@@ -5,7 +5,7 @@ import type { SpinResult } from "../engine/types";
 import { AudioManager } from "./AudioManager";
 import { GameScene } from "./GameScene";
 
-type ControllerState = "BOOT" | "IDLE" | "SPIN_INIT" | "INITIAL_DROP" | "EVALUATING" | "WIN_HIGHLIGHT" | "WIN_EXPLOSION" | "GRAVITY" | "REFILL" | "CASCADE_DROP" | "BONUS_TRIGGER" | "BONUS_INTRO" | "FREE_SPIN_PLAY" | "CRYSTAL_REVEAL" | "BIG_WIN" | "MAX_WIN" | "BONUS_SUMMARY" | "SPIN_COMPLETE";
+type ControllerState = "BOOT" | "IDLE" | "SPIN_INIT" | "INITIAL_DROP" | "EVALUATING" | "WIN_HIGHLIGHT" | "WIN_EXPLOSION" | "GRAVITY" | "REFILL" | "CASCADE_DROP" | "BONUS_TRIGGER" | "BONUS_INTRO" | "FREE_SPIN_PLAY" | "CORE_REVEAL" | "BIG_WIN" | "MAX_WIN" | "BONUS_SUMMARY" | "SPIN_COMPLETE";
 
 const sleep = (milliseconds: number) => new Promise((resolve) => setTimeout(resolve, milliseconds));
 
@@ -28,7 +28,7 @@ export class GameController {
     balance: HTMLElement; bet: HTMLElement; win: HTMLElement; bonusWin: HTMLElement; freeSpins: HTMLElement;
     tumble: HTMLElement; status: HTMLElement; spin: HTMLButtonElement; spinLabel: HTMLElement; betMinus: HTMLButtonElement; betPlus: HTMLButtonElement;
     autoCount: HTMLSelectElement; autoStart: HTMLButtonElement; autoStatus: HTMLElement;
-    turbo: HTMLButtonElement; sound: HTMLButtonElement; bonusOverlay: HTMLElement; multiplierAnnouncer: HTMLElement; winAnnouncer: HTMLElement; boardWrap: HTMLElement;
+     turbo: HTMLButtonElement; sound: HTMLButtonElement; bonusOverlay: HTMLElement; multiplierAnnouncer: HTMLElement; winAnnouncer: HTMLElement; bigWinOverlay: HTMLElement; bonusSummaryOverlay: HTMLElement; boardWrap: HTMLElement;
     setModal: (name: string | null) => void;
   };
 
@@ -38,6 +38,7 @@ export class GameController {
     this.balanceCents = Number(localStorage.getItem("cascade8-balance") ?? STARTING_BALANCE_CENTS);
     this.state = "IDLE";
     this.bind();
+    this.audio.startMusic();
     this.updateHud();
   }
 
@@ -110,9 +111,9 @@ export class GameController {
     this.message("THE GATES ARE OPENING");
     this.setState("INITIAL_DROP");
     this.scene.renderBoard(result.initialBoard);
-    if (result.baseSpinMultiplier > 1) {
-      this.message(`LUCKY X${result.baseSpinMultiplier} BOOST ACTIVE`);
-      this.showMultiplierBoost(result.baseSpinMultiplier, false);
+    if (result.scatterCount > 0) {
+      this.audio.scatterAnticipation(result.scatterCount);
+      this.audio.scatterArrival();
     }
     await this.scene.animateDrop(this.duration(ANIMATION.initialDrop));
     await this.playTumbles(result, false);
@@ -122,6 +123,7 @@ export class GameController {
       this.setState("BONUS_TRIGGER");
       this.message(`${result.freeSpinsAwarded} FREE SPINS READY // PRESS SPIN`);
       this.audio.bonus();
+      this.audio.scatterCelebration(result.scatterCount);
       this.scene.sparkle();
       this.setBonusPrompt(true);
       this.busy = false;
@@ -138,6 +140,7 @@ export class GameController {
     this.busy = true;
     this.setBonusPrompt(false);
     this.scene.setFreeSpinMode(true);
+    this.audio.crossfadeMusic(this.audio.musicVolume * 1.35);
     this.ui.boardWrap.classList.add("free-spin-mode");
     this.setState("BONUS_INTRO");
     this.message("BONUS REALM // FREE SPINS");
@@ -148,9 +151,10 @@ export class GameController {
       this.freeSpinsLeft = result.freeSpins.length - freeSpin.index + 1;
       this.setState("FREE_SPIN_PLAY"); this.updateHud();
       this.scene.renderBoard(freeSpin.initialBoard);
-      if (freeSpin.multiplier > 1) {
-        this.message(`FREE SPIN X${freeSpin.multiplier} BOOST ACTIVE`);
-        this.showMultiplierBoost(freeSpin.multiplier, true);
+      if (freeSpin.scatterCount > 0) {
+        this.audio.scatterAnticipation(freeSpin.scatterCount);
+        this.audio.scatterArrival();
+        this.audio.scatterCelebration(freeSpin.scatterCount);
       }
       await this.scene.animateDrop(this.duration(ANIMATION.initialDrop));
       await this.playTumbles({ ...result, tumbles: freeSpin.tumbles }, true);
@@ -162,8 +166,11 @@ export class GameController {
       }
     }
     this.setState("BONUS_SUMMARY"); this.message(`BONUS COMPLETE // ${formatCredits(result.bonusWinCents)}`);
-    await sleep(this.duration(900)); this.freeSpinsLeft = 0;
+    this.audio.bonusComplete();
+    await this.showBonusSummary(result);
+    this.freeSpinsLeft = 0;
     this.scene.setFreeSpinMode(false);
+    this.audio.crossfadeMusic(this.audio.musicVolume);
     this.ui.boardWrap.classList.remove("free-spin-mode");
     await this.finishSpin(result);
   }
@@ -171,7 +178,12 @@ export class GameController {
   private async finishSpin(result: SpinResult) {
     this.currentWinCents = result.totalWinCents;
     if (result.maxWinReached) { this.setState("MAX_WIN"); this.message("MAX WIN // 5000x"); this.scene.sparkle(); await sleep(this.duration(900)); }
-    else if (result.totalMultiplier >= 10) { this.setState("BIG_WIN"); this.message(`${winTier(result.totalMultiplier)} // ${result.totalMultiplier.toFixed(2)}x`); this.scene.sparkle(); await sleep(this.duration(700)); }
+    else if (result.totalMultiplier >= 10) {
+      this.setState("BIG_WIN"); this.message(`${winTier(result.totalMultiplier)} // ${result.totalMultiplier.toFixed(2)}x`);
+      this.scene.sparkle(); this.audio.bigWin(); this.audio.duckMusic(true);
+      await this.showBigWin(result.totalMultiplier, result.totalWinCents);
+      this.audio.duckMusic(false);
+    }
     this.balanceCents += result.totalWinCents; this.persistBalance();
     this.setState("SPIN_COMPLETE"); this.message(result.totalWinCents ? "SPIN COMPLETE // COLLECTED" : "NO WIN // NEXT GATE AWAITS");
     this.busy = false; this.setState("IDLE"); this.updateHud();
@@ -233,25 +245,24 @@ export class GameController {
       this.ui.tumble.textContent = index === 0 ? "—" : `TUMBLE ${index + 1}`;
       this.scene.renderBoard(tumble.boardBefore, tumble.winningCells);
       const winningMessage = `${tumble.winningSymbols.map((symbol) => getSymbolDefinition(symbol).name).join(" + ")} RESONATE`;
-      this.message(isBonus && tumble.crystals.length ? "CRYSTALS ARE GATHERING" : tumble.spinMultiplier > 1 ? `${isBonus ? "FREE " : ""}X${tumble.spinMultiplier} BOOST // ${winningMessage}` : winningMessage);
+      this.message(tumble.multiplierCores.length ? "MULTIPLIER CORES ARE CHARGING" : winningMessage);
       this.setState("WIN_HIGHLIGHT"); this.audio.win();
       await this.scene.highlightCells(tumble.winningCells, this.duration(ANIMATION.winHighlight));
-      this.setState(tumble.crystals.length ? "CRYSTAL_REVEAL" : "WIN_EXPLOSION");
-      if (tumble.crystals.length) {
-        this.message(`${tumble.crystals.join("x + ")}x // TOTAL ${tumble.crystalTotalMultiplier}x`);
-        await sleep(this.duration(ANIMATION.freeSpinPause));
-      } else if (tumble.spinMultiplier > 1) {
-        this.message(`${isBonus ? "FREE " : ""}X${tumble.spinMultiplier} BOOST ACTIVE`);
+      this.setState(tumble.multiplierCores.length ? "CORE_REVEAL" : "WIN_EXPLOSION");
+      if (tumble.multiplierCores.length) {
+        this.message(`${tumble.multiplierCores.map((core) => `${core.value}x`).join(" + ")} // CORE TOTAL ${tumble.coreTotalMultiplier}x`);
+        this.audio.core(tumble.coreTotalMultiplier);
+        await this.scene.activateMultiplierCores(tumble.multiplierCores.map((core) => core.value), this.duration(ANIMATION.freeSpinPause));
         await sleep(this.duration(ANIMATION.freeSpinPause));
       }
-      await this.scene.burstCells(tumble.winningCells, this.duration(ANIMATION.burst));
+      await this.scene.burstCells(tumble.removedCells, this.duration(ANIMATION.burst));
       this.currentWinCents += Math.round(tumble.finalPayoutMultiplier * this.betCents);
       if (isBonus) this.bonusWinCents += Math.round(tumble.finalPayoutMultiplier * this.betCents);
       this.showWin(tumble.finalPayoutMultiplier, Math.round(tumble.finalPayoutMultiplier * this.betCents), isBonus);
       this.updateHud();
       this.setState("REFILL");
       this.setState("CASCADE_DROP");
-      await this.scene.animateCascade(tumble.boardAfterRefill, tumble.winningCells, this.duration(ANIMATION.refill));
+      await this.scene.animateCascade(tumble.boardAfterRefill, tumble.removedCells, this.duration(ANIMATION.refill));
       this.message(index > 0 ? `TUMBLE ${index + 1} // ${formatCredits(this.currentWinCents)}` : `WIN // ${formatCredits(this.currentWinCents)}`);
     }
   }
@@ -272,12 +283,34 @@ export class GameController {
       if (this.ui.winAnnouncer.classList.contains(`is-${size}`)) this.ui.winAnnouncer.classList.remove(`is-${size}`);
     }, this.duration(size === "mega" || size === "big" ? 1500 : 950));
   }
-  private showMultiplierBoost(multiplier: number, isBonus: boolean) {
-    this.ui.multiplierAnnouncer.className = `multiplier-announcer is-visible${isBonus ? " is-free" : ""}`;
-    this.ui.multiplierAnnouncer.innerHTML = `<span>${isBonus ? "FREE SPIN BOOST" : "LUCKY BOOST"}</span><strong>X${multiplier}</strong><small>APPLIED TO THIS SPIN</small>`;
-    window.setTimeout(() => {
-      if (this.ui.multiplierAnnouncer.classList.contains("is-visible")) this.ui.multiplierAnnouncer.className = "multiplier-announcer";
-    }, this.duration(1500));
+  showBigWin(multiplier: number, amountCents: number) {
+    return new Promise<void>((resolve) => {
+      const overlay = this.ui.bigWinOverlay;
+      const tier = winTier(multiplier);
+      overlay.className = "big-win-overlay is-visible";
+      overlay.innerHTML = `<div class="big-win-card"><span>${tier}</span><strong>0.00</strong><small>${multiplier.toFixed(2)}x TOTAL WIN</small><button type="button">TAP TO SPEED UP</button></div>`;
+      let fast = false;
+      let value = 0;
+      const target = amountCents / 100;
+      const finish = () => { value = target; (overlay.querySelector("strong") as HTMLElement).textContent = formatCredits(Math.round(value * 100)); overlay.classList.remove("is-visible"); overlay.innerHTML = ""; resolve(); };
+      overlay.querySelector("button")?.addEventListener("click", () => { fast = true; });
+      const tick = () => {
+        value = Math.min(target, value + Math.max(target / (fast ? 10 : 36), 0.01));
+        (overlay.querySelector("strong") as HTMLElement).textContent = value.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        if (value >= target) finish(); else window.setTimeout(tick, fast ? 18 : 42);
+      };
+      tick();
+    });
+  }
+  private showBonusSummary(result: SpinResult) {
+    return new Promise<void>((resolve) => {
+      const overlay = this.ui.bonusSummaryOverlay;
+      overlay.className = "bonus-summary-overlay is-visible";
+      overlay.innerHTML = `<div class="bonus-summary-card"><span>GOLDEN REALM</span><h2>BONUS COMPLETE</h2><div class="summary-total">${formatCredits(result.bonusWinCents)}</div><small>${result.freeSpins.length} FREE SPINS // ${result.freeSpins.reduce((sum, spin) => sum + spin.tumbles.length, 0)} TUMBLES</small><button type="button">CONTINUE</button></div>`;
+      const close = () => { overlay.classList.remove("is-visible"); overlay.innerHTML = ""; resolve(); };
+      overlay.querySelector("button")?.addEventListener("click", close, { once: true });
+      window.setTimeout(close, this.duration(1800));
+    });
   }
   resetDemo() { this.balanceCents = STARTING_BALANCE_CENTS; this.persistBalance(); this.updateHud(); this.message("DEMO BALANCE RESET TO 10,000.00"); }
 }

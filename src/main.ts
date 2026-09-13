@@ -75,7 +75,9 @@ app.innerHTML = `
     </footer>
     <div class="demo-note"><span>✧</span> VIRTUAL CREDITS ONLY <span class="note-separator">•</span> NO REAL-MONEY GAMBLING <span class="note-separator">•</span> RNG DEMO PROTOTYPE</div>
   </div>
-  <div id="modal-root"></div>
+   <div id="big-win-overlay" class="big-win-overlay" aria-live="assertive"></div>
+   <div id="bonus-summary-overlay" class="bonus-summary-overlay" aria-live="assertive"></div>
+   <div id="modal-root"></div>
 `;
 
 const byId = <T extends HTMLElement>(id: string) => document.getElementById(id) as T;
@@ -88,7 +90,8 @@ function showModal(name: string | null) {
       <label class="setting-row"><span><b>Sound effects</b><small>WebAudio tones only</small></span><input id="setting-sound" type="checkbox" checked><i></i></label>
       <label class="setting-row"><span><b>Turbo mode</b><small>Shorter animation timing</small></span><input id="setting-turbo" type="checkbox"><i></i></label>
       <label class="setting-row"><span><b>Reduced motion</b><small>Respect system accessibility preference</small></span><input id="setting-motion" type="checkbox"><i></i></label>
-      <label class="volume-row"><span>VOLUME</span><input id="setting-volume" type="range" min="0" max="1" step="0.01" value="0.38"></label>
+       <label class="volume-row"><span>SFX VOLUME</span><input id="setting-volume" type="range" min="0" max="1" step="0.01" value="0.38"></label>
+       <label class="volume-row"><span>MUSIC VOLUME</span><input id="setting-music-volume" type="range" min="0" max="1" step="0.01" value="0.18"></label>
       <button id="demo-reset" class="outline-button full">RESET DEMO CREDITS <small>RESTORE 10,000.00</small></button>
       <div class="modal-footnote">Preferences are stored locally. No secret RNG state or personal data is stored.</div>
     </section></div>`;
@@ -99,14 +102,16 @@ function showModal(name: string | null) {
     sound.onchange = () => { controller.audio.setMuted(!sound.checked); controller.updateForModal(); };
     turbo.onchange = () => { controller.turbo = turbo.checked; localStorage.setItem("cascade8-turbo", String(turbo.checked)); controller.updateForModal(); };
     motion.onchange = () => { controller.reducedMotion = motion.checked; localStorage.setItem("cascade8-reduced-motion", String(motion.checked)); };
-    volume.oninput = () => controller.audio.setVolume(Number(volume.value));
+     volume.oninput = () => controller.audio.setVolume(Number(volume.value));
+     const musicVolume = byId<HTMLInputElement>("setting-music-volume"); musicVolume.value = String(controller.audio.musicVolume);
+     musicVolume.oninput = () => controller.audio.setMusicVolume(Number(musicVolume.value));
     byId<HTMLButtonElement>("demo-reset").onclick = () => { controller.resetDemo(); showModal(null); };
   } else {
     modalRoot.innerHTML = `<div class="modal-backdrop"><section class="modal-card info-modal"><button class="modal-close" data-close>×</button><div class="modal-kicker">CASCADE 8 // FIELD GUIDE</div><h2>How to play</h2><p class="modal-lead">Match 8 or more of a club logo anywhere on the field. Winning logos burst, the field falls, and fresh logos tumble in.</p>
       <div class="info-grid"><div><span class="info-number">01</span><b>Drop</b><small>30 symbols land in a 6 × 5 field.</small></div><div><span class="info-number">02</span><b>Match</b><small>Every matching symbol counts, even when separated.</small></div><div><span class="info-number">03</span><b>Tumble</b><small>Wins vanish together and the cascade repeats.</small></div><div><span class="info-number">04</span><b>Bonus</b><small>4 Astral Gates trigger 10 Free Spins.</small></div></div>
       <div class="paytable"><div class="paytable-head"><span>CLUB LOGO</span><span>8 — 9</span><span>10 — 11</span><span>12+</span></div>${NORMAL_SYMBOLS.map((symbol) => { const paytable = PAYTABLE[symbol.id as keyof typeof PAYTABLE]; return `<div class="paytable-row"><span class="paytable-club" style="color:${symbol.colorHex}"><img src="${import.meta.env.BASE_URL}${symbol.logoPath}" alt="">${symbol.name}</span><span>${paytable[0].multiplier}x</span><span>${paytable[1].multiplier}x</span><span>${paytable[2].multiplier}x</span></div>`; }).join("")}</div>
-      <div class="info-callout"><b>MULTIPLIER CRYSTALS</b><span>Free Spin wins can reveal 2x–100x crystals. Revealed values add together and multiply that tumble only.</span></div>
-      <div class="modal-footnote">Measured RTP: 95.7117% over 1,000,000 spins (seed 20260913). This is a virtual-credit demo and is not a regulated gaming product.</div>
+       <div class="info-callout"><b>MULTIPLIER CORES</b><span>Free Spin refill cells can spawn physical 2x–500x Cores. All active Cores add together, multiply that tumble, then discharge and disappear.</span></div>
+       <div class="modal-footnote">Core spawn rate is 8% per Free Spin refill. This is a virtual-credit demo and is not a regulated gaming product.</div>
     </section></div>`;
   }
   modalRoot.querySelectorAll("[data-close]").forEach((button) => button.addEventListener("click", () => showModal(null)));
@@ -124,7 +129,7 @@ window.setTimeout(() => {
     tumble: byId("tumble"), status: byId("status"), spin: byId("spin"), spinLabel: byId("spin").querySelector(".spin-label") as HTMLElement,
     betMinus: byId("bet-minus"), betPlus: byId("bet-plus"), autoCount: byId("auto-count"), autoStart: byId("auto-start"), autoStatus: byId("auto-status"),
     turbo: byId("turbo"), sound: byId("sound"),
-    bonusOverlay: byId("bonus-overlay"), multiplierAnnouncer: byId("multiplier-announcer"), winAnnouncer: byId("win-announcer"), boardWrap: byId("phaser-board").parentElement!,
+     bonusOverlay: byId("bonus-overlay"), multiplierAnnouncer: byId("multiplier-announcer"), winAnnouncer: byId("win-announcer"), bigWinOverlay: byId("big-win-overlay"), bonusSummaryOverlay: byId("bonus-summary-overlay"), boardWrap: byId("phaser-board").parentElement!,
     setModal: showModal,
   });
   if (isLab) renderLab(scene);
@@ -133,11 +138,25 @@ window.setTimeout(() => {
 function renderLab(scene: GameScene) {
   const lab = document.createElement("section");
   lab.className = "lab-panel";
-  lab.innerHTML = `<div class="panel-kicker">DEVELOPMENT ROUTE // /lab</div><h1>Animation & Math Lab</h1><p>Deterministic board checks stay separate from live RNG. Use these cards to inspect the 8-symbol threshold and simultaneous removal logic.</p><div class="lab-actions"><button data-lab="seven">7 × S1</button><button data-lab="eight">8 × S1</button><button data-lab="simultaneous">8 × S1 + 8 × S6</button></div><div class="lab-result" id="lab-result">Choose a predefined board.</div>`;
+   lab.innerHTML = `<div class="panel-kicker">DEVELOPMENT ROUTE // /lab</div><h1>Animation & Math Lab</h1><p>Deterministic board checks stay separate from live RNG. Use these cards to inspect wins, Core activation and the full win presentation.</p><div class="lab-actions"><button data-lab="seven">7 × S1</button><button data-lab="eight">8 × S1</button><button data-lab="simultaneous">8 × S1 + 8 × S6</button><button data-lab="core">CORE BOARD</button><button data-lab="big">BIG WIN</button></div><div class="lab-result" id="lab-result">Choose a predefined board.</div><pre class="lab-metrics" id="lab-metrics"></pre>`;
   document.querySelector(".game-stage")?.append(lab);
+   const metrics = lab.querySelector<HTMLElement>("#lab-metrics")!;
+   const updateMetrics = () => {
+     const current = scene.getDebugMetrics();
+     metrics.textContent = `PERF // ${current.fps} FPS // ${current.renderer} // ${current.activeNodes}/${current.boardCells} ACTIVE BOARD NODES`;
+     window.requestAnimationFrame(updateMetrics);
+   };
+   updateMetrics();
   lab.querySelectorAll<HTMLButtonElement>("[data-lab]").forEach((button) => button.onclick = () => {
     const key = button.dataset.lab;
-    const values = key === "seven" ? [...Array(7).fill("S1"), ...Array(23).fill("S2")] : key === "eight" ? [...Array(8).fill("S1"), ...Array(22).fill("S2")] : [...Array(8).fill("S1"), ...Array(8).fill("S6"), ...Array(14).fill("S2")];
+     if (key === "big") {
+       controller.showBigWin(250, 25_000);
+       byId("lab-result").textContent = "BIG WIN COUNT-UP // tap to accelerate";
+       return;
+     }
+     const values = key === "core"
+       ? [...Array(8).fill("S8"), { kind: "MULTIPLIER_CORE", value: 2 }, { kind: "MULTIPLIER_CORE", value: 10 }, { kind: "MULTIPLIER_CORE", value: 100 }, ...Array(19).fill("S2")]
+       : key === "seven" ? [...Array(7).fill("S1"), ...Array(23).fill("S2")] : key === "eight" ? [...Array(8).fill("S1"), ...Array(22).fill("S2")] : [...Array(8).fill("S1"), ...Array(8).fill("S6"), ...Array(14).fill("S2")];
     const board = Array.from({ length: 5 }, (_, row) => values.slice(row * 6, row * 6 + 6)) as Board;
     const evaluation = evaluateBoard(board);
     scene.renderBoard(board, evaluation.winningCells); scene.highlightCells(evaluation.winningCells, 380);

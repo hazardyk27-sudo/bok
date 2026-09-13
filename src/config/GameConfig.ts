@@ -7,11 +7,11 @@ export const MAX_WIN_MULTIPLIER = 5000;
 export const BETS_CENTS = [20, 50, 100, 200, 500, 1000, 2000, 5000] as const;
 
 export const ANIMATION = {
-  initialDrop: 912,
-  winHighlight: 264,
-  burst: 290,
-  refill: 648,
-  freeSpinPause: 336,
+  initialDrop: 720,
+  winHighlight: 150,
+  burst: 240,
+  refill: 520,
+  freeSpinPause: 260,
 } as const;
 
 export type NormalSymbolId = "S1" | "S2" | "S3" | "S4" | "S5" | "S6" | "S7" | "S8";
@@ -43,6 +43,59 @@ export const SYMBOLS: readonly SymbolDefinition[] = [
 
 export const NORMAL_SYMBOLS = SYMBOLS.filter((symbol) => symbol.id !== "SCATTER") as readonly SymbolDefinition[];
 
+export type RunLength = 1 | 2 | 3 | 4;
+export type ReelConfig = {
+  name: "BASE" | "BONUS";
+  runLengthWeights: readonly { value: RunLength; weight: number }[];
+  symbolWeights: readonly { value: NormalSymbolId; weight: number }[];
+  scatterChance: number;
+};
+
+export const BASE_REEL_CONFIG: ReelConfig = {
+  name: "BASE",
+  runLengthWeights: [
+    { value: 1, weight: 42 },
+    { value: 2, weight: 44 },
+    { value: 3, weight: 12 },
+    { value: 4, weight: 2 },
+  ],
+  symbolWeights: NORMAL_SYMBOLS.map(({ id, weight }) => ({ value: id as NormalSymbolId, weight })),
+  scatterChance: 2.5,
+};
+
+export const BONUS_REEL_CONFIG: ReelConfig = {
+  name: "BONUS",
+  runLengthWeights: [
+    { value: 1, weight: 48 },
+    { value: 2, weight: 40 },
+    { value: 3, weight: 10 },
+    { value: 4, weight: 2 },
+  ],
+  symbolWeights: NORMAL_SYMBOLS.map(({ id, weight }) => ({ value: id as NormalSymbolId, weight })),
+  scatterChance: 1.4,
+};
+
+export type SymbolEffectProfile = {
+  particleType: "droplet" | "fragment" | "ray" | "dust" | "star" | "shard" | "streak" | "prism";
+  burstType: "ring" | "spiral" | "sun" | "smoke" | "flash" | "shards" | "crown" | "fracture";
+  glowType: "soft" | "angular" | "radial" | "halo";
+  particleCount: number;
+  duration: number;
+  pitch: number;
+  scale: number;
+};
+
+export const SYMBOL_EFFECT_PROFILES: Record<NormalSymbolId, SymbolEffectProfile> = {
+  S1: { particleType: "droplet", burstType: "ring", glowType: "soft", particleCount: 10, duration: 210, pitch: 0.92, scale: 1.04 },
+  S2: { particleType: "fragment", burstType: "spiral", glowType: "angular", particleCount: 11, duration: 220, pitch: 0.98, scale: 1.08 },
+  S3: { particleType: "ray", burstType: "sun", glowType: "radial", particleCount: 13, duration: 230, pitch: 1.04, scale: 1.12 },
+  S4: { particleType: "dust", burstType: "smoke", glowType: "halo", particleCount: 9, duration: 240, pitch: 1.1, scale: 1.06 },
+  S5: { particleType: "star", burstType: "flash", glowType: "radial", particleCount: 12, duration: 220, pitch: 1.16, scale: 1.1 },
+  S6: { particleType: "shard", burstType: "shards", glowType: "angular", particleCount: 12, duration: 230, pitch: 1.22, scale: 1.13 },
+  S7: { particleType: "streak", burstType: "crown", glowType: "radial", particleCount: 14, duration: 240, pitch: 1.3, scale: 1.16 },
+  S8: { particleType: "prism", burstType: "fracture", glowType: "halo", particleCount: 16, duration: 250, pitch: 1.38, scale: 1.2 },
+};
+
 export const PAYTABLE: Record<NormalSymbolId, readonly { min: number; max: number; multiplier: number }[]> = {
   S1: [{ min: 8, max: 9, multiplier: 0.9 }, { min: 10, max: 11, multiplier: 1.8 }, { min: 12, max: Infinity, multiplier: 3.6 }],
   S2: [{ min: 8, max: 9, multiplier: 1.1 }, { min: 10, max: 11, multiplier: 2.2 }, { min: 12, max: Infinity, multiplier: 4.4 }],
@@ -56,29 +109,20 @@ export const PAYTABLE: Record<NormalSymbolId, readonly { min: number; max: numbe
 
 export const BONUS_CONFIG = {
   base: { 4: 10, 5: 12, 6: 15 },
-  retrigger: { 3: 5, 4: 8, 5: 12, 6: 15 },
-  spinMultiplierChance: { base: 5, free: 20 },
-  spinMultiplierWeights: [
-    { value: 2, weight: 65 },
-    { value: 3, weight: 23 },
-    { value: 5, weight: 9 },
-    { value: 10, weight: 2.5 },
-    { value: 25, weight: 0.5 },
-  ],
-  crystalCountWeights: [
-    { value: 0, weight: 95 },
-    { value: 1, weight: 4 },
-    { value: 2, weight: 1 },
-    { value: 3, weight: 0 },
-  ],
-  crystalMultiplierWeights: [
-    { value: 2, weight: 40 },
-    { value: 3, weight: 25 },
-    { value: 5, weight: 15 },
-    { value: 10, weight: 10 },
-    { value: 25, weight: 6 },
-    { value: 50, weight: 3 },
-    { value: 100, weight: 1 },
+  retrigger: { 3: 5, 4: 5, 5: 5, 6: 5 },
+  multiplierCoreSpawnChance: 8,
+  multiplierCoreWeights: [
+    { value: 2, weight: 28 },
+    { value: 3, weight: 22 },
+    { value: 5, weight: 17 },
+    { value: 10, weight: 12 },
+    { value: 15, weight: 7 },
+    { value: 20, weight: 5 },
+    { value: 25, weight: 4 },
+    { value: 50, weight: 2.5 },
+    { value: 100, weight: 1.5 },
+    { value: 250, weight: 0.75 },
+    { value: 500, weight: 0.25 },
   ],
 } as const;
 

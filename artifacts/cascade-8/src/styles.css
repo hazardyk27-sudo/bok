@@ -20,7 +20,7 @@ body { min-width: 320px; background: radial-gradient(circle at 50% -15%, #263871
 button, input { font: inherit; }
 button { color: inherit; cursor: pointer; }
 button:focus-visible, input:focus-visible { outline: 2px solid var(--cyan); outline-offset: 3px; }
-.app-shell { position: relative; min-height: 100vh; overflow: hidden; padding: 28px clamp(18px, 4vw, 70px) 22px; }
+.app-shell { position: relative; min-height: 100vh; overflow: hidden; padding: max(28px, env(safe-area-inset-top)) max(clamp(18px, 4vw, 70px), env(safe-area-inset-right)) max(22px, env(safe-area-inset-bottom)) max(clamp(18px, 4vw, 70px), env(safe-area-inset-left)); }
 .app-shell::before { content: ""; position: absolute; inset: 0; pointer-events: none; background: linear-gradient(120deg, rgba(88, 127, 255, .06), transparent 44%, rgba(173, 104, 255, .04)); }
 .ambient { position: absolute; pointer-events: none; border-radius: 50%; filter: blur(10px); opacity: .28; }
 .ambient-a { width: 470px; height: 470px; background: #2d5de0; top: 18%; left: -220px; }
@@ -82,6 +82,14 @@ button:focus-visible, input:focus-visible { outline: 2px solid var(--cyan); outl
 .win-announcer.is-big strong { font-size: 55px; color: #ffe09a; text-shadow: 0 0 30px rgba(255, 195, 79, .75); }
 .win-announcer.is-mega strong { font-size: 72px; color: #fff0ae; text-shadow: 0 0 45px rgba(255, 180, 50, .92); }
 .win-announcer.is-free-win span { color: #ffe09a; }
+.big-win-overlay, .bonus-summary-overlay { position: fixed; inset: 0; z-index: 30; display: grid; place-items: center; padding: 24px; background: radial-gradient(circle at center, rgba(52, 40, 99, .92), rgba(4, 7, 23, .97) 72%); opacity: 0; pointer-events: none; transition: opacity .24s ease; }
+.big-win-overlay.is-visible, .bonus-summary-overlay.is-visible { opacity: 1; pointer-events: auto; }
+.big-win-card, .bonus-summary-card { display: grid; justify-items: center; gap: 12px; width: min(580px, 100%); padding: 42px 24px 32px; border: 1px solid rgba(255, 218, 119, .72); border-radius: 28px; background: linear-gradient(155deg, rgba(74, 43, 9, .96), rgba(19, 15, 43, .98)); box-shadow: 0 0 100px rgba(255, 191, 54, .25), inset 0 0 32px rgba(255, 222, 125, .08); text-align: center; animation: bonus-arrive .48s cubic-bezier(.16,.9,.24,1); }
+.big-win-card span, .bonus-summary-card span { color: #ffe59a; font: 11px "DM Mono", monospace; letter-spacing: .26em; }
+.big-win-card strong, .summary-total { color: #fff1ae; font-size: clamp(56px, 13vw, 118px); line-height: .95; text-shadow: 0 0 40px rgba(255, 198, 60, .8); }
+.big-win-card small, .bonus-summary-card small { color: #d8bd7b; font: 10px "DM Mono", monospace; letter-spacing: .15em; }
+.big-win-card button, .bonus-summary-card button { margin-top: 14px; padding: 10px 16px; border: 1px solid rgba(255, 218, 119, .55); border-radius: 999px; color: #ffe7a8; background: rgba(255, 206, 94, .08); font: 10px "DM Mono", monospace; letter-spacing: .12em; cursor: pointer; }
+.bonus-summary-card h2 { margin: 0; color: #fff8db; font-size: clamp(27px, 6vw, 48px); letter-spacing: .08em; }
 .status-line { display: flex; justify-content: center; align-items: center; gap: 9px; min-height: 33px; color: #abb6dd; font: 10px "DM Mono", monospace; letter-spacing: .12em; }
 .status-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--cyan); box-shadow: 0 0 14px var(--cyan); }
 #tumble { color: var(--gold); min-width: 62px; }
@@ -172,6 +180,7 @@ button:focus-visible, input:focus-visible { outline: 2px solid var(--cyan); outl
 .lab-panel { max-width: 720px; margin: 10px auto; padding: 18px 20px; border: 1px solid rgba(239, 196, 106, .24); border-radius: 15px; background: rgba(33, 29, 57, .65); }
 .lab-panel h1 { margin: 5px 0; font-size: 21px; }
 .lab-panel p { margin: 5px 0 15px; color: var(--muted); font-size: 11px; line-height: 1.45; }
+.lab-metrics { margin: 13px 0 0; color: #91ddff; font: 10px "DM Mono", monospace; letter-spacing: .08em; white-space: pre-wrap; }
 .lab-actions { display: flex; flex-wrap: wrap; gap: 7px; }
 .lab-actions button { padding: 8px 10px; border: 1px solid rgba(239, 196, 106, .35); border-radius: 8px; background: rgba(239, 196, 106, .07); color: #efcf8c; font: 9px "DM Mono", monospace; }
 .lab-result { margin-top: 14px; padding: 11px; border-radius: 8px; background: rgba(5, 10, 29, .45); color: #b6c0e4; font: 10px "DM Mono", monospace; }

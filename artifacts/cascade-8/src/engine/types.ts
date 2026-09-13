@@ -1,6 +1,6 @@
 import type { NormalSymbolId, SymbolId } from "../config/GameConfig";
 
-export type Board = SymbolId[][];
+export type Board = BoardCell[][];
 export type Cell = { row: number; col: number };
 export type RandomSource = { nextFloat: () => number };
 export type MultiplierCore = { kind: "MULTIPLIER_CORE"; value: number };
@@ -15,16 +15,13 @@ export type TumbleResult = {
   winningSymbols: NormalSymbolId[];
   winningCells: Cell[];
   rawPayoutMultiplier: number;
-  spinMultiplier: number;
   multiplierCores: MultiplierCore[];
   multiplierCoreCells: CoreCell[];
   coreTotalMultiplier: number;
-  crystals: number[];
-  crystalTotalMultiplier: number;
   finalPayoutMultiplier: number;
   removedCells: Cell[];
   boardAfterGravity: Board;
-  newSymbols: SymbolId[];
+  newSymbols: BoardCell[];
   boardAfterRefill: Board;
 };
 
@@ -33,7 +30,6 @@ export type FreeSpinResult = {
   initialBoard: Board;
   scatterCount: number;
   retriggered: number;
-  multiplier: number;
   tumbles: TumbleResult[];
   win: number;
 };
@@ -50,7 +46,6 @@ export type SpinResult = {
   bonusWinCents: number;
   totalWinCents: number;
   totalMultiplier: number;
-  baseSpinMultiplier: number;
   maxWinReached: boolean;
   totalMultiplierEvents: number[];
 };

@@ -1,8 +1,8 @@
 import Phaser from "phaser";
 import { BOARD_COLUMNS, BOARD_ROWS, NORMAL_SYMBOLS, getSymbolDefinition, type SymbolId } from "../config/GameConfig";
-import type { Board, Cell } from "../engine/types";
+import { isMultiplierCore, type Board, type BoardCell, type Cell } from "../engine/types";
 
-type BoardNode = { container: Phaser.GameObjects.Container; symbol: SymbolId; row: number; col: number };
+type BoardNode = { container: Phaser.GameObjects.Container; symbol: BoardCell; row: number; col: number };
 
 export class GameScene extends Phaser.Scene {
   private nodes: BoardNode[] = [];
@@ -67,13 +67,43 @@ export class GameScene extends Phaser.Scene {
     this.nodes = [];
   }
 
-  private createSymbolNode(symbol: SymbolId, row: number, col: number, crystal = false, winner = false) {
-    const definition = getSymbolDefinition(symbol);
-    const frameColor = definition.frameColor;
+  getDebugMetrics() {
+    return {
+      activeNodes: this.nodes.length,
+      boardCells: BOARD_COLUMNS * BOARD_ROWS,
+      fps: Math.round(this.game.loop.actualFps || 0),
+      renderer: this.game.renderer.type === Phaser.WEBGL ? "WEBGL" : "CANVAS",
+    };
+  }
+
+  private createSymbolNode(symbol: BoardCell, row: number, col: number, winner = false) {
     const container = this.add.container(
       this.boardOrigin.x + col * this.cellSize.width + 44,
       this.boardOrigin.y + row * this.cellSize.height + 41,
     );
+    if (isMultiplierCore(symbol)) {
+      const glow = this.add.circle(0, 0, 42, 0xffb52e, 0.28).setBlendMode(Phaser.BlendModes.ADD);
+      const core = this.add.polygon(0, 0, [0, -33, 28, -16, 28, 16, 0, 33, -28, 16, -28, -16], 0xf0a51a, 0.98);
+      core.setStrokeStyle(4, 0xffe7a0, 1);
+      const inner = this.add.polygon(0, 0, [0, -25, 21, -12, 21, 12, 0, 25, -21, 12, -21, -12], 0x55310d, 0.94);
+      inner.setStrokeStyle(1.5, 0xffd46a, 0.95);
+      const label = this.add.text(0, 1, `${symbol.value}x`, {
+        color: "#fff4c7",
+        fontFamily: "Arial, sans-serif",
+        fontSize: symbol.value >= 100 ? "15px" : "19px",
+        fontStyle: "bold",
+        stroke: "#5d3200",
+        strokeThickness: 4,
+      }).setOrigin(0.5);
+      const bolt = this.add.text(0, -39, "✦", { color: "#fff3ba", fontSize: "18px" }).setOrigin(0.5);
+      container.add([glow, core, inner, label, bolt]);
+      this.tweens.add({ targets: glow, scale: 1.18, alpha: 0.12, duration: 680, yoyo: true, repeat: -1 });
+      const node = { container, symbol, row, col };
+      this.nodes.push(node);
+      return node;
+    }
+    const definition = getSymbolDefinition(symbol);
+    const frameColor = definition.frameColor;
     const glow = this.add.circle(0, 2, 39, definition.color, winner ? 0.78 : 0.42);
     glow.setBlendMode(Phaser.BlendModes.ADD);
     const orb = this.add.circle(0, 0, 31, definition.color, winner ? 0.82 : 0.64);
@@ -83,7 +113,7 @@ export class GameScene extends Phaser.Scene {
     const core = this.add.circle(0, 0, 26, 0x09142f, 0.56);
     const shine = this.add.ellipse(-9, -12, 13, 7, 0xffffff, 0.18).setAngle(-25);
     const mark = symbol === "SCATTER"
-      ? this.add.text(0, 1, definition.icon, { color: definition.colorHex, fontFamily: "Georgia, serif", fontSize: "31px", fontStyle: "bold" }).setOrigin(0.5)
+      ? this.createTrophy()
       : this.add.image(0, 0, `club-logo-${symbol}`).setDisplaySize(52, 52);
     container.add([glow, orb, innerFrame, core, mark, shine]);
     if (symbol === "SCATTER") {
@@ -91,25 +121,34 @@ export class GameScene extends Phaser.Scene {
       container.add(ring);
       this.tweens.add({ targets: ring, scale: 1.14, alpha: 0.3, duration: 780, yoyo: true, repeat: -1 });
     }
-    if (crystal) {
-      container.add(this.add.text(0, -32, "✧", { color: "#f3d77a", fontSize: "16px" }).setOrigin(0.5));
-    }
     const node = { container, symbol, row, col };
     this.nodes.push(node);
     return node;
   }
 
-  renderBoard(board: Board, winningCells: Cell[] = [], crystalCells: Cell[] = []) {
+  private createTrophy() {
+    const trophy = this.add.graphics();
+    trophy.fillStyle(0xffd052, 1);
+    trophy.fillRoundedRect(-15, -19, 30, 26, 5);
+    trophy.fillRect(-7, 7, 14, 12);
+    trophy.fillRoundedRect(-18, 18, 36, 6, 3);
+    trophy.fillStyle(0xffefaa, 0.95);
+    trophy.fillRoundedRect(-22, -12, 7, 16, 3);
+    trophy.fillRoundedRect(15, -12, 7, 16, 3);
+    trophy.fillStyle(0xffffdf, 0.72);
+    trophy.fillEllipse(-7, -11, 7, 12);
+    return trophy;
+  }
+
+  renderBoard(board: Board, winningCells: Cell[] = []) {
     this.clearSymbols();
     const winning = new Set(winningCells.map((cell) => `${cell.row}:${cell.col}`));
-    const crystalSet = new Set(crystalCells.map((cell) => `${cell.row}:${cell.col}`));
     for (let row = 0; row < BOARD_ROWS; row += 1) {
       for (let col = 0; col < BOARD_COLUMNS; col += 1) {
         this.createSymbolNode(
           board[row][col],
           row,
           col,
-          crystalSet.has(`${row}:${col}`),
           winning.has(`${row}:${col}`),
         );
       }
@@ -148,11 +187,26 @@ export class GameScene extends Phaser.Scene {
     })));
   }
 
+  async activateMultiplierCores(values: number[], duration = 360) {
+    const active = this.nodes.filter((node) => isMultiplierCore(node.symbol) && values.includes(node.symbol.value));
+    await Promise.all(active.map((node) => new Promise<void>((resolve) => {
+      this.tweens.add({
+        targets: node.container,
+        scale: 1.24,
+        angle: 8,
+        duration,
+        yoyo: true,
+        ease: "Back.easeOut",
+        onComplete: () => resolve(),
+      });
+    })));
+  }
+
   async burstCells(cells: Cell[], duration: number) {
     const wanted = new Set(cells.map((cell) => `${cell.row}:${cell.col}`));
     const active = this.nodes.filter((node) => wanted.has(`${node.row}:${node.col}`));
     await Promise.all(active.map((node) => new Promise<void>((resolve) => {
-      const color = getSymbolDefinition(node.symbol).color;
+      const color = isMultiplierCore(node.symbol) ? 0xffc34d : getSymbolDefinition(node.symbol).color;
       const centerX = node.container.x;
       const centerY = node.container.y;
       const ring = this.add.circle(centerX, centerY, 25, undefined, 0)
@@ -197,8 +251,8 @@ export class GameScene extends Phaser.Scene {
     this.nodes = this.nodes.filter((node) => !wanted.has(`${node.row}:${node.col}`));
   }
 
-  async animateCascade(board: Board, winningCells: Cell[], duration: number) {
-    const winning = new Set(winningCells.map((cell) => `${cell.row}:${cell.col}`));
+  async animateCascade(board: Board, removedCells: Cell[], duration: number) {
+    const winning = new Set(removedCells.map((cell) => `${cell.row}:${cell.col}`));
     const animations: Promise<void>[] = [];
     for (let col = 0; col < BOARD_COLUMNS; col += 1) {
       const survivors = this.nodes

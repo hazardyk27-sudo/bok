@@ -61,9 +61,12 @@ export type SimulationReport = {
   frequency5000x: number;
   freeSpinRetriggerRate: number;
   averageFreeSpinsPerBonus: number;
-  multiplierCrystalTriggerFrequency: number;
-  averageCrystalMultiplier: number;
-  highestCrystalTotalObserved: number;
+  multiplierCoreFrequency: number;
+  averageCoreCellsPerFreeRefill: number;
+  averageCombinedCoreMultiplier: number;
+  highestCoreTotalObserved: number;
+  coreRtpContribution: number;
+  coreValueDistribution: Record<string, number>;
   histogram: Record<(typeof HISTOGRAM_BUCKETS)[number], number>;
 };
 
@@ -81,9 +84,14 @@ export function simulate(spins: number, seed: string, betCents = 100, onProgress
   let winningTumbleCount = 0;
   let retriggeredFreeSpins = 0;
   let freeSpinCount = 0;
-  let crystalTumbles = 0;
-  let crystalMultiplierTotal = 0;
-  let highestCrystalTotalObserved = 0;
+  let coreTumbles = 0;
+  let coreCells = 0;
+  let freeRefills = 0;
+  let freeRefillCells = 0;
+  let coreContributionCents = 0;
+  let coreTotal = 0;
+  let highestCoreTotalObserved = 0;
+  const coreValueDistribution: Record<string, number> = {};
   let maxObservedWinMultiplier = 0;
   let maxTumbles = 0;
   for (let index = 0; index < spins; index += 1) {
@@ -108,10 +116,20 @@ export function simulate(spins: number, seed: string, betCents = 100, onProgress
       if (freeSpin.retriggered > 0) retriggeredFreeSpins += freeSpin.retriggered;
     }
     for (const tumble of [...result.tumbles, ...result.freeSpins.flatMap((spin) => spin.tumbles)]) {
-      if (tumble.crystals.length) {
-        crystalTumbles += 1;
-        crystalMultiplierTotal += tumble.crystalTotalMultiplier;
-        highestCrystalTotalObserved = Math.max(highestCrystalTotalObserved, tumble.crystalTotalMultiplier);
+      const isFree = result.freeSpins.some((spin) => spin.tumbles.includes(tumble));
+      if (isFree) {
+        freeRefills += 1;
+        coreCells += tumble.newSymbols.filter((cell) => typeof cell !== "string").length;
+        freeRefillCells += tumble.newSymbols.length;
+      }
+      if (tumble.multiplierCores.length) {
+        coreTumbles += 1;
+        coreTotal += tumble.coreTotalMultiplier;
+        highestCoreTotalObserved = Math.max(highestCoreTotalObserved, tumble.coreTotalMultiplier);
+        coreContributionCents += Math.max(0, tumble.finalPayoutMultiplier - tumble.rawPayoutMultiplier) * betCents;
+        tumble.multiplierCores.forEach((core) => {
+          coreValueDistribution[String(core.value)] = (coreValueDistribution[String(core.value)] ?? 0) + 1;
+        });
       }
     }
     histogram[bucket(multiplier)] += 1;
@@ -148,9 +166,12 @@ export function simulate(spins: number, seed: string, betCents = 100, onProgress
     frequency5000x: percent(wins.filter((value) => value >= 5000).length),
     freeSpinRetriggerRate: freeSpinCount ? Number(((retriggeredFreeSpins / freeSpinCount) * 100).toFixed(4)) : 0,
     averageFreeSpinsPerBonus: bonusTriggerCount ? Number((freeSpinCount / bonusTriggerCount).toFixed(4)) : 0,
-    multiplierCrystalTriggerFrequency: winningTumbleCount ? Number(((crystalTumbles / winningTumbleCount) * 100).toFixed(4)) : 0,
-    averageCrystalMultiplier: crystalTumbles ? Number((crystalMultiplierTotal / crystalTumbles).toFixed(4)) : 0,
-    highestCrystalTotalObserved,
+    multiplierCoreFrequency: freeRefillCells ? Number(((coreCells / freeRefillCells) * 100).toFixed(4)) : 0,
+    averageCoreCellsPerFreeRefill: freeRefills ? Number((coreCells / freeRefills).toFixed(4)) : 0,
+    averageCombinedCoreMultiplier: coreTumbles ? Number((coreTotal / coreTumbles).toFixed(4)) : 0,
+    highestCoreTotalObserved,
+    coreRtpContribution: Number(((coreContributionCents / totalBetCents) * 100).toFixed(4)),
+    coreValueDistribution,
     histogram,
   };
 }

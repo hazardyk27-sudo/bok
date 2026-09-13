@@ -27,7 +27,11 @@ async function main() {
     "Average Win": `${report.averageWinMultiplier}x`,
     "Median Win": `${report.medianWinMultiplier}x`,
     "Max Observed Win": `${report.maxObservedWinMultiplier}x`,
-    "Crystal Trigger Frequency": `${report.multiplierCrystalTriggerFrequency}%`,
+     "Core Spawn Frequency": `${report.multiplierCoreFrequency}%`,
+     "Avg Core Cells / Free Refill": report.averageCoreCellsPerFreeRefill,
+     "Avg Combined Core": `${report.averageCombinedCoreMultiplier}x`,
+     "Core RTP Contribution": `${report.coreRtpContribution}%`,
+     "Core Distribution": JSON.stringify(report.coreValueDistribution),
   });
   console.log(`Histogram: ${JSON.stringify(report.histogram)}`);
   console.log(`Saved report: ${await saveSimulationReport(report)}`);
