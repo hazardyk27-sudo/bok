@@ -73,11 +73,11 @@ export class GameScene extends Phaser.Scene {
       this.boardOrigin.x + col * this.cellSize.width + 44,
       this.boardOrigin.y + row * this.cellSize.height + 41,
     );
-    const glow = this.add.circle(0, 2, 31, definition.color, winner ? 0.4 : 0.18);
+    const glow = this.add.circle(0, 2, 31, definition.color, winner ? 0.7 : 0.34);
     glow.setBlendMode(Phaser.BlendModes.ADD);
-    const orb = this.add.circle(0, 0, 25, definition.color, winner ? 0.48 : 0.3);
-    orb.setStrokeStyle(winner || symbol === "SCATTER" ? 2 : 1, definition.color, winner ? 0.9 : 0.3);
-    const core = this.add.circle(0, 0, 22, 0x09142f, 0.7);
+    const orb = this.add.circle(0, 0, 25, definition.color, winner ? 0.7 : 0.52);
+    orb.setStrokeStyle(winner || symbol === "SCATTER" ? 2 : 1.5, definition.color, winner ? 1 : 0.72);
+    const core = this.add.circle(0, 0, 22, 0x09142f, 0.5);
     const shine = this.add.ellipse(-9, -12, 13, 7, 0xffffff, 0.18).setAngle(-25);
     const mark = symbol === "SCATTER"
       ? this.add.text(0, 1, definition.icon, { color: definition.colorHex, fontFamily: "Georgia, serif", fontSize: "31px", fontStyle: "bold" }).setOrigin(0.5)

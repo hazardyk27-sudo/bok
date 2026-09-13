@@ -110,6 +110,7 @@ export class GameController {
     this.message("THE GATES ARE OPENING");
     this.setState("INITIAL_DROP");
     this.scene.renderBoard(result.initialBoard);
+    if (result.baseSpinMultiplier > 1) this.message(`LUCKY X${result.baseSpinMultiplier} BOOST ACTIVE`);
     await this.scene.animateDrop(this.duration(ANIMATION.initialDrop));
     await this.playTumbles(result, false);
     if (result.bonusTriggered && !result.maxWinReached) {
@@ -144,6 +145,7 @@ export class GameController {
       this.freeSpinsLeft = result.freeSpins.length - freeSpin.index + 1;
       this.setState("FREE_SPIN_PLAY"); this.updateHud();
       this.scene.renderBoard(freeSpin.initialBoard);
+      if (freeSpin.multiplier > 1) this.message(`FREE SPIN X${freeSpin.multiplier} BOOST ACTIVE`);
       await this.scene.animateDrop(this.duration(ANIMATION.initialDrop));
       await this.playTumbles({ ...result, tumbles: freeSpin.tumbles }, true);
       if (freeSpin.retriggered) {
@@ -224,12 +226,16 @@ export class GameController {
       this.setState("EVALUATING");
       this.ui.tumble.textContent = index === 0 ? "—" : `TUMBLE ${index + 1}`;
       this.scene.renderBoard(tumble.boardBefore, tumble.winningCells);
-      this.message(isBonus && tumble.crystals.length ? "CRYSTALS ARE GATHERING" : `${tumble.winningSymbols.map((symbol) => getSymbolDefinition(symbol).name).join(" + ")} RESONATE`);
+      const winningMessage = `${tumble.winningSymbols.map((symbol) => getSymbolDefinition(symbol).name).join(" + ")} RESONATE`;
+      this.message(isBonus && tumble.crystals.length ? "CRYSTALS ARE GATHERING" : tumble.spinMultiplier > 1 ? `${isBonus ? "FREE " : ""}X${tumble.spinMultiplier} BOOST // ${winningMessage}` : winningMessage);
       this.setState("WIN_HIGHLIGHT"); this.audio.win();
       await this.scene.highlightCells(tumble.winningCells, this.duration(ANIMATION.winHighlight));
       this.setState(tumble.crystals.length ? "CRYSTAL_REVEAL" : "WIN_EXPLOSION");
       if (tumble.crystals.length) {
         this.message(`${tumble.crystals.join("x + ")}x // TOTAL ${tumble.crystalTotalMultiplier}x`);
+        await sleep(this.duration(ANIMATION.freeSpinPause));
+      } else if (tumble.spinMultiplier > 1) {
+        this.message(`${isBonus ? "FREE " : ""}X${tumble.spinMultiplier} BOOST ACTIVE`);
         await sleep(this.duration(ANIMATION.freeSpinPause));
       }
       await this.scene.burstCells(tumble.winningCells, this.duration(ANIMATION.burst));

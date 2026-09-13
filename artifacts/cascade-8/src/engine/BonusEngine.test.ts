@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { applyCrystalMultiplier, baseFreeSpins, retriggerFreeSpins } from "./BonusEngine";
+import { applyCrystalMultiplier, baseFreeSpins, drawSpinMultiplier, retriggerFreeSpins } from "./BonusEngine";
 
 describe("bonus rules", () => {
   it("awards the base free spin table", () => {
@@ -20,5 +20,17 @@ describe("bonus rules", () => {
   });
   it("leaves a tumble unchanged when no crystals appear", () => {
     expect(applyCrystalMultiplier(4.5, [])).toBe(4.5);
+  });
+  it("uses a 5% base-spin and 20% free-spin trigger threshold", () => {
+    expect(drawSpinMultiplier({ nextFloat: () => 0.049 }, "base")).toBeGreaterThan(1);
+    expect(drawSpinMultiplier({ nextFloat: () => 0.05 }, "base")).toBe(1);
+    expect(drawSpinMultiplier({ nextFloat: () => 0.199 }, "free")).toBeGreaterThan(1);
+    expect(drawSpinMultiplier({ nextFloat: () => 0.2 }, "free")).toBe(1);
+  });
+  it("keeps the multiplier tiers inside the designed range", () => {
+    const values = [2, 3, 5, 10, 25];
+    let index = 0;
+    const multiplier = drawSpinMultiplier({ nextFloat: () => (index++ === 0 ? 0 : 0.999) }, "free");
+    expect(values).toContain(multiplier);
   });
 });

@@ -186,7 +186,7 @@ button:focus-visible, input:focus-visible { outline: 2px solid var(--cyan); outl
   .mode-ribbon > div { padding: 0 8px; }
   .mode-ribbon > div:nth-child(3) { display: none; }
   .mode-ribbon strong { font-size: 10px; }
-  #phaser-board { width: 100%; height: auto; aspect-ratio: 720 / 620; min-height: 0; margin-top: 0; margin-bottom: -8px; }
+  #phaser-board { width: 120%; height: auto; aspect-ratio: 720 / 620; min-height: 0; margin: 0 -10% -8px; }
   .side-panel { display: none; }
   .control-deck { gap: 10px; justify-content: space-between; padding-left: 0; padding-right: 0; flex-wrap: wrap; }
   .bet-stepper { gap: 5px; }
@@ -203,6 +203,9 @@ button:focus-visible, input:focus-visible { outline: 2px solid var(--cyan); outl
   .utility-button { min-width: 41px; padding: 5px 4px; }
   .utility-icon { font-size: 15px; }
   .utility-button span:last-child { font-size: 7px; letter-spacing: .04em; }
+  .status-line { min-height: 42px; gap: 7px; font-size: 9px; }
+  .status-line #status { max-width: 238px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  #tumble { min-width: 58px; font-size: 13px; font-weight: 700; letter-spacing: .08em; }
   .demo-note { font-size: 7px; gap: 5px; text-align: center; }
   .info-grid { grid-template-columns: repeat(2, 1fr); }
   .modal-card { padding: 23px 17px; }
