@@ -56,6 +56,14 @@ export const PAYTABLE: Record<NormalSymbolId, readonly { min: number; max: numbe
 export const BONUS_CONFIG = {
   base: { 4: 10, 5: 12, 6: 15 },
   retrigger: { 3: 5, 4: 8, 5: 12, 6: 15 },
+  spinMultiplierChance: { base: 5, free: 20 },
+  spinMultiplierWeights: [
+    { value: 2, weight: 65 },
+    { value: 3, weight: 23 },
+    { value: 5, weight: 9 },
+    { value: 10, weight: 2.5 },
+    { value: 25, weight: 0.5 },
+  ],
   crystalCountWeights: [
     { value: 0, weight: 95 },
     { value: 1, weight: 4 },

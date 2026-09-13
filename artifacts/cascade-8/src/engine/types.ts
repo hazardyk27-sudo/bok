@@ -9,6 +9,7 @@ export type TumbleResult = {
   winningSymbols: NormalSymbolId[];
   winningCells: Cell[];
   rawPayoutMultiplier: number;
+  spinMultiplier: number;
   crystals: number[];
   crystalTotalMultiplier: number;
   finalPayoutMultiplier: number;
@@ -23,6 +24,7 @@ export type FreeSpinResult = {
   initialBoard: Board;
   scatterCount: number;
   retriggered: number;
+  multiplier: number;
   tumbles: TumbleResult[];
   win: number;
 };
@@ -39,6 +41,7 @@ export type SpinResult = {
   bonusWinCents: number;
   totalWinCents: number;
   totalMultiplier: number;
+  baseSpinMultiplier: number;
   maxWinReached: boolean;
   totalMultiplierEvents: number[];
 };

@@ -1,6 +1,6 @@
 import { MAX_WIN_MULTIPLIER } from "../config/GameConfig";
 import { generateInitialBoard, countScatter } from "./BoardGenerator";
-import { applyCrystalMultiplier, baseFreeSpins, drawCrystalMultipliers, retriggerFreeSpins } from "./BonusEngine";
+import { applyCrystalMultiplier, baseFreeSpins, drawCrystalMultipliers, drawSpinMultiplier, retriggerFreeSpins } from "./BonusEngine";
 import { removeAndRefill, evaluateBoard } from "./WinEvaluator";
 import type { Board, RandomSource, SpinResult, TumbleResult, FreeSpinResult } from "./types";
 
@@ -10,6 +10,7 @@ type PlayContext = {
   betCents: number;
   source: RandomSource;
   mode: "base" | "free";
+  spinMultiplier: number;
   maxRemainingMultiplier: () => number;
   consumeMultiplier: (value: number) => number;
 };
@@ -23,7 +24,7 @@ function playTumbles(initialBoard: Board, context: PlayContext): TumbleResult[] 
     const crystals = context.mode === "free" ? drawCrystalMultipliers(context.source) : [];
     const crystalTotalMultiplier = crystals.length ? crystals.reduce((sum, value) => sum + value, 0) : 1;
     const available = context.maxRemainingMultiplier();
-    const finalPayoutMultiplier = Math.min(applyCrystalMultiplier(evaluation.rawPayoutMultiplier, crystals), available);
+    const finalPayoutMultiplier = Math.min(applyCrystalMultiplier(evaluation.rawPayoutMultiplier, crystals) * context.spinMultiplier, available);
     context.consumeMultiplier(finalPayoutMultiplier);
     const gravity = removeAndRefill(board, evaluation.winningCells, context.source);
     const tumble: TumbleResult = {
@@ -31,6 +32,7 @@ function playTumbles(initialBoard: Board, context: PlayContext): TumbleResult[] 
       winningSymbols: evaluation.winningSymbols,
       winningCells: evaluation.winningCells,
       rawPayoutMultiplier: evaluation.rawPayoutMultiplier,
+      spinMultiplier: context.spinMultiplier,
       crystals,
       crystalTotalMultiplier,
       finalPayoutMultiplier,
@@ -54,10 +56,12 @@ export function playSpin(betCents: number, source: RandomSource): SpinResult {
   };
   const initialBoard = generateInitialBoard(source);
   const scatterCount = countScatter(initialBoard);
+  const baseSpinMultiplier = drawSpinMultiplier(source, "base");
   const baseTumbles = playTumbles(initialBoard, {
     betCents,
     source,
     mode: "base",
+    spinMultiplier: baseSpinMultiplier,
     maxRemainingMultiplier: () => MAX_WIN_MULTIPLIER - usedMultiplier,
     consumeMultiplier: consume,
   });
@@ -71,10 +75,12 @@ export function playSpin(betCents: number, source: RandomSource): SpinResult {
   while (awarded > 0 && spinIndex < awarded && !maxWinReached) {
     const freeInitialBoard = generateInitialBoard(source);
     const freeScatterCount = countScatter(freeInitialBoard);
+    const multiplier = drawSpinMultiplier(source, "free");
     const freeTumbles = playTumbles(freeInitialBoard, {
       betCents,
       source,
       mode: "free",
+      spinMultiplier: multiplier,
       maxRemainingMultiplier: () => MAX_WIN_MULTIPLIER - usedMultiplier,
       consumeMultiplier: consume,
     });
@@ -86,6 +92,7 @@ export function playSpin(betCents: number, source: RandomSource): SpinResult {
       initialBoard: freeInitialBoard,
       scatterCount: freeScatterCount,
       retriggered,
+      multiplier,
       tumbles: freeTumbles,
       win: Math.round(win * betCents),
     });
@@ -109,6 +116,7 @@ export function playSpin(betCents: number, source: RandomSource): SpinResult {
     bonusWinCents,
     totalWinCents,
     totalMultiplier: usedMultiplier,
+    baseSpinMultiplier,
     maxWinReached,
     totalMultiplierEvents,
   };

@@ -22,6 +22,11 @@ export function drawCrystalMultipliers(source: RandomSource): number[] {
   return Array.from({ length: count }, () => weightedChoice(source, BONUS_CONFIG.crystalMultiplierWeights));
 }
 
+export function drawSpinMultiplier(source: RandomSource, mode: "base" | "free") {
+  if (source.nextFloat() * 100 >= BONUS_CONFIG.spinMultiplierChance[mode]) return 1;
+  return weightedChoice(source, BONUS_CONFIG.spinMultiplierWeights);
+}
+
 export function applyCrystalMultiplier(rawPayoutMultiplier: number, crystals: number[]) {
   return rawPayoutMultiplier * (crystals.length ? crystals.reduce((sum, value) => sum + value, 0) : 1);
 }
