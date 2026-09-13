@@ -1,11 +1,11 @@
-import { ANIMATION, BETS_CENTS, STARTING_BALANCE_CENTS, getSymbolDefinition } from "../config/GameConfig";
+import { ANIMATION, BETS_CENTS, MAX_WIN_MULTIPLIER, STARTING_BALANCE_CENTS, getSymbolDefinition } from "../config/GameConfig";
 import { CryptoRNG } from "../engine/RNG";
-import { playSpin } from "../engine/SlotEngine";
+import { playBaseSpin, playFreeSpin } from "../engine/SlotEngine";
 import type { SpinResult } from "../engine/types";
 import { AudioManager } from "./AudioManager";
 import { GameScene } from "./GameScene";
 
-type ControllerState = "BOOT" | "IDLE" | "SPIN_INIT" | "INITIAL_DROP" | "EVALUATING" | "WIN_HIGHLIGHT" | "WIN_EXPLOSION" | "GRAVITY" | "REFILL" | "CASCADE_DROP" | "BONUS_TRIGGER" | "BONUS_INTRO" | "FREE_SPIN_PLAY" | "CORE_REVEAL" | "BIG_WIN" | "MAX_WIN" | "BONUS_SUMMARY" | "SPIN_COMPLETE";
+type ControllerState = "BOOT" | "IDLE" | "SPIN_INIT" | "INITIAL_DROP" | "EVALUATING" | "WIN_HIGHLIGHT" | "WIN_EXPLOSION" | "GRAVITY" | "REFILL" | "CASCADE_DROP" | "BONUS_AWARD_PRESENTATION" | "BONUS_WAITING_FOR_START" | "BONUS_INTRO" | "FREE_SPIN_PLAY" | "CORE_REVEAL" | "BIG_WIN" | "MAX_WIN" | "BONUS_SUMMARY" | "SPIN_COMPLETE";
 
 const sleep = (milliseconds: number) => new Promise((resolve) => setTimeout(resolve, milliseconds));
 
@@ -20,6 +20,7 @@ export class GameController {
   freeSpinsLeft = 0;
   private busy = false;
   private pendingBonusResult: SpinResult | null = null;
+  private pendingBonusSource: CryptoRNG | null = null;
   private autoRunning = false;
   private autoRemaining = 0;
   readonly audio = new AudioManager();
@@ -76,6 +77,9 @@ export class GameController {
   private updateHud() {
     this.ui.balance.textContent = formatCredits(this.balanceCents);
     this.ui.bet.textContent = formatCredits(this.betCents);
+    document.querySelectorAll<HTMLElement>("[data-bet-display]").forEach((element) => {
+      element.textContent = formatCredits(this.betCents);
+    });
     this.ui.win.textContent = formatCredits(this.currentWinCents);
     this.ui.bonusWin.textContent = formatCredits(this.bonusWinCents);
     this.ui.freeSpins.textContent = String(this.freeSpinsLeft);
@@ -107,7 +111,8 @@ export class GameController {
     this.busy = true; this.currentWinCents = 0; this.bonusWinCents = 0; this.freeSpinsLeft = 0;
     this.setBonusPrompt(false);
     this.setState("SPIN_INIT"); this.balanceCents -= this.betCents; this.persistBalance(); this.audio.spin(); this.updateHud();
-    const result = playSpin(this.betCents, new CryptoRNG());
+    const source = new CryptoRNG();
+    const result = playBaseSpin(this.betCents, source);
     this.message("THE GATES ARE OPENING");
     this.setState("INITIAL_DROP");
     this.scene.renderBoard(result.initialBoard);
@@ -117,15 +122,19 @@ export class GameController {
     }
     await this.scene.animateDrop(this.duration(ANIMATION.initialDrop));
     await this.playTumbles(result, false);
+    this.currentWinCents = result.baseWinCents;
+    this.updateHud();
     if (result.bonusTriggered && !result.maxWinReached) {
       this.pendingBonusResult = result;
+      this.pendingBonusSource = source;
       this.freeSpinsLeft = result.freeSpinsAwarded;
-      this.setState("BONUS_TRIGGER");
+      this.setState("BONUS_AWARD_PRESENTATION");
       this.message(`${result.freeSpinsAwarded} FREE SPINS READY // PRESS SPIN`);
       this.audio.bonus();
       this.audio.scatterCelebration(result.scatterCount);
       this.scene.sparkle();
       this.setBonusPrompt(true);
+      this.setState("BONUS_WAITING_FOR_START");
       this.busy = false;
       this.updateHud();
       return;
@@ -135,8 +144,10 @@ export class GameController {
 
   private async startFreeSpins() {
     const result = this.pendingBonusResult;
-    if (!result) return;
+    const source = this.pendingBonusSource;
+    if (!result || !source) return;
     this.pendingBonusResult = null;
+    this.pendingBonusSource = null;
     this.busy = true;
     this.setBonusPrompt(false);
     this.scene.setFreeSpinMode(true);
@@ -145,10 +156,23 @@ export class GameController {
     this.setState("BONUS_INTRO");
     this.message("BONUS REALM // FREE SPINS");
     await sleep(this.duration(700));
-    this.freeSpinsLeft = result.freeSpins.length;
+    let remaining = result.freeSpinsAwarded;
+    let usedMultiplier = result.totalMultiplier;
+    let index = 0;
     this.updateHud();
-    for (const freeSpin of result.freeSpins) {
-      this.freeSpinsLeft = result.freeSpins.length - freeSpin.index + 1;
+    while (remaining > 0 && usedMultiplier < MAX_WIN_MULTIPLIER) {
+      index += 1;
+      const freeSpin = playFreeSpin(index, this.betCents, source, MAX_WIN_MULTIPLIER - usedMultiplier);
+      result.freeSpins.push(freeSpin);
+      result.totalMultiplierEvents.push(...freeSpin.tumbles.map((tumble) => tumble.finalPayoutMultiplier));
+      usedMultiplier += freeSpin.finalWinMultiplier;
+      remaining = remaining - 1 + freeSpin.retriggered;
+      result.bonusRawWinMultiplier += freeSpin.rawWinMultiplier;
+      result.bonusWinCents = Math.round((usedMultiplier - result.baseWinCents / this.betCents) * this.betCents);
+      result.totalMultiplier = usedMultiplier;
+      result.totalWinCents = Math.round(usedMultiplier * this.betCents);
+      result.maxWinReached = usedMultiplier >= MAX_WIN_MULTIPLIER;
+      this.freeSpinsLeft = remaining;
       this.setState("FREE_SPIN_PLAY"); this.updateHud();
       this.scene.renderBoard(freeSpin.initialBoard);
       if (freeSpin.scatterCount > 0) {
@@ -158,9 +182,11 @@ export class GameController {
       }
       await this.scene.animateDrop(this.duration(ANIMATION.initialDrop));
       await this.playTumbles({ ...result, tumbles: freeSpin.tumbles }, true);
+      this.currentWinCents = result.totalWinCents;
+      this.bonusWinCents = result.bonusWinCents;
+      this.updateHud();
       if (freeSpin.retriggered) {
         this.message(`+${freeSpin.retriggered} FREE SPINS`);
-        this.freeSpinsLeft += freeSpin.retriggered;
         this.updateHud();
         await sleep(this.duration(450));
       }
@@ -177,7 +203,7 @@ export class GameController {
 
   private async finishSpin(result: SpinResult) {
     this.currentWinCents = result.totalWinCents;
-    if (result.maxWinReached) { this.setState("MAX_WIN"); this.message("MAX WIN // 5000x"); this.scene.sparkle(); await sleep(this.duration(900)); }
+    if (result.maxWinReached) { this.setState("MAX_WIN"); this.message("MAX WIN // 5000x"); this.scene.sparkle(); await this.showBigWin(MAX_WIN_MULTIPLIER, result.totalWinCents, "MAX WIN"); }
     else if (result.totalMultiplier >= 10) {
       this.setState("BIG_WIN"); this.message(`${winTier(result.totalMultiplier)} // ${result.totalMultiplier.toFixed(2)}x`);
       this.scene.sparkle(); this.audio.bigWin(); this.audio.duckMusic(true);
@@ -217,9 +243,9 @@ export class GameController {
       this.autoRemaining -= 1;
       this.updateAutoStatus();
       if (this.pendingBonusResult) {
-        if (!this.autoRunning) break;
-        await sleep(this.duration(700));
-        await this.spin(true);
+        this.autoRunning = false;
+        this.message("AUTO PAUSED // PRESS START FREE SPINS");
+        break;
       }
       if (this.autoRunning) await sleep(this.duration(250));
     }
@@ -256,14 +282,12 @@ export class GameController {
         await sleep(this.duration(ANIMATION.freeSpinPause));
       }
       await this.scene.burstCells(tumble.removedCells, this.duration(ANIMATION.burst));
-      this.currentWinCents += Math.round(tumble.finalPayoutMultiplier * this.betCents);
-      if (isBonus) this.bonusWinCents += Math.round(tumble.finalPayoutMultiplier * this.betCents);
-      this.showWin(tumble.finalPayoutMultiplier, Math.round(tumble.finalPayoutMultiplier * this.betCents), isBonus);
+      this.showWin(tumble.rawPayoutMultiplier, Math.round(tumble.rawPayoutMultiplier * this.betCents), isBonus);
       this.updateHud();
       this.setState("REFILL");
       this.setState("CASCADE_DROP");
       await this.scene.animateCascade(tumble.boardAfterRefill, tumble.removedCells, this.duration(ANIMATION.refill));
-      this.message(index > 0 ? `TUMBLE ${index + 1} // ${formatCredits(this.currentWinCents)}` : `WIN // ${formatCredits(this.currentWinCents)}`);
+      this.message(index > 0 ? `TUMBLE ${index + 1} // RAW ${tumble.rawWinPoolAfter.toFixed(2)}x` : `WIN // RAW ${tumble.rawWinPoolAfter.toFixed(2)}x`);
     }
   }
 
@@ -283,21 +307,39 @@ export class GameController {
       if (this.ui.winAnnouncer.classList.contains(`is-${size}`)) this.ui.winAnnouncer.classList.remove(`is-${size}`);
     }, this.duration(size === "mega" || size === "big" ? 1500 : 950));
   }
-  showBigWin(multiplier: number, amountCents: number) {
+  showBigWin(multiplier: number, amountCents: number, forcedTier?: string) {
     return new Promise<void>((resolve) => {
       const overlay = this.ui.bigWinOverlay;
-      const tier = winTier(multiplier);
+      const tier = forcedTier ?? winTier(multiplier);
       overlay.className = "big-win-overlay is-visible";
       overlay.innerHTML = `<div class="big-win-card"><span>${tier}</span><strong>0.00</strong><small>${multiplier.toFixed(2)}x TOTAL WIN</small><button type="button">TAP TO SPEED UP</button></div>`;
-      let fast = false;
+      let counting = true;
+      let closed = false;
       let value = 0;
       const target = amountCents / 100;
-      const finish = () => { value = target; (overlay.querySelector("strong") as HTMLElement).textContent = formatCredits(Math.round(value * 100)); overlay.classList.remove("is-visible"); overlay.innerHTML = ""; resolve(); };
-      overlay.querySelector("button")?.addEventListener("click", () => { fast = true; });
+      const button = overlay.querySelector("button") as HTMLButtonElement;
+      const finishCounting = () => {
+        counting = false;
+        value = target;
+        (overlay.querySelector("strong") as HTMLElement).textContent = formatCredits(Math.round(value * 100));
+        button.textContent = "TAP TO CONTINUE";
+      };
+      const close = () => {
+        if (closed) return;
+        closed = true;
+        overlay.removeEventListener("pointerdown", onPointer);
+        overlay.classList.remove("is-visible");
+        overlay.innerHTML = "";
+        resolve();
+      };
+      const onPointer = () => { if (counting) finishCounting(); else close(); };
+      overlay.addEventListener("pointerdown", onPointer);
+      button.addEventListener("click", onPointer);
       const tick = () => {
-        value = Math.min(target, value + Math.max(target / (fast ? 10 : 36), 0.01));
+        if (closed || !counting) return;
+        value = Math.min(target, value + Math.max(target / 36, 0.01));
         (overlay.querySelector("strong") as HTMLElement).textContent = value.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-        if (value >= target) finish(); else window.setTimeout(tick, fast ? 18 : 42);
+        if (value >= target) finishCounting(); else window.setTimeout(tick, 42);
       };
       tick();
     });
@@ -309,7 +351,6 @@ export class GameController {
       overlay.innerHTML = `<div class="bonus-summary-card"><span>GOLDEN REALM</span><h2>BONUS COMPLETE</h2><div class="summary-total">${formatCredits(result.bonusWinCents)}</div><small>${result.freeSpins.length} FREE SPINS // ${result.freeSpins.reduce((sum, spin) => sum + spin.tumbles.length, 0)} TUMBLES</small><button type="button">CONTINUE</button></div>`;
       const close = () => { overlay.classList.remove("is-visible"); overlay.innerHTML = ""; resolve(); };
       overlay.querySelector("button")?.addEventListener("click", close, { once: true });
-      window.setTimeout(close, this.duration(1800));
     });
   }
   resetDemo() { this.balanceCents = STARTING_BALANCE_CENTS; this.persistBalance(); this.updateHud(); this.message("DEMO BALANCE RESET TO 10,000.00"); }

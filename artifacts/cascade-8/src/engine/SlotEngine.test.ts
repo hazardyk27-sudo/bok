@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { SeededRNG } from "./RNG";
-import { playSpin } from "./SlotEngine";
+import { calculateSequenceSettlement, playSpin } from "./SlotEngine";
 
 describe("spin accounting", () => {
   it("keeps outcomes bet-invariant", () => {
@@ -20,5 +20,21 @@ describe("spin accounting", () => {
     for (let seed = 0; seed < 100; seed += 1) {
       expect(playSpin(100, new SeededRNG(seed)).totalMultiplier).toBeLessThanOrEqual(5000);
     }
+  });
+  it("settles the complete raw sequence once with late Cores", () => {
+    expect(calculateSequenceSettlement(8, [10, 25])).toEqual({
+      combinedCoreMultiplier: 35,
+      finalWinMultiplier: 280,
+    });
+  });
+  it("applies a late Core to earlier raw wins", () => {
+    expect(calculateSequenceSettlement(5, [25])).toEqual({
+      combinedCoreMultiplier: 25,
+      finalWinMultiplier: 125,
+    });
+  });
+  it("adds multiple Cores and does not double-credit the raw pool", () => {
+    expect(calculateSequenceSettlement(7, [2, 10, 25]).finalWinMultiplier).toBe(259);
+    expect(calculateSequenceSettlement(8, [10, 25]).finalWinMultiplier).toBe(280);
   });
 });

@@ -9,8 +9,8 @@ export class GameScene extends Phaser.Scene {
   private frame?: Phaser.GameObjects.Graphics;
   private cellFrames: Phaser.GameObjects.Rectangle[] = [];
   private freeSpinMode = false;
-  private boardOrigin = { x: 88, y: 76 };
-  private cellSize = { width: 90, height: 88 };
+  private boardOrigin = { x: 22, y: 30 };
+  private cellSize = { width: 96, height: 92 };
 
   constructor() {
     super("Cascade8GameScene");
@@ -33,20 +33,20 @@ export class GameScene extends Phaser.Scene {
     const frame = this.add.graphics();
     frame.setDepth(-10);
     frame.fillStyle(this.freeSpinMode ? 0x33230b : 0x0b1530, 0.76);
-    frame.fillRoundedRect(70, 58, 580, 472, 28);
+    frame.fillRoundedRect(10, 18, 600, 484, 24);
     frame.lineStyle(2, this.freeSpinMode ? 0xffd36a : 0x5e7cff, this.freeSpinMode ? 0.68 : 0.3);
-    frame.strokeRoundedRect(70, 58, 580, 472, 28);
+    frame.strokeRoundedRect(10, 18, 600, 484, 24);
     frame.lineStyle(1, this.freeSpinMode ? 0xffe8a6 : 0x9baeff, this.freeSpinMode ? 0.28 : 0.13);
-    frame.strokeRoundedRect(80, 68, 560, 452, 22);
+    frame.strokeRoundedRect(18, 26, 584, 468, 18);
     for (let row = 0; row < BOARD_ROWS; row += 1) {
       for (let col = 0; col < BOARD_COLUMNS; col += 1) {
         const x = this.boardOrigin.x + col * this.cellSize.width;
         const y = this.boardOrigin.y + row * this.cellSize.height;
         const cell = this.add.rectangle(
-          x + 44,
-          y + 41,
-          80,
-          78,
+          x + 48,
+          y + 46,
+          88,
+          84,
           this.freeSpinMode ? 0x5b3b0d : 0x16264d,
           this.freeSpinMode ? 0.52 : 0.45,
         ).setDepth(-9);
@@ -78,8 +78,8 @@ export class GameScene extends Phaser.Scene {
 
   private createSymbolNode(symbol: BoardCell, row: number, col: number, winner = false) {
     const container = this.add.container(
-      this.boardOrigin.x + col * this.cellSize.width + 44,
-      this.boardOrigin.y + row * this.cellSize.height + 41,
+      this.boardOrigin.x + col * this.cellSize.width + 48,
+      this.boardOrigin.y + row * this.cellSize.height + 46,
     );
     if (isMultiplierCore(symbol)) {
       const glow = this.add.circle(0, 0, 42, 0xffb52e, 0.28).setBlendMode(Phaser.BlendModes.ADD);
@@ -107,20 +107,13 @@ export class GameScene extends Phaser.Scene {
     const glow = this.add.circle(0, 2, 39, definition.color, winner ? 0.78 : 0.42);
     glow.setBlendMode(Phaser.BlendModes.ADD);
     const orb = this.add.circle(0, 0, 31, definition.color, winner ? 0.82 : 0.64);
-    orb.setStrokeStyle(winner || symbol === "SCATTER" ? 3.5 : 3, frameColor, winner ? 1 : 0.96);
+    orb.setStrokeStyle(winner ? 3.5 : 3, frameColor, winner ? 1 : 0.96);
     const innerFrame = this.add.circle(0, 0, 27, undefined, 0)
       .setStrokeStyle(1.5, definition.color, winner ? 0.95 : 0.82);
     const core = this.add.circle(0, 0, 26, 0x09142f, 0.56);
     const shine = this.add.ellipse(-9, -12, 13, 7, 0xffffff, 0.18).setAngle(-25);
-    const mark = symbol === "SCATTER"
-      ? this.createTrophy()
-      : this.add.image(0, 0, `club-logo-${symbol}`).setDisplaySize(52, 52);
+    const mark = this.add.image(0, 0, `club-logo-${symbol}`).setDisplaySize(60, 60);
     container.add([glow, orb, innerFrame, core, mark, shine]);
-    if (symbol === "SCATTER") {
-      const ring = this.add.circle(0, 0, 40, undefined, 0).setStrokeStyle(2.5, definition.color, 0.82);
-      container.add(ring);
-      this.tweens.add({ targets: ring, scale: 1.14, alpha: 0.3, duration: 780, yoyo: true, repeat: -1 });
-    }
     const node = { container, symbol, row, col };
     this.nodes.push(node);
     return node;
@@ -129,12 +122,12 @@ export class GameScene extends Phaser.Scene {
   private createTrophy() {
     const trophy = this.add.graphics();
     trophy.fillStyle(0xffd052, 1);
-    trophy.fillRoundedRect(-15, -19, 30, 26, 5);
-    trophy.fillRect(-7, 7, 14, 12);
-    trophy.fillRoundedRect(-18, 18, 36, 6, 3);
+    trophy.fillRoundedRect(-17, -23, 34, 30, 5);
+    trophy.fillRect(-8, 7, 16, 14);
+    trophy.fillRoundedRect(-21, 21, 42, 7, 3);
     trophy.fillStyle(0xffefaa, 0.95);
-    trophy.fillRoundedRect(-22, -12, 7, 16, 3);
-    trophy.fillRoundedRect(15, -12, 7, 16, 3);
+    trophy.fillRoundedRect(-25, -14, 8, 19, 3);
+    trophy.fillRoundedRect(17, -14, 8, 19, 3);
     trophy.fillStyle(0xffffdf, 0.72);
     trophy.fillEllipse(-7, -11, 7, 12);
     return trophy;
@@ -261,7 +254,7 @@ export class GameScene extends Phaser.Scene {
       const generatedCount = BOARD_ROWS - survivors.length;
       survivors.forEach((node, index) => {
         const targetRow = generatedCount + index;
-        const targetY = this.boardOrigin.y + targetRow * this.cellSize.height + 41;
+        const targetY = this.boardOrigin.y + targetRow * this.cellSize.height + 46;
         node.row = targetRow;
         animations.push(new Promise<void>((resolve) => {
           this.tweens.add({
@@ -275,7 +268,7 @@ export class GameScene extends Phaser.Scene {
       });
       for (let row = 0; row < generatedCount; row += 1) {
         const node = this.createSymbolNode(board[row][col], row, col);
-        const targetY = this.boardOrigin.y + row * this.cellSize.height + 41;
+        const targetY = this.boardOrigin.y + row * this.cellSize.height + 46;
         node.container.y = targetY - 260 - col * 14;
         node.container.alpha = 0.2;
         animations.push(new Promise<void>((resolve) => {
@@ -296,12 +289,12 @@ export class GameScene extends Phaser.Scene {
 
   sparkle() {
     const sparks = Array.from({ length: 18 }, (_, index) => {
-      const spark = this.add.circle(360, 270, index % 3 === 0 ? 3 : 2, [0x73c9ff, 0xc69dff, 0xffd16e][index % 3], 0.9);
+      const spark = this.add.circle(310, 260, index % 3 === 0 ? 3 : 2, [0x73c9ff, 0xc69dff, 0xffd16e][index % 3], 0.9);
       const angle = (index / 18) * Math.PI * 2;
       this.tweens.add({
         targets: spark,
-        x: 360 + Math.cos(angle) * (80 + (index % 4) * 22),
-        y: 270 + Math.sin(angle) * (80 + (index % 4) * 22),
+        x: 310 + Math.cos(angle) * (80 + (index % 4) * 22),
+        y: 260 + Math.sin(angle) * (80 + (index % 4) * 22),
         alpha: 0,
         scale: 0.2,
         duration: 420 + (index % 4) * 35,
@@ -318,11 +311,11 @@ export function createGameScene(parent: HTMLElement) {
   return new Phaser.Game({
     type: Phaser.AUTO,
     parent,
-    width: 720,
-    height: 620,
+    width: 620,
+    height: 520,
     transparent: true,
     scene: [GameScene],
-    scale: { mode: Phaser.Scale.FIT, autoCenter: Phaser.Scale.CENTER_BOTH, width: 720, height: 620 },
+    scale: { mode: Phaser.Scale.FIT, autoCenter: Phaser.Scale.CENTER_BOTH, width: 620, height: 520 },
     render: { antialias: true, pixelArt: false, roundPixels: true },
     banner: false,
   });

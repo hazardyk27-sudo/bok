@@ -31,6 +31,12 @@ async function main() {
      "Avg Core Cells / Free Refill": report.averageCoreCellsPerFreeRefill,
      "Avg Combined Core": `${report.averageCombinedCoreMultiplier}x`,
      "Core RTP Contribution": `${report.coreRtpContribution}%`,
+     "Avg Raw Sequence": `${report.averageRawSequenceMultiplier}x`,
+     "Avg Final Sequence": `${report.averageFinalSequenceMultiplier}x`,
+     "Avg Core Uplift": `${report.averageCoreUpliftMultiplier}x`,
+     "Chain Rate": `${report.chainRate}%`,
+     "Run Lengths": JSON.stringify(report.runLengthDistribution),
+     "Symbol Hits": JSON.stringify(report.symbolHitCounts),
      "Core Distribution": JSON.stringify(report.coreValueDistribution),
   });
   console.log(`Histogram: ${JSON.stringify(report.histogram)}`);

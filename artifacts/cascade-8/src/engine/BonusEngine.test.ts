@@ -9,8 +9,8 @@ describe("bonus rules", () => {
   });
   it("awards retriggers", () => {
     expect(retriggerFreeSpins(3)).toBe(5);
-    expect(retriggerFreeSpins(4)).toBe(8);
-    expect(retriggerFreeSpins(6)).toBe(15);
+    expect(retriggerFreeSpins(4)).toBe(5);
+    expect(retriggerFreeSpins(6)).toBe(5);
   });
   it("spawns a physical Core at the designed 8% threshold", () => {
     expect(drawMultiplierCore({ nextFloat: () => 0 })).toEqual({ kind: "MULTIPLIER_CORE", value: 2 });

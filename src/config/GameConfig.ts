@@ -38,7 +38,7 @@ export const SYMBOLS: readonly SymbolDefinition[] = [
   { id: "S6", name: "PSG", icon: "PSG", color: 0x172c62, colorHex: "#617fc8", accentColor: 0xef3340, frameColor: 0x8d7cff, logoPath: "team-logos/psg.png", weight: 10 },
   { id: "S7", name: "Bayern", icon: "BAY", color: 0xe50059, colorHex: "#ff5b9a", accentColor: 0xf1f1f1, frameColor: 0xfff1f7, logoPath: "team-logos/bayern.png", weight: 9 },
   { id: "S8", name: "Galatasaray", icon: "GS", color: 0xf4bd00, colorHex: "#ffd31c", accentColor: 0xc8102e, frameColor: 0xffd42f, logoPath: "team-logos/galatasaray.png", weight: 8 },
-  { id: "SCATTER", name: "Astral Gate", icon: "◉", color: 0x00e5ff, colorHex: "#00e5ff", accentColor: 0xd8fbff, frameColor: 0xd8fbff, weight: 2.5 },
+  { id: "SCATTER", name: "Golden Trophy", icon: "★", color: 0xf2b84b, colorHex: "#f2b84b", accentColor: 0xffefad, frameColor: 0xffd05c, weight: 2.5 },
 ];
 
 export const NORMAL_SYMBOLS = SYMBOLS.filter((symbol) => symbol.id !== "SCATTER") as readonly SymbolDefinition[];
@@ -48,8 +48,33 @@ export type ReelConfig = {
   name: "BASE" | "BONUS";
   runLengthWeights: readonly { value: RunLength; weight: number }[];
   symbolWeights: readonly { value: NormalSymbolId; weight: number }[];
+  symbolWeightsByColumn?: readonly (readonly { value: NormalSymbolId; weight: number }[])[];
   scatterChance: number;
 };
+
+function columnProfiles(dominantWeight: number) {
+  const ids: NormalSymbolId[] = ["S1", "S2", "S3", "S4", "S5", "S6"];
+  const remainder = (100 - dominantWeight) / 7;
+  return ids.map((dominant) =>
+    [...(["S1", "S2", "S3", "S4", "S5", "S6", "S7", "S8"] as NormalSymbolId[]).map((value) => ({
+      value,
+      weight: value === dominant ? dominantWeight : remainder,
+    }))],
+  );
+}
+
+const BASE_SYMBOL_WEIGHTS: readonly { value: NormalSymbolId; weight: number }[] = [
+  { value: "S1", weight: 12.5 },
+  { value: "S2", weight: 12.5 },
+  { value: "S3", weight: 12.5 },
+  { value: "S4", weight: 12.5 },
+  { value: "S5", weight: 12.5 },
+  { value: "S6", weight: 12.5 },
+  { value: "S7", weight: 12.5 },
+  { value: "S8", weight: 12.5 },
+];
+
+const BONUS_SYMBOL_WEIGHTS = BASE_SYMBOL_WEIGHTS;
 
 export const BASE_REEL_CONFIG: ReelConfig = {
   name: "BASE",
@@ -59,7 +84,8 @@ export const BASE_REEL_CONFIG: ReelConfig = {
     { value: 3, weight: 12 },
     { value: 4, weight: 2 },
   ],
-  symbolWeights: NORMAL_SYMBOLS.map(({ id, weight }) => ({ value: id as NormalSymbolId, weight })),
+  symbolWeights: BASE_SYMBOL_WEIGHTS,
+  symbolWeightsByColumn: columnProfiles(79.4),
   scatterChance: 2.5,
 };
 
@@ -71,7 +97,8 @@ export const BONUS_REEL_CONFIG: ReelConfig = {
     { value: 3, weight: 10 },
     { value: 4, weight: 2 },
   ],
-  symbolWeights: NORMAL_SYMBOLS.map(({ id, weight }) => ({ value: id as NormalSymbolId, weight })),
+  symbolWeights: BONUS_SYMBOL_WEIGHTS,
+  symbolWeightsByColumn: columnProfiles(77.7),
   scatterChance: 1.4,
 };
 

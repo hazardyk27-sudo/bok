@@ -15,10 +15,12 @@ export type TumbleResult = {
   winningSymbols: NormalSymbolId[];
   winningCells: Cell[];
   rawPayoutMultiplier: number;
+  rawWinPoolAfter: number;
   multiplierCores: MultiplierCore[];
   multiplierCoreCells: CoreCell[];
   coreTotalMultiplier: number;
   finalPayoutMultiplier: number;
+  settlement: "deferred" | "sequence";
   removedCells: Cell[];
   boardAfterGravity: Board;
   newSymbols: BoardCell[];
@@ -31,6 +33,11 @@ export type FreeSpinResult = {
   scatterCount: number;
   retriggered: number;
   tumbles: TumbleResult[];
+  rawWinMultiplier: number;
+  combinedCoreMultiplier: number;
+  finalWinMultiplier: number;
+  multiplierCores: CoreCell[];
+  settlementApplied: boolean;
   win: number;
 };
 
@@ -44,6 +51,8 @@ export type SpinResult = {
   freeSpins: FreeSpinResult[];
   baseWinCents: number;
   bonusWinCents: number;
+  baseRawWinMultiplier: number;
+  bonusRawWinMultiplier: number;
   totalWinCents: number;
   totalMultiplier: number;
   maxWinReached: boolean;

@@ -1,6 +1,8 @@
 import { mkdir, writeFile } from "node:fs/promises";
 import { playSpin } from "../engine/SlotEngine";
 import { SeededRNG } from "../engine/RNG";
+import { evaluateBoard } from "../engine/WinEvaluator";
+import { isNormalSymbol, type Board } from "../engine/BoardGenerator";
 
 export const HISTOGRAM_BUCKETS = [
   "0x", "0-1x", "1-2x", "2-5x", "5-10x", "10-25x", "25-50x",
@@ -30,6 +32,50 @@ const median = (values: number[]) => {
   const sorted = [...values].sort((a, b) => a - b);
   const middle = Math.floor(sorted.length / 2);
   return sorted.length % 2 ? sorted[middle] : (sorted[middle - 1] + sorted[middle]) / 2;
+};
+
+function recordRuns(board: Board, distribution: Record<string, number>, metrics?: RunMetrics) {
+  for (let col = 0; col < board[0].length; col += 1) {
+    const unique = new Set<string>();
+    let columnMaximum = 0;
+    let columnHasPair = false;
+    let runLength = 1;
+    for (let row = 1; row <= board.length; row += 1) {
+      const previous = board[row - 1][col];
+      const current = row < board.length ? board[row][col] : undefined;
+      if (isNormalSymbol(previous)) unique.add(previous);
+      if (current === previous && typeof current === "string" && current !== "SCATTER") {
+        runLength += 1;
+      } else {
+        if (isNormalSymbol(previous)) {
+          columnMaximum = Math.max(columnMaximum, runLength);
+          columnHasPair ||= runLength >= 2;
+          const key = String(Math.min(runLength, 2));
+          distribution[key] = (distribution[key] ?? 0) + 1;
+        }
+        runLength = 1;
+      }
+    }
+    if (metrics) {
+      metrics.visibleColumns += 1;
+      metrics.uniqueNormalTotal += unique.size;
+      metrics.maximumContiguousNormal = Math.max(metrics.maximumContiguousNormal, columnMaximum);
+      if (columnHasPair) metrics.visiblePairColumns += 1;
+      if (columnMaximum >= 3) metrics.columnsWithThree += 1;
+      if (columnMaximum >= 4) metrics.columnsWithFour += 1;
+      if (columnMaximum >= 5) metrics.columnsWithFive += 1;
+    }
+  }
+}
+
+type RunMetrics = {
+  maximumContiguousNormal: number;
+  visiblePairColumns: number;
+  visibleColumns: number;
+  columnsWithThree: number;
+  columnsWithFour: number;
+  columnsWithFive: number;
+  uniqueNormalTotal: number;
 };
 
 export type SimulationReport = {
@@ -66,6 +112,28 @@ export type SimulationReport = {
   averageCombinedCoreMultiplier: number;
   highestCoreTotalObserved: number;
   coreRtpContribution: number;
+  averageRawSequenceMultiplier: number;
+  averageFinalSequenceMultiplier: number;
+  averageCoreUpliftMultiplier: number;
+  chainRate: number;
+  runLengthDistribution: Record<string, number>;
+  symbolHitCounts: Record<string, number>;
+  initialEightPlusFrequency: number;
+  twoTumbleFrequency: number;
+  threeTumbleFrequency: number;
+  fourTumbleFrequency: number;
+  configuredSingleProbability: number;
+  configuredPairProbability: number;
+  observedSingleProbability: number;
+  observedPairProbability: number;
+  maximumContiguousNormal: number;
+  averageUniqueNormalSymbolsPerColumn: number;
+  visiblePairFrequency: number;
+  columnThreeSameFrequency: number;
+  columnFourSameFrequency: number;
+  columnFiveSameFrequency: number;
+  sequenceCorePercentage: number;
+  averageActiveCoresAtSettlement: number;
   coreValueDistribution: Record<string, number>;
   histogram: Record<(typeof HISTOGRAM_BUCKETS)[number], number>;
 };
@@ -90,12 +158,31 @@ export function simulate(spins: number, seed: string, betCents = 100, onProgress
   let freeRefillCells = 0;
   let coreContributionCents = 0;
   let coreTotal = 0;
+  let rawSequenceTotal = 0;
+  let finalSequenceTotal = 0;
+  let sequenceCount = 0;
+  let chainedSpinCount = 0;
+  let initialEightPlusCount = 0;
+  let twoTumbleCount = 0;
+  let threeTumbleCount = 0;
+  let fourTumbleCount = 0;
+  let activeCoreCountTotal = 0;
+  let coreSequenceCount = 0;
   let highestCoreTotalObserved = 0;
+  const runLengthDistribution: Record<string, number> = {};
+  const symbolHitCounts: Record<string, number> = {};
+  const runMetrics: RunMetrics = {
+    maximumContiguousNormal: 0, visiblePairColumns: 0, visibleColumns: 0,
+    columnsWithThree: 0, columnsWithFour: 0, columnsWithFive: 0, uniqueNormalTotal: 0,
+  };
   const coreValueDistribution: Record<string, number> = {};
   let maxObservedWinMultiplier = 0;
   let maxTumbles = 0;
   for (let index = 0; index < spins; index += 1) {
     const result = playSpin(betCents, source);
+    recordRuns(result.initialBoard, runLengthDistribution, runMetrics);
+    if (evaluateBoard(result.initialBoard).winningCells.length) initialEightPlusCount += 1;
+    result.freeSpins.forEach((freeSpin) => recordRuns(freeSpin.initialBoard, runLengthDistribution, runMetrics));
     const multiplier = result.totalMultiplier;
     maxObservedWinMultiplier = Math.max(maxObservedWinMultiplier, multiplier);
     wins.push(multiplier);
@@ -111,26 +198,50 @@ export function simulate(spins: number, seed: string, betCents = 100, onProgress
     tumbleCount += totalTumbles;
     winningTumbleCount += totalTumbles;
     maxTumbles = Math.max(maxTumbles, totalTumbles);
+    if (totalTumbles >= 2) twoTumbleCount += 1;
+    if (totalTumbles >= 3) threeTumbleCount += 1;
+    if (totalTumbles >= 4) fourTumbleCount += 1;
     freeSpinCount += result.freeSpins.length;
     for (const freeSpin of result.freeSpins) {
       if (freeSpin.retriggered > 0) retriggeredFreeSpins += freeSpin.retriggered;
     }
     for (const tumble of [...result.tumbles, ...result.freeSpins.flatMap((spin) => spin.tumbles)]) {
       const isFree = result.freeSpins.some((spin) => spin.tumbles.includes(tumble));
-      if (isFree) {
+    if (isFree) {
         freeRefills += 1;
         coreCells += tumble.newSymbols.filter((cell) => typeof cell !== "string").length;
         freeRefillCells += tumble.newSymbols.length;
       }
-      if (tumble.multiplierCores.length) {
+      tumble.winningSymbols.forEach((symbol) => {
+        symbolHitCounts[symbol] = (symbolHitCounts[symbol] ?? 0) + 1;
+      });
+    }
+    for (const sequence of [
+      { raw: result.baseRawWinMultiplier, final: result.baseWinCents / betCents, cores: [] as number[] },
+      ...result.freeSpins.map((freeSpin) => ({
+        raw: freeSpin.rawWinMultiplier,
+        final: freeSpin.finalWinMultiplier,
+        cores: freeSpin.multiplierCores.map((core) => core.value),
+      })),
+    ]) {
+      sequenceCount += 1;
+      rawSequenceTotal += sequence.raw;
+      finalSequenceTotal += sequence.final;
+      if (sequence.cores.length) {
         coreTumbles += 1;
-        coreTotal += tumble.coreTotalMultiplier;
-        highestCoreTotalObserved = Math.max(highestCoreTotalObserved, tumble.coreTotalMultiplier);
-        coreContributionCents += Math.max(0, tumble.finalPayoutMultiplier - tumble.rawPayoutMultiplier) * betCents;
-        tumble.multiplierCores.forEach((core) => {
-          coreValueDistribution[String(core.value)] = (coreValueDistribution[String(core.value)] ?? 0) + 1;
+        coreSequenceCount += 1;
+        activeCoreCountTotal += sequence.cores.length;
+        const combined = sequence.cores.reduce((sum, value) => sum + value, 0);
+        coreTotal += combined;
+        highestCoreTotalObserved = Math.max(highestCoreTotalObserved, combined);
+        coreContributionCents += Math.max(0, sequence.final - sequence.raw) * betCents;
+        sequence.cores.forEach((value) => {
+          coreValueDistribution[String(value)] = (coreValueDistribution[String(value)] ?? 0) + 1;
         });
       }
+    }
+    if (result.tumbles.length > 1 || result.freeSpins.some((freeSpin) => freeSpin.tumbles.length > 1)) {
+      chainedSpinCount += 1;
     }
     histogram[bucket(multiplier)] += 1;
     if (onProgress && (index + 1) % 100_000 === 0) onProgress(index + 1);
@@ -171,6 +282,34 @@ export function simulate(spins: number, seed: string, betCents = 100, onProgress
     averageCombinedCoreMultiplier: coreTumbles ? Number((coreTotal / coreTumbles).toFixed(4)) : 0,
     highestCoreTotalObserved,
     coreRtpContribution: Number(((coreContributionCents / totalBetCents) * 100).toFixed(4)),
+    averageRawSequenceMultiplier: sequenceCount ? Number((rawSequenceTotal / sequenceCount).toFixed(4)) : 0,
+    averageFinalSequenceMultiplier: sequenceCount ? Number((finalSequenceTotal / sequenceCount).toFixed(4)) : 0,
+    averageCoreUpliftMultiplier: sequenceCount ? Number(((finalSequenceTotal - rawSequenceTotal) / sequenceCount).toFixed(4)) : 0,
+    chainRate: percent(chainedSpinCount),
+    runLengthDistribution,
+    symbolHitCounts,
+    initialEightPlusFrequency: percent(initialEightPlusCount),
+    twoTumbleFrequency: percent(twoTumbleCount),
+    threeTumbleFrequency: percent(threeTumbleCount),
+    fourTumbleFrequency: percent(fourTumbleCount),
+    configuredSingleProbability: 76.5,
+    configuredPairProbability: 23.5,
+    observedSingleProbability: (() => {
+      const total = (runLengthDistribution["1"] ?? 0) + (runLengthDistribution["2"] ?? 0);
+      return total ? Number((((runLengthDistribution["1"] ?? 0) / total) * 100).toFixed(4)) : 0;
+    })(),
+    observedPairProbability: (() => {
+      const total = (runLengthDistribution["1"] ?? 0) + (runLengthDistribution["2"] ?? 0);
+      return total ? Number((((runLengthDistribution["2"] ?? 0) / total) * 100).toFixed(4)) : 0;
+    })(),
+    maximumContiguousNormal: runMetrics.maximumContiguousNormal,
+    averageUniqueNormalSymbolsPerColumn: Number((runMetrics.uniqueNormalTotal / Math.max(1, runMetrics.visibleColumns)).toFixed(4)),
+    visiblePairFrequency: Number(((runMetrics.visiblePairColumns / Math.max(1, runMetrics.visibleColumns)) * 100).toFixed(4)),
+    columnThreeSameFrequency: Number(((runMetrics.columnsWithThree / Math.max(1, runMetrics.visibleColumns)) * 100).toFixed(4)),
+    columnFourSameFrequency: Number(((runMetrics.columnsWithFour / Math.max(1, runMetrics.visibleColumns)) * 100).toFixed(4)),
+    columnFiveSameFrequency: Number(((runMetrics.columnsWithFive / Math.max(1, runMetrics.visibleColumns)) * 100).toFixed(4)),
+    sequenceCorePercentage: Number(((coreSequenceCount / Math.max(1, sequenceCount)) * 100).toFixed(4)),
+    averageActiveCoresAtSettlement: Number((activeCoreCountTotal / Math.max(1, coreSequenceCount)).toFixed(4)),
     coreValueDistribution,
     histogram,
   };

@@ -10,7 +10,7 @@ describe("board generation", () => {
     expect(generateInitialBoard(alwaysFirst).flat()).toHaveLength(30);
   });
   it("can generate scatter on an initial board", () => {
-    expect(countScatter(generateInitialBoard(alwaysLast))).toBe(30);
+    expect(countScatter(generateInitialBoard({ nextFloat: () => 0.02 }))).toBeGreaterThan(0);
   });
   it("never generates scatter on a refill", () => {
     expect(generateRefillSymbols(alwaysLast, 30).every((symbol) => symbol !== "SCATTER")).toBe(true);
