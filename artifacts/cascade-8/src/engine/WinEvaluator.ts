@@ -41,7 +41,7 @@ export function removeAndRefill(board: Board, winningCells: Cell[], source: Rand
   const newSymbols: Board[number] = [];
   for (let col = 0; col < BOARD_COLUMNS; col += 1) {
     const survivors: Board[number] = [];
-    for (let row = BOARD_ROWS - 1; row >= 0; row -= 1) {
+    for (let row = 0; row < BOARD_ROWS; row += 1) {
       if (!winning.has(`${row}:${col}`)) survivors.push(board[row][col]);
     }
     const generated = generateRefillSymbols(source, BOARD_ROWS - survivors.length);

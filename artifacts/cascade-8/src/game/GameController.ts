@@ -139,9 +139,8 @@ export class GameController {
       if (isBonus) this.bonusWinCents += Math.round(tumble.finalPayoutMultiplier * this.betCents);
       this.updateHud();
       this.setState("REFILL");
-      this.scene.renderBoard(tumble.boardAfterRefill);
       this.setState("CASCADE_DROP");
-      await this.scene.animateDrop(this.duration(ANIMATION.refill));
+      await this.scene.animateCascade(tumble.boardAfterRefill, tumble.winningCells, this.duration(ANIMATION.refill));
       this.message(index > 0 ? `TUMBLE ${index + 1} // ${formatCredits(this.currentWinCents)}` : `WIN // ${formatCredits(this.currentWinCents)}`);
     }
   }

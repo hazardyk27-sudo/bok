@@ -38,4 +38,17 @@ describe("win evaluation and cascades", () => {
       expect(result.boardAfterGravity.map((row) => row[col]).every(Boolean)).toBe(true);
     }
   });
+  it("keeps survivors ordered while new symbols enter from above", () => {
+    const board: Board = [
+      ["S1", "S1", "S1", "S1", "S1", "S1"],
+      ["S1", "S1", "S2", "S3", "S4", "S5"],
+      ["S2", "S3", "S4", "S5", "S6", "S7"],
+      ["S3", "S4", "S5", "S6", "S7", "S8"],
+      ["S4", "S5", "S6", "S7", "S8", "SCATTER"],
+    ];
+    const result = removeAndRefill(board, evaluateBoard(board).winningCells, new SeededRNG(3));
+    expect(result.boardAfterGravity[2][0]).toBe("S2");
+    expect(result.boardAfterGravity[3][0]).toBe("S3");
+    expect(result.boardAfterGravity[4][0]).toBe("S4");
+  });
 });

@@ -40,42 +40,50 @@ export class GameScene extends Phaser.Scene {
     this.nodes = [];
   }
 
+  private createSymbolNode(symbol: SymbolId, row: number, col: number, crystal = false, winner = false) {
+    const definition = getSymbolDefinition(symbol);
+    const container = this.add.container(
+      this.boardOrigin.x + col * this.cellSize.width + 44,
+      this.boardOrigin.y + row * this.cellSize.height + 41,
+    );
+    const glow = this.add.circle(0, 2, 31, definition.color, winner ? 0.27 : 0.1);
+    glow.setBlendMode(Phaser.BlendModes.ADD);
+    const orb = this.add.circle(0, 0, 25, 0x09142f, 0.94);
+    orb.setStrokeStyle(winner || symbol === "SCATTER" ? 2 : 1, definition.color, winner ? 0.9 : 0.3);
+    const shine = this.add.ellipse(-9, -12, 13, 7, 0xffffff, 0.18).setAngle(-25);
+    const text = this.add.text(0, 1, definition.icon, {
+      color: definition.colorHex,
+      fontFamily: "Georgia, serif",
+      fontSize: symbol === "SCATTER" ? "31px" : "29px",
+      fontStyle: "bold",
+    }).setOrigin(0.5);
+    container.add([glow, orb, shine, text]);
+    if (symbol === "SCATTER") {
+      const ring = this.add.circle(0, 0, 34, undefined, 0).setStrokeStyle(1.5, definition.color, 0.72);
+      container.add(ring);
+      this.tweens.add({ targets: ring, scale: 1.14, alpha: 0.3, duration: 780, yoyo: true, repeat: -1 });
+    }
+    if (crystal) {
+      container.add(this.add.text(0, -32, "✧", { color: "#f3d77a", fontSize: "16px" }).setOrigin(0.5));
+    }
+    const node = { container, symbol, row, col };
+    this.nodes.push(node);
+    return node;
+  }
+
   renderBoard(board: Board, winningCells: Cell[] = [], crystalCells: Cell[] = []) {
     this.clearSymbols();
     const winning = new Set(winningCells.map((cell) => `${cell.row}:${cell.col}`));
     const crystalSet = new Set(crystalCells.map((cell) => `${cell.row}:${cell.col}`));
     for (let row = 0; row < BOARD_ROWS; row += 1) {
       for (let col = 0; col < BOARD_COLUMNS; col += 1) {
-        const symbol = board[row][col];
-        const definition = getSymbolDefinition(symbol);
-        const container = this.add.container(
-          this.boardOrigin.x + col * this.cellSize.width + 44,
-          this.boardOrigin.y + row * this.cellSize.height + 41,
+        this.createSymbolNode(
+          board[row][col],
+          row,
+          col,
+          crystalSet.has(`${row}:${col}`),
+          winning.has(`${row}:${col}`),
         );
-        const isWinner = winning.has(`${row}:${col}`);
-        const isCrystal = crystalSet.has(`${row}:${col}`);
-        const glow = this.add.circle(0, 2, 31, definition.color, isWinner ? 0.27 : 0.1);
-        glow.setBlendMode(Phaser.BlendModes.ADD);
-        const orb = this.add.circle(0, 0, 25, 0x09142f, 0.94);
-        orb.setStrokeStyle(isWinner || symbol === "SCATTER" ? 2 : 1, definition.color, isWinner ? 0.9 : 0.3);
-        const shine = this.add.ellipse(-9, -12, 13, 7, 0xffffff, 0.18).setAngle(-25);
-        const text = this.add.text(0, 1, definition.icon, {
-          color: definition.colorHex,
-          fontFamily: "Georgia, serif",
-          fontSize: symbol === "SCATTER" ? "31px" : "29px",
-          fontStyle: "bold",
-        }).setOrigin(0.5);
-        container.add([glow, orb, shine, text]);
-        if (symbol === "SCATTER") {
-          const ring = this.add.circle(0, 0, 34, undefined, 0).setStrokeStyle(1.5, definition.color, 0.72);
-          container.add(ring);
-          this.tweens.add({ targets: ring, scale: 1.14, alpha: 0.3, duration: 780, yoyo: true, repeat: -1 });
-        }
-        if (isCrystal) {
-          const badge = this.add.text(0, -32, "✧", { color: "#f3d77a", fontSize: "16px" }).setOrigin(0.5);
-          container.add(badge);
-        }
-        this.nodes.push({ container, symbol, row, col });
       }
     }
   }
@@ -128,6 +136,50 @@ export class GameScene extends Phaser.Scene {
         },
       });
     })));
+    this.nodes = this.nodes.filter((node) => !wanted.has(`${node.row}:${node.col}`));
+  }
+
+  async animateCascade(board: Board, winningCells: Cell[], duration: number) {
+    const winning = new Set(winningCells.map((cell) => `${cell.row}:${cell.col}`));
+    const animations: Promise<void>[] = [];
+    for (let col = 0; col < BOARD_COLUMNS; col += 1) {
+      const survivors = this.nodes
+        .filter((node) => node.col === col && !winning.has(`${node.row}:${node.col}`))
+        .sort((a, b) => a.row - b.row);
+      const generatedCount = BOARD_ROWS - survivors.length;
+      survivors.forEach((node, index) => {
+        const targetRow = generatedCount + index;
+        const targetY = this.boardOrigin.y + targetRow * this.cellSize.height + 41;
+        node.row = targetRow;
+        animations.push(new Promise<void>((resolve) => {
+          this.tweens.add({
+            targets: node.container,
+            y: targetY,
+            duration: duration + col * 18,
+            ease: "Cubic.easeInOut",
+            onComplete: () => resolve(),
+          });
+        }));
+      });
+      for (let row = 0; row < generatedCount; row += 1) {
+        const node = this.createSymbolNode(board[row][col], row, col);
+        const targetY = this.boardOrigin.y + row * this.cellSize.height + 41;
+        node.container.y = targetY - 260 - col * 14;
+        node.container.alpha = 0.2;
+        animations.push(new Promise<void>((resolve) => {
+          this.tweens.add({
+            targets: node.container,
+            y: targetY,
+            alpha: 1,
+            duration: duration + col * 18,
+            delay: col * 20,
+            ease: "Back.easeOut",
+            onComplete: () => resolve(),
+          });
+        }));
+      }
+    }
+    await Promise.all(animations);
   }
 
   sparkle() {
