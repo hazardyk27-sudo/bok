@@ -66,6 +66,12 @@ button:focus-visible, input:focus-visible { outline: 2px solid var(--cyan); outl
 .bonus-overlay span { color: #ffe29a; font: 9px "DM Mono", monospace; letter-spacing: .22em; }
 .bonus-overlay strong { color: #fff1c4; font-size: clamp(24px, 4vw, 39px); letter-spacing: .08em; text-shadow: 0 0 25px rgba(255, 205, 96, .7); }
 .bonus-overlay small { color: #d7bd7c; font: 9px "DM Mono", monospace; letter-spacing: .12em; }
+.multiplier-announcer { position: absolute; z-index: 7; left: 50%; top: 31%; display: grid; justify-items: center; gap: 3px; min-width: 170px; padding: 12px 20px 14px; border: 1px solid rgba(255, 224, 120, .75); border-radius: 14px; opacity: 0; pointer-events: none; transform: translate(-50%, -50%) scale(.65); background: linear-gradient(145deg, rgba(66, 43, 5, .94), rgba(28, 18, 8, .94)); box-shadow: 0 0 45px rgba(255, 194, 44, .4), inset 0 0 20px rgba(255, 226, 122, .12); text-align: center; }
+.multiplier-announcer.is-visible { opacity: 1; animation: multiplier-arrive .5s cubic-bezier(.16,.9,.24,1); }
+.multiplier-announcer.is-free { border-color: rgba(255, 237, 151, .9); box-shadow: 0 0 55px rgba(255, 213, 75, .55), inset 0 0 22px rgba(255, 236, 147, .15); }
+.multiplier-announcer span { color: #ffe59a; font: 9px "DM Mono", monospace; letter-spacing: .18em; }
+.multiplier-announcer strong { color: #fff3ad; font-size: 44px; line-height: .95; text-shadow: 0 0 26px rgba(255, 203, 65, .9); }
+.multiplier-announcer small { color: #d9bf7d; font: 8px "DM Mono", monospace; letter-spacing: .1em; }
 .win-announcer { position: absolute; z-index: 6; left: 50%; top: 43%; display: grid; justify-items: center; gap: 2px; opacity: 0; pointer-events: none; transform: translate(-50%, -50%) scale(.55); text-align: center; text-shadow: 0 3px 16px rgba(0, 0, 0, .72); }
 .win-announcer.is-small, .win-announcer.is-medium, .win-announcer.is-big, .win-announcer.is-mega { opacity: 1; animation: win-arrive .5s cubic-bezier(.16, .9, .24, 1); }
 .win-announcer span { color: #c7d8ff; font: 10px "DM Mono", monospace; letter-spacing: .24em; }
@@ -172,6 +178,7 @@ button:focus-visible, input:focus-visible { outline: 2px solid var(--cyan); outl
 @keyframes fade-in { from { opacity: 0; } to { opacity: 1; } }
 @keyframes bonus-arrive { from { opacity: 0; transform: translateY(16px) scale(.92); } to { opacity: 1; transform: translateY(0) scale(1); } }
 @keyframes win-arrive { from { opacity: 0; transform: translate(-50%, -50%) scale(.55); } 60% { opacity: 1; transform: translate(-50%, -50%) scale(1.08); } to { opacity: 1; transform: translate(-50%, -50%) scale(1); } }
+@keyframes multiplier-arrive { from { opacity: 0; transform: translate(-50%, -50%) scale(.65); } 60% { opacity: 1; transform: translate(-50%, -50%) scale(1.08); } to { opacity: 1; transform: translate(-50%, -50%) scale(1); } }
 @media (max-width: 930px) { .game-layout { grid-template-columns: 1fr; } .side-panel { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; padding-top: 0; } .side-panel > .panel-kicker, .side-panel > .full { grid-column: 1 / -1; } .side-card, .legend-card { margin-top: 0; } .outline-button.full { margin-top: 0; } }
 @media (max-width: 620px) {
   .app-shell { padding: 16px 12px 16px; }
