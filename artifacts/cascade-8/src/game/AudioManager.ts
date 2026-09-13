@@ -58,8 +58,15 @@ export class AudioManager {
   spin() { this.tone(180, 0.16, "sine"); }
   win() { this.tone(620, 0.12, "triangle"); setTimeout(() => this.tone(880, 0.16, "triangle"), 80); }
   bonus() { [440, 660, 880, 1100].forEach((tone, index) => setTimeout(() => this.tone(tone, 0.14, "sine"), index * 90)); }
-  core(value: number) { this.tone(value >= 100 ? 980 : 720, 0.16, "square"); setTimeout(() => this.tone(1240, 0.2, "sine"), 90); }
-  scatterArrival() { [300, 420, 560].forEach((tone, index) => setTimeout(() => this.tone(tone, 0.11, "triangle"), index * 65)); }
+  core(value: number, isBonus = true) {
+    this.tone(value >= 100 ? 980 : isBonus ? 720 : 820, 0.16, "square");
+    setTimeout(() => this.tone(value >= 500 ? 1560 : 1240, 0.2, "sine"), 90);
+    if (!isBonus && value >= 500) setTimeout(() => this.tone(1960, 0.24, "triangle"), 190);
+  }
+  scatterArrival(count = 1) {
+    const tones = count >= 4 ? [420, 560, 700, 900, 1160] : count === 3 ? [420, 560, 720, 980] : count === 2 ? [420, 580, 780] : [460, 640];
+    tones.forEach((tone, index) => setTimeout(() => this.tone(tone, 0.11, "triangle"), index * 75));
+  }
   scatterAnticipation(count: number) {
     if (count < 3) return;
     [260, 330, 420, 540].forEach((tone, index) => setTimeout(() => this.tone(tone, 0.12, "sine"), index * 90));

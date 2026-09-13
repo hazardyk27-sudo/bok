@@ -1,4 +1,8 @@
-import { BONUS_CONFIG } from "../config/GameConfig";
+import {
+  BASE_MULTIPLIER_CORE_CHANCE,
+  BASE_MULTIPLIER_CORE_WEIGHTS,
+  BONUS_CONFIG,
+} from "../config/GameConfig";
 import type { RandomSource } from "./types";
 import { weightedChoice } from "./RNG";
 
@@ -17,10 +21,12 @@ export function retriggerFreeSpins(scatterCount: number) {
   return 0;
 }
 
-export function drawMultiplierCore(source: RandomSource) {
-  if (source.nextFloat() * 100 >= BONUS_CONFIG.multiplierCoreSpawnChance) return null;
+export function drawMultiplierCore(source: RandomSource, mode: "base" | "bonus" = "bonus") {
+  const spawnChance = mode === "base" ? BASE_MULTIPLIER_CORE_CHANCE : BONUS_CONFIG.multiplierCoreSpawnChance;
+  const weights = mode === "base" ? BASE_MULTIPLIER_CORE_WEIGHTS : BONUS_CONFIG.multiplierCoreWeights;
+  if (source.nextFloat() * 100 >= spawnChance) return null;
   return {
     kind: "MULTIPLIER_CORE" as const,
-    value: weightedChoice(source, BONUS_CONFIG.multiplierCoreWeights),
+    value: weightedChoice(source, weights),
   };
 }

@@ -60,13 +60,14 @@ function playTumbles(initialBoard: Board, context: PlayContext): TumbleSequence 
       board,
       removedCells,
       context.source,
-      context.mode === "free",
+      true,
       context.mode === "free" ? "bonus" : "base",
       context.streams,
     );
     tumbles.push({
       boardBefore: cloneBoard(board),
       winningSymbols: evaluation.winningSymbols,
+      payouts: evaluation.payouts,
       winningCells: evaluation.winningCells,
       rawPayoutMultiplier: evaluation.rawPayoutMultiplier,
       rawWinPoolAfter: rawWinPool,
@@ -74,6 +75,7 @@ function playTumbles(initialBoard: Board, context: PlayContext): TumbleSequence 
       multiplierCoreCells,
       coreTotalMultiplier,
       finalPayoutMultiplier: 0,
+      settlementCores: [],
       settlement: "deferred",
       removedCells,
       boardAfterGravity: cloneBoard(gravity.boardAfterGravity),
@@ -103,6 +105,10 @@ function settleSequence(sequence: TumbleSequence, consumeMultiplier: (value: num
   sequence.tumbles.forEach((tumble, index) => {
     const isSettlementTumble = index === sequence.tumbles.length - 1;
     tumble.finalPayoutMultiplier = isSettlementTumble ? finalWinMultiplier : 0;
+    tumble.coreTotalMultiplier = isSettlementTumble ? settlement.combinedCoreMultiplier : tumble.coreTotalMultiplier;
+    tumble.settlementCores = isSettlementTumble
+      ? sequence.multiplierCores.map(({ value }) => ({ kind: "MULTIPLIER_CORE" as const, value }))
+      : [];
     tumble.settlement = isSettlementTumble ? "sequence" : "deferred";
   });
   return { ...settlement, finalWinMultiplier };

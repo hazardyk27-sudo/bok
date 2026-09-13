@@ -82,11 +82,15 @@ export class GameScene extends Phaser.Scene {
       this.boardOrigin.y + row * this.cellSize.height + 46,
     );
     if (isMultiplierCore(symbol)) {
-      const glow = this.add.circle(0, 0, 42, 0xffb52e, 0.28).setBlendMode(Phaser.BlendModes.ADD);
-      const core = this.add.polygon(0, 0, [0, -33, 28, -16, 28, 16, 0, 33, -28, 16, -28, -16], 0xf0a51a, 0.98);
-      core.setStrokeStyle(4, 0xffe7a0, 1);
-      const inner = this.add.polygon(0, 0, [0, -25, 21, -12, 21, 12, 0, 25, -21, 12, -21, -12], 0x55310d, 0.94);
-      inner.setStrokeStyle(1.5, 0xffd46a, 0.95);
+      const glow = this.add.circle(0, 0, 43, 0xffb52e, 0.2).setBlendMode(Phaser.BlendModes.ADD);
+      const radiance = this.add.graphics();
+      radiance.lineStyle(2, 0xffdb6b, 0.62);
+      for (let index = 0; index < 8; index += 1) {
+        const angle = (index / 8) * Math.PI * 2;
+        radiance.lineBetween(Math.cos(angle) * 27, Math.sin(angle) * 27, Math.cos(angle) * 38, Math.sin(angle) * 38);
+      }
+      const core = this.add.polygon(0, 0, [0, -32, 25, -14, 25, 14, 0, 32, -25, 14, -25, -14], 0x8f5a0c, 0.72);
+      const inner = this.add.polygon(0, 0, [0, -24, 18, -10, 18, 10, 0, 24, -18, 10, -18, -10], 0xffbe35, 0.72);
       const label = this.add.text(0, 1, `${symbol.value}x`, {
         color: "#fff4c7",
         fontFamily: "Arial, sans-serif",
@@ -96,27 +100,25 @@ export class GameScene extends Phaser.Scene {
         strokeThickness: 4,
       }).setOrigin(0.5);
       const bolt = this.add.text(0, -39, "✦", { color: "#fff3ba", fontSize: "18px" }).setOrigin(0.5);
-      container.add([glow, core, inner, label, bolt]);
+      container.add([glow, radiance, core, inner, label, bolt]);
       this.tweens.add({ targets: glow, scale: 1.18, alpha: 0.12, duration: 680, yoyo: true, repeat: -1 });
+      this.tweens.add({ targets: radiance, angle: 360, duration: 4200, repeat: -1 });
       const node = { container, symbol, row, col };
       this.nodes.push(node);
       return node;
     }
     if (symbol === "SCATTER") {
-      const aura = this.add.polygon(0, 0, [0, -43, 32, -25, 43, 0, 32, 25, 0, 43, -32, 25, -43, 0, -32, -25], 0xffbc3d, 0.2)
-        .setStrokeStyle(2, 0xffe8a4, 0.9)
-        .setBlendMode(Phaser.BlendModes.ADD);
+      const aura = this.add.ellipse(0, 1, 70, 78, 0xffbb3c, 0.08).setBlendMode(Phaser.BlendModes.ADD);
+      const warmBloom = this.add.ellipse(0, 4, 48, 60, 0xffe29a, 0.08).setBlendMode(Phaser.BlendModes.ADD);
       const trophy = this.createTrophy();
-      trophy.setScale(1.25);
-      const label = this.add.text(0, 43, "SCATTER", {
-        color: "#ffe7a0",
-        fontFamily: "DM Mono, monospace",
-        fontSize: "7px",
-        fontStyle: "bold",
-        letterSpacing: 1,
-      }).setOrigin(0.5);
-      container.add([aura, trophy, label]);
-      this.tweens.add({ targets: aura, scale: 1.12, alpha: 0.48, duration: 640, yoyo: true, repeat: -1 });
+      const highlight = this.add.ellipse(-10, -20, 5, 16, 0xffffef, 0.75).setAngle(-18);
+      const glint = this.add.text(18, -31, "✦", { color: "#fff4bf", fontSize: "11px" }).setOrigin(0.5);
+      container.add([aura, warmBloom, trophy, highlight, glint]);
+      this.tweens.add({ targets: aura, scale: 1.12, alpha: 0.14, duration: 1700, yoyo: true, repeat: -1, ease: "Sine.easeInOut" });
+      this.tweens.add({ targets: warmBloom, scale: 1.16, alpha: 0.16, duration: 1200, yoyo: true, repeat: -1, ease: "Sine.easeInOut" });
+      this.tweens.add({ targets: trophy, scaleX: 1.025, scaleY: 0.985, duration: 1500, yoyo: true, repeat: -1, ease: "Sine.easeInOut" });
+      this.tweens.add({ targets: highlight, x: 10, alpha: 0.12, duration: 1250, repeat: -1, yoyo: true, ease: "Sine.easeInOut", delay: 420 });
+      this.tweens.add({ targets: glint, alpha: 0.18, scale: 0.6, duration: 260, yoyo: true, repeat: -1, repeatDelay: 2600 });
       const node = { container, symbol, row, col };
       this.nodes.push(node);
       return node;
@@ -140,16 +142,79 @@ export class GameScene extends Phaser.Scene {
 
   private createTrophy() {
     const trophy = this.add.graphics();
-    trophy.fillStyle(0xffd052, 1);
-    trophy.fillRoundedRect(-17, -23, 34, 30, 5);
-    trophy.fillRect(-8, 7, 16, 14);
-    trophy.fillRoundedRect(-21, 21, 42, 7, 3);
-    trophy.fillStyle(0xffefaa, 0.95);
-    trophy.fillRoundedRect(-25, -14, 8, 19, 3);
-    trophy.fillRoundedRect(17, -14, 8, 19, 3);
-    trophy.fillStyle(0xffffdf, 0.72);
-    trophy.fillEllipse(-7, -11, 7, 12);
+    trophy.fillStyle(0x633507, 0.9);
+    trophy.fillRoundedRect(-18, -34, 36, 35, 8);
+    trophy.fillRoundedRect(-28, -29, 10, 24, 5);
+    trophy.fillRoundedRect(18, -29, 10, 24, 5);
+    trophy.fillStyle(0xb66c0e, 1);
+    trophy.fillRoundedRect(-15, -36, 30, 34, 7);
+    trophy.fillRoundedRect(-24, -27, 8, 21, 4);
+    trophy.fillRoundedRect(16, -27, 8, 21, 4);
+    trophy.fillStyle(0xf0b52c, 1);
+    trophy.fillRoundedRect(-11, -32, 22, 28, 5);
+    trophy.fillStyle(0xffe59a, 0.92);
+    trophy.fillRoundedRect(-7, -30, 6, 20, 3);
+    trophy.fillStyle(0xd18916, 1);
+    trophy.fillRect(-7, -1, 14, 22);
+    trophy.fillStyle(0xffd45a, 1);
+    trophy.fillRect(-5, 0, 6, 20);
+    trophy.fillStyle(0x8a4d08, 1);
+    trophy.fillRoundedRect(-23, 20, 46, 9, 3);
+    trophy.fillStyle(0xf7c64d, 1);
+    trophy.fillRoundedRect(-19, 19, 38, 6, 2);
+    trophy.fillStyle(0xffffd7, 0.95);
+    trophy.fillTriangle(0, -22, -4, -14, 4, -14);
+    trophy.fillStyle(0xfff2b0, 0.85);
+    trophy.fillCircle(0, -17, 2);
     return trophy;
+  }
+
+  private animateScatterLanding(node: BoardNode) {
+    const centerX = node.container.x;
+    const centerY = node.container.y + 34;
+    const shockwave = this.add.ellipse(centerX, centerY, 28, 9, undefined, 0)
+      .setStrokeStyle(2, 0xffd56a, 0.9)
+      .setDepth(4);
+    const sparks = Array.from({ length: 5 }, (_, index) => {
+      const spark = this.add.text(centerX, centerY, "✦", { color: "#ffe49a", fontSize: index % 2 ? "9px" : "12px" })
+        .setOrigin(0.5)
+        .setDepth(4);
+      const angle = (index / 5) * Math.PI * 2;
+      this.tweens.add({
+        targets: spark,
+        x: centerX + Math.cos(angle) * (22 + index * 5),
+        y: centerY + Math.sin(angle) * (12 + index * 4),
+        alpha: 0,
+        scale: 0.5,
+        duration: 260,
+        ease: "Cubic.easeOut",
+        onComplete: () => spark.destroy(),
+      });
+      return spark;
+    });
+    return new Promise<void>((resolve) => {
+      this.tweens.add({
+        targets: shockwave,
+        scaleX: 2.6,
+        scaleY: 1.8,
+        alpha: 0,
+        duration: 300,
+        ease: "Cubic.easeOut",
+        onComplete: () => shockwave.destroy(),
+      });
+      this.tweens.add({
+        targets: node.container,
+        scaleX: 1.13,
+        scaleY: 0.82,
+        duration: 72,
+        yoyo: true,
+        ease: "Quad.easeOut",
+        onComplete: () => {
+          sparks.forEach((spark) => { if (spark.active) spark.destroy(); });
+          resolve();
+        },
+      });
+    });
   }
 
   renderBoard(board: Board, winningCells: Cell[] = []) {
@@ -179,7 +244,10 @@ export class GameScene extends Phaser.Scene {
         duration: duration + (index % BOARD_COLUMNS) * 24,
         delay: (index % BOARD_COLUMNS) * 20,
         ease: "Back.easeOut",
-        onComplete: () => resolve(),
+         onComplete: () => {
+           if (node.symbol === "SCATTER") void this.animateScatterLanding(node).then(resolve);
+           else resolve();
+         },
       });
     })));
   }
@@ -194,7 +262,10 @@ export class GameScene extends Phaser.Scene {
         duration: duration / 2,
         yoyo: true,
         ease: "Sine.easeInOut",
-        onComplete: () => resolve(),
+             onComplete: () => {
+               if (node.symbol === "SCATTER") void this.animateScatterLanding(node).then(resolve);
+               else resolve();
+             },
       });
     })));
   }

@@ -45,7 +45,11 @@ export class GameController {
     window.addEventListener("keydown", (event) => { if (event.key === "Escape") this.ui.setModal(null); if (event.code === "Space" && !event.repeat && document.activeElement?.tagName !== "INPUT") { event.preventDefault(); void this.spin(); } });
   }
   get betCents() { return BETS_CENTS[this.betIndex]; }
-  private duration(value: number) { return this.reducedMotion ? 40 : this.turbo ? Math.round(value * 0.45) : value; }
+  private duration(value: number) {
+    if (this.reducedMotion) return 40;
+    const slowed = Math.round(value * 1.15);
+    return this.turbo ? Math.round(slowed * 0.45) : slowed;
+  }
   private setState(state: ControllerState) { this.state = state; this.ui.spin.disabled = this.busy || this.autoRunning || (!this.pendingBonusResult && this.balanceCents < this.betCents); }
   private changeBet(direction: number) { if (this.busy || this.autoRunning) return; this.betIndex = Math.max(0, Math.min(BETS_CENTS.length - 1, this.betIndex + direction)); this.audio.click(); this.updateHud(); }
   private updateHud() {

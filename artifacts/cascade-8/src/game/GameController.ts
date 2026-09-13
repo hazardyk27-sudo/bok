@@ -29,7 +29,7 @@ export class GameController {
     balance: HTMLElement; bet: HTMLElement; win: HTMLElement; bonusWin: HTMLElement; freeSpins: HTMLElement;
     tumble: HTMLElement; status: HTMLElement; spin: HTMLButtonElement; spinLabel: HTMLElement; betMinus: HTMLButtonElement; betPlus: HTMLButtonElement;
     autoCount: HTMLSelectElement; autoStart: HTMLButtonElement; autoStatus: HTMLElement;
-     turbo: HTMLButtonElement; sound: HTMLButtonElement; bonusOverlay: HTMLElement; multiplierAnnouncer: HTMLElement; winAnnouncer: HTMLElement; bigWinOverlay: HTMLElement; bonusSummaryOverlay: HTMLElement; boardWrap: HTMLElement;
+     turbo: HTMLButtonElement; sound: HTMLButtonElement; bonusOverlay: HTMLElement; tumbleSymbolWin: HTMLElement; tumbleIncrement: HTMLElement; tumbleMeta: HTMLElement; tumbleSettlement: HTMLElement; tumblePanel: HTMLElement; bigWinOverlay: HTMLElement; bonusSummaryOverlay: HTMLElement; boardWrap: HTMLElement;
     setModal: (name: string | null) => void;
   };
 
@@ -64,7 +64,11 @@ export class GameController {
   }
 
   get betCents() { return BETS_CENTS[this.betIndex]; }
-  private duration(value: number) { return this.reducedMotion ? 40 : this.turbo ? Math.round(value * 0.45) : value; }
+  private duration(value: number) {
+    if (this.reducedMotion) return 40;
+    const slowed = Math.round(value * 1.15);
+    return this.turbo ? Math.round(slowed * 0.45) : slowed;
+  }
   private setState(state: ControllerState) {
     this.state = state;
     this.ui.spin.disabled = this.busy || this.autoRunning || (!this.pendingBonusResult && this.balanceCents < this.betCents);
@@ -108,7 +112,8 @@ export class GameController {
       if (!this.busy && this.balanceCents < this.betCents) this.message("INSUFFICIENT DEMO CREDITS");
       return;
     }
-    this.busy = true; this.currentWinCents = 0; this.bonusWinCents = 0; this.freeSpinsLeft = 0;
+     this.busy = true; this.currentWinCents = 0; this.bonusWinCents = 0; this.freeSpinsLeft = 0;
+     this.resetTumbleWin();
     this.setBonusPrompt(false);
     this.setState("SPIN_INIT"); this.balanceCents -= this.betCents; this.persistBalance(); this.audio.spin(); this.updateHud();
     const source = new CryptoRNG();
@@ -118,7 +123,7 @@ export class GameController {
     this.scene.renderBoard(result.initialBoard);
     if (result.scatterCount > 0) {
       this.audio.scatterAnticipation(result.scatterCount);
-      this.audio.scatterArrival();
+       this.audio.scatterArrival(result.scatterCount);
     }
     await this.scene.animateDrop(this.duration(ANIMATION.initialDrop));
     await this.playTumbles(result, false);
@@ -176,7 +181,7 @@ export class GameController {
       this.scene.renderBoard(freeSpin.initialBoard);
       if (freeSpin.scatterCount > 0) {
         this.audio.scatterAnticipation(freeSpin.scatterCount);
-        this.audio.scatterArrival();
+         this.audio.scatterArrival(freeSpin.scatterCount);
         this.audio.scatterCelebration(freeSpin.scatterCount);
       }
       await this.scene.animateDrop(this.duration(ANIMATION.initialDrop));
@@ -269,7 +274,6 @@ export class GameController {
     for (let index = 0; index < result.tumbles.length; index += 1) {
       const tumble = result.tumbles[index];
       this.setState("EVALUATING");
-      this.ui.tumble.textContent = `${tumble.rawWinPoolAfter.toFixed(2)}x`;
       this.scene.renderBoard(tumble.boardBefore, tumble.winningCells);
       const winningMessage = `${tumble.winningSymbols.map((symbol) => getSymbolDefinition(symbol).name).join(" + ")} RESONATE`;
       this.message(tumble.multiplierCores.length ? "MULTIPLIER CORES ARE CHARGING" : winningMessage);
@@ -278,18 +282,20 @@ export class GameController {
       this.setState(tumble.multiplierCores.length ? "CORE_REVEAL" : "WIN_EXPLOSION");
       if (tumble.multiplierCores.length) {
         this.message(`${tumble.multiplierCores.map((core) => `${core.value}x`).join(" + ")} // CORE TOTAL ${tumble.coreTotalMultiplier}x`);
-        this.audio.core(tumble.coreTotalMultiplier);
+      this.audio.core(tumble.coreTotalMultiplier, isBonus);
         await this.scene.activateMultiplierCores(tumble.multiplierCores.map((core) => core.value), this.duration(ANIMATION.freeSpinPause));
         await sleep(this.duration(ANIMATION.freeSpinPause));
       }
       await this.scene.burstCells(tumble.removedCells, this.duration(ANIMATION.burst));
-      this.showWin(tumble.rawPayoutMultiplier, Math.round(tumble.rawPayoutMultiplier * this.betCents), isBonus);
+       this.showTumbleWin(tumble, index + 1, isBonus);
       this.updateHud();
       this.setState("REFILL");
       this.setState("CASCADE_DROP");
       await this.scene.animateCascade(tumble.boardAfterRefill, tumble.removedCells, this.duration(ANIMATION.refill));
       this.message(index > 0 ? `TUMBLE ${index + 1} // RAW ${tumble.rawWinPoolAfter.toFixed(2)}x` : `WIN // RAW ${tumble.rawWinPoolAfter.toFixed(2)}x`);
     }
+    const last = result.tumbles.at(-1);
+    if (last) await this.presentSequenceSettlement(last, isBonus);
   }
 
   private persistBalance() { localStorage.setItem("cascade8-balance", String(this.balanceCents)); }
@@ -300,13 +306,62 @@ export class GameController {
     this.ui.spinLabel.textContent = active ? "START FREE SPINS" : "SPIN";
     this.ui.spin.querySelector("small")!.textContent = active ? "ENTER THE GOLDEN REALM" : "ENTER THE CASCADE";
   }
-  private showWin(multiplier: number, amountCents: number, isBonus: boolean) {
-    const size = multiplier >= 100 ? "mega" : multiplier >= 25 ? "big" : multiplier >= 10 ? "medium" : "small";
-    this.ui.winAnnouncer.className = `win-announcer is-${size}${isBonus ? " is-free-win" : ""}`;
-    this.ui.winAnnouncer.innerHTML = `<span>${isBonus ? "FREE WIN" : "WIN"}</span><strong>+${formatCredits(amountCents)}</strong><small>${multiplier.toFixed(2)}x</small>`;
-    window.setTimeout(() => {
-      if (this.ui.winAnnouncer.classList.contains(`is-${size}`)) this.ui.winAnnouncer.classList.remove(`is-${size}`);
-    }, this.duration(size === "mega" || size === "big" ? 1500 : 950));
+  private resetTumbleWin() {
+    this.ui.tumblePanel.className = "tumble-win-panel";
+    this.ui.tumbleSymbolWin.textContent = "";
+    this.ui.tumble.textContent = "—";
+    this.ui.tumbleIncrement.textContent = "";
+    this.ui.tumbleMeta.textContent = "GOOD LUCK";
+    this.ui.tumbleSettlement.innerHTML = "";
+  }
+  private showTumbleWin(tumble: SpinResult["tumbles"][number], tumbleIndex: number, isBonus: boolean) {
+    this.ui.tumblePanel.className = `tumble-win-panel is-active${isBonus ? " is-free-win" : ""}`;
+    this.ui.tumbleSymbolWin.textContent = tumble.winningSymbols
+      .map((symbol) => `${getSymbolDefinition(symbol).name} +${formatCredits(Math.round((tumble.payouts[symbol] ?? 0) * this.betCents))}`)
+      .join("  ·  ");
+    this.ui.tumble.textContent = formatCredits(Math.round(tumble.rawWinPoolAfter * this.betCents));
+    this.ui.tumbleIncrement.textContent = `+${formatCredits(Math.round(tumble.rawPayoutMultiplier * this.betCents))}  //  ${tumble.rawPayoutMultiplier.toFixed(2)}x`;
+    this.ui.tumbleMeta.textContent = `TUMBLE ${tumbleIndex}  //  RAW POOL ${tumble.rawWinPoolAfter.toFixed(2)}x`;
+  }
+  private async presentSequenceSettlement(tumble: SpinResult["tumbles"][number], isBonus: boolean) {
+    if (tumble.finalPayoutMultiplier <= tumble.rawWinPoolAfter || !tumble.settlementCores.length) return;
+    const rawAmount = formatCredits(Math.round(tumble.rawWinPoolAfter * this.betCents));
+    const coreText = tumble.settlementCores.map((core) => `${core.value}x`).join(" + ");
+    const total = tumble.coreTotalMultiplier;
+    this.ui.tumblePanel.className = `tumble-win-panel is-settling${isBonus ? " is-free-win" : ""}`;
+    this.ui.tumbleSymbolWin.textContent = "";
+    await this.scene.activateMultiplierCores(tumble.settlementCores.map((core) => core.value), this.duration(260));
+    this.ui.tumbleSettlement.innerHTML = `<span>CORES ACTIVATE</span><strong>${coreText}</strong><small>TOTAL MULTIPLIER ${total}x</small>`;
+    await sleep(this.duration(380));
+    this.ui.tumbleSettlement.innerHTML = `<span>SEQUENCE CALCULATION</span><strong>${rawAmount} × ${total}</strong><small>RAW TUMBLE WIN × TOTAL MULTIPLIER</small>`;
+    await sleep(this.duration(470));
+    this.ui.tumble.textContent = formatCredits(Math.round(tumble.finalPayoutMultiplier * this.betCents));
+    this.ui.tumbleIncrement.textContent = `FINAL +${formatCredits(Math.round(tumble.finalPayoutMultiplier * this.betCents))}`;
+    this.ui.tumbleMeta.textContent = `FINAL TUMBLE WIN  //  ${tumble.finalPayoutMultiplier.toFixed(2)}x`;
+    this.ui.tumbleSettlement.innerHTML = "";
+    await sleep(this.duration(420));
+  }
+  async previewTumbleSequence(withSettlement = false) {
+    this.resetTumbleWin();
+    const values = [1.2, 4, 8];
+    for (let index = 0; index < values.length; index += 1) {
+      const increment = index === 0 ? values[0] : values[index] - values[index - 1];
+      this.ui.tumblePanel.className = "tumble-win-panel is-active";
+      this.ui.tumbleSymbolWin.textContent = "SYMBOL WIN PREVIEW";
+      this.ui.tumble.textContent = formatCredits(Math.round(values[index] * this.betCents));
+      this.ui.tumbleIncrement.textContent = `+${formatCredits(Math.round(increment * this.betCents))}  //  ${increment.toFixed(2)}x`;
+      this.ui.tumbleMeta.textContent = `TUMBLE ${index + 1}  //  RAW POOL ${values[index].toFixed(2)}x`;
+      await sleep(this.duration(520));
+    }
+    if (withSettlement) {
+      this.ui.tumblePanel.className = "tumble-win-panel is-settling";
+      this.ui.tumbleSettlement.innerHTML = `<span>CORES ACTIVATE</span><strong>10x + 25x</strong><small>TOTAL MULTIPLIER 35x</small>`;
+      await sleep(this.duration(380));
+      this.ui.tumbleSettlement.innerHTML = `<span>SEQUENCE CALCULATION</span><strong>8.00 × 35</strong><small>FINAL TUMBLE WIN 280.00x</small>`;
+      await sleep(this.duration(600));
+      this.ui.tumbleSettlement.innerHTML = "";
+      this.ui.tumbleMeta.textContent = "FINAL TUMBLE WIN  //  280.00x";
+    }
   }
   showBigWin(multiplier: number, amountCents: number, forcedTier?: string) {
     return new Promise<void>((resolve) => {

@@ -38,10 +38,16 @@ app.innerHTML = `
           <div class="board-caption"><span>6 × 5 CASCADE FIELD</span></div>
           <div id="phaser-board" aria-label="Cascade 8 game board"></div>
           <div id="bonus-overlay" class="bonus-overlay" hidden aria-live="assertive"><span>✦ BONUS UNLOCKED ✦</span><strong>FREE SPINS READY</strong><small>PRESS SPIN TO ENTER THE GOLDEN REALM</small></div>
-          <div id="multiplier-announcer" class="multiplier-announcer" aria-live="assertive"></div>
-          <div id="win-announcer" class="win-announcer" aria-live="polite"></div>
         </div>
-        <div class="status-line"><span class="status-dot"></span><span id="status">THE GATES ARE QUIET</span><strong id="tumble">—</strong></div>
+         <div id="tumble-win-panel" class="tumble-win-panel" aria-live="polite">
+           <span class="tumble-win-label">TUMBLE WIN</span>
+            <span id="tumble-symbol-win" class="tumble-symbol-win"></span>
+           <strong id="tumble">—</strong>
+           <span id="tumble-increment" class="tumble-increment"></span>
+           <small id="tumble-meta" class="tumble-meta">GOOD LUCK</small>
+           <div id="tumble-settlement" class="tumble-settlement"></div>
+         </div>
+         <div class="status-line" aria-live="polite"><span class="status-dot"></span><span id="status">THE GATES ARE QUIET</span></div>
       </section>
     </main>
     <footer class="control-deck">
@@ -97,8 +103,8 @@ function showModal(name: string | null) {
     modalRoot.innerHTML = `<div class="modal-backdrop"><section class="modal-card info-modal"><button class="modal-close" data-close>×</button><div class="modal-kicker">CASCADE 8 // FIELD GUIDE</div><h2>How to play</h2><p class="modal-lead">Match 8 or more of a club logo anywhere on the field. Winning logos burst, the field falls, and fresh logos tumble in.</p>
       <div class="info-grid"><div><span class="info-number">01</span><b>Drop</b><small>30 symbols land in a 6 × 5 field.</small></div><div><span class="info-number">02</span><b>Match</b><small>Every matching symbol counts, even when separated.</small></div><div><span class="info-number">03</span><b>Tumble</b><small>Wins vanish together and the cascade repeats.</small></div><div><span class="info-number">04</span><b>Bonus</b><small>4 Astral Gates trigger 10 Free Spins.</small></div></div>
        <div class="paytable"><div class="paytable-head"><span>CLUB LOGO</span><span>8 — 9</span><span>10 — 11</span><span>12+</span></div>${NORMAL_SYMBOLS.map((symbol) => { const paytable = PAYTABLE[symbol.id as keyof typeof PAYTABLE]; return `<div class="paytable-row"><span class="paytable-club" style="color:${symbol.colorHex}"><img src="${import.meta.env.BASE_URL}${symbol.logoPath}" alt="">${symbol.name}</span><span>${paytable[0].multiplier}x</span><span>${paytable[1].multiplier}x</span><span>${paytable[2].multiplier}x</span></div>`; }).join("")}</div>
-       <div class="info-callout"><b>MULTIPLIER CORES</b><span>Free Spin refill cells can spawn physical 2x–500x Cores. Cores stay locked across the whole Free Spin sequence, add together at settlement, and apply once to the raw sequence pool.</span></div>
-       <div class="modal-footnote">Core spawn rate is 8% per Free Spin refill. This is a virtual-credit demo and is not a regulated gaming product.</div>
+        <div class="info-callout"><b>MULTIPLIER CORES</b><span>Rare Base refill cells and Free Spin refill cells can spawn physical 2x–500x Cores. Cores stay locked across the whole tumble sequence, add together at settlement, and apply once to the raw sequence pool.</span></div>
+        <div class="modal-footnote">Base Core chance is 0.006% per Base refill position after RTP calibration; Bonus Core chance is 1.10%. This is a virtual-credit demo and is not a regulated gaming product.</div>
     </section></div>`;
   }
   modalRoot.querySelectorAll("[data-close]").forEach((button) => button.addEventListener("click", () => showModal(null)));
@@ -115,8 +121,8 @@ window.setTimeout(() => {
     balance: byId("balance"), bet: byId("bet"), win: byId("win"), bonusWin: byId("bonus-win"), freeSpins: byId("free-spins"),
     tumble: byId("tumble"), status: byId("status"), spin: byId("spin"), spinLabel: byId("spin").querySelector(".spin-label") as HTMLElement,
     betMinus: byId("bet-minus"), betPlus: byId("bet-plus"), autoCount: byId("auto-count"), autoStart: byId("auto-start"), autoStatus: byId("auto-status"),
-    turbo: byId("turbo"), sound: byId("sound"),
-     bonusOverlay: byId("bonus-overlay"), multiplierAnnouncer: byId("multiplier-announcer"), winAnnouncer: byId("win-announcer"), bigWinOverlay: byId("big-win-overlay"), bonusSummaryOverlay: byId("bonus-summary-overlay"), boardWrap: byId("phaser-board").parentElement!,
+     turbo: byId("turbo"), sound: byId("sound"),
+       bonusOverlay: byId("bonus-overlay"), tumbleSymbolWin: byId("tumble-symbol-win"), tumbleIncrement: byId("tumble-increment"), tumbleMeta: byId("tumble-meta"), tumbleSettlement: byId("tumble-settlement"), tumblePanel: byId("tumble-win-panel"), bigWinOverlay: byId("big-win-overlay"), bonusSummaryOverlay: byId("bonus-summary-overlay"), boardWrap: byId("phaser-board").parentElement!,
     setModal: showModal,
   });
   if (isLab) renderLab(scene);
@@ -125,7 +131,7 @@ window.setTimeout(() => {
 function renderLab(scene: GameScene) {
   const lab = document.createElement("section");
   lab.className = "lab-panel";
-    lab.innerHTML = `<div class="panel-kicker">DEVELOPMENT ROUTE // /lab</div><h1>Animation & Math Lab</h1><p>Deterministic board checks stay separate from live RNG. Use these cards to inspect wins, persistent Cores, streams and the full win presentation.</p><div class="lab-actions"><button data-lab="seven">7 × S1</button><button data-lab="eight">8 × S1</button><button data-lab="simultaneous">8 × S1 + 8 × S6</button><button data-lab="core">CORE BOARD</button><button data-lab="settlement">8x + 35x</button><button data-lab="waiting">BONUS WAITING</button><button data-lab="streams">STREAMS</button><button data-lab="pairs">PAIR SPLIT</button><button data-lab="anti">ANTI-STREAK</button><button data-lab="timing">TIMINGS</button><button data-lab="big">BIG WIN WAIT</button><button data-lab="max">MAX WIN WAIT</button></div><div class="lab-result" id="lab-result">Choose a predefined board.</div><pre class="lab-metrics" id="lab-metrics"></pre><div class="special-design"><div class="panel-kicker">SPECIAL SYMBOL DESIGN</div><div class="special-grid"><div class="special-preview normal-preview"><span class="special-state">IDLE</span><div class="preview-crest">GS</div><b>GALATASARAY</b></div><div class="special-preview scatter-preview"><span class="special-state">LANDING</span><div class="preview-trophy">★</div><b>GOLDEN SCATTER</b></div>${[2, 10, 25, 50, 100, 250, 500].map((value) => `<div class="special-preview core-preview core-${value}"><span class="special-state">${value >= 100 ? "SETTLEMENT" : "ACTIVE"}</span><strong>${value}x</strong><b>CORE</b></div>`).join("")}</div></div>`;
+    lab.innerHTML = `<div class="panel-kicker">DEVELOPMENT ROUTE // /lab</div><h1>Animation & Math Lab</h1><p>Deterministic board checks stay separate from live RNG. Use these cards to inspect the frameless Scatter, persistent Cores, streams and the full win presentation.</p><div class="lab-actions"><button data-lab="seven">7 × S1</button><button data-lab="eight">8 × S1</button><button data-lab="simultaneous">8 × S1 + 8 × S6</button><button data-lab="core">CORE BOARD</button><button data-lab="scatter-idle">SCATTER IDLE</button><button data-lab="scatter-fall">SCATTER FALL</button><button data-lab="scatter-land">SCATTER LAND</button><button data-lab="scatter-1">SCATTER #1</button><button data-lab="scatter-2">SCATTER #2</button><button data-lab="scatter-3">SCATTER #3</button><button data-lab="scatter-bonus">BONUS SCATTER</button><button data-lab="tumble">TUMBLE 1.20 → 4.00 → 8.00</button><button data-lab="settlement">8x + 35x</button><button data-lab="waiting">BONUS WAITING</button><button data-lab="streams">STREAMS</button><button data-lab="pairs">PAIR SPLIT</button><button data-lab="anti">ANTI-STREAK</button><button data-lab="timing">TIMINGS</button><button data-lab="big">BIG WIN WAIT</button><button data-lab="max">MAX WIN WAIT</button></div><div class="lab-result" id="lab-result">Choose a predefined board.</div><pre class="lab-metrics" id="lab-metrics"></pre><div class="special-design"><div class="panel-kicker">SPECIAL SYMBOL DESIGN // SCATTER NEXT TO ORDINARY SYMBOL</div><div class="special-grid"><div class="special-preview normal-preview"><span class="special-state">ORDINARY</span><div class="preview-crest">GS</div><b>GALATASARAY</b></div><div class="special-preview scatter-preview"><span class="special-state">FRAMELESS</span><div class="preview-trophy-mark"></div><b>GOLDEN TROPHY</b></div>${[2, 10, 25, 50, 100, 250, 500].map((value) => `<div class="special-preview core-preview core-${value}"><span class="special-state">${value >= 100 ? "SETTLEMENT" : "ACTIVE"}</span><strong>${value}x</strong><b>CORE</b></div>`).join("")}</div></div>`;
   document.querySelector(".game-stage")?.append(lab);
    const metrics = lab.querySelector<HTMLElement>("#lab-metrics")!;
    const updateMetrics = () => {
@@ -136,7 +142,13 @@ function renderLab(scene: GameScene) {
    updateMetrics();
   lab.querySelectorAll<HTMLButtonElement>("[data-lab]").forEach((button) => button.onclick = () => {
     const key = button.dataset.lab;
-    if (key === "settlement") {
+      if (key === "tumble") {
+        void controller.previewTumbleSequence(false);
+        byId("lab-result").textContent = "TUMBLE WIN PREVIEW // 1.20 → 4.00 → 8.00 // cumulative raw pool";
+        return;
+      }
+      if (key === "settlement") {
+        void controller.previewTumbleSequence(true);
       const settlement = calculateSequenceSettlement(8, [10, 25]);
       byId("lab-result").textContent = `RAW POOL 8.00x × CORES ${settlement.combinedCoreMultiplier}x = FINAL ${settlement.finalWinMultiplier}x // SETTLED ONCE`;
       return;
@@ -155,11 +167,23 @@ function renderLab(scene: GameScene) {
         byId("lab-result").textContent = "BONUS_WAITING_FOR_START // no Free Spin board is generated until START FREE SPINS";
         return;
       }
-      if (key === "timing") {
+       if (key === "timing") {
         byId("lab-result").textContent = `NORMAL TIMINGS // drop ${ANIMATION.initialDrop}ms // highlight ${ANIMATION.winHighlight}ms // burst ${ANIMATION.burst}ms // refill ${ANIMATION.refill}ms // turbo scales centrally`;
         return;
       }
-      if (key === "streams") {
+       if (key?.startsWith("scatter-")) {
+         const scatterCount = key === "scatter-1" || key === "scatter-idle" || key === "scatter-fall" || key === "scatter-land" ? 1 : key === "scatter-2" ? 2 : key === "scatter-3" ? 3 : 4;
+         const values = Array(30).fill("S2");
+         const placements = [[2, 1], [1, 3], [3, 4], [0, 5]];
+         placements.slice(0, scatterCount).forEach(([row, col]) => { values[row * 6 + col] = "SCATTER"; });
+         const scatterBoard = Array.from({ length: 5 }, (_, row) => values.slice(row * 6, row * 6 + 6)) as Board;
+         scene.renderBoard(scatterBoard);
+         if (key === "scatter-fall") void scene.animateDrop(520);
+         if (key === "scatter-land") { scene.renderBoard(scatterBoard); void scene.animateDrop(160); }
+         byId("lab-result").textContent = `${key.toUpperCase()} // ${scatterCount} GOLDEN TROPHY${scatterCount === 1 ? "" : "S"} // ordinary football symbol shown beside it`;
+         return;
+       }
+       if (key === "streams") {
         const seeded = generateInitialBoardWithStreams(new SeededRNG("lab-streams"), "base");
         const first = seeded.streams[0].next(1, "BASE_REFILL");
         const second = seeded.streams[0].next(1, "BASE_REFILL");
@@ -178,7 +202,7 @@ function renderLab(scene: GameScene) {
         let current = 0;
         let previous: unknown;
         values.forEach((value) => { current = value === previous ? current + 1 : 1; maximum = Math.max(maximum, current); previous = value; });
-        byId("lab-result").textContent = `ANTI-STREAK // 500 incoming cells // maximum contiguous normal streak ${maximum} // configured runs 76.5% singles / 23.5% pairs`;
+         byId("lab-result").textContent = `ANTI-STREAK // 500 incoming cells // maximum contiguous normal streak ${maximum} // configured runs 75% singles / 25% pairs`;
        return;
      }
      const values = key === "core"

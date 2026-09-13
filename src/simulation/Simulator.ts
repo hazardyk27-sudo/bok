@@ -111,6 +111,19 @@ export type SimulationReport = {
   averageFreeSpinsPerBonus: number;
   multiplierCoreFrequency: number;
   averageCoreCellsPerFreeRefill: number;
+  baseCoreSpawnFrequency: number;
+  baseCorePaidSpinFrequency: number;
+  baseCoreAverageValue: number;
+  baseCore50xFrequency: number;
+  baseCore100xFrequency: number;
+  baseCore250xFrequency: number;
+  baseCore500xFrequency: number;
+  bonusCoreSpawnFrequency: number;
+  bonusCoreAverageValue: number;
+  bonusCore50xFrequency: number;
+  bonusCore100xFrequency: number;
+  bonusCore250xFrequency: number;
+  bonusCore500xFrequency: number;
   averageCombinedCoreMultiplier: number;
   highestCoreTotalObserved: number;
   coreRtpContribution: number;
@@ -158,6 +171,11 @@ export function simulate(spins: number, seed: string, betCents = 100, onProgress
   let coreCells = 0;
   let freeRefills = 0;
   let freeRefillCells = 0;
+  let baseRefillCells = 0;
+  let baseCoreCells = 0;
+  let baseCorePaidSpinCount = 0;
+  const baseCoreValues: number[] = [];
+  const bonusCoreValues: number[] = [];
   let coreContributionCents = 0;
   let coreTotal = 0;
   let rawSequenceTotal = 0;
@@ -216,8 +234,27 @@ export function simulate(spins: number, seed: string, betCents = 100, onProgress
         symbolHitCounts[symbol] = (symbolHitCounts[symbol] ?? 0) + 1;
       });
     }
+    const baseCoreValuesThisSpin = result.tumbles.flatMap((tumble) =>
+      tumble.newSymbols.filter((cell) => typeof cell !== "string").map((cell) => cell.value),
+    );
+    baseRefillCells += result.tumbles.reduce((sum, tumble) => sum + tumble.newSymbols.length, 0);
+    baseCoreCells += baseCoreValuesThisSpin.length;
+    baseCoreValues.push(...baseCoreValuesThisSpin);
+    if (baseCoreValuesThisSpin.length) baseCorePaidSpinCount += 1;
+    const bonusCoreValuesThisSpin = result.freeSpins.flatMap((spin) =>
+      spin.tumbles.flatMap((tumble) =>
+        tumble.newSymbols.filter((cell) => typeof cell !== "string").map((cell) => cell.value),
+      ),
+    );
+    bonusCoreValues.push(...bonusCoreValuesThisSpin);
     for (const sequence of [
-      { raw: result.baseRawWinMultiplier, final: result.baseWinCents / betCents, cores: [] as number[] },
+      {
+        raw: result.baseRawWinMultiplier,
+        final: result.baseWinCents / betCents,
+        cores: result.tumbles.flatMap((tumble) =>
+          tumble.newSymbols.filter((cell) => typeof cell !== "string").map((cell) => cell.value),
+        ),
+      },
       ...result.freeSpins.map((freeSpin) => ({
         raw: freeSpin.rawWinMultiplier,
         final: freeSpin.finalWinMultiplier,
@@ -270,6 +307,19 @@ export function simulate(spins: number, seed: string, betCents = 100, onProgress
     averageFreeSpinsPerBonus: bonusTriggerCount ? Number((freeSpinCount / bonusTriggerCount).toFixed(4)) : 0,
     multiplierCoreFrequency: freeRefillCells ? Number(((coreCells / freeRefillCells) * 100).toFixed(4)) : 0,
     averageCoreCellsPerFreeRefill: freeRefills ? Number((coreCells / freeRefills).toFixed(4)) : 0,
+    baseCoreSpawnFrequency: Number(((baseCoreCells / Math.max(1, baseRefillCells)) * 100).toFixed(4)),
+    baseCorePaidSpinFrequency: percent(baseCorePaidSpinCount),
+    baseCoreAverageValue: baseCoreValues.length ? Number((baseCoreValues.reduce((sum, value) => sum + value, 0) / baseCoreValues.length).toFixed(4)) : 0,
+    baseCore50xFrequency: Number(((baseCoreValues.filter((value) => value === 50).length / spins) * 100).toFixed(4)),
+    baseCore100xFrequency: Number(((baseCoreValues.filter((value) => value === 100).length / spins) * 100).toFixed(4)),
+    baseCore250xFrequency: Number(((baseCoreValues.filter((value) => value === 250).length / spins) * 100).toFixed(4)),
+    baseCore500xFrequency: Number(((baseCoreValues.filter((value) => value === 500).length / spins) * 100).toFixed(4)),
+    bonusCoreSpawnFrequency: Number(((coreCells / Math.max(1, freeRefillCells)) * 100).toFixed(4)),
+    bonusCoreAverageValue: bonusCoreValues.length ? Number((bonusCoreValues.reduce((sum, value) => sum + value, 0) / bonusCoreValues.length).toFixed(4)) : 0,
+    bonusCore50xFrequency: Number(((bonusCoreValues.filter((value) => value === 50).length / spins) * 100).toFixed(4)),
+    bonusCore100xFrequency: Number(((bonusCoreValues.filter((value) => value === 100).length / spins) * 100).toFixed(4)),
+    bonusCore250xFrequency: Number(((bonusCoreValues.filter((value) => value === 250).length / spins) * 100).toFixed(4)),
+    bonusCore500xFrequency: Number(((bonusCoreValues.filter((value) => value === 500).length / spins) * 100).toFixed(4)),
     averageCombinedCoreMultiplier: coreTumbles ? Number((coreTotal / coreTumbles).toFixed(4)) : 0,
     highestCoreTotalObserved, coreRtpContribution: Number(((coreContributionCents / totalBetCents) * 100).toFixed(4)),
     averageRawSequenceMultiplier: sequenceCount ? Number((rawSequenceTotal / sequenceCount).toFixed(4)) : 0,

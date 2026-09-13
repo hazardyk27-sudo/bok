@@ -33,15 +33,15 @@ export class ColumnStream {
     private readonly columnIndex: number,
   ) {}
 
-  next(count: number, context: GenerationContext): BoardCell[] {
-    while (this.queue.length < count) this.appendRun(context);
+  next(count: number, context: GenerationContext, allowCores = true): BoardCell[] {
+    while (this.queue.length < count) this.appendRun(context, allowCores);
     return this.queue.splice(0, count);
   }
 
-  private appendRun(context: GenerationContext) {
+  private appendRun(context: GenerationContext, allowCores: boolean) {
     const isInitial = context === "BASE_INITIAL" || context === "BONUS_INITIAL";
     const allowScatter = isInitial;
-    const allowCore = context === "BONUS_REFILL";
+    const coreMode = allowCores && context === "BASE_REFILL" ? "base" : allowCores && context === "BONUS_REFILL" ? "bonus" : null;
     const candidates = this.config.symbolWeights
       .filter(({ value }) => value !== this.lastRunSymbol)
       .filter(({ value }) => !isInitial || this.queue.filter((cell) => cell === value).length < 3)
@@ -63,8 +63,8 @@ export class ColumnStream {
         endedWithBoundary = true;
         continue;
       }
-      if (allowCore) {
-        const core = drawMultiplierCore(this.source);
+      if (coreMode) {
+        const core = drawMultiplierCore(this.source, coreMode);
         if (core) {
           this.queue.push(core);
           this.lastRunSymbol = null;
@@ -107,9 +107,9 @@ export function generateInitialBoard(source: RandomSource, mode: "base" | "bonus
   return generateInitialBoardWithStreams(source, mode).board;
 }
 
-export function generateRefillSymbols(source: RandomSource, count: number, mode: "base" | "bonus" = "base"): NormalSymbolId[] {
+export function generateRefillSymbols(source: RandomSource, count: number, mode: "base" | "bonus" = "base"): BoardCell[] {
   const stream = new ColumnStream(source, mode === "bonus" ? BONUS_REEL_CONFIG : BASE_REEL_CONFIG, 0);
-  return stream.next(count, mode === "bonus" ? "BONUS_REFILL" : "BASE_REFILL") as NormalSymbolId[];
+  return stream.next(count, mode === "bonus" ? "BONUS_REFILL" : "BASE_REFILL", false);
 }
 
 export function generateRefillCells(
@@ -120,7 +120,7 @@ export function generateRefillCells(
   columnIndex = 0,
 ): BoardCell[] {
   const stream = new ColumnStream(source, mode === "bonus" ? BONUS_REEL_CONFIG : BASE_REEL_CONFIG, columnIndex);
-  return stream.next(count, allowCores && mode === "bonus" ? "BONUS_REFILL" : "BASE_REFILL");
+  return stream.next(count, mode === "bonus" ? "BONUS_REFILL" : "BASE_REFILL", allowCores);
 }
 
 export function countScatter(board: Board): number {

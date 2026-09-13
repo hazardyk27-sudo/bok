@@ -113,6 +113,22 @@ export const PAYTABLE: Record<NormalSymbolId, readonly { min: number; max: numbe
   S8: [{ min: 8, max: 9, multiplier: 9.4 }, { min: 10, max: 11, multiplier: 22.5 }, { min: 12, max: Infinity, multiplier: 45 }],
 };
 
+// Calibrated below the initial 0.20% starting point to keep total RTP in target.
+export const BASE_MULTIPLIER_CORE_CHANCE = 0.006;
+export const BASE_MULTIPLIER_CORE_WEIGHTS = [
+  { value: 2, weight: 40 },
+  { value: 3, weight: 27 },
+  { value: 5, weight: 17 },
+  { value: 10, weight: 8 },
+  { value: 15, weight: 3 },
+  { value: 20, weight: 2 },
+  { value: 25, weight: 1.5 },
+  { value: 50, weight: 0.8 },
+  { value: 100, weight: 0.45 },
+  { value: 250, weight: 0.2 },
+  { value: 500, weight: 0.05 },
+] as const;
+
 export const BONUS_CONFIG = {
   base: { 4: 10, 5: 12, 6: 15 },
   retrigger: { 3: 5, 4: 5, 5: 5, 6: 5 },

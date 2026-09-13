@@ -13,6 +13,7 @@ export const isMultiplierCore = (cell: BoardCell): cell is MultiplierCore =>
 export type TumbleResult = {
   boardBefore: Board;
   winningSymbols: NormalSymbolId[];
+  payouts: Record<NormalSymbolId, number>;
   winningCells: Cell[];
   rawPayoutMultiplier: number;
   rawWinPoolAfter: number;
@@ -20,6 +21,7 @@ export type TumbleResult = {
   multiplierCoreCells: CoreCell[];
   coreTotalMultiplier: number;
   finalPayoutMultiplier: number;
+  settlementCores: MultiplierCore[];
   settlement: "deferred" | "sequence";
   removedCells: Cell[];
   boardAfterGravity: Board;
