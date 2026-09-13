@@ -23,6 +23,7 @@ export class GameScene extends Phaser.Scene {
     this.load.image("core-2x", `${import.meta.env.BASE_URL}special-symbols/2x.png`);
     this.load.image("core-3x", `${import.meta.env.BASE_URL}special-symbols/3x.png`);
     this.load.image("core-5x", `${import.meta.env.BASE_URL}special-symbols/5x.png`);
+    this.load.image("core-10x", `${import.meta.env.BASE_URL}special-symbols/10x.png`);
   }
 
   create() {
@@ -92,7 +93,7 @@ export class GameScene extends Phaser.Scene {
         const angle = (index / 8) * Math.PI * 2;
         radiance.lineBetween(Math.cos(angle) * 27, Math.sin(angle) * 27, Math.cos(angle) * 38, Math.sin(angle) * 38);
       }
-      if (symbol.value === 2 || symbol.value === 3 || symbol.value === 5) {
+      if (symbol.value === 2 || symbol.value === 3 || symbol.value === 5 || symbol.value === 10) {
         const portrait = this.add.image(0, 0, `core-${symbol.value}x`).setDisplaySize(84, 84);
         container.add([glow, radiance, portrait]);
         this.tweens.add({ targets: glow, scale: 1.18, alpha: 0.12, duration: 680, yoyo: true, repeat: -1 });
