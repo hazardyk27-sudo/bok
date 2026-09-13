@@ -19,12 +19,17 @@ export class GameController {
   reducedMotion = localStorage.getItem("cascade8-reduced-motion") === "true";
   freeSpinsLeft = 0;
   private busy = false;
+  private pendingBonusResult: SpinResult | null = null;
+  private autoRunning = false;
+  private autoRemaining = 0;
   readonly audio = new AudioManager();
   private readonly scene: GameScene;
   private readonly ui: {
     balance: HTMLElement; bet: HTMLElement; win: HTMLElement; bonusWin: HTMLElement; freeSpins: HTMLElement;
-    tumble: HTMLElement; status: HTMLElement; spin: HTMLButtonElement; betMinus: HTMLButtonElement; betPlus: HTMLButtonElement;
-    turbo: HTMLButtonElement; sound: HTMLButtonElement; setModal: (name: string | null) => void;
+    tumble: HTMLElement; status: HTMLElement; spin: HTMLButtonElement; spinLabel: HTMLElement; betMinus: HTMLButtonElement; betPlus: HTMLButtonElement;
+    autoCount: HTMLSelectElement; autoStart: HTMLButtonElement; autoStatus: HTMLElement;
+    turbo: HTMLButtonElement; sound: HTMLButtonElement; bonusOverlay: HTMLElement; winAnnouncer: HTMLElement; boardWrap: HTMLElement;
+    setModal: (name: string | null) => void;
   };
 
   constructor(scene: GameScene, ui: GameController["ui"]) {
@@ -40,6 +45,8 @@ export class GameController {
     this.ui.spin.addEventListener("click", () => void this.spin());
     this.ui.betMinus.addEventListener("click", () => this.changeBet(-1));
     this.ui.betPlus.addEventListener("click", () => this.changeBet(1));
+    this.ui.autoCount.addEventListener("change", () => this.updateAutoStatus());
+    this.ui.autoStart.addEventListener("click", () => void this.toggleAuto());
     this.ui.turbo.addEventListener("click", () => {
       this.turbo = !this.turbo; localStorage.setItem("cascade8-turbo", String(this.turbo)); this.updateHud();
     });
@@ -56,9 +63,12 @@ export class GameController {
 
   get betCents() { return BETS_CENTS[this.betIndex]; }
   private duration(value: number) { return this.reducedMotion ? 40 : this.turbo ? Math.round(value * 0.45) : value; }
-  private setState(state: ControllerState) { this.state = state; this.ui.spin.disabled = this.busy || this.balanceCents < this.betCents; }
+  private setState(state: ControllerState) {
+    this.state = state;
+    this.ui.spin.disabled = this.busy || this.autoRunning || (!this.pendingBonusResult && this.balanceCents < this.betCents);
+  }
   private changeBet(direction: number) {
-    if (this.busy) return;
+    if (this.busy || this.autoRunning) return;
     this.betIndex = Math.max(0, Math.min(BETS_CENTS.length - 1, this.betIndex + direction));
     this.audio.click(); this.updateHud();
   }
@@ -71,19 +81,30 @@ export class GameController {
     this.ui.turbo.classList.toggle("is-active", this.turbo);
     this.ui.sound.textContent = this.audio.muted ? "Sound off" : "Sound on";
     this.ui.sound.classList.toggle("is-active", !this.audio.muted);
-    this.ui.spin.disabled = this.busy || this.balanceCents < this.betCents;
+    this.ui.spin.disabled = this.busy || this.autoRunning || (!this.pendingBonusResult && this.balanceCents < this.betCents);
     this.ui.betMinus.disabled = this.busy || this.betIndex === 0;
     this.ui.betPlus.disabled = this.busy || this.betIndex === BETS_CENTS.length - 1;
+    this.ui.autoCount.disabled = this.busy || this.autoRunning || Boolean(this.pendingBonusResult);
+    this.ui.autoStart.disabled = (this.busy && !this.autoRunning) || Boolean(this.pendingBonusResult);
+    this.ui.autoStart.textContent = this.autoRunning ? "STOP" : "START AUTO";
+    this.ui.autoStart.classList.toggle("is-running", this.autoRunning);
+    this.updateAutoStatus();
   }
   updateForModal() { this.updateHud(); }
   private message(value: string) { this.ui.status.textContent = value; }
 
-  async spin() {
+  async spin(fromAuto = false) {
+    if (this.autoRunning && !fromAuto) return;
+    if (this.pendingBonusResult) {
+      await this.startFreeSpins();
+      return;
+    }
     if (this.busy || this.balanceCents < this.betCents) {
       if (!this.busy && this.balanceCents < this.betCents) this.message("INSUFFICIENT DEMO CREDITS");
       return;
     }
     this.busy = true; this.currentWinCents = 0; this.bonusWinCents = 0; this.freeSpinsLeft = 0;
+    this.setBonusPrompt(false);
     this.setState("SPIN_INIT"); this.balanceCents -= this.betCents; this.persistBalance(); this.audio.spin(); this.updateHud();
     const result = playSpin(this.betCents, new CryptoRNG());
     this.message("THE GATES ARE OPENING");
@@ -92,32 +113,109 @@ export class GameController {
     await this.scene.animateDrop(this.duration(ANIMATION.initialDrop));
     await this.playTumbles(result, false);
     if (result.bonusTriggered && !result.maxWinReached) {
-      this.setState("BONUS_TRIGGER"); this.message(`${result.freeSpinsAwarded} FREE SPINS AWARDED`); this.audio.bonus(); this.scene.sparkle();
-      await sleep(this.duration(700)); this.freeSpinsLeft = result.freeSpins.length; this.updateHud();
-      this.setState("BONUS_INTRO"); this.message("BONUS REALM // FREE SPINS");
-      await sleep(this.duration(500));
-      for (const freeSpin of result.freeSpins) {
-        this.freeSpinsLeft = result.freeSpins.length - freeSpin.index + 1;
-        this.setState("FREE_SPIN_PLAY"); this.updateHud();
-        this.scene.renderBoard(freeSpin.initialBoard);
-        await this.scene.animateDrop(this.duration(ANIMATION.initialDrop));
-        await this.playTumbles({ ...result, tumbles: freeSpin.tumbles }, true);
-        if (freeSpin.retriggered) {
-          this.message(`+${freeSpin.retriggered} FREE SPINS`);
-          this.freeSpinsLeft += freeSpin.retriggered;
-          this.updateHud();
-          await sleep(this.duration(450));
-        }
-      }
-      this.setState("BONUS_SUMMARY"); this.message(`BONUS COMPLETE // ${formatCredits(result.bonusWinCents)}`);
-      await sleep(this.duration(900)); this.freeSpinsLeft = 0;
+      this.pendingBonusResult = result;
+      this.freeSpinsLeft = result.freeSpinsAwarded;
+      this.setState("BONUS_TRIGGER");
+      this.message(`${result.freeSpinsAwarded} FREE SPINS READY // PRESS SPIN`);
+      this.audio.bonus();
+      this.scene.sparkle();
+      this.setBonusPrompt(true);
+      this.busy = false;
+      this.updateHud();
+      return;
     }
+    await this.finishSpin(result);
+  }
+
+  private async startFreeSpins() {
+    const result = this.pendingBonusResult;
+    if (!result) return;
+    this.pendingBonusResult = null;
+    this.busy = true;
+    this.setBonusPrompt(false);
+    this.scene.setFreeSpinMode(true);
+    this.ui.boardWrap.classList.add("free-spin-mode");
+    this.setState("BONUS_INTRO");
+    this.message("BONUS REALM // FREE SPINS");
+    await sleep(this.duration(700));
+    this.freeSpinsLeft = result.freeSpins.length;
+    this.updateHud();
+    for (const freeSpin of result.freeSpins) {
+      this.freeSpinsLeft = result.freeSpins.length - freeSpin.index + 1;
+      this.setState("FREE_SPIN_PLAY"); this.updateHud();
+      this.scene.renderBoard(freeSpin.initialBoard);
+      await this.scene.animateDrop(this.duration(ANIMATION.initialDrop));
+      await this.playTumbles({ ...result, tumbles: freeSpin.tumbles }, true);
+      if (freeSpin.retriggered) {
+        this.message(`+${freeSpin.retriggered} FREE SPINS`);
+        this.freeSpinsLeft += freeSpin.retriggered;
+        this.updateHud();
+        await sleep(this.duration(450));
+      }
+    }
+    this.setState("BONUS_SUMMARY"); this.message(`BONUS COMPLETE // ${formatCredits(result.bonusWinCents)}`);
+    await sleep(this.duration(900)); this.freeSpinsLeft = 0;
+    this.scene.setFreeSpinMode(false);
+    this.ui.boardWrap.classList.remove("free-spin-mode");
+    await this.finishSpin(result);
+  }
+
+  private async finishSpin(result: SpinResult) {
     this.currentWinCents = result.totalWinCents;
     if (result.maxWinReached) { this.setState("MAX_WIN"); this.message("MAX WIN // 5000x"); this.scene.sparkle(); await sleep(this.duration(900)); }
     else if (result.totalMultiplier >= 10) { this.setState("BIG_WIN"); this.message(`${winTier(result.totalMultiplier)} // ${result.totalMultiplier.toFixed(2)}x`); this.scene.sparkle(); await sleep(this.duration(700)); }
     this.balanceCents += result.totalWinCents; this.persistBalance();
     this.setState("SPIN_COMPLETE"); this.message(result.totalWinCents ? "SPIN COMPLETE // COLLECTED" : "NO WIN // NEXT GATE AWAITS");
     this.busy = false; this.setState("IDLE"); this.updateHud();
+  }
+
+  private async toggleAuto() {
+    if (this.autoRunning) {
+      this.autoRunning = false;
+      this.message("AUTO STOPPING // CURRENT SPIN FINISHES");
+      this.updateHud();
+      return;
+    }
+    if (this.busy || this.pendingBonusResult || this.balanceCents < this.betCents) {
+      if (this.balanceCents < this.betCents) this.message("INSUFFICIENT DEMO CREDITS");
+      return;
+    }
+    this.autoRunning = true;
+    this.autoRemaining = Number(this.ui.autoCount.value);
+    this.updateHud();
+    await this.runAuto();
+  }
+
+  private async runAuto() {
+    while (this.autoRunning && this.autoRemaining > 0) {
+      if (this.balanceCents < this.betCents) {
+        this.autoRunning = false;
+        this.message("AUTO STOPPED // INSUFFICIENT CREDITS");
+        break;
+      }
+      await this.spin(true);
+      this.autoRemaining -= 1;
+      this.updateAutoStatus();
+      if (this.pendingBonusResult) {
+        if (!this.autoRunning) break;
+        await sleep(this.duration(700));
+        await this.spin(true);
+      }
+      if (this.autoRunning) await sleep(this.duration(250));
+    }
+    if (this.autoRunning) {
+      this.autoRunning = false;
+      this.message("AUTO COMPLETE // ALL SPINS FINISHED");
+    }
+    this.updateHud();
+  }
+
+  private updateAutoStatus() {
+    if (!this.ui.autoStatus) return;
+    const selected = Number(this.ui.autoCount.value);
+    this.ui.autoStatus.textContent = this.autoRunning
+      ? `${this.autoRemaining} LEFT / BET ${formatCredits(this.betCents)}`
+      : `BET ${formatCredits(this.betCents)} / ${selected} READY`;
   }
 
   private async playTumbles(result: Pick<SpinResult, "tumbles">, isBonus: boolean) {
@@ -137,6 +235,7 @@ export class GameController {
       await this.scene.burstCells(tumble.winningCells, this.duration(ANIMATION.burst));
       this.currentWinCents += Math.round(tumble.finalPayoutMultiplier * this.betCents);
       if (isBonus) this.bonusWinCents += Math.round(tumble.finalPayoutMultiplier * this.betCents);
+      this.showWin(tumble.finalPayoutMultiplier, Math.round(tumble.finalPayoutMultiplier * this.betCents), isBonus);
       this.updateHud();
       this.setState("REFILL");
       this.setState("CASCADE_DROP");
@@ -146,6 +245,21 @@ export class GameController {
   }
 
   private persistBalance() { localStorage.setItem("cascade8-balance", String(this.balanceCents)); }
+  private setBonusPrompt(active: boolean) {
+    this.ui.bonusOverlay.hidden = !active;
+    this.ui.boardWrap.classList.toggle("free-spin-ready", active);
+    this.ui.spin.classList.toggle("is-bonus", active);
+    this.ui.spinLabel.textContent = active ? "START FREE SPINS" : "SPIN";
+    this.ui.spin.querySelector("small")!.textContent = active ? "ENTER THE GOLDEN REALM" : "ENTER THE CASCADE";
+  }
+  private showWin(multiplier: number, amountCents: number, isBonus: boolean) {
+    const size = multiplier >= 100 ? "mega" : multiplier >= 25 ? "big" : multiplier >= 10 ? "medium" : "small";
+    this.ui.winAnnouncer.className = `win-announcer is-${size}${isBonus ? " is-free-win" : ""}`;
+    this.ui.winAnnouncer.innerHTML = `<span>${isBonus ? "FREE WIN" : "WIN"}</span><strong>+${formatCredits(amountCents)}</strong><small>${multiplier.toFixed(2)}x</small>`;
+    window.setTimeout(() => {
+      if (this.ui.winAnnouncer.classList.contains(`is-${size}`)) this.ui.winAnnouncer.classList.remove(`is-${size}`);
+    }, this.duration(size === "mega" || size === "big" ? 1500 : 950));
+  }
   resetDemo() { this.balanceCents = STARTING_BALANCE_CENTS; this.persistBalance(); this.updateHud(); this.message("DEMO BALANCE RESET TO 10,000.00"); }
 }
 

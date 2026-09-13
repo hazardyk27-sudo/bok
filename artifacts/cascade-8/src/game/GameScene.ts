@@ -6,6 +6,9 @@ type BoardNode = { container: Phaser.GameObjects.Container; symbol: SymbolId; ro
 
 export class GameScene extends Phaser.Scene {
   private nodes: BoardNode[] = [];
+  private frame?: Phaser.GameObjects.Graphics;
+  private cellFrames: Phaser.GameObjects.Rectangle[] = [];
+  private freeSpinMode = false;
   private boardOrigin = { x: 88, y: 76 };
   private cellSize = { width: 90, height: 88 };
 
@@ -18,21 +21,39 @@ export class GameScene extends Phaser.Scene {
   }
 
   private drawBoardFrame() {
+    this.frame?.destroy();
+    this.cellFrames.forEach((cell) => cell.destroy());
+    this.cellFrames = [];
     const frame = this.add.graphics();
-    frame.fillStyle(0x0b1530, 0.76);
+    frame.setDepth(-10);
+    frame.fillStyle(this.freeSpinMode ? 0x33230b : 0x0b1530, 0.76);
     frame.fillRoundedRect(70, 58, 580, 472, 28);
-    frame.lineStyle(2, 0x5e7cff, 0.3);
+    frame.lineStyle(2, this.freeSpinMode ? 0xffd36a : 0x5e7cff, this.freeSpinMode ? 0.68 : 0.3);
     frame.strokeRoundedRect(70, 58, 580, 472, 28);
-    frame.lineStyle(1, 0x9baeff, 0.13);
+    frame.lineStyle(1, this.freeSpinMode ? 0xffe8a6 : 0x9baeff, this.freeSpinMode ? 0.28 : 0.13);
     frame.strokeRoundedRect(80, 68, 560, 452, 22);
     for (let row = 0; row < BOARD_ROWS; row += 1) {
       for (let col = 0; col < BOARD_COLUMNS; col += 1) {
         const x = this.boardOrigin.x + col * this.cellSize.width;
         const y = this.boardOrigin.y + row * this.cellSize.height;
-        const cell = this.add.rectangle(x + 44, y + 41, 80, 78, 0x16264d, 0.45);
-        cell.setStrokeStyle(1, 0x8b9de3, 0.1);
+        const cell = this.add.rectangle(
+          x + 44,
+          y + 41,
+          80,
+          78,
+          this.freeSpinMode ? 0x5b3b0d : 0x16264d,
+          this.freeSpinMode ? 0.52 : 0.45,
+        ).setDepth(-9);
+        cell.setStrokeStyle(1, this.freeSpinMode ? 0xffd36a : 0x8b9de3, this.freeSpinMode ? 0.25 : 0.1);
+        this.cellFrames.push(cell);
       }
     }
+    this.frame = frame;
+  }
+
+  setFreeSpinMode(enabled: boolean) {
+    this.freeSpinMode = enabled;
+    this.drawBoardFrame();
   }
 
   clearSymbols() {
@@ -46,10 +67,11 @@ export class GameScene extends Phaser.Scene {
       this.boardOrigin.x + col * this.cellSize.width + 44,
       this.boardOrigin.y + row * this.cellSize.height + 41,
     );
-    const glow = this.add.circle(0, 2, 31, definition.color, winner ? 0.27 : 0.1);
+    const glow = this.add.circle(0, 2, 31, definition.color, winner ? 0.4 : 0.18);
     glow.setBlendMode(Phaser.BlendModes.ADD);
-    const orb = this.add.circle(0, 0, 25, 0x09142f, 0.94);
+    const orb = this.add.circle(0, 0, 25, definition.color, winner ? 0.48 : 0.3);
     orb.setStrokeStyle(winner || symbol === "SCATTER" ? 2 : 1, definition.color, winner ? 0.9 : 0.3);
+    const core = this.add.circle(0, 0, 19, 0x09142f, 0.76);
     const shine = this.add.ellipse(-9, -12, 13, 7, 0xffffff, 0.18).setAngle(-25);
     const text = this.add.text(0, 1, definition.icon, {
       color: definition.colorHex,
@@ -57,7 +79,7 @@ export class GameScene extends Phaser.Scene {
       fontSize: symbol === "SCATTER" ? "31px" : "29px",
       fontStyle: "bold",
     }).setOrigin(0.5);
-    container.add([glow, orb, shine, text]);
+    container.add([glow, orb, core, shine, text]);
     if (symbol === "SCATTER") {
       const ring = this.add.circle(0, 0, 34, undefined, 0).setStrokeStyle(1.5, definition.color, 0.72);
       container.add(ring);
@@ -124,6 +146,36 @@ export class GameScene extends Phaser.Scene {
     const wanted = new Set(cells.map((cell) => `${cell.row}:${cell.col}`));
     const active = this.nodes.filter((node) => wanted.has(`${node.row}:${node.col}`));
     await Promise.all(active.map((node) => new Promise<void>((resolve) => {
+      const color = getSymbolDefinition(node.symbol).color;
+      const centerX = node.container.x;
+      const centerY = node.container.y;
+      const ring = this.add.circle(centerX, centerY, 25, undefined, 0)
+        .setStrokeStyle(2, color, 0.9)
+        .setDepth(3);
+      this.tweens.add({
+        targets: ring,
+        scale: 2.15,
+        alpha: 0,
+        duration: duration + 80,
+        ease: "Cubic.easeOut",
+        onComplete: () => ring.destroy(),
+      });
+      Array.from({ length: 12 }, (_, index) => {
+        const particle = this.add.circle(centerX, centerY, index % 3 === 0 ? 4 : 2.5, color, 0.92).setDepth(3);
+        const angle = (index / 12) * Math.PI * 2;
+        const distance = 38 + (index % 4) * 15;
+        this.tweens.add({
+          targets: particle,
+          x: centerX + Math.cos(angle) * distance,
+          y: centerY + Math.sin(angle) * distance,
+          alpha: 0,
+          scale: 0.15,
+          duration: duration + 120,
+          ease: "Cubic.easeOut",
+          onComplete: () => particle.destroy(),
+        });
+        return particle;
+      });
       this.tweens.add({
         targets: node.container,
         scale: 1.6,

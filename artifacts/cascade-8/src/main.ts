@@ -60,6 +60,11 @@ app.innerHTML = `
         <span class="eyebrow">STAKE</span>
         <div class="bet-stepper"><button id="bet-minus" aria-label="Decrease bet">−</button><strong id="bet">1.00</strong><button id="bet-plus" aria-label="Increase bet">+</button></div>
       </div>
+      <div class="auto-control">
+        <span class="eyebrow">AUTO RUN</span>
+        <div class="auto-row"><select id="auto-count" aria-label="Automatic spin count"><option value="25">25 SPINS</option><option value="50">50 SPINS</option><option value="75">75 SPINS</option><option value="100">100 SPINS</option></select><button id="auto-start">START AUTO</button></div>
+        <small id="auto-status">BET 1.00 / READY</small>
+      </div>
       <button id="spin" class="spin-button"><span class="spin-glow"></span><span class="spin-icon">✦</span><span class="spin-label">SPIN</span><small>ENTER THE CASCADE</small></button>
       <div class="utility-controls">
         <button id="turbo" class="utility-button"><span class="utility-icon">»</span><span>TURBO</span></button>
@@ -116,7 +121,8 @@ window.setTimeout(() => {
   controller = new GameController(scene, {
     balance: byId("balance"), bet: byId("bet"), win: byId("win"), bonusWin: byId("bonus-win"), freeSpins: byId("free-spins"),
     tumble: byId("tumble"), status: byId("status"), spin: byId("spin"), spinLabel: byId("spin").querySelector(".spin-label") as HTMLElement,
-    betMinus: byId("bet-minus"), betPlus: byId("bet-plus"), turbo: byId("turbo"), sound: byId("sound"),
+    betMinus: byId("bet-minus"), betPlus: byId("bet-plus"), autoCount: byId("auto-count"), autoStart: byId("auto-start"), autoStatus: byId("auto-status"),
+    turbo: byId("turbo"), sound: byId("sound"),
     bonusOverlay: byId("bonus-overlay"), winAnnouncer: byId("win-announcer"), boardWrap: byId("phaser-board").parentElement!,
     setModal: showModal,
   });
