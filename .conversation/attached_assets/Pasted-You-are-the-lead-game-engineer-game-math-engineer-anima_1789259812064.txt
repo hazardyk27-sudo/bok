@@ -1,0 +1,1782 @@
+You are the lead game engineer, game-math engineer, animation engineer, and QA engineer for this project.
+
+Build a complete, playable, polished browser-based cascading slot-style game from scratch.
+
+This is a DEMO / VIRTUAL-CREDIT game only.
+
+DO NOT implement:
+
+* deposits
+* withdrawals
+* cryptocurrency payments
+* cash-out
+* real-money wallets
+* payment processors
+* real-money gambling account systems
+
+Use virtual credits only.
+
+The game may be inspired by the general "tumble/cascade + anywhere pays" genre, but DO NOT copy Sweet Bonanza branding, artwork, symbols, sounds, UI, trade dress, animations, backgrounds, or copyrighted assets.
+
+The game must have its own visual identity.
+
+PROJECT WORKING NAME:
+
+CASCADE 8
+
+The architecture must be production-quality and modular enough that graphics, math configuration, sound, and UI can later be replaced independently.
+
+Do not stop after scaffolding.
+
+Do not leave TODOs.
+
+Do not leave placeholder functions.
+
+Do not tell me what remains to be built.
+
+Actually implement the entire V1, run it, run automated tests, run the mathematical simulator, fix build/runtime errors, and leave the project in a working state.
+
+# 1. TECHNOLOGY
+
+Use:
+
+* Vite
+* TypeScript
+* Phaser 3
+* HTML/CSS for surrounding interface
+* Vitest for unit tests
+
+Do not use React unless there is a compelling technical reason.
+
+Keep the core game-math engine independent from Phaser.
+
+The simulator must be able to import exactly the same:
+
+* symbol definitions
+* RNG interface
+* weights
+* paytable
+* win evaluator
+* cascade logic
+* bonus logic
+
+used by the playable game.
+
+Graphics must NEVER contain game-math logic.
+
+# 2. GAME GRID
+
+Use:
+
+6 columns × 5 rows
+
+Total:
+
+30 cells
+
+Symbols fall vertically into the grid.
+
+This is NOT a traditional paylines/reel-line game.
+
+There are eight normal symbols:
+
+S1
+S2
+S3
+S4
+S5
+S6
+S7
+S8
+
+and one special symbol:
+
+SCATTER
+
+A normal symbol wins when AT LEAST 8 copies of that same symbol exist anywhere on the current grid.
+
+Adjacency does NOT matter.
+
+Example:
+
+S5 appearing in:
+
+top-left,
+bottom-right,
+middle,
+different columns,
+
+etc. still counts toward the same win.
+
+The rule is simply:
+
+COUNT SAME SYMBOL ANYWHERE ON GRID.
+
+7 copies = no win.
+
+8 or more = win.
+
+# 3. CORE CASCADE RULE
+
+After the board settles:
+
+1. Count every normal symbol S1-S8.
+2. Find all symbols having count >= 8.
+3. Calculate all winning symbol payouts.
+4. Add all winning symbol payouts together.
+5. Highlight every winning instance.
+6. Animate those symbols.
+7. Remove ALL instances of every winning symbol from the board.
+8. Apply gravity independently to each column.
+9. Existing symbols fall into lower empty positions.
+10. Generate replacement symbols above the grid.
+11. Animate replacements falling down.
+12. Evaluate the new board.
+13. Repeat until no symbol has 8+ instances.
+
+This is one paid spin.
+
+There is NO artificial limit on tumble count.
+
+The only hard limit is MAX WIN.
+
+# 4. IMPORTANT CASCADE EXAMPLE
+
+Suppose the current board contains:
+
+S1 = 9
+S6 = 8
+all others < 8
+
+Both S1 and S6 win simultaneously.
+
+Calculate:
+
+S1 payout
++
+S6 payout
+
+Then remove ALL 9 S1 symbols and ALL 8 S6 symbols simultaneously.
+
+Do NOT execute one symbol first and the other afterward.
+
+Then perform one gravity/refill animation.
+
+# 5. INITIAL SYMBOL WEIGHTS
+
+On the INITIAL 30-cell board of every normal paid spin use these probabilities:
+
+S1 = 17.0%
+S2 = 15.5%
+S3 = 14.0%
+S4 = 12.5%
+S5 = 11.5%
+S6 = 10.0%
+S7 = 9.0%
+S8 = 8.0%
+SCATTER = 2.5%
+
+TOTAL = 100%
+
+Keep these values in a single editable configuration file.
+
+Do NOT duplicate these numbers throughout the codebase.
+
+# 6. REFILL SYMBOL RULE
+
+SCATTER MUST NOT appear during tumble/cascade refills.
+
+Scatter exists only on the first 30-symbol deal of a new paid spin or new free spin.
+
+For cascade refills use S1-S8 only.
+
+Normalize their respective original weights proportionally.
+
+Therefore refill relative weights are based on:
+
+S1 17.0
+S2 15.5
+S3 14.0
+S4 12.5
+S5 11.5
+S6 10.0
+S7 9.0
+S8 8.0
+
+without Scatter.
+
+This distinction is important.
+
+Do not accidentally allow Scatter into refill drops.
+
+# 7. PAYTABLE
+
+All rewards are expressed as multipliers of the original spin bet.
+
+Use:
+
+S1
+8-9 = 0.9x
+10-11 = 1.8x
+12+ = 3.6x
+
+S2
+8-9 = 1.1x
+10-11 = 2.2x
+12+ = 4.4x
+
+S3
+8-9 = 1.5x
+10-11 = 3.0x
+12+ = 6.0x
+
+S4
+8-9 = 1.9x
+10-11 = 3.8x
+12+ = 7.5x
+
+S5
+8-9 = 2.8x
+10-11 = 5.6x
+12+ = 11.0x
+
+S6
+8-9 = 3.8x
+10-11 = 9.4x
+12+ = 19.0x
+
+S7
+8-9 = 5.6x
+10-11 = 15.0x
+12+ = 30.0x
+
+S8
+8-9 = 9.4x
+10-11 = 22.5x
+12+ = 45.0x
+
+Example:
+
+Bet = 10 credits
+
+10 copies of S6 appear.
+
+S6 10-11 payout = 9.4x
+
+Payout:
+
+10 × 9.4 = 94 credits.
+
+Then those S6 symbols explode and the tumble continues.
+
+# 8. PAYOUT ACCOUNTING
+
+The player is charged exactly once at the beginning of a paid spin.
+
+Example:
+
+balance = 1000
+bet = 10
+
+Immediately after spin starts:
+
+balance = 990
+
+All cascade rewards belong to that same paid spin.
+
+Do NOT deduct another bet during cascades.
+
+Keep:
+
+currentSpinWin
+
+separately from:
+
+balance
+
+During the cascades accumulate:
+
+currentSpinWin += tumblePayout
+
+At the end of the entire spin credit the reward cleanly.
+
+Do not introduce floating-point visual errors.
+
+Internally handle monetary credit values safely.
+
+For display, maximum two decimal places.
+
+# 9. SCATTER / FREE SPIN TRIGGER
+
+Evaluate Scatter only from the INITIAL settled 30-symbol board.
+
+Do not count cascade refill symbols because Scatter is not generated there.
+
+Base game:
+
+4 Scatter = 10 Free Spins
+5 Scatter = 12 Free Spins
+6 or more Scatter = 15 Free Spins
+
+Scatter does not have a direct monetary payout.
+
+With a 2.5% independent Scatter probability per initial cell, the intended starting trigger frequency is approximately around one bonus per 150-170 paid spins.
+
+Do not fake this frequency.
+
+It must emerge from RNG.
+
+# 10. FREE SPIN MODE
+
+Free Spins use the same:
+
+* 6×5 board
+* normal symbol weights
+* 8+ anywhere win rule
+* paytable
+* cascade system
+
+No credits are deducted during free spins.
+
+Display prominently:
+
+FREE SPINS LEFT
+
+and:
+
+BONUS WIN
+
+When a bonus begins:
+
+save the originating paid spin state.
+
+Play all free spins.
+
+At the end:
+
+show a Bonus Summary screen.
+
+Then return to base mode.
+
+# 11. FREE SPIN RETRIGGER
+
+Scatter may occur on the INITIAL deal of every Free Spin.
+
+Retrigger table:
+
+3 Scatter = +5 Free Spins
+4 Scatter = +8 Free Spins
+5 Scatter = +12 Free Spins
+6+ Scatter = +15 Free Spins
+
+Again:
+
+Scatter appears on initial Free Spin board only.
+
+Never on tumble refills.
+
+The added spins must be animated clearly:
+
++5 FREE SPINS
+
+etc.
+
+# 12. BONUS MULTIPLIER CRYSTALS
+
+Create an original mechanic called:
+
+MULTIPLIER CRYSTALS
+
+They are NOT normal grid symbols.
+
+They are a visual bonus overlay event.
+
+They can occur only during Free Spins.
+
+They may occur only after a winning tumble has been detected.
+
+For every winning tumble in Free Spin mode determine crystal count using:
+
+0 crystals = 80%
+1 crystal = 15%
+2 crystals = 4%
+3 crystals = 1%
+
+If crystal count = 0:
+
+normal tumble payout applies.
+
+If one or more crystals appear:
+
+each crystal independently receives one multiplier.
+
+Multiplier weights:
+
+2x = 40%
+3x = 25%
+5x = 15%
+10x = 10%
+25x = 6%
+50x = 3%
+100x = 1%
+
+If multiple crystals appear:
+
+ADD the multipliers.
+
+Example:
+
+3x crystal
++
+10x crystal
+
+Total multiplier = 13x.
+
+If the original tumble win was:
+
+4.5x
+
+the final tumble reward is:
+
+4.5 × 13 = 58.5x bet.
+
+IMPORTANT:
+
+The crystal multiplier applies only to that specific tumble.
+
+It does NOT persist into the next tumble.
+
+Do not multiply individual winning symbols separately.
+
+First calculate the complete tumble subtotal.
+
+Then apply the summed multiplier.
+
+Example:
+
+S2 win = 2.2x
+S5 win = 5.6x
+
+subtotal:
+
+7.8x
+
+Crystals:
+
+3x + 5x = 8x
+
+Final tumble:
+
+7.8 × 8 = 62.4x.
+
+# 13. MAX WIN
+
+Maximum payout for ONE originating paid spin, including all cascades and the complete Free Spin bonus initiated by that spin:
+
+5000× original bet.
+
+If accumulated win reaches or exceeds 5000×:
+
+cap payout at exactly 5000×.
+
+Immediately stop further mathematical play for that originating spin.
+
+Do NOT generate hidden additional outcomes.
+
+Show a special:
+
+MAX WIN
+5000x
+
+sequence.
+
+Credit exactly the capped reward.
+
+# 14. RTP / MATHEMATICAL TARGET
+
+Treat the provided weights and paytable as the INITIAL mathematical configuration, not as an unverified claim that RTP is already exactly correct.
+
+Build a proper high-speed simulator.
+
+Target final V1 ranges:
+
+Overall RTP:
+95.5% - 96.5%
+
+Preferred center:
+approximately 96.0%
+
+Base-game contribution target:
+approximately 82%-86%
+
+Bonus contribution target:
+approximately 10%-14%
+
+Base-game hit rate target:
+approximately 27%-33%
+
+Bonus frequency target:
+approximately 1 in 145 to 175 paid spins.
+
+Volatility:
+HIGH
+
+Do not manipulate results dynamically to hit these values.
+
+Do not use player history.
+
+Do not use current balance.
+
+Do not use losses/wins.
+
+Do not implement adaptive RTP.
+
+Only static mathematical configuration may be tuned.
+
+If the initial paytable misses the RTP target, tune configuration systematically.
+
+Preferred tuning order:
+
+1. global paytable scaling
+2. individual high-tier payouts
+3. multiplier-crystal frequency
+4. multiplier distribution
+
+Avoid changing the 8-symbol minimum unless absolutely necessary.
+
+Keep Scatter near 2.5% because we want roughly 1/157 bonus trigger probability from the initial grid.
+
+After tuning, document the FINAL values actually used.
+
+# 15. MATHEMATICAL SIMULATOR
+
+Create a command such as:
+
+npm run simulate -- --spins=1000000 --seed=12345
+
+It must run without rendering Phaser.
+
+Support at least:
+
+10,000 spins
+100,000 spins
+1,000,000 spins
+10,000,000 spins
+
+depending on machine performance.
+
+The simulator must report:
+
+Total Spins
+Total Bet
+Total Return
+Overall RTP
+Base Game RTP
+Bonus RTP
+Hit Rate
+Zero-win Rate
+Bonus Trigger Count
+Bonus Frequency
+Average Bonus Win
+Median Bonus Win
+Average Tumbles per Paid Spin
+Maximum Tumbles Seen
+Average Winning Tumbles
+Average Win
+Median Win
+Max Observed Win
+100x+ frequency
+250x+ frequency
+500x+ frequency
+1000x+ frequency
+2500x+ frequency
+5000x frequency
+Free Spin Retrigger Rate
+Average Free Spins per Bonus
+Multiplier Crystal trigger frequency
+Average crystal multiplier
+Highest crystal total observed
+
+Also create a payout-distribution histogram dataset for ranges:
+
+0x
+0-1x
+1-2x
+2-5x
+5-10x
+10-25x
+25-50x
+50-100x
+100-250x
+250-500x
+500-1000x
+1000-2500x
+2500-5000x
+5000x
+
+Output console results and write JSON results to:
+
+/simulation-results/
+
+with timestamp and seed.
+
+# 16. RNG ARCHITECTURE
+
+Create an RNG abstraction.
+
+For the playable demo use:
+
+window.crypto.getRandomValues()
+
+or equivalent cryptographically strong browser randomness.
+
+DO NOT use Math.random() for live game outcomes.
+
+For the simulator implement a deterministic seeded PRNG through the same RNG interface.
+
+This allows identical simulation results from identical seeds.
+
+Game logic should depend on an interface similar conceptually to:
+
+RandomSource.nextFloat()
+
+which returns [0, 1).
+
+Then weightedChoice() consumes that interface.
+
+Do not hard-code randomness directly inside game components.
+
+IMPORTANT:
+
+Document clearly in README that browser-side RNG is suitable for this virtual-credit prototype only.
+
+If the game were ever converted to regulated real-money play, outcome generation would need to move to an appropriately certified server-side/RNG gaming platform and undergo the required independent certification.
+
+# 17. STRICT FAIRNESS RULES
+
+NEVER implement:
+
+if player has lost N spins -> force win
+
+if balance is low -> give bonus
+
+if balance is high -> reduce wins
+
+if player just won -> reduce probability
+
+if user changes bet -> modify RTP
+
+if player is inactive -> alter result
+
+near-miss outcome manipulation
+
+loss recovery algorithms
+
+session-based odds manipulation
+
+Every spin must follow the same static configuration.
+
+Bet size changes reward amounts only.
+
+Bet size must NOT alter symbol probabilities.
+
+# 18. STATE MACHINE
+
+Implement an explicit game state machine.
+
+Minimum states:
+
+BOOT
+IDLE
+SPIN_INIT
+INITIAL_DROP
+EVALUATING
+WIN_HIGHLIGHT
+WIN_EXPLOSION
+GRAVITY
+REFILL
+CASCADE_DROP
+BONUS_TRIGGER
+BONUS_INTRO
+FREE_SPIN_INIT
+FREE_SPIN_PLAY
+CRYSTAL_REVEAL
+BIG_WIN
+MAX_WIN
+BONUS_SUMMARY
+SPIN_COMPLETE
+
+Prevent impossible transitions.
+
+Do not allow a second spin while another spin is active.
+
+Rapid clicking must never:
+
+* double deduct
+* duplicate a payout
+* start overlapping animations
+* corrupt the board
+
+# 19. VISUAL STYLE
+
+Create an original premium fantasy/crystal identity.
+
+Do not make it visually resemble Sweet Bonanza.
+
+Suggested original theme:
+
+dark midnight-to-indigo atmospheric background
+
+subtle moving light particles
+
+premium glowing glass board
+
+rounded but not cartoonish symbols
+
+clean modern UI
+
+Symbols:
+
+S1 = blue water drop
+S2 = green leaf crystal
+S3 = amber sun
+S4 = violet moon
+S5 = silver star
+S6 = red ruby
+S7 = gold crown
+S8 = multicolor prism crystal
+
+Scatter:
+
+a glowing dimensional portal / vortex.
+
+Create original SVG assets in the repository.
+
+Do not hotlink copyrighted art.
+
+SVG graphics should be visually polished enough that the game feels like a real prototype, not a developer grid.
+
+Each symbol needs:
+
+idle state
+hover/shine possibility
+win glow
+burst state
+
+Use subtle depth/shadows.
+
+Prioritize clarity.
+
+# 20. GRID PRESENTATION
+
+The board must remain visually stable.
+
+No layout jumping.
+
+Maintain perfect 6×5 alignment.
+
+Symbols must be clearly distinguishable.
+
+The grid should occupy most of the usable mobile screen.
+
+The game must work well at:
+
+390×844 mobile
+
+430×932 mobile
+
+768×1024 tablet
+
+1366×768 desktop
+
+1920×1080 desktop
+
+Mobile-first.
+
+Keep the board centered.
+
+Desktop can have atmospheric empty space or side information but do not stretch the symbols disproportionately.
+
+# 21. DROP ANIMATION
+
+Initial spin sequence:
+
+Player presses SPIN.
+
+Immediately lock controls.
+
+Bet is deducted.
+
+Spin button reacts.
+
+Grid symbols transition out quickly.
+
+New symbols spawn above the visible board.
+
+Symbols fall downward with slight stagger.
+
+Target initial drop duration:
+
+approximately 550-700 ms.
+
+Different columns can have slightly different timing.
+
+Use easing with a small landing bounce.
+
+Do not emulate rotating physical reels.
+
+This game is a falling-symbol game.
+
+# 22. WIN ANIMATION
+
+Once board settles:
+
+wait approximately 80-120 ms.
+
+Winning symbols:
+
+glow
+slightly scale up
+pulse once
+
+Duration:
+
+approximately 180-220 ms.
+
+Then:
+
+burst/explode
+
+Duration:
+
+approximately 180-250 ms.
+
+Use:
+
+particles
+small light fragments
+symbol-colored glow
+subtle screen response for larger wins.
+
+Remove symbols exactly when burst reaches the correct point.
+
+Then gravity begins.
+
+# 23. GRAVITY AND REFILL
+
+Each column acts independently.
+
+After winning symbols disappear:
+
+non-winning symbols keep their relative vertical order.
+
+They fall into the lowest available cells.
+
+Never create holes.
+
+Then calculate the number of empty cells at the top.
+
+Generate exactly that number of new normal symbols.
+
+Spawn them above the board.
+
+Animate them down.
+
+Fall duration should depend lightly on distance.
+
+Target refill sequence:
+
+350-500 ms.
+
+Then evaluate again.
+
+# 24. CASCADE INDICATOR
+
+During multiple tumbles show a clean small indicator:
+
+TUMBLE 2
+TUMBLE 3
+TUMBLE 4
+
+etc.
+
+Do not show TUMBLE 1 unnecessarily.
+
+Display accumulated win continuously.
+
+Example:
+
+WIN
+18.40
+
+Update the number smoothly.
+
+# 25. SCATTER PRESENTATION
+
+Scatter symbols should feel special.
+
+When 3 Scatter symbols appear in base game but no 4th:
+
+do NOT fake a fourth Scatter approaching.
+
+Do not manipulate animation.
+
+Simply display the actual board.
+
+At 4+ Scatter:
+
+dim the rest of the board slightly.
+
+Scatter portals glow.
+
+Play a short buildup.
+
+Then show:
+
+FREE SPINS
+
+and:
+
+10 FREE SPINS
+
+or relevant amount.
+
+Transition into bonus mode.
+
+# 26. FREE SPIN VISUAL MODE
+
+Bonus mode should visibly differ from base mode while remaining the same game.
+
+Change atmosphere subtly:
+
+brighter particles
+more energetic board glow
+bonus header
+Free Spins counter
+
+Do NOT completely replace the UI.
+
+Show:
+
+FREE SPINS LEFT: N
+
+BONUS WIN: XX.XX
+
+Crystal multipliers must have enough space to animate without hiding the winning board.
+
+# 27. MULTIPLIER CRYSTAL ANIMATION
+
+After a winning Free Spin tumble is calculated:
+
+if crystal count > 0:
+
+pause normal removal progression briefly.
+
+Crystals fly or materialize near the board.
+
+Reveal multipliers sequentially.
+
+Example:
+
+3x
+5x
+10x
+
+Then visually combine them:
+
+TOTAL MULTIPLIER
+18x
+
+Then display:
+
+TUMBLE WIN
+6.2x
+
+followed by:
+
+# 6.2 × 18
+
+111.6x
+
+Do not make this sequence excessively slow.
+
+Allow animation speed to respect Turbo mode.
+
+Then add the result to Bonus Win and continue cascade.
+
+# 28. WIN PRESENTATION TIERS
+
+Use total originating-spin payout relative to bet.
+
+Normal:
+below 10x
+
+BIG WIN:
+10x - 24.99x
+
+MEGA WIN:
+25x - 49.99x
+
+EPIC WIN:
+50x - 99.99x
+
+LEGENDARY WIN:
+100x - 499.99x
+
+COLOSSAL WIN:
+500x+
+
+MAX WIN:
+5000x
+
+For large wins:
+
+brief overlay
+animated counter
+particles
+subtle background response
+
+Do not block gameplay for excessively long periods.
+
+Player may click/tap to accelerate the counting animation without affecting the mathematical result.
+
+# 29. AUDIO
+
+Create an original lightweight audio system.
+
+Do not use copyrighted slot audio.
+
+Where practical, generate simple effects through WebAudio or include original/licensed-safe project assets.
+
+Need sounds for:
+
+UI click
+spin
+symbol landing
+win highlight
+burst
+cascade
+Scatter
+bonus trigger
+Free Spin
+crystal spawn
+multiplier reveal
+Big Win
+Max Win
+
+Include:
+
+Mute button
+
+Volume setting
+
+Remember mute preference in localStorage.
+
+Audio must never affect game timing/math.
+
+# 30. BET SYSTEM
+
+Virtual-credit demo.
+
+Starting balance:
+
+10,000 credits.
+
+Available bets:
+
+0.20
+0.50
+1.00
+2.00
+5.00
+10.00
+20.00
+50.00
+
+Controls:
+
+BET -
+BET +
+SPIN
+
+Display:
+
+BALANCE
+BET
+WIN
+
+Prevent spin if:
+
+balance < bet
+
+Show a clean:
+
+INSUFFICIENT DEMO CREDITS
+
+message.
+
+Also include a DEMO RESET button inside Settings that restores 10,000 virtual credits.
+
+It must be clearly a demo-credit reset, not a deposit action.
+
+# 31. TURBO MODE
+
+Include Turbo toggle.
+
+Normal mode:
+
+full animation timings.
+
+Turbo:
+
+roughly 40%-50% of normal delays.
+
+Turbo must change animation timing only.
+
+It must NEVER change:
+
+RNG
+symbol distribution
+RTP
+bonus frequency
+payout.
+
+# 32. OPTIONAL AUTOPLAY
+
+If implemented, keep it simple and virtual-credit only.
+
+Options:
+
+10 spins
+25 spins
+50 spins
+
+AutoPlay must stop when:
+
+Bonus triggers
+balance becomes insufficient
+MAX WIN occurs
+player presses STOP.
+
+Do not add loss-chasing or betting strategies.
+
+Do not automatically increase/decrease bet.
+
+# 33. GAME UI
+
+Top/upper game information:
+
+CASCADE 8 logo
+Balance
+Current Win
+Free Spins Left when relevant
+
+Bottom control deck:
+
+Bet minus
+Bet amount
+Bet plus
+large Spin button
+Turbo
+Sound
+Info
+
+Make Spin button visually dominant.
+
+Use smooth responsive CSS.
+
+Buttons need:
+
+normal
+hover
+pressed
+disabled
+
+states.
+
+# 34. INFO / PAYTABLE PANEL
+
+Create an Info button opening a polished modal/panel.
+
+Include:
+
+How To Play
+Paytable
+Scatter Rules
+Free Spins
+Multiplier Crystals
+Max Win
+RTP information based on FINAL measured simulation result
+Demo disclaimer
+
+Clearly explain:
+
+"8 or more matching symbols anywhere on the grid win."
+
+Show every symbol and its 8-9 / 10-11 / 12+ multiplier.
+
+Do not hard-code a fake RTP in UI.
+
+Expose measured/calibrated configured RTP only after simulator validation.
+
+If measured RTP is not validated, say:
+
+"Target RTP: approximately 96%"
+
+instead of falsely stating an exact value.
+
+# 35. SETTINGS
+
+Settings modal:
+
+Sound on/off
+Volume
+Turbo
+Reduced Motion
+Demo Reset
+
+Store preferences locally.
+
+Do not store secret RNG state or any sensitive data in localStorage.
+
+# 36. REDUCED MOTION / ACCESSIBILITY
+
+Respect:
+
+prefers-reduced-motion
+
+and provide explicit Reduced Motion toggle.
+
+Reduced Motion should:
+
+shorten movement
+reduce screen shake
+reduce particle density
+
+but not skip mathematical states.
+
+Add keyboard support:
+
+Space = spin when allowed
+Escape = close modal
+
+Avoid accidental repeated Space spins.
+
+Provide visible focus states.
+
+# 37. PROJECT ARCHITECTURE
+
+Organize approximately as:
+
+src/
+main.ts
+
+game/
+GameScene.ts
+GameController.ts
+GameState.ts
+BoardView.ts
+SymbolView.ts
+ParticleManager.ts
+AudioManager.ts
+
+engine/
+types.ts
+SlotEngine.ts
+RNG.ts
+WeightedChoice.ts
+BoardGenerator.ts
+WinEvaluator.ts
+CascadeEngine.ts
+BonusEngine.ts
+MultiplierEngine.ts
+PayoutCalculator.ts
+
+config/
+GameConfig.ts
+SymbolConfig.ts
+Paytable.ts
+BonusConfig.ts
+AnimationConfig.ts
+
+ui/
+Controls.ts
+HUD.ts
+Modals.ts
+Settings.ts
+
+simulation/
+Simulator.ts
+SimulationStats.ts
+SeededRNG.ts
+cli.ts
+
+assets/
+symbols/
+ui/
+
+tests/
+WinEvaluator.test.ts
+CascadeEngine.test.ts
+BonusEngine.test.ts
+PayoutCalculator.test.ts
+RNG.test.ts
+MaxWin.test.ts
+
+simulation-results/
+
+Exact filenames may differ slightly, but preserve clean separation.
+
+# 38. IMPORTANT ENGINE DATA MODEL
+
+Never make Phaser sprites the source of truth.
+
+The source of truth must be pure data.
+
+Conceptually:
+
+Board = array/grid of SymbolIds
+
+Phaser only renders that board.
+
+Game math produces events/results such as:
+
+INITIAL_BOARD
+WIN_FOUND
+SYMBOLS_REMOVED
+BOARD_AFTER_GRAVITY
+NEW_SYMBOLS
+NEW_BOARD
+MULTIPLIER_RESULT
+BONUS_TRIGGER
+SPIN_RESULT
+
+Then the visual layer animates those events.
+
+This allows:
+
+simulation
+deterministic tests
+replay/debugging
+UI independence.
+
+# 39. SPIN RESULT EVENT LOG
+
+For development/testing, each spin should be representable as a structured result.
+
+Include concepts such as:
+
+bet
+initialBoard
+tumbles[]
+scatterCount
+bonusTriggered
+freeSpins[]
+totalMultiplierEvents
+baseWin
+bonusWin
+totalWin
+maxWinReached
+
+Each tumble can contain:
+
+boardBefore
+winningSymbols
+winningCells
+rawPayoutMultiplier
+crystals
+crystalTotalMultiplier
+finalPayoutMultiplier
+removedCells
+boardAfterGravity
+newSymbols
+boardAfterRefill
+
+Do not necessarily expose all this in production UI.
+
+Use it for testing/debugging/simulation.
+
+# 40. DEV LAB
+
+Create a development-only route or mode:
+
+/lab
+
+It may contain:
+
+symbol animation preview
+Scatter animation preview
+Big Win preview
+Max Win preview
+crystal animation preview
+board layout preview
+
+Also permit deterministic predefined boards for testing.
+
+Example test board:
+
+exactly 7 S1 -> should not win
+
+exactly 8 S1 -> should win
+
+8 S1 + 8 S6 -> both win simultaneously
+
+This is a development animation/testing harness.
+
+Do not mix forced boards with the normal live game RNG.
+
+Make dev tools unavailable/disabled in production build unless an explicit development environment flag is enabled.
+
+# 41. UNIT TESTS – REQUIRED
+
+Create real automated tests.
+
+At minimum verify:
+
+TEST 1:
+7 identical normal symbols do not win.
+
+TEST 2:
+8 identical normal symbols win.
+
+TEST 3:
+12 identical symbols use the 12+ payout.
+
+TEST 4:
+Non-adjacent identical symbols count together.
+
+TEST 5:
+8 S1 and 8 S6 pay simultaneously.
+
+TEST 6:
+Every winning instance of the winning symbol is removed.
+
+TEST 7:
+Gravity produces no empty cells beneath non-empty cells.
+
+TEST 8:
+Refill produces exactly the number of missing symbols.
+
+TEST 9:
+Cascade refills never produce Scatter.
+
+TEST 10:
+Initial board can produce Scatter.
+
+TEST 11:
+4 Scatter triggers 10 Free Spins.
+
+TEST 12:
+5 Scatter triggers 12 Free Spins.
+
+TEST 13:
+6 Scatter triggers 15 Free Spins.
+
+TEST 14:
+3 Scatter during Free Spins adds exactly 5 spins.
+
+TEST 15:
+Crystal multipliers add rather than multiply with each other.
+
+Example:
+3x + 10x = 13x, not 30x.
+
+TEST 16:
+Crystal total multiplies the complete tumble subtotal.
+
+TEST 17:
+No crystals means normal payout.
+
+TEST 18:
+MAX WIN caps exact payout at 5000x.
+
+TEST 19:
+No additional mathematical play occurs after Max Win.
+
+TEST 20:
+Bet amount does not influence symbol probabilities.
+
+TEST 21:
+same deterministic simulator seed produces identical result.
+
+TEST 22:
+different deterministic seeds produce different sequences.
+
+TEST 23:
+weighted generator statistically approximates configured probabilities within reasonable tolerance over a large test sample.
+
+# 42. VISUAL QA
+
+Verify manually/programmatically that:
+
+no symbols overlap
+no board cells move out of alignment
+mobile controls remain visible
+modal fits mobile screen
+landscape desktop works
+Free Spin counter updates correctly
+Bonus Summary cannot appear twice
+balance never becomes NaN
+win never becomes NaN
+negative balance cannot occur from a permitted spin
+rapid-clicking Spin does not duplicate a spin
+Turbo switching mid-session does not affect math
+Mute switching does not affect math.
+
+# 43. PERFORMANCE
+
+Target smooth 60 FPS on a modern phone/desktop.
+
+Reuse Phaser objects where sensible.
+
+Avoid leaking:
+
+timers
+event listeners
+particles
+audio nodes
+sprites.
+
+Do not recreate the entire game scene every tumble.
+
+Simulation should NOT instantiate Phaser.
+
+# 44. SIMULATION PERFORMANCE
+
+The simulator needs to be fast enough to run millions of spins.
+
+Avoid visual objects.
+
+Avoid unnecessary deep copies in high-volume simulation.
+
+For debug mode preserve detailed logs.
+
+For bulk simulation use optimized structures.
+
+Show simulator progress periodically for very large runs.
+
+# 45. CALIBRATION WORK
+
+After implementing the engine:
+
+run at least an initial large simulation.
+
+Prefer:
+
+1,000,000 paid spins
+
+during development if runtime permits.
+
+Inspect:
+
+RTP
+hit rate
+bonus frequency
+win distribution.
+
+Then tune static mathematical configuration toward the target.
+
+After major tuning run again.
+
+Before considering the task finished, provide at least one reproducible simulation report with:
+
+seed
+spin count
+final configuration
+results.
+
+Do not claim statistical perfection from small samples.
+
+If 10 million spins is practical, run it.
+
+If not, ensure the command is ready for me to run later.
+
+# 46. README
+
+Create a detailed README containing:
+
+Project overview
+Architecture
+How to run
+How to build
+How to test
+How to run simulation
+How symbol weights work
+How 8+ win evaluation works
+How tumbles work
+How bonus works
+How multiplier crystals work
+How max win works
+Current final math configuration
+Latest simulation results
+Known statistical limitations
+How to replace symbol artwork
+How to change animation timing
+How to modify paytable safely
+How to rerun simulation after math changes
+
+Also clearly state:
+
+This project currently uses virtual demo credits and does not implement real-money gambling.
+
+Browser RNG in the playable prototype is not intended as a substitute for a regulated/certified server-side RNG platform.
+
+# 47. NO FAKE BACKEND
+
+Do not unnecessarily create a fake payment backend.
+
+A lightweight development server from Vite is sufficient for V1.
+
+Game state may exist locally because this is a virtual-credit prototype.
+
+Keep engine architecture suitable for a future authoritative backend, but do not implement gambling deposits or cash balances.
+
+# 48. ACCEPTANCE CRITERIA
+
+The project is complete only if I can:
+
+open it
+see a polished game
+choose a virtual bet
+press Spin
+watch 30 symbols fall
+receive wins when 8+ matching symbols appear anywhere
+see those symbols explode
+watch remaining symbols fall
+watch replacements appear
+see multiple cascades continue correctly
+trigger Scatter bonus through genuine RNG
+play Free Spins
+see retriggers
+receive Multiplier Crystals
+see crystal multipliers combine correctly
+finish bonus
+see final Bonus Win
+return to base game
+change bet
+use Turbo
+mute sound
+open Paytable
+play comfortably on mobile and desktop
+
+AND:
+
+npm run build
+
+must succeed.
+
+AND:
+
+npm test
+
+must succeed.
+
+AND:
+
+npm run simulate -- --spins=100000 --seed=12345
+
+must succeed and print meaningful statistics.
+
+# 49. QUALITY REQUIREMENT
+
+This should feel like a genuine polished game prototype rather than a coding tutorial.
+
+Pay attention to:
+
+timing
+spacing
+responsive UI
+particle effects
+number animations
+button feedback
+state transitions
+symbol clarity
+sound timing
+bonus pacing.
+
+But game correctness is more important than excessive visual effects.
+
+Never hide broken game logic behind animations.
+
+# 50. IMPLEMENTATION ORDER
+
+Work through this project internally in the following order:
+
+A. Pure game engine and data structures.
+B. RNG abstraction.
+C. Board generation.
+D. 8+ evaluator.
+E. payout calculator.
+F. cascade/gravity engine.
+G. Scatter/bonus logic.
+H. multiplier crystal logic.
+I. Max Win logic.
+J. unit tests.
+K. simulator.
+L. first mathematical simulation.
+M. mathematical calibration.
+N. Phaser rendering.
+O. animations.
+P. UI/HUD.
+Q. Free Spin presentation.
+R. sound.
+S. responsive polish.
+T. integration tests.
+U. production build.
+V. final simulation report.
+W. README.
+
+Do not build visuals first and then invent the game math underneath them.
+
+# 51. FINAL SELF-CHECK BEFORE YOU STOP
+
+Before declaring completion:
+
+Run the application.
+
+Play multiple manual spins.
+
+Force test boards only through development tools to verify:
+
+7 vs 8 symbol threshold
+simultaneous winners
+large cascades
+Scatter trigger
+retrigger
+1/2/3 crystals
+100x crystal
+Big Win
+Max Win.
+
+Then run:
+
+npm test
+
+Then run:
+
+npm run build
+
+Then run:
+
+npm run simulate -- --spins=1000000 --seed=20260913
+
+or the largest practical validation run.
+
+Fix any failures.
+
+Update README with the actually measured result.
+
+Do not state that the project is complete until these checks pass.
+
+Finally give me a concise completion report containing:
+
+* what was implemented
+* final measured RTP
+* hit rate
+* bonus frequency
+* simulator seed/spin count
+* final relevant math parameters
+* tests passed
+* build status
+* exact command to run the game
+* exact command to rerun the simulator.
