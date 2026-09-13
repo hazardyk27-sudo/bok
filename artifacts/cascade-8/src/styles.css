@@ -174,11 +174,19 @@ button:focus-visible, input:focus-visible { outline: 2px solid var(--cyan); outl
 .bonus-ceremony-panel button:disabled { opacity: .55; cursor: wait; }
 .big-win-overlay, .bonus-summary-overlay { position: fixed; inset: 0; z-index: 30; display: grid; place-items: center; padding: 24px; background: radial-gradient(circle at center, rgba(52, 40, 99, .92), rgba(4, 7, 23, .97) 72%); opacity: 0; pointer-events: none; transition: opacity .24s ease; }
 .big-win-overlay.is-visible, .bonus-summary-overlay.is-visible { opacity: 1; pointer-events: auto; }
+.bonus-summary-overlay {
+  z-index: 40;
+  padding: clamp(16px, 5vw, 40px);
+  background:
+    radial-gradient(circle at 50% 44%, rgba(255, 190, 65, .2), transparent 34%),
+    linear-gradient(180deg, rgba(5, 8, 24, .66), rgba(5, 7, 20, .92));
+  backdrop-filter: blur(7px) saturate(.78);
+}
 .big-win-card, .bonus-summary-card { display: grid; justify-items: center; gap: 12px; width: min(580px, 100%); padding: 42px 24px 32px; border: 1px solid rgba(255, 218, 119, .72); border-radius: 28px; background: linear-gradient(155deg, rgba(74, 43, 9, .96), rgba(19, 15, 43, .98)); box-shadow: 0 0 100px rgba(255, 191, 54, .25), inset 0 0 32px rgba(255, 222, 125, .08); text-align: center; animation: bonus-arrive .48s cubic-bezier(.16,.9,.24,1); }
 .big-win-card span, .bonus-summary-card span { color: #ffe59a; font: 11px "DM Mono", monospace; letter-spacing: .26em; }
 .big-win-card strong, .summary-total { color: #fff1ae; font-size: clamp(56px, 13vw, 118px); line-height: .95; text-shadow: 0 0 40px rgba(255, 198, 60, .8); }
-.big-win-card small, .bonus-summary-card small { color: #d8bd7b; font: 10px "DM Mono", monospace; letter-spacing: .15em; }
-.big-win-card button, .bonus-summary-card button { margin-top: 14px; padding: 10px 16px; border: 1px solid rgba(255, 218, 119, .55); border-radius: 999px; color: #ffe7a8; background: rgba(255, 206, 94, .08); font: 10px "DM Mono", monospace; letter-spacing: .12em; cursor: pointer; }
+.big-win-card small { color: #d8bd7b; font: 10px "DM Mono", monospace; letter-spacing: .15em; }
+.big-win-card button { margin-top: 14px; padding: 10px 16px; border: 1px solid rgba(255, 218, 119, .55); border-radius: 999px; color: #ffe7a8; background: rgba(255, 206, 94, .08); font: 10px "DM Mono", monospace; letter-spacing: .12em; cursor: pointer; }
 .bonus-summary-card {
   position: relative;
   width: min(520px, 100%);
@@ -201,6 +209,7 @@ button:focus-visible, input:focus-visible { outline: 2px solid var(--cyan); outl
   font: 9px "DM Mono", monospace;
   letter-spacing: .22em;
 }
+.bonus-summary-card .summary-label { font-size: 9px; letter-spacing: .22em; }
 .bonus-summary-card .summary-total {
   margin-top: 8px;
   color: #fff1ae;
@@ -213,6 +222,7 @@ button:focus-visible, input:focus-visible { outline: 2px solid var(--cyan); outl
   color: #e0c889;
   font-size: 10px;
 }
+.bonus-summary-card .bonus-eyebrow { font-size: 10px; letter-spacing: .3em; }
 .status-line { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); clip-path: inset(50%); white-space: nowrap; }
 .status-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--cyan); box-shadow: 0 0 14px var(--cyan); }
 #tumble { color: var(--gold); min-width: 62px; }
@@ -249,6 +259,7 @@ button:focus-visible, input:focus-visible { outline: 2px solid var(--cyan); outl
 #auto-start:disabled, .auto-row select:disabled { opacity: .35; cursor: not-allowed; }
 #auto-status { color: #7180aa; font: 8px "DM Mono", monospace; letter-spacing: .06em; }
 .spin-button { position: relative; display: grid; place-items: center; width: 154px; height: 83px; overflow: hidden; border: 1px solid rgba(161, 153, 255, .7); border-radius: 24px 24px 24px 8px; color: #fff; background: linear-gradient(145deg, #826bff, #4d6df1); box-shadow: 0 10px 35px rgba(81, 104, 255, .28), inset 0 1px 0 rgba(255,255,255,.35); font-size: 20px; font-weight: 800; letter-spacing: .2em; transition: .2s ease; }
+.spin-button[hidden] { display: none; }
 .spin-button:hover:not(:disabled) { transform: translateY(-3px); box-shadow: 0 15px 45px rgba(81, 104, 255, .4), inset 0 1px 0 rgba(255,255,255,.45); }
 .spin-button.is-bonus { border-color: rgba(255, 224, 137, .86); background: linear-gradient(145deg, #d69a38, #946324); box-shadow: 0 10px 35px rgba(222, 157, 46, .38), inset 0 1px 0 rgba(255,255,255,.4); font-size: 13px; letter-spacing: .1em; }
 .spin-button:active:not(:disabled) { transform: translateY(1px) scale(.98); }
@@ -312,6 +323,11 @@ button:focus-visible, input:focus-visible { outline: 2px solid var(--cyan); outl
 .app-shell.is-lab .control-deck, .app-shell.is-lab .demo-note, .app-shell.is-lab .tumble-win-panel { display: none; }
 @keyframes fade-in { from { opacity: 0; } to { opacity: 1; } }
 @keyframes bonus-arrive { from { opacity: 0; transform: translateY(16px) scale(.92); } to { opacity: 1; transform: translateY(0) scale(1); } }
+@keyframes ceremony-backdrop-in { from { opacity: 0; } to { opacity: 1; } }
+@keyframes ceremony-panel-in { from { opacity: 0; transform: translateY(18px) scale(.94); } to { opacity: 1; transform: translateY(0) scale(1); } }
+@keyframes ceremony-number-in { from { opacity: 0; transform: translateY(12px) scale(.72); } to { opacity: 1; transform: translateY(0) scale(1); } }
+@keyframes ceremony-cta-in { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes ceremony-glint { 0%, 100% { opacity: .38; } 50% { opacity: .85; } }
 @media (max-width: 930px) { .game-layout { grid-template-columns: 1fr; } .side-panel { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; padding-top: 0; } .side-panel > .panel-kicker, .side-panel > .full { grid-column: 1 / -1; } .side-card, .legend-card { margin-top: 0; } .outline-button.full { margin-top: 0; } }
 @media (max-width: 620px) {
   .app-shell { padding: 16px 12px 16px; }
@@ -453,8 +469,9 @@ button:focus-visible, input:focus-visible { outline: 2px solid var(--cyan); outl
 .utility-icon { font-size: 15px; }
 .demo-note { width: min(100%, 760px); margin-top: 3px; font-size: 7px; }
 .side-panel { display: none !important; }
-.bonus-overlay { inset: 28% 7% auto; padding: 18px 14px; border-radius: 15px; }
-.bonus-overlay strong { font-size: clamp(20px, 5vw, 32px); }
+.bonus-ceremony-panel { padding-left: 22px; padding-right: 22px; }
+.bonus-title { font-size: clamp(23px, 6vw, 34px); }
+.bonus-summary-card h2 { font-size: clamp(25px, 7vw, 40px); }
 
 .tumble-win-panel {
   position: relative;
