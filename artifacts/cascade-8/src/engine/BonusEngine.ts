@@ -22,6 +22,14 @@ export function drawCrystalMultipliers(source: RandomSource): number[] {
   return Array.from({ length: count }, () => weightedChoice(source, BONUS_CONFIG.crystalMultiplierWeights));
 }
 
+export function drawMultiplierCore(source: RandomSource) {
+  if (source.nextFloat() * 100 >= BONUS_CONFIG.multiplierCoreSpawnChance) return null;
+  return {
+    kind: "MULTIPLIER_CORE" as const,
+    value: weightedChoice(source, BONUS_CONFIG.multiplierCoreWeights),
+  };
+}
+
 export function drawSpinMultiplier(source: RandomSource, mode: "base" | "free") {
   if (source.nextFloat() * 100 >= BONUS_CONFIG.spinMultiplierChance[mode]) return 1;
   return weightedChoice(source, BONUS_CONFIG.spinMultiplierWeights);
