@@ -1,15 +1,14 @@
-# [Project name]
+# Cascade 8
 
-_Replace the heading above with the project's name, and this line with one sentence describing what this app does for users._
+Virtual-credit cascading slot-style browser game with a Phaser board, pure TypeScript math engine, deterministic simulator, and responsive controls.
 
 ## Run & Operate
 
-- `pnpm --filter @workspace/api-server run dev` — run the API server (port 5000)
-- `pnpm run typecheck` — full typecheck across all packages
-- `pnpm run build` — typecheck + build all packages
-- `pnpm --filter @workspace/api-spec run codegen` — regenerate API hooks and Zod schemas from the OpenAPI spec
-- `pnpm --filter @workspace/db run push` — push DB schema changes (dev only)
-- Required env: `DATABASE_URL` — Postgres connection string
+- `pnpm run dev` — run the Cascade 8 Vite preview (port 5000)
+- `pnpm run typecheck` — full typecheck across the root game and workspace packages
+- `pnpm run build` — typecheck + build the root game
+- `pnpm test` — run the pure-engine regression suite
+- `pnpm run simulate -- --spins=100000 --seed=12345` — run the deterministic simulator
 
 ## Stack
 
@@ -22,23 +21,32 @@ _Replace the heading above with the project's name, and this line with one sente
 
 ## Where things live
 
-_Populate as you build — short repo map plus pointers to the source-of-truth file for DB schema, API contracts, theme files, etc._
+- `src/config/GameConfig.ts` — single source of truth for symbol weights, paytable, bonus rules, crystals, bets, and max win.
+- `src/engine/` — Phaser-independent board generation, evaluation, cascades, bonus logic, and seeded/crypto RNG.
+- `src/game/` — Phaser scene, controller state machine, and WebAudio effects.
+- `src/simulation/` — high-speed simulator, CLI, and saved reports in `simulation-results/`.
+- `src/main.ts` and `src/styles.css` — responsive surrounding interface and modals.
+- `/lab` — development-only deterministic board harness.
 
 ## Architecture decisions
 
-_Populate as you build — non-obvious choices a reader couldn't infer from the code (3-5 bullets)._
+- Phaser renders pure board data; it never owns the math state.
+- Paid spins charge once and credit once after base cascades and any bonus complete.
+- Browser crypto randomness is used only for this virtual-credit prototype; the simulator shares the same interface with a seeded PRNG.
+- Crystal calibration is static and documented in `README.md`; no player history or balance affects outcomes.
 
 ## Product
 
-_Describe the high-level user-facing capabilities of this app once they exist._
+The app supports 6 × 5 anywhere-pays, simultaneous symbol wins, cascades, scatter-triggered free spins, retriggers, free-spin multiplier crystals, max-win capping, bet controls, turbo, sound, reduced motion, settings, paytable info, and a local demo-credit reset.
 
 ## User preferences
 
-_Populate as you build — explicit user instructions worth remembering across sessions._
+- Keep the game virtual-credit only; do not add deposits, withdrawals, cash-out, or payment processors.
 
 ## Gotchas
 
-_Populate as you build — sharp edges, "always run X before Y" rules._
+- `pnpm run build` intentionally builds the root Vite game only; sibling artifact packages require their managed artifact environment.
+- Do not move symbol probabilities into Phaser/UI code or make them depend on bet, balance, or player history.
 
 ## Pointers
 

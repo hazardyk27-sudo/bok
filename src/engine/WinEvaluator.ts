@@ -1,4 +1,4 @@
-import { BOARD_COLUMNS, BOARD_ROWS, NORMAL_SYMBOLS, type NormalSymbolId, getPaytableMultiplier } from "../config/GameConfig";
+import { BOARD_COLUMNS, BOARD_ROWS, NORMAL_SYMBOLS, type NormalSymbolId, type SymbolId, getPaytableMultiplier } from "../config/GameConfig";
 import { generateRefillSymbols } from "./BoardGenerator";
 import type { Board, Cell, RandomSource } from "./types";
 
@@ -16,7 +16,8 @@ export function evaluateBoard(board: Board): WinEvaluation {
       if (symbol !== "SCATTER") counts.set(symbol, (counts.get(symbol) ?? 0) + 1);
     }
   }
-  const winningSymbols = NORMAL_SYMBOLS.map((symbol) => symbol.id).filter((id) => (counts.get(id) ?? 0) >= 8);
+  const normalIds = NORMAL_SYMBOLS.map((symbol) => symbol.id as NormalSymbolId);
+  const winningSymbols = normalIds.filter((id) => (counts.get(id) ?? 0) >= 8);
   const winningCells: Cell[] = [];
   for (let row = 0; row < BOARD_ROWS; row += 1) {
     for (let col = 0; col < BOARD_COLUMNS; col += 1) {
@@ -27,7 +28,7 @@ export function evaluateBoard(board: Board): WinEvaluation {
   let rawPayoutMultiplier = 0;
   for (const symbol of winningSymbols) {
     const count = counts.get(symbol) ?? 0;
-    const payout = count * getPaytableMultiplier(symbol, count);
+    const payout = getPaytableMultiplier(symbol, count);
     payouts[symbol] = payout;
     rawPayoutMultiplier += payout;
   }
@@ -36,7 +37,7 @@ export function evaluateBoard(board: Board): WinEvaluation {
 
 export function removeAndRefill(board: Board, winningCells: Cell[], source: RandomSource) {
   const winning = new Set(winningCells.map((cell) => `${cell.row}:${cell.col}`));
-  const next = Array.from({ length: BOARD_ROWS }, () => Array.from({ length: BOARD_COLUMNS }, () => "SCATTER" as const));
+  const next: Board = Array.from({ length: BOARD_ROWS }, () => Array.from({ length: BOARD_COLUMNS }, () => "SCATTER" as SymbolId));
   const newSymbols: Board[number] = [];
   for (let col = 0; col < BOARD_COLUMNS; col += 1) {
     const survivors: Board[number] = [];

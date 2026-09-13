@@ -1,0 +1,1 @@
+- [Workspace build boundary](workspace-build-boundary.md) — the root Cascade 8 app builds independently; sibling artifact packages keep their own injected preview environment.

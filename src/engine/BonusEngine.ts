@@ -21,3 +21,7 @@ export function drawCrystalMultipliers(source: RandomSource): number[] {
   const count = weightedChoice(source, BONUS_CONFIG.crystalCountWeights);
   return Array.from({ length: count }, () => weightedChoice(source, BONUS_CONFIG.crystalMultiplierWeights));
 }
+
+export function applyCrystalMultiplier(rawPayoutMultiplier: number, crystals: number[]) {
+  return rawPayoutMultiplier * (crystals.length ? crystals.reduce((sum, value) => sum + value, 0) : 1);
+}

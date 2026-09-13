@@ -1,6 +1,6 @@
 import { MAX_WIN_MULTIPLIER } from "../config/GameConfig";
 import { generateInitialBoard, countScatter } from "./BoardGenerator";
-import { baseFreeSpins, drawCrystalMultipliers, retriggerFreeSpins } from "./BonusEngine";
+import { applyCrystalMultiplier, baseFreeSpins, drawCrystalMultipliers, retriggerFreeSpins } from "./BonusEngine";
 import { removeAndRefill, evaluateBoard } from "./WinEvaluator";
 import type { Board, RandomSource, SpinResult, TumbleResult, FreeSpinResult } from "./types";
 
@@ -23,7 +23,7 @@ function playTumbles(initialBoard: Board, context: PlayContext): TumbleResult[] 
     const crystals = context.mode === "free" ? drawCrystalMultipliers(context.source) : [];
     const crystalTotalMultiplier = crystals.length ? crystals.reduce((sum, value) => sum + value, 0) : 1;
     const available = context.maxRemainingMultiplier();
-    const finalPayoutMultiplier = Math.min(evaluation.rawPayoutMultiplier * crystalTotalMultiplier, available);
+    const finalPayoutMultiplier = Math.min(applyCrystalMultiplier(evaluation.rawPayoutMultiplier, crystals), available);
     context.consumeMultiplier(finalPayoutMultiplier);
     const gravity = removeAndRefill(board, evaluation.winningCells, context.source);
     const tumble: TumbleResult = {

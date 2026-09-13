@@ -55,10 +55,10 @@ export const BONUS_CONFIG = {
   base: { 4: 10, 5: 12, 6: 15 },
   retrigger: { 3: 5, 4: 8, 5: 12, 6: 15 },
   crystalCountWeights: [
-    { value: 0, weight: 80 },
-    { value: 1, weight: 15 },
-    { value: 2, weight: 4 },
-    { value: 3, weight: 1 },
+    { value: 0, weight: 95 },
+    { value: 1, weight: 4 },
+    { value: 2, weight: 1 },
+    { value: 3, weight: 0 },
   ],
   crystalMultiplierWeights: [
     { value: 2, weight: 40 },
