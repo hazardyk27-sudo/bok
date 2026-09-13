@@ -15,6 +15,10 @@ export class GameController {
   betIndex = 2;
   currentWinCents = 0;
   bonusWinCents = 0;
+  currentFreeSpinRawSymbolWin = 0;
+  currentFreeSpinCombinedMultiplier = 1;
+  currentFreeSpinFinalWin = 0;
+  bonusCumulativeWinSoFar = 0;
   turbo = localStorage.getItem("cascade8-turbo") === "true";
   reducedMotion = localStorage.getItem("cascade8-reduced-motion") === "true";
   freeSpinsLeft = 0;
@@ -29,7 +33,7 @@ export class GameController {
     balance: HTMLElement; bet: HTMLElement; win: HTMLElement; bonusWin: HTMLElement; freeSpins: HTMLElement;
     tumble: HTMLElement; status: HTMLElement; spin: HTMLButtonElement; spinLabel: HTMLElement; betMinus: HTMLButtonElement; betPlus: HTMLButtonElement;
     autoCount: HTMLSelectElement; autoStart: HTMLButtonElement; autoStatus: HTMLElement;
-     turbo: HTMLButtonElement; sound: HTMLButtonElement; bonusOverlay: HTMLElement; bonusStart: HTMLButtonElement; bonusSpinCount: HTMLElement; tumbleSymbolWin: HTMLElement; tumbleIncrement: HTMLElement; tumbleMeta: HTMLElement; tumbleSettlement: HTMLElement; tumblePanel: HTMLElement; bigWinOverlay: HTMLElement; bonusSummaryOverlay: HTMLElement; boardWrap: HTMLElement;
+     turbo: HTMLButtonElement; sound: HTMLButtonElement; bonusOverlay: HTMLElement; bonusStart: HTMLButtonElement; bonusSpinCount: HTMLElement; freeSpinCalculation: HTMLElement; freeSpinIndex: HTMLElement; freeSpinRawWin: HTMLElement; freeSpinMultiplier: HTMLElement; freeSpinFinalWin: HTMLElement; freeSpinCalcStatus: HTMLElement; tumbleLabel: HTMLElement; tumbleSymbolWin: HTMLElement; tumbleIncrement: HTMLElement; tumbleMeta: HTMLElement; tumbleSettlement: HTMLElement; tumblePanel: HTMLElement; bigWinOverlay: HTMLElement; bonusSummaryOverlay: HTMLElement; boardWrap: HTMLElement;
     setModal: (name: string | null) => void;
   };
 
@@ -157,6 +161,8 @@ export class GameController {
     this.busy = true;
     this.setBonusPrompt(false);
     this.scene.setFreeSpinMode(true);
+    this.bonusCumulativeWinSoFar = 0;
+    this.setFreeSpinPresentation(true);
     this.audio.crossfadeMusic(this.audio.musicVolume * 1.35);
     this.ui.boardWrap.classList.add("free-spin-mode");
     this.setState("BONUS_INTRO");
@@ -169,6 +175,7 @@ export class GameController {
       if (index > 0) await sleep(this.duration(ANIMATION.spinPause));
       index += 1;
       const freeSpin = playFreeSpin(index, this.betCents, source, MAX_WIN_MULTIPLIER - usedMultiplier);
+       this.resetCurrentFreeSpinDisplay(index);
       result.freeSpins.push(freeSpin);
       result.totalMultiplierEvents.push(...freeSpin.tumbles.map((tumble) => tumble.finalPayoutMultiplier));
       usedMultiplier += freeSpin.finalWinMultiplier;
@@ -187,6 +194,11 @@ export class GameController {
       }
       await this.scene.animateDrop(this.duration(ANIMATION.initialDrop));
       await this.playTumbles({ ...result, tumbles: freeSpin.tumbles }, true);
+       this.resolveCurrentFreeSpinDisplay(freeSpin);
+       await sleep(this.duration(680));
+       this.bonusCumulativeWinSoFar += freeSpin.win;
+       this.updateBonusTotalDisplay(true);
+       await sleep(this.duration(420));
       this.currentWinCents = result.totalWinCents;
       this.bonusWinCents = result.bonusWinCents;
       remaining = remaining - 1 + freeSpin.retriggered;
@@ -201,6 +213,7 @@ export class GameController {
     this.audio.bonusComplete();
     await this.showBonusSummary(result);
     this.freeSpinsLeft = 0;
+     this.setFreeSpinPresentation(false);
     this.scene.setFreeSpinMode(false);
     this.audio.crossfadeMusic(this.audio.musicVolume);
     this.ui.boardWrap.classList.remove("free-spin-mode");
@@ -317,7 +330,66 @@ export class GameController {
     this.ui.tumbleMeta.textContent = "GOOD LUCK";
     this.ui.tumbleSettlement.innerHTML = "";
   }
+  private setFreeSpinPresentation(active: boolean) {
+    this.ui.freeSpinCalculation.hidden = !active;
+    this.ui.tumbleLabel.textContent = active ? "TOTAL BONUS WIN" : "TUMBLE WIN";
+    if (active) {
+      this.updateBonusTotalDisplay(false);
+    } else {
+      this.resetTumbleWin();
+    }
+  }
+  private resetCurrentFreeSpinDisplay(index: number) {
+    this.currentFreeSpinRawSymbolWin = 0;
+    this.currentFreeSpinCombinedMultiplier = 1;
+    this.currentFreeSpinFinalWin = 0;
+    this.ui.freeSpinIndex.textContent = String(index).padStart(2, "0");
+    this.updateCurrentFreeSpinDisplay("COLLECTING SYMBOL WINS");
+    this.updateBonusTotalDisplay(false);
+  }
+  private pulseFreeSpinValue(element: HTMLElement) {
+    element.classList.remove("is-updating");
+    void element.offsetWidth;
+    element.classList.add("is-updating");
+  }
+  private multiplierLabel(value: number) {
+    return `${Number.isInteger(value) ? value : value.toFixed(2)}x`;
+  }
+  private updateCurrentFreeSpinDisplay(status: string) {
+    const raw = formatCredits(this.currentFreeSpinRawSymbolWin);
+    const multiplier = this.multiplierLabel(this.currentFreeSpinCombinedMultiplier);
+    const final = formatCredits(this.currentFreeSpinFinalWin);
+    this.ui.freeSpinRawWin.textContent = raw;
+    this.ui.freeSpinMultiplier.textContent = multiplier;
+    this.ui.freeSpinFinalWin.textContent = final;
+    this.ui.freeSpinCalcStatus.textContent = this.currentFreeSpinCombinedMultiplier > 1
+      ? `${status} // ${raw} × ${multiplier} = ${final}`
+      : `${status} // SYMBOL WIN = SPIN WIN`;
+    if (status.includes("COLLECTING")) this.pulseFreeSpinValue(this.ui.freeSpinRawWin);
+    if (status.includes("MULTIPLIER")) this.pulseFreeSpinValue(this.ui.freeSpinMultiplier);
+    if (status.includes("COMPLETE")) this.pulseFreeSpinValue(this.ui.freeSpinFinalWin);
+  }
+  private updateBonusTotalDisplay(isIncrement: boolean) {
+    this.ui.tumblePanel.className = `tumble-win-panel is-active is-free-total${isIncrement ? " is-total-updated" : ""}`;
+    this.ui.tumbleLabel.textContent = "TOTAL BONUS WIN";
+    this.ui.tumble.textContent = formatCredits(this.bonusCumulativeWinSoFar);
+    this.ui.tumbleSymbolWin.textContent = "";
+    this.ui.tumbleIncrement.textContent = isIncrement
+      ? `+${formatCredits(this.currentFreeSpinFinalWin)}  //  THIS SPIN`
+      : "";
+    this.ui.tumbleMeta.textContent = "BONUS TOTAL // RUNNING WIN";
+    this.ui.tumbleSettlement.innerHTML = "";
+  }
   private showTumbleWin(tumble: SpinResult["tumbles"][number], tumbleIndex: number, isBonus: boolean) {
+    if (isBonus) {
+      this.currentFreeSpinRawSymbolWin += Math.round(tumble.rawPayoutMultiplier * this.betCents);
+      this.currentFreeSpinCombinedMultiplier = Math.max(this.currentFreeSpinCombinedMultiplier, tumble.coreTotalMultiplier);
+      this.updateCurrentFreeSpinDisplay(
+        this.currentFreeSpinCombinedMultiplier > 1 ? "MULTIPLIER CORES ACCUMULATING" : "COLLECTING SYMBOL WINS",
+      );
+      this.updateBonusTotalDisplay(false);
+      return;
+    }
     this.ui.tumblePanel.className = `tumble-win-panel is-active${isBonus ? " is-free-win" : ""}`;
     this.ui.tumbleSymbolWin.textContent = tumble.winningSymbols
       .map((symbol) => `${getSymbolDefinition(symbol).name} +${formatCredits(Math.round((tumble.payouts[symbol] ?? 0) * this.betCents))}`)
@@ -331,6 +403,13 @@ export class GameController {
     const rawAmount = formatCredits(Math.round(tumble.rawWinPoolAfter * this.betCents));
     const coreText = tumble.settlementCores.map((core) => `${core.value}x`).join(" + ");
     const total = tumble.coreTotalMultiplier;
+    if (isBonus) {
+      this.currentFreeSpinCombinedMultiplier = total;
+      this.updateCurrentFreeSpinDisplay("MULTIPLIERS LOCKED");
+      await this.scene.activateMultiplierCores(tumble.settlementCores.map((core) => core.value), this.duration(260));
+      await sleep(this.duration(380));
+      return;
+    }
     this.ui.tumblePanel.className = `tumble-win-panel is-settling${isBonus ? " is-free-win" : ""}`;
     this.ui.tumbleSymbolWin.textContent = "";
     await this.scene.activateMultiplierCores(tumble.settlementCores.map((core) => core.value), this.duration(260));
@@ -366,22 +445,54 @@ export class GameController {
       this.ui.tumbleMeta.textContent = "FINAL TUMBLE WIN  //  280.00x";
     }
   }
+  async previewFreeSpinAccounting() {
+    this.bonusCumulativeWinSoFar = 40_000;
+    this.setFreeSpinPresentation(true);
+    this.resetCurrentFreeSpinDisplay(4);
+    this.currentFreeSpinRawSymbolWin = 2_000;
+    this.updateCurrentFreeSpinDisplay("SYMBOL WIN +20.00");
+    await sleep(this.duration(420));
+    this.currentFreeSpinRawSymbolWin = 5_000;
+    this.updateCurrentFreeSpinDisplay("SYMBOL WIN +30.00");
+    await sleep(this.duration(420));
+    this.currentFreeSpinCombinedMultiplier = 10;
+    this.updateCurrentFreeSpinDisplay("MULTIPLIER CORE +10x");
+    await sleep(this.duration(520));
+    this.currentFreeSpinFinalWin = 50_000;
+    this.updateCurrentFreeSpinDisplay("SPIN COMPLETE");
+    await sleep(this.duration(680));
+    this.bonusCumulativeWinSoFar = 90_000;
+    this.updateBonusTotalDisplay(true);
+  }
+  private resolveCurrentFreeSpinDisplay(freeSpin: SpinResult["freeSpins"][number]) {
+    this.currentFreeSpinRawSymbolWin = Math.round(freeSpin.rawWinMultiplier * this.betCents);
+    this.currentFreeSpinCombinedMultiplier = freeSpin.combinedCoreMultiplier;
+    this.currentFreeSpinFinalWin = freeSpin.win;
+    this.updateCurrentFreeSpinDisplay("SPIN COMPLETE");
+  }
   showBigWin(multiplier: number, amountCents: number, forcedTier?: string) {
     return new Promise<void>((resolve) => {
       const overlay = this.ui.bigWinOverlay;
       const tier = forcedTier ?? winTier(multiplier);
+      const tierClass = tier.split(" ")[0].toLowerCase();
       overlay.className = "big-win-overlay is-visible";
-      overlay.innerHTML = `<div class="big-win-card"><span>${tier}</span><strong>0.00</strong><small>${multiplier.toFixed(2)}x TOTAL WIN</small><button type="button">TAP TO SPEED UP</button></div>`;
+      overlay.innerHTML = `<div class="big-win-card tier-${tierClass}"><span class="big-win-kicker">REWARD CEREMONY</span><div class="big-win-tier"><i>✦</i><span>${tier}</span><i>✦</i></div><div class="big-win-amount-wrap"><strong class="big-win-amount is-counting">0.00</strong></div><div class="big-win-summary"><span>TOTAL WIN</span><b>${multiplier.toFixed(2)}x BET</b></div><button class="big-win-action" type="button">TAP TO SPEED UP</button></div>`;
       let counting = true;
       let closed = false;
       let value = 0;
       const target = amountCents / 100;
       const button = overlay.querySelector("button") as HTMLButtonElement;
+      const card = overlay.querySelector(".big-win-card") as HTMLElement;
+      const amount = overlay.querySelector(".big-win-amount") as HTMLElement;
       const finishCounting = () => {
         counting = false;
         value = target;
-        (overlay.querySelector("strong") as HTMLElement).textContent = formatCredits(Math.round(value * 100));
+        amount.textContent = formatCredits(Math.round(value * 100));
+        amount.classList.remove("is-counting");
+        amount.classList.add("is-complete");
+        card.classList.add("is-complete");
         button.textContent = "TAP TO CONTINUE";
+        button.classList.add("is-ready");
       };
       const close = () => {
         if (closed) return;
@@ -396,7 +507,7 @@ export class GameController {
       const tick = () => {
         if (closed || !counting) return;
         value = Math.min(target, value + Math.max(target / 36, 0.01));
-        (overlay.querySelector("strong") as HTMLElement).textContent = value.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        amount.textContent = value.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
         if (value >= target) finishCounting(); else window.setTimeout(tick, 42);
       };
       tick();
@@ -419,7 +530,7 @@ export function formatCredits(cents: number) {
 }
 
 function winTier(multiplier: number) {
-  if (multiplier >= 500) return "COLOSSAL WIN";
+  if (multiplier >= 500) return "SUPER WIN";
   if (multiplier >= 100) return "LEGENDARY WIN";
   if (multiplier >= 50) return "EPIC WIN";
   if (multiplier >= 25) return "MEGA WIN";
