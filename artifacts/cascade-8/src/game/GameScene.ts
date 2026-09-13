@@ -69,22 +69,25 @@ export class GameScene extends Phaser.Scene {
 
   private createSymbolNode(symbol: SymbolId, row: number, col: number, crystal = false, winner = false) {
     const definition = getSymbolDefinition(symbol);
+    const frameColor = definition.frameColor;
     const container = this.add.container(
       this.boardOrigin.x + col * this.cellSize.width + 44,
       this.boardOrigin.y + row * this.cellSize.height + 41,
     );
-    const glow = this.add.circle(0, 2, 31, definition.color, winner ? 0.7 : 0.34);
+    const glow = this.add.circle(0, 2, 39, definition.color, winner ? 0.78 : 0.42);
     glow.setBlendMode(Phaser.BlendModes.ADD);
-    const orb = this.add.circle(0, 0, 25, definition.color, winner ? 0.7 : 0.52);
-    orb.setStrokeStyle(winner || symbol === "SCATTER" ? 2 : 1.5, definition.color, winner ? 1 : 0.72);
-    const core = this.add.circle(0, 0, 22, 0x09142f, 0.5);
+    const orb = this.add.circle(0, 0, 31, definition.color, winner ? 0.82 : 0.64);
+    orb.setStrokeStyle(winner || symbol === "SCATTER" ? 3.5 : 3, frameColor, winner ? 1 : 0.96);
+    const innerFrame = this.add.circle(0, 0, 27, undefined, 0)
+      .setStrokeStyle(1.5, definition.color, winner ? 0.95 : 0.82);
+    const core = this.add.circle(0, 0, 26, 0x09142f, 0.56);
     const shine = this.add.ellipse(-9, -12, 13, 7, 0xffffff, 0.18).setAngle(-25);
     const mark = symbol === "SCATTER"
       ? this.add.text(0, 1, definition.icon, { color: definition.colorHex, fontFamily: "Georgia, serif", fontSize: "31px", fontStyle: "bold" }).setOrigin(0.5)
-      : this.add.image(0, 0, `club-logo-${symbol}`).setDisplaySize(42, 42);
-    container.add([glow, orb, core, mark, shine]);
+      : this.add.image(0, 0, `club-logo-${symbol}`).setDisplaySize(52, 52);
+    container.add([glow, orb, innerFrame, core, mark, shine]);
     if (symbol === "SCATTER") {
-      const ring = this.add.circle(0, 0, 34, undefined, 0).setStrokeStyle(1.5, definition.color, 0.72);
+      const ring = this.add.circle(0, 0, 40, undefined, 0).setStrokeStyle(2.5, definition.color, 0.82);
       container.add(ring);
       this.tweens.add({ targets: ring, scale: 1.14, alpha: 0.3, duration: 780, yoyo: true, repeat: -1 });
     }

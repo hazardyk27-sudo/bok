@@ -193,7 +193,7 @@ button:focus-visible, input:focus-visible { outline: 2px solid var(--cyan); outl
   .mode-ribbon > div { padding: 0 8px; }
   .mode-ribbon > div:nth-child(3) { display: none; }
   .mode-ribbon strong { font-size: 10px; }
-  #phaser-board { width: 120%; height: auto; aspect-ratio: 720 / 620; min-height: 0; margin: 0 -10% -8px; }
+  #phaser-board { width: 128%; height: auto; aspect-ratio: 720 / 620; min-height: 0; margin: 0 -14% -8px; }
   .side-panel { display: none; }
   .control-deck { gap: 10px; justify-content: space-between; padding-left: 0; padding-right: 0; flex-wrap: wrap; }
   .bet-stepper { gap: 5px; }
