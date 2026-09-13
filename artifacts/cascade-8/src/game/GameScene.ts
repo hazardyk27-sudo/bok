@@ -9,8 +9,11 @@ type BoardNode = {
   col: number;
 };
 
-const SCATTER_SYMBOL_SIZE = 98.4;
+const SCATTER_SYMBOL_SIZE = 100;
 const SCATTER_SOURCE_SIZE = 256;
+const CORE_BASE_SIZE = 84;
+const SMALL_CORE_SIZE = 80;
+const LARGE_CORE_SIZE = 100;
 
 export class GameScene extends Phaser.Scene {
   private nodes: BoardNode[] = [];
@@ -101,6 +104,8 @@ export class GameScene extends Phaser.Scene {
       this.boardOrigin.y + row * this.cellSize.height + 46,
     );
     if (isMultiplierCore(symbol)) {
+      const coreSize = symbol.value >= 10 ? LARGE_CORE_SIZE : SMALL_CORE_SIZE;
+      const coreScale = coreSize / CORE_BASE_SIZE;
       const glow = this.add.circle(0, 0, 43, 0xffb52e, 0.2).setBlendMode(Phaser.BlendModes.ADD);
       const radiance = this.add.graphics();
       radiance.lineStyle(2, 0xffdb6b, 0.62);
@@ -111,6 +116,7 @@ export class GameScene extends Phaser.Scene {
       if (symbol.value === 2 || symbol.value === 3 || symbol.value === 5 || symbol.value === 10) {
         const portrait = this.add.image(0, 0, `core-${symbol.value}x`).setDisplaySize(84, 84);
         container.add([glow, radiance, portrait]);
+        container.setScale(coreScale);
         this.tweens.add({ targets: glow, scale: 1.18, alpha: 0.12, duration: 680, yoyo: true, repeat: -1 });
         this.tweens.add({ targets: radiance, angle: 360, duration: 4200, repeat: -1 });
         const node = { container, symbol, row, col };
@@ -129,6 +135,7 @@ export class GameScene extends Phaser.Scene {
       }).setOrigin(0.5);
       const bolt = this.add.text(0, -39, "✦", { color: "#fff3ba", fontSize: "18px" }).setOrigin(0.5);
       container.add([glow, radiance, core, inner, label, bolt]);
+      container.setScale(coreScale);
       this.tweens.add({ targets: glow, scale: 1.18, alpha: 0.12, duration: 680, yoyo: true, repeat: -1 });
       this.tweens.add({ targets: radiance, angle: 360, duration: 4200, repeat: -1 });
       const node = { container, symbol, row, col };
