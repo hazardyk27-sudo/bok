@@ -7,11 +7,11 @@ export const MAX_WIN_MULTIPLIER = 5000;
 export const BETS_CENTS = [20, 50, 100, 200, 500, 1000, 2000, 5000] as const;
 
 export const ANIMATION = {
-  initialDrop: 760,
-  winHighlight: 220,
-  burst: 242,
-  refill: 540,
-  freeSpinPause: 280,
+  initialDrop: 912,
+  winHighlight: 264,
+  burst: 290,
+  refill: 648,
+  freeSpinPause: 336,
 } as const;
 
 export type NormalSymbolId = "S1" | "S2" | "S3" | "S4" | "S5" | "S6" | "S7" | "S8";

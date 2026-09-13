@@ -35,6 +35,7 @@ app.innerHTML = `
           <div id="phaser-board" aria-label="Cascade 8 game board"></div>
           <div class="board-floor"></div>
           <div id="bonus-overlay" class="bonus-overlay" hidden aria-live="assertive"><span>✦ BONUS UNLOCKED ✦</span><strong>FREE SPINS READY</strong><small>PRESS SPIN TO ENTER THE GOLDEN REALM</small></div>
+          <div id="multiplier-announcer" class="multiplier-announcer" aria-live="assertive"></div>
           <div id="win-announcer" class="win-announcer" aria-live="polite"></div>
         </div>
         <div class="status-line"><span class="status-dot"></span><span id="status">THE GATES ARE QUIET</span><span id="tumble">—</span></div>
@@ -123,7 +124,7 @@ window.setTimeout(() => {
     tumble: byId("tumble"), status: byId("status"), spin: byId("spin"), spinLabel: byId("spin").querySelector(".spin-label") as HTMLElement,
     betMinus: byId("bet-minus"), betPlus: byId("bet-plus"), autoCount: byId("auto-count"), autoStart: byId("auto-start"), autoStatus: byId("auto-status"),
     turbo: byId("turbo"), sound: byId("sound"),
-    bonusOverlay: byId("bonus-overlay"), winAnnouncer: byId("win-announcer"), boardWrap: byId("phaser-board").parentElement!,
+    bonusOverlay: byId("bonus-overlay"), multiplierAnnouncer: byId("multiplier-announcer"), winAnnouncer: byId("win-announcer"), boardWrap: byId("phaser-board").parentElement!,
     setModal: showModal,
   });
   if (isLab) renderLab(scene);

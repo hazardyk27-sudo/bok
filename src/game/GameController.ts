@@ -28,7 +28,7 @@ export class GameController {
     balance: HTMLElement; bet: HTMLElement; win: HTMLElement; bonusWin: HTMLElement; freeSpins: HTMLElement;
     tumble: HTMLElement; status: HTMLElement; spin: HTMLButtonElement; spinLabel: HTMLElement; betMinus: HTMLButtonElement; betPlus: HTMLButtonElement;
     autoCount: HTMLSelectElement; autoStart: HTMLButtonElement; autoStatus: HTMLElement;
-    turbo: HTMLButtonElement; sound: HTMLButtonElement; bonusOverlay: HTMLElement; winAnnouncer: HTMLElement; boardWrap: HTMLElement;
+    turbo: HTMLButtonElement; sound: HTMLButtonElement; bonusOverlay: HTMLElement; multiplierAnnouncer: HTMLElement; winAnnouncer: HTMLElement; boardWrap: HTMLElement;
     setModal: (name: string | null) => void;
   };
 
@@ -110,7 +110,10 @@ export class GameController {
     this.message("THE GATES ARE OPENING");
     this.setState("INITIAL_DROP");
     this.scene.renderBoard(result.initialBoard);
-    if (result.baseSpinMultiplier > 1) this.message(`LUCKY X${result.baseSpinMultiplier} BOOST ACTIVE`);
+    if (result.baseSpinMultiplier > 1) {
+      this.message(`LUCKY X${result.baseSpinMultiplier} BOOST ACTIVE`);
+      this.showMultiplierBoost(result.baseSpinMultiplier, false);
+    }
     await this.scene.animateDrop(this.duration(ANIMATION.initialDrop));
     await this.playTumbles(result, false);
     if (result.bonusTriggered && !result.maxWinReached) {
@@ -145,7 +148,10 @@ export class GameController {
       this.freeSpinsLeft = result.freeSpins.length - freeSpin.index + 1;
       this.setState("FREE_SPIN_PLAY"); this.updateHud();
       this.scene.renderBoard(freeSpin.initialBoard);
-      if (freeSpin.multiplier > 1) this.message(`FREE SPIN X${freeSpin.multiplier} BOOST ACTIVE`);
+      if (freeSpin.multiplier > 1) {
+        this.message(`FREE SPIN X${freeSpin.multiplier} BOOST ACTIVE`);
+        this.showMultiplierBoost(freeSpin.multiplier, true);
+      }
       await this.scene.animateDrop(this.duration(ANIMATION.initialDrop));
       await this.playTumbles({ ...result, tumbles: freeSpin.tumbles }, true);
       if (freeSpin.retriggered) {
@@ -265,6 +271,13 @@ export class GameController {
     window.setTimeout(() => {
       if (this.ui.winAnnouncer.classList.contains(`is-${size}`)) this.ui.winAnnouncer.classList.remove(`is-${size}`);
     }, this.duration(size === "mega" || size === "big" ? 1500 : 950));
+  }
+  private showMultiplierBoost(multiplier: number, isBonus: boolean) {
+    this.ui.multiplierAnnouncer.className = `multiplier-announcer is-visible${isBonus ? " is-free" : ""}`;
+    this.ui.multiplierAnnouncer.innerHTML = `<span>${isBonus ? "FREE SPIN BOOST" : "LUCKY BOOST"}</span><strong>X${multiplier}</strong><small>APPLIED TO THIS SPIN</small>`;
+    window.setTimeout(() => {
+      if (this.ui.multiplierAnnouncer.classList.contains("is-visible")) this.ui.multiplierAnnouncer.className = "multiplier-announcer";
+    }, this.duration(1500));
   }
   resetDemo() { this.balanceCents = STARTING_BALANCE_CENTS; this.persistBalance(); this.updateHud(); this.message("DEMO BALANCE RESET TO 10,000.00"); }
 }
