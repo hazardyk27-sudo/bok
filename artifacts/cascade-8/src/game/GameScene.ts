@@ -20,6 +20,7 @@ export class GameScene extends Phaser.Scene {
     NORMAL_SYMBOLS.forEach((symbol) => {
       if (symbol.logoPath) this.load.image(`club-logo-${symbol.id}`, `${import.meta.env.BASE_URL}${symbol.logoPath}`);
     });
+    this.load.image("core-2x", `${import.meta.env.BASE_URL}special-symbols/2x.png`);
   }
 
   create() {
@@ -88,6 +89,15 @@ export class GameScene extends Phaser.Scene {
       for (let index = 0; index < 8; index += 1) {
         const angle = (index / 8) * Math.PI * 2;
         radiance.lineBetween(Math.cos(angle) * 27, Math.sin(angle) * 27, Math.cos(angle) * 38, Math.sin(angle) * 38);
+      }
+      if (symbol.value === 2) {
+        const portrait = this.add.image(0, 0, "core-2x").setDisplaySize(84, 84);
+        container.add([glow, radiance, portrait]);
+        this.tweens.add({ targets: glow, scale: 1.18, alpha: 0.12, duration: 680, yoyo: true, repeat: -1 });
+        this.tweens.add({ targets: radiance, angle: 360, duration: 4200, repeat: -1 });
+        const node = { container, symbol, row, col };
+        this.nodes.push(node);
+        return node;
       }
       const core = this.add.polygon(0, 0, [0, -32, 25, -14, 25, 14, 0, 32, -25, 14, -25, -14], 0x8f5a0c, 0.72);
       const inner = this.add.polygon(0, 0, [0, -24, 18, -10, 18, 10, 0, 24, -18, 10, -18, -10], 0xffbe35, 0.72);

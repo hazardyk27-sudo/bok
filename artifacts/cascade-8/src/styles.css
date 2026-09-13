@@ -224,6 +224,7 @@ button:focus-visible, input:focus-visible { outline: 2px solid var(--cyan); outl
 .core-preview { border-color: rgba(255, 201, 76, .3); }
 .core-preview strong { color: #fff0ad; font-size: 23px; text-shadow: 0 0 15px rgba(255, 181, 38, .7); }
 .core-500 strong { color: #ffffff; font-size: 28px; text-shadow: 0 0 23px rgba(255, 255, 210, .95); }
+.core-preview-image { width: 56px; height: 56px; object-fit: cover; border-radius: 50%; filter: drop-shadow(0 0 10px rgba(70, 143, 255, .72)); }
 @media (max-width: 620px) { .special-grid { grid-template-columns: repeat(3, 1fr); } .special-preview { min-height: 80px; } }
 @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation-duration: .01ms !important; transition-duration: .01ms !important; } }
 
