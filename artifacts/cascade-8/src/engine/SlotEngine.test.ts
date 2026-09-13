@@ -1,6 +1,14 @@
 import { describe, expect, it } from "vitest";
 import { SeededRNG } from "./RNG";
-import { calculateSequenceSettlement, playSpin } from "./SlotEngine";
+import {
+  addFreeSpinSymbolWin,
+  beginFreeSpinAccounting,
+  calculateSequenceSettlement,
+  createFreeSpinAccounting,
+  playSpin,
+  resolveFreeSpinAccounting,
+  settleFreeSpinAccounting,
+} from "./SlotEngine";
 
 describe("spin accounting", () => {
   it("keeps outcomes bet-invariant", () => {
@@ -36,5 +44,33 @@ describe("spin accounting", () => {
   it("adds multiple Cores and does not double-credit the raw pool", () => {
     expect(calculateSequenceSettlement(7, [2, 10, 25]).finalWinMultiplier).toBe(259);
     expect(calculateSequenceSettlement(8, [10, 25]).finalWinMultiplier).toBe(280);
+  });
+  it("keeps the cumulative bonus total unchanged until a Free Spin resolves", () => {
+    let accounting = beginFreeSpinAccounting(createFreeSpinAccounting(40_000));
+    accounting = addFreeSpinSymbolWin(accounting, 2_000);
+    accounting = addFreeSpinSymbolWin(accounting, 3_000);
+
+    expect(accounting.rawSymbolWinCents).toBe(5_000);
+    expect(accounting.cumulativeBonusWinCents).toBe(40_000);
+
+    accounting = resolveFreeSpinAccounting(accounting, 50, 10, 50_000, 100);
+    expect(accounting).toMatchObject({
+      rawSymbolWinCents: 5_000,
+      combinedCoreMultiplier: 10,
+      currentSpinWinCents: 50_000,
+      cumulativeBonusWinCents: 40_000,
+    });
+
+    accounting = settleFreeSpinAccounting(accounting);
+    expect(accounting.cumulativeBonusWinCents).toBe(90_000);
+  });
+  it("does not create payout from a multiplier without symbol wins", () => {
+    const noMultiplier = resolveFreeSpinAccounting(createFreeSpinAccounting(), 50, 1, 50_000, 1_000);
+    expect(noMultiplier.currentSpinWinCents).toBe(50_000);
+
+    const multiplierOnly = resolveFreeSpinAccounting(createFreeSpinAccounting(), 0, 10, 0, 1_000);
+    expect(multiplierOnly.currentSpinWinCents).toBe(0);
+    expect(multiplierOnly.cumulativeBonusWinCents).toBe(0);
+    expect(calculateSequenceSettlement(0, [10]).finalWinMultiplier).toBe(0);
   });
 });

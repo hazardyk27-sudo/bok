@@ -43,6 +43,13 @@ export type FreeSpinResult = {
   win: number;
 };
 
+export type FreeSpinAccounting = {
+  rawSymbolWinCents: number;
+  combinedCoreMultiplier: number;
+  currentSpinWinCents: number;
+  cumulativeBonusWinCents: number;
+};
+
 export type SpinResult = {
   betCents: number;
   initialBoard: Board;

@@ -6,6 +6,7 @@ import {
   isMultiplierCore,
   type Board,
   type CoreCell,
+  type FreeSpinAccounting,
   type FreeSpinResult,
   type RandomSource,
   type SpinResult,
@@ -37,6 +38,53 @@ export function calculateSequenceSettlement(rawWinMultiplier: number, coreValues
   return {
     combinedCoreMultiplier,
     finalWinMultiplier: rawWinMultiplier * combinedCoreMultiplier,
+  };
+}
+
+export function createFreeSpinAccounting(cumulativeBonusWinCents = 0): FreeSpinAccounting {
+  return {
+    rawSymbolWinCents: 0,
+    combinedCoreMultiplier: 1,
+    currentSpinWinCents: 0,
+    cumulativeBonusWinCents,
+  };
+}
+
+export function beginFreeSpinAccounting(accounting: FreeSpinAccounting): FreeSpinAccounting {
+  return {
+    ...accounting,
+    rawSymbolWinCents: 0,
+    combinedCoreMultiplier: 1,
+    currentSpinWinCents: 0,
+  };
+}
+
+export function addFreeSpinSymbolWin(accounting: FreeSpinAccounting, symbolWinCents: number): FreeSpinAccounting {
+  return {
+    ...accounting,
+    rawSymbolWinCents: accounting.rawSymbolWinCents + symbolWinCents,
+  };
+}
+
+export function resolveFreeSpinAccounting(
+  accounting: FreeSpinAccounting,
+  rawWinMultiplier: number,
+  combinedCoreMultiplier: number,
+  currentSpinWinCents: number,
+  betCents: number,
+): FreeSpinAccounting {
+  return {
+    ...accounting,
+    rawSymbolWinCents: Math.round(rawWinMultiplier * betCents),
+    combinedCoreMultiplier,
+    currentSpinWinCents,
+  };
+}
+
+export function settleFreeSpinAccounting(accounting: FreeSpinAccounting): FreeSpinAccounting {
+  return {
+    ...accounting,
+    cumulativeBonusWinCents: accounting.cumulativeBonusWinCents + accounting.currentSpinWinCents,
   };
 }
 

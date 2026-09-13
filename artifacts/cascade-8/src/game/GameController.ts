@@ -1,6 +1,14 @@
 import { ANIMATION, BETS_CENTS, MAX_WIN_MULTIPLIER, STARTING_BALANCE_CENTS, getSymbolDefinition } from "../config/GameConfig";
 import { CryptoRNG } from "../engine/RNG";
-import { playBaseSpin, playFreeSpin } from "../engine/SlotEngine";
+import {
+  addFreeSpinSymbolWin,
+  beginFreeSpinAccounting,
+  createFreeSpinAccounting,
+  playBaseSpin,
+  playFreeSpin,
+  resolveFreeSpinAccounting,
+  settleFreeSpinAccounting,
+} from "../engine/SlotEngine";
 import type { SpinResult } from "../engine/types";
 import { AudioManager } from "./AudioManager";
 import { GameScene } from "./GameScene";
@@ -15,10 +23,7 @@ export class GameController {
   betIndex = 2;
   currentWinCents = 0;
   bonusWinCents = 0;
-  currentFreeSpinRawSymbolWin = 0;
-  currentFreeSpinCombinedMultiplier = 1;
-  currentFreeSpinFinalWin = 0;
-  bonusCumulativeWinSoFar = 0;
+  freeSpinAccounting = createFreeSpinAccounting();
   turbo = localStorage.getItem("cascade8-turbo") === "true";
   reducedMotion = localStorage.getItem("cascade8-reduced-motion") === "true";
   freeSpinsLeft = 0;
@@ -161,7 +166,7 @@ export class GameController {
     this.busy = true;
     this.setBonusPrompt(false);
     this.scene.setFreeSpinMode(true);
-    this.bonusCumulativeWinSoFar = 0;
+    this.freeSpinAccounting = createFreeSpinAccounting();
     this.setFreeSpinPresentation(true);
     this.audio.crossfadeMusic(this.audio.musicVolume * 1.35);
     this.ui.boardWrap.classList.add("free-spin-mode");
@@ -196,7 +201,7 @@ export class GameController {
       await this.playTumbles({ ...result, tumbles: freeSpin.tumbles }, true);
        this.resolveCurrentFreeSpinDisplay(freeSpin);
        await sleep(this.duration(680));
-       this.bonusCumulativeWinSoFar += freeSpin.win;
+       this.freeSpinAccounting = settleFreeSpinAccounting(this.freeSpinAccounting);
        this.updateBonusTotalDisplay(true);
        await sleep(this.duration(420));
       this.currentWinCents = result.totalWinCents;
@@ -340,9 +345,7 @@ export class GameController {
     }
   }
   private resetCurrentFreeSpinDisplay(index: number) {
-    this.currentFreeSpinRawSymbolWin = 0;
-    this.currentFreeSpinCombinedMultiplier = 1;
-    this.currentFreeSpinFinalWin = 0;
+    this.freeSpinAccounting = beginFreeSpinAccounting(this.freeSpinAccounting);
     this.ui.freeSpinIndex.textContent = String(index).padStart(2, "0");
     this.updateCurrentFreeSpinDisplay("COLLECTING SYMBOL WINS");
     this.updateBonusTotalDisplay(false);
@@ -356,13 +359,13 @@ export class GameController {
     return `${Number.isInteger(value) ? value : value.toFixed(2)}x`;
   }
   private updateCurrentFreeSpinDisplay(status: string) {
-    const raw = formatCredits(this.currentFreeSpinRawSymbolWin);
-    const multiplier = this.multiplierLabel(this.currentFreeSpinCombinedMultiplier);
-    const final = formatCredits(this.currentFreeSpinFinalWin);
+    const raw = formatCredits(this.freeSpinAccounting.rawSymbolWinCents);
+    const multiplier = this.multiplierLabel(this.freeSpinAccounting.combinedCoreMultiplier);
+    const final = formatCredits(this.freeSpinAccounting.currentSpinWinCents);
     this.ui.freeSpinRawWin.textContent = raw;
     this.ui.freeSpinMultiplier.textContent = multiplier;
     this.ui.freeSpinFinalWin.textContent = final;
-    this.ui.freeSpinCalcStatus.textContent = this.currentFreeSpinCombinedMultiplier > 1
+    this.ui.freeSpinCalcStatus.textContent = this.freeSpinAccounting.combinedCoreMultiplier > 1
       ? `${status} // ${raw} × ${multiplier} = ${final}`
       : `${status} // SYMBOL WIN = SPIN WIN`;
     if (status.includes("COLLECTING")) this.pulseFreeSpinValue(this.ui.freeSpinRawWin);
@@ -372,20 +375,26 @@ export class GameController {
   private updateBonusTotalDisplay(isIncrement: boolean) {
     this.ui.tumblePanel.className = `tumble-win-panel is-active is-free-total${isIncrement ? " is-total-updated" : ""}`;
     this.ui.tumbleLabel.textContent = "TOTAL BONUS WIN";
-    this.ui.tumble.textContent = formatCredits(this.bonusCumulativeWinSoFar);
+     this.ui.tumble.textContent = formatCredits(this.freeSpinAccounting.cumulativeBonusWinCents);
     this.ui.tumbleSymbolWin.textContent = "";
     this.ui.tumbleIncrement.textContent = isIncrement
-      ? `+${formatCredits(this.currentFreeSpinFinalWin)}  //  THIS SPIN`
+      ? `+${formatCredits(this.freeSpinAccounting.currentSpinWinCents)}  //  THIS SPIN`
       : "";
     this.ui.tumbleMeta.textContent = "BONUS TOTAL // RUNNING WIN";
     this.ui.tumbleSettlement.innerHTML = "";
   }
   private showTumbleWin(tumble: SpinResult["tumbles"][number], tumbleIndex: number, isBonus: boolean) {
     if (isBonus) {
-      this.currentFreeSpinRawSymbolWin += Math.round(tumble.rawPayoutMultiplier * this.betCents);
-      this.currentFreeSpinCombinedMultiplier = Math.max(this.currentFreeSpinCombinedMultiplier, tumble.coreTotalMultiplier);
+       this.freeSpinAccounting = addFreeSpinSymbolWin(
+         this.freeSpinAccounting,
+         Math.round(tumble.rawPayoutMultiplier * this.betCents),
+       );
+       this.freeSpinAccounting = {
+         ...this.freeSpinAccounting,
+         combinedCoreMultiplier: Math.max(this.freeSpinAccounting.combinedCoreMultiplier, tumble.coreTotalMultiplier),
+       };
       this.updateCurrentFreeSpinDisplay(
-        this.currentFreeSpinCombinedMultiplier > 1 ? "MULTIPLIER CORES ACCUMULATING" : "COLLECTING SYMBOL WINS",
+         this.freeSpinAccounting.combinedCoreMultiplier > 1 ? "MULTIPLIER CORES ACCUMULATING" : "COLLECTING SYMBOL WINS",
       );
       this.updateBonusTotalDisplay(false);
       return;
@@ -404,7 +413,10 @@ export class GameController {
     const coreText = tumble.settlementCores.map((core) => `${core.value}x`).join(" + ");
     const total = tumble.coreTotalMultiplier;
     if (isBonus) {
-      this.currentFreeSpinCombinedMultiplier = total;
+      this.freeSpinAccounting = {
+        ...this.freeSpinAccounting,
+        combinedCoreMultiplier: total,
+      };
       this.updateCurrentFreeSpinDisplay("MULTIPLIERS LOCKED");
       await this.scene.activateMultiplierCores(tumble.settlementCores.map((core) => core.value), this.duration(260));
       await sleep(this.duration(380));
@@ -446,28 +458,35 @@ export class GameController {
     }
   }
   async previewFreeSpinAccounting() {
-    this.bonusCumulativeWinSoFar = 40_000;
+    this.freeSpinAccounting = createFreeSpinAccounting(40_000);
     this.setFreeSpinPresentation(true);
     this.resetCurrentFreeSpinDisplay(4);
-    this.currentFreeSpinRawSymbolWin = 2_000;
+    this.freeSpinAccounting = addFreeSpinSymbolWin(this.freeSpinAccounting, 2_000);
     this.updateCurrentFreeSpinDisplay("SYMBOL WIN +20.00");
     await sleep(this.duration(420));
-    this.currentFreeSpinRawSymbolWin = 5_000;
+    this.freeSpinAccounting = addFreeSpinSymbolWin(this.freeSpinAccounting, 3_000);
     this.updateCurrentFreeSpinDisplay("SYMBOL WIN +30.00");
     await sleep(this.duration(420));
-    this.currentFreeSpinCombinedMultiplier = 10;
+    this.freeSpinAccounting = {
+      ...this.freeSpinAccounting,
+      combinedCoreMultiplier: 10,
+    };
     this.updateCurrentFreeSpinDisplay("MULTIPLIER CORE +10x");
     await sleep(this.duration(520));
-    this.currentFreeSpinFinalWin = 50_000;
+    this.freeSpinAccounting = resolveFreeSpinAccounting(this.freeSpinAccounting, 50, 10, 50_000, 100);
     this.updateCurrentFreeSpinDisplay("SPIN COMPLETE");
     await sleep(this.duration(680));
-    this.bonusCumulativeWinSoFar = 90_000;
+    this.freeSpinAccounting = settleFreeSpinAccounting(this.freeSpinAccounting);
     this.updateBonusTotalDisplay(true);
   }
   private resolveCurrentFreeSpinDisplay(freeSpin: SpinResult["freeSpins"][number]) {
-    this.currentFreeSpinRawSymbolWin = Math.round(freeSpin.rawWinMultiplier * this.betCents);
-    this.currentFreeSpinCombinedMultiplier = freeSpin.combinedCoreMultiplier;
-    this.currentFreeSpinFinalWin = freeSpin.win;
+    this.freeSpinAccounting = resolveFreeSpinAccounting(
+      this.freeSpinAccounting,
+      freeSpin.rawWinMultiplier,
+      freeSpin.combinedCoreMultiplier,
+      freeSpin.win,
+      this.betCents,
+    );
     this.updateCurrentFreeSpinDisplay("SPIN COMPLETE");
   }
   showBigWin(multiplier: number, amountCents: number, forcedTier?: string) {
