@@ -64,18 +64,18 @@ export type ReelConfig = {
 export const BASE_REEL_CONFIG: ReelConfig = {
   name: "BASE",
   runLengthWeights: [
-    { value: 1, weight: 76.5 },
-    { value: 2, weight: 23.5 },
+    { value: 1, weight: 75 },
+    { value: 2, weight: 25 },
   ],
   symbolWeights: NORMAL_SYMBOLS.map(({ id, weight }) => ({ value: id as NormalSymbolId, weight })),
-  scatterChance: 1.25,
+  scatterChance: 2.5,
 };
 
 export const BONUS_REEL_CONFIG: ReelConfig = {
   name: "BONUS",
   runLengthWeights: [
-    { value: 1, weight: 76.5 },
-    { value: 2, weight: 23.5 },
+    { value: 1, weight: 75 },
+    { value: 2, weight: 25 },
   ],
   symbolWeights: NORMAL_SYMBOLS.map(({ id, weight }) => ({ value: id as NormalSymbolId, weight })),
   scatterChance: 0.8,
@@ -116,7 +116,7 @@ export const PAYTABLE: Record<NormalSymbolId, readonly { min: number; max: numbe
 export const BONUS_CONFIG = {
   base: { 4: 10, 5: 12, 6: 15 },
   retrigger: { 3: 5, 4: 5, 5: 5, 6: 5 },
-  multiplierCoreSpawnChance: 8,
+  multiplierCoreSpawnChance: 1.1,
   multiplierCoreWeights: [
     { value: 2, weight: 70 },
     { value: 3, weight: 20 },

@@ -42,12 +42,6 @@ export class ColumnStream {
     const isInitial = context === "BASE_INITIAL" || context === "BONUS_INITIAL";
     const allowScatter = isInitial;
     const allowCore = context === "BONUS_REFILL";
-    if (allowScatter && this.source.nextFloat() * 100 < this.config.scatterChance) {
-      this.queue.push("SCATTER");
-      this.lastRunSymbol = null;
-      return;
-    }
-
     const candidates = this.config.symbolWeights
       .filter(({ value }) => value !== this.lastRunSymbol)
       .filter(({ value }) => !isInitial || this.queue.filter((cell) => cell === value).length < 3)
@@ -61,24 +55,30 @@ export class ColumnStream {
       ? 3 - this.queue.filter((cell) => cell === symbol).length
       : 2;
     const runLength = Math.max(1, Math.min(requestedLength, maxInitialCount, 2));
-    let endedWithCore = false;
+    let endedWithBoundary = false;
     for (let index = 0; index < runLength; index += 1) {
+      if (allowScatter && this.source.nextFloat() * 100 < this.config.scatterChance) {
+        this.queue.push("SCATTER");
+        this.lastRunSymbol = null;
+        endedWithBoundary = true;
+        continue;
+      }
       if (allowCore) {
         const core = drawMultiplierCore(this.source);
         if (core) {
           this.queue.push(core);
           this.lastRunSymbol = null;
-          endedWithCore = true;
+          endedWithBoundary = true;
           continue;
         }
       }
       this.queue.push(symbol);
-      endedWithCore = false;
+      endedWithBoundary = false;
       this.recent.push(symbol);
       if (this.recent.length > 4) this.recent.shift();
       this.stats.emittedNormal += 1;
     }
-    this.lastRunSymbol = endedWithCore ? null : symbol;
+    this.lastRunSymbol = endedWithBoundary ? null : symbol;
     const key = String(runLength) as "1" | "2";
     this.stats.runLengths[key] += 1;
     if (runLength === 2) this.stats.pairCount += 1;

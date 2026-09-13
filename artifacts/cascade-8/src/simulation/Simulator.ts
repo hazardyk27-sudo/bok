@@ -3,6 +3,7 @@ import { playSpin } from "../engine/SlotEngine";
 import { SeededRNG } from "../engine/RNG";
 import { evaluateBoard } from "../engine/WinEvaluator";
 import { isNormalSymbol } from "../engine/BoardGenerator";
+import { BASE_REEL_CONFIG } from "../config/GameConfig";
 import type { Board } from "../engine/types";
 
 export const HISTOGRAM_BUCKETS = [
@@ -293,8 +294,8 @@ export function simulate(spins: number, seed: string, betCents = 100, onProgress
     twoTumbleFrequency: percent(twoTumbleCount),
     threeTumbleFrequency: percent(threeTumbleCount),
     fourTumbleFrequency: percent(fourTumbleCount),
-    configuredSingleProbability: 76.5,
-    configuredPairProbability: 23.5,
+     configuredSingleProbability: Number(((BASE_REEL_CONFIG.runLengthWeights.find((entry) => entry.value === 1)!.weight / BASE_REEL_CONFIG.runLengthWeights.reduce((sum, entry) => sum + entry.weight, 0)) * 100).toFixed(4)),
+     configuredPairProbability: Number(((BASE_REEL_CONFIG.runLengthWeights.find((entry) => entry.value === 2)!.weight / BASE_REEL_CONFIG.runLengthWeights.reduce((sum, entry) => sum + entry.weight, 0)) * 100).toFixed(4)),
     observedSingleProbability: (() => {
       const total = (runLengthDistribution["1"] ?? 0) + (runLengthDistribution["2"] ?? 0);
       return total ? Number((((runLengthDistribution["1"] ?? 0) / total) * 100).toFixed(4)) : 0;
