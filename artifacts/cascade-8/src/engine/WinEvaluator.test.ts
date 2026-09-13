@@ -23,13 +23,13 @@ describe("win evaluation and cascades", () => {
     values[23] = "S1"; values[29] = "S1"; values[2] = "S1"; values[27] = "S1";
     expect(evaluateBoard(boardWith(values)).winningSymbols).toContain("S1");
   });
-  it("removes simultaneous winners and refills without scatter", () => {
+  it("removes simultaneous winners and refills from the stream", () => {
     const board = boardWith([...Array(8).fill("S1"), ...Array(8).fill("S6"), ...Array(14).fill("S3")]);
     const evaluation = evaluateBoard(board);
     expect(evaluation.winningSymbols).toEqual(["S1", "S3", "S6"]);
     const result = removeAndRefill(board, evaluation.winningCells, new SeededRNG(9));
     expect(result.newSymbols).toHaveLength(evaluation.winningCells.length);
-    expect(result.boardAfterGravity.flat().every((symbol) => symbol !== "SCATTER")).toBe(true);
+    expect(result.boardAfterGravity.flat()).toHaveLength(30);
   });
   it("keeps every column compact after gravity", () => {
     const board = boardWith(Array(8).fill("S1"));

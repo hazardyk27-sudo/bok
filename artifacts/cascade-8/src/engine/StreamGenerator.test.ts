@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { BASE_REEL_CONFIG, type ReelConfig } from "../config/GameConfig";
-import { ColumnStream } from "./BoardGenerator";
+import { ColumnStream, isNormalSymbol } from "./BoardGenerator";
 import { SeededRNG } from "./RNG";
 
 describe("persistent column streams", () => {
@@ -11,8 +11,9 @@ describe("persistent column streams", () => {
     let current = 0;
     let previous: unknown;
     for (const value of values) {
-      if (value === previous && typeof value === "string") current += 1;
-      else current = 1;
+      if (isNormalSymbol(value) && value === previous) current += 1;
+      else if (isNormalSymbol(value)) current = 1;
+      else current = 0;
       maximum = Math.max(maximum, current);
       previous = value;
     }

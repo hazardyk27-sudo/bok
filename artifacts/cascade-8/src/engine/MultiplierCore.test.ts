@@ -4,6 +4,8 @@ import { removeAndRefill } from "./WinEvaluator";
 import type { BoardCell, RandomSource } from "./types";
 
 const first: RandomSource = { nextFloat: () => 0 };
+const baseCoreRoll: RandomSource = { nextFloat: () => 0.035 };
+const bonusCoreRoll: RandomSource = { nextFloat: () => 0.05 };
 const last: RandomSource = { nextFloat: () => 0.999999 };
 
 describe("physical Multiplier Cores", () => {
@@ -13,12 +15,14 @@ describe("physical Multiplier Cores", () => {
     )).toBe(true);
   });
   it("can spawn in Base refills using the independent 0.20% config", () => {
-    const cells = generateRefillCells(first, 3, true, "base");
+    const cells = generateRefillCells(baseCoreRoll, 3, true, "base");
     expect(cells.every((cell) => typeof cell !== "string" && cell.kind === "MULTIPLIER_CORE")).toBe(true);
     expect((cells[0] as Exclude<BoardCell, string>).value).toBe(2);
   });
-  it("spawns in Free Spin refills and carries a 2x–500x value", () => {
-    const cells = generateRefillCells(first, 3, true, "bonus");
+  it("spawns in Free Spin initial boards and refills", () => {
+    const initial = generateInitialBoard(bonusCoreRoll, "bonus");
+    const cells = generateRefillCells(bonusCoreRoll, 3, true, "bonus");
+    expect(initial.flat().some((cell) => typeof cell !== "string" && cell.kind === "MULTIPLIER_CORE")).toBe(true);
     expect(cells.every((cell) => typeof cell !== "string" && cell.kind === "MULTIPLIER_CORE")).toBe(true);
     expect((cells[0] as Exclude<BoardCell, string>).value).toBe(2);
   });

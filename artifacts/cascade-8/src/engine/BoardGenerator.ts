@@ -1,5 +1,12 @@
 import {
   BASE_REEL_CONFIG,
+  BASE_INITIAL_SCATTER_CHANCE,
+  BASE_REFILL_CORE_CHANCE,
+  BASE_REFILL_SCATTER_CHANCE,
+  BONUS_INITIAL_CORE_CHANCE,
+  BONUS_INITIAL_SCATTER_CHANCE,
+  BONUS_REFILL_CORE_CHANCE,
+  BONUS_REFILL_SCATTER_CHANCE,
   BOARD_COLUMNS,
   BOARD_ROWS,
   BONUS_REEL_CONFIG,
@@ -9,7 +16,7 @@ import {
   type SymbolId,
 } from "../config/GameConfig";
 import type { Board, BoardCell, RandomSource } from "./types";
-import { drawMultiplierCore } from "./BonusEngine";
+import { drawMultiplierCoreValue } from "./BonusEngine";
 import { weightedChoice } from "./RNG";
 
 export type GenerationContext = "BASE_INITIAL" | "BASE_REFILL" | "BONUS_INITIAL" | "BONUS_REFILL";
@@ -40,8 +47,21 @@ export class ColumnStream {
 
   private appendRun(context: GenerationContext, allowCores: boolean) {
     const isInitial = context === "BASE_INITIAL" || context === "BONUS_INITIAL";
-    const allowScatter = isInitial;
-    const coreMode = allowCores && context === "BASE_REFILL" ? "base" : allowCores && context === "BONUS_REFILL" ? "bonus" : null;
+    const scatterChance = context === "BASE_INITIAL"
+      ? BASE_INITIAL_SCATTER_CHANCE
+      : context === "BASE_REFILL"
+        ? BASE_REFILL_SCATTER_CHANCE
+        : context === "BONUS_INITIAL"
+          ? BONUS_INITIAL_SCATTER_CHANCE
+          : BONUS_REFILL_SCATTER_CHANCE;
+    const coreMode = allowCores && (context === "BASE_REFILL" ? "base" : context === "BONUS_INITIAL" || context === "BONUS_REFILL" ? "bonus" : null);
+    const coreChance = context === "BASE_REFILL"
+      ? BASE_REFILL_CORE_CHANCE
+      : context === "BONUS_INITIAL"
+        ? BONUS_INITIAL_CORE_CHANCE
+        : context === "BONUS_REFILL"
+          ? BONUS_REFILL_CORE_CHANCE
+          : 0;
     const candidates = this.config.symbolWeights
       .filter(({ value }) => value !== this.lastRunSymbol)
       .filter(({ value }) => !isInitial || this.queue.filter((cell) => cell === value).length < 3)
@@ -56,32 +76,34 @@ export class ColumnStream {
       : 2;
     const runLength = Math.max(1, Math.min(requestedLength, maxInitialCount, 2));
     let endedWithBoundary = false;
+    let normalRunLength = 0;
     for (let index = 0; index < runLength; index += 1) {
-      if (allowScatter && this.source.nextFloat() * 100 < this.config.scatterChance) {
+      const specialRoll = this.source.nextFloat();
+      if (specialRoll < scatterChance) {
         this.queue.push("SCATTER");
         this.lastRunSymbol = null;
         endedWithBoundary = true;
-        continue;
+        break;
       }
-      if (coreMode) {
-        const core = drawMultiplierCore(this.source, coreMode);
-        if (core) {
-          this.queue.push(core);
-          this.lastRunSymbol = null;
-          endedWithBoundary = true;
-          continue;
-        }
+      if (coreMode && specialRoll < scatterChance + coreChance) {
+        this.queue.push(drawMultiplierCoreValue(this.source, coreMode));
+        this.lastRunSymbol = null;
+        endedWithBoundary = true;
+        break;
       }
       this.queue.push(symbol);
       endedWithBoundary = false;
+      normalRunLength += 1;
       this.recent.push(symbol);
       if (this.recent.length > 4) this.recent.shift();
       this.stats.emittedNormal += 1;
     }
     this.lastRunSymbol = endedWithBoundary ? null : symbol;
-    const key = String(runLength) as "1" | "2";
-    this.stats.runLengths[key] += 1;
-    if (runLength === 2) this.stats.pairCount += 1;
+    if (normalRunLength > 0) {
+      const key = String(normalRunLength) as "1" | "2";
+      this.stats.runLengths[key] += 1;
+      if (normalRunLength === 2) this.stats.pairCount += 1;
+    }
   }
 }
 

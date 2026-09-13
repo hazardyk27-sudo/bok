@@ -58,7 +58,6 @@ export type ReelConfig = {
   name: "BASE" | "BONUS";
   runLengthWeights: readonly { value: RunLength; weight: number }[];
   symbolWeights: readonly { value: NormalSymbolId; weight: number }[];
-  scatterChance: number;
 };
 
 export const BASE_REEL_CONFIG: ReelConfig = {
@@ -68,7 +67,6 @@ export const BASE_REEL_CONFIG: ReelConfig = {
     { value: 2, weight: 25 },
   ],
   symbolWeights: NORMAL_SYMBOLS.map(({ id, weight }) => ({ value: id as NormalSymbolId, weight })),
-  scatterChance: 2.5,
 };
 
 export const BONUS_REEL_CONFIG: ReelConfig = {
@@ -78,7 +76,6 @@ export const BONUS_REEL_CONFIG: ReelConfig = {
     { value: 2, weight: 25 },
   ],
   symbolWeights: NORMAL_SYMBOLS.map(({ id, weight }) => ({ value: id as NormalSymbolId, weight })),
-  scatterChance: 0.8,
 };
 
 export type SymbolEffectProfile = {
@@ -113,38 +110,48 @@ export const PAYTABLE: Record<NormalSymbolId, readonly { min: number; max: numbe
   S8: [{ min: 8, max: 9, multiplier: 9.4 }, { min: 10, max: 11, multiplier: 22.5 }, { min: 12, max: Infinity, multiplier: 45 }],
 };
 
-// Calibrated below the initial 0.20% starting point to keep total RTP in target.
-export const BASE_MULTIPLIER_CORE_CHANCE = 0.006;
+// Context-specific special-symbol probabilities. Values are decimals, not percentages.
+export const BASE_INITIAL_SCATTER_CHANCE = 0.03;
+export const BASE_REFILL_SCATTER_CHANCE = 0.03;
+export const BASE_REFILL_CORE_CHANCE = 0.02;
+export const BONUS_INITIAL_SCATTER_CHANCE = 0.04;
+export const BONUS_REFILL_SCATTER_CHANCE = 0.04;
+export const BONUS_INITIAL_CORE_CHANCE = 0.07;
+export const BONUS_REFILL_CORE_CHANCE = 0.07;
+
+export const BASE_MULTIPLIER_CORE_CHANCE = BASE_REFILL_CORE_CHANCE;
 export const BASE_MULTIPLIER_CORE_WEIGHTS = [
-  { value: 2, weight: 40 },
-  { value: 3, weight: 27 },
-  { value: 5, weight: 17 },
-  { value: 10, weight: 8 },
-  { value: 15, weight: 3 },
-  { value: 20, weight: 2 },
-  { value: 25, weight: 1.5 },
-  { value: 50, weight: 0.8 },
-  { value: 100, weight: 0.45 },
-  { value: 250, weight: 0.2 },
-  { value: 500, weight: 0.05 },
+  { value: 2, weight: 20 },
+  { value: 3, weight: 25 },
+  { value: 5, weight: 15 },
+  { value: 10, weight: 10 },
+  { value: 15, weight: 8 },
+  { value: 20, weight: 5 },
+  { value: 25, weight: 6 },
+  { value: 50, weight: 5 },
+  { value: 100, weight: 4 },
+  { value: 250, weight: 1 },
+  { value: 500, weight: 0.5 },
+  { value: 1000, weight: 0.5 },
 ] as const;
 
 export const BONUS_CONFIG = {
   base: { 4: 10, 5: 12, 6: 15 },
   retrigger: { 3: 5, 4: 5, 5: 5, 6: 5 },
-  multiplierCoreSpawnChance: 1.1,
+  multiplierCoreSpawnChance: BONUS_REFILL_CORE_CHANCE,
   multiplierCoreWeights: [
-    { value: 2, weight: 70 },
-    { value: 3, weight: 20 },
-    { value: 5, weight: 6 },
-    { value: 10, weight: 2 },
-    { value: 15, weight: 1 },
-    { value: 20, weight: 0.5 },
-    { value: 25, weight: 0.3 },
-    { value: 50, weight: 0.1 },
-    { value: 100, weight: 0.05 },
-    { value: 250, weight: 0.03 },
-    { value: 500, weight: 0.02 },
+    { value: 2, weight: 20 },
+    { value: 3, weight: 25 },
+    { value: 5, weight: 15 },
+    { value: 10, weight: 10 },
+    { value: 15, weight: 8 },
+    { value: 20, weight: 5 },
+    { value: 25, weight: 6 },
+    { value: 50, weight: 5 },
+    { value: 100, weight: 4 },
+    { value: 250, weight: 1 },
+    { value: 500, weight: 0.5 },
+    { value: 1000, weight: 0.5 },
   ],
 } as const;
 

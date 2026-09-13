@@ -21,12 +21,16 @@ export function retriggerFreeSpins(scatterCount: number) {
   return 0;
 }
 
-export function drawMultiplierCore(source: RandomSource, mode: "base" | "bonus" = "bonus") {
-  const spawnChance = mode === "base" ? BASE_MULTIPLIER_CORE_CHANCE : BONUS_CONFIG.multiplierCoreSpawnChance;
+export function drawMultiplierCoreValue(source: RandomSource, mode: "base" | "bonus" = "bonus") {
   const weights = mode === "base" ? BASE_MULTIPLIER_CORE_WEIGHTS : BONUS_CONFIG.multiplierCoreWeights;
-  if (source.nextFloat() * 100 >= spawnChance) return null;
   return {
     kind: "MULTIPLIER_CORE" as const,
     value: weightedChoice(source, weights),
   };
+}
+
+export function drawMultiplierCore(source: RandomSource, mode: "base" | "bonus" = "bonus") {
+  const spawnChance = mode === "base" ? BASE_MULTIPLIER_CORE_CHANCE : BONUS_CONFIG.multiplierCoreSpawnChance;
+  if (source.nextFloat() >= spawnChance) return null;
+  return drawMultiplierCoreValue(source, mode);
 }

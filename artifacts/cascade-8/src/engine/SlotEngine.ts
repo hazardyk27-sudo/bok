@@ -25,6 +25,9 @@ type TumbleSequence = {
   finalBoard: Board;
   multiplierCores: CoreCell[];
   rawWinMultiplier: number;
+  bonusPending: boolean;
+  bonusScatterCount: number;
+  retriggered: number;
 };
 
 export function calculateSequenceSettlement(rawWinMultiplier: number, coreValues: readonly number[]) {
@@ -41,6 +44,10 @@ function playTumbles(initialBoard: Board, context: PlayContext): TumbleSequence 
   const tumbles: TumbleResult[] = [];
   let board = cloneBoard(initialBoard);
   let rawWinPool = 0;
+  let bonusPending = context.mode === "base" && countScatter(board) >= 4;
+  let bonusScatterCount = context.mode === "base" ? countScatter(board) : 0;
+  let retriggered = 0;
+  let retriggerAwarded = false;
 
   while (true) {
     const evaluation = evaluateBoard(board);
@@ -83,6 +90,15 @@ function playTumbles(initialBoard: Board, context: PlayContext): TumbleSequence 
       boardAfterRefill: cloneBoard(gravity.boardAfterGravity),
     });
     board = gravity.boardAfterGravity;
+    const scatterCount = countScatter(board);
+    if (context.mode === "base" && scatterCount >= 4) {
+      bonusPending = true;
+      bonusScatterCount = Math.max(bonusScatterCount, scatterCount);
+    }
+    if (context.mode === "free" && !retriggerAwarded && scatterCount >= 3) {
+      retriggered = retriggerFreeSpins(scatterCount);
+      retriggerAwarded = retriggered > 0;
+    }
   }
 
   const finalCoreCells = board.flatMap((row, rowIndex) =>
@@ -93,6 +109,9 @@ function playTumbles(initialBoard: Board, context: PlayContext): TumbleSequence 
     finalBoard: cloneBoard(board),
     multiplierCores: finalCoreCells,
     rawWinMultiplier: rawWinPool,
+    bonusPending,
+    bonusScatterCount,
+    retriggered,
   };
 }
 
@@ -135,7 +154,9 @@ export function playBaseSpin(betCents: number, source: RandomSource): SpinResult
   const scatterCount = countScatter(initialBoard);
   const sequence = playTumbles(initialBoard, { source, mode: "base", streams });
   const settlement = settleSequence(sequence, consumer.consume);
-  const freeSpinsAwarded = baseFreeSpins(scatterCount);
+  const freeSpinsAwarded = sequence.bonusPending
+    ? baseFreeSpins(Math.max(scatterCount, sequence.bonusScatterCount))
+    : 0;
 
   return {
     betCents,
@@ -167,13 +188,11 @@ export function playFreeSpin(
   const sequence = playTumbles(freeInitialBoard, { source, mode: "free", streams });
   const consumer = createConsumer(MAX_WIN_MULTIPLIER - maxRemainingMultiplier);
   const settlement = settleSequence(sequence, consumer.consume);
-  const retriggered = retriggerFreeSpins(freeScatterCount);
-
   return {
     index,
     initialBoard: freeInitialBoard,
     scatterCount: freeScatterCount,
-    retriggered,
+    retriggered: sequence.retriggered || retriggerFreeSpins(freeScatterCount),
     tumbles: sequence.tumbles,
     rawWinMultiplier: sequence.rawWinMultiplier,
     combinedCoreMultiplier: settlement.combinedCoreMultiplier,

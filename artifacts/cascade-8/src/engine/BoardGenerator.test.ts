@@ -13,8 +13,8 @@ describe("board generation", () => {
   it("can generate scatter on an initial board", () => {
     expect(countScatter(generateInitialBoard({ nextFloat: () => 0 }))).toBeGreaterThan(0);
   });
-  it("never generates scatter on a refill", () => {
-    expect(generateRefillSymbols(alwaysLast, 30).every((symbol) => symbol !== "SCATTER")).toBe(true);
+  it("can generate scatter on a refill", () => {
+    expect(countScatter([generateRefillSymbols(alwaysFirst, 30)])).toBeGreaterThan(0);
   });
   it("generates exactly the requested refill count", () => {
     expect(generateRefillSymbols(alwaysFirst, 7)).toHaveLength(7);
@@ -27,7 +27,7 @@ describe("board generation", () => {
       scatterCount += countScatter(generateInitialBoard(source, "base"));
     }
     const marginal = scatterCount / (boards * 30);
-    expect(marginal).toBeGreaterThan(0.023);
-    expect(marginal).toBeLessThan(0.027);
+    expect(marginal).toBeGreaterThan(0.028);
+    expect(marginal).toBeLessThan(0.032);
   });
 });
