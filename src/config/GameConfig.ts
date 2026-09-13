@@ -7,10 +7,10 @@ export const MAX_WIN_MULTIPLIER = 5000;
 export const BETS_CENTS = [20, 50, 100, 200, 500, 1000, 2000, 5000] as const;
 
 export const ANIMATION = {
-  initialDrop: 620,
+  initialDrop: 760,
   winHighlight: 220,
-  burst: 220,
-  refill: 410,
+  burst: 242,
+  refill: 540,
   freeSpinPause: 280,
 } as const;
 

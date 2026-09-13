@@ -34,6 +34,8 @@ app.innerHTML = `
           <div class="board-caption"><span class="caption-line"></span><span>THE CELESTIAL FIELD</span><span class="caption-line"></span></div>
           <div id="phaser-board" aria-label="Cascade 8 game board"></div>
           <div class="board-floor"></div>
+          <div id="bonus-overlay" class="bonus-overlay" hidden aria-live="assertive"><span>✦ BONUS UNLOCKED ✦</span><strong>FREE SPINS READY</strong><small>PRESS SPIN TO ENTER THE GOLDEN REALM</small></div>
+          <div id="win-announcer" class="win-announcer" aria-live="polite"></div>
         </div>
         <div class="status-line"><span class="status-dot"></span><span id="status">THE GATES ARE QUIET</span><span id="tumble">—</span></div>
       </section>
@@ -58,7 +60,7 @@ app.innerHTML = `
         <span class="eyebrow">STAKE</span>
         <div class="bet-stepper"><button id="bet-minus" aria-label="Decrease bet">−</button><strong id="bet">1.00</strong><button id="bet-plus" aria-label="Increase bet">+</button></div>
       </div>
-      <button id="spin" class="spin-button"><span class="spin-glow"></span><span class="spin-icon">✦</span><span>SPIN</span><small>ENTER THE CASCADE</small></button>
+      <button id="spin" class="spin-button"><span class="spin-glow"></span><span class="spin-icon">✦</span><span class="spin-label">SPIN</span><small>ENTER THE CASCADE</small></button>
       <div class="utility-controls">
         <button id="turbo" class="utility-button"><span class="utility-icon">»</span><span>TURBO</span></button>
         <button id="sound" class="utility-button"><span class="utility-icon">◒</span><span>SOUND ON</span></button>
@@ -113,8 +115,10 @@ window.setTimeout(() => {
   const scene = game.scene.getScene("Cascade8GameScene") as GameScene;
   controller = new GameController(scene, {
     balance: byId("balance"), bet: byId("bet"), win: byId("win"), bonusWin: byId("bonus-win"), freeSpins: byId("free-spins"),
-    tumble: byId("tumble"), status: byId("status"), spin: byId("spin"), betMinus: byId("bet-minus"), betPlus: byId("bet-plus"),
-    turbo: byId("turbo"), sound: byId("sound"), setModal: showModal,
+    tumble: byId("tumble"), status: byId("status"), spin: byId("spin"), spinLabel: byId("spin").querySelector(".spin-label") as HTMLElement,
+    betMinus: byId("bet-minus"), betPlus: byId("bet-plus"), turbo: byId("turbo"), sound: byId("sound"),
+    bonusOverlay: byId("bonus-overlay"), winAnnouncer: byId("win-announcer"), boardWrap: byId("phaser-board").parentElement!,
+    setModal: showModal,
   });
   if (isLab) renderLab(scene);
 }, 80);
