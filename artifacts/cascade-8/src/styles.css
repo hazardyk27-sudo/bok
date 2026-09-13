@@ -227,6 +227,31 @@ button:focus-visible, input:focus-visible { outline: 2px solid var(--cyan); outl
 @media (max-width: 620px) { .special-grid { grid-template-columns: repeat(3, 1fr); } .special-preview { min-height: 80px; } }
 @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation-duration: .01ms !important; transition-duration: .01ms !important; } }
 
+/* Desktop viewport fit: keep the win readout and controls below the field. */
+@media (min-width: 621px) and (max-height: 850px) {
+  .app-shell:not(.is-lab) {
+    padding-top: max(8px, env(safe-area-inset-top));
+    padding-bottom: max(8px, env(safe-area-inset-bottom));
+  }
+  .app-shell:not(.is-lab) .topbar { margin-bottom: 5px; }
+  .app-shell:not(.is-lab) .game-layout { flex: 0 1 auto; }
+  .app-shell:not(.is-lab) #phaser-board {
+    height: min(520px, calc(100dvh - 350px));
+    min-height: 370px;
+    aspect-ratio: auto;
+    margin-bottom: -8px;
+  }
+  .app-shell:not(.is-lab) .tumble-win-panel {
+    min-height: 68px;
+    margin-top: 0;
+  }
+  .app-shell:not(.is-lab) .control-deck {
+    flex-shrink: 0;
+    margin-top: 3px;
+  }
+  .app-shell:not(.is-lab) .demo-note { flex-shrink: 0; }
+}
+
 /* Compact game shell: the board, HUD and controls stay in one viewport. */
 .app-shell {
   min-height: 100dvh;
