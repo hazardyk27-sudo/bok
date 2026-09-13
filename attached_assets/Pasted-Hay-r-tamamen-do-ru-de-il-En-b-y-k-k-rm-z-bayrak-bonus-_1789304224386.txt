@@ -1,0 +1,262 @@
+Hayır, tamamen doğru değil. En büyük kırmızı bayrak bonus frekansı.
+
+Scatter probability = %2.5, 30 hücre, 4+ Scatter bonus ise bağımsız hücre modelinde teorik bonus frekansı yaklaşık 1 / 157 spin çıkar. Replit’in raporundaki:
+
+1 / 3,759.40
+
+değeri aşırı düşük. Yaklaşık 24 kat daha seyrek bonus geliyor. Yani Scatter üretimi yeni stream/run sistemine geçerken büyük ihtimalle bozulmuş.
+
+Diğer rakamlar ise ilk bakışta mantıklı:
+
+RTP %95.8112 → hedef %95.5–96.5 içinde, iyi.
+Hit rate %28.014 → hedef %27–33 içinde, iyi.
+Maximum normal streak 2 → istediğimiz gibi.
+3/4/5 aynı sembol sütunu %0 → son yaşadığımız sütun spam probleminin çözüldüğünü gösteriyor.
+
+Ama RTP'nin iyi görünmesi seni yanıltmasın. Bonus 1/3759 ise matematik şu an istediğimiz oyun değil. Base game ödemeleri veya çok nadir bonusların ortalama değeri RTP'yi %95.8'e taşıyor olabilir. Oyuncu deneyiminde bonus neredeyse hiç görülmez.
+
+Muhtemel hata
+
+Yeni stream yapısında Scatter muhtemelen normal hücre gibi %2.5 olasılıkla her initial hücrede üretilmiyor.
+
+Mesela yanlışlıkla şunlardan biri yapılmış olabilir:
+
+Her COLUMN için bir kez Scatter kontrol et
+
+veya:
+
+Her RUN için bir kez Scatter kontrol et
+
+veya Scatter normal-symbol run generator'ın dışında öyle bir yere eklenmiş ki 30 hücre yerine çok daha az RNG fırsatı oluşuyor.
+
+Bizim istediğimiz Base initial board için mantık:
+
+30 INITIAL VISIBLE POSITIONS
+
+her position için special-symbol selection yapılır
+
+Scatter probability ≈ 2.5%
+
+Ama normal futbol sembolüyse ondan sonra run/pair mantığı devreye girebilir.
+
+Yani Scatter frekansını pair/run sistemi ezmemeli.
+
+Replit'e şunu gönder:
+
+CRITICAL MATH BUG — BONUS FREQUENCY IS WRONG.
+
+The latest 1,000,000-spin simulation reports:
+
+RTP: 95.8112%
+Hit Rate: 28.014%
+Bonus Frequency: 1 in 3,759.40
+
+RTP and Hit Rate are inside target ranges.
+
+BONUS FREQUENCY IS NOT.
+
+With:
+
+30 initial cells
+Scatter probability approximately 2.5% per initial cell
+4+ Scatter required
+
+the expected trigger frequency should be around:
+
+1 in 157 paid spins
+
+approximately.
+
+Our target remains roughly:
+
+1 in 145–175 paid spins.
+
+1 in 3,759 is a major generator bug.
+
+DO NOT compensate for this by increasing bonus payouts.
+
+FIX SCATTER GENERATION.
+
+==================================================
+1. AUDIT SCATTER GENERATION
+==================================================
+
+Inspect exactly how Scatter is inserted into:
+
+BASE_INITIAL
+
+and:
+
+BONUS_INITIAL.
+
+Determine how many independent Scatter opportunities exist per initial 6x5 board.
+
+There must effectively be 30 cell-level initial-board opportunities.
+
+Do not perform Scatter selection:
+
+once per column
+once per run
+once per stream batch
+
+if that reduces the intended marginal per-cell probability.
+
+==================================================
+2. NORMAL RUN LOGIC MUST NOT REDUCE SCATTER RATE
+==================================================
+
+Normal-symbol pair logic applies to football symbols.
+
+It must NOT mean:
+
+"choose a normal run first and only rarely replace the whole run with Scatter."
+
+That changes Scatter frequency dramatically.
+
+Scatter must retain its own intended marginal probability.
+
+==================================================
+3. TARGET BASE INITIAL MARGINAL
+==================================================
+
+For BASE_INITIAL:
+
+each visible initial position should have approximately:
+
+2.5% marginal Scatter probability.
+
+Measured over a very large sample:
+
+Scatter count / total initial cells
+
+should be close to:
+
+0.025.
+
+Report the actual measured number.
+
+==================================================
+4. BONUS TRIGGER SANITY TEST
+==================================================
+
+Generate at least:
+
+10,000,000 BASE_INITIAL boards
+
+without running full tumble simulation.
+
+Measure:
+
+0 Scatter frequency
+1 Scatter frequency
+2 Scatter frequency
+3 Scatter frequency
+4 Scatter frequency
+5 Scatter frequency
+6+ Scatter frequency
+
+and:
+
+P(4+ Scatter)
+
+Expected approximate trigger frequency:
+
+around 1 / 157
+
+for an independent 2.5% per-cell model.
+
+Allow final configured target:
+
+1 / 145–175.
+
+If result is anywhere near:
+
+1 / 3,759
+
+the generator is still broken.
+
+==================================================
+5. DO NOT TOUCH NORMAL HIT RATE YET
+==================================================
+
+Current Base Hit Rate:
+
+28.014%
+
+is good.
+
+Do not change normal-symbol pair logic just to fix Scatter.
+
+Fix Scatter separately.
+
+==================================================
+6. DO NOT TRUST CURRENT RTP AFTER FIX
+==================================================
+
+Once Scatter frequency changes from ~1/3759 to ~1/157,
+Bonus RTP will change dramatically.
+
+Therefore current:
+
+95.8112%
+
+will no longer be valid.
+
+After fixing Scatter frequency:
+
+rerun full 1,000,000-spin simulation.
+
+Then recalibrate RTP using static payout / bonus parameters.
+
+Do NOT lower Scatter frequency again merely to reach RTP.
+
+The desired order is:
+
+1. Correct Bonus Frequency
+2. Preserve reasonable Hit Rate
+3. Then calibrate Overall RTP
+
+==================================================
+7. REPORT REQUIRED
+==================================================
+
+After the fix report:
+
+Measured Scatter probability per BASE_INITIAL cell
+P(0 Scatter)
+P(1 Scatter)
+P(2 Scatter)
+P(3 Scatter)
+P(4 Scatter)
+P(5 Scatter)
+P(6+ Scatter)
+Measured 4+ trigger probability
+Bonus Frequency
+Overall RTP
+Base RTP
+Bonus RTP
+Hit Rate
+
+Target:
+
+Bonus Frequency:
+1 in 145–175
+
+Overall RTP:
+95.5%–96.5%
+
+Hit Rate:
+27%–33%.
+
+Do not mark complete if Bonus Frequency remains remotely close to 1/3759.
+
+Kısacası mevcut raporun değerlendirmesi:
+
+Metrik	Sonuç
+RTP %95.81	✅
+Hit rate %28.01	✅
+Max streak 2	✅
+3/4/5 aynı sütun %0	✅
+Bonus 1/3759	❌ ciddi hata
+
+Önce sadece bunu düzelttirelim. Çünkü bonusu 1/157 civarına çektiğimiz anda RTP yeniden değişecek; ondan sonra matematiği tekrar kalibre etmek gerekecek.
