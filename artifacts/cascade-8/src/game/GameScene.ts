@@ -7,10 +7,9 @@ type BoardNode = {
   symbol: BoardCell;
   row: number;
   col: number;
-  pulseTarget?: Phaser.GameObjects.Image;
 };
 
-const SCATTER_SYMBOL_SIZE = 74;
+const SCATTER_SYMBOL_SIZE = 82;
 const SCATTER_SOURCE_SIZE = 1254;
 
 export class GameScene extends Phaser.Scene {
@@ -133,15 +132,26 @@ export class GameScene extends Phaser.Scene {
     if (symbol === "SCATTER") {
       const aura = this.add.ellipse(0, 1, 70, 78, 0xffbb3c, 0.08).setBlendMode(Phaser.BlendModes.ADD);
       const warmBloom = this.add.ellipse(0, 4, 48, 60, 0xffe29a, 0.08).setBlendMode(Phaser.BlendModes.ADD);
-      const scatterArt = this.add.image(0, 0, "scatter-symbol").setScale(SCATTER_SYMBOL_SIZE / SCATTER_SOURCE_SIZE);
+      const scatterArt = this.add.image(0, 0, "scatter-symbol")
+        .setScale(SCATTER_SYMBOL_SIZE / SCATTER_SOURCE_SIZE);
       const highlight = this.add.ellipse(-10, -20, 5, 16, 0xffffef, 0.75).setAngle(-18);
       const glint = this.add.text(18, -31, "✦", { color: "#fff4bf", fontSize: "11px" }).setOrigin(0.5);
       container.add([aura, warmBloom, scatterArt, highlight, glint]);
       this.tweens.add({ targets: aura, scale: 1.12, alpha: 0.14, duration: 1700, yoyo: true, repeat: -1, ease: "Sine.easeInOut" });
       this.tweens.add({ targets: warmBloom, scale: 1.16, alpha: 0.16, duration: 1200, yoyo: true, repeat: -1, ease: "Sine.easeInOut" });
+      this.tweens.add({
+        targets: scatterArt,
+        x: 2,
+        y: -1,
+        duration: 90,
+        yoyo: true,
+        repeat: -1,
+        repeatDelay: 1800,
+        ease: "Sine.easeInOut",
+      });
       this.tweens.add({ targets: highlight, x: 10, alpha: 0.12, duration: 1250, repeat: -1, yoyo: true, ease: "Sine.easeInOut", delay: 420 });
       this.tweens.add({ targets: glint, alpha: 0.18, scale: 0.6, duration: 260, yoyo: true, repeat: -1, repeatDelay: 2600 });
-      const node = { container, symbol, row, col, pulseTarget: scatterArt };
+      const node = { container, symbol, row, col };
       this.nodes.push(node);
       return node;
     }
@@ -222,16 +232,8 @@ export class GameScene extends Phaser.Scene {
         alpha: 0,
         duration: 300,
         ease: "Cubic.easeOut",
-        onComplete: () => shockwave.destroy(),
-      });
-      this.tweens.add({
-        targets: node.pulseTarget ?? node.container,
-        scaleX: 1.08,
-        scaleY: 1.08,
-        duration: 150,
-        yoyo: true,
-        ease: "Quad.easeOut",
         onComplete: () => {
+          shockwave.destroy();
           sparks.forEach((spark) => { if (spark.active) spark.destroy(); });
           resolve();
         },
