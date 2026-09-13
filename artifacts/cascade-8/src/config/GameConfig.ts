@@ -23,19 +23,20 @@ export type SymbolDefinition = {
   icon: string;
   color: number;
   colorHex: string;
+  accentColor: number;
   weight: number;
 };
 
 export const SYMBOLS: readonly SymbolDefinition[] = [
-  { id: "S1", name: "Tide Drop", icon: "✦", color: 0x28a9ff, colorHex: "#28a9ff", weight: 17 },
-  { id: "S2", name: "Verdant Shard", icon: "❖", color: 0x20d890, colorHex: "#20d890", weight: 15.5 },
-  { id: "S3", name: "Amber Sun", icon: "✹", color: 0xffb21c, colorHex: "#ffb21c", weight: 14 },
-  { id: "S4", name: "Violet Moon", icon: "☾", color: 0x8a63ff, colorHex: "#8a63ff", weight: 12.5 },
-  { id: "S5", name: "Silver Star", icon: "★", color: 0xdce8ff, colorHex: "#dce8ff", weight: 11.5 },
-  { id: "S6", name: "Ruby Core", icon: "◆", color: 0xff3d61, colorHex: "#ff3d61", weight: 10 },
-  { id: "S7", name: "Solar Crown", icon: "♛", color: 0xff6b1a, colorHex: "#ff6b1a", weight: 9 },
-  { id: "S8", name: "Prism Heart", icon: "⬢", color: 0xf044d8, colorHex: "#f044d8", weight: 8 },
-  { id: "SCATTER", name: "Astral Gate", icon: "◉", color: 0x00e5ff, colorHex: "#00e5ff", weight: 2.5 },
+  { id: "S1", name: "Real Madrid", icon: "RM", color: 0x1654c7, colorHex: "#4d8dff", accentColor: 0xf3d36a, weight: 17 },
+  { id: "S2", name: "Barcelona", icon: "BAR", color: 0x8e1639, colorHex: "#e94362", accentColor: 0x2f63ba, weight: 15.5 },
+  { id: "S3", name: "Chelsea", icon: "CHE", color: 0x0755c9, colorHex: "#4da7ff", accentColor: 0x9ed5ff, weight: 14 },
+  { id: "S4", name: "Roma", icon: "ROM", color: 0x8f1823, colorHex: "#ff5b61", accentColor: 0xf0b44d, weight: 12.5 },
+  { id: "S5", name: "Liverpool", icon: "LIV", color: 0xc8102e, colorHex: "#ff526d", accentColor: 0xffd8d8, weight: 11.5 },
+  { id: "S6", name: "PSG", icon: "PSG", color: 0x142d66, colorHex: "#6aa8ff", accentColor: 0xef3340, weight: 10 },
+  { id: "S7", name: "Bayern", icon: "BAY", color: 0xd71920, colorHex: "#ff6670", accentColor: 0xf1f1f1, weight: 9 },
+  { id: "S8", name: "Galatasaray", icon: "GS", color: 0xc8102e, colorHex: "#ffdf57", accentColor: 0xf5b335, weight: 8 },
+  { id: "SCATTER", name: "Astral Gate", icon: "◉", color: 0x00e5ff, colorHex: "#00e5ff", accentColor: 0xd8fbff, weight: 2.5 },
 ];
 
 export const NORMAL_SYMBOLS = SYMBOLS.filter((symbol) => symbol.id !== "SCATTER") as readonly SymbolDefinition[];
