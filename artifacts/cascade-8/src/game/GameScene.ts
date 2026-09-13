@@ -9,7 +9,7 @@ type BoardNode = {
   col: number;
 };
 
-const SCATTER_SYMBOL_SIZE = 82;
+const SCATTER_SYMBOL_SIZE = 98.4;
 const SCATTER_SOURCE_SIZE = 256;
 
 export class GameScene extends Phaser.Scene {
