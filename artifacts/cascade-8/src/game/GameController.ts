@@ -160,7 +160,6 @@ export class GameController {
     this.ui.boardWrap.classList.add("free-spin-mode");
     this.setState("BONUS_INTRO");
     this.message("BONUS REALM // FREE SPINS");
-    await sleep(this.duration(700));
     let remaining = result.freeSpinsAwarded;
     let usedMultiplier = result.totalMultiplier;
     let index = 0;
@@ -194,7 +193,6 @@ export class GameController {
       if (freeSpin.retriggered) {
         this.message(`+${freeSpin.retriggered} FREE SPINS`);
         this.updateHud();
-        await sleep(this.duration(450));
       }
     }
     this.setState("BONUS_SUMMARY"); this.message(`BONUS COMPLETE // ${formatCredits(result.bonusWinCents)}`);
