@@ -1,1 +1,2 @@
 - [Workspace build boundary](workspace-build-boundary.md) — the root Cascade 8 app builds independently; sibling artifact packages keep their own injected preview environment.
+- [Preview artifact routing](preview-artifact-routing.md) — root-only Vite servers can work on localhost yet return external preview 404s until registered as a web artifact with managed routing.

@@ -1,0 +1,28 @@
+kind = "web"
+previewPath = "/"
+title = "Cascade 8"
+description = "A virtual-credit cascading slot-style browser game with Phaser rendering, pure TypeScript game math, free spins, multiplier crystals, responsive controls, and a deterministic simulator."
+version = "1.0.0"
+id = "artifacts/cascade-8"
+router = "path"
+
+[[services]]
+name = "web"
+paths = [ "/" ]
+localPort = 20003
+
+[services.development]
+run = "pnpm --filter @workspace/cascade-8 run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/cascade-8", "run", "build" ]
+serve = "static"
+publicDir = "artifacts/cascade-8/dist/public"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "20003"
+BASE_PATH = "/"
