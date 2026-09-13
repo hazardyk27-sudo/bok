@@ -1,4 +1,4 @@
-import { ANIMATION, BETS_CENTS, STARTING_BALANCE_CENTS } from "../config/GameConfig";
+import { ANIMATION, BETS_CENTS, STARTING_BALANCE_CENTS, getSymbolDefinition } from "../config/GameConfig";
 import { CryptoRNG } from "../engine/RNG";
 import { playSpin } from "../engine/SlotEngine";
 import type { SpinResult } from "../engine/types";
@@ -224,7 +224,7 @@ export class GameController {
       this.setState("EVALUATING");
       this.ui.tumble.textContent = index === 0 ? "—" : `TUMBLE ${index + 1}`;
       this.scene.renderBoard(tumble.boardBefore, tumble.winningCells);
-      this.message(isBonus && tumble.crystals.length ? "CRYSTALS ARE GATHERING" : `${tumble.winningSymbols.join(" + ")} RESONATE`);
+      this.message(isBonus && tumble.crystals.length ? "CRYSTALS ARE GATHERING" : `${tumble.winningSymbols.map((symbol) => getSymbolDefinition(symbol).name).join(" + ")} RESONATE`);
       this.setState("WIN_HIGHLIGHT"); this.audio.win();
       await this.scene.highlightCells(tumble.winningCells, this.duration(ANIMATION.winHighlight));
       this.setState(tumble.crystals.length ? "CRYSTAL_REVEAL" : "WIN_EXPLOSION");

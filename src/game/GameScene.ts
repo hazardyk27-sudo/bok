@@ -1,5 +1,5 @@
 import Phaser from "phaser";
-import { BOARD_COLUMNS, BOARD_ROWS, getSymbolDefinition, type SymbolId } from "../config/GameConfig";
+import { BOARD_COLUMNS, BOARD_ROWS, NORMAL_SYMBOLS, getSymbolDefinition, type SymbolId } from "../config/GameConfig";
 import type { Board, Cell } from "../engine/types";
 
 type BoardNode = { container: Phaser.GameObjects.Container; symbol: SymbolId; row: number; col: number };
@@ -14,6 +14,12 @@ export class GameScene extends Phaser.Scene {
 
   constructor() {
     super("Cascade8GameScene");
+  }
+
+  preload() {
+    NORMAL_SYMBOLS.forEach((symbol) => {
+      if (symbol.logoPath) this.load.image(`club-logo-${symbol.id}`, `${import.meta.env.BASE_URL}${symbol.logoPath}`);
+    });
   }
 
   create() {
@@ -71,15 +77,12 @@ export class GameScene extends Phaser.Scene {
     glow.setBlendMode(Phaser.BlendModes.ADD);
     const orb = this.add.circle(0, 0, 25, definition.color, winner ? 0.48 : 0.3);
     orb.setStrokeStyle(winner || symbol === "SCATTER" ? 2 : 1, definition.color, winner ? 0.9 : 0.3);
-    const core = this.add.circle(0, 0, 19, 0x09142f, 0.76);
+    const core = this.add.circle(0, 0, 22, 0x09142f, 0.7);
     const shine = this.add.ellipse(-9, -12, 13, 7, 0xffffff, 0.18).setAngle(-25);
-    const text = this.add.text(0, 1, definition.icon, {
-      color: definition.colorHex,
-      fontFamily: "Georgia, serif",
-      fontSize: symbol === "SCATTER" ? "31px" : "29px",
-      fontStyle: "bold",
-    }).setOrigin(0.5);
-    container.add([glow, orb, core, shine, text]);
+    const mark = symbol === "SCATTER"
+      ? this.add.text(0, 1, definition.icon, { color: definition.colorHex, fontFamily: "Georgia, serif", fontSize: "31px", fontStyle: "bold" }).setOrigin(0.5)
+      : this.add.image(0, 0, `club-logo-${symbol}`).setDisplaySize(42, 42);
+    container.add([glow, orb, core, mark, shine]);
     if (symbol === "SCATTER") {
       const ring = this.add.circle(0, 0, 34, undefined, 0).setStrokeStyle(1.5, definition.color, 0.72);
       container.add(ring);

@@ -24,18 +24,19 @@ export type SymbolDefinition = {
   color: number;
   colorHex: string;
   accentColor: number;
+  logoPath?: string;
   weight: number;
 };
 
 export const SYMBOLS: readonly SymbolDefinition[] = [
-  { id: "S1", name: "Real Madrid", icon: "RM", color: 0x1654c7, colorHex: "#4d8dff", accentColor: 0xf3d36a, weight: 17 },
-  { id: "S2", name: "Barcelona", icon: "BAR", color: 0x8e1639, colorHex: "#e94362", accentColor: 0x2f63ba, weight: 15.5 },
-  { id: "S3", name: "Chelsea", icon: "CHE", color: 0x0755c9, colorHex: "#4da7ff", accentColor: 0x9ed5ff, weight: 14 },
-  { id: "S4", name: "Roma", icon: "ROM", color: 0x8f1823, colorHex: "#ff5b61", accentColor: 0xf0b44d, weight: 12.5 },
-  { id: "S5", name: "Liverpool", icon: "LIV", color: 0xc8102e, colorHex: "#ff526d", accentColor: 0xffd8d8, weight: 11.5 },
-  { id: "S6", name: "PSG", icon: "PSG", color: 0x142d66, colorHex: "#6aa8ff", accentColor: 0xef3340, weight: 10 },
-  { id: "S7", name: "Bayern", icon: "BAY", color: 0xd71920, colorHex: "#ff6670", accentColor: 0xf1f1f1, weight: 9 },
-  { id: "S8", name: "Galatasaray", icon: "GS", color: 0xc8102e, colorHex: "#ffdf57", accentColor: 0xf5b335, weight: 8 },
+  { id: "S1", name: "Real Madrid", icon: "RM", color: 0xeaf1ff, colorHex: "#eaf1ff", accentColor: 0xd4af37, logoPath: "team-logos/real-madrid.png", weight: 17 },
+  { id: "S2", name: "Barcelona", icon: "BAR", color: 0x7030a0, colorHex: "#b36bef", accentColor: 0xa50044, logoPath: "team-logos/barcelona.png", weight: 15.5 },
+  { id: "S3", name: "Chelsea", icon: "CHE", color: 0x0879e8, colorHex: "#3aa5ff", accentColor: 0x9ed5ff, logoPath: "team-logos/chelsea.png", weight: 14 },
+  { id: "S4", name: "Roma", icon: "ROM", color: 0x8e3b12, colorHex: "#d8752e", accentColor: 0xf0b44d, logoPath: "team-logos/roma.png", weight: 12.5 },
+  { id: "S5", name: "Liverpool", icon: "LIV", color: 0xdc1638, colorHex: "#ff3c58", accentColor: 0xffd8d8, logoPath: "team-logos/liverpool.png", weight: 11.5 },
+  { id: "S6", name: "PSG", icon: "PSG", color: 0x172c62, colorHex: "#617fc8", accentColor: 0xef3340, logoPath: "team-logos/psg.png", weight: 10 },
+  { id: "S7", name: "Bayern", icon: "BAY", color: 0xe50059, colorHex: "#ff5b9a", accentColor: 0xf1f1f1, logoPath: "team-logos/bayern.png", weight: 9 },
+  { id: "S8", name: "Galatasaray", icon: "GS", color: 0xf4bd00, colorHex: "#ffd31c", accentColor: 0xc8102e, logoPath: "team-logos/galatasaray.png", weight: 8 },
   { id: "SCATTER", name: "Astral Gate", icon: "◉", color: 0x00e5ff, colorHex: "#00e5ff", accentColor: 0xd8fbff, weight: 2.5 },
 ];
 

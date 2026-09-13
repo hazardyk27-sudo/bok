@@ -50,7 +50,7 @@ app.innerHTML = `
         </div>
         <div class="legend-card">
           <div class="panel-kicker">SYMBOL FREQUENCY</div>
-          ${NORMAL_SYMBOLS.map((symbol) => `<div class="legend-row"><span class="legend-icon" style="color:${symbol.colorHex}">${symbol.icon}</span><span>${symbol.name}</span><b>${symbol.weight.toFixed(1)}%</b></div>`).join("")}
+          ${NORMAL_SYMBOLS.map((symbol) => `<div class="legend-row"><img class="legend-logo" src="${import.meta.env.BASE_URL}${symbol.logoPath}" alt=""><span>${symbol.name}</span><b>${symbol.weight.toFixed(1)}%</b></div>`).join("")}
         </div>
         <button class="outline-button full" data-modal="info"><span>▣</span> HOW TO PLAY <b>↗</b></button>
       </aside>
@@ -103,7 +103,7 @@ function showModal(name: string | null) {
   } else {
     modalRoot.innerHTML = `<div class="modal-backdrop"><section class="modal-card info-modal"><button class="modal-close" data-close>×</button><div class="modal-kicker">CASCADE 8 // FIELD GUIDE</div><h2>How to play</h2><p class="modal-lead">Match 8 or more of a club logo anywhere on the field. Winning logos burst, the field falls, and fresh logos tumble in.</p>
       <div class="info-grid"><div><span class="info-number">01</span><b>Drop</b><small>30 symbols land in a 6 × 5 field.</small></div><div><span class="info-number">02</span><b>Match</b><small>Every matching symbol counts, even when separated.</small></div><div><span class="info-number">03</span><b>Tumble</b><small>Wins vanish together and the cascade repeats.</small></div><div><span class="info-number">04</span><b>Bonus</b><small>4 Astral Gates trigger 10 Free Spins.</small></div></div>
-       <div class="paytable"><div class="paytable-head"><span>CLUB LOGO</span><span>8 — 9</span><span>10 — 11</span><span>12+</span></div>${NORMAL_SYMBOLS.map((symbol) => { const paytable = PAYTABLE[symbol.id as keyof typeof PAYTABLE]; return `<div class="paytable-row"><span style="color:${symbol.colorHex}">${symbol.icon} ${symbol.name}</span><span>${paytable[0].multiplier}x</span><span>${paytable[1].multiplier}x</span><span>${paytable[2].multiplier}x</span></div>`; }).join("")}</div>
+       <div class="paytable"><div class="paytable-head"><span>CLUB LOGO</span><span>8 — 9</span><span>10 — 11</span><span>12+</span></div>${NORMAL_SYMBOLS.map((symbol) => { const paytable = PAYTABLE[symbol.id as keyof typeof PAYTABLE]; return `<div class="paytable-row"><span class="paytable-club" style="color:${symbol.colorHex}"><img src="${import.meta.env.BASE_URL}${symbol.logoPath}" alt="">${symbol.name}</span><span>${paytable[0].multiplier}x</span><span>${paytable[1].multiplier}x</span><span>${paytable[2].multiplier}x</span></div>`; }).join("")}</div>
       <div class="info-callout"><b>MULTIPLIER CRYSTALS</b><span>Free Spin wins can reveal 2x–100x crystals. Revealed values add together and multiply that tumble only.</span></div>
       <div class="modal-footnote">Measured RTP: 95.7117% over 1,000,000 spins (seed 20260913). This is a virtual-credit demo and is not a regulated gaming product.</div>
     </section></div>`;

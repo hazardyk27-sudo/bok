@@ -91,6 +91,7 @@ button:focus-visible, input:focus-visible { outline: 2px solid var(--cyan); outl
 .legend-row { display: grid; grid-template-columns: 26px 1fr auto; align-items: center; height: 28px; color: #cad2eb; font: 11px "DM Mono", monospace; }
 .legend-row b { color: #7280a9; font-size: 9px; font-weight: 400; }
 .legend-icon { font: 17px Georgia, serif; text-align: center; }
+.legend-logo { width: 22px; height: 22px; object-fit: contain; filter: drop-shadow(0 2px 5px rgba(0,0,0,.5)); }
 .outline-button { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 11px 14px; border-radius: 11px; color: #cbd4ef; font: 10px "DM Mono", monospace; letter-spacing: .1em; }
 .outline-button.full { width: 100%; margin-top: 15px; }
 .outline-button b { color: var(--cyan); font-size: 15px; }
@@ -144,6 +145,8 @@ button:focus-visible, input:focus-visible { outline: 2px solid var(--cyan); outl
 .paytable-head { background: rgba(117, 141, 255, .09); color: var(--muted); font-size: 8px; }
 .paytable-row { border-top: 1px solid rgba(149, 165, 231, .1); color: #c4cdef; }
 .paytable-row span:not(:first-child) { color: var(--gold); }
+.paytable-club { display: flex; align-items: center; gap: 7px; min-width: 0; }
+.paytable-club img { width: 23px; height: 23px; flex: 0 0 23px; object-fit: contain; filter: drop-shadow(0 2px 4px rgba(0,0,0,.45)); }
 .info-callout { display: grid; gap: 7px; padding: 13px 15px; border-left: 2px solid var(--cyan); background: rgba(91, 208, 255, .06); }
 .info-callout b { color: var(--cyan); font: 10px "DM Mono", monospace; letter-spacing: .12em; }
 .info-callout span, .modal-footnote { color: var(--muted); font-size: 11px; line-height: 1.5; }
