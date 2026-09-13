@@ -1,5 +1,5 @@
 import { BOARD_COLUMNS, BOARD_ROWS, NORMAL_SYMBOLS, type NormalSymbolId, getPaytableMultiplier } from "../config/GameConfig";
-import { generateRefillCells } from "./BoardGenerator";
+import { generateRefillCells, type ColumnStreams } from "./BoardGenerator";
 import { isMultiplierCore, type Board, type BoardCell, type Cell, type RandomSource } from "./types";
 
 export type WinEvaluation = {
@@ -41,6 +41,7 @@ export function removeAndRefill(
   source: RandomSource,
   allowCores = false,
   mode: "base" | "bonus" = allowCores ? "bonus" : "base",
+  streams?: ColumnStreams,
 ) {
   const winning = new Set(winningCells.map((cell) => `${cell.row}:${cell.col}`));
   const next: Board = Array.from({ length: BOARD_ROWS }, () => Array.from({ length: BOARD_COLUMNS }, () => "SCATTER" as BoardCell));
@@ -51,7 +52,9 @@ export function removeAndRefill(
       const cell = board[row][col];
       if (isMultiplierCore(cell) || !winning.has(`${row}:${col}`)) survivors.push(cell);
     }
-    const generated = generateRefillCells(source, BOARD_ROWS - survivors.length, allowCores, mode, col);
+    const generated = streams
+      ? streams[col].next(BOARD_ROWS - survivors.length, allowCores && mode === "bonus" ? "BONUS_REFILL" : "BASE_REFILL")
+      : generateRefillCells(source, BOARD_ROWS - survivors.length, allowCores, mode, col);
     const column = [...generated, ...survivors];
     for (let row = 0; row < BOARD_ROWS; row += 1) next[row][col] = column[row];
     newSymbols.push(...generated);

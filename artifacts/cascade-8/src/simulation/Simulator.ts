@@ -2,7 +2,8 @@ import { mkdir, writeFile } from "node:fs/promises";
 import { playSpin } from "../engine/SlotEngine";
 import { SeededRNG } from "../engine/RNG";
 import { evaluateBoard } from "../engine/WinEvaluator";
-import { isNormalSymbol, type Board } from "../engine/BoardGenerator";
+import { isNormalSymbol } from "../engine/BoardGenerator";
+import type { Board } from "../engine/types";
 
 export const HISTOGRAM_BUCKETS = [
   "0x", "0-1x", "1-2x", "2-5x", "5-10x", "10-25x", "25-50x",

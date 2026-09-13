@@ -166,7 +166,6 @@ export class GameController {
       result.freeSpins.push(freeSpin);
       result.totalMultiplierEvents.push(...freeSpin.tumbles.map((tumble) => tumble.finalPayoutMultiplier));
       usedMultiplier += freeSpin.finalWinMultiplier;
-      remaining = remaining - 1 + freeSpin.retriggered;
       result.bonusRawWinMultiplier += freeSpin.rawWinMultiplier;
       result.bonusWinCents = Math.round((usedMultiplier - result.baseWinCents / this.betCents) * this.betCents);
       result.totalMultiplier = usedMultiplier;
@@ -184,6 +183,8 @@ export class GameController {
       await this.playTumbles({ ...result, tumbles: freeSpin.tumbles }, true);
       this.currentWinCents = result.totalWinCents;
       this.bonusWinCents = result.bonusWinCents;
+      remaining = remaining - 1 + freeSpin.retriggered;
+      this.freeSpinsLeft = remaining;
       this.updateHud();
       if (freeSpin.retriggered) {
         this.message(`+${freeSpin.retriggered} FREE SPINS`);
@@ -268,7 +269,7 @@ export class GameController {
     for (let index = 0; index < result.tumbles.length; index += 1) {
       const tumble = result.tumbles[index];
       this.setState("EVALUATING");
-      this.ui.tumble.textContent = index === 0 ? "—" : `TUMBLE ${index + 1}`;
+      this.ui.tumble.textContent = `${tumble.rawWinPoolAfter.toFixed(2)}x`;
       this.scene.renderBoard(tumble.boardBefore, tumble.winningCells);
       const winningMessage = `${tumble.winningSymbols.map((symbol) => getSymbolDefinition(symbol).name).join(" + ")} RESONATE`;
       this.message(tumble.multiplierCores.length ? "MULTIPLIER CORES ARE CHARGING" : winningMessage);
@@ -334,7 +335,6 @@ export class GameController {
       };
       const onPointer = () => { if (counting) finishCounting(); else close(); };
       overlay.addEventListener("pointerdown", onPointer);
-      button.addEventListener("click", onPointer);
       const tick = () => {
         if (closed || !counting) return;
         value = Math.min(target, value + Math.max(target / 36, 0.01));

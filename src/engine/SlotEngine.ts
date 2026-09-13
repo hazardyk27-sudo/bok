@@ -1,11 +1,11 @@
 import { MAX_WIN_MULTIPLIER } from "../config/GameConfig";
-import { generateInitialBoard, countScatter } from "./BoardGenerator";
+import { generateInitialBoardWithStreams, countScatter, type ColumnStreams } from "./BoardGenerator";
 import { baseFreeSpins, retriggerFreeSpins } from "./BonusEngine";
 import { removeAndRefill, evaluateBoard } from "./WinEvaluator";
 import { isMultiplierCore, type Board, type CoreCell, type FreeSpinResult, type RandomSource, type SpinResult, type TumbleResult } from "./types";
 
 const cloneBoard = (board: Board): Board => board.map((row) => [...row]);
-type PlayContext = { source: RandomSource; mode: "base" | "free" };
+type PlayContext = { source: RandomSource; mode: "base" | "free"; streams: ColumnStreams };
 type TumbleSequence = { tumbles: TumbleResult[]; finalBoard: Board; multiplierCores: CoreCell[]; rawWinMultiplier: number };
 
 export function calculateSequenceSettlement(rawWinMultiplier: number, coreValues: readonly number[]) {
@@ -25,7 +25,14 @@ function playTumbles(initialBoard: Board, context: PlayContext): TumbleSequence 
     const coreTotalMultiplier = multiplierCores.length ? multiplierCores.reduce((sum, core) => sum + core.value, 0) : 1;
     rawWinPool += evaluation.rawPayoutMultiplier;
     const removedCells = [...evaluation.winningCells];
-    const gravity = removeAndRefill(board, removedCells, context.source, context.mode === "free", context.mode === "free" ? "bonus" : "base");
+    const gravity = removeAndRefill(
+      board,
+      removedCells,
+      context.source,
+      context.mode === "free",
+      context.mode === "free" ? "bonus" : "base",
+      context.streams,
+    );
     tumbles.push({
       boardBefore: cloneBoard(board),
       winningSymbols: evaluation.winningSymbols,
@@ -71,9 +78,9 @@ function createConsumer(initialUsed = 0) {
 
 export function playBaseSpin(betCents: number, source: RandomSource): SpinResult {
   const consumer = createConsumer();
-  const initialBoard = generateInitialBoard(source, "base");
+  const { board: initialBoard, streams } = generateInitialBoardWithStreams(source, "base");
   const scatterCount = countScatter(initialBoard);
-  const sequence = playTumbles(initialBoard, { source, mode: "base" });
+  const sequence = playTumbles(initialBoard, { source, mode: "base", streams });
   const settlement = settleSequence(sequence, consumer.consume);
   const freeSpinsAwarded = baseFreeSpins(scatterCount);
   return {
@@ -88,9 +95,9 @@ export function playBaseSpin(betCents: number, source: RandomSource): SpinResult
 }
 
 export function playFreeSpin(index: number, betCents: number, source: RandomSource, maxRemainingMultiplier = MAX_WIN_MULTIPLIER): FreeSpinResult {
-  const initialBoard = generateInitialBoard(source, "bonus");
+  const { board: initialBoard, streams } = generateInitialBoardWithStreams(source, "bonus");
   const scatterCount = countScatter(initialBoard);
-  const sequence = playTumbles(initialBoard, { source, mode: "free" });
+  const sequence = playTumbles(initialBoard, { source, mode: "free", streams });
   const consumer = createConsumer(MAX_WIN_MULTIPLIER - maxRemainingMultiplier);
   const settlement = settleSequence(sequence, consumer.consume);
   return {

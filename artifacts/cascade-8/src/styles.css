@@ -184,6 +184,9 @@ button:focus-visible, input:focus-visible { outline: 2px solid var(--cyan); outl
 .lab-actions { display: flex; flex-wrap: wrap; gap: 7px; }
 .lab-actions button { padding: 8px 10px; border: 1px solid rgba(239, 196, 106, .35); border-radius: 8px; background: rgba(239, 196, 106, .07); color: #efcf8c; font: 9px "DM Mono", monospace; }
 .lab-result { margin-top: 14px; padding: 11px; border-radius: 8px; background: rgba(5, 10, 29, .45); color: #b6c0e4; font: 10px "DM Mono", monospace; }
+.app-shell.is-lab { overflow: auto; }
+.app-shell.is-lab .mode-ribbon, .app-shell.is-lab .board-wrap, .app-shell.is-lab .status-line,
+.app-shell.is-lab .control-deck, .app-shell.is-lab .demo-note { display: none; }
 @keyframes fade-in { from { opacity: 0; } to { opacity: 1; } }
 @keyframes bonus-arrive { from { opacity: 0; transform: translateY(16px) scale(.92); } to { opacity: 1; transform: translateY(0) scale(1); } }
 @keyframes win-arrive { from { opacity: 0; transform: translate(-50%, -50%) scale(.55); } 60% { opacity: 1; transform: translate(-50%, -50%) scale(1.08); } to { opacity: 1; transform: translate(-50%, -50%) scale(1); } }
@@ -226,6 +229,8 @@ button:focus-visible, input:focus-visible { outline: 2px solid var(--cyan); outl
   .info-grid { grid-template-columns: repeat(2, 1fr); }
   .modal-card { padding: 23px 17px; }
   .modal-card h2 { font-size: 26px; }
+  .app-shell.is-lab { min-height: 100dvh; padding-bottom: 24px; }
+  .app-shell.is-lab .lab-panel { margin-top: 18px; }
 }
 .special-design { margin-top: 18px; padding-top: 15px; border-top: 1px solid rgba(239, 196, 106, .18); }
 .special-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-top: 10px; }

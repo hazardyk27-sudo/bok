@@ -50,28 +50,35 @@ export class ColumnStream {
 
     const candidates = this.config.symbolWeights
       .filter(({ value }) => value !== this.lastRunSymbol)
+      .filter(({ value }) => !isInitial || this.queue.filter((cell) => cell === value).length < 3)
       .map(({ value, weight }) => ({ value, weight: weight * softFactor(this.recent, value) }));
-    const symbol = weightedChoice(this.source, candidates);
+    const available = candidates.length ? candidates : this.config.symbolWeights
+      .filter(({ value }) => value !== this.lastRunSymbol)
+      .map(({ value, weight }) => ({ value, weight: weight * softFactor(this.recent, value) }));
+    const symbol = weightedChoice(this.source, available);
     const requestedLength = weightedChoice(this.source, this.config.runLengthWeights);
     const maxInitialCount = isInitial
       ? 3 - this.queue.filter((cell) => cell === symbol).length
       : 2;
     const runLength = Math.max(1, Math.min(requestedLength, maxInitialCount, 2));
+    let endedWithCore = false;
     for (let index = 0; index < runLength; index += 1) {
       if (allowCore) {
         const core = drawMultiplierCore(this.source);
         if (core) {
           this.queue.push(core);
           this.lastRunSymbol = null;
+          endedWithCore = true;
           continue;
         }
       }
       this.queue.push(symbol);
+      endedWithCore = false;
       this.recent.push(symbol);
       if (this.recent.length > 4) this.recent.shift();
       this.stats.emittedNormal += 1;
     }
-    this.lastRunSymbol = symbol;
+    this.lastRunSymbol = endedWithCore ? null : symbol;
     const key = String(runLength) as "1" | "2";
     this.stats.runLengths[key] += 1;
     if (runLength === 2) this.stats.pairCount += 1;

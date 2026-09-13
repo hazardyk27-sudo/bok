@@ -1,8 +1,10 @@
 import Phaser from "phaser";
 import "./styles.css";
-import { getSymbolDefinition, PAYTABLE, NORMAL_SYMBOLS } from "./config/GameConfig";
+import { getSymbolDefinition, PAYTABLE, NORMAL_SYMBOLS, BASE_REEL_CONFIG, ANIMATION } from "./config/GameConfig";
 import { evaluateBoard } from "./engine/WinEvaluator";
 import { calculateSequenceSettlement } from "./engine/SlotEngine";
+import { ColumnStream, createColumnStreams, generateInitialBoardWithStreams } from "./engine/BoardGenerator";
+import { SeededRNG } from "./engine/RNG";
 import type { Board } from "./engine/types";
 import { GameController, formatCredits } from "./game/GameController";
 import { createGameScene, GameScene } from "./game/GameScene";
@@ -61,8 +63,9 @@ window.setTimeout(() => {
 }, 80);
 
 function renderLab(scene: GameScene) {
-  const lab = document.createElement("section"); lab.className = "lab-panel";
-  lab.innerHTML = `<div class="panel-kicker">DEVELOPMENT ROUTE // /lab</div><h1>Animation & Math Lab</h1><p>Deterministic board checks stay separate from live RNG. Use these cards to inspect wins, persistent Cores and the full win presentation.</p><div class="lab-actions"><button data-lab="seven">7 × S1</button><button data-lab="eight">8 × S1</button><button data-lab="simultaneous">8 × S1 + 8 × S6</button><button data-lab="core">CORE BOARD</button><button data-lab="settlement">8x + 35x</button><button data-lab="big">BIG WIN</button></div><div class="lab-result" id="lab-result">Choose a predefined board.</div><pre class="lab-metrics" id="lab-metrics"></pre><div class="special-design"><div class="panel-kicker">SPECIAL SYMBOL DESIGN</div><div class="special-grid"><div class="special-preview normal-preview"><span class="special-state">IDLE</span><div class="preview-crest">GS</div><b>GALATASARAY</b></div><div class="special-preview scatter-preview"><span class="special-state">LANDING</span><div class="preview-trophy">★</div><b>GOLDEN SCATTER</b></div>${[2, 10, 25, 50, 100, 250, 500].map((value) => `<div class="special-preview core-preview core-${value}"><span class="special-state">${value >= 100 ? "SETTLEMENT" : "ACTIVE"}</span><strong>${value}x</strong><b>CORE</b></div>`).join("")}</div></div>`;
+  const lab = document.createElement("section");
+  lab.className = "lab-panel";
+  lab.innerHTML = `<div class="panel-kicker">DEVELOPMENT ROUTE // /lab</div><h1>Animation & Math Lab</h1><p>Deterministic board checks stay separate from live RNG. Use these cards to inspect wins, persistent Cores, streams and the full win presentation.</p><div class="lab-actions"><button data-lab="seven">7 × S1</button><button data-lab="eight">8 × S1</button><button data-lab="simultaneous">8 × S1 + 8 × S6</button><button data-lab="core">CORE BOARD</button><button data-lab="settlement">8x + 35x</button><button data-lab="waiting">BONUS WAITING</button><button data-lab="streams">STREAMS</button><button data-lab="pairs">PAIR SPLIT</button><button data-lab="anti">ANTI-STREAK</button><button data-lab="timing">TIMINGS</button><button data-lab="big">BIG WIN WAIT</button><button data-lab="max">MAX WIN WAIT</button></div><div class="lab-result" id="lab-result">Choose a predefined board.</div><pre class="lab-metrics" id="lab-metrics"></pre><div class="special-design"><div class="panel-kicker">SPECIAL SYMBOL DESIGN</div><div class="special-grid"><div class="special-preview normal-preview"><span class="special-state">IDLE</span><div class="preview-crest">GS</div><b>GALATASARAY</b></div><div class="special-preview scatter-preview"><span class="special-state">LANDING</span><div class="preview-trophy">★</div><b>GOLDEN SCATTER</b></div>${[2, 10, 25, 50, 100, 250, 500].map((value) => `<div class="special-preview core-preview core-${value}"><span class="special-state">${value >= 100 ? "SETTLEMENT" : "ACTIVE"}</span><strong>${value}x</strong><b>CORE</b></div>`).join("")}</div></div>`;
   document.querySelector(".game-stage")?.append(lab);
   const metrics = lab.querySelector<HTMLElement>("#lab-metrics")!;
   const updateMetrics = () => { const current = scene.getDebugMetrics(); metrics.textContent = `PERF // ${current.fps} FPS // ${current.renderer} // ${current.activeNodes}/${current.boardCells} ACTIVE BOARD NODES`; window.requestAnimationFrame(updateMetrics); };
@@ -70,7 +73,28 @@ function renderLab(scene: GameScene) {
   lab.querySelectorAll<HTMLButtonElement>("[data-lab]").forEach((button) => button.onclick = () => {
     const key = button.dataset.lab;
     if (key === "settlement") { const settlement = calculateSequenceSettlement(8, [10, 25]); byId("lab-result").textContent = `RAW POOL 8.00x × CORES ${settlement.combinedCoreMultiplier}x = FINAL ${settlement.finalWinMultiplier}x // SETTLED ONCE`; return; }
-    if (key === "big") { controller.showBigWin(250, 25_000); byId("lab-result").textContent = "BIG WIN COUNT-UP // tap to accelerate"; return; }
+    if (key === "big") { controller.showBigWin(250, 25_000); byId("lab-result").textContent = "BIG WIN COUNT-UP // first tap finishes, second tap continues"; return; }
+    if (key === "max") { controller.showBigWin(5000, 500_000, "MAX WIN"); byId("lab-result").textContent = "MAX WIN WAIT // explicit two-input dismissal"; return; }
+    if (key === "waiting") { byId("lab-result").textContent = "BONUS_WAITING_FOR_START // no Free Spin board is generated until START FREE SPINS"; return; }
+    if (key === "timing") { byId("lab-result").textContent = `NORMAL TIMINGS // drop ${ANIMATION.initialDrop}ms // highlight ${ANIMATION.winHighlight}ms // burst ${ANIMATION.burst}ms // refill ${ANIMATION.refill}ms // turbo scales centrally`; return; }
+    if (key === "streams") {
+      const seeded = generateInitialBoardWithStreams(new SeededRNG("lab-streams"), "base");
+      const first = seeded.streams[0].next(1, "BASE_REFILL"); const second = seeded.streams[0].next(1, "BASE_REFILL");
+      byId("lab-result").textContent = `PERSISTENT STREAM // initial ${seeded.board.length}x${seeded.board[0].length} board // split refill items ${String(first[0])} → ${String(second[0])}`;
+      return;
+    }
+    if (key === "pairs") {
+      const stream = new ColumnStream({ nextFloat: () => 0.999999 }, { ...BASE_REEL_CONFIG, symbolWeights: [{ value: "S3", weight: 1 }], runLengthWeights: [{ value: 2, weight: 1 }] }, 0);
+      byId("lab-result").textContent = `PAIR SPLIT // request 1: ${String(stream.next(1, "BASE_REFILL")[0])} // request 2: ${String(stream.next(1, "BASE_REFILL")[0])}`;
+      return;
+    }
+    if (key === "anti") {
+      const stream = createColumnStreams(new SeededRNG("lab-anti"), "base")[0]; const values = stream.next(500, "BASE_REFILL");
+      let maximum = 0; let current = 0; let previous: unknown;
+      values.forEach((value) => { current = value === previous ? current + 1 : 1; maximum = Math.max(maximum, current); previous = value; });
+      byId("lab-result").textContent = `ANTI-STREAK // 500 incoming cells // maximum contiguous normal streak ${maximum} // configured runs 76.5% singles / 23.5% pairs`;
+      return;
+    }
     const values = key === "core" ? [...Array(8).fill("S8"), { kind: "MULTIPLIER_CORE", value: 2 }, { kind: "MULTIPLIER_CORE", value: 10 }, { kind: "MULTIPLIER_CORE", value: 100 }, ...Array(19).fill("S2")] : key === "seven" ? [...Array(7).fill("S1"), ...Array(23).fill("S2")] : key === "eight" ? [...Array(8).fill("S1"), ...Array(22).fill("S2")] : [...Array(8).fill("S1"), ...Array(8).fill("S6"), ...Array(14).fill("S2")];
     const board = Array.from({ length: 5 }, (_, row) => values.slice(row * 6, row * 6 + 6)) as Board;
     const evaluation = evaluateBoard(board); scene.renderBoard(board, evaluation.winningCells); scene.highlightCells(evaluation.winningCells, 380);
