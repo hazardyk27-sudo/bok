@@ -165,6 +165,7 @@ export class GameController {
     let index = 0;
     this.updateHud();
     while (remaining > 0 && usedMultiplier < MAX_WIN_MULTIPLIER) {
+      if (index > 0) await sleep(this.duration(ANIMATION.spinPause));
       index += 1;
       const freeSpin = playFreeSpin(index, this.betCents, source, MAX_WIN_MULTIPLIER - usedMultiplier);
       result.freeSpins.push(freeSpin);
@@ -251,7 +252,7 @@ export class GameController {
         this.message("AUTO PAUSED // PRESS START FREE SPINS");
         break;
       }
-      if (this.autoRunning) await sleep(this.duration(250));
+      if (this.autoRunning) await sleep(this.duration(ANIMATION.spinPause));
     }
     if (this.autoRunning) {
       this.autoRunning = false;

@@ -22,6 +22,7 @@ export const ANIMATION = {
   scatterLanding: 520,
   multiplierLanding: 190,
   freeSpinPause: 260,
+  spinPause: 250,
 } as const;
 
 export type NormalSymbolId = "S1" | "S2" | "S3" | "S4" | "S5" | "S6" | "S7" | "S8";
