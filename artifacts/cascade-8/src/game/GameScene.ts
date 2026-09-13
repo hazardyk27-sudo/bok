@@ -10,7 +10,7 @@ type BoardNode = {
 };
 
 const SCATTER_SYMBOL_SIZE = 82;
-const SCATTER_SOURCE_SIZE = 1254;
+const SCATTER_SOURCE_SIZE = 256;
 
 export class GameScene extends Phaser.Scene {
   private nodes: BoardNode[] = [];
@@ -76,8 +76,14 @@ export class GameScene extends Phaser.Scene {
   }
 
   clearSymbols() {
-    this.nodes.forEach((node) => node.container.destroy());
+    this.nodes.forEach((node) => this.destroyNode(node));
     this.nodes = [];
+  }
+
+  private destroyNode(node: BoardNode) {
+    const targets = [node.container, ...node.container.list];
+    this.tweens.killTweensOf(targets);
+    node.container.destroy();
   }
 
   getDebugMetrics() {
@@ -325,9 +331,10 @@ export class GameScene extends Phaser.Scene {
         ease: "Cubic.easeOut",
         onComplete: () => ring.destroy(),
       });
-      Array.from({ length: 12 }, (_, index) => {
+      const particleCount = Math.min(8, Math.max(3, Math.floor(96 / Math.max(active.length, 1))));
+      Array.from({ length: particleCount }, (_, index) => {
         const particle = this.add.circle(centerX, centerY, index % 3 === 0 ? 4 : 2.5, color, 0.92).setDepth(3);
-        const angle = (index / 12) * Math.PI * 2;
+        const angle = (index / particleCount) * Math.PI * 2;
         const distance = 38 + (index % 4) * 15;
         this.tweens.add({
           targets: particle,
@@ -348,7 +355,7 @@ export class GameScene extends Phaser.Scene {
         duration,
         ease: "Cubic.easeIn",
         onComplete: () => {
-          node.container.destroy();
+          this.destroyNode(node);
           resolve();
         },
       });

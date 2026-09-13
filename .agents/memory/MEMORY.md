@@ -2,3 +2,4 @@
 - [Preview artifact routing](preview-artifact-routing.md) — root-only Vite servers can work on localhost yet return external preview 404s until registered as a web artifact with managed routing.
 - [Base Core RTP calibration](base-core-rtp-calibration.md) — refill-only Core chances are correlated with winning tumbles, so calibrate RTP from full simulations rather than chance alone.
 - [Special symbol RTP calibration](special-symbol-rtp-calibration.md) — high per-cell Core odds plus multiplicative settlement can overwhelm RTP; calibrate before release.
+- [Phaser effect cleanup](phaser-effect-cleanup.md) — destroy board child tweens explicitly before rebuilding cascade nodes to prevent performance drift.
