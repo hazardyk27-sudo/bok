@@ -29,7 +29,7 @@ export class GameController {
     balance: HTMLElement; bet: HTMLElement; win: HTMLElement; bonusWin: HTMLElement; freeSpins: HTMLElement;
     tumble: HTMLElement; status: HTMLElement; spin: HTMLButtonElement; spinLabel: HTMLElement; betMinus: HTMLButtonElement; betPlus: HTMLButtonElement;
     autoCount: HTMLSelectElement; autoStart: HTMLButtonElement; autoStatus: HTMLElement;
-     turbo: HTMLButtonElement; sound: HTMLButtonElement; bonusOverlay: HTMLElement; tumbleSymbolWin: HTMLElement; tumbleIncrement: HTMLElement; tumbleMeta: HTMLElement; tumbleSettlement: HTMLElement; tumblePanel: HTMLElement; bigWinOverlay: HTMLElement; bonusSummaryOverlay: HTMLElement; boardWrap: HTMLElement;
+     turbo: HTMLButtonElement; sound: HTMLButtonElement; bonusOverlay: HTMLElement; bonusStart: HTMLButtonElement; bonusSpinCount: HTMLElement; tumbleSymbolWin: HTMLElement; tumbleIncrement: HTMLElement; tumbleMeta: HTMLElement; tumbleSettlement: HTMLElement; tumblePanel: HTMLElement; bigWinOverlay: HTMLElement; bonusSummaryOverlay: HTMLElement; boardWrap: HTMLElement;
     setModal: (name: string | null) => void;
   };
 
@@ -55,6 +55,7 @@ export class GameController {
     this.ui.sound.addEventListener("click", () => {
       this.audio.setMuted(!this.audio.muted); this.updateHud();
     });
+     this.ui.bonusStart.addEventListener("click", () => void this.spin());
     window.addEventListener("keydown", (event) => {
       if (event.key === "Escape") this.ui.setModal(null);
       if (event.code === "Space" && !event.repeat && document.activeElement?.tagName !== "INPUT") {
@@ -300,10 +301,13 @@ export class GameController {
   private persistBalance() { localStorage.setItem("cascade8-balance", String(this.balanceCents)); }
   private setBonusPrompt(active: boolean) {
     this.ui.bonusOverlay.hidden = !active;
+     this.ui.spin.hidden = active;
+     this.ui.bonusStart.disabled = !active;
+     this.ui.bonusSpinCount.textContent = String(this.freeSpinsLeft);
     this.ui.boardWrap.classList.toggle("free-spin-ready", active);
-    this.ui.spin.classList.toggle("is-bonus", active);
-    this.ui.spinLabel.textContent = active ? "START FREE SPINS" : "SPIN";
-    this.ui.spin.querySelector("small")!.textContent = active ? "ENTER THE GOLDEN REALM" : "ENTER THE CASCADE";
+     this.ui.spin.classList.remove("is-bonus");
+     this.ui.spinLabel.textContent = "SPIN";
+     this.ui.spin.querySelector("small")!.textContent = "ENTER THE CASCADE";
   }
   private resetTumbleWin() {
     this.ui.tumblePanel.className = "tumble-win-panel";
@@ -402,7 +406,7 @@ export class GameController {
     return new Promise<void>((resolve) => {
       const overlay = this.ui.bonusSummaryOverlay;
       overlay.className = "bonus-summary-overlay is-visible";
-      overlay.innerHTML = `<div class="bonus-summary-card"><span>GOLDEN REALM</span><h2>BONUS COMPLETE</h2><div class="summary-total">${formatCredits(result.bonusWinCents)}</div><small>${result.freeSpins.length} FREE SPINS // ${result.freeSpins.reduce((sum, spin) => sum + spin.tumbles.length, 0)} TUMBLES</small><button type="button">CONTINUE</button></div>`;
+      overlay.innerHTML = `<div class="bonus-summary-card"><span class="bonus-eyebrow">GOLDEN REALM</span><h2>BONUS COMPLETE</h2><span class="summary-label">TOTAL BONUS WIN</span><div class="summary-total">${formatCredits(result.bonusWinCents)}</div><small>${result.freeSpins.length} FREE SPINS // ${result.freeSpins.reduce((sum, spin) => sum + spin.tumbles.length, 0)} TUMBLES</small><button type="button">CONTINUE</button></div>`;
       const close = () => { overlay.classList.remove("is-visible"); overlay.innerHTML = ""; resolve(); };
       overlay.querySelector("button")?.addEventListener("click", close, { once: true });
     });

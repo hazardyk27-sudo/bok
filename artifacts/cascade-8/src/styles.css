@@ -61,11 +61,117 @@ button:focus-visible, input:focus-visible { outline: 2px solid var(--cyan); outl
 #phaser-board canvas { display: block; width: 100% !important; height: 100% !important; }
 .board-floor { width: 72%; height: 16px; margin: -5px auto 0; border-radius: 50%; background: rgba(102, 114, 255, .22); filter: blur(18px); }
 .free-spin-mode .board-floor { background: rgba(255, 188, 62, .38); }
-.bonus-overlay { position: absolute; inset: 30% 10% auto; z-index: 5; display: grid; justify-items: center; gap: 8px; padding: 25px 20px 23px; border: 1px solid rgba(255, 222, 131, .72); border-radius: 20px; background: linear-gradient(145deg, rgba(71, 42, 8, .94), rgba(27, 19, 8, .96)); box-shadow: 0 0 70px rgba(255, 195, 75, .3), inset 0 0 24px rgba(255, 220, 132, .1); text-align: center; animation: bonus-arrive .55s cubic-bezier(.2,.85,.2,1); }
+.bonus-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  display: grid;
+  place-items: center;
+  padding: clamp(16px, 5vw, 40px);
+  background:
+    radial-gradient(circle at 50% 44%, rgba(255, 190, 65, .2), transparent 34%),
+    linear-gradient(180deg, rgba(5, 8, 24, .66), rgba(5, 7, 20, .9));
+  backdrop-filter: blur(7px) saturate(.78);
+  opacity: 1;
+  pointer-events: auto;
+  animation: ceremony-backdrop-in .55s ease-out;
+}
 .bonus-overlay[hidden] { display: none; }
-.bonus-overlay span { color: #ffe29a; font: 9px "DM Mono", monospace; letter-spacing: .22em; }
-.bonus-overlay strong { color: #fff1c4; font-size: clamp(24px, 4vw, 39px); letter-spacing: .08em; text-shadow: 0 0 25px rgba(255, 205, 96, .7); }
-.bonus-overlay small { color: #d7bd7c; font: 9px "DM Mono", monospace; letter-spacing: .12em; }
+.bonus-ceremony-panel {
+  position: relative;
+  display: grid;
+  justify-items: center;
+  width: min(460px, 100%);
+  max-height: calc(100svh - 32px);
+  overflow: auto;
+  padding: clamp(28px, 6vw, 52px) clamp(22px, 7vw, 58px) clamp(24px, 5vw, 42px);
+  border: 1px solid rgba(255, 222, 131, .8);
+  border-radius: 26px;
+  background: linear-gradient(155deg, rgba(75, 46, 12, .96), rgba(20, 16, 32, .98) 78%);
+  box-shadow: 0 0 120px rgba(255, 187, 46, .25), inset 0 0 38px rgba(255, 222, 125, .1), 0 28px 70px rgba(0, 0, 0, .48);
+  text-align: center;
+  animation: ceremony-panel-in .65s cubic-bezier(.16,.9,.24,1);
+}
+.bonus-ceremony-panel::before,
+.bonus-summary-card::before {
+  content: "";
+  position: absolute;
+  inset: 10px;
+  border: 1px solid rgba(255, 225, 145, .15);
+  border-radius: 19px;
+  pointer-events: none;
+}
+.bonus-ceremony-panel::after,
+.bonus-summary-card::after {
+  content: "✦  ·  ✦";
+  position: absolute;
+  top: 17px;
+  color: rgba(255, 220, 132, .56);
+  font: 12px "DM Mono", monospace;
+  letter-spacing: .45em;
+  animation: ceremony-glint 2.8s ease-in-out infinite;
+}
+.bonus-eyebrow {
+  color: #ffe59a;
+  font: 10px "DM Mono", monospace;
+  letter-spacing: .3em;
+  text-transform: uppercase;
+}
+.bonus-title {
+  margin-top: 14px;
+  color: #fff8dc;
+  font-size: clamp(25px, 5vw, 42px);
+  font-weight: 800;
+  letter-spacing: .08em;
+  line-height: 1;
+  text-shadow: 0 0 28px rgba(255, 211, 104, .42);
+}
+.bonus-hero-number {
+  margin: 17px 0 2px;
+  color: #fff0ad;
+  font-size: clamp(76px, 18vw, 132px);
+  font-weight: 800;
+  letter-spacing: -.07em;
+  line-height: .82;
+  text-shadow: 0 0 18px rgba(255, 190, 51, .5), 0 0 52px rgba(255, 170, 30, .35);
+  animation: ceremony-number-in .7s .16s both cubic-bezier(.16,.9,.24,1);
+}
+.bonus-support {
+  color: #ffe7a8;
+  font: 11px "DM Mono", monospace;
+  letter-spacing: .2em;
+}
+.bonus-ceremony-panel small {
+  margin-top: 13px;
+  color: #d7bd7c;
+  font: 10px "DM Mono", monospace;
+  letter-spacing: .1em;
+}
+.bonus-ceremony-panel button,
+.bonus-summary-card button {
+  min-height: 46px;
+  margin-top: 24px;
+  padding: 0 25px;
+  border: 1px solid rgba(255, 239, 177, .82);
+  border-radius: 999px;
+  color: #fff9e7;
+  background: linear-gradient(180deg, #e8b94f, #9b641d);
+  box-shadow: 0 8px 26px rgba(233, 169, 48, .28), inset 0 1px 0 rgba(255, 255, 255, .48);
+  font: 800 10px "DM Mono", monospace;
+  letter-spacing: .14em;
+  cursor: pointer;
+  transition: transform .2s ease, filter .2s ease, box-shadow .2s ease;
+  animation: ceremony-cta-in .55s .32s both cubic-bezier(.16,.9,.24,1);
+}
+.bonus-ceremony-panel button:hover,
+.bonus-summary-card button:hover {
+  filter: brightness(1.1);
+  box-shadow: 0 11px 32px rgba(233, 169, 48, .4), inset 0 1px 0 rgba(255, 255, 255, .58);
+  transform: translateY(-2px);
+}
+.bonus-ceremony-panel button:active,
+.bonus-summary-card button:active { transform: translateY(1px) scale(.98); }
+.bonus-ceremony-panel button:disabled { opacity: .55; cursor: wait; }
 .big-win-overlay, .bonus-summary-overlay { position: fixed; inset: 0; z-index: 30; display: grid; place-items: center; padding: 24px; background: radial-gradient(circle at center, rgba(52, 40, 99, .92), rgba(4, 7, 23, .97) 72%); opacity: 0; pointer-events: none; transition: opacity .24s ease; }
 .big-win-overlay.is-visible, .bonus-summary-overlay.is-visible { opacity: 1; pointer-events: auto; }
 .big-win-card, .bonus-summary-card { display: grid; justify-items: center; gap: 12px; width: min(580px, 100%); padding: 42px 24px 32px; border: 1px solid rgba(255, 218, 119, .72); border-radius: 28px; background: linear-gradient(155deg, rgba(74, 43, 9, .96), rgba(19, 15, 43, .98)); box-shadow: 0 0 100px rgba(255, 191, 54, .25), inset 0 0 32px rgba(255, 222, 125, .08); text-align: center; animation: bonus-arrive .48s cubic-bezier(.16,.9,.24,1); }
@@ -73,7 +179,40 @@ button:focus-visible, input:focus-visible { outline: 2px solid var(--cyan); outl
 .big-win-card strong, .summary-total { color: #fff1ae; font-size: clamp(56px, 13vw, 118px); line-height: .95; text-shadow: 0 0 40px rgba(255, 198, 60, .8); }
 .big-win-card small, .bonus-summary-card small { color: #d8bd7b; font: 10px "DM Mono", monospace; letter-spacing: .15em; }
 .big-win-card button, .bonus-summary-card button { margin-top: 14px; padding: 10px 16px; border: 1px solid rgba(255, 218, 119, .55); border-radius: 999px; color: #ffe7a8; background: rgba(255, 206, 94, .08); font: 10px "DM Mono", monospace; letter-spacing: .12em; cursor: pointer; }
-.bonus-summary-card h2 { margin: 0; color: #fff8db; font-size: clamp(27px, 6vw, 48px); letter-spacing: .08em; }
+.bonus-summary-card {
+  position: relative;
+  width: min(520px, 100%);
+  max-height: calc(100svh - 32px);
+  overflow: auto;
+  padding: clamp(34px, 7vw, 56px) clamp(22px, 7vw, 56px) clamp(28px, 5vw, 44px);
+  background: linear-gradient(155deg, rgba(78, 47, 11, .97), rgba(18, 14, 34, .99) 78%);
+  box-shadow: 0 0 135px rgba(255, 190, 48, .3), inset 0 0 38px rgba(255, 222, 125, .1), 0 28px 70px rgba(0, 0, 0, .5);
+  animation: ceremony-panel-in .65s cubic-bezier(.16,.9,.24,1);
+}
+.bonus-summary-card h2 {
+  margin: 15px 0 0;
+  color: #fff8db;
+  font-size: clamp(28px, 6vw, 50px);
+  letter-spacing: .08em;
+}
+.summary-label {
+  margin-top: 25px;
+  color: #d7bd7c;
+  font: 9px "DM Mono", monospace;
+  letter-spacing: .22em;
+}
+.bonus-summary-card .summary-total {
+  margin-top: 8px;
+  color: #fff1ae;
+  font-size: clamp(52px, 14vw, 104px);
+  font-variant-numeric: tabular-nums;
+  text-shadow: 0 0 24px rgba(255, 198, 60, .68), 0 0 55px rgba(255, 170, 30, .28);
+}
+.bonus-summary-card small {
+  margin-top: 14px;
+  color: #e0c889;
+  font-size: 10px;
+}
 .status-line { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); clip-path: inset(50%); white-space: nowrap; }
 .status-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--cyan); box-shadow: 0 0 14px var(--cyan); }
 #tumble { color: var(--gold); min-width: 62px; }

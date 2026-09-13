@@ -37,7 +37,16 @@ app.innerHTML = `
         <div class="board-wrap">
           <div class="board-caption"><span>6 × 5 CASCADE FIELD</span></div>
           <div id="phaser-board" aria-label="Cascade 8 game board"></div>
-          <div id="bonus-overlay" class="bonus-overlay" hidden aria-live="assertive"><span>✦ BONUS UNLOCKED ✦</span><strong>FREE SPINS READY</strong><small>PRESS SPIN TO ENTER THE GOLDEN REALM</small></div>
+          <div id="bonus-overlay" class="bonus-overlay" hidden aria-live="assertive">
+            <div class="bonus-ceremony-panel">
+              <span class="bonus-eyebrow">GOLDEN REALM</span>
+              <strong class="bonus-title">FREE SPINS READY</strong>
+              <div id="bonus-spin-count" class="bonus-hero-number">10</div>
+              <span class="bonus-support">FREE SPINS AWARDED</span>
+              <small>PRESS START TO ENTER THE GOLDEN REALM</small>
+              <button type="button" data-bonus-start>START FREE SPINS</button>
+            </div>
+          </div>
         </div>
          <div id="tumble-win-panel" class="tumble-win-panel" aria-live="polite">
            <span class="tumble-win-label">TUMBLE WIN</span>
@@ -122,7 +131,7 @@ window.setTimeout(() => {
     tumble: byId("tumble"), status: byId("status"), spin: byId("spin"), spinLabel: byId("spin").querySelector(".spin-label") as HTMLElement,
     betMinus: byId("bet-minus"), betPlus: byId("bet-plus"), autoCount: byId("auto-count"), autoStart: byId("auto-start"), autoStatus: byId("auto-status"),
      turbo: byId("turbo"), sound: byId("sound"),
-       bonusOverlay: byId("bonus-overlay"), tumbleSymbolWin: byId("tumble-symbol-win"), tumbleIncrement: byId("tumble-increment"), tumbleMeta: byId("tumble-meta"), tumbleSettlement: byId("tumble-settlement"), tumblePanel: byId("tumble-win-panel"), bigWinOverlay: byId("big-win-overlay"), bonusSummaryOverlay: byId("bonus-summary-overlay"), boardWrap: byId("phaser-board").parentElement!,
+       bonusOverlay: byId("bonus-overlay"), bonusStart: byId("bonus-overlay").querySelector("[data-bonus-start]") as HTMLButtonElement, bonusSpinCount: byId("bonus-spin-count"), tumbleSymbolWin: byId("tumble-symbol-win"), tumbleIncrement: byId("tumble-increment"), tumbleMeta: byId("tumble-meta"), tumbleSettlement: byId("tumble-settlement"), tumblePanel: byId("tumble-win-panel"), bigWinOverlay: byId("big-win-overlay"), bonusSummaryOverlay: byId("bonus-summary-overlay"), boardWrap: byId("phaser-board").parentElement!,
     setModal: showModal,
   });
   if (isLab) renderLab(scene);
