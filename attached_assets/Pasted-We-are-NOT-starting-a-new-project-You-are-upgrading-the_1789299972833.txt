@@ -1,0 +1,1896 @@
+We are NOT starting a new project.
+
+You are upgrading the EXISTING CASCADE 8 slot game in this repository.
+
+The core game already exists and works. Preserve all working mathematical logic unless this specification explicitly replaces it.
+
+Your task is to perform a major UX, presentation, animation, audio, mobile-layout, Free Spins and multiplier-system upgrade.
+
+IMPORTANT:
+This game may use successful modern tumble-slot UX principles as reference, including the kind of pacing and clarity seen in games such as Sweet Bonanza, but DO NOT copy copyrighted graphics, logos, sounds, exact layouts, branded assets, animations or trade dress.
+
+Create our own polished identity.
+
+The final result must feel like a premium commercial-quality cascading slot prototype rather than a technical demo.
+
+==================================================
+0. FIRST: AUDIT THE CURRENT PROJECT
+==================================================
+
+Before changing code:
+
+1. Inspect the existing architecture.
+2. Identify:
+   - game engine
+   - grid renderer
+   - Free Spin implementation
+   - tumble implementation
+   - multiplier implementation
+   - autoplay implementation
+   - audio system
+   - responsive/mobile CSS
+   - win animations
+3. Preserve already working functionality.
+4. Refactor only where necessary.
+
+DO NOT rewrite the whole application blindly.
+
+After the audit, implement everything below.
+
+==================================================
+1. MAIN PROBLEM TO SOLVE
+==================================================
+
+The current version is mathematically functional, but game feedback is too weak.
+
+Current problems include:
+
+- Free Spins begin immediately with no proper bonus-entry screen.
+- Large wins do not feel large.
+- There is no satisfying win celebration layer.
+- autoplay remaining-spin counter is too small and hard to see.
+- current multiplier only displays something like "3x" outside the game board.
+- multipliers must become physical objects inside the grid/tumble experience.
+- Scatter appearance is too quiet.
+- triggering 4+ Scatter has no proper celebration.
+- there is no continuous background soundtrack.
+- Scatter visual identity is too weak.
+- normal symbols need stronger separation and thicker visual framing.
+- mobile presentation is weaker than desktop.
+- tumble win is difficult to read.
+- total win progression lacks impact.
+- animations need more polish and better sequencing.
+- game must remain fluid with no animation stuttering.
+
+MOBILE IS THE PRIMARY PLATFORM.
+
+Desktop is secondary.
+
+==================================================
+2. FREE SPIN BONUS ENTRY MUST BECOME A REAL EVENT
+==================================================
+
+When the base game lands 4 or more Scatter symbols:
+
+DO NOT immediately begin Free Spins.
+
+Sequence:
+
+1. Stop normal gameplay.
+2. Dim the normal grid slightly.
+3. Highlight every Scatter.
+4. Scatter symbols pulse individually.
+5. Play Scatter trigger buildup sound.
+6. Brief screen light effect.
+7. Transition into a dedicated full-screen bonus intro.
+
+Bonus intro example structure:
+
+center:
+large golden trophy / portal visual
+
+headline:
+
+FREE SPINS
+
+below:
+
+10 FREE SPINS
+
+or:
+
+12 FREE SPINS
+15 FREE SPINS
+
+depending on the trigger.
+
+Then:
+
+TAP TO START
+
+or automatically continue after approximately 2.5 seconds.
+
+If user taps:
+
+skip remaining delay,
+but do not skip important state transitions.
+
+The bonus intro should feel exciting, but not unnecessarily long.
+
+Target full sequence:
+
+approximately 2.0–3.5 seconds.
+
+After the intro:
+
+transition into the Free Spins game mode.
+
+==================================================
+3. FREE SPIN MODE VISUAL TRANSITION
+==================================================
+
+Free Spins must visually feel different from the base game.
+
+Keep the same identity and board, but modify atmosphere.
+
+Base mode:
+deep navy / dark blue.
+
+Free Spin mode:
+richer blue + gold atmospheric highlights.
+
+During transition:
+
+- ambient background changes smoothly
+- board edge glow increases
+- golden particles appear
+- FREE SPINS counter becomes prominent
+- BONUS WIN becomes visible
+- multiplier-specific UI appears
+
+Do NOT rebuild the entire layout.
+
+The transition should feel like entering a special state.
+
+==================================================
+4. FREE SPIN HEADER
+==================================================
+
+During Free Spins make these elements extremely readable:
+
+FREE SPINS
+
+SPINS LEFT
+7
+
+BONUS WIN
+42.60
+
+Do not use tiny text.
+
+On mobile, remaining Free Spins must be one of the most visible secondary UI elements.
+
+Example visual hierarchy:
+
+FREE SPINS
+7 / 10
+
+BONUS WIN
+42.60
+
+Use large tabular numbers.
+
+Animate the counter when a spin finishes.
+
+When retrigger occurs:
+
++5 FREE SPINS
+
+must appear prominently.
+
+Then animate the counter increasing.
+
+==================================================
+5. COMPLETELY REPLACE THE CURRENT MULTIPLIER PRESENTATION
+==================================================
+
+The current system that only writes something such as:
+
+3x
+
+somewhere on screen is NOT acceptable.
+
+Remove that visual presentation.
+
+Multipliers must exist as PHYSICAL SPECIAL OBJECTS INSIDE THE GRID EXPERIENCE.
+
+Create an original object called:
+
+MULTIPLIER CORE
+
+or another original project-appropriate name.
+
+Visually it should be clearly different from all normal symbols.
+
+Suggested design:
+
+circular/hexagonal energy object
+bright metallic frame
+glowing center
+large multiplier number
+animated energy ring
+subtle particles
+
+Examples:
+
+2x
+5x
+25x
+100x
+500x
+
+Multiplier number must be readable instantly.
+
+==================================================
+6. MULTIPLIER CORE GRID BEHAVIOR
+==================================================
+
+Multiplier Cores exist ONLY during Free Spins.
+
+They can appear during CASCADE REFILLS.
+
+They must physically occupy a grid cell just like another object.
+
+They do NOT count as one of S1-S8.
+
+They NEVER contribute toward the 8+ matching-symbol requirement.
+
+They do not themselves form wins.
+
+They may land during a cascade along with normal symbols.
+
+IMPORTANT:
+
+A Multiplier Core should remain visibly sitting in its cell while the cascade result is evaluated.
+
+If that cascade contains a winning 8+ normal-symbol combination:
+
+all multiplier cores currently present on the board participate.
+
+After the winning-symbol explosion animation:
+
+the Multiplier Cores activate.
+
+They should:
+
+shake slightly
+light up
+pulse
+launch energy toward the win counter
+
+Then apply their value.
+
+After being used:
+
+they disappear before the next cascade/refill.
+
+If the cascade contains no normal-symbol win:
+
+the multiplier cores do NOT create a payout by themselves.
+
+They leave the board when that Free Spin resolves.
+
+==================================================
+7. MULTIPLE MULTIPLIERS
+==================================================
+
+Multiple Multiplier Cores may exist simultaneously.
+
+Their values are ADDED.
+
+Example:
+
+5x
++
+10x
++
+25x
+
+=
+
+40x
+
+Then:
+
+raw tumble payout × 40.
+
+Example:
+
+Tumble = 3.2x
+
+cores:
+
+5x + 10x = 15x
+
+final tumble:
+
+3.2 × 15 = 48x
+
+Animation sequence:
+
+3.2x
+
+5x + 10x
+
+TOTAL MULTIPLIER
+15x
+
+then:
+
+3.2 × 15
+
+48x
+
+This should be fast and satisfying.
+
+Do not make the player wait 8 seconds for basic multiplier arithmetic.
+
+==================================================
+8. MULTIPLIER VALUES
+==================================================
+
+Available values:
+
+2x
+3x
+5x
+10x
+15x
+20x
+25x
+50x
+100x
+250x
+500x
+
+The visual intensity must scale with the value.
+
+2x / 3x:
+simple blue energy.
+
+5x / 10x:
+cyan/purple glow.
+
+15x / 20x / 25x:
+gold.
+
+50x:
+strong gold/orange.
+
+100x:
+red-gold / intense.
+
+250x:
+special animated aura.
+
+500x:
+extremely rare premium visual:
+bright gold-white
+large energy halo
+unique arrival sound.
+
+Do NOT make 500x visually identical to 2x.
+
+==================================================
+9. INITIAL MULTIPLIER DISTRIBUTION
+==================================================
+
+Do NOT claim to copy proprietary probabilities from another commercial game.
+
+Use this starting distribution WHEN A MULTIPLIER CORE IS GENERATED:
+
+2x      28.00%
+3x      22.00%
+5x      17.00%
+10x     12.00%
+15x      7.00%
+20x      5.00%
+25x      4.00%
+50x      2.50%
+100x     1.50%
+250x     0.75%
+500x     0.25%
+
+Total:
+100%.
+
+Keep this entire table in configuration.
+
+Do not hard-code it inside rendering code.
+
+==================================================
+10. MULTIPLIER CORE SPAWN RATE
+==================================================
+
+Multiplier Cores may spawn ONLY on Free Spin cascade/refill drops.
+
+They must not occur in the initial Base Game.
+
+They must not occur in the Base Game cascades.
+
+Initial mathematical tuning target:
+
+Every replacement cell during a Free Spin tumble should independently have approximately:
+
+8% chance
+
+to become a Multiplier Core.
+
+Normal symbols fill the remaining probability.
+
+HOWEVER:
+
+this is only the initial calibration value.
+
+The simulator MUST measure the resulting:
+
+- Free Spin RTP
+- average multipliers per bonus
+- multiplier frequency
+- average multiplier total
+- 100x frequency
+- 250x frequency
+- 500x frequency
+- Max Win frequency
+
+Then tune this value if required to preserve the project's overall RTP target.
+
+Do NOT dynamically change the probability based on player outcome.
+
+Static configuration only.
+
+==================================================
+11. VERY IMPORTANT MULTIPLIER FAIRNESS
+==================================================
+
+The multiplier RNG must use the exact same fair RNG abstraction as the rest of the game.
+
+NEVER:
+
+increase multipliers after losses
+
+reduce multipliers after wins
+
+change values based on balance
+
+change distribution based on bet amount
+
+force a 500x
+
+block a 500x
+
+use session history.
+
+Multiplier probabilities must remain static.
+
+==================================================
+12. UPDATE SIMULATOR FOR NEW MULTIPLIER MODEL
+==================================================
+
+The existing simulator MUST be updated to match the new physical-grid multiplier model.
+
+Simulator must understand:
+
+Multiplier Core spawning inside Free Spin cascade refills.
+
+Report:
+
+Multiplier cores per bonus
+Percentage of bonuses with any multiplier
+Average cores per winning tumble
+Average activated multiplier
+Average combined multiplier
+Median combined multiplier
+Maximum combined multiplier
+2x count
+3x count
+5x count
+10x count
+15x count
+20x count
+25x count
+50x count
+100x count
+250x count
+500x count
+100x+ multiplier frequency
+250x+ multiplier frequency
+500x frequency
+multiplier RTP contribution.
+
+Run at least:
+
+1,000,000 paid spins
+
+after implementation if practical.
+
+Keep target overall RTP approximately:
+
+95.5% – 96.5%.
+
+Do not simply report the old RTP after changing multiplier mechanics.
+
+Recalculate it.
+
+==================================================
+13. SCATTER VISUAL MUST BE COMPLETELY REDESIGNED
+==================================================
+
+Replace the current Scatter artwork.
+
+Scatter must now be a highly visible:
+
+GOLD TROPHY / GOLDEN CUP
+
+symbol.
+
+Requirements:
+
+large golden trophy
+premium metallic gold
+strong dark outline
+bright rim lighting
+subtle golden halo
+small sparkle particles
+distinct frame
+instantly recognizable.
+
+It must visually stand apart from football-club / normal symbols.
+
+Use original SVG artwork.
+
+Do not use copyrighted trophy photography.
+
+Display:
+
+SCATTER
+
+small but readable beneath or integrated into the trophy.
+
+==================================================
+14. SCATTER ARRIVAL SOUND
+==================================================
+
+Every time a Scatter lands:
+
+play a distinct Scatter sound.
+
+If multiple Scatter symbols appear:
+
+make later Scatter arrivals progressively more exciting.
+
+Example:
+
+first Scatter:
+short metallic chime
+
+second:
+slightly stronger chime
+
+third:
+tension layer
+
+fourth:
+bonus trigger impact
+
+Do not make sounds painfully loud.
+
+==================================================
+15. SCATTER ANTICIPATION
+==================================================
+
+Important:
+
+Do not fake outcomes.
+
+If the actual generated board contains enough Scatter symbols to justify anticipation animation, presentation may emphasize them.
+
+Never manipulate symbol generation.
+
+Never pretend a fourth Scatter nearly landed when it did not.
+
+When 3 Scatter symbols have already visibly landed during the initial deal:
+
+the remaining column/drop animation may receive a subtle tension audio layer IF the result was already determined by RNG.
+
+Do not alter the mathematical result.
+
+==================================================
+16. 4+ SCATTER CELEBRATION
+==================================================
+
+When 4+ Scatter lands:
+
+play a unique celebration cue.
+
+Use:
+
+golden particles
+board flash
+Scatter glow
+bass impact
+short celebratory musical sting
+
+Then enter Free Spin intro.
+
+This should be clearly different from an ordinary win.
+
+==================================================
+17. BACKGROUND MUSIC
+==================================================
+
+Add continuous low-intensity background music.
+
+Base-game track:
+
+calm
+atmospheric
+modern
+subtle
+slightly mysterious
+not annoying
+loopable
+
+Free Spins track:
+
+same musical identity
+more energetic
+slightly faster / richer percussion
+
+Do not use copyrighted commercial music.
+
+Use original generated audio or license-safe project assets.
+
+Music must loop seamlessly.
+
+==================================================
+18. AUDIO SETTINGS
+==================================================
+
+Add separate control over:
+
+MASTER
+MUSIC
+SFX
+
+Minimum UI:
+
+music volume
+effects volume
+mute all
+
+Store settings in localStorage.
+
+Default volume should be moderate.
+
+Suggested:
+
+Music = 30%
+SFX = 65%
+
+Background music must remain in the background.
+
+Do not overpower symbol sounds.
+
+==================================================
+19. AUDIO CROSSFADE
+==================================================
+
+When Free Spins begin:
+
+crossfade from Base music into Bonus music.
+
+When Free Spins finish:
+
+crossfade back.
+
+Target:
+
+500–1000 ms smooth crossfade.
+
+No abrupt restart.
+
+==================================================
+20. SYMBOL VISUAL CLARITY
+==================================================
+
+The current normal symbols need clearer separation.
+
+Improve every symbol.
+
+Requirements:
+
+stronger outer frame
+thicker ring/border
+clean contrast
+clear inner icon
+subtle depth
+consistent lighting
+visible separation from dark cell background.
+
+The current board cells are visually too similar to some symbol backgrounds.
+
+Increase contrast.
+
+Each normal symbol should have:
+
+outer ring
+inner plate
+center artwork
+
+Do NOT oversaturate everything.
+
+The symbols should look premium rather than childish.
+
+==================================================
+21. SYMBOL FRAME STATES
+==================================================
+
+Create visual states:
+
+NORMAL
+
+WIN-HIGHLIGHT
+
+ABOUT-TO-BURST
+
+BURST
+
+For winning symbols:
+
+frame brightens
+ring emits glow
+symbol scale ~1.05–1.10
+small pulse
+
+Then burst.
+
+All winning instances of the same symbol should animate coherently.
+
+==================================================
+22. WINNING TUMBLE DISPLAY
+==================================================
+
+Current tumble winnings are too subtle.
+
+Create a prominent win display directly under or immediately adjacent to the grid.
+
+During cascades show:
+
+TUMBLE WIN
+
+12.40
+
+or:
+
+TUMBLE WIN
+3.6x
+
+depending on UI context.
+
+This must be easily readable on mobile.
+
+Suggested hierarchy:
+
+small label:
+TUMBLE WIN
+
+large number:
+12.40
+
+If multiplier occurs:
+
+TUMBLE
+3.20
+
+MULTIPLIER
+15x
+
+FINAL
+48.00
+
+Do not hide this in tiny corner text.
+
+==================================================
+23. CURRENT WIN DISPLAY
+==================================================
+
+Have two concepts:
+
+TUMBLE WIN
+= current individual cascade payout
+
+TOTAL WIN
+= complete current paid spin accumulated payout
+
+Both must be understandable.
+
+During Bonus also have:
+
+BONUS WIN
+
+Do not show too many competing numbers at the same size.
+
+Hierarchy:
+
+primary temporary:
+TUMBLE WIN
+
+secondary persistent:
+TOTAL WIN / BONUS WIN.
+
+==================================================
+24. WIN NUMBER ANIMATION
+==================================================
+
+Do not simply replace:
+
+0 → 48.40
+
+instantly.
+
+Animate numbers smoothly.
+
+Use acceleration / easing.
+
+Small wins:
+150–300 ms.
+
+Medium wins:
+400–700 ms.
+
+Big wins:
+longer, but skippable.
+
+Numbers should remain legible during animation.
+
+==================================================
+25. BIG WIN SYSTEM MUST BE BUILT
+==================================================
+
+Currently major wins have insufficient celebration.
+
+Implement full-screen celebration overlays.
+
+Based on TOTAL originating-spin multiplier:
+
+10x – 24.99x:
+BIG WIN
+
+25x – 49.99x:
+MEGA WIN
+
+50x – 99.99x:
+EPIC WIN
+
+100x – 499.99x:
+LEGENDARY WIN
+
+500x – 999.99x:
+SUPER WIN
+
+1000x – 2499.99x:
+MONSTER WIN
+
+2500x – 4999.99x:
+COLOSSAL WIN
+
+5000x:
+MAX WIN
+
+These names may be adjusted slightly if necessary for visual identity.
+
+==================================================
+26. BIG WIN PRESENTATION
+==================================================
+
+When a Big Win threshold is reached:
+
+do NOT instantly continue the next spin.
+
+Show:
+
+full-screen overlay
+large animated title
+counting amount
+particles
+light rays
+subtle camera/board response
+
+Example:
+
+LEGENDARY WIN
+
+428.60
+
+or:
+
+128.4x
+
+Give player a satisfying moment.
+
+Allow tap/click to accelerate.
+
+Do not allow skipping math.
+
+==================================================
+27. BIG WIN UPGRADE DURING COUNT
+==================================================
+
+If payout crosses multiple levels during count:
+
+BIG WIN
+
+then becomes:
+
+MEGA WIN
+
+then:
+
+EPIC WIN
+
+with stronger effect.
+
+Do not restart the entire number count every time.
+
+Continue smoothly.
+
+==================================================
+28. MAX WIN
+==================================================
+
+MAX WIN deserves its own sequence.
+
+5000x reached:
+
+stop further mathematical generation.
+
+Use:
+
+gold-white screen flash
+unique animation
+premium sound
+large:
+
+MAX WIN
+
+5000x
+
+Do not make this identical to ordinary Big Win.
+
+==================================================
+29. AUTOPLAY REMAINING SPINS
+==================================================
+
+Current autoplay remaining count is too small.
+
+Redesign.
+
+When AutoPlay is active, make a clearly visible panel/button:
+
+AUTO
+23
+
+or:
+
+AUTO SPINS
+23 LEFT
+
+Position it near the Spin button.
+
+Mobile:
+
+the number should be large enough to read without concentrating.
+
+At least approximately:
+
+24–32px equivalent number size
+
+depending on viewport.
+
+When autoplay is stopped:
+
+return Spin button to normal state.
+
+==================================================
+30. AUTOPLAY BUTTON BEHAVIOR
+==================================================
+
+While AutoPlay runs:
+
+Spin button becomes:
+
+STOP AUTO
+
+or shows a clear stop icon.
+
+Do NOT require opening a separate menu to stop autoplay.
+
+Remaining spins decrease only after one complete paid spin resolves.
+
+Cascades do NOT consume additional auto spins.
+
+Free Spins do NOT consume purchased/queued AutoPlay spins.
+
+AutoPlay pauses while Free Spins are playing.
+
+Then resumes afterward unless existing design intentionally stops AutoPlay on bonus trigger.
+
+Choose one behavior and document it.
+
+Preferred:
+pause through bonus and resume afterward.
+
+==================================================
+31. MOBILE-FIRST REDESIGN
+==================================================
+
+This is extremely important.
+
+Primary target:
+
+390×844
+393×852
+430×932
+
+The entire design should first be perfected at these dimensions.
+
+Desktop adaptation comes afterward.
+
+On mobile:
+
+grid should occupy most of the width.
+
+Use approximately:
+
+94–98% available content width
+
+while preserving padding.
+
+Do not waste huge amounts of screen space around the grid.
+
+Grid should remain square-ish / correctly proportioned for 6×5.
+
+Symbols must stay large enough to recognize immediately.
+
+==================================================
+32. MOBILE LAYOUT ORDER
+==================================================
+
+Preferred portrait hierarchy:
+
+TOP:
+logo / compact game header
+
+then:
+Balance / Bet / Total Win
+
+then:
+Free Spins info if active
+
+then:
+MAIN GRID
+
+then:
+Tumble Win / Bonus Win
+
+then:
+controls
+
+BOTTOM:
+Bet control
+Spin
+Auto
+Turbo
+Sound
+
+Grid gets priority.
+
+Do not allow oversized decorative header to shrink the grid.
+
+==================================================
+33. SAFE-AREA SUPPORT
+==================================================
+
+Support mobile browser safe areas.
+
+Use:
+
+env(safe-area-inset-top)
+env(safe-area-inset-bottom)
+
+where appropriate.
+
+Prevent bottom controls being hidden behind mobile browser UI.
+
+==================================================
+34. MOBILE FONT LEGIBILITY
+==================================================
+
+No critical value should be tiny.
+
+Critical:
+
+BALANCE
+BET
+WIN
+TUMBLE WIN
+FREE SPINS LEFT
+BONUS WIN
+AUTO LEFT
+
+must remain readable at normal phone viewing distance.
+
+Avoid 9px/10px text for important values.
+
+==================================================
+35. RESPONSIVE CONTROL BAR
+==================================================
+
+Build a dedicated mobile control deck.
+
+Large central Spin button.
+
+Bet control nearby.
+
+Auto and Turbo accessible.
+
+Sound compact.
+
+Do not squeeze 8 tiny buttons into one row.
+
+Possible layout:
+
+row 1:
+BALANCE | BET | WIN
+
+row 2:
+AUTO | BET - | SPIN | BET + | TURBO
+
+or an ergonomically better implementation.
+
+Test real viewport widths.
+
+==================================================
+36. LANDSCAPE MOBILE
+==================================================
+
+Also support mobile landscape.
+
+Use grid on left.
+
+Controls/information on right if space permits.
+
+Do not simply scale portrait view down until text becomes unreadable.
+
+==================================================
+37. DESKTOP
+==================================================
+
+Desktop can keep the current board-centric identity.
+
+But align information more cleanly.
+
+Avoid massive dead space.
+
+Game should remain visually centered.
+
+Do not make the grid tiny just because the monitor is large.
+
+==================================================
+38. ANIMATION PERFORMANCE
+==================================================
+
+Animation smoothness is mandatory.
+
+Target:
+
+60 FPS.
+
+Use transform/scale/opacity rather than expensive layout changes.
+
+Avoid:
+
+continuous DOM layout recalculation
+unbounded particles
+too many simultaneous filters
+memory leaks
+recreating the whole Phaser scene every tumble.
+
+Use object pooling for particles where sensible.
+
+==================================================
+39. PARTICLE QUALITY SETTINGS
+==================================================
+
+Create automatic quality adaptation if needed.
+
+HIGH:
+full particles.
+
+MEDIUM:
+reduced particles.
+
+LOW:
+minimal particles.
+
+Do not change game mathematics.
+
+Reduced Motion should reduce:
+particles
+screen shake
+long travel animations.
+
+==================================================
+40. TUMBLE TIMING
+==================================================
+
+Normal mode suggested sequence:
+
+board settles
+
+100 ms
+
+win highlight
+
+180–220 ms
+
+tumble win counter begins
+
+symbols burst
+
+180–240 ms
+
+gravity begins
+
+replacement symbols fall
+
+300–450 ms
+
+evaluate again.
+
+Turbo mode can approximately halve nonessential delays.
+
+Do not create dead pauses.
+
+==================================================
+41. WIN IMPACT
+==================================================
+
+Improve tactile/visual response.
+
+For ordinary win:
+
+small board pulse.
+
+For larger tumble:
+
+slightly stronger board glow.
+
+For large multiplier:
+
+short screen response.
+
+Avoid violent constant screen shake.
+
+Use shake sparingly.
+
+==================================================
+42. MULTIPLIER ARRIVAL ANIMATION
+==================================================
+
+Multiplier Cores should not look like ordinary symbols falling.
+
+When one arrives:
+
+fall normally
+
+then:
+small energy pulse
+
+large multiplier text remains readable.
+
+For 100x+:
+special landing ring.
+
+250x:
+stronger aura.
+
+500x:
+unique arrival sound and gold-white shock ring.
+
+But do not pause gameplay excessively just because it appears.
+
+Activation should happen only when associated winning tumble resolves.
+
+==================================================
+43. MULTIPLIER CORE DESIGN
+==================================================
+
+Create visually unique original SVG artwork.
+
+Recommended shape:
+
+thick metallic octagonal frame
+dark glass center
+luminous inner ring
+
+Center:
+
+500x
+
+Number should occupy most of the center.
+
+Do not display tiny:
+
+x500
+
+Prefer:
+
+500x
+
+Use a high-contrast font.
+
+Add subtle idle animation.
+
+==================================================
+44. SCATTER TROPHY DESIGN
+==================================================
+
+Create original trophy artwork.
+
+Structure:
+
+large cup
+handles
+gold bevel
+dark central shadow
+small gem
+SCATTER label
+
+Color:
+
+gold / amber.
+
+Frame:
+
+thicker than normal symbols.
+
+Subtle sparkle.
+
+It must instantly signal:
+
+special symbol.
+
+==================================================
+45. SOUND EVENT PRIORITY
+==================================================
+
+Implement an audio mixer.
+
+Categories:
+
+MUSIC
+UI
+SYMBOL
+WIN
+SCATTER
+BONUS
+MULTIPLIER
+BIG_WIN
+
+Prevent too many simultaneous sounds becoming noisy.
+
+If 15 symbols burst simultaneously:
+
+do not play 15 identical loud sounds.
+
+Use one layered burst event.
+
+==================================================
+46. AUDIO DUCKING
+==================================================
+
+During:
+
+bonus trigger
+Big Win
+Max Win
+
+temporarily reduce background music volume.
+
+Then restore smoothly.
+
+This lets the important effect be heard clearly.
+
+==================================================
+47. FREE SPIN END
+==================================================
+
+Do NOT instantly return to base game after the final Free Spin.
+
+Show:
+
+BONUS COMPLETE
+
+TOTAL BONUS WIN
+
+xxx.xx
+
+Optionally:
+
+xxx.x BET
+
+Continue button or ~2 sec automatic continuation.
+
+Then:
+
+crossfade music
+transition board atmosphere
+return to Base Game.
+
+==================================================
+48. BONUS SUMMARY
+==================================================
+
+Bonus Summary should be clear and satisfying.
+
+Example:
+
+BONUS COMPLETE
+
+TOTAL WIN
+
+684.20
+
+68.42x BET
+
+CONTINUE
+
+Do not overload with unnecessary statistics.
+
+==================================================
+49. GAME INFORMATION
+==================================================
+
+Update Info/Paytable for new multiplier system.
+
+Explain:
+
+During Free Spins, Multiplier Cores may land on tumble refills.
+
+If the tumble produces a win:
+
+all active multiplier values are added together.
+
+The combined multiplier multiplies the full tumble win.
+
+List available:
+
+2x
+3x
+5x
+10x
+15x
+20x
+25x
+50x
+100x
+250x
+500x.
+
+Do not expose internal probability percentages in the normal player-facing paytable unless intentionally requested.
+
+==================================================
+50. IMPORTANT MATH CHANGE
+==================================================
+
+Because the Multiplier Core architecture is changing substantially:
+
+DO NOT assume the previous RTP remains correct.
+
+After all changes:
+
+run simulator.
+
+Tune only static config values.
+
+Target:
+
+overall RTP:
+95.5% – 96.5%
+
+preferred:
+~96%
+
+Keep:
+
+8+ anywhere pays.
+
+Do not alter bet-dependent probabilities.
+
+==================================================
+51. FREE SPIN FEEL TARGET
+==================================================
+
+We want Free Spins to feel significantly more exciting than Base Game.
+
+However:
+
+do not make every spin contain multipliers.
+
+There must be anticipation.
+
+Typical experience should include:
+
+some free spins with no win
+some ordinary wins
+some multiplier events
+occasional multiple multiplier cores
+rare large multiplier cores
+very rare extreme sequences.
+
+Do not make 100x, 250x or 500x feel common.
+
+==================================================
+52. VALIDATE 500X RARITY
+==================================================
+
+The configured 500x weight is intentionally tiny.
+
+The simulator must report its actual observed frequency.
+
+If total RTP or volatility becomes unreasonable:
+
+adjust static multiplier spawn probability or multiplier distribution.
+
+Never secretly cap multiplier occurrence except Max Win payout cap.
+
+==================================================
+53. DEBUG / LAB UPDATE
+==================================================
+
+Update /lab.
+
+Allow previewing:
+
+Scatter arrival
+4 Scatter trigger
+Free Spin intro
+Free Spin transition
+2x Core
+10x Core
+50x Core
+100x Core
+250x Core
+500x Core
+multiple multiplier activation
+Tumble Win UI
+Big Win
+Mega Win
+Epic Win
+Legendary Win
+Super Win
+Monster Win
+Colossal Win
+Max Win
+Bonus Complete
+Autoplay UI
+mobile layout.
+
+This is essential for visual QA.
+
+==================================================
+54. ADD PERFORMANCE DEBUG INFO IN DEV MODE
+==================================================
+
+In development only allow checking:
+
+FPS
+active particles
+active tweens
+sprite count
+audio node count
+
+No debug overlay in production.
+
+==================================================
+55. TESTS
+==================================================
+
+Add/update automated tests.
+
+Required:
+
+- Multiplier Core cannot spawn in Base Game.
+- Multiplier Core can spawn during Free Spin refill.
+- Core does not count toward 8+ symbols.
+- Core occupies a real grid cell.
+- 2x Core correctly multiplies the tumble.
+- 500x Core correctly multiplies the tumble.
+- Multiple cores add.
+- 5x + 25x = 30x.
+- Cores activate only on a winning tumble.
+- Core does not pay by itself.
+- Used Core is removed correctly.
+- Scatter does not spawn in cascade refill.
+- Scatter trigger starts Bonus Intro before Free Spins.
+- Auto counter counts paid spins correctly.
+- Free Spins do not decrement Auto remaining count.
+- Big Win threshold classification is correct.
+- Max Win remains capped at 5000x.
+- Audio preferences persist.
+- Turbo does not change RNG.
+- mobile layout does not overflow major target widths.
+
+==================================================
+56. VISUAL QA VIEWPORTS
+==================================================
+
+Manually inspect using:
+
+390×844
+393×852
+430×932
+844×390
+932×430
+768×1024
+1366×768
+1920×1080
+
+Take screenshots if tooling permits.
+
+Fix:
+
+overflow
+clipped controls
+tiny text
+oversized headers
+grid shrinkage
+modal overflow
+safe-area problems.
+
+==================================================
+57. DO NOT DAMAGE CURRENT FOOTBALL SYMBOL CONTENT
+==================================================
+
+The project currently uses football-style symbol artwork.
+
+Preserve the current concept unless replacement is technically required.
+
+Improve:
+
+frame
+ring
+contrast
+depth
+visual clarity.
+
+Do NOT randomly replace all football symbols with fruit or candy.
+
+The special Scatter Trophy and Multiplier Core should complement the football identity while remaining obviously special.
+
+==================================================
+58. GAME FEEL PRIORITY
+==================================================
+
+Priority order:
+
+1. Mobile readability
+2. Mathematical correctness
+3. Free Spin experience
+4. Multiplier Core presentation
+5. Win satisfaction
+6. Scatter feedback
+7. Animation smoothness
+8. Audio
+9. Desktop polish
+
+Do not prioritize fancy desktop effects while mobile remains poor.
+
+==================================================
+59. ACCEPTANCE TEST – FREE SPINS
+==================================================
+
+I must be able to see this exact user journey:
+
+Base Game.
+
+4 Scatters land.
+
+Each Scatter is clearly visible.
+
+Scatter sound is heard.
+
+The 4th Scatter causes a clear celebration.
+
+Gameplay pauses.
+
+A dedicated FREE SPINS intro appears.
+
+FREE SPINS amount is clearly displayed.
+
+Bonus music starts.
+
+Free Spin mode begins.
+
+Free Spins remaining is prominent.
+
+A winning tumble occurs.
+
+A Multiplier Core physically lands inside the board.
+
+Example:
+10x.
+
+The winning symbols burst.
+
+10x Core visibly activates.
+
+TUMBLE WIN clearly shows calculation.
+
+Total Bonus Win increases.
+
+Bonus continues.
+
+Final Free Spin finishes.
+
+BONUS COMPLETE appears.
+
+Total Bonus Win is clearly shown.
+
+Then game transitions back to Base Game.
+
+If this complete flow does not feel polished, the task is not complete.
+
+==================================================
+60. ACCEPTANCE TEST – BIG WIN
+==================================================
+
+Force only via /lab:
+
+15x
+30x
+75x
+150x
+600x
+1200x
+3000x
+5000x.
+
+Verify every tier has:
+
+correct title
+smooth counter
+appropriate intensity
+correct sound
+no frame drops
+tap-to-speed-up
+correct return to gameplay.
+
+==================================================
+61. ACCEPTANCE TEST – MOBILE
+==================================================
+
+At 390×844:
+
+I must immediately understand:
+
+my balance
+my bet
+my current win
+the main grid
+the Spin button
+Auto remaining spins
+Free Spins remaining when active
+Tumble Win
+Bonus Win.
+
+The grid must be large.
+
+No important information should require squinting.
+
+No important control may fall below or outside the viewport unexpectedly.
+
+==================================================
+62. FINAL SIMULATION
+==================================================
+
+After implementation run:
+
+npm test
+
+npm run build
+
+and:
+
+npm run simulate -- --spins=1000000 --seed=20260913
+
+If practical also:
+
+npm run simulate -- --spins=10000000 --seed=20260913
+
+Update simulation results.
+
+Report:
+
+Overall RTP
+Base RTP
+Bonus RTP
+Hit Rate
+Bonus Frequency
+Average Bonus
+Median Bonus
+Average Tumbles
+Average Multiplier Cores per Bonus
+Average Activated Multiplier
+100x frequency
+250x frequency
+500x frequency
+1000x+ win frequency
+2500x+ win frequency
+5000x frequency.
+
+==================================================
+63. DO NOT STOP WITH PARTIAL IMPLEMENTATION
+==================================================
+
+Do not tell me:
+
+"you could add..."
+"next you should..."
+"this could later be implemented..."
+
+IMPLEMENT IT.
+
+Do not leave placeholder animation panels.
+
+Do not leave fake sounds.
+
+Do not leave old multiplier text system active alongside the new system.
+
+Remove obsolete visual code.
+
+Fix all TypeScript errors.
+
+Fix runtime warnings that indicate real bugs.
+
+Run the game after changes.
+
+==================================================
+64. FINAL REPORT
+==================================================
+
+When everything is finished, give me a concise report containing:
+
+1. What visual systems changed.
+2. What changed in mobile layout.
+3. What changed in Free Spins.
+4. How Multiplier Cores now work.
+5. Exact final multiplier spawn probability.
+6. Exact final multiplier value distribution.
+7. Final measured RTP.
+8. Base / Bonus RTP.
+9. Bonus frequency.
+10. Average multiplier statistics.
+11. 500x frequency.
+12. Tests passed.
+13. Production build status.
+14. Any remaining issue.
+
+Do not call the project complete unless:
+
+npm test passes,
+npm run build passes,
+the game has been manually launched,
+and the simulation has been rerun with the new multiplier model.
