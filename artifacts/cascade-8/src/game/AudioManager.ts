@@ -83,6 +83,26 @@ export class AudioManager {
     });
     setTimeout(() => this.tone(base * 3, 0.42, "sine"), 330);
   }
+  freeSpinRawCollect() {
+    this.tone(680, 0.08, "triangle");
+    setTimeout(() => this.tone(980, 0.1, "sine"), 52);
+  }
+  freeSpinMultiplierCollect(value: number) {
+    const base = value >= 25 ? 760 : 620;
+    this.tone(base, 0.11, "triangle");
+    setTimeout(() => this.tone(base * 1.5, 0.15, "sine"), 65);
+    setTimeout(() => this.tone(base * 2, 0.11, "triangle"), 135);
+  }
+  freeSpinResolve() {
+    [460, 620, 820].forEach((frequency, index) => {
+      setTimeout(() => this.tone(frequency, 0.13, "sine"), index * 80);
+    });
+    setTimeout(() => this.tone(1240, 0.24, "triangle"), 250);
+  }
+  freeSpinTransfer() {
+    this.tone(520, 0.12, "sine");
+    setTimeout(() => this.tone(780, 0.18, "sine"), 90);
+  }
   bigWin() { [440, 660, 880, 1320].forEach((tone, index) => setTimeout(() => this.tone(tone, 0.22, "sawtooth"), index * 110)); }
   bonusComplete() { [660, 880, 1100, 1320].forEach((tone, index) => setTimeout(() => this.tone(tone, 0.18, "sine"), index * 95)); }
   startMusic() {
