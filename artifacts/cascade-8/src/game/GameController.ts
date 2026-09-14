@@ -349,16 +349,10 @@ export class GameController {
       this.setState("EVALUATING");
       this.scene.renderBoard(tumble.boardBefore, tumble.winningCells);
       const winningMessage = `${tumble.winningSymbols.map((symbol) => getSymbolDefinition(symbol).name).join(" + ")} RESONATE`;
-      this.message(tumble.multiplierCores.length ? "MULTIPLIER CORES ARE CHARGING" : winningMessage);
+       this.message(tumble.multiplierCores.length ? `${winningMessage} // CORES BANKED` : winningMessage);
       this.setState("WIN_HIGHLIGHT"); this.audio.win();
       await this.scene.highlightCells(tumble.winningCells, this.duration(ANIMATION.winHighlight));
-      this.setState(tumble.multiplierCores.length ? "CORE_REVEAL" : "WIN_EXPLOSION");
-      if (tumble.multiplierCores.length && !isBonus) {
-        this.message(`${tumble.multiplierCores.map((core) => `${core.value}x`).join(" + ")} // CORE TOTAL ${tumble.coreTotalMultiplier}x`);
-        this.audio.core(tumble.coreTotalMultiplier, false);
-        await this.scene.activateMultiplierCores(tumble.multiplierCores.map((core) => core.value), this.duration(ANIMATION.freeSpinPause));
-        await sleep(this.duration(ANIMATION.freeSpinPause));
-      }
+       this.setState("WIN_EXPLOSION");
       await this.scene.burstCells(tumble.removedCells, this.duration(ANIMATION.burst));
       await this.showTumbleWin(tumble, index + 1, isBonus);
       this.updateHud();
@@ -525,29 +519,24 @@ export class GameController {
     const coreText = tumble.settlementCores.map((core) => `${core.value}x`).join(" + ");
     const total = tumble.coreTotalMultiplier;
     if (isBonus) {
-      let collectedCoreTotal = 0;
+      const coreValues = tumble.settlementCores.map((core) => core.value);
+      await this.scene.activateMultiplierCores(coreValues, this.duration(360));
+      this.audio.core(total, true);
+      await Promise.all(coreValues.map((value) =>
+        this.animateFreeSpinFlight("multiplier", value, this.ui.boardWrap, this.ui.freeSpinMultiplier, 360),
+      ));
+      this.freeSpinAccounting = { ...this.freeSpinAccounting, combinedCoreMultiplier: total };
+      this.updateCurrentFreeSpinDisplay();
+      await sleep(this.duration(160));
       for (const core of tumble.settlementCores) {
-        await this.scene.collectMultiplierCore(core.value, 0, this.duration(230));
-        await this.animateFreeSpinFlight("multiplier", core.value, this.ui.boardWrap, this.ui.freeSpinMultiplier, 360);
-        this.audio.freeSpinMultiplierCollect(core.value);
-        collectedCoreTotal += core.value;
-        this.freeSpinAccounting = {
-          ...this.freeSpinAccounting,
-          combinedCoreMultiplier: collectedCoreTotal,
-        };
-        this.updateCurrentFreeSpinDisplay();
-        await sleep(this.duration(90));
-      }
-      if (tumble.settlementCores.length) {
-        this.freeSpinAccounting = { ...this.freeSpinAccounting, combinedCoreMultiplier: total };
-        this.updateCurrentFreeSpinDisplay();
-        await sleep(this.duration(220));
+        await this.scene.dissolveMultiplierCore(core.value, this.duration(220));
       }
       return;
     }
     this.ui.tumblePanel.className = `tumble-win-panel is-settling${isBonus ? " is-free-win" : ""}`;
     this.ui.tumbleSymbolWin.textContent = "";
     await this.scene.activateMultiplierCores(tumble.settlementCores.map((core) => core.value), this.duration(260));
+    this.audio.core(total, false);
     this.ui.tumbleSettlement.innerHTML = `<span>CORES ACTIVATE</span><strong>${coreText}</strong><small>TOTAL MULTIPLIER ${total}x</small>`;
     await sleep(this.duration(380));
     this.ui.tumbleSettlement.innerHTML = `<span>SEQUENCE CALCULATION</span><strong>${rawAmount} × ${total}</strong><small>RAW TUMBLE WIN × TOTAL MULTIPLIER</small>`;
