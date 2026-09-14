@@ -103,6 +103,16 @@ export class AudioManager {
     this.tone(520, 0.12, "sine");
     setTimeout(() => this.tone(780, 0.18, "sine"), 90);
   }
+  retriggerGather() {
+    [360, 440, 540, 680].forEach((frequency, index) => {
+      setTimeout(() => this.tone(frequency, 0.1, "sine"), index * 75);
+    });
+  }
+  retriggerReward() {
+    [520, 760, 1040, 1380].forEach((frequency, index) => {
+      setTimeout(() => this.tone(frequency, index === 3 ? 0.3 : 0.14, "triangle"), index * 80);
+    });
+  }
   bigWin() { [440, 660, 880, 1320].forEach((tone, index) => setTimeout(() => this.tone(tone, 0.22, "sawtooth"), index * 110)); }
   bonusComplete() { [660, 880, 1100, 1320].forEach((tone, index) => setTimeout(() => this.tone(tone, 0.18, "sine"), index * 95)); }
   startMusic() {

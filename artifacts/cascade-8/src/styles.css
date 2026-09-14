@@ -1103,3 +1103,145 @@ button:focus-visible, input:focus-visible { outline: 2px solid var(--cyan); outl
   .control-deck { padding-top: 1px; }
   .spin-button { height: 52px; }
 }
+
+/* Production bonus presentation: values lead, controls share one dock. */
+.free-spin-calc-kicker,
+.free-spin-calc-status,
+.free-spin-calc-value > span {
+  display: none;
+}
+.free-spin-calculation {
+  min-height: 56px;
+  display: grid;
+  align-items: center;
+  padding: 8px 16px;
+}
+.free-spin-calc-equation { margin-top: 0; }
+.free-spin-calc-value strong { font-size: clamp(19px, 2.8vw, 27px); }
+.free-spin-calc-operator { font-size: 19px; }
+.tumble-win-panel.is-free-total {
+  min-height: 74px;
+  margin-top: 5px;
+  padding: 8px 14px;
+  border: 1px solid rgba(255, 211, 102, .2);
+  border-radius: 14px;
+}
+.tumble-win-panel.is-free-total .tumble-meta,
+.tumble-win-panel.is-free-total .tumble-increment { display: none; }
+.demo-note { display: none; }
+.control-deck {
+  display: grid;
+  grid-template-columns: minmax(125px, 1fr) minmax(150px, 1.15fr) 78px minmax(125px, 1fr);
+  align-items: center;
+  width: min(100%, 760px);
+  max-width: 760px;
+  gap: 12px;
+  padding: 9px 8px 7px;
+  border: 1px solid rgba(149, 165, 231, .15);
+  border-radius: 16px;
+  background: rgba(9, 15, 37, .72);
+  box-shadow: 0 12px 30px rgba(0, 0, 0, .18), inset 0 1px 0 rgba(255,255,255,.04);
+}
+.bet-control, .auto-control { min-width: 0; }
+.bet-control { text-align: left; }
+.bet-stepper { justify-content: flex-start; }
+.auto-control { min-width: 0; }
+.auto-row { min-width: 0; }
+.auto-prefix { display: none; color: var(--muted); font: 800 9px "DM Mono", monospace; letter-spacing: .12em; }
+.auto-row select { min-width: 52px; }
+.spin-button {
+  width: 72px;
+  height: 72px;
+  justify-self: center;
+  border-radius: 22px;
+  font-size: 15px;
+  letter-spacing: .12em;
+}
+.spin-button small { display: none; }
+.spin-icon { top: 7px; left: 10px; }
+.utility-controls { justify-content: flex-end; }
+.utility-button { min-width: 54px; }
+.bonus-retrigger-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 42;
+  display: grid;
+  place-items: center;
+  padding: 16px;
+  background: rgba(4, 7, 20, .78);
+  backdrop-filter: blur(8px) saturate(.8);
+}
+.bonus-retrigger-overlay[hidden] { display: none; }
+.bonus-retrigger-panel {
+  position: relative;
+  display: grid;
+  justify-items: center;
+  width: min(460px, 100%);
+  padding: 30px 22px 26px;
+  border: 1px solid rgba(255, 222, 131, .78);
+  border-radius: 24px;
+  background: linear-gradient(155deg, rgba(73, 44, 10, .97), rgba(19, 14, 34, .99) 78%);
+  box-shadow: 0 0 100px rgba(255, 187, 46, .28), inset 0 0 32px rgba(255, 222, 125, .1);
+  text-align: center;
+  animation: ceremony-panel-in .48s cubic-bezier(.16,.9,.24,1);
+}
+.bonus-retrigger-title {
+  margin-top: 20px;
+  color: #fff0ad;
+  font-size: clamp(34px, 9vw, 62px);
+  letter-spacing: .03em;
+  text-shadow: 0 0 24px rgba(255, 190, 51, .58);
+}
+.bonus-retrigger-panel small {
+  margin-top: 8px;
+  color: #ffe7a8;
+  font: 10px "DM Mono", monospace;
+  letter-spacing: .22em;
+}
+.bonus-retrigger-panel button {
+  min-width: 150px;
+  min-height: 45px;
+  margin-top: 22px;
+  border: 1px solid rgba(255, 239, 177, .82);
+  border-radius: 999px;
+  color: #fff9e7;
+  background: linear-gradient(180deg, #e8b94f, #9b641d);
+  box-shadow: 0 8px 26px rgba(233, 169, 48, .28);
+  font: 800 10px "DM Mono", monospace;
+  letter-spacing: .15em;
+}
+@media (max-width: 620px) {
+  .control-deck {
+    grid-template-columns: minmax(0, 1fr) 72px minmax(0, 1fr);
+    grid-template-areas:
+      "bet spin auto"
+      "utility utility utility";
+    gap: 7px;
+    padding: 8px 6px 7px;
+  }
+  .bet-control { grid-area: bet; }
+  .auto-control { grid-area: auto; }
+  .spin-button { grid-area: spin; width: 68px; height: 68px; }
+  .utility-controls {
+    grid-area: utility;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    width: 100%;
+  }
+  .bet-control { text-align: center; }
+  .bet-stepper { justify-content: center; }
+  .auto-control { justify-items: center; }
+  .auto-row { justify-content: center; }
+  .auto-row select { min-width: 44px; flex: 0 1 52px; }
+  #auto-start { flex: 0 1 70px; padding: 0 6px; }
+  .auto-status { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .free-spin-calculation { min-height: 58px; padding: 8px 7px; }
+  .free-spin-calc-equation { gap: 4px; }
+  .free-spin-calc-value strong { font-size: clamp(16px, 5vw, 22px); }
+  .free-spin-calc-operator { font-size: 16px; }
+  .tumble-win-panel.is-free-total { min-height: 68px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .bonus-retrigger-panel,
+  .bonus-retrigger-panel * { animation-duration: .01ms !important; }
+}

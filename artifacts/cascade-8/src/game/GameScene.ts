@@ -320,6 +320,26 @@ export class GameScene extends Phaser.Scene {
     })));
   }
 
+  async dissolveMultiplierCore(value: number, duration = 260) {
+    const node = this.nodes.find((candidate) => isMultiplierCore(candidate.symbol) && candidate.symbol.value === value);
+    if (!node) return;
+    await new Promise<void>((resolve) => {
+      this.tweens.add({
+        targets: node.container,
+        scale: node.container.scale * 1.42,
+        alpha: 0,
+        angle: node.container.angle + 12,
+        duration,
+        ease: "Cubic.easeOut",
+        onComplete: () => {
+          this.destroyNode(node);
+          this.nodes = this.nodes.filter((candidate) => candidate !== node);
+          resolve();
+        },
+      });
+    });
+  }
+
   async burstCells(cells: Cell[], duration: number) {
     const wanted = new Set(cells.map((cell) => `${cell.row}:${cell.col}`));
     const active = this.nodes.filter((node) => wanted.has(`${node.row}:${node.col}`));
