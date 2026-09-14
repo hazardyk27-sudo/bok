@@ -1526,3 +1526,163 @@ button:focus-visible, input:focus-visible { outline: 2px solid var(--cyan); outl
   .auto-row select,
   #auto-start { height: 30px; font-size: 8px; }
 }
+
+/* Mobile-first Auto popover and compact utility labels. */
+.auto-control {
+  position: relative;
+  justify-items: start;
+}
+.auto-trigger {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  min-width: 78px;
+  min-height: 40px;
+  padding: 0 11px;
+  border: 1px solid rgba(125, 164, 239, .3);
+  border-radius: 11px;
+  color: #e2ecff;
+  background: linear-gradient(180deg, rgba(37, 66, 121, .84), rgba(15, 29, 64, .92));
+  box-shadow: inset 0 1px 0 rgba(235, 242, 255, .08), 0 7px 18px rgba(1, 7, 24, .18);
+  font: 800 9px "DM Mono", monospace;
+  letter-spacing: .15em;
+  transition: border-color .2s ease, background .2s ease, transform .2s ease;
+}
+.auto-trigger:hover:not(:disabled),
+.auto-trigger.is-open {
+  border-color: rgba(143, 196, 255, .7);
+  background: linear-gradient(180deg, rgba(48, 87, 153, .92), rgba(19, 39, 82, .96));
+  transform: translateY(-1px);
+}
+.auto-trigger small {
+  display: grid;
+  place-items: center;
+  min-width: 18px;
+  height: 18px;
+  border: 1px solid rgba(190, 220, 255, .25);
+  border-radius: 6px;
+  color: #bfe5ff;
+  font: 700 9px "DM Mono", monospace;
+  letter-spacing: 0;
+}
+.auto-trigger.is-running {
+  border-color: rgba(255, 143, 143, .62);
+  color: #ffd2d2;
+  background: linear-gradient(180deg, rgba(123, 55, 69, .86), rgba(54, 24, 42, .94));
+}
+.auto-trigger:disabled { opacity: .42; cursor: not-allowed; }
+.auto-menu {
+  position: absolute;
+  z-index: 12;
+  left: 50%;
+  bottom: calc(100% + 9px);
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 5px;
+  width: 154px;
+  padding: 7px;
+  border: 1px solid rgba(142, 184, 250, .38);
+  border-radius: 13px;
+  background: linear-gradient(155deg, rgba(22, 40, 82, .98), rgba(7, 14, 34, .99));
+  box-shadow: 0 16px 32px rgba(0, 0, 0, .35), inset 0 1px 0 rgba(235, 242, 255, .08);
+  transform: translateX(-50%);
+}
+.auto-menu[hidden] { display: none; }
+.auto-option {
+  min-height: 35px;
+  border: 1px solid rgba(126, 168, 239, .2);
+  border-radius: 8px;
+  color: #c7d9f8;
+  background: rgba(22, 42, 83, .7);
+  font: 700 10px "DM Mono", monospace;
+  transition: .2s ease;
+}
+.auto-option:hover:not(:disabled),
+.auto-option.is-selected {
+  border-color: rgba(151, 204, 255, .72);
+  color: #f3f8ff;
+  background: rgba(67, 112, 183, .74);
+  box-shadow: 0 0 14px rgba(91, 166, 255, .16);
+}
+.auto-option:disabled { opacity: .4; cursor: not-allowed; }
+.auto-count-native,
+.auto-start-native {
+  position: absolute !important;
+  width: 1px !important;
+  height: 1px !important;
+  overflow: hidden !important;
+  clip: rect(0 0 0 0) !important;
+  clip-path: inset(50%) !important;
+  white-space: nowrap !important;
+}
+.sound-label-compact { display: none; }
+.tumble-win-label {
+  display: none;
+}
+.tumble-win-panel > #tumble { margin-top: 0; }
+.tumble-win-panel.is-active,
+.tumble-win-panel.is-settling { min-height: 68px; }
+
+@media (max-width: 620px) {
+  .control-deck {
+    grid-template-columns: minmax(78px, 1.05fr) minmax(53px, .72fr) 76px minmax(94px, 1.15fr);
+    grid-template-areas: "bet auto spin utility";
+    gap: 6px;
+    padding: 7px 5px 6px;
+  }
+  .bet-control { text-align: center; }
+  .auto-control {
+    grid-area: auto;
+    justify-items: center;
+    width: 100%;
+  }
+  .auto-trigger {
+    min-width: 54px;
+    min-height: 42px;
+    padding: 0 6px;
+    gap: 4px;
+    letter-spacing: .09em;
+  }
+  .auto-trigger small { min-width: 16px; height: 17px; font-size: 8px; }
+  .auto-menu {
+    left: 50%;
+    bottom: calc(100% + 8px);
+    width: 148px;
+  }
+  .auto-status {
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .sound-label-full { display: none; }
+  .sound-label-compact { display: inline; }
+  .utility-controls {
+    grid-area: utility;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    width: 100%;
+    gap: 4px;
+  }
+  .utility-button {
+    min-width: 0;
+    min-height: 42px;
+    padding-inline: 3px;
+  }
+  .utility-button span.sound-label-compact {
+    font-size: 7px;
+    letter-spacing: .08em;
+  }
+}
+@media (max-width: 360px) {
+  .control-deck {
+    grid-template-columns: minmax(72px, 1fr) 49px 68px minmax(86px, 1.1fr);
+    gap: 4px;
+    padding-inline: 3px;
+  }
+  .auto-trigger { min-width: 49px; padding-inline: 3px; }
+  .auto-trigger small { display: none; }
+  .spin-button { width: 68px; }
+  .utility-button span.sound-label-compact { font-size: 6px; }
+}

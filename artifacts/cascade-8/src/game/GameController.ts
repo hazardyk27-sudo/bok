@@ -53,8 +53,8 @@ export class GameController {
   private readonly scene: GameScene;
   private readonly ui: {
     balance: HTMLElement; bet: HTMLElement; win: HTMLElement; bonusWin: HTMLElement; freeSpins: HTMLElement;
-    tumble: HTMLElement; status: HTMLElement; spin: HTMLButtonElement; spinLabel: HTMLElement; betMinus: HTMLButtonElement; betPlus: HTMLButtonElement;
-    autoCount: HTMLSelectElement; autoStart: HTMLButtonElement; autoStatus: HTMLElement;
+     tumble: HTMLElement; status: HTMLElement; spin: HTMLButtonElement; spinLabel: HTMLElement; betMinus: HTMLButtonElement; betPlus: HTMLButtonElement;
+     autoToggle: HTMLButtonElement; autoSelection: HTMLElement; autoMenu: HTMLElement; autoCount: HTMLSelectElement; autoStart: HTMLButtonElement; autoStatus: HTMLElement;
      turbo: HTMLButtonElement; sound: HTMLButtonElement; bonusOverlay: HTMLElement; bonusStart: HTMLButtonElement; bonusSpinCount: HTMLElement; bonusScatterRow: HTMLElement; bonusTriggerLabel: HTMLElement; bonusTitle: HTMLElement; bonusSupport: HTMLElement; bonusInstruction: HTMLElement; freeSpinCalculation: HTMLElement; freeSpinRawWin: HTMLElement; freeSpinMultiplier: HTMLElement; freeSpinFinalWin: HTMLElement; freeSpinMultiplyOperator: HTMLElement; freeSpinEqualsOperator: HTMLElement; tumbleLabel: HTMLElement; tumbleSymbolWin: HTMLElement; tumbleIncrement: HTMLElement; tumbleMeta: HTMLElement; tumbleSettlement: HTMLElement; tumblePanel: HTMLElement; bigWinOverlay: HTMLElement; bonusSummaryOverlay: HTMLElement; boardWrap: HTMLElement;
     setModal: (name: string | null) => void;
   };
@@ -75,6 +75,28 @@ export class GameController {
     this.ui.betPlus.addEventListener("click", () => this.changeBet(1));
     this.ui.autoCount.addEventListener("change", () => this.updateAutoStatus());
     this.ui.autoStart.addEventListener("click", () => void this.toggleAuto());
+    this.ui.autoToggle.addEventListener("click", () => {
+      if (this.autoRunning) {
+        void this.toggleAuto();
+      } else {
+        this.setAutoMenuOpen(this.ui.autoMenu.hidden);
+      }
+    });
+    this.ui.autoMenu.addEventListener("click", (event) => {
+      const target = event.target instanceof HTMLElement
+        ? event.target.closest<HTMLButtonElement>("[data-auto-option]")
+        : null;
+      const value = target?.dataset.autoOption;
+      if (!value || !target || target.disabled) return;
+      this.ui.autoCount.value = value;
+      this.ui.autoCount.dispatchEvent(new Event("change"));
+      this.setAutoMenuOpen(false);
+      void this.toggleAuto();
+    });
+    document.addEventListener("pointerdown", (event) => {
+      const root = this.ui.autoMenu.parentElement;
+      if (root && event.target instanceof Node && !root.contains(event.target)) this.setAutoMenuOpen(false);
+    });
     this.ui.turbo.addEventListener("click", () => {
       this.turbo = !this.turbo; localStorage.setItem("cascade8-turbo", String(this.turbo)); this.updateHud();
     });
@@ -92,7 +114,10 @@ export class GameController {
       void this.spin();
     });
     window.addEventListener("keydown", (event) => {
-      if (event.key === "Escape") this.ui.setModal(null);
+      if (event.key === "Escape") {
+        this.setAutoMenuOpen(false);
+        this.ui.setModal(null);
+      }
       if (event.code === "Space" && !event.repeat && document.activeElement?.tagName !== "INPUT") {
         event.preventDefault(); void this.spin();
       }
@@ -128,7 +153,9 @@ export class GameController {
     this.ui.bonusWin.textContent = formatCredits(this.bonusWinCents);
     this.ui.freeSpins.textContent = String(this.freeSpinsLeft);
     this.ui.turbo.classList.toggle("is-active", this.turbo);
-    this.ui.sound.textContent = this.audio.muted ? "Sound off" : "Sound on";
+    const soundLabel = this.ui.sound.querySelector<HTMLElement>(".sound-label-full");
+    if (soundLabel) soundLabel.textContent = this.audio.muted ? "SOUND OFF" : "SOUND ON";
+    this.ui.sound.setAttribute("aria-label", this.audio.muted ? "Turn sound on" : "Turn sound off");
     this.ui.sound.classList.toggle("is-active", !this.audio.muted);
     this.ui.spin.disabled = this.busy || this.autoRunning || (!this.pendingBonusResult && this.balanceCents < this.betCents);
     this.ui.betMinus.disabled = this.busy || this.betIndex === 0;
@@ -137,6 +164,15 @@ export class GameController {
     this.ui.autoStart.disabled = (this.busy && !this.autoRunning) || Boolean(this.pendingBonusResult);
     this.ui.autoStart.textContent = this.autoRunning ? "STOP" : "START AUTO";
     this.ui.autoStart.classList.toggle("is-running", this.autoRunning);
+    this.ui.autoToggle.disabled = (this.busy && !this.autoRunning) || Boolean(this.pendingBonusResult);
+    this.ui.autoToggle.classList.toggle("is-running", this.autoRunning);
+    this.ui.autoToggle.setAttribute("aria-label", this.autoRunning ? "Stop automatic spins" : "Choose automatic spin count");
+    this.ui.autoMenu.querySelectorAll<HTMLButtonElement>("[data-auto-option]").forEach((option) => {
+      const isSelected = option.dataset.autoOption === this.ui.autoCount.value;
+      option.disabled = this.busy || this.autoRunning || Boolean(this.pendingBonusResult);
+      option.setAttribute("aria-checked", String(isSelected));
+      option.classList.toggle("is-selected", isSelected);
+    });
     this.updateAutoStatus();
   }
   updateForModal() { this.updateHud(); }
@@ -314,6 +350,13 @@ export class GameController {
     await this.runAuto();
   }
 
+  private setAutoMenuOpen(open: boolean) {
+    if (open && (this.busy || this.autoRunning || this.pendingBonusResult)) return;
+    this.ui.autoMenu.hidden = !open;
+    this.ui.autoToggle.setAttribute("aria-expanded", String(open));
+    this.ui.autoToggle.classList.toggle("is-open", open);
+  }
+
   private async runAuto() {
     while (this.autoRunning && this.autoRemaining > 0) {
       if (this.balanceCents < this.betCents) {
@@ -341,6 +384,7 @@ export class GameController {
   private updateAutoStatus() {
     if (!this.ui.autoStatus) return;
     const selected = Number(this.ui.autoCount.value);
+    this.ui.autoSelection.textContent = this.autoRunning ? String(this.autoRemaining) : String(selected);
     this.ui.autoStatus.textContent = this.autoRunning
       ? `${this.autoRemaining} LEFT / BET ${formatCredits(this.betCents)}`
       : `BET ${formatCredits(this.betCents)} / ${selected} READY`;
