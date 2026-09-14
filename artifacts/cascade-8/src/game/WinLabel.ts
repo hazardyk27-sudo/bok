@@ -19,6 +19,9 @@ type BoardLayout = {
 
 const DEFAULT_BOARD_ORIGIN = { x: 22, y: 30 };
 const DEFAULT_CELL_SIZE = { width: 96, height: 92 };
+const LABEL_HALF_HEIGHT = 15;
+const LABEL_VERTICAL_GAP = 34;
+const LABEL_HORIZONTAL_CLEARANCE = 96;
 
 export function buildWinLabelEvents(
   board: Board,
@@ -58,18 +61,24 @@ export function calculateWinLabelPositions(
       y: center.y / event.cells.length - 30,
     };
 
-    let offset = 0;
+    const minY = boardOrigin.y + LABEL_HALF_HEIGHT;
+    const maxY = boardOrigin.y + 5 * cellSize.height - LABEL_HALF_HEIGHT;
+    let y = candidate.y;
+    let step = 0;
     while (placements.some((placement) =>
-      Math.abs(placement.x - candidate.x) < 112 &&
-      Math.abs(placement.y - (candidate.y - offset)) < 42,
+      Math.abs(placement.x - candidate.x) < LABEL_HORIZONTAL_CLEARANCE &&
+      Math.abs(placement.y - y) < LABEL_VERTICAL_GAP,
     )) {
-      offset += 42;
+      step += 1;
+      const above = candidate.y - step * LABEL_VERTICAL_GAP;
+      const below = candidate.y + step * LABEL_VERTICAL_GAP;
+      y = above >= minY ? above : below <= maxY ? below : above;
     }
 
     placements.push({
       ...event,
       x: candidate.x,
-      y: candidate.y - offset,
+      y,
     });
   });
 

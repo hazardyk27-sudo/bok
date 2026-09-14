@@ -560,54 +560,56 @@ export class GameScene extends Phaser.Scene {
   async presentWinLabels(events: readonly WinLabelEvent[], duration: number) {
     if (!events.length) return;
     const placements = calculateWinLabelPositions(events);
-    const popDuration = Math.max(40, Math.min(160, Math.round(duration * 0.22)));
-    const fadeDuration = Math.max(60, Math.min(360, Math.round(duration * 0.42)));
-    const holdDuration = Math.max(40, duration - popDuration - fadeDuration);
+    const totalDuration = Math.max(40, Math.min(680, duration));
+    const popDuration = totalDuration <= 40 ? 40 : Math.max(90, Math.min(130, Math.round(totalDuration * 0.2)));
+    const fadeDuration = totalDuration <= 40 ? 40 : Math.max(180, Math.min(270, Math.round(totalDuration * 0.38)));
+    const holdDuration = Math.max(40, totalDuration - popDuration - fadeDuration);
 
     await Promise.all(placements.map((placement, index) => new Promise<void>((resolve) => {
       const text = this.add.text(0, 0, placement.text, {
-        color: "#fff7d6",
-        fontFamily: "Manrope, sans-serif",
-        fontSize: "21px",
-        fontStyle: "800",
-        stroke: "#38230a",
-        strokeThickness: 5,
-        shadow: { blur: 10, color: "#f4bd57", fill: true, offsetX: 0, offsetY: 0 },
+        color: "#fff5d6",
+        fontFamily: "DM Mono, monospace",
+        fontSize: "18px",
+        fontStyle: "bold",
+        stroke: "#070d20",
+        strokeThickness: 3,
+        shadow: { blur: 5, color: "#02050f", fill: true, offsetX: 0, offsetY: 2 },
       }).setOrigin(0.5);
-      const badge = this.add.rectangle(
-        0,
-        0,
-        text.width + 24,
-        text.height + 12,
-        0x111a38,
-        0.9,
-      ).setStrokeStyle(1.5, 0xffd477, 0.9);
+      const width = Math.max(58, text.width + 18);
+      const height = text.height + 10;
+      const halo = this.add.circle(0, 0, Math.max(width, height) * 0.58, 0xe7bd63, 0.08)
+        .setBlendMode(Phaser.BlendModes.ADD);
+      const badge = this.add.graphics();
+      badge.fillStyle(0x0a1022, 0.88);
+      badge.fillRoundedRect(-width / 2, -height / 2, width, height, 8);
+      badge.lineStyle(1, 0xe6c777, 0.64);
+      badge.strokeRoundedRect(-width / 2, -height / 2, width, height, 8);
+      const sheen = this.add.rectangle(0, -height / 2 + 1.5, Math.min(width * 0.62, 44), 1, 0xfff2c4, 0.26);
       const container = this.trackEffect(
-        this.add.container(placement.x, placement.y, [badge, text])
+        this.add.container(placement.x, placement.y, [halo, badge, sheen, text])
           .setDepth(14)
           .setAlpha(0)
-          .setScale(0.72),
+          .setScale(0.9),
       );
 
       this.tweens.add({
         targets: container,
         alpha: 1,
-        scale: 1.06,
+        scale: 1,
         duration: popDuration,
         delay: index * 35,
-        ease: "Back.easeOut",
+        ease: "Cubic.easeOut",
         onComplete: () => {
           this.tweens.add({
             targets: container,
-            scale: 1,
             duration: holdDuration,
             ease: "Sine.easeInOut",
             onComplete: () => {
               this.tweens.add({
                 targets: container,
-                y: placement.y - 28,
+                y: placement.y - 18,
                 alpha: 0,
-                scale: 0.94,
+                scale: 0.98,
                 duration: fadeDuration,
                 ease: "Cubic.easeOut",
                 onComplete: () => {

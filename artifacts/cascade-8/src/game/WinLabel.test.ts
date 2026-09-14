@@ -41,6 +41,18 @@ describe("on-board win labels", () => {
     expect(placements[1].y).toBeLessThan(placements[0].y);
   });
 
+  it("keeps stacked labels inside the board when a win is near the top edge", () => {
+    const events = [
+      { amountCents: 100, text: "1.00", cells: [{ row: 0, col: 2 }] },
+      { amountCents: 200, text: "2.00", cells: [{ row: 0, col: 2 }] },
+      { amountCents: 300, text: "3.00", cells: [{ row: 0, col: 2 }] },
+    ];
+    const placements = calculateWinLabelPositions(events);
+
+    expect(placements.every((placement) => placement.y >= 45)).toBe(true);
+    expect(new Set(placements.map((placement) => placement.y)).size).toBe(3);
+  });
+
   it("returns no label events when the board has no win", () => {
     const normalSymbols = ["S1", "S2", "S3", "S4", "S5", "S6", "S7", "S8"];
     const board = boardWith(Array.from({ length: 30 }, (_, index) => normalSymbols[index % normalSymbols.length]));
