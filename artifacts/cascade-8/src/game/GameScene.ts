@@ -1,6 +1,6 @@
 import Phaser from "phaser";
 import { BOARD_COLUMNS, BOARD_ROWS, MULTIPLIER_CORE_ARTWORK, NORMAL_SYMBOLS, getSymbolDefinition, type SymbolId } from "../config/GameConfig";
-import { getNormalSymbol, getStackMetadata, isMultiplierCore, type Board, type BoardCell, type Cell } from "../engine/types";
+import { getNormalSymbol, getStackMetadata, isMultiplierCore, type Board, type BoardCell, type Cell, type CoreCell } from "../engine/types";
 import { calculateWinLabelPositions, type WinLabelEvent } from "./WinLabel";
 
 type BoardNode = {
@@ -8,6 +8,7 @@ type BoardNode = {
   symbol: BoardCell;
   row: number;
   col: number;
+  coreCollected?: boolean;
 };
 
 const SCATTER_SYMBOL_SIZE = 100;
@@ -344,8 +345,21 @@ export class GameScene extends Phaser.Scene {
     })));
   }
 
-  async activateMultiplierCores(values: number[], duration = 360) {
-    const active = this.nodes.filter((node) => isMultiplierCore(node.symbol) && values.includes(node.symbol.value));
+  private findMultiplierNode(core: CoreCell) {
+    return this.nodes.find((node) => {
+      if (!isMultiplierCore(node.symbol) || node.symbol.value !== core.value) return false;
+      if (core.id && node.symbol.id) return core.id === node.symbol.id;
+      return node.row === core.row && node.col === core.col;
+    });
+  }
+
+  async activateMultiplierCores(cores: readonly CoreCell[] | readonly number[], duration = 360) {
+    const active = cores.flatMap((core) => {
+      if (typeof core === "number") {
+        return this.nodes.find((node) => isMultiplierCore(node.symbol) && node.symbol.value === core) ?? [];
+      }
+      return this.findMultiplierNode(core) ?? [];
+    });
     await Promise.all(active.map((node) => new Promise<void>((resolve) => {
       this.tweens.add({
         targets: node.container,
@@ -357,6 +371,119 @@ export class GameScene extends Phaser.Scene {
         onComplete: () => resolve(),
       });
     })));
+  }
+
+  private markMultiplierCoreCollected(node: BoardNode) {
+    if (!isMultiplierCore(node.symbol) || node.coreCollected) return;
+    node.coreCollected = true;
+    const ring = this.add.circle(0, 0, 42, undefined, 0)
+      .setStrokeStyle(node.symbol.value >= 500 ? 3 : 2, 0xffed9c, node.symbol.value >= 500 ? 0.95 : 0.72);
+    const lock = this.add.circle(0, 0, 35, 0xffd56b, node.symbol.value >= 500 ? 0.12 : 0.07)
+      .setBlendMode(Phaser.BlendModes.ADD);
+    node.container.add([lock, ring]);
+    this.tweens.add({
+      targets: ring,
+      angle: 360,
+      alpha: node.symbol.value >= 500 ? 0.78 : 0.5,
+      duration: 2200,
+      repeat: -1,
+      ease: "Linear",
+    });
+    this.tweens.add({
+      targets: lock,
+      scale: node.symbol.value >= 500 ? 1.12 : 1.06,
+      alpha: node.symbol.value >= 500 ? 0.2 : 0.11,
+      duration: 760,
+      yoyo: true,
+      repeat: -1,
+      ease: "Sine.easeInOut",
+    });
+  }
+
+  private canvasPointForElement(element: HTMLElement) {
+    const canvas = this.game.canvas;
+    const canvasRect = canvas.getBoundingClientRect();
+    const targetRect = element.getBoundingClientRect();
+    const scaleX = this.scale.width / Math.max(1, canvasRect.width);
+    const scaleY = this.scale.height / Math.max(1, canvasRect.height);
+    return {
+      x: (targetRect.left + targetRect.width / 2 - canvasRect.left) * scaleX,
+      y: (targetRect.top + targetRect.height / 2 - canvasRect.top) * scaleY,
+    };
+  }
+
+  private async presentMultiplierImpact(node: BoardNode, duration: number) {
+    const impact = this.trackEffect(this.add.circle(node.container.x, node.container.y, 25, 0xffe6a1, 0.36)
+      .setBlendMode(Phaser.BlendModes.ADD)
+      .setDepth(18));
+    const ring = this.trackEffect(this.add.circle(node.container.x, node.container.y, 30, undefined, 0)
+      .setStrokeStyle(node.symbol && isMultiplierCore(node.symbol) && node.symbol.value >= 500 ? 3 : 2, 0xffd56b, 0.92)
+      .setDepth(18));
+    await new Promise<void>((resolve) => {
+      this.tweens.add({
+        targets: [impact, ring],
+        scale: node.symbol && isMultiplierCore(node.symbol) && node.symbol.value >= 500 ? 2.35 : 1.85,
+        alpha: 0,
+        duration,
+        ease: "Cubic.easeOut",
+        onComplete: () => {
+          this.destroyEffect(impact);
+          this.destroyEffect(ring);
+          resolve();
+        },
+      });
+    });
+  }
+
+  async collectMultiplierCore(core: CoreCell, target: HTMLElement, duration = 360) {
+    const node = this.findMultiplierNode(core);
+    if (!node || !isMultiplierCore(node.symbol) || node.coreCollected) return;
+    const emphasis = core.value >= 500 ? 1.2 : core.value >= 100 ? 1.1 : 1;
+    await new Promise<void>((resolve) => {
+      this.tweens.add({
+        targets: node.container,
+        scale: node.container.scale * 1.16 * emphasis,
+        angle: node.container.angle + (core.value >= 500 ? 5 : 3),
+        duration: Math.max(70, Math.round(duration * 0.24)),
+        ease: "Back.easeOut",
+        onComplete: () => resolve(),
+      });
+    });
+
+    const targetPoint = this.canvasPointForElement(target);
+    const label = this.add.text(0, 0, `+${core.value}x`, {
+      color: core.value >= 500 ? "#fff8c9" : "#ffe6a0",
+      fontFamily: "DM Mono, monospace",
+      fontSize: core.value >= 500 ? "22px" : "17px",
+      fontStyle: "bold",
+      stroke: "#5a3309",
+      strokeThickness: 5,
+      shadow: { blur: core.value >= 500 ? 18 : 10, color: "#ffc84d", fill: true, offsetX: 0, offsetY: 0 },
+    }).setOrigin(0.5);
+    const energy = this.add.circle(0, 0, core.value >= 500 ? 18 : 13, 0xffd36a, core.value >= 500 ? 0.32 : 0.2)
+      .setBlendMode(Phaser.BlendModes.ADD);
+    const flight = this.trackEffect(
+      this.add.container(node.container.x, node.container.y, [energy, label])
+        .setDepth(21)
+        .setScale(core.value >= 500 ? 1.16 : 1),
+    );
+    await new Promise<void>((resolve) => {
+      this.tweens.add({
+        targets: flight,
+        x: targetPoint.x,
+        y: targetPoint.y,
+        scale: core.value >= 500 ? 0.8 : 0.7,
+        alpha: 0.18,
+        duration: Math.max(100, Math.round(duration * 0.58)),
+        ease: "Cubic.easeInOut",
+        onComplete: () => {
+          this.destroyEffect(flight);
+          resolve();
+        },
+      });
+    });
+    this.markMultiplierCoreCollected(node);
+    await this.presentMultiplierImpact(node, Math.max(70, Math.round(duration * 0.3)));
   }
 
   async dissolveMultiplierCore(value: number, duration = 260) {
@@ -666,37 +793,6 @@ export class GameScene extends Phaser.Scene {
     this.sparkle();
   }
 
-  async collectMultiplierCore(value: number, occurrence = 0, duration = 230) {
-    const matching = this.nodes.filter((node) => isMultiplierCore(node.symbol) && node.symbol.value === value);
-    const node = matching[occurrence];
-    if (!node) return;
-    const halo = this.trackEffect(this.add.circle(node.container.x, node.container.y, 34, 0xffd36a, 0.18)
-      .setBlendMode(Phaser.BlendModes.ADD)
-      .setDepth(4));
-    await new Promise<void>((resolve) => {
-      this.tweens.add({
-        targets: [node.container, halo],
-        scale: 1.22,
-        duration: Math.max(70, duration * 0.45),
-        ease: "Back.easeOut",
-        onComplete: () => {
-          this.tweens.add({
-            targets: [node.container, halo],
-            alpha: 0,
-            scale: 1.55,
-            duration: Math.max(70, duration * 0.55),
-            ease: "Cubic.easeIn",
-            onComplete: () => {
-              this.destroyNode(node);
-              this.destroyEffect(halo);
-              resolve();
-            },
-          });
-        },
-      });
-    });
-    this.nodes = this.nodes.filter((candidate) => candidate !== node);
-  }
 }
 
 export function createGameScene(parent: HTMLElement) {

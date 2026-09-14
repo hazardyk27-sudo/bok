@@ -91,11 +91,17 @@ export class AudioManager {
     this.tone(680, 0.08, "triangle");
     setTimeout(() => this.tone(980, 0.1, "sine"), 52);
   }
+  multiplierCoreCollect(value: number, isBonus = true) {
+    const large = value >= 500;
+    const major = value >= 100;
+    const base = large ? 860 : major ? 760 : isBonus ? 620 : 680;
+    this.tone(base, large ? 0.16 : 0.11, "triangle");
+    setTimeout(() => this.tone(base * (large ? 1.55 : 1.5), large ? 0.22 : 0.15, "sine"), 65);
+    setTimeout(() => this.tone(base * (large ? 2.05 : 2), large ? 0.18 : 0.11, "triangle"), 135);
+    if (large) setTimeout(() => this.tone(1960, 0.24, "sine"), 195);
+  }
   freeSpinMultiplierCollect(value: number) {
-    const base = value >= 25 ? 760 : 620;
-    this.tone(base, 0.11, "triangle");
-    setTimeout(() => this.tone(base * 1.5, 0.15, "sine"), 65);
-    setTimeout(() => this.tone(base * 2, 0.11, "triangle"), 135);
+    this.multiplierCoreCollect(value, true);
   }
   freeSpinResolve() {
     [460, 620, 820].forEach((frequency, index) => {

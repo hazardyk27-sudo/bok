@@ -10,7 +10,7 @@ import {
   settleFreeSpinAccounting,
 } from "../engine/SlotEngine";
 import { evaluateBoard } from "../engine/WinEvaluator";
-import type { Board, SpinResult } from "../engine/types";
+import type { Board, BoardCell, SpinResult } from "../engine/types";
 import { AudioManager } from "./AudioManager";
 import { renderBonusCeremony } from "./bonusCeremony";
 import { GameScene } from "./GameScene";
@@ -540,26 +540,34 @@ export class GameController {
     const coreText = tumble.settlementCores.map((core) => `${core.value}x`).join(" + ");
     const total = tumble.coreTotalMultiplier;
     if (isBonus) {
-      const coreValues = tumble.settlementCores.map((core) => core.value);
-      await this.scene.activateMultiplierCores(coreValues, this.duration(360));
-      this.audio.core(total, true);
-      await Promise.all(coreValues.map((value) =>
-        this.animateFreeSpinFlight("multiplier", value, this.ui.boardWrap, this.ui.freeSpinMultiplier, 360),
-      ));
+      this.ui.freeSpinCalculation.classList.add("is-collecting");
+      this.freeSpinAccounting = { ...this.freeSpinAccounting, combinedCoreMultiplier: 0 };
+      this.updateCurrentFreeSpinDisplay();
+      let collectedTotal = 0;
+      for (const core of tumble.settlementCores) {
+        await this.scene.collectMultiplierCore(core, this.ui.freeSpinMultiplier, this.duration(430));
+        this.audio.freeSpinMultiplierCollect(core.value);
+        collectedTotal += core.value;
+        this.freeSpinAccounting = { ...this.freeSpinAccounting, combinedCoreMultiplier: collectedTotal };
+        this.updateCurrentFreeSpinDisplay();
+        await sleep(this.duration(110));
+      }
       this.freeSpinAccounting = { ...this.freeSpinAccounting, combinedCoreMultiplier: total };
       this.updateCurrentFreeSpinDisplay();
-      await sleep(this.duration(160));
-      for (const core of tumble.settlementCores) {
-        await this.scene.dissolveMultiplierCore(core.value, this.duration(220));
-      }
+      this.ui.freeSpinCalculation.classList.remove("is-collecting");
       return;
     }
     this.ui.tumblePanel.className = `tumble-win-panel is-settling${isBonus ? " is-free-win" : ""}`;
     this.ui.tumbleSymbolWin.textContent = "";
-    await this.scene.activateMultiplierCores(tumble.settlementCores.map((core) => core.value), this.duration(260));
-    this.audio.core(total, false);
-    this.ui.tumbleSettlement.innerHTML = `<span>CORES ACTIVATE</span><strong>${coreText}</strong><small>TOTAL MULTIPLIER ${total}x</small>`;
-    await sleep(this.duration(380));
+    this.ui.tumbleSettlement.innerHTML = `<span>CORES ACTIVATE</span><strong>0x</strong><small>ARRIVAL ORDER // ${coreText}</small>`;
+    let collectedTotal = 0;
+    for (const core of tumble.settlementCores) {
+      await this.scene.collectMultiplierCore(core, this.ui.tumbleSettlement, this.duration(400));
+      this.audio.multiplierCoreCollect(core.value, false);
+      collectedTotal += core.value;
+      this.ui.tumbleSettlement.innerHTML = `<span>CORE COLLECTED</span><strong>${collectedTotal}x</strong><small>+${core.value}x // ${collectedTotal}x BANKED</small>`;
+      await sleep(this.duration(105));
+    }
     this.ui.tumbleSettlement.innerHTML = `<span>SEQUENCE CALCULATION</span><strong>${rawAmount} × ${total}</strong><small>RAW TUMBLE WIN × TOTAL MULTIPLIER</small>`;
     await sleep(this.duration(470));
     this.ui.tumble.textContent = formatCredits(Math.round(tumble.finalPayoutMultiplier * this.betCents));
@@ -690,6 +698,51 @@ export class GameController {
     await this.animateFreeSpinFlight("transfer", 75_000, this.ui.freeSpinFinalWin, this.ui.tumble, 440);
     this.updateBonusTotalDisplay(true);
     await sleep(this.duration(360));
+  }
+  async previewMultiplierCollection() {
+    const values = [5, 10, 500, 25];
+    const positions = [[0, 0], [1, 1], [2, 2], [3, 3]];
+    const cells: BoardCell[] = Array.from({ length: 30 }, () => "S2");
+    const cores = values.map((value, index) => {
+      const [row, col] = positions[index];
+      const core = {
+        kind: "MULTIPLIER_CORE" as const,
+        value,
+        id: `lab-core-${index + 1}`,
+        arrivalSequence: index + 1,
+      };
+      cells[row * 6 + col] = core;
+      return { row, col, value, id: core.id, arrivalSequence: core.arrivalSequence };
+    });
+    const board = Array.from({ length: 5 }, (_, row) => cells.slice(row * 6, row * 6 + 6)) as Board;
+    this.scene.setFreeSpinMode(true);
+    this.scene.renderBoard(board);
+    this.setFreeSpinPresentation(true);
+    this.resetCurrentFreeSpinDisplay(99);
+    this.freeSpinAccounting = addFreeSpinSymbolWin(this.freeSpinAccounting, 5_000);
+    this.freeSpinAccounting = { ...this.freeSpinAccounting, combinedCoreMultiplier: 0 };
+    this.updateCurrentFreeSpinDisplay();
+    this.ui.freeSpinCalculation.classList.add("is-collecting");
+    let collectedTotal = 0;
+    for (const core of cores) {
+      await this.scene.collectMultiplierCore(core, this.ui.freeSpinMultiplier, this.duration(430));
+      this.audio.freeSpinMultiplierCollect(core.value);
+      collectedTotal += core.value;
+      this.freeSpinAccounting = { ...this.freeSpinAccounting, combinedCoreMultiplier: collectedTotal };
+      this.updateCurrentFreeSpinDisplay();
+      await sleep(this.duration(150));
+    }
+    this.ui.freeSpinCalculation.classList.remove("is-collecting");
+    await this.presentCurrentFreeSpinResolution({
+      rawWinMultiplier: 50,
+      combinedCoreMultiplier: 540,
+      win: 2_700_000,
+    } as SpinResult["freeSpins"][number]);
+    this.freeSpinAccounting = settleFreeSpinAccounting(this.freeSpinAccounting);
+    this.audio.freeSpinTransfer();
+    await this.animateFreeSpinFlight("transfer", 2_700_000, this.ui.freeSpinFinalWin, this.ui.tumble, 440);
+    this.updateBonusTotalDisplay(true);
+    this.message("MULTIPLIER SEQUENCE // 5x → 10x → 500x → 25x // 540x");
   }
   async previewZeroWinFreeSpin() {
     this.freeSpinAccounting = createFreeSpinAccounting(40_000);

@@ -3,7 +3,12 @@ import type { NormalSymbolId, SymbolId } from "../config/GameConfig";
 export type Board = BoardCell[][];
 export type Cell = { row: number; col: number };
 export type RandomSource = { nextFloat: () => number };
-export type MultiplierCore = { kind: "MULTIPLIER_CORE"; value: number };
+export type MultiplierCore = {
+  kind: "MULTIPLIER_CORE";
+  value: number;
+  id?: string;
+  arrivalSequence?: number;
+};
 export type StackSize = 1 | 2;
 export type NormalSymbolCell = {
   kind: "NORMAL_SYMBOL";
@@ -13,7 +18,15 @@ export type NormalSymbolCell = {
   stackSize: StackSize;
 };
 export type BoardCell = SymbolId | NormalSymbolCell | MultiplierCore;
-export type CoreCell = Cell & { value: number };
+export type CoreCell = Cell & {
+  value: number;
+  id?: string;
+  arrivalSequence?: number;
+};
+
+export type MultiplierCoreState = CoreCell & {
+  collected: boolean;
+};
 
 export const isMultiplierCore = (cell: BoardCell): cell is MultiplierCore =>
   typeof cell !== "string" && cell.kind === "MULTIPLIER_CORE";
@@ -42,7 +55,7 @@ export type TumbleResult = {
   multiplierCoreCells: CoreCell[];
   coreTotalMultiplier: number;
   finalPayoutMultiplier: number;
-  settlementCores: MultiplierCore[];
+  settlementCores: MultiplierCoreState[];
   settlement: "deferred" | "sequence";
   removedCells: Cell[];
   boardAfterGravity: Board;

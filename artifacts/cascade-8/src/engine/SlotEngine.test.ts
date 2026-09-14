@@ -10,6 +10,7 @@ import {
   settleFreeSpinAccounting,
 } from "./SlotEngine";
 import { countScatter } from "./BoardGenerator";
+import type { CoreCell } from "./types";
 
 const settledBaseBoard = (result: ReturnType<typeof playSpin>) =>
   result.tumbles.at(-1)?.boardAfterRefill ?? result.initialBoard;
@@ -53,6 +54,24 @@ describe("spin accounting", () => {
   it("adds multiple Cores and does not double-credit the raw pool", () => {
     expect(calculateSequenceSettlement(7, [2, 10, 25]).finalWinMultiplier).toBe(259);
     expect(calculateSequenceSettlement(8, [10, 25]).finalWinMultiplier).toBe(280);
+  });
+  it("keeps duplicate-valued settlement Cores independently identifiable and ordered", () => {
+    const cores: CoreCell[] = [
+      { row: 3, col: 2, value: 5, id: "core-b", arrivalSequence: 2 },
+      { row: 1, col: 4, value: 5, id: "core-a", arrivalSequence: 1 },
+      { row: 4, col: 0, value: 500, id: "core-c", arrivalSequence: 3 },
+    ];
+    const ordered = [...cores].sort((a, b) => (a.arrivalSequence ?? 0) - (b.arrivalSequence ?? 0));
+
+    expect(ordered.map((core) => `${core.id}:${core.value}`)).toEqual([
+      "core-a:5",
+      "core-b:5",
+      "core-c:500",
+    ]);
+    expect(calculateSequenceSettlement(50, ordered.map((core) => core.value))).toEqual({
+      combinedCoreMultiplier: 510,
+      finalWinMultiplier: 25_500,
+    });
   });
   it("keeps the cumulative bonus total unchanged until a Free Spin resolves", () => {
     let accounting = beginFreeSpinAccounting(createFreeSpinAccounting(40_000));

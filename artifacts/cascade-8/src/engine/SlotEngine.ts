@@ -8,6 +8,7 @@ import {
   type CoreCell,
   type FreeSpinAccounting,
   type FreeSpinResult,
+  type MultiplierCoreState,
   type RandomSource,
   type SpinResult,
   type TumbleResult,
@@ -32,6 +33,8 @@ type TumbleSequence = {
   retriggered: number;
   retriggerBoard: Board | null;
 };
+
+type CoreRegistryEntry = MultiplierCoreState;
 
 export function calculateSequenceSettlement(rawWinMultiplier: number, coreValues: readonly number[]) {
   const combinedCoreMultiplier = coreValues.length
@@ -90,6 +93,58 @@ export function settleFreeSpinAccounting(accounting: FreeSpinAccounting): FreeSp
   };
 }
 
+function registerMultiplierCores(
+  board: Board,
+  registry: Map<string, CoreRegistryEntry>,
+  nextIdentity: { value: number },
+  nextArrival: { value: number },
+) {
+  const cells: CoreCell[] = [];
+  // Column-major order matches the physical stream landing order: columns
+  // are refilled independently from left to right, top to bottom.
+  for (let col = 0; col < (board[0]?.length ?? 0); col += 1) {
+    for (let row = 0; row < board.length; row += 1) {
+      const cell = board[row][col];
+      if (!isMultiplierCore(cell)) continue;
+      let core = cell;
+      if (!core.id) {
+        core = {
+          ...core,
+          id: `core-${nextIdentity.value}`,
+          arrivalSequence: nextArrival.value,
+        };
+        nextIdentity.value += 1;
+        nextArrival.value += 1;
+        board[row][col] = core;
+      }
+      const id = core.id!;
+      const existing = registry.get(id);
+      if (existing) {
+        existing.row = row;
+        existing.col = col;
+      } else {
+        registry.set(id, {
+          row,
+          col,
+          value: core.value,
+          id,
+          arrivalSequence: core.arrivalSequence ?? nextArrival.value++,
+          collected: false,
+        });
+      }
+      const registered = registry.get(id)!;
+      cells.push({
+        row,
+        col,
+        value: core.value,
+        id,
+        arrivalSequence: registered.arrivalSequence,
+      });
+    }
+  }
+  return cells.sort((a, b) => (a.arrivalSequence ?? 0) - (b.arrivalSequence ?? 0));
+}
+
 function playTumbles(initialBoard: Board, context: PlayContext): TumbleSequence {
   const tumbles: TumbleResult[] = [];
   let board = cloneBoard(initialBoard);
@@ -100,15 +155,22 @@ function playTumbles(initialBoard: Board, context: PlayContext): TumbleSequence 
   let retriggered = 0;
   let retriggerBoard: Board | null = null;
   let retriggerAwarded = false;
+  const coreRegistry = new Map<string, CoreRegistryEntry>();
+  const nextCoreIdentity = { value: 1 };
+  const nextCoreArrival = { value: 1 };
 
   while (true) {
+    const activeCoreCells = registerMultiplierCores(board, coreRegistry, nextCoreIdentity, nextCoreArrival);
     const evaluation = evaluateBoard(board);
     if (!evaluation.winningCells.length) break;
 
-    const multiplierCoreCells = board.flatMap((row, rowIndex) =>
-      row.flatMap((cell, col) => isMultiplierCore(cell) ? [{ row: rowIndex, col, value: cell.value }] : []),
-    );
-    const multiplierCores = multiplierCoreCells.map(({ value }) => ({ kind: "MULTIPLIER_CORE" as const, value }));
+    const multiplierCoreCells = activeCoreCells;
+    const multiplierCores = multiplierCoreCells.map(({ value, id, arrivalSequence }) => ({
+      kind: "MULTIPLIER_CORE" as const,
+      value,
+      id,
+      arrivalSequence,
+    }));
     const coreTotalMultiplier = multiplierCores.length
       ? multiplierCores.reduce((sum, core) => sum + core.value, 0)
       : 1;
@@ -155,9 +217,7 @@ function playTumbles(initialBoard: Board, context: PlayContext): TumbleSequence 
     }
   }
 
-  const finalCoreCells = board.flatMap((row, rowIndex) =>
-    row.flatMap((cell, col) => isMultiplierCore(cell) ? [{ row: rowIndex, col, value: cell.value }] : []),
-  );
+  const finalCoreCells = registerMultiplierCores(board, coreRegistry, nextCoreIdentity, nextCoreArrival);
   return {
     tumbles,
     finalBoard: cloneBoard(board),
@@ -182,7 +242,14 @@ function settleSequence(sequence: TumbleSequence, consumeMultiplier: (value: num
     tumble.finalPayoutMultiplier = isSettlementTumble ? finalWinMultiplier : 0;
     tumble.coreTotalMultiplier = isSettlementTumble ? settlement.combinedCoreMultiplier : tumble.coreTotalMultiplier;
     tumble.settlementCores = isSettlementTumble
-      ? sequence.multiplierCores.map(({ value }) => ({ kind: "MULTIPLIER_CORE" as const, value }))
+      ? sequence.multiplierCores.map(({ row, col, value, id, arrivalSequence }) => ({
+        row,
+        col,
+        value,
+        id,
+        arrivalSequence,
+        collected: false,
+      }))
       : [];
     tumble.settlement = isSettlementTumble ? "sequence" : "deferred";
   });

@@ -559,6 +559,8 @@ button:focus-visible, input:focus-visible { outline: 2px solid var(--cyan); outl
 .app-shell.is-lab .board-wrap > #phaser-board { display: none; }
 .app-shell.is-lab.is-label-preview .board-wrap > .board-caption { display: flex; }
 .app-shell.is-lab.is-label-preview .board-wrap > #phaser-board { display: block; }
+.app-shell.is-lab.is-multiplier-preview .board-wrap > .board-caption { display: flex; }
+.app-shell.is-lab.is-multiplier-preview .board-wrap > #phaser-board { display: block; }
 .app-shell.is-lab .free-spin-calculation { display: block; margin-top: 18px; }
 .app-shell.is-lab .tumble-win-panel.is-free-total { display: grid; margin-top: 10px; }
 @keyframes fade-in { from { opacity: 0; } to { opacity: 1; } }
