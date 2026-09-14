@@ -16,6 +16,7 @@ import { renderBonusCeremony } from "./bonusCeremony";
 import { GameScene } from "./GameScene";
 import { mountResponsiveWinAmount } from "./ResponsiveWinAmount";
 import { buildWinLabelEvents, type WinLabelEvent } from "./WinLabel";
+import { isLargeWin, isMaxWin, winTier } from "./WinTiers";
 
 type ControllerState = "BOOT" | "IDLE" | "SPIN_INIT" | "INITIAL_DROP" | "EVALUATING" | "WIN_HIGHLIGHT" | "WIN_EXPLOSION" | "GRAVITY" | "REFILL" | "CASCADE_DROP" | "BONUS_TRIGGER_CEREMONY" | "BONUS_AWARD_PRESENTATION" | "BONUS_WAITING_FOR_START" | "BONUS_INTRO" | "FREE_SPIN_PLAY" | "CORE_REVEAL" | "BIG_WIN" | "MAX_WIN" | "BONUS_SUMMARY" | "SPIN_COMPLETE";
 
@@ -207,6 +208,10 @@ export class GameController {
     await this.playTumbles(result, false);
     this.currentWinCents = result.baseWinCents;
     this.updateHud();
+    const baseMultiplier = result.baseWinCents / this.betCents;
+    if (isLargeWin(baseMultiplier)) {
+      await this.presentLargeWin(baseMultiplier, result.baseWinCents);
+    }
      if (result.bonusTriggered && !result.maxWinReached) {
       this.pendingBonusResult = result;
       this.pendingBonusSource = source;
@@ -280,18 +285,8 @@ export class GameController {
         await sleep(this.duration(260));
       } else {
         await this.presentCurrentFreeSpinResolution(freeSpin);
-        if (freeSpin.finalWinMultiplier >= 10) {
-          this.setState(freeSpin.finalWinMultiplier >= MAX_WIN_MULTIPLIER ? "MAX_WIN" : "BIG_WIN");
-          this.message(`${freeSpin.finalWinMultiplier >= MAX_WIN_MULTIPLIER ? "MAX WIN" : winTier(freeSpin.finalWinMultiplier)} // ${freeSpin.finalWinMultiplier.toFixed(2)}x`);
-          this.scene.sparkle();
-          this.audio.bigWin();
-          this.audio.duckMusic(true);
-          await this.showBigWin(
-            freeSpin.finalWinMultiplier,
-            freeSpin.win,
-            freeSpin.finalWinMultiplier >= MAX_WIN_MULTIPLIER ? "MAX WIN" : undefined,
-          );
-          this.audio.duckMusic(false);
+        if (isLargeWin(freeSpin.finalWinMultiplier)) {
+          await this.presentLargeWin(freeSpin.finalWinMultiplier, freeSpin.win);
         }
         await sleep(this.duration(220));
         this.audio.freeSpinTransfer();
@@ -869,14 +864,23 @@ export class GameController {
     this.setState("BONUS_WAITING_FOR_START");
   }
   previewBaseLargeWin() {
-    this.ui.bigWinOverlay.className = "big-win-overlay";
-    this.ui.bigWinOverlay.innerHTML = "";
-    this.message("BASE GAME LARGE WIN // COLLECTED WITHOUT OVERLAY");
+    void this.presentLargeWin(25, Math.round(this.betCents * 25));
   }
   previewBonusLargeWin(amountCents = 25_000) {
+    void this.presentLargeWin(amountCents / this.betCents, amountCents);
+  }
+  private async presentLargeWin(multiplier: number, amountCents: number) {
+    const maxWin = isMaxWin(multiplier, MAX_WIN_MULTIPLIER);
+    this.setState(maxWin ? "MAX_WIN" : "BIG_WIN");
+    this.message(`${maxWin ? "MAX WIN" : winTier(multiplier)} // ${multiplier.toFixed(2)}x`);
     this.scene.sparkle();
     this.audio.bigWin();
-    void this.showBigWin(amountCents / this.betCents, amountCents);
+    this.audio.duckMusic(true);
+    try {
+      await this.showBigWin(multiplier, amountCents, maxWin ? "MAX WIN" : undefined);
+    } finally {
+      this.audio.duckMusic(false);
+    }
   }
   private async presentCurrentFreeSpinResolution(freeSpin: SpinResult["freeSpins"][number]) {
     this.freeSpinAccounting = resolveFreeSpinAccounting(
@@ -983,12 +987,4 @@ export class GameController {
 
 export function formatCredits(cents: number) {
   return (cents / 100).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-}
-
-function winTier(multiplier: number) {
-  if (multiplier >= 500) return "SUPER WIN";
-  if (multiplier >= 100) return "LEGENDARY WIN";
-  if (multiplier >= 50) return "EPIC WIN";
-  if (multiplier >= 25) return "MEGA WIN";
-  return "BIG WIN";
 }

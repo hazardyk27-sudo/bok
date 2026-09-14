@@ -144,8 +144,8 @@ function showModal(name: string | null) {
     modalRoot.innerHTML = `<div class="modal-backdrop"><section class="modal-card info-modal"><button class="modal-close" data-close>×</button><div class="modal-kicker">CASCADE 8 // FIELD GUIDE</div><h2>How to play</h2><p class="modal-lead">Match 8 or more of a club logo anywhere on the field. Winning logos burst, the field falls, and fresh logos tumble in.</p>
       <div class="info-grid"><div><span class="info-number">01</span><b>Drop</b><small>30 symbols land in a 6 × 5 field.</small></div><div><span class="info-number">02</span><b>Match</b><small>Every matching symbol counts, even when separated.</small></div><div><span class="info-number">03</span><b>Tumble</b><small>Wins vanish together and the cascade repeats.</small></div><div><span class="info-number">04</span><b>Bonus</b><small>4 Astral Gates trigger 10 Free Spins.</small></div></div>
        <div class="paytable"><div class="paytable-head"><span>CLUB LOGO</span><span>8</span><span>9</span><span>10</span><span>11</span><span>12+</span></div>${NORMAL_SYMBOLS.map((symbol) => { const paytable = PAYTABLE[symbol.id as keyof typeof PAYTABLE]; return `<div class="paytable-row"><span class="paytable-club" style="color:${symbol.colorHex}"><img src="${import.meta.env.BASE_URL}${symbol.logoPath}" alt="">${symbol.name}</span>${paytable.map((tier) => `<span>${tier.multiplier}x</span>`).join("")}</div>`; }).join("")}</div>
-        <div class="info-callout"><b>MULTIPLIER CORES</b><span>Rare Base refill cells and Free Spin refill cells can spawn physical 2x–500x Cores. Cores stay locked across the whole tumble sequence, add together at settlement, and apply once to the raw sequence pool.</span></div>
-        <div class="modal-footnote">Base Core chance is 0.006% per Base refill position after RTP calibration; Bonus Core chance is 1.10%. This is a virtual-credit demo and is not a regulated gaming product.</div>
+        <div class="info-callout"><b>MULTIPLIER CORES</b><span>Rare Base refill cells and Free Spin cells can spawn physical 2x–1000x Cores. Cores stay locked across the whole tumble sequence, add together at settlement, and apply once to the raw sequence pool.</span></div>
+        <div class="modal-footnote">Base Core chance is 2.2% per eligible Base refill position; Free Spin Core chance is 8% per eligible initial or refill position. This is a virtual-credit demo and is not a regulated gaming product.</div>
     </section></div>`;
   }
   modalRoot.querySelectorAll("[data-close]").forEach((button) => button.addEventListener("click", () => showModal(null)));
@@ -244,7 +244,7 @@ function renderLab(scene: GameScene) {
      }
      if (key === "base-big") {
        controller.previewBaseLargeWin();
-        byId("lab-result").textContent = "BASE GAME LARGE WIN // MAJOR-WIN OVERLAY SUPPRESSED";
+         byId("lab-result").textContent = "BASE GAME LARGE WIN // CEREMONY OVERLAY";
         return;
       }
       if (key === "bonus-big") {

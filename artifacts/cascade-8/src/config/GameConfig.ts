@@ -2,7 +2,7 @@ export const BOARD_COLUMNS = 6;
 export const BOARD_ROWS = 5;
 export const CELL_COUNT = BOARD_COLUMNS * BOARD_ROWS;
 export const STARTING_BALANCE_CENTS = 1_000_000;
-export const MAX_WIN_MULTIPLIER = 5000;
+export const MAX_WIN_MULTIPLIER = 10000;
 
 export const BETS_CENTS = [20, 50, 100, 200, 500, 1000, 2000, 5000, 10000, 20000, 50000] as const;
 
@@ -123,18 +123,18 @@ export const BONUS_REFILL_CORE_CHANCE = 0.08;
 
 export const BASE_MULTIPLIER_CORE_CHANCE = BASE_REFILL_CORE_CHANCE;
 export const BASE_MULTIPLIER_CORE_WEIGHTS = [
-  { value: 2, weight: 20 },
-  { value: 3, weight: 25 },
-  { value: 5, weight: 15 },
-  { value: 10, weight: 10 },
-  { value: 15, weight: 8 },
-  { value: 20, weight: 5 },
-  { value: 25, weight: 6 },
-  { value: 50, weight: 5 },
-  { value: 100, weight: 4 },
-  { value: 250, weight: 1 },
-  { value: 500, weight: 0.5 },
-  { value: 1000, weight: 0.5 },
+  { value: 2, weight: 52 },
+  { value: 3, weight: 26 },
+  { value: 5, weight: 12 },
+  { value: 10, weight: 5 },
+  { value: 15, weight: 2 },
+  { value: 20, weight: 1.2 },
+  { value: 25, weight: 0.8 },
+  { value: 50, weight: 0.5 },
+  { value: 100, weight: 0.3 },
+  { value: 250, weight: 0.12 },
+  { value: 500, weight: 0.05 },
+  { value: 1000, weight: 0.03 },
 ] as const;
 
 export const BONUS_CONFIG = {
@@ -142,18 +142,18 @@ export const BONUS_CONFIG = {
   retrigger: { 3: 5, 4: 5, 5: 5, 6: 5 },
   multiplierCoreSpawnChance: BONUS_REFILL_CORE_CHANCE,
   multiplierCoreWeights: [
-    { value: 2, weight: 20 },
+    { value: 2, weight: 40 },
     { value: 3, weight: 25 },
     { value: 5, weight: 15 },
-    { value: 10, weight: 10 },
-    { value: 15, weight: 8 },
-    { value: 20, weight: 5 },
-    { value: 25, weight: 6 },
-    { value: 50, weight: 5 },
-    { value: 100, weight: 4 },
-    { value: 250, weight: 1 },
-    { value: 500, weight: 0.5 },
-    { value: 1000, weight: 0.5 },
+    { value: 10, weight: 8 },
+    { value: 15, weight: 4 },
+    { value: 20, weight: 3 },
+    { value: 25, weight: 2 },
+    { value: 50, weight: 1.5 },
+    { value: 100, weight: 1 },
+    { value: 250, weight: 0.3 },
+    { value: 500, weight: 0.15 },
+    { value: 1000, weight: 0.05 },
   ],
 } as const;
 
