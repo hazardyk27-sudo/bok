@@ -14,7 +14,7 @@ export const ANIMATION = {
   winHighlight: 340,
   preBurst: 140,
   burst: 330,
-  winLabel: 760,
+  winLabel: 980,
   postBurstPause: 110,
   gravity: 380,
   refill: 560,

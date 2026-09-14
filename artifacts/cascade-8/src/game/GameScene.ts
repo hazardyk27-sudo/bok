@@ -580,17 +580,19 @@ export class GameScene extends Phaser.Scene {
   async presentWinLabels(events: readonly WinLabelEvent[], duration: number) {
     if (!events.length) return;
     const placements = calculateWinLabelPositions(events);
-    const totalDuration = Math.max(40, Math.min(780, duration));
+    const totalDuration = Math.max(40, Math.min(1120, duration));
     const isReducedMotion = totalDuration <= 40;
-    const popDuration = isReducedMotion ? 1 : Math.max(120, Math.min(150, Math.round(totalDuration * 0.17)));
-    const fadeDuration = isReducedMotion ? 1 : Math.max(250, Math.min(300, Math.round(totalDuration * 0.35)));
+    const popDuration = isReducedMotion ? 1 : Math.max(130, Math.min(150, Math.round(totalDuration * 0.14)));
+    const fadeDuration = isReducedMotion ? 1 : Math.max(270, Math.min(300, Math.round(totalDuration * 0.27)));
     const holdDuration = Math.max(1, totalDuration - popDuration - fadeDuration);
+    const canvasScale = this.game.canvas.getBoundingClientRect().width / Math.max(1, this.scale.width);
+    const fontSize = Math.round(30 / Math.max(0.82, canvasScale || 1));
 
     await Promise.all(placements.map((placement, index) => new Promise<void>((resolve) => {
       const glowText = this.add.text(0, 0, placement.text, {
         color: "#e4b95e",
         fontFamily: "Manrope, sans-serif",
-        fontSize: "19px",
+        fontSize: `${fontSize}px`,
         fontStyle: "bold",
         shadow: { blur: 5, color: "#d8a942", fill: true, offsetX: 0, offsetY: 0 },
       }).setOrigin(0.5).setAlpha(0.2).setScale(1.04)
@@ -598,10 +600,10 @@ export class GameScene extends Phaser.Scene {
       const text = this.add.text(0, 0, placement.text, {
         color: "#fff6dc",
         fontFamily: "Manrope, sans-serif",
-        fontSize: "19px",
+        fontSize: `${fontSize}px`,
         fontStyle: "bold",
         stroke: "#120f1b",
-        strokeThickness: 2,
+        strokeThickness: 3,
         shadow: { blur: 3, color: "#080913", fill: true, offsetX: 0, offsetY: 2 },
       }).setOrigin(0.5);
       const container = this.trackEffect(
