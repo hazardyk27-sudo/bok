@@ -1,7 +1,8 @@
 import { MAX_WIN_MULTIPLIER } from "../config/GameConfig";
 import { generateInitialBoardWithStreams, countScatter, type ColumnStreams } from "./BoardGenerator";
 import { baseFreeSpins, retriggerFreeSpins } from "./BonusEngine";
-import { removeAndRefill, evaluateBoard } from "./WinEvaluator";
+import { removeAndRefill, evaluateBoard, type RefillDiagnostics } from "./WinEvaluator";
+import { SeededRNG } from "./RNG";
 import {
   isMultiplierCore,
   type Board,
@@ -20,6 +21,7 @@ type PlayContext = {
   source: RandomSource;
   mode: "base" | "free";
   streams: ColumnStreams;
+  refillDiagnostics?: RefillDiagnostics;
 };
 
 type TumbleSequence = {
@@ -184,6 +186,7 @@ function playTumbles(initialBoard: Board, context: PlayContext): TumbleSequence 
       true,
       context.mode === "free" ? "bonus" : "base",
       context.streams,
+      context.refillDiagnostics,
     );
     tumbles.push({
       boardBefore: cloneBoard(board),
@@ -271,11 +274,15 @@ function createConsumer(initialUsed = 0) {
   };
 }
 
-export function playBaseSpin(betCents: number, source: RandomSource): SpinResult {
+export function playBaseSpin(
+  betCents: number,
+  source: RandomSource,
+  refillDiagnostics?: RefillDiagnostics,
+): SpinResult {
   const consumer = createConsumer();
   const { board: initialBoard, streams } = generateInitialBoardWithStreams(source, "base");
   const scatterCount = countScatter(initialBoard);
-  const sequence = playTumbles(initialBoard, { source, mode: "base", streams });
+  const sequence = playTumbles(initialBoard, { source, mode: "base", streams, refillDiagnostics });
   const settlement = settleSequence(sequence, consumer.consume);
   const bonusTriggerScatterCount = sequence.bonusPending
     ? Math.max(scatterCount, sequence.bonusScatterCount)
@@ -309,10 +316,11 @@ export function playFreeSpin(
   betCents: number,
   source: RandomSource,
   maxRemainingMultiplier = MAX_WIN_MULTIPLIER,
+  refillDiagnostics?: RefillDiagnostics,
 ): FreeSpinResult {
   const { board: freeInitialBoard, streams } = generateInitialBoardWithStreams(source, "bonus");
   const freeScatterCount = countScatter(freeInitialBoard);
-  const sequence = playTumbles(freeInitialBoard, { source, mode: "free", streams });
+  const sequence = playTumbles(freeInitialBoard, { source, mode: "free", streams, refillDiagnostics });
   const consumer = createConsumer(MAX_WIN_MULTIPLIER - maxRemainingMultiplier);
   const settlement = settleSequence(sequence, consumer.consume);
   return {
@@ -329,6 +337,39 @@ export function playFreeSpin(
     multiplierCores: sequence.multiplierCores,
     settlementApplied: true,
     win: Math.round(settlement.finalWinMultiplier * betCents),
+  };
+}
+
+export type VisiblePairCopyMetric = {
+  sampledCases: number;
+  copiedCases: number;
+  probability: number;
+  spinsSampled: number;
+};
+
+export function measureProductionVisiblePairCopyRate(
+  targetCases = 10_000,
+  seed = "production-visible-pair",
+): VisiblePairCopyMetric {
+  let sampledCases = 0;
+  let copiedCases = 0;
+  let spinsSampled = 0;
+  while (sampledCases < targetCases && spinsSampled < targetCases * 200) {
+    const diagnostics: RefillDiagnostics = {
+      onVisibleUnpairedRefill: (event) => {
+        if (sampledCases >= targetCases) return;
+        sampledCases += 1;
+        if (event.copiedFromVisibleTop) copiedCases += 1;
+      },
+    };
+    playBaseSpin(100, new SeededRNG(`${seed}:${spinsSampled}`), diagnostics);
+    spinsSampled += 1;
+  }
+  return {
+    sampledCases,
+    copiedCases,
+    probability: sampledCases ? copiedCases / sampledCases : 0,
+    spinsSampled,
   };
 }
 

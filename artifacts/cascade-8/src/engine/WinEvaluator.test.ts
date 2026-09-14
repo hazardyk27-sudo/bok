@@ -51,4 +51,37 @@ describe("win evaluation and cascades", () => {
     expect(result.boardAfterGravity[3][0]).toBe("S3");
     expect(result.boardAfterGravity[4][0]).toBe("S4");
   });
+
+  it("copies the current visible unpaired top symbol in the production refill path", () => {
+    const board: Board = [
+      ["S1", "S2", "S3", "S4", "S5", "S6"],
+      ["S2", "S3", "S4", "S5", "S6", "S7"],
+      ["S3", "S4", "S5", "S6", "S7", "S8"],
+      ["S4", "S5", "S6", "S7", "S8", "S1"],
+      ["S5", "S6", "S7", "S8", "S1", "S2"],
+    ];
+    const observations: Array<{ topSymbol: string; belowSymbol: string | null; incomingSymbol: string }> = [];
+    const result = removeAndRefill(
+      board,
+      [{ row: 0, col: 0 }],
+      { nextFloat: (() => {
+        const values = [0.99, 0.0, 0.1];
+        return () => values.shift() ?? 0.1;
+      })() },
+      false,
+      "base",
+      undefined,
+      { onVisibleUnpairedRefill: (event) => observations.push(event) },
+    );
+
+    expect(observations).toHaveLength(1);
+    expect(observations[0]).toMatchObject({
+      topSymbol: "S2",
+      belowSymbol: "S3",
+      incomingSymbol: "S2",
+      copiedFromVisibleTop: true,
+    });
+    expect(result.boardAfterGravity[0][0]).toMatchObject({ kind: "NORMAL_SYMBOL", symbol: "S2" });
+    expect(result.boardAfterGravity[1][0]).toBe("S2");
+  });
 });

@@ -1,5 +1,11 @@
-import { BOARD_COLUMNS, BOARD_ROWS, NORMAL_SYMBOLS, type NormalSymbolId, getPaytableMultiplier } from "../config/GameConfig";
-import { generateRefillCells, type ColumnStreams } from "./BoardGenerator";
+import {
+  BOARD_COLUMNS,
+  BOARD_ROWS,
+  NORMAL_SYMBOLS,
+  type NormalSymbolId,
+  getPaytableMultiplier,
+} from "../config/GameConfig";
+import { generateRefillCells, generateVisibleAwareRefillCell, type ColumnStreams } from "./BoardGenerator";
 import { getNormalSymbol, isMultiplierCore, type Board, type BoardCell, type Cell, type RandomSource } from "./types";
 
 export type WinEvaluation = {
@@ -7,6 +13,19 @@ export type WinEvaluation = {
   winningCells: Cell[];
   payouts: Record<NormalSymbolId, number>;
   rawPayoutMultiplier: number;
+};
+
+export type VisibleUnpairedRefillEvent = {
+  column: number;
+  topSymbol: NormalSymbolId;
+  belowSymbol: NormalSymbolId | null;
+  copyRoll: number;
+  incomingSymbol: NormalSymbolId;
+  copiedFromVisibleTop: boolean;
+};
+
+export type RefillDiagnostics = {
+  onVisibleUnpairedRefill?: (event: VisibleUnpairedRefillEvent) => void;
 };
 
 export function evaluateBoard(board: Board): WinEvaluation {
@@ -44,6 +63,7 @@ export function removeAndRefill(
   allowCores = false,
   mode: "base" | "bonus" = allowCores ? "bonus" : "base",
   streams?: ColumnStreams,
+  diagnostics?: RefillDiagnostics,
 ) {
   const winning = new Set(winningCells.map((cell) => `${cell.row}:${cell.col}`));
   const next: Board = Array.from({ length: BOARD_ROWS }, () => Array.from({ length: BOARD_COLUMNS }, () => "SCATTER" as BoardCell));
@@ -56,9 +76,41 @@ export function removeAndRefill(
       // sequence and are never discharged by a normal symbol win.
       if (isMultiplierCore(cell) || !winning.has(`${row}:${col}`)) survivors.push(cell);
     }
-    const generated = streams
-      ? streams[col].next(BOARD_ROWS - survivors.length, allowCores && mode === "bonus" ? "BONUS_REFILL" : "BASE_REFILL")
-      : generateRefillCells(source, BOARD_ROWS - survivors.length, allowCores, mode, col);
+    const generated: BoardCell[] = [];
+    const refillContext = allowCores && mode === "bonus" ? "BONUS_REFILL" : "BASE_REFILL";
+    while (generated.length < BOARD_ROWS - survivors.length) {
+      const visibleColumn = [...generated, ...survivors];
+      const topSymbol = visibleColumn[0] ? getNormalSymbol(visibleColumn[0]) : null;
+      const belowSymbol = visibleColumn[1] ? getNormalSymbol(visibleColumn[1]) : null;
+      const isVisuallyUnpaired = Boolean(topSymbol && belowSymbol !== topSymbol);
+      const emission = streams
+        ? streams[col].nextVisibleAware(
+          refillContext,
+          allowCores && mode === "bonus",
+          isVisuallyUnpaired && topSymbol ? topSymbol : null,
+        )
+        : generateVisibleAwareRefillCell(
+          source,
+          allowCores,
+          mode,
+          col,
+          isVisuallyUnpaired && topSymbol ? topSymbol : null,
+        );
+      const incoming = emission.cell;
+      const incomingSymbol = getNormalSymbol(incoming);
+
+      if (isVisuallyUnpaired && topSymbol && incomingSymbol && emission.copyRoll !== undefined) {
+        diagnostics?.onVisibleUnpairedRefill?.({
+          column: col,
+          topSymbol,
+          belowSymbol,
+          copyRoll: emission.copyRoll,
+          incomingSymbol,
+          copiedFromVisibleTop: emission.copiedFromVisibleTop === true,
+        });
+      }
+      generated.push(incoming);
+    }
     const column = [...generated, ...survivors];
     for (let row = 0; row < BOARD_ROWS; row += 1) next[row][col] = column[row];
     newSymbols.push(...generated);

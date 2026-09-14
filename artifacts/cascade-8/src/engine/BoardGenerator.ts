@@ -29,6 +29,12 @@ export type ColumnStreamStats = {
   emittedSpecial: number;
 };
 
+export type VisibleAwareEmission = {
+  cell: BoardCell;
+  copyRoll?: number;
+  copiedFromVisibleTop?: boolean;
+};
+
 const normalSymbolOf = (cell: BoardCell): NormalSymbolId | null =>
   typeof cell === "string" && cell !== "SCATTER"
     ? cell as NormalSymbolId
@@ -48,6 +54,19 @@ export const createNormalSymbolCell = (
   stackIndex,
   stackSize,
 });
+
+const weightedChoiceFromRoll = <T>(
+  roll: number,
+  choices: readonly { value: T; weight: number }[],
+): T => {
+  const total = choices.reduce((sum, choice) => sum + choice.weight, 0);
+  let pick = roll * total;
+  for (const choice of choices) {
+    pick -= choice.weight;
+    if (pick < 0) return choice.value;
+  }
+  return choices[choices.length - 1].value;
+};
 
 export class ColumnStream {
   private readonly queue: BoardCell[] = [];
@@ -75,7 +94,27 @@ export class ColumnStream {
     return this.queue.splice(0, count);
   }
 
-  private appendPosition(context: GenerationContext, allowCores: boolean) {
+  nextVisibleAware(
+    context: GenerationContext,
+    allowCores: boolean,
+    visibleTopSymbol: NormalSymbolId | null,
+  ): VisibleAwareEmission {
+    const emission = this.queue.length === 0
+      ? this.appendPosition(context, allowCores, visibleTopSymbol)
+      : undefined;
+    const cell = this.queue.splice(0, 1)[0];
+    return {
+      cell: cell ?? "SCATTER",
+      copyRoll: emission?.copyRoll,
+      copiedFromVisibleTop: emission?.copiedFromVisibleTop,
+    };
+  }
+
+  private appendPosition(
+    context: GenerationContext,
+    allowCores: boolean,
+    visibleTopSymbol: NormalSymbolId | null = null,
+  ): VisibleAwareEmission {
     const scatterChance = context === "BASE_INITIAL"
       ? BASE_INITIAL_SCATTER_CHANCE
       : context === "BASE_REFILL"
@@ -104,12 +143,13 @@ export class ColumnStream {
       if (specialRoll < scatterChance) {
         this.queue.push("SCATTER");
         this.stats.emittedSpecial += 1;
-        return;
+        return { cell: "SCATTER" };
       }
       if (coreMode && specialRoll < scatterChance + coreChance) {
-        this.queue.push(drawMultiplierCoreValue(this.source, coreMode));
+        const cell = drawMultiplierCoreValue(this.source, coreMode);
+        this.queue.push(cell);
         this.stats.emittedSpecial += 1;
-        return;
+        return { cell };
       }
     }
 
@@ -120,16 +160,42 @@ export class ColumnStream {
       : this.activePairId!;
     let symbol: NormalSymbolId;
     let stackIndex: 0 | 1;
+    let copyRoll: number | undefined;
+    let copiedFromVisibleTop: boolean | undefined;
 
     if (isFirst) {
-      symbol = weightedChoice(this.source, this.config.symbolWeights);
+      const symbolRoll = this.source.nextFloat();
+      if (visibleTopSymbol) {
+        copyRoll = symbolRoll;
+        copiedFromVisibleTop = symbolRoll < NORMAL_PAIR_COPY_CHANCE;
+        symbol = copiedFromVisibleTop
+          ? visibleTopSymbol
+          : weightedChoiceFromRoll(
+            (symbolRoll - NORMAL_PAIR_COPY_CHANCE) / (1 - NORMAL_PAIR_COPY_CHANCE),
+            this.config.symbolWeights,
+          );
+      } else {
+        symbol = weightedChoiceFromRoll(symbolRoll, this.config.symbolWeights);
+      }
       this.pairBaseSymbol = symbol;
       this.activePairId = stackId;
       this.pairPhase = "SECOND";
       stackIndex = 0;
     } else {
-      const copied = this.source.nextFloat() < NORMAL_PAIR_COPY_CHANCE;
-      symbol = copied ? baseSymbol! : weightedChoice(this.source, this.config.symbolWeights);
+      const pairRoll = this.source.nextFloat();
+      const copied = pairRoll < NORMAL_PAIR_COPY_CHANCE;
+      if (visibleTopSymbol) {
+        copyRoll = pairRoll;
+        copiedFromVisibleTop = copied;
+        symbol = copied
+          ? visibleTopSymbol
+          : weightedChoiceFromRoll(
+            (pairRoll - NORMAL_PAIR_COPY_CHANCE) / (1 - NORMAL_PAIR_COPY_CHANCE),
+            this.config.symbolWeights,
+          );
+      } else {
+        symbol = copied ? baseSymbol! : weightedChoice(this.source, this.config.symbolWeights);
+      }
       this.stats.pairCount += 1;
       if (copied) this.stats.copyBranchCount += 1;
       else this.stats.freshSecondCount += 1;
@@ -142,6 +208,11 @@ export class ColumnStream {
 
     this.queue.push(createNormalSymbolCell(symbol, stackId, stackIndex, 2));
     this.stats.emittedNormal += 1;
+    return {
+      cell: this.queue.at(-1)!,
+      copyRoll,
+      copiedFromVisibleTop,
+    };
   }
 }
 
@@ -181,6 +252,25 @@ export function generateRefillCells(
 ): BoardCell[] {
   const stream = new ColumnStream(source, mode === "bonus" ? BONUS_REEL_CONFIG : BASE_REEL_CONFIG, columnIndex);
   return stream.next(count, mode === "bonus" ? "BONUS_REFILL" : "BASE_REFILL", allowCores);
+}
+
+export function generateVisibleAwareRefillCell(
+  source: RandomSource,
+  allowCores = false,
+  mode: "base" | "bonus" = "base",
+  columnIndex = 0,
+  visibleTopSymbol: NormalSymbolId | null = null,
+): VisibleAwareEmission {
+  const stream = new ColumnStream(
+    source,
+    mode === "bonus" ? BONUS_REEL_CONFIG : BASE_REEL_CONFIG,
+    columnIndex,
+  );
+  return stream.nextVisibleAware(
+    mode === "bonus" ? "BONUS_REFILL" : "BASE_REFILL",
+    allowCores,
+    visibleTopSymbol,
+  );
 }
 
 export function countScatter(board: Board): number {
