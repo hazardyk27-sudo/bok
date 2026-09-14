@@ -359,7 +359,7 @@ export class GameController {
        this.setState("WIN_EXPLOSION");
       winEvents.forEach(() => this.audio.winLabel());
       await this.scene.burstCells(tumble.removedCells, this.duration(ANIMATION.burst));
-      await this.scene.presentWinLabels(winEvents, this.duration(ANIMATION.winLabel));
+      void this.scene.presentWinLabels(winEvents, this.duration(ANIMATION.winLabel));
       await this.showTumbleWin(tumble, index + 1, isBonus, winEvents);
       this.updateHud();
       this.setState("REFILL");
@@ -644,7 +644,7 @@ export class GameController {
       await this.scene.highlightCells(evaluation.winningCells, this.duration(ANIMATION.winHighlight));
       events.forEach(() => this.audio.winLabel());
       await this.scene.burstCells(evaluation.winningCells, this.duration(ANIMATION.burst));
-      await this.scene.presentWinLabels(events, this.duration(ANIMATION.winLabel));
+      void this.scene.presentWinLabels(events, this.duration(ANIMATION.winLabel));
       rawTotalCents += Math.round(evaluation.rawPayoutMultiplier * this.betCents);
       this.ui.tumblePanel.className = "tumble-win-panel is-active";
       this.ui.tumbleSymbolWin.textContent = events.map((event) => event.text).join("  ·  ");

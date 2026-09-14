@@ -580,7 +580,7 @@ export class GameScene extends Phaser.Scene {
   async presentWinLabels(events: readonly WinLabelEvent[], duration: number) {
     if (!events.length) return;
     const placements = calculateWinLabelPositions(events);
-    const totalDuration = Math.max(40, Math.min(3400, duration));
+    const totalDuration = Math.max(40, Math.min(2000, duration));
     const isReducedMotion = totalDuration <= 40;
     const popDuration = isReducedMotion ? 1 : Math.max(650, Math.min(700, Math.round(totalDuration * 0.21)));
     const fadeDuration = isReducedMotion ? 1 : Math.max(900, Math.min(1000, Math.round(totalDuration * 0.29)));
@@ -606,12 +606,10 @@ export class GameScene extends Phaser.Scene {
         strokeThickness: 4,
         shadow: { blur: 2, color: "#02040c", fill: true, offsetX: 0, offsetY: 2 },
       }).setOrigin(0.5);
-      const container = this.trackEffect(
-        this.add.container(placement.x, placement.y, [glowText, text])
-          .setDepth(14)
-          .setAlpha(0)
-          .setScale(0.94),
-      );
+      const container = this.add.container(placement.x, placement.y, [glowText, text])
+        .setDepth(14)
+        .setAlpha(0)
+        .setScale(0.94);
 
       this.tweens.add({
         targets: container,
