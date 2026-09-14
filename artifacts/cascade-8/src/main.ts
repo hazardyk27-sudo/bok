@@ -34,16 +34,16 @@ app.innerHTML = `
           <div class="hud-stat bonus-stat"><span>BONUS WIN</span><strong id="bonus-win">0.00</strong></div>
           <div class="free-counter"><span>FREE SPINS</span><strong id="free-spins">0</strong></div>
         </div>
-        <section id="free-spin-calculation" class="free-spin-calculation" hidden aria-live="polite">
-          <div class="free-spin-calc-kicker">CURRENT FREE SPIN <span id="free-spin-index">—</span></div>
+         <section id="free-spin-calculation" class="free-spin-calculation" hidden aria-label="Free Spin calculation" aria-live="polite">
+           <span class="free-spin-calc-kicker" aria-hidden="true">CURRENT FREE SPIN <span id="free-spin-index">—</span></span>
           <div class="free-spin-calc-equation">
-            <div class="free-spin-calc-value"><span>SYMBOL WIN</span><strong id="free-spin-symbol-win">0.00</strong></div>
+             <div class="free-spin-calc-value" aria-label="Raw explosion total"><span aria-hidden="true">SYMBOL WIN</span><strong id="free-spin-symbol-win">0.00</strong></div>
             <span id="free-spin-multiply-operator" class="free-spin-calc-operator">×</span>
-            <div class="free-spin-calc-value"><span>MULTIPLIER</span><strong id="free-spin-multiplier">1x</strong></div>
+             <div class="free-spin-calc-value" aria-label="Multiplier"><span aria-hidden="true">MULTIPLIER</span><strong id="free-spin-multiplier">1x</strong></div>
             <span id="free-spin-equals-operator" class="free-spin-calc-operator">=</span>
-            <div class="free-spin-calc-value is-result"><span>SPIN WIN</span><strong id="free-spin-spin-win">0.00</strong></div>
+             <div class="free-spin-calc-value is-result" aria-label="Spin win"><span aria-hidden="true">SPIN WIN</span><strong id="free-spin-spin-win">0.00</strong></div>
           </div>
-          <div id="free-spin-calc-status" class="free-spin-calc-status">WAITING FOR FREE SPIN</div>
+           <span id="free-spin-calc-status" class="free-spin-calc-status" aria-hidden="true">WAITING FOR FREE SPIN</span>
         </section>
         <div class="board-wrap">
           <div class="board-caption"><span>6 × 5 CASCADE FIELD</span></div>
@@ -60,6 +60,16 @@ app.innerHTML = `
               <button type="button" data-bonus-start>START FREE SPINS</button>
             </div>
           </div>
+          <div id="bonus-retrigger-overlay" class="bonus-retrigger-overlay" hidden aria-live="assertive">
+            <div class="bonus-retrigger-panel">
+              <span class="bonus-eyebrow">BONUS RE-TRIGGER</span>
+              <div id="retrigger-scatter-row" class="bonus-scatter-row" aria-label="Retrigger scatters"></div>
+              <span id="retrigger-count-label" class="bonus-trigger-label"></span>
+              <strong class="bonus-retrigger-title">+5 FREE SPINS</strong>
+              <small>TAP TO CONTINUE</small>
+              <button id="retrigger-continue" type="button">CONTINUE</button>
+            </div>
+          </div>
          </div>
           <div id="tumble-win-panel" class="tumble-win-panel" aria-live="polite">
            <span class="tumble-win-label">TUMBLE WIN</span>
@@ -72,23 +82,23 @@ app.innerHTML = `
          <div class="status-line" aria-live="polite"><span class="status-dot"></span><span id="status">THE GATES ARE QUIET</span></div>
       </section>
     </main>
-    <footer class="control-deck">
+     <footer class="control-deck" aria-label="Game controls">
       <div class="bet-control">
         <span class="eyebrow">BET</span>
         <div class="bet-stepper"><button id="bet-minus" aria-label="Decrease bet">−</button><strong data-bet-display>1.00</strong><button id="bet-plus" aria-label="Increase bet">+</button></div>
       </div>
       <div class="auto-control">
         <span class="eyebrow">AUTO</span>
-        <div class="auto-row"><select id="auto-count" aria-label="Automatic spin count"><option value="25">25 SPINS</option><option value="50">50 SPINS</option><option value="75">75 SPINS</option><option value="100">100 SPINS</option></select><button id="auto-start">START AUTO</button></div>
+         <div class="auto-row"><span class="auto-prefix">AUTO</span><select id="auto-count" aria-label="Automatic spin count"><option value="25">25</option><option value="50">50</option><option value="75">75</option><option value="100">100</option></select><button id="auto-start">START</button></div>
         <small id="auto-status">BET 1.00 / READY</small>
       </div>
-      <button id="spin" class="spin-button"><span class="spin-glow"></span><span class="spin-icon">✦</span><span class="spin-label">SPIN</span><small>ENTER THE CASCADE</small></button>
+       <button id="spin" class="spin-button" aria-label="Spin"><span class="spin-glow"></span><span class="spin-icon">✦</span><span class="spin-label">SPIN</span><small>PLAY</small></button>
       <div class="utility-controls">
-        <button id="turbo" class="utility-button"><span class="utility-icon">»</span><span>TURBO</span></button>
-        <button id="sound" class="utility-button"><span class="utility-icon">◒</span><span>SOUND ON</span></button>
+         <button id="turbo" class="utility-button" aria-label="Toggle turbo"><span class="utility-icon">»</span><span>TURBO</span></button>
+         <button id="sound" class="utility-button" aria-label="Toggle sound"><span class="utility-icon">◒</span><span>SOUND</span></button>
       </div>
     </footer>
-    <div class="demo-note"><span>✧</span> VIRTUAL CREDITS ONLY <span class="note-separator">•</span> NO REAL-MONEY GAMBLING <span class="note-separator">•</span> RNG DEMO PROTOTYPE</div>
+     <div class="demo-note" aria-hidden="true"><span>✧</span> VIRTUAL CREDITS ONLY <span class="note-separator">•</span> NO REAL-MONEY GAMBLING</div>
   </div>
    <div id="big-win-overlay" class="big-win-overlay" aria-live="assertive"></div>
    <div id="bonus-summary-overlay" class="bonus-summary-overlay" aria-live="assertive"></div>
@@ -144,7 +154,7 @@ window.setTimeout(() => {
     tumble: byId("tumble"), status: byId("status"), spin: byId("spin"), spinLabel: byId("spin").querySelector(".spin-label") as HTMLElement,
     betMinus: byId("bet-minus"), betPlus: byId("bet-plus"), autoCount: byId("auto-count"), autoStart: byId("auto-start"), autoStatus: byId("auto-status"),
      turbo: byId("turbo"), sound: byId("sound"),
-        bonusOverlay: byId("bonus-overlay"), bonusStart: byId("bonus-overlay").querySelector("[data-bonus-start]") as HTMLButtonElement, bonusSpinCount: byId("bonus-spin-count"), bonusScatterRow: byId("bonus-scatter-row"), bonusTriggerLabel: byId("bonus-trigger-label"), freeSpinCalculation: byId("free-spin-calculation"), freeSpinIndex: byId("free-spin-index"), freeSpinRawWin: byId("free-spin-symbol-win"), freeSpinMultiplier: byId("free-spin-multiplier"), freeSpinFinalWin: byId("free-spin-spin-win"), freeSpinCalcStatus: byId("free-spin-calc-status"), freeSpinMultiplyOperator: byId("free-spin-multiply-operator"), freeSpinEqualsOperator: byId("free-spin-equals-operator"), tumbleLabel: document.querySelector(".tumble-win-label") as HTMLElement, tumbleSymbolWin: byId("tumble-symbol-win"), tumbleIncrement: byId("tumble-increment"), tumbleMeta: byId("tumble-meta"), tumbleSettlement: byId("tumble-settlement"), tumblePanel: byId("tumble-win-panel"), bigWinOverlay: byId("big-win-overlay"), bonusSummaryOverlay: byId("bonus-summary-overlay"), boardWrap: byId("phaser-board").parentElement!,
+         bonusOverlay: byId("bonus-overlay"), bonusStart: byId("bonus-overlay").querySelector("[data-bonus-start]") as HTMLButtonElement, bonusSpinCount: byId("bonus-spin-count"), bonusScatterRow: byId("bonus-scatter-row"), bonusTriggerLabel: byId("bonus-trigger-label"), retriggerOverlay: byId("bonus-retrigger-overlay"), retriggerScatterRow: byId("retrigger-scatter-row"), retriggerCountLabel: byId("retrigger-count-label"), retriggerContinue: byId("retrigger-continue"), freeSpinCalculation: byId("free-spin-calculation"), freeSpinIndex: byId("free-spin-index"), freeSpinRawWin: byId("free-spin-symbol-win"), freeSpinMultiplier: byId("free-spin-multiplier"), freeSpinFinalWin: byId("free-spin-spin-win"), freeSpinCalcStatus: byId("free-spin-calc-status"), freeSpinMultiplyOperator: byId("free-spin-multiply-operator"), freeSpinEqualsOperator: byId("free-spin-equals-operator"), tumbleLabel: document.querySelector(".tumble-win-label") as HTMLElement, tumbleSymbolWin: byId("tumble-symbol-win"), tumbleIncrement: byId("tumble-increment"), tumbleMeta: byId("tumble-meta"), tumbleSettlement: byId("tumble-settlement"), tumblePanel: byId("tumble-win-panel"), bigWinOverlay: byId("big-win-overlay"), bonusSummaryOverlay: byId("bonus-summary-overlay"), boardWrap: byId("phaser-board").parentElement!,
     setModal: showModal,
   });
    if (isLab) renderLab(scene);

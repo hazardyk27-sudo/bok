@@ -28,6 +28,7 @@ type TumbleSequence = {
   rawWinMultiplier: number;
   bonusPending: boolean;
   bonusScatterCount: number;
+  retriggerScatterCount: number;
   retriggered: number;
 };
 
@@ -94,6 +95,7 @@ function playTumbles(initialBoard: Board, context: PlayContext): TumbleSequence 
   let rawWinPool = 0;
   let bonusPending = context.mode === "base" && countScatter(board) >= 4;
   let bonusScatterCount = context.mode === "base" ? countScatter(board) : 0;
+  let retriggerScatterCount = 0;
   let retriggered = 0;
   let retriggerAwarded = false;
 
@@ -144,6 +146,7 @@ function playTumbles(initialBoard: Board, context: PlayContext): TumbleSequence 
       bonusScatterCount = Math.max(bonusScatterCount, scatterCount);
     }
     if (context.mode === "free" && !retriggerAwarded && scatterCount >= 3) {
+      retriggerScatterCount = scatterCount;
       retriggered = retriggerFreeSpins(scatterCount);
       retriggerAwarded = retriggered > 0;
     }
@@ -159,6 +162,7 @@ function playTumbles(initialBoard: Board, context: PlayContext): TumbleSequence 
     rawWinMultiplier: rawWinPool,
     bonusPending,
     bonusScatterCount,
+    retriggerScatterCount,
     retriggered,
   };
 }
@@ -244,6 +248,7 @@ export function playFreeSpin(
     index,
     initialBoard: freeInitialBoard,
     scatterCount: freeScatterCount,
+    retriggerScatterCount: sequence.retriggerScatterCount || (freeScatterCount >= 3 ? freeScatterCount : 0),
     retriggered: sequence.retriggered || retriggerFreeSpins(freeScatterCount),
     tumbles: sequence.tumbles,
     rawWinMultiplier: sequence.rawWinMultiplier,

@@ -33,6 +33,7 @@ export type FreeSpinResult = {
   index: number;
   initialBoard: Board;
   scatterCount: number;
+  retriggerScatterCount: number;
   retriggered: number;
   tumbles: TumbleResult[];
   rawWinMultiplier: number;
