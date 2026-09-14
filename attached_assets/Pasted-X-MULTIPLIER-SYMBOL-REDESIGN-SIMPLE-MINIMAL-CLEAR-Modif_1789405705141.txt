@@ -1,0 +1,191 @@
+X MULTIPLIER SYMBOL REDESIGN — SIMPLE / MINIMAL / CLEAR
+
+Modify the EXISTING Cascade 8 project.
+
+Do NOT change multiplier math.
+Do NOT change multiplier probabilities.
+Do NOT change RNG.
+Do NOT change Free Spin logic.
+
+This task is ONLY about the VISUAL DESIGN of multiplier symbols.
+
+==================================================
+1. REMOVE CURRENT MULTIPLIER VISUALS
+==================================================
+
+Remove all football-player portrait multiplier symbols.
+
+Do NOT use:
+- footballer faces
+- portrait badges
+- character art
+- extra decorative UI inside the symbol
+- complex medallion artwork
+
+The multiplier symbol must become simple, clear, and minimal.
+
+==================================================
+2. NEW MULTIPLIER SYMBOL GOAL
+==================================================
+
+Each multiplier tile should show only:
+
+- a clear large X value
+- simple premium visual treatment
+- easy readability
+- minimal design
+
+Examples:
+2x
+3x
+5x
+10x
+25x
+50x
+100x
+250x
+500x
+
+The player must instantly understand what the multiplier is.
+
+==================================================
+3. DESIGN STYLE
+==================================================
+
+Style direction:
+
+- minimal
+- clean
+- premium
+- high contrast
+- easy to read
+- not cluttered
+- not cartoonish
+- not overloaded
+
+The multiplier symbol should feel like a premium slot tile,
+not like a character card.
+
+==================================================
+4. TILE CONTENT
+==================================================
+
+The tile should contain only:
+
+- the multiplier number
+- the “x”
+
+Example:
+“5x”
+“25x”
+“500x”
+
+No portrait.
+No face.
+No badge text.
+No extra icon unless it is extremely subtle and helpful.
+
+==================================================
+5. VISUAL APPEARANCE
+==================================================
+
+Use a simple premium look such as:
+
+- dark/navy or deep blue base
+- subtle gold / cyan / electric glow
+- bold central text
+- clear border
+- soft depth
+- clean circular or softly rounded symbol frame
+
+Keep it elegant and readable.
+
+==================================================
+6. TYPOGRAPHY
+==================================================
+
+The multiplier text must be:
+
+- large
+- centered
+- bold
+- immediately readable
+- high contrast
+
+Examples:
+2x should be obvious
+500x should still fit cleanly and remain readable
+
+Use a font treatment that works well for all values.
+
+==================================================
+7. DIFFERENTIATE LOW / MID / HIGH MULTIPLIERS
+==================================================
+
+Keep the same design family for all multipliers,
+but allow subtle intensity differences.
+
+Suggested:
+- low multipliers (2x, 3x, 5x): simpler / softer glow
+- mid multipliers (10x, 25x, 50x): slightly stronger glow
+- high multipliers (100x, 250x, 500x): more premium aura / stronger highlight
+
+But all must remain visually minimal.
+
+==================================================
+8. DO NOT OVERDESIGN
+==================================================
+
+Avoid:
+- too many layers
+- too much ornament
+- portrait medallions
+- ribbons
+- crowns
+- complex emblem art
+- cluttered backgrounds
+
+The symbol should be understandable in one glance.
+
+==================================================
+9. SIZE / READABILITY
+==================================================
+
+The multiplier symbol must be readable both:
+- on desktop
+- on mobile
+
+Especially on mobile,
+the X value must remain very easy to recognize.
+
+==================================================
+10. KEEP SYMBOLS CONSISTENT
+==================================================
+
+All multiplier tiles should belong to one single visual system.
+
+Example:
+2x and 500x should clearly look like part of the same symbol family.
+
+==================================================
+11. ACCEPTANCE
+==================================================
+
+Do not mark complete until:
+- footballer portraits are fully removed
+- multiplier tiles show only simple X values
+- the symbols are minimal and premium
+- each X value is instantly readable
+- 500x remains clean and readable
+- mobile readability is verified
+
+==================================================
+12. FINAL REPORT
+==================================================
+
+Report:
+- new multiplier tile design approach
+- how low/mid/high multipliers differ visually
+- mobile readability result
+- desktop readability result
+- screenshot verification
