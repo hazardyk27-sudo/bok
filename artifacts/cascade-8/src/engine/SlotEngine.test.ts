@@ -9,6 +9,15 @@ import {
   resolveFreeSpinAccounting,
   settleFreeSpinAccounting,
 } from "./SlotEngine";
+import { countScatter } from "./BoardGenerator";
+
+const settledBaseBoard = (result: ReturnType<typeof playSpin>) =>
+  result.tumbles.at(-1)?.boardAfterRefill ?? result.initialBoard;
+
+const scatterPositions = (board: ReturnType<typeof settledBaseBoard>) =>
+  board.flatMap((row, rowIndex) =>
+    row.flatMap((cell, col) => cell === "SCATTER" ? [`${rowIndex}:${col}`] : []),
+  );
 
 describe("spin accounting", () => {
   it("keeps outcomes bet-invariant", () => {
@@ -72,5 +81,37 @@ describe("spin accounting", () => {
     expect(multiplierOnly.currentSpinWinCents).toBe(0);
     expect(multiplierOnly.cumulativeBonusWinCents).toBe(0);
     expect(calculateSequenceSettlement(0, [10]).finalWinMultiplier).toBe(0);
+  });
+});
+
+describe("base bonus trigger accounting", () => {
+  it.each([
+    { seed: 33, scatterCount: 4, freeSpinsAwarded: 10 },
+    { seed: 923, scatterCount: 5, freeSpinsAwarded: 12 },
+    { seed: 2687, scatterCount: 6, freeSpinsAwarded: 15 },
+  ])("exposes the settled $scatterCount-Scatter trigger count", ({ seed, scatterCount, freeSpinsAwarded }) => {
+    const result = playSpin(100, new SeededRNG(seed));
+
+    expect(result.bonusTriggered).toBe(true);
+    expect(result.bonusTriggerScatterCount).toBe(scatterCount);
+    expect(result.freeSpinsAwarded).toBe(freeSpinsAwarded);
+  });
+
+  it("uses the final settled board after a tumble/refill trigger", () => {
+    const result = playSpin(100, new SeededRNG(2687));
+    const finalBoard = settledBaseBoard(result);
+
+    expect(result.scatterCount).toBe(3);
+    expect(result.tumbles).toHaveLength(3);
+    expect(countScatter(finalBoard)).toBe(6);
+    expect(result.bonusTriggerScatterCount).toBe(countScatter(finalBoard));
+    expect(scatterPositions(finalBoard)).toEqual([
+      "0:2",
+      "0:5",
+      "3:0",
+      "4:1",
+      "4:4",
+      "4:5",
+    ]);
   });
 });
