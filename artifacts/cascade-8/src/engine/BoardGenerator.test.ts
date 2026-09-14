@@ -36,7 +36,7 @@ describe("board generation", () => {
       scatterCount += countScatter(generateInitialBoard(source, "base"));
     }
     const marginal = scatterCount / (boards * 30);
-    expect(marginal).toBeGreaterThan(0.015);
-    expect(marginal).toBeLessThan(0.020);
+    expect(marginal).toBeGreaterThan(0.022);
+    expect(marginal).toBeLessThan(0.027);
   });
 });

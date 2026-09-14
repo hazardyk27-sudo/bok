@@ -13,9 +13,9 @@ describe("bonus rules", () => {
     expect(retriggerFreeSpins(5)).toBe(5);
     expect(retriggerFreeSpins(6)).toBe(5);
   });
-  it("spawns a physical Core at the designed 7% threshold", () => {
+  it("spawns a physical Core at the designed 8% threshold", () => {
     expect(drawMultiplierCore({ nextFloat: () => 0 })).toEqual({ kind: "MULTIPLIER_CORE", value: 2 });
-    expect(drawMultiplierCore({ nextFloat: () => 0.07 })).toBeNull();
+    expect(drawMultiplierCore({ nextFloat: () => 0.08 })).toBeNull();
   });
   it("supports the complete 2x–1000x Core range", () => {
     let index = 0;

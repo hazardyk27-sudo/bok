@@ -6,7 +6,7 @@ import { renderBonusCeremony } from "./bonusCeremony";
 
 const testCases = [
   { seed: 78, scatterCount: 4, freeSpinsAwarded: 10 },
-  { seed: 1156, scatterCount: 5, freeSpinsAwarded: 15 },
+  { seed: 258, scatterCount: 5, freeSpinsAwarded: 15 },
   { seed: 25794, scatterCount: 6, freeSpinsAwarded: 20 },
 ] as const;
 
