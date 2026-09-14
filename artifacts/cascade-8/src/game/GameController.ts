@@ -11,6 +11,7 @@ import {
 } from "../engine/SlotEngine";
 import type { Board, SpinResult } from "../engine/types";
 import { AudioManager } from "./AudioManager";
+import { renderBonusCeremony } from "./bonusCeremony";
 import { GameScene } from "./GameScene";
 
 type ControllerState = "BOOT" | "IDLE" | "SPIN_INIT" | "INITIAL_DROP" | "EVALUATING" | "WIN_HIGHLIGHT" | "WIN_EXPLOSION" | "GRAVITY" | "REFILL" | "CASCADE_DROP" | "BONUS_TRIGGER_CEREMONY" | "BONUS_AWARD_PRESENTATION" | "BONUS_WAITING_FOR_START" | "BONUS_INTRO" | "FREE_SPIN_PLAY" | "CORE_REVEAL" | "BIG_WIN" | "MAX_WIN" | "BONUS_SUMMARY" | "SPIN_COMPLETE";
@@ -350,19 +351,22 @@ export class GameController {
 
   private persistBalance() { localStorage.setItem("cascade8-balance", String(this.balanceCents)); }
   private setBonusPrompt(active: boolean) {
-    this.ui.bonusOverlay.hidden = !active;
+    renderBonusCeremony(
+      {
+        overlay: this.ui.bonusOverlay,
+        scatterRow: this.ui.bonusScatterRow,
+        triggerLabel: this.ui.bonusTriggerLabel,
+        spinCount: this.ui.bonusSpinCount,
+      },
+      active,
+      {
+        bonusTriggerScatterCount: this.bonusTriggerScatterCount,
+        freeSpinsAwarded: this.freeSpinsLeft,
+      },
+      import.meta.env.BASE_URL,
+    );
      this.ui.spin.hidden = active;
      this.ui.bonusStart.disabled = !active;
-     this.ui.bonusSpinCount.textContent = String(this.freeSpinsLeft);
-    this.ui.bonusTriggerLabel.textContent = active
-      ? `TRIGGERED BY ${this.bonusTriggerScatterCount} SCATTERS`
-      : "";
-    this.ui.bonusScatterRow.className = `bonus-scatter-row count-${this.bonusTriggerScatterCount}`;
-    this.ui.bonusScatterRow.innerHTML = active
-      ? Array.from({ length: this.bonusTriggerScatterCount }, (_, index) =>
-        `<span class="bonus-scatter-token" style="--scatter-index:${index}"><img src="${import.meta.env.BASE_URL}special-symbols/scatter.png" alt="Triggering scatter ${index + 1}"></span>`,
-      ).join("")
-      : "";
     this.ui.boardWrap.classList.toggle("free-spin-ready", active);
      this.ui.spin.classList.remove("is-bonus");
      this.ui.spinLabel.textContent = "SPIN";
