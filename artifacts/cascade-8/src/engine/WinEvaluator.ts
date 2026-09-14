@@ -86,7 +86,7 @@ export function removeAndRefill(
       const emission = streams
         ? streams[col].nextVisibleAware(
           refillContext,
-          allowCores && mode === "bonus",
+          allowCores,
           isVisuallyUnpaired && topSymbol ? topSymbol : null,
         )
         : generateVisibleAwareRefillCell(
