@@ -15,12 +15,19 @@ import {
   type ReelConfig,
   type SymbolId,
 } from "../config/GameConfig";
-import type { Board, BoardCell, RandomSource } from "./types";
+import type { Board, BoardCell, NormalSymbolCell, RandomSource, StackSize } from "./types";
 import { drawMultiplierCoreValue } from "./BonusEngine";
 import { weightedChoice } from "./RNG";
 
 export type GenerationContext = "BASE_INITIAL" | "BASE_REFILL" | "BONUS_INITIAL" | "BONUS_REFILL";
-export type ColumnStreamStats = { runLengths: Record<"1" | "2", number>; emittedNormal: number; pairCount: number };
+export type ColumnStreamStats = {
+  runLengths: Record<"1" | "2", number>;
+  packetLengths: Record<"1" | "2", number>;
+  emittedNormal: number;
+  pairCount: number;
+  singlePacketCount: number;
+  doublePacketCount: number;
+};
 
 const normalIds = NORMAL_SYMBOLS.map((symbol) => symbol.id as NormalSymbolId);
 const softFactor = (history: NormalSymbolId[], candidate: NormalSymbolId) => {
@@ -28,11 +35,39 @@ const softFactor = (history: NormalSymbolId[], candidate: NormalSymbolId) => {
   return occurrences === 0 ? 1 : occurrences === 1 ? 0.8 : occurrences === 2 ? 0.55 : 0.3;
 };
 
+const normalSymbolOf = (cell: BoardCell): NormalSymbolId | null =>
+  typeof cell === "string" && cell !== "SCATTER"
+    ? cell as NormalSymbolId
+    : typeof cell !== "string" && cell.kind === "NORMAL_SYMBOL"
+      ? cell.symbol
+      : null;
+
+export const createNormalSymbolCell = (
+  symbol: NormalSymbolId,
+  stackId: number,
+  stackIndex: number,
+  stackSize: StackSize,
+): NormalSymbolCell => ({
+  kind: "NORMAL_SYMBOL",
+  symbol,
+  stackId,
+  stackIndex,
+  stackSize,
+});
+
 export class ColumnStream {
   private readonly queue: BoardCell[] = [];
   private readonly recent: NormalSymbolId[] = [];
-  private lastRunSymbol: NormalSymbolId | null = null;
-  readonly stats: ColumnStreamStats = { runLengths: { "1": 0, "2": 0 }, emittedNormal: 0, pairCount: 0 };
+  private lastNormalPacketSymbol: NormalSymbolId | null = null;
+  private nextStackSequence = 1;
+  readonly stats: ColumnStreamStats = {
+    runLengths: { "1": 0, "2": 0 },
+    packetLengths: { "1": 0, "2": 0 },
+    emittedNormal: 0,
+    pairCount: 0,
+    singlePacketCount: 0,
+    doublePacketCount: 0,
+  };
 
   constructor(
     private readonly source: RandomSource,
@@ -41,11 +76,11 @@ export class ColumnStream {
   ) {}
 
   next(count: number, context: GenerationContext, allowCores = true): BoardCell[] {
-    while (this.queue.length < count) this.appendRun(context, allowCores);
+    while (this.queue.length < count) this.appendPacket(context, allowCores);
     return this.queue.splice(0, count);
   }
 
-  private appendRun(context: GenerationContext, allowCores: boolean) {
+  private appendPacket(context: GenerationContext, allowCores: boolean) {
     const isInitial = context === "BASE_INITIAL" || context === "BONUS_INITIAL";
     const scatterChance = context === "BASE_INITIAL"
       ? BASE_INITIAL_SCATTER_CHANCE
@@ -54,7 +89,11 @@ export class ColumnStream {
         : context === "BONUS_INITIAL"
           ? BONUS_INITIAL_SCATTER_CHANCE
           : BONUS_REFILL_SCATTER_CHANCE;
-    const coreMode = allowCores && (context === "BASE_REFILL" ? "base" : context === "BONUS_INITIAL" || context === "BONUS_REFILL" ? "bonus" : null);
+    const coreMode = allowCores && (context === "BASE_REFILL"
+      ? "base"
+      : context === "BONUS_INITIAL" || context === "BONUS_REFILL"
+        ? "bonus"
+        : null);
     const coreChance = context === "BASE_REFILL"
       ? BASE_REFILL_CORE_CHANCE
       : context === "BONUS_INITIAL"
@@ -62,47 +101,50 @@ export class ColumnStream {
         : context === "BONUS_REFILL"
           ? BONUS_REFILL_CORE_CHANCE
           : 0;
+
+    const requestedSize = weightedChoice(this.source, this.config.packetWeights) as StackSize;
+    const packetScale = requestedSize === 2 ? 1.8 : 1;
+
+    // Specials are always single packets and never interrupt a normal packet.
+    // Scaling the packet roll keeps the configured chance close to its
+    // per-cell meaning while preserving atomic special packets.
+    const specialRoll = this.source.nextFloat();
+    if (specialRoll < scatterChance * packetScale) {
+      this.queue.push("SCATTER");
+      this.lastNormalPacketSymbol = null;
+      return;
+    }
+    if (coreMode && specialRoll < (scatterChance + coreChance) * packetScale) {
+      this.queue.push(drawMultiplierCoreValue(this.source, coreMode));
+      this.lastNormalPacketSymbol = null;
+      return;
+    }
+
     const candidates = this.config.symbolWeights
-      .filter(({ value }) => value !== this.lastRunSymbol)
-      .filter(({ value }) => !isInitial || this.queue.filter((cell) => cell === value).length < 3)
+      .filter(({ value }) => value !== this.lastNormalPacketSymbol)
+      .filter(({ value }) => !isInitial || this.queue.filter((cell) => normalSymbolOf(cell) === value).length + requestedSize <= 3)
       .map(({ value, weight }) => ({ value, weight: weight * softFactor(this.recent, value) }));
     const available = candidates.length ? candidates : this.config.symbolWeights
-      .filter(({ value }) => value !== this.lastRunSymbol)
       .map(({ value, weight }) => ({ value, weight: weight * softFactor(this.recent, value) }));
     const symbol = weightedChoice(this.source, available);
-    const requestedLength = weightedChoice(this.source, this.config.runLengthWeights);
-    const maxInitialCount = isInitial
-      ? 3 - this.queue.filter((cell) => cell === symbol).length
-      : 2;
-    const runLength = Math.max(1, Math.min(requestedLength, maxInitialCount, 2));
-    let endedWithBoundary = false;
-    let normalRunLength = 0;
-    for (let index = 0; index < runLength; index += 1) {
-      const specialRoll = this.source.nextFloat();
-      if (specialRoll < scatterChance) {
-        this.queue.push("SCATTER");
-        this.lastRunSymbol = null;
-        endedWithBoundary = true;
-        break;
-      }
-      if (coreMode && specialRoll < scatterChance + coreChance) {
-        this.queue.push(drawMultiplierCoreValue(this.source, coreMode));
-        this.lastRunSymbol = null;
-        endedWithBoundary = true;
-        break;
-      }
-      this.queue.push(symbol);
-      endedWithBoundary = false;
-      normalRunLength += 1;
+    const stackId = (this.columnIndex + 1) * 1_000_000 + this.nextStackSequence;
+    this.nextStackSequence += 1;
+
+    for (let stackIndex = 0; stackIndex < requestedSize; stackIndex += 1) {
+      this.queue.push(createNormalSymbolCell(symbol, stackId, stackIndex, requestedSize));
       this.recent.push(symbol);
       if (this.recent.length > 4) this.recent.shift();
       this.stats.emittedNormal += 1;
     }
-    this.lastRunSymbol = endedWithBoundary ? null : symbol;
-    if (normalRunLength > 0) {
-      const key = String(normalRunLength) as "1" | "2";
-      this.stats.runLengths[key] += 1;
-      if (normalRunLength === 2) this.stats.pairCount += 1;
+    this.lastNormalPacketSymbol = symbol;
+    const key = String(requestedSize) as "1" | "2";
+    this.stats.packetLengths[key] += 1;
+    this.stats.runLengths[key] += 1;
+    if (requestedSize === 2) {
+      this.stats.pairCount += 1;
+      this.stats.doublePacketCount += 1;
+    } else {
+      this.stats.singlePacketCount += 1;
     }
   }
 }
@@ -149,6 +191,6 @@ export function countScatter(board: Board): number {
   return board.flat().filter((cell) => cell === "SCATTER").length;
 }
 
-export function isNormalSymbol(cell: BoardCell): cell is SymbolId & NormalSymbolId {
-  return typeof cell === "string" && cell !== "SCATTER" && normalIds.includes(cell as NormalSymbolId);
+export function isNormalSymbol(cell: BoardCell): cell is NormalSymbolId | NormalSymbolCell {
+  return normalSymbolOf(cell) !== null;
 }

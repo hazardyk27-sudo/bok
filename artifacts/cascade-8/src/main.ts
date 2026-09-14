@@ -5,12 +5,21 @@ import { evaluateBoard } from "./engine/WinEvaluator";
 import { calculateSequenceSettlement } from "./engine/SlotEngine";
 import { ColumnStream, createColumnStreams, generateInitialBoardWithStreams } from "./engine/BoardGenerator";
 import { SeededRNG } from "./engine/RNG";
-import type { Board } from "./engine/types";
+import { getNormalSymbol, getStackMetadata } from "./engine/types";
+import type { Board, BoardCell } from "./engine/types";
 import { GameController, formatCredits } from "./game/GameController";
 import { createGameScene, GameScene } from "./game/GameScene";
 
 const app = document.querySelector<HTMLDivElement>("#app")!;
 const isLab = window.location.pathname === "/lab";
+const describePacketCell = (cell: BoardCell) => {
+  const symbol = getNormalSymbol(cell);
+  if (!symbol) return cell === "SCATTER" ? "SCATTER" : "CORE";
+  const metadata = getStackMetadata(cell);
+  return metadata
+    ? `${symbol}[stack ${metadata.stackId}, ${metadata.stackIndex + 1}/${metadata.stackSize}]`
+    : symbol;
+};
 
 app.innerHTML = `
   <div class="app-shell ${isLab ? "is-lab" : ""}">
@@ -158,7 +167,7 @@ window.setTimeout(() => {
 function renderLab(scene: GameScene) {
   const lab = document.createElement("section");
   lab.className = "lab-panel";
-   lab.innerHTML = `<div class="panel-kicker">DEVELOPMENT ROUTE // /lab</div><h1>Animation & Math Lab</h1><p>Deterministic board checks stay separate from live RNG. Use these cards to inspect the frameless Scatter, persistent Cores, streams and the full win presentation.</p><div class="lab-actions"><button data-lab="seven">7 × S1</button><button data-lab="eight">8 × S1</button><button data-lab="simultaneous">8 × S1 + 8 × S6</button><button data-lab="core">CORE BOARD</button><button data-lab="scatter-idle">SCATTER IDLE</button><button data-lab="scatter-fall">SCATTER FALL</button><button data-lab="scatter-land">SCATTER LAND</button><button data-lab="scatter-1">SCATTER #1</button><button data-lab="scatter-2">SCATTER #2</button><button data-lab="scatter-3">SCATTER #3</button><button data-lab="scatter-bonus">BONUS SCATTER</button><button data-lab="tumble">TUMBLE 1.20 → 4.00 → 8.00</button><button data-lab="settlement">8x + 35x</button><button data-lab="free-spin-accounting">FREE SPIN ACCOUNTING</button><button data-lab="free-spin-zero">ZERO-WIN FREE SPIN</button><button data-lab="bonus-4">BONUS CEREMONY // 4</button><button data-lab="bonus-5">BONUS CEREMONY // 5</button><button data-lab="bonus-6">BONUS CEREMONY // 6</button><button data-lab="retrigger-3">RETRIGGER // 3</button><button data-lab="retrigger-4">RETRIGGER // 4</button><button data-lab="retrigger-5">RETRIGGER // 5</button><button data-lab="retrigger-6">RETRIGGER // 6</button><button data-lab="waiting">BONUS WAITING</button><button data-lab="streams">STREAMS</button><button data-lab="pairs">PAIR SPLIT</button><button data-lab="anti">ANTI-STREAK</button><button data-lab="timing">TIMINGS</button><button data-lab="base-big">BASE LARGE WIN</button><button data-lab="bonus-big">BONUS LARGE WIN</button></div><div class="lab-result" id="lab-result">Choose a predefined board.</div><pre class="lab-metrics" id="lab-metrics"></pre><div class="special-design"><div class="panel-kicker">SPECIAL SYMBOL DESIGN // SCATTER NEXT TO ORDINARY SYMBOL</div><div class="special-grid"><div class="special-preview normal-preview"><span class="special-state">ORDINARY</span><div class="preview-crest">GS</div><b>GALATASARAY</b></div><div class="special-preview scatter-preview"><span class="special-state">TRANSPARENT CIRCLE</span><img class="scatter-preview-image" src="${import.meta.env.BASE_URL}special-symbols/scatter.png" alt="Golden Scatter symbol"><b>GOLDEN SCATTER</b></div>${[2, 3, 5, 10, 25, 50, 100, 250, 500].map((value) => `<div class="special-preview core-preview core-${value}"><span class="special-state">${value >= 100 ? "SETTLEMENT" : "ACTIVE"}</span>${value === 2 || value === 3 || value === 5 || value === 10 ? `<img class="core-preview-image" src="${import.meta.env.BASE_URL}special-symbols/${value}x.png" alt="${value}x multiplier core">` : `<strong>${value}x</strong>`}<b>CORE</b></div>`).join("")}</div></div>`;
+  lab.innerHTML = `<div class="panel-kicker">DEVELOPMENT ROUTE // /lab</div><h1>Animation & Math Lab</h1><p>Deterministic board checks stay separate from live RNG. Use these cards to inspect the frameless Scatter, persistent Cores, packet streams and the full win presentation.</p><div class="lab-actions"><button data-lab="seven">7 × S1</button><button data-lab="eight">8 × S1</button><button data-lab="simultaneous">8 × S1 + 8 × S6</button><button data-lab="core">CORE BOARD</button><button data-lab="scatter-idle">SCATTER IDLE</button><button data-lab="scatter-fall">SCATTER FALL</button><button data-lab="scatter-land">SCATTER LAND</button><button data-lab="scatter-1">SCATTER #1</button><button data-lab="scatter-2">SCATTER #2</button><button data-lab="scatter-3">SCATTER #3</button><button data-lab="scatter-bonus">BONUS SCATTER</button><button data-lab="tumble">TUMBLE 1.20 → 4.00 → 8.00</button><button data-lab="settlement">8x + 35x</button><button data-lab="free-spin-accounting">FREE SPIN ACCOUNTING</button><button data-lab="free-spin-zero">ZERO-WIN FREE SPIN</button><button data-lab="bonus-4">BONUS CEREMONY // 4</button><button data-lab="bonus-5">BONUS CEREMONY // 5</button><button data-lab="bonus-6">BONUS CEREMONY // 6</button><button data-lab="retrigger-3">RETRIGGER // 3</button><button data-lab="retrigger-4">RETRIGGER // 4</button><button data-lab="retrigger-5">RETRIGGER // 5</button><button data-lab="retrigger-6">RETRIGGER // 6</button><button data-lab="waiting">BONUS WAITING</button><button data-lab="streams">PERSISTENT STREAM</button><button data-lab="packets">PACKET STREAM</button><button data-lab="pairs">ONE-VACANCY SPLIT</button><button data-lab="anti">ANTI-STREAK</button><button data-lab="timing">TIMINGS</button><button data-lab="base-big">BASE LARGE WIN</button><button data-lab="bonus-big">BONUS LARGE WIN</button></div><div class="lab-result" id="lab-result">Choose a predefined board.</div><pre class="lab-metrics" id="lab-metrics"></pre><div class="special-design"><div class="panel-kicker">SPECIAL SYMBOL DESIGN // SCATTER NEXT TO ORDINARY SYMBOL</div><div class="special-grid"><div class="special-preview normal-preview"><span class="special-state">ORDINARY</span><div class="preview-crest">GS</div><b>GALATASARAY</b></div><div class="special-preview scatter-preview"><span class="special-state">TRANSPARENT CIRCLE</span><img class="scatter-preview-image" src="${import.meta.env.BASE_URL}special-symbols/scatter.png" alt="Golden Scatter symbol"><b>GOLDEN SCATTER</b></div>${[2, 3, 5, 10, 25, 50, 100, 250, 500].map((value) => `<div class="special-preview core-preview core-${value}"><span class="special-state">${value >= 100 ? "SETTLEMENT" : "ACTIVE"}</span>${value === 2 || value === 3 || value === 5 || value === 10 ? `<img class="core-preview-image" src="${import.meta.env.BASE_URL}special-symbols/${value}x.png" alt="${value}x multiplier core">` : `<strong>${value}x</strong>`}<b>CORE</b></div>`).join("")}</div></div>`;
   document.querySelector(".game-stage")?.append(lab);
    const metrics = lab.querySelector<HTMLElement>("#lab-metrics")!;
    const updateMetrics = () => {
@@ -236,12 +245,20 @@ function renderLab(scene: GameScene) {
         const seeded = generateInitialBoardWithStreams(new SeededRNG("lab-streams"), "base");
         const first = seeded.streams[0].next(1, "BASE_REFILL");
         const second = seeded.streams[0].next(1, "BASE_REFILL");
-        byId("lab-result").textContent = `PERSISTENT STREAM // initial ${seeded.board.length}x${seeded.board[0].length} board // split refill items ${String(first[0])} → ${String(second[0])}`;
+         byId("lab-result").textContent = `PERSISTENT STREAM // initial ${seeded.board.length}x${seeded.board[0].length} board // next cells ${describePacketCell(first[0])} → ${describePacketCell(second[0])}`;
+        return;
+      }
+      if (key === "packets") {
+        const stream = createColumnStreams(new SeededRNG("lab-packets"), "base")[0];
+        const values = stream.next(10, "BASE_REFILL");
+        byId("lab-result").textContent = `PACKET STREAM // ${values.map(describePacketCell).join("  →  ")} // calibrated 80% single / 20% double`;
         return;
       }
       if (key === "pairs") {
-        const stream = new ColumnStream({ nextFloat: () => 0.999999 }, { ...BASE_REEL_CONFIG, symbolWeights: [{ value: "S3", weight: 1 }], runLengthWeights: [{ value: 2, weight: 1 }] }, 0);
-        byId("lab-result").textContent = `PAIR SPLIT // request 1: ${String(stream.next(1, "BASE_REFILL")[0])} // request 2: ${String(stream.next(1, "BASE_REFILL")[0])}`;
+         const stream = new ColumnStream({ nextFloat: () => 0.999999 }, { ...BASE_REEL_CONFIG, symbolWeights: [{ value: "S3", weight: 1 }], packetWeights: [{ value: 2, weight: 1 }] }, 0);
+        const first = stream.next(1, "BASE_REFILL")[0];
+        const second = stream.next(1, "BASE_REFILL")[0];
+        byId("lab-result").textContent = `ONE-VACANCY CONTINUATION // request 1: ${describePacketCell(first)} // request 2: ${describePacketCell(second)} // same stackId proves pending continuation`;
         return;
       }
       if (key === "anti") {
@@ -249,9 +266,9 @@ function renderLab(scene: GameScene) {
         const values = stream.next(500, "BASE_REFILL");
         let maximum = 0;
         let current = 0;
-        let previous: unknown;
-        values.forEach((value) => { current = value === previous ? current + 1 : 1; maximum = Math.max(maximum, current); previous = value; });
-         byId("lab-result").textContent = `ANTI-STREAK // 500 incoming cells // maximum contiguous normal streak ${maximum} // configured runs 75% singles / 25% pairs`;
+         let previous: string | null = null;
+         values.forEach((value) => { const symbol = getNormalSymbol(value); current = symbol && symbol === previous ? current + 1 : symbol ? 1 : 0; maximum = Math.max(maximum, current); previous = symbol; });
+          byId("lab-result").textContent = `ANTI-STREAK // 500 incoming cells // maximum contiguous normal streak ${maximum} // calibrated packets 80% singles / 20% doubles`;
        return;
      }
      const values = key === "core"

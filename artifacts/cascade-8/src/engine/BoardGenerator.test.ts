@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { countScatter, generateInitialBoard, generateRefillSymbols } from "./BoardGenerator";
 import { SeededRNG } from "./RNG";
+import { getNormalSymbol, getStackMetadata } from "./types";
 import type { RandomSource } from "./types";
 
 const alwaysLast: RandomSource = { nextFloat: () => 0.999999 };
@@ -18,6 +19,14 @@ describe("board generation", () => {
   });
   it("generates exactly the requested refill count", () => {
     expect(generateRefillSymbols(alwaysFirst, 7)).toHaveLength(7);
+  });
+  it("keeps packet metadata on generated normal symbols", () => {
+    const cells = generateRefillSymbols(alwaysLast, 12);
+    const normalCells = cells.filter((cell) => getNormalSymbol(cell) !== null);
+    expect(normalCells.every((cell) => {
+      const metadata = getStackMetadata(cell);
+      return metadata && metadata.stackSize <= 2 && metadata.stackIndex < metadata.stackSize;
+    })).toBe(true);
   });
   it("keeps Base initial Scatter close to the configured per-cell marginal", () => {
     const boards = 20_000;

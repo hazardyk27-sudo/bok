@@ -2,9 +2,9 @@ import { mkdir, writeFile } from "node:fs/promises";
 import { playSpin } from "../engine/SlotEngine";
 import { SeededRNG } from "../engine/RNG";
 import { evaluateBoard } from "../engine/WinEvaluator";
-import { isNormalSymbol } from "../engine/BoardGenerator";
 import { BASE_REEL_CONFIG } from "../config/GameConfig";
-import type { Board } from "../engine/types";
+import { getNormalSymbol, isMultiplierCore } from "../engine/types";
+import type { Board, BoardCell } from "../engine/types";
 
 export const HISTOGRAM_BUCKETS = [
   "0x", "0-1x", "1-2x", "2-5x", "5-10x", "10-25x", "25-50x",
@@ -45,11 +45,13 @@ function recordRuns(board: Board, distribution: Record<string, number>, metrics?
     for (let row = 1; row <= board.length; row += 1) {
       const previous = board[row - 1][col];
       const current = row < board.length ? board[row][col] : undefined;
-      if (isNormalSymbol(previous)) unique.add(previous);
-      if (current === previous && typeof current === "string" && current !== "SCATTER") {
+      const previousSymbol = getNormalSymbol(previous);
+      const currentSymbol = current ? getNormalSymbol(current) : null;
+      if (previousSymbol) unique.add(previousSymbol);
+      if (currentSymbol && currentSymbol === previousSymbol) {
         runLength += 1;
       } else {
-        if (isNormalSymbol(previous)) {
+        if (previousSymbol) {
           columnMaximum = Math.max(columnMaximum, runLength);
           columnHasPair ||= runLength >= 2;
           const key = String(Math.min(runLength, 2));
@@ -79,6 +81,41 @@ type RunMetrics = {
   columnsWithFive: number;
   uniqueNormalTotal: number;
 };
+
+type PacketMetrics = {
+  packetSingles: number;
+  packetDoubles: number;
+  initialBoards: number;
+  initialBoardsWithDouble: number;
+  refillEvents: number;
+  refillEventsWithDouble: number;
+};
+
+function recordPackets(
+  cells: BoardCell[],
+  source: "initial" | "refill",
+  context: string,
+  seen: Set<string>,
+  metrics: PacketMetrics,
+) {
+  if (source === "initial") metrics.initialBoards += 1;
+  if (source === "refill") metrics.refillEvents += 1;
+  let hasDouble = false;
+  cells.forEach((cell) => {
+    if (typeof cell === "string" || cell.kind !== "NORMAL_SYMBOL") return;
+    const packetKey = `${context}:${cell.stackId}`;
+    if (seen.has(packetKey)) return;
+    seen.add(packetKey);
+    if (cell.stackSize === 2) {
+      metrics.packetDoubles += 1;
+      hasDouble = true;
+    } else {
+      metrics.packetSingles += 1;
+    }
+  });
+  if (source === "initial" && hasDouble) metrics.initialBoardsWithDouble += 1;
+  if (source === "refill" && hasDouble) metrics.refillEventsWithDouble += 1;
+}
 
 export type SimulationReport = {
   seed: string;
@@ -139,6 +176,10 @@ export type SimulationReport = {
   fourTumbleFrequency: number;
   configuredSingleProbability: number;
   configuredPairProbability: number;
+  observedPacketSingleProbability: number;
+  observedPacketDoubleProbability: number;
+  initialBoardDoubleStackFrequency: number;
+  refillDoubleStackFrequency: number;
   observedSingleProbability: number;
   observedPairProbability: number;
   maximumContiguousNormal: number;
@@ -195,14 +236,27 @@ export function simulate(spins: number, seed: string, betCents = 100, onProgress
     maximumContiguousNormal: 0, visiblePairColumns: 0, visibleColumns: 0,
     columnsWithThree: 0, columnsWithFour: 0, columnsWithFive: 0, uniqueNormalTotal: 0,
   };
+  const packetMetrics: PacketMetrics = {
+    packetSingles: 0,
+    packetDoubles: 0,
+    initialBoards: 0,
+    initialBoardsWithDouble: 0,
+    refillEvents: 0,
+    refillEventsWithDouble: 0,
+  };
   const coreValueDistribution: Record<string, number> = {};
   let maxObservedWinMultiplier = 0;
   let maxTumbles = 0;
   for (let index = 0; index < spins; index += 1) {
     const result = playSpin(betCents, source);
+    const seenPackets = new Set<string>();
+    recordPackets(result.initialBoard.flat(), "initial", `base:${index}`, seenPackets, packetMetrics);
     recordRuns(result.initialBoard, runLengthDistribution, runMetrics);
     if (evaluateBoard(result.initialBoard).winningCells.length) initialEightPlusCount += 1;
-    result.freeSpins.forEach((freeSpin) => recordRuns(freeSpin.initialBoard, runLengthDistribution, runMetrics));
+    result.freeSpins.forEach((freeSpin, freeSpinIndex) => {
+      recordPackets(freeSpin.initialBoard.flat(), "initial", `bonus:${index}:${freeSpinIndex}`, seenPackets, packetMetrics);
+      recordRuns(freeSpin.initialBoard, runLengthDistribution, runMetrics);
+    });
     const multiplier = result.totalMultiplier;
     maxObservedWinMultiplier = Math.max(maxObservedWinMultiplier, multiplier);
     wins.push(multiplier);
@@ -229,15 +283,17 @@ export function simulate(spins: number, seed: string, betCents = 100, onProgress
       const isFree = result.freeSpins.some((spin) => spin.tumbles.includes(tumble));
     if (isFree) {
         freeRefills += 1;
-        coreCells += tumble.newSymbols.filter((cell) => typeof cell !== "string").length;
+        coreCells += tumble.newSymbols.filter((cell) => isMultiplierCore(cell)).length;
         freeRefillCells += tumble.newSymbols.length;
       }
+      const context = isFree ? `bonus:${index}` : `base:${index}`;
+      recordPackets(tumble.newSymbols, "refill", context, seenPackets, packetMetrics);
       tumble.winningSymbols.forEach((symbol) => {
         symbolHitCounts[symbol] = (symbolHitCounts[symbol] ?? 0) + 1;
       });
     }
     const baseCoreValuesThisSpin = result.tumbles.flatMap((tumble) =>
-      tumble.newSymbols.filter((cell) => typeof cell !== "string").map((cell) => cell.value),
+      tumble.newSymbols.filter((cell) => isMultiplierCore(cell)).map((cell) => cell.value),
     );
     baseRefillCells += result.tumbles.reduce((sum, tumble) => sum + tumble.newSymbols.length, 0);
     baseCoreCells += baseCoreValuesThisSpin.length;
@@ -245,7 +301,7 @@ export function simulate(spins: number, seed: string, betCents = 100, onProgress
     if (baseCoreValuesThisSpin.length) baseCorePaidSpinCount += 1;
     const bonusCoreValuesThisSpin = result.freeSpins.flatMap((spin) =>
       spin.tumbles.flatMap((tumble) =>
-        tumble.newSymbols.filter((cell) => typeof cell !== "string").map((cell) => cell.value),
+        tumble.newSymbols.filter((cell) => isMultiplierCore(cell)).map((cell) => cell.value),
       ),
     );
     bonusCoreValues.push(...bonusCoreValuesThisSpin);
@@ -254,7 +310,7 @@ export function simulate(spins: number, seed: string, betCents = 100, onProgress
         raw: result.baseRawWinMultiplier,
         final: result.baseWinCents / betCents,
         cores: result.tumbles.flatMap((tumble) =>
-          tumble.newSymbols.filter((cell) => typeof cell !== "string").map((cell) => cell.value),
+          tumble.newSymbols.filter((cell) => isMultiplierCore(cell)).map((cell) => cell.value),
         ),
       },
       ...result.freeSpins.map((freeSpin) => ({
@@ -344,8 +400,12 @@ export function simulate(spins: number, seed: string, betCents = 100, onProgress
     twoTumbleFrequency: percent(twoTumbleCount),
     threeTumbleFrequency: percent(threeTumbleCount),
     fourTumbleFrequency: percent(fourTumbleCount),
-     configuredSingleProbability: Number(((BASE_REEL_CONFIG.runLengthWeights.find((entry) => entry.value === 1)!.weight / BASE_REEL_CONFIG.runLengthWeights.reduce((sum, entry) => sum + entry.weight, 0)) * 100).toFixed(4)),
-     configuredPairProbability: Number(((BASE_REEL_CONFIG.runLengthWeights.find((entry) => entry.value === 2)!.weight / BASE_REEL_CONFIG.runLengthWeights.reduce((sum, entry) => sum + entry.weight, 0)) * 100).toFixed(4)),
+    configuredSingleProbability: Number(((BASE_REEL_CONFIG.packetWeights.find((entry) => entry.value === 1)!.weight / BASE_REEL_CONFIG.packetWeights.reduce((sum, entry) => sum + entry.weight, 0)) * 100).toFixed(4)),
+    configuredPairProbability: Number(((BASE_REEL_CONFIG.packetWeights.find((entry) => entry.value === 2)!.weight / BASE_REEL_CONFIG.packetWeights.reduce((sum, entry) => sum + entry.weight, 0)) * 100).toFixed(4)),
+    observedPacketSingleProbability: Number(((packetMetrics.packetSingles / Math.max(1, packetMetrics.packetSingles + packetMetrics.packetDoubles)) * 100).toFixed(4)),
+    observedPacketDoubleProbability: Number(((packetMetrics.packetDoubles / Math.max(1, packetMetrics.packetSingles + packetMetrics.packetDoubles)) * 100).toFixed(4)),
+    initialBoardDoubleStackFrequency: Number(((packetMetrics.initialBoardsWithDouble / Math.max(1, packetMetrics.initialBoards)) * 100).toFixed(4)),
+    refillDoubleStackFrequency: Number(((packetMetrics.refillEventsWithDouble / Math.max(1, packetMetrics.refillEvents)) * 100).toFixed(4)),
     observedSingleProbability: (() => {
       const total = (runLengthDistribution["1"] ?? 0) + (runLengthDistribution["2"] ?? 0);
       return total ? Number((((runLengthDistribution["1"] ?? 0) / total) * 100).toFixed(4)) : 0;

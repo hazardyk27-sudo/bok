@@ -57,24 +57,24 @@ export const NORMAL_SYMBOLS = SYMBOLS.filter((symbol) => symbol.id !== "SCATTER"
 export type RunLength = 1 | 2;
 export type ReelConfig = {
   name: "BASE" | "BONUS";
-  runLengthWeights: readonly { value: RunLength; weight: number }[];
+  packetWeights: readonly { value: RunLength; weight: number }[];
   symbolWeights: readonly { value: NormalSymbolId; weight: number }[];
 };
 
 export const BASE_REEL_CONFIG: ReelConfig = {
   name: "BASE",
-  runLengthWeights: [
-    { value: 1, weight: 75 },
-    { value: 2, weight: 25 },
+  packetWeights: [
+    { value: 1, weight: 80 },
+    { value: 2, weight: 20 },
   ],
   symbolWeights: NORMAL_SYMBOLS.map(({ id, weight }) => ({ value: id as NormalSymbolId, weight })),
 };
 
 export const BONUS_REEL_CONFIG: ReelConfig = {
   name: "BONUS",
-  runLengthWeights: [
-    { value: 1, weight: 75 },
-    { value: 2, weight: 25 },
+  packetWeights: [
+    { value: 1, weight: 80 },
+    { value: 2, weight: 20 },
   ],
   symbolWeights: NORMAL_SYMBOLS.map(({ id, weight }) => ({ value: id as NormalSymbolId, weight })),
 };

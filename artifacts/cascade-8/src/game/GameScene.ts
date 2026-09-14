@@ -1,6 +1,6 @@
 import Phaser from "phaser";
 import { BOARD_COLUMNS, BOARD_ROWS, NORMAL_SYMBOLS, getSymbolDefinition, type SymbolId } from "../config/GameConfig";
-import { isMultiplierCore, type Board, type BoardCell, type Cell } from "../engine/types";
+import { getNormalSymbol, getStackMetadata, isMultiplierCore, type Board, type BoardCell, type Cell } from "../engine/types";
 
 type BoardNode = {
   container: Phaser.GameObjects.Container;
@@ -74,8 +74,8 @@ export class GameScene extends Phaser.Scene {
           this.freeSpinMode ? 0.52 : 0.45,
         ).setDepth(-9);
         cell.setStrokeStyle(1, this.freeSpinMode ? 0xffd36a : 0x8b9de3, this.freeSpinMode ? 0.25 : 0.1);
-        this.cellFrames.push(cell);
-      }
+         this.cellFrames.push(cell);
+       }
     }
     this.frame = frame;
   }
@@ -199,7 +199,9 @@ export class GameScene extends Phaser.Scene {
       this.nodes.push(node);
       return node;
     }
-    const definition = getSymbolDefinition(symbol);
+    const normalSymbol = getNormalSymbol(symbol);
+    if (!normalSymbol) throw new Error("Unsupported board symbol");
+    const definition = getSymbolDefinition(normalSymbol);
     const frameColor = definition.frameColor;
     const glow = this.add.circle(0, 2, 39, definition.color, winner ? 0.78 : 0.42);
     glow.setBlendMode(Phaser.BlendModes.ADD);
@@ -209,7 +211,7 @@ export class GameScene extends Phaser.Scene {
       .setStrokeStyle(1.5, definition.color, winner ? 0.95 : 0.82);
     const core = this.add.circle(0, 0, 26, 0x09142f, 0.56);
     const shine = this.add.ellipse(-9, -12, 13, 7, 0xffffff, 0.18).setAngle(-25);
-    const mark = this.add.image(0, 0, `club-logo-${symbol}`).setDisplaySize(60, 60);
+     const mark = this.add.image(0, 0, `club-logo-${normalSymbol}`).setDisplaySize(60, 60);
     container.add([glow, orb, innerFrame, core, mark, shine]);
     const node = { container, symbol, row, col };
     this.nodes.push(node);
@@ -282,7 +284,7 @@ export class GameScene extends Phaser.Scene {
           resolve();
         },
       });
-    });
+       });
   }
 
   renderBoard(board: Board, winningCells: Cell[] = []) {
@@ -377,7 +379,8 @@ export class GameScene extends Phaser.Scene {
     const wanted = new Set(cells.map((cell) => `${cell.row}:${cell.col}`));
     const active = this.nodes.filter((node) => wanted.has(`${node.row}:${node.col}`));
     await Promise.all(active.map((node) => new Promise<void>((resolve) => {
-      const color = isMultiplierCore(node.symbol) ? 0xffc34d : getSymbolDefinition(node.symbol).color;
+      const normalSymbol = getNormalSymbol(node.symbol);
+      const color = isMultiplierCore(node.symbol) ? 0xffc34d : getSymbolDefinition(normalSymbol!).color;
       const centerX = node.container.x;
       const centerY = node.container.y;
       const ring = this.trackEffect(this.add.circle(centerX, centerY, 25, undefined, 0)
@@ -445,23 +448,39 @@ export class GameScene extends Phaser.Scene {
           });
         }));
       });
+      const incomingGroups = new Map<string, BoardNode[]>();
       for (let row = 0; row < generatedCount; row += 1) {
         const node = this.createSymbolNode(board[row][col], row, col);
         const targetY = this.boardOrigin.y + row * this.cellSize.height + 46;
         node.container.y = targetY - 260 - col * 14;
         node.container.alpha = 0.2;
+        const metadata = getStackMetadata(node.symbol);
+        const key = metadata ? `stack:${metadata.stackId}` : `single:${col}:${row}`;
+        const group = incomingGroups.get(key) ?? [];
+        group.push(node);
+        incomingGroups.set(key, group);
+      }
+      incomingGroups.forEach((group) => {
+        const targetYs = group.map((node) => this.boardOrigin.y + node.row * this.cellSize.height + 46);
+        const starts = group.map((node) => node.container.y);
         animations.push(new Promise<void>((resolve) => {
+          const motion = { progress: 0 };
           this.tweens.add({
-            targets: node.container,
-            y: targetY,
-            alpha: 1,
+            targets: motion,
+            progress: 1,
             duration: duration + col * 18,
-            delay: col * 20,
+            delay: col * 20 + (group.length > 1 ? 44 : 0),
             ease: "Back.easeOut",
+            onUpdate: () => {
+              group.forEach((node, index) => {
+                node.container.y = starts[index] + (targetYs[index] - starts[index]) * motion.progress;
+                node.container.alpha = 0.2 + motion.progress * 0.8;
+              });
+            },
             onComplete: () => resolve(),
           });
         }));
-      }
+      });
     }
     await Promise.all(animations);
   }

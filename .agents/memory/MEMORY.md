@@ -3,3 +3,4 @@
 - [Base Core RTP calibration](base-core-rtp-calibration.md) — refill-only Core chances are correlated with winning tumbles, so calibrate RTP from full simulations rather than chance alone.
 - [Special symbol RTP calibration](special-symbol-rtp-calibration.md) — high per-cell Core odds plus multiplicative settlement can overwhelm RTP; calibrate before release.
 - [Phaser effect cleanup](phaser-effect-cleanup.md) — destroy board child tweens explicitly before rebuilding cascade nodes to prevent performance drift.
+- [Packet stack RTP calibration](packet-stack-rtp-calibration.md) — correlated 1x2 packets can amplify tumble payouts; tune only packet-size probability after full-spin simulation.

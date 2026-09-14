@@ -1,6 +1,6 @@
 import { BOARD_COLUMNS, BOARD_ROWS, NORMAL_SYMBOLS, type NormalSymbolId, getPaytableMultiplier } from "../config/GameConfig";
 import { generateRefillCells, type ColumnStreams } from "./BoardGenerator";
-import { isMultiplierCore, type Board, type BoardCell, type Cell, type RandomSource } from "./types";
+import { getNormalSymbol, isMultiplierCore, type Board, type BoardCell, type Cell, type RandomSource } from "./types";
 
 export type WinEvaluation = {
   winningSymbols: NormalSymbolId[];
@@ -13,7 +13,8 @@ export function evaluateBoard(board: Board): WinEvaluation {
   const counts = new Map<NormalSymbolId, number>();
   for (const row of board) {
     for (const symbol of row) {
-      if (typeof symbol === "string" && symbol !== "SCATTER") counts.set(symbol, (counts.get(symbol) ?? 0) + 1);
+      const normalSymbol = getNormalSymbol(symbol);
+      if (normalSymbol) counts.set(normalSymbol, (counts.get(normalSymbol) ?? 0) + 1);
     }
   }
   const normalIds = NORMAL_SYMBOLS.map((symbol) => symbol.id as NormalSymbolId);
@@ -21,7 +22,8 @@ export function evaluateBoard(board: Board): WinEvaluation {
   const winningCells: Cell[] = [];
   for (let row = 0; row < BOARD_ROWS; row += 1) {
     for (let col = 0; col < BOARD_COLUMNS; col += 1) {
-       if (typeof board[row][col] === "string" && winningSymbols.includes(board[row][col] as NormalSymbolId)) winningCells.push({ row, col });
+       const normalSymbol = getNormalSymbol(board[row][col]);
+       if (normalSymbol && winningSymbols.includes(normalSymbol as NormalSymbolId)) winningCells.push({ row, col });
     }
   }
   const payouts = {} as Record<NormalSymbolId, number>;

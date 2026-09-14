@@ -4,11 +4,32 @@ export type Board = BoardCell[][];
 export type Cell = { row: number; col: number };
 export type RandomSource = { nextFloat: () => number };
 export type MultiplierCore = { kind: "MULTIPLIER_CORE"; value: number };
-export type BoardCell = SymbolId | MultiplierCore;
+export type StackSize = 1 | 2;
+export type NormalSymbolCell = {
+  kind: "NORMAL_SYMBOL";
+  symbol: NormalSymbolId;
+  stackId: number;
+  stackIndex: number;
+  stackSize: StackSize;
+};
+export type BoardCell = SymbolId | NormalSymbolCell | MultiplierCore;
 export type CoreCell = Cell & { value: number };
 
 export const isMultiplierCore = (cell: BoardCell): cell is MultiplierCore =>
   typeof cell !== "string" && cell.kind === "MULTIPLIER_CORE";
+
+export const isNormalSymbolCell = (cell: BoardCell): cell is NormalSymbolCell =>
+  typeof cell !== "string" && cell.kind === "NORMAL_SYMBOL";
+
+export const getNormalSymbol = (cell: BoardCell): NormalSymbolId | null => {
+  if (isNormalSymbolCell(cell)) return cell.symbol;
+  return typeof cell === "string" && cell !== "SCATTER" ? cell as NormalSymbolId : null;
+};
+
+export const getStackMetadata = (cell: BoardCell) =>
+  isNormalSymbolCell(cell)
+    ? { stackId: cell.stackId, stackIndex: cell.stackIndex, stackSize: cell.stackSize }
+    : null;
 
 export type TumbleResult = {
   boardBefore: Board;
