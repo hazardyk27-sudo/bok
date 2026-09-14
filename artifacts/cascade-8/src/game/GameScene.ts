@@ -1,5 +1,5 @@
 import Phaser from "phaser";
-import { BOARD_COLUMNS, BOARD_ROWS, MULTIPLIER_CORE_ARTWORK, NORMAL_SYMBOLS, getSymbolDefinition, type SymbolId } from "../config/GameConfig";
+import { BOARD_COLUMNS, BOARD_ROWS, NORMAL_SYMBOLS, getMultiplierCoreVisualTier, getSymbolDefinition, type SymbolId } from "../config/GameConfig";
 import { getNormalSymbol, getStackMetadata, isMultiplierCore, type Board, type BoardCell, type Cell, type CoreCell } from "../engine/types";
 import { calculateWinLabelPositions, type WinLabelEvent } from "./WinLabel";
 
@@ -16,6 +16,34 @@ const SCATTER_SOURCE_SIZE = 256;
 const CORE_BASE_SIZE = 84;
 const SMALL_CORE_SIZE = 80;
 const LARGE_CORE_SIZE = 100;
+const MULTIPLIER_TILE_SIZE = 68;
+
+const MULTIPLIER_VISUALS = {
+  low: {
+    tile: 0x102a4b,
+    border: 0x69caff,
+    aura: 0x4fb8ff,
+    auraAlpha: 0.14,
+    pulseScale: 1.1,
+    text: "#eef8ff",
+  },
+  mid: {
+    tile: 0x172b55,
+    border: 0x8ed8ff,
+    aura: 0x66cfff,
+    auraAlpha: 0.18,
+    pulseScale: 1.14,
+    text: "#f3fbff",
+  },
+  high: {
+    tile: 0x282044,
+    border: 0xffd477,
+    aura: 0xffc75c,
+    auraAlpha: 0.23,
+    pulseScale: 1.2,
+    text: "#fff5cc",
+  },
+} as const;
 
 export class GameScene extends Phaser.Scene {
   private nodes: BoardNode[] = [];
@@ -41,9 +69,6 @@ export class GameScene extends Phaser.Scene {
       if (symbol.logoPath) this.load.image(`club-logo-${symbol.id}`, `${import.meta.env.BASE_URL}${symbol.logoPath}`);
     });
     this.load.image("scatter-symbol", `${import.meta.env.BASE_URL}special-symbols/scatter.png`);
-    Object.entries(MULTIPLIER_CORE_ARTWORK).forEach(([value, path]) => {
-      this.load.image(`core-${value}x`, `${import.meta.env.BASE_URL}${path}`);
-    });
   }
 
   create() {
@@ -140,42 +165,37 @@ export class GameScene extends Phaser.Scene {
     if (isMultiplierCore(symbol)) {
       const coreSize = symbol.value >= 10 ? LARGE_CORE_SIZE : SMALL_CORE_SIZE;
       const coreScale = coreSize / CORE_BASE_SIZE;
-      const glow = this.add.circle(0, 0, 43, 0xffb52e, 0.2).setBlendMode(Phaser.BlendModes.ADD);
-      const radiance = this.add.graphics();
-      radiance.lineStyle(2, 0xffdb6b, 0.62);
-      for (let index = 0; index < 8; index += 1) {
-        const angle = (index / 8) * Math.PI * 2;
-        radiance.lineBetween(Math.cos(angle) * 27, Math.sin(angle) * 27, Math.cos(angle) * 38, Math.sin(angle) * 38);
-      }
-      const artworkPath = MULTIPLIER_CORE_ARTWORK[symbol.value as keyof typeof MULTIPLIER_CORE_ARTWORK];
-      if (artworkPath) {
-        const portrait = this.add.image(0, 0, `core-${symbol.value}x`).setDisplaySize(84, 84);
-        container.add([glow, radiance, portrait]);
-        container.setScale(coreScale);
-        this.tweens.add({ targets: glow, scale: 1.18, alpha: 0.12, duration: 680, yoyo: true, repeat: -1 });
-        this.tweens.add({ targets: radiance, angle: 360, duration: 4200, repeat: -1 });
-        const node = { container, symbol, row, col };
-        this.nodes.push(node);
-        return node;
-      }
-      const fallbackColor = symbol.value >= 1000 ? 0x6d2a9e : symbol.value >= 500 ? 0xb87416 : 0x8f5a0c;
-      const core = this.add.circle(0, 0, 32, fallbackColor, 0.9)
-        .setStrokeStyle(3, 0xffd36b, 0.98);
-      const inner = this.add.circle(0, 0, 26, 0x241a33, 0.72)
-        .setStrokeStyle(1.5, 0xffbe35, 0.9);
-      const label = this.add.text(0, 1, `${symbol.value}x`, {
-        color: "#fff4c7",
-        fontFamily: "Arial, sans-serif",
-        fontSize: symbol.value >= 100 ? "15px" : "19px",
+      const visual = MULTIPLIER_VISUALS[getMultiplierCoreVisualTier(symbol.value)];
+      const aura = this.add.circle(0, 0, 43, visual.aura, visual.auraAlpha)
+        .setBlendMode(Phaser.BlendModes.ADD);
+      const tile = this.add.graphics();
+      tile.fillStyle(visual.tile, 0.96);
+      tile.fillRoundedRect(-MULTIPLIER_TILE_SIZE / 2, -MULTIPLIER_TILE_SIZE / 2, MULTIPLIER_TILE_SIZE, MULTIPLIER_TILE_SIZE, 14);
+      tile.lineStyle(2, visual.border, 0.9);
+      tile.strokeRoundedRect(-MULTIPLIER_TILE_SIZE / 2, -MULTIPLIER_TILE_SIZE / 2, MULTIPLIER_TILE_SIZE, MULTIPLIER_TILE_SIZE, 14);
+      tile.lineStyle(1, 0xffffff, 0.12);
+      tile.strokeRoundedRect(-MULTIPLIER_TILE_SIZE / 2 + 5, -MULTIPLIER_TILE_SIZE / 2 + 5, MULTIPLIER_TILE_SIZE - 10, MULTIPLIER_TILE_SIZE - 10, 10);
+      const fontSize = symbol.value >= 1000 ? "15px" : symbol.value >= 100 ? "18px" : symbol.value >= 10 ? "20px" : "23px";
+      const label = this.add.text(0, 0, `${symbol.value}x`, {
+        color: visual.text,
+        fontFamily: "DM Mono, monospace",
+        fontSize,
         fontStyle: "bold",
-        stroke: "#5d3200",
-        strokeThickness: 4,
+        stroke: "#061022",
+        strokeThickness: 3,
+        shadow: { blur: 6, color: "#020611", fill: true, offsetX: 0, offsetY: 2 },
       }).setOrigin(0.5);
-      const bolt = this.add.text(0, -39, "✦", { color: "#fff3ba", fontSize: "18px" }).setOrigin(0.5);
-      container.add([glow, radiance, core, inner, label, bolt]);
+      container.add([aura, tile, label]);
       container.setScale(coreScale);
-      this.tweens.add({ targets: glow, scale: 1.18, alpha: 0.12, duration: 680, yoyo: true, repeat: -1 });
-      this.tweens.add({ targets: radiance, angle: 360, duration: 4200, repeat: -1 });
+      this.tweens.add({
+        targets: aura,
+        scale: visual.pulseScale,
+        alpha: visual.auraAlpha * 0.72,
+        duration: 820,
+        yoyo: true,
+        repeat: -1,
+        ease: "Sine.easeInOut",
+      });
       const node = { container, symbol, row, col };
       this.nodes.push(node);
       return node;
