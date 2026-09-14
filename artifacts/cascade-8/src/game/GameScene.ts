@@ -581,9 +581,10 @@ export class GameScene extends Phaser.Scene {
     if (!events.length) return;
     const placements = calculateWinLabelPositions(events);
     const totalDuration = Math.max(40, Math.min(780, duration));
-    const popDuration = totalDuration <= 40 ? 40 : Math.max(120, Math.min(150, Math.round(totalDuration * 0.17)));
-    const fadeDuration = totalDuration <= 40 ? 40 : Math.max(250, Math.min(300, Math.round(totalDuration * 0.35)));
-    const holdDuration = Math.max(40, totalDuration - popDuration - fadeDuration);
+    const isReducedMotion = totalDuration <= 40;
+    const popDuration = isReducedMotion ? 1 : Math.max(120, Math.min(150, Math.round(totalDuration * 0.17)));
+    const fadeDuration = isReducedMotion ? 1 : Math.max(250, Math.min(300, Math.round(totalDuration * 0.35)));
+    const holdDuration = Math.max(1, totalDuration - popDuration - fadeDuration);
 
     await Promise.all(placements.map((placement, index) => new Promise<void>((resolve) => {
       const glowText = this.add.text(0, 0, placement.text, {
