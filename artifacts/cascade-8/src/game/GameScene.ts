@@ -214,18 +214,8 @@ export class GameScene extends Phaser.Scene {
     }
     const normalSymbol = getNormalSymbol(symbol);
     if (!normalSymbol) throw new Error("Unsupported board symbol");
-    const definition = getSymbolDefinition(normalSymbol);
-    const frameColor = definition.frameColor;
-    const glow = this.add.circle(0, 2, 39, definition.color, winner ? 0.78 : 0.42);
-    glow.setBlendMode(Phaser.BlendModes.ADD);
-    const orb = this.add.circle(0, 0, 31, definition.color, winner ? 0.82 : 0.64);
-    orb.setStrokeStyle(winner ? 3.5 : 3, frameColor, winner ? 1 : 0.96);
-    const innerFrame = this.add.circle(0, 0, 27, undefined, 0)
-      .setStrokeStyle(1.5, definition.color, winner ? 0.95 : 0.82);
-    const core = this.add.circle(0, 0, 26, 0x09142f, 0.56);
-    const shine = this.add.ellipse(-9, -12, 13, 7, 0xffffff, 0.18).setAngle(-25);
-     const mark = this.add.image(0, 0, `club-logo-${normalSymbol}`).setDisplaySize(60, 60);
-    container.add([glow, orb, innerFrame, core, mark, shine]);
+    const mark = this.add.image(0, 0, `club-logo-${normalSymbol}`).setDisplaySize(60, 60);
+    container.add(mark);
     const node = { container, symbol, row, col };
     this.nodes.push(node);
     return node;
