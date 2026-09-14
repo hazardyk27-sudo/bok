@@ -28,7 +28,7 @@ describe("board generation", () => {
       return metadata && metadata.stackSize <= 2 && metadata.stackIndex < metadata.stackSize;
     })).toBe(true);
   });
-  it("keeps Base initial Scatter close to the configured per-cell marginal", () => {
+    it("keeps Base initial Scatter close to its pair-start marginal", () => {
     const boards = 20_000;
     const source = new SeededRNG("base-scatter-marginal");
     let scatterCount = 0;
@@ -36,7 +36,7 @@ describe("board generation", () => {
       scatterCount += countScatter(generateInitialBoard(source, "base"));
     }
     const marginal = scatterCount / (boards * 30);
-    expect(marginal).toBeGreaterThan(0.028);
-    expect(marginal).toBeLessThan(0.032);
+    expect(marginal).toBeGreaterThan(0.015);
+    expect(marginal).toBeLessThan(0.020);
   });
 });

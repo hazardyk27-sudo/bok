@@ -21,7 +21,7 @@ describe("persistent column streams", () => {
       ...BASE_REEL_CONFIG,
       symbolWeights: [{ value: "S3", weight: 1 }],
     };
-    const rolls = [0.999999, 0.999999, 0.999999, 0.1];
+    const rolls = [0.999999, 0.999999, 0.1];
     const stream = new ColumnStream({ nextFloat: () => rolls.shift() ?? 0.999999 }, config, 0);
     const first = stream.next(1, "BASE_REFILL")[0];
     const second = stream.next(1, "BASE_REFILL")[0];

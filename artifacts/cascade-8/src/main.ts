@@ -255,7 +255,7 @@ function renderLab(scene: GameScene) {
         return;
       }
       if (key === "pairs") {
-          const rolls = [0.999999, 0.999999, 0.999999, 0.1];
+           const rolls = [0.999999, 0.999999, 0.1];
           const stream = new ColumnStream({ nextFloat: () => rolls.shift() ?? 0.999999 }, { ...BASE_REEL_CONFIG, symbolWeights: [{ value: "S3", weight: 1 }] }, 0);
         const first = stream.next(1, "BASE_REFILL")[0];
         const second = stream.next(1, "BASE_REFILL")[0];
