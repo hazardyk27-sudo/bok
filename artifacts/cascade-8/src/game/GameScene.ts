@@ -609,7 +609,7 @@ export class GameScene extends Phaser.Scene {
       const backgroundWidth = text.width + 16;
       const backgroundHeight = text.height + 8;
       const backdrop = this.add.graphics();
-      backdrop.fillStyle(0x050916, 0.66);
+      backdrop.fillStyle(this.freeSpinMode ? 0x33230b : 0x0b1530, 0.66);
       backdrop.fillRoundedRect(
         -backgroundWidth / 2,
         -backgroundHeight / 2,
