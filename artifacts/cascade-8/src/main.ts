@@ -71,11 +71,11 @@ app.innerHTML = `
           </div>
          </div>
           <div id="tumble-win-panel" class="tumble-win-panel" aria-live="polite">
-           <span class="tumble-win-label">TUMBLE WIN</span>
-            <span id="tumble-symbol-win" class="tumble-symbol-win"></span>
+            <span class="tumble-win-label">TUMBLE WIN</span>
+            <span id="tumble-symbol-win" class="tumble-symbol-win" hidden aria-hidden="true"></span>
            <strong id="tumble">—</strong>
-           <span id="tumble-increment" class="tumble-increment"></span>
-           <small id="tumble-meta" class="tumble-meta">GOOD LUCK</small>
+            <span id="tumble-increment" class="tumble-increment" hidden aria-hidden="true"></span>
+            <small id="tumble-meta" class="tumble-meta" hidden aria-hidden="true"></small>
            <div id="tumble-settlement" class="tumble-settlement"></div>
          </div>
          <div class="status-line" aria-live="polite"><span class="status-dot"></span><span id="status">THE GATES ARE QUIET</span></div>

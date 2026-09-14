@@ -404,8 +404,8 @@ export class GameController {
     this.ui.tumbleSymbolWin.textContent = "";
     this.ui.tumble.textContent = "—";
     this.ui.tumbleIncrement.textContent = "";
-    this.ui.tumbleMeta.textContent = "GOOD LUCK";
-    this.ui.tumbleSettlement.innerHTML = "";
+    this.ui.tumbleMeta.textContent = "";
+    this.ui.tumbleSettlement.textContent = "";
   }
   private setFreeSpinPresentation(active: boolean) {
     this.ui.freeSpinCalculation.hidden = !active;
@@ -488,13 +488,20 @@ export class GameController {
   private updateBonusTotalDisplay(isIncrement: boolean) {
     this.ui.tumblePanel.className = `tumble-win-panel is-active is-free-total${isIncrement ? " is-total-updated" : ""}`;
     this.ui.tumbleLabel.textContent = "TOTAL BONUS WIN";
-     this.ui.tumble.textContent = formatCredits(this.freeSpinAccounting.cumulativeBonusWinCents);
+    const totalCents = this.freeSpinAccounting.cumulativeBonusWinCents;
+    const currentSpinCents = this.freeSpinAccounting.currentSpinWinCents;
+    const previousTotalCents = totalCents - currentSpinCents;
+    this.ui.tumble.textContent = formatCredits(totalCents);
     this.ui.tumbleSymbolWin.textContent = "";
-    this.ui.tumbleIncrement.textContent = isIncrement
-      ? `+${formatCredits(this.freeSpinAccounting.currentSpinWinCents)}  //  THIS SPIN`
-      : "";
-    this.ui.tumbleMeta.textContent = "BONUS TOTAL // RUNNING WIN";
-    this.ui.tumbleSettlement.innerHTML = "";
+    this.ui.tumbleIncrement.textContent = "";
+    this.ui.tumbleMeta.textContent = "";
+    this.ui.tumbleSettlement.textContent =
+      `${formatCredits(previousTotalCents)} + ${formatCredits(currentSpinCents)} = ${formatCredits(totalCents)}`;
+  }
+  private updateTumbleEquation(rawAmountCents: number, multiplier: number, finalAmountCents: number) {
+    const formattedMultiplier = Number.isInteger(multiplier) ? String(multiplier) : multiplier.toFixed(2);
+    this.ui.tumbleSettlement.textContent =
+      `${formatCredits(rawAmountCents)} × ${formattedMultiplier} = ${formatCredits(finalAmountCents)}`;
   }
   private buildWinLabelEvents(tumble: SpinResult["tumbles"][number]): WinLabelEvent[] {
     return buildWinLabelEvents(
@@ -525,17 +532,17 @@ export class GameController {
       return;
     }
     this.ui.tumblePanel.className = `tumble-win-panel is-active${isBonus ? " is-free-win" : ""}`;
-    this.ui.tumbleSymbolWin.textContent = tumble.winningSymbols
-      .map((symbol) => `${getSymbolDefinition(symbol).name} +${formatCredits(Math.round((tumble.payouts[symbol] ?? 0) * this.betCents))}`)
-      .join("  ·  ");
-    this.ui.tumble.textContent = formatCredits(Math.round(tumble.rawWinPoolAfter * this.betCents));
-    this.ui.tumbleIncrement.textContent = `+${formatCredits(Math.round(tumble.rawPayoutMultiplier * this.betCents))}  //  ${tumble.rawPayoutMultiplier.toFixed(2)}x`;
-    this.ui.tumbleMeta.textContent = `TUMBLE ${tumbleIndex}  //  RAW POOL ${tumble.rawWinPoolAfter.toFixed(2)}x`;
+    this.ui.tumbleLabel.textContent = "TUMBLE WIN";
+    const rawAmountCents = Math.round(tumble.rawWinPoolAfter * this.betCents);
+    this.ui.tumbleSymbolWin.textContent = "";
+    this.ui.tumble.textContent = formatCredits(rawAmountCents);
+    this.ui.tumbleIncrement.textContent = "";
+    this.ui.tumbleMeta.textContent = "";
+    this.updateTumbleEquation(rawAmountCents, 1, rawAmountCents);
   }
   private async presentSequenceSettlement(tumble: SpinResult["tumbles"][number], isBonus: boolean) {
     if (tumble.finalPayoutMultiplier <= tumble.rawWinPoolAfter || !tumble.settlementCores.length) return;
-    const rawAmount = formatCredits(Math.round(tumble.rawWinPoolAfter * this.betCents));
-    const coreText = tumble.settlementCores.map((core) => `${core.value}x`).join(" + ");
+    const rawAmountCents = Math.round(tumble.rawWinPoolAfter * this.betCents);
     const total = tumble.coreTotalMultiplier;
     if (isBonus) {
       this.ui.freeSpinCalculation.classList.add("is-collecting");
@@ -556,22 +563,26 @@ export class GameController {
       return;
     }
     this.ui.tumblePanel.className = `tumble-win-panel is-settling${isBonus ? " is-free-win" : ""}`;
+    this.ui.tumbleLabel.textContent = "TUMBLE WIN";
     this.ui.tumbleSymbolWin.textContent = "";
-    this.ui.tumbleSettlement.innerHTML = `<span>CORES ACTIVATE</span><strong>0x</strong><small>ARRIVAL ORDER // ${coreText}</small>`;
+    this.ui.tumbleIncrement.textContent = "";
+    this.ui.tumbleMeta.textContent = "";
+    this.ui.tumble.textContent = formatCredits(rawAmountCents);
+    this.updateTumbleEquation(rawAmountCents, 1, rawAmountCents);
     let collectedTotal = 0;
     for (const core of tumble.settlementCores) {
       await this.scene.collectMultiplierCore(core, this.ui.tumbleSettlement, this.duration(400));
       this.audio.multiplierCoreCollect(core.value, false);
       collectedTotal += core.value;
-      this.ui.tumbleSettlement.innerHTML = `<span>CORE COLLECTED</span><strong>${collectedTotal}x</strong><small>+${core.value}x // ${collectedTotal}x BANKED</small>`;
+      const collectedAmountCents = Math.round(tumble.rawWinPoolAfter * collectedTotal * this.betCents);
+      this.ui.tumble.textContent = formatCredits(collectedAmountCents);
+      this.updateTumbleEquation(rawAmountCents, collectedTotal, collectedAmountCents);
       await sleep(this.duration(105));
     }
-    this.ui.tumbleSettlement.innerHTML = `<span>SEQUENCE CALCULATION</span><strong>${rawAmount} × ${total}</strong><small>RAW TUMBLE WIN × TOTAL MULTIPLIER</small>`;
+    const finalAmountCents = Math.round(tumble.finalPayoutMultiplier * this.betCents);
+    this.ui.tumble.textContent = formatCredits(finalAmountCents);
+    this.updateTumbleEquation(rawAmountCents, total, finalAmountCents);
     await sleep(this.duration(470));
-    this.ui.tumble.textContent = formatCredits(Math.round(tumble.finalPayoutMultiplier * this.betCents));
-    this.ui.tumbleIncrement.textContent = `FINAL +${formatCredits(Math.round(tumble.finalPayoutMultiplier * this.betCents))}`;
-    this.ui.tumbleMeta.textContent = `FINAL TUMBLE WIN  //  ${tumble.finalPayoutMultiplier.toFixed(2)}x`;
-    this.ui.tumbleSettlement.innerHTML = "";
     await sleep(this.duration(420));
   }
   private async pauseForRetrigger(freeSpin: SpinResult["freeSpins"][number]) {
@@ -603,22 +614,27 @@ export class GameController {
     this.resetTumbleWin();
     const values = [1.2, 4, 8];
     for (let index = 0; index < values.length; index += 1) {
-      const increment = index === 0 ? values[0] : values[index] - values[index - 1];
       this.ui.tumblePanel.className = "tumble-win-panel is-active";
-      this.ui.tumbleSymbolWin.textContent = "SYMBOL WIN PREVIEW";
-      this.ui.tumble.textContent = formatCredits(Math.round(values[index] * this.betCents));
-      this.ui.tumbleIncrement.textContent = `+${formatCredits(Math.round(increment * this.betCents))}  //  ${increment.toFixed(2)}x`;
-      this.ui.tumbleMeta.textContent = `TUMBLE ${index + 1}  //  RAW POOL ${values[index].toFixed(2)}x`;
+      this.ui.tumbleLabel.textContent = "TUMBLE WIN";
+      const amountCents = Math.round(values[index] * this.betCents);
+      this.ui.tumble.textContent = formatCredits(amountCents);
+      this.ui.tumbleSymbolWin.textContent = "";
+      this.ui.tumbleIncrement.textContent = "";
+      this.ui.tumbleMeta.textContent = "";
+      this.updateTumbleEquation(amountCents, 1, amountCents);
       await sleep(this.duration(520));
     }
     if (withSettlement) {
       this.ui.tumblePanel.className = "tumble-win-panel is-settling";
-      this.ui.tumbleSettlement.innerHTML = `<span>CORES ACTIVATE</span><strong>10x + 25x</strong><small>TOTAL MULTIPLIER 35x</small>`;
+      this.ui.tumbleLabel.textContent = "TUMBLE WIN";
+      const rawAmountCents = Math.round(8 * this.betCents);
+      this.ui.tumble.textContent = formatCredits(rawAmountCents);
+      this.updateTumbleEquation(rawAmountCents, 1, rawAmountCents);
       await sleep(this.duration(380));
-      this.ui.tumbleSettlement.innerHTML = `<span>SEQUENCE CALCULATION</span><strong>8.00 × 35</strong><small>FINAL TUMBLE WIN 280.00x</small>`;
+      const finalAmountCents = Math.round(280 * this.betCents);
+      this.ui.tumble.textContent = formatCredits(finalAmountCents);
+      this.updateTumbleEquation(rawAmountCents, 35, finalAmountCents);
       await sleep(this.duration(600));
-      this.ui.tumbleSettlement.innerHTML = "";
-      this.ui.tumbleMeta.textContent = "FINAL TUMBLE WIN  //  280.00x";
     }
   }
   async previewWinLabels() {
@@ -647,10 +663,12 @@ export class GameController {
       void this.scene.presentWinLabels(events, this.duration(ANIMATION.winLabel));
       rawTotalCents += Math.round(evaluation.rawPayoutMultiplier * this.betCents);
       this.ui.tumblePanel.className = "tumble-win-panel is-active";
-      this.ui.tumbleSymbolWin.textContent = events.map((event) => event.text).join("  ·  ");
+      this.ui.tumbleLabel.textContent = "TUMBLE WIN";
       this.ui.tumble.textContent = formatCredits(rawTotalCents);
-      this.ui.tumbleIncrement.textContent = `+${formatCredits(Math.round(evaluation.rawPayoutMultiplier * this.betCents))}`;
-      this.ui.tumbleMeta.textContent = `LABEL DEMO ${index + 1}  //  RAW TOTAL ${formatCredits(rawTotalCents)}`;
+      this.ui.tumbleSymbolWin.textContent = "";
+      this.ui.tumbleIncrement.textContent = "";
+      this.ui.tumbleMeta.textContent = "";
+      this.updateTumbleEquation(rawTotalCents, 1, rawTotalCents);
       if (index < boards.length - 1) await sleep(this.duration(360));
     }
   }

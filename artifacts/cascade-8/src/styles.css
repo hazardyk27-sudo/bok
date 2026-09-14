@@ -887,109 +887,91 @@ button:focus-visible, input:focus-visible { outline: 2px solid var(--cyan); outl
   display: grid;
   justify-items: center;
   align-content: center;
-  min-height: 16px;
-  margin: -2px auto 0;
+  width: min(100%, 390px);
+  min-height: 18px;
+  margin: 4px auto 0;
+  padding: 12px 22px 13px;
+  border: 1px solid rgba(226, 205, 150, .14);
+  border-radius: 16px;
   color: #fff;
+  background:
+    radial-gradient(circle at 50% 0%, rgba(255, 221, 144, .07), transparent 56%),
+    linear-gradient(145deg, rgba(26, 25, 34, .86), rgba(11, 13, 23, .82));
+  box-shadow:
+    0 12px 28px rgba(2, 4, 12, .2),
+    inset 0 1px 0 rgba(255, 244, 196, .04);
   text-align: center;
   pointer-events: none;
+  transition: border-color .3s ease, box-shadow .3s ease, background .3s ease;
 }
 .tumble-win-panel.is-active,
-.tumble-win-panel.is-settling { min-height: 68px; }
+.tumble-win-panel.is-settling {
+  min-height: 92px;
+  border-color: rgba(226, 205, 150, .24);
+  box-shadow:
+    0 14px 34px rgba(2, 4, 12, .28),
+    0 0 28px rgba(244, 204, 111, .05),
+    inset 0 1px 0 rgba(255, 244, 196, .06);
+}
 .tumble-win-label {
-  color: #d8c68f;
-  font: 9px "DM Mono", monospace;
-  letter-spacing: .28em;
-  opacity: .82;
+  color: #cfbb82;
+  font: 600 9px "DM Mono", monospace;
+  letter-spacing: .32em;
+  line-height: 1;
+  opacity: .9;
 }
 .tumble-win-panel > #tumble {
   min-width: 0;
-  color: #fff8d7;
-  font: 800 clamp(32px, 5vw, 54px) "Manrope", sans-serif;
-  line-height: .95;
-  letter-spacing: -.045em;
+  margin-top: 8px;
+  color: #fff4cf;
+  font: 800 clamp(38px, 5.6vw, 58px) "Manrope", sans-serif;
+  line-height: .88;
+  letter-spacing: -.055em;
   font-variant-numeric: tabular-nums;
-  text-shadow: 0 0 25px rgba(255, 205, 97, .36);
+  text-shadow: 0 0 22px rgba(255, 214, 125, .26);
 }
 .tumble-win-panel.is-active > #tumble,
 .tumble-win-panel.is-settling > #tumble { animation: tumble-number-in .34s cubic-bezier(.16,.9,.24,1); }
-.tumble-win-panel.is-free-win > #tumble { color: #ffe19a; }
+.tumble-win-panel.is-free-win > #tumble,
+.tumble-win-panel.is-free-total > #tumble { color: #ffeab0; }
 .tumble-win-panel.is-free-total {
-  min-height: 82px;
-  margin-top: 2px;
-  padding: 5px 12px 6px;
-  border-top: 1px solid rgba(255, 211, 102, .16);
-  border-bottom: 1px solid rgba(255, 211, 102, .12);
-  background: linear-gradient(180deg, rgba(57, 38, 14, .12), transparent);
+  min-height: 92px;
+  margin-top: 8px;
+  border-color: rgba(255, 211, 102, .22);
+  background:
+    radial-gradient(circle at 50% 0%, rgba(255, 211, 102, .1), transparent 58%),
+    linear-gradient(145deg, rgba(49, 35, 16, .72), rgba(17, 16, 24, .88));
 }
 .tumble-win-panel.is-free-total .tumble-win-label {
   color: #f0d178;
-  font-size: 8px;
-  letter-spacing: .3em;
 }
 .tumble-win-panel.is-free-total > #tumble {
-  color: #fff0ac;
-  font-size: clamp(37px, 6vw, 64px);
-  text-shadow: 0 0 28px rgba(255, 200, 66, .55), 0 0 55px rgba(255, 166, 28, .2);
-}
-.tumble-win-panel.is-free-total .tumble-increment {
-  color: #ffe7a4;
-  font-size: 9px;
-}
-.tumble-win-panel.is-free-total .tumble-meta {
-  color: #ad9863;
+  font-size: clamp(38px, 6vw, 64px);
+  text-shadow: 0 0 28px rgba(255, 200, 66, .38), 0 0 55px rgba(255, 166, 28, .14);
 }
 .tumble-win-panel.is-free-total .tumble-symbol-win,
 .tumble-win-panel.is-free-total .tumble-increment,
 .tumble-win-panel.is-free-total .tumble-meta { display: none; }
 .tumble-win-panel.is-total-updated > #tumble { animation: bonus-total-in .62s cubic-bezier(.16,.9,.24,1); }
-.tumble-symbol-win {
-  max-width: min(92vw, 620px);
-  overflow: hidden;
-  color: #f8d779;
-  font: 700 9px "DM Mono", monospace;
-  letter-spacing: .08em;
-  line-height: 1.2;
-  text-overflow: ellipsis;
-  text-transform: uppercase;
-  white-space: nowrap;
-}
-.tumble-increment {
-  min-height: 14px;
-  color: #f4d47e;
-  font: 10px "DM Mono", monospace;
-  letter-spacing: .08em;
-}
-.tumble-meta {
-  color: #7180aa;
-  font: 8px "DM Mono", monospace;
-  letter-spacing: .13em;
-}
+.tumble-symbol-win,
+.tumble-increment,
+.tumble-meta { display: none !important; }
 .tumble-win-panel:not(.is-active):not(.is-settling) .tumble-win-label,
 .tumble-win-panel:not(.is-active):not(.is-settling) > #tumble,
 .tumble-win-panel:not(.is-active):not(.is-settling) .tumble-symbol-win,
 .tumble-win-panel:not(.is-active):not(.is-settling) .tumble-meta { display: none; }
 .tumble-settlement {
-  display: grid;
-  justify-items: center;
-  gap: 3px;
-  min-height: 0;
-  margin-top: 4px;
-  color: #ffe7a4;
+  min-height: 16px;
+  margin-top: 10px;
+  color: #d9c58f;
+  font: 500 clamp(12px, 1.8vw, 15px) "DM Mono", monospace;
+  letter-spacing: .045em;
+  line-height: 1.1;
+  font-variant-numeric: tabular-nums;
+  text-shadow: 0 0 14px rgba(244, 204, 111, .14);
   animation: settlement-in .28s ease-out;
 }
 .tumble-settlement:empty { display: none; }
-.tumble-settlement span,
-.tumble-settlement small {
-  color: #c9b77f;
-  font: 8px "DM Mono", monospace;
-  letter-spacing: .14em;
-}
-.tumble-settlement strong {
-  color: #fff2b3;
-  font-size: clamp(14px, 2.4vw, 22px);
-  line-height: 1;
-  text-shadow: 0 0 18px rgba(255, 201, 70, .65);
-}
 .preview-trophy-mark {
   position: relative;
   width: 34px;
