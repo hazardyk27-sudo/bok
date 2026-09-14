@@ -606,7 +606,26 @@ export class GameScene extends Phaser.Scene {
         strokeThickness: 4,
         shadow: { blur: 2, color: "#02040c", fill: true, offsetX: 0, offsetY: 2 },
       }).setOrigin(0.5);
-      const container = this.add.container(placement.x, placement.y, [glowText, text])
+      const backgroundWidth = text.width + 16;
+      const backgroundHeight = text.height + 8;
+      const backdrop = this.add.graphics();
+      backdrop.fillStyle(0x050916, 0.66);
+      backdrop.fillRoundedRect(
+        -backgroundWidth / 2,
+        -backgroundHeight / 2,
+        backgroundWidth,
+        backgroundHeight,
+        6,
+      );
+      backdrop.lineStyle(1, 0xd8b968, 0.22);
+      backdrop.strokeRoundedRect(
+        -backgroundWidth / 2,
+        -backgroundHeight / 2,
+        backgroundWidth,
+        backgroundHeight,
+        6,
+      );
+      const container = this.add.container(placement.x, placement.y, [backdrop, glowText, text])
         .setDepth(14)
         .setAlpha(0)
         .setScale(0.94);
