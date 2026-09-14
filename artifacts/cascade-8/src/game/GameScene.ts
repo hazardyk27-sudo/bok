@@ -391,7 +391,7 @@ export class GameScene extends Phaser.Scene {
         ease: "Cubic.easeOut",
         onComplete: () => this.destroyEffect(ring),
       });
-      const particleCount = Math.min(6, Math.max(3, Math.floor(72 / Math.max(active.length, 1))));
+      const particleCount = Math.min(8, Math.max(3, Math.floor(96 / Math.max(active.length, 1))));
       Array.from({ length: particleCount }, (_, index) => {
         const particle = this.trackEffect(this.add.circle(centerX, centerY, index % 3 === 0 ? 4 : 2.5, color, 0.92).setDepth(3));
         const angle = (index / particleCount) * Math.PI * 2;
@@ -617,7 +617,7 @@ export function createGameScene(parent: HTMLElement) {
     transparent: true,
     scene: [GameScene],
     scale: { mode: Phaser.Scale.FIT, autoCenter: Phaser.Scale.CENTER_BOTH, width: 620, height: 520 },
-    render: { antialias: false, pixelArt: false, roundPixels: true },
+    render: { antialias: true, pixelArt: false, roundPixels: true },
     banner: false,
   });
 }
