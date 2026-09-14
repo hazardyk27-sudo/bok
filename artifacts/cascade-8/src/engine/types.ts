@@ -35,6 +35,7 @@ export type FreeSpinResult = {
   scatterCount: number;
   retriggerScatterCount: number;
   retriggered: number;
+  retriggerBoard: Board | null;
   tumbles: TumbleResult[];
   rawWinMultiplier: number;
   combinedCoreMultiplier: number;

@@ -34,16 +34,14 @@ app.innerHTML = `
           <div class="hud-stat bonus-stat"><span>BONUS WIN</span><strong id="bonus-win">0.00</strong></div>
           <div class="free-counter"><span>FREE SPINS</span><strong id="free-spins">0</strong></div>
         </div>
-         <section id="free-spin-calculation" class="free-spin-calculation" hidden aria-label="Free Spin calculation" aria-live="polite">
-           <span class="free-spin-calc-kicker" aria-hidden="true">CURRENT FREE SPIN <span id="free-spin-index">—</span></span>
+        <section id="free-spin-calculation" class="free-spin-calculation" hidden aria-label="Free Spin calculation" aria-live="polite">
           <div class="free-spin-calc-equation">
-             <div class="free-spin-calc-value" aria-label="Raw explosion total"><span aria-hidden="true">SYMBOL WIN</span><strong id="free-spin-symbol-win">0.00</strong></div>
+            <div class="free-spin-calc-value" aria-label="Raw explosion total"><span aria-hidden="true">SYMBOL WIN</span><strong id="free-spin-symbol-win">0.00</strong></div>
             <span id="free-spin-multiply-operator" class="free-spin-calc-operator">×</span>
-             <div class="free-spin-calc-value" aria-label="Multiplier"><span aria-hidden="true">MULTIPLIER</span><strong id="free-spin-multiplier">1x</strong></div>
+            <div class="free-spin-calc-value" aria-label="Multiplier"><span aria-hidden="true">MULTIPLIER</span><strong id="free-spin-multiplier">1x</strong></div>
             <span id="free-spin-equals-operator" class="free-spin-calc-operator">=</span>
-             <div class="free-spin-calc-value is-result" aria-label="Spin win"><span aria-hidden="true">SPIN WIN</span><strong id="free-spin-spin-win">0.00</strong></div>
+            <div class="free-spin-calc-value is-result" aria-label="Spin win"><span aria-hidden="true">SPIN WIN</span><strong id="free-spin-spin-win">0.00</strong></div>
           </div>
-           <span id="free-spin-calc-status" class="free-spin-calc-status" aria-hidden="true">WAITING FOR FREE SPIN</span>
         </section>
         <div class="board-wrap">
           <div class="board-caption"><span>6 × 5 CASCADE FIELD</span></div>
@@ -53,21 +51,11 @@ app.innerHTML = `
               <span class="bonus-eyebrow">GOLDEN REALM</span>
               <div id="bonus-scatter-row" class="bonus-scatter-row" aria-label="Triggering scatter symbols"></div>
               <span id="bonus-trigger-label" class="bonus-trigger-label"></span>
-              <strong class="bonus-title">FREE SPINS READY</strong>
+              <strong id="bonus-title" class="bonus-title">FREE SPINS READY</strong>
               <div id="bonus-spin-count" class="bonus-hero-number">10</div>
-              <span class="bonus-support">FREE SPINS AWARDED</span>
-              <small>PRESS START TO ENTER THE GOLDEN REALM</small>
+              <span id="bonus-support" class="bonus-support">FREE SPINS AWARDED</span>
+              <small id="bonus-instruction">PRESS START TO ENTER THE GOLDEN REALM</small>
               <button type="button" data-bonus-start>START FREE SPINS</button>
-            </div>
-          </div>
-          <div id="bonus-retrigger-overlay" class="bonus-retrigger-overlay" hidden aria-live="assertive">
-            <div class="bonus-retrigger-panel">
-              <span class="bonus-eyebrow">BONUS RE-TRIGGER</span>
-              <div id="retrigger-scatter-row" class="bonus-scatter-row" aria-label="Retrigger scatters"></div>
-              <span id="retrigger-count-label" class="bonus-trigger-label"></span>
-              <strong class="bonus-retrigger-title">+5 FREE SPINS</strong>
-              <small>TAP TO CONTINUE</small>
-              <button id="retrigger-continue" type="button">CONTINUE</button>
             </div>
           </div>
          </div>
@@ -82,23 +70,23 @@ app.innerHTML = `
          <div class="status-line" aria-live="polite"><span class="status-dot"></span><span id="status">THE GATES ARE QUIET</span></div>
       </section>
     </main>
-     <footer class="control-deck" aria-label="Game controls">
+    <footer class="control-deck">
       <div class="bet-control">
         <span class="eyebrow">BET</span>
         <div class="bet-stepper"><button id="bet-minus" aria-label="Decrease bet">−</button><strong data-bet-display>1.00</strong><button id="bet-plus" aria-label="Increase bet">+</button></div>
       </div>
       <div class="auto-control">
         <span class="eyebrow">AUTO</span>
-         <div class="auto-row"><span class="auto-prefix">AUTO</span><select id="auto-count" aria-label="Automatic spin count"><option value="25">25</option><option value="50">50</option><option value="75">75</option><option value="100">100</option></select><button id="auto-start">START</button></div>
+        <div class="auto-row"><select id="auto-count" aria-label="Automatic spin count"><option value="25">25 SPINS</option><option value="50">50 SPINS</option><option value="75">75 SPINS</option><option value="100">100 SPINS</option></select><button id="auto-start">START AUTO</button></div>
         <small id="auto-status">BET 1.00 / READY</small>
       </div>
-       <button id="spin" class="spin-button" aria-label="Spin"><span class="spin-glow"></span><span class="spin-icon">✦</span><span class="spin-label">SPIN</span><small>PLAY</small></button>
+      <button id="spin" class="spin-button"><span class="spin-glow"></span><span class="spin-icon">✦</span><span class="spin-label">SPIN</span><small>ENTER THE CASCADE</small></button>
       <div class="utility-controls">
-         <button id="turbo" class="utility-button" aria-label="Toggle turbo"><span class="utility-icon">»</span><span>TURBO</span></button>
-         <button id="sound" class="utility-button" aria-label="Toggle sound"><span class="utility-icon">◒</span><span>SOUND</span></button>
+        <button id="turbo" class="utility-button"><span class="utility-icon">»</span><span>TURBO</span></button>
+        <button id="sound" class="utility-button"><span class="utility-icon">◒</span><span>SOUND ON</span></button>
       </div>
     </footer>
-     <div class="demo-note" aria-hidden="true"><span>✧</span> VIRTUAL CREDITS ONLY <span class="note-separator">•</span> NO REAL-MONEY GAMBLING</div>
+    <div class="demo-note"><span>✧</span> VIRTUAL CREDITS ONLY <span class="note-separator">•</span> NO REAL-MONEY GAMBLING <span class="note-separator">•</span> RNG DEMO PROTOTYPE</div>
   </div>
    <div id="big-win-overlay" class="big-win-overlay" aria-live="assertive"></div>
    <div id="bonus-summary-overlay" class="bonus-summary-overlay" aria-live="assertive"></div>
@@ -154,7 +142,7 @@ window.setTimeout(() => {
     tumble: byId("tumble"), status: byId("status"), spin: byId("spin"), spinLabel: byId("spin").querySelector(".spin-label") as HTMLElement,
     betMinus: byId("bet-minus"), betPlus: byId("bet-plus"), autoCount: byId("auto-count"), autoStart: byId("auto-start"), autoStatus: byId("auto-status"),
      turbo: byId("turbo"), sound: byId("sound"),
-         bonusOverlay: byId("bonus-overlay"), bonusStart: byId("bonus-overlay").querySelector("[data-bonus-start]") as HTMLButtonElement, bonusSpinCount: byId("bonus-spin-count"), bonusScatterRow: byId("bonus-scatter-row"), bonusTriggerLabel: byId("bonus-trigger-label"), retriggerOverlay: byId("bonus-retrigger-overlay"), retriggerScatterRow: byId("retrigger-scatter-row"), retriggerCountLabel: byId("retrigger-count-label"), retriggerContinue: byId("retrigger-continue") as HTMLButtonElement, freeSpinCalculation: byId("free-spin-calculation"), freeSpinIndex: byId("free-spin-index"), freeSpinRawWin: byId("free-spin-symbol-win"), freeSpinMultiplier: byId("free-spin-multiplier"), freeSpinFinalWin: byId("free-spin-spin-win"), freeSpinCalcStatus: byId("free-spin-calc-status"), freeSpinMultiplyOperator: byId("free-spin-multiply-operator"), freeSpinEqualsOperator: byId("free-spin-equals-operator"), tumbleLabel: document.querySelector(".tumble-win-label") as HTMLElement, tumbleSymbolWin: byId("tumble-symbol-win"), tumbleIncrement: byId("tumble-increment"), tumbleMeta: byId("tumble-meta"), tumbleSettlement: byId("tumble-settlement"), tumblePanel: byId("tumble-win-panel"), bigWinOverlay: byId("big-win-overlay"), bonusSummaryOverlay: byId("bonus-summary-overlay"), boardWrap: byId("phaser-board").parentElement!,
+        bonusOverlay: byId("bonus-overlay"), bonusStart: byId("bonus-overlay").querySelector("[data-bonus-start]") as HTMLButtonElement, bonusSpinCount: byId("bonus-spin-count"), bonusScatterRow: byId("bonus-scatter-row"), bonusTriggerLabel: byId("bonus-trigger-label"), bonusTitle: byId("bonus-title"), bonusSupport: byId("bonus-support"), bonusInstruction: byId("bonus-instruction"), freeSpinCalculation: byId("free-spin-calculation"), freeSpinRawWin: byId("free-spin-symbol-win"), freeSpinMultiplier: byId("free-spin-multiplier"), freeSpinFinalWin: byId("free-spin-spin-win"), freeSpinMultiplyOperator: byId("free-spin-multiply-operator"), freeSpinEqualsOperator: byId("free-spin-equals-operator"), tumbleLabel: document.querySelector(".tumble-win-label") as HTMLElement, tumbleSymbolWin: byId("tumble-symbol-win"), tumbleIncrement: byId("tumble-increment"), tumbleMeta: byId("tumble-meta"), tumbleSettlement: byId("tumble-settlement"), tumblePanel: byId("tumble-win-panel"), bigWinOverlay: byId("big-win-overlay"), bonusSummaryOverlay: byId("bonus-summary-overlay"), boardWrap: byId("phaser-board").parentElement!,
     setModal: showModal,
   });
    if (isLab) renderLab(scene);
@@ -166,7 +154,7 @@ window.setTimeout(() => {
 function renderLab(scene: GameScene) {
   const lab = document.createElement("section");
   lab.className = "lab-panel";
-   lab.innerHTML = `<div class="panel-kicker">DEVELOPMENT ROUTE // /lab</div><h1>Animation & Math Lab</h1><p>Deterministic board checks stay separate from live RNG. Use these cards to inspect the frameless Scatter, persistent Cores, streams and the full win presentation.</p><div class="lab-actions"><button data-lab="seven">7 × S1</button><button data-lab="eight">8 × S1</button><button data-lab="simultaneous">8 × S1 + 8 × S6</button><button data-lab="core">CORE BOARD</button><button data-lab="scatter-idle">SCATTER IDLE</button><button data-lab="scatter-fall">SCATTER FALL</button><button data-lab="scatter-land">SCATTER LAND</button><button data-lab="scatter-1">SCATTER #1</button><button data-lab="scatter-2">SCATTER #2</button><button data-lab="scatter-3">SCATTER #3</button><button data-lab="scatter-bonus">BONUS SCATTER</button><button data-lab="tumble">TUMBLE 1.20 → 4.00 → 8.00</button><button data-lab="settlement">8x + 35x</button><button data-lab="free-spin-accounting">FREE SPIN ACCOUNTING</button><button data-lab="bonus-4">BONUS CEREMONY // 4</button><button data-lab="bonus-5">BONUS CEREMONY // 5</button><button data-lab="bonus-6">BONUS CEREMONY // 6</button><button data-lab="waiting">BONUS WAITING</button><button data-lab="streams">STREAMS</button><button data-lab="pairs">PAIR SPLIT</button><button data-lab="anti">ANTI-STREAK</button><button data-lab="timing">TIMINGS</button><button data-lab="big">BIG WIN WAIT</button><button data-lab="max">MAX WIN WAIT</button></div><div class="lab-result" id="lab-result">Choose a predefined board.</div><pre class="lab-metrics" id="lab-metrics"></pre><div class="special-design"><div class="panel-kicker">SPECIAL SYMBOL DESIGN // SCATTER NEXT TO ORDINARY SYMBOL</div><div class="special-grid"><div class="special-preview normal-preview"><span class="special-state">ORDINARY</span><div class="preview-crest">GS</div><b>GALATASARAY</b></div><div class="special-preview scatter-preview"><span class="special-state">TRANSPARENT CIRCLE</span><img class="scatter-preview-image" src="${import.meta.env.BASE_URL}special-symbols/scatter.png" alt="Golden Scatter symbol"><b>GOLDEN SCATTER</b></div>${[2, 3, 5, 10, 25, 50, 100, 250, 500].map((value) => `<div class="special-preview core-preview core-${value}"><span class="special-state">${value >= 100 ? "SETTLEMENT" : "ACTIVE"}</span>${value === 2 || value === 3 || value === 5 || value === 10 ? `<img class="core-preview-image" src="${import.meta.env.BASE_URL}special-symbols/${value}x.png" alt="${value}x multiplier core">` : `<strong>${value}x</strong>`}<b>CORE</b></div>`).join("")}</div></div>`;
+   lab.innerHTML = `<div class="panel-kicker">DEVELOPMENT ROUTE // /lab</div><h1>Animation & Math Lab</h1><p>Deterministic board checks stay separate from live RNG. Use these cards to inspect the frameless Scatter, persistent Cores, streams and the full win presentation.</p><div class="lab-actions"><button data-lab="seven">7 × S1</button><button data-lab="eight">8 × S1</button><button data-lab="simultaneous">8 × S1 + 8 × S6</button><button data-lab="core">CORE BOARD</button><button data-lab="scatter-idle">SCATTER IDLE</button><button data-lab="scatter-fall">SCATTER FALL</button><button data-lab="scatter-land">SCATTER LAND</button><button data-lab="scatter-1">SCATTER #1</button><button data-lab="scatter-2">SCATTER #2</button><button data-lab="scatter-3">SCATTER #3</button><button data-lab="scatter-bonus">BONUS SCATTER</button><button data-lab="tumble">TUMBLE 1.20 → 4.00 → 8.00</button><button data-lab="settlement">8x + 35x</button><button data-lab="free-spin-accounting">FREE SPIN ACCOUNTING</button><button data-lab="free-spin-zero">ZERO-WIN FREE SPIN</button><button data-lab="bonus-4">BONUS CEREMONY // 4</button><button data-lab="bonus-5">BONUS CEREMONY // 5</button><button data-lab="bonus-6">BONUS CEREMONY // 6</button><button data-lab="retrigger-3">RETRIGGER // 3</button><button data-lab="retrigger-4">RETRIGGER // 4</button><button data-lab="retrigger-5">RETRIGGER // 5</button><button data-lab="retrigger-6">RETRIGGER // 6</button><button data-lab="waiting">BONUS WAITING</button><button data-lab="streams">STREAMS</button><button data-lab="pairs">PAIR SPLIT</button><button data-lab="anti">ANTI-STREAK</button><button data-lab="timing">TIMINGS</button><button data-lab="base-big">BASE LARGE WIN</button><button data-lab="bonus-big">BONUS LARGE WIN</button></div><div class="lab-result" id="lab-result">Choose a predefined board.</div><pre class="lab-metrics" id="lab-metrics"></pre><div class="special-design"><div class="panel-kicker">SPECIAL SYMBOL DESIGN // SCATTER NEXT TO ORDINARY SYMBOL</div><div class="special-grid"><div class="special-preview normal-preview"><span class="special-state">ORDINARY</span><div class="preview-crest">GS</div><b>GALATASARAY</b></div><div class="special-preview scatter-preview"><span class="special-state">TRANSPARENT CIRCLE</span><img class="scatter-preview-image" src="${import.meta.env.BASE_URL}special-symbols/scatter.png" alt="Golden Scatter symbol"><b>GOLDEN SCATTER</b></div>${[2, 3, 5, 10, 25, 50, 100, 250, 500].map((value) => `<div class="special-preview core-preview core-${value}"><span class="special-state">${value >= 100 ? "SETTLEMENT" : "ACTIVE"}</span>${value === 2 || value === 3 || value === 5 || value === 10 ? `<img class="core-preview-image" src="${import.meta.env.BASE_URL}special-symbols/${value}x.png" alt="${value}x multiplier core">` : `<strong>${value}x</strong>`}<b>CORE</b></div>`).join("")}</div></div>`;
   document.querySelector(".game-stage")?.append(lab);
    const metrics = lab.querySelector<HTMLElement>("#lab-metrics")!;
    const updateMetrics = () => {
@@ -193,20 +181,31 @@ function renderLab(scene: GameScene) {
        byId("lab-result").textContent = "FREE SPIN ACCOUNTING // 20.00 + 30.00 × 10x = 500.00 // BONUS TOTAL 400.00 → 900.00";
        return;
      }
-      if (key === "bonus-4" || key === "bonus-5" || key === "bonus-6") {
+      if (key === "free-spin-zero") {
+        void controller.previewZeroWinFreeSpin();
+        byId("lab-result").textContent = "ZERO-WIN FREE SPIN // NO CORE OR EQUATION CEREMONY // SETTLE THEN ADVANCE";
+        return;
+      }
+     if (key === "bonus-4" || key === "bonus-5" || key === "bonus-6") {
        const scatterCount = Number(key.slice(-1));
        void controller.previewBonusTriggerCeremony(scatterCount);
        byId("lab-result").textContent = `BONUS TRIGGER CEREMONY // ${scatterCount} SCATTERS // BOARD → CENTER → FREE SPINS READY`;
        return;
      }
-     if (key === "big") {
-       controller.showBigWin(250, 25_000);
-        byId("lab-result").textContent = "BIG WIN COUNT-UP // first tap finishes, second tap continues";
+     if (key?.startsWith("retrigger-")) {
+       const count = Number(key.slice(-1));
+       void controller.previewFreeSpinRetriggerCeremony(count);
+       byId("lab-result").textContent = `FREE SPIN RETRIGGER // ${count} SCATTERS GATHER → +5 FREE SPINS → EXPLICIT CONTINUE`;
+       return;
+     }
+     if (key === "base-big") {
+       controller.previewBaseLargeWin();
+        byId("lab-result").textContent = "BASE GAME LARGE WIN // MAJOR-WIN OVERLAY SUPPRESSED";
         return;
       }
-      if (key === "max") {
-        controller.showBigWin(5000, 500_000, "MAX WIN");
-        byId("lab-result").textContent = "MAX WIN WAIT // explicit two-input dismissal";
+      if (key === "bonus-big") {
+        controller.previewBonusLargeWin();
+        byId("lab-result").textContent = "BONUS FINAL LARGE WIN // CALCULATION → OVERLAY → TOTAL TRANSFER";
         return;
       }
       if (key === "waiting") {

@@ -17,10 +17,15 @@ const LARGE_CORE_SIZE = 100;
 
 export class GameScene extends Phaser.Scene {
   private nodes: BoardNode[] = [];
+
   private frame?: Phaser.GameObjects.Graphics;
+
   private cellFrames: Phaser.GameObjects.Rectangle[] = [];
+
   private freeSpinMode = false;
+
   private boardOrigin = { x: 22, y: 30 };
+
   private cellSize = { width: 96, height: 92 };
 
   constructor() {
@@ -540,6 +545,38 @@ export class GameScene extends Phaser.Scene {
       onComplete: () => ring.destroy(),
     });
     this.sparkle();
+  }
+
+  async collectMultiplierCore(value: number, occurrence = 0, duration = 230) {
+    const matching = this.nodes.filter((node) => isMultiplierCore(node.symbol) && node.symbol.value === value);
+    const node = matching[occurrence];
+    if (!node) return;
+    const halo = this.add.circle(node.container.x, node.container.y, 34, 0xffd36a, 0.18)
+      .setBlendMode(Phaser.BlendModes.ADD)
+      .setDepth(4);
+    await new Promise<void>((resolve) => {
+      this.tweens.add({
+        targets: [node.container, halo],
+        scale: 1.22,
+        duration: Math.max(70, duration * 0.45),
+        ease: "Back.easeOut",
+        onComplete: () => {
+          this.tweens.add({
+            targets: [node.container, halo],
+            alpha: 0,
+            scale: 1.55,
+            duration: Math.max(70, duration * 0.55),
+            ease: "Cubic.easeIn",
+            onComplete: () => {
+              this.destroyNode(node);
+              halo.destroy();
+              resolve();
+            },
+          });
+        },
+      });
+    });
+    this.nodes = this.nodes.filter((candidate) => candidate !== node);
   }
 }
 

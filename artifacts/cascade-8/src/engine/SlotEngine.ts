@@ -30,6 +30,7 @@ type TumbleSequence = {
   bonusScatterCount: number;
   retriggerScatterCount: number;
   retriggered: number;
+  retriggerBoard: Board | null;
 };
 
 export function calculateSequenceSettlement(rawWinMultiplier: number, coreValues: readonly number[]) {
@@ -97,6 +98,7 @@ function playTumbles(initialBoard: Board, context: PlayContext): TumbleSequence 
   let bonusScatterCount = context.mode === "base" ? countScatter(board) : 0;
   let retriggerScatterCount = 0;
   let retriggered = 0;
+  let retriggerBoard: Board | null = null;
   let retriggerAwarded = false;
 
   while (true) {
@@ -146,8 +148,9 @@ function playTumbles(initialBoard: Board, context: PlayContext): TumbleSequence 
       bonusScatterCount = Math.max(bonusScatterCount, scatterCount);
     }
     if (context.mode === "free" && !retriggerAwarded && scatterCount >= 3) {
-      retriggerScatterCount = scatterCount;
+      retriggerScatterCount = Math.min(scatterCount, 6);
       retriggered = retriggerFreeSpins(scatterCount);
+      retriggerBoard = cloneBoard(board);
       retriggerAwarded = retriggered > 0;
     }
   }
@@ -164,6 +167,7 @@ function playTumbles(initialBoard: Board, context: PlayContext): TumbleSequence 
     bonusScatterCount,
     retriggerScatterCount,
     retriggered,
+    retriggerBoard,
   };
 }
 
@@ -248,8 +252,9 @@ export function playFreeSpin(
     index,
     initialBoard: freeInitialBoard,
     scatterCount: freeScatterCount,
-    retriggerScatterCount: sequence.retriggerScatterCount || (freeScatterCount >= 3 ? freeScatterCount : 0),
     retriggered: sequence.retriggered || retriggerFreeSpins(freeScatterCount),
+    retriggerScatterCount: sequence.retriggerScatterCount || (freeScatterCount >= 3 ? Math.min(freeScatterCount, 6) : 0),
+    retriggerBoard: sequence.retriggerBoard ?? (freeScatterCount >= 3 ? cloneBoard(freeInitialBoard) : null),
     tumbles: sequence.tumbles,
     rawWinMultiplier: sequence.rawWinMultiplier,
     combinedCoreMultiplier: settlement.combinedCoreMultiplier,

@@ -43,7 +43,7 @@ button:focus-visible, input:focus-visible { outline: 2px solid var(--cyan); outl
 .icon-button:hover, .utility-button:hover, .outline-button:hover { border-color: rgba(112, 213, 255, .55); color: var(--cyan); transform: translateY(-1px); }
 .game-layout { display: grid; grid-template-columns: minmax(0, 1fr) 245px; gap: 24px; align-items: start; }
 .game-stage { min-width: 0; }
-.mode-ribbon { display: grid; grid-template-columns: 1.5fr .8fr .8fr 1fr; align-items: center; max-width: 950px; margin: 0 auto 12px; border: 1px solid var(--line); background: rgba(14, 21, 51, .68); border-radius: 16px; padding: 11px 16px; }
+.mode-ribbon { display: grid; grid-template-columns: 1.35fr .75fr .85fr 1fr .85fr; align-items: center; max-width: 950px; margin: 0 auto 12px; border: 1px solid var(--line); background: rgba(14, 21, 51, .68); border-radius: 16px; padding: 11px 16px; }
 .mode-ribbon > div { min-height: 27px; padding: 0 16px; border-right: 1px solid var(--line); }
 .mode-ribbon > div:first-child { padding-left: 2px; }
 .mode-ribbon > div:last-child { border-right: 0; }
@@ -461,7 +461,7 @@ button:focus-visible, input:focus-visible { outline: 2px solid var(--cyan); outl
 .outline-button { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 11px 14px; border-radius: 11px; color: #cbd4ef; font: 10px "DM Mono", monospace; letter-spacing: .1em; }
 .outline-button.full { width: 100%; margin-top: 15px; }
 .outline-button b { color: var(--cyan); font-size: 15px; }
-.control-deck { display: flex; align-items: end; justify-content: center; gap: clamp(24px, 6vw, 90px); max-width: 960px; margin-top: 3px; padding: 13px 19px 15px; border-top: 1px solid var(--line); }
+.control-deck { display: flex; align-items: end; justify-content: center; gap: clamp(24px, 6vw, 90px); max-width: 960px; margin-top: 3px; padding: 13px 19px 15px; border: 1px solid var(--line); border-radius: 18px; background: rgba(10, 16, 40, .54); }
 .bet-control { text-align: center; }
 .bet-stepper { display: flex; align-items: center; gap: 10px; margin-top: 7px; }
 .bet-stepper button { display: grid; place-items: center; width: 31px; height: 31px; border-radius: 9px; color: var(--cyan); font-size: 21px; line-height: 1; }
@@ -883,6 +883,9 @@ button:focus-visible, input:focus-visible { outline: 2px solid var(--cyan); outl
 .tumble-win-panel.is-free-total .tumble-meta {
   color: #ad9863;
 }
+.tumble-win-panel.is-free-total .tumble-symbol-win,
+.tumble-win-panel.is-free-total .tumble-increment,
+.tumble-win-panel.is-free-total .tumble-meta { display: none; }
 .tumble-win-panel.is-total-updated > #tumble { animation: bonus-total-in .62s cubic-bezier(.16,.9,.24,1); }
 .tumble-symbol-win {
   max-width: min(92vw, 620px);

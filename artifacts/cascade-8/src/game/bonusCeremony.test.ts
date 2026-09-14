@@ -20,6 +20,10 @@ describe("bonus trigger ceremony", () => {
       scatterRow: document.createElement("div"),
       triggerLabel: document.createElement("span"),
       spinCount: document.createElement("div"),
+      title: document.createElement("strong"),
+      support: document.createElement("span"),
+      instruction: document.createElement("small"),
+      button: document.createElement("button"),
     };
 
     renderBonusCeremony(elements, true, result, "/");
@@ -32,6 +36,7 @@ describe("bonus trigger ceremony", () => {
     expect(elements.scatterRow.querySelectorAll("img")).toHaveLength(scatterCount);
     expect(elements.triggerLabel.textContent).toBe(`TRIGGERED BY ${scatterCount} SCATTERS`);
     expect(elements.spinCount.textContent).toBe(String(freeSpinsAwarded));
+    expect(elements.title.textContent).toBe("FREE SPINS READY");
 
     window.close();
   });

@@ -43,6 +43,7 @@ export class GameController {
   private busy = false;
   private pendingBonusResult: SpinResult | null = null;
   private pendingBonusSource: CryptoRNG | null = null;
+  private pendingRetriggerContinue: (() => void) | null = null;
   private autoRunning = false;
   private autoRemaining = 0;
   readonly audio = new AudioManager();
@@ -51,7 +52,7 @@ export class GameController {
     balance: HTMLElement; bet: HTMLElement; win: HTMLElement; bonusWin: HTMLElement; freeSpins: HTMLElement;
     tumble: HTMLElement; status: HTMLElement; spin: HTMLButtonElement; spinLabel: HTMLElement; betMinus: HTMLButtonElement; betPlus: HTMLButtonElement;
     autoCount: HTMLSelectElement; autoStart: HTMLButtonElement; autoStatus: HTMLElement;
-     turbo: HTMLButtonElement; sound: HTMLButtonElement; bonusOverlay: HTMLElement; bonusStart: HTMLButtonElement; bonusSpinCount: HTMLElement; bonusScatterRow: HTMLElement; bonusTriggerLabel: HTMLElement; retriggerOverlay: HTMLElement; retriggerScatterRow: HTMLElement; retriggerCountLabel: HTMLElement; retriggerContinue: HTMLButtonElement; freeSpinCalculation: HTMLElement; freeSpinIndex: HTMLElement; freeSpinRawWin: HTMLElement; freeSpinMultiplier: HTMLElement; freeSpinFinalWin: HTMLElement; freeSpinCalcStatus: HTMLElement; freeSpinMultiplyOperator: HTMLElement; freeSpinEqualsOperator: HTMLElement; tumbleLabel: HTMLElement; tumbleSymbolWin: HTMLElement; tumbleIncrement: HTMLElement; tumbleMeta: HTMLElement; tumbleSettlement: HTMLElement; tumblePanel: HTMLElement; bigWinOverlay: HTMLElement; bonusSummaryOverlay: HTMLElement; boardWrap: HTMLElement;
+     turbo: HTMLButtonElement; sound: HTMLButtonElement; bonusOverlay: HTMLElement; bonusStart: HTMLButtonElement; bonusSpinCount: HTMLElement; bonusScatterRow: HTMLElement; bonusTriggerLabel: HTMLElement; bonusTitle: HTMLElement; bonusSupport: HTMLElement; bonusInstruction: HTMLElement; freeSpinCalculation: HTMLElement; freeSpinRawWin: HTMLElement; freeSpinMultiplier: HTMLElement; freeSpinFinalWin: HTMLElement; freeSpinMultiplyOperator: HTMLElement; freeSpinEqualsOperator: HTMLElement; tumbleLabel: HTMLElement; tumbleSymbolWin: HTMLElement; tumbleIncrement: HTMLElement; tumbleMeta: HTMLElement; tumbleSettlement: HTMLElement; tumblePanel: HTMLElement; bigWinOverlay: HTMLElement; bonusSummaryOverlay: HTMLElement; boardWrap: HTMLElement;
     setModal: (name: string | null) => void;
   };
 
@@ -77,7 +78,16 @@ export class GameController {
     this.ui.sound.addEventListener("click", () => {
       this.audio.setMuted(!this.audio.muted); this.updateHud();
     });
-     this.ui.bonusStart.addEventListener("click", () => void this.spin());
+    this.ui.bonusStart.addEventListener("click", () => {
+      if (this.pendingRetriggerContinue) {
+        const continueRetrigger = this.pendingRetriggerContinue;
+        this.pendingRetriggerContinue = null;
+        this.setBonusPrompt(false);
+        continueRetrigger();
+        return;
+      }
+      void this.spin();
+    });
     window.addEventListener("keydown", (event) => {
       if (event.key === "Escape") this.ui.setModal(null);
       if (event.code === "Space" && !event.repeat && document.activeElement?.tagName !== "INPUT") {
@@ -115,14 +125,14 @@ export class GameController {
     this.ui.bonusWin.textContent = formatCredits(this.bonusWinCents);
     this.ui.freeSpins.textContent = String(this.freeSpinsLeft);
     this.ui.turbo.classList.toggle("is-active", this.turbo);
-     this.ui.sound.textContent = this.audio.muted ? "OFF" : "ON";
+    this.ui.sound.textContent = this.audio.muted ? "Sound off" : "Sound on";
     this.ui.sound.classList.toggle("is-active", !this.audio.muted);
     this.ui.spin.disabled = this.busy || this.autoRunning || (!this.pendingBonusResult && this.balanceCents < this.betCents);
     this.ui.betMinus.disabled = this.busy || this.betIndex === 0;
     this.ui.betPlus.disabled = this.busy || this.betIndex === BETS_CENTS.length - 1;
     this.ui.autoCount.disabled = this.busy || this.autoRunning || Boolean(this.pendingBonusResult);
     this.ui.autoStart.disabled = (this.busy && !this.autoRunning) || Boolean(this.pendingBonusResult);
-     this.ui.autoStart.textContent = this.autoRunning ? "STOP" : "START";
+    this.ui.autoStart.textContent = this.autoRunning ? "STOP" : "START AUTO";
     this.ui.autoStart.classList.toggle("is-running", this.autoRunning);
     this.updateAutoStatus();
   }
@@ -224,32 +234,45 @@ export class GameController {
       }
       await this.scene.animateDrop(this.duration(ANIMATION.initialDrop));
       await this.playTumbles({ ...result, tumbles: freeSpin.tumbles }, true);
-       if (freeSpin.rawWinMultiplier > 0) {
-         await this.presentCurrentFreeSpinResolution(freeSpin);
-         if (freeSpin.win >= this.betCents * 10) await this.presentBonusMajorWin(freeSpin);
-         await sleep(this.duration(220));
-         this.audio.freeSpinTransfer();
-         await this.animateFreeSpinFlight(
-           "transfer",
-           this.freeSpinAccounting.currentSpinWinCents,
-           this.ui.freeSpinFinalWin,
-           this.ui.tumble,
-           440,
-         );
-       } else {
-         this.freeSpinAccounting = resolveFreeSpinAccounting(this.freeSpinAccounting, 0, 1, 0, this.betCents);
-         this.ui.freeSpinFinalWin.textContent = "—";
-         await sleep(this.duration(140));
-       }
-      this.freeSpinAccounting = settleFreeSpinAccounting(this.freeSpinAccounting);
-      this.updateBonusTotalDisplay(true);
-      await sleep(this.duration(360));
+      if (freeSpin.win === 0) {
+        this.resolveZeroWinFreeSpin(freeSpin);
+        await sleep(this.duration(260));
+      } else {
+        await this.presentCurrentFreeSpinResolution(freeSpin);
+        if (freeSpin.finalWinMultiplier >= 10) {
+          this.setState(freeSpin.finalWinMultiplier >= MAX_WIN_MULTIPLIER ? "MAX_WIN" : "BIG_WIN");
+          this.message(`${freeSpin.finalWinMultiplier >= MAX_WIN_MULTIPLIER ? "MAX WIN" : winTier(freeSpin.finalWinMultiplier)} // ${freeSpin.finalWinMultiplier.toFixed(2)}x`);
+          this.scene.sparkle();
+          this.audio.bigWin();
+          this.audio.duckMusic(true);
+          await this.showBigWin(
+            freeSpin.finalWinMultiplier,
+            freeSpin.win,
+            freeSpin.finalWinMultiplier >= MAX_WIN_MULTIPLIER ? "MAX WIN" : undefined,
+          );
+          this.audio.duckMusic(false);
+        }
+        await sleep(this.duration(220));
+        this.audio.freeSpinTransfer();
+        await this.animateFreeSpinFlight(
+          "transfer",
+          this.freeSpinAccounting.currentSpinWinCents,
+          this.ui.freeSpinFinalWin,
+          this.ui.tumble,
+          440,
+        );
+        this.freeSpinAccounting = settleFreeSpinAccounting(this.freeSpinAccounting);
+        this.updateBonusTotalDisplay(true);
+        await sleep(this.duration(360));
+      }
       this.currentWinCents = result.totalWinCents;
       this.bonusWinCents = result.bonusWinCents;
       remaining = remaining - 1 + freeSpin.retriggered;
       this.freeSpinsLeft = remaining;
       this.updateHud();
-       if (freeSpin.retriggered) await this.presentRetriggerCeremony(freeSpin.retriggerScatterCount);
+      if (freeSpin.retriggered) {
+        await this.pauseForRetrigger(freeSpin);
+      }
     }
     this.setState("BONUS_SUMMARY"); this.message(`BONUS COMPLETE // ${formatCredits(result.bonusWinCents)}`);
     this.audio.bonusComplete();
@@ -264,6 +287,8 @@ export class GameController {
 
   private async finishSpin(result: SpinResult) {
     this.currentWinCents = result.totalWinCents;
+    if (result.maxWinReached) this.setState("MAX_WIN");
+    else if (result.totalMultiplier >= 10) this.setState("BIG_WIN");
     this.balanceCents += result.totalWinCents; this.persistBalance();
     this.setState("SPIN_COMPLETE"); this.message(result.totalWinCents ? "SPIN COMPLETE // COLLECTED" : "NO WIN // NEXT GATE AWAITS");
     this.busy = false; this.setState("IDLE"); this.updateHud();
@@ -328,9 +353,9 @@ export class GameController {
       this.setState("WIN_HIGHLIGHT"); this.audio.win();
       await this.scene.highlightCells(tumble.winningCells, this.duration(ANIMATION.winHighlight));
       this.setState(tumble.multiplierCores.length ? "CORE_REVEAL" : "WIN_EXPLOSION");
-      if (tumble.multiplierCores.length) {
+      if (tumble.multiplierCores.length && !isBonus) {
         this.message(`${tumble.multiplierCores.map((core) => `${core.value}x`).join(" + ")} // CORE TOTAL ${tumble.coreTotalMultiplier}x`);
-      this.audio.core(tumble.coreTotalMultiplier, isBonus);
+        this.audio.core(tumble.coreTotalMultiplier, false);
         await this.scene.activateMultiplierCores(tumble.multiplierCores.map((core) => core.value), this.duration(ANIMATION.freeSpinPause));
         await sleep(this.duration(ANIMATION.freeSpinPause));
       }
@@ -347,20 +372,25 @@ export class GameController {
   }
 
   private persistBalance() { localStorage.setItem("cascade8-balance", String(this.balanceCents)); }
-  private setBonusPrompt(active: boolean) {
+  private setBonusPrompt(active: boolean, kind: "trigger" | "retrigger" = "trigger", awarded = this.freeSpinsLeft) {
     renderBonusCeremony(
       {
         overlay: this.ui.bonusOverlay,
         scatterRow: this.ui.bonusScatterRow,
         triggerLabel: this.ui.bonusTriggerLabel,
+        title: this.ui.bonusTitle,
+        support: this.ui.bonusSupport,
+        instruction: this.ui.bonusInstruction,
+        button: this.ui.bonusStart,
         spinCount: this.ui.bonusSpinCount,
       },
       active,
       {
         bonusTriggerScatterCount: this.bonusTriggerScatterCount,
-        freeSpinsAwarded: this.freeSpinsLeft,
+        freeSpinsAwarded: awarded,
       },
       import.meta.env.BASE_URL,
+      kind,
     );
      this.ui.spin.hidden = active;
      this.ui.bonusStart.disabled = !active;
@@ -391,9 +421,8 @@ export class GameController {
     this.freeSpinAccounting = beginFreeSpinAccounting(this.freeSpinAccounting);
     this.ui.freeSpinMultiplyOperator.classList.remove("is-emphasized");
     this.ui.freeSpinEqualsOperator.classList.remove("is-emphasized");
-    this.ui.freeSpinIndex.textContent = String(index).padStart(2, "0");
-    this.ui.freeSpinFinalWin.textContent = "—";
-    this.updateCurrentFreeSpinDisplay("COLLECTING SYMBOL WINS");
+    this.ui.freeSpinCalculation.dataset.spin = String(index);
+    this.updateCurrentFreeSpinDisplay();
     this.updateBonusTotalDisplay(false);
   }
   private pulseFreeSpinValue(element: HTMLElement) {
@@ -437,27 +466,34 @@ export class GameController {
     flight.remove();
     this.pulseFreeSpinValue(target);
   }
-  private updateCurrentFreeSpinDisplay(status: string) {
+  private updateCurrentFreeSpinDisplay() {
     const raw = formatCredits(this.freeSpinAccounting.rawSymbolWinCents);
     const multiplier = this.multiplierLabel(this.freeSpinAccounting.combinedCoreMultiplier);
     const final = formatCredits(this.freeSpinAccounting.currentSpinWinCents);
     this.ui.freeSpinRawWin.textContent = raw;
     this.ui.freeSpinMultiplier.textContent = multiplier;
     this.ui.freeSpinFinalWin.textContent = final;
-    this.ui.freeSpinCalcStatus.textContent = this.freeSpinAccounting.combinedCoreMultiplier > 1
-      ? `${status} // ${raw} × ${multiplier} = ${final}`
-      : `${status} // SYMBOL WIN = SPIN WIN`;
-    if (status.includes("COLLECTING")) this.pulseFreeSpinValue(this.ui.freeSpinRawWin);
-    if (status.includes("MULTIPLIER")) this.pulseFreeSpinValue(this.ui.freeSpinMultiplier);
-    if (status.includes("COMPLETE")) this.pulseFreeSpinValue(this.ui.freeSpinFinalWin);
+  }
+  private resolveZeroWinFreeSpin(freeSpin: SpinResult["freeSpins"][number]) {
+    this.freeSpinAccounting = resolveFreeSpinAccounting(
+      this.freeSpinAccounting,
+      freeSpin.rawWinMultiplier,
+      freeSpin.combinedCoreMultiplier,
+      0,
+      this.betCents,
+    );
+    this.updateCurrentFreeSpinDisplay();
+    this.ui.freeSpinCalculation.classList.remove("is-collecting", "is-resolving");
   }
   private updateBonusTotalDisplay(isIncrement: boolean) {
     this.ui.tumblePanel.className = `tumble-win-panel is-active is-free-total${isIncrement ? " is-total-updated" : ""}`;
     this.ui.tumbleLabel.textContent = "TOTAL BONUS WIN";
      this.ui.tumble.textContent = formatCredits(this.freeSpinAccounting.cumulativeBonusWinCents);
     this.ui.tumbleSymbolWin.textContent = "";
-    this.ui.tumbleIncrement.textContent = "";
-    this.ui.tumbleMeta.textContent = "";
+    this.ui.tumbleIncrement.textContent = isIncrement
+      ? `+${formatCredits(this.freeSpinAccounting.currentSpinWinCents)}  //  THIS SPIN`
+      : "";
+    this.ui.tumbleMeta.textContent = "BONUS TOTAL // RUNNING WIN";
     this.ui.tumbleSettlement.innerHTML = "";
   }
   private async showTumbleWin(tumble: SpinResult["tumbles"][number], tumbleIndex: number, isBonus: boolean) {
@@ -470,7 +506,7 @@ export class GameController {
          this.freeSpinAccounting,
         rawIncrement,
       );
-      this.updateCurrentFreeSpinDisplay("COLLECTING SYMBOL WINS");
+      this.updateCurrentFreeSpinDisplay();
       this.ui.freeSpinCalculation.classList.remove("is-collecting");
       this.updateBonusTotalDisplay(false);
       return;
@@ -489,21 +525,24 @@ export class GameController {
     const coreText = tumble.settlementCores.map((core) => `${core.value}x`).join(" + ");
     const total = tumble.coreTotalMultiplier;
     if (isBonus) {
-      if (this.freeSpinAccounting.rawSymbolWinCents <= 0) return;
-      let runningTotal = 0;
+      let collectedCoreTotal = 0;
       for (const core of tumble.settlementCores) {
-        await this.scene.activateMultiplierCores([core.value], this.duration(180));
+        await this.scene.collectMultiplierCore(core.value, 0, this.duration(230));
         await this.animateFreeSpinFlight("multiplier", core.value, this.ui.boardWrap, this.ui.freeSpinMultiplier, 360);
         this.audio.freeSpinMultiplierCollect(core.value);
-        runningTotal += core.value;
-        this.freeSpinAccounting = { ...this.freeSpinAccounting, combinedCoreMultiplier: runningTotal };
-        this.updateCurrentFreeSpinDisplay("MULTIPLIER COLLECTION");
-        await this.scene.dissolveMultiplierCore(core.value, this.duration(220));
+        collectedCoreTotal += core.value;
+        this.freeSpinAccounting = {
+          ...this.freeSpinAccounting,
+          combinedCoreMultiplier: collectedCoreTotal,
+        };
+        this.updateCurrentFreeSpinDisplay();
+        await sleep(this.duration(90));
       }
-      this.freeSpinAccounting = {
-        ...this.freeSpinAccounting,
-        combinedCoreMultiplier: total || 1,
-      };
+      if (tumble.settlementCores.length) {
+        this.freeSpinAccounting = { ...this.freeSpinAccounting, combinedCoreMultiplier: total };
+        this.updateCurrentFreeSpinDisplay();
+        await sleep(this.duration(220));
+      }
       return;
     }
     this.ui.tumblePanel.className = `tumble-win-panel is-settling${isBonus ? " is-free-win" : ""}`;
@@ -518,6 +557,31 @@ export class GameController {
     this.ui.tumbleMeta.textContent = `FINAL TUMBLE WIN  //  ${tumble.finalPayoutMultiplier.toFixed(2)}x`;
     this.ui.tumbleSettlement.innerHTML = "";
     await sleep(this.duration(420));
+  }
+  private async pauseForRetrigger(freeSpin: SpinResult["freeSpins"][number]) {
+    const count = freeSpin.retriggerScatterCount;
+    const board = freeSpin.retriggerBoard
+      ?? freeSpin.tumbles.at(-1)?.boardAfterRefill
+      ?? freeSpin.initialBoard;
+    const scatterCells = board.flatMap((row, rowIndex) =>
+      row.flatMap((cell, col) => cell === "SCATTER" ? [{ row: rowIndex, col }] : []),
+    ).slice(0, count);
+    if (count < 3 || !scatterCells.length) return;
+
+    this.bonusTriggerScatterCount = count;
+    this.setState("BONUS_TRIGGER_CEREMONY");
+    this.message(`+${freeSpin.retriggered} FREE SPINS // ${count} SCATTERS`);
+    await this.scene.presentBonusTriggerCeremony(scatterCells, count);
+    this.audio.scatterCelebration(count);
+    this.audio.bonusUnlock(count);
+    this.scene.bonusUnlockFlash();
+    this.setBonusPrompt(true, "retrigger", freeSpin.retriggered);
+    this.setState("BONUS_WAITING_FOR_START");
+    await new Promise<void>((resolve) => {
+      this.pendingRetriggerContinue = resolve;
+    });
+    this.setState("FREE_SPIN_PLAY");
+    this.message(`FREE SPIN ${freeSpin.index + 1} // CONTINUING`);
   }
   async previewTumbleSequence(withSettlement = false) {
     this.resetTumbleWin();
@@ -545,16 +609,15 @@ export class GameController {
     this.freeSpinAccounting = createFreeSpinAccounting(40_000);
     this.setFreeSpinPresentation(true);
     this.resetCurrentFreeSpinDisplay(4);
-    this.ui.freeSpinCalcStatus.textContent = "BONUS TOTAL 400.00 // LIVE COLLECTION PREVIEW";
     this.freeSpinAccounting = addFreeSpinSymbolWin(this.freeSpinAccounting, 2_000);
     await this.animateFreeSpinFlight("raw", 2_000, this.ui.boardWrap, this.ui.freeSpinRawWin, 380);
     this.audio.freeSpinRawCollect();
-    this.updateCurrentFreeSpinDisplay("SYMBOL WIN +20.00");
+    this.updateCurrentFreeSpinDisplay();
     await sleep(this.duration(420));
     this.freeSpinAccounting = addFreeSpinSymbolWin(this.freeSpinAccounting, 3_000);
     await this.animateFreeSpinFlight("raw", 3_000, this.ui.boardWrap, this.ui.freeSpinRawWin, 380);
     this.audio.freeSpinRawCollect();
-    this.updateCurrentFreeSpinDisplay("SYMBOL WIN +30.00");
+    this.updateCurrentFreeSpinDisplay();
     await sleep(this.duration(420));
     await this.animateFreeSpinFlight("multiplier", 5, this.ui.boardWrap, this.ui.freeSpinMultiplier, 420);
     this.audio.freeSpinMultiplierCollect(5);
@@ -562,7 +625,7 @@ export class GameController {
       ...this.freeSpinAccounting,
       combinedCoreMultiplier: 5,
     };
-    this.updateCurrentFreeSpinDisplay("MULTIPLIER CORE +5x");
+    this.updateCurrentFreeSpinDisplay();
     await sleep(this.duration(520));
     await this.animateFreeSpinFlight("multiplier", 10, this.ui.boardWrap, this.ui.freeSpinMultiplier, 420);
     this.audio.freeSpinMultiplierCollect(10);
@@ -570,7 +633,7 @@ export class GameController {
       ...this.freeSpinAccounting,
       combinedCoreMultiplier: 15,
     };
-    this.updateCurrentFreeSpinDisplay("MULTIPLIER CORE +10x");
+    this.updateCurrentFreeSpinDisplay();
     await sleep(this.duration(520));
     await this.presentCurrentFreeSpinResolution({
       rawWinMultiplier: 50,
@@ -582,6 +645,18 @@ export class GameController {
     await this.animateFreeSpinFlight("transfer", 75_000, this.ui.freeSpinFinalWin, this.ui.tumble, 440);
     this.updateBonusTotalDisplay(true);
     await sleep(this.duration(360));
+  }
+  async previewZeroWinFreeSpin() {
+    this.freeSpinAccounting = createFreeSpinAccounting(40_000);
+    this.setFreeSpinPresentation(true);
+    this.resetCurrentFreeSpinDisplay(1);
+    this.resolveZeroWinFreeSpin({
+      rawWinMultiplier: 0,
+      combinedCoreMultiplier: 1,
+      win: 0,
+    } as SpinResult["freeSpins"][number]);
+    await sleep(this.duration(260));
+    this.updateBonusTotalDisplay(false);
   }
   async previewBonusTriggerCeremony(count: number) {
     const scatterCount = Math.max(4, Math.min(6, count));
@@ -603,6 +678,37 @@ export class GameController {
     this.setBonusPrompt(true);
     this.setState("BONUS_WAITING_FOR_START");
   }
+  async previewFreeSpinRetriggerCeremony(count: number) {
+    const scatterCount = Math.max(3, Math.min(6, count));
+    const values = Array(30).fill("S2");
+    const placements = [[0, 0], [1, 2], [2, 4], [3, 1], [4, 3], [0, 5]];
+    placements.slice(0, scatterCount).forEach(([row, col]) => { values[row * 6 + col] = "SCATTER"; });
+    const board = Array.from({ length: 5 }, (_, row) => values.slice(row * 6, row * 6 + 6)) as Board;
+    const cells = placements.slice(0, scatterCount).map(([row, col]) => ({ row, col }));
+    this.bonusTriggerScatterCount = scatterCount;
+    this.freeSpinsLeft = 5;
+    this.scene.renderBoard(board);
+    this.setState("BONUS_TRIGGER_CEREMONY");
+    await this.scene.animateDrop(this.duration(ANIMATION.initialDrop));
+    await this.scene.presentBonusTriggerCeremony(cells, scatterCount);
+    this.audio.scatterCelebration(scatterCount);
+    this.audio.bonusUnlock(scatterCount);
+    this.scene.bonusUnlockFlash();
+    await sleep(this.duration(360));
+    this.pendingRetriggerContinue = () => {};
+    this.setBonusPrompt(true, "retrigger", 5);
+    this.setState("BONUS_WAITING_FOR_START");
+  }
+  previewBaseLargeWin() {
+    this.ui.bigWinOverlay.className = "big-win-overlay";
+    this.ui.bigWinOverlay.innerHTML = "";
+    this.message("BASE GAME LARGE WIN // COLLECTED WITHOUT OVERLAY");
+  }
+  previewBonusLargeWin() {
+    this.scene.sparkle();
+    this.audio.bigWin();
+    void this.showBigWin(250, 25_000);
+  }
   private async presentCurrentFreeSpinResolution(freeSpin: SpinResult["freeSpins"][number]) {
     this.freeSpinAccounting = resolveFreeSpinAccounting(
       this.freeSpinAccounting,
@@ -612,7 +718,7 @@ export class GameController {
       this.betCents,
     );
     this.ui.freeSpinCalculation.classList.add("is-resolving");
-    this.updateCurrentFreeSpinDisplay("FINAL CALCULATION");
+    this.updateCurrentFreeSpinDisplay();
     await sleep(this.duration(360));
     this.pulseFreeSpinEquation();
     this.audio.freeSpinResolve();
@@ -632,41 +738,8 @@ export class GameController {
       target,
       this.betCents,
     );
-    this.updateCurrentFreeSpinDisplay("SPIN COMPLETE");
+    this.updateCurrentFreeSpinDisplay();
     this.ui.freeSpinCalculation.classList.remove("is-resolving");
-  }
-  private async presentRetriggerCeremony(count: number) {
-    const visibleCount = Math.max(3, Math.min(6, count));
-    const overlay = this.ui.retriggerOverlay;
-    const row = this.ui.retriggerScatterRow;
-    row.className = `bonus-scatter-row count-${visibleCount}`;
-    row.innerHTML = Array.from({ length: visibleCount }, (_, index) =>
-      `<span class="bonus-scatter-token" style="--scatter-index:${index}"><img src="${import.meta.env.BASE_URL}special-symbols/scatter.png" alt="Retrigger scatter ${index + 1}"></span>`,
-    ).join("");
-    this.ui.retriggerCountLabel.textContent = `${visibleCount} SCATTERS ADDED`;
-    overlay.hidden = false;
-    this.ui.retriggerContinue.disabled = false;
-    this.setState("BONUS_WAITING_FOR_START");
-    this.audio.retriggerGather();
-    await sleep(this.duration(520));
-    this.audio.retriggerReward();
-    await new Promise<void>((resolve) => {
-      this.ui.retriggerContinue.onclick = () => {
-        overlay.hidden = true;
-        this.ui.retriggerContinue.onclick = null;
-        resolve();
-      };
-    });
-  }
-  private async presentBonusMajorWin(freeSpin: SpinResult["freeSpins"][number]) {
-    const multiplier = freeSpin.win / this.betCents;
-    this.setState(multiplier >= MAX_WIN_MULTIPLIER ? "MAX_WIN" : "BIG_WIN");
-    this.message(`${winTier(multiplier)} // ${multiplier.toFixed(2)}x`);
-    this.scene.sparkle();
-    this.audio.bigWin();
-    this.audio.duckMusic(true);
-    await this.showBigWin(multiplier, freeSpin.win, multiplier >= MAX_WIN_MULTIPLIER ? "MAX WIN" : undefined);
-    this.audio.duckMusic(false);
   }
   showBigWin(multiplier: number, amountCents: number, forcedTier?: string) {
     return new Promise<void>((resolve) => {

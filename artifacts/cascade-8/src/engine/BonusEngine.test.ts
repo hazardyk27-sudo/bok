@@ -10,6 +10,7 @@ describe("bonus rules", () => {
   it("awards retriggers", () => {
     expect(retriggerFreeSpins(3)).toBe(5);
     expect(retriggerFreeSpins(4)).toBe(5);
+    expect(retriggerFreeSpins(5)).toBe(5);
     expect(retriggerFreeSpins(6)).toBe(5);
   });
   it("spawns a physical Core at the designed 7% threshold", () => {
