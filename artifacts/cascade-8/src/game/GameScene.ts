@@ -18,6 +18,8 @@ const LARGE_CORE_SIZE = 100;
 export class GameScene extends Phaser.Scene {
   private nodes: BoardNode[] = [];
 
+  private transientEffects: Phaser.GameObjects.GameObject[] = [];
+
   private frame?: Phaser.GameObjects.Graphics;
 
   private cellFrames: Phaser.GameObjects.Rectangle[] = [];
@@ -84,8 +86,34 @@ export class GameScene extends Phaser.Scene {
   }
 
   clearSymbols() {
+    this.clearTransientEffects();
     this.nodes.forEach((node) => this.destroyNode(node));
     this.nodes = [];
+  }
+
+  private trackEffect<T extends Phaser.GameObjects.GameObject>(effect: T) {
+    this.transientEffects.push(effect);
+    return effect;
+  }
+
+  private releaseEffect(effect: Phaser.GameObjects.GameObject) {
+    const index = this.transientEffects.indexOf(effect);
+    if (index >= 0) this.transientEffects.splice(index, 1);
+  }
+
+  private destroyEffect(effect: Phaser.GameObjects.GameObject) {
+    this.tweens.killTweensOf(effect);
+    this.releaseEffect(effect);
+    if (effect.active) effect.destroy();
+  }
+
+  private clearTransientEffects() {
+    if (!this.transientEffects.length) return;
+    this.tweens.killTweensOf(this.transientEffects);
+    this.transientEffects.forEach((effect) => {
+      if (effect.active) effect.destroy();
+    });
+    this.transientEffects = [];
   }
 
   private destroyNode(node: BoardNode) {
@@ -220,13 +248,13 @@ export class GameScene extends Phaser.Scene {
   private animateScatterLanding(node: BoardNode) {
     const centerX = node.container.x;
     const centerY = node.container.y + 34;
-    const shockwave = this.add.ellipse(centerX, centerY, 28, 9, undefined, 0)
+    const shockwave = this.trackEffect(this.add.ellipse(centerX, centerY, 28, 9, undefined, 0)
       .setStrokeStyle(2, 0xffd56a, 0.9)
-      .setDepth(4);
+      .setDepth(4));
     const sparks = Array.from({ length: 5 }, (_, index) => {
-      const spark = this.add.text(centerX, centerY, "✦", { color: "#ffe49a", fontSize: index % 2 ? "9px" : "12px" })
+      const spark = this.trackEffect(this.add.text(centerX, centerY, "✦", { color: "#ffe49a", fontSize: index % 2 ? "9px" : "12px" })
         .setOrigin(0.5)
-        .setDepth(4);
+        .setDepth(4));
       const angle = (index / 5) * Math.PI * 2;
       this.tweens.add({
         targets: spark,
@@ -236,7 +264,7 @@ export class GameScene extends Phaser.Scene {
         scale: 0.5,
         duration: 260,
         ease: "Cubic.easeOut",
-        onComplete: () => spark.destroy(),
+          onComplete: () => this.destroyEffect(spark),
       });
       return spark;
     });
@@ -248,9 +276,9 @@ export class GameScene extends Phaser.Scene {
         alpha: 0,
         duration: 300,
         ease: "Cubic.easeOut",
-        onComplete: () => {
-          shockwave.destroy();
-          sparks.forEach((spark) => { if (spark.active) spark.destroy(); });
+          onComplete: () => {
+          this.destroyEffect(shockwave);
+          sparks.forEach((spark) => this.destroyEffect(spark));
           resolve();
         },
       });
@@ -352,20 +380,20 @@ export class GameScene extends Phaser.Scene {
       const color = isMultiplierCore(node.symbol) ? 0xffc34d : getSymbolDefinition(node.symbol).color;
       const centerX = node.container.x;
       const centerY = node.container.y;
-      const ring = this.add.circle(centerX, centerY, 25, undefined, 0)
+      const ring = this.trackEffect(this.add.circle(centerX, centerY, 25, undefined, 0)
         .setStrokeStyle(2, color, 0.9)
-        .setDepth(3);
+        .setDepth(3));
       this.tweens.add({
         targets: ring,
         scale: 2.15,
         alpha: 0,
         duration: duration + 80,
         ease: "Cubic.easeOut",
-        onComplete: () => ring.destroy(),
+        onComplete: () => this.destroyEffect(ring),
       });
-      const particleCount = Math.min(8, Math.max(3, Math.floor(96 / Math.max(active.length, 1))));
+      const particleCount = Math.min(6, Math.max(3, Math.floor(72 / Math.max(active.length, 1))));
       Array.from({ length: particleCount }, (_, index) => {
-        const particle = this.add.circle(centerX, centerY, index % 3 === 0 ? 4 : 2.5, color, 0.92).setDepth(3);
+        const particle = this.trackEffect(this.add.circle(centerX, centerY, index % 3 === 0 ? 4 : 2.5, color, 0.92).setDepth(3));
         const angle = (index / particleCount) * Math.PI * 2;
         const distance = 38 + (index % 4) * 15;
         this.tweens.add({
@@ -376,7 +404,7 @@ export class GameScene extends Phaser.Scene {
           scale: 0.15,
           duration: duration + 120,
           ease: "Cubic.easeOut",
-          onComplete: () => particle.destroy(),
+          onComplete: () => this.destroyEffect(particle),
         });
         return particle;
       });
@@ -440,7 +468,7 @@ export class GameScene extends Phaser.Scene {
 
   sparkle() {
     const sparks = Array.from({ length: 18 }, (_, index) => {
-      const spark = this.add.circle(310, 260, index % 3 === 0 ? 3 : 2, [0x73c9ff, 0xc69dff, 0xffd16e][index % 3], 0.9);
+      const spark = this.trackEffect(this.add.circle(310, 260, index % 3 === 0 ? 3 : 2, [0x73c9ff, 0xc69dff, 0xffd16e][index % 3], 0.9));
       const angle = (index / 18) * Math.PI * 2;
       this.tweens.add({
         targets: spark,
@@ -450,11 +478,11 @@ export class GameScene extends Phaser.Scene {
         scale: 0.2,
         duration: 420 + (index % 4) * 35,
         ease: "Cubic.easeOut",
-        onComplete: () => spark.destroy(),
+        onComplete: () => this.destroyEffect(spark),
       });
       return spark;
     });
-    this.time.delayedCall(650, () => sparks.forEach((spark) => { if (spark.active) spark.destroy(); }));
+    this.time.delayedCall(650, () => sparks.forEach((spark) => this.destroyEffect(spark)));
   }
 
   async presentBonusTriggerCeremony(scatterCells: Cell[], count: number) {
@@ -482,9 +510,9 @@ export class GameScene extends Phaser.Scene {
       ...selected.map((node, index) => new Promise<void>((resolve) => {
         const targetX = centerX + (index - (visibleCount - 1) / 2) * rowGap;
         const targetY = centerY;
-        const halo = this.add.circle(node.container.x, node.container.y, 46, 0xffc94f, 0.14)
+        const halo = this.trackEffect(this.add.circle(node.container.x, node.container.y, 46, 0xffc94f, 0.14)
           .setBlendMode(Phaser.BlendModes.ADD)
-          .setDepth(2);
+          .setDepth(2));
         this.tweens.add({
           targets: halo,
           x: targetX,
@@ -500,7 +528,7 @@ export class GameScene extends Phaser.Scene {
               scale: 1.48,
               duration: 240,
               ease: "Cubic.easeOut",
-              onComplete: () => halo.destroy(),
+              onComplete: () => this.destroyEffect(halo),
             });
           },
         });
@@ -522,19 +550,19 @@ export class GameScene extends Phaser.Scene {
   }
 
   bonusUnlockFlash() {
-    const flash = this.add.circle(310, 258, 46, 0xffe7a1, 0.48)
+    const flash = this.trackEffect(this.add.circle(310, 258, 46, 0xffe7a1, 0.48)
       .setBlendMode(Phaser.BlendModes.ADD)
-      .setDepth(8);
-    const ring = this.add.circle(310, 258, 58, undefined, 0)
+      .setDepth(8));
+    const ring = this.trackEffect(this.add.circle(310, 258, 58, undefined, 0)
       .setStrokeStyle(3, 0xffd064, 0.95)
-      .setDepth(8);
+      .setDepth(8));
     this.tweens.add({
       targets: flash,
       scale: 3.4,
       alpha: 0,
       duration: 420,
       ease: "Cubic.easeOut",
-      onComplete: () => flash.destroy(),
+      onComplete: () => this.destroyEffect(flash),
     });
     this.tweens.add({
       targets: ring,
@@ -542,7 +570,7 @@ export class GameScene extends Phaser.Scene {
       alpha: 0,
       duration: 520,
       ease: "Cubic.easeOut",
-      onComplete: () => ring.destroy(),
+      onComplete: () => this.destroyEffect(ring),
     });
     this.sparkle();
   }
@@ -551,9 +579,9 @@ export class GameScene extends Phaser.Scene {
     const matching = this.nodes.filter((node) => isMultiplierCore(node.symbol) && node.symbol.value === value);
     const node = matching[occurrence];
     if (!node) return;
-    const halo = this.add.circle(node.container.x, node.container.y, 34, 0xffd36a, 0.18)
+    const halo = this.trackEffect(this.add.circle(node.container.x, node.container.y, 34, 0xffd36a, 0.18)
       .setBlendMode(Phaser.BlendModes.ADD)
-      .setDepth(4);
+      .setDepth(4));
     await new Promise<void>((resolve) => {
       this.tweens.add({
         targets: [node.container, halo],
@@ -569,7 +597,7 @@ export class GameScene extends Phaser.Scene {
             ease: "Cubic.easeIn",
             onComplete: () => {
               this.destroyNode(node);
-              halo.destroy();
+              this.destroyEffect(halo);
               resolve();
             },
           });
@@ -589,7 +617,7 @@ export function createGameScene(parent: HTMLElement) {
     transparent: true,
     scene: [GameScene],
     scale: { mode: Phaser.Scale.FIT, autoCenter: Phaser.Scale.CENTER_BOTH, width: 620, height: 520 },
-    render: { antialias: true, pixelArt: false, roundPixels: true },
+    render: { antialias: false, pixelArt: false, roundPixels: true },
     banner: false,
   });
 }
