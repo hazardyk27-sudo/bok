@@ -4,8 +4,8 @@ import { baseFreeSpins, drawMultiplierCore, retriggerFreeSpins } from "./BonusEn
 describe("bonus rules", () => {
   it("awards the base free spin table", () => {
     expect(baseFreeSpins(4)).toBe(10);
-    expect(baseFreeSpins(5)).toBe(12);
-    expect(baseFreeSpins(6)).toBe(15);
+    expect(baseFreeSpins(5)).toBe(15);
+    expect(baseFreeSpins(6)).toBe(20);
   });
   it("awards retriggers", () => {
     expect(retriggerFreeSpins(3)).toBe(5);

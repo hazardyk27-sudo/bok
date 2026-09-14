@@ -106,8 +106,8 @@ describe("spin accounting", () => {
 describe("base bonus trigger accounting", () => {
   it.each([
     { seed: 78, scatterCount: 4, freeSpinsAwarded: 10 },
-    { seed: 1156, scatterCount: 5, freeSpinsAwarded: 12 },
-    { seed: 25794, scatterCount: 6, freeSpinsAwarded: 15 },
+    { seed: 1156, scatterCount: 5, freeSpinsAwarded: 15 },
+    { seed: 25794, scatterCount: 6, freeSpinsAwarded: 20 },
   ])("exposes the settled $scatterCount-Scatter trigger count", ({ seed, scatterCount, freeSpinsAwarded }) => {
     const result = playSpin(100, new SeededRNG(seed));
 
