@@ -19,9 +19,9 @@ type BoardLayout = {
 
 const DEFAULT_BOARD_ORIGIN = { x: 22, y: 30 };
 const DEFAULT_CELL_SIZE = { width: 96, height: 92 };
-const LABEL_HALF_HEIGHT = 15;
-const LABEL_VERTICAL_GAP = 34;
-const LABEL_HORIZONTAL_CLEARANCE = 96;
+const LABEL_HALF_HEIGHT = 22;
+const LABEL_VERTICAL_GAP = 48;
+const LABEL_HORIZONTAL_CLEARANCE = 120;
 
 export function buildWinLabelEvents(
   board: Board,
@@ -58,7 +58,7 @@ export function calculateWinLabelPositions(
     );
     const candidate = {
       x: center.x / event.cells.length,
-      y: center.y / event.cells.length - 30,
+      y: center.y / event.cells.length,
     };
 
     const minY = boardOrigin.y + LABEL_HALF_HEIGHT;
