@@ -261,7 +261,7 @@ button:focus-visible, input:focus-visible { outline: 2px solid var(--cyan); outl
     linear-gradient(180deg, rgba(5, 8, 24, .66), rgba(5, 7, 20, .92));
   backdrop-filter: blur(7px) saturate(.78);
 }
-.big-win-card, .bonus-summary-card { display: grid; justify-items: center; gap: 12px; width: min(580px, 100%); padding: 42px 24px 32px; border: 1px solid rgba(255, 218, 119, .72); border-radius: 28px; background: linear-gradient(155deg, rgba(74, 43, 9, .96), rgba(19, 15, 43, .98)); box-shadow: 0 0 100px rgba(255, 191, 54, .25), inset 0 0 32px rgba(255, 222, 125, .08); text-align: center; animation: bonus-arrive .48s cubic-bezier(.16,.9,.24,1); }
+.big-win-card, .bonus-summary-card { display: grid; justify-items: center; gap: 12px; width: min(680px, 92vw); padding: 42px 24px 32px; border: 1px solid rgba(255, 218, 119, .72); border-radius: 28px; background: linear-gradient(155deg, rgba(74, 43, 9, .96), rgba(19, 15, 43, .98)); box-shadow: 0 0 100px rgba(255, 191, 54, .25), inset 0 0 32px rgba(255, 222, 125, .08); text-align: center; animation: bonus-arrive .48s cubic-bezier(.16,.9,.24,1); }
 .bonus-summary-card span { color: #ffe59a; font: 11px "DM Mono", monospace; letter-spacing: .26em; }
 .bonus-summary-card .summary-total { color: #fff1ae; font-size: clamp(56px, 13vw, 118px); line-height: .95; text-shadow: 0 0 40px rgba(255, 198, 60, .8); }
 .big-win-card {
@@ -269,8 +269,8 @@ button:focus-visible, input:focus-visible { outline: 2px solid var(--cyan); outl
   --tier-highlight: rgba(255, 220, 125, .14);
   position: relative;
   z-index: 1;
-  width: min(560px, 100%);
-  overflow: hidden;
+   width: min(680px, 92vw);
+   overflow: visible;
   padding: clamp(34px, 6vw, 52px) clamp(22px, 6vw, 50px) clamp(28px, 5vw, 42px);
   border: 1px solid rgba(255, 225, 145, .82);
   border-radius: 30px;
@@ -339,10 +339,18 @@ button:focus-visible, input:focus-visible { outline: 2px solid var(--cyan); outl
   z-index: 1;
   display: grid;
   place-items: center;
-  min-width: 80%;
+   width: 100%;
+   min-width: 0;
+   box-sizing: border-box;
+   padding-inline: 24px;
   margin: 26px 0 13px;
 }
 .big-win-amount {
+   display: block;
+   width: 100%;
+   max-width: 100%;
+   overflow: visible;
+   white-space: nowrap;
   position: relative;
   color: #fff0ad;
   font-size: clamp(78px, 18vw, 148px);
@@ -408,9 +416,9 @@ button:focus-visible, input:focus-visible { outline: 2px solid var(--cyan); outl
 .tier-max { --tier-glow: rgba(255, 224, 119, .94); --tier-highlight: rgba(255, 242, 177, .48); }
 .bonus-summary-card {
   position: relative;
-  width: min(520px, 100%);
+   width: min(680px, 92vw);
   max-height: calc(100svh - 32px);
-  overflow: auto;
+   overflow: visible;
   padding: clamp(34px, 7vw, 56px) clamp(22px, 7vw, 56px) clamp(28px, 5vw, 44px);
   background: linear-gradient(155deg, rgba(78, 47, 11, .97), rgba(18, 14, 34, .99) 78%);
   box-shadow: 0 0 135px rgba(255, 190, 48, .3), inset 0 0 38px rgba(255, 222, 125, .1), 0 28px 70px rgba(0, 0, 0, .5);
@@ -430,6 +438,13 @@ button:focus-visible, input:focus-visible { outline: 2px solid var(--cyan); outl
 }
 .bonus-summary-card .summary-label { font-size: 9px; letter-spacing: .22em; }
 .bonus-summary-card .summary-total {
+   display: block;
+   width: 100%;
+   max-width: 100%;
+   box-sizing: border-box;
+   padding-inline: 24px;
+   white-space: nowrap;
+   overflow: visible;
   margin-top: 8px;
   color: #fff1ae;
   font-size: clamp(52px, 14vw, 104px);
@@ -562,15 +577,17 @@ button:focus-visible, input:focus-visible { outline: 2px solid var(--cyan); outl
 @media (max-width: 930px) { .game-layout { grid-template-columns: 1fr; } .side-panel { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; padding-top: 0; } .side-panel > .panel-kicker, .side-panel > .full { grid-column: 1 / -1; } .side-card, .legend-card { margin-top: 0; } .outline-button.full { margin-top: 0; } }
 @media (max-width: 620px) {
   .big-win-overlay { padding: 16px; }
-  .big-win-card { padding: 31px 18px 27px; border-radius: 25px; }
+  .big-win-card, .bonus-summary-card { width: min(92vw, 520px); padding: 31px 18px 27px; border-radius: 25px; }
   .big-win-tier { gap: 9px; margin-top: 13px; }
   .big-win-tier i { font-size: 12px; }
   .big-win-tier span { font-size: clamp(28px, 8vw, 40px); letter-spacing: .08em; }
   .big-win-amount-wrap { margin: 23px 0 12px; }
-  .big-win-amount { font-size: clamp(66px, 20vw, 100px); }
+  .big-win-amount { font-size: clamp(26px, 20vw, 100px); }
+  .big-win-amount-wrap { padding-inline: 16px; }
   .big-win-summary { padding-left: 12px; padding-right: 12px; }
   .big-win-summary b { font-size: 12px; }
   .big-win-action { min-width: 190px; min-height: 48px; margin-top: 22px; }
+  .bonus-summary-card .summary-total { padding-inline: 16px; font-size: clamp(26px, 18vw, 92px); }
   .app-shell { padding: 16px 12px 16px; }
   .topbar { margin-bottom: 10px; }
   .brand-mark { width: 32px; height: 32px; }

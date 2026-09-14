@@ -149,6 +149,10 @@ window.setTimeout(() => {
    if (isLab && new URLSearchParams(window.location.search).has("preview-free-spin")) {
      void controller.previewFreeSpinAccounting();
    }
+    const previewAmount = Number(new URLSearchParams(window.location.search).get("preview-amount"));
+    if (isLab && Number.isFinite(previewAmount) && previewAmount > 0) {
+      controller.previewBonusLargeWin(Math.round(previewAmount * 100));
+    }
 }, 80);
 
 function renderLab(scene: GameScene) {

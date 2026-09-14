@@ -13,6 +13,7 @@ import type { Board, SpinResult } from "../engine/types";
 import { AudioManager } from "./AudioManager";
 import { renderBonusCeremony } from "./bonusCeremony";
 import { GameScene } from "./GameScene";
+import { mountResponsiveWinAmount } from "./ResponsiveWinAmount";
 
 type ControllerState = "BOOT" | "IDLE" | "SPIN_INIT" | "INITIAL_DROP" | "EVALUATING" | "WIN_HIGHLIGHT" | "WIN_EXPLOSION" | "GRAVITY" | "REFILL" | "CASCADE_DROP" | "BONUS_TRIGGER_CEREMONY" | "BONUS_AWARD_PRESENTATION" | "BONUS_WAITING_FOR_START" | "BONUS_INTRO" | "FREE_SPIN_PLAY" | "CORE_REVEAL" | "BIG_WIN" | "MAX_WIN" | "BONUS_SUMMARY" | "SPIN_COMPLETE";
 
@@ -693,10 +694,10 @@ export class GameController {
     this.ui.bigWinOverlay.innerHTML = "";
     this.message("BASE GAME LARGE WIN // COLLECTED WITHOUT OVERLAY");
   }
-  previewBonusLargeWin() {
+  previewBonusLargeWin(amountCents = 25_000) {
     this.scene.sparkle();
     this.audio.bigWin();
-    void this.showBigWin(250, 25_000);
+    void this.showBigWin(amountCents / this.betCents, amountCents);
   }
   private async presentCurrentFreeSpinResolution(freeSpin: SpinResult["freeSpins"][number]) {
     this.freeSpinAccounting = resolveFreeSpinAccounting(
@@ -744,6 +745,10 @@ export class GameController {
       const button = overlay.querySelector("button") as HTMLButtonElement;
       const card = overlay.querySelector(".big-win-card") as HTMLElement;
       const amount = overlay.querySelector(".big-win-amount") as HTMLElement;
+       const responsiveAmount = mountResponsiveWinAmount(amount, formatCredits(amountCents), {
+         maxFontSize: 148,
+         minFontSize: 22,
+       });
       const finishCounting = () => {
         counting = false;
         value = target;
@@ -757,6 +762,7 @@ export class GameController {
       const close = () => {
         if (closed) return;
         closed = true;
+         responsiveAmount.destroy();
         overlay.removeEventListener("pointerdown", onPointer);
         overlay.classList.remove("is-visible");
         overlay.innerHTML = "";
@@ -766,8 +772,8 @@ export class GameController {
       overlay.addEventListener("pointerdown", onPointer);
       const tick = () => {
         if (closed || !counting) return;
-        value = Math.min(target, value + Math.max(target / 36, 0.01));
-        amount.textContent = value.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+         value = Math.min(target, value + Math.max(target / 36, 0.01));
+         amount.textContent = formatCredits(Math.round(value * 100));
         if (value >= target) finishCounting(); else window.setTimeout(tick, 42);
       };
       tick();
@@ -777,8 +783,19 @@ export class GameController {
     return new Promise<void>((resolve) => {
       const overlay = this.ui.bonusSummaryOverlay;
       overlay.className = "bonus-summary-overlay is-visible";
-      overlay.innerHTML = `<div class="bonus-summary-card"><span class="bonus-eyebrow">GOLDEN REALM</span><h2>BONUS COMPLETE</h2><span class="summary-label">TOTAL BONUS WIN</span><div class="summary-total">${formatCredits(result.bonusWinCents)}</div><small>${result.freeSpins.length} FREE SPINS // ${result.freeSpins.reduce((sum, spin) => sum + spin.tumbles.length, 0)} TUMBLES</small><button type="button">CONTINUE</button></div>`;
-      const close = () => { overlay.classList.remove("is-visible"); overlay.innerHTML = ""; resolve(); };
+       const formattedTotal = formatCredits(result.bonusWinCents);
+       overlay.innerHTML = `<div class="bonus-summary-card"><span class="bonus-eyebrow">GOLDEN REALM</span><h2>BONUS COMPLETE</h2><span class="summary-label">TOTAL BONUS WIN</span><div class="summary-total responsive-win-amount">${formattedTotal}</div><small>${result.freeSpins.length} FREE SPINS // ${result.freeSpins.reduce((sum, spin) => sum + spin.tumbles.length, 0)} TUMBLES</small><button type="button">CONTINUE</button></div>`;
+       const amount = overlay.querySelector(".summary-total") as HTMLElement;
+       const responsiveAmount = mountResponsiveWinAmount(amount, formattedTotal, {
+         maxFontSize: 118,
+         minFontSize: 22,
+       });
+       const close = () => {
+         responsiveAmount.destroy();
+         overlay.classList.remove("is-visible");
+         overlay.innerHTML = "";
+         resolve();
+       };
       overlay.querySelector("button")?.addEventListener("click", close, { once: true });
     });
   }
