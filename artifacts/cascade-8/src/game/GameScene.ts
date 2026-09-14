@@ -214,7 +214,7 @@ export class GameScene extends Phaser.Scene {
     }
     const normalSymbol = getNormalSymbol(symbol);
     if (!normalSymbol) throw new Error("Unsupported board symbol");
-    const mark = this.add.image(0, 0, `club-logo-${normalSymbol}`).setDisplaySize(60, 60);
+    const mark = this.add.image(0, 0, `club-logo-${normalSymbol}`).setDisplaySize(75, 75);
     container.add(mark);
     const node = { container, symbol, row, col };
     this.nodes.push(node);
