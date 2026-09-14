@@ -54,7 +54,7 @@ describe("on-board win labels", () => {
   });
 
   it("returns no label events when the board has no win", () => {
-    const normalSymbols = ["S1", "S2", "S3", "S4", "S5", "S6", "S7", "S8"];
+    const normalSymbols = ["S1", "S2", "S3", "S4", "S5", "S6", "S7", "S9", "S8"];
     const board = boardWith(Array.from({ length: 30 }, (_, index) => normalSymbols[index % normalSymbols.length]));
     const evaluation = evaluateBoard(board);
     const events = buildWinLabelEvents(board, evaluation.winningSymbols, evaluation.winningCells, evaluation.payouts, 100, String);

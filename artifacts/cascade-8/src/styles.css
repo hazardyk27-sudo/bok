@@ -522,8 +522,8 @@ button:focus-visible, input:focus-visible { outline: 2px solid var(--cyan); outl
 .info-grid b, .info-grid small { display: block; }
 .info-grid b { font-size: 12px; }
 .info-grid small { margin-top: 5px; color: var(--muted); font-size: 10px; line-height: 1.35; }
-.paytable { overflow: hidden; margin: 20px 0; border: 1px solid var(--line); border-radius: 11px; }
-.paytable-head, .paytable-row { display: grid; grid-template-columns: 1.4fr repeat(3, 1fr); gap: 5px; align-items: center; padding: 9px 12px; font: 11px "DM Mono", monospace; }
+.paytable { overflow-x: auto; margin: 20px 0; border: 1px solid var(--line); border-radius: 11px; }
+.paytable-head, .paytable-row { display: grid; grid-template-columns: 1.4fr repeat(5, 1fr); gap: 5px; align-items: center; padding: 9px 12px; font: 11px "DM Mono", monospace; min-width: 560px; }
 .paytable-head { background: rgba(117, 141, 255, .09); color: var(--muted); font-size: 8px; }
 .paytable-row { border-top: 1px solid rgba(149, 165, 231, .1); color: #c4cdef; }
 .paytable-row span:not(:first-child) { color: var(--gold); }
@@ -615,7 +615,7 @@ button:focus-visible, input:focus-visible { outline: 2px solid var(--cyan); outl
   .auto-row { width: 100%; justify-content: center; }
   .auto-row select { flex: 0 1 104px; }
   #auto-start { flex: 0 1 128px; }
-  .paytable-head, .paytable-row { grid-template-columns: 1.35fr repeat(3, 1fr); padding: 8px 8px; font-size: 9px; }
+  .paytable-head, .paytable-row { grid-template-columns: 1.35fr repeat(5, 1fr); padding: 8px 8px; font-size: 9px; }
   .paytable-head { font-size: 7px; }
   .utility-controls { gap: 3px; }
   .utility-button { min-width: 41px; padding: 5px 4px; }

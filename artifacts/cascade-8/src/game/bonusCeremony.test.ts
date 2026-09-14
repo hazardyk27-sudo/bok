@@ -5,9 +5,9 @@ import { SeededRNG } from "../engine/RNG";
 import { renderBonusCeremony } from "./bonusCeremony";
 
 const testCases = [
-  { seed: 78, scatterCount: 4, freeSpinsAwarded: 10 },
+  { seed: 136, scatterCount: 4, freeSpinsAwarded: 10 },
   { seed: 258, scatterCount: 5, freeSpinsAwarded: 15 },
-  { seed: 25794, scatterCount: 6, freeSpinsAwarded: 20 },
+  { seed: 4549, scatterCount: 6, freeSpinsAwarded: 20 },
 ] as const;
 
 describe("bonus trigger ceremony", () => {

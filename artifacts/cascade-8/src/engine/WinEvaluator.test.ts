@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { getPaytableMultiplier, NORMAL_SYMBOLS } from "../config/GameConfig";
 import { evaluateBoard, removeAndRefill } from "./WinEvaluator";
 import { SeededRNG } from "./RNG";
 import type { Board } from "./types";
@@ -15,7 +16,25 @@ describe("win evaluation and cascades", () => {
   });
   it("uses the 12+ payout tier", () => {
     const result = evaluateBoard(boardWith([...Array(12).fill("S1"), ...Array(18).fill("S3")]));
-    expect(result.payouts.S1).toBe(3.6);
+    expect(result.payouts.S1).toBe(1.8);
+  });
+  it("uses exact payout values for every normal symbol count", () => {
+    const expected = [
+      [0.45, 0.68, 0.9, 1.35, 1.8],
+      [0.55, 0.83, 1.1, 1.65, 2.2],
+      [0.75, 1.13, 1.5, 2.25, 3],
+      [0.95, 1.43, 1.9, 2.83, 3.75],
+      [1.4, 2.1, 2.8, 4.15, 5.5],
+      [1.9, 3.3, 4.7, 7.1, 9.5],
+      [2.8, 5.15, 7.5, 11.25, 15],
+      [3.75, 6.56, 9.38, 14.06, 18.75],
+      [4.7, 7.98, 11.25, 16.88, 22.5],
+    ];
+    NORMAL_SYMBOLS.forEach((symbol, index) => {
+      [8, 9, 10, 11, 12].forEach((count, tierIndex) => {
+        expect(getPaytableMultiplier(symbol.id, count)).toBe(expected[index][tierIndex]);
+      });
+    });
   });
   it("counts non-adjacent symbols together", () => {
     const values = Array(30).fill("S2");
