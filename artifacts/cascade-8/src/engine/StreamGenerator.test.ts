@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { BASE_REEL_CONFIG, type ReelConfig } from "../config/GameConfig";
 import { ColumnStream } from "./BoardGenerator";
 import { SeededRNG } from "./RNG";
-import { getNormalSymbol, getStackMetadata } from "./types";
+import { getNormalSymbol, getStackMetadata, isMultiplierCore } from "./types";
 
 describe("persistent column streams", () => {
   it("generates fixed two-position groups with a 90% copy branch", () => {
@@ -42,5 +42,23 @@ describe("persistent column streams", () => {
     expect(values.map(getNormalSymbol)).toEqual(["S3", "S3", "S3", "S3"]);
     expect(stream.stats.freshSecondCount).toBe(2);
     expect(stream.stats.actualSamePairCount).toBe(2);
+  });
+
+  it("keeps the normal pair phase across independent Scatter and Core cells", () => {
+    const config: ReelConfig = {
+      ...BASE_REEL_CONFIG,
+      symbolWeights: [{ value: "S3", weight: 1 }],
+    };
+    const rolls = [0.999999, 0.999999, 0.05, 0.999999, 0.999999, 0.1];
+    const stream = new ColumnStream({ nextFloat: () => rolls.shift() ?? 0.999999 }, config, 0);
+    const values = stream.next(3, "BONUS_REFILL");
+
+    expect(getNormalSymbol(values[0])).toBe("S3");
+    expect(values[1]).not.toBe("SCATTER");
+    expect(isMultiplierCore(values[1])).toBe(true);
+    expect(getNormalSymbol(values[2])).toBe("S3");
+    expect(getStackMetadata(values[0])).toMatchObject({ stackId: 1_000_001, stackIndex: 0, stackSize: 2 });
+    expect(getStackMetadata(values[2])).toMatchObject({ stackId: 1_000_001, stackIndex: 1, stackSize: 2 });
+    expect(stream.stats.pairCount).toBe(1);
   });
 });

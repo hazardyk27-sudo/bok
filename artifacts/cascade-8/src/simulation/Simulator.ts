@@ -4,7 +4,7 @@ import { SeededRNG } from "../engine/RNG";
 import { evaluateBoard } from "../engine/WinEvaluator";
 import { BASE_REEL_CONFIG, NORMAL_PAIR_COPY_CHANCE } from "../config/GameConfig";
 import { ColumnStream } from "../engine/BoardGenerator";
-import { getNormalSymbol, isMultiplierCore } from "../engine/types";
+import { getNormalSymbol, getStackMetadata, isMultiplierCore } from "../engine/types";
 import type { Board, BoardCell } from "../engine/types";
 
 export const HISTOGRAM_BUCKETS = [
@@ -115,13 +115,29 @@ function recordPairGroups(
 
 function measureNormalPairBranches(seed: string, targetPairs = 1_000_000) {
   const stream = new ColumnStream(new SeededRNG(`${seed}:normal-pair-statistics`), BASE_REEL_CONFIG, 0);
+  let previousPairSecond: string | null = null;
+  let thirdPositionSamples = 0;
+  let thirdMatchesPreviousSecond = 0;
   while (stream.stats.pairCount < targetPairs) {
-    stream.next(1, "BASE_REFILL", false);
+    const cell = stream.next(1, "BASE_REFILL", false)[0];
+    const normal = getNormalSymbol(cell);
+    const metadata = getStackMetadata(cell);
+    if (!normal || !metadata) continue;
+    if (metadata.stackIndex === 0) {
+      if (previousPairSecond !== null) {
+        thirdPositionSamples += 1;
+        if (normal === previousPairSecond) thirdMatchesPreviousSecond += 1;
+      }
+    } else if (metadata.stackIndex === 1) {
+      previousPairSecond = normal;
+    }
   }
   return {
     sampledPairs: stream.stats.pairCount,
     copyBranchRate: Number(((stream.stats.copyBranchCount / stream.stats.pairCount) * 100).toFixed(4)),
     actualSecondSameRate: Number(((stream.stats.actualSamePairCount / stream.stats.pairCount) * 100).toFixed(4)),
+    thirdPositionSamples,
+    thirdMatchesPreviousSecondRate: Number(((thirdMatchesPreviousSecond / Math.max(1, thirdPositionSamples)) * 100).toFixed(4)),
     freshSecondCount: stream.stats.freshSecondCount,
   };
 }
@@ -187,6 +203,8 @@ export type SimulationReport = {
   observedCopyBranchProbability: number;
   observedSecondSameProbability: number;
   sampledNormalPairs: number;
+  thirdPositionSamples: number;
+  thirdMatchesPreviousSecondProbability: number;
   initialBoardPairFrequency: number;
   refillPairFrequency: number;
   observedSingleProbability: number;
@@ -413,6 +431,8 @@ export function simulate(spins: number, seed: string, betCents = 100, onProgress
      observedCopyBranchProbability: pairBranches.copyBranchRate,
      observedSecondSameProbability: pairBranches.actualSecondSameRate,
      sampledNormalPairs: pairBranches.sampledPairs,
+     thirdPositionSamples: pairBranches.thirdPositionSamples,
+     thirdMatchesPreviousSecondProbability: pairBranches.thirdMatchesPreviousSecondRate,
      initialBoardPairFrequency: Number(((pairMetrics.initialBoardsWithPair / Math.max(1, pairMetrics.initialBoards)) * 100).toFixed(4)),
      refillPairFrequency: Number(((pairMetrics.refillEventsWithPair / Math.max(1, pairMetrics.refillEvents)) * 100).toFixed(4)),
     observedSingleProbability: (() => {

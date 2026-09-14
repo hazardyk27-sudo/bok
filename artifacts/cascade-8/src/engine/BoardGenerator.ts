@@ -135,7 +135,7 @@ export class ColumnStream {
       stackIndex = 1;
     }
 
-    this.queue.push(createNormalSymbolCell(symbol, stackId, stackIndex, 2 as StackSize));
+    this.queue.push(createNormalSymbolCell(symbol, stackId, stackIndex, 2));
     this.stats.emittedNormal += 1;
   }
 }

@@ -47,6 +47,8 @@ async function main() {
       "Observed Copy Branch": `${report.observedCopyBranchProbability}%`,
       "Actual Second = First": `${report.observedSecondSameProbability}%`,
       "Sampled Normal Pairs": report.sampledNormalPairs,
+      "Third Position Samples": report.thirdPositionSamples,
+      "Third = Previous Second": `${report.thirdMatchesPreviousSecondProbability}%`,
       "Observed Visible Runs": `${report.observedSingleProbability}% / ${report.observedPairProbability}%`,
       "Initial Boards With Pair": `${report.initialBoardPairFrequency}%`,
       "Refill Events With Pair": `${report.refillPairFrequency}%`,
