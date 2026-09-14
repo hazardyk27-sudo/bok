@@ -97,18 +97,6 @@ app.innerHTML = `
 
 const byId = <T extends HTMLElement>(id: string) => document.getElementById(id) as T;
 const modalRoot = byId<HTMLDivElement>("modal-root");
-const previewBonusCount = Number(new URLSearchParams(window.location.search).get("preview-bonus"));
-if (isLab && [4, 5, 6].includes(previewBonusCount) && new URLSearchParams(window.location.search).has("preview-bonus-final")) {
-  const previewOverlay = byId("bonus-overlay");
-  const previewRow = byId("bonus-scatter-row");
-  previewOverlay.hidden = false;
-  previewRow.className = `bonus-scatter-row count-${previewBonusCount}`;
-  previewRow.innerHTML = Array.from({ length: previewBonusCount }, (_, index) =>
-    `<span class="bonus-scatter-token" style="--scatter-index:${index}"><img src="${import.meta.env.BASE_URL}special-symbols/scatter.png" alt="Triggering scatter ${index + 1}"></span>`,
-  ).join("");
-  byId("bonus-trigger-label").textContent = `TRIGGERED BY ${previewBonusCount} SCATTERS`;
-  byId("bonus-spin-count").textContent = previewBonusCount === 6 ? "15" : previewBonusCount === 5 ? "12" : "10";
-}
 
 function showModal(name: string | null) {
   if (!name) { modalRoot.innerHTML = ""; return; }
