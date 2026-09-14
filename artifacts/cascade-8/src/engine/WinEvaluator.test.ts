@@ -10,6 +10,21 @@ const boardWith = (symbols: string[]): Board => {
 };
 
 describe("win evaluation and cascades", () => {
+  it("uses the requested nine-symbol rarity order and weights", () => {
+    expect(NORMAL_SYMBOLS.map(({ name }) => name)).toEqual([
+      "Real Madrid",
+      "Barcelona",
+      "Chelsea",
+      "Roma",
+      "Liverpool",
+      "PSG",
+      "Bayern",
+      "Beşiktaş",
+      "Galatasaray",
+    ]);
+    expect(NORMAL_SYMBOLS.map(({ weight }) => weight)).toEqual([17, 15.5, 14, 12.5, 11.5, 10, 9, 8.5, 8]);
+    expect(NORMAL_SYMBOLS.reduce((total, { weight }) => total + weight, 0)).toBe(106);
+  });
   it("does not win at seven and wins at eight", () => {
     expect(evaluateBoard(boardWith(Array(7).fill("S1"))).winningSymbols).toEqual(["S2"]);
     expect(evaluateBoard(boardWith([...Array(8).fill("S1"), ...Array(22).fill("S3")])).winningSymbols).toContain("S1");
