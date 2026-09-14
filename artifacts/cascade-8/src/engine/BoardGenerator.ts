@@ -96,16 +96,21 @@ export class ColumnStream {
           ? BONUS_REFILL_CORE_CHANCE
           : 0;
 
-    const specialRoll = this.source.nextFloat();
-    if (specialRoll < scatterChance) {
-      this.queue.push("SCATTER");
-      this.stats.emittedSpecial += 1;
-      return;
-    }
-    if (coreMode && specialRoll < scatterChance + coreChance) {
-      this.queue.push(drawMultiplierCoreValue(this.source, coreMode));
-      this.stats.emittedSpecial += 1;
-      return;
+    // Once a normal group has emitted its first member, the second member
+    // is the next physical stream position. Specials can begin a position,
+    // but they must never split an already-started pair.
+    if (this.pairPhase === "FIRST") {
+      const specialRoll = this.source.nextFloat();
+      if (specialRoll < scatterChance) {
+        this.queue.push("SCATTER");
+        this.stats.emittedSpecial += 1;
+        return;
+      }
+      if (coreMode && specialRoll < scatterChance + coreChance) {
+        this.queue.push(drawMultiplierCoreValue(this.source, coreMode));
+        this.stats.emittedSpecial += 1;
+        return;
+      }
     }
 
     const isFirst = this.pairPhase === "FIRST";

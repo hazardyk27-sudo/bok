@@ -44,21 +44,47 @@ describe("persistent column streams", () => {
     expect(stream.stats.actualSamePairCount).toBe(2);
   });
 
-  it("keeps the normal pair phase across independent Scatter and Core cells", () => {
+  it("keeps special cells independent without splitting a pending pair", () => {
     const config: ReelConfig = {
       ...BASE_REEL_CONFIG,
       symbolWeights: [{ value: "S3", weight: 1 }],
     };
-    const rolls = [0.999999, 0.999999, 0.05, 0.999999, 0.999999, 0.1];
+    const rolls = [0.05, 0.999999, 0.999999, 0.1];
     const stream = new ColumnStream({ nextFloat: () => rolls.shift() ?? 0.999999 }, config, 0);
     const values = stream.next(3, "BONUS_REFILL");
 
-    expect(getNormalSymbol(values[0])).toBe("S3");
-    expect(values[1]).not.toBe("SCATTER");
-    expect(isMultiplierCore(values[1])).toBe(true);
+    expect(isMultiplierCore(values[0])).toBe(true);
+    expect(getNormalSymbol(values[1])).toBe("S3");
     expect(getNormalSymbol(values[2])).toBe("S3");
-    expect(getStackMetadata(values[0])).toMatchObject({ stackId: 1_000_001, stackIndex: 0, stackSize: 2 });
+    expect(getStackMetadata(values[1])).toMatchObject({ stackId: 1_000_001, stackIndex: 0, stackSize: 2 });
     expect(getStackMetadata(values[2])).toMatchObject({ stackId: 1_000_001, stackIndex: 1, stackSize: 2 });
     expect(stream.stats.pairCount).toBe(1);
+  });
+
+  it("keeps the pending second member above the odd five-cell visible boundary", () => {
+    const config: ReelConfig = {
+      ...BASE_REEL_CONFIG,
+      symbolWeights: [
+        { value: "S1", weight: 1 },
+        { value: "S4", weight: 1 },
+        { value: "S7", weight: 1 },
+        { value: "S6", weight: 1 },
+      ],
+    };
+    const rolls = [
+      0.999999, 0, 0,
+      0.999999, 0.3, 0,
+      0.999999, 0.6,
+      0, 0.999999, 0.9, 0,
+    ];
+    const stream = new ColumnStream({ nextFloat: () => rolls.shift() ?? 0.999999 }, config, 0);
+    const visible = stream.next(5, "BASE_INITIAL", false);
+    const hiddenContinuation = stream.next(1, "BASE_REFILL", false)[0];
+    const nextGroup = stream.next(2, "BASE_REFILL", false);
+
+    expect(visible.map(getNormalSymbol)).toEqual(["S1", "S1", "S4", "S4", "S7"]);
+    expect(getNormalSymbol(hiddenContinuation)).toBe("S7");
+    expect(getStackMetadata(hiddenContinuation)).toEqual({ stackId: 1_000_003, stackIndex: 1, stackSize: 2 });
+    expect(nextGroup.map(getNormalSymbol)).toEqual(["S6", "S6"]);
   });
 });
