@@ -5,14 +5,14 @@ import { SeededRNG } from "./RNG";
 import { getNormalSymbol, getStackMetadata, isMultiplierCore } from "./types";
 
 describe("persistent column streams", () => {
-  it("generates fixed two-position groups with a 90% copy branch", () => {
+  it("generates fixed two-position groups with a 75% copy branch", () => {
     const stream = new ColumnStream(new SeededRNG("stream-distribution"), BASE_REEL_CONFIG, 0);
     const values = stream.next(1_000_000, "BASE_REFILL");
     const normalValues = values.filter((value) => getNormalSymbol(value) !== null);
     expect(normalValues.length).toBeGreaterThan(0);
     expect(stream.stats.pairCount).toBeGreaterThan(400_000);
-    expect(stream.stats.copyBranchCount / stream.stats.pairCount).toBeGreaterThan(0.88);
-    expect(stream.stats.copyBranchCount / stream.stats.pairCount).toBeLessThan(0.92);
+    expect(stream.stats.copyBranchCount / stream.stats.pairCount).toBeGreaterThan(0.73);
+    expect(stream.stats.copyBranchCount / stream.stats.pairCount).toBeLessThan(0.77);
     expect(normalValues.every((value) => getStackMetadata(value)?.stackSize === 2)).toBe(true);
   });
 
