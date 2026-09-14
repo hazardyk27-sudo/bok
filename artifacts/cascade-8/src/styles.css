@@ -1285,3 +1285,232 @@ button:focus-visible, input:focus-visible { outline: 2px solid var(--cyan); outl
   .bonus-retrigger-panel,
   .bonus-retrigger-panel * { animation-duration: .01ms !important; }
 }
+
+/* Premium UI layout polish: the grid is the stage, the readout is a compact reward card. */
+.board-wrap {
+  width: min(100%, 720px);
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+.board-wrap.free-spin-mode {
+  background: transparent;
+  box-shadow: 0 0 70px rgba(255, 194, 74, .16);
+}
+.board-wrap.free-spin-ready {
+  box-shadow: 0 0 70px rgba(255, 202, 93, .22);
+}
+.board-caption { display: none; }
+#phaser-board {
+  width: min(100%, 700px);
+  margin: 0 auto -7px;
+}
+.tumble-win-panel {
+  width: min(100%, 360px);
+  min-height: 28px;
+  margin: 7px auto 2px;
+  padding: 10px 18px 11px;
+  border: 1px solid rgba(136, 172, 237, .2);
+  border-radius: 14px;
+  background:
+    radial-gradient(circle at 50% 0%, rgba(111, 151, 255, .11), transparent 58%),
+    linear-gradient(145deg, rgba(11, 21, 48, .92), rgba(6, 12, 29, .9));
+  box-shadow:
+    0 12px 30px rgba(2, 7, 24, .25),
+    inset 0 1px 0 rgba(221, 234, 255, .07);
+}
+.tumble-win-panel.is-active,
+.tumble-win-panel.is-settling {
+  min-height: 76px;
+  border-color: rgba(151, 184, 246, .32);
+  box-shadow:
+    0 15px 34px rgba(2, 7, 24, .32),
+    0 0 26px rgba(96, 144, 255, .1),
+    inset 0 1px 0 rgba(230, 240, 255, .09);
+}
+.tumble-win-label {
+  color: #d9e3ff;
+  font-size: 8px;
+  letter-spacing: .3em;
+  text-shadow: 0 0 12px rgba(170, 198, 255, .22);
+}
+.tumble-win-panel > #tumble {
+  margin-top: 8px;
+  color: #fff8e7;
+  font-size: clamp(37px, 5vw, 54px);
+  text-shadow: 0 0 20px rgba(255, 216, 132, .18);
+}
+.tumble-settlement {
+  margin-top: 9px;
+  color: #b9c8e9;
+  font-size: 9px;
+  letter-spacing: .04em;
+  text-shadow: 0 0 10px rgba(132, 172, 255, .2);
+}
+.tumble-win-panel.is-free-total {
+  min-height: 70px;
+  margin-top: 5px;
+  border-color: rgba(255, 211, 102, .3);
+  background:
+    radial-gradient(circle at 50% 0%, rgba(255, 211, 102, .14), transparent 58%),
+    linear-gradient(145deg, rgba(55, 37, 11, .92), rgba(22, 16, 32, .94));
+  box-shadow:
+    0 15px 34px rgba(2, 7, 24, .32),
+    0 0 28px rgba(255, 190, 54, .11),
+    inset 0 1px 0 rgba(255, 238, 178, .1);
+}
+.tumble-win-panel.is-free-total .tumble-win-label { color: #ffe6a1; }
+.tumble-win-panel.is-free-total > #tumble {
+  color: #fff0b5;
+  text-shadow: 0 0 22px rgba(255, 198, 63, .34);
+}
+.tumble-win-panel.is-free-total .tumble-settlement { display: none; }
+.control-deck {
+  grid-template-columns: minmax(128px, .9fr) minmax(190px, 1.25fr) 88px minmax(135px, .9fr);
+  gap: 9px;
+  padding: 8px 10px 7px;
+  border: 1px solid rgba(137, 167, 235, .2);
+  border-radius: 18px;
+  background:
+    linear-gradient(135deg, rgba(17, 28, 63, .86), rgba(7, 13, 32, .88)),
+    rgba(9, 15, 37, .72);
+  box-shadow:
+    0 14px 32px rgba(0, 0, 0, .22),
+    inset 0 1px 0 rgba(235, 242, 255, .07);
+}
+.control-deck .eyebrow {
+  color: #879bc9;
+  font-size: 7px;
+  letter-spacing: .2em;
+}
+.bet-stepper {
+  gap: 5px;
+  margin-top: 5px;
+  padding: 3px;
+  border: 1px solid rgba(121, 157, 232, .18);
+  border-radius: 11px;
+  background: rgba(6, 13, 32, .55);
+}
+.bet-stepper button {
+  width: 29px;
+  height: 29px;
+  border: 1px solid rgba(125, 164, 239, .16);
+  border-radius: 8px;
+  background: rgba(40, 61, 112, .45);
+}
+.bet-stepper strong {
+  min-width: 54px;
+  color: #f4f7ff;
+  font-size: 14px;
+}
+.auto-control { gap: 5px; }
+.auto-row { gap: 5px; }
+.auto-row select,
+#auto-start {
+  height: 32px;
+  border-color: rgba(125, 164, 239, .22);
+  border-radius: 9px;
+  background: rgba(11, 22, 50, .84);
+}
+.auto-row select { padding: 0 8px; }
+#auto-start {
+  min-width: 0;
+  color: #bfe5ff;
+  background: linear-gradient(180deg, rgba(40, 76, 133, .75), rgba(21, 39, 81, .86));
+}
+.spin-button {
+  width: 82px;
+  height: 72px;
+  border-radius: 23px 23px 23px 9px;
+  background: linear-gradient(145deg, #8b79ff, #4f67e8 68%, #3947ae);
+  box-shadow:
+    0 10px 28px rgba(79, 91, 233, .34),
+    inset 0 1px 0 rgba(255, 255, 255, .36);
+}
+.spin-button:hover {
+  box-shadow:
+    0 13px 34px rgba(102, 113, 255, .46),
+    inset 0 1px 0 rgba(255, 255, 255, .5);
+}
+.spin-button small { display: none; }
+.utility-controls { gap: 5px; }
+.utility-button {
+  min-width: 58px;
+  min-height: 42px;
+  padding: 5px 7px;
+  border: 1px solid rgba(125, 164, 239, .22);
+  border-radius: 10px;
+  background: rgba(19, 34, 72, .7);
+}
+.utility-icon { color: #b9d7ff; }
+
+@media (max-width: 620px) {
+  .board-wrap {
+    width: 100%;
+    margin-inline: auto;
+  }
+  #phaser-board {
+    width: 100%;
+    margin: 0 auto -5px;
+  }
+  .tumble-win-panel {
+    width: min(100%, 350px);
+    min-height: 24px;
+    margin-top: 4px;
+    padding: 8px 14px 9px;
+  }
+  .tumble-win-panel.is-active,
+  .tumble-win-panel.is-settling { min-height: 64px; }
+  .tumble-win-panel > #tumble { font-size: clamp(32px, 10vw, 46px); }
+  .control-deck {
+    grid-template-columns: minmax(92px, 1fr) 80px minmax(108px, 1.1fr);
+    grid-template-areas:
+      "bet spin utility"
+      "auto auto auto";
+    gap: 7px 6px;
+    padding: 8px 6px 7px;
+  }
+  .bet-control { grid-area: bet; }
+  .auto-control {
+    grid-area: auto;
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    align-items: center;
+    gap: 5px;
+  }
+  .auto-row { min-width: 0; }
+  #auto-status { grid-column: 2; text-align: right; }
+  .spin-button {
+    grid-area: spin;
+    width: 76px;
+    height: 68px;
+    justify-self: center;
+  }
+  .utility-controls {
+    grid-area: utility;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 4px;
+  }
+  .utility-button {
+    min-width: 0;
+    min-height: 42px;
+    padding-inline: 3px;
+  }
+  .utility-button span:last-child {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+}
+
+@media (max-width: 430px) {
+  .control-deck { padding-inline: 5px; }
+  .bet-stepper { gap: 3px; }
+  .bet-stepper button { width: 27px; height: 28px; }
+  .bet-stepper strong { min-width: 45px; font-size: 13px; }
+  .auto-row select,
+  #auto-start { height: 30px; font-size: 8px; }
+  .utility-button span:last-child { font-size: 6px; letter-spacing: .02em; }
+}

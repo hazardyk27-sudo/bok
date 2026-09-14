@@ -486,7 +486,7 @@ export class GameController {
     this.ui.freeSpinCalculation.classList.remove("is-collecting", "is-resolving");
   }
   private updateBonusTotalDisplay(isIncrement: boolean) {
-    this.ui.tumblePanel.className = `tumble-win-panel is-active is-free-total${isIncrement ? " is-total-updated" : ""}`;
+    this.ui.tumblePanel.className = `tumble-win-panel is-active is-free-total is-bonus${isIncrement ? " is-total-updated" : ""}`;
     this.ui.tumbleLabel.textContent = "TOTAL BONUS WIN";
     const totalCents = this.freeSpinAccounting.cumulativeBonusWinCents;
     const currentSpinCents = this.freeSpinAccounting.currentSpinWinCents;
@@ -495,10 +495,13 @@ export class GameController {
     this.ui.tumbleSymbolWin.textContent = "";
     this.ui.tumbleIncrement.textContent = "";
     this.ui.tumbleMeta.textContent = "";
-    this.ui.tumbleSettlement.textContent =
-      `${formatCredits(previousTotalCents)} + ${formatCredits(currentSpinCents)} = ${formatCredits(totalCents)}`;
+    this.ui.tumbleSettlement.textContent = "";
   }
   private updateTumbleEquation(rawAmountCents: number, multiplier: number, finalAmountCents: number) {
+    if (multiplier <= 1) {
+      this.ui.tumbleSettlement.textContent = "";
+      return;
+    }
     const formattedMultiplier = Number.isInteger(multiplier) ? String(multiplier) : multiplier.toFixed(2);
     this.ui.tumbleSettlement.textContent =
       `${formatCredits(rawAmountCents)} × ${formattedMultiplier} = ${formatCredits(finalAmountCents)}`;
@@ -531,7 +534,7 @@ export class GameController {
       this.updateBonusTotalDisplay(false);
       return;
     }
-    this.ui.tumblePanel.className = `tumble-win-panel is-active${isBonus ? " is-free-win" : ""}`;
+    this.ui.tumblePanel.className = `tumble-win-panel is-active${isBonus ? " is-bonus" : ""}`;
     this.ui.tumbleLabel.textContent = "TUMBLE WIN";
     const rawAmountCents = Math.round(tumble.rawWinPoolAfter * this.betCents);
     this.ui.tumbleSymbolWin.textContent = "";

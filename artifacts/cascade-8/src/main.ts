@@ -55,7 +55,6 @@ app.innerHTML = `
           </div>
         </section>
         <div class="board-wrap">
-          <div class="board-caption"><span>6 × 5 CASCADE FIELD</span></div>
           <div id="phaser-board" aria-label="Cascade 8 game board"></div>
           <div id="bonus-overlay" class="bonus-overlay" hidden aria-live="assertive">
             <div class="bonus-ceremony-panel">

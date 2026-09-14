@@ -50,8 +50,6 @@ export class GameScene extends Phaser.Scene {
 
   private transientEffects: Phaser.GameObjects.GameObject[] = [];
 
-  private frame?: Phaser.GameObjects.Graphics;
-
   private cellFrames: Phaser.GameObjects.Rectangle[] = [];
 
   private freeSpinMode = false;
@@ -76,17 +74,8 @@ export class GameScene extends Phaser.Scene {
   }
 
   private drawBoardFrame() {
-    this.frame?.destroy();
     this.cellFrames.forEach((cell) => cell.destroy());
     this.cellFrames = [];
-    const frame = this.add.graphics();
-    frame.setDepth(-10);
-    frame.fillStyle(this.freeSpinMode ? 0x33230b : 0x0b1530, 0.76);
-    frame.fillRoundedRect(10, 18, 600, 484, 24);
-    frame.lineStyle(2, this.freeSpinMode ? 0xffd36a : 0x5e7cff, this.freeSpinMode ? 0.68 : 0.3);
-    frame.strokeRoundedRect(10, 18, 600, 484, 24);
-    frame.lineStyle(1, this.freeSpinMode ? 0xffe8a6 : 0x9baeff, this.freeSpinMode ? 0.28 : 0.13);
-    frame.strokeRoundedRect(18, 26, 584, 468, 18);
     for (let row = 0; row < BOARD_ROWS; row += 1) {
       for (let col = 0; col < BOARD_COLUMNS; col += 1) {
         const x = this.boardOrigin.x + col * this.cellSize.width;
@@ -103,7 +92,6 @@ export class GameScene extends Phaser.Scene {
          this.cellFrames.push(cell);
        }
     }
-    this.frame = frame;
   }
 
   setFreeSpinMode(enabled: boolean) {
