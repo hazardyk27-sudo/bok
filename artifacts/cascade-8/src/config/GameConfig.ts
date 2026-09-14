@@ -101,15 +101,15 @@ export const SYMBOL_EFFECT_PROFILES: Record<NormalSymbolId, SymbolEffectProfile>
 };
 
 export const PAYTABLE: Record<NormalSymbolId, readonly { min: number; max: number; multiplier: number }[]> = {
-  S1: [{ min: 8, max: 8, multiplier: 0.45 }, { min: 9, max: 9, multiplier: 0.68 }, { min: 10, max: 10, multiplier: 0.9 }, { min: 11, max: 11, multiplier: 1.35 }, { min: 12, max: Infinity, multiplier: 1.8 }],
-  S2: [{ min: 8, max: 8, multiplier: 0.55 }, { min: 9, max: 9, multiplier: 0.83 }, { min: 10, max: 10, multiplier: 1.1 }, { min: 11, max: 11, multiplier: 1.65 }, { min: 12, max: Infinity, multiplier: 2.2 }],
-  S3: [{ min: 8, max: 8, multiplier: 0.75 }, { min: 9, max: 9, multiplier: 1.13 }, { min: 10, max: 10, multiplier: 1.5 }, { min: 11, max: 11, multiplier: 2.25 }, { min: 12, max: Infinity, multiplier: 3 }],
-  S4: [{ min: 8, max: 8, multiplier: 0.95 }, { min: 9, max: 9, multiplier: 1.43 }, { min: 10, max: 10, multiplier: 1.9 }, { min: 11, max: 11, multiplier: 2.83 }, { min: 12, max: Infinity, multiplier: 3.75 }],
-  S5: [{ min: 8, max: 8, multiplier: 1.4 }, { min: 9, max: 9, multiplier: 2.1 }, { min: 10, max: 10, multiplier: 2.8 }, { min: 11, max: 11, multiplier: 4.15 }, { min: 12, max: Infinity, multiplier: 5.5 }],
-  S6: [{ min: 8, max: 8, multiplier: 1.9 }, { min: 9, max: 9, multiplier: 3.3 }, { min: 10, max: 10, multiplier: 4.7 }, { min: 11, max: 11, multiplier: 7.1 }, { min: 12, max: Infinity, multiplier: 9.5 }],
-  S7: [{ min: 8, max: 8, multiplier: 2.8 }, { min: 9, max: 9, multiplier: 5.15 }, { min: 10, max: 10, multiplier: 7.5 }, { min: 11, max: 11, multiplier: 11.25 }, { min: 12, max: Infinity, multiplier: 15 }],
-  S9: [{ min: 8, max: 8, multiplier: 3.75 }, { min: 9, max: 9, multiplier: 6.56 }, { min: 10, max: 10, multiplier: 9.38 }, { min: 11, max: 11, multiplier: 14.06 }, { min: 12, max: Infinity, multiplier: 18.75 }],
-  S8: [{ min: 8, max: 8, multiplier: 4.7 }, { min: 9, max: 9, multiplier: 7.98 }, { min: 10, max: 10, multiplier: 11.25 }, { min: 11, max: 11, multiplier: 16.88 }, { min: 12, max: Infinity, multiplier: 22.5 }],
+  S1: [{ min: 8, max: 8, multiplier: 0.4 }, { min: 9, max: 9, multiplier: 0.6 }, { min: 10, max: 10, multiplier: 0.8 }, { min: 11, max: 11, multiplier: 1.2 }, { min: 12, max: Infinity, multiplier: 1.5 }],
+  S2: [{ min: 8, max: 8, multiplier: 0.5 }, { min: 9, max: 9, multiplier: 0.7 }, { min: 10, max: 10, multiplier: 1.0 }, { min: 11, max: 11, multiplier: 1.4 }, { min: 12, max: Infinity, multiplier: 1.9 }],
+  S3: [{ min: 8, max: 8, multiplier: 0.6 }, { min: 9, max: 9, multiplier: 1.0 }, { min: 10, max: 10, multiplier: 1.3 }, { min: 11, max: 11, multiplier: 1.9 }, { min: 12, max: Infinity, multiplier: 2.5 }],
+  S4: [{ min: 8, max: 8, multiplier: 0.8 }, { min: 9, max: 9, multiplier: 1.2 }, { min: 10, max: 10, multiplier: 1.6 }, { min: 11, max: 11, multiplier: 2.4 }, { min: 12, max: Infinity, multiplier: 3.2 }],
+  S5: [{ min: 8, max: 8, multiplier: 1.2 }, { min: 9, max: 9, multiplier: 1.8 }, { min: 10, max: 10, multiplier: 2.4 }, { min: 11, max: 11, multiplier: 3.5 }, { min: 12, max: Infinity, multiplier: 4.7 }],
+  S6: [{ min: 8, max: 8, multiplier: 1.6 }, { min: 9, max: 9, multiplier: 2.8 }, { min: 10, max: 10, multiplier: 4.0 }, { min: 11, max: 11, multiplier: 6.0 }, { min: 12, max: Infinity, multiplier: 8.0 }],
+  S7: [{ min: 8, max: 8, multiplier: 2.4 }, { min: 9, max: 9, multiplier: 4.4 }, { min: 10, max: 10, multiplier: 6.4 }, { min: 11, max: 11, multiplier: 9.6 }, { min: 12, max: Infinity, multiplier: 12.8 }],
+  S9: [{ min: 8, max: 8, multiplier: 3.2 }, { min: 9, max: 9, multiplier: 5.6 }, { min: 10, max: 10, multiplier: 8.0 }, { min: 11, max: 11, multiplier: 12.0 }, { min: 12, max: Infinity, multiplier: 16.0 }],
+  S8: [{ min: 8, max: 8, multiplier: 4.0 }, { min: 9, max: 9, multiplier: 6.8 }, { min: 10, max: 10, multiplier: 9.6 }, { min: 11, max: 11, multiplier: 14.4 }, { min: 12, max: Infinity, multiplier: 19.2 }],
 };
 
 // Context-specific special-symbol probabilities. Values are decimals, not percentages.
