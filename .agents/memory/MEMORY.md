@@ -6,3 +6,4 @@
 - [Packet stack RTP calibration](packet-stack-rtp-calibration.md) — correlated 1x2 packets can amplify tumble payouts; tune only packet-size probability after full-spin simulation.
 - [Multiplier asset masking](multiplier-asset-masking.md) — supplied portraits need bottom-caption cropping before transparent circular masking.
 - [Pair stream continuity](pair-stream-continuity.md) — a five-cell board can leave a pending second member that must refill before any new group or special.
+- [Phaser preview texture readiness](phaser-preview-texture-readiness.md) — deterministic previews that render immediately after scene setup can show unloaded image textures; defer them until assets are ready.

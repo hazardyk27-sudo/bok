@@ -9,11 +9,13 @@ import {
   resolveFreeSpinAccounting,
   settleFreeSpinAccounting,
 } from "../engine/SlotEngine";
+import { evaluateBoard } from "../engine/WinEvaluator";
 import type { Board, SpinResult } from "../engine/types";
 import { AudioManager } from "./AudioManager";
 import { renderBonusCeremony } from "./bonusCeremony";
 import { GameScene } from "./GameScene";
 import { mountResponsiveWinAmount } from "./ResponsiveWinAmount";
+import { buildWinLabelEvents, type WinLabelEvent } from "./WinLabel";
 
 type ControllerState = "BOOT" | "IDLE" | "SPIN_INIT" | "INITIAL_DROP" | "EVALUATING" | "WIN_HIGHLIGHT" | "WIN_EXPLOSION" | "GRAVITY" | "REFILL" | "CASCADE_DROP" | "BONUS_TRIGGER_CEREMONY" | "BONUS_AWARD_PRESENTATION" | "BONUS_WAITING_FOR_START" | "BONUS_INTRO" | "FREE_SPIN_PLAY" | "CORE_REVEAL" | "BIG_WIN" | "MAX_WIN" | "BONUS_SUMMARY" | "SPIN_COMPLETE";
 
@@ -349,13 +351,18 @@ export class GameController {
       const tumble = result.tumbles[index];
       this.setState("EVALUATING");
       this.scene.renderBoard(tumble.boardBefore, tumble.winningCells);
+      const winEvents = this.buildWinLabelEvents(tumble);
       const winningMessage = `${tumble.winningSymbols.map((symbol) => getSymbolDefinition(symbol).name).join(" + ")} RESONATE`;
        this.message(tumble.multiplierCores.length ? `${winningMessage} // CORES BANKED` : winningMessage);
       this.setState("WIN_HIGHLIGHT"); this.audio.win();
       await this.scene.highlightCells(tumble.winningCells, this.duration(ANIMATION.winHighlight));
        this.setState("WIN_EXPLOSION");
-      await this.scene.burstCells(tumble.removedCells, this.duration(ANIMATION.burst));
-      await this.showTumbleWin(tumble, index + 1, isBonus);
+      winEvents.forEach(() => this.audio.winLabel());
+      await Promise.all([
+        this.scene.burstCells(tumble.removedCells, this.duration(ANIMATION.burst)),
+        this.scene.presentWinLabels(winEvents, this.duration(ANIMATION.winLabel)),
+      ]);
+      await this.showTumbleWin(tumble, index + 1, isBonus, winEvents);
       this.updateHud();
       this.setState("REFILL");
       this.setState("CASCADE_DROP");
@@ -491,18 +498,31 @@ export class GameController {
     this.ui.tumbleMeta.textContent = "BONUS TOTAL // RUNNING WIN";
     this.ui.tumbleSettlement.innerHTML = "";
   }
-  private async showTumbleWin(tumble: SpinResult["tumbles"][number], tumbleIndex: number, isBonus: boolean) {
+  private buildWinLabelEvents(tumble: SpinResult["tumbles"][number]): WinLabelEvent[] {
+    return buildWinLabelEvents(
+      tumble.boardBefore,
+      tumble.winningSymbols,
+      tumble.winningCells,
+      tumble.payouts,
+      this.betCents,
+      formatCredits,
+    );
+  }
+  private async showTumbleWin(
+    tumble: SpinResult["tumbles"][number],
+    tumbleIndex: number,
+    isBonus: boolean,
+    winEvents: readonly WinLabelEvent[],
+  ) {
     if (isBonus) {
-      const rawIncrement = Math.round(tumble.rawPayoutMultiplier * this.betCents);
-      this.ui.freeSpinCalculation.classList.add("is-collecting");
-      await this.animateFreeSpinFlight("raw", rawIncrement, this.ui.boardWrap, this.ui.freeSpinRawWin, 380);
-      this.audio.freeSpinRawCollect();
-      this.freeSpinAccounting = addFreeSpinSymbolWin(
-         this.freeSpinAccounting,
-        rawIncrement,
-      );
-      this.updateCurrentFreeSpinDisplay();
-      this.ui.freeSpinCalculation.classList.remove("is-collecting");
+      for (const event of winEvents) {
+        this.ui.freeSpinCalculation.classList.add("is-collecting");
+        await this.animateFreeSpinFlight("raw", event.amountCents, this.ui.boardWrap, this.ui.freeSpinRawWin, 380);
+        this.audio.freeSpinRawCollect();
+        this.freeSpinAccounting = addFreeSpinSymbolWin(this.freeSpinAccounting, event.amountCents);
+        this.updateCurrentFreeSpinDisplay();
+        this.ui.freeSpinCalculation.classList.remove("is-collecting");
+      }
       this.updateBonusTotalDisplay(false);
       return;
     }
@@ -593,6 +613,41 @@ export class GameController {
       await sleep(this.duration(600));
       this.ui.tumbleSettlement.innerHTML = "";
       this.ui.tumbleMeta.textContent = "FINAL TUMBLE WIN  //  280.00x";
+    }
+  }
+  async previewWinLabels() {
+    this.resetTumbleWin();
+    const boards = [
+      [...Array(8).fill("S1"), ...Array(8).fill("S6"), ...Array.from({ length: 14 }, (_, index) => index % 2 === 0 ? "S2" : "S3")],
+      [...Array(10).fill("S7"), ...Array(20).fill("S3")],
+    ].map((values) => Array.from({ length: 5 }, (_, row) => values.slice(row * 6, row * 6 + 6)) as Board);
+    let rawTotalCents = 0;
+
+    for (let index = 0; index < boards.length; index += 1) {
+      const board = boards[index];
+      const evaluation = evaluateBoard(board);
+      const events = buildWinLabelEvents(
+        board,
+        evaluation.winningSymbols,
+        evaluation.winningCells,
+        evaluation.payouts,
+        this.betCents,
+        formatCredits,
+      );
+      this.scene.renderBoard(board, evaluation.winningCells);
+      await this.scene.highlightCells(evaluation.winningCells, this.duration(ANIMATION.winHighlight));
+      events.forEach(() => this.audio.winLabel());
+      await Promise.all([
+        this.scene.burstCells(evaluation.winningCells, this.duration(ANIMATION.burst)),
+        this.scene.presentWinLabels(events, this.duration(ANIMATION.winLabel)),
+      ]);
+      rawTotalCents += Math.round(evaluation.rawPayoutMultiplier * this.betCents);
+      this.ui.tumblePanel.className = "tumble-win-panel is-active";
+      this.ui.tumbleSymbolWin.textContent = events.map((event) => event.text).join("  ·  ");
+      this.ui.tumble.textContent = formatCredits(rawTotalCents);
+      this.ui.tumbleIncrement.textContent = `+${formatCredits(Math.round(evaluation.rawPayoutMultiplier * this.betCents))}`;
+      this.ui.tumbleMeta.textContent = `LABEL DEMO ${index + 1}  //  RAW TOTAL ${formatCredits(rawTotalCents)}`;
+      if (index < boards.length - 1) await sleep(this.duration(360));
     }
   }
   async previewFreeSpinAccounting() {

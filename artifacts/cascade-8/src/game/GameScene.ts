@@ -1,6 +1,7 @@
 import Phaser from "phaser";
 import { BOARD_COLUMNS, BOARD_ROWS, MULTIPLIER_CORE_ARTWORK, NORMAL_SYMBOLS, getSymbolDefinition, type SymbolId } from "../config/GameConfig";
 import { getNormalSymbol, getStackMetadata, isMultiplierCore, type Board, type BoardCell, type Cell } from "../engine/types";
+import { calculateWinLabelPositions, type WinLabelEvent } from "./WinLabel";
 
 type BoardNode = {
   container: Phaser.GameObjects.Container;
@@ -427,6 +428,71 @@ export class GameScene extends Phaser.Scene {
       });
     })));
     this.nodes = this.nodes.filter((node) => !wanted.has(`${node.row}:${node.col}`));
+  }
+
+  async presentWinLabels(events: readonly WinLabelEvent[], duration: number) {
+    if (!events.length) return;
+    const placements = calculateWinLabelPositions(events);
+    const popDuration = Math.max(40, Math.min(160, Math.round(duration * 0.22)));
+    const fadeDuration = Math.max(60, Math.min(360, Math.round(duration * 0.42)));
+    const holdDuration = Math.max(40, duration - popDuration - fadeDuration);
+
+    await Promise.all(placements.map((placement, index) => new Promise<void>((resolve) => {
+      const text = this.add.text(0, 0, placement.text, {
+        color: "#fff7d6",
+        fontFamily: "Manrope, sans-serif",
+        fontSize: "21px",
+        fontStyle: "800",
+        stroke: "#38230a",
+        strokeThickness: 5,
+        shadow: { blur: 10, color: "#f4bd57", fill: true, offsetX: 0, offsetY: 0 },
+      }).setOrigin(0.5);
+      const badge = this.add.rectangle(
+        0,
+        0,
+        text.width + 24,
+        text.height + 12,
+        0x111a38,
+        0.9,
+      ).setStrokeStyle(1.5, 0xffd477, 0.9);
+      const container = this.trackEffect(
+        this.add.container(placement.x, placement.y, [badge, text])
+          .setDepth(14)
+          .setAlpha(0)
+          .setScale(0.72),
+      );
+
+      this.tweens.add({
+        targets: container,
+        alpha: 1,
+        scale: 1.06,
+        duration: popDuration,
+        delay: index * 35,
+        ease: "Back.easeOut",
+        onComplete: () => {
+          this.tweens.add({
+            targets: container,
+            scale: 1,
+            duration: holdDuration,
+            ease: "Sine.easeInOut",
+            onComplete: () => {
+              this.tweens.add({
+                targets: container,
+                y: placement.y - 28,
+                alpha: 0,
+                scale: 0.94,
+                duration: fadeDuration,
+                ease: "Cubic.easeOut",
+                onComplete: () => {
+                  this.destroyEffect(container);
+                  resolve();
+                },
+              });
+            },
+          });
+        },
+      });
+    })));
   }
 
   async animateCascade(board: Board, removedCells: Cell[], duration: number) {

@@ -12,6 +12,7 @@ import { createGameScene, GameScene } from "./game/GameScene";
 
 const app = document.querySelector<HTMLDivElement>("#app")!;
 const isLab = window.location.pathname === "/lab";
+const isWinLabelPreview = isLab && new URLSearchParams(window.location.search).get("preview") === "win-labels";
 const describeStreamCell = (cell: BoardCell) => {
   const symbol = getNormalSymbol(cell);
   if (!symbol) return cell === "SCATTER" ? "SCATTER" : "CORE";
@@ -22,7 +23,7 @@ const describeStreamCell = (cell: BoardCell) => {
 };
 
 app.innerHTML = `
-  <div class="app-shell ${isLab ? "is-lab" : ""}">
+  <div class="app-shell ${isLab ? "is-lab" : ""} ${isWinLabelPreview ? "is-label-preview" : ""}">
     <div class="ambient ambient-a"></div><div class="ambient ambient-b"></div><div class="stars"></div>
     <header class="topbar">
       <div class="brand">
@@ -158,6 +159,10 @@ window.setTimeout(() => {
    if (isLab && new URLSearchParams(window.location.search).has("preview-free-spin")) {
      void controller.previewFreeSpinAccounting();
    }
+    if (isLab && new URLSearchParams(window.location.search).get("preview") === "win-labels") {
+      byId("lab-result").textContent = "ON-BOARD WIN LABELS // TWO EVENTS → RAW TOTAL";
+      window.setTimeout(() => { void controller.previewWinLabels(); }, 500);
+    }
     const previewAmount = Number(new URLSearchParams(window.location.search).get("preview-amount"));
     if (isLab && Number.isFinite(previewAmount) && previewAmount > 0) {
       controller.previewBonusLargeWin(Math.round(previewAmount * 100));
@@ -167,7 +172,7 @@ window.setTimeout(() => {
 function renderLab(scene: GameScene) {
   const lab = document.createElement("section");
   lab.className = "lab-panel";
-   lab.innerHTML = `<div class="panel-kicker">DEVELOPMENT ROUTE // /lab</div><h1>Animation & Math Lab</h1><p>Deterministic board checks stay separate from live RNG. Use these cards to inspect the frameless Scatter, persistent Cores, paired normal groups and the full win presentation.</p><div class="lab-actions"><button data-lab="seven">7 × S1</button><button data-lab="eight">8 × S1</button><button data-lab="simultaneous">8 × S1 + 8 × S6</button><button data-lab="core">CORE BOARD</button><button data-lab="scatter-idle">SCATTER IDLE</button><button data-lab="scatter-fall">SCATTER FALL</button><button data-lab="scatter-land">SCATTER LAND</button><button data-lab="scatter-1">SCATTER #1</button><button data-lab="scatter-2">SCATTER #2</button><button data-lab="scatter-3">SCATTER #3</button><button data-lab="scatter-bonus">BONUS SCATTER</button><button data-lab="tumble">TUMBLE 1.20 → 4.00 → 8.00</button><button data-lab="settlement">8x + 35x</button><button data-lab="free-spin-accounting">FREE SPIN ACCOUNTING</button><button data-lab="free-spin-zero">ZERO-WIN FREE SPIN</button><button data-lab="bonus-4">BONUS CEREMONY // 4</button><button data-lab="bonus-5">BONUS CEREMONY // 5</button><button data-lab="bonus-6">BONUS CEREMONY // 6</button><button data-lab="retrigger-3">RETRIGGER // 3</button><button data-lab="retrigger-4">RETRIGGER // 4</button><button data-lab="retrigger-5">RETRIGGER // 5</button><button data-lab="retrigger-6">RETRIGGER // 6</button><button data-lab="waiting">BONUS WAITING</button><button data-lab="streams">PERSISTENT STREAM</button><button data-lab="pair-stream">PAIR STREAM</button><button data-lab="pairs">PAIR CONTINUATION</button><button data-lab="anti">GROUP INDEPENDENCE</button><button data-lab="timing">TIMINGS</button><button data-lab="base-big">BASE LARGE WIN</button><button data-lab="bonus-big">BONUS LARGE WIN</button></div><div class="lab-result" id="lab-result">Choose a predefined board.</div><pre class="lab-metrics" id="lab-metrics"></pre><div class="special-design"><div class="panel-kicker">SPECIAL SYMBOL DESIGN // CIRCULAR MULTIPLIER ARTWORK</div><div class="special-grid"><div class="special-preview normal-preview"><span class="special-state">ORDINARY</span><div class="preview-crest">GS</div><b>GALATASARAY</b></div><div class="special-preview scatter-preview"><span class="special-state">TRANSPARENT CIRCLE</span><img class="scatter-preview-image" src="${import.meta.env.BASE_URL}special-symbols/scatter.png" alt="Golden Scatter symbol"><b>GOLDEN SCATTER</b></div>${[2, 3, 5, 10, 15, 20, 25, 50, 100, 250, 500, 1000].map((value) => `<div class="special-preview core-preview core-${value}"><span class="special-state">${value >= 100 ? "SETTLEMENT" : "ACTIVE"}</span>${MULTIPLIER_CORE_ARTWORK[value as keyof typeof MULTIPLIER_CORE_ARTWORK] ? `<img class="core-preview-image" src="${import.meta.env.BASE_URL}${MULTIPLIER_CORE_ARTWORK[value as keyof typeof MULTIPLIER_CORE_ARTWORK]}" alt="${value}x multiplier core">` : `<strong class="core-preview-fallback">${value}x</strong>`}<b>CORE</b></div>`).join("")}</div></div>`;
+    lab.innerHTML = `<div class="panel-kicker">DEVELOPMENT ROUTE // /lab</div><h1>Animation & Math Lab</h1><p>Deterministic board checks stay separate from live RNG. Use these cards to inspect the frameless Scatter, persistent Cores, paired normal groups and the full win presentation.</p><div class="lab-actions"><button data-lab="seven">7 × S1</button><button data-lab="eight">8 × S1</button><button data-lab="simultaneous">8 × S1 + 8 × S6</button><button data-lab="win-labels">WIN LABELS</button><button data-lab="core">CORE BOARD</button><button data-lab="scatter-idle">SCATTER IDLE</button><button data-lab="scatter-fall">SCATTER FALL</button><button data-lab="scatter-land">SCATTER LAND</button><button data-lab="scatter-1">SCATTER #1</button><button data-lab="scatter-2">SCATTER #2</button><button data-lab="scatter-3">SCATTER #3</button><button data-lab="scatter-bonus">BONUS SCATTER</button><button data-lab="tumble">TUMBLE 1.20 → 4.00 → 8.00</button><button data-lab="settlement">8x + 35x</button><button data-lab="free-spin-accounting">FREE SPIN ACCOUNTING</button><button data-lab="free-spin-zero">ZERO-WIN FREE SPIN</button><button data-lab="bonus-4">BONUS CEREMONY // 4</button><button data-lab="bonus-5">BONUS CEREMONY // 5</button><button data-lab="bonus-6">BONUS CEREMONY // 6</button><button data-lab="retrigger-3">RETRIGGER // 3</button><button data-lab="retrigger-4">RETRIGGER // 4</button><button data-lab="retrigger-5">RETRIGGER // 5</button><button data-lab="retrigger-6">RETRIGGER // 6</button><button data-lab="waiting">BONUS WAITING</button><button data-lab="streams">PERSISTENT STREAM</button><button data-lab="pair-stream">PAIR STREAM</button><button data-lab="pairs">PAIR CONTINUATION</button><button data-lab="anti">GROUP INDEPENDENCE</button><button data-lab="timing">TIMINGS</button><button data-lab="base-big">BASE LARGE WIN</button><button data-lab="bonus-big">BONUS LARGE WIN</button></div><div class="lab-result" id="lab-result">Choose a predefined board.</div><pre class="lab-metrics" id="lab-metrics"></pre><div class="special-design"><div class="panel-kicker">SPECIAL SYMBOL DESIGN // CIRCULAR MULTIPLIER ARTWORK</div><div class="special-grid"><div class="special-preview normal-preview"><span class="special-state">ORDINARY</span><div class="preview-crest">GS</div><b>GALATASARAY</b></div><div class="special-preview scatter-preview"><span class="special-state">TRANSPARENT CIRCLE</span><img class="scatter-preview-image" src="${import.meta.env.BASE_URL}special-symbols/scatter.png" alt="Golden Scatter symbol"><b>GOLDEN SCATTER</b></div>${[2, 3, 5, 10, 15, 20, 25, 50, 100, 250, 500, 1000].map((value) => `<div class="special-preview core-preview core-${value}"><span class="special-state">${value >= 100 ? "SETTLEMENT" : "ACTIVE"}</span>${MULTIPLIER_CORE_ARTWORK[value as keyof typeof MULTIPLIER_CORE_ARTWORK] ? `<img class="core-preview-image" src="${import.meta.env.BASE_URL}${MULTIPLIER_CORE_ARTWORK[value as keyof typeof MULTIPLIER_CORE_ARTWORK]}" alt="${value}x multiplier core">` : `<strong class="core-preview-fallback">${value}x</strong>`}<b>CORE</b></div>`).join("")}</div></div>`;
   document.querySelector(".game-stage")?.append(lab);
    const metrics = lab.querySelector<HTMLElement>("#lab-metrics")!;
    const updateMetrics = () => {
@@ -194,6 +199,12 @@ function renderLab(scene: GameScene) {
        byId("lab-result").textContent = "FREE SPIN ACCOUNTING // 20.00 + 30.00 × 10x = 500.00 // BONUS TOTAL 400.00 → 900.00";
        return;
      }
+      if (key === "win-labels") {
+        app.classList.add("is-label-preview");
+        void controller.previewWinLabels();
+        byId("lab-result").textContent = "ON-BOARD WIN LABELS // TWO EVENTS → RAW TOTAL";
+        return;
+      }
       if (key === "free-spin-zero") {
         void controller.previewZeroWinFreeSpin();
         byId("lab-result").textContent = "ZERO-WIN FREE SPIN // NO CORE OR EQUATION CEREMONY // SETTLE THEN ADVANCE";

@@ -57,6 +57,10 @@ export class AudioManager {
   click() { this.tone(480, 0.05, "triangle"); }
   spin() { this.tone(180, 0.16, "sine"); }
   win() { this.tone(620, 0.12, "triangle"); setTimeout(() => this.tone(880, 0.16, "triangle"), 80); }
+  winLabel() {
+    this.tone(760, 0.07, "triangle");
+    setTimeout(() => this.tone(1120, 0.09, "sine"), 42);
+  }
   bonus() { [440, 660, 880, 1100].forEach((tone, index) => setTimeout(() => this.tone(tone, 0.14, "sine"), index * 90)); }
   core(value: number, isBonus = true) {
     this.tone(value >= 100 ? 980 : isBonus ? 720 : 820, 0.16, "square");
