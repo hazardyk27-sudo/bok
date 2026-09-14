@@ -202,14 +202,18 @@ export function playBaseSpin(betCents: number, source: RandomSource): SpinResult
   const scatterCount = countScatter(initialBoard);
   const sequence = playTumbles(initialBoard, { source, mode: "base", streams });
   const settlement = settleSequence(sequence, consumer.consume);
-  const freeSpinsAwarded = sequence.bonusPending
-    ? baseFreeSpins(Math.max(scatterCount, sequence.bonusScatterCount))
+  const bonusTriggerScatterCount = sequence.bonusPending
+    ? Math.max(scatterCount, sequence.bonusScatterCount)
+    : 0;
+  const freeSpinsAwarded = bonusTriggerScatterCount > 0
+    ? baseFreeSpins(bonusTriggerScatterCount)
     : 0;
 
   return {
     betCents,
     initialBoard,
     scatterCount,
+    bonusTriggerScatterCount,
     bonusTriggered: freeSpinsAwarded > 0,
     freeSpinsAwarded,
     tumbles: sequence.tumbles,

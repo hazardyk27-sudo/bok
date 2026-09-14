@@ -431,6 +431,96 @@ export class GameScene extends Phaser.Scene {
     });
     this.time.delayedCall(650, () => sparks.forEach((spark) => { if (spark.active) spark.destroy(); }));
   }
+
+  async presentBonusTriggerCeremony(scatterCells: Cell[], count: number) {
+    const wanted = new Set(scatterCells.map((cell) => `${cell.row}:${cell.col}`));
+    const selected = this.nodes.filter((node) => node.symbol === "SCATTER" && wanted.has(`${node.row}:${node.col}`));
+    if (!selected.length) return;
+
+    const visibleCount = Math.min(count, selected.length);
+    const rowGap = visibleCount >= 6 ? 66 : visibleCount === 5 ? 76 : 88;
+    const rowScale = visibleCount >= 6 ? 0.68 : visibleCount === 5 ? 0.78 : 0.88;
+    const centerX = 310;
+    const centerY = 258;
+    const nonSelected = this.nodes.filter((node) => !selected.includes(node));
+
+    await Promise.all([
+      ...nonSelected.map((node) => new Promise<void>((resolve) => {
+        this.tweens.add({
+          targets: node.container,
+          alpha: 0.2,
+          duration: 180,
+          ease: "Quad.easeOut",
+          onComplete: () => resolve(),
+        });
+      })),
+      ...selected.map((node, index) => new Promise<void>((resolve) => {
+        const targetX = centerX + (index - (visibleCount - 1) / 2) * rowGap;
+        const targetY = centerY;
+        const halo = this.add.circle(node.container.x, node.container.y, 46, 0xffc94f, 0.14)
+          .setBlendMode(Phaser.BlendModes.ADD)
+          .setDepth(2);
+        this.tweens.add({
+          targets: halo,
+          x: targetX,
+          y: targetY,
+          scale: 1.18,
+          alpha: 0.28,
+          duration: 560,
+          ease: "Cubic.easeInOut",
+          onComplete: () => {
+            this.tweens.add({
+              targets: halo,
+              alpha: 0,
+              scale: 1.48,
+              duration: 240,
+              ease: "Cubic.easeOut",
+              onComplete: () => halo.destroy(),
+            });
+          },
+        });
+        this.tweens.add({
+          targets: node.container,
+          x: targetX,
+          y: targetY,
+          scale: rowScale,
+          angle: index % 2 ? 2 : -2,
+          depth: 7,
+          duration: 560 + index * 22,
+          delay: index * 42,
+          ease: "Back.easeOut",
+          onComplete: () => resolve(),
+        });
+      })),
+    ]);
+    await new Promise<void>((resolve) => this.time.delayedCall(260, () => resolve()));
+  }
+
+  bonusUnlockFlash() {
+    const flash = this.add.circle(310, 258, 46, 0xffe7a1, 0.48)
+      .setBlendMode(Phaser.BlendModes.ADD)
+      .setDepth(8);
+    const ring = this.add.circle(310, 258, 58, undefined, 0)
+      .setStrokeStyle(3, 0xffd064, 0.95)
+      .setDepth(8);
+    this.tweens.add({
+      targets: flash,
+      scale: 3.4,
+      alpha: 0,
+      duration: 420,
+      ease: "Cubic.easeOut",
+      onComplete: () => flash.destroy(),
+    });
+    this.tweens.add({
+      targets: ring,
+      scale: 2.6,
+      alpha: 0,
+      duration: 520,
+      ease: "Cubic.easeOut",
+      onComplete: () => ring.destroy(),
+    });
+    this.sparkle();
+  }
 }
 
 export function createGameScene(parent: HTMLElement) {

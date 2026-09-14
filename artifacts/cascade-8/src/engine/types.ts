@@ -54,6 +54,7 @@ export type SpinResult = {
   betCents: number;
   initialBoard: Board;
   scatterCount: number;
+  bonusTriggerScatterCount: number;
   bonusTriggered: boolean;
   freeSpinsAwarded: number;
   tumbles: TumbleResult[];

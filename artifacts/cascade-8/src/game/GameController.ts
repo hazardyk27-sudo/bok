@@ -9,11 +9,11 @@ import {
   resolveFreeSpinAccounting,
   settleFreeSpinAccounting,
 } from "../engine/SlotEngine";
-import type { SpinResult } from "../engine/types";
+import type { Board, SpinResult } from "../engine/types";
 import { AudioManager } from "./AudioManager";
 import { GameScene } from "./GameScene";
 
-type ControllerState = "BOOT" | "IDLE" | "SPIN_INIT" | "INITIAL_DROP" | "EVALUATING" | "WIN_HIGHLIGHT" | "WIN_EXPLOSION" | "GRAVITY" | "REFILL" | "CASCADE_DROP" | "BONUS_AWARD_PRESENTATION" | "BONUS_WAITING_FOR_START" | "BONUS_INTRO" | "FREE_SPIN_PLAY" | "CORE_REVEAL" | "BIG_WIN" | "MAX_WIN" | "BONUS_SUMMARY" | "SPIN_COMPLETE";
+type ControllerState = "BOOT" | "IDLE" | "SPIN_INIT" | "INITIAL_DROP" | "EVALUATING" | "WIN_HIGHLIGHT" | "WIN_EXPLOSION" | "GRAVITY" | "REFILL" | "CASCADE_DROP" | "BONUS_TRIGGER_CEREMONY" | "BONUS_AWARD_PRESENTATION" | "BONUS_WAITING_FOR_START" | "BONUS_INTRO" | "FREE_SPIN_PLAY" | "CORE_REVEAL" | "BIG_WIN" | "MAX_WIN" | "BONUS_SUMMARY" | "SPIN_COMPLETE";
 
 const sleep = (milliseconds: number) => new Promise((resolve) => setTimeout(resolve, milliseconds));
 
@@ -27,6 +27,7 @@ export class GameController {
   turbo = localStorage.getItem("cascade8-turbo") === "true";
   reducedMotion = localStorage.getItem("cascade8-reduced-motion") === "true";
   freeSpinsLeft = 0;
+  bonusTriggerScatterCount = 0;
   private busy = false;
   private pendingBonusResult: SpinResult | null = null;
   private pendingBonusSource: CryptoRNG | null = null;
@@ -38,7 +39,7 @@ export class GameController {
     balance: HTMLElement; bet: HTMLElement; win: HTMLElement; bonusWin: HTMLElement; freeSpins: HTMLElement;
     tumble: HTMLElement; status: HTMLElement; spin: HTMLButtonElement; spinLabel: HTMLElement; betMinus: HTMLButtonElement; betPlus: HTMLButtonElement;
     autoCount: HTMLSelectElement; autoStart: HTMLButtonElement; autoStatus: HTMLElement;
-     turbo: HTMLButtonElement; sound: HTMLButtonElement; bonusOverlay: HTMLElement; bonusStart: HTMLButtonElement; bonusSpinCount: HTMLElement; freeSpinCalculation: HTMLElement; freeSpinIndex: HTMLElement; freeSpinRawWin: HTMLElement; freeSpinMultiplier: HTMLElement; freeSpinFinalWin: HTMLElement; freeSpinCalcStatus: HTMLElement; tumbleLabel: HTMLElement; tumbleSymbolWin: HTMLElement; tumbleIncrement: HTMLElement; tumbleMeta: HTMLElement; tumbleSettlement: HTMLElement; tumblePanel: HTMLElement; bigWinOverlay: HTMLElement; bonusSummaryOverlay: HTMLElement; boardWrap: HTMLElement;
+     turbo: HTMLButtonElement; sound: HTMLButtonElement; bonusOverlay: HTMLElement; bonusStart: HTMLButtonElement; bonusSpinCount: HTMLElement; bonusScatterRow: HTMLElement; bonusTriggerLabel: HTMLElement; freeSpinCalculation: HTMLElement; freeSpinIndex: HTMLElement; freeSpinRawWin: HTMLElement; freeSpinMultiplier: HTMLElement; freeSpinFinalWin: HTMLElement; freeSpinCalcStatus: HTMLElement; tumbleLabel: HTMLElement; tumbleSymbolWin: HTMLElement; tumbleIncrement: HTMLElement; tumbleMeta: HTMLElement; tumbleSettlement: HTMLElement; tumblePanel: HTMLElement; bigWinOverlay: HTMLElement; bonusSummaryOverlay: HTMLElement; boardWrap: HTMLElement;
     setModal: (name: string | null) => void;
   };
 
@@ -139,15 +140,23 @@ export class GameController {
     await this.playTumbles(result, false);
     this.currentWinCents = result.baseWinCents;
     this.updateHud();
-    if (result.bonusTriggered && !result.maxWinReached) {
+     if (result.bonusTriggered && !result.maxWinReached) {
       this.pendingBonusResult = result;
       this.pendingBonusSource = source;
       this.freeSpinsLeft = result.freeSpinsAwarded;
-      this.setState("BONUS_AWARD_PRESENTATION");
-      this.message(`${result.freeSpinsAwarded} FREE SPINS READY // PRESS SPIN`);
-      this.audio.bonus();
-      this.audio.scatterCelebration(result.scatterCount);
-      this.scene.sparkle();
+       this.bonusTriggerScatterCount = result.bonusTriggerScatterCount;
+       this.setState("BONUS_TRIGGER_CEREMONY");
+       this.message(`BONUS TRIGGER DETECTED // ${this.bonusTriggerScatterCount} SCATTERS`);
+       const triggerBoard = result.tumbles.at(-1)?.boardAfterRefill ?? result.initialBoard;
+       const triggerCells = triggerBoard.flatMap((row, rowIndex) =>
+         row.flatMap((cell, col) => cell === "SCATTER" ? [{ row: rowIndex, col }] : []),
+       );
+       await this.scene.presentBonusTriggerCeremony(triggerCells, this.bonusTriggerScatterCount);
+       this.audio.bonusUnlock(this.bonusTriggerScatterCount);
+       this.scene.bonusUnlockFlash();
+       await sleep(this.duration(360));
+       this.setState("BONUS_AWARD_PRESENTATION");
+       this.message(`${result.freeSpinsAwarded} FREE SPINS READY // ${this.bonusTriggerScatterCount} SCATTERS // PRESS SPIN`);
       this.setBonusPrompt(true);
       this.setState("BONUS_WAITING_FOR_START");
       this.busy = false;
@@ -322,6 +331,15 @@ export class GameController {
      this.ui.spin.hidden = active;
      this.ui.bonusStart.disabled = !active;
      this.ui.bonusSpinCount.textContent = String(this.freeSpinsLeft);
+    this.ui.bonusTriggerLabel.textContent = active
+      ? `TRIGGERED BY ${this.bonusTriggerScatterCount} SCATTERS`
+      : "";
+    this.ui.bonusScatterRow.className = `bonus-scatter-row count-${this.bonusTriggerScatterCount}`;
+    this.ui.bonusScatterRow.innerHTML = active
+      ? Array.from({ length: this.bonusTriggerScatterCount }, (_, index) =>
+        `<span class="bonus-scatter-token" style="--scatter-index:${index}"><img src="${import.meta.env.BASE_URL}special-symbols/scatter.png" alt="Triggering scatter ${index + 1}"></span>`,
+      ).join("")
+      : "";
     this.ui.boardWrap.classList.toggle("free-spin-ready", active);
      this.ui.spin.classList.remove("is-bonus");
      this.ui.spinLabel.textContent = "SPIN";
@@ -478,6 +496,26 @@ export class GameController {
     await sleep(this.duration(680));
     this.freeSpinAccounting = settleFreeSpinAccounting(this.freeSpinAccounting);
     this.updateBonusTotalDisplay(true);
+  }
+  async previewBonusTriggerCeremony(count: number) {
+    const scatterCount = Math.max(4, Math.min(6, count));
+    const values = Array(30).fill("S2");
+    const placements = [[0, 0], [1, 2], [2, 4], [3, 1], [4, 3], [0, 5]];
+    placements.slice(0, scatterCount).forEach(([row, col]) => { values[row * 6 + col] = "SCATTER"; });
+    const board = Array.from({ length: 5 }, (_, row) => values.slice(row * 6, row * 6 + 6)) as Board;
+    const cells = placements.slice(0, scatterCount).map(([row, col]) => ({ row, col }));
+    this.bonusTriggerScatterCount = scatterCount;
+    this.freeSpinsLeft = scatterCount === 6 ? 15 : scatterCount === 5 ? 12 : 10;
+    this.scene.renderBoard(board);
+    this.setState("BONUS_TRIGGER_CEREMONY");
+    this.message(`BONUS TRIGGER DETECTED // ${scatterCount} SCATTERS`);
+    await this.scene.animateDrop(this.duration(ANIMATION.initialDrop));
+    await this.scene.presentBonusTriggerCeremony(cells, scatterCount);
+    this.audio.bonusUnlock(scatterCount);
+    this.scene.bonusUnlockFlash();
+    await sleep(this.duration(360));
+    this.setBonusPrompt(true);
+    this.setState("BONUS_WAITING_FOR_START");
   }
   private resolveCurrentFreeSpinDisplay(freeSpin: SpinResult["freeSpins"][number]) {
     this.freeSpinAccounting = resolveFreeSpinAccounting(

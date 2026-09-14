@@ -117,8 +117,52 @@ button:focus-visible, input:focus-visible { outline: 2px solid var(--cyan); outl
   letter-spacing: .3em;
   text-transform: uppercase;
 }
+.bonus-scatter-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: clamp(4px, 1.4vw, 9px);
+  width: min(100%, 420px);
+  min-height: 78px;
+  margin: 19px auto 5px;
+}
+.bonus-scatter-token {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: clamp(52px, 16vw, 78px);
+  aspect-ratio: 1;
+  flex: 0 1 auto;
+  border: 1px solid rgba(255, 224, 143, .34);
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(255, 222, 126, .24), rgba(255, 179, 34, .04) 64%, transparent 70%);
+  box-shadow: 0 0 22px rgba(255, 193, 57, .28), inset 0 0 15px rgba(255, 239, 180, .1);
+  animation: bonus-scatter-arrive .55s calc(var(--scatter-index) * 70ms) both cubic-bezier(.16,.9,.24,1);
+}
+.bonus-scatter-token::before {
+  content: "";
+  position: absolute;
+  inset: -5px;
+  border: 1px solid rgba(255, 212, 91, .18);
+  border-radius: inherit;
+  animation: bonus-scatter-halo 1.8s ease-in-out infinite;
+}
+.bonus-scatter-token img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  filter: drop-shadow(0 0 12px rgba(255, 190, 54, .68));
+}
+.bonus-scatter-row.count-5 .bonus-scatter-token { width: clamp(48px, 14vw, 68px); }
+.bonus-scatter-row.count-6 .bonus-scatter-token { width: clamp(43px, 12vw, 59px); }
+.bonus-trigger-label {
+  color: #f5d77d;
+  font: 8px "DM Mono", monospace;
+  letter-spacing: .2em;
+  text-transform: uppercase;
+}
 .bonus-title {
-  margin-top: 14px;
+  margin-top: 10px;
   color: #fff8dc;
   font-size: clamp(25px, 5vw, 42px);
   font-weight: 800;
@@ -494,8 +538,10 @@ button:focus-visible, input:focus-visible { outline: 2px solid var(--cyan); outl
 .lab-actions button { padding: 8px 10px; border: 1px solid rgba(239, 196, 106, .35); border-radius: 8px; background: rgba(239, 196, 106, .07); color: #efcf8c; font: 9px "DM Mono", monospace; }
 .lab-result { margin-top: 14px; padding: 11px; border-radius: 8px; background: rgba(5, 10, 29, .45); color: #b6c0e4; font: 10px "DM Mono", monospace; }
 .app-shell.is-lab { overflow: auto; }
-.app-shell.is-lab .mode-ribbon, .app-shell.is-lab .board-wrap, .app-shell.is-lab .status-line,
+.app-shell.is-lab .mode-ribbon, .app-shell.is-lab .status-line,
 .app-shell.is-lab .control-deck, .app-shell.is-lab .demo-note, .app-shell.is-lab .tumble-win-panel { display: none; }
+.app-shell.is-lab .board-wrap > .board-caption,
+.app-shell.is-lab .board-wrap > #phaser-board { display: none; }
 .app-shell.is-lab .free-spin-calculation { display: block; margin-top: 18px; }
 .app-shell.is-lab .tumble-win-panel.is-free-total { display: grid; margin-top: 10px; }
 @keyframes fade-in { from { opacity: 0; } to { opacity: 1; } }
@@ -511,6 +557,8 @@ button:focus-visible, input:focus-visible { outline: 2px solid var(--cyan); outl
 @keyframes ceremony-number-in { from { opacity: 0; transform: translateY(12px) scale(.72); } to { opacity: 1; transform: translateY(0) scale(1); } }
 @keyframes ceremony-cta-in { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
 @keyframes ceremony-glint { 0%, 100% { opacity: .38; } 50% { opacity: .85; } }
+@keyframes bonus-scatter-arrive { from { opacity: 0; transform: translateY(18px) scale(.62); } 65% { opacity: 1; transform: translateY(-3px) scale(1.06); } to { opacity: 1; transform: translateY(0) scale(1); } }
+@keyframes bonus-scatter-halo { 0%, 100% { opacity: .3; transform: scale(.94); } 50% { opacity: .85; transform: scale(1.08); } }
 @media (max-width: 930px) { .game-layout { grid-template-columns: 1fr; } .side-panel { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; padding-top: 0; } .side-panel > .panel-kicker, .side-panel > .full { grid-column: 1 / -1; } .side-card, .legend-card { margin-top: 0; } .outline-button.full { margin-top: 0; } }
 @media (max-width: 620px) {
   .big-win-overlay { padding: 16px; }

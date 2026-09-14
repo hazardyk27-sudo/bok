@@ -75,6 +75,14 @@ export class AudioManager {
     if (count < 4) return;
     [520, 700, 880, 1180, 1480].forEach((tone, index) => setTimeout(() => this.tone(tone, 0.16, "triangle"), index * 75));
   }
+  bonusUnlock(count: number) {
+    if (count < 4) return;
+    const base = count === 6 ? 392 : count === 5 ? 370 : 349;
+    [base, base * 1.25, base * 1.5, base * 2, base * 2.5].forEach((frequency, index) => {
+      setTimeout(() => this.tone(frequency, index === 4 ? 0.32 : 0.16, index === 4 ? "sine" : "triangle"), index * 72);
+    });
+    setTimeout(() => this.tone(base * 3, 0.42, "sine"), 330);
+  }
   bigWin() { [440, 660, 880, 1320].forEach((tone, index) => setTimeout(() => this.tone(tone, 0.22, "sawtooth"), index * 110)); }
   bonusComplete() { [660, 880, 1100, 1320].forEach((tone, index) => setTimeout(() => this.tone(tone, 0.18, "sine"), index * 95)); }
   startMusic() {
