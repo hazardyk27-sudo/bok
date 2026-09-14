@@ -1686,3 +1686,263 @@ button:focus-visible, input:focus-visible { outline: 2px solid var(--cyan); outl
   .spin-button { width: 68px; }
   .utility-button span.sound-label-compact { font-size: 6px; }
 }
+
+/* Final control-dock hierarchy: a premium surface with one clear primary action. */
+.control-deck {
+  position: relative;
+  isolation: isolate;
+  display: grid;
+  grid-template-columns: minmax(148px, 1fr) minmax(112px, .82fr) 158px minmax(148px, 1fr);
+  grid-template-areas: "bet auto spin utility";
+  gap: 12px;
+  align-items: stretch;
+  width: min(100%, 920px);
+  padding: 10px;
+  border: 1px solid rgba(156, 186, 255, .24);
+  border-radius: 23px;
+  background:
+    linear-gradient(135deg, rgba(26, 42, 83, .9), rgba(7, 13, 31, .96) 58%),
+    rgba(8, 14, 34, .9);
+  box-shadow:
+    0 20px 54px rgba(0, 0, 0, .3),
+    inset 0 1px 0 rgba(244, 248, 255, .1),
+    inset 0 -1px 0 rgba(77, 108, 181, .12);
+}
+.control-deck::before {
+  content: "";
+  position: absolute;
+  z-index: -1;
+  inset: 1px;
+  border-radius: 22px;
+  pointer-events: none;
+  background: linear-gradient(90deg, rgba(104, 179, 255, .08), transparent 42%, rgba(151, 126, 255, .1));
+}
+.bet-control,
+.auto-control,
+.utility-controls {
+  min-width: 0;
+  min-height: 66px;
+  border: 1px solid rgba(139, 171, 237, .16);
+  border-radius: 15px;
+  background: rgba(7, 15, 37, .56);
+  box-shadow: inset 0 1px 0 rgba(233, 242, 255, .045);
+}
+.bet-control {
+  display: grid;
+  align-content: center;
+  justify-items: start;
+  padding: 8px 10px;
+  text-align: left;
+}
+.control-deck .eyebrow {
+  color: #9bb2df;
+  font-size: 8px;
+  font-weight: 500;
+  letter-spacing: .24em;
+}
+.bet-stepper {
+  width: 100%;
+  justify-content: space-between;
+  gap: 6px;
+  margin-top: 5px;
+  padding: 3px;
+  border: 1px solid rgba(139, 176, 244, .24);
+  border-radius: 10px;
+  background: rgba(4, 10, 27, .72);
+}
+.bet-stepper button {
+  width: 32px;
+  height: 30px;
+  border: 1px solid rgba(126, 172, 249, .2);
+  border-radius: 8px;
+  color: #a9d9ff;
+  background: rgba(31, 62, 116, .55);
+  font-size: 19px;
+}
+.bet-stepper button:hover:not(:disabled) {
+  border-color: rgba(145, 209, 255, .7);
+  background: rgba(49, 99, 171, .75);
+}
+.bet-stepper strong {
+  flex: 1;
+  min-width: 0;
+  color: #f1f6ff;
+  font-size: 16px;
+  text-align: center;
+}
+.auto-control {
+  display: grid;
+  align-content: center;
+  justify-items: stretch;
+  gap: 4px;
+  padding: 8px 9px;
+}
+.auto-trigger {
+  width: 100%;
+  min-width: 0;
+  min-height: 38px;
+  border-color: rgba(120, 183, 255, .38);
+  border-radius: 10px;
+  background: linear-gradient(180deg, rgba(44, 84, 149, .82), rgba(18, 40, 83, .96));
+  box-shadow: inset 0 1px 0 rgba(239, 248, 255, .12), 0 7px 18px rgba(5, 19, 53, .24);
+}
+.auto-trigger:hover:not(:disabled),
+.auto-trigger.is-open {
+  border-color: rgba(165, 218, 255, .82);
+  background: linear-gradient(180deg, rgba(57, 110, 187, .94), rgba(21, 49, 101, .98));
+}
+.auto-trigger.is-running {
+  border-color: rgba(255, 190, 112, .72);
+  color: #fff0c4;
+  background: linear-gradient(180deg, rgba(136, 91, 49, .94), rgba(70, 42, 34, .98));
+}
+.auto-trigger.is-stopping {
+  border-color: rgba(255, 157, 157, .68);
+  color: #ffdede;
+  background: linear-gradient(180deg, rgba(103, 54, 71, .94), rgba(51, 25, 44, .98));
+}
+#auto-status {
+  display: block;
+  overflow: visible;
+  color: #9eb3da;
+  font: 700 8px "DM Mono", monospace;
+  letter-spacing: .13em;
+  line-height: 1;
+  text-align: center;
+  white-space: nowrap;
+}
+#auto-status[data-state="running"] { color: #ffd997; }
+#auto-status[data-state="stopping"] { color: #ffb6b6; }
+.spin-button {
+  width: 100%;
+  min-width: 0;
+  height: auto;
+  min-height: 76px;
+  border: 1px solid rgba(199, 190, 255, .86);
+  border-radius: 19px 19px 19px 8px;
+  background:
+    radial-gradient(circle at 28% 18%, rgba(255, 255, 255, .22), transparent 24%),
+    linear-gradient(145deg, #a095ff 0%, #6b73f4 46%, #4352c8 100%);
+  box-shadow:
+    0 14px 34px rgba(73, 82, 226, .46),
+    0 0 0 1px rgba(120, 130, 255, .12),
+    inset 0 1px 0 rgba(255, 255, 255, .56),
+    inset 0 -8px 18px rgba(38, 48, 141, .18);
+  font-size: 21px;
+  letter-spacing: .19em;
+}
+.spin-button::after {
+  content: "";
+  position: absolute;
+  inset: 3px;
+  border: 1px solid rgba(255, 255, 255, .16);
+  border-radius: 16px 16px 16px 6px;
+  pointer-events: none;
+}
+.spin-button:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow:
+    0 18px 42px rgba(88, 99, 255, .58),
+    0 0 24px rgba(128, 145, 255, .2),
+    inset 0 1px 0 rgba(255, 255, 255, .64);
+}
+.spin-button:active:not(:disabled) { transform: translateY(1px) scale(.985); }
+.spin-button:disabled {
+  filter: saturate(.58);
+  opacity: .62;
+}
+.utility-controls {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  align-items: stretch;
+  gap: 5px;
+  padding: 5px;
+}
+.utility-button {
+  min-width: 0;
+  min-height: 54px;
+  padding: 7px 5px;
+  border: 1px solid rgba(140, 181, 242, .25);
+  border-radius: 11px;
+  color: #b5c9ed;
+  background: linear-gradient(180deg, rgba(32, 56, 105, .72), rgba(12, 26, 57, .86));
+  box-shadow: inset 0 1px 0 rgba(235, 244, 255, .06);
+}
+.utility-button:hover:not(:disabled),
+.utility-button.is-active {
+  border-color: rgba(145, 207, 255, .7);
+  color: #e8f5ff;
+  background: linear-gradient(180deg, rgba(46, 89, 151, .88), rgba(16, 38, 78, .94));
+}
+.utility-button.is-active .utility-icon { color: #8edbff; }
+.utility-icon {
+  color: #a8c9f8;
+  font-size: 17px;
+  line-height: 1;
+}
+.utility-button span:last-child {
+  color: inherit;
+  font-size: 8px;
+  letter-spacing: .1em;
+}
+
+@media (max-width: 620px) {
+  .control-deck {
+    grid-template-columns: minmax(84px, 1.06fr) minmax(70px, .88fr) 82px minmax(102px, 1.22fr);
+    grid-template-areas: "bet auto spin utility";
+    gap: 6px;
+    width: 100%;
+    padding: 7px;
+    border-radius: 20px;
+  }
+  .bet-control,
+  .auto-control,
+  .utility-controls { min-height: 68px; }
+  .bet-control {
+    padding: 8px 7px;
+    justify-items: stretch;
+  }
+  .bet-stepper { margin-top: 5px; }
+  .bet-stepper button { width: 29px; height: 31px; }
+  .bet-stepper strong { font-size: 14px; }
+  .auto-control { padding: 8px 6px; }
+  .auto-trigger {
+    min-height: 40px;
+    padding-inline: 4px;
+    gap: 4px;
+    letter-spacing: .08em;
+  }
+  .auto-trigger small { min-width: 17px; height: 17px; }
+  #auto-status {
+    font-size: 7px;
+    letter-spacing: .08em;
+  }
+  .spin-button {
+    min-height: 68px;
+    border-radius: 17px 17px 17px 7px;
+    font-size: 18px;
+  }
+  .utility-controls { padding: 4px; gap: 4px; }
+  .utility-button { min-height: 58px; padding-inline: 2px; }
+  .utility-icon { font-size: 15px; }
+  .utility-button span:last-child { font-size: 7px; letter-spacing: .06em; }
+}
+@media (max-width: 360px) {
+  .control-deck {
+    grid-template-columns: minmax(76px, 1fr) 61px 74px minmax(93px, 1.16fr);
+    gap: 4px;
+    padding: 5px;
+  }
+  .bet-control,
+  .auto-control,
+  .utility-controls { min-height: 64px; }
+  .bet-control { padding-inline: 5px; }
+  .bet-stepper button { width: 26px; height: 29px; }
+  .bet-stepper strong { font-size: 13px; }
+  .auto-control { padding-inline: 4px; }
+  .auto-trigger { min-height: 38px; }
+  .auto-trigger small { display: none; }
+  #auto-status { font-size: 6px; }
+  .spin-button { min-height: 64px; width: 100%; }
+  .utility-button { min-height: 54px; }
+}

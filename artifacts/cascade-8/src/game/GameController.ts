@@ -48,6 +48,7 @@ export class GameController {
   private pendingBonusSource: CryptoRNG | null = null;
   private pendingRetriggerContinue: (() => void) | null = null;
   private autoRunning = false;
+  private autoStopping = false;
   private autoRemaining = 0;
   readonly audio = new AudioManager();
   private readonly scene: GameScene;
@@ -166,6 +167,7 @@ export class GameController {
     this.ui.autoStart.classList.toggle("is-running", this.autoRunning);
     this.ui.autoToggle.disabled = (this.busy && !this.autoRunning) || Boolean(this.pendingBonusResult);
     this.ui.autoToggle.classList.toggle("is-running", this.autoRunning);
+    this.ui.autoToggle.classList.toggle("is-stopping", this.autoStopping);
     this.ui.autoToggle.setAttribute("aria-label", this.autoRunning ? "Stop automatic spins" : "Choose automatic spin count");
     this.ui.autoMenu.querySelectorAll<HTMLButtonElement>("[data-auto-option]").forEach((option) => {
       const isSelected = option.dataset.autoOption === this.ui.autoCount.value;
@@ -336,6 +338,7 @@ export class GameController {
   private async toggleAuto() {
     if (this.autoRunning) {
       this.autoRunning = false;
+      this.autoStopping = true;
       this.message("AUTO STOPPING // CURRENT SPIN FINISHES");
       this.updateHud();
       return;
@@ -345,6 +348,7 @@ export class GameController {
       return;
     }
     this.autoRunning = true;
+    this.autoStopping = false;
     this.autoRemaining = Number(this.ui.autoCount.value);
     this.updateHud();
     await this.runAuto();
@@ -378,16 +382,22 @@ export class GameController {
       this.autoRunning = false;
       this.message("AUTO COMPLETE // ALL SPINS FINISHED");
     }
+    this.autoStopping = false;
     this.updateHud();
   }
 
   private updateAutoStatus() {
     if (!this.ui.autoStatus) return;
     const selected = Number(this.ui.autoCount.value);
-    this.ui.autoSelection.textContent = this.autoRunning ? String(this.autoRemaining) : String(selected);
-    this.ui.autoStatus.textContent = this.autoRunning
-      ? `${this.autoRemaining} LEFT / BET ${formatCredits(this.betCents)}`
-      : `BET ${formatCredits(this.betCents)} / ${selected} READY`;
+    this.ui.autoSelection.textContent = this.autoRunning
+      ? String(this.autoRemaining)
+      : this.autoStopping ? "—" : String(selected);
+    this.ui.autoStatus.dataset.state = this.autoStopping ? "stopping" : this.autoRunning ? "running" : "ready";
+    this.ui.autoStatus.textContent = this.autoStopping
+      ? "STOPPING"
+      : this.autoRunning
+        ? `${this.autoRemaining} LEFT`
+        : `${selected} READY`;
   }
 
   private async playTumbles(result: Pick<SpinResult, "tumbles">, isBonus: boolean) {
