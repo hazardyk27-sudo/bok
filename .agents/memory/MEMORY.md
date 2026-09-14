@@ -4,3 +4,4 @@
 - [Special symbol RTP calibration](special-symbol-rtp-calibration.md) — high per-cell Core odds plus multiplicative settlement can overwhelm RTP; calibrate before release.
 - [Phaser effect cleanup](phaser-effect-cleanup.md) — destroy board child tweens explicitly before rebuilding cascade nodes to prevent performance drift.
 - [Packet stack RTP calibration](packet-stack-rtp-calibration.md) — correlated 1x2 packets can amplify tumble payouts; tune only packet-size probability after full-spin simulation.
+- [Multiplier asset masking](multiplier-asset-masking.md) — supplied portraits need bottom-caption cropping before transparent circular masking.

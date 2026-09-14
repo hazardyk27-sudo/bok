@@ -637,7 +637,8 @@ button:focus-visible, input:focus-visible { outline: 2px solid var(--cyan); outl
 .core-preview { border-color: rgba(255, 201, 76, .3); }
 .core-preview strong { color: #fff0ad; font-size: 23px; text-shadow: 0 0 15px rgba(255, 181, 38, .7); }
 .core-500 strong { color: #ffffff; font-size: 28px; text-shadow: 0 0 23px rgba(255, 255, 210, .95); }
-.core-preview-image { width: 56px; height: 56px; object-fit: cover; border-radius: 50%; filter: drop-shadow(0 0 10px rgba(70, 143, 255, .72)); }
+.core-preview-image { width: 68px; height: 68px; object-fit: contain; border-radius: 50%; filter: drop-shadow(0 0 10px rgba(255, 183, 51, .72)); }
+.core-preview-fallback { display: grid; place-items: center; width: 68px; height: 68px; border: 2px solid rgba(255, 215, 107, .72); border-radius: 50%; background: radial-gradient(circle, rgba(190, 124, 27, .68), rgba(55, 27, 79, .84)); }
 .scatter-preview-image { width: 70px; height: 70px; object-fit: cover; border-radius: 50%; filter: drop-shadow(0 0 12px rgba(255, 190, 60, .72)); }
 @media (max-width: 620px) { .special-grid { grid-template-columns: repeat(3, 1fr); } .special-preview { min-height: 80px; } }
 @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation-duration: .01ms !important; transition-duration: .01ms !important; } }

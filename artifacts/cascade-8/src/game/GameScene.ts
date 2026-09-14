@@ -1,5 +1,5 @@
 import Phaser from "phaser";
-import { BOARD_COLUMNS, BOARD_ROWS, NORMAL_SYMBOLS, getSymbolDefinition, type SymbolId } from "../config/GameConfig";
+import { BOARD_COLUMNS, BOARD_ROWS, MULTIPLIER_CORE_ARTWORK, NORMAL_SYMBOLS, getSymbolDefinition, type SymbolId } from "../config/GameConfig";
 import { getNormalSymbol, getStackMetadata, isMultiplierCore, type Board, type BoardCell, type Cell } from "../engine/types";
 
 type BoardNode = {
@@ -39,10 +39,9 @@ export class GameScene extends Phaser.Scene {
       if (symbol.logoPath) this.load.image(`club-logo-${symbol.id}`, `${import.meta.env.BASE_URL}${symbol.logoPath}`);
     });
     this.load.image("scatter-symbol", `${import.meta.env.BASE_URL}special-symbols/scatter.png`);
-    this.load.image("core-2x", `${import.meta.env.BASE_URL}special-symbols/2x.png`);
-    this.load.image("core-3x", `${import.meta.env.BASE_URL}special-symbols/3x.png`);
-    this.load.image("core-5x", `${import.meta.env.BASE_URL}special-symbols/5x.png`);
-    this.load.image("core-10x", `${import.meta.env.BASE_URL}special-symbols/10x.png`);
+    Object.entries(MULTIPLIER_CORE_ARTWORK).forEach(([value, path]) => {
+      this.load.image(`core-${value}x`, `${import.meta.env.BASE_URL}${path}`);
+    });
   }
 
   create() {
@@ -146,7 +145,8 @@ export class GameScene extends Phaser.Scene {
         const angle = (index / 8) * Math.PI * 2;
         radiance.lineBetween(Math.cos(angle) * 27, Math.sin(angle) * 27, Math.cos(angle) * 38, Math.sin(angle) * 38);
       }
-      if (symbol.value === 2 || symbol.value === 3 || symbol.value === 5 || symbol.value === 10) {
+      const artworkPath = MULTIPLIER_CORE_ARTWORK[symbol.value as keyof typeof MULTIPLIER_CORE_ARTWORK];
+      if (artworkPath) {
         const portrait = this.add.image(0, 0, `core-${symbol.value}x`).setDisplaySize(84, 84);
         container.add([glow, radiance, portrait]);
         container.setScale(coreScale);
@@ -156,8 +156,11 @@ export class GameScene extends Phaser.Scene {
         this.nodes.push(node);
         return node;
       }
-      const core = this.add.polygon(0, 0, [0, -32, 25, -14, 25, 14, 0, 32, -25, 14, -25, -14], 0x8f5a0c, 0.72);
-      const inner = this.add.polygon(0, 0, [0, -24, 18, -10, 18, 10, 0, 24, -18, 10, -18, -10], 0xffbe35, 0.72);
+      const fallbackColor = symbol.value >= 1000 ? 0x6d2a9e : symbol.value >= 500 ? 0xb87416 : 0x8f5a0c;
+      const core = this.add.circle(0, 0, 32, fallbackColor, 0.9)
+        .setStrokeStyle(3, 0xffd36b, 0.98);
+      const inner = this.add.circle(0, 0, 26, 0x241a33, 0.72)
+        .setStrokeStyle(1.5, 0xffbe35, 0.9);
       const label = this.add.text(0, 1, `${symbol.value}x`, {
         color: "#fff4c7",
         fontFamily: "Arial, sans-serif",
@@ -455,7 +458,10 @@ export class GameScene extends Phaser.Scene {
         node.container.y = targetY - 260 - col * 14;
         node.container.alpha = 0.2;
         const metadata = getStackMetadata(node.symbol);
-        const key = metadata ? `stack:${metadata.stackId}` : `single:${col}:${row}`;
+         const normalSymbol = getNormalSymbol(node.symbol);
+         const key = metadata && metadata.stackSize === 2 && normalSymbol
+           ? `stack:${metadata.stackId}:${normalSymbol}`
+           : `single:${col}:${row}`;
         const group = incomingGroups.get(key) ?? [];
         group.push(node);
         incomingGroups.set(key, group);

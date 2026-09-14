@@ -54,30 +54,35 @@ export const SYMBOLS: readonly SymbolDefinition[] = [
 
 export const NORMAL_SYMBOLS = SYMBOLS.filter((symbol) => symbol.id !== "SCATTER") as readonly SymbolDefinition[];
 
-export type RunLength = 1 | 2;
 export type ReelConfig = {
   name: "BASE" | "BONUS";
-  packetWeights: readonly { value: RunLength; weight: number }[];
   symbolWeights: readonly { value: NormalSymbolId; weight: number }[];
 };
 
+export const NORMAL_PAIR_COPY_CHANCE = 0.9;
+
 export const BASE_REEL_CONFIG: ReelConfig = {
   name: "BASE",
-  packetWeights: [
-    { value: 1, weight: 80 },
-    { value: 2, weight: 20 },
-  ],
   symbolWeights: NORMAL_SYMBOLS.map(({ id, weight }) => ({ value: id as NormalSymbolId, weight })),
 };
 
 export const BONUS_REEL_CONFIG: ReelConfig = {
   name: "BONUS",
-  packetWeights: [
-    { value: 1, weight: 80 },
-    { value: 2, weight: 20 },
-  ],
   symbolWeights: NORMAL_SYMBOLS.map(({ id, weight }) => ({ value: id as NormalSymbolId, weight })),
 };
+
+export const MULTIPLIER_CORE_ARTWORK = {
+  2: "special-symbols/2x.png",
+  3: "special-symbols/3x.png",
+  5: "special-symbols/5x.png",
+  10: "special-symbols/10x.png",
+  15: "special-symbols/15x.png",
+  20: "special-symbols/20x.png",
+  25: "special-symbols/25x.png",
+  50: "special-symbols/50x.png",
+  100: "special-symbols/100x.png",
+  250: "special-symbols/250x.png",
+} as const;
 
 export type SymbolEffectProfile = {
   particleType: "droplet" | "fragment" | "ray" | "dust" | "star" | "shard" | "streak" | "prism";

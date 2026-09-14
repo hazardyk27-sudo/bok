@@ -10,7 +10,7 @@ import {
   BOARD_COLUMNS,
   BOARD_ROWS,
   BONUS_REEL_CONFIG,
-  NORMAL_SYMBOLS,
+  NORMAL_PAIR_COPY_CHANCE,
   type NormalSymbolId,
   type ReelConfig,
   type SymbolId,
@@ -21,18 +21,12 @@ import { weightedChoice } from "./RNG";
 
 export type GenerationContext = "BASE_INITIAL" | "BASE_REFILL" | "BONUS_INITIAL" | "BONUS_REFILL";
 export type ColumnStreamStats = {
-  runLengths: Record<"1" | "2", number>;
-  packetLengths: Record<"1" | "2", number>;
-  emittedNormal: number;
   pairCount: number;
-  singlePacketCount: number;
-  doublePacketCount: number;
-};
-
-const normalIds = NORMAL_SYMBOLS.map((symbol) => symbol.id as NormalSymbolId);
-const softFactor = (history: NormalSymbolId[], candidate: NormalSymbolId) => {
-  const occurrences = history.filter((value) => value === candidate).length;
-  return occurrences === 0 ? 1 : occurrences === 1 ? 0.8 : occurrences === 2 ? 0.55 : 0.3;
+  copyBranchCount: number;
+  freshSecondCount: number;
+  actualSamePairCount: number;
+  emittedNormal: number;
+  emittedSpecial: number;
 };
 
 const normalSymbolOf = (cell: BoardCell): NormalSymbolId | null =>
@@ -57,16 +51,17 @@ export const createNormalSymbolCell = (
 
 export class ColumnStream {
   private readonly queue: BoardCell[] = [];
-  private readonly recent: NormalSymbolId[] = [];
-  private lastNormalPacketSymbol: NormalSymbolId | null = null;
+  private pairPhase: "FIRST" | "SECOND" = "FIRST";
+  private pairBaseSymbol: NormalSymbolId | null = null;
+  private activePairId: number | null = null;
   private nextStackSequence = 1;
   readonly stats: ColumnStreamStats = {
-    runLengths: { "1": 0, "2": 0 },
-    packetLengths: { "1": 0, "2": 0 },
-    emittedNormal: 0,
     pairCount: 0,
-    singlePacketCount: 0,
-    doublePacketCount: 0,
+    copyBranchCount: 0,
+    freshSecondCount: 0,
+    actualSamePairCount: 0,
+    emittedNormal: 0,
+    emittedSpecial: 0,
   };
 
   constructor(
@@ -76,12 +71,11 @@ export class ColumnStream {
   ) {}
 
   next(count: number, context: GenerationContext, allowCores = true): BoardCell[] {
-    while (this.queue.length < count) this.appendPacket(context, allowCores);
+    while (this.queue.length < count) this.appendPosition(context, allowCores);
     return this.queue.splice(0, count);
   }
 
-  private appendPacket(context: GenerationContext, allowCores: boolean) {
-    const isInitial = context === "BASE_INITIAL" || context === "BONUS_INITIAL";
+  private appendPosition(context: GenerationContext, allowCores: boolean) {
     const scatterChance = context === "BASE_INITIAL"
       ? BASE_INITIAL_SCATTER_CHANCE
       : context === "BASE_REFILL"
@@ -102,50 +96,47 @@ export class ColumnStream {
           ? BONUS_REFILL_CORE_CHANCE
           : 0;
 
-    const requestedSize = weightedChoice(this.source, this.config.packetWeights) as StackSize;
-    const packetScale = requestedSize === 2 ? 1.8 : 1;
-
-    // Specials are always single packets and never interrupt a normal packet.
-    // Scaling the packet roll keeps the configured chance close to its
-    // per-cell meaning while preserving atomic special packets.
     const specialRoll = this.source.nextFloat();
-    if (specialRoll < scatterChance * packetScale) {
+    if (specialRoll < scatterChance) {
       this.queue.push("SCATTER");
-      this.lastNormalPacketSymbol = null;
+      this.stats.emittedSpecial += 1;
       return;
     }
-    if (coreMode && specialRoll < (scatterChance + coreChance) * packetScale) {
+    if (coreMode && specialRoll < scatterChance + coreChance) {
       this.queue.push(drawMultiplierCoreValue(this.source, coreMode));
-      this.lastNormalPacketSymbol = null;
+      this.stats.emittedSpecial += 1;
       return;
     }
 
-    const candidates = this.config.symbolWeights
-      .filter(({ value }) => value !== this.lastNormalPacketSymbol)
-      .filter(({ value }) => !isInitial || this.queue.filter((cell) => normalSymbolOf(cell) === value).length + requestedSize <= 3)
-      .map(({ value, weight }) => ({ value, weight: weight * softFactor(this.recent, value) }));
-    const available = candidates.length ? candidates : this.config.symbolWeights
-      .map(({ value, weight }) => ({ value, weight: weight * softFactor(this.recent, value) }));
-    const symbol = weightedChoice(this.source, available);
-    const stackId = (this.columnIndex + 1) * 1_000_000 + this.nextStackSequence;
-    this.nextStackSequence += 1;
+    const isFirst = this.pairPhase === "FIRST";
+    const baseSymbol = this.pairBaseSymbol;
+    const stackId = isFirst
+      ? (this.columnIndex + 1) * 1_000_000 + this.nextStackSequence++
+      : this.activePairId!;
+    let symbol: NormalSymbolId;
+    let stackIndex: 0 | 1;
 
-    for (let stackIndex = 0; stackIndex < requestedSize; stackIndex += 1) {
-      this.queue.push(createNormalSymbolCell(symbol, stackId, stackIndex, requestedSize));
-      this.recent.push(symbol);
-      if (this.recent.length > 4) this.recent.shift();
-      this.stats.emittedNormal += 1;
-    }
-    this.lastNormalPacketSymbol = symbol;
-    const key = String(requestedSize) as "1" | "2";
-    this.stats.packetLengths[key] += 1;
-    this.stats.runLengths[key] += 1;
-    if (requestedSize === 2) {
-      this.stats.pairCount += 1;
-      this.stats.doublePacketCount += 1;
+    if (isFirst) {
+      symbol = weightedChoice(this.source, this.config.symbolWeights);
+      this.pairBaseSymbol = symbol;
+      this.activePairId = stackId;
+      this.pairPhase = "SECOND";
+      stackIndex = 0;
     } else {
-      this.stats.singlePacketCount += 1;
+      const copied = this.source.nextFloat() < NORMAL_PAIR_COPY_CHANCE;
+      symbol = copied ? baseSymbol! : weightedChoice(this.source, this.config.symbolWeights);
+      this.stats.pairCount += 1;
+      if (copied) this.stats.copyBranchCount += 1;
+      else this.stats.freshSecondCount += 1;
+      if (symbol === baseSymbol) this.stats.actualSamePairCount += 1;
+      this.pairBaseSymbol = null;
+      this.activePairId = null;
+      this.pairPhase = "FIRST";
+      stackIndex = 1;
     }
+
+    this.queue.push(createNormalSymbolCell(symbol, stackId, stackIndex, 2 as StackSize));
+    this.stats.emittedNormal += 1;
   }
 }
 

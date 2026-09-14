@@ -2,7 +2,8 @@ import { mkdir, writeFile } from "node:fs/promises";
 import { playSpin } from "../engine/SlotEngine";
 import { SeededRNG } from "../engine/RNG";
 import { evaluateBoard } from "../engine/WinEvaluator";
-import { BASE_REEL_CONFIG } from "../config/GameConfig";
+import { BASE_REEL_CONFIG, NORMAL_PAIR_COPY_CHANCE } from "../config/GameConfig";
+import { ColumnStream } from "../engine/BoardGenerator";
 import { getNormalSymbol, isMultiplierCore } from "../engine/types";
 import type { Board, BoardCell } from "../engine/types";
 
@@ -82,39 +83,47 @@ type RunMetrics = {
   uniqueNormalTotal: number;
 };
 
-type PacketMetrics = {
-  packetSingles: number;
-  packetDoubles: number;
+type PairMetrics = {
+  pairGroups: number;
   initialBoards: number;
-  initialBoardsWithDouble: number;
+  initialBoardsWithPair: number;
   refillEvents: number;
-  refillEventsWithDouble: number;
+  refillEventsWithPair: number;
 };
 
-function recordPackets(
+function recordPairGroups(
   cells: BoardCell[],
   source: "initial" | "refill",
   context: string,
   seen: Set<string>,
-  metrics: PacketMetrics,
+  metrics: PairMetrics,
 ) {
   if (source === "initial") metrics.initialBoards += 1;
   if (source === "refill") metrics.refillEvents += 1;
   let hasDouble = false;
   cells.forEach((cell) => {
-    if (typeof cell === "string" || cell.kind !== "NORMAL_SYMBOL") return;
-    const packetKey = `${context}:${cell.stackId}`;
-    if (seen.has(packetKey)) return;
-    seen.add(packetKey);
-    if (cell.stackSize === 2) {
-      metrics.packetDoubles += 1;
-      hasDouble = true;
-    } else {
-      metrics.packetSingles += 1;
-    }
+    if (typeof cell === "string" || cell.kind !== "NORMAL_SYMBOL" || cell.stackSize !== 2) return;
+    const pairKey = `${context}:${cell.stackId}`;
+    if (seen.has(pairKey)) return;
+    seen.add(pairKey);
+    metrics.pairGroups += 1;
+    hasDouble = true;
   });
-  if (source === "initial" && hasDouble) metrics.initialBoardsWithDouble += 1;
-  if (source === "refill" && hasDouble) metrics.refillEventsWithDouble += 1;
+  if (source === "initial" && hasDouble) metrics.initialBoardsWithPair += 1;
+  if (source === "refill" && hasDouble) metrics.refillEventsWithPair += 1;
+}
+
+function measureNormalPairBranches(seed: string, targetPairs = 1_000_000) {
+  const stream = new ColumnStream(new SeededRNG(`${seed}:normal-pair-statistics`), BASE_REEL_CONFIG, 0);
+  while (stream.stats.pairCount < targetPairs) {
+    stream.next(1, "BASE_REFILL", false);
+  }
+  return {
+    sampledPairs: stream.stats.pairCount,
+    copyBranchRate: Number(((stream.stats.copyBranchCount / stream.stats.pairCount) * 100).toFixed(4)),
+    actualSecondSameRate: Number(((stream.stats.actualSamePairCount / stream.stats.pairCount) * 100).toFixed(4)),
+    freshSecondCount: stream.stats.freshSecondCount,
+  };
 }
 
 export type SimulationReport = {
@@ -174,12 +183,12 @@ export type SimulationReport = {
   twoTumbleFrequency: number;
   threeTumbleFrequency: number;
   fourTumbleFrequency: number;
-  configuredSingleProbability: number;
-  configuredPairProbability: number;
-  observedPacketSingleProbability: number;
-  observedPacketDoubleProbability: number;
-  initialBoardDoubleStackFrequency: number;
-  refillDoubleStackFrequency: number;
+  configuredCopyBranchProbability: number;
+  observedCopyBranchProbability: number;
+  observedSecondSameProbability: number;
+  sampledNormalPairs: number;
+  initialBoardPairFrequency: number;
+  refillPairFrequency: number;
   observedSingleProbability: number;
   observedPairProbability: number;
   maximumContiguousNormal: number;
@@ -236,25 +245,25 @@ export function simulate(spins: number, seed: string, betCents = 100, onProgress
     maximumContiguousNormal: 0, visiblePairColumns: 0, visibleColumns: 0,
     columnsWithThree: 0, columnsWithFour: 0, columnsWithFive: 0, uniqueNormalTotal: 0,
   };
-  const packetMetrics: PacketMetrics = {
-    packetSingles: 0,
-    packetDoubles: 0,
+  const pairMetrics: PairMetrics = {
+    pairGroups: 0,
     initialBoards: 0,
-    initialBoardsWithDouble: 0,
+    initialBoardsWithPair: 0,
     refillEvents: 0,
-    refillEventsWithDouble: 0,
+    refillEventsWithPair: 0,
   };
+  const pairBranches = measureNormalPairBranches(seed);
   const coreValueDistribution: Record<string, number> = {};
   let maxObservedWinMultiplier = 0;
   let maxTumbles = 0;
   for (let index = 0; index < spins; index += 1) {
     const result = playSpin(betCents, source);
-    const seenPackets = new Set<string>();
-    recordPackets(result.initialBoard.flat(), "initial", `base:${index}`, seenPackets, packetMetrics);
+    const seenPairs = new Set<string>();
+    recordPairGroups(result.initialBoard.flat(), "initial", `base:${index}`, seenPairs, pairMetrics);
     recordRuns(result.initialBoard, runLengthDistribution, runMetrics);
     if (evaluateBoard(result.initialBoard).winningCells.length) initialEightPlusCount += 1;
     result.freeSpins.forEach((freeSpin, freeSpinIndex) => {
-      recordPackets(freeSpin.initialBoard.flat(), "initial", `bonus:${index}:${freeSpinIndex}`, seenPackets, packetMetrics);
+      recordPairGroups(freeSpin.initialBoard.flat(), "initial", `bonus:${index}:${freeSpinIndex}`, seenPairs, pairMetrics);
       recordRuns(freeSpin.initialBoard, runLengthDistribution, runMetrics);
     });
     const multiplier = result.totalMultiplier;
@@ -287,7 +296,7 @@ export function simulate(spins: number, seed: string, betCents = 100, onProgress
         freeRefillCells += tumble.newSymbols.length;
       }
       const context = isFree ? `bonus:${index}` : `base:${index}`;
-      recordPackets(tumble.newSymbols, "refill", context, seenPackets, packetMetrics);
+      recordPairGroups(tumble.newSymbols, "refill", context, seenPairs, pairMetrics);
       tumble.winningSymbols.forEach((symbol) => {
         symbolHitCounts[symbol] = (symbolHitCounts[symbol] ?? 0) + 1;
       });
@@ -400,12 +409,12 @@ export function simulate(spins: number, seed: string, betCents = 100, onProgress
     twoTumbleFrequency: percent(twoTumbleCount),
     threeTumbleFrequency: percent(threeTumbleCount),
     fourTumbleFrequency: percent(fourTumbleCount),
-    configuredSingleProbability: Number(((BASE_REEL_CONFIG.packetWeights.find((entry) => entry.value === 1)!.weight / BASE_REEL_CONFIG.packetWeights.reduce((sum, entry) => sum + entry.weight, 0)) * 100).toFixed(4)),
-    configuredPairProbability: Number(((BASE_REEL_CONFIG.packetWeights.find((entry) => entry.value === 2)!.weight / BASE_REEL_CONFIG.packetWeights.reduce((sum, entry) => sum + entry.weight, 0)) * 100).toFixed(4)),
-    observedPacketSingleProbability: Number(((packetMetrics.packetSingles / Math.max(1, packetMetrics.packetSingles + packetMetrics.packetDoubles)) * 100).toFixed(4)),
-    observedPacketDoubleProbability: Number(((packetMetrics.packetDoubles / Math.max(1, packetMetrics.packetSingles + packetMetrics.packetDoubles)) * 100).toFixed(4)),
-    initialBoardDoubleStackFrequency: Number(((packetMetrics.initialBoardsWithDouble / Math.max(1, packetMetrics.initialBoards)) * 100).toFixed(4)),
-    refillDoubleStackFrequency: Number(((packetMetrics.refillEventsWithDouble / Math.max(1, packetMetrics.refillEvents)) * 100).toFixed(4)),
+     configuredCopyBranchProbability: Number((NORMAL_PAIR_COPY_CHANCE * 100).toFixed(4)),
+     observedCopyBranchProbability: pairBranches.copyBranchRate,
+     observedSecondSameProbability: pairBranches.actualSecondSameRate,
+     sampledNormalPairs: pairBranches.sampledPairs,
+     initialBoardPairFrequency: Number(((pairMetrics.initialBoardsWithPair / Math.max(1, pairMetrics.initialBoards)) * 100).toFixed(4)),
+     refillPairFrequency: Number(((pairMetrics.refillEventsWithPair / Math.max(1, pairMetrics.refillEvents)) * 100).toFixed(4)),
     observedSingleProbability: (() => {
       const total = (runLengthDistribution["1"] ?? 0) + (runLengthDistribution["2"] ?? 0);
       return total ? Number((((runLengthDistribution["1"] ?? 0) / total) * 100).toFixed(4)) : 0;
