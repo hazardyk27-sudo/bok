@@ -541,7 +541,7 @@ export class GameController {
     this.ui.tumble.textContent = formatCredits(rawAmountCents);
     this.ui.tumbleIncrement.textContent = "";
     this.ui.tumbleMeta.textContent = "";
-    this.updateTumbleEquation(rawAmountCents, 1, rawAmountCents);
+     this.ui.tumbleSettlement.textContent = "";
   }
   private async presentSequenceSettlement(tumble: SpinResult["tumbles"][number], isBonus: boolean) {
     if (tumble.finalPayoutMultiplier <= tumble.rawWinPoolAfter || !tumble.settlementCores.length) return;
@@ -571,7 +571,7 @@ export class GameController {
     this.ui.tumbleIncrement.textContent = "";
     this.ui.tumbleMeta.textContent = "";
     this.ui.tumble.textContent = formatCredits(rawAmountCents);
-    this.updateTumbleEquation(rawAmountCents, 1, rawAmountCents);
+     this.ui.tumbleSettlement.textContent = "";
     let collectedTotal = 0;
     for (const core of tumble.settlementCores) {
       await this.scene.collectMultiplierCore(core, this.ui.tumbleSettlement, this.duration(400));
@@ -624,7 +624,7 @@ export class GameController {
       this.ui.tumbleSymbolWin.textContent = "";
       this.ui.tumbleIncrement.textContent = "";
       this.ui.tumbleMeta.textContent = "";
-      this.updateTumbleEquation(amountCents, 1, amountCents);
+       this.ui.tumbleSettlement.textContent = "";
       await sleep(this.duration(520));
     }
     if (withSettlement) {
@@ -632,7 +632,7 @@ export class GameController {
       this.ui.tumbleLabel.textContent = "TUMBLE WIN";
       const rawAmountCents = Math.round(8 * this.betCents);
       this.ui.tumble.textContent = formatCredits(rawAmountCents);
-      this.updateTumbleEquation(rawAmountCents, 1, rawAmountCents);
+       this.ui.tumbleSettlement.textContent = "";
       await sleep(this.duration(380));
       const finalAmountCents = Math.round(280 * this.betCents);
       this.ui.tumble.textContent = formatCredits(finalAmountCents);
@@ -671,7 +671,7 @@ export class GameController {
       this.ui.tumbleSymbolWin.textContent = "";
       this.ui.tumbleIncrement.textContent = "";
       this.ui.tumbleMeta.textContent = "";
-      this.updateTumbleEquation(rawTotalCents, 1, rawTotalCents);
+       this.ui.tumbleSettlement.textContent = "";
       if (index < boards.length - 1) await sleep(this.duration(360));
     }
   }
