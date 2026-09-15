@@ -181,9 +181,14 @@ export class GameController {
     const visible = freeSpinActive || autoActive;
     this.ui.gameStatusBadge.hidden = !visible;
     if (!visible) return;
+    const isLastFreeSpin = freeSpinActive && this.freeSpinsLeft === 1;
     this.ui.gameStatusBadge.dataset.mode = freeSpinActive ? "free-spin" : "auto";
-    this.ui.freeSpins.textContent = freeSpinActive ? String(this.freeSpinsLeft) : String(this.autoRemaining);
-    this.ui.gameStatusLabel.textContent = freeSpinActive ? "FREE SPINS LEFT" : "AUTO SPINS LEFT";
+    this.ui.freeSpins.textContent = freeSpinActive
+      ? isLastFreeSpin ? "LAST" : String(this.freeSpinsLeft)
+      : String(this.autoRemaining);
+    this.ui.gameStatusLabel.textContent = freeSpinActive
+      ? isLastFreeSpin ? "FREE SPIN" : "FREE SPINS LEFT"
+      : "AUTO SPINS LEFT";
   }
   updateForModal() { this.updateHud(); }
   private message(value: string) { this.ui.status.textContent = value; }
@@ -391,6 +396,7 @@ export class GameController {
   private updateAutoStatus() {
     const selected = Number(this.ui.autoCount.value);
     const freeSpinActive = this.freeSpinsLeft > 0 && this.ui.boardWrap.classList.contains("free-spin-mode");
+    const isLastFreeSpin = freeSpinActive && this.freeSpinsLeft === 1;
     const action = this.autoRunning ? "STOP AUTO" : this.autoStopping ? "STOPPING" : "START AUTO";
     const desktopAction = this.autoRunning ? "STOP AUTO" : this.autoStopping ? "STOPPING" : "AUTO";
     const remainingActive = freeSpinActive || this.autoRunning || this.autoStopping;
@@ -398,20 +404,21 @@ export class GameController {
       ? this.freeSpinsLeft
       : this.autoRunning || this.autoStopping ? this.autoRemaining : selected;
     this.ui.autoSelectionDesktop.textContent = freeSpinActive
-      ? `${this.freeSpinsLeft} LEFT`
+      ? isLastFreeSpin ? "LAST FREE SPIN" : `${this.freeSpinsLeft} LEFT`
       : this.autoRunning || this.autoStopping
         ? `${this.autoRemaining} LEFT`
         : String(selected);
-    this.ui.autoSelectionValue.textContent = String(displayedCount);
-    this.ui.autoSelectionLabel.textContent = remainingActive ? "LEFT" : "";
+    this.ui.autoSelectionValue.textContent = isLastFreeSpin ? "LAST" : String(displayedCount);
+    this.ui.autoSelectionLabel.textContent = isLastFreeSpin ? "FREE SPIN" : remainingActive ? "LEFT" : "";
     this.ui.autoActionDesktop.textContent = freeSpinActive ? "FREE SPINS" : desktopAction;
     this.ui.autoActionMobile.textContent = freeSpinActive ? "FREE SPINS" : action;
     this.ui.autoToggle.dataset.mode = freeSpinActive ? "free-spin" : "auto";
     this.ui.autoToggle.dataset.state = this.autoStopping ? "stopping" : this.autoRunning ? "running" : "ready";
+    this.ui.autoToggle.classList.toggle("is-last-free-spin", isLastFreeSpin);
     this.ui.autoToggle.setAttribute(
       "aria-label",
       freeSpinActive
-        ? `Free spins: ${this.freeSpinsLeft} remaining`
+        ? isLastFreeSpin ? "Last free spin" : `Free spins: ${this.freeSpinsLeft} remaining`
         : this.autoRunning
           ? `Stop automatic spins: ${this.autoRemaining} remaining`
           : "Choose automatic spin count",
