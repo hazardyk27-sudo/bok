@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { BETS_CENTS, getMultiplierCoreVisualTier } from "./GameConfig";
 
 describe("bet configuration", () => {
-  it("allows bets up to $500", () => {
+  it("allows bets up to $10,000", () => {
     expect(BETS_CENTS.at(-1)).toBe(1_000_000);
   });
 

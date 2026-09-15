@@ -42,15 +42,15 @@ export type SymbolDefinition = {
 };
 
 export const SYMBOLS: readonly SymbolDefinition[] = [
-  { id: "S1", name: "Real Madrid", icon: "RM", color: 0xd946ef, colorHex: "#d946ef", accentColor: 0xf3a7ff, frameColor: 0xffb8ff, logoPath: "team-logos/real-madrid.png", weight: 17 },
-  { id: "S2", name: "Barcelona", icon: "BAR", color: 0x7030a0, colorHex: "#b36bef", accentColor: 0xa50044, frameColor: 0xffc24b, logoPath: "team-logos/barcelona.png", weight: 15.5 },
-  { id: "S3", name: "Chelsea", icon: "CHE", color: 0x034694, colorHex: "#034694", accentColor: 0xffffff, frameColor: 0x55a9ff, logoPath: "team-logos/chelsea.png", weight: 14 },
-  { id: "S4", name: "Roma", icon: "ROM", color: 0x8e1537, colorHex: "#8e1537", accentColor: 0xf0b44d, frameColor: 0xffc75c, logoPath: "team-logos/roma.png", weight: 12.5 },
-  { id: "S5", name: "Liverpool", icon: "LIV", color: 0xc8102e, colorHex: "#c8102e", accentColor: 0xffd8d8, frameColor: 0xff466b, logoPath: "team-logos/liverpool.png", weight: 11.5 },
-  { id: "S6", name: "PSG", icon: "PSG", color: 0x172c62, colorHex: "#172c62", accentColor: 0xef3340, frameColor: 0x8d7cff, logoPath: "team-logos/psg.png", weight: 10 },
-  { id: "S7", name: "Bayern", icon: "BAY", color: 0xdc052d, colorHex: "#dc052d", accentColor: 0xffffff, frameColor: 0xfff1f7, logoPath: "team-logos/bayern.png", weight: 9 },
-  { id: "S9", name: "Beşiktaş", icon: "BJK", color: 0xf5f5f5, colorHex: "#f5f5f5", accentColor: 0x121212, frameColor: 0xd7d7d7, logoPath: "team-logos/besiktas.png", weight: 8.5 },
-  { id: "S8", name: "Galatasaray", icon: "GS", color: 0xf4bd00, colorHex: "#ffd31c", accentColor: 0xc8102e, frameColor: 0xffd42f, logoPath: "team-logos/galatasaray.png", weight: 8 },
+  { id: "S1", name: "Real Madrid", icon: "RM", color: 0xd946ef, colorHex: "#d946ef", accentColor: 0xf3a7ff, frameColor: 0xffb8ff, logoPath: "team-logos/real-madrid.png", weight: 18.75 },
+  { id: "S5", name: "Liverpool", icon: "LIV", color: 0xc8102e, colorHex: "#c8102e", accentColor: 0xffd8d8, frameColor: 0xff466b, logoPath: "team-logos/liverpool.png", weight: 18.75 },
+  { id: "S6", name: "PSG", icon: "PSG", color: 0x172c62, colorHex: "#172c62", accentColor: 0xef3340, frameColor: 0x8d7cff, logoPath: "team-logos/psg.png", weight: 14.5 },
+  { id: "S7", name: "Bayern", icon: "BAY", color: 0xdc052d, colorHex: "#dc052d", accentColor: 0xffffff, frameColor: 0xfff1f7, logoPath: "team-logos/bayern.png", weight: 14.5 },
+  { id: "S4", name: "Roma", icon: "ROM", color: 0x8e1537, colorHex: "#8e1537", accentColor: 0xf0b44d, frameColor: 0xffc75c, logoPath: "team-logos/roma.png", weight: 11.5 },
+  { id: "S2", name: "Barcelona", icon: "BAR", color: 0x7030a0, colorHex: "#b36bef", accentColor: 0xa50044, frameColor: 0xffc24b, logoPath: "team-logos/barcelona.png", weight: 8.5 },
+  { id: "S3", name: "Chelsea", icon: "CHE", color: 0x034694, colorHex: "#034694", accentColor: 0xffffff, frameColor: 0x55a9ff, logoPath: "team-logos/chelsea.png", weight: 6.5 },
+  { id: "S9", name: "Beşiktaş", icon: "BJK", color: 0xf5f5f5, colorHex: "#f5f5f5", accentColor: 0x121212, frameColor: 0xd7d7d7, logoPath: "team-logos/besiktas.png", weight: 4 },
+  { id: "S8", name: "Galatasaray", icon: "GS", color: 0xf4bd00, colorHex: "#ffd31c", accentColor: 0xc8102e, frameColor: 0xffd42f, logoPath: "team-logos/galatasaray.png", weight: 3 },
   { id: "SCATTER", name: "Golden Trophy", icon: "★", color: 0xf2b84b, colorHex: "#f2b84b", accentColor: 0xffefad, frameColor: 0xffd05c, weight: 2.5 },
 ];
 
@@ -101,15 +101,15 @@ export const SYMBOL_EFFECT_PROFILES: Record<NormalSymbolId, SymbolEffectProfile>
 };
 
 export const PAYTABLE: Record<NormalSymbolId, readonly { min: number; max: number; multiplier: number }[]> = {
-  S1: [{ min: 8, max: 8, multiplier: 0.4 }, { min: 9, max: 9, multiplier: 0.6 }, { min: 10, max: 10, multiplier: 0.8 }, { min: 11, max: 11, multiplier: 1.2 }, { min: 12, max: Infinity, multiplier: 1.5 }],
-  S2: [{ min: 8, max: 8, multiplier: 0.5 }, { min: 9, max: 9, multiplier: 0.7 }, { min: 10, max: 10, multiplier: 1.0 }, { min: 11, max: 11, multiplier: 1.4 }, { min: 12, max: Infinity, multiplier: 1.9 }],
-  S3: [{ min: 8, max: 8, multiplier: 0.6 }, { min: 9, max: 9, multiplier: 1.0 }, { min: 10, max: 10, multiplier: 1.3 }, { min: 11, max: 11, multiplier: 1.9 }, { min: 12, max: Infinity, multiplier: 2.5 }],
-  S4: [{ min: 8, max: 8, multiplier: 0.8 }, { min: 9, max: 9, multiplier: 1.2 }, { min: 10, max: 10, multiplier: 1.6 }, { min: 11, max: 11, multiplier: 2.4 }, { min: 12, max: Infinity, multiplier: 3.2 }],
-  S5: [{ min: 8, max: 8, multiplier: 1.2 }, { min: 9, max: 9, multiplier: 1.8 }, { min: 10, max: 10, multiplier: 2.4 }, { min: 11, max: 11, multiplier: 3.5 }, { min: 12, max: Infinity, multiplier: 4.7 }],
-  S6: [{ min: 8, max: 8, multiplier: 1.6 }, { min: 9, max: 9, multiplier: 2.8 }, { min: 10, max: 10, multiplier: 4.0 }, { min: 11, max: 11, multiplier: 6.0 }, { min: 12, max: Infinity, multiplier: 8.0 }],
-  S7: [{ min: 8, max: 8, multiplier: 2.4 }, { min: 9, max: 9, multiplier: 4.4 }, { min: 10, max: 10, multiplier: 6.4 }, { min: 11, max: 11, multiplier: 9.6 }, { min: 12, max: Infinity, multiplier: 12.8 }],
-  S9: [{ min: 8, max: 8, multiplier: 3.2 }, { min: 9, max: 9, multiplier: 5.6 }, { min: 10, max: 10, multiplier: 8.0 }, { min: 11, max: 11, multiplier: 12.0 }, { min: 12, max: Infinity, multiplier: 16.0 }],
-  S8: [{ min: 8, max: 8, multiplier: 4.0 }, { min: 9, max: 9, multiplier: 6.8 }, { min: 10, max: 10, multiplier: 9.6 }, { min: 11, max: 11, multiplier: 14.4 }, { min: 12, max: Infinity, multiplier: 19.2 }],
+  S1: [{ min: 8, max: 8, multiplier: 0.2 }, { min: 9, max: 9, multiplier: 0.25 }, { min: 10, max: 10, multiplier: 0.3 }, { min: 11, max: 11, multiplier: 0.45 }, { min: 12, max: Infinity, multiplier: 0.65 }],
+  S5: [{ min: 8, max: 8, multiplier: 0.3 }, { min: 9, max: 9, multiplier: 0.35 }, { min: 10, max: 10, multiplier: 0.45 }, { min: 11, max: 11, multiplier: 0.65 }, { min: 12, max: Infinity, multiplier: 1.0 }],
+  S6: [{ min: 8, max: 8, multiplier: 0.6 }, { min: 9, max: 9, multiplier: 0.7 }, { min: 10, max: 10, multiplier: 0.9 }, { min: 11, max: 11, multiplier: 1.3 }, { min: 12, max: Infinity, multiplier: 1.9 }],
+  S7: [{ min: 8, max: 8, multiplier: 0.45 }, { min: 9, max: 9, multiplier: 0.55 }, { min: 10, max: 10, multiplier: 0.65 }, { min: 11, max: 11, multiplier: 1.0 }, { min: 12, max: Infinity, multiplier: 1.45 }],
+  S4: [{ min: 8, max: 8, multiplier: 0.85 }, { min: 9, max: 9, multiplier: 1.0 }, { min: 10, max: 10, multiplier: 1.25 }, { min: 11, max: 11, multiplier: 1.85 }, { min: 12, max: Infinity, multiplier: 2.75 }],
+  S2: [{ min: 8, max: 8, multiplier: 1.0 }, { min: 9, max: 9, multiplier: 1.2 }, { min: 10, max: 10, multiplier: 1.45 }, { min: 11, max: 11, multiplier: 2.15 }, { min: 12, max: Infinity, multiplier: 3.2 }],
+  S3: [{ min: 8, max: 8, multiplier: 2.0 }, { min: 9, max: 9, multiplier: 2.5 }, { min: 10, max: 10, multiplier: 3.0 }, { min: 11, max: 11, multiplier: 4.5 }, { min: 12, max: Infinity, multiplier: 6.5 }],
+  S9: [{ min: 8, max: 8, multiplier: 4.0 }, { min: 9, max: 9, multiplier: 5.0 }, { min: 10, max: 10, multiplier: 6.0 }, { min: 11, max: 11, multiplier: 8.5 }, { min: 12, max: Infinity, multiplier: 13.0 }],
+  S8: [{ min: 8, max: 8, multiplier: 6.0 }, { min: 9, max: 9, multiplier: 7.0 }, { min: 10, max: 10, multiplier: 9.0 }, { min: 11, max: 11, multiplier: 13.0 }, { min: 12, max: Infinity, multiplier: 19.0 }],
 };
 
 // Context-specific special-symbol probabilities. Values are decimals, not percentages.
