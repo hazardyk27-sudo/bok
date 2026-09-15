@@ -2436,3 +2436,107 @@ button:focus-visible, input:focus-visible { outline: 2px solid var(--cyan); outl
     padding-inline: 9px;
   }
 }
+
+/* Final mobile dock alignment: every row shares the deck edges, and AUTO is
+   split into two adjacent boxes instead of a centered, nested control. */
+@media (max-width: 620px) {
+  .control-deck {
+    grid-template-columns: minmax(0, 1fr) 82px;
+    grid-template-areas:
+      "bet spin"
+      "auto auto"
+      "utility utility";
+    column-gap: 5px;
+    row-gap: 5px;
+  }
+  .bet-control,
+  .auto-control,
+  .utility-controls {
+    width: 100%;
+    min-width: 0;
+  }
+  .auto-control {
+    grid-column: 1 / -1;
+    padding: 0;
+  }
+  .auto-trigger {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(92px, 34%);
+    gap: 5px;
+    width: 100%;
+    max-width: none;
+    min-height: 48px;
+    padding: 0;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+    box-shadow: none;
+  }
+  .auto-action-mobile {
+    display: flex;
+    align-items: center;
+    min-width: 0;
+    min-height: 48px;
+    padding: 0 15px;
+    border: 1px solid rgba(132, 194, 255, .5);
+    border-radius: 12px;
+    background: linear-gradient(180deg, rgba(42, 83, 148, .9), rgba(17, 37, 79, .98));
+    box-shadow:
+      inset 0 1px 0 rgba(239, 248, 255, .14),
+      0 8px 20px rgba(5, 19, 53, .24);
+  }
+  .auto-trigger small {
+    width: 100%;
+    min-width: 0;
+    min-height: 48px;
+    padding: 0;
+    border: 1px solid rgba(190, 220, 255, .32);
+    border-radius: 12px;
+    background: rgba(6, 18, 45, .38);
+  }
+  .auto-selection-mobile {
+    height: 100%;
+    padding-inline: 12px;
+  }
+  .auto-trigger[data-state="running"] .auto-action-mobile,
+  .auto-trigger[data-state="stopping"] .auto-action-mobile {
+    color: #ffe0a6;
+  }
+  .auto-trigger[data-state="running"] .auto-action-mobile,
+  .auto-trigger.is-running .auto-action-mobile {
+    border-color: rgba(255, 207, 128, .54);
+    background: linear-gradient(180deg, rgba(112, 77, 44, .94), rgba(63, 39, 35, .98));
+  }
+  .auto-trigger[data-state="stopping"] .auto-action-mobile,
+  .auto-trigger.is-stopping .auto-action-mobile {
+    border-color: rgba(255, 157, 157, .68);
+    background: linear-gradient(180deg, rgba(103, 54, 71, .94), rgba(51, 25, 44, .98));
+  }
+  .auto-trigger[data-state="running"] small,
+  .auto-trigger[data-state="stopping"] small,
+  .auto-trigger.is-running small,
+  .auto-trigger.is-stopping small {
+    border-color: rgba(255, 207, 128, .42);
+    color: #fff0c3;
+  }
+  .auto-trigger[data-mode="free-spin"] .auto-action-mobile,
+  .auto-trigger[data-mode="free-spin"] small {
+    border-color: rgba(255, 214, 112, .58);
+    color: #fff2bf;
+    background:
+      radial-gradient(circle at 16% 0%, rgba(255, 226, 142, .16), transparent 54%),
+      linear-gradient(180deg, rgba(113, 77, 27, .96), rgba(54, 37, 25, .98));
+    box-shadow:
+      inset 0 1px 0 rgba(255, 241, 187, .18),
+      0 8px 20px rgba(43, 27, 4, .25);
+  }
+}
+
+@media (max-width: 360px) {
+  .control-deck { padding-inline: 7px; }
+  .auto-trigger {
+    grid-template-columns: minmax(0, 1fr) minmax(78px, 34%);
+  }
+  .auto-action-mobile { padding-inline: 12px; }
+  .auto-selection-mobile { padding-inline: 9px; }
+}
