@@ -22,6 +22,7 @@ const MULTIPLIER_2X_IMAGE_KEY = "multiplier-core-2x";
 const MULTIPLIER_3X_IMAGE_KEY = "multiplier-core-3x";
 const MULTIPLIER_5X_IMAGE_KEY = "multiplier-core-5x";
 const MULTIPLIER_10X_IMAGE_KEY = "multiplier-core-10x";
+const MULTIPLIER_15X_IMAGE_KEY = "multiplier-core-15x";
 
 const MULTIPLIER_VISUALS = {
   low: {
@@ -76,6 +77,7 @@ export class GameScene extends Phaser.Scene {
     this.load.image(MULTIPLIER_3X_IMAGE_KEY, `${import.meta.env.BASE_URL}special-symbols/3x.png`);
     this.load.image(MULTIPLIER_5X_IMAGE_KEY, `${import.meta.env.BASE_URL}special-symbols/5x.png`);
     this.load.image(MULTIPLIER_10X_IMAGE_KEY, `${import.meta.env.BASE_URL}special-symbols/10x.png`);
+    this.load.image(MULTIPLIER_15X_IMAGE_KEY, `${import.meta.env.BASE_URL}special-symbols/15x.png`);
   }
 
   create() {
@@ -165,14 +167,16 @@ export class GameScene extends Phaser.Scene {
         : symbol.value >= 10
           ? LARGE_CORE_SIZE
           : SMALL_CORE_SIZE;
-      const usesSuppliedArt = symbol.value === 2 || symbol.value === 3 || symbol.value === 5 || symbol.value === 10;
+      const usesSuppliedArt = symbol.value === 2 || symbol.value === 3 || symbol.value === 5 || symbol.value === 10 || symbol.value === 15;
       const suppliedArtKey = symbol.value === 2
         ? MULTIPLIER_2X_IMAGE_KEY
         : symbol.value === 3
           ? MULTIPLIER_3X_IMAGE_KEY
           : symbol.value === 5
             ? MULTIPLIER_5X_IMAGE_KEY
-            : MULTIPLIER_10X_IMAGE_KEY;
+            : symbol.value === 10
+              ? MULTIPLIER_10X_IMAGE_KEY
+              : MULTIPLIER_15X_IMAGE_KEY;
       const coreScale = usesSuppliedArt ? 1 : coreSize / CORE_BASE_SIZE;
       const visual = MULTIPLIER_VISUALS[getMultiplierCoreVisualTier(symbol.value)];
       const aura = this.add.circle(0, 0, 43, visual.aura, visual.auraAlpha)
