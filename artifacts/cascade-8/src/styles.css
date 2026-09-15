@@ -2540,3 +2540,50 @@ button:focus-visible, input:focus-visible { outline: 2px solid var(--cyan); outl
   .auto-action-mobile { padding-inline: 12px; }
   .auto-selection-mobile { padding-inline: 9px; }
 }
+
+/* Mobile tumble clearance: keep result content above the dock with a
+   deliberate gap, while making the active result surface shorter. */
+@media (max-width: 620px) {
+  .tumble-win-panel {
+    z-index: 3;
+    min-height: 12px;
+    margin: 1px auto 9px;
+    padding: 6px 12px 7px;
+  }
+  .tumble-win-panel.is-active,
+  .tumble-win-panel.is-settling,
+  .tumble-win-panel.is-free-total {
+    min-height: 64px;
+    margin-bottom: 9px;
+  }
+  .tumble-win-panel > #tumble {
+    margin-top: 4px;
+    font-size: clamp(28px, 9vw, 40px);
+  }
+  .tumble-settlement {
+    min-height: 12px;
+    margin-top: 5px;
+    font-size: clamp(9px, 2.7vw, 12px);
+  }
+  .free-spin-calculation {
+    position: relative;
+    z-index: 3;
+  }
+}
+
+@media (max-width: 360px) {
+  .tumble-win-panel {
+    margin-bottom: 8px;
+    padding-inline: 10px;
+  }
+  .tumble-win-panel.is-active,
+  .tumble-win-panel.is-settling,
+  .tumble-win-panel.is-free-total {
+    min-height: 60px;
+    margin-bottom: 8px;
+  }
+  .tumble-settlement {
+    margin-top: 4px;
+    font-size: 9px;
+  }
+}
