@@ -2957,3 +2957,148 @@ button:focus-visible, input:focus-visible { outline: 2px solid var(--cyan); outl
     width: min(100%, 280px);
   }
 }
+
+/* Desktop balance pass: keep the dock anchored while the board and tumble
+   result share the available vertical rhythm. */
+@media (min-width: 621px) {
+  .app-shell:not(.is-lab) {
+    display: flex;
+    flex-direction: column;
+    height: 100dvh;
+    min-height: 100dvh;
+  }
+
+  .app-shell:not(.is-lab) .topbar {
+    flex: 0 0 auto;
+  }
+
+  .app-shell:not(.is-lab) .game-layout {
+    display: flex;
+    flex: 1 1 auto;
+    flex-direction: column;
+    min-height: 0;
+  }
+
+  .app-shell:not(.is-lab) .game-stage {
+    flex: 1 1 auto;
+    min-height: 0;
+  }
+
+  .app-shell:not(.is-lab) .board-wrap {
+    width: min(100%, 700px, calc(100dvh - 266px));
+    max-width: 700px;
+    flex: 0 0 auto;
+    overflow: visible;
+  }
+
+  .app-shell:not(.is-lab) #phaser-board {
+    width: 100%;
+    max-width: 700px;
+    height: auto;
+    aspect-ratio: 620 / 520;
+  }
+
+  .app-shell:not(.is-lab) .game-stage:has(.free-spin-calculation:not([hidden])) .board-wrap {
+    width: min(100%, 520px, calc(100dvh - 331px));
+  }
+
+  .app-shell:not(.is-lab) .game-stage:has(.free-spin-calculation:not([hidden])) #phaser-board {
+    width: 100%;
+    max-width: 520px;
+  }
+
+  .app-shell:not(.is-lab) .tumble-win-panel {
+    width: min(100%, 400px);
+    height: 84px;
+    min-height: 84px;
+    flex: 0 0 84px;
+    margin: 8px auto 0;
+    visibility: hidden;
+  }
+
+  .app-shell:not(.is-lab) .tumble-win-panel.is-active,
+  .app-shell:not(.is-lab) .tumble-win-panel.is-settling,
+  .app-shell:not(.is-lab) .tumble-win-panel.is-free-total {
+    visibility: visible;
+    min-height: 84px;
+  }
+
+  .app-shell:not(.is-lab) .tumble-win-panel > #tumble {
+    font-size: clamp(34px, 4.2vw, 52px);
+  }
+
+  .app-shell:not(.is-lab) .control-deck {
+    width: min(100%, 860px);
+    max-width: 860px;
+    flex: 0 0 auto;
+    grid-template-columns:
+      minmax(110px, 1.05fr)
+      minmax(126px, 1.1fr)
+      120px
+      minmax(100px, .85fr);
+    gap: 8px;
+    margin-top: 8px;
+    padding: 7px 9px 6px;
+  }
+
+  .app-shell:not(.is-lab) .control-deck > .bet-control,
+  .app-shell:not(.is-lab) .control-deck > .auto-control,
+  .app-shell:not(.is-lab) .control-deck > .utility-controls {
+    min-height: 54px;
+  }
+
+  .app-shell:not(.is-lab) .bet-stepper {
+    gap: 5px;
+    margin-top: 3px;
+  }
+
+  .app-shell:not(.is-lab) .bet-stepper button {
+    width: 28px;
+    min-width: 28px;
+    height: 28px;
+  }
+
+  .app-shell:not(.is-lab) .bet-stepper strong {
+    font-size: 14px;
+  }
+
+  .app-shell:not(.is-lab) .auto-control {
+    gap: 3px;
+  }
+
+  .app-shell:not(.is-lab) .auto-trigger {
+    min-height: 38px;
+    border-radius: 9px;
+  }
+
+  .app-shell:not(.is-lab) .spin-button {
+    width: 120px;
+    max-width: 120px;
+    height: 58px;
+    min-height: 58px;
+    border-radius: 16px 16px 16px 7px;
+    font-size: 16px;
+  }
+
+  .app-shell:not(.is-lab) .utility-controls {
+    gap: 6px;
+  }
+
+  .app-shell:not(.is-lab) .utility-button {
+    min-height: 44px;
+    padding: 4px;
+  }
+
+  .app-shell:not(.is-lab) .utility-icon {
+    font-size: 14px;
+  }
+
+  .app-shell:not(.is-lab) .utility-button span:last-child {
+    font-size: 7px;
+  }
+
+  .app-shell:not(.is-lab) .demo-note {
+    flex: 0 0 auto;
+    margin-top: 4px;
+  }
+}
