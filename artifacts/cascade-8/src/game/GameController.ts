@@ -57,7 +57,7 @@ export class GameController {
     balance: HTMLElement; bet: HTMLElement; win: HTMLElement; bonusWin: HTMLElement; freeSpins: HTMLElement; gameStatusBadge: HTMLElement; gameStatusLabel: HTMLElement;
      tumble: HTMLElement; status: HTMLElement; spin: HTMLButtonElement; spinLabel: HTMLElement; betMinus: HTMLButtonElement; betPlus: HTMLButtonElement;
       autoToggle: HTMLButtonElement; autoActionDesktop: HTMLElement; autoActionMobile: HTMLElement; autoSelectionDesktop: HTMLElement; autoSelectionValue: HTMLElement; autoSelectionLabel: HTMLElement; autoMenu: HTMLElement; autoCount: HTMLSelectElement;
-     turbo: HTMLButtonElement; sound: HTMLButtonElement; bonusOverlay: HTMLElement; bonusStart: HTMLButtonElement; bonusSpinCount: HTMLElement; bonusScatterRow: HTMLElement; bonusTriggerLabel: HTMLElement; bonusTitle: HTMLElement; bonusSupport: HTMLElement; bonusInstruction: HTMLElement; freeSpinCalculation: HTMLElement; freeSpinRawWin: HTMLElement; freeSpinMultiplier: HTMLElement; freeSpinFinalWin: HTMLElement; freeSpinMultiplyOperator: HTMLElement; freeSpinEqualsOperator: HTMLElement; tumbleLabel: HTMLElement; tumbleSymbolWin: HTMLElement; tumbleIncrement: HTMLElement; tumbleMeta: HTMLElement; tumbleSettlement: HTMLElement; tumblePanel: HTMLElement; bigWinOverlay: HTMLElement; bonusSummaryOverlay: HTMLElement; boardWrap: HTMLElement;
+      turbo: HTMLButtonElement; sound: HTMLButtonElement; bonusOverlay: HTMLElement; bonusStart: HTMLButtonElement; bonusSpinCount: HTMLElement; bonusScatterRow: HTMLElement; bonusTriggerLabel: HTMLElement; bonusTitle: HTMLElement; bonusSupport: HTMLElement; bonusInstruction: HTMLElement; freeSpinCalculation: HTMLElement; freeSpinRawWin: HTMLElement; freeSpinMultiplier: HTMLElement; freeSpinFinalWin: HTMLElement; freeSpinMultiplyOperator: HTMLElement; freeSpinEqualsOperator: HTMLElement; tumbleLabel: HTMLElement; tumbleSymbolWin: HTMLElement; tumbleIncrement: HTMLElement; tumbleMeta: HTMLElement; tumbleSettlement: HTMLElement; tumblePanel: HTMLElement; bigWinOverlay: HTMLElement; bonusSummaryOverlay: HTMLElement; boardWrap: HTMLElement; controlDeck: HTMLElement;
     setModal: (name: string | null) => void;
   };
 
@@ -477,6 +477,7 @@ export class GameController {
     this.ui.tumbleSettlement.textContent = "";
   }
   private setFreeSpinPresentation(active: boolean) {
+    this.ui.controlDeck.classList.toggle("is-free-spin-mode", active);
     this.ui.freeSpinCalculation.hidden = !active;
     this.ui.freeSpinCalculation.classList.remove("is-collecting", "is-resolving");
     this.ui.tumbleLabel.textContent = active ? "TOTAL BONUS WIN" : "TUMBLE WIN";

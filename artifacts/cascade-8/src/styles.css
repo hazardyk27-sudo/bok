@@ -2449,6 +2449,16 @@ button:focus-visible, input:focus-visible { outline: 2px solid var(--cyan); outl
     column-gap: 5px;
     row-gap: 5px;
   }
+  .control-deck.is-free-spin-mode {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-areas:
+      "auto"
+      "utility";
+  }
+  .control-deck.is-free-spin-mode > .bet-control,
+  .control-deck.is-free-spin-mode > .spin-button {
+    display: none;
+  }
   .bet-control,
   .auto-control,
   .utility-controls {
