@@ -18,6 +18,7 @@ const SMALL_CORE_SIZE = 80;
 const LARGE_CORE_SIZE = 100;
 const MULTIPLIER_TILE_SIZE = 68;
 const MULTIPLIER_2X_IMAGE_KEY = "multiplier-core-2x";
+const MULTIPLIER_3X_IMAGE_KEY = "multiplier-core-3x";
 
 const MULTIPLIER_VISUALS = {
   low: {
@@ -69,6 +70,7 @@ export class GameScene extends Phaser.Scene {
     });
     this.load.image("scatter-symbol", `${import.meta.env.BASE_URL}special-symbols/scatter.png`);
     this.load.image(MULTIPLIER_2X_IMAGE_KEY, `${import.meta.env.BASE_URL}special-symbols/2x.png`);
+    this.load.image(MULTIPLIER_3X_IMAGE_KEY, `${import.meta.env.BASE_URL}special-symbols/3x.png`);
   }
 
   create() {
@@ -154,13 +156,14 @@ export class GameScene extends Phaser.Scene {
     );
     if (isMultiplierCore(symbol)) {
       const coreSize = symbol.value >= 10 ? LARGE_CORE_SIZE : SMALL_CORE_SIZE;
-      const usesSuppliedArt = symbol.value === 2;
+      const usesSuppliedArt = symbol.value === 2 || symbol.value === 3;
+      const suppliedArtKey = symbol.value === 2 ? MULTIPLIER_2X_IMAGE_KEY : MULTIPLIER_3X_IMAGE_KEY;
       const coreScale = usesSuppliedArt ? 1 : coreSize / CORE_BASE_SIZE;
       const visual = MULTIPLIER_VISUALS[getMultiplierCoreVisualTier(symbol.value)];
       const aura = this.add.circle(0, 0, 43, visual.aura, visual.auraAlpha)
         .setBlendMode(Phaser.BlendModes.ADD);
       if (usesSuppliedArt) {
-        const suppliedArt = this.add.image(0, 0, MULTIPLIER_2X_IMAGE_KEY)
+        const suppliedArt = this.add.image(0, 0, suppliedArtKey)
           .setDisplaySize(coreSize, coreSize);
         container.add([aura, suppliedArt]);
       } else {
