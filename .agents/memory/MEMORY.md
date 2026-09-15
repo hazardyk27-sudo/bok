@@ -10,3 +10,4 @@
 - [Mobile ceremony layering](mobile-ceremony-layering.md) — bonus ceremonies nested in the board can lose their action area to the compact mobile dock; use an app-level overlay and reserve result space.
 - [Responsive media scoping](responsive-media-scoping.md) — compact landscape rules must be mobile-scoped or explicitly neutralized on desktop.
 - [Transient result slots](transient-result-slots.md) — optional result panels need reserved layout height so surrounding controls do not shift between states.
+- [Bonus flow state ownership](bonus-flow-state-ownership.md) — base Auto consumption owns the Auto counter; bonus retriggers never do, and manual stop clears pending resume.

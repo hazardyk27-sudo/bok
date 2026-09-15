@@ -17,6 +17,7 @@ import { GameScene } from "./GameScene";
 import { mountResponsiveWinAmount } from "./ResponsiveWinAmount";
 import { buildWinLabelEvents, type WinLabelEvent } from "./WinLabel";
 import { isLargeWin, isMaxWin, winTier } from "./WinTiers";
+import { getAnimationDuration, shouldResumeAutoSpin } from "./GameTiming";
 
 type ControllerState = "BOOT" | "IDLE" | "SPIN_INIT" | "INITIAL_DROP" | "EVALUATING" | "WIN_HIGHLIGHT" | "WIN_EXPLOSION" | "GRAVITY" | "REFILL" | "CASCADE_DROP" | "BONUS_TRIGGER_CEREMONY" | "BONUS_AWARD_PRESENTATION" | "BONUS_WAITING_FOR_START" | "BONUS_INTRO" | "FREE_SPIN_PLAY" | "CORE_REVEAL" | "BIG_WIN" | "MAX_WIN" | "BONUS_SUMMARY" | "SPIN_COMPLETE";
 
@@ -48,6 +49,7 @@ export class GameController {
   private pendingBonusResult: SpinResult | null = null;
   private pendingBonusSource: CryptoRNG | null = null;
   private pendingRetriggerContinue: (() => void) | null = null;
+  private pendingAutoResume = false;
   private autoRunning = false;
   private autoStopping = false;
   private autoRemaining = 0;
@@ -130,10 +132,8 @@ export class GameController {
   get currentFreeSpinCombinedMultiplier() { return this.freeSpinAccounting.combinedCoreMultiplier; }
   get currentFreeSpinFinalWin() { return this.freeSpinAccounting.currentSpinWinCents; }
   get bonusCumulativeWinSoFar() { return this.freeSpinAccounting.cumulativeBonusWinCents; }
-  private duration(value: number) {
-    if (this.reducedMotion) return 40;
-    const slowed = Math.round(value * 1.15);
-    return this.turbo ? Math.round(slowed * 0.45) : slowed;
+  private duration(value: number, freeSpin = false) {
+    return getAnimationDuration(value, this.turbo, this.reducedMotion, freeSpin);
   }
   private setState(state: ControllerState) {
     this.state = state;
@@ -225,6 +225,9 @@ export class GameController {
       await this.presentLargeWin(baseMultiplier, result.baseWinCents);
     }
      if (result.bonusTriggered && !result.maxWinReached) {
+       if (fromAuto && this.autoRunning && !this.autoStopping) {
+         this.pendingAutoResume = true;
+       }
       this.pendingBonusResult = result;
       this.pendingBonusSource = source;
       this.freeSpinsLeft = result.freeSpinsAwarded;
@@ -270,7 +273,7 @@ export class GameController {
     let index = 0;
     this.updateHud();
     while (remaining > 0 && usedMultiplier < MAX_WIN_MULTIPLIER) {
-      if (index > 0) await sleep(this.duration(ANIMATION.spinPause));
+      if (index > 0) await sleep(this.duration(ANIMATION.spinPause, true));
       index += 1;
       const freeSpin = playFreeSpin(index, this.betCents, source, MAX_WIN_MULTIPLIER - usedMultiplier);
        this.resetCurrentFreeSpinDisplay(index);
@@ -290,17 +293,17 @@ export class GameController {
          this.audio.scatterArrival(freeSpin.scatterCount);
         this.audio.scatterCelebration(freeSpin.scatterCount);
       }
-      await this.scene.animateDrop(this.duration(ANIMATION.initialDrop));
+      await this.scene.animateDrop(this.duration(ANIMATION.initialDrop, true));
       await this.playTumbles({ ...result, tumbles: freeSpin.tumbles }, true);
       if (freeSpin.win === 0) {
         this.resolveZeroWinFreeSpin(freeSpin);
-        await sleep(this.duration(260));
+        await sleep(this.duration(260, true));
       } else {
         await this.presentCurrentFreeSpinResolution(freeSpin);
         if (isLargeWin(freeSpin.finalWinMultiplier)) {
           await this.presentLargeWin(freeSpin.finalWinMultiplier, freeSpin.win);
         }
-        await sleep(this.duration(220));
+        await sleep(this.duration(220, true));
         this.audio.freeSpinTransfer();
         await this.animateFreeSpinFlight(
           "transfer",
@@ -311,7 +314,7 @@ export class GameController {
         );
         this.freeSpinAccounting = settleFreeSpinAccounting(this.freeSpinAccounting);
         this.updateBonusTotalDisplay(true);
-        await sleep(this.duration(360));
+        await sleep(this.duration(360, true));
       }
       this.currentWinCents = result.totalWinCents;
       this.bonusWinCents = result.bonusWinCents;
@@ -330,7 +333,16 @@ export class GameController {
     this.scene.setFreeSpinMode(false);
     this.audio.crossfadeMusic(this.audio.musicVolume);
     this.ui.boardWrap.classList.remove("free-spin-mode");
+    const resumeAuto = shouldResumeAutoSpin(this.pendingAutoResume, this.autoRemaining);
+    this.pendingAutoResume = false;
     await this.finishSpin(result);
+    if (resumeAuto) {
+      this.autoRunning = true;
+      this.autoStopping = false;
+      this.message(`AUTO RESUMING // ${this.autoRemaining} SPINS LEFT`);
+      this.updateHud();
+      await this.runAuto();
+    }
   }
 
   private async finishSpin(result: SpinResult) {
@@ -346,6 +358,7 @@ export class GameController {
     if (this.autoRunning) {
       this.autoRunning = false;
       this.autoStopping = true;
+      this.pendingAutoResume = false;
       this.message("AUTO STOPPING // CURRENT SPIN FINISHES");
       this.updateHud();
       return;
@@ -356,6 +369,7 @@ export class GameController {
     }
     this.autoRunning = true;
     this.autoStopping = false;
+    this.pendingAutoResume = false;
     this.autoRemaining = Number(this.ui.autoCount.value);
     this.updateHud();
     await this.runAuto();
@@ -435,16 +449,16 @@ export class GameController {
       const winningMessage = `${tumble.winningSymbols.map((symbol) => getSymbolDefinition(symbol).name).join(" + ")} RESONATE`;
        this.message(tumble.multiplierCores.length ? `${winningMessage} // CORES BANKED` : winningMessage);
       this.setState("WIN_HIGHLIGHT"); this.audio.win();
-      await this.scene.highlightCells(tumble.winningCells, this.duration(ANIMATION.winHighlight));
+      await this.scene.highlightCells(tumble.winningCells, this.duration(ANIMATION.winHighlight, isBonus));
        this.setState("WIN_EXPLOSION");
       winEvents.forEach(() => this.audio.winLabel());
-      await this.scene.burstCells(tumble.removedCells, this.duration(ANIMATION.burst));
-      void this.scene.presentWinLabels(winEvents, this.duration(ANIMATION.winLabel));
+      await this.scene.burstCells(tumble.removedCells, this.duration(ANIMATION.burst, isBonus));
+      void this.scene.presentWinLabels(winEvents, this.duration(ANIMATION.winLabel, isBonus));
       await this.showTumbleWin(tumble, index + 1, isBonus, winEvents);
       this.updateHud();
       this.setState("REFILL");
       this.setState("CASCADE_DROP");
-      await this.scene.animateCascade(tumble.boardAfterRefill, tumble.removedCells, this.duration(ANIMATION.refill));
+      await this.scene.animateCascade(tumble.boardAfterRefill, tumble.removedCells, this.duration(ANIMATION.refill, isBonus));
       this.message(index > 0 ? `TUMBLE ${index + 1} // RAW ${tumble.rawWinPoolAfter.toFixed(2)}x` : `WIN // RAW ${tumble.rawWinPoolAfter.toFixed(2)}x`);
     }
     const last = result.tumbles.at(-1);
@@ -541,9 +555,9 @@ export class GameController {
     flight.style.top = `${startY}px`;
     flight.style.setProperty("--flight-x", `${targetRect.left + targetRect.width / 2 - startX}px`);
     flight.style.setProperty("--flight-y", `${targetRect.top + targetRect.height / 2 - startY}px`);
-    flight.style.animationDuration = `${this.duration(milliseconds)}ms`;
+    flight.style.animationDuration = `${this.duration(milliseconds, true)}ms`;
     document.body.appendChild(flight);
-    await sleep(this.duration(milliseconds));
+    await sleep(this.duration(milliseconds, true));
     flight.remove();
     this.pulseFreeSpinValue(target);
   }
@@ -634,12 +648,12 @@ export class GameController {
       this.updateCurrentFreeSpinDisplay();
       let collectedTotal = 0;
       for (const core of tumble.settlementCores) {
-        await this.scene.collectMultiplierCore(core, this.ui.freeSpinMultiplier, this.duration(430));
+        await this.scene.collectMultiplierCore(core, this.ui.freeSpinMultiplier, this.duration(430, true));
         this.audio.freeSpinMultiplierCollect(core.value);
         collectedTotal += core.value;
         this.freeSpinAccounting = { ...this.freeSpinAccounting, combinedCoreMultiplier: collectedTotal };
         this.updateCurrentFreeSpinDisplay();
-        await sleep(this.duration(110));
+        await sleep(this.duration(110, true));
       }
       this.freeSpinAccounting = { ...this.freeSpinAccounting, combinedCoreMultiplier: total };
       this.updateCurrentFreeSpinDisplay();
@@ -655,19 +669,19 @@ export class GameController {
      this.ui.tumbleSettlement.textContent = "";
     let collectedTotal = 0;
     for (const core of tumble.settlementCores) {
-      await this.scene.collectMultiplierCore(core, this.ui.tumbleSettlement, this.duration(400));
+      await this.scene.collectMultiplierCore(core, this.ui.tumbleSettlement, this.duration(400, isBonus));
       this.audio.multiplierCoreCollect(core.value, false);
       collectedTotal += core.value;
       const collectedAmountCents = Math.round(tumble.rawWinPoolAfter * collectedTotal * this.betCents);
       this.ui.tumble.textContent = formatCredits(collectedAmountCents);
       this.updateTumbleEquation(rawAmountCents, collectedTotal, collectedAmountCents);
-      await sleep(this.duration(105));
+      await sleep(this.duration(105, isBonus));
     }
     const finalAmountCents = Math.round(tumble.finalPayoutMultiplier * this.betCents);
     this.ui.tumble.textContent = formatCredits(finalAmountCents);
     this.updateTumbleEquation(rawAmountCents, total, finalAmountCents);
-    await sleep(this.duration(470));
-    await sleep(this.duration(420));
+    await sleep(this.duration(470, isBonus));
+    await sleep(this.duration(420, isBonus));
   }
   private async pauseForRetrigger(freeSpin: SpinResult["freeSpins"][number]) {
     const count = freeSpin.retriggerScatterCount;
@@ -764,12 +778,12 @@ export class GameController {
     await this.animateFreeSpinFlight("raw", 2_000, this.ui.boardWrap, this.ui.freeSpinRawWin, 380);
     this.audio.freeSpinRawCollect();
     this.updateCurrentFreeSpinDisplay();
-    await sleep(this.duration(420));
+    await sleep(this.duration(420, true));
     this.freeSpinAccounting = addFreeSpinSymbolWin(this.freeSpinAccounting, 3_000);
     await this.animateFreeSpinFlight("raw", 3_000, this.ui.boardWrap, this.ui.freeSpinRawWin, 380);
     this.audio.freeSpinRawCollect();
     this.updateCurrentFreeSpinDisplay();
-    await sleep(this.duration(420));
+    await sleep(this.duration(420, true));
     await this.animateFreeSpinFlight("multiplier", 5, this.ui.boardWrap, this.ui.freeSpinMultiplier, 420);
     this.audio.freeSpinMultiplierCollect(5);
     this.freeSpinAccounting = {
@@ -777,7 +791,7 @@ export class GameController {
       combinedCoreMultiplier: 5,
     };
     this.updateCurrentFreeSpinDisplay();
-    await sleep(this.duration(520));
+    await sleep(this.duration(520, true));
     await this.animateFreeSpinFlight("multiplier", 10, this.ui.boardWrap, this.ui.freeSpinMultiplier, 420);
     this.audio.freeSpinMultiplierCollect(10);
     this.freeSpinAccounting = {
@@ -785,7 +799,7 @@ export class GameController {
       combinedCoreMultiplier: 15,
     };
     this.updateCurrentFreeSpinDisplay();
-    await sleep(this.duration(520));
+    await sleep(this.duration(520, true));
     await this.presentCurrentFreeSpinResolution({
       rawWinMultiplier: 50,
       combinedCoreMultiplier: 15,
@@ -795,7 +809,7 @@ export class GameController {
     this.audio.freeSpinTransfer();
     await this.animateFreeSpinFlight("transfer", 75_000, this.ui.freeSpinFinalWin, this.ui.tumble, 440);
     this.updateBonusTotalDisplay(true);
-    await sleep(this.duration(360));
+    await sleep(this.duration(360, true));
   }
   async previewMultiplierCollection() {
     const values = [5, 10, 500, 25];
@@ -823,12 +837,12 @@ export class GameController {
     this.ui.freeSpinCalculation.classList.add("is-collecting");
     let collectedTotal = 0;
     for (const core of cores) {
-      await this.scene.collectMultiplierCore(core, this.ui.freeSpinMultiplier, this.duration(430));
+      await this.scene.collectMultiplierCore(core, this.ui.freeSpinMultiplier, this.duration(430, true));
       this.audio.freeSpinMultiplierCollect(core.value);
       collectedTotal += core.value;
       this.freeSpinAccounting = { ...this.freeSpinAccounting, combinedCoreMultiplier: collectedTotal };
       this.updateCurrentFreeSpinDisplay();
-      await sleep(this.duration(150));
+      await sleep(this.duration(150, true));
     }
     this.ui.freeSpinCalculation.classList.remove("is-collecting");
     await this.presentCurrentFreeSpinResolution({
@@ -851,7 +865,7 @@ export class GameController {
       combinedCoreMultiplier: 1,
       win: 0,
     } as SpinResult["freeSpins"][number]);
-    await sleep(this.duration(260));
+    await sleep(this.duration(260, true));
     this.updateBonusTotalDisplay(false);
   }
   async previewBonusTriggerCeremony(count: number) {
@@ -885,12 +899,12 @@ export class GameController {
     this.freeSpinsLeft = 5;
     this.scene.renderBoard(board);
     this.setState("BONUS_TRIGGER_CEREMONY");
-    await this.scene.animateDrop(this.duration(ANIMATION.initialDrop));
+    await this.scene.animateDrop(this.duration(ANIMATION.initialDrop, true));
     await this.scene.presentBonusTriggerCeremony(cells, scatterCount);
     this.audio.scatterCelebration(scatterCount);
     this.audio.bonusUnlock(scatterCount);
     this.scene.bonusUnlockFlash();
-    await sleep(this.duration(360));
+    await sleep(this.duration(360, true));
     this.pendingRetriggerContinue = () => {};
     this.setBonusPrompt(true, "retrigger", 5);
     this.setState("BONUS_WAITING_FOR_START");
@@ -924,12 +938,12 @@ export class GameController {
     );
     this.ui.freeSpinCalculation.classList.add("is-resolving");
     this.updateCurrentFreeSpinDisplay();
-    await sleep(this.duration(360));
+    await sleep(this.duration(360, true));
     this.pulseFreeSpinEquation();
     this.audio.freeSpinResolve();
-    await sleep(this.duration(260));
+    await sleep(this.duration(260, true));
     const target = freeSpin.win;
-    await animateValue(0, target, this.duration(720), (value) => {
+    await animateValue(0, target, this.duration(720, true), (value) => {
       this.freeSpinAccounting = {
         ...this.freeSpinAccounting,
         currentSpinWinCents: Math.round(value),
