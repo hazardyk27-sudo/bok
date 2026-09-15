@@ -31,7 +31,7 @@ describe("win evaluation and cascades", () => {
   });
   it("uses the 12+ payout tier", () => {
     const result = evaluateBoard(boardWith([...Array(12).fill("S1"), ...Array(18).fill("S3")]));
-     expect(result.payouts.S1).toBe(0.5);
+    expect(result.payouts.S1).toBe(0.5);
   });
   it("uses exact payout values for every normal symbol count", () => {
     const expected = [
