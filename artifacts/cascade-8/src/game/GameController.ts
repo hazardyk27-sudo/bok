@@ -397,12 +397,14 @@ export class GameController {
     const displayedCount = freeSpinActive
       ? this.freeSpinsLeft
       : this.autoRunning || this.autoStopping ? this.autoRemaining : selected;
-    this.ui.autoSelectionDesktop.textContent = this.autoRunning || this.autoStopping
-      ? `${this.autoRemaining} LEFT`
-      : String(selected);
+    this.ui.autoSelectionDesktop.textContent = freeSpinActive
+      ? `${this.freeSpinsLeft} LEFT`
+      : this.autoRunning || this.autoStopping
+        ? `${this.autoRemaining} LEFT`
+        : String(selected);
     this.ui.autoSelectionValue.textContent = String(displayedCount);
     this.ui.autoSelectionLabel.textContent = remainingActive ? "LEFT" : "";
-    this.ui.autoActionDesktop.textContent = desktopAction;
+    this.ui.autoActionDesktop.textContent = freeSpinActive ? "FREE SPINS" : desktopAction;
     this.ui.autoActionMobile.textContent = freeSpinActive ? "FREE SPINS" : action;
     this.ui.autoToggle.dataset.mode = freeSpinActive ? "free-spin" : "auto";
     this.ui.autoToggle.dataset.state = this.autoStopping ? "stopping" : this.autoRunning ? "running" : "ready";
@@ -410,7 +412,9 @@ export class GameController {
       "aria-label",
       freeSpinActive
         ? `Free spins: ${this.freeSpinsLeft} remaining`
-        : this.autoRunning ? "Stop automatic spins" : "Choose automatic spin count",
+        : this.autoRunning
+          ? `Stop automatic spins: ${this.autoRemaining} remaining`
+          : "Choose automatic spin count",
     );
     this.updateStatusBadge();
   }

@@ -3102,3 +3102,69 @@ button:focus-visible, input:focus-visible { outline: 2px solid var(--cyan); outl
     margin-top: 4px;
   }
 }
+
+/* Desktop auto progress: keep the only visible spin counter in the dock,
+   away from the tumble result region. */
+@media (min-width: 621px) {
+  .app-shell:not(.is-lab) .game-status-badge {
+    display: none !important;
+  }
+
+  .app-shell:not(.is-lab) .auto-trigger {
+    min-height: 52px;
+    gap: 12px;
+    padding-inline: 15px 10px;
+  }
+
+  .app-shell:not(.is-lab) .auto-action {
+    font-size: 10px;
+    letter-spacing: .1em;
+  }
+
+  .app-shell:not(.is-lab) .auto-trigger small {
+    min-width: 88px;
+    height: 36px;
+    padding: 0 10px;
+    border: 1px solid rgba(190, 220, 255, .48);
+    border-radius: 9px;
+    color: #f2f8ff;
+    background: rgba(5, 20, 49, .62);
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, .08),
+      0 0 14px rgba(85, 173, 255, .1);
+    font-size: 13px;
+    letter-spacing: .02em;
+  }
+
+  .app-shell:not(.is-lab) .auto-trigger[data-state="running"] small,
+  .app-shell:not(.is-lab) .auto-trigger[data-state="stopping"] small {
+    border-color: rgba(255, 207, 128, .62);
+    color: #fff3cc;
+    background: rgba(72, 43, 24, .55);
+    box-shadow: 0 0 16px rgba(255, 182, 86, .12);
+  }
+
+  .app-shell:not(.is-lab) .auto-trigger[data-state="stopping"] small {
+    border-color: rgba(255, 157, 157, .68);
+    color: #ffe7e7;
+    background: rgba(65, 27, 44, .58);
+    box-shadow: 0 0 16px rgba(255, 119, 145, .12);
+  }
+
+  .app-shell:not(.is-lab) .auto-trigger[data-mode="free-spin"] {
+    border-color: rgba(255, 214, 112, .62);
+    color: #fff2bf;
+    background:
+      radial-gradient(circle at 16% 0%, rgba(255, 226, 142, .16), transparent 54%),
+      linear-gradient(180deg, rgba(113, 77, 27, .96), rgba(54, 37, 25, .98));
+    box-shadow:
+      inset 0 1px 0 rgba(255, 241, 187, .18),
+      0 8px 20px rgba(43, 27, 4, .25);
+  }
+
+  .app-shell:not(.is-lab) .auto-trigger[data-mode="free-spin"] small {
+    border-color: rgba(255, 224, 139, .58);
+    color: #fff8d7;
+    background: rgba(87, 52, 12, .4);
+  }
+}
