@@ -2,8 +2,12 @@ import { describe, expect, it } from "vitest";
 import { BETS_CENTS, getMultiplierCoreVisualTier } from "./GameConfig";
 
 describe("bet configuration", () => {
-  it("allows bets up to $10,000", () => {
-    expect(BETS_CENTS.at(-1)).toBe(1_000_000);
+  it("allows progressive bets up to $1,000,000", () => {
+    expect(BETS_CENTS.at(-1)).toBe(100_000_000);
+    expect(BETS_CENTS.slice(-7)).toEqual([
+      1_000_000, 2_000_000, 5_000_000, 10_000_000, 20_000_000,
+      50_000_000, 100_000_000,
+    ]);
   });
 
   it("keeps multiplier values in one minimal visual family", () => {
