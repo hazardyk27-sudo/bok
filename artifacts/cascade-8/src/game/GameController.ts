@@ -56,7 +56,7 @@ export class GameController {
   private readonly ui: {
     balance: HTMLElement; bet: HTMLElement; win: HTMLElement; bonusWin: HTMLElement; freeSpins: HTMLElement; gameStatusBadge: HTMLElement; gameStatusLabel: HTMLElement;
      tumble: HTMLElement; status: HTMLElement; spin: HTMLButtonElement; spinLabel: HTMLElement; betMinus: HTMLButtonElement; betPlus: HTMLButtonElement;
-      autoToggle: HTMLButtonElement; autoActionDesktop: HTMLElement; autoActionMobile: HTMLElement; autoSelection: HTMLElement; autoMenu: HTMLElement; autoCount: HTMLSelectElement;
+      autoToggle: HTMLButtonElement; autoActionDesktop: HTMLElement; autoActionMobile: HTMLElement; autoSelectionDesktop: HTMLElement; autoSelectionValue: HTMLElement; autoSelectionLabel: HTMLElement; autoMenu: HTMLElement; autoCount: HTMLSelectElement;
      turbo: HTMLButtonElement; sound: HTMLButtonElement; bonusOverlay: HTMLElement; bonusStart: HTMLButtonElement; bonusSpinCount: HTMLElement; bonusScatterRow: HTMLElement; bonusTriggerLabel: HTMLElement; bonusTitle: HTMLElement; bonusSupport: HTMLElement; bonusInstruction: HTMLElement; freeSpinCalculation: HTMLElement; freeSpinRawWin: HTMLElement; freeSpinMultiplier: HTMLElement; freeSpinFinalWin: HTMLElement; freeSpinMultiplyOperator: HTMLElement; freeSpinEqualsOperator: HTMLElement; tumbleLabel: HTMLElement; tumbleSymbolWin: HTMLElement; tumbleIncrement: HTMLElement; tumbleMeta: HTMLElement; tumbleSettlement: HTMLElement; tumblePanel: HTMLElement; bigWinOverlay: HTMLElement; bonusSummaryOverlay: HTMLElement; boardWrap: HTMLElement;
     setModal: (name: string | null) => void;
   };
@@ -390,14 +390,28 @@ export class GameController {
 
   private updateAutoStatus() {
     const selected = Number(this.ui.autoCount.value);
+    const freeSpinActive = this.freeSpinsLeft > 0 && this.ui.boardWrap.classList.contains("free-spin-mode");
     const action = this.autoRunning ? "STOP AUTO" : this.autoStopping ? "STOPPING" : "START AUTO";
     const desktopAction = this.autoRunning ? "STOP AUTO" : this.autoStopping ? "STOPPING" : "AUTO";
-    this.ui.autoSelection.textContent = this.autoRunning
+    const remainingActive = freeSpinActive || this.autoRunning || this.autoStopping;
+    const displayedCount = freeSpinActive
+      ? this.freeSpinsLeft
+      : this.autoRunning || this.autoStopping ? this.autoRemaining : selected;
+    this.ui.autoSelectionDesktop.textContent = this.autoRunning || this.autoStopping
       ? `${this.autoRemaining} LEFT`
-      : this.autoStopping ? `${this.autoRemaining} LEFT` : String(selected);
+      : String(selected);
+    this.ui.autoSelectionValue.textContent = String(displayedCount);
+    this.ui.autoSelectionLabel.textContent = remainingActive ? "LEFT" : "";
     this.ui.autoActionDesktop.textContent = desktopAction;
-    this.ui.autoActionMobile.textContent = action;
+    this.ui.autoActionMobile.textContent = freeSpinActive ? "FREE SPINS" : action;
+    this.ui.autoToggle.dataset.mode = freeSpinActive ? "free-spin" : "auto";
     this.ui.autoToggle.dataset.state = this.autoStopping ? "stopping" : this.autoRunning ? "running" : "ready";
+    this.ui.autoToggle.setAttribute(
+      "aria-label",
+      freeSpinActive
+        ? `Free spins: ${this.freeSpinsLeft} remaining`
+        : this.autoRunning ? "Stop automatic spins" : "Choose automatic spin count",
+    );
     this.updateStatusBadge();
   }
 

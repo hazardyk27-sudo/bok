@@ -93,7 +93,13 @@ app.innerHTML = `
         <button id="auto-toggle" class="auto-trigger" type="button" aria-haspopup="menu" aria-expanded="false" aria-label="Choose automatic spin count">
           <span id="auto-action-desktop" class="auto-action auto-action-desktop">AUTO</span>
           <span id="auto-action-mobile" class="auto-action auto-action-mobile">START AUTO</span>
-          <small id="auto-selection">25</small>
+          <small id="auto-selection">
+            <span id="auto-selection-desktop" class="auto-selection-desktop">25</span>
+            <span id="auto-selection-mobile" class="auto-selection-mobile">
+              <strong id="auto-selection-value" class="auto-selection-value">25</strong>
+              <span id="auto-selection-label" class="auto-selection-label"></span>
+            </span>
+          </small>
         </button>
         <div id="auto-menu" class="auto-menu" role="menu" aria-label="Automatic spin count" hidden>
           <button type="button" class="auto-option" data-auto-option="10" role="menuitemradio" aria-checked="false">10</button>
@@ -165,7 +171,7 @@ window.setTimeout(() => {
   controller = new GameController(scene, {
     balance: byId("balance"), bet: byId("bet"), win: byId("win"), bonusWin: byId("bonus-win"), freeSpins: byId("free-spins"), gameStatusBadge: byId("game-status-badge"), gameStatusLabel: byId("game-status-label"),
     tumble: byId("tumble"), status: byId("status"), spin: byId("spin"), spinLabel: byId("spin").querySelector(".spin-label") as HTMLElement,
-     betMinus: byId("bet-minus"), betPlus: byId("bet-plus"), autoToggle: byId("auto-toggle"), autoActionDesktop: byId("auto-action-desktop"), autoActionMobile: byId("auto-action-mobile"), autoSelection: byId("auto-selection"), autoMenu: byId("auto-menu"), autoCount: byId("auto-count"),
+     betMinus: byId("bet-minus"), betPlus: byId("bet-plus"), autoToggle: byId("auto-toggle"), autoActionDesktop: byId("auto-action-desktop"), autoActionMobile: byId("auto-action-mobile"), autoSelectionDesktop: byId("auto-selection-desktop"), autoSelectionValue: byId("auto-selection-value"), autoSelectionLabel: byId("auto-selection-label"), autoMenu: byId("auto-menu"), autoCount: byId("auto-count"),
      turbo: byId("turbo"), sound: byId("sound"),
         bonusOverlay: byId("bonus-overlay"), bonusStart: byId("bonus-overlay").querySelector("[data-bonus-start]") as HTMLButtonElement, bonusSpinCount: byId("bonus-spin-count"), bonusScatterRow: byId("bonus-scatter-row"), bonusTriggerLabel: byId("bonus-trigger-label"), bonusTitle: byId("bonus-title"), bonusSupport: byId("bonus-support"), bonusInstruction: byId("bonus-instruction"), freeSpinCalculation: byId("free-spin-calculation"), freeSpinRawWin: byId("free-spin-symbol-win"), freeSpinMultiplier: byId("free-spin-multiplier"), freeSpinFinalWin: byId("free-spin-spin-win"), freeSpinMultiplyOperator: byId("free-spin-multiply-operator"), freeSpinEqualsOperator: byId("free-spin-equals-operator"), tumbleLabel: document.querySelector(".tumble-win-label") as HTMLElement, tumbleSymbolWin: byId("tumble-symbol-win"), tumbleIncrement: byId("tumble-increment"), tumbleMeta: byId("tumble-meta"), tumbleSettlement: byId("tumble-settlement"), tumblePanel: byId("tumble-win-panel"), bigWinOverlay: byId("big-win-overlay"), bonusSummaryOverlay: byId("bonus-summary-overlay"), boardWrap: byId("phaser-board").parentElement!,
     setModal: showModal,

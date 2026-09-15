@@ -2307,3 +2307,132 @@ button:focus-visible, input:focus-visible { outline: 2px solid var(--cyan); outl
     display: grid;
   }
 }
+
+/* Mobile status consolidation: preserve the desktop card and layout while
+   keeping AUTO / Free Spins progress inside the compact mobile control row. */
+.auto-selection-mobile { display: none; }
+.auto-selection-value {
+  color: inherit;
+  font: inherit;
+  line-height: inherit;
+}
+.auto-selection-label { display: none; }
+
+@media (max-width: 620px) {
+  .game-status-badge { display: none !important; }
+
+  .tumble-win-panel {
+    width: min(100%, 340px);
+    margin-top: 1px;
+    padding: 7px 12px 8px;
+  }
+  .tumble-win-panel.is-active,
+  .tumble-win-panel.is-settling,
+  .tumble-win-panel.is-free-total { min-height: 72px; }
+  .tumble-win-panel > #tumble {
+    margin-top: 5px;
+    font-size: clamp(30px, 10vw, 44px);
+  }
+  .tumble-settlement {
+    min-height: 14px;
+    margin-top: 7px;
+    font-size: clamp(10px, 3vw, 13px);
+  }
+
+  .control-deck {
+    gap: 5px;
+    padding: 6px 9px 7px;
+  }
+  .control-deck .eyebrow {
+    font-size: 7px;
+    line-height: 1;
+  }
+  .bet-stepper { margin-top: 3px; }
+  .bet-stepper button {
+    width: 42px;
+    min-width: 42px;
+    height: 42px;
+    min-height: 42px;
+  }
+  .spin-button {
+    min-height: 60px;
+    height: 60px;
+    font-size: 17px;
+  }
+  .auto-trigger {
+    min-height: 48px;
+    padding: 0 0 0 15px;
+    overflow: hidden;
+  }
+  .auto-action-mobile {
+    flex: 1 1 56%;
+    text-align: left;
+  }
+  .auto-trigger small {
+    align-self: stretch;
+    display: grid;
+    place-items: stretch;
+    min-width: 42%;
+    height: auto;
+    padding: 0;
+    border-left-color: rgba(190, 220, 255, .3);
+  }
+  .auto-selection-desktop { display: none; }
+  .auto-selection-mobile {
+    display: grid;
+    grid-template-columns: auto auto;
+    place-content: center;
+    gap: 6px;
+    height: 100%;
+    padding: 0 12px;
+  }
+  .auto-selection-value {
+    font: 800 18px "Manrope", sans-serif;
+    font-variant-numeric: tabular-nums;
+    letter-spacing: -.035em;
+    line-height: 1;
+  }
+  .auto-selection-label {
+    display: block;
+    align-self: end;
+    padding-bottom: 1px;
+    color: #a9c9e4;
+    font: 700 7px "DM Mono", monospace;
+    letter-spacing: .13em;
+    line-height: 1;
+  }
+  .auto-selection-label:empty { display: none; }
+  .auto-trigger[data-mode="free-spin"] {
+    border-color: rgba(255, 214, 112, .58);
+    color: #fff2bf;
+    background:
+      radial-gradient(circle at 16% 0%, rgba(255, 226, 142, .16), transparent 54%),
+      linear-gradient(180deg, rgba(113, 77, 27, .96), rgba(54, 37, 25, .98));
+    box-shadow:
+      inset 0 1px 0 rgba(255, 241, 187, .18),
+      0 8px 20px rgba(43, 27, 4, .25);
+  }
+  .auto-trigger[data-mode="free-spin"] small {
+    border-left-color: rgba(255, 224, 139, .34);
+  }
+  .auto-trigger[data-mode="free-spin"] .auto-selection-label {
+    color: #e0c47e;
+  }
+  .utility-controls { gap: 5px; }
+  .utility-button {
+    min-height: 46px;
+    padding-block: 5px;
+  }
+  .utility-icon { font-size: 15px; }
+}
+
+@media (max-width: 360px) {
+  .control-deck { padding-inline: 7px; }
+  .auto-trigger { padding-left: 12px; }
+  .auto-trigger small {
+    min-width: 44%;
+  }
+  .auto-selection-mobile {
+    padding-inline: 9px;
+  }
+}
