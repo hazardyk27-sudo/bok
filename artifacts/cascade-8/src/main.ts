@@ -29,7 +29,7 @@ app.innerHTML = `
     <header class="topbar">
       <div class="brand">
         <div class="brand-mark"><span>✦</span></div>
-        <div><div class="brand-name">CASCADE <em>8</em></div><div class="brand-sub">ASTRAL TUMBLE SYSTEM</div></div>
+        <div><div class="brand-name">FAHRİNİN <em>YOLU</em></div><div class="brand-sub">FAHRİ SENİ BU DEFA GÜLDÜRECEK</div></div>
       </div>
       <div class="top-actions">
         <button class="icon-button" data-modal="info" aria-label="How to play">?</button>
@@ -54,7 +54,7 @@ app.innerHTML = `
           </div>
         </section>
         <div class="board-wrap">
-          <div id="phaser-board" aria-label="Cascade 8 game board"></div>
+          <div id="phaser-board" aria-label="Fahrinin Yolu oyun alanı"></div>
          </div>
           <div id="game-status-badge" class="game-status-badge" hidden aria-live="polite" aria-atomic="true">
             <span class="game-status-icon" aria-hidden="true">✦</span>
