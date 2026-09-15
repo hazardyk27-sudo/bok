@@ -2210,3 +2210,100 @@ button:focus-visible, input:focus-visible { outline: 2px solid var(--cyan); outl
   .auto-trigger { padding-inline: 13px 10px; }
   .auto-trigger small { min-width: 70px; }
 }
+
+/* Dock finish: the deck is the shared surface; controls should not become
+   nested cards inside it. AUTO keeps one readable action surface. */
+.control-deck {
+  grid-template-columns: minmax(148px, 1.06fr) minmax(128px, .88fr) minmax(164px, 1.08fr) minmax(148px, 1fr);
+  gap: 10px;
+  padding: 12px 14px 13px;
+}
+.control-deck > .bet-control,
+.control-deck > .auto-control,
+.control-deck > .utility-controls {
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+.bet-control { padding: 0; }
+.auto-control {
+  align-content: center;
+  gap: 5px;
+  padding: 0;
+}
+.auto-trigger {
+  min-height: 48px;
+  border-color: rgba(132, 194, 255, .5);
+  border-radius: 12px;
+  background: linear-gradient(180deg, rgba(42, 83, 148, .9), rgba(17, 37, 79, .98));
+  box-shadow:
+    inset 0 1px 0 rgba(239, 248, 255, .14),
+    0 8px 20px rgba(5, 19, 53, .24);
+}
+.auto-trigger small {
+  min-width: 30px;
+  height: auto;
+  padding: 3px 0 3px 10px;
+  border: 0;
+  border-left: 1px solid rgba(190, 220, 255, .34);
+  border-radius: 0;
+  background: transparent;
+}
+.bet-stepper {
+  border-color: rgba(139, 176, 244, .2);
+  background: rgba(4, 10, 27, .5);
+}
+.utility-controls {
+  padding: 0;
+  gap: 7px;
+}
+.utility-button {
+  min-height: 58px;
+  border-color: rgba(140, 181, 242, .3);
+}
+
+@media (max-width: 620px) {
+  .control-deck {
+    grid-template-columns: minmax(0, 1fr) 82px;
+    grid-template-areas:
+      "bet spin"
+      "auto auto"
+      "utility utility";
+    gap: 6px;
+    padding: 8px 10px 9px;
+  }
+  .bet-control,
+  .auto-control,
+  .utility-controls { min-height: 0; }
+  .bet-control { padding: 0; }
+  .auto-control { padding: 0; }
+  .auto-trigger {
+    min-height: 52px;
+    padding-inline: 16px 13px;
+  }
+  .auto-trigger small {
+    min-width: 76px;
+    height: auto;
+    padding: 3px 0 3px 12px;
+  }
+  .utility-controls {
+    padding: 0;
+    gap: 6px;
+  }
+}
+@media (max-width: 430px) {
+  .control-deck { padding-inline: 10px; }
+  .auto-trigger { width: 100%; }
+}
+@media (max-width: 360px) {
+  .control-deck {
+    grid-template-columns: minmax(0, 1fr) 78px;
+    padding-inline: 8px;
+  }
+  .auto-trigger { padding-inline: 13px 10px; }
+  .auto-trigger small {
+    min-width: 70px;
+    display: grid;
+  }
+}
