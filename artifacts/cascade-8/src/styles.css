@@ -1888,8 +1888,10 @@ button:focus-visible, input:focus-visible { outline: 2px solid var(--cyan); outl
 
 @media (max-width: 620px) {
   .control-deck {
-    grid-template-columns: minmax(84px, 1.06fr) minmax(70px, .88fr) 82px minmax(102px, 1.22fr);
-    grid-template-areas: "bet auto spin utility";
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) 82px;
+    grid-template-areas:
+      "bet auto spin"
+      "utility utility utility";
     gap: 6px;
     width: 100%;
     padding: 7px;
@@ -1929,20 +1931,43 @@ button:focus-visible, input:focus-visible { outline: 2px solid var(--cyan); outl
 }
 @media (max-width: 360px) {
   .control-deck {
-    grid-template-columns: minmax(76px, 1fr) 61px 74px minmax(93px, 1.16fr);
-    gap: 4px;
-    padding: 5px;
+    grid-template-columns: minmax(0, 1fr) 74px;
+    grid-template-areas:
+      "bet spin"
+      "auto auto"
+      "utility utility";
+    gap: 6px;
+    padding: 6px;
   }
   .bet-control,
   .auto-control,
   .utility-controls { min-height: 64px; }
-  .bet-control { padding-inline: 5px; }
-  .bet-stepper button { width: 26px; height: 29px; }
+  .bet-control { padding-inline: 7px; }
+  .bet-stepper button { width: 30px; height: 30px; }
   .bet-stepper strong { font-size: 13px; }
-  .auto-control { padding-inline: 4px; }
+  .auto-control {
+    grid-area: auto;
+    padding-inline: 8px;
+  }
   .auto-trigger { min-height: 38px; }
-  .auto-trigger small { display: none; }
-  #auto-status { font-size: 6px; }
+  #auto-status { font-size: 7px; }
   .spin-button { min-height: 64px; width: 100%; }
   .utility-button { min-height: 54px; }
+}
+@media (max-width: 390px) {
+  .control-deck {
+    grid-template-columns: minmax(0, 1fr) 78px;
+    grid-template-areas:
+      "bet spin"
+      "auto auto"
+      "utility utility";
+  }
+  .bet-control { min-width: 0; }
+  .bet-stepper strong { font-size: clamp(13px, 4vw, 15px); }
+  .auto-control {
+    justify-items: stretch;
+    width: 100%;
+  }
+  .auto-trigger { width: min(100%, 180px); justify-self: center; }
+  #auto-status { width: 100%; }
 }

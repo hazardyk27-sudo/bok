@@ -3,7 +3,7 @@ import { BETS_CENTS, getMultiplierCoreVisualTier } from "./GameConfig";
 
 describe("bet configuration", () => {
   it("allows bets up to $500", () => {
-    expect(BETS_CENTS.at(-1)).toBe(50_000);
+    expect(BETS_CENTS.at(-1)).toBe(1_000_000);
   });
 
   it("keeps multiplier values in one minimal visual family", () => {
