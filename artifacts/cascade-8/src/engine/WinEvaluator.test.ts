@@ -14,15 +14,15 @@ describe("win evaluation and cascades", () => {
     expect(NORMAL_SYMBOLS.map(({ name }) => name)).toEqual([
       "Real Madrid",
       "Liverpool",
-      "PSG",
       "Bayern",
+      "PSG",
       "Roma",
       "Barcelona",
       "Chelsea",
       "Beşiktaş",
       "Galatasaray",
     ]);
-    expect(NORMAL_SYMBOLS.map(({ weight }) => weight)).toEqual([13, 13, 13, 13, 12.5, 11.5, 10.5, 9.5, 4]);
+    expect(NORMAL_SYMBOLS.map(({ weight }) => weight)).toEqual([15.5, 14, 13.5, 12.5, 11.5, 10.5, 10, 7.5, 5]);
     expect(NORMAL_SYMBOLS.reduce((total, { weight }) => total + weight, 0)).toBe(100);
   });
   it("does not win at seven and wins at eight", () => {
@@ -31,19 +31,19 @@ describe("win evaluation and cascades", () => {
   });
   it("uses the 12+ payout tier", () => {
     const result = evaluateBoard(boardWith([...Array(12).fill("S1"), ...Array(18).fill("S3")]));
-    expect(result.payouts.S1).toBe(0.65);
+     expect(result.payouts.S1).toBe(0.5);
   });
   it("uses exact payout values for every normal symbol count", () => {
     const expected = [
-      [0.2, 0.25, 0.3, 0.45, 0.65],
-      [0.3, 0.35, 0.45, 0.65, 1.0],
-      [0.6, 0.7, 0.9, 1.3, 1.9],
-      [0.45, 0.55, 0.65, 1.0, 1.45],
-      [0.85, 1.0, 1.25, 1.85, 2.75],
-      [1.0, 1.2, 1.45, 2.15, 3.2],
-      [2.0, 2.5, 3.0, 4.5, 6.5],
-      [4.0, 5.0, 6.0, 8.5, 13.0],
-      [6.0, 7.0, 9.0, 13.0, 19.0],
+      [0.15, 0.2, 0.25, 0.35, 0.5],
+      [0.25, 0.3, 0.4, 0.55, 0.75],
+      [0.35, 0.45, 0.55, 0.75, 1.0],
+      [0.45, 0.55, 0.7, 0.95, 1.3],
+      [0.7, 0.85, 1.05, 1.4, 1.9],
+      [1.0, 1.1, 1.3, 1.75, 2.4],
+      [1.75, 2.1, 2.6, 3.5, 4.75],
+      [4.0, 4.5, 5.5, 7.5, 10.5],
+      [6.0, 6.5, 8.0, 11.0, 15.0],
     ];
     NORMAL_SYMBOLS.forEach((symbol, index) => {
       [8, 9, 10, 11, 12].forEach((count, tierIndex) => {
