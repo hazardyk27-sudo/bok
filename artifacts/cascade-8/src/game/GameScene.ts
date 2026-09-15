@@ -20,6 +20,7 @@ const TEN_X_CORE_SIZE = 90;
 const FIFTY_X_CORE_SIZE = 150;
 const TWO_HUNDRED_FIFTY_X_CORE_SIZE = 170;
 const FIVE_HUNDRED_X_CORE_SIZE = 190;
+const ONE_THOUSAND_X_CORE_SIZE = SCATTER_SYMBOL_SIZE * 1.5;
 const MULTIPLIER_TILE_SIZE = 68;
 const MULTIPLIER_2X_IMAGE_KEY = "multiplier-core-2x";
 const MULTIPLIER_3X_IMAGE_KEY = "multiplier-core-3x";
@@ -31,6 +32,7 @@ const MULTIPLIER_25X_IMAGE_KEY = "multiplier-core-25x";
 const MULTIPLIER_50X_IMAGE_KEY = "multiplier-core-50x";
 const MULTIPLIER_250X_IMAGE_KEY = "multiplier-core-250x";
 const MULTIPLIER_500X_IMAGE_KEY = "multiplier-core-500x";
+const MULTIPLIER_1000X_IMAGE_KEY = "multiplier-core-1000x";
 
 const MULTIPLIER_VISUALS = {
   low: {
@@ -91,6 +93,7 @@ export class GameScene extends Phaser.Scene {
     this.load.image(MULTIPLIER_50X_IMAGE_KEY, `${import.meta.env.BASE_URL}special-symbols/50x.png`);
     this.load.image(MULTIPLIER_250X_IMAGE_KEY, `${import.meta.env.BASE_URL}special-symbols/250x.png`);
     this.load.image(MULTIPLIER_500X_IMAGE_KEY, `${import.meta.env.BASE_URL}special-symbols/500x.png`);
+    this.load.image(MULTIPLIER_1000X_IMAGE_KEY, `${import.meta.env.BASE_URL}special-symbols/1000x.png`);
   }
 
   create() {
@@ -183,10 +186,12 @@ export class GameScene extends Phaser.Scene {
             ? TWO_HUNDRED_FIFTY_X_CORE_SIZE
             : symbol.value === 500
               ? FIVE_HUNDRED_X_CORE_SIZE
+              : symbol.value === 1000
+                ? ONE_THOUSAND_X_CORE_SIZE
               : symbol.value >= 10
                 ? LARGE_CORE_SIZE
                 : SMALL_CORE_SIZE;
-      const usesSuppliedArt = symbol.value === 2 || symbol.value === 3 || symbol.value === 5 || symbol.value === 10 || symbol.value === 15 || symbol.value === 20 || symbol.value === 25 || symbol.value === 50 || symbol.value === 250 || symbol.value === 500;
+      const usesSuppliedArt = symbol.value === 2 || symbol.value === 3 || symbol.value === 5 || symbol.value === 10 || symbol.value === 15 || symbol.value === 20 || symbol.value === 25 || symbol.value === 50 || symbol.value === 250 || symbol.value === 500 || symbol.value === 1000;
       const suppliedArtKey = symbol.value === 2
         ? MULTIPLIER_2X_IMAGE_KEY
         : symbol.value === 3
@@ -205,7 +210,9 @@ export class GameScene extends Phaser.Scene {
                       ? MULTIPLIER_50X_IMAGE_KEY
                       : symbol.value === 250
                         ? MULTIPLIER_250X_IMAGE_KEY
-                        : MULTIPLIER_500X_IMAGE_KEY;
+                        : symbol.value === 500
+                          ? MULTIPLIER_500X_IMAGE_KEY
+                          : MULTIPLIER_1000X_IMAGE_KEY;
       const coreScale = usesSuppliedArt ? 1 : coreSize / CORE_BASE_SIZE;
       const visual = MULTIPLIER_VISUALS[getMultiplierCoreVisualTier(symbol.value)];
       const aura = this.add.circle(0, 0, 43, visual.aura, visual.auraAlpha)
