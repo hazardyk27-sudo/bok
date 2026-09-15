@@ -2587,3 +2587,101 @@ button:focus-visible, input:focus-visible { outline: 2px solid var(--cyan); outl
     font-size: 9px;
   }
 }
+
+/* Active bonus ceremonies own the mobile viewport. Keep the dock out of the
+   hit area and give the panel its own safe-area-aware scroll container. */
+.bonus-overlay {
+  z-index: 100;
+}
+
+@media (max-width: 620px) {
+  #app:has(.bonus-overlay:not([hidden])) .control-deck {
+    visibility: hidden;
+    pointer-events: none;
+  }
+
+  .bonus-overlay {
+    align-items: center;
+    overflow-y: auto;
+    padding:
+      max(12px, env(safe-area-inset-top))
+      max(12px, env(safe-area-inset-right))
+      max(12px, env(safe-area-inset-bottom))
+      max(12px, env(safe-area-inset-left));
+  }
+  .bonus-ceremony-panel {
+    width: min(100%, 430px);
+    max-height: calc(100dvh - max(24px, env(safe-area-inset-top) + env(safe-area-inset-bottom)));
+    overflow-y: auto;
+    padding: 24px 18px max(20px, env(safe-area-inset-bottom));
+  }
+  .bonus-scatter-row {
+    min-height: 54px;
+    margin: 13px auto 4px;
+  }
+  .bonus-scatter-token {
+    width: clamp(40px, 13vw, 56px);
+  }
+  .bonus-scatter-row.count-5 .bonus-scatter-token {
+    width: clamp(38px, 12vw, 52px);
+  }
+  .bonus-scatter-row.count-6 .bonus-scatter-token {
+    width: clamp(35px, 11vw, 48px);
+  }
+  .bonus-title {
+    margin-top: 8px;
+    font-size: clamp(21px, 6vw, 31px);
+  }
+  .bonus-hero-number {
+    margin: 13px 0 1px;
+    font-size: clamp(64px, 18vw, 104px);
+  }
+  .bonus-ceremony-panel small {
+    margin-top: 10px;
+    font-size: 9px;
+  }
+  .bonus-ceremony-panel button {
+    min-height: 52px;
+    margin-top: 17px;
+    padding-inline: 22px;
+  }
+
+  /* Keep the total visible as a distinct result row after the board, even
+     when the compact shell is close to its viewport height. */
+  .game-stage:has(.free-spin-calculation:not([hidden])) .board-wrap {
+    flex: 0 0 auto;
+  }
+  .game-stage:has(.free-spin-calculation:not([hidden])) .tumble-win-panel.is-free-total {
+    display: grid;
+    flex: 0 0 auto;
+    position: relative;
+    z-index: 4;
+    width: min(100%, 340px);
+    min-height: 74px;
+    margin: 3px auto 11px;
+    padding: 8px 12px 9px;
+    visibility: visible;
+    opacity: 1;
+  }
+  .game-stage:has(.free-spin-calculation:not([hidden])) .tumble-win-panel.is-free-total > #tumble {
+    margin-top: 4px;
+    font-size: clamp(30px, 9vw, 42px);
+  }
+}
+
+@media (max-width: 360px) {
+  .bonus-ceremony-panel {
+    padding-inline: 14px;
+  }
+  .bonus-title {
+    font-size: clamp(19px, 5.8vw, 27px);
+  }
+  .bonus-hero-number {
+    font-size: clamp(58px, 17vw, 88px);
+  }
+  .game-stage:has(.free-spin-calculation:not([hidden])) .tumble-win-panel.is-free-total {
+    min-height: 70px;
+    margin-bottom: 9px;
+    padding-inline: 10px;
+  }
+}

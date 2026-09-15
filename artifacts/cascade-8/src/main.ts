@@ -55,18 +55,6 @@ app.innerHTML = `
         </section>
         <div class="board-wrap">
           <div id="phaser-board" aria-label="Cascade 8 game board"></div>
-          <div id="bonus-overlay" class="bonus-overlay" hidden aria-live="assertive">
-            <div class="bonus-ceremony-panel">
-              <span class="bonus-eyebrow">GOLDEN REALM</span>
-              <div id="bonus-scatter-row" class="bonus-scatter-row" aria-label="Triggering scatter symbols"></div>
-              <span id="bonus-trigger-label" class="bonus-trigger-label"></span>
-              <strong id="bonus-title" class="bonus-title">FREE SPINS READY</strong>
-              <div id="bonus-spin-count" class="bonus-hero-number">10</div>
-              <span id="bonus-support" class="bonus-support">FREE SPINS AWARDED</span>
-              <small id="bonus-instruction">PRESS START TO ENTER THE GOLDEN REALM</small>
-              <button type="button" data-bonus-start>START FREE SPINS</button>
-            </div>
-          </div>
          </div>
           <div id="game-status-badge" class="game-status-badge" hidden aria-live="polite" aria-atomic="true">
             <span class="game-status-icon" aria-hidden="true">✦</span>
@@ -119,6 +107,18 @@ app.innerHTML = `
     </footer>
     <div class="demo-note"><span>✧</span> VIRTUAL CREDITS ONLY <span class="note-separator">•</span> NO REAL-MONEY GAMBLING <span class="note-separator">•</span> RNG DEMO PROTOTYPE</div>
   </div>
+   <div id="bonus-overlay" class="bonus-overlay" hidden aria-live="assertive">
+     <div class="bonus-ceremony-panel">
+       <span class="bonus-eyebrow">GOLDEN REALM</span>
+       <div id="bonus-scatter-row" class="bonus-scatter-row" aria-label="Triggering scatter symbols"></div>
+       <span id="bonus-trigger-label" class="bonus-trigger-label"></span>
+       <strong id="bonus-title" class="bonus-title">FREE SPINS READY</strong>
+       <div id="bonus-spin-count" class="bonus-hero-number">10</div>
+       <span id="bonus-support" class="bonus-support">FREE SPINS AWARDED</span>
+       <small id="bonus-instruction">PRESS START TO ENTER THE GOLDEN REALM</small>
+       <button type="button" data-bonus-start>START FREE SPINS</button>
+     </div>
+   </div>
    <div id="big-win-overlay" class="big-win-overlay" aria-live="assertive"></div>
    <div id="bonus-summary-overlay" class="bonus-summary-overlay" aria-live="assertive"></div>
    <div id="modal-root"></div>
