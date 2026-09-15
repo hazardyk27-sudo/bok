@@ -42,15 +42,15 @@ export type SymbolDefinition = {
 };
 
 export const SYMBOLS: readonly SymbolDefinition[] = [
-  { id: "S1", name: "Real Madrid", icon: "RM", color: 0xd946ef, colorHex: "#d946ef", accentColor: 0xf3a7ff, frameColor: 0xffb8ff, logoPath: "team-logos/real-madrid.png", weight: 18.75 },
-  { id: "S5", name: "Liverpool", icon: "LIV", color: 0xc8102e, colorHex: "#c8102e", accentColor: 0xffd8d8, frameColor: 0xff466b, logoPath: "team-logos/liverpool.png", weight: 18.75 },
-  { id: "S6", name: "PSG", icon: "PSG", color: 0x172c62, colorHex: "#172c62", accentColor: 0xef3340, frameColor: 0x8d7cff, logoPath: "team-logos/psg.png", weight: 14.5 },
-  { id: "S7", name: "Bayern", icon: "BAY", color: 0xdc052d, colorHex: "#dc052d", accentColor: 0xffffff, frameColor: 0xfff1f7, logoPath: "team-logos/bayern.png", weight: 14.5 },
-  { id: "S4", name: "Roma", icon: "ROM", color: 0x8e1537, colorHex: "#8e1537", accentColor: 0xf0b44d, frameColor: 0xffc75c, logoPath: "team-logos/roma.png", weight: 11.5 },
-  { id: "S2", name: "Barcelona", icon: "BAR", color: 0x7030a0, colorHex: "#b36bef", accentColor: 0xa50044, frameColor: 0xffc24b, logoPath: "team-logos/barcelona.png", weight: 8.5 },
-  { id: "S3", name: "Chelsea", icon: "CHE", color: 0x034694, colorHex: "#034694", accentColor: 0xffffff, frameColor: 0x55a9ff, logoPath: "team-logos/chelsea.png", weight: 6.5 },
-  { id: "S9", name: "Beşiktaş", icon: "BJK", color: 0xf5f5f5, colorHex: "#f5f5f5", accentColor: 0x121212, frameColor: 0xd7d7d7, logoPath: "team-logos/besiktas.png", weight: 4 },
-  { id: "S8", name: "Galatasaray", icon: "GS", color: 0xf4bd00, colorHex: "#ffd31c", accentColor: 0xc8102e, frameColor: 0xffd42f, logoPath: "team-logos/galatasaray.png", weight: 3 },
+  { id: "S1", name: "Real Madrid", icon: "RM", color: 0xd946ef, colorHex: "#d946ef", accentColor: 0xf3a7ff, frameColor: 0xffb8ff, logoPath: "team-logos/real-madrid.png", weight: 13 },
+  { id: "S5", name: "Liverpool", icon: "LIV", color: 0xc8102e, colorHex: "#c8102e", accentColor: 0xffd8d8, frameColor: 0xff466b, logoPath: "team-logos/liverpool.png", weight: 13 },
+  { id: "S6", name: "PSG", icon: "PSG", color: 0x172c62, colorHex: "#172c62", accentColor: 0xef3340, frameColor: 0x8d7cff, logoPath: "team-logos/psg.png", weight: 13 },
+  { id: "S7", name: "Bayern", icon: "BAY", color: 0xdc052d, colorHex: "#dc052d", accentColor: 0xffffff, frameColor: 0xfff1f7, logoPath: "team-logos/bayern.png", weight: 13 },
+  { id: "S4", name: "Roma", icon: "ROM", color: 0x8e1537, colorHex: "#8e1537", accentColor: 0xf0b44d, frameColor: 0xffc75c, logoPath: "team-logos/roma.png", weight: 12.5 },
+  { id: "S2", name: "Barcelona", icon: "BAR", color: 0x7030a0, colorHex: "#b36bef", accentColor: 0xa50044, frameColor: 0xffc24b, logoPath: "team-logos/barcelona.png", weight: 11.5 },
+  { id: "S3", name: "Chelsea", icon: "CHE", color: 0x034694, colorHex: "#034694", accentColor: 0xffffff, frameColor: 0x55a9ff, logoPath: "team-logos/chelsea.png", weight: 10.5 },
+  { id: "S9", name: "Beşiktaş", icon: "BJK", color: 0xf5f5f5, colorHex: "#f5f5f5", accentColor: 0x121212, frameColor: 0xd7d7d7, logoPath: "team-logos/besiktas.png", weight: 9.5 },
+  { id: "S8", name: "Galatasaray", icon: "GS", color: 0xf4bd00, colorHex: "#ffd31c", accentColor: 0xc8102e, frameColor: 0xffd42f, logoPath: "team-logos/galatasaray.png", weight: 4 },
   { id: "SCATTER", name: "Golden Trophy", icon: "★", color: 0xf2b84b, colorHex: "#f2b84b", accentColor: 0xffefad, frameColor: 0xffd05c, weight: 2.5 },
 ];
 

@@ -22,7 +22,7 @@ describe("win evaluation and cascades", () => {
       "Beşiktaş",
       "Galatasaray",
     ]);
-    expect(NORMAL_SYMBOLS.map(({ weight }) => weight)).toEqual([18.75, 18.75, 14.5, 14.5, 11.5, 8.5, 6.5, 4, 3]);
+    expect(NORMAL_SYMBOLS.map(({ weight }) => weight)).toEqual([13, 13, 13, 13, 12.5, 11.5, 10.5, 9.5, 4]);
     expect(NORMAL_SYMBOLS.reduce((total, { weight }) => total + weight, 0)).toBe(100);
   });
   it("does not win at seven and wins at eight", () => {
