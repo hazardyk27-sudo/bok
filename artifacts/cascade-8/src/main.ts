@@ -91,7 +91,9 @@ app.innerHTML = `
       </div>
       <div class="auto-control">
         <button id="auto-toggle" class="auto-trigger" type="button" aria-haspopup="menu" aria-expanded="false" aria-label="Choose automatic spin count">
-          <span>AUTO</span><small id="auto-selection">25</small>
+          <span id="auto-action-desktop" class="auto-action auto-action-desktop">AUTO</span>
+          <span id="auto-action-mobile" class="auto-action auto-action-mobile">START AUTO</span>
+          <small id="auto-selection">25</small>
         </button>
         <div id="auto-menu" class="auto-menu" role="menu" aria-label="Automatic spin count" hidden>
           <button type="button" class="auto-option" data-auto-option="10" role="menuitemradio" aria-checked="false">10</button>
@@ -102,8 +104,6 @@ app.innerHTML = `
         <select id="auto-count" class="auto-count-native" aria-hidden="true" tabindex="-1">
           <option value="10">10 SPINS</option><option value="25" selected>25 SPINS</option><option value="50">50 SPINS</option><option value="100">100 SPINS</option>
         </select>
-        <button id="auto-start" class="auto-start-native" type="button" aria-hidden="true" tabindex="-1">START AUTO</button>
-        <small id="auto-status">BET 1.00 / READY</small>
       </div>
       <button id="spin" class="spin-button"><span class="spin-glow"></span><span class="spin-icon">✦</span><span class="spin-label">SPIN</span><small>ENTER THE CASCADE</small></button>
       <div class="utility-controls">
@@ -165,7 +165,7 @@ window.setTimeout(() => {
   controller = new GameController(scene, {
     balance: byId("balance"), bet: byId("bet"), win: byId("win"), bonusWin: byId("bonus-win"), freeSpins: byId("free-spins"), gameStatusBadge: byId("game-status-badge"), gameStatusLabel: byId("game-status-label"),
     tumble: byId("tumble"), status: byId("status"), spin: byId("spin"), spinLabel: byId("spin").querySelector(".spin-label") as HTMLElement,
-     betMinus: byId("bet-minus"), betPlus: byId("bet-plus"), autoToggle: byId("auto-toggle"), autoSelection: byId("auto-selection"), autoMenu: byId("auto-menu"), autoCount: byId("auto-count"), autoStart: byId("auto-start"), autoStatus: byId("auto-status"),
+     betMinus: byId("bet-minus"), betPlus: byId("bet-plus"), autoToggle: byId("auto-toggle"), autoActionDesktop: byId("auto-action-desktop"), autoActionMobile: byId("auto-action-mobile"), autoSelection: byId("auto-selection"), autoMenu: byId("auto-menu"), autoCount: byId("auto-count"),
      turbo: byId("turbo"), sound: byId("sound"),
         bonusOverlay: byId("bonus-overlay"), bonusStart: byId("bonus-overlay").querySelector("[data-bonus-start]") as HTMLButtonElement, bonusSpinCount: byId("bonus-spin-count"), bonusScatterRow: byId("bonus-scatter-row"), bonusTriggerLabel: byId("bonus-trigger-label"), bonusTitle: byId("bonus-title"), bonusSupport: byId("bonus-support"), bonusInstruction: byId("bonus-instruction"), freeSpinCalculation: byId("free-spin-calculation"), freeSpinRawWin: byId("free-spin-symbol-win"), freeSpinMultiplier: byId("free-spin-multiplier"), freeSpinFinalWin: byId("free-spin-spin-win"), freeSpinMultiplyOperator: byId("free-spin-multiply-operator"), freeSpinEqualsOperator: byId("free-spin-equals-operator"), tumbleLabel: document.querySelector(".tumble-win-label") as HTMLElement, tumbleSymbolWin: byId("tumble-symbol-win"), tumbleIncrement: byId("tumble-increment"), tumbleMeta: byId("tumble-meta"), tumbleSettlement: byId("tumble-settlement"), tumblePanel: byId("tumble-win-panel"), bigWinOverlay: byId("big-win-overlay"), bonusSummaryOverlay: byId("bonus-summary-overlay"), boardWrap: byId("phaser-board").parentElement!,
     setModal: showModal,

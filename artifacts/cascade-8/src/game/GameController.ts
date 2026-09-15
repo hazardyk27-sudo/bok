@@ -56,7 +56,7 @@ export class GameController {
   private readonly ui: {
     balance: HTMLElement; bet: HTMLElement; win: HTMLElement; bonusWin: HTMLElement; freeSpins: HTMLElement; gameStatusBadge: HTMLElement; gameStatusLabel: HTMLElement;
      tumble: HTMLElement; status: HTMLElement; spin: HTMLButtonElement; spinLabel: HTMLElement; betMinus: HTMLButtonElement; betPlus: HTMLButtonElement;
-     autoToggle: HTMLButtonElement; autoSelection: HTMLElement; autoMenu: HTMLElement; autoCount: HTMLSelectElement; autoStart: HTMLButtonElement; autoStatus: HTMLElement;
+      autoToggle: HTMLButtonElement; autoActionDesktop: HTMLElement; autoActionMobile: HTMLElement; autoSelection: HTMLElement; autoMenu: HTMLElement; autoCount: HTMLSelectElement;
      turbo: HTMLButtonElement; sound: HTMLButtonElement; bonusOverlay: HTMLElement; bonusStart: HTMLButtonElement; bonusSpinCount: HTMLElement; bonusScatterRow: HTMLElement; bonusTriggerLabel: HTMLElement; bonusTitle: HTMLElement; bonusSupport: HTMLElement; bonusInstruction: HTMLElement; freeSpinCalculation: HTMLElement; freeSpinRawWin: HTMLElement; freeSpinMultiplier: HTMLElement; freeSpinFinalWin: HTMLElement; freeSpinMultiplyOperator: HTMLElement; freeSpinEqualsOperator: HTMLElement; tumbleLabel: HTMLElement; tumbleSymbolWin: HTMLElement; tumbleIncrement: HTMLElement; tumbleMeta: HTMLElement; tumbleSettlement: HTMLElement; tumblePanel: HTMLElement; bigWinOverlay: HTMLElement; bonusSummaryOverlay: HTMLElement; boardWrap: HTMLElement;
     setModal: (name: string | null) => void;
   };
@@ -76,7 +76,6 @@ export class GameController {
     this.ui.betMinus.addEventListener("click", () => this.changeBet(-1));
     this.ui.betPlus.addEventListener("click", () => this.changeBet(1));
     this.ui.autoCount.addEventListener("change", () => this.updateAutoStatus());
-    this.ui.autoStart.addEventListener("click", () => void this.toggleAuto());
     this.ui.autoToggle.addEventListener("click", () => {
       if (this.autoRunning) {
         void this.toggleAuto();
@@ -164,9 +163,6 @@ export class GameController {
     this.ui.betMinus.disabled = this.busy || this.betIndex === 0;
     this.ui.betPlus.disabled = this.busy || this.betIndex === BETS_CENTS.length - 1;
     this.ui.autoCount.disabled = this.busy || this.autoRunning || Boolean(this.pendingBonusResult);
-    this.ui.autoStart.disabled = (this.busy && !this.autoRunning) || Boolean(this.pendingBonusResult);
-    this.ui.autoStart.textContent = this.autoRunning ? "STOP" : "START AUTO";
-    this.ui.autoStart.classList.toggle("is-running", this.autoRunning);
     this.ui.autoToggle.disabled = (this.busy && !this.autoRunning) || Boolean(this.pendingBonusResult);
     this.ui.autoToggle.classList.toggle("is-running", this.autoRunning);
     this.ui.autoToggle.classList.toggle("is-stopping", this.autoStopping);
@@ -393,17 +389,15 @@ export class GameController {
   }
 
   private updateAutoStatus() {
-    if (!this.ui.autoStatus) return;
     const selected = Number(this.ui.autoCount.value);
+    const action = this.autoRunning ? "STOP AUTO" : this.autoStopping ? "STOPPING" : "START AUTO";
+    const desktopAction = this.autoRunning ? "STOP AUTO" : this.autoStopping ? "STOPPING" : "AUTO";
     this.ui.autoSelection.textContent = this.autoRunning
-      ? String(this.autoRemaining)
-      : this.autoStopping ? "—" : String(selected);
-    this.ui.autoStatus.dataset.state = this.autoStopping ? "stopping" : this.autoRunning ? "running" : "ready";
-    this.ui.autoStatus.textContent = this.autoStopping
-      ? "STOPPING"
-      : this.autoRunning
-        ? `${this.autoRemaining} LEFT`
-        : `${selected} READY`;
+      ? `${this.autoRemaining} LEFT`
+      : this.autoStopping ? `${this.autoRemaining} LEFT` : String(selected);
+    this.ui.autoActionDesktop.textContent = desktopAction;
+    this.ui.autoActionMobile.textContent = action;
+    this.ui.autoToggle.dataset.state = this.autoStopping ? "stopping" : this.autoRunning ? "running" : "ready";
     this.updateStatusBadge();
   }
 

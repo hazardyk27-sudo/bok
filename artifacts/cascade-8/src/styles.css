@@ -2117,3 +2117,96 @@ button:focus-visible, input:focus-visible { outline: 2px solid var(--cyan); outl
   .spin-button { width: 78px; }
   .bet-control { padding-inline: 7px; }
 }
+
+/* Auto Spin control refinement: one readable action/count surface. */
+.auto-trigger {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 9px;
+  min-height: 46px;
+  padding: 0 10px 0 13px;
+}
+.auto-action {
+  min-width: 0;
+  overflow: hidden;
+  color: inherit;
+  font: 800 9px "DM Mono", monospace;
+  letter-spacing: .12em;
+  line-height: 1;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.auto-action-mobile { display: none; }
+.auto-trigger small {
+  display: grid;
+  flex: 0 0 auto;
+  place-items: center;
+  min-width: 34px;
+  height: 26px;
+  padding: 0 6px;
+  border: 1px solid rgba(190, 220, 255, .32);
+  border-radius: 8px;
+  color: #d9efff;
+  background: rgba(6, 18, 45, .38);
+  font: 800 11px "DM Mono", monospace;
+  letter-spacing: 0;
+  white-space: nowrap;
+}
+.auto-trigger[data-state="running"] .auto-action,
+.auto-trigger[data-state="stopping"] .auto-action { color: #ffe0a6; }
+.auto-trigger[data-state="running"] small,
+.auto-trigger[data-state="stopping"] small {
+  border-color: rgba(255, 207, 128, .42);
+  color: #fff0c3;
+}
+.auto-trigger[data-state="stopping"] { border-color: rgba(255, 157, 157, .68); }
+.auto-menu {
+  width: 188px;
+  gap: 8px;
+  padding: 9px;
+}
+.auto-option {
+  min-height: 46px;
+  border-radius: 10px;
+  font-size: 12px;
+}
+#auto-status,
+.auto-status { display: none !important; }
+@media (max-width: 620px) {
+  .control-deck {
+    grid-template-columns: minmax(0, 1fr) 82px;
+    grid-template-areas:
+      "bet spin"
+      "auto auto"
+      "utility utility";
+  }
+  .auto-control {
+    grid-area: auto;
+    display: block;
+    min-height: 0;
+    padding: 7px 8px;
+  }
+  .auto-trigger {
+    width: 100%;
+    min-height: 52px;
+    padding-inline: 16px 13px;
+  }
+  .auto-action-desktop { display: none; }
+  .auto-action-mobile { display: block; }
+  .auto-action { font-size: clamp(9px, 2.7vw, 11px); letter-spacing: .1em; }
+  .auto-trigger small { min-width: 76px; height: 32px; font-size: 12px; }
+  .auto-menu {
+    left: 50%;
+    width: min(236px, calc(100vw - 24px));
+    padding: 10px;
+    gap: 8px;
+  }
+  .auto-option { min-height: 48px; font-size: 12px; }
+}
+@media (max-width: 360px) {
+  .control-deck { grid-template-columns: minmax(0, 1fr) 78px; }
+  .auto-control { padding-inline: 6px; }
+  .auto-trigger { padding-inline: 13px 10px; }
+  .auto-trigger small { min-width: 70px; }
+}
