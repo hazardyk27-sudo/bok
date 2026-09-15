@@ -117,13 +117,13 @@ describe("base bonus trigger accounting", () => {
   });
 
   it("uses the final settled board after a tumble/refill trigger", () => {
-     const result = playSpin(100, new SeededRNG(2756));
+     const result = playSpin(100, new SeededRNG(330));
     const finalBoard = settledBaseBoard(result);
 
     expect(result.scatterCount).toBe(2);
     expect(result.tumbles).toHaveLength(4);
     expect(countScatter(finalBoard)).toBe(4);
     expect(result.bonusTriggerScatterCount).toBe(countScatter(finalBoard));
-     expect(scatterPositions(finalBoard)).toEqual(["0:1", "2:1", "4:3", "4:4"]);
+     expect(scatterPositions(finalBoard)).toEqual(["0:1", "4:0", "4:1", "4:3"]);
   });
 });

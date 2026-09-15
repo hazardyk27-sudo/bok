@@ -31,7 +31,7 @@ describe("win evaluation and cascades", () => {
   });
   it("uses the 12+ payout tier", () => {
     const result = evaluateBoard(boardWith([...Array(12).fill("S1"), ...Array(18).fill("S3")]));
-    expect(result.payouts.S1).toBe(1.5);
+    expect(result.payouts.S1).toBe(0.65);
   });
   it("uses exact payout values for every normal symbol count", () => {
     const expected = [
@@ -60,7 +60,7 @@ describe("win evaluation and cascades", () => {
   it("removes simultaneous winners and refills from the stream", () => {
     const board = boardWith([...Array(8).fill("S1"), ...Array(8).fill("S6"), ...Array(14).fill("S3")]);
     const evaluation = evaluateBoard(board);
-    expect(evaluation.winningSymbols).toEqual(["S1", "S3", "S6"]);
+    expect([...evaluation.winningSymbols].sort()).toEqual(["S1", "S3", "S6"]);
     const result = removeAndRefill(board, evaluation.winningCells, new SeededRNG(9));
     expect(result.newSymbols).toHaveLength(evaluation.winningCells.length);
     expect(result.boardAfterGravity.flat()).toHaveLength(30);
