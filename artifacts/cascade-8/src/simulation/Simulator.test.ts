@@ -17,5 +17,14 @@ describe("simulator", () => {
     expect(report.thirdPositionSamples).toBeGreaterThan(999_000);
     expect(report.thirdMatchesPreviousSecondProbability).toBeGreaterThan(8);
     expect(report.thirdMatchesPreviousSecondProbability).toBeLessThan(20);
+    expect(report.exactTwoTumbleFrequency).toBeGreaterThanOrEqual(0);
+    expect(report.exactThreeTumbleFrequency).toBeGreaterThanOrEqual(0);
+    expect(report.exactFourTumbleFrequency).toBeGreaterThanOrEqual(0);
+    expect(report.returnDecompositionDifferenceCents).toBe(0);
+    expect(report.symbolAppearanceRates.initialBoard.S8).toBeGreaterThanOrEqual(0);
+    expect(report.symbolAppearanceRates.refill.S8).toBeGreaterThanOrEqual(0);
+    expect(report.galatasarayExplosionCount).toBeGreaterThanOrEqual(0);
+    expect(report.galatasarayExplosionCounts["8"]).toBeGreaterThanOrEqual(0);
+    expect(report.galatasarayExplosionCounts["12+"]).toBeGreaterThanOrEqual(0);
   });
 });

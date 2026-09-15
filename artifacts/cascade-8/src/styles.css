@@ -2051,6 +2051,33 @@ button:focus-visible, input:focus-visible { outline: 2px solid var(--cyan); outl
   line-height: 1;
   white-space: nowrap;
 }
+.game-status-badge[data-mode="free-spin"] {
+  border-color: rgba(255, 224, 129, .82);
+  background:
+    radial-gradient(circle at 50% 0%, rgba(255, 232, 153, .24), transparent 62%),
+    linear-gradient(145deg, rgba(101, 67, 18, .96), rgba(25, 19, 26, .98));
+  box-shadow:
+    0 10px 26px rgba(1, 4, 17, .3),
+    inset 0 1px 0 rgba(255, 249, 211, .22),
+    0 0 30px rgba(255, 200, 63, .28);
+  animation: game-status-in .28s ease-out, free-spin-status-pulse 2.6s ease-in-out infinite;
+}
+.game-status-badge[data-mode="free-spin"] .game-status-icon {
+  border-color: rgba(255, 235, 166, .78);
+  color: #fff7cf;
+  background: rgba(255, 211, 91, .2);
+  box-shadow: 0 0 20px rgba(255, 213, 89, .4);
+}
+.game-status-badge[data-mode="free-spin"] strong {
+  color: #fff9d8;
+  font-size: clamp(26px, 5vw, 36px);
+  text-shadow:
+    0 0 8px rgba(255, 238, 163, .72),
+    0 0 22px rgba(255, 190, 50, .5);
+}
+.game-status-badge[data-mode="free-spin"] > span:last-child {
+  color: #ffe9ad;
+}
 .game-status-badge[data-mode="auto"] > span:last-child { color: #9bc5df; }
 .app-shell.is-lab .game-status-badge { display: none; }
 .bet-stepper {
@@ -2077,6 +2104,20 @@ button:focus-visible, input:focus-visible { outline: 2px solid var(--cyan); outl
 @keyframes game-status-in {
   from { opacity: 0; transform: translateY(-4px) scale(.98); }
   to { opacity: 1; transform: translateY(0) scale(1); }
+}
+@keyframes free-spin-status-pulse {
+  0%, 100% {
+    box-shadow:
+      0 10px 26px rgba(1, 4, 17, .3),
+      inset 0 1px 0 rgba(255, 249, 211, .22),
+      0 0 24px rgba(255, 200, 63, .2);
+  }
+  50% {
+    box-shadow:
+      0 10px 26px rgba(1, 4, 17, .3),
+      inset 0 1px 0 rgba(255, 249, 211, .3),
+      0 0 38px rgba(255, 211, 85, .42);
+  }
 }
 @media (max-width: 620px) {
   .mode-ribbon { grid-template-columns: repeat(4, minmax(0, 1fr)); }

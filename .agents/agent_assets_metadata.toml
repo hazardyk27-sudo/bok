@@ -14,3 +14,31 @@ mtime_ms = 1789425815075
 storage_uri = "gcs://replit-rams-assets-sisko/rams/assets/repl:799f53e3-6d51-4a21-909c-3a4f5e94c6ea/e3135856-888b-4010-90b3-e176d755443f/4a0b8dae-23a1-412c-b5b4-69c8f24eea2a"
 storage_version_token = "1789425874873467"
 content_type = "application/octet-stream"
+
+[[outputs]]
+id = "mTWiHHi8Wt8-kJIKC07ZK"
+uri = "file://artifacts/cascade-8/simulation-results/2026-09-15T02-59-14-968Z-symbol-paytable-rounded-10m.json"
+type = "unspecified"
+title = "Cascade 8 — 10M RTP Analytics JSON"
+description = "Deterministic 10,000,000 paid-spin raw report with RTP, bonus, Core, tumble, pair, symbol, and Galatasaray explosion metrics."
+logical_id = "7a671471-dc73-4074-93c2-00179a31b3f8"
+content_hash = "sha256:1405389716507d0e50269fd3de289336fb159cee42c6d5be6c06fb454cb91bfb"
+size = 6899
+mtime_ms = 1789441155035
+storage_uri = "gcs://replit-rams-assets-sisko/rams/assets/repl:799f53e3-6d51-4a21-909c-3a4f5e94c6ea/7a671471-dc73-4074-93c2-00179a31b3f8/56f7af42-918e-448d-86ed-8a32d9c07d84"
+storage_version_token = "1789441248374644"
+content_type = "application/octet-stream"
+
+[[outputs]]
+id = "SzIc39aN0Z9w5dCMmeZUB"
+uri = "file://artifacts/cascade-8/simulation-results/2026-09-15T02-59-14-968Z-symbol-paytable-rounded-10m.md"
+type = "text"
+title = "Cascade 8 — 10M RTP Analytics Summary"
+description = "Readable Markdown summary of the deterministic 10,000,000-spin simulation, including metric definitions and validation checks."
+logical_id = "2f7005a9-3039-466a-be3e-511f4c2e499e"
+content_hash = "sha256:bccfc018e0099e3807720b5ec4faf398a2c9d29b575b4a248d2a55408e3aadf9"
+size = 3812
+mtime_ms = 1789441155045
+storage_uri = "gcs://replit-rams-assets-sisko/rams/assets/repl:799f53e3-6d51-4a21-909c-3a4f5e94c6ea/2f7005a9-3039-466a-be3e-511f4c2e499e/0901f985-2350-43fc-9ddf-47627495bf04"
+storage_version_token = "1789441249765837"
+content_type = "text/markdown"
