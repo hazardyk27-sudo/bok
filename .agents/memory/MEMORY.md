@@ -8,3 +8,4 @@
 - [Pair stream continuity](pair-stream-continuity.md) — a five-cell board can leave a pending second member that must refill before any new group or special.
 - [Phaser preview texture readiness](phaser-preview-texture-readiness.md) — deterministic previews that render immediately after scene setup can show unloaded image textures; defer them until assets are ready.
 - [Mobile ceremony layering](mobile-ceremony-layering.md) — bonus ceremonies nested in the board can lose their action area to the compact mobile dock; use an app-level overlay and reserve result space.
+- [Responsive media scoping](responsive-media-scoping.md) — compact landscape rules must be mobile-scoped or explicitly neutralized on desktop.

@@ -2909,3 +2909,51 @@ button:focus-visible, input:focus-visible { outline: 2px solid var(--cyan); outl
     min-width: 40px;
   }
 }
+
+/* Desktop board proportions: the Phaser scene is authored at 620 × 520.
+   Keep that ratio intact so the five rows do not collapse into short tiles
+   when Chrome has a short viewport. */
+@media (min-width: 621px) {
+  .app-shell:not(.is-lab) #phaser-board {
+    width: min(100%, 700px);
+    height: auto;
+    aspect-ratio: 620 / 520;
+  }
+
+  .app-shell:not(.is-lab) .game-stage:has(.free-spin-calculation:not([hidden])) #phaser-board {
+    width: min(100%, 520px);
+    height: auto;
+    aspect-ratio: 620 / 520;
+  }
+}
+
+@media (min-width: 621px) and (max-height: 900px) {
+  .app-shell:not(.is-lab) #phaser-board {
+    width: min(100%, 560px);
+  }
+
+  .app-shell:not(.is-lab) .game-stage:has(.free-spin-calculation:not([hidden])) #phaser-board {
+    width: min(100%, 460px);
+  }
+}
+
+@media (min-width: 621px) and (max-height: 760px) {
+  .app-shell:not(.is-lab) .board-wrap {
+    width: min(100%, 320px);
+    height: auto;
+    flex: 0 0 auto;
+    overflow: visible;
+  }
+
+  .app-shell:not(.is-lab) #phaser-board {
+    width: min(100%, 320px);
+  }
+
+  .app-shell:not(.is-lab) .game-stage:has(.free-spin-calculation:not([hidden])) #phaser-board {
+    width: min(100%, 280px);
+  }
+
+  .app-shell:not(.is-lab) .game-stage:has(.free-spin-calculation:not([hidden])) .board-wrap {
+    width: min(100%, 280px);
+  }
+}
