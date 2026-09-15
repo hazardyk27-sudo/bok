@@ -676,6 +676,7 @@ button:focus-visible, input:focus-visible { outline: 2px solid var(--cyan); outl
   box-shadow: 0 0 22px rgba(255, 199, 92, .3), inset 0 1px 0 rgba(255, 245, 204, .14);
 }
 .core-1000 .core-preview-fallback { font-size: 17px; }
+.core-preview-image { width: 68px; height: 68px; object-fit: contain; border-radius: 9px; filter: drop-shadow(0 0 14px rgba(255, 86, 44, .35)); }
 .scatter-preview-image { width: 70px; height: 70px; object-fit: cover; border-radius: 50%; filter: drop-shadow(0 0 12px rgba(255, 190, 60, .72)); }
 @media (max-width: 620px) { .special-grid { grid-template-columns: repeat(3, 1fr); } .special-preview { min-height: 80px; } }
 @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation-duration: .01ms !important; transition-duration: .01ms !important; } }

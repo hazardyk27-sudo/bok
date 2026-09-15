@@ -17,6 +17,7 @@ const CORE_BASE_SIZE = 84;
 const SMALL_CORE_SIZE = 80;
 const LARGE_CORE_SIZE = 100;
 const MULTIPLIER_TILE_SIZE = 68;
+const MULTIPLIER_2X_IMAGE_KEY = "multiplier-core-2x";
 
 const MULTIPLIER_VISUALS = {
   low: {
@@ -67,6 +68,7 @@ export class GameScene extends Phaser.Scene {
       if (symbol.logoPath) this.load.image(`club-logo-${symbol.id}`, `${import.meta.env.BASE_URL}${symbol.logoPath}`);
     });
     this.load.image("scatter-symbol", `${import.meta.env.BASE_URL}special-symbols/scatter.png`);
+    this.load.image(MULTIPLIER_2X_IMAGE_KEY, `${import.meta.env.BASE_URL}special-symbols/2x.png`);
   }
 
   create() {
@@ -152,28 +154,35 @@ export class GameScene extends Phaser.Scene {
     );
     if (isMultiplierCore(symbol)) {
       const coreSize = symbol.value >= 10 ? LARGE_CORE_SIZE : SMALL_CORE_SIZE;
-      const coreScale = coreSize / CORE_BASE_SIZE;
+      const usesSuppliedArt = symbol.value === 2;
+      const coreScale = usesSuppliedArt ? 1 : coreSize / CORE_BASE_SIZE;
       const visual = MULTIPLIER_VISUALS[getMultiplierCoreVisualTier(symbol.value)];
       const aura = this.add.circle(0, 0, 43, visual.aura, visual.auraAlpha)
         .setBlendMode(Phaser.BlendModes.ADD);
-      const tile = this.add.graphics();
-      tile.fillStyle(visual.tile, 0.96);
-      tile.fillRoundedRect(-MULTIPLIER_TILE_SIZE / 2, -MULTIPLIER_TILE_SIZE / 2, MULTIPLIER_TILE_SIZE, MULTIPLIER_TILE_SIZE, 14);
-      tile.lineStyle(2, visual.border, 0.9);
-      tile.strokeRoundedRect(-MULTIPLIER_TILE_SIZE / 2, -MULTIPLIER_TILE_SIZE / 2, MULTIPLIER_TILE_SIZE, MULTIPLIER_TILE_SIZE, 14);
-      tile.lineStyle(1, 0xffffff, 0.12);
-      tile.strokeRoundedRect(-MULTIPLIER_TILE_SIZE / 2 + 5, -MULTIPLIER_TILE_SIZE / 2 + 5, MULTIPLIER_TILE_SIZE - 10, MULTIPLIER_TILE_SIZE - 10, 10);
-      const fontSize = symbol.value >= 1000 ? "15px" : symbol.value >= 100 ? "18px" : symbol.value >= 10 ? "20px" : "23px";
-      const label = this.add.text(0, 0, `${symbol.value}x`, {
-        color: visual.text,
-        fontFamily: "DM Mono, monospace",
-        fontSize,
-        fontStyle: "bold",
-        stroke: "#061022",
-        strokeThickness: 3,
-        shadow: { blur: 6, color: "#020611", fill: true, offsetX: 0, offsetY: 2 },
-      }).setOrigin(0.5);
-      container.add([aura, tile, label]);
+      if (usesSuppliedArt) {
+        const suppliedArt = this.add.image(0, 0, MULTIPLIER_2X_IMAGE_KEY)
+          .setDisplaySize(coreSize, coreSize);
+        container.add([aura, suppliedArt]);
+      } else {
+        const tile = this.add.graphics();
+        tile.fillStyle(visual.tile, 0.96);
+        tile.fillRoundedRect(-MULTIPLIER_TILE_SIZE / 2, -MULTIPLIER_TILE_SIZE / 2, MULTIPLIER_TILE_SIZE, MULTIPLIER_TILE_SIZE, 14);
+        tile.lineStyle(2, visual.border, 0.9);
+        tile.strokeRoundedRect(-MULTIPLIER_TILE_SIZE / 2, -MULTIPLIER_TILE_SIZE / 2, MULTIPLIER_TILE_SIZE, MULTIPLIER_TILE_SIZE, 14);
+        tile.lineStyle(1, 0xffffff, 0.12);
+        tile.strokeRoundedRect(-MULTIPLIER_TILE_SIZE / 2 + 5, -MULTIPLIER_TILE_SIZE / 2 + 5, MULTIPLIER_TILE_SIZE - 10, MULTIPLIER_TILE_SIZE - 10, 10);
+        const fontSize = symbol.value >= 1000 ? "15px" : symbol.value >= 100 ? "18px" : symbol.value >= 10 ? "20px" : "23px";
+        const label = this.add.text(0, 0, `${symbol.value}x`, {
+          color: visual.text,
+          fontFamily: "DM Mono, monospace",
+          fontSize,
+          fontStyle: "bold",
+          stroke: "#061022",
+          strokeThickness: 3,
+          shadow: { blur: 6, color: "#020611", fill: true, offsetX: 0, offsetY: 2 },
+        }).setOrigin(0.5);
+        container.add([aura, tile, label]);
+      }
       container.setScale(coreScale);
       this.tweens.add({
         targets: aura,
