@@ -1971,3 +1971,149 @@ button:focus-visible, input:focus-visible { outline: 2px solid var(--cyan); outl
   .auto-trigger { width: min(100%, 180px); justify-self: center; }
   #auto-status { width: 100%; }
 }
+
+/* Final status and touch-target pass for the mobile-first game shell. */
+.mode-ribbon {
+  grid-template-columns: 1.35fr .75fr .85fr 1fr;
+}
+.game-status-badge {
+  display: grid;
+  grid-template-columns: 28px auto;
+  grid-template-areas:
+    "icon value"
+    "icon label";
+  align-items: center;
+  justify-content: center;
+  column-gap: 9px;
+  width: min(100%, 260px);
+  min-height: 66px;
+  margin: 8px auto 0;
+  padding: 9px 20px;
+  border: 1px solid rgba(255, 218, 125, .38);
+  border-radius: 18px;
+  background:
+    radial-gradient(circle at 50% 0%, rgba(255, 220, 126, .12), transparent 62%),
+    linear-gradient(145deg, rgba(48, 35, 16, .9), rgba(11, 15, 35, .94));
+  box-shadow:
+    0 10px 26px rgba(1, 4, 17, .24),
+    inset 0 1px 0 rgba(255, 243, 190, .1),
+    0 0 22px rgba(255, 196, 67, .08);
+  text-align: left;
+  animation: game-status-in .28s ease-out;
+}
+.game-status-badge[hidden] { display: none; }
+.game-status-badge[data-mode="auto"] {
+  border-color: rgba(122, 193, 255, .38);
+  background:
+    radial-gradient(circle at 50% 0%, rgba(117, 190, 255, .12), transparent 62%),
+    linear-gradient(145deg, rgba(19, 38, 76, .92), rgba(9, 15, 36, .95));
+  box-shadow:
+    0 10px 26px rgba(1, 4, 17, .24),
+    inset 0 1px 0 rgba(215, 238, 255, .1),
+    0 0 22px rgba(87, 175, 255, .08);
+}
+.game-status-icon {
+  grid-area: icon;
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border: 1px solid rgba(255, 224, 143, .45);
+  border-radius: 10px 10px 10px 4px;
+  color: #ffe7a1;
+  background: rgba(255, 204, 92, .11);
+  box-shadow: 0 0 16px rgba(255, 199, 74, .2);
+  font-size: 15px;
+}
+.game-status-badge[data-mode="auto"] .game-status-icon {
+  border-color: rgba(145, 208, 255, .45);
+  color: #a8ddff;
+  background: rgba(84, 175, 255, .11);
+  box-shadow: 0 0 16px rgba(84, 175, 255, .2);
+}
+.game-status-badge strong {
+  grid-area: value;
+  color: #fff4c9;
+  font: 800 clamp(22px, 4vw, 30px) "Manrope", sans-serif;
+  font-variant-numeric: tabular-nums;
+  line-height: .9;
+  text-shadow: 0 0 18px rgba(255, 208, 98, .35);
+}
+.game-status-badge[data-mode="auto"] strong {
+  color: #e4f5ff;
+  text-shadow: 0 0 18px rgba(104, 200, 255, .3);
+}
+.game-status-badge > span:last-child {
+  grid-area: label;
+  color: #cdbd8e;
+  font: 700 7px "DM Mono", monospace;
+  letter-spacing: .17em;
+  line-height: 1;
+  white-space: nowrap;
+}
+.game-status-badge[data-mode="auto"] > span:last-child { color: #9bc5df; }
+.app-shell.is-lab .game-status-badge { display: none; }
+.bet-stepper {
+  display: grid;
+  grid-template-columns: 44px minmax(0, 1fr) 44px;
+  align-items: center;
+  gap: 8px;
+}
+.bet-stepper button {
+  width: 44px;
+  min-width: 44px;
+  height: 44px;
+  min-height: 44px;
+}
+.bet-stepper strong {
+  width: 100%;
+  min-width: 0;
+  overflow: hidden;
+  text-align: center;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+.control-deck .bet-control { min-width: 0; }
+@keyframes game-status-in {
+  from { opacity: 0; transform: translateY(-4px) scale(.98); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+@media (max-width: 620px) {
+  .mode-ribbon { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+  .mode-ribbon > div:nth-child(3) { display: block; }
+  .mode-ribbon > div:nth-child(4) { display: block; }
+  .mode-ribbon > div { padding-inline: 5px; }
+  .hud-stat span { font-size: 7px; }
+  .game-status-badge { width: min(100%, 238px); min-height: 62px; margin-top: 6px; padding: 8px 16px; }
+  .bet-stepper { gap: 7px; }
+  .bet-stepper button { width: 44px; min-width: 44px; height: 44px; }
+  .bet-stepper strong { font-size: clamp(12px, 3.4vw, 15px); }
+}
+@media (max-width: 430px) {
+  .control-deck {
+    grid-template-columns: minmax(0, 1fr) 82px;
+    grid-template-areas:
+      "bet spin"
+      "auto auto"
+      "utility utility";
+    gap: 6px;
+  }
+  .bet-control { padding: 8px 9px; }
+  .bet-stepper { gap: 8px; }
+  .bet-stepper strong { font-size: clamp(13px, 3.8vw, 16px); }
+  .auto-control {
+    grid-area: auto;
+    grid-template-columns: 1fr;
+    justify-items: stretch;
+    padding-inline: 9px;
+  }
+  .auto-trigger { width: min(100%, 210px); justify-self: center; }
+  #auto-status { width: 100%; }
+  .utility-controls { grid-area: utility; width: 100%; }
+}
+@media (max-width: 360px) {
+  .game-status-badge { width: min(100%, 220px); }
+  .control-deck { grid-template-columns: minmax(0, 1fr) 78px; }
+  .spin-button { width: 78px; }
+  .bet-control { padding-inline: 7px; }
+}

@@ -54,7 +54,7 @@ export class GameController {
   readonly audio = new AudioManager();
   private readonly scene: GameScene;
   private readonly ui: {
-    balance: HTMLElement; bet: HTMLElement; win: HTMLElement; bonusWin: HTMLElement; freeSpins: HTMLElement;
+    balance: HTMLElement; bet: HTMLElement; win: HTMLElement; bonusWin: HTMLElement; freeSpins: HTMLElement; gameStatusBadge: HTMLElement; gameStatusLabel: HTMLElement;
      tumble: HTMLElement; status: HTMLElement; spin: HTMLButtonElement; spinLabel: HTMLElement; betMinus: HTMLButtonElement; betPlus: HTMLButtonElement;
      autoToggle: HTMLButtonElement; autoSelection: HTMLElement; autoMenu: HTMLElement; autoCount: HTMLSelectElement; autoStart: HTMLButtonElement; autoStatus: HTMLElement;
      turbo: HTMLButtonElement; sound: HTMLButtonElement; bonusOverlay: HTMLElement; bonusStart: HTMLButtonElement; bonusSpinCount: HTMLElement; bonusScatterRow: HTMLElement; bonusTriggerLabel: HTMLElement; bonusTitle: HTMLElement; bonusSupport: HTMLElement; bonusInstruction: HTMLElement; freeSpinCalculation: HTMLElement; freeSpinRawWin: HTMLElement; freeSpinMultiplier: HTMLElement; freeSpinFinalWin: HTMLElement; freeSpinMultiplyOperator: HTMLElement; freeSpinEqualsOperator: HTMLElement; tumbleLabel: HTMLElement; tumbleSymbolWin: HTMLElement; tumbleIncrement: HTMLElement; tumbleMeta: HTMLElement; tumbleSettlement: HTMLElement; tumblePanel: HTMLElement; bigWinOverlay: HTMLElement; bonusSummaryOverlay: HTMLElement; boardWrap: HTMLElement;
@@ -154,6 +154,7 @@ export class GameController {
     this.ui.win.textContent = formatCredits(this.currentWinCents);
     this.ui.bonusWin.textContent = formatCredits(this.bonusWinCents);
     this.ui.freeSpins.textContent = String(this.freeSpinsLeft);
+    this.updateStatusBadge();
     this.ui.turbo.classList.toggle("is-active", this.turbo);
     const soundLabel = this.ui.sound.querySelector<HTMLElement>(".sound-label-full");
     if (soundLabel) soundLabel.textContent = this.audio.muted ? "SOUND OFF" : "SOUND ON";
@@ -177,6 +178,16 @@ export class GameController {
       option.classList.toggle("is-selected", isSelected);
     });
     this.updateAutoStatus();
+  }
+  private updateStatusBadge() {
+    const freeSpinActive = this.freeSpinsLeft > 0 && this.ui.boardWrap.classList.contains("free-spin-mode");
+    const autoActive = !freeSpinActive && (this.autoRunning || this.autoStopping);
+    const visible = freeSpinActive || autoActive;
+    this.ui.gameStatusBadge.hidden = !visible;
+    if (!visible) return;
+    this.ui.gameStatusBadge.dataset.mode = freeSpinActive ? "free-spin" : "auto";
+    this.ui.freeSpins.textContent = freeSpinActive ? String(this.freeSpinsLeft) : String(this.autoRemaining);
+    this.ui.gameStatusLabel.textContent = freeSpinActive ? "FREE SPINS LEFT" : "AUTO SPINS LEFT";
   }
   updateForModal() { this.updateHud(); }
   private message(value: string) { this.ui.status.textContent = value; }
@@ -393,6 +404,7 @@ export class GameController {
       : this.autoRunning
         ? `${this.autoRemaining} LEFT`
         : `${selected} READY`;
+    this.updateStatusBadge();
   }
 
   private async playTumbles(result: Pick<SpinResult, "tumbles">, isBonus: boolean) {

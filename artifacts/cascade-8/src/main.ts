@@ -43,7 +43,6 @@ app.innerHTML = `
           <div class="hud-stat"><span>BET</span><strong id="bet">1.00</strong></div>
           <div class="hud-stat"><span>TOTAL WIN</span><strong id="win">0.00</strong></div>
           <div class="hud-stat bonus-stat"><span>BONUS WIN</span><strong id="bonus-win">0.00</strong></div>
-          <div class="free-counter"><span>FREE SPINS</span><strong id="free-spins">0</strong></div>
         </div>
         <section id="free-spin-calculation" class="free-spin-calculation" hidden aria-label="Free Spin calculation" aria-live="polite">
           <div class="free-spin-calc-equation">
@@ -69,6 +68,11 @@ app.innerHTML = `
             </div>
           </div>
          </div>
+          <div id="game-status-badge" class="game-status-badge" hidden aria-live="polite" aria-atomic="true">
+            <span class="game-status-icon" aria-hidden="true">✦</span>
+            <strong id="free-spins">0</strong>
+            <span id="game-status-label">FREE SPINS LEFT</span>
+          </div>
           <div id="tumble-win-panel" class="tumble-win-panel" aria-live="polite">
             <span class="tumble-win-label">TUMBLE WIN</span>
             <span id="tumble-symbol-win" class="tumble-symbol-win" hidden aria-hidden="true"></span>
@@ -159,7 +163,7 @@ let controller: GameController;
 window.setTimeout(() => {
   const scene = game.scene.getScene("Cascade8GameScene") as GameScene;
   controller = new GameController(scene, {
-    balance: byId("balance"), bet: byId("bet"), win: byId("win"), bonusWin: byId("bonus-win"), freeSpins: byId("free-spins"),
+    balance: byId("balance"), bet: byId("bet"), win: byId("win"), bonusWin: byId("bonus-win"), freeSpins: byId("free-spins"), gameStatusBadge: byId("game-status-badge"), gameStatusLabel: byId("game-status-label"),
     tumble: byId("tumble"), status: byId("status"), spin: byId("spin"), spinLabel: byId("spin").querySelector(".spin-label") as HTMLElement,
      betMinus: byId("bet-minus"), betPlus: byId("bet-plus"), autoToggle: byId("auto-toggle"), autoSelection: byId("auto-selection"), autoMenu: byId("auto-menu"), autoCount: byId("auto-count"), autoStart: byId("auto-start"), autoStatus: byId("auto-status"),
      turbo: byId("turbo"), sound: byId("sound"),
