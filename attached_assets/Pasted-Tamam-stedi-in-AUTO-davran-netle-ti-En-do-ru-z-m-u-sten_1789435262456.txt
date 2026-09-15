@@ -1,0 +1,203 @@
+Tamam. İstediğin AUTO davranışı netleşti. En doğru çözüm şu:
+
+İstenen yeni AUTO yapısı
+Masaüstü
+Alttaki “25 READY” gibi ikinci satır tamamen kaldırılacak.
+AUTO kutusunda tek satır olacak.
+Kutunun tamamı daha temiz görünecek.
+İçerik örneği:
+AUTO 25
+Buradaki sayı daha büyük, okunaklı ve net olacak.
+Mobil
+
+AUTO küçük kutu gibi kalmayacak.
+
+Mobilde:
+
+Bet ve Spin butonunun altındaki satıra yayılacak
+tam genişlikte / daha geniş bir kontrol olacak
+butonun:
+sol yarısı: START AUTO
+sağ yarısı: seçili spin sayısı, örn 25
+Yani tek bar gibi davranacak.
+
+Örnek:
+[ START AUTO ] [ 25 ]
+
+AUTO açıkken
+
+AUTO çalışmaya başladığında buton şu hale dönüşecek:
+
+[ STOP AUTO ] [ 25 LEFT ]
+
+veya daha sade:
+[ STOP AUTO ] [ 25 ]
+
+Ama en iyisi kalan sayıyı yazmak:
+
+STOP AUTO | 25 LEFT
+STOP AUTO | 24 LEFT
+STOP AUTO | 23 LEFT
+AUTO seçenek pop-up’ı
+
+AUTO’ya basınca çıkan:
+
+10
+25
+50
+100
+
+butonları:
+
+daha büyük
+daha rahat basılabilir
+daha okunaklı
+mobilde yeterli boşluklu
+premium pill/button görünümünde
+
+olmalı.
+
+Replit’e atılacak net prompt
+AUTO SPIN UI / MOBILE AUTO CONTROL PATCH — CASCADE 8
+
+Modify the existing Cascade 8 UI.
+
+Do NOT change:
+- RNG
+- math
+- payout logic
+- tumble logic
+- bonus logic
+
+This patch is ONLY about AUTO SPIN UI / UX / mobile layout / readability / control behavior.
+
+==================================================
+1. REMOVE SECONDARY AUTO TEXT
+==================================================
+
+The current AUTO control shows unnecessary secondary text under the main button such as:
+- "25 READY"
+- "100 READY"
+
+Remove this secondary line completely.
+
+The AUTO control should become cleaner and simpler.
+
+Required result:
+- no extra small label under AUTO
+- one clean primary AUTO display only
+
+==================================================
+2. DESKTOP AUTO BUTTON REDESIGN
+==================================================
+
+On desktop, the AUTO control should remain compact, but cleaner.
+
+The whole control should visually read as a single AUTO module.
+
+Preferred display:
+- "AUTO 25"
+or
+- "AUTO" with a clearly readable number badge on the right
+
+Requirements:
+- the selected spin count must be more readable
+- the count badge should be clearer and slightly larger
+- the control should feel premium and minimal
+- remove visual clutter
+
+==================================================
+3. MOBILE AUTO CONTROL LAYOUT
+==================================================
+
+On mobile, AUTO should no longer behave like a tiny small control.
+
+Create a full-width secondary row under the Bet and Spin controls.
+
+In that mobile row, AUTO should expand horizontally and feel much easier to use.
+
+Required mobile structure:
+
+[ START AUTO ] [ 25 ]
+
+Meaning:
+- left half = action
+- right half = selected auto spin amount
+
+The full control should be wider and easier to tap.
+
+==================================================
+4. AUTO ACTIVE STATE
+==================================================
+
+When auto mode is active, the control must change from START AUTO to STOP AUTO.
+
+Required active-state structure on mobile:
+
+[ STOP AUTO ] [ 25 LEFT ]
+
+The right side should show the remaining auto spins if possible.
+
+Examples:
+- STOP AUTO | 25 LEFT
+- STOP AUTO | 18 LEFT
+- STOP AUTO | 7 LEFT
+
+This should update live while auto spin is running.
+
+On desktop, the AUTO control should also visually switch to a stop state while active.
+
+==================================================
+5. AUTO OPTIONS POPOVER
+==================================================
+
+When the player taps/clicks AUTO, the options panel for:
+- 10
+- 25
+- 50
+- 100
+
+must be redesigned.
+
+Requirements:
+- larger buttons
+- easier to tap
+- better spacing
+- more readable numbers
+- mobile friendly
+- premium visual style
+
+The option buttons must not feel cramped or tiny.
+
+They should feel like proper selection buttons, not small cramped labels.
+
+==================================================
+6. VISUAL STYLE
+==================================================
+
+The new AUTO UI should feel:
+- premium
+- modern
+- clean
+- readable
+- mobile friendly
+- touch friendly
+
+Do not make it childish.
+Do not keep unnecessary labels.
+Do not keep cramped spacing.
+
+==================================================
+7. IMPORTANT RESULT
+==================================================
+
+Main goals:
+- remove "25 READY" and similar text completely
+- make AUTO cleaner
+- make the selected number easier to read
+- on mobile, expand AUTO into a wider full-row control
+- split mobile AUTO into:
+  - left = START / STOP AUTO
+  - right = selected or remaining spin count
+- make 10 / 25 / 50 / 100 buttons larger and more touch friendly
+- when AUTO runs, button must become STOP AUTO
