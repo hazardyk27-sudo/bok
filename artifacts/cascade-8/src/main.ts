@@ -173,6 +173,15 @@ const rouletteMarkup = `
       <button class="roulette-sound-button" data-action="sound" type="button" aria-label="Türkçe sesi aç"><span>SESİ AÇ</span></button>
     </section>
     <section class="roulette-mobile-results" data-mobile-results aria-label="Son sonuçlar"><span class="mobile-results-label">SON SONUÇLAR</span><div class="mobile-results-list"><span class="muted-copy">Sonuçlar yükleniyor</span></div></section>
+    <nav class="mobile-control-dock" aria-label="Mobil masa araçları">
+      <button type="button" data-action="drawer-controls" aria-label="Masa araçlarını aç" aria-haspopup="dialog"><span>☷</span><small>ARAÇLAR</small></button>
+      <button type="button" data-action="undo" aria-label="Son bahsi geri al"><span>↶</span><small>UNDO</small></button>
+      <button type="button" data-action="rebet" aria-label="Son bahsi tekrar et"><span>↻</span><small>TEKRAR</small></button>
+      <button type="button" data-action="clear" aria-label="Masadaki tüm bahisleri temizle"><span>×</span><small>TEMİZLE</small></button>
+      <button type="button" data-action="drawer-chips" aria-label="Chip seçici"><span>◉</span><small>CHIP</small></button>
+      <button type="button" data-action="sound" aria-label="Türkçe sesi aç"><span>♫</span><small>SES</small></button>
+      <button type="button" data-action="menu" aria-label="Ana menüye dön"><span>←</span><small>MENÜ</small></button>
+    </nav>
     <section class="roulette-layout">
       <section class="roulette-wheel-card" aria-labelledby="roulette-wheel-title" aria-describedby="roulette-wheel-order">
         <h2 id="roulette-wheel-title" class="roulette-screen-reader-only">Avrupa ruleti çarkı</h2>
@@ -248,6 +257,22 @@ const rouletteMarkup = `
     <aside class="roulette-drawer" data-drawer="inside" aria-hidden="true"><button class="drawer-close" type="button" data-action="drawer-close">×</button><span class="roulette-card-kicker">INSIDE BETS</span><h2>İÇ BAHİSLER</h2><p>Masadaki klasik iç bahis bölgeleri.</p>${rouletteInsideBets}</aside>
     <aside class="roulette-drawer" data-drawer="fairness" aria-hidden="true"><button class="drawer-close" type="button" data-action="drawer-close">×</button><span class="roulette-card-kicker">FAIR PLAY // SERVER PROOF</span><h2>ADİL OYUN</h2><p>Sonuç server tarafından round başlamadan önce belirlenir; animasyon sadece bu sonucu doğal biçimde gösterir.</p><div class="drawer-proof"><b>COMMITMENT HASH</b><code data-commitment>WAITING FOR ROUND</code><small>Sonuç açıklandığında doğrulanabilir.</small></div></aside>
     <aside class="roulette-drawer roulette-history-drawer" data-drawer="history" aria-hidden="true"><button class="drawer-close" type="button" data-action="drawer-close">×</button><span class="roulette-card-kicker">RECENT ROUNDS</span><h2>SONUÇ GEÇMİŞİ</h2><div class="history-list" data-history-drawer><span class="muted-copy">Sonuçlar yükleniyor</span></div></aside>
+      <aside class="roulette-drawer mobile-controls-drawer" data-drawer="controls" aria-hidden="true">
+        <button class="drawer-close" type="button" data-action="drawer-close">×</button>
+        <span class="roulette-card-kicker">TABLE CONTROLS</span>
+        <h2>MASA ARAÇLARI</h2>
+        <div class="mobile-control-grid">
+          <button type="button" data-action="undo">↶<small>UNDO</small></button>
+          <button type="button" data-action="rebet">↻<small>TEKRAR</small></button>
+          <button type="button" data-action="double">×2<small>İKİLE</small></button>
+          <button type="button" data-action="clear">×<small>TEMİZLE</small></button>
+          <button type="button" data-action="racetrack" aria-pressed="false">◎<small>RACE</small></button>
+          <button type="button" data-action="neighbors" aria-pressed="false">✦<small>KOMŞU</small></button>
+          <button type="button" data-action="drawer-inside">＋<small>İÇ BAHİS</small></button>
+          <button type="button" data-action="drawer-history">◌<small>GEÇMİŞ</small></button>
+          <button type="button" data-action="drawer-fairness">✧<small>FAIR</small></button>
+        </div>
+      </aside>
   </main>
 `;
 

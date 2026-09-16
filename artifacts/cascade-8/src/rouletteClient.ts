@@ -430,11 +430,11 @@ export class RouletteClient {
     });
     this.root.querySelectorAll<HTMLButtonElement>("[data-action='undo']").forEach((button) => button.addEventListener("click", () => this.undo()));
     this.root.querySelectorAll<HTMLButtonElement>("[data-action='clear']").forEach((button) => button.addEventListener("click", () => this.clearSelections()));
-    this.root.querySelector<HTMLButtonElement>("[data-action='rebet']")?.addEventListener("click", () => this.rebet());
+    this.root.querySelectorAll<HTMLButtonElement>("[data-action='rebet']").forEach((button) => button.addEventListener("click", () => this.rebet()));
     this.root.querySelectorAll<HTMLButtonElement>("[data-action='double']").forEach((button) => button.addEventListener("click", () => this.doubleSelections()));
     this.root.querySelectorAll<HTMLButtonElement>("[data-action='racetrack']").forEach((button) => button.addEventListener("click", () => this.toggleRacetrack()));
     this.root.querySelectorAll<HTMLButtonElement>("[data-action='neighbors']").forEach((button) => button.addEventListener("click", () => this.toggleNeighbors()));
-    this.root.querySelector<HTMLButtonElement>("[data-action='menu']")?.addEventListener("click", () => { window.location.href = "/"; });
+    this.root.querySelectorAll<HTMLButtonElement>("[data-action='menu']").forEach((button) => button.addEventListener("click", () => { window.location.href = "/"; }));
     this.root.querySelectorAll<HTMLButtonElement>("[data-action='sound']").forEach((button) => button.addEventListener("click", () => {
       const enabled = this.voice.toggle();
       this.root.querySelectorAll<HTMLButtonElement>("[data-action='sound']").forEach((soundButton) => {
