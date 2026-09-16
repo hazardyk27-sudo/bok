@@ -62,6 +62,24 @@
 .bet-label { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .table-chip { position: absolute; top: -9px; right: -8px; z-index: 8; display: grid; place-items: center; min-width: 28px; height: 24px; padding: 0 4px; border: 2px dashed #fff0b1; border-radius: 50%; color: #3f2359; background: radial-gradient(circle at 35% 27%, #fff8d4 0 8%, #f7ca55 10% 55%, #b27825 57% 68%, #f7d878 70% 100%); box-shadow: inset 0 0 0 2px rgba(118, 70, 19, .64), 0 3px 8px rgba(0, 0, 0, .48); font: 700 7px "DM Mono", monospace; white-space: nowrap; }
 .table-chip[hidden] { display: none; }
+.table-bet[data-bet-type="STRAIGHT"] .table-chip {
+  top: 50%;
+  right: auto;
+  left: 50%;
+  width: calc(100% - 6px);
+  max-width: calc(100% - 6px);
+  height: calc(100% - 8px);
+  min-width: 0;
+  max-height: 28px;
+  padding: 0 2px;
+  transform: translate(-50%, -50%);
+  border-width: 1px;
+  border-radius: 50%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-size: 7px;
+}
+.table-bet[data-bet-type="STRAIGHT"].is-occupied .bet-label { opacity: .24; }
 .combination-bets { margin-top: 12px; border: 1px solid rgba(134, 165, 235, .16); border-radius: 10px; background: rgba(11, 19, 47, .62); }
 .combination-bets summary { display: flex; align-items: center; justify-content: space-between; padding: 10px 12px; cursor: pointer; list-style: none; color: #d6def8; font: 10px "DM Mono", monospace; letter-spacing: .1em; }
 .combination-bets summary::-webkit-details-marker { display: none; }
@@ -188,6 +206,16 @@
   .table-bet.number-zero { min-height: 35px; font-size: 13px; }
   .table-bet.outside-bet { min-height: 32px; font-size: 8px; }
   .table-chip { top: -7px; right: -5px; min-width: 22px; height: 18px; padding: 0 2px; font-size: 6px; }
+  .table-bet[data-bet-type="STRAIGHT"] .table-chip {
+    top: 50%;
+    right: auto;
+    left: 50%;
+    width: calc(100% - 4px);
+    max-width: calc(100% - 4px);
+    height: calc(100% - 4px);
+    max-height: 22px;
+    font-size: 5px;
+  }
   .roulette-dozen-row, .roulette-outside-row { gap: 2px; margin-top: 3px; }
   .combination-bets { margin-top: 8px; }
   .combination-bets summary { display: block; line-height: 1.6; }

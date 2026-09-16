@@ -57,11 +57,11 @@ export function getRouletteAnimationTransition(
 const API_BASE = "/api/roulette";
 
 export const ROULETTE_MOTION_TIMINGS = {
-  rotorOrbitMs: 1450,
-  ballOrbitMs: 620,
-  landingDurationMs: 3900,
-  resultRevealDelayMs: 3850,
-  resultRevealDurationMs: 450,
+  rotorOrbitMs: 2050,
+  ballOrbitMs: 980,
+  landingDurationMs: 6100,
+  resultRevealDelayMs: 6000,
+  resultRevealDurationMs: 550,
 } as const;
 const PHASE_LABELS: Record<RoulettePhase, string> = {
   OPEN: "BAHİSLER AÇIK", LAST_CALL: "SON ÇAĞRI", LOCKED: "MASA KİLİTLENDİ",
@@ -876,27 +876,33 @@ export class RouletteClient {
       wheel.style.setProperty("--label-counter-angle", finalLabelAngle);
     }).catch(() => undefined);
     const profileSeed = [...resultKey].reduce((sum, character) => (sum * 31 + character.charCodeAt(0)) >>> 0, 7);
-    const extraTurns = 4 + (profileSeed % 3);
+    const extraTurns = 3 + (profileSeed % 2);
     const deflectorCount = 2 + (profileSeed % 3);
     const pocketSkip = 3 + (profileSeed % 6);
     const finalBallAngle = -1440 - extraTurns * 360;
     const ballDelta = finalBallAngle - currentBallAngle;
+    const deflectorHitAngle = currentBallAngle + ballDelta * .54;
+    const secondDeflectorAngle = currentBallAngle + ballDelta * .63;
+    const innerTrackRadius = pocketRadius + (outerRadius - pocketRadius) * .58;
     const outer = ball.animate(
       [
         { transform: `rotate(${currentBallAngle}deg) translateY(-${outerRadius}px)`, offset: 0 },
-        { transform: `rotate(${currentBallAngle + ballDelta * .17}deg) translateY(-${outerRadius + 2}px)`, offset: .17 },
-        { transform: `rotate(${currentBallAngle + ballDelta * .36}deg) translateY(-${outerRadius - 1}px)`, offset: .36 },
-        { transform: `rotate(${currentBallAngle + ballDelta * .53}deg) translateY(-${outerRadius - 3}px)`, offset: .53 },
-        { transform: `rotate(${currentBallAngle + ballDelta * .58}deg) translateY(-${outerRadius - 12 - deflectorCount}px)`, offset: .58 },
-        { transform: `rotate(${currentBallAngle + ballDelta * .64}deg) translateY(-${outerRadius - 2}px)`, offset: .64 },
-        { transform: `rotate(${currentBallAngle + ballDelta * .71}deg) translateY(-${outerRadius - 9}px)`, offset: .71 },
-        { transform: `rotate(${finalBallAngle - pocketSkip * 9.7297}deg) translateY(-${pocketRadius + 12}px)`, offset: .79 },
-        { transform: `rotate(${finalBallAngle - pocketSkip * 4.1}deg) translateY(-${pocketRadius - 2}px)`, offset: .84 },
-        { transform: `rotate(${finalBallAngle + 2.1}deg) translateY(-${pocketRadius + 7}px)`, offset: .89 },
-        { transform: `rotate(${finalBallAngle - 1.1}deg) translateY(-${pocketRadius - 1}px)`, offset: .95 },
+        { transform: `rotate(${currentBallAngle + ballDelta * .13}deg) translateY(-${outerRadius + 3}px)`, offset: .13 },
+        { transform: `rotate(${currentBallAngle + ballDelta * .28}deg) translateY(-${outerRadius - 1}px)`, offset: .28 },
+        { transform: `rotate(${currentBallAngle + ballDelta * .42}deg) translateY(-${outerRadius + 2}px)`, offset: .42 },
+        { transform: `rotate(${deflectorHitAngle}deg) translateY(-${outerRadius - 12 - deflectorCount}px)`, offset: .54 },
+        { transform: `rotate(${deflectorHitAngle + ballDelta * .035}deg) translateY(-${outerRadius + 4}px)`, offset: .58 },
+        { transform: `rotate(${secondDeflectorAngle}deg) translateY(-${outerRadius - 8}px)`, offset: .63 },
+        { transform: `rotate(${secondDeflectorAngle + ballDelta * .035}deg) translateY(-${outerRadius + 1}px)`, offset: .67 },
+        { transform: `rotate(${currentBallAngle + ballDelta * .72}deg) translateY(-${innerTrackRadius}px)`, offset: .72 },
+        { transform: `rotate(${finalBallAngle - pocketSkip * 9.7297}deg) translateY(-${pocketRadius + 22}px)`, offset: .79 },
+        { transform: `rotate(${finalBallAngle - pocketSkip * 4.1}deg) translateY(-${pocketRadius - 3}px)`, offset: .84 },
+        { transform: `rotate(${finalBallAngle + 2.8}deg) translateY(-${pocketRadius + 14}px)`, offset: .89 },
+        { transform: `rotate(${finalBallAngle - 1.8}deg) translateY(-${pocketRadius - 2}px)`, offset: .94 },
+        { transform: `rotate(${finalBallAngle + 1.1}deg) translateY(-${pocketRadius + 6}px)`, offset: .97 },
         { transform: `rotate(${finalBallAngle}deg) translateY(-${pocketRadius}px)`, offset: 1 },
       ],
-      { duration: resultRevealDelayMs, easing: "linear", fill: "forwards" },
+      { duration: resultRevealDelayMs, easing: "cubic-bezier(.16,.72,.2,1)", fill: "forwards" },
     );
     this.ballAnimation = outer;
     this.ballAnimation.currentTime = Math.min(Math.max(0, animationElapsedMs), BALL_LANDING_DURATION_MS);
@@ -938,9 +944,11 @@ export class RouletteClient {
 
   private scheduleBallSounds(resultKey: string) {
     this.clearBallSoundTimers();
-    [2350, 2820, 3190, 3470].forEach((delay, index) => {
+    const duration = ROULETTE_MOTION_TIMINGS.resultRevealDelayMs;
+    [0.54, 0.63, 0.79, 0.89, 0.97].forEach((progress, index) => {
+      const delay = Math.round(duration * progress);
       this.ballSoundTimers.push(window.setTimeout(() => {
-        if (this.animatedResultKey === resultKey) this.voice.cue(index === 3 ? "land" : "bounce");
+        if (this.animatedResultKey === resultKey) this.voice.cue(index === 4 ? "land" : "bounce");
       }, delay));
     });
   }

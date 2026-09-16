@@ -81,7 +81,7 @@ describe("server-driven roulette animation transitions", () => {
 
   it("resumes only an active RESULT landing and settles after the landing window", () => {
     expect(getRouletteResultResumeAction("RESULT", 1200)).toBe("resume");
-    expect(getRouletteResultResumeAction("RESULT", 3850)).toBe("settle");
+    expect(getRouletteResultResumeAction("RESULT", 6000)).toBe("settle");
     expect(getRouletteResultResumeAction("MULTIPLIER_REVEAL", 1200)).toBe("settle");
     expect(getRouletteResultResumeAction("RESULT", Number.NaN)).toBe("settle");
   });
@@ -99,7 +99,7 @@ describe("server-driven roulette animation transitions", () => {
     const result = { id: "mobile-result", phase: "RESULT" as const, winningNumber: 26 };
 
     expect(getRouletteVisibilityResumeAction(result, 1_200)).toBe("resume-result");
-    expect(getRouletteVisibilityResumeAction(result, 3_850)).toBe("settle-result");
+    expect(getRouletteVisibilityResumeAction(result, 6_000)).toBe("settle-result");
     expect(getRouletteAnimationTransition(result, result)).toEqual({ startsSpin: false, winningNumber: null });
     expect(isRouletteResultSettled(result, "mobile-result:26")).toBe(true);
   });
@@ -195,11 +195,11 @@ describe("server-driven roulette animation transitions", () => {
 describe("roulette motion timing contract", () => {
   it("keeps orbit, landing, and reveal timings coordinated", () => {
     expect(ROULETTE_MOTION_TIMINGS).toEqual({
-      rotorOrbitMs: 1450,
-      ballOrbitMs: 620,
-      landingDurationMs: 3900,
-      resultRevealDelayMs: 3850,
-      resultRevealDurationMs: 450,
+      rotorOrbitMs: 2050,
+      ballOrbitMs: 980,
+      landingDurationMs: 6100,
+      resultRevealDelayMs: 6000,
+      resultRevealDurationMs: 550,
     });
     expect(ROULETTE_MOTION_TIMINGS.resultRevealDelayMs)
       .toBeLessThanOrEqual(ROULETTE_MOTION_TIMINGS.landingDurationMs);
