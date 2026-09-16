@@ -312,7 +312,7 @@ export class RouletteClient {
       ? round.revealedMultipliers.map((value, index) => `<span class="multiplier-chip ${lucky.has(round.luckyNumbers[index]) ? "is-lucky" : ""}" style="--reveal-index:${index}">${value}x</span>`).join("")
       : `<span class="muted-copy">Tek tek reveal bekleniyor</span>`;
     this.root.querySelector<HTMLElement>("[data-reveal-count]")!.textContent = `${round.revealedMultipliers.length}/${round.multipliersTotal}`;
-    const resultVisible = round.winningNumber !== null && ["RESULT", "MULTIPLIER_REVEAL", "SETTLING", "INTERMISSION"].includes(round.phase);
+    const resultVisible = round.winningNumber !== null && ["RESULT", "SETTLING", "INTERMISSION"].includes(round.phase);
     const overlay = this.root.querySelector<HTMLElement>("[data-result-overlay]");
     if (overlay) {
       overlay.classList.toggle("is-visible", resultVisible);

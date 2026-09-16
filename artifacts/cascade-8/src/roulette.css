@@ -482,7 +482,8 @@
 }
 .wheel-ball::after { inset: 2px 8px 9px 3px; }
 .wheel-result-overlay {
-  inset: 36% 24%;
+  inset: 41% 33%;
+  padding: 8px;
   border-color: rgba(229, 192, 117, .76);
   background: radial-gradient(circle at 35% 18%, rgba(199,142,64,.32), transparent 52%), rgba(11,14,15,.94);
 }
@@ -498,5 +499,130 @@
   .roulette-wheel-live { width: min(390px, 94vw); }
   .roulette-bet-card { transition: transform .35s ease, opacity .35s ease; }
   .is-multiplier-reveal .roulette-bet-card { transform: scale(.985); transform-origin: top center; }
-  .wheel-result-overlay { inset: 36% 20%; }
+  .wheel-result-overlay { inset: 41% 31%; }
+}
+
+/* Reference-inspired wheel rings: warm wood bowl, clean number band, separate pocket slots. */
+.roulette-wheel-live {
+  background:
+    radial-gradient(circle at 50% 48%, #b87542 0 7%, #6f3a1e 7.5% 25%, #3b1c0f 25.5% 29%, transparent 29.5%),
+    radial-gradient(circle at 50% 50%, #6e3b20 0 39%, #9b5a2c 39.5% 57%, #6c351b 57.5% 67%, #a96231 67.5% 84%, #5a2a16 84.5% 100%);
+  box-shadow:
+    0 0 0 2px #e2b56a,
+    0 0 0 7px #512812,
+    0 0 0 10px #b87338,
+    0 0 0 15px #28100a,
+    inset 0 0 45px rgba(24, 7, 2, .75),
+    0 28px 65px rgba(0,0,0,.6);
+}
+.roulette-wheel-live::before {
+  inset: 4%;
+  border: 2px solid rgba(255, 213, 139, .55);
+  background: repeating-conic-gradient(from 0deg, rgba(255, 224, 165, .06) 0 1deg, transparent 1deg 15deg);
+  box-shadow: inset 0 0 30px rgba(37, 10, 2, .8);
+}
+.wheel-pocket-track {
+  inset: 7%;
+  border: 3px solid #f1eee3;
+  background: transparent;
+  box-shadow: 0 0 0 5px #3c4546, 0 0 0 7px rgba(11, 11, 11, .95), inset 0 0 18px rgba(0,0,0,.85);
+}
+.wheel-pocket-track::before {
+  inset: 14%;
+  border: 2px solid #d9d8cb;
+  box-shadow: inset 0 0 12px rgba(0,0,0,.65);
+}
+.wheel-pocket-track::after {
+  inset: 31%;
+  border: 1px solid rgba(232, 204, 152, .55);
+  box-shadow: none;
+}
+.wheel-pocket {
+  width: 8.2%;
+  height: 21%;
+  margin: -10.5% -4.1%;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  align-items: stretch;
+  gap: 7%;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  transform: rotate(calc(var(--pocket-index) * 9.7297deg)) translateY(calc(-1 * var(--pocket-radius))) rotate(calc(var(--pocket-index) * -9.7297deg));
+}
+.wheel-pocket b {
+  flex: 0 0 34%;
+  display: grid;
+  place-items: center;
+  width: 100%;
+  border: 1px solid #f4f2e9;
+  border-radius: 2px 2px 0 0;
+  color: #fff;
+  background: linear-gradient(90deg, rgba(0,0,0,.26), transparent 48%, rgba(255,255,255,.12)), #1b1d1e;
+  box-shadow: none;
+  font-size: clamp(8px, .8vw, 13px);
+}
+.wheel-pocket i {
+  display: block;
+  flex: 1 1 52%;
+  width: 72%;
+  align-self: center;
+  border: 1px solid rgba(230, 230, 222, .62);
+  background: linear-gradient(90deg, rgba(0,0,0,.3), transparent 50%, rgba(255,255,255,.12)), #202324;
+  clip-path: polygon(12% 0, 88% 0, 100% 100%, 0 100%);
+  box-shadow: none;
+}
+.wheel-pocket.is-red b, .wheel-pocket.is-red i {
+  background: linear-gradient(90deg, rgba(0,0,0,.25), transparent 47%, rgba(255,255,255,.14)), #d8312e;
+}
+.wheel-pocket.is-black b, .wheel-pocket.is-black i {
+  background: linear-gradient(90deg, rgba(0,0,0,.36), transparent 48%, rgba(255,255,255,.1)), #16191a;
+}
+.wheel-pocket.is-green b, .wheel-pocket.is-green i {
+  background: linear-gradient(90deg, rgba(0,0,0,.28), transparent 48%, rgba(255,255,255,.12)), #16a34a;
+}
+.wheel-pocket.is-winning b {
+  border-color: #fff3b5;
+  box-shadow: 0 0 12px rgba(255,223,120,.72), inset 0 -3px 4px rgba(0,0,0,.35);
+}
+.wheel-pocket.is-winning i { filter: brightness(1.2); }
+.wheel-center-well {
+  inset: 28%;
+  border: 5px solid #6c351b;
+  background:
+    repeating-conic-gradient(from 2deg, rgba(255,218,154,.12) 0 7deg, transparent 7deg 45deg),
+    radial-gradient(circle at 35% 26%, #a86032, #6d371b 42%, #34170b 72%, #160b07);
+  box-shadow: inset 0 0 25px rgba(22,5,1,.85), 0 0 0 3px #d39a55, 0 8px 18px rgba(0,0,0,.5);
+}
+.wheel-center-cap {
+  inset: 27%;
+  border: 2px solid #f3f5f3;
+  background: radial-gradient(circle at 31% 22%, #fff, #b7bdc0 32%, #636c70 58%, #d9ddda 70%, #555e61 100%);
+  box-shadow: inset 0 0 0 4px #81898c, inset 0 0 0 6px #edf0ec, 0 4px 10px rgba(0,0,0,.55);
+}
+.wheel-center-cap::before {
+  content: "";
+  position: absolute;
+  inset: 28%;
+  border: 2px solid #6a7172;
+  border-radius: 50%;
+  background: radial-gradient(circle at 30% 22%, #e9ece8, #9da4a5 55%, #4b5355);
+  box-shadow: inset 0 2px 4px rgba(255,255,255,.65), 0 2px 4px rgba(0,0,0,.45);
+}
+.wheel-center-cap i, .wheel-center-cap b { display: none; }
+.wheel-deflectors i {
+  width: 6px;
+  height: 24px;
+  border-color: #e6e4d8;
+  background: linear-gradient(90deg, #727677, #fff 48%, #858a89);
+  box-shadow: 0 1px 3px rgba(0,0,0,.8);
+  opacity: .9;
+}
+@media (min-width: 901px) {
+  .roulette-wheel-live { --pocket-radius: clamp(136px, 31vw, 174px); --ball-radius: clamp(136px, 31vw, 174px); }
+}
+@media (max-width: 600px) {
+  .roulette-wheel-live { --pocket-radius: clamp(124px, 33vw, 145px); --ball-radius: clamp(124px, 33vw, 145px); }
 }
