@@ -170,7 +170,7 @@ const rouletteMarkup = `
       <section class="roulette-wheel-card" aria-label="Global roulette result">
          <div class="roulette-card-kicker">LIVE EUROPEAN WHEEL</div>
         <div class="roulette-wheel-stage">
-          <div class="roulette-wheel-live" data-wheel>
+           <div class="roulette-wheel-live" data-wheel style="--wheel-band:${rouletteWheelBand}">
             <div class="wheel-rotor">
                <div class="wheel-wood-deck" aria-hidden="true"></div>
               <div class="wheel-number-band" aria-hidden="true" style="--wheel-band:${rouletteWheelBand}"></div>
