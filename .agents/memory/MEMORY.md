@@ -11,3 +11,4 @@
 - [Responsive media scoping](responsive-media-scoping.md) — compact landscape rules must be mobile-scoped or explicitly neutralized on desktop.
 - [Transient result slots](transient-result-slots.md) — optional result panels need reserved layout height so surrounding controls do not shift between states.
 - [Bonus flow state ownership](bonus-flow-state-ownership.md) — base Auto consumption owns the Auto counter; bonus retriggers never do, and manual stop clears pending resume.
+- [Roulette snapshot refresh](roulette-snapshot-refresh.md) — session-specific REST refreshes after websocket phases must be edge-triggered, not run on every snapshot.

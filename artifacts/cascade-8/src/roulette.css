@@ -199,3 +199,80 @@
 @media (prefers-reduced-motion: reduce) {
   .roulette-wheel-live.is-spinning, .multiplier-chip { animation: none; }
 }
+
+.roulette-mobile-results,
+.roulette-mobile-table,
+.mobile-utility-rail { display: none; }
+.multiplier-badge { position: absolute; top: -8px; left: 50%; z-index: 3; display: grid; place-items: center; min-width: 29px; height: 18px; padding: 0 4px; transform: translateX(-50%); border: 1px solid rgba(255, 226, 138, .9); border-radius: 999px; color: #fff5c6; background: linear-gradient(135deg, #a96f27, #5c3377); box-shadow: 0 0 14px rgba(255, 204, 92, .55); font: 800 8px "DM Mono", monospace; white-space: nowrap; }
+.multiplier-badge[hidden] { display: none; }
+.table-bet.is-high-multiplier .multiplier-badge { color: #fff; border-color: rgba(255, 241, 179, .98); background: linear-gradient(135deg, #e6a63d, #bd4d9c 52%, #6557d6); box-shadow: 0 0 9px rgba(255, 215, 102, .85), 0 0 24px rgba(186, 92, 224, .62); animation: roulette-high-multiplier .85s ease-in-out infinite alternate; }
+.wheel-result-overlay { position: absolute; inset: 28% 18%; z-index: 5; display: none; place-items: center; align-content: center; gap: 5px; padding: 12px; border: 1px solid rgba(255, 227, 142, .8); border-radius: 18px; background: radial-gradient(circle at 50% 10%, rgba(255, 222, 127, .26), transparent 58%), rgba(13, 18, 58, .91); box-shadow: 0 0 32px rgba(255, 200, 83, .25), inset 0 0 25px rgba(112, 111, 255, .24); text-align: center; }
+.wheel-result-overlay.is-visible { display: grid; animation: roulette-result-pop .45s cubic-bezier(.2,.9,.25,1.2) both; }
+.wheel-result-overlay small { color: #aab8df; font: 8px "DM Mono", monospace; letter-spacing: .16em; }
+.wheel-result-overlay strong { color: #fff2ad; font-size: 50px; line-height: .9; text-shadow: 0 0 22px rgba(255, 211, 101, .55); }
+.wheel-result-overlay span { color: #9ee9ff; font: 700 9px "DM Mono", monospace; letter-spacing: .08em; }
+@keyframes roulette-high-multiplier { to { transform: translateX(-50%) scale(1.1); } }
+@keyframes roulette-result-pop { from { opacity: 0; transform: scale(.84); } to { opacity: 1; transform: scale(1); } }
+
+@media (max-width: 600px) {
+  .roulette-mobile-results { display: flex; align-items: center; gap: 8px; min-height: 40px; margin-top: 10px; padding: 6px 8px; overflow: hidden; border: 1px solid rgba(131, 157, 232, .2); border-radius: 10px; background: rgba(8, 14, 38, .74); }
+  .mobile-results-label { flex: 0 0 auto; color: #7082ad; font: 8px "DM Mono", monospace; letter-spacing: .1em; }
+  .mobile-results-list { display: flex; min-width: 0; gap: 6px; overflow: hidden; }
+  .mobile-result-chip { display: grid; place-items: center; flex: 0 0 27px; width: 27px; height: 27px; border: 1px solid rgba(197, 219, 255, .24); border-radius: 50%; color: #fff; background: #1c2749; font: 800 9px "DM Mono", monospace; }
+  .mobile-result-chip small { margin-top: -2px; color: #ffe28a; font-size: 6px; }
+  .mobile-result-chip.is-red { background: #813649; }
+  .mobile-result-chip.is-black { background: #131d32; }
+  .mobile-result-chip.is-zero { color: #fff0b0; background: #12644f; }
+  .roulette-layout { display: flex; flex-direction: column; gap: 10px; margin-top: 10px; }
+  .roulette-wheel-card { order: -2; padding: 12px 9px 10px; border-radius: 17px; }
+  .roulette-wheel-card > .roulette-card-kicker { display: block; padding-left: 3px; }
+  .roulette-wheel-stage { min-height: 328px; }
+  .roulette-wheel-live { width: min(330px, 84vw); }
+  .roulette-wheel-live .wheel-number-ring span { transform: rotate(calc(var(--wheel-index) * 9.73deg)) translateY(-129px) rotate(calc(var(--wheel-index) * -9.73deg)); }
+  .roulette-wheel-live .wheel-ball { transform: rotate(var(--winning-angle)) translateY(-137px); }
+  .wheel-result-overlay { inset: 27% 17%; }
+  .roulette-result-line { margin-inline: 2px; padding: 9px 4px; }
+  .fairness-card { margin-top: 8px; }
+  .roulette-bet-card { order: 2; position: relative; padding: 11px 58px 12px 9px; border-radius: 17px; }
+  .roulette-bet-card .table-card-heading { min-height: 34px; margin-bottom: 7px; }
+  .table-card-heading > div > strong { font-size: 13px; }
+  .table-odds-note { max-width: 94px; font-size: 6px; }
+  .mobile-utility-rail { position: absolute; top: 57px; right: 7px; display: flex; width: 43px; flex-direction: column; align-items: stretch; gap: 5px; z-index: 6; }
+  .mobile-utility-rail > button, .mobile-utility-chips > button { display: grid; place-items: center; min-height: 35px; padding: 2px; border: 1px solid rgba(133, 164, 235, .35); border-radius: 8px; color: #bbcaef; background: rgba(22, 35, 75, .9); font: 15px "DM Mono", monospace; }
+  .mobile-utility-rail > button small { color: #7288b7; font-size: 5px; letter-spacing: .04em; }
+  .mobile-utility-rail button:disabled { opacity: .28; }
+  .mobile-utility-chips { display: grid; gap: 4px; padding: 4px 0; border-block: 1px solid rgba(126, 156, 226, .18); }
+  .mobile-utility-chips > button { min-height: 25px; border-radius: 50%; }
+  .mobile-utility-chips i { width: 13px; height: 13px; border: 1px solid #fff0b2; border-radius: 50%; background: #d49a36; box-shadow: 0 0 8px rgba(255, 210, 104, .35); }
+  .roulette-table-felt { padding: 8px 6px; }
+  .roulette-zero-lane { width: 100%; margin-bottom: 4px; }
+  .roulette-desktop-table { display: none; }
+  .roulette-mobile-table { display: block; }
+  .mobile-table-main { display: grid; grid-template-columns: 46px minmax(0, 1fr) 52px; gap: 3px; }
+  .mobile-outer-rail, .mobile-dozen-rail { display: grid; grid-template-rows: repeat(6, 1fr); gap: 2px; }
+  .mobile-dozen-rail { grid-template-rows: repeat(3, 1fr); }
+  .mobile-number-columns { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 2px; }
+  .mobile-number-column { display: grid; grid-template-rows: repeat(12, minmax(22px, 1fr)); gap: 2px; }
+  .mobile-number-column .table-bet { min-height: 22px; font-size: 8px; }
+  .mobile-outer-rail .table-bet, .mobile-dozen-rail .table-bet { min-height: 0; height: auto; font-size: 6px; }
+  .mobile-column-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 3px; margin-top: 4px; }
+  .mobile-column-row .table-bet { min-height: 28px; font-size: 8px; }
+  .table-bet.number-zero { min-height: 31px; font-size: 14px; }
+  .table-chip { top: -6px; right: -5px; min-width: 22px; height: 17px; font-size: 6px; }
+  .multiplier-badge { top: -6px; min-width: 25px; height: 15px; padding: 0 3px; font-size: 6px; }
+  .roulette-lucky-row, .roulette-multiplier-row { display: none; }
+  .combination-bets { margin-top: 7px; }
+  .combination-bets summary { padding: 8px 9px; font-size: 8px; }
+  .combination-zone-grid { grid-template-columns: 1fr 1fr; gap: 5px; padding: 0 6px 6px; }
+  .bet-zone-group > span { margin-bottom: 4px; font-size: 6px; }
+  .bet-zone-group > div { max-height: 72px; gap: 2px; }
+  .bet-zone-group .table-bet { min-height: 19px; font-size: 5px; }
+  .chip-picker { display: none; }
+  .bet-slip-summary { margin-top: 7px; padding-top: 8px; }
+  .bet-slip-summary strong { font-size: 18px; }
+  .bet-slip-actions { display: none; }
+  .selected-bets { max-height: 37px; overflow: hidden; margin: 6px 0; }
+  .selected-bet-pill { padding: 4px 5px; font-size: 7px; }
+  .roulette-bet-button { min-height: 42px; }
+  .roulette-bet-status { font-size: 8px; }
+}

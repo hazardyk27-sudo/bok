@@ -5,7 +5,7 @@ type RouletteSelection = { key: string; type: RouletteBetType; numbers: number[]
 type RouletteSnapshot = {
   serverTime: string;
   coordinator: "leader" | "standby";
-  wallet: { sessionId: string; balanceCents: number };
+  wallet: { sessionId: string; balanceCents: number; lastPayoutCents: number };
   round: {
     id: string;
     sequence: number;
@@ -64,6 +64,7 @@ export class RouletteClient {
   private socket?: WebSocket;
   private selectedChipCents = 100;
   private selections = new Map<string, RouletteSelection>();
+  private lastPlacedSelections: RouletteSelection[] = [];
   private undoStack: string[] = [];
   private betStatus = "";
   private roundId = "";
@@ -100,8 +101,10 @@ export class RouletteClient {
       });
     });
     this.root.querySelector<HTMLButtonElement>("[data-action='bet']")?.addEventListener("click", () => void this.placeBets());
-    this.root.querySelector<HTMLButtonElement>("[data-action='undo']")?.addEventListener("click", () => this.undo());
+    this.root.querySelectorAll<HTMLButtonElement>("[data-action='undo']").forEach((button) => button.addEventListener("click", () => this.undo()));
     this.root.querySelector<HTMLButtonElement>("[data-action='clear']")?.addEventListener("click", () => this.clearSelections());
+    this.root.querySelector<HTMLButtonElement>("[data-action='rebet']")?.addEventListener("click", () => this.rebet());
+    this.root.querySelector<HTMLButtonElement>("[data-action='menu']")?.addEventListener("click", () => { window.location.href = "/"; });
     this.root.querySelector<HTMLButtonElement>("[data-action='sound']")?.addEventListener("click", (event) => {
       const button = event.currentTarget as HTMLButtonElement;
       button.classList.toggle("is-active", this.voice.toggle());
@@ -156,6 +159,14 @@ export class RouletteClient {
     this.render();
   }
 
+  private rebet() {
+    if (!this.snapshot || !["OPEN", "LAST_CALL"].includes(this.snapshot.round.phase) || !this.lastPlacedSelections.length) return;
+    this.saveUndoPoint();
+    this.selections = new Map(this.lastPlacedSelections.map((selection) => [selection.key, { ...selection }] as [string, RouletteSelection]));
+    this.betStatus = "SON BAHİS MASAYA GERİ YERLEŞTİRİLDİ";
+    this.render();
+  }
+
   private async load() {
     try {
       const response = await fetch(`${API_BASE}/snapshot`, { credentials: "same-origin", signal: AbortSignal.timeout(7000) });
@@ -191,6 +202,9 @@ export class RouletteClient {
 
   private applySnapshot(next: RouletteSnapshot) {
     const previous = this.snapshot;
+    if (previous?.round.id === next.round.id && next.wallet.lastPayoutCents === 0) {
+      next.wallet.lastPayoutCents = previous.wallet.lastPayoutCents;
+    }
     this.snapshot = next;
     this.serverOffsetMs = Date.parse(next.serverTime) - Date.now();
     if (this.roundId !== next.round.id) {
@@ -199,7 +213,11 @@ export class RouletteClient {
       this.undoStack = [];
       this.betStatus = "";
     }
-    if (previous?.round.phase !== next.round.phase) this.announcePhase(next);
+    const phaseChanged = previous?.round.phase !== next.round.phase;
+    if (phaseChanged) {
+      this.announcePhase(next);
+      if (next.round.phase === "SETTLING" || next.round.phase === "INTERMISSION") void this.load();
+    }
     if (previous?.round.winningNumber === null && next.round.winningNumber !== null) this.voice.speak(`${next.round.winningNumber} numara kazandı`);
     if ((previous?.round.revealedMultipliers.length ?? 0) < next.round.revealedMultipliers.length) {
       const value = next.round.revealedMultipliers.at(-1);
@@ -228,8 +246,9 @@ export class RouletteClient {
     this.root.querySelector<HTMLElement>("[data-total-stake]")!.textContent = formatCredits(totalStakeCents);
     this.root.querySelector<HTMLElement>("[data-bet-count]")!.textContent = `${this.selections.size} ALAN`;
     this.root.querySelector<HTMLButtonElement>("[data-action='bet']")!.disabled = !bettingOpen || !this.selections.size || wallet.balanceCents < totalStakeCents;
-    this.root.querySelector<HTMLButtonElement>("[data-action='undo']")!.disabled = !this.undoStack.length;
+    this.root.querySelectorAll<HTMLButtonElement>("[data-action='undo']").forEach((button) => { button.disabled = !this.undoStack.length; });
     this.root.querySelector<HTMLButtonElement>("[data-action='clear']")!.disabled = !this.selections.size;
+    this.root.querySelector<HTMLButtonElement>("[data-action='rebet']")!.disabled = !this.lastPlacedSelections.length || !bettingOpen;
     this.root.querySelector<HTMLElement>("[data-bet-status]")!.textContent = this.betStatus || (bettingOpen ? (round.phase === "LAST_CALL" ? "SON ÇAĞRI // CHIPLERİ MASAYA KOY" : "CHIP SEÇ // BİR VEYA DAHA FAZLA ALAN SEÇ") : "BU ROUND İÇİN BAHİSLER KAPALI");
     this.root.querySelectorAll<HTMLButtonElement>(".table-bet").forEach((button) => {
       const selection = this.selections.get(button.dataset.betKey ?? "");
@@ -240,6 +259,17 @@ export class RouletteClient {
         chip.hidden = !selection;
         chip.textContent = selection ? formatCredits(selection.stakeCents) : "";
       }
+    });
+    this.root.querySelectorAll<HTMLButtonElement>(".table-bet[data-bet-type='STRAIGHT']").forEach((button) => {
+      const number = Number((button.dataset.betNumbers ?? "").split(",")[0]);
+      const revealIndex = round.luckyNumbers.indexOf(number);
+      const value = revealIndex >= 0 ? round.revealedMultipliers[revealIndex] : undefined;
+      const badge = button.querySelector<HTMLElement>(".multiplier-badge");
+      if (!badge) return;
+      badge.hidden = !value;
+      badge.textContent = value ? `${value}x` : "";
+      button.classList.toggle("has-multiplier", Boolean(value));
+      button.classList.toggle("is-high-multiplier", Boolean(value && value >= 300));
     });
     this.root.querySelectorAll<HTMLButtonElement>("[data-stake]").forEach((button) => button.classList.toggle("is-selected", Number(button.dataset.stake) === this.selectedChipCents));
     this.root.querySelector<HTMLElement>("[data-selected-bets]")!.innerHTML = this.selections.size
@@ -259,6 +289,15 @@ export class RouletteClient {
       ? round.revealedMultipliers.map((value, index) => `<span class="multiplier-chip ${lucky.has(round.luckyNumbers[index]) ? "is-lucky" : ""}" style="--reveal-index:${index}">${value}x</span>`).join("")
       : `<span class="muted-copy">Tek tek reveal bekleniyor</span>`;
     this.root.querySelector<HTMLElement>("[data-reveal-count]")!.textContent = `${round.revealedMultipliers.length}/${round.multipliersTotal}`;
+    const resultVisible = round.winningNumber !== null && ["RESULT", "MULTIPLIER_REVEAL", "SETTLING", "INTERMISSION"].includes(round.phase);
+    const overlay = this.root.querySelector<HTMLElement>("[data-result-overlay]");
+    if (overlay) {
+      overlay.classList.toggle("is-visible", resultVisible);
+      overlay.querySelector<HTMLElement>("[data-overlay-winning]")!.textContent = resultVisible ? String(round.winningNumber) : "?";
+      overlay.querySelector<HTMLElement>("[data-overlay-payout]")!.textContent = wallet.lastPayoutCents > 0
+        ? `KAZANÇ +${formatCredits(wallet.lastPayoutCents)}`
+        : "KAZANAN SAYI";
+    }
     this.renderCountdown();
   }
 
@@ -284,6 +323,7 @@ export class RouletteClient {
       });
       const data = await response.json() as { wallet?: { balanceCents: number }; error?: string; bets?: unknown[]; totalStakeCents?: number };
       if (!response.ok) throw new Error(data.error ?? "Bahisler kabul edilmedi");
+      this.lastPlacedSelections = bets.map((bet) => ({ ...bet, key: `${bet.type}:${bet.numbers.join("-")}` }));
       this.betStatus = `${data.bets?.length ?? bets.length} BAHİS KABUL // TOPLAM ${formatCredits(data.totalStakeCents ?? 0)}`;
       this.selections.clear();
       this.undoStack = [];
@@ -298,6 +338,13 @@ export class RouletteClient {
 
   private renderHistory(results: Array<{ sequence: number; winningNumber: number; luckyNumbers: number[]; multipliers: number[] }>) {
     const target = this.root.querySelector<HTMLElement>("[data-history]");
+    const historyMarkup = results.map((result) => `
+      <span class="mobile-result-chip ${result.winningNumber === 0 ? "is-zero" : RED_NUMBERS.has(result.winningNumber) ? "is-red" : "is-black"}">
+        <b>${result.winningNumber}</b><small>${result.multipliers[0] ? `${result.multipliers[0]}x` : ""}</small>
+      </span>
+    `).join("") || `<span class="muted-copy">İlk sonuç bekleniyor</span>`;
+    const mobileTarget = this.root.querySelector<HTMLElement>(".mobile-results-list");
+    if (mobileTarget) mobileTarget.innerHTML = historyMarkup;
     if (!target) return;
     target.innerHTML = results.map((result) => `
       <div class="history-row">

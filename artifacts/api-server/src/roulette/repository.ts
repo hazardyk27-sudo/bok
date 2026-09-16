@@ -143,7 +143,11 @@ export class RouletteRepository {
     await this.start();
     const round = this.currentRound ?? await this.loadOrCreateRound();
     const wallet = await this.getWallet(sessionId);
-    return this.toSnapshot(round, wallet.balanceCents, new Date(), sessionId);
+    const payout = await pool.query(
+      "SELECT COALESCE(SUM(payout_cents), 0)::int AS total FROM roulette_bets WHERE session_id = $1 AND round_id = $2 AND status = 'WON'",
+      [sessionId, round.id],
+    );
+    return this.toSnapshot(round, wallet.balanceCents, new Date(), sessionId, Number(payout.rows[0]?.total ?? 0));
   }
 
   async placeBets(sessionId: string, input: { bets: RouletteBetInput[]; idempotencyKey: string }) {
@@ -417,7 +421,7 @@ export class RouletteRepository {
     return this.toSnapshot(round, 0, new Date());
   }
 
-  private toSnapshot(round: RouletteRoundRecord, balanceCents: number, now: Date, sessionId = ""): RouletteSnapshot {
+  private toSnapshot(round: RouletteRoundRecord, balanceCents: number, now: Date, sessionId = "", lastPayoutCents = 0): RouletteSnapshot {
     const phaseStartedAt = this.phaseStart(round);
     const nextTransitionAt = this.phaseEnd(round);
     const revealedCount = this.revealedCount(round, now);
@@ -425,7 +429,7 @@ export class RouletteRepository {
     return {
       serverTime: iso(now),
       coordinator: this.leadership,
-      wallet: { sessionId, balanceCents },
+      wallet: { sessionId, balanceCents, lastPayoutCents },
       round: {
         id: round.id,
         sequence: round.sequence,

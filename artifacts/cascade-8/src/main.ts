@@ -81,7 +81,7 @@ const mainMenuMarkup = `
 `;
 
 const rouletteRedNumbers = new Set([1, 3, 5, 7, 9, 12, 14, 16, 18, 19, 21, 23, 25, 27, 30, 32, 34, 36]);
-const rouletteBetButton = (type: string, key: string, numbers: number[], label: string, className = "") => `<button type="button" class="table-bet ${className}" data-bet-type="${type}" data-bet-key="${key}" data-bet-numbers="${numbers.join(",")}" data-bet-label="${label}"><span class="bet-label">${label}</span><span class="table-chip" hidden></span></button>`;
+const rouletteBetButton = (type: string, key: string, numbers: number[], label: string, className = "") => `<button type="button" class="table-bet ${className}" data-bet-type="${type}" data-bet-key="${key}" data-bet-numbers="${numbers.join(",")}" data-bet-label="${label}"><span class="bet-label">${label}</span><span class="table-chip" hidden></span><span class="multiplier-badge" hidden></span></button>`;
 const rouletteNumberRows = [2, 1, 0].map((row) => Array.from({ length: 12 }, (_, column) => column * 3 + row + 1).map((number) => rouletteBetButton("STRAIGHT", `straight:${number}`, [number], String(number), rouletteRedNumbers.has(number) ? "number-red" : "number-black")).join("")).join("");
 const rouletteStreetBets = Array.from({ length: 12 }, (_, column) => {
   const numbers = [column * 3 + 1, column * 3 + 2, column * 3 + 3];
@@ -119,6 +119,19 @@ const rouletteOutsideBets = [
   rouletteOutside("ODD", "odd", "ODD", Array.from({ length: 18 }, (_, index) => index * 2 + 1)),
   rouletteOutside("HIGH", "high", "19–36", Array.from({ length: 18 }, (_, index) => index + 19)),
 ].join("");
+const rouletteMobileOutsideBets = [
+  rouletteOutside("LOW", "low", "1–18", Array.from({ length: 18 }, (_, index) => index + 1)),
+  rouletteOutside("EVEN", "even", "EVEN", Array.from({ length: 18 }, (_, index) => (index + 1) * 2)),
+  rouletteOutside("RED", "red", "RED", [...rouletteRedNumbers]),
+  rouletteOutside("BLACK", "black", "BLACK", Array.from({ length: 36 }, (_, index) => index + 1).filter((number) => !rouletteRedNumbers.has(number))),
+  rouletteOutside("ODD", "odd", "ODD", Array.from({ length: 18 }, (_, index) => index * 2 + 1)),
+  rouletteOutside("HIGH", "high", "19–36", Array.from({ length: 18 }, (_, index) => index + 19)),
+].join("");
+const rouletteMobileDozens = rouletteDozens;
+const rouletteMobileNumberColumns = Array.from({ length: 3 }, (_, column) => `<div class="mobile-number-column">${Array.from({ length: 12 }, (_, row) => {
+  const number = column * 12 + row + 1;
+  return rouletteBetButton("STRAIGHT", `straight:${number}`, [number], String(number), rouletteRedNumbers.has(number) ? "number-red" : "number-black");
+}).join("")}</div>`).join("");
 const rouletteMarkup = `
   <main class="roulette-page" aria-labelledby="roulette-title">
     <div class="roulette-heading">
@@ -137,6 +150,7 @@ const rouletteMarkup = `
       <div class="roulette-hud-card wallet-hud"><span>ROULETTE WALLET</span><strong data-balance>0.00</strong></div>
       <button class="roulette-sound-button" data-action="sound" type="button" aria-label="Türkçe sesi aç"><span>SESİ AÇ</span></button>
     </section>
+    <section class="roulette-mobile-results" data-mobile-results aria-label="Son sonuçlar"><span class="mobile-results-label">SON SONUÇLAR</span><div class="mobile-results-list"><span class="muted-copy">Sonuçlar yükleniyor</span></div></section>
     <section class="roulette-layout">
       <section class="roulette-wheel-card" aria-label="Global roulette result">
         <div class="roulette-card-kicker">SERVER RESULT // 0 — 36</div>
@@ -146,21 +160,42 @@ const rouletteMarkup = `
             <div class="wheel-number-ring">${Array.from({ length: 37 }, (_, index) => `<span style="--wheel-index:${index}">${index}</span>`).join("")}</div>
             <div class="wheel-core"><span data-winning-number>?</span><small>KAZANAN</small></div>
             <div class="wheel-ball"></div>
+            <div class="wheel-result-overlay" data-result-overlay>
+              <small>ROUND SONUCU</small>
+              <strong data-overlay-winning>?</strong>
+              <span data-overlay-payout>SONUÇ BEKLENİYOR</span>
+            </div>
           </div>
         </div>
         <div class="roulette-result-line"><span>SONUÇ</span><strong data-winning-number>?</strong><small>Herkes için aynı server sonucu</small></div>
         <div class="fairness-card"><span class="fairness-icon">✦</span><div><b>COMMITMENT HASH</b><small data-commitment>WAITING FOR ROUND</small></div><span class="fairness-copy">Sonuç önceden kilitlenir, açıklandıktan sonra doğrulanır.</span></div>
       </section>
       <section class="roulette-bet-card" aria-label="Klasik Avrupa ruleti bahis masası">
+        <div class="mobile-utility-rail" aria-label="Mobil masa kontrolleri">
+          <button type="button" data-action="undo" aria-label="Son bahsi geri al">↶<small>UNDO</small></button>
+          <button type="button" data-action="rebet" aria-label="Son bahsi tekrar et">↻<small>TEKRAR</small></button>
+          <div class="mobile-utility-chips">${[100, 500, 1000].map((stake) => `<button type="button" data-stake="${stake}" aria-label="${stake / 100} chip"><i></i></button>`).join("")}</div>
+          <button type="button" data-action="menu" aria-label="Ana menüye dön">☰<small>MENÜ</small></button>
+        </div>
         <div class="table-card-heading"><div><div class="roulette-card-kicker">EUROPEAN ROULETTE // 0 + 36 NUMARA</div><strong>BAHİS MASASI</strong></div><span class="table-odds-note">KAZANAN SAYIYA GÖRE ÖDEME<br><b>35:1 STRAIGHT UP</b></span></div>
         <div class="roulette-table-felt">
           <div class="roulette-zero-lane">${rouletteBetButton("STRAIGHT", "straight:0", [0], "0", "number-zero")}</div>
+          <div class="roulette-desktop-table">
           <div class="roulette-number-board" aria-label="Standart 3 sıra 12 kolon sayı düzeni">
             <div class="roulette-number-grid">${rouletteNumberRows}</div>
             <div class="roulette-column-row">${rouletteColumns}</div>
           </div>
           <div class="roulette-dozen-row">${rouletteDozens}</div>
           <div class="roulette-outside-row">${rouletteOutsideBets}</div>
+          </div>
+          <div class="roulette-mobile-table" aria-label="Mobil dikey Avrupa ruleti masası">
+            <div class="mobile-table-main">
+              <div class="mobile-outer-rail">${rouletteMobileOutsideBets}</div>
+              <div class="mobile-number-columns">${rouletteMobileNumberColumns}</div>
+              <div class="mobile-dozen-rail">${rouletteMobileDozens}</div>
+            </div>
+            <div class="mobile-column-row">${rouletteColumns}</div>
+          </div>
         </div>
         <details class="combination-bets" open>
           <summary><span>HİT-ZONE BAHİSLERİ</span><small>SPLIT · STREET · CORNER · SIX LINE</small></summary>
@@ -175,7 +210,7 @@ const rouletteMarkup = `
         <div class="roulette-multiplier-row"><span>MULTIPLIER REVEAL</span><div data-multiplier-list><span class="muted-copy">Tek tek reveal bekleniyor</span></div></div>
         <div class="roulette-bet-slip">
           <div class="chip-picker"><span>CHIP DEĞERİ</span><div>${[100, 500, 1000, 2500, 5000].map((stake) => `<button type="button" data-stake="${stake}" class="${stake === 100 ? "is-selected" : ""}"><i></i>${(stake / 100).toLocaleString("tr-TR", { minimumFractionDigits: 2 })}</button>`).join("")}</div></div>
-          <div class="bet-slip-summary"><div><span>MASADAKİ BAHİS</span><strong data-total-stake>0,00</strong><small data-bet-count>0 ALAN</small></div><div class="bet-slip-actions"><button type="button" data-action="undo">↶ UNDO</button><button type="button" data-action="clear">CLEAR</button></div></div>
+          <div class="bet-slip-summary"><div><span>MASADAKİ BAHİS</span><strong data-total-stake>0,00</strong><small data-bet-count>0 ALAN · <b data-table-info>EUROPEAN TABLE</b></small></div><div class="bet-slip-actions"><button type="button" data-action="undo">↶ UNDO</button><button type="button" data-action="clear">CLEAR</button></div></div>
           <div class="selected-bets" data-selected-bets><span class="muted-copy">Chip seç ve masada bir veya daha fazla alana dokun</span></div>
           <button type="button" class="roulette-bet-button" data-action="bet" disabled>BAHİSLERİ ONAYLA <small>SERVER’A GÖNDER</small></button>
         </div>
