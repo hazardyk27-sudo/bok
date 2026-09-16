@@ -7,4 +7,4 @@ The roulette wheel and ball should animate as separate layers, but their phase p
 
 **Why:** Clients can enter a round at different times, and starting a local animation at zero makes the same server round look inconsistent across browsers.
 
-**How to apply:** Offset repeating spin animations by elapsed phase time, then use the authoritative winning number to drive the final rotor alignment and ball drop.
+**How to apply:** Offset repeating spin animations by elapsed phase time, then use the authoritative winning number to drive the final rotor alignment and ball drop. Keep the ball’s pocket-drop radius aligned with the visual pocket-ring radius, and counter-rotate final labels when the rotor settles at a non-zero angle.

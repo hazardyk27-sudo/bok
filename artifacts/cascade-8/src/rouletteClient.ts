@@ -401,6 +401,7 @@ export class RouletteClient {
     this.ballDropTimer = undefined;
     this.wheelAnimation?.cancel();
     this.ballAnimation?.cancel();
+    wheel.style.setProperty("--label-counter-angle", "0deg");
     rotor.style.transform = "rotate(0deg)";
     wheel.classList.add("is-spinning");
     const radius = wheel.clientWidth * 0.45;
@@ -435,10 +436,14 @@ export class RouletteClient {
     const targetOrientation = (360 - targetAngle) % 360;
     const wheelDelta = ((targetOrientation - currentRotation) + 360) % 360 + 720;
     const finalRotation = currentRotation + wheelDelta;
+    const finalLabelAngle = `${((finalRotation % 360) + 360) % 360}deg`;
     this.wheelAnimation = rotor.animate(
       [{ transform: `rotate(${currentRotation}deg)` }, { transform: `rotate(${finalRotation - 90}deg)`, offset: .72 }, { transform: `rotate(${finalRotation}deg)` }],
       { duration: 3900, easing: "cubic-bezier(.12,.7,.18,1)", fill: "forwards" },
     );
+    this.wheelAnimation.finished.then(() => {
+      if (this.animatedResultKey === resultKey) wheel.style.setProperty("--label-counter-angle", finalLabelAngle);
+    }).catch(() => undefined);
     const outerRadius = wheel.clientWidth * 0.45;
     const outer = ball.animate(
       [{ transform: `rotate(0deg) translateY(-${outerRadius}px)` }, { transform: `rotate(-1220deg) translateY(-${outerRadius}px)`, offset: .65 }, { transform: `rotate(-1440deg) translateY(-${outerRadius}px)` }],
@@ -447,7 +452,7 @@ export class RouletteClient {
     this.ballAnimation = outer;
     outer.finished.then(() => {
       if (this.animatedResultKey !== resultKey) return;
-      const pocketRadius = wheel.clientWidth * 0.29;
+      const pocketRadius = wheel.clientWidth * 0.32;
       this.ballAnimation = ball.animate(
         [
           { transform: `rotate(-1440deg) translateY(-${outerRadius}px)` },
