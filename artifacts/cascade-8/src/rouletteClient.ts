@@ -85,6 +85,18 @@ export function getRouletteResultResumeAction(
     : "settle";
 }
 
+export type RouletteVisibilityResumeAction = "start-spin" | "resume-result" | "settle-result" | "noop";
+
+export function getRouletteVisibilityResumeAction(
+  snapshot: Pick<RouletteAnimationSnapshot, "phase" | "winningNumber">,
+  elapsedMs: number,
+): RouletteVisibilityResumeAction {
+  if (snapshot.winningNumber === null) return snapshot.phase === "SPINNING" ? "start-spin" : "noop";
+  return getRouletteResultResumeAction(snapshot.phase, elapsedMs) === "resume"
+    ? "resume-result"
+    : "settle-result";
+}
+
 export function getRouletteLiveSummary(snapshot: Pick<RouletteSnapshot, "round">) {
   const { round } = snapshot;
   const result = round.winningNumber === null
@@ -438,10 +450,17 @@ export class RouletteClient {
     }
     const animationTransition = getRouletteAnimationTransition(previous?.round ?? null, next.round);
     const resumingFromBackground = this.visibilityResumePending;
-    if (animationTransition.startsSpin || (resumingFromBackground && next.round.phase === "SPINNING")) this.startWheelSpin();
-    if (resumingFromBackground && next.round.winningNumber !== null) {
-      this.resumeResultPresentation(next.round.winningNumber, next.round.phase, next.round.phaseStartedAt);
-    } else if (animationTransition.winningNumber !== null) {
+    if (resumingFromBackground) {
+      const elapsed = Date.now() + this.serverOffsetMs - Date.parse(next.round.phaseStartedAt);
+      const resumeAction = getRouletteVisibilityResumeAction(next.round, elapsed);
+      if (resumeAction === "start-spin") this.startWheelSpin();
+      if (resumeAction === "resume-result" || resumeAction === "settle-result") {
+        this.resumeResultPresentation(next.round.winningNumber!, next.round.phase, next.round.phaseStartedAt);
+      }
+    } else if (animationTransition.startsSpin) {
+      this.startWheelSpin();
+    }
+    if (!resumingFromBackground && animationTransition.winningNumber !== null) {
       this.finishWheelSpin(animationTransition.winningNumber);
     }
     if (animationTransition.winningNumber !== null) this.voice.speak(`${animationTransition.winningNumber} numara kazandı`);

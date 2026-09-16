@@ -12,6 +12,7 @@ import {
 import {
   getRouletteAnimationTransition,
   getRouletteResultResumeAction,
+  getRouletteVisibilityResumeAction,
   isRouletteResultSettled,
 } from "./rouletteClient";
 
@@ -79,5 +80,33 @@ describe("server-driven roulette animation transitions", () => {
     expect(getRouletteResultResumeAction("RESULT", 3850)).toBe("settle");
     expect(getRouletteResultResumeAction("MULTIPLIER_REVEAL", 1200)).toBe("settle");
     expect(getRouletteResultResumeAction("RESULT", Number.NaN)).toBe("settle");
+  });
+
+  it("recovers a mobile tab returning during SPINNING without inventing a result", () => {
+    const mobileViewport = { width: 390, height: 844 };
+    const spinning = { id: "mobile-spin", phase: "SPINNING" as const, winningNumber: null };
+
+    expect(mobileViewport.width).toBeLessThan(600);
+    expect(getRouletteVisibilityResumeAction(spinning, 4_000)).toBe("start-spin");
+    expect(getRouletteAnimationTransition(spinning, spinning)).toEqual({ startsSpin: false, winningNumber: null });
+  });
+
+  it("resumes a mobile RESULT landing from its server phase clock", () => {
+    const result = { id: "mobile-result", phase: "RESULT" as const, winningNumber: 26 };
+
+    expect(getRouletteVisibilityResumeAction(result, 1_200)).toBe("resume-result");
+    expect(getRouletteVisibilityResumeAction(result, 3_850)).toBe("settle-result");
+    expect(getRouletteAnimationTransition(result, result)).toEqual({ startsSpin: false, winningNumber: null });
+    expect(isRouletteResultSettled(result, "mobile-result:26")).toBe(true);
+  });
+
+  it("settles once after a mobile return beyond RESULT and keeps later snapshots from replaying", () => {
+    const settled = { id: "mobile-settled", phase: "SETTLING" as const, winningNumber: 8 };
+    const settledKey = "mobile-settled:8";
+
+    expect(getRouletteVisibilityResumeAction(settled, 0)).toBe("settle-result");
+    expect(getRouletteVisibilityResumeAction(settled, Number.NaN)).toBe("settle-result");
+    expect(isRouletteResultSettled(settled, settledKey)).toBe(true);
+    expect(getRouletteAnimationTransition(settled, settled)).toEqual({ startsSpin: false, winningNumber: null });
   });
 });
