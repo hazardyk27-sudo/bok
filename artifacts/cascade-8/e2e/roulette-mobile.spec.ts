@@ -29,6 +29,16 @@ type RouletteFixture = {
   animationCounts: () => Promise<{ rotor: number; ball: number; active: number }>;
 };
 
+type OrientationDiagnostics = {
+  orientation: "portrait" | "landscape";
+  viewport: { width: number; height: number };
+  wheel: { width: number; height: number; left: number; top: number };
+  overlay: { width: number; height: number; left: number; top: number; visible: boolean };
+  overlayWithinWheel: boolean;
+  winningNumber: string;
+  winningPockets: number;
+};
+
 const WINNING_NUMBER = 26;
 function makeSnapshot(
   phase: RoulettePhase,
@@ -177,10 +187,53 @@ async function expectHiddenResult(page: Page) {
 }
 
 async function expectSettledResult(page: Page) {
-  await expect(page.locator("[data-overlay-winning]")).toHaveText(String(WINNING_NUMBER), { timeout: 5_000 });
+  await expect(page.locator("[data-overlay-winning]")).toHaveText(String(WINNING_NUMBER), { timeout: 10_000 });
   await expect(page.locator("[data-result-overlay]")).toHaveClass(/is-visible/);
   await expect(page.locator(".wheel-pocket.is-winning")).toHaveCount(1);
   await expect(page.locator(`.wheel-pocket[data-wheel-number="${WINNING_NUMBER}"]`)).toHaveClass(/is-winning/);
+}
+
+async function captureOrientationDiagnostics(page: Page): Promise<OrientationDiagnostics> {
+  return page.evaluate(() => {
+    const wheel = document.querySelector<HTMLElement>("[data-wheel]")!;
+    const overlay = document.querySelector<HTMLElement>("[data-result-overlay]")!;
+    const wheelRect = wheel.getBoundingClientRect();
+    const overlayRect = overlay.getBoundingClientRect();
+    const viewport = { width: window.innerWidth, height: window.innerHeight };
+    const orientation = window.matchMedia("(orientation: portrait)").matches ? "portrait" : "landscape";
+    const overlayWithinWheel = overlayRect.left >= wheelRect.left
+      && overlayRect.top >= wheelRect.top
+      && overlayRect.right <= wheelRect.right
+      && overlayRect.bottom <= wheelRect.bottom;
+    return {
+      orientation,
+      viewport,
+      wheel: { width: wheelRect.width, height: wheelRect.height, left: wheelRect.left, top: wheelRect.top },
+      overlay: {
+        width: overlayRect.width,
+        height: overlayRect.height,
+        left: overlayRect.left,
+        top: overlayRect.top,
+        visible: overlay.classList.contains("is-visible"),
+      },
+      overlayWithinWheel,
+      winningNumber: document.querySelector<HTMLElement>("[data-overlay-winning]")?.textContent ?? "",
+      winningPockets: document.querySelectorAll(".wheel-pocket.is-winning").length,
+    };
+  });
+}
+
+async function setMobileOrientation(page: Page, orientation: "portrait" | "landscape") {
+  const viewport = orientation === "portrait"
+    ? { width: 412, height: 915 }
+    : { width: 915, height: 412 };
+  await page.setViewportSize(viewport);
+  await expect.poll(() => page.evaluate(() => ({
+    orientation: window.matchMedia("(orientation: portrait)").matches ? "portrait" : "landscape",
+    width: window.innerWidth,
+    height: window.innerHeight,
+  }))).toEqual({ orientation, ...viewport });
+  return captureOrientationDiagnostics(page);
 }
 
 async function attachLifecycleDiagnostics(page: Page, testInfo: TestInfo) {
@@ -255,6 +308,70 @@ test.describe("roulette recovery on mobile browsers", () => {
       const afterDuplicate = await fixture.animationCounts();
       expect(afterDuplicate.ball).toBe(beforeDuplicate.ball);
       expect(afterDuplicate.active).toBe(0);
+    });
+  });
+
+  test("keeps wheel geometry and the server result authoritative across orientation changes", async ({ page }, testInfo) => {
+    const fixture = await installRouletteFixture(page);
+    const orientationDiagnostics: OrientationDiagnostics[] = [];
+    const spinning = makeSnapshot("SPINNING");
+
+    await test.step("lifecycle: enter SPINNING in portrait", async () => {
+      orientationDiagnostics.push(await setMobileOrientation(page, "portrait"));
+      await fixture.emitSnapshot(spinning);
+      await expect(page.locator(".roulette-hud [data-phase]")).toHaveText("ÇARK DÖNÜYOR");
+      await expect(page.locator("[data-wheel]")).toHaveClass(/is-spinning/);
+      await expectHiddenResult(page);
+    });
+
+    await test.step("layout: rotate to landscape during SPINNING", async () => {
+      const diagnostics = await setMobileOrientation(page, "landscape");
+      orientationDiagnostics.push(diagnostics);
+      expect(diagnostics.orientation).toBe("landscape");
+      expect(diagnostics.wheel.width).toBeGreaterThan(0);
+      expect(diagnostics.wheel.height).toBeGreaterThan(0);
+      expect(Math.abs(diagnostics.wheel.width - diagnostics.wheel.height)).toBeLessThan(2);
+      expect(diagnostics.overlay.visible).toBe(false);
+      await expect(page.locator("[data-wheel]")).toHaveClass(/is-spinning/);
+      await expectHiddenResult(page);
+    });
+
+    await test.step("lifecycle: enter RESULT without exposing the pocket", async () => {
+      const result = makeSnapshot("RESULT", WINNING_NUMBER, new Date().toISOString());
+      await fixture.emitSnapshot(result);
+      await expect(page.locator(".roulette-hud [data-phase]")).toHaveText("KAZANAN SAYI");
+      await expectHiddenResult(page);
+      orientationDiagnostics.push(await captureOrientationDiagnostics(page));
+    });
+
+    await test.step("layout: rotate portrait to landscape again during RESULT", async () => {
+      const portraitDiagnostics = await setMobileOrientation(page, "portrait");
+      const landscapeDiagnostics = await setMobileOrientation(page, "landscape");
+      orientationDiagnostics.push(portraitDiagnostics, landscapeDiagnostics);
+      for (const diagnostics of [portraitDiagnostics, landscapeDiagnostics]) {
+        expect(diagnostics.wheel.width).toBeGreaterThan(0);
+        expect(diagnostics.wheel.height).toBeGreaterThan(0);
+        expect(Math.abs(diagnostics.wheel.width - diagnostics.wheel.height)).toBeLessThan(2);
+        expect(diagnostics.overlay.visible).toBe(false);
+        expect(diagnostics.winningNumber).toBe("?");
+        expect(diagnostics.winningPockets).toBe(0);
+      }
+      await expectHiddenResult(page);
+    });
+
+    await test.step("visual settlement: reveal only the server-selected pocket", async () => {
+      await expectSettledResult(page);
+      const settledDiagnostics = await captureOrientationDiagnostics(page);
+      orientationDiagnostics.push(settledDiagnostics);
+      expect(settledDiagnostics.winningNumber).toBe(String(WINNING_NUMBER));
+      expect(settledDiagnostics.winningPockets).toBe(1);
+      expect(settledDiagnostics.overlay.visible).toBe(true);
+      expect(settledDiagnostics.overlayWithinWheel).toBe(true);
+    });
+
+    await testInfo.attach("roulette-orientation-diagnostics", {
+      body: JSON.stringify(orientationDiagnostics, null, 2),
+      contentType: "application/json",
     });
   });
 

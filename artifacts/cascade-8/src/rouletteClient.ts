@@ -561,7 +561,8 @@ export class RouletteClient {
     if (lifecycleAction.action === "start-spin" || lifecycleAction.action === "resume-spin") {
       this.startWheelSpin();
     } else if (lifecycleAction.action === "start-landing" && next.round.winningNumber !== null) {
-      this.finishWheelSpin(next.round.winningNumber);
+      if (next.round.phase === "RESULT") this.finishWheelSpinAt(next.round.winningNumber, Math.max(0, elapsed));
+      else this.settleWheelSpinImmediately(next.round.winningNumber);
     } else if (lifecycleAction.action === "resume-landing" && next.round.winningNumber !== null) {
       this.resumeResultPresentation(next.round.winningNumber, next.round.phase, next.round.phaseStartedAt);
     } else if (lifecycleAction.action === "settle" && next.round.winningNumber !== null) {
@@ -960,6 +961,7 @@ export class RouletteClient {
     wheel.style.setProperty("--label-counter-angle", finalLabelAngle);
     ball.style.transform = `rotate(-1440deg) translateY(-${finalPocketRadius}px)`;
     this.settledResultKey = resultKey;
+    this.render();
   }
 
   private scheduleBallSounds(resultKey: string) {
