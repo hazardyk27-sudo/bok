@@ -54,6 +54,15 @@ export function getRouletteAnimationTransition(
   };
 }
 
+export function isRouletteBetLockTransition(
+  previous: Pick<RouletteAnimationSnapshot, "id" | "phase"> | null,
+  next: Pick<RouletteAnimationSnapshot, "id" | "phase">,
+) {
+  return previous?.id === next.id
+    && (previous.phase === "OPEN" || previous.phase === "LAST_CALL")
+    && next.phase === "LOCKED";
+}
+
 const API_BASE = "/api/roulette";
 
 export const ROULETTE_MOTION_TIMINGS = {
@@ -291,6 +300,10 @@ export class RouletteClient {
 
   private visibilityResumePending = false;
 
+  private betSubmissionRoundId = "";
+
+  private betSubmissionInFlightRoundId = "";
+
   private readonly root: HTMLElement;
 
   private readonly visibilityChangeHandler = () => {
@@ -341,7 +354,6 @@ export class RouletteClient {
         this.render();
       });
     });
-    this.root.querySelector<HTMLButtonElement>("[data-action='bet']")?.addEventListener("click", () => void this.placeBets());
     this.root.querySelectorAll<HTMLButtonElement>("[data-action='undo']").forEach((button) => button.addEventListener("click", () => this.undo()));
     this.root.querySelectorAll<HTMLButtonElement>("[data-action='clear']").forEach((button) => button.addEventListener("click", () => this.clearSelections()));
     this.root.querySelector<HTMLButtonElement>("[data-action='rebet']")?.addEventListener("click", () => this.rebet());
@@ -528,6 +540,9 @@ export class RouletteClient {
     const phaseChanged = previous?.round.phase !== next.round.phase;
     if (phaseChanged) {
       this.announcePhase(next);
+      if (isRouletteBetLockTransition(previous?.round ?? null, next.round)) {
+        void this.placeBets(next.round.id);
+      }
       if (next.round.phase === "SETTLING" || next.round.phase === "INTERMISSION") void this.load();
     }
     const resumingFromBackground = this.visibilityResumePending;
@@ -596,12 +611,11 @@ export class RouletteClient {
     this.root.querySelector<HTMLElement>("[data-commitment]")!.textContent = round.commitmentHash.slice(0, 18).toUpperCase();
     this.root.querySelector<HTMLElement>("[data-total-stake]")!.textContent = formatCredits(totalStakeCents);
     this.root.querySelector<HTMLElement>("[data-bet-count]")!.textContent = `${this.selections.size} ALAN`;
-    this.root.querySelector<HTMLButtonElement>("[data-action='bet']")!.disabled = !bettingOpen || !this.selections.size || wallet.balanceCents < totalStakeCents;
-    this.root.querySelectorAll<HTMLButtonElement>("[data-action='undo']").forEach((button) => { button.disabled = !this.undoStack.length; });
-    this.root.querySelectorAll<HTMLButtonElement>("[data-action='clear']").forEach((button) => { button.disabled = !this.selections.size; });
+    this.root.querySelectorAll<HTMLButtonElement>("[data-action='undo']").forEach((button) => { button.disabled = !this.undoStack.length || !bettingOpen; });
+    this.root.querySelectorAll<HTMLButtonElement>("[data-action='clear']").forEach((button) => { button.disabled = !this.selections.size || !bettingOpen; });
     this.root.querySelectorAll<HTMLButtonElement>("[data-action='double']").forEach((button) => { button.disabled = !this.selections.size || !bettingOpen; });
     this.root.querySelector<HTMLButtonElement>("[data-action='rebet']")!.disabled = !this.lastPlacedSelections.length || !bettingOpen;
-    this.root.querySelector<HTMLElement>("[data-bet-status]")!.textContent = this.betStatus || (bettingOpen ? (round.phase === "LAST_CALL" ? "SON ÇAĞRI // CHIPLERİ MASAYA KOY" : "CHIP SEÇ // BİR VEYA DAHA FAZLA ALAN SEÇ") : "BU ROUND İÇİN BAHİSLER KAPALI");
+    this.root.querySelector<HTMLElement>("[data-bet-status]")!.textContent = this.betStatus || (bettingOpen ? (round.phase === "LAST_CALL" ? "SON ÇAĞRI // CHIPLERİ MASAYA KOY" : "CHIP SEÇ // BİR VEYA DAHA FAZLA ALAN SEÇ") : "BAHİSLER KİLİTLENİNCE MASADAKİ CHIPLER OTOMATİK GÖNDERİLİR");
     this.root.querySelectorAll<HTMLButtonElement>(".table-bet").forEach((button) => {
       const selection = this.selections.get(button.dataset.betKey ?? "");
       button.disabled = !bettingOpen;
@@ -698,13 +712,15 @@ export class RouletteClient {
     this.root.querySelector<HTMLElement>("[data-progress]")!.style.setProperty("--countdown-progress", `${Math.max(0, Math.min(100, 100 - (remaining / Math.max(1, this.snapshot.round.countdownMs)) * 100))}%`);
   }
 
-  private async placeBets() {
-    if (!this.selections.size) return;
-    this.voice.unlock();
-    const button = this.root.querySelector<HTMLButtonElement>("[data-action='bet']")!;
-    button.disabled = true;
+  private async placeBets(roundId: string) {
+    if (!this.snapshot || this.snapshot.round.id !== roundId || !this.selections.size) return;
+    if (this.betSubmissionRoundId === roundId || this.betSubmissionInFlightRoundId === roundId) return;
+    this.betSubmissionRoundId = roundId;
+    this.betSubmissionInFlightRoundId = roundId;
+    const bets = [...this.selections.values()].map(({ type, numbers, stakeCents, label }) => ({ type, numbers, stakeCents, label }));
+    this.betStatus = "BAHİSLER KİLİTLENİYOR // SERVER’A GÖNDERİLİYOR";
+    this.render();
     try {
-      const bets = [...this.selections.values()].map(({ type, numbers, stakeCents, label }) => ({ type, numbers, stakeCents, label }));
       const response = await fetch(`${API_BASE}/bets`, {
         method: "POST",
         credentials: "same-origin",
@@ -715,14 +731,16 @@ export class RouletteClient {
       if (!response.ok) throw new Error(data.error ?? "Bahisler kabul edilmedi");
       this.lastPlacedSelections = bets.map((bet) => ({ ...bet, key: `${bet.type}:${bet.numbers.join("-")}` }));
       this.betStatus = `${data.bets?.length ?? bets.length} BAHİS KABUL // TOPLAM ${formatCredits(data.totalStakeCents ?? 0)}`;
-      this.selections.clear();
       this.undoStack = [];
       if (this.snapshot && data.wallet) this.snapshot.wallet.balanceCents = data.wallet.balanceCents;
-      this.render();
+      if (this.snapshot?.round.id === roundId) this.render();
     } catch (error) {
-      this.betStatus = error instanceof Error ? error.message : "BAHİSLER KABUL EDİLMEDİ";
-      this.root.querySelector<HTMLElement>("[data-bet-status]")!.textContent = this.betStatus;
-      button.disabled = false;
+      if (this.snapshot?.round.id === roundId) {
+        this.betStatus = error instanceof Error ? error.message : "BAHİSLER KABUL EDİLMEDİ";
+        this.render();
+      }
+    } finally {
+      if (this.betSubmissionInFlightRoundId === roundId) this.betSubmissionInFlightRoundId = "";
     }
   }
 
@@ -847,13 +865,14 @@ export class RouletteClient {
     wheel.classList.remove("is-spinning");
     const plan = getWheelLandingPlan(winningNumber, currentRotation, this.readWheelRadii(wheel));
     const { finalRotation, finalLabelAngle, outerRadius, pocketRadius } = plan;
+    const finalPocketRadius = Math.max(0, pocketRadius - Math.max(9, outerRadius * .025));
     if (this.prefersReducedMotion()) {
       this.stopLabelOrientationSync();
       this.wheelAnimation = undefined;
       this.ballAnimation = undefined;
       rotor.style.transform = `rotate(${finalRotation}deg)`;
       wheel.style.setProperty("--label-counter-angle", finalLabelAngle);
-      ball.style.transform = `rotate(-1440deg) translateY(-${pocketRadius}px)`;
+      ball.style.transform = `rotate(-1440deg) translateY(-${finalPocketRadius}px)`;
       this.settledResultKey = resultKey;
       this.voice.cue("land");
       return;
@@ -895,12 +914,12 @@ export class RouletteClient {
         { transform: `rotate(${secondDeflectorAngle}deg) translateY(-${outerRadius - 8}px)`, offset: .63 },
         { transform: `rotate(${secondDeflectorAngle + ballDelta * .035}deg) translateY(-${outerRadius + 1}px)`, offset: .67 },
         { transform: `rotate(${currentBallAngle + ballDelta * .72}deg) translateY(-${innerTrackRadius}px)`, offset: .72 },
-        { transform: `rotate(${finalBallAngle - pocketSkip * 9.7297}deg) translateY(-${pocketRadius + 22}px)`, offset: .79 },
-        { transform: `rotate(${finalBallAngle - pocketSkip * 4.1}deg) translateY(-${pocketRadius - 3}px)`, offset: .84 },
-        { transform: `rotate(${finalBallAngle + 2.8}deg) translateY(-${pocketRadius + 14}px)`, offset: .89 },
-        { transform: `rotate(${finalBallAngle - 1.8}deg) translateY(-${pocketRadius - 2}px)`, offset: .94 },
-        { transform: `rotate(${finalBallAngle + 1.1}deg) translateY(-${pocketRadius + 6}px)`, offset: .97 },
-        { transform: `rotate(${finalBallAngle}deg) translateY(-${pocketRadius}px)`, offset: 1 },
+         { transform: `rotate(${finalBallAngle - pocketSkip * 9.7297}deg) translateY(-${finalPocketRadius + 22}px)`, offset: .79 },
+         { transform: `rotate(${finalBallAngle - pocketSkip * 4.1}deg) translateY(-${finalPocketRadius - 3}px)`, offset: .84 },
+         { transform: `rotate(${finalBallAngle + 2.8}deg) translateY(-${finalPocketRadius + 14}px)`, offset: .89 },
+         { transform: `rotate(${finalBallAngle - 1.8}deg) translateY(-${finalPocketRadius - 2}px)`, offset: .94 },
+         { transform: `rotate(${finalBallAngle + 1.1}deg) translateY(-${finalPocketRadius + 6}px)`, offset: .97 },
+         { transform: `rotate(${finalBallAngle}deg) translateY(-${finalPocketRadius}px)`, offset: 1 },
       ],
       { duration: resultRevealDelayMs, easing: "cubic-bezier(.16,.72,.2,1)", fill: "forwards" },
     );
@@ -932,13 +951,14 @@ export class RouletteClient {
     this.ballAnimation?.cancel();
     this.wheelAnimation?.cancel();
     wheel.classList.remove("is-spinning");
-    const { finalRotation, finalLabelAngle, pocketRadius } = getWheelLandingPlan(winningNumber, currentRotation, this.readWheelRadii(wheel));
+    const { finalRotation, finalLabelAngle, outerRadius, pocketRadius } = getWheelLandingPlan(winningNumber, currentRotation, this.readWheelRadii(wheel));
+    const finalPocketRadius = Math.max(0, pocketRadius - Math.max(9, outerRadius * .025));
     this.stopLabelOrientationSync();
     this.wheelAnimation = undefined;
     this.ballAnimation = undefined;
     rotor.style.transform = `rotate(${finalRotation}deg)`;
     wheel.style.setProperty("--label-counter-angle", finalLabelAngle);
-    ball.style.transform = `rotate(-1440deg) translateY(-${pocketRadius}px)`;
+    ball.style.transform = `rotate(-1440deg) translateY(-${finalPocketRadius}px)`;
     this.settledResultKey = resultKey;
   }
 

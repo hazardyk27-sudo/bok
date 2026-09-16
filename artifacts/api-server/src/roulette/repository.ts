@@ -174,7 +174,7 @@ export class RouletteRepository {
     });
     const totalStakeCents = bets.reduce((sum, bet) => sum + bet.stakeCents, 0);
     const round = this.currentRound ?? await this.loadOrCreateRound();
-    if (round.phase !== "OPEN" && round.phase !== "LAST_CALL") throw new Error("BETTING_CLOSED");
+    if (!["OPEN", "LAST_CALL", "LOCKED"].includes(round.phase)) throw new Error("BETTING_CLOSED");
 
     const client = await pool.connect();
     try {
@@ -188,7 +188,7 @@ export class RouletteRepository {
       }
 
       const roundLock = await client.query("SELECT phase FROM roulette_rounds WHERE id = $1 FOR UPDATE", [round.id]);
-      if (!["OPEN", "LAST_CALL"].includes(roundLock.rows[0]?.phase)) throw new Error("BETTING_CLOSED");
+      if (!["OPEN", "LAST_CALL", "LOCKED"].includes(roundLock.rows[0]?.phase)) throw new Error("BETTING_CLOSED");
       const wallet = await client.query("SELECT balance_cents FROM roulette_wallets WHERE session_id = $1 FOR UPDATE", [sessionId]);
       const balanceCents = wallet.rows[0]?.balance_cents ?? INITIAL_ROULETTE_BALANCE_CENTS;
       if (!wallet.rows[0]) {

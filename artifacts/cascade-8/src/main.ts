@@ -239,7 +239,6 @@ const rouletteMarkup = `
            <div class="chip-picker"><span>CHIP DEĞERİ</span><div>${rouletteChipValues.map((stake) => `<button type="button" data-stake="${stake}" class="${stake === 100 ? "is-selected" : ""}"><i></i>${(stake / 100).toLocaleString("tr-TR", { minimumFractionDigits: 2 })}</button>`).join("")}</div></div>
            <div class="bet-slip-summary"><div><span>MASADAKİ BAHİS</span><strong data-total-stake>0,00</strong><small data-bet-count>0 ALAN · <b data-table-info>EUROPEAN TABLE</b></small></div><div class="bet-slip-actions"><button type="button" data-action="undo">↶ UNDO</button><button type="button" data-action="clear">CLEAR</button><button type="button" data-action="double">×2</button></div></div>
           <div class="selected-bets" data-selected-bets><span class="muted-copy">Chip seç ve masada bir veya daha fazla alana dokun</span></div>
-          <button type="button" class="roulette-bet-button" data-action="bet" disabled>BAHİSLERİ ONAYLA <small>SERVER’A GÖNDER</small></button>
         </div>
         <p class="roulette-bet-status" data-bet-status>CANLI MASA YÜKLENİYOR</p>
       </section>

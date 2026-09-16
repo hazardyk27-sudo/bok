@@ -16,6 +16,7 @@ import {
   getRouletteAnimationTransition,
   getRouletteResultResumeAction,
   getRouletteVisibilityResumeAction,
+  isRouletteBetLockTransition,
   isRouletteResultSettled,
   ROULETTE_MOTION_CSS_VARIABLES,
   ROULETTE_MOTION_TIMINGS,
@@ -52,6 +53,25 @@ describe("roulette wheel geometry", () => {
 });
 
 describe("server-driven roulette animation transitions", () => {
+  it("submits the table once when the server closes the current round", () => {
+    expect(isRouletteBetLockTransition(
+      { id: "round-1", phase: "LAST_CALL" },
+      { id: "round-1", phase: "LOCKED" },
+    )).toBe(true);
+    expect(isRouletteBetLockTransition(
+      { id: "round-1", phase: "OPEN" },
+      { id: "round-1", phase: "LOCKED" },
+    )).toBe(true);
+    expect(isRouletteBetLockTransition(
+      { id: "round-1", phase: "LOCKED" },
+      { id: "round-1", phase: "LOCKED" },
+    )).toBe(false);
+    expect(isRouletteBetLockTransition(
+      { id: "round-1", phase: "LAST_CALL" },
+      { id: "round-2", phase: "LOCKED" },
+    )).toBe(false);
+  });
+
   it("starts only when the server enters SPINNING and finishes on the revealed result", () => {
     const locked = { id: "round-1", phase: "LOCKED" as const, winningNumber: null };
     const spinning = { id: "round-1", phase: "SPINNING" as const, winningNumber: null };

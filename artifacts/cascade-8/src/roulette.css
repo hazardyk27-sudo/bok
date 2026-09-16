@@ -117,10 +117,6 @@
 .selected-bets { display: flex; flex-wrap: wrap; gap: 5px; min-height: 27px; margin: 10px 0; }
 .selected-bet-pill { display: inline-flex; align-items: center; gap: 7px; padding: 5px 7px; border: 1px solid rgba(255, 216, 121, .3); border-radius: 6px; color: #f1d990; background: rgba(158, 100, 31, .14); font: 8px "DM Mono", monospace; }
 .selected-bet-pill strong { color: #fff; }
-.roulette-bet-button { width: 100%; min-height: 47px; border: 1px solid rgba(255, 228, 145, .78); border-radius: 11px; color: #fff8e3; background: linear-gradient(145deg, #c98e37, #775025); box-shadow: 0 8px 26px rgba(217, 154, 52, .2); font: 800 10px "DM Mono", monospace; letter-spacing: .1em; }
-.roulette-bet-button small { display: block; margin-top: 4px; color: #efd394; font: 8px "DM Mono", monospace; letter-spacing: .12em; }
-.roulette-bet-button:hover:not(:disabled) { filter: brightness(1.13); transform: translateY(-1px); }
-.roulette-bet-button:disabled { cursor: not-allowed; filter: grayscale(.6); opacity: .42; }
 .roulette-bet-status { min-height: 13px; margin: 10px 0 0; color: #8c9bc2; font: 9px "DM Mono", monospace; letter-spacing: .05em; }
 .table-heading-tools { display: flex; align-items: end; gap: 6px; }
 .table-heading-tools > button { padding: 7px 8px; border: 1px solid rgba(213, 180, 112, .35); border-radius: 6px; color: #d9bd7c; background: rgba(50, 42, 27, .5); font: 7px "DM Mono", monospace; letter-spacing: .08em; }
@@ -304,7 +300,6 @@
   .bet-slip-actions { display: none; }
   .selected-bets { max-height: 37px; overflow: hidden; margin: 6px 0; }
   .selected-bet-pill { padding: 4px 5px; font-size: 7px; }
-  .roulette-bet-button { min-height: 42px; }
   .roulette-bet-status { font-size: 8px; }
 }
 
@@ -536,9 +531,9 @@
   position: absolute;
   left: 50%;
   top: 50%;
-  width: 11px;
-  height: 11px;
-  margin: -5.5px;
+  width: 13px;
+  height: 13px;
+  margin: -6.5px;
   border: 1px solid #fffdf0;
   border-radius: 50%;
   background: radial-gradient(circle at 28% 23%, #fff, #fff8dc 47%, #b9b8ab 100%);
