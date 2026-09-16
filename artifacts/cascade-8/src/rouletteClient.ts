@@ -31,6 +31,13 @@ type RouletteSnapshot = {
 
 export type RouletteAnimationSnapshot = Pick<RouletteSnapshot["round"], "id" | "phase" | "winningNumber">;
 
+export function isRouletteResultSettled(
+  snapshot: Pick<RouletteAnimationSnapshot, "id" | "winningNumber">,
+  settledResultKey: string,
+) {
+  return snapshot.winningNumber !== null && settledResultKey === `${snapshot.id}:${snapshot.winningNumber}`;
+}
+
 export function getRouletteAnimationTransition(
   previous: RouletteAnimationSnapshot | null,
   next: RouletteAnimationSnapshot,
@@ -113,6 +120,7 @@ export class RouletteClient {
   private labelSyncFrame?: number;
   private ballDropTimer?: number;
   private animatedResultKey = "";
+  private settledResultKey = "";
   private liveSummaryKey = "";
   private readonly root: HTMLElement;
 
@@ -297,6 +305,7 @@ export class RouletteClient {
   private render() {
     if (!this.snapshot) return;
     const { round, wallet } = this.snapshot;
+    const resultSettled = isRouletteResultSettled(round, this.settledResultKey);
     const bettingOpen = round.phase === "OPEN" || round.phase === "LAST_CALL";
     const totalStakeCents = [...this.selections.values()].reduce((sum, bet) => sum + bet.stakeCents, 0);
     const liveSummary = this.root.querySelector<HTMLElement>("[data-roulette-summary]");
@@ -338,15 +347,15 @@ export class RouletteClient {
       button.classList.toggle("is-high-multiplier", Boolean(value && value >= 300));
     });
     this.root.querySelectorAll<HTMLElement>(".wheel-pocket").forEach((pocket) => {
-      pocket.classList.toggle("is-winning", round.winningNumber !== null && Number(pocket.dataset.wheelNumber) === round.winningNumber);
+      pocket.classList.toggle("is-winning", resultSettled && Number(pocket.dataset.wheelNumber) === round.winningNumber);
     });
     this.root.querySelectorAll<HTMLButtonElement>("[data-stake]").forEach((button) => button.classList.toggle("is-selected", Number(button.dataset.stake) === this.selectedChipCents));
     this.root.querySelector<HTMLElement>("[data-selected-bets]")!.innerHTML = this.selections.size
       ? [...this.selections.values()].map((bet) => `<span class="selected-bet-pill"><b>${bet.label}</b><strong>${formatCredits(bet.stakeCents)}</strong></span>`).join("")
       : `<span class="muted-copy">Chip seç ve masada bir veya daha fazla alana dokun</span>`;
     this.root.querySelectorAll<HTMLElement>("[data-winning-number]").forEach((element) => {
-      element.textContent = round.winningNumber === null ? "?" : String(round.winningNumber);
-      element.classList.toggle("is-visible", round.winningNumber !== null);
+      element.textContent = resultSettled ? String(round.winningNumber) : "?";
+      element.classList.toggle("is-visible", resultSettled);
     });
     this.root.querySelector<HTMLElement>("[data-wheel]")!.classList.toggle("is-spinning", round.phase === "SPINNING");
     const winningAngle = round.winningNumber === null ? 0 : getWheelAngle(round.winningNumber);
@@ -359,7 +368,7 @@ export class RouletteClient {
       ? round.revealedMultipliers.map((value, index) => `<span class="multiplier-chip ${lucky.has(round.luckyNumbers[index]) ? "is-lucky" : ""}" style="--reveal-index:${index}">${value}x</span>`).join("")
       : `<span class="muted-copy">Tek tek reveal bekleniyor</span>`;
     this.root.querySelector<HTMLElement>("[data-reveal-count]")!.textContent = `${round.revealedMultipliers.length}/${round.multipliersTotal}`;
-    const resultVisible = round.winningNumber !== null && ["RESULT", "SETTLING", "INTERMISSION"].includes(round.phase);
+    const resultVisible = resultSettled && ["RESULT", "SETTLING", "INTERMISSION"].includes(round.phase);
     const overlay = this.root.querySelector<HTMLElement>("[data-result-overlay]");
     if (overlay) {
       overlay.classList.toggle("is-visible", resultVisible);
@@ -448,6 +457,7 @@ export class RouletteClient {
     this.ballDropTimer = undefined;
     this.wheelAnimation?.cancel();
     this.ballAnimation?.cancel();
+    this.settledResultKey = "";
     wheel.style.setProperty("--label-counter-angle", "0deg");
     rotor.style.transform = "rotate(0deg)";
     wheel.classList.add("is-spinning");
@@ -480,9 +490,11 @@ export class RouletteClient {
     const resultKey = `${this.snapshot?.round.id}:${winningNumber}`;
     if (this.animatedResultKey === resultKey) return;
     this.animatedResultKey = resultKey;
+    this.settledResultKey = "";
     if (this.ballDropTimer) window.clearTimeout(this.ballDropTimer);
     this.ballDropTimer = undefined;
     const currentRotation = this.readRotation(rotor);
+    const currentBallAngle = this.readBallAngle(ball);
     this.ballAnimation?.cancel();
     this.wheelAnimation?.cancel();
     wheel.classList.remove("is-spinning");
@@ -495,11 +507,17 @@ export class RouletteClient {
       rotor.style.transform = `rotate(${finalRotation}deg)`;
       wheel.style.setProperty("--label-counter-angle", finalLabelAngle);
       ball.style.transform = `rotate(-1440deg) translateY(-${pocketRadius}px)`;
+      this.settledResultKey = resultKey;
       return;
     }
+    const wheelDelta = finalRotation - currentRotation;
     this.wheelAnimation = rotor.animate(
-      [{ transform: `rotate(${currentRotation}deg)` }, { transform: `rotate(${finalRotation - 90}deg)`, offset: .72 }, { transform: `rotate(${finalRotation}deg)` }],
-      { duration: 3900, easing: "cubic-bezier(.12,.7,.18,1)", fill: "forwards" },
+      [
+        { transform: `rotate(${currentRotation}deg)` },
+        { transform: `rotate(${currentRotation + wheelDelta * .62}deg)`, offset: .55 },
+        { transform: `rotate(${finalRotation}deg)` },
+      ],
+      { duration: 3900, easing: "linear", fill: "forwards" },
     );
     this.startLabelOrientationSync();
     this.wheelAnimation.finished.then(() => {
@@ -507,39 +525,48 @@ export class RouletteClient {
       this.stopLabelOrientationSync();
       wheel.style.setProperty("--label-counter-angle", finalLabelAngle);
     }).catch(() => undefined);
+    const finalBallAngle = -1440;
+    const ballDelta = finalBallAngle - currentBallAngle;
     const outer = ball.animate(
       [
-        { transform: `rotate(0deg) translateY(-${outerRadius}px)` },
-        { transform: `rotate(-520deg) translateY(-${outerRadius - 4}px)`, offset: .2 },
-        { transform: `rotate(-1010deg) translateY(-${outerRadius + 2}px)`, offset: .46 },
-        { transform: `rotate(-1370deg) translateY(-${outerRadius - 3}px)`, offset: .72 },
-        { transform: `rotate(-1440deg) translateY(-${outerRadius}px)` },
+        { transform: `rotate(${currentBallAngle}deg) translateY(-${outerRadius}px)` },
+        { transform: `rotate(${currentBallAngle + ballDelta * .55}deg) translateY(-${outerRadius}px)`, offset: .55 },
+        { transform: `rotate(${currentBallAngle + ballDelta * .72}deg) translateY(-${outerRadius - 4}px)`, offset: .72 },
+        { transform: `rotate(${currentBallAngle + ballDelta * .88}deg) translateY(-${pocketRadius + 5}px)`, offset: .88 },
+        { transform: `rotate(${finalBallAngle}deg) translateY(-${pocketRadius}px)` },
       ],
-      { duration: 2700, easing: "cubic-bezier(.08,.7,.16,1)", fill: "forwards" },
+      { duration: 3850, easing: "linear", fill: "forwards" },
     );
     this.ballAnimation = outer;
     outer.finished.then(() => {
       if (this.animatedResultKey !== resultKey) return;
-      this.ballAnimation = ball.animate(
-        [
-          { transform: `rotate(-1440deg) translateY(-${outerRadius}px)` },
-          { transform: `rotate(-1440deg) translateY(-${pocketRadius - 6}px)`, offset: .18 },
-          { transform: `rotate(-1452deg) translateY(-${pocketRadius + 5}px)`, offset: .38 },
-          { transform: `rotate(-1437deg) translateY(-${pocketRadius - 4}px)`, offset: .58 },
-          { transform: `rotate(-1447deg) translateY(-${pocketRadius + 3}px)`, offset: .77 },
-          { transform: `rotate(-1440deg) translateY(-${pocketRadius}px)` },
-        ],
-        { duration: 1150, easing: "cubic-bezier(.12,.75,.2,1)", fill: "forwards" },
-      );
+      this.settledResultKey = resultKey;
+      this.render();
     }).catch(() => undefined);
   }
 
   private readRotation(element: HTMLElement) {
+    const values = this.readTransformValues(element);
+    if (!values) return 0;
+    const [a, b] = values.length === 16 ? values : [values[0], values[1]];
+    return Math.atan2(b, a) * 180 / Math.PI;
+  }
+
+  private readBallAngle(element: HTMLElement) {
+    const values = this.readTransformValues(element);
+    if (!values) return 0;
+    const translateX = values.length === 16 ? values[12] : values[4];
+    const translateY = values.length === 16 ? values[13] : values[5];
+    if (!Number.isFinite(translateX) || !Number.isFinite(translateY) || Math.hypot(translateX, translateY) < 1) return 0;
+    return Math.atan2(translateX, -translateY) * 180 / Math.PI;
+  }
+
+  private readTransformValues(element: HTMLElement) {
     const transform = getComputedStyle(element).transform;
-    if (!transform || transform === "none") return 0;
-    const values = transform.match(/matrix\(([^)]+)\)/)?.[1].split(",").map(Number);
-    if (!values || values.length < 2) return 0;
-    return Math.atan2(values[1], values[0]) * 180 / Math.PI;
+    if (!transform || transform === "none") return null;
+    const matrixMatch = transform.match(/matrix(?:3d)?\(([^)]+)\)/);
+    const values = matrixMatch?.[1].split(",").map(Number);
+    return values && (values.length === 6 || values.length === 16) && values.every(Number.isFinite) ? values : null;
   }
 
   private startLabelOrientationSync() {

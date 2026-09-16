@@ -9,7 +9,7 @@ import {
   ROULETTE_POCKET_COUNT,
   ROULETTE_SEGMENT_DEGREES,
 } from "./rouletteGeometry";
-import { getRouletteAnimationTransition } from "./rouletteClient";
+import { getRouletteAnimationTransition, isRouletteResultSettled } from "./rouletteClient";
 
 describe("roulette wheel geometry", () => {
   it("keeps the exact European pocket order used by the rendered wheel", () => {
@@ -41,6 +41,7 @@ describe("roulette wheel geometry", () => {
   });
 });
 
+
 describe("server-driven roulette animation transitions", () => {
   it("starts only when the server enters SPINNING and finishes on the revealed result", () => {
     const locked = { id: "round-1", phase: "LOCKED" as const, winningNumber: null };
@@ -58,5 +59,14 @@ describe("server-driven roulette animation transitions", () => {
       phase: "RESULT",
       winningNumber: 0,
     })).toEqual({ startsSpin: false, winningNumber: 0 });
+  });
+
+  it("keeps the result hidden until the matching visual landing settles", () => {
+    const result = { id: "round-3", phase: "RESULT" as const, winningNumber: 31 };
+
+    expect(isRouletteResultSettled(result, "")).toBe(false);
+    expect(isRouletteResultSettled(result, "round-2:31")).toBe(false);
+    expect(isRouletteResultSettled(result, "round-3:31")).toBe(true);
+    expect(isRouletteResultSettled({ ...result, winningNumber: null }, "round-3:31")).toBe(false);
   });
 });
