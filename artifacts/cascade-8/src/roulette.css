@@ -381,3 +381,122 @@
   .mobile-utility-rail > button small { font-size: 4px; }
   .combination-bets { display: none; }
 }
+
+/* Final cinematic wheel pass: quiet materials, stronger proportions, no infographic noise. */
+.roulette-wheel-card {
+  background: linear-gradient(145deg, rgba(28, 31, 31, .94), rgba(9, 13, 15, .96));
+}
+.roulette-wheel-card > .roulette-card-kicker {
+  color: #c9af76;
+  letter-spacing: .18em;
+}
+.roulette-wheel-live {
+  --pocket-radius: clamp(116px, 31vw, 150px);
+  --ball-radius: clamp(116px, 31vw, 150px);
+  border-width: 8px;
+  background:
+    radial-gradient(circle at 50% 49%, #a77842 0 17%, #6d4526 17.5% 25%, transparent 25.5%),
+    radial-gradient(circle at 50% 50%, #0a0e10 0 31%, #2f2117 31.5% 35%, #9a7040 35.5% 38%, #222a2c 38.5% 44%, #070a0b 44.5% 100%);
+  box-shadow:
+    0 0 0 2px #d3b170,
+    0 0 0 7px #1d2427,
+    0 0 0 10px #755c3a,
+    0 0 0 14px #0b1012,
+    inset 0 0 38px rgba(0,0,0,.95),
+    0 28px 65px rgba(0,0,0,.58);
+}
+.roulette-wheel-live::before {
+  inset: 7%;
+  border: 2px solid rgba(217, 180, 108, .62);
+  background: radial-gradient(circle, transparent 0 70%, rgba(0,0,0,.35) 71% 72%, transparent 73%);
+  box-shadow: inset 0 0 24px rgba(0,0,0,.9);
+}
+.roulette-wheel-live::after {
+  inset: -5px;
+  border: 1px solid rgba(248, 221, 153, .48);
+  box-shadow: 0 0 0 1px rgba(0,0,0,.8);
+}
+.wheel-pocket-track {
+  inset: 5%;
+  border: 4px solid #161d20;
+  box-shadow: 0 0 0 2px #c29c60, inset 0 0 15px rgba(0,0,0,.9);
+}
+.wheel-pocket-track::before {
+  inset: 8%;
+  border: 1px solid rgba(229, 197, 131, .3);
+  box-shadow: inset 0 0 20px #000;
+}
+.wheel-pocket-track::after {
+  inset: 25%;
+  border: 2px solid rgba(15, 18, 19, .85);
+  box-shadow: inset 0 0 12px rgba(0,0,0,.8);
+}
+.wheel-pocket {
+  width: 7%;
+  height: 14%;
+  margin: -7% -3.5%;
+  border-width: 1px;
+  border-color: rgba(241, 214, 161, .55);
+  border-radius: 4px 4px 9px 9px;
+  transform: rotate(calc(var(--pocket-index) * 9.7297deg)) translateY(calc(-1 * var(--pocket-radius))) rotate(calc(var(--pocket-index) * -9.7297deg));
+  color: #f9eac0;
+  background: linear-gradient(90deg, #15191a, #3c4746 50%, #111516);
+  box-shadow: inset 0 -12px 12px rgba(0,0,0,.48), 0 1px 3px rgba(0,0,0,.7);
+  font-size: clamp(8px, .72vw, 11px);
+}
+.wheel-pocket.is-red { background: linear-gradient(90deg, #3d171a, #a6474b 50%, #42181c); }
+.wheel-pocket.is-green { background: linear-gradient(90deg, #0c3326, #227752 50%, #0b2d22); }
+.wheel-pocket.is-winning {
+  border-color: #fff3be;
+  box-shadow: inset 0 -12px 12px rgba(0,0,0,.48), 0 0 0 2px rgba(255,216,121,.35), 0 0 18px rgba(255,218,120,.72);
+}
+.wheel-deflectors i {
+  width: 7px;
+  height: 21px;
+  border-color: #b48b4f;
+  background: linear-gradient(90deg, #3d2915, #ebc77d 45%, #4c3217);
+  transform: rotate(calc(var(--deflector-index) * 45deg + 22.5deg)) translateY(calc(-1 * clamp(68px, 18vw, 88px)));
+  opacity: .82;
+}
+.wheel-center-well {
+  inset: 29%;
+  border-width: 5px;
+  border-color: #bf9250;
+  background: radial-gradient(circle at 34% 25%, #b38249, #4a2c18 33%, #101416 70%);
+  box-shadow: inset 0 0 22px #000, 0 0 0 3px #20282a, 0 8px 16px rgba(0,0,0,.5);
+}
+.wheel-center-cap {
+  inset: 21%;
+  border-color: #dfba72;
+  background: radial-gradient(circle at 30% 22%, #c18d4c, #51331c 45%, #141819);
+}
+.wheel-center-cap span { color: rgba(255,233,178,.7); }
+.wheel-ball {
+  width: 19px;
+  height: 19px;
+  margin: -9.5px;
+  transform: rotate(0deg) translateY(calc(-1 * var(--ball-radius)));
+  border-width: 2px;
+  background: radial-gradient(circle at 28% 22%, #fff, #eef1ec 45%, #929a96);
+  box-shadow: 0 2px 4px rgba(0,0,0,.8), 0 0 16px rgba(255,255,255,.72);
+}
+.wheel-ball::after { inset: 2px 8px 9px 3px; }
+.wheel-result-overlay {
+  inset: 36% 24%;
+  border-color: rgba(229, 192, 117, .76);
+  background: radial-gradient(circle at 35% 18%, rgba(199,142,64,.32), transparent 52%), rgba(11,14,15,.94);
+}
+.is-wheel-spinning .roulette-wheel-card { z-index: 2; }
+.is-wheel-spinning .roulette-wheel-live { box-shadow: 0 0 0 2px #d3b170, 0 0 0 7px #1d2427, 0 0 0 10px #755c3a, 0 0 0 14px #0b1012, inset 0 0 38px rgba(0,0,0,.95), 0 0 80px rgba(224,176,85,.24), 0 28px 65px rgba(0,0,0,.58); }
+@media (min-width: 901px) {
+  .roulette-layout { grid-template-columns: minmax(440px, .95fr) minmax(720px, 1.7fr); gap: 24px; }
+  .roulette-wheel-stage { min-height: 500px; }
+  .roulette-wheel-live { width: min(480px, 100%); }
+}
+@media (max-width: 600px) {
+  .roulette-wheel-stage { min-height: 420px; }
+  .roulette-wheel-live { width: min(390px, 94vw); }
+  .roulette-bet-card { transition: transform .35s ease, opacity .35s ease; }
+  .is-multiplier-reveal .roulette-bet-card { transform: scale(.985); transform-origin: top center; }
+  .wheel-result-overlay { inset: 36% 20%; }
+}

@@ -72,6 +72,8 @@ export class RouletteClient {
   private statusTimer?: number;
   private voice = new RouletteVoice();
   private ballAnimation?: Animation;
+  private wheelAnimation?: Animation;
+  private ballDropTimer?: number;
   private animatedResultKey = "";
   private readonly root: HTMLElement;
 
@@ -219,6 +221,8 @@ export class RouletteClient {
       next.wallet.lastPayoutCents = previous.wallet.lastPayoutCents;
     }
     this.snapshot = next;
+    this.root.classList.toggle("is-wheel-spinning", next.round.phase === "SPINNING");
+    this.root.classList.toggle("is-multiplier-reveal", next.round.phase === "MULTIPLIER_REVEAL");
     this.serverOffsetMs = Date.parse(next.serverTime) - Date.now();
     if (this.roundId !== next.round.id) {
       this.roundId = next.round.id;
@@ -390,44 +394,75 @@ export class RouletteClient {
 
   private startWheelSpin() {
     const wheel = this.root.querySelector<HTMLElement>("[data-wheel]");
+    const rotor = wheel?.querySelector<HTMLElement>(".wheel-rotor");
     const ball = this.root.querySelector<HTMLElement>(".wheel-ball");
-    if (!wheel || !ball) return;
+    if (!wheel || !rotor || !ball) return;
+    this.ballDropTimer = window.clearTimeout(this.ballDropTimer);
+    this.wheelAnimation?.cancel();
     this.ballAnimation?.cancel();
+    rotor.style.transform = "rotate(0deg)";
     wheel.classList.add("is-spinning");
-    const radius = wheel.clientWidth * 0.43;
+    const radius = wheel.clientWidth * 0.38;
+    this.wheelAnimation = rotor.animate(
+      [{ transform: "rotate(0deg)" }, { transform: "rotate(360deg)" }],
+      { duration: 1450, iterations: Infinity, easing: "linear" },
+    );
     this.ballAnimation = ball.animate(
       [{ transform: `rotate(0deg) translateY(-${radius}px)` }, { transform: `rotate(-360deg) translateY(-${radius}px)` }],
-      { duration: 760, iterations: Infinity, easing: "linear" },
+      { duration: 620, iterations: Infinity, easing: "linear" },
     );
   }
 
   private finishWheelSpin(winningNumber: number) {
     const wheel = this.root.querySelector<HTMLElement>("[data-wheel]");
+    const rotor = wheel?.querySelector<HTMLElement>(".wheel-rotor");
     const ball = this.root.querySelector<HTMLElement>(".wheel-ball");
-    if (!wheel || !ball) return;
+    if (!wheel || !rotor || !ball) return;
     const resultKey = `${this.snapshot?.round.id}:${winningNumber}`;
     if (this.animatedResultKey === resultKey) return;
     this.animatedResultKey = resultKey;
+    this.ballDropTimer = window.clearTimeout(this.ballDropTimer);
+    const currentRotation = this.readRotation(rotor);
     this.ballAnimation?.cancel();
+    this.wheelAnimation?.cancel();
     wheel.classList.remove("is-spinning");
-    const rotor = wheel.querySelector<HTMLElement>(".wheel-rotor");
-    if (rotor) rotor.style.transform = "rotate(0deg)";
-    const radius = wheel.clientWidth;
-    const outerRadius = radius * 0.43;
-    const pocketRadius = radius * 0.365;
     const targetAngle = EUROPEAN_WHEEL_ORDER.indexOf(winningNumber) * (360 / 37);
-    this.ballAnimation = ball.animate(
-      [
-        { transform: `rotate(-12deg) translateY(-${outerRadius}px)` },
-        { transform: `rotate(-552deg) translateY(-${outerRadius}px)` },
-        { transform: `rotate(${targetAngle - 18}deg) translateY(-${outerRadius}px)` },
-        { transform: `rotate(${targetAngle + 5}deg) translateY(-${pocketRadius - 9}px)`, offset: .78 },
-        { transform: `rotate(${targetAngle - 3}deg) translateY(-${pocketRadius}px)`, offset: .9 },
-        { transform: `rotate(${targetAngle + 1}deg) translateY(-${pocketRadius}px)`, offset: .96 },
-        { transform: `rotate(${targetAngle}deg) translateY(-${pocketRadius}px)` },
-      ],
-      { duration: 3200, easing: "cubic-bezier(.12,.76,.2,1)", fill: "forwards" },
+    const targetOrientation = (360 - targetAngle) % 360;
+    const wheelDelta = ((targetOrientation - currentRotation) + 360) % 360 + 720;
+    const finalRotation = currentRotation + wheelDelta;
+    this.wheelAnimation = rotor.animate(
+      [{ transform: `rotate(${currentRotation}deg)` }, { transform: `rotate(${finalRotation - 90}deg)`, offset: .72 }, { transform: `rotate(${finalRotation}deg)` }],
+      { duration: 3900, easing: "cubic-bezier(.12,.7,.18,1)", fill: "forwards" },
     );
+    const outerRadius = wheel.clientWidth * 0.38;
+    const outer = ball.animate(
+      [{ transform: `rotate(0deg) translateY(-${outerRadius}px)` }, { transform: `rotate(-1220deg) translateY(-${outerRadius}px)`, offset: .65 }, { transform: `rotate(-1440deg) translateY(-${outerRadius}px)` }],
+      { duration: 2700, easing: "cubic-bezier(.08,.7,.16,1)", fill: "forwards" },
+    );
+    this.ballAnimation = outer;
+    outer.finished.then(() => {
+      if (this.animatedResultKey !== resultKey) return;
+      const pocketRadius = wheel.clientWidth * 0.31;
+      this.ballAnimation = ball.animate(
+        [
+          { transform: `rotate(-1440deg) translateY(-${outerRadius}px)` },
+          { transform: `rotate(-1440deg) translateY(-${pocketRadius - 17}px)`, offset: .2 },
+          { transform: `rotate(-1448deg) translateY(-${pocketRadius + 7}px)`, offset: .42 },
+          { transform: `rotate(-1434deg) translateY(-${pocketRadius - 2}px)`, offset: .62 },
+          { transform: `rotate(-1442deg) translateY(-${pocketRadius + 2}px)`, offset: .8 },
+          { transform: `rotate(-1440deg) translateY(-${pocketRadius}px)` },
+        ],
+        { duration: 1150, easing: "cubic-bezier(.12,.75,.2,1)", fill: "forwards" },
+      );
+    }).catch(() => undefined);
+  }
+
+  private readRotation(element: HTMLElement) {
+    const transform = getComputedStyle(element).transform;
+    if (!transform || transform === "none") return 0;
+    const values = transform.match(/matrix\(([^)]+)\)/)?.[1].split(",").map(Number);
+    if (!values || values.length < 2) return 0;
+    return Math.atan2(values[1], values[0]) * 180 / Math.PI;
   }
 
   private setConnection(label: string, live: boolean) {
