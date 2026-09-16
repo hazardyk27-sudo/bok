@@ -397,7 +397,8 @@ export class RouletteClient {
     const rotor = wheel?.querySelector<HTMLElement>(".wheel-rotor");
     const ball = this.root.querySelector<HTMLElement>(".wheel-ball");
     if (!wheel || !rotor || !ball) return;
-    this.ballDropTimer = window.clearTimeout(this.ballDropTimer);
+    if (this.ballDropTimer) window.clearTimeout(this.ballDropTimer);
+    this.ballDropTimer = undefined;
     this.wheelAnimation?.cancel();
     this.ballAnimation?.cancel();
     rotor.style.transform = "rotate(0deg)";
@@ -411,6 +412,9 @@ export class RouletteClient {
       [{ transform: `rotate(0deg) translateY(-${radius}px)` }, { transform: `rotate(-360deg) translateY(-${radius}px)` }],
       { duration: 620, iterations: Infinity, easing: "linear" },
     );
+    const phaseElapsed = Math.max(0, Date.now() + this.serverOffsetMs - Date.parse(this.snapshot?.round.phaseStartedAt ?? ""));
+    this.wheelAnimation.currentTime = phaseElapsed % 1450;
+    this.ballAnimation.currentTime = phaseElapsed % 620;
   }
 
   private finishWheelSpin(winningNumber: number) {
@@ -421,7 +425,8 @@ export class RouletteClient {
     const resultKey = `${this.snapshot?.round.id}:${winningNumber}`;
     if (this.animatedResultKey === resultKey) return;
     this.animatedResultKey = resultKey;
-    this.ballDropTimer = window.clearTimeout(this.ballDropTimer);
+    if (this.ballDropTimer) window.clearTimeout(this.ballDropTimer);
+    this.ballDropTimer = undefined;
     const currentRotation = this.readRotation(rotor);
     this.ballAnimation?.cancel();
     this.wheelAnimation?.cancel();
