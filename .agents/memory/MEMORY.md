@@ -13,3 +13,4 @@
 - [Bonus flow state ownership](bonus-flow-state-ownership.md) — base Auto consumption owns the Auto counter; bonus retriggers never do, and manual stop clears pending resume.
 - [Roulette snapshot refresh](roulette-snapshot-refresh.md) — session-specific REST refreshes after websocket phases must be edge-triggered, not run on every snapshot.
 - [Roulette animation synchronization](roulette-animation-sync.md) — wheel/ball animation progress follows the server phase clock; the server result always controls the landing pocket.
+- [Mobile browser matrix](mobile-browser-matrix.md) — Android Chromium can run with the workspace binary; WebKit needs native host libraries and should remain an optional gated profile.
