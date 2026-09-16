@@ -12,6 +12,7 @@ import {
   ROULETTE_SEGMENT_DEGREES,
 } from "./rouletteGeometry";
 import {
+  getRouletteAnimationLifecycleAction,
   getRouletteAnimationTransition,
   getRouletteResultResumeAction,
   getRouletteVisibilityResumeAction,
@@ -20,6 +21,18 @@ import {
   ROULETTE_MOTION_TIMINGS,
 } from "./rouletteClient";
 
+describe("roulette wheel geometry", () => {
+  it("keeps the exact European pocket order used by the rendered wheel", () => {
+    expect(EUROPEAN_WHEEL_ORDER).toEqual([
+      0, 32, 15, 19, 4, 21, 2, 25, 17, 34, 6, 27, 13, 36, 11, 30, 8, 23, 10,
+      5, 24, 16, 33, 1, 20, 14, 31, 9, 22, 18, 29, 7, 28, 12, 35, 3, 26,
+    ]);
+    expect(new Set(EUROPEAN_WHEEL_ORDER).size).toBe(37);
+    expect(ROULETTE_POCKET_COUNT).toBe(37);
+    expect(ROULETTE_SEGMENT_DEGREES).toBeCloseTo(360 / 37);
+  });
+
+  it("maps a server-selected number to the same pocket index and rotor orientation", () => {
     const radii = { outerRadius: 204, pocketRadius: 146 };
     const plan = getWheelLandingPlan(26, 137.5, radii);
 
@@ -41,8 +54,8 @@ import {
 describe("server-driven roulette animation transitions", () => {
   it("starts only when the server enters SPINNING and finishes on the revealed result", () => {
     const locked = { id: "round-1", phase: "LOCKED" as const, winningNumber: null };
-    const spinning = { id: "mobile-spin", phase: "SPINNING" as const, winningNumber: null };
-    const result = { id: "mobile-result", phase: "RESULT" as const, winningNumber: 26 };
+    const spinning = { id: "round-1", phase: "SPINNING" as const, winningNumber: null };
+    const result = { id: "round-1", phase: "RESULT" as const, winningNumber: 17 };
 
     expect(getRouletteAnimationTransition(locked, spinning)).toEqual({ startsSpin: true, winningNumber: null });
     expect(getRouletteAnimationTransition(spinning, result)).toEqual({ startsSpin: false, winningNumber: 17 });
@@ -58,7 +71,7 @@ describe("server-driven roulette animation transitions", () => {
   });
 
   it("keeps the result hidden until the matching visual landing settles", () => {
-    const result = { id: "mobile-result", phase: "RESULT" as const, winningNumber: 26 };
+    const result = { id: "round-3", phase: "RESULT" as const, winningNumber: 31 };
 
     expect(isRouletteResultSettled(result, "")).toBe(false);
     expect(isRouletteResultSettled(result, "round-2:31")).toBe(false);
@@ -99,6 +112,83 @@ describe("server-driven roulette animation transitions", () => {
     expect(getRouletteVisibilityResumeAction(settled, Number.NaN)).toBe("settle-result");
     expect(isRouletteResultSettled(settled, settledKey)).toBe(true);
     expect(getRouletteAnimationTransition(settled, settled)).toEqual({ startsSpin: false, winningNumber: null });
+  });
+
+  it("does not start a second landing when RESULT snapshots repeat after resume", () => {
+    const spinning = { id: "repeat-result", phase: "SPINNING" as const, winningNumber: null };
+    const result = { id: "repeat-result", phase: "RESULT" as const, winningNumber: 22 };
+    const firstLanding = getRouletteAnimationLifecycleAction(spinning, result, {
+      visibilityResume: false,
+      elapsedMs: 0,
+      activeSpinRoundId: "repeat-result",
+      animatedResultKey: "",
+      settledResultKey: "",
+    });
+    const resumedLanding = getRouletteAnimationLifecycleAction(result, result, {
+      visibilityResume: true,
+      elapsedMs: 1_200,
+      activeSpinRoundId: "",
+      animatedResultKey: "repeat-result:22",
+      settledResultKey: "",
+    });
+    const settledRepeat = getRouletteAnimationLifecycleAction(result, result, {
+      visibilityResume: true,
+      elapsedMs: 1_400,
+      activeSpinRoundId: "",
+      animatedResultKey: "repeat-result:22",
+      settledResultKey: "repeat-result:22",
+    });
+
+    expect(firstLanding.action).toBe("start-landing");
+    expect(resumedLanding.action).toBe("resume-landing");
+    expect(settledRepeat.action).toBe("noop");
+  });
+
+  it("models start, cancel, and settle as idempotent operations across suspension modes", () => {
+    type Operation = "start-spin" | "start-landing" | "cancel" | "settle";
+    const operations: Operation[] = [];
+    let activeSpinRoundId = "";
+    let animatedResultKey = "";
+    let settledResultKey = "";
+    const apply = (
+      previous: Parameters<typeof getRouletteAnimationLifecycleAction>[0],
+      next: Parameters<typeof getRouletteAnimationLifecycleAction>[1],
+      visibilityResume: boolean,
+      elapsedMs: number,
+    ) => {
+      const plan = getRouletteAnimationLifecycleAction(previous, next, {
+        visibilityResume,
+        elapsedMs,
+        activeSpinRoundId,
+        animatedResultKey,
+        settledResultKey,
+      });
+      if (plan.action === "start-spin") {
+        operations.push("start-spin");
+        activeSpinRoundId = next.id;
+      } else if (plan.action === "start-landing") {
+        operations.push("cancel", "start-landing");
+        activeSpinRoundId = "";
+        animatedResultKey = plan.resultKey;
+      } else if (plan.action === "settle") {
+        operations.push("cancel", "settle");
+        activeSpinRoundId = "";
+        animatedResultKey = plan.resultKey;
+        settledResultKey = plan.resultKey;
+      }
+      return plan.action;
+    };
+    const spinning = { id: "operation-round", phase: "SPINNING" as const, winningNumber: null };
+    const result = { id: "operation-round", phase: "RESULT" as const, winningNumber: 9 };
+    const settling = { id: "operation-round", phase: "SETTLING" as const, winningNumber: 9 };
+
+    expect(apply(null, spinning, false, 0)).toBe("start-spin");
+    expect(apply(spinning, spinning, true, 4_000)).toBe("resume-spin");
+    expect(apply(spinning, result, false, 0)).toBe("start-landing");
+    expect(apply(result, result, true, 1_200)).toBe("resume-landing");
+    expect(apply(result, settling, true, 0)).toBe("settle");
+    expect(apply(settling, settling, true, 0)).toBe("noop");
+    expect(operations).toEqual(["start-spin", "cancel", "start-landing", "cancel", "settle"]);
   });
 });
 

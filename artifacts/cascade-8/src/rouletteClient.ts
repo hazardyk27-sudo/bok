@@ -105,6 +105,54 @@ export function getRouletteVisibilityResumeAction(
     : "settle-result";
 }
 
+export type RouletteAnimationLifecycleAction =
+  | "start-spin"
+  | "resume-spin"
+  | "start-landing"
+  | "resume-landing"
+  | "settle"
+  | "noop";
+
+export function getRouletteAnimationLifecycleAction(
+  previous: RouletteAnimationSnapshot | null,
+  next: RouletteAnimationSnapshot,
+  options: {
+    visibilityResume: boolean;
+    elapsedMs: number;
+    activeSpinRoundId: string;
+    animatedResultKey: string;
+    settledResultKey: string;
+  },
+): { action: RouletteAnimationLifecycleAction; resultKey: string } {
+  const resultKey = next.winningNumber === null ? "" : `${next.id}:${next.winningNumber}`;
+  if (options.visibilityResume) {
+    const resumeAction = getRouletteVisibilityResumeAction(next, options.elapsedMs);
+    if (resumeAction === "start-spin") {
+      return { action: options.activeSpinRoundId === next.id ? "resume-spin" : "start-spin", resultKey };
+    }
+    if (resumeAction === "resume-result") {
+      if (options.settledResultKey === resultKey) return { action: "noop", resultKey };
+      return { action: options.animatedResultKey === resultKey ? "resume-landing" : "start-landing", resultKey };
+    }
+    if (resumeAction === "settle-result") {
+      return { action: options.settledResultKey === resultKey ? "noop" : "settle", resultKey };
+    }
+    return { action: "noop", resultKey };
+  }
+
+  const transition = getRouletteAnimationTransition(previous, next);
+  if (transition.startsSpin) {
+    return { action: options.activeSpinRoundId === next.id ? "resume-spin" : "start-spin", resultKey };
+  }
+  if (transition.winningNumber !== null && resultKey) {
+    if (options.animatedResultKey === resultKey || options.settledResultKey === resultKey) {
+      return { action: "noop", resultKey };
+    }
+    return { action: "start-landing", resultKey };
+  }
+  return { action: "noop", resultKey };
+}
+
 export function getRouletteLiveSummary(snapshot: Pick<RouletteSnapshot, "round">) {
   const { round } = snapshot;
   const result = round.winningNumber === null
@@ -224,6 +272,8 @@ export class RouletteClient {
   private ballAnimation?: Animation;
 
   private wheelAnimation?: Animation;
+
+  private activeSpinRoundId = "";
 
   private labelSyncFrame?: number;
 
@@ -480,21 +530,29 @@ export class RouletteClient {
       this.announcePhase(next);
       if (next.round.phase === "SETTLING" || next.round.phase === "INTERMISSION") void this.load();
     }
-    const animationTransition = getRouletteAnimationTransition(previous?.round ?? null, next.round);
     const resumingFromBackground = this.visibilityResumePending;
-    if (resumingFromBackground) {
-      const elapsed = Date.now() + this.serverOffsetMs - Date.parse(next.round.phaseStartedAt);
-      const resumeAction = getRouletteVisibilityResumeAction(next.round, elapsed);
-      if (resumeAction === "start-spin") this.startWheelSpin();
-      if (resumeAction === "resume-result" || resumeAction === "settle-result") {
-        this.resumeResultPresentation(next.round.winningNumber!, next.round.phase, next.round.phaseStartedAt);
-      }
-    } else if (animationTransition.startsSpin) {
+    const elapsed = Date.now() + this.serverOffsetMs - Date.parse(next.round.phaseStartedAt);
+    const lifecycleAction = getRouletteAnimationLifecycleAction(
+      previous?.round ?? null,
+      next.round,
+      {
+        visibilityResume: resumingFromBackground,
+        elapsedMs: elapsed,
+        activeSpinRoundId: this.activeSpinRoundId,
+        animatedResultKey: this.animatedResultKey,
+        settledResultKey: this.settledResultKey,
+      },
+    );
+    if (lifecycleAction.action === "start-spin" || lifecycleAction.action === "resume-spin") {
       this.startWheelSpin();
+    } else if (lifecycleAction.action === "start-landing" && next.round.winningNumber !== null) {
+      this.finishWheelSpin(next.round.winningNumber);
+    } else if (lifecycleAction.action === "resume-landing" && next.round.winningNumber !== null) {
+      this.resumeResultPresentation(next.round.winningNumber, next.round.phase, next.round.phaseStartedAt);
+    } else if (lifecycleAction.action === "settle" && next.round.winningNumber !== null) {
+      this.settleWheelSpinImmediately(next.round.winningNumber);
     }
-    if (!resumingFromBackground && animationTransition.winningNumber !== null) {
-      this.finishWheelSpin(animationTransition.winningNumber);
-    }
+    const animationTransition = getRouletteAnimationTransition(previous?.round ?? null, next.round);
     if (animationTransition.winningNumber !== null) this.voice.speak(`${animationTransition.winningNumber} numara kazandı`);
     const previousRevealCount = previous?.round.revealedMultipliers.length ?? 0;
     const newRevealIndex = next.round.revealedMultipliers.length > previousRevealCount
@@ -706,6 +764,19 @@ export class RouletteClient {
     const rotor = wheel?.querySelector<HTMLElement>(".wheel-rotor");
     const ball = this.root.querySelector<HTMLElement>(".wheel-ball");
     if (!wheel || !rotor || !ball) return;
+    const roundId = this.snapshot?.round.id ?? "";
+    if (!roundId) return;
+    const { rotorOrbitMs, ballOrbitMs } = ROULETTE_MOTION_TIMINGS;
+    const phaseElapsed = Math.max(0, Date.now() + this.serverOffsetMs - Date.parse(this.snapshot?.round.phaseStartedAt ?? ""));
+    if (this.activeSpinRoundId === roundId && this.wheelAnimation && this.ballAnimation) {
+      this.wheelAnimation.currentTime = phaseElapsed % rotorOrbitMs;
+      this.ballAnimation.currentTime = phaseElapsed % ballOrbitMs;
+      this.wheelAnimation.play();
+      this.ballAnimation.play();
+      this.voice.startSpin();
+      return;
+    }
+    this.activeSpinRoundId = roundId;
     if (this.ballDropTimer) window.clearTimeout(this.ballDropTimer);
     this.ballDropTimer = undefined;
     this.wheelAnimation?.cancel();
@@ -722,7 +793,6 @@ export class RouletteClient {
       ball.style.transform = `rotate(0deg) translateY(-${outerRadius}px)`;
       return;
     }
-    const { rotorOrbitMs, ballOrbitMs } = ROULETTE_MOTION_TIMINGS;
     this.wheelAnimation = rotor.animate(
       [{ transform: "rotate(0deg)" }, { transform: "rotate(360deg)" }],
       { duration: rotorOrbitMs, iterations: Infinity, easing: "linear" },
@@ -731,7 +801,6 @@ export class RouletteClient {
       [{ transform: `rotate(0deg) translateY(-${outerRadius}px)` }, { transform: `rotate(-360deg) translateY(-${outerRadius}px)` }],
       { duration: ballOrbitMs, iterations: Infinity, easing: "linear" },
     );
-    const phaseElapsed = Math.max(0, Date.now() + this.serverOffsetMs - Date.parse(this.snapshot?.round.phaseStartedAt ?? ""));
     this.wheelAnimation.currentTime = phaseElapsed % rotorOrbitMs;
     this.ballAnimation.currentTime = phaseElapsed % ballOrbitMs;
     this.startLabelOrientationSync();
@@ -766,6 +835,7 @@ export class RouletteClient {
     if (this.animatedResultKey === resultKey) return;
     this.animatedResultKey = resultKey;
     this.settledResultKey = "";
+    this.activeSpinRoundId = "";
     this.voice.stopSpin();
     this.clearBallSoundTimers();
     if (this.ballDropTimer) window.clearTimeout(this.ballDropTimer);
@@ -849,6 +919,7 @@ export class RouletteClient {
     if (this.ballDropTimer) window.clearTimeout(this.ballDropTimer);
     this.ballDropTimer = undefined;
     this.animatedResultKey = resultKey;
+    this.activeSpinRoundId = "";
     this.voice.stopSpin();
     this.clearBallSoundTimers();
     const currentRotation = this.readRotation(rotor);
