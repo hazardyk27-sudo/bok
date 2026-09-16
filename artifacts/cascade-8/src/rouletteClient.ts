@@ -486,7 +486,6 @@ export class RouletteClient {
 
   private activeSpinRoundId = "";
 
-  private labelSyncFrame?: number;
 
   private ballDropTimer?: number;
 
@@ -1355,34 +1354,16 @@ export class RouletteClient {
     return values && (values.length === 6 || values.length === 16) && values.every(Number.isFinite) ? values : null;
   }
 
-  private startLabelOrientationSync() {
-    this.stopLabelOrientationSync();
-    const sync = () => {
-      const wheel = this.root.querySelector<HTMLElement>("[data-wheel]");
-      const rotor = wheel?.querySelector<HTMLElement>(".wheel-rotor");
-      if (!wheel || !rotor) return;
-      this.updateLabelOrientations(wheel, this.readRotation(rotor));
-      this.labelSyncFrame = window.requestAnimationFrame(sync);
-    };
-    sync();
-  }
+  private startLabelOrientationSync() {}
 
-  private updateLabelOrientations(wheel: HTMLElement, rotorRotation: number) {
+  private updateLabelOrientations(wheel: HTMLElement, _rotorRotation: number) {
     wheel.querySelectorAll<HTMLElement>(".wheel-number-label").forEach((label) => {
-      const pocketIndex = Number(label.dataset.pocketIndex);
-      if (!Number.isFinite(pocketIndex)) return;
-      const screenAngle = normalizeDegrees(pocketIndex * ROULETTE_SEGMENT_DEGREES + rotorRotation);
       const labelBody = label.querySelector<HTMLElement>("b");
-      labelBody?.style.setProperty("--label-flip", screenAngle > 90 && screenAngle < 270 ? "180deg" : "0deg");
+      labelBody?.style.setProperty("--label-flip", "180deg");
     });
   }
 
-  private stopLabelOrientationSync() {
-    if (this.labelSyncFrame !== undefined) {
-      window.cancelAnimationFrame(this.labelSyncFrame);
-      this.labelSyncFrame = undefined;
-    }
-  }
+  private stopLabelOrientationSync() {}
 
   private prefersReducedMotion() {
     return window.matchMedia?.("(prefers-reduced-motion: reduce)").matches ?? false;
