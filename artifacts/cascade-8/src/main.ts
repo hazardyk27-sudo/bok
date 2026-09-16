@@ -146,6 +146,14 @@ const rouletteInsideBets = `
     <div class="bet-zone-group"><span>SIX LINE // 5:1</span><div>${rouletteSixLineBets}</div></div>
   </div>
 `;
+const rouletteRacetrack = `
+  <div class="roulette-racetrack" data-racetrack-panel hidden aria-hidden="true">
+    <div class="racetrack-heading"><span>RACETRACK // EUROPEAN ORDER</span><small>Bir sayıya dokun · komşu modu açıksa 5’li cluster</small></div>
+    <div class="racetrack-ring" aria-label="Racetrack Avrupa sayı sırası">
+      ${EUROPEAN_WHEEL_ORDER.map((number) => rouletteBetButton("STRAIGHT", `straight:${number}`, [number], String(number), `racetrack-number ${number === 0 ? "number-zero" : rouletteRedNumbers.has(number) ? "number-red" : "number-black"}`)).join("")}
+    </div>
+  </div>
+`;
 const rouletteMarkup = `
   <main class="roulette-page" aria-labelledby="roulette-title">
     <div class="roulette-heading">
@@ -194,6 +202,8 @@ const rouletteMarkup = `
         <div class="mobile-utility-rail" aria-label="Mobil masa kontrolleri">
           <button type="button" data-action="undo" aria-label="Son bahsi geri al">↶<small>UNDO</small></button>
           <button type="button" data-action="rebet" aria-label="Son bahsi tekrar et">↻<small>TEKRAR</small></button>
+           <button type="button" data-action="double" aria-label="Tüm chipleri iki katına çıkar">×2<small>İKİLE</small></button>
+           <button type="button" data-action="clear" aria-label="Masadaki tüm bahisleri temizle">×<small>TEMİZLE</small></button>
           <button type="button" data-action="drawer-chips" aria-label="Chip seçici">◉<small>CHIP</small></button>
           <button type="button" data-action="drawer-inside" aria-label="Inside bahisleri">＋<small>INSIDE</small></button>
           <button type="button" data-action="drawer-history" aria-label="Geçmiş sonuçlar">◌<small>GEÇMİŞ</small></button>
@@ -201,8 +211,9 @@ const rouletteMarkup = `
           <button type="button" data-action="sound" aria-label="Türkçe sesi aç">♫<small>SES</small></button>
           <button type="button" data-action="menu" aria-label="Ana menüye dön">☰<small>MENÜ</small></button>
         </div>
-        <div class="table-card-heading"><div><div class="roulette-card-kicker">EUROPEAN ROULETTE // 0 + 36 NUMARA</div><strong>BAHİS MASASI</strong></div><div class="table-heading-tools"><button type="button" data-action="drawer-inside">İÇ BAHİSLER</button><button type="button" data-action="drawer-fairness">FAIRNESS</button><span class="table-odds-note">KAZANAN SAYIYA GÖRE ÖDEME<br><b>35:1 STRAIGHT UP</b></span></div></div>
+         <div class="table-card-heading"><div><div class="roulette-card-kicker">EUROPEAN ROULETTE // 0 + 36 NUMARA</div><strong>BAHİS MASASI</strong></div><div class="table-heading-tools"><button type="button" data-action="racetrack" aria-pressed="false">RACETRACK</button><button type="button" data-action="neighbors" aria-pressed="false">KOMŞULAR</button><button type="button" data-action="drawer-inside">İÇ BAHİSLER</button><button type="button" data-action="drawer-fairness">FAIRNESS</button><span class="table-odds-note">KAZANAN SAYIYA GÖRE ÖDEME<br><b>35:1 STRAIGHT UP</b></span></div></div>
         <div class="roulette-table-felt">
+           ${rouletteRacetrack}
           <div class="roulette-zero-lane">${rouletteBetButton("STRAIGHT", "straight:0", [0], "0", "number-zero")}</div>
           <div class="roulette-desktop-table">
           <div class="roulette-number-board" aria-label="Standart 3 sıra 12 kolon sayı düzeni">
@@ -221,11 +232,12 @@ const rouletteMarkup = `
             <div class="mobile-column-row">${rouletteColumns}</div>
           </div>
         </div>
-        <div class="roulette-lucky-row"><div><span>LUCKY NUMBERS</span><div data-lucky-list><span class="muted-copy">Sonuçtan sonra açıklanacak</span></div></div><div class="reveal-count"><span>REVEAL</span><strong data-reveal-count>0/0</strong></div></div>
+         <div class="roulette-multiplier-effects" data-multiplier-effects aria-hidden="true"></div>
+         <div class="roulette-lucky-row"><div><span>LUCKY NUMBERS</span><div data-lucky-list><span class="muted-copy">Sonuçtan sonra açıklanacak</span></div></div><div class="reveal-count"><span>REVEAL</span><strong data-reveal-count>0/0</strong></div></div>
         <div class="roulette-multiplier-row"><span>MULTIPLIER REVEAL</span><div data-multiplier-list><span class="muted-copy">Tek tek reveal bekleniyor</span></div></div>
         <div class="roulette-bet-slip">
            <div class="chip-picker"><span>CHIP DEĞERİ</span><div>${rouletteChipValues.map((stake) => `<button type="button" data-stake="${stake}" class="${stake === 100 ? "is-selected" : ""}"><i></i>${(stake / 100).toLocaleString("tr-TR", { minimumFractionDigits: 2 })}</button>`).join("")}</div></div>
-          <div class="bet-slip-summary"><div><span>MASADAKİ BAHİS</span><strong data-total-stake>0,00</strong><small data-bet-count>0 ALAN · <b data-table-info>EUROPEAN TABLE</b></small></div><div class="bet-slip-actions"><button type="button" data-action="undo">↶ UNDO</button><button type="button" data-action="clear">CLEAR</button></div></div>
+           <div class="bet-slip-summary"><div><span>MASADAKİ BAHİS</span><strong data-total-stake>0,00</strong><small data-bet-count>0 ALAN · <b data-table-info>EUROPEAN TABLE</b></small></div><div class="bet-slip-actions"><button type="button" data-action="undo">↶ UNDO</button><button type="button" data-action="clear">CLEAR</button><button type="button" data-action="double">×2</button></div></div>
           <div class="selected-bets" data-selected-bets><span class="muted-copy">Chip seç ve masada bir veya daha fazla alana dokun</span></div>
           <button type="button" class="roulette-bet-button" data-action="bet" disabled>BAHİSLERİ ONAYLA <small>SERVER’A GÖNDER</small></button>
         </div>
@@ -233,7 +245,7 @@ const rouletteMarkup = `
       </section>
     </section>
     <section class="roulette-history-card"><div class="history-heading"><div><span class="roulette-card-kicker">GLOBAL HISTORY</span><h2>SONUÇ AKIŞI</h2></div><button type="button" data-action="refresh">↻ YENİLE</button></div><div class="history-list" data-history><span class="muted-copy">Sonuçlar yükleniyor</span></div></section>
-    <aside class="roulette-drawer" data-drawer="chips" aria-hidden="true"><button class="drawer-close" type="button" data-action="drawer-close">×</button><span class="roulette-card-kicker">CHIP SELECTOR</span><h2>CHIP DEĞERİ</h2><p>Seçili chip’i masada istediğin kadar farklı alana uygula.</p><div class="drawer-chip-grid">${rouletteChipValues.map((stake) => `<button type="button" data-stake="${stake}"><i></i>${(stake / 100).toLocaleString("tr-TR", { minimumFractionDigits: 2 })}</button>`).join("")}</div></aside>
+     <aside class="roulette-drawer" data-drawer="chips" aria-hidden="true"><button class="drawer-close" type="button" data-action="drawer-close">×</button><span class="roulette-card-kicker">CHIP SELECTOR</span><h2>CHIP DEĞERİ</h2><p>Seçili chip’i masada istediğin kadar farklı alana uygula.</p><div class="drawer-chip-grid">${rouletteChipValues.map((stake) => `<button type="button" data-stake="${stake}"><i></i>${(stake / 100).toLocaleString("tr-TR", { minimumFractionDigits: 2 })}</button>`).join("")}</div><small class="drawer-hint">1 · 5 · 10 · 25 · 50 · 100 · 250 · 500 CREDITS</small></aside>
     <aside class="roulette-drawer" data-drawer="inside" aria-hidden="true"><button class="drawer-close" type="button" data-action="drawer-close">×</button><span class="roulette-card-kicker">INSIDE BETS</span><h2>İÇ BAHİSLER</h2><p>Masadaki klasik iç bahis bölgeleri.</p>${rouletteInsideBets}</aside>
     <aside class="roulette-drawer" data-drawer="fairness" aria-hidden="true"><button class="drawer-close" type="button" data-action="drawer-close">×</button><span class="roulette-card-kicker">FAIR PLAY // SERVER PROOF</span><h2>ADİL OYUN</h2><p>Sonuç server tarafından round başlamadan önce belirlenir; animasyon sadece bu sonucu doğal biçimde gösterir.</p><div class="drawer-proof"><b>COMMITMENT HASH</b><code data-commitment>WAITING FOR ROUND</code><small>Sonuç açıklandığında doğrulanabilir.</small></div></aside>
     <aside class="roulette-drawer roulette-history-drawer" data-drawer="history" aria-hidden="true"><button class="drawer-close" type="button" data-action="drawer-close">×</button><span class="roulette-card-kicker">RECENT ROUNDS</span><h2>SONUÇ GEÇMİŞİ</h2><div class="history-list" data-history-drawer><span class="muted-copy">Sonuçlar yükleniyor</span></div></aside>

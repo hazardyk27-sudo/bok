@@ -21,6 +21,16 @@ import { chooseLuckyNumbers, chooseMultipliers, createCommitment, newId, uniform
 
 const LEADER_LOCK_KEY = 834_118;
 const REVEAL_STEP_MS = 1_250;
+const LEGACY_PHASE_ORDER: readonly RoulettePhase[] = [
+  "OPEN",
+  "LAST_CALL",
+  "LOCKED",
+  "SPINNING",
+  "RESULT",
+  "MULTIPLIER_REVEAL",
+  "SETTLING",
+  "INTERMISSION",
+];
 
 type Subscriber = (event: RouletteEvent) => void;
 
@@ -296,7 +306,7 @@ export class RouletteRepository {
       cursor += PHASE_DURATIONS_MS[phase];
       boundaries.push(new Date(cursor));
     }
-    const [openUntil, lastCallUntil, lockedUntil, spinningUntil, resultUntil, revealUntil, settlingUntil, intermissionUntil] = boundaries;
+    const [openUntil, lastCallUntil, lockedUntil, revealUntil, spinningUntil, resultUntil, settlingUntil, intermissionUntil] = boundaries;
     const id = newId();
     const winningNumber = uniformWinningNumber();
     const luckyNumbers = chooseLuckyNumbers();
@@ -352,9 +362,15 @@ export class RouletteRepository {
     if (time < round.openUntil.getTime()) return "OPEN";
     if (time < round.lastCallUntil.getTime()) return "LAST_CALL";
     if (time < round.lockedUntil.getTime()) return "LOCKED";
-    if (time < round.spinningUntil.getTime()) return "SPINNING";
-    if (time < round.resultUntil.getTime()) return "RESULT";
-    if (time < round.revealUntil.getTime()) return "MULTIPLIER_REVEAL";
+    if (this.revealPrecedesSpin(round)) {
+      if (time < round.revealUntil.getTime()) return "MULTIPLIER_REVEAL";
+      if (time < round.spinningUntil.getTime()) return "SPINNING";
+      if (time < round.resultUntil.getTime()) return "RESULT";
+    } else {
+      if (time < round.spinningUntil.getTime()) return "SPINNING";
+      if (time < round.resultUntil.getTime()) return "RESULT";
+      if (time < round.revealUntil.getTime()) return "MULTIPLIER_REVEAL";
+    }
     if (time < round.settlingUntil.getTime()) return "SETTLING";
     return "INTERMISSION";
   }
@@ -362,7 +378,8 @@ export class RouletteRepository {
   private revealedCount(round: RouletteRoundRecord, now: Date) {
     if (round.phase === "SETTLING" || round.phase === "INTERMISSION") return round.multipliers.length;
     if (round.phase !== "MULTIPLIER_REVEAL") return 0;
-    return Math.min(round.multipliers.length, Math.max(0, Math.floor((now.getTime() - round.resultUntil.getTime()) / REVEAL_STEP_MS)));
+    const revealStartedAt = this.revealPrecedesSpin(round) ? round.lockedUntil : round.resultUntil;
+    return Math.min(round.multipliers.length, Math.max(0, Math.floor((now.getTime() - revealStartedAt.getTime()) / REVEAL_STEP_MS)));
   }
 
   private async settleRound(round: RouletteRoundRecord) {
@@ -425,7 +442,10 @@ export class RouletteRepository {
     const phaseStartedAt = this.phaseStart(round);
     const nextTransitionAt = this.phaseEnd(round);
     const revealedCount = this.revealedCount(round, now);
-    const isResultVisible = ["RESULT", "MULTIPLIER_REVEAL", "SETTLING", "INTERMISSION"].includes(round.phase);
+    const isMultiplierVisible = ["MULTIPLIER_REVEAL", "SPINNING", "RESULT", "SETTLING", "INTERMISSION"].includes(round.phase);
+    const isResultVisible = this.revealPrecedesSpin(round)
+      ? ["RESULT", "SETTLING", "INTERMISSION"].includes(round.phase)
+      : ["RESULT", "MULTIPLIER_REVEAL", "SETTLING", "INTERMISSION"].includes(round.phase);
     return {
       serverTime: iso(now),
       coordinator: this.leadership,
@@ -439,7 +459,7 @@ export class RouletteRepository {
         countdownMs: Math.max(0, nextTransitionAt.getTime() - now.getTime()),
         commitmentHash: round.commitmentHash,
         winningNumber: isResultVisible ? round.winningNumber : null,
-        luckyNumbers: isResultVisible ? round.luckyNumbers : [],
+        luckyNumbers: isMultiplierVisible ? round.luckyNumbers : [],
         revealedMultipliers: round.multipliers.slice(0, revealedCount),
         multipliersTotal: round.multipliers.length,
         version: round.version,
@@ -448,14 +468,23 @@ export class RouletteRepository {
   }
 
   private phaseStart(round: RouletteRoundRecord) {
-    const ends = [round.openUntil, round.lastCallUntil, round.lockedUntil, round.spinningUntil, round.resultUntil, round.revealUntil, round.settlingUntil, round.intermissionUntil];
-    const index = ROULETTE_PHASES.indexOf(round.phase);
+    const ends = this.revealPrecedesSpin(round)
+      ? [round.openUntil, round.lastCallUntil, round.lockedUntil, round.revealUntil, round.spinningUntil, round.resultUntil, round.settlingUntil, round.intermissionUntil]
+      : [round.openUntil, round.lastCallUntil, round.lockedUntil, round.spinningUntil, round.resultUntil, round.revealUntil, round.settlingUntil, round.intermissionUntil];
+    const index = (this.revealPrecedesSpin(round) ? ROULETTE_PHASES : LEGACY_PHASE_ORDER).indexOf(round.phase);
     return index === 0 ? round.startsAt : ends[index - 1];
   }
 
   private phaseEnd(round: RouletteRoundRecord) {
-    const ends = [round.openUntil, round.lastCallUntil, round.lockedUntil, round.spinningUntil, round.resultUntil, round.revealUntil, round.settlingUntil, round.intermissionUntil];
-    return ends[ROULETTE_PHASES.indexOf(round.phase)] ?? round.intermissionUntil;
+    const ends = this.revealPrecedesSpin(round)
+      ? [round.openUntil, round.lastCallUntil, round.lockedUntil, round.revealUntil, round.spinningUntil, round.resultUntil, round.settlingUntil, round.intermissionUntil]
+      : [round.openUntil, round.lastCallUntil, round.lockedUntil, round.spinningUntil, round.resultUntil, round.revealUntil, round.settlingUntil, round.intermissionUntil];
+    const index = (this.revealPrecedesSpin(round) ? ROULETTE_PHASES : LEGACY_PHASE_ORDER).indexOf(round.phase);
+    return ends[index] ?? round.intermissionUntil;
+  }
+
+  private revealPrecedesSpin(round: RouletteRoundRecord) {
+    return round.revealUntil.getTime() < round.spinningUntil.getTime();
   }
 
   private mapRound(row: RoundRow): RouletteRoundRecord {

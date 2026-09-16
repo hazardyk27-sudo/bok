@@ -2,9 +2,9 @@ export const ROULETTE_PHASES = [
   "OPEN",
   "LAST_CALL",
   "LOCKED",
+  "MULTIPLIER_REVEAL",
   "SPINNING",
   "RESULT",
-  "MULTIPLIER_REVEAL",
   "SETTLING",
   "INTERMISSION",
 ] as const;
@@ -56,14 +56,14 @@ export const ROULETTE_PAYOUT_UNITS: Record<RouletteBetType, number> = {
 };
 
 export const PHASE_DURATIONS_MS: Record<RoulettePhase, number> = {
-  OPEN: 22_000,
-  LAST_CALL: 8_000,
-  LOCKED: 3_000,
-  SPINNING: 6_000,
-  RESULT: 4_000,
-  MULTIPLIER_REVEAL: 10_000,
+  OPEN: 15_000,
+  LAST_CALL: 5_000,
+  LOCKED: 1_000,
+  MULTIPLIER_REVEAL: 7_000,
+  SPINNING: 18_000,
+  RESULT: 3_500,
   SETTLING: 3_000,
-  INTERMISSION: 4_000,
+  INTERMISSION: 3_000,
 };
 
 export const INITIAL_ROULETTE_BALANCE_CENTS = 100_000;
