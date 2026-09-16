@@ -184,7 +184,7 @@ const rouletteMarkup = `
             <div class="wheel-rotor">
                <div class="wheel-wood-deck" aria-hidden="true"></div>
               <div class="wheel-number-band" aria-hidden="true" style="--wheel-band:${rouletteWheelBand}"></div>
-              <div class="wheel-number-labels" aria-label="European wheel number order">${EUROPEAN_WHEEL_ORDER.map((number, index) => `<span class="wheel-number-label" style="--pocket-index:${index}"><b>${number}</b></span>`).join("")}</div>
+              <div class="wheel-number-labels" aria-label="European wheel number order">${EUROPEAN_WHEEL_ORDER.map((number, index) => `<span class="wheel-number-label" data-pocket-index="${index}" style="--pocket-index:${index};--label-flip:${index >= 10 && index <= 27 ? "180deg" : "0deg"}"><b>${number}</b></span>`).join("")}</div>
               <div class="wheel-pocket-track">${EUROPEAN_WHEEL_ORDER.map((number, index) => `<span class="wheel-pocket ${number === 0 ? "is-green" : rouletteRedNumbers.has(number) ? "is-red" : "is-black"}" data-wheel-number="${number}" style="--pocket-index:${index}"><i aria-hidden="true"></i></span>`).join("")}</div>
               <div class="wheel-deflectors">${Array.from({ length: 8 }, (_, index) => `<i style="--deflector-index:${index}"></i>`).join("")}</div>
               <div class="wheel-center-well"><div class="wheel-center-cap"><i></i><b></b></div></div>

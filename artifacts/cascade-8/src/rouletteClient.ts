@@ -4,6 +4,8 @@ import {
   FALLBACK_POCKET_RADIUS_RATIO,
   getWheelAngle,
   getWheelLandingPlan,
+  normalizeDegrees,
+  ROULETTE_SEGMENT_DEGREES,
 } from "./rouletteGeometry";
 
 type RoulettePhase = "OPEN" | "LAST_CALL" | "LOCKED" | "SPINNING" | "RESULT" | "MULTIPLIER_REVEAL" | "SETTLING" | "INTERMISSION";
@@ -897,7 +899,7 @@ export class RouletteClient {
     this.wheelAnimation?.cancel();
     this.ballAnimation?.cancel();
     this.settledResultKey = "";
-    wheel.style.setProperty("--label-counter-angle", "0deg");
+    this.updateLabelOrientations(wheel, 0);
     rotor.style.transform = "rotate(0deg)";
     wheel.classList.add("is-spinning");
     this.voice.startSpin();
@@ -905,6 +907,7 @@ export class RouletteClient {
     if (this.prefersReducedMotion()) {
       this.stopLabelOrientationSync();
       wheel.classList.remove("is-spinning");
+      this.updateLabelOrientations(wheel, 0);
       ball.style.transform = `rotate(0deg) translateY(-${outerRadius}px)`;
       return;
     }
@@ -961,14 +964,14 @@ export class RouletteClient {
     this.wheelAnimation?.cancel();
     wheel.classList.remove("is-spinning");
     const plan = getWheelLandingPlan(winningNumber, currentRotation, this.readWheelRadii(wheel));
-    const { finalRotation, finalLabelAngle, outerRadius, pocketRadius } = plan;
+    const { finalRotation, outerRadius, pocketRadius } = plan;
     const finalPocketRadius = Math.max(0, pocketRadius - Math.max(9, outerRadius * .025));
     if (this.prefersReducedMotion()) {
       this.stopLabelOrientationSync();
       this.wheelAnimation = undefined;
       this.ballAnimation = undefined;
       rotor.style.transform = `rotate(${finalRotation}deg)`;
-      wheel.style.setProperty("--label-counter-angle", finalLabelAngle);
+      this.updateLabelOrientations(wheel, finalRotation);
       ball.style.transform = `rotate(-1440deg) translateY(-${finalPocketRadius}px)`;
       this.settledResultKey = resultKey;
       this.voice.cue("land");
@@ -989,7 +992,7 @@ export class RouletteClient {
     this.wheelAnimation.finished.then(() => {
       if (this.animatedResultKey !== resultKey) return;
       this.stopLabelOrientationSync();
-      wheel.style.setProperty("--label-counter-angle", finalLabelAngle);
+      this.updateLabelOrientations(wheel, finalRotation);
     }).catch(() => undefined);
     const profileSeed = [...resultKey].reduce((sum, character) => (sum * 31 + character.charCodeAt(0)) >>> 0, 7);
     const extraTurns = 3 + (profileSeed % 2);
@@ -1048,13 +1051,13 @@ export class RouletteClient {
     this.ballAnimation?.cancel();
     this.wheelAnimation?.cancel();
     wheel.classList.remove("is-spinning");
-    const { finalRotation, finalLabelAngle, outerRadius, pocketRadius } = getWheelLandingPlan(winningNumber, currentRotation, this.readWheelRadii(wheel));
+    const { finalRotation, outerRadius, pocketRadius } = getWheelLandingPlan(winningNumber, currentRotation, this.readWheelRadii(wheel));
     const finalPocketRadius = Math.max(0, pocketRadius - Math.max(9, outerRadius * .025));
     this.stopLabelOrientationSync();
     this.wheelAnimation = undefined;
     this.ballAnimation = undefined;
     rotor.style.transform = `rotate(${finalRotation}deg)`;
-    wheel.style.setProperty("--label-counter-angle", finalLabelAngle);
+    this.updateLabelOrientations(wheel, finalRotation);
     ball.style.transform = `rotate(-1440deg) translateY(-${finalPocketRadius}px)`;
     this.settledResultKey = resultKey;
     this.render();
@@ -1106,10 +1109,20 @@ export class RouletteClient {
       const wheel = this.root.querySelector<HTMLElement>("[data-wheel]");
       const rotor = wheel?.querySelector<HTMLElement>(".wheel-rotor");
       if (!wheel || !rotor) return;
-      wheel.style.setProperty("--label-counter-angle", `${this.readRotation(rotor)}deg`);
+      this.updateLabelOrientations(wheel, this.readRotation(rotor));
       this.labelSyncFrame = window.requestAnimationFrame(sync);
     };
     sync();
+  }
+
+  private updateLabelOrientations(wheel: HTMLElement, rotorRotation: number) {
+    wheel.querySelectorAll<HTMLElement>(".wheel-number-label").forEach((label) => {
+      const pocketIndex = Number(label.dataset.pocketIndex);
+      if (!Number.isFinite(pocketIndex)) return;
+      const screenAngle = normalizeDegrees(pocketIndex * ROULETTE_SEGMENT_DEGREES + rotorRotation);
+      const labelBody = label.querySelector<HTMLElement>("b");
+      labelBody?.style.setProperty("--label-flip", screenAngle > 90 && screenAngle < 270 ? "180deg" : "0deg");
+    });
   }
 
   private stopLabelOrientationSync() {
