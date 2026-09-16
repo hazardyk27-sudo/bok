@@ -70,6 +70,22 @@ type BettingControlDiagnostics = {
   }>;
 };
 
+type BettingTextDiagnostics = {
+  viewport: { width: number; height: number };
+  horizontalOverflow: boolean;
+  labels: Record<string, {
+    text: string;
+    visible: boolean;
+    contained: boolean;
+    left: number;
+    right: number;
+    top: number;
+    bottom: number;
+    width: number;
+    height: number;
+  }>;
+};
+
 type SafeAreaInsets = {
   top: number;
   right: number;
@@ -390,6 +406,91 @@ async function captureBettingControlDiagnostics(page: Page): Promise<BettingCont
       },
       controls: Object.fromEntries(Object.entries(controls).map(([name, element]) => [name, rectValues(element)])),
     } as BettingControlDiagnostics;
+  });
+}
+
+async function captureBettingTextDiagnostics(page: Page): Promise<BettingTextDiagnostics> {
+  return page.evaluate(() => {
+    const firstVisible = (selector: string) => Array.from(document.querySelectorAll<HTMLElement>(selector))
+      .find((element) => {
+        const style = getComputedStyle(element);
+        const rect = element.getBoundingClientRect();
+        return style.display !== "none" && style.visibility !== "hidden" && rect.width > 0 && rect.height > 0;
+      }) ?? null;
+    const rectValues = (element: HTMLElement | null) => {
+      if (!element) {
+        return {
+          text: "",
+          visible: false,
+          contained: false,
+          left: 0,
+          right: 0,
+          top: 0,
+          bottom: 0,
+          width: 0,
+          height: 0,
+        };
+      }
+      const rect = element.getBoundingClientRect();
+      const style = getComputedStyle(element);
+      const visible = style.display !== "none" && style.visibility !== "hidden" && rect.width > 0 && rect.height > 0;
+      const contained = visible
+        && rect.left >= -1
+        && rect.right <= document.documentElement.clientWidth + 1
+        && element.scrollWidth <= element.clientWidth + 1
+        && element.scrollHeight <= element.clientHeight + 1;
+      return {
+        text: element.textContent?.trim() ?? "",
+        visible,
+        contained,
+        left: rect.left,
+        right: rect.right,
+        top: rect.top,
+        bottom: rect.bottom,
+        width: rect.width,
+        height: rect.height,
+      };
+    };
+    const targets = {
+      chip: firstVisible('[data-action="drawer-chips"] small') ?? firstVisible('.chip-picker [data-stake="100"]'),
+      betCount: firstVisible("[data-bet-count]"),
+      undo: firstVisible('[data-action="undo"] small') ?? firstVisible('[data-action="undo"]'),
+      clear: firstVisible('[data-action="clear"] small') ?? firstVisible('[data-action="clear"]'),
+      rebet: firstVisible('[data-action="rebet"] small') ?? firstVisible('[data-action="rebet"]'),
+    };
+    const scrollWidth = Math.max(document.documentElement.scrollWidth, document.body.scrollWidth);
+    return {
+      viewport: { width: window.innerWidth, height: window.innerHeight },
+      horizontalOverflow: scrollWidth > document.documentElement.clientWidth + 1,
+      labels: Object.fromEntries(Object.entries(targets).map(([name, element]) => [name, rectValues(element)])),
+    } as BettingTextDiagnostics;
+  });
+}
+
+async function emulateEnlargedBettingText(page: Page) {
+  await page.addStyleTag({
+    content: `
+      :root {
+        -webkit-text-size-adjust: 150%;
+        text-size-adjust: 150%;
+      }
+      .roulette-page .mobile-utility-rail > button small {
+        font-size: 8px !important;
+        line-height: 1.15;
+      }
+      .roulette-page [data-bet-count] {
+        font-size: 13px !important;
+        line-height: 1.2;
+      }
+      .roulette-page .chip-picker button {
+        font-size: 15px !important;
+        line-height: 1.2;
+      }
+      .roulette-page .bet-slip-actions button {
+        font-size: 12px !important;
+        line-height: 1.2;
+      }
+    `,
   });
 }
 
@@ -754,6 +855,50 @@ test.describe("roulette betting controls on rotation", () => {
     }
 
     await testInfo.attach("roulette-betting-control-diagnostics", {
+      body: JSON.stringify(diagnostics, null, 2),
+      contentType: "application/json",
+    });
+  });
+});
+
+test.describe("roulette betting text scaling", () => {
+  test("keeps chip, count, undo, clear, and rebet labels contained in portrait and short landscape", async ({ page }, testInfo) => {
+    const fixture = await installRouletteFixture(page);
+    const open = makeSnapshot("OPEN", null, new Date().toISOString(), 60_000);
+    const diagnostics: BettingTextDiagnostics[] = [];
+
+    await fixture.setSnapshot(open);
+    await fixture.emitSnapshot(open);
+    await expect(page.locator(".roulette-page")).toHaveClass(/is-betting-phase/);
+    await emulateEnlargedBettingText(page);
+
+    for (const viewport of [
+      { width: 412, height: 915 },
+      { width: 568, height: 320 },
+    ]) {
+      await page.setViewportSize(viewport);
+      await expect.poll(() => page.evaluate(() => ({
+        width: window.innerWidth,
+        height: window.innerHeight,
+      }))).toEqual(viewport);
+
+      const viewportDiagnostics = await captureBettingTextDiagnostics(page);
+      diagnostics.push(viewportDiagnostics);
+      expect(viewportDiagnostics.horizontalOverflow, JSON.stringify(viewportDiagnostics, null, 2)).toBe(false);
+
+      for (const [name, label] of Object.entries(viewportDiagnostics.labels)) {
+        expect(label.visible, `${name} is not visible: ${JSON.stringify(viewportDiagnostics, null, 2)}`).toBe(true);
+        expect(label.contained, `${name} is clipped: ${JSON.stringify(viewportDiagnostics, null, 2)}`).toBe(true);
+        expect(label.text.length, `${name} has no readable label: ${JSON.stringify(viewportDiagnostics, null, 2)}`).toBeGreaterThan(0);
+      }
+      expect(viewportDiagnostics.labels.chip.text).toMatch(/CHIP|100/);
+      expect(viewportDiagnostics.labels.betCount.text).toContain("ALAN");
+      expect(viewportDiagnostics.labels.undo.text).toContain("UNDO");
+      expect(viewportDiagnostics.labels.clear.text).toMatch(/TEMİZLE|CLEAR/);
+      expect(viewportDiagnostics.labels.rebet.text).toContain("TEKRAR");
+    }
+
+    await testInfo.attach("roulette-betting-text-diagnostics", {
       body: JSON.stringify(diagnostics, null, 2),
       contentType: "application/json",
     });

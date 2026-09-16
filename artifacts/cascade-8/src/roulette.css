@@ -104,14 +104,14 @@
 .roulette-bet-slip { margin-top: 12px; padding: 12px; border: 1px solid rgba(151, 178, 239, .18); border-radius: 11px; background: rgba(8, 14, 38, .62); }
 .chip-picker { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
 .chip-picker > div { display: flex; flex-wrap: wrap; justify-content: end; gap: 5px; }
-.chip-picker button { position: relative; min-width: 48px; min-height: 31px; padding: 0 7px 0 19px; border: 1px solid rgba(180, 194, 236, .23); border-radius: 7px; color: #b9c4e3; background: rgba(28, 41, 85, .72); font: 10px "DM Mono", monospace; }
+.chip-picker button { position: relative; min-width: 48px; min-height: 31px; padding: 0 7px 0 19px; border: 1px solid rgba(180, 194, 236, .23); border-radius: 7px; color: #b9c4e3; background: rgba(28, 41, 85, .72); font: 10px "DM Mono", monospace; white-space: nowrap; }
 .chip-picker button i { position: absolute; left: 5px; top: 50%; width: 10px; height: 10px; transform: translateY(-50%); border: 1px solid #fff2ae; border-radius: 50%; background: #d89e3c; }
 .chip-picker button:hover, .chip-picker button.is-selected { border-color: #6fd9ff; color: #fff; box-shadow: 0 0 12px rgba(112, 213, 255, .2); }
 .bet-slip-summary { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 12px; padding-top: 11px; border-top: 1px solid rgba(149, 165, 231, .13); }
 .bet-slip-summary strong { display: inline-block; margin-top: 4px; color: #fff0ad; font: 700 21px "DM Mono", monospace; }
 .bet-slip-summary small { display: block; color: #7282aa; font: 8px "DM Mono", monospace; }
 .bet-slip-actions { display: flex; gap: 5px; }
-.bet-slip-actions button { padding: 7px 9px; border: 1px solid rgba(142, 166, 225, .25); border-radius: 6px; color: #a9b8de; background: rgba(29, 40, 79, .65); font: 8px "DM Mono", monospace; }
+.bet-slip-actions button { flex: 0 0 auto; padding: 7px 9px; border: 1px solid rgba(142, 166, 225, .25); border-radius: 6px; color: #a9b8de; background: rgba(29, 40, 79, .65); font: 8px "DM Mono", monospace; white-space: nowrap; }
 .bet-slip-actions button:hover:not(:disabled) { color: var(--cyan); border-color: var(--cyan); }
 .bet-slip-actions button:disabled { opacity: .35; }
 .selected-bets { display: flex; flex-wrap: wrap; gap: 5px; min-height: 27px; margin: 10px 0; }
@@ -270,11 +270,15 @@
   .fairness-card { margin-top: 8px; }
   .roulette-bet-card { order: 2; position: relative; padding: 11px 58px 12px 9px; border-radius: 17px; }
   .roulette-bet-card .table-card-heading { min-height: 34px; margin-bottom: 7px; }
+  .table-card-heading { flex-wrap: wrap; }
+  .table-card-heading > div:first-child, .table-heading-tools { min-width: 0; }
+  .table-heading-tools { width: 100%; flex-wrap: wrap; justify-content: flex-start; }
+  .table-odds-note { flex: 1 1 100%; max-width: none; text-align: left; }
   .table-card-heading > div > strong { font-size: 13px; }
   .table-odds-note { max-width: 94px; font-size: 6px; }
-  .mobile-utility-rail { position: absolute; top: 57px; right: 7px; display: flex; width: 43px; flex-direction: column; align-items: stretch; gap: 5px; z-index: 6; }
-  .mobile-utility-rail > button, .mobile-utility-chips > button { display: grid; place-items: center; min-height: 35px; padding: 2px; border: 1px solid rgba(133, 164, 235, .35); border-radius: 8px; color: #bbcaef; background: rgba(22, 35, 75, .9); font: 15px "DM Mono", monospace; }
-  .mobile-utility-rail > button small { color: #7288b7; font-size: 5px; letter-spacing: .04em; }
+  .mobile-utility-rail { position: absolute; top: 57px; right: 7px; display: flex; width: max-content; min-width: 43px; flex-direction: column; align-items: stretch; gap: 5px; z-index: 6; }
+  .mobile-utility-rail > button, .mobile-utility-chips > button { display: grid; place-items: center; min-width: 100%; min-height: 35px; padding: 2px; border: 1px solid rgba(133, 164, 235, .35); border-radius: 8px; color: #bbcaef; background: rgba(22, 35, 75, .9); font: 15px "DM Mono", monospace; }
+  .mobile-utility-rail > button small { color: #7288b7; font-size: 5px; letter-spacing: .04em; white-space: nowrap; }
   .mobile-utility-rail button:disabled { opacity: .28; }
   .mobile-utility-chips { display: grid; gap: 4px; padding: 4px 0; border-block: 1px solid rgba(126, 156, 226, .18); }
   .mobile-utility-chips > button { min-height: 25px; border-radius: 50%; }
