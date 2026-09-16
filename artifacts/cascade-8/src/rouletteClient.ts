@@ -29,6 +29,7 @@ const PHASE_LABELS: Record<RoulettePhase, string> = {
   SETTLING: "ÖDEME YAPILIYOR", INTERMISSION: "YENİ ROUND HAZIRLANIYOR",
 };
 const RED_NUMBERS = new Set([1, 3, 5, 7, 9, 12, 14, 16, 18, 19, 21, 23, 25, 27, 30, 32, 34, 36]);
+const EUROPEAN_WHEEL_ORDER = [0, 32, 15, 19, 4, 21, 2, 25, 17, 34, 6, 27, 13, 36, 11, 30, 8, 23, 10, 5, 24, 16, 33, 1, 20, 14, 31, 9, 22, 18, 29, 7, 28, 12, 35, 3, 26];
 const MAX_BET_PER_AREA = 10_000;
 const formatCredits = (cents: number) => (cents / 100).toLocaleString("tr-TR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 const formatCountdown = (milliseconds: number) => {
@@ -70,6 +71,8 @@ export class RouletteClient {
   private roundId = "";
   private statusTimer?: number;
   private voice = new RouletteVoice();
+  private ballAnimation?: Animation;
+  private animatedResultKey = "";
   private readonly root: HTMLElement;
 
   constructor(root: HTMLElement) {
@@ -105,12 +108,22 @@ export class RouletteClient {
     this.root.querySelector<HTMLButtonElement>("[data-action='clear']")?.addEventListener("click", () => this.clearSelections());
     this.root.querySelector<HTMLButtonElement>("[data-action='rebet']")?.addEventListener("click", () => this.rebet());
     this.root.querySelector<HTMLButtonElement>("[data-action='menu']")?.addEventListener("click", () => { window.location.href = "/"; });
-    this.root.querySelector<HTMLButtonElement>("[data-action='sound']")?.addEventListener("click", (event) => {
-      const button = event.currentTarget as HTMLButtonElement;
-      button.classList.toggle("is-active", this.voice.toggle());
-      button.querySelector("span")!.textContent = button.classList.contains("is-active") ? "SES AÇIK" : "SESİ AÇ";
-    });
+    this.root.querySelectorAll<HTMLButtonElement>("[data-action='sound']").forEach((button) => button.addEventListener("click", () => {
+      const enabled = this.voice.toggle();
+      this.root.querySelectorAll<HTMLButtonElement>("[data-action='sound']").forEach((soundButton) => {
+        soundButton.classList.toggle("is-active", enabled);
+        const label = soundButton.querySelector("span");
+        if (label) label.textContent = enabled ? "SES AÇIK" : "SESİ AÇ";
+        const small = soundButton.querySelector("small");
+        if (small) small.textContent = enabled ? "AÇIK" : "SES";
+      });
+    }));
     this.root.querySelector<HTMLButtonElement>("[data-action='refresh']")?.addEventListener("click", () => void this.load());
+    this.root.querySelectorAll<HTMLButtonElement>("[data-action^='drawer-']").forEach((button) => button.addEventListener("click", () => {
+      const action = button.dataset.action;
+      if (action === "drawer-close") this.closeDrawers();
+      else if (action) this.toggleDrawer(action.replace("drawer-", ""));
+    }));
   }
 
   private serializeSelections() {
@@ -218,6 +231,8 @@ export class RouletteClient {
       this.announcePhase(next);
       if (next.round.phase === "SETTLING" || next.round.phase === "INTERMISSION") void this.load();
     }
+    if (next.round.phase === "SPINNING" && (previous?.round.phase !== "SPINNING" || previous.round.id !== next.round.id)) this.startWheelSpin();
+    if (next.round.winningNumber !== null && (previous?.round.winningNumber === null || previous?.round.id !== next.round.id)) this.finishWheelSpin(next.round.winningNumber);
     if (previous?.round.winningNumber === null && next.round.winningNumber !== null) this.voice.speak(`${next.round.winningNumber} numara kazandı`);
     if ((previous?.round.revealedMultipliers.length ?? 0) < next.round.revealedMultipliers.length) {
       const value = next.round.revealedMultipliers.at(-1);
@@ -271,6 +286,9 @@ export class RouletteClient {
       button.classList.toggle("has-multiplier", Boolean(value));
       button.classList.toggle("is-high-multiplier", Boolean(value && value >= 300));
     });
+    this.root.querySelectorAll<HTMLElement>(".wheel-pocket").forEach((pocket) => {
+      pocket.classList.toggle("is-winning", round.winningNumber !== null && Number(pocket.dataset.wheelNumber) === round.winningNumber);
+    });
     this.root.querySelectorAll<HTMLButtonElement>("[data-stake]").forEach((button) => button.classList.toggle("is-selected", Number(button.dataset.stake) === this.selectedChipCents));
     this.root.querySelector<HTMLElement>("[data-selected-bets]")!.innerHTML = this.selections.size
       ? [...this.selections.values()].map((bet) => `<span class="selected-bet-pill"><b>${bet.label}</b><strong>${formatCredits(bet.stakeCents)}</strong></span>`).join("")
@@ -280,7 +298,8 @@ export class RouletteClient {
       element.classList.toggle("is-visible", round.winningNumber !== null);
     });
     this.root.querySelector<HTMLElement>("[data-wheel]")!.classList.toggle("is-spinning", round.phase === "SPINNING");
-    this.root.querySelector<HTMLElement>("[data-wheel]")!.style.setProperty("--winning-angle", `${(round.winningNumber ?? 0) * 9.73}deg`);
+    const winningIndex = round.winningNumber === null ? 0 : EUROPEAN_WHEEL_ORDER.indexOf(round.winningNumber);
+    this.root.querySelector<HTMLElement>("[data-wheel]")!.style.setProperty("--winning-angle", `${winningIndex * (360 / 37)}deg`);
     const lucky = new Set(round.luckyNumbers);
     this.root.querySelector<HTMLElement>("[data-lucky-list]")!.innerHTML = round.luckyNumbers.length
       ? round.luckyNumbers.map((number) => `<span class="lucky-chip">${number}</span>`).join("")
@@ -345,8 +364,7 @@ export class RouletteClient {
     `).join("") || `<span class="muted-copy">İlk sonuç bekleniyor</span>`;
     const mobileTarget = this.root.querySelector<HTMLElement>(".mobile-results-list");
     if (mobileTarget) mobileTarget.innerHTML = historyMarkup;
-    if (!target) return;
-    target.innerHTML = results.map((result) => `
+    const historyRows = results.map((result) => `
       <div class="history-row">
         <span>#${String(result.sequence).padStart(6, "0")}</span>
         <strong class="${result.winningNumber === 0 ? "is-zero" : RED_NUMBERS.has(result.winningNumber) ? "is-red" : "is-black"}">${result.winningNumber}</strong>
@@ -354,6 +372,62 @@ export class RouletteClient {
         <span>${result.multipliers.map((value) => `${value}x`).join(" · ")}</span>
       </div>
     `).join("") || `<span class="muted-copy">İlk sonuç bekleniyor</span>`;
+    if (target) target.innerHTML = historyRows;
+    const drawerTarget = this.root.querySelector<HTMLElement>("[data-history-drawer]");
+    if (drawerTarget) drawerTarget.innerHTML = historyRows;
+  }
+
+  private toggleDrawer(name: string) {
+    this.root.querySelectorAll<HTMLElement>("[data-drawer]").forEach((drawer) => {
+      const open = drawer.dataset.drawer === name && drawer.getAttribute("aria-hidden") === "true";
+      drawer.setAttribute("aria-hidden", String(!open));
+    });
+  }
+
+  private closeDrawers() {
+    this.root.querySelectorAll<HTMLElement>("[data-drawer]").forEach((drawer) => drawer.setAttribute("aria-hidden", "true"));
+  }
+
+  private startWheelSpin() {
+    const wheel = this.root.querySelector<HTMLElement>("[data-wheel]");
+    const ball = this.root.querySelector<HTMLElement>(".wheel-ball");
+    if (!wheel || !ball) return;
+    this.ballAnimation?.cancel();
+    wheel.classList.add("is-spinning");
+    const radius = wheel.clientWidth * 0.43;
+    this.ballAnimation = ball.animate(
+      [{ transform: `rotate(0deg) translateY(-${radius}px)` }, { transform: `rotate(-360deg) translateY(-${radius}px)` }],
+      { duration: 760, iterations: Infinity, easing: "linear" },
+    );
+  }
+
+  private finishWheelSpin(winningNumber: number) {
+    const wheel = this.root.querySelector<HTMLElement>("[data-wheel]");
+    const ball = this.root.querySelector<HTMLElement>(".wheel-ball");
+    if (!wheel || !ball) return;
+    const resultKey = `${this.snapshot?.round.id}:${winningNumber}`;
+    if (this.animatedResultKey === resultKey) return;
+    this.animatedResultKey = resultKey;
+    this.ballAnimation?.cancel();
+    wheel.classList.remove("is-spinning");
+    const rotor = wheel.querySelector<HTMLElement>(".wheel-rotor");
+    if (rotor) rotor.style.transform = "rotate(0deg)";
+    const radius = wheel.clientWidth;
+    const outerRadius = radius * 0.43;
+    const pocketRadius = radius * 0.365;
+    const targetAngle = EUROPEAN_WHEEL_ORDER.indexOf(winningNumber) * (360 / 37);
+    this.ballAnimation = ball.animate(
+      [
+        { transform: `rotate(-12deg) translateY(-${outerRadius}px)` },
+        { transform: `rotate(-552deg) translateY(-${outerRadius}px)` },
+        { transform: `rotate(${targetAngle - 18}deg) translateY(-${outerRadius}px)` },
+        { transform: `rotate(${targetAngle + 5}deg) translateY(-${pocketRadius - 9}px)`, offset: .78 },
+        { transform: `rotate(${targetAngle - 3}deg) translateY(-${pocketRadius}px)`, offset: .9 },
+        { transform: `rotate(${targetAngle + 1}deg) translateY(-${pocketRadius}px)`, offset: .96 },
+        { transform: `rotate(${targetAngle}deg) translateY(-${pocketRadius}px)` },
+      ],
+      { duration: 3200, easing: "cubic-bezier(.12,.76,.2,1)", fill: "forwards" },
+    );
   }
 
   private setConnection(label: string, live: boolean) {
