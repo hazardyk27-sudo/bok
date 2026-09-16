@@ -337,7 +337,6 @@
 .roulette-wheel-live {
   --winning-angle: 0deg;
   --pocket-radius: clamp(126px, 34vw, 164px);
-  --number-radius: clamp(142px, 37vw, 186px);
   --ball-radius: clamp(175px, 45vw, 222px);
   position: relative;
   width: min(330px, 100%);
@@ -348,6 +347,7 @@
   background: radial-gradient(circle at 48% 44%, #7c4726 0 27%, #4f2816 28% 63%, #7e4824 63.5% 79%, #301309 79.5% 100%);
   box-shadow: 0 0 0 2px #e0b36b, 0 0 0 5px #5d321b, 0 0 0 8px #a96a38, 0 0 0 12px #26130b, 0 0 0 15px #0a0d0e, inset 0 0 36px rgba(25, 7, 2, .84), inset 0 0 0 2px rgba(255, 226, 164, .18), 0 24px 58px rgba(0, 0, 0, .62);
   isolation: isolate;
+  container-type: inline-size;
 }
 .roulette-wheel-live::before {
   content: "";
@@ -399,6 +399,8 @@
   margin: -4.7%;
   display: grid;
   place-items: center;
+  --number-radius: clamp(142px, 37vw, 186px);
+  --number-radius: clamp(118px, 41cqw, 220px);
   transform: rotate(calc(var(--pocket-index) * 9.7297deg)) translateY(calc(-1 * var(--number-radius)));
 }
 .wheel-number-label b {
@@ -613,7 +615,6 @@
   .roulette-wheel-live {
     width: min(530px, 100%);
     --pocket-radius: clamp(146px, 34vw, 164px);
-    --number-radius: clamp(154px, 35vw, 178px);
     --ball-radius: clamp(204px, 45vw, 222px);
   }
   .wheel-number-label b { font-size: clamp(15px, 1.25vw, 20px); }
@@ -624,7 +625,6 @@
   .roulette-wheel-live {
     width: min(390px, 94vw);
     --pocket-radius: clamp(118px, 34vw, 132px);
-    --number-radius: clamp(134px, 37vw, 150px);
     --ball-radius: clamp(154px, 45vw, 174px);
   }
   .wheel-number-label { width: 10%; height: 10%; margin: -5%; }
@@ -671,7 +671,6 @@
   .roulette-wheel-live {
     width: min(260px, calc(100svh - var(--safe-area-inset-top) - var(--safe-area-inset-bottom) - 150px));
     --pocket-radius: clamp(88px, 28vw, 108px);
-    --number-radius: clamp(102px, 31vw, 122px);
     --ball-radius: clamp(118px, 37vw, 142px);
   }
   .wheel-deflectors i { transform: rotate(calc(var(--deflector-index) * 45deg + 22.5deg)) translateY(-78px); }

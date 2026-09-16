@@ -219,17 +219,17 @@ describe("roulette motion timing contract", () => {
     expect(first.bounceCount).toBeGreaterThanOrEqual(2);
     expect(first.bounceCount).toBeLessThanOrEqual(5);
     expect(first.outerTrackTurns).toBeGreaterThanOrEqual(4);
-    expect(first.outerTrackTurns).toBeLessThanOrEqual(6);
+    expect(first.outerTrackTurns).toBeLessThanOrEqual(5);
     expect(first.ballOrbitMs).toBeGreaterThan(2_000);
   });
 
   it("keeps orbit, landing, and reveal timings coordinated", () => {
     expect(ROULETTE_MOTION_TIMINGS).toEqual({
-      rotorOrbitMs: 5000,
-      ballOrbitMs: 2900,
-      landingDurationMs: 3500,
-      resultRevealDelayMs: 3500,
-      resultRevealDurationMs: 550,
+      rotorOrbitMs: 4700,
+      ballOrbitMs: 2600,
+      landingDurationMs: 2800,
+      resultRevealDelayMs: 2800,
+      resultRevealDurationMs: 500,
     });
     expect(ROULETTE_MOTION_TIMINGS.resultRevealDelayMs)
       .toBeLessThanOrEqual(ROULETTE_MOTION_TIMINGS.landingDurationMs);
@@ -242,6 +242,7 @@ describe("roulette motion timing contract", () => {
     expect(rouletteCss).toContain(`animation: roulette-result-pop-compact var(${ROULETTE_MOTION_CSS_VARIABLES.resultReveal})`);
     expect(rouletteCss).not.toContain("roulette-rotor-roll 1.9s");
     expect(rouletteCss).not.toContain("roulette-result-pop-compact .45s");
+      expect(rouletteCss).toContain("--number-radius: clamp(118px, 41cqw, 220px);");
   });
 });
 

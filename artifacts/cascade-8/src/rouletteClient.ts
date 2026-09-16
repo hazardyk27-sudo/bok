@@ -68,11 +68,11 @@ export function getRouletteAnimationTransition(
 const API_BASE = "/api/roulette";
 
 export const ROULETTE_MOTION_TIMINGS = {
-  rotorOrbitMs: 5000,
-  ballOrbitMs: 2900,
-  landingDurationMs: 3500,
-  resultRevealDelayMs: 3500,
-  resultRevealDurationMs: 550,
+  rotorOrbitMs: 4700,
+  ballOrbitMs: 2600,
+  landingDurationMs: 2800,
+  resultRevealDelayMs: 2800,
+  resultRevealDurationMs: 500,
 } as const;
 
 export type RouletteMotionProfile = {
@@ -94,11 +94,11 @@ function hashMotionSeed(roundId: string) {
 export function getRouletteMotionProfile(roundId: string): RouletteMotionProfile {
   const seed = hashMotionSeed(roundId);
   const next = (offset: number, modulus: number) => Math.floor(seed / 2 ** offset) % modulus;
-  const outerTrackTurns = 4 + next(8, 3);
+  const outerTrackTurns = 4 + next(8, 2);
   return {
     initialBallAngle: next(0, 360),
-    rotorOrbitMs: 4_650 + next(3, 4) * 260,
-    ballOrbitMs: Math.round(18_000 / (outerTrackTurns + 1.2)),
+    rotorOrbitMs: 4_450 + next(3, 4) * 250,
+    ballOrbitMs: Math.round(11_500 / outerTrackTurns),
     outerTrackTurns,
     landingOuterTurns: 1 + next(23, 2),
     deflectorIndex: next(11, 8),
@@ -1102,8 +1102,16 @@ export class RouletteClient {
       [{ transform: "rotate(0deg)" }, { transform: "rotate(360deg)" }],
       { duration: rotorOrbitMs, iterations: Infinity, easing: "linear" },
     );
+    const orbitTransform = (angle: number, radius: number) =>
+      `rotate(${angle}deg) translateY(-${radius}px)`;
     this.ballAnimation = ball.animate(
-      [{ transform: `rotate(${profile.initialBallAngle}deg) translateY(-${outerRadius}px)` }, { transform: `rotate(${profile.initialBallAngle - 360}deg) translateY(-${outerRadius}px)` }],
+      [
+        { transform: orbitTransform(profile.initialBallAngle, outerRadius), offset: 0 },
+        { transform: orbitTransform(profile.initialBallAngle - 82, outerRadius + 3), offset: .23, easing: "cubic-bezier(.4,0,.6,1)" },
+        { transform: orbitTransform(profile.initialBallAngle - 180, outerRadius - 2), offset: .5, easing: "cubic-bezier(.4,0,.6,1)" },
+        { transform: orbitTransform(profile.initialBallAngle - 278, outerRadius + 2), offset: .77, easing: "cubic-bezier(.4,0,.6,1)" },
+        { transform: orbitTransform(profile.initialBallAngle - 360, outerRadius), offset: 1 },
+      ],
       { duration: ballOrbitMs, iterations: Infinity, easing: "linear" },
     );
     this.wheelAnimation.currentTime = phaseElapsed % rotorOrbitMs;
@@ -1191,24 +1199,27 @@ export class RouletteClient {
     const deflectorHitAngle = currentBallAngle
       - normalizeDegrees(currentBallAngle - deflectorAngle)
       - profile.landingOuterTurns * 360;
-    const deflectorRadius = Math.min(outerRadius - 20, Math.max(78, outerRadius * .56));
+    const deflectorRadius = Math.min(
+      outerRadius - 24,
+      Math.max(78, Math.min(pocketRadius - 22, outerRadius * .62)),
+    );
     const innerTrackRadius = pocketRadius + (outerRadius - pocketRadius) * .18;
     const ballTransform = (angle: number, radius: number, scale = 1) =>
       `rotate(${angle}deg) translateY(-${radius}px) scale(${scale})`;
     const keyframes: Keyframe[] = [
       { transform: ballTransform(currentBallAngle, outerRadius), offset: 0 },
-      { transform: ballTransform(currentBallAngle - 120, outerRadius + 2), offset: .1, easing: "cubic-bezier(.18,.72,.28,1)" },
-      { transform: ballTransform(deflectorHitAngle + 210, outerRadius - 2), offset: .22, easing: "cubic-bezier(.18,.72,.28,1)" },
-      { transform: ballTransform(deflectorHitAngle + 82, outerRadius - 24), offset: .36, easing: "cubic-bezier(.2,.64,.3,1)" },
-      { transform: ballTransform(deflectorHitAngle + 30, deflectorRadius + 26), offset: .43, easing: "cubic-bezier(.2,.64,.3,1)" },
-      { transform: ballTransform(deflectorHitAngle, deflectorRadius, 1.16), offset: .47, easing: "cubic-bezier(.16,.8,.24,1)" },
-      { transform: ballTransform(deflectorHitAngle - 26, deflectorRadius + 13), offset: .51, easing: "cubic-bezier(.22,.68,.28,1)" },
-      { transform: ballTransform(deflectorHitAngle - 76, deflectorRadius - 2), offset: .56, easing: "cubic-bezier(.2,.65,.3,1)" },
-      { transform: ballTransform(deflectorHitAngle - 142, innerTrackRadius + 15), offset: .63, easing: "cubic-bezier(.18,.74,.25,1)" },
-      { transform: ballTransform(deflectorHitAngle - 206, innerTrackRadius), offset: .69, easing: "cubic-bezier(.18,.74,.25,1)" },
+      { transform: ballTransform(currentBallAngle - 105, outerRadius + 2), offset: .09, easing: "cubic-bezier(.18,.72,.28,1)" },
+      { transform: ballTransform(deflectorHitAngle + 228, outerRadius - 2), offset: .2, easing: "cubic-bezier(.18,.72,.28,1)" },
+      { transform: ballTransform(deflectorHitAngle + 96, outerRadius - 18), offset: .32, easing: "cubic-bezier(.2,.64,.3,1)" },
+      { transform: ballTransform(deflectorHitAngle + 35, deflectorRadius + 18), offset: .4, easing: "cubic-bezier(.2,.64,.3,1)" },
+      { transform: ballTransform(deflectorHitAngle, deflectorRadius, 1.16), offset: .45, easing: "cubic-bezier(.16,.8,.24,1)" },
+      { transform: ballTransform(deflectorHitAngle - 30, deflectorRadius + 12), offset: .49, easing: "cubic-bezier(.22,.68,.28,1)" },
+      { transform: ballTransform(deflectorHitAngle - 78, deflectorRadius - 4), offset: .54, easing: "cubic-bezier(.2,.65,.3,1)" },
+      { transform: ballTransform(deflectorHitAngle - 136, innerTrackRadius + 10), offset: .61, easing: "cubic-bezier(.18,.74,.25,1)" },
+      { transform: ballTransform(deflectorHitAngle - 198, innerTrackRadius), offset: .67, easing: "cubic-bezier(.18,.74,.25,1)" },
     ];
-    const bounceStart = .69;
-    const bounceWindow = .26;
+    const bounceStart = .67;
+    const bounceWindow = .28;
     const bounceArc = 7 + (profile.bounceRhythm % 7);
     for (let index = 0; index < profile.bounceCount; index += 1) {
       const segment = bounceWindow / profile.bounceCount;
