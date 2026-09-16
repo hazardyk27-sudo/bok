@@ -15,11 +15,13 @@
   "dependencies": {
     "@replit/connectors-sdk": "^0.4.3",
     "@types/node": "catalog:",
+    "@types/ws": "^8.18.1",
     "happy-dom": "^20.14.5",
     "phaser": "^3.90.0",
     "tsx": "catalog:",
     "vite": "catalog:",
-    "vitest": "^5.0.0"
+    "vitest": "^5.0.0",
+    "ws": "^8.21.3"
   },
   "devDependencies": {
     "prettier": "^3.9.6",

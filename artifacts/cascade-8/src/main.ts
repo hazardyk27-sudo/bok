@@ -1,5 +1,6 @@
 import Phaser from "phaser";
 import "./styles.css";
+import "./roulette.css";
 import { getSymbolDefinition, PAYTABLE, NORMAL_SYMBOLS, BASE_REEL_CONFIG, ANIMATION, NORMAL_PAIR_COPY_CHANCE } from "./config/GameConfig";
 import { evaluateBoard } from "./engine/WinEvaluator";
 import { calculateSequenceSettlement } from "./engine/SlotEngine";
@@ -9,6 +10,7 @@ import { getNormalSymbol, getStackMetadata } from "./engine/types";
 import type { Board, BoardCell } from "./engine/types";
 import { GameController, formatCredits } from "./game/GameController";
 import { createGameScene, GameScene } from "./game/GameScene";
+import { RouletteClient } from "./rouletteClient";
 
 const app = document.querySelector<HTMLDivElement>("#app")!;
 const currentPath = window.location.pathname.replace(/\/+$/, "") || "/";
@@ -60,14 +62,14 @@ const mainMenuMarkup = `
         <span class="choice-footer"><span>30 SYMBOL FIELD</span><span class="choice-arrow" aria-hidden="true">→</span></span>
       </a>
       <a class="game-choice game-choice-roulette" href="/roulette">
-        <span class="choice-status is-soon">COMING SOON</span>
+        <span class="choice-status is-live">LIVE GLOBAL TABLE</span>
         <span class="choice-art choice-art-roulette" aria-hidden="true"><span>R</span><i></i><b></b></span>
         <span class="choice-copy">
           <span class="choice-overline">THE NIGHT TABLE</span>
           <strong>ROULETTE</strong>
           <span class="choice-type">TABLE EXPERIENCE</span>
         </span>
-        <span class="choice-footer"><span>TABLE IN PREPARATION</span><span class="choice-arrow" aria-hidden="true">→</span></span>
+        <span class="choice-footer"><span>24/7 SYNCHRONIZED ROUNDS</span><span class="choice-arrow" aria-hidden="true">→</span></span>
       </a>
     </div>
     <div class="menu-footer">
@@ -80,26 +82,47 @@ const mainMenuMarkup = `
 
 const rouletteMarkup = `
   <main class="roulette-page" aria-labelledby="roulette-title">
-    <a class="back-link" href="/">← ANA MENÜ</a>
-    <section class="roulette-hero">
-      <span class="menu-kicker">THE NIGHT TABLE // ROULETTE</span>
-      <h1 id="roulette-title">MASA <em>HAZIRLANIYOR</em></h1>
-      <p>Roulette deneyimi bu salona yakında katılıyor. Şimdilik ana menüden Fahrinin Yolu slotuna geçebilirsin.</p>
-      <div class="roulette-placeholder" aria-label="Roulette placeholder">
-        <div class="roulette-wheel">
-          <span class="roulette-wheel-ring"></span>
-          <span class="roulette-wheel-mark roulette-wheel-mark-a">R</span>
-          <span class="roulette-wheel-mark roulette-wheel-mark-b">0</span>
-          <span class="roulette-wheel-mark roulette-wheel-mark-c">R</span>
-          <span class="roulette-wheel-center">ROULETTE</span>
-        </div>
-        <span class="roulette-placeholder-label">COMING SOON // TABLE EXPERIENCE</span>
+    <div class="roulette-heading">
+      <a class="back-link" href="/">← ANA MENÜ</a>
+      <div>
+        <span class="menu-kicker">THE NIGHT TABLE // GLOBAL TABLE</span>
+        <h1 id="roulette-title">LIGHTNING <em>ROULETTE</em></h1>
+        <p>Tek masa. Herkes aynı round’u görür. Şans sayını seç, sonucu dünya ile aynı anda izle.</p>
       </div>
-      <div class="roulette-actions">
-        <a class="menu-primary-action" href="/">ANA MENÜYE DÖN</a>
-        <a class="menu-secondary-action" href="/slot">FAHRİNİN YOLU SLOTU AÇ</a>
-      </div>
+      <div class="roulette-connection" data-connection>BAĞLANTI KURULUYOR</div>
+    </div>
+    <section class="roulette-hud" aria-label="Round status">
+      <div class="roulette-hud-card"><span>ROUND</span><strong data-round>—</strong></div>
+      <div class="roulette-hud-card is-phase"><span>MASA DURUMU</span><strong data-phase>BAĞLANIYOR</strong></div>
+      <div class="roulette-countdown" data-progress><small>SONRAKİ GEÇİŞ</small><strong data-countdown>--:--</strong></div>
+      <div class="roulette-hud-card wallet-hud"><span>ROULETTE WALLET</span><strong data-balance>0.00</strong></div>
+      <button class="roulette-sound-button" data-action="sound" type="button" aria-label="Türkçe sesi aç"><span>SESİ AÇ</span></button>
     </section>
+    <section class="roulette-layout">
+      <section class="roulette-wheel-card" aria-label="Global roulette result">
+        <div class="roulette-card-kicker">SERVER RESULT // 0 — 36</div>
+        <div class="roulette-wheel-stage">
+          <div class="roulette-wheel-live" data-wheel>
+            <div class="wheel-orbit wheel-orbit-a"></div><div class="wheel-orbit wheel-orbit-b"></div>
+            <div class="wheel-number-ring">${Array.from({ length: 37 }, (_, index) => `<span style="--wheel-index:${index}">${index}</span>`).join("")}</div>
+            <div class="wheel-core"><span data-winning-number>?</span><small>KAZANAN</small></div>
+            <div class="wheel-ball"></div>
+          </div>
+        </div>
+        <div class="roulette-result-line"><span>SONUÇ</span><strong data-winning-number>?</strong><small>Herkes için aynı server sonucu</small></div>
+        <div class="fairness-card"><span class="fairness-icon">✦</span><div><b>COMMITMENT HASH</b><small data-commitment>WAITING FOR ROUND</small></div><span class="fairness-copy">Sonuç önceden kilitlenir, açıklandıktan sonra doğrulanır.</span></div>
+      </section>
+      <section class="roulette-bet-card" aria-label="Roulette betting table">
+        <div class="roulette-card-kicker">STRAIGHT UP // TEK SAYI</div>
+        <div class="roulette-number-grid" role="group" aria-label="0 ile 36 arasında bir sayı seç">${[0, ...Array.from({ length: 36 }, (_, index) => index + 1)].map((number) => `<button type="button" data-number="${number}" class="${number === 0 ? "number-zero" : [1,3,5,7,9,12,14,16,18,19,21,23,25,27,30,32,34,36].includes(number) ? "number-red" : "number-black"}">${number}</button>`).join("")}</div>
+        <div class="roulette-lucky-row"><div><span>LUCKY NUMBERS</span><div data-lucky-list><span class="muted-copy">Sonuçtan sonra açıklanacak</span></div></div><div class="reveal-count"><span>REVEAL</span><strong data-reveal-count>0/0</strong></div></div>
+        <div class="roulette-multiplier-row"><span>MULTIPLIER REVEAL</span><div data-multiplier-list><span class="muted-copy">Tek tek reveal bekleniyor</span></div></div>
+        <div class="roulette-stake-row"><div><span>STAKE</span><strong data-stake-value>1,00</strong></div><div class="stake-options">${[100, 500, 1000, 2500, 5000].map((stake) => `<button type="button" data-stake="${stake}" class="${stake === 100 ? "is-selected" : ""}">${(stake / 100).toLocaleString("tr-TR", { minimumFractionDigits: 2 })}</button>`).join("")}</div></div>
+        <div class="roulette-bet-summary"><div><span>SEÇİLEN SAYI</span><strong data-selected-number>—</strong></div><button type="button" class="roulette-bet-button" data-action="bet" disabled>BAHİSİ ONAYLA <small>SERVER’A GÖNDER</small></button></div>
+        <p class="roulette-bet-status" data-bet-status>CANLI MASA YÜKLENİYOR</p>
+      </section>
+    </section>
+    <section class="roulette-history-card"><div class="history-heading"><div><span class="roulette-card-kicker">GLOBAL HISTORY</span><h2>SONUÇ AKIŞI</h2></div><button type="button" data-action="refresh">↻ YENİLE</button></div><div class="history-list" data-history><span class="muted-copy">Sonuçlar yükleniyor</span></div></section>
   </main>
 `;
 
@@ -207,7 +230,8 @@ app.innerHTML = `
    <div id="big-win-overlay" class="big-win-overlay" aria-live="assertive"></div>
    <div id="bonus-summary-overlay" class="bonus-summary-overlay" aria-live="assertive"></div>
    <div id="modal-root"></div>
-`;
+ `;
+}
 
 const byId = <T extends HTMLElement>(id: string) => document.getElementById(id) as T;
 const modalRoot = byId<HTMLDivElement>("modal-root");
@@ -251,8 +275,12 @@ function showModal(name: string | null) {
 
 document.querySelectorAll<HTMLElement>("[data-modal]").forEach((button) => button.addEventListener("click", () => showModal(button.dataset.modal ?? null)));
 
-const game = createGameScene(byId("phaser-board"));
 let controller: GameController;
+if (isRouletteRoute) {
+  const rouletteRoot = document.querySelector<HTMLElement>(".roulette-page");
+  if (rouletteRoot) new RouletteClient(rouletteRoot);
+} else if (isSlotRoute) {
+const game = createGameScene(byId("phaser-board"));
 window.setTimeout(() => {
   const scene = game.scene.getScene("Cascade8GameScene") as GameScene;
   controller = new GameController(scene, {
@@ -280,6 +308,7 @@ window.setTimeout(() => {
       controller.previewBonusLargeWin(Math.round(previewAmount * 100));
     }
 }, 80);
+}
 
 function renderLab(scene: GameScene) {
   const lab = document.createElement("section");
@@ -407,6 +436,5 @@ function renderLab(scene: GameScene) {
     const evaluation = evaluateBoard(board);
     scene.renderBoard(board, evaluation.winningCells); scene.highlightCells(evaluation.winningCells, 380);
     byId("lab-result").textContent = `${evaluation.winningSymbols.length ? evaluation.winningSymbols.join(" + ") : "NO WIN"} // ${evaluation.winningCells.length} CELLS // ${evaluation.rawPayoutMultiplier.toFixed(2)}x`;
-  });
-}
-}
+   });
+ }

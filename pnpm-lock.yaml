@@ -164,6 +164,9 @@ importers:
       '@types/node':
         specifier: 'catalog:'
         version: 25.9.6
+      '@types/ws':
+        specifier: ^8.18.1
+        version: 8.18.1
       happy-dom:
         specifier: ^20.14.5
         version: 20.14.5
@@ -179,6 +182,9 @@ importers:
       vitest:
         specifier: ^5.0.0
         version: 5.0.0(@types/node@25.9.6)(happy-dom@20.14.5)(vite@7.3.6(@types/node@25.9.6)(jiti@2.7.0)(lightningcss@1.32.0)(tsx@4.23.13)(yaml@2.9.0))
+      ws:
+        specifier: ^8.21.3
+        version: 8.21.3
     devDependencies:
       prettier:
         specifier: ^3.9.6

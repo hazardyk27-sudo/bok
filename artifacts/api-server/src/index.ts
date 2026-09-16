@@ -1,5 +1,8 @@
+import { createServer } from "node:http";
 import app from "./app";
 import { logger } from "./lib/logger";
+import { rouletteRepository } from "./roulette/repository";
+import { attachRouletteWebSocket } from "./roulette/realtime";
 
 const rawPort = process.env["PORT"];
 
@@ -15,11 +18,20 @@ if (Number.isNaN(port) || port <= 0) {
   throw new Error(`Invalid PORT value: "${rawPort}"`);
 }
 
-app.listen(port, (err) => {
-  if (err) {
-    logger.error({ err }, "Error listening on port");
-    process.exit(1);
-  }
+const server = createServer(app);
+attachRouletteWebSocket(server);
 
-  logger.info({ port }, "Server listening");
-});
+void rouletteRepository.start()
+  .then(() => {
+    server.listen(port, () => logger.info({ port, coordinator: rouletteRepository.leadership }, "Server listening"));
+  })
+  .catch((err: unknown) => {
+    logger.error({ err }, "Unable to start roulette coordinator");
+    process.exit(1);
+  });
+
+const shutdown = () => {
+  void rouletteRepository.stop().finally(() => server.close());
+};
+process.once("SIGTERM", shutdown);
+process.once("SIGINT", shutdown);
