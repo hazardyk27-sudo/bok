@@ -1046,3 +1046,97 @@
   .wheel-number-label b { font-size: 12px; }
   .wheel-deflectors i { transform: rotate(calc(var(--deflector-index) * 45deg + 22.5deg)) translateY(-95px); }
 }
+
+/* Number-ring depth correction: reference-style deep pockets with a readable outer number rail. */
+.roulette-wheel-live {
+  --number-radius: clamp(142px, 37vw, 186px);
+}
+.wheel-number-band {
+  -webkit-mask: radial-gradient(circle, transparent 0 71.5%, #000 72% 94%, transparent 94.5%);
+  mask: radial-gradient(circle, transparent 0 71.5%, #000 72% 94%, transparent 94.5%);
+  box-shadow:
+    0 0 0 1px rgba(248, 236, 199, .82),
+    inset 0 0 0 1px rgba(14, 11, 9, .9),
+    inset 0 -9px 13px rgba(25, 5, 1, .28);
+}
+.wheel-number-label {
+  width: 9%;
+  height: 9%;
+  margin: -4.5%;
+}
+.wheel-number-label b {
+  color: #fffef7;
+  font-size: clamp(13px, 1.2vw, 19px);
+  letter-spacing: -.08em;
+  text-shadow:
+    0 1px 0 rgba(0, 0, 0, .95),
+    0 0 2px rgba(0, 0, 0, .95),
+    0 2px 5px rgba(0, 0, 0, .8);
+}
+.wheel-pocket-track::before,
+.wheel-pocket-track::after {
+  -webkit-mask: radial-gradient(circle, transparent 0 42.5%, #000 43% 72.5%, transparent 73%);
+  mask: radial-gradient(circle, transparent 0 42.5%, #000 43% 72.5%, transparent 73%);
+}
+.wheel-pocket-track::before {
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 237, 192, .88),
+    inset 0 0 13px rgba(23, 7, 2, .52),
+    0 0 0 1px rgba(42, 17, 7, .9);
+}
+.wheel-pocket-track::after {
+  background: repeating-conic-gradient(
+    from -4.8649deg,
+    transparent 0 9.08deg,
+    rgba(244, 237, 214, .95) 9.08deg 9.7297deg
+  );
+  box-shadow:
+    inset 0 0 0 1px rgba(28, 17, 10, .84),
+    0 0 0 1px rgba(28, 17, 10, .62);
+}
+.wheel-pocket {
+  height: 28%;
+  margin: -14% -2.45%;
+}
+.wheel-pocket i {
+  inset: 0 8%;
+  border-left: 1px solid rgba(255, 249, 229, .62);
+  border-right: 1px solid rgba(255, 249, 229, .62);
+  box-shadow:
+    inset 2px 0 4px rgba(255, 255, 255, .06),
+    inset -2px 0 4px rgba(0, 0, 0, .18);
+}
+.wheel-pocket i::before,
+.wheel-pocket i::after {
+  display: none;
+}
+.wheel-pocket.is-winning {
+  border: 0 !important;
+  box-shadow: none !important;
+  filter: drop-shadow(0 0 4px rgba(255, 220, 120, .75));
+}
+.wheel-pocket.is-winning i {
+  background: transparent !important;
+  box-shadow: none !important;
+  filter: none !important;
+}
+@media (min-width: 901px) {
+  .roulette-wheel-live {
+    --number-radius: clamp(154px, 35vw, 178px);
+  }
+  .wheel-number-label b { font-size: clamp(15px, 1.2vw, 19px); }
+}
+@media (max-width: 600px) {
+  .roulette-wheel-live {
+    --number-radius: clamp(134px, 37vw, 150px);
+  }
+  .wheel-number-label {
+    width: 10%;
+    height: 10%;
+    margin: -5%;
+  }
+  .wheel-number-label b {
+    font-size: 13px;
+    letter-spacing: -.1em;
+  }
+}
