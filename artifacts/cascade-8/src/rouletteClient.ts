@@ -52,6 +52,12 @@ const PHASE_LABELS: Record<RoulettePhase, string> = {
   SPINNING: "ÇARK DÖNÜYOR", RESULT: "KAZANAN SAYI", MULTIPLIER_REVEAL: "MULTIPLIER REVEAL",
   SETTLING: "ÖDEME YAPILIYOR", INTERMISSION: "YENİ ROUND HAZIRLANIYOR",
 };
+const PHASE_ANNOUNCEMENT_LABELS: Record<RoulettePhase, string> = {
+  OPEN: "Bahisler açık", LAST_CALL: "Son çağrı, bahisler kapanıyor",
+  LOCKED: "Bahisler kapandı", SPINNING: "Çark dönüyor",
+  RESULT: "Kazanan sayı açıklanıyor", MULTIPLIER_REVEAL: "Çarpanlar açıklanıyor",
+  SETTLING: "Ödeme yapılıyor", INTERMISSION: "Yeni round hazırlanıyor",
+};
 const RED_NUMBERS = new Set([1, 3, 5, 7, 9, 12, 14, 16, 18, 19, 21, 23, 25, 27, 30, 32, 34, 36]);
 const MAX_BET_PER_AREA = 10_000;
 const formatCredits = (cents: number) => (cents / 100).toLocaleString("tr-TR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -59,6 +65,14 @@ const formatCountdown = (milliseconds: number) => {
   const seconds = Math.ceil(Math.max(0, milliseconds) / 1000);
   return `${String(Math.floor(seconds / 60)).padStart(2, "0")}:${String(seconds % 60).padStart(2, "0")}`;
 };
+
+export function getRouletteLiveSummary(snapshot: Pick<RouletteSnapshot, "round">) {
+  const { round } = snapshot;
+  const result = round.winningNumber === null
+    ? "Kazanan sayı henüz açıklanmadı."
+    : `Kazanan sayı: ${round.winningNumber}.`;
+  return `Round ${String(round.sequence).padStart(6, "0")}. ${PHASE_ANNOUNCEMENT_LABELS[round.phase]}. ${result}`;
+}
 
 class RouletteVoice {
   private enabled = false;
@@ -99,6 +113,7 @@ export class RouletteClient {
   private labelSyncFrame?: number;
   private ballDropTimer?: number;
   private animatedResultKey = "";
+  private liveSummaryKey = "";
   private readonly root: HTMLElement;
 
   constructor(root: HTMLElement) {
@@ -284,6 +299,12 @@ export class RouletteClient {
     const { round, wallet } = this.snapshot;
     const bettingOpen = round.phase === "OPEN" || round.phase === "LAST_CALL";
     const totalStakeCents = [...this.selections.values()].reduce((sum, bet) => sum + bet.stakeCents, 0);
+    const liveSummary = this.root.querySelector<HTMLElement>("[data-roulette-summary]");
+    const liveSummaryKey = `${round.id}:${round.phase}:${round.winningNumber ?? "pending"}`;
+    if (liveSummary && liveSummaryKey !== this.liveSummaryKey) {
+      liveSummary.textContent = getRouletteLiveSummary(this.snapshot);
+      this.liveSummaryKey = liveSummaryKey;
+    }
     this.root.querySelector<HTMLElement>("[data-phase]")!.textContent = PHASE_LABELS[round.phase];
     this.root.querySelector<HTMLElement>("[data-round]")!.textContent = `ROUND ${String(round.sequence).padStart(6, "0")}`;
     this.root.querySelector<HTMLElement>("[data-balance]")!.textContent = formatCredits(wallet.balanceCents);

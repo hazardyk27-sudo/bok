@@ -166,7 +166,10 @@ const rouletteMarkup = `
     </section>
     <section class="roulette-mobile-results" data-mobile-results aria-label="Son sonuçlar"><span class="mobile-results-label">SON SONUÇLAR</span><div class="mobile-results-list"><span class="muted-copy">Sonuçlar yükleniyor</span></div></section>
     <section class="roulette-layout">
-      <section class="roulette-wheel-card" aria-label="Global roulette result">
+      <section class="roulette-wheel-card" aria-labelledby="roulette-wheel-title" aria-describedby="roulette-wheel-order">
+        <h2 id="roulette-wheel-title" class="roulette-screen-reader-only">Avrupa ruleti çarkı</h2>
+        <p id="roulette-wheel-order" class="roulette-screen-reader-only">Avrupa ruleti sayı sırası: ${EUROPEAN_WHEEL_ORDER.join(", ")}.</p>
+        <div class="roulette-screen-reader-only" data-roulette-summary role="status" aria-live="polite" aria-atomic="true">Rulet senkronizasyonu bekleniyor.</div>
          <div class="roulette-card-kicker">LIVE EUROPEAN WHEEL</div>
         <div class="roulette-wheel-stage">
            <div class="roulette-wheel-live" data-wheel style="--wheel-band:${rouletteWheelBand}">
