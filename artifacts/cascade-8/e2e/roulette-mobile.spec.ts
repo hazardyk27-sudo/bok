@@ -42,14 +42,27 @@ type RouletteFixture = {
 type OrientationDiagnostics = {
   orientation: "portrait" | "landscape";
   viewport: { width: number; height: number };
+  safeAreaInsets: SafeAreaInsets;
+  safeAreaPadding: SafeAreaInsets;
   wheel: { width: number; height: number; left: number; top: number };
   overlay: { width: number; height: number; left: number; top: number; visible: boolean };
   overlayWithinWheel: boolean;
+  wheelWithinSafeArea: boolean;
+  overlayWithinSafeArea: boolean;
   winningNumber: string;
   winningPockets: number;
 };
 
+type SafeAreaInsets = {
+  top: number;
+  right: number;
+  bottom: number;
+  left: number;
+};
+
 const WINNING_NUMBER = 26;
+const MOBILE_SAFE_AREA_INSETS: SafeAreaInsets = { top: 30, right: 24, bottom: 36, left: 18 };
+
 function makeSnapshot(
   phase: RoulettePhase,
   winningNumber: number | null = null,
@@ -246,17 +259,44 @@ async function captureOrientationDiagnostics(page: Page): Promise<OrientationDia
   return page.evaluate(() => {
     const wheel = document.querySelector<HTMLElement>("[data-wheel]")!;
     const overlay = document.querySelector<HTMLElement>("[data-result-overlay]")!;
+    const appShell = document.querySelector<HTMLElement>(".app-shell")!;
     const wheelRect = wheel.getBoundingClientRect();
     const overlayRect = overlay.getBoundingClientRect();
     const viewport = { width: window.innerWidth, height: window.innerHeight };
     const orientation = window.matchMedia("(orientation: portrait)").matches ? "portrait" : "landscape";
+    const rootStyles = getComputedStyle(document.documentElement);
+    const shellStyles = getComputedStyle(appShell);
+    const readPixels = (value: string) => Number.parseFloat(value) || 0;
+    const safeAreaInsets = {
+      top: readPixels(rootStyles.getPropertyValue("--safe-area-inset-top")),
+      right: readPixels(rootStyles.getPropertyValue("--safe-area-inset-right")),
+      bottom: readPixels(rootStyles.getPropertyValue("--safe-area-inset-bottom")),
+      left: readPixels(rootStyles.getPropertyValue("--safe-area-inset-left")),
+    };
+    const safeAreaPadding = {
+      top: readPixels(shellStyles.paddingTop),
+      right: readPixels(shellStyles.paddingRight),
+      bottom: readPixels(shellStyles.paddingBottom),
+      left: readPixels(shellStyles.paddingLeft),
+    };
     const overlayWithinWheel = overlayRect.left >= wheelRect.left
       && overlayRect.top >= wheelRect.top
       && overlayRect.right <= wheelRect.right
       && overlayRect.bottom <= wheelRect.bottom;
+    const wheelWithinSafeArea = wheelRect.left >= safeAreaInsets.left
+      && wheelRect.top >= safeAreaInsets.top
+      && wheelRect.right <= viewport.width - safeAreaInsets.right
+      && wheelRect.bottom <= viewport.height - safeAreaInsets.bottom;
+    const overlayWithinSafeArea = !overlay.classList.contains("is-visible")
+      || (overlayRect.left >= safeAreaInsets.left
+        && overlayRect.top >= safeAreaInsets.top
+        && overlayRect.right <= viewport.width - safeAreaInsets.right
+        && overlayRect.bottom <= viewport.height - safeAreaInsets.bottom);
     return {
       orientation,
       viewport,
+      safeAreaInsets,
+      safeAreaPadding,
       wheel: { width: wheelRect.width, height: wheelRect.height, left: wheelRect.left, top: wheelRect.top },
       overlay: {
         width: overlayRect.width,
@@ -266,9 +306,35 @@ async function captureOrientationDiagnostics(page: Page): Promise<OrientationDia
         visible: overlay.classList.contains("is-visible"),
       },
       overlayWithinWheel,
+      wheelWithinSafeArea,
+      overlayWithinSafeArea,
       winningNumber: document.querySelector<HTMLElement>("[data-overlay-winning]")?.textContent ?? "",
       winningPockets: document.querySelectorAll(".wheel-pocket.is-winning").length,
     };
+  });
+}
+
+async function emulateSafeAreaInsets(page: Page, insets: SafeAreaInsets) {
+  await page.addStyleTag({
+    content: `
+      :root {
+        --safe-area-inset-top: ${insets.top}px !important;
+        --safe-area-inset-right: ${insets.right}px !important;
+        --safe-area-inset-bottom: ${insets.bottom}px !important;
+        --safe-area-inset-left: ${insets.left}px !important;
+      }
+    `,
+  });
+  await expect.poll(() => page.evaluate(() => ({
+    top: getComputedStyle(document.documentElement).getPropertyValue("--safe-area-inset-top").trim(),
+    right: getComputedStyle(document.documentElement).getPropertyValue("--safe-area-inset-right").trim(),
+    bottom: getComputedStyle(document.documentElement).getPropertyValue("--safe-area-inset-bottom").trim(),
+    left: getComputedStyle(document.documentElement).getPropertyValue("--safe-area-inset-left").trim(),
+  }))).toEqual({
+    top: `${insets.top}px`,
+    right: `${insets.right}px`,
+    bottom: `${insets.bottom}px`,
+    left: `${insets.left}px`,
   });
 }
 
@@ -286,14 +352,43 @@ async function setMobileOrientation(page: Page, orientation: "portrait" | "lands
 }
 
 async function attachLifecycleDiagnostics(page: Page, testInfo: TestInfo) {
+  const lifecycle = await page.evaluate(() => ({
+    viewport: { width: window.innerWidth, height: window.innerHeight },
+    phase: document.querySelector("[data-phase]")?.textContent,
+    winningNumber: document.querySelector("[data-overlay-winning]")?.textContent,
+    resultVisible: document.querySelector("[data-result-overlay]")?.classList.contains("is-visible"),
+    winningPockets: document.querySelectorAll(".wheel-pocket.is-winning").length,
+    safeAreaInsets: (() => {
+      const styles = getComputedStyle(document.documentElement);
+      const readPixels = (value: string) => Number.parseFloat(value) || 0;
+      return {
+        top: readPixels(styles.getPropertyValue("--safe-area-inset-top")),
+        right: readPixels(styles.getPropertyValue("--safe-area-inset-right")),
+        bottom: readPixels(styles.getPropertyValue("--safe-area-inset-bottom")),
+        left: readPixels(styles.getPropertyValue("--safe-area-inset-left")),
+      };
+    })(),
+    safeAreaPadding: (() => {
+      const appShell = document.querySelector<HTMLElement>(".app-shell");
+      if (!appShell) return null;
+      const styles = getComputedStyle(appShell);
+      const readPixels = (value: string) => Number.parseFloat(value) || 0;
+      return {
+        top: readPixels(styles.paddingTop),
+        right: readPixels(styles.paddingRight),
+        bottom: readPixels(styles.paddingBottom),
+        left: readPixels(styles.paddingLeft),
+      };
+    })(),
+  }));
+  let geometry: OrientationDiagnostics | null = null;
+  try {
+    geometry = await captureOrientationDiagnostics(page);
+  } catch {
+    // Keep lifecycle state when the page failed before the roulette geometry mounted.
+  }
   await testInfo.attach("roulette-lifecycle-state", {
-    body: await page.evaluate(() => JSON.stringify({
-      viewport: { width: window.innerWidth, height: window.innerHeight },
-      phase: document.querySelector("[data-phase]")?.textContent,
-      winningNumber: document.querySelector("[data-overlay-winning]")?.textContent,
-      resultVisible: document.querySelector("[data-result-overlay]")?.classList.contains("is-visible"),
-      winningPockets: document.querySelectorAll(".wheel-pocket.is-winning").length,
-    }, null, 2)),
+    body: JSON.stringify({ lifecycle, geometry }, null, 2),
     contentType: "application/json",
   });
 }
@@ -364,9 +459,15 @@ test.describe("roulette recovery on mobile browsers", () => {
     const fixture = await installRouletteFixture(page);
     const orientationDiagnostics: OrientationDiagnostics[] = [];
     const spinning = makeSnapshot("SPINNING");
+    await emulateSafeAreaInsets(page, MOBILE_SAFE_AREA_INSETS);
 
     await test.step("lifecycle: enter SPINNING in portrait", async () => {
       orientationDiagnostics.push(await setMobileOrientation(page, "portrait"));
+      expect(orientationDiagnostics.at(-1)?.safeAreaInsets).toEqual(MOBILE_SAFE_AREA_INSETS);
+      expect(orientationDiagnostics.at(-1)?.safeAreaPadding.left).toBeGreaterThanOrEqual(MOBILE_SAFE_AREA_INSETS.left);
+      expect(orientationDiagnostics.at(-1)?.safeAreaPadding.right).toBeGreaterThanOrEqual(MOBILE_SAFE_AREA_INSETS.right);
+      expect(orientationDiagnostics.at(-1)?.safeAreaPadding.top).toBeGreaterThanOrEqual(MOBILE_SAFE_AREA_INSETS.top);
+      expect(orientationDiagnostics.at(-1)?.safeAreaPadding.bottom).toBeGreaterThanOrEqual(MOBILE_SAFE_AREA_INSETS.bottom);
       await fixture.emitSnapshot(spinning);
       await expect(page.locator(".roulette-hud [data-phase]")).toHaveText("ÇARK DÖNÜYOR");
       await expect(page.locator("[data-wheel]")).toHaveClass(/is-spinning/);
@@ -377,6 +478,9 @@ test.describe("roulette recovery on mobile browsers", () => {
       const diagnostics = await setMobileOrientation(page, "landscape");
       orientationDiagnostics.push(diagnostics);
       expect(diagnostics.orientation).toBe("landscape");
+      expect(diagnostics.safeAreaInsets).toEqual(MOBILE_SAFE_AREA_INSETS);
+      expect(diagnostics.safeAreaPadding.left).toBeGreaterThanOrEqual(MOBILE_SAFE_AREA_INSETS.left);
+      expect(diagnostics.safeAreaPadding.right).toBeGreaterThanOrEqual(MOBILE_SAFE_AREA_INSETS.right);
       expect(diagnostics.wheel.width).toBeGreaterThan(0);
       expect(diagnostics.wheel.height).toBeGreaterThan(0);
       expect(Math.abs(diagnostics.wheel.width - diagnostics.wheel.height)).toBeLessThan(2);
@@ -398,6 +502,7 @@ test.describe("roulette recovery on mobile browsers", () => {
       const landscapeDiagnostics = await setMobileOrientation(page, "landscape");
       orientationDiagnostics.push(portraitDiagnostics, landscapeDiagnostics);
       for (const diagnostics of [portraitDiagnostics, landscapeDiagnostics]) {
+        expect(diagnostics.safeAreaInsets).toEqual(MOBILE_SAFE_AREA_INSETS);
         expect(diagnostics.wheel.width).toBeGreaterThan(0);
         expect(diagnostics.wheel.height).toBeGreaterThan(0);
         expect(Math.abs(diagnostics.wheel.width - diagnostics.wheel.height)).toBeLessThan(2);
@@ -416,6 +521,7 @@ test.describe("roulette recovery on mobile browsers", () => {
       expect(settledDiagnostics.winningPockets).toBe(1);
       expect(settledDiagnostics.overlay.visible).toBe(true);
       expect(settledDiagnostics.overlayWithinWheel).toBe(true);
+      expect(settledDiagnostics.overlayWithinSafeArea, JSON.stringify(settledDiagnostics, null, 2)).toBe(true);
     });
 
     await testInfo.attach("roulette-orientation-diagnostics", {

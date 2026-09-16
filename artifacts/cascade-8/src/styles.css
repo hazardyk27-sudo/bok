@@ -13,6 +13,10 @@
   --cyan: #70d5ff;
   --violet: #a894ff;
   --gold: #f3c66b;
+  --safe-area-inset-top: env(safe-area-inset-top, 0px);
+  --safe-area-inset-right: env(safe-area-inset-right, 0px);
+  --safe-area-inset-bottom: env(safe-area-inset-bottom, 0px);
+  --safe-area-inset-left: env(safe-area-inset-left, 0px);
 }
 * { box-sizing: border-box; }
 html, body, #app { width: 100%; max-width: 100%; min-height: 100%; margin: 0; overflow-x: hidden; }
@@ -20,7 +24,7 @@ body { min-width: 0; background: radial-gradient(circle at 50% -15%, #263871 0, 
 button, input { font: inherit; }
 button { color: inherit; cursor: pointer; }
 button:focus-visible, input:focus-visible { outline: 2px solid var(--cyan); outline-offset: 3px; }
-.app-shell { position: relative; min-height: 100vh; overflow: hidden; padding: max(28px, env(safe-area-inset-top)) max(clamp(18px, 4vw, 70px), env(safe-area-inset-right)) max(22px, env(safe-area-inset-bottom)) max(clamp(18px, 4vw, 70px), env(safe-area-inset-left)); }
+.app-shell { position: relative; min-height: 100vh; overflow: hidden; padding: max(28px, var(--safe-area-inset-top)) max(clamp(18px, 4vw, 70px), var(--safe-area-inset-right)) max(22px, var(--safe-area-inset-bottom)) max(clamp(18px, 4vw, 70px), var(--safe-area-inset-left)); }
 .app-shell::before { content: ""; position: absolute; inset: 0; pointer-events: none; background: linear-gradient(120deg, rgba(88, 127, 255, .06), transparent 44%, rgba(173, 104, 255, .04)); }
 .ambient { position: absolute; pointer-events: none; border-radius: 50%; filter: blur(10px); opacity: .28; }
 .ambient-a { width: 470px; height: 470px; background: #2d5de0; top: 18%; left: -220px; }
@@ -1029,7 +1033,7 @@ button:focus-visible, input:focus-visible { outline: 2px solid var(--cyan); outl
   .control-deck { padding-top: 10px; }
 }
 @media (max-width: 620px) {
-  .app-shell { padding: max(8px, env(safe-area-inset-top)) max(8px, env(safe-area-inset-right)) max(7px, env(safe-area-inset-bottom)) max(8px, env(safe-area-inset-left)); }
+  .app-shell { padding: max(8px, var(--safe-area-inset-top)) max(8px, var(--safe-area-inset-right)) max(7px, var(--safe-area-inset-bottom)) max(8px, var(--safe-area-inset-left)); }
   .topbar { margin-bottom: 6px; }
   .game-layout, .mode-ribbon, .board-wrap, #phaser-board, .control-deck { min-width: 0; max-width: 100%; }
   .mode-ribbon { grid-template-columns: repeat(3, minmax(0, 1fr)); padding: 6px 4px; margin-bottom: 5px; }
@@ -3545,7 +3549,7 @@ button:focus-visible, input:focus-visible { outline: 2px solid var(--cyan); outl
   50% { transform: rotate(3deg); filter: brightness(1.1); }
 }
 @media (max-width: 680px) {
-  .route-shell { padding-top: max(20px, env(safe-area-inset-top)); }
+  .route-shell { padding-top: max(20px, var(--safe-area-inset-top)); }
   .route-context { display: none; }
   .route-shell .route-topbar { margin-bottom: 0; }
   .game-menu { padding-top: 42px; }
