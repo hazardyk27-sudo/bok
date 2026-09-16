@@ -1,7 +1,7 @@
 import { Router, type IRouter, type Request, type Response } from "express";
 import { randomUUID } from "node:crypto";
 import { rouletteRepository } from "./repository";
-import { MAX_STAKE_CENTS, MIN_STAKE_CENTS } from "./types";
+import { MAX_STAKE_CENTS, MIN_STAKE_CENTS, type RouletteBetInput } from "./types";
 
 const router: IRouter = Router();
 const SESSION_COOKIE = "roulette_session";
@@ -67,20 +67,30 @@ router.get("/roulette/history", async (req, res) => {
 router.post("/roulette/bets", async (req, res) => {
   try {
     const sessionId = getSessionId(req, res);
-    const { number, stakeCents, idempotencyKey } = req.body as {
+    const { number, stakeCents, bets, idempotencyKey } = req.body as {
       number?: unknown;
       stakeCents?: unknown;
+      bets?: unknown;
       idempotencyKey?: unknown;
     };
-    if (typeof number !== "number" || typeof stakeCents !== "number" || typeof idempotencyKey !== "string") {
-      res.status(400).json({ error: "number, stakeCents and idempotencyKey are required" });
+    if (typeof idempotencyKey !== "string") {
+      res.status(400).json({ error: "bets and idempotencyKey are required" });
       return;
     }
-    if (stakeCents < MIN_STAKE_CENTS || stakeCents > MAX_STAKE_CENTS) {
-      res.status(400).json({ error: `Stake must be between ${MIN_STAKE_CENTS} and ${MAX_STAKE_CENTS} cents` });
+    const normalizedBets: RouletteBetInput[] = Array.isArray(bets)
+      ? bets as RouletteBetInput[]
+      : typeof number === "number" && typeof stakeCents === "number"
+        ? [{ type: "STRAIGHT", numbers: [number], stakeCents }]
+        : [];
+    if (!normalizedBets.length) {
+      res.status(400).json({ error: "At least one bet is required" });
       return;
     }
-    res.status(201).json(await rouletteRepository.placeBet(sessionId, { number, stakeCents, idempotencyKey }));
+    if (normalizedBets.some((bet) => typeof bet.stakeCents !== "number" || bet.stakeCents < MIN_STAKE_CENTS || bet.stakeCents > MAX_STAKE_CENTS)) {
+      res.status(400).json({ error: `Each bet must be between ${MIN_STAKE_CENTS} and ${MAX_STAKE_CENTS} cents` });
+      return;
+    }
+    res.status(201).json(await rouletteRepository.placeBets(sessionId, { bets: normalizedBets, idempotencyKey }));
   } catch (error) {
     sendError(res, error);
   }

@@ -1,5 +1,7 @@
 type RoulettePhase = "OPEN" | "LAST_CALL" | "LOCKED" | "SPINNING" | "RESULT" | "MULTIPLIER_REVEAL" | "SETTLING" | "INTERMISSION";
 type RouletteMultiplier = 50 | 100 | 150 | 200 | 250 | 300 | 400 | 500;
+type RouletteBetType = "STRAIGHT" | "SPLIT" | "STREET" | "CORNER" | "SIX_LINE" | "DOZEN" | "COLUMN" | "RED" | "BLACK" | "ODD" | "EVEN" | "LOW" | "HIGH";
+type RouletteSelection = { key: string; type: RouletteBetType; numbers: number[]; stakeCents: number; label: string };
 type RouletteSnapshot = {
   serverTime: string;
   coordinator: "leader" | "standby";
@@ -22,16 +24,12 @@ type RouletteSnapshot = {
 
 const API_BASE = "/api/roulette";
 const PHASE_LABELS: Record<RoulettePhase, string> = {
-  OPEN: "BAHİSLER AÇIK",
-  LAST_CALL: "SON ÇAĞRI",
-  LOCKED: "MASA KİLİTLENDİ",
-  SPINNING: "ÇARK DÖNÜYOR",
-  RESULT: "KAZANAN SAYI",
-  MULTIPLIER_REVEAL: "MULTIPLIER REVEAL",
-  SETTLING: "ÖDEME YAPILIYOR",
-  INTERMISSION: "YENİ ROUND HAZIRLANIYOR",
+  OPEN: "BAHİSLER AÇIK", LAST_CALL: "SON ÇAĞRI", LOCKED: "MASA KİLİTLENDİ",
+  SPINNING: "ÇARK DÖNÜYOR", RESULT: "KAZANAN SAYI", MULTIPLIER_REVEAL: "MULTIPLIER REVEAL",
+  SETTLING: "ÖDEME YAPILIYOR", INTERMISSION: "YENİ ROUND HAZIRLANIYOR",
 };
 const RED_NUMBERS = new Set([1, 3, 5, 7, 9, 12, 14, 16, 18, 19, 21, 23, 25, 27, 30, 32, 34, 36]);
+const MAX_BET_PER_AREA = 10_000;
 const formatCredits = (cents: number) => (cents / 100).toLocaleString("tr-TR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 const formatCountdown = (milliseconds: number) => {
   const seconds = Math.ceil(Math.max(0, milliseconds) / 1000);
@@ -41,20 +39,13 @@ const formatCountdown = (milliseconds: number) => {
 class RouletteVoice {
   private enabled = false;
   private lastPhrase = "";
-
-  unlock() {
-    this.enabled = true;
-    window.speechSynthesis?.cancel();
-    this.speak("Ses açıldı");
-  }
-
+  unlock() { this.enabled = true; window.speechSynthesis?.cancel(); this.speak("Ses açıldı"); }
   toggle() {
     this.enabled = !this.enabled;
     if (!this.enabled) window.speechSynthesis?.cancel();
     else this.speak("Türkçe seslendirme açık");
     return this.enabled;
   }
-
   speak(phrase: string) {
     if (!this.enabled || !window.speechSynthesis || phrase === this.lastPhrase) return;
     this.lastPhrase = phrase;
@@ -71,8 +62,9 @@ export class RouletteClient {
   private snapshot: RouletteSnapshot | null = null;
   private serverOffsetMs = 0;
   private socket?: WebSocket;
-  private selectedNumber: number | null = null;
-  private stakeCents = 100;
+  private selectedChipCents = 100;
+  private selections = new Map<string, RouletteSelection>();
+  private undoStack: string[] = [];
   private betStatus = "";
   private roundId = "";
   private statusTimer?: number;
@@ -94,22 +86,22 @@ export class RouletteClient {
   }
 
   private bind() {
-    this.root.querySelectorAll<HTMLButtonElement>("[data-number]").forEach((button) => {
+    this.root.querySelectorAll<HTMLButtonElement>(".table-bet").forEach((button) => {
       button.addEventListener("click", () => {
         this.voice.unlock();
-        this.selectedNumber = Number(button.dataset.number);
-        this.render();
+        this.addSelection(button);
       });
     });
     this.root.querySelectorAll<HTMLButtonElement>("[data-stake]").forEach((button) => {
       button.addEventListener("click", () => {
         this.voice.unlock();
-        this.stakeCents = Number(button.dataset.stake);
+        this.selectedChipCents = Number(button.dataset.stake);
         this.render();
       });
-      button.classList.toggle("is-selected", Number(button.dataset.stake) === this.stakeCents);
     });
-    this.root.querySelector<HTMLButtonElement>("[data-action='bet']")?.addEventListener("click", () => void this.placeBet());
+    this.root.querySelector<HTMLButtonElement>("[data-action='bet']")?.addEventListener("click", () => void this.placeBets());
+    this.root.querySelector<HTMLButtonElement>("[data-action='undo']")?.addEventListener("click", () => this.undo());
+    this.root.querySelector<HTMLButtonElement>("[data-action='clear']")?.addEventListener("click", () => this.clearSelections());
     this.root.querySelector<HTMLButtonElement>("[data-action='sound']")?.addEventListener("click", (event) => {
       const button = event.currentTarget as HTMLButtonElement;
       button.classList.toggle("is-active", this.voice.toggle());
@@ -118,13 +110,61 @@ export class RouletteClient {
     this.root.querySelector<HTMLButtonElement>("[data-action='refresh']")?.addEventListener("click", () => void this.load());
   }
 
+  private serializeSelections() {
+    return JSON.stringify([...this.selections.values()]);
+  }
+
+  private saveUndoPoint() {
+    this.undoStack.push(this.serializeSelections());
+    if (this.undoStack.length > 30) this.undoStack.shift();
+  }
+
+  private addSelection(button: HTMLButtonElement) {
+    if (!this.snapshot || !["OPEN", "LAST_CALL"].includes(this.snapshot.round.phase)) return;
+    const key = button.dataset.betKey;
+    const type = button.dataset.betType as RouletteBetType | undefined;
+    const numbers = (button.dataset.betNumbers ?? "").split(",").filter(Boolean).map(Number);
+    const label = button.dataset.betLabel ?? key ?? "Bahis";
+    if (!key || !type || !numbers.length) return;
+    this.saveUndoPoint();
+    const existing = this.selections.get(key);
+    this.selections.set(key, {
+      key,
+      type,
+      numbers,
+      label,
+      stakeCents: Math.min(MAX_BET_PER_AREA, (existing?.stakeCents ?? 0) + this.selectedChipCents),
+    });
+    this.betStatus = "";
+    this.render();
+  }
+
+  private undo() {
+    const previous = this.undoStack.pop();
+    if (previous === undefined) return;
+    const restored = JSON.parse(previous) as RouletteSelection[];
+    this.selections = new Map(restored.map((selection) => [selection.key, selection] as [string, RouletteSelection]));
+    this.betStatus = "";
+    this.render();
+  }
+
+  private clearSelections() {
+    if (!this.selections.size) return;
+    this.saveUndoPoint();
+    this.selections.clear();
+    this.betStatus = "";
+    this.render();
+  }
+
   private async load() {
     try {
       const response = await fetch(`${API_BASE}/snapshot`, { credentials: "same-origin", signal: AbortSignal.timeout(7000) });
       if (!response.ok) throw new Error("snapshot");
       this.applySnapshot(await response.json() as RouletteSnapshot);
       const historyResponse = await fetch(`${API_BASE}/history?limit=12`, { credentials: "same-origin", signal: AbortSignal.timeout(7000) });
-      if (historyResponse.ok) this.renderHistory((await historyResponse.json() as { results: Array<{ sequence: number; winningNumber: number; luckyNumbers: number[]; multipliers: number[] }> }).results);
+      if (historyResponse.ok) {
+        this.renderHistory((await historyResponse.json() as { results: Array<{ sequence: number; winningNumber: number; luckyNumbers: number[]; multipliers: number[] }> }).results);
+      }
     } catch {
       this.setConnection("BAĞLANTI BEKLENİYOR", false);
     }
@@ -155,13 +195,12 @@ export class RouletteClient {
     this.serverOffsetMs = Date.parse(next.serverTime) - Date.now();
     if (this.roundId !== next.round.id) {
       this.roundId = next.round.id;
-      this.selectedNumber = null;
+      this.selections.clear();
+      this.undoStack = [];
       this.betStatus = "";
     }
     if (previous?.round.phase !== next.round.phase) this.announcePhase(next);
-    if (previous?.round.winningNumber === null && next.round.winningNumber !== null) {
-      this.voice.speak(`${next.round.winningNumber} numara kazandı`);
-    }
+    if (previous?.round.winningNumber === null && next.round.winningNumber !== null) this.voice.speak(`${next.round.winningNumber} numara kazandı`);
     if ((previous?.round.revealedMultipliers.length ?? 0) < next.round.revealedMultipliers.length) {
       const value = next.round.revealedMultipliers.at(-1);
       if (value) this.voice.speak(`${value} çarpan`);
@@ -181,29 +220,37 @@ export class RouletteClient {
     if (!this.snapshot) return;
     const { round, wallet } = this.snapshot;
     const bettingOpen = round.phase === "OPEN" || round.phase === "LAST_CALL";
+    const totalStakeCents = [...this.selections.values()].reduce((sum, bet) => sum + bet.stakeCents, 0);
     this.root.querySelector<HTMLElement>("[data-phase]")!.textContent = PHASE_LABELS[round.phase];
     this.root.querySelector<HTMLElement>("[data-round]")!.textContent = `ROUND ${String(round.sequence).padStart(6, "0")}`;
     this.root.querySelector<HTMLElement>("[data-balance]")!.textContent = formatCredits(wallet.balanceCents);
     this.root.querySelector<HTMLElement>("[data-commitment]")!.textContent = round.commitmentHash.slice(0, 18).toUpperCase();
-    this.root.querySelector<HTMLElement>("[data-selected-number]")!.textContent = this.selectedNumber === null ? "—" : String(this.selectedNumber);
-    this.root.querySelector<HTMLElement>("[data-stake-value]")!.textContent = formatCredits(this.stakeCents);
-    this.root.querySelector<HTMLButtonElement>("[data-action='bet']")!.disabled = !bettingOpen || this.selectedNumber === null || wallet.balanceCents < this.stakeCents;
-    this.root.querySelector<HTMLElement>("[data-bet-status]")!.textContent = this.betStatus || (bettingOpen ? (round.phase === "LAST_CALL" ? "SON ÇAĞRI // BAHİSLER KAPANIYOR" : "SAYINI SEÇ VE BAHİSİ ONAYLA") : "BU ROUND İÇİN BAHİSLER KAPALI");
+    this.root.querySelector<HTMLElement>("[data-total-stake]")!.textContent = formatCredits(totalStakeCents);
+    this.root.querySelector<HTMLElement>("[data-bet-count]")!.textContent = `${this.selections.size} ALAN`;
+    this.root.querySelector<HTMLButtonElement>("[data-action='bet']")!.disabled = !bettingOpen || !this.selections.size || wallet.balanceCents < totalStakeCents;
+    this.root.querySelector<HTMLButtonElement>("[data-action='undo']")!.disabled = !this.undoStack.length;
+    this.root.querySelector<HTMLButtonElement>("[data-action='clear']")!.disabled = !this.selections.size;
+    this.root.querySelector<HTMLElement>("[data-bet-status]")!.textContent = this.betStatus || (bettingOpen ? (round.phase === "LAST_CALL" ? "SON ÇAĞRI // CHIPLERİ MASAYA KOY" : "CHIP SEÇ // BİR VEYA DAHA FAZLA ALAN SEÇ") : "BU ROUND İÇİN BAHİSLER KAPALI");
+    this.root.querySelectorAll<HTMLButtonElement>(".table-bet").forEach((button) => {
+      const selection = this.selections.get(button.dataset.betKey ?? "");
+      button.disabled = !bettingOpen;
+      button.classList.toggle("is-occupied", Boolean(selection));
+      const chip = button.querySelector<HTMLElement>(".table-chip");
+      if (chip) {
+        chip.hidden = !selection;
+        chip.textContent = selection ? formatCredits(selection.stakeCents) : "";
+      }
+    });
+    this.root.querySelectorAll<HTMLButtonElement>("[data-stake]").forEach((button) => button.classList.toggle("is-selected", Number(button.dataset.stake) === this.selectedChipCents));
+    this.root.querySelector<HTMLElement>("[data-selected-bets]")!.innerHTML = this.selections.size
+      ? [...this.selections.values()].map((bet) => `<span class="selected-bet-pill"><b>${bet.label}</b><strong>${formatCredits(bet.stakeCents)}</strong></span>`).join("")
+      : `<span class="muted-copy">Chip seç ve masada bir veya daha fazla alana dokun</span>`;
     this.root.querySelectorAll<HTMLElement>("[data-winning-number]").forEach((element) => {
       element.textContent = round.winningNumber === null ? "?" : String(round.winningNumber);
       element.classList.toggle("is-visible", round.winningNumber !== null);
     });
     this.root.querySelector<HTMLElement>("[data-wheel]")!.classList.toggle("is-spinning", round.phase === "SPINNING");
     this.root.querySelector<HTMLElement>("[data-wheel]")!.style.setProperty("--winning-angle", `${(round.winningNumber ?? 0) * 9.73}deg`);
-    this.root.querySelectorAll<HTMLButtonElement>("[data-number]").forEach((button) => {
-      const number = Number(button.dataset.number);
-      button.classList.toggle("is-selected", this.selectedNumber === number);
-      button.classList.toggle("is-winning", round.winningNumber === number);
-      button.disabled = !bettingOpen;
-    });
-    this.root.querySelectorAll<HTMLButtonElement>("[data-stake]").forEach((button) => {
-      button.classList.toggle("is-selected", Number(button.dataset.stake) === this.stakeCents);
-    });
     const lucky = new Set(round.luckyNumbers);
     this.root.querySelector<HTMLElement>("[data-lucky-list]")!.innerHTML = round.luckyNumbers.length
       ? round.luckyNumbers.map((number) => `<span class="lucky-chip">${number}</span>`).join("")
@@ -222,25 +269,28 @@ export class RouletteClient {
     this.root.querySelector<HTMLElement>("[data-progress]")!.style.setProperty("--countdown-progress", `${Math.max(0, Math.min(100, 100 - (remaining / Math.max(1, this.snapshot.round.countdownMs)) * 100))}%`);
   }
 
-  private async placeBet() {
-    if (this.selectedNumber === null) return;
+  private async placeBets() {
+    if (!this.selections.size) return;
     this.voice.unlock();
     const button = this.root.querySelector<HTMLButtonElement>("[data-action='bet']")!;
     button.disabled = true;
     try {
+      const bets = [...this.selections.values()].map(({ type, numbers, stakeCents, label }) => ({ type, numbers, stakeCents, label }));
       const response = await fetch(`${API_BASE}/bets`, {
         method: "POST",
         credentials: "same-origin",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ number: this.selectedNumber, stakeCents: this.stakeCents, idempotencyKey: `${crypto.randomUUID()}-${Date.now()}` }),
+        body: JSON.stringify({ bets, idempotencyKey: `${crypto.randomUUID()}-${Date.now()}` }),
       });
-      const data = await response.json() as { wallet?: { balanceCents: number }; error?: string; bet?: { number: number; stakeCents: number } };
-      if (!response.ok) throw new Error(data.error ?? "Bahis kabul edilmedi");
-      this.betStatus = `BAHİS KABUL // ${data.bet?.number} NUMARA // ${formatCredits(data.bet?.stakeCents ?? this.stakeCents)}`;
+      const data = await response.json() as { wallet?: { balanceCents: number }; error?: string; bets?: unknown[]; totalStakeCents?: number };
+      if (!response.ok) throw new Error(data.error ?? "Bahisler kabul edilmedi");
+      this.betStatus = `${data.bets?.length ?? bets.length} BAHİS KABUL // TOPLAM ${formatCredits(data.totalStakeCents ?? 0)}`;
+      this.selections.clear();
+      this.undoStack = [];
       if (this.snapshot && data.wallet) this.snapshot.wallet.balanceCents = data.wallet.balanceCents;
       this.render();
     } catch (error) {
-      this.betStatus = error instanceof Error ? error.message : "BAHİS KABUL EDİLMEDİ";
+      this.betStatus = error instanceof Error ? error.message : "BAHİSLER KABUL EDİLMEDİ";
       this.root.querySelector<HTMLElement>("[data-bet-status]")!.textContent = this.betStatus;
       button.disabled = false;
     }

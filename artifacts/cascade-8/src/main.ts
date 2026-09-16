@@ -80,14 +80,53 @@ const mainMenuMarkup = `
   </main>
 `;
 
+const rouletteRedNumbers = new Set([1, 3, 5, 7, 9, 12, 14, 16, 18, 19, 21, 23, 25, 27, 30, 32, 34, 36]);
+const rouletteBetButton = (type: string, key: string, numbers: number[], label: string, className = "") => `<button type="button" class="table-bet ${className}" data-bet-type="${type}" data-bet-key="${key}" data-bet-numbers="${numbers.join(",")}" data-bet-label="${label}"><span class="bet-label">${label}</span><span class="table-chip" hidden></span></button>`;
+const rouletteNumberRows = [2, 1, 0].map((row) => Array.from({ length: 12 }, (_, column) => column * 3 + row + 1).map((number) => rouletteBetButton("STRAIGHT", `straight:${number}`, [number], String(number), rouletteRedNumbers.has(number) ? "number-red" : "number-black")).join("")).join("");
+const rouletteStreetBets = Array.from({ length: 12 }, (_, column) => {
+  const numbers = [column * 3 + 1, column * 3 + 2, column * 3 + 3];
+  return rouletteBetButton("STREET", `street:${numbers.join("-")}`, numbers, `${numbers[0]}–${numbers[2]}`);
+}).join("");
+const rouletteSixLineBets = Array.from({ length: 11 }, (_, column) => {
+  const numbers = Array.from({ length: 6 }, (_, index) => column * 3 + index + 1);
+  return rouletteBetButton("SIX_LINE", `six:${numbers.join("-")}`, numbers, `${numbers[0]}–${numbers[5]}`);
+}).join("");
+const rouletteSplitBets = [
+  ...[1, 2, 3].map((number) => [0, number]),
+  ...Array.from({ length: 36 }, (_, index) => index + 1).flatMap((number) => {
+    const bets: number[][] = [];
+    if (number % 3 !== 0) bets.push([number, number + 1]);
+    if (number <= 33) bets.push([number, number + 3]);
+    return bets;
+  }),
+].map((numbers) => rouletteBetButton("SPLIT", `split:${numbers.join("-")}`, numbers, numbers.join("/"))).join("");
+const rouletteCornerBets = Array.from({ length: 11 }, (_, column) => [1, 2].flatMap((row) => {
+  const number = column * 3 + row;
+  return [number, number + 1, number + 3, number + 4];
+})).flatMap((numbers) => numbers.length ? [numbers] : []).map((numbers) => rouletteBetButton("CORNER", `corner:${numbers.join("-")}`, numbers, `${numbers[0]}/${numbers[1]}/${numbers[2]}/${numbers[3]}`)).join("");
+const rouletteOutside = (type: string, key: string, label: string, numbers: number[]) => rouletteBetButton(type, key, numbers, label, "outside-bet");
+const rouletteDozens = [
+  rouletteOutside("DOZEN", "dozen:1", "1st 12", Array.from({ length: 12 }, (_, index) => index + 1)),
+  rouletteOutside("DOZEN", "dozen:2", "2nd 12", Array.from({ length: 12 }, (_, index) => index + 13)),
+  rouletteOutside("DOZEN", "dozen:3", "3rd 12", Array.from({ length: 12 }, (_, index) => index + 25)),
+].join("");
+const rouletteColumns = [0, 1, 2].map((column) => rouletteOutside("COLUMN", `column:${column + 1}`, `C${column + 1}`, Array.from({ length: 12 }, (_, index) => index * 3 + column + 1))).join("");
+const rouletteOutsideBets = [
+  rouletteOutside("LOW", "low", "1–18", Array.from({ length: 18 }, (_, index) => index + 1)),
+  rouletteOutside("EVEN", "even", "EVEN", Array.from({ length: 18 }, (_, index) => (index + 1) * 2)),
+  rouletteOutside("RED", "red", "RED", [...rouletteRedNumbers]),
+  rouletteOutside("BLACK", "black", "BLACK", Array.from({ length: 36 }, (_, index) => index + 1).filter((number) => !rouletteRedNumbers.has(number))),
+  rouletteOutside("ODD", "odd", "ODD", Array.from({ length: 18 }, (_, index) => index * 2 + 1)),
+  rouletteOutside("HIGH", "high", "19–36", Array.from({ length: 18 }, (_, index) => index + 19)),
+].join("");
 const rouletteMarkup = `
   <main class="roulette-page" aria-labelledby="roulette-title">
     <div class="roulette-heading">
       <a class="back-link" href="/">← ANA MENÜ</a>
       <div>
-        <span class="menu-kicker">THE NIGHT TABLE // GLOBAL TABLE</span>
+        <span class="menu-kicker">THE NIGHT TABLE // EUROPEAN TABLE</span>
         <h1 id="roulette-title">LIGHTNING <em>ROULETTE</em></h1>
-        <p>Tek masa. Herkes aynı round’u görür. Şans sayını seç, sonucu dünya ile aynı anda izle.</p>
+        <p>Klasik Avrupa ruleti düzeni. Birden fazla sayı ve bahis alanına chip koy, masayı istediğin gibi kur.</p>
       </div>
       <div class="roulette-connection" data-connection>BAĞLANTI KURULUYOR</div>
     </div>
@@ -112,13 +151,34 @@ const rouletteMarkup = `
         <div class="roulette-result-line"><span>SONUÇ</span><strong data-winning-number>?</strong><small>Herkes için aynı server sonucu</small></div>
         <div class="fairness-card"><span class="fairness-icon">✦</span><div><b>COMMITMENT HASH</b><small data-commitment>WAITING FOR ROUND</small></div><span class="fairness-copy">Sonuç önceden kilitlenir, açıklandıktan sonra doğrulanır.</span></div>
       </section>
-      <section class="roulette-bet-card" aria-label="Roulette betting table">
-        <div class="roulette-card-kicker">STRAIGHT UP // TEK SAYI</div>
-        <div class="roulette-number-grid" role="group" aria-label="0 ile 36 arasında bir sayı seç">${[0, ...Array.from({ length: 36 }, (_, index) => index + 1)].map((number) => `<button type="button" data-number="${number}" class="${number === 0 ? "number-zero" : [1,3,5,7,9,12,14,16,18,19,21,23,25,27,30,32,34,36].includes(number) ? "number-red" : "number-black"}">${number}</button>`).join("")}</div>
+      <section class="roulette-bet-card" aria-label="Klasik Avrupa ruleti bahis masası">
+        <div class="table-card-heading"><div><div class="roulette-card-kicker">EUROPEAN ROULETTE // 0 + 36 NUMARA</div><strong>BAHİS MASASI</strong></div><span class="table-odds-note">KAZANAN SAYIYA GÖRE ÖDEME<br><b>35:1 STRAIGHT UP</b></span></div>
+        <div class="roulette-table-felt">
+          <div class="roulette-zero-lane">${rouletteBetButton("STRAIGHT", "straight:0", [0], "0", "number-zero")}</div>
+          <div class="roulette-number-board" aria-label="Standart 3 sıra 12 kolon sayı düzeni">
+            <div class="roulette-number-grid">${rouletteNumberRows}</div>
+            <div class="roulette-column-row">${rouletteColumns}</div>
+          </div>
+          <div class="roulette-dozen-row">${rouletteDozens}</div>
+          <div class="roulette-outside-row">${rouletteOutsideBets}</div>
+        </div>
+        <details class="combination-bets" open>
+          <summary><span>HİT-ZONE BAHİSLERİ</span><small>SPLIT · STREET · CORNER · SIX LINE</small></summary>
+          <div class="combination-zone-grid">
+            <div class="bet-zone-group"><span>SPLIT // 17:1</span><div>${rouletteSplitBets}</div></div>
+            <div class="bet-zone-group"><span>STREET // 11:1</span><div>${rouletteStreetBets}</div></div>
+            <div class="bet-zone-group"><span>CORNER // 8:1</span><div>${rouletteCornerBets}</div></div>
+            <div class="bet-zone-group"><span>SIX LINE // 5:1</span><div>${rouletteSixLineBets}</div></div>
+          </div>
+        </details>
         <div class="roulette-lucky-row"><div><span>LUCKY NUMBERS</span><div data-lucky-list><span class="muted-copy">Sonuçtan sonra açıklanacak</span></div></div><div class="reveal-count"><span>REVEAL</span><strong data-reveal-count>0/0</strong></div></div>
         <div class="roulette-multiplier-row"><span>MULTIPLIER REVEAL</span><div data-multiplier-list><span class="muted-copy">Tek tek reveal bekleniyor</span></div></div>
-        <div class="roulette-stake-row"><div><span>STAKE</span><strong data-stake-value>1,00</strong></div><div class="stake-options">${[100, 500, 1000, 2500, 5000].map((stake) => `<button type="button" data-stake="${stake}" class="${stake === 100 ? "is-selected" : ""}">${(stake / 100).toLocaleString("tr-TR", { minimumFractionDigits: 2 })}</button>`).join("")}</div></div>
-        <div class="roulette-bet-summary"><div><span>SEÇİLEN SAYI</span><strong data-selected-number>—</strong></div><button type="button" class="roulette-bet-button" data-action="bet" disabled>BAHİSİ ONAYLA <small>SERVER’A GÖNDER</small></button></div>
+        <div class="roulette-bet-slip">
+          <div class="chip-picker"><span>CHIP DEĞERİ</span><div>${[100, 500, 1000, 2500, 5000].map((stake) => `<button type="button" data-stake="${stake}" class="${stake === 100 ? "is-selected" : ""}"><i></i>${(stake / 100).toLocaleString("tr-TR", { minimumFractionDigits: 2 })}</button>`).join("")}</div></div>
+          <div class="bet-slip-summary"><div><span>MASADAKİ BAHİS</span><strong data-total-stake>0,00</strong><small data-bet-count>0 ALAN</small></div><div class="bet-slip-actions"><button type="button" data-action="undo">↶ UNDO</button><button type="button" data-action="clear">CLEAR</button></div></div>
+          <div class="selected-bets" data-selected-bets><span class="muted-copy">Chip seç ve masada bir veya daha fazla alana dokun</span></div>
+          <button type="button" class="roulette-bet-button" data-action="bet" disabled>BAHİSLERİ ONAYLA <small>SERVER’A GÖNDER</small></button>
+        </div>
         <p class="roulette-bet-status" data-bet-status>CANLI MASA YÜKLENİYOR</p>
       </section>
     </section>

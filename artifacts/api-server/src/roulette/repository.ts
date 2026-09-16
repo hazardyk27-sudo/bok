@@ -8,6 +8,10 @@ import {
   PHASE_DURATIONS_MS,
   ROULETTE_PHASES,
   type RouletteEvent,
+  type RouletteBetInput,
+  type RouletteBetType,
+  ROULETTE_BET_TYPES,
+  ROULETTE_PAYOUT_UNITS,
   type RouletteMultiplier,
   type RoulettePhase,
   type RouletteRoundRecord,
@@ -45,6 +49,51 @@ type LeaderClient = { query: (...args: any[]) => Promise<any>; release: () => vo
 
 const iso = (value: Date) => value.toISOString();
 const safeJson = <T>(value: unknown, fallback: T): T => (Array.isArray(value) ? value as T : fallback);
+
+const RED_NUMBERS = new Set([1, 3, 5, 7, 9, 12, 14, 16, 18, 19, 21, 23, 25, 27, 30, 32, 34, 36]);
+const normalizeNumbers = (numbers: number[]) => [...new Set(numbers)].sort((a, b) => a - b);
+const validSplit = (numbers: number[]) => {
+  const [a, b] = numbers;
+  if (a === 0 || b === 0) return [a, b].includes(0) && [a, b].some((value) => value >= 1 && value <= 3);
+  const verticalNeighbor = Math.abs(a - b) === 1 && Math.min(a, b) % 3 !== 0;
+  const horizontalNeighbor = Math.abs(a - b) === 3;
+  return verticalNeighbor || horizontalNeighbor;
+};
+const validBetNumbers = (type: RouletteBetType, numbers: number[]) => {
+  const expected = {
+    STRAIGHT: 1, SPLIT: 2, STREET: 3, CORNER: 4, SIX_LINE: 6,
+    DOZEN: 12, COLUMN: 12, RED: 18, BLACK: 18, ODD: 18, EVEN: 18, LOW: 18, HIGH: 18,
+  }[type];
+  if (numbers.length !== expected || numbers.some((number) => !Number.isInteger(number) || number < 0 || number > 36)) return false;
+  if (type === "SPLIT") return validSplit(numbers);
+  if (type === "STRAIGHT") return true;
+  if (type === "STREET") return numbers.every((number) => number > 0) && numbers.every((number) => Math.floor((number - 1) / 3) === Math.floor((numbers[0] - 1) / 3));
+  if (type === "CORNER") {
+    const positive = numbers.filter((number) => number > 0);
+    const rows = [...new Set(positive.map((number) => (number - 1) % 3))].sort();
+    const columns = [...new Set(positive.map((number) => Math.floor((number - 1) / 3)))].sort((a, b) => a - b);
+    return positive.length === 4 && rows.length === 2 && columns.length === 2 && columns[1] === columns[0] + 1;
+  }
+  if (type === "SIX_LINE") {
+    const start = numbers[0];
+    return start > 0 && start <= 31 && start % 3 === 1
+      && numbers.every((number, index) => number === start + index);
+  }
+  if (type === "DOZEN") {
+    const start = numbers[0];
+    return [1, 13, 25].includes(start) && numbers.every((number) => number >= start && number <= start + 11);
+  }
+  if (type === "COLUMN") return new Set(numbers.filter(Boolean).map((number) => (number - 1) % 3)).size === 1;
+  const expectedSet = {
+    RED: RED_NUMBERS,
+    BLACK: new Set([...Array.from({ length: 36 }, (_, index) => index + 1)].filter((number) => !RED_NUMBERS.has(number))),
+    ODD: new Set([...Array.from({ length: 18 }, (_, index) => index * 2 + 1)]),
+    EVEN: new Set([...Array.from({ length: 18 }, (_, index) => (index + 1) * 2)]),
+    LOW: new Set([...Array.from({ length: 18 }, (_, index) => index + 1)]),
+    HIGH: new Set([...Array.from({ length: 18 }, (_, index) => index + 19)]),
+  }[type as "RED" | "BLACK" | "ODD" | "EVEN" | "LOW" | "HIGH"];
+  return Boolean(expectedSet && numbers.every((number) => expectedSet.has(number)) && expectedSet.size === numbers.length);
+};
 
 export class RouletteRepository {
   private currentRound: RouletteRoundRecord | null = null;
@@ -97,25 +146,31 @@ export class RouletteRepository {
     return this.toSnapshot(round, wallet.balanceCents, new Date(), sessionId);
   }
 
-  async placeBet(sessionId: string, input: { number: number; stakeCents: number; idempotencyKey: string }) {
+  async placeBets(sessionId: string, input: { bets: RouletteBetInput[]; idempotencyKey: string }) {
     await this.start();
-    const number = Number(input.number);
-    const stakeCents = Number(input.stakeCents);
-    if (!Number.isInteger(number) || number < 0 || number > 36) throw new Error("NUMBER_MUST_BE_0_TO_36");
-    if (!Number.isInteger(stakeCents) || stakeCents < MIN_STAKE_CENTS || stakeCents > MAX_STAKE_CENTS) throw new Error("STAKE_OUT_OF_RANGE");
+    if (!Array.isArray(input.bets) || input.bets.length < 1 || input.bets.length > 60) throw new Error("BETS_MUST_BE_1_TO_60");
     if (!/^[a-zA-Z0-9_-]{12,80}$/.test(input.idempotencyKey)) throw new Error("INVALID_IDEMPOTENCY_KEY");
+    const bets = input.bets.map((bet) => {
+      const type = String(bet.type).toUpperCase() as RouletteBetType;
+      const numbers = normalizeNumbers((Array.isArray(bet.numbers) ? bet.numbers : []).map(Number));
+      const stakeCents = Number(bet.stakeCents);
+      if (!ROULETTE_BET_TYPES.includes(type) || !validBetNumbers(type, numbers)) throw new Error("INVALID_BET_SELECTION");
+      if (!Number.isInteger(stakeCents) || stakeCents < MIN_STAKE_CENTS || stakeCents > MAX_STAKE_CENTS) throw new Error("STAKE_OUT_OF_RANGE");
+      return { type, numbers, stakeCents, label: typeof bet.label === "string" ? bet.label.slice(0, 40) : undefined };
+    });
+    const totalStakeCents = bets.reduce((sum, bet) => sum + bet.stakeCents, 0);
     const round = this.currentRound ?? await this.loadOrCreateRound();
     if (round.phase !== "OPEN" && round.phase !== "LAST_CALL") throw new Error("BETTING_CLOSED");
 
     const client = await pool.connect();
     try {
       await client.query("BEGIN");
-      const existing = await client.query("SELECT id, session_id, round_id, number, stake_cents, status, payout_cents FROM roulette_bets WHERE idempotency_key = $1", [input.idempotencyKey]);
+      const existing = await client.query("SELECT id, session_id, round_id, number, bet_type, numbers, stake_cents, status, payout_cents FROM roulette_bets WHERE batch_id = $1 ORDER BY created_at", [input.idempotencyKey]);
       if (existing.rows[0]) {
         if (existing.rows[0].session_id !== sessionId) throw new Error("IDEMPOTENCY_KEY_REUSED");
         await client.query("COMMIT");
         const wallet = await this.getWallet(sessionId);
-        return { duplicate: true, bet: existing.rows[0], wallet };
+        return { duplicate: true, bets: existing.rows, totalStakeCents: existing.rows.reduce((sum: number, bet: { stake_cents: number }) => sum + Number(bet.stake_cents), 0), wallet };
       }
 
       const roundLock = await client.query("SELECT phase FROM roulette_rounds WHERE id = $1 FOR UPDATE", [round.id]);
@@ -125,23 +180,29 @@ export class RouletteRepository {
       if (!wallet.rows[0]) {
         await client.query("INSERT INTO roulette_wallets (session_id, balance_cents) VALUES ($1, $2)", [sessionId, balanceCents]);
       }
-      if (balanceCents < stakeCents) throw new Error("INSUFFICIENT_ROULETTE_CREDITS");
+      if (balanceCents < totalStakeCents) throw new Error("INSUFFICIENT_ROULETTE_CREDITS");
 
-      const betId = newId();
-      await client.query("UPDATE roulette_wallets SET balance_cents = balance_cents - $1, updated_at = now() WHERE session_id = $2", [stakeCents, sessionId]);
-      await client.query(
-        "INSERT INTO roulette_bets (id, round_id, session_id, number, stake_cents, idempotency_key) VALUES ($1, $2, $3, $4, $5, $6)",
-        [betId, round.id, sessionId, number, stakeCents, input.idempotencyKey],
-      );
-      await client.query(
-        "INSERT INTO roulette_ledger (id, session_id, round_id, bet_id, kind, amount_cents, idempotency_key) VALUES ($1, $2, $3, $4, 'BET_DEBIT', $5, $6)",
-        [newId(), sessionId, round.id, betId, -stakeCents, `debit:${input.idempotencyKey}`],
-      );
+      await client.query("UPDATE roulette_wallets SET balance_cents = balance_cents - $1, updated_at = now() WHERE session_id = $2", [totalStakeCents, sessionId]);
+      const acceptedBets = [];
+      for (const [index, bet] of bets.entries()) {
+        const betId = newId();
+        const rowKey = `${input.idempotencyKey}-${index}`;
+        await client.query(
+          "INSERT INTO roulette_bets (id, round_id, session_id, number, bet_type, numbers, batch_id, stake_cents, idempotency_key) VALUES ($1, $2, $3, $4, $5, $6::jsonb, $7, $8, $9)",
+          [betId, round.id, sessionId, bet.numbers[0] ?? 0, bet.type, JSON.stringify(bet.numbers), input.idempotencyKey, bet.stakeCents, rowKey],
+        );
+        await client.query(
+          "INSERT INTO roulette_ledger (id, session_id, round_id, bet_id, kind, amount_cents, idempotency_key) VALUES ($1, $2, $3, $4, 'BET_DEBIT', $5, $6)",
+          [newId(), sessionId, round.id, betId, -bet.stakeCents, `debit:${rowKey}`],
+        );
+        acceptedBets.push({ id: betId, roundId: round.id, type: bet.type, numbers: bet.numbers, stakeCents: bet.stakeCents, status: "ACCEPTED", payoutCents: 0 });
+      }
       await client.query("COMMIT");
       return {
         duplicate: false,
-        bet: { id: betId, roundId: round.id, number, stakeCents, status: "ACCEPTED", payoutCents: 0 },
-        wallet: { sessionId, balanceCents: balanceCents - stakeCents },
+        bets: acceptedBets,
+        totalStakeCents,
+        wallet: { sessionId, balanceCents: balanceCents - totalStakeCents },
       };
     } catch (error) {
       await client.query("ROLLBACK");
@@ -149,6 +210,13 @@ export class RouletteRepository {
     } finally {
       client.release();
     }
+  }
+
+  async placeBet(sessionId: string, input: { number: number; stakeCents: number; idempotencyKey: string }) {
+    return this.placeBets(sessionId, {
+      idempotencyKey: input.idempotencyKey,
+      bets: [{ type: "STRAIGHT", numbers: [Number(input.number)], stakeCents: Number(input.stakeCents) }],
+    });
   }
 
   async getWallet(sessionId: string) {
@@ -297,11 +365,18 @@ export class RouletteRepository {
     const client = await pool.connect();
     try {
       await client.query("BEGIN");
-      const bets = await client.query("SELECT id, session_id, number, stake_cents FROM roulette_bets WHERE round_id = $1 AND status = 'ACCEPTED' FOR UPDATE", [round.id]);
+      const bets = await client.query("SELECT id, session_id, number, bet_type, numbers, stake_cents FROM roulette_bets WHERE round_id = $1 AND status = 'ACCEPTED' FOR UPDATE", [round.id]);
       const luckyIndex = round.luckyNumbers.indexOf(round.winningNumber ?? -1);
       const multiplier = luckyIndex >= 0 ? round.multipliers[luckyIndex] : 0;
       for (const bet of bets.rows) {
-        const payoutCents = bet.number === round.winningNumber ? bet.stake_cents * multiplier : 0;
+        const betType = (bet.bet_type || "STRAIGHT") as RouletteBetType;
+        const storedNumbers = safeJson<number[]>(bet.numbers, []);
+        const numbers = storedNumbers.length ? storedNumbers : [Number(bet.number)];
+        const coversWinningNumber = numbers.includes(round.winningNumber ?? -1);
+        const payoutUnits = betType === "STRAIGHT" && luckyIndex >= 0 && coversWinningNumber
+          ? multiplier
+          : ROULETTE_PAYOUT_UNITS[betType] ?? 0;
+        const payoutCents = coversWinningNumber ? bet.stake_cents * payoutUnits : 0;
         const status = payoutCents > 0 ? "WON" : "LOST";
         await client.query("UPDATE roulette_bets SET status = $1, payout_cents = $2, settled_at = now() WHERE id = $3 AND status = 'ACCEPTED'", [status, payoutCents, bet.id]);
         if (payoutCents > 0) {

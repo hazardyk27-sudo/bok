@@ -14,6 +14,47 @@ export type RoulettePhase = (typeof ROULETTE_PHASES)[number];
 export const MULTIPLIER_VALUES = [50, 100, 150, 200, 250, 300, 400, 500] as const;
 export type RouletteMultiplier = (typeof MULTIPLIER_VALUES)[number];
 
+export const ROULETTE_BET_TYPES = [
+  "STRAIGHT",
+  "SPLIT",
+  "STREET",
+  "CORNER",
+  "SIX_LINE",
+  "DOZEN",
+  "COLUMN",
+  "RED",
+  "BLACK",
+  "ODD",
+  "EVEN",
+  "LOW",
+  "HIGH",
+] as const;
+
+export type RouletteBetType = (typeof ROULETTE_BET_TYPES)[number];
+
+export type RouletteBetInput = {
+  type: RouletteBetType;
+  numbers: number[];
+  stakeCents: number;
+  label?: string;
+};
+
+export const ROULETTE_PAYOUT_UNITS: Record<RouletteBetType, number> = {
+  STRAIGHT: 35,
+  SPLIT: 17,
+  STREET: 11,
+  CORNER: 8,
+  SIX_LINE: 5,
+  DOZEN: 2,
+  COLUMN: 2,
+  RED: 1,
+  BLACK: 1,
+  ODD: 1,
+  EVEN: 1,
+  LOW: 1,
+  HIGH: 1,
+};
+
 export const PHASE_DURATIONS_MS: Record<RoulettePhase, number> = {
   OPEN: 22_000,
   LAST_CALL: 8_000,
