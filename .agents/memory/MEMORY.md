@@ -18,3 +18,4 @@
 - [Roulette mobile heading wrapping](roulette-mobile-heading-wrapping.md) — narrow betting headers need wrapped tools or hidden overflow can push the utility rail outside the viewport.
 - [Roulette motion keyframe order](roulette-motion-keyframe-order.md) — generated landing bounces must keep Web Animations offsets monotonically ordered.
 - [Roulette portrait flow](roulette-portrait-flow.md) — keep portrait controls in normal document flow so compact tools never cover betting cells or result rows.
+- [Roulette audio timing](roulette-audio-timing.md) — keep round voice cues phase-gated and schedule physical impacts from the same visible landing timeline.

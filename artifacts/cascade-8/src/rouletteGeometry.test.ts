@@ -14,7 +14,10 @@ import {
 import {
   getRouletteAnimationLifecycleAction,
   getRouletteAnimationTransition,
+  getRouletteColorLabel,
+  getRoulettePhaseAnnouncement,
   getRouletteResultResumeAction,
+  getRouletteResultAnnouncement,
   getRouletteMotionProfile,
   getRouletteVisibilityResumeAction,
   isRouletteResultSettled,
@@ -53,6 +56,18 @@ describe("roulette wheel geometry", () => {
 });
 
 describe("server-driven roulette animation transitions", () => {
+  it("formats the Turkish round voice cues without changing the server result", () => {
+    expect(getRoulettePhaseAnnouncement("OPEN")).toBe("Bahisler açıldı.");
+    expect(getRoulettePhaseAnnouncement("LAST_CALL")).toBe("Son bahisler.");
+    expect(getRoulettePhaseAnnouncement("LOCKED")).toBe("Bahisler kapandı.");
+    expect(getRoulettePhaseAnnouncement("MULTIPLIER_REVEAL")).toBe("Çarpanlar açıklanıyor.");
+    expect(getRoulettePhaseAnnouncement("SPINNING")).toBeNull();
+    expect(getRouletteResultAnnouncement(17)).toBe("on yedi, siyah.");
+    expect(getRouletteResultAnnouncement(0)).toBe("sıfır, yeşil.");
+    expect(getRouletteColorLabel(32)).toBe("kırmızı");
+    expect(getRouletteColorLabel(8)).toBe("siyah");
+  });
+
   it("starts only when the server enters SPINNING and finishes on the revealed result", () => {
     const locked = { id: "round-1", phase: "LOCKED" as const, winningNumber: null };
     const spinning = { id: "round-1", phase: "SPINNING" as const, winningNumber: null };

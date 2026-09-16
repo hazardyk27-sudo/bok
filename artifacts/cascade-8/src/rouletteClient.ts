@@ -119,6 +119,13 @@ const PHASE_ANNOUNCEMENT_LABELS: Record<RoulettePhase, string> = {
   SETTLING: "Ödeme yapılıyor", INTERMISSION: "Yeni round hazırlanıyor",
 };
 const RED_NUMBERS = new Set([1, 3, 5, 7, 9, 12, 14, 16, 18, 19, 21, 23, 25, 27, 30, 32, 34, 36]);
+const TURKISH_ROULETTE_NUMBERS = [
+  "sıfır", "bir", "iki", "üç", "dört", "beş", "altı", "yedi", "sekiz", "dokuz",
+  "on", "on bir", "on iki", "on üç", "on dört", "on beş", "on altı", "on yedi",
+  "on sekiz", "on dokuz", "yirmi", "yirmi bir", "yirmi iki", "yirmi üç", "yirmi dört",
+  "yirmi beş", "yirmi altı", "yirmi yedi", "yirmi sekiz", "yirmi dokuz", "otuz",
+  "otuz bir", "otuz iki", "otuz üç", "otuz dört", "otuz beş", "otuz altı",
+] as const;
 const MAX_BET_PER_AREA = 10_000;
 const WHEEL_LANDING_DURATION_MS = ROULETTE_MOTION_TIMINGS.landingDurationMs;
 const BALL_LANDING_DURATION_MS = ROULETTE_MOTION_TIMINGS.resultRevealDelayMs;
@@ -127,6 +134,26 @@ const formatCountdown = (milliseconds: number) => {
   const seconds = Math.ceil(Math.max(0, milliseconds) / 1000);
   return `${String(Math.floor(seconds / 60)).padStart(2, "0")}:${String(seconds % 60).padStart(2, "0")}`;
 };
+
+export function getRouletteColorLabel(number: number) {
+  if (number === 0) return "yeşil";
+  return RED_NUMBERS.has(number) ? "kırmızı" : "siyah";
+}
+
+export function getRouletteResultAnnouncement(number: number) {
+  const spokenNumber = TURKISH_ROULETTE_NUMBERS[number] ?? String(number);
+  return `${spokenNumber}, ${getRouletteColorLabel(number)}.`;
+}
+
+export function getRoulettePhaseAnnouncement(phase: RoulettePhase) {
+  const announcements: Partial<Record<RoulettePhase, string>> = {
+    OPEN: "Bahisler açıldı.",
+    LAST_CALL: "Son bahisler.",
+    LOCKED: "Bahisler kapandı.",
+    MULTIPLIER_REVEAL: "Çarpanlar açıklanıyor.",
+  };
+  return announcements[phase] ?? null;
+}
 
 export function getRouletteResultResumeAction(
   phase: RouletteAnimationSnapshot["phase"],
@@ -205,82 +232,121 @@ export function getRouletteLiveSummary(snapshot: Pick<RouletteSnapshot, "round">
   return `Round ${String(round.sequence).padStart(6, "0")}. ${PHASE_ANNOUNCEMENT_LABELS[round.phase]}. ${result}`;
 }
 
+type RouletteCue = "unlock" | "phase" | "spin" | "roll" | "fret" | "deflector" | "reveal" | "land" | "settle";
+
 class RouletteVoice {
   private enabled = false;
   private lastPhrase = "";
   private audioContext?: AudioContext;
   private spinTimer?: number;
+  private wheelBed?: AudioBufferSourceNode;
+  private wheelBedGain?: GainNode;
 
   unlock() {
-    this.enabled = true;
-    this.ensureAudio();
+    const firstUnlock = !this.unlocked;
+    const context = this.ensureAudio();
+    if (context) {
+      this.unlocked = true;
+      if (firstUnlock) this.enabled = true;
+    }
     void this.audioContext?.resume();
-    window.speechSynthesis?.cancel();
-    this.cue("unlock");
-    this.speak("Ses açıldı");
+    return this.enabled;
   }
+
+  private unlocked = false;
+
   toggle() {
-    this.enabled = !this.enabled;
+    const wasUnlocked = this.unlocked;
+    const wasEnabled = this.enabled;
+    this.unlock();
+    if (wasUnlocked) this.enabled = !wasEnabled;
     if (!this.enabled) {
       window.speechSynthesis?.cancel();
       this.stopSpin();
     } else {
-      this.ensureAudio();
       void this.audioContext?.resume();
       this.cue("phase");
-      this.speak("Türkçe seslendirme açık");
+      this.speak("Sesli uyarılar açık.");
     }
     return this.enabled;
   }
-  startSpin() {
-    if (!this.enabled) return;
+
+  startSpin(ballOrbitMs: number) {
+    if (!this.enabled || !this.unlocked) return;
     this.stopSpin();
+    const context = this.ensureAudio();
+    if (!context) return;
+    this.startWheelBed(context);
     this.cue("spin");
-    this.spinTimer = window.setInterval(() => this.cue("roll"), 690);
+    const speedFactor = Math.min(1.35, Math.max(.72, 2_900 / Math.max(1, ballOrbitMs)));
+    const pulseMs = Math.max(280, Math.min(620, Math.round(ballOrbitMs / 5)));
+    this.cue("roll", speedFactor);
+    this.spinTimer = window.setInterval(() => this.cue("roll", speedFactor), pulseMs);
   }
+
   stopSpin() {
     if (this.spinTimer) window.clearInterval(this.spinTimer);
     this.spinTimer = undefined;
+    this.wheelBed?.stop();
+    this.wheelBed = undefined;
+    this.wheelBedGain = undefined;
   }
-  cue(kind: "unlock" | "phase" | "spin" | "roll" | "tick" | "bounce" | "fret" | "deflector" | "reveal" | "land" | "settle") {
-    if (!this.enabled) return;
+
+  cue(kind: RouletteCue, intensity = 1) {
+    if (!this.enabled || !this.unlocked) return;
     const context = this.ensureAudio();
     if (!context) return;
     const now = context.currentTime;
+    const level = Math.min(1.5, Math.max(.45, intensity));
+    if (kind === "roll") {
+      this.playNoise(context, .11, .012 * level, 850, "lowpass");
+      this.playTone(context, 176 * level, .07, .009 * level, "triangle");
+      return;
+    }
+    if (kind === "fret") {
+      this.playNoise(context, .045, .042 * level, 2_300, "bandpass");
+      this.playTone(context, 640, .055, .026 * level, "square");
+      return;
+    }
+    if (kind === "deflector") {
+      this.playNoise(context, .12, .072 * level, 1_150, "bandpass");
+      this.playTone(context, 520, .13, .05 * level, "triangle", 760);
+      return;
+    }
+    if (kind === "reveal") {
+      this.playNoise(context, .16, .05 * level, 2_800, "highpass");
+      this.playTone(context, 980, .2, .046 * level, "sawtooth", 180);
+      return;
+    }
+    if (kind === "settle") {
+      this.playNoise(context, .08, .025 * level, 1_400, "bandpass");
+      this.playTone(context, 184, .34, .06 * level, "sine", 128);
+      this.playTone(context, 548, .22, .028 * level, "sine", 470);
+      return;
+    }
+    if (kind === "land") {
+      this.playTone(context, 286, .18, .042 * level, "sine", 176);
+      return;
+    }
     const presets = {
-      unlock: [440, 0.11, 0.045, "sine"],
+      unlock: [440, 0.11, 0.04, "sine"],
       phase: [220, 0.16, 0.035, "triangle"],
-      spin: [92, 0.24, 0.028, "sawtooth"],
-      roll: [124, 0.06, 0.014, "triangle"],
-      tick: [132 + Math.random() * 34, 0.045, 0.018, "triangle"],
-      bounce: [310, 0.07, 0.035, "square"],
-      fret: [382, 0.075, 0.042, "square"],
-      deflector: [184, 0.16, 0.06, "sawtooth"],
-      reveal: [520, 0.2, 0.05, "triangle"],
-      land: [174, 0.3, 0.055, "sine"],
-      settle: [128, 0.34, 0.06, "sine"],
+      spin: [92, 0.24, 0.025, "sawtooth"],
     } as const;
-    const [frequency, duration, volume, type] = presets[kind];
-    const oscillator = context.createOscillator();
-    const gain = context.createGain();
-    oscillator.type = type;
-    oscillator.frequency.setValueAtTime(frequency, now);
-    oscillator.frequency.exponentialRampToValueAtTime(Math.max(45, frequency * .72), now + duration);
-    gain.gain.setValueAtTime(0.0001, now);
-    gain.gain.exponentialRampToValueAtTime(volume, now + .012);
-    gain.gain.exponentialRampToValueAtTime(0.0001, now + duration);
-    oscillator.connect(gain).connect(context.destination);
-    oscillator.start(now);
-    oscillator.stop(now + duration + .02);
+    const [frequency, duration, volume, type] = presets[kind as "unlock" | "phase" | "spin"];
+    this.playTone(context, frequency, duration, volume * level, type);
   }
+
   multiplierReveal(value: RouletteMultiplier, index: number, total: number) {
-    if (!this.enabled) return;
+    if (!this.enabled || !this.unlocked) return;
     const context = this.ensureAudio();
     if (!context) return;
     const now = context.currentTime;
     const baseFrequency = value >= 500 ? 720 : value >= 400 ? 640 : value >= 300 ? 570 : value >= 200 ? 500 : 430;
     const progress = index / Math.max(1, total - 1);
-    const volume = .035 + progress * .025 + (value >= 300 ? .015 : 0);
+    const strength = value >= 500 ? 1.45 : value >= 400 ? 1.25 : value >= 300 ? 1.1 : value >= 200 ? .95 : .82;
+    this.cue("reveal", strength);
+    const volume = (.035 + progress * .025 + (value >= 300 ? .015 : 0)) * strength;
     [0, .075, .15].forEach((offset, toneIndex) => {
       const oscillator = context.createOscillator();
       const gain = context.createGain();
@@ -297,6 +363,79 @@ class RouletteVoice {
       oscillator.stop(now + offset + duration + .02);
     });
   }
+
+  private startWheelBed(context: AudioContext) {
+    const buffer = this.createNoiseBuffer(context, 1.2);
+    const source = context.createBufferSource();
+    const filter = context.createBiquadFilter();
+    const gain = context.createGain();
+    source.buffer = buffer;
+    source.loop = true;
+    filter.type = "lowpass";
+    filter.frequency.setValueAtTime(460, context.currentTime);
+    gain.gain.setValueAtTime(0.0001, context.currentTime);
+    gain.gain.exponentialRampToValueAtTime(.026, context.currentTime + .18);
+    source.connect(filter).connect(gain).connect(context.destination);
+    source.start();
+    this.wheelBed = source;
+    this.wheelBedGain = gain;
+  }
+
+  private playTone(
+    context: AudioContext,
+    frequency: number,
+    duration: number,
+    volume: number,
+    type: OscillatorType,
+    endFrequency = frequency * .72,
+  ) {
+    const now = context.currentTime;
+    const oscillator = context.createOscillator();
+    const gain = context.createGain();
+    oscillator.type = type;
+    oscillator.frequency.setValueAtTime(Math.max(35, frequency), now);
+    oscillator.frequency.exponentialRampToValueAtTime(Math.max(35, endFrequency), now + duration);
+    gain.gain.setValueAtTime(0.0001, now);
+    gain.gain.exponentialRampToValueAtTime(Math.max(.0002, volume), now + .012);
+    gain.gain.exponentialRampToValueAtTime(0.0001, now + duration);
+    oscillator.connect(gain).connect(context.destination);
+    oscillator.start(now);
+    oscillator.stop(now + duration + .025);
+  }
+
+  private playNoise(
+    context: AudioContext,
+    duration: number,
+    volume: number,
+    frequency: number,
+    filterType: BiquadFilterType,
+  ) {
+    const now = context.currentTime;
+    const source = context.createBufferSource();
+    const filter = context.createBiquadFilter();
+    const gain = context.createGain();
+    source.buffer = this.createNoiseBuffer(context, duration);
+    filter.type = filterType;
+    filter.frequency.setValueAtTime(frequency, now);
+    filter.Q.setValueAtTime(filterType === "bandpass" ? 1.8 : .7, now);
+    gain.gain.setValueAtTime(0.0001, now);
+    gain.gain.exponentialRampToValueAtTime(Math.max(.0002, volume), now + .004);
+    gain.gain.exponentialRampToValueAtTime(0.0001, now + duration);
+    source.connect(filter).connect(gain).connect(context.destination);
+    source.start(now);
+    source.stop(now + duration + .025);
+  }
+
+  private createNoiseBuffer(context: AudioContext, duration: number) {
+    const frameCount = Math.max(1, Math.ceil(context.sampleRate * duration));
+    const buffer = context.createBuffer(1, frameCount, context.sampleRate);
+    const channel = buffer.getChannelData(0);
+    for (let index = 0; index < frameCount; index += 1) {
+      channel[index] = Math.random() * 2 - 1;
+    }
+    return buffer;
+  }
+
   private ensureAudio() {
     if (this.audioContext) return this.audioContext;
     const Context = window.AudioContext ?? (window as typeof window & { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
@@ -305,7 +444,7 @@ class RouletteVoice {
     return this.audioContext;
   }
   speak(phrase: string) {
-    if (!this.enabled || !window.speechSynthesis || phrase === this.lastPhrase) return;
+    if (!this.enabled || !this.unlocked || !window.speechSynthesis || phrase === this.lastPhrase) return;
     this.lastPhrase = phrase;
     const utterance = new SpeechSynthesisUtterance(phrase);
     utterance.lang = "tr-TR";
@@ -354,6 +493,10 @@ export class RouletteClient {
   private ballSoundTimers: number[] = [];
 
   private deflectorHitTimer?: number;
+
+  private resultAnnouncementTimer?: number;
+
+  private announcedResultKey = "";
 
   private animatedResultKey = "";
 
@@ -411,19 +554,20 @@ export class RouletteClient {
     this.stopLabelOrientationSync();
     this.voice.stopSpin();
     this.clearBallSoundTimers();
+    if (this.resultAnnouncementTimer) window.clearTimeout(this.resultAnnouncementTimer);
     this.socket?.close();
   }
 
   private bind() {
     this.root.querySelectorAll<HTMLButtonElement>(".table-bet").forEach((button) => {
       button.addEventListener("click", () => {
-        this.voice.unlock();
+        this.updateSoundButtons(this.voice.unlock());
         this.addSelection(button);
       });
     });
     this.root.querySelectorAll<HTMLButtonElement>("[data-stake]").forEach((button) => {
       button.addEventListener("click", () => {
-        this.voice.unlock();
+        this.updateSoundButtons(this.voice.unlock());
         this.selectedChipCents = Number(button.dataset.stake);
         this.render();
       });
@@ -437,13 +581,10 @@ export class RouletteClient {
     this.root.querySelectorAll<HTMLButtonElement>("[data-action='menu']").forEach((button) => button.addEventListener("click", () => { window.location.href = "/"; }));
     this.root.querySelectorAll<HTMLButtonElement>("[data-action='sound']").forEach((button) => button.addEventListener("click", () => {
       const enabled = this.voice.toggle();
-      this.root.querySelectorAll<HTMLButtonElement>("[data-action='sound']").forEach((soundButton) => {
-        soundButton.classList.toggle("is-active", enabled);
-        const label = soundButton.querySelector("span");
-        if (label) label.textContent = enabled ? "SES AÇIK" : "SESİ AÇ";
-        const small = soundButton.querySelector("small");
-        if (small) small.textContent = enabled ? "AÇIK" : "SES";
-      });
+      if (enabled && this.snapshot?.round.phase === "SPINNING") {
+        this.voice.startSpin(getRouletteMotionProfile(this.snapshot.round.id).ballOrbitMs);
+      }
+      this.updateSoundButtons(enabled);
     }));
     this.root.querySelector<HTMLButtonElement>("[data-action='refresh']")?.addEventListener("click", () => void this.load());
     this.root.querySelectorAll<HTMLButtonElement>("[data-action^='drawer-']").forEach((button) => button.addEventListener("click", () => {
@@ -451,6 +592,16 @@ export class RouletteClient {
       if (action === "drawer-close") this.closeDrawers();
       else if (action) this.toggleDrawer(action.replace("drawer-", ""));
     }));
+  }
+
+  private updateSoundButtons(enabled: boolean) {
+    this.root.querySelectorAll<HTMLButtonElement>("[data-action='sound']").forEach((soundButton) => {
+      soundButton.classList.toggle("is-active", enabled);
+      const label = soundButton.querySelector("span");
+      if (label) label.textContent = enabled ? "SES AÇIK" : "SESİ AÇ";
+      const small = soundButton.querySelector("small");
+      if (small) small.textContent = enabled ? "AÇIK" : "SES";
+    });
   }
 
   private serializeSelections() {
@@ -614,6 +765,9 @@ export class RouletteClient {
       this.undoStack = [];
       this.betStatus = "";
       this.acceptedBetsRoundId = "";
+      this.announcedResultKey = "";
+      if (this.resultAnnouncementTimer) window.clearTimeout(this.resultAnnouncementTimer);
+      this.resultAnnouncementTimer = undefined;
     }
     this.hydrateAcceptedBets(next.round.bets);
     this.scheduleBetSubmission(next);
@@ -645,30 +799,20 @@ export class RouletteClient {
     } else if (lifecycleAction.action === "settle" && next.round.winningNumber !== null) {
       this.settleWheelSpinImmediately(next.round.winningNumber);
     }
-    const animationTransition = getRouletteAnimationTransition(previous?.round ?? null, next.round);
-    if (animationTransition.winningNumber !== null) this.voice.speak(`${animationTransition.winningNumber} numara kazandı`);
     const previousRevealCount = previous?.round.revealedMultipliers.length ?? 0;
     const newRevealIndex = next.round.revealedMultipliers.length > previousRevealCount
       ? next.round.revealedMultipliers.length - 1
       : -1;
     const newRevealValue = newRevealIndex >= 0 ? next.round.revealedMultipliers[newRevealIndex] : undefined;
-    if (newRevealValue) this.voice.speak(`${newRevealValue} çarpan`);
     this.render();
     if (newRevealIndex >= 0 && newRevealValue) this.playMultiplierReveal(newRevealIndex, newRevealValue);
   }
 
   private announcePhase(snapshot: RouletteSnapshot) {
-    if (snapshot.round.phase === "OPEN") this.voice.speak("Bahisler açıldı");
-    if (snapshot.round.phase === "LAST_CALL") this.voice.speak("Son çağrı, bahisler kapanıyor");
-    if (snapshot.round.phase === "LOCKED") this.voice.speak("Bahisler kapandı");
-    if (snapshot.round.phase === "MULTIPLIER_REVEAL") {
-      this.voice.cue("reveal");
-      this.voice.speak("Özel çarpanlar açıklanıyor");
-    }
-    if (snapshot.round.phase === "SPINNING") this.voice.speak("Çark dönüyor");
-    if (snapshot.round.phase === "RESULT") this.voice.speak("Kazanan sayı açıklanıyor");
-    if (snapshot.round.phase === "SPINNING") this.voice.startSpin();
-    else this.voice.stopSpin();
+    const phrase = getRoulettePhaseAnnouncement(snapshot.round.phase);
+    if (phrase) this.voice.speak(phrase);
+    if (snapshot.round.phase === "MULTIPLIER_REVEAL") this.voice.cue("reveal");
+    if (snapshot.round.phase !== "SPINNING") this.voice.stopSpin();
   }
 
   private render() {
@@ -930,7 +1074,7 @@ export class RouletteClient {
       this.ballAnimation.currentTime = phaseElapsed % ballOrbitMs;
       this.wheelAnimation.play();
       this.ballAnimation.play();
-      this.voice.startSpin();
+      this.voice.startSpin(profile.ballOrbitMs);
       return;
     }
     this.activeSpinRoundId = roundId;
@@ -944,7 +1088,7 @@ export class RouletteClient {
     this.updateLabelOrientations(wheel, 0);
     rotor.style.transform = "rotate(0deg)";
     wheel.classList.add("is-spinning");
-    this.voice.startSpin();
+    this.voice.startSpin(profile.ballOrbitMs);
     const { outerRadius } = this.readWheelRadii(wheel);
     ball.style.transform = `rotate(${profile.initialBallAngle}deg) translateY(-${outerRadius}px)`;
     if (this.prefersReducedMotion()) {
@@ -1021,6 +1165,7 @@ export class RouletteClient {
       ball.style.transform = `rotate(-1440deg) translateY(-${finalPocketRadius}px)`;
       this.settledResultKey = resultKey;
       this.voice.cue("land");
+      this.announceSettledResult();
       return;
     }
     const { landingDurationMs, resultRevealDelayMs } = ROULETTE_MOTION_TIMINGS;
@@ -1104,7 +1249,8 @@ export class RouletteClient {
     outer.finished.then(() => {
       if (this.animatedResultKey !== resultKey) return;
       this.settledResultKey = resultKey;
-       this.voice.cue("settle");
+      this.voice.cue("settle");
+      this.announceSettledResult();
       this.render();
     }).catch(() => undefined);
   }
@@ -1135,6 +1281,7 @@ export class RouletteClient {
     this.updateLabelOrientations(wheel, finalRotation);
     ball.style.transform = `rotate(-1440deg) translateY(-${finalPocketRadius}px)`;
     this.settledResultKey = resultKey;
+    this.announceSettledResult();
     this.render();
   }
 
@@ -1148,9 +1295,24 @@ export class RouletteClient {
         if (this.animatedResultKey === resultKey) this.voice.cue("fret");
       }, delay));
     });
-    this.ballSoundTimers.push(window.setTimeout(() => {
-      if (this.animatedResultKey === resultKey) this.voice.cue("settle");
-    }, Math.max(0, ROULETTE_MOTION_TIMINGS.resultRevealDelayMs - 120)));
+  }
+
+  private announceSettledResult() {
+    const round = this.snapshot?.round;
+    if (!round || round.winningNumber === null) return;
+    const resultKey = `${round.id}:${round.winningNumber}`;
+    if (this.announcedResultKey === resultKey) return;
+    this.announcedResultKey = resultKey;
+    this.voice.speak(getRouletteResultAnnouncement(round.winningNumber));
+    const multiplierIndex = round.luckyNumbers.indexOf(round.winningNumber);
+    const multiplier = multiplierIndex >= 0 ? round.revealedMultipliers[multiplierIndex] : undefined;
+    if (multiplier === undefined) return;
+    this.resultAnnouncementTimer = window.setTimeout(() => {
+      this.resultAnnouncementTimer = undefined;
+      if (this.snapshot?.round.id === round.id && this.snapshot.round.winningNumber === round.winningNumber) {
+        this.voice.speak(`Kazanan sayıda ${multiplier} çarpan.`);
+      }
+    }, 1_050);
   }
 
   private clearBallSoundTimers() {
