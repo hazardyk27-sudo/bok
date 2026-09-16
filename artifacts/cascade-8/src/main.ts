@@ -81,6 +81,8 @@ const mainMenuMarkup = `
 `;
 
 const rouletteRedNumbers = new Set([1, 3, 5, 7, 9, 12, 14, 16, 18, 19, 21, 23, 25, 27, 30, 32, 34, 36]);
+const rouletteWheelOrder = [0, 32, 15, 19, 4, 21, 2, 25, 17, 34, 6, 27, 13, 36, 11, 30, 8, 23, 10, 5, 24, 16, 33, 1, 20, 14, 31, 9, 22, 18, 29, 7, 28, 12, 35, 3, 26];
+const rouletteChipValues = [100, 500, 1000, 2500, 5000, 10000, 25000, 50000];
 const rouletteBetButton = (type: string, key: string, numbers: number[], label: string, className = "") => `<button type="button" class="table-bet ${className}" data-bet-type="${type}" data-bet-key="${key}" data-bet-numbers="${numbers.join(",")}" data-bet-label="${label}"><span class="bet-label">${label}</span><span class="table-chip" hidden></span><span class="multiplier-badge" hidden></span></button>`;
 const rouletteNumberRows = [2, 1, 0].map((row) => Array.from({ length: 12 }, (_, column) => column * 3 + row + 1).map((number) => rouletteBetButton("STRAIGHT", `straight:${number}`, [number], String(number), rouletteRedNumbers.has(number) ? "number-red" : "number-black")).join("")).join("");
 const rouletteStreetBets = Array.from({ length: 12 }, (_, column) => {
@@ -132,6 +134,14 @@ const rouletteMobileNumberColumns = Array.from({ length: 3 }, (_, column) => `<d
   const number = column * 12 + row + 1;
   return rouletteBetButton("STRAIGHT", `straight:${number}`, [number], String(number), rouletteRedNumbers.has(number) ? "number-red" : "number-black");
 }).join("")}</div>`).join("");
+const rouletteInsideBets = `
+  <div class="inside-bet-drawer-grid">
+    <div class="bet-zone-group"><span>SPLIT // 17:1</span><div>${rouletteSplitBets}</div></div>
+    <div class="bet-zone-group"><span>STREET // 11:1</span><div>${rouletteStreetBets}</div></div>
+    <div class="bet-zone-group"><span>CORNER // 8:1</span><div>${rouletteCornerBets}</div></div>
+    <div class="bet-zone-group"><span>SIX LINE // 5:1</span><div>${rouletteSixLineBets}</div></div>
+  </div>
+`;
 const rouletteMarkup = `
   <main class="roulette-page" aria-labelledby="roulette-title">
     <div class="roulette-heading">
@@ -157,9 +167,13 @@ const rouletteMarkup = `
         <div class="roulette-wheel-stage">
           <div class="roulette-wheel-live" data-wheel>
             <div class="wheel-orbit wheel-orbit-a"></div><div class="wheel-orbit wheel-orbit-b"></div>
-            <div class="wheel-number-ring">${Array.from({ length: 37 }, (_, index) => `<span style="--wheel-index:${index}">${index}</span>`).join("")}</div>
+            <div class="wheel-rotor">
+              <div class="wheel-pocket-track">${rouletteWheelOrder.map((number, index) => `<span class="wheel-pocket ${number === 0 ? "is-green" : rouletteRedNumbers.has(number) ? "is-red" : "is-black"}" data-wheel-number="${number}" style="--pocket-index:${index}"><b>${number}</b></span>`).join("")}</div>
+              <div class="wheel-deflectors">${Array.from({ length: 8 }, (_, index) => `<i style="--deflector-index:${index}"></i>`).join("")}</div>
+              <div class="wheel-center-well"><div class="wheel-center-cap"><span>EUROPEAN</span><b>37</b></div></div>
+            </div>
             <div class="wheel-core"><span data-winning-number>?</span><small>KAZANAN</small></div>
-            <div class="wheel-ball"></div>
+            <div class="wheel-ball-track"><div class="wheel-ball"></div></div>
             <div class="wheel-result-overlay" data-result-overlay>
               <small>ROUND SONUCU</small>
               <strong data-overlay-winning>?</strong>
@@ -167,14 +181,15 @@ const rouletteMarkup = `
             </div>
           </div>
         </div>
-        <div class="roulette-result-line"><span>SONUÇ</span><strong data-winning-number>?</strong><small>Herkes için aynı server sonucu</small></div>
-        <div class="fairness-card"><span class="fairness-icon">✦</span><div><b>COMMITMENT HASH</b><small data-commitment>WAITING FOR ROUND</small></div><span class="fairness-copy">Sonuç önceden kilitlenir, açıklandıktan sonra doğrulanır.</span></div>
       </section>
       <section class="roulette-bet-card" aria-label="Klasik Avrupa ruleti bahis masası">
         <div class="mobile-utility-rail" aria-label="Mobil masa kontrolleri">
           <button type="button" data-action="undo" aria-label="Son bahsi geri al">↶<small>UNDO</small></button>
           <button type="button" data-action="rebet" aria-label="Son bahsi tekrar et">↻<small>TEKRAR</small></button>
-          <div class="mobile-utility-chips">${[100, 500, 1000].map((stake) => `<button type="button" data-stake="${stake}" aria-label="${stake / 100} chip"><i></i></button>`).join("")}</div>
+          <button type="button" data-action="drawer-chips" aria-label="Chip seçici">◉<small>CHIP</small></button>
+          <button type="button" data-action="drawer-inside" aria-label="Inside bahisleri">＋<small>INSIDE</small></button>
+          <button type="button" data-action="drawer-history" aria-label="Geçmiş sonuçlar">◌<small>GEÇMİŞ</small></button>
+          <button type="button" data-action="drawer-fairness" aria-label="Adil oyun bilgisi">✦<small>FAIR</small></button>
           <button type="button" data-action="menu" aria-label="Ana menüye dön">☰<small>MENÜ</small></button>
         </div>
         <div class="table-card-heading"><div><div class="roulette-card-kicker">EUROPEAN ROULETTE // 0 + 36 NUMARA</div><strong>BAHİS MASASI</strong></div><span class="table-odds-note">KAZANAN SAYIYA GÖRE ÖDEME<br><b>35:1 STRAIGHT UP</b></span></div>
@@ -197,15 +212,6 @@ const rouletteMarkup = `
             <div class="mobile-column-row">${rouletteColumns}</div>
           </div>
         </div>
-        <details class="combination-bets" open>
-          <summary><span>HİT-ZONE BAHİSLERİ</span><small>SPLIT · STREET · CORNER · SIX LINE</small></summary>
-          <div class="combination-zone-grid">
-            <div class="bet-zone-group"><span>SPLIT // 17:1</span><div>${rouletteSplitBets}</div></div>
-            <div class="bet-zone-group"><span>STREET // 11:1</span><div>${rouletteStreetBets}</div></div>
-            <div class="bet-zone-group"><span>CORNER // 8:1</span><div>${rouletteCornerBets}</div></div>
-            <div class="bet-zone-group"><span>SIX LINE // 5:1</span><div>${rouletteSixLineBets}</div></div>
-          </div>
-        </details>
         <div class="roulette-lucky-row"><div><span>LUCKY NUMBERS</span><div data-lucky-list><span class="muted-copy">Sonuçtan sonra açıklanacak</span></div></div><div class="reveal-count"><span>REVEAL</span><strong data-reveal-count>0/0</strong></div></div>
         <div class="roulette-multiplier-row"><span>MULTIPLIER REVEAL</span><div data-multiplier-list><span class="muted-copy">Tek tek reveal bekleniyor</span></div></div>
         <div class="roulette-bet-slip">
@@ -218,6 +224,10 @@ const rouletteMarkup = `
       </section>
     </section>
     <section class="roulette-history-card"><div class="history-heading"><div><span class="roulette-card-kicker">GLOBAL HISTORY</span><h2>SONUÇ AKIŞI</h2></div><button type="button" data-action="refresh">↻ YENİLE</button></div><div class="history-list" data-history><span class="muted-copy">Sonuçlar yükleniyor</span></div></section>
+    <aside class="roulette-drawer" data-drawer="chips" aria-hidden="true"><button class="drawer-close" type="button" data-action="drawer-close">×</button><span class="roulette-card-kicker">CHIP SELECTOR</span><h2>CHIP DEĞERİ</h2><p>Seçili chip’i masada istediğin kadar farklı alana uygula.</p><div class="drawer-chip-grid">${rouletteChipValues.map((stake) => `<button type="button" data-stake="${stake}"><i></i>${(stake / 100).toLocaleString("tr-TR", { minimumFractionDigits: 2 })}</button>`).join("")}</div></aside>
+    <aside class="roulette-drawer" data-drawer="inside" aria-hidden="true"><button class="drawer-close" type="button" data-action="drawer-close">×</button><span class="roulette-card-kicker">INSIDE BETS</span><h2>İÇ BAHİSLER</h2><p>Masadaki klasik iç bahis bölgeleri.</p>${rouletteInsideBets}</aside>
+    <aside class="roulette-drawer" data-drawer="fairness" aria-hidden="true"><button class="drawer-close" type="button" data-action="drawer-close">×</button><span class="roulette-card-kicker">FAIR PLAY // SERVER PROOF</span><h2>ADİL OYUN</h2><p>Sonuç server tarafından round başlamadan önce belirlenir; animasyon sadece bu sonucu doğal biçimde gösterir.</p><div class="drawer-proof"><b>COMMITMENT HASH</b><code data-commitment>WAITING FOR ROUND</code><small>Sonuç açıklandığında doğrulanabilir.</small></div></aside>
+    <aside class="roulette-drawer roulette-history-drawer" data-drawer="history" aria-hidden="true"><button class="drawer-close" type="button" data-action="drawer-close">×</button><span class="roulette-card-kicker">RECENT ROUNDS</span><h2>SONUÇ GEÇMİŞİ</h2><div class="history-list" data-history-drawer><span class="muted-copy">Sonuçlar yükleniyor</span></div></aside>
   </main>
 `;
 
