@@ -403,7 +403,7 @@ export class RouletteClient {
     this.ballAnimation?.cancel();
     rotor.style.transform = "rotate(0deg)";
     wheel.classList.add("is-spinning");
-    const radius = wheel.clientWidth * 0.38;
+    const radius = wheel.clientWidth * 0.45;
     this.wheelAnimation = rotor.animate(
       [{ transform: "rotate(0deg)" }, { transform: "rotate(360deg)" }],
       { duration: 1450, iterations: Infinity, easing: "linear" },
@@ -439,7 +439,7 @@ export class RouletteClient {
       [{ transform: `rotate(${currentRotation}deg)` }, { transform: `rotate(${finalRotation - 90}deg)`, offset: .72 }, { transform: `rotate(${finalRotation}deg)` }],
       { duration: 3900, easing: "cubic-bezier(.12,.7,.18,1)", fill: "forwards" },
     );
-    const outerRadius = wheel.clientWidth * 0.38;
+    const outerRadius = wheel.clientWidth * 0.45;
     const outer = ball.animate(
       [{ transform: `rotate(0deg) translateY(-${outerRadius}px)` }, { transform: `rotate(-1220deg) translateY(-${outerRadius}px)`, offset: .65 }, { transform: `rotate(-1440deg) translateY(-${outerRadius}px)` }],
       { duration: 2700, easing: "cubic-bezier(.08,.7,.16,1)", fill: "forwards" },
@@ -447,13 +447,13 @@ export class RouletteClient {
     this.ballAnimation = outer;
     outer.finished.then(() => {
       if (this.animatedResultKey !== resultKey) return;
-      const pocketRadius = wheel.clientWidth * 0.31;
+      const pocketRadius = wheel.clientWidth * 0.29;
       this.ballAnimation = ball.animate(
         [
           { transform: `rotate(-1440deg) translateY(-${outerRadius}px)` },
-          { transform: `rotate(-1440deg) translateY(-${pocketRadius - 17}px)`, offset: .2 },
-          { transform: `rotate(-1448deg) translateY(-${pocketRadius + 7}px)`, offset: .42 },
-          { transform: `rotate(-1434deg) translateY(-${pocketRadius - 2}px)`, offset: .62 },
+          { transform: `rotate(-1440deg) translateY(-${pocketRadius - 7}px)`, offset: .2 },
+          { transform: `rotate(-1448deg) translateY(-${pocketRadius + 5}px)`, offset: .42 },
+          { transform: `rotate(-1434deg) translateY(-${pocketRadius - 3}px)`, offset: .62 },
           { transform: `rotate(-1442deg) translateY(-${pocketRadius + 2}px)`, offset: .8 },
           { transform: `rotate(-1440deg) translateY(-${pocketRadius}px)` },
         ],

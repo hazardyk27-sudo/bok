@@ -82,6 +82,11 @@ const mainMenuMarkup = `
 
 const rouletteRedNumbers = new Set([1, 3, 5, 7, 9, 12, 14, 16, 18, 19, 21, 23, 25, 27, 30, 32, 34, 36]);
 const rouletteWheelOrder = [0, 32, 15, 19, 4, 21, 2, 25, 17, 34, 6, 27, 13, 36, 11, 30, 8, 23, 10, 5, 24, 16, 33, 1, 20, 14, 31, 9, 22, 18, 29, 7, 28, 12, 35, 3, 26];
+const rouletteWheelSegment = 360 / rouletteWheelOrder.length;
+const rouletteWheelBand = rouletteWheelOrder.map((number, index) => {
+  const color = number === 0 ? "#138a4a" : rouletteRedNumbers.has(number) ? "#b5282b" : "#161a1c";
+  return `${color} ${index * rouletteWheelSegment}deg ${(index + 1) * rouletteWheelSegment}deg`;
+}).join(", ");
 const rouletteChipValues = [100, 500, 1000, 2500, 5000, 10000, 25000, 50000];
 const rouletteBetButton = (type: string, key: string, numbers: number[], label: string, className = "") => `<button type="button" class="table-bet ${className}" data-bet-type="${type}" data-bet-key="${key}" data-bet-numbers="${numbers.join(",")}" data-bet-label="${label}"><span class="bet-label">${label}</span><span class="table-chip" hidden></span><span class="multiplier-badge" hidden></span></button>`;
 const rouletteNumberRows = [2, 1, 0].map((row) => Array.from({ length: 12 }, (_, column) => column * 3 + row + 1).map((number) => rouletteBetButton("STRAIGHT", `straight:${number}`, [number], String(number), rouletteRedNumbers.has(number) ? "number-red" : "number-black")).join("")).join("");
@@ -167,7 +172,9 @@ const rouletteMarkup = `
         <div class="roulette-wheel-stage">
           <div class="roulette-wheel-live" data-wheel>
             <div class="wheel-rotor">
-              <div class="wheel-pocket-track">${rouletteWheelOrder.map((number, index) => `<span class="wheel-pocket ${number === 0 ? "is-green" : rouletteRedNumbers.has(number) ? "is-red" : "is-black"}" data-wheel-number="${number}" style="--pocket-index:${index}"><b>${number}</b><i aria-hidden="true"></i></span>`).join("")}</div>
+              <div class="wheel-number-band" aria-hidden="true" style="--wheel-band:${rouletteWheelBand}"></div>
+              <div class="wheel-number-labels" aria-label="European wheel number order">${rouletteWheelOrder.map((number, index) => `<span class="wheel-number-label" style="--pocket-index:${index}"><b>${number}</b></span>`).join("")}</div>
+              <div class="wheel-pocket-track">${rouletteWheelOrder.map((number, index) => `<span class="wheel-pocket ${number === 0 ? "is-green" : rouletteRedNumbers.has(number) ? "is-red" : "is-black"}" data-wheel-number="${number}" style="--pocket-index:${index}"><i aria-hidden="true"></i></span>`).join("")}</div>
               <div class="wheel-deflectors">${Array.from({ length: 8 }, (_, index) => `<i style="--deflector-index:${index}"></i>`).join("")}</div>
               <div class="wheel-center-well"><div class="wheel-center-cap"><i></i><b></b></div></div>
             </div>
