@@ -394,13 +394,13 @@
   position: absolute;
   left: 50%;
   top: 50%;
-  width: 9.4%;
-  height: 9.4%;
-  margin: -4.7%;
+  width: 8.2%;
+  height: 8.2%;
+  margin: -4.1%;
   display: grid;
   place-items: center;
   --number-radius: clamp(142px, 37vw, 186px);
-  --number-radius: clamp(118px, 41cqw, 220px);
+  --number-radius: clamp(118px, 44cqw, 236px);
   transform: rotate(calc(var(--pocket-index) * 9.7297deg)) translateY(calc(-1 * var(--number-radius)));
 }
 .wheel-number-label b {
@@ -471,7 +471,10 @@
   inset: 0 8%;
   display: block;
   width: auto;
-  height: auto;
+  height: 14%;
+  top: 50%;
+  bottom: auto;
+  transform: translateY(-50%);
   border: 0;
   border-left: 1px solid rgba(255, 249, 229, .62);
   border-right: 1px solid rgba(255, 249, 229, .62);
@@ -630,6 +633,7 @@
   .wheel-number-label { width: 10%; height: 10%; margin: -5%; }
   .wheel-number-label b { font-size: 13px; letter-spacing: -.06em; }
   .wheel-deflectors i { transform: rotate(calc(var(--deflector-index) * 45deg + 22.5deg)) translateY(-95px); }
+  .wheel-pocket i { height: 10%; }
   .wheel-result-overlay { inset: 41% 31%; }
   .roulette-bet-card { transition: transform .35s ease, opacity .35s ease; }
   .is-multiplier-reveal .roulette-bet-card { transform: scale(.985); transform-origin: top center; }

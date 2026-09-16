@@ -242,7 +242,8 @@ describe("roulette motion timing contract", () => {
     expect(rouletteCss).toContain(`animation: roulette-result-pop-compact var(${ROULETTE_MOTION_CSS_VARIABLES.resultReveal})`);
     expect(rouletteCss).not.toContain("roulette-rotor-roll 1.9s");
     expect(rouletteCss).not.toContain("roulette-result-pop-compact .45s");
-      expect(rouletteCss).toContain("--number-radius: clamp(118px, 41cqw, 220px);");
+      expect(rouletteCss).toContain("--number-radius: clamp(118px, 44cqw, 236px);");
+      expect(rouletteCss).toContain("height: 14%;");
   });
 });
 
