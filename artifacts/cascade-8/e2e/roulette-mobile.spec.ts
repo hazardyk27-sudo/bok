@@ -1,6 +1,6 @@
 import { test, expect, type Page, type TestInfo } from "@playwright/test";
 
-type RoulettePhase = "LOCKED" | "SPINNING" | "RESULT" | "SETTLING";
+type RoulettePhase = "OPEN" | "LAST_CALL" | "LOCKED" | "SPINNING" | "RESULT" | "SETTLING";
 
 type RouletteSnapshot = {
   serverTime: string;
@@ -12,6 +12,7 @@ type RouletteSnapshot = {
     phase: RoulettePhase;
     phaseStartedAt: string;
     nextTransitionAt: string;
+    bettingClosesAt: string;
     countdownMs: number;
     commitmentHash: string;
     winningNumber: number | null;
@@ -19,6 +20,14 @@ type RouletteSnapshot = {
     revealedMultipliers: number[];
     multipliersTotal: number;
     version: number;
+    bets: Array<{
+      type: string;
+      numbers: number[];
+      stakeCents: number;
+      status: "ACCEPTED" | "WON" | "LOST";
+      payoutCents: number;
+      label: string;
+    }>;
   };
 };
 
@@ -27,6 +36,7 @@ type RouletteFixture = {
   setSnapshot: (snapshot: RouletteSnapshot) => Promise<void>;
   emitSnapshot: (snapshot: RouletteSnapshot) => Promise<void>;
   animationCounts: () => Promise<{ rotor: number; ball: number; active: number }>;
+  postBatches: Array<{ bets: Array<{ type: string; numbers: number[]; stakeCents: number; label: string }> }>;
 };
 
 type OrientationDiagnostics = {
@@ -44,6 +54,8 @@ function makeSnapshot(
   phase: RoulettePhase,
   winningNumber: number | null = null,
   phaseStartedAt = new Date().toISOString(),
+  bettingClosesInMs = 10_000,
+  roundId = "mobile-e2e-round",
 ): RouletteSnapshot {
   const now = Date.now();
   return {
@@ -51,11 +63,12 @@ function makeSnapshot(
     coordinator: "leader",
     wallet: { sessionId: "mobile-e2e-session", balanceCents: 100_000, lastPayoutCents: 0 },
     round: {
-      id: "mobile-e2e-round",
+      id: roundId,
       sequence: 42,
       phase,
       phaseStartedAt,
       nextTransitionAt: new Date(now + 10_000).toISOString(),
+      bettingClosesAt: new Date(now + bettingClosesInMs).toISOString(),
       countdownMs: 10_000,
       commitmentHash: "mobile-e2e-commitment",
       winningNumber,
@@ -63,12 +76,14 @@ function makeSnapshot(
       revealedMultipliers: [],
       multipliersTotal: 0,
       version: 1,
+      bets: [],
     },
   };
 }
 
 async function installRouletteFixture(page: Page): Promise<RouletteFixture> {
   let currentSnapshot = makeSnapshot("LOCKED");
+  const postBatches: RouletteFixture["postBatches"] = [];
 
   await page.addInitScript(() => {
     const sockets = new Set<EventTarget>();
@@ -144,6 +159,39 @@ async function installRouletteFixture(page: Page): Promise<RouletteFixture> {
       body: JSON.stringify({ results: [] }),
     });
   });
+  await page.route("**/api/roulette/bets", async (route) => {
+    const payload = route.request().postDataJSON() as RouletteFixture["postBatches"][number];
+    if (!["OPEN", "LAST_CALL"].includes(currentSnapshot.round.phase)) {
+      await route.fulfill({
+        status: 409,
+        contentType: "application/json",
+        body: JSON.stringify({ error: "BETTING_CLOSED" }),
+      });
+      return;
+    }
+    postBatches.push(payload);
+    const accepted = payload.bets.map((bet) => ({
+      ...bet,
+      status: "ACCEPTED" as const,
+      payoutCents: 0,
+    }));
+    currentSnapshot = {
+      ...currentSnapshot,
+      round: { ...currentSnapshot.round, bets: accepted },
+    };
+    await route.fulfill({
+      status: 201,
+      contentType: "application/json",
+      body: JSON.stringify({
+        bets: accepted,
+        totalStakeCents: accepted.reduce((sum, bet) => sum + bet.stakeCents, 0),
+        wallet: {
+          sessionId: currentSnapshot.wallet.sessionId,
+          balanceCents: currentSnapshot.wallet.balanceCents - accepted.reduce((sum, bet) => sum + bet.stakeCents, 0),
+        },
+      }),
+    });
+  });
 
   await page.goto("/roulette");
   await expect(page.locator(".roulette-page")).toBeVisible();
@@ -167,6 +215,7 @@ async function installRouletteFixture(page: Page): Promise<RouletteFixture> {
         __rouletteFixture?: { animationCounts: () => { rotor: number; ball: number; active: number } };
       }).__rouletteFixture?.animationCounts() ?? { rotor: 0, ball: 0, active: 0 };
     }),
+    postBatches,
   };
 }
 
@@ -401,5 +450,89 @@ test.describe("roulette recovery on mobile browsers", () => {
       expect(afterDuplicate.rotor).toBe(beforeDuplicate.rotor);
       expect(afterDuplicate.active).toBe(0);
     });
+  });
+});
+
+test.describe("roulette betting flow", () => {
+  test("keeps multiple bets, auto-submits once, restores after refresh, and rejects late bets", async ({ page }) => {
+    const fixture = await installRouletteFixture(page);
+    const open = makeSnapshot("OPEN", null, new Date().toISOString(), 3_000);
+    const visibleBet = (key: string) => page.locator(`[data-bet-key="${key}"]:visible`).first();
+
+    await fixture.setSnapshot(open);
+    await fixture.emitSnapshot(open);
+    await expect(page.locator(".roulette-hud [data-phase]")).toHaveText("BAHİSLER AÇIK");
+    await expect(page.locator("[data-action='bet']")).toHaveCount(0);
+
+    for (const key of ["straight:7", "straight:17", "straight:22", "red", "dozen:2"]) {
+      await visibleBet(key).click();
+    }
+    await visibleBet("straight:7").click();
+    await expect(page.locator("[data-bet-count]")).toHaveText("5 ALAN");
+    await expect(visibleBet("straight:7").locator(".table-chip")).toHaveText("2,00");
+
+    await page.locator("[data-action='undo']:visible").first().click();
+    await expect(visibleBet("straight:7").locator(".table-chip")).toHaveText("1,00");
+    await expect(page.locator("[data-bet-count]")).toHaveText("5 ALAN");
+
+    await expect.poll(() => fixture.postBatches.length, { timeout: 5_000 }).toBe(1);
+    expect(fixture.postBatches[0].bets.map((bet) => `${bet.type}:${bet.numbers.join("-")}`)).toEqual([
+      "STRAIGHT:7",
+      "STRAIGHT:17",
+      "STRAIGHT:22",
+      "RED:1-3-5-7-9-12-14-16-18-19-21-23-25-27-30-32-34-36",
+      "DOZEN:13-14-15-16-17-18-19-20-21-22-23-24",
+    ]);
+
+    const acceptedBets = fixture.postBatches[0].bets.map((bet) => ({
+      ...bet,
+      status: "ACCEPTED" as const,
+      payoutCents: 0,
+    }));
+    const locked = {
+      ...open,
+      round: {
+        ...open.round,
+        phase: "LOCKED" as const,
+        nextTransitionAt: new Date(Date.now() + 1_000).toISOString(),
+        bets: acceptedBets,
+      },
+    };
+    await fixture.setSnapshot(locked);
+    await fixture.emitSnapshot(locked);
+    await fixture.emitSnapshot(locked);
+    await expect(page.locator("[data-action='bet']")).toHaveCount(0);
+    expect(fixture.postBatches).toHaveLength(1);
+
+    const lateResponse = await page.evaluate(async () => {
+      const response = await fetch("/api/roulette/bets", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          bets: [{ type: "STRAIGHT", numbers: [26], stakeCents: 100, label: "26" }],
+          idempotencyKey: "late-bet-fixture-key",
+        }),
+      });
+      return { status: response.status, body: await response.json() };
+    });
+    expect(lateResponse).toEqual({ status: 409, body: { error: "BETTING_CLOSED" } });
+
+    await page.reload();
+    await expect(page.locator(".roulette-hud [data-phase]")).toHaveText("MASA KİLİTLENDİ");
+    await expect(visibleBet("straight:7").locator(".table-chip")).toHaveText("1,00");
+    await page.waitForTimeout(250);
+    expect(fixture.postBatches).toHaveLength(1);
+
+    const nextRound = makeSnapshot("OPEN", null, new Date().toISOString(), 10_000, "mobile-e2e-next-round");
+    await fixture.setSnapshot(nextRound);
+    await fixture.emitSnapshot(nextRound);
+    await expect(page.locator(".roulette-hud [data-phase]")).toHaveText("BAHİSLER AÇIK");
+    await page.locator("[data-action='rebet']:visible").first().click();
+    await expect(page.locator("[data-bet-count]")).toHaveText("5 ALAN");
+    await expect(visibleBet("straight:7").locator(".table-chip")).toHaveText("1,00");
+    await page.locator("[data-action='clear']:visible").first().click();
+    await expect(page.locator("[data-bet-count]")).toHaveText("0 ALAN");
+    await page.locator("[data-action='rebet']:visible").first().click();
+    await expect(page.locator("[data-bet-count]")).toHaveText("5 ALAN");
   });
 });

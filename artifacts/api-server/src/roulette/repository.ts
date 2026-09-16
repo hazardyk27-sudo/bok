@@ -10,6 +10,7 @@ import {
   type RouletteEvent,
   type RouletteBetInput,
   type RouletteBetType,
+  type RouletteBetSnapshot,
   ROULETTE_BET_TYPES,
   ROULETTE_PAYOUT_UNITS,
   type RouletteMultiplier,
@@ -157,7 +158,18 @@ export class RouletteRepository {
       "SELECT COALESCE(SUM(payout_cents), 0)::int AS total FROM roulette_bets WHERE session_id = $1 AND round_id = $2 AND status = 'WON'",
       [sessionId, round.id],
     );
-    return this.toSnapshot(round, wallet.balanceCents, new Date(), sessionId, Number(payout.rows[0]?.total ?? 0));
+    const bets = await pool.query(
+      "SELECT number, bet_type, numbers, stake_cents, status, payout_cents FROM roulette_bets WHERE session_id = $1 AND round_id = $2 ORDER BY created_at",
+      [sessionId, round.id],
+    );
+    return this.toSnapshot(
+      round,
+      wallet.balanceCents,
+      new Date(),
+      sessionId,
+      Number(payout.rows[0]?.total ?? 0),
+      bets.rows.map((bet) => this.toBetSnapshot(bet)),
+    );
   }
 
   async placeBets(sessionId: string, input: { bets: RouletteBetInput[]; idempotencyKey: string }) {
@@ -174,7 +186,7 @@ export class RouletteRepository {
     });
     const totalStakeCents = bets.reduce((sum, bet) => sum + bet.stakeCents, 0);
     const round = this.currentRound ?? await this.loadOrCreateRound();
-    if (!["OPEN", "LAST_CALL", "LOCKED"].includes(round.phase)) throw new Error("BETTING_CLOSED");
+    if (!["OPEN", "LAST_CALL"].includes(round.phase)) throw new Error("BETTING_CLOSED");
 
     const client = await pool.connect();
     try {
@@ -188,7 +200,7 @@ export class RouletteRepository {
       }
 
       const roundLock = await client.query("SELECT phase FROM roulette_rounds WHERE id = $1 FOR UPDATE", [round.id]);
-      if (!["OPEN", "LAST_CALL", "LOCKED"].includes(roundLock.rows[0]?.phase)) throw new Error("BETTING_CLOSED");
+      if (!["OPEN", "LAST_CALL"].includes(roundLock.rows[0]?.phase)) throw new Error("BETTING_CLOSED");
       const wallet = await client.query("SELECT balance_cents FROM roulette_wallets WHERE session_id = $1 FOR UPDATE", [sessionId]);
       const balanceCents = wallet.rows[0]?.balance_cents ?? INITIAL_ROULETTE_BALANCE_CENTS;
       if (!wallet.rows[0]) {
@@ -438,7 +450,14 @@ export class RouletteRepository {
     return this.toSnapshot(round, 0, new Date());
   }
 
-  private toSnapshot(round: RouletteRoundRecord, balanceCents: number, now: Date, sessionId = "", lastPayoutCents = 0): RouletteSnapshot {
+  private toSnapshot(
+    round: RouletteRoundRecord,
+    balanceCents: number,
+    now: Date,
+    sessionId = "",
+    lastPayoutCents = 0,
+    bets: RouletteBetSnapshot[] = [],
+  ): RouletteSnapshot {
     const phaseStartedAt = this.phaseStart(round);
     const nextTransitionAt = this.phaseEnd(round);
     const revealedCount = this.revealedCount(round, now);
@@ -456,6 +475,7 @@ export class RouletteRepository {
         phase: round.phase,
         phaseStartedAt: iso(phaseStartedAt),
         nextTransitionAt: iso(nextTransitionAt),
+        bettingClosesAt: iso(round.lockedUntil),
         countdownMs: Math.max(0, nextTransitionAt.getTime() - now.getTime()),
         commitmentHash: round.commitmentHash,
         winningNumber: isResultVisible ? round.winningNumber : null,
@@ -463,7 +483,31 @@ export class RouletteRepository {
         revealedMultipliers: round.multipliers.slice(0, revealedCount),
         multipliersTotal: round.multipliers.length,
         version: round.version,
+        bets,
       },
+    };
+  }
+
+  private toBetSnapshot(row: {
+    number: number;
+    bet_type: string;
+    numbers: unknown;
+    stake_cents: number;
+    status: string;
+    payout_cents: number;
+  }): RouletteBetSnapshot {
+    const type = String(row.bet_type).toUpperCase() as RouletteBetType;
+    const numbers = safeJson<number[]>(row.numbers, [Number(row.number)]);
+    const label = type === "STRAIGHT" && numbers.length === 1
+      ? String(numbers[0])
+      : `${type} ${numbers.join("/")}`;
+    return {
+      type,
+      numbers,
+      stakeCents: Number(row.stake_cents),
+      status: row.status as RouletteBetSnapshot["status"],
+      payoutCents: Number(row.payout_cents ?? 0),
+      label,
     };
   }
 

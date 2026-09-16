@@ -20,6 +20,7 @@ type RouletteSnapshot = {
     phase: RoulettePhase;
     phaseStartedAt: string;
     nextTransitionAt: string;
+    bettingClosesAt: string;
     countdownMs: number;
     commitmentHash: string;
     winningNumber: number | null;
@@ -27,6 +28,14 @@ type RouletteSnapshot = {
     revealedMultipliers: RouletteMultiplier[];
     multipliersTotal: number;
     version: number;
+    bets: Array<{
+      type: RouletteBetType;
+      numbers: number[];
+      stakeCents: number;
+      status: "ACCEPTED" | "WON" | "LOST";
+      payoutCents: number;
+      label: string;
+    }>;
   };
 };
 
@@ -52,15 +61,6 @@ export function getRouletteAnimationTransition(
     startsSpin,
     winningNumber: finishesSpin ? next.winningNumber : null,
   };
-}
-
-export function isRouletteBetLockTransition(
-  previous: Pick<RouletteAnimationSnapshot, "id" | "phase"> | null,
-  next: Pick<RouletteAnimationSnapshot, "id" | "phase">,
-) {
-  return previous?.id === next.id
-    && (previous.phase === "OPEN" || previous.phase === "LAST_CALL")
-    && next.phase === "LOCKED";
 }
 
 const API_BASE = "/api/roulette";
@@ -304,6 +304,12 @@ export class RouletteClient {
 
   private betSubmissionInFlightRoundId = "";
 
+  private acceptedBetsRoundId = "";
+
+  private betLockTimer?: number;
+
+  private betLockTimerRoundId = "";
+
   private readonly root: HTMLElement;
 
   private readonly visibilityChangeHandler = () => {
@@ -333,6 +339,9 @@ export class RouletteClient {
 
   destroy() {
     if (this.statusTimer) window.clearInterval(this.statusTimer);
+    if (this.betLockTimer) window.clearTimeout(this.betLockTimer);
+    this.betLockTimer = undefined;
+    this.betLockTimerRoundId = "";
     document.removeEventListener("visibilitychange", this.visibilityChangeHandler);
     this.stopLabelOrientationSync();
     this.voice.stopSpin();
@@ -532,17 +541,20 @@ export class RouletteClient {
     this.root.classList.toggle("is-multiplier-reveal", next.round.phase === "MULTIPLIER_REVEAL");
     this.serverOffsetMs = Date.parse(next.serverTime) - Date.now();
     if (this.roundId !== next.round.id) {
+      if (this.betLockTimer) window.clearTimeout(this.betLockTimer);
+      this.betLockTimer = undefined;
+      this.betLockTimerRoundId = "";
       this.roundId = next.round.id;
       this.selections.clear();
       this.undoStack = [];
       this.betStatus = "";
+      this.acceptedBetsRoundId = "";
     }
+    this.hydrateAcceptedBets(next.round.bets);
+    this.scheduleBetSubmission(next);
     const phaseChanged = previous?.round.phase !== next.round.phase;
     if (phaseChanged) {
       this.announcePhase(next);
-      if (isRouletteBetLockTransition(previous?.round ?? null, next.round)) {
-        void this.placeBets(next.round.id);
-      }
       if (next.round.phase === "SETTLING" || next.round.phase === "INTERMISSION") void this.load();
     }
     const resumingFromBackground = this.visibilityResumePending;
@@ -616,7 +628,7 @@ export class RouletteClient {
     this.root.querySelectorAll<HTMLButtonElement>("[data-action='clear']").forEach((button) => { button.disabled = !this.selections.size || !bettingOpen; });
     this.root.querySelectorAll<HTMLButtonElement>("[data-action='double']").forEach((button) => { button.disabled = !this.selections.size || !bettingOpen; });
     this.root.querySelector<HTMLButtonElement>("[data-action='rebet']")!.disabled = !this.lastPlacedSelections.length || !bettingOpen;
-    this.root.querySelector<HTMLElement>("[data-bet-status]")!.textContent = this.betStatus || (bettingOpen ? (round.phase === "LAST_CALL" ? "SON ÇAĞRI // CHIPLERİ MASAYA KOY" : "CHIP SEÇ // BİR VEYA DAHA FAZLA ALAN SEÇ") : "BAHİSLER KİLİTLENİNCE MASADAKİ CHIPLER OTOMATİK GÖNDERİLİR");
+    this.root.querySelector<HTMLElement>("[data-bet-status]")!.textContent = this.betStatus || (bettingOpen ? (round.phase === "LAST_CALL" ? "SON ÇAĞRI // SAYAÇ SIFIRLANINCA MASA KİLİTLENİR" : "CHIP SEÇ // SAYAÇ SIFIRLANINCA MASA OTOMATİK GÖNDERİLİR") : "BAHİSLER KAPALI // GEÇ KALAN CHIPLER REDDEDİLİR");
     this.root.querySelectorAll<HTMLButtonElement>(".table-bet").forEach((button) => {
       const selection = this.selections.get(button.dataset.betKey ?? "");
       button.disabled = !bettingOpen;
@@ -713,8 +725,48 @@ export class RouletteClient {
     this.root.querySelector<HTMLElement>("[data-progress]")!.style.setProperty("--countdown-progress", `${Math.max(0, Math.min(100, 100 - (remaining / Math.max(1, this.snapshot.round.countdownMs)) * 100))}%`);
   }
 
+  private hydrateAcceptedBets(bets: RouletteSnapshot["round"]["bets"]) {
+    if (!bets.length || this.selections.size) return;
+    const restored = bets.map((bet) => ({
+      key: this.selectionKey(bet.type, bet.numbers),
+      type: bet.type,
+      numbers: [...bet.numbers],
+      stakeCents: bet.stakeCents,
+      label: bet.label,
+    }));
+    this.selections = new Map(restored.map((selection) => [selection.key, selection] as [string, RouletteSelection]));
+    this.lastPlacedSelections = restored.map((selection) => ({ ...selection, numbers: [...selection.numbers] }));
+    this.undoStack = [];
+    this.acceptedBetsRoundId = this.snapshot?.round.id ?? "";
+  }
+
+  private scheduleBetSubmission(snapshot: RouletteSnapshot) {
+    if (!["OPEN", "LAST_CALL"].includes(snapshot.round.phase)) return;
+    if (this.acceptedBetsRoundId === snapshot.round.id) return;
+    if (this.betLockTimerRoundId === snapshot.round.id) return;
+    const closesAt = Date.parse(snapshot.round.bettingClosesAt);
+    if (!Number.isFinite(closesAt)) return;
+    const delay = closesAt - (Date.now() + this.serverOffsetMs);
+    if (delay < -250) return;
+    this.betLockTimerRoundId = snapshot.round.id;
+    this.betLockTimer = window.setTimeout(() => {
+      this.betLockTimer = undefined;
+      this.betLockTimerRoundId = "";
+      void this.placeBets(snapshot.round.id);
+    }, Math.max(0, delay - 75));
+  }
+
+  private selectionKey(type: RouletteBetType, numbers: number[]) {
+    return `${type.toLowerCase()}:${numbers.join("-")}`;
+  }
+
   private async placeBets(roundId: string) {
     if (!this.snapshot || this.snapshot.round.id !== roundId || !this.selections.size) return;
+    if (!["OPEN", "LAST_CALL"].includes(this.snapshot.round.phase)) {
+      this.betStatus = "BAHİSLER KAPANDI // GEÇ KALAN CHIPLER REDDEDİLDİ";
+      this.render();
+      return;
+    }
     if (this.betSubmissionRoundId === roundId || this.betSubmissionInFlightRoundId === roundId) return;
     this.betSubmissionRoundId = roundId;
     this.betSubmissionInFlightRoundId = roundId;
@@ -730,7 +782,8 @@ export class RouletteClient {
       });
       const data = await response.json() as { wallet?: { balanceCents: number }; error?: string; bets?: unknown[]; totalStakeCents?: number };
       if (!response.ok) throw new Error(data.error ?? "Bahisler kabul edilmedi");
-      this.lastPlacedSelections = bets.map((bet) => ({ ...bet, key: `${bet.type}:${bet.numbers.join("-")}` }));
+      this.lastPlacedSelections = bets.map((bet) => ({ ...bet, key: this.selectionKey(bet.type, bet.numbers) }));
+      this.acceptedBetsRoundId = roundId;
       this.betStatus = `${data.bets?.length ?? bets.length} BAHİS KABUL // TOPLAM ${formatCredits(data.totalStakeCents ?? 0)}`;
       this.undoStack = [];
       if (this.snapshot && data.wallet) this.snapshot.wallet.balanceCents = data.wallet.balanceCents;

@@ -39,6 +39,15 @@ export type RouletteBetInput = {
   label?: string;
 };
 
+export type RouletteBetSnapshot = {
+  type: RouletteBetType;
+  numbers: number[];
+  stakeCents: number;
+  status: "ACCEPTED" | "WON" | "LOST";
+  payoutCents: number;
+  label: string;
+};
+
 export const ROULETTE_PAYOUT_UNITS: Record<RouletteBetType, number> = {
   STRAIGHT: 35,
   SPLIT: 17,
@@ -102,6 +111,7 @@ export type RouletteSnapshot = {
     phase: RoulettePhase;
     phaseStartedAt: string;
     nextTransitionAt: string;
+    bettingClosesAt: string;
     countdownMs: number;
     commitmentHash: string;
     winningNumber: number | null;
@@ -109,6 +119,7 @@ export type RouletteSnapshot = {
     revealedMultipliers: RouletteMultiplier[];
     multipliersTotal: number;
     version: number;
+    bets: RouletteBetSnapshot[];
   };
 };
 
