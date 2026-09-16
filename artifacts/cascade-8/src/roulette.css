@@ -474,7 +474,7 @@
   height: 14%;
   top: 50%;
   bottom: auto;
-  transform: translateY(calc(-50% + 3px));
+  transform: translateY(calc(-50% + 9px));
   border: 0;
   border-left: 1px solid rgba(255, 249, 229, .62);
   border-right: 1px solid rgba(255, 249, 229, .62);
