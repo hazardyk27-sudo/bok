@@ -333,7 +333,7 @@
 }
 .roulette-wheel-live.is-spinning { animation: none; }
 .wheel-rotor { position: absolute; inset: 0; z-index: 2; border-radius: 50%; transform-origin: 50% 50%; }
-.roulette-wheel-live.is-spinning .wheel-rotor { animation: roulette-rotor-roll 1.9s linear infinite; }
+.roulette-wheel-live.is-spinning .wheel-rotor { animation: roulette-rotor-roll var(--roulette-rotor-orbit-duration) linear infinite; }
 .wheel-wood-deck {
   position: absolute;
   inset: 8%;
@@ -538,7 +538,7 @@
   box-shadow: 0 0 0 2px rgba(43, 25, 12, .65), 0 8px 20px rgba(0, 0, 0, .48);
   text-align: center;
 }
-.wheel-result-overlay.is-visible { display: grid; animation: roulette-result-pop-compact .45s cubic-bezier(.2, .9, .25, 1.2) both; }
+.wheel-result-overlay.is-visible { display: grid; animation: roulette-result-pop-compact var(--roulette-result-reveal-duration) cubic-bezier(.2, .9, .25, 1.2) both; }
 .wheel-result-overlay small { color: #aab8df; font: 8px "DM Mono", monospace; letter-spacing: .16em; }
 .wheel-result-overlay strong { color: #ffe4a1; font-size: 28px; line-height: .9; text-shadow: 0 2px 0 #4a2f18, 0 0 12px rgba(255, 210, 112, .45); }
 .wheel-result-overlay span { color: #c5e9d7; font: 700 9px "DM Mono", monospace; letter-spacing: .08em; }

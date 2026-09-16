@@ -55,6 +55,14 @@ export function getRouletteAnimationTransition(
 }
 
 const API_BASE = "/api/roulette";
+
+export const ROULETTE_MOTION_TIMINGS = {
+  rotorOrbitMs: 1450,
+  ballOrbitMs: 620,
+  landingDurationMs: 3900,
+  resultRevealDelayMs: 3850,
+  resultRevealDurationMs: 450,
+} as const;
 const PHASE_LABELS: Record<RoulettePhase, string> = {
   OPEN: "BAHİSLER AÇIK", LAST_CALL: "SON ÇAĞRI", LOCKED: "MASA KİLİTLENDİ",
   SPINNING: "ÇARK DÖNÜYOR", RESULT: "KAZANAN SAYI", MULTIPLIER_REVEAL: "MULTIPLIER REVEAL",
@@ -68,8 +76,8 @@ const PHASE_ANNOUNCEMENT_LABELS: Record<RoulettePhase, string> = {
 };
 const RED_NUMBERS = new Set([1, 3, 5, 7, 9, 12, 14, 16, 18, 19, 21, 23, 25, 27, 30, 32, 34, 36]);
 const MAX_BET_PER_AREA = 10_000;
-const WHEEL_LANDING_DURATION_MS = 3900;
-const BALL_LANDING_DURATION_MS = 3850;
+const WHEEL_LANDING_DURATION_MS = ROULETTE_MOTION_TIMINGS.landingDurationMs;
+const BALL_LANDING_DURATION_MS = ROULETTE_MOTION_TIMINGS.resultRevealDelayMs;
 const formatCredits = (cents: number) => (cents / 100).toLocaleString("tr-TR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 const formatCountdown = (milliseconds: number) => {
   const seconds = Math.ceil(Math.max(0, milliseconds) / 1000);
@@ -190,28 +198,51 @@ class RouletteVoice {
 
 export class RouletteClient {
   private snapshot: RouletteSnapshot | null = null;
+
   private serverOffsetMs = 0;
+
   private socket?: WebSocket;
+
   private selectedChipCents = 100;
+
   private neighborMode = false;
+
   private selections = new Map<string, RouletteSelection>();
+
   private lastPlacedSelections: RouletteSelection[] = [];
+
   private undoStack: string[] = [];
+
   private betStatus = "";
+
   private roundId = "";
+
   private statusTimer?: number;
+
   private voice = new RouletteVoice();
+
   private ballAnimation?: Animation;
+
   private wheelAnimation?: Animation;
+
   private labelSyncFrame?: number;
+
   private ballDropTimer?: number;
+
   private ballSoundTimers: number[] = [];
+
   private animatedResultKey = "";
+
   private settledResultKey = "";
+
   private liveSummaryKey = "";
+
   private wasDocumentHidden = false;
+
   private visibilityResumePending = false;
+
   private readonly root: HTMLElement;
+
   private readonly visibilityChangeHandler = () => {
     if (document.visibilityState === "hidden") {
       this.wasDocumentHidden = true;
@@ -227,6 +258,7 @@ export class RouletteClient {
 
   constructor(root: HTMLElement) {
     this.root = root;
+    applyRouletteMotionTimingContract(root);
     this.wasDocumentHidden = document.visibilityState === "hidden";
     document.addEventListener("visibilitychange", this.visibilityChangeHandler);
     this.setConnection("SENKRON BAŞLATILIYOR", false);
@@ -690,17 +722,18 @@ export class RouletteClient {
       ball.style.transform = `rotate(0deg) translateY(-${outerRadius}px)`;
       return;
     }
+    const { rotorOrbitMs, ballOrbitMs } = ROULETTE_MOTION_TIMINGS;
     this.wheelAnimation = rotor.animate(
       [{ transform: "rotate(0deg)" }, { transform: "rotate(360deg)" }],
-      { duration: 1450, iterations: Infinity, easing: "linear" },
+      { duration: rotorOrbitMs, iterations: Infinity, easing: "linear" },
     );
     this.ballAnimation = ball.animate(
       [{ transform: `rotate(0deg) translateY(-${outerRadius}px)` }, { transform: `rotate(-360deg) translateY(-${outerRadius}px)` }],
-      { duration: 620, iterations: Infinity, easing: "linear" },
+      { duration: ballOrbitMs, iterations: Infinity, easing: "linear" },
     );
     const phaseElapsed = Math.max(0, Date.now() + this.serverOffsetMs - Date.parse(this.snapshot?.round.phaseStartedAt ?? ""));
-    this.wheelAnimation.currentTime = phaseElapsed % 1450;
-    this.ballAnimation.currentTime = phaseElapsed % 620;
+    this.wheelAnimation.currentTime = phaseElapsed % rotorOrbitMs;
+    this.ballAnimation.currentTime = phaseElapsed % ballOrbitMs;
     this.startLabelOrientationSync();
   }
 
@@ -755,6 +788,7 @@ export class RouletteClient {
       this.voice.cue("land");
       return;
     }
+    const { landingDurationMs, resultRevealDelayMs } = ROULETTE_MOTION_TIMINGS;
     const wheelDelta = finalRotation - currentRotation;
     this.wheelAnimation = rotor.animate(
       [
@@ -762,10 +796,10 @@ export class RouletteClient {
         { transform: `rotate(${currentRotation + wheelDelta * .62}deg)`, offset: .55 },
         { transform: `rotate(${finalRotation}deg)` },
       ],
-      { duration: 3900, easing: "linear", fill: "forwards" },
+      { duration: landingDurationMs, easing: "linear", fill: "forwards" },
     );
     this.startLabelOrientationSync();
-    this.wheelAnimation.currentTime = Math.min(Math.max(0, animationElapsedMs), WHEEL_LANDING_DURATION_MS);
+    this.wheelAnimation.currentTime = Math.min(Math.max(0, animationElapsedMs), landingDurationMs);
     this.wheelAnimation.finished.then(() => {
       if (this.animatedResultKey !== resultKey) return;
       this.stopLabelOrientationSync();
@@ -792,7 +826,7 @@ export class RouletteClient {
         { transform: `rotate(${finalBallAngle - 1.1}deg) translateY(-${pocketRadius - 1}px)`, offset: .95 },
         { transform: `rotate(${finalBallAngle}deg) translateY(-${pocketRadius}px)`, offset: 1 },
       ],
-      { duration: BALL_LANDING_DURATION_MS, easing: "linear", fill: "forwards" },
+      { duration: resultRevealDelayMs, easing: "linear", fill: "forwards" },
     );
     this.ballAnimation = outer;
     this.ballAnimation.currentTime = Math.min(Math.max(0, animationElapsedMs), BALL_LANDING_DURATION_MS);
@@ -918,3 +952,19 @@ export class RouletteClient {
     element.classList.toggle("is-live", live);
   }
 }
+
+export function applyRouletteMotionTimingContract(element: HTMLElement) {
+  element.style.setProperty(ROULETTE_MOTION_CSS_VARIABLES.rotorOrbit, `${ROULETTE_MOTION_TIMINGS.rotorOrbitMs}ms`);
+  element.style.setProperty(ROULETTE_MOTION_CSS_VARIABLES.ballOrbit, `${ROULETTE_MOTION_TIMINGS.ballOrbitMs}ms`);
+  element.style.setProperty(ROULETTE_MOTION_CSS_VARIABLES.landing, `${ROULETTE_MOTION_TIMINGS.landingDurationMs}ms`);
+  element.style.setProperty(ROULETTE_MOTION_CSS_VARIABLES.resultRevealDelay, `${ROULETTE_MOTION_TIMINGS.resultRevealDelayMs}ms`);
+  element.style.setProperty(ROULETTE_MOTION_CSS_VARIABLES.resultReveal, `${ROULETTE_MOTION_TIMINGS.resultRevealDurationMs}ms`);
+}
+
+export const ROULETTE_MOTION_CSS_VARIABLES = {
+  rotorOrbit: "--roulette-rotor-orbit-duration",
+  ballOrbit: "--roulette-ball-orbit-duration",
+  landing: "--roulette-landing-duration",
+  resultRevealDelay: "--roulette-result-reveal-delay",
+  resultReveal: "--roulette-result-reveal-duration",
+} as const;

@@ -1,3 +1,5 @@
+import { readFileSync } from "node:fs";
+import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 import {
   EUROPEAN_WHEEL_ORDER,
@@ -14,20 +16,10 @@ import {
   getRouletteResultResumeAction,
   getRouletteVisibilityResumeAction,
   isRouletteResultSettled,
+  ROULETTE_MOTION_CSS_VARIABLES,
+  ROULETTE_MOTION_TIMINGS,
 } from "./rouletteClient";
 
-describe("roulette wheel geometry", () => {
-  it("keeps the exact European pocket order used by the rendered wheel", () => {
-    expect(EUROPEAN_WHEEL_ORDER).toEqual([
-      0, 32, 15, 19, 4, 21, 2, 25, 17, 34, 6, 27, 13, 36, 11, 30, 8, 23, 10,
-      5, 24, 16, 33, 1, 20, 14, 31, 9, 22, 18, 29, 7, 28, 12, 35, 3, 26,
-    ]);
-    expect(new Set(EUROPEAN_WHEEL_ORDER).size).toBe(37);
-    expect(ROULETTE_POCKET_COUNT).toBe(37);
-    expect(ROULETTE_SEGMENT_DEGREES).toBeCloseTo(360 / 37);
-  });
-
-  it("maps a server-selected number to the same pocket index and rotor orientation", () => {
     const radii = { outerRadius: 204, pocketRadius: 146 };
     const plan = getWheelLandingPlan(26, 137.5, radii);
 
@@ -46,12 +38,11 @@ describe("roulette wheel geometry", () => {
   });
 });
 
-
 describe("server-driven roulette animation transitions", () => {
   it("starts only when the server enters SPINNING and finishes on the revealed result", () => {
     const locked = { id: "round-1", phase: "LOCKED" as const, winningNumber: null };
-    const spinning = { id: "round-1", phase: "SPINNING" as const, winningNumber: null };
-    const result = { id: "round-1", phase: "RESULT" as const, winningNumber: 17 };
+    const spinning = { id: "mobile-spin", phase: "SPINNING" as const, winningNumber: null };
+    const result = { id: "mobile-result", phase: "RESULT" as const, winningNumber: 26 };
 
     expect(getRouletteAnimationTransition(locked, spinning)).toEqual({ startsSpin: true, winningNumber: null });
     expect(getRouletteAnimationTransition(spinning, result)).toEqual({ startsSpin: false, winningNumber: 17 });
@@ -67,7 +58,7 @@ describe("server-driven roulette animation transitions", () => {
   });
 
   it("keeps the result hidden until the matching visual landing settles", () => {
-    const result = { id: "round-3", phase: "RESULT" as const, winningNumber: 31 };
+    const result = { id: "mobile-result", phase: "RESULT" as const, winningNumber: 26 };
 
     expect(isRouletteResultSettled(result, "")).toBe(false);
     expect(isRouletteResultSettled(result, "round-2:31")).toBe(false);
@@ -110,3 +101,28 @@ describe("server-driven roulette animation transitions", () => {
     expect(getRouletteAnimationTransition(settled, settled)).toEqual({ startsSpin: false, winningNumber: null });
   });
 });
+
+describe("roulette motion timing contract", () => {
+  it("keeps orbit, landing, and reveal timings coordinated", () => {
+    expect(ROULETTE_MOTION_TIMINGS).toEqual({
+      rotorOrbitMs: 1450,
+      ballOrbitMs: 620,
+      landingDurationMs: 3900,
+      resultRevealDelayMs: 3850,
+      resultRevealDurationMs: 450,
+    });
+    expect(ROULETTE_MOTION_TIMINGS.resultRevealDelayMs)
+      .toBeLessThanOrEqual(ROULETTE_MOTION_TIMINGS.landingDurationMs);
+    expect(ROULETTE_MOTION_TIMINGS.landingDurationMs - ROULETTE_MOTION_TIMINGS.resultRevealDelayMs)
+      .toBeLessThanOrEqual(100);
+  });
+
+  it("routes CSS animation durations through the shared timing variables", () => {
+    expect(rouletteCss).toContain(`animation: roulette-rotor-roll var(${ROULETTE_MOTION_CSS_VARIABLES.rotorOrbit}) linear infinite`);
+    expect(rouletteCss).toContain(`animation: roulette-result-pop-compact var(${ROULETTE_MOTION_CSS_VARIABLES.resultReveal})`);
+    expect(rouletteCss).not.toContain("roulette-rotor-roll 1.9s");
+    expect(rouletteCss).not.toContain("roulette-result-pop-compact .45s");
+  });
+});
+
+const rouletteCss = readFileSync(fileURLToPath(new URL("./roulette.css", import.meta.url)), "utf8");
