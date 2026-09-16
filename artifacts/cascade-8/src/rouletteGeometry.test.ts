@@ -15,6 +15,7 @@ import {
   getRouletteAnimationLifecycleAction,
   getRouletteAnimationTransition,
   getRouletteResultResumeAction,
+  getRouletteMotionProfile,
   getRouletteVisibilityResumeAction,
   isRouletteResultSettled,
   ROULETTE_MOTION_CSS_VARIABLES,
@@ -193,12 +194,26 @@ describe("server-driven roulette animation transitions", () => {
 });
 
 describe("roulette motion timing contract", () => {
+  it("keeps motion variation deterministic while changing the visible path per round", () => {
+    const first = getRouletteMotionProfile("round-a");
+    const firstRepeat = getRouletteMotionProfile("round-a");
+    const second = getRouletteMotionProfile("round-b");
+
+    expect(first).toEqual(firstRepeat);
+    expect(first).not.toEqual(second);
+    expect(first.bounceCount).toBeGreaterThanOrEqual(2);
+    expect(first.bounceCount).toBeLessThanOrEqual(5);
+    expect(first.outerTrackTurns).toBeGreaterThanOrEqual(4);
+    expect(first.outerTrackTurns).toBeLessThanOrEqual(6);
+    expect(first.ballOrbitMs).toBeGreaterThan(2_000);
+  });
+
   it("keeps orbit, landing, and reveal timings coordinated", () => {
     expect(ROULETTE_MOTION_TIMINGS).toEqual({
-      rotorOrbitMs: 2050,
-      ballOrbitMs: 980,
-      landingDurationMs: 6100,
-      resultRevealDelayMs: 6000,
+      rotorOrbitMs: 5000,
+      ballOrbitMs: 2900,
+      landingDurationMs: 3500,
+      resultRevealDelayMs: 3500,
       resultRevealDurationMs: 550,
     });
     expect(ROULETTE_MOTION_TIMINGS.resultRevealDelayMs)
@@ -208,7 +223,7 @@ describe("roulette motion timing contract", () => {
   });
 
   it("routes CSS animation durations through the shared timing variables", () => {
-    expect(rouletteCss).toContain(`animation: roulette-rotor-roll var(${ROULETTE_MOTION_CSS_VARIABLES.rotorOrbit}) linear infinite`);
+    expect(rouletteCss).toContain(".roulette-wheel-live.is-spinning .wheel-rotor { animation: none; }");
     expect(rouletteCss).toContain(`animation: roulette-result-pop-compact var(${ROULETTE_MOTION_CSS_VARIABLES.resultReveal})`);
     expect(rouletteCss).not.toContain("roulette-rotor-roll 1.9s");
     expect(rouletteCss).not.toContain("roulette-result-pop-compact .45s");

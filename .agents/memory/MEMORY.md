@@ -16,3 +16,4 @@
 - [Mobile browser matrix](mobile-browser-matrix.md) — Android Chromium can run with the workspace binary; WebKit needs native host libraries and should remain an optional gated profile.
 - [Roulette safe-area coverage](roulette-safe-area.md) — expose env fallbacks through custom properties so tests can emulate insets and keep result overlays above the home indicator.
 - [Roulette mobile heading wrapping](roulette-mobile-heading-wrapping.md) — narrow betting headers need wrapped tools or hidden overflow can push the utility rail outside the viewport.
+- [Roulette motion keyframe order](roulette-motion-keyframe-order.md) — generated landing bounces must keep Web Animations offsets monotonically ordered.
