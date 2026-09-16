@@ -172,6 +172,7 @@ const rouletteMarkup = `
         <div class="roulette-wheel-stage">
           <div class="roulette-wheel-live" data-wheel>
             <div class="wheel-rotor">
+               <div class="wheel-wood-deck" aria-hidden="true"></div>
               <div class="wheel-number-band" aria-hidden="true" style="--wheel-band:${rouletteWheelBand}"></div>
               <div class="wheel-number-labels" aria-label="European wheel number order">${rouletteWheelOrder.map((number, index) => `<span class="wheel-number-label" style="--pocket-index:${index}"><b>${number}</b></span>`).join("")}</div>
               <div class="wheel-pocket-track">${rouletteWheelOrder.map((number, index) => `<span class="wheel-pocket ${number === 0 ? "is-green" : rouletteRedNumbers.has(number) ? "is-red" : "is-black"}" data-wheel-number="${number}" style="--pocket-index:${index}"><i aria-hidden="true"></i></span>`).join("")}</div>

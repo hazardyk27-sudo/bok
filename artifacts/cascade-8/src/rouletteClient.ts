@@ -446,20 +446,26 @@ export class RouletteClient {
     }).catch(() => undefined);
     const outerRadius = wheel.clientWidth * 0.45;
     const outer = ball.animate(
-      [{ transform: `rotate(0deg) translateY(-${outerRadius}px)` }, { transform: `rotate(-1220deg) translateY(-${outerRadius}px)`, offset: .65 }, { transform: `rotate(-1440deg) translateY(-${outerRadius}px)` }],
+      [
+        { transform: `rotate(0deg) translateY(-${outerRadius}px)` },
+        { transform: `rotate(-520deg) translateY(-${outerRadius - 4}px)`, offset: .2 },
+        { transform: `rotate(-1010deg) translateY(-${outerRadius + 2}px)`, offset: .46 },
+        { transform: `rotate(-1370deg) translateY(-${outerRadius - 3}px)`, offset: .72 },
+        { transform: `rotate(-1440deg) translateY(-${outerRadius}px)` },
+      ],
       { duration: 2700, easing: "cubic-bezier(.08,.7,.16,1)", fill: "forwards" },
     );
     this.ballAnimation = outer;
     outer.finished.then(() => {
       if (this.animatedResultKey !== resultKey) return;
-      const pocketRadius = wheel.clientWidth * 0.32;
+      const pocketRadius = wheel.clientWidth * 0.34;
       this.ballAnimation = ball.animate(
         [
           { transform: `rotate(-1440deg) translateY(-${outerRadius}px)` },
-          { transform: `rotate(-1440deg) translateY(-${pocketRadius - 7}px)`, offset: .2 },
-          { transform: `rotate(-1448deg) translateY(-${pocketRadius + 5}px)`, offset: .42 },
-          { transform: `rotate(-1434deg) translateY(-${pocketRadius - 3}px)`, offset: .62 },
-          { transform: `rotate(-1442deg) translateY(-${pocketRadius + 2}px)`, offset: .8 },
+          { transform: `rotate(-1440deg) translateY(-${pocketRadius - 6}px)`, offset: .18 },
+          { transform: `rotate(-1452deg) translateY(-${pocketRadius + 5}px)`, offset: .38 },
+          { transform: `rotate(-1437deg) translateY(-${pocketRadius - 4}px)`, offset: .58 },
+          { transform: `rotate(-1447deg) translateY(-${pocketRadius + 3}px)`, offset: .77 },
           { transform: `rotate(-1440deg) translateY(-${pocketRadius}px)` },
         ],
         { duration: 1150, easing: "cubic-bezier(.12,.75,.2,1)", fill: "forwards" },
