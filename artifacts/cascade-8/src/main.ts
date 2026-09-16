@@ -11,7 +11,10 @@ import { GameController, formatCredits } from "./game/GameController";
 import { createGameScene, GameScene } from "./game/GameScene";
 
 const app = document.querySelector<HTMLDivElement>("#app")!;
-const isLab = window.location.pathname === "/lab";
+const currentPath = window.location.pathname.replace(/\/+$/, "") || "/";
+const isLab = currentPath === "/lab";
+const isSlotRoute = currentPath === "/slot" || isLab;
+const isRouletteRoute = currentPath === "/roulette";
 const isWinLabelPreview = isLab && new URLSearchParams(window.location.search).get("preview") === "win-labels";
 const isMultiplierCollectionPreview = isLab && new URLSearchParams(window.location.search).get("preview") === "multiplier-collection";
 const describeStreamCell = (cell: BoardCell) => {
@@ -23,6 +26,88 @@ const describeStreamCell = (cell: BoardCell) => {
     : symbol;
 };
 
+const routeShell = (content: string, className = "") => `
+  <div class="app-shell route-shell ${className}">
+    <div class="ambient ambient-a"></div><div class="ambient ambient-b"></div><div class="stars"></div>
+    <header class="topbar route-topbar">
+      <a class="brand brand-link" href="/" aria-label="Fahrinin Yolu ana menü">
+        <div class="brand-mark"><span>✦</span></div>
+        <div><div class="brand-name">FAHRİNİN <em>YOLU</em></div><div class="brand-sub">FAHRİ SENİ BU DEFA GÜLDÜRECEK</div></div>
+      </a>
+      <span class="route-context">SELECT YOUR GAME</span>
+    </header>
+    ${content}
+    <div class="demo-note"><span>✧</span> VIRTUAL CREDITS ONLY <span class="note-separator">•</span> NO REAL-MONEY GAMBLING <span class="note-separator">•</span> RNG DEMO PROTOTYPE</div>
+  </div>
+`;
+
+const mainMenuMarkup = `
+  <main class="game-menu" aria-labelledby="game-menu-title">
+    <div class="menu-intro">
+      <span class="menu-kicker">FAHRİNİN YOLU // PLAY LOUNGE</span>
+      <h1 id="game-menu-title">OYUNUNU <em>SEÇ</em></h1>
+      <p>Gece açıldı. İki ayrı masa seni bekliyor. Hangi dünyaya gireceğine karar ver.</p>
+    </div>
+    <div class="game-choice-grid">
+      <a class="game-choice game-choice-slot" href="/slot">
+        <span class="choice-status is-live">AVAILABLE NOW</span>
+        <span class="choice-art choice-art-slot" aria-hidden="true"><span>✦</span></span>
+        <span class="choice-copy">
+          <span class="choice-overline">CASCADE 8</span>
+          <strong>FAHRİNİN YOLU</strong>
+          <span class="choice-type">SLOT EXPERIENCE</span>
+        </span>
+        <span class="choice-footer"><span>30 SYMBOL FIELD</span><span class="choice-arrow" aria-hidden="true">→</span></span>
+      </a>
+      <a class="game-choice game-choice-roulette" href="/roulette">
+        <span class="choice-status is-soon">COMING SOON</span>
+        <span class="choice-art choice-art-roulette" aria-hidden="true"><span>R</span><i></i><b></b></span>
+        <span class="choice-copy">
+          <span class="choice-overline">THE NIGHT TABLE</span>
+          <strong>ROULETTE</strong>
+          <span class="choice-type">TABLE EXPERIENCE</span>
+        </span>
+        <span class="choice-footer"><span>TABLE IN PREPARATION</span><span class="choice-arrow" aria-hidden="true">→</span></span>
+      </a>
+    </div>
+    <div class="menu-footer">
+      <span class="menu-footer-line"></span>
+      <span>ONE LOUNGE · TWO WORLDS</span>
+      <span class="menu-footer-line"></span>
+    </div>
+  </main>
+`;
+
+const rouletteMarkup = `
+  <main class="roulette-page" aria-labelledby="roulette-title">
+    <a class="back-link" href="/">← ANA MENÜ</a>
+    <section class="roulette-hero">
+      <span class="menu-kicker">THE NIGHT TABLE // ROULETTE</span>
+      <h1 id="roulette-title">MASA <em>HAZIRLANIYOR</em></h1>
+      <p>Roulette deneyimi bu salona yakında katılıyor. Şimdilik ana menüden Fahrinin Yolu slotuna geçebilirsin.</p>
+      <div class="roulette-placeholder" aria-label="Roulette placeholder">
+        <div class="roulette-wheel">
+          <span class="roulette-wheel-ring"></span>
+          <span class="roulette-wheel-mark roulette-wheel-mark-a">R</span>
+          <span class="roulette-wheel-mark roulette-wheel-mark-b">0</span>
+          <span class="roulette-wheel-mark roulette-wheel-mark-c">R</span>
+          <span class="roulette-wheel-center">ROULETTE</span>
+        </div>
+        <span class="roulette-placeholder-label">COMING SOON // TABLE EXPERIENCE</span>
+      </div>
+      <div class="roulette-actions">
+        <a class="menu-primary-action" href="/">ANA MENÜYE DÖN</a>
+        <a class="menu-secondary-action" href="/slot">FAHRİNİN YOLU SLOTU AÇ</a>
+      </div>
+    </section>
+  </main>
+`;
+
+if (isRouletteRoute) {
+  app.innerHTML = routeShell(rouletteMarkup, "is-route-page is-roulette-page");
+} else if (!isSlotRoute) {
+  app.innerHTML = routeShell(mainMenuMarkup, "is-route-page is-menu-page");
+} else {
 app.innerHTML = `
   <div class="app-shell ${isLab ? "is-lab" : ""} ${isWinLabelPreview ? "is-label-preview" : ""} ${isMultiplierCollectionPreview ? "is-multiplier-preview" : ""}">
     <div class="ambient ambient-a"></div><div class="ambient ambient-b"></div><div class="stars"></div>
@@ -33,7 +118,7 @@ app.innerHTML = `
       </div>
       <div class="top-actions">
         <button class="icon-button" data-modal="info" aria-label="How to play">?</button>
-        <button class="icon-button" data-modal="settings" aria-label="Open settings">☷</button>
+        <button class="icon-button" data-modal="settings" aria-label="Open menu">☷</button>
       </div>
     </header>
     <main class="game-layout">
@@ -136,7 +221,8 @@ function showModal(name: string | null) {
       <label class="setting-row"><span><b>Reduced motion</b><small>Respect system accessibility preference</small></span><input id="setting-motion" type="checkbox"><i></i></label>
        <label class="volume-row"><span>SFX VOLUME</span><input id="setting-volume" type="range" min="0" max="1" step="0.01" value="0.38"></label>
        <label class="volume-row"><span>MUSIC VOLUME</span><input id="setting-music-volume" type="range" min="0" max="1" step="0.01" value="0.18"></label>
-      <button id="demo-reset" class="outline-button full">RESET DEMO CREDITS <small>RESTORE 10,000.00</small></button>
+       <button id="demo-reset" class="outline-button full">RESET DEMO CREDITS <small>RESTORE 10,000.00</small></button>
+       <button id="main-menu-button" class="outline-button full menu-exit-button">ANA MENÜ <small>BACK TO GAME SELECT</small></button>
       <div class="modal-footnote">Preferences are stored locally. No secret RNG state or personal data is stored.</div>
     </section></div>`;
     const sound = byId<HTMLInputElement>("setting-sound"); sound.checked = !controller.audio.muted;
@@ -150,6 +236,7 @@ function showModal(name: string | null) {
      const musicVolume = byId<HTMLInputElement>("setting-music-volume"); musicVolume.value = String(controller.audio.musicVolume);
      musicVolume.oninput = () => controller.audio.setMusicVolume(Number(musicVolume.value));
     byId<HTMLButtonElement>("demo-reset").onclick = () => { controller.resetDemo(); showModal(null); };
+     byId<HTMLButtonElement>("main-menu-button").onclick = () => { window.location.assign("/"); };
   } else {
     modalRoot.innerHTML = `<div class="modal-backdrop"><section class="modal-card info-modal"><button class="modal-close" data-close>×</button><div class="modal-kicker">CASCADE 8 // FIELD GUIDE</div><h2>How to play</h2><p class="modal-lead">Match 8 or more of a club logo anywhere on the field. Winning logos burst, the field falls, and fresh logos tumble in.</p>
       <div class="info-grid"><div><span class="info-number">01</span><b>Drop</b><small>30 symbols land in a 6 × 5 field.</small></div><div><span class="info-number">02</span><b>Match</b><small>Every matching symbol counts, even when separated.</small></div><div><span class="info-number">03</span><b>Tumble</b><small>Wins vanish together and the cascade repeats.</small></div><div><span class="info-number">04</span><b>Bonus</b><small>4 Astral Gates trigger 10 Free Spins.</small></div></div>
@@ -321,4 +408,5 @@ function renderLab(scene: GameScene) {
     scene.renderBoard(board, evaluation.winningCells); scene.highlightCells(evaluation.winningCells, 380);
     byId("lab-result").textContent = `${evaluation.winningSymbols.length ? evaluation.winningSymbols.join(" + ") : "NO WIN"} // ${evaluation.winningCells.length} CELLS // ${evaluation.rawPayoutMultiplier.toFixed(2)}x`;
   });
+}
 }
