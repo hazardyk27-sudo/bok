@@ -1,3 +1,10 @@
+import {
+  FALLBACK_OUTER_RADIUS_RATIO,
+  FALLBACK_POCKET_RADIUS_RATIO,
+  getWheelAngle,
+  getWheelLandingPlan,
+} from "./rouletteGeometry";
+
 type RoulettePhase = "OPEN" | "LAST_CALL" | "LOCKED" | "SPINNING" | "RESULT" | "MULTIPLIER_REVEAL" | "SETTLING" | "INTERMISSION";
 type RouletteMultiplier = 50 | 100 | 150 | 200 | 250 | 300 | 400 | 500;
 type RouletteBetType = "STRAIGHT" | "SPLIT" | "STREET" | "CORNER" | "SIX_LINE" | "DOZEN" | "COLUMN" | "RED" | "BLACK" | "ODD" | "EVEN" | "LOW" | "HIGH";
@@ -22,6 +29,23 @@ type RouletteSnapshot = {
   };
 };
 
+export type RouletteAnimationSnapshot = Pick<RouletteSnapshot["round"], "id" | "phase" | "winningNumber">;
+
+export function getRouletteAnimationTransition(
+  previous: RouletteAnimationSnapshot | null,
+  next: RouletteAnimationSnapshot,
+) {
+  const startsSpin = next.phase === "SPINNING"
+    && (previous?.phase !== "SPINNING" || previous.id !== next.id);
+  const finishesSpin = next.winningNumber !== null
+    && (previous?.winningNumber === null || previous?.id !== next.id || previous === null);
+
+  return {
+    startsSpin,
+    winningNumber: finishesSpin ? next.winningNumber : null,
+  };
+}
+
 const API_BASE = "/api/roulette";
 const PHASE_LABELS: Record<RoulettePhase, string> = {
   OPEN: "BAHİSLER AÇIK", LAST_CALL: "SON ÇAĞRI", LOCKED: "MASA KİLİTLENDİ",
@@ -29,7 +53,6 @@ const PHASE_LABELS: Record<RoulettePhase, string> = {
   SETTLING: "ÖDEME YAPILIYOR", INTERMISSION: "YENİ ROUND HAZIRLANIYOR",
 };
 const RED_NUMBERS = new Set([1, 3, 5, 7, 9, 12, 14, 16, 18, 19, 21, 23, 25, 27, 30, 32, 34, 36]);
-const EUROPEAN_WHEEL_ORDER = [0, 32, 15, 19, 4, 21, 2, 25, 17, 34, 6, 27, 13, 36, 11, 30, 8, 23, 10, 5, 24, 16, 33, 1, 20, 14, 31, 9, 22, 18, 29, 7, 28, 12, 35, 3, 26];
 const MAX_BET_PER_AREA = 10_000;
 const formatCredits = (cents: number) => (cents / 100).toLocaleString("tr-TR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 const formatCountdown = (milliseconds: number) => {
@@ -235,9 +258,10 @@ export class RouletteClient {
       this.announcePhase(next);
       if (next.round.phase === "SETTLING" || next.round.phase === "INTERMISSION") void this.load();
     }
-    if (next.round.phase === "SPINNING" && (previous?.round.phase !== "SPINNING" || previous.round.id !== next.round.id)) this.startWheelSpin();
-    if (next.round.winningNumber !== null && (previous?.round.winningNumber === null || previous?.round.id !== next.round.id)) this.finishWheelSpin(next.round.winningNumber);
-    if (previous?.round.winningNumber === null && next.round.winningNumber !== null) this.voice.speak(`${next.round.winningNumber} numara kazandı`);
+    const animationTransition = getRouletteAnimationTransition(previous?.round ?? null, next.round);
+    if (animationTransition.startsSpin) this.startWheelSpin();
+    if (animationTransition.winningNumber !== null) this.finishWheelSpin(animationTransition.winningNumber);
+    if (animationTransition.winningNumber !== null) this.voice.speak(`${animationTransition.winningNumber} numara kazandı`);
     if ((previous?.round.revealedMultipliers.length ?? 0) < next.round.revealedMultipliers.length) {
       const value = next.round.revealedMultipliers.at(-1);
       if (value) this.voice.speak(`${value} çarpan`);
@@ -302,8 +326,8 @@ export class RouletteClient {
       element.classList.toggle("is-visible", round.winningNumber !== null);
     });
     this.root.querySelector<HTMLElement>("[data-wheel]")!.classList.toggle("is-spinning", round.phase === "SPINNING");
-    const winningIndex = round.winningNumber === null ? 0 : EUROPEAN_WHEEL_ORDER.indexOf(round.winningNumber);
-    this.root.querySelector<HTMLElement>("[data-wheel]")!.style.setProperty("--winning-angle", `${winningIndex * (360 / 37)}deg`);
+    const winningAngle = round.winningNumber === null ? 0 : getWheelAngle(round.winningNumber);
+    this.root.querySelector<HTMLElement>("[data-wheel]")!.style.setProperty("--winning-angle", `${winningAngle}deg`);
     const lucky = new Set(round.luckyNumbers);
     this.root.querySelector<HTMLElement>("[data-lucky-list]")!.innerHTML = round.luckyNumbers.length
       ? round.luckyNumbers.map((number) => `<span class="lucky-chip">${number}</span>`).join("")
@@ -404,13 +428,13 @@ export class RouletteClient {
     wheel.style.setProperty("--label-counter-angle", "0deg");
     rotor.style.transform = "rotate(0deg)";
     wheel.classList.add("is-spinning");
-    const radius = wheel.clientWidth * 0.45;
+    const { outerRadius } = this.readWheelRadii(wheel);
     this.wheelAnimation = rotor.animate(
       [{ transform: "rotate(0deg)" }, { transform: "rotate(360deg)" }],
       { duration: 1450, iterations: Infinity, easing: "linear" },
     );
     this.ballAnimation = ball.animate(
-      [{ transform: `rotate(0deg) translateY(-${radius}px)` }, { transform: `rotate(-360deg) translateY(-${radius}px)` }],
+      [{ transform: `rotate(0deg) translateY(-${outerRadius}px)` }, { transform: `rotate(-360deg) translateY(-${outerRadius}px)` }],
       { duration: 620, iterations: Infinity, easing: "linear" },
     );
     const phaseElapsed = Math.max(0, Date.now() + this.serverOffsetMs - Date.parse(this.snapshot?.round.phaseStartedAt ?? ""));
@@ -432,11 +456,8 @@ export class RouletteClient {
     this.ballAnimation?.cancel();
     this.wheelAnimation?.cancel();
     wheel.classList.remove("is-spinning");
-    const targetAngle = EUROPEAN_WHEEL_ORDER.indexOf(winningNumber) * (360 / 37);
-    const targetOrientation = (360 - targetAngle) % 360;
-    const wheelDelta = ((targetOrientation - currentRotation) + 360) % 360 + 720;
-    const finalRotation = currentRotation + wheelDelta;
-    const finalLabelAngle = `${((finalRotation % 360) + 360) % 360}deg`;
+    const plan = getWheelLandingPlan(winningNumber, currentRotation, this.readWheelRadii(wheel));
+    const { finalRotation, finalLabelAngle, outerRadius, pocketRadius } = plan;
     this.wheelAnimation = rotor.animate(
       [{ transform: `rotate(${currentRotation}deg)` }, { transform: `rotate(${finalRotation - 90}deg)`, offset: .72 }, { transform: `rotate(${finalRotation}deg)` }],
       { duration: 3900, easing: "cubic-bezier(.12,.7,.18,1)", fill: "forwards" },
@@ -444,7 +465,6 @@ export class RouletteClient {
     this.wheelAnimation.finished.then(() => {
       if (this.animatedResultKey === resultKey) wheel.style.setProperty("--label-counter-angle", finalLabelAngle);
     }).catch(() => undefined);
-    const outerRadius = wheel.clientWidth * 0.45;
     const outer = ball.animate(
       [
         { transform: `rotate(0deg) translateY(-${outerRadius}px)` },
@@ -458,7 +478,6 @@ export class RouletteClient {
     this.ballAnimation = outer;
     outer.finished.then(() => {
       if (this.animatedResultKey !== resultKey) return;
-      const pocketRadius = wheel.clientWidth * 0.34;
       this.ballAnimation = ball.animate(
         [
           { transform: `rotate(-1440deg) translateY(-${outerRadius}px)` },
@@ -479,6 +498,25 @@ export class RouletteClient {
     const values = transform.match(/matrix\(([^)]+)\)/)?.[1].split(",").map(Number);
     if (!values || values.length < 2) return 0;
     return Math.atan2(values[1], values[0]) * 180 / Math.PI;
+  }
+
+  private readWheelRadii(wheel: HTMLElement) {
+    const readRadius = (variable: string, fallbackRatio: number) => {
+      const probe = document.createElement("span");
+      probe.style.position = "absolute";
+      probe.style.visibility = "hidden";
+      probe.style.pointerEvents = "none";
+      probe.style.width = `var(${variable})`;
+      probe.style.height = "0";
+      wheel.append(probe);
+      const resolvedValue = probe.getBoundingClientRect().width;
+      probe.remove();
+      return resolvedValue > 0 ? resolvedValue : wheel.clientWidth * fallbackRatio;
+    };
+    return {
+      outerRadius: readRadius("--ball-radius", FALLBACK_OUTER_RADIUS_RATIO),
+      pocketRadius: readRadius("--pocket-radius", FALLBACK_POCKET_RADIUS_RATIO),
+    };
   }
 
   private setConnection(label: string, live: boolean) {
