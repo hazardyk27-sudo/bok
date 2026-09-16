@@ -329,9 +329,12 @@
   height: 100%;
   color: #fffef7;
   font: 800 clamp(13px, 1.2vw, 19px) "DM Mono", monospace;
+  font-variant-numeric: tabular-nums;
   line-height: 1;
   letter-spacing: -.08em;
   text-shadow: 0 1px 0 rgba(0, 0, 0, .95), 0 0 2px rgba(0, 0, 0, .95), 0 2px 5px rgba(0, 0, 0, .8);
+  transform-origin: 50% 50%;
+  backface-visibility: hidden;
   transform: rotate(calc(var(--pocket-index) * -9.7297deg - var(--label-counter-angle, 0deg)));
 }
 .wheel-number-label:first-child b { color: #fff9c4; }

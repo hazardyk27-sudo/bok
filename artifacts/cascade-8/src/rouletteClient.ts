@@ -96,6 +96,7 @@ export class RouletteClient {
   private voice = new RouletteVoice();
   private ballAnimation?: Animation;
   private wheelAnimation?: Animation;
+  private labelSyncFrame?: number;
   private ballDropTimer?: number;
   private animatedResultKey = "";
   private readonly root: HTMLElement;
@@ -111,6 +112,7 @@ export class RouletteClient {
 
   destroy() {
     if (this.statusTimer) window.clearInterval(this.statusTimer);
+    this.stopLabelOrientationSync();
     this.socket?.close();
   }
 
@@ -440,6 +442,7 @@ export class RouletteClient {
     const phaseElapsed = Math.max(0, Date.now() + this.serverOffsetMs - Date.parse(this.snapshot?.round.phaseStartedAt ?? ""));
     this.wheelAnimation.currentTime = phaseElapsed % 1450;
     this.ballAnimation.currentTime = phaseElapsed % 620;
+    this.startLabelOrientationSync();
   }
 
   private finishWheelSpin(winningNumber: number) {
@@ -462,8 +465,11 @@ export class RouletteClient {
       [{ transform: `rotate(${currentRotation}deg)` }, { transform: `rotate(${finalRotation - 90}deg)`, offset: .72 }, { transform: `rotate(${finalRotation}deg)` }],
       { duration: 3900, easing: "cubic-bezier(.12,.7,.18,1)", fill: "forwards" },
     );
+    this.startLabelOrientationSync();
     this.wheelAnimation.finished.then(() => {
-      if (this.animatedResultKey === resultKey) wheel.style.setProperty("--label-counter-angle", finalLabelAngle);
+      if (this.animatedResultKey !== resultKey) return;
+      this.stopLabelOrientationSync();
+      wheel.style.setProperty("--label-counter-angle", finalLabelAngle);
     }).catch(() => undefined);
     const outer = ball.animate(
       [
@@ -498,6 +504,25 @@ export class RouletteClient {
     const values = transform.match(/matrix\(([^)]+)\)/)?.[1].split(",").map(Number);
     if (!values || values.length < 2) return 0;
     return Math.atan2(values[1], values[0]) * 180 / Math.PI;
+  }
+
+  private startLabelOrientationSync() {
+    this.stopLabelOrientationSync();
+    const sync = () => {
+      const wheel = this.root.querySelector<HTMLElement>("[data-wheel]");
+      const rotor = wheel?.querySelector<HTMLElement>(".wheel-rotor");
+      if (!wheel || !rotor) return;
+      wheel.style.setProperty("--label-counter-angle", `${this.readRotation(rotor)}deg`);
+      this.labelSyncFrame = window.requestAnimationFrame(sync);
+    };
+    sync();
+  }
+
+  private stopLabelOrientationSync() {
+    if (this.labelSyncFrame !== undefined) {
+      window.cancelAnimationFrame(this.labelSyncFrame);
+      this.labelSyncFrame = undefined;
+    }
   }
 
   private readWheelRadii(wheel: HTMLElement) {
