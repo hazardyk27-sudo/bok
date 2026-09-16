@@ -1359,7 +1359,7 @@ export class RouletteClient {
   private updateLabelOrientations(wheel: HTMLElement, _rotorRotation: number) {
     wheel.querySelectorAll<HTMLElement>(".wheel-number-label").forEach((label) => {
       const labelBody = label.querySelector<HTMLElement>("b");
-      labelBody?.style.setProperty("--label-flip", "180deg");
+      labelBody?.style.setProperty("--label-flip", "0deg");
     });
   }
 
