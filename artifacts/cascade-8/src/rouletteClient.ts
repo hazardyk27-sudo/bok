@@ -67,11 +67,22 @@ const PHASE_ANNOUNCEMENT_LABELS: Record<RoulettePhase, string> = {
 };
 const RED_NUMBERS = new Set([1, 3, 5, 7, 9, 12, 14, 16, 18, 19, 21, 23, 25, 27, 30, 32, 34, 36]);
 const MAX_BET_PER_AREA = 10_000;
+const WHEEL_LANDING_DURATION_MS = 3900;
+const BALL_LANDING_DURATION_MS = 3850;
 const formatCredits = (cents: number) => (cents / 100).toLocaleString("tr-TR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 const formatCountdown = (milliseconds: number) => {
   const seconds = Math.ceil(Math.max(0, milliseconds) / 1000);
   return `${String(Math.floor(seconds / 60)).padStart(2, "0")}:${String(seconds % 60).padStart(2, "0")}`;
 };
+
+export function getRouletteResultResumeAction(
+  phase: RouletteAnimationSnapshot["phase"],
+  elapsedMs: number,
+) {
+  return phase === "RESULT" && Number.isFinite(elapsedMs) && elapsedMs < BALL_LANDING_DURATION_MS
+    ? "resume"
+    : "settle";
+}
 
 export function getRouletteLiveSummary(snapshot: Pick<RouletteSnapshot, "round">) {
   const { round } = snapshot;
@@ -122,10 +133,26 @@ export class RouletteClient {
   private animatedResultKey = "";
   private settledResultKey = "";
   private liveSummaryKey = "";
+  private wasDocumentHidden = false;
+  private visibilityResumePending = false;
   private readonly root: HTMLElement;
+  private readonly visibilityChangeHandler = () => {
+    if (document.visibilityState === "hidden") {
+      this.wasDocumentHidden = true;
+      return;
+    }
+    if (!this.wasDocumentHidden) return;
+    this.wasDocumentHidden = false;
+    this.visibilityResumePending = true;
+    void this.load().finally(() => {
+      this.visibilityResumePending = false;
+    });
+  };
 
   constructor(root: HTMLElement) {
     this.root = root;
+    this.wasDocumentHidden = document.visibilityState === "hidden";
+    document.addEventListener("visibilitychange", this.visibilityChangeHandler);
     this.setConnection("SENKRON BAŞLATILIYOR", false);
     this.bind();
     void this.load();
@@ -135,6 +162,7 @@ export class RouletteClient {
 
   destroy() {
     if (this.statusTimer) window.clearInterval(this.statusTimer);
+    document.removeEventListener("visibilitychange", this.visibilityChangeHandler);
     this.stopLabelOrientationSync();
     this.socket?.close();
   }
@@ -284,8 +312,13 @@ export class RouletteClient {
       if (next.round.phase === "SETTLING" || next.round.phase === "INTERMISSION") void this.load();
     }
     const animationTransition = getRouletteAnimationTransition(previous?.round ?? null, next.round);
-    if (animationTransition.startsSpin) this.startWheelSpin();
-    if (animationTransition.winningNumber !== null) this.finishWheelSpin(animationTransition.winningNumber);
+    const resumingFromBackground = this.visibilityResumePending;
+    if (animationTransition.startsSpin || (resumingFromBackground && next.round.phase === "SPINNING")) this.startWheelSpin();
+    if (resumingFromBackground && next.round.winningNumber !== null) {
+      this.resumeResultPresentation(next.round.winningNumber, next.round.phase, next.round.phaseStartedAt);
+    } else if (animationTransition.winningNumber !== null) {
+      this.finishWheelSpin(animationTransition.winningNumber);
+    }
     if (animationTransition.winningNumber !== null) this.voice.speak(`${animationTransition.winningNumber} numara kazandı`);
     if ((previous?.round.revealedMultipliers.length ?? 0) < next.round.revealedMultipliers.length) {
       const value = next.round.revealedMultipliers.at(-1);
@@ -483,6 +516,26 @@ export class RouletteClient {
   }
 
   private finishWheelSpin(winningNumber: number) {
+    this.finishWheelSpinAt(winningNumber, 0);
+  }
+
+  private resumeResultPresentation(winningNumber: number, phase: RoulettePhase, phaseStartedAt: string) {
+    const rawElapsed = Date.now() + this.serverOffsetMs - Date.parse(phaseStartedAt);
+    const elapsed = Number.isFinite(rawElapsed) ? Math.max(0, rawElapsed) : BALL_LANDING_DURATION_MS;
+    if (getRouletteResultResumeAction(phase, elapsed) === "settle") {
+      this.settleWheelSpinImmediately(winningNumber);
+      return;
+    }
+    const resultKey = `${this.snapshot?.round.id}:${winningNumber}`;
+    if (this.animatedResultKey !== resultKey) {
+      this.finishWheelSpinAt(winningNumber, elapsed);
+      return;
+    }
+    if (this.wheelAnimation) this.wheelAnimation.currentTime = Math.min(elapsed, WHEEL_LANDING_DURATION_MS);
+    if (this.ballAnimation) this.ballAnimation.currentTime = Math.min(elapsed, BALL_LANDING_DURATION_MS);
+  }
+
+  private finishWheelSpinAt(winningNumber: number, animationElapsedMs: number) {
     const wheel = this.root.querySelector<HTMLElement>("[data-wheel]");
     const rotor = wheel?.querySelector<HTMLElement>(".wheel-rotor");
     const ball = this.root.querySelector<HTMLElement>(".wheel-ball");
@@ -520,6 +573,7 @@ export class RouletteClient {
       { duration: 3900, easing: "linear", fill: "forwards" },
     );
     this.startLabelOrientationSync();
+    this.wheelAnimation.currentTime = Math.min(Math.max(0, animationElapsedMs), WHEEL_LANDING_DURATION_MS);
     this.wheelAnimation.finished.then(() => {
       if (this.animatedResultKey !== resultKey) return;
       this.stopLabelOrientationSync();
@@ -535,14 +589,39 @@ export class RouletteClient {
         { transform: `rotate(${currentBallAngle + ballDelta * .88}deg) translateY(-${pocketRadius + 5}px)`, offset: .88 },
         { transform: `rotate(${finalBallAngle}deg) translateY(-${pocketRadius}px)` },
       ],
-      { duration: 3850, easing: "linear", fill: "forwards" },
+      { duration: BALL_LANDING_DURATION_MS, easing: "linear", fill: "forwards" },
     );
     this.ballAnimation = outer;
+    this.ballAnimation.currentTime = Math.min(Math.max(0, animationElapsedMs), BALL_LANDING_DURATION_MS);
     outer.finished.then(() => {
       if (this.animatedResultKey !== resultKey) return;
       this.settledResultKey = resultKey;
       this.render();
     }).catch(() => undefined);
+  }
+
+  private settleWheelSpinImmediately(winningNumber: number) {
+    const wheel = this.root.querySelector<HTMLElement>("[data-wheel]");
+    const rotor = wheel?.querySelector<HTMLElement>(".wheel-rotor");
+    const ball = this.root.querySelector<HTMLElement>(".wheel-ball");
+    if (!wheel || !rotor || !ball) return;
+    const resultKey = `${this.snapshot?.round.id}:${winningNumber}`;
+    if (this.settledResultKey === resultKey) return;
+    if (this.ballDropTimer) window.clearTimeout(this.ballDropTimer);
+    this.ballDropTimer = undefined;
+    this.animatedResultKey = resultKey;
+    const currentRotation = this.readRotation(rotor);
+    this.ballAnimation?.cancel();
+    this.wheelAnimation?.cancel();
+    wheel.classList.remove("is-spinning");
+    const { finalRotation, finalLabelAngle, pocketRadius } = getWheelLandingPlan(winningNumber, currentRotation, this.readWheelRadii(wheel));
+    this.stopLabelOrientationSync();
+    this.wheelAnimation = undefined;
+    this.ballAnimation = undefined;
+    rotor.style.transform = `rotate(${finalRotation}deg)`;
+    wheel.style.setProperty("--label-counter-angle", finalLabelAngle);
+    ball.style.transform = `rotate(-1440deg) translateY(-${pocketRadius}px)`;
+    this.settledResultKey = resultKey;
   }
 
   private readRotation(element: HTMLElement) {

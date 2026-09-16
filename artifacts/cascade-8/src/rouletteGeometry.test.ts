@@ -9,7 +9,11 @@ import {
   ROULETTE_POCKET_COUNT,
   ROULETTE_SEGMENT_DEGREES,
 } from "./rouletteGeometry";
-import { getRouletteAnimationTransition, isRouletteResultSettled } from "./rouletteClient";
+import {
+  getRouletteAnimationTransition,
+  getRouletteResultResumeAction,
+  isRouletteResultSettled,
+} from "./rouletteClient";
 
 describe("roulette wheel geometry", () => {
   it("keeps the exact European pocket order used by the rendered wheel", () => {
@@ -68,5 +72,12 @@ describe("server-driven roulette animation transitions", () => {
     expect(isRouletteResultSettled(result, "round-2:31")).toBe(false);
     expect(isRouletteResultSettled(result, "round-3:31")).toBe(true);
     expect(isRouletteResultSettled({ ...result, winningNumber: null }, "round-3:31")).toBe(false);
+  });
+
+  it("resumes only an active RESULT landing and settles after the landing window", () => {
+    expect(getRouletteResultResumeAction("RESULT", 1200)).toBe("resume");
+    expect(getRouletteResultResumeAction("RESULT", 3850)).toBe("settle");
+    expect(getRouletteResultResumeAction("MULTIPLIER_REVEAL", 1200)).toBe("settle");
+    expect(getRouletteResultResumeAction("RESULT", Number.NaN)).toBe("settle");
   });
 });
