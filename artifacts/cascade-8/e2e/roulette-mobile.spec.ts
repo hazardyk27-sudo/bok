@@ -53,6 +53,23 @@ type OrientationDiagnostics = {
   winningPockets: number;
 };
 
+type BettingControlDiagnostics = {
+  viewport: { width: number; height: number };
+  scroll: { clientWidth: number; scrollWidth: number; clientHeight: number; scrollHeight: number };
+  horizontalOverflow: boolean;
+  bettingCard: { left: number; right: number; top: number; bottom: number; width: number; height: number };
+  controls: Record<string, {
+    visible: boolean;
+    reachable: boolean;
+    left: number;
+    right: number;
+    top: number;
+    bottom: number;
+    width: number;
+    height: number;
+  }>;
+};
+
 type SafeAreaInsets = {
   top: number;
   right: number;
@@ -314,6 +331,68 @@ async function captureOrientationDiagnostics(page: Page): Promise<OrientationDia
   });
 }
 
+async function captureBettingControlDiagnostics(page: Page): Promise<BettingControlDiagnostics> {
+  return page.evaluate(() => {
+    const rectValues = (element: HTMLElement | null) => {
+      if (!element) return { visible: false, reachable: false, left: 0, right: 0, top: 0, bottom: 0, width: 0, height: 0 };
+      const style = getComputedStyle(element);
+      const rect = element.getBoundingClientRect();
+      const visible = style.display !== "none" && style.visibility !== "hidden" && rect.width > 0 && rect.height > 0;
+      const viewportWidth = document.documentElement.clientWidth;
+      const reachable = visible
+        && rect.left >= -1
+        && rect.right <= viewportWidth + 1
+        && rect.top >= -1
+        && rect.bottom <= document.documentElement.scrollHeight + 1;
+      return {
+        visible,
+        reachable,
+        left: rect.left,
+        right: rect.right,
+        top: rect.top,
+        bottom: rect.bottom,
+        width: rect.width,
+        height: rect.height,
+      };
+    };
+    const firstVisible = (selector: string) => Array.from(document.querySelectorAll<HTMLElement>(selector))
+      .find((element) => {
+        const style = getComputedStyle(element);
+        const rect = element.getBoundingClientRect();
+        return style.display !== "none" && style.visibility !== "hidden" && rect.width > 0 && rect.height > 0;
+      }) ?? null;
+    const controls = {
+      betArea: firstVisible('[data-bet-key="straight:7"]'),
+      chip: firstVisible('[data-action="drawer-chips"], [data-stake="100"]'),
+      undo: firstVisible('[data-action="undo"]'),
+      clear: firstVisible('[data-action="clear"]'),
+      spin: firstVisible("[data-wheel]"),
+    };
+    const bettingCard = document.querySelector<HTMLElement>(".roulette-bet-card");
+    const scroll = {
+      clientWidth: document.documentElement.clientWidth,
+      scrollWidth: Math.max(document.documentElement.scrollWidth, document.body.scrollWidth),
+      clientHeight: document.documentElement.clientHeight,
+      scrollHeight: Math.max(document.documentElement.scrollHeight, document.body.scrollHeight),
+    };
+    const cardRect = bettingCard?.getBoundingClientRect() ?? new DOMRect();
+    return {
+      viewport: { width: window.innerWidth, height: window.innerHeight },
+      scroll,
+      horizontalOverflow: scroll.scrollWidth > scroll.clientWidth + 1,
+      bettingCard: {
+        left: cardRect.left,
+        right: cardRect.right,
+        top: cardRect.top,
+        bottom: cardRect.bottom,
+        width: cardRect.width,
+        height: cardRect.height,
+      },
+      controls: Object.fromEntries(Object.entries(controls).map(([name, element]) => [name, rectValues(element)])),
+    } as BettingControlDiagnostics;
+  });
+}
+
 async function emulateSafeAreaInsets(page: Page, insets: SafeAreaInsets) {
   await page.addStyleTag({
     content: `
@@ -555,6 +634,54 @@ test.describe("roulette recovery on mobile browsers", () => {
       expect(afterDuplicate.ball).toBe(beforeDuplicate.ball);
       expect(afterDuplicate.rotor).toBe(beforeDuplicate.rotor);
       expect(afterDuplicate.active).toBe(0);
+    });
+  });
+});
+
+test.describe("roulette betting controls on rotation", () => {
+  test("keeps OPEN and LAST_CALL controls reachable in short landscape viewports", async ({ page }, testInfo) => {
+    const fixture = await installRouletteFixture(page);
+    const open = makeSnapshot("OPEN", null, new Date().toISOString(), 60_000);
+    const diagnostics: BettingControlDiagnostics[] = [];
+    const landscapeViewports = [
+      { width: 915, height: 412 },
+      { width: 667, height: 375 },
+      { width: 568, height: 320 },
+    ];
+
+    await fixture.setSnapshot(open);
+    await fixture.emitSnapshot(open);
+    await expect(page.locator(".roulette-page")).toHaveClass(/is-betting-phase/);
+
+    for (const [index, viewport] of landscapeViewports.entries()) {
+      await page.setViewportSize(viewport);
+      await expect.poll(() => page.evaluate(() => ({
+        orientation: window.matchMedia("(orientation: portrait)").matches ? "portrait" : "landscape",
+        width: window.innerWidth,
+        height: window.innerHeight,
+      }))).toEqual({ orientation: "landscape", ...viewport });
+
+      if (index === 1) {
+        const lastCall = makeSnapshot("LAST_CALL", null, new Date().toISOString(), 60_000, open.round.id);
+        await fixture.emitSnapshot(lastCall);
+        await expect(page.locator(".roulette-page")).toHaveClass(/is-betting-phase/);
+      }
+
+      const viewportDiagnostics = await captureBettingControlDiagnostics(page);
+      diagnostics.push(viewportDiagnostics);
+      expect(viewportDiagnostics.horizontalOverflow, JSON.stringify(viewportDiagnostics, null, 2)).toBe(false);
+      expect(viewportDiagnostics.bettingCard.width).toBeLessThanOrEqual(viewport.width);
+      expect(viewportDiagnostics.bettingCard.left).toBeGreaterThanOrEqual(-1);
+      expect(viewportDiagnostics.bettingCard.right).toBeLessThanOrEqual(viewport.width + 1);
+      for (const [name, control] of Object.entries(viewportDiagnostics.controls)) {
+        expect(control.visible, `${name} is not visible: ${JSON.stringify(viewportDiagnostics, null, 2)}`).toBe(true);
+        expect(control.reachable, `${name} is clipped: ${JSON.stringify(viewportDiagnostics, null, 2)}`).toBe(true);
+      }
+    }
+
+    await testInfo.attach("roulette-betting-control-diagnostics", {
+      body: JSON.stringify(diagnostics, null, 2),
+      contentType: "application/json",
     });
   });
 });

@@ -604,8 +604,13 @@
 }
 
 @media (orientation: landscape) and (max-height: 600px) and (max-width: 1000px) {
+  .app-shell.is-roulette-page:has(.roulette-page.is-betting-phase) {
+    height: auto;
+    min-height: 100dvh;
+    overflow: visible;
+  }
   .app-shell.route-shell { padding-block: max(12px, var(--safe-area-inset-top)) max(12px, var(--safe-area-inset-bottom)); }
-  .roulette-page { padding-bottom: max(16px, var(--safe-area-inset-bottom)); }
+  .roulette-page { width: 100%; min-width: 0; padding-bottom: max(16px, var(--safe-area-inset-bottom)); }
   .roulette-heading { gap: 14px; margin: 4px 0 10px; }
   .roulette-heading h1 { font-size: clamp(24px, 5vw, 38px); }
   .roulette-heading p { display: none; }
@@ -613,7 +618,23 @@
   .roulette-hud-card, .roulette-countdown { min-height: 48px; padding: 8px 11px; }
   .roulette-sound-button { min-width: 76px; }
   .roulette-layout { gap: 12px; margin-top: 12px; }
-  .roulette-wheel-card { padding: 10px 12px; transform: translateY(-48px); }
+  .roulette-page.is-betting-phase .roulette-layout { display: flex; flex-direction: column; min-width: 0; }
+  .roulette-page.is-betting-phase .roulette-bet-card { order: -2; }
+  .roulette-page.is-betting-phase .roulette-wheel-card { order: 2; }
+  .roulette-page.is-betting-phase .roulette-bet-card,
+  .roulette-page.is-betting-phase .roulette-wheel-card {
+    width: 100%;
+    min-width: 0;
+    transform: none;
+  }
+  .roulette-page.is-betting-phase .roulette-bet-card { padding: 12px; }
+  .roulette-page.is-betting-phase .roulette-wheel-card { padding: 10px 12px; }
+  .table-card-heading { flex-wrap: wrap; }
+  .table-card-heading > div:first-child { min-width: 0; }
+  .table-heading-tools { min-width: 0; flex-wrap: wrap; justify-content: flex-start; }
+  .table-odds-note { flex: 1 1 100%; max-width: none; text-align: left; }
+  .bet-slip-actions { flex-wrap: wrap; }
+  .roulette-page.is-wheel-phase .roulette-wheel-card { transform: translateY(-160px); }
   .roulette-wheel-stage { min-height: 220px; }
   .roulette-wheel-live {
     width: min(260px, calc(100svh - var(--safe-area-inset-top) - var(--safe-area-inset-bottom) - 150px));
