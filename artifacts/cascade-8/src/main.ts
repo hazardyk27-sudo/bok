@@ -163,13 +163,13 @@ const rouletteMarkup = `
     <section class="roulette-mobile-results" data-mobile-results aria-label="Son sonuçlar"><span class="mobile-results-label">SON SONUÇLAR</span><div class="mobile-results-list"><span class="muted-copy">Sonuçlar yükleniyor</span></div></section>
     <section class="roulette-layout">
       <section class="roulette-wheel-card" aria-label="Global roulette result">
-         <div class="roulette-card-kicker">EUROPEAN WHEEL // 37 POCKETS</div>
+         <div class="roulette-card-kicker">LIVE EUROPEAN WHEEL</div>
         <div class="roulette-wheel-stage">
           <div class="roulette-wheel-live" data-wheel>
             <div class="wheel-rotor">
-              <div class="wheel-pocket-track">${rouletteWheelOrder.map((number, index) => `<span class="wheel-pocket ${number === 0 ? "is-green" : rouletteRedNumbers.has(number) ? "is-red" : "is-black"}" data-wheel-number="${number}" style="--pocket-index:${index}"><b>${number}</b></span>`).join("")}</div>
+              <div class="wheel-pocket-track">${rouletteWheelOrder.map((number, index) => `<span class="wheel-pocket ${number === 0 ? "is-green" : rouletteRedNumbers.has(number) ? "is-red" : "is-black"}" data-wheel-number="${number}" style="--pocket-index:${index}"><b>${number}</b><i aria-hidden="true"></i></span>`).join("")}</div>
               <div class="wheel-deflectors">${Array.from({ length: 8 }, (_, index) => `<i style="--deflector-index:${index}"></i>`).join("")}</div>
-              <div class="wheel-center-well"><div class="wheel-center-cap"><span>EUROPEAN</span><b>37</b></div></div>
+              <div class="wheel-center-well"><div class="wheel-center-cap"><i></i><b></b></div></div>
             </div>
             <div class="wheel-ball-track"><div class="wheel-ball"></div></div>
             <div class="wheel-result-overlay" data-result-overlay>
