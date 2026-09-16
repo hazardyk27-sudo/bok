@@ -1,6 +1,6 @@
 import { test, expect, type Page, type TestInfo } from "@playwright/test";
 
-type RoulettePhase = "OPEN" | "LAST_CALL" | "LOCKED" | "SPINNING" | "RESULT" | "SETTLING";
+type RoulettePhase = "OPEN" | "LAST_CALL" | "LOCKED" | "MULTIPLIER_REVEAL" | "SPINNING" | "RESULT" | "SETTLING";
 
 type RouletteSnapshot = {
   serverTime: string;
@@ -635,6 +635,80 @@ test.describe("roulette recovery on mobile browsers", () => {
       expect(afterDuplicate.rotor).toBe(beforeDuplicate.rotor);
       expect(afterDuplicate.active).toBe(0);
     });
+  });
+
+  test("reveals one and multiple multiplier targets on the actual portrait cells", async ({ page }) => {
+    const fixture = await installRouletteFixture(page);
+    const makeReveal = (revealedMultipliers: number[]) => {
+      const snapshot = makeSnapshot(
+        "MULTIPLIER_REVEAL",
+        null,
+        new Date(Date.now() - 2_000).toISOString(),
+        8_000,
+        "mobile-multiplier-round",
+      );
+      return {
+        ...snapshot,
+        round: {
+          ...snapshot.round,
+          luckyNumbers: [7, 26],
+          revealedMultipliers,
+          multipliersTotal: 2,
+          nextTransitionAt: new Date(Date.now() + 7_000).toISOString(),
+          version: revealedMultipliers.length,
+        },
+      };
+    };
+
+    const firstReveal = makeReveal([50]);
+    await fixture.setSnapshot(firstReveal);
+    await fixture.emitSnapshot(firstReveal);
+    await expect(page.locator(".roulette-hud [data-phase]")).toHaveText("MULTIPLIER REVEAL");
+    await expect(page.locator('[data-bet-key="straight:7"]:visible .multiplier-badge')).toHaveText("50x");
+    await expect(page.locator('[data-bet-key="straight:26"]:visible .multiplier-badge')).toHaveCount(1);
+
+    const secondReveal = makeReveal([50, 500]);
+    await fixture.setSnapshot(secondReveal);
+    await fixture.emitSnapshot(secondReveal);
+    await expect(page.locator('[data-bet-key="straight:26"]:visible .multiplier-badge')).toHaveText("500x");
+
+    const diagnostics = await page.evaluate(() => {
+      const visibleTarget = (number: number) => Array.from(document.querySelectorAll<HTMLElement>(`[data-bet-key="straight:${number}"]`))
+        .find((element) => {
+          const rect = element.getBoundingClientRect();
+          return rect.width > 0 && rect.height > 0;
+        }) ?? null;
+      const effects = document.querySelector<HTMLElement>("[data-multiplier-effects]");
+      const strike = document.querySelector<HTMLElement>(".multiplier-strike");
+      const impact = document.querySelector<HTMLElement>(".multiplier-impact");
+      const effectRect = effects?.getBoundingClientRect() ?? new DOMRect();
+      const targets = [7, 26].map((number) => {
+        const target = visibleTarget(number);
+        const rect = target?.getBoundingClientRect() ?? new DOMRect();
+        return {
+          number,
+          isMobileTable: target?.closest(".roulette-mobile-table") !== null,
+          withinEffects: rect.left >= effectRect.left
+            && rect.right <= effectRect.right
+            && rect.top >= effectRect.top
+            && rect.bottom <= effectRect.bottom,
+        };
+      });
+      return {
+        targets,
+        horizontalOverflow: document.documentElement.scrollWidth > document.documentElement.clientWidth + 1,
+        strikeUsesTargetOrigin: Boolean(strike?.style.getPropertyValue("--strike-start-x")),
+        impactUsesTargetCoordinates: Boolean(impact?.style.getPropertyValue("--impact-x")),
+      };
+    });
+
+    expect(diagnostics.horizontalOverflow).toBe(false);
+    expect(diagnostics.targets).toEqual([
+      { number: 7, isMobileTable: true, withinEffects: true },
+      { number: 26, isMobileTable: true, withinEffects: true },
+    ]);
+    expect(diagnostics.strikeUsesTargetOrigin).toBe(true);
+    expect(diagnostics.impactUsesTargetCoordinates).toBe(true);
   });
 });
 

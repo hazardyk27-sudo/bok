@@ -231,8 +231,8 @@ const rouletteMarkup = `
             </div>
             <div class="mobile-column-row">${rouletteColumns}</div>
           </div>
+          <div class="roulette-multiplier-effects" data-multiplier-effects aria-hidden="true"></div>
         </div>
-         <div class="roulette-multiplier-effects" data-multiplier-effects aria-hidden="true"></div>
          <div class="roulette-lucky-row"><div><span>LUCKY NUMBERS</span><div data-lucky-list><span class="muted-copy">Sonuçtan sonra açıklanacak</span></div></div><div class="reveal-count"><span>REVEAL</span><strong data-reveal-count>0/0</strong></div></div>
         <div class="roulette-multiplier-row"><span>MULTIPLIER REVEAL</span><div data-multiplier-list><span class="muted-copy">Tek tek reveal bekleniyor</span></div></div>
         <div class="roulette-bet-slip">

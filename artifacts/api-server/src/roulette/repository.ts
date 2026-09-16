@@ -5,8 +5,10 @@ import {
   MAX_STAKE_CENTS,
   MIN_STAKE_CENTS,
   MULTIPLIER_VALUES,
+  MULTIPLIER_REVEAL_CONFIG,
   PHASE_DURATIONS_MS,
   ROULETTE_PHASES,
+  getMultiplierRevealCount,
   type RouletteEvent,
   type RouletteBetInput,
   type RouletteBetType,
@@ -21,7 +23,7 @@ import {
 import { chooseLuckyNumbers, chooseMultipliers, createCommitment, newId, uniformWinningNumber } from "./rng";
 
 const LEADER_LOCK_KEY = 834_118;
-const REVEAL_STEP_MS = 1_250;
+const REVEAL_STEP_MS = MULTIPLIER_REVEAL_CONFIG.stepMs;
 const LEGACY_PHASE_ORDER: readonly RoulettePhase[] = [
   "OPEN",
   "LAST_CALL",
@@ -388,10 +390,12 @@ export class RouletteRepository {
   }
 
   private revealedCount(round: RouletteRoundRecord, now: Date) {
+    if (round.multipliers.length === 0) return 0;
     if (round.phase === "SETTLING" || round.phase === "INTERMISSION") return round.multipliers.length;
+    if (this.revealPrecedesSpin(round) && ["SPINNING", "RESULT"].includes(round.phase)) return round.multipliers.length;
     if (round.phase !== "MULTIPLIER_REVEAL") return 0;
     const revealStartedAt = this.revealPrecedesSpin(round) ? round.lockedUntil : round.resultUntil;
-    return Math.min(round.multipliers.length, Math.max(0, Math.floor((now.getTime() - revealStartedAt.getTime()) / REVEAL_STEP_MS)));
+    return getMultiplierRevealCount(now.getTime() - revealStartedAt.getTime(), round.multipliers.length, REVEAL_STEP_MS);
   }
 
   private async settleRound(round: RouletteRoundRecord) {

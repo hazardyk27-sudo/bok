@@ -14,6 +14,16 @@ export type RoulettePhase = (typeof ROULETTE_PHASES)[number];
 export const MULTIPLIER_VALUES = [50, 100, 150, 200, 250, 300, 400, 500] as const;
 export type RouletteMultiplier = (typeof MULTIPLIER_VALUES)[number];
 
+export const MULTIPLIER_REVEAL_CONFIG = {
+  durationMs: 9_000,
+  stepMs: 1_500,
+} as const;
+
+export function getMultiplierRevealCount(elapsedMs: number, total: number, stepMs = MULTIPLIER_REVEAL_CONFIG.stepMs) {
+  if (total <= 0 || !Number.isFinite(elapsedMs) || stepMs <= 0) return 0;
+  return Math.min(total, Math.max(0, Math.floor(Math.max(0, elapsedMs) / stepMs)));
+}
+
 export const ROULETTE_BET_TYPES = [
   "STRAIGHT",
   "SPLIT",
@@ -68,7 +78,7 @@ export const PHASE_DURATIONS_MS: Record<RoulettePhase, number> = {
   OPEN: 15_000,
   LAST_CALL: 5_000,
   LOCKED: 1_000,
-  MULTIPLIER_REVEAL: 7_000,
+  MULTIPLIER_REVEAL: MULTIPLIER_REVEAL_CONFIG.durationMs,
   SPINNING: 18_000,
   RESULT: 3_500,
   SETTLING: 3_000,

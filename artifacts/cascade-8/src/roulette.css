@@ -133,13 +133,22 @@
 .drawer-hint { display: block; margin-top: 12px; color: #7f927f; font: 8px "DM Mono", monospace; letter-spacing: .1em; }
 
 .roulette-multiplier-effects { position: absolute; inset: 0; z-index: 25; overflow: hidden; pointer-events: none; border-radius: 13px; }
-.multiplier-strike { position: absolute; left: 50%; top: 4px; width: var(--strike-length, 180px); height: 5px; transform-origin: 0 50%; transform: rotate(var(--strike-angle, 35deg)); border-radius: 99px; background: linear-gradient(90deg, transparent, #fff9c3 22%, #fff 49%, #e9aeff 73%, transparent); filter: drop-shadow(0 0 4px #fff3aa) drop-shadow(0 0 12px #c665ff); animation: roulette-strike .72s cubic-bezier(.2, .85, .25, 1) both; }
+.multiplier-strike { position: absolute; left: var(--strike-start-x, 50%); top: var(--strike-start-y, 5px); width: var(--strike-length, 180px); height: 5px; transform-origin: 0 50%; transform: translateY(-50%) rotate(var(--strike-angle, 35deg)) scaleX(0); border-radius: 99px; background: linear-gradient(90deg, transparent, #fff9c3 22%, #fff 49%, #e9aeff 73%, transparent); filter: drop-shadow(0 0 4px #fff3aa) drop-shadow(0 0 12px #c665ff); animation: roulette-strike .72s cubic-bezier(.2, .85, .25, 1) both; }
 .multiplier-strike::after { content: ""; position: absolute; inset: -9px 5% -9px; background: inherit; filter: blur(7px); opacity: .55; }
 .multiplier-strike.is-major { height: 8px; filter: drop-shadow(0 0 6px #fff3aa) drop-shadow(0 0 19px #b448ff); animation-duration: 1.05s; }
+.multiplier-impact { position: absolute; left: var(--impact-x, 50%); top: var(--impact-y, 50%); width: 22px; height: 22px; transform: translate(-50%, -50%) scale(.35); border: 2px solid #fff5b6; border-radius: 50%; background: radial-gradient(circle, #fff 0 10%, #ffd771 12% 26%, rgba(230, 114, 255, .72) 44%, transparent 70%); box-shadow: 0 0 8px #fff4a7, 0 0 22px rgba(213, 101, 255, .9); animation: roulette-impact .72s cubic-bezier(.15, .8, .25, 1) both; }
+.multiplier-impact::before, .multiplier-impact::after { content: ""; position: absolute; left: 50%; top: 50%; width: 34px; height: 2px; transform: translate(-50%, -50%) rotate(45deg); background: linear-gradient(90deg, transparent, #fff8c9, transparent); box-shadow: 0 0 8px #e789ff; }
+.multiplier-impact::after { transform: translate(-50%, -50%) rotate(-45deg); }
+.multiplier-impact.is-major { width: 32px; height: 32px; border-width: 3px; animation-duration: 1.05s; }
 .table-bet.is-multiplier-target { z-index: 4; border-color: rgba(255, 229, 134, .72); box-shadow: 0 0 12px rgba(255, 196, 80, .18); }
 .table-bet.is-multiplier-active, .table-bet.is-multiplier-impact { z-index: 7; animation: roulette-target-charge .9s ease both; }
 .table-bet.is-high-multiplier.is-multiplier-active { animation: roulette-target-major 1.2s ease both; }
-@keyframes roulette-strike { from { opacity: 0; transform: rotate(var(--strike-angle, 35deg)) scaleX(0); } 22% { opacity: 1; } to { opacity: 0; transform: rotate(var(--strike-angle, 35deg)) scaleX(1); } }
+.table-bet.is-multiplier-low .multiplier-badge { border-color: rgba(255, 213, 125, .68); }
+.table-bet.is-multiplier-mid .multiplier-badge { color: #fff4c5; border-color: rgba(255, 226, 131, .9); background: linear-gradient(135deg, #b0792e, #70448d); }
+.table-bet.is-multiplier-high .multiplier-badge { color: #fff; border-color: rgba(255, 241, 179, .98); background: linear-gradient(135deg, #e6a63d, #bd4d9c 52%, #6557d6); box-shadow: 0 0 9px rgba(255, 215, 102, .85), 0 0 24px rgba(186, 92, 224, .62); }
+.table-bet.is-multiplier-ultra .multiplier-badge { color: #fff; border-color: #fff8c2; background: linear-gradient(135deg, #ffe28a, #f07ccf 45%, #6d70ff); box-shadow: 0 0 12px rgba(255, 224, 123, .98), 0 0 30px rgba(197, 93, 255, .9); }
+@keyframes roulette-strike { from { opacity: 0; transform: translateY(-50%) rotate(var(--strike-angle, 35deg)) scaleX(0); } 22% { opacity: 1; } to { opacity: 0; transform: translateY(-50%) rotate(var(--strike-angle, 35deg)) scaleX(1); } }
+@keyframes roulette-impact { 0% { opacity: 0; transform: translate(-50%, -50%) scale(.35); } 24% { opacity: 1; } 100% { opacity: 0; transform: translate(-50%, -50%) scale(1.9); } }
 @keyframes roulette-target-charge { 0% { filter: brightness(1); } 35% { filter: brightness(1.75) saturate(1.4); transform: translateY(-2px) scale(1.04); } 100% { filter: brightness(1); transform: translateY(0) scale(1); } }
 @keyframes roulette-target-major { 0% { filter: brightness(1); } 28% { filter: brightness(2) saturate(1.65); transform: translateY(-3px) scale(1.09); } 100% { filter: brightness(1.15); transform: translateY(0) scale(1); } }
 
@@ -232,7 +241,7 @@
   .roulette-wheel-live.is-spinning,
   .roulette-wheel-live.is-spinning .wheel-rotor,
   .wheel-result-overlay.is-visible,
-  .multiplier-chip { animation: none !important; }
+  .multiplier-chip, .multiplier-strike, .multiplier-impact { animation: none !important; }
   .wheel-ball { transition: none !important; }
 }
 

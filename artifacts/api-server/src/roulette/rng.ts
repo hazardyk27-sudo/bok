@@ -1,7 +1,9 @@
 import { createHash, randomInt, randomUUID } from "node:crypto";
 import { MULTIPLIER_VALUES, type RouletteMultiplier } from "./types";
 
-const multiplierWeights: readonly { value: RouletteMultiplier; weight: number }[] = [
+export type RouletteRandomInt = (min: number, max: number) => number;
+
+export const MULTIPLIER_DISTRIBUTION: readonly { value: RouletteMultiplier; weight: number }[] = [
   { value: 50, weight: 52 },
   { value: 100, weight: 24 },
   { value: 150, weight: 10 },
@@ -12,29 +14,29 @@ const multiplierWeights: readonly { value: RouletteMultiplier; weight: number }[
   { value: 500, weight: 1 },
 ];
 
-export function uniformWinningNumber(): number {
-  return randomInt(0, 37);
+export function uniformWinningNumber(nextInt: RouletteRandomInt = (min, max) => randomInt(min, max)): number {
+  return nextInt(0, 37);
 }
 
-export function chooseLuckyNumbers(): number[] {
-  const count = randomInt(1, 6);
+export function chooseLuckyNumbers(nextInt: RouletteRandomInt = (min, max) => randomInt(min, max)): number[] {
+  const count = nextInt(1, 6);
   const values = new Set<number>();
-  while (values.size < count) values.add(uniformWinningNumber());
+  while (values.size < count) values.add(uniformWinningNumber(nextInt));
   return [...values].sort((a, b) => a - b);
 }
 
-export function weightedMultiplier(): RouletteMultiplier {
-  const total = multiplierWeights.reduce((sum, choice) => sum + choice.weight, 0);
-  let pick = (randomInt(0, 1_000_000) / 1_000_000) * total;
-  for (const choice of multiplierWeights) {
+export function weightedMultiplier(nextInt: RouletteRandomInt = (min, max) => randomInt(min, max)): RouletteMultiplier {
+  const total = MULTIPLIER_DISTRIBUTION.reduce((sum, choice) => sum + choice.weight, 0);
+  let pick = (nextInt(0, 1_000_000) / 1_000_000) * total;
+  for (const choice of MULTIPLIER_DISTRIBUTION) {
     pick -= choice.weight;
     if (pick < 0) return choice.value;
   }
   return MULTIPLIER_VALUES[0];
 }
 
-export function chooseMultipliers(count: number): RouletteMultiplier[] {
-  return Array.from({ length: count }, () => weightedMultiplier());
+export function chooseMultipliers(count: number, nextInt: RouletteRandomInt = (min, max) => randomInt(min, max)): RouletteMultiplier[] {
+  return Array.from({ length: count }, () => weightedMultiplier(nextInt));
 }
 
 export function createCommitment(roundId: string, winningNumber: number, luckyNumbers: number[], multipliers: RouletteMultiplier[]): string {

@@ -234,6 +234,30 @@ class RouletteVoice {
     oscillator.start(now);
     oscillator.stop(now + duration + .02);
   }
+  multiplierReveal(value: RouletteMultiplier, index: number, total: number) {
+    if (!this.enabled) return;
+    const context = this.ensureAudio();
+    if (!context) return;
+    const now = context.currentTime;
+    const baseFrequency = value >= 500 ? 720 : value >= 400 ? 640 : value >= 300 ? 570 : value >= 200 ? 500 : 430;
+    const progress = index / Math.max(1, total - 1);
+    const volume = .035 + progress * .025 + (value >= 300 ? .015 : 0);
+    [0, .075, .15].forEach((offset, toneIndex) => {
+      const oscillator = context.createOscillator();
+      const gain = context.createGain();
+      const frequency = baseFrequency * (1 + toneIndex * .24 + progress * .08);
+      const duration = .22 + progress * .08;
+      oscillator.type = toneIndex === 2 ? "sine" : "triangle";
+      oscillator.frequency.setValueAtTime(frequency, now + offset);
+      oscillator.frequency.exponentialRampToValueAtTime(Math.max(60, frequency * .72), now + offset + duration);
+      gain.gain.setValueAtTime(0.0001, now + offset);
+      gain.gain.exponentialRampToValueAtTime(volume / (toneIndex + 1), now + offset + .012);
+      gain.gain.exponentialRampToValueAtTime(0.0001, now + offset + duration);
+      oscillator.connect(gain).connect(context.destination);
+      oscillator.start(now + offset);
+      oscillator.stop(now + offset + duration + .02);
+    });
+  }
   private ensureAudio() {
     if (this.audioContext) return this.audioContext;
     const Context = window.AudioContext ?? (window as typeof window & { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
@@ -653,6 +677,11 @@ export class RouletteClient {
       button.classList.toggle("is-high-multiplier", Boolean(value && value >= 300));
       button.classList.toggle("is-multiplier-target", revealIndex >= 0);
       button.classList.toggle("is-multiplier-active", Boolean(value && revealIndex === round.revealedMultipliers.length - 1 && round.phase === "MULTIPLIER_REVEAL"));
+      button.classList.remove("is-multiplier-low", "is-multiplier-mid", "is-multiplier-high", "is-multiplier-ultra");
+      if (value) {
+        const tier = value >= 500 ? "ultra" : value >= 300 ? "high" : value >= 150 ? "mid" : "low";
+        button.classList.add(`is-multiplier-${tier}`);
+      }
     });
     this.root.querySelectorAll<HTMLElement>(".wheel-pocket").forEach((pocket) => {
       pocket.classList.toggle("is-winning", resultSettled && Number(pocket.dataset.wheelNumber) === round.winningNumber);
@@ -673,7 +702,10 @@ export class RouletteClient {
       ? round.luckyNumbers.map((number) => `<span class="lucky-chip">${number}</span>`).join("")
       : `<span class="muted-copy">Sonuçtan sonra açıklanacak</span>`;
     this.root.querySelector<HTMLElement>("[data-multiplier-list]")!.innerHTML = round.revealedMultipliers.length
-      ? round.revealedMultipliers.map((value, index) => `<span class="multiplier-chip ${lucky.has(round.luckyNumbers[index]) ? "is-lucky" : ""}" style="--reveal-index:${index}">${value}x</span>`).join("")
+      ? round.revealedMultipliers.map((value, index) => {
+        const tier = value >= 500 ? "ultra" : value >= 300 ? "high" : value >= 150 ? "mid" : "low";
+        return `<span class="multiplier-chip is-${tier} ${lucky.has(round.luckyNumbers[index]) ? "is-lucky" : ""}" style="--reveal-index:${index}">${value}x</span>`;
+      }).join("")
       : `<span class="muted-copy">Tek tek reveal bekleniyor</span>`;
     this.root.querySelector<HTMLElement>("[data-reveal-count]")!.textContent = `${round.revealedMultipliers.length}/${round.multipliersTotal}`;
     const resultVisible = resultSettled && ["RESULT", "SETTLING", "INTERMISSION"].includes(round.phase);
@@ -693,7 +725,11 @@ export class RouletteClient {
     if (number === undefined) return;
     const effects = this.root.querySelector<HTMLElement>("[data-multiplier-effects]");
     const targets = [...this.root.querySelectorAll<HTMLElement>(`.table-bet[data-bet-key="straight:${number}"]`)]
-      .filter((target) => target.getBoundingClientRect().width > 0);
+      .filter((target) => {
+        const rect = target.getBoundingClientRect();
+        return rect.width > 0 && rect.height > 0;
+      })
+      .sort((a, b) => Number(b.closest(".roulette-mobile-table") !== null) - Number(a.closest(".roulette-mobile-table") !== null));
     const target = targets[0];
     if (!effects || !target) return;
     const sourceRect = effects.getBoundingClientRect();
@@ -704,18 +740,25 @@ export class RouletteClient {
     const sourceY = 5;
     const strike = document.createElement("span");
     strike.className = `multiplier-strike${value >= 300 ? " is-major" : ""}`;
-    strike.style.setProperty("--strike-x", `${x}px`);
-    strike.style.setProperty("--strike-y", `${y}px`);
+    strike.style.setProperty("--strike-start-x", `${sourceX}px`);
+    strike.style.setProperty("--strike-start-y", `${sourceY}px`);
+    strike.style.setProperty("--strike-target-x", `${x}px`);
+    strike.style.setProperty("--strike-target-y", `${y}px`);
     strike.style.setProperty("--strike-length", `${Math.hypot(x - sourceX, y - sourceY)}px`);
     strike.style.setProperty("--strike-angle", `${Math.atan2(y - sourceY, x - sourceX)}rad`);
     strike.style.setProperty("--strike-index", String(index));
-    effects.append(strike);
+    const impact = document.createElement("span");
+    impact.className = `multiplier-impact${value >= 300 ? " is-major" : ""}`;
+    impact.style.setProperty("--impact-x", `${x}px`);
+    impact.style.setProperty("--impact-y", `${y}px`);
+    effects.append(strike, impact);
     target.classList.add("is-multiplier-impact");
-    this.voice.cue(value >= 300 ? "reveal" : "bounce");
+    this.voice.multiplierReveal(value, index, this.snapshot?.round.multipliersTotal ?? 1);
     window.setTimeout(() => {
       strike.remove();
+      impact.remove();
       target.classList.remove("is-multiplier-impact");
-    }, value >= 300 ? 1250 : 850);
+    }, value >= 300 ? 1450 : 1050);
   }
 
   private renderCountdown() {
