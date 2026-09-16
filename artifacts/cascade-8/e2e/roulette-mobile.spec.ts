@@ -562,13 +562,19 @@ async function attachLifecycleDiagnostics(page: Page, testInfo: TestInfo) {
     })(),
   }));
   let geometry: OrientationDiagnostics | null = null;
+  let bettingControls: BettingControlDiagnostics | null = null;
   try {
     geometry = await captureOrientationDiagnostics(page);
   } catch {
     // Keep lifecycle state when the page failed before the roulette geometry mounted.
   }
+  try {
+    bettingControls = await captureBettingControlDiagnostics(page);
+  } catch {
+    // Keep lifecycle state when the page failed before the betting controls mounted.
+  }
   await testInfo.attach("roulette-lifecycle-state", {
-    body: JSON.stringify({ lifecycle, geometry }, null, 2),
+    body: JSON.stringify({ lifecycle, geometry, bettingControls }, null, 2),
     contentType: "application/json",
   });
 }
