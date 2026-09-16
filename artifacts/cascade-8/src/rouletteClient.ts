@@ -431,6 +431,12 @@ export class RouletteClient {
     rotor.style.transform = "rotate(0deg)";
     wheel.classList.add("is-spinning");
     const { outerRadius } = this.readWheelRadii(wheel);
+    if (this.prefersReducedMotion()) {
+      this.stopLabelOrientationSync();
+      wheel.classList.remove("is-spinning");
+      ball.style.transform = `rotate(0deg) translateY(-${outerRadius}px)`;
+      return;
+    }
     this.wheelAnimation = rotor.animate(
       [{ transform: "rotate(0deg)" }, { transform: "rotate(360deg)" }],
       { duration: 1450, iterations: Infinity, easing: "linear" },
@@ -461,6 +467,15 @@ export class RouletteClient {
     wheel.classList.remove("is-spinning");
     const plan = getWheelLandingPlan(winningNumber, currentRotation, this.readWheelRadii(wheel));
     const { finalRotation, finalLabelAngle, outerRadius, pocketRadius } = plan;
+    if (this.prefersReducedMotion()) {
+      this.stopLabelOrientationSync();
+      this.wheelAnimation = undefined;
+      this.ballAnimation = undefined;
+      rotor.style.transform = `rotate(${finalRotation}deg)`;
+      wheel.style.setProperty("--label-counter-angle", finalLabelAngle);
+      ball.style.transform = `rotate(-1440deg) translateY(-${pocketRadius}px)`;
+      return;
+    }
     this.wheelAnimation = rotor.animate(
       [{ transform: `rotate(${currentRotation}deg)` }, { transform: `rotate(${finalRotation - 90}deg)`, offset: .72 }, { transform: `rotate(${finalRotation}deg)` }],
       { duration: 3900, easing: "cubic-bezier(.12,.7,.18,1)", fill: "forwards" },
@@ -523,6 +538,10 @@ export class RouletteClient {
       window.cancelAnimationFrame(this.labelSyncFrame);
       this.labelSyncFrame = undefined;
     }
+  }
+
+  private prefersReducedMotion() {
+    return window.matchMedia?.("(prefers-reduced-motion: reduce)").matches ?? false;
   }
 
   private readWheelRadii(wheel: HTMLElement) {

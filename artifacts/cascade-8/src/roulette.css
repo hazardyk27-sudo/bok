@@ -182,7 +182,11 @@
   .history-row span:last-child { grid-column: 1 / -1; padding-bottom: 8px; }
 }
 @media (prefers-reduced-motion: reduce) {
-  .roulette-wheel-live.is-spinning, .multiplier-chip { animation: none; }
+  .roulette-wheel-live.is-spinning,
+  .roulette-wheel-live.is-spinning .wheel-rotor,
+  .wheel-result-overlay.is-visible,
+  .multiplier-chip { animation: none !important; }
+  .wheel-ball { transition: none !important; }
 }
 
 .roulette-mobile-results,
