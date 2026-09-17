@@ -59,7 +59,7 @@ const OUTER_TRACK_CONTACT_TOLERANCE = 0.018;
 const OUTER_TRACK_RADIAL_TOLERANCE = 0.06;
 const BALL_VALIDATION_TEST_COUNT = 100;
 const PART4_SPIN_TEST_COUNT = 20;
-const PART5_SPIN_TEST_COUNT = 3;
+const PART5_SPIN_TEST_COUNT = 100;
 const PART5_DURATION_LIMIT_SECONDS = 24;
 const PART5_STABLE_WINDOW_FRAMES = 180;
 const PART5_DEBUG_SAMPLE_COUNT = 5;
@@ -639,11 +639,11 @@ function measuredBowlProfile() {
     [2.3, -0.429],
     [2.5, -0.425],
     [2.6, -0.421],
-    [2.668, -0.418],
-    [2.718, -0.411],
-    [2.763, -0.398],
-    [2.801, -0.383],
-    [2.83, -0.366],
+    [2.668, -0.41],
+    [2.718, -0.402],
+    [2.763, -0.391],
+    [2.801, -0.378],
+    [2.83, -0.364],
     [2.85, -0.347],
     [2.87, -0.322],
     [2.89, -0.294],
@@ -4101,7 +4101,7 @@ function App() {
                     <span>{result.id}</span>
                     <strong>{result.chainComplete ? 'complete' : 'review'}</strong>
                     <small>
-                      {result.outerTrackLaps.toFixed(2)} laps · {result.settleSeconds.toFixed(1)} s · pocket {result.finalPocketNumber ?? '—'} ·
+                      {result.settleSeconds.toFixed(1)} s · pocket {result.finalPocketNumber ?? '—'} ·
                       {result.deflectorHit ? ' deflector' : ' no deflector'} ·
                       {result.movingFretContact ? ' moving fret' : ' no fret'} ·
                       {result.pocketChangeCount} changes / {result.bounceCount} bounces ·
