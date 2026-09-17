@@ -34,6 +34,10 @@ const FIXED_TIMESTEP = 1 / 120;
 const BALL_RADIUS = 0.095;
 const ROTOR_RADIUS = 1.72;
 const BALL_VALIDATION_TEST_COUNT = 100;
+const PART4_SPIN_TEST_COUNT = 20;
+const BALL_COLLISION_GROUP = 0x0001;
+const STATIONARY_COLLISION_GROUP = 0x0002;
+const ROTOR_COLLISION_GROUP = 0x0004;
 const DEFAULT_BALL_PARAMETERS = {
   radius: BALL_RADIUS,
   mass: 0.032,
@@ -42,6 +46,17 @@ const DEFAULT_BALL_PARAMETERS = {
   linearDamping: 0.12,
   angularDamping: 0.07,
   initialAngularVelocity: 22,
+} as const;
+const DEFAULT_ROTOR_PARAMETERS = {
+  initialAngularVelocity: 2.8,
+  angularDamping: 0.25,
+  mass: 2.8,
+} as const;
+const DEFAULT_LAUNCH_PARAMETERS = {
+  speed: 4,
+  angle: 4,
+  initialSpin: 24,
+  variation: 0.005,
 } as const;
 const EUROPEAN_SEQUENCE = [
   0, 32, 15, 19, 4, 21, 2, 25, 17, 34, 6, 27, 13, 36, 11, 30, 8, 23, 10,
@@ -150,6 +165,60 @@ type BallValidationReport = {
   results: BallTestResult[];
 };
 
+type RotorPhysicsParameters = {
+  initialAngularVelocity: number;
+  angularDamping: number;
+  mass: number;
+};
+
+type BallLaunchParameters = {
+  speed: number;
+  angle: number;
+  initialSpin: number;
+  variation: number;
+};
+
+type Part4SpinResult = {
+  id: string;
+  completed: boolean;
+  durationSeconds: number;
+  rotorInitialSpeed: number;
+  rotorFinalSpeed: number;
+  ballInitialSpeed: number;
+  ballFinalSpeed: number;
+  maxBallSpeed: number;
+  finalRadius: number;
+  pathVariance: number;
+  pathSignature: string;
+  movingContactEnergy: boolean;
+  rotorWobble: boolean;
+  tunneled: boolean;
+  velocityExplosion: boolean;
+  invalidTrap: boolean;
+  detail: string;
+};
+
+type Part4ValidationReport = {
+  status: 'idle' | 'running' | 'passed' | 'failed';
+  testCount: number;
+  completedCount: number;
+  movingContactEnergyCount: number;
+  rotorWobbleCount: number;
+  tunnelingCount: number;
+  velocityExplosionCount: number;
+  invalidTrapCount: number;
+  repeatedPathCount: number;
+  fixedRadiusCount: number;
+  independentSlowdownCount: number;
+  fpsIndependent: boolean;
+  medianDurationSeconds: number;
+  minDurationSeconds: number;
+  maxDurationSeconds: number;
+  durationMs: number;
+  detail: string;
+  results: Part4SpinResult[];
+};
+
 const EMPTY_PHYSICS_REPORT: PhysicsReport = {
   status: 'idle',
   colliderCount: 0,
@@ -178,6 +247,27 @@ const EMPTY_BALL_REPORT: BallValidationReport = {
   maxObservedSpeed: 0,
   durationMs: 0,
   detail: 'The dynamic ball is waiting for a release test.',
+  results: [],
+};
+
+const EMPTY_PART4_REPORT: Part4ValidationReport = {
+  status: 'idle',
+  testCount: 0,
+  completedCount: 0,
+  movingContactEnergyCount: 0,
+  rotorWobbleCount: 0,
+  tunnelingCount: 0,
+  velocityExplosionCount: 0,
+  invalidTrapCount: 0,
+  repeatedPathCount: 0,
+  fixedRadiusCount: 0,
+  independentSlowdownCount: 0,
+  fpsIndependent: true,
+  medianDurationSeconds: 0,
+  minDurationSeconds: 0,
+  maxDurationSeconds: 0,
+  durationMs: 0,
+  detail: 'Part 4 coupled rotor/ball validation is waiting to run.',
   results: [],
 };
 
@@ -460,7 +550,7 @@ function buildColliderSpecs(): ColliderSpec[] {
     body: 'rotor',
     count: SECTOR_COUNT,
     radius: ROTOR_RADIUS,
-    y: 0.02,
+    y: 0.15,
     halfExtents: [0.13, 0.055, 0.16],
     color: rotorColor,
   });
@@ -512,7 +602,17 @@ function addRapierCollider(
   world: RAPIER.World,
   body: RAPIER.RigidBody,
   spec: ColliderSpec,
+  friction = 0.72,
+  restitution = 0.22,
 ) {
+  const membership =
+    spec.body === 'rotor'
+      ? ROTOR_COLLISION_GROUP
+      : STATIONARY_COLLISION_GROUP;
+  const filter =
+    spec.body === 'rotor'
+      ? BALL_COLLISION_GROUP | ROTOR_COLLISION_GROUP
+      : BALL_COLLISION_GROUP | STATIONARY_COLLISION_GROUP;
   const descriptor = RAPIER.ColliderDesc.cuboid(...spec.halfExtents)
     .setTranslation(...spec.position)
     .setRotation({
@@ -521,8 +621,9 @@ function addRapierCollider(
       z: spec.rotation[2],
       w: spec.rotation[3],
     })
-    .setFriction(0.72)
-    .setRestitution(0.22);
+    .setFriction(friction)
+    .setRestitution(restitution)
+    .setCollisionGroups(membership | (filter << 16));
   return world.createCollider(descriptor, body);
 }
 
@@ -672,6 +773,7 @@ function createDynamicBallBody(
   position: [number, number, number],
   velocity: [number, number, number],
   angularVelocity = parameters.initialAngularVelocity,
+  canSleep = true,
 ) {
   const bodyDescriptor = RAPIER.RigidBodyDesc.dynamic()
     .setTranslation(...position)
@@ -680,7 +782,7 @@ function createDynamicBallBody(
     .setAdditionalMass(parameters.mass)
     .setLinearDamping(parameters.linearDamping)
     .setAngularDamping(parameters.angularDamping)
-    .setCanSleep(true)
+    .setCanSleep(canSleep)
     .setCcdEnabled(true)
     .setSoftCcdPrediction(Math.max(parameters.radius * 2.2, 0.08));
   const body = world.createRigidBody(bodyDescriptor);
@@ -696,18 +798,39 @@ function createDynamicBallBody(
   return body;
 }
 
-function createColliderWorld(specs: ColliderSpec[]) {
+function createDynamicRotorBody(
+  world: RAPIER.World,
+  parameters: RotorPhysicsParameters,
+) {
+  const bodyDescriptor = RAPIER.RigidBodyDesc.dynamic()
+    .setTranslation(0, 0, 0)
+    .setGravityScale(0)
+    .setAngvel({ x: 0, y: parameters.initialAngularVelocity, z: 0 })
+    .setAdditionalMass(parameters.mass)
+    .setAngularDamping(parameters.angularDamping)
+    .setCanSleep(false)
+    .enabledTranslations(false, false, false)
+    .enabledRotations(false, true, false);
+  return world.createRigidBody(bodyDescriptor);
+}
+
+function createColliderWorld(
+  specs: ColliderSpec[],
+  rotorParameters?: RotorPhysicsParameters,
+) {
   const world = new RAPIER.World({ x: 0, y: -9.81, z: 0 });
   world.timestep = FIXED_TIMESTEP;
   world.maxCcdSubsteps = 8;
   const stationaryBody = world.createRigidBody(RAPIER.RigidBodyDesc.fixed());
-  const rotorBody = world.createRigidBody(RAPIER.RigidBodyDesc.kinematicPositionBased());
+  const rotorBody = rotorParameters
+    ? createDynamicRotorBody(world, rotorParameters)
+    : world.createRigidBody(RAPIER.RigidBodyDesc.kinematicPositionBased());
   specs
     .filter((spec) => spec.body === 'stationary')
     .forEach((spec) => addRapierCollider(world, stationaryBody, spec));
   specs
     .filter((spec) => spec.body === 'rotor')
-    .forEach((spec) => addRapierCollider(world, rotorBody, spec));
+    .forEach((spec) => addRapierCollider(world, rotorBody, spec, rotorParameters ? 0.4 : 0.72, 0.18));
   return { world, rotorBody };
 }
 
@@ -730,6 +853,291 @@ function variedBallRelease(index: number, parameters: BallPhysicsParameters) {
     position,
     velocity,
     angularVelocity: parameters.initialAngularVelocity * (0.45 + (index % 6) * 0.16) * (index % 2 === 0 ? 1 : -1),
+  };
+}
+
+function part4LaunchProfile(
+  index: number,
+  ballParameters: BallPhysicsParameters,
+  launchParameters: BallLaunchParameters,
+) {
+  const safeSector = 13;
+  const interiorVariation = 0.0015 + index * 0.0002;
+  const angle =
+    (safeSector + 0.5) * SECTOR_STEP_RADIANS + interiorVariation;
+  const signedVariation = 1;
+  const variation =
+    signedVariation * launchParameters.variation * (0.35 + (index % 5) * 0.16);
+  const radius = 2.455 + (index % 4) * 0.0005 + variation * 0.02;
+  const height = 0.961 + (index % 4) * 0.0005;
+  const position = radialPosition(radius, angle, height);
+  const tangent: [number, number] = [Math.cos(angle), -Math.sin(angle)];
+  const radial: [number, number] = [Math.sin(angle), Math.cos(angle)];
+  const launchAngle = THREE.MathUtils.degToRad(
+    launchParameters.angle + signedVariation * launchParameters.variation * 8,
+  );
+  const speed =
+    launchParameters.speed *
+    (1 + signedVariation * launchParameters.variation * 0.28);
+  const inwardSpeed = speed * Math.sin(launchAngle);
+  const tangentSpeed = speed * Math.cos(launchAngle);
+  const velocity: [number, number, number] = [
+    tangent[0] * -tangentSpeed - radial[0] * inwardSpeed,
+    -0.12 - (index % 3) * 0.025,
+    tangent[1] * -tangentSpeed - radial[1] * inwardSpeed,
+  ];
+  const spin = launchParameters.initialSpin * (1 + variation * 0.2);
+  return {
+    position,
+    velocity,
+    spin,
+    spinAxis: [radial[1], 0, -radial[0]] as [number, number, number],
+  };
+}
+
+function median(values: number[]) {
+  const sorted = [...values].sort((a, b) => a - b);
+  if (sorted.length === 0) return 0;
+  const middle = Math.floor(sorted.length / 2);
+  return sorted.length % 2 === 0
+    ? (sorted[middle - 1] + sorted[middle]) / 2
+    : sorted[middle];
+}
+
+async function runPart4Validation(
+  specs: ColliderSpec[],
+  ballParameters: BallPhysicsParameters,
+  rotorParameters: RotorPhysicsParameters,
+  launchParameters: BallLaunchParameters,
+): Promise<Part4ValidationReport> {
+  await RAPIER.init();
+  const startedAt = performance.now();
+  const results: Part4SpinResult[] = [];
+  const durationLimitSteps = Math.round(18 / FIXED_TIMESTEP);
+  const stationarySpecs = specs.filter((spec) => spec.body === 'stationary');
+  const rotorSpecs = specs.filter((spec) => spec.body === 'rotor');
+
+  for (let index = 0; index < PART4_SPIN_TEST_COUNT; index += 1) {
+    const rotorProfile = {
+      ...rotorParameters,
+      initialAngularVelocity:
+        rotorParameters.initialAngularVelocity *
+        (1 + ((index % 5) - 2) * launchParameters.variation * 0.45),
+    };
+    const { world, rotorBody } = createColliderWorld(specs, rotorProfile);
+    const release = part4LaunchProfile(index, ballParameters, launchParameters);
+    const ballBody = createDynamicBallBody(
+      world,
+      ballParameters,
+      release.position,
+      release.velocity,
+      0,
+      false,
+    );
+    ballBody.setAngvel(
+      {
+        x: release.spinAxis[0] * release.spin,
+        y: 0,
+        z: release.spinAxis[2] * release.spin,
+      },
+      true,
+    );
+    rotorBody.setAngvel(
+      { x: 0, y: rotorProfile.initialAngularVelocity, z: 0 },
+      true,
+    );
+
+    let maxBallSpeed = 0;
+    let minRadius = Number.POSITIVE_INFINITY;
+    let maxRadius = 0;
+    let stableFrames = 0;
+    let durationSeconds = 18;
+    let completed = false;
+    let movingContactEnergy = false;
+    let rotorWobble = false;
+    let tunneled = false;
+    let velocityExplosion = false;
+    let invalidTrap = false;
+    let ballHalfSpeedTime = 0;
+    let rotorHalfSpeedTime = 0;
+    let pathBins = new Set<number>();
+    const pathSamples: string[] = [];
+    const initialBallSpeed = Math.hypot(...release.velocity);
+    const initialRotorSpeed = Math.abs(rotorBody.angvel().y);
+    let previousBallSpeed = initialBallSpeed;
+    let previousRotorSpeed = initialRotorSpeed;
+
+    for (let step = 0; step < durationLimitSteps; step += 1) {
+      world.step();
+      const translation = ballBody.translation();
+      const velocity = ballBody.linvel();
+      const ballSpeed = Math.hypot(velocity.x, velocity.y, velocity.z);
+      const radius = Math.hypot(translation.x, translation.z);
+      const rotorVelocity = rotorBody.angvel();
+      const rotorSpeed = Math.abs(rotorVelocity.y);
+      const rotorRotation = rotorBody.rotation();
+      const rotorTranslation = rotorBody.translation();
+      maxBallSpeed = Math.max(maxBallSpeed, ballSpeed);
+      minRadius = Math.min(minRadius, radius);
+      maxRadius = Math.max(maxRadius, radius);
+      const angleBin = Math.floor(
+        ((Math.atan2(translation.x, translation.z) + Math.PI * 2) %
+          (Math.PI * 2) /
+          (Math.PI * 2)) *
+          72,
+      );
+      pathBins.add(angleBin);
+      if (step % 30 === 0) {
+        pathSamples.push(`${angleBin}:${Math.round(radius * 20)}`);
+      }
+
+      if (
+        radius > 3.18 ||
+        translation.y < -0.82 ||
+        translation.y > 2.8
+      ) {
+        tunneled = true;
+      }
+      if (ballSpeed > Math.max(16, initialBallSpeed * 4 + 4)) {
+        velocityExplosion = true;
+      }
+      if (
+        Math.abs(rotorTranslation.x) > 0.01 ||
+        Math.abs(rotorTranslation.y) > 0.01 ||
+        Math.abs(rotorTranslation.z) > 0.01 ||
+        Math.abs(rotorRotation.x) > 0.01 ||
+        Math.abs(rotorRotation.z) > 0.01
+      ) {
+        rotorWobble = true;
+      }
+      if (rotorSpeed < initialRotorSpeed * 0.5 && rotorHalfSpeedTime === 0) {
+        rotorHalfSpeedTime = step * FIXED_TIMESTEP;
+      }
+      if (ballSpeed < initialBallSpeed * 0.5 && ballHalfSpeedTime === 0) {
+        ballHalfSpeedTime = step * FIXED_TIMESTEP;
+      }
+      if (
+        radius < 2.2 &&
+        rotorSpeed > 0.25 &&
+        (ballSpeed > previousBallSpeed + 0.025 ||
+          rotorSpeed < previousRotorSpeed - 0.0005)
+      ) {
+        movingContactEnergy = true;
+      }
+      previousBallSpeed = ballSpeed;
+      previousRotorSpeed = rotorSpeed;
+
+      if (
+        ballSpeed < 0.18 &&
+        radius > 1.08 &&
+        radius < 2.18 &&
+        translation.y > -0.42 &&
+        translation.y < 1.3
+      ) {
+        stableFrames += 1;
+        if (stableFrames >= 120 && !completed) {
+          completed = true;
+          durationSeconds = step * FIXED_TIMESTEP;
+        }
+      } else {
+        stableFrames = 0;
+      }
+    }
+
+    const translation = ballBody.translation();
+    const velocity = ballBody.linvel();
+    const finalSpeed = Math.hypot(velocity.x, velocity.y, velocity.z);
+    const finalRadius = Math.hypot(translation.x, translation.z);
+    invalidTrap =
+      !completed &&
+      finalSpeed < 0.05 &&
+      (finalRadius < 1.05 || translation.y < -0.45);
+    const independentSlowdown =
+      ballHalfSpeedTime > 0 &&
+      rotorHalfSpeedTime > 0 &&
+      Math.abs(ballHalfSpeedTime - rotorHalfSpeedTime) > 0.45;
+    const pathVariance = maxRadius - minRadius;
+    const pathSignature = pathSamples.join('.');
+    results.push({
+      id: `part4-spin-${String(index + 1).padStart(2, '0')}`,
+      completed,
+      durationSeconds,
+      rotorInitialSpeed: initialRotorSpeed,
+      rotorFinalSpeed: Math.abs(rotorBody.angvel().y),
+      ballInitialSpeed: initialBallSpeed,
+      ballFinalSpeed: finalSpeed,
+      maxBallSpeed,
+      finalRadius,
+      pathVariance,
+      pathSignature,
+      movingContactEnergy,
+      rotorWobble,
+      tunneled,
+      velocityExplosion,
+      invalidTrap,
+      detail: completed
+        ? `Natural settle after ${durationSeconds.toFixed(1)} s · ${pathBins.size} angular path bins`
+        : 'Did not reach a valid natural settle within the 18 s audit window',
+    });
+    world.removeRigidBody(ballBody);
+    world.removeRigidBody(rotorBody);
+    world.free();
+  }
+
+  const durations = results.map((result) => result.durationSeconds);
+  const signatures = results.map((result) => result.pathSignature);
+  const repeatedPathCount = signatures.length - new Set(signatures).size;
+  const fixedRadiusCount = results.filter((result) => result.pathVariance < 0.045).length;
+  const completedCount = results.filter((result) => result.completed).length;
+  const movingContactEnergyCount = results.filter(
+    (result) => result.movingContactEnergy,
+  ).length;
+  const rotorWobbleCount = results.filter((result) => result.rotorWobble).length;
+  const tunnelingCount = results.filter((result) => result.tunneled).length;
+  const velocityExplosionCount = results.filter(
+    (result) => result.velocityExplosion,
+  ).length;
+  const invalidTrapCount = results.filter((result) => result.invalidTrap).length;
+  const independentSlowdownCount = results.filter((result) => {
+    const ballDrop = result.ballInitialSpeed - result.ballFinalSpeed;
+    const rotorDrop = result.rotorInitialSpeed - result.rotorFinalSpeed;
+    return Math.abs(ballDrop - rotorDrop) > 0.12;
+  }).length;
+  const durationsInTarget =
+    durations.filter((duration) => duration >= 10 && duration <= 16).length;
+  const aggregatePassed =
+    completedCount === PART4_SPIN_TEST_COUNT &&
+    movingContactEnergyCount >= 15 &&
+    rotorWobbleCount === 0 &&
+    tunnelingCount === 0 &&
+    velocityExplosionCount === 0 &&
+    invalidTrapCount === 0 &&
+    repeatedPathCount === 0 &&
+    fixedRadiusCount === 0 &&
+    independentSlowdownCount >= 15 &&
+    durationsInTarget >= 15;
+
+  return {
+    status: aggregatePassed ? 'passed' : 'failed',
+    testCount: PART4_SPIN_TEST_COUNT,
+    completedCount,
+    movingContactEnergyCount,
+    rotorWobbleCount,
+    tunnelingCount,
+    velocityExplosionCount,
+    invalidTrapCount,
+    repeatedPathCount,
+    fixedRadiusCount,
+    independentSlowdownCount,
+    fpsIndependent: true,
+    medianDurationSeconds: median(durations),
+    minDurationSeconds: Math.min(...durations),
+    maxDurationSeconds: Math.max(...durations),
+    durationMs: Math.round(performance.now() - startedAt),
+    detail: aggregatePassed
+      ? `${PART4_SPIN_TEST_COUNT} complete coupled rotor/ball spins passed at 120 Hz fixed physics.`
+      : `Part 4 review needed: ${results.filter((result) => !result.completed).length} spins missed the acceptance envelope.`,
+    results,
   };
 }
 
@@ -979,7 +1387,10 @@ function SceneViewport({
   rotorTestRequest,
   probeTestRequest,
   ballValidationRequest,
+  part4RunRequest,
   ballParameters,
+  rotorParameters,
+  launchParameters,
   ballCommand,
   onStateChange,
   onAudit,
@@ -988,6 +1399,8 @@ function SceneViewport({
   onPhysicsReport,
   onBallState,
   onBallValidationReport,
+  onPart4State,
+  onPart4ValidationReport,
 }: {
   loadKey: number;
   view: InspectionView;
@@ -1001,7 +1414,10 @@ function SceneViewport({
   rotorTestRequest: number;
   probeTestRequest: number;
   ballValidationRequest: number;
+  part4RunRequest: number;
   ballParameters: BallPhysicsParameters;
+  rotorParameters: RotorPhysicsParameters;
+  launchParameters: BallLaunchParameters;
   ballCommand: BallCommand;
   onStateChange: (state: LoadState, detail?: string) => void;
   onAudit: (audit: AssetAudit) => void;
@@ -1010,6 +1426,8 @@ function SceneViewport({
   onPhysicsReport: (report: PhysicsReport) => void;
   onBallState: (state: 'ready' | 'active' | 'settled', detail?: string) => void;
   onBallValidationReport: (report: BallValidationReport) => void;
+  onPart4State: (state: 'ready' | 'active' | 'complete', detail?: string) => void;
+  onPart4ValidationReport: (report: Part4ValidationReport) => void;
 }) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const stageRef = useRef<HTMLDivElement | null>(null);
@@ -1029,13 +1447,18 @@ function SceneViewport({
   const onPhysicsReportRef = useRef(onPhysicsReport);
   const onBallStateRef = useRef(onBallState);
   const onBallValidationReportRef = useRef(onBallValidationReport);
+  const onPart4StateRef = useRef(onPart4State);
+  const onPart4ValidationReportRef = useRef(onPart4ValidationReport);
   const physicsSpecsRef = useRef<ColliderSpec[]>([]);
   const physicsWorldRef = useRef<RAPIER.World | null>(null);
   const rotorPhysicsBodyRef = useRef<RAPIER.RigidBody | null>(null);
   const ballBodyRef = useRef<RAPIER.RigidBody | null>(null);
   const ballParametersRef = useRef<BallPhysicsParameters>(ballParameters);
+  const rotorParametersRef = useRef<RotorPhysicsParameters>(rotorParameters);
+  const launchParametersRef = useRef<BallLaunchParameters>(launchParameters);
   const rebuildBallRef = useRef<((parameters: BallPhysicsParameters) => void) | null>(null);
   const releaseBallRef = useRef<((profileIndex: number) => void) | null>(null);
+  const startPart4Ref = useRef<(() => void) | null>(null);
   const syncBallRef = useRef<(() => void) | null>(null);
   const variedReleaseIndexRef = useRef(0);
 
@@ -1046,7 +1469,11 @@ function SceneViewport({
   onPhysicsReportRef.current = onPhysicsReport;
   onBallStateRef.current = onBallState;
   onBallValidationReportRef.current = onBallValidationReport;
+  onPart4StateRef.current = onPart4State;
+  onPart4ValidationReportRef.current = onPart4ValidationReport;
   ballParametersRef.current = ballParameters;
+  rotorParametersRef.current = rotorParameters;
+  launchParametersRef.current = launchParameters;
   viewRef.current = view;
 
   useEffect(() => {
@@ -1224,17 +1651,20 @@ function SceneViewport({
            try {
              await RAPIER.init();
              if (disposed) return;
-             physicsWorld = new RAPIER.World({ x: 0, y: -9.81, z: 0 });
+              physicsWorld = new RAPIER.World({ x: 0, y: -9.81, z: 0 });
              physicsWorld.timestep = FIXED_TIMESTEP;
-             physicsWorld.maxCcdSubsteps = 4;
+              physicsWorld.maxCcdSubsteps = 8;
              const stationaryBody = physicsWorld.createRigidBody(RAPIER.RigidBodyDesc.fixed());
-             const rotorBody = physicsWorld.createRigidBody(RAPIER.RigidBodyDesc.kinematicPositionBased());
+              const rotorBody = createDynamicRotorBody(
+                physicsWorld,
+                rotorParametersRef.current,
+              );
              colliderSpecs
                .filter((spec) => spec.body === 'stationary')
                .forEach((spec) => addRapierCollider(physicsWorld!, stationaryBody, spec));
              colliderSpecs
                .filter((spec) => spec.body === 'rotor')
-               .forEach((spec) => addRapierCollider(physicsWorld!, rotorBody, spec));
+                .forEach((spec) => addRapierCollider(physicsWorld!, rotorBody, spec, 0.4, 0.18));
              physicsWorldRef.current = physicsWorld;
              rotorPhysicsBodyRef.current = rotorBody;
              physicsDebug.userData = {
@@ -1291,6 +1721,8 @@ function SceneViewport({
                  parameters,
                  defaultPosition,
                  [0, 0, 0],
+                  parameters.initialAngularVelocity,
+                  false,
                );
                syncBallVisual();
                onBallStateRef.current('ready', `Dynamic sphere · ${parameters.radius.toFixed(3)} wu radius · exact Rapier ball collider`);
@@ -1324,8 +1756,58 @@ function SceneViewport({
                  `Release ${String(profileIndex + 1).padStart(2, '0')} · CCD enabled · ${Math.hypot(...release.velocity).toFixed(2)} wu/s`,
                );
              };
+              const startPart4 = () => {
+                const body = ballBodyRef.current;
+                const rotorBody = rotorPhysicsBodyRef.current;
+                if (!body || !rotorBody) return;
+                const release = part4LaunchProfile(
+                  0,
+                  ballParametersRef.current,
+                  launchParametersRef.current,
+                );
+                rotorBody.setAngvel(
+                  {
+                    x: 0,
+                    y: rotorParametersRef.current.initialAngularVelocity,
+                    z: 0,
+                  },
+                  true,
+                );
+                body.setTranslation(
+                  {
+                    x: release.position[0],
+                    y: release.position[1],
+                    z: release.position[2],
+                  },
+                  true,
+                );
+                body.setLinvel(
+                  {
+                    x: release.velocity[0],
+                    y: release.velocity[1],
+                    z: release.velocity[2],
+                  },
+                  true,
+                );
+                body.setAngvel(
+                  {
+                    x: release.spinAxis[0] * release.spin,
+                    y: 0,
+                    z: release.spinAxis[2] * release.spin,
+                  },
+                  true,
+                );
+                rotorBody.wakeUp();
+                body.wakeUp();
+                syncBallVisual();
+                onPart4StateRef.current(
+                  'active',
+                  `Coupled launch · rotor ${rotorParametersRef.current.initialAngularVelocity.toFixed(2)} rad/s · ball ${Math.hypot(...release.velocity).toFixed(2)} wu/s`,
+                );
+              };
              rebuildBallRef.current = rebuildBall;
              releaseBallRef.current = releaseBall;
+              startPart4Ref.current = startPart4;
              syncBallRef.current = syncBallVisual;
              rebuildBall(ballParametersRef.current);
            }
@@ -1444,14 +1926,16 @@ function SceneViewport({
          physicsAccumulator += Math.min((now - physicsLastTime) / 1000, 0.1);
          physicsLastTime = now;
          while (physicsAccumulator >= FIXED_TIMESTEP && physicsWorld && rotorPhysicsBodyRef.current) {
-           const rotation = rotorGroupRef.current?.rotation.y ?? 0;
-           rotorPhysicsBodyRef.current.setNextKinematicRotation({
-             x: 0,
-             y: Math.sin(rotation / 2),
-             z: 0,
-             w: Math.cos(rotation / 2),
-           });
            physicsWorld.step();
+            const rotorRotation = rotorPhysicsBodyRef.current.rotation();
+            if (rotorGroupRef.current) {
+              rotorGroupRef.current.quaternion.set(
+                rotorRotation.x,
+                rotorRotation.y,
+                rotorRotation.z,
+                rotorRotation.w,
+              );
+            }
            syncBallRef.current?.();
            physicsAccumulator -= FIXED_TIMESTEP;
          }
@@ -1528,44 +2012,9 @@ function SceneViewport({
   }, [showSectorOverlay]);
 
   useEffect(() => {
-    if (rotorGroupRef.current) {
-      rotorGroupRef.current.rotation.y = THREE.MathUtils.degToRad(rotorAngle);
-    }
-  }, [rotorAngle]);
-
-  useEffect(() => {
-    const rotorGroup = rotorGroupRef.current;
-    if (!rotorGroup || rotorTestRequest === 0) return undefined;
-
-    let frame = 0;
-    let cancelled = false;
-    const cycles = 3;
-    const duration = 2100;
-    const startTime = performance.now();
-    const referenceAngle = 0;
-    onRotorTestStateRef.current('running', `${cycles} × 360° diagnostic rotation`);
-
-    const tick = (now: number) => {
-      if (cancelled) return;
-      const progress = Math.min((now - startTime) / duration, 1);
-      const easedProgress = progress < 0.5
-        ? 4 * progress * progress * progress
-        : 1 - Math.pow(-2 * progress + 2, 3) / 2;
-      rotorGroup.rotation.y = referenceAngle - easedProgress * Math.PI * 2 * cycles;
-      if (progress < 1) {
-        frame = requestAnimationFrame(tick);
-        return;
-      }
-      rotorGroup.rotation.y = referenceAngle;
-      onRotorAngleChangeRef.current(0);
-      onRotorTestStateRef.current('passed', '3 × 360° complete · pivot remained locked');
-    };
-
-    frame = requestAnimationFrame(tick);
-    return () => {
-      cancelled = true;
-      cancelAnimationFrame(frame);
-    };
+    if (rotorTestRequest === 0) return;
+    onRotorTestStateRef.current('running', 'Physics rotor + tangential launch active');
+    startPart4Ref.current?.();
   }, [rotorTestRequest]);
 
   useEffect(() => {
@@ -1618,6 +2067,34 @@ function SceneViewport({
       cancelled = true;
     };
   }, [ballValidationRequest]);
+
+  useEffect(() => {
+    if (part4RunRequest === 0 || physicsSpecsRef.current.length === 0) return undefined;
+    let cancelled = false;
+    onPart4ValidationReportRef.current({
+      ...EMPTY_PART4_REPORT,
+      status: 'running',
+      testCount: PART4_SPIN_TEST_COUNT,
+      detail: `Running ${PART4_SPIN_TEST_COUNT} complete coupled rotor/ball spins at ${Math.round(1 / FIXED_TIMESTEP)} Hz…`,
+    });
+    void runPart4Validation(
+      physicsSpecsRef.current,
+      ballParametersRef.current,
+      rotorParametersRef.current,
+      launchParametersRef.current,
+    ).then((report) => {
+      if (!cancelled) {
+        onPart4ValidationReportRef.current(report);
+        onPart4StateRef.current(
+          report.status === 'passed' ? 'complete' : 'ready',
+          report.detail,
+        );
+      }
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [part4RunRequest]);
 
   return (
     <div ref={stageRef} className="scene-stage" data-testid="canvas-viewport">
@@ -1743,12 +2220,25 @@ function App() {
   const [ballParameters, setBallParameters] = useState<BallPhysicsParameters>({
     ...DEFAULT_BALL_PARAMETERS,
   });
+  const [rotorParameters, setRotorParameters] = useState<RotorPhysicsParameters>({
+    ...DEFAULT_ROTOR_PARAMETERS,
+  });
+  const [launchParameters, setLaunchParameters] = useState<BallLaunchParameters>({
+    ...DEFAULT_LAUNCH_PARAMETERS,
+  });
   const [ballCommand, setBallCommand] = useState<BallCommand>({ kind: 'reset', token: 0 });
   const [ballState, setBallState] = useState<'ready' | 'active' | 'settled'>('ready');
   const [ballStateDetail, setBallStateDetail] = useState('Waiting for the dynamic body.');
   const [ballValidationRequest, setBallValidationRequest] = useState(0);
   const [ballValidationReport, setBallValidationReport] =
     useState<BallValidationReport>(EMPTY_BALL_REPORT);
+  const [part4RunRequest, setPart4RunRequest] = useState(0);
+  const [part4State, setPart4State] = useState<'ready' | 'active' | 'complete'>('ready');
+  const [part4StateDetail, setPart4StateDetail] = useState(
+    'Real rotor dynamics and launch are waiting.',
+  );
+  const [part4Report, setPart4Report] =
+    useState<Part4ValidationReport>(EMPTY_PART4_REPORT);
 
   const handleStateChange = useCallback((state: LoadState, detail?: string) => {
     setLoadState(state);
@@ -1763,7 +2253,7 @@ function App() {
   };
   const runRotorTest = () => {
     setRotorTestState('running');
-    setRotorTestDetail('3 × 360° diagnostic rotation');
+    setRotorTestDetail('Physics rotor + tangential launch');
     setRotorTestRequest((current) => current + 1);
   };
   const runProbeTest = () => {
@@ -1775,6 +2265,12 @@ function App() {
   const updateBallParameter = (key: keyof BallPhysicsParameters, value: number) => {
     setBallParameters((current) => ({ ...current, [key]: value }));
   };
+  const updateRotorParameter = (key: keyof RotorPhysicsParameters, value: number) => {
+    setRotorParameters((current) => ({ ...current, [key]: value }));
+  };
+  const updateLaunchParameter = (key: keyof BallLaunchParameters, value: number) => {
+    setLaunchParameters((current) => ({ ...current, [key]: value }));
+  };
   const runBallValidation = () => {
     setBallValidationReport({
       ...EMPTY_BALL_REPORT,
@@ -1782,6 +2278,17 @@ function App() {
        detail: `Running ${BALL_VALIDATION_TEST_COUNT} varied dynamic-body tests at ${Math.round(1 / FIXED_TIMESTEP)} Hz with CCD…`,
     });
     setBallValidationRequest((current) => current + 1);
+  };
+  const runPart4Audit = () => {
+    setPart4Report({
+      ...EMPTY_PART4_REPORT,
+      status: 'running',
+      testCount: PART4_SPIN_TEST_COUNT,
+      detail: `Running ${PART4_SPIN_TEST_COUNT} complete coupled rotor/ball spins…`,
+    });
+    setPart4State('active');
+    setPart4StateDetail(`Running ${PART4_SPIN_TEST_COUNT} complete physics spins…`);
+    setPart4RunRequest((current) => current + 1);
   };
   const retryLoad = () => {
     setAudit(null);
@@ -1798,6 +2305,13 @@ function App() {
     (state: 'ready' | 'active' | 'settled', detail?: string) => {
       setBallState(state);
       if (detail) setBallStateDetail(detail);
+    },
+    [],
+  );
+  const handlePart4State = useCallback(
+    (state: 'ready' | 'active' | 'complete', detail?: string) => {
+      setPart4State(state);
+      if (detail) setPart4StateDetail(detail);
     },
     [],
   );
@@ -1964,32 +2478,93 @@ function App() {
           </section>
 
           <section className="inspector-section rotor-test-panel">
-            <div className="section-label">ROTOR PIVOT TEST</div>
+            <div className="section-label">PART 4 · PHYSICAL ROTOR DYNAMICS</div>
             <div className="rotor-angle-readout">
-              <span>Reference angle</span>
-              <strong data-testid="text-rotor-angle">{rotorAngle.toFixed(1)}°</strong>
+              <span>Axis lock</span>
+              <strong data-testid="text-rotor-angle">Y+ / 0°</strong>
             </div>
-            <input
-              className="rotor-angle-slider"
-              type="range"
-              min="-180"
-              max="180"
-              step="1"
-              value={rotorAngle}
-              onChange={(event) => setRotorAngle(Number(event.target.value))}
-              aria-label="Rotor reference angle"
-              data-testid="input-rotor-angle"
-            />
+            <div className="ball-parameter-grid">
+              <BallParameterField
+                label="Rotor angular velocity"
+                value={rotorParameters.initialAngularVelocity}
+                min={0.5}
+                max={12}
+                step={0.1}
+                unit="rad/s"
+                testId="input-rotor-angular-velocity"
+                onChange={(value) => updateRotorParameter('initialAngularVelocity', value)}
+              />
+              <BallParameterField
+                label="Rotor angular damping"
+                value={rotorParameters.angularDamping}
+                min={0}
+                max={0.5}
+                step={0.005}
+                unit="s⁻¹"
+                testId="input-rotor-angular-damping"
+                onChange={(value) => updateRotorParameter('angularDamping', value)}
+              />
+              <BallParameterField
+                label="Rotor mass"
+                value={rotorParameters.mass}
+                min={0.2}
+                max={10}
+                step={0.1}
+                unit="kg"
+                testId="input-rotor-mass"
+                onChange={(value) => updateRotorParameter('mass', value)}
+              />
+              <BallParameterField
+                label="Launch speed"
+                value={launchParameters.speed}
+                min={1}
+                max={8}
+                step={0.05}
+                unit="wu/s"
+                testId="input-launch-speed"
+                onChange={(value) => updateLaunchParameter('speed', value)}
+              />
+              <BallParameterField
+                label="Launch angle"
+                value={launchParameters.angle}
+                min={-12}
+                max={12}
+                step={0.5}
+                unit="°"
+                testId="input-launch-angle"
+                onChange={(value) => updateLaunchParameter('angle', value)}
+              />
+              <BallParameterField
+                label="Initial ball spin"
+                value={launchParameters.initialSpin}
+                min={0}
+                max={80}
+                step={1}
+                unit="rad/s"
+                testId="input-launch-spin"
+                onChange={(value) => updateLaunchParameter('initialSpin', value)}
+              />
+              <BallParameterField
+                label="Launch variation"
+                value={launchParameters.variation}
+                min={0}
+                max={0.25}
+                step={0.01}
+                unit="ratio"
+                testId="input-launch-variation"
+                onChange={(value) => updateLaunchParameter('variation', value)}
+              />
+            </div>
             <div className="rotor-test-actions">
               <button type="button" className="secondary-button" onClick={resetRotor} data-testid="button-rotor-reset">
-                Reset rotor
+                Reset reference
               </button>
               <button type="button" className="primary-button" onClick={runRotorTest} data-testid="button-rotor-test">
-                Run 3 × 360°
+                Launch coupled spin
               </button>
             </div>
             <div className={`rotor-test-status rotor-test-${rotorTestState}`} data-testid="status-rotor-test">
-              <span>{rotorTestState === 'passed' ? 'PIVOT TEST PASSED' : rotorTestState === 'running' ? 'TEST RUNNING' : 'READY'}</span>
+              <span>{rotorTestState === 'passed' ? 'PHYSICS ROTOR READY' : rotorTestState === 'running' ? 'COUPLED SPIN ACTIVE' : 'READY'}</span>
               <small>{rotorTestDetail}</small>
             </div>
           </section>
@@ -2146,13 +2721,125 @@ function App() {
             </div>
           </section>
 
+          <section className="inspector-section rotor-test-panel" data-testid="part4-validation-panel">
+            <div className="section-label">PART 4 · COUPLED SPIN ACCEPTANCE</div>
+            <div className="physics-summary">
+              <div>
+                <span>Runtime spins</span>
+                <strong>{part4Report.testCount || PART4_SPIN_TEST_COUNT}</strong>
+              </div>
+              <div>
+                <span>Fixed step</span>
+                <strong>{Math.round(1 / FIXED_TIMESTEP)} Hz</strong>
+              </div>
+              <div>
+                <span>CCD</span>
+                <strong>8 substeps</strong>
+              </div>
+            </div>
+            <button
+              type="button"
+              className="primary-button"
+              onClick={runPart4Audit}
+              disabled={part4Report.status === 'running' || !audit}
+              data-testid="button-run-part4-validation"
+            >
+              {part4Report.status === 'running'
+                ? `Running ${PART4_SPIN_TEST_COUNT} full spins…`
+                : `Run ${PART4_SPIN_TEST_COUNT} full runtime spins`}
+            </button>
+            <div className={`probe-status probe-${part4Report.status}`} data-testid="status-part4-validation">
+              <span>
+                {part4Report.status === 'passed'
+                  ? 'PART 4 ACCEPTANCE PASSED'
+                  : part4Report.status === 'failed'
+                    ? 'PART 4 ACCEPTANCE NEEDS REVIEW'
+                    : part4Report.status === 'running'
+                      ? 'PART 4 AUDIT RUNNING'
+                      : 'PART 4 AUDIT READY'}
+              </span>
+              <small>{part4Report.detail}</small>
+            </div>
+            {part4Report.testCount > 0 && (
+              <div className="physics-summary" data-testid="part4-validation-metrics">
+                <div>
+                  <span>Completed</span>
+                  <strong>{part4Report.completedCount}/{part4Report.testCount}</strong>
+                </div>
+                <div>
+                  <span>Median spin</span>
+                  <strong>{part4Report.medianDurationSeconds.toFixed(1)} s</strong>
+                </div>
+                <div>
+                  <span>Range</span>
+                  <strong>{part4Report.minDurationSeconds.toFixed(1)}–{part4Report.maxDurationSeconds.toFixed(1)} s</strong>
+                </div>
+                <div>
+                  <span>Moving contact energy</span>
+                  <strong>{part4Report.movingContactEnergyCount}/{part4Report.testCount}</strong>
+                </div>
+                <div>
+                  <span>Independent slowdown</span>
+                  <strong>{part4Report.independentSlowdownCount}/{part4Report.testCount}</strong>
+                </div>
+                <div>
+                  <span>Path repeats</span>
+                  <strong>{part4Report.repeatedPathCount}</strong>
+                </div>
+                <div>
+                  <span>Fixed-radius paths</span>
+                  <strong>{part4Report.fixedRadiusCount}</strong>
+                </div>
+              </div>
+            )}
+            {part4Report.testCount > 0 && (
+              <div className="ball-validation-safety" data-testid="part4-validation-safety">
+                <span className={part4Report.rotorWobbleCount === 0 ? 'is-good' : 'is-bad'}>
+                  {part4Report.rotorWobbleCount} rotor wobble / drift
+                </span>
+                <span className={part4Report.tunnelingCount === 0 ? 'is-good' : 'is-bad'}>
+                  {part4Report.tunnelingCount} tunneling / escape
+                </span>
+                <span className={part4Report.velocityExplosionCount === 0 ? 'is-good' : 'is-bad'}>
+                  {part4Report.velocityExplosionCount} velocity explosions
+                </span>
+                <span className={part4Report.invalidTrapCount === 0 ? 'is-good' : 'is-bad'}>
+                  {part4Report.invalidTrapCount} invalid traps
+                </span>
+                <span className={part4Report.fpsIndependent ? 'is-good' : 'is-bad'}>
+                  {part4Report.fpsIndependent ? 'fixed-step / FPS independent' : 'FPS dependent'}
+                </span>
+              </div>
+            )}
+            {part4Report.results.length > 0 && (
+              <div className="probe-result-list" data-testid="part4-result-rows">
+                {part4Report.results.map((result) => (
+                  <div className="probe-result-row" key={result.id}>
+                    <span>{result.id}</span>
+                    <strong>{result.completed ? 'complete' : 'review'}</strong>
+                    <small>
+                      {result.durationSeconds.toFixed(1)} s · r {result.finalRadius.toFixed(2)} · Δr {result.pathVariance.toFixed(2)} ·
+                      {result.movingContactEnergy ? ' moving contact' : ' no moving contact'}
+                      {result.tunneled ? ' · escape' : ''}
+                      {result.velocityExplosion ? ' · velocity spike' : ''}
+                    </small>
+                  </div>
+                ))}
+              </div>
+            )}
+            <div className={`probe-status probe-${part4State}`} data-testid="status-part4-runtime">
+              <span>{part4State === 'active' ? 'COUPLED PHYSICS ACTIVE' : part4State === 'complete' ? 'COUPLED PHYSICS READY' : 'COUPLED PHYSICS READY'}</span>
+              <small>{part4StateDetail}</small>
+            </div>
+          </section>
+
           <section className="physics-note" data-testid="status-physics">
             <div className="note-icon">
               <ShieldCheck size={17} />
             </div>
             <div>
-                <strong>Part 3 · isolated dynamic ball</strong>
-                <p>The visible ball is a clean sphere with a matching Rapier ball collider and real angular motion. Production launch, betting, round timing, and Part 4 remain disconnected.</p>
+                <strong>Part 4 · isolated coupled physics</strong>
+                <p>The rotor is a Y-axis constrained dynamic body and the ball launches tangentially into the primitive outer track. Production launch, betting, round timing, and /roulette remain disconnected.</p>
             </div>
           </section>
 
@@ -2204,7 +2891,10 @@ function App() {
               rotorTestRequest={rotorTestRequest}
                probeTestRequest={probeTestRequest}
                ballValidationRequest={ballValidationRequest}
+              part4RunRequest={part4RunRequest}
                ballParameters={ballParameters}
+              rotorParameters={rotorParameters}
+              launchParameters={launchParameters}
                ballCommand={ballCommand}
               onStateChange={handleStateChange}
               onAudit={setAudit}
@@ -2213,6 +2903,8 @@ function App() {
                onPhysicsReport={setPhysicsReport}
                onBallState={handleBallState}
                onBallValidationReport={setBallValidationReport}
+              onPart4State={handlePart4State}
+              onPart4ValidationReport={setPart4Report}
             />
             {loadState === 'loading' && (
               <div className="viewport-overlay" data-testid="status-loading" role="status" aria-live="polite">

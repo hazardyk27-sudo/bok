@@ -22,3 +22,4 @@
 - [Physics Lab runtime verification](physics-lab-runtime.md) — verify GLB bytes and WebGL with direct Chromium because proxy screenshots may lack WebGL and misrouted assets can return HTML 200s.
 - [Roulette Part 1 visual decomposition](roulette-part1-visual-decomposition.md) — normalized scale and European number-ring indexing are verified for future physics alignment.
 - [Physics Lab Part 3 validation](physics-lab-part3-validation.md) — center dynamic-ball tests on sector interiors and keep a catch floor; segmented seam starts can create false velocity explosions.
+- [Physics Lab Part 4 dynamics](physics-lab-part4-dynamics.md) — dynamic rotor colliders need rotor/stationary collision isolation and release calibration inside a proven transition band.
