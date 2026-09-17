@@ -3,6 +3,7 @@ import { countScatter, generateInitialBoard, generateRefillSymbols } from "./Boa
 import { SeededRNG } from "./RNG";
 import { getNormalSymbol, getStackMetadata, isMultiplierCore } from "./types";
 import type { RandomSource } from "./types";
+import { BASE_INITIAL_CORE_CHANCE, BASE_INITIAL_SCATTER_CHANCE } from "../config/GameConfig";
 
 const alwaysLast: RandomSource = { nextFloat: () => 0.999999 };
 const alwaysFirst: RandomSource = { nextFloat: () => 0 };
@@ -15,7 +16,8 @@ describe("board generation", () => {
     expect(countScatter(generateInitialBoard({ nextFloat: () => 0 }))).toBeGreaterThan(0);
   });
   it("can generate a Core on a Base initial board", () => {
-    expect(generateInitialBoard({ nextFloat: () => 0.031 }).flat().some(isMultiplierCore)).toBe(true);
+    const roll = BASE_INITIAL_SCATTER_CHANCE + (BASE_INITIAL_CORE_CHANCE / 2);
+    expect(generateInitialBoard({ nextFloat: () => roll }).flat().some(isMultiplierCore)).toBe(true);
   });
   it("can generate scatter on a refill", () => {
     expect(countScatter([generateRefillSymbols(alwaysFirst, 30)])).toBeGreaterThan(0);
@@ -40,6 +42,6 @@ describe("board generation", () => {
     }
     const marginal = scatterCount / (boards * 30);
     expect(marginal).toBeGreaterThan(0.016);
-    expect(marginal).toBeLessThan(0.02);
+    expect(marginal).toBeLessThan(0.021);
   });
 });

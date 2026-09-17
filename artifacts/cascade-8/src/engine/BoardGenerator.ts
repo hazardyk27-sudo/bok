@@ -71,10 +71,15 @@ const weightedChoiceFromRoll = <T>(
 
 export class ColumnStream {
   private readonly queue: BoardCell[] = [];
+
   private pairPhase: "FIRST" | "SECOND" = "FIRST";
+
   private pairBaseSymbol: NormalSymbolId | null = null;
+
   private activePairId: number | null = null;
+
   private nextStackSequence = 1;
+
   readonly stats: ColumnStreamStats = {
     pairCount: 0,
     copyBranchCount: 0,
@@ -132,11 +137,11 @@ export class ColumnStream {
       ? BASE_INITIAL_CORE_CHANCE
       : context === "BASE_REFILL"
         ? BASE_REFILL_CORE_CHANCE
-      : context === "BONUS_INITIAL"
-        ? BONUS_INITIAL_CORE_CHANCE
-        : context === "BONUS_REFILL"
-          ? BONUS_REFILL_CORE_CHANCE
-          : 0;
+        : context === "BONUS_INITIAL"
+          ? BONUS_INITIAL_CORE_CHANCE
+          : context === "BONUS_REFILL"
+            ? BONUS_REFILL_CORE_CHANCE
+            : 0;
 
     // Once a normal group has emitted its first member, the second member
     // is the next physical stream position. Specials can begin a position,

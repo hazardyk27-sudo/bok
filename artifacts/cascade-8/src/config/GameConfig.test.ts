@@ -1,5 +1,16 @@
 import { describe, expect, it } from "vitest";
-import { BASE_REFILL_CORE_CHANCE, BETS_CENTS, getMultiplierCoreVisualTier } from "./GameConfig";
+import {
+  BASE_INITIAL_CORE_CHANCE,
+  BASE_INITIAL_SCATTER_CHANCE,
+  BASE_REFILL_CORE_CHANCE,
+  BASE_REFILL_SCATTER_CHANCE,
+  BETS_CENTS,
+  BONUS_INITIAL_CORE_CHANCE,
+  BONUS_INITIAL_SCATTER_CHANCE,
+  BONUS_REFILL_CORE_CHANCE,
+  BONUS_REFILL_SCATTER_CHANCE,
+  getMultiplierCoreVisualTier,
+} from "./GameConfig";
 
 describe("bet configuration", () => {
   it("allows progressive bets up to $1,000,000", () => {
@@ -17,8 +28,19 @@ describe("bet configuration", () => {
   });
 });
 
-describe("base Core configuration", () => {
-  it("uses a 0.7% Core chance on eligible base refill positions", () => {
+
+describe("special-symbol configuration", () => {
+  it("uses the requested Scatter chances", () => {
+    expect(BASE_INITIAL_SCATTER_CHANCE).toBe(0.03);
+    expect(BASE_REFILL_SCATTER_CHANCE).toBe(0.04);
+    expect(BONUS_INITIAL_SCATTER_CHANCE).toBe(0.03);
+    expect(BONUS_REFILL_SCATTER_CHANCE).toBe(0.035);
+  });
+
+  it("uses the requested Core chances", () => {
+    expect(BASE_INITIAL_CORE_CHANCE).toBe(0.002);
     expect(BASE_REFILL_CORE_CHANCE).toBe(0.007);
+    expect(BONUS_INITIAL_CORE_CHANCE).toBe(0.035);
+    expect(BONUS_REFILL_CORE_CHANCE).toBe(0.05);
   });
 });
