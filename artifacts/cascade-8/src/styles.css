@@ -2668,6 +2668,77 @@ button:focus-visible, input:focus-visible { outline: 2px solid var(--cyan); outl
   }
 }
 
+/* Final mobile viewport fit: keep the dock anchored to the bottom while
+   the board absorbs the flexible space above the result panel. */
+@media (max-width: 620px) {
+  html,
+  body,
+  #app {
+    height: 100%;
+    overflow: hidden;
+  }
+
+  .app-shell:not(.is-lab) {
+    height: 100dvh;
+    min-height: 100dvh;
+    overflow: hidden;
+  }
+
+  .app-shell:not(.is-lab) .game-layout {
+    display: flex;
+    flex: 1 1 auto;
+    flex-direction: column;
+    min-height: 0;
+    overflow: hidden;
+  }
+
+  .app-shell:not(.is-lab) .game-stage {
+    display: flex;
+    flex: 1 1 auto;
+    flex-direction: column;
+    min-height: 0;
+    overflow: hidden;
+  }
+
+  .app-shell:not(.is-lab) .board-wrap {
+    flex: 0 0 auto;
+    margin-top: auto;
+    margin-bottom: 0;
+  }
+
+  .app-shell:not(.is-lab) #phaser-board {
+    flex: 0 0 auto;
+    height: auto;
+    aspect-ratio: 620 / 520;
+  }
+
+  .app-shell:not(.is-lab) .tumble-win-panel {
+    flex: 0 0 auto;
+    margin-top: 1.5px;
+    margin-bottom: 1.5px;
+  }
+
+  .app-shell:not(.is-lab) .tumble-win-panel.is-active,
+  .app-shell:not(.is-lab) .tumble-win-panel.is-settling,
+  .app-shell:not(.is-lab) .tumble-win-panel.is-free-total {
+    margin-top: 1.5px;
+    margin-bottom: 1.5px;
+  }
+
+  .app-shell:not(.is-lab) .status-line {
+    flex: 0 0 0;
+  }
+
+  .app-shell:not(.is-lab) .control-deck {
+    flex: 0 0 auto;
+    margin-top: 0;
+  }
+
+  .app-shell:not(.is-lab) .demo-note {
+    flex: 0 0 auto;
+  }
+}
+
 /* Active bonus ceremonies own the mobile viewport. Keep the dock out of the
    hit area and give the panel its own safe-area-aware scroll container. */
 .bonus-overlay {
