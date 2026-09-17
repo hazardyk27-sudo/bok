@@ -1,0 +1,1193 @@
+@import url('https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Manrope:wght@400;500;600;700;800&display=swap');
+@import 'tailwindcss';
+@import 'tw-animate-css';
+@plugin "@tailwindcss/typography";
+
+@custom-variant dark (&:is(.dark *));
+
+@theme inline {
+  --color-background: hsl(var(--background));
+  --color-foreground: hsl(var(--foreground));
+  --color-border: hsl(var(--border));
+  --color-input: hsl(var(--input));
+  --color-ring: hsl(var(--ring));
+
+  --color-card: hsl(var(--card));
+  --color-card-foreground: hsl(var(--card-foreground));
+  --color-card-border: hsl(var(--card-border));
+
+  --color-popover: hsl(var(--popover));
+  --color-popover-foreground: hsl(var(--popover-foreground));
+  --color-popover-border: hsl(var(--popover-border));
+
+  --color-primary: hsl(var(--primary));
+  --color-primary-foreground: hsl(var(--primary-foreground));
+  --color-primary-border: var(--primary-border);
+
+  --color-secondary: hsl(var(--secondary));
+  --color-secondary-foreground: hsl(var(--secondary-foreground));
+  --color-secondary-border: var(--secondary-border);
+
+  --color-muted: hsl(var(--muted));
+  --color-muted-foreground: hsl(var(--muted-foreground));
+  --color-muted-border: var(--muted-border);
+
+  --color-accent: hsl(var(--accent));
+  --color-accent-foreground: hsl(var(--accent-foreground));
+  --color-accent-border: var(--accent-border);
+
+  --color-destructive: hsl(var(--destructive));
+  --color-destructive-foreground: hsl(var(--destructive-foreground));
+  --color-destructive-border: var(--destructive-border);
+
+  --color-chart-1: hsl(var(--chart-1));
+  --color-chart-2: hsl(var(--chart-2));
+  --color-chart-3: hsl(var(--chart-3));
+  --color-chart-4: hsl(var(--chart-4));
+  --color-chart-5: hsl(var(--chart-5));
+
+  --color-sidebar: hsl(var(--sidebar));
+  --color-sidebar-foreground: hsl(var(--sidebar-foreground));
+  --color-sidebar-border: hsl(var(--sidebar-border));
+  --color-sidebar-primary: hsl(var(--sidebar-primary));
+  --color-sidebar-primary-foreground: hsl(var(--sidebar-primary-foreground));
+  --color-sidebar-primary-border: var(--sidebar-primary-border);
+  --color-sidebar-accent: hsl(var(--sidebar-accent));
+  --color-sidebar-accent-foreground: hsl(var(--sidebar-accent-foreground));
+  --color-sidebar-accent-border: var(--sidebar-accent-border);
+  --color-sidebar-ring: hsl(var(--sidebar-ring));
+
+  --font-sans: var(--app-font-sans);
+  --font-serif: var(--app-font-serif);
+  --font-mono: var(--app-font-mono);
+
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+}
+
+/* LIGHT MODE */
+:root {
+  --button-outline: rgba(0, 0, 0, 0.1);
+  --badge-outline: rgba(0, 0, 0, 0.05);
+
+  /* Automatic computation of border around primary / danger buttons */
+  --opaque-button-border-intensity: -8; /* In terms of percentages */
+
+  /* Backgrounds applied on top of other backgrounds when hovered/active */
+  --elevate-1: rgba(0, 0, 0, 0.03);
+  --elevate-2: rgba(0, 0, 0, 0.08);
+
+  --background: 42 24% 94%;
+
+  --foreground: 199 27% 16%;
+
+  --border: 39 14% 82%;
+
+  --card: 42 31% 97%;
+
+  --card-foreground: 199 27% 16%;
+
+  --card-border: 39 16% 84%;
+
+  --sidebar: 201 25% 20%;
+
+  --sidebar-foreground: 42 25% 91%;
+
+  --sidebar-border: 198 18% 29%;
+
+  --sidebar-primary: 31 58% 63%;
+
+  --sidebar-primary-foreground: 199 27% 16%;
+
+  --sidebar-accent: 197 19% 27%;
+
+  --sidebar-accent-foreground: 42 25% 91%;
+
+  --sidebar-ring: 31 58% 63%;
+
+  --popover: 42 31% 97%;
+
+  --popover-foreground: 199 27% 16%;
+
+  --popover-border: 39 16% 84%;
+
+  --primary: 198 39% 31%;
+
+  --primary-foreground: 42 25% 96%;
+
+  --secondary: 39 16% 86%;
+
+  --secondary-foreground: 199 27% 16%;
+
+  --muted: 39 14% 88%;
+
+  --muted-foreground: 199 10% 43%;
+
+  --accent: 31 58% 63%;
+
+  --accent-foreground: 199 27% 16%;
+
+  --destructive: 5 60% 53%;
+
+  --destructive-foreground: 42 25% 96%;
+
+  --input: 39 15% 78%;
+  --ring: 31 58% 63%;
+  --chart-1: 198 39% 31%;
+  --chart-2: 31 58% 63%;
+  --chart-3: 161 29% 43%;
+  --chart-4: 5 60% 53%;
+  --chart-5: 39 53% 62%;
+
+  --app-font-sans: 'Manrope', sans-serif;
+  --app-font-serif: 'Manrope', sans-serif;
+  --app-font-mono: 'DM Mono', monospace;
+  --radius: 0.5rem; /* 8px */
+  --shadow-2xs: 0px 2px 0px 0px hsl(202.8169 89.1213% 53.1373% / 0); /*replace with H S L */
+  --shadow-xs: 0px 2px 0px 0px hsl(202.8169 89.1213% 53.1373% / 0); /*replace with H S L */
+  --shadow-sm:
+    0px 2px 0px 0px hsl(202.8169 89.1213% 53.1373% / 0),
+    0px 1px 2px -1px hsl(202.8169 89.1213% 53.1373% / 0);
+  --shadow:
+    0px 2px 0px 0px hsl(202.8169 89.1213% 53.1373% / 0),
+    0px 1px 2px -1px hsl(202.8169 89.1213% 53.1373% / 0);
+  --shadow-md:
+    0px 2px 0px 0px hsl(202.8169 89.1213% 53.1373% / 0),
+    0px 2px 4px -1px hsl(202.8169 89.1213% 53.1373% / 0);
+  --shadow-lg:
+    0px 2px 0px 0px hsl(202.8169 89.1213% 53.1373% / 0),
+    0px 4px 6px -1px hsl(202.8169 89.1213% 53.1373% / 0);
+  --shadow-xl:
+    0px 2px 0px 0px hsl(202.8169 89.1213% 53.1373% / 0),
+    0px 8px 10px -1px hsl(202.8169 89.1213% 53.1373% / 0);
+  --shadow-2xl: 0px 2px 0px 0px hsl(202.8169 89.1213% 53.1373% / 0);
+  --tracking-normal: 0em;
+  --spacing: 0.25rem;
+
+  /* Automatically computed borders - intensity can be controlled by the user by the --opaque-button-border-intensity setting */
+
+  /* Fallback for older browsers */
+  --sidebar-primary-border: hsl(var(--sidebar-primary));
+  --sidebar-primary-border: hsl(
+    from hsl(var(--sidebar-primary)) h s
+      calc(l + var(--opaque-button-border-intensity)) / alpha
+  );
+
+  /* Fallback for older browsers */
+  --sidebar-accent-border: hsl(var(--sidebar-accent));
+  --sidebar-accent-border: hsl(
+    from hsl(var(--sidebar-accent)) h s
+      calc(l + var(--opaque-button-border-intensity)) / alpha
+  );
+
+  /* Fallback for older browsers */
+  --primary-border: hsl(var(--primary));
+  --primary-border: hsl(
+    from hsl(var(--primary)) h s
+      calc(l + var(--opaque-button-border-intensity)) / alpha
+  );
+
+  /* Fallback for older browsers */
+  --secondary-border: hsl(var(--secondary));
+  --secondary-border: hsl(
+    from hsl(var(--secondary)) h s
+      calc(l + var(--opaque-button-border-intensity)) / alpha
+  );
+
+  /* Fallback for older browsers */
+  --muted-border: hsl(var(--muted));
+  --muted-border: hsl(
+    from hsl(var(--muted)) h s calc(l + var(--opaque-button-border-intensity)) /
+      alpha
+  );
+
+  /* Fallback for older browsers */
+  --accent-border: hsl(var(--accent));
+  --accent-border: hsl(
+    from hsl(var(--accent)) h s
+      calc(l + var(--opaque-button-border-intensity)) / alpha
+  );
+
+  /* Fallback for older browsers */
+  --destructive-border: hsl(var(--destructive));
+  --destructive-border: hsl(
+    from hsl(var(--destructive)) h s
+      calc(l + var(--opaque-button-border-intensity)) / alpha
+  );
+}
+
+.dark {
+  --button-outline: rgba(255, 255, 255, 0.1);
+  --badge-outline: rgba(255, 255, 255, 0.05);
+
+  --opaque-button-border-intensity: 9; /* In terms of percentages */
+
+  /* Backgrounds applied on top of other backgrounds when hovered/active */
+  --elevate-1: rgba(255, 255, 255, 0.04);
+  --elevate-2: rgba(255, 255, 255, 0.09);
+
+  --background: 200 25% 11%;
+
+  --foreground: 42 25% 92%;
+
+  --border: 198 18% 29%;
+
+  --card: 199 25% 16%;
+
+  --card-foreground: 42 25% 92%;
+
+  --card-border: 198 18% 29%;
+
+  --sidebar: 199 29% 9%;
+
+  --sidebar-foreground: 42 25% 92%;
+
+  --sidebar-border: 198 18% 22%;
+
+  --sidebar-primary: 31 58% 63%;
+
+  --sidebar-primary-foreground: 199 27% 16%;
+
+  --sidebar-accent: 198 18% 23%;
+
+  --sidebar-accent-foreground: 42 25% 92%;
+
+  --sidebar-ring: 31 58% 63%;
+
+  --popover: 199 25% 16%;
+
+  --popover-foreground: 42 25% 92%;
+
+  --popover-border: 198 18% 29%;
+
+  --primary: 31 58% 63%;
+
+  --primary-foreground: 199 27% 16%;
+
+  --secondary: 198 18% 23%;
+
+  --secondary-foreground: 42 25% 92%;
+
+  --muted: 198 18% 23%;
+
+  --muted-foreground: 198 12% 64%;
+
+  --accent: 31 58% 63%;
+
+  --accent-foreground: 199 27% 16%;
+
+  --destructive: 5 60% 53%;
+
+  --destructive-foreground: 42 25% 96%;
+
+  /* Used as the border around inputs. Dark mode: Should be a border that is light enough to have high contrast when rendered on a --card background. More contrast than standard --border */
+  --input: 198 18% 34%;
+  --ring: 31 58% 63%;
+  --chart-1: 31 58% 63%;
+  --chart-2: 161 29% 43%;
+  --chart-3: 198 39% 51%;
+  --chart-4: 5 60% 53%;
+  --chart-5: 39 53% 62%;
+
+  --shadow-2xs: 0px 2px 0px 0px hsl(202.8169 89.1213% 53.1373% / 0);
+  --shadow-xs: 0px 2px 0px 0px hsl(202.8169 89.1213% 53.1373% / 0);
+  --shadow-sm:
+    0px 2px 0px 0px hsl(202.8169 89.1213% 53.1373% / 0),
+    0px 1px 2px -1px hsl(202.8169 89.1213% 53.1373% / 0);
+  --shadow:
+    0px 2px 0px 0px hsl(202.8169 89.1213% 53.1373% / 0),
+    0px 1px 2px -1px hsl(202.8169 89.1213% 53.1373% / 0);
+  --shadow-md:
+    0px 2px 0px 0px hsl(202.8169 89.1213% 53.1373% / 0),
+    0px 2px 4px -1px hsl(202.8169 89.1213% 53.1373% / 0);
+  --shadow-lg:
+    0px 2px 0px 0px hsl(202.8169 89.1213% 53.1373% / 0),
+    0px 4px 6px -1px hsl(202.8169 89.1213% 53.1373% / 0);
+  --shadow-xl:
+    0px 2px 0px 0px hsl(202.8169 89.1213% 53.1373% / 0),
+    0px 8px 10px -1px hsl(202.8169 89.1213% 53.1373% / 0);
+  --shadow-2xl: 0px 2px 0px 0px hsl(202.8169 89.1213% 53.1373% / 0);
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply font-sans antialiased bg-background text-foreground;
+  }
+}
+
+/**
+ * Using the elevate system.
+ * Automatic contrast adjustment.
+ *
+ * <element className="hover-elevate" />
+ * <element className="active-elevate-2" />
+ *
+ * // Using the tailwind utility when a data attribute is "on"
+ * <element className="toggle-elevate data-[state=on]:toggle-elevated" />
+ * // Or manually controlling the toggle state
+ * <element className="toggle-elevate toggle-elevated" />
+ *
+ * Elevation systems have to handle many states.
+ * - not-hovered, vs. hovered vs. active  (three mutually exclusive states)
+ * - toggled or not
+ * - focused or not (this is not handled with these utilities)
+ *
+ * Even without handling focused or not, this is six possible combinations that
+ * need to be distinguished from eachother visually.
+ */
+@layer utilities {
+  /* Hide ugly search cancel button in Chrome until we can style it properly */
+  input[type='search']::-webkit-search-cancel-button {
+    @apply hidden;
+  }
+
+  /* Placeholder styling for contentEditable div */
+  [contenteditable][data-placeholder]:empty::before {
+    content: attr(data-placeholder);
+    color: hsl(var(--muted-foreground));
+    pointer-events: none;
+  }
+
+  /* .no-default-hover-elevate/no-default-active-elevate is an escape hatch so consumers of
+   * buttons/badges can remove the automatic brightness adjustment on interactions
+   * and program their own. */
+  .no-default-hover-elevate {
+  }
+
+  .no-default-active-elevate {
+  }
+
+  /**
+   * Toggleable backgrounds go behind the content. Hoverable/active goes on top.
+   * This way they can stack/compound. Both will overlap the parent's borders!
+   * So borders will be automatically adjusted both on toggle, and hover/active,
+   * and they will be compounded.
+   */
+  .toggle-elevate::before,
+  .toggle-elevate-2::before {
+    content: '';
+    pointer-events: none;
+    position: absolute;
+    inset: 0px;
+    /*border-radius: inherit;   match rounded corners */
+    border-radius: inherit;
+    z-index: -1;
+    /* sits behind content but above backdrop */
+  }
+
+  .toggle-elevate.toggle-elevated::before {
+    background-color: var(--elevate-2);
+  }
+
+  /* If there's a 1px border, adjust the inset so that it covers that parent's border */
+  .border.toggle-elevate::before {
+    inset: -1px;
+  }
+
+  /* Does not work on elements with overflow:hidden! */
+  .hover-elevate:not(.no-default-hover-elevate),
+  .active-elevate:not(.no-default-active-elevate),
+  .hover-elevate-2:not(.no-default-hover-elevate),
+  .active-elevate-2:not(.no-default-active-elevate) {
+    position: relative;
+    z-index: 0;
+  }
+
+  .hover-elevate:not(.no-default-hover-elevate)::after,
+  .active-elevate:not(.no-default-active-elevate)::after,
+  .hover-elevate-2:not(.no-default-hover-elevate)::after,
+  .active-elevate-2:not(.no-default-active-elevate)::after {
+    content: '';
+    pointer-events: none;
+    position: absolute;
+    inset: 0px;
+    /*border-radius: inherit;   match rounded corners */
+    border-radius: inherit;
+    z-index: 999;
+    /* sits in front of content */
+  }
+
+  .hover-elevate:hover:not(.no-default-hover-elevate)::after,
+  .active-elevate:active:not(.no-default-active-elevate)::after {
+    background-color: var(--elevate-1);
+  }
+
+  .hover-elevate-2:hover:not(.no-default-hover-elevate)::after,
+  .active-elevate-2:active:not(.no-default-active-elevate)::after {
+    background-color: var(--elevate-2);
+  }
+
+  /* If there's a 1px border, adjust the inset so that it covers that parent's border */
+  .border.hover-elevate:not(.no-hover-interaction-elevate)::after,
+  .border.active-elevate:not(.no-active-interaction-elevate)::after,
+  .border.hover-elevate-2:not(.no-hover-interaction-elevate)::after,
+  .border.active-elevate-2:not(.no-active-interaction-elevate)::after,
+  .border.hover-elevate:not(.no-hover-interaction-elevate)::after {
+    inset: -1px;
+  }
+}
+
+/* Roulette Physics Lab — a quiet, instrument-like workbench */
+:root {
+  --lab-ink: #17252b;
+  --lab-ink-soft: #2b4147;
+  --lab-paper: #f1eee5;
+  --lab-panel: #f8f6ef;
+  --lab-line: #d8d3c7;
+  --lab-copper: #c88d61;
+  --lab-mint: #7faeaa;
+  --lab-red: #bd6558;
+}
+
+html {
+  min-width: 320px;
+  background: var(--lab-paper);
+}
+
+body {
+  margin: 0;
+  min-width: 320px;
+  min-height: 100dvh;
+  background: var(--lab-paper);
+  color: var(--lab-ink);
+  font-family: 'Manrope', sans-serif;
+}
+
+button {
+  font: inherit;
+}
+
+button:focus-visible,
+canvas:focus-visible {
+  outline: 2px solid var(--lab-copper);
+  outline-offset: 3px;
+}
+
+.lab-shell {
+  display: flex;
+  min-height: 100dvh;
+  flex-direction: column;
+  overflow: hidden;
+  background:
+    linear-gradient(90deg, rgba(216, 211, 199, 0.25) 1px, transparent 1px) 0 0 / 48px 48px,
+    var(--lab-paper);
+}
+
+.lab-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-height: 72px;
+  padding: 14px clamp(18px, 3vw, 42px);
+  border-bottom: 1px solid var(--lab-line);
+  background: rgba(248, 246, 239, 0.92);
+}
+
+.brand-lockup,
+.header-meta,
+.toolbar-actions,
+.toolbar-title,
+.caption-left,
+.caption-right,
+.asset-name,
+.section-kicker,
+.rail-footer-line {
+  display: flex;
+  align-items: center;
+}
+
+.brand-lockup {
+  gap: 12px;
+}
+
+.brand-mark {
+  display: grid;
+  width: 36px;
+  height: 36px;
+  place-items: center;
+  border: 1px solid #b8b2a5;
+  border-radius: 9px;
+  color: var(--lab-copper);
+  background: #ece8dc;
+}
+
+.eyebrow,
+.section-kicker,
+.section-label,
+.build-tag,
+.toolbar-title,
+.grid-status,
+.viewport-readout,
+.caption-right,
+.lab-footer,
+.loaded-stamp {
+  font-family: 'DM Mono', monospace;
+  letter-spacing: 0.11em;
+  text-transform: uppercase;
+}
+
+.eyebrow {
+  color: #6c7775;
+  font-size: 9px;
+  line-height: 1.2;
+}
+
+h1 {
+  margin: 2px 0 0;
+  color: var(--lab-ink);
+  font-size: clamp(14px, 1.4vw, 18px);
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+
+.header-meta {
+  gap: 16px;
+}
+
+.build-tag {
+  color: #76817d;
+  font-size: 10px;
+}
+
+.status-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  min-height: 28px;
+  padding: 0 10px;
+  border: 1px solid var(--lab-line);
+  border-radius: 99px;
+  background: #f1eee5;
+  color: #586865;
+  font-family: 'DM Mono', monospace;
+  font-size: 10px;
+  letter-spacing: 0.03em;
+}
+
+.status-icon {
+  color: #6f9994;
+}
+
+.status-loaded {
+  color: #4f807a;
+  border-color: #b4d0c9;
+  background: #e9f1eb;
+}
+
+.status-error {
+  color: #a85049;
+  border-color: #e1bbb2;
+  background: #f7eae4;
+}
+
+.status-pulse {
+  animation: status-pulse 1.35s ease-in-out infinite;
+}
+
+@keyframes status-pulse {
+  0%, 100% { opacity: 0.35; transform: scale(0.82); }
+  50% { opacity: 1; transform: scale(1); }
+}
+
+.lab-layout {
+  display: grid;
+  min-height: 0;
+  flex: 1;
+  grid-template-columns: minmax(235px, 282px) minmax(0, 1fr);
+}
+
+.inspector-rail {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  padding: 27px 23px 18px;
+  border-right: 1px solid #c7c5b9;
+  background: #e8e5da;
+}
+
+.rail-intro {
+  padding-bottom: 23px;
+  border-bottom: 1px solid #cecabd;
+}
+
+.section-kicker {
+  gap: 7px;
+  color: #8c6145;
+  font-size: 9px;
+  font-weight: 500;
+}
+
+.rail-intro p {
+  max-width: 218px;
+  margin: 13px 0 0;
+  color: #53645f;
+  font-size: 12px;
+  line-height: 1.65;
+}
+
+.inspector-section {
+  padding: 22px 0;
+  border-bottom: 1px solid #cecabd;
+}
+
+.section-label {
+  margin-bottom: 15px;
+  color: #7b8580;
+  font-size: 9px;
+}
+
+.asset-name {
+  gap: 10px;
+  margin-bottom: 19px;
+  color: var(--lab-ink);
+}
+
+.asset-name svg {
+  color: var(--lab-copper);
+}
+
+.asset-name strong,
+.asset-name span {
+  display: block;
+}
+
+.asset-name strong {
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.asset-name span {
+  margin-top: 4px;
+  color: #78837f;
+  font-family: 'DM Mono', monospace;
+  font-size: 9px;
+}
+
+.data-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 9px 0;
+  border-top: 1px solid rgba(199, 197, 185, 0.62);
+  color: #697671;
+  font-size: 10px;
+}
+
+.data-row code {
+  max-width: 145px;
+  overflow: hidden;
+  color: #53645f;
+  font-family: 'DM Mono', monospace;
+  font-size: 8px;
+  line-height: 1.4;
+  text-align: right;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.value-muted {
+  color: #53645f;
+  font-family: 'DM Mono', monospace;
+  font-size: 9px;
+}
+
+.control-list {
+  display: grid;
+  gap: 4px;
+}
+
+.rail-control {
+  display: flex;
+  width: 100%;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 10px 0;
+  border: 0;
+  color: #53645f;
+  background: transparent;
+  cursor: pointer;
+  font-size: 11px;
+  text-align: left;
+  transition: color 160ms ease, transform 160ms ease;
+}
+
+.rail-control > span:first-child {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+}
+
+.rail-control:hover {
+  color: var(--lab-ink);
+  transform: translateX(2px);
+}
+
+.toggle {
+  display: inline-flex;
+  width: 24px;
+  height: 14px;
+  align-items: center;
+  padding: 2px;
+  border-radius: 99px;
+  background: #b7bcb3;
+  transition: background 160ms ease;
+}
+
+.toggle span {
+  display: block;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: #f5f2e9;
+  transition: transform 160ms ease;
+}
+
+.toggle.on {
+  background: var(--lab-mint);
+}
+
+.toggle.on span {
+  transform: translateX(10px);
+}
+
+.physics-note {
+  display: flex;
+  gap: 11px;
+  margin-top: 22px;
+  padding: 13px 12px;
+  border: 1px solid #d7b99f;
+  border-radius: 6px;
+  background: #f1e7da;
+}
+
+.note-icon {
+  color: #b77b52;
+}
+
+.physics-note strong {
+  display: block;
+  color: #81553b;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.01em;
+}
+
+.physics-note p {
+  margin: 6px 0 0;
+  color: #896e5b;
+  font-size: 10px;
+  line-height: 1.5;
+}
+
+.rail-footer {
+  display: grid;
+  gap: 8px;
+  margin-top: auto;
+  padding-top: 21px;
+  color: #7a8580;
+}
+
+.rail-footer-line {
+  gap: 7px;
+  font-family: 'DM Mono', monospace;
+  font-size: 8px;
+  line-height: 1.4;
+}
+
+.workbench {
+  display: flex;
+  min-width: 0;
+  min-height: 0;
+  flex-direction: column;
+  padding: clamp(16px, 2.5vw, 34px);
+  background: #d9d8ce;
+}
+
+.workbench-toolbar {
+  display: flex;
+  min-height: 37px;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 3px 13px;
+}
+
+.toolbar-title {
+  gap: 9px;
+  color: #506360;
+  font-size: 9px;
+}
+
+.toolbar-muted {
+  color: #909a95;
+}
+
+.live-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--lab-copper);
+  box-shadow: 0 0 0 3px rgba(200, 141, 97, 0.14);
+}
+
+.toolbar-divider {
+  width: 1px;
+  height: 12px;
+  margin-left: 3px;
+  background: #aeb2aa;
+}
+
+.toolbar-actions {
+  gap: 13px;
+}
+
+.toolbar-metric {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: #70807b;
+  font-family: 'DM Mono', monospace;
+  font-size: 9px;
+  text-transform: uppercase;
+}
+
+.icon-button {
+  display: grid;
+  width: 29px;
+  height: 29px;
+  place-items: center;
+  border: 1px solid #afb3ab;
+  border-radius: 4px;
+  color: #5c6c67;
+  background: #e8e7de;
+  cursor: pointer;
+  transition: background 160ms ease, color 160ms ease;
+}
+
+.icon-button:hover {
+  color: var(--lab-ink);
+  background: #efeee7;
+}
+
+.viewport-wrap {
+  position: relative;
+  min-height: 340px;
+  flex: 1;
+  overflow: hidden;
+  border: 1px solid #a9aba3;
+  border-radius: 3px;
+  background: #17252b;
+  box-shadow: 0 10px 26px rgba(39, 54, 56, 0.11);
+}
+
+.scene-stage,
+.scene-stage canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.scene-stage {
+  position: absolute;
+  inset: 0;
+  min-height: 340px;
+}
+
+.scene-stage canvas {
+  cursor: grab;
+}
+
+.scene-stage canvas:active {
+  cursor: grabbing;
+}
+
+.scene-corner {
+  position: absolute;
+  width: 12px;
+  height: 12px;
+  border-color: rgba(185, 214, 204, 0.6);
+  border-style: solid;
+  pointer-events: none;
+}
+
+.scene-corner-tl {
+  top: 16px;
+  left: 16px;
+  border-width: 1px 0 0 1px;
+}
+
+.scene-corner-br {
+  right: 16px;
+  bottom: 16px;
+  border-width: 0 1px 1px 0;
+}
+
+.viewport-readout {
+  position: absolute;
+  top: 19px;
+  right: 19px;
+  display: grid;
+  gap: 4px;
+  color: rgba(197, 218, 210, 0.6);
+  font-size: 8px;
+  line-height: 1.35;
+  text-align: right;
+  pointer-events: none;
+}
+
+.viewport-readout span:last-child {
+  color: rgba(200, 141, 97, 0.82);
+}
+
+.grid-status {
+  position: absolute;
+  bottom: 19px;
+  left: 19px;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  color: rgba(185, 214, 204, 0.62);
+  font-size: 8px;
+  opacity: 0;
+  transform: translateY(3px);
+  transition: opacity 180ms ease, transform 180ms ease;
+  pointer-events: none;
+}
+
+.grid-status.is-visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.viewport-overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  background: rgba(23, 37, 43, 0.86);
+  color: #dbe6df;
+  text-align: center;
+}
+
+.viewport-overlay strong {
+  margin-top: 3px;
+  color: #e8efe9;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.viewport-overlay > span {
+  color: #92aaa5;
+  font-family: 'DM Mono', monospace;
+  font-size: 9px;
+}
+
+.loader-graphic {
+  display: flex;
+  gap: 5px;
+  height: 20px;
+  align-items: flex-end;
+}
+
+.loader-graphic span {
+  display: block;
+  width: 3px;
+  height: 10px;
+  background: var(--lab-copper);
+  animation: loader-bounce 850ms ease-in-out infinite;
+}
+
+.loader-graphic span:nth-child(2) { animation-delay: 120ms; height: 16px; }
+.loader-graphic span:nth-child(3) { animation-delay: 240ms; height: 12px; }
+
+@keyframes loader-bounce {
+  0%, 100% { opacity: 0.35; transform: scaleY(0.55); }
+  50% { opacity: 1; transform: scaleY(1); }
+}
+
+.error-overlay {
+  color: #dfa99b;
+}
+
+.error-overlay > svg {
+  color: #d38b72;
+}
+
+.error-overlay strong {
+  color: #f0d2c8;
+}
+
+.error-overlay button {
+  margin-top: 10px;
+  padding: 8px 13px;
+  border: 1px solid #af765f;
+  border-radius: 3px;
+  color: #f3dfd1;
+  background: #49342f;
+  cursor: pointer;
+  font-size: 10px;
+}
+
+.error-overlay button:hover {
+  background: #5b4038;
+}
+
+.loaded-stamp {
+  position: absolute;
+  right: 19px;
+  bottom: 18px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: rgba(183, 214, 203, 0.76);
+  font-size: 8px;
+  pointer-events: none;
+}
+
+.loaded-stamp svg {
+  color: #9ac5b1;
+}
+
+.workbench-caption {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-height: 35px;
+  padding: 9px 3px 0;
+  color: #70807b;
+  font-family: 'DM Mono', monospace;
+  font-size: 8px;
+}
+
+.caption-left {
+  gap: 7px;
+}
+
+.caption-right {
+  gap: 15px;
+  color: #8d9891;
+  font-size: 8px;
+}
+
+.lab-footer {
+  display: flex;
+  min-height: 33px;
+  align-items: center;
+  gap: 12px;
+  padding: 0 clamp(18px, 3vw, 42px);
+  border-top: 1px solid var(--lab-line);
+  color: #8a938d;
+  background: #e9e5db;
+  font-size: 8px;
+}
+
+.footer-rule {
+  width: 28px;
+  height: 1px;
+  background: #c5c5ba;
+}
+
+.footer-build {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-left: auto;
+  color: #9a775e;
+}
+
+@media (max-width: 760px) {
+  .lab-header {
+    min-height: 64px;
+    padding: 12px 16px;
+  }
+
+  .build-tag {
+    display: none;
+  }
+
+  .header-meta {
+    gap: 0;
+  }
+
+  .lab-layout {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .inspector-rail {
+    order: 2;
+    padding: 22px 17px 20px;
+    border-top: 1px solid #c7c5b9;
+    border-right: 0;
+  }
+
+  .rail-intro p {
+    max-width: none;
+  }
+
+  .inspector-section {
+    padding: 18px 0;
+  }
+
+  .physics-note {
+    margin-top: 18px;
+  }
+
+  .rail-footer {
+    display: none;
+  }
+
+  .workbench {
+    order: 1;
+    min-height: 58dvh;
+    padding: 14px 12px 12px;
+  }
+
+  .viewport-wrap,
+  .scene-stage {
+    min-height: 340px;
+  }
+
+  .toolbar-metric {
+    display: none;
+  }
+
+  .caption-right {
+    gap: 8px;
+  }
+
+  .lab-footer {
+    min-height: 42px;
+    padding: 8px 16px;
+    line-height: 1.4;
+  }
+
+  .footer-rule,
+  .footer-build {
+    display: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .status-pulse,
+  .loader-graphic span {
+    animation: none;
+  }
+
+  .rail-control,
+  .grid-status,
+  .toggle,
+  .toggle span {
+    transition: none;
+  }
+}
