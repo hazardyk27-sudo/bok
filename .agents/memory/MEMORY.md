@@ -26,3 +26,4 @@
 - [Physics Lab Part 4 dynamics](physics-lab-part4-dynamics.md) — dynamic rotor colliders need rotor/stationary collision isolation and release calibration inside a proven transition band.
 - [Physics Lab Part 5 dynamics](physics-lab-part5-dynamics.md) — a sloped inward transition and spindle guard prevent flat-step traps without scripted inward motion.
 - [Physics Lab server authority](physics-lab-server-authority.md) — preserve the validated release band while securely varying allowed starts, then return canonical persisted replay payloads.
+- [Rapier concave track limits](rapier-concave-track-limits.md) — convex rings and full disks cannot prove a natural roulette track; require a genuinely concave support surface and pair-specific contact evidence.

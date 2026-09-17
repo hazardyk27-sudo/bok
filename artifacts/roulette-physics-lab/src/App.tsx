@@ -47,10 +47,13 @@ const OUTER_TRACK_TILT = -0.08;
 const OUTER_TRACK_LAUNCH_CLEARANCE = 0.003;
 const OUTER_TRACK_SURFACE_Y =
   OUTER_TRACK_CENTER_Y + OUTER_TRACK_HALF_HEIGHT;
-const OUTER_TRACK_INNER_RADIUS = 2.31;
-const OUTER_TRACK_OUTER_RADIUS = 2.68;
-const OUTER_TRACK_MESH_SEGMENTS = 256;
-const OUTER_TRACK_MESH_THICKNESS = 0.09;
+const OUTER_TRACK_FLOOR_RADIUS = 2.5;
+const OUTER_TRACK_WALL_RADIUS = 2.531;
+const OUTER_TRACK_WALL_SEGMENTS = 512;
+const OUTER_TRACK_WALL_CAPSULE_RADIUS =
+  (OUTER_TRACK_WALL_RADIUS * Math.PI) / OUTER_TRACK_WALL_SEGMENTS;
+const OUTER_TRACK_WALL_CENTER_RADIUS =
+  OUTER_TRACK_WALL_RADIUS + OUTER_TRACK_WALL_CAPSULE_RADIUS;
 // The normalized GLB's measured outer-track contact surface is y=-0.425.
 // Keep the collider model in its validated local coordinates, then apply this
 // one rigid world-space translation to every stationary collider and release
@@ -62,7 +65,7 @@ const OUTER_TRACK_CONTACT_TOLERANCE = 0.018;
 const OUTER_TRACK_RADIAL_TOLERANCE = 0.06;
 const BALL_VALIDATION_TEST_COUNT = 100;
 const PART4_SPIN_TEST_COUNT = 20;
-const PART5_SPIN_TEST_COUNT = 50;
+const PART5_SPIN_TEST_COUNT = 100;
 const PART5_DURATION_LIMIT_SECONDS = 24;
 const PART5_STABLE_WINDOW_FRAMES = 180;
 const PART5_DEBUG_SAMPLE_COUNT = 5;
@@ -72,10 +75,10 @@ const ROTOR_COLLISION_GROUP = 0x0004;
 const DEFAULT_BALL_PARAMETERS = {
   radius: BALL_RADIUS,
   mass: 0.0027,
-  friction: 0.44,
-  restitution: 0.18,
-  linearDamping: 0.065,
-  angularDamping: 0.1,
+  friction: 0.005,
+  restitution: 0,
+  linearDamping: 0.002,
+  angularDamping: 0.03,
   initialAngularVelocity: 230,
 } as const;
 const DEFAULT_ROTOR_PARAMETERS = {
@@ -134,7 +137,7 @@ type ColliderSpec = {
   halfExtents: [number, number, number];
   rotation: [number, number, number, number];
   color: string;
-  shape?: 'box' | 'outer-track-ramp';
+  shape?: 'box' | 'outer-track-floor' | 'outer-track-wall-capsule';
 };
 
 type ColliderBuckets = {
@@ -595,13 +598,10 @@ function outerTrackContactPosition(
   angle: number,
   ballRadius: number,
 ): [number, number, number] {
-  const normalOffset = ballRadius + OUTER_TRACK_LAUNCH_CLEARANCE;
   return radialPosition(
-    OUTER_TRACK_RADIUS + normalOffset * Math.sin(OUTER_TRACK_TILT),
+    OUTER_TRACK_WALL_RADIUS - ballRadius,
     angle,
-    OUTER_TRACK_SURFACE_Y +
-      normalOffset * Math.cos(OUTER_TRACK_TILT) +
-      PHYSICS_Y_OFFSET,
+    OUTER_TRACK_SURFACE_Y + ballRadius + PHYSICS_Y_OFFSET,
   );
 }
 
@@ -613,106 +613,14 @@ function physicsPosition(position: [number, number, number]): [number, number, n
   return [position[0], physicsY(position[1]), position[2]];
 }
 
-function outerTrackSurfaceY(radius: number) {
-  return (
-    OUTER_TRACK_SURFACE_Y -
-    Math.sin(OUTER_TRACK_TILT) * (radius - OUTER_TRACK_RADIUS)
-  );
-}
-
-function createOuterTrackMeshData() {
-  const vertices: number[] = [];
-  const indices: number[] = [];
-  const topY = (radius: number) => outerTrackSurfaceY(radius);
-  const bottomY = (radius: number) =>
-    topY(radius) - OUTER_TRACK_MESH_THICKNESS;
-
-  for (let index = 0; index < OUTER_TRACK_MESH_SEGMENTS; index += 1) {
-    const angle = (index / OUTER_TRACK_MESH_SEGMENTS) * Math.PI * 2;
-    const sin = Math.sin(angle);
-    const cos = Math.cos(angle);
-    vertices.push(
-      sin * OUTER_TRACK_INNER_RADIUS,
-      topY(OUTER_TRACK_INNER_RADIUS),
-      cos * OUTER_TRACK_INNER_RADIUS,
-      sin * OUTER_TRACK_OUTER_RADIUS,
-      topY(OUTER_TRACK_OUTER_RADIUS),
-      cos * OUTER_TRACK_OUTER_RADIUS,
-      sin * OUTER_TRACK_INNER_RADIUS,
-      bottomY(OUTER_TRACK_INNER_RADIUS),
-      cos * OUTER_TRACK_INNER_RADIUS,
-      sin * OUTER_TRACK_OUTER_RADIUS,
-      bottomY(OUTER_TRACK_OUTER_RADIUS),
-      cos * OUTER_TRACK_OUTER_RADIUS,
-    );
-  }
-
-  for (let index = 0; index < OUTER_TRACK_MESH_SEGMENTS; index += 1) {
-    const next = (index + 1) % OUTER_TRACK_MESH_SEGMENTS;
-    const current = index * 4;
-    const following = next * 4;
-    const currentTopInner = current;
-    const currentTopOuter = current + 1;
-    const currentBottomInner = current + 2;
-    const currentBottomOuter = current + 3;
-    const nextTopInner = following;
-    const nextTopOuter = following + 1;
-    const nextBottomInner = following + 2;
-    const nextBottomOuter = following + 3;
-
-    // Top surface, with upward-facing winding.
-    indices.push(
-      currentTopInner,
-      currentTopOuter,
-      nextTopInner,
-      currentTopOuter,
-      nextTopOuter,
-      nextTopInner,
-    );
-    // Bottom surface.
-    indices.push(
-      currentBottomInner,
-      nextBottomInner,
-      currentBottomOuter,
-      currentBottomOuter,
-      nextBottomInner,
-      nextBottomOuter,
-    );
-    // Inner and outer walls.
-    indices.push(
-      currentTopInner,
-      nextTopInner,
-      currentBottomInner,
-      nextTopInner,
-      nextBottomInner,
-      currentBottomInner,
-      currentTopOuter,
-      currentBottomOuter,
-      nextTopOuter,
-      nextTopOuter,
-      currentBottomOuter,
-      nextBottomOuter,
-    );
-  }
-
-  return {
-    vertices: new Float32Array(vertices),
-    indices: new Uint32Array(indices),
-  };
-}
-
 function isOuterTrackContactHeight(
   translation: { x: number; y: number; z: number },
   ballRadius: number,
 ) {
-  const normalOffset = ballRadius + OUTER_TRACK_LAUNCH_CLEARANCE;
   const radius = Math.hypot(translation.x, translation.z);
-  const expectedRadius =
-    OUTER_TRACK_RADIUS + normalOffset * Math.sin(OUTER_TRACK_TILT);
+  const expectedRadius = OUTER_TRACK_WALL_RADIUS - ballRadius;
   const expectedHeight =
-    OUTER_TRACK_SURFACE_Y +
-    normalOffset * Math.cos(OUTER_TRACK_TILT) +
-    PHYSICS_Y_OFFSET;
+    OUTER_TRACK_SURFACE_Y + ballRadius + PHYSICS_Y_OFFSET;
   return (
     Math.abs(radius - expectedRadius) <= OUTER_TRACK_RADIAL_TOLERANCE &&
     Math.abs(translation.y - expectedHeight) <= OUTER_TRACK_CONTACT_TOLERANCE
@@ -732,6 +640,7 @@ function addRingSpecs(
     color,
     radialOffset = 0,
     tilt,
+    shape,
   }: {
     id: string;
     label: string;
@@ -743,6 +652,7 @@ function addRingSpecs(
     color: string;
     radialOffset?: number;
     tilt?: number;
+    shape?: ColliderSpec['shape'];
   },
 ) {
   for (let index = 0; index < count; index += 1) {
@@ -755,6 +665,7 @@ function addRingSpecs(
       halfExtents,
       rotation: tiltedYQuaternion(angle + radialOffset, tilt ?? 0),
       color,
+      shape,
     });
   }
 }
@@ -811,23 +722,37 @@ function buildColliderSpecs(): ColliderSpec[] {
     color: stationaryColor,
     tilt: -0.25,
   });
-  // One continuous annular ramp replaces overlapping 37-sector track boxes.
-  // The top surface uses the same radius, slope and translated Y origin as
-  // the launch helper, so the ball can cross sector boundaries without
-  // entering multiple neighboring contacts at once.
+  // A broad continuous floor carries the sphere while a high-resolution
+  // rounded capsule ring supplies the outer boundary without triangle-face
+  // normals or a floor/wall corner at the release point.
   specs.push({
-    id: 'track-floor-ramp',
+    id: 'track-floor',
     label: 'Ball track',
     body: 'stationary',
-    position: [0, 0, 0],
+    position: [0, OUTER_TRACK_SURFACE_Y - OUTER_TRACK_HALF_HEIGHT, 0],
     halfExtents: [
-      (OUTER_TRACK_OUTER_RADIUS - OUTER_TRACK_INNER_RADIUS) / 2,
-      OUTER_TRACK_MESH_THICKNESS / 2,
-      OUTER_TRACK_RADIUS,
+      OUTER_TRACK_FLOOR_RADIUS,
+      OUTER_TRACK_HALF_HEIGHT,
+      OUTER_TRACK_FLOOR_RADIUS,
     ],
     rotation: [0, 0, 0, 1],
     color: stationaryColor,
-    shape: 'outer-track-ramp',
+    shape: 'outer-track-floor',
+  });
+  addRingSpecs(specs, {
+    id: 'track-outer-wall',
+    label: 'Ball track',
+    body: 'stationary',
+    count: OUTER_TRACK_WALL_SEGMENTS,
+    radius: OUTER_TRACK_WALL_CENTER_RADIUS,
+    y: OUTER_TRACK_SURFACE_Y + 0.02,
+    halfExtents: [
+      OUTER_TRACK_WALL_CAPSULE_RADIUS,
+      0.28,
+      OUTER_TRACK_WALL_CAPSULE_RADIUS,
+    ],
+    color: stationaryColor,
+    shape: 'outer-track-wall-capsule',
   });
   addRingSpecs(specs, {
     id: 'outer-rim',
@@ -944,12 +869,17 @@ function addRapierCollider(
       ? BALL_COLLISION_GROUP | ROTOR_COLLISION_GROUP
       : BALL_COLLISION_GROUP | STATIONARY_COLLISION_GROUP;
   const descriptor = (
-    spec.shape === 'outer-track-ramp'
-      ? (() => {
-          const { vertices, indices } = createOuterTrackMeshData();
-          return RAPIER.ColliderDesc.trimesh(vertices, indices);
-        })()
-      : RAPIER.ColliderDesc.cuboid(...spec.halfExtents)
+    spec.shape === 'outer-track-wall-capsule'
+      ? RAPIER.ColliderDesc.capsule(
+          spec.halfExtents[1],
+          OUTER_TRACK_WALL_CAPSULE_RADIUS,
+        )
+      : spec.shape === 'outer-track-floor'
+        ? RAPIER.ColliderDesc.cylinder(
+            OUTER_TRACK_HALF_HEIGHT,
+            OUTER_TRACK_FLOOR_RADIUS,
+          )
+        : RAPIER.ColliderDesc.cuboid(...spec.halfExtents)
   )
     .setTranslation(...physicsPosition(spec.position))
     .setRotation({
@@ -959,12 +889,18 @@ function addRapierCollider(
       w: spec.rotation[3],
     });
   descriptor
-    .setFriction(isDeflector ? 0.28 : friction)
+    .setFriction(
+      isDeflector
+        ? 0.28
+        : spec.label === 'Ball track'
+          ? 0.005
+          : friction,
+    )
     .setRestitution(
       isDeflector
         ? 0.42
         : spec.label === 'Ball track'
-          ? 0.06
+          ? 0
           : restitution,
     )
     .setCollisionGroups(membership | (filter << 16));
@@ -973,23 +909,25 @@ function addRapierCollider(
 
 function makePhysicsDebugMesh(spec: ColliderSpec) {
   const geometry =
-    spec.shape === 'outer-track-ramp'
-      ? (() => {
-          const { vertices, indices } = createOuterTrackMeshData();
-          const trackGeometry = new THREE.BufferGeometry();
-          trackGeometry.setAttribute(
-            'position',
-            new THREE.Float32BufferAttribute(vertices, 3),
+    spec.shape === 'outer-track-floor'
+      ? new THREE.CylinderGeometry(
+          OUTER_TRACK_FLOOR_RADIUS,
+          OUTER_TRACK_FLOOR_RADIUS,
+          OUTER_TRACK_HALF_HEIGHT * 2,
+          128,
+        )
+      : spec.shape === 'outer-track-wall-capsule'
+        ? new THREE.CapsuleGeometry(
+            OUTER_TRACK_WALL_CAPSULE_RADIUS,
+            spec.halfExtents[1] * 2,
+            8,
+            4,
+          )
+        : new THREE.BoxGeometry(
+            spec.halfExtents[0] * 2,
+            spec.halfExtents[1] * 2,
+            spec.halfExtents[2] * 2,
           );
-          trackGeometry.setIndex(Array.from(indices));
-          trackGeometry.computeVertexNormals();
-          return trackGeometry;
-        })()
-      : new THREE.BoxGeometry(
-          spec.halfExtents[0] * 2,
-          spec.halfExtents[1] * 2,
-          spec.halfExtents[2] * 2,
-        );
   const mesh = new THREE.Mesh(
     geometry,
     new THREE.MeshBasicMaterial({
@@ -1194,7 +1132,7 @@ function createColliderWorld(
     .filter((spec) => spec.body === 'stationary')
     .forEach((spec) => {
       const collider = addRapierCollider(world, stationaryBody, spec);
-      if (spec.id.startsWith('track-floor-')) {
+      if (spec.label === 'Ball track') {
         colliderBuckets.outerTrack.push(collider);
       }
       if (spec.label === 'Deflector') colliderBuckets.deflectors.push(collider);
@@ -1449,9 +1387,7 @@ async function runPart4Validation(
         colliderBuckets.outerTrack,
       );
       const outerTrackContactY =
-        OUTER_TRACK_SURFACE_Y +
-        ballParameters.radius * Math.cos(OUTER_TRACK_TILT) +
-        PHYSICS_Y_OFFSET;
+        OUTER_TRACK_SURFACE_Y + ballParameters.radius + PHYSICS_Y_OFFSET;
       const localHeight = translation.y - PHYSICS_Y_OFFSET;
       const outerTrackEnvelope =
         radius > OUTER_TRACK_RADIUS - 0.15 &&
@@ -1775,8 +1711,7 @@ async function runPart5Validation(
     let previousTrackAngle = Math.atan2(release.position[0], release.position[2]);
     let trackAngleTravel = 0;
     let trackLostFrames = 0;
-    const trackContactRadius =
-      OUTER_TRACK_RADIUS + ballParameters.radius * Math.sin(OUTER_TRACK_TILT);
+    const trackContactRadius = OUTER_TRACK_WALL_RADIUS - ballParameters.radius;
     const pathSamples: string[] = [];
     const initialBallSpeed = previousBallSpeed;
 
