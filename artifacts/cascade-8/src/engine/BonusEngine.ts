@@ -7,7 +7,8 @@ import type { RandomSource } from "./types";
 import { weightedChoice } from "./RNG";
 
 export function baseFreeSpins(scatterCount: number) {
-  if (scatterCount >= 6) return BONUS_CONFIG.base[6];
+  if (scatterCount >= 7) return BONUS_CONFIG.base[7];
+  if (scatterCount === 6) return BONUS_CONFIG.base[6];
   if (scatterCount === 5) return BONUS_CONFIG.base[5];
   if (scatterCount === 4) return BONUS_CONFIG.base[4];
   return 0;

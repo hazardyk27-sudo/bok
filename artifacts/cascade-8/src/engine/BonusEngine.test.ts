@@ -7,6 +7,8 @@ describe("bonus rules", () => {
     expect(baseFreeSpins(4)).toBe(10);
     expect(baseFreeSpins(5)).toBe(15);
     expect(baseFreeSpins(6)).toBe(20);
+    expect(baseFreeSpins(7)).toBe(25);
+    expect(baseFreeSpins(8)).toBe(25);
   });
   it("awards retriggers", () => {
     expect(retriggerFreeSpins(3)).toBe(5);
@@ -14,9 +16,9 @@ describe("bonus rules", () => {
     expect(retriggerFreeSpins(5)).toBe(5);
     expect(retriggerFreeSpins(6)).toBe(5);
   });
-  it("spawns a Free Spin refill Core at the designed 3% threshold", () => {
+  it("spawns a Free Spin refill Core at the designed 5% threshold", () => {
     expect(drawMultiplierCore({ nextFloat: () => 0 })).toEqual({ kind: "MULTIPLIER_CORE", value: 2 });
-    expect(drawMultiplierCore({ nextFloat: () => 0.03 })).toBeNull();
+    expect(drawMultiplierCore({ nextFloat: () => 0.05 })).toBeNull();
   });
   it("supports the complete 2x–1000x Core range", () => {
     let index = 0;

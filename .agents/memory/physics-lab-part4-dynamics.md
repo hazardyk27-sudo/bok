@@ -15,6 +15,12 @@ The stationary outer ball track should have a shallow inward slope, and the dyna
 
 **How to apply:** Keep the track stationary and collision-driven, set the initial linear velocity tangential with no scripted position correction, and run the complete 20-spin fixed-step audit with explicit contact, floating, tunneling, and velocity checks.
 
+Primitive track segments must be evaluated with the ball radius included in the tangent overlap budget; a segment width that looks non-overlapping for the collider can still create simultaneous neighboring contacts and a large solver impulse. Continuous annular meshes also require a direct isolated launch test before use.
+
+**Why:** The current audit repeatedly showed the launch sphere entering multiple track contacts at the first segment transition, while a separately tested mesh reproduced an impulse despite apparently exact top-surface placement.
+
+**How to apply:** Treat segment pitch, segment tangent half-width, ball radius, and corner clearance as one coupled geometry calculation; reject any track representation that cannot pass an isolated launch trace before running the full 20-spin suite.
+
 The normalized GLB's rendered outer-track contact surface is below the original
 physics model's local Y origin. Apply the same rigid Y translation to every
 stationary collider, collider-debug mesh, and ball release position; never

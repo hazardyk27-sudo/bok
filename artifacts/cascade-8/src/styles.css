@@ -3314,6 +3314,26 @@ button:focus-visible, input:focus-visible { outline: 2px solid var(--cyan); outl
   transform: translateY(-5px);
   box-shadow: 0 30px 84px rgba(1, 5, 21, .46), 0 0 34px rgba(75, 163, 255, .1), inset 0 1px 0 rgba(255, 255, 255, .07);
 }
+.game-choice.is-disabled {
+  cursor: not-allowed;
+  filter: saturate(.72);
+}
+.game-choice.is-disabled:hover {
+  border-color: rgba(145, 164, 235, .2);
+  transform: none;
+  box-shadow: 0 25px 70px rgba(1, 5, 21, .32), inset 0 1px 0 rgba(255, 255, 255, .04);
+}
+.game-choice.is-disabled .choice-art,
+.game-choice.is-disabled .choice-copy,
+.game-choice.is-disabled .choice-footer {
+  opacity: .62;
+}
+.game-choice.is-disabled .choice-arrow {
+  color: var(--gold);
+}
+.game-choice.is-disabled:hover .choice-arrow {
+  transform: none;
+}
 .game-choice:focus-visible {
   outline: 2px solid var(--cyan);
   outline-offset: 4px;

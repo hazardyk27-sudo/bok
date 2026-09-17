@@ -1,5 +1,6 @@
 import {
   BASE_REEL_CONFIG,
+  BASE_INITIAL_CORE_CHANCE,
   BASE_INITIAL_SCATTER_CHANCE,
   BASE_REFILL_CORE_CHANCE,
   BASE_REFILL_SCATTER_CHANCE,
@@ -122,13 +123,15 @@ export class ColumnStream {
         : context === "BONUS_INITIAL"
           ? BONUS_INITIAL_SCATTER_CHANCE
           : BONUS_REFILL_SCATTER_CHANCE;
-    const coreMode = allowCores && (context === "BASE_REFILL"
+    const coreMode = allowCores && (context === "BASE_INITIAL" || context === "BASE_REFILL"
       ? "base"
       : context === "BONUS_INITIAL" || context === "BONUS_REFILL"
         ? "bonus"
         : null);
-    const coreChance = context === "BASE_REFILL"
-      ? BASE_REFILL_CORE_CHANCE
+    const coreChance = context === "BASE_INITIAL"
+      ? BASE_INITIAL_CORE_CHANCE
+      : context === "BASE_REFILL"
+        ? BASE_REFILL_CORE_CHANCE
       : context === "BONUS_INITIAL"
         ? BONUS_INITIAL_CORE_CHANCE
         : context === "BONUS_REFILL"

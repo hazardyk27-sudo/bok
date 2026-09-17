@@ -62,16 +62,16 @@ const mainMenuMarkup = `
         </span>
         <span class="choice-footer"><span>30 SYMBOL FIELD</span><span class="choice-arrow" aria-hidden="true">→</span></span>
       </a>
-      <a class="game-choice game-choice-roulette" href="/roulette">
-        <span class="choice-status is-live">LIVE GLOBAL TABLE</span>
+      <article class="game-choice game-choice-roulette is-disabled" aria-disabled="true" aria-label="Roulette, coming soon">
+        <span class="choice-status is-soon">COMING SOON</span>
         <span class="choice-art choice-art-roulette" aria-hidden="true"><span>R</span><i></i><b></b></span>
         <span class="choice-copy">
           <span class="choice-overline">THE NIGHT TABLE</span>
           <strong>ROULETTE</strong>
           <span class="choice-type">TABLE EXPERIENCE</span>
         </span>
-        <span class="choice-footer"><span>24/7 SYNCHRONIZED ROUNDS</span><span class="choice-arrow" aria-hidden="true">→</span></span>
-      </a>
+        <span class="choice-footer"><span>TABLE OPENS SOON</span><span class="choice-arrow" aria-hidden="true">—</span></span>
+      </article>
     </div>
     <div class="menu-footer">
       <span class="menu-footer-line"></span>
@@ -297,18 +297,18 @@ app.innerHTML = `
     <main class="game-layout">
       <section class="game-stage">
         <div class="mode-ribbon">
-          <div class="hud-stat"><span>BALANCE</span><strong id="balance">10,000.00</strong></div>
-          <div class="hud-stat"><span>BET</span><strong id="bet">1.00</strong></div>
-          <div class="hud-stat"><span>TOTAL WIN</span><strong id="win">0.00</strong></div>
-          <div class="hud-stat bonus-stat"><span>BONUS WIN</span><strong id="bonus-win">0.00</strong></div>
+          <div class="hud-stat"><span>BALANCE</span><strong id="balance">$10,000.00</strong></div>
+          <div class="hud-stat"><span>BET</span><strong id="bet">$1.00</strong></div>
+          <div class="hud-stat"><span>TOTAL WIN</span><strong id="win">$0.00</strong></div>
+          <div class="hud-stat bonus-stat"><span>BONUS WIN</span><strong id="bonus-win">$0.00</strong></div>
         </div>
         <section id="free-spin-calculation" class="free-spin-calculation" hidden aria-label="Free Spin calculation" aria-live="polite">
           <div class="free-spin-calc-equation">
-            <div class="free-spin-calc-value" aria-label="Raw explosion total"><span aria-hidden="true">SYMBOL WIN</span><strong id="free-spin-symbol-win">0.00</strong></div>
+            <div class="free-spin-calc-value" aria-label="Raw explosion total"><span aria-hidden="true">SYMBOL WIN</span><strong id="free-spin-symbol-win">$0.00</strong></div>
             <span id="free-spin-multiply-operator" class="free-spin-calc-operator">×</span>
             <div class="free-spin-calc-value" aria-label="Multiplier"><span aria-hidden="true">MULTIPLIER</span><strong id="free-spin-multiplier">1x</strong></div>
             <span id="free-spin-equals-operator" class="free-spin-calc-operator">=</span>
-            <div class="free-spin-calc-value is-result" aria-label="Spin win"><span aria-hidden="true">SPIN WIN</span><strong id="free-spin-spin-win">0.00</strong></div>
+            <div class="free-spin-calc-value is-result" aria-label="Spin win"><span aria-hidden="true">SPIN WIN</span><strong id="free-spin-spin-win">$0.00</strong></div>
           </div>
         </section>
         <div class="board-wrap">
@@ -333,7 +333,7 @@ app.innerHTML = `
     <footer class="control-deck">
       <div class="bet-control">
         <span class="eyebrow">BET</span>
-        <div class="bet-stepper"><button id="bet-minus" aria-label="Decrease bet">−</button><strong data-bet-display>1.00</strong><button id="bet-plus" aria-label="Increase bet">+</button></div>
+        <div class="bet-stepper"><button id="bet-minus" aria-label="Decrease bet">−</button><strong data-bet-display>$1.00</strong><button id="bet-plus" aria-label="Increase bet">+</button></div>
       </div>
       <div class="auto-control">
         <button id="auto-toggle" class="auto-trigger" type="button" aria-haspopup="menu" aria-expanded="false" aria-label="Choose automatic spin count">
@@ -395,7 +395,7 @@ function showModal(name: string | null) {
       <label class="setting-row"><span><b>Reduced motion</b><small>Respect system accessibility preference</small></span><input id="setting-motion" type="checkbox"><i></i></label>
        <label class="volume-row"><span>SFX VOLUME</span><input id="setting-volume" type="range" min="0" max="1" step="0.01" value="0.38"></label>
        <label class="volume-row"><span>MUSIC VOLUME</span><input id="setting-music-volume" type="range" min="0" max="1" step="0.01" value="0.18"></label>
-       <button id="demo-reset" class="outline-button full">RESET DEMO CREDITS <small>RESTORE 10,000.00</small></button>
+       <button id="demo-reset" class="outline-button full">RESET DEMO CREDITS <small>RESTORE $10,000.00</small></button>
        <button id="main-menu-button" class="outline-button full menu-exit-button">ANA MENÜ <small>BACK TO GAME SELECT</small></button>
       <div class="modal-footnote">Preferences are stored locally. No secret RNG state or personal data is stored.</div>
     </section></div>`;

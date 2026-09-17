@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { countScatter, generateInitialBoard, generateRefillSymbols } from "./BoardGenerator";
 import { SeededRNG } from "./RNG";
-import { getNormalSymbol, getStackMetadata } from "./types";
+import { getNormalSymbol, getStackMetadata, isMultiplierCore } from "./types";
 import type { RandomSource } from "./types";
 
 const alwaysLast: RandomSource = { nextFloat: () => 0.999999 };
@@ -13,6 +13,9 @@ describe("board generation", () => {
   });
   it("can generate scatter on an initial board", () => {
     expect(countScatter(generateInitialBoard({ nextFloat: () => 0 }))).toBeGreaterThan(0);
+  });
+  it("can generate a Core on a Base initial board", () => {
+    expect(generateInitialBoard({ nextFloat: () => 0.031 }).flat().some(isMultiplierCore)).toBe(true);
   });
   it("can generate scatter on a refill", () => {
     expect(countScatter([generateRefillSymbols(alwaysFirst, 30)])).toBeGreaterThan(0);
@@ -36,7 +39,7 @@ describe("board generation", () => {
       scatterCount += countScatter(generateInitialBoard(source, "base"));
     }
     const marginal = scatterCount / (boards * 30);
-    expect(marginal).toBeGreaterThan(0.022);
-    expect(marginal).toBeLessThan(0.027);
+    expect(marginal).toBeGreaterThan(0.016);
+    expect(marginal).toBeLessThan(0.02);
   });
 });

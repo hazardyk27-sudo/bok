@@ -3,6 +3,7 @@ import { playSpin } from "../engine/SlotEngine";
 import { SeededRNG } from "../engine/RNG";
 import { evaluateBoard } from "../engine/WinEvaluator";
 import {
+  BASE_INITIAL_CORE_CHANCE,
   BASE_INITIAL_SCATTER_CHANCE,
   BASE_REEL_CONFIG,
   BASE_REFILL_CORE_CHANCE,
@@ -205,6 +206,7 @@ export type SimulationReport = {
     normalPairCopyChance: number;
     symbols: { id: string; weight: number }[];
     baseInitialScatterChance: number;
+    baseInitialCoreChance: number;
     baseRefillScatterChance: number;
     baseRefillCoreChance: number;
     bonusInitialScatterChance: number;
@@ -542,6 +544,7 @@ export function simulate(spins: number, seed: string, betCents = 100, onProgress
       normalPairCopyChance: NORMAL_PAIR_COPY_CHANCE,
       symbols: SYMBOLS.map(({ id, weight }) => ({ id, weight })),
       baseInitialScatterChance: BASE_INITIAL_SCATTER_CHANCE,
+      baseInitialCoreChance: BASE_INITIAL_CORE_CHANCE,
       baseRefillScatterChance: BASE_REFILL_SCATTER_CHANCE,
       baseRefillCoreChance: BASE_REFILL_CORE_CHANCE,
       bonusInitialScatterChance: BONUS_INITIAL_SCATTER_CHANCE,

@@ -966,7 +966,7 @@ export class GameController {
       const tier = forcedTier ?? winTier(multiplier);
       const tierClass = tier.split(" ")[0].toLowerCase();
       overlay.className = "big-win-overlay is-visible";
-      overlay.innerHTML = `<div class="big-win-card tier-${tierClass}"><span class="big-win-kicker">REWARD CEREMONY</span><div class="big-win-tier"><i>✦</i><span>${tier}</span><i>✦</i></div><div class="big-win-amount-wrap"><strong class="big-win-amount is-counting">0.00</strong></div><div class="big-win-summary"><span>TOTAL WIN</span><b>${multiplier.toFixed(2)}x BET</b></div><button class="big-win-action" type="button">TAP TO SPEED UP</button></div>`;
+      overlay.innerHTML = `<div class="big-win-card tier-${tierClass}"><span class="big-win-kicker">REWARD CEREMONY</span><div class="big-win-tier"><i>✦</i><span>${tier}</span><i>✦</i></div><div class="big-win-amount-wrap"><strong class="big-win-amount is-counting">$0.00</strong></div><div class="big-win-summary"><span>TOTAL WIN</span><b>${multiplier.toFixed(2)}x BET</b></div><button class="big-win-action" type="button">TAP TO SPEED UP</button></div>`;
       let counting = true;
       let closed = false;
       let value = 0;
@@ -1028,9 +1028,9 @@ export class GameController {
       overlay.querySelector("button")?.addEventListener("click", close, { once: true });
     });
   }
-  resetDemo() { this.balanceCents = STARTING_BALANCE_CENTS; this.persistBalance(); this.updateHud(); this.message("DEMO BALANCE RESET TO 10,000.00"); }
+  resetDemo() { this.balanceCents = STARTING_BALANCE_CENTS; this.persistBalance(); this.updateHud(); this.message("DEMO BALANCE RESET TO $10,000.00"); }
 }
 
 export function formatCredits(cents: number) {
-  return (cents / 100).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  return `$${(cents / 100).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 }

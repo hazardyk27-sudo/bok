@@ -30,6 +30,7 @@ const MULTIPLIER_15X_IMAGE_KEY = "multiplier-core-15x";
 const MULTIPLIER_20X_IMAGE_KEY = "multiplier-core-20x";
 const MULTIPLIER_25X_IMAGE_KEY = "multiplier-core-25x";
 const MULTIPLIER_50X_IMAGE_KEY = "multiplier-core-50x";
+const MULTIPLIER_100X_IMAGE_KEY = "multiplier-core-100x";
 const MULTIPLIER_250X_IMAGE_KEY = "multiplier-core-250x";
 const MULTIPLIER_500X_IMAGE_KEY = "multiplier-core-500x";
 const MULTIPLIER_1000X_IMAGE_KEY = "multiplier-core-1000x";
@@ -91,6 +92,7 @@ export class GameScene extends Phaser.Scene {
     this.load.image(MULTIPLIER_20X_IMAGE_KEY, `${import.meta.env.BASE_URL}special-symbols/20x.png`);
     this.load.image(MULTIPLIER_25X_IMAGE_KEY, `${import.meta.env.BASE_URL}special-symbols/25x.png`);
     this.load.image(MULTIPLIER_50X_IMAGE_KEY, `${import.meta.env.BASE_URL}special-symbols/50x.png`);
+    this.load.image(MULTIPLIER_100X_IMAGE_KEY, `${import.meta.env.BASE_URL}special-symbols/100x.png`);
     this.load.image(MULTIPLIER_250X_IMAGE_KEY, `${import.meta.env.BASE_URL}special-symbols/250x.png`);
     this.load.image(MULTIPLIER_500X_IMAGE_KEY, `${import.meta.env.BASE_URL}special-symbols/500x.png`);
     this.load.image(MULTIPLIER_1000X_IMAGE_KEY, `${import.meta.env.BASE_URL}special-symbols/1000x.png`);
@@ -191,7 +193,7 @@ export class GameScene extends Phaser.Scene {
               : symbol.value >= 10
                 ? LARGE_CORE_SIZE
                 : SMALL_CORE_SIZE;
-      const usesSuppliedArt = symbol.value === 2 || symbol.value === 3 || symbol.value === 5 || symbol.value === 10 || symbol.value === 15 || symbol.value === 20 || symbol.value === 25 || symbol.value === 50 || symbol.value === 250 || symbol.value === 500 || symbol.value === 1000;
+      const usesSuppliedArt = symbol.value === 2 || symbol.value === 3 || symbol.value === 5 || symbol.value === 10 || symbol.value === 15 || symbol.value === 20 || symbol.value === 25 || symbol.value === 50 || symbol.value === 100 || symbol.value === 250 || symbol.value === 500 || symbol.value === 1000;
       const suppliedArtKey = symbol.value === 2
         ? MULTIPLIER_2X_IMAGE_KEY
         : symbol.value === 3
@@ -208,6 +210,8 @@ export class GameScene extends Phaser.Scene {
                     ? MULTIPLIER_25X_IMAGE_KEY
                     : symbol.value === 50
                       ? MULTIPLIER_50X_IMAGE_KEY
+                      : symbol.value === 100
+                        ? MULTIPLIER_100X_IMAGE_KEY
                       : symbol.value === 250
                         ? MULTIPLIER_250X_IMAGE_KEY
                         : symbol.value === 500

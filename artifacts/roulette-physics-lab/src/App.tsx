@@ -44,6 +44,7 @@ const OUTER_TRACK_RADIUS = 2.48;
 const OUTER_TRACK_CENTER_Y = 0.61;
 const OUTER_TRACK_HALF_HEIGHT = 0.045;
 const OUTER_TRACK_TILT = -0.08;
+const OUTER_TRACK_LAUNCH_CLEARANCE = 0.003;
 const OUTER_TRACK_SURFACE_Y =
   OUTER_TRACK_CENTER_Y + OUTER_TRACK_HALF_HEIGHT;
 // The normalized GLB's measured outer-track contact surface is y=-0.425.
@@ -67,15 +68,15 @@ const ROTOR_COLLISION_GROUP = 0x0004;
 const DEFAULT_BALL_PARAMETERS = {
   radius: BALL_RADIUS,
   mass: 0.0027,
-  friction: 0.38,
+  friction: 0.44,
   restitution: 0.18,
-  linearDamping: 0.045,
-  angularDamping: 0.028,
+  linearDamping: 0.065,
+  angularDamping: 0.1,
   initialAngularVelocity: 230,
 } as const;
 const DEFAULT_ROTOR_PARAMETERS = {
   initialAngularVelocity: 2.4,
-  angularDamping: 0.12,
+  angularDamping: 0.22,
   mass: 3.2,
 } as const;
 const DEFAULT_LAUNCH_PARAMETERS = {
@@ -265,6 +266,8 @@ type Part5SpinResult = {
   completed: boolean;
   chainComplete: boolean;
   outerTrackEntered: boolean;
+  outerTrackLaps: number;
+  naturalTrackExit: boolean;
   energyLossObserved: boolean;
   inwardMovementObserved: boolean;
   deflectorHit: boolean;
@@ -587,11 +590,12 @@ function outerTrackContactPosition(
   angle: number,
   ballRadius: number,
 ): [number, number, number] {
+  const normalOffset = ballRadius + OUTER_TRACK_LAUNCH_CLEARANCE;
   return radialPosition(
-    OUTER_TRACK_RADIUS + ballRadius * Math.sin(OUTER_TRACK_TILT),
+    OUTER_TRACK_RADIUS + normalOffset * Math.sin(OUTER_TRACK_TILT),
     angle,
     OUTER_TRACK_SURFACE_Y +
-      ballRadius * Math.cos(OUTER_TRACK_TILT) +
+      normalOffset * Math.cos(OUTER_TRACK_TILT) +
       PHYSICS_Y_OFFSET,
   );
 }
@@ -608,12 +612,13 @@ function isOuterTrackContactHeight(
   translation: { x: number; y: number; z: number },
   ballRadius: number,
 ) {
+  const normalOffset = ballRadius + OUTER_TRACK_LAUNCH_CLEARANCE;
   const radius = Math.hypot(translation.x, translation.z);
   const expectedRadius =
-    OUTER_TRACK_RADIUS + ballRadius * Math.sin(OUTER_TRACK_TILT);
+    OUTER_TRACK_RADIUS + normalOffset * Math.sin(OUTER_TRACK_TILT);
   const expectedHeight =
     OUTER_TRACK_SURFACE_Y +
-    ballRadius * Math.cos(OUTER_TRACK_TILT) +
+    normalOffset * Math.cos(OUTER_TRACK_TILT) +
     PHYSICS_Y_OFFSET;
   return (
     Math.abs(radius - expectedRadius) <= OUTER_TRACK_RADIAL_TOLERANCE &&
@@ -674,20 +679,20 @@ function buildColliderSpecs(): ColliderSpec[] {
     id: 'bowl-transition-outer',
     label: 'Bowl transition',
     body: 'stationary',
-    count: 96,
-    radius: 2.40,
+    count: 37,
+    radius: 2.25,
     y: 0.56,
-    halfExtents: [0.10, 0.055, 0.12],
+    halfExtents: [0.095, 0.055, 0.08],
     color: stationaryColor,
   });
   addRingSpecs(specs, {
     id: 'bowl-transition-middle-outer',
     label: 'Bowl transition',
     body: 'stationary',
-    count: 96,
+    count: 192,
     radius: 2.26,
     y: 0.45,
-    halfExtents: [0.10, 0.055, 0.12],
+    halfExtents: [0.095, 0.055, 0.12],
     color: stationaryColor,
     tilt: -0.38,
   });
@@ -695,10 +700,10 @@ function buildColliderSpecs(): ColliderSpec[] {
     id: 'bowl-transition-middle-inner',
     label: 'Bowl transition',
     body: 'stationary',
-    count: 96,
+    count: 192,
     radius: 2.12,
     y: 0.32,
-    halfExtents: [0.10, 0.055, 0.12],
+    halfExtents: [0.095, 0.055, 0.12],
     color: stationaryColor,
     tilt: -0.45,
   });
@@ -717,10 +722,10 @@ function buildColliderSpecs(): ColliderSpec[] {
     id: 'track-floor',
     label: 'Ball track',
     body: 'stationary',
-    count: 96,
-    radius: 2.48,
-    y: 0.61,
-    halfExtents: [0.11, 0.045, 0.17],
+    count: 37,
+    radius: OUTER_TRACK_RADIUS,
+    y: OUTER_TRACK_CENTER_Y,
+    halfExtents: [0.22, OUTER_TRACK_HALF_HEIGHT, 0.17],
     color: stationaryColor,
     tilt: OUTER_TRACK_TILT,
   });
@@ -728,10 +733,10 @@ function buildColliderSpecs(): ColliderSpec[] {
     id: 'outer-rim',
     label: 'Outer rim',
     body: 'stationary',
-    count: 96,
-    radius: 2.70,
+    count: 192,
+    radius: 2.80,
     y: 0.85,
-    halfExtents: [0.12, 0.17, 0.10],
+    halfExtents: [0.12, 0.17, 0.08],
     color: stationaryColor,
   });
   addRingSpecs(specs, {
@@ -751,7 +756,7 @@ function buildColliderSpecs(): ColliderSpec[] {
     label: 'Deflector',
     body: 'stationary',
     count: 8,
-    radius: 2.33,
+    radius: 2.05,
     y: 0.78,
     halfExtents: [0.16, 0.08, 0.10],
     color: '#c48b68',
@@ -766,7 +771,7 @@ function buildColliderSpecs(): ColliderSpec[] {
     count: SECTOR_COUNT,
     radius: ROTOR_RADIUS,
     y: 0.15,
-    halfExtents: [0.13, 0.055, 0.16],
+    halfExtents: [0.18, 0.055, 0.18],
     color: rotorColor,
   });
   addRingSpecs(specs, {
@@ -838,20 +843,25 @@ function addRapierCollider(
     spec.body === 'rotor'
       ? BALL_COLLISION_GROUP | ROTOR_COLLISION_GROUP
       : BALL_COLLISION_GROUP | STATIONARY_COLLISION_GROUP;
-  const descriptor = RAPIER.ColliderDesc.cuboid(...spec.halfExtents)
+  const descriptor = (
+    spec.label === 'Ball track'
+      ? RAPIER.ColliderDesc.roundCuboid(...spec.halfExtents, 0.035)
+      : RAPIER.ColliderDesc.cuboid(...spec.halfExtents)
+  )
     .setTranslation(...physicsPosition(spec.position))
     .setRotation({
       x: spec.rotation[0],
       y: spec.rotation[1],
       z: spec.rotation[2],
       w: spec.rotation[3],
-    })
+    });
+  descriptor
     .setFriction(isDeflector ? 0.28 : friction)
     .setRestitution(
       isDeflector
         ? 0.42
-        : spec.label === 'Ball track'
-          ? 0.06
+          : spec.label === 'Ball track'
+            ? 0.06
           : restitution,
     )
     .setCollisionGroups(membership | (filter << 16));
@@ -1143,10 +1153,11 @@ function part4LaunchProfile(
   ballParameters: BallPhysicsParameters,
   launchParameters: BallLaunchParameters,
 ) {
-  const safeSector = 13;
+  const safeSectors = [1, 2, 5, 6, 10];
+  const safeSector = safeSectors[index % safeSectors.length];
   const interiorVariation = 0.0015 + index * 0.0002;
   const angle =
-    (safeSector + 0.5) * SECTOR_STEP_RADIANS + interiorVariation;
+    safeSector * SECTOR_STEP_RADIANS + interiorVariation;
   const signedVariation = 1;
   const variation =
     signedVariation * launchParameters.variation * (0.35 + (index % 5) * 0.16);
@@ -1173,7 +1184,7 @@ function part4LaunchProfile(
     spin,
     // A tangentially moving sphere rolls around the radial axis. This keeps
     // the launch physically coupled to the stationary horizontal track.
-    spinAxis: [radial[0], 0, radial[1]] as [number, number, number],
+    spinAxis: [-radial[0], 0, -radial[1]] as [number, number, number],
   };
 }
 
@@ -1182,39 +1193,37 @@ function part5LaunchProfile(
   ballParameters: BallPhysicsParameters,
   launchParameters: BallLaunchParameters,
 ) {
-  const safeSector = (13 + index * 7) % SECTOR_COUNT;
-  const interiorVariation = 0.0015 + (index % 9) * 0.0002;
+  // These sector centers sit between the eight deflectors. The ball is not
+  // spawned inside an obstacle; it reaches deflectors only after its real
+  // outer-track run and natural inward exit.
+  const safeSectors = [1, 2, 5, 6, 10];
+  const safeSector = safeSectors[index % safeSectors.length];
+  const interiorVariation = ((index % 5) - 2) * 0.008;
   const signedVariation = index % 2 === 0 ? 1 : -1;
   const variation =
     signedVariation * launchParameters.variation * (0.35 + (index % 5) * 0.16);
   const angle =
-    (safeSector + 0.5) * SECTOR_STEP_RADIANS + interiorVariation;
-  const radius = 2.455 + (index % 4) * 0.0005 + variation * 0.02;
-  const height = physicsY(0.961 + (index % 4) * 0.0005);
-  const position = radialPosition(radius, angle, height);
+    safeSector * SECTOR_STEP_RADIANS + interiorVariation;
+  // Part 5 must begin as a real rolling release on the rendered track. Do
+  // not give it an inward component or a hand-authored height; the sloped
+  // contact helper is the single source of truth for both.
+  const position = outerTrackContactPosition(angle, ballParameters.radius);
   const tangent: [number, number] = [Math.cos(angle), -Math.sin(angle)];
   const radial: [number, number] = [Math.sin(angle), Math.cos(angle)];
-  const launchAngle = THREE.MathUtils.degToRad(
-    launchParameters.angle +
-      1.5 +
-      signedVariation * launchParameters.variation * 8,
-  );
   const speed =
     launchParameters.speed *
     (1 + signedVariation * launchParameters.variation * 0.28);
-  const inwardSpeed = speed * Math.sin(launchAngle);
-  const tangentSpeed = speed * Math.cos(launchAngle);
   const velocity: [number, number, number] = [
-    tangent[0] * -tangentSpeed - radial[0] * inwardSpeed,
-    -0.12 - (index % 3) * 0.025,
-    tangent[1] * -tangentSpeed - radial[1] * inwardSpeed,
+    tangent[0] * -speed,
+    0,
+    tangent[1] * -speed,
   ];
   const spin = launchParameters.initialSpin * (1 + variation * 0.2);
   return {
     position,
     velocity,
     spin,
-    spinAxis: [radial[1], 0, -radial[0]] as [number, number, number],
+    spinAxis: [-radial[0], 0, -radial[1]] as [number, number, number],
   };
 }
 
@@ -1247,7 +1256,7 @@ async function runPart4Validation(
         rotorParameters.initialAngularVelocity *
         (1 + ((index % 5) - 2) * launchParameters.variation * 0.45),
     };
-    const { world, rotorBody, outerTrackColliders } = createColliderWorld(
+    const { world, rotorBody, colliderBuckets } = createColliderWorld(
       specs,
       rotorProfile,
     );
@@ -1301,6 +1310,7 @@ async function runPart4Validation(
     let rotorHalfSpeedTime = 0;
     let pathBins = new Set<number>();
     const pathSamples: string[] = [];
+    const firstStepTrace: string[] = [];
     const initialBallSpeed = Math.hypot(...release.velocity);
     const initialRotorSpeed = Math.abs(rotorBody.angvel().y);
     let previousBallSpeed = initialBallSpeed;
@@ -1319,7 +1329,7 @@ async function runPart4Validation(
       const physicalOuterTrackContact = hasOuterTrackContact(
         world,
         ballCollider,
-        outerTrackColliders,
+        colliderBuckets.outerTrack,
       );
       const outerTrackContactY =
         OUTER_TRACK_SURFACE_Y +
@@ -1341,6 +1351,25 @@ async function runPart4Validation(
           radius < OUTER_TRACK_RADIUS + 0.15) {
         outerTrackPhaseFrames += 1;
         outerTrackContactFrames += 1;
+      }
+      if (index === 0 && step < 12) {
+        const contactBuckets = [
+          physicalOuterTrackContact ? 'track' : '',
+          hasColliderCategoryContact(world, ballCollider, colliderBuckets.deflectors)
+            ? 'deflector'
+            : '',
+          hasColliderCategoryContact(world, ballCollider, colliderBuckets.pocketGeometry)
+            ? 'pocket'
+            : '',
+        ]
+          .filter(Boolean)
+          .join('+') || 'none';
+        firstStepTrace.push(
+          `${step}:${physicalOuterTrackContact ? 'C' : '-'} ` +
+          `p(${translation.x.toFixed(3)},${translation.y.toFixed(3)},${translation.z.toFixed(3)}) ` +
+          `v(${velocity.x.toFixed(3)},${velocity.y.toFixed(3)},${velocity.z.toFixed(3)}) ` +
+          `[${contactBuckets}]`,
+        );
       }
       if (
         outerTrackEnvelope &&
@@ -1455,7 +1484,7 @@ async function runPart4Validation(
       invalidTrap,
       detail: completed
         ? `Natural settle after ${durationSeconds.toFixed(1)} s · ${pathBins.size} angular path bins · track ${outerTrackContactFrames}/${outerTrackPhaseFrames}`
-        : `Did not reach a valid natural settle within the 18 s audit window · track ${outerTrackContactFrames}/${outerTrackPhaseFrames}`,
+        : `Did not reach a valid natural settle within the 18 s audit window · track ${outerTrackContactFrames}/${outerTrackPhaseFrames}${index === 0 ? ` · ${firstStepTrace.join(' | ')}` : ''}`,
     });
     world.removeRigidBody(ballBody);
     world.removeRigidBody(rotorBody);
@@ -1531,7 +1560,7 @@ async function runPart4Validation(
     durationMs: Math.round(performance.now() - startedAt),
     detail: aggregatePassed
       ? `${PART4_SPIN_TEST_COUNT} complete coupled rotor/ball spins passed at 120 Hz fixed physics.`
-      : `Part 4 review needed: ${results.filter((result) => !result.completed).length} spins missed the settle envelope; ${outerTrackLaunchContactCount}/${PART4_SPIN_TEST_COUNT} had physical launch contact and ${outerTrackContactPassCount}/${PART4_SPIN_TEST_COUNT} maintained an outer-track contact phase.`,
+      : `Part 4 review needed: ${results.filter((result) => !result.completed).length} spins missed the settle envelope; ${outerTrackLaunchContactCount}/${PART4_SPIN_TEST_COUNT} had physical launch contact and ${outerTrackContactPassCount}/${PART4_SPIN_TEST_COUNT} maintained an outer-track contact phase. First trace: ${results[0]?.detail ?? 'unavailable'}`,
     results,
   };
 }
@@ -1570,8 +1599,11 @@ async function runPart5Validation(
         rotorParameters.initialAngularVelocity *
         (1 + ((index % 7) - 3) * launchParameters.variation * 0.35),
     };
-    const { world, rotorBody } = createColliderWorld(specs, rotorProfile);
-    const release = part4LaunchProfile(index, ballParameters, launchParameters);
+    const { world, rotorBody, colliderBuckets } = createColliderWorld(
+      specs,
+      rotorProfile,
+    );
+    const release = part5LaunchProfile(index, ballParameters, launchParameters);
     const ballBody = createDynamicBallBody(
       world,
       ballParameters,
@@ -1594,6 +1626,8 @@ async function runPart5Validation(
     );
 
     let outerTrackEntered = false;
+    let outerTrackLaps = 0;
+    let naturalTrackExit = false;
     let energyLossObserved = false;
     let inwardMovementObserved = false;
     let deflectorHit = false;
@@ -1621,6 +1655,11 @@ async function runPart5Validation(
     let previousRadialVelocity = 0;
     let previousVerticalVelocity = release.velocity[1];
     let previousPocketIndex: number | null = null;
+    let previousTrackAngle = Math.atan2(release.position[0], release.position[2]);
+    let trackAngleTravel = 0;
+    let trackLostFrames = 0;
+    const trackContactRadius =
+      OUTER_TRACK_RADIUS + ballParameters.radius * Math.sin(OUTER_TRACK_TILT);
     const pathSamples: string[] = [];
     const initialBallSpeed = previousBallSpeed;
 
@@ -1689,40 +1728,69 @@ async function runPart5Validation(
         velocityExplosion = true;
       }
 
-      if (radius > 2.32 && radius < 2.66 && localHeight > 0.52) {
+      const physicalOuterTrackContact = hasColliderCategoryContact(
+        world,
+        ballBody.collider(0),
+        colliderBuckets.outerTrack,
+      );
+      const physicalDeflectorContact = hasColliderCategoryContact(
+        world,
+        ballBody.collider(0),
+        colliderBuckets.deflectors,
+      );
+      const physicalFretContact = hasColliderCategoryContact(
+        world,
+        ballBody.collider(0),
+        colliderBuckets.frets,
+      );
+      const physicalPocketContact = hasColliderCategoryContact(
+        world,
+        ballBody.collider(0),
+        colliderBuckets.pocketGeometry,
+      );
+      const onTrackRadius =
+        radius > trackContactRadius - 0.12 &&
+        radius < trackContactRadius + 0.12;
+
+      if (physicalOuterTrackContact && onTrackRadius) {
         outerTrackEntered = true;
+        if (!naturalTrackExit) {
+          trackLostFrames = 0;
+          const currentTrackAngle = Math.atan2(translation.x, translation.z);
+          const angleDelta = normalizedAngle(currentTrackAngle - previousTrackAngle);
+          if (Math.abs(angleDelta) < 0.35) {
+            trackAngleTravel += Math.abs(angleDelta);
+          }
+          previousTrackAngle = currentTrackAngle;
+        }
+      } else if (outerTrackEntered && !naturalTrackExit) {
+        trackLostFrames += 1;
+        if (
+          trackLostFrames >= 8 &&
+          (radius < trackContactRadius - 0.10 || localHeight < 0.28)
+        ) {
+          naturalTrackExit = true;
+        }
       }
+      outerTrackLaps = trackAngleTravel / (Math.PI * 2);
       if (outerTrackEntered && ballSpeed < initialBallSpeed * 0.72) {
         energyLossObserved = true;
       }
-      if (minRadius < 2.24 && maxRadius - minRadius > 0.12) {
+      if (naturalTrackExit && minRadius < trackContactRadius - 0.12) {
         inwardMovementObserved = true;
       }
-      if (
-        radius > 2.18 &&
-        radius < 2.48 &&
-        localHeight > 0.62 &&
-        localHeight < 1.1 &&
-        Math.abs(radialVelocity - previousRadialVelocity) > 0.035 &&
-        ballSpeed > 0.22
-      ) {
+      if (physicalDeflectorContact) {
         deflectorHit = true;
       }
-      if (
-        radius > 1.35 &&
-        radius < 2.2 &&
-        rotorSpeed > 0.08 &&
-        (Math.abs(ballSpeed - previousBallSpeed) > 0.01 ||
-          Math.abs(rotorSpeed - previousRotorSpeed) > 0.0002)
-      ) {
+      if (physicalFretContact && rotorSpeed > 0.08) {
         movingFretContact = true;
       }
 
       const pocketIndex =
-        radius > 1.18 && radius < 1.98
+        physicalPocketContact && radius > 1.18 && radius < 1.98
           ? pocketIndexFromState(translation, rotation)
           : null;
-      if (pocketIndex !== null && ballSpeed > 0.08) {
+      if (pocketIndex !== null) {
         pocketInteraction = true;
         if (
           previousPocketIndex !== null &&
@@ -1791,6 +1859,8 @@ async function runPart5Validation(
     const chainComplete =
       completed &&
       outerTrackEntered &&
+      outerTrackLaps >= 2 &&
+      naturalTrackExit &&
       energyLossObserved &&
       inwardMovementObserved &&
       deflectorHit &&
@@ -1803,6 +1873,8 @@ async function runPart5Validation(
       completed,
       chainComplete,
       outerTrackEntered,
+      outerTrackLaps,
+      naturalTrackExit,
       energyLossObserved,
       inwardMovementObserved,
       deflectorHit,
