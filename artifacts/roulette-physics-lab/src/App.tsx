@@ -449,9 +449,9 @@ const VIEW_PRESETS: Record<
   InspectionView,
   { position: [number, number, number]; up: [number, number, number] }
 > = {
-  top: { position: [0, 8.4, 0.001], up: [0, 0, -1] },
-  angled: { position: [6.4, 4.6, 7.2], up: [0, 1, 0] },
-  side: { position: [0.2, 1.35, 8.4], up: [0, 1, 0] },
+  top: { position: [0, 13.5, 0.001], up: [0, 0, -1] },
+  angled: { position: [8.3, 6.0, 9.35], up: [0, 1, 0] },
+  side: { position: [0.3, 2.1, 13.0], up: [0, 1, 0] },
 };
 
 const HIERARCHY_AUDIT = [
