@@ -2714,14 +2714,14 @@ button:focus-visible, input:focus-visible { outline: 2px solid var(--cyan); outl
 
   .app-shell:not(.is-lab) .tumble-win-panel {
     flex: 0 0 auto;
-    margin-top: auto;
+    margin-top: 1.5px;
     margin-bottom: auto;
   }
 
   .app-shell:not(.is-lab) .tumble-win-panel.is-active,
   .app-shell:not(.is-lab) .tumble-win-panel.is-settling,
   .app-shell:not(.is-lab) .tumble-win-panel.is-free-total {
-    margin-top: auto;
+    margin-top: 1.5px;
     margin-bottom: auto;
   }
 
