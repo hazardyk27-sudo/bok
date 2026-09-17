@@ -44,6 +44,27 @@ describe("persistent column streams", () => {
     expect(stream.stats.actualSamePairCount).toBe(2);
   });
 
+  it("uses a lower copy chance for a new group while preserving pair copies", () => {
+    const config: ReelConfig = {
+      ...BASE_REEL_CONFIG,
+      symbolWeights: [
+        { value: "S3", weight: 1 },
+        { value: "S4", weight: 9 },
+      ],
+    };
+    const rolls = [0.99, 0.49, 0.74, 0.99, 0.6];
+    const stream = new ColumnStream({ nextFloat: () => rolls.shift() ?? 0.999999 }, config, 0);
+
+    const first = stream.nextVisibleAware("BASE_REFILL", false, "S3");
+    const second = stream.nextVisibleAware("BASE_REFILL", false, "S3");
+    const third = stream.nextVisibleAware("BASE_REFILL", false, "S3");
+
+    expect(first.copiedFromVisibleTop).toBe(true);
+    expect(second.copiedFromVisibleTop).toBe(true);
+    expect(third.copiedFromVisibleTop).toBe(false);
+    expect(getNormalSymbol(third.cell)).toBe("S4");
+  });
+
   it("keeps special cells independent without splitting a pending pair", () => {
     const config: ReelConfig = {
       ...BASE_REEL_CONFIG,

@@ -16,8 +16,10 @@ import {
   BONUS_REFILL_SCATTER_CHANCE,
   MAX_WIN_MULTIPLIER,
   NORMAL_PAIR_COPY_CHANCE,
+  NORMAL_THIRD_COPY_CHANCE,
   NORMAL_SYMBOLS,
   SYMBOLS,
+  type NormalSymbolId,
 } from "../config/GameConfig";
 import { ColumnStream } from "../engine/BoardGenerator";
 import { getNormalSymbol, getStackMetadata, isMultiplierCore } from "../engine/types";
@@ -168,21 +170,31 @@ function recordPairGroups(
 
 function measureNormalPairBranches(seed: string, targetPairs = 1_000_000) {
   const stream = new ColumnStream(new SeededRNG(`${seed}:normal-pair-statistics`), BASE_REEL_CONFIG, 0);
-  let previousPairSecond: string | null = null;
+  const visibleStream = new ColumnStream(
+    new SeededRNG(`${seed}:normal-pair-visible-statistics`),
+    BASE_REEL_CONFIG,
+    0,
+  );
   let thirdPositionSamples = 0;
+  let thirdCopyBranches = 0;
   let thirdMatchesPreviousSecond = 0;
   while (stream.stats.pairCount < targetPairs) {
-    const cell = stream.next(1, "BASE_REFILL", false)[0];
-    const normal = getNormalSymbol(cell);
-    const metadata = getStackMetadata(cell);
+    stream.next(1, "BASE_REFILL", false);
+  }
+  let visiblePreviousPairSecond: NormalSymbolId | null = null;
+  while (visibleStream.stats.pairCount < targetPairs) {
+    const emission = visibleStream.nextVisibleAware("BASE_REFILL", false, visiblePreviousPairSecond);
+    const normal = getNormalSymbol(emission.cell);
+    const metadata = getStackMetadata(emission.cell);
     if (!normal || !metadata) continue;
     if (metadata.stackIndex === 0) {
-      if (previousPairSecond !== null) {
+      if (visiblePreviousPairSecond !== null) {
         thirdPositionSamples += 1;
-        if (normal === previousPairSecond) thirdMatchesPreviousSecond += 1;
+        if (emission.copiedFromVisibleTop) thirdCopyBranches += 1;
+        if (normal === visiblePreviousPairSecond) thirdMatchesPreviousSecond += 1;
       }
     } else if (metadata.stackIndex === 1) {
-      previousPairSecond = normal;
+      visiblePreviousPairSecond = normal;
     }
   }
   return {
@@ -190,6 +202,7 @@ function measureNormalPairBranches(seed: string, targetPairs = 1_000_000) {
     copyBranchRate: Number(((stream.stats.copyBranchCount / stream.stats.pairCount) * 100).toFixed(4)),
     actualSecondSameRate: Number(((stream.stats.actualSamePairCount / stream.stats.pairCount) * 100).toFixed(4)),
     thirdPositionSamples,
+    thirdCopyBranchRate: Number(((thirdCopyBranches / Math.max(1, thirdPositionSamples)) * 100).toFixed(4)),
     thirdMatchesPreviousSecondRate: Number(((thirdMatchesPreviousSecond / Math.max(1, thirdPositionSamples)) * 100).toFixed(4)),
     freshSecondCount: stream.stats.freshSecondCount,
   };
@@ -204,6 +217,7 @@ export type SimulationReport = {
     boardRows: number;
     maxWinMultiplier: number;
     normalPairCopyChance: number;
+    normalThirdCopyChance: number;
     symbols: { id: string; weight: number }[];
     baseInitialScatterChance: number;
     baseInitialCoreChance: number;
@@ -279,6 +293,8 @@ export type SimulationReport = {
   configuredCopyBranchProbability: number;
   observedCopyBranchProbability: number;
   observedSecondSameProbability: number;
+  configuredThirdCopyBranchProbability: number;
+  observedThirdCopyBranchProbability: number;
   sampledNormalPairs: number;
   thirdPositionSamples: number;
   thirdMatchesPreviousSecondProbability: number;
@@ -542,6 +558,7 @@ export function simulate(spins: number, seed: string, betCents = 100, onProgress
       boardRows: BOARD_ROWS,
       maxWinMultiplier: MAX_WIN_MULTIPLIER,
       normalPairCopyChance: NORMAL_PAIR_COPY_CHANCE,
+      normalThirdCopyChance: NORMAL_THIRD_COPY_CHANCE,
       symbols: SYMBOLS.map(({ id, weight }) => ({ id, weight })),
       baseInitialScatterChance: BASE_INITIAL_SCATTER_CHANCE,
       baseInitialCoreChance: BASE_INITIAL_CORE_CHANCE,
@@ -617,6 +634,8 @@ export function simulate(spins: number, seed: string, betCents = 100, onProgress
      configuredCopyBranchProbability: Number((NORMAL_PAIR_COPY_CHANCE * 100).toFixed(4)),
      observedCopyBranchProbability: pairBranches.copyBranchRate,
      observedSecondSameProbability: pairBranches.actualSecondSameRate,
+      configuredThirdCopyBranchProbability: Number((NORMAL_THIRD_COPY_CHANCE * 100).toFixed(4)),
+      observedThirdCopyBranchProbability: pairBranches.thirdCopyBranchRate,
      sampledNormalPairs: pairBranches.sampledPairs,
      thirdPositionSamples: pairBranches.thirdPositionSamples,
      thirdMatchesPreviousSecondProbability: pairBranches.thirdMatchesPreviousSecondRate,

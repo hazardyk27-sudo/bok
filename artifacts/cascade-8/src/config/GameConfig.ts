@@ -67,6 +67,7 @@ export type ReelConfig = {
 };
 
 export const NORMAL_PAIR_COPY_CHANCE = 0.75;
+export const NORMAL_THIRD_COPY_CHANCE = 0.5;
 
 export const BASE_REEL_CONFIG: ReelConfig = {
   name: "BASE",

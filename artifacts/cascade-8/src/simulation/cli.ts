@@ -50,6 +50,8 @@ async function main() {
       "Configured Copy Branch": `${report.configuredCopyBranchProbability}%`,
       "Observed Copy Branch": `${report.observedCopyBranchProbability}%`,
       "Actual Second = First": `${report.observedSecondSameProbability}%`,
+       "Configured Third Copy Branch": `${report.configuredThirdCopyBranchProbability}%`,
+       "Observed Third Copy Branch": `${report.observedThirdCopyBranchProbability}%`,
       "Sampled Normal Pairs": report.sampledNormalPairs,
       "Third Position Samples": report.thirdPositionSamples,
       "Third = Previous Second": `${report.thirdMatchesPreviousSecondProbability}%`,

@@ -7,16 +7,19 @@ describe("simulator", () => {
     expect(simulate(1000, "123").totalReturnCents).not.toBe(simulate(1000, "124").totalReturnCents);
   });
 
-  it("reports million-pair copy and third-position independence metrics", () => {
+  it("reports million-pair copy and separate third-position metrics", () => {
     const report = simulate(1, "pair-metrics");
     expect(report.sampledNormalPairs).toBe(1_000_000);
     expect(report.configuredCopyBranchProbability).toBe(75);
     expect(report.observedCopyBranchProbability).toBeGreaterThan(73);
     expect(report.observedCopyBranchProbability).toBeLessThan(77);
     expect(report.observedSecondSameProbability).toBeGreaterThan(report.observedCopyBranchProbability);
+    expect(report.configuredThirdCopyBranchProbability).toBe(50);
+    expect(report.observedThirdCopyBranchProbability).toBeGreaterThan(48);
+    expect(report.observedThirdCopyBranchProbability).toBeLessThan(52);
     expect(report.thirdPositionSamples).toBeGreaterThan(999_000);
-    expect(report.thirdMatchesPreviousSecondProbability).toBeGreaterThan(8);
-    expect(report.thirdMatchesPreviousSecondProbability).toBeLessThan(20);
+    expect(report.thirdMatchesPreviousSecondProbability).toBeGreaterThan(50);
+    expect(report.thirdMatchesPreviousSecondProbability).toBeLessThan(65);
     expect(report.exactTwoTumbleFrequency).toBeGreaterThanOrEqual(0);
     expect(report.exactThreeTumbleFrequency).toBeGreaterThanOrEqual(0);
     expect(report.exactFourTumbleFrequency).toBeGreaterThanOrEqual(0);
