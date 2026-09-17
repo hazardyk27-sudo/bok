@@ -38,7 +38,7 @@ const WORLD_UNITS_PER_METER = 6;
 const SECTOR_COUNT = 37;
 const SECTOR_STEP_RADIANS = (Math.PI * 2) / SECTOR_COUNT;
 const FIXED_TIMESTEP = 1 / 120;
-const BALL_RADIUS = 0.095;
+const BALL_RADIUS = 0.056;
 const ROTOR_RADIUS = 1.72;
 const OUTER_TRACK_RADIUS = 2.48;
 const OUTER_TRACK_CENTER_Y = 0.61;
@@ -46,6 +46,13 @@ const OUTER_TRACK_HALF_HEIGHT = 0.045;
 const OUTER_TRACK_TILT = -0.08;
 const OUTER_TRACK_SURFACE_Y =
   OUTER_TRACK_CENTER_Y + OUTER_TRACK_HALF_HEIGHT;
+// The normalized GLB's measured outer-track contact surface is y=-0.425.
+// Keep the collider model in its validated local coordinates, then apply this
+// one rigid world-space translation to every stationary collider and release
+// position. This moves the geometry, not just the rendered ball.
+const RENDERED_OUTER_TRACK_SURFACE_Y = -0.425;
+const PHYSICS_Y_OFFSET =
+  RENDERED_OUTER_TRACK_SURFACE_Y - OUTER_TRACK_SURFACE_Y;
 const OUTER_TRACK_CONTACT_TOLERANCE = 0.018;
 const OUTER_TRACK_RADIAL_TOLERANCE = 0.06;
 const BALL_VALIDATION_TEST_COUNT = 100;
@@ -59,22 +66,22 @@ const STATIONARY_COLLISION_GROUP = 0x0002;
 const ROTOR_COLLISION_GROUP = 0x0004;
 const DEFAULT_BALL_PARAMETERS = {
   radius: BALL_RADIUS,
-  mass: 0.032,
-  friction: 0.4,
-  restitution: 0.34,
-  linearDamping: 0.12,
-  angularDamping: 0.07,
-  initialAngularVelocity: 22,
+  mass: 0.0027,
+  friction: 0.38,
+  restitution: 0.18,
+  linearDamping: 0.045,
+  angularDamping: 0.028,
+  initialAngularVelocity: 230,
 } as const;
 const DEFAULT_ROTOR_PARAMETERS = {
-  initialAngularVelocity: 2.8,
-  angularDamping: 0.25,
-  mass: 2.8,
+  initialAngularVelocity: 2.4,
+  angularDamping: 0.12,
+  mass: 3.2,
 } as const;
 const DEFAULT_LAUNCH_PARAMETERS = {
-  speed: 4,
-  angle: 24,
-  initialSpin: 24,
+  speed: 13,
+  angle: 0,
+  initialSpin: 230,
   variation: 0.005,
 } as const;
 const EUROPEAN_SEQUENCE = [
@@ -122,6 +129,13 @@ type ColliderSpec = {
   halfExtents: [number, number, number];
   rotation: [number, number, number, number];
   color: string;
+};
+
+type ColliderBuckets = {
+  outerTrack: RAPIER.Collider[];
+  deflectors: RAPIER.Collider[];
+  frets: RAPIER.Collider[];
+  pocketGeometry: RAPIER.Collider[];
 };
 
 type ProbeResult = {
@@ -576,8 +590,18 @@ function outerTrackContactPosition(
   return radialPosition(
     OUTER_TRACK_RADIUS + ballRadius * Math.sin(OUTER_TRACK_TILT),
     angle,
-    OUTER_TRACK_SURFACE_Y + ballRadius * Math.cos(OUTER_TRACK_TILT),
+    OUTER_TRACK_SURFACE_Y +
+      ballRadius * Math.cos(OUTER_TRACK_TILT) +
+      PHYSICS_Y_OFFSET,
   );
+}
+
+function physicsY(y: number) {
+  return y + PHYSICS_Y_OFFSET;
+}
+
+function physicsPosition(position: [number, number, number]): [number, number, number] {
+  return [position[0], physicsY(position[1]), position[2]];
 }
 
 function isOuterTrackContactHeight(
@@ -588,7 +612,9 @@ function isOuterTrackContactHeight(
   const expectedRadius =
     OUTER_TRACK_RADIUS + ballRadius * Math.sin(OUTER_TRACK_TILT);
   const expectedHeight =
-    OUTER_TRACK_SURFACE_Y + ballRadius * Math.cos(OUTER_TRACK_TILT);
+    OUTER_TRACK_SURFACE_Y +
+    ballRadius * Math.cos(OUTER_TRACK_TILT) +
+    PHYSICS_Y_OFFSET;
   return (
     Math.abs(radius - expectedRadius) <= OUTER_TRACK_RADIAL_TOLERANCE &&
     Math.abs(translation.y - expectedHeight) <= OUTER_TRACK_CONTACT_TOLERANCE
@@ -640,26 +666,39 @@ function buildColliderSpecs(): ColliderSpec[] {
   const stationaryColor = '#76b9b1';
   const rotorColor = '#d9a06f';
 
-  // Stationary bowl: segmented primitive rings approximate the measured slope
-  // without ever using the premium GLB as a collision mesh.
+  // Stationary bowl: dense, overlapping primitive rings approximate a
+  // continuous measured slope without ever using the premium GLB as a
+  // collision mesh. The overlap prevents a ball from finding a seam between
+  // adjacent support bands.
   addRingSpecs(specs, {
     id: 'bowl-transition-outer',
     label: 'Bowl transition',
     body: 'stationary',
-    count: 48,
-    radius: 2.30,
-    y: 0.48,
-    halfExtents: [0.15, 0.045, 0.10],
+    count: 96,
+    radius: 2.40,
+    y: 0.56,
+    halfExtents: [0.10, 0.055, 0.12],
     color: stationaryColor,
   });
   addRingSpecs(specs, {
-    id: 'bowl-transition-inner',
+    id: 'bowl-transition-middle-outer',
     label: 'Bowl transition',
     body: 'stationary',
-    count: 48,
-    radius: 2.05,
-    y: 0.28,
-    halfExtents: [0.14, 0.045, 0.10],
+    count: 96,
+    radius: 2.26,
+    y: 0.45,
+    halfExtents: [0.10, 0.055, 0.12],
+    color: stationaryColor,
+    tilt: -0.38,
+  });
+  addRingSpecs(specs, {
+    id: 'bowl-transition-middle-inner',
+    label: 'Bowl transition',
+    body: 'stationary',
+    count: 96,
+    radius: 2.12,
+    y: 0.32,
+    halfExtents: [0.10, 0.055, 0.12],
     color: stationaryColor,
     tilt: -0.45,
   });
@@ -667,11 +706,12 @@ function buildColliderSpecs(): ColliderSpec[] {
     id: 'bowl-floor',
     label: 'Bowl floor',
     body: 'stationary',
-    count: 48,
-    radius: 1.86,
-    y: 0.10,
-    halfExtents: [0.13, 0.045, 0.12],
+    count: 96,
+    radius: 1.98,
+    y: 0.19,
+    halfExtents: [0.10, 0.055, 0.12],
     color: stationaryColor,
+    tilt: -0.25,
   });
   addRingSpecs(specs, {
     id: 'track-floor',
@@ -799,7 +839,7 @@ function addRapierCollider(
       ? BALL_COLLISION_GROUP | ROTOR_COLLISION_GROUP
       : BALL_COLLISION_GROUP | STATIONARY_COLLISION_GROUP;
   const descriptor = RAPIER.ColliderDesc.cuboid(...spec.halfExtents)
-    .setTranslation(...spec.position)
+    .setTranslation(...physicsPosition(spec.position))
     .setRotation({
       x: spec.rotation[0],
       y: spec.rotation[1],
@@ -834,7 +874,7 @@ function makePhysicsDebugMesh(spec: ColliderSpec) {
     }),
   );
   mesh.name = `ColliderDebug__${spec.id}`;
-  mesh.position.set(...spec.position);
+  mesh.position.set(...physicsPosition(spec.position));
   mesh.quaternion.set(spec.rotation[0], spec.rotation[1], spec.rotation[2], spec.rotation[3]);
   mesh.userData = { colliderRole: spec.body, colliderLabel: spec.label };
   return mesh;
@@ -852,8 +892,9 @@ function probeOutcome(
   speed: number,
   settledFrames: number,
 ): ProbeOutcome {
-  if (radius > 3.2 || height < -0.9 || height > 2.4) return 'leak';
-  if (height < -0.35 || (radius > 2.85 && speed < 0.04)) return 'pass-through';
+  const localHeight = height - PHYSICS_Y_OFFSET;
+  if (radius > 3.2 || localHeight < -0.9 || localHeight > 2.4) return 'leak';
+  if (localHeight < -0.35 || (radius > 2.85 && speed < 0.04)) return 'pass-through';
   if (settledFrames > 150 && speed < 0.04 && radius < 1.2) return 'trap';
   return 'resting';
 }
@@ -864,11 +905,11 @@ async function runDropProbeValidation(specs: ColliderSpec[]): Promise<PhysicsRep
   const stationarySpecs = specs.filter((spec) => spec.body === 'stationary');
   const rotorSpecs = specs.filter((spec) => spec.body === 'rotor');
   const probes = [
-    { id: 'track-entry', label: 'High-speed track entry', position: [0, 1.42, 2.46] as [number, number, number], velocity: [0.82, -0.55, -1.8] as [number, number, number] },
-    { id: 'transition-drop', label: 'Transition drop', position: [0.18, 1.28, 2.08] as [number, number, number], velocity: [-0.3, -0.65, -0.22] as [number, number, number] },
-    { id: 'pocket-zero', label: 'Pocket 0 alignment', position: [0, 0.94, ROTOR_RADIUS] as [number, number, number], velocity: [0, -0.2, 0] as [number, number, number] },
-    { id: 'pocket-19', label: 'Pocket 19 alignment', position: radialPosition(ROTOR_RADIUS, 19 * SECTOR_STEP_RADIANS, 0.94), velocity: [0.15, -0.25, -0.1] as [number, number, number] },
-    { id: 'deflector-hit', label: 'Deflector CCD strike', position: [-0.08, 1.62, 2.48] as [number, number, number], velocity: [3.4, -1.1, -0.2] as [number, number, number] },
+    { id: 'track-entry', label: 'High-speed track entry', position: physicsPosition([0, 1.42, 2.46]), velocity: [0.82, -0.55, -1.8] as [number, number, number] },
+    { id: 'transition-drop', label: 'Transition drop', position: physicsPosition([0.18, 1.28, 2.08]), velocity: [-0.3, -0.65, -0.22] as [number, number, number] },
+    { id: 'pocket-zero', label: 'Pocket 0 alignment', position: physicsPosition([0, 0.94, ROTOR_RADIUS]), velocity: [0, -0.2, 0] as [number, number, number] },
+    { id: 'pocket-19', label: 'Pocket 19 alignment', position: physicsPosition(radialPosition(ROTOR_RADIUS, 19 * SECTOR_STEP_RADIANS, 0.94)), velocity: [0.15, -0.25, -0.1] as [number, number, number] },
+    { id: 'deflector-hit', label: 'Deflector CCD strike', position: physicsPosition([-0.08, 1.62, 2.48]), velocity: [3.4, -1.1, -0.2] as [number, number, number] },
   ];
   const results: ProbeResult[] = [];
 
@@ -1016,19 +1057,53 @@ function createColliderWorld(
   const rotorBody = rotorParameters
     ? createDynamicRotorBody(world, rotorParameters)
     : world.createRigidBody(RAPIER.RigidBodyDesc.kinematicPositionBased());
-  const outerTrackColliders: RAPIER.Collider[] = [];
+  const colliderBuckets: ColliderBuckets = {
+    outerTrack: [],
+    deflectors: [],
+    frets: [],
+    pocketGeometry: [],
+  };
   specs
     .filter((spec) => spec.body === 'stationary')
     .forEach((spec) => {
       const collider = addRapierCollider(world, stationaryBody, spec);
       if (spec.id.startsWith('track-floor-')) {
-        outerTrackColliders.push(collider);
+        colliderBuckets.outerTrack.push(collider);
       }
+      if (spec.label === 'Deflector') colliderBuckets.deflectors.push(collider);
     });
   specs
     .filter((spec) => spec.body === 'rotor')
-    .forEach((spec) => addRapierCollider(world, rotorBody, spec, rotorParameters ? 0.4 : 0.72, 0.18));
-  return { world, rotorBody, outerTrackColliders };
+    .forEach((spec) => {
+      const collider = addRapierCollider(
+        world,
+        rotorBody,
+        spec,
+        rotorParameters ? 0.4 : 0.72,
+        0.18,
+      );
+      if (spec.label === 'Pocket fret / separator') {
+        colliderBuckets.frets.push(collider);
+      } else {
+        colliderBuckets.pocketGeometry.push(collider);
+      }
+    });
+  return { world, rotorBody, colliderBuckets };
+}
+
+function hasColliderCategoryContact(
+  world: RAPIER.World,
+  ballCollider: RAPIER.Collider,
+  colliders: RAPIER.Collider[],
+) {
+  let contact = false;
+  const handles = new Set(colliders.map((collider) => collider.handle));
+  world.contactPairsWith(ballCollider, (otherCollider) => {
+    if (handles.has(otherCollider.handle)) {
+      contact = true;
+    }
+  });
+  return contact;
 }
 
 function hasOuterTrackContact(
@@ -1036,16 +1111,7 @@ function hasOuterTrackContact(
   ballCollider: RAPIER.Collider,
   outerTrackColliders: RAPIER.Collider[],
 ) {
-  let contact = false;
-  const outerTrackHandles = new Set(
-    outerTrackColliders.map((trackCollider) => trackCollider.handle),
-  );
-  world.contactPairsWith(ballCollider, (otherCollider) => {
-    if (outerTrackHandles.has(otherCollider.handle)) {
-      contact = true;
-    }
-  });
-  return contact;
+  return hasColliderCategoryContact(world, ballCollider, outerTrackColliders);
 }
 
 function variedBallRelease(index: number, parameters: BallPhysicsParameters) {
@@ -1053,7 +1119,9 @@ function variedBallRelease(index: number, parameters: BallPhysicsParameters) {
   const angle = (sector + 0.5) * SECTOR_STEP_RADIANS;
   const radiusByBand = [2.30, 2.28, 2.18, 1.76];
   const radius = radiusByBand[index % radiusByBand.length];
-  const position = radialPosition(radius, angle, 0.96 + (index % 5) * 0.11);
+  const position = physicsPosition(
+    radialPosition(radius, angle, 0.96 + (index % 5) * 0.11),
+  );
   const tangent: [number, number] = [Math.cos(angle), -Math.sin(angle)];
   const radial: [number, number] = [Math.sin(angle), Math.cos(angle)];
   const tangentSpeed = 0.72 + (index % 9) * 0.38;
@@ -1122,7 +1190,7 @@ function part5LaunchProfile(
   const angle =
     (safeSector + 0.5) * SECTOR_STEP_RADIANS + interiorVariation;
   const radius = 2.455 + (index % 4) * 0.0005 + variation * 0.02;
-  const height = 0.961 + (index % 4) * 0.0005;
+  const height = physicsY(0.961 + (index % 4) * 0.0005);
   const position = radialPosition(radius, angle, height);
   const tangent: [number, number] = [Math.cos(angle), -Math.sin(angle)];
   const radial: [number, number] = [Math.sin(angle), Math.cos(angle)];
@@ -1255,7 +1323,9 @@ async function runPart4Validation(
       );
       const outerTrackContactY =
         OUTER_TRACK_SURFACE_Y +
-        ballParameters.radius * Math.cos(OUTER_TRACK_TILT);
+        ballParameters.radius * Math.cos(OUTER_TRACK_TILT) +
+        PHYSICS_Y_OFFSET;
+      const localHeight = translation.y - PHYSICS_Y_OFFSET;
       const outerTrackEnvelope =
         radius > OUTER_TRACK_RADIUS - 0.15 &&
         radius < OUTER_TRACK_RADIUS + 0.15 &&
@@ -1295,8 +1365,8 @@ async function runPart4Validation(
 
       if (
         radius > 3.18 ||
-        translation.y < -0.82 ||
-        translation.y > 2.8
+        localHeight < -0.82 ||
+        localHeight > 2.8
       ) {
         tunneled = true;
       }
@@ -1333,8 +1403,8 @@ async function runPart4Validation(
         ballSpeed < 0.18 &&
         radius > 1.08 &&
         radius < 2.18 &&
-        translation.y > -0.42 &&
-        translation.y < 1.3
+        localHeight > -0.42 &&
+        localHeight < 1.3
       ) {
         stableFrames += 1;
         if (stableFrames >= 120 && !completed) {
@@ -1353,7 +1423,8 @@ async function runPart4Validation(
     invalidTrap =
       !completed &&
       finalSpeed < 0.05 &&
-      (finalRadius < 1.05 || translation.y < -0.45);
+      (finalRadius < 1.05 ||
+        translation.y - PHYSICS_Y_OFFSET < -0.45);
     const independentSlowdown =
       ballHalfSpeedTime > 0 &&
       rotorHalfSpeedTime > 0 &&
@@ -1568,6 +1639,7 @@ async function runPart5Validation(
       );
       const rotorSpeed = Math.abs(rotorVelocity.y);
       const radius = Math.hypot(translation.x, translation.z);
+      const localHeight = translation.y - PHYSICS_Y_OFFSET;
       const radialVelocity =
         radius > 0
           ? (translation.x * velocity.x + translation.z * velocity.z) / radius
@@ -1607,8 +1679,8 @@ async function runPart5Validation(
 
       if (
         radius > 3.18 ||
-        translation.y < -0.82 ||
-        translation.y > 2.8
+        localHeight < -0.82 ||
+        localHeight > 2.8
       ) {
         escaped = true;
         tunneling = true;
@@ -1617,7 +1689,7 @@ async function runPart5Validation(
         velocityExplosion = true;
       }
 
-      if (radius > 2.32 && radius < 2.66 && translation.y > 0.52) {
+      if (radius > 2.32 && radius < 2.66 && localHeight > 0.52) {
         outerTrackEntered = true;
       }
       if (outerTrackEntered && ballSpeed < initialBallSpeed * 0.72) {
@@ -1629,8 +1701,8 @@ async function runPart5Validation(
       if (
         radius > 2.18 &&
         radius < 2.48 &&
-        translation.y > 0.62 &&
-        translation.y < 1.1 &&
+        localHeight > 0.62 &&
+        localHeight < 1.1 &&
         Math.abs(radialVelocity - previousRadialVelocity) > 0.035 &&
         ballSpeed > 0.22
       ) {
@@ -1675,7 +1747,9 @@ async function runPart5Validation(
       }
       if (
         lowSpeedFrames > 360 &&
-        (radius > 2.18 || radius < 1.08 || translation.y < -0.42)
+        (radius > 2.18 ||
+          radius < 1.08 ||
+          localHeight < -0.42)
       ) {
         permanentTrap = true;
       }
@@ -1693,8 +1767,8 @@ async function runPart5Validation(
         ballAngularSpeed < 5 &&
         radius > 1.18 &&
         radius < 1.98 &&
-        translation.y > -0.42 &&
-        translation.y < 1.3 &&
+        localHeight > -0.42 &&
+        localHeight < 1.3 &&
         previousPocketIndex !== null
       ) {
         stableFrames += 1;
@@ -1879,12 +1953,13 @@ async function runBallValidation(
       const velocity = ballBody.linvel();
       const speed = Math.hypot(velocity.x, velocity.y, velocity.z);
       const radius = Math.hypot(translation.x, translation.z);
+      const localHeight = translation.y - PHYSICS_Y_OFFSET;
       maxSpeed = Math.max(maxSpeed, speed);
 
       if (
         radius > 3.18 ||
-        translation.y < -0.82 ||
-        translation.y > 2.8
+        localHeight < -0.82 ||
+        localHeight > 2.8
       ) {
         tunneled = true;
       }
@@ -1908,8 +1983,8 @@ async function runBallValidation(
         speed < 0.55 &&
         radius > 1.1 &&
         radius < 2.92 &&
-        translation.y > -0.42 &&
-        translation.y < 1.3
+        localHeight > -0.42 &&
+        localHeight < 1.3
       ) {
         stableFrames += 1;
         if (stableFrames >= 90) stable = true;
@@ -1927,7 +2002,7 @@ async function runBallValidation(
       !stable &&
       finalSpeed < 0.03 &&
       finalRadius < 1.1 &&
-      translation.y < 0.4;
+      translation.y - PHYSICS_Y_OFFSET < 0.4;
     const passed = !tunneled && !velocitySpike && !trapped && stable;
     results.push({
       id: `ball-test-${String(index + 1).padStart(2, '0')}`,

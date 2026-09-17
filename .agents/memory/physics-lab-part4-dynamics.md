@@ -14,3 +14,16 @@ The stationary outer ball track should have a shallow inward slope, and the dyna
 **Why:** A flat outer ring either traps a ball at the track radius or requires an unrealistically large inward launch component; a visual-only height check cannot distinguish physical contact from a hovering mesh.
 
 **How to apply:** Keep the track stationary and collision-driven, set the initial linear velocity tangential with no scripted position correction, and run the complete 20-spin fixed-step audit with explicit contact, floating, tunneling, and velocity checks.
+
+The normalized GLB's rendered outer-track contact surface is below the original
+physics model's local Y origin. Apply the same rigid Y translation to every
+stationary collider, collider-debug mesh, and ball release position; never
+apply it to the ball visual alone.
+
+**Why:** The earlier Rapier validation passed while the rendered ball was still
+visibly suspended because the physics model and normalized GLB had different
+vertical origins. A ball-only offset would hide that mismatch.
+
+**How to apply:** Treat visual track surface plus exactly one ball radius as the
+ready center, keep `syncBallVisual()` as a direct body-pose copy, and rerun both
+moving-rotor suites after any vertical calibration change.
