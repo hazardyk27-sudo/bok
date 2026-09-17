@@ -31,7 +31,7 @@ describe("bet configuration", () => {
 
 describe("special-symbol configuration", () => {
   it("uses the requested Scatter chances", () => {
-    expect(BASE_INITIAL_SCATTER_CHANCE).toBe(0.035);
+    expect(BASE_INITIAL_SCATTER_CHANCE).toBe(0.0325);
     expect(BASE_REFILL_SCATTER_CHANCE).toBe(0.04);
     expect(BONUS_INITIAL_SCATTER_CHANCE).toBe(0.03);
     expect(BONUS_REFILL_SCATTER_CHANCE).toBe(0.035);
