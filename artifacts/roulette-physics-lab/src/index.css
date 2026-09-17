@@ -878,6 +878,68 @@ h1 {
   color: #986d49;
 }
 
+.physics-summary {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 5px;
+}
+
+.physics-summary > div {
+  display: grid;
+  gap: 5px;
+  padding: 8px 7px;
+  border: 1px solid #c8d0c7;
+  background: rgba(224, 235, 227, 0.54);
+}
+
+.physics-summary span {
+  color: #7c8983;
+  font-size: 8px;
+}
+
+.physics-summary strong {
+  color: #4d8175;
+  font-family: 'DM Mono', monospace;
+  font-size: 10px;
+  font-weight: 500;
+}
+
+.primary-button:disabled {
+  cursor: wait;
+  filter: saturate(0.45);
+  opacity: 0.66;
+}
+
+.probe-status {
+  display: grid;
+  gap: 3px;
+  padding: 8px 9px;
+  border-left: 2px solid #afcabe;
+  background: rgba(220, 233, 226, 0.5);
+  color: #4f786d;
+  font-family: 'DM Mono', monospace;
+  font-size: 8px;
+}
+
+.probe-status small {
+  color: #81938b;
+  font-family: inherit;
+  font-size: 8px;
+  line-height: 1.4;
+}
+
+.probe-running {
+  border-left-color: #c89b6f;
+  background: rgba(241, 231, 218, 0.74);
+  color: #986d49;
+}
+
+.probe-failed {
+  border-left-color: #bd6558;
+  background: rgba(247, 226, 219, 0.72);
+  color: #9d554d;
+}
+
 .physics-note {
   display: flex;
   gap: 11px;
@@ -1468,6 +1530,75 @@ h1 {
   color: #89938d !important;
   font-family: 'DM Mono', monospace;
   font-size: 8px !important;
+}
+
+.probe-report-panel {
+  display: grid;
+  gap: 16px;
+  margin-top: 19px;
+  padding: 19px 20px 20px;
+  border: 1px solid #b9bbb2;
+  border-radius: 4px;
+  background: rgba(239, 238, 229, 0.72);
+}
+
+.probe-result-list {
+  display: grid;
+  gap: 5px;
+}
+
+.probe-result-row {
+  display: grid;
+  grid-template-columns: 8px minmax(145px, 0.65fr) minmax(180px, 1fr) auto;
+  gap: 9px;
+  align-items: center;
+  min-width: 0;
+  padding: 8px 9px;
+  border: 1px solid #d0d1c8;
+  background: rgba(247, 246, 239, 0.62);
+}
+
+.probe-result-row strong {
+  overflow: hidden;
+  color: #4b625d;
+  font-size: 9px;
+  font-weight: 700;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.probe-result-row > span:not(.probe-result-dot) {
+  overflow: hidden;
+  color: #77857e;
+  font-size: 9px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.probe-result-row code {
+  color: #7f8d86;
+  font-family: 'DM Mono', monospace;
+  font-size: 8px;
+  white-space: nowrap;
+}
+
+.probe-result-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #bd6558;
+}
+
+.probe-result-resting {
+  background: #70a894;
+  box-shadow: 0 0 0 3px rgba(112, 168, 148, 0.14);
+}
+
+.probe-result-leak,
+.probe-result-pass-through,
+.probe-result-trap {
+  background: #bd6558;
+  box-shadow: 0 0 0 3px rgba(189, 101, 88, 0.12);
 }
 
 .lab-footer {

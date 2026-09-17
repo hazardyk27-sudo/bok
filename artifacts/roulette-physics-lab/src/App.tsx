@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import * as THREE from 'three';
+import RAPIER from '@dimforge/rapier3d-compat';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import {
@@ -29,6 +30,9 @@ const METERS_PER_WORLD_UNIT = 1 / 6;
 const WORLD_UNITS_PER_METER = 6;
 const SECTOR_COUNT = 37;
 const SECTOR_STEP_RADIANS = (Math.PI * 2) / SECTOR_COUNT;
+const FIXED_TIMESTEP = 1 / 120;
+const BALL_RADIUS = 0.13;
+const ROTOR_RADIUS = 1.72;
 const EUROPEAN_SEQUENCE = [
   0, 32, 15, 19, 4, 21, 2, 25, 17, 34, 6, 27, 13, 36, 11, 30, 8, 23, 10,
   5, 24, 16, 33, 1, 20, 14, 31, 9, 22, 18, 29, 7, 28, 12, 35, 3, 26,
@@ -48,6 +52,54 @@ const PHYSICAL_MEASUREMENTS = [
 
 type LoadState = 'loading' | 'loaded' | 'error';
 type InspectionView = 'top' | 'angled' | 'side';
+type ProbeOutcome = 'resting' | 'leak' | 'pass-through' | 'trap';
+
+type ColliderSpec = {
+  id: string;
+  label: string;
+  body: 'stationary' | 'rotor';
+  position: [number, number, number];
+  halfExtents: [number, number, number];
+  rotation: [number, number, number, number];
+  color: string;
+};
+
+type ProbeResult = {
+  id: string;
+  label: string;
+  outcome: ProbeOutcome;
+  pocket: number | null;
+  finalRadius: number;
+  finalHeight: number;
+  finalSpeed: number;
+  detail: string;
+};
+
+type PhysicsReport = {
+  status: 'idle' | 'running' | 'passed' | 'failed';
+  colliderCount: number;
+  stationaryCount: number;
+  rotorCount: number;
+  probeCount: number;
+  passedCount: number;
+  failedCount: number;
+  durationMs: number;
+  detail: string;
+  results: ProbeResult[];
+};
+
+const EMPTY_PHYSICS_REPORT: PhysicsReport = {
+  status: 'idle',
+  colliderCount: 0,
+  stationaryCount: 0,
+  rotorCount: 0,
+  probeCount: 0,
+  passedCount: 0,
+  failedCount: 0,
+  durationMs: 0,
+  detail: 'Collider model is waiting for the normalized source.',
+  results: [],
+};
 
 type AssetAudit = {
   sourceMeshCount: number;
@@ -194,6 +246,337 @@ function decomposeVisualScene(runtimeScene: THREE.Group, wheelRoot: THREE.Group)
   return { stationaryGroup, rotorGroup };
 }
 
+function yQuaternion(angle: number): [number, number, number, number] {
+  return [0, Math.sin(angle / 2), 0, Math.cos(angle / 2)];
+}
+
+function radialPosition(radius: number, angle: number, y: number): [number, number, number] {
+  return [Math.sin(angle) * radius, y, Math.cos(angle) * radius];
+}
+
+function addRingSpecs(
+  specs: ColliderSpec[],
+  {
+    id,
+    label,
+    body,
+    count,
+    radius,
+    y,
+    halfExtents,
+    color,
+    radialOffset = 0,
+  }: {
+    id: string;
+    label: string;
+    body: ColliderSpec['body'];
+    count: number;
+    radius: number;
+    y: number;
+    halfExtents: [number, number, number];
+    color: string;
+    radialOffset?: number;
+  },
+) {
+  for (let index = 0; index < count; index += 1) {
+    const angle = (index / count) * Math.PI * 2;
+    specs.push({
+      id: `${id}-${index}`,
+      label,
+      body,
+      position: radialPosition(radius, angle, y),
+      halfExtents,
+      rotation: yQuaternion(angle + radialOffset),
+      color,
+    });
+  }
+}
+
+function buildColliderSpecs(): ColliderSpec[] {
+  const specs: ColliderSpec[] = [];
+  const stationaryColor = '#76b9b1';
+  const rotorColor = '#d9a06f';
+
+  // Stationary bowl: segmented primitive rings approximate the measured slope
+  // without ever using the premium GLB as a collision mesh.
+  addRingSpecs(specs, {
+    id: 'bowl-transition-outer',
+    label: 'Bowl transition',
+    body: 'stationary',
+    count: 48,
+    radius: 2.30,
+    y: 0.48,
+    halfExtents: [0.15, 0.045, 0.10],
+    color: stationaryColor,
+  });
+  addRingSpecs(specs, {
+    id: 'bowl-transition-inner',
+    label: 'Bowl transition',
+    body: 'stationary',
+    count: 48,
+    radius: 2.05,
+    y: 0.28,
+    halfExtents: [0.14, 0.045, 0.10],
+    color: stationaryColor,
+  });
+  addRingSpecs(specs, {
+    id: 'bowl-floor',
+    label: 'Bowl floor',
+    body: 'stationary',
+    count: 48,
+    radius: 1.86,
+    y: 0.10,
+    halfExtents: [0.13, 0.045, 0.12],
+    color: stationaryColor,
+  });
+  addRingSpecs(specs, {
+    id: 'track-floor',
+    label: 'Ball track',
+    body: 'stationary',
+    count: 64,
+    radius: 2.48,
+    y: 0.61,
+    halfExtents: [0.13, 0.045, 0.17],
+    color: stationaryColor,
+  });
+  addRingSpecs(specs, {
+    id: 'outer-rim',
+    label: 'Outer rim',
+    body: 'stationary',
+    count: 64,
+    radius: 2.76,
+    y: 0.79,
+    halfExtents: [0.13, 0.16, 0.07],
+    color: stationaryColor,
+  });
+  addRingSpecs(specs, {
+    id: 'track-inner-rail',
+    label: 'Track inner rail',
+    body: 'stationary',
+    count: 64,
+    radius: 2.20,
+    y: 0.66,
+    halfExtents: [0.13, 0.075, 0.055],
+    color: stationaryColor,
+  });
+
+  // Eight low, independent deflector blocks sit above the track transition.
+  addRingSpecs(specs, {
+    id: 'deflector',
+    label: 'Deflector',
+    body: 'stationary',
+    count: 8,
+    radius: 2.33,
+    y: 0.84,
+    halfExtents: [0.20, 0.075, 0.055],
+    color: '#c48b68',
+    radialOffset: Math.PI / 2,
+  });
+
+  // Rotor: a kinematic body owns the floors, pocket walls, frets and separators.
+  addRingSpecs(specs, {
+    id: 'rotor-pocket-floor',
+    label: 'Pocket floor',
+    body: 'rotor',
+    count: SECTOR_COUNT,
+    radius: ROTOR_RADIUS,
+    y: 0.02,
+    halfExtents: [0.13, 0.055, 0.16],
+    color: rotorColor,
+  });
+  addRingSpecs(specs, {
+    id: 'rotor-inner-wall',
+    label: 'Pocket inner wall',
+    body: 'rotor',
+    count: SECTOR_COUNT,
+    radius: 1.42,
+    y: 0.15,
+    halfExtents: [0.13, 0.15, 0.045],
+    color: rotorColor,
+  });
+  addRingSpecs(specs, {
+    id: 'rotor-outer-wall',
+    label: 'Pocket outer wall',
+    body: 'rotor',
+    count: SECTOR_COUNT,
+    radius: 2.03,
+    y: 0.16,
+    halfExtents: [0.13, 0.15, 0.045],
+    color: rotorColor,
+  });
+  addRingSpecs(specs, {
+    id: 'rotor-fret',
+    label: 'Pocket fret / separator',
+    body: 'rotor',
+    count: SECTOR_COUNT,
+    radius: 1.73,
+    y: 0.15,
+    halfExtents: [0.35, 0.13, 0.022],
+    color: rotorColor,
+    radialOffset: -Math.PI / 2,
+  });
+
+  return specs;
+}
+
+function addRapierCollider(
+  world: RAPIER.World,
+  body: RAPIER.RigidBody,
+  spec: ColliderSpec,
+) {
+  const descriptor = RAPIER.ColliderDesc.cuboid(...spec.halfExtents)
+    .setTranslation(...spec.position)
+    .setRotation({
+      x: spec.rotation[0],
+      y: spec.rotation[1],
+      z: spec.rotation[2],
+      w: spec.rotation[3],
+    })
+    .setFriction(0.72)
+    .setRestitution(0.22);
+  return world.createCollider(descriptor, body);
+}
+
+function makePhysicsDebugMesh(spec: ColliderSpec) {
+  const mesh = new THREE.Mesh(
+    new THREE.BoxGeometry(
+      spec.halfExtents[0] * 2,
+      spec.halfExtents[1] * 2,
+      spec.halfExtents[2] * 2,
+    ),
+    new THREE.MeshBasicMaterial({
+      color: spec.color,
+      transparent: true,
+      opacity: spec.body === 'rotor' ? 0.23 : 0.16,
+      wireframe: false,
+      depthWrite: false,
+    }),
+  );
+  mesh.name = `ColliderDebug__${spec.id}`;
+  mesh.position.set(...spec.position);
+  mesh.quaternion.set(spec.rotation[0], spec.rotation[1], spec.rotation[2], spec.rotation[3]);
+  mesh.userData = { colliderRole: spec.body, colliderLabel: spec.label };
+  return mesh;
+}
+
+function pocketIndexFromPosition(x: number, z: number) {
+  let angle = Math.atan2(x, z);
+  if (angle < 0) angle += Math.PI * 2;
+  return Math.round(angle / SECTOR_STEP_RADIANS) % SECTOR_COUNT;
+}
+
+function probeOutcome(
+  radius: number,
+  height: number,
+  speed: number,
+  settledFrames: number,
+): ProbeOutcome {
+  if (radius > 3.2 || height < -0.9 || height > 2.4) return 'leak';
+  if (height < -0.35 || (radius > 2.85 && speed < 0.04)) return 'pass-through';
+  if (settledFrames > 150 && speed < 0.04 && radius < 1.2) return 'trap';
+  return 'resting';
+}
+
+async function runDropProbeValidation(specs: ColliderSpec[]): Promise<PhysicsReport> {
+  await RAPIER.init();
+  const startedAt = performance.now();
+  const stationarySpecs = specs.filter((spec) => spec.body === 'stationary');
+  const rotorSpecs = specs.filter((spec) => spec.body === 'rotor');
+  const probes = [
+    { id: 'track-entry', label: 'High-speed track entry', position: [0, 1.42, 2.46] as [number, number, number], velocity: [0.82, -0.55, -1.8] as [number, number, number] },
+    { id: 'transition-drop', label: 'Transition drop', position: [0.18, 1.28, 2.08] as [number, number, number], velocity: [-0.3, -0.65, -0.22] as [number, number, number] },
+    { id: 'pocket-zero', label: 'Pocket 0 alignment', position: [0, 0.94, ROTOR_RADIUS] as [number, number, number], velocity: [0, -0.2, 0] as [number, number, number] },
+    { id: 'pocket-19', label: 'Pocket 19 alignment', position: radialPosition(ROTOR_RADIUS, 19 * SECTOR_STEP_RADIANS, 0.94), velocity: [0.15, -0.25, -0.1] as [number, number, number] },
+    { id: 'deflector-hit', label: 'Deflector CCD strike', position: [-0.08, 1.62, 2.48] as [number, number, number], velocity: [3.4, -1.1, -0.2] as [number, number, number] },
+  ];
+  const results: ProbeResult[] = [];
+
+  for (const probe of probes) {
+    const world = new RAPIER.World({ x: 0, y: -9.81, z: 0 });
+    world.timestep = FIXED_TIMESTEP;
+    world.maxCcdSubsteps = 4;
+    const stationaryBody = world.createRigidBody(RAPIER.RigidBodyDesc.fixed());
+    const rotorBody = world.createRigidBody(RAPIER.RigidBodyDesc.kinematicPositionBased());
+    stationarySpecs.forEach((spec) => addRapierCollider(world, stationaryBody, spec));
+    rotorSpecs.forEach((spec) => addRapierCollider(world, rotorBody, spec));
+
+    const ballBody = world.createRigidBody(
+      RAPIER.RigidBodyDesc.dynamic()
+        .setTranslation(...probe.position)
+        .setLinvel(...probe.velocity)
+        .setCanSleep(true),
+    );
+    ballBody.enableCcd(true);
+    const ballCollider = RAPIER.ColliderDesc.ball(BALL_RADIUS)
+      .setFriction(0.36)
+      .setRestitution(0.34)
+      .setDensity(0.55);
+    world.createCollider(ballCollider, ballBody);
+
+    let settledFrames = 0;
+    for (let step = 0; step < 120 * 4; step += 1) {
+      const rotorAngle = step * FIXED_TIMESTEP * 0.65;
+      rotorBody.setNextKinematicRotation({
+        x: 0,
+        y: Math.sin(rotorAngle / 2),
+        z: 0,
+        w: Math.cos(rotorAngle / 2),
+      });
+      world.step();
+      const translation = ballBody.translation();
+      const velocity = ballBody.linvel();
+      const speed = Math.sqrt(velocity.x ** 2 + velocity.y ** 2 + velocity.z ** 2);
+      if (speed < 0.12) settledFrames += 1;
+      else settledFrames = 0;
+    }
+
+    const translation = ballBody.translation();
+    const velocity = ballBody.linvel();
+    const radius = Math.hypot(translation.x, translation.z);
+    const speed = Math.sqrt(velocity.x ** 2 + velocity.y ** 2 + velocity.z ** 2);
+    const outcome = probeOutcome(radius, translation.y, speed, settledFrames);
+    const pocket = radius < 2.12 ? pocketIndexFromPosition(translation.x, translation.z) : null;
+    const detail =
+      outcome === 'resting'
+        ? pocket === null
+          ? 'Settled on the guided track / transition.'
+          : `Settled in sector ${pocket} · ${EUROPEAN_SEQUENCE[pocket]}.`
+        : outcome === 'leak'
+          ? 'Ball escaped the modeled wheel bounds.'
+          : outcome === 'pass-through'
+            ? 'Ball crossed a thin feature or fell below the bowl.'
+            : 'Ball became immobile in an invalid inner pocket.';
+    results.push({
+      id: probe.id,
+      label: probe.label,
+      outcome,
+      pocket,
+      finalRadius: radius,
+      finalHeight: translation.y,
+      finalSpeed: speed,
+      detail,
+    });
+    world.removeRigidBody(ballBody);
+  }
+
+  const failedCount = results.filter((result) => result.outcome !== 'resting').length;
+  return {
+    status: failedCount === 0 ? 'passed' : 'failed',
+    colliderCount: specs.length,
+    stationaryCount: stationarySpecs.length,
+    rotorCount: rotorSpecs.length,
+    probeCount: results.length,
+    passedCount: results.length - failedCount,
+    failedCount,
+    durationMs: Math.round(performance.now() - startedAt),
+    detail:
+      failedCount === 0
+        ? `All ${results.length} temporary probes passed at ${Math.round(1 / FIXED_TIMESTEP)} Hz with CCD.`
+        : `${failedCount} probe${failedCount === 1 ? '' : 's'} need geometry review.`,
+    results,
+  };
+}
+
 function SceneViewport({
   loadKey,
   view,
@@ -205,10 +588,12 @@ function SceneViewport({
   showSectorOverlay,
   rotorAngle,
   rotorTestRequest,
+  probeTestRequest,
   onStateChange,
   onAudit,
   onRotorAngleChange,
   onRotorTestState,
+  onPhysicsReport,
 }: {
   loadKey: number;
   view: InspectionView;
@@ -220,10 +605,12 @@ function SceneViewport({
   showSectorOverlay: boolean;
   rotorAngle: number;
   rotorTestRequest: number;
+  probeTestRequest: number;
   onStateChange: (state: LoadState, detail?: string) => void;
   onAudit: (audit: AssetAudit) => void;
   onRotorAngleChange: (angle: number) => void;
   onRotorTestState: (state: 'idle' | 'running' | 'passed', detail?: string) => void;
+  onPhysicsReport: (report: PhysicsReport) => void;
 }) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const stageRef = useRef<HTMLDivElement | null>(null);
@@ -240,11 +627,16 @@ function SceneViewport({
   const sectorDebugRef = useRef<THREE.Group | null>(null);
   const onRotorAngleChangeRef = useRef(onRotorAngleChange);
   const onRotorTestStateRef = useRef(onRotorTestState);
+  const onPhysicsReportRef = useRef(onPhysicsReport);
+  const physicsSpecsRef = useRef<ColliderSpec[]>([]);
+  const physicsWorldRef = useRef<RAPIER.World | null>(null);
+  const rotorPhysicsBodyRef = useRef<RAPIER.RigidBody | null>(null);
 
   onStateChangeRef.current = onStateChange;
   onAuditRef.current = onAudit;
   onRotorAngleChangeRef.current = onRotorAngleChange;
   onRotorTestStateRef.current = onRotorTestState;
+  onPhysicsReportRef.current = onPhysicsReport;
   viewRef.current = view;
 
   useEffect(() => {
@@ -261,6 +653,9 @@ function SceneViewport({
     let wheelRoot: THREE.Group | null = null;
     let grid: THREE.GridHelper | null = null;
     let floor: THREE.Mesh | null = null;
+    let physicsWorld: RAPIER.World | null = null;
+    let physicsLastTime = performance.now();
+    let physicsAccumulator = 0;
 
     onStateChangeRef.current('loading');
 
@@ -328,7 +723,7 @@ function SceneViewport({
       const loader = new GLTFLoader();
       loader.load(
         ASSET_PATH,
-        (gltf) => {
+        async (gltf) => {
           if (disposed || !scene || !grid || !floor) return;
 
           const sourceMeshCount = countMeshes(gltf.scene);
@@ -390,8 +785,13 @@ function SceneViewport({
           wheelRoot.add(ballPlaceholder);
 
           const physicsDebug = new THREE.Group();
-          physicsDebug.name = 'PhysicsDebugScaffold__noColliders';
-          physicsDebug.userData = { collidersReady: false };
+           physicsDebug.name = 'PhysicsColliderDebug__primitiveCompound';
+           physicsDebug.userData = {
+             collidersReady: false,
+             sourceMeshUsedAsCollider: false,
+             fixedTimestepHz: Math.round(1 / FIXED_TIMESTEP),
+             ccd: true,
+           };
           const axes = new THREE.AxesHelper(1.35);
           axes.name = 'WheelPivotAxes__YUp';
           physicsDebug.add(axes);
@@ -414,9 +814,42 @@ function SceneViewport({
           pivotRing.rotation.x = -Math.PI / 2;
           pivotRing.position.y = 0.03;
           physicsDebug.add(pivotRing);
+           const colliderSpecs = buildColliderSpecs();
+           physicsSpecsRef.current = colliderSpecs;
+           colliderSpecs.forEach((spec) => physicsDebug.add(makePhysicsDebugMesh(spec)));
           physicsDebug.visible = showPhysicsDebug;
           physicsDebugRef.current = physicsDebug;
           wheelRoot.add(physicsDebug);
+
+           try {
+             await RAPIER.init();
+             if (disposed) return;
+             physicsWorld = new RAPIER.World({ x: 0, y: -9.81, z: 0 });
+             physicsWorld.timestep = FIXED_TIMESTEP;
+             physicsWorld.maxCcdSubsteps = 4;
+             const stationaryBody = physicsWorld.createRigidBody(RAPIER.RigidBodyDesc.fixed());
+             const rotorBody = physicsWorld.createRigidBody(RAPIER.RigidBodyDesc.kinematicPositionBased());
+             colliderSpecs
+               .filter((spec) => spec.body === 'stationary')
+               .forEach((spec) => addRapierCollider(physicsWorld!, stationaryBody, spec));
+             colliderSpecs
+               .filter((spec) => spec.body === 'rotor')
+               .forEach((spec) => addRapierCollider(physicsWorld!, rotorBody, spec));
+             physicsWorldRef.current = physicsWorld;
+             rotorPhysicsBodyRef.current = rotorBody;
+             physicsDebug.userData = {
+               ...physicsDebug.userData,
+               collidersReady: true,
+               colliderCount: colliderSpecs.length,
+             };
+           } catch (physicsError) {
+             console.error('Rapier collider model failed to initialize', physicsError);
+             onPhysicsReportRef.current({
+               ...EMPTY_PHYSICS_REPORT,
+               status: 'failed',
+               detail: 'Rapier could not initialize the primitive collider model.',
+             });
+           }
 
           const sectorDebug = new THREE.Group();
           sectorDebug.name = 'SectorIndexDebug__37EuropeanPockets';
@@ -528,6 +961,20 @@ function SceneViewport({
 
       const render = () => {
         if (disposed || !renderer || !scene || !camera || !controls) return;
+         const now = performance.now();
+         physicsAccumulator += Math.min((now - physicsLastTime) / 1000, 0.1);
+         physicsLastTime = now;
+         while (physicsAccumulator >= FIXED_TIMESTEP && physicsWorld && rotorPhysicsBodyRef.current) {
+           const rotation = rotorGroupRef.current?.rotation.y ?? 0;
+           rotorPhysicsBodyRef.current.setNextKinematicRotation({
+             x: 0,
+             y: Math.sin(rotation / 2),
+             z: 0,
+             w: Math.cos(rotation / 2),
+           });
+           physicsWorld.step();
+           physicsAccumulator -= FIXED_TIMESTEP;
+         }
         controls.update();
         renderer.render(scene, camera);
         frame = requestAnimationFrame(render);
@@ -551,6 +998,10 @@ function SceneViewport({
         resetRef.current = null;
         gridRef.current = null;
         physicsDebugRef.current = null;
+         physicsSpecsRef.current = [];
+         physicsWorldRef.current?.free();
+         physicsWorldRef.current = null;
+         rotorPhysicsBodyRef.current = null;
         ballRef.current = null;
         stationaryGroupRef.current = null;
         rotorGroupRef.current = null;
@@ -633,6 +1084,25 @@ function SceneViewport({
     };
   }, [rotorTestRequest]);
 
+  useEffect(() => {
+    if (probeTestRequest === 0 || physicsSpecsRef.current.length === 0) return undefined;
+    let cancelled = false;
+    onPhysicsReportRef.current({
+      ...EMPTY_PHYSICS_REPORT,
+      status: 'running',
+      colliderCount: physicsSpecsRef.current.length,
+      stationaryCount: physicsSpecsRef.current.filter((spec) => spec.body === 'stationary').length,
+      rotorCount: physicsSpecsRef.current.filter((spec) => spec.body === 'rotor').length,
+      detail: `Running deterministic drops at ${Math.round(1 / FIXED_TIMESTEP)} Hz with CCD…`,
+    });
+    void runDropProbeValidation(physicsSpecsRef.current).then((report) => {
+      if (!cancelled) onPhysicsReportRef.current(report);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [probeTestRequest]);
+
   return (
     <div ref={stageRef} className="scene-stage" data-testid="canvas-viewport">
       <canvas ref={canvasRef} tabIndex={0} aria-label="Interactive 3D roulette physics lab preview" />
@@ -649,7 +1119,7 @@ function SceneViewport({
       {showPhysicsDebug && (
         <div className="debug-status" aria-hidden="true">
           <Crosshair size={13} />
-          <span>PHYSICS DEBUG SCAFFOLD · NO COLLIDERS</span>
+          <span>PRIMITIVE COLLIDERS · {Math.round(1 / FIXED_TIMESTEP)} HZ · CCD</span>
         </div>
       )}
     </div>
@@ -714,6 +1184,8 @@ function App() {
   const [rotorTestState, setRotorTestState] = useState<'idle' | 'running' | 'passed'>('idle');
   const [rotorTestDetail, setRotorTestDetail] = useState('Reference angle · 0.0°');
   const [audit, setAudit] = useState<AssetAudit | null>(null);
+  const [probeTestRequest, setProbeTestRequest] = useState(0);
+  const [physicsReport, setPhysicsReport] = useState<PhysicsReport>(EMPTY_PHYSICS_REPORT);
 
   const handleStateChange = useCallback((state: LoadState, detail?: string) => {
     setLoadState(state);
@@ -730,6 +1202,9 @@ function App() {
     setRotorTestState('running');
     setRotorTestDetail('3 × 360° diagnostic rotation');
     setRotorTestRequest((current) => current + 1);
+  };
+  const runProbeTest = () => {
+    setProbeTestRequest((current) => current + 1);
   };
   const retryLoad = () => {
     setAudit(null);
@@ -751,8 +1226,8 @@ function App() {
             <Layers3 size={18} strokeWidth={1.7} />
           </div>
           <div>
-             <div className="eyebrow">ISOLATED PHYSICS LAB · PART 1</div>
-             <h1>Roulette / visual decomposition</h1>
+             <div className="eyebrow">ISOLATED PHYSICS LAB · PART 2</div>
+             <h1>Roulette / primitive collision geometry</h1>
           </div>
         </div>
         <div className="header-meta">
@@ -764,10 +1239,10 @@ function App() {
       <div className="lab-layout">
         <aside className="inspector-rail">
           <div className="rail-intro">
-            <div className="section-kicker">
-              <Crosshair size={13} /> PART 1 · VISUAL DECOMPOSITION
+              <div className="section-kicker">
+              <Crosshair size={13} /> PART 2 · COLLISION MODEL
             </div>
-            <p>Standardize physical scale and separate the visual bowl and rotor before collision geometry exists.</p>
+            <p>Keep the premium visual source separate from clean primitive colliders, then validate temporary drops at a fixed timestep.</p>
           </div>
 
           <section className="inspector-section">
@@ -847,7 +1322,7 @@ function App() {
                 data-testid="button-physics-debug-toggle"
               >
                 <span>
-                  <Crosshair size={15} /> Physics debug scaffold
+                   <Crosshair size={15} /> Collider debug geometry
                 </span>
                 <span className={`toggle ${showPhysicsDebug ? 'on' : ''}`} aria-hidden="true">
                   <span />
@@ -935,13 +1410,52 @@ function App() {
             </div>
           </section>
 
+          <section className="inspector-section rotor-test-panel" data-testid="physics-probe-panel">
+            <div className="section-label">DROP-PROBE VALIDATION</div>
+            <div className="physics-summary">
+              <div>
+                <span>Fixed step</span>
+                <strong>{Math.round(1 / FIXED_TIMESTEP)} Hz</strong>
+              </div>
+              <div>
+                <span>Colliders</span>
+                <strong>{physicsReport.colliderCount || '—'}</strong>
+              </div>
+              <div>
+                <span>CCD probes</span>
+                <strong>{physicsReport.probeCount || '—'}</strong>
+              </div>
+            </div>
+            <button
+              type="button"
+              className="primary-button"
+              onClick={runProbeTest}
+              disabled={physicsReport.status === 'running' || !audit}
+              data-testid="button-run-probes"
+            >
+              {physicsReport.status === 'running' ? 'Running temporary probes…' : 'Run 5 drop probes'}
+            </button>
+            <div className={`probe-status probe-${physicsReport.status}`} data-testid="status-probes">
+              <span>
+                {physicsReport.status === 'passed'
+                  ? 'COLLIDER PROBES PASSED'
+                  : physicsReport.status === 'failed'
+                    ? 'GEOMETRY REVIEW NEEDED'
+                    : physicsReport.status === 'running'
+                      ? 'PROBES RUNNING'
+                      : 'READY FOR VALIDATION'}
+              </span>
+              <small>{physicsReport.detail}</small>
+            </div>
+          </section>
+
           <section className="physics-note" data-testid="status-physics">
             <div className="note-icon">
               <ShieldCheck size={17} />
             </div>
             <div>
-              <strong>Part 1 · visual decomposition only</strong>
-              <p>Visual groups share the normalized origin. No final colliders, Rapier, rigid bodies, betting, or production round logic are connected.</p>
+                <strong>Part 2 · isolated primitive physics</strong>
+                <p>Stationary bowl and kinematic rotor use separate low-complexity colliders. Drop probes are temporary only; final launch and production round logic remain disconnected.</p>
             </div>
           </section>
 
@@ -961,7 +1475,7 @@ function App() {
               <span className="live-dot" aria-hidden="true" />
               <span>SCENE PREVIEW</span>
               <span className="toolbar-divider" />
-              <span className="toolbar-muted">NO SIMULATION</span>
+               <span className="toolbar-muted">PROBE-ONLY SIMULATION</span>
             </div>
             <div className="toolbar-actions">
               <span className="toolbar-metric">
@@ -991,10 +1505,12 @@ function App() {
               showSectorOverlay={showSectorOverlay}
               rotorAngle={rotorAngle}
               rotorTestRequest={rotorTestRequest}
+               probeTestRequest={probeTestRequest}
               onStateChange={handleStateChange}
               onAudit={setAudit}
               onRotorAngleChange={setRotorAngle}
               onRotorTestState={handleRotorTestState}
+               onPhysicsReport={setPhysicsReport}
             />
             {loadState === 'loading' && (
               <div className="viewport-overlay" data-testid="status-loading" role="status" aria-live="polite">
@@ -1124,15 +1640,40 @@ function App() {
               </div>
             </div>
           </section>
+          {physicsReport.results.length > 0 && (
+            <section className="probe-report-panel" aria-label="Drop probe results" data-testid="probe-report">
+              <div className="audit-heading">
+                <div>
+                  <div className="section-label">TEMPORARY DROP-PROBE REPORT</div>
+                  <strong>CCD contact check · no production ball launch</strong>
+                </div>
+                <span className={`audit-state ${physicsReport.status === 'passed' ? 'is-ready' : ''}`}>
+                  {physicsReport.passedCount}/{physicsReport.probeCount} RESTING
+                </span>
+              </div>
+              <div className="probe-result-list">
+                {physicsReport.results.map((result) => (
+                  <div className="probe-result-row" key={result.id}>
+                    <span className={`probe-result-dot probe-result-${result.outcome}`} />
+                    <strong>{result.label}</strong>
+                    <span>{result.detail}</span>
+                    <code>
+                      r {result.finalRadius.toFixed(2)} · y {result.finalHeight.toFixed(2)} · v {result.finalSpeed.toFixed(2)}
+                    </code>
+                  </div>
+                ))}
+              </div>
+            </section>
+          )}
         </section>
       </div>
 
       <footer className="lab-footer">
-        <span>ROULETTE PHYSICS LAB · PART 1</span>
+       <span>ROULETTE PHYSICS LAB · PART 2</span>
         <span className="footer-rule" />
-        <span>Visual decomposition · no final collision geometry</span>
+       <span>Primitive colliders · temporary CCD probes</span>
         <span className="footer-build">
-          <Download size={12} /> SOURCE REFERENCE
+           <Download size={12} /> ISOLATED LAB
         </span>
       </footer>
     </main>
