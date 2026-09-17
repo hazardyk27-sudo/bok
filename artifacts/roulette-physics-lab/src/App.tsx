@@ -41,17 +41,12 @@ const FIXED_TIMESTEP = 1 / 120;
 const BALL_RADIUS = 0.056;
 const ROTOR_RADIUS = 1.72;
 const OUTER_TRACK_RADIUS = 2.48;
+const OUTER_TRACK_WALL_RADIUS = 2.531;
 const OUTER_TRACK_CENTER_Y = 0.61;
-const OUTER_TRACK_TILT = -0.08;
-const OUTER_TRACK_LAUNCH_CLEARANCE = 0.003;
 const OUTER_TRACK_SURFACE_Y =
   OUTER_TRACK_CENTER_Y + 0.045;
-const OUTER_TRACK_HEIGHTFIELD_SIZE = 5.8;
-const OUTER_TRACK_HEIGHTFIELD_CELLS = 384;
-const OUTER_TRACK_BOWL_DROP = 0.05;
-const OUTER_TRACK_WALL_HEIGHT = 1;
-const OUTER_TRACK_WALL_WIDTH = 0.08;
-const OUTER_TRACK_WALL_RADIUS = 2.531;
+const MEASURED_BOWL_SEGMENTS = 128;
+const MEASURED_BOWL_SHELL_THICKNESS = 0.08;
 // The normalized GLB's measured outer-track contact surface is y=-0.425.
 // Keep the collider model in its validated local coordinates, then apply this
 // one rigid world-space translation to every stationary collider and release
@@ -85,7 +80,7 @@ const DEFAULT_ROTOR_PARAMETERS = {
   mass: 3.2,
 } as const;
 const DEFAULT_LAUNCH_PARAMETERS = {
-  speed: 13,
+  speed: 6,
   angle: 0,
   initialSpin: 230,
   variation: 0.005,
@@ -135,7 +130,7 @@ type ColliderSpec = {
   halfExtents: [number, number, number];
   rotation: [number, number, number, number];
   color: string;
-  shape?: 'box' | 'outer-track-heightfield';
+  shape?: 'box' | 'measured-bowl-trimesh';
 };
 
 type ColliderBuckets = {
@@ -625,59 +620,138 @@ function isOuterTrackContactHeight(
   );
 }
 
-function buildOuterTrackHeightfieldHeights() {
-  const cells = OUTER_TRACK_HEIGHTFIELD_CELLS;
-  const samples = cells + 1;
-  const heights = new Float32Array(samples * samples);
+function measuredBowlProfile() {
+  // These are radial samples taken from the normalized stationary
+  // ROULETTE_MAIN_31 source meshes. Object_61 contains the outer running
+  // surface and rising berm; Object_63/Object_64 continue the visible bowl
+  // slope toward the rotor. The physics mesh is a low-poly reconstruction of
+  // this profile, never the source mesh itself.
+  const sourceProfile = [
+    [0.86, -0.339],
+    [1.0, -0.339],
+    [1.2, -0.355],
+    [1.4, -0.385],
+    [1.55, -0.415],
+    [1.68, -0.435],
+    [1.9, -0.434],
+    [2.1, -0.432],
+    [2.3, -0.429],
+    [2.5, -0.425],
+    [2.6, -0.421],
+    [2.668, -0.418],
+    [2.718, -0.411],
+    [2.763, -0.398],
+    [2.801, -0.383],
+    [2.83, -0.366],
+    [2.85, -0.347],
+    [2.87, -0.322],
+    [2.89, -0.294],
+    [2.91, -0.25],
+    [2.93, -0.19],
+    [2.95, -0.12],
+    [2.97, -0.035],
+    [2.99, 0.065],
+    [3.01, 0.145],
+    [3.03, 0.18],
+  ] as const;
+  return sourceProfile.map(([radius, sourceY]) => [
+    radius,
+    OUTER_TRACK_SURFACE_Y + (sourceY - RENDERED_OUTER_TRACK_SURFACE_Y),
+  ] as [number, number]);
+}
 
-  for (let xIndex = 0; xIndex < samples; xIndex += 1) {
-    for (let zIndex = 0; zIndex < samples; zIndex += 1) {
-      const x =
-        (xIndex / cells - 0.5) * OUTER_TRACK_HEIGHTFIELD_SIZE;
-      const z =
-        (zIndex / cells - 0.5) * OUTER_TRACK_HEIGHTFIELD_SIZE;
-      const radius = Math.hypot(x, z);
-      const localHeight =
-        radius <= OUTER_TRACK_WALL_RADIUS - 0.031
-          ? OUTER_TRACK_SURFACE_Y -
-            OUTER_TRACK_BOWL_DROP *
-              (1 - radius / (OUTER_TRACK_WALL_RADIUS - 0.031))
-          : OUTER_TRACK_SURFACE_Y +
-            OUTER_TRACK_WALL_HEIGHT *
-              Math.min(
-                1,
-                (radius - (OUTER_TRACK_WALL_RADIUS - 0.031)) /
-                  OUTER_TRACK_WALL_WIDTH,
-              );
-      // Rapier expects the height matrix in column-major order and needs
-      // (nrows + 1) * (ncols + 1) samples for a nrows x ncols field.
-      heights[xIndex * samples + zIndex] = localHeight;
+let measuredBowlTrimeshCache: {
+  vertices: Float32Array;
+  indices: Uint32Array;
+} | null = null;
+
+function buildMeasuredBowlTrimesh() {
+  if (measuredBowlTrimeshCache) return measuredBowlTrimeshCache;
+
+  const profile = measuredBowlProfile();
+  const segments = MEASURED_BOWL_SEGMENTS;
+  const profileCount = profile.length;
+  const vertices: number[] = [];
+  const indices: number[] = [];
+
+  for (const [radius, y] of profile) {
+    for (let index = 0; index < segments; index += 1) {
+      const angle = (index / segments) * Math.PI * 2;
+      vertices.push(Math.sin(angle) * radius, y, Math.cos(angle) * radius);
     }
   }
 
-  return heights;
+  for (const [radius, y] of profile) {
+    for (let index = 0; index < segments; index += 1) {
+      const angle = (index / segments) * Math.PI * 2;
+      vertices.push(
+        Math.sin(angle) * radius,
+        y - MEASURED_BOWL_SHELL_THICKNESS,
+        Math.cos(angle) * radius,
+      );
+    }
+  }
+
+  const topOffset = 0;
+  const bottomOffset = profileCount * segments;
+  for (let profileIndex = 0; profileIndex < profileCount - 1; profileIndex += 1) {
+    for (let segmentIndex = 0; segmentIndex < segments; segmentIndex += 1) {
+      const nextSegment = (segmentIndex + 1) % segments;
+      const a = topOffset + profileIndex * segments + segmentIndex;
+      const b = topOffset + profileIndex * segments + nextSegment;
+      const c =
+        topOffset + (profileIndex + 1) * segments + nextSegment;
+      const d = topOffset + (profileIndex + 1) * segments + segmentIndex;
+      // The top surface faces upward. Keeping the profile vertices shared
+      // makes the bowl one continuous collision surface.
+      indices.push(a, d, b, b, d, c);
+
+      const bottomA = bottomOffset + profileIndex * segments + segmentIndex;
+      const bottomB = bottomOffset + profileIndex * segments + nextSegment;
+      const bottomC =
+        bottomOffset + (profileIndex + 1) * segments + nextSegment;
+      const bottomD =
+        bottomOffset + (profileIndex + 1) * segments + segmentIndex;
+      indices.push(bottomA, bottomB, bottomD, bottomB, bottomC, bottomD);
+    }
+  }
+
+  // Close the inner and outer profile edges without adding a second visible
+  // support surface. The shell thickness only makes the trimesh manifold.
+  for (let segmentIndex = 0; segmentIndex < segments; segmentIndex += 1) {
+    const nextSegment = (segmentIndex + 1) % segments;
+    const innerTop = segmentIndex;
+    const innerTopNext = nextSegment;
+    const innerBottom = bottomOffset + segmentIndex;
+    const innerBottomNext = bottomOffset + nextSegment;
+    indices.push(innerTop, innerTopNext, innerBottom, innerTopNext, innerBottomNext, innerBottom);
+
+    const outerTop = (profileCount - 1) * segments + segmentIndex;
+    const outerTopNext = (profileCount - 1) * segments + nextSegment;
+    const outerBottom = bottomOffset + (profileCount - 1) * segments + segmentIndex;
+    const outerBottomNext =
+      bottomOffset + (profileCount - 1) * segments + nextSegment;
+    indices.push(
+      outerTop,
+      outerBottom,
+      outerTopNext,
+      outerTopNext,
+      outerBottom,
+      outerBottomNext,
+    );
+  }
+
+  measuredBowlTrimeshCache = {
+    vertices: new Float32Array(vertices),
+    indices: new Uint32Array(indices),
+  };
+  return measuredBowlTrimeshCache;
 }
 
 function outerTrackDebugProfile() {
-  const innerRadius = OUTER_TRACK_WALL_RADIUS - 0.28;
-  return [
-    new THREE.Vector2(
-      innerRadius,
-      OUTER_TRACK_SURFACE_Y - OUTER_TRACK_BOWL_DROP * 0.12,
-    ),
-    new THREE.Vector2(
-      OUTER_TRACK_WALL_RADIUS - 0.031,
-      OUTER_TRACK_SURFACE_Y,
-    ),
-    new THREE.Vector2(
-      OUTER_TRACK_WALL_RADIUS + OUTER_TRACK_WALL_WIDTH,
-      OUTER_TRACK_SURFACE_Y + OUTER_TRACK_WALL_HEIGHT,
-    ),
-    new THREE.Vector2(
-      OUTER_TRACK_WALL_RADIUS + 0.38,
-      OUTER_TRACK_SURFACE_Y + OUTER_TRACK_WALL_HEIGHT,
-    ),
-  ];
+  return measuredBowlProfile().map(
+    ([radius, y]) => new THREE.Vector2(radius, y),
+  );
 }
 
 function addRingSpecs(
@@ -728,89 +802,18 @@ function buildColliderSpecs(): ColliderSpec[] {
   const stationaryColor = '#76b9b1';
   const rotorColor = '#d9a06f';
 
-  // Stationary bowl: dense, overlapping primitive rings approximate a
-  // continuous measured slope without ever using the premium GLB as a
-  // collision mesh. The overlap prevents a ball from finding a seam between
-  // adjacent support bands.
-  addRingSpecs(specs, {
-    id: 'bowl-transition-outer',
-    label: 'Bowl transition',
-    body: 'stationary',
-    count: 37,
-    radius: 2.25,
-    y: 0.56,
-    halfExtents: [0.095, 0.055, 0.08],
-    color: stationaryColor,
-  });
-  addRingSpecs(specs, {
-    id: 'bowl-transition-middle-outer',
-    label: 'Bowl transition',
-    body: 'stationary',
-    count: 192,
-    radius: 2.26,
-    y: 0.45,
-    halfExtents: [0.095, 0.055, 0.12],
-    color: stationaryColor,
-    tilt: -0.38,
-  });
-  addRingSpecs(specs, {
-    id: 'bowl-transition-middle-inner',
-    label: 'Bowl transition',
-    body: 'stationary',
-    count: 192,
-    radius: 2.12,
-    y: 0.32,
-    halfExtents: [0.095, 0.055, 0.12],
-    color: stationaryColor,
-    tilt: -0.45,
-  });
-  addRingSpecs(specs, {
-    id: 'bowl-floor',
-    label: 'Bowl floor',
-    body: 'stationary',
-    count: 96,
-    radius: 1.98,
-    y: 0.19,
-    halfExtents: [0.10, 0.055, 0.12],
-    color: stationaryColor,
-    tilt: -0.25,
-  });
-  // One continuous Rapier heightfield carries both the outer running surface
-  // and its steep outer berm. It is intentionally a concave radial
-  // cross-section rather than a broad disk plus a separate capsule ring.
+  // One continuous low-poly shell carries the measured stationary bowl
+  // profile, including the outer running surface and its concave berm. It is
+  // derived from the normalized source measurements, not from the GLB mesh.
   specs.push({
-    id: 'track-heightfield',
-    label: 'Ball track',
+    id: 'measured-stationary-bowl',
+    label: 'Measured stationary bowl',
     body: 'stationary',
     position: [0, 0, 0],
-    halfExtents: [
-      OUTER_TRACK_HEIGHTFIELD_SIZE / 2,
-      OUTER_TRACK_WALL_HEIGHT,
-      OUTER_TRACK_HEIGHTFIELD_SIZE / 2,
-    ],
+    halfExtents: [0, 0, 0],
     rotation: [0, 0, 0, 1],
     color: stationaryColor,
-    shape: 'outer-track-heightfield',
-  });
-  addRingSpecs(specs, {
-    id: 'outer-rim',
-    label: 'Outer rim',
-    body: 'stationary',
-    count: 192,
-    radius: 2.80,
-    y: 0.85,
-    halfExtents: [0.12, 0.17, 0.08],
-    color: stationaryColor,
-  });
-  addRingSpecs(specs, {
-    id: 'track-inner-rail',
-    label: 'Track inner rail',
-    body: 'stationary',
-    count: 64,
-    radius: 2.20,
-    y: 0.58,
-    halfExtents: [0.13, 0.025, 0.055],
-    color: stationaryColor,
+    shape: 'measured-bowl-trimesh',
   });
 
   // Eight low, independent deflector blocks sit above the track transition.
@@ -868,25 +871,6 @@ function buildColliderSpecs(): ColliderSpec[] {
     color: rotorColor,
     radialOffset: -Math.PI / 2,
   });
-  specs.push({
-    id: 'bowl-spindle-guard',
-    label: 'Bowl center spindle',
-    body: 'stationary',
-    position: [0, 0.34, 0],
-    halfExtents: [1.05, 0.34, 1.05],
-    rotation: [0, 0, 0, 1],
-    color: stationaryColor,
-  });
-  specs.push({
-    id: 'bowl-center-floor',
-    label: 'Bowl center safety floor',
-    body: 'stationary',
-    position: [0, -0.04, 0],
-    halfExtents: [1.52, 0.05, 1.52],
-    rotation: [0, 0, 0, 1],
-    color: stationaryColor,
-  });
-
   return specs;
 }
 
@@ -907,18 +891,16 @@ function addRapierCollider(
       ? BALL_COLLISION_GROUP | ROTOR_COLLISION_GROUP
       : BALL_COLLISION_GROUP | STATIONARY_COLLISION_GROUP;
   const descriptor = (
-    spec.shape === 'outer-track-heightfield'
-      ? RAPIER.ColliderDesc.heightfield(
-          OUTER_TRACK_HEIGHTFIELD_CELLS,
-          OUTER_TRACK_HEIGHTFIELD_CELLS,
-          buildOuterTrackHeightfieldHeights(),
-          new RAPIER.Vector3(
-            OUTER_TRACK_HEIGHTFIELD_SIZE,
-            1,
-            OUTER_TRACK_HEIGHTFIELD_SIZE,
-          ),
-          RAPIER.HeightFieldFlags.FIX_INTERNAL_EDGES,
-        )
+    spec.shape === 'measured-bowl-trimesh'
+      ? (() => {
+          const mesh = buildMeasuredBowlTrimesh();
+          return RAPIER.ColliderDesc.trimesh(
+            mesh.vertices,
+            mesh.indices,
+            RAPIER.TriMeshFlags.FIX_INTERNAL_EDGES |
+              RAPIER.TriMeshFlags.ORIENTED,
+          );
+        })()
       : RAPIER.ColliderDesc.cuboid(...spec.halfExtents)
   )
     .setTranslation(...physicsPosition(spec.position))
@@ -932,14 +914,16 @@ function addRapierCollider(
     .setFriction(
       isDeflector
         ? 0.28
-        : spec.label === 'Ball track'
+         : spec.shape === 'measured-bowl-trimesh' ||
+             spec.label === 'Ball track'
           ? 0.005
           : friction,
     )
     .setRestitution(
       isDeflector
         ? 0.42
-        : spec.label === 'Ball track'
+         : spec.shape === 'measured-bowl-trimesh' ||
+             spec.label === 'Ball track'
           ? 0
           : restitution,
     )
@@ -949,7 +933,7 @@ function addRapierCollider(
 
 function makePhysicsDebugMesh(spec: ColliderSpec) {
   const geometry =
-    spec.shape === 'outer-track-heightfield'
+    spec.shape === 'measured-bowl-trimesh'
       ? new THREE.LatheGeometry(outerTrackDebugProfile(), 128)
       : new THREE.BoxGeometry(
           spec.halfExtents[0] * 2,
@@ -1160,7 +1144,10 @@ function createColliderWorld(
     .filter((spec) => spec.body === 'stationary')
     .forEach((spec) => {
       const collider = addRapierCollider(world, stationaryBody, spec);
-      if (spec.label === 'Ball track') {
+       if (
+         spec.label === 'Ball track' ||
+         spec.shape === 'measured-bowl-trimesh'
+       ) {
         colliderBuckets.outerTrack.push(collider);
       }
       if (spec.label === 'Deflector') colliderBuckets.deflectors.push(collider);
@@ -2534,7 +2521,7 @@ function SceneViewport({
           floor.position.y = baseY - 0.02;
 
           const physicsDebug = new THREE.Group();
-           physicsDebug.name = 'PhysicsColliderDebug__primitiveCompound';
+            physicsDebug.name = 'PhysicsColliderDebug__measuredBowlShell';
            physicsDebug.userData = {
              collidersReady: false,
              sourceMeshUsedAsCollider: false,
@@ -2599,7 +2586,7 @@ function SceneViewport({
              onPhysicsReportRef.current({
                ...EMPTY_PHYSICS_REPORT,
                status: 'failed',
-               detail: 'Rapier could not initialize the primitive collider model.',
+                detail: 'Rapier could not initialize the measured bowl collider.',
              });
            }
 
