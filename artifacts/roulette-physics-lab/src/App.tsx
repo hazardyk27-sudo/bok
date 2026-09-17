@@ -40,6 +40,14 @@ const SECTOR_STEP_RADIANS = (Math.PI * 2) / SECTOR_COUNT;
 const FIXED_TIMESTEP = 1 / 120;
 const BALL_RADIUS = 0.095;
 const ROTOR_RADIUS = 1.72;
+const OUTER_TRACK_RADIUS = 2.48;
+const OUTER_TRACK_CENTER_Y = 0.61;
+const OUTER_TRACK_HALF_HEIGHT = 0.045;
+const OUTER_TRACK_TILT = -0.08;
+const OUTER_TRACK_SURFACE_Y =
+  OUTER_TRACK_CENTER_Y + OUTER_TRACK_HALF_HEIGHT;
+const OUTER_TRACK_CONTACT_TOLERANCE = 0.018;
+const OUTER_TRACK_RADIAL_TOLERANCE = 0.06;
 const BALL_VALIDATION_TEST_COUNT = 100;
 const PART4_SPIN_TEST_COUNT = 20;
 const PART5_SPIN_TEST_COUNT = 50;
@@ -65,7 +73,7 @@ const DEFAULT_ROTOR_PARAMETERS = {
 } as const;
 const DEFAULT_LAUNCH_PARAMETERS = {
   speed: 4,
-  angle: 4,
+  angle: 24,
   initialSpin: 24,
   variation: 0.005,
 } as const;
@@ -199,9 +207,14 @@ type Part4SpinResult = {
   ballFinalSpeed: number;
   maxBallSpeed: number;
   finalRadius: number;
+  finalHeight: number;
   pathVariance: number;
   pathSignature: string;
   movingContactEnergy: boolean;
+  outerTrackContactAtLaunch: boolean;
+  outerTrackContactFrames: number;
+  outerTrackPhaseFrames: number;
+  floatingOuterTrackFrames: number;
   rotorWobble: boolean;
   tunneled: boolean;
   velocityExplosion: boolean;
@@ -214,6 +227,9 @@ type Part4ValidationReport = {
   testCount: number;
   completedCount: number;
   movingContactEnergyCount: number;
+  outerTrackLaunchContactCount: number;
+  outerTrackContactPassCount: number;
+  floatingOuterTrackCount: number;
   rotorWobbleCount: number;
   tunnelingCount: number;
   velocityExplosionCount: number;
@@ -331,6 +347,9 @@ const EMPTY_PART4_REPORT: Part4ValidationReport = {
   testCount: 0,
   completedCount: 0,
   movingContactEnergyCount: 0,
+  outerTrackLaunchContactCount: 0,
+  outerTrackContactPassCount: 0,
+  floatingOuterTrackCount: 0,
   rotorWobbleCount: 0,
   tunnelingCount: 0,
   velocityExplosionCount: 0,
@@ -550,6 +569,32 @@ function radialPosition(radius: number, angle: number, y: number): [number, numb
   return [Math.sin(angle) * radius, y, Math.cos(angle) * radius];
 }
 
+function outerTrackContactPosition(
+  angle: number,
+  ballRadius: number,
+): [number, number, number] {
+  return radialPosition(
+    OUTER_TRACK_RADIUS + ballRadius * Math.sin(OUTER_TRACK_TILT),
+    angle,
+    OUTER_TRACK_SURFACE_Y + ballRadius * Math.cos(OUTER_TRACK_TILT),
+  );
+}
+
+function isOuterTrackContactHeight(
+  translation: { x: number; y: number; z: number },
+  ballRadius: number,
+) {
+  const radius = Math.hypot(translation.x, translation.z);
+  const expectedRadius =
+    OUTER_TRACK_RADIUS + ballRadius * Math.sin(OUTER_TRACK_TILT);
+  const expectedHeight =
+    OUTER_TRACK_SURFACE_Y + ballRadius * Math.cos(OUTER_TRACK_TILT);
+  return (
+    Math.abs(radius - expectedRadius) <= OUTER_TRACK_RADIAL_TOLERANCE &&
+    Math.abs(translation.y - expectedHeight) <= OUTER_TRACK_CONTACT_TOLERANCE
+  );
+}
+
 function addRingSpecs(
   specs: ColliderSpec[],
   {
@@ -637,6 +682,7 @@ function buildColliderSpecs(): ColliderSpec[] {
     y: 0.61,
     halfExtents: [0.11, 0.045, 0.17],
     color: stationaryColor,
+    tilt: OUTER_TRACK_TILT,
   });
   addRingSpecs(specs, {
     id: 'outer-rim',
@@ -761,7 +807,13 @@ function addRapierCollider(
       w: spec.rotation[3],
     })
     .setFriction(isDeflector ? 0.28 : friction)
-    .setRestitution(isDeflector ? 0.42 : restitution)
+    .setRestitution(
+      isDeflector
+        ? 0.42
+        : spec.label === 'Ball track'
+          ? 0.06
+          : restitution,
+    )
     .setCollisionGroups(membership | (filter << 16));
   return world.createCollider(descriptor, body);
 }
@@ -964,13 +1016,36 @@ function createColliderWorld(
   const rotorBody = rotorParameters
     ? createDynamicRotorBody(world, rotorParameters)
     : world.createRigidBody(RAPIER.RigidBodyDesc.kinematicPositionBased());
+  const outerTrackColliders: RAPIER.Collider[] = [];
   specs
     .filter((spec) => spec.body === 'stationary')
-    .forEach((spec) => addRapierCollider(world, stationaryBody, spec));
+    .forEach((spec) => {
+      const collider = addRapierCollider(world, stationaryBody, spec);
+      if (spec.id.startsWith('track-floor-')) {
+        outerTrackColliders.push(collider);
+      }
+    });
   specs
     .filter((spec) => spec.body === 'rotor')
     .forEach((spec) => addRapierCollider(world, rotorBody, spec, rotorParameters ? 0.4 : 0.72, 0.18));
-  return { world, rotorBody };
+  return { world, rotorBody, outerTrackColliders };
+}
+
+function hasOuterTrackContact(
+  world: RAPIER.World,
+  ballCollider: RAPIER.Collider,
+  outerTrackColliders: RAPIER.Collider[],
+) {
+  let contact = false;
+  const outerTrackHandles = new Set(
+    outerTrackColliders.map((trackCollider) => trackCollider.handle),
+  );
+  world.contactPairsWith(ballCollider, (otherCollider) => {
+    if (outerTrackHandles.has(otherCollider.handle)) {
+      contact = true;
+    }
+  });
+  return contact;
 }
 
 function variedBallRelease(index: number, parameters: BallPhysicsParameters) {
@@ -1007,9 +1082,7 @@ function part4LaunchProfile(
   const signedVariation = 1;
   const variation =
     signedVariation * launchParameters.variation * (0.35 + (index % 5) * 0.16);
-  const radius = 2.455 + (index % 4) * 0.0005 + variation * 0.02;
-  const height = 0.961 + (index % 4) * 0.0005;
-  const position = radialPosition(radius, angle, height);
+  const position = outerTrackContactPosition(angle, ballParameters.radius);
   const tangent: [number, number] = [Math.cos(angle), -Math.sin(angle)];
   const radial: [number, number] = [Math.sin(angle), Math.cos(angle)];
   const launchAngle = THREE.MathUtils.degToRad(
@@ -1022,7 +1095,7 @@ function part4LaunchProfile(
   const tangentSpeed = speed * Math.cos(launchAngle);
   const velocity: [number, number, number] = [
     tangent[0] * -tangentSpeed - radial[0] * inwardSpeed,
-    -0.12 - (index % 3) * 0.025,
+    0,
     tangent[1] * -tangentSpeed - radial[1] * inwardSpeed,
   ];
   const spin = launchParameters.initialSpin * (1 + variation * 0.2);
@@ -1030,7 +1103,9 @@ function part4LaunchProfile(
     position,
     velocity,
     spin,
-    spinAxis: [radial[1], 0, -radial[0]] as [number, number, number],
+    // A tangentially moving sphere rolls around the radial axis. This keeps
+    // the launch physically coupled to the stationary horizontal track.
+    spinAxis: [radial[0], 0, radial[1]] as [number, number, number],
   };
 }
 
@@ -1104,7 +1179,10 @@ async function runPart4Validation(
         rotorParameters.initialAngularVelocity *
         (1 + ((index % 5) - 2) * launchParameters.variation * 0.45),
     };
-    const { world, rotorBody } = createColliderWorld(specs, rotorProfile);
+    const { world, rotorBody, outerTrackColliders } = createColliderWorld(
+      specs,
+      rotorProfile,
+    );
     const release = part4LaunchProfile(index, ballParameters, launchParameters);
     const ballBody = createDynamicBallBody(
       world,
@@ -1113,6 +1191,15 @@ async function runPart4Validation(
       release.velocity,
       0,
       false,
+    );
+    const ballCollider = ballBody.collider(0);
+    const geometricLaunchContact = isOuterTrackContactHeight(
+      {
+        x: release.position[0],
+        y: release.position[1],
+        z: release.position[2],
+      },
+      ballParameters.radius,
     );
     ballBody.setAngvel(
       {
@@ -1134,6 +1221,10 @@ async function runPart4Validation(
     let durationSeconds = 18;
     let completed = false;
     let movingContactEnergy = false;
+    let outerTrackContactAtLaunch = false;
+    let outerTrackContactFrames = 0;
+    let outerTrackPhaseFrames = 0;
+    let floatingOuterTrackFrames = 0;
     let rotorWobble = false;
     let tunneled = false;
     let velocityExplosion = false;
@@ -1157,6 +1248,37 @@ async function runPart4Validation(
       const rotorSpeed = Math.abs(rotorVelocity.y);
       const rotorRotation = rotorBody.rotation();
       const rotorTranslation = rotorBody.translation();
+      const physicalOuterTrackContact = hasOuterTrackContact(
+        world,
+        ballCollider,
+        outerTrackColliders,
+      );
+      const outerTrackContactY =
+        OUTER_TRACK_SURFACE_Y +
+        ballParameters.radius * Math.cos(OUTER_TRACK_TILT);
+      const outerTrackEnvelope =
+        radius > OUTER_TRACK_RADIUS - 0.15 &&
+        radius < OUTER_TRACK_RADIUS + 0.15 &&
+        translation.y > outerTrackContactY - 0.08 &&
+        translation.y < outerTrackContactY + 0.08;
+      if (step === 0) {
+        outerTrackContactAtLaunch =
+          geometricLaunchContact &&
+          physicalOuterTrackContact &&
+          isOuterTrackContactHeight(translation, ballParameters.radius);
+      }
+      if (physicalOuterTrackContact && radius > OUTER_TRACK_RADIUS - 0.15 &&
+          radius < OUTER_TRACK_RADIUS + 0.15) {
+        outerTrackPhaseFrames += 1;
+        outerTrackContactFrames += 1;
+      }
+      if (
+        outerTrackEnvelope &&
+        !physicalOuterTrackContact &&
+        translation.y > outerTrackContactY + 0.12
+      ) {
+        floatingOuterTrackFrames += 1;
+      }
       maxBallSpeed = Math.max(maxBallSpeed, ballSpeed);
       minRadius = Math.min(minRadius, radius);
       maxRadius = Math.max(maxRadius, radius);
@@ -1248,16 +1370,21 @@ async function runPart4Validation(
       ballFinalSpeed: finalSpeed,
       maxBallSpeed,
       finalRadius,
+      finalHeight: translation.y,
       pathVariance,
       pathSignature,
       movingContactEnergy,
+      outerTrackContactAtLaunch,
+      outerTrackContactFrames,
+      outerTrackPhaseFrames,
+      floatingOuterTrackFrames,
       rotorWobble,
       tunneled,
       velocityExplosion,
       invalidTrap,
       detail: completed
-        ? `Natural settle after ${durationSeconds.toFixed(1)} s · ${pathBins.size} angular path bins`
-        : 'Did not reach a valid natural settle within the 18 s audit window',
+        ? `Natural settle after ${durationSeconds.toFixed(1)} s · ${pathBins.size} angular path bins · track ${outerTrackContactFrames}/${outerTrackPhaseFrames}`
+        : `Did not reach a valid natural settle within the 18 s audit window · track ${outerTrackContactFrames}/${outerTrackPhaseFrames}`,
     });
     world.removeRigidBody(ballBody);
     world.removeRigidBody(rotorBody);
@@ -1271,6 +1398,17 @@ async function runPart4Validation(
   const completedCount = results.filter((result) => result.completed).length;
   const movingContactEnergyCount = results.filter(
     (result) => result.movingContactEnergy,
+  ).length;
+  const outerTrackLaunchContactCount = results.filter(
+    (result) => result.outerTrackContactAtLaunch,
+  ).length;
+  const outerTrackContactPassCount = results.filter(
+    (result) =>
+      result.outerTrackPhaseFrames > 0 &&
+      result.outerTrackContactFrames === result.outerTrackPhaseFrames,
+  ).length;
+  const floatingOuterTrackCount = results.filter(
+    (result) => result.floatingOuterTrackFrames > 0,
   ).length;
   const rotorWobbleCount = results.filter((result) => result.rotorWobble).length;
   const tunnelingCount = results.filter((result) => result.tunneled).length;
@@ -1287,6 +1425,9 @@ async function runPart4Validation(
     durations.filter((duration) => duration >= 10 && duration <= 16).length;
   const aggregatePassed =
     completedCount === PART4_SPIN_TEST_COUNT &&
+    outerTrackLaunchContactCount === PART4_SPIN_TEST_COUNT &&
+    outerTrackContactPassCount === PART4_SPIN_TEST_COUNT &&
+    floatingOuterTrackCount === 0 &&
     movingContactEnergyCount >= 15 &&
     rotorWobbleCount === 0 &&
     tunnelingCount === 0 &&
@@ -1302,6 +1443,9 @@ async function runPart4Validation(
     testCount: PART4_SPIN_TEST_COUNT,
     completedCount,
     movingContactEnergyCount,
+    outerTrackLaunchContactCount,
+    outerTrackContactPassCount,
+    floatingOuterTrackCount,
     rotorWobbleCount,
     tunnelingCount,
     velocityExplosionCount,
@@ -1316,7 +1460,7 @@ async function runPart4Validation(
     durationMs: Math.round(performance.now() - startedAt),
     detail: aggregatePassed
       ? `${PART4_SPIN_TEST_COUNT} complete coupled rotor/ball spins passed at 120 Hz fixed physics.`
-      : `Part 4 review needed: ${results.filter((result) => !result.completed).length} spins missed the acceptance envelope.`,
+      : `Part 4 review needed: ${results.filter((result) => !result.completed).length} spins missed the settle envelope; ${outerTrackLaunchContactCount}/${PART4_SPIN_TEST_COUNT} had physical launch contact and ${outerTrackContactPassCount}/${PART4_SPIN_TEST_COUNT} maintained an outer-track contact phase.`,
     results,
   };
 }
@@ -2162,13 +2306,6 @@ function SceneViewport({
           grid.position.y = baseY;
           floor.position.y = baseY - 0.02;
 
-           const ballPlaceholder = createBallVisual(ballParametersRef.current);
-           ballPlaceholder.name = 'PhysicsLabBall__awaitingRapier';
-           ballPlaceholder.position.set(0, 1.2, 2.46);
-           ballPlaceholder.userData.dynamicBodyAttached = false;
-           ballRef.current = ballPlaceholder;
-           wheelRoot.add(ballPlaceholder);
-
           const physicsDebug = new THREE.Group();
            physicsDebug.name = 'PhysicsColliderDebug__primitiveCompound';
            physicsDebug.userData = {
@@ -2240,7 +2377,11 @@ function SceneViewport({
            }
 
            if (physicsWorld && wheelRoot) {
-             const defaultPosition: [number, number, number] = [0, 1.2, 2.46];
+             const defaultPositionFor = (parameters: BallPhysicsParameters) =>
+               outerTrackContactPosition(
+                 13.5 * SECTOR_STEP_RADIANS + 0.0015,
+                 parameters.radius,
+               );
              const removeCurrentBall = () => {
                if (ballBodyRef.current) {
                  physicsWorld?.removeRigidBody(ballBodyRef.current);
@@ -2270,8 +2411,11 @@ function SceneViewport({
              };
              const rebuildBall = (parameters: BallPhysicsParameters) => {
                removeCurrentBall();
+               const defaultPosition = defaultPositionFor(parameters);
                const mesh = createBallVisual(parameters);
                mesh.position.set(...defaultPosition);
+               mesh.userData.dynamicBodyAttached = true;
+               mesh.userData.colliderCenterOffset = [0, 0, 0];
                wheelRoot?.add(mesh);
                ballRef.current = mesh;
                ballBodyRef.current = createDynamicBallBody(
@@ -3261,7 +3405,7 @@ function App() {
                 label="Launch angle"
                 value={launchParameters.angle}
                 min={-12}
-                max={12}
+                max={30}
                 step={0.5}
                 unit="°"
                 testId="input-launch-angle"
@@ -3512,6 +3656,18 @@ function App() {
                   <strong>{part4Report.movingContactEnergyCount}/{part4Report.testCount}</strong>
                 </div>
                 <div>
+                  <span>Track contact at launch</span>
+                  <strong>{part4Report.outerTrackLaunchContactCount}/{part4Report.testCount}</strong>
+                </div>
+                <div>
+                  <span>Track contact phase</span>
+                  <strong>{part4Report.outerTrackContactPassCount}/{part4Report.testCount}</strong>
+                </div>
+                <div>
+                  <span>Floating outer-track runs</span>
+                  <strong>{part4Report.floatingOuterTrackCount}</strong>
+                </div>
+                <div>
                   <span>Independent slowdown</span>
                   <strong>{part4Report.independentSlowdownCount}/{part4Report.testCount}</strong>
                 </div>
@@ -3539,6 +3695,15 @@ function App() {
                 <span className={part4Report.invalidTrapCount === 0 ? 'is-good' : 'is-bad'}>
                   {part4Report.invalidTrapCount} invalid traps
                 </span>
+                <span className={part4Report.outerTrackLaunchContactCount === part4Report.testCount ? 'is-good' : 'is-bad'}>
+                  {part4Report.outerTrackLaunchContactCount} launch contacts
+                </span>
+                <span className={part4Report.outerTrackContactPassCount === part4Report.testCount ? 'is-good' : 'is-bad'}>
+                  {part4Report.outerTrackContactPassCount} continuous track contacts
+                </span>
+                <span className={part4Report.floatingOuterTrackCount === 0 ? 'is-good' : 'is-bad'}>
+                  {part4Report.floatingOuterTrackCount} floating outer-track runs
+                </span>
                 <span className={part4Report.fpsIndependent ? 'is-good' : 'is-bad'}>
                   {part4Report.fpsIndependent ? 'fixed-step / FPS independent' : 'FPS dependent'}
                 </span>
@@ -3552,6 +3717,8 @@ function App() {
                     <strong>{result.completed ? 'complete' : 'review'}</strong>
                     <small>
                       {result.durationSeconds.toFixed(1)} s · r {result.finalRadius.toFixed(2)} · Δr {result.pathVariance.toFixed(2)} ·
+                      y {result.finalHeight.toFixed(2)} ·
+                      track {result.outerTrackContactFrames}/{result.outerTrackPhaseFrames} ·
                       {result.movingContactEnergy ? ' moving contact' : ' no moving contact'}
                       {result.tunneled ? ' · escape' : ''}
                       {result.velocityExplosion ? ' · velocity spike' : ''}
