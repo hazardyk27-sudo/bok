@@ -33,6 +33,7 @@ const SECTOR_STEP_RADIANS = (Math.PI * 2) / SECTOR_COUNT;
 const FIXED_TIMESTEP = 1 / 120;
 const BALL_RADIUS = 0.095;
 const ROTOR_RADIUS = 1.72;
+const BALL_VALIDATION_TEST_COUNT = 100;
 const DEFAULT_BALL_PARAMETERS = {
   radius: BALL_RADIUS,
   mass: 0.032,
@@ -738,7 +739,7 @@ async function runBallValidation(
 ): Promise<BallValidationReport> {
   await RAPIER.init();
   const startedAt = performance.now();
-  const testCount = 100;
+  const testCount = BALL_VALIDATION_TEST_COUNT;
   const results: BallTestResult[] = [];
 
   for (let index = 0; index < testCount; index += 1) {
@@ -889,7 +890,7 @@ async function runBallValidation(
     detail: aggregatePassed
       ? `${testCount} varied dynamic-body tests passed at ${Math.round(1 / FIXED_TIMESTEP)} Hz with CCD.`
       : `Review needed: ${testCount - passedCount} of ${testCount} varied tests missed the acceptance envelope.`,
-    results,
+    results: results.slice(0, 10),
   };
 }
 
@@ -1545,7 +1546,7 @@ function SceneViewport({
       releaseBallRef.current?.(0);
       return;
     }
-    const profileIndex = variedReleaseIndexRef.current % 60;
+    const profileIndex = variedReleaseIndexRef.current % BALL_VALIDATION_TEST_COUNT;
     variedReleaseIndexRef.current += 1;
     releaseBallRef.current?.(profileIndex);
   }, [ballCommand]);
@@ -1556,8 +1557,8 @@ function SceneViewport({
     onBallValidationReportRef.current({
       ...EMPTY_BALL_REPORT,
       status: 'running',
-      testCount: 60,
-      detail: `Running 60 varied dynamic-body tests at ${Math.round(1 / FIXED_TIMESTEP)} Hz with CCD…`,
+       testCount: BALL_VALIDATION_TEST_COUNT,
+       detail: `Running ${BALL_VALIDATION_TEST_COUNT} varied dynamic-body tests at ${Math.round(1 / FIXED_TIMESTEP)} Hz with CCD…`,
     });
     void runBallValidation(physicsSpecsRef.current, ballParametersRef.current).then((report) => {
       if (!cancelled) onBallValidationReportRef.current(report);
@@ -1727,7 +1728,7 @@ function App() {
     setBallValidationReport({
       ...EMPTY_BALL_REPORT,
       status: 'running',
-      detail: `Running 60 varied dynamic-body tests at ${Math.round(1 / FIXED_TIMESTEP)} Hz with CCD…`,
+       detail: `Running ${BALL_VALIDATION_TEST_COUNT} varied dynamic-body tests at ${Math.round(1 / FIXED_TIMESTEP)} Hz with CCD…`,
     });
     setBallValidationRequest((current) => current + 1);
   };
@@ -2073,7 +2074,7 @@ function App() {
                 Release varied drop
               </button>
               <button type="button" className="primary-button" onClick={runBallValidation} disabled={ballValidationReport.status === 'running' || !audit} data-testid="button-run-ball-validation">
-                {ballValidationReport.status === 'running' ? 'Running 60 tests…' : 'Run 60 collision tests'}
+                 {ballValidationReport.status === 'running' ? `Running ${BALL_VALIDATION_TEST_COUNT} tests…` : `Run ${BALL_VALIDATION_TEST_COUNT} collision tests`}
               </button>
             </div>
             <div className={`probe-status ball-runtime-${ballState}`} data-testid="status-ball-runtime">
@@ -2083,11 +2084,11 @@ function App() {
             <div className={`probe-status probe-${ballValidationReport.status}`} data-testid="status-ball-validation">
               <span>
                 {ballValidationReport.status === 'passed'
-                  ? '60-TEST BALL VALIDATION PASSED'
+                   ? `${BALL_VALIDATION_TEST_COUNT}-TEST BALL VALIDATION PASSED`
                   : ballValidationReport.status === 'failed'
                     ? 'BALL VALIDATION NEEDS REVIEW'
                     : ballValidationReport.status === 'running'
-                      ? '60-TEST BALL VALIDATION RUNNING'
+                       ? `${BALL_VALIDATION_TEST_COUNT}-TEST BALL VALIDATION RUNNING`
                       : 'BALL VALIDATION READY'}
               </span>
               <small>{ballValidationReport.detail}</small>
@@ -2339,6 +2340,9 @@ function App() {
                 </span>
                 <span className={ballValidationReport.velocitySpikeCount === 0 ? 'is-good' : 'is-bad'}>
                   {ballValidationReport.velocitySpikeCount} velocity spikes
+                </span>
+                <span className={ballValidationReport.trapCount === 0 ? 'is-good' : 'is-bad'}>
+                  {ballValidationReport.trapCount} physics-out-of-bounds traps
                 </span>
                 <span>120 Hz fixed step · CCD substeps 8 · sphere collider exact-match</span>
               </div>
