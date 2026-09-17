@@ -42,18 +42,16 @@ const BALL_RADIUS = 0.056;
 const ROTOR_RADIUS = 1.72;
 const OUTER_TRACK_RADIUS = 2.48;
 const OUTER_TRACK_CENTER_Y = 0.61;
-const OUTER_TRACK_HALF_HEIGHT = 0.045;
 const OUTER_TRACK_TILT = -0.08;
 const OUTER_TRACK_LAUNCH_CLEARANCE = 0.003;
 const OUTER_TRACK_SURFACE_Y =
-  OUTER_TRACK_CENTER_Y + OUTER_TRACK_HALF_HEIGHT;
-const OUTER_TRACK_FLOOR_RADIUS = 2.5;
+  OUTER_TRACK_CENTER_Y + 0.045;
+const OUTER_TRACK_HEIGHTFIELD_SIZE = 5.8;
+const OUTER_TRACK_HEIGHTFIELD_CELLS = 384;
+const OUTER_TRACK_BOWL_DROP = 0.05;
+const OUTER_TRACK_WALL_HEIGHT = 1;
+const OUTER_TRACK_WALL_WIDTH = 0.08;
 const OUTER_TRACK_WALL_RADIUS = 2.531;
-const OUTER_TRACK_WALL_SEGMENTS = 512;
-const OUTER_TRACK_WALL_CAPSULE_RADIUS =
-  (OUTER_TRACK_WALL_RADIUS * Math.PI) / OUTER_TRACK_WALL_SEGMENTS;
-const OUTER_TRACK_WALL_CENTER_RADIUS =
-  OUTER_TRACK_WALL_RADIUS + OUTER_TRACK_WALL_CAPSULE_RADIUS;
 // The normalized GLB's measured outer-track contact surface is y=-0.425.
 // Keep the collider model in its validated local coordinates, then apply this
 // one rigid world-space translation to every stationary collider and release
@@ -137,7 +135,7 @@ type ColliderSpec = {
   halfExtents: [number, number, number];
   rotation: [number, number, number, number];
   color: string;
-  shape?: 'box' | 'outer-track-floor' | 'outer-track-wall-capsule';
+  shape?: 'box' | 'outer-track-heightfield';
 };
 
 type ColliderBuckets = {
@@ -627,6 +625,61 @@ function isOuterTrackContactHeight(
   );
 }
 
+function buildOuterTrackHeightfieldHeights() {
+  const cells = OUTER_TRACK_HEIGHTFIELD_CELLS;
+  const samples = cells + 1;
+  const heights = new Float32Array(samples * samples);
+
+  for (let xIndex = 0; xIndex < samples; xIndex += 1) {
+    for (let zIndex = 0; zIndex < samples; zIndex += 1) {
+      const x =
+        (xIndex / cells - 0.5) * OUTER_TRACK_HEIGHTFIELD_SIZE;
+      const z =
+        (zIndex / cells - 0.5) * OUTER_TRACK_HEIGHTFIELD_SIZE;
+      const radius = Math.hypot(x, z);
+      const localHeight =
+        radius <= OUTER_TRACK_WALL_RADIUS - 0.031
+          ? OUTER_TRACK_SURFACE_Y -
+            OUTER_TRACK_BOWL_DROP *
+              (1 - radius / (OUTER_TRACK_WALL_RADIUS - 0.031))
+          : OUTER_TRACK_SURFACE_Y +
+            OUTER_TRACK_WALL_HEIGHT *
+              Math.min(
+                1,
+                (radius - (OUTER_TRACK_WALL_RADIUS - 0.031)) /
+                  OUTER_TRACK_WALL_WIDTH,
+              );
+      // Rapier expects the height matrix in column-major order and needs
+      // (nrows + 1) * (ncols + 1) samples for a nrows x ncols field.
+      heights[xIndex * samples + zIndex] = localHeight;
+    }
+  }
+
+  return heights;
+}
+
+function outerTrackDebugProfile() {
+  const innerRadius = OUTER_TRACK_WALL_RADIUS - 0.28;
+  return [
+    new THREE.Vector2(
+      innerRadius,
+      OUTER_TRACK_SURFACE_Y - OUTER_TRACK_BOWL_DROP * 0.12,
+    ),
+    new THREE.Vector2(
+      OUTER_TRACK_WALL_RADIUS - 0.031,
+      OUTER_TRACK_SURFACE_Y,
+    ),
+    new THREE.Vector2(
+      OUTER_TRACK_WALL_RADIUS + OUTER_TRACK_WALL_WIDTH,
+      OUTER_TRACK_SURFACE_Y + OUTER_TRACK_WALL_HEIGHT,
+    ),
+    new THREE.Vector2(
+      OUTER_TRACK_WALL_RADIUS + 0.38,
+      OUTER_TRACK_SURFACE_Y + OUTER_TRACK_WALL_HEIGHT,
+    ),
+  ];
+}
+
 function addRingSpecs(
   specs: ColliderSpec[],
   {
@@ -722,37 +775,22 @@ function buildColliderSpecs(): ColliderSpec[] {
     color: stationaryColor,
     tilt: -0.25,
   });
-  // A broad continuous floor carries the sphere while a high-resolution
-  // rounded capsule ring supplies the outer boundary without triangle-face
-  // normals or a floor/wall corner at the release point.
+  // One continuous Rapier heightfield carries both the outer running surface
+  // and its steep outer berm. It is intentionally a concave radial
+  // cross-section rather than a broad disk plus a separate capsule ring.
   specs.push({
-    id: 'track-floor',
+    id: 'track-heightfield',
     label: 'Ball track',
     body: 'stationary',
-    position: [0, OUTER_TRACK_SURFACE_Y - OUTER_TRACK_HALF_HEIGHT, 0],
+    position: [0, 0, 0],
     halfExtents: [
-      OUTER_TRACK_FLOOR_RADIUS,
-      OUTER_TRACK_HALF_HEIGHT,
-      OUTER_TRACK_FLOOR_RADIUS,
+      OUTER_TRACK_HEIGHTFIELD_SIZE / 2,
+      OUTER_TRACK_WALL_HEIGHT,
+      OUTER_TRACK_HEIGHTFIELD_SIZE / 2,
     ],
     rotation: [0, 0, 0, 1],
     color: stationaryColor,
-    shape: 'outer-track-floor',
-  });
-  addRingSpecs(specs, {
-    id: 'track-outer-wall',
-    label: 'Ball track',
-    body: 'stationary',
-    count: OUTER_TRACK_WALL_SEGMENTS,
-    radius: OUTER_TRACK_WALL_CENTER_RADIUS,
-    y: OUTER_TRACK_SURFACE_Y + 0.02,
-    halfExtents: [
-      OUTER_TRACK_WALL_CAPSULE_RADIUS,
-      0.28,
-      OUTER_TRACK_WALL_CAPSULE_RADIUS,
-    ],
-    color: stationaryColor,
-    shape: 'outer-track-wall-capsule',
+    shape: 'outer-track-heightfield',
   });
   addRingSpecs(specs, {
     id: 'outer-rim',
@@ -869,17 +907,19 @@ function addRapierCollider(
       ? BALL_COLLISION_GROUP | ROTOR_COLLISION_GROUP
       : BALL_COLLISION_GROUP | STATIONARY_COLLISION_GROUP;
   const descriptor = (
-    spec.shape === 'outer-track-wall-capsule'
-      ? RAPIER.ColliderDesc.capsule(
-          spec.halfExtents[1],
-          OUTER_TRACK_WALL_CAPSULE_RADIUS,
+    spec.shape === 'outer-track-heightfield'
+      ? RAPIER.ColliderDesc.heightfield(
+          OUTER_TRACK_HEIGHTFIELD_CELLS,
+          OUTER_TRACK_HEIGHTFIELD_CELLS,
+          buildOuterTrackHeightfieldHeights(),
+          new RAPIER.Vector3(
+            OUTER_TRACK_HEIGHTFIELD_SIZE,
+            1,
+            OUTER_TRACK_HEIGHTFIELD_SIZE,
+          ),
+          RAPIER.HeightFieldFlags.FIX_INTERNAL_EDGES,
         )
-      : spec.shape === 'outer-track-floor'
-        ? RAPIER.ColliderDesc.cylinder(
-            OUTER_TRACK_HALF_HEIGHT,
-            OUTER_TRACK_FLOOR_RADIUS,
-          )
-        : RAPIER.ColliderDesc.cuboid(...spec.halfExtents)
+      : RAPIER.ColliderDesc.cuboid(...spec.halfExtents)
   )
     .setTranslation(...physicsPosition(spec.position))
     .setRotation({
@@ -909,25 +949,13 @@ function addRapierCollider(
 
 function makePhysicsDebugMesh(spec: ColliderSpec) {
   const geometry =
-    spec.shape === 'outer-track-floor'
-      ? new THREE.CylinderGeometry(
-          OUTER_TRACK_FLOOR_RADIUS,
-          OUTER_TRACK_FLOOR_RADIUS,
-          OUTER_TRACK_HALF_HEIGHT * 2,
-          128,
-        )
-      : spec.shape === 'outer-track-wall-capsule'
-        ? new THREE.CapsuleGeometry(
-            OUTER_TRACK_WALL_CAPSULE_RADIUS,
-            spec.halfExtents[1] * 2,
-            8,
-            4,
-          )
-        : new THREE.BoxGeometry(
-            spec.halfExtents[0] * 2,
-            spec.halfExtents[1] * 2,
-            spec.halfExtents[2] * 2,
-          );
+    spec.shape === 'outer-track-heightfield'
+      ? new THREE.LatheGeometry(outerTrackDebugProfile(), 128)
+      : new THREE.BoxGeometry(
+          spec.halfExtents[0] * 2,
+          spec.halfExtents[1] * 2,
+          spec.halfExtents[2] * 2,
+        );
   const mesh = new THREE.Mesh(
     geometry,
     new THREE.MeshBasicMaterial({
