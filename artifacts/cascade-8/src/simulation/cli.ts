@@ -54,6 +54,8 @@ async function main() {
        "Observed Third Copy Branch": `${report.observedThirdCopyBranchProbability}%`,
        "Configured Third Repeat Weight": `${report.configuredThirdRepeatWeightFactor}%`,
        "Observed Third Fallback Same": `${report.observedThirdFallbackSameProbability}%`,
+       "Third Fallback Samples / Symbol": JSON.stringify(report.thirdFallbackSamplesBySymbol),
+       "Third Fallback Same Rate / Symbol": JSON.stringify(report.thirdFallbackSameRatesBySymbol),
       "Sampled Normal Pairs": report.sampledNormalPairs,
       "Third Position Samples": report.thirdPositionSamples,
       "Third = Previous Second": `${report.thirdMatchesPreviousSecondProbability}%`,

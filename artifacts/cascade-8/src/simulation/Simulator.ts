@@ -62,6 +62,7 @@ const OBSERVED_SYMBOL_KEYS = [
   "MULTIPLIER_CORE",
 ] as const;
 type ObservedSymbolKey = (typeof OBSERVED_SYMBOL_KEYS)[number];
+const NORMAL_SYMBOL_IDS = NORMAL_SYMBOLS.map(({ id }) => id as NormalSymbolId);
 const GS_EXPLOSION_BUCKETS = ["8", "9", "10", "11", "12+"] as const;
 type GsExplosionBucket = (typeof GS_EXPLOSION_BUCKETS)[number];
 
@@ -147,6 +148,14 @@ type PairMetrics = {
   refillEventsWithPair: number;
 };
 
+type ThirdFallbackMetrics = Record<NormalSymbolId, {
+  samples: number;
+  sameCount: number;
+}>;
+
+const createThirdFallbackMetrics = (): ThirdFallbackMetrics =>
+  Object.fromEntries(NORMAL_SYMBOL_IDS.map((id) => [id, { samples: 0, sameCount: 0 }])) as ThirdFallbackMetrics;
+
 function recordPairGroups(
   cells: BoardCell[],
   source: "initial" | "refill",
@@ -181,6 +190,7 @@ function measureNormalPairBranches(seed: string, targetPairs = 1_000_000) {
   let thirdMatchesPreviousSecond = 0;
   let thirdFallbackSamples = 0;
   let thirdFallbackMatchesPreviousSecond = 0;
+  const thirdFallbackBySymbol = createThirdFallbackMetrics();
   while (stream.stats.pairCount < targetPairs) {
     stream.next(1, "BASE_REFILL", false);
   }
@@ -197,7 +207,11 @@ function measureNormalPairBranches(seed: string, targetPairs = 1_000_000) {
         if (normal === visiblePreviousPairSecond) thirdMatchesPreviousSecond += 1;
         if (!emission.copiedFromVisibleTop) {
           thirdFallbackSamples += 1;
-          if (normal === visiblePreviousPairSecond) thirdFallbackMatchesPreviousSecond += 1;
+          thirdFallbackBySymbol[normal].samples += 1;
+          if (normal === visiblePreviousPairSecond) {
+            thirdFallbackMatchesPreviousSecond += 1;
+            thirdFallbackBySymbol[normal].sameCount += 1;
+          }
         }
       }
     } else if (metadata.stackIndex === 1) {
@@ -212,6 +226,15 @@ function measureNormalPairBranches(seed: string, targetPairs = 1_000_000) {
     thirdCopyBranchRate: Number(((thirdCopyBranches / Math.max(1, thirdPositionSamples)) * 100).toFixed(4)),
     thirdMatchesPreviousSecondRate: Number(((thirdMatchesPreviousSecond / Math.max(1, thirdPositionSamples)) * 100).toFixed(4)),
     thirdFallbackSameRate: Number(((thirdFallbackMatchesPreviousSecond / Math.max(1, thirdFallbackSamples)) * 100).toFixed(4)),
+    thirdFallbackSamplesBySymbol: Object.fromEntries(
+      NORMAL_SYMBOL_IDS.map((id) => [id, thirdFallbackBySymbol[id].samples]),
+    ) as Record<NormalSymbolId, number>,
+    thirdFallbackSameRatesBySymbol: Object.fromEntries(
+      NORMAL_SYMBOL_IDS.map((id) => [
+        id,
+        Number(((thirdFallbackBySymbol[id].sameCount / Math.max(1, thirdFallbackBySymbol[id].samples)) * 100).toFixed(4)),
+      ]),
+    ) as Record<NormalSymbolId, number>,
     freshSecondCount: stream.stats.freshSecondCount,
   };
 }
@@ -305,6 +328,8 @@ export type SimulationReport = {
   observedThirdCopyBranchProbability: number;
   configuredThirdRepeatWeightFactor: number;
   observedThirdFallbackSameProbability: number;
+  thirdFallbackSamplesBySymbol: Record<NormalSymbolId, number>;
+  thirdFallbackSameRatesBySymbol: Record<NormalSymbolId, number>;
   sampledNormalPairs: number;
   thirdPositionSamples: number;
   thirdMatchesPreviousSecondProbability: number;
@@ -648,6 +673,8 @@ export function simulate(spins: number, seed: string, betCents = 100, onProgress
       observedThirdCopyBranchProbability: pairBranches.thirdCopyBranchRate,
       configuredThirdRepeatWeightFactor: Number((NORMAL_THIRD_REPEAT_WEIGHT_FACTOR * 100).toFixed(4)),
       observedThirdFallbackSameProbability: pairBranches.thirdFallbackSameRate,
+       thirdFallbackSamplesBySymbol: pairBranches.thirdFallbackSamplesBySymbol,
+       thirdFallbackSameRatesBySymbol: pairBranches.thirdFallbackSameRatesBySymbol,
      sampledNormalPairs: pairBranches.sampledPairs,
      thirdPositionSamples: pairBranches.thirdPositionSamples,
      thirdMatchesPreviousSecondProbability: pairBranches.thirdMatchesPreviousSecondRate,
@@ -703,6 +730,12 @@ export async function saveSimulationReport(report: SimulationReport) {
 export function formatSimulationSummary(report: SimulationReport) {
   const symbolRows = OBSERVED_SYMBOL_KEYS
     .map((symbol) => `| ${symbol} | ${report.symbolAppearanceCounts.initialBoard[symbol]} | ${report.symbolAppearanceCounts.refill[symbol]} | ${report.symbolAppearanceCounts.visible[symbol]} | ${report.symbolAppearanceRates.initialBoard[symbol]}% | ${report.symbolAppearanceRates.refill[symbol]}% | ${report.symbolAppearanceRates.visible[symbol]}% |`)
+    .join("\n");
+  const thirdFallbackRows = NORMAL_SYMBOLS
+    .map(({ id }) => {
+      const normalId = id as NormalSymbolId;
+      return `| ${normalId} | ${report.thirdFallbackSamplesBySymbol[normalId]} | ${report.thirdFallbackSameRatesBySymbol[normalId]}% |`;
+    })
     .join("\n");
   const gsRows = GS_EXPLOSION_BUCKETS
     .map((bucketKey) => `| ${bucketKey} | ${report.galatasarayExplosionCounts[bucketKey]} | ${report.galatasarayExplosionRates[bucketKey]}% |`)
@@ -777,6 +810,14 @@ export function formatSimulationSummary(report: SimulationReport) {
 | Refill pair frequency | ${report.refillPairFrequency}% |
 | Visible pair frequency | ${report.visiblePairFrequency}% |
 | 3 / 4 / 5 same-symbol column frequency | ${report.columnThreeSameFrequency}% / ${report.columnFourSameFrequency}% / ${report.columnFiveSameFrequency}% |
+
+## Third-position fallback
+
+These samples exclude the configured third-cell copy branch. Same-symbol rate is conditional on the fallback branch and is reported separately from pair-internal copy metrics.
+
+| Symbol | Fallback samples | Same-symbol rate |
+| --- | ---: | ---: |
+${thirdFallbackRows}
 
 ## Symbol observations
 

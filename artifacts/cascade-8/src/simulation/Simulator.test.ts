@@ -22,6 +22,11 @@ describe("simulator", () => {
     expect(report.thirdPositionSamples).toBeGreaterThan(999_000);
     expect(report.thirdMatchesPreviousSecondProbability).toBeGreaterThan(50);
     expect(report.thirdMatchesPreviousSecondProbability).toBeLessThan(65);
+    expect(report.thirdFallbackSamplesBySymbol.S5).toBeGreaterThan(50_000);
+    expect(report.thirdFallbackSameRatesBySymbol.S5).toBeGreaterThan(5);
+    expect(report.thirdFallbackSameRatesBySymbol.S5).toBeLessThan(9);
+    expect(Object.values(report.thirdFallbackSamplesBySymbol).reduce((sum, value) => sum + value, 0))
+      .toBeLessThanOrEqual(report.thirdPositionSamples);
     expect(report.exactTwoTumbleFrequency).toBeGreaterThanOrEqual(0);
     expect(report.exactThreeTumbleFrequency).toBeGreaterThanOrEqual(0);
     expect(report.exactFourTumbleFrequency).toBeGreaterThanOrEqual(0);
