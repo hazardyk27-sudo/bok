@@ -13,6 +13,8 @@ Adding intermediate radial samples for a smoother lip curvature raised the short
 
 Exit diagnostics place the ordinary loss at the inner edge of the outer-flat band (radius about 2.353–2.355, inward radial velocity, tangential speed about 1.0–1.7), not at the outer berm; a roughly 3 mm inner trough keeps 2.2–2.4 laps but traps the ball outside the inward chain, while a sub-millimeter trough preserves descent but stays below two laps.
 
+A monotonic inner-edge S-ramp that steepened outward support did not solve the tradeoff: all three short spins stalled near radius 2.61 after only 0.21 lap, with no inward chain. Do not reuse that slope pattern without a new contact-energy hypothesis.
+
 **Why:** Fifty-spin runtime audits exposed both failure modes: low-speed resting on the flat transition and center-floor traps. The sloped transition preserves gravity/friction support while allowing inward movement, and the spindle guard prevents the ball from crossing the pocket basin.
 
 **How to apply:** Keep the Part 4 dynamic rotor unchanged, preserve the -58.86/default-contact baseline, and do not strengthen this lip further without a new radial-energy hypothesis. When adjusting Part 5 geometry, validate the complete 50-spin chain at fixed 120 Hz with stable-window settling and separate escape, trap, tunneling, and velocity-explosion counters.
