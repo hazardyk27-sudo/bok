@@ -907,6 +907,53 @@ function createBallVisual(parameters: BallPhysicsParameters) {
       emissiveIntensity: 0.06,
     }),
   );
+  const seam = new THREE.Mesh(
+    new THREE.TorusGeometry(
+      parameters.radius * 0.975,
+      parameters.radius * 0.032,
+      10,
+      64,
+    ),
+    new THREE.MeshPhysicalMaterial({
+      color: '#a19c88',
+      roughness: 0.24,
+      metalness: 0.08,
+      clearcoat: 0.18,
+      clearcoatRoughness: 0.24,
+    }),
+  );
+  seam.name = 'PhysicsLabBall__rotationSeam';
+  seam.rotation.x = Math.PI / 2;
+  seam.castShadow = true;
+  seam.userData = {
+    visualRole: 'rigidly-attached-rotation-seam',
+    independentAnimation: false,
+  };
+  ball.add(seam);
+
+  const asymmetryMark = new THREE.Mesh(
+    new THREE.SphereGeometry(parameters.radius * 0.036, 12, 8),
+    new THREE.MeshPhysicalMaterial({
+      color: '#67685f',
+      roughness: 0.2,
+      metalness: 0.06,
+      clearcoat: 0.12,
+      clearcoatRoughness: 0.28,
+    }),
+  );
+  asymmetryMark.name = 'PhysicsLabBall__rotationMark';
+  asymmetryMark.position.set(
+    0,
+    parameters.radius * 0.48,
+    parameters.radius * 0.86,
+  );
+  asymmetryMark.castShadow = true;
+  asymmetryMark.userData = {
+    visualRole: 'asymmetric-rotation-reference',
+    independentAnimation: false,
+  };
+  ball.add(asymmetryMark);
+
   ball.name = 'PhysicsLabBall__dynamicRigidBody';
   ball.castShadow = true;
   ball.userData = {
@@ -914,6 +961,7 @@ function createBallVisual(parameters: BallPhysicsParameters) {
     sourceMeshUsed: false,
     colliderShape: 'exact sphere',
     radius: parameters.radius,
+    rotationReadout: 'seam-band + asymmetric mark inherit body quaternion',
   };
   return ball;
 }
@@ -1212,11 +1260,14 @@ function SceneViewport({
                }
                if (ballRef.current) {
                  ballRef.current.parent?.remove(ballRef.current);
-                 ballRef.current.geometry.dispose();
-                 const material = Array.isArray(ballRef.current.material)
-                   ? ballRef.current.material
-                   : [ballRef.current.material];
-                 material.forEach((item) => item.dispose());
+                 ballRef.current.traverse((child) => {
+                   if (!(child instanceof THREE.Mesh)) return;
+                   child.geometry.dispose();
+                   const materials = Array.isArray(child.material)
+                     ? child.material
+                     : [child.material];
+                   materials.forEach((item) => item.dispose());
+                 });
                  ballRef.current = null;
                }
              };
