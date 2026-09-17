@@ -59,7 +59,7 @@ const OUTER_TRACK_CONTACT_TOLERANCE = 0.018;
 const OUTER_TRACK_RADIAL_TOLERANCE = 0.06;
 const BALL_VALIDATION_TEST_COUNT = 100;
 const PART4_SPIN_TEST_COUNT = 20;
-const PART5_SPIN_TEST_COUNT = 3;
+const PART5_SPIN_TEST_COUNT = 100;
 const PART5_DURATION_LIMIT_SECONDS = 24;
 const PART5_STABLE_WINDOW_FRAMES = 180;
 const PART5_DEBUG_SAMPLE_COUNT = 5;
@@ -4107,7 +4107,7 @@ function App() {
                     <span>{result.id}</span>
                     <strong>{result.chainComplete ? 'complete' : 'review'}</strong>
                     <small>
-                      {result.outerTrackLaps.toFixed(2)} laps · {result.settleSeconds.toFixed(1)} s · pocket {result.finalPocketNumber ?? '—'} ·
+                      {result.settleSeconds.toFixed(1)} s · pocket {result.finalPocketNumber ?? '—'} ·
                       {result.deflectorHit ? ' deflector' : ' no deflector'} ·
                       {result.movingFretContact ? ' moving fret' : ' no fret'} ·
                       {result.pocketChangeCount} changes / {result.bounceCount} bounces ·
