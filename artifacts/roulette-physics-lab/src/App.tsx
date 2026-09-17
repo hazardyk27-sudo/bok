@@ -36,10 +36,10 @@ const ROTOR_RADIUS = 1.72;
 const DEFAULT_BALL_PARAMETERS = {
   radius: BALL_RADIUS,
   mass: 0.032,
-  friction: 0.36,
+  friction: 0.4,
   restitution: 0.34,
-  linearDamping: 0.08,
-  angularDamping: 0.05,
+  linearDamping: 0.12,
+  angularDamping: 0.07,
   initialAngularVelocity: 22,
 } as const;
 const EUROPEAN_SEQUENCE = [
@@ -122,6 +122,7 @@ type BallTestResult = {
   stable: boolean;
   tunneled: boolean;
   velocitySpike: boolean;
+  trapped: boolean;
   angledResponse: boolean;
   maxSpeed: number;
   finalSpeed: number;
@@ -141,6 +142,7 @@ type BallValidationReport = {
   angledResponseCount: number;
   tunnelingCount: number;
   velocitySpikeCount: number;
+  trapCount: number;
   maxObservedSpeed: number;
   durationMs: number;
   detail: string;
@@ -171,6 +173,7 @@ const EMPTY_BALL_REPORT: BallValidationReport = {
   angledResponseCount: 0,
   tunnelingCount: 0,
   velocitySpikeCount: 0,
+  trapCount: 0,
   maxObservedSpeed: 0,
   durationMs: 0,
   detail: 'The dynamic ball is waiting for a release test.',
@@ -735,7 +738,7 @@ async function runBallValidation(
 ): Promise<BallValidationReport> {
   await RAPIER.init();
   const startedAt = performance.now();
-  const testCount = 60;
+  const testCount = 100;
   const results: BallTestResult[] = [];
 
   for (let index = 0; index < testCount; index += 1) {
@@ -815,7 +818,12 @@ async function runBallValidation(
     const finalSpeed = Math.hypot(velocity.x, velocity.y, velocity.z);
     const finalRadius = Math.hypot(translation.x, translation.z);
     const angledResponse = directionChanged && Math.abs(release.velocity[0]) > 0.2 && Math.abs(release.velocity[2]) > 0.2;
-    const passed = !tunneled && !velocitySpike && stable;
+    const trapped =
+      !stable &&
+      finalSpeed < 0.03 &&
+      finalRadius < 1.1 &&
+      translation.y < 0.4;
+    const passed = !tunneled && !velocitySpike && !trapped && stable;
     results.push({
       id: `ball-test-${String(index + 1).padStart(2, '0')}`,
       label: `Variation ${String(index + 1).padStart(2, '0')}`,
@@ -825,6 +833,7 @@ async function runBallValidation(
       stable,
       tunneled,
       velocitySpike,
+      trapped,
       angledResponse,
       maxSpeed,
       finalSpeed,
@@ -836,6 +845,8 @@ async function runBallValidation(
           ? 'Escaped modeled bounds / possible tunneling'
           : velocitySpike
             ? 'Velocity exceeded the safety envelope'
+            : trapped
+              ? 'Physics-out-of-bounds trap detected'
             : 'Did not reach a stable low-energy rest',
     });
     world.removeRigidBody(ballBody);
@@ -849,15 +860,17 @@ async function runBallValidation(
   const angledResponseCount = results.filter((result) => result.angledResponse).length;
   const tunnelingCount = results.filter((result) => result.tunneled).length;
   const velocitySpikeCount = results.filter((result) => result.velocitySpike).length;
+  const trapCount = results.filter((result) => result.trapped).length;
   const maxObservedSpeed = Math.max(...results.map((result) => result.maxSpeed));
   const aggregatePassed =
-    passedCount >= 54 &&
-    reboundCount >= 36 &&
-    directionChangeCount >= 36 &&
-    stableSettlingCount >= 54 &&
-    angledResponseCount >= 28 &&
+    passedCount === testCount &&
+    reboundCount >= 60 &&
+    directionChangeCount >= 50 &&
+    stableSettlingCount === testCount &&
+    angledResponseCount >= 40 &&
     tunnelingCount === 0 &&
-    velocitySpikeCount === 0;
+    velocitySpikeCount === 0 &&
+    trapCount === 0;
 
   return {
     status: aggregatePassed ? 'passed' : 'failed',
@@ -870,12 +883,13 @@ async function runBallValidation(
     angledResponseCount,
     tunnelingCount,
     velocitySpikeCount,
+    trapCount,
     maxObservedSpeed,
     durationMs: Math.round(performance.now() - startedAt),
     detail: aggregatePassed
       ? `${testCount} varied dynamic-body tests passed at ${Math.round(1 / FIXED_TIMESTEP)} Hz with CCD.`
       : `Review needed: ${testCount - passedCount} of ${testCount} varied tests missed the acceptance envelope.`,
-    results: results.slice(0, 10),
+    results,
   };
 }
 
