@@ -23,3 +23,4 @@
 - [Roulette Part 1 visual decomposition](roulette-part1-visual-decomposition.md) — normalized scale and European number-ring indexing are verified for future physics alignment.
 - [Physics Lab Part 3 validation](physics-lab-part3-validation.md) — center dynamic-ball tests on sector interiors and keep a catch floor; segmented seam starts can create false velocity explosions.
 - [Physics Lab Part 4 dynamics](physics-lab-part4-dynamics.md) — dynamic rotor colliders need rotor/stationary collision isolation and release calibration inside a proven transition band.
+- [Physics Lab Part 5 dynamics](physics-lab-part5-dynamics.md) — a sloped inward transition and spindle guard prevent flat-step traps without scripted inward motion.

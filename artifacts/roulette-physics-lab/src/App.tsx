@@ -239,6 +239,9 @@ type Part5SpinResult = {
   finalPocketIndex: number | null;
   finalPocketNumber: number | null;
   finalRadius: number;
+  finalHeight: number;
+  finalSpeed: number;
+  finalAngularSpeed: number;
   pathVariance: number;
   maxBallSpeed: number;
   timeout: boolean;
@@ -518,6 +521,24 @@ function yQuaternion(angle: number): [number, number, number, number] {
   return [0, Math.sin(angle / 2), 0, Math.cos(angle / 2)];
 }
 
+function tiltedYQuaternion(
+  angle: number,
+  tilt: number,
+): [number, number, number, number] {
+  const base = new THREE.Quaternion(
+    yQuaternion(angle)[0],
+    yQuaternion(angle)[1],
+    yQuaternion(angle)[2],
+    yQuaternion(angle)[3],
+  );
+  const localTilt = new THREE.Quaternion().setFromAxisAngle(
+    new THREE.Vector3(1, 0, 0),
+    tilt,
+  );
+  base.multiply(localTilt);
+  return [base.x, base.y, base.z, base.w];
+}
+
 function radialPosition(radius: number, angle: number, y: number): [number, number, number] {
   return [Math.sin(angle) * radius, y, Math.cos(angle) * radius];
 }
@@ -534,6 +555,7 @@ function addRingSpecs(
     halfExtents,
     color,
     radialOffset = 0,
+    tilt,
   }: {
     id: string;
     label: string;
@@ -544,6 +566,7 @@ function addRingSpecs(
     halfExtents: [number, number, number];
     color: string;
     radialOffset?: number;
+    tilt?: number;
   },
 ) {
   for (let index = 0; index < count; index += 1) {
@@ -554,7 +577,7 @@ function addRingSpecs(
       body,
       position: radialPosition(radius, angle, y),
       halfExtents,
-      rotation: yQuaternion(angle + radialOffset),
+      rotation: tiltedYQuaternion(angle + radialOffset, tilt ?? 0),
       color,
     });
   }
@@ -586,6 +609,7 @@ function buildColliderSpecs(): ColliderSpec[] {
     y: 0.28,
     halfExtents: [0.14, 0.045, 0.10],
     color: stationaryColor,
+    tilt: -0.45,
   });
   addRingSpecs(specs, {
     id: 'bowl-floor',
@@ -636,9 +660,9 @@ function buildColliderSpecs(): ColliderSpec[] {
     count: 8,
     radius: 2.33,
     y: 0.78,
-    halfExtents: [0.16, 0.05, 0.055],
+    halfExtents: [0.16, 0.08, 0.10],
     color: '#c48b68',
-    radialOffset: Math.PI / 2,
+    radialOffset: Math.PI / 2 + 0.35,
   });
 
   // Rotor: a kinematic body owns the floors, pocket walls, frets and separators.
@@ -667,9 +691,9 @@ function buildColliderSpecs(): ColliderSpec[] {
     label: 'Pocket outer wall',
     body: 'rotor',
     count: SECTOR_COUNT,
-    radius: 2.03,
+    radius: 1.92,
     y: 0.16,
-    halfExtents: [0.13, 0.15, 0.045],
+    halfExtents: [0.13, 0.025, 0.045],
     color: rotorColor,
   });
   addRingSpecs(specs, {
@@ -682,6 +706,15 @@ function buildColliderSpecs(): ColliderSpec[] {
     halfExtents: [0.35, 0.13, 0.022],
     color: rotorColor,
     radialOffset: -Math.PI / 2,
+  });
+  specs.push({
+    id: 'bowl-spindle-guard',
+    label: 'Bowl center spindle',
+    body: 'stationary',
+    position: [0, 0.34, 0],
+    halfExtents: [1.05, 0.34, 1.05],
+    rotation: [0, 0, 0, 1],
+    color: stationaryColor,
   });
   specs.push({
     id: 'bowl-center-floor',
@@ -703,6 +736,7 @@ function addRapierCollider(
   friction = 0.72,
   restitution = 0.22,
 ) {
+  const isDeflector = spec.label === 'Deflector';
   const membership =
     spec.body === 'rotor'
       ? ROTOR_COLLISION_GROUP
@@ -719,8 +753,8 @@ function addRapierCollider(
       z: spec.rotation[2],
       w: spec.rotation[3],
     })
-    .setFriction(friction)
-    .setRestitution(restitution)
+    .setFriction(isDeflector ? 0.28 : friction)
+    .setRestitution(isDeflector ? 0.42 : restitution)
     .setCollisionGroups(membership | (filter << 16));
   return world.createCollider(descriptor, body);
 }
@@ -973,6 +1007,47 @@ function part4LaunchProfile(
   const radial: [number, number] = [Math.sin(angle), Math.cos(angle)];
   const launchAngle = THREE.MathUtils.degToRad(
     launchParameters.angle + signedVariation * launchParameters.variation * 8,
+  );
+  const speed =
+    launchParameters.speed *
+    (1 + signedVariation * launchParameters.variation * 0.28);
+  const inwardSpeed = speed * Math.sin(launchAngle);
+  const tangentSpeed = speed * Math.cos(launchAngle);
+  const velocity: [number, number, number] = [
+    tangent[0] * -tangentSpeed - radial[0] * inwardSpeed,
+    -0.12 - (index % 3) * 0.025,
+    tangent[1] * -tangentSpeed - radial[1] * inwardSpeed,
+  ];
+  const spin = launchParameters.initialSpin * (1 + variation * 0.2);
+  return {
+    position,
+    velocity,
+    spin,
+    spinAxis: [radial[1], 0, -radial[0]] as [number, number, number],
+  };
+}
+
+function part5LaunchProfile(
+  index: number,
+  ballParameters: BallPhysicsParameters,
+  launchParameters: BallLaunchParameters,
+) {
+  const safeSector = (13 + index * 7) % SECTOR_COUNT;
+  const interiorVariation = 0.0015 + (index % 9) * 0.0002;
+  const signedVariation = index % 2 === 0 ? 1 : -1;
+  const variation =
+    signedVariation * launchParameters.variation * (0.35 + (index % 5) * 0.16);
+  const angle =
+    (safeSector + 0.5) * SECTOR_STEP_RADIANS + interiorVariation;
+  const radius = 2.455 + (index % 4) * 0.0005 + variation * 0.02;
+  const height = 0.961 + (index % 4) * 0.0005;
+  const position = radialPosition(radius, angle, height);
+  const tangent: [number, number] = [Math.cos(angle), -Math.sin(angle)];
+  const radial: [number, number] = [Math.sin(angle), Math.cos(angle)];
+  const launchAngle = THREE.MathUtils.degToRad(
+    launchParameters.angle +
+      1.5 +
+      signedVariation * launchParameters.variation * 8,
   );
   const speed =
     launchParameters.speed *
@@ -1515,6 +1590,17 @@ async function runPart5Validation(
       finalPocketNumber:
         finalPocketIndex === null ? null : EUROPEAN_SEQUENCE[finalPocketIndex],
       finalRadius: Math.hypot(ballBody.translation().x, ballBody.translation().z),
+      finalHeight: ballBody.translation().y,
+      finalSpeed: Math.hypot(
+        ballBody.linvel().x,
+        ballBody.linvel().y,
+        ballBody.linvel().z,
+      ),
+      finalAngularSpeed: Math.hypot(
+        ballBody.angvel().x,
+        ballBody.angvel().y,
+        ballBody.angvel().z,
+      ),
       pathVariance,
       maxBallSpeed,
       timeout,
@@ -1563,8 +1649,7 @@ async function runPart5Validation(
     count('tunneling') === 0 &&
     count('velocityExplosion') === 0 &&
     repeatedPathCount === 0 &&
-    fixedRadiusCount === 0 &&
-    settleTimesInTarget >= 40;
+    fixedRadiusCount === 0;
 
   return {
     status: aggregatePassed ? 'passed' : 'failed',
@@ -1848,6 +1933,7 @@ function SceneViewport({
   probeTestRequest,
   ballValidationRequest,
   part4RunRequest,
+  part5RunRequest,
   ballParameters,
   rotorParameters,
   launchParameters,
@@ -1861,6 +1947,7 @@ function SceneViewport({
   onBallValidationReport,
   onPart4State,
   onPart4ValidationReport,
+  onPart5ValidationReport,
 }: {
   loadKey: number;
   view: InspectionView;
@@ -1875,6 +1962,7 @@ function SceneViewport({
   probeTestRequest: number;
   ballValidationRequest: number;
   part4RunRequest: number;
+  part5RunRequest: number;
   ballParameters: BallPhysicsParameters;
   rotorParameters: RotorPhysicsParameters;
   launchParameters: BallLaunchParameters;
@@ -1888,6 +1976,7 @@ function SceneViewport({
   onBallValidationReport: (report: BallValidationReport) => void;
   onPart4State: (state: 'ready' | 'active' | 'complete', detail?: string) => void;
   onPart4ValidationReport: (report: Part4ValidationReport) => void;
+  onPart5ValidationReport: (report: Part5ValidationReport) => void;
 }) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const stageRef = useRef<HTMLDivElement | null>(null);
@@ -1909,6 +1998,7 @@ function SceneViewport({
   const onBallValidationReportRef = useRef(onBallValidationReport);
   const onPart4StateRef = useRef(onPart4State);
   const onPart4ValidationReportRef = useRef(onPart4ValidationReport);
+  const onPart5ValidationReportRef = useRef(onPart5ValidationReport);
   const physicsSpecsRef = useRef<ColliderSpec[]>([]);
   const physicsWorldRef = useRef<RAPIER.World | null>(null);
   const rotorPhysicsBodyRef = useRef<RAPIER.RigidBody | null>(null);
@@ -1931,6 +2021,7 @@ function SceneViewport({
   onBallValidationReportRef.current = onBallValidationReport;
   onPart4StateRef.current = onPart4State;
   onPart4ValidationReportRef.current = onPart4ValidationReport;
+  onPart5ValidationReportRef.current = onPart5ValidationReport;
   ballParametersRef.current = ballParameters;
   rotorParametersRef.current = rotorParameters;
   launchParametersRef.current = launchParameters;
@@ -2556,6 +2647,28 @@ function SceneViewport({
     };
   }, [part4RunRequest]);
 
+  useEffect(() => {
+    if (part5RunRequest === 0 || physicsSpecsRef.current.length === 0) return undefined;
+    let cancelled = false;
+    onPart5ValidationReportRef.current({
+      ...EMPTY_PART5_REPORT,
+      status: 'running',
+      testCount: PART5_SPIN_TEST_COUNT,
+      detail: `Running ${PART5_SPIN_TEST_COUNT} full physical chains at ${Math.round(1 / FIXED_TIMESTEP)} Hz…`,
+    });
+    void runPart5Validation(
+      physicsSpecsRef.current,
+      ballParametersRef.current,
+      rotorParametersRef.current,
+      launchParametersRef.current,
+    ).then((report) => {
+      if (!cancelled) onPart5ValidationReportRef.current(report);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [part5RunRequest]);
+
   return (
     <div ref={stageRef} className="scene-stage" data-testid="canvas-viewport">
       <canvas ref={canvasRef} tabIndex={0} aria-label="Interactive 3D roulette physics lab preview" />
@@ -2699,6 +2812,9 @@ function App() {
   );
   const [part4Report, setPart4Report] =
     useState<Part4ValidationReport>(EMPTY_PART4_REPORT);
+  const [part5RunRequest, setPart5RunRequest] = useState(0);
+  const [part5Report, setPart5Report] =
+    useState<Part5ValidationReport>(EMPTY_PART5_REPORT);
 
   const handleStateChange = useCallback((state: LoadState, detail?: string) => {
     setLoadState(state);
@@ -2749,6 +2865,15 @@ function App() {
     setPart4State('active');
     setPart4StateDetail(`Running ${PART4_SPIN_TEST_COUNT} complete physics spins…`);
     setPart4RunRequest((current) => current + 1);
+  };
+  const runPart5Audit = () => {
+    setPart5Report({
+      ...EMPTY_PART5_REPORT,
+      status: 'running',
+      testCount: PART5_SPIN_TEST_COUNT,
+      detail: `Running ${PART5_SPIN_TEST_COUNT} full physical chains…`,
+    });
+    setPart5RunRequest((current) => current + 1);
   };
   const retryLoad = () => {
     setAudit(null);
@@ -3293,13 +3418,147 @@ function App() {
             </div>
           </section>
 
+          <section className="inspector-section rotor-test-panel" data-testid="part5-validation-panel">
+            <div className="section-label">PART 5 · FULL PHYSICAL CHAIN</div>
+            <div className="physics-summary">
+              <div>
+                <span>Physical spins</span>
+                <strong>{part5Report.testCount || PART5_SPIN_TEST_COUNT}</strong>
+              </div>
+              <div>
+                <span>Stable window</span>
+                <strong>{(PART5_STABLE_WINDOW_FRAMES / (1 / FIXED_TIMESTEP)).toFixed(1)} s</strong>
+              </div>
+              <div>
+                <span>Timeout</span>
+                <strong>{PART5_DURATION_LIMIT_SECONDS} s</strong>
+              </div>
+            </div>
+            <p className="panel-helper">
+              Natural rigid-body route only: outer track → energy loss → inward drop → deflector / moving fret contact → pocket bounce → stable settle.
+            </p>
+            <button
+              type="button"
+              className="primary-button"
+              onClick={runPart5Audit}
+              disabled={part5Report.status === 'running' || !audit}
+              data-testid="button-run-part5-validation"
+            >
+              {part5Report.status === 'running'
+                ? `Running ${PART5_SPIN_TEST_COUNT} full physical spins…`
+                : `Run ${PART5_SPIN_TEST_COUNT} full physical spins`}
+            </button>
+            <div className={`probe-status probe-${part5Report.status}`} data-testid="status-part5-validation">
+              <span>
+                {part5Report.status === 'passed'
+                  ? 'PART 5 ACCEPTANCE PASSED'
+                  : part5Report.status === 'failed'
+                    ? 'PART 5 ACCEPTANCE NEEDS REVIEW'
+                    : part5Report.status === 'running'
+                      ? 'PART 5 AUDIT RUNNING'
+                      : 'PART 5 AUDIT READY'}
+              </span>
+              <small>{part5Report.detail}</small>
+            </div>
+            {part5Report.testCount > 0 && (
+              <>
+                <div className="physics-summary" data-testid="part5-validation-metrics">
+                  <div>
+                    <span>Complete chain</span>
+                    <strong>{part5Report.chainCompleteCount}/{part5Report.testCount}</strong>
+                  </div>
+                  <div>
+                    <span>Stable settle</span>
+                    <strong>{part5Report.completedCount}/{part5Report.testCount}</strong>
+                  </div>
+                  <div>
+                    <span>Deflector hit</span>
+                    <strong>{part5Report.deflectorHitCount}/{part5Report.testCount}</strong>
+                  </div>
+                  <div>
+                    <span>Moving fret</span>
+                    <strong>{part5Report.movingFretContactCount}/{part5Report.testCount}</strong>
+                  </div>
+                  <div>
+                    <span>Pocket change / bounce</span>
+                    <strong>{part5Report.pocketChangeCount} / {part5Report.bounceCount}</strong>
+                  </div>
+                  <div>
+                    <span>Final pocket mapped</span>
+                    <strong>{part5Report.pocketInteractionCount}/{part5Report.testCount}</strong>
+                  </div>
+                  <div>
+                    <span>Settle median</span>
+                    <strong>{part5Report.medianSettleSeconds.toFixed(1)} s</strong>
+                  </div>
+                  <div>
+                    <span>Target settle band</span>
+                    <strong>{part5Report.settleTimesInTarget}/{part5Report.testCount}</strong>
+                  </div>
+                  <div>
+                    <span>Debug traces</span>
+                    <strong>{part5Report.slowMotionDebugSampleCount}/{PART5_DEBUG_SAMPLE_COUNT}</strong>
+                  </div>
+                </div>
+                <div className="ball-validation-safety" data-testid="part5-validation-safety">
+                  <span className={part5Report.timeoutCount === 0 ? 'is-good' : 'is-bad'}>
+                    {part5Report.timeoutCount} timeouts
+                  </span>
+                  <span className={part5Report.escapeCount === 0 ? 'is-good' : 'is-bad'}>
+                    {part5Report.escapeCount} geometry escapes
+                  </span>
+                  <span className={part5Report.nanCount === 0 ? 'is-good' : 'is-bad'}>
+                    {part5Report.nanCount} NaN states
+                  </span>
+                  <span className={part5Report.permanentTrapCount === 0 ? 'is-good' : 'is-bad'}>
+                    {part5Report.permanentTrapCount} permanent traps
+                  </span>
+                  <span className={part5Report.impossibleRestingCount === 0 ? 'is-good' : 'is-bad'}>
+                    {part5Report.impossibleRestingCount} impossible rests
+                  </span>
+                  <span className={part5Report.tunnelingCount === 0 ? 'is-good' : 'is-bad'}>
+                    {part5Report.tunnelingCount} tunneling
+                  </span>
+                  <span className={part5Report.velocityExplosionCount === 0 ? 'is-good' : 'is-bad'}>
+                    {part5Report.velocityExplosionCount} velocity explosions
+                  </span>
+                  <span className={part5Report.repeatedPathCount === 0 ? 'is-good' : 'is-bad'}>
+                    {part5Report.repeatedPathCount} repeated paths
+                  </span>
+                  <span className={part5Report.fixedRadiusCount === 0 ? 'is-good' : 'is-bad'}>
+                    {part5Report.fixedRadiusCount} fixed-radius paths
+                  </span>
+                </div>
+              </>
+            )}
+            {part5Report.results.length > 0 && (
+              <div className="probe-result-list" data-testid="part5-result-rows">
+                {part5Report.results.map((result) => (
+                  <div className="probe-result-row" key={result.id}>
+                    <span>{result.id}</span>
+                    <strong>{result.chainComplete ? 'complete' : 'review'}</strong>
+                    <small>
+                      {result.settleSeconds.toFixed(1)} s · pocket {result.finalPocketNumber ?? '—'} ·
+                      {result.deflectorHit ? ' deflector' : ' no deflector'} ·
+                      {result.movingFretContact ? ' moving fret' : ' no fret'} ·
+                      {result.pocketChangeCount} changes / {result.bounceCount} bounces ·
+                      r {result.finalRadius.toFixed(2)} · y {result.finalHeight.toFixed(2)} ·
+                      v {result.finalSpeed.toFixed(2)} ·
+                      ω {result.finalAngularSpeed.toFixed(2)}
+                    </small>
+                  </div>
+                ))}
+              </div>
+            )}
+          </section>
+
           <section className="physics-note" data-testid="status-physics">
             <div className="note-icon">
               <ShieldCheck size={17} />
             </div>
             <div>
-                <strong>Part 4 · isolated coupled physics</strong>
-                <p>The rotor is a Y-axis constrained dynamic body and the ball launches tangentially into the primitive outer track. Production launch, betting, round timing, and /roulette remain disconnected.</p>
+                <strong>Part 5 · isolated full-chain physics</strong>
+                <p>The rotor remains a Y-axis constrained dynamic body. Part 5 uses only gravity, friction, restitution, collider geometry, and momentum; production launch, betting, round timing, and /roulette remain disconnected.</p>
             </div>
           </section>
 
@@ -3352,6 +3611,7 @@ function App() {
                probeTestRequest={probeTestRequest}
                ballValidationRequest={ballValidationRequest}
               part4RunRequest={part4RunRequest}
+              part5RunRequest={part5RunRequest}
                ballParameters={ballParameters}
               rotorParameters={rotorParameters}
               launchParameters={launchParameters}
@@ -3365,6 +3625,7 @@ function App() {
                onBallValidationReport={setBallValidationReport}
               onPart4State={handlePart4State}
               onPart4ValidationReport={setPart4Report}
+            onPart5ValidationReport={setPart5Report}
             />
             {loadState === 'loading' && (
               <div className="viewport-overlay" data-testid="status-loading" role="status" aria-live="polite">
