@@ -740,7 +740,7 @@ export function formatSimulationSummary(report: SimulationReport) {
     .map((bucketKey) => `| ${bucketKey} | ${report.galatasarayExplosionCounts[bucketKey]} | ${report.galatasarayExplosionRates[bucketKey]}% |`)
     .join("\n");
 
-  return `# Cascade 8 — 10M RTP Analytics
+  return `# Cascade 8 — ${report.totalSpins.toLocaleString("en-US")} Spin RTP Analytics
 
 ## Run
 

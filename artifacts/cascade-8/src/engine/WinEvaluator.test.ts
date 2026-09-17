@@ -31,18 +31,18 @@ describe("win evaluation and cascades", () => {
   });
   it("uses the 12+ payout tier", () => {
     const result = evaluateBoard(boardWith([...Array(12).fill("S1"), ...Array(18).fill("S3")]));
-    expect(result.payouts.S1).toBe(0.5);
+    expect(result.payouts.S1).toBe(1.0);
   });
   it("uses exact payout values for every normal symbol count", () => {
     const expected = [
-      [0.15, 0.2, 0.25, 0.35, 0.5],
-      [0.25, 0.3, 0.4, 0.55, 0.75],
-      [0.35, 0.45, 0.55, 0.75, 1.0],
-      [0.45, 0.55, 0.7, 0.95, 1.3],
-      [0.7, 0.85, 1.05, 1.4, 1.9],
+      [0.3, 0.35, 0.4, 0.45, 1.0],
+      [0.35, 0.4, 0.45, 0.55, 1.25],
+      [0.5, 0.55, 0.65, 1.0, 1.5],
+      [0.6, 0.65, 0.75, 1.1, 1.75],
+      [0.75, 0.85, 1.0, 1.25, 1.9],
       [1.0, 1.1, 1.3, 1.75, 2.4],
-      [1.75, 2.1, 2.6, 3.5, 4.75],
-      [4.0, 4.5, 5.5, 7.5, 10.5],
+      [1.75, 2.1, 2.6, 3.5, 5.0],
+      [3.0, 4.5, 5.5, 7.5, 10.5],
       [6.0, 6.5, 8.0, 11.0, 15.0],
     ];
     NORMAL_SYMBOLS.forEach((symbol, index) => {
