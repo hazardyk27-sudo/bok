@@ -35,6 +35,10 @@ const BALL_RADIUS = 0.095;
 const ROTOR_RADIUS = 1.72;
 const BALL_VALIDATION_TEST_COUNT = 100;
 const PART4_SPIN_TEST_COUNT = 20;
+const PART5_SPIN_TEST_COUNT = 50;
+const PART5_DURATION_LIMIT_SECONDS = 24;
+const PART5_STABLE_WINDOW_FRAMES = 180;
+const PART5_DEBUG_SAMPLE_COUNT = 5;
 const BALL_COLLISION_GROUP = 0x0001;
 const STATIONARY_COLLISION_GROUP = 0x0002;
 const ROTOR_COLLISION_GROUP = 0x0004;
@@ -219,6 +223,68 @@ type Part4ValidationReport = {
   results: Part4SpinResult[];
 };
 
+type Part5SpinResult = {
+  id: string;
+  completed: boolean;
+  chainComplete: boolean;
+  outerTrackEntered: boolean;
+  energyLossObserved: boolean;
+  inwardMovementObserved: boolean;
+  deflectorHit: boolean;
+  movingFretContact: boolean;
+  pocketInteraction: boolean;
+  pocketChangeCount: number;
+  bounceCount: number;
+  settleSeconds: number;
+  finalPocketIndex: number | null;
+  finalPocketNumber: number | null;
+  finalRadius: number;
+  pathVariance: number;
+  maxBallSpeed: number;
+  timeout: boolean;
+  escaped: boolean;
+  nanDetected: boolean;
+  permanentTrap: boolean;
+  impossibleRestingState: boolean;
+  tunneling: boolean;
+  velocityExplosion: boolean;
+  pathSignature: string;
+  debugTraceCaptured: boolean;
+  detail: string;
+};
+
+type Part5ValidationReport = {
+  status: 'idle' | 'running' | 'passed' | 'failed';
+  testCount: number;
+  completedCount: number;
+  chainCompleteCount: number;
+  outerTrackCount: number;
+  energyLossCount: number;
+  inwardMovementCount: number;
+  deflectorHitCount: number;
+  movingFretContactCount: number;
+  pocketInteractionCount: number;
+  pocketChangeCount: number;
+  bounceCount: number;
+  timeoutCount: number;
+  escapeCount: number;
+  nanCount: number;
+  permanentTrapCount: number;
+  impossibleRestingCount: number;
+  tunnelingCount: number;
+  velocityExplosionCount: number;
+  repeatedPathCount: number;
+  fixedRadiusCount: number;
+  settleTimesInTarget: number;
+  slowMotionDebugSampleCount: number;
+  medianSettleSeconds: number;
+  minSettleSeconds: number;
+  maxSettleSeconds: number;
+  durationMs: number;
+  detail: string;
+  results: Part5SpinResult[];
+};
+
 const EMPTY_PHYSICS_REPORT: PhysicsReport = {
   status: 'idle',
   colliderCount: 0,
@@ -268,6 +334,38 @@ const EMPTY_PART4_REPORT: Part4ValidationReport = {
   maxDurationSeconds: 0,
   durationMs: 0,
   detail: 'Part 4 coupled rotor/ball validation is waiting to run.',
+  results: [],
+};
+
+const EMPTY_PART5_REPORT: Part5ValidationReport = {
+  status: 'idle',
+  testCount: 0,
+  completedCount: 0,
+  chainCompleteCount: 0,
+  outerTrackCount: 0,
+  energyLossCount: 0,
+  inwardMovementCount: 0,
+  deflectorHitCount: 0,
+  movingFretContactCount: 0,
+  pocketInteractionCount: 0,
+  pocketChangeCount: 0,
+  bounceCount: 0,
+  timeoutCount: 0,
+  escapeCount: 0,
+  nanCount: 0,
+  permanentTrapCount: 0,
+  impossibleRestingCount: 0,
+  tunnelingCount: 0,
+  velocityExplosionCount: 0,
+  repeatedPathCount: 0,
+  fixedRadiusCount: 0,
+  settleTimesInTarget: 0,
+  slowMotionDebugSampleCount: 0,
+  medianSettleSeconds: 0,
+  minSettleSeconds: 0,
+  maxSettleSeconds: 0,
+  durationMs: 0,
+  detail: 'Part 5 full physical chain validation is waiting to run.',
   results: [],
 };
 
@@ -1137,6 +1235,368 @@ async function runPart4Validation(
     detail: aggregatePassed
       ? `${PART4_SPIN_TEST_COUNT} complete coupled rotor/ball spins passed at 120 Hz fixed physics.`
       : `Part 4 review needed: ${results.filter((result) => !result.completed).length} spins missed the acceptance envelope.`,
+    results,
+  };
+}
+
+function normalizedAngle(angle: number) {
+  return ((angle + Math.PI) % (Math.PI * 2)) - Math.PI;
+}
+
+function pocketIndexFromState(
+  translation: { x: number; z: number },
+  rotation: { y: number; w: number },
+) {
+  const worldAngle = Math.atan2(translation.x, translation.z);
+  const rotorAngle = 2 * Math.atan2(rotation.y, rotation.w);
+  const relativeAngle = normalizedAngle(worldAngle - rotorAngle);
+  const index = Math.round(relativeAngle / SECTOR_STEP_RADIANS);
+  return (index % SECTOR_COUNT + SECTOR_COUNT) % SECTOR_COUNT;
+}
+
+async function runPart5Validation(
+  specs: ColliderSpec[],
+  ballParameters: BallPhysicsParameters,
+  rotorParameters: RotorPhysicsParameters,
+  launchParameters: BallLaunchParameters,
+): Promise<Part5ValidationReport> {
+  await RAPIER.init();
+  const startedAt = performance.now();
+  const results: Part5SpinResult[] = [];
+  const durationLimitSteps = Math.round(PART5_DURATION_LIMIT_SECONDS / FIXED_TIMESTEP);
+  const debugStride = Math.max(1, Math.floor(PART5_SPIN_TEST_COUNT / PART5_DEBUG_SAMPLE_COUNT));
+
+  for (let index = 0; index < PART5_SPIN_TEST_COUNT; index += 1) {
+    const rotorProfile = {
+      ...rotorParameters,
+      initialAngularVelocity:
+        rotorParameters.initialAngularVelocity *
+        (1 + ((index % 7) - 3) * launchParameters.variation * 0.35),
+    };
+    const { world, rotorBody } = createColliderWorld(specs, rotorProfile);
+    const release = part4LaunchProfile(index, ballParameters, launchParameters);
+    const ballBody = createDynamicBallBody(
+      world,
+      ballParameters,
+      release.position,
+      release.velocity,
+      0,
+      false,
+    );
+    ballBody.setAngvel(
+      {
+        x: release.spinAxis[0] * release.spin,
+        y: 0,
+        z: release.spinAxis[2] * release.spin,
+      },
+      true,
+    );
+    rotorBody.setAngvel(
+      { x: 0, y: rotorProfile.initialAngularVelocity, z: 0 },
+      true,
+    );
+
+    let outerTrackEntered = false;
+    let energyLossObserved = false;
+    let inwardMovementObserved = false;
+    let deflectorHit = false;
+    let movingFretContact = false;
+    let pocketInteraction = false;
+    let pocketChangeCount = 0;
+    let bounceCount = 0;
+    let completed = false;
+    let timeout = false;
+    let escaped = false;
+    let nanDetected = false;
+    let permanentTrap = false;
+    let impossibleRestingState = false;
+    let tunneling = false;
+    let velocityExplosion = false;
+    let stableFrames = 0;
+    let lowSpeedFrames = 0;
+    let settleSeconds = PART5_DURATION_LIMIT_SECONDS;
+    let finalPocketIndex: number | null = null;
+    let minRadius = Number.POSITIVE_INFINITY;
+    let maxRadius = 0;
+    let maxBallSpeed = 0;
+    let previousBallSpeed = Math.hypot(...release.velocity);
+    let previousRotorSpeed = Math.abs(rotorBody.angvel().y);
+    let previousRadialVelocity = 0;
+    let previousVerticalVelocity = release.velocity[1];
+    let previousPocketIndex: number | null = null;
+    const pathSamples: string[] = [];
+    const initialBallSpeed = previousBallSpeed;
+
+    for (let step = 0; step < durationLimitSteps; step += 1) {
+      world.step();
+      const translation = ballBody.translation();
+      const velocity = ballBody.linvel();
+      const rotation = ballBody.rotation();
+      const angularVelocity = ballBody.angvel();
+      const rotorVelocity = rotorBody.angvel();
+      const ballSpeed = Math.hypot(velocity.x, velocity.y, velocity.z);
+      const ballAngularSpeed = Math.hypot(
+        angularVelocity.x,
+        angularVelocity.y,
+        angularVelocity.z,
+      );
+      const rotorSpeed = Math.abs(rotorVelocity.y);
+      const radius = Math.hypot(translation.x, translation.z);
+      const radialVelocity =
+        radius > 0
+          ? (translation.x * velocity.x + translation.z * velocity.z) / radius
+          : 0;
+      const finiteState = [
+        translation.x,
+        translation.y,
+        translation.z,
+        velocity.x,
+        velocity.y,
+        velocity.z,
+        rotation.x,
+        rotation.y,
+        rotation.z,
+        rotation.w,
+        ballSpeed,
+        ballAngularSpeed,
+        rotorSpeed,
+      ].every(Number.isFinite);
+
+      if (!finiteState) {
+        nanDetected = true;
+        break;
+      }
+      minRadius = Math.min(minRadius, radius);
+      maxRadius = Math.max(maxRadius, radius);
+      maxBallSpeed = Math.max(maxBallSpeed, ballSpeed);
+      if (step % 30 === 0) {
+        const pathBin = Math.floor(
+          ((Math.atan2(translation.x, translation.z) + Math.PI * 2) %
+            (Math.PI * 2) /
+            (Math.PI * 2)) *
+            72,
+        );
+        pathSamples.push(`${pathBin}:${Math.round(radius * 20)}`);
+      }
+
+      if (
+        radius > 3.18 ||
+        translation.y < -0.82 ||
+        translation.y > 2.8
+      ) {
+        escaped = true;
+        tunneling = true;
+      }
+      if (ballSpeed > Math.max(16, initialBallSpeed * 4 + 4)) {
+        velocityExplosion = true;
+      }
+
+      if (radius > 2.32 && radius < 2.66 && translation.y > 0.52) {
+        outerTrackEntered = true;
+      }
+      if (outerTrackEntered && ballSpeed < initialBallSpeed * 0.72) {
+        energyLossObserved = true;
+      }
+      if (minRadius < 2.24 && maxRadius - minRadius > 0.12) {
+        inwardMovementObserved = true;
+      }
+      if (
+        radius > 2.18 &&
+        radius < 2.48 &&
+        translation.y > 0.62 &&
+        translation.y < 1.1 &&
+        Math.abs(radialVelocity - previousRadialVelocity) > 0.035 &&
+        ballSpeed > 0.22
+      ) {
+        deflectorHit = true;
+      }
+      if (
+        radius > 1.35 &&
+        radius < 2.2 &&
+        rotorSpeed > 0.08 &&
+        (Math.abs(ballSpeed - previousBallSpeed) > 0.01 ||
+          Math.abs(rotorSpeed - previousRotorSpeed) > 0.0002)
+      ) {
+        movingFretContact = true;
+      }
+
+      const pocketIndex =
+        radius > 1.18 && radius < 1.98
+          ? pocketIndexFromState(translation, rotation)
+          : null;
+      if (pocketIndex !== null && ballSpeed > 0.08) {
+        pocketInteraction = true;
+        if (
+          previousPocketIndex !== null &&
+          previousPocketIndex !== pocketIndex
+        ) {
+          pocketChangeCount += 1;
+        }
+        previousPocketIndex = pocketIndex;
+      }
+      if (
+        radius < 1.98 &&
+        previousVerticalVelocity < -0.12 &&
+        velocity.y > 0.08
+      ) {
+        bounceCount += 1;
+      }
+
+      if (ballSpeed < 0.18 && ballAngularSpeed < 5) {
+        lowSpeedFrames += 1;
+      } else {
+        lowSpeedFrames = 0;
+      }
+      if (
+        lowSpeedFrames > 360 &&
+        (radius > 2.18 || radius < 1.08 || translation.y < -0.42)
+      ) {
+        permanentTrap = true;
+      }
+      if (
+        lowSpeedFrames > 360 &&
+        radius > 2.18 &&
+        radius < 2.35 &&
+        Math.abs(velocity.y) < 0.03
+      ) {
+        impossibleRestingState = true;
+      }
+
+      if (
+        ballSpeed < 0.18 &&
+        ballAngularSpeed < 5 &&
+        radius > 1.18 &&
+        radius < 1.98 &&
+        translation.y > -0.42 &&
+        translation.y < 1.3 &&
+        previousPocketIndex !== null
+      ) {
+        stableFrames += 1;
+        if (stableFrames >= PART5_STABLE_WINDOW_FRAMES && !completed) {
+          completed = true;
+          settleSeconds = step * FIXED_TIMESTEP;
+          finalPocketIndex = previousPocketIndex;
+        }
+      } else {
+        stableFrames = 0;
+      }
+
+      previousBallSpeed = ballSpeed;
+      previousRotorSpeed = rotorSpeed;
+      previousRadialVelocity = radialVelocity;
+      previousVerticalVelocity = velocity.y;
+    }
+
+    timeout = !completed && !nanDetected;
+    const chainComplete =
+      completed &&
+      outerTrackEntered &&
+      energyLossObserved &&
+      inwardMovementObserved &&
+      deflectorHit &&
+      movingFretContact &&
+      pocketInteraction;
+    const pathVariance = maxRadius - minRadius;
+    const debugTraceCaptured = index % debugStride === 0;
+    results.push({
+      id: `part5-spin-${String(index + 1).padStart(2, '0')}`,
+      completed,
+      chainComplete,
+      outerTrackEntered,
+      energyLossObserved,
+      inwardMovementObserved,
+      deflectorHit,
+      movingFretContact,
+      pocketInteraction,
+      pocketChangeCount,
+      bounceCount,
+      settleSeconds,
+      finalPocketIndex,
+      finalPocketNumber:
+        finalPocketIndex === null ? null : EUROPEAN_SEQUENCE[finalPocketIndex],
+      finalRadius: Math.hypot(ballBody.translation().x, ballBody.translation().z),
+      pathVariance,
+      maxBallSpeed,
+      timeout,
+      escaped,
+      nanDetected,
+      permanentTrap,
+      impossibleRestingState,
+      tunneling,
+      velocityExplosion,
+      pathSignature: pathSamples.join('.'),
+      debugTraceCaptured,
+      detail: chainComplete
+        ? `Outer track → inward drop → deflector/fret contact → pocket ${EUROPEAN_SEQUENCE[finalPocketIndex ?? 0]} → ${settleSeconds.toFixed(1)} s stable`
+        : 'Physical chain incomplete before stable pocket settle',
+    });
+    world.removeRigidBody(ballBody);
+    world.removeRigidBody(rotorBody);
+    world.free();
+  }
+
+  const durations = results.map((result) => result.settleSeconds);
+  const signatures = results.map((result) => result.pathSignature);
+  const repeatedPathCount = signatures.length - new Set(signatures).size;
+  const fixedRadiusCount = results.filter((result) => result.pathVariance < 0.045).length;
+  const completedCount = results.filter((result) => result.completed).length;
+  const chainCompleteCount = results.filter((result) => result.chainComplete).length;
+  const count = (key: keyof Part5SpinResult) =>
+    results.filter((result) => Boolean(result[key])).length;
+  const settleTimesInTarget = results.filter(
+    (result) => result.settleSeconds >= 10 && result.settleSeconds <= 16,
+  ).length;
+  const aggregatePassed =
+    completedCount === PART5_SPIN_TEST_COUNT &&
+    chainCompleteCount === PART5_SPIN_TEST_COUNT &&
+    count('outerTrackEntered') === PART5_SPIN_TEST_COUNT &&
+    count('energyLossObserved') === PART5_SPIN_TEST_COUNT &&
+    count('inwardMovementObserved') === PART5_SPIN_TEST_COUNT &&
+    count('deflectorHit') === PART5_SPIN_TEST_COUNT &&
+    count('movingFretContact') === PART5_SPIN_TEST_COUNT &&
+    count('pocketInteraction') === PART5_SPIN_TEST_COUNT &&
+    count('timeout') === 0 &&
+    count('escaped') === 0 &&
+    count('nanDetected') === 0 &&
+    count('permanentTrap') === 0 &&
+    count('impossibleRestingState') === 0 &&
+    count('tunneling') === 0 &&
+    count('velocityExplosion') === 0 &&
+    repeatedPathCount === 0 &&
+    fixedRadiusCount === 0 &&
+    settleTimesInTarget >= 40;
+
+  return {
+    status: aggregatePassed ? 'passed' : 'failed',
+    testCount: PART5_SPIN_TEST_COUNT,
+    completedCount,
+    chainCompleteCount,
+    outerTrackCount: count('outerTrackEntered'),
+    energyLossCount: count('energyLossObserved'),
+    inwardMovementCount: count('inwardMovementObserved'),
+    deflectorHitCount: count('deflectorHit'),
+    movingFretContactCount: count('movingFretContact'),
+    pocketInteractionCount: count('pocketInteraction'),
+    pocketChangeCount: results.reduce((sum, result) => sum + result.pocketChangeCount, 0),
+    bounceCount: results.reduce((sum, result) => sum + result.bounceCount, 0),
+    timeoutCount: count('timeout'),
+    escapeCount: count('escaped'),
+    nanCount: count('nanDetected'),
+    permanentTrapCount: count('permanentTrap'),
+    impossibleRestingCount: count('impossibleRestingState'),
+    tunnelingCount: count('tunneling'),
+    velocityExplosionCount: count('velocityExplosion'),
+    repeatedPathCount,
+    fixedRadiusCount,
+    settleTimesInTarget,
+    slowMotionDebugSampleCount: results.filter((result) => result.debugTraceCaptured).length,
+    medianSettleSeconds: median(durations),
+    minSettleSeconds: Math.min(...durations),
+    maxSettleSeconds: Math.max(...durations),
+    durationMs: Math.round(performance.now() - startedAt),
+    detail: aggregatePassed
+      ? `${PART5_SPIN_TEST_COUNT} full physical chains passed at ${Math.round(1 / FIXED_TIMESTEP)} Hz fixed physics.`
+      : `Part 5 review needed: ${results.filter((result) => !result.chainComplete).length} chains were incomplete.`,
     results,
   };
 }
