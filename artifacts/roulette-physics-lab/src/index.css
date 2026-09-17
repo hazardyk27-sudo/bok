@@ -796,6 +796,88 @@ h1 {
   transform: translateX(10px);
 }
 
+.rotor-test-panel {
+  display: grid;
+  gap: 10px;
+}
+
+.rotor-angle-readout {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  color: #7b8882;
+  font-family: 'DM Mono', monospace;
+  font-size: 9px;
+}
+
+.rotor-angle-readout strong {
+  color: #456c64;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.rotor-angle-slider {
+  width: 100%;
+  accent-color: #67998c;
+}
+
+.rotor-test-actions {
+  display: grid;
+  grid-template-columns: 1fr 1.15fr;
+  gap: 6px;
+}
+
+.secondary-button,
+.primary-button {
+  min-height: 29px;
+  padding: 6px 8px;
+  border: 1px solid #becbc2;
+  border-radius: 4px;
+  cursor: pointer;
+  font-family: 'DM Mono', monospace;
+  font-size: 8px;
+  letter-spacing: 0.02em;
+}
+
+.secondary-button {
+  color: #5e736b;
+  background: #e7ebe3;
+}
+
+.primary-button {
+  border-color: #78a294;
+  color: #f6f3e9;
+  background: #5d8c80;
+}
+
+.secondary-button:hover,
+.primary-button:hover {
+  filter: brightness(1.04);
+}
+
+.rotor-test-status {
+  display: grid;
+  gap: 3px;
+  padding: 8px 9px;
+  border-left: 2px solid #afcabe;
+  background: rgba(220, 233, 226, 0.5);
+  color: #4f786d;
+  font-family: 'DM Mono', monospace;
+  font-size: 8px;
+}
+
+.rotor-test-status small {
+  color: #81938b;
+  font-family: inherit;
+  font-size: 8px;
+}
+
+.rotor-test-running {
+  border-left-color: #c89b6f;
+  background: rgba(241, 231, 218, 0.74);
+  color: #986d49;
+}
+
 .physics-note {
   display: flex;
   gap: 11px;
@@ -1213,6 +1295,43 @@ h1 {
   white-space: nowrap;
 }
 
+.decomposition-strip {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  border-bottom: 1px solid #c9cbc1;
+}
+
+.decomposition-strip > div {
+  display: grid;
+  gap: 5px;
+  min-width: 0;
+  padding: 10px 12px 11px 0;
+  border-right: 1px solid #c9cbc1;
+}
+
+.decomposition-strip > div:not(:first-child) {
+  padding-left: 12px;
+}
+
+.decomposition-strip > div:last-child {
+  border-right: 0;
+}
+
+.decomposition-strip span {
+  color: #7c8983;
+  font-size: 8px;
+}
+
+.decomposition-strip strong {
+  overflow: hidden;
+  color: #4d8175;
+  font-family: 'DM Mono', monospace;
+  font-size: 9px;
+  font-weight: 500;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .audit-details {
   display: grid;
   grid-template-columns: minmax(0, 1.3fr) minmax(220px, 0.7fr);
@@ -1252,6 +1371,75 @@ h1 {
   color: #8f9992;
   font-family: inherit;
   white-space: normal;
+}
+
+.measurement-block {
+  display: grid;
+  align-content: start;
+  gap: 9px;
+  min-width: 0;
+}
+
+.measurement-list {
+  display: grid;
+  gap: 5px;
+}
+
+.measurement-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 3px 8px;
+  padding: 6px 8px;
+  border-left: 2px solid #d0b093;
+  background: rgba(239, 230, 218, 0.56);
+}
+
+.measurement-row span {
+  color: #6f7f78;
+  font-size: 9px;
+}
+
+.measurement-row strong {
+  color: #865e45;
+  font-family: 'DM Mono', monospace;
+  font-size: 9px;
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.measurement-row small {
+  grid-column: 1 / -1;
+  color: #9a8a7c;
+  font-size: 8px;
+  line-height: 1.35;
+}
+
+.sequence-audit {
+  display: grid;
+  gap: 7px;
+  margin-top: 4px;
+  padding: 10px;
+  border: 1px solid #b9cfc6;
+  background: rgba(221, 231, 223, 0.42);
+}
+
+.sequence-audit > strong {
+  color: #4d8175;
+  font-size: 9px;
+}
+
+.sequence-audit code {
+  overflow-wrap: anywhere;
+  color: #63786f;
+  font-family: 'DM Mono', monospace;
+  font-size: 8px;
+  line-height: 1.55;
+}
+
+.sequence-audit small {
+  color: #7d8983;
+  font-size: 8px;
+  line-height: 1.45;
 }
 
 .attribution-block {
@@ -1386,6 +1574,21 @@ h1 {
   }
 
   .audit-metric:nth-last-child(-n + 2) {
+    border-bottom: 0;
+  }
+
+  .decomposition-strip {
+    grid-template-columns: 1fr;
+  }
+
+  .decomposition-strip > div,
+  .decomposition-strip > div:not(:first-child) {
+    padding: 9px 0;
+    border-right: 0;
+    border-bottom: 1px solid #c9cbc1;
+  }
+
+  .decomposition-strip > div:last-child {
     border-bottom: 0;
   }
 

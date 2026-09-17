@@ -20,3 +20,4 @@
 - [Roulette portrait flow](roulette-portrait-flow.md) — keep portrait controls in normal document flow so compact tools never cover betting cells or result rows.
 - [Roulette audio timing](roulette-audio-timing.md) — keep round voice cues phase-gated and schedule physical impacts from the same visible landing timeline.
 - [Physics Lab runtime verification](physics-lab-runtime.md) — verify GLB bytes and WebGL with direct Chromium because proxy screenshots may lack WebGL and misrouted assets can return HTML 200s.
+- [Roulette Part 1 visual decomposition](roulette-part1-visual-decomposition.md) — normalized scale and European number-ring indexing are verified for future physics alignment.

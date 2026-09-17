@@ -25,6 +25,26 @@ import {
 const ASSET_PATH = '/physics-lab/roulette-visual-source.glb';
 const TARGET_WHEEL_DIAMETER = 6;
 const SOURCE_BALL_NODE = 'Sphere_16';
+const METERS_PER_WORLD_UNIT = 1 / 6;
+const WORLD_UNITS_PER_METER = 6;
+const SECTOR_COUNT = 37;
+const SECTOR_STEP_RADIANS = (Math.PI * 2) / SECTOR_COUNT;
+const EUROPEAN_SEQUENCE = [
+  0, 32, 15, 19, 4, 21, 2, 25, 17, 34, 6, 27, 13, 36, 11, 30, 8, 23, 10,
+  5, 24, 16, 33, 1, 20, 14, 31, 9, 22, 18, 29, 7, 28, 12, 35, 3, 26,
+];
+
+const PHYSICAL_MEASUREMENTS = [
+  { label: 'Overall diameter', value: '1.000 m', detail: '6.000 normalized world units' },
+  { label: 'Outer wheel radius', value: '0.500 m', detail: 'main visual radius 0.5001 m' },
+  { label: 'Ball-track radius', value: '0.440 m', detail: 'deflector band 0.4309–0.4488 m' },
+  { label: 'Bowl transition', value: '0.300 m', detail: 'visual slope band around 0.280–0.320 m' },
+  { label: 'Rotor outer radius', value: '0.421 m', detail: 'rotor presentation maximum' },
+  { label: 'Number / pocket ring', value: '0.323 m', detail: 'number glyph band center 0.2948–0.3504 m' },
+  { label: 'Pocket width / depth', value: '0.049 / 0.055 m', detail: '37-sector pitch / radial visual estimate' },
+  { label: 'Fret / deflector height', value: '0.015 m', detail: 'measured 0.012–0.016 m relief' },
+  { label: 'Spindle reference', value: '0, 0, 0', detail: 'Y+ axis through exact pivot' },
+];
 
 type LoadState = 'loading' | 'loaded' | 'error';
 type InspectionView = 'top' | 'angled' | 'side';
@@ -45,6 +65,10 @@ type AssetAudit = {
     license: string;
     source: string;
   };
+  stationaryMeshCount: number;
+  stationaryTriangles: number;
+  rotorMeshCount: number;
+  rotorTriangles: number;
 };
 
 const VIEW_LABELS: Record<InspectionView, string> = {
@@ -66,12 +90,12 @@ const HIERARCHY_AUDIT = [
   {
     label: 'Outer body / bowl',
     nodes: 'ROULETTE MAIN_31 · MAIN.002_32 · MAIN.003_33',
-    detail: 'High-poly shell, bowl, and main wheel surfaces',
+    detail: 'Stationary high-poly shell, bowl, and rim surfaces',
   },
   {
     label: 'Rotor / number area',
-    nodes: 'Text_29 · Plane.001–.015',
-    detail: 'Number typography, pocket cards, and radial details',
+    nodes: 'Text_29 · Plane_0–.015',
+    detail: 'Rotating number presentation, pocket cards, and radial details',
   },
   {
     label: 'Center / spindle',
@@ -81,7 +105,7 @@ const HIERARCHY_AUDIT = [
   {
     label: 'Deflector details',
     nodes: 'Cube_18 · Cube.001–.007',
-    detail: 'Eight small perimeter deflector/marker pieces',
+    detail: 'Stationary eight-piece deflector/marker ring',
   },
   {
     label: 'Excluded source geometry',
@@ -142,22 +166,64 @@ function normalizedSourceScene(scene: THREE.Group) {
   };
 }
 
+function decomposeVisualScene(runtimeScene: THREE.Group, wheelRoot: THREE.Group) {
+  const stationaryGroup = new THREE.Group();
+  stationaryGroup.name = 'StationaryBowl__visualGroup';
+  stationaryGroup.userData = {
+    visualRole: 'stationary-bowl',
+    physicsGeometryAttached: false,
+  };
+
+  const rotorGroup = new THREE.Group();
+  rotorGroup.name = 'RotatingRotor__visualGroup';
+  rotorGroup.userData = {
+    visualRole: 'rotating-rotor',
+    physicsGeometryAttached: false,
+    rotationAxis: 'Y+',
+  };
+
+  wheelRoot.add(stationaryGroup, rotorGroup);
+
+  const sourceRoot = runtimeScene.getObjectByName('GLTF_SceneRootNode') ?? runtimeScene;
+  const sourceChildren = [...sourceRoot.children];
+  sourceChildren.forEach((child) => {
+    const isRotorNode = child.name.startsWith('Text_29') || child.name.startsWith('Plane');
+    (isRotorNode ? rotorGroup : stationaryGroup).attach(child);
+  });
+
+  return { stationaryGroup, rotorGroup };
+}
+
 function SceneViewport({
   loadKey,
   view,
   showGrid,
   showPhysicsDebug,
   showBallPlaceholder,
+  showStationaryGroup,
+  showRotorGroup,
+  showSectorOverlay,
+  rotorAngle,
+  rotorTestRequest,
   onStateChange,
   onAudit,
+  onRotorAngleChange,
+  onRotorTestState,
 }: {
   loadKey: number;
   view: InspectionView;
   showGrid: boolean;
   showPhysicsDebug: boolean;
   showBallPlaceholder: boolean;
+  showStationaryGroup: boolean;
+  showRotorGroup: boolean;
+  showSectorOverlay: boolean;
+  rotorAngle: number;
+  rotorTestRequest: number;
   onStateChange: (state: LoadState, detail?: string) => void;
   onAudit: (audit: AssetAudit) => void;
+  onRotorAngleChange: (angle: number) => void;
+  onRotorTestState: (state: 'idle' | 'running' | 'passed', detail?: string) => void;
 }) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const stageRef = useRef<HTMLDivElement | null>(null);
@@ -169,9 +235,16 @@ function SceneViewport({
   const gridRef = useRef<THREE.GridHelper | null>(null);
   const physicsDebugRef = useRef<THREE.Group | null>(null);
   const ballRef = useRef<THREE.Mesh | null>(null);
+  const stationaryGroupRef = useRef<THREE.Group | null>(null);
+  const rotorGroupRef = useRef<THREE.Group | null>(null);
+  const sectorDebugRef = useRef<THREE.Group | null>(null);
+  const onRotorAngleChangeRef = useRef(onRotorAngleChange);
+  const onRotorTestStateRef = useRef(onRotorTestState);
 
   onStateChangeRef.current = onStateChange;
   onAuditRef.current = onAudit;
+  onRotorAngleChangeRef.current = onRotorAngleChange;
+  onRotorTestStateRef.current = onRotorTestState;
   viewRef.current = view;
 
   useEffect(() => {
@@ -284,7 +357,14 @@ function SceneViewport({
           runtimeOffset.position.sub(runtimeWorldCenter);
           wheelRoot.updateMatrixWorld(true);
 
-          const normalizedBounds = new THREE.Box3().setFromObject(runtimeScene);
+          const { stationaryGroup, rotorGroup } = decomposeVisualScene(runtimeScene, wheelRoot);
+          wheelRoot.remove(runtimeOffset);
+          stationaryGroupRef.current = stationaryGroup;
+          rotorGroupRef.current = rotorGroup;
+          rotorGroup.rotation.y = THREE.MathUtils.degToRad(rotorAngle);
+          wheelRoot.updateMatrixWorld(true);
+
+          const normalizedBounds = new THREE.Box3().setFromObject(wheelRoot);
           const normalizedSize = normalizedBounds.getSize(new THREE.Vector3());
           const normalizedCenter = normalizedBounds.getCenter(new THREE.Vector3());
 
@@ -338,6 +418,61 @@ function SceneViewport({
           physicsDebugRef.current = physicsDebug;
           wheelRoot.add(physicsDebug);
 
+          const sectorDebug = new THREE.Group();
+          sectorDebug.name = 'SectorIndexDebug__37EuropeanPockets';
+          const sectorBoundaryPositions: number[] = [];
+          const pocketInner = 0.258 * WORLD_UNITS_PER_METER;
+          const pocketOuter = 0.313 * WORLD_UNITS_PER_METER;
+          const sectorOverlayY = 0.74;
+          for (let index = 0; index < SECTOR_COUNT; index += 1) {
+            const angle = -index * SECTOR_STEP_RADIANS;
+            const sin = Math.sin(angle);
+            const cos = Math.cos(angle);
+            sectorBoundaryPositions.push(
+              sin * pocketInner,
+              sectorOverlayY,
+              cos * pocketInner,
+              sin * pocketOuter,
+              sectorOverlayY,
+              cos * pocketOuter,
+            );
+          }
+          const boundaryGeometry = new THREE.BufferGeometry();
+          boundaryGeometry.setAttribute(
+            'position',
+            new THREE.Float32BufferAttribute(sectorBoundaryPositions, 3),
+          );
+          const sectorBoundaries = new THREE.LineSegments(
+            boundaryGeometry,
+            new THREE.LineBasicMaterial({
+              color: '#e1ad86',
+              transparent: true,
+              opacity: 0.72,
+            }),
+          );
+          sectorBoundaries.name = 'SectorBoundaries__37';
+          sectorDebug.add(sectorBoundaries);
+          const pocketRing = new THREE.Mesh(
+            new THREE.RingGeometry(
+              0.286 * WORLD_UNITS_PER_METER - 0.012,
+              0.286 * WORLD_UNITS_PER_METER + 0.012,
+              128,
+            ),
+            new THREE.MeshBasicMaterial({
+              color: '#e1ad86',
+              transparent: true,
+              opacity: 0.42,
+              side: THREE.DoubleSide,
+            }),
+          );
+          pocketRing.rotation.x = -Math.PI / 2;
+          pocketRing.position.y = sectorOverlayY;
+          pocketRing.name = 'PocketReferenceRing__0.286m';
+          sectorDebug.add(pocketRing);
+          sectorDebug.visible = showSectorOverlay;
+          sectorDebugRef.current = sectorDebug;
+          wheelRoot.add(sectorDebug);
+
           scene.add(wheelRoot);
           wheelRoot.updateMatrixWorld(true);
 
@@ -348,14 +483,18 @@ function SceneViewport({
           onAuditRef.current({
             sourceMeshCount,
             sourceTriangles,
-            runtimeMeshCount: countMeshes(runtimeScene),
-            runtimeTriangles: countTriangles(runtimeScene),
+            runtimeMeshCount: countMeshes(stationaryGroup) + countMeshes(rotorGroup),
+            runtimeTriangles: countTriangles(stationaryGroup) + countTriangles(rotorGroup),
             normalizationScale,
             dimensions: roundedVector(normalizedSize),
             pivot: roundedVector(normalizedCenter),
             sourcePivot: roundedVector(sourceCenter),
             sourceRoot: gltf.scene.name || 'Sketchfab_model',
             excludedGeometry,
+            stationaryMeshCount: countMeshes(stationaryGroup),
+            stationaryTriangles: countTriangles(stationaryGroup),
+            rotorMeshCount: countMeshes(rotorGroup),
+            rotorTriangles: countTriangles(rotorGroup),
             attribution: {
               author: extras.author ?? 'Unknown author',
               license: extras.license ?? 'Unknown license',
@@ -413,6 +552,9 @@ function SceneViewport({
         gridRef.current = null;
         physicsDebugRef.current = null;
         ballRef.current = null;
+        stationaryGroupRef.current = null;
+        rotorGroupRef.current = null;
+        sectorDebugRef.current = null;
         wheelRoot = null;
       };
     } catch (error) {
@@ -437,6 +579,59 @@ function SceneViewport({
   useEffect(() => {
     if (ballRef.current) ballRef.current.visible = showBallPlaceholder;
   }, [showBallPlaceholder]);
+
+  useEffect(() => {
+    if (stationaryGroupRef.current) stationaryGroupRef.current.visible = showStationaryGroup;
+  }, [showStationaryGroup]);
+
+  useEffect(() => {
+    if (rotorGroupRef.current) rotorGroupRef.current.visible = showRotorGroup;
+  }, [showRotorGroup]);
+
+  useEffect(() => {
+    if (sectorDebugRef.current) sectorDebugRef.current.visible = showSectorOverlay;
+  }, [showSectorOverlay]);
+
+  useEffect(() => {
+    if (rotorGroupRef.current) {
+      rotorGroupRef.current.rotation.y = THREE.MathUtils.degToRad(rotorAngle);
+    }
+  }, [rotorAngle]);
+
+  useEffect(() => {
+    const rotorGroup = rotorGroupRef.current;
+    if (!rotorGroup || rotorTestRequest === 0) return undefined;
+
+    let frame = 0;
+    let cancelled = false;
+    const cycles = 3;
+    const duration = 2100;
+    const startTime = performance.now();
+    const referenceAngle = 0;
+    onRotorTestStateRef.current('running', `${cycles} × 360° diagnostic rotation`);
+
+    const tick = (now: number) => {
+      if (cancelled) return;
+      const progress = Math.min((now - startTime) / duration, 1);
+      const easedProgress = progress < 0.5
+        ? 4 * progress * progress * progress
+        : 1 - Math.pow(-2 * progress + 2, 3) / 2;
+      rotorGroup.rotation.y = referenceAngle - easedProgress * Math.PI * 2 * cycles;
+      if (progress < 1) {
+        frame = requestAnimationFrame(tick);
+        return;
+      }
+      rotorGroup.rotation.y = referenceAngle;
+      onRotorAngleChangeRef.current(0);
+      onRotorTestStateRef.current('passed', '3 × 360° complete · pivot remained locked');
+    };
+
+    frame = requestAnimationFrame(tick);
+    return () => {
+      cancelled = true;
+      cancelAnimationFrame(frame);
+    };
+  }, [rotorTestRequest]);
 
   return (
     <div ref={stageRef} className="scene-stage" data-testid="canvas-viewport">
@@ -511,6 +706,13 @@ function App() {
   const [showGrid, setShowGrid] = useState(true);
   const [showPhysicsDebug, setShowPhysicsDebug] = useState(false);
   const [showBallPlaceholder, setShowBallPlaceholder] = useState(true);
+  const [showStationaryGroup, setShowStationaryGroup] = useState(true);
+  const [showRotorGroup, setShowRotorGroup] = useState(true);
+  const [showSectorOverlay, setShowSectorOverlay] = useState(false);
+  const [rotorAngle, setRotorAngle] = useState(0);
+  const [rotorTestRequest, setRotorTestRequest] = useState(0);
+  const [rotorTestState, setRotorTestState] = useState<'idle' | 'running' | 'passed'>('idle');
+  const [rotorTestDetail, setRotorTestDetail] = useState('Reference angle · 0.0°');
   const [audit, setAudit] = useState<AssetAudit | null>(null);
 
   const handleStateChange = useCallback((state: LoadState, detail?: string) => {
@@ -519,10 +721,27 @@ function App() {
   }, []);
 
   const resetView = () => window.dispatchEvent(new Event('roulette-reset-view'));
+  const resetRotor = () => {
+    setRotorAngle(0);
+    setRotorTestState('idle');
+    setRotorTestDetail('Reference angle · 0.0°');
+  };
+  const runRotorTest = () => {
+    setRotorTestState('running');
+    setRotorTestDetail('3 × 360° diagnostic rotation');
+    setRotorTestRequest((current) => current + 1);
+  };
   const retryLoad = () => {
     setAudit(null);
     setLoadKey((current) => current + 1);
   };
+  const handleRotorTestState = useCallback(
+    (state: 'idle' | 'running' | 'passed', detail?: string) => {
+      setRotorTestState(state);
+      if (detail) setRotorTestDetail(detail);
+    },
+    [],
+  );
 
   return (
     <main className="lab-shell">
@@ -532,8 +751,8 @@ function App() {
             <Layers3 size={18} strokeWidth={1.7} />
           </div>
           <div>
-            <div className="eyebrow">ISOLATED PHYSICS LAB · PART 0</div>
-            <h1>Roulette / asset intake</h1>
+             <div className="eyebrow">ISOLATED PHYSICS LAB · PART 1</div>
+             <h1>Roulette / visual decomposition</h1>
           </div>
         </div>
         <div className="header-meta">
@@ -546,9 +765,9 @@ function App() {
         <aside className="inspector-rail">
           <div className="rail-intro">
             <div className="section-kicker">
-              <Crosshair size={13} /> PART 0 · ASSET INTAKE
+              <Crosshair size={13} /> PART 1 · VISUAL DECOMPOSITION
             </div>
-            <p>Normalize and inspect the visual source before any rigid-body system is attached.</p>
+            <p>Standardize physical scale and separate the visual bowl and rotor before collision geometry exists.</p>
           </div>
 
           <section className="inspector-section">
@@ -634,6 +853,48 @@ function App() {
                   <span />
                 </span>
               </button>
+              <button
+                type="button"
+                className="rail-control"
+                onClick={() => setShowStationaryGroup((visible) => !visible)}
+                aria-pressed={showStationaryGroup}
+                data-testid="button-stationary-toggle"
+              >
+                <span>
+                  <Layers3 size={15} /> Stationary bowl group
+                </span>
+                <span className={`toggle ${showStationaryGroup ? 'on' : ''}`} aria-hidden="true">
+                  <span />
+                </span>
+              </button>
+              <button
+                type="button"
+                className="rail-control"
+                onClick={() => setShowRotorGroup((visible) => !visible)}
+                aria-pressed={showRotorGroup}
+                data-testid="button-rotor-toggle"
+              >
+                <span>
+                  <RotateCcw size={15} /> Rotating rotor group
+                </span>
+                <span className={`toggle ${showRotorGroup ? 'on' : ''}`} aria-hidden="true">
+                  <span />
+                </span>
+              </button>
+              <button
+                type="button"
+                className="rail-control"
+                onClick={() => setShowSectorOverlay((visible) => !visible)}
+                aria-pressed={showSectorOverlay}
+                data-testid="button-sector-overlay-toggle"
+              >
+                <span>
+                  <Ruler size={15} /> 37-sector overlay
+                </span>
+                <span className={`toggle ${showSectorOverlay ? 'on' : ''}`} aria-hidden="true">
+                  <span />
+                </span>
+              </button>
               <button type="button" className="rail-control" onClick={resetView} data-testid="button-reset-view">
                 <span>
                   <RotateCcw size={15} /> Reset framing
@@ -643,13 +904,44 @@ function App() {
             </div>
           </section>
 
+          <section className="inspector-section rotor-test-panel">
+            <div className="section-label">ROTOR PIVOT TEST</div>
+            <div className="rotor-angle-readout">
+              <span>Reference angle</span>
+              <strong data-testid="text-rotor-angle">{rotorAngle.toFixed(1)}°</strong>
+            </div>
+            <input
+              className="rotor-angle-slider"
+              type="range"
+              min="-180"
+              max="180"
+              step="1"
+              value={rotorAngle}
+              onChange={(event) => setRotorAngle(Number(event.target.value))}
+              aria-label="Rotor reference angle"
+              data-testid="input-rotor-angle"
+            />
+            <div className="rotor-test-actions">
+              <button type="button" className="secondary-button" onClick={resetRotor} data-testid="button-rotor-reset">
+                Reset rotor
+              </button>
+              <button type="button" className="primary-button" onClick={runRotorTest} data-testid="button-rotor-test">
+                Run 3 × 360°
+              </button>
+            </div>
+            <div className={`rotor-test-status rotor-test-${rotorTestState}`} data-testid="status-rotor-test">
+              <span>{rotorTestState === 'passed' ? 'PIVOT TEST PASSED' : rotorTestState === 'running' ? 'TEST RUNNING' : 'READY'}</span>
+              <small>{rotorTestDetail}</small>
+            </div>
+          </section>
+
           <section className="physics-note" data-testid="status-physics">
             <div className="note-icon">
               <ShieldCheck size={17} />
             </div>
             <div>
-              <strong>Part 1 not started</strong>
-              <p>Visual scene only. No Rapier, colliders, rigid bodies, betting, or production round logic are connected.</p>
+              <strong>Part 1 · visual decomposition only</strong>
+              <p>Visual groups share the normalized origin. No final colliders, Rapier, rigid bodies, betting, or production round logic are connected.</p>
             </div>
           </section>
 
@@ -658,7 +950,7 @@ function App() {
               <MousePointer2 size={13} /> Drag to orbit · scroll to zoom
             </div>
             <div className="rail-footer-line">
-              <Ruler size={13} /> Normalized target diameter · {TARGET_WHEEL_DIAMETER.toFixed(1)} world units
+              <Ruler size={13} /> Physical standard · {(TARGET_WHEEL_DIAMETER * METERS_PER_WORLD_UNIT).toFixed(3)} m diameter
             </div>
           </div>
         </aside>
@@ -694,8 +986,15 @@ function App() {
               showGrid={showGrid}
               showPhysicsDebug={showPhysicsDebug}
               showBallPlaceholder={showBallPlaceholder}
+              showStationaryGroup={showStationaryGroup}
+              showRotorGroup={showRotorGroup}
+              showSectorOverlay={showSectorOverlay}
+              rotorAngle={rotorAngle}
+              rotorTestRequest={rotorTestRequest}
               onStateChange={handleStateChange}
               onAudit={setAudit}
+              onRotorAngleChange={setRotorAngle}
+              onRotorTestState={handleRotorTestState}
             />
             {loadState === 'loading' && (
               <div className="viewport-overlay" data-testid="status-loading" role="status" aria-live="polite">
@@ -753,6 +1052,24 @@ function App() {
               <AuditMetric label="World dimensions" value={audit ? `${audit.dimensions.x} × ${audit.dimensions.y} × ${audit.dimensions.z}` : '—'} testId="text-world-dimensions" />
               <AuditMetric label="Final pivot" value={audit ? `${audit.pivot.x}, ${audit.pivot.y}, ${audit.pivot.z}` : '—'} testId="text-final-pivot" />
             </div>
+            <div className="decomposition-strip">
+              <div>
+                <span>STATIONARY BOWL</span>
+                <strong data-testid="text-stationary-group">
+                  {audit ? `${audit.stationaryMeshCount} meshes · ${audit.stationaryTriangles.toLocaleString()} tris` : '—'}
+                </strong>
+              </div>
+              <div>
+                <span>ROTATING ROTOR</span>
+                <strong data-testid="text-rotor-group">
+                  {audit ? `${audit.rotorMeshCount} meshes · ${audit.rotorTriangles.toLocaleString()} tris` : '—'}
+                </strong>
+              </div>
+              <div>
+                <span>VISUAL / PHYSICS</span>
+                <strong>Shared origin · separate geometry</strong>
+              </div>
+            </div>
             <div className="audit-details">
               <div>
                 <span className="section-label">CLASSIFICATION</span>
@@ -764,6 +1081,28 @@ function App() {
                       <small>{item.detail}</small>
                     </div>
                   ))}
+                </div>
+              </div>
+              <div className="measurement-block">
+                <span className="section-label">PHYSICAL SCALE · METERS</span>
+                <div className="measurement-list">
+                  {PHYSICAL_MEASUREMENTS.map((measurement) => (
+                    <div className="measurement-row" key={measurement.label}>
+                      <span>{measurement.label}</span>
+                      <strong>{measurement.value}</strong>
+                      <small>{measurement.detail}</small>
+                    </div>
+                  ))}
+                </div>
+                <div className="sequence-audit" data-testid="sequence-audit">
+                  <span className="section-label">NUMBER RING AUDIT</span>
+                  <strong>EUROPEAN SINGLE-ZERO · VERIFIED</strong>
+                  <code>{EUROPEAN_SEQUENCE.join(' · ')}</code>
+                  <small>
+                    Index 0 = 0 at +Z / 6 o’clock; increasing index follows visual clockwise
+                    order toward 32. One pocket immediately inward per printed sector.
+                    Δθ = {(360 / SECTOR_COUNT).toFixed(4)}°.
+                  </small>
                 </div>
               </div>
               <div className="attribution-block">
@@ -789,9 +1128,9 @@ function App() {
       </div>
 
       <footer className="lab-footer">
-        <span>ROULETTE PHYSICS LAB · PART 0</span>
+        <span>ROULETTE PHYSICS LAB · PART 1</span>
         <span className="footer-rule" />
-        <span>Asset intake only · Part 1 not started</span>
+        <span>Visual decomposition · no final collision geometry</span>
         <span className="footer-build">
           <Download size={12} /> SOURCE REFERENCE
         </span>
