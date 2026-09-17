@@ -940,6 +940,96 @@ h1 {
   color: #9d554d;
 }
 
+.ball-controls-panel {
+  border-bottom-color: #d5b193;
+}
+
+.ball-identity {
+  display: grid;
+  gap: 4px;
+  padding: 9px 10px;
+  border-left: 2px solid #c88d61;
+  background: rgba(239, 230, 218, 0.58);
+}
+
+.ball-identity strong {
+  color: #825d45;
+  font-size: 10px;
+}
+
+.ball-identity span,
+.ball-identity small {
+  color: #8d7968;
+  font-size: 8px;
+  line-height: 1.4;
+}
+
+.ball-identity small {
+  color: #a18d7c;
+  font-family: 'DM Mono', monospace;
+}
+
+.ball-parameter-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 6px;
+}
+
+.ball-parameter {
+  display: grid;
+  gap: 5px;
+  min-width: 0;
+}
+
+.ball-parameter > span {
+  overflow: hidden;
+  color: #7a837d;
+  font-size: 8px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ball-parameter > div {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
+  padding: 4px 5px;
+  border: 1px solid #c9d0c7;
+  background: rgba(247, 246, 239, 0.68);
+}
+
+.ball-parameter input {
+  width: 100%;
+  min-width: 0;
+  padding: 2px 0;
+  border: 0;
+  outline: 0;
+  color: #4d6f66;
+  background: transparent;
+  font-family: 'DM Mono', monospace;
+  font-size: 9px;
+}
+
+.ball-parameter small {
+  flex: 0 0 auto;
+  color: #9aa39c;
+  font-family: 'DM Mono', monospace;
+  font-size: 8px;
+}
+
+.ball-runtime-active {
+  border-left-color: #c88d61;
+  background: rgba(241, 231, 218, 0.74);
+  color: #986d49;
+}
+
+.ball-runtime-settled {
+  border-left-color: #70a894;
+  background: rgba(220, 233, 226, 0.62);
+  color: #4f786d;
+}
+
 .physics-note {
   display: flex;
   gap: 11px;
@@ -1599,6 +1689,49 @@ h1 {
 .probe-result-trap {
   background: #bd6558;
   box-shadow: 0 0 0 3px rgba(189, 101, 88, 0.12);
+}
+
+.ball-validation-report {
+  border-color: #d2b295;
+  background: rgba(242, 235, 224, 0.78);
+}
+
+.ball-validation-metrics {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  border-top: 1px solid #d6c8bb;
+  border-bottom: 1px solid #d6c8bb;
+}
+
+.ball-validation-metrics .audit-metric {
+  border-right-color: #d6c8bb;
+}
+
+.ball-validation-metrics .audit-metric strong {
+  color: #875f45;
+}
+
+.ball-validation-safety {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 15px;
+  color: #7d766e;
+  font-family: 'DM Mono', monospace;
+  font-size: 8px;
+}
+
+.ball-validation-safety .is-good {
+  color: #4d8175;
+}
+
+.ball-validation-safety .is-bad {
+  color: #a9534a;
+}
+
+.validation-limitation {
+  color: #8f8174;
+  font-size: 8px;
+  line-height: 1.5;
 }
 
 .lab-footer {

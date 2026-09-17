@@ -31,8 +31,17 @@ const WORLD_UNITS_PER_METER = 6;
 const SECTOR_COUNT = 37;
 const SECTOR_STEP_RADIANS = (Math.PI * 2) / SECTOR_COUNT;
 const FIXED_TIMESTEP = 1 / 120;
-const BALL_RADIUS = 0.13;
+const BALL_RADIUS = 0.095;
 const ROTOR_RADIUS = 1.72;
+const DEFAULT_BALL_PARAMETERS = {
+  radius: BALL_RADIUS,
+  mass: 0.032,
+  friction: 0.36,
+  restitution: 0.34,
+  linearDamping: 0.08,
+  angularDamping: 0.05,
+  initialAngularVelocity: 22,
+} as const;
 const EUROPEAN_SEQUENCE = [
   0, 32, 15, 19, 4, 21, 2, 25, 17, 34, 6, 27, 13, 36, 11, 30, 8, 23, 10,
   5, 24, 16, 33, 1, 20, 14, 31, 9, 22, 18, 29, 7, 28, 12, 35, 3, 26,
@@ -53,6 +62,22 @@ const PHYSICAL_MEASUREMENTS = [
 type LoadState = 'loading' | 'loaded' | 'error';
 type InspectionView = 'top' | 'angled' | 'side';
 type ProbeOutcome = 'resting' | 'leak' | 'pass-through' | 'trap';
+type BallCommandKind = 'apply' | 'release' | 'varied' | 'reset';
+
+type BallPhysicsParameters = {
+  radius: number;
+  mass: number;
+  friction: number;
+  restitution: number;
+  linearDamping: number;
+  angularDamping: number;
+  initialAngularVelocity: number;
+};
+
+type BallCommand = {
+  kind: BallCommandKind;
+  token: number;
+};
 
 type ColliderSpec = {
   id: string;
@@ -88,6 +113,40 @@ type PhysicsReport = {
   results: ProbeResult[];
 };
 
+type BallTestResult = {
+  id: string;
+  label: string;
+  passed: boolean;
+  rebound: boolean;
+  directionChanged: boolean;
+  stable: boolean;
+  tunneled: boolean;
+  velocitySpike: boolean;
+  angledResponse: boolean;
+  maxSpeed: number;
+  finalSpeed: number;
+  finalRadius: number;
+  finalHeight: number;
+  detail: string;
+};
+
+type BallValidationReport = {
+  status: 'idle' | 'running' | 'passed' | 'failed';
+  testCount: number;
+  passedCount: number;
+  failedCount: number;
+  reboundCount: number;
+  directionChangeCount: number;
+  stableSettlingCount: number;
+  angledResponseCount: number;
+  tunnelingCount: number;
+  velocitySpikeCount: number;
+  maxObservedSpeed: number;
+  durationMs: number;
+  detail: string;
+  results: BallTestResult[];
+};
+
 const EMPTY_PHYSICS_REPORT: PhysicsReport = {
   status: 'idle',
   colliderCount: 0,
@@ -98,6 +157,23 @@ const EMPTY_PHYSICS_REPORT: PhysicsReport = {
   failedCount: 0,
   durationMs: 0,
   detail: 'Collider model is waiting for the normalized source.',
+  results: [],
+};
+
+const EMPTY_BALL_REPORT: BallValidationReport = {
+  status: 'idle',
+  testCount: 0,
+  passedCount: 0,
+  failedCount: 0,
+  reboundCount: 0,
+  directionChangeCount: 0,
+  stableSettlingCount: 0,
+  angledResponseCount: 0,
+  tunnelingCount: 0,
+  velocitySpikeCount: 0,
+  maxObservedSpeed: 0,
+  durationMs: 0,
+  detail: 'The dynamic ball is waiting for a release test.',
   results: [],
 };
 
@@ -333,20 +409,20 @@ function buildColliderSpecs(): ColliderSpec[] {
     id: 'track-floor',
     label: 'Ball track',
     body: 'stationary',
-    count: 64,
+    count: 96,
     radius: 2.48,
     y: 0.61,
-    halfExtents: [0.13, 0.045, 0.17],
+    halfExtents: [0.11, 0.045, 0.17],
     color: stationaryColor,
   });
   addRingSpecs(specs, {
     id: 'outer-rim',
     label: 'Outer rim',
     body: 'stationary',
-    count: 64,
-    radius: 2.76,
-    y: 0.79,
-    halfExtents: [0.13, 0.16, 0.07],
+    count: 96,
+    radius: 2.70,
+    y: 0.85,
+    halfExtents: [0.12, 0.17, 0.10],
     color: stationaryColor,
   });
   addRingSpecs(specs, {
@@ -355,8 +431,8 @@ function buildColliderSpecs(): ColliderSpec[] {
     body: 'stationary',
     count: 64,
     radius: 2.20,
-    y: 0.66,
-    halfExtents: [0.13, 0.075, 0.055],
+    y: 0.58,
+    halfExtents: [0.13, 0.025, 0.055],
     color: stationaryColor,
   });
 
@@ -367,8 +443,8 @@ function buildColliderSpecs(): ColliderSpec[] {
     body: 'stationary',
     count: 8,
     radius: 2.33,
-    y: 0.84,
-    halfExtents: [0.20, 0.075, 0.055],
+    y: 0.78,
+    halfExtents: [0.16, 0.05, 0.055],
     color: '#c48b68',
     radialOffset: Math.PI / 2,
   });
@@ -414,6 +490,15 @@ function buildColliderSpecs(): ColliderSpec[] {
     halfExtents: [0.35, 0.13, 0.022],
     color: rotorColor,
     radialOffset: -Math.PI / 2,
+  });
+  specs.push({
+    id: 'bowl-center-floor',
+    label: 'Bowl center safety floor',
+    body: 'stationary',
+    position: [0, -0.04, 0],
+    halfExtents: [1.52, 0.05, 1.52],
+    rotation: [0, 0, 0, 1],
+    color: stationaryColor,
   });
 
   return specs;
@@ -577,6 +662,247 @@ async function runDropProbeValidation(specs: ColliderSpec[]): Promise<PhysicsRep
   };
 }
 
+function createDynamicBallBody(
+  world: RAPIER.World,
+  parameters: BallPhysicsParameters,
+  position: [number, number, number],
+  velocity: [number, number, number],
+  angularVelocity = parameters.initialAngularVelocity,
+) {
+  const bodyDescriptor = RAPIER.RigidBodyDesc.dynamic()
+    .setTranslation(...position)
+    .setLinvel(...velocity)
+    .setAngvel({ x: 0, y: 0, z: -angularVelocity })
+    .setAdditionalMass(parameters.mass)
+    .setLinearDamping(parameters.linearDamping)
+    .setAngularDamping(parameters.angularDamping)
+    .setCanSleep(true)
+    .setCcdEnabled(true)
+    .setSoftCcdPrediction(Math.max(parameters.radius * 2.2, 0.08));
+  const body = world.createRigidBody(bodyDescriptor);
+  body.enableCcd(true);
+  body.setSoftCcdPrediction(Math.max(parameters.radius * 2.2, 0.08));
+  world.createCollider(
+    RAPIER.ColliderDesc.ball(parameters.radius)
+      .setFriction(parameters.friction)
+      .setRestitution(parameters.restitution)
+      .setDensity(0.001),
+    body,
+  );
+  return body;
+}
+
+function createColliderWorld(specs: ColliderSpec[]) {
+  const world = new RAPIER.World({ x: 0, y: -9.81, z: 0 });
+  world.timestep = FIXED_TIMESTEP;
+  world.maxCcdSubsteps = 8;
+  const stationaryBody = world.createRigidBody(RAPIER.RigidBodyDesc.fixed());
+  const rotorBody = world.createRigidBody(RAPIER.RigidBodyDesc.kinematicPositionBased());
+  specs
+    .filter((spec) => spec.body === 'stationary')
+    .forEach((spec) => addRapierCollider(world, stationaryBody, spec));
+  specs
+    .filter((spec) => spec.body === 'rotor')
+    .forEach((spec) => addRapierCollider(world, rotorBody, spec));
+  return { world, rotorBody };
+}
+
+function variedBallRelease(index: number, parameters: BallPhysicsParameters) {
+  const sector = (index * 7) % SECTOR_COUNT;
+  const angle = (sector + 0.5) * SECTOR_STEP_RADIANS;
+  const radiusByBand = [2.30, 2.28, 2.18, 1.76];
+  const radius = radiusByBand[index % radiusByBand.length];
+  const position = radialPosition(radius, angle, 0.96 + (index % 5) * 0.11);
+  const tangent: [number, number] = [Math.cos(angle), -Math.sin(angle)];
+  const radial: [number, number] = [Math.sin(angle), Math.cos(angle)];
+  const tangentSpeed = 0.72 + (index % 9) * 0.38;
+  const radialSpeed = -0.9 + (index % 7) * 0.3;
+  const velocity: [number, number, number] = [
+    tangent[0] * tangentSpeed + radial[0] * radialSpeed,
+    -0.25 - (index % 6) * 0.22,
+    tangent[1] * tangentSpeed + radial[1] * radialSpeed,
+  ];
+  return {
+    position,
+    velocity,
+    angularVelocity: parameters.initialAngularVelocity * (0.45 + (index % 6) * 0.16) * (index % 2 === 0 ? 1 : -1),
+  };
+}
+
+async function runBallValidation(
+  specs: ColliderSpec[],
+  parameters: BallPhysicsParameters,
+): Promise<BallValidationReport> {
+  await RAPIER.init();
+  const startedAt = performance.now();
+  const testCount = 60;
+  const results: BallTestResult[] = [];
+
+  for (let index = 0; index < testCount; index += 1) {
+    const release = variedBallRelease(index, parameters);
+    const { world, rotorBody } = createColliderWorld(specs);
+    const ballBody = createDynamicBallBody(
+      world,
+      parameters,
+      release.position,
+      release.velocity,
+      release.angularVelocity,
+    );
+    let maxSpeed = 0;
+    let stableFrames = 0;
+    let stable = false;
+    let rebound = false;
+    let directionChanged = false;
+    let tunneled = false;
+    let velocitySpike = false;
+    let previousVelocity: { x: number; y: number; z: number } | null = null;
+    const initialSpeed = Math.hypot(...release.velocity);
+
+    for (let step = 0; step < 120 * 10; step += 1) {
+      const rotorAngle = 0;
+      rotorBody.setNextKinematicRotation({
+        x: 0,
+        y: Math.sin(rotorAngle / 2),
+        z: 0,
+        w: Math.cos(rotorAngle / 2),
+      });
+      world.step();
+      const translation = ballBody.translation();
+      const velocity = ballBody.linvel();
+      const speed = Math.hypot(velocity.x, velocity.y, velocity.z);
+      const radius = Math.hypot(translation.x, translation.z);
+      maxSpeed = Math.max(maxSpeed, speed);
+
+      if (
+        radius > 3.18 ||
+        translation.y < -0.82 ||
+        translation.y > 2.8
+      ) {
+        tunneled = true;
+      }
+      if (speed > Math.max(14, initialSpeed * 4 + 3)) velocitySpike = true;
+      if (previousVelocity) {
+        const previousSpeed = Math.hypot(
+          previousVelocity.x,
+          previousVelocity.y,
+          previousVelocity.z,
+        );
+        const dot =
+          previousVelocity.x * velocity.x +
+          previousVelocity.y * velocity.y +
+          previousVelocity.z * velocity.z;
+        if (previousSpeed > 0.28 && speed > 0.28 && dot < 0) directionChanged = true;
+        if (previousVelocity.y < -0.18 && velocity.y > 0.12) rebound = true;
+      }
+      previousVelocity = velocity;
+
+      if (
+        speed < 0.55 &&
+        radius > 1.1 &&
+        radius < 2.92 &&
+        translation.y > -0.42 &&
+        translation.y < 1.3
+      ) {
+        stableFrames += 1;
+        if (stableFrames >= 90) stable = true;
+      } else {
+        stableFrames = 0;
+      }
+    }
+
+    const translation = ballBody.translation();
+    const velocity = ballBody.linvel();
+    const finalSpeed = Math.hypot(velocity.x, velocity.y, velocity.z);
+    const finalRadius = Math.hypot(translation.x, translation.z);
+    const angledResponse = directionChanged && Math.abs(release.velocity[0]) > 0.2 && Math.abs(release.velocity[2]) > 0.2;
+    const passed = !tunneled && !velocitySpike && stable;
+    results.push({
+      id: `ball-test-${String(index + 1).padStart(2, '0')}`,
+      label: `Variation ${String(index + 1).padStart(2, '0')}`,
+      passed,
+      rebound,
+      directionChanged,
+      stable,
+      tunneled,
+      velocitySpike,
+      angledResponse,
+      maxSpeed,
+      finalSpeed,
+      finalRadius,
+      finalHeight: translation.y,
+      detail: passed
+        ? `${rebound ? 'Rebound' : 'Low-energy settle'} · ${directionChanged ? 'direction changed' : 'guided contact'}`
+        : tunneled
+          ? 'Escaped modeled bounds / possible tunneling'
+          : velocitySpike
+            ? 'Velocity exceeded the safety envelope'
+            : 'Did not reach a stable low-energy rest',
+    });
+    world.removeRigidBody(ballBody);
+    world.free();
+  }
+
+  const passedCount = results.filter((result) => result.passed).length;
+  const reboundCount = results.filter((result) => result.rebound).length;
+  const directionChangeCount = results.filter((result) => result.directionChanged).length;
+  const stableSettlingCount = results.filter((result) => result.stable).length;
+  const angledResponseCount = results.filter((result) => result.angledResponse).length;
+  const tunnelingCount = results.filter((result) => result.tunneled).length;
+  const velocitySpikeCount = results.filter((result) => result.velocitySpike).length;
+  const maxObservedSpeed = Math.max(...results.map((result) => result.maxSpeed));
+  const aggregatePassed =
+    passedCount >= 54 &&
+    reboundCount >= 36 &&
+    directionChangeCount >= 36 &&
+    stableSettlingCount >= 54 &&
+    angledResponseCount >= 28 &&
+    tunnelingCount === 0 &&
+    velocitySpikeCount === 0;
+
+  return {
+    status: aggregatePassed ? 'passed' : 'failed',
+    testCount,
+    passedCount,
+    failedCount: testCount - passedCount,
+    reboundCount,
+    directionChangeCount,
+    stableSettlingCount,
+    angledResponseCount,
+    tunnelingCount,
+    velocitySpikeCount,
+    maxObservedSpeed,
+    durationMs: Math.round(performance.now() - startedAt),
+    detail: aggregatePassed
+      ? `${testCount} varied dynamic-body tests passed at ${Math.round(1 / FIXED_TIMESTEP)} Hz with CCD.`
+      : `Review needed: ${testCount - passedCount} of ${testCount} varied tests missed the acceptance envelope.`,
+    results: results.slice(0, 10),
+  };
+}
+
+function createBallVisual(parameters: BallPhysicsParameters) {
+  const ball = new THREE.Mesh(
+    new THREE.SphereGeometry(parameters.radius, 40, 24),
+    new THREE.MeshPhysicalMaterial({
+      color: '#f5f1dc',
+      roughness: 0.14,
+      metalness: 0.14,
+      clearcoat: 0.42,
+      clearcoatRoughness: 0.16,
+      emissive: '#6d776c',
+      emissiveIntensity: 0.06,
+    }),
+  );
+  ball.name = 'PhysicsLabBall__dynamicRigidBody';
+  ball.castShadow = true;
+  ball.userData = {
+    dynamicBodyAttached: true,
+    sourceMeshUsed: false,
+    colliderShape: 'exact sphere',
+    radius: parameters.radius,
+  };
+  return ball;
+}
+
 function SceneViewport({
   loadKey,
   view,
@@ -589,11 +915,16 @@ function SceneViewport({
   rotorAngle,
   rotorTestRequest,
   probeTestRequest,
+  ballValidationRequest,
+  ballParameters,
+  ballCommand,
   onStateChange,
   onAudit,
   onRotorAngleChange,
   onRotorTestState,
   onPhysicsReport,
+  onBallState,
+  onBallValidationReport,
 }: {
   loadKey: number;
   view: InspectionView;
@@ -606,11 +937,16 @@ function SceneViewport({
   rotorAngle: number;
   rotorTestRequest: number;
   probeTestRequest: number;
+  ballValidationRequest: number;
+  ballParameters: BallPhysicsParameters;
+  ballCommand: BallCommand;
   onStateChange: (state: LoadState, detail?: string) => void;
   onAudit: (audit: AssetAudit) => void;
   onRotorAngleChange: (angle: number) => void;
   onRotorTestState: (state: 'idle' | 'running' | 'passed', detail?: string) => void;
   onPhysicsReport: (report: PhysicsReport) => void;
+  onBallState: (state: 'ready' | 'active' | 'settled', detail?: string) => void;
+  onBallValidationReport: (report: BallValidationReport) => void;
 }) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const stageRef = useRef<HTMLDivElement | null>(null);
@@ -628,15 +964,26 @@ function SceneViewport({
   const onRotorAngleChangeRef = useRef(onRotorAngleChange);
   const onRotorTestStateRef = useRef(onRotorTestState);
   const onPhysicsReportRef = useRef(onPhysicsReport);
+  const onBallStateRef = useRef(onBallState);
+  const onBallValidationReportRef = useRef(onBallValidationReport);
   const physicsSpecsRef = useRef<ColliderSpec[]>([]);
   const physicsWorldRef = useRef<RAPIER.World | null>(null);
   const rotorPhysicsBodyRef = useRef<RAPIER.RigidBody | null>(null);
+  const ballBodyRef = useRef<RAPIER.RigidBody | null>(null);
+  const ballParametersRef = useRef<BallPhysicsParameters>(ballParameters);
+  const rebuildBallRef = useRef<((parameters: BallPhysicsParameters) => void) | null>(null);
+  const releaseBallRef = useRef<((profileIndex: number) => void) | null>(null);
+  const syncBallRef = useRef<(() => void) | null>(null);
+  const variedReleaseIndexRef = useRef(0);
 
   onStateChangeRef.current = onStateChange;
   onAuditRef.current = onAudit;
   onRotorAngleChangeRef.current = onRotorAngleChange;
   onRotorTestStateRef.current = onRotorTestState;
   onPhysicsReportRef.current = onPhysicsReport;
+  onBallStateRef.current = onBallState;
+  onBallValidationReportRef.current = onBallValidationReport;
+  ballParametersRef.current = ballParameters;
   viewRef.current = view;
 
   useEffect(() => {
@@ -767,22 +1114,12 @@ function SceneViewport({
           grid.position.y = baseY;
           floor.position.y = baseY - 0.02;
 
-          const ballPlaceholder = new THREE.Mesh(
-            new THREE.SphereGeometry(0.13, 24, 16),
-            new THREE.MeshStandardMaterial({
-              color: '#f5f1dc',
-              roughness: 0.18,
-              metalness: 0.12,
-              emissive: '#6d776c',
-              emissiveIntensity: 0.08,
-            }),
-          );
-          ballPlaceholder.name = 'PhysicsLabBall__placeholder';
-          ballPlaceholder.position.set(0, 0.72, 2.24);
-          ballPlaceholder.castShadow = true;
-          ballPlaceholder.userData = { dynamicBodyAttached: false };
-          ballRef.current = ballPlaceholder;
-          wheelRoot.add(ballPlaceholder);
+           const ballPlaceholder = createBallVisual(ballParametersRef.current);
+           ballPlaceholder.name = 'PhysicsLabBall__awaitingRapier';
+           ballPlaceholder.position.set(0, 1.2, 2.46);
+           ballPlaceholder.userData.dynamicBodyAttached = false;
+           ballRef.current = ballPlaceholder;
+           wheelRoot.add(ballPlaceholder);
 
           const physicsDebug = new THREE.Group();
            physicsDebug.name = 'PhysicsColliderDebug__primitiveCompound';
@@ -849,6 +1186,82 @@ function SceneViewport({
                status: 'failed',
                detail: 'Rapier could not initialize the primitive collider model.',
              });
+           }
+
+           if (physicsWorld && wheelRoot) {
+             const defaultPosition: [number, number, number] = [0, 1.2, 2.46];
+             const removeCurrentBall = () => {
+               if (ballBodyRef.current) {
+                 physicsWorld?.removeRigidBody(ballBodyRef.current);
+                 ballBodyRef.current = null;
+               }
+               if (ballRef.current) {
+                 ballRef.current.parent?.remove(ballRef.current);
+                 ballRef.current.geometry.dispose();
+                 const material = Array.isArray(ballRef.current.material)
+                   ? ballRef.current.material
+                   : [ballRef.current.material];
+                 material.forEach((item) => item.dispose());
+                 ballRef.current = null;
+               }
+             };
+             const syncBallVisual = () => {
+               const body = ballBodyRef.current;
+               const mesh = ballRef.current;
+               if (!body || !mesh) return;
+               const translation = body.translation();
+               const rotation = body.rotation();
+               mesh.position.set(translation.x, translation.y, translation.z);
+               mesh.quaternion.set(rotation.x, rotation.y, rotation.z, rotation.w);
+             };
+             const rebuildBall = (parameters: BallPhysicsParameters) => {
+               removeCurrentBall();
+               const mesh = createBallVisual(parameters);
+               mesh.position.set(...defaultPosition);
+               wheelRoot?.add(mesh);
+               ballRef.current = mesh;
+               ballBodyRef.current = createDynamicBallBody(
+                 physicsWorld!,
+                 parameters,
+                 defaultPosition,
+                 [0, 0, 0],
+               );
+               syncBallVisual();
+               onBallStateRef.current('ready', `Dynamic sphere · ${parameters.radius.toFixed(3)} wu radius · exact Rapier ball collider`);
+             };
+             const releaseBall = (profileIndex: number) => {
+               const body = ballBodyRef.current;
+               const parameters = ballParametersRef.current;
+               if (!body) return;
+               const release = variedBallRelease(profileIndex, parameters);
+               body.setTranslation(
+                 {
+                   x: release.position[0],
+                   y: release.position[1],
+                   z: release.position[2],
+                 },
+                 true,
+               );
+               body.setLinvel(
+                 {
+                   x: release.velocity[0],
+                   y: release.velocity[1],
+                   z: release.velocity[2],
+                 },
+                 true,
+               );
+               body.setAngvel({ x: 0, y: 0, z: -release.angularVelocity }, true);
+               body.wakeUp();
+               syncBallVisual();
+               onBallStateRef.current(
+                 'active',
+                 `Release ${String(profileIndex + 1).padStart(2, '0')} · CCD enabled · ${Math.hypot(...release.velocity).toFixed(2)} wu/s`,
+               );
+             };
+             rebuildBallRef.current = rebuildBall;
+             releaseBallRef.current = releaseBall;
+             syncBallRef.current = syncBallVisual;
+             rebuildBall(ballParametersRef.current);
            }
 
           const sectorDebug = new THREE.Group();
@@ -973,6 +1386,7 @@ function SceneViewport({
              w: Math.cos(rotation / 2),
            });
            physicsWorld.step();
+           syncBallRef.current?.();
            physicsAccumulator -= FIXED_TIMESTEP;
          }
         controls.update();
@@ -1002,6 +1416,10 @@ function SceneViewport({
          physicsWorldRef.current?.free();
          physicsWorldRef.current = null;
          rotorPhysicsBodyRef.current = null;
+         ballBodyRef.current = null;
+         rebuildBallRef.current = null;
+         releaseBallRef.current = null;
+         syncBallRef.current = null;
         ballRef.current = null;
         stationaryGroupRef.current = null;
         rotorGroupRef.current = null;
@@ -1103,6 +1521,38 @@ function SceneViewport({
     };
   }, [probeTestRequest]);
 
+  useEffect(() => {
+    if (ballCommand.token === 0) return;
+    if (ballCommand.kind === 'apply' || ballCommand.kind === 'reset') {
+      rebuildBallRef.current?.(ballParametersRef.current);
+      return;
+    }
+    if (ballCommand.kind === 'release') {
+      releaseBallRef.current?.(0);
+      return;
+    }
+    const profileIndex = variedReleaseIndexRef.current % 60;
+    variedReleaseIndexRef.current += 1;
+    releaseBallRef.current?.(profileIndex);
+  }, [ballCommand]);
+
+  useEffect(() => {
+    if (ballValidationRequest === 0 || physicsSpecsRef.current.length === 0) return undefined;
+    let cancelled = false;
+    onBallValidationReportRef.current({
+      ...EMPTY_BALL_REPORT,
+      status: 'running',
+      testCount: 60,
+      detail: `Running 60 varied dynamic-body tests at ${Math.round(1 / FIXED_TIMESTEP)} Hz with CCD…`,
+    });
+    void runBallValidation(physicsSpecsRef.current, ballParametersRef.current).then((report) => {
+      if (!cancelled) onBallValidationReportRef.current(report);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [ballValidationRequest]);
+
   return (
     <div ref={stageRef} className="scene-stage" data-testid="canvas-viewport">
       <canvas ref={canvasRef} tabIndex={0} aria-label="Interactive 3D roulette physics lab preview" />
@@ -1168,6 +1618,44 @@ function AuditMetric({
   );
 }
 
+function BallParameterField({
+  label,
+  value,
+  min,
+  max,
+  step,
+  unit,
+  testId,
+  onChange,
+}: {
+  label: string;
+  value: number;
+  min: number;
+  max: number;
+  step: number;
+  unit: string;
+  testId: string;
+  onChange: (value: number) => void;
+}) {
+  return (
+    <label className="ball-parameter">
+      <span>{label}</span>
+      <div>
+        <input
+          type="number"
+          min={min}
+          max={max}
+          step={step}
+          value={value}
+          onChange={(event) => onChange(Number(event.target.value))}
+          data-testid={testId}
+        />
+        <small>{unit}</small>
+      </div>
+    </label>
+  );
+}
+
 function App() {
   const [loadKey, setLoadKey] = useState(0);
   const [loadState, setLoadState] = useState<LoadState>('loading');
@@ -1186,6 +1674,15 @@ function App() {
   const [audit, setAudit] = useState<AssetAudit | null>(null);
   const [probeTestRequest, setProbeTestRequest] = useState(0);
   const [physicsReport, setPhysicsReport] = useState<PhysicsReport>(EMPTY_PHYSICS_REPORT);
+  const [ballParameters, setBallParameters] = useState<BallPhysicsParameters>({
+    ...DEFAULT_BALL_PARAMETERS,
+  });
+  const [ballCommand, setBallCommand] = useState<BallCommand>({ kind: 'reset', token: 0 });
+  const [ballState, setBallState] = useState<'ready' | 'active' | 'settled'>('ready');
+  const [ballStateDetail, setBallStateDetail] = useState('Waiting for the dynamic body.');
+  const [ballValidationRequest, setBallValidationRequest] = useState(0);
+  const [ballValidationReport, setBallValidationReport] =
+    useState<BallValidationReport>(EMPTY_BALL_REPORT);
 
   const handleStateChange = useCallback((state: LoadState, detail?: string) => {
     setLoadState(state);
@@ -1206,6 +1703,20 @@ function App() {
   const runProbeTest = () => {
     setProbeTestRequest((current) => current + 1);
   };
+  const issueBallCommand = (kind: BallCommandKind) => {
+    setBallCommand((current) => ({ kind, token: current.token + 1 }));
+  };
+  const updateBallParameter = (key: keyof BallPhysicsParameters, value: number) => {
+    setBallParameters((current) => ({ ...current, [key]: value }));
+  };
+  const runBallValidation = () => {
+    setBallValidationReport({
+      ...EMPTY_BALL_REPORT,
+      status: 'running',
+      detail: `Running 60 varied dynamic-body tests at ${Math.round(1 / FIXED_TIMESTEP)} Hz with CCD…`,
+    });
+    setBallValidationRequest((current) => current + 1);
+  };
   const retryLoad = () => {
     setAudit(null);
     setLoadKey((current) => current + 1);
@@ -1214,6 +1725,13 @@ function App() {
     (state: 'idle' | 'running' | 'passed', detail?: string) => {
       setRotorTestState(state);
       if (detail) setRotorTestDetail(detail);
+    },
+    [],
+  );
+  const handleBallState = useCallback(
+    (state: 'ready' | 'active' | 'settled', detail?: string) => {
+      setBallState(state);
+      if (detail) setBallStateDetail(detail);
     },
     [],
   );
@@ -1226,8 +1744,8 @@ function App() {
             <Layers3 size={18} strokeWidth={1.7} />
           </div>
           <div>
-             <div className="eyebrow">ISOLATED PHYSICS LAB · PART 2</div>
-             <h1>Roulette / primitive collision geometry</h1>
+             <div className="eyebrow">ISOLATED PHYSICS LAB · PART 3</div>
+             <h1>Roulette / real rigid-body ball</h1>
           </div>
         </div>
         <div className="header-meta">
@@ -1240,7 +1758,7 @@ function App() {
         <aside className="inspector-rail">
           <div className="rail-intro">
               <div className="section-kicker">
-              <Crosshair size={13} /> PART 2 · COLLISION MODEL
+              <Crosshair size={13} /> PART 3 · DYNAMIC BALL
             </div>
             <p>Keep the premium visual source separate from clean primitive colliders, then validate temporary drops at a fixed timestep.</p>
           </div>
@@ -1308,7 +1826,7 @@ function App() {
                 data-testid="button-ball-toggle"
               >
                 <span>
-                  <CircleDot size={15} /> Ball placeholder
+                    <CircleDot size={15} /> Dynamic ball visibility
                 </span>
                 <span className={`toggle ${showBallPlaceholder ? 'on' : ''}`} aria-hidden="true">
                   <span />
@@ -1449,13 +1967,126 @@ function App() {
             </div>
           </section>
 
+          <section className="inspector-section rotor-test-panel ball-controls-panel" data-testid="ball-controls-panel">
+            <div className="section-label">PART 3 · REAL RIGID-BODY BALL</div>
+            <div className="ball-identity">
+              <strong>Rapier dynamic sphere</strong>
+              <span>Visual center = body center = exact sphere collider center</span>
+              <small>Default diameter {((DEFAULT_BALL_PARAMETERS.radius * 2) / WORLD_UNITS_PER_METER).toFixed(3)} m · pocket pitch {(1 / SECTOR_COUNT * 2 * Math.PI * ROTOR_RADIUS / WORLD_UNITS_PER_METER).toFixed(3)} m</small>
+            </div>
+            <div className="ball-parameter-grid">
+              <BallParameterField
+                label="Ball radius"
+                value={ballParameters.radius}
+                min={0.06}
+                max={0.12}
+                step={0.001}
+                unit="wu"
+                testId="input-ball-radius"
+                onChange={(value) => updateBallParameter('radius', value)}
+              />
+              <BallParameterField
+                label="Mass"
+                value={ballParameters.mass}
+                min={0.008}
+                max={0.08}
+                step={0.001}
+                unit="kg"
+                testId="input-ball-mass"
+                onChange={(value) => updateBallParameter('mass', value)}
+              />
+              <BallParameterField
+                label="Friction"
+                value={ballParameters.friction}
+                min={0.02}
+                max={1}
+                step={0.01}
+                unit="μ"
+                testId="input-ball-friction"
+                onChange={(value) => updateBallParameter('friction', value)}
+              />
+              <BallParameterField
+                label="Restitution"
+                value={ballParameters.restitution}
+                min={0}
+                max={0.95}
+                step={0.01}
+                unit="e"
+                testId="input-ball-restitution"
+                onChange={(value) => updateBallParameter('restitution', value)}
+              />
+              <BallParameterField
+                label="Linear damping"
+                value={ballParameters.linearDamping}
+                min={0}
+                max={0.5}
+                step={0.005}
+                unit="s⁻¹"
+                testId="input-ball-linear-damping"
+                onChange={(value) => updateBallParameter('linearDamping', value)}
+              />
+              <BallParameterField
+                label="Angular damping"
+                value={ballParameters.angularDamping}
+                min={0}
+                max={0.5}
+                step={0.005}
+                unit="s⁻¹"
+                testId="input-ball-angular-damping"
+                onChange={(value) => updateBallParameter('angularDamping', value)}
+              />
+              <BallParameterField
+                label="Initial angular velocity"
+                value={ballParameters.initialAngularVelocity}
+                min={0}
+                max={80}
+                step={1}
+                unit="rad/s"
+                testId="input-ball-spin"
+                onChange={(value) => updateBallParameter('initialAngularVelocity', value)}
+              />
+            </div>
+            <div className="rotor-test-actions">
+              <button type="button" className="secondary-button" onClick={() => issueBallCommand('apply')} data-testid="button-apply-ball-settings">
+                Apply + reset ball
+              </button>
+              <button type="button" className="primary-button" onClick={() => issueBallCommand('release')} data-testid="button-release-ball">
+                Release selected drop
+              </button>
+            </div>
+            <div className="rotor-test-actions">
+              <button type="button" className="secondary-button" onClick={() => issueBallCommand('varied')} data-testid="button-release-varied-ball">
+                Release varied drop
+              </button>
+              <button type="button" className="primary-button" onClick={runBallValidation} disabled={ballValidationReport.status === 'running' || !audit} data-testid="button-run-ball-validation">
+                {ballValidationReport.status === 'running' ? 'Running 60 tests…' : 'Run 60 collision tests'}
+              </button>
+            </div>
+            <div className={`probe-status ball-runtime-${ballState}`} data-testid="status-ball-runtime">
+              <span>{ballState === 'active' ? 'DYNAMIC BALL ACTIVE' : ballState === 'settled' ? 'BALL SETTLED' : 'DYNAMIC BALL READY'}</span>
+              <small>{ballStateDetail}</small>
+            </div>
+            <div className={`probe-status probe-${ballValidationReport.status}`} data-testid="status-ball-validation">
+              <span>
+                {ballValidationReport.status === 'passed'
+                  ? '60-TEST BALL VALIDATION PASSED'
+                  : ballValidationReport.status === 'failed'
+                    ? 'BALL VALIDATION NEEDS REVIEW'
+                    : ballValidationReport.status === 'running'
+                      ? '60-TEST BALL VALIDATION RUNNING'
+                      : 'BALL VALIDATION READY'}
+              </span>
+              <small>{ballValidationReport.detail}</small>
+            </div>
+          </section>
+
           <section className="physics-note" data-testid="status-physics">
             <div className="note-icon">
               <ShieldCheck size={17} />
             </div>
             <div>
-                <strong>Part 2 · isolated primitive physics</strong>
-                <p>Stationary bowl and kinematic rotor use separate low-complexity colliders. Drop probes are temporary only; final launch and production round logic remain disconnected.</p>
+                <strong>Part 3 · isolated dynamic ball</strong>
+                <p>The visible ball is a clean sphere with a matching Rapier ball collider and real angular motion. Production launch, betting, round timing, and Part 4 remain disconnected.</p>
             </div>
           </section>
 
@@ -1475,7 +2106,7 @@ function App() {
               <span className="live-dot" aria-hidden="true" />
               <span>SCENE PREVIEW</span>
               <span className="toolbar-divider" />
-               <span className="toolbar-muted">PROBE-ONLY SIMULATION</span>
+                <span className="toolbar-muted">REAL RIGID-BODY SIMULATION</span>
             </div>
             <div className="toolbar-actions">
               <span className="toolbar-metric">
@@ -1506,11 +2137,16 @@ function App() {
               rotorAngle={rotorAngle}
               rotorTestRequest={rotorTestRequest}
                probeTestRequest={probeTestRequest}
+               ballValidationRequest={ballValidationRequest}
+               ballParameters={ballParameters}
+               ballCommand={ballCommand}
               onStateChange={handleStateChange}
               onAudit={setAudit}
               onRotorAngleChange={setRotorAngle}
               onRotorTestState={handleRotorTestState}
                onPhysicsReport={setPhysicsReport}
+               onBallState={handleBallState}
+               onBallValidationReport={setBallValidationReport}
             />
             {loadState === 'loading' && (
               <div className="viewport-overlay" data-testid="status-loading" role="status" aria-live="polite">
@@ -1665,13 +2301,57 @@ function App() {
               </div>
             </section>
           )}
+          {ballValidationReport.testCount > 0 && (
+            <section className="probe-report-panel ball-validation-report" aria-label="Dynamic ball validation results" data-testid="ball-validation-report">
+              <div className="audit-heading">
+                <div>
+                  <div className="section-label">PART 3 · DYNAMIC BALL VALIDATION</div>
+                  <strong>Real rigid body · real angular rotation · no scripted path</strong>
+                </div>
+                <span className={`audit-state ${ballValidationReport.status === 'passed' ? 'is-ready' : ''}`}>
+                  {ballValidationReport.passedCount}/{ballValidationReport.testCount} PASS
+                </span>
+              </div>
+              <div className="ball-validation-metrics">
+                <AuditMetric label="Rebound response" value={`${ballValidationReport.reboundCount}/${ballValidationReport.testCount}`} testId="text-ball-rebounds" />
+                <AuditMetric label="Direction changes" value={`${ballValidationReport.directionChangeCount}/${ballValidationReport.testCount}`} testId="text-ball-direction-changes" />
+                <AuditMetric label="Stable settle" value={`${ballValidationReport.stableSettlingCount}/${ballValidationReport.testCount}`} testId="text-ball-stable-settles" />
+                <AuditMetric label="Angled response" value={`${ballValidationReport.angledResponseCount}/${ballValidationReport.testCount}`} testId="text-ball-angled-responses" />
+                <AuditMetric label="Max observed speed" value={`${ballValidationReport.maxObservedSpeed.toFixed(2)} wu/s`} testId="text-ball-max-speed" />
+              </div>
+              <div className="ball-validation-safety">
+                <span className={ballValidationReport.tunnelingCount === 0 ? 'is-good' : 'is-bad'}>
+                  {ballValidationReport.tunnelingCount} tunneling / bounds escapes
+                </span>
+                <span className={ballValidationReport.velocitySpikeCount === 0 ? 'is-good' : 'is-bad'}>
+                  {ballValidationReport.velocitySpikeCount} velocity spikes
+                </span>
+                <span>120 Hz fixed step · CCD substeps 8 · sphere collider exact-match</span>
+              </div>
+              <div className="probe-result-list">
+                {ballValidationReport.results.map((result) => (
+                  <div className="probe-result-row" key={result.id}>
+                    <span className={`probe-result-dot ${result.passed ? 'probe-result-resting' : 'probe-result-trap'}`} />
+                    <strong>{result.label}</strong>
+                    <span>{result.detail}</span>
+                    <code>
+                      max {result.maxSpeed.toFixed(2)} · final {result.finalSpeed.toFixed(2)} · {result.finalRadius.toFixed(2)}r
+                    </code>
+                  </div>
+                ))}
+              </div>
+              <small className="validation-limitation">
+                Remaining limitation: this lab intentionally stops at isolated rigid-body validation; production launch timing, networking, betting results, and Part 4 are not connected.
+              </small>
+            </section>
+          )}
         </section>
       </div>
 
       <footer className="lab-footer">
-       <span>ROULETTE PHYSICS LAB · PART 2</span>
+       <span>ROULETTE PHYSICS LAB · PART 3</span>
         <span className="footer-rule" />
-       <span>Primitive colliders · temporary CCD probes</span>
+       <span>Real dynamic ball · isolated collision validation</span>
         <span className="footer-build">
            <Download size={12} /> ISOLATED LAB
         </span>

@@ -21,3 +21,4 @@
 - [Roulette audio timing](roulette-audio-timing.md) — keep round voice cues phase-gated and schedule physical impacts from the same visible landing timeline.
 - [Physics Lab runtime verification](physics-lab-runtime.md) — verify GLB bytes and WebGL with direct Chromium because proxy screenshots may lack WebGL and misrouted assets can return HTML 200s.
 - [Roulette Part 1 visual decomposition](roulette-part1-visual-decomposition.md) — normalized scale and European number-ring indexing are verified for future physics alignment.
+- [Physics Lab Part 3 validation](physics-lab-part3-validation.md) — center dynamic-ball tests on sector interiors and keep a catch floor; segmented seam starts can create false velocity explosions.
