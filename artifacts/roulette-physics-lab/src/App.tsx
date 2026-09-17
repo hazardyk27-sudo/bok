@@ -286,7 +286,6 @@ type Part5SpinResult = {
   finalAngularSpeed: number;
   pathVariance: number;
   maxBallSpeed: number;
-  trackExitDiagnostic: string;
   timeout: boolean;
   escaped: boolean;
   nanDetected: boolean;
@@ -637,7 +636,8 @@ function measuredBowlProfile() {
     [1.68, -0.435],
     [1.9, -0.434],
     [2.1, -0.432],
-    [2.3, -0.429],
+    [2.3, -0.428],
+    [2.4, -0.427],
     [2.5, -0.425],
     [2.6, -0.421],
     [2.62, -0.42],
@@ -666,23 +666,6 @@ function measuredBowlProfile() {
     radius,
     OUTER_TRACK_SURFACE_Y + (sourceY - RENDERED_OUTER_TRACK_SURFACE_Y),
   ] as [number, number]);
-}
-
-function measuredBowlProfileSegment(radius: number) {
-  if (radius < 2.6) return 'outer-flat';
-  if (radius < 2.62) return 'lip-2.60-2.62';
-  if (radius < 2.64) return 'lip-2.62-2.64';
-  if (radius < 2.668) return 'lip-2.64-2.668';
-  if (radius < 2.69) return 'transition-2.668-2.69';
-  if (radius < 2.718) return 'transition-2.69-2.718';
-  if (radius < 2.74) return 'transition-2.718-2.74';
-  if (radius < 2.763) return 'transition-2.74-2.763';
-  if (radius < 2.783) return 'transition-2.763-2.783';
-  if (radius < 2.801) return 'transition-2.783-2.801';
-  if (radius < 2.815) return 'transition-2.801-2.815';
-  if (radius < 2.83) return 'transition-2.815-2.83';
-  if (radius < 2.85) return 'berm-2.83-2.85';
-  return 'berm-outer';
 }
 
 let measuredBowlTrimeshCache: {
