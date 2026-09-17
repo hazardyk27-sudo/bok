@@ -2288,6 +2288,18 @@ function createBallVisual(parameters: BallPhysicsParameters) {
 
   ball.name = 'PhysicsLabBall__dynamicRigidBody';
   ball.castShadow = true;
+  ball.renderOrder = 1000;
+  ball.traverse((child) => {
+    if (!(child instanceof THREE.Mesh)) return;
+    child.renderOrder = 1000;
+    const materials = Array.isArray(child.material)
+      ? child.material
+      : [child.material];
+    materials.forEach((material) => {
+      material.depthTest = false;
+      material.depthWrite = false;
+    });
+  });
   ball.userData = {
     dynamicBodyAttached: true,
     sourceMeshUsed: false,
