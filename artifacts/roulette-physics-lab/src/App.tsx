@@ -4,6 +4,13 @@ import RAPIER from '@dimforge/rapier3d-compat';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import {
+  getGetPhysicsLabCurrentRoundQueryKey,
+  useCreatePhysicsLabRound,
+  useGetPhysicsLabCurrentRound,
+  type PhysicsLabRound,
+} from '@workspace/api-client-react';
+import { useQueryClient } from '@tanstack/react-query';
+import {
   AlertTriangle,
   Box,
   Check,
@@ -2772,6 +2779,147 @@ function BallParameterField({
   );
 }
 
+function AuthoritativeRoundPanel() {
+  const queryClient = useQueryClient();
+  const currentRound = useGetPhysicsLabCurrentRound({
+    query: {
+      queryKey: getGetPhysicsLabCurrentRoundQueryKey(),
+      staleTime: Infinity,
+      retry: false,
+    },
+  });
+  const createRound = useCreatePhysicsLabRound();
+  const round = currentRound.data;
+
+  const refreshRound = () => {
+    void currentRound.refetch();
+  };
+  const generateRound = () => {
+    createRound.mutate(undefined, {
+      onSuccess: (nextRound) => {
+        queryClient.setQueryData(
+          getGetPhysicsLabCurrentRoundQueryKey(),
+          nextRound,
+        );
+      },
+    });
+  };
+
+  return (
+    <section className="authoritative-round-panel" data-testid="physics-lab-part6">
+      <div className="section-kicker">PART 6 · SERVER-AUTHORITATIVE ROUND</div>
+      <div className="authoritative-round-header">
+        <div>
+          <h2>Official result from the server simulation</h2>
+          <p>
+            This panel never runs a client result calculation. The API server owns the seed,
+            Rapier simulation, stable settle, winning number, and replay trajectory.
+          </p>
+        </div>
+        <div className="authoritative-round-actions">
+          <button
+            type="button"
+            className="secondary-button"
+            onClick={refreshRound}
+            disabled={currentRound.isFetching}
+            data-testid="button-refresh-authoritative-round"
+          >
+            {currentRound.isFetching ? 'Refreshing…' : 'Refresh snapshot'}
+          </button>
+          <button
+            type="button"
+            className="primary-button"
+            onClick={generateRound}
+            disabled={createRound.isPending}
+            data-testid="button-generate-authoritative-round"
+          >
+            {createRound.isPending ? 'Simulating server round…' : 'Generate server round'}
+          </button>
+        </div>
+      </div>
+
+      {currentRound.isLoading && (
+        <div className="authoritative-round-status is-loading" data-testid="authoritative-round-loading">
+          Loading the global round from the API server…
+        </div>
+      )}
+      {currentRound.isError && (
+        <div className="authoritative-round-status is-error" data-testid="authoritative-round-error">
+          Server round unavailable. No client-side fallback result is allowed.
+        </div>
+      )}
+      {createRound.isError && (
+        <div className="authoritative-round-status is-error" data-testid="authoritative-round-create-error">
+          The server rejected the round generation; the previous official round remains unchanged.
+        </div>
+      )}
+      {round && <AuthoritativeRoundDetails round={round} />}
+    </section>
+  );
+}
+
+function AuthoritativeRoundDetails({ round }: { round: PhysicsLabRound }) {
+  const eventTypes = [
+    'TRACK_ENTRY',
+    'NATURAL_INWARD_EXIT',
+    'DEFLECTOR_IMPACT',
+    'MOVING_FRET_CONTACT',
+    'POCKET_ENTRY',
+    'STABLE_SETTLE',
+  ] as const;
+  const eventsByType = new Map(round.events.map((event) => [event.type, event]));
+  const eventLabel: Record<(typeof eventTypes)[number], string> = {
+    TRACK_ENTRY: 'track',
+    NATURAL_INWARD_EXIT: 'inward',
+    DEFLECTOR_IMPACT: 'deflector',
+    MOVING_FRET_CONTACT: 'moving fret',
+    POCKET_ENTRY: 'pocket',
+    STABLE_SETTLE: 'stable settle',
+  };
+
+  return (
+    <div className="authoritative-round-body">
+      <div
+        className={`authoritative-round-result ${round.status === 'SETTLED' ? 'is-settled' : 'is-invalid'}`}
+        data-testid="authoritative-round-result"
+      >
+        <span>{round.status === 'SETTLED' ? 'OFFICIAL WINNING NUMBER' : 'INVALID SIMULATION'}</span>
+        <strong>{round.winningNumber ?? '—'}</strong>
+        <small>
+          {round.finalPocket
+            ? `Pocket ${round.finalPocket.index} · ${round.finalPocket.number}`
+            : round.errorCode ?? 'No official result'}
+        </small>
+      </div>
+      <div className="authoritative-round-metrics">
+        <AuditMetric label="Round ID" value={round.roundId.slice(0, 18)} testId="authoritative-round-id" />
+        <AuditMetric label="Sequence" value={String(round.sequence)} testId="authoritative-round-sequence" />
+        <AuditMetric label="Stable step" value={round.stableSettleStep === null ? '—' : String(round.stableSettleStep)} testId="authoritative-round-stable-step" />
+        <AuditMetric label="Trajectory" value={`${round.trajectory.length} samples`} testId="authoritative-round-trajectory-count" />
+        <AuditMetric label="Replay hash" value={round.trajectoryHash.slice(0, 12)} testId="authoritative-round-hash" />
+        <AuditMetric label="Server sim" value={`${round.simulationDurationMs} ms`} testId="authoritative-round-duration" />
+      </div>
+      <div className="authoritative-round-events" aria-label="Authoritative physics event timeline">
+        {eventTypes.map((type) => {
+          const item = eventsByType.get(type);
+          return (
+            <span className={item ? 'event-chip is-present' : 'event-chip'} key={type}>
+              {eventLabel[type]} {item ? `${(item.simulatedAtMs / 1000).toFixed(2)}s` : '—'}
+            </span>
+          );
+        })}
+      </div>
+      <div className="authoritative-round-conditions">
+        <span>seed {round.startConditions.seed.slice(0, 16)}…</span>
+        <span>launch {round.startConditions.launchSpeed.toFixed(2)} m/s</span>
+        <span>spin {round.startConditions.ballSpin.toFixed(2)}</span>
+        <span>rotor {round.startConditions.rotorInitialAngularVelocity.toFixed(3)} rad/s</span>
+        <span>timestamps persisted</span>
+      </div>
+    </div>
+  );
+}
+
 function App() {
   const [loadKey, setLoadKey] = useState(0);
   const [loadState, setLoadState] = useState<LoadState>('loading');
@@ -3551,6 +3699,8 @@ function App() {
               </div>
             )}
           </section>
+
+          <AuthoritativeRoundPanel />
 
           <section className="physics-note" data-testid="status-physics">
             <div className="note-icon">

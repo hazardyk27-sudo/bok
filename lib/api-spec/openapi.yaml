@@ -10,6 +10,8 @@ servers:
 tags:
   - name: health
     description: Health operations
+  - name: physics-lab
+    description: Server-authoritative Physics Lab rounds and replay data
 paths:
   /healthz:
     get:
@@ -24,6 +26,54 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+  /physics-lab/rounds/current:
+    get:
+      operationId: getPhysicsLabCurrentRound
+      tags: [physics-lab]
+      summary: Get the current server-authoritative Physics Lab round
+      responses:
+        "200":
+          description: Current authoritative round
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PhysicsLabRound"
+        "503":
+          description: Simulation unavailable or invalid
+  /physics-lab/rounds:
+    post:
+      operationId: createPhysicsLabRound
+      tags: [physics-lab]
+      summary: Create the next server-authoritative Physics Lab round
+      responses:
+        "201":
+          description: Created authoritative round
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PhysicsLabRound"
+        "503":
+          description: Simulation unavailable or invalid
+  /physics-lab/rounds/{roundId}:
+    get:
+      operationId: getPhysicsLabRound
+      tags: [physics-lab]
+      summary: Get a persisted Physics Lab round replay
+      parameters:
+        - name: roundId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Persisted authoritative round and replay
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PhysicsLabRound"
+        "404":
+          description: Round not found
 components:
   schemas:
     HealthStatus:
@@ -38,4 +88,149 @@ components:
           type: string
       required:
         - status
+    PhysicsLabVec3:
+      type: object
+      properties:
+        x: { type: number }
+        y: { type: number }
+        z: { type: number }
+      required: [x, y, z]
+    PhysicsLabQuaternion:
+      type: object
+      properties:
+        x: { type: number }
+        y: { type: number }
+        z: { type: number }
+        w: { type: number }
+      required: [x, y, z, w]
+    PhysicsLabStartConditions:
+      type: object
+      properties:
+        seed: { type: string }
+        launchAzimuthRadians: { type: number }
+        launchAngleDegrees: { type: number }
+        launchSpeed: { type: number }
+        ballSpin: { type: number }
+        rotorInitialAngleRadians: { type: number }
+        rotorInitialAngularVelocity: { type: number }
+        ballPosition:
+          type: array
+          items: { type: number }
+          minItems: 3
+          maxItems: 3
+        ballVelocity:
+          type: array
+          items: { type: number }
+          minItems: 3
+          maxItems: 3
+        ballSpinAxis:
+          type: array
+          items: { type: number }
+          minItems: 3
+          maxItems: 3
+      required:
+        - seed
+        - launchAzimuthRadians
+        - launchAngleDegrees
+        - launchSpeed
+        - ballSpin
+        - rotorInitialAngleRadians
+        - rotorInitialAngularVelocity
+        - ballPosition
+        - ballVelocity
+        - ballSpinAxis
+    PhysicsLabTrajectoryBall:
+      type: object
+      properties:
+        position: { $ref: "#/components/schemas/PhysicsLabVec3" }
+        orientation: { $ref: "#/components/schemas/PhysicsLabQuaternion" }
+        linearVelocity: { $ref: "#/components/schemas/PhysicsLabVec3" }
+        angularVelocity: { $ref: "#/components/schemas/PhysicsLabVec3" }
+      required: [position, orientation, linearVelocity, angularVelocity]
+    PhysicsLabTrajectoryRotor:
+      type: object
+      properties:
+        orientation: { $ref: "#/components/schemas/PhysicsLabQuaternion" }
+        angularVelocity: { $ref: "#/components/schemas/PhysicsLabVec3" }
+      required: [orientation, angularVelocity]
+    PhysicsLabTrajectorySample:
+      type: object
+      properties:
+        step: { type: integer }
+        simulatedAtMs: { type: integer }
+        ball: { $ref: "#/components/schemas/PhysicsLabTrajectoryBall" }
+        rotor: { $ref: "#/components/schemas/PhysicsLabTrajectoryRotor" }
+      required: [step, simulatedAtMs, ball, rotor]
+    PhysicsLabEvent:
+      type: object
+      properties:
+        type:
+          type: string
+          enum:
+            - TRACK_ENTRY
+            - ENERGY_LOSS
+            - NATURAL_INWARD_EXIT
+            - DEFLECTOR_IMPACT
+            - MOVING_FRET_CONTACT
+            - POCKET_ENTRY
+            - POCKET_CHANGE
+            - POCKET_BOUNCE
+            - STABLE_SETTLE
+            - INVALID
+        step: { type: integer }
+        simulatedAtMs: { type: integer }
+        pocketIndex: { type: ["integer", "null"] }
+        pocketNumber: { type: ["integer", "null"] }
+        detail: { type: ["string", "null"] }
+      required: [type, step, simulatedAtMs]
+    PhysicsLabRound:
+      type: object
+      properties:
+        roundId: { type: string }
+        sequence: { type: integer }
+        status:
+          type: string
+          enum: [SETTLED, INVALID]
+        winningNumber: { type: ["integer", "null"] }
+        finalPocket:
+          type: ["object", "null"]
+          properties:
+            index: { type: integer }
+            number: { type: integer }
+          required: [index, number]
+        startConditions:
+          $ref: "#/components/schemas/PhysicsLabStartConditions"
+        timestamps:
+          type: object
+          properties:
+            createdAt: { type: string, format: date-time }
+            simulationStartedAt: { type: string, format: date-time }
+            settledAt: { type: ["string", "null"], format: date-time }
+          required: [createdAt, simulationStartedAt, settledAt]
+        stableSettleStep: { type: ["integer", "null"] }
+        simulationDurationMs: { type: integer }
+        trajectory:
+          type: array
+          items:
+            $ref: "#/components/schemas/PhysicsLabTrajectorySample"
+        events:
+          type: array
+          items:
+            $ref: "#/components/schemas/PhysicsLabEvent"
+        trajectoryHash: { type: string }
+        errorCode: { type: ["string", "null"] }
+      required:
+        - roundId
+        - sequence
+        - status
+        - winningNumber
+        - finalPocket
+        - startConditions
+        - timestamps
+        - stableSettleStep
+        - simulationDurationMs
+        - trajectory
+        - events
+        - trajectoryHash
+        - errorCode
 
