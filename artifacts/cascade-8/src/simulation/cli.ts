@@ -52,6 +52,8 @@ async function main() {
       "Actual Second = First": `${report.observedSecondSameProbability}%`,
        "Configured Third Copy Branch": `${report.configuredThirdCopyBranchProbability}%`,
        "Observed Third Copy Branch": `${report.observedThirdCopyBranchProbability}%`,
+       "Configured Third Repeat Weight": `${report.configuredThirdRepeatWeightFactor}%`,
+       "Observed Third Fallback Same": `${report.observedThirdFallbackSameProbability}%`,
       "Sampled Normal Pairs": report.sampledNormalPairs,
       "Third Position Samples": report.thirdPositionSamples,
       "Third = Previous Second": `${report.thirdMatchesPreviousSecondProbability}%`,

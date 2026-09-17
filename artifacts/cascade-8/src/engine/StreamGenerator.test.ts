@@ -65,6 +65,23 @@ describe("persistent column streams", () => {
     expect(getNormalSymbol(third.cell)).toBe("S4");
   });
 
+  it("attenuates the visible symbol only in the third-cell weighted fallback", () => {
+    const config: ReelConfig = {
+      ...BASE_REEL_CONFIG,
+      symbolWeights: [
+        { value: "S3", weight: 1 },
+        { value: "S4", weight: 9 },
+      ],
+    };
+    const rolls = [0.99, 0.5375];
+    const stream = new ColumnStream({ nextFloat: () => rolls.shift() ?? 0.999999 }, config, 0);
+
+    const third = stream.nextVisibleAware("BASE_REFILL", false, "S3");
+
+    expect(third.copiedFromVisibleTop).toBe(false);
+    expect(getNormalSymbol(third.cell)).toBe("S4");
+  });
+
   it("keeps special cells independent without splitting a pending pair", () => {
     const config: ReelConfig = {
       ...BASE_REEL_CONFIG,

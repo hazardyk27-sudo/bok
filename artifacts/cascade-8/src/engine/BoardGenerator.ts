@@ -13,6 +13,7 @@ import {
   BONUS_REEL_CONFIG,
   NORMAL_PAIR_COPY_CHANCE,
   NORMAL_THIRD_COPY_CHANCE,
+  NORMAL_THIRD_REPEAT_WEIGHT_FACTOR,
   type NormalSymbolId,
   type ReelConfig,
   type SymbolId,
@@ -68,6 +69,27 @@ const weightedChoiceFromRoll = <T>(
     if (pick < 0) return choice.value;
   }
   return choices[choices.length - 1].value;
+};
+
+const weightedChoicesWithAttenuatedValue = <T>(
+  choices: readonly { value: T; weight: number }[],
+  attenuatedValue: T,
+  factor: number,
+) => {
+  const target = choices.find((choice) => choice.value === attenuatedValue);
+  if (!target || factor >= 1 || factor < 0) return choices;
+  const otherWeight = choices.reduce(
+    (sum, choice) => sum + (choice.value === attenuatedValue ? 0 : choice.weight),
+    0,
+  );
+  if (otherWeight <= 0) return choices;
+  const removedWeight = target.weight * (1 - factor);
+  return choices.map((choice) => ({
+    value: choice.value,
+    weight: choice.value === attenuatedValue
+      ? choice.weight * factor
+      : choice.weight + (choice.weight / otherWeight) * removedWeight,
+  }));
 };
 
 export class ColumnStream {
@@ -182,7 +204,11 @@ export class ColumnStream {
           ? visibleTopSymbol
           : weightedChoiceFromRoll(
             (symbolRoll - copyChance) / (1 - copyChance),
-            this.config.symbolWeights,
+            weightedChoicesWithAttenuatedValue(
+              this.config.symbolWeights,
+              visibleTopSymbol,
+              NORMAL_THIRD_REPEAT_WEIGHT_FACTOR,
+            ),
           );
       } else {
         symbol = weightedChoiceFromRoll(symbolRoll, this.config.symbolWeights);

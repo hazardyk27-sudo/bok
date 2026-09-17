@@ -17,6 +17,8 @@ describe("simulator", () => {
     expect(report.configuredThirdCopyBranchProbability).toBe(50);
     expect(report.observedThirdCopyBranchProbability).toBeGreaterThan(48);
     expect(report.observedThirdCopyBranchProbability).toBeLessThan(52);
+    expect(report.configuredThirdRepeatWeightFactor).toBe(50);
+    expect(report.observedThirdFallbackSameProbability).toBeLessThan(10);
     expect(report.thirdPositionSamples).toBeGreaterThan(999_000);
     expect(report.thirdMatchesPreviousSecondProbability).toBeGreaterThan(50);
     expect(report.thirdMatchesPreviousSecondProbability).toBeLessThan(65);

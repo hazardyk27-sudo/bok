@@ -17,6 +17,7 @@ import {
   MAX_WIN_MULTIPLIER,
   NORMAL_PAIR_COPY_CHANCE,
   NORMAL_THIRD_COPY_CHANCE,
+  NORMAL_THIRD_REPEAT_WEIGHT_FACTOR,
   NORMAL_SYMBOLS,
   SYMBOLS,
   type NormalSymbolId,
@@ -178,6 +179,8 @@ function measureNormalPairBranches(seed: string, targetPairs = 1_000_000) {
   let thirdPositionSamples = 0;
   let thirdCopyBranches = 0;
   let thirdMatchesPreviousSecond = 0;
+  let thirdFallbackSamples = 0;
+  let thirdFallbackMatchesPreviousSecond = 0;
   while (stream.stats.pairCount < targetPairs) {
     stream.next(1, "BASE_REFILL", false);
   }
@@ -192,6 +195,10 @@ function measureNormalPairBranches(seed: string, targetPairs = 1_000_000) {
         thirdPositionSamples += 1;
         if (emission.copiedFromVisibleTop) thirdCopyBranches += 1;
         if (normal === visiblePreviousPairSecond) thirdMatchesPreviousSecond += 1;
+        if (!emission.copiedFromVisibleTop) {
+          thirdFallbackSamples += 1;
+          if (normal === visiblePreviousPairSecond) thirdFallbackMatchesPreviousSecond += 1;
+        }
       }
     } else if (metadata.stackIndex === 1) {
       visiblePreviousPairSecond = normal;
@@ -204,6 +211,7 @@ function measureNormalPairBranches(seed: string, targetPairs = 1_000_000) {
     thirdPositionSamples,
     thirdCopyBranchRate: Number(((thirdCopyBranches / Math.max(1, thirdPositionSamples)) * 100).toFixed(4)),
     thirdMatchesPreviousSecondRate: Number(((thirdMatchesPreviousSecond / Math.max(1, thirdPositionSamples)) * 100).toFixed(4)),
+    thirdFallbackSameRate: Number(((thirdFallbackMatchesPreviousSecond / Math.max(1, thirdFallbackSamples)) * 100).toFixed(4)),
     freshSecondCount: stream.stats.freshSecondCount,
   };
 }
@@ -295,6 +303,8 @@ export type SimulationReport = {
   observedSecondSameProbability: number;
   configuredThirdCopyBranchProbability: number;
   observedThirdCopyBranchProbability: number;
+  configuredThirdRepeatWeightFactor: number;
+  observedThirdFallbackSameProbability: number;
   sampledNormalPairs: number;
   thirdPositionSamples: number;
   thirdMatchesPreviousSecondProbability: number;
@@ -636,6 +646,8 @@ export function simulate(spins: number, seed: string, betCents = 100, onProgress
      observedSecondSameProbability: pairBranches.actualSecondSameRate,
       configuredThirdCopyBranchProbability: Number((NORMAL_THIRD_COPY_CHANCE * 100).toFixed(4)),
       observedThirdCopyBranchProbability: pairBranches.thirdCopyBranchRate,
+      configuredThirdRepeatWeightFactor: Number((NORMAL_THIRD_REPEAT_WEIGHT_FACTOR * 100).toFixed(4)),
+      observedThirdFallbackSameProbability: pairBranches.thirdFallbackSameRate,
      sampledNormalPairs: pairBranches.sampledPairs,
      thirdPositionSamples: pairBranches.thirdPositionSamples,
      thirdMatchesPreviousSecondProbability: pairBranches.thirdMatchesPreviousSecondRate,
