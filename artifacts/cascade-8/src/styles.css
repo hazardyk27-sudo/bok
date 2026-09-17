@@ -3667,3 +3667,328 @@ button:focus-visible, input:focus-visible { outline: 2px solid var(--cyan); outl
   .menu-primary-action,
   .menu-secondary-action { width: min(100%, 310px); margin: 0 auto; }
 }
+
+/* Final slot-only art direction: a quiet stadium atmosphere in the breathing
+   space and one coherent midnight-glass control surface. */
+.app-shell:not(.is-lab) .stadium-atmosphere {
+  position: absolute;
+  z-index: 0;
+  inset: clamp(390px, calc(100dvh - 280px), 680px) 0 max(92px, calc(9vh + 34px));
+  overflow: hidden;
+  pointer-events: none;
+  opacity: .92;
+}
+
+.stadium-atmosphere::before {
+  position: absolute;
+  left: -12%;
+  bottom: -28%;
+  width: 58%;
+  height: 82%;
+  border-radius: 50%;
+  background:
+    radial-gradient(ellipse at 50% 100%, rgba(112, 190, 255, .15), transparent 47%),
+    radial-gradient(ellipse at 50% 100%, rgba(104, 139, 255, .08), transparent 67%);
+  filter: blur(18px);
+  content: "";
+  opacity: .72;
+}
+
+.stadium-atmosphere::after {
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(118deg, transparent 30%, rgba(106, 158, 255, .045) 49%, transparent 69%),
+    radial-gradient(ellipse at 18% 100%, rgba(120, 183, 255, .12), transparent 29%),
+    radial-gradient(ellipse at 82% 36%, rgba(126, 91, 255, .08), transparent 36%);
+  content: "";
+}
+
+.stadium-starball {
+  position: absolute;
+  top: 50%;
+  right: clamp(-92px, -4vw, -26px);
+  width: clamp(260px, 35vw, 500px);
+  aspect-ratio: 1;
+  transform: translateY(-50%) rotate(-8deg);
+  border: 1px solid rgba(144, 186, 255, .14);
+  border-radius: 50%;
+  background:
+    linear-gradient(32deg, transparent 44%, rgba(150, 181, 255, .12) 44.5%, transparent 45.5%),
+    linear-gradient(148deg, transparent 47%, rgba(111, 142, 255, .1) 47.5%, transparent 48.5%),
+    linear-gradient(90deg, transparent 49.3%, rgba(180, 209, 255, .08) 49.7%, transparent 50.3%),
+    conic-gradient(from 12deg, rgba(83, 123, 226, .11), rgba(25, 42, 101, .02) 18%, rgba(145, 111, 255, .12) 34%, rgba(14, 27, 72, .03) 53%, rgba(91, 153, 255, .1) 76%, rgba(83, 123, 226, .11)),
+    radial-gradient(circle at 36% 30%, rgba(116, 164, 255, .18), rgba(20, 35, 84, .08) 52%, rgba(4, 10, 28, .02) 74%);
+  box-shadow:
+    0 0 85px rgba(85, 119, 255, .1),
+    inset 20px 12px 60px rgba(125, 169, 255, .09),
+    inset -30px -20px 65px rgba(3, 8, 28, .45);
+  opacity: .48;
+}
+
+.stadium-starball::before,
+.stadium-starball::after {
+  position: absolute;
+  inset: 14%;
+  border: 1px solid rgba(143, 176, 255, .11);
+  clip-path: polygon(50% 0, 61% 36%, 100% 36%, 69% 58%, 81% 100%, 50% 73%, 19% 100%, 31% 58%, 0 36%, 39% 36%);
+  content: "";
+}
+
+.stadium-starball::after {
+  inset: 28%;
+  border-color: rgba(189, 181, 255, .11);
+  transform: rotate(36deg);
+}
+
+.stadium-copy {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  display: grid;
+  justify-items: center;
+  gap: 7px;
+  transform: translate(-50%, -50%);
+  color: rgba(177, 200, 255, .2);
+}
+
+.stadium-copy span {
+  font-size: 11px;
+  line-height: 1;
+}
+
+.stadium-copy small {
+  font: 7px "DM Mono", monospace;
+  letter-spacing: .28em;
+  white-space: nowrap;
+}
+
+.app-shell:not(.is-lab) .control-deck {
+  position: relative;
+  isolation: isolate;
+  border: 1px solid rgba(126, 166, 224, .25);
+  border-radius: 16px;
+  background:
+    linear-gradient(180deg, rgba(19, 31, 68, .94), rgba(8, 16, 39, .97)),
+    rgba(8, 16, 39, .94);
+  box-shadow:
+    0 18px 40px rgba(1, 5, 19, .34),
+    inset 0 1px 0 rgba(222, 236, 255, .08),
+    inset 0 -1px 0 rgba(52, 76, 138, .3);
+  backdrop-filter: blur(16px) saturate(.9);
+}
+
+.app-shell:not(.is-lab) .control-deck::before {
+  position: absolute;
+  z-index: -1;
+  inset: 4px;
+  border: 1px solid rgba(127, 165, 226, .08);
+  border-radius: 12px;
+  content: "";
+  pointer-events: none;
+}
+
+.app-shell:not(.is-lab) .control-deck > .bet-control,
+.app-shell:not(.is-lab) .control-deck > .auto-control,
+.app-shell:not(.is-lab) .control-deck > .utility-controls {
+  min-width: 0;
+}
+
+.app-shell:not(.is-lab) .bet-stepper {
+  min-height: 42px;
+  margin-top: 5px;
+  padding: 4px;
+  gap: 6px;
+  border: 1px solid rgba(119, 157, 216, .2);
+  border-radius: 11px;
+  background: rgba(4, 10, 27, .42);
+}
+
+.app-shell:not(.is-lab) .bet-stepper button {
+  width: 32px;
+  min-width: 32px;
+  height: 32px;
+  border-color: rgba(123, 165, 226, .25);
+  border-radius: 8px;
+  color: #b9d8ff;
+  background: rgba(35, 55, 98, .54);
+  font-size: 18px;
+}
+
+.app-shell:not(.is-lab) .bet-stepper strong {
+  color: #eef4ff;
+  font-size: 14px;
+}
+
+.app-shell:not(.is-lab) .auto-trigger {
+  min-height: 42px;
+  border: 1px solid rgba(121, 163, 224, .3);
+  border-radius: 10px;
+  color: #c5d7f6;
+  background: linear-gradient(180deg, rgba(28, 48, 91, .86), rgba(12, 26, 59, .96));
+  box-shadow:
+    inset 0 1px 0 rgba(232, 242, 255, .08),
+    0 7px 18px rgba(4, 13, 36, .2);
+}
+
+.app-shell:not(.is-lab) .auto-trigger small {
+  border-left-color: rgba(151, 184, 233, .24);
+  color: #e4edff;
+  background: rgba(4, 12, 31, .28);
+}
+
+.app-shell:not(.is-lab) .spin-button {
+  width: 120px;
+  max-width: 120px;
+  height: 58px;
+  min-height: 58px;
+  border: 1px solid rgba(144, 178, 241, .62);
+  border-radius: 15px 15px 15px 7px;
+  color: #f5f7ff;
+  background: linear-gradient(145deg, #6877c9, #3d4e98);
+  box-shadow:
+    0 9px 24px rgba(37, 52, 131, .26),
+    inset 0 1px 0 rgba(255, 255, 255, .22);
+}
+
+.app-shell:not(.is-lab) .spin-button:hover:not(:disabled) {
+  box-shadow:
+    0 12px 29px rgba(37, 52, 131, .34),
+    inset 0 1px 0 rgba(255, 255, 255, .28);
+}
+
+.app-shell:not(.is-lab) .utility-controls {
+  gap: 6px;
+}
+
+.app-shell:not(.is-lab) .utility-button {
+  min-height: 42px;
+  border: 1px solid rgba(123, 163, 222, .25);
+  border-radius: 9px;
+  color: #94a9cf;
+  background: rgba(7, 17, 42, .48);
+}
+
+.app-shell:not(.is-lab) .utility-button:hover {
+  color: #c8dcff;
+  border-color: rgba(144, 188, 255, .45);
+  background: rgba(24, 44, 82, .58);
+}
+
+.app-shell:not(.is-lab) .utility-icon {
+  color: #b6c9ed;
+}
+
+.app-shell:not(.is-lab) .auto-trigger[data-state="running"] {
+  border-color: rgba(218, 164, 83, .54);
+  color: #f5d9a1;
+  background: linear-gradient(180deg, rgba(74, 55, 35, .9), rgba(39, 31, 30, .96));
+}
+
+.app-shell:not(.is-lab) .auto-trigger[data-state="running"] small {
+  border-left-color: rgba(218, 164, 83, .34);
+  color: #ffe4b0;
+}
+
+.app-shell:not(.is-lab) .auto-trigger[data-state="stopping"] {
+  border-color: rgba(201, 116, 103, .54);
+  background: linear-gradient(180deg, rgba(67, 39, 44, .9), rgba(35, 24, 35, .96));
+}
+
+@media (max-width: 620px) {
+  .app-shell:not(.is-lab) .stadium-atmosphere {
+    inset: clamp(410px, calc(100dvh - 380px), 560px) 0 max(99px, calc(9vh + 34px));
+  }
+
+  .stadium-starball {
+    right: -30%;
+    width: clamp(270px, 82vw, 380px);
+    opacity: .38;
+  }
+
+  .stadium-copy {
+    top: 50%;
+    left: 38%;
+    opacity: .58;
+  }
+
+  .app-shell:not(.is-lab) .control-deck {
+    border-radius: 15px;
+    padding: 7px 9px 8px;
+    gap: 5px;
+  }
+
+  .app-shell:not(.is-lab) .bet-stepper {
+    min-height: 48px;
+    margin-top: 3px;
+    padding: 3px;
+    border-radius: 11px;
+  }
+
+  .app-shell:not(.is-lab) .bet-stepper button {
+    width: 40px;
+    min-width: 40px;
+    height: 40px;
+    border-radius: 9px;
+  }
+
+  .app-shell:not(.is-lab) .spin-button {
+    width: 100%;
+    max-width: none;
+    height: 58px;
+    min-height: 58px;
+    border-radius: 15px 15px 15px 7px;
+    font-size: 16px;
+  }
+
+  .app-shell:not(.is-lab) .auto-trigger,
+  .app-shell:not(.is-lab) .auto-action-mobile,
+  .app-shell:not(.is-lab) .auto-trigger small {
+    min-height: 48px;
+    border-radius: 10px;
+  }
+
+  .app-shell:not(.is-lab) .auto-action-mobile {
+    border-color: rgba(121, 163, 224, .3);
+    color: #c5d7f6;
+    background: linear-gradient(180deg, rgba(28, 48, 91, .86), rgba(12, 26, 59, .96));
+    box-shadow:
+      inset 0 1px 0 rgba(232, 242, 255, .08),
+      0 7px 18px rgba(4, 13, 36, .2);
+  }
+
+  .app-shell:not(.is-lab) .auto-trigger small {
+    border-color: rgba(121, 163, 224, .24);
+    background: rgba(4, 12, 31, .42);
+  }
+
+  .app-shell:not(.is-lab) .utility-button {
+    min-height: 44px;
+    border-radius: 9px;
+  }
+
+  .app-shell:not(.is-lab) .auto-trigger[data-state="running"] .auto-action-mobile,
+  .app-shell:not(.is-lab) .auto-trigger.is-running .auto-action-mobile {
+    border-color: rgba(218, 164, 83, .54);
+    color: #f5d9a1;
+    background: linear-gradient(180deg, rgba(74, 55, 35, .9), rgba(39, 31, 30, .96));
+  }
+
+  .app-shell:not(.is-lab) .auto-trigger[data-state="running"] small,
+  .app-shell:not(.is-lab) .auto-trigger.is-running small {
+    border-color: rgba(218, 164, 83, .34);
+    color: #ffe4b0;
+    background: rgba(46, 31, 19, .46);
+  }
+}
+
+@media (max-width: 360px) {
+  .app-shell:not(.is-lab) .stadium-atmosphere {
+    inset: 365px 0 max(100px, calc(9vh + 34px));
+  }
+
+  .stadium-starball {
+    right: -42%;
+    width: 300px;
+  }
+}

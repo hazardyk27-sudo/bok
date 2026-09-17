@@ -330,6 +330,10 @@ app.innerHTML = `
          <div class="status-line" aria-live="polite"><span class="status-dot"></span><span id="status">THE GATES ARE QUIET</span></div>
       </section>
     </main>
+    <div class="stadium-atmosphere" aria-hidden="true">
+      <div class="stadium-starball"></div>
+      <div class="stadium-copy"><span>✦</span><small>MORE THAN A GAME</small></div>
+    </div>
     <footer class="control-deck">
       <div class="bet-control">
         <span class="eyebrow">BET</span>
