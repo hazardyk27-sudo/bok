@@ -21,6 +21,12 @@ Primitive track segments must be evaluated with the ball radius included in the 
 
 **How to apply:** Treat segment pitch, segment tangent half-width, ball radius, and corner clearance as one coupled geometry calculation; reject any track representation that cannot pass an isolated launch trace before running the full 20-spin suite.
 
+High-speed outer-track traces must measure actual contact pairs, not only radius/height heuristics. Segmented cuboids, capsule rings, analytic floor/wall combinations, and a faceted annular trimesh can all look aligned while producing only a few contact frames followed by escape or a solver velocity spike.
+
+**Why:** Isolated Rapier runs at the validated launch speed reproduced false support across several stationary shape representations; aggregate probe outcomes alone did not identify which stationary shape caused the impulse.
+
+**How to apply:** Keep a track-only fixed-step harness available during geometry work; require continuous contact-phase evidence, bounded speed, and bounded radius before accepting a new collider or starting the coupled rotor suite.
+
 The normalized GLB's rendered outer-track contact surface is below the original
 physics model's local Y origin. Apply the same rigid Y translation to every
 stationary collider, collider-debug mesh, and ball release position; never

@@ -47,6 +47,10 @@ const OUTER_TRACK_TILT = -0.08;
 const OUTER_TRACK_LAUNCH_CLEARANCE = 0.003;
 const OUTER_TRACK_SURFACE_Y =
   OUTER_TRACK_CENTER_Y + OUTER_TRACK_HALF_HEIGHT;
+const OUTER_TRACK_INNER_RADIUS = 2.31;
+const OUTER_TRACK_OUTER_RADIUS = 2.68;
+const OUTER_TRACK_MESH_SEGMENTS = 256;
+const OUTER_TRACK_MESH_THICKNESS = 0.09;
 // The normalized GLB's measured outer-track contact surface is y=-0.425.
 // Keep the collider model in its validated local coordinates, then apply this
 // one rigid world-space translation to every stationary collider and release
@@ -130,6 +134,7 @@ type ColliderSpec = {
   halfExtents: [number, number, number];
   rotation: [number, number, number, number];
   color: string;
+  shape?: 'box' | 'outer-track-ramp';
 };
 
 type ColliderBuckets = {
@@ -608,6 +613,94 @@ function physicsPosition(position: [number, number, number]): [number, number, n
   return [position[0], physicsY(position[1]), position[2]];
 }
 
+function outerTrackSurfaceY(radius: number) {
+  return (
+    OUTER_TRACK_SURFACE_Y -
+    Math.sin(OUTER_TRACK_TILT) * (radius - OUTER_TRACK_RADIUS)
+  );
+}
+
+function createOuterTrackMeshData() {
+  const vertices: number[] = [];
+  const indices: number[] = [];
+  const topY = (radius: number) => outerTrackSurfaceY(radius);
+  const bottomY = (radius: number) =>
+    topY(radius) - OUTER_TRACK_MESH_THICKNESS;
+
+  for (let index = 0; index < OUTER_TRACK_MESH_SEGMENTS; index += 1) {
+    const angle = (index / OUTER_TRACK_MESH_SEGMENTS) * Math.PI * 2;
+    const sin = Math.sin(angle);
+    const cos = Math.cos(angle);
+    vertices.push(
+      sin * OUTER_TRACK_INNER_RADIUS,
+      topY(OUTER_TRACK_INNER_RADIUS),
+      cos * OUTER_TRACK_INNER_RADIUS,
+      sin * OUTER_TRACK_OUTER_RADIUS,
+      topY(OUTER_TRACK_OUTER_RADIUS),
+      cos * OUTER_TRACK_OUTER_RADIUS,
+      sin * OUTER_TRACK_INNER_RADIUS,
+      bottomY(OUTER_TRACK_INNER_RADIUS),
+      cos * OUTER_TRACK_INNER_RADIUS,
+      sin * OUTER_TRACK_OUTER_RADIUS,
+      bottomY(OUTER_TRACK_OUTER_RADIUS),
+      cos * OUTER_TRACK_OUTER_RADIUS,
+    );
+  }
+
+  for (let index = 0; index < OUTER_TRACK_MESH_SEGMENTS; index += 1) {
+    const next = (index + 1) % OUTER_TRACK_MESH_SEGMENTS;
+    const current = index * 4;
+    const following = next * 4;
+    const currentTopInner = current;
+    const currentTopOuter = current + 1;
+    const currentBottomInner = current + 2;
+    const currentBottomOuter = current + 3;
+    const nextTopInner = following;
+    const nextTopOuter = following + 1;
+    const nextBottomInner = following + 2;
+    const nextBottomOuter = following + 3;
+
+    // Top surface, with upward-facing winding.
+    indices.push(
+      currentTopInner,
+      currentTopOuter,
+      nextTopInner,
+      currentTopOuter,
+      nextTopOuter,
+      nextTopInner,
+    );
+    // Bottom surface.
+    indices.push(
+      currentBottomInner,
+      nextBottomInner,
+      currentBottomOuter,
+      currentBottomOuter,
+      nextBottomInner,
+      nextBottomOuter,
+    );
+    // Inner and outer walls.
+    indices.push(
+      currentTopInner,
+      nextTopInner,
+      currentBottomInner,
+      nextTopInner,
+      nextBottomInner,
+      currentBottomInner,
+      currentTopOuter,
+      currentBottomOuter,
+      nextTopOuter,
+      nextTopOuter,
+      currentBottomOuter,
+      nextBottomOuter,
+    );
+  }
+
+  return {
+    vertices: new Float32Array(vertices),
+    indices: new Uint32Array(indices),
+  };
+}
+
 function isOuterTrackContactHeight(
   translation: { x: number; y: number; z: number },
   ballRadius: number,
@@ -718,16 +811,23 @@ function buildColliderSpecs(): ColliderSpec[] {
     color: stationaryColor,
     tilt: -0.25,
   });
-  addRingSpecs(specs, {
-    id: 'track-floor',
+  // One continuous annular ramp replaces overlapping 37-sector track boxes.
+  // The top surface uses the same radius, slope and translated Y origin as
+  // the launch helper, so the ball can cross sector boundaries without
+  // entering multiple neighboring contacts at once.
+  specs.push({
+    id: 'track-floor-ramp',
     label: 'Ball track',
     body: 'stationary',
-    count: 37,
-    radius: OUTER_TRACK_RADIUS,
-    y: OUTER_TRACK_CENTER_Y,
-    halfExtents: [0.22, OUTER_TRACK_HALF_HEIGHT, 0.17],
+    position: [0, 0, 0],
+    halfExtents: [
+      (OUTER_TRACK_OUTER_RADIUS - OUTER_TRACK_INNER_RADIUS) / 2,
+      OUTER_TRACK_MESH_THICKNESS / 2,
+      OUTER_TRACK_RADIUS,
+    ],
+    rotation: [0, 0, 0, 1],
     color: stationaryColor,
-    tilt: OUTER_TRACK_TILT,
+    shape: 'outer-track-ramp',
   });
   addRingSpecs(specs, {
     id: 'outer-rim',
@@ -844,8 +944,11 @@ function addRapierCollider(
       ? BALL_COLLISION_GROUP | ROTOR_COLLISION_GROUP
       : BALL_COLLISION_GROUP | STATIONARY_COLLISION_GROUP;
   const descriptor = (
-    spec.label === 'Ball track'
-      ? RAPIER.ColliderDesc.roundCuboid(...spec.halfExtents, 0.035)
+    spec.shape === 'outer-track-ramp'
+      ? (() => {
+          const { vertices, indices } = createOuterTrackMeshData();
+          return RAPIER.ColliderDesc.trimesh(vertices, indices);
+        })()
       : RAPIER.ColliderDesc.cuboid(...spec.halfExtents)
   )
     .setTranslation(...physicsPosition(spec.position))
@@ -860,8 +963,8 @@ function addRapierCollider(
     .setRestitution(
       isDeflector
         ? 0.42
-          : spec.label === 'Ball track'
-            ? 0.06
+        : spec.label === 'Ball track'
+          ? 0.06
           : restitution,
     )
     .setCollisionGroups(membership | (filter << 16));
@@ -869,12 +972,26 @@ function addRapierCollider(
 }
 
 function makePhysicsDebugMesh(spec: ColliderSpec) {
+  const geometry =
+    spec.shape === 'outer-track-ramp'
+      ? (() => {
+          const { vertices, indices } = createOuterTrackMeshData();
+          const trackGeometry = new THREE.BufferGeometry();
+          trackGeometry.setAttribute(
+            'position',
+            new THREE.Float32BufferAttribute(vertices, 3),
+          );
+          trackGeometry.setIndex(Array.from(indices));
+          trackGeometry.computeVertexNormals();
+          return trackGeometry;
+        })()
+      : new THREE.BoxGeometry(
+          spec.halfExtents[0] * 2,
+          spec.halfExtents[1] * 2,
+          spec.halfExtents[2] * 2,
+        );
   const mesh = new THREE.Mesh(
-    new THREE.BoxGeometry(
-      spec.halfExtents[0] * 2,
-      spec.halfExtents[1] * 2,
-      spec.halfExtents[2] * 2,
-    ),
+    geometry,
     new THREE.MeshBasicMaterial({
       color: spec.color,
       transparent: true,
