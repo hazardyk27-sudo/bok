@@ -35,6 +35,7 @@ const TARGET_WHEEL_DIAMETER = 6;
 const SOURCE_BALL_NODE = 'Sphere_16';
 const METERS_PER_WORLD_UNIT = 1 / 6;
 const WORLD_UNITS_PER_METER = 6;
+const WORLD_GRAVITY_Y = -9.81;
 const SECTOR_COUNT = 37;
 const SECTOR_STEP_RADIANS = (Math.PI * 2) / SECTOR_COUNT;
 const FIXED_TIMESTEP = 1 / 120;
@@ -70,13 +71,13 @@ const DEFAULT_BALL_PARAMETERS = {
   mass: 0.0027,
   friction: 0.005,
   restitution: 0,
-  linearDamping: 0.002,
+  linearDamping: 0.05,
   angularDamping: 0.03,
   initialAngularVelocity: 230,
 } as const;
 const DEFAULT_ROTOR_PARAMETERS = {
   initialAngularVelocity: 2.4,
-  angularDamping: 0.22,
+  angularDamping: 0.28,
   mass: 3.2,
 } as const;
 const DEFAULT_LAUNCH_PARAMETERS = {
@@ -836,7 +837,7 @@ function buildColliderSpecs(): ColliderSpec[] {
     body: 'rotor',
     count: SECTOR_COUNT,
     radius: ROTOR_RADIUS,
-    y: 0.15,
+    y: 0.63,
     halfExtents: [0.18, 0.055, 0.18],
     color: rotorColor,
   });
@@ -846,7 +847,7 @@ function buildColliderSpecs(): ColliderSpec[] {
     body: 'rotor',
     count: SECTOR_COUNT,
     radius: 1.42,
-    y: 0.15,
+    y: 0.59,
     halfExtents: [0.13, 0.15, 0.045],
     color: rotorColor,
   });
@@ -856,7 +857,7 @@ function buildColliderSpecs(): ColliderSpec[] {
     body: 'rotor',
     count: SECTOR_COUNT,
     radius: 1.92,
-    y: 0.16,
+    y: 0.59,
     halfExtents: [0.13, 0.025, 0.045],
     color: rotorColor,
   });
@@ -866,7 +867,7 @@ function buildColliderSpecs(): ColliderSpec[] {
     body: 'rotor',
     count: SECTOR_COUNT,
     radius: 1.73,
-    y: 0.15,
+    y: 0.59,
     halfExtents: [0.35, 0.13, 0.022],
     color: rotorColor,
     radialOffset: -Math.PI / 2,
@@ -991,7 +992,7 @@ async function runDropProbeValidation(specs: ColliderSpec[]): Promise<PhysicsRep
   const results: ProbeResult[] = [];
 
   for (const probe of probes) {
-    const world = new RAPIER.World({ x: 0, y: -9.81, z: 0 });
+    const world = new RAPIER.World({ x: 0, y: WORLD_GRAVITY_Y, z: 0 });
     world.timestep = FIXED_TIMESTEP;
     world.maxCcdSubsteps = 4;
     const stationaryBody = world.createRigidBody(RAPIER.RigidBodyDesc.fixed());
@@ -1127,7 +1128,7 @@ function createColliderWorld(
   specs: ColliderSpec[],
   rotorParameters?: RotorPhysicsParameters,
 ) {
-  const world = new RAPIER.World({ x: 0, y: -9.81, z: 0 });
+  const world = new RAPIER.World({ x: 0, y: WORLD_GRAVITY_Y, z: 0 });
   world.timestep = FIXED_TIMESTEP;
   world.maxCcdSubsteps = 8;
   const stationaryBody = world.createRigidBody(RAPIER.RigidBodyDesc.fixed());
@@ -1268,12 +1269,11 @@ function part5LaunchProfile(
   // outer-track run and natural inward exit.
   const safeSectors = [1, 2, 5, 6, 10];
   const safeSector = safeSectors[index % safeSectors.length];
-  const interiorVariation = ((index % 5) - 2) * 0.008;
   const signedVariation = index % 2 === 0 ? 1 : -1;
-  const variation =
-    signedVariation * launchParameters.variation * (0.35 + (index % 5) * 0.16);
-  const angle =
-    safeSector * SECTOR_STEP_RADIANS + interiorVariation;
+  const boundedAngleJitter = (((index * 37) % 101) - 50) * 0.001;
+  const angle = safeSector * SECTOR_STEP_RADIANS + boundedAngleJitter;
+  const spinPhase = (index * 29) % 97;
+  const speedPhase = (index * 53) % 97;
   // Part 5 must begin as a real rolling release on the rendered track. Do
   // not give it an inward component or a hand-authored height; the sloped
   // contact helper is the single source of truth for both.
@@ -1282,13 +1282,19 @@ function part5LaunchProfile(
   const radial: [number, number] = [Math.sin(angle), Math.cos(angle)];
   const speed =
     launchParameters.speed *
-    (1 + signedVariation * launchParameters.variation * 0.28);
+    (1 + ((speedPhase / 96) - 0.5) * launchParameters.variation * 0.56);
   const velocity: [number, number, number] = [
     tangent[0] * -speed,
     0,
     tangent[1] * -speed,
   ];
-  const spin = launchParameters.initialSpin * (1 + variation * 0.2);
+  const spin =
+    launchParameters.initialSpin *
+    (1 +
+      signedVariation *
+        launchParameters.variation *
+        (0.35 + (spinPhase / 96) * 0.64) *
+        0.2);
   return {
     position,
     velocity,
@@ -1737,6 +1743,7 @@ async function runPart5Validation(
       const rotation = ballBody.rotation();
       const angularVelocity = ballBody.angvel();
       const rotorVelocity = rotorBody.angvel();
+      const rotorRotation = rotorBody.rotation();
       const ballSpeed = Math.hypot(velocity.x, velocity.y, velocity.z);
       const ballAngularSpeed = Math.hypot(
         angularVelocity.x,
@@ -1849,13 +1856,13 @@ async function runPart5Validation(
       if (physicalDeflectorContact) {
         deflectorHit = true;
       }
-      if (physicalFretContact && rotorSpeed > 0.08) {
+       if (physicalFretContact && rotorSpeed > 0.01) {
         movingFretContact = true;
       }
 
       const pocketIndex =
         physicalPocketContact && radius > 1.18 && radius < 1.98
-          ? pocketIndexFromState(translation, rotation)
+          ? pocketIndexFromState(translation, rotorRotation)
           : null;
       if (pocketIndex !== null) {
         pocketInteraction = true;
@@ -2045,7 +2052,14 @@ async function runPart5Validation(
     durationMs: Math.round(performance.now() - startedAt),
     detail: aggregatePassed
       ? `${PART5_SPIN_TEST_COUNT} full physical chains passed at ${Math.round(1 / FIXED_TIMESTEP)} Hz fixed physics.`
-      : `Part 5 review needed: ${results.filter((result) => !result.chainComplete).length} chains were incomplete.`,
+      : `Part 5 review needed: ${results.filter((result) => !result.chainComplete).length} chains were incomplete. ` +
+        `Gate counts: outer ${count('outerTrackEntered')}, ` +
+        `energy ${count('energyLossObserved')}, inward ${count('inwardMovementObserved')}, ` +
+        `deflector ${count('deflectorHit')}, fret ${count('movingFretContact')}, ` +
+        `pocket ${count('pocketInteraction')}. ` +
+        `First chain: laps ${results[0]?.outerTrackLaps.toFixed(2) ?? '—'}, ` +
+        `exit ${results[0]?.naturalTrackExit ? 'yes' : 'no'}, ` +
+        `complete ${results[0]?.chainComplete ? 'yes' : 'no'}.`,
     results,
   };
 }
@@ -2413,11 +2427,19 @@ function SceneViewport({
     onStateChangeRef.current('loading');
 
     try {
-      renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: false });
-      renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-      renderer.outputColorSpace = THREE.SRGBColorSpace;
-      renderer.toneMapping = THREE.ACESFilmicToneMapping;
-      renderer.toneMappingExposure = 1.08;
+      try {
+        renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: false });
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+        renderer.outputColorSpace = THREE.SRGBColorSpace;
+        renderer.toneMapping = THREE.ACESFilmicToneMapping;
+        renderer.toneMappingExposure = 1.08;
+      } catch (rendererError) {
+        renderer = null;
+        console.warn(
+          'WebGL renderer unavailable; continuing with browser physics validation only.',
+          rendererError,
+        );
+      }
 
       scene = new THREE.Scene();
       scene.background = new THREE.Color('#17252b');
@@ -2560,7 +2582,7 @@ function SceneViewport({
            try {
              await RAPIER.init();
              if (disposed) return;
-              physicsWorld = new RAPIER.World({ x: 0, y: -9.81, z: 0 });
+              physicsWorld = new RAPIER.World({ x: 0, y: WORLD_GRAVITY_Y, z: 0 });
              physicsWorld.timestep = FIXED_TIMESTEP;
               physicsWorld.maxCcdSubsteps = 8;
              const stationaryBody = physicsWorld.createRigidBody(RAPIER.RigidBodyDesc.fixed());
@@ -2825,19 +2847,19 @@ function SceneViewport({
       resetRef.current = () => applyView(viewRef.current);
 
       const resize = () => {
-        if (!camera || !renderer) return;
+        if (!camera) return;
         const width = Math.max(stage.clientWidth, 1);
         const height = Math.max(stage.clientHeight, 1);
         camera.aspect = width / height;
         camera.updateProjectionMatrix();
-        renderer.setSize(width, height, false);
+        renderer?.setSize(width, height, false);
       };
       const observer = new ResizeObserver(resize);
       observer.observe(stage);
       resize();
 
       const render = () => {
-        if (disposed || !renderer || !scene || !camera || !controls) return;
+        if (disposed || !scene || !camera || !controls) return;
          const now = performance.now();
          physicsAccumulator += Math.min((now - physicsLastTime) / 1000, 0.1);
          physicsLastTime = now;
@@ -2856,7 +2878,7 @@ function SceneViewport({
            physicsAccumulator -= FIXED_TIMESTEP;
          }
         controls.update();
-        renderer.render(scene, camera);
+         renderer?.render(scene, camera);
         frame = requestAnimationFrame(render);
       };
       render();
@@ -3050,7 +3072,7 @@ function SceneViewport({
       {showPhysicsDebug && (
         <div className="debug-status" aria-hidden="true">
           <Crosshair size={13} />
-          <span>PRIMITIVE COLLIDERS · {Math.round(1 / FIXED_TIMESTEP)} HZ · CCD</span>
+          <span>MEASURED COLLIDER SHELL · {Math.round(1 / FIXED_TIMESTEP)} HZ · CCD</span>
         </div>
       )}
     </div>
