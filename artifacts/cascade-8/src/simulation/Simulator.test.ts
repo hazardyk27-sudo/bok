@@ -14,14 +14,13 @@ describe("simulator", () => {
     expect(report.observedCopyBranchProbability).toBeGreaterThan(73);
     expect(report.observedCopyBranchProbability).toBeLessThan(77);
     expect(report.observedSecondSameProbability).toBeGreaterThan(report.observedCopyBranchProbability);
-    expect(report.configuredThirdCopyBranchProbability).toBe(50);
-    expect(report.observedThirdCopyBranchProbability).toBeGreaterThan(48);
-    expect(report.observedThirdCopyBranchProbability).toBeLessThan(52);
+    expect(report.configuredThirdCopyBranchProbability).toBe(0);
+    expect(report.observedThirdCopyBranchProbability).toBe(0);
     expect(report.configuredThirdRepeatWeightFactor).toBe(50);
     expect(report.observedThirdFallbackSameProbability).toBeLessThan(10);
     expect(report.thirdPositionSamples).toBeGreaterThan(999_000);
-    expect(report.thirdMatchesPreviousSecondProbability).toBeGreaterThan(50);
-    expect(report.thirdMatchesPreviousSecondProbability).toBeLessThan(65);
+    expect(report.thirdMatchesPreviousSecondProbability).toBeGreaterThan(5);
+    expect(report.thirdMatchesPreviousSecondProbability).toBeLessThan(9);
     expect(report.thirdFallbackSamplesBySymbol.S5).toBeGreaterThan(50_000);
     expect(report.thirdFallbackSameRatesBySymbol.S5).toBeGreaterThan(5);
     expect(report.thirdFallbackSameRatesBySymbol.S5).toBeLessThan(9);

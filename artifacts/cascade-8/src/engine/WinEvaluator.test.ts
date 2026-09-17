@@ -86,7 +86,7 @@ describe("win evaluation and cascades", () => {
     expect(result.boardAfterGravity[4][0]).toBe("S4");
   });
 
-  it("copies the current visible unpaired top symbol in the production refill path", () => {
+  it("does not directly copy the current visible unpaired top symbol", () => {
     const board: Board = [
       ["S1", "S2", "S3", "S4", "S5", "S6"],
       ["S2", "S3", "S4", "S5", "S6", "S7"],
@@ -108,14 +108,8 @@ describe("win evaluation and cascades", () => {
       { onVisibleUnpairedRefill: (event) => observations.push(event) },
     );
 
-    expect(observations).toHaveLength(1);
-    expect(observations[0]).toMatchObject({
-      topSymbol: "S2",
-      belowSymbol: "S3",
-      incomingSymbol: "S2",
-      copiedFromVisibleTop: true,
-    });
-    expect(result.boardAfterGravity[0][0]).toMatchObject({ kind: "NORMAL_SYMBOL", symbol: "S2" });
+    expect(observations).toHaveLength(0);
+    expect(result.boardAfterGravity[0][0]).toMatchObject({ kind: "NORMAL_SYMBOL", symbol: "S1" });
     expect(result.boardAfterGravity[1][0]).toBe("S2");
   });
 });

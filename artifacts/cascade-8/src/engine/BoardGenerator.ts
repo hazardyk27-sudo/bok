@@ -12,7 +12,6 @@ import {
   BOARD_ROWS,
   BONUS_REEL_CONFIG,
   NORMAL_PAIR_COPY_CHANCE,
-  NORMAL_THIRD_COPY_CHANCE,
   NORMAL_THIRD_REPEAT_WEIGHT_FACTOR,
   type NormalSymbolId,
   type ReelConfig,
@@ -197,19 +196,15 @@ export class ColumnStream {
     if (isFirst) {
       const symbolRoll = this.source.nextFloat();
       if (visibleTopSymbol) {
-        const copyChance = NORMAL_THIRD_COPY_CHANCE;
-        copyRoll = symbolRoll;
-        copiedFromVisibleTop = symbolRoll < copyChance;
-        symbol = copiedFromVisibleTop
-          ? visibleTopSymbol
-          : weightedChoiceFromRoll(
-            (symbolRoll - copyChance) / (1 - copyChance),
-            weightedChoicesWithAttenuatedValue(
-              this.config.symbolWeights,
-              visibleTopSymbol,
-              NORMAL_THIRD_REPEAT_WEIGHT_FACTOR,
-            ),
-          );
+        copiedFromVisibleTop = false;
+        symbol = weightedChoiceFromRoll(
+          symbolRoll,
+          weightedChoicesWithAttenuatedValue(
+            this.config.symbolWeights,
+            visibleTopSymbol,
+            NORMAL_THIRD_REPEAT_WEIGHT_FACTOR,
+          ),
+        );
       } else {
         symbol = weightedChoiceFromRoll(symbolRoll, this.config.symbolWeights);
       }

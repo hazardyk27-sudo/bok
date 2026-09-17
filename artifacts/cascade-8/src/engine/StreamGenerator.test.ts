@@ -44,7 +44,7 @@ describe("persistent column streams", () => {
     expect(stream.stats.actualSamePairCount).toBe(2);
   });
 
-  it("uses a lower copy chance for a new group while preserving pair copies", () => {
+  it("removes direct third-cell copies while preserving pair copies", () => {
     const config: ReelConfig = {
       ...BASE_REEL_CONFIG,
       symbolWeights: [
@@ -59,8 +59,10 @@ describe("persistent column streams", () => {
     const second = stream.nextVisibleAware("BASE_REFILL", false, "S3");
     const third = stream.nextVisibleAware("BASE_REFILL", false, "S3");
 
-    expect(first.copiedFromVisibleTop).toBe(true);
+    expect(getNormalSymbol(first.cell)).toBe("S4");
+    expect(first.copiedFromVisibleTop).toBe(false);
     expect(second.copiedFromVisibleTop).toBe(true);
+    expect(getNormalSymbol(second.cell)).toBe("S3");
     expect(third.copiedFromVisibleTop).toBe(false);
     expect(getNormalSymbol(third.cell)).toBe("S4");
   });

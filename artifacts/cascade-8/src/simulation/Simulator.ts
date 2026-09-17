@@ -16,7 +16,6 @@ import {
   BONUS_REFILL_SCATTER_CHANCE,
   MAX_WIN_MULTIPLIER,
   NORMAL_PAIR_COPY_CHANCE,
-  NORMAL_THIRD_COPY_CHANCE,
   NORMAL_THIRD_REPEAT_WEIGHT_FACTOR,
   NORMAL_SYMBOLS,
   SYMBOLS,
@@ -593,7 +592,7 @@ export function simulate(spins: number, seed: string, betCents = 100, onProgress
       boardRows: BOARD_ROWS,
       maxWinMultiplier: MAX_WIN_MULTIPLIER,
       normalPairCopyChance: NORMAL_PAIR_COPY_CHANCE,
-      normalThirdCopyChance: NORMAL_THIRD_COPY_CHANCE,
+      normalThirdCopyChance: 0,
       symbols: SYMBOLS.map(({ id, weight }) => ({ id, weight })),
       baseInitialScatterChance: BASE_INITIAL_SCATTER_CHANCE,
       baseInitialCoreChance: BASE_INITIAL_CORE_CHANCE,
@@ -669,7 +668,7 @@ export function simulate(spins: number, seed: string, betCents = 100, onProgress
      configuredCopyBranchProbability: Number((NORMAL_PAIR_COPY_CHANCE * 100).toFixed(4)),
      observedCopyBranchProbability: pairBranches.copyBranchRate,
      observedSecondSameProbability: pairBranches.actualSecondSameRate,
-      configuredThirdCopyBranchProbability: Number((NORMAL_THIRD_COPY_CHANCE * 100).toFixed(4)),
+      configuredThirdCopyBranchProbability: 0,
       observedThirdCopyBranchProbability: pairBranches.thirdCopyBranchRate,
       configuredThirdRepeatWeightFactor: Number((NORMAL_THIRD_REPEAT_WEIGHT_FACTOR * 100).toFixed(4)),
       observedThirdFallbackSameProbability: pairBranches.thirdFallbackSameRate,
@@ -813,7 +812,7 @@ export function formatSimulationSummary(report: SimulationReport) {
 
 ## Third-position fallback
 
-These samples exclude the configured third-cell copy branch. Same-symbol rate is conditional on the fallback branch and is reported separately from pair-internal copy metrics.
+Third-position samples use only weighted selection with the previous visible symbol attenuated. Pair-internal copy metrics are reported separately.
 
 | Symbol | Fallback samples | Same-symbol rate |
 | --- | ---: | ---: |

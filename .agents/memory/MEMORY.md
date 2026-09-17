@@ -19,6 +19,7 @@
 - [Roulette motion keyframe order](roulette-motion-keyframe-order.md) — generated landing bounces must keep Web Animations offsets monotonically ordered.
 - [Roulette portrait flow](roulette-portrait-flow.md) — keep portrait controls in normal document flow so compact tools never cover betting cells or result rows.
 - [Roulette audio timing](roulette-audio-timing.md) — keep round voice cues phase-gated and schedule physical impacts from the same visible landing timeline.
+- [Third-position repeat semantics](third-position-repeat-semantics.md) — third-cell direct copy is disabled; attenuate only natural weighted repeats, while pair-internal copy remains 75%.
 - [Physics Lab runtime verification](physics-lab-runtime.md) — verify GLB bytes and WebGL with direct Chromium because proxy screenshots may lack WebGL and misrouted assets can return HTML 200s.
 - [Roulette Part 1 visual decomposition](roulette-part1-visual-decomposition.md) — normalized scale and European number-ring indexing are verified for future physics alignment.
 - [Physics Lab Part 3 validation](physics-lab-part3-validation.md) — center dynamic-ball tests on sector interiors and keep a catch floor; segmented seam starts can create false velocity explosions.
