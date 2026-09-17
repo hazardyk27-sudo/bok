@@ -7,4 +7,6 @@ Keep binary assets at the artifact public root when the Vite base path is alread
 
 **Why:** The preview proxy can serve a fallback document for a misrouted binary request, and its screenshot browser may not create a WebGL context even when direct Chromium can load the scene.
 
-**How to apply:** Verify the GLB response content type and magic bytes, then run a direct Chromium check with SwiftShader for `Source loaded`; keep a user-visible WebGL error state for browsers that cannot initialize the renderer.
+When reparenting a cloned GLTF scene, measure its post-parent world bounds and apply a corrective offset before accepting the normalized pivot; cloned child world matrices can retain stale state across the new parent boundary.
+
+**How to apply:** Verify the GLB response content type and magic bytes, then run a direct Chromium check with SwiftShader for `Source loaded`, exact pivot, and view controls; keep a user-visible WebGL error state for browsers that cannot initialize the renderer.

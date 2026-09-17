@@ -698,6 +698,44 @@ h1 {
   font-size: 9px;
 }
 
+.view-switcher {
+  display: grid;
+  gap: 4px;
+}
+
+.view-button {
+  display: flex;
+  width: 100%;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 9px 10px;
+  border: 1px solid transparent;
+  border-radius: 4px;
+  color: #64736e;
+  background: transparent;
+  cursor: pointer;
+  font-family: 'DM Mono', monospace;
+  font-size: 9px;
+  text-align: left;
+  transition: background 160ms ease, border-color 160ms ease, color 160ms ease;
+}
+
+.view-button:hover {
+  color: var(--lab-ink);
+  background: rgba(255, 255, 255, 0.34);
+}
+
+.view-button.is-active {
+  border-color: #b7c9c1;
+  color: #3e625e;
+  background: #dce9e2;
+}
+
+.view-button svg {
+  opacity: 0.48;
+}
+
 .control-list {
   display: grid;
   gap: 4px;
@@ -966,6 +1004,23 @@ h1 {
   transform: translateY(0);
 }
 
+.debug-status {
+  position: absolute;
+  right: 19px;
+  bottom: 18px;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  color: rgba(216, 166, 138, 0.9);
+  font-family: 'DM Mono', monospace;
+  font-size: 8px;
+  pointer-events: none;
+}
+
+.debug-status svg {
+  color: #d38b72;
+}
+
 .viewport-overlay {
   position: absolute;
   inset: 0;
@@ -1079,6 +1134,154 @@ h1 {
   font-size: 8px;
 }
 
+.audit-panel {
+  display: grid;
+  gap: 20px;
+  margin-top: 19px;
+  padding: 19px 20px 20px;
+  border: 1px solid #b9bbb2;
+  border-radius: 4px;
+  background: rgba(239, 238, 229, 0.72);
+}
+
+.audit-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 20px;
+}
+
+.audit-heading strong {
+  display: block;
+  margin-top: 4px;
+  color: #415550;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.audit-state {
+  padding: 5px 7px;
+  border: 1px solid #c5c7bd;
+  border-radius: 3px;
+  color: #8a938d;
+  font-family: 'DM Mono', monospace;
+  font-size: 8px;
+  white-space: nowrap;
+}
+
+.audit-state.is-ready {
+  border-color: #b3d0c4;
+  color: #4d8175;
+  background: #e5f0e9;
+}
+
+.audit-metrics {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  border-top: 1px solid #c9cbc1;
+  border-bottom: 1px solid #c9cbc1;
+}
+
+.audit-metric {
+  display: grid;
+  min-width: 0;
+  gap: 7px;
+  padding: 12px 12px 11px 0;
+  border-right: 1px solid #c9cbc1;
+}
+
+.audit-metric:not(:first-child) {
+  padding-left: 12px;
+}
+
+.audit-metric:last-child {
+  border-right: 0;
+}
+
+.audit-metric span {
+  color: #7c8983;
+  font-size: 8px;
+}
+
+.audit-metric strong {
+  overflow: hidden;
+  color: #3f5f59;
+  font-family: 'DM Mono', monospace;
+  font-size: 11px;
+  font-weight: 500;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.audit-details {
+  display: grid;
+  grid-template-columns: minmax(0, 1.3fr) minmax(220px, 0.7fr);
+  gap: 22px;
+}
+
+.hierarchy-list {
+  display: grid;
+  gap: 7px;
+}
+
+.hierarchy-row {
+  display: grid;
+  gap: 3px;
+  padding: 9px 10px;
+  border-left: 2px solid #b9cfc6;
+  background: rgba(221, 231, 223, 0.42);
+}
+
+.hierarchy-row strong {
+  color: #4b625d;
+  font-size: 10px;
+}
+
+.hierarchy-row span,
+.hierarchy-row small {
+  overflow: hidden;
+  color: #7d8983;
+  font-family: 'DM Mono', monospace;
+  font-size: 8px;
+  line-height: 1.45;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.hierarchy-row small {
+  color: #8f9992;
+  font-family: inherit;
+  white-space: normal;
+}
+
+.attribution-block {
+  display: grid;
+  align-content: start;
+  gap: 8px;
+  min-width: 0;
+}
+
+.attribution-block a,
+.attribution-block > span:not(.section-label) {
+  overflow-wrap: anywhere;
+  color: #647a73;
+  font-size: 9px;
+  line-height: 1.45;
+}
+
+.attribution-block a {
+  color: #8a6047;
+  text-decoration-color: #c9a58e;
+}
+
+.source-pivot-readout {
+  padding-top: 6px;
+  border-top: 1px solid #c9cbc1;
+  color: #89938d !important;
+  font-family: 'DM Mono', monospace;
+  font-size: 8px !important;
+}
+
 .lab-footer {
   display: flex;
   min-height: 33px;
@@ -1164,6 +1367,30 @@ h1 {
 
   .caption-right {
     gap: 8px;
+  }
+
+  .audit-panel {
+    padding: 16px 14px;
+  }
+
+  .audit-metrics {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .audit-metric {
+    border-bottom: 1px solid #c9cbc1;
+  }
+
+  .audit-metric:nth-child(2n) {
+    border-right: 0;
+  }
+
+  .audit-metric:nth-last-child(-n + 2) {
+    border-bottom: 0;
+  }
+
+  .audit-details {
+    grid-template-columns: 1fr;
   }
 
   .lab-footer {
