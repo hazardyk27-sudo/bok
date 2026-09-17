@@ -267,6 +267,12 @@ export type SimulationReport = {
   zeroWinRate: number;
   bonusTriggerCount: number;
   bonusFrequency: string;
+  freeSpinCount: number;
+  freeSpinHitRate: number;
+  freeSpinInitialBoardsWithAtLeastOneCore: number;
+  freeSpinInitialBoardsWithAtLeastTwoCores: number;
+  freeSpinInitialAtLeastOneCoreRate: number;
+  freeSpinInitialAtLeastTwoCoreRate: number;
   averageBonusWinMultiplier: number;
   medianBonusWinMultiplier: number;
   averageTumblesPerPaidSpin: number;
@@ -378,6 +384,9 @@ export function simulate(spins: number, seed: string, betCents = 100, onProgress
   let totalBonusCents = 0;
   let hitCount = 0;
   let bonusTriggerCount = 0;
+  let freeSpinHitCount = 0;
+  let freeSpinInitialBoardsWithAtLeastOneCore = 0;
+  let freeSpinInitialBoardsWithAtLeastTwoCores = 0;
   let bonusSessionsWithRetrigger = 0;
   let tumbleCount = 0;
   let winningTumbleCount = 0;
@@ -467,6 +476,9 @@ export function simulate(spins: number, seed: string, betCents = 100, onProgress
       bonusInitialCoreCells += initialCoreValues.length;
       bonusInitialCoreValues.push(...initialCoreValues);
       bonusCoreValues.push(...initialCoreValues);
+      if (initialCoreValues.length >= 1) freeSpinInitialBoardsWithAtLeastOneCore += 1;
+      if (initialCoreValues.length >= 2) freeSpinInitialBoardsWithAtLeastTwoCores += 1;
+      if (freeSpin.tumbles.length > 0) freeSpinHitCount += 1;
     });
     const multiplier = result.totalMultiplier;
     maxObservedWinMultiplier = Math.max(maxObservedWinMultiplier, multiplier);
@@ -612,6 +624,12 @@ export function simulate(spins: number, seed: string, betCents = 100, onProgress
     zeroWinRate: percent(spins - hitCount),
     bonusTriggerCount,
     bonusFrequency: bonusTriggerCount ? `1 in ${(spins / bonusTriggerCount).toFixed(2)}` : "none observed",
+    freeSpinCount,
+    freeSpinHitRate: Number(((freeSpinHitCount / Math.max(1, freeSpinCount)) * 100).toFixed(4)),
+    freeSpinInitialBoardsWithAtLeastOneCore,
+    freeSpinInitialBoardsWithAtLeastTwoCores,
+    freeSpinInitialAtLeastOneCoreRate: Number(((freeSpinInitialBoardsWithAtLeastOneCore / Math.max(1, freeSpinCount)) * 100).toFixed(4)),
+    freeSpinInitialAtLeastTwoCoreRate: Number(((freeSpinInitialBoardsWithAtLeastTwoCores / Math.max(1, freeSpinCount)) * 100).toFixed(4)),
     averageBonusWinMultiplier: bonuses.length ? Number((bonuses.reduce((a, b) => a + b, 0) / bonuses.length).toFixed(4)) : 0,
     medianBonusWinMultiplier: Number(median(bonuses).toFixed(4)),
     averageTumblesPerPaidSpin: Number((tumbleCount / spins).toFixed(4)),
@@ -774,6 +792,10 @@ export function formatSimulationSummary(report: SimulationReport) {
 | --- | ---: |
 | Bonus trigger count | ${report.bonusTriggerCount.toLocaleString("en-US")} |
 | Bonus frequency | ${report.bonusFrequency} |
+| Free Spin count | ${report.freeSpinCount.toLocaleString("en-US")} |
+| Free Spin hit rate | ${report.freeSpinHitRate}% |
+| Free Spin initial board with at least 1 Core | ${report.freeSpinInitialAtLeastOneCoreRate}% |
+| Free Spin initial board with at least 2 Cores | ${report.freeSpinInitialAtLeastTwoCoreRate}% |
 | Average bonus win | ${report.averageBonusWinMultiplier}x |
 | Bonus retrigger rate | ${report.bonusRetriggerRate}% |
 | Free Spin retrigger rate | ${report.freeSpinRetriggerRate}% |
