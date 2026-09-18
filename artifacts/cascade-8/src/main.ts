@@ -35,7 +35,7 @@ const routeShell = (content: string, className = "") => `
     <header class="topbar route-topbar">
       <a class="brand brand-link" href="/" aria-label="Fahrinin Yolu ana menü">
         <div class="brand-mark"><span>✦</span></div>
-        <div><div class="brand-name">FAHRİNİN <em>YOLU</em></div><div class="brand-sub">FAHRİ SENİ BU DEFA GÜLDÜRECEK</div></div>
+        <div><div class="brand-name">FAHRİNİN <em>YOLU</em></div><div class="brand-sub">FAHRİYİ BEKLEYECEK KADAR SABIRLI MISIN?</div></div>
       </a>
       <span class="route-context">SELECT YOUR GAME</span>
     </header>
@@ -287,7 +287,7 @@ app.innerHTML = `
     <header class="topbar">
       <div class="brand">
         <div class="brand-mark"><span>✦</span></div>
-        <div><div class="brand-name">FAHRİNİN <em>YOLU</em></div><div class="brand-sub">FAHRİ SENİ BU DEFA GÜLDÜRECEK</div></div>
+        <div><div class="brand-name">FAHRİNİN <em>YOLU</em></div><div class="brand-sub">FAHRİYİ BEKLEYECEK KADAR SABIRLI MISIN?</div></div>
       </div>
       <div class="top-actions">
         <button class="icon-button" data-modal="info" aria-label="How to play">?</button>
