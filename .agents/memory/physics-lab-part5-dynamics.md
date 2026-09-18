@@ -19,6 +19,8 @@ Direct normalized GLB sampling shows the low-poly profile is about 10–14 mm to
 
 The 1.09–1.25 result belongs to the measured-GLB replacement profile, not to a post-rollback smoke of the retained shallow baseline; runtime launch, material, gravity, timestep, rotor, and lap criteria match the earlier safe snapshot. Treat the post-rollback baseline as unverified rather than as runtime drift.
 
+A controlled post-rollback smoke confirmed the retained shallow baseline at 1.67/1.52/1.72 laps with identical launch diagnostics across the earlier snapshot: radius 2.475, height -0.369, tangential speed about 5.99–6.00, zero radial speed, fixed gravity/material/damping/timestep criteria, and full downstream settle.
+
 **Why:** Fifty-spin runtime audits exposed both failure modes: low-speed resting on the flat transition and center-floor traps. The sloped transition preserves gravity/friction support while allowing inward movement, and the spindle guard prevents the ball from crossing the pocket basin.
 
 **How to apply:** Keep the Part 4 dynamic rotor unchanged, preserve the -58.86/default-contact baseline, and do not strengthen this lip further without a new radial-energy hypothesis. When adjusting Part 5 geometry, validate the complete 50-spin chain at fixed 120 Hz with stable-window settling and separate escape, trap, tunneling, and velocity-explosion counters.
