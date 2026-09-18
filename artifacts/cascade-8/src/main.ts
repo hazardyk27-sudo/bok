@@ -297,10 +297,10 @@ app.innerHTML = `
     <main class="game-layout">
       <section class="game-stage">
         <div class="mode-ribbon">
-          <div class="hud-stat"><span>BALANCE</span><strong id="balance">$0.0</strong></div>
-          <div class="hud-stat"><span>BET</span><strong id="bet">$1.0 FREE</strong></div>
-          <div class="hud-stat"><span>TOTAL WIN</span><strong id="win">$0.0</strong></div>
-          <div class="hud-stat bonus-stat"><span>BONUS WIN</span><strong id="bonus-win">$0.0</strong></div>
+          <div class="hud-stat"><span>BALANCE</span><strong id="balance">$0.00</strong></div>
+          <div class="hud-stat"><span>BET</span><strong id="bet">$1.00 FREE</strong></div>
+          <div class="hud-stat"><span>TOTAL WIN</span><strong id="win">$0.00</strong></div>
+          <div class="hud-stat bonus-stat"><span>BONUS WIN</span><strong id="bonus-win">$0.00</strong></div>
         </div>
         <section id="free-spin-calculation" class="free-spin-calculation" hidden aria-label="Free Spin calculation" aria-live="polite">
           <div class="free-spin-calc-equation">

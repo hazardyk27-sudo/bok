@@ -8,11 +8,13 @@ import {
 } from "./GameController";
 
 describe("slot credit presentation", () => {
-  it("shows one decimal and compacts million-scale HUD values", () => {
-    expect(formatCredits(0)).toBe("$0.0");
-    expect(formatCredits(123_456)).toBe("$1,234.6");
-    expect(formatCredits(100_000_000)).toBe("$1.0M");
-    expect(formatCredits(125_000_000)).toBe("$1.3M");
+  it("shows cents below $10,000 and whole expanded amounts at or above the threshold", () => {
+    expect(formatCredits(0)).toBe("$0.00");
+    expect(formatCredits(155)).toBe("$1.55");
+    expect(formatCredits(999_999)).toBe("$9,999.99");
+    expect(formatCredits(1_000_000)).toBe("$10,000");
+    expect(formatCredits(1_000_001)).toBe("$10,000");
+    expect(formatCredits(100_000_000)).toBe("$1,000,000");
   });
 
   it("keeps tumble values expanded and shows two decimals", () => {

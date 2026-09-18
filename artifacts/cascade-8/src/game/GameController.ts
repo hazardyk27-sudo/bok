@@ -1039,15 +1039,9 @@ export class GameController {
 
 export function formatCredits(cents: number) {
   const dollars = cents / 100;
-  if (Math.abs(dollars) >= 1_000_000) {
-    return `$${(dollars / 1_000_000).toLocaleString("en-US", {
-      minimumFractionDigits: 1,
-      maximumFractionDigits: 1,
-    })}M`;
-  }
   return `$${dollars.toLocaleString("en-US", {
-    minimumFractionDigits: 1,
-    maximumFractionDigits: 1,
+    minimumFractionDigits: Math.abs(dollars) >= 10_000 ? 0 : 2,
+    maximumFractionDigits: Math.abs(dollars) >= 10_000 ? 0 : 2,
   })}`;
 }
 
