@@ -356,9 +356,11 @@ app.innerHTML = `
           <button type="button" class="auto-option" data-auto-option="25" role="menuitemradio" aria-checked="true">25</button>
           <button type="button" class="auto-option" data-auto-option="50" role="menuitemradio" aria-checked="false">50</button>
           <button type="button" class="auto-option" data-auto-option="100" role="menuitemradio" aria-checked="false">100</button>
+          <button type="button" class="auto-option" data-auto-option="250" role="menuitemradio" aria-checked="false">250</button>
+          <button type="button" class="auto-option" data-auto-option="500" role="menuitemradio" aria-checked="false">500</button>
         </div>
         <select id="auto-count" class="auto-count-native" aria-hidden="true" tabindex="-1">
-          <option value="10">10 SPINS</option><option value="25" selected>25 SPINS</option><option value="50">50 SPINS</option><option value="100">100 SPINS</option>
+          <option value="10">10 SPINS</option><option value="25" selected>25 SPINS</option><option value="50">50 SPINS</option><option value="100">100 SPINS</option><option value="250">250 SPINS</option><option value="500">500 SPINS</option>
         </select>
       </div>
       <button id="spin" class="spin-button"><span class="spin-glow"></span><span class="spin-icon">✦</span><span class="spin-label">SPIN</span><small>ENTER THE CASCADE</small></button>
