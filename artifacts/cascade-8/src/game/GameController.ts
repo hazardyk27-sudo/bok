@@ -557,7 +557,7 @@ export class GameController {
     flight.className = `free-spin-flight ${kind}`;
     flight.textContent = kind === "multiplier"
       ? `+${this.multiplierLabel(Math.max(1, amountCents))}`
-      : `+${formatCredits(amountCents)}`;
+      : `+${formatWinDetailCredits(amountCents)}`;
     flight.style.left = `${startX}px`;
     flight.style.top = `${startY}px`;
     flight.style.setProperty("--flight-x", `${targetRect.left + targetRect.width / 2 - startX}px`);
@@ -569,9 +569,9 @@ export class GameController {
     this.pulseFreeSpinValue(target);
   }
   private updateCurrentFreeSpinDisplay() {
-    const raw = formatCredits(this.freeSpinAccounting.rawSymbolWinCents);
+    const raw = formatWinDetailCredits(this.freeSpinAccounting.rawSymbolWinCents);
     const multiplier = this.multiplierLabel(this.freeSpinAccounting.combinedCoreMultiplier);
-    const final = formatCredits(this.freeSpinAccounting.currentSpinWinCents);
+    const final = formatWinDetailCredits(this.freeSpinAccounting.currentSpinWinCents);
     this.ui.freeSpinRawWin.textContent = raw;
     this.ui.freeSpinMultiplier.textContent = multiplier;
     this.ui.freeSpinFinalWin.textContent = final;
@@ -955,7 +955,7 @@ export class GameController {
         ...this.freeSpinAccounting,
         currentSpinWinCents: Math.round(value),
       };
-      this.ui.freeSpinFinalWin.textContent = formatCredits(Math.round(value));
+      this.ui.freeSpinFinalWin.textContent = formatWinDetailCredits(Math.round(value));
     });
     this.freeSpinAccounting = resolveFreeSpinAccounting(
       this.freeSpinAccounting,
@@ -1052,9 +1052,13 @@ export function formatCredits(cents: number) {
 }
 
 export function formatTumbleCredits(cents: number) {
+  return formatWinDetailCredits(cents);
+}
+
+export function formatWinDetailCredits(cents: number) {
   return `$${(cents / 100).toLocaleString("en-US", {
-    minimumFractionDigits: 1,
-    maximumFractionDigits: 1,
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
   })}`;
 }
 

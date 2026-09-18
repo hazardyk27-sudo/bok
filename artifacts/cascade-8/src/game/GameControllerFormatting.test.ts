@@ -3,6 +3,7 @@ import {
   canAffordBet,
   formatCredits,
   formatTumbleCredits,
+  formatWinDetailCredits,
   isFreeBetCents,
 } from "./GameController";
 
@@ -14,9 +15,15 @@ describe("slot credit presentation", () => {
     expect(formatCredits(125_000_000)).toBe("$1.3M");
   });
 
-  it("keeps tumble values expanded while using one decimal", () => {
-    expect(formatTumbleCredits(123_456)).toBe("$1,234.6");
-    expect(formatTumbleCredits(100_000_000)).toBe("$1,000,000.0");
+  it("keeps tumble values expanded and shows two decimals", () => {
+    expect(formatTumbleCredits(123_456)).toBe("$1,234.56");
+    expect(formatTumbleCredits(100_000_000)).toBe("$1,000,000.00");
+  });
+
+  it("shows two decimals for Free Spin calculation details", () => {
+    expect(formatWinDetailCredits(0)).toBe("$0.00");
+    expect(formatWinDetailCredits(12_345)).toBe("$123.45");
+    expect(formatWinDetailCredits(100_000_000)).toBe("$1,000,000.00");
   });
 });
 
