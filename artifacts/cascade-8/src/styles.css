@@ -1896,6 +1896,19 @@ button:focus-visible, input:focus-visible { outline: 2px solid var(--cyan); outl
   font-size: 17px;
   line-height: 1;
 }
+.sound-icon {
+  display: grid;
+  place-items: center;
+}
+.sound-icon svg {
+  width: 17px;
+  height: 17px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
 .utility-button span:last-child {
   color: inherit;
   font-size: 8px;

@@ -364,7 +364,7 @@ app.innerHTML = `
       <button id="spin" class="spin-button"><span class="spin-glow"></span><span class="spin-icon">✦</span><span class="spin-label">SPIN</span><small>ENTER THE CASCADE</small></button>
       <div class="utility-controls">
         <button id="turbo" class="utility-button"><span class="utility-icon">»</span><span>TURBO</span></button>
-        <button id="sound" class="utility-button" aria-label="Toggle sound effects"><span class="utility-icon" aria-hidden="true">🔊</span><span class="sound-label-full">SOUND ON</span><span class="sound-label-compact">SFX</span></button>
+        <button id="sound" class="utility-button" aria-label="Toggle sound effects"><span class="utility-icon sound-icon" aria-hidden="true"><svg viewBox="0 0 24 24" role="presentation"><path d="M5 9v6h4l5 4V5L9 9H5Z"/><path d="M17 9.5c.9.7 1.4 1.5 1.4 2.5s-.5 1.8-1.4 2.5"/></svg></span><span class="sound-label-full">SOUND ON</span><span class="sound-label-compact">SFX</span></button>
       </div>
     </footer>
     <div class="demo-note"><span>✧</span> VIRTUAL CREDITS ONLY <span class="note-separator">•</span> NO REAL-MONEY GAMBLING <span class="note-separator">•</span> RNG DEMO PROTOTYPE</div>
