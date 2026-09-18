@@ -1,7 +1,8 @@
 export const BOARD_COLUMNS = 6;
 export const BOARD_ROWS = 5;
 export const CELL_COUNT = BOARD_COLUMNS * BOARD_ROWS;
-export const STARTING_BALANCE_CENTS = 1_000_000;
+export const STARTING_BALANCE_CENTS = 0;
+export const FREE_BET_CENTS = 100;
 export const MAX_WIN_MULTIPLIER = 10000;
 
 export const BETS_CENTS = [

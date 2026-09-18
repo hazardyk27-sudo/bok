@@ -486,7 +486,7 @@ button:focus-visible, input:focus-visible { outline: 2px solid var(--cyan); outl
 .bet-stepper button { display: grid; place-items: center; width: 31px; height: 31px; border-radius: 9px; color: var(--cyan); font-size: 21px; line-height: 1; }
 .bet-stepper button:hover { background: rgba(100, 173, 255, .15); }
 .bet-stepper button:disabled, .utility-button:disabled { opacity: .3; cursor: not-allowed; }
-.bet-stepper strong { min-width: 55px; font: 16px "DM Mono", monospace; }
+.bet-stepper strong { min-width: 55px; white-space: nowrap; font: 16px "DM Mono", monospace; }
 .auto-control { display: grid; gap: 6px; min-width: 170px; }
 .auto-row { display: flex; align-items: center; gap: 6px; }
 .auto-row select, #auto-start { height: 31px; border: 1px solid var(--line); border-radius: 8px; background: rgba(18, 28, 63, .85); color: #cbd4ef; font: 9px "DM Mono", monospace; letter-spacing: .04em; }
@@ -509,7 +509,13 @@ button:focus-visible, input:focus-visible { outline: 2px solid var(--cyan); outl
 .utility-button { display: grid; place-items: center; gap: 5px; min-width: 55px; padding: 7px 9px; border-radius: 10px; color: #7e8ab0; }
 .utility-button span:last-child { font-size: 8px; }
 .utility-icon { color: #b9c6ed; font-size: 18px; }
-.utility-button.is-active { color: var(--cyan); border-color: rgba(112, 213, 255, .4); }
+.utility-button.is-active {
+  color: #f1fbff;
+  border-color: rgba(126, 215, 255, .82);
+  background: linear-gradient(145deg, rgba(42, 85, 162, .96), rgba(32, 68, 138, .94));
+  box-shadow: 0 0 20px rgba(74, 167, 255, .22), inset 0 1px 0 rgba(255, 255, 255, .2);
+}
+.utility-button.is-active .utility-icon { color: #bceaff; }
 .demo-note { display: flex; justify-content: center; align-items: center; gap: 9px; margin-top: 4px; color: #526083; font-size: 8px; }
 .demo-note span:first-child { color: var(--gold); }
 .note-separator { color: #344263; }
@@ -1879,11 +1885,12 @@ button:focus-visible, input:focus-visible { outline: 2px solid var(--cyan); outl
 }
 .utility-button:hover:not(:disabled),
 .utility-button.is-active {
-  border-color: rgba(145, 207, 255, .7);
-  color: #e8f5ff;
-  background: linear-gradient(180deg, rgba(46, 89, 151, .88), rgba(16, 38, 78, .94));
+  border-color: rgba(159, 221, 255, .88);
+  color: #f4fbff;
+  background: linear-gradient(180deg, rgba(65, 126, 211, .96), rgba(35, 78, 151, .98));
+  box-shadow: 0 0 20px rgba(74, 167, 255, .26), inset 0 1px 0 rgba(255, 255, 255, .22);
 }
-.utility-button.is-active .utility-icon { color: #8edbff; }
+.utility-button.is-active .utility-icon { color: #c9efff; }
 .utility-icon {
   color: #a8c9f8;
   font-size: 17px;
@@ -3873,6 +3880,17 @@ button:focus-visible, input:focus-visible { outline: 2px solid var(--cyan); outl
   color: #c8dcff;
   border-color: rgba(144, 188, 255, .45);
   background: rgba(24, 44, 82, .58);
+}
+
+.app-shell:not(.is-lab) .utility-button.is-active {
+  color: #f4fbff;
+  border-color: rgba(159, 221, 255, .88);
+  background: linear-gradient(180deg, rgba(65, 126, 211, .96), rgba(35, 78, 151, .98));
+  box-shadow: 0 0 20px rgba(74, 167, 255, .26), inset 0 1px 0 rgba(255, 255, 255, .22);
+}
+
+.app-shell:not(.is-lab) .utility-button.is-active .utility-icon {
+  color: #c9efff;
 }
 
 .app-shell:not(.is-lab) .utility-icon {

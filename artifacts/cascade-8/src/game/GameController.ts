@@ -1,4 +1,4 @@
-import { ANIMATION, BETS_CENTS, MAX_WIN_MULTIPLIER, STARTING_BALANCE_CENTS, getSymbolDefinition } from "../config/GameConfig";
+import { ANIMATION, BETS_CENTS, FREE_BET_CENTS, MAX_WIN_MULTIPLIER, STARTING_BALANCE_CENTS, getSymbolDefinition } from "../config/GameConfig";
 import { CryptoRNG } from "../engine/RNG";
 import {
   addFreeSpinSymbolWin,
@@ -128,6 +128,7 @@ export class GameController {
   }
 
   get betCents() { return BETS_CENTS[this.betIndex]; }
+  get isCurrentBetFree() { return isFreeBetCents(this.betCents); }
   get currentFreeSpinRawSymbolWin() { return this.freeSpinAccounting.rawSymbolWinCents; }
   get currentFreeSpinCombinedMultiplier() { return this.freeSpinAccounting.combinedCoreMultiplier; }
   get currentFreeSpinFinalWin() { return this.freeSpinAccounting.currentSpinWinCents; }
@@ -137,7 +138,7 @@ export class GameController {
   }
   private setState(state: ControllerState) {
     this.state = state;
-    this.ui.spin.disabled = this.busy || this.autoRunning || (!this.pendingBonusResult && this.balanceCents < this.betCents);
+    this.ui.spin.disabled = this.busy || this.autoRunning || (!this.pendingBonusResult && !canAffordBet(this.balanceCents, this.betCents));
   }
   private changeBet(direction: number) {
     if (this.busy || this.autoRunning) return;
@@ -146,9 +147,10 @@ export class GameController {
   }
   private updateHud() {
     this.ui.balance.textContent = formatCredits(this.balanceCents);
-    this.ui.bet.textContent = formatCredits(this.betCents);
+    const formattedBet = `${formatCredits(this.betCents)}${this.isCurrentBetFree ? " FREE" : ""}`;
+    this.ui.bet.textContent = formattedBet;
     document.querySelectorAll<HTMLElement>("[data-bet-display]").forEach((element) => {
-      element.textContent = formatCredits(this.betCents);
+      element.textContent = formattedBet;
     });
     this.ui.win.textContent = formatCredits(this.currentWinCents);
     this.ui.bonusWin.textContent = formatCredits(this.bonusWinCents);
@@ -159,7 +161,7 @@ export class GameController {
     if (soundLabel) soundLabel.textContent = this.audio.muted ? "SOUND OFF" : "SOUND ON";
     this.ui.sound.setAttribute("aria-label", this.audio.muted ? "Turn sound on" : "Turn sound off");
     this.ui.sound.classList.toggle("is-active", !this.audio.muted);
-    this.ui.spin.disabled = this.busy || this.autoRunning || (!this.pendingBonusResult && this.balanceCents < this.betCents);
+    this.ui.spin.disabled = this.busy || this.autoRunning || (!this.pendingBonusResult && !canAffordBet(this.balanceCents, this.betCents));
     this.ui.betMinus.disabled = this.busy || this.betIndex === 0;
     this.ui.betPlus.disabled = this.busy || this.betIndex === BETS_CENTS.length - 1;
     this.ui.autoCount.disabled = this.busy || this.autoRunning || Boolean(this.pendingBonusResult);
@@ -199,14 +201,19 @@ export class GameController {
       await this.startFreeSpins();
       return;
     }
-    if (this.busy || this.balanceCents < this.betCents) {
-      if (!this.busy && this.balanceCents < this.betCents) this.message("INSUFFICIENT DEMO CREDITS");
+    if (this.busy || !canAffordBet(this.balanceCents, this.betCents)) {
+      if (!this.busy && !canAffordBet(this.balanceCents, this.betCents)) this.message("INSUFFICIENT DEMO CREDITS");
       return;
     }
      this.busy = true; this.currentWinCents = 0; this.bonusWinCents = 0; this.freeSpinsLeft = 0;
      this.resetTumbleWin();
     this.setBonusPrompt(false);
-    this.setState("SPIN_INIT"); this.balanceCents -= this.betCents; this.persistBalance(); this.audio.spin(); this.updateHud();
+    this.setState("SPIN_INIT");
+    if (!this.isCurrentBetFree) {
+      this.balanceCents -= this.betCents;
+      this.persistBalance();
+    }
+    this.audio.spin(); this.updateHud();
     const source = new CryptoRNG();
     const result = playBaseSpin(this.betCents, source);
     this.message("THE GATES ARE OPENING");
@@ -363,8 +370,8 @@ export class GameController {
       this.updateHud();
       return;
     }
-    if (this.busy || this.pendingBonusResult || this.balanceCents < this.betCents) {
-      if (this.balanceCents < this.betCents) this.message("INSUFFICIENT DEMO CREDITS");
+    if (this.busy || this.pendingBonusResult || !canAffordBet(this.balanceCents, this.betCents)) {
+      if (!canAffordBet(this.balanceCents, this.betCents)) this.message("INSUFFICIENT DEMO CREDITS");
       return;
     }
     this.autoRunning = true;
@@ -384,7 +391,7 @@ export class GameController {
 
   private async runAuto() {
     while (this.autoRunning && this.autoRemaining > 0) {
-      if (this.balanceCents < this.betCents) {
+      if (!canAffordBet(this.balanceCents, this.betCents)) {
         this.autoRunning = false;
         this.message("AUTO STOPPED // INSUFFICIENT CREDITS");
         break;
@@ -586,7 +593,7 @@ export class GameController {
     const totalCents = this.freeSpinAccounting.cumulativeBonusWinCents;
     const currentSpinCents = this.freeSpinAccounting.currentSpinWinCents;
     const previousTotalCents = totalCents - currentSpinCents;
-    this.ui.tumble.textContent = formatCredits(totalCents);
+    this.ui.tumble.textContent = formatTumbleCredits(totalCents);
     this.ui.tumbleSymbolWin.textContent = "";
     this.ui.tumbleIncrement.textContent = "";
     this.ui.tumbleMeta.textContent = "";
@@ -599,7 +606,7 @@ export class GameController {
     }
     const formattedMultiplier = Number.isInteger(multiplier) ? String(multiplier) : multiplier.toFixed(2);
     this.ui.tumbleSettlement.textContent =
-      `${formatCredits(rawAmountCents)} × ${formattedMultiplier} = ${formatCredits(finalAmountCents)}`;
+      `${formatTumbleCredits(rawAmountCents)} × ${formattedMultiplier} = ${formatTumbleCredits(finalAmountCents)}`;
   }
   private buildWinLabelEvents(tumble: SpinResult["tumbles"][number]): WinLabelEvent[] {
     return buildWinLabelEvents(
@@ -633,7 +640,7 @@ export class GameController {
     this.ui.tumbleLabel.textContent = "TUMBLE WIN";
     const rawAmountCents = Math.round(tumble.rawWinPoolAfter * this.betCents);
     this.ui.tumbleSymbolWin.textContent = "";
-    this.ui.tumble.textContent = formatCredits(rawAmountCents);
+    this.ui.tumble.textContent = formatTumbleCredits(rawAmountCents);
     this.ui.tumbleIncrement.textContent = "";
     this.ui.tumbleMeta.textContent = "";
      this.ui.tumbleSettlement.textContent = "";
@@ -665,7 +672,7 @@ export class GameController {
     this.ui.tumbleSymbolWin.textContent = "";
     this.ui.tumbleIncrement.textContent = "";
     this.ui.tumbleMeta.textContent = "";
-    this.ui.tumble.textContent = formatCredits(rawAmountCents);
+    this.ui.tumble.textContent = formatTumbleCredits(rawAmountCents);
      this.ui.tumbleSettlement.textContent = "";
     let collectedTotal = 0;
     for (const core of tumble.settlementCores) {
@@ -673,12 +680,12 @@ export class GameController {
       this.audio.multiplierCoreCollect(core.value, false);
       collectedTotal += core.value;
       const collectedAmountCents = Math.round(tumble.rawWinPoolAfter * collectedTotal * this.betCents);
-      this.ui.tumble.textContent = formatCredits(collectedAmountCents);
+      this.ui.tumble.textContent = formatTumbleCredits(collectedAmountCents);
       this.updateTumbleEquation(rawAmountCents, collectedTotal, collectedAmountCents);
       await sleep(this.duration(105, isBonus));
     }
     const finalAmountCents = Math.round(tumble.finalPayoutMultiplier * this.betCents);
-    this.ui.tumble.textContent = formatCredits(finalAmountCents);
+    this.ui.tumble.textContent = formatTumbleCredits(finalAmountCents);
     this.updateTumbleEquation(rawAmountCents, total, finalAmountCents);
     await sleep(this.duration(470, isBonus));
     await sleep(this.duration(420, isBonus));
@@ -715,7 +722,7 @@ export class GameController {
       this.ui.tumblePanel.className = "tumble-win-panel is-active";
       this.ui.tumbleLabel.textContent = "TUMBLE WIN";
       const amountCents = Math.round(values[index] * this.betCents);
-      this.ui.tumble.textContent = formatCredits(amountCents);
+      this.ui.tumble.textContent = formatTumbleCredits(amountCents);
       this.ui.tumbleSymbolWin.textContent = "";
       this.ui.tumbleIncrement.textContent = "";
       this.ui.tumbleMeta.textContent = "";
@@ -726,11 +733,11 @@ export class GameController {
       this.ui.tumblePanel.className = "tumble-win-panel is-settling";
       this.ui.tumbleLabel.textContent = "TUMBLE WIN";
       const rawAmountCents = Math.round(8 * this.betCents);
-      this.ui.tumble.textContent = formatCredits(rawAmountCents);
+      this.ui.tumble.textContent = formatTumbleCredits(rawAmountCents);
        this.ui.tumbleSettlement.textContent = "";
       await sleep(this.duration(380));
       const finalAmountCents = Math.round(280 * this.betCents);
-      this.ui.tumble.textContent = formatCredits(finalAmountCents);
+      this.ui.tumble.textContent = formatTumbleCredits(finalAmountCents);
       this.updateTumbleEquation(rawAmountCents, 35, finalAmountCents);
       await sleep(this.duration(600));
     }
@@ -762,7 +769,7 @@ export class GameController {
       rawTotalCents += Math.round(evaluation.rawPayoutMultiplier * this.betCents);
       this.ui.tumblePanel.className = "tumble-win-panel is-active";
       this.ui.tumbleLabel.textContent = "TUMBLE WIN";
-      this.ui.tumble.textContent = formatCredits(rawTotalCents);
+      this.ui.tumble.textContent = formatTumbleCredits(rawTotalCents);
       this.ui.tumbleSymbolWin.textContent = "";
       this.ui.tumbleIncrement.textContent = "";
       this.ui.tumbleMeta.textContent = "";
@@ -1028,9 +1035,33 @@ export class GameController {
       overlay.querySelector("button")?.addEventListener("click", close, { once: true });
     });
   }
-  resetDemo() { this.balanceCents = STARTING_BALANCE_CENTS; this.persistBalance(); this.updateHud(); this.message("DEMO BALANCE RESET TO $10,000.00"); }
 }
 
 export function formatCredits(cents: number) {
-  return `$${(cents / 100).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  const dollars = cents / 100;
+  if (Math.abs(dollars) >= 1_000_000) {
+    return `$${(dollars / 1_000_000).toLocaleString("en-US", {
+      minimumFractionDigits: 1,
+      maximumFractionDigits: 1,
+    })}M`;
+  }
+  return `$${dollars.toLocaleString("en-US", {
+    minimumFractionDigits: 1,
+    maximumFractionDigits: 1,
+  })}`;
+}
+
+export function formatTumbleCredits(cents: number) {
+  return `$${(cents / 100).toLocaleString("en-US", {
+    minimumFractionDigits: 1,
+    maximumFractionDigits: 1,
+  })}`;
+}
+
+export function isFreeBetCents(betCents: number) {
+  return betCents === FREE_BET_CENTS;
+}
+
+export function canAffordBet(balanceCents: number, betCents: number) {
+  return isFreeBetCents(betCents) || balanceCents >= betCents;
 }

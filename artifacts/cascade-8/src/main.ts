@@ -297,10 +297,10 @@ app.innerHTML = `
     <main class="game-layout">
       <section class="game-stage">
         <div class="mode-ribbon">
-          <div class="hud-stat"><span>BALANCE</span><strong id="balance">$10,000.00</strong></div>
-          <div class="hud-stat"><span>BET</span><strong id="bet">$1.00</strong></div>
-          <div class="hud-stat"><span>TOTAL WIN</span><strong id="win">$0.00</strong></div>
-          <div class="hud-stat bonus-stat"><span>BONUS WIN</span><strong id="bonus-win">$0.00</strong></div>
+          <div class="hud-stat"><span>BALANCE</span><strong id="balance">$0.0</strong></div>
+          <div class="hud-stat"><span>BET</span><strong id="bet">$1.0 FREE</strong></div>
+          <div class="hud-stat"><span>TOTAL WIN</span><strong id="win">$0.0</strong></div>
+          <div class="hud-stat bonus-stat"><span>BONUS WIN</span><strong id="bonus-win">$0.0</strong></div>
         </div>
         <section id="free-spin-calculation" class="free-spin-calculation" hidden aria-label="Free Spin calculation" aria-live="polite">
           <div class="free-spin-calc-equation">
@@ -337,7 +337,7 @@ app.innerHTML = `
     <footer class="control-deck">
       <div class="bet-control">
         <span class="eyebrow">BET</span>
-        <div class="bet-stepper"><button id="bet-minus" aria-label="Decrease bet">−</button><strong data-bet-display>$1.00</strong><button id="bet-plus" aria-label="Increase bet">+</button></div>
+        <div class="bet-stepper"><button id="bet-minus" aria-label="Decrease bet">−</button><strong data-bet-display>$1.0 FREE</strong><button id="bet-plus" aria-label="Increase bet">+</button></div>
       </div>
       <div class="auto-control">
         <button id="auto-toggle" class="auto-trigger" type="button" aria-haspopup="menu" aria-expanded="false" aria-label="Choose automatic spin count">
@@ -364,7 +364,7 @@ app.innerHTML = `
       <button id="spin" class="spin-button"><span class="spin-glow"></span><span class="spin-icon">✦</span><span class="spin-label">SPIN</span><small>ENTER THE CASCADE</small></button>
       <div class="utility-controls">
         <button id="turbo" class="utility-button"><span class="utility-icon">»</span><span>TURBO</span></button>
-        <button id="sound" class="utility-button" aria-label="Toggle sound effects"><span class="utility-icon">◒</span><span class="sound-label-full">SOUND ON</span><span class="sound-label-compact">SFX</span></button>
+        <button id="sound" class="utility-button" aria-label="Toggle sound effects"><span class="utility-icon" aria-hidden="true">🔊</span><span class="sound-label-full">SOUND ON</span><span class="sound-label-compact">SFX</span></button>
       </div>
     </footer>
     <div class="demo-note"><span>✧</span> VIRTUAL CREDITS ONLY <span class="note-separator">•</span> NO REAL-MONEY GAMBLING <span class="note-separator">•</span> RNG DEMO PROTOTYPE</div>
@@ -399,7 +399,6 @@ function showModal(name: string | null) {
       <label class="setting-row"><span><b>Reduced motion</b><small>Respect system accessibility preference</small></span><input id="setting-motion" type="checkbox"><i></i></label>
        <label class="volume-row"><span>SFX VOLUME</span><input id="setting-volume" type="range" min="0" max="1" step="0.01" value="0.38"></label>
        <label class="volume-row"><span>MUSIC VOLUME</span><input id="setting-music-volume" type="range" min="0" max="1" step="0.01" value="0.18"></label>
-       <button id="demo-reset" class="outline-button full">RESET DEMO CREDITS <small>RESTORE $10,000.00</small></button>
        <button id="main-menu-button" class="outline-button full menu-exit-button">ANA MENÜ <small>BACK TO GAME SELECT</small></button>
       <div class="modal-footnote">Preferences are stored locally. No secret RNG state or personal data is stored.</div>
     </section></div>`;
@@ -413,7 +412,6 @@ function showModal(name: string | null) {
      volume.oninput = () => controller.audio.setVolume(Number(volume.value));
      const musicVolume = byId<HTMLInputElement>("setting-music-volume"); musicVolume.value = String(controller.audio.musicVolume);
      musicVolume.oninput = () => controller.audio.setMusicVolume(Number(musicVolume.value));
-    byId<HTMLButtonElement>("demo-reset").onclick = () => { controller.resetDemo(); showModal(null); };
      byId<HTMLButtonElement>("main-menu-button").onclick = () => { window.location.assign("/"); };
   } else {
     modalRoot.innerHTML = `<div class="modal-backdrop"><section class="modal-card info-modal"><button class="modal-close" data-close>×</button><div class="modal-kicker">CASCADE 8 // FIELD GUIDE</div><h2>How to play</h2><p class="modal-lead">Match 8 or more of a club logo anywhere on the field. Winning logos burst, the field falls, and fresh logos tumble in.</p>
