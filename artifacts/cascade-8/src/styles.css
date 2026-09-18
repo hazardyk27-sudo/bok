@@ -689,7 +689,6 @@ button:focus-visible, input:focus-visible { outline: 2px solid var(--cyan); outl
 .core-preview-image { width: 68px; height: 68px; object-fit: contain; border-radius: 9px; filter: drop-shadow(0 0 14px rgba(255, 86, 44, .35)); }
 .scatter-preview-image { width: 70px; height: 70px; object-fit: cover; border-radius: 50%; filter: drop-shadow(0 0 12px rgba(255, 190, 60, .72)); }
 @media (max-width: 620px) { .special-grid { grid-template-columns: repeat(3, 1fr); } .special-preview { min-height: 80px; } }
-@media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation-duration: .01ms !important; transition-duration: .01ms !important; } }
 
 /* Desktop viewport fit: keep the win readout and controls below the field. */
 @media (min-width: 621px) and (max-height: 850px) {
@@ -1292,11 +1291,6 @@ button:focus-visible, input:focus-visible { outline: 2px solid var(--cyan); outl
   .free-spin-calc-operator { font-size: 16px; }
   .tumble-win-panel.is-free-total { min-height: 68px; }
 }
-@media (prefers-reduced-motion: reduce) {
-  .bonus-retrigger-panel,
-  .bonus-retrigger-panel * { animation-duration: .01ms !important; }
-}
-
 /* Premium game surface: one quiet board stage and one compact control dock. */
 .board-wrap {
   width: min(100%, 720px);

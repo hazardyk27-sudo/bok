@@ -42,7 +42,6 @@ export class GameController {
   bonusWinCents = 0;
   freeSpinAccounting = createFreeSpinAccounting();
   turbo = localStorage.getItem("cascade8-turbo") === "true";
-  reducedMotion = localStorage.getItem("cascade8-reduced-motion") === "true";
   freeSpinsLeft = 0;
   bonusTriggerScatterCount = 0;
   private busy = false;
@@ -134,7 +133,7 @@ export class GameController {
   get currentFreeSpinFinalWin() { return this.freeSpinAccounting.currentSpinWinCents; }
   get bonusCumulativeWinSoFar() { return this.freeSpinAccounting.cumulativeBonusWinCents; }
   private duration(value: number, freeSpin = false) {
-    return getAnimationDuration(value, this.turbo, this.reducedMotion, freeSpin);
+    return getAnimationDuration(value, this.turbo, freeSpin);
   }
   private setState(state: ControllerState) {
     this.state = state;

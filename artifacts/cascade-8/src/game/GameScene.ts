@@ -630,9 +630,9 @@ export class GameScene extends Phaser.Scene {
     if (!events.length) return;
     const placements = calculateWinLabelPositions(events);
     const totalDuration = Math.max(40, Math.min(2000, duration));
-    const isReducedMotion = totalDuration <= 40;
-    const popDuration = isReducedMotion ? 1 : Math.max(650, Math.min(700, Math.round(totalDuration * 0.21)));
-    const fadeDuration = isReducedMotion ? 1 : Math.max(900, Math.min(1000, Math.round(totalDuration * 0.29)));
+    const isInstantTiming = totalDuration <= 40;
+    const popDuration = isInstantTiming ? 1 : Math.max(650, Math.min(700, Math.round(totalDuration * 0.21)));
+    const fadeDuration = isInstantTiming ? 1 : Math.max(900, Math.min(1000, Math.round(totalDuration * 0.29)));
     const holdDuration = Math.max(1, totalDuration - popDuration - fadeDuration);
     const canvasScale = this.game.canvas.getBoundingClientRect().width / Math.max(1, this.scale.width);
     const fontSize = Math.round(36 / Math.max(0.82, canvasScale || 1));
