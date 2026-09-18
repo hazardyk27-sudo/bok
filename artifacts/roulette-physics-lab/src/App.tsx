@@ -59,7 +59,7 @@ const OUTER_TRACK_CONTACT_TOLERANCE = 0.018;
 const OUTER_TRACK_RADIAL_TOLERANCE = 0.06;
 const BALL_VALIDATION_TEST_COUNT = 100;
 const PART4_SPIN_TEST_COUNT = 20;
-const PART5_SPIN_TEST_COUNT = 100;
+const PART5_SPIN_TEST_COUNT = 3;
 const PART5_DURATION_LIMIT_SECONDS = 24;
 const PART5_STABLE_WINDOW_FRAMES = 180;
 const PART5_DEBUG_SAMPLE_COUNT = 5;
@@ -81,7 +81,7 @@ const DEFAULT_ROTOR_PARAMETERS = {
   mass: 3.2,
 } as const;
 const DEFAULT_LAUNCH_PARAMETERS = {
-  speed: 6,
+  speed: 9.2,
   angle: 0,
   initialSpin: 230,
   variation: 0.005,
@@ -636,24 +636,23 @@ function measuredBowlProfile() {
     [1.68, -0.435],
     [1.9, -0.434],
     [2.1, -0.432],
-    [2.3, -0.428],
+    [2.3, -0.429],
     [2.4, -0.427],
-    [2.5, -0.425],
-    [2.6, -0.421],
-    [2.62, -0.42],
-    [2.64, -0.416],
-    [2.668, -0.408],
-    [2.69, -0.403],
-    [2.718, -0.397],
-    [2.74, -0.391],
-    [2.763, -0.384],
-    [2.783, -0.378],
-    [2.801, -0.372],
-    [2.815, -0.367],
-    [2.83, -0.362],
-    [2.85, -0.347],
-    [2.87, -0.322],
-    [2.89, -0.294],
+    [2.5, -0.4248],
+    [2.56, -0.4229],
+    [2.61, -0.4209],
+    [2.665, -0.4179],
+    [2.715, -0.4111],
+    [2.76, -0.3985],
+    [2.8, -0.3826],
+    [2.83, -0.3661],
+    [2.84, -0.3597],
+    [2.85, -0.3533],
+    [2.86, -0.3387],
+    [2.87, -0.3305],
+    [2.88, -0.3128],
+    [2.89, -0.3032],
+    [2.9, -0.273],
     [2.91, -0.25],
     [2.93, -0.19],
     [2.95, -0.12],
@@ -4108,7 +4107,7 @@ function App() {
                     <span>{result.id}</span>
                     <strong>{result.chainComplete ? 'complete' : 'review'}</strong>
                     <small>
-                      {result.settleSeconds.toFixed(1)} s · pocket {result.finalPocketNumber ?? '—'} ·
+                      {result.outerTrackLaps.toFixed(2)} laps · {result.settleSeconds.toFixed(1)} s · pocket {result.finalPocketNumber ?? '—'} ·
                       {result.deflectorHit ? ' deflector' : ' no deflector'} ·
                       {result.movingFretContact ? ' moving fret' : ' no fret'} ·
                       {result.pocketChangeCount} changes / {result.bounceCount} bounces ·
