@@ -14,3 +14,9 @@ For a rotating pocket, classify rest from ball velocity relative to the rotor’
 **Why:** A physically settled ball can co-rotate with a slow kinematic rotor and therefore retain modest world-space velocity without slipping or receiving injected energy.
 
 **How to apply:** Use rotor-relative speed for stable-settle windows; use absolute world speed, escape bounds, and CCD/tunneling flags separately for safety acceptance.
+
+The lower faces of kinematic pocket frets must clear the continuous pocket floor instead of extending through it; direct-entry geometry validation should phase-lock the rotor and keep PART 4 baseline acceptance isolated.
+
+**Why:** A moving separator that overlaps the floor can push a ball downward through the support surface, and adding unvalidated pocket geometry to the established rotor probe can hide whether a regression belongs to PART 4 or the new pocket system.
+
+**How to apply:** Place fret bottoms just above the floor, validate center/positive-side/negative-side entries in their own 120 Hz CCD worlds, then keep the legacy rotor probe world comparable until pocket validation passes.
