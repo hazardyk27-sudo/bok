@@ -1,6 +1,7 @@
 import Phaser from "phaser";
 import "./styles.css";
 import "./roulette.css";
+import "./witch.css";
 import { getSymbolDefinition, PAYTABLE, NORMAL_SYMBOLS, BASE_REEL_CONFIG, ANIMATION, NORMAL_PAIR_COPY_CHANCE } from "./config/GameConfig";
 import { evaluateBoard } from "./engine/WinEvaluator";
 import { calculateSequenceSettlement } from "./engine/SlotEngine";
@@ -11,6 +12,7 @@ import type { Board, BoardCell } from "./engine/types";
 import { GameController, formatCredits } from "./game/GameController";
 import { createGameScene, GameScene } from "./game/GameScene";
 import { RouletteClient } from "./rouletteClient";
+import { CADI_KAZAN_MARKUP, WitchClient } from "./witchClient";
 import { EUROPEAN_WHEEL_ORDER, ROULETTE_SEGMENT_DEGREES } from "./rouletteGeometry";
 
 const app = document.querySelector<HTMLDivElement>("#app")!;
@@ -18,6 +20,7 @@ const currentPath = window.location.pathname.replace(/\/+$/, "") || "/";
 const isLab = currentPath === "/lab";
 const isSlotRoute = currentPath === "/slot" || isLab;
 const isRouletteRoute = currentPath === "/roulette";
+const isWitchRoute = currentPath === "/cadi-kazan";
 const isWinLabelPreview = isLab && new URLSearchParams(window.location.search).get("preview") === "win-labels";
 const isMultiplierCollectionPreview = isLab && new URLSearchParams(window.location.search).get("preview") === "multiplier-collection";
 const describeStreamCell = (cell: BoardCell) => {
@@ -49,7 +52,7 @@ const mainMenuMarkup = `
     <div class="menu-intro">
       <span class="menu-kicker">FAHRİNİN YOLU // PLAY LOUNGE</span>
       <h1 id="game-menu-title">OYUNUNU <em>SEÇ</em></h1>
-      <p>Gece açıldı. İki ayrı masa seni bekliyor. Hangi dünyaya gireceğine karar ver.</p>
+       <p>Gece açıldı. Üç ayrı masa seni bekliyor. Hangi dünyaya gireceğine karar ver.</p>
     </div>
     <div class="game-choice-grid">
       <a class="game-choice game-choice-slot" href="/slot">
@@ -62,20 +65,30 @@ const mainMenuMarkup = `
         </span>
         <span class="choice-footer"><span>30 SYMBOL FIELD</span><span class="choice-arrow" aria-hidden="true">→</span></span>
       </a>
-      <article class="game-choice game-choice-roulette is-disabled" aria-disabled="true" aria-label="Roulette, coming soon">
-        <span class="choice-status is-soon">COMING SOON</span>
+       <a class="game-choice game-choice-roulette" href="/roulette" aria-label="Roulette oyununu aç">
+         <span class="choice-status is-live">AVAILABLE NOW</span>
         <span class="choice-art choice-art-roulette" aria-hidden="true"><span>R</span><i></i><b></b></span>
         <span class="choice-copy">
           <span class="choice-overline">THE NIGHT TABLE</span>
           <strong>ROULETTE</strong>
           <span class="choice-type">TABLE EXPERIENCE</span>
         </span>
-        <span class="choice-footer"><span>TABLE OPENS SOON</span><span class="choice-arrow" aria-hidden="true">—</span></span>
-      </article>
+         <span class="choice-footer"><span>LIVE TABLE</span><span class="choice-arrow" aria-hidden="true">→</span></span>
+       </a>
+       <a class="game-choice game-choice-witch" href="/cadi-kazan" aria-label="Cadı Kazan oyununu aç">
+         <span class="choice-status is-live">AVAILABLE NOW</span>
+         <span class="choice-art choice-art-witch" aria-hidden="true"><span>✧</span></span>
+         <span class="choice-copy">
+           <span class="choice-overline">LUCKY SCRATCH</span>
+           <strong>CADI KAZAN</strong>
+           <span class="choice-type">SCRATCH EXPERIENCE</span>
+         </span>
+         <span class="choice-footer"><span>5 OR 25 CELLS</span><span class="choice-arrow" aria-hidden="true">→</span></span>
+       </a>
     </div>
     <div class="menu-footer">
       <span class="menu-footer-line"></span>
-      <span>ONE LOUNGE · TWO WORLDS</span>
+       <span>ONE LOUNGE · THREE WORLDS</span>
       <span class="menu-footer-line"></span>
     </div>
   </main>
@@ -279,6 +292,8 @@ const rouletteMarkup = `
 
 if (isRouletteRoute) {
   app.innerHTML = routeShell(rouletteMarkup, "is-route-page is-roulette-page");
+} else if (isWitchRoute) {
+  app.innerHTML = routeShell(CADI_KAZAN_MARKUP, "is-route-page is-witch-page");
 } else if (!isSlotRoute) {
   app.innerHTML = routeShell(mainMenuMarkup, "is-route-page is-menu-page");
 } else {
@@ -431,6 +446,9 @@ let controller: GameController;
 if (isRouletteRoute) {
   const rouletteRoot = document.querySelector<HTMLElement>(".roulette-page");
   if (rouletteRoot) new RouletteClient(rouletteRoot);
+} else if (isWitchRoute) {
+  const witchRoot = document.querySelector<HTMLElement>(".witch-page");
+  if (witchRoot) new WitchClient(witchRoot);
 } else if (isSlotRoute) {
 const game = createGameScene(byId("phaser-board"));
 window.setTimeout(() => {
