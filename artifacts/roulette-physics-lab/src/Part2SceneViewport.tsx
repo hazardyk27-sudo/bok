@@ -72,8 +72,36 @@ type Part2DropReport = {
   detail: string;
 };
 
+type Part3ProbeResult = {
+  id: string;
+  label: string;
+  spawnRadius: number;
+  spawnHeight: number;
+  initialVelocity: VectorReadout;
+  peakSpeed: number;
+  minRadius: number;
+  maxRadius: number;
+  maxPenetration: number;
+  maxSeparation: number;
+  stableContact: boolean;
+  leftValidVolume: boolean;
+  tunneling: boolean;
+  velocityExplosion: boolean;
+  maxVisualBodySyncError: number;
+  outcome: 'stable' | 'settled' | 'failed';
+  detail: string;
+};
+
+type Part3ValidationReport = {
+  status: 'running' | 'passed' | 'failed';
+  results: Part3ProbeResult[];
+  ccdEnabled: boolean;
+  detail: string;
+};
+
 type Part2SceneViewportProps = {
   loadKey: number;
+  validationMode?: 'part2' | 'part3';
   view: InspectionView;
   showGrid: boolean;
   showPhysicsDebug: boolean;
@@ -119,6 +147,25 @@ const COLLIDER_PROFILE = {
   innerFloorTop: -0.68,
   centerGuardRadius: 0.25,
 };
+
+const PART3_PROBES = [
+  {
+    id: 'gentle-tangential',
+    label: 'Gentle tangential glide',
+    angle: 0.37,
+    radius: DROP_RADIUS,
+    speed: 0.55,
+    durationSeconds: 1.8,
+  },
+  {
+    id: 'moderate-tangential',
+    label: 'Moderate CCD continuity',
+    angle: 1.11,
+    radius: DROP_RADIUS,
+    speed: 1.35,
+    durationSeconds: 1.8,
+  },
+] as const;
 
 function countMeshes(object: THREE.Object3D) {
   let count = 0;
@@ -288,6 +335,7 @@ function createBallVisual() {
 
 export function Part2SceneViewport({
   loadKey,
+  validationMode = 'part2',
   view,
   showGrid,
   showPhysicsDebug,
@@ -306,6 +354,7 @@ export function Part2SceneViewport({
   const rotorAngleRef = useRef(normalizedAngle(rotorAngle));
   const [angleReadout, setAngleReadout] = useState(normalizedAngle(rotorAngle));
   const [dropReport, setDropReport] = useState<Part2DropReport | null>(null);
+  const [part3Report, setPart3Report] = useState<Part3ValidationReport | null>(null);
 
   viewRef.current = view;
   callbacksRef.current = { onStateChange, onAudit, onRotorAngleChange };
