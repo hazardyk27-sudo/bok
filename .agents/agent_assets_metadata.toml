@@ -42,3 +42,31 @@ mtime_ms = 1789441155045
 storage_uri = "gcs://replit-rams-assets-sisko/rams/assets/repl:799f53e3-6d51-4a21-909c-3a4f5e94c6ea/2f7005a9-3039-466a-be3e-511f4c2e499e/0901f985-2350-43fc-9ddf-47627495bf04"
 storage_version_token = "1789441249765837"
 content_type = "text/markdown"
+
+[[outputs]]
+id = "Ds8CC_HhKeaMf3e9fg6ha"
+uri = "file://artifacts/cascade-8/simulation-results/2026-09-21T14-53-23-869Z-12345.md"
+type = "text"
+title = "Cascade 8 — 2 milyon spin özeti"
+description = "Seed 12345 ile 2.000.000 adet 1,00 $ bahisli spin için tam Markdown simülasyon raporu."
+logical_id = "c1676170-5d36-4432-b62c-dcd3c54c8b09"
+content_hash = "sha256:aa415e2eeb024e692c3a685bbdefdb2e8c1d043f815f9e34558ec954b62dd3f2"
+size = 4434
+mtime_ms = 1790002403876
+storage_uri = "gcs://replit-rams-assets-sisko/rams/assets/repl:799f53e3-6d51-4a21-909c-3a4f5e94c6ea/c1676170-5d36-4432-b62c-dcd3c54c8b09/f9ab0e91-19e0-4d27-a263-8e9a1fdec70f"
+storage_version_token = "1790002420441362"
+content_type = "text/markdown"
+
+[[outputs]]
+id = "x6oaUchdynpRET6tzD5xH"
+uri = "file://artifacts/cascade-8/simulation-results/2026-09-21T14-53-23-869Z-12345.json"
+type = "unspecified"
+title = "Cascade 8 — 2 milyon spin ham verisi"
+description = "Aynı simülasyonun tüm metriklerini ve yapılandırma snapshot'ını içeren JSON raporu."
+logical_id = "b915c4f3-d158-46ac-8fbc-12754d0e0b34"
+content_hash = "sha256:0cbabbdae522b1e16a77b9f5e1e006acf63abdd0ba526439365a8568697002f2"
+size = 7730
+mtime_ms = 1790002403871
+storage_uri = "gcs://replit-rams-assets-sisko/rams/assets/repl:799f53e3-6d51-4a21-909c-3a4f5e94c6ea/b915c4f3-d158-46ac-8fbc-12754d0e0b34/2a3d2a97-2d85-4493-9d1c-86355a1ee514"
+storage_version_token = "1790002421775855"
+content_type = "application/octet-stream"
