@@ -3,6 +3,8 @@ import * as THREE from 'three';
 import RAPIER from '@dimforge/rapier3d-compat';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
+import { Part1SceneViewport } from './Part1SceneViewport';
+import { ROULETTE_ASSET_PATH } from './roulette-scene-config';
 import {
   getGetPhysicsLabCurrentRoundQueryKey,
   useCreatePhysicsLabRound,
@@ -30,7 +32,7 @@ import {
   TriangleAlert,
 } from 'lucide-react';
 
-const ASSET_PATH = '/physics-lab/rou-lp-test-04.glb';
+const ASSET_PATH = ROULETTE_ASSET_PATH;
 const TARGET_WHEEL_DIAMETER = 6;
 const SOURCE_BALL_NODE = 'Sphere_16';
 const METERS_PER_WORLD_UNIT = 1 / 6;
@@ -4230,35 +4232,16 @@ function App() {
           </div>
 
           <div className="viewport-wrap">
-            <SceneViewport
+            <Part1SceneViewport
               loadKey={loadKey}
               view={view}
               showGrid={showGrid}
-              showPhysicsDebug={showPhysicsDebug}
-              showBallPlaceholder={showBallPlaceholder}
               showStationaryGroup={showStationaryGroup}
               showRotorGroup={showRotorGroup}
-              showSectorOverlay={showSectorOverlay}
               rotorAngle={rotorAngle}
-              rotorTestRequest={rotorTestRequest}
-               probeTestRequest={probeTestRequest}
-               ballValidationRequest={ballValidationRequest}
-              part4RunRequest={part4RunRequest}
-              part5RunRequest={part5RunRequest}
-               ballParameters={ballParameters}
-              rotorParameters={rotorParameters}
-              launchParameters={launchParameters}
-               ballCommand={ballCommand}
               onStateChange={handleStateChange}
-              onAudit={setAudit}
+              onAudit={(nextAudit) => setAudit(nextAudit)}
               onRotorAngleChange={setRotorAngle}
-              onRotorTestState={handleRotorTestState}
-               onPhysicsReport={setPhysicsReport}
-               onBallState={handleBallState}
-               onBallValidationReport={setBallValidationReport}
-              onPart4State={handlePart4State}
-              onPart4ValidationReport={setPart4Report}
-            onPart5ValidationReport={setPart5Report}
             />
             {loadState === 'loading' && (
               <div className="viewport-overlay" data-testid="status-loading" role="status" aria-live="polite">

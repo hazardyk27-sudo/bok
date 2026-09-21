@@ -30,3 +30,4 @@
 - [Procedural pocket validation](procedural-pocket-validation.md) — a bowl opening needs continuous pocket support and smoke runs must prove kinematic fret contacts do not eject the ball.
 - [Rolley asset pocket mismatch](rolley-asset-pocket-mismatch.md) — supplied Rolley FBX exposes 38 equal radial separators at 360/38, not a verified 37-pocket European layout.
 - [LP Test 04 asset role](lp-test-04-asset-role.md) — compact three-mesh GLB is visual-only; preserve the canonical 37-pocket physics/result mapping.
+- [PART 1 rotor infrastructure](part1-rotor-infrastructure.md) — the active GLB scene uses one centered root and a dedicated Y-only rotor pivot with a shared fixed-step angle state.
