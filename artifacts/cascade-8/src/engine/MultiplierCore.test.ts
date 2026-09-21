@@ -1,5 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { generateRefillCells, generateInitialBoard } from "./BoardGenerator";
+import {
+  createCoreBudget,
+  generateRefillCells,
+  generateInitialBoard,
+} from "./BoardGenerator";
+import { BONUS_CONFIG } from "../config/GameConfig";
 import { removeAndRefill } from "./WinEvaluator";
 import { isMultiplierCore, type BoardCell, type RandomSource } from "./types";
 
@@ -24,6 +29,30 @@ describe("physical Multiplier Cores", () => {
     expect(initial.flat().some((cell) => isMultiplierCore(cell))).toBe(true);
     expect(cells.every((cell) => isMultiplierCore(cell))).toBe(true);
     expect((cells[0] as Exclude<BoardCell, string>).value).toBe(2);
+  });
+  it("stops bonus Core generation at seven cells", () => {
+    const coreRoll: RandomSource = { nextFloat: () => 0.04 };
+    const initial = generateInitialBoard(coreRoll, "bonus");
+    const refill = generateRefillCells(coreRoll, 30, true, "bonus");
+
+    expect(BONUS_CONFIG.maxMultiplierCoresPerFreeSpin).toBe(7);
+    expect(initial.flat().filter(isMultiplierCore)).toHaveLength(7);
+    expect(refill.filter(isMultiplierCore)).toHaveLength(7);
+  });
+  it("does not add an eighth Core when the active bonus budget is full", () => {
+    const fullBudget = createCoreBudget("bonus")!;
+    fullBudget.used = fullBudget.max;
+    const refill = generateRefillCells(
+      { nextFloat: () => 0.04 },
+      30,
+      true,
+      "bonus",
+      0,
+      fullBudget,
+    );
+
+    expect(refill.some(isMultiplierCore)).toBe(false);
+    expect(fullBudget.used).toBe(7);
   });
   it("keeps a physical Core anchored through gravity and refill", () => {
     const board = Array.from({ length: 5 }, () =>

@@ -11,6 +11,7 @@ import {
   BOARD_COLUMNS,
   BOARD_ROWS,
   BONUS_REEL_CONFIG,
+  BONUS_CONFIG,
   NORMAL_PAIR_COPY_CHANCE,
   NORMAL_THIRD_REPEAT_WEIGHT_FACTOR,
   type NormalSymbolId,
@@ -36,6 +37,16 @@ export type VisibleAwareEmission = {
   copyRoll?: number;
   copiedFromVisibleTop?: boolean;
 };
+
+export type CoreBudget = {
+  max: number;
+  used: number;
+};
+
+export const createCoreBudget = (mode: "base" | "bonus"): CoreBudget | undefined =>
+  mode === "bonus"
+    ? { max: BONUS_CONFIG.maxMultiplierCoresPerFreeSpin, used: 0 }
+    : undefined;
 
 const normalSymbolOf = (cell: BoardCell): NormalSymbolId | null =>
   typeof cell === "string" && cell !== "SCATTER"
@@ -117,8 +128,13 @@ export class ColumnStream {
     private readonly columnIndex: number,
   ) {}
 
-  next(count: number, context: GenerationContext, allowCores = true): BoardCell[] {
-    while (this.queue.length < count) this.appendPosition(context, allowCores);
+  next(
+    count: number,
+    context: GenerationContext,
+    allowCores = true,
+    coreBudget?: CoreBudget,
+  ): BoardCell[] {
+    while (this.queue.length < count) this.appendPosition(context, allowCores, null, coreBudget);
     return this.queue.splice(0, count);
   }
 
@@ -126,9 +142,10 @@ export class ColumnStream {
     context: GenerationContext,
     allowCores: boolean,
     visibleTopSymbol: NormalSymbolId | null,
+    coreBudget?: CoreBudget,
   ): VisibleAwareEmission {
     const emission = this.queue.length === 0
-      ? this.appendPosition(context, allowCores, visibleTopSymbol)
+      ? this.appendPosition(context, allowCores, visibleTopSymbol, coreBudget)
       : undefined;
     const cell = this.queue.splice(0, 1)[0];
     return {
@@ -142,6 +159,7 @@ export class ColumnStream {
     context: GenerationContext,
     allowCores: boolean,
     visibleTopSymbol: NormalSymbolId | null = null,
+    coreBudget?: CoreBudget,
   ): VisibleAwareEmission {
     const scatterChance = context === "BASE_INITIAL"
       ? BASE_INITIAL_SCATTER_CHANCE
@@ -175,9 +193,11 @@ export class ColumnStream {
         this.stats.emittedSpecial += 1;
         return { cell: "SCATTER" };
       }
-      if (coreMode && specialRoll < scatterChance + coreChance) {
+      const canSpawnCore = coreMode && (!coreBudget || coreBudget.used < coreBudget.max);
+      if (canSpawnCore && specialRoll < scatterChance + coreChance) {
         const cell = drawMultiplierCoreValue(this.source, coreMode);
         this.queue.push(cell);
+        if (coreBudget) coreBudget.used += 1;
         this.stats.emittedSpecial += 1;
         return { cell };
       }
@@ -254,15 +274,24 @@ export function createColumnStreams(source: RandomSource, mode: "base" | "bonus"
   return Array.from({ length: BOARD_COLUMNS }, (_, columnIndex) => new ColumnStream(source, config, columnIndex)) as ColumnStreams;
 }
 
-export function boardFromStreams(streams: ColumnStreams, context: "BASE_INITIAL" | "BONUS_INITIAL"): Board {
-  const columns = streams.map((stream) => stream.next(BOARD_ROWS, context));
+export function boardFromStreams(
+  streams: ColumnStreams,
+  context: "BASE_INITIAL" | "BONUS_INITIAL",
+  coreBudget?: CoreBudget,
+): Board {
+  const columns = streams.map((stream) => stream.next(BOARD_ROWS, context, true, coreBudget));
   return Array.from({ length: BOARD_ROWS }, (_, row) => columns.map((column) => column[row]));
 }
 
 export function generateInitialBoardWithStreams(source: RandomSource, mode: "base" | "bonus" = "base") {
   const streams = createColumnStreams(source, mode);
-  const board = boardFromStreams(streams, mode === "bonus" ? "BONUS_INITIAL" : "BASE_INITIAL");
-  return { board, streams };
+  const coreBudget = createCoreBudget(mode);
+  const board = boardFromStreams(
+    streams,
+    mode === "bonus" ? "BONUS_INITIAL" : "BASE_INITIAL",
+    coreBudget,
+  );
+  return { board, streams, coreBudget };
 }
 
 export function generateInitialBoard(source: RandomSource, mode: "base" | "bonus" = "base"): Board {
@@ -280,9 +309,15 @@ export function generateRefillCells(
   allowCores = false,
   mode: "base" | "bonus" = "base",
   columnIndex = 0,
+  coreBudget = createCoreBudget(mode),
 ): BoardCell[] {
   const stream = new ColumnStream(source, mode === "bonus" ? BONUS_REEL_CONFIG : BASE_REEL_CONFIG, columnIndex);
-  return stream.next(count, mode === "bonus" ? "BONUS_REFILL" : "BASE_REFILL", allowCores);
+  return stream.next(
+    count,
+    mode === "bonus" ? "BONUS_REFILL" : "BASE_REFILL",
+    allowCores,
+    coreBudget,
+  );
 }
 
 export function generateVisibleAwareRefillCell(
@@ -291,6 +326,7 @@ export function generateVisibleAwareRefillCell(
   mode: "base" | "bonus" = "base",
   columnIndex = 0,
   visibleTopSymbol: NormalSymbolId | null = null,
+  coreBudget = createCoreBudget(mode),
 ): VisibleAwareEmission {
   const stream = new ColumnStream(
     source,
@@ -301,6 +337,7 @@ export function generateVisibleAwareRefillCell(
     mode === "bonus" ? "BONUS_REFILL" : "BASE_REFILL",
     allowCores,
     visibleTopSymbol,
+    coreBudget,
   );
 }
 

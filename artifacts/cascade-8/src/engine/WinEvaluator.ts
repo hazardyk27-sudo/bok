@@ -5,7 +5,12 @@ import {
   type NormalSymbolId,
   getPaytableMultiplier,
 } from "../config/GameConfig";
-import { generateRefillCells, generateVisibleAwareRefillCell, type ColumnStreams } from "./BoardGenerator";
+import {
+  generateRefillCells,
+  generateVisibleAwareRefillCell,
+  type ColumnStreams,
+  type CoreBudget,
+} from "./BoardGenerator";
 import { getNormalSymbol, isMultiplierCore, type Board, type BoardCell, type Cell, type RandomSource } from "./types";
 
 export type WinEvaluation = {
@@ -64,6 +69,7 @@ export function removeAndRefill(
   mode: "base" | "bonus" = allowCores ? "bonus" : "base",
   streams?: ColumnStreams,
   diagnostics?: RefillDiagnostics,
+  coreBudget?: CoreBudget,
 ) {
   const winning = new Set(winningCells.map((cell) => `${cell.row}:${cell.col}`));
   const next: Board = Array.from({ length: BOARD_ROWS }, () => Array.from({ length: BOARD_COLUMNS }, () => "SCATTER" as BoardCell));
@@ -88,6 +94,7 @@ export function removeAndRefill(
           refillContext,
           allowCores,
           isVisuallyUnpaired && topSymbol ? topSymbol : null,
+          coreBudget,
         )
         : generateVisibleAwareRefillCell(
           source,
@@ -95,6 +102,7 @@ export function removeAndRefill(
           mode,
           col,
           isVisuallyUnpaired && topSymbol ? topSymbol : null,
+          coreBudget,
         );
       const incoming = emission.cell;
       const incomingSymbol = getNormalSymbol(incoming);

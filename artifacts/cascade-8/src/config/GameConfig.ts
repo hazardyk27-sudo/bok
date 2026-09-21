@@ -148,6 +148,7 @@ export const BASE_MULTIPLIER_CORE_WEIGHTS = [
 export const BONUS_CONFIG = {
   base: { 4: 10, 5: 15, 6: 20, 7: 25 },
   retrigger: { 3: 5, 4: 5, 5: 5, 6: 5 },
+  maxMultiplierCoresPerFreeSpin: 7,
   multiplierCoreSpawnChance: BONUS_REFILL_CORE_CHANCE,
   multiplierCoreWeights: [
     { value: 2, weight: 40 },
