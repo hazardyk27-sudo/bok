@@ -28,10 +28,10 @@ const POCKET_ENTRY_RIM_HALF_HEIGHT = 0.025;
 const POCKET_ENTRY_RIM_HALF_RADIAL_WIDTH = 0.045;
 const POCKET_ENTRY_RIM_HALF_TANGENTIAL_WIDTH = 0.11;
 const OUTER_RADIUS = 2.54;
-const BALL_TRACK_RADIUS = 2.4;
+const BALL_TRACK_RADIUS = 2.48;
 const POCKET_RADIUS = 1.66;
 const ROTOR_SPEED = 0.25;
-const LAUNCH_SPEED = 15;
+const LAUNCH_SPEED = 13;
 
 type WheelProps = {
   loadKey: number;
@@ -470,7 +470,7 @@ export function ProceduralRouletteViewport(props: WheelProps) {
         RAPIER.TriMeshFlags.FIX_INTERNAL_EDGES | RAPIER.TriMeshFlags.ORIENTED,
       ).setFriction(0.012).setRestitution(0.08);
       world.createCollider(bowlCollider, stationaryBody);
-      addSegmentRing(world, stationaryBody, OUTER_RADIUS, bowlY(OUTER_RADIUS) + 0.025, 0.075, 0.075, 0.05, 128, 0, 0.18, 0.16);
+      addSegmentRing(world, stationaryBody, OUTER_RADIUS, bowlY(OUTER_RADIUS) + 0.025, 0.075, 0.075, 0.05, 128, 0, 0.08, 0.04);
       world.createCollider(
         RAPIER.ColliderDesc.cuboid(3.0, 0.035, 3.0)
           .setTranslation(0, -0.27, 0)
@@ -627,7 +627,13 @@ export function ProceduralRouletteViewport(props: WheelProps) {
       const speed = LAUNCH_SPEED * (1 + ((index % 3) - 1) * props.launchParameters.variation * 0.24);
       ballBody.setTranslation({ x: Math.sin(angle) * radius, y: bowlY(radius) + BALL_RADIUS + 0.02, z: Math.cos(angle) * radius }, true);
       ballBody.setLinvel({ x: Math.cos(angle) * speed, y: 0, z: -Math.sin(angle) * speed }, true);
-      ballBody.setAngvel({ x: 0, y: 0, z: -props.launchParameters.initialSpin }, true);
+      // Match the ball's spin to the tangential launch so the outer-rail
+      // contact begins as a rolling release instead of a sliding impulse.
+      const rollingSpin = speed / BALL_RADIUS;
+      ballBody.setAngvel(
+        { x: -Math.sin(angle) * rollingSpin, y: 0, z: -Math.cos(angle) * rollingSpin },
+        true,
+      );
       updateRotorTarget(angle * 0.1);
       ballBody.wakeUp();
       ballState = "active";
