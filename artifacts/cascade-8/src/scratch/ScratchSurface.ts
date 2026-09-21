@@ -7,6 +7,7 @@ import {
 
 const BRUSH_RADIUS = 0.16;
 const MIN_GESTURE_DISTANCE_PX = 18;
+export const SCRATCH_COMPLETION_DURATION_MS = 180;
 
 type ScratchSurfaceOptions = {
   threshold?: number;
@@ -21,9 +22,12 @@ export class ScratchSurface {
   private lastPoint: ScratchPoint | null = null;
   private gestureDistance = 0;
   private committed = false;
+  private completionFrame: number | null = null;
+  private completionGeneration = 0;
 
   private readonly handlePointerDown = (event: PointerEvent) => {
     if (event.pointerType === "mouse" && event.button !== 0) return;
+    if (this.committed) return;
     this.pointerId = event.pointerId;
     this.lastPoint = this.pointFromEvent(event);
     this.gestureDistance = 0;
@@ -33,7 +37,7 @@ export class ScratchSurface {
   };
 
   private readonly handlePointerMove = (event: PointerEvent) => {
-    if (this.pointerId !== event.pointerId || !this.lastPoint) return;
+    if (this.committed || this.pointerId !== event.pointerId || !this.lastPoint) return;
     const point = this.pointFromEvent(event);
     const distance = Math.hypot(point.x - this.lastPoint.x, point.y - this.lastPoint.y);
     if (distance < 0.001) return;
@@ -72,6 +76,7 @@ export class ScratchSurface {
   }
 
   destroy() {
+    this.cancelCompletion();
     this.canvas.removeEventListener("pointerdown", this.handlePointerDown);
     this.canvas.removeEventListener("pointermove", this.handlePointerMove);
     this.canvas.removeEventListener("pointerup", this.finishPointer);
@@ -80,6 +85,7 @@ export class ScratchSurface {
   }
 
   reset() {
+    this.cancelCompletion();
     this.pointerId = null;
     this.lastPoint = null;
     this.gestureDistance = 0;
@@ -137,6 +143,37 @@ export class ScratchSurface {
   private tryCommit() {
     if (this.committed || this.gestureDistance < MIN_GESTURE_DISTANCE_PX || !this.progress.committed) return;
     this.committed = true;
-    this.onCommit();
+    this.animateCompletion();
+  }
+
+  private cancelCompletion() {
+    this.completionGeneration += 1;
+    if (this.completionFrame !== null) {
+      window.cancelAnimationFrame(this.completionFrame);
+      this.completionFrame = null;
+    }
+  }
+
+  private animateCompletion() {
+    const generation = this.completionGeneration + 1;
+    this.completionGeneration = generation;
+    const startedAt = performance.now();
+    const animate = (timestamp: number) => {
+      if (generation !== this.completionGeneration) return;
+      const progress = Math.min(1, (timestamp - startedAt) / SCRATCH_COMPLETION_DURATION_MS);
+      this.context.save();
+      this.context.globalCompositeOperation = "destination-out";
+      this.context.globalAlpha = Math.min(1, 0.16 + progress * 0.84);
+      this.context.fillStyle = "#000";
+      this.context.fillRect(0, 0, this.canvas.clientWidth, this.canvas.clientHeight);
+      this.context.restore();
+      if (progress >= 1) {
+        this.completionFrame = null;
+        this.onCommit();
+        return;
+      }
+      this.completionFrame = window.requestAnimationFrame(animate);
+    };
+    this.completionFrame = window.requestAnimationFrame(animate);
   }
 }

@@ -4,6 +4,7 @@ import {
   ScratchProgressGrid,
   interpolateScratchPoints,
 } from "./ScratchProgress";
+import { SCRATCH_COMPLETION_DURATION_MS } from "./ScratchSurface";
 
 describe("scratch progress core", () => {
   it("keeps a single tap and tiny movement below the reveal threshold", () => {
@@ -42,5 +43,10 @@ describe("scratch progress core", () => {
 
     expect(progress.committed).toBe(false);
     expect(progress.threshold).toBe(0.8);
+  });
+
+  it("keeps threshold completion short enough to finish the visible mask", () => {
+    expect(SCRATCH_COMPLETION_DURATION_MS).toBeGreaterThanOrEqual(150);
+    expect(SCRATCH_COMPLETION_DURATION_MS).toBeLessThanOrEqual(250);
   });
 });

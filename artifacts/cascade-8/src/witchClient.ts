@@ -1,4 +1,5 @@
 import { ScratchSurface } from "./scratch/ScratchSurface";
+import { getScratchCellPresentation } from "./scratch/ScratchPresentation";
 
 type CadiKazanMode = "STANDARD" | "ADVANCED";
 type CadiKazanStatus = "ACTIVE" | "CASHED_OUT" | "BUST" | "COMPLETED";
@@ -341,8 +342,9 @@ export class WitchClient {
     if (board && board.childElementCount !== round.cellCount) {
       this.destroyScratchSurfaces();
       board.innerHTML = Array.from({ length: round.cellCount }, (_, index) => `
-        <button type="button" class="witch-cell" data-witch-cell="${index}" aria-label="${index + 1}. kazınabilir kapalı alan">
-          <span class="witch-cell-content">${index + 1}</span>
+        <button type="button" class="witch-cell" data-witch-cell="${index}" aria-label="Kazınabilir kapalı alan">
+          <span class="witch-cell-content" aria-hidden="true"></span>
+          <span class="witch-cell-result-label" aria-hidden="true"></span>
           <canvas class="witch-scratch-canvas" aria-hidden="true"></canvas>
         </button>
       `).join("");
@@ -355,15 +357,27 @@ export class WitchClient {
       const index = Number(button.dataset.witchCell);
       const isActuallyRevealed = round.revealedCells.includes(index);
       const isRevealed = isActuallyRevealed || terminalBoardVisible;
-      const isBomb = terminalBoardVisible && revealedBombs.has(index);
+      const isBomb = round.status !== "ACTIVE"
+        && revealedBombs.has(index)
+        && (isActuallyRevealed || terminalBoardVisible);
+      const presentation = getScratchCellPresentation(round.mode, isRevealed, isBomb);
       button.disabled = round.status !== "ACTIVE" || isActuallyRevealed;
       button.classList.toggle("is-revealed", isRevealed);
-      button.classList.toggle("is-safe", isRevealed && !isBomb);
-      button.classList.toggle("is-bomb", isBomb);
+      button.classList.toggle("is-safe", presentation.resultClass === "safe");
+      button.classList.toggle("is-bomb", presentation.resultClass === "bomb");
       button.classList.toggle("is-pending", this.pendingRevealCell === index);
-      button.setAttribute("aria-label", isBomb ? `${index + 1}. bomba` : isRevealed ? `${index + 1}. güvenli alan` : `${index + 1}. kazınabilir kapalı alan`);
+      button.setAttribute(
+        "aria-label",
+        presentation.resultClass === "bomb"
+          ? presentation.label
+          : presentation.resultClass === "safe"
+            ? "GOLD ödülü"
+            : "Kazınabilir kapalı alan",
+      );
       const content = button.querySelector<HTMLElement>(".witch-cell-content");
-      if (content) content.textContent = isBomb ? "!" : isRevealed ? "✓" : String(index + 1);
+      if (content) content.textContent = presentation.symbol;
+      const resultLabel = button.querySelector<HTMLElement>(".witch-cell-result-label");
+      if (resultLabel) resultLabel.textContent = presentation.label;
       const canvas = button.querySelector<HTMLCanvasElement>(".witch-scratch-canvas");
       if (!canvas) return;
       canvas.hidden = isRevealed;
