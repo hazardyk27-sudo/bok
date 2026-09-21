@@ -1,9 +1,8 @@
-export type ScratchHapticEvent = "GOLD" | "BOMB" | "ALARM" | "CASH_OUT";
+export type ScratchHapticEvent = "GOLD" | "BOMB" | "CASH_OUT";
 
 const HAPTIC_PATTERNS: Record<ScratchHapticEvent, number | number[]> = {
   GOLD: 18,
   BOMB: [36, 24, 72],
-  ALARM: [24, 18, 24, 18, 92],
   CASH_OUT: [18, 28, 46],
 };
 

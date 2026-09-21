@@ -26,10 +26,10 @@ describe("scratch result presentation", () => {
     });
   });
 
-  it("uses an alarm result for Advanced and a gold result for safe cells", () => {
+  it("uses the shared bomb result for both modes and a gold result for safe cells", () => {
     expect(getScratchCellPresentation("ADVANCED", true, true)).toEqual({
-      symbol: "⚠",
-      label: "ALARM",
+      symbol: "💣",
+      label: "BOMBA",
       resultClass: "bomb",
     });
     expect(getScratchCellPresentation("ADVANCED", true, false)).toEqual({

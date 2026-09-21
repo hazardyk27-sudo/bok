@@ -12,42 +12,44 @@ export const CADI_KAZAN_MIN_STAKE_CENTS = 100;
 export const CADI_KAZAN_MAX_STAKE_CENTS = 10_000;
 export const CADI_KAZAN_STANDARD_CELL_COUNT = 5;
 export const CADI_KAZAN_ADVANCED_CELL_COUNT = 25;
+export const ADVANCED_PAYOUT_TABLE_VERSION = "advanced-final-v1";
+export const ADVANCED_TARGET_RTP_BPS = 9_600;
+export const ADVANCED_MAX_MULTIPLIER_BPS = 100_000;
 
 type AdvancedPayoutTable = {
   alarmCount: AdvancedAlarmCount;
   safeCellCount: number;
-  growthBps: number;
-  capBps: number;
+  targetRtpBps: number;
+  maxMultiplierBps: number;
   multipliersBps: number[];
-  calibration: "TEMPORARY_CONSERVATIVE";
+  calibration: "FINAL_DATA_DRIVEN";
+  version: string;
 };
 
-const ADVANCED_TABLE_INPUTS: Readonly<Record<AdvancedAlarmCount, { growthBps: number; capBps: number }>> = {
-  1: { growthBps: 5, capBps: 220 },
-  3: { growthBps: 6, capBps: 250 },
-  5: { growthBps: 8, capBps: 300 },
-  7: { growthBps: 11, capBps: 360 },
-  10: { growthBps: 15, capBps: 450 },
-};
+function survivalProbability(safeCellCount: number, revealedSafeCount: number) {
+  let probability = 1;
+  for (let index = 0; index < revealedSafeCount; index += 1) {
+    probability *= (safeCellCount - index) / (CADI_KAZAN_ADVANCED_CELL_COUNT - index);
+  }
+  return probability;
+}
 
 function createAdvancedPayoutTable(alarmCount: AdvancedAlarmCount): AdvancedPayoutTable {
   const safeCellCount = CADI_KAZAN_ADVANCED_CELL_COUNT - alarmCount;
-  const { growthBps, capBps } = ADVANCED_TABLE_INPUTS[alarmCount];
   return {
     alarmCount,
     safeCellCount,
-    growthBps,
-    capBps,
-    multipliersBps: Array.from({ length: safeCellCount }, (_, index) => Math.min(capBps, 100 + growthBps * (index + 1))),
-    calibration: "TEMPORARY_CONSERVATIVE",
+    targetRtpBps: ADVANCED_TARGET_RTP_BPS,
+    maxMultiplierBps: ADVANCED_MAX_MULTIPLIER_BPS,
+    multipliersBps: Array.from({ length: safeCellCount }, (_, index) => Math.min(
+      ADVANCED_MAX_MULTIPLIER_BPS,
+      Math.round((ADVANCED_TARGET_RTP_BPS / 100) / survivalProbability(safeCellCount, index + 1)),
+    )),
+    calibration: "FINAL_DATA_DRIVEN",
+    version: ADVANCED_PAYOUT_TABLE_VERSION,
   };
 }
 
-/**
- * Advanced values are deliberately a replaceable calibration table, not a final
- * economy decision. A later simulator can replace this object without changing
- * round, reveal, or settlement code.
- */
 export const ADVANCED_PAYOUT_TABLES: Readonly<Record<AdvancedAlarmCount, AdvancedPayoutTable>> = {
   1: createAdvancedPayoutTable(1),
   3: createAdvancedPayoutTable(3),

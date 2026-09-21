@@ -36,3 +36,5 @@
 - [Main-world pocket transition](physics-lab-pocket-transition.md) — open the measured track aperture, align descent to live rotor phase, and keep a supported floor underlay under moving frets.
 - [Cadı Kazan wallet boundary](cadi-kazan-wallet-boundary.md) — share the server wallet/session with roulette while keeping scratch rounds and ledger entries isolated.
 - [Slot wallet authority](slot-wallet-authority.md) — slot RNG and settlement stay server-side; legacy localStorage is a one-time untrusted migration marker.
+- [Cadı Kazan final economy](cadi-kazan-final-economy.md) — fixed cashout points target 96% RTP; a 1000x cap intentionally lowers random/aggressive high-risk returns.
+- [Layered scratch reveal](layered-scratch-reveal.md) — shallow abrasion stays opaque; only locally deep cells can reveal results, while global coverage commits the server reveal.

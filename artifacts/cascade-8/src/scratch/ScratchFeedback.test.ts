@@ -5,7 +5,7 @@ describe("scratch tactile feedback", () => {
   it("keeps distinct short patterns for the important result events", () => {
     expect(getScratchHapticPattern("GOLD")).toBe(18);
     expect(getScratchHapticPattern("BOMB")).toEqual([36, 24, 72]);
-    expect(getScratchHapticPattern("ALARM")).toEqual([24, 18, 24, 18, 92]);
+    expect(getScratchHapticPattern("BOMB")).toEqual([36, 24, 72]);
     expect(getScratchHapticPattern("CASH_OUT")).toEqual([18, 28, 46]);
   });
 });

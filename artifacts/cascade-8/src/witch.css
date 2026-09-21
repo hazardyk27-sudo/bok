@@ -48,6 +48,7 @@
 .witch-cell.is-pending { border-color: rgba(243, 198, 107, .9); box-shadow: 0 0 0 2px rgba(243, 198, 107, .16); }
 .witch-cell.is-safe { border-color: rgba(106, 240, 190, .7); color: #081b17; background: linear-gradient(145deg, #89f3ca, #3bb995); }
 .witch-cell.is-bomb { border-color: rgba(255, 128, 128, .8); color: #fff; background: linear-gradient(145deg, #c34f64, #70283d); box-shadow: 0 0 22px rgba(255, 92, 105, .24); }
+.witch-cell.is-terminal-reveal .witch-cell-result-layer { animation: witch-terminal-reveal .24s cubic-bezier(.2, .8, .2, 1) both; }
 .witch-actions { display: grid; grid-template-columns: 1fr auto auto; gap: 14px; align-items: center; }
 .witch-actions .witch-feedback { margin: 0; }
 .witch-rules { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1px; margin-top: 16px; border: 1px solid var(--line); border-radius: 14px; overflow: hidden; background: var(--line); }
@@ -66,4 +67,12 @@
   .witch-board { grid-template-columns: repeat(5, minmax(42px, 1fr)); gap: 6px; }
   .witch-cell { border-radius: 7px; }
   .witch-actions .witch-feedback { min-height: 0; }
+}
+@keyframes witch-terminal-reveal {
+  from { opacity: 0; transform: scale(.86) rotate(-2deg); filter: brightness(1.6) saturate(.7); }
+  58% { opacity: 1; transform: scale(1.04) rotate(1deg); filter: brightness(1.18) saturate(1.12); }
+  to { opacity: 1; transform: scale(1) rotate(0); filter: none; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .witch-cell.is-terminal-reveal .witch-cell-result-layer { animation: none; }
 }

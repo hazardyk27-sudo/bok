@@ -56,7 +56,7 @@ export class AudioManager {
     oscillator.start();
     oscillator.stop(this.context!.currentTime + duration + 0.02);
   }
-  scratch(intensity = 0.5) {
+  scratch(intensity = 0.5, abrasion = 0.5) {
     if (this.muted) return;
     this.ensure();
     const context = this.context!;
@@ -72,18 +72,19 @@ export class AudioManager {
     }
 
     const normalized = Math.max(0, Math.min(1, intensity));
+    const depth = Math.max(0, Math.min(1, abrasion));
     const source = context.createBufferSource();
     const filter = context.createBiquadFilter();
     const envelope = context.createGain();
-    const duration = 0.035 + normalized * 0.04;
+    const duration = 0.04 + normalized * 0.035 + depth * 0.02;
     const startAt = context.currentTime;
     source.buffer = this.scratchBuffer;
-    source.playbackRate.value = 0.72 + normalized * 0.48;
+    source.playbackRate.value = 0.68 + normalized * 0.42 + depth * 0.18;
     filter.type = "bandpass";
-    filter.frequency.value = 750 + normalized * 2_000;
-    filter.Q.value = 0.65;
+    filter.frequency.value = 650 + normalized * 1_700 + depth * 900;
+    filter.Q.value = 0.6 + depth * 0.25;
     envelope.gain.setValueAtTime(0.0001, startAt);
-    envelope.gain.exponentialRampToValueAtTime(0.055 + normalized * 0.075, startAt + 0.006);
+    envelope.gain.exponentialRampToValueAtTime(0.04 + normalized * 0.055 + depth * 0.035, startAt + 0.006);
     envelope.gain.exponentialRampToValueAtTime(0.0001, startAt + duration);
     source.connect(filter);
     filter.connect(envelope);

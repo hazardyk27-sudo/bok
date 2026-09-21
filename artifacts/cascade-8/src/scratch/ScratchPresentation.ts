@@ -25,8 +25,8 @@ export function getScratchCellPresentation(
   if (!revealed) return { symbol: "", label: "", resultClass: null };
   if (bomb) {
     return {
-      symbol: mode === "ADVANCED" ? "⚠" : "💣",
-      label: mode === "ADVANCED" ? "ALARM" : "BOMBA",
+      symbol: "💣",
+      label: "BOMBA",
       resultClass: "bomb",
     };
   }

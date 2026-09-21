@@ -1,13 +1,14 @@
 import { AudioManager } from "../game/AudioManager";
 import {
   interpolateScratchPoints,
+  SCRATCH_ABRASION_CONFIG,
   SCRATCH_REVEAL_THRESHOLD,
   ScratchProgressGrid,
+  type ScratchAbrasionConfig,
   type ScratchPoint,
 } from "./ScratchProgress";
 import { prefersReducedMotion } from "./ScratchFeedback";
 
-const BRUSH_RADIUS = 0.16;
 const MIN_GESTURE_DISTANCE_PX = 18;
 const MIN_AUDIO_INTERVAL_MS = 28;
 const MAX_DEBRIS_PARTICLES = 18;
@@ -29,6 +30,7 @@ type DebrisParticle = {
 
 export type ScratchSurfaceOptions = {
   threshold?: number;
+  abrasion?: Partial<ScratchAbrasionConfig>;
   audio?: AudioManager;
   debrisCanvas?: HTMLCanvasElement;
   onCommit: () => void;
@@ -41,6 +43,7 @@ export class ScratchSurface {
   private readonly progress: ScratchProgressGrid;
   private readonly onCommit: () => void;
   private readonly audio?: AudioManager;
+  private readonly abrasionConfig: ScratchAbrasionConfig;
   private readonly reducedMotion: boolean;
   private readonly debrisCanvas?: HTMLCanvasElement;
   private readonly debrisContext?: CanvasRenderingContext2D;
@@ -84,12 +87,13 @@ export class ScratchSurface {
     const angle = Math.atan2(deltaY, deltaX);
     this.gestureDistance += distancePx;
     for (const sample of interpolateScratchPoints(this.lastPoint, point)) {
-      this.erase(sample, angle, speed);
-      this.progress.sampleCircle(sample.x, sample.y, BRUSH_RADIUS);
+      const depthGain = this.abrasionConfig.depthPerSample * (0.82 + speed * 0.42);
+      this.progress.sampleCircle(sample.x, sample.y, this.abrasionConfig.brushRadius, depthGain);
+      this.erase(sample, angle, speed, this.progress.isRevealableAt(sample.x, sample.y));
     }
     this.emitDebris(point, angle, speed);
     if (now - this.lastAudioAt >= MIN_AUDIO_INTERVAL_MS) {
-      this.audio?.scratch(speed);
+      this.audio?.scratch(speed, this.progress.depthAt(point.x, point.y));
       this.lastAudioAt = now;
     }
     this.lastPoint = point;
@@ -112,7 +116,8 @@ export class ScratchSurface {
     options: ScratchSurfaceOptions,
   ) {
     this.context = canvas.getContext("2d")!;
-    this.progress = new ScratchProgressGrid(10, 10, options.threshold ?? SCRATCH_REVEAL_THRESHOLD);
+    this.abrasionConfig = { ...SCRATCH_ABRASION_CONFIG, ...options.abrasion };
+    this.progress = new ScratchProgressGrid(10, 10, options.threshold ?? SCRATCH_REVEAL_THRESHOLD, this.abrasionConfig);
     this.onCommit = options.onCommit;
     this.audio = options.audio;
     this.reducedMotion = prefersReducedMotion();
@@ -130,6 +135,9 @@ export class ScratchSurface {
   destroy() {
     this.cancelCompletion();
     this.cancelDebris();
+    if (this.pointerId.value !== null && this.canvas.hasPointerCapture(this.pointerId.value)) {
+      this.canvas.releasePointerCapture(this.pointerId.value);
+    }
     this.pointerId.value = null;
     this.lastPoint = null;
     this.canvas.classList.remove("is-scratching");
@@ -147,6 +155,7 @@ export class ScratchSurface {
     this.gestureDistance = 0;
     this.lastMoveAt = 0;
     this.lastAudioAt = -Infinity;
+    this.brushStep = 0;
     this.committed = false;
     this.progress.reset();
     this.context.clearRect(0, 0, this.canvas.clientWidth, this.canvas.clientHeight);
@@ -228,19 +237,38 @@ export class ScratchSurface {
     };
   }
 
-  private erase(point: ScratchPoint, angle: number, speed: number) {
+  private erase(point: ScratchPoint, angle: number, speed: number, revealable: boolean) {
     const width = this.canvas.clientWidth;
     const height = this.canvas.clientHeight;
-    const radius = Math.max(8, width * BRUSH_RADIUS);
+    const radius = Math.max(8, width * this.abrasionConfig.brushRadius);
     const x = point.x * width;
     const y = point.y * height;
     const roughness = 0.9 + Math.sin(this.brushStep * 1.7) * 0.06;
     this.brushStep += 1;
     this.context.save();
-    this.context.globalCompositeOperation = "destination-out";
     this.context.translate(x, y);
     this.context.rotate(angle);
-    this.context.globalAlpha = 0.82;
+    this.context.globalCompositeOperation = "source-over";
+    this.context.globalAlpha = 0.12 + speed * 0.05;
+    this.context.fillStyle = "#4d3428";
+    this.drawBrushPath(radius, speed, roughness);
+    this.context.globalAlpha = 0.11 + speed * 0.06;
+    this.context.strokeStyle = "#f8d98f";
+    this.context.lineWidth = Math.max(0.6, radius * 0.06);
+    this.context.beginPath();
+    this.context.moveTo(-radius * 0.52, -radius * 0.08);
+    this.context.lineTo(radius * 0.58, radius * 0.1);
+    this.context.stroke();
+    if (revealable) {
+      this.context.globalCompositeOperation = "destination-out";
+      this.context.globalAlpha = 0.88;
+      this.context.fillStyle = "#000";
+      this.drawBrushPath(radius * 0.74, speed, roughness);
+    }
+    this.context.restore();
+  }
+
+  private drawBrushPath(radius: number, speed: number, roughness: number) {
     this.context.beginPath();
     for (let index = 0; index < 12; index += 1) {
       const theta = (index / 12) * Math.PI * 2;
@@ -252,11 +280,6 @@ export class ScratchSurface {
     }
     this.context.closePath();
     this.context.fill();
-    this.context.globalAlpha = 0.28;
-    this.context.beginPath();
-    this.context.ellipse(radius * 0.18, -radius * 0.08, radius * 0.7, radius * 0.42, 0, 0, Math.PI * 2);
-    this.context.fill();
-    this.context.restore();
   }
 
   private emitDebris(point: ScratchPoint, angle: number, speed: number) {

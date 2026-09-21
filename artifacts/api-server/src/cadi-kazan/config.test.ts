@@ -16,12 +16,31 @@ describe("Cadı Kazan payout configuration", () => {
     expect(getCashoutMultiplierBps("STANDARD", 1, 4)).toBe(480);
   });
 
-  it("provides replaceable conservative tables for every Advanced alarm option", () => {
+  it("provides final data-driven tables for every Advanced bomb option", () => {
     for (const alarmCount of ADVANCED_ALARM_OPTIONS) {
       const table = ADVANCED_PAYOUT_TABLES[alarmCount];
-      expect(table.calibration).toBe("TEMPORARY_CONSERVATIVE");
+      expect(table.calibration).toBe("FINAL_DATA_DRIVEN");
+      expect(table.version).toBe("advanced-final-v1");
+      expect(table.targetRtpBps).toBe(9_600);
+      expect(table.maxMultiplierBps).toBe(100_000);
       expect(table.multipliersBps).toHaveLength(getSafeCellCount("ADVANCED", alarmCount));
       expect(table.multipliersBps.every((value, index) => index === 0 || value >= table.multipliersBps[index - 1])).toBe(true);
+      expect(Math.max(...table.multipliersBps)).toBeLessThanOrEqual(100_000);
+    }
+  });
+
+  it("keeps Advanced early cashout points inside the RTP target band", () => {
+    for (const alarmCount of ADVANCED_ALARM_OPTIONS) {
+      const table = ADVANCED_PAYOUT_TABLES[alarmCount];
+      for (let safeCount = 1; safeCount <= Math.min(5, table.safeCellCount); safeCount += 1) {
+        let survival = 1;
+        for (let index = 0; index < safeCount; index += 1) {
+          survival *= (25 - alarmCount - index) / (25 - index);
+        }
+        const rtp = survival * (table.multipliersBps[safeCount - 1] / 100);
+        expect(rtp).toBeGreaterThanOrEqual(0.955);
+        expect(rtp).toBeLessThanOrEqual(0.965);
+      }
     }
   });
 

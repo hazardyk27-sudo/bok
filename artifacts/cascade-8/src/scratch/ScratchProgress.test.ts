@@ -14,6 +14,17 @@ describe("scratch progress core", () => {
 
     expect(progress.coverage).toBeLessThan(SCRATCH_REVEAL_THRESHOLD);
     expect(progress.committed).toBe(false);
+    expect(progress.depthAt(0.5, 0.5)).toBeLessThan(0.62);
+    expect(progress.isRevealableAt(0.5, 0.5)).toBe(false);
+  });
+
+  it("requires repeated abrasion before a local result can show", () => {
+    const progress = new ScratchProgressGrid();
+    for (let pass = 0; pass < 4; pass += 1) progress.sampleCircle(0.5, 0.5, 0.06);
+
+    expect(progress.isRevealableAt(0.5, 0.5)).toBe(false);
+    progress.sampleCircle(0.5, 0.5, 0.06);
+    expect(progress.isRevealableAt(0.5, 0.5)).toBe(true);
   });
 
   it("interpolates fast pointer movement without gaps", () => {
