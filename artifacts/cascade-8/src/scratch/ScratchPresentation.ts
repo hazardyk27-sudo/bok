@@ -6,6 +6,16 @@ export type ScratchCellPresentation = {
   resultClass: "safe" | "bomb" | null;
 };
 
+export function getScratchCellLayerMarkup() {
+  return `
+    <span class="witch-cell-result-layer" aria-hidden="true">
+      <span class="witch-cell-content"></span>
+      <span class="witch-cell-result-label"></span>
+    </span>
+    <canvas class="witch-scratch-canvas" aria-hidden="true"></canvas>
+  `;
+}
+
 export function getScratchCellPresentation(
   mode: ScratchCellMode,
   revealed: boolean,

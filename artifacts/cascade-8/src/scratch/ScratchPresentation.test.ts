@@ -1,7 +1,15 @@
 import { describe, expect, it } from "vitest";
-import { getScratchCellPresentation } from "./ScratchPresentation";
+import { getScratchCellLayerMarkup, getScratchCellPresentation } from "./ScratchPresentation";
 
 describe("scratch result presentation", () => {
+  it("places the result layer directly below the scratch mask", () => {
+    const markup = getScratchCellLayerMarkup();
+
+    expect(markup.indexOf("witch-cell-result-layer")).toBeGreaterThanOrEqual(0);
+    expect(markup.indexOf("witch-scratch-canvas")).toBeGreaterThan(markup.indexOf("witch-cell-result-layer"));
+    expect(markup).not.toContain("data-witch-cell");
+  });
+
   it("does not expose a cell index for an unrevealed surface", () => {
     expect(getScratchCellPresentation("STANDARD", false, false)).toEqual({
       symbol: "",

@@ -1,5 +1,5 @@
 import { ScratchSurface } from "./scratch/ScratchSurface";
-import { getScratchCellPresentation } from "./scratch/ScratchPresentation";
+import { getScratchCellLayerMarkup, getScratchCellPresentation } from "./scratch/ScratchPresentation";
 
 type CadiKazanMode = "STANDARD" | "ADVANCED";
 type CadiKazanStatus = "ACTIVE" | "CASHED_OUT" | "BUST" | "COMPLETED";
@@ -343,9 +343,7 @@ export class WitchClient {
       this.destroyScratchSurfaces();
       board.innerHTML = Array.from({ length: round.cellCount }, (_, index) => `
         <button type="button" class="witch-cell" data-witch-cell="${index}" aria-label="Kazınabilir kapalı alan">
-          <span class="witch-cell-content" aria-hidden="true"></span>
-          <span class="witch-cell-result-label" aria-hidden="true"></span>
-          <canvas class="witch-scratch-canvas" aria-hidden="true"></canvas>
+          ${getScratchCellLayerMarkup()}
         </button>
       `).join("");
     }
@@ -380,7 +378,8 @@ export class WitchClient {
       if (resultLabel) resultLabel.textContent = presentation.label;
       const canvas = button.querySelector<HTMLCanvasElement>(".witch-scratch-canvas");
       if (!canvas) return;
-      canvas.hidden = isRevealed;
+      const keepActiveMaskLayer = round.status === "ACTIVE" && isActuallyRevealed;
+      canvas.hidden = isRevealed && !keepActiveMaskLayer;
       const surface = this.scratchSurfaces.get(index);
       if (!isRevealed && !surface) {
         this.scratchSurfaces.set(index, new ScratchSurface(canvas, {

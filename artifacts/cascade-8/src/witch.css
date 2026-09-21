@@ -39,9 +39,10 @@
 .witch-cell { position: relative; aspect-ratio: 1; display: grid; place-items: center; overflow: hidden; border: 1px solid rgba(112, 213, 255, .25); border-radius: 10px; color: var(--cyan); background: linear-gradient(145deg, rgba(28, 60, 107, .78), rgba(9, 21, 55, .94)); font: 700 clamp(15px, 3vw, 23px) "DM Mono", monospace; transition: .18s ease; touch-action: none; user-select: none; }
 .witch-cell:hover:not(:disabled) { border-color: rgba(243, 198, 107, .9); color: #fff; transform: translateY(-2px); }
 .witch-cell.is-revealed { cursor: default; }
+.witch-cell-result-layer { position: relative; z-index: 1; display: grid; place-items: center; width: 100%; height: 100%; pointer-events: none; }
 .witch-cell-content { position: relative; z-index: 1; pointer-events: none; font-size: clamp(30px, 6vw, 46px); line-height: 1; }
 .witch-cell-result-label { position: absolute; right: 8px; bottom: 8px; left: 8px; z-index: 1; color: currentColor; font: 700 clamp(8px, 1.5vw, 11px) "DM Mono", monospace; letter-spacing: .12em; line-height: 1; text-align: center; pointer-events: none; }
-.witch-scratch-canvas { position: absolute; inset: 0; z-index: 2; display: block; width: 100%; height: 100%; cursor: crosshair; touch-action: none; }
+.witch-scratch-canvas { position: absolute; inset: 0; z-index: 2; display: block; width: 100%; height: 100%; background: transparent; cursor: crosshair; touch-action: none; }
 .witch-scratch-canvas[hidden] { display: none; }
 .witch-cell.is-pending { border-color: rgba(243, 198, 107, .9); box-shadow: 0 0 0 2px rgba(243, 198, 107, .16); }
 .witch-cell.is-safe { border-color: rgba(106, 240, 190, .7); color: #081b17; background: linear-gradient(145deg, #89f3ca, #3bb995); }
