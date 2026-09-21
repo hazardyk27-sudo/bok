@@ -13,6 +13,7 @@ export function getScratchCellLayerMarkup() {
       <span class="witch-cell-result-label"></span>
     </span>
     <canvas class="witch-scratch-canvas" aria-hidden="true"></canvas>
+    <canvas class="witch-debris-canvas" aria-hidden="true"></canvas>
   `;
 }
 

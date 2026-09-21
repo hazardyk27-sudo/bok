@@ -1,5 +1,7 @@
 import { ScratchSurface } from "./scratch/ScratchSurface";
 import { getScratchCellLayerMarkup, getScratchCellPresentation } from "./scratch/ScratchPresentation";
+import { triggerScratchHaptic } from "./scratch/ScratchFeedback";
+import { AudioManager } from "./game/AudioManager";
 
 type CadiKazanMode = "STANDARD" | "ADVANCED";
 type CadiKazanStatus = "ACTIVE" | "CASHED_OUT" | "BUST" | "COMPLETED";
@@ -141,6 +143,7 @@ export class WitchClient {
   private terminalRevealVisible = false;
   private terminalRevealTimer: number | null = null;
   private readonly scratchSurfaces = new Map<number, ScratchSurface>();
+  private readonly audio = new AudioManager();
 
   constructor(root: HTMLElement) {
     this.root = root;
@@ -222,6 +225,11 @@ export class WitchClient {
       const data = await response.json() as CadiKazanMutation & { error?: string };
       if (!response.ok) throw new Error(data.error ?? "Alan açılamadı");
       this.applyState(data.state, data.state.round?.status !== "ACTIVE");
+      if (data.outcome === "BUST") {
+        triggerScratchHaptic(round.mode === "ADVANCED" ? "ALARM" : "BOMB");
+      } else if (data.outcome === "SAFE" || data.outcome === "COMPLETED") {
+        triggerScratchHaptic("GOLD");
+      }
       this.setFeedback(
         data.outcome === "BUST" ? "BOMBA! Round BUST oldu." :
           data.outcome === "COMPLETED" ? "Tüm güvenli alanlar açıldı. Ödül tamamlandı." :
@@ -254,6 +262,7 @@ export class WitchClient {
       const data = await response.json() as CadiKazanMutation & { error?: string };
       if (!response.ok) throw new Error(data.error ?? "Cash Out başarısız");
       this.applyState(data.state, data.state.round?.status !== "ACTIVE");
+      if (data.outcome === "CASHED_OUT") triggerScratchHaptic("CASH_OUT");
       this.setFeedback(data.outcome === "CASHED_OUT" ? "Kazanç wallet’a aktarıldı." : "Round zaten kapalı.");
     } catch (error) {
       this.setFeedback(error instanceof Error ? error.message : "Cash Out başarısız");
@@ -378,11 +387,15 @@ export class WitchClient {
       if (resultLabel) resultLabel.textContent = presentation.label;
       const canvas = button.querySelector<HTMLCanvasElement>(".witch-scratch-canvas");
       if (!canvas) return;
+      const debrisCanvas = button.querySelector<HTMLCanvasElement>(".witch-debris-canvas");
       const keepActiveMaskLayer = round.status === "ACTIVE" && isActuallyRevealed;
       canvas.hidden = isRevealed && !keepActiveMaskLayer;
+      if (debrisCanvas) debrisCanvas.hidden = canvas.hidden;
       const surface = this.scratchSurfaces.get(index);
       if (!isRevealed && !surface) {
         this.scratchSurfaces.set(index, new ScratchSurface(canvas, {
+          audio: this.audio,
+          debrisCanvas: debrisCanvas ?? undefined,
           onCommit: () => {
             if (this.pendingRevealCell === null && !this.busy) void this.reveal(index);
           },

@@ -5,6 +5,8 @@ export class AudioManager {
   private musicGain?: GainNode;
   private musicTimer?: number;
   private musicStep = 0;
+  private scratchBuffer?: AudioBuffer;
+  private readonly scratchSources = new Set<AudioBufferSourceNode>();
   muted = localStorage.getItem("cascade8-muted") === "true";
   volume = Number(localStorage.getItem("cascade8-volume") ?? "0.38");
   musicVolume = Number(localStorage.getItem("cascade8-music-volume") ?? "0.18");
@@ -53,6 +55,48 @@ export class AudioManager {
     envelope.connect(this.sfxGain!);
     oscillator.start();
     oscillator.stop(this.context!.currentTime + duration + 0.02);
+  }
+  scratch(intensity = 0.5) {
+    if (this.muted) return;
+    this.ensure();
+    const context = this.context!;
+    if (!this.scratchBuffer) {
+      const sampleRate = context.sampleRate;
+      const buffer = context.createBuffer(1, Math.ceil(sampleRate * 0.12), sampleRate);
+      const samples = buffer.getChannelData(0);
+      for (let index = 0; index < samples.length; index += 1) {
+        const envelope = 1 - index / samples.length;
+        samples[index] = (Math.random() * 2 - 1) * envelope;
+      }
+      this.scratchBuffer = buffer;
+    }
+
+    const normalized = Math.max(0, Math.min(1, intensity));
+    const source = context.createBufferSource();
+    const filter = context.createBiquadFilter();
+    const envelope = context.createGain();
+    const duration = 0.035 + normalized * 0.04;
+    const startAt = context.currentTime;
+    source.buffer = this.scratchBuffer;
+    source.playbackRate.value = 0.72 + normalized * 0.48;
+    filter.type = "bandpass";
+    filter.frequency.value = 750 + normalized * 2_000;
+    filter.Q.value = 0.65;
+    envelope.gain.setValueAtTime(0.0001, startAt);
+    envelope.gain.exponentialRampToValueAtTime(0.055 + normalized * 0.075, startAt + 0.006);
+    envelope.gain.exponentialRampToValueAtTime(0.0001, startAt + duration);
+    source.connect(filter);
+    filter.connect(envelope);
+    envelope.connect(this.sfxGain!);
+    this.scratchSources.add(source);
+    source.addEventListener("ended", () => {
+      this.scratchSources.delete(source);
+      source.disconnect();
+      filter.disconnect();
+      envelope.disconnect();
+    }, { once: true });
+    source.start(startAt);
+    source.stop(startAt + duration);
   }
   click() { this.tone(480, 0.05, "triangle"); }
   spin() { this.tone(180, 0.16, "sine"); }
