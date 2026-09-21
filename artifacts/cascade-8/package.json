@@ -5,8 +5,8 @@
   "type": "module",
   "scripts": {
     "dev": "vite --config vite.config.ts --host 0.0.0.0",
-    "build": "vite build --config vite.config.ts",
-    "serve": "vite preview --config vite.config.ts --host 0.0.0.0",
+    "build": "PORT=20003 BASE_PATH=/ vite build --config vite.config.ts",
+    "serve": "PORT=20003 BASE_PATH=/ vite preview --config vite.config.ts --host 0.0.0.0",
     "simulate": "tsx src/simulation/cli.ts",
     "test": "PORT=4173 BASE_PATH=/ vitest run src",
     "test:mobile": "playwright test --project=android-chrome",

@@ -21,50 +21,22 @@ pnpm run build
 
 ## Simulation
 
-The simulator uses the exact same symbol weights, RNG interface, paytable, win evaluator, cascade logic, bonus rules, and crystal logic as the game. It never imports Phaser.
+The simulator uses the exact same symbol weights, RNG interface, paytable, win evaluator, cascade logic, bonus rules, and crystal logic as the canonical `artifacts/cascade-8` game. It never imports Phaser.
 
 ```bash
 pnpm run simulate -- --spins=100000 --seed=12345
 pnpm run simulate -- --spins=1000000 --seed=20260913
 ```
 
-Reports are printed to the console and written to `simulation-results/` with the seed and timestamp.
-
-### Latest reproducible report
-
-Command:
-
-```bash
-pnpm run simulate -- --spins=1000000 --seed=20260913
-```
-
-Measured on September 13, 2026:
-
-| Metric | Result |
-| --- | ---: |
-| Overall RTP | 95.7117% |
-| Base game RTP | 85.6379% |
-| Bonus RTP | 10.0738% |
-| Hit rate | 30.6587% |
-| Zero-win rate | 69.3413% |
-| Bonus triggers | 6,418 |
-| Bonus frequency | 1 in 155.81 |
-| Average bonus win | 15.6962x |
-| Median bonus win | 10.3x |
-| Average tumbles per paid spin | 0.502 |
-| Maximum tumbles observed | 36 |
-| Maximum observed win | 1,507.6x |
-| Crystal trigger frequency | 0.3753% |
-
-This is a statistical sample, not a claim of exact long-run perfection. The complete JSON report is stored alongside the simulation output.
+Reports are printed to the console and written to `artifacts/cascade-8/simulation-results/` with the seed and timestamp.
 
 ## Architecture
 
-- `src/engine/` contains pure game math and deterministic tests.
-- `src/config/GameConfig.ts` is the single editable source for board dimensions, weights, paytable, bonus tables, crystal distribution, bets, and the max-win cap.
-- `src/game/` contains Phaser rendering, animation orchestration, audio, and the explicit controller state machine.
-- `src/simulation/` contains the non-Phaser simulator and CLI.
-- `src/main.ts` builds the surrounding HTML/CSS interface and connects it to the Phaser scene.
+- `artifacts/cascade-8/src/engine/` contains pure game math and deterministic tests.
+- `artifacts/cascade-8/src/config/GameConfig.ts` is the single editable source for board dimensions, weights, paytable, bonus tables, crystal distribution, bets, and the max-win cap.
+- `artifacts/cascade-8/src/game/` contains Phaser rendering, animation orchestration, audio, and the explicit controller state machine.
+- `artifacts/cascade-8/src/simulation/` contains the non-Phaser simulator and CLI.
+- `artifacts/cascade-8/src/main.ts` builds the surrounding HTML/CSS interface and connects it to the Phaser scene.
 
 Phaser is never the source of truth. A board is pure symbol data; the scene renders it and animates the events produced by the engine.
 
@@ -101,9 +73,9 @@ No player history, balance, bet size, win/loss history, inactivity, or autoplay 
 
 ## Replacing art and timing
 
-The prototype uses original vector-like Phaser shapes and typography instead of external game artwork. Symbol colors, names, and icons are in `src/config/GameConfig.ts`; the renderer is `src/game/GameScene.ts`.
+The prototype uses original vector-like Phaser shapes and typography instead of external game artwork. Symbol colors, names, and icons are in `artifacts/cascade-8/src/config/GameConfig.ts`; the renderer is `artifacts/cascade-8/src/game/GameScene.ts`.
 
-Animation durations are in `ANIMATION` in `src/config/GameConfig.ts`. Turbo and reduced-motion change timing only, never the RNG or mathematical result.
+Animation durations are in `ANIMATION` in `artifacts/cascade-8/src/config/GameConfig.ts`. Turbo and reduced-motion change timing only, never the RNG or mathematical result.
 
 ## RNG safety note
 

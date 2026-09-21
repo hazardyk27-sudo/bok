@@ -4,10 +4,10 @@ Virtual-credit cascading slot-style browser game with a Phaser board, pure TypeS
 
 ## Run & Operate
 
-- `pnpm run dev` — run the Cascade 8 Vite preview (port 5000)
-- `pnpm run typecheck` — full typecheck across the root game and workspace packages
-- `pnpm run build` — typecheck + build the root game
-- `pnpm test` — run the pure-engine regression suite
+- `pnpm run dev` — run the `artifacts/cascade-8` Vite preview
+- `pnpm run typecheck` — full typecheck across workspace packages
+- `pnpm run build` — typecheck + build `artifacts/cascade-8`
+- `pnpm test` — run the `artifacts/cascade-8` regression suite
 - `pnpm run simulate -- --spins=100000 --seed=12345` — run the deterministic `artifacts/cascade-8` simulator
 
 ## Stack
@@ -21,16 +21,16 @@ Virtual-credit cascading slot-style browser game with a Phaser board, pure TypeS
 
 ## Where things live
 
-- `src/config/GameConfig.ts` — single source of truth for symbol weights, paytable, bonus rules, crystals, bets, and max win.
-- `src/engine/` — Phaser-independent board generation, evaluation, cascades, bonus logic, and seeded/crypto RNG.
-- `src/game/` — Phaser scene, controller state machine, and WebAudio effects.
-- `src/simulation/` — high-speed simulator, CLI, and saved reports in `simulation-results/`.
-- `src/main.ts` and `src/styles.css` — responsive surrounding interface and modals.
-- `/lab` — development-only deterministic board harness.
+- `artifacts/cascade-8/src/config/GameConfig.ts` — single source of truth for symbol weights, paytable, bonus rules, crystals, bets, and max win.
+- `artifacts/cascade-8/src/engine/` — Phaser-independent board generation, evaluation, cascades, bonus logic, and seeded/crypto RNG.
+- `artifacts/cascade-8/src/game/` — Phaser scene, controller state machine, and WebAudio effects.
+- `artifacts/cascade-8/src/simulation/` — high-speed simulator, CLI, and saved reports.
+- `artifacts/cascade-8/src/main.ts` and `artifacts/cascade-8/src/styles.css` — responsive surrounding interface and modals.
+- `/lab` — development-only deterministic board harness in the canonical artifact.
 
 ## Architecture decisions
 
-- `artifacts/cascade-8` is the only product game engine and simulation source of truth; the root `src/` engine is legacy and is not used by the product workflow.
+- `artifacts/cascade-8` is the only product game engine and simulation source of truth.
 
 - Phaser renders pure board data; it never owns the math state.
 - Paid spins charge once and credit once after base cascades and any bonus complete.
@@ -47,7 +47,7 @@ The app supports 6 × 5 anywhere-pays, simultaneous symbol wins, cascades, scatt
 
 ## Gotchas
 
-- `pnpm run build` intentionally builds the root Vite game only; sibling artifact packages require their managed artifact environment.
+- The root workspace delegates product development, testing, simulation, and builds to `artifacts/cascade-8`.
 - Do not move symbol probabilities into Phaser/UI code or make them depend on bet, balance, or player history.
 
 ## Pointers
