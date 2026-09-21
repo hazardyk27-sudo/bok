@@ -574,6 +574,22 @@
   transition: none;
 }
 .wheel-ball::after { content: ""; position: absolute; inset: 1px 5px 5px 2px; border-radius: 50%; background: rgba(255, 255, 255, .9); }
+.roulette-physics-canvas {
+  position: absolute;
+  inset: 0;
+  z-index: 9;
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity .2s ease;
+}
+.roulette-physics-canvas[data-ready="true"] { opacity: 1; }
+.roulette-wheel-live:has(.roulette-physics-canvas[data-ready="true"]) > .wheel-rotor,
+.roulette-wheel-live:has(.roulette-physics-canvas[data-ready="true"]) > .wheel-ball-track {
+  visibility: hidden;
+}
 .wheel-result-overlay {
   position: absolute;
   top: 50%;

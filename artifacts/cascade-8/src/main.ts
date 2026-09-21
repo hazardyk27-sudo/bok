@@ -190,6 +190,7 @@ const rouletteMarkup = `
          <div class="roulette-card-kicker">LIVE EUROPEAN WHEEL</div>
         <div class="roulette-wheel-stage">
            <div class="roulette-wheel-live" data-wheel style="--wheel-band:${rouletteWheelBand}">
+            <canvas class="roulette-physics-canvas" data-physics-wheel aria-hidden="true"></canvas>
             <div class="wheel-rotor">
                <div class="wheel-wood-deck" aria-hidden="true"></div>
               <div class="wheel-number-band" aria-hidden="true" style="--wheel-band:${rouletteWheelBand}"></div>

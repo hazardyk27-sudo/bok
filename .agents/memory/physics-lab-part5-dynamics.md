@@ -21,6 +21,8 @@ The 1.09–1.25 result belongs to the measured-GLB replacement profile, not to a
 
 A controlled post-rollback smoke confirmed the retained shallow baseline at 1.67/1.52/1.72 laps with identical launch diagnostics across the earlier snapshot: radius 2.475, height -0.369, tangential speed about 5.99–6.00, zero radial speed, fixed gravity/material/damping/timestep criteria, and full downstream settle.
 
+The current runtime snapshot does not reproduce that older lap result: the safest three-seed smoke with 6.0 wu/s, 230 rad/s launch spin, and the shallow inner profile settles cleanly at 0.84/1.16/1.28 laps. Raising both inner samples toward a 3 mm lift reaches about 1.6–2.0 laps but prevents natural exit and stable settle, confirming the remaining gap is a geometry-energy tradeoff rather than a simple launch-speed fix.
+
 **Why:** Fifty-spin runtime audits exposed both failure modes: low-speed resting on the flat transition and center-floor traps. The sloped transition preserves gravity/friction support while allowing inward movement, and the spindle guard prevents the ball from crossing the pocket basin.
 
 **How to apply:** Keep the Part 4 dynamic rotor unchanged, preserve the -58.86/default-contact baseline, and do not strengthen this lip further without a new radial-energy hypothesis. When adjusting Part 5 geometry, validate the complete 50-spin chain at fixed 120 Hz with stable-window settling and separate escape, trap, tunneling, and velocity-explosion counters.

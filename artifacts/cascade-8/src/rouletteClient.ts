@@ -7,6 +7,7 @@ import {
   normalizeDegrees,
   ROULETTE_SEGMENT_DEGREES,
 } from "./rouletteGeometry";
+import { RoulettePhysicsReplay } from "./roulettePhysicsReplay";
 
 type RoulettePhase = "OPEN" | "LAST_CALL" | "LOCKED" | "SPINNING" | "RESULT" | "MULTIPLIER_REVEAL" | "SETTLING" | "INTERMISSION";
 type RouletteMultiplier = 50 | 100 | 150 | 200 | 250 | 300 | 400 | 500;
@@ -484,6 +485,8 @@ export class RouletteClient {
 
   private wheelAnimation?: Animation;
 
+  private physicsReplay?: RoulettePhysicsReplay;
+
   private activeSpinRoundId = "";
 
 
@@ -539,6 +542,15 @@ export class RouletteClient {
     document.addEventListener("visibilitychange", this.visibilityChangeHandler);
     this.setConnection("SENKRON BAŞLATILIYOR", false);
     this.bind();
+    const physicsCanvas = this.root.querySelector<HTMLCanvasElement>("[data-physics-wheel]");
+    if (physicsCanvas) {
+      void RoulettePhysicsReplay.create(physicsCanvas)
+        .then((replay) => { this.physicsReplay = replay; })
+        .catch((error) => {
+          physicsCanvas.dataset.error = error instanceof Error ? error.message : "PHYSICS_REPLAY_UNAVAILABLE";
+          console.warn("3D physics replay unavailable; keeping the existing wheel fallback.", error);
+        });
+    }
     void this.load();
     this.connect();
     this.statusTimer = window.setInterval(() => this.renderCountdown(), 200);
@@ -555,6 +567,7 @@ export class RouletteClient {
     this.clearBallSoundTimers();
     if (this.resultAnnouncementTimer) window.clearTimeout(this.resultAnnouncementTimer);
     this.socket?.close();
+    this.physicsReplay?.destroy();
   }
 
   private bind() {
@@ -1088,6 +1101,7 @@ export class RouletteClient {
     rotor.style.transform = "rotate(0deg)";
     wheel.classList.add("is-spinning");
     this.voice.startSpin(profile.ballOrbitMs);
+    this.physicsReplay?.startLoop();
     const { outerRadius } = this.readWheelRadii(wheel);
     ball.style.transform = `rotate(${profile.initialBallAngle}deg) translateY(-${outerRadius}px)`;
     if (this.prefersReducedMotion()) {
@@ -1149,6 +1163,24 @@ export class RouletteClient {
     this.settledResultKey = "";
     this.activeSpinRoundId = "";
     this.voice.stopSpin();
+    if (this.physicsReplay) {
+      this.ballAnimation?.cancel();
+      this.wheelAnimation?.cancel();
+      wheel.classList.remove("is-spinning");
+      this.physicsReplay.playTo(
+        winningNumber,
+        BALL_LANDING_DURATION_MS,
+        animationElapsedMs,
+        () => {
+          if (this.animatedResultKey !== resultKey) return;
+          this.settledResultKey = resultKey;
+          this.voice.cue("settle");
+          this.announceSettledResult();
+          this.render();
+        },
+      );
+      return;
+    }
     this.clearBallSoundTimers();
     if (this.ballDropTimer) window.clearTimeout(this.ballDropTimer);
     this.ballDropTimer = undefined;
@@ -1279,6 +1311,18 @@ export class RouletteClient {
     this.voice.stopSpin();
     this.clearBallSoundTimers();
     const currentRotation = this.readRotation(rotor);
+    if (this.physicsReplay) {
+      this.ballAnimation?.cancel();
+      this.wheelAnimation?.cancel();
+      wheel.classList.remove("is-spinning");
+      this.physicsReplay.settle(winningNumber);
+      this.wheelAnimation = undefined;
+      this.ballAnimation = undefined;
+      this.settledResultKey = resultKey;
+      this.announceSettledResult();
+      this.render();
+      return;
+    }
     this.ballAnimation?.cancel();
     this.wheelAnimation?.cancel();
     wheel.classList.remove("is-spinning");

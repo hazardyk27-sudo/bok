@@ -27,3 +27,4 @@
 - [Physics Lab Part 5 dynamics](physics-lab-part5-dynamics.md) — a sloped inward transition and spindle guard prevent flat-step traps without scripted inward motion.
 - [Physics Lab server authority](physics-lab-server-authority.md) — preserve the validated release band while securely varying allowed starts, then return canonical persisted replay payloads.
 - [Rapier concave track limits](rapier-concave-track-limits.md) — convex rings and full disks cannot prove a natural roulette track; require a genuinely concave support surface and pair-specific contact evidence.
+- [Procedural pocket validation](procedural-pocket-validation.md) — a bowl opening needs continuous pocket support and smoke runs must prove kinematic fret contacts do not eject the ball.

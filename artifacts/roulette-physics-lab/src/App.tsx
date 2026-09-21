@@ -3,6 +3,7 @@ import * as THREE from 'three';
 import RAPIER from '@dimforge/rapier3d-compat';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
+import { ProceduralRouletteViewport } from './ProceduralRouletteViewport';
 import {
   getGetPhysicsLabCurrentRoundQueryKey,
   useCreatePhysicsLabRound,
@@ -57,6 +58,12 @@ const PHYSICS_Y_OFFSET =
   RENDERED_OUTER_TRACK_SURFACE_Y - OUTER_TRACK_SURFACE_Y;
 const OUTER_TRACK_CONTACT_TOLERANCE = 0.018;
 const OUTER_TRACK_RADIAL_TOLERANCE = 0.06;
+const OBJECT_56_DECK_INNER_RADIUS = 2.4456;
+const OBJECT_56_DECK_OUTER_RADIUS = 2.5264;
+const OBJECT_56_DECK_INNER_Y = -0.01018;
+const OBJECT_56_DECK_OUTER_Y = -0.02097;
+const OBJECT_56_DECK_SEGMENTS = 128;
+const OBJECT_56_DECK_HALF_THICKNESS = 0.006;
 const BALL_VALIDATION_TEST_COUNT = 100;
 const PART4_SPIN_TEST_COUNT = 20;
 const PART5_SPIN_TEST_COUNT = 3;
@@ -71,7 +78,7 @@ const DEFAULT_BALL_PARAMETERS = {
   mass: 0.0027,
   friction: 0.005,
   restitution: 0,
-  linearDamping: 0.05,
+  linearDamping: 0.02,
   angularDamping: 0.03,
   initialAngularVelocity: 230,
 } as const;
@@ -81,7 +88,7 @@ const DEFAULT_ROTOR_PARAMETERS = {
   mass: 3.2,
 } as const;
 const DEFAULT_LAUNCH_PARAMETERS = {
-  speed: 9.2,
+  speed: 6.0,
   angle: 0,
   initialSpin: 230,
   variation: 0.005,
@@ -636,7 +643,7 @@ function measuredBowlProfile() {
     [1.68, -0.435],
     [1.9, -0.434],
     [2.1, -0.432],
-    [2.3, -0.429],
+    [2.3, -0.428],
     [2.4, -0.427],
     [2.5, -0.4248],
     [2.56, -0.4229],
@@ -837,6 +844,34 @@ function buildColliderSpecs(): ColliderSpec[] {
   });
 
   // Rotor: a kinematic body owns the floors, pocket walls, frets and separators.
+  addRingSpecs(specs, {
+    id: 'object-56-deck',
+    label: 'Object_56 visible deck ring',
+    body: 'rotor',
+    count: OBJECT_56_DECK_SEGMENTS,
+    radius: (OBJECT_56_DECK_INNER_RADIUS + OBJECT_56_DECK_OUTER_RADIUS) / 2,
+    y:
+      (OBJECT_56_DECK_INNER_Y + OBJECT_56_DECK_OUTER_Y) / 2 -
+      OBJECT_56_DECK_HALF_THICKNESS *
+        Math.cos(
+          Math.atan2(
+            OBJECT_56_DECK_INNER_Y - OBJECT_56_DECK_OUTER_Y,
+            OBJECT_56_DECK_OUTER_RADIUS - OBJECT_56_DECK_INNER_RADIUS,
+          ),
+        ),
+    halfExtents: [
+      ((OBJECT_56_DECK_INNER_RADIUS + OBJECT_56_DECK_OUTER_RADIUS) / 2) *
+        Math.tan(Math.PI / OBJECT_56_DECK_SEGMENTS) *
+        1.01,
+      OBJECT_56_DECK_HALF_THICKNESS,
+      (OBJECT_56_DECK_OUTER_RADIUS - OBJECT_56_DECK_INNER_RADIUS) / 2,
+    ],
+    color: rotorColor,
+    tilt: Math.atan2(
+      OBJECT_56_DECK_INNER_Y - OBJECT_56_DECK_OUTER_Y,
+      OBJECT_56_DECK_OUTER_RADIUS - OBJECT_56_DECK_INNER_RADIUS,
+    ),
+  });
   addRingSpecs(specs, {
     id: 'rotor-pocket-floor',
     label: 'Pocket floor',
@@ -3099,13 +3134,13 @@ function SceneViewport({
 
 function StatusChip({ state }: { state: LoadState }) {
   const content = {
-    loading: {
-      label: 'Reading source',
+      loading: {
+      label: 'Building wheel',
       icon: <CircleDot className="status-icon status-pulse" size={13} />,
     },
-    loaded: { label: 'Source loaded', icon: <Check className="status-icon" size={13} /> },
+    loaded: { label: 'Procedural ready', icon: <Check className="status-icon" size={13} /> },
     error: {
-      label: 'Load blocked',
+      label: 'WebGL blocked',
       icon: <AlertTriangle className="status-icon" size={13} />,
     },
   }[state];
@@ -3456,7 +3491,7 @@ function App() {
           </div>
           <div>
              <div className="eyebrow">ISOLATED PHYSICS LAB · PART 3</div>
-             <h1>Roulette / real rigid-body ball</h1>
+              <h1>Roulette / procedural rigid-body V1</h1>
           </div>
         </div>
         <div className="header-meta">
@@ -3471,7 +3506,7 @@ function App() {
               <div className="section-kicker">
               <Crosshair size={13} /> PART 3 · DYNAMIC BALL
             </div>
-            <p>Keep the premium visual source separate from clean primitive colliders, then validate temporary drops at a fixed timestep.</p>
+            <p>One shared procedural coordinate system drives the visible wheel, rotor, pocket layout, and Rapier colliders.</p>
           </div>
 
           <section className="inspector-section">
@@ -3479,17 +3514,17 @@ function App() {
             <div className="asset-name">
               <Box size={17} />
               <div>
-                <strong>roulette-visual-source</strong>
-                <span>GLB / untouched source reference</span>
+                <strong>procedural-european-v1</strong>
+                <span>Three.js mesh + Rapier collider source</span>
               </div>
             </div>
             <div className="data-row">
               <span>File path</span>
-              <code data-testid="text-asset-path">{ASSET_PATH}</code>
+              <code data-testid="text-asset-path">generated://shared-wheel-v1</code>
             </div>
             <div className="data-row">
               <span>Runtime object</span>
-              <span className="value-muted">Derived normalized copy</span>
+              <span className="value-muted">Shared mesh / collider scale</span>
             </div>
           </section>
 
@@ -4168,7 +4203,7 @@ function App() {
           </div>
 
           <div className="viewport-wrap">
-            <SceneViewport
+            <ProceduralRouletteViewport
               loadKey={loadKey}
               view={view}
               showGrid={showGrid}
@@ -4205,15 +4240,15 @@ function App() {
                   <span />
                   <span />
                 </div>
-                <strong>Loading visual source</strong>
-                <span>Auditing roulette-visual-source.glb</span>
+                <strong>Building procedural wheel</strong>
+                <span>Creating shared Three.js / Rapier geometry</span>
               </div>
             )}
             {loadState === 'error' && (
               <div className="viewport-overlay error-overlay" data-testid="status-error" role="alert">
                 <TriangleAlert size={21} />
-                <strong>Source unavailable</strong>
-                <span>{errorDetail || 'Check the asset path and try again.'}</span>
+                <strong>WebGL unavailable</strong>
+                <span>{errorDetail || 'Enable a WebGL-capable preview to view the procedural wheel.'}</span>
                 <button type="button" onClick={retryLoad} data-testid="button-load-retry">
                   Retry load
                 </button>
@@ -4221,7 +4256,7 @@ function App() {
             )}
             {loadState === 'loaded' && (
               <div className="loaded-stamp" data-testid="status-loaded">
-                <Check size={13} /> SOURCE READY
+                <Check size={13} /> PROCEDURAL READY
               </div>
             )}
           </div>
