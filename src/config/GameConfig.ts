@@ -64,8 +64,8 @@ export type ReelConfig = {
 export const BASE_REEL_CONFIG: ReelConfig = {
   name: "BASE",
   runLengthWeights: [
-    { value: 1, weight: 25 },
-    { value: 2, weight: 75 },
+    { value: 1, weight: 75 },
+    { value: 2, weight: 25 },
   ],
   symbolWeights: NORMAL_SYMBOLS.map(({ id, weight }) => ({ value: id as NormalSymbolId, weight })),
   scatterChance: 2.5,
@@ -74,8 +74,8 @@ export const BASE_REEL_CONFIG: ReelConfig = {
 export const BONUS_REEL_CONFIG: ReelConfig = {
   name: "BONUS",
   runLengthWeights: [
-    { value: 1, weight: 25 },
-    { value: 2, weight: 75 },
+    { value: 1, weight: 75 },
+    { value: 2, weight: 25 },
   ],
   symbolWeights: NORMAL_SYMBOLS.map(({ id, weight }) => ({ value: id as NormalSymbolId, weight })),
   scatterChance: 0.8,
