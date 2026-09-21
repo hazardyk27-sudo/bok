@@ -24,6 +24,11 @@ const DROP_HEIGHT_ABOVE_SURFACE = 0.72;
 const DROP_DURATION_SECONDS = 4;
 const PROFILE_SEGMENTS = 64;
 const PROFILE_SHELL_THICKNESS = 0.08;
+const BALL_COLLISION_GROUP = 0x0001;
+const STATIONARY_COLLISION_GROUP = 0x0002;
+const ROTOR_COLLISION_GROUP = 0x0004;
+const ROTOR_CONTACT_RADIUS = 1.72;
+const ROTOR_CONTACT_SEGMENTS = 32;
 
 type InspectionView = 'top' | 'angled' | 'side';
 type LoadState = 'loading' | 'loaded' | 'error';
@@ -99,9 +104,41 @@ type Part3ValidationReport = {
   detail: string;
 };
 
+type Part4ProbeResult = {
+  id: string;
+  label: string;
+  rotorAngularSpeed: number;
+  contactDuration: number;
+  spawnRadius: number;
+  spawnHeight: number;
+  initialVelocity: VectorReadout;
+  peakSpeed: number;
+  maxEnergyGain: number;
+  minRadius: number;
+  maxRadius: number;
+  maxPenetration: number;
+  maxSeparation: number;
+  escaped: boolean;
+  tunneling: boolean;
+  velocityExplosion: boolean;
+  maxVisualBodySyncError: number;
+  maxRotorSyncError: number;
+  outsideTurretStationary: boolean;
+  outcome: 'stable' | 'settled' | 'failed';
+  detail: string;
+};
+
+type Part4ValidationReport = {
+  status: 'running' | 'passed' | 'failed';
+  results: Part4ProbeResult[];
+  ccdEnabled: boolean;
+  kinematicRotor: boolean;
+  detail: string;
+};
+
 type Part2SceneViewportProps = {
   loadKey: number;
-  validationMode?: 'part2' | 'part3';
+  validationMode?: 'part2' | 'part3' | 'part4';
   view: InspectionView;
   showGrid: boolean;
   showPhysicsDebug: boolean;
@@ -167,6 +204,25 @@ const PART3_PROBES = [
   },
 ] as const;
 
+const PART4_PROBES = [
+  {
+    id: 'gentle-kinematic-contact',
+    label: 'Gentle kinematic rotor contact',
+    angle: 0.47,
+    radius: ROTOR_CONTACT_RADIUS,
+    relativeSpeed: 0.12,
+    durationSeconds: 1.6,
+  },
+  {
+    id: 'moderate-kinematic-contact',
+    label: 'Moderate relative rotor contact',
+    angle: 1.03,
+    radius: ROTOR_CONTACT_RADIUS,
+    relativeSpeed: 0.45,
+    durationSeconds: 1.6,
+  },
+] as const;
+
 function part3SpawnPosition(probe: (typeof PART3_PROBES)[number]) {
   return radialPosition(
     probe.radius,
@@ -181,6 +237,44 @@ function part3InitialVelocity(probe: (typeof PART3_PROBES)[number]): VectorReado
     y: 0,
     z: Number((-Math.sin(probe.angle) * probe.speed).toFixed(4)),
   };
+}
+
+function part4SpawnPosition(probe: (typeof PART4_PROBES)[number]) {
+  return radialPosition(
+    probe.radius,
+    probe.angle,
+    ROTOR_CONTACT_HEIGHT + BALL_RADIUS + 0.002,
+  );
+}
+
+function part4InitialVelocity(probe: (typeof PART4_PROBES)[number]): VectorReadout {
+  const surfaceSpeed = TEST_ANGULAR_SPEED * probe.radius;
+  const totalSpeed = surfaceSpeed + probe.relativeSpeed;
+  return {
+    x: Number((Math.cos(probe.angle) * totalSpeed).toFixed(4)),
+    y: 0,
+    z: Number((-Math.sin(probe.angle) * totalSpeed).toFixed(4)),
+  };
+}
+
+function addKinematicRotorBand(world: RAPIER.World, body: RAPIER.RigidBody) {
+  const colliders: RAPIER.Collider[] = [];
+  for (let index = 0; index < ROTOR_CONTACT_SEGMENTS; index += 1) {
+    const angle = (index / ROTOR_CONTACT_SEGMENTS) * TWO_PI;
+    const collider = RAPIER.ColliderDesc.roundCuboid(
+      (ROTOR_CONTACT_RADIUS * Math.PI) / ROTOR_CONTACT_SEGMENTS,
+      0.018,
+      0.16,
+      0.025,
+    )
+      .setTranslation(...radialPosition(ROTOR_CONTACT_RADIUS, angle, ROTOR_CONTACT_HEIGHT))
+      .setRotation({ x: 0, y: Math.sin(angle / 2), z: 0, w: Math.cos(angle / 2) })
+      .setFriction(0.42)
+      .setRestitution(0.02)
+      .setCollisionGroups(ROTOR_COLLISION_GROUP | (BALL_COLLISION_GROUP << 16));
+    colliders.push(world.createCollider(collider, body));
+  }
+  return colliders;
 }
 
 function countMeshes(object: THREE.Object3D) {
@@ -232,6 +326,7 @@ function profileHeight(radius: number) {
 }
 
 const DROP_TRACK_Y = profileHeight(DROP_RADIUS);
+const ROTOR_CONTACT_HEIGHT = profileHeight(ROTOR_CONTACT_RADIUS) + 0.04;
 const DROP_INITIAL_POSITION = radialPosition(
   DROP_RADIUS,
   0,
@@ -371,6 +466,7 @@ export function Part2SceneViewport({
   const [angleReadout, setAngleReadout] = useState(normalizedAngle(rotorAngle));
   const [dropReport, setDropReport] = useState<Part2DropReport | null>(null);
   const [part3Report, setPart3Report] = useState<Part3ValidationReport | null>(null);
+  const [part4Report, setPart4Report] = useState<Part4ValidationReport | null>(null);
 
   viewRef.current = view;
   callbacksRef.current = { onStateChange, onAudit, onRotorAngleChange };
@@ -394,7 +490,9 @@ export function Part2SceneViewport({
     let ballMesh: THREE.Mesh | null = null;
     let world: RAPIER.World | null = null;
     let ballBody: RAPIER.RigidBody | null = null;
+    let rotorBody: RAPIER.RigidBody | null = null;
     let physicsBallCollider: RAPIER.Collider | null = null;
+    let rotorColliders: RAPIER.Collider[] = [];
     let accumulator = 0;
     let lastTime = performance.now();
     let fixedStepCount = 0;
@@ -422,6 +520,25 @@ export function Part2SceneViewport({
     let part3LeftValidVolume = false;
     let part3Results: Part3ProbeResult[] = [];
     let part3Finished = false;
+    let part4ProbeIndex = 0;
+    let part4Elapsed = 0;
+    let part4PeakSpeed = 0;
+    let part4InitialSpeed = 0;
+    let part4MinRadius = Number.POSITIVE_INFINITY;
+    let part4MaxRadius = 0;
+    let part4MaxPenetration = 0;
+    let part4MaxSeparation = 0;
+    let part4ContactFrames = 0;
+    let part4SampleFrames = 0;
+    let part4MaxVisualBodySyncError = 0;
+    let part4MaxRotorSyncError = 0;
+    let part4MaxEnergyGain = 0;
+    let part4OutsideTurretStationary = true;
+    let part4LeftValidVolume = false;
+    let part4Results: Part4ProbeResult[] = [];
+    let part4Finished = false;
+    const stationaryBaselinePosition = new THREE.Vector3();
+    const stationaryBaselineQuaternion = new THREE.Quaternion();
 
     callbacksRef.current.onStateChange('loading');
 
@@ -438,6 +555,20 @@ export function Part2SceneViewport({
         status,
         results,
         ccdEnabled,
+        detail,
+      });
+    };
+
+    const publishPart4Report = (
+      status: Part4ValidationReport['status'],
+      detail: string,
+      results = part4Results,
+    ) => {
+      setPart4Report({
+        status,
+        results,
+        ccdEnabled,
+        kinematicRotor: Boolean(rotorBody),
         detail,
       });
     };
@@ -467,6 +598,43 @@ export function Part2SceneViewport({
       publishPart3Report(
         'running',
         `Running probe ${index + 1}/${PART3_PROBES.length}: ${probe.label}.`,
+      );
+    };
+
+    const startPart4Probe = (index: number) => {
+      const probe = PART4_PROBES[index];
+      if (!probe || !ballBody || !ballMesh || !rotorBody) return;
+      const position = part4SpawnPosition(probe);
+      const velocity = part4InitialVelocity(probe);
+      const rotorAngleNow = normalizedAngle(rotorAngleRef.current);
+      rotorBody.setRotation(
+        { x: 0, y: Math.sin(rotorAngleNow / 2), z: 0, w: Math.cos(rotorAngleNow / 2) },
+        true,
+      );
+      ballBody.setTranslation({ x: position[0], y: position[1], z: position[2] }, true);
+      ballBody.setLinvel({ x: velocity.x, y: velocity.y, z: velocity.z }, true);
+      ballBody.setAngvel({ x: 0, y: 0, z: 0 }, true);
+      ballBody.setRotation({ x: 0, y: 0, z: 0, w: 1 }, true);
+      ballMesh.position.set(...position);
+      ballMesh.quaternion.identity();
+      part4ProbeIndex = index;
+      part4Elapsed = 0;
+      part4InitialSpeed = Math.hypot(velocity.x, velocity.y, velocity.z);
+      part4PeakSpeed = part4InitialSpeed;
+      part4MinRadius = probe.radius;
+      part4MaxRadius = probe.radius;
+      part4MaxPenetration = 0;
+      part4MaxSeparation = 0;
+      part4ContactFrames = 0;
+      part4SampleFrames = 0;
+      part4MaxVisualBodySyncError = 0;
+      part4MaxRotorSyncError = 0;
+      part4MaxEnergyGain = 0;
+      part4OutsideTurretStationary = true;
+      part4LeftValidVolume = false;
+      publishPart4Report(
+        'running',
+        `Running probe ${index + 1}/${PART4_PROBES.length}: ${probe.label}.`,
       );
     };
 
@@ -578,6 +746,8 @@ export function Part2SceneViewport({
           stationaryGroup.attach(outside);
           rotorGroup.attach(inside);
           stationaryGroup.attach(turret);
+          stationaryBaselinePosition.copy(stationaryGroup.position);
+          stationaryBaselineQuaternion.copy(stationaryGroup.quaternion);
           wheelRoot.remove(runtimeOffset);
           wheelRoot.updateMatrixWorld(true);
           scene.add(wheelRoot);
@@ -642,10 +812,27 @@ export function Part2SceneViewport({
             stationaryBody,
           );
 
+          if (validationMode === 'part4') {
+            const initialRotorAngle = normalizedAngle(rotorAngleRef.current);
+            rotorBody = world.createRigidBody(
+              RAPIER.RigidBodyDesc.kinematicPositionBased()
+                .setTranslation(0, 0, 0)
+                .setRotation({
+                  x: 0,
+                  y: Math.sin(initialRotorAngle / 2),
+                  z: 0,
+                  w: Math.cos(initialRotorAngle / 2),
+                }),
+            );
+            rotorColliders = addKinematicRotorBand(world, rotorBody);
+          }
+
           const initialPosition =
             validationMode === 'part3'
               ? part3SpawnPosition(PART3_PROBES[0])
-              : DROP_INITIAL_POSITION;
+              : validationMode === 'part4'
+                ? part4SpawnPosition(PART4_PROBES[0])
+                : DROP_INITIAL_POSITION;
           ballMesh = createBallVisual();
           ballMesh.visible = showBallPlaceholder;
           wheelRoot.add(ballMesh);
@@ -663,18 +850,25 @@ export function Part2SceneViewport({
           ballBody.enableCcd(true);
           ballBody.setSoftCcdPrediction(BALL_RADIUS * 2.5);
           ccdEnabled = true;
-          physicsBallCollider = world.createCollider(
-            RAPIER.ColliderDesc.ball(BALL_RADIUS)
+          const ballColliderDescriptor = RAPIER.ColliderDesc.ball(BALL_RADIUS)
               .setFriction(0.42)
               .setRestitution(0.02)
-              .setDensity(0.001),
-            ballBody,
-          );
+              .setDensity(0.001);
+          if (validationMode === 'part4') {
+            ballColliderDescriptor.setCollisionGroups(
+              BALL_COLLISION_GROUP |
+                ((STATIONARY_COLLISION_GROUP | ROTOR_COLLISION_GROUP) << 16),
+            );
+          }
+          physicsBallCollider = world.createCollider(ballColliderDescriptor, ballBody);
           ballBody.setTranslation({ x: initialPosition[0], y: initialPosition[1], z: initialPosition[2] }, true);
           ballMesh.position.set(...initialPosition);
           if (validationMode === 'part3') {
             startPart3Probe(0);
             callbacksRef.current.onStateChange('loaded', 'PART 3 static-collider ball probes running');
+          } else if (validationMode === 'part4') {
+            startPart4Probe(0);
+            callbacksRef.current.onStateChange('loaded', 'PART 4 kinematic-rotor probes running');
           } else {
             publishDropReport({
               status: 'running',
@@ -776,6 +970,64 @@ export function Part2SceneViewport({
         }
       };
 
+      const completePart4Probe = (position: RAPIER.Vector, velocity: RAPIER.Vector) => {
+        const probe = PART4_PROBES[part4ProbeIndex];
+        const finalSpeed = Math.hypot(velocity.x, velocity.y, velocity.z);
+        const stableContact =
+          part4SampleFrames > 0 && part4ContactFrames / part4SampleFrames >= 0.75;
+        const velocityExplosion =
+          part4PeakSpeed > Math.max(8, part4InitialSpeed * 4);
+        const passed =
+          stableContact &&
+          !part4LeftValidVolume &&
+          part4MaxPenetration <= 0.08 &&
+          !velocityExplosion &&
+          part4MaxVisualBodySyncError <= 0.001 &&
+          part4MaxRotorSyncError <= 0.001 &&
+          part4OutsideTurretStationary;
+        const result: Part4ProbeResult = {
+          id: probe.id,
+          label: probe.label,
+          rotorAngularSpeed: TEST_ANGULAR_SPEED,
+          contactDuration: Number((part4ContactFrames * FIXED_TIMESTEP).toFixed(4)),
+          spawnRadius: probe.radius,
+          spawnHeight: Number(part4SpawnPosition(probe)[1].toFixed(4)),
+          initialVelocity: part4InitialVelocity(probe),
+          peakSpeed: Number(part4PeakSpeed.toFixed(4)),
+          maxEnergyGain: Number(part4MaxEnergyGain.toFixed(4)),
+          minRadius: Number(part4MinRadius.toFixed(4)),
+          maxRadius: Number(part4MaxRadius.toFixed(4)),
+          maxPenetration: Number(part4MaxPenetration.toFixed(4)),
+          maxSeparation: Number(part4MaxSeparation.toFixed(4)),
+          escaped: part4LeftValidVolume,
+          tunneling: part4LeftValidVolume || part4MaxPenetration > 0.08,
+          velocityExplosion,
+          maxVisualBodySyncError: Number(part4MaxVisualBodySyncError.toFixed(6)),
+          maxRotorSyncError: Number(part4MaxRotorSyncError.toFixed(6)),
+          outsideTurretStationary: part4OutsideTurretStationary,
+          outcome: passed ? (finalSpeed < 0.08 ? 'settled' : 'stable') : 'failed',
+          detail: passed
+            ? finalSpeed < 0.08
+              ? 'Moving rotor contact remained stable and the ball settled.'
+              : 'Moving rotor contact remained stable without artificial launch.'
+            : 'Probe failed the kinematic-rotor contact envelope.',
+        };
+        part4Results = [...part4Results, result];
+        if (!passed || part4ProbeIndex === PART4_PROBES.length - 1) {
+          part4Finished = true;
+          publishPart4Report(
+            part4Results.every((probeResult) => probeResult.outcome !== 'failed')
+              ? 'passed'
+              : 'failed',
+            part4Results.every((probeResult) => probeResult.outcome !== 'failed')
+              ? 'Both deterministic kinematic-rotor probes passed.'
+              : 'A deterministic kinematic-rotor probe failed.',
+          );
+        } else {
+          startPart4Probe(part4ProbeIndex + 1);
+        }
+      };
+
       const render = () => {
         if (disposed) return;
         const now = performance.now();
@@ -785,6 +1037,14 @@ export function Part2SceneViewport({
           if (rotorPivot) {
             rotorAngleRef.current = normalizedAngle(rotorAngleRef.current + TEST_ANGULAR_SPEED * FIXED_TIMESTEP);
             rotorPivot.rotation.set(0, rotorAngleRef.current, 0);
+            if (validationMode === 'part4' && rotorBody) {
+              rotorBody.setNextKinematicRotation({
+                x: 0,
+                y: Math.sin(rotorAngleRef.current / 2),
+                z: 0,
+                w: Math.cos(rotorAngleRef.current / 2),
+              });
+            }
             fixedStepCount += 1;
             if (fixedStepCount % 6 === 0) {
               setAngleReadout(rotorAngleRef.current);
@@ -838,6 +1098,74 @@ export function Part2SceneViewport({
             ballMesh.quaternion.set(rotation.x, rotation.y, rotation.z, rotation.w);
             if (part3Elapsed >= probe.durationSeconds) {
               completePart3Probe(position, velocity);
+            }
+          }
+
+          if (validationMode === 'part4' && world && ballBody && ballMesh && rotorBody && !part4Finished) {
+            const probe = PART4_PROBES[part4ProbeIndex];
+            world.step();
+            const position = ballBody.translation();
+            const velocity = ballBody.linvel();
+            const radius = Math.hypot(position.x, position.z);
+            const bottom = position.y - BALL_RADIUS;
+            const penetration = Math.max(0, ROTOR_CONTACT_HEIGHT - bottom);
+            const separation = Math.max(0, bottom - ROTOR_CONTACT_HEIGHT);
+            const speed = Math.hypot(velocity.x, velocity.y, velocity.z);
+            const leftValidVolume =
+              !Number.isFinite(position.x) ||
+              !Number.isFinite(position.y) ||
+              !Number.isFinite(position.z) ||
+              radius < 0.18 ||
+              radius > 3.08 ||
+              position.y < COLLIDER_PROFILE.innerFloorTop - BALL_RADIUS - 0.08;
+            const rotorRotation = rotorBody.rotation();
+            const rotorBodyAngle = normalizedAngle(
+              2 * Math.atan2(rotorRotation.y, rotorRotation.w),
+            );
+            const rotorSyncError = Math.abs(
+              THREE.MathUtils.euclideanModulo(
+                rotorBodyAngle - rotorAngleRef.current + Math.PI,
+                TWO_PI,
+              ) - Math.PI,
+            );
+            const stationaryPositionDrift = stationaryGroup
+              ? stationaryGroup.position.distanceTo(stationaryBaselinePosition)
+              : Number.POSITIVE_INFINITY;
+            const stationaryRotationDrift = stationaryGroup
+              ? stationaryGroup.quaternion.angleTo(stationaryBaselineQuaternion)
+              : Number.POSITIVE_INFINITY;
+            part4Elapsed += FIXED_TIMESTEP;
+            part4SampleFrames += 1;
+            part4PeakSpeed = Math.max(part4PeakSpeed, speed);
+            part4MaxEnergyGain = Math.max(
+              part4MaxEnergyGain,
+              Math.max(0, speed * speed - part4InitialSpeed * part4InitialSpeed),
+            );
+            part4MinRadius = Math.min(part4MinRadius, radius);
+            part4MaxRadius = Math.max(part4MaxRadius, radius);
+            part4MaxPenetration = Math.max(part4MaxPenetration, penetration);
+            part4MaxSeparation = Math.max(part4MaxSeparation, separation);
+            part4MaxRotorSyncError = Math.max(part4MaxRotorSyncError, rotorSyncError);
+            part4LeftValidVolume ||= leftValidVolume;
+            part4OutsideTurretStationary &&=
+              stationaryPositionDrift <= 0.000001 &&
+              stationaryRotationDrift <= 0.000001;
+            if (penetration <= 0.03 && separation <= 0.12) {
+              part4ContactFrames += 1;
+            }
+            ballMesh.position.set(position.x, position.y, position.z);
+            part4MaxVisualBodySyncError = Math.max(
+              part4MaxVisualBodySyncError,
+              Math.hypot(
+                ballMesh.position.x - position.x,
+                ballMesh.position.y - position.y,
+                ballMesh.position.z - position.z,
+              ),
+            );
+            const rotation = ballBody.rotation();
+            ballMesh.quaternion.set(rotation.x, rotation.y, rotation.z, rotation.w);
+            if (part4Elapsed >= probe.durationSeconds) {
+              completePart4Probe(position, velocity);
             }
           }
 
@@ -923,7 +1251,9 @@ export function Part2SceneViewport({
           materials.forEach((material) => material.dispose());
         });
         if (ballBody && world) world.removeRigidBody(ballBody);
+        if (rotorBody && world) world.removeRigidBody(rotorBody);
         void physicsBallCollider;
+        void rotorColliders;
         world?.free();
       };
     } catch (error) {
@@ -979,21 +1309,78 @@ export function Part2SceneViewport({
     </div>
   );
 
+  const renderPart4Report = () => (
+    <div
+      className="part2-drop-report"
+      data-testid="part4-validation-report"
+      data-status={part4Report?.status ?? 'waiting'}
+      aria-live="polite"
+    >
+      {part4Report ? (
+        <>
+          <strong>{part4Report.detail}</strong>
+          <span>
+            kinematic rotor {part4Report.kinematicRotor ? 'enabled' : 'disabled'} · CCD {part4Report.ccdEnabled ? 'enabled' : 'disabled'} ·
+            rotor ω {TEST_ANGULAR_SPEED.toFixed(4)} rad/s · no pocket/fret colliders
+          </span>
+          {part4Report.results.map((result) => (
+            <span key={result.id}>
+              {result.label}: {result.outcome.toUpperCase()} · contact {result.contactDuration.toFixed(4)} s ·
+              spawn r {result.spawnRadius.toFixed(4)} / y {result.spawnHeight.toFixed(4)} ·
+              v {result.initialVelocity.x.toFixed(4)}, {result.initialVelocity.y.toFixed(4)}, {result.initialVelocity.z.toFixed(4)} ·
+              peak {result.peakSpeed.toFixed(4)} · energy gain {result.maxEnergyGain.toFixed(4)} ·
+              r {result.minRadius.toFixed(4)}–{result.maxRadius.toFixed(4)}
+            </span>
+          ))}
+          {part4Report.results.map((result) => (
+            <span key={`${result.id}-safety`}>
+              {result.label}: pen {result.maxPenetration.toFixed(4)} · sep {result.maxSeparation.toFixed(4)} ·
+              escape {result.escaped ? 'yes' : 'no'} · tunneling {result.tunneling ? 'yes' : 'no'} ·
+              velocity spike {result.velocityExplosion ? 'yes' : 'no'} · ball sync {result.maxVisualBodySyncError.toFixed(6)} ·
+              rotor sync {result.maxRotorSyncError.toFixed(6)} · outside/turret static {result.outsideTurretStationary ? 'yes' : 'no'} ·
+              {result.detail}
+            </span>
+          ))}
+        </>
+      ) : (
+        'Waiting for PART 4 kinematic-rotor probes.'
+      )}
+    </div>
+  );
+
   return (
     <div ref={stageRef} className="scene-stage" data-testid="canvas-viewport">
-      <canvas ref={canvasRef} tabIndex={0} aria-label="Part 2 roulette collider alignment preview" />
+      <canvas
+        ref={canvasRef}
+        tabIndex={0}
+        aria-label={
+          validationMode === 'part4'
+            ? 'Part 4 kinematic rotor interaction preview'
+            : validationMode === 'part3'
+              ? 'Part 3 dynamic ball validation preview'
+              : 'Part 2 roulette collider alignment preview'
+        }
+      />
       <div className="scene-corner scene-corner-tl" aria-hidden="true" />
       <div className="scene-corner scene-corner-br" aria-hidden="true" />
       <div className="viewport-readout" aria-hidden="true">
-        <span>{validationMode === 'part3' ? 'PART 3 · DYNAMIC BALL VALIDATION' : 'PART 2 · ZERO-VELOCITY CONTACT'}</span>
+        <span>
+          {validationMode === 'part4'
+            ? 'PART 4 · KINEMATIC ROTOR INTERACTION'
+            : validationMode === 'part3'
+              ? 'PART 3 · DYNAMIC BALL VALIDATION'
+              : 'PART 2 · ZERO-VELOCITY CONTACT'}
+        </span>
         <span>ANGLE {THREE.MathUtils.radToDeg(angleReadout).toFixed(2)}° · PIVOT [0, 0, 0] · Y+</span>
         <span>
-          {validationMode === 'part3'
-            ? `PROBES ${part3Report?.status.toUpperCase() ?? 'WAITING'} · STATIC COLLIDER · CCD`
-            : `DROP ${dropReport?.status.toUpperCase() ?? 'WAITING'} · CCD · 120 HZ`}
+          {validationMode === 'part4'
+            ? `PROBES ${part4Report?.status.toUpperCase() ?? 'WAITING'} · KINEMATIC ROTOR · CCD`
+            : validationMode === 'part3'
+              ? `PROBES ${part3Report?.status.toUpperCase() ?? 'WAITING'} · STATIC COLLIDER · CCD`
+              : `DROP ${dropReport?.status.toUpperCase() ?? 'WAITING'} · CCD · 120 HZ`}
         </span>
       </div>
-      {validationMode === 'part3' ? renderPart3Report() : (
+      {validationMode === 'part4' ? renderPart4Report() : validationMode === 'part3' ? renderPart3Report() : (
         <div
           className="part2-drop-report"
           data-testid="part2-drop-report"
