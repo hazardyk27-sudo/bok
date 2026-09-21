@@ -49,6 +49,7 @@ Phaser is never the source of truth. A board is pure symbol data; the scene rend
 - The base scatter table is 4 → 10 Free Spins, 5 → 12, 6+ → 15.
 - Free-spin retriggers are 3 → +5, 4 → +8, 5 → +12, 6+ → +15.
 - Crystals are free-spin-only overlays that resolve after a winning tumble. Their values add together and multiply that tumble subtotal only.
+- A free-spin sequence can hold at most 7 multiplier Cores; once seven are present, later bonus refills cannot add an eighth.
 - The originating paid spin is capped at 5000x bet across its base cascades and complete bonus.
 - The player is charged once at spin start and credited once when the originating spin finishes.
 
