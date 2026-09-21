@@ -92,7 +92,7 @@ function renderLab(scene: GameScene) {
       const stream = createColumnStreams(new SeededRNG("lab-anti"), "base")[0]; const values = stream.next(500, "BASE_REFILL");
       let maximum = 0; let current = 0; let previous: unknown;
       values.forEach((value) => { current = value === previous ? current + 1 : 1; maximum = Math.max(maximum, current); previous = value; });
-      byId("lab-result").textContent = `ANTI-STREAK // 500 incoming cells // maximum contiguous normal streak ${maximum} // configured runs 76.5% singles / 23.5% pairs`;
+      byId("lab-result").textContent = `ANTI-STREAK // 500 incoming cells // maximum contiguous normal streak ${maximum} // configured runs 25% singles / 75% pairs`;
       return;
     }
     const values = key === "core" ? [...Array(8).fill("S8"), { kind: "MULTIPLIER_CORE", value: 2 }, { kind: "MULTIPLIER_CORE", value: 10 }, { kind: "MULTIPLIER_CORE", value: 100 }, ...Array(19).fill("S2")] : key === "seven" ? [...Array(7).fill("S1"), ...Array(23).fill("S2")] : key === "eight" ? [...Array(8).fill("S1"), ...Array(22).fill("S2")] : [...Array(8).fill("S1"), ...Array(8).fill("S6"), ...Array(14).fill("S2")];
