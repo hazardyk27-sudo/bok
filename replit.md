@@ -8,7 +8,7 @@ Virtual-credit cascading slot-style browser game with a Phaser board, pure TypeS
 - `pnpm run typecheck` — full typecheck across the root game and workspace packages
 - `pnpm run build` — typecheck + build the root game
 - `pnpm test` — run the pure-engine regression suite
-- `pnpm run simulate -- --spins=100000 --seed=12345` — run the deterministic simulator
+- `pnpm run simulate -- --spins=100000 --seed=12345` — run the deterministic `artifacts/cascade-8` simulator
 
 ## Stack
 
@@ -29,6 +29,8 @@ Virtual-credit cascading slot-style browser game with a Phaser board, pure TypeS
 - `/lab` — development-only deterministic board harness.
 
 ## Architecture decisions
+
+- `artifacts/cascade-8` is the only product game engine and simulation source of truth; the root `src/` engine is legacy and is not used by the product workflow.
 
 - Phaser renders pure board data; it never owns the math state.
 - Paid spins charge once and credit once after base cascades and any bonus complete.

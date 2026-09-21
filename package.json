@@ -7,7 +7,7 @@
     "dev": "vite --host 0.0.0.0 --port 5000",
     "build": "pnpm run typecheck && vite build",
     "test": "vitest run",
-    "simulate": "tsx src/simulation/cli.ts",
+    "simulate": "pnpm --filter @workspace/cascade-8 run simulate",
     "typecheck:libs": "tsc --build",
     "typecheck": "pnpm run typecheck:libs && tsc -p tsconfig.app.json --noEmit && pnpm -r --filter \"./artifacts/**\" --filter \"./scripts\" --if-present run typecheck"
   },
