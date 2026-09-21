@@ -22,6 +22,14 @@ const TWO_PI = Math.PI * 2;
 const DROP_RADIUS = 2.35;
 const DROP_HEIGHT_ABOVE_SURFACE = 0.72;
 const DROP_DURATION_SECONDS = 4;
+const DARK_OUTER_TRACK_RADIUS = 2.35;
+const DARK_OUTER_TRACK_HEIGHT = -0.338;
+const PART3_TRACK_FRICTION = 0.15;
+const PART3_TRACK_DAMPING = 0.01;
+const PART3_TRACK_DURATION_SECONDS = 30;
+const PART3_TRACK_INNER_RADIUS = 2.15;
+const PART3_TRACK_OUTER_RADIUS = 2.42;
+const PART3_TRACK_CONTACT_TOLERANCE = 0.1;
 const PROFILE_SEGMENTS = 64;
 const PROFILE_SHELL_THICKNESS = 0.08;
 const BALL_COLLISION_GROUP = 0x0001;
@@ -103,6 +111,26 @@ type Part3ProbeResult = {
   spawnRadius: number;
   spawnHeight: number;
   initialVelocity: VectorReadout;
+  initialAngularSpin: VectorReadout;
+  lapCount: number;
+  trackDuration: number;
+  averageTrackSpeed: number;
+  trackStartSpeed: number;
+  trackEndSpeed: number;
+  trackLapSpeeds: number[];
+  energyLossRatio: number;
+  continuousTrackContact: boolean;
+  naturalRollOrSlide: boolean;
+  inwardDescentTime: number | null;
+  inwardDescentRadius: number | null;
+  deflectorContact: boolean;
+  peakSpeedBeforeContact: number | null;
+  peakSpeedAfterContact: number | null;
+  bouncePlausible: boolean;
+  hover: boolean;
+  clipping: boolean;
+  artificialAcceleration: boolean;
+  maxRotorSyncError: number;
   peakSpeed: number;
   minRadius: number;
   maxRadius: number;
@@ -235,20 +263,31 @@ const COLLIDER_PROFILE = {
 
 const PART3_PROBES = [
   {
-    id: 'gentle-tangential',
-    label: 'Gentle tangential glide',
+    id: 'outer-track-smoke-a',
+    label: 'Outer track smoke A',
     angle: 0.37,
-    radius: DROP_RADIUS,
-    speed: 0.55,
-    durationSeconds: 1.8,
+    radius: DARK_OUTER_TRACK_RADIUS,
+    speed: 4.8,
+    spinFactor: 1,
+    durationSeconds: PART3_TRACK_DURATION_SECONDS,
   },
   {
-    id: 'moderate-tangential',
-    label: 'Moderate CCD continuity',
+    id: 'outer-track-smoke-b',
+    label: 'Outer track smoke B',
     angle: 1.11,
-    radius: DROP_RADIUS,
-    speed: 1.35,
-    durationSeconds: 1.8,
+    radius: DARK_OUTER_TRACK_RADIUS,
+    speed: 5,
+    spinFactor: 1,
+    durationSeconds: PART3_TRACK_DURATION_SECONDS,
+  },
+  {
+    id: 'outer-track-smoke-c',
+    label: 'Outer track smoke C',
+    angle: 2.03,
+    radius: DARK_OUTER_TRACK_RADIUS,
+    speed: 5.2,
+    spinFactor: 1,
+    durationSeconds: PART3_TRACK_DURATION_SECONDS,
   },
 ] as const;
 
@@ -299,7 +338,7 @@ function part3SpawnPosition(probe: (typeof PART3_PROBES)[number]) {
   return radialPosition(
     probe.radius,
     probe.angle,
-    profileHeight(probe.radius) + BALL_RADIUS + 0.002,
+    DARK_OUTER_TRACK_HEIGHT + BALL_RADIUS + 0.002,
   );
 }
 
@@ -308,6 +347,78 @@ function part3InitialVelocity(probe: (typeof PART3_PROBES)[number]): VectorReado
     x: Number((Math.cos(probe.angle) * probe.speed).toFixed(4)),
     y: 0,
     z: Number((-Math.sin(probe.angle) * probe.speed).toFixed(4)),
+  };
+}
+
+function part3InitialAngularSpin(probe: (typeof PART3_PROBES)[number]): VectorReadout {
+  return {
+    x: 0,
+    y: 0,
+    z: Number((-probe.speed / probe.radius * probe.spinFactor).toFixed(4)),
+  };
+}
+
+function part3TrackHeight(radius: number) {
+  const trackProfile: Array<[number, number]> = [
+    [1.95, -0.458],
+    [2.05, -0.39],
+    [2.12, -0.35],
+    [2.25, -0.343],
+    [2.35, -0.338],
+    [2.45, -0.33],
+  ];
+  const clamped = Math.max(trackProfile[0][0], Math.min(trackProfile.at(-1)![0], radius));
+  for (let index = 1; index < trackProfile.length; index += 1) {
+    const [rightRadius, rightY] = trackProfile[index];
+    const [leftRadius, leftY] = trackProfile[index - 1];
+    if (clamped <= rightRadius) {
+      return THREE.MathUtils.lerp(
+        leftY,
+        rightY,
+        (clamped - leftRadius) / (rightRadius - leftRadius),
+      );
+    }
+  }
+  return trackProfile.at(-1)![1];
+}
+
+// This is an analytic lathed cross-section of the visible dark outer ray and
+// its retaining edge. It is not derived from or used as a raw GLB collider.
+function makePart3OuterTrackTrimesh() {
+  const crossSection: Array<[number, number]> = [
+    [1.95, -0.458],
+    [2.05, -0.39],
+    [2.12, -0.35],
+    [2.25, -0.343],
+    [2.35, -0.338],
+    [2.45, -0.33],
+    [2.45, 0],
+    [2.52, 0],
+    [2.52, -0.4],
+    [1.95, -0.4],
+  ];
+  const vertices: number[] = [];
+  const indices: number[] = [];
+  const segments = 128;
+  for (const [radius, y] of crossSection) {
+    for (let segment = 0; segment < segments; segment += 1) {
+      const angle = (segment / segments) * TWO_PI;
+      vertices.push(Math.sin(angle) * radius, y, Math.cos(angle) * radius);
+    }
+  }
+  for (let row = 0; row < crossSection.length; row += 1) {
+    for (let segment = 0; segment < segments; segment += 1) {
+      const next = (segment + 1) % segments;
+      const a = row * segments + segment;
+      const b = row * segments + next;
+      const c = ((row + 1) % crossSection.length) * segments + next;
+      const d = ((row + 1) % crossSection.length) * segments + segment;
+      indices.push(a, d, b, b, d, c);
+    }
+  }
+  return {
+    vertices: new Float32Array(vertices),
+    indices: new Uint32Array(indices),
   };
 }
 
@@ -898,6 +1009,7 @@ export function Part2SceneViewport({
     let ballBody: RAPIER.RigidBody | null = null;
     let rotorBody: RAPIER.RigidBody | null = null;
     let physicsBallCollider: RAPIER.Collider | null = null;
+    let part3TrackCollider: RAPIER.Collider | null = null;
     let rotorColliders: RAPIER.Collider[] = [];
     let accumulator = 0;
     let lastTime = performance.now();
@@ -924,6 +1036,23 @@ export function Part2SceneViewport({
     let part3SampleFrames = 0;
     let part3MaxVisualBodySyncError = 0;
     let part3LeftValidVolume = false;
+    let part3TrackAngle: number | null = null;
+    let part3TrackAngleStart: number | null = null;
+    let part3TrackAngleEnd: number | null = null;
+    let part3TrackContactFrames = 0;
+    let part3TrackSampleFrames = 0;
+    let part3TrackSpeedSum = 0;
+    let part3TrackStartSpeed = 0;
+    let part3TrackEndSpeed = 0;
+    let part3TrackLapSpeeds: number[] = [];
+    let part3TrackCompletedLaps = 0;
+    let part3InwardDescentTime: number | null = null;
+    let part3InwardDescentRadius: number | null = null;
+    let part3ArtificialAcceleration = false;
+    let part3Hover = false;
+    let part3Clipping = false;
+    let part3BouncePlausible = true;
+    let part3PreviousSpeed = 0;
     let part3Results: Part3ProbeResult[] = [];
     let part3Finished = false;
     let part4ProbeIndex = 0;
@@ -986,7 +1115,8 @@ export function Part2SceneViewport({
       const velocity = part3InitialVelocity(probe);
       ballBody.setTranslation({ x: position[0], y: position[1], z: position[2] }, true);
       ballBody.setLinvel({ x: velocity.x, y: velocity.y, z: velocity.z }, true);
-      ballBody.setAngvel({ x: 0, y: 0, z: 0 }, true);
+      const angularSpin = part3InitialAngularSpin(probe);
+      ballBody.setAngvel({ x: angularSpin.x, y: angularSpin.y, z: angularSpin.z }, true);
       ballBody.setRotation({ x: 0, y: 0, z: 0, w: 1 }, true);
       ballMesh.position.set(...position);
       ballMesh.quaternion.identity();
@@ -1001,6 +1131,23 @@ export function Part2SceneViewport({
       part3SampleFrames = 0;
       part3MaxVisualBodySyncError = 0;
       part3LeftValidVolume = false;
+      part3TrackAngle = null;
+      part3TrackAngleStart = null;
+      part3TrackAngleEnd = null;
+      part3TrackContactFrames = 0;
+      part3TrackSampleFrames = 0;
+      part3TrackSpeedSum = 0;
+      part3TrackStartSpeed = 0;
+      part3TrackEndSpeed = 0;
+      part3TrackLapSpeeds = [];
+      part3TrackCompletedLaps = 0;
+      part3InwardDescentTime = null;
+      part3InwardDescentRadius = null;
+      part3ArtificialAcceleration = false;
+      part3Hover = false;
+      part3Clipping = false;
+      part3BouncePlausible = true;
+      part3PreviousSpeed = probe.speed;
       publishPart3Report(
         'running',
         `Running probe ${index + 1}/${PART3_PROBES.length}: ${probe.label}.`,
@@ -1218,17 +1365,31 @@ export function Part2SceneViewport({
           world.timestep = FIXED_TIMESTEP;
           world.maxCcdSubsteps = 8;
           const stationaryBody = world.createRigidBody(RAPIER.RigidBodyDesc.fixed());
-          const profileMesh = makeProfileTrimesh();
-          const profileCollider = RAPIER.ColliderDesc.trimesh(
-            profileMesh.vertices,
-            profileMesh.indices,
-            RAPIER.TriMeshFlags.FIX_INTERNAL_EDGES | RAPIER.TriMeshFlags.ORIENTED,
-          )
-            .setFriction(0.42)
-            .setRestitution(0.02);
-          world.createCollider(profileCollider, stationaryBody);
-          addProfileSupportRings(world, stationaryBody);
-          addRetainingRim(world, stationaryBody, 2.94, -0.02);
+          if (validationMode === 'part3') {
+            const outerTrackMesh = makePart3OuterTrackTrimesh();
+            part3TrackCollider = world.createCollider(
+              RAPIER.ColliderDesc.trimesh(
+                outerTrackMesh.vertices,
+                outerTrackMesh.indices,
+                RAPIER.TriMeshFlags.FIX_INTERNAL_EDGES | RAPIER.TriMeshFlags.ORIENTED,
+              )
+                .setFriction(PART3_TRACK_FRICTION)
+                .setRestitution(0.01),
+              stationaryBody,
+            );
+          } else {
+            const profileMesh = makeProfileTrimesh();
+            const profileCollider = RAPIER.ColliderDesc.trimesh(
+              profileMesh.vertices,
+              profileMesh.indices,
+              RAPIER.TriMeshFlags.FIX_INTERNAL_EDGES | RAPIER.TriMeshFlags.ORIENTED,
+            )
+              .setFriction(0.42)
+              .setRestitution(0.02);
+            world.createCollider(profileCollider, stationaryBody);
+            addProfileSupportRings(world, stationaryBody);
+            addRetainingRim(world, stationaryBody, 2.94, -0.02);
+          }
           world.createCollider(
             RAPIER.ColliderDesc.cylinder(1.88, 0.04)
               .setTranslation(0, COLLIDER_PROFILE.innerFloorTop - 0.04, 0)
@@ -1277,8 +1438,12 @@ export function Part2SceneViewport({
               .setLinvel(0, 0, 0)
               .setAngvel({ x: 0, y: 0, z: 0 })
               .setAdditionalMass(BALL_MASS)
-              .setLinearDamping(0.04)
-              .setAngularDamping(0.08)
+              .setLinearDamping(
+                validationMode === 'part3' ? PART3_TRACK_DAMPING : 0.04,
+              )
+              .setAngularDamping(
+                validationMode === 'part3' ? PART3_TRACK_DAMPING : 0.08,
+              )
               .setCcdEnabled(true)
               .setSoftCcdPrediction(BALL_RADIUS * 2.5),
           );
@@ -1286,8 +1451,8 @@ export function Part2SceneViewport({
           ballBody.setSoftCcdPrediction(BALL_RADIUS * 2.5);
           ccdEnabled = true;
           const ballColliderDescriptor = RAPIER.ColliderDesc.ball(BALL_RADIUS)
-              .setFriction(0.42)
-              .setRestitution(0.02)
+              .setFriction(validationMode === 'part3' ? PART3_TRACK_FRICTION : 0.42)
+              .setRestitution(validationMode === 'part3' ? 0.01 : 0.02)
               .setDensity(0.001);
           if (validationMode === 'part4') {
             ballColliderDescriptor.setCollisionGroups(
@@ -1376,6 +1541,11 @@ export function Part2SceneViewport({
       const completePart3Probe = (position: RAPIER.Vector, velocity: RAPIER.Vector) => {
         const probe = PART3_PROBES[part3ProbeIndex];
         const finalSpeed = Math.hypot(velocity.x, velocity.y, velocity.z);
+        const trackContactRatio =
+          part3TrackSampleFrames > 0
+            ? part3TrackContactFrames / part3TrackSampleFrames
+            : 0;
+        const continuousTrackContact = trackContactRatio >= 0.94;
         const stableContact =
           part3SampleFrames > 0 && part3ContactFrames / part3SampleFrames >= 0.75;
         const leftValidVolume =
@@ -1386,7 +1556,44 @@ export function Part2SceneViewport({
         const tunneling = leftValidVolume || part3MaxPenetration > 0.08;
         const velocityExplosion =
           part3PeakSpeed > Math.max(8, probe.speed * 4);
+        const lapCount =
+          part3TrackAngleStart === null || part3TrackAngleEnd === null
+            ? 0
+            : Math.abs(part3TrackAngleEnd - part3TrackAngleStart) / TWO_PI;
+        const trackDuration =
+          part3TrackAngleStart === null || part3TrackAngleEnd === null
+            ? 0
+            : Math.max(
+                0,
+                part3InwardDescentTime === null
+                  ? part3Elapsed
+                  : part3InwardDescentTime,
+              );
+        const averageTrackSpeed =
+          part3TrackContactFrames > 0
+            ? part3TrackSpeedSum / part3TrackContactFrames
+            : 0;
+        const energyLossRatio =
+          part3TrackStartSpeed > 0
+            ? Math.max(
+                0,
+                1 -
+                  (part3TrackEndSpeed * part3TrackEndSpeed) /
+                    (part3TrackStartSpeed * part3TrackStartSpeed),
+              )
+            : 0;
+        const naturalRollOrSlide =
+          part3TrackContactFrames > 120 &&
+          part3TrackStartSpeed > part3TrackEndSpeed;
         const passed =
+          lapCount >= 3.8 &&
+          lapCount <= 5.2 &&
+          continuousTrackContact &&
+          part3InwardDescentTime !== null &&
+          naturalRollOrSlide &&
+          !part3ArtificialAcceleration &&
+          !part3Hover &&
+          !part3Clipping &&
           stableContact &&
           !leftValidVolume &&
           !tunneling &&
@@ -1398,6 +1605,34 @@ export function Part2SceneViewport({
           spawnRadius: probe.radius,
           spawnHeight: Number(part3SpawnPosition(probe)[1].toFixed(4)),
           initialVelocity: part3InitialVelocity(probe),
+          initialAngularSpin: part3InitialAngularSpin(probe),
+          lapCount: Number(lapCount.toFixed(3)),
+          trackDuration: Number(trackDuration.toFixed(4)),
+          averageTrackSpeed: Number(averageTrackSpeed.toFixed(4)),
+          trackStartSpeed: Number(part3TrackStartSpeed.toFixed(4)),
+          trackEndSpeed: Number(part3TrackEndSpeed.toFixed(4)),
+          trackLapSpeeds: part3TrackLapSpeeds.map((speed) =>
+            Number(speed.toFixed(4)),
+          ),
+          energyLossRatio: Number(energyLossRatio.toFixed(4)),
+          continuousTrackContact,
+          naturalRollOrSlide,
+          inwardDescentTime:
+            part3InwardDescentTime === null
+              ? null
+              : Number(part3InwardDescentTime.toFixed(4)),
+          inwardDescentRadius:
+            part3InwardDescentRadius === null
+              ? null
+              : Number(part3InwardDescentRadius.toFixed(4)),
+          deflectorContact: false,
+          peakSpeedBeforeContact: Number(part3PeakSpeed.toFixed(4)),
+          peakSpeedAfterContact: null,
+          bouncePlausible: part3BouncePlausible,
+          hover: part3Hover,
+          clipping: part3Clipping,
+          artificialAcceleration: part3ArtificialAcceleration,
+          maxRotorSyncError: 0,
           peakSpeed: Number(part3PeakSpeed.toFixed(4)),
           minRadius: Number(part3MinRadius.toFixed(4)),
           maxRadius: Number(part3MaxRadius.toFixed(4)),
@@ -1410,10 +1645,20 @@ export function Part2SceneViewport({
           maxVisualBodySyncError: Number(part3MaxVisualBodySyncError.toFixed(6)),
           outcome: passed ? (finalSpeed < 0.08 ? 'settled' : 'stable') : 'failed',
           detail: passed
-            ? finalSpeed < 0.08
-              ? 'Contact remained stable and the ball naturally settled.'
-              : 'Contact remained stable while the ball continued naturally across the bowl.'
-            : 'Probe failed the stable static-bowl contact envelope.',
+            ? `Natural outer-track run passed: ${lapCount.toFixed(2)} laps before inward descent.`
+            : `Outer-track smoke failed: ${[
+                lapCount < 3.8 || lapCount > 5.2 ? 'lap target' : '',
+                !continuousTrackContact ? 'contact continuity' : '',
+                part3InwardDescentTime === null ? 'no inward descent' : '',
+                part3ArtificialAcceleration ? 'artificial acceleration' : '',
+                part3Hover ? 'hover' : '',
+                part3Clipping ? 'clipping' : '',
+                leftValidVolume ? 'escape' : '',
+                tunneling ? 'tunneling' : '',
+                velocityExplosion ? 'velocity spike' : '',
+              ]
+                .filter(Boolean)
+                .join(', ') || 'review required'}.`,
         };
         part3Results = [...part3Results, result];
         if (!passed || part3ProbeIndex === PART3_PROBES.length - 1) {
@@ -1423,8 +1668,8 @@ export function Part2SceneViewport({
               ? 'passed'
               : 'failed',
             part3Results.every((probeResult) => probeResult.outcome !== 'failed')
-              ? 'Both deterministic static-bowl motion probes passed.'
-              : 'A deterministic static-bowl motion probe failed.',
+              ? 'All three outer-track smoke spins passed with natural energy loss and inward descent.'
+              : 'An outer-track smoke spin failed the launch-to-descent envelope.',
           );
         } else {
           startPart3Probe(part3ProbeIndex + 1);
@@ -1518,14 +1763,30 @@ export function Part2SceneViewport({
             world.step();
             const position = ballBody.translation();
             const velocity = ballBody.linvel();
+            const speed = Math.hypot(velocity.x, velocity.y, velocity.z);
             const radius = Math.hypot(position.x, position.z);
             const surfaceY =
-              radius >= BOWL_PROFILE[0][0]
-                ? profileHeight(radius)
+              radius >= 1.95 && radius <= 2.45
+                ? part3TrackHeight(radius)
                 : COLLIDER_PROFILE.innerFloorTop;
             const bottom = position.y - BALL_RADIUS;
             const penetration = Math.max(0, surfaceY - bottom);
             const separation = Math.max(0, bottom - surfaceY);
+            let trackPairContact = false;
+            if (physicsBallCollider && part3TrackCollider) {
+              world.contactPairsWith(physicsBallCollider, (otherCollider) => {
+                if (otherCollider.handle === part3TrackCollider?.handle) {
+                  trackPairContact = true;
+                }
+              });
+            }
+            const geometricTrackContact =
+              radius >= PART3_TRACK_INNER_RADIUS &&
+              radius <= PART3_TRACK_OUTER_RADIUS &&
+              separation <= PART3_TRACK_CONTACT_TOLERANCE &&
+              penetration <= 0.03;
+            const onTrack = geometricTrackContact && trackPairContact;
+            const trackAngle = normalizedAngle(Math.atan2(position.x, position.z));
             const leftValidVolume =
               !Number.isFinite(position.x) ||
               !Number.isFinite(position.y) ||
@@ -1544,6 +1805,43 @@ export function Part2SceneViewport({
             part3MaxPenetration = Math.max(part3MaxPenetration, penetration);
             part3MaxSeparation = Math.max(part3MaxSeparation, separation);
             part3LeftValidVolume ||= leftValidVolume;
+            part3ArtificialAcceleration ||=
+              speed > Math.max(12, part3PreviousSpeed * 3);
+            part3Clipping ||= penetration > 0.03;
+            if (geometricTrackContact) {
+              part3TrackSampleFrames += 1;
+              part3TrackContactFrames += trackPairContact ? 1 : 0;
+              part3TrackSpeedSum += speed;
+              part3TrackEndSpeed = speed;
+              part3Hover ||= !trackPairContact;
+              if (part3TrackStartSpeed === 0) {
+                part3TrackStartSpeed = speed;
+                part3TrackAngle = trackAngle;
+                part3TrackAngleStart = trackAngle;
+              } else if (part3TrackAngle !== null) {
+                const delta = THREE.MathUtils.euclideanModulo(
+                  trackAngle - normalizedAngle(part3TrackAngle) + Math.PI,
+                  TWO_PI,
+                ) - Math.PI;
+                part3TrackAngle += delta;
+                part3TrackAngleEnd = part3TrackAngle;
+                const completedLaps = Math.floor(
+                  Math.abs(part3TrackAngle - part3TrackAngleStart!) / TWO_PI,
+                );
+                if (completedLaps > part3TrackCompletedLaps) {
+                  part3TrackCompletedLaps = completedLaps;
+                  part3TrackLapSpeeds.push(speed);
+                }
+              }
+            } else if (
+              part3InwardDescentTime === null &&
+              part3TrackAngleStart !== null &&
+              radius < PART3_TRACK_INNER_RADIUS
+            ) {
+              part3InwardDescentTime = part3Elapsed;
+              part3InwardDescentRadius = radius;
+              part3TrackAngleEnd ??= part3TrackAngle;
+            }
             const inContactEnvelope = penetration <= 0.03 && separation <= 0.12;
             if (inContactEnvelope) part3ContactFrames += 1;
             ballMesh.position.set(position.x, position.y, position.z);
@@ -1557,6 +1855,7 @@ export function Part2SceneViewport({
             );
             const rotation = ballBody.rotation();
             ballMesh.quaternion.set(rotation.x, rotation.y, rotation.z, rotation.w);
+            part3PreviousSpeed = speed;
             if (part3Elapsed >= probe.durationSeconds) {
               completePart3Probe(position, velocity);
             }
@@ -1747,25 +2046,35 @@ export function Part2SceneViewport({
       {part3Report ? (
         <>
           <strong>{part3Report.detail}</strong>
-          <span>CCD {part3Report.ccdEnabled ? 'enabled' : 'disabled'} · 120 Hz · max 2 deterministic probes</span>
+          <span>
+            CCD {part3Report.ccdEnabled ? 'enabled' : 'disabled'} · 120 Hz · max 3 outer-track smoke spins ·
+            visible dark track r {DARK_OUTER_TRACK_RADIUS.toFixed(4)} / y {DARK_OUTER_TRACK_HEIGHT.toFixed(4)}
+          </span>
           {part3Report.results.map((result) => (
             <span key={result.id}>
-              {result.label}: {result.outcome.toUpperCase()} · spawn r {result.spawnRadius.toFixed(4)} / y {result.spawnHeight.toFixed(4)} ·
-              v {result.initialVelocity.x.toFixed(4)}, {result.initialVelocity.y.toFixed(4)}, {result.initialVelocity.z.toFixed(4)} ·
-              peak {result.peakSpeed.toFixed(4)} · r {result.minRadius.toFixed(4)}–{result.maxRadius.toFixed(4)} ·
-              pen {result.maxPenetration.toFixed(4)} · sep {result.maxSeparation.toFixed(4)}
+              {result.label}: {result.outcome.toUpperCase()} · launch r {result.spawnRadius.toFixed(4)} / y {result.spawnHeight.toFixed(4)} ·
+              vtan {Math.hypot(result.initialVelocity.x, result.initialVelocity.z).toFixed(4)} ·
+              spin {result.initialAngularSpin.z.toFixed(4)} · laps {result.lapCount.toFixed(3)} ·
+              track {result.trackDuration.toFixed(4)} s · avg/peak {result.averageTrackSpeed.toFixed(4)} / {result.peakSpeed.toFixed(4)} ·
+              speed {result.trackStartSpeed.toFixed(4)}→{result.trackEndSpeed.toFixed(4)} · energy loss {(result.energyLossRatio * 100).toFixed(2)}%
             </span>
           ))}
           {part3Report.results.map((result) => (
             <span key={`${result.id}-safety`}>
-              {result.label}: contact {result.stableContact ? 'stable' : 'unstable'} · volume escape {result.leftValidVolume ? 'yes' : 'no'} ·
-              tunneling {result.tunneling ? 'yes' : 'no'} · velocity spike {result.velocityExplosion ? 'yes' : 'no'} ·
-              sync {result.maxVisualBodySyncError.toFixed(6)} · {result.detail}
+              {result.label}: contact {result.continuousTrackContact ? 'continuous' : 'interrupted'} ·
+              inward {result.inwardDescentTime?.toFixed(4) ?? '—'} s @ r {result.inwardDescentRadius?.toFixed(4) ?? '—'} ·
+              lap speeds [{result.trackLapSpeeds.map((speed) => speed.toFixed(3)).join(', ')}] ·
+              roll/slide {result.naturalRollOrSlide ? 'natural' : 'invalid'} · bounce {result.bouncePlausible ? 'plausible' : 'invalid'} ·
+              deflector {result.deflectorContact ? 'yes' : 'no'} · hover {result.hover ? 'yes' : 'no'} · clipping {result.clipping ? 'yes' : 'no'} ·
+              escape {result.leftValidVolume ? 'yes' : 'no'} · tunneling {result.tunneling ? 'yes' : 'no'} ·
+              velocity spike {result.velocityExplosion ? 'yes' : 'no'} · artificial acceleration {result.artificialAcceleration ? 'yes' : 'no'} ·
+              pen {result.maxPenetration.toFixed(4)} · sep {result.maxSeparation.toFixed(4)} ·
+              ball sync {result.maxVisualBodySyncError.toFixed(6)} · rotor sync {result.maxRotorSyncError.toFixed(6)} · {result.detail}
             </span>
           ))}
         </>
       ) : (
-        'Waiting for PART 3 static-bowl probes.'
+        'Waiting for outer-track smoke spins.'
       )}
     </div>
   );

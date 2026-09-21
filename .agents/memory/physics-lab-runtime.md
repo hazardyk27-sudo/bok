@@ -11,4 +11,4 @@ When reparenting a cloned GLTF scene, measure its post-parent world bounds and a
 
 The lab keeps a procedural viewport as rollback code, but the GLB is not active until the main render path mounts the asset-backed SceneViewport; loading the asset in an unused component is insufficient.
 
-**How to apply:** Verify the GLB response content type and magic bytes, then run a direct Chromium check with SwiftShader for `Source loaded`, exact pivot, view controls, Rapier collider initialization, and temporary probe results; keep a user-visible WebGL error state for browsers that cannot initialize the renderer.
+**How to apply:** Verify the GLB response content type and magic bytes, then run a direct Chromium check with SwiftShader for `Source loaded`, exact pivot, view controls, Rapier collider initialization, and temporary probe results; keep a user-visible WebGL error state for browsers that cannot initialize the renderer. For multi-probe runs, allow more than the nominal physics duration because headless rendering can make fixed-step validation take longer than wall-clock time.

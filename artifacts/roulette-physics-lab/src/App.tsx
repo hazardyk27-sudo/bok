@@ -4234,7 +4234,7 @@ function App() {
           <div className="viewport-wrap">
             <Part2SceneViewport
               loadKey={loadKey}
-              validationMode="part4"
+              validationMode="part3"
               view={view}
               showGrid={showGrid}
               showPhysicsDebug={showPhysicsDebug}
