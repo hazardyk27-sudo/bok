@@ -693,9 +693,22 @@ export function Part2SceneViewport({
         async (gltf) => {
           if (disposed) return;
           const runtimeScene = gltf.scene.clone(true);
-          const embeddedScaleNode = runtimeScene.getObjectByName('mesh.fbx');
+          const embeddedScaleNode = (() => {
+            let found: THREE.Object3D | undefined;
+            runtimeScene.traverse((child) => {
+              if (
+                !found &&
+                Math.abs(child.scale.x - 0.01) < 0.000001 &&
+                Math.abs(child.scale.y - 0.01) < 0.000001 &&
+                Math.abs(child.scale.z - 0.01) < 0.000001
+              ) {
+                found = child;
+              }
+            });
+            return found;
+          })();
           if (!embeddedScaleNode) {
-            throw new Error('PART 2 requires the mesh.fbx transform node for scale normalization');
+            throw new Error('PART 2 requires the embedded 0.01 GLB transform for scale normalization');
           }
           embeddedScaleNode.scale.set(1, 1, 1);
           runtimeScene.updateMatrixWorld(true);
