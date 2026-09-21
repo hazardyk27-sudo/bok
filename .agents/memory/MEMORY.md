@@ -29,3 +29,4 @@
 - [Rapier concave track limits](rapier-concave-track-limits.md) — convex rings and full disks cannot prove a natural roulette track; require a genuinely concave support surface and pair-specific contact evidence.
 - [Procedural pocket validation](procedural-pocket-validation.md) — a bowl opening needs continuous pocket support and smoke runs must prove kinematic fret contacts do not eject the ball.
 - [Rolley asset pocket mismatch](rolley-asset-pocket-mismatch.md) — supplied Rolley FBX exposes 38 equal radial separators at 360/38, not a verified 37-pocket European layout.
+- [LP Test 04 asset role](lp-test-04-asset-role.md) — compact three-mesh GLB is visual-only; preserve the canonical 37-pocket physics/result mapping.

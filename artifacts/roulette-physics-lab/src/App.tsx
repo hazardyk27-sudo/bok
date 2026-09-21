@@ -31,7 +31,7 @@ import {
   TriangleAlert,
 } from 'lucide-react';
 
-const ASSET_PATH = '/physics-lab/roulette-visual-source.glb';
+const ASSET_PATH = '/physics-lab/rou-lp-test-04.glb';
 const TARGET_WHEEL_DIAMETER = 6;
 const SOURCE_BALL_NODE = 'Sphere_16';
 const METERS_PER_WORLD_UNIT = 1 / 6;
@@ -558,6 +558,23 @@ function decomposeVisualScene(runtimeScene: THREE.Group, wheelRoot: THREE.Group)
   };
 
   wheelRoot.add(stationaryGroup, rotorGroup);
+
+  // The uploaded rou_LP_Test_04 export is a compact three-part visual asset
+  // rather than the older pocket-by-pocket source. Keep its inner bowl on the
+  // rotor while leaving the outside shell and turret stationary. The physics
+  // layer remains the validated 37-pocket European collider model below.
+  const uploadedAssetParts = [
+    runtimeScene.getObjectByName('geo1_inside_0'),
+    runtimeScene.getObjectByName('geo1_outside_0'),
+    runtimeScene.getObjectByName('geo1_turret_0'),
+  ].filter((part): part is THREE.Object3D => Boolean(part));
+  if (uploadedAssetParts.length > 0) {
+    uploadedAssetParts.forEach((part) => {
+      const isRotorPart = part.name.toLowerCase().includes('inside');
+      (isRotorPart ? rotorGroup : stationaryGroup).attach(part);
+    });
+    return { stationaryGroup, rotorGroup };
+  }
 
   const sourceRoot = runtimeScene.getObjectByName('GLTF_SceneRootNode') ?? runtimeScene;
   const sourceChildren = [...sourceRoot.children];
@@ -3490,8 +3507,8 @@ function App() {
             <Layers3 size={18} strokeWidth={1.7} />
           </div>
           <div>
-             <div className="eyebrow">ISOLATED PHYSICS LAB · PART 3</div>
-              <h1>Roulette / procedural rigid-body V1</h1>
+              <div className="eyebrow">ISOLATED PHYSICS LAB · PART 3</div>
+               <h1>Roulette / uploaded visual asset + rigid-body V1</h1>
           </div>
         </div>
         <div className="header-meta">
@@ -3506,7 +3523,7 @@ function App() {
               <div className="section-kicker">
               <Crosshair size={13} /> PART 3 · DYNAMIC BALL
             </div>
-            <p>One shared procedural coordinate system drives the visible wheel, rotor, pocket layout, and Rapier colliders.</p>
+            <p>The uploaded wheel drives the visible shell and rotor; the validated European 37-pocket layout remains the source of truth for physics and results.</p>
           </div>
 
           <section className="inspector-section">
@@ -3514,17 +3531,17 @@ function App() {
             <div className="asset-name">
               <Box size={17} />
               <div>
-                <strong>procedural-european-v1</strong>
-                <span>Three.js mesh + Rapier collider source</span>
+                 <strong>rou_LP_Test_04</strong>
+                 <span>Uploaded GLB visual source · 3 mesh parts</span>
               </div>
             </div>
             <div className="data-row">
               <span>File path</span>
-              <code data-testid="text-asset-path">generated://shared-wheel-v1</code>
+               <code data-testid="text-asset-path">{ASSET_PATH}</code>
             </div>
             <div className="data-row">
               <span>Runtime object</span>
-              <span className="value-muted">Shared mesh / collider scale</span>
+               <span className="value-muted">Visual shell / validated collider scale</span>
             </div>
           </section>
 
