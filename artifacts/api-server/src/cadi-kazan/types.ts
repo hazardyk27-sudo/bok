@@ -71,6 +71,14 @@ export function getCashoutMultiplierBps(mode: CadiKazanMode, alarmCount: number,
   return ADVANCED_PAYOUT_TABLES[alarmCount as AdvancedAlarmCount].multipliersBps[revealedSafeCount - 1] ?? 0;
 }
 
+export function getCashoutPayoutCents(stakeCents: number, multiplierBps: number) {
+  return Math.floor((stakeCents * multiplierBps) / 100);
+}
+
+export function getVisibleBombCells(status: CadiKazanStatus, bombIndices: number[]) {
+  return status === "ACTIVE" ? [] : [...bombIndices];
+}
+
 export type CadiKazanRoundSnapshot = {
   id: string;
   mode: CadiKazanMode;
@@ -80,6 +88,7 @@ export type CadiKazanRoundSnapshot = {
   revealedCells: number[];
   revealedSafeCount: number;
   currentMultiplierBps: number;
+  currentCashoutCents: number;
   status: CadiKazanStatus;
   payoutCents: number;
   revealedBombCells: number[];

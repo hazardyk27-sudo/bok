@@ -1,3 +1,5 @@
+import { ScratchSurface } from "./scratch/ScratchSurface";
+
 type CadiKazanMode = "STANDARD" | "ADVANCED";
 type CadiKazanStatus = "ACTIVE" | "CASHED_OUT" | "BUST" | "COMPLETED";
 
@@ -10,6 +12,7 @@ type CadiKazanRound = {
   revealedCells: number[];
   revealedSafeCount: number;
   currentMultiplierBps: number;
+  currentCashoutCents: number;
   status: CadiKazanStatus;
   payoutCents: number;
   revealedBombCells: number[];
@@ -97,7 +100,7 @@ export const CADI_KAZAN_MARKUP = `
       <p class="witch-feedback" data-witch-feedback role="status">Mod seç ve biletini başlat.</p>
     </section>
 
-    <section class="witch-play" data-witch-play hidden>
+     <section class="witch-play" data-witch-play hidden>
       <div class="witch-play-heading">
         <div>
           <span class="roulette-card-kicker" data-witch-play-mode>STANDARD 5</span>
@@ -110,7 +113,7 @@ export const CADI_KAZAN_MARKUP = `
         </div>
       </div>
       <div class="witch-board-wrap">
-        <div class="witch-board" data-witch-board aria-label="Cadı Kazan kapalı alanları"></div>
+         <div class="witch-board" data-witch-board aria-label="Cadı Kazan kazınabilir alanları"></div>
       </div>
       <div class="witch-actions">
         <p class="witch-feedback" data-witch-play-feedback role="status">Güvenli bir alan seç.</p>
@@ -132,6 +135,11 @@ export class WitchClient {
   private state: CadiKazanState | null = null;
   private mode: CadiKazanMode = "STANDARD";
   private busy = false;
+  private pendingRevealCell: number | null = null;
+  private terminalRevealRoundId: string | null = null;
+  private terminalRevealVisible = false;
+  private terminalRevealTimer: number | null = null;
+  private readonly scratchSurfaces = new Map<number, ScratchSurface>();
 
   constructor(root: HTMLElement) {
     this.root = root;
@@ -150,15 +158,7 @@ export class WitchClient {
     this.root.querySelector<HTMLButtonElement>("[data-witch-action='start']")?.addEventListener("click", () => void this.startRound());
     this.root.querySelector<HTMLButtonElement>("[data-witch-action='cashout']")?.addEventListener("click", () => void this.cashOut());
     this.root.querySelector<HTMLButtonElement>("[data-witch-action='new']")?.addEventListener("click", () => {
-      this.state = this.state ? { ...this.state, round: null } : null;
-      this.render();
-    });
-    this.root.querySelector<HTMLElement>("[data-witch-board]")?.addEventListener("click", (event) => {
-      const target = event.target instanceof HTMLElement
-        ? event.target.closest<HTMLButtonElement>("[data-witch-cell]")
-        : null;
-      if (!target) return;
-      void this.reveal(Number(target.dataset.witchCell));
+       if (this.state) this.applyState({ ...this.state, round: null });
     });
   }
 
@@ -167,7 +167,7 @@ export class WitchClient {
       const response = await fetch(`${API_BASE}/state`, { credentials: "same-origin" });
       const data = await response.json() as CadiKazanState & { error?: string };
       if (!response.ok) throw new Error(data.error ?? "Cadı Kazan yüklenemedi");
-      this.state = data;
+      this.applyState(data);
       if (data.round) this.mode = data.round.mode;
       this.setStatus("SERVER’A BAĞLI", true);
       this.render();
@@ -194,7 +194,7 @@ export class WitchClient {
       });
       const data = await response.json() as CadiKazanState & { error?: string };
       if (!response.ok) throw new Error(data.error ?? "Bilet başlatılamadı");
-      this.state = data;
+      this.applyState(data);
       this.setStatus("SERVER’A BAĞLI", true);
     } catch (error) {
       this.setFeedback(error instanceof Error ? error.message : "Bilet başlatılamadı");
@@ -208,6 +208,7 @@ export class WitchClient {
     const round = this.state?.round;
     if (!round || round.status !== "ACTIVE" || this.busy || round.revealedCells.includes(cellIndex)) return;
     this.busy = true;
+    this.pendingRevealCell = cellIndex;
     this.setFeedback("Alan server’da açılıyor…");
     this.render();
     try {
@@ -219,7 +220,7 @@ export class WitchClient {
       });
       const data = await response.json() as CadiKazanMutation & { error?: string };
       if (!response.ok) throw new Error(data.error ?? "Alan açılamadı");
-      this.state = data.state;
+      this.applyState(data.state, data.state.round?.status !== "ACTIVE");
       this.setFeedback(
         data.outcome === "BUST" ? "BOMBA! Round BUST oldu." :
           data.outcome === "COMPLETED" ? "Tüm güvenli alanlar açıldı. Ödül tamamlandı." :
@@ -227,8 +228,10 @@ export class WitchClient {
               "Bu alan daha önce açıldı.",
       );
     } catch (error) {
+      this.scratchSurfaces.get(cellIndex)?.reset();
       this.setFeedback(error instanceof Error ? error.message : "Alan açılamadı");
     } finally {
+      this.pendingRevealCell = null;
       this.busy = false;
       this.render();
     }
@@ -249,7 +252,7 @@ export class WitchClient {
       });
       const data = await response.json() as CadiKazanMutation & { error?: string };
       if (!response.ok) throw new Error(data.error ?? "Cash Out başarısız");
-      this.state = data.state;
+      this.applyState(data.state, data.state.round?.status !== "ACTIVE");
       this.setFeedback(data.outcome === "CASHED_OUT" ? "Kazanç wallet’a aktarıldı." : "Round zaten kapalı.");
     } catch (error) {
       this.setFeedback(error instanceof Error ? error.message : "Cash Out başarısız");
@@ -271,6 +274,42 @@ export class WitchClient {
     this.root.querySelectorAll<HTMLElement>("[data-witch-feedback], [data-witch-play-feedback]").forEach((element) => {
       element.textContent = value;
     });
+  }
+
+  private clearTerminalRevealTimer() {
+    if (this.terminalRevealTimer !== null) {
+      window.clearTimeout(this.terminalRevealTimer);
+      this.terminalRevealTimer = null;
+    }
+  }
+
+  private destroyScratchSurfaces() {
+    this.scratchSurfaces.forEach((surface) => surface.destroy());
+    this.scratchSurfaces.clear();
+  }
+
+  private applyState(nextState: CadiKazanState, animateTerminal = false) {
+    this.clearTerminalRevealTimer();
+    this.state = nextState;
+    const round = nextState.round;
+    if (!round) {
+      this.terminalRevealRoundId = null;
+      this.terminalRevealVisible = false;
+      this.destroyScratchSurfaces();
+      this.render();
+      return;
+    }
+    const terminal = round.status !== "ACTIVE";
+    this.terminalRevealRoundId = terminal ? round.id : null;
+    this.terminalRevealVisible = terminal && !animateTerminal;
+    this.render();
+    if (terminal && animateTerminal) {
+      this.terminalRevealTimer = window.setTimeout(() => {
+        this.terminalRevealVisible = true;
+        this.terminalRevealTimer = null;
+        this.render();
+      }, 380);
+    }
   }
 
   private render() {
@@ -300,30 +339,53 @@ export class WitchClient {
     if (!round) return;
     const board = this.root.querySelector<HTMLElement>("[data-witch-board]");
     if (board && board.childElementCount !== round.cellCount) {
+      this.destroyScratchSurfaces();
       board.innerHTML = Array.from({ length: round.cellCount }, (_, index) => `
-        <button type="button" class="witch-cell" data-witch-cell="${index}" aria-label="${index + 1}. alan">
-          <span>${index + 1}</span>
+        <button type="button" class="witch-cell" data-witch-cell="${index}" aria-label="${index + 1}. kazınabilir kapalı alan">
+          <span class="witch-cell-content">${index + 1}</span>
+          <canvas class="witch-scratch-canvas" aria-hidden="true"></canvas>
         </button>
       `).join("");
     }
     const revealedBombs = new Set(round.revealedBombCells);
+    const terminalBoardVisible = round.status !== "ACTIVE"
+      && this.terminalRevealRoundId === round.id
+      && this.terminalRevealVisible;
     this.root.querySelectorAll<HTMLButtonElement>("[data-witch-cell]").forEach((button) => {
       const index = Number(button.dataset.witchCell);
-      const isRevealed = round.revealedCells.includes(index);
-      const isBomb = revealedBombs.has(index);
-      button.disabled = this.busy || round.status !== "ACTIVE" || isRevealed;
+      const isActuallyRevealed = round.revealedCells.includes(index);
+      const isRevealed = isActuallyRevealed || terminalBoardVisible;
+      const isBomb = terminalBoardVisible && revealedBombs.has(index);
+      button.disabled = round.status !== "ACTIVE" || isActuallyRevealed;
       button.classList.toggle("is-revealed", isRevealed);
       button.classList.toggle("is-safe", isRevealed && !isBomb);
       button.classList.toggle("is-bomb", isBomb);
-      button.querySelector("span")!.textContent = isBomb ? "!" : isRevealed ? "✓" : String(index + 1);
-      button.setAttribute("aria-label", isBomb ? `${index + 1}. bomba` : isRevealed ? `${index + 1}. güvenli alan` : `${index + 1}. kapalı alan`);
+      button.classList.toggle("is-pending", this.pendingRevealCell === index);
+      button.setAttribute("aria-label", isBomb ? `${index + 1}. bomba` : isRevealed ? `${index + 1}. güvenli alan` : `${index + 1}. kazınabilir kapalı alan`);
+      const content = button.querySelector<HTMLElement>(".witch-cell-content");
+      if (content) content.textContent = isBomb ? "!" : isRevealed ? "✓" : String(index + 1);
+      const canvas = button.querySelector<HTMLCanvasElement>(".witch-scratch-canvas");
+      if (!canvas) return;
+      canvas.hidden = isRevealed;
+      const surface = this.scratchSurfaces.get(index);
+      if (!isRevealed && !surface) {
+        this.scratchSurfaces.set(index, new ScratchSurface(canvas, {
+          onCommit: () => {
+            if (this.pendingRevealCell === null && !this.busy) void this.reveal(index);
+          },
+        }));
+      } else if (isRevealed && surface) {
+        surface.destroy();
+        this.scratchSurfaces.delete(index);
+      }
     });
     const playMode = this.root.querySelector<HTMLElement>("[data-witch-play-mode]");
     const playTitle = this.root.querySelector<HTMLElement>("[data-witch-play-title]");
     if (playMode) playMode.textContent = round.mode === "STANDARD" ? "STANDARD 5 // 1 BOMBA" : `ADVANCED 25 // ${round.alarmCount} ALARM`;
     if (playTitle) playTitle.textContent = round.status === "BUST" ? "Bomba açıldı" : round.status === "CASHED_OUT" ? "Kazanç alındı" : round.status === "COMPLETED" ? "Round tamamlandı" : "Bir alan seç";
     this.root.querySelector<HTMLElement>("[data-witch-multiplier]")!.textContent = formatMultiplier(round.currentMultiplierBps);
-    this.root.querySelector<HTMLElement>("[data-witch-payout]")!.textContent = `${formatCredits(round.payoutCents || Math.floor((round.stakeCents * round.currentMultiplierBps) / 100))} kredi`;
+    const displayedPayout = round.status === "ACTIVE" ? round.currentCashoutCents : round.payoutCents;
+    this.root.querySelector<HTMLElement>("[data-witch-payout]")!.textContent = `${formatCredits(displayedPayout)} kredi`;
     const cashout = this.root.querySelector<HTMLButtonElement>("[data-witch-action='cashout']");
     if (cashout) cashout.disabled = this.busy || round.status !== "ACTIVE" || round.revealedSafeCount < 1;
     const newRound = this.root.querySelector<HTMLButtonElement>("[data-witch-action='new']");

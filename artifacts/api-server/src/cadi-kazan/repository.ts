@@ -13,7 +13,9 @@ import {
   type CadiKazanState,
   type CadiKazanStatus,
   getCashoutMultiplierBps,
+  getCashoutPayoutCents,
   getSafeCellCount,
+  getVisibleBombCells,
 } from "./types";
 
 type CadiRoundRow = {
@@ -63,19 +65,21 @@ function chooseBombIndices(cellCount: number, alarmCount: number) {
 }
 
 function toSnapshot(row: CadiRoundRow): CadiKazanRoundSnapshot {
-  const bombIndices = row.status === "BUST" ? safeNumberArray(row.bomb_indices) : [];
+  const bombIndices = safeNumberArray(row.bomb_indices);
+  const revealedCells = safeNumberArray(row.revealed_cells);
   return {
     id: row.id,
     mode: row.mode,
     alarmCount: Number(row.alarm_count),
     cellCount: Number(row.cell_count),
     stakeCents: Number(row.stake_cents),
-    revealedCells: safeNumberArray(row.revealed_cells),
+    revealedCells,
     revealedSafeCount: Number(row.revealed_safe_count),
     currentMultiplierBps: Number(row.current_multiplier_bps),
+    currentCashoutCents: getCashoutPayoutCents(Number(row.stake_cents), Number(row.current_multiplier_bps)),
     status: row.status,
     payoutCents: Number(row.payout_cents),
-    revealedBombCells: row.status === "BUST" ? bombIndices.filter((index) => safeNumberArray(row.revealed_cells).includes(index)) : [],
+    revealedBombCells: getVisibleBombCells(row.status, bombIndices),
     createdAt: asIso(row.created_at),
     updatedAt: asIso(row.updated_at),
   };
@@ -216,7 +220,7 @@ export class CadiKazanRepository {
       const currentMultiplierBps = getCashoutMultiplierBps(row.mode, Number(row.alarm_count), revealedSafeCount);
       const safeCellCount = getSafeCellCount(row.mode, Number(row.alarm_count));
       const completed = revealedSafeCount >= safeCellCount;
-      const payoutCents = completed ? Math.floor((Number(row.stake_cents) * currentMultiplierBps) / 100) : 0;
+      const payoutCents = completed ? getCashoutPayoutCents(Number(row.stake_cents), currentMultiplierBps) : 0;
       const nextStatus: CadiKazanStatus = completed ? "COMPLETED" : "ACTIVE";
       const updated = await client.query<CadiRoundRow>(
         `UPDATE cadi_kazan_rounds
@@ -264,7 +268,7 @@ export class CadiKazanRepository {
         return { outcome: "NOOP" as const, state: stateFrom(sessionId, balanceCents, row) };
       }
       if (Number(row.revealed_safe_count) < 1 || Number(row.current_multiplier_bps) <= 0) throw new Error("CASH_OUT_REQUIRES_SAFE_REVEAL");
-      const payoutCents = Math.floor((Number(row.stake_cents) * Number(row.current_multiplier_bps)) / 100);
+       const payoutCents = getCashoutPayoutCents(Number(row.stake_cents), Number(row.current_multiplier_bps));
       const updated = await client.query<CadiRoundRow>(
         "UPDATE cadi_kazan_rounds SET status = 'CASHED_OUT', payout_cents = $1, cashout_idempotency_key = $2, updated_at = now(), completed_at = now() WHERE id = $3 RETURNING *",
         [payoutCents, idempotencyKey, roundId],
