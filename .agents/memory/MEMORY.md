@@ -33,3 +33,4 @@
 - [PART 1 rotor infrastructure](part1-rotor-infrastructure.md) — the active GLB scene uses one centered root and a dedicated Y-only rotor pivot with a shared fixed-step angle state.
 - [PART 2 profile support](part2-profile-support.md) — an open radial profile needs continuous derived support underlay and a floor catch to keep a dynamic sphere above the measured surface.
 - [PART 3 outer-track validation](physics-lab-part3-outer-track.md) — keep measured deflector cuboids separate from the running lane and validate clearance and impact with ball-radius-aware probes.
+- [Main-world pocket transition](physics-lab-pocket-transition.md) — open the measured track aperture, align descent to live rotor phase, and keep a supported floor underlay under moving frets.
