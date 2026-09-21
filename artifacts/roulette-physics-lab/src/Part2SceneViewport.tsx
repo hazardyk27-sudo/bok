@@ -693,7 +693,14 @@ export function Part2SceneViewport({
         async (gltf) => {
           if (disposed) return;
           const runtimeScene = gltf.scene.clone(true);
+          const embeddedScaleNode = runtimeScene.getObjectByName('mesh.fbx');
+          if (!embeddedScaleNode) {
+            throw new Error('PART 2 requires the mesh.fbx transform node for scale normalization');
+          }
+          embeddedScaleNode.scale.set(1, 1, 1);
           runtimeScene.updateMatrixWorld(true);
+          const sourceMeshCount = countMeshes(runtimeScene);
+          const sourceTriangles = countTriangles(runtimeScene);
           const sourceCenter = new THREE.Vector3(
             ROULETTE_RAW_SOURCE_CENTER.x,
             ROULETTE_RAW_SOURCE_CENTER.y,
@@ -752,8 +759,6 @@ export function Part2SceneViewport({
           wheelRoot.updateMatrixWorld(true);
           scene.add(wheelRoot);
 
-          const sourceMeshCount = countMeshes(runtimeScene);
-          const sourceTriangles = countTriangles(runtimeScene);
           const runtimeBounds = new THREE.Box3().setFromObject(wheelRoot);
           const runtimeSize = runtimeBounds.getSize(new THREE.Vector3());
           const json = gltf.parser.json as { asset?: { extras?: Record<string, string> } };
