@@ -3,7 +3,6 @@ import * as THREE from 'three';
 import RAPIER from '@dimforge/rapier3d-compat';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
-import { ProceduralRouletteViewport } from './ProceduralRouletteViewport';
 import {
   getGetPhysicsLabCurrentRoundQueryKey,
   useCreatePhysicsLabRound,
@@ -569,6 +568,11 @@ function decomposeVisualScene(runtimeScene: THREE.Group, wheelRoot: THREE.Group)
     runtimeScene.getObjectByName('geo1_turret_0'),
   ].filter((part): part is THREE.Object3D => Boolean(part));
   if (uploadedAssetParts.length > 0) {
+    if (uploadedAssetParts.length !== 3) {
+      throw new Error(
+        `rou_LP_Test_04 requires outside, inside/rotor, and turret parts; found ${uploadedAssetParts.length}/3`,
+      );
+    }
     uploadedAssetParts.forEach((part) => {
       const isRotorPart = part.name.toLowerCase().includes('inside');
       (isRotorPart ? rotorGroup : stationaryGroup).attach(part);
@@ -2583,6 +2587,12 @@ function SceneViewport({
             sourceUntouched: true,
             rotationAxis: 'Y',
             physicsCollidersAttached: false,
+            authoritativeTransform: {
+              sourceCenter: roundedVector(sourceCenter),
+              normalizedCenter: { x: 0, y: 0, z: 0 },
+              scale: Number(normalizationScale.toFixed(6)),
+              yOrigin: 0,
+            },
           };
           const runtimeOffset = new THREE.Group();
           runtimeOffset.name = 'RouletteVisualRuntime__derived';
@@ -3155,7 +3165,7 @@ function StatusChip({ state }: { state: LoadState }) {
       label: 'Building wheel',
       icon: <CircleDot className="status-icon status-pulse" size={13} />,
     },
-    loaded: { label: 'Procedural ready', icon: <Check className="status-icon" size={13} /> },
+    loaded: { label: 'Asset ready', icon: <Check className="status-icon" size={13} /> },
     error: {
       label: 'WebGL blocked',
       icon: <AlertTriangle className="status-icon" size={13} />,
@@ -4220,7 +4230,7 @@ function App() {
           </div>
 
           <div className="viewport-wrap">
-            <ProceduralRouletteViewport
+            <SceneViewport
               loadKey={loadKey}
               view={view}
               showGrid={showGrid}
@@ -4257,15 +4267,15 @@ function App() {
                   <span />
                   <span />
                 </div>
-                <strong>Building procedural wheel</strong>
-                <span>Creating shared Three.js / Rapier geometry</span>
+                <strong>Loading rou_LP_Test_04</strong>
+                <span>Preparing the uploaded visual asset and canonical 37-pocket audit</span>
               </div>
             )}
             {loadState === 'error' && (
               <div className="viewport-overlay error-overlay" data-testid="status-error" role="alert">
                 <TriangleAlert size={21} />
                 <strong>WebGL unavailable</strong>
-                <span>{errorDetail || 'Enable a WebGL-capable preview to view the procedural wheel.'}</span>
+                <span>{errorDetail || 'Enable a WebGL-capable preview to view the uploaded roulette asset.'}</span>
                 <button type="button" onClick={retryLoad} data-testid="button-load-retry">
                   Retry load
                 </button>
@@ -4273,7 +4283,7 @@ function App() {
             )}
             {loadState === 'loaded' && (
               <div className="loaded-stamp" data-testid="status-loaded">
-                <Check size={13} /> PROCEDURAL READY
+                <Check size={13} /> ASSET READY
               </div>
             )}
           </div>
