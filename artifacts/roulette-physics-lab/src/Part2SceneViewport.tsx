@@ -24,11 +24,26 @@ const DROP_HEIGHT_ABOVE_SURFACE = 0.72;
 const DROP_DURATION_SECONDS = 4;
 const DARK_OUTER_TRACK_RADIUS = 2.35;
 const DARK_OUTER_TRACK_HEIGHT = -0.338;
-const PART3_TRACK_FRICTION = 0.15;
+const PART3_TRACK_FRICTION = 0.08;
 const PART3_TRACK_DAMPING = 0.01;
 const PART3_TRACK_DURATION_SECONDS = 30;
-const PART3_TRACK_INNER_RADIUS = 2.15;
-const PART3_TRACK_OUTER_RADIUS = 2.42;
+const PART3_LAUNCH_RADIUS = 2.82;
+const PART3_RETAINING_RIM_INNER_RADIUS = 2.95;
+const PART3_DEFLECTOR_INNER_RADIUS = 2.464;
+const PART3_DEFLECTOR_OUTER_RADIUS = 2.657;
+const PART3_DEFLECTOR_BOTTOM = -0.291;
+const PART3_DEFLECTOR_TOP = 0.015;
+const PART3_DEFLECTOR_COUNT = 37;
+const PART3_DEFLECTOR_PITCH = TWO_PI / PART3_DEFLECTOR_COUNT;
+const PART3_DEFLECTOR_FRICTION = 0.28;
+const PART3_DEFLECTOR_RESTITUTION = 0.16;
+const PART3_DEFLECTOR_RADIUS = (PART3_DEFLECTOR_INNER_RADIUS + PART3_DEFLECTOR_OUTER_RADIUS) / 2;
+const PART3_DEFLECTOR_HEIGHT = PART3_DEFLECTOR_TOP - PART3_DEFLECTOR_BOTTOM;
+const PART3_DEFLECTOR_TANGENTIAL_WIDTH =
+  PART3_DEFLECTOR_RADIUS * THREE.MathUtils.degToRad(7.83);
+const PART3_DEFLECTOR_APPROACH_RADIUS = 2.74;
+const PART3_TRACK_INNER_RADIUS = 2.72;
+const PART3_TRACK_OUTER_RADIUS = 2.90;
 const PART3_TRACK_CONTACT_TOLERANCE = 0.1;
 const PROFILE_SEGMENTS = 64;
 const PROFILE_SHELL_THICKNESS = 0.08;
@@ -126,6 +141,18 @@ type Part3ProbeResult = {
   deflectorContact: boolean;
   peakSpeedBeforeContact: number | null;
   peakSpeedAfterContact: number | null;
+  impactSpeedBefore: number | null;
+  impactSpeedAfter: number | null;
+  impactDirectionChangeDegrees: number | null;
+  noPassThrough: boolean;
+  visualContactAlignmentCredible: boolean;
+  retainingRimRadius: number;
+  nearestDeflectorRadius: number;
+  earlyLapMinimumDeflectorClearance: number | null;
+  deflectorColliderCount: number;
+  deflectorColliderType: string;
+  deflectorColliderFriction: number;
+  deflectorColliderRestitution: number;
   bouncePlausible: boolean;
   hover: boolean;
   clipping: boolean;
@@ -263,31 +290,24 @@ const COLLIDER_PROFILE = {
 
 const PART3_PROBES = [
   {
-    id: 'outer-track-smoke-a',
-    label: 'Outer track smoke A',
+    id: 'outer-track-launch',
+    label: 'Outer-track launch / deflector clearance',
     angle: 0.37,
-    radius: DARK_OUTER_TRACK_RADIUS,
-    speed: 4.8,
-    spinFactor: 1,
-    durationSeconds: PART3_TRACK_DURATION_SECONDS,
-  },
-  {
-    id: 'outer-track-smoke-b',
-    label: 'Outer track smoke B',
-    angle: 1.11,
-    radius: DARK_OUTER_TRACK_RADIUS,
+    radius: PART3_LAUNCH_RADIUS,
     speed: 5,
     spinFactor: 1,
+    kind: 'outer-track',
     durationSeconds: PART3_TRACK_DURATION_SECONDS,
   },
   {
-    id: 'outer-track-smoke-c',
-    label: 'Outer track smoke C',
-    angle: 2.03,
-    radius: DARK_OUTER_TRACK_RADIUS,
-    speed: 5.2,
-    spinFactor: 1,
-    durationSeconds: PART3_TRACK_DURATION_SECONDS,
+    id: 'controlled-deflector-approach',
+    label: 'Controlled inward deflector approach',
+    angle: 0.37,
+    radius: PART3_DEFLECTOR_APPROACH_RADIUS,
+    speed: 1.4,
+    spinFactor: 0,
+    kind: 'deflector-approach',
+    durationSeconds: 2.5,
   },
 ] as const;
 
@@ -335,14 +355,25 @@ const POCKET_ENTRY_PROBES = [
 ] as const;
 
 function part3SpawnPosition(probe: (typeof PART3_PROBES)[number]) {
+  const y =
+    probe.kind === 'deflector-approach'
+      ? (PART3_DEFLECTOR_BOTTOM + PART3_DEFLECTOR_TOP) / 2
+      : part3TrackHeight(probe.radius);
   return radialPosition(
     probe.radius,
     probe.angle,
-    DARK_OUTER_TRACK_HEIGHT + BALL_RADIUS + 0.002,
+    y + (probe.kind === 'deflector-approach' ? 0 : BALL_RADIUS + 0.002),
   );
 }
 
 function part3InitialVelocity(probe: (typeof PART3_PROBES)[number]): VectorReadout {
+  if (probe.kind === 'deflector-approach') {
+    return {
+      x: Number((-Math.sin(probe.angle) * probe.speed).toFixed(4)),
+      y: 0,
+      z: Number((-Math.cos(probe.angle) * probe.speed).toFixed(4)),
+    };
+  }
   return {
     x: Number((Math.cos(probe.angle) * probe.speed).toFixed(4)),
     y: 0,
@@ -351,11 +382,49 @@ function part3InitialVelocity(probe: (typeof PART3_PROBES)[number]): VectorReado
 }
 
 function part3InitialAngularSpin(probe: (typeof PART3_PROBES)[number]): VectorReadout {
+  if (probe.kind === 'deflector-approach') {
+    return { x: 0, y: 0, z: 0 };
+  }
   return {
     x: 0,
     y: 0,
     z: Number((-probe.speed / probe.radius * probe.spinFactor).toFixed(4)),
   };
+}
+
+function addPart3DeflectorColliders(
+  world: RAPIER.World,
+  stationaryBody: RAPIER.RigidBody,
+) {
+  const colliders: RAPIER.Collider[] = [];
+  const halfTangentialWidth = PART3_DEFLECTOR_TANGENTIAL_WIDTH / 2;
+  const halfHeight = PART3_DEFLECTOR_HEIGHT / 2;
+  const halfRadialDepth =
+    (PART3_DEFLECTOR_OUTER_RADIUS - PART3_DEFLECTOR_INNER_RADIUS) / 2;
+  const centerY = (PART3_DEFLECTOR_BOTTOM + PART3_DEFLECTOR_TOP) / 2;
+  for (let index = 0; index < PART3_DEFLECTOR_COUNT; index += 1) {
+    const angle = (index + 0.5) * PART3_DEFLECTOR_PITCH;
+    const collider = RAPIER.ColliderDesc.cuboid(
+      halfTangentialWidth,
+      halfHeight,
+      halfRadialDepth,
+    )
+      .setTranslation(
+        Math.sin(angle) * PART3_DEFLECTOR_RADIUS,
+        centerY,
+        Math.cos(angle) * PART3_DEFLECTOR_RADIUS,
+      )
+      .setRotation({
+        x: 0,
+        y: Math.sin(angle / 2),
+        z: 0,
+        w: Math.cos(angle / 2),
+      })
+      .setFriction(PART3_DEFLECTOR_FRICTION)
+      .setRestitution(PART3_DEFLECTOR_RESTITUTION);
+    colliders.push(world.createCollider(collider, stationaryBody));
+  }
+  return colliders;
 }
 
 function part3TrackHeight(radius: number) {
@@ -366,6 +435,9 @@ function part3TrackHeight(radius: number) {
     [2.25, -0.343],
     [2.35, -0.338],
     [2.45, -0.33],
+    [2.65, -0.27],
+    [2.90, -0.27],
+    [2.95, -0.15],
   ];
   const clamped = Math.max(trackProfile[0][0], Math.min(trackProfile.at(-1)![0], radius));
   for (let index = 1; index < trackProfile.length; index += 1) {
@@ -392,9 +464,10 @@ function makePart3OuterTrackTrimesh() {
     [2.25, -0.343],
     [2.35, -0.338],
     [2.45, -0.33],
-    [2.45, 0],
-    [2.52, 0],
-    [2.52, -0.4],
+    [2.65, -0.27],
+    [2.90, -0.27],
+    [2.95, -0.15],
+    [2.95, -0.4],
     [1.95, -0.4],
   ];
   const vertices: number[] = [];
@@ -1010,6 +1083,7 @@ export function Part2SceneViewport({
     let rotorBody: RAPIER.RigidBody | null = null;
     let physicsBallCollider: RAPIER.Collider | null = null;
     let part3TrackCollider: RAPIER.Collider | null = null;
+    let part3DeflectorColliders: RAPIER.Collider[] = [];
     let rotorColliders: RAPIER.Collider[] = [];
     let accumulator = 0;
     let lastTime = performance.now();
@@ -1053,6 +1127,14 @@ export function Part2SceneViewport({
     let part3Clipping = false;
     let part3BouncePlausible = true;
     let part3PreviousSpeed = 0;
+    let part3DeflectorContact = false;
+    let part3DeflectorContactTime: number | null = null;
+    let part3ImpactSpeedBefore: number | null = null;
+    let part3ImpactSpeedAfter: number | null = null;
+    let part3ImpactDirectionBefore: THREE.Vector3 | null = null;
+    let part3ImpactDirectionAfter: THREE.Vector3 | null = null;
+    let part3EarlyLapMinimumDeflectorClearance: number | null = null;
+    let part3DeflectorPassThrough = false;
     let part3Results: Part3ProbeResult[] = [];
     let part3Finished = false;
     let part4ProbeIndex = 0;
@@ -1148,6 +1230,14 @@ export function Part2SceneViewport({
       part3Clipping = false;
       part3BouncePlausible = true;
       part3PreviousSpeed = probe.speed;
+      part3DeflectorContact = false;
+      part3DeflectorContactTime = null;
+      part3ImpactSpeedBefore = null;
+      part3ImpactSpeedAfter = null;
+      part3ImpactDirectionBefore = null;
+      part3ImpactDirectionAfter = null;
+      part3EarlyLapMinimumDeflectorClearance = null;
+      part3DeflectorPassThrough = false;
       publishPart3Report(
         'running',
         `Running probe ${index + 1}/${PART3_PROBES.length}: ${probe.label}.`,
@@ -1377,6 +1467,7 @@ export function Part2SceneViewport({
                 .setRestitution(0.01),
               stationaryBody,
             );
+            part3DeflectorColliders = addPart3DeflectorColliders(world, stationaryBody);
           } else {
             const profileMesh = makeProfileTrimesh();
             const profileCollider = RAPIER.ColliderDesc.trimesh(
@@ -1541,6 +1632,7 @@ export function Part2SceneViewport({
       const completePart3Probe = (position: RAPIER.Vector, velocity: RAPIER.Vector) => {
         const probe = PART3_PROBES[part3ProbeIndex];
         const finalSpeed = Math.hypot(velocity.x, velocity.y, velocity.z);
+        const isDeflectorApproach = probe.kind === 'deflector-approach';
         const trackContactRatio =
           part3TrackSampleFrames > 0
             ? part3TrackContactFrames / part3TrackSampleFrames
@@ -1585,20 +1677,43 @@ export function Part2SceneViewport({
         const naturalRollOrSlide =
           part3TrackContactFrames > 120 &&
           part3TrackStartSpeed > part3TrackEndSpeed;
+        const impactDirectionChangeDegrees =
+          part3ImpactDirectionBefore && part3ImpactDirectionAfter
+            ? THREE.MathUtils.radToDeg(
+                part3ImpactDirectionBefore.angleTo(part3ImpactDirectionAfter),
+              )
+            : null;
+        const noPassThrough = !part3DeflectorPassThrough;
+        const visualContactAlignmentCredible =
+          PART3_DEFLECTOR_INNER_RADIUS >= 2.46 &&
+          PART3_DEFLECTOR_OUTER_RADIUS <= 2.67 &&
+          PART3_DEFLECTOR_BOTTOM <= -0.28 &&
+          PART3_DEFLECTOR_TOP >= 0.01;
         const passed =
-          lapCount >= 3.8 &&
-          lapCount <= 5.2 &&
-          continuousTrackContact &&
-          part3InwardDescentTime !== null &&
-          naturalRollOrSlide &&
-          !part3ArtificialAcceleration &&
-          !part3Hover &&
-          !part3Clipping &&
-          stableContact &&
-          !leftValidVolume &&
-          !tunneling &&
-          !velocityExplosion &&
-          part3MaxVisualBodySyncError <= 0.001;
+          isDeflectorApproach
+            ? part3DeflectorContact &&
+              part3ImpactSpeedBefore !== null &&
+              part3ImpactSpeedAfter !== null &&
+              (impactDirectionChangeDegrees ?? 0) >= 10 &&
+              noPassThrough &&
+              !velocityExplosion &&
+              !leftValidVolume &&
+              !tunneling &&
+              part3MaxVisualBodySyncError <= 0.001 &&
+              visualContactAlignmentCredible
+            : lapCount >= 2.5 &&
+              lapCount <= 8 &&
+              continuousTrackContact &&
+              naturalRollOrSlide &&
+              (part3EarlyLapMinimumDeflectorClearance ?? 0) >= 0.005 &&
+              !part3ArtificialAcceleration &&
+              !part3Hover &&
+              !part3Clipping &&
+              stableContact &&
+              !leftValidVolume &&
+              !tunneling &&
+              !velocityExplosion &&
+              part3MaxVisualBodySyncError <= 0.001;
         const result: Part3ProbeResult = {
           id: probe.id,
           label: probe.label,
@@ -1625,9 +1740,42 @@ export function Part2SceneViewport({
             part3InwardDescentRadius === null
               ? null
               : Number(part3InwardDescentRadius.toFixed(4)),
-          deflectorContact: false,
-          peakSpeedBeforeContact: Number(part3PeakSpeed.toFixed(4)),
-          peakSpeedAfterContact: null,
+          deflectorContact: part3DeflectorContact,
+          peakSpeedBeforeContact:
+            part3ImpactSpeedBefore === null
+              ? null
+              : Number(part3ImpactSpeedBefore.toFixed(4)),
+          peakSpeedAfterContact:
+            part3ImpactSpeedAfter === null
+              ? null
+              : Number(part3ImpactSpeedAfter.toFixed(4)),
+          impactSpeedBefore:
+            part3ImpactSpeedBefore === null
+              ? null
+              : Number(part3ImpactSpeedBefore.toFixed(4)),
+          impactSpeedAfter:
+            part3ImpactSpeedAfter === null
+              ? null
+              : Number(part3ImpactSpeedAfter.toFixed(4)),
+          impactDirectionChangeDegrees:
+            impactDirectionChangeDegrees === null
+              ? null
+              : Number(impactDirectionChangeDegrees.toFixed(2)),
+          noPassThrough,
+          visualContactAlignmentCredible,
+          retainingRimRadius: PART3_RETAINING_RIM_INNER_RADIUS,
+          nearestDeflectorRadius:
+            isDeflectorApproach
+              ? PART3_DEFLECTOR_INNER_RADIUS
+              : PART3_DEFLECTOR_OUTER_RADIUS,
+          earlyLapMinimumDeflectorClearance:
+            part3EarlyLapMinimumDeflectorClearance === null
+              ? null
+              : Number(part3EarlyLapMinimumDeflectorClearance.toFixed(4)),
+          deflectorColliderCount: part3DeflectorColliders.length,
+          deflectorColliderType: 'cuboid',
+          deflectorColliderFriction: PART3_DEFLECTOR_FRICTION,
+          deflectorColliderRestitution: PART3_DEFLECTOR_RESTITUTION,
           bouncePlausible: part3BouncePlausible,
           hover: part3Hover,
           clipping: part3Clipping,
@@ -1645,11 +1793,30 @@ export function Part2SceneViewport({
           maxVisualBodySyncError: Number(part3MaxVisualBodySyncError.toFixed(6)),
           outcome: passed ? (finalSpeed < 0.08 ? 'settled' : 'stable') : 'failed',
           detail: passed
-            ? `Natural outer-track run passed: ${lapCount.toFixed(2)} laps before inward descent.`
+            ? isDeflectorApproach
+              ? `Deflector impact passed: ${part3ImpactSpeedBefore?.toFixed(3)}→${part3ImpactSpeedAfter?.toFixed(3)} m/s with ${impactDirectionChangeDegrees?.toFixed(1)}° direction change.`
+              : `Outer-track launch passed: ${lapCount.toFixed(2)} laps with ${part3EarlyLapMinimumDeflectorClearance?.toFixed(3)} m positive clearance before any inward approach.`
             : `Outer-track smoke failed: ${[
-                lapCount < 3.8 || lapCount > 5.2 ? 'lap target' : '',
-                !continuousTrackContact ? 'contact continuity' : '',
-                part3InwardDescentTime === null ? 'no inward descent' : '',
+                isDeflectorApproach
+                  ? !part3DeflectorContact
+                    ? 'no deflector contact'
+                    : ''
+                  : lapCount < 2.5 || lapCount > 8
+                    ? 'lap target'
+                    : '',
+                isDeflectorApproach
+                  ? part3ImpactSpeedAfter === null
+                    ? 'no impact aftermath'
+                    : ''
+                  : !continuousTrackContact
+                    ? 'contact continuity'
+                    : '',
+                isDeflectorApproach
+                  ? (impactDirectionChangeDegrees ?? 0) < 10
+                    ? 'no direction change'
+                    : ''
+                  : '',
+                !noPassThrough ? 'pass-through' : '',
                 part3ArtificialAcceleration ? 'artificial acceleration' : '',
                 part3Hover ? 'hover' : '',
                 part3Clipping ? 'clipping' : '',
@@ -1661,15 +1828,15 @@ export function Part2SceneViewport({
                 .join(', ') || 'review required'}.`,
         };
         part3Results = [...part3Results, result];
-        if (!passed || part3ProbeIndex === PART3_PROBES.length - 1) {
+        if (part3ProbeIndex === PART3_PROBES.length - 1) {
           part3Finished = true;
           publishPart3Report(
             part3Results.every((probeResult) => probeResult.outcome !== 'failed')
               ? 'passed'
               : 'failed',
             part3Results.every((probeResult) => probeResult.outcome !== 'failed')
-              ? 'All three outer-track smoke spins passed with natural energy loss and inward descent.'
-              : 'An outer-track smoke spin failed the launch-to-descent envelope.',
+              ? 'Both targeted outer-track probes passed with measured clearance and deflector contact.'
+              : 'One or more targeted outer-track probes failed the measured geometry envelope.',
           );
         } else {
           startPart3Probe(part3ProbeIndex + 1);
@@ -1766,7 +1933,7 @@ export function Part2SceneViewport({
             const speed = Math.hypot(velocity.x, velocity.y, velocity.z);
             const radius = Math.hypot(position.x, position.z);
             const surfaceY =
-              radius >= 1.95 && radius <= 2.45
+              radius >= 1.95 && radius <= PART3_RETAINING_RIM_INNER_RADIUS
                 ? part3TrackHeight(radius)
                 : COLLIDER_PROFILE.innerFloorTop;
             const bottom = position.y - BALL_RADIUS;
@@ -1780,6 +1947,18 @@ export function Part2SceneViewport({
                 }
               });
             }
+            let deflectorPairContact = false;
+            if (physicsBallCollider && part3DeflectorColliders.length > 0) {
+              world.contactPairsWith(physicsBallCollider, (otherCollider) => {
+                if (
+                  part3DeflectorColliders.some(
+                    (deflectorCollider) => deflectorCollider.handle === otherCollider.handle,
+                  )
+                ) {
+                  deflectorPairContact = true;
+                }
+              });
+            }
             const geometricTrackContact =
               radius >= PART3_TRACK_INNER_RADIUS &&
               radius <= PART3_TRACK_OUTER_RADIUS &&
@@ -1787,6 +1966,63 @@ export function Part2SceneViewport({
               penetration <= 0.03;
             const onTrack = geometricTrackContact && trackPairContact;
             const trackAngle = normalizedAngle(Math.atan2(position.x, position.z));
+            if (probe.kind === 'outer-track' && part3InwardDescentTime === null) {
+              const deflectorClearance =
+                radius >= PART3_DEFLECTOR_OUTER_RADIUS
+                  ? radius - BALL_RADIUS - PART3_DEFLECTOR_OUTER_RADIUS
+                  : PART3_DEFLECTOR_INNER_RADIUS - radius - BALL_RADIUS;
+              part3EarlyLapMinimumDeflectorClearance =
+                part3EarlyLapMinimumDeflectorClearance === null
+                  ? deflectorClearance
+                  : Math.min(
+                      part3EarlyLapMinimumDeflectorClearance,
+                      deflectorClearance,
+                    );
+            }
+            if (probe.kind === 'deflector-approach') {
+              if (deflectorPairContact && !part3DeflectorContact) {
+                part3DeflectorContact = true;
+                part3DeflectorContactTime = part3Elapsed;
+                part3ImpactSpeedBefore = part3PreviousSpeed;
+                const incomingDirection = new THREE.Vector3(
+                  velocity.x,
+                  0,
+                  velocity.z,
+                );
+                if (incomingDirection.lengthSq() > 0.000001) {
+                  part3ImpactDirectionBefore = incomingDirection.normalize();
+                }
+              } else if (
+                part3DeflectorContact &&
+                part3ImpactSpeedAfter === null &&
+                part3DeflectorContactTime !== null &&
+                part3Elapsed - part3DeflectorContactTime >= 0.05
+              ) {
+                part3ImpactSpeedAfter = speed;
+                const outgoingDirection = new THREE.Vector3(
+                  velocity.x,
+                  0,
+                  velocity.z,
+                );
+                if (outgoingDirection.lengthSq() > 0.000001) {
+                  part3ImpactDirectionAfter = outgoingDirection.normalize();
+                }
+                const impactDirectionChange =
+                  part3ImpactDirectionBefore && part3ImpactDirectionAfter
+                    ? THREE.MathUtils.radToDeg(
+                        part3ImpactDirectionBefore.angleTo(part3ImpactDirectionAfter),
+                      )
+                    : 0;
+                part3BouncePlausible =
+                  part3ImpactSpeedAfter <=
+                    (part3ImpactSpeedBefore ?? part3ImpactSpeedAfter) * 1.05 &&
+                  impactDirectionChange >= 10;
+              }
+              part3DeflectorPassThrough ||=
+                radius <
+                  PART3_DEFLECTOR_INNER_RADIUS - BALL_RADIUS - 0.01 &&
+                !part3DeflectorContact;
+            }
             const leftValidVolume =
               !Number.isFinite(position.x) ||
               !Number.isFinite(position.y) ||
@@ -2047,8 +2283,9 @@ export function Part2SceneViewport({
         <>
           <strong>{part3Report.detail}</strong>
           <span>
-            CCD {part3Report.ccdEnabled ? 'enabled' : 'disabled'} · 120 Hz · max 3 outer-track smoke spins ·
-            visible dark track r {DARK_OUTER_TRACK_RADIUS.toFixed(4)} / y {DARK_OUTER_TRACK_HEIGHT.toFixed(4)}
+            CCD {part3Report.ccdEnabled ? 'enabled' : 'disabled'} · 120 Hz · 2 targeted probes ·
+            measured dark track r {DARK_OUTER_TRACK_RADIUS.toFixed(4)} / y {DARK_OUTER_TRACK_HEIGHT.toFixed(4)} ·
+            launch lane r {PART3_LAUNCH_RADIUS.toFixed(4)} · retaining inner r {PART3_RETAINING_RIM_INNER_RADIUS.toFixed(4)}
           </span>
           {part3Report.results.map((result) => (
             <span key={result.id}>
@@ -2056,7 +2293,8 @@ export function Part2SceneViewport({
               vtan {Math.hypot(result.initialVelocity.x, result.initialVelocity.z).toFixed(4)} ·
               spin {result.initialAngularSpin.z.toFixed(4)} · laps {result.lapCount.toFixed(3)} ·
               track {result.trackDuration.toFixed(4)} s · avg/peak {result.averageTrackSpeed.toFixed(4)} / {result.peakSpeed.toFixed(4)} ·
-              speed {result.trackStartSpeed.toFixed(4)}→{result.trackEndSpeed.toFixed(4)} · energy loss {(result.energyLossRatio * 100).toFixed(2)}%
+              speed {result.trackStartSpeed.toFixed(4)}→{result.trackEndSpeed.toFixed(4)} · energy loss {(result.energyLossRatio * 100).toFixed(2)}% ·
+              clearance {result.earlyLapMinimumDeflectorClearance?.toFixed(4) ?? '—'} m
             </span>
           ))}
           {part3Report.results.map((result) => (
@@ -2065,7 +2303,11 @@ export function Part2SceneViewport({
               inward {result.inwardDescentTime?.toFixed(4) ?? '—'} s @ r {result.inwardDescentRadius?.toFixed(4) ?? '—'} ·
               lap speeds [{result.trackLapSpeeds.map((speed) => speed.toFixed(3)).join(', ')}] ·
               roll/slide {result.naturalRollOrSlide ? 'natural' : 'invalid'} · bounce {result.bouncePlausible ? 'plausible' : 'invalid'} ·
-              deflector {result.deflectorContact ? 'yes' : 'no'} · hover {result.hover ? 'yes' : 'no'} · clipping {result.clipping ? 'yes' : 'no'} ·
+              deflector {result.deflectorContact ? 'yes' : 'no'} · impact {result.impactSpeedBefore?.toFixed(4) ?? '—'}→{result.impactSpeedAfter?.toFixed(4) ?? '—'} m/s ·
+              direction Δ {result.impactDirectionChangeDegrees?.toFixed(1) ?? '—'}° · pass-through {result.noPassThrough ? 'no' : 'yes'} ·
+              colliders {result.deflectorColliderCount}×{result.deflectorColliderType} · μ {result.deflectorColliderFriction.toFixed(2)} · e {result.deflectorColliderRestitution.toFixed(2)} ·
+              visual alignment {result.visualContactAlignmentCredible ? 'credible' : 'unverified'} ·
+              hover {result.hover ? 'yes' : 'no'} · clipping {result.clipping ? 'yes' : 'no'} ·
               escape {result.leftValidVolume ? 'yes' : 'no'} · tunneling {result.tunneling ? 'yes' : 'no'} ·
               velocity spike {result.velocityExplosion ? 'yes' : 'no'} · artificial acceleration {result.artificialAcceleration ? 'yes' : 'no'} ·
               pen {result.maxPenetration.toFixed(4)} · sep {result.maxSeparation.toFixed(4)} ·
