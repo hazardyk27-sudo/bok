@@ -471,6 +471,7 @@ canvas:focus-visible {
 
 .lab-shell {
   display: flex;
+  height: 100dvh;
   min-height: 100dvh;
   flex-direction: column;
   overflow: hidden;
@@ -1304,8 +1305,11 @@ h1 {
 
 .viewport-wrap {
   position: relative;
-  min-height: 340px;
-  flex: 1;
+  flex: 0 0 auto;
+  width: 100%;
+  height: clamp(360px, 60dvh, 680px);
+  min-height: 360px;
+  max-height: 680px;
   overflow: hidden;
   border: 1px solid #a9aba3;
   border-radius: 3px;
@@ -1958,13 +1962,15 @@ h1 {
 
   .workbench {
     order: 1;
-    min-height: 58dvh;
+    min-height: 0;
     padding: 14px 12px 12px;
   }
 
   .viewport-wrap,
   .scene-stage {
-    min-height: 340px;
+    height: min(82vw, 58dvh);
+    min-height: 320px;
+    max-height: 520px;
   }
 
   .toolbar-metric {

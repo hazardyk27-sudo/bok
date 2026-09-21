@@ -918,14 +918,32 @@ export function Part2SceneViewport({
       );
 
       const resize = () => {
-        const width = Math.max(stage.clientWidth, 1);
-        const height = Math.max(stage.clientHeight, 1);
+        const container = stage.parentElement ?? stage;
+        const width = Math.max(container.clientWidth, 1);
+        const height = Math.max(container.clientHeight, 1);
         renderer?.setSize(width, height, false);
         camera.aspect = width / height;
         camera.updateProjectionMatrix();
+        const target = controls?.target ?? new THREE.Vector3(0, 0, 0);
+        const cameraOffset = camera.position.clone().sub(target);
+        const verticalHalfFov = THREE.MathUtils.degToRad(camera.fov / 2);
+        const horizontalHalfFov = Math.atan(
+          Math.tan(verticalHalfFov) * camera.aspect,
+        );
+        const wheelRadiusWithMargin = (ROULETTE_NORMALIZED_DIAMETER / 2) * 1.08;
+        const requiredDistance = wheelRadiusWithMargin / Math.min(
+          Math.tan(verticalHalfFov),
+          Math.tan(horizontalHalfFov),
+        );
+        if (cameraOffset.length() < requiredDistance) {
+          camera.position.copy(
+            target.clone().add(cameraOffset.setLength(requiredDistance)),
+          );
+          controls?.update();
+        }
       };
       const observer = new ResizeObserver(resize);
-      observer.observe(stage);
+      observer.observe(stage.parentElement ?? stage);
       resize();
       const resetView = () => applyView(viewRef.current);
       window.addEventListener('roulette-reset-view', resetView);
