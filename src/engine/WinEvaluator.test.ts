@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { evaluateBoard, removeAndRefill } from "./WinEvaluator";
 import { SeededRNG } from "./RNG";
+import { createColumnStreams } from "./BoardGenerator";
 import type { Board } from "./types";
 
 const boardWith = (symbols: string[]): Board => {
@@ -50,5 +51,27 @@ describe("win evaluation and cascades", () => {
     expect(result.boardAfterGravity[2][0]).toBe("S2");
     expect(result.boardAfterGravity[3][0]).toBe("S3");
     expect(result.boardAfterGravity[4][0]).toBe("S4");
+  });
+  it("caps bonus refills at seven visible normal symbols", () => {
+    const board: Board = [
+      ["S1", "S2", "S3", "S4", "S5", "S6"],
+      ["S7", "S1", "S2", "S3", "S4", "S5"],
+      ["S6", "S7", "S1", "S2", "S3", "S4"],
+      ["S5", "S6", "S7", "S1", "S2", "S3"],
+      ["S4", "S5", "S6", "S7", "S1", "S2"],
+    ];
+    const result = removeAndRefill(
+      board,
+      [{ row: 0, col: 0 }],
+      { nextFloat: () => 0.999999 },
+      false,
+      "bonus",
+      createColumnStreams({ nextFloat: () => 0.999999 }, "bonus"),
+    );
+    const distinctNormals = new Set(
+      result.boardAfterGravity.flat().filter((cell) => typeof cell === "string" && cell !== "SCATTER"),
+    );
+    expect(distinctNormals.size).toBeLessThanOrEqual(7);
+    expect(result.boardAfterGravity.flat()).not.toContain("S8");
   });
 });

@@ -4,6 +4,7 @@ import {
   BOARD_ROWS,
   BONUS_REEL_CONFIG,
   NORMAL_SYMBOLS,
+  BONUS_MAX_DISTINCT_NORMAL_SYMBOLS,
   type NormalSymbolId,
   type ReelConfig,
   type SymbolId,
@@ -33,21 +34,89 @@ export class ColumnStream {
     private readonly columnIndex: number,
   ) {}
 
-  next(count: number, context: GenerationContext, allowCores = true): BoardCell[] {
-    while (this.queue.length < count) this.appendRun(context, allowCores);
-    return this.queue.splice(0, count);
+  next(count: number, context: GenerationContext, allowCores = true, visibleNormalSymbols?: Set<NormalSymbolId>): BoardCell[] {
+    const output: BoardCell[] = [];
+    while (output.length < count) {
+      this.normalizeQueuedRun(context, visibleNormalSymbols);
+      const cell = this.queue.shift();
+      if (cell === undefined) {
+        this.appendRun(context, allowCores, visibleNormalSymbols);
+        continue;
+      }
+      output.push(cell);
+      if (visibleNormalSymbols && typeof cell === "string" && cell !== "SCATTER") {
+        visibleNormalSymbols.add(cell);
+      }
+    }
+    return output;
   }
 
-  private appendRun(context: GenerationContext, allowCores: boolean) {
+  private selectSymbol(visibleNormalSymbols?: Set<NormalSymbolId>) {
+    const candidates = this.config.symbolWeights
+      .filter(({ value }) => value !== this.lastRunSymbol)
+      .filter(({ value }) =>
+        this.config.name !== "BONUS" ||
+        !visibleNormalSymbols ||
+        visibleNormalSymbols.size < BONUS_MAX_DISTINCT_NORMAL_SYMBOLS ||
+        visibleNormalSymbols.has(value),
+      )
+      .map(({ value, weight }) => ({ value, weight: weight * softFactor(this.recent, value) }));
+    const available = candidates.length ? candidates : this.config.symbolWeights
+      .filter(({ value }) =>
+        this.config.name !== "BONUS" ||
+        !visibleNormalSymbols ||
+        visibleNormalSymbols.size < BONUS_MAX_DISTINCT_NORMAL_SYMBOLS ||
+        visibleNormalSymbols.has(value),
+      )
+      .map(({ value, weight }) => ({ value, weight: weight * softFactor(this.recent, value) }));
+    return weightedChoice(this.source, available);
+  }
+
+  private normalizeQueuedRun(
+    context: GenerationContext,
+    visibleNormalSymbols?: Set<NormalSymbolId>,
+  ) {
+    if (
+      context !== "BONUS_INITIAL" &&
+      context !== "BONUS_REFILL" ||
+      !visibleNormalSymbols ||
+      visibleNormalSymbols.size < BONUS_MAX_DISTINCT_NORMAL_SYMBOLS
+    ) return;
+
+    const queued = this.queue[0];
+    if (typeof queued !== "string" || queued === "SCATTER" || visibleNormalSymbols.has(queued)) return;
+
+    const replacement = this.selectSymbol(visibleNormalSymbols);
+    for (let index = 0; index < this.queue.length && this.queue[index] === queued; index += 1) {
+      this.queue[index] = replacement;
+    }
+  }
+
+  private appendRun(
+    context: GenerationContext,
+    allowCores: boolean,
+    visibleNormalSymbols?: Set<NormalSymbolId>,
+  ) {
     const isInitial = context === "BASE_INITIAL" || context === "BONUS_INITIAL";
     const allowScatter = isInitial;
     const coreMode = allowCores && context === "BASE_REFILL" ? "base" : allowCores && context === "BONUS_REFILL" ? "bonus" : null;
     const candidates = this.config.symbolWeights
       .filter(({ value }) => value !== this.lastRunSymbol)
       .filter(({ value }) => !isInitial || this.queue.filter((cell) => cell === value).length < 3)
+      .filter(({ value }) =>
+        this.config.name !== "BONUS" ||
+        !visibleNormalSymbols ||
+        visibleNormalSymbols.size < BONUS_MAX_DISTINCT_NORMAL_SYMBOLS ||
+        visibleNormalSymbols.has(value),
+      )
       .map(({ value, weight }) => ({ value, weight: weight * softFactor(this.recent, value) }));
     const available = candidates.length ? candidates : this.config.symbolWeights
-      .filter(({ value }) => value !== this.lastRunSymbol)
+      .filter(({ value }) =>
+        this.config.name !== "BONUS" ||
+        !visibleNormalSymbols ||
+        visibleNormalSymbols.size < BONUS_MAX_DISTINCT_NORMAL_SYMBOLS ||
+        visibleNormalSymbols.has(value),
+      )
       .map(({ value, weight }) => ({ value, weight: weight * softFactor(this.recent, value) }));
     const symbol = weightedChoice(this.source, available);
     const requestedLength = weightedChoice(this.source, this.config.runLengthWeights);
@@ -73,6 +142,7 @@ export class ColumnStream {
         }
       }
       this.queue.push(symbol);
+      if (visibleNormalSymbols) visibleNormalSymbols.add(symbol);
       endedWithBoundary = false;
       this.recent.push(symbol);
       if (this.recent.length > 4) this.recent.shift();
@@ -93,7 +163,8 @@ export function createColumnStreams(source: RandomSource, mode: "base" | "bonus"
 }
 
 export function boardFromStreams(streams: ColumnStreams, context: "BASE_INITIAL" | "BONUS_INITIAL"): Board {
-  const columns = streams.map((stream) => stream.next(BOARD_ROWS, context));
+  const visibleNormalSymbols = context === "BONUS_INITIAL" ? new Set<NormalSymbolId>() : undefined;
+  const columns = streams.map((stream) => stream.next(BOARD_ROWS, context, true, visibleNormalSymbols));
   return Array.from({ length: BOARD_ROWS }, (_, row) => columns.map((column) => column[row]));
 }
 
@@ -109,7 +180,8 @@ export function generateInitialBoard(source: RandomSource, mode: "base" | "bonus
 
 export function generateRefillSymbols(source: RandomSource, count: number, mode: "base" | "bonus" = "base"): BoardCell[] {
   const stream = new ColumnStream(source, mode === "bonus" ? BONUS_REEL_CONFIG : BASE_REEL_CONFIG, 0);
-  return stream.next(count, mode === "bonus" ? "BONUS_REFILL" : "BASE_REFILL", false);
+  const visibleNormalSymbols = mode === "bonus" ? new Set<NormalSymbolId>() : undefined;
+  return stream.next(count, mode === "bonus" ? "BONUS_REFILL" : "BASE_REFILL", false, visibleNormalSymbols);
 }
 
 export function generateRefillCells(
@@ -118,9 +190,15 @@ export function generateRefillCells(
   allowCores = false,
   mode: "base" | "bonus" = "base",
   columnIndex = 0,
+  visibleNormalSymbols?: Set<NormalSymbolId>,
 ): BoardCell[] {
   const stream = new ColumnStream(source, mode === "bonus" ? BONUS_REEL_CONFIG : BASE_REEL_CONFIG, columnIndex);
-  return stream.next(count, mode === "bonus" ? "BONUS_REFILL" : "BASE_REFILL", allowCores);
+  return stream.next(
+    count,
+    mode === "bonus" ? "BONUS_REFILL" : "BASE_REFILL",
+    allowCores,
+    visibleNormalSymbols ?? (mode === "bonus" ? new Set<NormalSymbolId>() : undefined),
+  );
 }
 
 export function countScatter(board: Board): number {

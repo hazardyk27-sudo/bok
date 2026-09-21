@@ -1,6 +1,6 @@
 import { BOARD_COLUMNS, BOARD_ROWS, NORMAL_SYMBOLS, type NormalSymbolId, getPaytableMultiplier } from "../config/GameConfig";
 import { generateRefillCells, type ColumnStreams } from "./BoardGenerator";
-import { isMultiplierCore, type Board, type BoardCell, type Cell, type RandomSource } from "./types";
+import { isNormalSymbol, isMultiplierCore, type Board, type BoardCell, type Cell, type RandomSource } from "./types";
 
 export type WinEvaluation = {
   winningSymbols: NormalSymbolId[];
@@ -46,15 +46,28 @@ export function removeAndRefill(
   const winning = new Set(winningCells.map((cell) => `${cell.row}:${cell.col}`));
   const next: Board = Array.from({ length: BOARD_ROWS }, () => Array.from({ length: BOARD_COLUMNS }, () => "SCATTER" as BoardCell));
   const newSymbols: BoardCell[] = [];
+  const survivorColumns: Board[number][] = [];
   for (let col = 0; col < BOARD_COLUMNS; col += 1) {
     const survivors: Board[number] = [];
     for (let row = 0; row < BOARD_ROWS; row += 1) {
       const cell = board[row][col];
       if (isMultiplierCore(cell) || !winning.has(`${row}:${col}`)) survivors.push(cell);
     }
+    survivorColumns.push(survivors);
+  }
+  const visibleNormalSymbols = mode === "bonus"
+    ? new Set<NormalSymbolId>(survivorColumns.flat().filter(isNormalSymbol))
+    : undefined;
+  for (let col = 0; col < BOARD_COLUMNS; col += 1) {
+    const survivors = survivorColumns[col];
     const generated = streams
-      ? streams[col].next(BOARD_ROWS - survivors.length, allowCores && mode === "bonus" ? "BONUS_REFILL" : "BASE_REFILL")
-      : generateRefillCells(source, BOARD_ROWS - survivors.length, allowCores, mode, col);
+      ? streams[col].next(
+        BOARD_ROWS - survivors.length,
+        allowCores && mode === "bonus" ? "BONUS_REFILL" : "BASE_REFILL",
+        allowCores,
+        visibleNormalSymbols,
+      )
+      : generateRefillCells(source, BOARD_ROWS - survivors.length, allowCores, mode, col, visibleNormalSymbols);
     const column = [...generated, ...survivors];
     for (let row = 0; row < BOARD_ROWS; row += 1) next[row][col] = column[row];
     newSymbols.push(...generated);

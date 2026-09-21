@@ -81,6 +81,8 @@ export const BONUS_REEL_CONFIG: ReelConfig = {
   scatterChance: 0.8,
 };
 
+export const BONUS_MAX_DISTINCT_NORMAL_SYMBOLS = 7;
+
 export type SymbolEffectProfile = {
   particleType: "droplet" | "fragment" | "ray" | "dust" | "star" | "shard" | "streak" | "prism";
   burstType: "ring" | "spiral" | "sun" | "smoke" | "flash" | "shards" | "crown" | "fracture";

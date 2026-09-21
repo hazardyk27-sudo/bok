@@ -10,6 +10,9 @@ export type CoreCell = Cell & { value: number };
 export const isMultiplierCore = (cell: BoardCell): cell is MultiplierCore =>
   typeof cell !== "string" && cell.kind === "MULTIPLIER_CORE";
 
+export const isNormalSymbol = (cell: BoardCell): cell is NormalSymbolId =>
+  typeof cell === "string" && cell !== "SCATTER";
+
 export type TumbleResult = {
   boardBefore: Board;
   winningSymbols: NormalSymbolId[];
