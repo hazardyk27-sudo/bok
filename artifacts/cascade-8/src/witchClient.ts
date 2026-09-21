@@ -456,15 +456,16 @@ export class WitchClient {
         this.scratchSurfaces.set(index, new ScratchSurface(canvas, {
           audio: this.audio,
           debrisCanvas: debrisCanvas ?? undefined,
-          onCommit: () => {
+           onCommit: () => {
             if (this.pendingRevealCell === null && !this.busy) {
               this.telemetry.recordScratchCommit(index);
               this.lastRevealInput = "pointer";
-              void this.reveal(index);
+               return this.reveal(index);
             }
+             return Promise.resolve();
           },
         }));
-      } else if (isRevealed && surface) {
+       } else if (isRevealed && surface && round.status !== "ACTIVE") {
         surface.destroy();
         this.scratchSurfaces.delete(index);
       }

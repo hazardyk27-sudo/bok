@@ -4,7 +4,7 @@ import {
   ScratchProgressGrid,
   interpolateScratchPoints,
 } from "./ScratchProgress";
-import { SCRATCH_COMPLETION_DURATION_MS } from "./ScratchSurface";
+import { getCompletionEraseAlpha, SCRATCH_COMPLETION_DURATION_MS } from "./ScratchSurface";
 
 describe("scratch progress core", () => {
   it("keeps a single tap and tiny movement below the reveal threshold", () => {
@@ -14,17 +14,26 @@ describe("scratch progress core", () => {
 
     expect(progress.coverage).toBeLessThan(SCRATCH_REVEAL_THRESHOLD);
     expect(progress.committed).toBe(false);
-    expect(progress.depthAt(0.5, 0.5)).toBeLessThan(0.62);
+    expect(progress.depthAt(0.5, 0.5)).toBeLessThan(0.74);
     expect(progress.isRevealableAt(0.5, 0.5)).toBe(false);
   });
 
   it("requires repeated abrasion before a local result can show", () => {
     const progress = new ScratchProgressGrid();
-    for (let pass = 0; pass < 4; pass += 1) progress.sampleCircle(0.5, 0.5, 0.06);
+    for (let pass = 0; pass < 8; pass += 1) progress.sampleCircle(0.5, 0.5, 0.06);
 
     expect(progress.isRevealableAt(0.5, 0.5)).toBe(false);
     progress.sampleCircle(0.5, 0.5, 0.06);
     expect(progress.isRevealableAt(0.5, 0.5)).toBe(true);
+  });
+
+  it("counts only locally deep cells toward global completion", () => {
+    const progress = new ScratchProgressGrid();
+    for (let pass = 0; pass < 9; pass += 1) progress.sampleCircle(0.5, 0.5, 0.06);
+
+    expect(progress.isRevealableAt(0.5, 0.5)).toBe(true);
+    expect(progress.coverage).toBeLessThan(SCRATCH_REVEAL_THRESHOLD);
+    expect(progress.committed).toBe(false);
   });
 
   it("interpolates fast pointer movement without gaps", () => {
@@ -59,5 +68,10 @@ describe("scratch progress core", () => {
   it("keeps threshold completion short enough to finish the visible mask", () => {
     expect(SCRATCH_COMPLETION_DURATION_MS).toBeGreaterThanOrEqual(150);
     expect(SCRATCH_COMPLETION_DURATION_MS).toBeLessThanOrEqual(250);
+  });
+
+  it("uses incremental clear alpha so the mask lasts through the full duration", () => {
+    expect(getCompletionEraseAlpha(0.5, 0.4)).toBeCloseTo(1 / 6);
+    expect(getCompletionEraseAlpha(1, 0.9)).toBe(1);
   });
 });

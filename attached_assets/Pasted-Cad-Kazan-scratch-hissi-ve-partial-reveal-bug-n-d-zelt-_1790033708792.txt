@@ -1,0 +1,41 @@
+Cadı Kazan scratch hissi ve partial reveal bug'ını düzelt. Hedef davranış kullanıcının son iki ekran görüntüsündeki ikinci örnek gibi olmalı: kazıdıkça alttaki gerçek sembol parça parça görünmeli, fakat ilk dokunuşta yüzey hemen delinmemeli.
+
+Katmanlı ve daha zor scratch:
+İlk kısa temas/stroke sonucu göstermesin.
+İlk geçişler yalnız folyonun üst yüzeyini scuff/mat/çizik hale getirsin.
+Lokal birikimli abrasion/depth sistemi kullan: aynı bölgeden birkaç kez geçildikçe folyo incelsin, ancak yeterli yerel aşınmadan sonra transparanlık başlayıp result layer görünür olsun.
+Tek kısa stroke görünür bir delik açmamalı.
+Global completion threshold yaklaşık %62 kalabilir; fakat yalnız yeterli abrasion derinliğine ulaşmış alanlar bu yüzdeye sayılsın.
+Threshold sonrası mevcut yaklaşık 180 ms full-clear davranışı korunsun.
+Partial scratch sırasında gerçek sonuç görünmeli:
+Server sonucu geldikten sonra kazınmış bölgelerin altında gerçek result layer net biçimde görünmeli.
+Şu an koyu smear/delik görünen bölgelerde bunun yerine sonuç görünmeli.
+Güvenli hücre: büyük, merkezli '✦ GOLD'.
+Kötü hücre: büyük, merkezli '💣 BOMBA'.
+Result art/label hücreyi iyi doldursun ve küçük bir gerçek açıklıktan sembolün parçası seçilebilsin.
+ACTIVE durumda partial scratch ile sembolün bir kısmı görünmeli; ancak server sonucu gelmeden result layer boş/generic kalsın ve gizli bomba bilgisi sızmasın.
+Kötü sembol tutarlılığı:
+Standard 5 ve Advanced 25 oyuncu UI'sında kötü sonuç her zaman '💣 BOMBA' olsun.
+Production UI'da 'ALARM' görünmesin.
+Korunacak davranışlar:
+Server-authoritative reveal/payout/wallet.
+ACTIVE round'da unrevealed bomba bilgisi sızmaması.
+CASHED_OUT/BUST/COMPLETED terminal full-board reveal.
+Duplicate reveal/cashout idempotency.
+Pointer Events, pointer capture, touch-action, interpolation.
+Slot ve Roulette'e dokunma.
+QA ve kabul kriterleri:
+Test: first short stroke does NOT expose result.
+Test: repeated passes progressively expose result.
+Test: sufficiently abraded local area reveals GOLD/BOMBA beneath the mask.
+Test: only sufficiently deep abrasion counts toward global threshold.
+Test: threshold still full-clears around 180 ms.
+Test: Standard ve Advanced her ikisi de BOMBA presentation kullanıyor.
+Test: ACTIVE unrevealed cells leak no result.
+Desktop ve mobile visual smoke: partial scratch sırasında koyu boşluk değil, gerçek sembol parçası görünmeli.
+Full test suite, typecheck, production build ve git diff check tamamen yeşil olsun.
+Bu değişiklik yalnız Cadı Kazan scratch rendering/abrasion davranışını düzeltmeli; ekonomi veya diğer oyunları değiştirme.
+
+Quoting the user: "hala kolay kazıolıyor ve altında sembol görünmüyor"; "böyle görünmeliydi"
+
+Attachment details: İlk ekran görüntüsünde folyo çok kolay delinmiş ve kazınmış alanda koyu boşluk var; alttaki GOLD/BOMBA görünmüyor. İkinci ekran görüntüsü hedef davranışı gösteriyor: partial scratch içinden alttaki gerçek sembol parça parça görünmeli.

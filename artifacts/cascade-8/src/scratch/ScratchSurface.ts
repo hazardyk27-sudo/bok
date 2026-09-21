@@ -15,6 +15,11 @@ const MAX_DEBRIS_PARTICLES = 18;
 const MOBILE_DEBRIS_PARTICLES = 10;
 export const SCRATCH_COMPLETION_DURATION_MS = 180;
 
+export function getCompletionEraseAlpha(progress: number, previousProgress: number) {
+  if (progress >= 1) return 1;
+  return Math.max(0, progress - previousProgress) / Math.max(0.001, 1 - previousProgress);
+}
+
 type DebrisParticle = {
   x: number;
   y: number;
@@ -33,7 +38,7 @@ export type ScratchSurfaceOptions = {
   abrasion?: Partial<ScratchAbrasionConfig>;
   audio?: AudioManager;
   debrisCanvas?: HTMLCanvasElement;
-  onCommit: () => void;
+  onCommit: () => Promise<void>;
 };
 
 const clamp = (value: number, minimum = 0, maximum = 1) => Math.max(minimum, Math.min(maximum, value));
@@ -41,7 +46,7 @@ const clamp = (value: number, minimum = 0, maximum = 1) => Math.max(minimum, Mat
 export class ScratchSurface {
   private readonly context: CanvasRenderingContext2D;
   private readonly progress: ScratchProgressGrid;
-  private readonly onCommit: () => void;
+  private readonly onCommit: () => Promise<void>;
   private readonly audio?: AudioManager;
   private readonly abrasionConfig: ScratchAbrasionConfig;
   private readonly reducedMotion: boolean;
@@ -261,9 +266,11 @@ export class ScratchSurface {
     this.context.stroke();
     if (revealable) {
       this.context.globalCompositeOperation = "destination-out";
-      this.context.globalAlpha = 0.88;
+      // Keep the rough scuff as a rim, but fully clear the already-abraded
+      // center so the real result layer is visible instead of a dark smear.
+      this.context.globalAlpha = 1;
       this.context.fillStyle = "#000";
-      this.drawBrushPath(radius * 0.74, speed, roughness);
+      this.drawBrushPath(radius * 0.64, speed, roughness);
     }
     this.context.restore();
   }
@@ -372,30 +379,40 @@ export class ScratchSurface {
   private animateCompletion() {
     const generation = this.completionGeneration + 1;
     this.completionGeneration = generation;
-    if (this.reducedMotion) {
-      this.context.clearRect(0, 0, this.canvas.clientWidth, this.canvas.clientHeight);
-      this.clearDebris();
-      this.onCommit();
-      return;
-    }
-    const startedAt = performance.now();
-    const animate = (timestamp: number) => {
+    // Keep the partial abrasion visible while the server decides the result.
+    // The result layer is still empty at this point, so no hidden bomb data
+    // can leak through the openings.
+    void this.onCommit().then(() => {
       if (generation !== this.completionGeneration) return;
-      const progress = Math.min(1, (timestamp - startedAt) / SCRATCH_COMPLETION_DURATION_MS);
-      this.context.save();
-      this.context.globalCompositeOperation = "destination-out";
-      this.context.globalAlpha = Math.min(1, 0.16 + progress * 0.84);
-      this.context.fillStyle = "#000";
-      this.context.fillRect(0, 0, this.canvas.clientWidth, this.canvas.clientHeight);
-      this.context.restore();
-      if (progress >= 1) {
-        this.completionFrame = null;
+      if (this.reducedMotion) {
+        this.context.clearRect(0, 0, this.canvas.clientWidth, this.canvas.clientHeight);
         this.clearDebris();
-        this.onCommit();
         return;
       }
+      const startedAt = performance.now();
+      let previousProgress = 0;
+      const animate = (timestamp: number) => {
+        if (generation !== this.completionGeneration) return;
+        const progress = Math.min(1, (timestamp - startedAt) / SCRATCH_COMPLETION_DURATION_MS);
+        const progressDelta = progress - previousProgress;
+        this.context.save();
+        this.context.globalCompositeOperation = "destination-out";
+        // destination-out compounds across frames. Convert the linear overall
+        // progress into the incremental alpha needed to reach that exact
+        // remaining mask opacity instead of clearing almost everything early.
+        this.context.globalAlpha = getCompletionEraseAlpha(progress, previousProgress);
+        this.context.fillStyle = "#000";
+        this.context.fillRect(0, 0, this.canvas.clientWidth, this.canvas.clientHeight);
+        this.context.restore();
+        previousProgress = progress;
+        if (progress >= 1) {
+          this.completionFrame = null;
+          this.clearDebris();
+          return;
+        }
+        this.completionFrame = window.requestAnimationFrame(animate);
+      };
       this.completionFrame = window.requestAnimationFrame(animate);
-    };
-    this.completionFrame = window.requestAnimationFrame(animate);
+    });
   }
 }
