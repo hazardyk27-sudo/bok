@@ -164,6 +164,13 @@ function profileHeight(radius: number) {
   return BOWL_PROFILE.at(-1)![1];
 }
 
+const DROP_TRACK_Y = profileHeight(DROP_RADIUS);
+const DROP_INITIAL_POSITION = radialPosition(
+  DROP_RADIUS,
+  0,
+  DROP_TRACK_Y + DROP_HEIGHT_ABOVE_SURFACE,
+);
+
 function makeProfileTrimesh() {
   const vertices: number[] = [];
   const indices: number[] = [];
@@ -229,6 +236,33 @@ function addRetainingRim(
       .setFriction(0.45)
       .setRestitution(0.02);
     colliders.push(world.createCollider(collider, body));
+  }
+  return colliders;
+}
+
+function addProfileSupportRings(world: RAPIER.World, body: RAPIER.RigidBody) {
+  const count = 48;
+  const colliders: RAPIER.Collider[] = [];
+  for (let profileIndex = 0; profileIndex < BOWL_PROFILE.length; profileIndex += 1) {
+    const [radius, y] = BOWL_PROFILE[profileIndex];
+    const previousRadius = BOWL_PROFILE[profileIndex - 1]?.[0] ?? radius;
+    const nextRadius = BOWL_PROFILE[profileIndex + 1]?.[0] ?? radius;
+    const radialHalfExtent =
+      Math.max(radius - previousRadius, nextRadius - radius) / 2 + 0.01;
+    for (let index = 0; index < count; index += 1) {
+      const angle = (index / count) * TWO_PI;
+      const collider = RAPIER.ColliderDesc.roundCuboid(
+        Math.max(0.05, (radius * Math.PI) / count),
+        0.018,
+        radialHalfExtent,
+        0.025,
+      )
+        .setTranslation(...radialPosition(radius, angle, y))
+        .setRotation({ x: 0, y: Math.sin(angle / 2), z: 0, w: Math.cos(angle / 2) })
+        .setFriction(0.42)
+        .setRestitution(0.02);
+      colliders.push(world.createCollider(collider, body));
+    }
   }
   return colliders;
 }
@@ -465,9 +499,10 @@ export function Part2SceneViewport({
             .setFriction(0.42)
             .setRestitution(0.02);
           world.createCollider(profileCollider, stationaryBody);
+          addProfileSupportRings(world, stationaryBody);
           addRetainingRim(world, stationaryBody, 2.94, -0.02);
           world.createCollider(
-            RAPIER.ColliderDesc.cylinder(0.04, 1.88)
+            RAPIER.ColliderDesc.cylinder(1.88, 0.04)
               .setTranslation(0, COLLIDER_PROFILE.innerFloorTop - 0.04, 0)
               .setFriction(0.38)
               .setRestitution(0.01),
@@ -481,8 +516,7 @@ export function Part2SceneViewport({
             stationaryBody,
           );
 
-          const trackY = profileHeight(DROP_RADIUS);
-          const initialPosition = radialPosition(DROP_RADIUS, 0, trackY + DROP_HEIGHT_ABOVE_SURFACE);
+          const initialPosition = DROP_INITIAL_POSITION;
           ballMesh = createBallVisual();
           ballMesh.visible = showBallPlaceholder;
           wheelRoot.add(ballMesh);
@@ -490,7 +524,7 @@ export function Part2SceneViewport({
             RAPIER.RigidBodyDesc.dynamic()
               .setTranslation(...initialPosition)
               .setLinvel(0, 0, 0)
-              .setAngvel(0, 0, 0)
+              .setAngvel({ x: 0, y: 0, z: 0 })
               .setAdditionalMass(BALL_MASS)
               .setLinearDamping(0.04)
               .setAngularDamping(0.08)
@@ -573,7 +607,7 @@ export function Part2SceneViewport({
             const separation = Math.max(0, bottom - surfaceY);
             maxPenetration = Math.max(maxPenetration, penetration);
             maxSeparation = Math.max(maxSeparation, separation);
-            if (!firstContact && previousVerticalVelocity < -0.08 && velocity.y >= -0.08 && position.y < trackY + BALL_RADIUS + 0.12) {
+            if (!firstContact && previousVerticalVelocity < -0.08 && velocity.y >= -0.08 && position.y < DROP_TRACK_Y + BALL_RADIUS + 0.12) {
               firstContact = roundedVector(new THREE.Vector3(position.x, position.y, position.z));
               firstContactRadius = Number(radius.toFixed(4));
               visibleSurfaceMatch = Math.abs(position.y - (surfaceY + BALL_RADIUS)) < 0.08;
@@ -594,7 +628,7 @@ export function Part2SceneViewport({
               const passed = Boolean(firstContact) && !passThrough && maxPenetration < 0.02 && visibleSurfaceMatch;
               publishDropReport({
                 status: passed ? 'passed' : 'failed',
-                initialPosition: roundedVector(new THREE.Vector3(...initialPosition)),
+                initialPosition: roundedVector(new THREE.Vector3(...DROP_INITIAL_POSITION)),
                 firstContactPosition: firstContact,
                 firstContactRadius,
                 finalPosition,
@@ -669,9 +703,30 @@ export function Part2SceneViewport({
         className="part2-drop-report"
         data-testid="part2-drop-report"
         data-status={dropReport?.status ?? 'waiting'}
+        data-first-contact={dropReport?.firstContactPosition ? 'yes' : 'no'}
+        data-pass-through={dropReport?.passThrough ? 'yes' : 'no'}
+        data-visible-surface-match={dropReport?.visibleSurfaceMatch ? 'yes' : 'no'}
         aria-live="polite"
       >
-        {dropReport?.detail ?? 'Waiting for one controlled drop.'}
+        {dropReport ? (
+          <>
+            <strong>{dropReport.detail}</strong>
+            <span>
+              contact {dropReport.firstContactPosition ? 'yes' : 'no'} · final speed {dropReport.finalSpeed.toFixed(4)} ·
+              max penetration {dropReport.maxPenetration.toFixed(4)} · separation {dropReport.finalSeparation.toFixed(4)}
+            </span>
+            <span>
+              pass-through {dropReport.passThrough ? 'yes' : 'no'} · visible match {dropReport.visibleSurfaceMatch ? 'yes' : 'no'} ·
+              contact radius {dropReport.firstContactRadius?.toFixed(4) ?? '—'}
+            </span>
+            <span>
+              first {dropReport.firstContactPosition ? `${dropReport.firstContactPosition.x.toFixed(4)}, ${dropReport.firstContactPosition.y.toFixed(4)}, ${dropReport.firstContactPosition.z.toFixed(4)}` : '—'} ·
+              final {dropReport.finalPosition.x.toFixed(4)}, {dropReport.finalPosition.y.toFixed(4)}, {dropReport.finalPosition.z.toFixed(4)}
+            </span>
+          </>
+        ) : (
+          'Waiting for one controlled drop.'
+        )}
       </div>
     </div>
   );

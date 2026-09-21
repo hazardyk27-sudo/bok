@@ -3,7 +3,7 @@ import * as THREE from 'three';
 import RAPIER from '@dimforge/rapier3d-compat';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
-import { Part1SceneViewport } from './Part1SceneViewport';
+import { Part2SceneViewport } from './Part2SceneViewport';
 import { ROULETTE_ASSET_PATH } from './roulette-scene-config';
 import {
   getGetPhysicsLabCurrentRoundQueryKey,
@@ -4232,10 +4232,12 @@ function App() {
           </div>
 
           <div className="viewport-wrap">
-            <Part1SceneViewport
+            <Part2SceneViewport
               loadKey={loadKey}
               view={view}
               showGrid={showGrid}
+              showPhysicsDebug={showPhysicsDebug}
+              showBallPlaceholder={showBallPlaceholder}
               showStationaryGroup={showStationaryGroup}
               showRotorGroup={showRotorGroup}
               rotorAngle={rotorAngle}

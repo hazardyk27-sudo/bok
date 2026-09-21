@@ -31,3 +31,4 @@
 - [Rolley asset pocket mismatch](rolley-asset-pocket-mismatch.md) — supplied Rolley FBX exposes 38 equal radial separators at 360/38, not a verified 37-pocket European layout.
 - [LP Test 04 asset role](lp-test-04-asset-role.md) — compact three-mesh GLB is visual-only; preserve the canonical 37-pocket physics/result mapping.
 - [PART 1 rotor infrastructure](part1-rotor-infrastructure.md) — the active GLB scene uses one centered root and a dedicated Y-only rotor pivot with a shared fixed-step angle state.
+- [PART 2 profile support](part2-profile-support.md) — an open radial profile needs continuous derived support underlay and a floor catch to keep a dynamic sphere above the measured surface.
