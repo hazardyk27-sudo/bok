@@ -15,19 +15,22 @@ const POCKET_COUNT = 37;
 const POCKET_STEP = (Math.PI * 2) / POCKET_COUNT;
 const POCKET_FLOOR_Y = -0.19;
 const POCKET_FLOOR_HALF_THICKNESS = 0.055;
-const POCKET_FLOOR_BORDER_RADIUS = 0.03;
-const POCKET_FLOOR_TOP =
-  POCKET_FLOOR_Y + POCKET_FLOOR_HALF_THICKNESS + POCKET_FLOOR_BORDER_RADIUS;
+const POCKET_FLOOR_TOP = POCKET_FLOOR_Y + POCKET_FLOOR_HALF_THICKNESS;
 const POCKET_FRET_RADIUS = 1.69;
 const POCKET_FRET_Y = -0.115;
 const POCKET_FRET_HALF_HEIGHT = 0.03;
 const POCKET_FRET_HALF_RADIAL_WIDTH = 0.18;
 const POCKET_FRET_HALF_TANGENTIAL_WIDTH = 0.06;
 const POCKET_FRET_BORDER_RADIUS = 0.02;
+const POCKET_ENTRY_RIM_RADIUS = 1.94;
+const POCKET_ENTRY_RIM_Y = -0.11;
+const POCKET_ENTRY_RIM_HALF_HEIGHT = 0.025;
+const POCKET_ENTRY_RIM_HALF_RADIAL_WIDTH = 0.045;
+const POCKET_ENTRY_RIM_HALF_TANGENTIAL_WIDTH = 0.11;
 const OUTER_RADIUS = 2.54;
 const BALL_TRACK_RADIUS = 2.4;
 const POCKET_RADIUS = 1.66;
-const ROTOR_SPEED = 2.4;
+const ROTOR_SPEED = 0.25;
 const LAUNCH_SPEED = 15;
 
 type WheelProps = {
@@ -201,15 +204,16 @@ function addPocketCellColliders(world: RAPIER.World, rotorBody: RAPIER.RigidBody
   // shared by the two neighboring cells, so one canonical cell has two sides
   // without duplicating or interpenetrating colliders at the boundary.
   world.createCollider(
-    RAPIER.ColliderDesc.roundCuboid(
+    RAPIER.ColliderDesc.cuboid(
       2.05,
       POCKET_FLOOR_HALF_THICKNESS,
       2.05,
-      POCKET_FLOOR_BORDER_RADIUS,
     )
       .setTranslation(0, POCKET_FLOOR_Y, 0)
-      .setFriction(0.08)
-      .setRestitution(0.02),
+      .setFriction(0.18)
+      .setRestitution(0)
+      .setFrictionCombineRule(RAPIER.CoefficientCombineRule.Min)
+      .setRestitutionCombineRule(RAPIER.CoefficientCombineRule.Min),
     rotorBody,
   );
   for (let index = 0; index < POCKET_COUNT; index += 1) {
@@ -223,8 +227,25 @@ function addPocketCellColliders(world: RAPIER.World, rotorBody: RAPIER.RigidBody
       )
         .setTranslation(...radialPosition(POCKET_FRET_RADIUS, boundaryAngle, POCKET_FRET_Y))
         .setRotation(yRotation(boundaryAngle))
-        .setFriction(0.08)
-        .setRestitution(0.02),
+        .setFriction(0.005)
+        .setRestitution(0)
+        .setFrictionCombineRule(RAPIER.CoefficientCombineRule.Min)
+        .setRestitutionCombineRule(RAPIER.CoefficientCombineRule.Min),
+      rotorBody,
+    );
+    const cellAngle = index * POCKET_STEP;
+    world.createCollider(
+      RAPIER.ColliderDesc.cuboid(
+        POCKET_ENTRY_RIM_HALF_TANGENTIAL_WIDTH,
+        POCKET_ENTRY_RIM_HALF_HEIGHT,
+        POCKET_ENTRY_RIM_HALF_RADIAL_WIDTH,
+      )
+        .setTranslation(...radialPosition(POCKET_ENTRY_RIM_RADIUS, cellAngle, POCKET_ENTRY_RIM_Y))
+        .setRotation(yRotation(cellAngle))
+        .setFriction(0.005)
+        .setRestitution(0)
+        .setFrictionCombineRule(RAPIER.CoefficientCombineRule.Min)
+        .setRestitutionCombineRule(RAPIER.CoefficientCombineRule.Min),
       rotorBody,
     );
   }
@@ -409,6 +430,18 @@ export function ProceduralRouletteViewport(props: WheelProps) {
       fret.rotation.y = angle + POCKET_STEP / 2;
       fret.castShadow = true;
       pocketRing.add(fret);
+      const entryRim = new THREE.Mesh(
+        new THREE.BoxGeometry(
+          POCKET_ENTRY_RIM_HALF_TANGENTIAL_WIDTH * 2,
+          POCKET_ENTRY_RIM_HALF_HEIGHT * 2,
+          POCKET_ENTRY_RIM_HALF_RADIAL_WIDTH * 2,
+        ),
+        new THREE.MeshStandardMaterial({ color: "#704c29", roughness: 0.34, metalness: 0.72 }),
+      );
+      entryRim.position.set(...radialPosition(POCKET_ENTRY_RIM_RADIUS, angle, POCKET_ENTRY_RIM_Y));
+      entryRim.rotation.y = angle;
+      entryRim.castShadow = true;
+      pocketRing.add(entryRim);
     }
     const cone = new THREE.Mesh(
       new THREE.ConeGeometry(0.58, 0.82, 48),
@@ -470,7 +503,7 @@ export function ProceduralRouletteViewport(props: WheelProps) {
         rotorMeshCount: rotorGroup?.children.length ?? 0,
         rotorTriangles: 0,
       });
-      if (props.probeTestRequest > 0) runDrop();
+       if (props.probeTestRequest > 0) runCanonicalPocketChecks();
       else if (props.part5RunRequest > 0) void runSmoke();
       else if (props.ballCommand.kind === "release") releaseBall(0);
       else if (props.ballCommand.kind === "varied") releaseBall(1);
@@ -516,8 +549,8 @@ export function ProceduralRouletteViewport(props: WheelProps) {
       ballBody.setSoftCcdPrediction(Math.max(BALL_RADIUS * 2.2, 0.08));
       world.createCollider(
         RAPIER.ColliderDesc.ball(BALL_RADIUS)
-          .setFriction(0.012)
-          .setRestitution(0.08)
+          .setFriction(0.12)
+          .setRestitution(0.01)
           .setDensity(0.001),
         ballBody,
       );
@@ -531,6 +564,33 @@ export function ProceduralRouletteViewport(props: WheelProps) {
       const position = ballBody.translation();
       ballMesh.position.set(position.x, position.y, position.z);
       quaternionFromBody(ballMesh.quaternion, ballBody.rotation());
+    }
+
+    function updateRotorTarget(angle: number) {
+      if (!rotorBody) return;
+      rotorAngle = angle;
+      // This target is consumed by Rapier on the next fixed world.step().
+      // It is never advanced from the render clock, so kinematic contact
+      // velocity is bounded by ROTOR_SPEED * STEP.
+      rotorBody.setNextKinematicRotation(yRotation(angle));
+      if (rotorGroup) rotorGroup.rotation.y = angle;
+    }
+
+    function relativeRotorSpeed(
+      position: { x: number; y: number; z: number },
+      velocity: { x: number; y: number; z: number },
+      angularSpeed = ROTOR_SPEED,
+    ) {
+      const rotorVelocity = {
+        x: angularSpeed * position.z,
+        y: 0,
+        z: -angularSpeed * position.x,
+      };
+      return Math.hypot(
+        velocity.x - rotorVelocity.x,
+        velocity.y,
+        velocity.z - rotorVelocity.z,
+      );
     }
 
     function resetBall() {
@@ -559,9 +619,7 @@ export function ProceduralRouletteViewport(props: WheelProps) {
       ballBody.setTranslation({ x: Math.sin(angle) * radius, y: bowlY(radius) + BALL_RADIUS + 0.02, z: Math.cos(angle) * radius }, true);
       ballBody.setLinvel({ x: Math.cos(angle) * speed, y: 0, z: -Math.sin(angle) * speed }, true);
       ballBody.setAngvel({ x: 0, y: 0, z: -props.launchParameters.initialSpin }, true);
-      rotorAngle = angle * 0.1;
-      rotorBody.setNextKinematicRotation(yRotation(rotorAngle));
-      if (rotorGroup) rotorGroup.rotation.y = rotorAngle;
+      updateRotorTarget(angle * 0.1);
       ballBody.wakeUp();
       ballState = "active";
       callbacks.current.onBallState("active", `Tangential launch · ${speed.toFixed(2)} wu/s · CCD`);
@@ -601,9 +659,7 @@ export function ProceduralRouletteViewport(props: WheelProps) {
       let tunneling = false;
       const trace: string[] = [];
       for (let step = 0; step < stepCount; step += 1) {
-        rotorAngle += ROTOR_SPEED * STEP;
-        rotorBody.setNextKinematicRotation(yRotation(rotorAngle));
-        if (rotorGroup) rotorGroup.rotation.y = rotorAngle;
+        updateRotorTarget(rotorAngle + ROTOR_SPEED * STEP);
         world.step();
         syncBall();
         const position = ballBody.translation();
@@ -642,7 +698,13 @@ export function ProceduralRouletteViewport(props: WheelProps) {
           tunneling = true;
         }
         if (speed > 18) tunneling = true;
-        if (speed < 0.18 && radius > 1.35 && radius < 1.95 && position.y > -0.42 && position.y < 0.2) {
+        if (
+          relativeRotorSpeed(position, velocity) < 0.18 &&
+          radius > 1.35 &&
+          radius < 1.95 &&
+          position.y > -0.42 &&
+          position.y < 0.2
+        ) {
           stable += 1;
           if (stable >= 120 && settleStep === 0) settleStep = step;
         } else {
@@ -658,50 +720,96 @@ export function ProceduralRouletteViewport(props: WheelProps) {
       return { radiusMin, radiusMax, laps, outerEntered, naturalExit, inward, energyLoss, deflector, fret, pocket, pocketChanges, bounces, settleStep, maxSpeed, escaped, tunneling, trace, finalPocketIndex, finalPosition: position, finalSpeed: Math.hypot(velocity.x, velocity.y, velocity.z) };
     }
 
-    function runDrop() {
+    function runCanonicalPocketChecks() {
       if (!world || !rotorBody || !ballBody) return;
-      resetBall();
-      const angle = 0;
-      const radius = POCKET_FRET_RADIUS;
-      ballBody.setTranslation({ x: Math.sin(angle) * radius, y: 0.32, z: Math.cos(angle) * radius }, true);
-      ballBody.setLinvel({ x: 0, y: 0, z: 0 }, true);
-      rotorAngle = 0;
-      rotorBody.setNextKinematicRotation(yRotation(0));
-      if (rotorGroup) rotorGroup.rotation.y = 0;
-      let firstContact = false;
-      let minGap = Infinity;
-      let escaped = false;
-      for (let step = 0; step < 240; step += 1) {
-        world.step();
-        syncBall();
-        const position = ballBody.translation();
-        const gap = position.y - BALL_RADIUS - POCKET_FLOOR_TOP;
-        minGap = Math.min(minGap, gap);
-        if (gap < 0.002) firstContact = true;
-        if (
-          position.y < -0.6 ||
-          position.y > 0.5 ||
-          Math.hypot(position.x, position.z) > 2.2 ||
-          !Number.isFinite(position.y)
-        ) {
-          escaped = true;
+      const cases = [
+        { id: "center-drop", angle: 0, speed: 0 },
+        { id: "positive-entry", angle: 0.035, speed: 0.4 },
+        { id: "negative-entry", angle: -0.035, speed: -0.4 },
+      ];
+      const results = cases.map((testCase) => {
+        const radius = 1.84;
+        ballBody!.setTranslation(
+          { x: Math.sin(testCase.angle) * radius, y: 0.18, z: Math.cos(testCase.angle) * radius },
+          true,
+        );
+        ballBody!.setLinvel(
+          {
+            x: Math.cos(testCase.angle) * testCase.speed,
+            y: 0,
+            z: -Math.sin(testCase.angle) * testCase.speed,
+          },
+          true,
+        );
+        ballBody!.setAngvel({ x: 0, y: 0, z: 0 }, true);
+        updateRotorTarget(0);
+        ballBody!.wakeUp();
+        let firstContact = false;
+        let minGap = Infinity;
+        let maxSpeed = 0;
+        let stable = 0;
+        let escaped = false;
+        for (let step = 0; step < 360; step += 1) {
+          updateRotorTarget(0);
+          world!.step();
+          syncBall();
+          const position = ballBody!.translation();
+          const velocity = ballBody!.linvel();
+          const gap = position.y - BALL_RADIUS - POCKET_FLOOR_TOP;
+          const speed = Math.hypot(velocity.x, velocity.y, velocity.z);
+          minGap = Math.min(minGap, gap);
+          maxSpeed = Math.max(maxSpeed, speed);
+          if (gap < 0.002) firstContact = true;
+          if (
+            relativeRotorSpeed(position, velocity, 0) < 0.18 &&
+            Math.hypot(position.x, position.z) > 1.35 &&
+            position.y > -0.42 &&
+            position.y < 0.2
+          ) {
+            stable += 1;
+          } else {
+            stable = 0;
+          }
+          if (
+            position.y < -0.6 ||
+            position.y > 0.5 ||
+            Math.hypot(position.x, position.z) > 2.2 ||
+            !Number.isFinite(position.y)
+          ) {
+            escaped = true;
+          }
         }
-      }
-      const position = ballBody.translation();
-      const radiusAfter = Math.hypot(position.x, position.z);
-      const penetration = Math.max(0, -minGap);
-      const passed = firstContact && penetration < 0.003 && !escaped;
+        const position = ballBody!.translation();
+        const velocity = ballBody!.linvel();
+        const penetration = Math.max(0, -minGap);
+        const passed = firstContact && stable >= 120 && penetration < 0.003 && maxSpeed <= 18 && !escaped;
+        return {
+          id: `canonical-pocket-${testCase.id}`,
+          label: `Canonical pocket ${testCase.id}`,
+          outcome: passed ? "resting" : "unstable",
+          pocket: passed ? settlePocketIndex() : null,
+          finalRadius: Math.hypot(position.x, position.z),
+          finalHeight: position.y,
+          finalSpeed: Math.hypot(velocity.x, velocity.y, velocity.z),
+          maxSpeed,
+          escaped,
+          tunneling: maxSpeed > 18 || escaped,
+          detail: `Fixed-step entry · penetration ${penetration.toFixed(4)} wu · max speed ${maxSpeed.toFixed(2)} wu/s`,
+        };
+      });
+      const passed = results.every((result) => result.outcome === "resting");
+      resetBall();
       callbacks.current.onPhysicsReport({
         status: passed ? "passed" : "failed",
         colliderCount: 138 + POCKET_COUNT + 1,
         stationaryCount: 1 + 8 + 128 + 1,
         rotorCount: POCKET_COUNT + 1,
-        probeCount: 1,
-        passedCount: passed ? 1 : 0,
-        failedCount: passed ? 0 : 1,
-        durationMs: 240 * STEP * 1000,
-        detail: `Canonical pocket entry drop · final radius ${radiusAfter.toFixed(3)} · penetration ${penetration.toFixed(4)} wu`,
-        results: [{ id: "procedural-pocket-entry-drop", label: "Canonical pocket entry drop", outcome: passed ? "resting" : "pass-through", pocket: settlePocketIndex(), finalRadius: radiusAfter, finalHeight: position.y, finalSpeed: 0, detail: `Continuous rotor floor + shared fret boundaries · max penetration ${penetration.toFixed(4)} wu` }],
+        probeCount: cases.length,
+        passedCount: results.filter((result) => result.outcome === "resting").length,
+        failedCount: results.filter((result) => result.outcome !== "resting").length,
+        durationMs: cases.length * 360 * STEP * 1000,
+        detail: passed ? "Canonical pocket cell passed three fixed-step entries." : "Canonical pocket cell still has an unstable entry.",
+        results,
       });
     }
 
@@ -783,16 +891,20 @@ export function ProceduralRouletteViewport(props: WheelProps) {
       lastTime = now;
       if (world && rotorBody && ballBody) {
         while (accumulator >= STEP) {
-          rotorAngle += ROTOR_SPEED * STEP;
-          rotorBody.setNextKinematicRotation(yRotation(rotorAngle));
-          if (rotorGroup) rotorGroup.rotation.y = rotorAngle;
+          updateRotorTarget(rotorAngle + ROTOR_SPEED * STEP);
           world.step();
           accumulator -= STEP;
           syncBall();
           const position = ballBody.translation();
-          const speed = Math.hypot(...Object.values(ballBody.linvel()));
+           const velocity = ballBody.linvel();
           const radius = Math.hypot(position.x, position.z);
-          if (speed < 0.18 && radius > 1.35 && radius < 1.95 && position.y > -0.42 && position.y < 0.2) {
+           if (
+             relativeRotorSpeed(position, velocity) < 0.18 &&
+             radius > 1.35 &&
+             radius < 1.95 &&
+             position.y > -0.42 &&
+             position.y < 0.2
+           ) {
             settlingFrames += 1;
             if (settlingFrames === 120 && ballState === "active") {
               ballState = "settled";
