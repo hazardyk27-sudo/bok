@@ -45,8 +45,14 @@ const PART3_DEFLECTOR_APPROACH_RADIUS = 2.74;
 const PART3_TRACK_INNER_RADIUS = 2.72;
 const PART3_TRACK_OUTER_RADIUS = 2.90;
 const PART3_TRACK_CONTACT_TOLERANCE = 0.1;
+// Runtime GLB raycast at the alignment probe measured the visible upper track
+// 0.2848 m above the pre-existing analytic profile. Keep the correction on the
+// physics surface so the visual ball remains directly synced to Rapier.
+const PART3_TRACK_VERTICAL_OFFSET = 0.2848;
 const PART3_POCKET_PROBE_DURATION_SECONDS = 3.5;
 const PART3_POCKET_PROBE_RADIUS = 1.62;
+const PART3_ALIGNMENT_PROBE_DURATION_SECONDS = 0.9;
+const PART3_ALIGNMENT_PROBE_SPEED = 0.42;
 const PART3_POCKET_TARGET_INDEX = 0;
 const PART3_POCKET_TRANSITION_RADIUS = 1.95;
 const PART3_PREFIX_BLOCKING_COLLIDER_HANDLE = 0;
@@ -186,6 +192,28 @@ type Part3ValidationReport = {
   detail: string;
 };
 
+type Part3AlignmentReport = {
+  status: 'running' | 'passed' | 'failed';
+  sampleRadius: number;
+  sampleAzimuth: number;
+  visibleSurfaceY: number | null;
+  visibleSurfaceSource: string | null;
+  analyticColliderContactYBefore: number;
+  analyticColliderContactYAfter: number;
+  rigidBodyCenterY: number;
+  ballBottomY: number;
+  ballRadius: number;
+  signedVerticalMismatch: number | null;
+  signedColliderContactMismatch: number;
+  visuallyInsideWheelBody: boolean;
+  physicalContact: boolean;
+  hover: boolean;
+  passThrough: boolean;
+  tunneling: boolean;
+  maxVisualBodySyncError: number;
+  detail: string;
+};
+
 type Part3PocketDescentReport = {
   status: 'running' | 'passed' | 'failed';
   label: string;
@@ -285,6 +313,7 @@ type PocketValidationReport = {
 type Part2SceneViewportProps = {
   loadKey: number;
   validationMode?: 'part2' | 'part3' | 'part4';
+  alignmentOnly?: boolean;
   view: InspectionView;
   showGrid: boolean;
   showPhysicsDebug: boolean;
@@ -470,7 +499,7 @@ function addPart3DeflectorColliders(
   return colliders;
 }
 
-function part3TrackHeight(radius: number) {
+function part3TrackHeightBase(radius: number) {
   const trackProfile: Array<[number, number]> = [
     [1.95, -0.458],
     [2.05, -0.39],
@@ -497,6 +526,10 @@ function part3TrackHeight(radius: number) {
   return trackProfile.at(-1)![1];
 }
 
+function part3TrackHeight(radius: number) {
+  return part3TrackHeightBase(radius) + PART3_TRACK_VERTICAL_OFFSET;
+}
+
 // This is an analytic lathed cross-section of the visible dark outer ray and
 // its retaining edge. It is not derived from or used as a raw GLB collider.
 function makePart3OuterTrackTrimesh() {
@@ -517,7 +550,11 @@ function makePart3OuterTrackTrimesh() {
   for (const [radius, y] of crossSection) {
     for (let segment = 0; segment < segments; segment += 1) {
       const angle = (segment / segments) * TWO_PI;
-      vertices.push(Math.sin(angle) * radius, y, Math.cos(angle) * radius);
+       vertices.push(
+         Math.sin(angle) * radius,
+         y + PART3_TRACK_VERTICAL_OFFSET,
+         Math.cos(angle) * radius,
+       );
     }
   }
   for (let row = 0; row < crossSection.length - 1; row += 1) {
@@ -1083,6 +1120,7 @@ function createBallVisual() {
 export function Part2SceneViewport({
   loadKey,
   validationMode = 'part2',
+  alignmentOnly = false,
   view,
   showGrid,
   showPhysicsDebug,
@@ -1102,6 +1140,8 @@ export function Part2SceneViewport({
   const [angleReadout, setAngleReadout] = useState(normalizedAngle(rotorAngle));
   const [dropReport, setDropReport] = useState<Part2DropReport | null>(null);
   const [part3Report, setPart3Report] = useState<Part3ValidationReport | null>(null);
+  const [part3AlignmentReport, setPart3AlignmentReport] =
+    useState<Part3AlignmentReport | null>(null);
   const [part4Report, setPart4Report] = useState<Part4ValidationReport | null>(null);
   const [pocketReport, setPocketReport] = useState<PocketValidationReport | null>(null);
 
@@ -1187,6 +1227,9 @@ export function Part2SceneViewport({
     let part3DeflectorPassThrough = false;
     let part3Results: Part3ProbeResult[] = [];
     let part3Finished = false;
+    let part3AlignmentRunning = false;
+    let part3AlignmentFinished = false;
+    let part3AlignmentMaxVisualBodySyncError = 0;
     let part3PocketRunning = false;
     let part3PocketElapsed = 0;
     let part3PocketPeakSpeed = 0;
@@ -1243,6 +1286,82 @@ export function Part2SceneViewport({
         pocketDescent: part3PocketReport,
         ccdEnabled,
         detail,
+      });
+    };
+
+    const publishPart3AlignmentReport = (report: Part3AlignmentReport) => {
+      setPart3AlignmentReport(report);
+    };
+
+    const measureVisibleSurfaceAt = (x: number, z: number) => {
+      if (!stationaryGroup) return null;
+      stationaryGroup.updateMatrixWorld(true);
+      const raycaster = new THREE.Raycaster(
+        new THREE.Vector3(x, 1.5, z),
+        new THREE.Vector3(0, -1, 0),
+        0,
+        4,
+      );
+      const intersections = raycaster.intersectObject(stationaryGroup, true);
+      const hit = intersections
+        .filter((intersection) => intersection.point.y > -1.5 && intersection.point.y < 1)
+        .sort((left, right) => right.point.y - left.point.y)[0];
+      return hit
+        ? { y: hit.point.y, source: hit.object.name || hit.object.parent?.name || 'unnamed-mesh' }
+        : null;
+    };
+
+    const startPart3AlignmentProbe = () => {
+      if (!ballBody || !ballMesh) return;
+      const radius = PART3_LAUNCH_RADIUS;
+      const azimuth = 0.37;
+      const position = radialPosition(
+        radius,
+        azimuth,
+        part3TrackHeight(radius) + BALL_RADIUS + 0.002,
+      );
+      const velocity = {
+        x: Math.cos(azimuth) * PART3_ALIGNMENT_PROBE_SPEED,
+        y: 0,
+        z: -Math.sin(azimuth) * PART3_ALIGNMENT_PROBE_SPEED,
+      };
+      const visibleSurface = measureVisibleSurfaceAt(position[0], position[2]);
+      const analyticContactY = part3TrackHeight(radius);
+      ballBody.setTranslation({ x: position[0], y: position[1], z: position[2] }, true);
+      ballBody.setLinvel(velocity, true);
+      ballBody.setAngvel({ x: 0, y: 0, z: 0 }, true);
+      ballBody.setRotation({ x: 0, y: 0, z: 0, w: 1 }, true);
+      ballMesh.position.set(...position);
+      ballMesh.quaternion.identity();
+      part3AlignmentRunning = true;
+      part3AlignmentFinished = false;
+      part3Elapsed = 0;
+      part3AlignmentMaxVisualBodySyncError = 0;
+      publishPart3AlignmentReport({
+        status: 'running',
+        sampleRadius: radius,
+        sampleAzimuth: azimuth,
+        visibleSurfaceY: visibleSurface?.y ?? null,
+        visibleSurfaceSource: visibleSurface?.source ?? null,
+        analyticColliderContactYBefore: part3TrackHeightBase(radius),
+        analyticColliderContactYAfter: analyticContactY,
+        rigidBodyCenterY: position[1],
+        ballBottomY: position[1] - BALL_RADIUS,
+        ballRadius: BALL_RADIUS,
+        signedVerticalMismatch:
+          visibleSurface === null
+            ? null
+            : position[1] - BALL_RADIUS - visibleSurface.y,
+        signedColliderContactMismatch: position[1] - BALL_RADIUS - analyticContactY,
+        visuallyInsideWheelBody:
+          visibleSurface !== null &&
+          position[1] - BALL_RADIUS < visibleSurface.y - 0.005,
+        physicalContact: false,
+        hover: false,
+        passThrough: false,
+        tunneling: false,
+        maxVisualBodySyncError: 0,
+        detail: 'Measuring one short outer-track visual/physics alignment probe…',
       });
     };
 
@@ -1747,17 +1866,27 @@ export function Part2SceneViewport({
           physicsBallCollider = world.createCollider(ballColliderDescriptor, ballBody);
           ballBody.setTranslation({ x: initialPosition[0], y: initialPosition[1], z: initialPosition[2] }, true);
           ballMesh.position.set(...initialPosition);
-          setPocketReport({
-            status: 'running',
-            results: [],
-            detail: 'Running three direct European pocket-entry probes at 120 Hz with CCD…',
-          });
-          void runPocketEntryValidation().then((report) => {
-            if (!disposed) setPocketReport(report);
-          });
+           if (!alignmentOnly) {
+             setPocketReport({
+               status: 'running',
+               results: [],
+               detail: 'Running three direct European pocket-entry probes at 120 Hz with CCD…',
+             });
+             void runPocketEntryValidation().then((report) => {
+               if (!disposed) setPocketReport(report);
+             });
+           }
           if (validationMode === 'part3') {
-            startPart3Probe(0);
-            callbacksRef.current.onStateChange('loaded', 'PART 3 static-collider ball probes running');
+             if (alignmentOnly) {
+               startPart3AlignmentProbe();
+               callbacksRef.current.onStateChange(
+                 'loaded',
+                 'PART 3 short visual/physics alignment probe running',
+               );
+             } else {
+               startPart3Probe(0);
+               callbacksRef.current.onStateChange('loaded', 'PART 3 static-collider ball probes running');
+             }
           } else if (validationMode === 'part4') {
             startPart4Probe(0);
             callbacksRef.current.onStateChange('loaded', 'PART 4 kinematic-rotor probes running');
@@ -2116,6 +2245,104 @@ export function Part2SceneViewport({
 
           if (
             validationMode === 'part3' &&
+            alignmentOnly &&
+            world &&
+            ballBody &&
+            ballMesh &&
+            part3AlignmentRunning
+          ) {
+            world.step();
+            const position = ballBody.translation();
+            const velocity = ballBody.linvel();
+            const speed = Math.hypot(velocity.x, velocity.y, velocity.z);
+            const radius = Math.hypot(position.x, position.z);
+            const visibleSurface = measureVisibleSurfaceAt(position.x, position.z);
+            const analyticContactY = part3TrackHeight(radius);
+            const bottom = position.y - BALL_RADIUS;
+            const signedVerticalMismatch =
+              visibleSurface === null ? null : bottom - visibleSurface.y;
+            const signedColliderContactMismatch = bottom - analyticContactY;
+            let trackPairContact = false;
+            if (physicsBallCollider && part3TrackCollider) {
+              world.contactPairsWith(physicsBallCollider, (otherCollider) => {
+                if (otherCollider.handle === part3TrackCollider?.handle) {
+                  trackPairContact = true;
+                }
+              });
+            }
+            ballMesh.position.set(position.x, position.y, position.z);
+            const rotation = ballBody.rotation();
+            ballMesh.quaternion.set(rotation.x, rotation.y, rotation.z, rotation.w);
+            part3AlignmentMaxVisualBodySyncError = Math.max(
+              part3AlignmentMaxVisualBodySyncError,
+              Math.hypot(
+                ballMesh.position.x - position.x,
+                ballMesh.position.y - position.y,
+                ballMesh.position.z - position.z,
+              ),
+            );
+            part3Elapsed += FIXED_TIMESTEP;
+            if (part3Elapsed >= PART3_ALIGNMENT_PROBE_DURATION_SECONDS) {
+              const physicalContact =
+                trackPairContact && Math.abs(signedColliderContactMismatch) <= 0.03;
+              const visuallyInsideWheelBody =
+                signedVerticalMismatch !== null && signedVerticalMismatch < -0.005;
+              const hover =
+                !physicalContact && signedColliderContactMismatch > 0.03;
+              const passThrough =
+                signedColliderContactMismatch < -0.08 ||
+                radius < PART3_TRACK_INNER_RADIUS - BALL_RADIUS;
+              const tunneling =
+                passThrough ||
+                !Number.isFinite(position.x) ||
+                !Number.isFinite(position.y) ||
+                !Number.isFinite(position.z);
+              const passed =
+                visibleSurface !== null &&
+                !visuallyInsideWheelBody &&
+                Math.abs(signedVerticalMismatch ?? Number.POSITIVE_INFINITY) <= 0.012 &&
+                physicalContact &&
+                !hover &&
+                !passThrough &&
+                !tunneling &&
+                part3AlignmentMaxVisualBodySyncError <= 0.000001;
+              part3AlignmentRunning = false;
+              part3AlignmentFinished = true;
+              publishPart3AlignmentReport({
+                status: passed ? 'passed' : 'failed',
+                sampleRadius: radius,
+                sampleAzimuth: normalizedAngle(Math.atan2(position.x, position.z)),
+                visibleSurfaceY: visibleSurface?.y ?? null,
+                visibleSurfaceSource: visibleSurface?.source ?? null,
+                analyticColliderContactYBefore: part3TrackHeightBase(radius),
+                analyticColliderContactYAfter: part3TrackHeight(radius),
+                rigidBodyCenterY: position.y,
+                ballBottomY: bottom,
+                ballRadius: BALL_RADIUS,
+                signedVerticalMismatch,
+                signedColliderContactMismatch,
+                visuallyInsideWheelBody,
+                physicalContact,
+                hover,
+                passThrough,
+                tunneling,
+                maxVisualBodySyncError: part3AlignmentMaxVisualBodySyncError,
+                detail: passed
+                  ? 'PASS: the Rapier ball is on the visible upper outer-track surface with real contact.'
+                  : 'FAIL: visible GLB surface and analytic Rapier contact are vertically misaligned.',
+              });
+              callbacksRef.current.onStateChange(
+                passed ? 'loaded' : 'error',
+                passed
+                  ? 'PART 3 short visual/physics alignment probe passed'
+                  : 'PART 3 short visual/physics alignment probe failed',
+              );
+            }
+          }
+
+          if (
+            validationMode === 'part3' &&
+            !alignmentOnly &&
             world &&
             ballBody &&
             ballMesh &&
@@ -2784,6 +3011,48 @@ export function Part2SceneViewport({
     </div>
   );
 
+  const renderPart3AlignmentReport = () => (
+    <div
+      className="part2-drop-report"
+      data-testid="part3-alignment-report"
+      data-status={part3AlignmentReport?.status ?? 'waiting'}
+      aria-live="polite"
+    >
+      {part3AlignmentReport ? (
+        <>
+          <strong>{part3AlignmentReport.detail}</strong>
+          <span>
+            short outer-track contact probe · r {part3AlignmentReport.sampleRadius.toFixed(4)} ·
+            azimuth {THREE.MathUtils.radToDeg(part3AlignmentReport.sampleAzimuth).toFixed(2)}° ·
+            ball radius {part3AlignmentReport.ballRadius.toFixed(4)}
+          </span>
+          <span>
+            visible GLB upper surface Y {part3AlignmentReport.visibleSurfaceY?.toFixed(4) ?? '—'} ·
+            source {part3AlignmentReport.visibleSurfaceSource ?? '—'} ·
+            collider contact Y before {part3AlignmentReport.analyticColliderContactYBefore.toFixed(4)} ·
+            after {part3AlignmentReport.analyticColliderContactYAfter.toFixed(4)}
+          </span>
+          <span>
+            rigid-body center Y {part3AlignmentReport.rigidBodyCenterY.toFixed(4)} ·
+            ball bottom Y {part3AlignmentReport.ballBottomY.toFixed(4)} ·
+            visible signed mismatch {part3AlignmentReport.signedVerticalMismatch?.toFixed(4) ?? '—'} ·
+            collider signed mismatch {part3AlignmentReport.signedColliderContactMismatch.toFixed(4)}
+          </span>
+          <span>
+            visually inside wheel body {part3AlignmentReport.visuallyInsideWheelBody ? 'yes' : 'no'} ·
+            physical contact {part3AlignmentReport.physicalContact ? 'yes' : 'no'} ·
+            hover {part3AlignmentReport.hover ? 'yes' : 'no'} ·
+            pass-through {part3AlignmentReport.passThrough ? 'yes' : 'no'} ·
+            tunneling {part3AlignmentReport.tunneling ? 'yes' : 'no'} ·
+            ball sync {part3AlignmentReport.maxVisualBodySyncError.toFixed(6)}
+          </span>
+        </>
+      ) : (
+        'Waiting for the short visual/physics alignment probe.'
+      )}
+    </div>
+  );
+
   const renderPart4Report = () => (
     <div
       className="part2-drop-report"
@@ -2883,7 +3152,9 @@ export function Part2SceneViewport({
           {validationMode === 'part4'
             ? `PROBES ${part4Report?.status.toUpperCase() ?? 'WAITING'} · KINEMATIC ROTOR · CCD`
             : validationMode === 'part3'
-              ? `PROBES ${part3Report?.status.toUpperCase() ?? 'WAITING'} · STATIC COLLIDER · CCD`
+              ? alignmentOnly
+                ? `ALIGNMENT ${part3AlignmentReport?.status.toUpperCase() ?? 'WAITING'} · RAPIER CONTACT · CCD`
+                : `PROBES ${part3Report?.status.toUpperCase() ?? 'WAITING'} · STATIC COLLIDER · CCD`
               : `DROP ${dropReport?.status.toUpperCase() ?? 'WAITING'} · CCD · 120 HZ`}
         </span>
       </div>
@@ -2892,7 +3163,9 @@ export function Part2SceneViewport({
           {renderPart4Report()}
           {renderPocketReport()}
         </>
-      ) : validationMode === 'part3' ? renderPart3Report() : (
+      ) : validationMode === 'part3' ? (
+        alignmentOnly ? renderPart3AlignmentReport() : renderPart3Report()
+      ) : (
         <div
           className="part2-drop-report"
           data-testid="part2-drop-report"

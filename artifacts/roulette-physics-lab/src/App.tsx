@@ -4235,6 +4235,7 @@ function App() {
             <Part2SceneViewport
               loadKey={loadKey}
               validationMode="part3"
+              alignmentOnly
               view={view}
               showGrid={showGrid}
               showPhysicsDebug={showPhysicsDebug}
