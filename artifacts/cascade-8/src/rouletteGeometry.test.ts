@@ -243,7 +243,7 @@ describe("roulette motion timing contract", () => {
     expect(rouletteCss).not.toContain("roulette-rotor-roll 1.9s");
     expect(rouletteCss).not.toContain("roulette-result-pop-compact .45s");
       expect(rouletteCss).toContain("--number-radius: clamp(118px, 44cqw, 236px);");
-      expect(rouletteCss).toContain("height: 14%;");
+      expect(rouletteCss).toContain("height: 28%;");
   });
 });
 

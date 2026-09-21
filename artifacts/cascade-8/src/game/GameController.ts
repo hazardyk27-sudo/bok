@@ -1,11 +1,8 @@
 import { ANIMATION, BETS_CENTS, FREE_BET_CENTS, MAX_WIN_MULTIPLIER, STARTING_BALANCE_CENTS, getSymbolDefinition } from "../config/GameConfig";
-import { CryptoRNG } from "../engine/RNG";
 import {
   addFreeSpinSymbolWin,
   beginFreeSpinAccounting,
   createFreeSpinAccounting,
-  playBaseSpin,
-  playFreeSpin,
   resolveFreeSpinAccounting,
   settleFreeSpinAccounting,
 } from "../engine/SlotEngine";
@@ -18,6 +15,7 @@ import { mountResponsiveWinAmount } from "./ResponsiveWinAmount";
 import { buildWinLabelEvents, type WinLabelEvent } from "./WinLabel";
 import { isLargeWin, isMaxWin, winTier } from "./WinTiers";
 import { getAnimationDuration, shouldResumeAutoSpin } from "./GameTiming";
+import { SlotWalletClient } from "./SlotWalletClient";
 
 type ControllerState = "BOOT" | "IDLE" | "SPIN_INIT" | "INITIAL_DROP" | "EVALUATING" | "WIN_HIGHLIGHT" | "WIN_EXPLOSION" | "GRAVITY" | "REFILL" | "CASCADE_DROP" | "BONUS_TRIGGER_CEREMONY" | "BONUS_AWARD_PRESENTATION" | "BONUS_WAITING_FOR_START" | "BONUS_INTRO" | "FREE_SPIN_PLAY" | "CORE_REVEAL" | "BIG_WIN" | "MAX_WIN" | "BONUS_SUMMARY" | "SPIN_COMPLETE";
 
@@ -46,12 +44,13 @@ export class GameController {
   bonusTriggerScatterCount = 0;
   private busy = false;
   private pendingBonusResult: SpinResult | null = null;
-  private pendingBonusSource: CryptoRNG | null = null;
   private pendingRetriggerContinue: (() => void) | null = null;
   private pendingAutoResume = false;
   private autoRunning = false;
   private autoStopping = false;
   private autoRemaining = 0;
+  private walletReady = false;
+  private readonly wallet = new SlotWalletClient();
   readonly audio = new AudioManager();
   private readonly scene: GameScene;
   private readonly ui: {
@@ -65,11 +64,24 @@ export class GameController {
   constructor(scene: GameScene, ui: GameController["ui"]) {
     this.scene = scene;
     this.ui = ui;
-    this.balanceCents = Number(localStorage.getItem("cascade8-balance") ?? STARTING_BALANCE_CENTS);
     this.state = "IDLE";
     this.bind();
     this.audio.startMusic();
     this.updateHud();
+    void this.initializeWallet();
+  }
+
+  private async initializeWallet() {
+    try {
+      const wallet = await this.wallet.bootstrap();
+      this.balanceCents = wallet.balanceCents;
+      this.walletReady = true;
+      this.message("SERVER WALLET CONNECTED");
+      this.updateHud();
+    } catch {
+      this.message("WALLET CONNECTION REQUIRED");
+      this.updateHud();
+    }
   }
 
   private bind() {
@@ -137,7 +149,7 @@ export class GameController {
   }
   private setState(state: ControllerState) {
     this.state = state;
-    this.ui.spin.disabled = this.busy || this.autoRunning || (!this.pendingBonusResult && !canAffordBet(this.balanceCents, this.betCents));
+    this.ui.spin.disabled = !this.walletReady || this.busy || this.autoRunning || (!this.pendingBonusResult && !canAffordBet(this.balanceCents, this.betCents));
   }
   private changeBet(direction: number) {
     if (this.busy || this.autoRunning) return;
@@ -160,7 +172,7 @@ export class GameController {
     if (soundLabel) soundLabel.textContent = this.audio.muted ? "SOUND OFF" : "SOUND ON";
     this.ui.sound.setAttribute("aria-label", this.audio.muted ? "Turn sound on" : "Turn sound off");
     this.ui.sound.classList.toggle("is-active", !this.audio.muted);
-    this.ui.spin.disabled = this.busy || this.autoRunning || (!this.pendingBonusResult && !canAffordBet(this.balanceCents, this.betCents));
+    this.ui.spin.disabled = !this.walletReady || this.busy || this.autoRunning || (!this.pendingBonusResult && !canAffordBet(this.balanceCents, this.betCents));
     this.ui.betMinus.disabled = this.busy || this.betIndex === 0;
     this.ui.betPlus.disabled = this.busy || this.betIndex === BETS_CENTS.length - 1;
     this.ui.autoCount.disabled = this.busy || this.autoRunning || Boolean(this.pendingBonusResult);
@@ -196,6 +208,10 @@ export class GameController {
 
   async spin(fromAuto = false) {
     if (this.autoRunning && !fromAuto) return;
+    if (!this.walletReady) {
+      this.message("WALLET CONNECTION REQUIRED");
+      return;
+    }
     if (this.pendingBonusResult) {
       await this.startFreeSpins();
       return;
@@ -208,13 +224,22 @@ export class GameController {
      this.resetTumbleWin();
     this.setBonusPrompt(false);
     this.setState("SPIN_INIT");
-    if (!this.isCurrentBetFree) {
-      this.balanceCents -= this.betCents;
-      this.persistBalance();
-    }
     this.audio.spin(); this.updateHud();
-    const source = new CryptoRNG();
-    const result = playBaseSpin(this.betCents, source);
+     let result: SpinResult;
+     try {
+       const serverSpin = await this.wallet.spin(this.betCents, crypto.randomUUID());
+       result = serverSpin.result;
+       this.balanceCents = serverSpin.wallet.balanceCents;
+       this.updateHud();
+     } catch (error) {
+       this.busy = false;
+       this.setState("IDLE");
+       this.message(error instanceof Error && error.message === "INSUFFICIENT_SLOT_CREDITS"
+         ? "INSUFFICIENT DEMO CREDITS"
+         : "SLOT SERVER UNAVAILABLE");
+       this.updateHud();
+       return;
+     }
     this.message("THE GATES ARE OPENING");
     this.setState("INITIAL_DROP");
     this.scene.renderBoard(result.initialBoard);
@@ -235,7 +260,6 @@ export class GameController {
          this.pendingAutoResume = true;
        }
       this.pendingBonusResult = result;
-      this.pendingBonusSource = source;
       this.freeSpinsLeft = result.freeSpinsAwarded;
        this.bonusTriggerScatterCount = result.bonusTriggerScatterCount;
        this.setState("BONUS_TRIGGER_CEREMONY");
@@ -261,10 +285,8 @@ export class GameController {
 
   private async startFreeSpins() {
     const result = this.pendingBonusResult;
-    const source = this.pendingBonusSource;
-    if (!result || !source) return;
+    if (!result) return;
     this.pendingBonusResult = null;
-    this.pendingBonusSource = null;
     this.busy = true;
     this.setBonusPrompt(false);
     this.scene.setFreeSpinMode(true);
@@ -275,22 +297,24 @@ export class GameController {
     this.setState("BONUS_INTRO");
     this.message("BONUS REALM // FREE SPINS");
     let remaining = result.freeSpinsAwarded;
-    let usedMultiplier = result.totalMultiplier;
+    let usedMultiplier = result.baseWinCents / this.betCents;
+    let displayedBonusWinCents = 0;
     let index = 0;
     this.updateHud();
     while (remaining > 0 && usedMultiplier < MAX_WIN_MULTIPLIER) {
       if (index > 0) await sleep(this.duration(ANIMATION.spinPause, true));
       index += 1;
-      const freeSpin = playFreeSpin(index, this.betCents, source, MAX_WIN_MULTIPLIER - usedMultiplier);
+      const freeSpin = result.freeSpins[index - 1];
+      if (!freeSpin) {
+        this.busy = false;
+        this.setState("IDLE");
+        this.message("BONUS RESULT UNAVAILABLE");
+        this.updateHud();
+        return;
+      }
        this.resetCurrentFreeSpinDisplay(index);
-      result.freeSpins.push(freeSpin);
-      result.totalMultiplierEvents.push(...freeSpin.tumbles.map((tumble) => tumble.finalPayoutMultiplier));
       usedMultiplier += freeSpin.finalWinMultiplier;
-      result.bonusRawWinMultiplier += freeSpin.rawWinMultiplier;
-      result.bonusWinCents = Math.round((usedMultiplier - result.baseWinCents / this.betCents) * this.betCents);
-      result.totalMultiplier = usedMultiplier;
-      result.totalWinCents = Math.round(usedMultiplier * this.betCents);
-      result.maxWinReached = usedMultiplier >= MAX_WIN_MULTIPLIER;
+       displayedBonusWinCents = Math.round((usedMultiplier - result.baseWinCents / this.betCents) * this.betCents);
       this.freeSpinsLeft = remaining;
       this.setState("FREE_SPIN_PLAY"); this.updateHud();
       this.scene.renderBoard(freeSpin.initialBoard);
@@ -322,8 +346,8 @@ export class GameController {
         this.updateBonusTotalDisplay(true);
         await sleep(this.duration(360, true));
       }
-      this.currentWinCents = result.totalWinCents;
-      this.bonusWinCents = result.bonusWinCents;
+       this.currentWinCents = Math.round(usedMultiplier * this.betCents);
+       this.bonusWinCents = displayedBonusWinCents;
       remaining = remaining - 1 + freeSpin.retriggered;
       this.freeSpinsLeft = remaining;
       this.updateHud();
@@ -355,7 +379,6 @@ export class GameController {
     this.currentWinCents = result.totalWinCents;
     if (result.maxWinReached) this.setState("MAX_WIN");
     else if (result.totalMultiplier >= 10) this.setState("BIG_WIN");
-    this.balanceCents += result.totalWinCents; this.persistBalance();
     this.setState("SPIN_COMPLETE"); this.message(result.totalWinCents ? "SPIN COMPLETE // COLLECTED" : "NO WIN // NEXT GATE AWAITS");
     this.busy = false; this.setState("IDLE"); this.updateHud();
   }
@@ -471,7 +494,6 @@ export class GameController {
     if (last) await this.presentSequenceSettlement(last, isBonus);
   }
 
-  private persistBalance() { localStorage.setItem("cascade8-balance", String(this.balanceCents)); }
   private setBonusPrompt(active: boolean, kind: "trigger" | "retrigger" = "trigger", awarded = this.freeSpinsLeft) {
     renderBonusCeremony(
       {

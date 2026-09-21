@@ -16,9 +16,9 @@ describe("bonus rules", () => {
     expect(retriggerFreeSpins(5)).toBe(5);
     expect(retriggerFreeSpins(6)).toBe(5);
   });
-  it("spawns a Free Spin refill Core at the designed 5% threshold", () => {
+  it("spawns a Free Spin refill Core below the designed 5.5% threshold", () => {
     expect(drawMultiplierCore({ nextFloat: () => 0 })).toEqual({ kind: "MULTIPLIER_CORE", value: 2 });
-    expect(drawMultiplierCore({ nextFloat: () => 0.05 })).toBeNull();
+    expect(drawMultiplierCore({ nextFloat: () => 0.055 })).toBeNull();
   });
   it("supports the complete 2x–1000x Core range", () => {
     let index = 0;

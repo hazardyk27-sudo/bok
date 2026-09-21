@@ -35,3 +35,4 @@
 - [PART 3 outer-track validation](physics-lab-part3-outer-track.md) — keep measured deflector cuboids separate from the running lane and validate clearance and impact with ball-radius-aware probes.
 - [Main-world pocket transition](physics-lab-pocket-transition.md) — open the measured track aperture, align descent to live rotor phase, and keep a supported floor underlay under moving frets.
 - [Cadı Kazan wallet boundary](cadi-kazan-wallet-boundary.md) — share the server wallet/session with roulette while keeping scratch rounds and ledger entries isolated.
+- [Slot wallet authority](slot-wallet-authority.md) — slot RNG and settlement stay server-side; legacy localStorage is a one-time untrusted migration marker.
