@@ -167,6 +167,22 @@ const PART3_PROBES = [
   },
 ] as const;
 
+function part3SpawnPosition(probe: (typeof PART3_PROBES)[number]) {
+  return radialPosition(
+    probe.radius,
+    probe.angle,
+    profileHeight(probe.radius) + BALL_RADIUS + 0.002,
+  );
+}
+
+function part3InitialVelocity(probe: (typeof PART3_PROBES)[number]): VectorReadout {
+  return {
+    x: Number((Math.cos(probe.angle) * probe.speed).toFixed(4)),
+    y: 0,
+    z: Number((-Math.sin(probe.angle) * probe.speed).toFixed(4)),
+  };
+}
+
 function countMeshes(object: THREE.Object3D) {
   let count = 0;
   object.traverse((child) => {
@@ -393,11 +409,65 @@ export function Part2SceneViewport({
     let maxVisualBodySyncError = 0;
     let ccdEnabled = false;
     let visibleSurfaceMatch = false;
+    let part3ProbeIndex = 0;
+    let part3Elapsed = 0;
+    let part3PeakSpeed = 0;
+    let part3MinRadius = Number.POSITIVE_INFINITY;
+    let part3MaxRadius = 0;
+    let part3MaxPenetration = 0;
+    let part3MaxSeparation = 0;
+    let part3ContactFrames = 0;
+    let part3SampleFrames = 0;
+    let part3MaxVisualBodySyncError = 0;
+    let part3LeftValidVolume = false;
+    let part3Results: Part3ProbeResult[] = [];
+    let part3Finished = false;
 
     callbacksRef.current.onStateChange('loading');
 
     const publishDropReport = (report: Part2DropReport) => {
       setDropReport(report);
+    };
+
+    const publishPart3Report = (
+      status: Part3ValidationReport['status'],
+      detail: string,
+      results = part3Results,
+    ) => {
+      setPart3Report({
+        status,
+        results,
+        ccdEnabled,
+        detail,
+      });
+    };
+
+    const startPart3Probe = (index: number) => {
+      const probe = PART3_PROBES[index];
+      if (!probe || !ballBody || !ballMesh) return;
+      const position = part3SpawnPosition(probe);
+      const velocity = part3InitialVelocity(probe);
+      ballBody.setTranslation({ x: position[0], y: position[1], z: position[2] }, true);
+      ballBody.setLinvel({ x: velocity.x, y: velocity.y, z: velocity.z }, true);
+      ballBody.setAngvel({ x: 0, y: 0, z: 0 }, true);
+      ballBody.setRotation({ x: 0, y: 0, z: 0, w: 1 }, true);
+      ballMesh.position.set(...position);
+      ballMesh.quaternion.identity();
+      part3ProbeIndex = index;
+      part3Elapsed = 0;
+      part3PeakSpeed = 0;
+      part3MinRadius = probe.radius;
+      part3MaxRadius = probe.radius;
+      part3MaxPenetration = 0;
+      part3MaxSeparation = 0;
+      part3ContactFrames = 0;
+      part3SampleFrames = 0;
+      part3MaxVisualBodySyncError = 0;
+      part3LeftValidVolume = false;
+      publishPart3Report(
+        'running',
+        `Running probe ${index + 1}/${PART3_PROBES.length}: ${probe.label}.`,
+      );
     };
 
     try {
@@ -572,7 +642,10 @@ export function Part2SceneViewport({
             stationaryBody,
           );
 
-          const initialPosition = DROP_INITIAL_POSITION;
+          const initialPosition =
+            validationMode === 'part3'
+              ? part3SpawnPosition(PART3_PROBES[0])
+              : DROP_INITIAL_POSITION;
           ballMesh = createBallVisual();
           ballMesh.visible = showBallPlaceholder;
           wheelRoot.add(ballMesh);
@@ -599,25 +672,30 @@ export function Part2SceneViewport({
           );
           ballBody.setTranslation({ x: initialPosition[0], y: initialPosition[1], z: initialPosition[2] }, true);
           ballMesh.position.set(...initialPosition);
-          publishDropReport({
-            status: 'running',
-            initialPosition: roundedVector(new THREE.Vector3(...initialPosition)),
-            firstContactPosition: null,
-            firstContactRadius: null,
-            firstContactTime: null,
-            finalPosition: roundedVector(new THREE.Vector3(...initialPosition)),
-            finalSpeed: 0,
-            maxPenetration: 0,
-            finalSeparation: DROP_HEIGHT_ABOVE_SURFACE,
-            passThrough: false,
-            visibleSurfaceMatch: false,
-            ccdEnabled,
-            maxVisualBodySyncError: 0,
-            colliderProfile: COLLIDER_PROFILE,
-            detail: 'One zero-horizontal-velocity drop running at 120 Hz.',
-          });
-          dropStarted = true;
-          callbacksRef.current.onStateChange('loaded', 'PART 2 collider shell ready · one zero-velocity drop running');
+          if (validationMode === 'part3') {
+            startPart3Probe(0);
+            callbacksRef.current.onStateChange('loaded', 'PART 3 static-collider ball probes running');
+          } else {
+            publishDropReport({
+              status: 'running',
+              initialPosition: roundedVector(new THREE.Vector3(...initialPosition)),
+              firstContactPosition: null,
+              firstContactRadius: null,
+              firstContactTime: null,
+              finalPosition: roundedVector(new THREE.Vector3(...initialPosition)),
+              finalSpeed: 0,
+              maxPenetration: 0,
+              finalSeparation: DROP_HEIGHT_ABOVE_SURFACE,
+              passThrough: false,
+              visibleSurfaceMatch: false,
+              ccdEnabled,
+              maxVisualBodySyncError: 0,
+              colliderProfile: COLLIDER_PROFILE,
+              detail: 'One zero-horizontal-velocity drop running at 120 Hz.',
+            });
+            dropStarted = true;
+            callbacksRef.current.onStateChange('loaded', 'PART 2 collider shell ready · one zero-velocity drop running');
+          }
         },
         undefined,
         (error) => {
@@ -640,6 +718,64 @@ export function Part2SceneViewport({
       const resetView = () => applyView(viewRef.current);
       window.addEventListener('roulette-reset-view', resetView);
 
+      const completePart3Probe = (position: RAPIER.Vector, velocity: RAPIER.Vector) => {
+        const probe = PART3_PROBES[part3ProbeIndex];
+        const finalSpeed = Math.hypot(velocity.x, velocity.y, velocity.z);
+        const stableContact =
+          part3SampleFrames > 0 && part3ContactFrames / part3SampleFrames >= 0.75;
+        const leftValidVolume =
+          part3LeftValidVolume ||
+          !Number.isFinite(position.x) ||
+          !Number.isFinite(position.y) ||
+          !Number.isFinite(position.z);
+        const tunneling = leftValidVolume || part3MaxPenetration > 0.08;
+        const velocityExplosion =
+          part3PeakSpeed > Math.max(8, probe.speed * 4);
+        const passed =
+          stableContact &&
+          !leftValidVolume &&
+          !tunneling &&
+          !velocityExplosion &&
+          part3MaxVisualBodySyncError <= 0.001;
+        const result: Part3ProbeResult = {
+          id: probe.id,
+          label: probe.label,
+          spawnRadius: probe.radius,
+          spawnHeight: Number(part3SpawnPosition(probe)[1].toFixed(4)),
+          initialVelocity: part3InitialVelocity(probe),
+          peakSpeed: Number(part3PeakSpeed.toFixed(4)),
+          minRadius: Number(part3MinRadius.toFixed(4)),
+          maxRadius: Number(part3MaxRadius.toFixed(4)),
+          maxPenetration: Number(part3MaxPenetration.toFixed(4)),
+          maxSeparation: Number(part3MaxSeparation.toFixed(4)),
+          stableContact,
+          leftValidVolume,
+          tunneling,
+          velocityExplosion,
+          maxVisualBodySyncError: Number(part3MaxVisualBodySyncError.toFixed(6)),
+          outcome: passed ? (finalSpeed < 0.08 ? 'settled' : 'stable') : 'failed',
+          detail: passed
+            ? finalSpeed < 0.08
+              ? 'Contact remained stable and the ball naturally settled.'
+              : 'Contact remained stable while the ball continued naturally across the bowl.'
+            : 'Probe failed the stable static-bowl contact envelope.',
+        };
+        part3Results = [...part3Results, result];
+        if (!passed || part3ProbeIndex === PART3_PROBES.length - 1) {
+          part3Finished = true;
+          publishPart3Report(
+            part3Results.every((probeResult) => probeResult.outcome !== 'failed')
+              ? 'passed'
+              : 'failed',
+            part3Results.every((probeResult) => probeResult.outcome !== 'failed')
+              ? 'Both deterministic static-bowl motion probes passed.'
+              : 'A deterministic static-bowl motion probe failed.',
+          );
+        } else {
+          startPart3Probe(part3ProbeIndex + 1);
+        }
+      };
+
       const render = () => {
         if (disposed) return;
         const now = performance.now();
@@ -656,7 +792,56 @@ export function Part2SceneViewport({
             }
           }
 
-          if (world && ballBody && ballMesh && dropStarted && dropSteps < DROP_DURATION_SECONDS / FIXED_TIMESTEP) {
+          if (validationMode === 'part3' && world && ballBody && ballMesh && !part3Finished) {
+            const probe = PART3_PROBES[part3ProbeIndex];
+            world.step();
+            const position = ballBody.translation();
+            const velocity = ballBody.linvel();
+            const radius = Math.hypot(position.x, position.z);
+            const surfaceY =
+              radius >= BOWL_PROFILE[0][0]
+                ? profileHeight(radius)
+                : COLLIDER_PROFILE.innerFloorTop;
+            const bottom = position.y - BALL_RADIUS;
+            const penetration = Math.max(0, surfaceY - bottom);
+            const separation = Math.max(0, bottom - surfaceY);
+            const leftValidVolume =
+              !Number.isFinite(position.x) ||
+              !Number.isFinite(position.y) ||
+              !Number.isFinite(position.z) ||
+              radius < 0.18 ||
+              radius > 3.08 ||
+              position.y < COLLIDER_PROFILE.innerFloorTop - BALL_RADIUS - 0.08;
+            part3Elapsed += FIXED_TIMESTEP;
+            part3SampleFrames += 1;
+            part3PeakSpeed = Math.max(
+              part3PeakSpeed,
+              Math.hypot(velocity.x, velocity.y, velocity.z),
+            );
+            part3MinRadius = Math.min(part3MinRadius, radius);
+            part3MaxRadius = Math.max(part3MaxRadius, radius);
+            part3MaxPenetration = Math.max(part3MaxPenetration, penetration);
+            part3MaxSeparation = Math.max(part3MaxSeparation, separation);
+            part3LeftValidVolume ||= leftValidVolume;
+            const inContactEnvelope = penetration <= 0.03 && separation <= 0.12;
+            if (inContactEnvelope) part3ContactFrames += 1;
+            ballMesh.position.set(position.x, position.y, position.z);
+            part3MaxVisualBodySyncError = Math.max(
+              part3MaxVisualBodySyncError,
+              Math.hypot(
+                ballMesh.position.x - position.x,
+                ballMesh.position.y - position.y,
+                ballMesh.position.z - position.z,
+              ),
+            );
+            const rotation = ballBody.rotation();
+            ballMesh.quaternion.set(rotation.x, rotation.y, rotation.z, rotation.w);
+            if (part3Elapsed >= probe.durationSeconds) {
+              completePart3Probe(position, velocity);
+            }
+          }
+
+          if (validationMode === 'part2' && world && ballBody && ballMesh && dropStarted && dropSteps < DROP_DURATION_SECONDS / FIXED_TIMESTEP) {
             world.step();
             const position = ballBody.translation();
             const velocity = ballBody.linvel();
@@ -761,49 +946,88 @@ export function Part2SceneViewport({
     }
   }, [showPhysicsDebug]);
 
+  const renderPart3Report = () => (
+    <div
+      className="part2-drop-report"
+      data-testid="part3-validation-report"
+      data-status={part3Report?.status ?? 'waiting'}
+      aria-live="polite"
+    >
+      {part3Report ? (
+        <>
+          <strong>{part3Report.detail}</strong>
+          <span>CCD {part3Report.ccdEnabled ? 'enabled' : 'disabled'} · 120 Hz · max 2 deterministic probes</span>
+          {part3Report.results.map((result) => (
+            <span key={result.id}>
+              {result.label}: {result.outcome.toUpperCase()} · spawn r {result.spawnRadius.toFixed(4)} / y {result.spawnHeight.toFixed(4)} ·
+              v {result.initialVelocity.x.toFixed(4)}, {result.initialVelocity.y.toFixed(4)}, {result.initialVelocity.z.toFixed(4)} ·
+              peak {result.peakSpeed.toFixed(4)} · r {result.minRadius.toFixed(4)}–{result.maxRadius.toFixed(4)} ·
+              pen {result.maxPenetration.toFixed(4)} · sep {result.maxSeparation.toFixed(4)}
+            </span>
+          ))}
+          {part3Report.results.map((result) => (
+            <span key={`${result.id}-safety`}>
+              {result.label}: contact {result.stableContact ? 'stable' : 'unstable'} · volume escape {result.leftValidVolume ? 'yes' : 'no'} ·
+              tunneling {result.tunneling ? 'yes' : 'no'} · velocity spike {result.velocityExplosion ? 'yes' : 'no'} ·
+              sync {result.maxVisualBodySyncError.toFixed(6)} · {result.detail}
+            </span>
+          ))}
+        </>
+      ) : (
+        'Waiting for PART 3 static-bowl probes.'
+      )}
+    </div>
+  );
+
   return (
     <div ref={stageRef} className="scene-stage" data-testid="canvas-viewport">
       <canvas ref={canvasRef} tabIndex={0} aria-label="Part 2 roulette collider alignment preview" />
       <div className="scene-corner scene-corner-tl" aria-hidden="true" />
       <div className="scene-corner scene-corner-br" aria-hidden="true" />
       <div className="viewport-readout" aria-hidden="true">
-        <span>PART 2 · ZERO-VELOCITY CONTACT</span>
+        <span>{validationMode === 'part3' ? 'PART 3 · DYNAMIC BALL VALIDATION' : 'PART 2 · ZERO-VELOCITY CONTACT'}</span>
         <span>ANGLE {THREE.MathUtils.radToDeg(angleReadout).toFixed(2)}° · PIVOT [0, 0, 0] · Y+</span>
-        <span>DROP {dropReport?.status.toUpperCase() ?? 'WAITING'} · CCD · 120 HZ</span>
+        <span>
+          {validationMode === 'part3'
+            ? `PROBES ${part3Report?.status.toUpperCase() ?? 'WAITING'} · STATIC COLLIDER · CCD`
+            : `DROP ${dropReport?.status.toUpperCase() ?? 'WAITING'} · CCD · 120 HZ`}
+        </span>
       </div>
-      <div
-        className="part2-drop-report"
-        data-testid="part2-drop-report"
-        data-status={dropReport?.status ?? 'waiting'}
-        data-first-contact={dropReport?.firstContactPosition ? 'yes' : 'no'}
-        data-pass-through={dropReport?.passThrough ? 'yes' : 'no'}
-        data-visible-surface-match={dropReport?.visibleSurfaceMatch ? 'yes' : 'no'}
-        aria-live="polite"
-      >
-        {dropReport ? (
-          <>
-            <strong>{dropReport.detail}</strong>
-            <span>
-              contact {dropReport.firstContactPosition ? 'yes' : 'no'} · final speed {dropReport.finalSpeed.toFixed(4)} ·
-              max penetration {dropReport.maxPenetration.toFixed(4)} · separation {dropReport.finalSeparation.toFixed(4)}
-            </span>
-            <span>
-              pass-through {dropReport.passThrough ? 'yes' : 'no'} · visible match {dropReport.visibleSurfaceMatch ? 'yes' : 'no'} ·
-              contact radius {dropReport.firstContactRadius?.toFixed(4) ?? '—'} ·
-              contact time {dropReport.firstContactTime?.toFixed(4) ?? '—'} s
-            </span>
-            <span>
-              first {dropReport.firstContactPosition ? `${dropReport.firstContactPosition.x.toFixed(4)}, ${dropReport.firstContactPosition.y.toFixed(4)}, ${dropReport.firstContactPosition.z.toFixed(4)}` : '—'} ·
-              final {dropReport.finalPosition.x.toFixed(4)}, {dropReport.finalPosition.y.toFixed(4)}, {dropReport.finalPosition.z.toFixed(4)}
-            </span>
-            <span>
-              CCD {dropReport.ccdEnabled ? 'enabled' : 'disabled'} · visual/body sync error {dropReport.maxVisualBodySyncError.toFixed(6)}
-            </span>
-          </>
-        ) : (
-          'Waiting for one controlled drop.'
-        )}
-      </div>
+      {validationMode === 'part3' ? renderPart3Report() : (
+        <div
+          className="part2-drop-report"
+          data-testid="part2-drop-report"
+          data-status={dropReport?.status ?? 'waiting'}
+          data-first-contact={dropReport?.firstContactPosition ? 'yes' : 'no'}
+          data-pass-through={dropReport?.passThrough ? 'yes' : 'no'}
+          data-visible-surface-match={dropReport?.visibleSurfaceMatch ? 'yes' : 'no'}
+          aria-live="polite"
+        >
+          {dropReport ? (
+            <>
+              <strong>{dropReport.detail}</strong>
+              <span>
+                contact {dropReport.firstContactPosition ? 'yes' : 'no'} · final speed {dropReport.finalSpeed.toFixed(4)} ·
+                max penetration {dropReport.maxPenetration.toFixed(4)} · separation {dropReport.finalSeparation.toFixed(4)}
+              </span>
+              <span>
+                pass-through {dropReport.passThrough ? 'yes' : 'no'} · visible match {dropReport.visibleSurfaceMatch ? 'yes' : 'no'} ·
+                contact radius {dropReport.firstContactRadius?.toFixed(4) ?? '—'} ·
+                contact time {dropReport.firstContactTime?.toFixed(4) ?? '—'} s
+              </span>
+              <span>
+                first {dropReport.firstContactPosition ? `${dropReport.firstContactPosition.x.toFixed(4)}, ${dropReport.firstContactPosition.y.toFixed(4)}, ${dropReport.firstContactPosition.z.toFixed(4)}` : '—'} ·
+                final {dropReport.finalPosition.x.toFixed(4)}, {dropReport.finalPosition.y.toFixed(4)}, {dropReport.finalPosition.z.toFixed(4)}
+              </span>
+              <span>
+                CCD {dropReport.ccdEnabled ? 'enabled' : 'disabled'} · visual/body sync error {dropReport.maxVisualBodySyncError.toFixed(6)}
+              </span>
+            </>
+          ) : (
+            'Waiting for one controlled drop.'
+          )}
+        </div>
+      )}
     </div>
   );
 }
