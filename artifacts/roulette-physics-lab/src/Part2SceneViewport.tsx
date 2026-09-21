@@ -175,7 +175,37 @@ type Part3ProbeResult = {
 type Part3ValidationReport = {
   status: 'running' | 'passed' | 'failed';
   results: Part3ProbeResult[];
+  pocketDescent: Part3PocketDescentReport | null;
   ccdEnabled: boolean;
+  detail: string;
+};
+
+type Part3PocketDescentReport = {
+  status: 'running' | 'passed' | 'failed';
+  label: string;
+  targetPocketIndex: number;
+  targetPocketNumber: number;
+  blockingColliderHandle: number | null;
+  blockingColliderType: string | null;
+  blockingColliderFirstContactTime: number | null;
+  correctedTransitionRadius: number;
+  pocketFloorIntegrated: boolean;
+  fretColliderCount: number;
+  enteredPocketVolume: boolean;
+  fretContact: boolean;
+  peakSpeedAtFretContact: number | null;
+  maxPenetration: number;
+  maxSeparation: number;
+  settled: boolean;
+  finalPocketIndex: number | null;
+  finalPocketNumber: number | null;
+  escaped: boolean;
+  tunneled: boolean;
+  hover: boolean;
+  velocityExplosion: boolean;
+  artificialEnergyInjection: boolean;
+  maxRotorSyncError: number;
+  maxVisualBodySyncError: number;
   detail: string;
 };
 
