@@ -6,6 +6,7 @@ import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import {
   ROULETTE_ASSET_PATH,
   ROULETTE_AUTHORITATIVE_SCALE,
+  ROULETTE_BALL_RADIUS,
   ROULETTE_NORMALIZED_DIAMETER,
   ROULETTE_RAW_SOURCE_CENTER,
   ROULETTE_ROTATION_AXIS,
@@ -15,7 +16,7 @@ import {
 const FIXED_TIMESTEP = 1 / 120;
 const TEST_ANGULAR_SPEED = 0.35;
 const GRAVITY_Y = -58.86;
-const BALL_RADIUS = 0.056;
+const BALL_RADIUS = ROULETTE_BALL_RADIUS;
 const BALL_MASS = 0.0027;
 const TWO_PI = Math.PI * 2;
 const DROP_RADIUS = 2.35;
@@ -51,12 +52,15 @@ type Part2DropReport = {
   initialPosition: VectorReadout;
   firstContactPosition: VectorReadout | null;
   firstContactRadius: number | null;
+  firstContactTime: number | null;
   finalPosition: VectorReadout;
   finalSpeed: number;
   maxPenetration: number;
   finalSeparation: number;
   passThrough: boolean;
   visibleSurfaceMatch: boolean;
+  ccdEnabled: boolean;
+  maxVisualBodySyncError: number;
   colliderProfile: {
     outerTrackRadius: number;
     outerTrackHeight: number;
@@ -334,8 +338,11 @@ export function Part2SceneViewport({
     let previousVerticalVelocity = 0;
     let firstContact: VectorReadout | null = null;
     let firstContactRadius: number | null = null;
+    let firstContactTime: number | null = null;
     let maxPenetration = 0;
     let maxSeparation = 0;
+    let maxVisualBodySyncError = 0;
+    let ccdEnabled = false;
     let visibleSurfaceMatch = false;
 
     callbacksRef.current.onStateChange('loading');
@@ -533,6 +540,7 @@ export function Part2SceneViewport({
           );
           ballBody.enableCcd(true);
           ballBody.setSoftCcdPrediction(BALL_RADIUS * 2.5);
+          ccdEnabled = true;
           physicsBallCollider = world.createCollider(
             RAPIER.ColliderDesc.ball(BALL_RADIUS)
               .setFriction(0.42)
@@ -547,12 +555,15 @@ export function Part2SceneViewport({
             initialPosition: roundedVector(new THREE.Vector3(...initialPosition)),
             firstContactPosition: null,
             firstContactRadius: null,
+            firstContactTime: null,
             finalPosition: roundedVector(new THREE.Vector3(...initialPosition)),
             finalSpeed: 0,
             maxPenetration: 0,
             finalSeparation: DROP_HEIGHT_ABOVE_SURFACE,
             passThrough: false,
             visibleSurfaceMatch: false,
+            ccdEnabled,
+            maxVisualBodySyncError: 0,
             colliderProfile: COLLIDER_PROFILE,
             detail: 'One zero-horizontal-velocity drop running at 120 Hz.',
           });
@@ -610,9 +621,18 @@ export function Part2SceneViewport({
             if (!firstContact && previousVerticalVelocity < -0.08 && velocity.y >= -0.08 && position.y < DROP_TRACK_Y + BALL_RADIUS + 0.12) {
               firstContact = roundedVector(new THREE.Vector3(position.x, position.y, position.z));
               firstContactRadius = Number(radius.toFixed(4));
+              firstContactTime = Number(((dropSteps + 1) * FIXED_TIMESTEP).toFixed(4));
               visibleSurfaceMatch = Math.abs(position.y - (surfaceY + BALL_RADIUS)) < 0.08;
             }
             ballMesh.position.set(position.x, position.y, position.z);
+            maxVisualBodySyncError = Math.max(
+              maxVisualBodySyncError,
+              Math.hypot(
+                ballMesh.position.x - position.x,
+                ballMesh.position.y - position.y,
+                ballMesh.position.z - position.z,
+              ),
+            );
             const rotation = ballBody.rotation();
             ballMesh.quaternion.set(rotation.x, rotation.y, rotation.z, rotation.w);
             previousVerticalVelocity = velocity.y;
@@ -631,12 +651,15 @@ export function Part2SceneViewport({
                 initialPosition: roundedVector(new THREE.Vector3(...DROP_INITIAL_POSITION)),
                 firstContactPosition: firstContact,
                 firstContactRadius,
+                firstContactTime,
                 finalPosition,
                 finalSpeed: Number(finalSpeed.toFixed(4)),
                 maxPenetration: Number(maxPenetration.toFixed(4)),
                 finalSeparation: Number(finalSeparation.toFixed(4)),
                 passThrough,
                 visibleSurfaceMatch,
+                ccdEnabled,
+                maxVisualBodySyncError: Number(maxVisualBodySyncError.toFixed(6)),
                 colliderProfile: COLLIDER_PROFILE,
                 detail: passed
                   ? 'Zero-horizontal-velocity drop contacted the derived visible profile without pass-through.'
@@ -717,11 +740,15 @@ export function Part2SceneViewport({
             </span>
             <span>
               pass-through {dropReport.passThrough ? 'yes' : 'no'} · visible match {dropReport.visibleSurfaceMatch ? 'yes' : 'no'} ·
-              contact radius {dropReport.firstContactRadius?.toFixed(4) ?? '—'}
+              contact radius {dropReport.firstContactRadius?.toFixed(4) ?? '—'} ·
+              contact time {dropReport.firstContactTime?.toFixed(4) ?? '—'} s
             </span>
             <span>
               first {dropReport.firstContactPosition ? `${dropReport.firstContactPosition.x.toFixed(4)}, ${dropReport.firstContactPosition.y.toFixed(4)}, ${dropReport.firstContactPosition.z.toFixed(4)}` : '—'} ·
               final {dropReport.finalPosition.x.toFixed(4)}, {dropReport.finalPosition.y.toFixed(4)}, {dropReport.finalPosition.z.toFixed(4)}
+            </span>
+            <span>
+              CCD {dropReport.ccdEnabled ? 'enabled' : 'disabled'} · visual/body sync error {dropReport.maxVisualBodySyncError.toFixed(6)}
             </span>
           </>
         ) : (
