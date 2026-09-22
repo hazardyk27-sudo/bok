@@ -288,7 +288,12 @@ export function boardFromStreams(
     }
     return column;
   });
-  return Array.from({ length: BOARD_ROWS }, (_, row) => columns.map((column) => column[row]));
+  // Streams are emitted bottom-up (logical row 0 first), while Board is stored
+  // in screen order (index 0 is the visible top row).
+  return Array.from(
+    { length: BOARD_ROWS },
+    (_, boardRow) => columns.map((column) => column[BOARD_ROWS - 1 - boardRow]),
+  );
 }
 
 export function generateInitialBoardWithStreams(source: RandomSource, mode: "base" | "bonus" = "base") {

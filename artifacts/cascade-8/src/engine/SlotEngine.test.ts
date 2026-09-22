@@ -106,9 +106,9 @@ describe("spin accounting", () => {
 describe("base bonus trigger accounting", () => {
   it.each([
     { seed: 4, scatterCount: 4, freeSpinsAwarded: 10 },
-    { seed: 869, scatterCount: 5, freeSpinsAwarded: 15 },
+    { seed: 1186, scatterCount: 5, freeSpinsAwarded: 15 },
     { seed: 7897, scatterCount: 6, freeSpinsAwarded: 20 },
-    { seed: 166696, scatterCount: 7, freeSpinsAwarded: 25 },
+    { seed: 307624, scatterCount: 7, freeSpinsAwarded: 25 },
   ])("exposes the settled $scatterCount-Scatter trigger count", ({ seed, scatterCount, freeSpinsAwarded }) => {
     const result = playSpin(100, new SeededRNG(seed));
 
@@ -122,9 +122,9 @@ describe("base bonus trigger accounting", () => {
     const finalBoard = settledBaseBoard(result);
 
     expect(result.scatterCount).toBe(2);
-    expect(result.tumbles).toHaveLength(3);
+    expect(result.tumbles).toHaveLength(2);
     expect(countScatter(finalBoard)).toBe(4);
     expect(result.bonusTriggerScatterCount).toBe(countScatter(finalBoard));
-    expect(scatterPositions(finalBoard)).toEqual(["2:0", "2:5", "4:2", "4:5"]);
+    expect(scatterPositions(finalBoard)).toEqual(["2:2", "3:5", "4:0", "4:5"]);
   });
 });

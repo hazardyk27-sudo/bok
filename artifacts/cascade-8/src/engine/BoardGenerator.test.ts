@@ -42,11 +42,11 @@ describe("board generation", () => {
   it("builds initial column pairs upward from row 0", () => {
     const board = generateInitialBoard(alwaysLast);
     for (let col = 0; col < 6; col += 1) {
-      const row0 = getStackMetadata(board[0][col]);
-      const row1 = getStackMetadata(board[1][col]);
+      const row4 = getStackMetadata(board[0][col]);
+      const row3 = getStackMetadata(board[1][col]);
       const row2 = getStackMetadata(board[2][col]);
-      const row3 = getStackMetadata(board[3][col]);
-      const row4 = getStackMetadata(board[4][col]);
+      const row1 = getStackMetadata(board[3][col]);
+      const row0 = getStackMetadata(board[4][col]);
       expect(row0).toMatchObject({ stackIndex: 0, stackSize: 2 });
       expect(row1).toMatchObject({ stackId: row0?.stackId, stackIndex: 1, stackSize: 2 });
       expect(row2).toMatchObject({ stackIndex: 0, stackSize: 2 });

@@ -1,8 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { getPaytableMultiplier, NORMAL_SYMBOLS } from "../config/GameConfig";
+import { BASE_REEL_CONFIG, getPaytableMultiplier, NORMAL_SYMBOLS } from "../config/GameConfig";
+import { ColumnStream } from "./BoardGenerator";
 import { evaluateBoard, removeAndRefill } from "./WinEvaluator";
 import { SeededRNG } from "./RNG";
-import type { Board } from "./types";
+import { getNormalSymbol, getStackMetadata } from "./types";
+import type { Board, RandomSource } from "./types";
 
 const boardWith = (symbols: string[]): Board => {
   const flattened = [...symbols, ...Array(30 - symbols.length).fill("S2")];
@@ -111,5 +113,124 @@ describe("win evaluation and cascades", () => {
     expect(observations).toHaveLength(0);
     expect(result.boardAfterGravity[0][0]).toMatchObject({ kind: "NORMAL_SYMBOL", symbol: "S1" });
     expect(result.boardAfterGravity[1][0]).toBe("S2");
+  });
+
+  it("continues a pending pair above the visible top row", () => {
+    const values = [0.99, 0.5, 0.1];
+    const source: RandomSource = { nextFloat: () => values.shift() ?? 0.1 };
+    const active = new ColumnStream(source, BASE_REEL_CONFIG, 0);
+    active.nextVisibleAware("BASE_INITIAL", false, null);
+    const streams = [
+      active,
+      ...Array.from(
+        { length: 5 },
+        (_, index) => new ColumnStream(new SeededRNG(index), BASE_REEL_CONFIG, index + 1),
+      ),
+    ] as [
+      ColumnStream,
+      ColumnStream,
+      ColumnStream,
+      ColumnStream,
+      ColumnStream,
+      ColumnStream,
+    ];
+    const board: Board = [
+      ["S4", "S2", "S3", "S4", "S5", "S6"],
+      ["S3", "S3", "S4", "S5", "S6", "S7"],
+      ["S2", "S4", "S5", "S6", "S7", "S8"],
+      ["S1", "S5", "S6", "S7", "S8", "S1"],
+      ["S5", "S6", "S7", "S8", "S1", "S2"],
+    ];
+    const observations: Array<{
+      topSymbol: string;
+      belowSymbol: string | null;
+      copiedFromVisibleTop: boolean;
+    }> = [];
+
+    const result = removeAndRefill(
+      board,
+      [{ row: 4, col: 0 }],
+      source,
+      false,
+      "base",
+      streams,
+      { onVisibleUnpairedRefill: (event) => observations.push(event) },
+    );
+
+    expect(observations).toEqual([
+      expect.objectContaining({
+        topSymbol: "S4",
+        belowSymbol: "S3",
+        copiedFromVisibleTop: true,
+      }),
+    ]);
+    expect(result.boardAfterGravity[0][0]).toMatchObject({
+      kind: "NORMAL_SYMBOL",
+      symbol: "S4",
+    });
+    expect(result.boardAfterGravity[1][0]).toBe("S4");
+  });
+
+  it("keeps multiple refill emissions in bottom-up stream order", () => {
+    const values = [
+      0.99, 0.2,
+      0.1,
+      0.99, 0.4,
+      0.1,
+      0.99, 0.6,
+      0.1,
+      0.99, 0.8,
+      0.1,
+    ];
+    const source: RandomSource = { nextFloat: () => values.shift() ?? 0.1 };
+    const active = new ColumnStream(source, BASE_REEL_CONFIG, 0);
+    const initialColumn = [];
+    for (let logicalRow = 0; logicalRow < 5; logicalRow += 1) {
+      const previous = logicalRow > 0 ? initialColumn[logicalRow - 1] : null;
+      initialColumn.push(active.nextVisibleAware(
+        "BASE_INITIAL",
+        false,
+        previous ? getNormalSymbol(previous) : null,
+      ).cell);
+    }
+    const streams = [
+      active,
+      ...Array.from(
+        { length: 5 },
+        (_, index) => new ColumnStream(new SeededRNG(index), BASE_REEL_CONFIG, index + 1),
+      ),
+    ] as [
+      ColumnStream,
+      ColumnStream,
+      ColumnStream,
+      ColumnStream,
+      ColumnStream,
+      ColumnStream,
+    ];
+    const board: Board = Array.from(
+      { length: 5 },
+      (_, boardRow) => Array.from(
+        { length: 6 },
+        (_, col) => col === 0 ? initialColumn[4 - boardRow] : "SCATTER",
+      ),
+    ) as Board;
+
+    const result = removeAndRefill(
+      board,
+      [{ row: 2, col: 0 }, { row: 3, col: 0 }, { row: 4, col: 0 }],
+      source,
+      false,
+      "base",
+      streams,
+    );
+    const displayed = result.boardAfterGravity.map((row) => row[0]);
+    const metadata = displayed.map(getStackMetadata);
+
+    expect(metadata[0]).toMatchObject({ stackIndex: 1 });
+    expect(metadata[1]).toMatchObject({ stackId: metadata[0]?.stackId, stackIndex: 0 });
+    expect(metadata[2]).toMatchObject({ stackIndex: 1 });
+    expect(metadata[3]).toMatchObject({ stackId: metadata[2]?.stackId, stackIndex: 0 });
+    expect(getNormalSymbol(displayed[0])).toBe(getNormalSymbol(displayed[1]));
+    expect(getNormalSymbol(displayed[2])).toBe(getNormalSymbol(displayed[3]));
   });
 });

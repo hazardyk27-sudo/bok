@@ -85,9 +85,9 @@ export function removeAndRefill(
     const generated: BoardCell[] = [];
     const refillContext = allowCores && mode === "bonus" ? "BONUS_REFILL" : "BASE_REFILL";
     while (generated.length < BOARD_ROWS - survivors.length) {
-      const visibleColumn = [...generated, ...survivors];
-      const topCell = visibleColumn.at(-1);
-      const belowCell = visibleColumn.at(-2);
+      const visibleColumn = [...generated].reverse().concat(survivors);
+      const topCell = visibleColumn[0];
+      const belowCell = visibleColumn[1];
       const topSymbol = topCell ? getNormalSymbol(topCell) : null;
       const belowSymbol = belowCell ? getNormalSymbol(belowCell) : null;
       const isVisuallyUnpaired = Boolean(topSymbol && belowSymbol !== topSymbol);
@@ -95,7 +95,7 @@ export function removeAndRefill(
         ? streams[col].nextVisibleAware(
           refillContext,
           allowCores,
-          isVisuallyUnpaired && topSymbol ? topSymbol : null,
+          topSymbol,
           coreBudget,
         )
         : generateVisibleAwareRefillCell(
@@ -103,7 +103,7 @@ export function removeAndRefill(
           allowCores,
           mode,
           col,
-          isVisuallyUnpaired && topSymbol ? topSymbol : null,
+          topSymbol,
           coreBudget,
         );
       const incoming = emission.cell;
@@ -121,7 +121,7 @@ export function removeAndRefill(
       }
       generated.push(incoming);
     }
-    const column = [...generated, ...survivors];
+    const column = [...generated].reverse().concat(survivors);
     for (let row = 0; row < BOARD_ROWS; row += 1) next[row][col] = column[row];
     newSymbols.push(...generated);
   }
