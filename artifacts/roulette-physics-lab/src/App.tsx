@@ -94,6 +94,12 @@ const DEFAULT_LAUNCH_PARAMETERS = {
   initialSpin: 230,
   variation: 0.005,
 } as const;
+
+function legacyRouletteWorldDisabled(): RAPIER.World {
+  throw new Error(
+    'Legacy roulette physics is disabled. Use the authoritative GLB world in Part2SceneViewport.',
+  );
+}
 const EUROPEAN_SEQUENCE = [
   0, 32, 15, 19, 4, 21, 2, 25, 17, 34, 6, 27, 13, 36, 11, 30, 8, 23, 10,
   5, 24, 16, 33, 1, 20, 14, 31, 9, 22, 18, 29, 7, 28, 12, 35, 3, 26,
@@ -1056,7 +1062,7 @@ async function runDropProbeValidation(specs: ColliderSpec[]): Promise<PhysicsRep
   const results: ProbeResult[] = [];
 
   for (const probe of probes) {
-    const world = new RAPIER.World({ x: 0, y: WORLD_GRAVITY_Y, z: 0 });
+    const world = legacyRouletteWorldDisabled();
     world.timestep = FIXED_TIMESTEP;
     world.maxCcdSubsteps = 4;
     const stationaryBody = world.createRigidBody(RAPIER.RigidBodyDesc.fixed());
@@ -1192,7 +1198,7 @@ function createColliderWorld(
   specs: ColliderSpec[],
   rotorParameters?: RotorPhysicsParameters,
 ) {
-  const world = new RAPIER.World({ x: 0, y: WORLD_GRAVITY_Y, z: 0 });
+  const world = legacyRouletteWorldDisabled();
   world.timestep = FIXED_TIMESTEP;
   world.maxCcdSubsteps = 8;
   const stationaryBody = world.createRigidBody(RAPIER.RigidBodyDesc.fixed());
@@ -2139,7 +2145,7 @@ async function runBallValidation(
 
   for (let index = 0; index < testCount; index += 1) {
     const release = variedBallRelease(index, parameters);
-    const { world, rotorBody } = createColliderWorld(specs);
+  const { world, rotorBody } = createColliderWorld(specs);
     const ballBody = createDynamicBallBody(
       world,
       parameters,
@@ -2664,12 +2670,16 @@ function SceneViewport({
            try {
              await RAPIER.init();
              if (disposed) return;
-              physicsWorld = new RAPIER.World({ x: 0, y: WORLD_GRAVITY_Y, z: 0 });
-             physicsWorld.timestep = FIXED_TIMESTEP;
-              physicsWorld.maxCcdSubsteps = 8;
-             const stationaryBody = physicsWorld.createRigidBody(RAPIER.RigidBodyDesc.fixed());
+              // The legacy viewport is retained only for its dormant UI shape.
+              // It must never construct a second roulette physics world.
+              physicsWorld = null;
+              return;
+              if (!physicsWorld) return;
+              physicsWorld!.timestep = FIXED_TIMESTEP;
+              physicsWorld!.maxCcdSubsteps = 8;
+             const stationaryBody = physicsWorld!.createRigidBody(RAPIER.RigidBodyDesc.fixed());
               const rotorBody = createDynamicRotorBody(
-                physicsWorld,
+                 physicsWorld!,
                 rotorParametersRef.current,
               );
              colliderSpecs
@@ -3438,12 +3448,14 @@ function App() {
     setRotorTestDetail('Reference angle · 0.0°');
   };
   const runRotorTest = () => {
-    setRotorTestState('running');
-    setRotorTestDetail('Physics rotor + tangential launch');
-    setRotorTestRequest((current) => current + 1);
+    setRotorTestState('idle');
+    setRotorTestDetail('Disabled: only the three PART 1 authoritative-world probes are in scope.');
   };
   const runProbeTest = () => {
-    setProbeTestRequest((current) => current + 1);
+    setPhysicsReport({
+      ...EMPTY_PHYSICS_REPORT,
+      detail: 'Disabled: legacy drop-probe validation cannot create a parallel world.',
+    });
   };
   const issueBallCommand = (kind: BallCommandKind) => {
     setBallCommand((current) => ({ kind, token: current.token + 1 }));
@@ -3460,30 +3472,22 @@ function App() {
   const runBallValidation = () => {
     setBallValidationReport({
       ...EMPTY_BALL_REPORT,
-      status: 'running',
-       detail: `Running ${BALL_VALIDATION_TEST_COUNT} varied dynamic-body tests at ${Math.round(1 / FIXED_TIMESTEP)} Hz with CCD…`,
+      detail: 'Disabled: the 100-test legacy validation is outside PART 1 scope.',
     });
-    setBallValidationRequest((current) => current + 1);
   };
   const runPart4Audit = () => {
     setPart4Report({
       ...EMPTY_PART4_REPORT,
-      status: 'running',
-      testCount: PART4_SPIN_TEST_COUNT,
-      detail: `Running ${PART4_SPIN_TEST_COUNT} complete coupled rotor/ball spins…`,
+      detail: 'Disabled: PART 4 is outside the single-world PART 1 validation scope.',
     });
-    setPart4State('active');
-    setPart4StateDetail(`Running ${PART4_SPIN_TEST_COUNT} complete physics spins…`);
-    setPart4RunRequest((current) => current + 1);
+    setPart4State('ready');
+    setPart4StateDetail('Disabled: PART 4 is outside the current validation scope.');
   };
   const runPart5Audit = () => {
     setPart5Report({
       ...EMPTY_PART5_REPORT,
-      status: 'running',
-      testCount: PART5_SPIN_TEST_COUNT,
-      detail: `Running ${PART5_SPIN_TEST_COUNT} full physical chains…`,
+      detail: 'Disabled: PART 5 is outside the single-world PART 1 validation scope.',
     });
-    setPart5RunRequest((current) => current + 1);
   };
   const retryLoad = () => {
     setAudit(null);
@@ -3754,8 +3758,8 @@ function App() {
               <button type="button" className="secondary-button" onClick={resetRotor} data-testid="button-rotor-reset">
                 Reset reference
               </button>
-              <button type="button" className="primary-button" onClick={runRotorTest} data-testid="button-rotor-test">
-                Launch coupled spin
+              <button type="button" className="primary-button" onClick={runRotorTest} disabled data-testid="button-rotor-test">
+                Disabled outside PART 1
               </button>
             </div>
             <div className={`rotor-test-status rotor-test-${rotorTestState}`} data-testid="status-rotor-test">
@@ -3784,10 +3788,10 @@ function App() {
               type="button"
               className="primary-button"
               onClick={runProbeTest}
-              disabled={physicsReport.status === 'running' || !audit}
+              disabled
               data-testid="button-run-probes"
             >
-              {physicsReport.status === 'running' ? 'Running temporary probes…' : 'Run 5 drop probes'}
+              Disabled outside PART 1
             </button>
             <div className={`probe-status probe-${physicsReport.status}`} data-testid="status-probes">
               <span>
@@ -3886,16 +3890,16 @@ function App() {
               <button type="button" className="secondary-button" onClick={() => issueBallCommand('apply')} data-testid="button-apply-ball-settings">
                 Apply + reset ball
               </button>
-              <button type="button" className="primary-button" onClick={() => issueBallCommand('release')} data-testid="button-release-ball">
-                Release selected drop
+              <button type="button" className="primary-button" onClick={() => issueBallCommand('release')} disabled data-testid="button-release-ball">
+                Disabled outside PART 1
               </button>
             </div>
             <div className="rotor-test-actions">
-              <button type="button" className="secondary-button" onClick={() => issueBallCommand('varied')} data-testid="button-release-varied-ball">
-                Release varied drop
+              <button type="button" className="secondary-button" onClick={() => issueBallCommand('varied')} disabled data-testid="button-release-varied-ball">
+                Disabled outside PART 1
               </button>
-              <button type="button" className="primary-button" onClick={runBallValidation} disabled={ballValidationReport.status === 'running' || !audit} data-testid="button-run-ball-validation">
-                 {ballValidationReport.status === 'running' ? `Running ${BALL_VALIDATION_TEST_COUNT} tests…` : `Run ${BALL_VALIDATION_TEST_COUNT} collision tests`}
+              <button type="button" className="primary-button" onClick={runBallValidation} disabled data-testid="button-run-ball-validation">
+                 Disabled outside PART 1
               </button>
             </div>
             <div className={`probe-status ball-runtime-${ballState}`} data-testid="status-ball-runtime">
@@ -3936,12 +3940,10 @@ function App() {
               type="button"
               className="primary-button"
               onClick={runPart4Audit}
-              disabled={part4Report.status === 'running' || !audit}
+              disabled
               data-testid="button-run-part4-validation"
             >
-              {part4Report.status === 'running'
-                ? `Running ${PART4_SPIN_TEST_COUNT} full spins…`
-                : `Run ${PART4_SPIN_TEST_COUNT} full runtime spins`}
+              Disabled outside PART 1
             </button>
             <div className={`probe-status probe-${part4Report.status}`} data-testid="status-part4-validation">
               <span>
@@ -4074,12 +4076,10 @@ function App() {
               type="button"
               className="primary-button"
               onClick={runPart5Audit}
-              disabled={part5Report.status === 'running' || !audit}
+              disabled
               data-testid="button-run-part5-validation"
             >
-              {part5Report.status === 'running'
-                ? `Running ${PART5_SPIN_TEST_COUNT} full physical spins…`
-                : `Run ${PART5_SPIN_TEST_COUNT} full physical spins`}
+              Disabled outside PART 1
             </button>
             <div className={`probe-status probe-${part5Report.status}`} data-testid="status-part5-validation">
               <span>
@@ -4235,7 +4235,7 @@ function App() {
             <Part2SceneViewport
               loadKey={loadKey}
               validationMode="part3"
-               geometryDiagnosticOnly
+              part1ProbeOnly
               view={view}
               showGrid={showGrid}
               showPhysicsDebug={showPhysicsDebug}

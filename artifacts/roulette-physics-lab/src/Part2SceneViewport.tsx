@@ -417,14 +417,17 @@ type Part4ValidationReport = {
 type PocketEntryProbeResult = {
   id: string;
   label: string;
-  targetPocketIndex: number;
-  targetPocketNumber: number;
+  kind: 'side-track' | 'bowl-contact' | 'pocket-aperture';
+  targetPocketIndex: number | null;
+  targetPocketNumber: number | null;
   rotorAngularSpeed: number;
   entryVelocity: VectorReadout;
   peakBallSpeed: number;
   maxPenetration: number;
   maxSeparation: number;
   fretContact: boolean;
+  physicalContact: boolean;
+  contactColliderType: string | null;
   artificialEnergyInjection: boolean;
   escaped: boolean;
   tunneled: boolean;
@@ -445,6 +448,7 @@ type PocketValidationReport = {
 type Part2SceneViewportProps = {
   loadKey: number;
   validationMode?: 'part2' | 'part3' | 'part4';
+  part1ProbeOnly?: boolean;
   alignmentOnly?: boolean;
   outerLaneOnly?: boolean;
   outerLaneSpinOnly?: boolean;
@@ -537,27 +541,32 @@ const PART4_PROBES = [
   },
 ] as const;
 
-const POCKET_ENTRY_PROBES = [
+const PART1_PROBES = [
   {
-    id: 'pocket-center',
-    label: 'Pocket-center entry',
+    id: 'real-side-track-placement',
+    label: 'Real side-track placement',
+    kind: 'side-track',
+    angle: 0.37,
+    radius: 2.39,
+    durationSeconds: 0.15,
+  },
+  {
+    id: 'bowl-contact',
+    label: 'Bowl contact',
+    kind: 'bowl-contact',
+    angle: 0.37,
+    radius: 2.05,
+    durationSeconds: 0.65,
+  },
+  {
+    id: 'pocket-aperture-access',
+    label: 'Representative pocket-aperture access',
+    kind: 'pocket-aperture',
     targetPocketIndex: 0,
     angularOffset: 0,
     tangentialSpeed: 0,
-  },
-  {
-    id: 'positive-side-fret',
-    label: 'Positive-side fret approach',
-    targetPocketIndex: 12,
-    angularOffset: POCKET_STEP_RADIANS * 0.30,
-    tangentialSpeed: -0.08,
-  },
-  {
-    id: 'negative-side-fret',
-    label: 'Negative-side fret approach',
-    targetPocketIndex: 25,
-    angularOffset: -POCKET_STEP_RADIANS * 0.30,
-    tangentialSpeed: 0.04,
+    radius: 1.62,
+    durationSeconds: 3.5,
   },
 ] as const;
 
@@ -891,60 +900,67 @@ function pocketEntryVelocity(angle: number, tangentialSpeed: number): VectorRead
   };
 }
 
-async function runPocketEntryValidation(): Promise<PocketValidationReport> {
-  await RAPIER.init();
+function runPocketEntryValidation(
+  world: RAPIER.World,
+  rotorBody: RAPIER.RigidBody,
+  ballBody: RAPIER.RigidBody,
+  ballCollider: RAPIER.Collider,
+  pocketColliders: RAPIER.Collider[],
+  initialRotorAngle: number,
+  ballMesh: THREE.Mesh,
+  visibleSurfaceAt: (x: number, z: number) => { y: number; source: string } | null,
+  colliderRoles: ReadonlyMap<number, string>,
+  trackCollider: RAPIER.Collider | null,
+): PocketValidationReport {
   const results: PocketEntryProbeResult[] = [];
-  // Direct-entry validation phase-locks the rotor at its reference angle.
-  // The same setNextKinematicRotation path is used, but no outer-track launch
-  // energy is allowed into this isolated geometry test.
+  // These probes reuse the live GLB runtime world. They only reset the existing
+  // dynamic ball and kinematic rotor between cases; no probe owns a world or
+  // creates a second collider set.
   const rotorAngularSpeed = 0;
-  const durationSteps = Math.round(3.5 / FIXED_TIMESTEP);
 
-  for (const probe of POCKET_ENTRY_PROBES) {
-    const world = new RAPIER.World({ x: 0, y: GRAVITY_Y, z: 0 });
-    world.timestep = FIXED_TIMESTEP;
-    world.maxCcdSubsteps = 8;
-    const rotorBody = world.createRigidBody(
-      RAPIER.RigidBodyDesc.kinematicPositionBased(),
-    );
-    const pocketColliders = addKinematicPocketSystem(world, rotorBody);
+  for (const probe of PART1_PROBES) {
     const targetAngle =
-      probe.targetPocketIndex * POCKET_STEP_RADIANS + probe.angularOffset;
+      probe.kind === 'pocket-aperture'
+        ? probe.targetPocketIndex * POCKET_STEP_RADIANS + probe.angularOffset
+        : probe.angle;
+    const samplePosition = radialPosition(probe.radius, targetAngle, 0);
+    const visibleSurface = visibleSurfaceAt(samplePosition[0], samplePosition[2]);
+    const contactSurfaceY =
+      probe.kind === 'pocket-aperture'
+        ? POCKET_FLOOR_Y
+        : visibleSurface?.y ?? part3TrackHeight(probe.radius);
     const entryPosition = radialPosition(
-      1.62,
+      probe.radius,
       targetAngle,
-      POCKET_FLOOR_Y + BALL_RADIUS + 0.18,
+      probe.kind === 'pocket-aperture'
+        ? POCKET_FLOOR_Y + BALL_RADIUS + 0.18
+        : contactSurfaceY +
+            BALL_RADIUS +
+            (probe.kind === 'side-track' ? 0.02 : 0),
     );
-    const entryVelocity = pocketEntryVelocity(
-      targetAngle,
-      probe.tangentialSpeed,
+    const entryVelocity =
+      probe.kind === 'bowl-contact'
+        ? { x: 0, y: -0.7, z: 0 }
+        : probe.kind === 'side-track'
+          ? { x: 0, y: 0, z: 0 }
+          : pocketEntryVelocity(targetAngle, probe.tangentialSpeed);
+    ballBody.setTranslation(
+      { x: entryPosition[0], y: entryPosition[1], z: entryPosition[2] },
+      true,
     );
-    const ballBody = world.createRigidBody(
-      RAPIER.RigidBodyDesc.dynamic()
-        .setTranslation(...entryPosition)
-        .setLinvel(entryVelocity.x, entryVelocity.y, entryVelocity.z)
-        .setAdditionalMass(BALL_MASS)
-        .setLinearDamping(0.04)
-        .setAngularDamping(0.08)
-        .setCcdEnabled(true)
-        .setSoftCcdPrediction(BALL_RADIUS * 2.5)
-        .setCanSleep(false),
-    );
-    ballBody.enableCcd(true);
-    ballBody.setSoftCcdPrediction(BALL_RADIUS * 2.5);
-    const ballCollider = world.createCollider(
-      RAPIER.ColliderDesc.ball(BALL_RADIUS)
-        .setFriction(0.42)
-        .setRestitution(0.02)
-        .setDensity(0.001)
-        .setCollisionGroups(
-          BALL_COLLISION_GROUP |
-            ((ROTOR_COLLISION_GROUP | STATIONARY_COLLISION_GROUP) << 16),
-        ),
-      ballBody,
-    );
+    ballBody.setLinvel(entryVelocity, true);
+    ballBody.setAngvel({ x: 0, y: 0, z: 0 }, true);
+    ballBody.wakeUp();
+    rotorBody.setNextKinematicRotation({
+      x: 0,
+      y: Math.sin(initialRotorAngle / 2),
+      z: 0,
+      w: Math.cos(initialRotorAngle / 2),
+    });
     const fretHandles = new Set(
-      pocketColliders.slice(1).map((collider) => collider.handle),
+      pocketColliders
+        .slice(1, EUROPEAN_POCKET_COUNT + 1)
+        .map((collider) => collider.handle),
     );
     let peakBallSpeed = 0;
     let maxPenetration = 0;
@@ -958,11 +974,14 @@ async function runPocketEntryValidation(): Promise<PocketValidationReport> {
     );
     let settledFrames = 0;
     let fretContact = false;
+    let physicalContact = false;
+    let contactColliderType: string | null = null;
     let escaped = false;
     let tunneled = false;
     let artificialEnergyInjection = false;
-    let rotorAngle = 0;
+    let rotorAngle = normalizedAngle(initialRotorAngle);
 
+    const durationSteps = Math.round(probe.durationSeconds / FIXED_TIMESTEP);
     for (let step = 0; step < durationSteps; step += 1) {
       rotorAngle += rotorAngularSpeed * FIXED_TIMESTEP;
       rotorBody.setNextKinematicRotation({
@@ -977,8 +996,8 @@ async function runPocketEntryValidation(): Promise<PocketValidationReport> {
       const speed = Math.hypot(velocity.x, velocity.y, velocity.z);
       const radius = Math.hypot(position.x, position.z);
       const bottom = position.y - BALL_RADIUS;
-      const penetration = Math.max(0, POCKET_FLOOR_Y - bottom);
-      const separation = Math.max(0, bottom - POCKET_FLOOR_Y);
+      const penetration = Math.max(0, contactSurfaceY - bottom);
+      const separation = Math.max(0, bottom - contactSurfaceY);
       const rotorRotation = rotorBody.rotation();
       const bodyRotorAngle = normalizedAngle(
         2 * Math.atan2(rotorRotation.y, rotorRotation.w),
@@ -997,15 +1016,39 @@ async function runPocketEntryValidation(): Promise<PocketValidationReport> {
       maxPenetration = Math.max(maxPenetration, penetration);
       maxSeparation = Math.max(maxSeparation, separation);
       world.contactPairsWith(ballCollider, (otherCollider) => {
+        const role =
+          colliderRoles.get(otherCollider.handle) ??
+          (trackCollider?.handle === otherCollider.handle
+            ? 'actual-glb-outside-trimesh'
+            : null);
+        if (role) {
+          physicalContact = true;
+          contactColliderType = role;
+        }
         if (fretHandles.has(otherCollider.handle)) fretContact = true;
       });
+      ballMesh.position.set(position.x, position.y, position.z);
+      const rotation = ballBody.rotation();
+      ballMesh.quaternion.set(rotation.x, rotation.y, rotation.z, rotation.w);
+      const minimumValidRadius =
+        probe.kind === 'pocket-aperture'
+          ? POCKET_FLOOR_INNER_RADIUS - 0.14
+          : probe.kind === 'side-track'
+            ? 2.12
+            : 1.72;
+      const maximumValidRadius =
+        probe.kind === 'pocket-aperture'
+          ? POCKET_FLOOR_OUTER_RADIUS + 0.14
+          : probe.kind === 'side-track'
+            ? 2.62
+            : 2.42;
       escaped ||=
         !Number.isFinite(position.x) ||
         !Number.isFinite(position.y) ||
         !Number.isFinite(position.z) ||
-        radius < POCKET_FLOOR_INNER_RADIUS - 0.14 ||
-        radius > POCKET_FLOOR_OUTER_RADIUS + 0.14 ||
-        position.y < POCKET_FLOOR_Y - BALL_RADIUS - 0.18;
+        radius < minimumValidRadius ||
+        radius > maximumValidRadius ||
+        position.y < contactSurfaceY - BALL_RADIUS - 0.18;
       tunneled ||= penetration > 0.08;
       artificialEnergyInjection ||=
         speed > Math.max(8, previousSpeed * 4);
@@ -1034,6 +1077,7 @@ async function runPocketEntryValidation(): Promise<PocketValidationReport> {
       Math.atan2(finalPosition.x, finalPosition.z) - rotorAngle,
     );
     const finalPocketIndex =
+      probe.kind === 'pocket-aperture' &&
       finalRadius >= POCKET_FLOOR_INNER_RADIUS + BALL_RADIUS &&
       finalRadius <= POCKET_FLOOR_OUTER_RADIUS - BALL_RADIUS
         ? pocketIndexFromLocalPosition(
@@ -1043,26 +1087,36 @@ async function runPocketEntryValidation(): Promise<PocketValidationReport> {
         : null;
     const settled =
       settledFrames >= Math.round(0.5 / FIXED_TIMESTEP) && finalSpeed < 0.12;
-    const pocketMatch = finalPocketIndex === probe.targetPocketIndex;
+    const pocketMatch =
+      probe.kind !== 'pocket-aperture' ||
+      finalPocketIndex === probe.targetPocketIndex;
     const passed =
       !escaped &&
       !tunneled &&
       !artificialEnergyInjection &&
-      settled &&
-      pocketMatch &&
-      maxRotorSyncError <= 0.000001;
+      maxRotorSyncError <= 0.000001 &&
+      (probe.kind === 'pocket-aperture'
+        ? settled && pocketMatch && physicalContact
+        : physicalContact && maxPenetration <= 0.03);
 
     results.push({
       id: probe.id,
       label: probe.label,
-      targetPocketIndex: probe.targetPocketIndex,
-      targetPocketNumber: EUROPEAN_SEQUENCE[probe.targetPocketIndex],
+      kind: probe.kind,
+      targetPocketIndex:
+        probe.kind === 'pocket-aperture' ? probe.targetPocketIndex : null,
+      targetPocketNumber:
+        probe.kind === 'pocket-aperture'
+          ? EUROPEAN_SEQUENCE[probe.targetPocketIndex]
+          : null,
       rotorAngularSpeed,
       entryVelocity,
       peakBallSpeed: Number(peakBallSpeed.toFixed(4)),
       maxPenetration: Number(maxPenetration.toFixed(4)),
       maxSeparation: Number(maxSeparation.toFixed(4)),
       fretContact,
+      physicalContact,
+      contactColliderType,
       artificialEnergyInjection,
       escaped,
       tunneled,
@@ -1073,38 +1127,40 @@ async function runPocketEntryValidation(): Promise<PocketValidationReport> {
       maxVisualBodySyncError,
       maxRotorSyncError: Number(maxRotorSyncError.toFixed(6)),
       detail: passed
-        ? fretContact
-          ? 'Stable pocket settle with controlled fret contact.'
-          : 'Stable pocket-center settle without fret contact.'
-        : `Pocket entry failed: ${[
+        ? probe.kind === 'pocket-aperture'
+          ? fretContact
+            ? 'Stable pocket settle with controlled fret contact.'
+            : 'Stable pocket-center settle without fret contact.'
+          : `Authoritative ${probe.kind} contact verified at ${contactColliderType ?? 'unknown collider'}.`
+        : `PART 1 probe failed: ${[
             escaped && 'escape',
             tunneled && 'tunneling',
             artificialEnergyInjection && 'energy injection',
-            !settled && 'no stable settle',
+            probe.kind === 'pocket-aperture' && !settled && 'no stable settle',
             !pocketMatch && 'wrong final pocket',
+            !physicalContact && 'no authoritative-world contact',
           ]
             .filter(Boolean)
             .join(', ') || 'review required'}.`,
     });
-    world.removeRigidBody(ballBody);
-    world.removeRigidBody(rotorBody);
   }
 
   const passed = results.filter(
     (result) =>
-      result.settled &&
+      result.physicalContact &&
       !result.escaped &&
       !result.tunneled &&
       !result.artificialEnergyInjection &&
-      result.finalPocketIndex === result.targetPocketIndex,
+      (result.kind !== 'pocket-aperture' ||
+        (result.settled && result.finalPocketIndex === result.targetPocketIndex)),
   ).length;
   return {
-    status: passed === POCKET_ENTRY_PROBES.length ? 'passed' : 'failed',
+    status: passed === PART1_PROBES.length ? 'passed' : 'failed',
     results,
     detail:
-      passed === POCKET_ENTRY_PROBES.length
-        ? 'All three direct European pocket-entry probes passed at 120 Hz with CCD.'
-        : `${POCKET_ENTRY_PROBES.length - passed} direct pocket-entry probe(s) need geometry review.`,
+      passed === PART1_PROBES.length
+        ? 'All three PART 1 probes passed in the authoritative GLB world at 120 Hz with CCD.'
+        : `${PART1_PROBES.length - passed} PART 1 probe(s) need geometry review.`,
   };
 }
 
@@ -1298,6 +1354,7 @@ function createBallVisual() {
 export function Part2SceneViewport({
   loadKey,
   validationMode = 'part2',
+  part1ProbeOnly = false,
   alignmentOnly = false,
   outerLaneOnly = false,
   outerLaneSpinOnly = false,
@@ -1556,7 +1613,11 @@ export function Part2SceneViewport({
       setPart3GeometryDiagnosticReport(report);
     };
 
-    const measureVisibleSurfaceAt = (x: number, z: number) => {
+    const measureVisibleSurfaceAt = (
+      x: number,
+      z: number,
+      darkTrackOnly = true,
+    ) => {
       if (!stationaryGroup) return null;
       stationaryGroup.updateMatrixWorld(true);
       const sampleRadius = Math.hypot(x, z);
@@ -1578,10 +1639,11 @@ export function Part2SceneViewport({
           const isOutsideGeometry = objectName === 'geo1_outside_0';
           const isOutsideMaterial = materialNames.includes('outside');
           return (
-            sampleRadius >= PART3_DARK_TRACK_RADIUS_BAND[0] &&
-            sampleRadius <= PART3_DARK_TRACK_RADIUS_BAND[1] &&
-            hitRadius >= PART3_DARK_TRACK_RADIUS_BAND[0] &&
-            hitRadius <= PART3_DARK_TRACK_RADIUS_BAND[1] &&
+            (!darkTrackOnly ||
+              (sampleRadius >= PART3_DARK_TRACK_RADIUS_BAND[0] &&
+                sampleRadius <= PART3_DARK_TRACK_RADIUS_BAND[1] &&
+                hitRadius >= PART3_DARK_TRACK_RADIUS_BAND[0] &&
+                hitRadius <= PART3_DARK_TRACK_RADIUS_BAND[1])) &&
             (isOutsideGeometry || isOutsideMaterial) &&
             intersection.point.y > -1.5 &&
             intersection.point.y < 1
@@ -2744,7 +2806,11 @@ export function Part2SceneViewport({
           world.timestep = FIXED_TIMESTEP;
           world.maxCcdSubsteps = 8;
           const stationaryBody = world.createRigidBody(RAPIER.RigidBodyDesc.fixed());
-           if (validationMode === 'part3' && !geometryDiagnosticOnly) {
+           if (
+             validationMode === 'part3' &&
+             !geometryDiagnosticOnly &&
+             !part1ProbeOnly
+           ) {
              const launchSample = radialPosition(PART3_LAUNCH_RADIUS, 0.37, 0);
              const darkTrackSurface = measureVisibleSurfaceAt(
                launchSample[0],
@@ -2773,7 +2839,10 @@ export function Part2SceneViewport({
             for (const collider of part3DeflectorColliders) {
               part3ColliderRoles.set(collider.handle, 'visible-deflector-cuboid');
             }
-           } else if (validationMode === 'part3' && geometryDiagnosticOnly) {
+           } else if (
+             validationMode === 'part3' &&
+             (geometryDiagnosticOnly || part1ProbeOnly)
+           ) {
              const actualOutsideMesh = makeWorldTrimeshFromObject(outside);
              part3TrackCollider = world.createCollider(
                RAPIER.ColliderDesc.trimesh(
@@ -2820,10 +2889,7 @@ export function Part2SceneViewport({
             stationaryBody,
           );
 
-            if (
-              (validationMode === 'part3' && !geometryDiagnosticOnly) ||
-              validationMode === 'part4'
-            ) {
+            if (validationMode === 'part3' || validationMode === 'part4') {
             const initialRotorAngle = normalizedAngle(rotorAngleRef.current);
             rotorBody = world.createRigidBody(
               RAPIER.RigidBodyDesc.kinematicPositionBased()
@@ -2835,7 +2901,7 @@ export function Part2SceneViewport({
                   w: Math.cos(initialRotorAngle / 2),
                 }),
             );
-              if (validationMode === 'part3' && !geometryDiagnosticOnly) {
+              if (validationMode === 'part3') {
                part3PocketColliders = addKinematicPocketSystem(world, rotorBody);
                part3PocketColliders.forEach((collider, index) => {
                  part3ColliderRoles.set(
@@ -2910,22 +2976,39 @@ export function Part2SceneViewport({
           ballBody.setTranslation({ x: initialPosition[0], y: initialPosition[1], z: initialPosition[2] }, true);
           ballMesh.position.set(...initialPosition);
             if (
-              !alignmentOnly &&
-              !outerLaneOnly &&
-              !outerLaneSpinOnly &&
-              !geometryDiagnosticOnly
+              part1ProbeOnly &&
+              validationMode === 'part3' &&
+              rotorBody &&
+              ballBody &&
+              physicsBallCollider
             ) {
-             setPocketReport({
-               status: 'running',
-               results: [],
-               detail: 'Running three direct European pocket-entry probes at 120 Hz with CCD…',
-             });
-             void runPocketEntryValidation().then((report) => {
-               if (!disposed) setPocketReport(report);
-             });
-           }
+              setPocketReport({
+                status: 'running',
+                results: [],
+                detail:
+                  'Running three PART 1 probes in the authoritative GLB world at 120 Hz with CCD…',
+              });
+              const report = runPocketEntryValidation(
+                world,
+                rotorBody,
+                ballBody,
+                physicsBallCollider,
+                part3PocketColliders,
+                normalizedAngle(rotorAngleRef.current),
+                ballMesh,
+                (x, z) => measureVisibleSurfaceAt(x, z, false),
+                part3ColliderRoles,
+                part3TrackCollider,
+              );
+              if (!disposed) setPocketReport(report);
+            }
            if (validationMode === 'part3') {
-              if (geometryDiagnosticOnly) {
+              if (part1ProbeOnly) {
+                callbacksRef.current.onStateChange(
+                  'loaded',
+                  'PART 1 authoritative-world probes complete',
+                );
+              } else if (geometryDiagnosticOnly) {
                 try {
                   runPart3GeometryDiagnostic();
                 } catch (error) {
@@ -4541,9 +4624,10 @@ export function Part2SceneViewport({
           </span>
           {pocketReport.results.map((result) => (
             <span key={result.id}>
-              {result.label}: {result.detail} · target {result.targetPocketNumber} / index {result.targetPocketIndex} ·
+              {result.label}: {result.detail} · {result.kind} · target {result.targetPocketNumber ?? '—'} / index {result.targetPocketIndex ?? '—'} ·
               final {result.finalPocketNumber ?? '—'} · peak {result.peakBallSpeed.toFixed(4)} ·
               pen {result.maxPenetration.toFixed(4)} · sep {result.maxSeparation.toFixed(4)} ·
+              contact {result.physicalContact ? result.contactColliderType ?? 'yes' : 'no'} ·
               fret {result.fretContact ? 'yes' : 'no'} · escape {result.escaped ? 'yes' : 'no'} ·
               tunnel {result.tunneled ? 'yes' : 'no'} · energy injection {result.artificialEnergyInjection ? 'yes' : 'no'} ·
               rotor sync {result.maxRotorSyncError.toFixed(6)}
@@ -4551,7 +4635,7 @@ export function Part2SceneViewport({
           ))}
         </>
       ) : (
-        'Waiting for three direct pocket-entry probes.'
+        'Waiting for the three PART 1 authoritative-world probes.'
       )}
     </div>
   );
@@ -4581,7 +4665,9 @@ export function Part2SceneViewport({
         </span>
         <span>ANGLE {THREE.MathUtils.radToDeg(angleReadout).toFixed(2)}° · PIVOT [0, 0, 0] · Y+</span>
         <span>
-          {validationMode === 'part4'
+          {part1ProbeOnly
+            ? `PART 1 PROBES ${pocketReport?.status.toUpperCase() ?? 'WAITING'} · AUTHORITATIVE WORLD · CCD`
+            : validationMode === 'part4'
             ? `PROBES ${part4Report?.status.toUpperCase() ?? 'WAITING'} · KINEMATIC ROTOR · CCD`
             : validationMode === 'part3'
               ? outerLaneOnly
@@ -4594,7 +4680,9 @@ export function Part2SceneViewport({
               : `DROP ${dropReport?.status.toUpperCase() ?? 'WAITING'} · CCD · 120 HZ`}
         </span>
       </div>
-      {validationMode === 'part4' ? (
+      {part1ProbeOnly ? (
+        renderPocketReport()
+      ) : validationMode === 'part4' ? (
         <>
           {renderPart4Report()}
           {renderPocketReport()}

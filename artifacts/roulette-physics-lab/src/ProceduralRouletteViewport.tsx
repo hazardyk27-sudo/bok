@@ -460,18 +460,27 @@ export function ProceduralRouletteViewport(props: WheelProps) {
     const dropProfile = makeProfileTrimesh();
     void RAPIER.init().then(() => {
       if (disposed) return;
-      world = new RAPIER.World({ x: 0, y: GRAVITY, z: 0 });
-      world.timestep = STEP;
-      world.maxCcdSubsteps = 8;
-      const stationaryBody = world.createRigidBody(RAPIER.RigidBodyDesc.fixed());
+      // This prototype is intentionally disabled. The GLB viewport owns the
+      // only roulette Rapier world; never create a parallel procedural world.
+      callbacks.current.onStateChange(
+        "error",
+        "Procedural roulette physics is disabled; use the authoritative GLB world.",
+      );
+      return;
+      // eslint-disable-next-line no-unreachable
+      world = null;
+      if (!world) return;
+      world!.timestep = STEP;
+      world!.maxCcdSubsteps = 8;
+      const stationaryBody = world!.createRigidBody(RAPIER.RigidBodyDesc.fixed());
       const bowlCollider = RAPIER.ColliderDesc.trimesh(
         dropProfile.vertices,
         dropProfile.indices,
         RAPIER.TriMeshFlags.FIX_INTERNAL_EDGES | RAPIER.TriMeshFlags.ORIENTED,
       ).setFriction(0.012).setRestitution(0.08);
-      world.createCollider(bowlCollider, stationaryBody);
-      addSegmentRing(world, stationaryBody, OUTER_RADIUS, bowlY(OUTER_RADIUS) + 0.025, 0.075, 0.075, 0.05, 128, 0, 0.18, 0.16);
-      world.createCollider(
+      world!.createCollider(bowlCollider, stationaryBody);
+      addSegmentRing(world!, stationaryBody, OUTER_RADIUS, bowlY(OUTER_RADIUS) + 0.025, 0.075, 0.075, 0.05, 128, 0, 0.18, 0.16);
+      world!.createCollider(
         RAPIER.ColliderDesc.cuboid(3.0, 0.035, 3.0)
           .setTranslation(0, -0.27, 0)
           .setFriction(0.32)
@@ -485,10 +494,10 @@ export function ProceduralRouletteViewport(props: WheelProps) {
           .setRotation(yRotation(angle))
           .setFriction(0.42)
           .setRestitution(0.35);
-        world.createCollider(descriptor, stationaryBody);
+        world!.createCollider(descriptor, stationaryBody);
       }
-      rotorBody = world.createRigidBody(RAPIER.RigidBodyDesc.kinematicPositionBased());
-      addPocketCellColliders(world, rotorBody);
+      rotorBody = world!.createRigidBody(RAPIER.RigidBodyDesc.kinematicPositionBased());
+      addPocketCellColliders(world!, rotorBody!);
       spawnBall();
       callbacks.current.onStateChange("loaded", "Procedural European roulette V1 ready");
       callbacks.current.onAudit({

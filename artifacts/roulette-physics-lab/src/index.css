@@ -1376,6 +1376,37 @@ h1 {
   color: rgba(200, 141, 97, 0.82);
 }
 
+.part2-drop-report {
+  position: absolute;
+  right: 18px;
+  bottom: 18px;
+  z-index: 3;
+  display: grid;
+  gap: 5px;
+  width: min(620px, calc(100% - 36px));
+  max-height: 150px;
+  overflow: auto;
+  padding: 10px 12px;
+  border: 1px solid rgba(185, 214, 204, 0.22);
+  border-radius: 3px;
+  background: rgba(23, 37, 43, 0.9);
+  color: rgba(219, 230, 223, 0.82);
+  font-family: 'DM Mono', monospace;
+  font-size: 8px;
+  line-height: 1.45;
+  pointer-events: auto;
+}
+
+.part2-drop-report strong {
+  color: #d8a68a;
+  font-size: 9px;
+  font-weight: 500;
+}
+
+.part2-drop-report span {
+  display: block;
+}
+
 .grid-status {
   position: absolute;
   bottom: 19px;
