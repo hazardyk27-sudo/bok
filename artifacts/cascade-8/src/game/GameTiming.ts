@@ -3,8 +3,8 @@ export function getAnimationDuration(
   turbo: boolean,
   freeSpin = false,
 ) {
-  const normalDuration = Math.round(value * 1.00);
-  return turbo && !freeSpin ? Math.round(normalDuration * 0.60) : normalDuration;
+  const slowed = Math.round(value * 1.10);
+  return turbo && !freeSpin ? Math.round(slowed * 0.50) : slowed;
 }
 
 export function shouldResumeAutoSpin(autoResumeRequested: boolean, autoRemaining: number) {
