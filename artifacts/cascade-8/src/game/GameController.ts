@@ -247,7 +247,7 @@ export class GameController {
       this.audio.scatterAnticipation(result.scatterCount);
        this.audio.scatterArrival(result.scatterCount);
     }
-    await this.scene.animateDrop(this.duration(ANIMATION.initialDrop));
+     await this.scene.animateDrop(this.duration(ANIMATION.initialDrop), this.turbo);
     await this.playTumbles(result, false);
     this.currentWinCents = result.baseWinCents;
     this.updateHud();
@@ -323,7 +323,7 @@ export class GameController {
          this.audio.scatterArrival(freeSpin.scatterCount);
         this.audio.scatterCelebration(freeSpin.scatterCount);
       }
-      await this.scene.animateDrop(this.duration(ANIMATION.initialDrop, true));
+      await this.scene.animateDrop(this.duration(ANIMATION.initialDrop, true), false);
       await this.playTumbles({ ...result, tumbles: freeSpin.tumbles }, true);
       if (freeSpin.win === 0) {
         this.resolveZeroWinFreeSpin(freeSpin);
@@ -485,7 +485,12 @@ export class GameController {
       this.updateHud();
       this.setState("REFILL");
       this.setState("CASCADE_DROP");
-      await this.scene.animateCascade(tumble.boardAfterRefill, tumble.removedCells, this.duration(ANIMATION.refill, isBonus));
+       await this.scene.animateCascade(
+         tumble.boardAfterRefill,
+         tumble.removedCells,
+         this.duration(ANIMATION.refill, isBonus),
+         this.turbo && !isBonus,
+       );
       this.message(index > 0 ? `TUMBLE ${index + 1} // RAW ${tumble.rawWinPoolAfter.toFixed(2)}x` : `WIN // RAW ${tumble.rawWinPoolAfter.toFixed(2)}x`);
     }
     const last = result.tumbles.at(-1);
