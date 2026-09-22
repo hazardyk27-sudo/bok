@@ -29,6 +29,14 @@ export default defineConfig({
         ...(hasWorkspaceChromium ? { launchOptions: { executablePath: chromiumPath } } : {}),
       },
     },
+    {
+      name: "desktop-chromium",
+      testMatch: /cadi-kazan\.spec\.ts/,
+      use: {
+        ...devices["Desktop Chrome"],
+        ...(hasWorkspaceChromium ? { launchOptions: { executablePath: chromiumPath } } : {}),
+      },
+    },
     ...(process.env.ROULETTE_IOS === "1"
       ? [{
           name: "ios-safari",
