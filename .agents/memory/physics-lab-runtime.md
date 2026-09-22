@@ -18,3 +18,9 @@ The preview screenshot path may successfully load the GLB and show the audit whi
 **Why:** The proxied browser can lack a WebGL context even when the Rapier setup and asset audit complete, so a blank canvas alone is not evidence that physics initialization failed.
 
 **How to apply:** Keep validation status and probe details in an explicit DOM report overlay, and treat WebGL availability as a separate visual capability from physics validation.
+
+For sloped GLB-backed side-track contact, place the ball from the sampled triangle point along its transformed world-space normal by one ball radius plus a small measured tolerance; evaluate side-track penetration against that same local contact plane, not only the old vertical Y sample.
+
+**Why:** A vertical-only spawn and Y penetration metric can report false clipping when the true surface normal shifts the ball center in X/Z; the normal-based placement reduced the side-track guard from 0.0327 to 0.0006 without changing the 0.03 acceptance limit.
+
+**How to apply:** Preserve the single authoritative world and direct mesh/body sync, expose the sample point/normal/center in the report, and include penetration and rotor-sync guards in the aggregate PART 1 status.
