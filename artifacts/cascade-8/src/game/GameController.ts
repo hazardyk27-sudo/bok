@@ -704,7 +704,6 @@ export class GameController {
       const collectedAmountCents = Math.round(tumble.rawWinPoolAfter * collectedTotal * this.betCents);
       this.ui.tumble.textContent = formatTumbleCredits(collectedAmountCents);
       this.updateTumbleEquation(rawAmountCents, collectedTotal, collectedAmountCents);
-      await sleep(this.duration(105, isBonus));
     }
     const finalAmountCents = Math.round(tumble.finalPayoutMultiplier * this.betCents);
     this.ui.tumble.textContent = formatTumbleCredits(finalAmountCents);

@@ -513,7 +513,7 @@ export class GameScene extends Phaser.Scene {
         targets: node.container,
         scale: node.container.scale * 1.16 * emphasis,
         angle: node.container.angle + (core.value >= 500 ? 5 : 3),
-        duration: Math.max(70, Math.round(duration * 0.24)),
+        duration: Math.max(1, Math.round(duration * 0.24)),
         ease: "Back.easeOut",
         onComplete: () => resolve(),
       });
@@ -543,7 +543,7 @@ export class GameScene extends Phaser.Scene {
         y: targetPoint.y,
         scale: core.value >= 500 ? 0.8 : 0.7,
         alpha: 0.18,
-        duration: Math.max(100, Math.round(duration * 0.58)),
+        duration: Math.max(1, Math.round(duration * 0.58)),
         ease: "Cubic.easeInOut",
         onComplete: () => {
           this.destroyEffect(flight);
@@ -552,7 +552,7 @@ export class GameScene extends Phaser.Scene {
       });
     });
     this.markMultiplierCoreCollected(node);
-    await this.presentMultiplierImpact(node, Math.max(70, Math.round(duration * 0.3)));
+    await this.presentMultiplierImpact(node, Math.max(1, Math.round(duration * 0.3)));
   }
 
   async dissolveMultiplierCore(value: number, duration = 260) {
@@ -723,6 +723,7 @@ export class GameScene extends Phaser.Scene {
         const targetRow = generatedCount + index;
         const targetY = this.boardOrigin.y + targetRow * this.cellSize.height + 46;
         node.row = targetRow;
+        if (Math.abs(node.container.y - targetY) < 0.5 && node.container.alpha >= 0.999) return;
         animations.push(new Promise<void>((resolve) => {
           this.tweens.add({
             targets: node.container,
