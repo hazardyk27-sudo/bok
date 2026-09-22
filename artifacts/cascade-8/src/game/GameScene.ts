@@ -377,16 +377,19 @@ export class GameScene extends Phaser.Scene {
   }
 
   async animateDrop(duration: number) {
+    const maximumColumnDelay = (BOARD_COLUMNS - 1) * 20;
+    const tweenDuration = Math.max(160, duration - maximumColumnDelay);
     await Promise.all(this.nodes.map((node, index) => new Promise<void>((resolve) => {
       const finalY = node.container.y;
+      const columnDelay = (index % BOARD_COLUMNS) * 20;
       node.container.y = finalY - 260 - (index % BOARD_COLUMNS) * 18;
       node.container.alpha = 0.2;
       this.tweens.add({
         targets: node.container,
         y: finalY,
         alpha: 1,
-        duration: duration + (index % BOARD_COLUMNS) * 24,
-        delay: (index % BOARD_COLUMNS) * 20,
+        duration: tweenDuration,
+        delay: columnDelay,
         ease: "Back.easeOut",
          onComplete: () => {
            if (node.symbol === "SCATTER") void this.animateScatterLanding(node).then(resolve);
