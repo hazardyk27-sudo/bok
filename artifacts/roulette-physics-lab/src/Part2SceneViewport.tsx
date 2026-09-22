@@ -45,10 +45,13 @@ const PART3_DEFLECTOR_APPROACH_RADIUS = 2.74;
 const PART3_TRACK_INNER_RADIUS = 2.72;
 const PART3_TRACK_OUTER_RADIUS = 2.90;
 const PART3_TRACK_CONTACT_TOLERANCE = 0.1;
-// Runtime GLB raycast at the alignment probe measured the visible upper track
-// 0.2848 m above the pre-existing analytic profile. Keep the correction on the
-// physics surface so the visual ball remains directly synced to Rapier.
-const PART3_TRACK_VERTICAL_OFFSET = 0.2848;
+const PART3_DARK_TRACK_RADIUS_BAND: readonly [number, number] = [
+  PART3_TRACK_INNER_RADIUS,
+  PART3_TRACK_OUTER_RADIUS,
+];
+// Retained only as a diagnostic baseline. This was the incorrect highest-hit
+// wood-derived correction and must not be applied to the physics surface.
+const PART3_LEGACY_TRACK_VERTICAL_OFFSET = 0.2848;
 const PART3_POCKET_PROBE_DURATION_SECONDS = 3.5;
 const PART3_POCKET_PROBE_RADIUS = 1.62;
 const PART3_ALIGNMENT_PROBE_DURATION_SECONDS = 0.9;
@@ -196,6 +199,7 @@ type Part3AlignmentReport = {
   status: 'running' | 'passed' | 'failed';
   sampleRadius: number;
   sampleAzimuth: number;
+  darkTrackRadiusBand: readonly [number, number];
   visibleSurfaceY: number | null;
   visibleSurfaceSource: string | null;
   analyticColliderContactYBefore: number;
@@ -205,6 +209,7 @@ type Part3AlignmentReport = {
   ballRadius: number;
   signedVerticalMismatch: number | null;
   signedColliderContactMismatch: number;
+  woodRetainingRingContact: boolean;
   visuallyInsideWheelBody: boolean;
   physicalContact: boolean;
   hover: boolean;
@@ -426,11 +431,14 @@ const POCKET_ENTRY_PROBES = [
   },
 ] as const;
 
-function part3SpawnPosition(probe: (typeof PART3_PROBES)[number]) {
+function part3SpawnPosition(
+  probe: (typeof PART3_PROBES)[number],
+  verticalOffset = 0,
+) {
   const y =
     probe.kind === 'deflector-approach'
       ? (PART3_DEFLECTOR_BOTTOM + PART3_DEFLECTOR_TOP) / 2
-      : part3TrackHeight(probe.radius);
+      : part3TrackHeight(probe.radius, verticalOffset);
   return radialPosition(
     probe.radius,
     probe.angle,
@@ -526,13 +534,13 @@ function part3TrackHeightBase(radius: number) {
   return trackProfile.at(-1)![1];
 }
 
-function part3TrackHeight(radius: number) {
-  return part3TrackHeightBase(radius) + PART3_TRACK_VERTICAL_OFFSET;
+function part3TrackHeight(radius: number, verticalOffset = 0) {
+  return part3TrackHeightBase(radius) + verticalOffset;
 }
 
 // This is an analytic lathed cross-section of the visible dark outer ray and
 // its retaining edge. It is not derived from or used as a raw GLB collider.
-function makePart3OuterTrackTrimesh() {
+function makePart3OuterTrackTrimesh(verticalOffset = 0) {
   const crossSection: Array<[number, number]> = [
     [1.95, -0.458],
     [2.05, -0.39],
@@ -552,7 +560,7 @@ function makePart3OuterTrackTrimesh() {
       const angle = (segment / segments) * TWO_PI;
        vertices.push(
          Math.sin(angle) * radius,
-         y + PART3_TRACK_VERTICAL_OFFSET,
+          y + verticalOffset,
          Math.cos(angle) * radius,
        );
     }
@@ -1230,6 +1238,7 @@ export function Part2SceneViewport({
     let part3AlignmentRunning = false;
     let part3AlignmentFinished = false;
     let part3AlignmentMaxVisualBodySyncError = 0;
+    let part3TrackVerticalOffset = 0;
     let part3PocketRunning = false;
     let part3PocketElapsed = 0;
     let part3PocketPeakSpeed = 0;
@@ -1296,6 +1305,7 @@ export function Part2SceneViewport({
     const measureVisibleSurfaceAt = (x: number, z: number) => {
       if (!stationaryGroup) return null;
       stationaryGroup.updateMatrixWorld(true);
+      const sampleRadius = Math.hypot(x, z);
       const raycaster = new THREE.Raycaster(
         new THREE.Vector3(x, 1.5, z),
         new THREE.Vector3(0, -1, 0),
@@ -1304,7 +1314,25 @@ export function Part2SceneViewport({
       );
       const intersections = raycaster.intersectObject(stationaryGroup, true);
       const hit = intersections
-        .filter((intersection) => intersection.point.y > -1.5 && intersection.point.y < 1)
+        .filter((intersection) => {
+          const hitRadius = Math.hypot(intersection.point.x, intersection.point.z);
+          const objectName = intersection.object.name;
+          const material = (intersection.object as THREE.Mesh).material;
+          const materialNames = Array.isArray(material)
+            ? material.map((entry) => entry.name)
+            : [material?.name];
+          const isOutsideGeometry = objectName === 'geo1_outside_0';
+          const isOutsideMaterial = materialNames.includes('outside');
+          return (
+            sampleRadius >= PART3_DARK_TRACK_RADIUS_BAND[0] &&
+            sampleRadius <= PART3_DARK_TRACK_RADIUS_BAND[1] &&
+            hitRadius >= PART3_DARK_TRACK_RADIUS_BAND[0] &&
+            hitRadius <= PART3_DARK_TRACK_RADIUS_BAND[1] &&
+            (isOutsideGeometry || isOutsideMaterial) &&
+            intersection.point.y > -1.5 &&
+            intersection.point.y < 1
+          );
+        })
         .sort((left, right) => right.point.y - left.point.y)[0];
       return hit
         ? { y: hit.point.y, source: hit.object.name || hit.object.parent?.name || 'unnamed-mesh' }
@@ -1318,7 +1346,7 @@ export function Part2SceneViewport({
       const position = radialPosition(
         radius,
         azimuth,
-        part3TrackHeight(radius) + BALL_RADIUS + 0.002,
+        part3TrackHeight(radius, part3TrackVerticalOffset) + BALL_RADIUS + 0.002,
       );
       const velocity = {
         x: Math.cos(azimuth) * PART3_ALIGNMENT_PROBE_SPEED,
@@ -1326,7 +1354,7 @@ export function Part2SceneViewport({
         z: -Math.sin(azimuth) * PART3_ALIGNMENT_PROBE_SPEED,
       };
       const visibleSurface = measureVisibleSurfaceAt(position[0], position[2]);
-      const analyticContactY = part3TrackHeight(radius);
+      const analyticContactY = part3TrackHeight(radius, part3TrackVerticalOffset);
       ballBody.setTranslation({ x: position[0], y: position[1], z: position[2] }, true);
       ballBody.setLinvel(velocity, true);
       ballBody.setAngvel({ x: 0, y: 0, z: 0 }, true);
@@ -1343,7 +1371,9 @@ export function Part2SceneViewport({
         sampleAzimuth: azimuth,
         visibleSurfaceY: visibleSurface?.y ?? null,
         visibleSurfaceSource: visibleSurface?.source ?? null,
-        analyticColliderContactYBefore: part3TrackHeightBase(radius),
+        darkTrackRadiusBand: PART3_DARK_TRACK_RADIUS_BAND,
+        analyticColliderContactYBefore:
+          part3TrackHeightBase(radius) + PART3_LEGACY_TRACK_VERTICAL_OFFSET,
         analyticColliderContactYAfter: analyticContactY,
         rigidBodyCenterY: position[1],
         ballBottomY: position[1] - BALL_RADIUS,
@@ -1353,6 +1383,8 @@ export function Part2SceneViewport({
             ? null
             : position[1] - BALL_RADIUS - visibleSurface.y,
         signedColliderContactMismatch: position[1] - BALL_RADIUS - analyticContactY,
+        woodRetainingRingContact:
+          radius + BALL_RADIUS >= PART3_RETAINING_RIM_INNER_RADIUS - 0.005,
         visuallyInsideWheelBody:
           visibleSurface !== null &&
           position[1] - BALL_RADIUS < visibleSurface.y - 0.005,
@@ -1382,7 +1414,7 @@ export function Part2SceneViewport({
     const startPart3Probe = (index: number) => {
       const probe = PART3_PROBES[index];
       if (!probe || !ballBody || !ballMesh) return;
-      const position = part3SpawnPosition(probe);
+      const position = part3SpawnPosition(probe, part3TrackVerticalOffset);
       const velocity = part3InitialVelocity(probe);
       ballBody.setTranslation({ x: position[0], y: position[1], z: position[2] }, true);
       ballBody.setLinvel({ x: velocity.x, y: velocity.y, z: velocity.z }, true);
@@ -1734,7 +1766,19 @@ export function Part2SceneViewport({
           world.maxCcdSubsteps = 8;
           const stationaryBody = world.createRigidBody(RAPIER.RigidBodyDesc.fixed());
           if (validationMode === 'part3') {
-            const outerTrackMesh = makePart3OuterTrackTrimesh();
+             const launchSample = radialPosition(PART3_LAUNCH_RADIUS, 0.37, 0);
+             const darkTrackSurface = measureVisibleSurfaceAt(
+               launchSample[0],
+               launchSample[2],
+             );
+             if (!darkTrackSurface) {
+               throw new Error(
+                 'PART 3 could not measure the visible dark outer track inside the configured radius band',
+               );
+             }
+             part3TrackVerticalOffset =
+               darkTrackSurface.y - part3TrackHeightBase(PART3_LAUNCH_RADIUS);
+             const outerTrackMesh = makePart3OuterTrackTrimesh(part3TrackVerticalOffset);
             part3TrackCollider = world.createCollider(
               RAPIER.ColliderDesc.trimesh(
                 outerTrackMesh.vertices,
@@ -1828,7 +1872,7 @@ export function Part2SceneViewport({
 
           const initialPosition =
             validationMode === 'part3'
-              ? part3SpawnPosition(PART3_PROBES[0])
+               ? part3SpawnPosition(PART3_PROBES[0], part3TrackVerticalOffset)
               : validationMode === 'part4'
                 ? part4SpawnPosition(PART4_PROBES[0])
                 : DROP_INITIAL_POSITION;
@@ -2040,7 +2084,7 @@ export function Part2SceneViewport({
           id: probe.id,
           label: probe.label,
           spawnRadius: probe.radius,
-          spawnHeight: Number(part3SpawnPosition(probe)[1].toFixed(4)),
+           spawnHeight: Number(part3SpawnPosition(probe, part3TrackVerticalOffset)[1].toFixed(4)),
           initialVelocity: part3InitialVelocity(probe),
           initialAngularSpin: part3InitialAngularSpin(probe),
           lapCount: Number(lapCount.toFixed(3)),
@@ -2257,7 +2301,7 @@ export function Part2SceneViewport({
             const speed = Math.hypot(velocity.x, velocity.y, velocity.z);
             const radius = Math.hypot(position.x, position.z);
             const visibleSurface = measureVisibleSurfaceAt(position.x, position.z);
-            const analyticContactY = part3TrackHeight(radius);
+            const analyticContactY = part3TrackHeight(radius, part3TrackVerticalOffset);
             const bottom = position.y - BALL_RADIUS;
             const signedVerticalMismatch =
               visibleSurface === null ? null : bottom - visibleSurface.y;
@@ -2314,13 +2358,20 @@ export function Part2SceneViewport({
                 sampleAzimuth: normalizedAngle(Math.atan2(position.x, position.z)),
                 visibleSurfaceY: visibleSurface?.y ?? null,
                 visibleSurfaceSource: visibleSurface?.source ?? null,
-                analyticColliderContactYBefore: part3TrackHeightBase(radius),
-                analyticColliderContactYAfter: part3TrackHeight(radius),
+                darkTrackRadiusBand: PART3_DARK_TRACK_RADIUS_BAND,
+                analyticColliderContactYBefore:
+                  part3TrackHeightBase(radius) + PART3_LEGACY_TRACK_VERTICAL_OFFSET,
+                analyticColliderContactYAfter: part3TrackHeight(
+                  radius,
+                  part3TrackVerticalOffset,
+                ),
                 rigidBodyCenterY: position.y,
                 ballBottomY: bottom,
                 ballRadius: BALL_RADIUS,
                 signedVerticalMismatch,
                 signedColliderContactMismatch,
+                woodRetainingRingContact:
+                  radius + BALL_RADIUS >= PART3_RETAINING_RIM_INNER_RADIUS - 0.005,
                 visuallyInsideWheelBody,
                 physicalContact,
                 hover,
@@ -2357,7 +2408,7 @@ export function Part2SceneViewport({
             const radius = Math.hypot(position.x, position.z);
             const surfaceY =
               radius >= 1.95 && radius <= PART3_RETAINING_RIM_INNER_RADIUS
-                ? part3TrackHeight(radius)
+                ? part3TrackHeight(radius, part3TrackVerticalOffset)
                 : COLLIDER_PROFILE.innerFloorTop;
             const bottom = position.y - BALL_RADIUS;
             const penetration = Math.max(0, surfaceY - bottom);
@@ -3022,8 +3073,9 @@ export function Part2SceneViewport({
         <>
           <strong>{part3AlignmentReport.detail}</strong>
           <span>
-            short outer-track contact probe · r {part3AlignmentReport.sampleRadius.toFixed(4)} ·
-            azimuth {THREE.MathUtils.radToDeg(part3AlignmentReport.sampleAzimuth).toFixed(2)}° ·
+              short outer-track contact probe · dark radius band {part3AlignmentReport.darkTrackRadiusBand[0].toFixed(4)}–{part3AlignmentReport.darkTrackRadiusBand[1].toFixed(4)} ·
+              launch r {part3AlignmentReport.sampleRadius.toFixed(4)} ·
+              azimuth {THREE.MathUtils.radToDeg(part3AlignmentReport.sampleAzimuth).toFixed(2)}° ·
             ball radius {part3AlignmentReport.ballRadius.toFixed(4)}
           </span>
           <span>
@@ -3036,7 +3088,8 @@ export function Part2SceneViewport({
             rigid-body center Y {part3AlignmentReport.rigidBodyCenterY.toFixed(4)} ·
             ball bottom Y {part3AlignmentReport.ballBottomY.toFixed(4)} ·
             visible signed mismatch {part3AlignmentReport.signedVerticalMismatch?.toFixed(4) ?? '—'} ·
-            collider signed mismatch {part3AlignmentReport.signedColliderContactMismatch.toFixed(4)}
+              collider signed mismatch {part3AlignmentReport.signedColliderContactMismatch.toFixed(4)} ·
+              wood-ring contact {part3AlignmentReport.woodRetainingRingContact ? 'yes' : 'no'}
           </span>
           <span>
             visually inside wheel body {part3AlignmentReport.visuallyInsideWheelBody ? 'yes' : 'no'} ·

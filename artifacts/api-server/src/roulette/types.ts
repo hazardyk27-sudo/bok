@@ -113,7 +113,8 @@ export type RouletteRoundRecord = {
 
 export type RouletteSnapshot = {
   serverTime: string;
-  coordinator: "leader" | "standby";
+  coordinator: "leader" | "standby" | "paused";
+  roundGenerationPaused: boolean;
   wallet: { sessionId: string; balanceCents: number; lastPayoutCents: number };
   round: {
     id: string;

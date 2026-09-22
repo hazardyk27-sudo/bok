@@ -1,5 +1,6 @@
 import type { IncomingMessage, Server } from "node:http";
 import { WebSocketServer, type WebSocket } from "ws";
+import { isRouletteRoundGenerationPaused } from "./config";
 import { rouletteRepository } from "./repository";
 import { SESSION_COOKIE } from "./routes";
 
@@ -41,8 +42,18 @@ export function attachRouletteWebSocket(server: Server) {
         if (!closed) send(socket, { ...event, snapshot });
       });
     });
-    const timer = setInterval(() => void sendSnapshot(), 1000);
-    const connection = { socket, sessionId, stop: () => { closed = true; clearInterval(timer); unsubscribe(); } };
+    const timer = isRouletteRoundGenerationPaused()
+      ? undefined
+      : setInterval(() => void sendSnapshot(), 1000);
+    const connection = {
+      socket,
+      sessionId,
+      stop: () => {
+        closed = true;
+        if (timer) clearInterval(timer);
+        unsubscribe();
+      },
+    };
     connections.add(connection);
     socket.on("message", (message) => {
       if (message.toString() === "sync" || message.toString() === "{\"type\":\"sync\"}") void sendSnapshot();

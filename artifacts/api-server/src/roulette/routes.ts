@@ -24,6 +24,7 @@ function sendError(res: Response, error: unknown) {
   const status = message === "BETTING_CLOSED" ? 409
     : message === "INSUFFICIENT_ROULETTE_CREDITS" ? 402
       : message === "ROULETTE_COORDINATOR_UNAVAILABLE" ? 503
+        : message === "ROULETTE_ROUND_GENERATION_PAUSED" ? 503
         : 400;
   res.status(status).json({ error: message });
 }

@@ -1,5 +1,6 @@
 import { createHash } from "node:crypto";
 import { pool } from "@workspace/db";
+import { isRouletteRoundGenerationPaused } from "./config";
 import {
   INITIAL_ROULETTE_BALANCE_CENTS,
   MAX_STAKE_CENTS,
@@ -120,6 +121,10 @@ export class RouletteRepository {
   async start() {
     if (this.started) return;
     this.started = true;
+    if (isRouletteRoundGenerationPaused()) {
+      this.currentRound = await this.loadLatestRound();
+      return;
+    }
     await this.tryAcquireLeadership();
     await this.loadOrCreateRound();
     this.scheduler = setInterval(() => void this.tick(), 250);
@@ -148,13 +153,20 @@ export class RouletteRepository {
     return () => this.subscribers.delete(subscriber);
   }
 
-  get leadership(): "leader" | "standby" {
+  get leadership(): "leader" | "standby" | "paused" {
+    if (isRouletteRoundGenerationPaused()) return "paused";
     return this.isLeader ? "leader" : "standby";
   }
 
   async getSnapshot(sessionId: string): Promise<RouletteSnapshot> {
     await this.start();
-    const round = this.currentRound ?? await this.loadOrCreateRound();
+    let round = this.currentRound;
+    if (!round) {
+      if (isRouletteRoundGenerationPaused()) {
+        throw new Error("ROULETTE_ROUND_GENERATION_PAUSED");
+      }
+      round = await this.loadOrCreateRound();
+    }
     const wallet = await this.getWallet(sessionId);
     const payout = await pool.query(
       "SELECT COALESCE(SUM(payout_cents), 0)::int AS total FROM roulette_bets WHERE session_id = $1 AND round_id = $2 AND status = 'WON'",
@@ -176,6 +188,9 @@ export class RouletteRepository {
 
   async placeBets(sessionId: string, input: { bets: RouletteBetInput[]; idempotencyKey: string }) {
     await this.start();
+    if (isRouletteRoundGenerationPaused()) {
+      throw new Error("ROULETTE_ROUND_GENERATION_PAUSED");
+    }
     if (!Array.isArray(input.bets) || input.bets.length < 1 || input.bets.length > 60) throw new Error("BETS_MUST_BE_1_TO_60");
     if (!/^[a-zA-Z0-9_-]{12,80}$/.test(input.idempotencyKey)) throw new Error("INVALID_IDEMPOTENCY_KEY");
     const bets = input.bets.map((bet) => {
@@ -290,6 +305,14 @@ export class RouletteRepository {
     }
   }
 
+  private async loadLatestRound(): Promise<RouletteRoundRecord | null> {
+    const result = await pool.query("SELECT * FROM roulette_rounds ORDER BY sequence DESC LIMIT 1");
+    if (!result.rows[0]) return null;
+    const loaded = this.mapRound(result.rows[0] as RoundRow);
+    this.currentRound = loaded;
+    return loaded;
+  }
+
   private async loadOrCreateRound(): Promise<RouletteRoundRecord> {
     if (this.currentRound && this.currentRound.intermissionUntil.getTime() > Date.now() - 1000) return this.currentRound;
     const result = await pool.query("SELECT * FROM roulette_rounds ORDER BY sequence DESC LIMIT 1");
@@ -341,6 +364,7 @@ export class RouletteRepository {
   }
 
   private async tick() {
+    if (isRouletteRoundGenerationPaused()) return;
     if (!this.isLeader) return;
     const round = this.currentRound ?? await this.loadOrCreateRound();
     const now = new Date();
@@ -472,6 +496,7 @@ export class RouletteRepository {
     return {
       serverTime: iso(now),
       coordinator: this.leadership,
+      roundGenerationPaused: isRouletteRoundGenerationPaused(),
       wallet: { sessionId, balanceCents, lastPayoutCents },
       round: {
         id: round.id,
