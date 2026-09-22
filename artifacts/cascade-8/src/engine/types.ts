@@ -1,12 +1,6 @@
 import type { NormalSymbolId, SymbolId } from "../config/GameConfig";
 
-export type Board = BoardCell[][] & {
-  /**
-   * Temporary visible debug buffer for the odd-height pair boundary.
-   * It is intentionally outside the five-cell game board.
-   */
-  hiddenPairRow?: Array<BoardCell | null>;
-};
+export type Board = BoardCell[][];
 export type Cell = { row: number; col: number };
 export type RandomSource = { nextFloat: () => number };
 export type MultiplierCore = {

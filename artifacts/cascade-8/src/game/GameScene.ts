@@ -8,7 +8,6 @@ type BoardNode = {
   symbol: BoardCell;
   row: number;
   col: number;
-  hidden?: boolean;
   coreCollected?: boolean;
 };
 
@@ -76,18 +75,8 @@ export class GameScene extends Phaser.Scene {
 
   private cellSize = { width: 96, height: 92 };
 
-  private renderedRows = BOARD_ROWS;
-
   constructor() {
     super("Cascade8GameScene");
-  }
-
-  private visualRow(row: number) {
-    return this.renderedRows - 1 - row;
-  }
-
-  private yForRow(row: number) {
-    return this.boardOrigin.y + this.visualRow(row) * this.cellSize.height;
   }
 
   preload() {
@@ -116,7 +105,7 @@ export class GameScene extends Phaser.Scene {
   private drawBoardFrame() {
     this.cellFrames.forEach((cell) => cell.destroy());
     this.cellFrames = [];
-    for (let row = 0; row < this.renderedRows; row += 1) {
+    for (let row = 0; row < BOARD_ROWS; row += 1) {
       for (let col = 0; col < BOARD_COLUMNS; col += 1) {
         const x = this.boardOrigin.x + col * this.cellSize.width;
         const y = this.boardOrigin.y + row * this.cellSize.height;
@@ -185,10 +174,10 @@ export class GameScene extends Phaser.Scene {
     };
   }
 
-  private createSymbolNode(symbol: BoardCell, row: number, col: number, winner = false, hidden = false) {
+  private createSymbolNode(symbol: BoardCell, row: number, col: number, winner = false) {
     const container = this.add.container(
       this.boardOrigin.x + col * this.cellSize.width + 48,
-      this.yForRow(row) + 46,
+      this.boardOrigin.y + row * this.cellSize.height + 46,
     );
     if (isMultiplierCore(symbol)) {
       const coreSize = symbol.value === 10
@@ -266,7 +255,7 @@ export class GameScene extends Phaser.Scene {
         repeat: -1,
         ease: "Sine.easeInOut",
       });
-      const node = { container, symbol, row, col, hidden };
+      const node = { container, symbol, row, col };
       this.nodes.push(node);
       return node;
     }
@@ -290,7 +279,7 @@ export class GameScene extends Phaser.Scene {
         ease: "Sine.easeInOut",
       });
       this.tweens.add({ targets: glint, alpha: 0.18, scale: 0.6, duration: 260, yoyo: true, repeat: -1, repeatDelay: 2600 });
-      const node = { container, symbol, row, col, hidden };
+      const node = { container, symbol, row, col };
       this.nodes.push(node);
       return node;
     }
@@ -298,7 +287,7 @@ export class GameScene extends Phaser.Scene {
     if (!normalSymbol) throw new Error("Unsupported board symbol");
     const mark = this.add.image(0, 0, `club-logo-${normalSymbol}`).setDisplaySize(82, 82);
     container.add(mark);
-    const node = { container, symbol, row, col, hidden };
+    const node = { container, symbol, row, col };
     this.nodes.push(node);
     return node;
   }
@@ -374,8 +363,6 @@ export class GameScene extends Phaser.Scene {
 
   renderBoard(board: Board, winningCells: Cell[] = []) {
     this.clearSymbols();
-    this.renderedRows = board.hiddenPairRow ? BOARD_ROWS + 1 : BOARD_ROWS;
-    this.drawBoardFrame();
     const winning = new Set(winningCells.map((cell) => `${cell.row}:${cell.col}`));
     for (let row = 0; row < BOARD_ROWS; row += 1) {
       for (let col = 0; col < BOARD_COLUMNS; col += 1) {
@@ -386,11 +373,6 @@ export class GameScene extends Phaser.Scene {
           winning.has(`${row}:${col}`),
         );
       }
-    }
-    if (board.hiddenPairRow) {
-      board.hiddenPairRow.forEach((cell, col) => {
-        if (cell) this.createSymbolNode(cell, BOARD_ROWS, col, false, true);
-      });
     }
   }
 
@@ -734,12 +716,12 @@ export class GameScene extends Phaser.Scene {
     const animations: Promise<void>[] = [];
     for (let col = 0; col < BOARD_COLUMNS; col += 1) {
       const survivors = this.nodes
-        .filter((node) => !node.hidden && node.col === col && !winning.has(`${node.row}:${node.col}`))
+        .filter((node) => node.col === col && !winning.has(`${node.row}:${node.col}`))
         .sort((a, b) => a.row - b.row);
       const generatedCount = BOARD_ROWS - survivors.length;
       survivors.forEach((node, index) => {
-        const targetRow = index;
-        const targetY = this.yForRow(targetRow) + 46;
+        const targetRow = generatedCount + index;
+        const targetY = this.boardOrigin.y + targetRow * this.cellSize.height + 46;
         node.row = targetRow;
         animations.push(new Promise<void>((resolve) => {
           this.tweens.add({
@@ -752,9 +734,9 @@ export class GameScene extends Phaser.Scene {
         }));
       });
       const incomingGroups = new Map<string, BoardNode[]>();
-      for (let row = BOARD_ROWS - generatedCount; row < BOARD_ROWS; row += 1) {
+      for (let row = 0; row < generatedCount; row += 1) {
         const node = this.createSymbolNode(board[row][col], row, col);
-        const targetY = this.yForRow(row) + 46;
+        const targetY = this.boardOrigin.y + row * this.cellSize.height + 46;
         node.container.y = targetY - 260 - col * 14;
         node.container.alpha = 0.2;
         const metadata = getStackMetadata(node.symbol);
@@ -767,7 +749,7 @@ export class GameScene extends Phaser.Scene {
         incomingGroups.set(key, group);
       }
       incomingGroups.forEach((group) => {
-        const targetYs = group.map((node) => this.yForRow(node.row) + 46);
+        const targetYs = group.map((node) => this.boardOrigin.y + node.row * this.cellSize.height + 46);
         const starts = group.map((node) => node.container.y);
         animations.push(new Promise<void>((resolve) => {
           const motion = { progress: 0 };

@@ -1,5 +1,5 @@
-import { BOARD_ROWS, type NormalSymbolId } from "../config/GameConfig";
 import { getNormalSymbol, type Board, type Cell } from "../engine/types";
+import type { NormalSymbolId } from "../config/GameConfig";
 
 export type WinLabelEvent = {
   amountCents: number;
@@ -52,7 +52,7 @@ export function calculateWinLabelPositions(
     const center = event.cells.reduce(
       (sum, cell) => ({
         x: sum.x + boardOrigin.x + cell.col * cellSize.width + cellSize.width / 2,
-        y: sum.y + boardOrigin.y + (BOARD_ROWS - 1 - cell.row) * cellSize.height + cellSize.height / 2,
+        y: sum.y + boardOrigin.y + cell.row * cellSize.height + cellSize.height / 2,
       }),
       { x: 0, y: 0 },
     );

@@ -85,10 +85,7 @@ export function removeAndRefill(
     const generated: BoardCell[] = [];
     const refillContext = allowCores && mode === "bonus" ? "BONUS_REFILL" : "BASE_REFILL";
     while (generated.length < BOARD_ROWS - survivors.length) {
-      // Logical rows run from bottom to top. New cells enter from above, so
-      // generated cells are observed before the surviving bottom-to-top
-      // column when looking from the visual top downward.
-      const visibleColumn = [...generated, ...survivors.slice().reverse()];
+      const visibleColumn = [...generated, ...survivors];
       const topSymbol = visibleColumn[0] ? getNormalSymbol(visibleColumn[0]) : null;
       const belowSymbol = visibleColumn[1] ? getNormalSymbol(visibleColumn[1]) : null;
       const isVisuallyUnpaired = Boolean(topSymbol && belowSymbol !== topSymbol);
@@ -122,13 +119,9 @@ export function removeAndRefill(
       }
       generated.push(incoming);
     }
-    // Keep survivors at the bottom (row 0 upward) and place the incoming
-    // cells above them in their physical top-to-bottom order.
-    const incoming = [...generated];
-    const column = [...survivors, ...incoming.reverse()];
+    const column = [...generated, ...survivors];
     for (let row = 0; row < BOARD_ROWS; row += 1) next[row][col] = column[row];
-    newSymbols.push(...incoming);
+    newSymbols.push(...generated);
   }
-  if (board.hiddenPairRow) next.hiddenPairRow = [...board.hiddenPairRow];
   return { boardAfterGravity: next, newSymbols };
 }

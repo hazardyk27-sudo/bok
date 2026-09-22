@@ -20,11 +20,7 @@ import {
   type TumbleResult,
 } from "./types";
 
-const cloneBoard = (board: Board): Board => {
-  const clone = board.map((row) => [...row]) as Board;
-  if (board.hiddenPairRow) clone.hiddenPairRow = [...board.hiddenPairRow];
-  return clone;
-};
+const cloneBoard = (board: Board): Board => board.map((row) => [...row]);
 
 type PlayContext = {
   source: RandomSource;
