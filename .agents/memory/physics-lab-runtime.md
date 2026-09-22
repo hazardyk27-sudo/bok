@@ -19,6 +19,12 @@ The preview screenshot path may successfully load the GLB and show the audit whi
 
 **How to apply:** Keep validation status and probe details in an explicit DOM report overlay, and treat WebGL availability as a separate visual capability from physics validation.
 
+For the outer-race task, a numeric Rapier placement/contact result is never sufficient for PASS: the static gate must also have a live renderer and a screenshot-visible ball inside the recessed dark channel; otherwise it must fail and stop before tangential or lap probes.
+
+**Why:** A blank WebGL canvas can make an upper-surface or otherwise incorrect placement appear numerically valid while the required visual acceptance cannot be inspected.
+
+**How to apply:** Keep the analytic channel collider and physics report available, but require renderer-backed visual evidence before starting any follow-on outer-track probe or lap tuning.
+
 For sloped GLB-backed side-track contact, place the ball from the sampled triangle point along its transformed world-space normal by one ball radius plus a small measured tolerance; evaluate side-track penetration against that same local contact plane, not only the old vertical Y sample.
 
 **Why:** A vertical-only spawn and Y penetration metric can report false clipping when the true surface normal shifts the ball center in X/Z; the normal-based placement reduced the side-track guard from 0.0327 to 0.0006 without changing the 0.03 acceptance limit.

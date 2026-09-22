@@ -1397,6 +1397,10 @@ h1 {
   pointer-events: auto;
 }
 
+.part2-race-placement-report {
+  bottom: 178px;
+}
+
 .part2-drop-report strong {
   color: #d8a68a;
   font-size: 9px;

@@ -1339,6 +1339,99 @@ function radialPosition(radius: number, angle: number, y: number): [number, numb
   return [Math.sin(angle) * radius, y, Math.cos(angle) * radius];
 }
 
+function part2ChannelSurfaceAt(radius: number, verticalOffset = 0) {
+  const clamped = Math.max(
+    PART2_CHANNEL_PROFILE[0][0],
+    Math.min(PART2_CHANNEL_PROFILE.at(-1)![0], radius),
+  );
+  for (let index = 1; index < PART2_CHANNEL_PROFILE.length; index += 1) {
+    const [rightRadius, rightY] = PART2_CHANNEL_PROFILE[index];
+    const [leftRadius, leftY] = PART2_CHANNEL_PROFILE[index - 1];
+    if (clamped <= rightRadius) {
+      const alpha = (clamped - leftRadius) / (rightRadius - leftRadius);
+      return {
+        y: THREE.MathUtils.lerp(leftY, rightY, alpha) + verticalOffset,
+        slope: (rightY - leftY) / (rightRadius - leftRadius),
+        segment: index - 1,
+      };
+    }
+  }
+  const last = PART2_CHANNEL_PROFILE.at(-1)!;
+  const previous = PART2_CHANNEL_PROFILE.at(-2)!;
+  return {
+    y: last[1] + verticalOffset,
+    slope: (last[1] - previous[1]) / (last[0] - previous[0]),
+    segment: PART2_CHANNEL_PROFILE.length - 2,
+  };
+}
+
+function part2ChannelNormalAt(radius: number, angle: number) {
+  const { slope } = part2ChannelSurfaceAt(radius);
+  const radial = new THREE.Vector3(Math.sin(angle), 0, Math.cos(angle));
+  return new THREE.Vector3(
+    -slope * radial.x,
+    1,
+    -slope * radial.z,
+  ).normalize();
+}
+
+function makePart2RaceChannelTrimesh(verticalOffset = 0) {
+  const vertices: number[] = [];
+  const indices: number[] = [];
+  const segments = 128;
+  const appendProfile = (profile: readonly [number, number][]) => {
+    for (const [radius, y] of profile) {
+      for (let segment = 0; segment < segments; segment += 1) {
+        const angle = (segment / segments) * TWO_PI;
+        vertices.push(
+          Math.sin(angle) * radius,
+          y + verticalOffset,
+          Math.cos(angle) * radius,
+        );
+      }
+    }
+  };
+  const bottomProfile = PART2_CHANNEL_PROFILE.map(
+    ([radius, y]) =>
+      [radius, y - PART2_CHANNEL_BOTTOM_THICKNESS] as [number, number],
+  );
+  appendProfile(PART2_CHANNEL_PROFILE);
+  const bottomOffset = PART2_CHANNEL_PROFILE.length * segments;
+  appendProfile(bottomProfile);
+
+  for (let row = 0; row < PART2_CHANNEL_PROFILE.length - 1; row += 1) {
+    for (let segment = 0; segment < segments; segment += 1) {
+      const next = (segment + 1) % segments;
+      const topA = row * segments + segment;
+      const topB = row * segments + next;
+      const topC = (row + 1) * segments + next;
+      const topD = (row + 1) * segments + segment;
+      indices.push(topA, topD, topB, topB, topD, topC);
+
+      const bottomA = bottomOffset + topA;
+      const bottomB = bottomOffset + topB;
+      const bottomC = bottomOffset + topC;
+      const bottomD = bottomOffset + topD;
+      indices.push(bottomA, bottomB, bottomD, bottomB, bottomC, bottomD);
+    }
+  }
+  for (const row of [0, PART2_CHANNEL_PROFILE.length - 1]) {
+    const nextRow = bottomOffset + row * segments;
+    for (let segment = 0; segment < segments; segment += 1) {
+      const next = (segment + 1) % segments;
+      const topA = row * segments + segment;
+      const topB = row * segments + next;
+      const bottomA = nextRow + segment;
+      const bottomB = nextRow + next;
+      indices.push(topA, topB, bottomB, topA, bottomB, bottomA);
+    }
+  }
+  return {
+    vertices: new Float32Array(vertices),
+    indices: new Uint32Array(indices),
+  };
+}
+
 function profileHeight(radius: number) {
   const clamped = Math.max(BOWL_PROFILE[0][0], Math.min(BOWL_PROFILE.at(-1)![0], radius));
   for (let index = 1; index < BOWL_PROFILE.length; index += 1) {
@@ -1502,6 +1595,8 @@ export function Part2SceneViewport({
     useState<Part3OuterLaneReport | null>(null);
   const [part3OuterLaneSpinReport, setPart3OuterLaneSpinReport] =
     useState<Part3OuterLaneSpinReport | null>(null);
+  const [part2RacePlacementReport, setPart2RacePlacementReport] =
+    useState<Part2RacePlacementReport | null>(null);
   const [part3GeometryDiagnosticReport, setPart3GeometryDiagnosticReport] =
     useState<Part3GeometryDiagnosticReport | null>(null);
   const [part3AlignmentReport, setPart3AlignmentReport] =
@@ -1657,6 +1752,7 @@ export function Part2SceneViewport({
     let part3AlignmentFinished = false;
     let part3AlignmentMaxVisualBodySyncError = 0;
     let part3TrackVerticalOffset = 0;
+    let part2RaceVerticalOffset = 0;
     let part3PocketRunning = false;
     let part3PocketElapsed = 0;
     let part3PocketPeakSpeed = 0;
@@ -1932,38 +2028,64 @@ export function Part2SceneViewport({
     const startPart3OuterLaneProbe = () => {
       if (!ballBody || !ballMesh) return;
       const launchAzimuth = 0.37;
-      const darkTrackInnerRadius = PART3_DARK_TRACK_RADIUS_BAND[0];
-      const darkTrackOuterRadius = PART3_DARK_TRACK_RADIUS_BAND[1];
-      const retainingRimInnerRadius = PART3_RETAINING_RIM_INNER_RADIUS;
-      const nearestDeflectorOuterRadius = PART3_DEFLECTOR_OUTER_RADIUS;
-      const chosenLaunchRadius = Math.min(
-        darkTrackOuterRadius - BALL_RADIUS - 0.06,
-        retainingRimInnerRadius - BALL_RADIUS - PART3_OUTER_LANE_CLEARANCE_MARGIN,
+      const darkTrackInnerRadius = PART2_ACTUAL_DARK_TRACK_RADIUS_BAND[0];
+      const darkTrackOuterRadius = PART2_ACTUAL_DARK_TRACK_RADIUS_BAND[1];
+      const retainingRimInnerRadius = PART2_ACTUAL_WOOD_INNER_RADIUS;
+      const nearestDeflectorOuterRadius = PART2_ACTUAL_INWARD_EDGE_RADIUS;
+      const chosenLaunchRadius = PART2_ACTUAL_DARK_TRACK_LAUNCH_RADIUS;
+      const channelSurface = part2ChannelSurfaceAt(
+        chosenLaunchRadius,
+        part2RaceVerticalOffset,
       );
-      const launchSurface = measureVisibleSurfaceAt(
-        Math.sin(launchAzimuth) * chosenLaunchRadius,
-        Math.cos(launchAzimuth) * chosenLaunchRadius,
+      const launchPositionVector = new THREE.Vector3(
+        ...radialPosition(
+          chosenLaunchRadius,
+          launchAzimuth,
+          channelSurface.y,
+        ),
+      ).addScaledVector(
+        part2ChannelNormalAt(chosenLaunchRadius, launchAzimuth),
+        BALL_RADIUS + 0.002,
       );
-      if (!launchSurface) {
-        throw new Error(
-          'PART B could not measure the visible dark outer-track surface at the chosen launch radius',
-        );
-      }
-      const launchContactY = launchSurface.y;
-      const launchPosition = radialPosition(
+      const launchPosition: [number, number, number] = [
+        launchPositionVector.x,
+        launchPositionVector.y,
+        launchPositionVector.z,
+      ];
+      const initialLinearSpeed = PART3_PROBES[0].speed;
+      const launchNormal = part2ChannelNormalAt(
         chosenLaunchRadius,
         launchAzimuth,
-        launchContactY + BALL_RADIUS + 0.002,
       );
-      const initialLinearSpeed = PART3_PROBES[0].speed;
-      const initialVelocity = part3TangentialVelocity(
-        launchAzimuth,
-        initialLinearSpeed,
-      );
+      const initialVelocityVector = new THREE.Vector3(
+        Math.cos(launchAzimuth),
+        0,
+        -Math.sin(launchAzimuth),
+      )
+        .projectOnPlane(launchNormal)
+        .normalize()
+        .multiplyScalar(initialLinearSpeed);
+      const initialVelocity = {
+        x: initialVelocityVector.x,
+        y: initialVelocityVector.y,
+        z: initialVelocityVector.z,
+      };
       const initialAngularSpin = {
-        x: Number((initialVelocity.z / BALL_RADIUS).toFixed(4)),
-        y: 0,
-        z: Number((-initialVelocity.x / BALL_RADIUS).toFixed(4)),
+        x: Number(
+          ((launchNormal.z * initialVelocityVector.y -
+            launchNormal.y * initialVelocityVector.z) /
+            BALL_RADIUS).toFixed(4),
+        ),
+        y: Number(
+          ((launchNormal.x * initialVelocityVector.z -
+            launchNormal.z * initialVelocityVector.x) /
+            BALL_RADIUS).toFixed(4),
+        ),
+        z: Number(
+          ((launchNormal.y * initialVelocityVector.x -
+            launchNormal.x * initialVelocityVector.y) /
+            BALL_RADIUS).toFixed(4),
+        ),
       };
       part3OuterLaneRunning = true;
       part3OuterLaneElapsed = 0;
@@ -2039,8 +2161,169 @@ export function Part2SceneViewport({
         maxPenetration: 0,
         maxSeparation: 0,
         physicalTrackContact: false,
-        detail: `PART B running one ${PART3_OUTER_LANE_PROBE_DURATION_SECONDS.toFixed(2)} s high-speed outer-lane probe; no lap target is being evaluated.`,
+         detail: `Running one ${PART3_OUTER_LANE_PROBE_DURATION_SECONDS.toFixed(2)} s short tangential probe inside the measured recessed channel; no lap target is being evaluated.`,
       });
+    };
+
+    const runPart2RaceStaticPlacementCheck = () => {
+      if (!world || !ballBody || !ballMesh || !part3TrackCollider) return;
+      const launchAzimuth = 0.37;
+      const spawnRadius = PART2_ACTUAL_DARK_TRACK_LAUNCH_RADIUS;
+      const surface = part2ChannelSurfaceAt(spawnRadius, part2RaceVerticalOffset);
+      const contactNormal = part2ChannelNormalAt(spawnRadius, launchAzimuth);
+      const spawnPoint = new THREE.Vector3(
+        ...radialPosition(spawnRadius, launchAzimuth, surface.y),
+      ).addScaledVector(contactNormal, BALL_RADIUS + 0.002);
+      const visibleSurface = measureVisibleSurfaceAt(
+        spawnPoint.x,
+        spawnPoint.z,
+        true,
+        PART2_ACTUAL_DARK_TRACK_RADIUS_BAND,
+      );
+      const analyticSurfaceY = surface.y;
+      const visualHeightError = visibleSurface
+        ? Math.abs(visibleSurface.y - analyticSurfaceY)
+        : Number.POSITIVE_INFINITY;
+      const liveRendererAvailable = renderer !== null;
+      const disabledColliders = [
+        'actual-glb-outside-trimesh (disabled for physics)',
+        'outer-track-support-trimesh (broad annular support disabled)',
+        'visible-deflector-cuboid (not active in short race probe)',
+      ];
+      const activeRaceCollider =
+        part3ColliderRoles.get(part3TrackCollider.handle) ?? 'unknown';
+      const broadSupportActive = [...part3ColliderRoles.values()].some(
+        (role) =>
+          role === 'outer-track-support-trimesh' ||
+          role === 'actual-glb-outside-trimesh',
+      );
+      setPart2RacePlacementReport({
+        status: 'running',
+        channelInnerRadius: PART2_CHANNEL_PROFILE[0][0],
+        channelOuterRadius: PART2_CHANNEL_PROFILE.at(-1)![0],
+        runningSurfaceYRange: [
+          PART2_CHANNEL_PROFILE[2][1] + part2RaceVerticalOffset,
+          PART2_CHANNEL_PROFILE[5][1] + part2RaceVerticalOffset,
+        ],
+        runningSurfaceSlope: [
+          (PART2_CHANNEL_PROFILE[3][1] - PART2_CHANNEL_PROFILE[2][1]) /
+            (PART2_CHANNEL_PROFILE[3][0] - PART2_CHANNEL_PROFILE[2][0]),
+          (PART2_CHANNEL_PROFILE[5][1] - PART2_CHANNEL_PROFILE[4][1]) /
+            (PART2_CHANNEL_PROFILE[5][0] - PART2_CHANNEL_PROFILE[4][0]),
+        ],
+        outerWallY: PART2_CHANNEL_PROFILE.at(-1)![1] + part2RaceVerticalOffset,
+        innerTransitionY:
+          PART2_CHANNEL_PROFILE[0][1] + part2RaceVerticalOffset,
+        disabledColliders,
+        activeRaceCollider,
+        spawnRadius: Math.hypot(spawnPoint.x, spawnPoint.z),
+        spawnHeight: spawnPoint.y,
+        contactNormal: roundedVector(contactNormal),
+        minRadius: Math.hypot(spawnPoint.x, spawnPoint.z),
+        maxRadius: Math.hypot(spawnPoint.x, spawnPoint.z),
+        physicalContact: false,
+        visibleSurfaceMatch: false,
+        onWoodTop: false,
+        broadSupportActive,
+        hover: false,
+        detail: 'Static placement check is running before the tangential probe.',
+      });
+
+      ballBody.setTranslation(
+        { x: spawnPoint.x, y: spawnPoint.y, z: spawnPoint.z },
+        true,
+      );
+      ballBody.setLinvel({ x: 0, y: 0, z: 0 }, true);
+      ballBody.setAngvel({ x: 0, y: 0, z: 0 }, true);
+      ballBody.setRotation({ x: 0, y: 0, z: 0, w: 1 }, true);
+      ballMesh.position.copy(spawnPoint);
+      ballMesh.quaternion.identity();
+      world.step();
+
+      const position = ballBody.translation();
+      let physicalContact = false;
+      const raceColliderHandle = part3TrackCollider.handle;
+      if (physicsBallCollider) {
+        world.contactPairsWith(physicsBallCollider, (otherCollider) => {
+          physicalContact ||= otherCollider.handle === raceColliderHandle;
+        });
+      }
+      const centerRadius = Math.hypot(position.x, position.z);
+      const centerSurface = part2ChannelSurfaceAt(
+        centerRadius,
+        part2RaceVerticalOffset,
+      );
+      const bottomGap = position.y - BALL_RADIUS - centerSurface.y;
+      const lateralContainment =
+        centerRadius >= PART2_CHANNEL_PROFILE[1][0] + BALL_RADIUS &&
+        centerRadius <= PART2_CHANNEL_PROFILE[6][0] - BALL_RADIUS;
+      const onWoodTop =
+        centerRadius + BALL_RADIUS >= PART2_ACTUAL_WOOD_INNER_RADIUS - 0.005;
+      const hover =
+        !physicalContact ||
+        bottomGap > 0.03 ||
+        !lateralContainment;
+      const visibleSurfaceMatch =
+        liveRendererAvailable &&
+        visibleSurface !== null &&
+        visualHeightError <= 0.03 &&
+        visibleSurface.y > -1.5 &&
+        visibleSurface.y < 1;
+      const passed =
+        activeRaceCollider === 'analytic-dark-recessed-channel' &&
+        !broadSupportActive &&
+        physicalContact &&
+        visibleSurfaceMatch &&
+        lateralContainment &&
+        !onWoodTop &&
+        !hover &&
+        bottomGap >= -0.03;
+      ballMesh.position.set(position.x, position.y, position.z);
+      const rotation = ballBody.rotation();
+      ballMesh.quaternion.set(rotation.x, rotation.y, rotation.z, rotation.w);
+      setPart2RacePlacementReport((previous) =>
+        previous
+          ? {
+              ...previous,
+              status: passed ? 'passed' : 'failed',
+              spawnRadius: centerRadius,
+              spawnHeight: position.y,
+              minRadius: centerRadius,
+              maxRadius: centerRadius,
+              physicalContact,
+              visibleSurfaceMatch,
+              onWoodTop,
+              hover,
+              detail: passed
+                ? 'PASS: the live ball placement is inside the measured recessed dark race with analytic contact.'
+                : `FAIL: static channel gate failed (${[
+                    activeRaceCollider !== 'analytic-dark-recessed-channel'
+                      ? 'wrong active collider'
+                      : '',
+                    broadSupportActive ? 'broad support active' : '',
+                    !physicalContact ? 'no Rapier contact' : '',
+                    !visibleSurfaceMatch ? 'visible GLB mismatch' : '',
+                    !liveRendererAvailable
+                      ? 'live renderer unavailable; screenshot-visible gate cannot pass'
+                      : '',
+                    !lateralContainment ? 'outside channel walls' : '',
+                    onWoodTop ? 'on wood/top surface' : '',
+                    hover ? 'hovering' : '',
+                  ]
+                    .filter(Boolean)
+                    .join(', ') || 'review required'}).`,
+            }
+          : previous,
+      );
+      callbacksRef.current.onStateChange(
+        passed ? 'loaded' : 'error',
+        passed
+          ? 'PART 2 recessed dark-race static placement passed'
+          : 'PART 2 recessed dark-race static placement failed',
+      );
+      if (passed) {
+        startPart3OuterLaneProbe();
+      }
     };
 
     const startPart3OuterLaneSpin = (index: number) => {
@@ -3003,23 +3286,44 @@ export function Part2SceneViewport({
           const stationaryBody = world.createRigidBody(RAPIER.RigidBodyDesc.fixed());
             if (
               validationMode === 'part3' &&
-              outerLaneSpinOnly
+              (outerLaneOnly || outerLaneSpinOnly)
             ) {
-              const actualOutsideMesh = makeWorldTrimeshFromObject(outside);
+              const launchSample = radialPosition(
+                PART2_ACTUAL_DARK_TRACK_LAUNCH_RADIUS,
+                0.37,
+                0,
+              );
+              const darkTrackSurface = measureVisibleSurfaceAt(
+                launchSample[0],
+                launchSample[2],
+                true,
+                PART2_ACTUAL_DARK_TRACK_RADIUS_BAND,
+              );
+              if (!darkTrackSurface) {
+                throw new Error(
+                  'PART 2 could not measure the visible dark recessed race at the configured launch radius',
+                );
+              }
+              part2RaceVerticalOffset =
+                darkTrackSurface.y -
+                part2ChannelSurfaceAt(PART2_ACTUAL_DARK_TRACK_LAUNCH_RADIUS).y;
+              const channelMesh = makePart2RaceChannelTrimesh(
+                part2RaceVerticalOffset,
+              );
               part3TrackCollider = world.createCollider(
                 RAPIER.ColliderDesc.trimesh(
-                  actualOutsideMesh.vertices,
-                  actualOutsideMesh.indices,
+                  channelMesh.vertices,
+                  channelMesh.indices,
                   RAPIER.TriMeshFlags.FIX_INTERNAL_EDGES |
                     RAPIER.TriMeshFlags.ORIENTED,
                 )
-                  .setFriction(PART3_OUTER_SPIN_TRACK_FRICTION)
+                  .setFriction(PART3_TRACK_FRICTION)
                   .setRestitution(0.01),
                 stationaryBody,
               );
               part3ColliderRoles.set(
                 part3TrackCollider.handle,
-                'actual-glb-outside-trimesh',
+                'analytic-dark-recessed-channel',
               );
             } else if (
               validationMode === 'part3' &&
@@ -3039,7 +3343,7 @@ export function Part2SceneViewport({
              part3TrackVerticalOffset =
                darkTrackSurface.y - part3TrackHeightBase(PART3_LAUNCH_RADIUS);
              const outerTrackMesh = makePart3OuterTrackTrimesh(part3TrackVerticalOffset);
-            part3TrackCollider = world.createCollider(
+             part3TrackCollider = world.createCollider(
               RAPIER.ColliderDesc.trimesh(
                 outerTrackMesh.vertices,
                 outerTrackMesh.indices,
@@ -3049,7 +3353,7 @@ export function Part2SceneViewport({
                 .setRestitution(0.01),
               stationaryBody,
             );
-            part3ColliderRoles.set(part3TrackCollider.handle, 'outer-track-support-trimesh');
+             part3ColliderRoles.set(part3TrackCollider.handle, 'outer-track-support-trimesh');
             part3DeflectorColliders = addPart3DeflectorColliders(world, stationaryBody);
             for (const collider of part3DeflectorColliders) {
               part3ColliderRoles.set(collider.handle, 'visible-deflector-cuboid');
@@ -3257,11 +3561,11 @@ export function Part2SceneViewport({
                   'PART C diagnostic radial geometry profile running',
                 );
               } else if (outerLaneSpinOnly) {
-                startPart3OuterLaneSpin(0);
-                callbacksRef.current.onStateChange(
-                  'loaded',
-                  'PART 2 real dark side-track smoke spins running',
-                );
+                 runPart2RaceStaticPlacementCheck();
+                 callbacksRef.current.onStateChange(
+                   'loaded',
+                   'PART 2 recessed dark-race static gate running',
+                 );
               } else if (outerLaneOnly) {
                 startPart3OuterLaneProbe();
                callbacksRef.current.onStateChange(
@@ -3636,7 +3940,7 @@ export function Part2SceneViewport({
 
           if (
             validationMode === 'part3' &&
-            outerLaneOnly &&
+            (outerLaneOnly || outerLaneSpinOnly) &&
             world &&
             ballBody &&
             ballMesh &&
@@ -3647,7 +3951,10 @@ export function Part2SceneViewport({
             const velocity = ballBody.linvel();
             const speed = Math.hypot(velocity.x, velocity.y, velocity.z);
             const radius = Math.hypot(position.x, position.z);
-            const contactY = part3TrackHeight(radius, part3TrackVerticalOffset);
+            const contactY = part2ChannelSurfaceAt(
+              radius,
+              part2RaceVerticalOffset,
+            ).y;
             const bottom = position.y - BALL_RADIUS;
             const penetration = Math.max(0, contactY - bottom);
             const separation = Math.max(0, bottom - contactY);
@@ -3668,24 +3975,24 @@ export function Part2SceneViewport({
               });
             }
             const ballCenterInsideOuterLane =
-              radius >= PART3_TRACK_INNER_RADIUS + BALL_RADIUS &&
-              radius <= PART3_TRACK_OUTER_RADIUS - BALL_RADIUS;
+              radius >= PART2_CHANNEL_PROFILE[1][0] + BALL_RADIUS &&
+              radius <= PART2_CHANNEL_PROFILE[6][0] - BALL_RADIUS;
             const geometricTrackContact =
               ballCenterInsideOuterLane &&
               penetration <= 0.03 &&
               separation <= 0.03;
             const rimClearance =
-              PART3_RETAINING_RIM_INNER_RADIUS - BALL_RADIUS - radius;
+              PART2_CHANNEL_PROFILE[6][0] - BALL_RADIUS - radius;
             const deflectorClearance =
-              radius - BALL_RADIUS - PART3_DEFLECTOR_OUTER_RADIUS;
+              radius - BALL_RADIUS - PART2_CHANNEL_PROFILE[1][0];
             const woodContact =
-              radius + BALL_RADIUS >= PART3_RETAINING_RIM_INNER_RADIUS - 0.005;
+              radius + BALL_RADIUS >= PART2_ACTUAL_WOOD_INNER_RADIUS - 0.005;
             const escaped =
               !Number.isFinite(position.x) ||
               !Number.isFinite(position.y) ||
               !Number.isFinite(position.z) ||
-              radius < PART3_TRACK_INNER_RADIUS - BALL_RADIUS ||
-              radius > PART3_RETAINING_RIM_INNER_RADIUS + BALL_RADIUS ||
+              radius < PART2_CHANNEL_PROFILE[0][0] - BALL_RADIUS ||
+              radius > PART2_CHANNEL_PROFILE[7][0] + BALL_RADIUS ||
               position.y < COLLIDER_PROFILE.innerFloorTop - BALL_RADIUS - 0.08;
             part3OuterLaneElapsed += FIXED_TIMESTEP;
             part3OuterLaneSampleFrames += 1;
@@ -3739,8 +4046,8 @@ export function Part2SceneViewport({
                 !part3OuterLaneEscaped &&
                 !part3OuterLaneDeflectorContact &&
                 !part3OuterLaneHover &&
-                part3OuterLaneMinRadius >= PART3_TRACK_INNER_RADIUS &&
-                part3OuterLaneMaxRadius <= PART3_TRACK_OUTER_RADIUS &&
+                 part3OuterLaneMinRadius >= PART2_CHANNEL_PROFILE[1][0] &&
+                 part3OuterLaneMaxRadius <= PART2_CHANNEL_PROFILE[6][0] &&
                 part3OuterLaneMinRimClearance >= PART3_OUTER_LANE_CLEARANCE_MARGIN &&
                 part3OuterLaneMinDeflectorClearance >=
                   PART3_OUTER_LANE_CLEARANCE_MARGIN;
@@ -4861,7 +5168,7 @@ export function Part2SceneViewport({
         <>
           <strong>{part3OuterLaneReport.detail}</strong>
           <span>
-            PART B short high-speed probe · dark lane r {part3OuterLaneReport.darkTrackInnerRadius.toFixed(4)}–
+            PART 2 short tangential probe · dark race r {part3OuterLaneReport.darkTrackInnerRadius.toFixed(4)}–
             {part3OuterLaneReport.darkTrackOuterRadius.toFixed(4)} · retaining rim inner r{' '}
             {part3OuterLaneReport.retainingRimInnerRadius.toFixed(4)} · nearest deflector outer r{' '}
             {part3OuterLaneReport.nearestDeflectorOuterRadius.toFixed(4)} · ball r{' '}
@@ -4904,6 +5211,56 @@ export function Part2SceneViewport({
         </>
       ) : (
         'Waiting for the short PART B outer-lane probe.'
+      )}
+    </div>
+  );
+
+  const renderPart2RacePlacementReport = () => (
+    <div
+      className="part2-drop-report part2-race-placement-report"
+      data-testid="part2-race-placement-report"
+      data-status={part2RacePlacementReport?.status ?? 'waiting'}
+      aria-live="polite"
+    >
+      {part2RacePlacementReport ? (
+        <>
+          <strong>{part2RacePlacementReport.detail}</strong>
+          <span>
+            measured recessed race r {part2RacePlacementReport.channelInnerRadius.toFixed(4)}–
+            {part2RacePlacementReport.channelOuterRadius.toFixed(4)} · running floor r{' '}
+            {PART2_CHANNEL_PROFILE[2][0].toFixed(4)}–{PART2_CHANNEL_PROFILE[5][0].toFixed(4)} · ball radius {BALL_RADIUS.toFixed(4)} ·
+            active collider {part2RacePlacementReport.activeRaceCollider}
+          </span>
+          <span>
+            running surface Y {part2RacePlacementReport.runningSurfaceYRange[0].toFixed(4)}–
+            {part2RacePlacementReport.runningSurfaceYRange[1].toFixed(4)} · slope{' '}
+            {part2RacePlacementReport.runningSurfaceSlope[0].toFixed(4)}→
+            {part2RacePlacementReport.runningSurfaceSlope[1].toFixed(4)} · outer wall/lip Y{' '}
+            {part2RacePlacementReport.outerWallY.toFixed(4)} · inner transition Y{' '}
+            {part2RacePlacementReport.innerTransitionY.toFixed(4)}
+          </span>
+          <span>
+            static ball center r/y {part2RacePlacementReport.spawnRadius.toFixed(4)} /{' '}
+            {part2RacePlacementReport.spawnHeight.toFixed(4)} · contact normal (
+            {part2RacePlacementReport.contactNormal.x.toFixed(4)},{' '}
+            {part2RacePlacementReport.contactNormal.y.toFixed(4)},{' '}
+            {part2RacePlacementReport.contactNormal.z.toFixed(4)}) · radius range{' '}
+            {part2RacePlacementReport.minRadius.toFixed(4)}–
+            {part2RacePlacementReport.maxRadius.toFixed(4)}
+          </span>
+          <span>
+            physical contact {part2RacePlacementReport.physicalContact ? 'yes' : 'no'} · visible GLB match{' '}
+            {part2RacePlacementReport.visibleSurfaceMatch ? 'yes' : 'no'} · wood/top contact{' '}
+            {part2RacePlacementReport.onWoodTop ? 'yes' : 'no'} · broad support active{' '}
+            {part2RacePlacementReport.broadSupportActive ? 'yes' : 'no'} · hover{' '}
+            {part2RacePlacementReport.hover ? 'yes' : 'no'}
+          </span>
+          <code>
+            disabled: {part2RacePlacementReport.disabledColliders.join(' · ')}
+          </code>
+        </>
+      ) : (
+        'Waiting for the static recessed dark-race placement gate.'
       )}
     </div>
   );
@@ -5184,7 +5541,7 @@ export function Part2SceneViewport({
               ? outerLaneOnly
                 ? `PART B OUTER LANE ${part3OuterLaneReport?.status.toUpperCase() ?? 'WAITING'} · TANGENTIAL LAUNCH · CCD`
                 : outerLaneSpinOnly
-                  ? `PART 2 DARK SIDE-TRACK ${part3OuterLaneSpinReport?.status.toUpperCase() ?? 'WAITING'} · REAL GLB · CCD`
+                  ? `PART 2 DARK RACE GATE ${part2RacePlacementReport?.status.toUpperCase() ?? 'WAITING'} · STATIC + SHORT PROBE · CCD`
                 : geometryDiagnosticOnly
                   ? `GEOMETRY DIAGNOSTIC ${part3GeometryDiagnosticReport?.status.toUpperCase() ?? 'WAITING'} · STATIC CONTACT`
                 : alignmentOnly
@@ -5206,7 +5563,10 @@ export function Part2SceneViewport({
           : outerLaneOnly
           ? renderPart3OuterLaneReport()
           : outerLaneSpinOnly
-            ? renderPart2OuterLaneSpinReport()
+            ? <>
+                {renderPart2RacePlacementReport()}
+                {renderPart3OuterLaneReport()}
+              </>
           : alignmentOnly
             ? renderPart3AlignmentReport()
             : renderPart3Report()
