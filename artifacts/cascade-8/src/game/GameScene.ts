@@ -376,7 +376,7 @@ export class GameScene extends Phaser.Scene {
     }
   }
 
-  async animateDrop(duration: number) {
+  async animateDrop(duration: number, awaitScatterLanding = true) {
     await Promise.all(this.nodes.map((node, index) => new Promise<void>((resolve) => {
       const finalY = node.container.y;
       node.container.y = finalY - 260 - (index % BOARD_COLUMNS) * 18;
@@ -389,8 +389,14 @@ export class GameScene extends Phaser.Scene {
         delay: (index % BOARD_COLUMNS) * 20,
         ease: "Back.easeOut",
          onComplete: () => {
-           if (node.symbol === "SCATTER") void this.animateScatterLanding(node).then(resolve);
-           else resolve();
+           if (node.symbol === "SCATTER") {
+             const landing = this.animateScatterLanding(node);
+             if (awaitScatterLanding) void landing.then(resolve);
+             else {
+               void landing;
+               resolve();
+             }
+           } else resolve();
          },
       });
     })));

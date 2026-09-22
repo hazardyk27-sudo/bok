@@ -248,7 +248,7 @@ export class GameController {
       this.audio.scatterAnticipation(result.scatterCount);
        this.audio.scatterArrival(result.scatterCount);
     }
-    await this.scene.animateDrop(this.duration(ANIMATION.initialDrop));
+     await this.scene.animateDrop(this.duration(ANIMATION.initialDrop), !this.turbo);
     await this.playTumbles(result, false);
     this.currentWinCents = result.baseWinCents;
     this.updateHud();

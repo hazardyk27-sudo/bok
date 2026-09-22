@@ -7,4 +7,4 @@ Round completion should return immediately after the final required settlement t
 
 **Why:** The visible dead-time came from completion barriers and per-core minimum/hold timing, especially in Turbo, not from a required result hold.
 
-**How to apply:** Keep promise completion aligned with the last visible tween, skip no-op motion barriers, scale core phases from the already-scaled duration, and avoid sequential sleeps after core collection.
+**How to apply:** Keep promise completion aligned with the last visible tween, skip no-op motion barriers, scale core phases from the already-scaled duration, avoid sequential sleeps after core collection, and let base Turbo scatter landing effects run without blocking completion; normal and Free Spin landing waits remain awaited.
