@@ -81,9 +81,9 @@ describe("win evaluation and cascades", () => {
       ["S4", "S5", "S6", "S7", "S8", "SCATTER"],
     ];
     const result = removeAndRefill(board, evaluateBoard(board).winningCells, new SeededRNG(3));
-    expect(result.boardAfterGravity[2][0]).toBe("S2");
-    expect(result.boardAfterGravity[3][0]).toBe("S3");
-    expect(result.boardAfterGravity[4][0]).toBe("S4");
+    expect(result.boardAfterGravity[0][0]).toBe("S2");
+    expect(result.boardAfterGravity[1][0]).toBe("S3");
+    expect(result.boardAfterGravity[2][0]).toBe("S4");
   });
 
   it("does not directly copy the current visible unpaired top symbol", () => {
@@ -97,7 +97,7 @@ describe("win evaluation and cascades", () => {
     const observations: Array<{ topSymbol: string; belowSymbol: string | null; incomingSymbol: string }> = [];
     const result = removeAndRefill(
       board,
-      [{ row: 0, col: 0 }],
+      [{ row: 4, col: 0 }],
       { nextFloat: (() => {
         const values = [0.99, 0.0, 0.1];
         return () => values.shift() ?? 0.1;
@@ -109,7 +109,8 @@ describe("win evaluation and cascades", () => {
     );
 
     expect(observations).toHaveLength(0);
-    expect(result.boardAfterGravity[0][0]).toMatchObject({ kind: "NORMAL_SYMBOL", symbol: "S1" });
+    expect(result.boardAfterGravity[0][0]).toBe("S1");
     expect(result.boardAfterGravity[1][0]).toBe("S2");
+    expect(result.boardAfterGravity[4][0]).toMatchObject({ kind: "NORMAL_SYMBOL", symbol: "S1" });
   });
 });

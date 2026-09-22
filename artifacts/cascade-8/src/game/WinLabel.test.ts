@@ -37,7 +37,7 @@ describe("on-board win labels", () => {
     ];
     const placements = calculateWinLabelPositions(events);
 
-    expect(placements[0]).toMatchObject({ x: 166, y: 168 });
+    expect(placements[0]).toMatchObject({ x: 166, y: 352 });
     expect(placements[1].y).toBeLessThan(placements[0].y);
   });
 

@@ -155,6 +155,17 @@ export class ColumnStream {
     };
   }
 
+  /**
+   * Completes a visible odd boundary without exposing another normal board
+   * row. A hidden buffer only exists when the visible boundary is the first
+   * member of a pending pair; it must never spend a Scatter/Core slot.
+   */
+  nextHiddenPairContinuation(context: GenerationContext): BoardCell | null {
+    if (this.pairPhase !== "SECOND") return null;
+    const emission = this.appendPosition(context, false, null);
+    return this.queue.splice(0, 1)[0] ?? emission.cell;
+  }
+
   private appendPosition(
     context: GenerationContext,
     allowCores: boolean,
@@ -279,8 +290,18 @@ export function boardFromStreams(
   context: "BASE_INITIAL" | "BONUS_INITIAL",
   coreBudget?: CoreBudget,
 ): Board {
-  const columns = streams.map((stream) => stream.next(BOARD_ROWS, context, true, coreBudget));
-  return Array.from({ length: BOARD_ROWS }, (_, row) => columns.map((column) => column[row]));
+  // Board rows are logical bottom-to-top rows: row 0 is the bottom visible
+  // cell. Complete an odd visible boundary in a hidden buffer cell so the
+  // viewport does not leave its top visible cell as an unfinished packet.
+  const hiddenPairRow: Array<BoardCell | null> = [];
+  const columns = streams.map((stream) => {
+    const visible = stream.next(BOARD_ROWS, context, true, coreBudget);
+    hiddenPairRow.push(stream.nextHiddenPairContinuation(context));
+    return visible;
+  });
+  const board = Array.from({ length: BOARD_ROWS }, (_, row) => columns.map((column) => column[row])) as Board;
+  board.hiddenPairRow = hiddenPairRow;
+  return board;
 }
 
 export function generateInitialBoardWithStreams(source: RandomSource, mode: "base" | "bonus" = "base") {

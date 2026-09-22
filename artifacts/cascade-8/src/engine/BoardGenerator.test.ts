@@ -1,5 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { countScatter, generateInitialBoard, generateRefillSymbols } from "./BoardGenerator";
+import {
+  countScatter,
+  generateInitialBoard,
+  generateInitialBoardWithStreams,
+  generateRefillSymbols,
+} from "./BoardGenerator";
 import { SeededRNG } from "./RNG";
 import { getNormalSymbol, getStackMetadata, isMultiplierCore } from "./types";
 import type { RandomSource } from "./types";
@@ -32,6 +37,24 @@ describe("board generation", () => {
       const metadata = getStackMetadata(cell);
       return metadata && metadata.stackSize <= 2 && metadata.stackIndex < metadata.stackSize;
     })).toBe(true);
+  });
+  it("starts visible columns at the bottom of a pair and consumes a hidden continuation", () => {
+    const { board, streams } = generateInitialBoardWithStreams(alwaysLast, "base");
+    const firstColumn = board.map((row) => row[0]);
+
+    expect(firstColumn.map((cell) => getStackMetadata(cell)?.stackIndex)).toEqual([0, 1, 0, 1, 0]);
+    expect(getStackMetadata(board.hiddenPairRow?.[0] ?? "SCATTER")).toMatchObject({
+      stackId: getStackMetadata(firstColumn[4])?.stackId,
+      stackIndex: 1,
+      stackSize: 2,
+    });
+    expect(streams[0].stats.pairCount).toBe(3);
+
+    const nextVisibleCell = streams[0].next(1, "BASE_REFILL", false)[0];
+    expect(getStackMetadata(nextVisibleCell)).toMatchObject({
+      stackIndex: 0,
+      stackSize: 2,
+    });
   });
     it("keeps Base initial Scatter close to its pair-start marginal", () => {
     const boards = 20_000;
