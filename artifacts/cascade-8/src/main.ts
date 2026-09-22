@@ -488,7 +488,8 @@ function renderLab(scene: GameScene) {
    const metrics = lab.querySelector<HTMLElement>("#lab-metrics")!;
    const updateMetrics = () => {
      const current = scene.getDebugMetrics();
-     metrics.textContent = `PERF // ${current.fps} FPS // ${current.renderer} // ${current.activeNodes}/${current.boardCells} ACTIVE BOARD NODES`;
+      const audio = controller.audio.getDebugMetrics();
+      metrics.textContent = `PERF // ${current.fps} FPS // ${current.renderer} // ${current.activeNodes}/${current.boardCells} NODES // ${current.activeTweens} TWEENS // ${current.transientEffects} FX // ${current.activeWinLabels} LABELS // ${current.displayObjects} OBJECTS // ${audio.activeTones} TONES // ${audio.pendingSfxTimers} SFX TIMERS`;
      window.requestAnimationFrame(updateMetrics);
    };
    updateMetrics();

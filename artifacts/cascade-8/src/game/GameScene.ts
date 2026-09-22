@@ -1,6 +1,7 @@
 import Phaser from "phaser";
 import { BOARD_COLUMNS, BOARD_ROWS, NORMAL_SYMBOLS, getMultiplierCoreVisualTier, getSymbolDefinition, type SymbolId } from "../config/GameConfig";
 import { getNormalSymbol, getStackMetadata, isMultiplierCore, type Board, type BoardCell, type Cell, type CoreCell } from "../engine/types";
+import { CancelableCompletionRegistry } from "./CancelableCompletionRegistry";
 import { calculateWinLabelPositions, type WinLabelEvent } from "./WinLabel";
 
 type BoardNode = {
@@ -67,6 +68,8 @@ export class GameScene extends Phaser.Scene {
 
   private transientEffects: Phaser.GameObjects.GameObject[] = [];
 
+  private readonly activeWinLabels = new CancelableCompletionRegistry();
+
   private cellFrames: Phaser.GameObjects.Rectangle[] = [];
 
   private freeSpinMode = false;
@@ -129,6 +132,7 @@ export class GameScene extends Phaser.Scene {
   }
 
   clearSymbols() {
+    this.activeWinLabels.completeAll();
     this.clearTransientEffects();
     this.nodes.forEach((node) => this.destroyNode(node));
     this.nodes = [];
@@ -169,6 +173,10 @@ export class GameScene extends Phaser.Scene {
     return {
       activeNodes: this.nodes.length,
       boardCells: BOARD_COLUMNS * BOARD_ROWS,
+      activeTweens: this.tweens.getTweens().length,
+      transientEffects: this.transientEffects.length,
+      activeWinLabels: this.activeWinLabels.size,
+      displayObjects: this.children.list.length,
       fps: Math.round(this.game.loop.actualFps || 0),
       renderer: this.game.renderer.type === Phaser.WEBGL ? "WEBGL" : "CANVAS",
     };
@@ -684,6 +692,11 @@ export class GameScene extends Phaser.Scene {
         .setDepth(14)
         .setAlpha(0)
         .setScale(0.94);
+      const complete = this.activeWinLabels.track(() => {
+        this.tweens.killTweensOf(container);
+        if (container.active) container.destroy();
+        resolve();
+      });
 
       this.tweens.add({
         targets: container,
@@ -705,10 +718,7 @@ export class GameScene extends Phaser.Scene {
                 scale: 0.99,
                 duration: fadeDuration,
                 ease: "Cubic.easeOut",
-                onComplete: () => {
-                  this.destroyEffect(container);
-                  resolve();
-                },
+                onComplete: complete,
               });
             },
           });
