@@ -13,23 +13,20 @@ export const BETS_CENTS = [
 ] as const;
 
 export const ANIMATION = {
-  // These base values resolve to 1000 ms normal / 600 ms Turbo for the
-  // initial drop after the shared timing and scene motion scales are applied.
-  initialDrop: 727,
+  initialDrop: 820,
   columnStagger: 56,
   boardSettle: 160,
   winDetectionPause: 140,
   winHighlight: 340,
   preBurst: 140,
-  burst: 280,
+  burst: 330,
   winLabel: 1740,
   postBurstPause: 110,
   gravity: 380,
-  // These base values resolve to 600 ms normal / 300 ms Turbo for refills.
-  refill: 436,
+  refill: 560,
   refillSettle: 150,
   nextEvaluation: 120,
-  scatterLanding: 180,
+  scatterLanding: 520,
   multiplierLanding: 190,
   freeSpinPause: 260,
   spinPause: 250,

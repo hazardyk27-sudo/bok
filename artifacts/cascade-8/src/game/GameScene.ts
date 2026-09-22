@@ -8,7 +8,6 @@ type BoardNode = {
   symbol: BoardCell;
   row: number;
   col: number;
-  renderKind: "normal" | "scatter" | "core";
   coreCollected?: boolean;
 };
 
@@ -166,33 +165,6 @@ export class GameScene extends Phaser.Scene {
     node.container.destroy();
   }
 
-  private resetNodeTransform(node: BoardNode, row: number, col: number) {
-    node.row = row;
-    node.col = col;
-    node.container.setPosition(
-      this.boardOrigin.x + col * this.cellSize.width + 48,
-      this.boardOrigin.y + row * this.cellSize.height + 46,
-    );
-    node.container.setAlpha(1).setScale(1).setAngle(0).setVisible(true);
-  }
-
-  private reuseBoardNode(node: BoardNode, symbol: BoardCell, row: number, col: number) {
-    if (node.renderKind === "scatter" && symbol === "SCATTER") {
-      node.symbol = symbol;
-      this.resetNodeTransform(node, row, col);
-      return true;
-    }
-    if (node.renderKind !== "normal" || symbol === "SCATTER" || isMultiplierCore(symbol)) return false;
-    const normalSymbol = getNormalSymbol(symbol);
-    const mark = node.container.list.find((child) => child instanceof Phaser.GameObjects.Image);
-    if (!normalSymbol || !mark || !(mark instanceof Phaser.GameObjects.Image)) return false;
-    mark.setTexture(`club-logo-${normalSymbol}`).setDisplaySize(82, 82);
-    node.symbol = symbol;
-    node.coreCollected = undefined;
-    this.resetNodeTransform(node, row, col);
-    return true;
-  }
-
   getDebugMetrics() {
     return {
       activeNodes: this.nodes.length,
@@ -283,7 +255,7 @@ export class GameScene extends Phaser.Scene {
         repeat: -1,
         ease: "Sine.easeInOut",
       });
-      const node = { container, symbol, row, col, renderKind: "core" as const };
+      const node = { container, symbol, row, col };
       this.nodes.push(node);
       return node;
     }
@@ -307,7 +279,7 @@ export class GameScene extends Phaser.Scene {
         ease: "Sine.easeInOut",
       });
       this.tweens.add({ targets: glint, alpha: 0.18, scale: 0.6, duration: 260, yoyo: true, repeat: -1, repeatDelay: 2600 });
-      const node = { container, symbol, row, col, renderKind: "scatter" as const };
+      const node = { container, symbol, row, col };
       this.nodes.push(node);
       return node;
     }
@@ -315,7 +287,7 @@ export class GameScene extends Phaser.Scene {
     if (!normalSymbol) throw new Error("Unsupported board symbol");
     const mark = this.add.image(0, 0, `club-logo-${normalSymbol}`).setDisplaySize(82, 82);
     container.add(mark);
-    const node = { container, symbol, row, col, renderKind: "normal" as const };
+    const node = { container, symbol, row, col };
     this.nodes.push(node);
     return node;
   }
@@ -366,7 +338,7 @@ export class GameScene extends Phaser.Scene {
         y: centerY + Math.sin(angle) * (12 + index * 4),
         alpha: 0,
         scale: 0.5,
-        duration: 150,
+        duration: 260,
         ease: "Cubic.easeOut",
           onComplete: () => this.destroyEffect(spark),
       });
@@ -378,7 +350,7 @@ export class GameScene extends Phaser.Scene {
         scaleX: 2.6,
         scaleY: 1.8,
         alpha: 0,
-        duration: 180,
+        duration: 300,
         ease: "Cubic.easeOut",
           onComplete: () => {
           this.destroyEffect(shockwave);
@@ -390,107 +362,38 @@ export class GameScene extends Phaser.Scene {
   }
 
   renderBoard(board: Board, winningCells: Cell[] = []) {
-    this.clearTransientEffects();
-    const previousNodes = this.nodes;
-    const previousByCell = new Map(previousNodes.map((node) => [`${node.row}:${node.col}`, node]));
-    this.nodes = [];
-    const nextNodes: BoardNode[] = [];
+    this.clearSymbols();
     const winning = new Set(winningCells.map((cell) => `${cell.row}:${cell.col}`));
     for (let row = 0; row < BOARD_ROWS; row += 1) {
       for (let col = 0; col < BOARD_COLUMNS; col += 1) {
-        const key = `${row}:${col}`;
-        const symbol = board[row][col];
-        const existing = previousByCell.get(key);
-        if (existing && this.reuseBoardNode(existing, symbol, row, col)) {
-          nextNodes.push(existing);
-          previousByCell.delete(key);
-          continue;
-        }
-        if (existing) {
-          this.destroyNode(existing);
-          previousByCell.delete(key);
-        }
-        nextNodes.push(this.createSymbolNode(symbol, row, col, winning.has(key)));
+        this.createSymbolNode(
+          board[row][col],
+          row,
+          col,
+          winning.has(`${row}:${col}`),
+        );
       }
     }
-    previousByCell.forEach((node) => this.destroyNode(node));
-    this.nodes = nextNodes;
   }
 
-  private naturalFallEase(progress: number) {
-    const local = Phaser.Math.Clamp(progress, 0, 1);
-    if (local < 0.8) {
-      return 0.975 * Math.pow(local / 0.8, 1.35);
-    }
-
-    const settle = (local - 0.8) / 0.2;
-    const start = 0.975;
-    const startVelocity = 0.975 * 1.35 * 0.2 / 0.8;
-    const h00 = 2 * settle ** 3 - 3 * settle ** 2 + 1;
-    const h10 = settle ** 3 - 2 * settle ** 2 + settle;
-    const h01 = -2 * settle ** 3 + 3 * settle ** 2;
-    return h00 * start + h10 * startVelocity + h01;
-  }
-
-  private durationForFallDistance(start: number, target: number, baseDuration: number) {
-    const distanceInCells = Math.max(1, Math.abs(target - start) / this.cellSize.height);
-    const distanceFactor = 0.64 + Math.min(0.42, distanceInCells * 0.08);
-    return Math.max(120, Math.round(baseDuration * distanceFactor));
-  }
-
-  private fallMotionScale(turbo: boolean, cascade = false) {
-    // Turbo initial drops use a 1.5x scene scale to land at 600 ms. Refills
-    // intentionally use the normal 1.25x scale so Turbo refills land at 300 ms.
-    return turbo && !cascade ? 1.5 : 1.25;
-  }
-
-  private animateFallingNodes(
-    nodes: BoardNode[],
-    starts: number[],
-    targets: number[],
-    duration: number,
-    delay: number,
-    staggerMs = 24,
-  ) {
-    return Promise.all(nodes.map((node, index) => new Promise<void>((resolve) => {
-      node.container.y = starts[index];
+  async animateDrop(duration: number) {
+    await Promise.all(this.nodes.map((node, index) => new Promise<void>((resolve) => {
+      const finalY = node.container.y;
+      node.container.y = finalY - 260 - (index % BOARD_COLUMNS) * 18;
+      node.container.alpha = 0.2;
       this.tweens.add({
         targets: node.container,
-        y: targets[index],
-        duration: this.durationForFallDistance(starts[index], targets[index], duration),
-        delay: delay + index * staggerMs,
-        ease: this.naturalFallEase,
-        onComplete: () => resolve(),
+        y: finalY,
+        alpha: 1,
+        duration: duration + (index % BOARD_COLUMNS) * 24,
+        delay: (index % BOARD_COLUMNS) * 20,
+        ease: "Back.easeOut",
+         onComplete: () => {
+           if (node.symbol === "SCATTER") void this.animateScatterLanding(node).then(resolve);
+           else resolve();
+         },
       });
-    }))).then(() => undefined);
-  }
-
-  async animateDrop(duration: number, turbo = false) {
-    const maximumColumnDelay = (BOARD_COLUMNS - 1) * 18;
-    const motionDuration = Math.round(duration * this.fallMotionScale(turbo));
-    const tweenDuration = Math.max(260, motionDuration - maximumColumnDelay);
-    await Promise.all(Array.from({ length: BOARD_COLUMNS }, (_, col) => {
-      const columnNodes = this.nodes.filter((node) => node.col === col);
-      const finalYs = columnNodes.map((node) => node.container.y);
-      const entryDistance = this.cellSize.height * 4.9;
-      const starts = finalYs.map((target) => target - entryDistance);
-      columnNodes.forEach((node, index) => {
-        node.container.y = starts[index];
-      });
-      return this.animateFallingNodes(
-        columnNodes,
-        starts,
-        finalYs,
-        tweenDuration,
-        col * 18,
-        0,
-      ).then(async () => {
-        const scatterLandings = columnNodes
-          .filter((node) => node.symbol === "SCATTER")
-          .map((node) => this.animateScatterLanding(node));
-        if (scatterLandings.length) await Promise.all(scatterLandings);
-      });
-    }));
+    })));
   }
 
   async highlightCells(cells: Cell[], duration: number) {
@@ -771,7 +674,7 @@ export class GameScene extends Phaser.Scene {
         backgroundHeight,
         6,
       );
-      const container = this.trackEffect(this.add.container(placement.x, placement.y, [backdrop, glowText, text]))
+      const container = this.add.container(placement.x, placement.y, [backdrop, glowText, text])
         .setDepth(14)
         .setAlpha(0)
         .setScale(0.94);
@@ -808,31 +711,34 @@ export class GameScene extends Phaser.Scene {
     })));
   }
 
-  async animateCascade(board: Board, removedCells: Cell[], duration: number, turbo = false) {
+  async animateCascade(board: Board, removedCells: Cell[], duration: number) {
     const winning = new Set(removedCells.map((cell) => `${cell.row}:${cell.col}`));
     const animations: Promise<void>[] = [];
-    const maximumColumnDelay = (BOARD_COLUMNS - 1) * 14;
-    const motionDuration = Math.round(duration * this.fallMotionScale(turbo, true));
-    const tweenDuration = Math.max(180, motionDuration - maximumColumnDelay);
     for (let col = 0; col < BOARD_COLUMNS; col += 1) {
       const survivors = this.nodes
         .filter((node) => node.col === col && !winning.has(`${node.row}:${node.col}`))
         .sort((a, b) => a.row - b.row);
       const generatedCount = BOARD_ROWS - survivors.length;
-      if (survivors.length) {
-        const starts = survivors.map((node) => node.container.y);
-        const targets = survivors.map((node, index) => {
-          const targetRow = generatedCount + index;
-          node.row = targetRow;
-          return this.boardOrigin.y + targetRow * this.cellSize.height + 46;
-        });
-        animations.push(this.animateFallingNodes(survivors, starts, targets, tweenDuration, col * 14, 0));
-      }
+      survivors.forEach((node, index) => {
+        const targetRow = generatedCount + index;
+        const targetY = this.boardOrigin.y + targetRow * this.cellSize.height + 46;
+        node.row = targetRow;
+        animations.push(new Promise<void>((resolve) => {
+          this.tweens.add({
+            targets: node.container,
+            y: targetY,
+            duration: duration + col * 18,
+            ease: "Cubic.easeInOut",
+            onComplete: () => resolve(),
+          });
+        }));
+      });
       const incomingGroups = new Map<string, BoardNode[]>();
       for (let row = 0; row < generatedCount; row += 1) {
         const node = this.createSymbolNode(board[row][col], row, col);
         const targetY = this.boardOrigin.y + row * this.cellSize.height + 46;
         node.container.y = targetY - 260 - col * 14;
+        node.container.alpha = 0.2;
         const metadata = getStackMetadata(node.symbol);
          const normalSymbol = getNormalSymbol(node.symbol);
          const key = metadata && metadata.stackSize === 2 && normalSymbol
@@ -845,14 +751,23 @@ export class GameScene extends Phaser.Scene {
       incomingGroups.forEach((group) => {
         const targetYs = group.map((node) => this.boardOrigin.y + node.row * this.cellSize.height + 46);
         const starts = group.map((node) => node.container.y);
-        animations.push(this.animateFallingNodes(
-          group,
-          starts,
-          targetYs,
-          tweenDuration,
-          col * 14,
-          0,
-        ));
+        animations.push(new Promise<void>((resolve) => {
+          const motion = { progress: 0 };
+          this.tweens.add({
+            targets: motion,
+            progress: 1,
+            duration: duration + col * 18,
+            delay: col * 20 + (group.length > 1 ? 44 : 0),
+            ease: "Back.easeOut",
+            onUpdate: () => {
+              group.forEach((node, index) => {
+                node.container.y = starts[index] + (targetYs[index] - starts[index]) * motion.progress;
+                node.container.alpha = 0.2 + motion.progress * 0.8;
+              });
+            },
+            onComplete: () => resolve(),
+          });
+        }));
       });
     }
     await Promise.all(animations);

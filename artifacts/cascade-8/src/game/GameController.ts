@@ -247,7 +247,7 @@ export class GameController {
       this.audio.scatterAnticipation(result.scatterCount);
        this.audio.scatterArrival(result.scatterCount);
     }
-     await this.scene.animateDrop(this.duration(ANIMATION.initialDrop), this.turbo);
+    await this.scene.animateDrop(this.duration(ANIMATION.initialDrop));
     await this.playTumbles(result, false);
     this.currentWinCents = result.baseWinCents;
     this.updateHud();
@@ -323,7 +323,7 @@ export class GameController {
          this.audio.scatterArrival(freeSpin.scatterCount);
         this.audio.scatterCelebration(freeSpin.scatterCount);
       }
-      await this.scene.animateDrop(this.duration(ANIMATION.initialDrop, true), false);
+      await this.scene.animateDrop(this.duration(ANIMATION.initialDrop, true));
       await this.playTumbles({ ...result, tumbles: freeSpin.tumbles }, true);
       if (freeSpin.win === 0) {
         this.resolveZeroWinFreeSpin(freeSpin);
@@ -426,6 +426,7 @@ export class GameController {
         this.message("AUTO PAUSED // PRESS START FREE SPINS");
         break;
       }
+      if (this.autoRunning) await sleep(this.duration(ANIMATION.spinPause));
     }
     if (this.autoRunning) {
       this.autoRunning = false;
@@ -472,6 +473,7 @@ export class GameController {
     for (let index = 0; index < result.tumbles.length; index += 1) {
       const tumble = result.tumbles[index];
       this.setState("EVALUATING");
+      this.scene.renderBoard(tumble.boardBefore, tumble.winningCells);
       const winEvents = this.buildWinLabelEvents(tumble);
       const winningMessage = `${tumble.winningSymbols.map((symbol) => getSymbolDefinition(symbol).name).join(" + ")} RESONATE`;
        this.message(tumble.multiplierCores.length ? `${winningMessage} // CORES BANKED` : winningMessage);
@@ -485,12 +487,7 @@ export class GameController {
       this.updateHud();
       this.setState("REFILL");
       this.setState("CASCADE_DROP");
-       await this.scene.animateCascade(
-         tumble.boardAfterRefill,
-         tumble.removedCells,
-         this.duration(ANIMATION.refill, isBonus),
-         this.turbo && !isBonus,
-       );
+      await this.scene.animateCascade(tumble.boardAfterRefill, tumble.removedCells, this.duration(ANIMATION.refill, isBonus));
       this.message(index > 0 ? `TUMBLE ${index + 1} // RAW ${tumble.rawWinPoolAfter.toFixed(2)}x` : `WIN // RAW ${tumble.rawWinPoolAfter.toFixed(2)}x`);
     }
     const last = result.tumbles.at(-1);
@@ -711,7 +708,8 @@ export class GameController {
     const finalAmountCents = Math.round(tumble.finalPayoutMultiplier * this.betCents);
     this.ui.tumble.textContent = formatTumbleCredits(finalAmountCents);
     this.updateTumbleEquation(rawAmountCents, total, finalAmountCents);
-    await sleep(this.duration(180, isBonus));
+    await sleep(this.duration(470, isBonus));
+    await sleep(this.duration(420, isBonus));
   }
   private async pauseForRetrigger(freeSpin: SpinResult["freeSpins"][number]) {
     const count = freeSpin.retriggerScatterCount;
