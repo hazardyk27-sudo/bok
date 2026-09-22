@@ -31,12 +31,34 @@ const PART3_OPERATIONAL_LAUNCH_RADIUS = 2.784;
 const PART3_OUTER_SPIN_TRACK_FRICTION = 0.08;
 const PART3_OUTER_SPIN_LINEAR_DAMPING = 0.01;
 const PART3_OUTER_SPIN_ANGULAR_DAMPING = 0.01;
-const PART3_OUTER_SPIN_DURATION_SECONDS = 2.0;
+const PART3_OUTER_SPIN_DURATION_SECONDS = 14.0;
 const PART3_OUTER_SPIN_RUNS = [
   { id: 'outer-spin-low', label: 'Outer spin · low launch variation', speed: 4.85 },
   { id: 'outer-spin-nominal', label: 'Outer spin · nominal launch', speed: 5.0 },
   { id: 'outer-spin-high', label: 'Outer spin · high launch variation', speed: 5.15 },
 ] as const;
+const PART2_ACTUAL_DARK_TRACK_RADIUS_BAND: readonly [number, number] = [
+  2.27,
+  2.54,
+];
+const PART2_ACTUAL_TRACK_CENTER_RADIUS_BAND: readonly [number, number] = [
+  PART2_ACTUAL_DARK_TRACK_RADIUS_BAND[0] + BALL_RADIUS,
+  PART2_ACTUAL_DARK_TRACK_RADIUS_BAND[1] - BALL_RADIUS,
+];
+const PART2_ACTUAL_DARK_TRACK_LAUNCH_RADIUS = 2.39;
+const PART2_ACTUAL_WOOD_INNER_RADIUS = 2.47;
+const PART2_ACTUAL_INWARD_EDGE_RADIUS = 2.26;
+const PART2_CHANNEL_PROFILE: readonly [number, number][] = [
+  [2.18, -0.205], // inner transition / bowl-side lip
+  [2.225, -0.315], // inner channel wall
+  [2.27, -0.3672], // measured dark-floor inner edge
+  [2.34, -0.342], // recessed running surface
+  [2.42, -0.300], // recessed running surface
+  [2.47, -0.2477], // measured dark-floor outer edge
+  [2.515, -0.175], // inward-facing outer retaining wall
+  [2.555, -0.035], // retaining lip top
+];
+const PART2_CHANNEL_BOTTOM_THICKNESS = 0.12;
 const PART3_LAUNCH_RADIUS = 2.82;
 const PART3_RETAINING_RIM_INNER_RADIUS = 2.95;
 const PART3_DEFLECTOR_INNER_RADIUS = 2.464;
@@ -285,6 +307,9 @@ type Part3OuterLaneSpinResult = {
   continuousTrackContact: boolean;
   rollingOrSlidingCoherent: boolean;
   readyForInwardDescent: boolean;
+  naturalInwardTransition: boolean;
+  inwardTransitionTime: number | null;
+  inwardTransitionRadius: number | null;
   woodContact: boolean;
   hover: boolean;
   clipping: boolean;
@@ -293,6 +318,7 @@ type Part3OuterLaneSpinResult = {
   velocitySpike: boolean;
   artificialAcceleration: boolean;
   maxVisualBodySyncError: number;
+  maxRotorSyncError: number;
   maxPenetration: number;
   maxSeparation: number;
   outcome: 'stable' | 'failed';
@@ -309,6 +335,29 @@ type Part3OuterLaneSpinReport = {
   launchHeight: number;
   ballRadius: number;
   results: Part3OuterLaneSpinResult[];
+  detail: string;
+};
+
+type Part2RacePlacementReport = {
+  status: 'running' | 'passed' | 'failed';
+  channelInnerRadius: number;
+  channelOuterRadius: number;
+  runningSurfaceYRange: readonly [number, number];
+  runningSurfaceSlope: readonly [number, number];
+  outerWallY: number;
+  innerTransitionY: number;
+  disabledColliders: string[];
+  activeRaceCollider: string;
+  spawnRadius: number;
+  spawnHeight: number;
+  contactNormal: VectorReadout;
+  minRadius: number;
+  maxRadius: number;
+  physicalContact: boolean;
+  visibleSurfaceMatch: boolean;
+  onWoodTop: boolean;
+  broadSupportActive: boolean;
+  hover: boolean;
   detail: string;
 };
 
@@ -1598,9 +1647,12 @@ export function Part2SceneViewport({
     let part3OuterLaneSpinVelocitySpike = false;
     let part3OuterLaneSpinArtificialAcceleration = false;
     let part3OuterLaneSpinMaxVisualBodySyncError = 0;
+    let part3OuterLaneSpinMaxRotorSyncError = 0;
     let part3OuterLaneSpinPreviousSpeed = 0;
     let part3OuterLaneSpinRollingMismatchSum = 0;
     let part3OuterLaneSpinRollingSamples = 0;
+    let part3OuterLaneSpinInwardTransitionTime: number | null = null;
+    let part3OuterLaneSpinInwardTransitionRadius: number | null = null;
     let part3AlignmentRunning = false;
     let part3AlignmentFinished = false;
     let part3AlignmentMaxVisualBodySyncError = 0;
@@ -1688,6 +1740,7 @@ export function Part2SceneViewport({
       x: number,
       z: number,
       darkTrackOnly = true,
+      darkTrackBand = PART3_DARK_TRACK_RADIUS_BAND,
     ) => {
       if (!stationaryGroup) return null;
       stationaryGroup.updateMatrixWorld(true);
@@ -1711,10 +1764,10 @@ export function Part2SceneViewport({
           const isOutsideMaterial = materialNames.includes('outside');
           return (
             (!darkTrackOnly ||
-              (sampleRadius >= PART3_DARK_TRACK_RADIUS_BAND[0] &&
-                sampleRadius <= PART3_DARK_TRACK_RADIUS_BAND[1] &&
-                hitRadius >= PART3_DARK_TRACK_RADIUS_BAND[0] &&
-                hitRadius <= PART3_DARK_TRACK_RADIUS_BAND[1])) &&
+              (sampleRadius >= darkTrackBand[0] &&
+                sampleRadius <= darkTrackBand[1] &&
+                hitRadius >= darkTrackBand[0] &&
+                hitRadius <= darkTrackBand[1])) &&
             (isOutsideGeometry || isOutsideMaterial) &&
             intersection.point.y > -1.5 &&
             intersection.point.y < 1
@@ -1995,28 +2048,53 @@ export function Part2SceneViewport({
       if (!run || !ballBody || !ballMesh) return;
       const launchAzimuth = 0.37;
       const launchSurface = measureVisibleSurfaceAt(
-        Math.sin(launchAzimuth) * PART3_OPERATIONAL_LAUNCH_RADIUS,
-        Math.cos(launchAzimuth) * PART3_OPERATIONAL_LAUNCH_RADIUS,
+        Math.sin(launchAzimuth) * PART2_ACTUAL_DARK_TRACK_LAUNCH_RADIUS,
+        Math.cos(launchAzimuth) * PART2_ACTUAL_DARK_TRACK_LAUNCH_RADIUS,
+        true,
+        PART2_ACTUAL_DARK_TRACK_RADIUS_BAND,
       );
       if (!launchSurface) {
         throw new Error(
-          'PART C could not measure the visible dark outer-track surface at the operational launch radius',
+          'PART 2 could not measure the visible dark side-track surface at the launch radius',
         );
       }
-      const launchPosition = radialPosition(
-        PART3_OPERATIONAL_LAUNCH_RADIUS,
-        launchAzimuth,
-        launchSurface.y + BALL_RADIUS + 0.002,
+      const launchNormal = new THREE.Vector3(
+        launchSurface.normal.x,
+        launchSurface.normal.y,
+        launchSurface.normal.z,
+      ).normalize();
+      const launchPositionVector = new THREE.Vector3(
+        launchSurface.point.x,
+        launchSurface.point.y,
+        launchSurface.point.z,
+      ).addScaledVector(launchNormal, BALL_RADIUS + 0.002);
+      const radialTangent = new THREE.Vector3(
+        Math.cos(launchAzimuth),
+        0,
+        -Math.sin(launchAzimuth),
       );
-      const initialVelocity = part3TangentialVelocity(
-        launchAzimuth,
-        run.speed,
-      );
-      const initialAngularSpin = {
-        x: Number((initialVelocity.z / BALL_RADIUS).toFixed(4)),
-        y: 0,
-        z: Number((-initialVelocity.x / BALL_RADIUS).toFixed(4)),
+      const initialVelocityVector = radialTangent
+        .projectOnPlane(launchNormal)
+        .normalize()
+        .multiplyScalar(run.speed);
+      const initialVelocity = {
+        x: initialVelocityVector.x,
+        y: initialVelocityVector.y,
+        z: initialVelocityVector.z,
       };
+      const initialAngularSpinVector = launchNormal
+        .clone()
+        .cross(initialVelocityVector)
+        .multiplyScalar(1 / BALL_RADIUS);
+      const initialAngularSpin = {
+        x: initialAngularSpinVector.x,
+        y: initialAngularSpinVector.y,
+        z: initialAngularSpinVector.z,
+      };
+      const launchRadius = Math.hypot(
+        launchPositionVector.x,
+        launchPositionVector.z,
+      );
       part3OuterLaneSpinIndex = index;
       part3OuterLaneSpinRunning = true;
       part3OuterLaneSpinElapsed = 0;
@@ -2031,16 +2109,16 @@ export function Part2SceneViewport({
       part3OuterLaneSpinStartSpeed = 0;
       part3OuterLaneSpinEndSpeed = 0;
       part3OuterLaneSpinPeakSpeed = 0;
-      part3OuterLaneSpinMinRadius = PART3_OPERATIONAL_LAUNCH_RADIUS;
-      part3OuterLaneSpinMaxRadius = PART3_OPERATIONAL_LAUNCH_RADIUS;
+      part3OuterLaneSpinMinRadius = launchRadius;
+      part3OuterLaneSpinMaxRadius = launchRadius;
       part3OuterLaneSpinMinRimClearance =
-        PART3_RETAINING_RIM_INNER_RADIUS -
+        PART2_ACTUAL_WOOD_INNER_RADIUS -
         BALL_RADIUS -
-        PART3_OPERATIONAL_LAUNCH_RADIUS;
+        launchRadius;
       part3OuterLaneSpinMinDeflectorClearance =
-        PART3_OPERATIONAL_LAUNCH_RADIUS -
+        launchRadius -
         BALL_RADIUS -
-        PART3_DEFLECTOR_OUTER_RADIUS;
+        PART2_ACTUAL_INWARD_EDGE_RADIUS;
       part3OuterLaneSpinMaxPenetration = 0;
       part3OuterLaneSpinMaxSeparation = 0;
       part3OuterLaneSpinWoodContact = false;
@@ -2051,17 +2129,24 @@ export function Part2SceneViewport({
       part3OuterLaneSpinVelocitySpike = false;
       part3OuterLaneSpinArtificialAcceleration = false;
       part3OuterLaneSpinMaxVisualBodySyncError = 0;
+      part3OuterLaneSpinMaxRotorSyncError = 0;
       part3OuterLaneSpinPreviousSpeed = run.speed;
       part3OuterLaneSpinRollingMismatchSum = 0;
       part3OuterLaneSpinRollingSamples = 0;
+      part3OuterLaneSpinInwardTransitionTime = null;
+      part3OuterLaneSpinInwardTransitionRadius = null;
       ballBody.setTranslation(
-        { x: launchPosition[0], y: launchPosition[1], z: launchPosition[2] },
+        {
+          x: launchPositionVector.x,
+          y: launchPositionVector.y,
+          z: launchPositionVector.z,
+        },
         true,
       );
       ballBody.setLinvel(initialVelocity, true);
       ballBody.setAngvel(initialAngularSpin, true);
       ballBody.setRotation({ x: 0, y: 0, z: 0, w: 1 }, true);
-      ballMesh.position.set(...launchPosition);
+      ballMesh.position.copy(launchPositionVector);
       ballMesh.quaternion.identity();
       publishPart3OuterLaneSpinReport({
         status: 'running',
@@ -2069,8 +2154,8 @@ export function Part2SceneViewport({
         linearDamping: PART3_OUTER_SPIN_LINEAR_DAMPING,
         angularDamping: PART3_OUTER_SPIN_ANGULAR_DAMPING,
         fixedTimestep: FIXED_TIMESTEP,
-        operationalLaunchRadius: PART3_OPERATIONAL_LAUNCH_RADIUS,
-        launchHeight: launchPosition[1],
+         operationalLaunchRadius: launchRadius,
+         launchHeight: launchPositionVector.y,
         ballRadius: BALL_RADIUS,
         results: part3OuterLaneSpinResults,
         detail: `PART C running spin ${index + 1}/${PART3_OUTER_SPIN_RUNS.length}: ${run.label}.`,
@@ -2587,12 +2672,13 @@ export function Part2SceneViewport({
           PART3_OUTER_LANE_CLEARANCE_MARGIN &&
         position.y > COLLIDER_PROFILE.innerFloorTop - BALL_RADIUS;
       const stable =
-        lapCount >= 2.5 &&
-        lapCount <= 7 &&
+        lapCount >= 3.5 &&
+        lapCount <= 5.5 &&
         continuousTrackContact &&
         part3OuterLaneSpinEndSpeed <
           part3OuterLaneSpinStartSpeed * 0.98 &&
         rollingOrSlidingCoherent &&
+        part3OuterLaneSpinInwardTransitionTime !== null &&
         readyForInwardDescent &&
         !part3OuterLaneSpinWoodContact &&
         !part3OuterLaneSpinHover &&
@@ -2601,11 +2687,10 @@ export function Part2SceneViewport({
         !part3OuterLaneSpinEscaped &&
         !part3OuterLaneSpinVelocitySpike &&
         !part3OuterLaneSpinArtificialAcceleration &&
-        part3OuterLaneSpinMinRimClearance >=
-          PART3_OUTER_LANE_CLEARANCE_MARGIN &&
-        part3OuterLaneSpinMinDeflectorClearance >=
-          PART3_OUTER_LANE_CLEARANCE_MARGIN &&
-        part3OuterLaneSpinMaxVisualBodySyncError <= 0.000001;
+        part3OuterLaneSpinMinRimClearance >= 0.02 &&
+        part3OuterLaneSpinMinDeflectorClearance >= 0.02 &&
+        part3OuterLaneSpinMaxVisualBodySyncError <= 0.000001 &&
+        part3OuterLaneSpinMaxRotorSyncError <= 0.001;
       const result: Part3OuterLaneSpinResult = {
         id: run.id,
         label: run.label,
@@ -2645,6 +2730,17 @@ export function Part2SceneViewport({
         continuousTrackContact,
         rollingOrSlidingCoherent,
         readyForInwardDescent,
+        naturalInwardTransition:
+          part3OuterLaneSpinInwardTransitionTime !== null &&
+          part3OuterLaneSpinInwardTransitionRadius !== null,
+        inwardTransitionTime:
+          part3OuterLaneSpinInwardTransitionTime === null
+            ? null
+            : Number(part3OuterLaneSpinInwardTransitionTime.toFixed(4)),
+        inwardTransitionRadius:
+          part3OuterLaneSpinInwardTransitionRadius === null
+            ? null
+            : Number(part3OuterLaneSpinInwardTransitionRadius.toFixed(4)),
         woodContact: part3OuterLaneSpinWoodContact,
         hover: part3OuterLaneSpinHover,
         clipping: part3OuterLaneSpinClipping,
@@ -2654,6 +2750,9 @@ export function Part2SceneViewport({
         artificialAcceleration: part3OuterLaneSpinArtificialAcceleration,
         maxVisualBodySyncError: Number(
           part3OuterLaneSpinMaxVisualBodySyncError.toFixed(6),
+        ),
+        maxRotorSyncError: Number(
+          part3OuterLaneSpinMaxRotorSyncError.toFixed(6),
         ),
         maxPenetration: Number(
           part3OuterLaneSpinMaxPenetration.toFixed(4),
@@ -2665,9 +2764,12 @@ export function Part2SceneViewport({
         detail: stable
           ? `Stable outer spin: ${lapCount.toFixed(2)} laps with gradual energy loss and no early deflector contact.`
           : `Outer spin failed: ${[
-              lapCount < 2.5 || lapCount > 7 ? 'lap spread' : '',
+              lapCount < 3.5 || lapCount > 5.5 ? 'lap spread' : '',
               !continuousTrackContact ? 'contact continuity' : '',
               !rollingOrSlidingCoherent ? 'rolling/sliding mismatch' : '',
+              part3OuterLaneSpinInwardTransitionTime === null
+                ? 'no natural inward transition'
+                : '',
               !readyForInwardDescent ? 'not ready for inward descent' : '',
               part3OuterLaneSpinWoodContact ? 'wood contact' : '',
               part3OuterLaneSpinHover ? 'hover' : '',
@@ -2709,7 +2811,7 @@ export function Part2SceneViewport({
         linearDamping: PART3_OUTER_SPIN_LINEAR_DAMPING,
         angularDamping: PART3_OUTER_SPIN_ANGULAR_DAMPING,
         fixedTimestep: FIXED_TIMESTEP,
-        operationalLaunchRadius: PART3_OPERATIONAL_LAUNCH_RADIUS,
+        operationalLaunchRadius: part3OuterLaneLaunchRadius,
         launchHeight: position.y - BALL_RADIUS - 0.002,
         ballRadius: BALL_RADIUS,
         results: part3OuterLaneSpinResults,
@@ -2899,11 +3001,31 @@ export function Part2SceneViewport({
           world.timestep = FIXED_TIMESTEP;
           world.maxCcdSubsteps = 8;
           const stationaryBody = world.createRigidBody(RAPIER.RigidBodyDesc.fixed());
-           if (
-             validationMode === 'part3' &&
-             !geometryDiagnosticOnly &&
-             !part1ProbeOnly
-           ) {
+            if (
+              validationMode === 'part3' &&
+              outerLaneSpinOnly
+            ) {
+              const actualOutsideMesh = makeWorldTrimeshFromObject(outside);
+              part3TrackCollider = world.createCollider(
+                RAPIER.ColliderDesc.trimesh(
+                  actualOutsideMesh.vertices,
+                  actualOutsideMesh.indices,
+                  RAPIER.TriMeshFlags.FIX_INTERNAL_EDGES |
+                    RAPIER.TriMeshFlags.ORIENTED,
+                )
+                  .setFriction(PART3_OUTER_SPIN_TRACK_FRICTION)
+                  .setRestitution(0.01),
+                stationaryBody,
+              );
+              part3ColliderRoles.set(
+                part3TrackCollider.handle,
+                'actual-glb-outside-trimesh',
+              );
+            } else if (
+              validationMode === 'part3' &&
+              !geometryDiagnosticOnly &&
+              !part1ProbeOnly
+            ) {
              const launchSample = radialPosition(PART3_LAUNCH_RADIUS, 0.37, 0);
              const darkTrackSurface = measureVisibleSurfaceAt(
                launchSample[0],
@@ -3134,8 +3256,14 @@ export function Part2SceneViewport({
                   'loaded',
                   'PART C diagnostic radial geometry profile running',
                 );
+              } else if (outerLaneSpinOnly) {
+                startPart3OuterLaneSpin(0);
+                callbacksRef.current.onStateChange(
+                  'loaded',
+                  'PART 2 real dark side-track smoke spins running',
+                );
               } else if (outerLaneOnly) {
-               startPart3OuterLaneProbe();
+                startPart3OuterLaneProbe();
                callbacksRef.current.onStateChange(
                  'loaded',
                  'PART B short outer dark-track launch-lane probe running',
@@ -3697,6 +3825,212 @@ export function Part2SceneViewport({
 
           if (
             validationMode === 'part3' &&
+            outerLaneSpinOnly &&
+            world &&
+            ballBody &&
+            ballMesh &&
+            part3OuterLaneSpinRunning
+          ) {
+            world.step();
+            const position = ballBody.translation();
+            const velocity = ballBody.linvel();
+            const angularVelocity = ballBody.angvel();
+            const speed = Math.hypot(velocity.x, velocity.y, velocity.z);
+            const radius = Math.hypot(position.x, position.z);
+            const inTrackCenterBand =
+              radius >= PART2_ACTUAL_TRACK_CENTER_RADIUS_BAND[0] &&
+              radius <= PART2_ACTUAL_TRACK_CENTER_RADIUS_BAND[1];
+            const surface =
+              radius >= PART2_ACTUAL_INWARD_EDGE_RADIUS - 0.08 &&
+              radius <= PART2_ACTUAL_WOOD_INNER_RADIUS + 0.08
+                ? measureVisibleSurfaceAt(position.x, position.z, false)
+                : null;
+            let signedSurfaceGap = Number.POSITIVE_INFINITY;
+            if (surface) {
+              const offsetFromSurface = new THREE.Vector3(
+                position.x - surface.point.x,
+                position.y - surface.point.y,
+                position.z - surface.point.z,
+              );
+              const surfaceNormal = new THREE.Vector3(
+                surface.normal.x,
+                surface.normal.y,
+                surface.normal.z,
+              );
+              signedSurfaceGap =
+                offsetFromSurface.dot(surfaceNormal) - BALL_RADIUS;
+            }
+            const penetration =
+              Number.isFinite(signedSurfaceGap) && signedSurfaceGap < 0
+                ? -signedSurfaceGap
+                : 0;
+            const separation =
+              Number.isFinite(signedSurfaceGap) && signedSurfaceGap > 0
+                ? signedSurfaceGap
+                : 0;
+            let trackPairContact = false;
+            if (physicsBallCollider && part3TrackCollider) {
+              world.contactPairsWith(physicsBallCollider, (otherCollider) => {
+                if (otherCollider.handle === part3TrackCollider?.handle) {
+                  trackPairContact = true;
+                }
+              });
+            }
+            const geometricTrackContact =
+              inTrackCenterBand &&
+              Number.isFinite(signedSurfaceGap) &&
+              penetration <= 0.03 &&
+              separation <= 0.03;
+            const trackAngle = normalizedAngle(Math.atan2(position.x, position.z));
+            const rotorRotation = rotorBody?.rotation();
+            const rotorBodyAngle = rotorRotation
+              ? normalizedAngle(2 * Math.atan2(rotorRotation.y, rotorRotation.w))
+              : rotorAngleRef.current;
+            const rotorSyncError = Math.abs(
+              THREE.MathUtils.euclideanModulo(
+                rotorBodyAngle - rotorAngleRef.current + Math.PI,
+                TWO_PI,
+              ) - Math.PI,
+            );
+            const rimClearance =
+              PART2_ACTUAL_WOOD_INNER_RADIUS - BALL_RADIUS - radius;
+            const inwardClearance =
+              radius - BALL_RADIUS - PART2_ACTUAL_INWARD_EDGE_RADIUS;
+            const woodContact =
+              radius + BALL_RADIUS >= PART2_ACTUAL_WOOD_INNER_RADIUS - 0.005;
+            const escaped =
+              !Number.isFinite(position.x) ||
+              !Number.isFinite(position.y) ||
+              !Number.isFinite(position.z) ||
+              radius < 1.72 ||
+              radius > 3.08 ||
+              position.y < COLLIDER_PROFILE.innerFloorTop - BALL_RADIUS - 0.08;
+
+            part3OuterLaneSpinElapsed += FIXED_TIMESTEP;
+            part3OuterLaneSpinTrackFrames += inTrackCenterBand ? 1 : 0;
+            part3OuterLaneSpinContactFrames +=
+              inTrackCenterBand && trackPairContact ? 1 : 0;
+            part3OuterLaneSpinMinRadius = Math.min(
+              part3OuterLaneSpinMinRadius,
+              radius,
+            );
+            part3OuterLaneSpinMaxRadius = Math.max(
+              part3OuterLaneSpinMaxRadius,
+              radius,
+            );
+            part3OuterLaneSpinMinRimClearance = Math.min(
+              part3OuterLaneSpinMinRimClearance,
+              rimClearance,
+            );
+            part3OuterLaneSpinMinDeflectorClearance = Math.min(
+              part3OuterLaneSpinMinDeflectorClearance,
+              inwardClearance,
+            );
+            part3OuterLaneSpinMaxPenetration = Math.max(
+              part3OuterLaneSpinMaxPenetration,
+              penetration,
+            );
+            part3OuterLaneSpinMaxSeparation = Math.max(
+              part3OuterLaneSpinMaxSeparation,
+              separation,
+            );
+            part3OuterLaneSpinPeakSpeed = Math.max(
+              part3OuterLaneSpinPeakSpeed,
+              speed,
+            );
+            part3OuterLaneSpinWoodContact ||= woodContact;
+            part3OuterLaneSpinHover ||=
+              geometricTrackContact && !trackPairContact;
+            part3OuterLaneSpinClipping ||= penetration > 0.03;
+            part3OuterLaneSpinEscaped ||= escaped;
+            part3OuterLaneSpinTunneling ||= escaped || penetration > 0.08;
+            part3OuterLaneSpinVelocitySpike ||=
+              speed > Math.max(8, part3OuterLaneSpinPreviousSpeed * 4);
+            part3OuterLaneSpinArtificialAcceleration ||=
+              speed > Math.max(
+                12,
+                part3OuterLaneSpinPreviousSpeed > 0
+                  ? part3OuterLaneSpinPreviousSpeed * 3
+                  : 12,
+              );
+            part3OuterLaneSpinMaxRotorSyncError = Math.max(
+              part3OuterLaneSpinMaxRotorSyncError,
+              rotorSyncError,
+            );
+
+            if (inTrackCenterBand && trackPairContact) {
+              if (part3OuterLaneSpinTrackAngle === null) {
+                part3OuterLaneSpinTrackAngle = trackAngle;
+                part3OuterLaneSpinTrackAngleStart = trackAngle;
+                part3OuterLaneSpinStartSpeed = speed;
+              } else {
+                const delta = THREE.MathUtils.euclideanModulo(
+                  trackAngle -
+                    normalizedAngle(part3OuterLaneSpinTrackAngle) +
+                    Math.PI,
+                  TWO_PI,
+                ) - Math.PI;
+                part3OuterLaneSpinTrackAngle += delta;
+                part3OuterLaneSpinTrackAngleEnd =
+                  part3OuterLaneSpinTrackAngle;
+                const completedLaps = Math.floor(
+                  Math.abs(
+                    part3OuterLaneSpinTrackAngle -
+                      part3OuterLaneSpinTrackAngleStart!,
+                  ) / TWO_PI,
+                );
+                if (completedLaps > part3OuterLaneSpinCompletedLaps) {
+                  part3OuterLaneSpinCompletedLaps = completedLaps;
+                  part3OuterLaneSpinLapSpeeds.push(speed);
+                }
+              }
+              part3OuterLaneSpinTrackFrames += 0;
+              part3OuterLaneSpinSpeedSum += speed;
+              part3OuterLaneSpinEndSpeed = speed;
+              const rollingSpeed =
+                Math.hypot(
+                  angularVelocity.x,
+                  angularVelocity.y,
+                  angularVelocity.z,
+                ) * BALL_RADIUS;
+              part3OuterLaneSpinRollingMismatchSum +=
+                Math.abs(rollingSpeed - speed) / Math.max(speed, 0.1);
+              part3OuterLaneSpinRollingSamples += 1;
+            } else if (
+              part3OuterLaneSpinInwardTransitionTime === null &&
+              part3OuterLaneSpinTrackAngleStart !== null &&
+              radius < PART2_ACTUAL_TRACK_CENTER_RADIUS_BAND[0]
+            ) {
+              part3OuterLaneSpinInwardTransitionTime =
+                part3OuterLaneSpinElapsed;
+              part3OuterLaneSpinInwardTransitionRadius = radius;
+              part3OuterLaneSpinTrackAngleEnd ??=
+                part3OuterLaneSpinTrackAngle;
+            }
+
+            ballMesh.position.set(position.x, position.y, position.z);
+            const rotation = ballBody.rotation();
+            ballMesh.quaternion.set(rotation.x, rotation.y, rotation.z, rotation.w);
+            part3OuterLaneSpinMaxVisualBodySyncError = Math.max(
+              part3OuterLaneSpinMaxVisualBodySyncError,
+              Math.hypot(
+                ballMesh.position.x - position.x,
+                ballMesh.position.y - position.y,
+                ballMesh.position.z - position.z,
+              ),
+            );
+            part3OuterLaneSpinPreviousSpeed = speed;
+
+            if (
+              part3OuterLaneSpinElapsed >=
+              PART3_OUTER_SPIN_DURATION_SECONDS
+            ) {
+              completePart3OuterLaneSpin(position, velocity);
+            }
+          }
+
+          if (
+            validationMode === 'part3' &&
             alignmentOnly &&
             world &&
             ballBody &&
@@ -3803,6 +4137,7 @@ export function Part2SceneViewport({
             validationMode === 'part3' &&
             !alignmentOnly &&
             !outerLaneOnly &&
+            !outerLaneSpinOnly &&
             world &&
             ballBody &&
             ballMesh &&
@@ -4573,6 +4908,58 @@ export function Part2SceneViewport({
     </div>
   );
 
+  const renderPart2OuterLaneSpinReport = () => (
+    <div
+      className="part2-drop-report"
+      data-testid="part2-outer-spin-report"
+      data-status={part3OuterLaneSpinReport?.status ?? 'waiting'}
+      aria-live="polite"
+    >
+      {part3OuterLaneSpinReport ? (
+        <>
+          <strong>{part3OuterLaneSpinReport.detail}</strong>
+          <span>
+            PART 2 real GLB dark side-track · actual outside trimesh · 120 Hz ·
+            CCD enabled · friction μ {part3OuterLaneSpinReport.trackFriction.toFixed(2)} ·
+            linear/angular damping {part3OuterLaneSpinReport.linearDamping.toFixed(2)} /{' '}
+            {part3OuterLaneSpinReport.angularDamping.toFixed(2)} · launch radius{' '}
+            {part3OuterLaneSpinReport.operationalLaunchRadius.toFixed(4)} · ball radius{' '}
+            {part3OuterLaneSpinReport.ballRadius.toFixed(4)}
+          </span>
+          {part3OuterLaneSpinReport.results.map((result) => (
+            <span key={result.id}>
+              {result.label}: {result.outcome.toUpperCase()} · vtan{' '}
+              {result.launchSpeed.toFixed(4)} · laps {result.lapCount.toFixed(3)} ·
+              track {result.trackDuration.toFixed(3)} s · speed{' '}
+              {result.averageTrackSpeed.toFixed(4)}→{result.endSpeed.toFixed(4)} ·
+              lap speeds [{result.speedTrendByLap.map((speed) => speed.toFixed(3)).join(', ')}]
+            </span>
+          ))}
+          {part3OuterLaneSpinReport.results.map((result) => (
+            <span key={`${result.id}-safety`}>
+              {result.label}: contact {result.continuousTrackContact ? 'continuous' : 'interrupted'} ·
+              roll/slide {result.rollingOrSlidingCoherent ? 'coherent' : 'invalid'} ·
+              inward transition {result.naturalInwardTransition ? 'natural' : 'not observed'} @ r{' '}
+              {result.inwardTransitionRadius?.toFixed(4) ?? '—'} / t{' '}
+              {result.inwardTransitionTime?.toFixed(3) ?? '—'} s ·
+              rim/edge clearance {result.minimumRimClearance.toFixed(4)} /{' '}
+              {result.minimumDeflectorClearance.toFixed(4)} ·
+              pen/sep {result.maxPenetration.toFixed(4)} / {result.maxSeparation.toFixed(4)} ·
+              hover {result.hover ? 'yes' : 'no'} · clipping {result.clipping ? 'yes' : 'no'} ·
+              tunneling {result.tunneling ? 'yes' : 'no'} · escape {result.escaped ? 'yes' : 'no'} ·
+              velocity spike {result.velocitySpike ? 'yes' : 'no'} · artificial acceleration{' '}
+              {result.artificialAcceleration ? 'yes' : 'no'} · ball/rotor sync{' '}
+              {result.maxVisualBodySyncError.toFixed(6)} / {result.maxRotorSyncError.toFixed(6)} ·{' '}
+              {result.detail}
+            </span>
+          ))}
+        </>
+      ) : (
+        'Waiting for the three PART 2 real dark side-track smoke spins.'
+      )}
+    </div>
+  );
+
   const renderPart3GeometryDiagnosticReport = () => {
     const profileRows =
       part3GeometryDiagnosticReport?.radialProfile
@@ -4796,6 +5183,8 @@ export function Part2SceneViewport({
             : validationMode === 'part3'
               ? outerLaneOnly
                 ? `PART B OUTER LANE ${part3OuterLaneReport?.status.toUpperCase() ?? 'WAITING'} · TANGENTIAL LAUNCH · CCD`
+                : outerLaneSpinOnly
+                  ? `PART 2 DARK SIDE-TRACK ${part3OuterLaneSpinReport?.status.toUpperCase() ?? 'WAITING'} · REAL GLB · CCD`
                 : geometryDiagnosticOnly
                   ? `GEOMETRY DIAGNOSTIC ${part3GeometryDiagnosticReport?.status.toUpperCase() ?? 'WAITING'} · STATIC CONTACT`
                 : alignmentOnly
@@ -4816,6 +5205,8 @@ export function Part2SceneViewport({
           ? renderPart3GeometryDiagnosticReport()
           : outerLaneOnly
           ? renderPart3OuterLaneReport()
+          : outerLaneSpinOnly
+            ? renderPart2OuterLaneSpinReport()
           : alignmentOnly
             ? renderPart3AlignmentReport()
             : renderPart3Report()

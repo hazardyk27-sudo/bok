@@ -4235,7 +4235,7 @@ function App() {
             <Part2SceneViewport
               loadKey={loadKey}
               validationMode="part3"
-              part1ProbeOnly
+              outerLaneSpinOnly
               view={view}
               showGrid={showGrid}
               showPhysicsDebug={showPhysicsDebug}
