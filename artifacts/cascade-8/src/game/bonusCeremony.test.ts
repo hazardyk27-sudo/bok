@@ -5,10 +5,10 @@ import { SeededRNG } from "../engine/RNG";
 import { renderBonusCeremony } from "./bonusCeremony";
 
 const testCases = [
-  { seed: 136, scatterCount: 4, freeSpinsAwarded: 10 },
-  { seed: 2309, scatterCount: 5, freeSpinsAwarded: 15 },
-  { seed: 28135, scatterCount: 6, freeSpinsAwarded: 20 },
-  { seed: 1156, scatterCount: 7, freeSpinsAwarded: 25 },
+  { seed: 4, scatterCount: 4, freeSpinsAwarded: 10 },
+  { seed: 869, scatterCount: 5, freeSpinsAwarded: 15 },
+  { seed: 7897, scatterCount: 6, freeSpinsAwarded: 20 },
+  { seed: 166696, scatterCount: 7, freeSpinsAwarded: 25 },
 ] as const;
 
 describe("bonus trigger ceremony", () => {
