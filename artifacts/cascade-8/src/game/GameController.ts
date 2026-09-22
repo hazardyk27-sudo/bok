@@ -709,8 +709,7 @@ export class GameController {
     const finalAmountCents = Math.round(tumble.finalPayoutMultiplier * this.betCents);
     this.ui.tumble.textContent = formatTumbleCredits(finalAmountCents);
     this.updateTumbleEquation(rawAmountCents, total, finalAmountCents);
-    await sleep(this.duration(470, isBonus));
-    await sleep(this.duration(420, isBonus));
+    await sleep(this.duration(180, isBonus));
   }
   private async pauseForRetrigger(freeSpin: SpinResult["freeSpins"][number]) {
     const count = freeSpin.retriggerScatterCount;

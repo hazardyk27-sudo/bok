@@ -39,3 +39,4 @@
 - [Cadı Kazan final economy](cadi-kazan-final-economy.md) — fixed cashout points target 96% RTP; a 1000x cap intentionally lowers random/aggressive high-risk returns.
 - [Layered scratch reveal](layered-scratch-reveal.md) — shallow abrasion stays opaque; only locally deep cells can reveal results, while global coverage commits the server reveal.
 - [Slot row coordinate mapping](slot-row-coordinate-mapping.md) — Slot pair logic labels rows bottom-up even though the rendered board array is stored top-down.
+- [Slot round-end timing](slot-round-end-timing.md) — keep one short post-settlement hold; remove dead-time without changing drop/refill motion or speed.
