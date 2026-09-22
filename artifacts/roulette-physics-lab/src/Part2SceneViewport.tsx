@@ -7,15 +7,21 @@ import {
   ROULETTE_ASSET_PATH,
   ROULETTE_AUTHORITATIVE_SCALE,
   ROULETTE_BALL_RADIUS,
+  ROULETTE_EUROPEAN_SEQUENCE,
+  ROULETTE_FIXED_TIMESTEP,
+  ROULETTE_GRAVITY_Y,
+  ROULETTE_MAX_CCD_SUBSTEPS,
   ROULETTE_NORMALIZED_DIAMETER,
+  ROULETTE_POCKET_COUNT,
   ROULETTE_RAW_SOURCE_CENTER,
   ROULETTE_ROTATION_AXIS,
+  ROULETTE_ROTOR_ANGULAR_SPEED,
   ROULETTE_Y_ORIGIN,
 } from './roulette-scene-config';
 
-const FIXED_TIMESTEP = 1 / 120;
-const TEST_ANGULAR_SPEED = 0.35;
-const GRAVITY_Y = -58.86;
+const FIXED_TIMESTEP = ROULETTE_FIXED_TIMESTEP;
+const TEST_ANGULAR_SPEED = ROULETTE_ROTOR_ANGULAR_SPEED;
+const GRAVITY_Y = ROULETTE_GRAVITY_Y;
 const BALL_RADIUS = ROULETTE_BALL_RADIUS;
 const BALL_MASS = 0.0027;
 const TWO_PI = Math.PI * 2;
@@ -110,7 +116,7 @@ const STATIONARY_COLLISION_GROUP = 0x0002;
 const ROTOR_COLLISION_GROUP = 0x0004;
 const ROTOR_CONTACT_RADIUS = 1.72;
 const ROTOR_CONTACT_SEGMENTS = 32;
-const EUROPEAN_POCKET_COUNT = 37;
+const EUROPEAN_POCKET_COUNT = ROULETTE_POCKET_COUNT;
 const POCKET_STEP_RADIANS = TWO_PI / EUROPEAN_POCKET_COUNT;
 const POCKET_FLOOR_INNER_RADIUS = 1.48;
 const POCKET_FLOOR_OUTER_RADIUS = 1.90;
@@ -126,10 +132,7 @@ const POCKET_FRET_VERTICAL_HALF_EXTENT = 0.11;
 // downward impulse when a ball approaches from the side.
 const POCKET_FRET_Y =
   POCKET_FLOOR_Y + POCKET_FRET_VERTICAL_HALF_EXTENT + 0.01;
-const EUROPEAN_SEQUENCE = [
-  0, 32, 15, 19, 4, 21, 2, 25, 17, 34, 6, 27, 13, 36, 11, 30, 8, 23, 10,
-  5, 24, 16, 33, 1, 20, 14, 31, 9, 22, 18, 29, 7, 28, 12, 35, 3, 26,
-];
+const EUROPEAN_SEQUENCE = ROULETTE_EUROPEAN_SEQUENCE;
 
 type InspectionView = 'top' | 'angled' | 'side';
 type LoadState = 'loading' | 'loaded' | 'error';
@@ -3637,7 +3640,7 @@ export function Part2SceneViewport({
           if (disposed) return;
           world = new RAPIER.World({ x: 0, y: GRAVITY_Y, z: 0 });
           world.timestep = FIXED_TIMESTEP;
-          world.maxCcdSubsteps = 8;
+          world.maxCcdSubsteps = ROULETTE_MAX_CCD_SUBSTEPS;
           const stationaryBody = world.createRigidBody(RAPIER.RigidBodyDesc.fixed());
             if (
               validationMode === 'part3' &&
