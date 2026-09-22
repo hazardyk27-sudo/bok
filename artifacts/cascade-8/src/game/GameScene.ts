@@ -438,8 +438,8 @@ export class GameScene extends Phaser.Scene {
     return Math.max(120, Math.round(baseDuration * distanceFactor));
   }
 
-  private fallMotionScale(turbo: boolean) {
-    return turbo ? 1.5 : 1.25;
+  private fallMotionScale(_turbo: boolean) {
+    return 1.00;
   }
 
   private animateFallingNodes(
