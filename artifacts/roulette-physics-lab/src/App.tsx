@@ -4,7 +4,18 @@ import RAPIER from '@dimforge/rapier3d-compat';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import { Part2SceneViewport } from './Part2SceneViewport';
-import { ROULETTE_ASSET_PATH } from './roulette-scene-config';
+import {
+  ROULETTE_ASSET_PATH,
+  ROULETTE_BALL_RADIUS,
+  ROULETTE_EUROPEAN_SEQUENCE,
+  ROULETTE_FIXED_TIMESTEP,
+  ROULETTE_GRAVITY_Y,
+  ROULETTE_METERS_PER_WORLD_UNIT,
+  ROULETTE_NORMALIZED_DIAMETER,
+  ROULETTE_POCKET_COUNT,
+  ROULETTE_ROTOR_ANGULAR_SPEED,
+  ROULETTE_WORLD_UNITS_PER_METER,
+} from './roulette-scene-config';
 import {
   getGetPhysicsLabCurrentRoundQueryKey,
   useCreatePhysicsLabRound,
@@ -33,15 +44,15 @@ import {
 } from 'lucide-react';
 
 const ASSET_PATH = ROULETTE_ASSET_PATH;
-const TARGET_WHEEL_DIAMETER = 6;
+const TARGET_WHEEL_DIAMETER = ROULETTE_NORMALIZED_DIAMETER;
 const SOURCE_BALL_NODE = 'Sphere_16';
-const METERS_PER_WORLD_UNIT = 1 / 6;
-const WORLD_UNITS_PER_METER = 6;
-const WORLD_GRAVITY_Y = -58.86;
-const SECTOR_COUNT = 37;
+const METERS_PER_WORLD_UNIT = ROULETTE_METERS_PER_WORLD_UNIT;
+const WORLD_UNITS_PER_METER = ROULETTE_WORLD_UNITS_PER_METER;
+const WORLD_GRAVITY_Y = ROULETTE_GRAVITY_Y;
+const SECTOR_COUNT = ROULETTE_POCKET_COUNT;
 const SECTOR_STEP_RADIANS = (Math.PI * 2) / SECTOR_COUNT;
-const FIXED_TIMESTEP = 1 / 120;
-const BALL_RADIUS = 0.056;
+const FIXED_TIMESTEP = ROULETTE_FIXED_TIMESTEP;
+const BALL_RADIUS = ROULETTE_BALL_RADIUS;
 const ROTOR_RADIUS = 1.72;
 const OUTER_TRACK_RADIUS = 2.48;
 const OUTER_TRACK_WALL_RADIUS = 2.531;
@@ -84,7 +95,7 @@ const DEFAULT_BALL_PARAMETERS = {
   initialAngularVelocity: 230,
 } as const;
 const DEFAULT_ROTOR_PARAMETERS = {
-  initialAngularVelocity: 2.4,
+  initialAngularVelocity: ROULETTE_ROTOR_ANGULAR_SPEED,
   angularDamping: 0.28,
   mass: 3.2,
 } as const;
@@ -100,10 +111,7 @@ function legacyRouletteWorldDisabled(): RAPIER.World {
     'Legacy roulette physics is disabled. Use the authoritative GLB world in Part2SceneViewport.',
   );
 }
-const EUROPEAN_SEQUENCE = [
-  0, 32, 15, 19, 4, 21, 2, 25, 17, 34, 6, 27, 13, 36, 11, 30, 8, 23, 10,
-  5, 24, 16, 33, 1, 20, 14, 31, 9, 22, 18, 29, 7, 28, 12, 35, 3, 26,
-];
+const EUROPEAN_SEQUENCE = ROULETTE_EUROPEAN_SEQUENCE;
 
 const PHYSICAL_MEASUREMENTS = [
   { label: 'Overall diameter', value: '1.000 m', detail: '6.000 normalized world units' },
