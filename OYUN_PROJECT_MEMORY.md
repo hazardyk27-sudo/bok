@@ -77,6 +77,14 @@ Preferred path:
 
 ## C. GitHub → Replit sync-only rule
 
+After ChatGPT changes `main`, Replit should receive **only one short sync instruction**. Do not send long explanations, implementation notes, audit requests, or extra commentary to Replit.
+
+Canonical Replit sync instruction:
+
+> **GitHub main branch’ini mevcut workspace’e fast-forward sync et ve Preview’ı yenile. Dosyalarda başka değişiklik yapma.**
+
+This is the default wording unless a genuine sync/auth/branch problem requires a different instruction.
+
 After ChatGPT changes `main`, Replit may be instructed only to synchronize the workspace.
 
 Safe sync logic:
