@@ -366,7 +366,7 @@ export class GameScene extends Phaser.Scene {
         y: centerY + Math.sin(angle) * (12 + index * 4),
         alpha: 0,
         scale: 0.5,
-        duration: 260,
+        duration: 150,
         ease: "Cubic.easeOut",
           onComplete: () => this.destroyEffect(spark),
       });
@@ -378,7 +378,7 @@ export class GameScene extends Phaser.Scene {
         scaleX: 2.6,
         scaleY: 1.8,
         alpha: 0,
-        duration: 300,
+        duration: 180,
         ease: "Cubic.easeOut",
           onComplete: () => {
           this.destroyEffect(shockwave);
@@ -417,38 +417,72 @@ export class GameScene extends Phaser.Scene {
     this.nodes = nextNodes;
   }
 
+  private naturalFallProgress(progress: number, stagger = 0) {
+    const local = Phaser.Math.Clamp((progress - stagger) / Math.max(0.001, 1 - stagger), 0, 1);
+    if (local < 0.84) {
+      const fall = local / 0.84;
+      return fall * fall * (3 - 2 * fall);
+    }
+    const settle = (local - 0.84) / 0.16;
+    return 1 + Math.sin(settle * Math.PI) * 0.018;
+  }
+
+  private animateFallingNodes(
+    nodes: BoardNode[],
+    starts: number[],
+    targets: number[],
+    duration: number,
+    delay: number,
+    fadeIn: boolean,
+  ) {
+    return new Promise<void>((resolve) => {
+      const motion = { progress: 0 };
+      this.tweens.add({
+        targets: motion,
+        progress: 1,
+        duration,
+        delay,
+        ease: "Linear",
+        onUpdate: () => {
+          nodes.forEach((node, index) => {
+            const travel = this.naturalFallProgress(motion.progress, index * 0.022);
+            node.container.y = starts[index] + (targets[index] - starts[index]) * travel;
+            if (fadeIn) node.container.alpha = Math.min(1, 0.16 + travel * 0.84);
+          });
+        },
+        onComplete: () => {
+          nodes.forEach((node, index) => {
+            node.container.y = targets[index];
+            node.container.alpha = 1;
+          });
+          resolve();
+        },
+      });
+    });
+  }
+
   async animateDrop(duration: number) {
-    const maximumColumnDelay = (BOARD_COLUMNS - 1) * 20;
-    const tweenDuration = Math.max(160, duration - maximumColumnDelay);
+    const maximumColumnDelay = (BOARD_COLUMNS - 1) * 18;
+    const tweenDuration = Math.max(220, duration - maximumColumnDelay);
     await Promise.all(Array.from({ length: BOARD_COLUMNS }, (_, col) => {
       const columnNodes = this.nodes.filter((node) => node.col === col);
       const finalYs = columnNodes.map((node) => node.container.y);
       columnNodes.forEach((node, index) => {
-        node.container.y = finalYs[index] - 260 - col * 18;
+        node.container.y = finalYs[index] - 290 - index * 24 - col * 12;
         node.container.alpha = 0.2;
       });
-      return new Promise<void>((resolve) => {
-        const motion = { progress: 0 };
-        this.tweens.add({
-          targets: motion,
-          progress: 1,
-          duration: tweenDuration,
-          delay: col * 20,
-          ease: "Cubic.easeOut",
-          onUpdate: () => {
-            columnNodes.forEach((node, index) => {
-              node.container.y = finalYs[index] - 260 - col * 18 + 260 * motion.progress + col * 18 * motion.progress;
-              node.container.alpha = 0.2 + motion.progress * 0.8;
-            });
-          },
-          onComplete: () => {
-            const scatterLandings = columnNodes
-              .filter((node) => node.symbol === "SCATTER")
-              .map((node) => this.animateScatterLanding(node));
-            if (scatterLandings.length) void Promise.all(scatterLandings).then(() => resolve());
-            else resolve();
-          },
-        });
+      return this.animateFallingNodes(
+        columnNodes,
+        columnNodes.map((node, index) => finalYs[index] - 290 - index * 24 - col * 12),
+        finalYs,
+        tweenDuration,
+        col * 18,
+        true,
+      ).then(async () => {
+        const scatterLandings = columnNodes
+          .filter((node) => node.symbol === "SCATTER")
+          .map((node) => this.animateScatterLanding(node));
+        if (scatterLandings.length) await Promise.all(scatterLandings);
       });
     }));
   }
@@ -771,8 +805,8 @@ export class GameScene extends Phaser.Scene {
   async animateCascade(board: Board, removedCells: Cell[], duration: number) {
     const winning = new Set(removedCells.map((cell) => `${cell.row}:${cell.col}`));
     const animations: Promise<void>[] = [];
-    const maximumColumnDelay = (BOARD_COLUMNS - 1) * 20;
-    const maximumIncomingDelay = maximumColumnDelay + 44;
+    const maximumColumnDelay = (BOARD_COLUMNS - 1) * 18;
+    const maximumIncomingDelay = maximumColumnDelay + 18;
     const tweenDuration = Math.max(160, duration - maximumIncomingDelay);
     for (let col = 0; col < BOARD_COLUMNS; col += 1) {
       const survivors = this.nodes
@@ -786,21 +820,7 @@ export class GameScene extends Phaser.Scene {
           node.row = targetRow;
           return this.boardOrigin.y + targetRow * this.cellSize.height + 46;
         });
-        animations.push(new Promise<void>((resolve) => {
-          const motion = { progress: 0 };
-          this.tweens.add({
-            targets: motion,
-            progress: 1,
-            duration: tweenDuration,
-            ease: "Cubic.easeInOut",
-            onUpdate: () => {
-              survivors.forEach((node, index) => {
-                node.container.y = starts[index] + (targets[index] - starts[index]) * motion.progress;
-              });
-            },
-            onComplete: () => resolve(),
-          });
-        }));
+        animations.push(this.animateFallingNodes(survivors, starts, targets, tweenDuration, col * 18, false));
       }
       const incomingGroups = new Map<string, BoardNode[]>();
       for (let row = 0; row < generatedCount; row += 1) {
@@ -817,26 +837,19 @@ export class GameScene extends Phaser.Scene {
         group.push(node);
         incomingGroups.set(key, group);
       }
+      let incomingGroupIndex = 0;
       incomingGroups.forEach((group) => {
         const targetYs = group.map((node) => this.boardOrigin.y + node.row * this.cellSize.height + 46);
         const starts = group.map((node) => node.container.y);
-        animations.push(new Promise<void>((resolve) => {
-          const motion = { progress: 0 };
-          this.tweens.add({
-            targets: motion,
-            progress: 1,
-            duration: tweenDuration,
-            delay: col * 20 + (group.length > 1 ? 44 : 0),
-            ease: "Cubic.easeOut",
-            onUpdate: () => {
-              group.forEach((node, index) => {
-                node.container.y = starts[index] + (targetYs[index] - starts[index]) * motion.progress;
-                node.container.alpha = 0.2 + motion.progress * 0.8;
-              });
-            },
-            onComplete: () => resolve(),
-          });
-        }));
+        animations.push(this.animateFallingNodes(
+          group,
+          starts,
+          targetYs,
+          tweenDuration,
+          col * 18 + incomingGroupIndex * 18,
+          true,
+        ));
+        incomingGroupIndex += 1;
       });
     }
     await Promise.all(animations);
