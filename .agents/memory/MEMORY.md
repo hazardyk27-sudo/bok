@@ -40,3 +40,4 @@
 - [Layered scratch reveal](layered-scratch-reveal.md) — shallow abrasion stays opaque; only locally deep cells can reveal results, while global coverage commits the server reveal.
 - [Slot row coordinate mapping](slot-row-coordinate-mapping.md) — Slot pair logic labels rows bottom-up even though the rendered board array is stored top-down.
 - [Slot round-end timing](slot-round-end-timing.md) — keep one short post-settlement hold; remove dead-time without changing drop/refill motion or speed.
+- [Roulette true dark track](roulette-true-dark-track.md) — transformed GLB sampling places the recessed channel near r 2.2700–2.5400, not the former assumed outer band.

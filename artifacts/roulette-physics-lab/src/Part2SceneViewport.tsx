@@ -311,6 +311,41 @@ type Part3OuterLaneSpinReport = {
   detail: string;
 };
 
+type Part3GeometryProfileHit = {
+  y: number;
+  objectName: string;
+  materialName: string;
+  normalY: number;
+};
+
+type Part3GeometryProfileSample = {
+  azimuth: number;
+  radius: number;
+  hits: Part3GeometryProfileHit[];
+};
+
+type Part3GeometryDiagnosticReport = {
+  status: 'running' | 'passed' | 'failed';
+  trueDarkTrackInnerRadius: number | null;
+  trueDarkTrackOuterRadius: number | null;
+  trueDarkTrackCenterRadius: number | null;
+  darkTrackSurfaceYRange: readonly [number, number] | null;
+  outerWoodRingRadiusBand: readonly [number, number] | null;
+  nearestDeflectorRadiusBand: readonly [number, number] | null;
+  proposedLaunchRadius: number | null;
+  proposedLaunchHeight: number | null;
+  ballRadius: number;
+  rimClearance: number | null;
+  deflectorClearance: number | null;
+  staticVisibleContact: boolean;
+  staticOnDarkTrack: boolean;
+  staticOnWood: boolean;
+  staticInsideWheel: boolean;
+  staticHover: boolean;
+  radialProfile: Part3GeometryProfileSample[];
+  detail: string;
+};
+
 type Part3PocketDescentReport = {
   status: 'running' | 'passed' | 'failed';
   label: string;
@@ -413,6 +448,7 @@ type Part2SceneViewportProps = {
   alignmentOnly?: boolean;
   outerLaneOnly?: boolean;
   outerLaneSpinOnly?: boolean;
+  geometryDiagnosticOnly?: boolean;
   view: InspectionView;
   showGrid: boolean;
   showPhysicsDebug: boolean;
@@ -678,6 +714,37 @@ function makePart3OuterTrackTrimesh(verticalOffset = 0) {
       indices.push(a, d, b, b, d, c);
     }
   }
+  return {
+    vertices: new Float32Array(vertices),
+    indices: new Uint32Array(indices),
+  };
+}
+
+function makeWorldTrimeshFromObject(object: THREE.Object3D) {
+  const vertices: number[] = [];
+  const indices: number[] = [];
+  object.updateMatrixWorld(true);
+  object.traverse((child) => {
+    if (!(child instanceof THREE.Mesh)) return;
+    const geometry = child.geometry;
+    const position = geometry.getAttribute('position');
+    if (!position) return;
+    const base = vertices.length / 3;
+    const worldPosition = new THREE.Vector3();
+    for (let index = 0; index < position.count; index += 1) {
+      worldPosition.fromBufferAttribute(position, index).applyMatrix4(child.matrixWorld);
+      vertices.push(worldPosition.x, worldPosition.y, worldPosition.z);
+    }
+    if (geometry.index) {
+      for (let index = 0; index < geometry.index.count; index += 1) {
+        indices.push(base + geometry.index.getX(index));
+      }
+    } else {
+      for (let index = 0; index < position.count; index += 3) {
+        indices.push(base + index, base + index + 1, base + index + 2);
+      }
+    }
+  });
   return {
     vertices: new Float32Array(vertices),
     indices: new Uint32Array(indices),
@@ -1234,6 +1301,7 @@ export function Part2SceneViewport({
   alignmentOnly = false,
   outerLaneOnly = false,
   outerLaneSpinOnly = false,
+  geometryDiagnosticOnly = false,
   view,
   showGrid,
   showPhysicsDebug,
@@ -1257,6 +1325,8 @@ export function Part2SceneViewport({
     useState<Part3OuterLaneReport | null>(null);
   const [part3OuterLaneSpinReport, setPart3OuterLaneSpinReport] =
     useState<Part3OuterLaneSpinReport | null>(null);
+  const [part3GeometryDiagnosticReport, setPart3GeometryDiagnosticReport] =
+    useState<Part3GeometryDiagnosticReport | null>(null);
   const [part3AlignmentReport, setPart3AlignmentReport] =
     useState<Part3AlignmentReport | null>(null);
   const [part4Report, setPart4Report] = useState<Part4ValidationReport | null>(null);
@@ -1480,6 +1550,12 @@ export function Part2SceneViewport({
       setPart3OuterLaneSpinReport(report);
     };
 
+    const publishPart3GeometryDiagnosticReport = (
+      report: Part3GeometryDiagnosticReport,
+    ) => {
+      setPart3GeometryDiagnosticReport(report);
+    };
+
     const measureVisibleSurfaceAt = (x: number, z: number) => {
       if (!stationaryGroup) return null;
       stationaryGroup.updateMatrixWorld(true);
@@ -1515,6 +1591,76 @@ export function Part2SceneViewport({
       return hit
         ? { y: hit.point.y, source: hit.object.name || hit.object.parent?.name || 'unnamed-mesh' }
         : null;
+    };
+
+    const sampleActualGeometryProfile = () => {
+      if (!stationaryGroup) return [];
+      stationaryGroup.updateMatrixWorld(true);
+      rotorPivot?.updateMatrixWorld(true);
+      const samples: Part3GeometryProfileSample[] = [];
+      const azimuths = [0.37, 0.37 + POCKET_STEP_RADIANS * 0.5];
+      for (const azimuth of azimuths) {
+        for (
+          let radius = 0.2;
+          radius <= 3.15 + 0.0001;
+          radius += 0.01
+        ) {
+          const raycaster = new THREE.Raycaster(
+            new THREE.Vector3(
+              Math.sin(azimuth) * radius,
+              2,
+              Math.cos(azimuth) * radius,
+            ),
+            new THREE.Vector3(0, -1, 0),
+            0,
+            4,
+          );
+          const intersections = [
+            ...raycaster.intersectObject(stationaryGroup, true),
+            ...(rotorPivot
+              ? raycaster.intersectObject(rotorPivot, true)
+              : []),
+          ];
+          const hits = intersections
+            .map((intersection) => {
+              const mesh = intersection.object as THREE.Mesh;
+              const faceNormal = intersection.face?.normal
+                ? intersection.face.normal
+                    .clone()
+                    .transformDirection(mesh.matrixWorld)
+                : new THREE.Vector3(0, 0, 0);
+              const material = Array.isArray(mesh.material)
+                ? mesh.material[intersection.face?.materialIndex ?? 0]
+                : mesh.material;
+              return {
+                y: intersection.point.y,
+                objectName: mesh.name || mesh.parent?.name || 'unnamed-mesh',
+                materialName: material?.name || 'unnamed-material',
+                normalY: faceNormal.y,
+              };
+            })
+            .filter(
+              (hit) =>
+                hit.normalY > 0.2 &&
+                hit.y > -1.5 &&
+                hit.y < 1.5,
+            )
+            .sort((left, right) => right.y - left.y);
+          if (hits.length > 0) {
+            samples.push({
+              azimuth,
+              radius: Number(radius.toFixed(4)),
+              hits: hits.map((hit) => ({
+                y: Number(hit.y.toFixed(4)),
+                objectName: hit.objectName,
+                materialName: hit.materialName,
+                normalY: Number(hit.normalY.toFixed(4)),
+              })),
+            });
+          }
+        }
+      }
+      return samples;
     };
 
     const startPart3AlignmentProbe = () => {
@@ -1970,6 +2116,282 @@ export function Part2SceneViewport({
       );
     };
 
+    const runPart3GeometryDiagnostic = () => {
+      const radialProfile = sampleActualGeometryProfile();
+      const azimuths = [
+        ...new Set(radialProfile.map((sample) => sample.azimuth)),
+      ];
+      const perAzimuth = azimuths.map((azimuth) => {
+        const samples = radialProfile.filter(
+          (sample) => sample.azimuth === azimuth,
+        );
+        const outsideSamples = samples.filter((sample) =>
+          sample.hits.some(
+            (hit) => hit.objectName === 'geo1_outside_0',
+          ),
+        );
+        const outsideHits = (sample: Part3GeometryProfileSample) =>
+          sample.hits.filter(
+            (hit) => hit.objectName === 'geo1_outside_0',
+          );
+        const nearDuplicateSamples = outsideSamples.filter((sample) => {
+          const hits = outsideHits(sample);
+          if (hits.length < 2) return false;
+          const yValues = hits.map((hit) => hit.y);
+          return (
+            Math.max(...yValues) - Math.min(...yValues) <= 0.08 &&
+            Math.min(...yValues) < -0.2 &&
+            sample.radius > 2
+          );
+        });
+        const woodSamples = outsideSamples.filter((sample) =>
+          outsideHits(sample).some(
+            (hit) => hit.y > -0.1 && sample.radius > 2.3,
+          ),
+        );
+        const lastInnerLip =
+          nearDuplicateSamples[nearDuplicateSamples.length - 1];
+        const darkSamples: Part3GeometryProfileSample[] = [];
+        let darkBranchStarted = false;
+        if (lastInnerLip !== undefined) {
+          for (const sample of outsideSamples) {
+            if (sample.radius <= lastInnerLip.radius) continue;
+            const hasLowTrackHit = outsideHits(sample).some(
+              (hit) => hit.y < -0.1,
+            );
+            if (hasLowTrackHit) {
+              darkBranchStarted = true;
+              darkSamples.push(sample);
+            } else if (darkBranchStarted) {
+              break;
+            }
+          }
+        }
+        return {
+          darkInner: lastInnerLip
+            ? Number((lastInnerLip.radius + 0.01).toFixed(4))
+            : null,
+          darkOuter: darkSamples.length
+            ? darkSamples[darkSamples.length - 1].radius
+            : null,
+          darkY: darkSamples.flatMap((sample) =>
+            outsideHits(sample)
+              .filter((hit) => hit.y < -0.1)
+              .map((hit) => hit.y),
+          ),
+          woodInner: woodSamples.length ? woodSamples[0].radius : null,
+          woodOuter: woodSamples.length
+            ? woodSamples[woodSamples.length - 1].radius
+            : null,
+          deflectorInner: nearDuplicateSamples.length
+            ? nearDuplicateSamples[0].radius
+            : null,
+          deflectorOuter: nearDuplicateSamples.length
+            ? lastInnerLip.radius
+            : null,
+        };
+      });
+      const validMeasures = perAzimuth.filter(
+        (measure) =>
+          measure.darkInner !== null &&
+          measure.darkOuter !== null &&
+          measure.woodInner !== null &&
+          measure.woodOuter !== null &&
+          measure.deflectorInner !== null &&
+          measure.deflectorOuter !== null,
+      );
+      const darkInner = validMeasures.length
+        ? Math.max(...validMeasures.map((measure) => measure.darkInner!))
+        : null;
+      const darkOuter = validMeasures.length
+        ? Math.min(...validMeasures.map((measure) => measure.darkOuter!))
+        : null;
+      const woodInner = validMeasures.length
+        ? Math.min(...validMeasures.map((measure) => measure.woodInner!))
+        : null;
+      const woodOuter = validMeasures.length
+        ? Math.max(...validMeasures.map((measure) => measure.woodOuter!))
+        : null;
+      const deflectorInner = validMeasures.length
+        ? Math.min(
+            ...validMeasures.map((measure) => measure.deflectorInner!),
+          )
+        : null;
+      const deflectorOuter = validMeasures.length
+        ? Math.max(
+            ...validMeasures.map((measure) => measure.deflectorOuter!),
+          )
+        : null;
+      const darkSurfaceYValues = validMeasures.flatMap(
+        (measure) => measure.darkY,
+      );
+      const proposedLaunchRadius =
+        darkOuter !== null && woodInner !== null && deflectorOuter !== null
+          ? Number(
+              Math.min(
+                Math.floor(
+                  (woodInner - BALL_RADIUS - 0.02) * 100,
+                ) / 100,
+                darkOuter - 0.02,
+              ).toFixed(4),
+            )
+          : null;
+      const proposedSample =
+        proposedLaunchRadius === null
+          ? null
+          : radialProfile
+              .filter(
+                (sample) =>
+                  sample.azimuth === azimuths[0] &&
+                  Math.abs(sample.radius - proposedLaunchRadius) <= 0.0051,
+              )
+              .sort(
+                (left, right) =>
+                  Math.abs(left.radius - proposedLaunchRadius) -
+                  Math.abs(right.radius - proposedLaunchRadius),
+              )[0] ?? null;
+      const proposedTrackHit =
+        proposedSample?.hits
+          .filter(
+            (hit) =>
+              hit.objectName === 'geo1_outside_0' &&
+              hit.y < -0.1,
+          )
+          .sort((left, right) => left.y - right.y)[0] ?? null;
+      const proposedLaunchHeight =
+        proposedTrackHit && ballBody
+          ? proposedTrackHit.y + BALL_RADIUS + 0.0005
+          : null;
+      let staticVisibleContact = false;
+      let staticOnDarkTrack = false;
+      let staticOnWood = false;
+      let staticInsideWheel = false;
+      let staticHover = false;
+      if (
+        world &&
+        ballBody &&
+        physicsBallCollider &&
+        part3TrackCollider &&
+        proposedLaunchRadius !== null &&
+        proposedLaunchHeight !== null
+      ) {
+        const launchPosition = radialPosition(
+          proposedLaunchRadius,
+          azimuths[0],
+          proposedLaunchHeight,
+        );
+        ballBody.setTranslation(
+          {
+            x: launchPosition[0],
+            y: launchPosition[1],
+            z: launchPosition[2],
+          },
+          true,
+        );
+        ballBody.setLinvel({ x: 0, y: 0, z: 0 }, true);
+        ballBody.setAngvel({ x: 0, y: 0, z: 0 }, true);
+        ballMesh?.position.set(...launchPosition);
+        for (let step = 0; step < 6; step += 1) world.step();
+        world.contactPairsWith(physicsBallCollider, (otherCollider) => {
+          if (otherCollider.handle === part3TrackCollider?.handle) {
+            staticVisibleContact = true;
+          }
+        });
+        const finalPosition = ballBody.translation();
+        const finalBottom = finalPosition.y - BALL_RADIUS;
+        const surfaceY = proposedTrackHit?.y ?? 0;
+        staticOnDarkTrack =
+          proposedLaunchRadius >= (darkInner ?? Number.POSITIVE_INFINITY) &&
+          proposedLaunchRadius <= (darkOuter ?? Number.NEGATIVE_INFINITY) &&
+          Math.abs(finalBottom - surfaceY) <= 0.02;
+        staticOnWood =
+          proposedLaunchRadius + BALL_RADIUS >= (woodInner ?? Infinity);
+        staticInsideWheel =
+          proposedLaunchRadius - BALL_RADIUS <=
+          (deflectorOuter ?? -Infinity);
+        staticHover = finalBottom - surfaceY > 0.02;
+      }
+      const passed =
+        validMeasures.length === azimuths.length &&
+        staticVisibleContact &&
+        staticOnDarkTrack &&
+        !staticOnWood &&
+        !staticInsideWheel &&
+        !staticHover &&
+        (woodInner === null ||
+          proposedLaunchRadius === null ||
+          woodInner -
+            proposedLaunchRadius -
+            BALL_RADIUS >=
+            0.02) &&
+        (deflectorOuter === null ||
+          proposedLaunchRadius === null ||
+          proposedLaunchRadius -
+            deflectorOuter -
+            BALL_RADIUS >=
+            0.02);
+      console.info(
+        'PART_C_GEOMETRY_PROFILE',
+        JSON.stringify({ perAzimuth, proposedLaunchRadius }),
+      );
+      publishPart3GeometryDiagnosticReport({
+        status: passed ? 'passed' : 'failed',
+        trueDarkTrackInnerRadius: darkInner,
+        trueDarkTrackOuterRadius: darkOuter,
+        trueDarkTrackCenterRadius:
+          darkInner !== null && darkOuter !== null
+            ? Number(((darkInner + darkOuter) / 2).toFixed(4))
+            : null,
+        darkTrackSurfaceYRange:
+          darkSurfaceYValues.length > 0
+            ? [
+                Number(Math.min(...darkSurfaceYValues).toFixed(4)),
+                Number(Math.max(...darkSurfaceYValues).toFixed(4)),
+              ]
+            : null,
+        outerWoodRingRadiusBand:
+          woodInner !== null && woodOuter !== null
+            ? [woodInner, woodOuter]
+            : null,
+        nearestDeflectorRadiusBand:
+          deflectorInner !== null && deflectorOuter !== null
+            ? [deflectorInner, deflectorOuter]
+            : null,
+        proposedLaunchRadius,
+        proposedLaunchHeight,
+        ballRadius: BALL_RADIUS,
+        rimClearance:
+          woodInner !== null && proposedLaunchRadius !== null
+            ? Number(
+                (
+                  woodInner -
+                  proposedLaunchRadius -
+                  BALL_RADIUS
+                ).toFixed(4),
+              )
+            : null,
+        deflectorClearance:
+          deflectorOuter !== null && proposedLaunchRadius !== null
+            ? Number(
+                (
+                  proposedLaunchRadius -
+                  deflectorOuter -
+                  BALL_RADIUS
+                ).toFixed(4),
+              )
+            : null,
+        staticVisibleContact,
+        staticOnDarkTrack,
+        staticOnWood,
+        staticInsideWheel,
+        staticHover,
+        radialProfile,
+        detail: passed
+          ? 'PART C remains interrupted; geometry diagnostic PASS only. True dark-track placement is ready for a separate future spin task; no lap tuning ran.'
+          : 'PART C remains interrupted; geometry diagnostic FAIL. No lap tuning or production path ran.',
+      });
+    };
+
     const completePart3OuterLaneSpin = (
       position: RAPIER.Vector,
       velocity: RAPIER.Vector,
@@ -2322,7 +2744,7 @@ export function Part2SceneViewport({
           world.timestep = FIXED_TIMESTEP;
           world.maxCcdSubsteps = 8;
           const stationaryBody = world.createRigidBody(RAPIER.RigidBodyDesc.fixed());
-          if (validationMode === 'part3') {
+           if (validationMode === 'part3' && !geometryDiagnosticOnly) {
              const launchSample = radialPosition(PART3_LAUNCH_RADIUS, 0.37, 0);
              const darkTrackSurface = measureVisibleSurfaceAt(
                launchSample[0],
@@ -2351,7 +2773,24 @@ export function Part2SceneViewport({
             for (const collider of part3DeflectorColliders) {
               part3ColliderRoles.set(collider.handle, 'visible-deflector-cuboid');
             }
-          } else {
+           } else if (validationMode === 'part3' && geometryDiagnosticOnly) {
+             const actualOutsideMesh = makeWorldTrimeshFromObject(outside);
+             part3TrackCollider = world.createCollider(
+               RAPIER.ColliderDesc.trimesh(
+                 actualOutsideMesh.vertices,
+                 actualOutsideMesh.indices,
+                 RAPIER.TriMeshFlags.FIX_INTERNAL_EDGES |
+                   RAPIER.TriMeshFlags.ORIENTED,
+               )
+                 .setFriction(PART3_TRACK_FRICTION)
+                 .setRestitution(0.01),
+               stationaryBody,
+             );
+             part3ColliderRoles.set(
+               part3TrackCollider.handle,
+               'actual-glb-outside-trimesh',
+             );
+           } else {
             const profileMesh = makeProfileTrimesh();
             const profileCollider = RAPIER.ColliderDesc.trimesh(
               profileMesh.vertices,
@@ -2381,7 +2820,10 @@ export function Part2SceneViewport({
             stationaryBody,
           );
 
-           if (validationMode === 'part3' || validationMode === 'part4') {
+            if (
+              (validationMode === 'part3' && !geometryDiagnosticOnly) ||
+              validationMode === 'part4'
+            ) {
             const initialRotorAngle = normalizedAngle(rotorAngleRef.current);
             rotorBody = world.createRigidBody(
               RAPIER.RigidBodyDesc.kinematicPositionBased()
@@ -2393,7 +2835,7 @@ export function Part2SceneViewport({
                   w: Math.cos(initialRotorAngle / 2),
                 }),
             );
-             if (validationMode === 'part3') {
+              if (validationMode === 'part3' && !geometryDiagnosticOnly) {
                part3PocketColliders = addKinematicPocketSystem(world, rotorBody);
                part3PocketColliders.forEach((collider, index) => {
                  part3ColliderRoles.set(
@@ -2467,7 +2909,12 @@ export function Part2SceneViewport({
           physicsBallCollider = world.createCollider(ballColliderDescriptor, ballBody);
           ballBody.setTranslation({ x: initialPosition[0], y: initialPosition[1], z: initialPosition[2] }, true);
           ballMesh.position.set(...initialPosition);
-            if (!alignmentOnly && !outerLaneOnly) {
+            if (
+              !alignmentOnly &&
+              !outerLaneOnly &&
+              !outerLaneSpinOnly &&
+              !geometryDiagnosticOnly
+            ) {
              setPocketReport({
                status: 'running',
                results: [],
@@ -2477,8 +2924,41 @@ export function Part2SceneViewport({
                if (!disposed) setPocketReport(report);
              });
            }
-          if (validationMode === 'part3') {
-             if (outerLaneOnly) {
+           if (validationMode === 'part3') {
+              if (geometryDiagnosticOnly) {
+                try {
+                  runPart3GeometryDiagnostic();
+                } catch (error) {
+                  console.error('PART C geometry diagnostic failed', error);
+                  publishPart3GeometryDiagnosticReport({
+                    status: 'failed',
+                    trueDarkTrackInnerRadius: null,
+                    trueDarkTrackOuterRadius: null,
+                    trueDarkTrackCenterRadius: null,
+                    darkTrackSurfaceYRange: null,
+                    outerWoodRingRadiusBand: null,
+                    nearestDeflectorRadiusBand: null,
+                    proposedLaunchRadius: null,
+                    proposedLaunchHeight: null,
+                    ballRadius: BALL_RADIUS,
+                    rimClearance: null,
+                    deflectorClearance: null,
+                    staticVisibleContact: false,
+                    staticOnDarkTrack: false,
+                    staticOnWood: false,
+                    staticInsideWheel: false,
+                    staticHover: false,
+                    radialProfile: [],
+                    detail: `PART C geometry diagnostic error: ${
+                      error instanceof Error ? error.message : String(error)
+                    }`,
+                  });
+                }
+                callbacksRef.current.onStateChange(
+                  'loaded',
+                  'PART C diagnostic radial geometry profile running',
+                );
+              } else if (outerLaneOnly) {
                startPart3OuterLaneProbe();
                callbacksRef.current.onStateChange(
                  'loaded',
@@ -3917,6 +4397,94 @@ export function Part2SceneViewport({
     </div>
   );
 
+  const renderPart3GeometryDiagnosticReport = () => {
+    const profileRows =
+      part3GeometryDiagnosticReport?.radialProfile
+        .filter(
+          (sample) =>
+            sample.azimuth ===
+              part3GeometryDiagnosticReport.radialProfile[0]?.azimuth &&
+            sample.radius >= 1.0 &&
+            sample.radius <= 2.6,
+        )
+        .map(
+          (sample) =>
+            `${sample.radius.toFixed(2)}:[${sample.hits
+              .map(
+                (hit) =>
+                  `${hit.y.toFixed(4)} ${hit.objectName}/${hit.materialName} n${hit.normalY.toFixed(2)}`,
+              )
+              .join('|')}]`,
+        ) ?? [];
+    return (
+      <div
+        className="part2-drop-report"
+        data-testid="part3-geometry-diagnostic-report"
+        data-status={part3GeometryDiagnosticReport?.status ?? 'waiting'}
+        aria-live="polite"
+      >
+        {part3GeometryDiagnosticReport ? (
+          <>
+            <strong>{part3GeometryDiagnosticReport.detail}</strong>
+            <span>
+              measured dark track r{' '}
+              {part3GeometryDiagnosticReport.trueDarkTrackInnerRadius?.toFixed(
+                4,
+              ) ?? '—'}
+              –
+              {part3GeometryDiagnosticReport.trueDarkTrackOuterRadius?.toFixed(
+                4,
+              ) ?? '—'} · center r{' '}
+              {part3GeometryDiagnosticReport.trueDarkTrackCenterRadius?.toFixed(
+                4,
+              ) ?? '—'} · surface Y{' '}
+              {part3GeometryDiagnosticReport.darkTrackSurfaceYRange
+                ? `${part3GeometryDiagnosticReport.darkTrackSurfaceYRange[0].toFixed(4)}–${part3GeometryDiagnosticReport.darkTrackSurfaceYRange[1].toFixed(4)}`
+                : '—'}
+            </span>
+            <span>
+              outer wood r{' '}
+              {part3GeometryDiagnosticReport.outerWoodRingRadiusBand
+                ? `${part3GeometryDiagnosticReport.outerWoodRingRadiusBand[0].toFixed(4)}–${part3GeometryDiagnosticReport.outerWoodRingRadiusBand[1].toFixed(4)}`
+                : '—'}{' '}
+              · nearest deflector r{' '}
+              {part3GeometryDiagnosticReport.nearestDeflectorRadiusBand
+                ? `${part3GeometryDiagnosticReport.nearestDeflectorRadiusBand[0].toFixed(4)}–${part3GeometryDiagnosticReport.nearestDeflectorRadiusBand[1].toFixed(4)}`
+                : '—'}
+            </span>
+            <span>
+              proposed launch r{' '}
+              {part3GeometryDiagnosticReport.proposedLaunchRadius?.toFixed(
+                4,
+              ) ?? '—'}{' '}
+              / Y{' '}
+              {part3GeometryDiagnosticReport.proposedLaunchHeight?.toFixed(
+                4,
+              ) ?? '—'} · wood clearance{' '}
+              {part3GeometryDiagnosticReport.rimClearance?.toFixed(4) ?? '—'}{' '}
+              · deflector clearance{' '}
+              {part3GeometryDiagnosticReport.deflectorClearance?.toFixed(
+                4,
+              ) ?? '—'}{' '}
+              · contact{' '}
+              {part3GeometryDiagnosticReport.staticVisibleContact
+                ? 'yes'
+                : 'no'}{' '}
+              · dark track{' '}
+              {part3GeometryDiagnosticReport.staticOnDarkTrack ? 'yes' : 'no'}{' '}
+              · wood{' '}
+              {part3GeometryDiagnosticReport.staticOnWood ? 'yes' : 'no'} ·
+              hover {part3GeometryDiagnosticReport.staticHover ? 'yes' : 'no'}
+            </span>
+            <code>{profileRows.join(' · ')}</code>
+          </>
+        ) : (
+          'Waiting for the transformed GLB geometry diagnostic.'
+        )}
+      </div>
+    );
+  };
+
   const renderPart4Report = () => (
     <div
       className="part2-drop-report"
@@ -4018,6 +4586,8 @@ export function Part2SceneViewport({
             : validationMode === 'part3'
               ? outerLaneOnly
                 ? `PART B OUTER LANE ${part3OuterLaneReport?.status.toUpperCase() ?? 'WAITING'} · TANGENTIAL LAUNCH · CCD`
+                : geometryDiagnosticOnly
+                  ? `GEOMETRY DIAGNOSTIC ${part3GeometryDiagnosticReport?.status.toUpperCase() ?? 'WAITING'} · STATIC CONTACT`
                 : alignmentOnly
                 ? `ALIGNMENT ${part3AlignmentReport?.status.toUpperCase() ?? 'WAITING'} · RAPIER CONTACT · CCD`
                 : `PROBES ${part3Report?.status.toUpperCase() ?? 'WAITING'} · STATIC COLLIDER · CCD`
@@ -4030,7 +4600,9 @@ export function Part2SceneViewport({
           {renderPocketReport()}
         </>
       ) : validationMode === 'part3' ? (
-        outerLaneOnly
+        geometryDiagnosticOnly
+          ? renderPart3GeometryDiagnosticReport()
+          : outerLaneOnly
           ? renderPart3OuterLaneReport()
           : alignmentOnly
             ? renderPart3AlignmentReport()
