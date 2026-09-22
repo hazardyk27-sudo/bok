@@ -438,8 +438,10 @@ export class GameScene extends Phaser.Scene {
     return Math.max(120, Math.round(baseDuration * distanceFactor));
   }
 
-  private fallMotionScale(turbo: boolean) {
-    return turbo ? 1.5 : 1.25;
+  private fallMotionScale(turbo: boolean, cascade = false) {
+    // Turbo initial drops use a 1.5x scene scale to land at 600 ms. Refills
+    // intentionally use the normal 1.25x scale so Turbo refills land at 300 ms.
+    return turbo && !cascade ? 1.5 : 1.25;
   }
 
   private animateFallingNodes(
@@ -810,7 +812,7 @@ export class GameScene extends Phaser.Scene {
     const winning = new Set(removedCells.map((cell) => `${cell.row}:${cell.col}`));
     const animations: Promise<void>[] = [];
     const maximumColumnDelay = (BOARD_COLUMNS - 1) * 14;
-    const motionDuration = Math.round(duration * this.fallMotionScale(turbo));
+    const motionDuration = Math.round(duration * this.fallMotionScale(turbo, true));
     const tweenDuration = Math.max(180, motionDuration - maximumColumnDelay);
     for (let col = 0; col < BOARD_COLUMNS; col += 1) {
       const survivors = this.nodes
