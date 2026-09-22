@@ -50,7 +50,9 @@ const PART2_ACTUAL_WOOD_INNER_RADIUS = 2.47;
 const PART2_ACTUAL_INWARD_EDGE_RADIUS = 2.26;
 const PART2_CHANNEL_PROFILE: readonly [number, number][] = [
   [2.18, -0.205], // inner transition / bowl-side lip
-  [2.225, -0.315], // inner channel wall
+  [2.195, -0.270], // measured curved bowl-side shoulder
+  [2.22, -0.330], // curved inner transition
+  [2.245, -0.355], // curved transition into the dark floor
   [2.27, -0.3672], // measured dark-floor inner edge
   [2.34, -0.342], // recessed running surface
   [2.42, -0.300], // recessed running surface
@@ -60,6 +62,10 @@ const PART2_CHANNEL_PROFILE: readonly [number, number][] = [
   [2.558, -0.120], // measured near-vertical retaining wall
   [2.559, -0.040], // measured retaining wall crest
 ];
+const PART2_CHANNEL_INNER_CONTAINMENT_INDEX = 1;
+const PART2_CHANNEL_FLOOR_INNER_INDEX = 4;
+const PART2_CHANNEL_FLOOR_OUTER_INDEX = 7;
+const PART2_CHANNEL_OUTER_WALL_FOOT_INDEX = 8;
 const PART2_CHANNEL_BOTTOM_THICKNESS = 0.12;
 const PART3_LAUNCH_RADIUS = 2.82;
 const PART3_RETAINING_RIM_INNER_RADIUS = 2.95;
@@ -272,6 +278,8 @@ type Part3OuterLaneReport = {
   tangentialLaunchDirection: VectorReadout;
   initialLinearSpeed: number;
   initialAngularSpin: VectorReadout;
+  floorContactNormal: VectorReadout;
+  outerWallContactNormal: VectorReadout;
   peakSpeed: number;
   inwardRadialDrift: number;
   minRadius: number;
@@ -346,6 +354,9 @@ type Part2RacePlacementReport = {
   status: 'running' | 'passed' | 'failed';
   channelInnerRadius: number;
   channelOuterRadius: number;
+  visibleInnerTransitionProfile: readonly [number, number][];
+  visibleInnerSurfaceProfile: readonly [number, number][];
+  analyticInnerTransitionProfile: readonly [number, number][];
   visibleOuterWallProfile: readonly [number, number][];
   analyticOuterWallProfile: readonly [number, number][];
   runningSurfaceYRange: readonly [number, number];
@@ -357,10 +368,24 @@ type Part2RacePlacementReport = {
   spawnRadius: number;
   spawnHeight: number;
   contactNormal: VectorReadout;
+  ballBottomContactPoint: VectorReadout;
+  ballBottomContactRadius: number;
+  ballBottomContactY: number;
+  nearestFloorPoint: VectorReadout;
+  nearestFloorRadius: number;
+  nearestFloorY: number;
+  centerFloorEnvelope: readonly [number, number];
+  centerInsideFloorEnvelope: boolean;
+  innerTransitionDistance: number;
+  outerWallDistance: number;
+  contactColliderHandle: number | null;
+  contactColliderType: string;
   minRadius: number;
   maxRadius: number;
   physicalContact: boolean;
   visibleSurfaceMatch: boolean;
+  numericPlacementPassed: boolean;
+  visualGateVerified: boolean;
   onWoodTop: boolean;
   broadSupportActive: boolean;
   hover: boolean;
@@ -1967,6 +1992,99 @@ export function Part2SceneViewport({
       return profile;
     };
 
+    const measureVisibleInnerTransitionProfile = () => {
+      if (!stationaryGroup) return [];
+      stationaryGroup.updateMatrixWorld(true);
+      const azimuth = 0.37;
+      const radialDirection = new THREE.Vector3(
+        Math.sin(azimuth),
+        0,
+        Math.cos(azimuth),
+      );
+      const sampleHeights = [
+        -0.39,
+        -0.37,
+        -0.35,
+        -0.33,
+        -0.31,
+        -0.29,
+        -0.27,
+        -0.25,
+        -0.23,
+        -0.21,
+      ];
+      const profile: Array<[number, number]> = [];
+      for (const height of sampleHeights) {
+        const raycaster = new THREE.Raycaster(
+          new THREE.Vector3(
+            Math.sin(azimuth) * 1.95,
+            height,
+            Math.cos(azimuth) * 1.95,
+          ),
+          radialDirection,
+          0,
+          0.45,
+        );
+        const hit = raycaster
+          .intersectObject(stationaryGroup, true)
+          .filter((intersection) => {
+            const hitRadius = Math.hypot(
+              intersection.point.x,
+              intersection.point.z,
+            );
+            const mesh = intersection.object as THREE.Mesh;
+            const material = Array.isArray(mesh.material)
+              ? mesh.material[intersection.face?.materialIndex ?? 0]
+              : mesh.material;
+            const isOutside =
+              mesh.name === 'geo1_outside_0' ||
+              material?.name === 'outside';
+            return (
+              isOutside &&
+              hitRadius >= 2.14 &&
+              hitRadius <= 2.30
+            );
+          })
+          .sort((left, right) => left.distance - right.distance)[0];
+        if (hit) {
+          profile.push([
+            Number(Math.hypot(hit.point.x, hit.point.z).toFixed(4)),
+            Number(height.toFixed(4)),
+          ]);
+        }
+      }
+      return profile;
+    };
+
+    const measureVisibleInnerSurfaceProfile = () => {
+      const sampleRadii = [
+        2.18,
+        2.2,
+        2.22,
+        2.24,
+        2.26,
+        2.27,
+        2.28,
+        2.3,
+      ];
+      const profile: Array<[number, number]> = [];
+      for (const radius of sampleRadii) {
+        const sample = measureVisibleSurfaceAt(
+          Math.sin(0.37) * radius,
+          Math.cos(0.37) * radius,
+          false,
+          [2.14, 2.32],
+        );
+        if (sample) {
+          profile.push([
+            Number(radius.toFixed(4)),
+            Number(sample.y.toFixed(4)),
+          ]);
+        }
+      }
+      return profile;
+    };
+
     const sampleActualGeometryProfile = () => {
       if (!stationaryGroup) return [];
       stationaryGroup.updateMatrixWorld(true);
@@ -2220,8 +2338,16 @@ export function Part2SceneViewport({
         },
         initialLinearSpeed,
         initialAngularSpin,
-         peakSpeed: initialLinearSpeed,
-         inwardRadialDrift: 0,
+        floorContactNormal: roundedVector(launchNormal),
+        outerWallContactNormal: roundedVector(
+          new THREE.Vector3(
+            -Math.sin(launchAzimuth),
+            0,
+            -Math.cos(launchAzimuth),
+          ),
+        ),
+        peakSpeed: initialLinearSpeed,
+        inwardRadialDrift: 0,
         minRadius: chosenLaunchRadius,
         maxRadius: chosenLaunchRadius,
         minRimClearance: part3OuterLaneMinRimClearance,
@@ -2257,12 +2383,44 @@ export function Part2SceneViewport({
         true,
         PART2_ACTUAL_DARK_TRACK_RADIUS_BAND,
       );
+      const visibleInnerTransitionProfile =
+        measureVisibleInnerTransitionProfile();
+      const visibleInnerSurfaceProfile = measureVisibleInnerSurfaceProfile();
       const visibleOuterWallProfile = measureVisibleOuterWallProfile();
       const analyticSurfaceY = surface.y;
       const visualHeightError = visibleSurface
         ? Math.abs(visibleSurface.y - analyticSurfaceY)
         : Number.POSITIVE_INFINITY;
       const liveRendererAvailable = renderer !== null;
+      const centerFloorEnvelope: readonly [number, number] = [
+        PART2_CHANNEL_PROFILE[PART2_CHANNEL_FLOOR_INNER_INDEX][0] +
+          BALL_RADIUS,
+        PART2_CHANNEL_PROFILE[PART2_CHANNEL_FLOOR_OUTER_INDEX][0] -
+          BALL_RADIUS,
+      ];
+      const provisionalCenterRadius = Math.hypot(
+        spawnPoint.x,
+        spawnPoint.z,
+      );
+      const provisionalBallBottom = spawnPoint
+        .clone()
+        .addScaledVector(contactNormal, -BALL_RADIUS);
+      const provisionalNearestFloorRadius = THREE.MathUtils.clamp(
+        provisionalCenterRadius,
+        PART2_CHANNEL_PROFILE[PART2_CHANNEL_FLOOR_INNER_INDEX][0],
+        PART2_CHANNEL_PROFILE[PART2_CHANNEL_FLOOR_OUTER_INDEX][0],
+      );
+      const provisionalNearestFloorSurface = part2ChannelSurfaceAt(
+        provisionalNearestFloorRadius,
+        part2RaceVerticalOffset,
+      );
+      const provisionalNearestFloorPoint = new THREE.Vector3(
+        ...radialPosition(
+          provisionalNearestFloorRadius,
+          launchAzimuth,
+          provisionalNearestFloorSurface.y,
+        ),
+      );
       const disabledColliders = [
         'actual-glb-outside-trimesh (disabled for physics)',
         'outer-track-support-trimesh (broad annular support disabled)',
@@ -2279,8 +2437,22 @@ export function Part2SceneViewport({
         status: 'running',
         channelInnerRadius: PART2_CHANNEL_PROFILE[0][0],
         channelOuterRadius: PART2_CHANNEL_PROFILE.at(-1)![0],
+        visibleInnerTransitionProfile,
+        visibleInnerSurfaceProfile,
+        analyticInnerTransitionProfile: PART2_CHANNEL_PROFILE.slice(
+          0,
+          PART2_CHANNEL_FLOOR_INNER_INDEX + 1,
+        ).map(
+          ([radius, y]) =>
+            [radius, Number((y + part2RaceVerticalOffset).toFixed(4))] as [
+              number,
+              number,
+            ],
+        ),
         visibleOuterWallProfile,
-        analyticOuterWallProfile: PART2_CHANNEL_PROFILE.slice(5).map(
+        analyticOuterWallProfile: PART2_CHANNEL_PROFILE.slice(
+          PART2_CHANNEL_FLOOR_OUTER_INDEX,
+        ).map(
           ([radius, y]) =>
             [radius, Number((y + part2RaceVerticalOffset).toFixed(4))] as [
               number,
@@ -2288,14 +2460,20 @@ export function Part2SceneViewport({
             ],
         ),
         runningSurfaceYRange: [
-          PART2_CHANNEL_PROFILE[2][1] + part2RaceVerticalOffset,
-          PART2_CHANNEL_PROFILE[5][1] + part2RaceVerticalOffset,
+          PART2_CHANNEL_PROFILE[PART2_CHANNEL_FLOOR_INNER_INDEX][1] +
+            part2RaceVerticalOffset,
+          PART2_CHANNEL_PROFILE[PART2_CHANNEL_FLOOR_OUTER_INDEX][1] +
+            part2RaceVerticalOffset,
         ],
         runningSurfaceSlope: [
-          (PART2_CHANNEL_PROFILE[3][1] - PART2_CHANNEL_PROFILE[2][1]) /
-            (PART2_CHANNEL_PROFILE[3][0] - PART2_CHANNEL_PROFILE[2][0]),
-          (PART2_CHANNEL_PROFILE[5][1] - PART2_CHANNEL_PROFILE[4][1]) /
-            (PART2_CHANNEL_PROFILE[5][0] - PART2_CHANNEL_PROFILE[4][0]),
+          (PART2_CHANNEL_PROFILE[PART2_CHANNEL_FLOOR_INNER_INDEX + 1][1] -
+            PART2_CHANNEL_PROFILE[PART2_CHANNEL_FLOOR_INNER_INDEX][1]) /
+            (PART2_CHANNEL_PROFILE[PART2_CHANNEL_FLOOR_INNER_INDEX + 1][0] -
+              PART2_CHANNEL_PROFILE[PART2_CHANNEL_FLOOR_INNER_INDEX][0]),
+          (PART2_CHANNEL_PROFILE[PART2_CHANNEL_FLOOR_OUTER_INDEX][1] -
+            PART2_CHANNEL_PROFILE[PART2_CHANNEL_FLOOR_OUTER_INDEX - 1][1]) /
+            (PART2_CHANNEL_PROFILE[PART2_CHANNEL_FLOOR_OUTER_INDEX][0] -
+              PART2_CHANNEL_PROFILE[PART2_CHANNEL_FLOOR_OUTER_INDEX - 1][0]),
         ],
         outerWallY: PART2_CHANNEL_PROFILE.at(-1)![1] + part2RaceVerticalOffset,
         innerTransitionY:
@@ -2305,10 +2483,35 @@ export function Part2SceneViewport({
         spawnRadius: Math.hypot(spawnPoint.x, spawnPoint.z),
         spawnHeight: spawnPoint.y,
         contactNormal: roundedVector(contactNormal),
+        ballBottomContactPoint: roundedVector(provisionalBallBottom),
+        ballBottomContactRadius: Math.hypot(
+          provisionalBallBottom.x,
+          provisionalBallBottom.z,
+        ),
+        ballBottomContactY: provisionalBallBottom.y,
+        nearestFloorPoint: roundedVector(provisionalNearestFloorPoint),
+        nearestFloorRadius: provisionalNearestFloorRadius,
+        nearestFloorY: provisionalNearestFloorSurface.y,
+        centerFloorEnvelope,
+        centerInsideFloorEnvelope:
+          provisionalCenterRadius >= centerFloorEnvelope[0] &&
+          provisionalCenterRadius <= centerFloorEnvelope[1],
+        innerTransitionDistance:
+          provisionalCenterRadius -
+          (PART2_CHANNEL_PROFILE[PART2_CHANNEL_INNER_CONTAINMENT_INDEX][0] +
+            BALL_RADIUS),
+        outerWallDistance:
+          PART2_CHANNEL_PROFILE[PART2_CHANNEL_OUTER_WALL_FOOT_INDEX][0] -
+          BALL_RADIUS -
+          provisionalCenterRadius,
+        contactColliderHandle: null,
+        contactColliderType: activeRaceCollider,
         minRadius: Math.hypot(spawnPoint.x, spawnPoint.z),
         maxRadius: Math.hypot(spawnPoint.x, spawnPoint.z),
         physicalContact: false,
         visibleSurfaceMatch: false,
+        numericPlacementPassed: false,
+        visualGateVerified: false,
         onWoodTop: false,
         broadSupportActive,
         hover: false,
@@ -2340,9 +2543,41 @@ export function Part2SceneViewport({
         part2RaceVerticalOffset,
       );
       const bottomGap = position.y - BALL_RADIUS - centerSurface.y;
+      const ballBottomContactPoint = new THREE.Vector3(
+        position.x,
+        position.y,
+        position.z,
+      ).addScaledVector(contactNormal, -BALL_RADIUS);
+      const ballBottomContactRadius = Math.hypot(
+        ballBottomContactPoint.x,
+        ballBottomContactPoint.z,
+      );
+      const nearestFloorRadius = THREE.MathUtils.clamp(
+        centerRadius,
+        PART2_CHANNEL_PROFILE[PART2_CHANNEL_FLOOR_INNER_INDEX][0],
+        PART2_CHANNEL_PROFILE[PART2_CHANNEL_FLOOR_OUTER_INDEX][0],
+      );
+      const nearestFloorSurface = part2ChannelSurfaceAt(
+        nearestFloorRadius,
+        part2RaceVerticalOffset,
+      );
+      const nearestFloorPoint = new THREE.Vector3(
+        ...radialPosition(
+          nearestFloorRadius,
+          launchAzimuth,
+          nearestFloorSurface.y,
+        ),
+      );
       const lateralContainment =
-        centerRadius >= PART2_CHANNEL_PROFILE[1][0] + BALL_RADIUS &&
-        centerRadius <= PART2_CHANNEL_PROFILE[6][0] - BALL_RADIUS;
+        centerRadius >=
+          PART2_CHANNEL_PROFILE[PART2_CHANNEL_INNER_CONTAINMENT_INDEX][0] +
+            BALL_RADIUS &&
+        centerRadius <=
+          PART2_CHANNEL_PROFILE[PART2_CHANNEL_OUTER_WALL_FOOT_INDEX][0] -
+            BALL_RADIUS;
+      const centerInsideFloorEnvelope =
+        centerRadius >= centerFloorEnvelope[0] &&
+        centerRadius <= centerFloorEnvelope[1];
       const onWoodTop =
         centerRadius + BALL_RADIUS >= PART2_ACTUAL_WOOD_INNER_RADIUS - 0.005;
       const hover =
@@ -2355,15 +2590,17 @@ export function Part2SceneViewport({
         visualHeightError <= 0.03 &&
         visibleSurface.y > -1.5 &&
         visibleSurface.y < 1;
-      const passed =
+      const numericPlacementPassed =
         activeRaceCollider === 'analytic-dark-recessed-channel' &&
         !broadSupportActive &&
         physicalContact &&
-        visibleSurfaceMatch &&
+        centerInsideFloorEnvelope &&
         lateralContainment &&
         !onWoodTop &&
         !hover &&
         bottomGap >= -0.03;
+      const visualGateVerified = visibleSurfaceMatch;
+      const passed = numericPlacementPassed && visualGateVerified;
       ballMesh.position.set(position.x, position.y, position.z);
       const rotation = ballBody.rotation();
       ballMesh.quaternion.set(rotation.x, rotation.y, rotation.z, rotation.w);
@@ -2371,24 +2608,54 @@ export function Part2SceneViewport({
         previous
           ? {
               ...previous,
-              status: passed ? 'passed' : 'failed',
+               status: passed
+                 ? 'passed'
+                 : numericPlacementPassed
+                   ? 'running'
+                   : 'failed',
               spawnRadius: centerRadius,
               spawnHeight: position.y,
+               ballBottomContactPoint: roundedVector(ballBottomContactPoint),
+               ballBottomContactRadius,
+               ballBottomContactY: ballBottomContactPoint.y,
+               nearestFloorPoint: roundedVector(nearestFloorPoint),
+               nearestFloorRadius,
+               nearestFloorY: nearestFloorSurface.y,
+               centerInsideFloorEnvelope,
+               innerTransitionDistance:
+                 centerRadius -
+          (PART2_CHANNEL_PROFILE[PART2_CHANNEL_INNER_CONTAINMENT_INDEX][0] +
+            BALL_RADIUS),
+               outerWallDistance:
+          PART2_CHANNEL_PROFILE[PART2_CHANNEL_OUTER_WALL_FOOT_INDEX][0] -
+                 BALL_RADIUS -
+                 centerRadius,
+               contactColliderHandle: physicalContact
+                 ? raceColliderHandle
+                 : null,
+               contactColliderType: activeRaceCollider,
               minRadius: centerRadius,
               maxRadius: centerRadius,
               physicalContact,
               visibleSurfaceMatch,
+               numericPlacementPassed,
+               visualGateVerified,
               onWoodTop,
               hover,
-              detail: passed
+               detail: passed
                 ? 'PASS: the live ball placement is inside the measured recessed dark race with analytic contact.'
+                 : numericPlacementPassed
+                   ? 'NUMERIC STATIC PASS: ball is inside the analytic recessed race; visual WebGL gate is unverified, so the short numerical probe will run and the overall gate will remain incomplete.'
                 : `FAIL: static channel gate failed (${[
                     activeRaceCollider !== 'analytic-dark-recessed-channel'
                       ? 'wrong active collider'
                       : '',
                     broadSupportActive ? 'broad support active' : '',
                     !physicalContact ? 'no Rapier contact' : '',
-                    !visibleSurfaceMatch ? 'visible GLB mismatch' : '',
+                    !visualGateVerified ? 'visible GLB gate unverified' : '',
+                    !centerInsideFloorEnvelope
+                      ? 'ball center outside floor envelope'
+                      : '',
                     !liveRendererAvailable
                       ? 'live renderer unavailable; screenshot-visible gate cannot pass'
                       : '',
@@ -2402,12 +2669,14 @@ export function Part2SceneViewport({
           : previous,
       );
       callbacksRef.current.onStateChange(
-        passed ? 'loaded' : 'error',
+        numericPlacementPassed ? 'loaded' : 'error',
         passed
           ? 'PART 2 recessed dark-race static placement passed'
-          : 'PART 2 recessed dark-race static placement failed',
+          : numericPlacementPassed
+            ? 'PART 2 recessed dark-race static placement numerically passed; visual gate unavailable'
+            : 'PART 2 recessed dark-race static placement failed',
       );
-      if (passed) {
+      if (numericPlacementPassed) {
         startPart3OuterLaneProbe();
       }
     };
@@ -4061,16 +4330,20 @@ export function Part2SceneViewport({
               });
             }
             const ballCenterInsideOuterLane =
-              radius >= PART2_CHANNEL_PROFILE[1][0] + BALL_RADIUS &&
-              radius <= PART2_CHANNEL_PROFILE[6][0] - BALL_RADIUS;
+              radius >=
+                PART2_CHANNEL_PROFILE[PART2_CHANNEL_INNER_CONTAINMENT_INDEX][0] +
+                  BALL_RADIUS &&
+              radius <=
+                PART2_CHANNEL_PROFILE[PART2_CHANNEL_OUTER_WALL_FOOT_INDEX][0] -
+                  BALL_RADIUS;
             const geometricTrackContact =
               ballCenterInsideOuterLane &&
               penetration <= 0.03 &&
               separation <= 0.03;
             const rimClearance =
-              PART2_CHANNEL_PROFILE[6][0] - BALL_RADIUS - radius;
+              PART2_ACTUAL_WOOD_INNER_RADIUS - BALL_RADIUS - radius;
             const deflectorClearance =
-              radius - BALL_RADIUS - PART2_CHANNEL_PROFILE[1][0];
+              radius - BALL_RADIUS - PART2_ACTUAL_INWARD_EDGE_RADIUS;
             const woodContact =
               radius + BALL_RADIUS >= PART2_ACTUAL_WOOD_INNER_RADIUS - 0.005;
             const escaped =
@@ -4078,7 +4351,8 @@ export function Part2SceneViewport({
               !Number.isFinite(position.y) ||
               !Number.isFinite(position.z) ||
               radius < PART2_CHANNEL_PROFILE[0][0] - BALL_RADIUS ||
-              radius > PART2_CHANNEL_PROFILE[7][0] + BALL_RADIUS ||
+              radius >
+                PART2_CHANNEL_PROFILE.at(-1)![0] + BALL_RADIUS ||
               position.y < COLLIDER_PROFILE.innerFloorTop - BALL_RADIUS - 0.08;
             part3OuterLaneElapsed += FIXED_TIMESTEP;
             part3OuterLaneSampleFrames += 1;
@@ -4136,8 +4410,14 @@ export function Part2SceneViewport({
                 !part3OuterLaneEscaped &&
                 !part3OuterLaneDeflectorContact &&
                 !part3OuterLaneHover &&
-                 part3OuterLaneMinRadius >= PART2_CHANNEL_PROFILE[1][0] &&
-                 part3OuterLaneMaxRadius <= PART2_CHANNEL_PROFILE[6][0] &&
+                 part3OuterLaneMinRadius >=
+                   PART2_CHANNEL_PROFILE[
+                     PART2_CHANNEL_INNER_CONTAINMENT_INDEX
+                   ][0] +
+                     BALL_RADIUS &&
+                 part3OuterLaneMaxRadius <=
+                   PART2_CHANNEL_PROFILE[PART2_CHANNEL_OUTER_WALL_FOOT_INDEX][0] -
+                     BALL_RADIUS &&
                 part3OuterLaneMinRimClearance >= PART3_OUTER_LANE_CLEARANCE_MARGIN &&
                 part3OuterLaneMinDeflectorClearance >=
                   PART3_OUTER_LANE_CLEARANCE_MARGIN;
@@ -4154,22 +4434,24 @@ export function Part2SceneViewport({
               part3OuterLaneRunning = false;
               publishPart3OuterLaneReport({
                 status: passed ? 'passed' : 'failed',
-                darkTrackInnerRadius: PART3_TRACK_INNER_RADIUS,
-                darkTrackOuterRadius: PART3_TRACK_OUTER_RADIUS,
-                retainingRimInnerRadius: PART3_RETAINING_RIM_INNER_RADIUS,
-                nearestDeflectorOuterRadius: PART3_DEFLECTOR_OUTER_RADIUS,
+                darkTrackInnerRadius:
+                  PART2_ACTUAL_DARK_TRACK_RADIUS_BAND[0],
+                darkTrackOuterRadius:
+                  PART2_ACTUAL_DARK_TRACK_RADIUS_BAND[1],
+                retainingRimInnerRadius: PART2_ACTUAL_WOOD_INNER_RADIUS,
+                nearestDeflectorOuterRadius: PART2_ACTUAL_INWARD_EDGE_RADIUS,
                 ballRadius: BALL_RADIUS,
                 chosenLaunchRadius: part3OuterLaneLaunchRadius,
                 radialClearanceToRim:
-                  PART3_RETAINING_RIM_INNER_RADIUS -
+                  PART2_ACTUAL_WOOD_INNER_RADIUS -
                   BALL_RADIUS -
                   part3OuterLaneLaunchRadius,
                 radialClearanceToDeflector:
                   part3OuterLaneLaunchRadius -
                   BALL_RADIUS -
-                  PART3_DEFLECTOR_OUTER_RADIUS,
+                  PART2_ACTUAL_INWARD_EDGE_RADIUS,
                 outerTrackEdgeClearance:
-                  PART3_TRACK_OUTER_RADIUS -
+                  PART2_ACTUAL_DARK_TRACK_RADIUS_BAND[1] -
                   BALL_RADIUS -
                   part3OuterLaneLaunchRadius,
                 launchAzimuth: part3OuterLaneLaunchAzimuth,
@@ -4191,6 +4473,23 @@ export function Part2SceneViewport({
                 },
                 initialLinearSpeed: part3OuterLaneInitialLinearSpeed,
                 initialAngularSpin: part3OuterLaneInitialAngularSpin,
+                floorContactNormal: roundedVector(
+                  part2ChannelNormalAt(
+                    THREE.MathUtils.clamp(
+                      part3OuterLaneMinRadius,
+                      PART2_CHANNEL_PROFILE[PART2_CHANNEL_FLOOR_INNER_INDEX][0],
+                      PART2_CHANNEL_PROFILE[PART2_CHANNEL_FLOOR_OUTER_INDEX][0],
+                    ),
+                    part3OuterLaneLaunchAzimuth,
+                  ),
+                ),
+                outerWallContactNormal: roundedVector(
+                  new THREE.Vector3(
+                    -Math.sin(part3OuterLaneLaunchAzimuth),
+                    0,
+                    -Math.cos(part3OuterLaneLaunchAzimuth),
+                  ),
+                ),
                 peakSpeed: part3OuterLanePeakSpeed,
                 inwardRadialDrift: Math.max(
                   0,
@@ -4221,6 +4520,40 @@ export function Part2SceneViewport({
                 passed
                   ? 'PART B outer dark-track launch lane passed'
                   : 'PART B outer dark-track launch lane failed',
+              );
+              setPart2RacePlacementReport((previous) =>
+                previous
+                  ? {
+                      ...previous,
+                      status:
+                        passed && previous.visualGateVerified
+                          ? 'passed'
+                          : 'failed',
+                      detail: passed
+                        ? previous.visualGateVerified
+                          ? 'PASS: static placement and the short tangential probe stayed physically and visibly inside the measured recessed dark race.'
+                          : 'FAIL: the numerical short probe passed, but the visual WebGL gate was not verified.'
+                        : `FAIL: static placement passed, but the short tangential probe failed (${[
+                            !staysOnOuterDarkLane
+                              ? 'inner/outer channel envelope'
+                              : '',
+                            !physicalTrackContact
+                              ? 'contact continuity'
+                              : '',
+                            part3OuterLaneMinDeflectorClearance <
+                            PART3_OUTER_LANE_CLEARANCE_MARGIN
+                              ? 'inner clearance'
+                              : '',
+                            part3OuterLaneMinRimClearance <
+                            PART3_OUTER_LANE_CLEARANCE_MARGIN
+                              ? 'outer/rim clearance'
+                              : '',
+                            part3OuterLaneEscaped ? 'escape' : '',
+                          ]
+                            .filter(Boolean)
+                            .join(', ') || 'stability envelope'}).`,
+                    }
+                  : previous,
               );
             }
           }
@@ -5286,6 +5619,14 @@ export function Part2SceneViewport({
             {part3OuterLaneReport.initialAngularSpin.z.toFixed(4)})
           </span>
           <span>
+            floor contact normal ({part3OuterLaneReport.floorContactNormal.x.toFixed(4)},{' '}
+            {part3OuterLaneReport.floorContactNormal.y.toFixed(4)},{' '}
+            {part3OuterLaneReport.floorContactNormal.z.toFixed(4)}) · outer-wall normal (
+            {part3OuterLaneReport.outerWallContactNormal.x.toFixed(4)},{' '}
+            {part3OuterLaneReport.outerWallContactNormal.y.toFixed(4)},{' '}
+            {part3OuterLaneReport.outerWallContactNormal.z.toFixed(4)})
+          </span>
+          <span>
             radius {part3OuterLaneReport.minRadius.toFixed(4)}–
             {part3OuterLaneReport.maxRadius.toFixed(4)} · minimum rim clearance{' '}
             {part3OuterLaneReport.minRimClearance.toFixed(4)} · minimum deflector clearance{' '}
@@ -5325,7 +5666,8 @@ export function Part2SceneViewport({
           <span>
             measured recessed race r {part2RacePlacementReport.channelInnerRadius.toFixed(4)}–
             {part2RacePlacementReport.channelOuterRadius.toFixed(4)} · running floor r{' '}
-            {PART2_CHANNEL_PROFILE[2][0].toFixed(4)}–{PART2_CHANNEL_PROFILE[5][0].toFixed(4)} · ball radius {BALL_RADIUS.toFixed(4)} ·
+            {PART2_CHANNEL_PROFILE[PART2_CHANNEL_FLOOR_INNER_INDEX][0].toFixed(4)}–
+            {PART2_CHANNEL_PROFILE[PART2_CHANNEL_FLOOR_OUTER_INDEX][0].toFixed(4)} · ball radius {BALL_RADIUS.toFixed(4)} ·
             active collider {part2RacePlacementReport.activeRaceCollider}
           </span>
           <span>
@@ -5335,6 +5677,19 @@ export function Part2SceneViewport({
             {part2RacePlacementReport.runningSurfaceSlope[1].toFixed(4)} · outer wall/lip Y{' '}
             {part2RacePlacementReport.outerWallY.toFixed(4)} · inner transition Y{' '}
             {part2RacePlacementReport.innerTransitionY.toFixed(4)}
+          </span>
+          <span>
+            GLB inner-transition samples [{part2RacePlacementReport.visibleInnerTransitionProfile.map(
+              ([radius, y]) => `${radius.toFixed(4)}/${y.toFixed(4)}`,
+            ).join(', ') || 'unavailable'}] · analytic inner [
+            {part2RacePlacementReport.analyticInnerTransitionProfile.map(
+              ([radius, y]) => `${radius.toFixed(4)}/${y.toFixed(4)}`,
+            ).join(', ')}]
+          </span>
+          <span>
+            GLB inner-surface samples [{part2RacePlacementReport.visibleInnerSurfaceProfile.map(
+              ([radius, y]) => `${radius.toFixed(4)}/${y.toFixed(4)}`,
+            ).join(', ') || 'unavailable'}]
           </span>
           <span>
             GLB wall samples [{part2RacePlacementReport.visibleOuterWallProfile.map(
@@ -5352,6 +5707,22 @@ export function Part2SceneViewport({
             {part2RacePlacementReport.contactNormal.z.toFixed(4)}) · radius range{' '}
             {part2RacePlacementReport.minRadius.toFixed(4)}–
             {part2RacePlacementReport.maxRadius.toFixed(4)}
+          </span>
+          <span>
+            ball-bottom contact r/y {part2RacePlacementReport.ballBottomContactRadius.toFixed(4)} /{' '}
+            {part2RacePlacementReport.ballBottomContactY.toFixed(4)} · nearest floor r/y{' '}
+            {part2RacePlacementReport.nearestFloorRadius.toFixed(4)} /{' '}
+            {part2RacePlacementReport.nearestFloorY.toFixed(4)} · floor-center envelope{' '}
+            {part2RacePlacementReport.centerFloorEnvelope[0].toFixed(4)}–
+            {part2RacePlacementReport.centerFloorEnvelope[1].toFixed(4)}
+          </span>
+          <span>
+            inner-transition distance {part2RacePlacementReport.innerTransitionDistance.toFixed(4)} ·
+            outer-wall distance {part2RacePlacementReport.outerWallDistance.toFixed(4)} · collider handle{' '}
+            {part2RacePlacementReport.contactColliderHandle ?? 'none'} /{' '}
+            {part2RacePlacementReport.contactColliderType} · numeric placement{' '}
+            {part2RacePlacementReport.numericPlacementPassed ? 'pass' : 'fail'} · visual gate{' '}
+            {part2RacePlacementReport.visualGateVerified ? 'verified' : 'unverified'}
           </span>
           <span>
             physical contact {part2RacePlacementReport.physicalContact ? 'yes' : 'no'} · visible GLB match{' '}

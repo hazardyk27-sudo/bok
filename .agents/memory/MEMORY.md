@@ -27,6 +27,7 @@
 - [Physics Lab Part 5 dynamics](physics-lab-part5-dynamics.md) — a sloped inward transition and spindle guard prevent flat-step traps without scripted inward motion.
 - [Physics Lab server authority](physics-lab-server-authority.md) — preserve the validated release band while securely varying allowed starts, then return canonical persisted replay payloads.
 - [Outer wall cross-section measurement](outer-wall-cross-section-measurement.md) — vertical top-down rays hit the wood rim; measure the retaining wall with horizontal radial rays through the transformed GLB.
+- [Dark-channel short-probe boundary](dark-channel-short-probe-boundary.md) — static floor placement can pass while tangential drift crosses the inner wall center limit; diagnose that boundary before lap tuning.
 - [Rapier concave track limits](rapier-concave-track-limits.md) — convex rings and full disks cannot prove a natural roulette track; require a genuinely concave support surface and pair-specific contact evidence.
 - [Procedural pocket validation](procedural-pocket-validation.md) — a bowl opening needs continuous pocket support and smoke runs must prove kinematic fret contacts do not eject the ball.
 - [Rolley asset pocket mismatch](rolley-asset-pocket-mismatch.md) — supplied Rolley FBX exposes 38 equal radial separators at 360/38, not a verified 37-pocket European layout.
@@ -42,3 +43,5 @@
 - [Slot row coordinate mapping](slot-row-coordinate-mapping.md) — Slot pair logic labels rows bottom-up even though the rendered board array is stored top-down.
 - [Slot round-end timing](slot-round-end-timing.md) — keep one short post-settlement hold; remove dead-time without changing drop/refill motion or speed.
 - [Roulette true dark track](roulette-true-dark-track.md) — transformed GLB sampling places the recessed channel near r 2.2700–2.5400, not the former assumed outer band.
+- [Cadı Kazan payout targets](cadi-kazan-payout-targets.md) — keep mobile payout value selectors separate from the sticky action container so render updates cannot replace the action UI.
+- [Game route viewport fit](game-route-viewport-fit.md) — fixed play surfaces must fit the viewport; move secondary history/tools into drawers or phase-specific surfaces instead of page scrolling.

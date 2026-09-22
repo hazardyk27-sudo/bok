@@ -50,86 +50,128 @@ const newIdempotencyKey = (prefix: string) => `${prefix}-${crypto.randomUUID()}-
 
 export const CADI_KAZAN_MARKUP = `
   <main class="witch-page" aria-labelledby="witch-title">
-    <div class="witch-heading">
+    <header class="witch-heading">
       <a class="back-link" href="/">← ANA MENÜ</a>
-      <div>
+      <div class="witch-brand">
         <span class="menu-kicker">FAHRİNİN YOLU // LUCKY SCRATCH</span>
         <h1 id="witch-title">CADI <em>KAZAN</em></h1>
-        <p>Kartı aç, güvenli hücreleri bul ve riske girmeden kazancını al.</p>
+        <p>Şansını kağıdın altında ara. Güvenli alanları aç, kazancı masadan kaldır.</p>
       </div>
-      <div class="witch-connection" data-witch-status>SERVER’A BAĞLANIYOR</div>
+      <div class="witch-connection" data-witch-status role="status" aria-live="polite">SERVER’A BAĞLANIYOR</div>
+    </header>
+
+    <section class="witch-wallet-bar" aria-label="Cadı Kazan bakiyesi ve round durumu">
+      <div class="witch-wallet-balance"><span>ORTAK WALLET</span><strong data-witch-balance>0,00</strong><small>KREDİ</small></div>
+      <div><span>ROUND</span><strong data-witch-round>—</strong><small>SERVER ID</small></div>
+      <div><span>DURUM</span><strong data-witch-round-status>HAZIR</strong><small data-witch-round-note>MASA BOŞ</small></div>
+    </section>
+
+    <div class="witch-layout">
+      <aside class="witch-controls" data-witch-lobby aria-label="Bilet ayarları">
+        <div class="witch-section-label"><span class="witch-mark"></span> BİLETİ KUR</div>
+        <div class="witch-control-heading">
+          <h2>Riskini seç.</h2>
+          <p>Her kart server’da mühürlenir. Bomba konumu açılışa kadar tarayıcıya gelmez.</p>
+        </div>
+
+        <div class="witch-mode-grid" role="group" aria-label="Cadı Kazan oyun modu">
+          <button type="button" class="witch-mode-card is-selected" data-witch-mode="STANDARD">
+            <span class="witch-mode-card-top"><b>01</b> STANDARD</span>
+            <strong>5 ALAN</strong>
+            <small>1 bomba · güvenli tavan 4.80x</small>
+          </button>
+          <button type="button" class="witch-mode-card" data-witch-mode="ADVANCED">
+            <span class="witch-mode-card-top"><b>25</b> ADVANCED</span>
+            <strong>5 × 5 ALAN</strong>
+            <small>Bombayı artır, masayı sıkıştır.</small>
+          </button>
+        </div>
+
+        <div class="witch-start-controls">
+          <label class="witch-field">
+            <span>STAKE / BİLET BEDELİ</span>
+            <div class="witch-input-wrap"><input data-witch-stake type="number" min="1" max="100" step="0.01" value="1.00" inputmode="decimal" aria-label="Bilet bedeli"><i>CR</i></div>
+          </label>
+          <label class="witch-field witch-alarm-field">
+            <span>ADVANCED BOMBA</span>
+            <select data-witch-alarms disabled aria-label="Advanced bomba sayısı">
+              <option value="1">01 BOMBA</option>
+              <option value="3">03 BOMBA</option>
+              <option value="5">05 BOMBA</option>
+              <option value="7">07 BOMBA</option>
+              <option value="10">10 BOMBA</option>
+            </select>
+          </label>
+        </div>
+        <div class="witch-risk-note" data-witch-risk-note>STANDARD / 1 BOMBA <span>DAHA YUMUŞAK GİRİŞ</span></div>
+        <button class="witch-primary-button" type="button" data-witch-action="start">
+          <span>BİLETİ SATIN AL</span><b>→</b>
+        </button>
+        <p class="witch-feedback" data-witch-feedback role="status">Masaya bir bilet bırak.</p>
+        <div class="witch-lock-note"><span class="witch-lock-icon">◇</span><span>Round ACTIVE olduğunda ayarlar kilitlenir.</span></div>
+      </aside>
+
+      <section class="witch-table-stage" data-witch-play aria-label="Cadı Kazan oyun masası">
+        <div class="witch-table-heading">
+          <div>
+            <div class="witch-section-label"><span class="witch-mark"></span> MASA <span class="witch-table-live">● LIVE</span></div>
+            <h2 data-witch-play-title>Bir kart bekliyor.</h2>
+          </div>
+          <div class="witch-table-count" data-witch-play-mode>NO TICKET</div>
+        </div>
+
+        <div class="witch-empty-table" data-witch-empty>
+          <div class="witch-empty-ring"><span>✦</span></div>
+          <strong>KARTIN BURADA AÇILACAK</strong>
+          <span>Soldan stake seç ve masaya ilk bileti bırak.</span>
+          <i>BEKLEMEDE // SERVER HAZIR</i>
+        </div>
+
+        <article class="witch-ticket" data-witch-ticket hidden aria-label="Kazınabilir Cadı Kazan bileti">
+          <div class="witch-ticket-edge"></div>
+          <header class="witch-ticket-header">
+            <div><span class="witch-ticket-brand">CADI KAZAN</span><small data-witch-ticket-mode>STANDARD 5</small></div>
+            <div class="witch-ticket-seal" aria-hidden="true">✦</div>
+            <div class="witch-ticket-meta"><span>STAKE</span><strong data-witch-ticket-stake>0,00 CR</strong><small data-witch-ticket-bombs>01 BOMB</small></div>
+          </header>
+          <div class="witch-ticket-rule"></div>
+          <div class="witch-board-wrap">
+            <div class="witch-board" data-witch-board aria-label="Cadı Kazan kazınabilir alanları"></div>
+          </div>
+          <footer class="witch-ticket-footer"><span>SERVER SEALED</span><span>SCRATCH TO REVEAL</span><span data-witch-ticket-id>—</span></footer>
+        </article>
+
+        <div class="witch-table-feedback">
+          <span class="witch-feedback" data-witch-play-feedback role="status">Bilet satın alındığında kart burada görünür.</span>
+          <span class="witch-table-hint">Kısa dokunuş yetmez · aynı noktayı tekrar tekrar kazı</span>
+        </div>
+      </section>
+
+      <aside class="witch-payout-panel" data-witch-desktop-payout aria-label="Kazanç ve Cash Out">
+        <div class="witch-section-label"><span class="witch-mark"></span> PAYOUT WINDOW</div>
+        <div class="witch-payout-caption">MASADAKİ KAZANÇ</div>
+        <strong class="witch-multiplier" data-witch-multiplier>0.00x</strong>
+        <div class="witch-payout-amount" data-witch-payout>0,00 kredi</div>
+        <div class="witch-payout-lines">
+          <span>STAKE <b data-witch-stake-display>—</b></span>
+          <span>NET <b data-witch-net>—</b></span>
+        </div>
+        <button class="witch-cashout-button" type="button" data-witch-action="cashout">CASH OUT <b>↗</b></button>
+        <button class="witch-secondary-button" type="button" data-witch-action="new" hidden>YENİ KART</button>
+        <p class="witch-payout-note" data-witch-payout-note>Güvenli bir alan açıldığında cash out aktif olur.</p>
+      </aside>
     </div>
 
-    <section class="witch-wallet-bar" aria-label="Cadı Kazan bakiyesi">
-      <div><span>ORTAK WALLET</span><strong data-witch-balance>0,00</strong></div>
-      <div><span>ROUND</span><strong data-witch-round>—</strong></div>
-      <div><span>DURUM</span><strong data-witch-round-status>HAZIR</strong></div>
-    </section>
-
-    <section class="witch-lobby" data-witch-lobby>
-      <div class="witch-panel-heading">
-        <span class="roulette-card-kicker">CHOOSE YOUR RISK</span>
-        <h2>Oyun modu</h2>
-        <p>Her bilet server tarafından oluşturulur. Bomba konumu tarayıcıya önceden gönderilmez.</p>
-      </div>
-      <div class="witch-mode-grid" role="group" aria-label="Cadı Kazan oyun modu">
-        <button type="button" class="witch-mode-card is-selected" data-witch-mode="STANDARD">
-          <span>STANDARD 5</span>
-          <strong>1 BOMBА</strong>
-          <small>5 alan · 4 güvenli açılış · 1.20x → 4.80x</small>
-        </button>
-        <button type="button" class="witch-mode-card" data-witch-mode="ADVANCED">
-          <span>ADVANCED 25</span>
-          <strong>25 ALAN</strong>
-          <small>5×5 alan · bomba sayısını sen seç</small>
-        </button>
-      </div>
-      <div class="witch-start-controls">
-        <label>
-          <span>BOMBA SAYISI</span>
-          <select data-witch-alarms disabled>
-            <option value="1">1 BOMBA</option>
-            <option value="3">3 BOMBA</option>
-            <option value="5">5 BOMBA</option>
-            <option value="7">7 BOMBA</option>
-            <option value="10">10 BOMBA</option>
-          </select>
-        </label>
-        <label>
-          <span>BİLET BEDELİ</span>
-          <input data-witch-stake type="number" min="1" max="100" step="0.01" value="1.00" inputmode="decimal">
-        </label>
-        <button class="witch-primary-button" type="button" data-witch-action="start">BİLETİ AÇ</button>
-      </div>
-      <p class="witch-feedback" data-witch-feedback role="status">Mod seç ve biletini başlat.</p>
-    </section>
-
-     <section class="witch-play" data-witch-play hidden>
-      <div class="witch-play-heading">
-        <div>
-          <span class="roulette-card-kicker" data-witch-play-mode>STANDARD 5</span>
-          <h2 data-witch-play-title>Şansını dene</h2>
-        </div>
-        <div class="witch-cashout-card">
-          <span>MEVCUT CASH OUT</span>
-          <strong data-witch-multiplier>0.00x</strong>
-          <small data-witch-payout>0,00 kredi</small>
-        </div>
-      </div>
-      <div class="witch-board-wrap">
-         <div class="witch-board" data-witch-board aria-label="Cadı Kazan kazınabilir alanları"></div>
-      </div>
-      <div class="witch-actions">
-        <p class="witch-feedback" data-witch-play-feedback role="status">Güvenli bir alan seç.</p>
-        <button class="witch-cashout-button" type="button" data-witch-action="cashout">CASH OUT</button>
-        <button class="witch-secondary-button" type="button" data-witch-action="new" hidden>YENİ ROUND</button>
-      </div>
-    </section>
+    <div class="witch-mobile-actions" data-witch-mobile-actions hidden aria-label="Mobil kazanç ve aksiyonlar">
+      <div class="witch-mobile-amount"><span data-witch-mobile-caption>MASADAKİ KAZANÇ</span><strong data-witch-mobile-multiplier>0.00x</strong><b data-witch-mobile-payout>0,00 kredi</b></div>
+      <button class="witch-cashout-button" type="button" data-witch-action="cashout">CASH OUT <b>↗</b></button>
+      <button class="witch-secondary-button" type="button" data-witch-action="new" hidden>YENİ KART</button>
+    </div>
 
     <section class="witch-rules" aria-label="Cadı Kazan kuralları">
-      <div><strong>01</strong><span>Her round server’da oluşturulur.</span></div>
-      <div><strong>02</strong><span>Bomba açılırsa round BUST olur ve payout sıfırlanır.</span></div>
-      <div><strong>03</strong><span>Güvenli hücrelerden sonra istediğin anda Cash Out yap.</span></div>
+      <div><strong>01</strong><span>Her kart server’da oluşturulur ve oyun boyunca mühürlü kalır.</span></div>
+      <div><strong>02</strong><span>Bomba açılırsa round BUST olur, payout sıfırlanır.</span></div>
+      <div><strong>03</strong><span>Güvenli alanlardan sonra istediğin anda kazancı al.</span></div>
     </section>
   </main>
 `;
@@ -148,6 +190,8 @@ export class WitchClient {
   private readonly audio = new AudioManager();
   private readonly telemetry = new ScratchTelemetry();
   private lastRevealInput: "pointer" | "keyboard" = "pointer";
+  private entranceRoundId: string | null = null;
+  private entranceTimer: number | null = null;
 
   constructor(root: HTMLElement) {
     this.root = root;
@@ -164,9 +208,13 @@ export class WitchClient {
       });
     });
     this.root.querySelector<HTMLButtonElement>("[data-witch-action='start']")?.addEventListener("click", () => void this.startRound());
-    this.root.querySelector<HTMLButtonElement>("[data-witch-action='cashout']")?.addEventListener("click", () => void this.cashOut());
-    this.root.querySelector<HTMLButtonElement>("[data-witch-action='new']")?.addEventListener("click", () => {
-       if (this.state) this.applyState({ ...this.state, round: null });
+    this.root.querySelectorAll<HTMLButtonElement>("[data-witch-action='cashout']").forEach((button) => {
+      button.addEventListener("click", () => void this.cashOut());
+    });
+    this.root.querySelectorAll<HTMLButtonElement>("[data-witch-action='new']").forEach((button) => {
+      button.addEventListener("click", () => {
+        if (this.state) this.applyState({ ...this.state, round: null });
+      });
     });
   }
 
@@ -190,7 +238,7 @@ export class WitchClient {
     const alarmInput = this.root.querySelector<HTMLSelectElement>("[data-witch-alarms]");
     const stakeCents = Math.round(Number(stakeInput?.value ?? 0) * 100);
     const alarmCount = this.mode === "STANDARD" ? 1 : Number(alarmInput?.value ?? 1);
-    this.setFeedback("Bilet server’da oluşturuluyor…");
+    this.setFeedback("Bilet server’da mühürleniyor…");
     this.busy = true;
     this.render();
     try {
@@ -213,6 +261,7 @@ export class WitchClient {
         });
       }
       this.setStatus("SERVER’A BAĞLI", true);
+      this.setFeedback("Kart hazır. Aynı noktayı tekrar tekrar kazı.");
     } catch (error) {
       this.setFeedback(error instanceof Error ? error.message : "Bilet başlatılamadı");
     } finally {
@@ -240,18 +289,11 @@ export class WitchClient {
       if (!response.ok) throw new Error(data.error ?? "Alan açılamadı");
       this.applyState(data.state, data.state.round?.status !== "ACTIVE");
       const resultRound = data.state.round;
-      if (resultRound) {
-        this.telemetry.recordRevealResult(cellIndex, data.outcome, resultRound.revealedSafeCount, resultRound.currentMultiplierBps);
-      }
-      if (data.outcome === "BUST") {
-          triggerScratchHaptic("BOMB");
-      } else if (data.outcome === "SAFE" || data.outcome === "COMPLETED") {
-        triggerScratchHaptic("GOLD");
-      }
+      if (resultRound) this.telemetry.recordRevealResult(cellIndex, data.outcome, resultRound.revealedSafeCount, resultRound.currentMultiplierBps);
+      if (data.outcome === "BUST") triggerScratchHaptic("BOMB");
+      else if (data.outcome === "SAFE" || data.outcome === "COMPLETED") triggerScratchHaptic("GOLD");
       if (data.outcome === "BUST" || data.outcome === "COMPLETED") {
-        if (resultRound) {
-          this.telemetry.recordSettlement(data.outcome, resultRound.revealedSafeCount, resultRound.currentMultiplierBps, resultRound.payoutCents);
-        }
+        if (resultRound) this.telemetry.recordSettlement(data.outcome, resultRound.revealedSafeCount, resultRound.currentMultiplierBps, resultRound.payoutCents);
       }
       this.setFeedback(
         data.outcome === "BUST" ? "BOMBA! Round BUST oldu." :
@@ -286,14 +328,7 @@ export class WitchClient {
       if (!response.ok) throw new Error(data.error ?? "Cash Out başarısız");
       this.applyState(data.state, data.state.round?.status !== "ACTIVE");
       if (data.outcome === "CASHED_OUT") triggerScratchHaptic("CASH_OUT");
-      if (data.state.round) {
-        this.telemetry.recordSettlement(
-          data.outcome,
-          data.state.round.revealedSafeCount,
-          data.state.round.currentMultiplierBps,
-          data.state.round.payoutCents,
-        );
-      }
+      if (data.state.round) this.telemetry.recordSettlement(data.outcome, data.state.round.revealedSafeCount, data.state.round.currentMultiplierBps, data.state.round.payoutCents);
       this.setFeedback(data.outcome === "CASHED_OUT" ? "Kazanç wallet’a aktarıldı." : "Round zaten kapalı.");
     } catch (error) {
       this.setFeedback(error instanceof Error ? error.message : "Cash Out başarısız");
@@ -329,16 +364,25 @@ export class WitchClient {
 
   private applyState(nextState: CadiKazanState, animateTerminal = false) {
     this.clearTerminalRevealTimer();
+    const previousRoundId = this.state?.round?.id;
     this.state = nextState;
     const round = nextState.round;
     if (!round) {
       this.terminalRevealRoundId = null;
       this.terminalRevealVisibleCells.clear();
       this.terminalRevealAnimating = false;
+      this.entranceRoundId = null;
+      if (this.entranceTimer !== null) {
+        window.clearTimeout(this.entranceTimer);
+        this.entranceTimer = null;
+      }
       this.destroyScratchSurfaces();
+      const board = this.root.querySelector<HTMLElement>("[data-witch-board]");
+      if (board) board.replaceChildren();
       this.render();
       return;
     }
+    if (round.id !== previousRoundId && round.status === "ACTIVE") this.entranceRoundId = round.id;
     const terminal = round.status !== "ACTIVE";
     this.terminalRevealRoundId = terminal ? round.id : null;
     this.terminalRevealVisibleCells.clear();
@@ -356,48 +400,53 @@ export class WitchClient {
       return;
     }
     this.terminalRevealAnimating = true;
-    if (round.status === "BUST") {
-      round.revealedBombCells.forEach((index) => immediateCells.add(index));
-    }
+    if (round.status === "BUST") round.revealedBombCells.forEach((index) => immediateCells.add(index));
     immediateCells.forEach((index) => this.terminalRevealVisibleCells.add(index));
     this.render();
-    allCells
-      .filter((index) => !this.terminalRevealVisibleCells.has(index))
-      .forEach((index, order) => {
-        const timer = window.setTimeout(() => {
-          this.terminalRevealTimers.delete(timer);
-          this.terminalRevealVisibleCells.add(index);
-          this.render();
-        }, 70 + order * 55);
-        this.terminalRevealTimers.add(timer);
-      });
+    allCells.filter((index) => !this.terminalRevealVisibleCells.has(index)).forEach((index, order) => {
+      const timer = window.setTimeout(() => {
+        this.terminalRevealTimers.delete(timer);
+        this.terminalRevealVisibleCells.add(index);
+        this.render();
+      }, 70 + order * 55);
+      this.terminalRevealTimers.add(timer);
+    });
   }
 
   private render() {
     const state = this.state;
     const round = state?.round ?? null;
-    const lobby = this.root.querySelector<HTMLElement>("[data-witch-lobby]");
-    const play = this.root.querySelector<HTMLElement>("[data-witch-play]");
     const balance = this.root.querySelector<HTMLElement>("[data-witch-balance]");
     const roundLabel = this.root.querySelector<HTMLElement>("[data-witch-round]");
     const roundStatus = this.root.querySelector<HTMLElement>("[data-witch-round-status]");
+    const roundNote = this.root.querySelector<HTMLElement>("[data-witch-round-note]");
     if (balance) balance.textContent = formatCredits(state?.wallet.balanceCents ?? 0);
     if (roundLabel) roundLabel.textContent = round ? `#${round.id.slice(0, 8).toUpperCase()}` : "—";
     if (roundStatus) roundStatus.textContent = round?.status ?? "HAZIR";
+    if (roundNote) roundNote.textContent = round ? (round.status === "ACTIVE" ? "KART AÇIK" : "ROUND KAPALI") : "MASA BOŞ";
 
+    const hasActiveRound = round?.status === "ACTIVE";
     const hasRound = Boolean(round);
-    if (lobby) lobby.hidden = hasRound;
-    if (play) play.hidden = !hasRound;
     this.root.querySelectorAll<HTMLButtonElement>("[data-witch-mode]").forEach((button) => {
       button.classList.toggle("is-selected", button.dataset.witchMode === this.mode);
-      button.disabled = this.busy || hasRound;
+      button.disabled = this.busy || hasActiveRound;
     });
     const alarms = this.root.querySelector<HTMLSelectElement>("[data-witch-alarms]");
-    if (alarms) alarms.disabled = this.busy || hasRound || this.mode !== "ADVANCED";
+    if (alarms) alarms.disabled = this.busy || hasActiveRound || this.mode !== "ADVANCED";
+    const stakeInput = this.root.querySelector<HTMLInputElement>("[data-witch-stake]");
+    if (stakeInput) stakeInput.disabled = this.busy || hasActiveRound;
     const start = this.root.querySelector<HTMLButtonElement>("[data-witch-action='start']");
-    if (start) start.disabled = this.busy;
+    if (start) start.disabled = this.busy || hasRound;
 
-    if (!round) return;
+    const empty = this.root.querySelector<HTMLElement>("[data-witch-empty]");
+    const ticket = this.root.querySelector<HTMLElement>("[data-witch-ticket]");
+    if (empty) empty.hidden = hasRound;
+    if (ticket) ticket.hidden = !hasRound;
+    if (!round) {
+      this.updatePayout(null);
+      return;
+    }
+
     const board = this.root.querySelector<HTMLElement>("[data-witch-board]");
     if (board && board.childElementCount !== round.cellCount) {
       this.destroyScratchSurfaces();
@@ -416,31 +465,23 @@ export class WitchClient {
         });
       });
     }
+
     const revealedBombs = new Set(round.revealedBombCells);
     this.root.querySelectorAll<HTMLButtonElement>("[data-witch-cell]").forEach((button) => {
       const index = Number(button.dataset.witchCell);
       const isActuallyRevealed = round.revealedCells.includes(index);
-      const isTerminallyRevealed = this.terminalRevealRoundId === round.id
-        && this.terminalRevealVisibleCells.has(index);
+      const isTerminallyRevealed = this.terminalRevealRoundId === round.id && this.terminalRevealVisibleCells.has(index);
       const isRevealed = isActuallyRevealed || isTerminallyRevealed;
-      const isBomb = round.status !== "ACTIVE"
-        && revealedBombs.has(index)
-        && isRevealed;
+      const isBomb = round.status !== "ACTIVE" && revealedBombs.has(index) && isRevealed;
       const presentation = getScratchCellPresentation(round.mode, isRevealed, isBomb);
       button.disabled = round.status !== "ACTIVE" || isActuallyRevealed;
+      button.dataset.cellState = presentation.resultClass ?? "covered";
       button.classList.toggle("is-revealed", isRevealed);
       button.classList.toggle("is-safe", presentation.resultClass === "safe");
       button.classList.toggle("is-bomb", presentation.resultClass === "bomb");
       button.classList.toggle("is-pending", this.pendingRevealCell === index);
       button.classList.toggle("is-terminal-reveal", this.terminalRevealAnimating && isTerminallyRevealed && !isActuallyRevealed);
-      button.setAttribute(
-        "aria-label",
-        presentation.resultClass === "bomb"
-          ? presentation.label
-          : presentation.resultClass === "safe"
-            ? "GOLD ödülü"
-            : "Kazınabilir kapalı alan",
-      );
+      button.setAttribute("aria-label", presentation.resultClass === "bomb" ? presentation.label : presentation.resultClass === "safe" ? "GOLD ödülü" : "Kazınabilir kapalı alan");
       const content = button.querySelector<HTMLElement>(".witch-cell-content");
       if (content) content.textContent = presentation.symbol;
       const resultLabel = button.querySelector<HTMLElement>(".witch-cell-result-label");
@@ -448,38 +489,76 @@ export class WitchClient {
       const canvas = button.querySelector<HTMLCanvasElement>(".witch-scratch-canvas");
       if (!canvas) return;
       const debrisCanvas = button.querySelector<HTMLCanvasElement>(".witch-debris-canvas");
-       const keepActiveMaskLayer = round.status === "ACTIVE" && isActuallyRevealed;
-       canvas.hidden = round.status !== "ACTIVE" ? !isRevealed : isRevealed && !keepActiveMaskLayer;
+      const keepActiveMaskLayer = round.status === "ACTIVE" && isActuallyRevealed;
+      canvas.hidden = round.status !== "ACTIVE" ? !isRevealed : isRevealed && !keepActiveMaskLayer;
       if (debrisCanvas) debrisCanvas.hidden = canvas.hidden;
       const surface = this.scratchSurfaces.get(index);
-       if (round.status === "ACTIVE" && !isRevealed && !surface) {
+      if (round.status === "ACTIVE" && !isRevealed && !surface) {
         this.scratchSurfaces.set(index, new ScratchSurface(canvas, {
           audio: this.audio,
           debrisCanvas: debrisCanvas ?? undefined,
-           onCommit: () => {
+          onCommit: () => {
             if (this.pendingRevealCell === null && !this.busy) {
               this.telemetry.recordScratchCommit(index);
               this.lastRevealInput = "pointer";
-               return this.reveal(index);
+              return this.reveal(index);
             }
-             return Promise.resolve();
+            return Promise.resolve();
           },
         }));
-       } else if (isRevealed && surface && round.status !== "ACTIVE") {
+      } else if (isRevealed && surface && round.status !== "ACTIVE") {
         surface.destroy();
         this.scratchSurfaces.delete(index);
       }
     });
+
     const playMode = this.root.querySelector<HTMLElement>("[data-witch-play-mode]");
     const playTitle = this.root.querySelector<HTMLElement>("[data-witch-play-title]");
-    if (playMode) playMode.textContent = round.mode === "STANDARD" ? "STANDARD 5 // 1 BOMBA" : `ADVANCED 25 // ${round.alarmCount} BOMBA`;
-    if (playTitle) playTitle.textContent = round.status === "BUST" ? "Bomba açıldı" : round.status === "CASHED_OUT" ? "Kazanç alındı" : round.status === "COMPLETED" ? "Round tamamlandı" : "Bir alan seç";
-    this.root.querySelector<HTMLElement>("[data-witch-multiplier]")!.textContent = formatMultiplier(round.currentMultiplierBps);
-    const displayedPayout = round.status === "ACTIVE" ? round.currentCashoutCents : round.payoutCents;
-    this.root.querySelector<HTMLElement>("[data-witch-payout]")!.textContent = `${formatCredits(displayedPayout)} kredi`;
-    const cashout = this.root.querySelector<HTMLButtonElement>("[data-witch-action='cashout']");
-    if (cashout) cashout.disabled = this.busy || round.status !== "ACTIVE" || round.revealedSafeCount < 1;
-    const newRound = this.root.querySelector<HTMLButtonElement>("[data-witch-action='new']");
-    if (newRound) newRound.hidden = round.status === "ACTIVE";
+    const ticketMode = this.root.querySelector<HTMLElement>("[data-witch-ticket-mode]");
+    const ticketStake = this.root.querySelector<HTMLElement>("[data-witch-ticket-stake]");
+    const ticketBombs = this.root.querySelector<HTMLElement>("[data-witch-ticket-bombs]");
+    const ticketId = this.root.querySelector<HTMLElement>("[data-witch-ticket-id]");
+    if (playMode) playMode.textContent = round.mode === "STANDARD" ? "STANDARD 5 / 01 BOMB" : `ADVANCED 25 / ${String(round.alarmCount).padStart(2, "0")} BOMBS`;
+    if (playTitle) playTitle.textContent = round.status === "BUST" ? "Bomba açıldı." : round.status === "CASHED_OUT" ? "Kazanç alındı." : round.status === "COMPLETED" ? "Kart tamamlandı." : "Aynı noktayı kazı.";
+    if (ticketMode) ticketMode.textContent = round.mode === "STANDARD" ? "STANDARD 5" : "ADVANCED 25";
+    if (ticketStake) ticketStake.textContent = `${formatCredits(round.stakeCents)} CR`;
+    if (ticketBombs) ticketBombs.textContent = `${String(round.alarmCount).padStart(2, "0")} ${round.alarmCount === 1 ? "BOMB" : "BOMBS"}`;
+    if (ticketId) ticketId.textContent = `#${round.id.slice(0, 8).toUpperCase()}`;
+    this.root.querySelector<HTMLElement>("[data-witch-risk-note]")!.innerHTML = `${this.mode} / ${this.mode === "STANDARD" ? "1 BOMBA" : `${alarms?.value ?? round.alarmCount} BOMBA`} <span>${this.mode === "STANDARD" ? "DAHA YUMUŞAK GİRİŞ" : "DAHA YÜKSEK RİSK"}</span>`;
+    const ticketElement = this.root.querySelector<HTMLElement>("[data-witch-ticket]");
+    if (ticketElement) {
+      ticketElement.classList.toggle("is-entering", this.entranceRoundId === round.id);
+      if (this.entranceRoundId === round.id && this.entranceTimer === null) {
+        this.entranceTimer = window.setTimeout(() => {
+          this.entranceRoundId = null;
+          this.entranceTimer = null;
+          ticketElement.classList.remove("is-entering");
+        }, 540);
+      }
+    }
+    this.updatePayout(round);
+  }
+
+  private updatePayout(round: CadiKazanRound | null) {
+    const displayedPayout = round ? (round.status === "ACTIVE" ? round.currentCashoutCents : round.payoutCents) : 0;
+    const multiplier = round ? formatMultiplier(round.currentMultiplierBps) : "0.00x";
+    this.root.querySelectorAll<HTMLElement>("[data-witch-multiplier], [data-witch-mobile-multiplier]").forEach((element) => { element.textContent = multiplier; });
+    this.root.querySelectorAll<HTMLElement>("[data-witch-payout], [data-witch-mobile-payout]").forEach((element) => { element.textContent = `${formatCredits(displayedPayout)} kredi`; });
+    const stake = round ? `${formatCredits(round.stakeCents)} CR` : "—";
+    const net = round ? `${formatCredits(displayedPayout - round.stakeCents)} CR` : "—";
+    this.root.querySelectorAll<HTMLElement>("[data-witch-stake-display]").forEach((element) => { element.textContent = stake; });
+    this.root.querySelectorAll<HTMLElement>("[data-witch-net]").forEach((element) => { element.textContent = net; });
+    const payoutNote = this.root.querySelector<HTMLElement>("[data-witch-payout-note]");
+    if (payoutNote) payoutNote.textContent = !round ? "Güvenli bir alan açıldığında cash out aktif olur." : round.status === "ACTIVE" ? (round.revealedSafeCount > 0 ? "Kazancı şimdi alabilir veya devam edebilirsin." : "İlk güvenli alan cash out’u açar.") : round.status === "BUST" ? "Bomba kartı kapattı. Payout: 0 kredi." : "Bu round server tarafından kapatıldı.";
+    this.root.querySelectorAll<HTMLButtonElement>("[data-witch-action='cashout']").forEach((button) => {
+      button.disabled = this.busy || !round || round.status !== "ACTIVE" || round.revealedSafeCount < 1;
+    });
+    this.root.querySelectorAll<HTMLButtonElement>("[data-witch-action='new']").forEach((button) => {
+      button.hidden = !round || round.status === "ACTIVE";
+    });
+    const mobileActions = this.root.querySelector<HTMLElement>("[data-witch-mobile-payout]")?.closest<HTMLElement>(".witch-mobile-actions");
+    if (mobileActions) mobileActions.hidden = !round;
+    const mobileCaption = this.root.querySelector<HTMLElement>("[data-witch-mobile-caption]");
+    if (mobileCaption) mobileCaption.textContent = round?.status === "BUST" ? "ROUND BUST" : round?.status === "ACTIVE" ? "MASADAKİ KAZANÇ" : "SON PAYOUT";
   }
 }

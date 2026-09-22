@@ -3298,6 +3298,10 @@ button:focus-visible, input:focus-visible { outline: 2px solid var(--cyan); outl
   min-height: 100svh;
   overflow: hidden;
 }
+.route-shell.is-menu-page {
+  overflow-x: hidden;
+  overflow-y: auto;
+}
 .route-shell .route-topbar {
   width: min(1240px, 100%);
   margin-bottom: 0;
@@ -4015,5 +4019,168 @@ button:focus-visible, input:focus-visible { outline: 2px solid var(--cyan); outl
   .stadium-starball {
     right: -42%;
     width: 300px;
+  }
+}
+
+/* Viewport-fit pass for the route surfaces.  These pages are play surfaces,
+   not documents: secondary details live in drawers or compact panels rather
+   than making the whole page scroll. */
+.route-shell {
+  height: 100dvh;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.route-shell.is-menu-page {
+  overflow: hidden;
+}
+
+.route-shell > .game-menu,
+.route-shell > .roulette-page,
+.route-shell > .witch-page {
+  min-height: 0;
+}
+
+.route-shell.is-menu-page .game-menu {
+  align-content: center;
+  padding-block: 18px 12px;
+}
+
+.route-shell.is-menu-page .menu-intro {
+  margin-bottom: 18px;
+}
+
+.route-shell.is-menu-page .game-choice-grid {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.route-shell.is-menu-page .game-choice {
+  min-height: 276px;
+  padding: 20px;
+}
+
+.route-shell.is-menu-page .choice-art {
+  top: 37px;
+  right: 26px;
+  width: 96px;
+  height: 96px;
+}
+
+.route-shell.is-menu-page .choice-copy {
+  margin-top: 92px;
+}
+
+.route-shell.is-menu-page .choice-footer {
+  margin-top: 18px;
+}
+
+.route-shell.is-menu-page .menu-footer {
+  margin-top: 18px;
+}
+
+@media (max-width: 680px) {
+  .route-shell.is-menu-page .game-menu {
+    align-content: start;
+    padding-block: 14px 8px;
+  }
+
+  .route-shell.is-menu-page .menu-intro {
+    margin-bottom: 12px;
+  }
+
+  .route-shell.is-menu-page .menu-intro h1 {
+    margin: 7px 0 6px;
+    font-size: clamp(32px, 11vw, 48px);
+  }
+
+  .route-shell.is-menu-page .menu-intro p {
+    font-size: 10px;
+    line-height: 1.35;
+  }
+
+  .route-shell.is-menu-page .game-choice-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+  }
+
+  .route-shell.is-menu-page .game-choice {
+    min-height: 188px;
+    padding: 12px;
+    border-radius: 16px 16px 16px 5px;
+  }
+
+  .route-shell.is-menu-page .game-choice::before {
+    inset: 8px;
+    border-radius: 11px 11px 11px 3px;
+  }
+
+  .route-shell.is-menu-page .choice-status {
+    padding: 4px 6px;
+    font-size: 7px;
+    letter-spacing: .08em;
+  }
+
+  .route-shell.is-menu-page .choice-art {
+    top: 26px;
+    right: 17px;
+    width: 61px;
+    height: 61px;
+  }
+
+  .route-shell.is-menu-page .choice-art-slot span {
+    font-size: 23px;
+  }
+
+  .route-shell.is-menu-page .choice-art-roulette span {
+    width: 23px;
+    height: 23px;
+    font-size: 11px;
+  }
+
+  .route-shell.is-menu-page .choice-art-roulette::before {
+    inset: 6px;
+  }
+
+  .route-shell.is-menu-page .choice-art-roulette i,
+  .route-shell.is-menu-page .choice-art-roulette b {
+    height: 56px;
+  }
+
+  .route-shell.is-menu-page .choice-copy {
+    gap: 4px;
+    margin-top: 57px;
+  }
+
+  .route-shell.is-menu-page .choice-overline,
+  .route-shell.is-menu-page .choice-type,
+  .route-shell.is-menu-page .choice-footer {
+    font-size: 7px;
+    letter-spacing: .08em;
+  }
+
+  .route-shell.is-menu-page .choice-copy strong {
+    font-size: clamp(14px, 4.4vw, 18px);
+    letter-spacing: -.025em;
+  }
+
+  .route-shell.is-menu-page .choice-footer {
+    margin-top: 9px;
+    padding-top: 7px;
+  }
+
+  .route-shell.is-menu-page .choice-arrow {
+    font-size: 15px;
+  }
+
+  .route-shell.is-menu-page .game-choice:last-child {
+    grid-column: 1 / -1;
+    width: calc(50% - 4px);
+    justify-self: center;
+  }
+
+  .route-shell.is-menu-page .menu-footer {
+    margin-top: 10px;
+    font-size: 7px;
   }
 }

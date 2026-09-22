@@ -155,6 +155,9 @@ export class ScratchSurface {
 
   reset() {
     this.cancelCompletion();
+    if (this.pointerId.value !== null && this.canvas.hasPointerCapture(this.pointerId.value)) {
+      this.canvas.releasePointerCapture(this.pointerId.value);
+    }
     this.pointerId.value = null;
     this.lastPoint = null;
     this.gestureDistance = 0;

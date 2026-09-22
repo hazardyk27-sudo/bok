@@ -1053,3 +1053,284 @@
     margin-top: 5px;
   }
 }
+
+/* The route is a fixed play surface.  History and secondary bets remain
+   reachable through their drawers, while the active wheel/table gets the
+   available viewport instead of creating a document-sized page. */
+@media (min-width: 901px) {
+  .app-shell.is-roulette-page {
+    height: 100dvh;
+    min-height: 0;
+    overflow: hidden;
+  }
+
+  .app-shell.is-roulette-page .roulette-page {
+    display: flex;
+    flex: 1 1 auto;
+    flex-direction: column;
+    min-height: 0;
+    padding-block: 0 8px;
+  }
+
+  .app-shell.is-roulette-page .roulette-heading {
+    flex: 0 0 auto;
+    margin-block: 10px 10px;
+  }
+
+  .app-shell.is-roulette-page .roulette-hud {
+    flex: 0 0 auto;
+  }
+
+  .app-shell.is-roulette-page .roulette-layout {
+    flex: 1 1 auto;
+    min-height: 0;
+    margin-top: 12px;
+    align-items: stretch;
+  }
+
+  .app-shell.is-roulette-page .roulette-wheel-card {
+    display: flex;
+    min-height: 0;
+    flex-direction: column;
+    padding-block: 10px;
+  }
+
+  .app-shell.is-roulette-page .roulette-wheel-stage {
+    display: grid;
+    flex: 1 1 auto;
+    min-height: 0;
+  }
+
+  .app-shell.is-roulette-page .roulette-wheel-live {
+    width: min(100%, 470px, calc(100dvh - 330px));
+  }
+
+  .app-shell.is-roulette-page .roulette-bet-card {
+    min-height: 0;
+    overflow: hidden;
+    padding: 12px;
+  }
+
+  .app-shell.is-roulette-page .roulette-number-grid {
+    grid-template-rows: repeat(3, 32px);
+  }
+
+  .app-shell.is-roulette-page .table-bet.number-zero {
+    min-height: 32px;
+  }
+
+  .app-shell.is-roulette-page .table-bet.outside-bet {
+    min-height: 30px;
+  }
+
+  .app-shell.is-roulette-page .roulette-table-felt {
+    padding: 9px;
+  }
+
+  .app-shell.is-roulette-page .roulette-lucky-row {
+    padding-block: 8px 5px;
+  }
+
+  .app-shell.is-roulette-page .roulette-multiplier-row {
+    min-height: 44px;
+    padding-block: 7px 5px;
+  }
+
+  .app-shell.is-roulette-page .roulette-bet-slip {
+    margin-top: 7px;
+    padding: 8px;
+  }
+
+  .app-shell.is-roulette-page .roulette-history-card {
+    display: none;
+  }
+}
+
+@media (min-width: 601px) and (max-width: 900px) {
+  .app-shell.is-roulette-page {
+    height: 100dvh;
+    min-height: 0;
+    overflow: hidden;
+  }
+
+  .app-shell.is-roulette-page .roulette-page {
+    display: flex;
+    flex: 1 1 auto;
+    flex-direction: column;
+    min-height: 0;
+    padding-block: 0 8px;
+  }
+
+  .app-shell.is-roulette-page .roulette-heading {
+    flex: 0 0 auto;
+    margin-block: 8px 9px;
+  }
+
+  .app-shell.is-roulette-page .roulette-layout {
+    flex: 1 1 auto;
+    min-height: 0;
+    grid-template-columns: minmax(240px, .72fr) minmax(0, 1.28fr);
+    gap: 10px;
+    margin-top: 10px;
+  }
+
+  .app-shell.is-roulette-page .roulette-wheel-card {
+    display: flex;
+    min-height: 0;
+    flex-direction: column;
+    padding: 9px;
+  }
+
+  .app-shell.is-roulette-page .roulette-wheel-stage {
+    display: grid;
+    flex: 1 1 auto;
+    min-height: 0;
+  }
+
+  .app-shell.is-roulette-page .roulette-wheel-live {
+    width: min(100%, calc(100dvh - 330px));
+  }
+
+  .app-shell.is-roulette-page .roulette-bet-card {
+    min-height: 0;
+    overflow: hidden;
+    padding: 10px;
+  }
+
+  .app-shell.is-roulette-page .roulette-number-grid {
+    grid-template-columns: repeat(12, minmax(0, 1fr));
+    grid-template-rows: repeat(3, 29px);
+    gap: 2px;
+  }
+
+  .app-shell.is-roulette-page .roulette-table-felt {
+    padding: 7px;
+  }
+
+  .app-shell.is-roulette-page .table-bet.number-zero,
+  .app-shell.is-roulette-page .table-bet.outside-bet {
+    min-height: 29px;
+  }
+
+  .app-shell.is-roulette-page .roulette-lucky-row {
+    padding-block: 7px 4px;
+  }
+
+  .app-shell.is-roulette-page .roulette-multiplier-row {
+    min-height: 40px;
+    padding-block: 6px 4px;
+  }
+
+  .app-shell.is-roulette-page .roulette-bet-slip {
+    margin-top: 6px;
+    padding: 7px;
+  }
+
+  .app-shell.is-roulette-page .roulette-history-card {
+    display: none;
+  }
+}
+
+@media (orientation: portrait) and (max-width: 767px) {
+  .app-shell.is-roulette-page {
+    height: 100dvh;
+    min-height: 0;
+    overflow: hidden;
+    padding-bottom: max(6px, var(--safe-area-inset-bottom));
+  }
+
+  .app-shell.is-roulette-page .roulette-page {
+    display: flex;
+    flex: 1 1 auto;
+    flex-direction: column;
+    min-height: 0;
+    overflow: hidden;
+  }
+
+  .app-shell.is-roulette-page .roulette-mobile-results {
+    flex: 0 0 auto;
+  }
+
+  .app-shell.is-roulette-page .roulette-layout {
+    flex: 1 1 auto;
+    min-height: 0;
+    margin-top: 5px;
+    overflow: hidden;
+  }
+
+  /* Betting needs the table; wheel phases need the result animation.  The
+     inactive surface is still available through the controls/drawers and no
+     longer pushes the active surface below the viewport. */
+  .app-shell.is-roulette-page .roulette-page:not(.is-wheel-phase) .roulette-wheel-card {
+    display: none;
+  }
+
+  .app-shell.is-roulette-page .roulette-page.is-wheel-phase .roulette-bet-card {
+    display: none;
+  }
+
+  .app-shell.is-roulette-page .roulette-page:not(.is-wheel-phase) .roulette-bet-card {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow: hidden;
+  }
+
+  .app-shell.is-roulette-page .roulette-page.is-wheel-phase .roulette-wheel-card {
+    display: flex;
+    flex: 1 1 auto;
+    min-height: 0;
+    flex-direction: column;
+  }
+
+  .app-shell.is-roulette-page .roulette-page.is-wheel-phase .roulette-wheel-stage {
+    display: grid;
+    flex: 1 1 auto;
+    min-height: 0;
+  }
+
+  .app-shell.is-roulette-page .roulette-page.is-wheel-phase .roulette-wheel-live {
+    width: min(360px, calc(100vw - var(--safe-area-inset-left) - var(--safe-area-inset-right) - 18px), calc(100dvh - 210px));
+  }
+
+  .app-shell.is-roulette-page .mobile-number-column {
+    grid-template-rows: repeat(12, minmax(22px, 1fr));
+    gap: 2px;
+  }
+
+  .app-shell.is-roulette-page .mobile-number-column .table-bet {
+    min-height: 22px;
+  }
+
+  .app-shell.is-roulette-page .mobile-outer-rail,
+  .app-shell.is-roulette-page .mobile-dozen-rail {
+    gap: 2px;
+  }
+
+  .app-shell.is-roulette-page .mobile-outer-rail .table-bet,
+  .app-shell.is-roulette-page .mobile-dozen-rail .table-bet,
+  .app-shell.is-roulette-page .mobile-column-row .table-bet {
+    min-height: 27px;
+  }
+
+  .app-shell.is-roulette-page .roulette-table-felt {
+    padding-block: 5px;
+  }
+
+  .app-shell.is-roulette-page .roulette-lucky-row {
+    padding-block: 5px 3px;
+  }
+
+  .app-shell.is-roulette-page .roulette-multiplier-row {
+    min-height: 36px;
+    padding-block: 5px 3px;
+  }
+
+  .app-shell.is-roulette-page .roulette-bet-slip {
+    margin-top: 5px;
+    padding: 6px;
+  }
+
+  .app-shell.is-roulette-page .roulette-bet-status {
+    margin-top: 4px;
+  }
+}
