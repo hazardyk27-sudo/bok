@@ -439,7 +439,33 @@ export class GameScene extends Phaser.Scene {
   }
 
   private fallMotionScale(turbo: boolean) {
-    return turbo ? 1.5 : 1.25;
+    return turbo ? 1.45 : 1.12;
+  }
+
+  private animateColumnStream(
+    nodes: BoardNode[],
+    starts: number[],
+    targets: number[],
+    duration: number,
+    delay: number,
+  ) {
+    return new Promise<void>((resolve) => {
+      const motion = { progress: 0 };
+      this.tweens.add({
+        targets: motion,
+        progress: 1,
+        duration,
+        delay,
+        ease: "Linear",
+        onUpdate: () => {
+          const travel = this.naturalFallEase(motion.progress);
+          nodes.forEach((node, index) => {
+            node.container.y = starts[index] + (targets[index] - starts[index]) * travel;
+          });
+        },
+        onComplete: () => resolve(),
+      });
+    });
   }
 
   private animateFallingNodes(
@@ -475,13 +501,12 @@ export class GameScene extends Phaser.Scene {
       columnNodes.forEach((node, index) => {
         node.container.y = starts[index];
       });
-      return this.animateFallingNodes(
+      return this.animateColumnStream(
         columnNodes,
         starts,
         finalYs,
         tweenDuration,
         col * 18,
-        0,
       ).then(async () => {
         const scatterLandings = columnNodes
           .filter((node) => node.symbol === "SCATTER")
