@@ -434,38 +434,12 @@ export class GameScene extends Phaser.Scene {
 
   private durationForFallDistance(start: number, target: number, baseDuration: number) {
     const distanceInCells = Math.max(1, Math.abs(target - start) / this.cellSize.height);
-    const distanceFactor = 0.78 + Math.min(0.28, distanceInCells * 0.07);
+    const distanceFactor = 0.64 + Math.min(0.42, distanceInCells * 0.08);
     return Math.max(120, Math.round(baseDuration * distanceFactor));
   }
 
   private fallMotionScale(turbo: boolean) {
-    return turbo ? 1.45 : 1;
-  }
-
-  private animateInitialColumn(
-    nodes: BoardNode[],
-    targets: number[],
-    duration: number,
-    turbo: boolean,
-  ) {
-    const staggerMs = turbo ? 14 : 20;
-    const fallDuration = turbo
-      ? Math.max(360, Math.round(duration * 0.86))
-      : Math.max(560, Math.round(duration * 0.69));
-    const entryDistance = this.cellSize.height * 3.9;
-    return Promise.all(nodes.map((node, index) => new Promise<void>((resolve) => {
-      const waveDelay = (node.row * BOARD_COLUMNS + node.col) * staggerMs;
-      const start = targets[index] - entryDistance - (entryDistance * waveDelay) / fallDuration;
-      node.container.y = start;
-      this.tweens.add({
-        targets: node.container,
-        y: targets[index],
-        duration: fallDuration,
-        delay: waveDelay,
-        ease: this.naturalFallEase,
-        onComplete: () => resolve(),
-      });
-    }))).then(() => undefined);
+    return turbo ? 1.5 : 1.25;
   }
 
   private animateFallingNodes(
@@ -490,10 +464,25 @@ export class GameScene extends Phaser.Scene {
   }
 
   async animateDrop(duration: number, turbo = false) {
+    const maximumColumnDelay = (BOARD_COLUMNS - 1) * 18;
+    const motionDuration = Math.round(duration * this.fallMotionScale(turbo));
+    const tweenDuration = Math.max(260, motionDuration - maximumColumnDelay);
     await Promise.all(Array.from({ length: BOARD_COLUMNS }, (_, col) => {
       const columnNodes = this.nodes.filter((node) => node.col === col);
       const finalYs = columnNodes.map((node) => node.container.y);
-      return this.animateInitialColumn(columnNodes, finalYs, duration, turbo).then(async () => {
+      const entryDistance = this.cellSize.height * 4.9;
+      const starts = finalYs.map((target) => target - entryDistance);
+      columnNodes.forEach((node, index) => {
+        node.container.y = starts[index];
+      });
+      return this.animateFallingNodes(
+        columnNodes,
+        starts,
+        finalYs,
+        tweenDuration,
+        col * 18,
+        0,
+      ).then(async () => {
         const scatterLandings = columnNodes
           .filter((node) => node.symbol === "SCATTER")
           .map((node) => this.animateScatterLanding(node));
