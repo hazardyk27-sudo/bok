@@ -279,7 +279,15 @@ export function boardFromStreams(
   context: "BASE_INITIAL" | "BONUS_INITIAL",
   coreBudget?: CoreBudget,
 ): Board {
-  const columns = streams.map((stream) => stream.next(BOARD_ROWS, context, true, coreBudget));
+  const columns = streams.map((stream) => {
+    const column: BoardCell[] = [];
+    for (let row = 0; row < BOARD_ROWS; row += 1) {
+      const previousRowSymbol = row > 0 ? normalSymbolOf(column[row - 1]) : null;
+      const emission = stream.nextVisibleAware(context, true, previousRowSymbol, coreBudget);
+      column.push(emission.cell);
+    }
+    return column;
+  });
   return Array.from({ length: BOARD_ROWS }, (_, row) => columns.map((column) => column[row]));
 }
 

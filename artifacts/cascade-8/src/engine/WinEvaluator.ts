@@ -86,10 +86,10 @@ export function removeAndRefill(
     const refillContext = allowCores && mode === "bonus" ? "BONUS_REFILL" : "BASE_REFILL";
     while (generated.length < BOARD_ROWS - survivors.length) {
       const visibleColumn = [...generated, ...survivors];
-       const topCell = visibleColumn.at(-1);
-       const belowCell = visibleColumn.at(-2);
-       const topSymbol = topCell ? getNormalSymbol(topCell) : null;
-       const belowSymbol = belowCell ? getNormalSymbol(belowCell) : null;
+      const topCell = visibleColumn.at(-1);
+      const belowCell = visibleColumn.at(-2);
+      const topSymbol = topCell ? getNormalSymbol(topCell) : null;
+      const belowSymbol = belowCell ? getNormalSymbol(belowCell) : null;
       const isVisuallyUnpaired = Boolean(topSymbol && belowSymbol !== topSymbol);
       const emission = streams
         ? streams[col].nextVisibleAware(
