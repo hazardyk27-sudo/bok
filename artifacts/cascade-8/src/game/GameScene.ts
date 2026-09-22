@@ -445,10 +445,13 @@ export class GameScene extends Phaser.Scene {
   private animateInitialColumn(
     nodes: BoardNode[],
     targets: number[],
+    duration: number,
     turbo: boolean,
   ) {
     const staggerMs = turbo ? 14 : 20;
-    const fallDuration = turbo ? 390 : 620;
+    const fallDuration = turbo
+      ? Math.max(360, Math.round(duration * 0.86))
+      : Math.max(560, Math.round(duration * 0.69));
     const entryDistance = this.cellSize.height * 3.9;
     return Promise.all(nodes.map((node, index) => new Promise<void>((resolve) => {
       const waveDelay = (node.row * BOARD_COLUMNS + node.col) * staggerMs;
@@ -490,7 +493,7 @@ export class GameScene extends Phaser.Scene {
     await Promise.all(Array.from({ length: BOARD_COLUMNS }, (_, col) => {
       const columnNodes = this.nodes.filter((node) => node.col === col);
       const finalYs = columnNodes.map((node) => node.container.y);
-      return this.animateInitialColumn(columnNodes, finalYs, turbo).then(async () => {
+      return this.animateInitialColumn(columnNodes, finalYs, duration, turbo).then(async () => {
         const scatterLandings = columnNodes
           .filter((node) => node.symbol === "SCATTER")
           .map((node) => this.animateScatterLanding(node));
