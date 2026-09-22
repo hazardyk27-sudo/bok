@@ -1,6 +1,12 @@
 import * as THREE from "three";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
 import { EUROPEAN_WHEEL_ORDER, ROULETTE_SEGMENT_DEGREES } from "./rouletteGeometry";
+import {
+  ROULETTE_BALL_RADIUS,
+  ROULETTE_MODEL_PATH,
+  ROULETTE_PHYSICS_SCHEMA_VERSION,
+  ROULETTE_WHEEL_DIAMETER,
+} from "../../../lib/roulette-physics-config";
 
 type Vec3 = { x: number; y: number; z: number };
 type Quaternion = { x: number; y: number; z: number; w: number };
@@ -18,8 +24,8 @@ type PhysicsReplay = {
 };
 
 const REPLAY_URL = "/api/physics-lab/rounds/current";
-const MODEL_URL = "/physics-lab/roulette-visual-source.glb";
-const TARGET_WHEEL_DIAMETER = 6;
+const MODEL_URL = ROULETTE_MODEL_PATH;
+const TARGET_WHEEL_DIAMETER = ROULETTE_WHEEL_DIAMETER;
 
 function indexFor(number: number) {
   return EUROPEAN_WHEEL_ORDER.indexOf(number as typeof EUROPEAN_WHEEL_ORDER[number]);
@@ -34,7 +40,7 @@ export class RoulettePhysicsReplay {
   private readonly scene = new THREE.Scene();
   private readonly camera = new THREE.PerspectiveCamera(28, 1, 0.1, 100);
   private readonly ball = new THREE.Mesh(
-    new THREE.SphereGeometry(0.095, 24, 18),
+    new THREE.SphereGeometry(ROULETTE_BALL_RADIUS, 24, 18),
     new THREE.MeshStandardMaterial({ color: 0xfff8dc, metalness: 0.18, roughness: 0.24 }),
   );
   private rotor?: THREE.Group;
@@ -73,6 +79,7 @@ export class RoulettePhysicsReplay {
     await Promise.all([player.loadModel(), player.loadReplay()]);
     player.resize();
     player.renderFrame();
+    canvas.dataset.physicsSchema = ROULETTE_PHYSICS_SCHEMA_VERSION;
     canvas.dataset.ready = "true";
     return player;
   }
