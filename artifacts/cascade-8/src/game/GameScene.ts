@@ -417,14 +417,25 @@ export class GameScene extends Phaser.Scene {
     this.nodes = nextNodes;
   }
 
-  private naturalFallProgress(progress: number, stagger = 0) {
-    const local = Phaser.Math.Clamp((progress - stagger) / Math.max(0.001, 1 - stagger), 0, 1);
-    if (local < 0.84) {
-      const fall = local / 0.84;
-      return fall * fall * (3 - 2 * fall);
+  private naturalFallEase(progress: number) {
+    const local = Phaser.Math.Clamp(progress, 0, 1);
+    if (local < 0.8) {
+      return 0.975 * Math.pow(local / 0.8, 1.35);
     }
-    const settle = (local - 0.84) / 0.16;
-    return 1 + Math.sin(settle * Math.PI) * 0.018;
+
+    const settle = (local - 0.8) / 0.2;
+    const start = 0.975;
+    const startVelocity = 0.975 * 1.35 * 0.2 / 0.8;
+    const h00 = 2 * settle ** 3 - 3 * settle ** 2 + 1;
+    const h10 = settle ** 3 - 2 * settle ** 2 + settle;
+    const h01 = -2 * settle ** 3 + 3 * settle ** 2;
+    return h00 * start + h10 * startVelocity + h01;
+  }
+
+  private durationForFallDistance(start: number, target: number, baseDuration: number) {
+    const distanceInCells = Math.max(1, Math.abs(target - start) / this.cellSize.height);
+    const distanceFactor = 0.64 + Math.min(0.42, distanceInCells * 0.08);
+    return Math.max(120, Math.round(baseDuration * distanceFactor));
   }
 
   private animateFallingNodes(
@@ -433,32 +444,19 @@ export class GameScene extends Phaser.Scene {
     targets: number[],
     duration: number,
     delay: number,
-    fadeIn: boolean,
+    staggerMs = 24,
   ) {
-    return new Promise<void>((resolve) => {
-      const motion = { progress: 0 };
+    return Promise.all(nodes.map((node, index) => new Promise<void>((resolve) => {
+      node.container.y = starts[index];
       this.tweens.add({
-        targets: motion,
-        progress: 1,
-        duration,
-        delay,
-        ease: "Linear",
-        onUpdate: () => {
-          nodes.forEach((node, index) => {
-            const travel = this.naturalFallProgress(motion.progress, index * 0.022);
-            node.container.y = starts[index] + (targets[index] - starts[index]) * travel;
-            if (fadeIn) node.container.alpha = Math.min(1, 0.16 + travel * 0.84);
-          });
-        },
-        onComplete: () => {
-          nodes.forEach((node, index) => {
-            node.container.y = targets[index];
-            node.container.alpha = 1;
-          });
-          resolve();
-        },
+        targets: node.container,
+        y: targets[index],
+        duration: this.durationForFallDistance(starts[index], targets[index], duration),
+        delay: delay + index * staggerMs,
+        ease: this.naturalFallEase,
+        onComplete: () => resolve(),
       });
-    });
+    }))).then(() => undefined);
   }
 
   async animateDrop(duration: number) {
@@ -467,17 +465,16 @@ export class GameScene extends Phaser.Scene {
     await Promise.all(Array.from({ length: BOARD_COLUMNS }, (_, col) => {
       const columnNodes = this.nodes.filter((node) => node.col === col);
       const finalYs = columnNodes.map((node) => node.container.y);
+      const starts = finalYs.map((target, index) => target - 290 - index * 24 - col * 12);
       columnNodes.forEach((node, index) => {
-        node.container.y = finalYs[index] - 290 - index * 24 - col * 12;
-        node.container.alpha = 0.2;
+        node.container.y = starts[index];
       });
       return this.animateFallingNodes(
         columnNodes,
-        columnNodes.map((node, index) => finalYs[index] - 290 - index * 24 - col * 12),
+        starts,
         finalYs,
         tweenDuration,
         col * 18,
-        true,
       ).then(async () => {
         const scatterLandings = columnNodes
           .filter((node) => node.symbol === "SCATTER")
@@ -820,14 +817,13 @@ export class GameScene extends Phaser.Scene {
           node.row = targetRow;
           return this.boardOrigin.y + targetRow * this.cellSize.height + 46;
         });
-        animations.push(this.animateFallingNodes(survivors, starts, targets, tweenDuration, col * 18, false));
+        animations.push(this.animateFallingNodes(survivors, starts, targets, tweenDuration, col * 18));
       }
       const incomingGroups = new Map<string, BoardNode[]>();
       for (let row = 0; row < generatedCount; row += 1) {
         const node = this.createSymbolNode(board[row][col], row, col);
         const targetY = this.boardOrigin.y + row * this.cellSize.height + 46;
         node.container.y = targetY - 260 - col * 14;
-        node.container.alpha = 0.2;
         const metadata = getStackMetadata(node.symbol);
          const normalSymbol = getNormalSymbol(node.symbol);
          const key = metadata && metadata.stackSize === 2 && normalSymbol
@@ -847,7 +843,7 @@ export class GameScene extends Phaser.Scene {
           targetYs,
           tweenDuration,
           col * 18 + incomingGroupIndex * 18,
-          true,
+          group.length > 1 ? 0 : 24,
         ));
         incomingGroupIndex += 1;
       });
