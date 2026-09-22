@@ -434,38 +434,35 @@ export class GameScene extends Phaser.Scene {
 
   private durationForFallDistance(start: number, target: number, baseDuration: number) {
     const distanceInCells = Math.max(1, Math.abs(target - start) / this.cellSize.height);
-    const distanceFactor = 0.64 + Math.min(0.42, distanceInCells * 0.08);
+    const distanceFactor = 0.78 + Math.min(0.28, distanceInCells * 0.07);
     return Math.max(120, Math.round(baseDuration * distanceFactor));
   }
 
   private fallMotionScale(turbo: boolean) {
-    return turbo ? 1.45 : 1.12;
+    return turbo ? 1.45 : 1;
   }
 
-  private animateColumnStream(
+  private animateInitialColumn(
     nodes: BoardNode[],
-    starts: number[],
     targets: number[],
-    duration: number,
-    delay: number,
+    turbo: boolean,
   ) {
-    return new Promise<void>((resolve) => {
-      const motion = { progress: 0 };
+    const staggerMs = turbo ? 14 : 20;
+    const fallDuration = turbo ? 390 : 620;
+    const entryDistance = this.cellSize.height * 3.9;
+    return Promise.all(nodes.map((node, index) => new Promise<void>((resolve) => {
+      const waveDelay = (node.row * BOARD_COLUMNS + node.col) * staggerMs;
+      const start = targets[index] - entryDistance - (entryDistance * waveDelay) / fallDuration;
+      node.container.y = start;
       this.tweens.add({
-        targets: motion,
-        progress: 1,
-        duration,
-        delay,
-        ease: "Linear",
-        onUpdate: () => {
-          const travel = this.naturalFallEase(motion.progress);
-          nodes.forEach((node, index) => {
-            node.container.y = starts[index] + (targets[index] - starts[index]) * travel;
-          });
-        },
+        targets: node.container,
+        y: targets[index],
+        duration: fallDuration,
+        delay: waveDelay,
+        ease: this.naturalFallEase,
         onComplete: () => resolve(),
       });
-    });
+    }))).then(() => undefined);
   }
 
   private animateFallingNodes(
@@ -490,24 +487,10 @@ export class GameScene extends Phaser.Scene {
   }
 
   async animateDrop(duration: number, turbo = false) {
-    const maximumColumnDelay = (BOARD_COLUMNS - 1) * 18;
-    const motionDuration = Math.round(duration * this.fallMotionScale(turbo));
-    const tweenDuration = Math.max(260, motionDuration - maximumColumnDelay);
     await Promise.all(Array.from({ length: BOARD_COLUMNS }, (_, col) => {
       const columnNodes = this.nodes.filter((node) => node.col === col);
       const finalYs = columnNodes.map((node) => node.container.y);
-      const entryDistance = this.cellSize.height * 4.9;
-      const starts = finalYs.map((target) => target - entryDistance);
-      columnNodes.forEach((node, index) => {
-        node.container.y = starts[index];
-      });
-      return this.animateColumnStream(
-        columnNodes,
-        starts,
-        finalYs,
-        tweenDuration,
-        col * 18,
-      ).then(async () => {
+      return this.animateInitialColumn(columnNodes, finalYs, turbo).then(async () => {
         const scatterLandings = columnNodes
           .filter((node) => node.symbol === "SCATTER")
           .map((node) => this.animateScatterLanding(node));
