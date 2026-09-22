@@ -45,6 +45,8 @@ const PART3_DEFLECTOR_APPROACH_RADIUS = 2.74;
 const PART3_TRACK_INNER_RADIUS = 2.72;
 const PART3_TRACK_OUTER_RADIUS = 2.90;
 const PART3_TRACK_CONTACT_TOLERANCE = 0.1;
+const PART3_OUTER_LANE_PROBE_DURATION_SECONDS = 1.2;
+const PART3_OUTER_LANE_CLEARANCE_MARGIN = 0.02;
 const PART3_DARK_TRACK_RADIUS_BAND: readonly [number, number] = [
   PART3_TRACK_INNER_RADIUS,
   PART3_TRACK_OUTER_RADIUS,
@@ -219,6 +221,41 @@ type Part3AlignmentReport = {
   detail: string;
 };
 
+type Part3OuterLaneReport = {
+  status: 'running' | 'passed' | 'failed';
+  darkTrackInnerRadius: number;
+  darkTrackOuterRadius: number;
+  retainingRimInnerRadius: number;
+  nearestDeflectorOuterRadius: number;
+  ballRadius: number;
+  chosenLaunchRadius: number;
+  radialClearanceToRim: number;
+  radialClearanceToDeflector: number;
+  outerTrackEdgeClearance: number;
+  launchAzimuth: number;
+  launchHeight: number;
+  tangentialLaunchDirection: VectorReadout;
+  initialLinearSpeed: number;
+  initialAngularSpin: VectorReadout;
+  minRadius: number;
+  maxRadius: number;
+  minRimClearance: number;
+  minDeflectorClearance: number;
+  staysOnOuterDarkLane: boolean;
+  prematureDeflectorContact: boolean;
+  woodContact: boolean;
+  hover: boolean;
+  clipping: boolean;
+  tunneling: boolean;
+  escaped: boolean;
+  velocitySpike: boolean;
+  maxVisualBodySyncError: number;
+  maxPenetration: number;
+  maxSeparation: number;
+  physicalTrackContact: boolean;
+  detail: string;
+};
+
 type Part3PocketDescentReport = {
   status: 'running' | 'passed' | 'failed';
   label: string;
@@ -319,6 +356,7 @@ type Part2SceneViewportProps = {
   loadKey: number;
   validationMode?: 'part2' | 'part3' | 'part4';
   alignmentOnly?: boolean;
+  outerLaneOnly?: boolean;
   view: InspectionView;
   showGrid: boolean;
   showPhysicsDebug: boolean;
