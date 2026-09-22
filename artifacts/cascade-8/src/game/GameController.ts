@@ -426,7 +426,6 @@ export class GameController {
         this.message("AUTO PAUSED // PRESS START FREE SPINS");
         break;
       }
-      if (this.autoRunning) await sleep(this.duration(ANIMATION.spinPause));
     }
     if (this.autoRunning) {
       this.autoRunning = false;

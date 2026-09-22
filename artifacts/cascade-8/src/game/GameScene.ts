@@ -392,8 +392,8 @@ export class GameScene extends Phaser.Scene {
         delay: columnDelay,
          ease: "Cubic.easeOut",
          onComplete: () => {
-           if (node.symbol === "SCATTER") void this.animateScatterLanding(node);
-           resolve();
+            if (node.symbol === "SCATTER") void this.animateScatterLanding(node).then(resolve);
+            else resolve();
          },
       });
     })));
@@ -410,8 +410,8 @@ export class GameScene extends Phaser.Scene {
         yoyo: true,
         ease: "Sine.easeInOut",
              onComplete: () => {
-               if (node.symbol === "SCATTER") void this.animateScatterLanding(node);
-               resolve();
+               if (node.symbol === "SCATTER") void this.animateScatterLanding(node).then(resolve);
+               else resolve();
              },
       });
     })));
