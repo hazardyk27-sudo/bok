@@ -152,7 +152,7 @@ export class GameController {
     this.ui.spin.disabled = !this.walletReady || this.busy || this.autoRunning || (!this.pendingBonusResult && !canAffordBet(this.balanceCents, this.betCents));
   }
   private changeBet(direction: number) {
-    if (this.busy || this.autoRunning) return;
+    if (this.busy || this.autoRunning || this.autoStopping) return;
     this.betIndex = Math.max(0, Math.min(BETS_CENTS.length - 1, this.betIndex + direction));
     this.audio.click(); this.updateHud();
   }
@@ -173,8 +173,9 @@ export class GameController {
     this.ui.sound.setAttribute("aria-label", this.audio.muted ? "Turn sound on" : "Turn sound off");
     this.ui.sound.classList.toggle("is-active", !this.audio.muted);
     this.ui.spin.disabled = !this.walletReady || this.busy || this.autoRunning || (!this.pendingBonusResult && !canAffordBet(this.balanceCents, this.betCents));
-    this.ui.betMinus.disabled = this.busy || this.betIndex === 0;
-    this.ui.betPlus.disabled = this.busy || this.betIndex === BETS_CENTS.length - 1;
+    const betLocked = this.busy || this.autoRunning || this.autoStopping;
+    this.ui.betMinus.disabled = betLocked || this.betIndex === 0;
+    this.ui.betPlus.disabled = betLocked || this.betIndex === BETS_CENTS.length - 1;
     this.ui.autoCount.disabled = this.busy || this.autoRunning || Boolean(this.pendingBonusResult);
     this.ui.autoToggle.disabled = (this.busy && !this.autoRunning) || Boolean(this.pendingBonusResult);
     this.ui.autoToggle.classList.toggle("is-running", this.autoRunning);
