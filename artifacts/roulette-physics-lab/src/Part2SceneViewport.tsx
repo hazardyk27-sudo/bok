@@ -55,10 +55,10 @@ const PART2_CHANNEL_PROFILE: readonly [number, number][] = [
   [2.34, -0.342], // recessed running surface
   [2.42, -0.300], // recessed running surface
   [2.47, -0.2477], // measured dark-floor outer edge
-  [2.492, -0.196], // measured wall foot, kept continuous with the floor
-  [2.514, -0.112], // steeper inward-facing outer retaining wall
-  [2.535, -0.0429], // measured retaining wall crest
-  [2.545, -0.0429], // short lip top, aligned to the visible outer rim
+  [2.525, -0.240], // measured dark floor continuation into the outer wall foot
+  [2.555, -0.200], // measured outer wall lower face
+  [2.558, -0.120], // measured near-vertical retaining wall
+  [2.559, -0.040], // measured retaining wall crest
 ];
 const PART2_CHANNEL_BOTTOM_THICKNESS = 0.12;
 const PART3_LAUNCH_RADIUS = 2.82;
@@ -272,6 +272,8 @@ type Part3OuterLaneReport = {
   tangentialLaunchDirection: VectorReadout;
   initialLinearSpeed: number;
   initialAngularSpin: VectorReadout;
+  peakSpeed: number;
+  inwardRadialDrift: number;
   minRadius: number;
   maxRadius: number;
   minRimClearance: number;
@@ -344,6 +346,8 @@ type Part2RacePlacementReport = {
   status: 'running' | 'passed' | 'failed';
   channelInnerRadius: number;
   channelOuterRadius: number;
+  visibleOuterWallProfile: readonly [number, number][];
+  analyticOuterWallProfile: readonly [number, number][];
   runningSurfaceYRange: readonly [number, number];
   runningSurfaceSlope: readonly [number, number];
   outerWallY: number;
@@ -1699,6 +1703,8 @@ export function Part2SceneViewport({
     );
     let part3OuterLaneInitialLinearSpeed = PART3_PROBES[0].speed;
     let part3OuterLaneInitialAngularSpin = part3InitialAngularSpin(PART3_PROBES[0]);
+    let part3OuterLanePeakSpeed = 0;
+    let part3OuterLaneInitialRadius = PART2_ACTUAL_DARK_TRACK_LAUNCH_RADIUS;
     let part3OuterLaneMinRadius = Number.POSITIVE_INFINITY;
     let part3OuterLaneMaxRadius = 0;
     let part3OuterLaneMinRimClearance = Number.POSITIVE_INFINITY;
@@ -1899,6 +1905,68 @@ export function Part2SceneViewport({
       };
     };
 
+    const measureVisibleOuterWallProfile = () => {
+      if (!stationaryGroup) return [];
+      stationaryGroup.updateMatrixWorld(true);
+      const azimuth = 0.37;
+      const radialDirection = new THREE.Vector3(
+        Math.sin(azimuth),
+        0,
+        Math.cos(azimuth),
+      );
+      const sampleHeights = [-0.24, -0.2, -0.16, -0.12, -0.08, -0.04, 0];
+      const profile: Array<[number, number]> = [];
+      for (const height of sampleHeights) {
+        const raycaster = new THREE.Raycaster(
+          new THREE.Vector3(
+            Math.sin(azimuth) * 2.18,
+            height,
+            Math.cos(azimuth) * 2.18,
+          ),
+          radialDirection,
+          0,
+          0.55,
+        );
+        const hit = raycaster
+          .intersectObject(stationaryGroup, true)
+          .filter((intersection) => {
+            const hitRadius = Math.hypot(
+              intersection.point.x,
+              intersection.point.z,
+            );
+            const mesh = intersection.object as THREE.Mesh;
+            const material = Array.isArray(mesh.material)
+              ? mesh.material[intersection.face?.materialIndex ?? 0]
+              : mesh.material;
+            const isOutside =
+              mesh.name === 'geo1_outside_0' ||
+              material?.name === 'outside';
+            const inwardFacing = intersection.face
+              ? intersection.face.normal
+                  .clone()
+                  .transformDirection(
+                    new THREE.Matrix4().extractRotation(mesh.matrixWorld),
+                  )
+                  .dot(radialDirection) < -0.05
+              : true;
+            return (
+              isOutside &&
+              inwardFacing &&
+              hitRadius >= PART2_ACTUAL_WOOD_INNER_RADIUS - 0.01 &&
+              hitRadius <= 2.58
+            );
+          })
+          .sort((left, right) => left.distance - right.distance)[0];
+        if (hit) {
+          profile.push([
+            Number(Math.hypot(hit.point.x, hit.point.z).toFixed(4)),
+            Number(height.toFixed(4)),
+          ]);
+        }
+      }
+      return profile;
+    };
+
     const sampleActualGeometryProfile = () => {
       if (!stationaryGroup) return [];
       stationaryGroup.updateMatrixWorld(true);
@@ -2097,6 +2165,11 @@ export function Part2SceneViewport({
       part3OuterLaneInitialVelocity = initialVelocity;
       part3OuterLaneInitialLinearSpeed = initialLinearSpeed;
       part3OuterLaneInitialAngularSpin = initialAngularSpin;
+      part3OuterLanePeakSpeed = initialLinearSpeed;
+      part3OuterLaneInitialRadius = Math.hypot(
+        launchPosition[0],
+        launchPosition[2],
+      );
       part3OuterLaneMinRadius = chosenLaunchRadius;
       part3OuterLaneMaxRadius = chosenLaunchRadius;
       part3OuterLaneMinRimClearance =
@@ -2147,6 +2220,8 @@ export function Part2SceneViewport({
         },
         initialLinearSpeed,
         initialAngularSpin,
+         peakSpeed: initialLinearSpeed,
+         inwardRadialDrift: 0,
         minRadius: chosenLaunchRadius,
         maxRadius: chosenLaunchRadius,
         minRimClearance: part3OuterLaneMinRimClearance,
@@ -2182,6 +2257,7 @@ export function Part2SceneViewport({
         true,
         PART2_ACTUAL_DARK_TRACK_RADIUS_BAND,
       );
+      const visibleOuterWallProfile = measureVisibleOuterWallProfile();
       const analyticSurfaceY = surface.y;
       const visualHeightError = visibleSurface
         ? Math.abs(visibleSurface.y - analyticSurfaceY)
@@ -2203,6 +2279,14 @@ export function Part2SceneViewport({
         status: 'running',
         channelInnerRadius: PART2_CHANNEL_PROFILE[0][0],
         channelOuterRadius: PART2_CHANNEL_PROFILE.at(-1)![0],
+        visibleOuterWallProfile,
+        analyticOuterWallProfile: PART2_CHANNEL_PROFILE.slice(5).map(
+          ([radius, y]) =>
+            [radius, Number((y + part2RaceVerticalOffset).toFixed(4))] as [
+              number,
+              number,
+            ],
+        ),
         runningSurfaceYRange: [
           PART2_CHANNEL_PROFILE[2][1] + part2RaceVerticalOffset,
           PART2_CHANNEL_PROFILE[5][1] + part2RaceVerticalOffset,
@@ -4017,6 +4101,10 @@ export function Part2SceneViewport({
               part3OuterLaneMaxSeparation,
               separation,
             );
+            part3OuterLanePeakSpeed = Math.max(
+              part3OuterLanePeakSpeed,
+              speed,
+            );
             const measuredPrematureDeflectorContact =
               deflectorPairContact &&
               deflectorClearance < PART3_OUTER_LANE_CLEARANCE_MARGIN;
@@ -4103,6 +4191,11 @@ export function Part2SceneViewport({
                 },
                 initialLinearSpeed: part3OuterLaneInitialLinearSpeed,
                 initialAngularSpin: part3OuterLaneInitialAngularSpin,
+                peakSpeed: part3OuterLanePeakSpeed,
+                inwardRadialDrift: Math.max(
+                  0,
+                  part3OuterLaneInitialRadius - part3OuterLaneMinRadius,
+                ),
                 minRadius: part3OuterLaneMinRadius,
                 maxRadius: part3OuterLaneMaxRadius,
                 minRimClearance: part3OuterLaneMinRimClearance,
@@ -5196,7 +5289,9 @@ export function Part2SceneViewport({
             radius {part3OuterLaneReport.minRadius.toFixed(4)}–
             {part3OuterLaneReport.maxRadius.toFixed(4)} · minimum rim clearance{' '}
             {part3OuterLaneReport.minRimClearance.toFixed(4)} · minimum deflector clearance{' '}
-            {part3OuterLaneReport.minDeflectorClearance.toFixed(4)} · track contact{' '}
+            {part3OuterLaneReport.minDeflectorClearance.toFixed(4)} · peak speed{' '}
+            {part3OuterLaneReport.peakSpeed.toFixed(4)} · inward radial drift{' '}
+            {part3OuterLaneReport.inwardRadialDrift.toFixed(4)} · track contact{' '}
             {part3OuterLaneReport.physicalTrackContact ? 'yes' : 'no'} · outer lane{' '}
             {part3OuterLaneReport.staysOnOuterDarkLane ? 'stable' : 'unstable'}
           </span>
@@ -5240,6 +5335,14 @@ export function Part2SceneViewport({
             {part2RacePlacementReport.runningSurfaceSlope[1].toFixed(4)} · outer wall/lip Y{' '}
             {part2RacePlacementReport.outerWallY.toFixed(4)} · inner transition Y{' '}
             {part2RacePlacementReport.innerTransitionY.toFixed(4)}
+          </span>
+          <span>
+            GLB wall samples [{part2RacePlacementReport.visibleOuterWallProfile.map(
+              ([radius, y]) => `${radius.toFixed(4)}/${y.toFixed(4)}`,
+            ).join(', ') || 'unavailable'}] · analytic wall [
+            {part2RacePlacementReport.analyticOuterWallProfile.map(
+              ([radius, y]) => `${radius.toFixed(4)}/${y.toFixed(4)}`,
+            ).join(', ')}]
           </span>
           <span>
             static ball center r/y {part2RacePlacementReport.spawnRadius.toFixed(4)} /{' '}

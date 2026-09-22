@@ -26,6 +26,7 @@
 - [Physics Lab Part 4 dynamics](physics-lab-part4-dynamics.md) — dynamic rotor colliders need rotor/stationary collision isolation and release calibration inside a proven transition band.
 - [Physics Lab Part 5 dynamics](physics-lab-part5-dynamics.md) — a sloped inward transition and spindle guard prevent flat-step traps without scripted inward motion.
 - [Physics Lab server authority](physics-lab-server-authority.md) — preserve the validated release band while securely varying allowed starts, then return canonical persisted replay payloads.
+- [Outer wall cross-section measurement](outer-wall-cross-section-measurement.md) — vertical top-down rays hit the wood rim; measure the retaining wall with horizontal radial rays through the transformed GLB.
 - [Rapier concave track limits](rapier-concave-track-limits.md) — convex rings and full disks cannot prove a natural roulette track; require a genuinely concave support surface and pair-specific contact evidence.
 - [Procedural pocket validation](procedural-pocket-validation.md) — a bowl opening needs continuous pocket support and smoke runs must prove kinematic fret contacts do not eject the ball.
 - [Rolley asset pocket mismatch](rolley-asset-pocket-mismatch.md) — supplied Rolley FBX exposes 38 equal radial separators at 360/38, not a verified 37-pocket European layout.
