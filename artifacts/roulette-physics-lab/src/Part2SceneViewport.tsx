@@ -55,8 +55,10 @@ const PART2_CHANNEL_PROFILE: readonly [number, number][] = [
   [2.34, -0.342], // recessed running surface
   [2.42, -0.300], // recessed running surface
   [2.47, -0.2477], // measured dark-floor outer edge
-  [2.515, -0.175], // inward-facing outer retaining wall
-  [2.555, -0.035], // retaining lip top
+  [2.492, -0.196], // measured wall foot, kept continuous with the floor
+  [2.514, -0.112], // steeper inward-facing outer retaining wall
+  [2.535, -0.0429], // measured retaining wall crest
+  [2.545, -0.0429], // short lip top, aligned to the visible outer rim
 ];
 const PART2_CHANNEL_BOTTOM_THICKNESS = 0.12;
 const PART3_LAUNCH_RADIUS = 2.82;
