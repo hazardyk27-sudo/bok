@@ -1130,46 +1130,62 @@ function addMeasuredOuterWallColliders(
   profile: readonly [number, number][],
   friction: number,
 ) {
-  // Preserve the full measured retaining-wall height. Omitting the
-  // upper -0.04/0.00 samples leaves a physical gap that a fast ball can clear
-  // after riding up the race profile.
+  // Build continuous sloped wall strips between measured profile samples.
+  // Independent horizontal rings create stair-step ledges that can inject
+  // vertical energy into a fast ball as it climbs the retaining wall.
   const samples = [...profile].sort((left, right) => left[1] - right[1]);
-  const segments = 48;
-  const radialHalfDepth = 0.018;
+  const segments = 64;
+  const wallHalfThickness = 0.018;
   const colliders: RAPIER.Collider[] = [];
 
-  samples.forEach(([radius, height], sampleIndex) => {
-    const lowerY =
-      sampleIndex === 0
-        ? height - 0.025
-        : (samples[sampleIndex - 1][1] + height) / 2;
-    const upperY =
-      sampleIndex === samples.length - 1
-        ? height + 0.04
-        : (height + samples[sampleIndex + 1][1]) / 2;
-    const halfHeight = Math.max(0.02, (upperY - lowerY) / 2);
-    const centerY = (lowerY + upperY) / 2;
-    const centerRadius = radius + radialHalfDepth;
+  for (let profileIndex = 0; profileIndex < samples.length - 1; profileIndex += 1) {
+    const [radiusA, yA] = samples[profileIndex];
+    const [radiusB, yB] = samples[profileIndex + 1];
+    const deltaRadius = radiusB - radiusA;
+    const deltaY = yB - yA;
+    const profileLength = Math.hypot(deltaRadius, deltaY);
+    if (profileLength <= 0.0001) continue;
+
+    const centerRadius = (radiusA + radiusB) / 2;
+    const centerY = (yA + yB) / 2;
+    const slopeAngle = Math.atan2(deltaRadius, deltaY);
+    const radialNormal = deltaY / profileLength;
+    const verticalNormal = -deltaRadius / profileLength;
+    const colliderRadius =
+      centerRadius + radialNormal * wallHalfThickness;
+    const colliderY =
+      centerY + verticalNormal * wallHalfThickness;
+    const halfProfileLength = profileLength / 2 + 0.002;
     const halfTangentialWidth =
-      centerRadius * Math.tan(Math.PI / segments) * 1.04;
+      colliderRadius * Math.tan(Math.PI / segments) * 1.04;
 
     for (let segment = 0; segment < segments; segment += 1) {
       const angle = (segment / segments) * TWO_PI;
+      const yaw = new THREE.Quaternion().setFromAxisAngle(
+        new THREE.Vector3(0, 1, 0),
+        angle,
+      );
+      const slope = new THREE.Quaternion().setFromAxisAngle(
+        new THREE.Vector3(1, 0, 0),
+        slopeAngle,
+      );
+      const rotation = yaw.multiply(slope);
+
       const collider = RAPIER.ColliderDesc.cuboid(
         halfTangentialWidth,
-        halfHeight,
-        radialHalfDepth,
+        halfProfileLength,
+        wallHalfThickness,
       )
         .setTranslation(
-          Math.sin(angle) * centerRadius,
-          centerY,
-          Math.cos(angle) * centerRadius,
+          Math.sin(angle) * colliderRadius,
+          colliderY,
+          Math.cos(angle) * colliderRadius,
         )
         .setRotation({
-          x: 0,
-          y: Math.sin(angle / 2),
-          z: 0,
-          w: Math.cos(angle / 2),
+          x: rotation.x,
+          y: rotation.y,
+          z: rotation.z,
+          w: rotation.w,
         })
         .setFriction(friction)
         .setRestitution(0.01)
@@ -1178,7 +1194,7 @@ function addMeasuredOuterWallColliders(
         );
       colliders.push(world.createCollider(collider, body));
     }
-  });
+  }
 
   return { colliders, samples, segments };
 }
