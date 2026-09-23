@@ -9,12 +9,12 @@ export type CadiKazanStatus = (typeof CADI_KAZAN_STATUSES)[number];
 
 export const STANDARD_CASHOUT_MULTIPLIERS_BPS = [120, 160, 240, 480] as const;
 export const CADI_KAZAN_MIN_STAKE_CENTS = 100;
-export const CADI_KAZAN_MAX_STAKE_CENTS = 10_000;
 export const CADI_KAZAN_STANDARD_CELL_COUNT = 5;
 export const CADI_KAZAN_ADVANCED_CELL_COUNT = 25;
 export const ADVANCED_PAYOUT_TABLE_VERSION = "advanced-final-v1";
 export const ADVANCED_TARGET_RTP_BPS = 9_600;
 export const ADVANCED_MAX_MULTIPLIER_BPS = 100_000;
+const POSTGRES_INT_MAX_CENTS = 2_147_483_647;
 
 type AdvancedPayoutTable = {
   alarmCount: AdvancedAlarmCount;
@@ -71,6 +71,15 @@ export function getCashoutMultiplierBps(mode: CadiKazanMode, alarmCount: number,
   if (mode === "STANDARD") return STANDARD_CASHOUT_MULTIPLIERS_BPS[revealedSafeCount - 1] ?? 0;
   if (!ADVANCED_ALARM_OPTIONS.includes(alarmCount as AdvancedAlarmCount)) return 0;
   return ADVANCED_PAYOUT_TABLES[alarmCount as AdvancedAlarmCount].multipliersBps[revealedSafeCount - 1] ?? 0;
+}
+
+export function getMaxSafeStakeCents(mode: CadiKazanMode, alarmCount: number) {
+  const maxMultiplierBps = mode === "STANDARD"
+    ? Math.max(...STANDARD_CASHOUT_MULTIPLIERS_BPS)
+    : ADVANCED_ALARM_OPTIONS.includes(alarmCount as AdvancedAlarmCount)
+      ? Math.max(...ADVANCED_PAYOUT_TABLES[alarmCount as AdvancedAlarmCount].multipliersBps)
+      : ADVANCED_MAX_MULTIPLIER_BPS;
+  return Math.floor((POSTGRES_INT_MAX_CENTS * 100) / Math.max(100, maxMultiplierBps));
 }
 
 export function getCashoutPayoutCents(stakeCents: number, multiplierBps: number) {
