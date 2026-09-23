@@ -9,6 +9,12 @@
 ---
 
 
+### Tool access rule — Figma + GitHub
+- This project has direct GitHub and Figma tool access available to the assistant.
+- Do not claim that GitHub/Figma access is unavailable when the tools are present.
+- For requested design/code work: use Figma directly for design work when the Figma MCP quota is available, and GitHub directly for code/branch/PR work.
+- A temporary Figma MCP Starter-plan rate limit is a quota condition, not a lack of access. When that quota blocks a call, report the quota specifically and continue any safe GitHub work that does not require another Figma write.
+
 ### Git workflow isolation rule — 2026-09-23
 - GitHub feature branches are permanently split by game:
   - `feature/cadi-kazan`
@@ -948,6 +954,16 @@ One audit-only instruction was mistakenly sent to Replit before this rule was cl
 - menu, game routes and slot shell can now extend beyond the viewport instead of being clipped
 - removed the Cadı Kazan landscape-only height/overflow trap so short landscape screens can scroll vertically when needed
 
+### Stage 22 — Approved 30/70 Advanced 25 mobile composition
+- Advanced 25 mobile card was rebuilt again around the approved mockup proportions: compact ~30% premium information rail on the left and dominant ~70% 5×5 scratch field on the right.
+- The 5×5 field now stretches to the ticket height/width instead of being forced into a small square, producing materially larger rectangular scratch cells while keeping the existing right payout HUD and bottom control dock.
+- Decorative parchment/moon treatment was strengthened to bring the in-game card closer to the approved visual concept.
+- Scratch feedback was adjusted so the first contact and live scratch head visibly erase the lacquer exactly at the current pointer/finger position; deeper reveal/settlement thresholds remain unchanged.
+- Standardized scratch brush was returned to 14 CSS px radius / 28 px diameter.
+- Existing dedicated cash-register payout SFX remains active on successful CASH_OUT and COMPLETED payout.
+- Figma write access was attempted for a new frame, but the Figma MCP Starter plan quota blocked the call; this was a quota/rate-limit issue, not an access/permission issue.
+- Merged into GitHub `main` via PR #11, merge commit `d787e29`.
+
 ### Stage 21 — Approved Advanced 25 horizontal mobile card
 - Implemented the approved Advanced 25 mobile visual direction: large horizontal premium parchment card, compact identity/info rail on the left, dominant 5×5 scratch board on the right.
 - Existing mobile payout HUD and bottom control dock remain visible; only the Advanced card itself is redesigned.
@@ -1094,7 +1110,7 @@ One audit-only instruction was mistakenly sent to Replit before this rule was cl
 
 As of this memory update, the next task is:
 
-> **Manually sync GitHub main in Replit Shell, then verify the approved Advanced 25 mobile card: wide parchment card, compact left info rail, large separable 5×5 board on the right, payout HUD and control dock still visible, first scratch mark directly under pointer/finger, and cash-register sound on CASH OUT / COMPLETED.**
+> **Manually sync GitHub main in Replit Shell, then verify the Advanced 25 mobile card against the approved mockup: compact left info rail, dominant large 5×5 field on the right, payout HUD/control dock preserved, scratch head directly under pointer/finger, and cash-register sound on CASH OUT / COMPLETED.**
 
 Priority checks:
 1. Desktop should visually read as the approved premium mockup, roughly 80%+ similar in hierarchy/composition.
