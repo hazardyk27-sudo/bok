@@ -6,6 +6,14 @@ export class AudioManager {
   private musicTimer?: number;
   private musicStep = 0;
   private scratchBuffer?: AudioBuffer;
+  private scratchLoopSource?: AudioBufferSourceNode;
+  private scratchBodyFilter?: BiquadFilterNode;
+  private scratchEdgeFilter?: BiquadFilterNode;
+  private scratchRumbleFilter?: BiquadFilterNode;
+  private scratchBodyGain?: GainNode;
+  private scratchEdgeGain?: GainNode;
+  private scratchRumbleGain?: GainNode;
+  private scratchLastGrainAt = -Infinity;
   private readonly scratchSources = new Set<AudioBufferSourceNode>();
   private readonly activeTones = new Set<OscillatorNode>();
   private readonly pendingSfxTimers = new Set<number>();
@@ -16,6 +24,7 @@ export class AudioManager {
   setMuted(value: boolean) {
     this.muted = value;
     localStorage.setItem("cascade8-muted", String(value));
+    if (value) this.scratchStop();
     if (this.gain) this.gain.gain.value = value ? 0 : 1;
   }
   setVolume(value: number) {
@@ -164,83 +173,231 @@ export class AudioManager {
       scratchSources: this.scratchSources.size,
     };
   }
-  scratch(intensity = 0.5, abrasion = 0.5) {
+  private ensureScratchTexture() {
+    if (this.scratchBuffer) return;
+    const context = this.context!;
+    const sampleRate = context.sampleRate;
+    const duration = 1.15;
+    const length = Math.ceil(sampleRate * duration);
+    const buffer = context.createBuffer(1, length, sampleRate);
+    const samples = buffer.getChannelData(0);
+
+    // Original continuous texture: dry card/foil friction with low mechanical
+    // body and irregular grit. Unlike the old burst model this is not enveloped
+    // to zero every few milliseconds, so a drag sounds like one physical scrape.
+    let slow = 0;
+    let mid = 0;
+    let gritEnvelope = 0;
+    for (let index = 0; index < length; index += 1) {
+      const white = Math.random() * 2 - 1;
+      slow = slow * 0.985 + white * 0.015;
+      mid = mid * 0.72 + white * 0.28;
+
+      if (Math.random() < 0.0065) gritEnvelope = 0.65 + Math.random() * 0.55;
+      gritEnvelope *= 0.91;
+      const grain = (Math.random() * 2 - 1) * gritEnvelope;
+
+      const time = index / sampleRate;
+      const handVariation =
+        0.86
+        + Math.sin(time * Math.PI * 2 * 6.7) * 0.07
+        + Math.sin(time * Math.PI * 2 * 13.1 + 1.7) * 0.035;
+
+      samples[index] = Math.max(-1, Math.min(1,
+        (white * 0.34 + mid * 0.38 + slow * 0.62 + grain * 0.18) * handVariation
+      ));
+    }
+    this.scratchBuffer = buffer;
+  }
+
+  scratchStart(intensity = 0, abrasion = 0.05) {
     if (this.muted) return;
     this.ensure();
-    const context = this.context!;
-    const output = this.sfxGain!;
-    const normalized = Math.max(0, Math.min(1, intensity));
-    const depth = Math.max(0, Math.min(1, abrasion));
-
-    if (!this.scratchBuffer) {
-      const sampleRate = context.sampleRate;
-      const duration = 0.19;
-      const buffer = context.createBuffer(1, Math.ceil(sampleRate * duration), sampleRate);
-      const samples = buffer.getChannelData(0);
-      let previous = 0;
-      for (let index = 0; index < samples.length; index += 1) {
-        const progress = index / samples.length;
-        const white = Math.random() * 2 - 1;
-        previous = previous * 0.74 + white * 0.26;
-        const grit = Math.random() > 0.965 ? (Math.random() * 2 - 1) * 1.7 : 0;
-        samples[index] = (white * 0.52 + previous * 0.42 + grit * 0.22) * Math.pow(1 - progress, 0.55);
-      }
-      this.scratchBuffer = buffer;
+    this.ensureScratchTexture();
+    if (this.scratchLoopSource) {
+      this.scratchUpdate(intensity, abrasion);
+      return;
     }
 
-    const startAt = context.currentTime;
-    const duration = 0.055 + normalized * 0.035;
+    const context = this.context!;
+    const output = this.sfxGain!;
+    const now = context.currentTime;
+    const source = context.createBufferSource();
+    source.buffer = this.scratchBuffer!;
+    source.loop = true;
+    source.loopStart = 0.08;
+    source.loopEnd = 1.07;
+    source.playbackRate.value = 0.78;
 
-    // Dry paper/foil rasp.
-    const body = context.createBufferSource();
     const bodyFilter = context.createBiquadFilter();
-    const bodyGain = context.createGain();
-    body.buffer = this.scratchBuffer;
-    body.playbackRate.value = 0.82 + normalized * 0.34 + depth * 0.08;
     bodyFilter.type = "bandpass";
-    bodyFilter.frequency.value = 900 + normalized * 900 + depth * 380;
-    bodyFilter.Q.value = 0.55;
-    bodyGain.gain.setValueAtTime(0.0001, startAt);
-    bodyGain.gain.exponentialRampToValueAtTime(0.045 + normalized * 0.055, startAt + 0.004);
-    bodyGain.gain.exponentialRampToValueAtTime(0.0001, startAt + duration);
-    body.connect(bodyFilter);
+    bodyFilter.frequency.value = 980;
+    bodyFilter.Q.value = 0.52;
+    const bodyGain = context.createGain();
+    bodyGain.gain.setValueAtTime(0.0001, now);
+
+    const edgeFilter = context.createBiquadFilter();
+    edgeFilter.type = "highpass";
+    edgeFilter.frequency.value = 2_650;
+    edgeFilter.Q.value = 0.28;
+    const edgeGain = context.createGain();
+    edgeGain.gain.setValueAtTime(0.0001, now);
+
+    const rumbleFilter = context.createBiquadFilter();
+    rumbleFilter.type = "lowpass";
+    rumbleFilter.frequency.value = 360;
+    rumbleFilter.Q.value = 0.38;
+    const rumbleGain = context.createGain();
+    rumbleGain.gain.setValueAtTime(0.0001, now);
+
+    source.connect(bodyFilter);
     bodyFilter.connect(bodyGain);
     bodyGain.connect(output);
 
-    // Metallic foil edge: quieter, brighter and shorter than the body.
-    const foil = context.createBufferSource();
-    const foilFilter = context.createBiquadFilter();
-    const foilGain = context.createGain();
-    foil.buffer = this.scratchBuffer;
-    foil.playbackRate.value = 1.08 + normalized * 0.50;
-    foilFilter.type = "highpass";
-    foilFilter.frequency.value = 3_200 + normalized * 1_500 + depth * 700;
-    foilFilter.Q.value = 0.3;
-    foilGain.gain.setValueAtTime(0.0001, startAt);
-    foilGain.gain.exponentialRampToValueAtTime(0.014 + normalized * 0.028 + depth * 0.012, startAt + 0.003);
-    foilGain.gain.exponentialRampToValueAtTime(0.0001, startAt + duration * 0.82);
-    foil.connect(foilFilter);
-    foilFilter.connect(foilGain);
-    foilGain.connect(output);
+    source.connect(edgeFilter);
+    edgeFilter.connect(edgeGain);
+    edgeGain.connect(output);
 
-    [body, foil].forEach((source) => this.scratchSources.add(source));
-    body.addEventListener("ended", () => {
-      this.scratchSources.delete(body);
-      body.disconnect();
+    source.connect(rumbleFilter);
+    rumbleFilter.connect(rumbleGain);
+    rumbleGain.connect(output);
+
+    this.scratchLoopSource = source;
+    this.scratchBodyFilter = bodyFilter;
+    this.scratchEdgeFilter = edgeFilter;
+    this.scratchRumbleFilter = rumbleFilter;
+    this.scratchBodyGain = bodyGain;
+    this.scratchEdgeGain = edgeGain;
+    this.scratchRumbleGain = rumbleGain;
+    this.scratchSources.add(source);
+
+    source.addEventListener("ended", () => {
+      this.scratchSources.delete(source);
+      source.disconnect();
       bodyFilter.disconnect();
       bodyGain.disconnect();
-    }, { once: true });
-    foil.addEventListener("ended", () => {
-      this.scratchSources.delete(foil);
-      foil.disconnect();
-      foilFilter.disconnect();
-      foilGain.disconnect();
+      edgeFilter.disconnect();
+      edgeGain.disconnect();
+      rumbleFilter.disconnect();
+      rumbleGain.disconnect();
+      if (this.scratchLoopSource === source) {
+        this.scratchLoopSource = undefined;
+        this.scratchBodyFilter = undefined;
+        this.scratchEdgeFilter = undefined;
+        this.scratchRumbleFilter = undefined;
+        this.scratchBodyGain = undefined;
+        this.scratchEdgeGain = undefined;
+        this.scratchRumbleGain = undefined;
+      }
     }, { once: true });
 
-    body.start(startAt, Math.random() * 0.035);
-    foil.start(startAt, Math.random() * 0.035);
-    body.stop(startAt + duration + 0.01);
-    foil.stop(startAt + duration + 0.01);
+    source.start(now, 0.11 + Math.random() * 0.63);
+    this.playNoiseBurst({
+      at: 0,
+      duration: 0.026,
+      gain: 0.026,
+      frequency: 2_150,
+      q: 1.1,
+      decay: 3.1,
+      warmth: 0.20,
+    });
+    this.scratchUpdate(intensity, abrasion);
+  }
+
+  scratchUpdate(intensity = 0.5, abrasion = 0.5) {
+    if (this.muted) return;
+    if (!this.scratchLoopSource || !this.context) {
+      this.scratchStart(intensity, abrasion);
+      return;
+    }
+
+    const context = this.context;
+    const now = context.currentTime;
+    const speed = Math.max(0, Math.min(1, intensity));
+    const depth = Math.max(0, Math.min(1, abrasion));
+    const bodyLevel = 0.0025 + speed * 0.105 + depth * speed * 0.020;
+    const edgeLevel = 0.0008 + speed * 0.052 + depth * speed * 0.018;
+    const rumbleLevel = 0.001 + speed * 0.023;
+
+    this.scratchLoopSource.playbackRate.setTargetAtTime(0.72 + speed * 0.46 + depth * 0.07, now, 0.018);
+    this.scratchBodyFilter?.frequency.setTargetAtTime(720 + speed * 1_050 + depth * 310, now, 0.02);
+    this.scratchEdgeFilter?.frequency.setTargetAtTime(2_450 + speed * 2_200 + depth * 700, now, 0.02);
+    this.scratchRumbleFilter?.frequency.setTargetAtTime(300 + speed * 190, now, 0.025);
+
+    const shapeGain = (node: GainNode | undefined, level: number, floor: number, attack: number) => {
+      if (!node) return;
+      node.gain.cancelScheduledValues(now);
+      node.gain.setTargetAtTime(level, now, attack);
+      // Pointer events stop arriving when the hand stops. Let friction decay
+      // naturally after each movement pulse so holding still is nearly silent.
+      node.gain.setTargetAtTime(floor, now + 0.075, 0.026);
+    };
+    shapeGain(this.scratchBodyGain, bodyLevel, 0.0015, 0.008);
+    shapeGain(this.scratchEdgeGain, edgeLevel, 0.0003, 0.006);
+    shapeGain(this.scratchRumbleGain, rumbleLevel, 0.0005, 0.012);
+
+    // Small irregular metallic/paper grains make the scrape feel like a coin
+    // catching real foil instead of a uniform digital noise loop.
+    if (speed > 0.14 && now - this.scratchLastGrainAt > 0.052 + (1 - speed) * 0.05) {
+      this.scratchLastGrainAt = now;
+      const grain = context.createBufferSource();
+      const grainFilter = context.createBiquadFilter();
+      const grainGain = context.createGain();
+      grain.buffer = this.scratchBuffer!;
+      grainFilter.type = "bandpass";
+      grainFilter.frequency.value = 2_900 + Math.random() * 2_600 + depth * 600;
+      grainFilter.Q.value = 0.72 + Math.random() * 0.55;
+      grainGain.gain.setValueAtTime(0.0001, now);
+      grainGain.gain.exponentialRampToValueAtTime(0.010 + speed * 0.026, now + 0.002);
+      grainGain.gain.exponentialRampToValueAtTime(0.0001, now + 0.018 + speed * 0.018);
+      grain.connect(grainFilter);
+      grainFilter.connect(grainGain);
+      grainGain.connect(this.sfxGain!);
+      this.scratchSources.add(grain);
+      grain.addEventListener("ended", () => {
+        this.scratchSources.delete(grain);
+        grain.disconnect();
+        grainFilter.disconnect();
+        grainGain.disconnect();
+      }, { once: true });
+      grain.start(now, 0.10 + Math.random() * 0.78);
+      grain.stop(now + 0.05);
+    }
+  }
+
+  scratchStop() {
+    if (!this.scratchLoopSource || !this.context) return;
+    const source = this.scratchLoopSource;
+    const now = this.context.currentTime;
+    const stopAt = now + 0.045;
+
+    [this.scratchBodyGain, this.scratchEdgeGain, this.scratchRumbleGain].forEach((gain) => {
+      if (!gain) return;
+      gain.gain.cancelScheduledValues(now);
+      gain.gain.setValueAtTime(Math.max(0.0001, gain.gain.value), now);
+      gain.gain.exponentialRampToValueAtTime(0.0001, stopAt);
+    });
+
+    // Clear the current handle immediately so a new gesture can start without
+    // waiting for the tail of the previous scrape.
+    this.scratchLoopSource = undefined;
+    this.scratchBodyFilter = undefined;
+    this.scratchEdgeFilter = undefined;
+    this.scratchRumbleFilter = undefined;
+    this.scratchBodyGain = undefined;
+    this.scratchEdgeGain = undefined;
+    this.scratchRumbleGain = undefined;
+    try {
+      source.stop(stopAt + 0.008);
+    } catch {
+      // Source may already have ended during teardown.
+    }
+  }
+
+  scratch(intensity = 0.5, abrasion = 0.5) {
+    // Compatibility wrapper for any older callers.
+    this.scratchStart(intensity, abrasion);
+    this.scratchUpdate(intensity, abrasion);
   }
   click() { this.tone(480, 0.05, "triangle"); }
   spin() { this.tone(180, 0.16, "sine"); }
