@@ -48,10 +48,10 @@ const formatMultiplier = (basisPoints: number) => `${(basisPoints / 100).toLocal
 
 const formatTicketPrice = (cents: number) => {
   const credits = cents / 100;
-  return `${credits.toLocaleString("tr-TR", {
+  return "$" + credits.toLocaleString("tr-TR", {
     minimumFractionDigits: Number.isInteger(credits) ? 0 : 2,
     maximumFractionDigits: 2,
-  })}`;
+  });
 };
 
 const newIdempotencyKey = (prefix: string) => `${prefix}-${crypto.randomUUID()}-${Date.now()}`;
@@ -200,7 +200,7 @@ export const CADI_KAZAN_MARKUP = `
 
         <div class="witch-table-feedback">
           <span class="witch-feedback" data-witch-play-feedback role="status">Bilet satın alındığında kart masaya gelir.</span>
-          <span>Kazı ve sonucu altta anında gör.</span>
+          <span>Üç katmanı kazı, sembolü yavaşça ortaya çıkar.</span>
         </div>
       </section>
 
