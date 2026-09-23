@@ -655,7 +655,7 @@ export class WitchClient {
       button.classList.toggle("is-bomb", presentation.resultClass === "bomb");
       button.classList.toggle("is-pending", this.pendingRevealCell === index);
       button.classList.toggle("is-terminal-reveal", this.terminalRevealAnimating && isTerminallyRevealed && !isActuallyRevealed);
-      button.setAttribute("aria-label", presentation.resultClass === "bomb" ? presentation.label : presentation.resultClass === "safe" ? "GOLD ödülü" : "Kazınabilir kapalı alan");
+      button.setAttribute("aria-label", presentation.resultClass ? presentation.label : "Kazınabilir kapalı alan");
       const content = button.querySelector<HTMLElement>(".witch-cell-content");
       if (content) {
         if (presentation.artworkUrl) {
