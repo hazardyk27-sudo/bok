@@ -68,7 +68,7 @@ export type ReelConfig = {
   symbolWeights: readonly { value: NormalSymbolId; weight: number }[];
 };
 
-export const NORMAL_PAIR_COPY_CHANCE = 0.75;
+export const NORMAL_PAIR_COPY_CHANCE = 0.85;
 export const NORMAL_THIRD_REPEAT_WEIGHT_FACTOR = 0.5;
 
 export const BASE_REEL_CONFIG: ReelConfig = {
