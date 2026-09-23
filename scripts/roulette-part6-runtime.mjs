@@ -1,6 +1,7 @@
 import { chromium } from '@playwright/test';
 import fs from 'node:fs';
 
+// Runtime probe intentionally runs only in GitHub Actions for PART 6B validation.
 const targetUrl = process.env.ROULETTE_LAB_URL ?? 'http://127.0.0.1:4173/';
 const outputPath =
   process.env.ROULETTE_PART6_OUTPUT ??
