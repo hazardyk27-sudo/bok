@@ -954,6 +954,15 @@ One audit-only instruction was mistakenly sent to Replit before this rule was cl
 - menu, game routes and slot shell can now extend beyond the viewport instead of being clipped
 - removed the Cadı Kazan landscape-only height/overflow trap so short landscape screens can scroll vertically when needed
 
+### Stage 29 — Standard 5 card made asset-independent
+- Preview proved that the prior Better Call Saul Standard 5 background asset still did not render even though main contained the expected commit and the cactus/Saul/Danger cell art rendered correctly.
+- Verified GitHub main before the fix: `b525e74`; the broken card asset existed at `artifacts/cascade-8/public/cadi-kazan/bcs-standard5-card.webp`.
+- To remove the failure mode entirely, Standard 5 no longer depends on that raster background. The ticket face is now built directly in HTML/CSS: red `IN LEGAL TROUBLE?` header, yellow body, Better Call Saul / SAUL GOODMAN / ATTORNEY AT LAW / phone / CALL SAUL NOW copy, red `NOT TOLL FREE • SE HABLA ESPAÑOL` footer, and the dynamic stake badge.
+- Existing five scratch cells remain registered over the right side; cactus closed art and Saul / I AM THE DANGER result art remain unchanged.
+- Advanced 25, Slot, and Roulette source files were untouched.
+- E2E visual guard now checks that the structural Standard 5 card face is actually visible instead of checking for the old background-image URL.
+- Merged via PR #34, merge commit `f98908d`.
+
 ### Stage 28 — Standard 5 card asset fixed
 - The Standard 5 Better Call Saul card background was not rendering in Preview even though the five interactive cells and dynamic price badge were visible.
 - Root cause: the previously committed `bcs-standard5-card.webp` asset was invalid/corrupted for browser rendering.
