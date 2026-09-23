@@ -737,37 +737,40 @@ This matches a real scratch ticket: the print is physically there underneath; sc
 - sound should react to movement/velocity rather than looping one flat MP3
 - use several short scratch samples if practical
 
-## Important unresolved visual bug
+## Scratch reveal — current implementation direction
 
-A recurring failure seen during development:
+The scratch interaction has now been changed toward the approved physical model:
 
-> scratched regions showed dark/navy holes instead of the actual symbol beneath the coating.
+- result is server-committed on the first meaningful scratch gesture rather than waiting for ~62% coverage
+- the result layer is mounted underneath the foil while the foil remains in place
+- active scratching no longer auto-clears the whole foil at a coverage threshold
+- only locally abraded/erased pixels expose the result underneath
+- safe result artwork is a premium **gold lucky symbol** (gold clover-style mark)
+- terminal states may still fully reveal the remaining results
 
-Even if tests pass, this is not acceptable.
-
-Until visually verified in Preview, treat the layered reveal as an open visual QA item.
+This must still be visually verified in Replit Preview. If dark/navy holes appear instead of the symbol under the foil, treat it as a blocking visual bug.
 
 ## Desktop layout
 
-- separate desktop design
-- left configuration/control panel
-  - mode
-  - stake
-  - bombs
-  - buy card
-- center physical tabletop + ticket
-- cashout/status outside the card
-- ticket should look printed, with paper texture, border, contact shadow
+Current target/implementation is based on the approved premium mockup:
+- dark midnight/navy + champagne-gold visual system
+- refined top title/status hierarchy
+- premium left control panel for mode / stake / bombs / Buy Card
+- large physical ivory-gold scratch ticket as the visual hero
+- subtle tabletop props and depth around the ticket
+- premium right-side KAZANÇ / multiplier / amount / Cash Out panel
+- restrained borders, glow, shadows and serif display typography
+- ticket should look printed and physical, with paper texture, ornate edge treatment and contact shadow
 
 ## Mobile layout
 
 Do not simply scale desktop.
 
-- compact wallet/config top
-- large card in center
-- sticky action area at bottom
-- action bar must not cover card
-- Advanced 25 cells need large touch targets
+- **Portrait:** compact header/status, setup panel before the round, large full-width ticket while playing, sticky payout/Cash Out bar at the bottom
+- once a mobile round is active, setup controls can collapse/hide so the scratch ticket gets priority
+- **Landscape mobile:** explicit horizontal layout is supported; compact setup left, ticket center, payout panel right
+- action UI must never cover the scratch area
+- Advanced 25 must remain touch-usable
 
 ## Buy-card ceremony
 
@@ -909,32 +912,31 @@ User clarified:
 
 One audit-only instruction was mistakenly sent to Replit before this rule was clarified. Do not repeat that pattern.
 
+### Stage 7 — Cadı Kazan premium rebuild
+- approved a premium desktop visual direction with ivory-gold physical ticket, dark mystical tabletop, left setup panel and right payout panel
+- rebuilt Cadı Kazan layout in GitHub to follow that design direction
+- added premium desktop styling, portrait mobile layout and dedicated landscape-mobile layout
+- changed scratch behavior so a meaningful scratch commits the server result early and locally erased pixels reveal the result underneath
+- removed active-round threshold-driven full-mask auto-clear behavior
+- safe scratch result is now a gold lucky symbol
+
 ---
 
 # 10) CURRENT NEXT TASK
 
-As of this memory update, the next technical task is:
+As of this memory update, the next task is:
 
-> **Deeply inspect Roulette and report where it is incomplete, wrong, fragile or visually/physically inconsistent.**
+> **Sync GitHub main to Replit Preview and visually QA the new Cadı Kazan rebuild against the approved premium mockup.**
 
-This audit must be performed by ChatGPT itself from GitHub/runtime evidence.
-
-Priority items already visible from code:
-
-1. Verify the likely roulette payout-return bug caused by debiting stake and then crediting only `stake × payoutUnits`.
-2. Verify effective runtime `ROULETTE_ROUND_GENERATION_PAUSED`.
-3. Verify fresh round generation and phase progression.
-4. Verify 3D replay readiness in real Preview/WebGL.
-5. Verify whether fallback is being used.
-6. Run/inspect Roulette and Physics Lab tests.
-7. Verify a real payout/settlement smoke path.
-8. Decide/document whether live outcome should remain server RNG + replay or eventually become physics-determined.
-9. Check mobile viewport and result presentation.
-10. Check animation/server-clock synchronization and reconnect behavior.
-
-Do not change Roulette while merely auditing unless the user explicitly says to implement fixes.
-
----
+Priority checks:
+1. Desktop should visually read as the approved premium mockup, roughly 80%+ similar in hierarchy/composition.
+2. Ticket must be centered and dominant, not stuck to the bottom.
+3. Gold lucky symbol must be visible progressively through only the pixels actually scratched.
+4. No active-round threshold should suddenly reveal the entire cell.
+5. Left setup and right payout panels must be readable and premium without crowding the ticket.
+6. Portrait mobile must prioritize the ticket and use the sticky payout bar correctly.
+7. Landscape mobile must render the intended left / ticket / right horizontal layout.
+8. Fix any compile/runtime/layout regression found in Preview before moving back to Roulette audit.
 
 # 11) MEMORY MAINTENANCE RULE
 
