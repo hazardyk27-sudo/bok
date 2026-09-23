@@ -248,16 +248,17 @@ export class ScratchSurface {
   }
 
   private resizeCanvases() {
-    const rect = this.interactionCanvas.getBoundingClientRect();
+    const width = Math.max(1, this.interactionCanvas.clientWidth);
+    const height = Math.max(1, this.interactionCanvas.clientHeight);
     const ratio = Math.max(1, Math.min(2, window.devicePixelRatio || 1));
     for (const layer of this.layers) {
-      layer.canvas.width = Math.max(1, Math.round(rect.width * ratio));
-      layer.canvas.height = Math.max(1, Math.round(rect.height * ratio));
+      layer.canvas.width = Math.max(1, Math.round(width * ratio));
+      layer.canvas.height = Math.max(1, Math.round(height * ratio));
       layer.context.setTransform(ratio, 0, 0, ratio, 0, 0);
     }
     if (this.debrisCanvas && this.debrisContext) {
-      this.debrisCanvas.width = Math.max(1, Math.round(rect.width * ratio));
-      this.debrisCanvas.height = Math.max(1, Math.round(rect.height * ratio));
+      this.debrisCanvas.width = Math.max(1, Math.round(width * ratio));
+      this.debrisCanvas.height = Math.max(1, Math.round(height * ratio));
       this.debrisContext.setTransform(ratio, 0, 0, ratio, 0, 0);
     }
   }
@@ -356,6 +357,16 @@ export class ScratchSurface {
 
   private pointFromEvent(event: PointerEvent): ScratchPoint {
     const rect = this.interactionCanvas.getBoundingClientRect();
+    const portraitAutoLandscape =
+      window.matchMedia?.("(max-width: 820px) and (orientation: portrait)").matches ?? false;
+
+    if (portraitAutoLandscape) {
+      return {
+        x: Math.max(0, Math.min(1, (event.clientY - rect.top) / Math.max(1, rect.height))),
+        y: Math.max(0, Math.min(1, 1 - ((event.clientX - rect.left) / Math.max(1, rect.width)))),
+      };
+    }
+
     return {
       x: Math.max(0, Math.min(1, (event.clientX - rect.left) / Math.max(1, rect.width))),
       y: Math.max(0, Math.min(1, (event.clientY - rect.top) / Math.max(1, rect.height))),
