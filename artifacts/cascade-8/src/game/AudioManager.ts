@@ -124,6 +124,67 @@ export class AudioManager {
   click() { this.tone(480, 0.05, "triangle"); }
   spin() { this.tone(180, 0.16, "sine"); }
   win() { this.tone(620, 0.12, "triangle"); this.delayedTone(880, 0.16, "triangle", 80); }
+  cashRegister() {
+    if (this.muted) return;
+    this.ensure();
+    const context = this.context!;
+    const output = this.sfxGain!;
+    const start = context.currentTime;
+
+    // Drawer clack.
+    const clackBuffer = context.createBuffer(1, Math.ceil(context.sampleRate * 0.075), context.sampleRate);
+    const clackSamples = clackBuffer.getChannelData(0);
+    for (let index = 0; index < clackSamples.length; index += 1) {
+      const progress = index / clackSamples.length;
+      clackSamples[index] = (Math.random() * 2 - 1) * Math.pow(1 - progress, 2.2);
+    }
+    const clack = context.createBufferSource();
+    const clackFilter = context.createBiquadFilter();
+    const clackGain = context.createGain();
+    clack.buffer = clackBuffer;
+    clackFilter.type = "bandpass";
+    clackFilter.frequency.value = 1_050;
+    clackFilter.Q.value = 0.75;
+    clackGain.gain.setValueAtTime(0.0001, start);
+    clackGain.gain.exponentialRampToValueAtTime(0.28, start + 0.006);
+    clackGain.gain.exponentialRampToValueAtTime(0.0001, start + 0.075);
+    clack.connect(clackFilter);
+    clackFilter.connect(clackGain);
+    clackGain.connect(output);
+    clack.addEventListener("ended", () => {
+      clack.disconnect();
+      clackFilter.disconnect();
+      clackGain.disconnect();
+    }, { once: true });
+    clack.start(start);
+    clack.stop(start + 0.08);
+
+    // Coin/bell tail: deliberately bright and unmistakable as a payout cue.
+    [
+      { frequency: 980, at: 0.035, duration: 0.18, gain: 0.18 },
+      { frequency: 1_320, at: 0.075, duration: 0.22, gain: 0.20 },
+      { frequency: 1_760, at: 0.125, duration: 0.28, gain: 0.18 },
+      { frequency: 2_240, at: 0.19, duration: 0.34, gain: 0.13 },
+    ].forEach(({ frequency, at, duration, gain }) => {
+      const oscillator = context.createOscillator();
+      const envelope = context.createGain();
+      oscillator.type = "triangle";
+      oscillator.frequency.setValueAtTime(frequency, start + at);
+      envelope.gain.setValueAtTime(0.0001, start + at);
+      envelope.gain.exponentialRampToValueAtTime(gain, start + at + 0.008);
+      envelope.gain.exponentialRampToValueAtTime(0.0001, start + at + duration);
+      oscillator.connect(envelope);
+      envelope.connect(output);
+      this.activeTones.add(oscillator);
+      oscillator.addEventListener("ended", () => {
+        this.activeTones.delete(oscillator);
+        oscillator.disconnect();
+        envelope.disconnect();
+      }, { once: true });
+      oscillator.start(start + at);
+      oscillator.stop(start + at + duration + 0.02);
+    });
+  }
   winLabel() {
     this.tone(760, 0.07, "triangle");
     this.delayedTone(1120, 0.09, "sine", 42);
