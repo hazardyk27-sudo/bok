@@ -11,7 +11,7 @@ export type ScratchAbrasionConfig = {
 
 export const SCRATCH_ABRASION_CONFIG: Readonly<ScratchAbrasionConfig> = {
   depthPerSample: 0.018,
-  revealDepth: 0.72,
+  revealDepth: 0.58,
   brushRadius: 0.085,
 };
 
