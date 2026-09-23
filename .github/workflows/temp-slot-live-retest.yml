@@ -1,0 +1,61 @@
+name: Temporary Slot Live Latency Retest
+
+on:
+  push:
+    branches:
+      - feature/slot
+    paths:
+      - .github/workflows/temp-slot-live-retest.yml
+
+permissions:
+  contents: read
+
+jobs:
+  retest:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Measure current published Slot latency
+        shell: bash
+        run: |
+          set -euo pipefail
+          BASE="https://cascade-8-slot-game.replit.app"
+          COOKIE="$(mktemp)"
+          OUT="$RUNNER_TEMP/live-retest.tsv"
+          echo "kind idx code dns connect tls ttfb total size" > "$OUT"
+
+          curl -sS --max-time 20 -b "$COOKIE" -c "$COOKIE" -o /dev/null "$BASE/api/slot/state"
+
+          for i in $(seq 1 30); do
+            curl -sS --max-time 20 -b "$COOKIE" -c "$COOKIE" -o /dev/null \
+              -w "state $i %{http_code} %{time_namelookup} %{time_connect} %{time_appconnect} %{time_starttransfer} %{time_total} %{size_download}\\n" \
+              "$BASE/api/slot/state" >> "$OUT"
+          done
+
+          for i in $(seq 1 80); do
+            KEY="retest-${GITHUB_RUN_ID}-${i}-$(date +%s%N)"
+            curl -sS --max-time 30 -b "$COOKIE" -c "$COOKIE" -o /dev/null \
+              -H "Content-Type: application/json" \
+              -d "{\"stakeCents\":20,\"idempotencyKey\":\"$KEY\"}" \
+              -w "spin $i %{http_code} %{time_namelookup} %{time_connect} %{time_appconnect} %{time_starttransfer} %{time_total} %{size_download}\\n" \
+              "$BASE/api/slot/spins" >> "$OUT"
+          done
+
+          python - "$OUT" <<'PY'
+          import sys, statistics
+          rows=[]
+          with open(sys.argv[1]) as f:
+              next(f)
+              for line in f:
+                  kind,idx,code,dns,conn,tls,ttfb,total,size=line.split()
+                  rows.append(dict(kind=kind,idx=int(idx),code=int(code),dns=float(dns)*1000,conn=float(conn)*1000,tls=float(tls)*1000,ttfb=float(ttfb)*1000,total=float(total)*1000,size=int(float(size))))
+          def pct(v,p):
+              s=sorted(v)
+              return s[round((len(s)-1)*p)]
+          for kind in ("state","spin"):
+              rs=[r for r in rows if r["kind"]==kind]
+              vals=[r["total"] for r in rs]; ttfb=[r["ttfb"] for r in rs]
+              print(f"SUMMARY {kind}: n={len(rs)} status={sorted(set(r['code'] for r in rs))} median={statistics.median(vals):.1f}ms p90={pct(vals,.90):.1f}ms p95={pct(vals,.95):.1f}ms p99={pct(vals,.99):.1f}ms max={max(vals):.1f}ms median_ttfb={statistics.median(ttfb):.1f}ms")
+              for r in sorted(rs,key=lambda x:x["total"],reverse=True)[:10]:
+                  print(f"SLOW {kind} #{r['idx']}: total={r['total']:.1f}ms ttfb={r['ttfb']:.1f}ms connect={r['conn']:.1f}ms tls={r['tls']:.1f}ms size={r['size']}B code={r['code']}")
+          PY
