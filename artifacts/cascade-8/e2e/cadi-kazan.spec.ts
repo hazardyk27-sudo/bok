@@ -300,6 +300,45 @@ test.describe("Cadı Kazan critical round lifecycle", () => {
     });
   });
 
+  test("desktop Advanced 25 uses the approved wide 30/70 ticket", async ({ page }, testInfo: TestInfo) => {
+    test.skip(testInfo.project.name !== "desktop-chromium", "Desktop Advanced 25 coverage runs in the desktop project");
+    const fixture = await installCadiKazanFixture(page);
+
+    await page.locator("[data-witch-mode='ADVANCED']").click();
+    await page.locator("[data-witch-alarm]").selectOption("3");
+    await page.locator("[data-witch-action='start']").click();
+
+    await expect(page.locator("[data-witch-ticket]")).toBeVisible();
+    await expect(page.locator("[data-witch-cell]")).toHaveCount(25);
+    await expect(page.locator(".witch-page")).toHaveClass(/is-advanced-round/);
+
+    const layout = await page.evaluate(() => {
+      const ticket = document.querySelector<HTMLElement>("[data-witch-ticket]");
+      const board = document.querySelector<HTMLElement>(".witch-ticket.is-advanced .witch-board-wrap");
+      const firstCell = document.querySelector<HTMLElement>("[data-witch-cell='0']");
+      const payout = document.querySelector<HTMLElement>("[data-witch-desktop-payout]");
+      const ticketRect = ticket?.getBoundingClientRect();
+      const boardRect = board?.getBoundingClientRect();
+      const firstCellRect = firstCell?.getBoundingClientRect();
+      const payoutRect = payout?.getBoundingClientRect();
+      return {
+        ticketWidth: ticketRect?.width ?? 0,
+        ticketHeight: ticketRect?.height ?? 0,
+        boardWidth: boardRect?.width ?? 0,
+        ticketRight: ticketRect?.right ?? 0,
+        payoutLeft: payoutRect?.left ?? 0,
+        cellWidth: firstCellRect?.width ?? 0,
+        cellHeight: firstCellRect?.height ?? 0,
+      };
+    });
+
+    expect(layout.ticketWidth / Math.max(1, layout.ticketHeight)).toBeGreaterThanOrEqual(1.75);
+    expect(layout.boardWidth / Math.max(1, layout.ticketWidth)).toBeGreaterThanOrEqual(0.60);
+    expect(layout.payoutLeft - layout.ticketRight).toBeGreaterThanOrEqual(8);
+    expect(Math.min(layout.cellWidth, layout.cellHeight)).toBeGreaterThanOrEqual(52);
+    expect(fixture.startBodies[0]).toMatchObject({ mode: "ADVANCED", alarmCount: 3 });
+  });
+
   test("mobile physical orientation fits Advanced 25, payout HUD, and control dock without overflow", async ({ page }, testInfo: TestInfo) => {
     test.skip(!["android-chrome", "android-portrait", "android-small-portrait", "android-narrow-portrait", "android-medium-portrait", "android-large-portrait"].includes(testInfo.project.name), "Mobile Cadı Kazan coverage runs in Android projects");
     const fixture = await installCadiKazanFixture(page);
