@@ -948,6 +948,18 @@ One audit-only instruction was mistakenly sent to Replit before this rule was cl
 - menu, game routes and slot shell can now extend beyond the viewport instead of being clipped
 - removed the Cadı Kazan landscape-only height/overflow trap so short landscape screens can scroll vertically when needed
 
+### Stage 16 — Cadı Kazan Mobile V4 true responsive phone UI
+- Removed all obsolete portrait handoff / auto-landscape rotate CSS from Cadı Kazan.
+- Removed the rotate-device prompt markup entirely.
+- Mobile layout is now width-driven for phone widths up to 820px, independent of orientation media-query quirks.
+- No `rotate(90deg)` remains in `witch.css`.
+- Phone UI now uses: compact two-row header, natural stacked stage, centered responsive ticket, compact full-width payout HUD below the ticket, and a two-column control sheet.
+- Standard 5 and Advanced 25 have dedicated mobile sizing; Advanced keeps a playable 5×5 board without desktop min-width constraints.
+- Very narrow phones (down to 320px QA viewport) trim decorative copy before gameplay elements.
+- Mobile page allows vertical document flow when necessary but forbids horizontal overflow.
+- Mobile QA now covers 915×412 landscape, 412×915 portrait, 360×640 small portrait, and 320×568 narrow portrait.
+- Merged to GitHub `main` in commit `1c1ab3b` without modifying Roulette or Slot source files.
+
 ### Stage 15 — True responsive portrait mobile
 - removed the failed portrait rotate/transform approach
 - portrait phones now render a dedicated responsive mobile composition rather than rotating the full desktop/landscape page
