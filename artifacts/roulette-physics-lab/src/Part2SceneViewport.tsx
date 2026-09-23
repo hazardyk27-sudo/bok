@@ -1186,7 +1186,7 @@ function runPocketEntryValidation(
             : 1.72;
       const maximumValidRadius =
         probe.kind === 'pocket-aperture'
-          ? POCKET_FLOOR_OUTER_RADIUS + 0.14
+          ? POCKET_OUTER_LIP_RADIUS
           : probe.kind === 'side-track'
             ? 2.62
             : 2.42;
