@@ -1,6 +1,6 @@
 export const SCRATCH_REVEAL_THRESHOLD = 0.62;
-export const SCRATCH_GRID_COLUMNS = 14;
-export const SCRATCH_GRID_ROWS = 10;
+export const SCRATCH_GRID_COLUMNS = 18;
+export const SCRATCH_GRID_ROWS = 12;
 
 export type ScratchPoint = { x: number; y: number };
 export type ScratchAbrasionConfig = {
@@ -10,14 +10,14 @@ export type ScratchAbrasionConfig = {
 };
 
 export const SCRATCH_ABRASION_CONFIG: Readonly<ScratchAbrasionConfig> = {
-  depthPerSample: 0.12,
-  revealDepth: 0.34,
-  brushRadius: 0.115,
+  depthPerSample: 0.11,
+  revealDepth: 0.16,
+  brushRadius: 0.10,
 };
 
 const clamp = (value: number) => Math.max(0, Math.min(1, value));
 
-export function interpolateScratchPoints(from: ScratchPoint, to: ScratchPoint, spacing = 0.022): ScratchPoint[] {
+export function interpolateScratchPoints(from: ScratchPoint, to: ScratchPoint, spacing = 0.018): ScratchPoint[] {
   const distance = Math.hypot(to.x - from.x, to.y - from.y);
   const steps = Math.max(1, Math.ceil(distance / Math.max(0.001, spacing)));
   return Array.from({ length: steps + 1 }, (_, index) => {
@@ -78,8 +78,8 @@ export class ScratchProgressGrid {
 
     for (let row = 0; row < this.rows; row += 1) {
       for (let column = 0; column < this.columns; column += 1) {
-        const centerX = (column + 0.5) * cellWidth;
-        const centerY = (row + 0.5) * cellHeight;
+        const centerX = (column + .5) * cellWidth;
+        const centerY = (row + .5) * cellHeight;
         if (Math.hypot(centerX - normalizedX, centerY - normalizedY) > normalizedRadius + cellRadius) continue;
         const index = row * this.columns + column;
         const wasRevealable = this.sampled[index] === 1;
