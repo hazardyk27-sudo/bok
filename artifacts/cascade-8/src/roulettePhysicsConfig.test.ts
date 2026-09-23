@@ -150,7 +150,10 @@ describe("authoritative roulette physics config", () => {
       "'stationary-bowl-apron-bridge'",
     );
     expect(part3ViewportSource).toContain(
-      "[POCKET_OUTER_LIP_RADIUS, POCKET_OUTER_LIP_Y]",
+      "[POCKET_OUTER_LIP_RADIUS, outerLipY]",
+    );
+    expect(part3ViewportSource).toContain(
+      "const activePocketOuterLipY =",
     );
     expect(part3ViewportSource).toContain(
       "targetOuterY = part2ChannelSurfaceAt",
@@ -159,7 +162,10 @@ describe("authoritative roulette physics config", () => {
       "STATIONARY_COLLISION_GROUP | (BALL_COLLISION_GROUP << 16)",
     );
     expect(part3ViewportSource).toContain(
-      "part3BowlBridgeColliders = addBowlBridgePrimitiveColliders",
+      "const bridgeMesh = buildBowlBridgeTrimesh",
+    );
+    expect(part3ViewportSource).toContain(
+      "part3BowlBridgeColliders = [bridgeCollider]",
     );
     expect(part3ViewportSource).toContain(
       "for (const collider of part3BowlBridgeColliders)",
@@ -231,7 +237,10 @@ describe("authoritative roulette physics config", () => {
       "RAPIER.RigidBodyDesc.kinematicPositionBased()",
     );
     expect(part3ViewportSource).toContain(
-      "part3PocketColliders = addKinematicPocketSystem(world, rotorBody)",
+      "part3PocketColliders = addKinematicPocketSystem(",
+    );
+    expect(part3ViewportSource).toContain(
+      "activePocketOuterLipY",
     );
     expect(part3ViewportSource).toContain(
       "for (let index = 0; index < EUROPEAN_POCKET_COUNT; index += 1)",
