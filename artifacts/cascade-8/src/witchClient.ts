@@ -46,6 +46,14 @@ const formatMultiplier = (basisPoints: number) => `${(basisPoints / 100).toLocal
   maximumFractionDigits: 2,
 })}x`;
 
+const formatTicketPrice = (cents: number) => {
+  const credits = cents / 100;
+  return `${credits.toLocaleString("tr-TR", {
+    minimumFractionDigits: Number.isInteger(credits) ? 0 : 2,
+    maximumFractionDigits: 2,
+  })}`;
+};
+
 const newIdempotencyKey = (prefix: string) => `${prefix}-${crypto.randomUUID()}-${Date.now()}`;
 
 export const CADI_KAZAN_MARKUP = `
@@ -106,7 +114,7 @@ export const CADI_KAZAN_MARKUP = `
           <div class="witch-stake-stepper">
             <button type="button" data-witch-stake-step="-1" aria-label="Stake azalt">−</button>
             <div class="witch-input-wrap">
-              <input data-witch-stake type="number" min="1" max="100" step="0.01" value="1.00" inputmode="decimal" aria-label="Bilet bedeli">
+              <input data-witch-stake type="number" min="1" step="0.01" value="1.00" inputmode="decimal" aria-label="Bilet bedeli">
               <i>CR</i>
             </div>
             <button type="button" data-witch-stake-step="1" aria-label="Stake artır">+</button>
@@ -165,8 +173,10 @@ export const CADI_KAZAN_MARKUP = `
                 <strong class="witch-ticket-brand">CADI KAZAN</strong>
                 <small>KAZI · KEŞFET · KATLA</small>
               </div>
-              <div class="witch-ticket-sidecopy is-right">
-                <small>KÜÇÜK BİR KAZIMA · BÜYÜK BİR İHTİMAL</small>
+              <div class="witch-ticket-price">
+                <small>BİLET DEĞERİ</small>
+                <strong data-witch-ticket-price>$1</strong>
+                <span>KAZI KAZAN</span>
               </div>
             </header>
 
@@ -269,8 +279,9 @@ export class WitchClient {
         const input = this.root.querySelector<HTMLInputElement>("[data-witch-stake]");
         if (!input) return;
         const direction = Number(button.dataset.witchStakeStep ?? 0);
-        const next = Math.max(1, Math.min(100, Number(input.value || 1) + direction));
-        input.value = next.toFixed(2);
+        const current = Number(input.value || 1);
+        const next = Math.max(1, current + direction);
+        input.value = Number.isInteger(next) ? String(next) : next.toFixed(2);
         this.render();
       });
     });
@@ -279,7 +290,7 @@ export class WitchClient {
         if (this.busy || this.state?.round) return;
         const input = this.root.querySelector<HTMLInputElement>("[data-witch-stake]");
         if (!input) return;
-        const next = Math.max(1, Math.min(100, Number(button.dataset.witchStakePreset ?? 1)));
+        const next = Math.max(1, Number(button.dataset.witchStakePreset ?? 1));
         input.value = next.toFixed(2);
         this.render();
       });
@@ -315,6 +326,10 @@ export class WitchClient {
     const alarmInput = this.root.querySelector<HTMLSelectElement>("[data-witch-alarms]");
     const stakeCents = Math.round(Number(stakeInput?.value ?? 0) * 100);
     const alarmCount = this.mode === "STANDARD" ? 1 : Number(alarmInput?.value ?? 1);
+    if (!Number.isSafeInteger(stakeCents) || stakeCents < 100) {
+      this.setFeedback("Bilet bedeli en az 1 kredi olmalı.");
+      return;
+    }
     this.setFeedback("Bilet server’da mühürleniyor…");
     this.busy = true;
     this.render();
@@ -617,12 +632,14 @@ export class WitchClient {
     const ticketMode = this.root.querySelector<HTMLElement>("[data-witch-ticket-mode]");
     const ticketStake = this.root.querySelector<HTMLElement>("[data-witch-ticket-stake]");
     const ticketBombs = this.root.querySelector<HTMLElement>("[data-witch-ticket-bombs]");
+    const ticketPrice = this.root.querySelector<HTMLElement>("[data-witch-ticket-price]");
     const ticketId = this.root.querySelector<HTMLElement>("[data-witch-ticket-id]");
     if (playMode) playMode.textContent = round.mode === "STANDARD" ? "STANDARD 5 / 01 BOMB" : `ADVANCED 25 / ${String(round.alarmCount).padStart(2, "0")} BOMBS`;
     if (playTitle) playTitle.textContent = round.status === "BUST" ? "Bomba açıldı." : round.status === "CASHED_OUT" ? "Kazanç alındı." : round.status === "COMPLETED" ? "Kart tamamlandı." : "Folyo kazındıkça alttaki sonuç görünür.";
     if (ticketMode) ticketMode.textContent = round.mode === "STANDARD" ? "STANDARD 5" : "ADVANCED 25";
     if (ticketStake) ticketStake.textContent = `${formatCredits(round.stakeCents)} CR`;
     if (ticketBombs) ticketBombs.textContent = `${String(round.alarmCount).padStart(2, "0")} ${round.alarmCount === 1 ? "BOMB" : "BOMBS"}`;
+    if (ticketPrice) ticketPrice.textContent = formatTicketPrice(round.stakeCents);
     if (ticketId) ticketId.textContent = `#${round.id.slice(0, 8).toUpperCase()}`;
     if (riskNote) {
       const selectedBombs = this.mode === "STANDARD" ? "1" : (alarms?.value ?? String(round.alarmCount));
