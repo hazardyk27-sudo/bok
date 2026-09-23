@@ -210,7 +210,7 @@ export class AudioManager {
     this.scratchBuffer = buffer;
   }
 
-  scratchStart(intensity = 0.12, abrasion = 0.05) {
+  scratchStart(intensity = 0, abrasion = 0.05) {
     if (this.muted) return;
     this.ensure();
     this.ensureScratchTexture();
@@ -292,6 +292,15 @@ export class AudioManager {
     }, { once: true });
 
     source.start(now, 0.11 + Math.random() * 0.63);
+    this.playNoiseBurst({
+      at: 0,
+      duration: 0.026,
+      gain: 0.026,
+      frequency: 2_150,
+      q: 1.1,
+      decay: 3.1,
+      warmth: 0.20,
+    });
     this.scratchUpdate(intensity, abrasion);
   }
 
@@ -306,18 +315,26 @@ export class AudioManager {
     const now = context.currentTime;
     const speed = Math.max(0, Math.min(1, intensity));
     const depth = Math.max(0, Math.min(1, abrasion));
-    const bodyLevel = 0.020 + speed * 0.085 + depth * 0.018;
-    const edgeLevel = 0.004 + speed * 0.040 + depth * 0.018;
-    const rumbleLevel = 0.004 + speed * 0.020;
+    const bodyLevel = 0.0025 + speed * 0.105 + depth * speed * 0.020;
+    const edgeLevel = 0.0008 + speed * 0.052 + depth * speed * 0.018;
+    const rumbleLevel = 0.001 + speed * 0.023;
 
     this.scratchLoopSource.playbackRate.setTargetAtTime(0.72 + speed * 0.46 + depth * 0.07, now, 0.018);
     this.scratchBodyFilter?.frequency.setTargetAtTime(720 + speed * 1_050 + depth * 310, now, 0.02);
     this.scratchEdgeFilter?.frequency.setTargetAtTime(2_450 + speed * 2_200 + depth * 700, now, 0.02);
     this.scratchRumbleFilter?.frequency.setTargetAtTime(300 + speed * 190, now, 0.025);
 
-    this.scratchBodyGain?.gain.setTargetAtTime(bodyLevel, now, 0.012);
-    this.scratchEdgeGain?.gain.setTargetAtTime(edgeLevel, now, 0.010);
-    this.scratchRumbleGain?.gain.setTargetAtTime(rumbleLevel, now, 0.018);
+    const shapeGain = (node: GainNode | undefined, level: number, floor: number, attack: number) => {
+      if (!node) return;
+      node.gain.cancelScheduledValues(now);
+      node.gain.setTargetAtTime(level, now, attack);
+      // Pointer events stop arriving when the hand stops. Let friction decay
+      // naturally after each movement pulse so holding still is nearly silent.
+      node.gain.setTargetAtTime(floor, now + 0.075, 0.026);
+    };
+    shapeGain(this.scratchBodyGain, bodyLevel, 0.0015, 0.008);
+    shapeGain(this.scratchEdgeGain, edgeLevel, 0.0003, 0.006);
+    shapeGain(this.scratchRumbleGain, rumbleLevel, 0.0005, 0.012);
 
     // Small irregular metallic/paper grains make the scrape feel like a coin
     // catching real foil instead of a uniform digital noise loop.
