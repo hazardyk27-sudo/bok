@@ -75,10 +75,10 @@ const PART2_CHANNEL_BOTTOM_THICKNESS = 0.12;
 const PART3_LAUNCH_RADIUS = PART2_ACTUAL_DARK_TRACK_LAUNCH_RADIUS;
 const PART3_RETAINING_RIM_INNER_RADIUS = PART2_ACTUAL_WOOD_INNER_RADIUS;
 const PART4_DEFLECTOR_SCAN_INNER_RADIUS =
-  ROULETTE_POCKET_OUTER_LIP_RADIUS - 0.02;
+  ROULETTE_POCKET_FLOOR_OUTER_RADIUS + 0.02;
 const PART4_DEFLECTOR_SCAN_OUTER_RADIUS =
-  PART2_ACTUAL_DARK_TRACK_RADIUS_BAND[0] + 0.03;
-const PART4_DEFLECTOR_RADIAL_SAMPLE_COUNT = 15;
+  ROULETTE_DARK_RACE_WOOD_INNER_RADIUS + 0.22;
+const PART4_DEFLECTOR_RADIAL_SAMPLE_COUNT = 31;
 const PART4_DEFLECTOR_AZIMUTH_SAMPLE_COUNT = 360;
 const PART4_DEFLECTOR_MIN_PROMINENCE = 0.012;
 const PART4_DEFLECTOR_MIN_CLUSTER_SAMPLES = 3;
@@ -3539,8 +3539,14 @@ export function Part2SceneViewport({
       const darkSurfaceYValues = validMeasures.flatMap(
         (measure) => measure.darkY,
       );
+      const effectiveDeflectorInner =
+        part4MeasuredDeflectorInnerRadius ?? deflectorInner;
+      const effectiveDeflectorOuter =
+        part4MeasuredDeflectorOuterRadius ?? deflectorOuter;
       const proposedLaunchRadius =
-        darkOuter !== null && woodInner !== null && deflectorOuter !== null
+        darkOuter !== null &&
+        woodInner !== null &&
+        effectiveDeflectorOuter !== null
           ? Number(
               Math.min(
                 Math.floor(
@@ -3622,7 +3628,7 @@ export function Part2SceneViewport({
           proposedLaunchRadius + BALL_RADIUS >= (woodInner ?? Infinity);
         staticInsideWheel =
           proposedLaunchRadius - BALL_RADIUS <=
-          (deflectorOuter ?? -Infinity);
+          (effectiveDeflectorOuter ?? -Infinity);
         staticHover = finalBottom - surfaceY > 0.02;
       }
       const passed =
@@ -3638,10 +3644,10 @@ export function Part2SceneViewport({
             proposedLaunchRadius -
             BALL_RADIUS >=
             0.02) &&
-        (deflectorOuter === null ||
+        (effectiveDeflectorOuter === null ||
           proposedLaunchRadius === null ||
           proposedLaunchRadius -
-            deflectorOuter -
+            effectiveDeflectorOuter -
             BALL_RADIUS >=
             0.02);
       console.info(
@@ -3668,15 +3674,13 @@ export function Part2SceneViewport({
             ? [woodInner, woodOuter]
             : null,
         nearestDeflectorRadiusBand:
-          part4MeasuredDeflectorInnerRadius !== null &&
-          part4MeasuredDeflectorOuterRadius !== null
+          effectiveDeflectorInner !== null &&
+          effectiveDeflectorOuter !== null
             ? [
-                Number(part4MeasuredDeflectorInnerRadius.toFixed(4)),
-                Number(part4MeasuredDeflectorOuterRadius.toFixed(4)),
+                Number(effectiveDeflectorInner.toFixed(4)),
+                Number(effectiveDeflectorOuter.toFixed(4)),
               ]
-            : deflectorInner !== null && deflectorOuter !== null
-              ? [deflectorInner, deflectorOuter]
-              : null,
+            : null,
         visibleDeflectorCount:
           part4DeflectorAudit?.descriptors.length ?? null,
         visibleDeflectorAnglesDegrees:
@@ -3701,11 +3705,12 @@ export function Part2SceneViewport({
               )
             : null,
         deflectorClearance:
-          deflectorOuter !== null && proposedLaunchRadius !== null
+          effectiveDeflectorOuter !== null &&
+          proposedLaunchRadius !== null
             ? Number(
                 (
                   proposedLaunchRadius -
-                  deflectorOuter -
+                  effectiveDeflectorOuter -
                   BALL_RADIUS
                 ).toFixed(4),
               )
@@ -4707,7 +4712,7 @@ export function Part2SceneViewport({
               ? null
               : Number(part3EarlyLapMinimumDeflectorClearance.toFixed(4)),
           deflectorColliderCount: part3DeflectorColliders.length,
-          deflectorColliderType: 'cuboid',
+          deflectorColliderType: 'asset-measured-cuboid',
           deflectorColliderFriction: PART3_DEFLECTOR_FRICTION,
           deflectorColliderRestitution: PART3_DEFLECTOR_RESTITUTION,
           bouncePlausible: part3BouncePlausible,
