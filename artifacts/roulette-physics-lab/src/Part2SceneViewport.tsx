@@ -1983,8 +1983,8 @@ export function Part2SceneViewport({
         BOWL_BRIDGE_OUTER_RADIUS,
         channelVerticalOffset,
       ).y;
-      const measuredInnerY = measured[0];
-      const measuredOuterY = measured.at(-1);
+      const measuredInnerY = measured[0] ?? null;
+      const measuredOuterY = measured[measured.length - 1] ?? null;
       const canAlignMeasuredProfile =
         measuredInnerY !== null &&
         measuredOuterY !== null &&
@@ -2001,7 +2001,7 @@ export function Part2SceneViewport({
         if (index === 0) return [radius, targetInnerY];
         if (index === radii.length - 1) return [radius, targetOuterY];
         const visibleY = measured[index];
-        if (!canAlignMeasuredProfile || visibleY === null) {
+        if (!canAlignMeasuredProfile || visibleY == null) {
           return [radius, fallbackY];
         }
         const seamCorrection = THREE.MathUtils.lerp(
