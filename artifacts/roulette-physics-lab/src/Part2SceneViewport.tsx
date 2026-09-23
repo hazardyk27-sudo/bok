@@ -362,6 +362,10 @@ type Part3OuterLaneSpinResult = {
   escaped: boolean;
   velocitySpike: boolean;
   artificialAcceleration: boolean;
+  maxTrackPenetration: number;
+  maxTrackSeparation: number;
+  maxPocketFloorPenetration: number;
+  maxPocketFloorSeparation: number;
   maxVisualBodySyncError: number;
   maxRotorSyncError: number;
   maxPenetration: number;
@@ -398,6 +402,7 @@ type Part6FullSpinTelemetryResult = {
   trackContactRatio: number;
   trackStartSpeed: number;
   trackEndSpeed: number;
+  peakSpeed: number;
   lapSpeeds: number[];
   speedDegradesAcrossLaps: boolean;
   outerLapTargetMet: boolean;
@@ -3526,6 +3531,11 @@ export function Part2SceneViewport({
         let trackContactFrames = 0;
         let trackStartSpeed = 0;
         let trackEndSpeed = run.speed;
+        let peakSpeed = run.speed;
+        let maxTrackPenetration = 0;
+        let maxTrackSeparation = 0;
+        let maxPocketFloorPenetration = 0;
+        let maxPocketFloorSeparation = 0;
         let inwardTransitionTime: number | null = null;
         let inwardTransitionRadius: number | null = null;
         let deflectorContactCount = 0;
@@ -3578,6 +3588,7 @@ export function Part2SceneViewport({
           minRadius = Math.min(minRadius, radius);
           maxRadius = Math.max(maxRadius, radius);
           finalSpeed = speed;
+          peakSpeed = Math.max(peakSpeed, speed);
 
           let trackPairContact = false;
           let deflectorPairContact = false;
@@ -3611,6 +3622,14 @@ export function Part2SceneViewport({
             const raceSurfaceY =
               part2ChannelSurfaceAt(radius, part2RaceVerticalOffset).y;
             const signedRaceGap = bottom - raceSurfaceY;
+            maxTrackPenetration = Math.max(
+              maxTrackPenetration,
+              Math.max(0, -signedRaceGap),
+            );
+            maxTrackSeparation = Math.max(
+              maxTrackSeparation,
+              Math.max(0, signedRaceGap),
+            );
             hover ||= !trackPairContact && signedRaceGap > 0.03;
             clipping ||= signedRaceGap < -0.03;
             tunneling ||= signedRaceGap < -0.08;
@@ -3715,6 +3734,16 @@ export function Part2SceneViewport({
 
           const floorPenetration =
             pocketEntered ? Math.max(0, POCKET_FLOOR_Y - bottom) : 0;
+          const floorSeparation =
+            pocketEntered ? Math.max(0, bottom - POCKET_FLOOR_Y) : 0;
+          maxPocketFloorPenetration = Math.max(
+            maxPocketFloorPenetration,
+            floorPenetration,
+          );
+          maxPocketFloorSeparation = Math.max(
+            maxPocketFloorSeparation,
+            floorSeparation,
+          );
           clipping ||= floorPenetration > 0.03;
           tunneling ||= floorPenetration > 0.08;
           escaped ||=
@@ -3850,6 +3879,7 @@ export function Part2SceneViewport({
           trackContactRatio: Number(trackContactRatio.toFixed(4)),
           trackStartSpeed: Number(trackStartSpeed.toFixed(4)),
           trackEndSpeed: Number(trackEndSpeed.toFixed(4)),
+          peakSpeed: Number(peakSpeed.toFixed(4)),
           lapSpeeds: lapSpeeds.map((speed) => Number(speed.toFixed(4))),
           speedDegradesAcrossLaps,
           outerLapTargetMet,
@@ -3905,6 +3935,14 @@ export function Part2SceneViewport({
           escaped,
           velocitySpike,
           artificialAcceleration,
+          maxTrackPenetration: Number(maxTrackPenetration.toFixed(4)),
+          maxTrackSeparation: Number(maxTrackSeparation.toFixed(4)),
+          maxPocketFloorPenetration: Number(
+            maxPocketFloorPenetration.toFixed(4),
+          ),
+          maxPocketFloorSeparation: Number(
+            maxPocketFloorSeparation.toFixed(4),
+          ),
           maxVisualBodySyncError: Number(
             maxVisualBodySyncError.toFixed(6),
           ),
@@ -7134,8 +7172,8 @@ export function Part2SceneViewport({
               seed {result.seed} · launch {THREE.MathUtils.radToDeg(result.launchAzimuth).toFixed(1)}° @{' '}
               {result.launchSpeed.toFixed(3)} · laps {result.lapCount.toFixed(3)} ·
               contact {(result.trackContactRatio * 100).toFixed(1)}% ·
-              speed {result.trackStartSpeed.toFixed(3)}→{result.trackEndSpeed.toFixed(3)} ·
-              inward {result.inwardTransitionTime?.toFixed(3) ?? '—'} s ·
+              speed {result.trackStartSpeed.toFixed(3)}→{result.trackEndSpeed.toFixed(3)} / peak{' '}
+              {result.peakSpeed.toFixed(3)} · inward {result.inwardTransitionTime?.toFixed(3) ?? '—'} s ·
               deflector {result.deflectorContactCount} @{' '}
               {result.firstDeflectorContactTime?.toFixed(3) ?? '—'} s ·
               impact {result.impactSpeedBefore?.toFixed(3) ?? '—'}→
@@ -7144,7 +7182,9 @@ export function Part2SceneViewport({
               fret {result.fretContact ? 'yes' : 'no'} · pocket{' '}
               {result.pocketEntered ? 'yes' : 'no'} · settled{' '}
               {result.settled ? 'yes' : 'no'} · final{' '}
-              {result.finalPocketNumber ?? '—'} · safety{' '}
+              {result.finalPocketNumber ?? '—'} · pen/sep track{' '}
+              {result.maxTrackPenetration.toFixed(3)}/{result.maxTrackSeparation.toFixed(3)} · pocket{' '}
+              {result.maxPocketFloorPenetration.toFixed(3)}/{result.maxPocketFloorSeparation.toFixed(3)} · safety{' '}
               {result.hover ||
               result.clipping ||
               result.tunneling ||
