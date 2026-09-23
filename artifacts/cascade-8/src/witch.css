@@ -2493,7 +2493,7 @@
   }
 
   .witch-stage-shell {
-    height: calc(100dvh - 104px);
+    height: calc(100dvh - 126px);
     min-height: 280px;
     margin-top: 5px;
     border-radius: 13px;
@@ -2912,7 +2912,7 @@
   }
 
   .witch-stage-shell {
-    height: calc(100vw - 104px);
+    height: calc(100vw - 126px);
     min-height: 0;
     margin-top: 5px;
     border-radius: 13px;
