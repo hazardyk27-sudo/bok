@@ -71,6 +71,18 @@ jobs:
           set -o pipefail
           node scripts/roulette-part6-runtime.mjs | tee part6-runtime.log
 
+      - name: Summarize PART 6 calibration evidence
+        if: always()
+        env:
+          ROULETTE_PART6_OUTPUT: artifacts/roulette-physics-lab/part6-runtime-result.json
+          ROULETTE_PART6_EVIDENCE: artifacts/roulette-physics-lab/part6-calibration-evidence.json
+        run: |
+          if [ -f "$ROULETTE_PART6_OUTPUT" ]; then
+            node scripts/roulette-part6-report.mjs | tee part6-calibration-evidence.log
+          else
+            echo "PART 6 runtime result was not produced."
+          fi
+
       - name: Show Vite log on failure
         if: failure()
         run: cat /tmp/roulette-part6-vite.log || true
@@ -82,6 +94,8 @@ jobs:
           name: roulette-part6-runtime
           path: |
             artifacts/roulette-physics-lab/part6-runtime-result.json
+            artifacts/roulette-physics-lab/part6-calibration-evidence.json
             part6-runtime.log
+            part6-calibration-evidence.log
             /tmp/roulette-part6-vite.log
           if-no-files-found: warn
