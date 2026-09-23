@@ -271,7 +271,15 @@ test.describe("Cadı Kazan critical round lifecycle", () => {
           .map((cell) => cell.getBoundingClientRect());
         return {
           ratio: rect.width / Math.max(1, rect.height),
-          backgroundImage: style.backgroundImage,
+          cardArtVisible: (() => {
+            const art = ticket.querySelector<HTMLElement>(".witch-bcs-card-art");
+            if (!art) return false;
+            const artStyle = getComputedStyle(art);
+            const artRect = art.getBoundingClientRect();
+            return artStyle.display !== "none" && artRect.width > 0 && artRect.height > 0;
+          })(),
+          topbarText: ticket.querySelector<HTMLElement>(".witch-bcs-topbar")?.textContent?.trim() ?? "",
+          bottomText: ticket.querySelector<HTMLElement>(".witch-bcs-bottombar")?.textContent?.replace(/\s+/g, " ").trim() ?? "",
           cellsInside: cells.every((cell) =>
             cell.left >= rect.left - 1 &&
             cell.top >= rect.top - 1 &&
@@ -285,7 +293,10 @@ test.describe("Cadı Kazan critical round lifecycle", () => {
       });
       expect(standardVisual.ratio).toBeGreaterThan(2.8);
       expect(standardVisual.ratio).toBeLessThan(3.2);
-      expect(standardVisual.backgroundImage).toContain("bcs-standard5-card.webp");
+      expect(standardVisual.cardArtVisible).toBe(true);
+      expect(standardVisual.topbarText).toBe("IN LEGAL TROUBLE?");
+      expect(standardVisual.bottomText).toContain("NOT TOLL FREE");
+      expect(standardVisual.bottomText).toContain("SE HABLA ESPAÑOL");
       expect(standardVisual.cellsInside).toBe(true);
       expect(standardVisual.cellsSeparated).toBe(true);
     });
