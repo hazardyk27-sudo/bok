@@ -305,7 +305,7 @@ test.describe("Cadı Kazan critical round lifecycle", () => {
     const fixture = await installCadiKazanFixture(page);
 
     await page.locator("[data-witch-mode='ADVANCED']").click();
-    await page.locator("[data-witch-alarm]").selectOption("3");
+    await page.locator("[data-witch-alarms]").selectOption("3");
     await page.locator("[data-witch-action='start']").click();
 
     await expect(page.locator("[data-witch-ticket]")).toBeVisible();
@@ -336,6 +336,39 @@ test.describe("Cadı Kazan critical round lifecycle", () => {
     expect(layout.boardWidth / Math.max(1, layout.ticketWidth)).toBeGreaterThanOrEqual(0.60);
     expect(layout.payoutLeft - layout.ticketRight).toBeGreaterThanOrEqual(8);
     expect(Math.min(layout.cellWidth, layout.cellHeight)).toBeGreaterThanOrEqual(52);
+
+    await page.evaluate(() => new Promise<void>((resolve) => {
+      requestAnimationFrame(() => requestAnimationFrame(() => resolve()));
+    }));
+    const lacquer = page.locator("[data-witch-cell='0'] .witch-scratch-layer-lacquer");
+    const registration = await lacquer.evaluate((canvas: HTMLCanvasElement) => {
+      const expectedRatio = Math.max(1, Math.min(2, window.devicePixelRatio || 1));
+      return {
+        cssWidth: canvas.clientWidth,
+        cssHeight: canvas.clientHeight,
+        backingWidth: canvas.width,
+        backingHeight: canvas.height,
+        expectedRatio,
+      };
+    });
+    expect(Math.abs(registration.backingWidth - Math.round(registration.cssWidth * registration.expectedRatio))).toBeLessThanOrEqual(1);
+    expect(Math.abs(registration.backingHeight - Math.round(registration.cssHeight * registration.expectedRatio))).toBeLessThanOrEqual(1);
+
+    const lacquerBox = await lacquer.boundingBox();
+    if (!lacquerBox) throw new Error("Advanced scratch canvas is not laid out");
+    const alphaBefore = await lacquer.evaluate((canvas: HTMLCanvasElement) => {
+      const context = canvas.getContext("2d")!;
+      return context.getImageData(Math.floor(canvas.width / 2), Math.floor(canvas.height / 2), 1, 1).data[3];
+    });
+    await page.mouse.move(lacquerBox.x + lacquerBox.width / 2, lacquerBox.y + lacquerBox.height / 2);
+    await page.mouse.down();
+    await page.mouse.up();
+    const alphaAfter = await lacquer.evaluate((canvas: HTMLCanvasElement) => {
+      const context = canvas.getContext("2d")!;
+      return context.getImageData(Math.floor(canvas.width / 2), Math.floor(canvas.height / 2), 1, 1).data[3];
+    });
+    expect(alphaAfter).toBeLessThan(alphaBefore);
+
     expect(fixture.startBodies[0]).toMatchObject({ mode: "ADVANCED", alarmCount: 3 });
   });
 
