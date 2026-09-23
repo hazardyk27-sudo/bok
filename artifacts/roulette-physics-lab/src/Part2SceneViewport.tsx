@@ -945,11 +945,22 @@ function addMeasuredDeflectorColliders(
 ) {
   const colliders: RAPIER.Collider[] = [];
   for (const descriptor of descriptors) {
+    // The visual prominence scan can include the sloped apron outside the
+    // actual inward edge. Never let the cuboid approximation protrude into
+    // the validated outer race, where it can strike the ball at launch.
+    const effectiveOuterRadius = Math.min(
+      descriptor.outerRadius,
+      PART2_ACTUAL_INWARD_EDGE_RADIUS,
+    );
+    const effectiveInnerRadius = Math.min(
+      descriptor.innerRadius,
+      effectiveOuterRadius - BALL_RADIUS * 0.5,
+    );
     const centerRadius =
-      (descriptor.innerRadius + descriptor.outerRadius) / 2;
+      (effectiveInnerRadius + effectiveOuterRadius) / 2;
     const halfRadialDepth = Math.max(
-      BALL_RADIUS * 0.45,
-      (descriptor.outerRadius - descriptor.innerRadius) / 2,
+      BALL_RADIUS * 0.25,
+      (effectiveOuterRadius - effectiveInnerRadius) / 2,
     );
     const halfHeight = Math.max(
       0.02,
@@ -4343,7 +4354,11 @@ export function Part2SceneViewport({
               );
             }
 
-            if (deflectorPairContact && !deflectorContactActive) {
+            if (
+              inwardTransitionTime !== null &&
+              deflectorPairContact &&
+              !deflectorContactActive
+            ) {
               deflectorContactCount += 1;
               firstDeflectorContactTime ??= elapsed;
               impactSpeedBefore ??= previousSpeed;
