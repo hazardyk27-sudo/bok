@@ -350,6 +350,18 @@ describe("authoritative roulette physics config", () => {
       "const PART3_OUTER_SPIN_ANGULAR_DAMPING = 0.01",
     );
     expect(part3ViewportSource).toContain(
+      "const PART6_LAUNCH_SPEED_BASE = 5.0",
+    );
+    expect(part3ViewportSource).toContain(
+      "const PART6_LAUNCH_SPEED_VARIATION = 0.15",
+    );
+    expect(part3ViewportSource).toContain(
+      "const PART6_BALL_SPIN_FACTOR = 1.0",
+    );
+    expect(part3ViewportSource).toContain(
+      ".multiplyScalar(PART6_BALL_SPIN_FACTOR / BALL_RADIUS)",
+    );
+    expect(part3ViewportSource).toContain(
       "const activePart3TrackFriction = outerLaneSpinOnly",
     );
     expect(part3ViewportSource).toContain(
