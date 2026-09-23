@@ -124,6 +124,27 @@ const PART2_CHANNEL_FLOOR_OUTER_INDEX = 7;
 const PART2_CHANNEL_OUTER_WALL_FOOT_INDEX = 8;
 const PART2_CHANNEL_BOTTOM_THICKNESS = 0.12;
 const PART3_LAUNCH_RADIUS = PART2_ACTUAL_DARK_TRACK_LAUNCH_RADIUS;
+const PART6_OUTER_RACE_PLATEAU_SLOPE = 0.05;
+const PART6_OUTER_RACE_LAUNCH_SURFACE_Y = THREE.MathUtils.lerp(
+  PART2_CHANNEL_PROFILE[5][1],
+  PART2_CHANNEL_PROFILE[6][1],
+  (PART3_LAUNCH_RADIUS - PART2_CHANNEL_PROFILE[5][0]) /
+    (PART2_CHANNEL_PROFILE[6][0] - PART2_CHANNEL_PROFILE[5][0]),
+);
+const PART6_OUTER_RACE_CHANNEL_PROFILE: readonly (readonly [number, number])[] = [
+  ...PART2_CHANNEL_PROFILE.slice(0, 6),
+  [
+    2.37,
+    PART6_OUTER_RACE_LAUNCH_SURFACE_Y +
+      (2.37 - PART3_LAUNCH_RADIUS) * PART6_OUTER_RACE_PLATEAU_SLOPE,
+  ],
+  [
+    2.41,
+    PART6_OUTER_RACE_LAUNCH_SURFACE_Y +
+      (2.41 - PART3_LAUNCH_RADIUS) * PART6_OUTER_RACE_PLATEAU_SLOPE,
+  ],
+  ...PART2_CHANNEL_PROFILE.slice(6),
+];
 const PART3_RETAINING_RIM_INNER_RADIUS = PART2_ACTUAL_WOOD_INNER_RADIUS;
 const PART4_DEFLECTOR_SCAN_INNER_RADIUS =
   ROULETTE_POCKET_FLOOR_OUTER_RADIUS + 0.02;
@@ -1808,16 +1829,17 @@ function part2ChannelNormalAt(radius: number, angle: number) {
 function makePart2RaceChannelTrimesh(
   verticalOffset = 0,
   openInnerRadius: number | null = null,
+  sourceProfile: readonly (readonly [number, number])[] = PART2_CHANNEL_PROFILE,
 ) {
   const vertices: number[] = [];
   const indices: number[] = [];
   const segments = 128;
   const activeProfile: Array<[number, number]> =
     openInnerRadius === null
-      ? PART2_CHANNEL_PROFILE.map(([radius, y]) => [radius, y])
+      ? sourceProfile.map(([radius, y]) => [radius, y])
       : [
           [openInnerRadius, part2ChannelSurfaceAt(openInnerRadius).y],
-          ...PART2_CHANNEL_PROFILE
+          ...sourceProfile
             .filter(([radius]) => radius > openInnerRadius)
             .map(([radius, y]) => [radius, y] as [number, number]),
         ];
@@ -2106,7 +2128,7 @@ export function Part2SceneViewport({
     // the 0.056 wu ball is geometrically touching the measured wall.
     const activeBallSoftCcdPrediction =
       validationMode === 'part3' && outerLaneSpinOnly
-        ? BALL_RADIUS * 0.2
+        ? 0
         : BALL_RADIUS * 2.5;
     let dropStarted = false;
     let dropSteps = 0;
@@ -6121,6 +6143,9 @@ export function Part2SceneViewport({
                 part6FullSpinRouteActive
                   ? PART2_ACTUAL_INWARD_EDGE_RADIUS
                   : null,
+                part6FullSpinRouteActive
+                  ? PART6_OUTER_RACE_CHANNEL_PROFILE
+                  : PART2_CHANNEL_PROFILE,
               );
               part3TrackCollider = world.createCollider(
                 RAPIER.ColliderDesc.trimesh(
@@ -6374,9 +6399,6 @@ export function Part2SceneViewport({
           );
           ballBody.enableCcd(true);
           ballBody.setSoftCcdPrediction(activeBallSoftCcdPrediction);
-          if (validationMode === 'part3' && outerLaneSpinOnly) {
-            ballBody.setAdditionalSolverIterations(8);
-          }
           ccdEnabled = true;
           const ballColliderDescriptor = RAPIER.ColliderDesc.ball(BALL_RADIUS)
               .setFriction(validationMode === 'part3' ? activePart3TrackFriction : 0.42)
