@@ -954,6 +954,15 @@ One audit-only instruction was mistakenly sent to Replit before this rule was cl
 - menu, game routes and slot shell can now extend beyond the viewport instead of being clipped
 - removed the Cadı Kazan landscape-only height/overflow trap so short landscape screens can scroll vertically when needed
 
+### Stage 24 — Root scratch registration fix + desktop Advanced 25 rebuild
+- Root cause targeted for cursor/finger scratch offset: scratch canvas backing-store dimensions could drift from the live CSS box after responsive/layout/font/orientation changes because canvases were only sized at construction.
+- ScratchSurface now observes its interaction canvas with ResizeObserver. When the rendered size changes, all scratch/debris backing stores are resized to the current CSS size × DPR, material layers are repainted, and the normalized abrasion trail is replayed so visible scratch registration remains aligned.
+- E2E now guards both backing-store/CSS-size registration and that first contact at the visual canvas center actually reduces lacquer alpha at that same center.
+- Desktop Advanced 25 was rebuilt again with a final override placed after legacy/Figma precision rules; this prevents older CSS from silently overriding the intended design.
+- New desktop card target: centered horizontal ticket, compact ~28% left info rail, dominant ~72% 5×5 board, no giant empty parchment area, payout HUD kept separate.
+- Changes were limited to Cadı Kazan CSS, ScratchSurface, and Cadı Kazan E2E; Roulette and Slot source files were not modified.
+- Merged into GitHub `main` via PR #13, merge commit `ec469e7`.
+
 ### Stage 23 — Advanced 25 desktop matches approved mobile card
 - Desktop Advanced 25 now uses the same approved horizontal card language as mobile: compact ~30% information rail on the left and dominant ~70% 5×5 scratch field on the right.
 - Desktop ticket uses the same parchment/gold hierarchy and keeps the payout HUD separate on the right.
