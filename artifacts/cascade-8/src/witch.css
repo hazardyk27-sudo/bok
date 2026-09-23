@@ -4516,13 +4516,209 @@
   overflow: hidden;
   border: 0 !important;
   border-radius: 5px !important;
+  container-type: inline-size;
   background:
-    url("/cadi-kazan/bcs-standard5-card.webp") center / 100% 100% no-repeat !important;
+    radial-gradient(circle at 20% 44%, rgba(255,255,255,.16), transparent 24%),
+    linear-gradient(180deg, #f8cc51 0%, #ffd75c 54%, #f4c343 100%) !important;
   box-shadow:
     0 24px 54px rgba(0, 0, 0, .46),
     0 4px 12px rgba(0, 0, 0, .30) !important;
   transform: translate(-50%, -50%) !important;
 }
+
+
+.witch-bcs-card-art {
+  display: none;
+}
+
+.witch-page.is-standard-theme .witch-ticket:not(.is-advanced) .witch-bcs-card-art {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  display: block;
+  overflow: hidden;
+  color: #17130f;
+  background:
+    radial-gradient(circle at 18% 42%, rgba(255,255,255,.16), transparent 24%),
+    linear-gradient(180deg, #f8ce57 0%, #ffd85f 52%, #f4c443 100%);
+  pointer-events: none;
+}
+
+.witch-page.is-standard-theme .witch-ticket:not(.is-advanced) .witch-bcs-card-art::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  opacity: .16;
+  background:
+    repeating-linear-gradient(0deg, rgba(120,73,20,.08) 0 1px, transparent 1px 3px),
+    linear-gradient(90deg, transparent, rgba(255,255,255,.16) 34%, transparent 67%);
+  mix-blend-mode: multiply;
+  pointer-events: none;
+}
+
+.witch-page.is-standard-theme .witch-ticket:not(.is-advanced) .witch-bcs-topbar {
+  position: absolute;
+  z-index: 2;
+  top: 0;
+  right: 0;
+  left: 0;
+  display: flex;
+  align-items: center;
+  height: 17.6%;
+  padding: 0 3.4%;
+  color: #fff;
+  background: linear-gradient(180deg, #cf2d22 0%, #c6261d 100%);
+  border-bottom: 1px solid rgba(139,26,20,.38);
+  box-shadow: inset 0 -1px 0 rgba(255,214,111,.35);
+  font-family: Impact, "Arial Black", "DM Sans", sans-serif;
+  font-size: 3.15cqw;
+  font-weight: 900;
+  letter-spacing: .035em;
+  line-height: 1;
+  text-shadow: 0 2px 0 rgba(121,23,17,.72);
+  white-space: nowrap;
+}
+
+.witch-page.is-standard-theme .witch-ticket:not(.is-advanced) .witch-bcs-main {
+  position: absolute;
+  z-index: 2;
+  top: 17.6%;
+  right: 0;
+  bottom: 13.7%;
+  left: 0;
+}
+
+.witch-page.is-standard-theme .witch-ticket:not(.is-advanced) .witch-bcs-copy {
+  position: absolute;
+  top: 8%;
+  bottom: 4%;
+  left: 3.4%;
+  display: grid;
+  width: 29.8%;
+  grid-template-rows: auto auto auto 1fr auto;
+  align-content: start;
+  justify-items: center;
+  min-width: 0;
+  text-align: center;
+}
+
+.witch-page.is-standard-theme .witch-ticket:not(.is-advanced) .witch-bcs-script {
+  width: 100%;
+  margin-bottom: .2cqw;
+  color: #17130f;
+  font-family: "Brush Script MT", "Segoe Script", "Snell Roundhand", cursive;
+  font-size: 3.25cqw;
+  font-weight: 800;
+  line-height: .92;
+  letter-spacing: -.045em;
+  transform: rotate(-2deg);
+  text-shadow:
+    0 1px 0 #fff6ce,
+    1px 0 0 #fff6ce,
+    -1px 0 0 #fff6ce;
+  white-space: nowrap;
+}
+
+.witch-page.is-standard-theme .witch-ticket:not(.is-advanced) .witch-bcs-name {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: .45cqw;
+  width: 100%;
+  margin-top: .1cqw;
+  color: #fff8dc;
+  font-family: Impact, "Arial Black", "DM Sans", sans-serif;
+  font-size: 2.65cqw;
+  font-weight: 900;
+  letter-spacing: .055em;
+  line-height: 1;
+  -webkit-text-stroke: .12cqw #d85b38;
+  paint-order: stroke fill;
+  text-shadow: 0 .18cqw 0 rgba(117,49,31,.22);
+  white-space: nowrap;
+}
+
+.witch-page.is-standard-theme .witch-ticket:not(.is-advanced) .witch-bcs-name i {
+  position: relative;
+  top: -.1cqw;
+  color: #14110e;
+  font-family: Georgia, serif;
+  font-size: 2.15cqw;
+  font-style: normal;
+  -webkit-text-stroke: 0;
+  text-shadow: none;
+}
+
+.witch-page.is-standard-theme .witch-ticket:not(.is-advanced) .witch-bcs-law {
+  width: 82%;
+  margin-top: .55cqw;
+  padding: .35cqw .25cqw .28cqw;
+  border-top: .16cqw solid #1c1813;
+  border-bottom: .16cqw solid #1c1813;
+  color: #1a1712;
+  font-family: Impact, "Arial Black", "DM Sans", sans-serif;
+  font-size: 1.45cqw;
+  font-weight: 900;
+  letter-spacing: .06em;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.witch-page.is-standard-theme .witch-ticket:not(.is-advanced) .witch-bcs-phone {
+  align-self: end;
+  margin-bottom: .2cqw;
+  color: #fff7df;
+  font-family: Impact, "Arial Black", "DM Sans", sans-serif;
+  font-size: 3.15cqw;
+  font-weight: 900;
+  letter-spacing: .035em;
+  line-height: .95;
+  -webkit-text-stroke: .11cqw #e26445;
+  paint-order: stroke fill;
+  text-shadow: 0 .16cqw 0 rgba(115,51,31,.20);
+  white-space: nowrap;
+}
+
+.witch-page.is-standard-theme .witch-ticket:not(.is-advanced) .witch-bcs-call {
+  color: #181410;
+  font-family: Impact, "Arial Black", "DM Sans", sans-serif;
+  font-size: 1.35cqw;
+  font-weight: 900;
+  letter-spacing: .055em;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.witch-page.is-standard-theme .witch-ticket:not(.is-advanced) .witch-bcs-bottombar {
+  position: absolute;
+  z-index: 2;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  display: flex;
+  align-items: center;
+  height: 13.7%;
+  padding: 0 3.4%;
+  color: #fff;
+  background: linear-gradient(180deg, #cb2b20 0%, #c3261c 100%);
+  border-top: 1px solid rgba(139,26,20,.34);
+  font-family: Impact, "Arial Black", "DM Sans", sans-serif;
+  font-size: 2.55cqw;
+  font-weight: 900;
+  letter-spacing: .045em;
+  line-height: 1;
+  text-shadow: 0 2px 0 rgba(121,23,17,.68);
+  white-space: nowrap;
+}
+
+.witch-page.is-standard-theme .witch-ticket:not(.is-advanced) .witch-bcs-bottombar b {
+  margin: 0 1.1cqw;
+  color: #ffe27b;
+  font-size: 1.65cqw;
+}
+
+/* The reference art is now built in CSS/HTML so the card can never disappear
+   because of a broken raster asset. Interactive scratch cells stay above it. */
 
 .witch-page.is-standard-theme .witch-ticket:not(.is-advanced)::before,
 .witch-page.is-standard-theme .witch-ticket:not(.is-advanced)::after,
