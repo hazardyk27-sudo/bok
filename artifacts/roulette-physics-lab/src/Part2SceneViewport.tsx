@@ -1267,13 +1267,15 @@ function addMeasuredOuterWallColliders(
   };
 }
 
-function buildPocketFloorTrimesh() {
+function buildPocketFloorTrimesh(
+  outerLipY: number = POCKET_OUTER_LIP_Y,
+) {
   const vertices: number[] = [];
   const indices: number[] = [];
   const topProfile: Array<[number, number]> = [
     [POCKET_FLOOR_INNER_RADIUS, POCKET_FLOOR_Y],
     [POCKET_FLOOR_OUTER_RADIUS, POCKET_FLOOR_Y],
-    [POCKET_OUTER_LIP_RADIUS, POCKET_OUTER_LIP_Y],
+    [POCKET_OUTER_LIP_RADIUS, outerLipY],
   ];
   const bottomProfile = topProfile.map(
     ([radius, height]) =>
@@ -1359,9 +1361,13 @@ function addKinematicPocketInnerGuard(
   );
 }
 
-function addKinematicPocketSystem(world: RAPIER.World, body: RAPIER.RigidBody) {
+function addKinematicPocketSystem(
+  world: RAPIER.World,
+  body: RAPIER.RigidBody,
+  outerLipY: number = POCKET_OUTER_LIP_Y,
+) {
   const colliders: RAPIER.Collider[] = [];
-  const floorMesh = buildPocketFloorTrimesh();
+  const floorMesh = buildPocketFloorTrimesh(outerLipY);
   colliders.push(
     world.createCollider(
       RAPIER.ColliderDesc.trimesh(
@@ -3965,9 +3971,14 @@ export function Part2SceneViewport({
           const alpha =
             (radius - POCKET_FLOOR_OUTER_RADIUS) /
             (POCKET_OUTER_LIP_RADIUS - POCKET_FLOOR_OUTER_RADIUS);
+          const activePocketOuterLipY =
+            part6FullSpinRouteActive &&
+            part3BowlBridgeProfile.length > 0
+              ? part3BowlBridgeProfile[0][1]
+              : POCKET_OUTER_LIP_Y;
           return THREE.MathUtils.lerp(
             POCKET_FLOOR_Y,
-            POCKET_OUTER_LIP_Y,
+            activePocketOuterLipY,
             alpha,
           );
         }
@@ -6448,7 +6459,16 @@ export function Part2SceneViewport({
                 }),
             );
               if (validationMode === 'part3') {
-               part3PocketColliders = addKinematicPocketSystem(world, rotorBody);
+               const activePocketOuterLipY =
+                 part6FullSpinRouteActive &&
+                 part3BowlBridgeProfile.length > 0
+                   ? part3BowlBridgeProfile[0][1]
+                   : POCKET_OUTER_LIP_Y;
+               part3PocketColliders = addKinematicPocketSystem(
+                 world,
+                 rotorBody,
+                 activePocketOuterLipY,
+               );
                part3PocketColliders.forEach((collider, index) => {
                  part3ColliderRoles.set(
                    collider.handle,
