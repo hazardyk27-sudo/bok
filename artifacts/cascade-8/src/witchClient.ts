@@ -36,8 +36,26 @@ type CadiKazanMutation = {
 
 const API_BASE = "/api/cadi-kazan";
 
-const formatCredits = (cents: number) => (cents / 100).toLocaleString("tr-TR", {
-  minimumFractionDigits: 2,
+const formatMoney = (cents: number, options: { compactInteger?: boolean; signed?: boolean } = {}) => {
+  const absolute = Math.abs(cents) / 100;
+  const minimumFractionDigits = options.compactInteger && Number.isInteger(absolute) ? 0 : 2;
+  const amount = absolute.toLocaleString("en-US", {
+    minimumFractionDigits,
+    maximumFractionDigits: 2,
+  });
+  const sign = options.signed ? (cents > 0 ? "+" : cents < 0 ? "−" : "") : (cents < 0 ? "−" : "");
+  return `${sign}${amount}`;
+};
+
+const parseStakeDollars = (value: string) => {
+  const normalized = value.trim().replace(/[$\s]/g, "").replace(/,/g, "");
+  const dollars = Number(normalized);
+  return Number.isFinite(dollars) ? dollars : NaN;
+};
+
+const formatStakeInput = (dollars: number) => dollars.toLocaleString("en-US", {
+  useGrouping: false,
+  minimumFractionDigits: Number.isInteger(dollars) ? 0 : 2,
   maximumFractionDigits: 2,
 });
 
@@ -46,13 +64,7 @@ const formatMultiplier = (basisPoints: number) => `${(basisPoints / 100).toLocal
   maximumFractionDigits: 2,
 })}x`;
 
-const formatTicketPrice = (cents: number) => {
-  const credits = cents / 100;
-  return "$" + credits.toLocaleString("tr-TR", {
-    minimumFractionDigits: Number.isInteger(credits) ? 0 : 2,
-    maximumFractionDigits: 2,
-  });
-};
+const formatTicketPrice = (cents: number) => formatMoney(cents, { compactInteger: true });
 
 const newIdempotencyKey = (prefix: string) => `${prefix}-${crypto.randomUUID()}-${Date.now()}`;
 
@@ -71,8 +83,7 @@ export const CADI_KAZAN_MARKUP = `
       <section class="witch-appstats" aria-label="Cadı Kazan durumu">
         <div class="witch-stat witch-stat-balance">
           <span>BAKİYE</span>
-          <strong data-witch-balance>0,00</strong>
-          <small>CR</small>
+          <strong data-witch-balance>$0.00</strong>
         </div>
         <div class="witch-stat">
           <span>ROUND</span>
@@ -133,7 +144,7 @@ export const CADI_KAZAN_MARKUP = `
           <div class="witch-ticket-meta-row">
             <span data-witch-ticket-mode>STANDARD 5</span>
             <i aria-hidden="true">✦</i>
-            <span><b data-witch-ticket-stake>0,00 CR</b> · <b data-witch-ticket-bombs>01 BOMB</b></span>
+            <span><b data-witch-ticket-stake>$0.00</b> · <b data-witch-ticket-bombs>01 BOMB</b></span>
           </div>
 
           <div class="witch-board-wrap">
@@ -156,7 +167,7 @@ export const CADI_KAZAN_MARKUP = `
 
         <div class="witch-payout-hero">
           <strong class="witch-multiplier" data-witch-multiplier>0.00x</strong>
-          <div class="witch-payout-amount" data-witch-payout>0,00 kredi</div>
+          <div class="witch-payout-amount" data-witch-payout>$0.00</div>
           <div class="witch-payout-net">NET <b data-witch-net>—</b></div>
         </div>
 
@@ -198,10 +209,18 @@ export const CADI_KAZAN_MARKUP = `
         <div class="witch-stake-stepper">
           <button type="button" data-witch-stake-step="-1" aria-label="Stake azalt">−</button>
           <div class="witch-input-wrap">
-            <input data-witch-stake type="number" min="1" step="0.01" value="1.00" inputmode="decimal" aria-label="Bilet bedeli">
-            <i>CR</i>
+            <i>$</i>
+            <input data-witch-stake type="text" value="1.00" inputmode="decimal" autocomplete="off" aria-label="Bilet bedeli">
           </div>
           <button type="button" data-witch-stake-step="1" aria-label="Stake artır">+</button>
+        </div>
+        <div class="witch-stake-presets" aria-label="Hızlı stake seçenekleri">
+          <button type="button" data-witch-stake-preset="25">$25</button>
+          <button type="button" data-witch-stake-preset="50">$50</button>
+          <button type="button" data-witch-stake-preset="100">$100</button>
+          <button type="button" data-witch-stake-preset="250">$250</button>
+          <button type="button" data-witch-stake-preset="500">$500</button>
+          <button type="button" data-witch-stake-preset="MAX">MAX</button>
         </div>
       </div>
 
@@ -232,10 +251,16 @@ export const CADI_KAZAN_MARKUP = `
       <div class="witch-mobile-amount">
         <span data-witch-mobile-caption>KAZANÇ</span>
         <strong data-witch-mobile-multiplier>0.00x</strong>
-        <b data-witch-mobile-payout>0,00 kredi</b>
+        <b data-witch-mobile-payout>$0.00</b>
       </div>
       <button class="witch-cashout-button" type="button" data-witch-action="cashout">CASH OUT <b>↗</b></button>
       <button class="witch-secondary-button" type="button" data-witch-action="new" hidden>YENİ KART</button>
+    </div>
+
+    <div class="witch-rotate-hint" aria-hidden="true">
+      <span>↻</span>
+      <strong>TELEFONU YATAY ÇEVİR</strong>
+      <small>Cadı Kazan mobilde yatay kullanım için tasarlandı.</small>
     </div>
   </main>
 `;
@@ -273,26 +298,42 @@ export class WitchClient {
     });
     this.root.querySelectorAll<HTMLButtonElement>("[data-witch-stake-step]").forEach((button) => {
       button.addEventListener("click", () => {
-        if (this.busy || this.state?.round) return;
+        if (this.busy || this.state?.round?.status === "ACTIVE") return;
         const input = this.root.querySelector<HTMLInputElement>("[data-witch-stake]");
         if (!input) return;
         const direction = Number(button.dataset.witchStakeStep ?? 0);
-        const current = Number(input.value || 1);
-        const next = Math.max(1, current + direction);
-        input.value = Number.isInteger(next) ? String(next) : next.toFixed(2);
+        const current = parseStakeDollars(input.value || "1");
+        const safeCurrent = Number.isFinite(current) ? current : 1;
+        const step = safeCurrent >= 1000 ? 100 : safeCurrent >= 250 ? 25 : safeCurrent >= 100 ? 10 : safeCurrent >= 25 ? 5 : 1;
+        const next = Math.max(1, safeCurrent + direction * step);
+        input.value = formatStakeInput(next);
         this.render();
       });
     });
     this.root.querySelectorAll<HTMLButtonElement>("[data-witch-stake-preset]").forEach((button) => {
       button.addEventListener("click", () => {
-        if (this.busy || this.state?.round) return;
+        if (this.busy || this.state?.round?.status === "ACTIVE") return;
         const input = this.root.querySelector<HTMLInputElement>("[data-witch-stake]");
         if (!input) return;
-        const next = Math.max(1, Number(button.dataset.witchStakePreset ?? 1));
-        input.value = next.toFixed(2);
+        const preset = button.dataset.witchStakePreset ?? "1";
+        const walletDollars = (this.state?.wallet.balanceCents ?? 0) / 100;
+        const next = preset === "MAX" ? Math.max(1, walletDollars) : Math.max(1, Number(preset));
+        input.value = formatStakeInput(next);
         this.render();
       });
     });
+    const stakeInput = this.root.querySelector<HTMLInputElement>("[data-witch-stake]");
+    stakeInput?.addEventListener("blur", () => {
+      const parsed = parseStakeDollars(stakeInput.value);
+      stakeInput.value = formatStakeInput(Number.isFinite(parsed) ? Math.max(1, parsed) : 1);
+    });
+    stakeInput?.addEventListener("keydown", (event) => {
+      if (event.key === "Enter") {
+        event.preventDefault();
+        void this.startRound();
+      }
+    });
+
     this.root.querySelector<HTMLButtonElement>("[data-witch-action='start']")?.addEventListener("click", () => void this.startRound());
     this.root.querySelectorAll<HTMLButtonElement>("[data-witch-action='cashout']").forEach((button) => {
       button.addEventListener("click", () => void this.cashOut());
@@ -322,10 +363,15 @@ export class WitchClient {
   private async startRound() {
     const stakeInput = this.root.querySelector<HTMLInputElement>("[data-witch-stake]");
     const alarmInput = this.root.querySelector<HTMLSelectElement>("[data-witch-alarms]");
-    const stakeCents = Math.round(Number(stakeInput?.value ?? 0) * 100);
+    const stakeDollars = parseStakeDollars(stakeInput?.value ?? "");
+    const stakeCents = Math.round(stakeDollars * 100);
     const alarmCount = this.mode === "STANDARD" ? 1 : Number(alarmInput?.value ?? 1);
     if (!Number.isSafeInteger(stakeCents) || stakeCents < 100) {
-      this.setFeedback("Bilet bedeli en az 1 kredi olmalı.");
+      this.setFeedback("Bilet bedeli en az $1.00 olmalı.");
+      return;
+    }
+    if (this.state && stakeCents > this.state.wallet.balanceCents) {
+      this.setFeedback(`Yetersiz bakiye. Kullanılabilir: ${formatMoney(this.state.wallet.balanceCents)}`);
       return;
     }
     this.setFeedback("Bilet server’da mühürleniyor…");
@@ -510,7 +556,7 @@ export class WitchClient {
     const roundLabel = this.root.querySelector<HTMLElement>("[data-witch-round]");
     const roundStatus = this.root.querySelector<HTMLElement>("[data-witch-round-status]");
     const roundNote = this.root.querySelector<HTMLElement>("[data-witch-round-note]");
-    if (balance) balance.textContent = formatCredits(state?.wallet.balanceCents ?? 0);
+    if (balance) balance.textContent = formatMoney(state?.wallet.balanceCents ?? 0);
     if (roundLabel) roundLabel.textContent = round ? `#${round.id.slice(0, 8).toUpperCase()}` : "—";
     if (roundStatus) roundStatus.textContent = round?.status ?? "HAZIR";
     if (roundNote) roundNote.textContent = round ? (round.status === "ACTIVE" ? "KART AÇIK" : "ROUND KAPALI") : "MASA BOŞ";
@@ -528,13 +574,15 @@ export class WitchClient {
     const stakeInput = this.root.querySelector<HTMLInputElement>("[data-witch-stake]");
     if (stakeInput) stakeInput.disabled = this.busy || hasActiveRound;
     const start = this.root.querySelector<HTMLButtonElement>("[data-witch-action='start']");
-    if (start) start.disabled = this.busy || hasRound;
+    if (start) start.disabled = this.busy || hasActiveRound;
     this.root.querySelectorAll<HTMLButtonElement>("[data-witch-stake-step], [data-witch-stake-preset]").forEach((button) => {
-      button.disabled = this.busy || hasRound;
+      button.disabled = this.busy || hasActiveRound;
     });
     this.root.querySelectorAll<HTMLButtonElement>("[data-witch-stake-preset]").forEach((button) => {
-      const preset = Number(button.dataset.witchStakePreset ?? 0);
-      button.classList.toggle("is-selected", Math.abs(Number(stakeInput?.value ?? 0) - preset) < 0.001);
+      const presetValue = button.dataset.witchStakePreset ?? "";
+      const inputValue = parseStakeDollars(stakeInput?.value ?? "");
+      const preset = presetValue === "MAX" ? (state?.wallet.balanceCents ?? 0) / 100 : Number(presetValue);
+      button.classList.toggle("is-selected", Number.isFinite(inputValue) && Math.abs(inputValue - preset) < 0.001);
     });
 
     const empty = this.root.querySelector<HTMLElement>("[data-witch-empty]");
@@ -635,7 +683,7 @@ export class WitchClient {
     if (playMode) playMode.textContent = round.mode === "STANDARD" ? "STANDARD 5 / 01 BOMB" : `ADVANCED 25 / ${String(round.alarmCount).padStart(2, "0")} BOMBS`;
     if (playTitle) playTitle.textContent = round.status === "BUST" ? "Bomba açıldı." : round.status === "CASHED_OUT" ? "Kazanç alındı." : round.status === "COMPLETED" ? "Kart tamamlandı." : "Folyo kazındıkça alttaki sonuç görünür.";
     if (ticketMode) ticketMode.textContent = round.mode === "STANDARD" ? "STANDARD 5" : "ADVANCED 25";
-    if (ticketStake) ticketStake.textContent = `${formatCredits(round.stakeCents)} CR`;
+    if (ticketStake) ticketStake.textContent = formatMoney(round.stakeCents);
     if (ticketBombs) ticketBombs.textContent = `${String(round.alarmCount).padStart(2, "0")} ${round.alarmCount === 1 ? "BOMB" : "BOMBS"}`;
     if (ticketPrice) ticketPrice.textContent = formatTicketPrice(round.stakeCents);
     if (ticketId) ticketId.textContent = `#${round.id.slice(0, 8).toUpperCase()}`;
@@ -662,13 +710,13 @@ export class WitchClient {
     const displayedPayout = round ? (round.status === "ACTIVE" ? round.currentCashoutCents : round.payoutCents) : 0;
     const multiplier = round ? formatMultiplier(round.currentMultiplierBps) : "0.00x";
     this.root.querySelectorAll<HTMLElement>("[data-witch-multiplier], [data-witch-mobile-multiplier]").forEach((element) => { element.textContent = multiplier; });
-    this.root.querySelectorAll<HTMLElement>("[data-witch-payout], [data-witch-mobile-payout]").forEach((element) => { element.textContent = `${formatCredits(displayedPayout)} kredi`; });
-    const stake = round ? `${formatCredits(round.stakeCents)} CR` : "—";
-    const net = round ? `${formatCredits(displayedPayout - round.stakeCents)} CR` : "—";
+    this.root.querySelectorAll<HTMLElement>("[data-witch-payout], [data-witch-mobile-payout]").forEach((element) => { element.textContent = formatMoney(displayedPayout); });
+    const stake = round ? formatMoney(round.stakeCents) : "—";
+    const net = round ? formatMoney(displayedPayout - round.stakeCents, { signed: true }) : "—";
     this.root.querySelectorAll<HTMLElement>("[data-witch-stake-display]").forEach((element) => { element.textContent = stake; });
     this.root.querySelectorAll<HTMLElement>("[data-witch-net]").forEach((element) => { element.textContent = net; });
     const payoutNote = this.root.querySelector<HTMLElement>("[data-witch-payout-note]");
-    if (payoutNote) payoutNote.textContent = !round ? "Güvenli bir alan açıldığında cash out aktif olur." : round.status === "ACTIVE" ? (round.revealedSafeCount > 0 ? "Kazancı şimdi alabilir veya devam edebilirsin." : "İlk güvenli alan cash out’u açar.") : round.status === "BUST" ? "Bomba kartı kapattı. Payout: 0 kredi." : "Bu round server tarafından kapatıldı.";
+    if (payoutNote) payoutNote.textContent = !round ? "Güvenli bir alan açıldığında cash out aktif olur." : round.status === "ACTIVE" ? (round.revealedSafeCount > 0 ? "Kazancı şimdi alabilir veya devam edebilirsin." : "İlk güvenli alan cash out’u açar.") : round.status === "BUST" ? "Bomba kartı kapattı. Payout: $0.00." : "Bu round server tarafından kapatıldı.";
     this.root.querySelectorAll<HTMLButtonElement>("[data-witch-action='cashout']").forEach((button) => {
       button.disabled = this.busy || !round || round.status !== "ACTIVE" || round.revealedSafeCount < 1;
     });
