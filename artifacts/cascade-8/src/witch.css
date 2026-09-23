@@ -4659,3 +4659,41 @@
     border-color: rgba(247, 201, 68, .50);
   }
 }
+
+
+/* Standard 5 result art must not inherit the legacy GOLD/BOMBA sculptures. */
+.witch-page.is-standard-theme .witch-ticket:not(.is-advanced) .witch-cell.is-safe .witch-cell-result-layer,
+.witch-page.is-standard-theme .witch-ticket:not(.is-advanced) .witch-cell.is-bomb .witch-cell-result-layer {
+  background: #fff !important;
+}
+
+.witch-page.is-standard-theme .witch-ticket:not(.is-advanced) .witch-cell.is-safe .witch-cell-content,
+.witch-page.is-standard-theme .witch-ticket:not(.is-advanced) .witch-cell.is-bomb .witch-cell-content {
+  position: absolute !important;
+  inset: 0 !important;
+  width: 100% !important;
+  height: 100% !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  background: #fff !important;
+  box-shadow: none !important;
+  transform: none !important;
+  filter: none !important;
+}
+
+.witch-page.is-standard-theme .witch-ticket:not(.is-advanced) .witch-cell.is-safe .witch-cell-content::before,
+.witch-page.is-standard-theme .witch-ticket:not(.is-advanced) .witch-cell.is-safe .witch-cell-content::after,
+.witch-page.is-standard-theme .witch-ticket:not(.is-advanced) .witch-cell.is-bomb .witch-cell-content::before,
+.witch-page.is-standard-theme .witch-ticket:not(.is-advanced) .witch-cell.is-bomb .witch-cell-content::after {
+  display: none !important;
+  content: none !important;
+}
+
+.witch-page.is-standard-theme .witch-ticket:not(.is-advanced) .witch-cell-artwork {
+  width: 100% !important;
+  height: 100% !important;
+  object-fit: contain !important;
+  object-position: center !important;
+  filter: none !important;
+  transform: none !important;
+}
