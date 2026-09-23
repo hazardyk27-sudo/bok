@@ -1756,7 +1756,7 @@ function makePart2RaceChannelTrimesh(
   const segments = 128;
   const activeProfile: Array<[number, number]> =
     openInnerRadius === null
-      ? activeProfile.map(([radius, y]) => [radius, y])
+      ? PART2_CHANNEL_PROFILE.map(([radius, y]) => [radius, y])
       : [
           [openInnerRadius, part2ChannelSurfaceAt(openInnerRadius).y],
           ...PART2_CHANNEL_PROFILE
