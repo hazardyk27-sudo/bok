@@ -393,7 +393,7 @@ describe("authoritative roulette physics config", () => {
       "PART6_LAUNCH_SPEED_METERS_PER_SECOND_VARIATION *\n  ROULETTE_WORLD_UNITS_PER_METER",
     );
     expect(part3ViewportSource).toContain(
-      "const PART6_BALL_SPIN_FACTOR = 0.0",
+      "const PART6_BALL_SPIN_FACTOR = 1.0",
     );
     expect(part3ViewportSource).toContain(
       ".multiplyScalar(PART6_BALL_SPIN_FACTOR / BALL_RADIUS)",
