@@ -15,6 +15,7 @@ const RESULT_COMMIT_MIN_DISTANCE_FACTOR = 1.5;
 const MAX_TRAIL_SAMPLES = 1800;
 const MAX_DEBRIS_PARTICLES = 24;
 const MOBILE_DEBRIS_PARTICLES = 12;
+const DEFAULT_BRUSH_RADIUS_PX = 14;
 
 type ScratchLayerName = "lacquer" | "foil" | "base";
 
@@ -45,6 +46,7 @@ type TrailSample = {
 
 export type ScratchSurfaceOptions = {
   abrasion?: Partial<ScratchAbrasionConfig>;
+  brushRadiusPx?: number;
   audio?: AudioManager;
   debrisCanvas?: HTMLCanvasElement;
   resultReady?: boolean;
@@ -60,6 +62,7 @@ export class ScratchSurface {
   private readonly onCommit: () => Promise<void>;
   private readonly audio?: AudioManager;
   private readonly abrasionConfig: ScratchAbrasionConfig;
+  private readonly brushRadiusPx: number;
   private readonly reducedMotion: boolean;
   private readonly debrisCanvas?: HTMLCanvasElement;
   private readonly debrisContext?: CanvasRenderingContext2D;
@@ -107,9 +110,13 @@ export class ScratchSurface {
     const angle = Math.atan2(deltaY, deltaX);
     this.scratchDistancePx += distancePx;
 
+    const localWidth = Math.max(1, this.interactionCanvas.clientWidth);
+    const localHeight = Math.max(1, this.interactionCanvas.clientHeight);
+    const normalizedBrushRadius = this.getBrushRadiusPx(localWidth, localHeight) / Math.max(1, Math.min(localWidth, localHeight));
+
     for (const sample of interpolateScratchPoints(this.lastPoint, point, 0.012)) {
       const depthGain = this.abrasionConfig.depthPerSample * (0.78 + speed * 0.24) * (0.86 + pressure * 0.32);
-      this.progress.sampleCircle(sample.x, sample.y, this.abrasionConfig.brushRadius, depthGain);
+      this.progress.sampleCircle(sample.x, sample.y, normalizedBrushRadius, depthGain);
       this.rememberTrail(sample, angle, speed);
       this.applyThreeLayerAbrasion(sample, angle, speed, this.resultReady);
     }
@@ -153,6 +160,7 @@ export class ScratchSurface {
       fallbackCanvas;
 
     this.abrasionConfig = { ...SCRATCH_ABRASION_CONFIG, ...options.abrasion };
+    this.brushRadiusPx = Math.max(8, options.brushRadiusPx ?? DEFAULT_BRUSH_RADIUS_PX);
     this.progress = new ScratchProgressGrid(22, 14, 1, this.abrasionConfig);
     this.onCommit = options.onCommit;
     this.audio = options.audio;
@@ -356,21 +364,48 @@ export class ScratchSurface {
   }
 
   private pointFromEvent(event: PointerEvent): ScratchPoint {
+    const localWidth = Math.max(1, this.interactionCanvas.clientWidth);
+    const localHeight = Math.max(1, this.interactionCanvas.clientHeight);
+
+    // PointerEvent offsetX/offsetY are expressed in the target canvas' local
+    // coordinate system, so they stay aligned even when the mobile game scene
+    // is rotated by a transformed ancestor.
+    const localX = event.offsetX;
+    const localY = event.offsetY;
+    if (
+      Number.isFinite(localX) &&
+      Number.isFinite(localY) &&
+      localX >= -1 &&
+      localY >= -1 &&
+      localX <= localWidth + 1 &&
+      localY <= localHeight + 1
+    ) {
+      return {
+        x: clamp(localX / localWidth),
+        y: clamp(localY / localHeight),
+      };
+    }
+
+    // Fallback for browsers that do not provide transform-aware offsets.
     const rect = this.interactionCanvas.getBoundingClientRect();
     const portraitLandscapeScene =
       window.matchMedia?.("(max-width: 600px) and (orientation: portrait)").matches ?? false;
-
     if (portraitLandscapeScene) {
       return {
-        x: Math.max(0, Math.min(1, (event.clientY - rect.top) / Math.max(1, rect.height))),
-        y: Math.max(0, Math.min(1, 1 - ((event.clientX - rect.left) / Math.max(1, rect.width)))),
+        x: clamp((event.clientY - rect.top) / Math.max(1, rect.height)),
+        y: clamp(1 - ((event.clientX - rect.left) / Math.max(1, rect.width))),
       };
     }
 
     return {
-      x: Math.max(0, Math.min(1, (event.clientX - rect.left) / Math.max(1, rect.width))),
-      y: Math.max(0, Math.min(1, (event.clientY - rect.top) / Math.max(1, rect.height))),
+      x: clamp((event.clientX - rect.left) / Math.max(1, rect.width)),
+      y: clamp((event.clientY - rect.top) / Math.max(1, rect.height)),
     };
+  }
+
+  private getBrushRadiusPx(width: number, height: number) {
+    const cellLimit = Math.max(8, Math.min(width, height) * 0.34);
+    return Math.min(this.brushRadiusPx, cellLimit);
   }
 
   private applyThreeLayerAbrasion(point: ScratchPoint, angle: number, speed: number, resultReady: boolean) {
@@ -396,8 +431,8 @@ export class ScratchSurface {
 
     const width = layer.canvas.clientWidth;
     const height = layer.canvas.clientHeight;
-    const baseRadius = Math.max(6, width * this.abrasionConfig.brushRadius);
-    const layerScale = name === "lacquer" ? .58 : name === "foil" ? .72 : .84;
+    const baseRadius = this.getBrushRadiusPx(width, height);
+    const layerScale = name === "lacquer" ? .72 : name === "foil" ? .86 : 1;
     const radius = baseRadius * layerScale;
     const x = point.x * width;
     const y = point.y * height;

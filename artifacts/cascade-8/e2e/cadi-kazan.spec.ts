@@ -201,6 +201,7 @@ async function captureMobileLayout(page: Page) {
     const dock = document.querySelector<HTMLElement>(".witch-control-dock");
     const ticket = document.querySelector<HTMLElement>("[data-witch-ticket]");
     const payout = document.querySelector<HTMLElement>("[data-witch-desktop-payout]");
+    const firstCell = document.querySelector<HTMLElement>("[data-witch-cell='0']");
     const scene = document.querySelector<HTMLElement>(".witch-page");
     const viewportWidth = window.visualViewport?.width ?? document.documentElement.clientWidth;
     const viewportHeight = window.visualViewport?.height ?? window.innerHeight;
@@ -209,6 +210,7 @@ async function captureMobileLayout(page: Page) {
     const dockRect = dock?.getBoundingClientRect();
     const ticketRect = ticket?.getBoundingClientRect();
     const payoutRect = payout?.getBoundingClientRect();
+    const firstCellRect = firstCell?.getBoundingClientRect();
     const sceneRect = scene?.getBoundingClientRect();
     const inside = (rect?: DOMRect) => Boolean(
       rect &&
@@ -221,12 +223,15 @@ async function captureMobileLayout(page: Page) {
       horizontalOverflow: scrollWidth > viewportWidth + 1,
       verticalOverflow: scrollHeight > viewportHeight + 1,
       dockPosition: dock ? getComputedStyle(dock).position : "",
+      dockDisplay: dock ? getComputedStyle(dock).display : "",
       dockInsideViewport: inside(dockRect),
       ticketInsideViewport: inside(ticketRect),
       payoutInsideViewport: inside(payoutRect),
       sceneInsideViewport: inside(sceneRect),
       sceneWidth: sceneRect?.width ?? 0,
       sceneHeight: sceneRect?.height ?? 0,
+      firstCellWidth: firstCellRect?.width ?? 0,
+      firstCellHeight: firstCellRect?.height ?? 0,
       viewportWidth,
       viewportHeight,
       pageTransform: scene ? getComputedStyle(scene).transform : "none",
@@ -316,11 +321,12 @@ test.describe("Cadı Kazan critical round lifecycle", () => {
     expect(layout.sceneInsideViewport).toBe(true);
     expect(layout.ticketInsideViewport).toBe(true);
     expect(layout.payoutInsideViewport).toBe(true);
-    expect(layout.dockInsideViewport).toBe(true);
+    expect(layout.dockDisplay).toBe("none");
     expect(Math.abs(layout.sceneWidth - layout.viewportWidth)).toBeLessThanOrEqual(2);
     expect(Math.abs(layout.sceneHeight - layout.viewportHeight)).toBeLessThanOrEqual(2);
-    expect(layout.dockPosition).toBe("relative");
+    expect(Math.min(layout.firstCellWidth, layout.firstCellHeight)).toBeGreaterThanOrEqual(40);
     expect(layout.pageTransform).not.toBe("none");
+    await expect(page.locator(".witch-page")).toHaveClass(/is-advanced-focus/);
     await expect(page.locator(".witch-rotate-hint")).toHaveCount(0);
   });
 });
