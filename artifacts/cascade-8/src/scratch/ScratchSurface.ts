@@ -9,6 +9,9 @@ import {
 import { prefersReducedMotion } from "./ScratchFeedback";
 
 const MIN_AUDIO_INTERVAL_MS = 28;
+const RESULT_COMMIT_MIN_COVERAGE = 0.2;
+const RESULT_COMMIT_MIN_MS = 420;
+const RESULT_COMMIT_MIN_DISTANCE_FACTOR = 1.5;
 const MAX_TRAIL_SAMPLES = 1800;
 const MAX_DEBRIS_PARTICLES = 16;
 const MOBILE_DEBRIS_PARTICLES = 9;
@@ -64,6 +67,8 @@ export class ScratchSurface {
   private readonly layers: ScratchLayer[];
   private readonly interactionCanvas: HTMLCanvasElement;
   private lastPoint: ScratchPoint | null = null;
+  private gestureStartedAt = 0;
+  private scratchDistancePx = 0;
   private resultReady = false;
   private resultRequest: Promise<void> | null = null;
   private lastMoveAt = 0;
@@ -78,10 +83,11 @@ export class ScratchSurface {
     if (event.pointerType === "mouse" && event.button !== 0) return;
     this.pointerId.value = event.pointerId;
     this.lastPoint = this.pointFromEvent(event);
-    this.lastMoveAt = performance.now();
+    this.gestureStartedAt = performance.now();
+    this.scratchDistancePx = 0;
+    this.lastMoveAt = this.gestureStartedAt;
     this.interactionCanvas.setPointerCapture(event.pointerId);
     this.interactionCanvas.classList.add("is-scratching");
-    if (!this.resultReady) this.ensureResultCommitted();
     event.preventDefault();
   };
 
@@ -98,6 +104,7 @@ export class ScratchSurface {
     const elapsed = Math.max(8, now - this.lastMoveAt);
     const speed = clamp(distancePx / elapsed / 1.05);
     const angle = Math.atan2(deltaY, deltaX);
+    this.scratchDistancePx += distancePx;
 
     for (const sample of interpolateScratchPoints(this.lastPoint, point, 0.014)) {
       const depthGain = this.abrasionConfig.depthPerSample * (0.86 + speed * 0.34);
@@ -106,6 +113,7 @@ export class ScratchSurface {
       this.applyThreeLayerAbrasion(sample, angle, speed, this.resultReady);
     }
 
+    this.maybeCommitResult(now);
     this.emitDebris(point, angle, speed);
     if (now - this.lastAudioAt >= MIN_AUDIO_INTERVAL_MS) {
       this.audio?.scratch(speed, this.progress.depthAt(point.x, point.y));
@@ -120,8 +128,11 @@ export class ScratchSurface {
   private readonly finishPointer = (event: PointerEvent) => {
     if (this.pointerId.value !== event.pointerId) return;
     if (this.interactionCanvas.hasPointerCapture(event.pointerId)) this.interactionCanvas.releasePointerCapture(event.pointerId);
+    this.maybeCommitResult(performance.now());
     this.pointerId.value = null;
     this.lastPoint = null;
+    this.gestureStartedAt = 0;
+    this.scratchDistancePx = 0;
     this.lastMoveAt = 0;
     this.interactionCanvas.classList.remove("is-scratching");
   };
@@ -181,6 +192,8 @@ export class ScratchSurface {
     }
     this.pointerId.value = null;
     this.lastPoint = null;
+    this.gestureStartedAt = 0;
+    this.scratchDistancePx = 0;
     this.lastMoveAt = 0;
     this.lastAudioAt = -Infinity;
     this.brushStep = 0;
@@ -198,6 +211,18 @@ export class ScratchSurface {
     if (this.trail.length > MAX_TRAIL_SAMPLES) {
       this.trail.splice(0, this.trail.length - MAX_TRAIL_SAMPLES);
     }
+  }
+
+  private maybeCommitResult(now: number) {
+    if (this.resultReady || this.resultRequest || this.gestureStartedAt <= 0) return;
+    const elapsed = now - this.gestureStartedAt;
+    const minimumDistance = Math.max(70, this.interactionCanvas.clientWidth * RESULT_COMMIT_MIN_DISTANCE_FACTOR);
+    if (
+      elapsed < RESULT_COMMIT_MIN_MS
+      || this.scratchDistancePx < minimumDistance
+      || this.progress.coverage < RESULT_COMMIT_MIN_COVERAGE
+    ) return;
+    this.ensureResultCommitted();
   }
 
   private ensureResultCommitted() {
