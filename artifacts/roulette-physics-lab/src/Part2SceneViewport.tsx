@@ -1222,7 +1222,7 @@ function addMeasuredOuterWallColliders(
   friction: number,
 ) {
   const measured = [...profile].sort((left, right) => left[1] - right[1]);
-  const segments = 256;
+  const segments = 64;
   const radialHalfDepth = 0.018;
   const colliders: RAPIER.Collider[] = [];
 
