@@ -1225,8 +1225,13 @@ function addMeasuredOuterWallColliders(
   const measured = [...profile].sort((left, right) => left[1] - right[1]);
   const segments = 512;
   const innerFaceRadius = PART2_ACTUAL_WOOD_INNER_RADIUS;
-  const lowerY =
-    part2ChannelSurfaceAt(innerFaceRadius, verticalOffset).y - 0.004;
+  const channelFloorMinY = Math.min(
+    ...PART2_CHANNEL_PROFILE.map(([, height]) => height + verticalOffset),
+  );
+  // Keep the open side-wall's lower edge far below the playable channel.
+  // The previous edge sat directly at the race seam, so the sphere could
+  // catch that edge and receive a large upward solver impulse.
+  const lowerY = channelFloorMinY - BALL_RADIUS * 2 - 0.05;
   const measuredMaxY = Math.max(...measured.map(([, height]) => height));
   const upperY = Math.max(
     measuredMaxY + BALL_RADIUS + 0.10,
