@@ -118,20 +118,20 @@ export class SlotRepository {
        ),
        settled_wallet AS (
          INSERT INTO roulette_wallets (session_id, balance_cents, updated_at)
-         SELECT $2, $13 + $1, now()
+         SELECT $2::text, $13::integer + $1::integer, now()
           WHERE NOT EXISTS (SELECT 1 FROM duplicate)
-            AND ($10 = 0 OR $13 >= $10)
+            AND ($10::integer = 0 OR $13::integer >= $10::integer)
          ON CONFLICT (session_id) DO UPDATE
-           SET balance_cents = roulette_wallets.balance_cents + $1,
+           SET balance_cents = roulette_wallets.balance_cents + $1::integer,
                updated_at = now()
          WHERE NOT EXISTS (SELECT 1 FROM duplicate)
-           AND ($10 = 0 OR roulette_wallets.balance_cents >= $10)
+           AND ($10::integer = 0 OR roulette_wallets.balance_cents >= $10::integer)
          RETURNING balance_cents
        ),
        inserted_round AS (
          INSERT INTO slot_rounds
            (id, session_id, stake_cents, payout_cents, result, idempotency_key)
-         SELECT $3, $2, $4, $5, $6::jsonb, $7
+         SELECT $3::text, $2::text, $4::integer, $5::integer, $6::jsonb, $7::text
           WHERE EXISTS (SELECT 1 FROM settled_wallet)
          RETURNING *
        ),
@@ -144,7 +144,7 @@ export class SlotRepository {
              ($9::text, $2::text, $3::text, 'PAYOUT_CREDIT'::text, $5::integer, $12::text)
            ) AS entries(id, session_id, round_id, kind, amount_cents, idempotency_key)
           WHERE EXISTS (SELECT 1 FROM inserted_round)
-            AND (entries.kind <> 'STAKE_DEBIT' OR $10 > 0)
+            AND (entries.kind <> 'STAKE_DEBIT' OR $10::integer > 0)
          RETURNING id
        ),
        settled_result AS (
@@ -161,7 +161,7 @@ export class SlotRepository {
                 duplicate.*,
                 COALESCE(
                   (SELECT balance_cents FROM roulette_wallets WHERE session_id = $2),
-                  $13
+                  $13::integer
                 ) AS balance_cents,
                 duplicate.session_id AS existing_session_id,
                 0::bigint AS ledger_count
@@ -178,7 +178,7 @@ export class SlotRepository {
                 now() AS created_at,
                 COALESCE(
                   (SELECT balance_cents FROM roulette_wallets WHERE session_id = $2),
-                  $13
+                  $13::integer
                 ) AS balance_cents,
                 $2::text AS existing_session_id,
                 0::bigint AS ledger_count
