@@ -96,11 +96,11 @@ jobs:
           echo "ROULETTE_GLB_BYTES=$bytes"
           test "$bytes" = "4663292"
 
-      - name: Run PART 6B.1 stage probe
+      - name: Run PART 6B.1A startup-gate probe
         env:
           ROULETTE_LAB_URL: http://127.0.0.1:4173/?part6Headless=1&part6SeedCount=1&part6MaxDurationSeconds=2
           ROULETTE_PART6_OUTPUT: artifacts/roulette-physics-lab/part6-runtime-result.json
-          ROULETTE_PART6_TIMEOUT_MS: '60000'
+          ROULETTE_PART6_TIMEOUT_MS: '15000'
           ROULETTE_PART6_EXPECTED_SEEDS: '1'
         shell: bash
         run: |
