@@ -3815,7 +3815,7 @@
     grid-area: board;
     align-self: center;
     justify-self: end;
-    width: clamp(205px, 66cqh, 286px);
+    width: clamp(214px, 66cqh, 286px);
     max-width: 100%;
     aspect-ratio: 1;
     margin: 0;
@@ -3925,7 +3925,7 @@
   }
 
   .witch-ticket.is-advanced .witch-board-wrap {
-    width: clamp(196px, 66cqh, 224px);
+    width: clamp(212px, 66cqh, 224px);
     padding: 4px;
   }
 
