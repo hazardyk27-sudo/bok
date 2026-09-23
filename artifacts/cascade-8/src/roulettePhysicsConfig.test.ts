@@ -350,16 +350,37 @@ describe("authoritative roulette physics config", () => {
       "const PART3_OUTER_SPIN_ANGULAR_DAMPING = 0.01",
     );
     expect(part3ViewportSource).toContain(
-      "const PART6_LAUNCH_SPEED_BASE = 5.0",
+      "const PART6_LAUNCH_SPEED_METERS_PER_SECOND_BASE = 5.0",
     );
     expect(part3ViewportSource).toContain(
-      "const PART6_LAUNCH_SPEED_VARIATION = 0.15",
+      "const PART6_LAUNCH_SPEED_METERS_PER_SECOND_VARIATION = 0.15",
+    );
+    expect(part3ViewportSource).toContain(
+      "PART6_LAUNCH_SPEED_METERS_PER_SECOND_BASE *\n  ROULETTE_WORLD_UNITS_PER_METER",
+    );
+    expect(part3ViewportSource).toContain(
+      "PART6_LAUNCH_SPEED_METERS_PER_SECOND_VARIATION *\n  ROULETTE_WORLD_UNITS_PER_METER",
     );
     expect(part3ViewportSource).toContain(
       "const PART6_BALL_SPIN_FACTOR = 1.0",
     );
     expect(part3ViewportSource).toContain(
       ".multiplyScalar(PART6_BALL_SPIN_FACTOR / BALL_RADIUS)",
+    );
+    expect(part3ViewportSource).toContain(
+      "const PART6_INTERACTIVE_YIELD_STEPS = 30",
+    );
+    expect(part3ViewportSource).toContain(
+      "ballMeshVisible: activeBallMesh.visible",
+    );
+    expect(part3ViewportSource).toContain(
+      "activeBallMesh.visible = false",
+    );
+    expect(part3ViewportSource).toContain(
+      "activeBallMesh.visible = previewSnapshot.ballMeshVisible",
+    );
+    expect(part3ViewportSource).toContain(
+      "launchSpeedMetersPerSecond",
     );
     expect(part3ViewportSource).toContain(
       "const activePart3TrackFriction = outerLaneSpinOnly",
