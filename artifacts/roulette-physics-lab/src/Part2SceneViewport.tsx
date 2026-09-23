@@ -1231,10 +1231,11 @@ function addMeasuredOuterWallColliders(
 
   for (let segment = 0; segment < segments; segment += 1) {
     const angle = (segment / segments) * TWO_PI;
-    const collider = RAPIER.ColliderDesc.cuboid(
+    const collider = RAPIER.ColliderDesc.roundCuboid(
       halfTangentialWidth,
       halfHeight,
       radialHalfDepth,
+      0.01,
     )
       .setTranslation(
         Math.sin(angle) * centerRadius,
