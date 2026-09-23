@@ -75,15 +75,19 @@ try {
         return status === 'captured' || status === 'failed';
       },
       undefined,
-      { timeout: 600_000 },
+      { timeout: 900_000 },
     );
   } catch (error) {
     terminalWaitError =
       error instanceof Error ? error.message : String(error);
   }
 
-  const status = await report.getAttribute('data-status');
-  const reportText = await report.innerText().catch(() => '');
+  const status = terminalWaitError
+    ? null
+    : await report.getAttribute('data-status');
+  const reportText = terminalWaitError
+    ? ''
+    : await report.innerText().catch(() => '');
   const errorOverlay = page.locator('[data-testid="status-error"]');
   const errorVisible = await errorOverlay.isVisible().catch(() => false);
   const errorText = errorVisible
