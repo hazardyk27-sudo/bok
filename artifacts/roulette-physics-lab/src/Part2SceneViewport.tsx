@@ -1199,7 +1199,7 @@ function addMeasuredOuterWallColliders(
   friction: number,
 ) {
   const measured = [...profile].sort((left, right) => left[1] - right[1]);
-  const segments = 192;
+  const segments = 64;
   const radialHalfDepth = 0.018;
   const colliders: RAPIER.Collider[] = [];
 
@@ -1811,7 +1811,7 @@ function makePart2RaceChannelTrimesh(
 ) {
   const vertices: number[] = [];
   const indices: number[] = [];
-  const segments = 512;
+  const segments = 128;
   const activeProfile: Array<[number, number]> =
     openInnerRadius === null
       ? PART2_CHANNEL_PROFILE.map(([radius, y]) => [radius, y])
@@ -2106,7 +2106,7 @@ export function Part2SceneViewport({
     // the 0.056 wu ball is geometrically touching the measured wall.
     const activeBallSoftCcdPrediction =
       validationMode === 'part3' && outerLaneSpinOnly
-        ? 0
+        ? BALL_RADIUS * 0.2
         : BALL_RADIUS * 2.5;
     let dropStarted = false;
     let dropSteps = 0;
