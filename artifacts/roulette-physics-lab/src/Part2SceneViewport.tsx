@@ -1416,11 +1416,10 @@ function addKinematicPocketSystem(
   );
   for (let index = 0; index < EUROPEAN_POCKET_COUNT; index += 1) {
     const angle = (index + 0.5) * POCKET_STEP_RADIANS;
-    const collider = RAPIER.ColliderDesc.roundCuboid(
+    const collider = RAPIER.ColliderDesc.cuboid(
       POCKET_FRET_TANGENTIAL_HALF_EXTENT,
       POCKET_FRET_VERTICAL_HALF_EXTENT,
       POCKET_FRET_RADIAL_HALF_EXTENT,
-      0.012,
     )
       .setTranslation(...radialPosition(POCKET_FRET_RADIUS, angle, POCKET_FRET_Y))
       .setRotation({ x: 0, y: Math.sin(angle / 2), z: 0, w: Math.cos(angle / 2) })
