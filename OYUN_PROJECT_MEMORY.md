@@ -954,6 +954,15 @@ One audit-only instruction was mistakenly sent to Replit before this rule was cl
 - menu, game routes and slot shell can now extend beyond the viewport instead of being clipped
 - removed the Cadı Kazan landscape-only height/overflow trap so short landscape screens can scroll vertically when needed
 
+### Stage 25 — Cadı Kazan physical SFX pass
+- Scratch SFX was rebuilt as layered paper/foil friction instead of a single filtered-noise chirp: a mid-body rasp plus a quieter high-frequency metallic foil edge, both velocity/depth responsive.
+- Cash Out / automatic COMPLETED payout now uses a more physical cash-register cue: latch transient, two inharmonic register-bell strikes, drawer rail/body motion, and a final drawer-stop thump.
+- BUST/BOMBA now has a dedicated negative sound: low blast/thump body, short high-frequency impact texture, and a descending failure tone.
+- Successful ticket purchase now has its own cue: short paper/foil feed, mechanical stamp/cutter hit, and restrained confirmation bell.
+- AudioContext is explicitly unlocked synchronously on Buy and Cash Out user gestures to improve sound reliability on mobile browsers before async server responses finish.
+- Changes were limited to Cadı Kazan event wiring and shared AudioManager additions; Roulette/Slot event logic was not modified.
+- Merged into GitHub `main` via PR #26, merge commit `24a61e4`.
+
 ### Stage 24 — Root scratch registration fix + desktop Advanced 25 rebuild
 - Root cause targeted for cursor/finger scratch offset: scratch canvas backing-store dimensions could drift from the live CSS box after responsive/layout/font/orientation changes because canvases were only sized at construction.
 - ScratchSurface now observes its interaction canvas with ResizeObserver. When the rendered size changes, all scratch/debris backing stores are resized to the current CSS size × DPR, material layers are repainted, and the normalized abrasion trail is replayed so visible scratch registration remains aligned.
