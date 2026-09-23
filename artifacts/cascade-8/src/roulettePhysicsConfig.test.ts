@@ -283,6 +283,13 @@ describe("authoritative roulette physics config", () => {
       "phaseSequenceValid",
     );
     expect(part3ViewportSource).toContain(
+      "noSkippedObservedPhases",
+    );
+    expect(part3ViewportSource).toContain(
+      "resetRotorAngleError <= 0.000001",
+    );
+
+    expect(part3ViewportSource).toContain(
       "transitionMaxSurfacePenetration",
     );
     expect(part3ViewportSource).toContain(
