@@ -225,6 +225,9 @@ describe("authoritative roulette physics config", () => {
     expect(seedBlock).not.toBeNull();
     expect(seedBlock?.[1].match(/\b610\d+\b/g) ?? []).toHaveLength(20);
     expect(part3ViewportSource).toContain(
+      "return (value >>> 0) / 0x100000000;",
+    );
+    expect(part3ViewportSource).toContain(
       "const runPart6FullSpinTelemetryBatch = () =>",
     );
     expect(part3ViewportSource).toContain(
