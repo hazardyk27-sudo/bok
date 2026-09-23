@@ -102,7 +102,7 @@ export class ScratchSurface {
     this.applyThreeLayerAbrasion(this.lastPoint, 0, 0.08, this.resultReady);
     this.eraseLayer("lacquer", this.lastPoint, 0, 0.08, 0.82);
 
-    this.audio?.scratchStart(0.12, this.progress.depthAt(this.lastPoint.x, this.lastPoint.y));
+    this.audio?.scratchStart(0, this.progress.depthAt(this.lastPoint.x, this.lastPoint.y));
     this.interactionCanvas.setPointerCapture(event.pointerId);
     this.interactionCanvas.classList.add("is-scratching");
     event.preventDefault();
