@@ -647,15 +647,23 @@ function part3SpawnPosition(
   probe: (typeof PART3_PROBES)[number],
   verticalOffset = 0,
 ) {
-  const y =
-    probe.kind === 'deflector-approach'
-      ? (PART3_DEFLECTOR_BOTTOM + PART3_DEFLECTOR_TOP) / 2
-      : part3TrackHeight(probe.radius, verticalOffset);
-  return radialPosition(
-    probe.radius,
-    probe.angle,
-    y + (probe.kind === 'deflector-approach' ? 0 : BALL_RADIUS + 0.002),
+  if (probe.kind === 'deflector-approach') {
+    return radialPosition(
+      probe.radius,
+      probe.angle,
+      (PART3_DEFLECTOR_BOTTOM + PART3_DEFLECTOR_TOP) / 2,
+    );
+  }
+  const surface = part2ChannelSurfaceAt(probe.radius, verticalOffset);
+  const surfacePoint = new THREE.Vector3(
+    ...radialPosition(probe.radius, probe.angle, surface.y),
   );
+  return surfacePoint
+    .addScaledVector(
+      part2ChannelNormalAt(probe.radius, probe.angle),
+      BALL_RADIUS + 0.002,
+    )
+    .toArray() as [number, number, number];
 }
 
 function part3InitialVelocity(probe: (typeof PART3_PROBES)[number]): VectorReadout {
@@ -2087,18 +2095,39 @@ export function Part2SceneViewport({
       if (!ballBody || !ballMesh) return;
       const radius = PART3_LAUNCH_RADIUS;
       const azimuth = 0.37;
-      const position = radialPosition(
+      const channelSurface = part2ChannelSurfaceAt(
         radius,
-        azimuth,
-        part3TrackHeight(radius, part3TrackVerticalOffset) + BALL_RADIUS + 0.002,
+        part3TrackVerticalOffset,
       );
+      const channelNormal = part2ChannelNormalAt(radius, azimuth);
+      const positionVector = new THREE.Vector3(
+        ...radialPosition(radius, azimuth, channelSurface.y),
+      ).addScaledVector(channelNormal, BALL_RADIUS + 0.002);
+      const position: [number, number, number] = [
+        positionVector.x,
+        positionVector.y,
+        positionVector.z,
+      ];
+      const velocityVector = new THREE.Vector3(
+        Math.cos(azimuth),
+        0,
+        -Math.sin(azimuth),
+      )
+        .projectOnPlane(channelNormal)
+        .normalize()
+        .multiplyScalar(PART3_ALIGNMENT_PROBE_SPEED);
       const velocity = {
-        x: Math.cos(azimuth) * PART3_ALIGNMENT_PROBE_SPEED,
-        y: 0,
-        z: -Math.sin(azimuth) * PART3_ALIGNMENT_PROBE_SPEED,
+        x: velocityVector.x,
+        y: velocityVector.y,
+        z: velocityVector.z,
       };
-      const visibleSurface = measureVisibleSurfaceAt(position[0], position[2]);
-      const analyticContactY = part3TrackHeight(radius, part3TrackVerticalOffset);
+      const visibleSurface = measureVisibleSurfaceAt(
+        position[0],
+        position[2],
+        true,
+        PART2_ACTUAL_DARK_TRACK_RADIUS_BAND,
+      );
+      const analyticContactY = channelSurface.y;
       ballBody.setTranslation({ x: position[0], y: position[1], z: position[2] }, true);
       ballBody.setLinvel(velocity, true);
       ballBody.setAngvel({ x: 0, y: 0, z: 0 }, true);
