@@ -230,7 +230,7 @@ test.describe("Cadı Kazan critical round lifecycle", () => {
       await expect(page.locator("[data-witch-ticket]")).toBeVisible();
       await expect(page.locator("[data-witch-cell]")).toHaveCount(5);
       await expect(page.locator("[data-witch-round-status]")).toHaveText("ACTIVE");
-      await expect(page.locator("[data-witch-play-mode]")).toHaveText("STANDARD 5 / 01 BOMB");
+      await expect(page.locator("[data-witch-play-mode]")).toHaveText("STANDARD 5 / 01 BOMBA");
       await expect(page.locator("[data-witch-action='cashout']:visible")).toBeDisabled();
       await expect(page.locator("[data-witch-cell].is-bomb")).toHaveCount(0);
       await expect(page.locator("[data-witch-cell='4']")).toHaveAttribute("aria-label", "Kazınabilir kapalı alan");
@@ -287,7 +287,7 @@ test.describe("Cadı Kazan critical round lifecycle", () => {
 
     await expect(page.locator("[data-witch-ticket]")).toBeVisible();
     await expect(page.locator("[data-witch-cell]")).toHaveCount(25);
-    await expect(page.locator("[data-witch-play-mode]")).toHaveText("ADVANCED 25 / 01 BOMBS");
+    await expect(page.locator("[data-witch-play-mode]")).toHaveText("ADVANCED 25 / 01 BOMBA");
     await expect(page.locator("[data-witch-desktop-payout]")).toBeVisible();
     await expect(page.locator("[data-witch-desktop-payout] [data-witch-action='cashout']")).toBeVisible();
     await expect(page.locator("[data-witch-desktop-payout] [data-witch-action='cashout']")).toBeDisabled();
