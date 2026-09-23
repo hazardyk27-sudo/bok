@@ -954,6 +954,16 @@ One audit-only instruction was mistakenly sent to Replit before this rule was cl
 - menu, game routes and slot shell can now extend beyond the viewport instead of being clipped
 - removed the Cadı Kazan landscape-only height/overflow trap so short landscape screens can scroll vertically when needed
 
+### Stage 26 — Scratch audio rebuilt from reference-video behavior
+- The two previously uploaded physical scratch-ticket videos were re-used as the behavior reference for Cadı Kazan scratch audio.
+- Old audio model (short independent noise bursts on pointer-move intervals) was removed from the active scratch path because it sounded like repeated digital hiss rather than one physical scrape.
+- New scratch audio is gesture-based and continuous: one loop starts on pointer-down, updates from hand speed and abrasion depth, and fades/stops on pointer-up.
+- Texture layers: dry paper/foil rasp body, quieter high-frequency metallic foil edge, low contact rumble, irregular grit/catch transients, and a small initial contact tick.
+- Sound now decays toward silence when the pointer stops moving even if it is still held down, so friction is tied to motion rather than press state.
+- ScratchSurface now calls `scratchStart`, `scratchUpdate`, and `scratchStop` instead of retriggering one-shot scratch bursts every ~28 ms.
+- Existing ticket-purchase, BOMBA/BUST, Cash Out and COMPLETED payout sounds remain unchanged.
+- Merged into GitHub `main` via PR #27, merge commit `96bada1`.
+
 ### Stage 25 — Cadı Kazan physical SFX pass
 - Scratch SFX was rebuilt as layered paper/foil friction instead of a single filtered-noise chirp: a mid-body rasp plus a quieter high-frequency metallic foil edge, both velocity/depth responsive.
 - Cash Out / automatic COMPLETED payout now uses a more physical cash-register cue: latch transient, two inharmonic register-bell strikes, drawer rail/body motion, and a final drawer-stop thump.
