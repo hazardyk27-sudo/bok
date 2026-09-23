@@ -370,6 +370,38 @@ export class GameScene extends Phaser.Scene {
        });
   }
 
+  private wallClockMotion(
+    duration: number,
+    delay: number,
+    ease: (value: number) => number,
+    onFrame: (easedProgress: number, linearProgress: number) => void,
+  ) {
+    const requestedAt = performance.now();
+    const startAt = requestedAt + Math.max(0, delay);
+    const motionDuration = Math.max(1, duration);
+
+    return new Promise<void>((resolve) => {
+      const step = (now: number) => {
+        if (now < startAt) {
+          window.requestAnimationFrame(step);
+          return;
+        }
+
+        const linearProgress = Math.min(1, Math.max(0, (now - startAt) / motionDuration));
+        const easedProgress = ease(linearProgress);
+        onFrame(easedProgress, linearProgress);
+
+        if (linearProgress >= 1) {
+          resolve();
+          return;
+        }
+        window.requestAnimationFrame(step);
+      };
+
+      window.requestAnimationFrame(step);
+    });
+  }
+
   renderBoard(board: Board, winningCells: Cell[] = []) {
     const startedAt = performance.now();
     this.clearSymbols();
@@ -413,55 +445,47 @@ export class GameScene extends Phaser.Scene {
       frameSamples += 1;
     };
 
-    await Promise.all(this.nodes.map((node, index) => new Promise<void>((resolve) => {
+    await Promise.all(this.nodes.map(async (node, index) => {
       const finalY = node.container.y;
-      node.container.y = finalY - 260 - (index % BOARD_COLUMNS) * 18;
+      const startY = finalY - 260 - (index % BOARD_COLUMNS) * 18;
+      node.container.y = startY;
       node.container.alpha = 0.2;
       let visuallySettled = false;
-      let completed = false;
       const markVisualSettled = () => {
         if (visuallySettled) return;
         visuallySettled = true;
         visualSettledUnits += 1;
         if (visualSettledUnits === movingUnits) visualSettledAt = performance.now();
       };
-      const complete = () => {
-        if (completed) return;
-        completed = true;
-        resolve();
-      };
-      this.tweens.add({
-        targets: node.container,
-        y: finalY,
-        alpha: 1,
-        duration: duration + (index % BOARD_COLUMNS) * 24,
-        delay: (index % BOARD_COLUMNS) * 20,
-        ease: "Back.easeOut",
-        onUpdate: (tween) => {
+
+      await this.wallClockMotion(
+        duration + (index % BOARD_COLUMNS) * 24,
+        (index % BOARD_COLUMNS) * 20,
+        Phaser.Math.Easing.Back.Out,
+        (easedProgress, linearProgress) => {
           sampleFrameGap();
+          node.container.y = startY + (finalY - startY) * easedProgress;
+          node.container.alpha = 0.2 + easedProgress * 0.8;
           if (
-            tween.progress >= 0.92
+            linearProgress >= 0.92
             && Math.abs(node.container.y - finalY) <= 1.5
             && node.container.alpha >= 0.995
           ) {
             markVisualSettled();
-            if (node.symbol !== "SCATTER") complete();
           }
         },
-         onComplete: () => {
-           sampleFrameGap();
-           markVisualSettled();
-           if (node.symbol === "SCATTER") {
-             const landing = this.animateScatterLanding(node);
-             if (awaitScatterLanding) void landing.then(complete);
-             else {
-               void landing;
-               complete();
-             }
-           } else complete();
-         },
-      });
-    })));
+      );
+
+      node.container.y = finalY;
+      node.container.alpha = 1;
+      sampleFrameGap();
+      markVisualSettled();
+
+      if (node.symbol === "SCATTER") {
+        const landing = this.animateScatterLanding(node);
+        if (awaitScatterLanding) await landing;
+      }
+    }));
 
     const completedAt = performance.now();
     const settledAt = visualSettledAt ?? completedAt;
@@ -828,41 +852,31 @@ export class GameScene extends Phaser.Scene {
         if (Math.abs(node.container.y - targetY) < 0.5 && node.container.alpha >= 0.999) return;
         movingUnits += 1;
         if (node.symbol === "SCATTER" || isMultiplierCore(node.symbol)) specialUnits += 1;
-        animations.push(new Promise<void>((resolve) => {
+        animations.push((async () => {
+          const startY = node.container.y;
           let visuallySettled = false;
-          let completed = false;
           const markVisualSettled = () => {
             if (visuallySettled) return;
             visuallySettled = true;
             markUnitVisualSettled();
           };
-          const complete = () => {
-            if (completed) return;
-            completed = true;
-            resolve();
-          };
-          const mayResolveAtVisualSettle = node.symbol !== "SCATTER" && !isMultiplierCore(node.symbol);
-          this.tweens.add({
-            targets: node.container,
-            y: targetY,
-            duration: duration + col * 18,
-            ease: "Cubic.easeInOut",
-            onUpdate: (tween) => {
+
+          await this.wallClockMotion(
+            duration + col * 18,
+            0,
+            Phaser.Math.Easing.Cubic.InOut,
+            (easedProgress, linearProgress) => {
               sampleFrameGap();
-              if (
-                tween.progress >= 0.92
-                && Math.abs(node.container.y - targetY) <= 1.5
-              ) {
+              node.container.y = startY + (targetY - startY) * easedProgress;
+              if (linearProgress >= 0.92 && Math.abs(node.container.y - targetY) <= 1.5) {
                 markVisualSettled();
-                if (mayResolveAtVisualSettle) complete();
               }
             },
-            onComplete: () => {
-              markVisualSettled();
-              complete();
-            },
-          });
-        }));
+          );
+
+          node.container.y = targetY;
+          markVisualSettled();
+        })());
       });
       const incomingGroups = new Map<string, BoardNode[]>();
       for (let row = 0; row < generatedCount; row += 1) {
@@ -885,46 +899,39 @@ export class GameScene extends Phaser.Scene {
         movingUnits += 1;
         const hasSpecialSymbol = group.some((node) => node.symbol === "SCATTER" || isMultiplierCore(node.symbol));
         if (hasSpecialSymbol) specialUnits += 1;
-        animations.push(new Promise<void>((resolve) => {
-          const motion = { progress: 0 };
+        animations.push((async () => {
           let visuallySettled = false;
-          let completed = false;
           const markVisualSettled = () => {
             if (visuallySettled) return;
             visuallySettled = true;
             markUnitVisualSettled();
           };
-          const complete = () => {
-            if (completed) return;
-            completed = true;
-            resolve();
-          };
-          this.tweens.add({
-            targets: motion,
-            progress: 1,
-            duration: duration + col * 18,
-            delay: col * 20 + (group.length > 1 ? 44 : 0),
-            ease: "Back.easeOut",
-            onUpdate: (tween) => {
+
+          await this.wallClockMotion(
+            duration + col * 18,
+            col * 20 + (group.length > 1 ? 44 : 0),
+            Phaser.Math.Easing.Back.Out,
+            (easedProgress, linearProgress) => {
               sampleFrameGap();
               group.forEach((node, index) => {
-                node.container.y = starts[index] + (targetYs[index] - starts[index]) * motion.progress;
-                node.container.alpha = 0.2 + motion.progress * 0.8;
+                node.container.y = starts[index] + (targetYs[index] - starts[index]) * easedProgress;
+                node.container.alpha = 0.2 + easedProgress * 0.8;
               });
               if (
-                tween.progress >= 0.92
+                linearProgress >= 0.92
                 && group.every((node, index) => Math.abs(node.container.y - targetYs[index]) <= 1.5 && node.container.alpha >= 0.995)
               ) {
                 markVisualSettled();
-                if (!hasSpecialSymbol) complete();
               }
             },
-            onComplete: () => {
-              markVisualSettled();
-              complete();
-            },
+          );
+
+          group.forEach((node, index) => {
+            node.container.y = targetYs[index];
+            node.container.alpha = 1;
           });
-        }));
+          markVisualSettled();
+        })());
       });
     }
 
