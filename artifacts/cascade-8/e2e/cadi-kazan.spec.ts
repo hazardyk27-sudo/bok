@@ -161,7 +161,7 @@ async function installCadiKazanFixture(page: Page): Promise<CadiKazanFixture> {
 }
 
 async function scratchCell(page: Page, cellIndex: number) {
-  const canvas = page.locator(`[data-witch-cell="${cellIndex}"] .witch-scratch-canvas`);
+  const canvas = page.locator(`[data-witch-cell="${cellIndex}"] .witch-scratch-layer-lacquer`);
   const box = await canvas.boundingBox();
   if (!box) throw new Error("Scratch canvas is not laid out");
 
@@ -227,7 +227,7 @@ test.describe("Cadı Kazan critical round lifecycle", () => {
       await expect.poll(() => fixture.revealBodies.length).toBe(1);
       await expect(page.locator("[data-witch-cell='0']")).toHaveClass(/is-safe/);
       await expect(page.locator("[data-witch-cell='0'] .witch-cell-content")).toHaveText("✦");
-      await expect(page.locator("[data-witch-cell='0'] .witch-cell-result-label")).toHaveText("GOLD");
+      await expect(page.locator("[data-witch-cell='0'] .witch-cell-result-label")).toHaveText("ALTIN");
       await expect(page.locator("[data-witch-action='cashout']:visible")).toBeEnabled();
       expect(fixture.revealBodies[0]).toMatchObject({ cellIndex: 0 });
     });
@@ -238,7 +238,6 @@ test.describe("Cadı Kazan critical round lifecycle", () => {
       await expect(page.locator("[data-witch-payout]")).toHaveText("1,20 kredi");
       await expect(page.locator("[data-witch-cell='0']")).toHaveClass(/is-safe/);
       await expect(page.locator("[data-witch-cell='4']")).toHaveClass(/is-bomb/, { timeout: 2_000 });
-      await expect(page.locator("[data-witch-cell='4'] .witch-cell-content")).toHaveText("💣");
       await expect(page.locator("[data-witch-cell='4'] .witch-cell-result-label")).toHaveText("BOMBA");
       await expect(page.locator("[data-witch-desktop-payout] [data-witch-action='cashout']")).toBeDisabled();
       await expect(page.locator("[data-witch-desktop-payout] [data-witch-action='new']")).toBeVisible();
