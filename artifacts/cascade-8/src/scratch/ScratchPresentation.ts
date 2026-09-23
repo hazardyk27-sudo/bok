@@ -1,9 +1,9 @@
-export type ScratchCellMode = "STANDARD" | "ADVANCED";
-
 export type ScratchCellPresentation = {
   symbol: string;
   label: string;
   resultClass: "safe" | "bomb" | null;
+  artworkUrl?: string | null;
+  artworkAlt?: string;
 };
 
 export function getScratchCellLayerMarkup() {
@@ -13,20 +13,38 @@ export function getScratchCellLayerMarkup() {
       <span class="witch-cell-content"></span>
       <span class="witch-cell-result-label"></span>
     </span>
-    <canvas class="witch-scratch-layer witch-scratch-layer-base" data-scratch-layer="base" aria-hidden="true"></canvas>
-    <canvas class="witch-scratch-layer witch-scratch-layer-foil" data-scratch-layer="foil" aria-hidden="true"></canvas>
-    <canvas class="witch-scratch-layer witch-scratch-layer-lacquer" data-scratch-layer="lacquer" aria-hidden="true"></canvas>
-    <canvas class="witch-debris-canvas" aria-hidden="true"></canvas>
+    <canvas class="witch-scratch-layer witch-scratch-layer-base" data-scratch-layer="base"></canvas>
+    <canvas class="witch-scratch-layer witch-scratch-layer-foil" data-scratch-layer="foil"></canvas>
+    <canvas class="witch-scratch-layer witch-scratch-layer-lacquer" data-scratch-layer="lacquer"></canvas>
+    <canvas class="witch-debris-canvas"></canvas>
   `;
 }
 
 export function getScratchCellPresentation(
-  mode: ScratchCellMode,
+  mode: "STANDARD" | "ADVANCED",
   revealed: boolean,
   bomb: boolean,
 ): ScratchCellPresentation {
-  void mode;
-  if (!revealed) return { symbol: "", label: "", resultClass: null };
-  if (bomb) return { symbol: "●", label: "BOMBA", resultClass: "bomb" };
-  return { symbol: "✦", label: "ALTIN", resultClass: "safe" };
+  if (!revealed) return { symbol: "", label: "", resultClass: null, artworkUrl: null };
+
+  if (mode === "STANDARD") {
+    return bomb
+      ? {
+          symbol: "",
+          label: "I AM THE DANGER",
+          resultClass: "bomb",
+          artworkUrl: "/cadi-kazan/bcs-danger.webp",
+          artworkAlt: "I AM THE DANGER",
+        }
+      : {
+          symbol: "",
+          label: "SAUL GOODMAN",
+          resultClass: "safe",
+          artworkUrl: "/cadi-kazan/bcs-saul.webp",
+          artworkAlt: "Saul Goodman",
+        };
+  }
+
+  if (bomb) return { symbol: "●", label: "BOMBA", resultClass: "bomb", artworkUrl: null };
+  return { symbol: "✦", label: "ALTIN", resultClass: "safe", artworkUrl: null };
 }

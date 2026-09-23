@@ -125,6 +125,7 @@ export const CADI_KAZAN_MARKUP = `
 
         <article class="witch-ticket" data-witch-ticket hidden aria-label="Kazınabilir Cadı Kazan bileti">
           <div class="witch-ticket-frame" aria-hidden="true"></div>
+          <div class="witch-standard-price-badge" data-witch-standard-price hidden>$1</div>
 
           <header class="witch-ticket-header">
             <div class="witch-ticket-sidecopy">
@@ -578,6 +579,8 @@ export class WitchClient {
     this.root.classList.toggle("has-round", hasRound);
     this.root.classList.toggle("is-active-round", hasActiveRound);
     this.root.classList.toggle("is-advanced-round", Boolean(round && round.mode === "ADVANCED"));
+    const visualMode = round?.mode ?? this.mode;
+    this.root.classList.toggle("is-standard-theme", visualMode === "STANDARD");
     this.root.querySelectorAll<HTMLButtonElement>("[data-witch-mode]").forEach((button) => {
       button.classList.toggle("is-selected", button.dataset.witchMode === this.mode);
       button.disabled = this.busy || hasActiveRound;
@@ -652,9 +655,15 @@ export class WitchClient {
       button.classList.toggle("is-bomb", presentation.resultClass === "bomb");
       button.classList.toggle("is-pending", this.pendingRevealCell === index);
       button.classList.toggle("is-terminal-reveal", this.terminalRevealAnimating && isTerminallyRevealed && !isActuallyRevealed);
-      button.setAttribute("aria-label", presentation.resultClass === "bomb" ? presentation.label : presentation.resultClass === "safe" ? "GOLD ödülü" : "Kazınabilir kapalı alan");
+      button.setAttribute("aria-label", presentation.resultClass ? presentation.label : "Kazınabilir kapalı alan");
       const content = button.querySelector<HTMLElement>(".witch-cell-content");
-      if (content) content.textContent = presentation.symbol;
+      if (content) {
+        if (presentation.artworkUrl) {
+          content.innerHTML = `<img class="witch-cell-artwork" src="${presentation.artworkUrl}" alt="" draggable="false">`;
+        } else {
+          content.textContent = presentation.symbol;
+        }
+      }
       const resultLabel = button.querySelector<HTMLElement>(".witch-cell-result-label");
       if (resultLabel) resultLabel.textContent = presentation.label;
       const layerCanvases = Array.from(button.querySelectorAll<HTMLCanvasElement>(".witch-scratch-layer"));
@@ -671,6 +680,7 @@ export class WitchClient {
           brushRadiusPx: SCRATCH_BRUSH_RADIUS_PX,
           debrisCanvas: debrisCanvas ?? undefined,
           layerCanvases,
+          coverImageUrl: round.mode === "STANDARD" ? "/cadi-kazan/bcs-cactus.webp" : undefined,
           resultReady: isActuallyRevealed,
           onCommit: async () => {
             if (this.state?.round?.revealedCells.includes(index)) return;
@@ -693,6 +703,7 @@ export class WitchClient {
     const ticketStake = this.root.querySelector<HTMLElement>("[data-witch-ticket-stake]");
     const ticketBombs = this.root.querySelector<HTMLElement>("[data-witch-ticket-bombs]");
     const ticketPrice = this.root.querySelector<HTMLElement>("[data-witch-ticket-price]");
+    const standardPrice = this.root.querySelector<HTMLElement>("[data-witch-standard-price]");
     const ticketId = this.root.querySelector<HTMLElement>("[data-witch-ticket-id]");
     if (playMode) playMode.textContent = round.mode === "STANDARD" ? "STANDARD 5 / 01 BOMBA" : `ADVANCED 25 / ${String(round.alarmCount).padStart(2, "0")} BOMBA`;
     if (playTitle) playTitle.textContent = round.status === "BUST" ? "Bomba açıldı." : round.status === "CASHED_OUT" ? "Kazanç alındı." : round.status === "COMPLETED" ? "Kart tamamlandı." : "Folyo kazındıkça alttaki sonuç görünür.";
@@ -700,6 +711,10 @@ export class WitchClient {
     if (ticketStake) ticketStake.textContent = formatMoney(round.stakeCents);
     if (ticketBombs) ticketBombs.textContent = `${String(round.alarmCount).padStart(2, "0")} BOMBA`;
     if (ticketPrice) ticketPrice.textContent = formatTicketPrice(round.stakeCents);
+    if (standardPrice) {
+      standardPrice.textContent = formatTicketPrice(round.stakeCents);
+      standardPrice.hidden = round.mode !== "STANDARD";
+    }
     if (ticketId) ticketId.textContent = `#${round.id.slice(0, 8).toUpperCase()}`;
     if (riskNote) {
       const selectedBombs = this.mode === "STANDARD" ? "1" : (alarms?.value ?? String(round.alarmCount));

@@ -4341,3 +4341,359 @@
     font-size: 5px !important;
   }
 }
+
+
+/* =========================================================
+   STANDARD 5 — BETTER CALL SAUL CARD + MATCHING PAGE THEME
+   User-approved reference: exact card artwork is used as the
+   ticket surface; interactive cells are registered over the
+   five printed squares.
+   ========================================================= */
+.witch-page.is-standard-theme {
+  --bcs-red: #c92a20;
+  --bcs-red-dark: #7c1713;
+  --bcs-yellow: #f7c944;
+  --bcs-yellow-soft: #ffd85c;
+  --bcs-ink: #17120d;
+  --bcs-panel: #120e0b;
+  --bcs-panel-2: #1d130e;
+  --bcs-cream: #fff0bd;
+  background:
+    radial-gradient(circle at 50% 38%, rgba(246, 184, 51, .16), transparent 31%),
+    linear-gradient(180deg, #21110b 0%, #0c0908 56%, #160b08 100%);
+}
+
+.witch-page.is-standard-theme .witch-appbar {
+  border-color: rgba(247, 201, 68, .62);
+  background:
+    linear-gradient(90deg, rgba(137, 24, 18, .98), rgba(76, 17, 14, .97) 44%, rgba(26, 15, 12, .98));
+  box-shadow:
+    0 10px 28px rgba(0, 0, 0, .28),
+    inset 0 -2px 0 rgba(247, 201, 68, .26);
+}
+
+.witch-page.is-standard-theme .witch-appbrand h1,
+.witch-page.is-standard-theme .witch-appbrand small,
+.witch-page.is-standard-theme .witch-back {
+  color: #ffe28a;
+}
+
+.witch-page.is-standard-theme .witch-back {
+  border-color: rgba(255, 219, 105, .68);
+  background: rgba(38, 14, 10, .54);
+}
+
+.witch-page.is-standard-theme .witch-appstats {
+  border-color: rgba(247, 201, 68, .28);
+  background: rgba(14, 10, 8, .62);
+}
+
+.witch-page.is-standard-theme .witch-stat strong {
+  color: #ffe08a;
+}
+
+.witch-page.is-standard-theme .witch-connection {
+  color: #ffd76a;
+}
+
+.witch-page.is-standard-theme .witch-stage-shell {
+  border-color: rgba(225, 74, 40, .48);
+  background:
+    linear-gradient(180deg, rgba(31, 14, 9, .92), rgba(12, 10, 9, .97)),
+    radial-gradient(circle at 50% 36%, rgba(255, 192, 62, .18), transparent 42%);
+  box-shadow:
+    inset 0 0 0 1px rgba(247, 201, 68, .12),
+    inset 0 -90px 120px rgba(70, 12, 8, .18);
+}
+
+.witch-page.is-standard-theme .witch-stage-shell::before {
+  border-color: rgba(247, 201, 68, .18);
+}
+
+.witch-page.is-standard-theme .witch-stage-decor {
+  opacity: .15;
+  filter: sepia(1) saturate(1.4);
+}
+
+.witch-page.is-standard-theme .witch-table-eyebrow,
+.witch-page.is-standard-theme .witch-table-heading strong {
+  color: #ffd66a;
+}
+
+.witch-page.is-standard-theme .witch-payout-panel {
+  border-color: rgba(247, 201, 68, .52);
+  background:
+    linear-gradient(165deg, rgba(32, 17, 11, .98), rgba(13, 10, 9, .99) 62%, rgba(77, 17, 13, .92));
+  box-shadow:
+    0 18px 38px rgba(0, 0, 0, .32),
+    inset 0 0 0 1px rgba(201, 42, 32, .26);
+}
+
+.witch-page.is-standard-theme .witch-payout-head span,
+.witch-page.is-standard-theme .witch-multiplier,
+.witch-page.is-standard-theme .witch-payout-amount {
+  color: #ffd55e;
+}
+
+.witch-page.is-standard-theme .witch-payout-net b {
+  color: #ff8a72;
+}
+
+.witch-page.is-standard-theme .witch-cashout-button,
+.witch-page.is-standard-theme .witch-secondary-button {
+  border-color: rgba(255, 215, 94, .62);
+}
+
+.witch-page.is-standard-theme .witch-cashout-button:not(:disabled) {
+  color: #24150d;
+  background: linear-gradient(180deg, #ffe282, #e9a831);
+  box-shadow: 0 7px 16px rgba(132, 53, 14, .25);
+}
+
+.witch-page.is-standard-theme .witch-secondary-button {
+  color: #ffd76b;
+  background: rgba(103, 24, 18, .32);
+}
+
+.witch-page.is-standard-theme .witch-control-dock {
+  border-color: rgba(247, 201, 68, .54);
+  background:
+    linear-gradient(90deg, rgba(104, 22, 17, .96), rgba(31, 15, 11, .98) 36%, rgba(22, 13, 10, .98));
+  box-shadow:
+    0 -8px 26px rgba(0, 0, 0, .24),
+    inset 0 1px 0 rgba(255, 218, 105, .11);
+}
+
+.witch-page.is-standard-theme .witch-mode-card {
+  border-color: rgba(247, 201, 68, .22);
+  background: rgba(17, 12, 10, .72);
+}
+
+.witch-page.is-standard-theme .witch-mode-card.is-selected {
+  border-color: #ffd056;
+  color: #1c120b;
+  background: linear-gradient(180deg, #ffd75f, #e7a72d);
+  box-shadow: inset 0 0 0 1px rgba(255,255,255,.24);
+}
+
+.witch-page.is-standard-theme .witch-mode-card.is-selected strong,
+.witch-page.is-standard-theme .witch-mode-card.is-selected small {
+  color: #20130c;
+}
+
+.witch-page.is-standard-theme .witch-stake-stepper,
+.witch-page.is-standard-theme .witch-alarm-field select,
+.witch-page.is-standard-theme .witch-stake-presets button {
+  border-color: rgba(247, 201, 68, .28);
+  background: rgba(18, 12, 10, .82);
+}
+
+.witch-page.is-standard-theme .witch-primary-button {
+  border-color: #ffe38a;
+  color: #20130b;
+  background:
+    linear-gradient(180deg, #ffd95f 0%, #f0b136 65%, #d88a24 100%);
+  box-shadow:
+    0 8px 18px rgba(110, 38, 12, .30),
+    inset 0 1px 0 rgba(255,255,255,.42);
+}
+
+/* Standard ticket uses the supplied closed-card reference as its visual master. */
+.witch-page.is-standard-theme .witch-ticket:not(.is-advanced) {
+  position: absolute !important;
+  top: 50% !important;
+  left: 50% !important;
+  right: auto !important;
+  bottom: auto !important;
+  width: min(96%, 920px) !important;
+  height: auto !important;
+  min-width: 0 !important;
+  max-width: 920px !important;
+  max-height: 94% !important;
+  aspect-ratio: 2001 / 671;
+  margin: 0 !important;
+  padding: 0 !important;
+  overflow: hidden;
+  border: 0 !important;
+  border-radius: 5px !important;
+  background:
+    url("/cadi-kazan/bcs-standard5-card.webp") center / 100% 100% no-repeat !important;
+  box-shadow:
+    0 24px 54px rgba(0, 0, 0, .46),
+    0 4px 12px rgba(0, 0, 0, .30) !important;
+  transform: translate(-50%, -50%) !important;
+}
+
+.witch-page.is-standard-theme .witch-ticket:not(.is-advanced)::before,
+.witch-page.is-standard-theme .witch-ticket:not(.is-advanced)::after,
+.witch-page.is-standard-theme .witch-ticket:not(.is-advanced) .witch-ticket-frame,
+.witch-page.is-standard-theme .witch-ticket:not(.is-advanced) .witch-ticket-header,
+.witch-page.is-standard-theme .witch-ticket:not(.is-advanced) .witch-ticket-meta-row,
+.witch-page.is-standard-theme .witch-ticket:not(.is-advanced) .witch-ticket-footer {
+  display: none !important;
+}
+
+.witch-standard-price-badge {
+  display: none;
+}
+
+.witch-page.is-standard-theme .witch-ticket:not(.is-advanced) .witch-standard-price-badge:not([hidden]) {
+  position: absolute;
+  z-index: 30;
+  top: 3.6%;
+  right: 2.1%;
+  display: grid;
+  width: clamp(58px, 9.4%, 86px);
+  aspect-ratio: 1;
+  place-items: center;
+  padding: 0 4px;
+  color: #c51f18;
+  font-family: Impact, "Arial Black", sans-serif;
+  font-size: clamp(15px, 2.25vw, 27px);
+  font-weight: 900;
+  letter-spacing: -.035em;
+  line-height: 1;
+  text-shadow: 0 1px 0 rgba(255,255,255,.55);
+  background: #ffdf3d;
+  clip-path: polygon(50% 0%,61% 13%,76% 5%,81% 21%,98% 21%,88% 36%,100% 50%,86% 60%,96% 76%,79% 79%,76% 97%,61% 87%,50% 100%,39% 87%,24% 96%,21% 79%,4% 76%,14% 61%,0% 50%,13% 39%,3% 23%,20% 20%,24% 4%,39% 13%);
+  filter: drop-shadow(0 2px 0 #a51512) drop-shadow(0 3px 2px rgba(0,0,0,.18));
+}
+
+/* The five interactive cells are registered to the printed squares in the card artwork. */
+.witch-page.is-standard-theme .witch-ticket:not(.is-advanced) .witch-board-wrap {
+  position: absolute !important;
+  z-index: 20;
+  top: 35.1% !important;
+  left: 35.25% !important;
+  width: 63.15% !important;
+  height: 35.7% !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+}
+
+.witch-page.is-standard-theme .witch-ticket:not(.is-advanced) .witch-board {
+  display: grid !important;
+  width: 100% !important;
+  height: 100% !important;
+  grid-template-columns: repeat(5, minmax(0, 1fr)) !important;
+  grid-template-rows: 1fr !important;
+  gap: 1.05% !important;
+}
+
+.witch-page.is-standard-theme .witch-ticket:not(.is-advanced) .witch-cell {
+  position: relative;
+  width: 100% !important;
+  height: 100% !important;
+  min-width: 0 !important;
+  min-height: 0 !important;
+  aspect-ratio: 1 !important;
+  overflow: hidden;
+  border: 1.5px solid #c53224 !important;
+  border-radius: 1px !important;
+  background: #fffdf8 !important;
+  box-shadow: none !important;
+}
+
+.witch-page.is-standard-theme .witch-ticket:not(.is-advanced) .witch-cell-result-layer {
+  inset: 0 !important;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  border-radius: 0;
+  background: #fff !important;
+}
+
+.witch-page.is-standard-theme .witch-ticket:not(.is-advanced) .witch-cell-aura,
+.witch-page.is-standard-theme .witch-ticket:not(.is-advanced) .witch-cell-result-label {
+  display: none !important;
+}
+
+.witch-page.is-standard-theme .witch-ticket:not(.is-advanced) .witch-cell-content {
+  position: absolute !important;
+  inset: 0 !important;
+  display: block !important;
+  width: 100% !important;
+  height: 100% !important;
+  transform: none !important;
+}
+
+.witch-cell-artwork {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  object-position: center;
+  background: #fff;
+  user-select: none;
+  pointer-events: none;
+}
+
+.witch-page.is-standard-theme .witch-ticket:not(.is-advanced) .witch-scratch-layer,
+.witch-page.is-standard-theme .witch-ticket:not(.is-advanced) .witch-debris-canvas {
+  border-radius: 0 !important;
+}
+
+/* Keep the card reference readable on the dedicated landscape-phone scene. */
+@media (max-width: 600px) and (orientation: portrait),
+       (max-height: 600px) and (orientation: landscape) and (max-width: 1200px) {
+  .witch-page.is-standard-theme .witch-ticket:not(.is-advanced) {
+    width: min(98%, 650px) !important;
+    max-width: 98% !important;
+    max-height: 96% !important;
+  }
+
+  .witch-page.is-standard-theme .witch-ticket:not(.is-advanced) .witch-standard-price-badge:not([hidden]) {
+    width: clamp(38px, 9.2%, 55px);
+    font-size: clamp(10px, 1.8cqw, 16px);
+  }
+
+  .witch-page.is-standard-theme .witch-ticket:not(.is-advanced) .witch-cell {
+    border-width: 1px !important;
+  }
+
+  .witch-page.is-standard-theme .witch-payout-panel {
+    border-color: rgba(247, 201, 68, .50);
+  }
+}
+
+
+/* Standard 5 result art must not inherit the legacy GOLD/BOMBA sculptures. */
+.witch-page.is-standard-theme .witch-ticket:not(.is-advanced) .witch-cell.is-safe .witch-cell-result-layer,
+.witch-page.is-standard-theme .witch-ticket:not(.is-advanced) .witch-cell.is-bomb .witch-cell-result-layer {
+  background: #fff !important;
+}
+
+.witch-page.is-standard-theme .witch-ticket:not(.is-advanced) .witch-cell.is-safe .witch-cell-content,
+.witch-page.is-standard-theme .witch-ticket:not(.is-advanced) .witch-cell.is-bomb .witch-cell-content {
+  position: absolute !important;
+  inset: 0 !important;
+  width: 100% !important;
+  height: 100% !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  background: #fff !important;
+  box-shadow: none !important;
+  transform: none !important;
+  filter: none !important;
+}
+
+.witch-page.is-standard-theme .witch-ticket:not(.is-advanced) .witch-cell.is-safe .witch-cell-content::before,
+.witch-page.is-standard-theme .witch-ticket:not(.is-advanced) .witch-cell.is-safe .witch-cell-content::after,
+.witch-page.is-standard-theme .witch-ticket:not(.is-advanced) .witch-cell.is-bomb .witch-cell-content::before,
+.witch-page.is-standard-theme .witch-ticket:not(.is-advanced) .witch-cell.is-bomb .witch-cell-content::after {
+  display: none !important;
+  content: none !important;
+}
+
+.witch-page.is-standard-theme .witch-ticket:not(.is-advanced) .witch-cell-artwork {
+  width: 100% !important;
+  height: 100% !important;
+  object-fit: contain !important;
+  object-position: center !important;
+  filter: none !important;
+  transform: none !important;
+}
