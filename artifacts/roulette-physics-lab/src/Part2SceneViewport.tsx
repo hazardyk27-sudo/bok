@@ -1198,78 +1198,59 @@ function addMeasuredOuterWallColliders(
   profile: readonly [number, number][],
   friction: number,
 ) {
-  // Build continuous sloped wall strips between measured profile samples.
-  // Independent horizontal rings create stair-step ledges that can inject
-  // vertical energy into a fast ball as it climbs the retaining wall.
-  // The analytic recessed-channel collider already owns the lower outer-wall
-  // profile. Add only the measured upper retaining lip to avoid duplicate
-  // overlapping contact surfaces and keep CCD cost bounded.
-  const samples = [...profile]
-    .filter(([, height]) => height >= -0.08)
-    .sort((left, right) => left[1] - right[1]);
-  const segments = 48;
-  const wallHalfThickness = 0.018;
+  const measured = [...profile].sort((left, right) => left[1] - right[1]);
+  const segments = 64;
+  const radialHalfDepth = 0.018;
   const colliders: RAPIER.Collider[] = [];
 
-  for (let profileIndex = 0; profileIndex < samples.length - 1; profileIndex += 1) {
-    const [radiusA, yA] = samples[profileIndex];
-    const [radiusB, yB] = samples[profileIndex + 1];
-    const deltaRadius = radiusB - radiusA;
-    const deltaY = yB - yA;
-    const profileLength = Math.hypot(deltaRadius, deltaY);
-    if (profileLength <= 0.0001) continue;
+  // Use the measured innermost visible wall radius as one continuous vertical
+  // containment band. Stacking rings at different radii creates artificial
+  // horizontal ledges that a fast ball can climb.
+  const innerFaceRadius = Math.min(
+    PART2_ACTUAL_WOOD_INNER_RADIUS,
+    ...measured.map(([radius]) => radius),
+  );
+  const centerRadius = innerFaceRadius + radialHalfDepth;
+  const minY = Math.min(...measured.map(([, height]) => height));
+  const maxY = Math.max(...measured.map(([, height]) => height));
+  const lowerY = minY - 0.025;
+  const upperY = maxY + BALL_RADIUS + 0.04;
+  const halfHeight = Math.max(0.02, (upperY - lowerY) / 2);
+  const centerY = (lowerY + upperY) / 2;
+  const halfTangentialWidth =
+    centerRadius * Math.tan(Math.PI / segments) * 1.03;
 
-    const centerRadius = (radiusA + radiusB) / 2;
-    const centerY = (yA + yB) / 2;
-    const slopeAngle = Math.atan2(deltaRadius, deltaY);
-    const radialNormal = deltaY / profileLength;
-    const verticalNormal = -deltaRadius / profileLength;
-    const colliderRadius =
-      centerRadius + radialNormal * wallHalfThickness;
-    const colliderY =
-      centerY + verticalNormal * wallHalfThickness;
-    const halfProfileLength = profileLength / 2 + 0.002;
-    const halfTangentialWidth =
-      colliderRadius * Math.tan(Math.PI / segments) * 1.04;
-
-    for (let segment = 0; segment < segments; segment += 1) {
-      const angle = (segment / segments) * TWO_PI;
-      const yaw = new THREE.Quaternion().setFromAxisAngle(
-        new THREE.Vector3(0, 1, 0),
-        angle,
-      );
-      const slope = new THREE.Quaternion().setFromAxisAngle(
-        new THREE.Vector3(1, 0, 0),
-        slopeAngle,
-      );
-      const rotation = yaw.multiply(slope);
-
-      const collider = RAPIER.ColliderDesc.cuboid(
-        halfTangentialWidth,
-        halfProfileLength,
-        wallHalfThickness,
+  for (let segment = 0; segment < segments; segment += 1) {
+    const angle = (segment / segments) * TWO_PI;
+    const collider = RAPIER.ColliderDesc.cuboid(
+      halfTangentialWidth,
+      halfHeight,
+      radialHalfDepth,
+    )
+      .setTranslation(
+        Math.sin(angle) * centerRadius,
+        centerY,
+        Math.cos(angle) * centerRadius,
       )
-        .setTranslation(
-          Math.sin(angle) * colliderRadius,
-          colliderY,
-          Math.cos(angle) * colliderRadius,
-        )
-        .setRotation({
-          x: rotation.x,
-          y: rotation.y,
-          z: rotation.z,
-          w: rotation.w,
-        })
-        .setFriction(friction)
-        .setRestitution(0.01)
-        .setCollisionGroups(
-          STATIONARY_COLLISION_GROUP | (BALL_COLLISION_GROUP << 16),
-        );
-      colliders.push(world.createCollider(collider, body));
-    }
+      .setRotation({
+        x: 0,
+        y: Math.sin(angle / 2),
+        z: 0,
+        w: Math.cos(angle / 2),
+      })
+      .setFriction(friction)
+      .setRestitution(0.01)
+      .setCollisionGroups(
+        STATIONARY_COLLISION_GROUP | (BALL_COLLISION_GROUP << 16),
+      );
+    colliders.push(world.createCollider(collider, body));
   }
 
-  return { colliders, samples, segments };
+  return {
+    colliders,
+    samples: [[innerFaceRadius, lowerY], [innerFaceRadius, upperY]] as Array<[number, number]>,
+    segments,
+  };
 }
 
 function buildPocketFloorTrimesh() {
