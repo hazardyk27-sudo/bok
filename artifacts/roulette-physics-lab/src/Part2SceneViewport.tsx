@@ -1062,6 +1062,74 @@ function part4InitialVelocity(probe: (typeof PART4_PROBES)[number]): VectorReado
   };
 }
 
+function addBowlBridgePrimitiveColliders(
+  world: RAPIER.World,
+  body: RAPIER.RigidBody,
+  profile: readonly [number, number][],
+  friction: number,
+) {
+  const colliders: RAPIER.Collider[] = [];
+  const segments = 24;
+  const halfThickness = BOWL_BRIDGE_THICKNESS / 2;
+
+  for (let profileIndex = 0; profileIndex < profile.length - 1; profileIndex += 1) {
+    const [radiusA, yA] = profile[profileIndex];
+    const [radiusB, yB] = profile[profileIndex + 1];
+    const deltaRadius = radiusB - radiusA;
+    const deltaY = yB - yA;
+    const profileLength = Math.hypot(deltaRadius, deltaY);
+    if (profileLength <= 0.0001) continue;
+
+    const slopeAngle = Math.atan2(deltaRadius, deltaY);
+    const radialNormal = deltaY / profileLength;
+    const verticalNormal = -deltaRadius / profileLength;
+    const centerRadius =
+      (radiusA + radiusB) / 2 + radialNormal * halfThickness;
+    const centerY =
+      (yA + yB) / 2 + verticalNormal * halfThickness;
+    const halfProfileLength = profileLength / 2 + 0.003;
+    const halfTangentialWidth =
+      centerRadius * Math.tan(Math.PI / segments) * 1.04;
+
+    for (let segment = 0; segment < segments; segment += 1) {
+      const angle = (segment / segments) * TWO_PI;
+      const yaw = new THREE.Quaternion().setFromAxisAngle(
+        new THREE.Vector3(0, 1, 0),
+        angle,
+      );
+      const slope = new THREE.Quaternion().setFromAxisAngle(
+        new THREE.Vector3(1, 0, 0),
+        slopeAngle,
+      );
+      const rotation = yaw.multiply(slope);
+      const collider = RAPIER.ColliderDesc.cuboid(
+        halfTangentialWidth,
+        halfProfileLength,
+        halfThickness,
+      )
+        .setTranslation(
+          Math.sin(angle) * centerRadius,
+          centerY,
+          Math.cos(angle) * centerRadius,
+        )
+        .setRotation({
+          x: rotation.x,
+          y: rotation.y,
+          z: rotation.z,
+          w: rotation.w,
+        })
+        .setFriction(friction)
+        .setRestitution(0.01)
+        .setCollisionGroups(
+          STATIONARY_COLLISION_GROUP | (BALL_COLLISION_GROUP << 16),
+        );
+      colliders.push(world.createCollider(collider, body));
+    }
+  }
+
+  return colliders;
+}
+
 function buildBowlBridgeTrimesh(
   profile: readonly [number, number][],
 ) {
@@ -2019,7 +2087,7 @@ export function Part2SceneViewport({
     let rotorBody: RAPIER.RigidBody | null = null;
     let physicsBallCollider: RAPIER.Collider | null = null;
     let part3TrackCollider: RAPIER.Collider | null = null;
-    let part3BowlBridgeCollider: RAPIER.Collider | null = null;
+    let part3BowlBridgeColliders: RAPIER.Collider[] = [];
     let part3BowlBridgeProfile: Array<[number, number]> = [];
     let part3BowlBridgeOuterRadius = BOWL_BRIDGE_OUTER_RADIUS;
     let part3InnerFloorCollider: RAPIER.Collider | null = null;
@@ -6206,31 +6274,25 @@ export function Part2SceneViewport({
                outerLaneOnly || outerLaneSpinOnly
                  ? part2RaceVerticalOffset
                  : part3TrackVerticalOffset;
+             part3BowlBridgeOuterRadius = part6FullSpinRouteActive
+               ? PART2_ACTUAL_INWARD_EDGE_RADIUS
+               : BOWL_BRIDGE_OUTER_RADIUS;
              part3BowlBridgeProfile = measureBowlBridgeProfile(
                activeTrackVerticalOffset,
+               part3BowlBridgeOuterRadius,
              );
-             const bowlBridgeMesh = buildBowlBridgeTrimesh(
-               part3BowlBridgeProfile,
-             );
-             part3BowlBridgeCollider = world.createCollider(
-               RAPIER.ColliderDesc.trimesh(
-                 bowlBridgeMesh.vertices,
-                 bowlBridgeMesh.indices,
-                 RAPIER.TriMeshFlags.FIX_INTERNAL_EDGES |
-                   RAPIER.TriMeshFlags.ORIENTED,
-               )
-                 .setFriction(activePart3TrackFriction)
-                 .setRestitution(0.01)
-                 .setCollisionGroups(
-                   STATIONARY_COLLISION_GROUP |
-                     (BALL_COLLISION_GROUP << 16),
-                 ),
+             part3BowlBridgeColliders = addBowlBridgePrimitiveColliders(
+               world,
                stationaryBody,
+               part3BowlBridgeProfile,
+               activePart3TrackFriction,
              );
-             part3ColliderRoles.set(
-               part3BowlBridgeCollider.handle,
-               'stationary-bowl-apron-bridge',
-             );
+             for (const collider of part3BowlBridgeColliders) {
+               part3ColliderRoles.set(
+                 collider.handle,
+                 'stationary-bowl-apron-bridge',
+               );
+             }
            }
 
            if (validationMode !== 'part3') {
