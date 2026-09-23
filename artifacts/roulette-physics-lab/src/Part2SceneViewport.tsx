@@ -4413,6 +4413,11 @@ export function Part2SceneViewport({
                   radius: Number(radius.toFixed(4)),
                   y: Number(position.y.toFixed(4)),
                   speed: Number(speed.toFixed(4)),
+                  velocity: {
+                    x: Number(velocity.x.toFixed(4)),
+                    y: Number(velocity.y.toFixed(4)),
+                    z: Number(velocity.z.toFixed(4)),
+                  },
                   contactRoles: [...stepContactRoles],
                   trackContact: trackPairContact,
                   deflectorContact: deflectorPairContact,
@@ -6203,6 +6208,16 @@ export function Part2SceneViewport({
               peakProminence: part4DeflectorAudit.peakProminence,
               maxSpacingDeviationRatio:
                 part4DeflectorAudit.maxSpacingDeviationRatio,
+              descriptors: part4DeflectorAudit.descriptors.map((descriptor) => ({
+                angleDegrees: Number(
+                  THREE.MathUtils.radToDeg(descriptor.angle).toFixed(3),
+                ),
+                innerRadius: descriptor.innerRadius,
+                outerRadius: descriptor.outerRadius,
+                bottomY: descriptor.bottomY,
+                topY: descriptor.topY,
+                angularWidth: descriptor.angularWidth,
+              })),
             }),
           );
 
