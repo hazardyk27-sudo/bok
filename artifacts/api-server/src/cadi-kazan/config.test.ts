@@ -5,6 +5,7 @@ import {
   STANDARD_CASHOUT_MULTIPLIERS_BPS,
   getCashoutMultiplierBps,
   getCashoutPayoutCents,
+  getMaxSafeStakeCents,
   getSafeCellCount,
   getVisibleBombCells,
 } from "./types";
@@ -54,5 +55,10 @@ describe("Cadı Kazan payout configuration", () => {
   it("keeps cash-out amount calculation server-owned", () => {
     expect(getCashoutPayoutCents(100, 120)).toBe(120);
     expect(getCashoutPayoutCents(333, 157)).toBe(522);
+  });
+
+  it("removes the old 100-credit product cap while keeping storage-safe payouts", () => {
+    expect(getMaxSafeStakeCents("STANDARD", 1)).toBeGreaterThan(10_000);
+    expect(getMaxSafeStakeCents("ADVANCED", 1)).toBeGreaterThan(10_000);
   });
 });
