@@ -3542,7 +3542,7 @@ export function Part2SceneViewport({
         new URLSearchParams(window.location.search).get('part6Headless') ===
         '1';
       const telemetryYieldSteps = part6HeadlessFastMode
-        ? maxSteps
+        ? PART6_UI_YIELD_STEPS * 2
         : PART6_UI_YIELD_STEPS;
       const settleFramesRequired = Math.round(
         PART6_SETTLE_DURATION_SECONDS / FIXED_TIMESTEP,
@@ -3623,6 +3623,11 @@ export function Part2SceneViewport({
           'PART 6A.1 deterministic full-spin telemetry is running with isolated seed resets and phase tracking; physics coefficients are unchanged.',
         ),
       );
+      // Commit the running report before heavy deterministic stepping starts.
+      // Headless mode remains faster, but never monopolizes the browser task
+      // for an entire 30-second simulated seed.
+      await yieldToBrowser();
+      if (disposed) return;
 
       try {
         for (const run of PART6_FULL_SPIN_RUNS) {
