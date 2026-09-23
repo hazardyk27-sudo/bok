@@ -5369,7 +5369,7 @@ export function Part2SceneViewport({
           telemetryCaptured
             ? 'PART 6A.1 telemetry captured all ' +
                 String(results.length) +
-                ' deterministic full-spin runs. Safety is reported separately; 4–5 lap calibration remains NOT EVALUATED.'
+                ' deterministic full-spin runs. Safety and lap calibration are reported in the status fields.'
             : 'PART 6A.1 telemetry did not capture every deterministic run.',
         );
 
