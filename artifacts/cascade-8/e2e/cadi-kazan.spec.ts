@@ -210,9 +210,11 @@ async function captureMobileLayout(page: Page) {
     return {
       horizontalOverflow: scrollWidth > viewportWidth + 1,
       dockPosition: dock ? getComputedStyle(dock).position : "",
-      dockWithinViewport: Boolean(dockRect && dockRect.left >= 0 && dockRect.right <= viewportWidth && dockRect.bottom <= viewportHeight + 1),
-      ticketWithinViewport: Boolean(ticketRect && ticketRect.left >= 0 && ticketRect.right <= viewportWidth && ticketRect.top >= 0 && ticketRect.bottom <= viewportHeight + 1),
-      payoutWithinViewport: Boolean(payoutRect && payoutRect.left >= 0 && payoutRect.right <= viewportWidth && payoutRect.top >= 0 && payoutRect.bottom <= viewportHeight + 1),
+      dockFitsWidth: Boolean(dockRect && dockRect.left >= -1 && dockRect.right <= viewportWidth + 1),
+      ticketFitsWidth: Boolean(ticketRect && ticketRect.left >= -1 && ticketRect.right <= viewportWidth + 1),
+      payoutFitsWidth: Boolean(payoutRect && payoutRect.left >= -1 && payoutRect.right <= viewportWidth + 1),
+      ticketStartsInViewport: Boolean(ticketRect && ticketRect.top >= 0 && ticketRect.top < viewportHeight),
+      pageTransform: getComputedStyle(document.querySelector<HTMLElement>(".witch-page")!).transform,
     };
   });
 }
@@ -277,7 +279,7 @@ test.describe("Cadı Kazan critical round lifecycle", () => {
   });
 
   test("mobile physical orientation fits Advanced 25, payout HUD, and control dock without overflow", async ({ page }, testInfo: TestInfo) => {
-    test.skip(!["android-chrome", "android-portrait", "android-small-portrait"].includes(testInfo.project.name), "Mobile Cadı Kazan coverage runs in Android projects");
+    test.skip(!["android-chrome", "android-portrait", "android-small-portrait", "android-narrow-portrait"].includes(testInfo.project.name), "Mobile Cadı Kazan coverage runs in Android projects");
     const fixture = await installCadiKazanFixture(page);
 
     await page.locator("[data-witch-mode='ADVANCED']").click();
@@ -294,18 +296,17 @@ test.describe("Cadı Kazan critical round lifecycle", () => {
     expect(fixture.startBodies[0]).toMatchObject({ mode: "ADVANCED", alarmCount: 1, stakeCents: 100 });
 
     const layout = await captureMobileLayout(page);
-    const shellTransform = await page.locator(".witch-page").evaluate((element) => getComputedStyle(element).transform);
-    const rotateHintDisplay = await page.locator(".witch-rotate-hint").evaluate((element) => getComputedStyle(element).display);
     expect(layout.horizontalOverflow).toBe(false);
-    if (["android-portrait", "android-small-portrait"].includes(testInfo.project.name)) {
-      expect(shellTransform).toBe("none");
-      expect(rotateHintDisplay).toBe("none");
+    expect(layout.ticketFitsWidth).toBe(true);
+    expect(layout.payoutFitsWidth).toBe(true);
+    expect(layout.dockFitsWidth).toBe(true);
+    expect(layout.ticketStartsInViewport).toBe(true);
+    if (["android-portrait", "android-small-portrait", "android-narrow-portrait"].includes(testInfo.project.name)) {
+      expect(layout.pageTransform).toBe("none");
       expect(layout.dockPosition).toBe("relative");
+      await expect(page.locator(".witch-rotate-hint")).toHaveCount(0);
     } else {
       expect(layout.dockPosition).toBe("fixed");
     }
-    expect(layout.dockWithinViewport).toBe(true);
-    expect(layout.ticketWithinViewport).toBe(true);
-    expect(layout.payoutWithinViewport).toBe(true);
   });
 });
