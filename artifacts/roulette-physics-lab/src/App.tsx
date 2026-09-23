@@ -3195,13 +3195,16 @@ function SceneViewport({
 
 function StatusChip({ state }: { state: LoadState }) {
   const content = {
-      loading: {
+    loading: {
       label: 'Building wheel',
       icon: <CircleDot className="status-icon status-pulse" size={13} />,
     },
-    loaded: { label: 'Asset ready', icon: <Check className="status-icon" size={13} /> },
+    loaded: {
+      label: 'Asset ready',
+      icon: <Check className="status-icon" size={13} />,
+    },
     error: {
-      label: 'WebGL blocked',
+      label: 'Asset unavailable',
       icon: <AlertTriangle className="status-icon" size={13} />,
     },
   }[state];
@@ -3419,6 +3422,10 @@ function App() {
   const [loadState, setLoadState] = useState<LoadState>('loading');
   const [errorDetail, setErrorDetail] = useState('');
   const [errorKind, setErrorKind] = useState<ValidationErrorKind | null>(null);
+  const [validationIssue, setValidationIssue] = useState<{
+    kind: ValidationErrorKind;
+    detail: string;
+  } | null>(null);
   const [view, setView] = useState<InspectionView>('angled');
   const [showGrid, setShowGrid] = useState(true);
   const [showPhysicsDebug, setShowPhysicsDebug] = useState(false);
@@ -3465,9 +3472,47 @@ function App() {
       detail?: string,
       nextErrorKind?: ValidationErrorKind,
     ) => {
-      setLoadState(state);
-      setErrorDetail(detail ?? '');
-      setErrorKind(state === 'error' ? nextErrorKind ?? 'initialization' : null);
+      if (state === 'loading') {
+        setLoadState('loading');
+        setErrorDetail('');
+        setErrorKind(null);
+        setValidationIssue(null);
+        return;
+      }
+
+      if (state === 'error') {
+        const resolvedKind = nextErrorKind ?? 'initialization';
+        const blockingFailure =
+          resolvedKind === 'asset' || resolvedKind === 'initialization';
+
+        if (blockingFailure) {
+          setLoadState('error');
+          setErrorDetail(
+            detail ?? 'The roulette scene could not be initialized.',
+          );
+          setErrorKind(resolvedKind);
+          setValidationIssue(null);
+          return;
+        }
+
+        // Geometry/physics/telemetry failures are diagnostics, not renderer
+        // failures. Keep the already-loaded scene interactive so the failed
+        // contact/trajectory can be inspected visually.
+        setLoadState('loaded');
+        setErrorDetail('');
+        setErrorKind(null);
+        setValidationIssue({
+          kind: resolvedKind,
+          detail:
+            detail ??
+            'Roulette physics validation failed while the visual scene remained available.',
+        });
+        return;
+      }
+
+      setLoadState('loaded');
+      setErrorDetail('');
+      setErrorKind(null);
     },
     [],
   );
@@ -3524,6 +3569,7 @@ function App() {
     setAudit(null);
     setErrorDetail('');
     setErrorKind(null);
+    setValidationIssue(null);
     setLoadState('loading');
     setLoadKey((current) => current + 1);
   };
@@ -4312,6 +4358,22 @@ function App() {
             {loadState === 'loaded' && (
               <div className="loaded-stamp" data-testid="status-loaded">
                 <Check size={13} /> ASSET READY
+              </div>
+            )}
+            {loadState === 'loaded' && validationIssue && (
+              <div
+                className="validation-issue-banner"
+                data-testid="status-validation-issue"
+                data-error-kind={validationIssue.kind}
+                role="status"
+                aria-live="polite"
+              >
+                <AlertTriangle size={14} />
+                <div>
+                  <strong>{VALIDATION_ERROR_TITLES[validationIssue.kind]}</strong>
+                  <span>{validationIssue.detail}</span>
+                  <small>Preview remains interactive for diagnosis.</small>
+                </div>
               </div>
             )}
           </div>
