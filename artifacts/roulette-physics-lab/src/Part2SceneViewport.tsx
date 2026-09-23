@@ -6307,17 +6307,39 @@ export function Part2SceneViewport({
                 'analytic-dark-recessed-channel',
               );
 
-              // The analytic dark-race trimesh already contains the measured
-              // outer-wall rise in the same continuous profile as the race floor.
-              // Do not overlay a second wall collider here: overlapping contact
-              // surfaces were producing vertical solver kicks at 30 wu/s.
+              const outerWall = addMeasuredOuterWallColliders(
+                world,
+                stationaryBody,
+                measuredOuterWallProfile,
+                activePart3TrackFriction,
+              );
+              outerWall.colliders.forEach((collider) => {
+                part3ColliderRoles.set(
+                  collider.handle,
+                  'measured-visible-outer-wall-cuboid',
+                );
+              });
               console.info(
                 'PART6_OUTER_WALL_COLLIDER',
                 JSON.stringify({
-                  mode: 'integrated-analytic-channel',
                   measuredSamples: measuredOuterWallProfile.length,
-                  primitiveColliderCount: 0,
+                  colliderRings: outerWall.samples.length,
+                  colliderSegments: outerWall.segments,
+                  primitiveColliderCount: outerWall.colliders.length,
+                  colliderProfile: outerWall.samples,
                   profile: measuredOuterWallProfile,
+                  minRadius: Math.min(
+                    ...measuredOuterWallProfile.map(([radius]) => radius),
+                  ),
+                  maxRadius: Math.max(
+                    ...measuredOuterWallProfile.map(([radius]) => radius),
+                  ),
+                  minY: Math.min(
+                    ...measuredOuterWallProfile.map(([, height]) => height),
+                  ),
+                  maxY: Math.max(
+                    ...measuredOuterWallProfile.map(([, height]) => height),
+                  ),
                 }),
               );
             } else if (
