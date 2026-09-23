@@ -54,7 +54,7 @@ describe("board generation", () => {
       expect(row4).toMatchObject({ stackIndex: 0, stackSize: 2 });
     }
   });
-  it("uses a 75% copy branch for the symbol above a pending pair member", () => {
+  it("uses an 85% copy branch for the symbol above a pending pair member", () => {
     const samples = 1_000;
     let copied = 0;
     for (let index = 0; index < samples; index += 1) {
