@@ -389,6 +389,24 @@ type Part3OuterLaneSpinReport = {
   detail: string;
 };
 
+type Part6SpinPhase =
+  | 'OUTER_RACE'
+  | 'INWARD_DESCENT'
+  | 'DEFLECTOR_ZONE'
+  | 'ROTOR_ENTRY'
+  | 'FRETS'
+  | 'POCKET'
+  | 'SETTLED';
+
+type Part6PhaseEvent = {
+  phase: Part6SpinPhase;
+  time: number;
+  radius: number;
+  y: number;
+  speed: number;
+  contactRole: string | null;
+};
+
 type Part6FullSpinTelemetryResult = {
   id: string;
   seed: number;
@@ -398,6 +416,7 @@ type Part6FullSpinTelemetryResult = {
   launchRadius: number;
   launchHeight: number;
   rotorStartAngle: number;
+  stateResetVerified: boolean;
   elapsed: number;
   lapCount: number;
   trackDuration: number;
@@ -412,6 +431,16 @@ type Part6FullSpinTelemetryResult = {
   maxRadius: number;
   inwardTransitionTime: number | null;
   inwardTransitionRadius: number | null;
+  phases: Part6PhaseEvent[];
+  phaseSequenceValid: boolean;
+  transitionMinRadius: number | null;
+  transitionMaxRadius: number | null;
+  transitionMinY: number | null;
+  transitionMaxY: number | null;
+  transitionMaxSurfacePenetration: number;
+  transitionMaxSurfaceSeparation: number;
+  transitionContactRoles: string[];
+  rotorEntryTime: number | null;
   deflectorContactCount: number;
   firstDeflectorContactTime: number | null;
   impactSpeedBefore: number | null;
@@ -439,17 +468,23 @@ type Part6FullSpinTelemetryResult = {
   maxPocketFloorSeparation: number;
   maxVisualBodySyncError: number;
   maxRotorSyncError: number;
+  timedOut: boolean;
+  safetyPassed: boolean;
   telemetryComplete: boolean;
   detail: string;
 };
 
 type Part6FullSpinTelemetryReport = {
   status: 'running' | 'captured' | 'failed';
+  safetyStatus: 'pending' | 'passed' | 'failed';
+  calibrationStatus: 'not-evaluated';
   schemaVersion: string;
   fixedTimestep: number;
   maxDurationSeconds: number;
   seedCount: number;
   completedCount: number;
+  timedOutCount: number;
+  phaseSequenceFailureCount: number;
   fourToFiveLapCount: number;
   inwardTransitionCount: number;
   deflectorContactCount: number;
@@ -457,6 +492,15 @@ type Part6FullSpinTelemetryReport = {
   pocketEntryCount: number;
   settledCount: number;
   safetyFailureCount: number;
+  medianLapCount: number | null;
+  minLapCount: number | null;
+  maxLapCount: number | null;
+  medianTrackContactRatio: number | null;
+  inwardTransitionRate: number;
+  deflectorContactRate: number;
+  pocketEntryRate: number;
+  settleRate: number;
+  safetyFailureRate: number;
   trackFriction: number;
   linearDamping: number;
   angularDamping: number;
