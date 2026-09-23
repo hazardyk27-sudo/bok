@@ -32,6 +32,8 @@ import {
 
 const FIXED_TIMESTEP = ROULETTE_FIXED_TIMESTEP;
 const TEST_ANGULAR_SPEED = ROULETTE_ROTOR_ANGULAR_SPEED;
+const MANUAL_SPIN_ANGULAR_SPEED = 7.5;
+const MANUAL_SPIN_DURATION_SECONDS = 5;
 const GRAVITY_Y = ROULETTE_GRAVITY_Y;
 const BALL_RADIUS = ROULETTE_BALL_RADIUS;
 const BALL_MASS = 0.0027;
@@ -750,6 +752,7 @@ type Part2SceneViewportProps = {
   showStationaryGroup: boolean;
   showRotorGroup: boolean;
   rotorAngle: number;
+  manualSpinRequest: number;
   onStateChange: (
     state: LoadState,
     detail?: string,
@@ -757,6 +760,7 @@ type Part2SceneViewportProps = {
   ) => void;
   onAudit: (audit: Part2AssetAudit) => void;
   onRotorAngleChange: (angle: number) => void;
+  onManualSpinStateChange: (state: 'idle' | 'running') => void;
 };
 
 const VIEW_PRESETS: Record<InspectionView, { position: [number, number, number]; up: [number, number, number] }> = {
@@ -1857,17 +1861,25 @@ export function Part2SceneViewport({
   showStationaryGroup,
   showRotorGroup,
   rotorAngle,
+  manualSpinRequest,
   onStateChange,
   onAudit,
   onRotorAngleChange,
+  onManualSpinStateChange,
 }: Part2SceneViewportProps) {
   const part6FullSpinRouteActive =
     validationMode === 'part3' && outerLaneSpinOnly;
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const stageRef = useRef<HTMLDivElement | null>(null);
   const viewRef = useRef(view);
-  const callbacksRef = useRef({ onStateChange, onAudit, onRotorAngleChange });
+  const callbacksRef = useRef({
+    onStateChange,
+    onAudit,
+    onRotorAngleChange,
+    onManualSpinStateChange,
+  });
   const rotorAngleRef = useRef(normalizedAngle(rotorAngle));
+  const manualSpinRequestRef = useRef(manualSpinRequest);
   const [angleReadout, setAngleReadout] = useState(normalizedAngle(rotorAngle));
   const [dropReport, setDropReport] = useState<Part2DropReport | null>(null);
   const [part3Report, setPart3Report] = useState<Part3ValidationReport | null>(null);
@@ -1887,7 +1899,13 @@ export function Part2SceneViewport({
   const [pocketReport, setPocketReport] = useState<PocketValidationReport | null>(null);
 
   viewRef.current = view;
-  callbacksRef.current = { onStateChange, onAudit, onRotorAngleChange };
+  callbacksRef.current = {
+    onStateChange,
+    onAudit,
+    onRotorAngleChange,
+    onManualSpinStateChange,
+  };
+  manualSpinRequestRef.current = manualSpinRequest;
 
   useEffect(() => {
     rotorAngleRef.current = normalizedAngle(rotorAngle);
@@ -1925,6 +1943,8 @@ export function Part2SceneViewport({
     let lastTime = performance.now();
     let fixedStepCount = 0;
     let part6TelemetryBatchRunning = false;
+    let handledManualSpinRequest = manualSpinRequestRef.current;
+    let manualSpinRemaining = 0;
     const activePart3TrackFriction = outerLaneSpinOnly
       ? PART3_OUTER_SPIN_TRACK_FRICTION
       : PART3_TRACK_FRICTION;
@@ -6421,8 +6441,20 @@ export function Part2SceneViewport({
         accumulator += Math.min((now - lastTime) / 1000, 0.1);
         lastTime = now;
         while (accumulator >= FIXED_TIMESTEP) {
+          if (manualSpinRequestRef.current !== handledManualSpinRequest) {
+            handledManualSpinRequest = manualSpinRequestRef.current;
+            manualSpinRemaining = MANUAL_SPIN_DURATION_SECONDS;
+            callbacksRef.current.onManualSpinStateChange('running');
+          }
+
           if (rotorPivot && !part6TelemetryBatchRunning) {
-            rotorAngleRef.current = normalizedAngle(rotorAngleRef.current + TEST_ANGULAR_SPEED * FIXED_TIMESTEP);
+            const angularSpeed =
+              manualSpinRemaining > 0
+                ? MANUAL_SPIN_ANGULAR_SPEED
+                : TEST_ANGULAR_SPEED;
+            rotorAngleRef.current = normalizedAngle(
+              rotorAngleRef.current + angularSpeed * FIXED_TIMESTEP,
+            );
             rotorPivot.rotation.set(0, rotorAngleRef.current, 0);
             if (
               (validationMode === 'part3' || validationMode === 'part4') &&
@@ -6439,6 +6471,16 @@ export function Part2SceneViewport({
             if (fixedStepCount % 6 === 0) {
               setAngleReadout(rotorAngleRef.current);
               callbacksRef.current.onRotorAngleChange(rotorAngleRef.current);
+            }
+
+            if (manualSpinRemaining > 0) {
+              manualSpinRemaining = Math.max(
+                0,
+                manualSpinRemaining - FIXED_TIMESTEP,
+              );
+              if (manualSpinRemaining === 0) {
+                callbacksRef.current.onManualSpinStateChange('idle');
+              }
             }
           }
 

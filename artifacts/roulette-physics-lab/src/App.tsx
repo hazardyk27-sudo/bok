@@ -3434,6 +3434,8 @@ function App() {
   const [showRotorGroup, setShowRotorGroup] = useState(true);
   const [showSectorOverlay, setShowSectorOverlay] = useState(false);
   const [rotorAngle, setRotorAngle] = useState(0);
+  const [manualSpinRequest, setManualSpinRequest] = useState(0);
+  const [manualSpinState, setManualSpinState] = useState<'idle' | 'running'>('idle');
   const [rotorTestRequest, setRotorTestRequest] = useState(0);
   const [rotorTestState, setRotorTestState] = useState<'idle' | 'running' | 'passed'>('idle');
   const [rotorTestDetail, setRotorTestDetail] = useState('Reference angle · 0.0°');
@@ -3526,6 +3528,10 @@ function App() {
   const runRotorTest = () => {
     setRotorTestState('idle');
     setRotorTestDetail('Disabled: only the three PART 1 authoritative-world probes are in scope.');
+  };
+  const runManualSpin = () => {
+    if (manualSpinState === 'running') return;
+    setManualSpinRequest((current) => current + 1);
   };
   const runProbeTest = () => {
     setPhysicsReport({
@@ -3736,6 +3742,18 @@ function App() {
               <button
                 type="button"
                 className="rail-control"
+                onClick={runManualSpin}
+                disabled={loadState !== 'loaded' || manualSpinState === 'running'}
+                data-testid="button-manual-spin"
+              >
+                <span>
+                  <RotateCcw size={15} /> {manualSpinState === 'running' ? 'Manual spin active' : 'Manual spin'}
+                </span>
+                <ChevronRight size={14} />
+              </button>
+              <button
+                type="button"
+                className="rail-control"
                 onClick={() => setShowSectorOverlay((visible) => !visible)}
                 aria-pressed={showSectorOverlay}
                 data-testid="button-sector-overlay-toggle"
@@ -3838,13 +3856,17 @@ function App() {
               <button type="button" className="secondary-button" onClick={resetRotor} data-testid="button-rotor-reset">
                 Reset reference
               </button>
-              <button type="button" className="primary-button" onClick={runRotorTest} disabled data-testid="button-rotor-test">
-                Disabled outside PART 1
+              <button type="button" className="primary-button" onClick={runManualSpin} disabled={loadState !== 'loaded' || manualSpinState === 'running'} data-testid="button-rotor-test">
+                {manualSpinState === 'running' ? 'Manual spin active' : 'Spin rotor manually'}
               </button>
             </div>
             <div className={`rotor-test-status rotor-test-${rotorTestState}`} data-testid="status-rotor-test">
               <span>{rotorTestState === 'passed' ? 'PHYSICS ROTOR READY' : rotorTestState === 'running' ? 'COUPLED SPIN ACTIVE' : 'READY'}</span>
-              <small>{rotorTestDetail}</small>
+              <small>
+                {manualSpinState === 'running'
+                  ? 'Manual rotor spin is using the live Y-axis kinematic path.'
+                  : 'Press Manual spin to visibly rotate the rotor for 5 seconds.'}
+              </small>
             </div>
           </section>
 
@@ -4323,9 +4345,11 @@ function App() {
               showStationaryGroup={showStationaryGroup}
               showRotorGroup={showRotorGroup}
               rotorAngle={rotorAngle}
+              manualSpinRequest={manualSpinRequest}
               onStateChange={handleStateChange}
               onAudit={(nextAudit) => setAudit(nextAudit)}
               onRotorAngleChange={setRotorAngle}
+              onManualSpinStateChange={setManualSpinState}
             />
             {loadState === 'loading' && (
               <div className="viewport-overlay" data-testid="status-loading" role="status" aria-live="polite">
