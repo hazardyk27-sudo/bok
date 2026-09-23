@@ -2954,6 +2954,39 @@ export function Part2SceneViewport({
       return profile;
     };
 
+
+    const measureVisibleOuterRaceFloorProfile = () => {
+      const profile: Array<{
+        radius: number;
+        y: number;
+        normal: VectorReadout;
+      }> = [];
+      for (
+        let radius = PART2_ACTUAL_DARK_TRACK_RADIUS_BAND[0];
+        radius <= PART2_ACTUAL_DARK_TRACK_RADIUS_BAND[1] + 0.0001;
+        radius += 0.01
+      ) {
+        const azimuth = 0.37;
+        const sample = measureVisibleSurfaceAt(
+          Math.sin(azimuth) * radius,
+          Math.cos(azimuth) * radius,
+          true,
+          PART2_ACTUAL_DARK_TRACK_RADIUS_BAND,
+        );
+        if (!sample) continue;
+        profile.push({
+          radius: Number(radius.toFixed(4)),
+          y: Number(sample.y.toFixed(4)),
+          normal: {
+            x: Number(sample.normal.x.toFixed(4)),
+            y: Number(sample.normal.y.toFixed(4)),
+            z: Number(sample.normal.z.toFixed(4)),
+          },
+        });
+      }
+      return profile;
+    };
+
     const sampleActualGeometryProfile = () => {
       if (!stationaryGroup) return [];
       stationaryGroup.updateMatrixWorld(true);
@@ -3316,6 +3349,12 @@ export function Part2SceneViewport({
       logStaticGateStage('outer-wall-profile-after', {
         samples: visibleOuterWallProfile.length,
       });
+      if (part6FullSpinRouteActive) {
+        console.info(
+          'PART6_ACTUAL_RACE_PROFILE',
+          JSON.stringify(measureVisibleOuterRaceFloorProfile()),
+        );
+      }
       const analyticSurfaceY = surface.y;
       const visualHeightError = visibleSurface
         ? Math.abs(visibleSurface.y - analyticSurfaceY)
@@ -4513,11 +4552,51 @@ export function Part2SceneViewport({
             if (inTrackCenterBand) {
               trackFrames += 1;
               if (trackPairContact) trackContactFrames += 1;
-              const raceSurfaceY = part2ChannelSurfaceAt(
-                radius,
-                part2RaceVerticalOffset,
-              ).y;
-              const signedRaceGap = bottom - raceSurfaceY;
+
+              const activeTrackRole =
+                part3ColliderRoles.get(activeTrackCollider.handle) ?? null;
+              const actualGlbTrackActive =
+                activeTrackRole === 'actual-glb-outside-trimesh';
+              let signedRaceGap: number;
+
+              if (actualGlbTrackActive) {
+                const visibleRaceSurface = measureVisibleSurfaceAt(
+                  position.x,
+                  position.z,
+                  true,
+                  PART2_ACTUAL_DARK_TRACK_RADIUS_BAND,
+                );
+                if (visibleRaceSurface) {
+                  const visiblePoint = new THREE.Vector3(
+                    visibleRaceSurface.point.x,
+                    visibleRaceSurface.point.y,
+                    visibleRaceSurface.point.z,
+                  );
+                  const visibleNormal = new THREE.Vector3(
+                    visibleRaceSurface.normal.x,
+                    visibleRaceSurface.normal.y,
+                    visibleRaceSurface.normal.z,
+                  ).normalize();
+                  signedRaceGap =
+                    new THREE.Vector3(
+                      position.x,
+                      position.y,
+                      position.z,
+                    )
+                      .sub(visiblePoint)
+                      .dot(visibleNormal) -
+                    BALL_RADIUS;
+                } else {
+                  signedRaceGap = 0;
+                }
+              } else {
+                const raceSurfaceY = part2ChannelSurfaceAt(
+                  radius,
+                  part2RaceVerticalOffset,
+                ).y;
+                signedRaceGap = bottom - raceSurfaceY;
+              }
+
               maxTrackPenetration = Math.max(
                 maxTrackPenetration,
                 Math.max(0, -signedRaceGap),
