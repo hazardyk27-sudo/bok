@@ -523,7 +523,7 @@ type Part6FullSpinTelemetryResult = {
 type Part6FullSpinTelemetryReport = {
   status: 'running' | 'captured' | 'failed';
   safetyStatus: 'pending' | 'passed' | 'failed';
-  calibrationStatus: 'not-evaluated';
+  calibrationStatus: 'not-evaluated' | 'passed' | 'failed';
   schemaVersion: string;
   fixedTimestep: number;
   maxDurationSeconds: number;
@@ -3894,6 +3894,23 @@ export function Part2SceneViewport({
         const safetyFailureCount = results.filter(
           (result) => !result.safetyPassed,
         ).length;
+        const medianLapCount = median(lapCounts);
+        const calibrationPassed =
+          status === 'captured' &&
+          activePart6Runs.length >= 5 &&
+          results.length === activePart6Runs.length &&
+          lapCounts.length === count &&
+          count > 0 &&
+          safetyFailureCount === 0 &&
+          phaseSequenceFailureCount === 0 &&
+          inwardTransitionCount === count &&
+          pocketEntryCount === count &&
+          settledCount === count &&
+          medianLapCount !== null &&
+          medianLapCount >= 4 &&
+          medianLapCount <= 5 &&
+          lapCounts[0] >= 3.5 &&
+          lapCounts[lapCounts.length - 1] <= 5.5;
 
         return {
           status,
@@ -3905,7 +3922,12 @@ export function Part2SceneViewport({
                   safetyFailureCount === 0
                 ? 'passed'
                 : 'failed',
-          calibrationStatus: 'not-evaluated',
+          calibrationStatus:
+            status === 'running'
+              ? 'not-evaluated'
+              : calibrationPassed
+                ? 'passed'
+                : 'failed',
           schemaVersion: PART6_TELEMETRY_SCHEMA_VERSION,
           fixedTimestep: FIXED_TIMESTEP,
           maxDurationSeconds: activePart6MaxDurationSeconds,
@@ -3922,7 +3944,7 @@ export function Part2SceneViewport({
           pocketEntryCount,
           settledCount,
           safetyFailureCount,
-          medianLapCount: median(lapCounts),
+          medianLapCount,
           minLapCount: lapCounts.length > 0 ? lapCounts[0] : null,
           maxLapCount:
             lapCounts.length > 0 ? lapCounts[lapCounts.length - 1] : null,
