@@ -48,7 +48,8 @@ const formatMoney = (cents: number, options: { compactInteger?: boolean; signed?
 };
 
 const parseStakeDollars = (value: string) => {
-  const normalized = value.trim().replace(/[$\s]/g, "").replace(/,/g, "");
+  const raw = value.trim().replace(/[$\\s]/g, "");
+  const normalized = raw.includes(".") ? raw.replace(/,/g, "") : raw.replace(",", ".");
   const dollars = Number(normalized);
   return Number.isFinite(dollars) ? dollars : NaN;
 };
