@@ -3560,10 +3560,10 @@
 
 
 /* =========================================================
-   MOBILE ADVANCED 25 — LARGE-CELL HORIZONTAL TICKET
-   Keep the established mobile shell/HUD/control bar. During an
-   Advanced round only, compress non-play chrome and let the ticket
-   use the full table height. The 5×5 board is height-driven.
+   MOBILE ADVANCED 25 — APPROVED HORIZONTAL CARD
+   Matches the approved concept: large premium parchment card,
+   compact identity/info rail on the left, dominant 5×5 board on
+   the right, existing payout HUD and bottom controls preserved.
    ========================================================= */
 @media (max-width: 600px) and (orientation: portrait),
        (max-height: 600px) and (orientation: landscape) and (max-width: 1200px) {
@@ -3573,7 +3573,7 @@
   }
 
   .witch-page.is-advanced-round .witch-appbar {
-    grid-template-columns: 28px minmax(100px, .62fr) minmax(0, 1.82fr);
+    grid-template-columns: 28px minmax(102px, .62fr) minmax(0, 1.82fr);
     gap: 5px;
     padding: 2px 5px;
   }
@@ -3603,7 +3603,7 @@
   }
 
   .witch-page.is-advanced-round .witch-stage-shell {
-    grid-template-columns: minmax(0, 1fr) clamp(100px, 16cqw, 140px);
+    grid-template-columns: minmax(0, 1fr) clamp(102px, 16cqw, 142px);
     grid-template-rows: 12px minmax(0, 1fr);
     gap: 3px;
     padding: 4px;
@@ -3615,8 +3615,16 @@
     display: none;
   }
 
+  .witch-page.is-advanced-round .witch-table-surface {
+    overflow: hidden;
+  }
+
   .witch-page.is-advanced-round .witch-payout-panel {
     padding: 4px;
+  }
+
+  .witch-page.is-advanced-round .witch-payout-hero {
+    padding-block: 2px;
   }
 
   .witch-page.is-advanced-round .witch-control-dock {
@@ -3650,22 +3658,46 @@
 
   .witch-ticket.is-advanced {
     display: grid;
-    grid-template-columns: minmax(108px, 1fr) auto;
+    grid-template-columns: minmax(118px, 1fr) auto;
     grid-template-rows: auto auto minmax(0, 1fr);
     grid-template-areas:
       "header board"
       "meta board"
       "footer board";
-    column-gap: clamp(5px, 1cqw, 9px);
-    row-gap: 1px;
-    width: min(98%, 640px) !important;
-    height: 100% !important;
+    column-gap: clamp(7px, 1.25cqw, 12px);
+    row-gap: 2px;
+    width: min(98%, 680px) !important;
+    height: calc(100% - 2px) !important;
     min-width: 0 !important;
     max-width: 100% !important;
     max-height: 100% !important;
-    padding: clamp(4px, 1.1cqh, 6px) clamp(5px, .9cqw, 8px);
+    margin: 0 auto !important;
+    padding: clamp(6px, 1.35cqh, 9px) clamp(7px, 1.15cqw, 11px);
     overflow: hidden;
-    border-radius: 10px;
+    border-radius: 12px;
+    background:
+      radial-gradient(circle at 14% 34%, rgba(183, 137, 57, .12), transparent 24%),
+      radial-gradient(circle at 22% 72%, rgba(139, 94, 42, .08), transparent 28%),
+      linear-gradient(104deg, #f8e9c3 0%, #f1ddb0 47%, #f7e8c4 100%);
+    box-shadow:
+      0 12px 28px rgba(0, 0, 0, .42),
+      inset 0 0 0 1px rgba(116, 77, 26, .36),
+      inset 0 0 0 5px rgba(255, 250, 230, .38);
+  }
+
+  .witch-ticket.is-advanced::before {
+    inset: 5px;
+    border-radius: 9px;
+    border: 1px solid rgba(126, 83, 25, .42);
+    box-shadow:
+      inset 0 0 0 1px rgba(255,255,255,.34),
+      inset 0 0 28px rgba(113,75,29,.05);
+  }
+
+  .witch-ticket.is-advanced .witch-ticket-frame {
+    inset: 8px;
+    border-color: rgba(137, 91, 28, .24);
+    opacity: .8;
   }
 
   .witch-ticket.is-advanced .witch-ticket-header {
@@ -3676,8 +3708,8 @@
     justify-items: start;
     min-width: 0;
     min-height: 0;
-    padding: 1px 0 2px;
-    border-bottom: 1px solid rgba(107, 76, 32, .22);
+    padding: 2px 3px 5px;
+    border-bottom: 1px solid rgba(100, 65, 22, .22);
   }
 
   .witch-ticket.is-advanced .witch-ticket-sidecopy,
@@ -3691,36 +3723,52 @@
     text-align: left;
   }
 
+  .witch-ticket.is-advanced .witch-ticket-lockup::before {
+    content: "✦  ☾  ✦";
+    margin-bottom: 3px;
+    color: rgba(121, 78, 24, .76);
+    font-size: clamp(6px, .9cqw, 9px);
+    letter-spacing: .3em;
+  }
+
   .witch-ticket.is-advanced .witch-ticket-brand {
-    font-size: clamp(18px, 3.3cqw, 27px);
+    font-size: clamp(23px, 4.1cqw, 34px);
     line-height: .76;
-    letter-spacing: -.035em;
+    letter-spacing: -.04em;
+    text-shadow: 0 1px 0 rgba(255,255,255,.42);
   }
 
   .witch-ticket.is-advanced .witch-ticket-lockup small {
-    margin-top: 2px;
-    font-size: clamp(2.5px, .42cqw, 4px);
-    letter-spacing: .16em;
+    margin-top: 4px;
+    color: rgba(93, 63, 29, .75);
+    font-size: clamp(3px, .46cqw, 4.5px);
+    letter-spacing: .22em;
   }
 
   .witch-ticket.is-advanced .witch-ticket-price {
     display: grid;
     grid-template-columns: auto auto;
-    gap: 4px;
+    gap: 5px;
     align-items: center;
     justify-items: start;
-    margin-top: 4px;
+    width: 100%;
+    margin-top: 7px;
   }
 
   .witch-ticket.is-advanced .witch-ticket-price small {
     display: inline;
-    font-size: clamp(2.5px, .42cqw, 4px);
+    color: rgba(85, 58, 29, .76);
+    font-size: clamp(3px, .46cqw, 4.5px);
   }
 
   .witch-ticket.is-advanced .witch-ticket-price strong {
-    min-width: 42px;
-    padding: 2px 4px;
-    font-size: clamp(8px, 1.25cqw, 11px);
+    min-width: 48px;
+    padding: 4px 7px 3px;
+    border: 1px solid rgba(122, 81, 27, .36);
+    border-radius: 6px;
+    background: rgba(255, 247, 220, .42);
+    box-shadow: inset 0 1px 0 rgba(255,255,255,.62);
+    font-size: clamp(10px, 1.55cqw, 13px);
   }
 
   .witch-ticket.is-advanced .witch-ticket-price span {
@@ -3731,13 +3779,14 @@
     grid-area: meta;
     display: grid;
     grid-template-columns: 1fr;
-    gap: 2px;
+    gap: 4px;
     align-content: start;
     min-width: 0;
     margin: 0;
-    padding: 3px 0;
+    padding: 5px 3px;
     border: 0;
-    font-size: clamp(3.5px, .52cqw, 4.5px);
+    color: #4f351b;
+    font-size: clamp(4px, .6cqw, 5px);
     text-align: left;
   }
 
@@ -3745,22 +3794,41 @@
     display: none;
   }
 
+  .witch-ticket.is-advanced .witch-ticket-meta-row > span {
+    width: fit-content;
+    padding: 3px 6px;
+    border: 1px solid rgba(132, 91, 34, .22);
+    border-radius: 5px;
+    background: rgba(255,255,255,.12);
+  }
+
   .witch-ticket.is-advanced .witch-ticket-meta-row > span:last-child {
     display: grid;
-    gap: 1px;
+    gap: 2px;
+  }
+
+  .witch-ticket.is-advanced .witch-ticket-meta-row b {
+    color: #2f2116;
   }
 
   .witch-ticket.is-advanced .witch-board-wrap {
     grid-area: board;
     align-self: center;
     justify-self: end;
-    height: calc(100% - 2px);
-    width: auto;
+    width: clamp(205px, 66cqh, 286px);
     max-width: 100%;
     aspect-ratio: 1;
     margin: 0;
-    padding: clamp(3px, .8cqh, 5px);
-    border-radius: 8px;
+    padding: clamp(5px, 1.15cqh, 7px);
+    border: 1px solid rgba(118, 77, 25, .28);
+    border-radius: 10px;
+    background:
+      linear-gradient(145deg, rgba(255,255,255,.42), rgba(129,83,24,.08)),
+      #ead29e;
+    box-shadow:
+      inset 0 0 0 2px rgba(255,255,255,.25),
+      inset 0 8px 18px rgba(255,255,255,.17),
+      0 5px 12px rgba(67, 41, 15, .16);
   }
 
   .witch-ticket.is-advanced .witch-board {
@@ -3768,7 +3836,7 @@
     height: 100%;
     grid-template-columns: repeat(5, minmax(0, 1fr));
     grid-template-rows: repeat(5, minmax(0, 1fr));
-    gap: clamp(2px, .45cqh, 3px);
+    gap: clamp(3px, .72cqh, 5px);
   }
 
   .witch-ticket.is-advanced .witch-cell {
@@ -3777,35 +3845,46 @@
     min-width: 0;
     min-height: 0;
     aspect-ratio: 1;
-    border-radius: 5px;
+    border: 1px solid rgba(105, 67, 22, .44);
+    border-radius: clamp(5px, 1.1cqh, 8px);
+    box-shadow:
+      0 2px 4px rgba(65, 41, 17, .22),
+      inset 0 0 0 1px rgba(255,255,255,.25);
+  }
+
+  .witch-ticket.is-advanced .witch-cell::before {
+    border-radius: inherit;
   }
 
   .witch-ticket.is-advanced .witch-cell-content {
-    transform: scale(.64);
+    transform: scale(.7);
   }
 
   .witch-ticket.is-advanced .witch-cell-result-label {
-    right: 1px;
-    bottom: 1px;
-    left: 1px;
-    font-size: clamp(2.5px, .42cqh, 3px);
+    right: 2px;
+    bottom: 2px;
+    left: 2px;
+    font-size: clamp(2.8px, .46cqh, 3.4px);
   }
 
   .witch-ticket.is-advanced .witch-ticket-footer {
     grid-area: footer;
     display: grid;
     align-content: end;
-    gap: 2px;
+    gap: 3px;
     min-width: 0;
     margin: 0;
-    padding: 3px 0 1px;
-    font-size: clamp(2.7px, .42cqw, 4px);
+    padding: 5px 3px 2px;
+    color: rgba(75, 51, 27, .72);
+    font-size: clamp(3px, .46cqw, 4px);
     text-align: left;
   }
 
   .witch-ticket.is-advanced .witch-ticket-footer strong {
     justify-self: start;
-    font-size: clamp(4px, .65cqw, 6px);
+    color: #6d4a20;
+    font-size: clamp(5px, .72cqw, 7px);
+    letter-spacing: .18em;
   }
 
   .witch-ticket.is-advanced .witch-ticket-footer span:last-child {
@@ -3816,7 +3895,7 @@
   }
 }
 
-/* Smallest supported phone heights: preserve board before decoration. */
+/* Smallest supported phone: cells stay usable, decoration gives way first. */
 @media (max-width: 340px) and (orientation: portrait),
        (max-height: 340px) and (orientation: landscape) and (max-width: 760px) {
   .witch-page.is-advanced-round {
@@ -3829,18 +3908,28 @@
   }
 
   .witch-ticket.is-advanced {
-    grid-template-columns: minmax(92px, .72fr) auto;
-    column-gap: 4px;
-    padding: 3px 4px;
+    grid-template-columns: minmax(98px, .72fr) auto;
+    column-gap: 5px;
+    padding: 4px 5px;
   }
 
-  .witch-ticket.is-advanced .witch-ticket-brand {
-    font-size: 16px;
-  }
-
+  .witch-ticket.is-advanced .witch-ticket-lockup::before,
   .witch-ticket.is-advanced .witch-ticket-lockup small,
   .witch-ticket.is-advanced .witch-ticket-price small,
   .witch-ticket.is-advanced .witch-ticket-footer > span:first-child {
     display: none;
+  }
+
+  .witch-ticket.is-advanced .witch-ticket-brand {
+    font-size: 19px;
+  }
+
+  .witch-ticket.is-advanced .witch-board-wrap {
+    width: clamp(196px, 66cqh, 224px);
+    padding: 4px;
+  }
+
+  .witch-ticket.is-advanced .witch-board {
+    gap: 3px;
   }
 }
