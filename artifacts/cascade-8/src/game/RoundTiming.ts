@@ -31,6 +31,51 @@ type TimingWindow = Window & {
 
 const MAX_TRACES = 50;
 
+type LongTaskSample = { startTime: number; duration: number; name: string };
+type SchedulerEvent = { at: number; type: string };
+
+const longTasks: LongTaskSample[] = [];
+const schedulerEvents: SchedulerEvent[] = [];
+let longTaskObserver: PerformanceObserver | null = null;
+
+function trimRuntimeDiagnostics(now = performance.now()) {
+  const cutoff = now - 60_000;
+  while (longTasks.length && longTasks[0].startTime + longTasks[0].duration < cutoff) longTasks.shift();
+  while (schedulerEvents.length && schedulerEvents[0].at < cutoff) schedulerEvents.shift();
+}
+
+function ingestLongTaskEntries(entries: readonly PerformanceEntry[]) {
+  entries.forEach((entry) => {
+    longTasks.push({
+      startTime: entry.startTime,
+      duration: entry.duration,
+      name: entry.name || "longtask",
+    });
+  });
+  trimRuntimeDiagnostics();
+}
+
+if (typeof window !== "undefined") {
+  if (typeof PerformanceObserver !== "undefined") {
+    try {
+      longTaskObserver = new PerformanceObserver((list) => ingestLongTaskEntries(list.getEntries()));
+      longTaskObserver.observe({ entryTypes: ["longtask"] });
+    } catch {
+      longTaskObserver = null;
+    }
+  }
+
+  const noteSchedulerEvent = (type: string) => {
+    schedulerEvents.push({ at: performance.now(), type });
+    trimRuntimeDiagnostics();
+  };
+  document.addEventListener("visibilitychange", () => noteSchedulerEvent(`visibility:${document.visibilityState}`));
+  window.addEventListener("blur", () => noteSchedulerEvent("window:blur"));
+  window.addEventListener("focus", () => noteSchedulerEvent("window:focus"));
+  window.addEventListener("pagehide", () => noteSchedulerEvent("pagehide"));
+  window.addEventListener("pageshow", () => noteSchedulerEvent("pageshow"));
+}
+
 export function createRoundTimingTrace(
   mode: RoundTimingTrace["mode"],
   turbo: boolean,
@@ -73,6 +118,7 @@ export function motionTimingDetail(timing: MotionTiming) {
 
 export function publishRoundTiming(trace: RoundTimingTrace | null) {
   if (!trace) return;
+  if (longTaskObserver) ingestLongTaskEntries(longTaskObserver.takeRecords());
   const target = window as TimingWindow;
   const history = target.__CASCADE8_TIMING__ ?? [];
   history.push(trace);
@@ -114,6 +160,29 @@ export function publishRoundTiming(trace: RoundTimingTrace | null) {
   ].join(" | ");
 
   console.warn("[CASCADE8_GAP]", summary);
+
+  const roundEndAt = performance.now();
+  const roundLongTasks = longTasks
+    .filter((task) => task.startTime <= roundEndAt && task.startTime + task.duration >= trace.startedAt)
+    .sort((a, b) => b.duration - a.duration);
+  const roundSchedulerEvents = schedulerEvents
+    .filter((event) => event.at >= trace.startedAt && event.at <= roundEndAt);
+  const maxFrameGapMs = typeof dropDetail.maxFrameGapMs === "number" ? dropDetail.maxFrameGapMs : 0;
+
+  if (maxFrameGapMs >= 100) {
+    const longestLongTask = roundLongTasks[0] ?? null;
+    const classification = longestLongTask && longestLongTask.duration >= 50
+      ? "MAIN_THREAD_LONG_TASK"
+      : roundSchedulerEvents.length || document.hidden
+        ? "PAGE_SCHEDULING_OR_VISIBILITY"
+        : "RAF_SCHEDULER_PAUSE";
+    console.error(
+      "[CASCADE8_STALL]",
+      `class=${classification} | maxFrameGap=${maxFrameGapMs}ms | longTask=${longestLongTask ? Math.round(longestLongTask.duration * 10) / 10 : 0}ms | hidden=${document.hidden} | focus=${document.hasFocus()} | schedulerEvents=${roundSchedulerEvents.map((event) => event.type).join(",") || "none"}`,
+      { longestLongTask, roundLongTasks, roundSchedulerEvents, trace },
+    );
+  }
+
   console.info("[CASCADE8_TIMING]", {
     id: trace.id,
     mode: trace.mode,
