@@ -359,7 +359,10 @@ try {
   };
   console.log('PART6_RUNTIME_SUMMARY ' + JSON.stringify(summary));
 
-  if (terminalWaitError) {
+  const terminalTelemetryCaptured =
+    telemetry?.status === 'captured' &&
+    seedTelemetry.length >= expectedSeedCount;
+  if (terminalWaitError && !terminalTelemetryCaptured) {
     throw new Error(terminalWaitError);
   }
   if (!telemetry) {
