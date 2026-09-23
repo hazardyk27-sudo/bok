@@ -136,6 +136,12 @@ export function publishRoundTiming(trace: RoundTimingTrace | null) {
   const serverResult = serverEvent?.detail ?? {};
   const boardEvent = trace.events.find((event) => event.name === "BASE_BOARD_RENDERED");
   const dropEvent = trace.events.find((event) => event.name === "BASE_DROP_DONE");
+  const motionEvents = trace.events.filter((event) => typeof event.detail?.maxFrameGapMs === "number");
+  const worstMotionFrameEvent = motionEvents.reduce<RoundTimingEvent | null>((worst, event) => {
+    if (!worst) return event;
+    return Number(event.detail?.maxFrameGapMs ?? 0) > Number(worst.detail?.maxFrameGapMs ?? 0) ? event : worst;
+  }, null);
+  const worstMotionFrameGapMs = Number(worstMotionFrameEvent?.detail?.maxFrameGapMs ?? 0);
   const biggest = gaps[0];
   const durationMs = trace.events.at(-1)?.atMs ?? 0;
   const requestEvent = trace.events.find((event) => event.name === "SPIN_REQUESTED");
@@ -167,19 +173,26 @@ export function publishRoundTiming(trace: RoundTimingTrace | null) {
     .sort((a, b) => b.duration - a.duration);
   const roundSchedulerEvents = schedulerEvents
     .filter((event) => event.at >= trace.startedAt && event.at <= roundEndAt);
-  const maxFrameGapMs = typeof dropDetail.maxFrameGapMs === "number" ? dropDetail.maxFrameGapMs : 0;
 
-  if (maxFrameGapMs >= 100) {
+  const movementGapLooksTooLong = Boolean(
+    biggest
+    && biggest.ms >= 1000
+    && (biggest.to === "BASE_DROP_DONE" || biggest.to.endsWith("_CASCADE_DONE")),
+  );
+
+  if (worstMotionFrameGapMs >= 100 || movementGapLooksTooLong) {
     const longestLongTask = roundLongTasks[0] ?? null;
-    const classification = longestLongTask && longestLongTask.duration >= 50
-      ? "MAIN_THREAD_LONG_TASK"
-      : roundSchedulerEvents.length || document.hidden
-        ? "PAGE_SCHEDULING_OR_VISIBILITY"
-        : "RAF_SCHEDULER_PAUSE";
+    const classification = worstMotionFrameGapMs >= 100
+      ? longestLongTask && longestLongTask.duration >= 50
+        ? "MAIN_THREAD_LONG_TASK"
+        : roundSchedulerEvents.length || document.hidden
+          ? "PAGE_SCHEDULING_OR_VISIBILITY"
+          : "RAF_SCHEDULER_PAUSE"
+      : "MOVEMENT_PHASE_SLOW_WITHOUT_FRAME_STALL";
     console.error(
       "[CASCADE8_STALL]",
-      `class=${classification} | maxFrameGap=${maxFrameGapMs}ms | longTask=${longestLongTask ? Math.round(longestLongTask.duration * 10) / 10 : 0}ms | hidden=${document.hidden} | focus=${document.hasFocus()} | schedulerEvents=${roundSchedulerEvents.map((event) => event.type).join(",") || "none"}`,
-      { longestLongTask, roundLongTasks, roundSchedulerEvents, trace },
+      `class=${classification} | motionEvent=${worstMotionFrameEvent?.name ?? "none"} | maxFrameGap=${Math.round(worstMotionFrameGapMs * 10) / 10}ms | biggest=${biggest ? `${biggest.ms}ms ${biggest.from}->${biggest.to}` : "n/a"} | longTask=${longestLongTask ? Math.round(longestLongTask.duration * 10) / 10 : 0}ms | hidden=${document.hidden} | focus=${document.hasFocus()} | schedulerEvents=${roundSchedulerEvents.map((event) => event.type).join(",") || "none"}`,
+      { longestLongTask, roundLongTasks, roundSchedulerEvents, worstMotionFrameEvent, trace },
     );
   }
 
