@@ -948,6 +948,16 @@ One audit-only instruction was mistakenly sent to Replit before this rule was cl
 - menu, game routes and slot shell can now extend beyond the viewport instead of being clipped
 - removed the Cadı Kazan landscape-only height/overflow trap so short landscape screens can scroll vertically when needed
 
+### Stage 18 — Advanced 25 mobile focus + precise scratch + payout sound
+- Mobile Advanced 25 now enters a dedicated focus mode whenever an Advanced round exists.
+- In Advanced focus, the lobby control dock is hidden and its height is reassigned to the ticket/board.
+- Advanced mobile board targets touchable cells; QA now requires the first 5×5 cell to be at least 40 CSS px on supported phone viewports.
+- Standard and Advanced use the same standardized scratch brush target: 14 CSS px local radius (28 px diameter), with a safety cap only if a cell is smaller than expected.
+- Scratch pointer mapping now prefers PointerEvent local `offsetX/offsetY`, which tracks the transformed canvas coordinate system directly; orientation-specific client-coordinate math remains only as fallback.
+- Cash-register-style payout audio now plays on successful `CASHED_OUT` and on automatic maximum-card `COMPLETED` settlement.
+- Changes were limited to Cadı Kazan source + its E2E test; Roulette and Slot source files were not modified.
+- Merged into GitHub `main` via PR #6, merge commit `6267365`.
+
 ### Stage 17 — Cadı Kazan always-landscape mobile viewport lock
 - Mobile product rule is now explicit: **Cadı Kazan is always a landscape game UI on phones**, even when the physical phone is held portrait.
 - Portrait phones rotate only the dedicated mobile landscape scene by 90°; the desktop layout is never blindly rotated.
