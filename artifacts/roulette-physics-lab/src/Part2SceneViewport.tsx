@@ -3708,7 +3708,22 @@ export function Part2SceneViewport({
         new Promise<void>((resolve) => {
           window.setTimeout(resolve, 0);
         });
+      const logPart6DiagnosticStage = (
+        stage: string,
+        extra: Record<string, number | string | boolean | null> = {},
+      ) => {
+        if (!part6DiagnosticMode) return;
+        console.info(
+          'PART6_DIAGNOSTIC_STAGE',
+          JSON.stringify({ stage, ...extra }),
+        );
+      };
 
+      logPart6DiagnosticStage('batch-ready', {
+        seedCount: activePart6Runs.length,
+        maxSteps,
+        maxDurationSeconds: activePart6MaxDurationSeconds,
+      });
       part6TelemetryBatchRunning = true;
       publishPart6TelemetryReport(
         summarize(
@@ -3724,10 +3739,13 @@ export function Part2SceneViewport({
       // for an entire 30-second simulated seed.
       await yieldToBrowser();
       if (disposed) return;
+      logPart6DiagnosticStage('initial-yield-complete');
 
       try {
         for (const run of activePart6Runs) {
           if (disposed) return;
+          logPart6DiagnosticStage('seed-start', { seed: run.seed });
+          logPart6DiagnosticStage('launch-surface-before', { seed: run.seed });
 
           const launchSurface = measureVisibleSurfaceAt(
             Math.sin(run.launchAzimuth) *
@@ -3737,6 +3755,10 @@ export function Part2SceneViewport({
             true,
             PART2_ACTUAL_DARK_TRACK_RADIUS_BAND,
           );
+          logPart6DiagnosticStage('launch-surface-after', {
+            seed: run.seed,
+            found: Boolean(launchSurface),
+          });
           if (!launchSurface) {
             failInfrastructure(
               'PART 6 geometry audit stopped the batch because seed ' +
@@ -3805,7 +3827,13 @@ export function Part2SceneViewport({
             w: Math.cos(rotorAngle / 2),
           });
           activeRotorPivot?.rotation.set(0, rotorAngle, 0);
+          logPart6DiagnosticStage('reset-world-step-before', {
+            seed: run.seed,
+          });
           activeWorld.step();
+          logPart6DiagnosticStage('reset-world-step-after', {
+            seed: run.seed,
+          });
 
           activeBallBody.setTranslation(
             {
@@ -3882,6 +3910,10 @@ export function Part2SceneViewport({
             resetAngularVelocityError <= PART6_STATE_RESET_VECTOR_EPSILON &&
             resetRotationError <= PART6_STATE_RESET_VECTOR_EPSILON &&
             resetRotorAngleError <= PART6_STATE_RESET_ANGLE_EPSILON;
+          logPart6DiagnosticStage('reset-verified', {
+            seed: run.seed,
+            stateResetVerified,
+          });
 
           let elapsed = 0;
           let minRadius = Math.hypot(
@@ -3978,6 +4010,11 @@ export function Part2SceneViewport({
 
           for (let step = 0; step < maxSteps; step += 1) {
             if (disposed) return;
+            if (step === 0) {
+              logPart6DiagnosticStage('simulation-step-0-before', {
+                seed: run.seed,
+              });
+            }
 
             rotorAngle = normalizedAngle(
               rotorAngle + TEST_ANGULAR_SPEED * FIXED_TIMESTEP,
@@ -3991,6 +4028,11 @@ export function Part2SceneViewport({
             });
             activeRotorPivot?.rotation.set(0, rotorAngle, 0);
             activeWorld.step();
+            if (step === 0) {
+              logPart6DiagnosticStage('simulation-step-0-after', {
+                seed: run.seed,
+              });
+            }
             elapsed += FIXED_TIMESTEP;
 
             const position = activeBallBody.translation();

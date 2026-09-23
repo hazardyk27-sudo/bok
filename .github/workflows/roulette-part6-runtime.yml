@@ -85,11 +85,11 @@ jobs:
           cat /tmp/roulette-part6-vite.log
           exit 1
 
-      - name: Run 1-seed PART 6B.1 diagnostic smoke
+      - name: Run PART 6B.1 stage probe
         env:
           ROULETTE_LAB_URL: http://127.0.0.1:4173/?part6Headless=1&part6SeedCount=1&part6MaxDurationSeconds=2
           ROULETTE_PART6_OUTPUT: artifacts/roulette-physics-lab/part6-runtime-result.json
-          ROULETTE_PART6_TIMEOUT_MS: '180000'
+          ROULETTE_PART6_TIMEOUT_MS: '60000'
           ROULETTE_PART6_EXPECTED_SEEDS: '1'
         shell: bash
         run: |

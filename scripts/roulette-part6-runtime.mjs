@@ -18,6 +18,7 @@ const expectedSeedCount = Number(
 let telemetry = null;
 const seedTelemetry = [];
 let lastStepProgress = null;
+let lastDiagnosticStage = null;
 
 const persistPartialResult = (extra = {}) => {
   const partial = {
@@ -49,6 +50,23 @@ try {
 
   page.on('console', (message) => {
     const text = message.text();
+
+    if (text.startsWith('PART6_DIAGNOSTIC_STAGE ')) {
+      const raw = text.slice('PART6_DIAGNOSTIC_STAGE '.length);
+      try {
+        lastDiagnosticStage = JSON.parse(raw);
+        console.log('PART6_RUNTIME_STAGE ' + raw);
+        persistPartialResult({
+          expectedSeedCount,
+          lastDiagnosticStage,
+          lastStepProgress,
+          seedResultsCaptured: seedTelemetry.length,
+        });
+      } catch (error) {
+        console.error('Could not parse PART 6 diagnostic stage payload:', error);
+      }
+      return;
+    }
 
     if (text.startsWith('PART6_STEP_PROGRESS ')) {
       const raw = text.slice('PART6_STEP_PROGRESS '.length);
@@ -161,6 +179,7 @@ try {
     terminalTimeoutMs,
     expectedSeedCount,
     lastStepProgress,
+    lastDiagnosticStage,
     domStatus: status,
     errorVisible,
     errorText,
@@ -180,6 +199,7 @@ try {
     terminalWaitError,
     expectedSeedCount,
     lastStepProgress,
+    lastDiagnosticStage,
     seedResultsCaptured: seedTelemetry.length,
     telemetryStatus: telemetry?.status ?? null,
     safetyStatus: telemetry?.safetyStatus ?? null,
