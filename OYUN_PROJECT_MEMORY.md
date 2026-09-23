@@ -948,6 +948,15 @@ One audit-only instruction was mistakenly sent to Replit before this rule was cl
 - menu, game routes and slot shell can now extend beyond the viewport instead of being clipped
 - removed the Cadı Kazan landscape-only height/overflow trap so short landscape screens can scroll vertically when needed
 
+### Stage 19 — Restore old mobile shell, redesign only Advanced 25 card
+- Rejected the Advanced focus-mode presentation because it looked visually unbalanced and removed too much of the previous mobile composition.
+- Restored the previous always-landscape mobile shell with header, stage, right-side payout HUD, and bottom control dock all visible.
+- Kept the newer scratch improvements: pointer-local scratch mapping, standardized ~14px scratch radius, and payout cash-register audio on CASHED_OUT / COMPLETED.
+- Mobile Advanced 25 ticket itself was redesigned as a compact horizontal premium ticket: info/price/meta in a narrow left rail and the 5×5 scratch board in a larger right section.
+- This avoids the prior huge empty ivory space and makes the board larger without hiding the rest of the game UI.
+- Mobile QA now expects the dock to remain visible and Advanced cells to stay at least ~34 CSS px on supported phone viewports.
+- Merged via PR #7 into GitHub `main`, merge commit `ac238c6`.
+
 ### Stage 18 — Advanced 25 mobile focus + precise scratch + payout sound
 - Mobile Advanced 25 now enters a dedicated focus mode whenever an Advanced round exists.
 - In Advanced focus, the lobby control dock is hidden and its height is reassigned to the ticket/board.
