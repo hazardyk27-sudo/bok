@@ -977,16 +977,29 @@ function addMeasuredDeflectorColliders(
       0.22,
     );
     const angle = descriptor.angle;
-    const deflectorRoundRadius = Math.min(
-      BALL_RADIUS * 0.32,
-      halfHeight * 0.7,
-      halfRadialDepth * 0.7,
-    );
-    const collider = RAPIER.ColliderDesc.roundCuboid(
-      halfTangentialWidth,
-      halfHeight,
-      halfRadialDepth,
-      deflectorRoundRadius,
+    // Model only the vertical sides of the measured deflector volume.
+    // A capped box adds an artificial horizontal top shelf; high-speed balls
+    // that only graze the measured prominence can then be launched upward.
+    const deflectorVertices = new Float32Array([
+      -halfTangentialWidth, -halfHeight, -halfRadialDepth,
+       halfTangentialWidth, -halfHeight, -halfRadialDepth,
+       halfTangentialWidth,  halfHeight, -halfRadialDepth,
+      -halfTangentialWidth,  halfHeight, -halfRadialDepth,
+      -halfTangentialWidth, -halfHeight,  halfRadialDepth,
+       halfTangentialWidth, -halfHeight,  halfRadialDepth,
+       halfTangentialWidth,  halfHeight,  halfRadialDepth,
+      -halfTangentialWidth,  halfHeight,  halfRadialDepth,
+    ]);
+    const deflectorIndices = new Uint32Array([
+      0, 2, 1, 0, 3, 2,
+      4, 5, 6, 4, 6, 7,
+      0, 4, 7, 0, 7, 3,
+      1, 2, 6, 1, 6, 5,
+    ]);
+    const collider = RAPIER.ColliderDesc.trimesh(
+      deflectorVertices,
+      deflectorIndices,
+      RAPIER.TriMeshFlags.FIX_INTERNAL_EDGES,
     )
       .setTranslation(
         Math.sin(angle) * centerRadius,
