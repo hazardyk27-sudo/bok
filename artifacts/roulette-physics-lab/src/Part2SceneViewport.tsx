@@ -4399,6 +4399,29 @@ export function Part2SceneViewport({
 
             if (
               part6DiagnosticMode &&
+              run.seed === 61005 &&
+              step >= 12 &&
+              step <= 36
+            ) {
+              console.info(
+                'PART6_ESCAPE_TRACE',
+                JSON.stringify({
+                  seed: run.seed,
+                  step,
+                  elapsed: Number(elapsed.toFixed(4)),
+                  radius: Number(radius.toFixed(4)),
+                  y: Number(position.y.toFixed(4)),
+                  speed: Number(speed.toFixed(4)),
+                  contactRoles: [...stepContactRoles],
+                  trackContact: trackPairContact,
+                  deflectorContact: deflectorPairContact,
+                  pocketFloorContact,
+                }),
+              );
+            }
+
+            if (
+              part6DiagnosticMode &&
               speed < 0.5 &&
               step % 10 === 0
             ) {
