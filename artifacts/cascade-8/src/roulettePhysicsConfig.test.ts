@@ -6,6 +6,7 @@ import {
   ROULETTE_BALL_RADIUS,
   ROULETTE_DARK_RACE_CHANNEL_PROFILE,
   ROULETTE_DARK_RACE_INWARD_EDGE_RADIUS,
+  ROULETTE_DARK_RACE_INNER_CONTAINMENT_RADIUS,
   ROULETTE_DARK_RACE_LAUNCH_RADIUS,
   ROULETTE_DARK_RACE_RADIUS_BAND,
   ROULETTE_DARK_RACE_WOOD_INNER_RADIUS,
@@ -55,7 +56,12 @@ describe("authoritative roulette physics config", () => {
     expect(ROULETTE_DARK_RACE_LAUNCH_RADIUS).toBeCloseTo(2.39);
     expect(ROULETTE_DARK_RACE_WOOD_INNER_RADIUS).toBeCloseTo(2.47);
     expect(ROULETTE_DARK_RACE_INWARD_EDGE_RADIUS).toBeCloseTo(2.26);
+    expect(ROULETTE_DARK_RACE_INNER_CONTAINMENT_RADIUS).toBeCloseTo(2.225);
+    expect(
+      ROULETTE_DARK_RACE_INNER_CONTAINMENT_RADIUS + ROULETTE_BALL_RADIUS,
+    ).toBeCloseTo(2.281);
     expect(ROULETTE_DARK_RACE_CHANNEL_PROFILE[0]).toEqual([2.18, -0.205]);
+    expect(ROULETTE_DARK_RACE_CHANNEL_PROFILE[2]).toEqual([2.225, -0.33]);
     expect(ROULETTE_DARK_RACE_CHANNEL_PROFILE.at(-1)).toEqual([
       2.559,
       -0.04,
@@ -92,6 +98,22 @@ describe("authoritative roulette physics config", () => {
     );
     expect(part3ViewportSource).toContain(
       "return makePart2RaceChannelTrimesh(verticalOffset)",
+    );
+  });
+
+  it("keeps the PART 2 containment correction geometric only", () => {
+    expect(part3ViewportSource).toContain("speed: 5,");
+    expect(part3ViewportSource).toContain(
+      "const initialLinearSpeed = PART3_PROBES[0].speed",
+    );
+    expect(part3ViewportSource).not.toContain(".addForce(");
+    expect(part3ViewportSource).not.toContain(".applyImpulse(");
+    expect(part3ViewportSource).not.toContain(".addTorque(");
+    expect(part3ViewportSource).toContain(
+      "PART2_INNER_CONTAINMENT_CENTER_LIMIT",
+    );
+    expect(part3ViewportSource).toContain(
+      "minimumInnerContainmentClearance",
     );
   });
 });
