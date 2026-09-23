@@ -19,6 +19,10 @@ import {
   ROULETTE_MAX_CCD_SUBSTEPS,
   ROULETTE_NORMALIZED_DIAMETER,
   ROULETTE_POCKET_COUNT,
+  ROULETTE_POCKET_FLOOR_OUTER_RADIUS,
+  ROULETTE_POCKET_FLOOR_Y,
+  ROULETTE_POCKET_OUTER_LIP_RADIUS,
+  ROULETTE_POCKET_OUTER_LIP_Y,
   ROULETTE_RAW_SOURCE_CENTER,
   ROULETTE_ROTATION_AXIS,
   ROULETTE_ROTOR_ANGULAR_SPEED,
@@ -108,10 +112,17 @@ const ROTOR_CONTACT_SEGMENTS = 32;
 const EUROPEAN_POCKET_COUNT = ROULETTE_POCKET_COUNT;
 const POCKET_STEP_RADIANS = TWO_PI / EUROPEAN_POCKET_COUNT;
 const POCKET_FLOOR_INNER_RADIUS = 1.48;
-const POCKET_FLOOR_OUTER_RADIUS = 1.90;
-const POCKET_FLOOR_Y = -0.45;
+const POCKET_FLOOR_OUTER_RADIUS = ROULETTE_POCKET_FLOOR_OUTER_RADIUS;
+const POCKET_FLOOR_Y = ROULETTE_POCKET_FLOOR_Y;
+const POCKET_OUTER_LIP_RADIUS = ROULETTE_POCKET_OUTER_LIP_RADIUS;
+const POCKET_OUTER_LIP_Y = ROULETTE_POCKET_OUTER_LIP_Y;
 const POCKET_FLOOR_THICKNESS = 0.06;
 const POCKET_FLOOR_SEGMENTS = 74;
+const BOWL_BRIDGE_INNER_RADIUS = POCKET_OUTER_LIP_RADIUS;
+const BOWL_BRIDGE_OUTER_RADIUS = PART2_CHANNEL_PROFILE[0][0];
+const BOWL_BRIDGE_SEGMENTS = 128;
+const BOWL_BRIDGE_SAMPLE_COUNT = 9;
+const BOWL_BRIDGE_THICKNESS = 0.08;
 const POCKET_FRET_RADIUS = 1.73;
 const POCKET_FRET_TANGENTIAL_HALF_EXTENT = 0.105;
 const POCKET_FRET_RADIAL_HALF_EXTENT = 0.032;
@@ -806,13 +817,75 @@ function part4InitialVelocity(probe: (typeof PART4_PROBES)[number]): VectorReado
   };
 }
 
+function buildBowlBridgeTrimesh(
+  profile: readonly [number, number][],
+) {
+  const vertices: number[] = [];
+  const indices: number[] = [];
+  const bottomProfile = profile.map(
+    ([radius, height]) =>
+      [radius, height - BOWL_BRIDGE_THICKNESS] as [number, number],
+  );
+
+  const appendProfile = (rings: readonly [number, number][]) => {
+    for (const [radius, height] of rings) {
+      for (let segment = 0; segment < BOWL_BRIDGE_SEGMENTS; segment += 1) {
+        const angle = (segment / BOWL_BRIDGE_SEGMENTS) * TWO_PI;
+        vertices.push(
+          Math.sin(angle) * radius,
+          height,
+          Math.cos(angle) * radius,
+        );
+      }
+    }
+  };
+
+  appendProfile(profile);
+  const bottomOffset = profile.length * BOWL_BRIDGE_SEGMENTS;
+  appendProfile(bottomProfile);
+
+  for (let row = 0; row < profile.length - 1; row += 1) {
+    for (let segment = 0; segment < BOWL_BRIDGE_SEGMENTS; segment += 1) {
+      const next = (segment + 1) % BOWL_BRIDGE_SEGMENTS;
+      const topA = row * BOWL_BRIDGE_SEGMENTS + segment;
+      const topB = row * BOWL_BRIDGE_SEGMENTS + next;
+      const topC = (row + 1) * BOWL_BRIDGE_SEGMENTS + next;
+      const topD = (row + 1) * BOWL_BRIDGE_SEGMENTS + segment;
+      indices.push(topA, topD, topB, topB, topD, topC);
+
+      const bottomA = bottomOffset + topA;
+      const bottomB = bottomOffset + topB;
+      const bottomC = bottomOffset + topC;
+      const bottomD = bottomOffset + topD;
+      indices.push(bottomA, bottomB, bottomD, bottomB, bottomC, bottomD);
+    }
+  }
+
+  for (const row of [0, profile.length - 1]) {
+    const bottomRow = bottomOffset + row * BOWL_BRIDGE_SEGMENTS;
+    for (let segment = 0; segment < BOWL_BRIDGE_SEGMENTS; segment += 1) {
+      const next = (segment + 1) % BOWL_BRIDGE_SEGMENTS;
+      const topA = row * BOWL_BRIDGE_SEGMENTS + segment;
+      const topB = row * BOWL_BRIDGE_SEGMENTS + next;
+      const bottomA = bottomRow + segment;
+      const bottomB = bottomRow + next;
+      indices.push(topA, topB, bottomB, topA, bottomB, bottomA);
+    }
+  }
+
+  return {
+    vertices: new Float32Array(vertices),
+    indices: new Uint32Array(indices),
+  };
+}
+
 function buildPocketFloorTrimesh() {
   const vertices: number[] = [];
   const indices: number[] = [];
   const topProfile: Array<[number, number]> = [
     [POCKET_FLOOR_INNER_RADIUS, POCKET_FLOOR_Y],
     [POCKET_FLOOR_OUTER_RADIUS, POCKET_FLOOR_Y],
-    [POCKET_FLOOR_OUTER_RADIUS + 0.14, POCKET_FLOOR_Y + 0.16],
+    [POCKET_OUTER_LIP_RADIUS, POCKET_OUTER_LIP_Y],
   ];
   const bottomProfile = topProfile.map(
     ([radius, height]) =>
@@ -1603,6 +1676,8 @@ export function Part2SceneViewport({
     let rotorBody: RAPIER.RigidBody | null = null;
     let physicsBallCollider: RAPIER.Collider | null = null;
     let part3TrackCollider: RAPIER.Collider | null = null;
+    let part3BowlBridgeCollider: RAPIER.Collider | null = null;
+    let part3BowlBridgeProfile: Array<[number, number]> = [];
     let part3InnerFloorCollider: RAPIER.Collider | null = null;
     let part3DeflectorColliders: RAPIER.Collider[] = [];
     let part3PocketColliders: RAPIER.Collider[] = [];
@@ -1871,6 +1946,77 @@ export function Part2SceneViewport({
           z: normal.z,
         },
       };
+    };
+
+    const measureBowlBridgeProfile = (
+      channelVerticalOffset: number,
+    ): Array<[number, number]> => {
+      const radii = Array.from(
+        { length: BOWL_BRIDGE_SAMPLE_COUNT },
+        (_, index) =>
+          THREE.MathUtils.lerp(
+            BOWL_BRIDGE_INNER_RADIUS,
+            BOWL_BRIDGE_OUTER_RADIUS,
+            index / (BOWL_BRIDGE_SAMPLE_COUNT - 1),
+          ),
+      );
+      const sampleAzimuths = [0.37, 2.464, 4.558];
+      const measured = radii.map((radius) => {
+        const heights = sampleAzimuths
+          .map((azimuth) => {
+            const hit = measureVisibleSurfaceAt(
+              Math.sin(azimuth) * radius,
+              Math.cos(azimuth) * radius,
+              false,
+            );
+            return hit?.y ?? null;
+          })
+          .filter((value): value is number => value !== null)
+          .sort((left, right) => left - right);
+        return heights.length > 0
+          ? heights[Math.floor(heights.length / 2)]
+          : null;
+      });
+
+      const targetInnerY = POCKET_OUTER_LIP_Y;
+      const targetOuterY = part2ChannelSurfaceAt(
+        BOWL_BRIDGE_OUTER_RADIUS,
+        channelVerticalOffset,
+      ).y;
+      const measuredInnerY = measured[0];
+      const measuredOuterY = measured.at(-1);
+      const canAlignMeasuredProfile =
+        measuredInnerY !== null &&
+        measuredOuterY !== null &&
+        Number.isFinite(measuredInnerY) &&
+        Number.isFinite(measuredOuterY);
+
+      return radii.map((radius, index) => {
+        const alpha = index / (radii.length - 1);
+        const fallbackY = THREE.MathUtils.lerp(
+          targetInnerY,
+          targetOuterY,
+          alpha,
+        );
+        if (index === 0) return [radius, targetInnerY];
+        if (index === radii.length - 1) return [radius, targetOuterY];
+        const visibleY = measured[index];
+        if (!canAlignMeasuredProfile || visibleY === null) {
+          return [radius, fallbackY];
+        }
+        const seamCorrection = THREE.MathUtils.lerp(
+          targetInnerY - measuredInnerY!,
+          targetOuterY - measuredOuterY!,
+          alpha,
+        );
+        const correctedY = visibleY + seamCorrection;
+        const envelopeMin = Math.min(targetInnerY, targetOuterY) - 0.04;
+        const envelopeMax = Math.max(targetInnerY, targetOuterY) + 0.04;
+        return [
+          radius,
+          THREE.MathUtils.clamp(correctedY, envelopeMin, envelopeMax),
+        ];
+      });
     };
 
     const measureVisibleOuterWallProfile = () => {
@@ -3713,6 +3859,43 @@ export function Part2SceneViewport({
             addProfileSupportRings(world, stationaryBody);
             addRetainingRim(world, stationaryBody, 2.94, -0.02);
           }
+           if (
+             validationMode === 'part3' &&
+             !geometryDiagnosticOnly &&
+             !part1ProbeOnly &&
+             part3TrackCollider
+           ) {
+             const activeTrackVerticalOffset =
+               outerLaneOnly || outerLaneSpinOnly
+                 ? part2RaceVerticalOffset
+                 : part3TrackVerticalOffset;
+             part3BowlBridgeProfile = measureBowlBridgeProfile(
+               activeTrackVerticalOffset,
+             );
+             const bowlBridgeMesh = buildBowlBridgeTrimesh(
+               part3BowlBridgeProfile,
+             );
+             part3BowlBridgeCollider = world.createCollider(
+               RAPIER.ColliderDesc.trimesh(
+                 bowlBridgeMesh.vertices,
+                 bowlBridgeMesh.indices,
+                 RAPIER.TriMeshFlags.FIX_INTERNAL_EDGES |
+                   RAPIER.TriMeshFlags.ORIENTED,
+               )
+                 .setFriction(PART3_TRACK_FRICTION)
+                 .setRestitution(0.01)
+                 .setCollisionGroups(
+                   STATIONARY_COLLISION_GROUP |
+                     (BALL_COLLISION_GROUP << 16),
+                 ),
+               stationaryBody,
+             );
+             part3ColliderRoles.set(
+               part3BowlBridgeCollider.handle,
+               'stationary-bowl-apron-bridge',
+             );
+           }
+
            if (validationMode !== 'part3') {
              part3InnerFloorCollider = world.createCollider(
                RAPIER.ColliderDesc.cylinder(1.88, 0.04)
