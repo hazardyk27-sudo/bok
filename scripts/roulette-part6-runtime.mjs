@@ -8,6 +8,9 @@ const targetUrl =
 const outputPath =
   process.env.ROULETTE_PART6_OUTPUT ??
   'artifacts/roulette-physics-lab/part6-runtime-result.json';
+const terminalTimeoutMs = Number(
+  process.env.ROULETTE_PART6_TIMEOUT_MS ?? 20_700_000,
+);
 
 let telemetry = null;
 const seedTelemetry = [];
@@ -75,7 +78,7 @@ try {
         return status === 'captured' || status === 'failed';
       },
       undefined,
-      { timeout: 900_000 },
+      { timeout: terminalTimeoutMs },
     );
   } catch (error) {
     terminalWaitError =
@@ -97,6 +100,7 @@ try {
   const runtimeResult = {
     capturedAt: new Date().toISOString(),
     url: targetUrl,
+    terminalTimeoutMs,
     domStatus: status,
     errorVisible,
     errorText,
