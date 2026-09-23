@@ -4144,7 +4144,7 @@ export function Part2SceneViewport({
             return;
           }
 
-          const launchClearance = BALL_RADIUS + 0.002;
+          const launchClearance = BALL_RADIUS + 0.01;
           const operationalLaunchCenterRadius =
             PART2_ACTUAL_DARK_TRACK_LAUNCH_RADIUS;
           let launchContactRadius = operationalLaunchCenterRadius;
