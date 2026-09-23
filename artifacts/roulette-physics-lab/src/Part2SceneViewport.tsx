@@ -1224,13 +1224,10 @@ function addMeasuredOuterWallColliders(
   const measured = [...profile].sort((left, right) => left[1] - right[1]);
   const segments = 512;
 
-  // Build the measured outer containment wall as one continuous inward-facing
-  // trimesh. The previous ring of separate cuboids introduced collider seams
-  // that could kick the 30 wu/s ball upward as it crossed segment boundaries.
-  const innerFaceRadius = Math.min(
-    PART2_ACTUAL_WOOD_INNER_RADIUS,
-    ...measured.map(([radius]) => radius),
-  );
+  // Build one continuous wall that follows the measured radius-vs-height
+  // profile. This avoids both segmented cuboid seams and the artificial
+  // narrow vertical wall created by collapsing every height to the minimum
+  // measured radius.
   const minY = Math.min(...measured.map(([, height]) => height));
   const maxY = Math.max(...measured.map(([, height]) => height));
   const channelFloorMinY = Math.min(
@@ -1241,38 +1238,47 @@ function addMeasuredOuterWallColliders(
     channelFloorMinY - BALL_RADIUS * 2 - 0.02,
   );
   const upperY = maxY + BALL_RADIUS + 0.04;
+
+  const profileRows: Array<[number, number]> = [
+    [measured[0][0], lowerY],
+    ...measured,
+    [measured[measured.length - 1][0], upperY],
+  ];
+
   const vertices: number[] = [];
   const indices: number[] = [];
 
-  for (const y of [lowerY, upperY]) {
+  for (const [radius, y] of profileRows) {
     for (let segment = 0; segment < segments; segment += 1) {
       const angle = (segment / segments) * TWO_PI;
       vertices.push(
-        Math.sin(angle) * innerFaceRadius,
+        Math.sin(angle) * radius,
         y,
-        Math.cos(angle) * innerFaceRadius,
+        Math.cos(angle) * radius,
       );
     }
   }
 
-  const upperOffset = segments;
-  for (let segment = 0; segment < segments; segment += 1) {
-    const next = (segment + 1) % segments;
-    const lowerA = segment;
-    const lowerB = next;
-    const upperA = upperOffset + segment;
-    const upperB = upperOffset + next;
+  for (let row = 0; row < profileRows.length - 1; row += 1) {
+    const lowerOffset = row * segments;
+    const upperOffset = (row + 1) * segments;
+    for (let segment = 0; segment < segments; segment += 1) {
+      const next = (segment + 1) % segments;
+      const lowerA = lowerOffset + segment;
+      const lowerB = lowerOffset + next;
+      const upperA = upperOffset + segment;
+      const upperB = upperOffset + next;
 
-    // Reverse the winding so the oriented surface normal points inward toward
-    // the roulette race rather than outward into the wooden rim.
-    indices.push(
-      lowerA,
-      upperB,
-      lowerB,
-      lowerA,
-      upperA,
-      upperB,
-    );
+      // Winding is inward-facing toward the roulette race.
+      indices.push(
+        lowerA,
+        upperB,
+        lowerB,
+        lowerA,
+        upperA,
+        upperB,
+      );
+    }
   }
 
   const collider = world.createCollider(
@@ -1292,7 +1298,7 @@ function addMeasuredOuterWallColliders(
 
   return {
     colliders: [collider],
-    samples: [[innerFaceRadius, lowerY], [innerFaceRadius, upperY]] as Array<[number, number]>,
+    samples: profileRows,
     segments,
   };
 }
