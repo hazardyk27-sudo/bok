@@ -4417,9 +4417,9 @@ export function Part2SceneViewport({
 
             if (
               part6DiagnosticMode &&
-              run.seed === 61005 &&
+              (run.seed === 61004 || run.seed === 61005) &&
               step >= 12 &&
-              step <= 36
+              step <= 48
             ) {
               console.info(
                 'PART6_ESCAPE_TRACE',
