@@ -948,6 +948,16 @@ One audit-only instruction was mistakenly sent to Replit before this rule was cl
 - menu, game routes and slot shell can now extend beyond the viewport instead of being clipped
 - removed the Cadı Kazan landscape-only height/overflow trap so short landscape screens can scroll vertically when needed
 
+### Stage 20 — Advanced 25 large-cell mobile + exact scratch + cash register SFX
+- Mobile Advanced 25 keeps the established landscape shell, right-side payout HUD, and bottom control dock.
+- During an Advanced round, header/control chrome is compressed but not removed; freed height is reassigned to the ticket/board.
+- Advanced ticket is height-driven and horizontal; the 5×5 board uses nearly the full available table height to make each cell materially larger.
+- Mobile QA now requires Advanced cells to be at least 36 CSS px on supported phone viewports.
+- Scratch input no longer prefers offsetX/offsetY in the rotated portrait host. Pointer mapping is calculated from clientX/clientY against the transformed canvas rect so the scratched center stays directly under the pointer/finger.
+- Scratch brush is standardized to a 12 CSS px local radius (24 px diameter) for both Standard and Advanced.
+- AudioManager now has a dedicated cash-register payout SFX (drawer clack + bright coin/bell tail). It plays on successful CASH_OUT and on automatic COMPLETED payout.
+- Merged into GitHub `main` via PR #9, merge commit `5a5214e`.
+
 ### Stage 19 — Restore old mobile shell, redesign only Advanced 25 card
 - Rejected the Advanced focus-mode presentation because it looked visually unbalanced and removed too much of the previous mobile composition.
 - Restored the previous always-landscape mobile shell with header, stage, right-side payout HUD, and bottom control dock all visible.
@@ -1076,7 +1086,7 @@ One audit-only instruction was mistakenly sent to Replit before this rule was cl
 
 As of this memory update, the next task is:
 
-> **Manually sync GitHub main in Replit Shell, then verify the restored mobile landscape shell and the new horizontal Advanced 25 ticket: ticket should look premium and wide, 5×5 board should be on the right side of the ticket, payout HUD/control dock must remain visible, scratch must follow the pointer exactly, and there must be no viewport overflow.**
+> **Manually sync GitHub main in Replit Shell, then verify Advanced 25 mobile on a real phone: cells must be visibly larger and separable, the scratch center must sit directly beneath the pointer/finger, the existing mobile HUD/control shell must remain, and CASH OUT / COMPLETED must play the cash-register payout sound.**
 
 Priority checks:
 1. Desktop should visually read as the approved premium mockup, roughly 80%+ similar in hierarchy/composition.
