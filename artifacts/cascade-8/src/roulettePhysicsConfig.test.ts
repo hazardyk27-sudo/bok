@@ -402,7 +402,7 @@ describe("authoritative roulette physics config", () => {
       "const PART6_INTERACTIVE_YIELD_STEPS = 30",
     );
     expect(part3ViewportSource).toContain(
-      "const PART6_DIAGNOSTIC_YIELD_STEPS = 5",
+      "const PART6_DIAGNOSTIC_YIELD_STEPS = 20",
     );
     expect(part3ViewportSource).toContain(
       "PART6_STEP_PROGRESS",
