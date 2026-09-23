@@ -43,6 +43,92 @@ export class AudioManager {
     }
     if (this.context.state === "suspended") void this.context.resume();
   }
+
+  unlock() {
+    if (this.muted) return;
+    this.ensure();
+  }
+
+  private makeNoiseBuffer(duration: number, decay = 1.6, warmth = 0.18) {
+    const context = this.context!;
+    const length = Math.max(1, Math.ceil(context.sampleRate * duration));
+    const buffer = context.createBuffer(1, length, context.sampleRate);
+    const samples = buffer.getChannelData(0);
+    let brown = 0;
+    for (let index = 0; index < length; index += 1) {
+      const progress = index / Math.max(1, length - 1);
+      const white = Math.random() * 2 - 1;
+      brown = brown * 0.92 + white * 0.08;
+      const mixed = white * (1 - warmth) + brown * warmth * 3.2;
+      samples[index] = mixed * Math.pow(1 - progress, decay);
+    }
+    return buffer;
+  }
+
+  private playNoiseBurst(options: {
+    at?: number;
+    duration: number;
+    gain: number;
+    frequency: number;
+    q?: number;
+    type?: BiquadFilterType;
+    decay?: number;
+    warmth?: number;
+  }) {
+    const context = this.context!;
+    const output = this.sfxGain!;
+    const start = context.currentTime + (options.at ?? 0);
+    const source = context.createBufferSource();
+    const filter = context.createBiquadFilter();
+    const envelope = context.createGain();
+    source.buffer = this.makeNoiseBuffer(options.duration, options.decay ?? 1.8, options.warmth ?? 0.15);
+    filter.type = options.type ?? "bandpass";
+    filter.frequency.setValueAtTime(options.frequency, start);
+    filter.Q.value = options.q ?? 0.8;
+    envelope.gain.setValueAtTime(0.0001, start);
+    envelope.gain.exponentialRampToValueAtTime(Math.max(0.0002, options.gain), start + 0.004);
+    envelope.gain.exponentialRampToValueAtTime(0.0001, start + options.duration);
+    source.connect(filter);
+    filter.connect(envelope);
+    envelope.connect(output);
+    source.addEventListener("ended", () => {
+      source.disconnect();
+      filter.disconnect();
+      envelope.disconnect();
+    }, { once: true });
+    source.start(start);
+    source.stop(start + options.duration + 0.01);
+  }
+
+  private playMetalPing(frequency: number, at: number, duration: number, gain: number) {
+    const context = this.context!;
+    const output = this.sfxGain!;
+    const start = context.currentTime + at;
+    const partials = [
+      { ratio: 1, gain: 1 },
+      { ratio: 2.01, gain: 0.44 },
+      { ratio: 3.87, gain: 0.18 },
+    ];
+    partials.forEach((partial) => {
+      const oscillator = context.createOscillator();
+      const envelope = context.createGain();
+      oscillator.type = "sine";
+      oscillator.frequency.setValueAtTime(frequency * partial.ratio, start);
+      envelope.gain.setValueAtTime(0.0001, start);
+      envelope.gain.exponentialRampToValueAtTime(Math.max(0.0002, gain * partial.gain), start + 0.004);
+      envelope.gain.exponentialRampToValueAtTime(0.0001, start + duration);
+      oscillator.connect(envelope);
+      envelope.connect(output);
+      this.activeTones.add(oscillator);
+      oscillator.addEventListener("ended", () => {
+        this.activeTones.delete(oscillator);
+        oscillator.disconnect();
+        envelope.disconnect();
+      }, { once: true });
+      oscillator.start(start);
+      oscillator.stop(start + duration + 0.02);
+    });
+  }
   tone(frequency: number, duration = 0.08, type: OscillatorType = "sine") {
     if (this.muted) return;
     this.ensure();
@@ -82,48 +168,169 @@ export class AudioManager {
     if (this.muted) return;
     this.ensure();
     const context = this.context!;
+    const output = this.sfxGain!;
+    const normalized = Math.max(0, Math.min(1, intensity));
+    const depth = Math.max(0, Math.min(1, abrasion));
+
     if (!this.scratchBuffer) {
       const sampleRate = context.sampleRate;
-      const buffer = context.createBuffer(1, Math.ceil(sampleRate * 0.12), sampleRate);
+      const duration = 0.19;
+      const buffer = context.createBuffer(1, Math.ceil(sampleRate * duration), sampleRate);
       const samples = buffer.getChannelData(0);
+      let previous = 0;
       for (let index = 0; index < samples.length; index += 1) {
-        const envelope = 1 - index / samples.length;
-        samples[index] = (Math.random() * 2 - 1) * envelope;
+        const progress = index / samples.length;
+        const white = Math.random() * 2 - 1;
+        previous = previous * 0.74 + white * 0.26;
+        const grit = Math.random() > 0.965 ? (Math.random() * 2 - 1) * 1.7 : 0;
+        samples[index] = (white * 0.52 + previous * 0.42 + grit * 0.22) * Math.pow(1 - progress, 0.55);
       }
       this.scratchBuffer = buffer;
     }
 
-    const normalized = Math.max(0, Math.min(1, intensity));
-    const depth = Math.max(0, Math.min(1, abrasion));
-    const source = context.createBufferSource();
-    const filter = context.createBiquadFilter();
-    const envelope = context.createGain();
-    const duration = 0.04 + normalized * 0.035 + depth * 0.02;
     const startAt = context.currentTime;
-    source.buffer = this.scratchBuffer;
-    source.playbackRate.value = 0.68 + normalized * 0.42 + depth * 0.18;
-    filter.type = "bandpass";
-    filter.frequency.value = 650 + normalized * 1_700 + depth * 900;
-    filter.Q.value = 0.6 + depth * 0.25;
-    envelope.gain.setValueAtTime(0.0001, startAt);
-    envelope.gain.exponentialRampToValueAtTime(0.04 + normalized * 0.055 + depth * 0.035, startAt + 0.006);
-    envelope.gain.exponentialRampToValueAtTime(0.0001, startAt + duration);
-    source.connect(filter);
-    filter.connect(envelope);
-    envelope.connect(this.sfxGain!);
-    this.scratchSources.add(source);
-    source.addEventListener("ended", () => {
-      this.scratchSources.delete(source);
-      source.disconnect();
-      filter.disconnect();
-      envelope.disconnect();
+    const duration = 0.055 + normalized * 0.035;
+
+    // Dry paper/foil rasp.
+    const body = context.createBufferSource();
+    const bodyFilter = context.createBiquadFilter();
+    const bodyGain = context.createGain();
+    body.buffer = this.scratchBuffer;
+    body.playbackRate.value = 0.82 + normalized * 0.34 + depth * 0.08;
+    bodyFilter.type = "bandpass";
+    bodyFilter.frequency.value = 900 + normalized * 900 + depth * 380;
+    bodyFilter.Q.value = 0.55;
+    bodyGain.gain.setValueAtTime(0.0001, startAt);
+    bodyGain.gain.exponentialRampToValueAtTime(0.045 + normalized * 0.055, startAt + 0.004);
+    bodyGain.gain.exponentialRampToValueAtTime(0.0001, startAt + duration);
+    body.connect(bodyFilter);
+    bodyFilter.connect(bodyGain);
+    bodyGain.connect(output);
+
+    // Metallic foil edge: quieter, brighter and shorter than the body.
+    const foil = context.createBufferSource();
+    const foilFilter = context.createBiquadFilter();
+    const foilGain = context.createGain();
+    foil.buffer = this.scratchBuffer;
+    foil.playbackRate.value = 1.08 + normalized * 0.50;
+    foilFilter.type = "highpass";
+    foilFilter.frequency.value = 3_200 + normalized * 1_500 + depth * 700;
+    foilFilter.Q.value = 0.3;
+    foilGain.gain.setValueAtTime(0.0001, startAt);
+    foilGain.gain.exponentialRampToValueAtTime(0.014 + normalized * 0.028 + depth * 0.012, startAt + 0.003);
+    foilGain.gain.exponentialRampToValueAtTime(0.0001, startAt + duration * 0.82);
+    foil.connect(foilFilter);
+    foilFilter.connect(foilGain);
+    foilGain.connect(output);
+
+    [body, foil].forEach((source) => this.scratchSources.add(source));
+    body.addEventListener("ended", () => {
+      this.scratchSources.delete(body);
+      body.disconnect();
+      bodyFilter.disconnect();
+      bodyGain.disconnect();
     }, { once: true });
-    source.start(startAt);
-    source.stop(startAt + duration);
+    foil.addEventListener("ended", () => {
+      this.scratchSources.delete(foil);
+      foil.disconnect();
+      foilFilter.disconnect();
+      foilGain.disconnect();
+    }, { once: true });
+
+    body.start(startAt, Math.random() * 0.035);
+    foil.start(startAt, Math.random() * 0.035);
+    body.stop(startAt + duration + 0.01);
+    foil.stop(startAt + duration + 0.01);
   }
   click() { this.tone(480, 0.05, "triangle"); }
   spin() { this.tone(180, 0.16, "sine"); }
   win() { this.tone(620, 0.12, "triangle"); this.delayedTone(880, 0.16, "triangle", 80); }
+  ticketPurchase() {
+    if (this.muted) return;
+    this.ensure();
+    const context = this.context!;
+    const output = this.sfxGain!;
+    const start = context.currentTime;
+
+    // Short paper/foil feed.
+    this.playNoiseBurst({ at: 0, duration: 0.13, gain: 0.055, frequency: 1_650, q: 0.65, decay: 0.55, warmth: 0.28 });
+    this.playNoiseBurst({ at: 0.075, duration: 0.055, gain: 0.13, frequency: 780, q: 0.9, decay: 2.4, warmth: 0.35 });
+
+    // Mechanical stamp/cutter.
+    const stamp = context.createOscillator();
+    const stampGain = context.createGain();
+    stamp.type = "square";
+    stamp.frequency.setValueAtTime(118, start + 0.095);
+    stamp.frequency.exponentialRampToValueAtTime(76, start + 0.155);
+    stampGain.gain.setValueAtTime(0.0001, start + 0.095);
+    stampGain.gain.exponentialRampToValueAtTime(0.08, start + 0.100);
+    stampGain.gain.exponentialRampToValueAtTime(0.0001, start + 0.165);
+    stamp.connect(stampGain);
+    stampGain.connect(output);
+    this.activeTones.add(stamp);
+    stamp.addEventListener("ended", () => {
+      this.activeTones.delete(stamp);
+      stamp.disconnect();
+      stampGain.disconnect();
+    }, { once: true });
+    stamp.start(start + 0.095);
+    stamp.stop(start + 0.18);
+
+    // Small confirmation bell, deliberately restrained.
+    this.playMetalPing(840, 0.135, 0.17, 0.055);
+  }
+
+  bombBust() {
+    if (this.muted) return;
+    this.ensure();
+    const context = this.context!;
+    const output = this.sfxGain!;
+    const start = context.currentTime;
+
+    // Airy blast + body thump.
+    this.playNoiseBurst({ at: 0, duration: 0.22, gain: 0.16, frequency: 260, q: 0.7, decay: 1.25, warmth: 0.72 });
+    this.playNoiseBurst({ at: 0.012, duration: 0.09, gain: 0.07, frequency: 2_300, q: 0.55, decay: 2.7, warmth: 0.08 });
+
+    const thump = context.createOscillator();
+    const thumpGain = context.createGain();
+    thump.type = "sine";
+    thump.frequency.setValueAtTime(105, start);
+    thump.frequency.exponentialRampToValueAtTime(38, start + 0.34);
+    thumpGain.gain.setValueAtTime(0.0001, start);
+    thumpGain.gain.exponentialRampToValueAtTime(0.24, start + 0.008);
+    thumpGain.gain.exponentialRampToValueAtTime(0.0001, start + 0.38);
+    thump.connect(thumpGain);
+    thumpGain.connect(output);
+    this.activeTones.add(thump);
+    thump.addEventListener("ended", () => {
+      this.activeTones.delete(thump);
+      thump.disconnect();
+      thumpGain.disconnect();
+    }, { once: true });
+    thump.start(start);
+    thump.stop(start + 0.40);
+
+    // Dissonant descending failure cue after the impact.
+    const fail = context.createOscillator();
+    const failGain = context.createGain();
+    fail.type = "triangle";
+    fail.frequency.setValueAtTime(310, start + 0.06);
+    fail.frequency.exponentialRampToValueAtTime(146, start + 0.42);
+    failGain.gain.setValueAtTime(0.0001, start + 0.06);
+    failGain.gain.exponentialRampToValueAtTime(0.075, start + 0.085);
+    failGain.gain.exponentialRampToValueAtTime(0.0001, start + 0.43);
+    fail.connect(failGain);
+    failGain.connect(output);
+    this.activeTones.add(fail);
+    fail.addEventListener("ended", () => {
+      this.activeTones.delete(fail);
+      fail.disconnect();
+      failGain.disconnect();
+    }, { once: true });
+    fail.start(start + 0.06);
+    fail.stop(start + 0.45);
+  }
+
   cashRegister() {
     if (this.muted) return;
     this.ensure();
@@ -131,59 +338,35 @@ export class AudioManager {
     const output = this.sfxGain!;
     const start = context.currentTime;
 
-    // Drawer clack.
-    const clackBuffer = context.createBuffer(1, Math.ceil(context.sampleRate * 0.075), context.sampleRate);
-    const clackSamples = clackBuffer.getChannelData(0);
-    for (let index = 0; index < clackSamples.length; index += 1) {
-      const progress = index / clackSamples.length;
-      clackSamples[index] = (Math.random() * 2 - 1) * Math.pow(1 - progress, 2.2);
-    }
-    const clack = context.createBufferSource();
-    const clackFilter = context.createBiquadFilter();
-    const clackGain = context.createGain();
-    clack.buffer = clackBuffer;
-    clackFilter.type = "bandpass";
-    clackFilter.frequency.value = 1_050;
-    clackFilter.Q.value = 0.75;
-    clackGain.gain.setValueAtTime(0.0001, start);
-    clackGain.gain.exponentialRampToValueAtTime(0.28, start + 0.006);
-    clackGain.gain.exponentialRampToValueAtTime(0.0001, start + 0.075);
-    clack.connect(clackFilter);
-    clackFilter.connect(clackGain);
-    clackGain.connect(output);
-    clack.addEventListener("ended", () => {
-      clack.disconnect();
-      clackFilter.disconnect();
-      clackGain.disconnect();
-    }, { once: true });
-    clack.start(start);
-    clack.stop(start + 0.08);
+    // Metal latch and drawer rails.
+    this.playNoiseBurst({ at: 0, duration: 0.055, gain: 0.12, frequency: 1_650, q: 1.2, decay: 2.8, warmth: 0.16 });
+    this.playNoiseBurst({ at: 0.055, duration: 0.12, gain: 0.08, frequency: 640, q: 0.75, decay: 1.4, warmth: 0.60 });
 
-    // Coin/bell tail: deliberately bright and unmistakable as a payout cue.
-    [
-      { frequency: 980, at: 0.035, duration: 0.18, gain: 0.18 },
-      { frequency: 1_320, at: 0.075, duration: 0.22, gain: 0.20 },
-      { frequency: 1_760, at: 0.125, duration: 0.28, gain: 0.18 },
-      { frequency: 2_240, at: 0.19, duration: 0.34, gain: 0.13 },
-    ].forEach(({ frequency, at, duration, gain }) => {
-      const oscillator = context.createOscillator();
-      const envelope = context.createGain();
-      oscillator.type = "triangle";
-      oscillator.frequency.setValueAtTime(frequency, start + at);
-      envelope.gain.setValueAtTime(0.0001, start + at);
-      envelope.gain.exponentialRampToValueAtTime(gain, start + at + 0.008);
-      envelope.gain.exponentialRampToValueAtTime(0.0001, start + at + duration);
-      oscillator.connect(envelope);
-      envelope.connect(output);
-      this.activeTones.add(oscillator);
-      oscillator.addEventListener("ended", () => {
-        this.activeTones.delete(oscillator);
-        oscillator.disconnect();
-        envelope.disconnect();
-      }, { once: true });
-      oscillator.start(start + at);
-      oscillator.stop(start + at + duration + 0.02);
-    });
+    // Two inharmonic register-bell strikes.
+    this.playMetalPing(1_030, 0.028, 0.32, 0.12);
+    this.playMetalPing(1_315, 0.128, 0.38, 0.10);
+
+    // Drawer stop / wooden-metal body at the end.
+    const drawer = context.createOscillator();
+    const drawerGain = context.createGain();
+    drawer.type = "sine";
+    drawer.frequency.setValueAtTime(92, start + 0.235);
+    drawer.frequency.exponentialRampToValueAtTime(54, start + 0.36);
+    drawerGain.gain.setValueAtTime(0.0001, start + 0.235);
+    drawerGain.gain.exponentialRampToValueAtTime(0.13, start + 0.242);
+    drawerGain.gain.exponentialRampToValueAtTime(0.0001, start + 0.39);
+    drawer.connect(drawerGain);
+    drawerGain.connect(output);
+    this.activeTones.add(drawer);
+    drawer.addEventListener("ended", () => {
+      this.activeTones.delete(drawer);
+      drawer.disconnect();
+      drawerGain.disconnect();
+    }, { once: true });
+    drawer.start(start + 0.235);
+    drawer.stop(start + 0.41);
+
+    this.playNoiseBurst({ at: 0.245, duration: 0.09, gain: 0.095, frequency: 420, q: 0.65, decay: 2.2, warmth: 0.72 });
   }
   winLabel() {
     this.tone(760, 0.07, "triangle");

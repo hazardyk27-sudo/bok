@@ -326,13 +326,20 @@ export class WitchClient {
     stakeInput?.addEventListener("keydown", (event) => {
       if (event.key === "Enter") {
         event.preventDefault();
+        this.audio.unlock();
         void this.startRound();
       }
     });
 
-    this.root.querySelector<HTMLButtonElement>("[data-witch-action='start']")?.addEventListener("click", () => void this.startRound());
+    this.root.querySelector<HTMLButtonElement>("[data-witch-action='start']")?.addEventListener("click", () => {
+      this.audio.unlock();
+      void this.startRound();
+    });
     this.root.querySelectorAll<HTMLButtonElement>("[data-witch-action='cashout']").forEach((button) => {
-      button.addEventListener("click", () => void this.cashOut());
+      button.addEventListener("click", () => {
+        this.audio.unlock();
+        void this.cashOut();
+      });
     });
     this.root.querySelectorAll<HTMLButtonElement>("[data-witch-action='new']").forEach((button) => {
       button.addEventListener("click", () => {
@@ -383,6 +390,7 @@ export class WitchClient {
       const data = await response.json() as CadiKazanState & { error?: string };
       if (!response.ok) throw new Error(data.error ?? "Bilet başlatılamadı");
       this.applyState(data);
+      this.audio.ticketPurchase();
       if (data.round) {
         this.telemetry.beginRound({
           roundId: data.round.id,
@@ -422,8 +430,12 @@ export class WitchClient {
       this.applyState(data.state, data.state.round?.status !== "ACTIVE");
       const resultRound = data.state.round;
       if (resultRound) this.telemetry.recordRevealResult(cellIndex, data.outcome, resultRound.revealedSafeCount, resultRound.currentMultiplierBps);
-      if (data.outcome === "BUST") triggerScratchHaptic("BOMB");
-      else if (data.outcome === "SAFE" || data.outcome === "COMPLETED") triggerScratchHaptic("GOLD");
+      if (data.outcome === "BUST") {
+        triggerScratchHaptic("BOMB");
+        this.audio.bombBust();
+      } else if (data.outcome === "SAFE" || data.outcome === "COMPLETED") {
+        triggerScratchHaptic("GOLD");
+      }
       if (data.outcome === "COMPLETED") this.audio.cashRegister();
       if (data.outcome === "BUST" || data.outcome === "COMPLETED") {
         if (resultRound) this.telemetry.recordSettlement(data.outcome, resultRound.revealedSafeCount, resultRound.currentMultiplierBps, resultRound.payoutCents);
