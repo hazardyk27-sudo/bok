@@ -3418,6 +3418,8 @@ function AuthoritativeRoundDetails({ round }: { round: PhysicsLabRound }) {
 }
 
 function App() {
+  const part6HeadlessRouteActive =
+    new URLSearchParams(window.location.search).get('part6Headless') === '1';
   const [loadKey, setLoadKey] = useState(0);
   const [loadState, setLoadState] = useState<LoadState>('loading');
   const [errorDetail, setErrorDetail] = useState('');
@@ -4265,7 +4267,7 @@ function App() {
             )}
           </section>
 
-          <AuthoritativeRoundPanel />
+          {!part6HeadlessRouteActive && <AuthoritativeRoundPanel />}
 
           <section className="physics-note" data-testid="status-physics">
             <div className="note-icon">
