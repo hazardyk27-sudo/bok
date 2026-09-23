@@ -7422,10 +7422,15 @@ export function Part2SceneViewport({
       };
     } catch (error) {
       console.error('PART 2 roulette scene failed to initialize', error);
+      const initializationDetail =
+        error instanceof Error ? error.message : String(error);
       callbacksRef.current.onStateChange(
         'error',
-        'The roulette physics scene could not initialize.',
-        'initialization',
+        initializationDetail,
+        initializationDetail.includes('visible-deflector audit') ||
+          initializationDetail.includes('Deflector audit')
+          ? 'geometry-audit'
+          : 'initialization',
       );
       return () => renderer?.dispose();
     }
@@ -7725,62 +7730,113 @@ export function Part2SceneViewport({
       className="part2-drop-report"
       data-testid="part6-full-spin-telemetry-report"
       data-status={part6TelemetryReport?.status ?? 'waiting'}
+      data-safety={part6TelemetryReport?.safetyStatus ?? 'pending'}
+      data-calibration={
+        part6TelemetryReport?.calibrationStatus ?? 'not-evaluated'
+      }
       aria-live="polite"
     >
       {part6TelemetryReport ? (
         <>
           <strong>{part6TelemetryReport.detail}</strong>
           <span>
+            Telemetry {part6TelemetryReport.status.toUpperCase()} · Safety{' '}
+            {part6TelemetryReport.safetyStatus.toUpperCase()} · Calibration{' '}
+            {part6TelemetryReport.calibrationStatus
+              .replace('-', ' ')
+              .toUpperCase()}
+          </span>
+          <span>
             schema {part6TelemetryReport.schemaVersion} · seeds{' '}
-            {part6TelemetryReport.completedCount}/{part6TelemetryReport.seedCount} ·
-            fixed step {part6TelemetryReport.fixedTimestep.toFixed(6)} s ·
-            max spin {part6TelemetryReport.maxDurationSeconds.toFixed(1)} s
+            {part6TelemetryReport.completedCount}/
+            {part6TelemetryReport.seedCount} · fixed step{' '}
+            {part6TelemetryReport.fixedTimestep.toFixed(6)} s · max spin{' '}
+            {part6TelemetryReport.maxDurationSeconds.toFixed(1)} s ·
+            timeouts {part6TelemetryReport.timedOutCount}
           </span>
           <span>
-            4–5 laps {part6TelemetryReport.fourToFiveLapCount}/{part6TelemetryReport.seedCount} ·
-            inward {part6TelemetryReport.inwardTransitionCount} ·
-            deflector {part6TelemetryReport.deflectorContactCount} ·
-            fret {part6TelemetryReport.fretContactCount} ·
-            pocket {part6TelemetryReport.pocketEntryCount} ·
-            settled {part6TelemetryReport.settledCount} ·
-            safety failures {part6TelemetryReport.safetyFailureCount}
+            laps median/min/max{' '}
+            {part6TelemetryReport.medianLapCount?.toFixed(3) ?? '—'} /{' '}
+            {part6TelemetryReport.minLapCount?.toFixed(3) ?? '—'} /{' '}
+            {part6TelemetryReport.maxLapCount?.toFixed(3) ?? '—'} ·
+            4–5 laps {part6TelemetryReport.fourToFiveLapCount}/
+            {part6TelemetryReport.seedCount} · median track contact{' '}
+            {part6TelemetryReport.medianTrackContactRatio === null
+              ? '—'
+              : (
+                  part6TelemetryReport.medianTrackContactRatio * 100
+                ).toFixed(1)}
+            %
           </span>
           <span>
-            unchanged physics: μ {part6TelemetryReport.trackFriction.toFixed(2)} ·
-            linear/angular damping {part6TelemetryReport.linearDamping.toFixed(2)} /{' '}
+            inward {(part6TelemetryReport.inwardTransitionRate * 100).toFixed(1)}
+            % · deflector{' '}
+            {(part6TelemetryReport.deflectorContactRate * 100).toFixed(1)}% ·
+            pocket {(part6TelemetryReport.pocketEntryRate * 100).toFixed(1)}% ·
+            settled {(part6TelemetryReport.settleRate * 100).toFixed(1)}% ·
+            safety fail{' '}
+            {(part6TelemetryReport.safetyFailureRate * 100).toFixed(1)}% ·
+            phase-order failures {part6TelemetryReport.phaseSequenceFailureCount}
+          </span>
+          <span>
+            unchanged physics: μ{' '}
+            {part6TelemetryReport.trackFriction.toFixed(2)} · linear/angular
+            damping {part6TelemetryReport.linearDamping.toFixed(2)} /{' '}
             {part6TelemetryReport.angularDamping.toFixed(2)}
           </span>
           {part6TelemetryReport.results.map((result) => (
             <span key={result.id}>
-              seed {result.seed} · launch {THREE.MathUtils.radToDeg(result.launchAzimuth).toFixed(1)}° @{' '}
-              {result.launchSpeed.toFixed(3)} · laps {result.lapCount.toFixed(3)} ·
-              contact {(result.trackContactRatio * 100).toFixed(1)}% ·
-              speed {result.trackStartSpeed.toFixed(3)}→{result.trackEndSpeed.toFixed(3)} / peak{' '}
-              {result.peakSpeed.toFixed(3)} · inward {result.inwardTransitionTime?.toFixed(3) ?? '—'} s ·
+              seed {result.seed} · reset{' '}
+              {result.stateResetVerified ? 'verified' : 'FAIL'} · launch{' '}
+              {THREE.MathUtils.radToDeg(result.launchAzimuth).toFixed(1)}° @{' '}
+              {result.launchSpeed.toFixed(3)} · laps{' '}
+              {result.lapCount.toFixed(3)} · contact{' '}
+              {(result.trackContactRatio * 100).toFixed(1)}% · speed{' '}
+              {result.trackStartSpeed.toFixed(3)}→
+              {result.trackEndSpeed.toFixed(3)} / peak{' '}
+              {result.peakSpeed.toFixed(3)} · inward{' '}
+              {result.inwardTransitionTime?.toFixed(3) ?? '—'} s · rotor entry{' '}
+              {result.rotorEntryTime?.toFixed(3) ?? '—'} s
+            </span>
+          ))}
+          {part6TelemetryReport.results.map((result) => (
+            <span key={`${result.id}-chain`}>
+              seed {result.seed} phases{' '}
+              {result.phases.map((event) => event.phase).join(' → ') || '—'} ·
+              order {result.phaseSequenceValid ? 'valid' : 'FAIL'} ·
               deflector {result.deflectorContactCount} @{' '}
-              {result.firstDeflectorContactTime?.toFixed(3) ?? '—'} s ·
-              impact {result.impactSpeedBefore?.toFixed(3) ?? '—'}→
+              {result.firstDeflectorContactTime?.toFixed(3) ?? '—'} s · impact{' '}
+              {result.impactSpeedBefore?.toFixed(3) ?? '—'}→
               {result.impactSpeedAfter?.toFixed(3) ?? '—'} / Δ{' '}
-              {result.impactDirectionChangeDegrees?.toFixed(1) ?? '—'}° ·
-              fret {result.fretContact ? 'yes' : 'no'} · pocket{' '}
+              {result.impactDirectionChangeDegrees?.toFixed(1) ?? '—'}° · fret{' '}
+              {result.fretContact ? 'yes' : 'no'} · pocket{' '}
               {result.pocketEntered ? 'yes' : 'no'} · settled{' '}
               {result.settled ? 'yes' : 'no'} · final{' '}
-              {result.finalPocketNumber ?? '—'} · pen/sep track{' '}
-              {result.maxTrackPenetration.toFixed(3)}/{result.maxTrackSeparation.toFixed(3)} · pocket{' '}
-              {result.maxPocketFloorPenetration.toFixed(3)}/{result.maxPocketFloorSeparation.toFixed(3)} · safety{' '}
-              {result.hover ||
-              result.clipping ||
-              result.tunneling ||
-              result.escaped ||
-              result.velocitySpike ||
-              result.artificialAcceleration
-                ? 'FAIL'
-                : 'clean'}
+              {result.finalPocketNumber ?? '—'} · timeout{' '}
+              {result.timedOut ? 'yes' : 'no'}
+            </span>
+          ))}
+          {part6TelemetryReport.results.map((result) => (
+            <span key={`${result.id}-transition`}>
+              seed {result.seed} transition r{' '}
+              {result.transitionMinRadius?.toFixed(3) ?? '—'}–
+              {result.transitionMaxRadius?.toFixed(3) ?? '—'} / Y{' '}
+              {result.transitionMinY?.toFixed(3) ?? '—'}–
+              {result.transitionMaxY?.toFixed(3) ?? '—'} · surface pen/sep{' '}
+              {result.transitionMaxSurfacePenetration.toFixed(3)}/
+              {result.transitionMaxSurfaceSeparation.toFixed(3)} · unsupported{' '}
+              {result.maxUnsupportedTransitionDuration.toFixed(3)} s · roles{' '}
+              {result.transitionContactRoles.join(', ') || '—'} · track pen/sep{' '}
+              {result.maxTrackPenetration.toFixed(3)}/
+              {result.maxTrackSeparation.toFixed(3)} · pocket pen/sep{' '}
+              {result.maxPocketFloorPenetration.toFixed(3)}/
+              {result.maxPocketFloorSeparation.toFixed(3)} · safety{' '}
+              {result.safetyPassed ? 'PASS' : 'FAIL'}
             </span>
           ))}
         </>
       ) : (
-        'Waiting for the PART 6A deterministic full-spin telemetry batch.'
+        'Waiting for the PART 6A.1 deterministic full-spin telemetry batch.'
       )}
     </div>
   );
