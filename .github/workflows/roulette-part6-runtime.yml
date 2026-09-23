@@ -1,5 +1,9 @@
 name: Roulette PART 6 Runtime
 
+concurrency:
+  group: roulette-part6-runtime-${{ github.ref }}
+  cancel-in-progress: true
+
 on:
   push:
     branches:
