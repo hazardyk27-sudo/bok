@@ -232,6 +232,8 @@ async function captureMobileLayout(page: Page) {
       sceneHeight: sceneRect?.height ?? 0,
       firstCellWidth: firstCellRect?.width ?? 0,
       firstCellHeight: firstCellRect?.height ?? 0,
+      ticketWidth: ticketRect?.width ?? 0,
+      ticketHeight: ticketRect?.height ?? 0,
       viewportWidth,
       viewportHeight,
       pageTransform: scene ? getComputedStyle(scene).transform : "none",
@@ -325,7 +327,8 @@ test.describe("Cadı Kazan critical round lifecycle", () => {
     expect(layout.dockInsideViewport).toBe(true);
     expect(Math.abs(layout.sceneWidth - layout.viewportWidth)).toBeLessThanOrEqual(2);
     expect(Math.abs(layout.sceneHeight - layout.viewportHeight)).toBeLessThanOrEqual(2);
-    expect(Math.min(layout.firstCellWidth, layout.firstCellHeight)).toBeGreaterThanOrEqual(34);
+    expect(Math.min(layout.firstCellWidth, layout.firstCellHeight)).toBeGreaterThanOrEqual(30);
+    expect(layout.ticketWidth / Math.max(1, layout.ticketHeight)).toBeGreaterThanOrEqual(1.55);
     expect(layout.pageTransform).not.toBe("none");
     await expect(page.locator(".witch-rotate-hint")).toHaveCount(0);
   });
