@@ -4739,7 +4739,7 @@ export function Part2SceneViewport({
               pocketEntered &&
               finalRotorRelativeSpeed < 0.12 &&
               radius >= POCKET_FLOOR_INNER_RADIUS + BALL_RADIUS &&
-              radius <= POCKET_FLOOR_OUTER_RADIUS - BALL_RADIUS &&
+              radius <= POCKET_OUTER_LIP_RADIUS - BALL_RADIUS &&
               Math.abs(bottom - POCKET_FLOOR_Y) <= 0.12
             ) {
               settledFrames += 1;
