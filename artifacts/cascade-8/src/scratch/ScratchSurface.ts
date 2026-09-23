@@ -364,36 +364,19 @@ export class ScratchSurface {
   }
 
   private pointFromEvent(event: PointerEvent): ScratchPoint {
-    const localWidth = Math.max(1, this.interactionCanvas.clientWidth);
-    const localHeight = Math.max(1, this.interactionCanvas.clientHeight);
-
-    // PointerEvent offsetX/offsetY are expressed in the target canvas' local
-    // coordinate system, so they stay aligned even when the mobile game scene
-    // is rotated by a transformed ancestor.
-    const localX = event.offsetX;
-    const localY = event.offsetY;
-    if (
-      Number.isFinite(localX) &&
-      Number.isFinite(localY) &&
-      localX >= -1 &&
-      localY >= -1 &&
-      localX <= localWidth + 1 &&
-      localY <= localHeight + 1
-    ) {
-      return {
-        x: clamp(localX / localWidth),
-        y: clamp(localY / localHeight),
-      };
-    }
-
-    // Fallback for browsers that do not provide transform-aware offsets.
     const rect = this.interactionCanvas.getBoundingClientRect();
     const portraitLandscapeScene =
       window.matchMedia?.("(max-width: 600px) and (orientation: portrait)").matches ?? false;
+
+    // The whole mobile game scene is rotated 90deg in portrait. Convert the
+    // screen-space pointer back into the canvas' unrotated local coordinates.
+    // This intentionally uses clientX/clientY + the transformed canvas rect
+    // instead of offsetX/offsetY, whose behavior is inconsistent across
+    // browsers when an ancestor is transformed.
     if (portraitLandscapeScene) {
       return {
         x: clamp((event.clientY - rect.top) / Math.max(1, rect.height)),
-        y: clamp(1 - ((event.clientX - rect.left) / Math.max(1, rect.width))),
+        y: clamp((rect.right - event.clientX) / Math.max(1, rect.width)),
       };
     }
 
