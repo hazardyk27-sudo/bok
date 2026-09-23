@@ -4347,19 +4347,46 @@ export function Part2SceneViewport({
               index === 0 ||
               phaseIndex >= observedPhaseIndices[index - 1],
           );
-          const deepestObservedPhase =
-            observedPhaseIndices.length > 0
-              ? Math.max(...observedPhaseIndices)
-              : -1;
-          const noSkippedObservedPhases =
-            deepestObservedPhase < 0 ||
-            phaseOrder
-              .slice(0, deepestObservedPhase + 1)
+          // Fret contact is physically possible but not mandatory: a ball can
+          // enter a pocket cleanly between two separators. Keep FRETS optional
+          // while still requiring the radial/settling chain to remain ordered.
+          const requiredPhaseOrder: Part6SpinPhase[] = [
+            'OUTER_RACE',
+            'INWARD_DESCENT',
+            'DEFLECTOR_ZONE',
+            'ROTOR_ENTRY',
+            'POCKET',
+            'SETTLED',
+          ];
+          const deepestRequiredPhase = requiredPhaseOrder.reduce(
+            (deepest, phase, index) =>
+              recordedPhases.has(phase) ? Math.max(deepest, index) : deepest,
+            -1,
+          );
+          const noSkippedRequiredPhases =
+            deepestRequiredPhase < 0 ||
+            requiredPhaseOrder
+              .slice(0, deepestRequiredPhase + 1)
               .every((phase) => recordedPhases.has(phase));
+          const fretEventIndex = phases.findIndex(
+            (event) => event.phase === 'FRETS',
+          );
+          const rotorEntryEventIndex = phases.findIndex(
+            (event) => event.phase === 'ROTOR_ENTRY',
+          );
+          const pocketEventIndex = phases.findIndex(
+            (event) => event.phase === 'POCKET',
+          );
+          const optionalFretPlacementValid =
+            fretEventIndex < 0 ||
+            (rotorEntryEventIndex >= 0 &&
+              fretEventIndex > rotorEntryEventIndex &&
+              (pocketEventIndex < 0 || fretEventIndex < pocketEventIndex));
           const phaseSequenceValid =
             phases[0]?.phase === 'OUTER_RACE' &&
             phaseSequenceMonotonic &&
-            noSkippedObservedPhases;
+            noSkippedRequiredPhases &&
+            optionalFretPlacementValid;
           const timedOut =
             !settled &&
             !escaped &&
@@ -4370,6 +4397,7 @@ export function Part2SceneViewport({
           const safetyPassed =
             stateResetVerified &&
             phaseSequenceValid &&
+            !timedOut &&
             !hover &&
             !clipping &&
             !tunneling &&
