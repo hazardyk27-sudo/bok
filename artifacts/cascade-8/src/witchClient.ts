@@ -35,7 +35,7 @@ type CadiKazanMutation = {
 };
 
 const API_BASE = "/api/cadi-kazan";
-const SCRATCH_BRUSH_RADIUS_PX = 14;
+const SCRATCH_BRUSH_RADIUS_PX = 12;
 
 const formatMoney = (cents: number, options: { compactInteger?: boolean; signed?: boolean } = {}) => {
   const absolute = Math.abs(cents) / 100;
