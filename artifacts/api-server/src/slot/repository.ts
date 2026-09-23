@@ -27,13 +27,13 @@ function validateInput(stakeCents: number, idempotencyKey: string) {
 }
 
 async function ensureWalletForUpdate(client: PoolClient, sessionId: string) {
-  await client.query(
-    "INSERT INTO roulette_wallets (session_id, balance_cents) VALUES ($1, $2) ON CONFLICT (session_id) DO NOTHING",
-    [sessionId, INITIAL_ROULETTE_BALANCE_CENTS],
-  );
   const result = await client.query<WalletRow>(
-    "SELECT balance_cents FROM roulette_wallets WHERE session_id = $1 FOR UPDATE",
-    [sessionId],
+    `INSERT INTO roulette_wallets (session_id, balance_cents)
+     VALUES ($1, $2)
+     ON CONFLICT (session_id) DO UPDATE
+       SET balance_cents = roulette_wallets.balance_cents
+     RETURNING balance_cents`,
+    [sessionId, INITIAL_ROULETTE_BALANCE_CENTS],
   );
   return Number(result.rows[0]?.balance_cents ?? 0);
 }
@@ -115,36 +115,56 @@ export class SlotRepository {
       const debitCents = isFreeBet ? 0 : input.stakeCents;
       const payoutCents = result.totalWinCents;
 
-      if (debitCents > 0) {
-        await client.query(
-          "UPDATE roulette_wallets SET balance_cents = balance_cents - $1, updated_at = now() WHERE session_id = $2",
-          [debitCents, sessionId],
-        );
-        balanceCents -= debitCents;
-        await client.query(
-          "INSERT INTO slot_ledger (id, session_id, round_id, kind, amount_cents, idempotency_key) VALUES ($1, $2, $3, 'STAKE_DEBIT', $4, $5)",
-          [randomUUID(), sessionId, roundId, -debitCents, `stake:${input.idempotencyKey}`],
-        );
-      }
-      await client.query(
-        "UPDATE roulette_wallets SET balance_cents = balance_cents + $1, updated_at = now() WHERE session_id = $2",
-        [payoutCents, sessionId],
+      const settlement = await client.query<SlotRoundRow & WalletRow>(
+        `WITH updated_wallet AS (
+           UPDATE roulette_wallets
+              SET balance_cents = balance_cents + $1,
+                  updated_at = now()
+            WHERE session_id = $2
+            RETURNING balance_cents
+         ),
+         inserted_round AS (
+           INSERT INTO slot_rounds
+             (id, session_id, stake_cents, payout_cents, result, idempotency_key)
+           VALUES ($3, $2, $4, $5, $6::jsonb, $7)
+           RETURNING *
+         ),
+         inserted_ledger AS (
+           INSERT INTO slot_ledger
+             (id, session_id, round_id, kind, amount_cents, idempotency_key)
+           SELECT *
+             FROM (VALUES
+               ($8::text, $2::text, $3::text, 'STAKE_DEBIT'::text, ($10::integer * -1), $11::text),
+               ($9::text, $2::text, $3::text, 'PAYOUT_CREDIT'::text, $5::integer, $12::text)
+             ) AS entries(id, session_id, round_id, kind, amount_cents, idempotency_key)
+            WHERE kind <> 'STAKE_DEBIT' OR $10 > 0
+           RETURNING id
+         )
+         SELECT inserted_round.*,
+                updated_wallet.balance_cents,
+                (SELECT count(*) FROM inserted_ledger) AS ledger_count
+           FROM inserted_round
+           CROSS JOIN updated_wallet`,
+        [
+          payoutCents - debitCents,
+          sessionId,
+          roundId,
+          input.stakeCents,
+          payoutCents,
+          JSON.stringify(result),
+          input.idempotencyKey,
+          randomUUID(),
+          randomUUID(),
+          debitCents,
+          `stake:${input.idempotencyKey}`,
+          `payout:${roundId}`,
+        ],
       );
-      balanceCents += payoutCents;
-
-      const inserted = await client.query<SlotRoundRow>(
-        `INSERT INTO slot_rounds
-          (id, session_id, stake_cents, payout_cents, result, idempotency_key)
-         VALUES ($1, $2, $3, $4, $5::jsonb, $6)
-         RETURNING *`,
-        [roundId, sessionId, input.stakeCents, payoutCents, JSON.stringify(result), input.idempotencyKey],
-      );
-      await client.query(
-        "INSERT INTO slot_ledger (id, session_id, round_id, kind, amount_cents, idempotency_key) VALUES ($1, $2, $3, 'PAYOUT_CREDIT', $4, $5)",
-        [randomUUID(), sessionId, roundId, payoutCents, `payout:${roundId}`],
-      );
+      const settled = settlement.rows[0];
+      if (!settled) throw new Error("SLOT_SETTLEMENT_FAILED");
+      balanceCents = Number(settled.balance_cents);
       await client.query("COMMIT");
-      return response(sessionId, balanceCents, inserted.rows[0]);
+      return response(sessionId, balanceCents, settled);
     } catch (error) {
       await client.query("ROLLBACK");
       throw error;
