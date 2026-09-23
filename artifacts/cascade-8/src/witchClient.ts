@@ -257,12 +257,6 @@ export const CADI_KAZAN_MARKUP = `
       <button class="witch-cashout-button" type="button" data-witch-action="cashout">CASH OUT <b>↗</b></button>
       <button class="witch-secondary-button" type="button" data-witch-action="new" hidden>YENİ KART</button>
     </div>
-
-    <div class="witch-rotate-hint" aria-hidden="true">
-      <span>↻</span>
-      <strong>TELEFONU YATAY ÇEVİR</strong>
-      <small>Cadı Kazan mobilde yatay kullanım için tasarlandı.</small>
-    </div>
   </main>
 `;
 
