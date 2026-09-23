@@ -1133,8 +1133,13 @@ function addMeasuredOuterWallColliders(
   // Build continuous sloped wall strips between measured profile samples.
   // Independent horizontal rings create stair-step ledges that can inject
   // vertical energy into a fast ball as it climbs the retaining wall.
-  const samples = [...profile].sort((left, right) => left[1] - right[1]);
-  const segments = 64;
+  // The analytic recessed-channel collider already owns the lower outer-wall
+  // profile. Add only the measured upper retaining lip to avoid duplicate
+  // overlapping contact surfaces and keep CCD cost bounded.
+  const samples = [...profile]
+    .filter(([, height]) => height >= -0.08)
+    .sort((left, right) => left[1] - right[1]);
+  const segments = 48;
   const wallHalfThickness = 0.018;
   const colliders: RAPIER.Collider[] = [];
 
