@@ -277,7 +277,7 @@ test.describe("Cadı Kazan critical round lifecycle", () => {
   });
 
   test("mobile physical orientation fits Advanced 25, payout HUD, and control dock without overflow", async ({ page }, testInfo: TestInfo) => {
-    test.skip(!["android-chrome", "android-portrait"].includes(testInfo.project.name), "Mobile Cadı Kazan coverage runs in Android projects");
+    test.skip(!["android-chrome", "android-portrait", "android-small-portrait"].includes(testInfo.project.name), "Mobile Cadı Kazan coverage runs in Android projects");
     const fixture = await installCadiKazanFixture(page);
 
     await page.locator("[data-witch-mode='ADVANCED']").click();
@@ -297,11 +297,13 @@ test.describe("Cadı Kazan critical round lifecycle", () => {
     const shellTransform = await page.locator(".witch-page").evaluate((element) => getComputedStyle(element).transform);
     const rotateHintDisplay = await page.locator(".witch-rotate-hint").evaluate((element) => getComputedStyle(element).display);
     expect(layout.horizontalOverflow).toBe(false);
-    if (testInfo.project.name === "android-portrait") {
-      expect(shellTransform).not.toBe("none");
+    if (["android-portrait", "android-small-portrait"].includes(testInfo.project.name)) {
+      expect(shellTransform).toBe("none");
       expect(rotateHintDisplay).toBe("none");
+      expect(layout.dockPosition).toBe("relative");
+    } else {
+      expect(layout.dockPosition).toBe("fixed");
     }
-    expect(layout.dockPosition).toBe("fixed");
     expect(layout.dockWithinViewport).toBe(true);
     expect(layout.ticketWithinViewport).toBe(true);
     expect(layout.payoutWithinViewport).toBe(true);
