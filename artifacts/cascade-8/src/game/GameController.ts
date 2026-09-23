@@ -278,7 +278,8 @@ export class GameController {
      }
     this.message("THE GATES ARE OPENING");
     this.setState("INITIAL_DROP");
-    this.scene.renderBoard(result.initialBoard);
+    const baseRenderTiming = this.scene.renderBoard(result.initialBoard);
+    this.markTiming("BASE_BOARD_RENDERED", baseRenderTiming);
     if (result.scatterCount > 0) {
       this.audio.scatterAnticipation(result.scatterCount);
        this.audio.scatterArrival(result.scatterCount);
@@ -377,7 +378,8 @@ export class GameController {
        displayedBonusWinCents = Math.round((usedMultiplier - result.baseWinCents / this.betCents) * this.betCents);
       this.freeSpinsLeft = remaining;
       this.setState("FREE_SPIN_PLAY"); this.updateHud();
-      this.scene.renderBoard(freeSpin.initialBoard);
+      const freeRenderTiming = this.scene.renderBoard(freeSpin.initialBoard);
+      this.markTiming(`FS_${index}_BOARD_RENDERED`, freeRenderTiming);
       if (freeSpin.scatterCount > 0) {
         this.audio.scatterAnticipation(freeSpin.scatterCount);
          this.audio.scatterArrival(freeSpin.scatterCount);
@@ -563,7 +565,8 @@ export class GameController {
     for (let index = 0; index < result.tumbles.length; index += 1) {
       const tumble = result.tumbles[index];
       this.setState("EVALUATING");
-      this.scene.renderBoard(tumble.boardBefore, tumble.winningCells);
+      const tumbleRenderTiming = this.scene.renderBoard(tumble.boardBefore, tumble.winningCells);
+      this.markTiming(`TUMBLE_${index + 1}_BOARD_RENDERED`, tumbleRenderTiming);
       const winEvents = this.buildWinLabelEvents(tumble);
       const winningMessage = `${tumble.winningSymbols.map((symbol) => getSymbolDefinition(symbol).name).join(" + ")} RESONATE`;
        this.message(tumble.multiplierCores.length ? `${winningMessage} // CORES BANKED` : winningMessage);
