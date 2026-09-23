@@ -23,13 +23,8 @@ export function getScratchCellPresentation(
   revealed: boolean,
   bomb: boolean,
 ): ScratchCellPresentation {
+  void mode;
   if (!revealed) return { symbol: "", label: "", resultClass: null };
-  if (bomb) {
-    return {
-      symbol: "●",
-      label: "BOMBA",
-      resultClass: "bomb",
-    };
-  }
-  return { symbol: "☘", label: "ALTIN", resultClass: "safe" };
+  if (bomb) return { symbol: "●", label: "BOMBA", resultClass: "bomb" };
+  return { symbol: "✦", label: "ALTIN", resultClass: "safe" };
 }
