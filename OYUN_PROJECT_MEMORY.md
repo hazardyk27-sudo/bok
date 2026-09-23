@@ -926,6 +926,14 @@ One audit-only instruction was mistakenly sent to Replit before this rule was cl
 - menu, game routes and slot shell can now extend beyond the viewport instead of being clipped
 - removed the Cadı Kazan landscape-only height/overflow trap so short landscape screens can scroll vertically when needed
 
+### Stage 10 — Three-layer scratch coating
+- scratch cells now use three real stacked canvases above the result: base coat, metallic foil and glossy lacquer
+- abrasion is intentionally progressive: first passes wear lacquer, repeated passes expose foil, deeper repeated passes remove the base coat and reveal the committed result
+- server result request starts on pointer-down so the result can be ready underneath while the player is physically scratching
+- deepest/base-layer removal is held until the server result is committed; then the buffered scratch trail is replayed so the already-scratched path reveals correctly
+- abrasion depth was slowed substantially so one swipe cannot behave like an instant reveal
+- no global percentage threshold is used to auto-clear an active cell
+
 ### Stage 9 — Cadı Kazan hierarchy + scratch rebuild
 - removed the duplicated Cadı Kazan route-header look by hiding the generic route topbar on this page and using one integrated app header
 - rebuilt desktop hierarchy around a single aligned shell: app header, compact setup panel, hero ticket table, compact payout panel
