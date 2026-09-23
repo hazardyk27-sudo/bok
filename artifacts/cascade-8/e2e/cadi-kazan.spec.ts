@@ -242,7 +242,7 @@ async function captureMobileLayout(page: Page) {
 }
 
 test.describe("Cadı Kazan critical round lifecycle", () => {
-  test("desktop protects hidden results, settles GOLD/BOMBA, and starts a new card", async ({ page }, testInfo: TestInfo) => {
+  test("desktop Standard 5 matches Saul card art, protects hidden results, and settles safely", async ({ page }, testInfo: TestInfo) => {
     test.skip(testInfo.project.name !== "desktop-chromium", "Desktop Cadı Kazan coverage runs in the desktop project");
     const fixture = await installCadiKazanFixture(page);
 
@@ -261,6 +261,33 @@ test.describe("Cadı Kazan critical round lifecycle", () => {
       await expect(page.locator("[data-witch-cell='4'] .witch-cell-result-label")).toHaveText("");
       expect(fixture.startBodies[0]).toMatchObject({ mode: "STANDARD", alarmCount: 1, stakeCents: 25_000 });
       await expect(page.locator("[data-witch-ticket-price]")).toHaveText("$250");
+      await expect(page.locator("[data-witch-standard-price]")).toHaveText("$250");
+      await expect(page.locator(".witch-page")).toHaveClass(/is-standard-theme/);
+
+      const standardVisual = await page.locator("[data-witch-ticket]").evaluate((ticket: HTMLElement) => {
+        const rect = ticket.getBoundingClientRect();
+        const style = getComputedStyle(ticket);
+        const cells = Array.from(ticket.querySelectorAll<HTMLElement>("[data-witch-cell]"))
+          .map((cell) => cell.getBoundingClientRect());
+        return {
+          ratio: rect.width / Math.max(1, rect.height),
+          backgroundImage: style.backgroundImage,
+          cellsInside: cells.every((cell) =>
+            cell.left >= rect.left - 1 &&
+            cell.top >= rect.top - 1 &&
+            cell.right <= rect.right + 1 &&
+            cell.bottom <= rect.bottom + 1
+          ),
+          cellsSeparated: cells.every((cell, index) =>
+            index === 0 || cell.left > cells[index - 1]!.right
+          ),
+        };
+      });
+      expect(standardVisual.ratio).toBeGreaterThan(2.8);
+      expect(standardVisual.ratio).toBeLessThan(3.2);
+      expect(standardVisual.backgroundImage).toContain("bcs-standard5-card.webp");
+      expect(standardVisual.cellsInside).toBe(true);
+      expect(standardVisual.cellsSeparated).toBe(true);
     });
 
     await test.step("a light scratch does not spoil or settle the hidden result", async () => {
@@ -275,8 +302,9 @@ test.describe("Cadı Kazan critical round lifecycle", () => {
       await scratchCell(page, 0);
       await expect.poll(() => fixture.revealBodies.length).toBe(1);
       await expect(page.locator("[data-witch-cell='0']")).toHaveClass(/is-safe/);
-      await expect(page.locator("[data-witch-cell='0'] .witch-cell-content")).toHaveText("✦");
-      await expect(page.locator("[data-witch-cell='0'] .witch-cell-result-label")).toHaveText("ALTIN");
+      await expect(page.locator("[data-witch-cell='0']")).toHaveAttribute("aria-label", "SAUL GOODMAN");
+      await expect(page.locator("[data-witch-cell='0'] .witch-cell-content img")).toHaveAttribute("src", "/cadi-kazan/bcs-saul.webp");
+      await expect(page.locator("[data-witch-cell='0'] .witch-cell-result-label")).toHaveText("SAUL GOODMAN");
       await expect(page.locator("[data-witch-action='cashout']:visible")).toBeEnabled();
       expect(fixture.revealBodies[0]).toMatchObject({ cellIndex: 0 });
     });
@@ -287,7 +315,9 @@ test.describe("Cadı Kazan critical round lifecycle", () => {
       await expect(page.locator("[data-witch-payout]")).toHaveText("$300.00");
       await expect(page.locator("[data-witch-cell='0']")).toHaveClass(/is-safe/);
       await expect(page.locator("[data-witch-cell='4']")).toHaveClass(/is-bomb/, { timeout: 2_000 });
-      await expect(page.locator("[data-witch-cell='4'] .witch-cell-result-label")).toHaveText("BOMBA");
+      await expect(page.locator("[data-witch-cell='4']")).toHaveAttribute("aria-label", "I AM THE DANGER");
+      await expect(page.locator("[data-witch-cell='4'] .witch-cell-content img")).toHaveAttribute("src", "/cadi-kazan/bcs-danger.webp");
+      await expect(page.locator("[data-witch-cell='4'] .witch-cell-result-label")).toHaveText("I AM THE DANGER");
       await expect(page.locator("[data-witch-desktop-payout] [data-witch-action='cashout']")).toBeDisabled();
       await expect(page.locator("[data-witch-desktop-payout] [data-witch-action='new']")).toBeVisible();
       expect(fixture.cashoutBodies).toHaveLength(1);
