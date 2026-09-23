@@ -6382,12 +6382,34 @@ export function Part2SceneViewport({
                  }),
                );
              }
-             part3BowlBridgeColliders = addBowlBridgePrimitiveColliders(
-               world,
-               stationaryBody,
-               part3BowlBridgeProfile,
-               activePart3TrackFriction,
-             );
+             if (part6FullSpinRouteActive) {
+               const bridgeMesh = buildBowlBridgeTrimesh(
+                 part3BowlBridgeProfile,
+               );
+               const bridgeCollider = world.createCollider(
+                 RAPIER.ColliderDesc.trimesh(
+                   bridgeMesh.vertices,
+                   bridgeMesh.indices,
+                   RAPIER.TriMeshFlags.FIX_INTERNAL_EDGES |
+                     RAPIER.TriMeshFlags.ORIENTED,
+                 )
+                   .setFriction(activePart3TrackFriction)
+                   .setRestitution(0.01)
+                   .setCollisionGroups(
+                     STATIONARY_COLLISION_GROUP |
+                       (BALL_COLLISION_GROUP << 16),
+                   ),
+                 stationaryBody,
+               );
+               part3BowlBridgeColliders = [bridgeCollider];
+             } else {
+               part3BowlBridgeColliders = addBowlBridgePrimitiveColliders(
+                 world,
+                 stationaryBody,
+                 part3BowlBridgeProfile,
+                 activePart3TrackFriction,
+               );
+             }
              for (const collider of part3BowlBridgeColliders) {
                part3ColliderRoles.set(
                  collider.handle,
