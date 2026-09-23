@@ -7,14 +7,27 @@ concurrency:
 on:
   push:
     branches:
-      - roulette-physics-part6b
-  pull_request:
-    branches:
-      - roulette-physics-part6
+      - feature/roulette
     paths:
       - '.github/workflows/roulette-part6-runtime.yml'
       - 'artifacts/roulette-physics-lab/**'
-      - 'scripts/roulette-part6-runtime.mjs'
+      - 'artifacts/api-server/src/physics-lab/**'
+      - 'artifacts/cascade-8/src/roulette*.ts'
+      - 'lib/roulette-physics-config.ts'
+      - 'scripts/roulette-part6-*.mjs'
+      - 'package.json'
+      - 'pnpm-lock.yaml'
+      - 'pnpm-workspace.yaml'
+  pull_request:
+    branches:
+      - main
+    paths:
+      - '.github/workflows/roulette-part6-runtime.yml'
+      - 'artifacts/roulette-physics-lab/**'
+      - 'artifacts/api-server/src/physics-lab/**'
+      - 'artifacts/cascade-8/src/roulette*.ts'
+      - 'lib/roulette-physics-config.ts'
+      - 'scripts/roulette-part6-*.mjs'
       - 'package.json'
       - 'pnpm-lock.yaml'
       - 'pnpm-workspace.yaml'
