@@ -371,7 +371,9 @@ export class GameScene extends Phaser.Scene {
   }
 
   renderBoard(board: Board, winningCells: Cell[] = []) {
+    const startedAt = performance.now();
     this.clearSymbols();
+    const clearedAt = performance.now();
     const winning = new Set(winningCells.map((cell) => `${cell.row}:${cell.col}`));
     for (let row = 0; row < BOARD_ROWS; row += 1) {
       for (let col = 0; col < BOARD_COLUMNS; col += 1) {
@@ -383,6 +385,16 @@ export class GameScene extends Phaser.Scene {
         );
       }
     }
+    const completedAt = performance.now();
+    return {
+      totalMs: Math.round((completedAt - startedAt) * 10) / 10,
+      clearMs: Math.round((clearedAt - startedAt) * 10) / 10,
+      createMs: Math.round((completedAt - clearedAt) * 10) / 10,
+      nodes: this.nodes.length,
+      activeTweens: this.tweens.getTweens().length,
+      displayObjects: this.children.list.length,
+      fps: Math.round(this.game.loop.actualFps || 0),
+    };
   }
 
   async animateDrop(duration: number, awaitScatterLanding = true): Promise<MotionTiming> {
@@ -391,6 +403,15 @@ export class GameScene extends Phaser.Scene {
     const specialUnits = this.nodes.filter((node) => node.symbol === "SCATTER").length;
     let visualSettledUnits = 0;
     let visualSettledAt: number | null = movingUnits === 0 ? startedAt : null;
+    let lastUpdateAt = startedAt;
+    let maxFrameGapMs = 0;
+    let frameSamples = 0;
+    const sampleFrameGap = () => {
+      const now = performance.now();
+      maxFrameGapMs = Math.max(maxFrameGapMs, now - lastUpdateAt);
+      lastUpdateAt = now;
+      frameSamples += 1;
+    };
 
     await Promise.all(this.nodes.map((node, index) => new Promise<void>((resolve) => {
       const finalY = node.container.y;
@@ -417,6 +438,7 @@ export class GameScene extends Phaser.Scene {
         delay: (index % BOARD_COLUMNS) * 20,
         ease: "Back.easeOut",
         onUpdate: (tween) => {
+          sampleFrameGap();
           if (
             tween.progress >= 0.92
             && Math.abs(node.container.y - finalY) <= 1.5
@@ -427,6 +449,7 @@ export class GameScene extends Phaser.Scene {
           }
         },
          onComplete: () => {
+           sampleFrameGap();
            markVisualSettled();
            if (node.symbol === "SCATTER") {
              const landing = this.animateScatterLanding(node);
@@ -449,6 +472,8 @@ export class GameScene extends Phaser.Scene {
       tailMs: Math.max(0, completedAt - settledAt),
       movingUnits,
       specialUnits,
+      maxFrameGapMs,
+      frameSamples,
     };
   }
 
@@ -771,6 +796,15 @@ export class GameScene extends Phaser.Scene {
 
   async animateCascade(board: Board, removedCells: Cell[], duration: number): Promise<MotionTiming> {
     const startedAt = performance.now();
+    let lastUpdateAt = startedAt;
+    let maxFrameGapMs = 0;
+    let frameSamples = 0;
+    const sampleFrameGap = () => {
+      const now = performance.now();
+      maxFrameGapMs = Math.max(maxFrameGapMs, now - lastUpdateAt);
+      lastUpdateAt = now;
+      frameSamples += 1;
+    };
     const winning = new Set(removedCells.map((cell) => `${cell.row}:${cell.col}`));
     const animations: Promise<void>[] = [];
     let movingUnits = 0;
@@ -814,6 +848,7 @@ export class GameScene extends Phaser.Scene {
             duration: duration + col * 18,
             ease: "Cubic.easeInOut",
             onUpdate: (tween) => {
+              sampleFrameGap();
               if (
                 tween.progress >= 0.92
                 && Math.abs(node.container.y - targetY) <= 1.5
@@ -871,6 +906,7 @@ export class GameScene extends Phaser.Scene {
             delay: col * 20 + (group.length > 1 ? 44 : 0),
             ease: "Back.easeOut",
             onUpdate: (tween) => {
+              sampleFrameGap();
               group.forEach((node, index) => {
                 node.container.y = starts[index] + (targetYs[index] - starts[index]) * motion.progress;
                 node.container.alpha = 0.2 + motion.progress * 0.8;
@@ -894,6 +930,7 @@ export class GameScene extends Phaser.Scene {
 
     if (movingUnits === 0) visualSettledAt = startedAt;
     await Promise.all(animations);
+    sampleFrameGap();
     const completedAt = performance.now();
     const settledAt = visualSettledAt ?? completedAt;
     return {
@@ -903,6 +940,8 @@ export class GameScene extends Phaser.Scene {
       tailMs: Math.max(0, completedAt - settledAt),
       movingUnits,
       specialUnits,
+      maxFrameGapMs,
+      frameSamples,
     };
   }
 
