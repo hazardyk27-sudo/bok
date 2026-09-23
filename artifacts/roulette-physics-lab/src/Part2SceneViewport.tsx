@@ -6301,18 +6301,12 @@ export function Part2SceneViewport({
                 'analytic-dark-recessed-channel',
               );
 
-              const outerWall = part6FullSpinRouteActive
-                ? {
-                    colliders: [] as RAPIER.Collider[],
-                    samples: measuredOuterWallProfile,
-                    segments: 0,
-                  }
-                : addMeasuredOuterWallColliders(
-                    world,
-                    stationaryBody,
-                    measuredOuterWallProfile,
-                    activePart3TrackFriction,
-                  );
+              const outerWall = addMeasuredOuterWallColliders(
+                world,
+                stationaryBody,
+                measuredOuterWallProfile,
+                activePart3TrackFriction,
+              );
               outerWall.colliders.forEach((collider) => {
                 part3ColliderRoles.set(
                   collider.handle,
