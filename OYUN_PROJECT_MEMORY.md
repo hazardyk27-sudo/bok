@@ -954,6 +954,13 @@ One audit-only instruction was mistakenly sent to Replit before this rule was cl
 - menu, game routes and slot shell can now extend beyond the viewport instead of being clipped
 - removed the Cadı Kazan landscape-only height/overflow trap so short landscape screens can scroll vertically when needed
 
+### Stage 23 — Advanced 25 desktop matches approved mobile card
+- Desktop Advanced 25 now uses the same approved horizontal card language as mobile: compact ~30% information rail on the left and dominant ~70% 5×5 scratch field on the right.
+- Desktop ticket uses the same parchment/gold hierarchy and keeps the payout HUD separate on the right.
+- Desktop QA now guards: wide ticket ratio, board occupying at least ~60% of ticket width, visible gap before payout HUD, and usable minimum cell size.
+- Changes were limited to Cadı Kazan CSS and its E2E test; Roulette and Slot source files were not modified.
+- Merged into GitHub `main` via PR #12, merge commit `aafbea1`.
+
 ### Stage 22 — Approved 30/70 Advanced 25 mobile composition
 - Advanced 25 mobile card was rebuilt again around the approved mockup proportions: compact ~30% premium information rail on the left and dominant ~70% 5×5 scratch field on the right.
 - The 5×5 field now stretches to the ticket height/width instead of being forced into a small square, producing materially larger rectangular scratch cells while keeping the existing right payout HUD and bottom control dock.
