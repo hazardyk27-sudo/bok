@@ -4636,7 +4636,7 @@ export function Part2SceneViewport({
 
             const insidePocket =
               radius >= POCKET_FLOOR_INNER_RADIUS + BALL_RADIUS &&
-              radius <= POCKET_FLOOR_OUTER_RADIUS - BALL_RADIUS &&
+              radius <= POCKET_OUTER_LIP_RADIUS - BALL_RADIUS &&
               bottom >= POCKET_FLOOR_Y - 0.08 &&
               bottom <= POCKET_FLOOR_Y + 0.16;
             const pocketContactInsideRotorEnvelope =
