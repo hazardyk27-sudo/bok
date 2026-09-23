@@ -163,6 +163,12 @@ const EUROPEAN_SEQUENCE = ROULETTE_EUROPEAN_SEQUENCE;
 
 type InspectionView = 'top' | 'angled' | 'side';
 type LoadState = 'loading' | 'loaded' | 'error';
+type ValidationErrorKind =
+  | 'asset'
+  | 'geometry-audit'
+  | 'physics-validation'
+  | 'telemetry'
+  | 'initialization';
 type VectorReadout = { x: number; y: number; z: number };
 
 type Part2AssetAudit = {
@@ -362,10 +368,6 @@ type Part3OuterLaneSpinResult = {
   escaped: boolean;
   velocitySpike: boolean;
   artificialAcceleration: boolean;
-  maxTrackPenetration: number;
-  maxTrackSeparation: number;
-  maxPocketFloorPenetration: number;
-  maxPocketFloorSeparation: number;
   maxVisualBodySyncError: number;
   maxRotorSyncError: number;
   maxPenetration: number;
@@ -431,6 +433,10 @@ type Part6FullSpinTelemetryResult = {
   escaped: boolean;
   velocitySpike: boolean;
   artificialAcceleration: boolean;
+  maxTrackPenetration: number;
+  maxTrackSeparation: number;
+  maxPocketFloorPenetration: number;
+  maxPocketFloorSeparation: number;
   maxVisualBodySyncError: number;
   maxRotorSyncError: number;
   telemetryComplete: boolean;
@@ -675,7 +681,11 @@ type Part2SceneViewportProps = {
   showStationaryGroup: boolean;
   showRotorGroup: boolean;
   rotorAngle: number;
-  onStateChange: (state: LoadState, detail?: string) => void;
+  onStateChange: (
+    state: LoadState,
+    detail?: string,
+    errorKind?: ValidationErrorKind,
+  ) => void;
   onAudit: (audit: Part2AssetAudit) => void;
   onRotorAngleChange: (angle: number) => void;
 };
@@ -4019,6 +4029,7 @@ export function Part2SceneViewport({
       callbacksRef.current.onStateChange(
         report.status === 'captured' ? 'loaded' : 'error',
         report.detail,
+        report.status === 'captured' ? undefined : 'telemetry',
       );
     };
 
@@ -4724,6 +4735,7 @@ export function Part2SceneViewport({
         passed
           ? 'PART C outer-track spin tuning passed'
           : 'PART C outer-track spin tuning failed',
+        passed ? undefined : 'physics-validation',
       );
     };
 
@@ -5338,7 +5350,11 @@ export function Part2SceneViewport({
         (error) => {
           if (disposed) return;
           console.error('PART 2 roulette visual source failed to load', error);
-          callbacksRef.current.onStateChange('error', 'The rou_LP_Test_04 visual source could not be read.');
+          callbacksRef.current.onStateChange(
+            'error',
+            'The rou_LP_Test_04 visual source could not be read.',
+            'asset',
+          );
         },
       );
 
@@ -6843,7 +6859,11 @@ export function Part2SceneViewport({
       };
     } catch (error) {
       console.error('PART 2 roulette scene failed to initialize', error);
-      callbacksRef.current.onStateChange('error', 'WebGL or Rapier could not initialize in this browser.');
+      callbacksRef.current.onStateChange(
+        'error',
+        'The roulette physics scene could not initialize.',
+        'initialization',
+      );
       return () => renderer?.dispose();
     }
   }, [loadKey]);
