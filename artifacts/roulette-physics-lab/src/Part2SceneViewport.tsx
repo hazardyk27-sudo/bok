@@ -121,7 +121,7 @@ const PART2_INNER_CONTAINMENT_CENTER_LIMIT =
   PART2_INNER_CONTAINMENT_RADIUS + BALL_RADIUS;
 const PART2_CHANNEL_FLOOR_INNER_INDEX = 4;
 const PART2_CHANNEL_FLOOR_OUTER_INDEX = 7;
-const PART2_CHANNEL_OUTER_WALL_FOOT_INDEX = 8;
+const PART2_CHANNEL_OUTER_WALL_FOOT_INDEX = 7;
 const PART2_CHANNEL_BOTTOM_THICKNESS = 0.12;
 const PART3_LAUNCH_RADIUS = PART2_ACTUAL_DARK_TRACK_LAUNCH_RADIUS;
 const PART3_RETAINING_RIM_INNER_RADIUS = PART2_ACTUAL_WOOD_INNER_RADIUS;
@@ -1220,65 +1220,46 @@ function addMeasuredOuterWallColliders(
   body: RAPIER.RigidBody,
   profile: readonly [number, number][],
   friction: number,
+  verticalOffset = 0,
 ) {
   const measured = [...profile].sort((left, right) => left[1] - right[1]);
   const segments = 512;
-
-  // Build one continuous wall that follows the measured radius-vs-height
-  // profile. This avoids both segmented cuboid seams and the artificial
-  // narrow vertical wall created by collapsing every height to the minimum
-  // measured radius.
-  const minY = Math.min(...measured.map(([, height]) => height));
-  const maxY = Math.max(...measured.map(([, height]) => height));
-  const channelFloorMinY = Math.min(
-    ...PART2_CHANNEL_PROFILE.map(([, height]) => height),
+  const innerFaceRadius = PART2_ACTUAL_WOOD_INNER_RADIUS;
+  const lowerY =
+    part2ChannelSurfaceAt(innerFaceRadius, verticalOffset).y - 0.004;
+  const measuredMaxY = Math.max(...measured.map(([, height]) => height));
+  const upperY = Math.max(
+    measuredMaxY + BALL_RADIUS + 0.10,
+    lowerY + 0.24,
   );
-  const lowerY = Math.min(
-    minY - 0.025,
-    channelFloorMinY - BALL_RADIUS * 2 - 0.02,
-  );
-  const upperY = maxY + BALL_RADIUS + 0.04;
-
-  const profileRows: Array<[number, number]> = [
-    [measured[0][0], lowerY],
-    ...measured,
-    [measured[measured.length - 1][0], upperY],
-  ];
-
   const vertices: number[] = [];
   const indices: number[] = [];
 
-  for (const [radius, y] of profileRows) {
+  for (const y of [lowerY, upperY]) {
     for (let segment = 0; segment < segments; segment += 1) {
       const angle = (segment / segments) * TWO_PI;
       vertices.push(
-        Math.sin(angle) * radius,
+        Math.sin(angle) * innerFaceRadius,
         y,
-        Math.cos(angle) * radius,
+        Math.cos(angle) * innerFaceRadius,
       );
     }
   }
 
-  for (let row = 0; row < profileRows.length - 1; row += 1) {
-    const lowerOffset = row * segments;
-    const upperOffset = (row + 1) * segments;
-    for (let segment = 0; segment < segments; segment += 1) {
-      const next = (segment + 1) % segments;
-      const lowerA = lowerOffset + segment;
-      const lowerB = lowerOffset + next;
-      const upperA = upperOffset + segment;
-      const upperB = upperOffset + next;
-
-      // Winding is inward-facing toward the roulette race.
-      indices.push(
-        lowerA,
-        upperB,
-        lowerB,
-        lowerA,
-        upperA,
-        upperB,
-      );
-    }
+  for (let segment = 0; segment < segments; segment += 1) {
+    const next = (segment + 1) % segments;
+    const lowerA = segment;
+    const lowerB = next;
+    const upperA = segments + segment;
+    const upperB = segments + next;
+    indices.push(
+      lowerA,
+      upperB,
+      lowerB,
+      lowerA,
+      upperA,
+      upperB,
+    );
   }
 
   const collider = world.createCollider(
@@ -1298,7 +1279,7 @@ function addMeasuredOuterWallColliders(
 
   return {
     colliders: [collider],
-    samples: profileRows,
+    samples: [[innerFaceRadius, lowerY], [innerFaceRadius, upperY]] as Array<[number, number]>,
     segments,
   };
 }
@@ -1876,11 +1857,12 @@ function part2ChannelNormalAt(radius: number, angle: number) {
 function makePart2RaceChannelTrimesh(
   verticalOffset = 0,
   openInnerRadius: number | null = null,
+  outerRadiusLimit: number | null = null,
 ) {
   const vertices: number[] = [];
   const indices: number[] = [];
   const segments = 512;
-  const activeProfile: Array<[number, number]> =
+  const baseProfile: Array<[number, number]> =
     openInnerRadius === null
       ? PART2_CHANNEL_PROFILE.map(([radius, y]) => [radius, y])
       : [
@@ -1889,6 +1871,10 @@ function makePart2RaceChannelTrimesh(
             .filter(([radius]) => radius > openInnerRadius)
             .map(([radius, y]) => [radius, y] as [number, number]),
         ];
+  const activeProfile =
+    outerRadiusLimit === null
+      ? baseProfile
+      : baseProfile.filter(([radius]) => radius <= outerRadiusLimit);
   const appendProfile = (
     profile: readonly (readonly [number, number])[],
   ) => {
@@ -4135,15 +4121,20 @@ export function Part2SceneViewport({
             return;
           }
 
-          const launchNormal = new THREE.Vector3(
-            launchSurface.normal.x,
-            launchSurface.normal.y,
-            launchSurface.normal.z,
-          ).normalize();
+          const launchNormal = part2ChannelNormalAt(
+            PART2_ACTUAL_DARK_TRACK_LAUNCH_RADIUS,
+            run.launchAzimuth,
+          );
+          const launchChannelSurface = part2ChannelSurfaceAt(
+            PART2_ACTUAL_DARK_TRACK_LAUNCH_RADIUS,
+            part2RaceVerticalOffset,
+          );
           const launchPosition = new THREE.Vector3(
-            launchSurface.point.x,
-            launchSurface.point.y,
-            launchSurface.point.z,
+            Math.sin(run.launchAzimuth) *
+              PART2_ACTUAL_DARK_TRACK_LAUNCH_RADIUS,
+            launchChannelSurface.y,
+            Math.cos(run.launchAzimuth) *
+              PART2_ACTUAL_DARK_TRACK_LAUNCH_RADIUS,
           ).addScaledVector(launchNormal, BALL_RADIUS + 0.002);
           const tangent = new THREE.Vector3(
             Math.cos(run.launchAzimuth),
@@ -6365,64 +6356,53 @@ export function Part2SceneViewport({
               part2RaceVerticalOffset =
                 darkTrackSurface.y -
                 part2ChannelSurfaceAt(PART2_ACTUAL_DARK_TRACK_LAUNCH_RADIUS).y;
-              if (part6FullSpinRouteActive) {
-                const actualOutsideMesh = makeWorldTrimeshFromObject(outside);
-                part3TrackCollider = world.createCollider(
-                  RAPIER.ColliderDesc.trimesh(
-                    actualOutsideMesh.vertices,
-                    actualOutsideMesh.indices,
-                    RAPIER.TriMeshFlags.FIX_INTERNAL_EDGES |
-                      RAPIER.TriMeshFlags.ORIENTED,
-                  )
-                    .setFriction(activePart3TrackFriction)
-                    .setRestitution(0.01),
-                  stationaryBody,
-                );
-                part3ColliderRoles.set(
-                  part3TrackCollider.handle,
-                  'actual-glb-outside-trimesh',
-                );
-                console.info(
-                  'PART6_OUTER_WALL_COLLIDER',
-                  JSON.stringify({
-                    mode: 'actual-glb-outside-trimesh',
-                    primitiveColliderCount: 1,
-                  }),
-                );
-              } else {
-                const channelMesh = makePart2RaceChannelTrimesh(
-                  part2RaceVerticalOffset,
-                  null,
-                );
-                part3TrackCollider = world.createCollider(
-                  RAPIER.ColliderDesc.trimesh(
-                    channelMesh.vertices,
-                    channelMesh.indices,
-                    RAPIER.TriMeshFlags.FIX_INTERNAL_EDGES |
-                      RAPIER.TriMeshFlags.ORIENTED,
-                  )
-                    .setFriction(activePart3TrackFriction)
-                    .setRestitution(0.01),
-                  stationaryBody,
-                );
-                part3ColliderRoles.set(
-                  part3TrackCollider.handle,
-                  'analytic-dark-recessed-channel',
-                );
+              const channelMesh = makePart2RaceChannelTrimesh(
+                part2RaceVerticalOffset,
+                part6FullSpinRouteActive
+                  ? PART2_ACTUAL_INWARD_EDGE_RADIUS + BALL_RADIUS
+                  : null,
+                part6FullSpinRouteActive
+                  ? PART2_ACTUAL_WOOD_INNER_RADIUS
+                  : null,
+              );
+              part3TrackCollider = world.createCollider(
+                RAPIER.ColliderDesc.trimesh(
+                  channelMesh.vertices,
+                  channelMesh.indices,
+                  RAPIER.TriMeshFlags.FIX_INTERNAL_EDGES |
+                    RAPIER.TriMeshFlags.ORIENTED,
+                )
+                  .setFriction(activePart3TrackFriction)
+                  .setRestitution(0.01),
+                stationaryBody,
+              );
+              part3ColliderRoles.set(
+                part3TrackCollider.handle,
+                'analytic-dark-recessed-channel',
+              );
 
-                const outerWall = addMeasuredOuterWallColliders(
-                  world,
-                  stationaryBody,
-                  measuredOuterWallProfile,
-                  activePart3TrackFriction,
+              const outerWall = addMeasuredOuterWallColliders(
+                world,
+                stationaryBody,
+                measuredOuterWallProfile,
+                activePart3TrackFriction,
+                part2RaceVerticalOffset,
+              );
+              outerWall.colliders.forEach((collider) => {
+                part3ColliderRoles.set(
+                  collider.handle,
+                  'measured-visible-outer-wall-cuboid',
                 );
-                outerWall.colliders.forEach((collider) => {
-                  part3ColliderRoles.set(
-                    collider.handle,
-                    'measured-visible-outer-wall-cuboid',
-                  );
-                });
-              }
+              });
+              console.info(
+                'PART6_OUTER_WALL_COLLIDER',
+                JSON.stringify({
+                  mode: 'measured-floor-vertical-wall',
+                  colliderSegments: outerWall.segments,
+                  primitiveColliderCount: outerWall.colliders.length,
+                  colliderProfile: outerWall.samples,
+                }),
+              );
             } else if (
               validationMode === 'part3' &&
               !geometryDiagnosticOnly &&
