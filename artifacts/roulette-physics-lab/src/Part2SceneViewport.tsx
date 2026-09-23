@@ -4372,6 +4372,28 @@ export function Part2SceneViewport({
               );
             }
 
+            if (
+              part6DiagnosticMode &&
+              speed < 0.5 &&
+              step % 10 === 0
+            ) {
+              console.info(
+                'PART6_STALL_STEP',
+                JSON.stringify({
+                  seed: run.seed,
+                  step,
+                  elapsed: Number(elapsed.toFixed(4)),
+                  radius: Number(radius.toFixed(4)),
+                  y: Number(position.y.toFixed(4)),
+                  speed: Number(speed.toFixed(4)),
+                  contactRoles: [...stepContactRoles],
+                  trackContact: trackPairContact,
+                  deflectorContact: deflectorPairContact,
+                  pocketFloorContact,
+                }),
+              );
+            }
+
             const inTrackCenterBand =
               radius >= PART2_ACTUAL_TRACK_CENTER_RADIUS_BAND[0] &&
               radius <= PART2_ACTUAL_TRACK_CENTER_RADIUS_BAND[1];
