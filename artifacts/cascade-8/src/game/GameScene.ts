@@ -2,6 +2,7 @@ import Phaser from "phaser";
 import { BOARD_COLUMNS, BOARD_ROWS, NORMAL_SYMBOLS, getMultiplierCoreVisualTier, getSymbolDefinition, type SymbolId } from "../config/GameConfig";
 import { getNormalSymbol, getStackMetadata, isMultiplierCore, type Board, type BoardCell, type Cell, type CoreCell } from "../engine/types";
 import { CancelableCompletionRegistry } from "./CancelableCompletionRegistry";
+import type { MotionTiming } from "./RoundTiming";
 import { calculateWinLabelPositions, type WinLabelEvent } from "./WinLabel";
 
 type BoardNode = {
@@ -384,12 +385,25 @@ export class GameScene extends Phaser.Scene {
     }
   }
 
-  async animateDrop(duration: number, awaitScatterLanding = true) {
+  async animateDrop(duration: number, awaitScatterLanding = true): Promise<MotionTiming> {
+    const startedAt = performance.now();
+    const movingUnits = this.nodes.length;
+    const specialUnits = this.nodes.filter((node) => node.symbol === "SCATTER").length;
+    let visualSettledUnits = 0;
+    let visualSettledAt: number | null = movingUnits === 0 ? startedAt : null;
+
     await Promise.all(this.nodes.map((node, index) => new Promise<void>((resolve) => {
       const finalY = node.container.y;
       node.container.y = finalY - 260 - (index % BOARD_COLUMNS) * 18;
       node.container.alpha = 0.2;
+      let visuallySettled = false;
       let completed = false;
+      const markVisualSettled = () => {
+        if (visuallySettled) return;
+        visuallySettled = true;
+        visualSettledUnits += 1;
+        if (visualSettledUnits === movingUnits) visualSettledAt = performance.now();
+      };
       const complete = () => {
         if (completed) return;
         completed = true;
@@ -404,13 +418,16 @@ export class GameScene extends Phaser.Scene {
         ease: "Back.easeOut",
         onUpdate: (tween) => {
           if (
-            node.symbol !== "SCATTER"
-            && tween.progress >= 0.92
+            tween.progress >= 0.92
             && Math.abs(node.container.y - finalY) <= 1.5
             && node.container.alpha >= 0.995
-          ) complete();
+          ) {
+            markVisualSettled();
+            if (node.symbol !== "SCATTER") complete();
+          }
         },
          onComplete: () => {
+           markVisualSettled();
            if (node.symbol === "SCATTER") {
              const landing = this.animateScatterLanding(node);
              if (awaitScatterLanding) void landing.then(complete);
@@ -422,6 +439,17 @@ export class GameScene extends Phaser.Scene {
          },
       });
     })));
+
+    const completedAt = performance.now();
+    const settledAt = visualSettledAt ?? completedAt;
+    return {
+      startedAt,
+      visualSettledAt: settledAt,
+      completedAt,
+      tailMs: Math.max(0, completedAt - settledAt),
+      movingUnits,
+      specialUnits,
+    };
   }
 
   async highlightCells(cells: Cell[], duration: number) {
@@ -741,9 +769,19 @@ export class GameScene extends Phaser.Scene {
     })));
   }
 
-  async animateCascade(board: Board, removedCells: Cell[], duration: number) {
+  async animateCascade(board: Board, removedCells: Cell[], duration: number): Promise<MotionTiming> {
+    const startedAt = performance.now();
     const winning = new Set(removedCells.map((cell) => `${cell.row}:${cell.col}`));
     const animations: Promise<void>[] = [];
+    let movingUnits = 0;
+    let specialUnits = 0;
+    let visualSettledUnits = 0;
+    let visualSettledAt: number | null = null;
+    const markUnitVisualSettled = () => {
+      visualSettledUnits += 1;
+      if (visualSettledUnits === movingUnits) visualSettledAt = performance.now();
+    };
+
     for (let col = 0; col < BOARD_COLUMNS; col += 1) {
       const survivors = this.nodes
         .filter((node) => node.col === col && !winning.has(`${node.row}:${node.col}`))
@@ -754,8 +792,16 @@ export class GameScene extends Phaser.Scene {
         const targetY = this.boardOrigin.y + targetRow * this.cellSize.height + 46;
         node.row = targetRow;
         if (Math.abs(node.container.y - targetY) < 0.5 && node.container.alpha >= 0.999) return;
+        movingUnits += 1;
+        if (node.symbol === "SCATTER" || isMultiplierCore(node.symbol)) specialUnits += 1;
         animations.push(new Promise<void>((resolve) => {
+          let visuallySettled = false;
           let completed = false;
+          const markVisualSettled = () => {
+            if (visuallySettled) return;
+            visuallySettled = true;
+            markUnitVisualSettled();
+          };
           const complete = () => {
             if (completed) return;
             completed = true;
@@ -769,12 +815,17 @@ export class GameScene extends Phaser.Scene {
             ease: "Cubic.easeInOut",
             onUpdate: (tween) => {
               if (
-                mayResolveAtVisualSettle
-                && tween.progress >= 0.92
+                tween.progress >= 0.92
                 && Math.abs(node.container.y - targetY) <= 1.5
-              ) complete();
+              ) {
+                markVisualSettled();
+                if (mayResolveAtVisualSettle) complete();
+              }
             },
-            onComplete: complete,
+            onComplete: () => {
+              markVisualSettled();
+              complete();
+            },
           });
         }));
       });
@@ -796,15 +847,23 @@ export class GameScene extends Phaser.Scene {
       incomingGroups.forEach((group) => {
         const targetYs = group.map((node) => this.boardOrigin.y + node.row * this.cellSize.height + 46);
         const starts = group.map((node) => node.container.y);
+        movingUnits += 1;
+        const hasSpecialSymbol = group.some((node) => node.symbol === "SCATTER" || isMultiplierCore(node.symbol));
+        if (hasSpecialSymbol) specialUnits += 1;
         animations.push(new Promise<void>((resolve) => {
           const motion = { progress: 0 };
+          let visuallySettled = false;
           let completed = false;
+          const markVisualSettled = () => {
+            if (visuallySettled) return;
+            visuallySettled = true;
+            markUnitVisualSettled();
+          };
           const complete = () => {
             if (completed) return;
             completed = true;
             resolve();
           };
-          const hasSpecialSymbol = group.some((node) => node.symbol === "SCATTER" || isMultiplierCore(node.symbol));
           this.tweens.add({
             targets: motion,
             progress: 1,
@@ -817,17 +876,34 @@ export class GameScene extends Phaser.Scene {
                 node.container.alpha = 0.2 + motion.progress * 0.8;
               });
               if (
-                !hasSpecialSymbol
-                && tween.progress >= 0.92
+                tween.progress >= 0.92
                 && group.every((node, index) => Math.abs(node.container.y - targetYs[index]) <= 1.5 && node.container.alpha >= 0.995)
-              ) complete();
+              ) {
+                markVisualSettled();
+                if (!hasSpecialSymbol) complete();
+              }
             },
-            onComplete: complete,
+            onComplete: () => {
+              markVisualSettled();
+              complete();
+            },
           });
         }));
       });
     }
+
+    if (movingUnits === 0) visualSettledAt = startedAt;
     await Promise.all(animations);
+    const completedAt = performance.now();
+    const settledAt = visualSettledAt ?? completedAt;
+    return {
+      startedAt,
+      visualSettledAt: settledAt,
+      completedAt,
+      tailMs: Math.max(0, completedAt - settledAt),
+      movingUnits,
+      specialUnits,
+    };
   }
 
   sparkle() {
