@@ -46,6 +46,9 @@ const PART3_TRACK_DURATION_SECONDS = 30;
 const PART3_OUTER_SPIN_TRACK_FRICTION = 0.08;
 const PART3_OUTER_SPIN_LINEAR_DAMPING = 0.01;
 const PART3_OUTER_SPIN_ANGULAR_DAMPING = 0.01;
+const PART6_LAUNCH_SPEED_BASE = 5.0;
+const PART6_LAUNCH_SPEED_VARIATION = 0.15;
+const PART6_BALL_SPIN_FACTOR = 1.0;
 const PART3_OUTER_SPIN_DURATION_SECONDS = 14.0;
 const PART3_OUTER_SPIN_RUNS = [
   { id: 'outer-spin-low', label: 'Outer spin · low launch variation', speed: 4.85 },
@@ -78,7 +81,10 @@ const PART6_FULL_SPIN_RUNS = PART6_DETERMINISTIC_SEEDS.map((seed, index) => ({
   id: 'part6-seed-' + String(seed),
   label: 'PART 6 deterministic spin ' + String(index + 1),
   seed,
-  speed: 4.85 + part6DeterministicUnit(seed, 1) * 0.3,
+  speed:
+    PART6_LAUNCH_SPEED_BASE +
+    (part6DeterministicUnit(seed, 1) * 2 - 1) *
+      PART6_LAUNCH_SPEED_VARIATION,
   launchAzimuth: part6DeterministicUnit(seed, 2) * TWO_PI,
   rotorStartAngle: part6DeterministicUnit(seed, 3) * TWO_PI,
 }));
@@ -3682,7 +3688,7 @@ export function Part2SceneViewport({
           const launchAngularVelocity = launchNormal
             .clone()
             .cross(launchVelocity)
-            .multiplyScalar(1 / BALL_RADIUS);
+            .multiplyScalar(PART6_BALL_SPIN_FACTOR / BALL_RADIUS);
 
           // Flush the previous seed's dynamic state and contact manifold before
           // applying this seed's launch. No impulse/force is used.
