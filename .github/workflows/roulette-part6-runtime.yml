@@ -85,6 +85,17 @@ jobs:
           cat /tmp/roulette-part6-vite.log
           exit 1
 
+      - name: Verify roulette GLB route
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl --fail --silent --show-error \
+            http://127.0.0.1:4173/rou-lp-test-04.glb \
+            --output /tmp/rou-lp-test-04.glb
+          bytes="$(wc -c < /tmp/rou-lp-test-04.glb | tr -d ' ')"
+          echo "ROULETTE_GLB_BYTES=$bytes"
+          test "$bytes" = "4663292"
+
       - name: Run PART 6B.1 stage probe
         env:
           ROULETTE_LAB_URL: http://127.0.0.1:4173/?part6Headless=1&part6SeedCount=1&part6MaxDurationSeconds=2
