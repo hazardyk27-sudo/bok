@@ -151,6 +151,12 @@ describe("authoritative roulette physics config", () => {
       "const PART4_DEFLECTOR_AZIMUTH_SAMPLE_COUNT = 360",
     );
     expect(part3ViewportSource).toContain(
+      "ROULETTE_POCKET_FLOOR_OUTER_RADIUS + 0.02",
+    );
+    expect(part3ViewportSource).toContain(
+      "ROULETTE_DARK_RACE_WOOD_INNER_RADIUS + 0.22",
+    );
+    expect(part3ViewportSource).toContain(
       "const measureVisibleDeflectors = (): Part4DeflectorAudit",
     );
     expect(part3ViewportSource).toContain(
@@ -158,6 +164,9 @@ describe("authoritative roulette physics config", () => {
     );
     expect(part3ViewportSource).toContain(
       "'asset-measured-visible-deflector-cuboid'",
+    );
+    expect(part3ViewportSource).toContain(
+      "deflectorColliderType: 'asset-measured-cuboid'",
     );
     expect(part3ViewportSource).toContain(
       "PART4_DEFLECTOR_AUDIT",
