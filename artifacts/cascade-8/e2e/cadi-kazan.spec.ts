@@ -201,20 +201,35 @@ async function captureMobileLayout(page: Page) {
     const dock = document.querySelector<HTMLElement>(".witch-control-dock");
     const ticket = document.querySelector<HTMLElement>("[data-witch-ticket]");
     const payout = document.querySelector<HTMLElement>("[data-witch-desktop-payout]");
-    const viewportWidth = document.documentElement.clientWidth;
-    const viewportHeight = window.innerHeight;
+    const scene = document.querySelector<HTMLElement>(".witch-page");
+    const viewportWidth = window.visualViewport?.width ?? document.documentElement.clientWidth;
+    const viewportHeight = window.visualViewport?.height ?? window.innerHeight;
     const scrollWidth = Math.max(document.documentElement.scrollWidth, document.body.scrollWidth);
+    const scrollHeight = Math.max(document.documentElement.scrollHeight, document.body.scrollHeight);
     const dockRect = dock?.getBoundingClientRect();
     const ticketRect = ticket?.getBoundingClientRect();
     const payoutRect = payout?.getBoundingClientRect();
+    const sceneRect = scene?.getBoundingClientRect();
+    const inside = (rect?: DOMRect) => Boolean(
+      rect &&
+      rect.left >= -1 &&
+      rect.top >= -1 &&
+      rect.right <= viewportWidth + 1 &&
+      rect.bottom <= viewportHeight + 1
+    );
     return {
       horizontalOverflow: scrollWidth > viewportWidth + 1,
+      verticalOverflow: scrollHeight > viewportHeight + 1,
       dockPosition: dock ? getComputedStyle(dock).position : "",
-      dockFitsWidth: Boolean(dockRect && dockRect.left >= -1 && dockRect.right <= viewportWidth + 1),
-      ticketFitsWidth: Boolean(ticketRect && ticketRect.left >= -1 && ticketRect.right <= viewportWidth + 1),
-      payoutFitsWidth: Boolean(payoutRect && payoutRect.left >= -1 && payoutRect.right <= viewportWidth + 1),
-      ticketStartsInViewport: Boolean(ticketRect && ticketRect.top >= 0 && ticketRect.top < viewportHeight),
-      pageTransform: getComputedStyle(document.querySelector<HTMLElement>(".witch-page")!).transform,
+      dockInsideViewport: inside(dockRect),
+      ticketInsideViewport: inside(ticketRect),
+      payoutInsideViewport: inside(payoutRect),
+      sceneInsideViewport: inside(sceneRect),
+      sceneWidth: sceneRect?.width ?? 0,
+      sceneHeight: sceneRect?.height ?? 0,
+      viewportWidth,
+      viewportHeight,
+      pageTransform: scene ? getComputedStyle(scene).transform : "none",
     };
   });
 }
@@ -279,7 +294,7 @@ test.describe("Cadı Kazan critical round lifecycle", () => {
   });
 
   test("mobile physical orientation fits Advanced 25, payout HUD, and control dock without overflow", async ({ page }, testInfo: TestInfo) => {
-    test.skip(!["android-chrome", "android-portrait", "android-small-portrait", "android-narrow-portrait"].includes(testInfo.project.name), "Mobile Cadı Kazan coverage runs in Android projects");
+    test.skip(!["android-chrome", "android-portrait", "android-small-portrait", "android-narrow-portrait", "android-medium-portrait", "android-large-portrait"].includes(testInfo.project.name), "Mobile Cadı Kazan coverage runs in Android projects");
     const fixture = await installCadiKazanFixture(page);
 
     await page.locator("[data-witch-mode='ADVANCED']").click();
@@ -297,16 +312,15 @@ test.describe("Cadı Kazan critical round lifecycle", () => {
 
     const layout = await captureMobileLayout(page);
     expect(layout.horizontalOverflow).toBe(false);
-    expect(layout.ticketFitsWidth).toBe(true);
-    expect(layout.payoutFitsWidth).toBe(true);
-    expect(layout.dockFitsWidth).toBe(true);
-    expect(layout.ticketStartsInViewport).toBe(true);
-    if (["android-portrait", "android-small-portrait", "android-narrow-portrait"].includes(testInfo.project.name)) {
-      expect(layout.pageTransform).toBe("none");
-      expect(layout.dockPosition).toBe("relative");
-      await expect(page.locator(".witch-rotate-hint")).toHaveCount(0);
-    } else {
-      expect(layout.dockPosition).toBe("fixed");
-    }
+    expect(layout.verticalOverflow).toBe(false);
+    expect(layout.sceneInsideViewport).toBe(true);
+    expect(layout.ticketInsideViewport).toBe(true);
+    expect(layout.payoutInsideViewport).toBe(true);
+    expect(layout.dockInsideViewport).toBe(true);
+    expect(Math.abs(layout.sceneWidth - layout.viewportWidth)).toBeLessThanOrEqual(2);
+    expect(Math.abs(layout.sceneHeight - layout.viewportHeight)).toBeLessThanOrEqual(2);
+    expect(layout.dockPosition).toBe("relative");
+    expect(layout.pageTransform).not.toBe("none");
+    await expect(page.locator(".witch-rotate-hint")).toHaveCount(0);
   });
 });
