@@ -4451,9 +4451,6 @@ export function Part2SceneViewport({
           const rotorEntryEventIndex = phases.findIndex(
             (event) => event.phase === 'ROTOR_ENTRY',
           );
-          const pocketEventIndex = phases.findIndex(
-            (event) => event.phase === 'POCKET',
-          );
           const optionalFretPlacementValid =
             fretEventIndex < 0 ||
             (rotorEntryEventIndex >= 0 &&
