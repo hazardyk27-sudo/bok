@@ -945,11 +945,18 @@ function addMeasuredDeflectorColliders(
 ) {
   const colliders: RAPIER.Collider[] = [];
   for (const descriptor of descriptors) {
+    // The visible diamond relief can extend radially under the recessed race.
+    // Keep the collision-active deflector face inside the measured inward race edge
+    // so a ball still on the outer-race center band cannot strike it prematurely.
+    const collisionOuterRadius = Math.min(
+      descriptor.outerRadius,
+      PART2_ACTUAL_INWARD_EDGE_RADIUS,
+    );
     const centerRadius =
-      (descriptor.innerRadius + descriptor.outerRadius) / 2;
+      (descriptor.innerRadius + collisionOuterRadius) / 2;
     const halfRadialDepth = Math.max(
       BALL_RADIUS * 0.45,
-      (descriptor.outerRadius - descriptor.innerRadius) / 2,
+      (collisionOuterRadius - descriptor.innerRadius) / 2,
     );
     const halfHeight = Math.max(
       0.02,
@@ -4301,14 +4308,17 @@ export function Part2SceneViewport({
               radius <= POCKET_FLOOR_OUTER_RADIUS - BALL_RADIUS &&
               bottom >= POCKET_FLOOR_Y - 0.08 &&
               bottom <= POCKET_FLOOR_Y + 0.16;
-            if (insidePocket || pocketFloorContact) {
+            const pocketContactInsideRotorEnvelope =
+              pocketFloorContact &&
+              radius <= POCKET_OUTER_LIP_RADIUS + BALL_RADIUS + 0.04;
+            if (insidePocket || pocketContactInsideRotorEnvelope) {
               pocketEntered = true;
               pocketEntryTime ??= elapsed;
               recordPhase(
                 'POCKET',
                 position,
                 speed,
-                pocketFloorContact
+                pocketContactInsideRotorEnvelope
                   ? [...stepContactRoles].find(
                       (role) =>
                         role === 'pocket-floor-trimesh' ||
