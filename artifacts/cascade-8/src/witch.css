@@ -2746,48 +2746,50 @@
 
 
 /* =========================================================
-   MOBILE V4 — TRUE RESPONSIVE PHONE LAYOUT
-   No rotate trick. No orientation prompt. Width-driven layout
-   so portrait phones work regardless of browser orientation quirks.
+   MOBILE V5 — FIXED LANDSCAPE GAME SCENE
+   The game is always laid out horizontally on phones.
+   Portrait hosts rotate the LANDSCAPE scene, never the desktop layout.
+   The scene exactly matches the dynamic visual viewport: no page scroll.
    ========================================================= */
-@media (max-width: 820px) {
+@media (max-width: 600px) and (orientation: portrait),
+       (max-height: 600px) and (orientation: landscape) and (max-width: 1200px) {
   html:has(.witch-page),
   body:has(.witch-page) {
     width: 100%;
-    min-width: 0;
-    overflow-x: hidden !important;
-    overscroll-behavior-x: none;
+    height: 100%;
+    margin: 0;
+    overflow: hidden !important;
+    overscroll-behavior: none;
+    touch-action: manipulation;
   }
 
   .app-shell.is-witch-page {
-    position: relative;
-    width: 100%;
-    min-width: 0;
-    min-height: 100svh;
-    overflow-x: hidden;
-    overflow-y: auto;
+    position: fixed !important;
+    inset: 0 !important;
+    width: 100dvw !important;
+    height: 100dvh !important;
+    min-width: 0 !important;
+    min-height: 0 !important;
+    padding: 0 !important;
+    overflow: hidden !important;
   }
 
   .witch-page {
-    position: relative !important;
-    inset: auto !important;
-    display: flex !important;
-    flex-direction: column;
-    gap: 7px;
-    width: 100% !important;
+    position: fixed !important;
+    z-index: 20;
+    top: 50dvh !important;
+    left: 50dvw !important;
+    display: grid !important;
+    grid-template-rows: clamp(38px, 12cqh, 50px) minmax(0, 1fr) clamp(56px, 18cqh, 72px);
+    gap: clamp(3px, 1.2cqh, 6px);
+    container-type: size;
     max-width: none !important;
     min-width: 0 !important;
-    height: auto !important;
-    min-height: 100svh;
+    min-height: 0 !important;
     margin: 0 !important;
-    padding:
-      max(6px, env(safe-area-inset-top))
-      max(6px, env(safe-area-inset-right))
-      max(8px, env(safe-area-inset-bottom))
-      max(6px, env(safe-area-inset-left)) !important;
-    overflow: visible !important;
-    transform: none !important;
-    transform-origin: initial !important;
+    padding: clamp(3px, 1cqh, 6px) !important;
+    overflow: hidden !important;
+    transform-origin: center center !important;
   }
 
   .witch-rotate-hint {
@@ -2796,52 +2798,48 @@
 
   .witch-appbar,
   .witch-stage-shell,
-  .witch-control-dock,
-  .witch-mobile-actions {
+  .witch-control-dock {
     visibility: visible !important;
     pointer-events: auto !important;
-    transform: none !important;
   }
 
-  /* Header: brand first, account/status in a readable second row. */
+  /* LANDSCAPE PHONE HEADER */
   .witch-appbar {
-    display: grid;
-    grid-template-columns: 36px minmax(0, 1fr);
-    grid-template-areas:
-      "back brand"
-      "stats stats";
-    gap: 5px 8px;
+    display: grid !important;
+    grid-template-columns: 34px minmax(118px, .72fr) minmax(0, 1.65fr);
+    grid-template-areas: "back brand stats";
+    gap: 7px;
+    align-items: center;
     width: 100%;
     min-width: 0;
-    min-height: 0;
-    padding: 7px 8px;
-    border-radius: 14px;
+    min-height: 0 !important;
+    padding: 4px 7px;
+    border-radius: 11px;
   }
 
   .witch-back {
     grid-area: back;
-    width: 34px;
-    height: 34px;
-    font-size: 18px;
+    width: 30px;
+    height: 30px;
+    font-size: 16px;
   }
 
   .witch-appbrand {
     grid-area: brand;
     min-width: 0;
-    align-self: center;
   }
 
   .witch-appbrand > div {
     display: flex;
     min-width: 0;
-    gap: 8px;
+    gap: 7px;
     align-items: baseline;
   }
 
   .witch-appbrand h1 {
     overflow: hidden;
     margin: 0;
-    font-size: clamp(20px, 6.4vw, 27px);
+    font-size: clamp(18px, 3.8cqw, 27px);
     line-height: 1;
     text-overflow: ellipsis;
     white-space: nowrap;
@@ -2851,8 +2849,8 @@
     overflow: hidden;
     min-width: 0;
     color: #b7c0bc;
-    font-size: 6px;
-    letter-spacing: .13em;
+    font-size: clamp(4px, .75cqw, 6px);
+    letter-spacing: .12em;
     text-overflow: ellipsis;
     white-space: nowrap;
   }
@@ -2864,24 +2862,25 @@
   .witch-appstats {
     grid-area: stats;
     display: grid;
-    grid-template-columns: 1.15fr .72fr .9fr auto;
+    grid-template-columns: 1.05fr .72fr .9fr auto;
     width: 100%;
     min-width: 0;
-    min-height: 34px;
-    border-radius: 10px;
+    min-height: 30px;
+    border-radius: 9px;
   }
 
   .witch-stat {
+    display: grid;
     grid-template-columns: 1fr;
-    gap: 2px;
+    gap: 1px;
     min-width: 0;
-    padding: 5px 6px;
+    padding: 3px 5px;
   }
 
   .witch-stat span,
   .witch-stat small {
     overflow: hidden;
-    font-size: 5px;
+    font-size: clamp(4px, .62cqw, 6px);
     line-height: 1;
     text-overflow: ellipsis;
     white-space: nowrap;
@@ -2889,15 +2888,15 @@
 
   .witch-stat strong {
     overflow: hidden;
-    font-size: 8px;
-    line-height: 1.05;
+    font-size: clamp(6px, .9cqw, 9px);
+    line-height: 1;
     text-align: left;
     text-overflow: ellipsis;
     white-space: nowrap;
   }
 
   .witch-stat-balance strong {
-    font-size: 10px;
+    font-size: clamp(8px, 1.15cqw, 11px);
   }
 
   .witch-stat-status small {
@@ -2906,8 +2905,8 @@
 
   .witch-connection {
     min-width: 0;
-    padding: 0 7px;
-    font-size: 5px;
+    padding: 0 6px;
+    font-size: clamp(4px, .58cqw, 5px);
   }
 
   .witch-connection::before {
@@ -2916,33 +2915,29 @@
     height: 6px;
   }
 
-  /* Stage: desktop visual language, stacked naturally for a phone. */
+  /* STAGE: CARD LEFT/CENTER + PAYOUT HUD RIGHT */
   .witch-stage-shell {
     position: relative;
-    display: grid;
+    display: grid !important;
+    grid-template-columns: minmax(0, 1fr) clamp(116px, 19cqw, 176px);
+    grid-template-rows: clamp(13px, 4.6cqh, 18px) minmax(0, 1fr);
     grid-template-areas:
-      "heading"
-      "table"
-      "payout";
-    grid-template-columns: minmax(0, 1fr);
-    grid-template-rows: auto auto auto;
-    gap: 7px;
+      "heading heading"
+      "table payout";
+    gap: clamp(3px, 1cqh, 6px);
     width: 100%;
-    height: auto !important;
+    height: 100% !important;
+    min-width: 0;
     min-height: 0 !important;
-    margin: 0;
-    padding: 8px;
-    overflow: hidden;
-    border-radius: 17px;
+    margin: 0 !important;
+    padding: clamp(4px, 1.2cqh, 7px);
+    overflow: hidden !important;
+    border-radius: 13px;
   }
 
   .witch-stage-shell::before {
-    inset: 5% -16% 10%;
+    inset: 4% 7% 2% 2%;
     opacity: .62;
-  }
-
-  .witch-stage-shell::after {
-    pointer-events: none;
   }
 
   .witch-stage-decor {
@@ -2951,32 +2946,32 @@
 
   .witch-table-heading {
     grid-area: heading;
-    position: relative;
-    inset: auto;
+    position: relative !important;
+    inset: auto !important;
     z-index: 8;
     display: flex;
     min-width: 0;
-    min-height: 18px;
-    padding: 1px 2px;
+    min-height: 0;
+    padding: 0 2px;
   }
 
   .witch-table-heading > div {
     min-width: 0;
-    gap: 6px;
+    gap: 5px;
   }
 
   .witch-table-eyebrow,
   .witch-table-heading strong {
-    font-size: 6px;
-    line-height: 1.05;
+    font-size: clamp(4px, .65cqw, 6px);
+    line-height: 1;
   }
 
   .witch-table-heading p {
     overflow: hidden;
-    max-width: 46%;
+    max-width: 42%;
     color: #aeb6b2;
-    font-size: 6px;
-    line-height: 1.05;
+    font-size: clamp(4px, .62cqw, 6px);
+    line-height: 1;
     text-overflow: ellipsis;
     white-space: nowrap;
   }
@@ -2987,73 +2982,72 @@
     inset: auto !important;
     display: grid;
     width: 100%;
+    height: 100%;
     min-width: 0;
-    min-height: 238px;
+    min-height: 0;
     place-items: center;
-    padding: 2px 0;
+    padding: 0;
+    overflow: hidden;
   }
 
   .witch-empty-table {
-    width: min(100%, 280px);
+    width: min(92%, 280px);
     max-width: none;
-    gap: 7px;
-    padding: 20px 16px;
-    border-radius: 14px;
+    gap: 5px;
+    padding: 12px 14px;
+    border-radius: 11px;
   }
 
   .witch-empty-seal {
-    width: 44px;
-    height: 44px;
+    width: 34px;
+    height: 34px;
   }
 
   .witch-empty-table strong {
-    font-size: 9px;
-  }
-
-  .witch-empty-table small {
     font-size: 8px;
   }
 
-  /* Ticket: no absolute placement and no desktop min-width. */
+  .witch-empty-table small {
+    font-size: 6px;
+  }
+
+  /* STANDARD 5 — premium desktop card language, compressed for phone height */
   .witch-ticket,
   .witch-ticket.is-advanced {
     position: relative !important;
-    top: auto !important;
-    right: auto !important;
-    bottom: auto !important;
-    left: auto !important;
-    width: min(100%, 398px) !important;
+    inset: auto !important;
     min-width: 0 !important;
     max-width: 100% !important;
-    max-height: none !important;
-    margin: 0 auto;
+    max-height: 100% !important;
+    margin: 0 auto !important;
     transform: none !important;
   }
 
   .witch-ticket {
-    padding: 9px 10px 8px;
-    border-radius: 13px;
+    width: min(96%, clamp(330px, 62cqw, 610px)) !important;
+    padding: clamp(5px, 1.7cqh, 8px) clamp(6px, 1.2cqw, 10px);
+    border-radius: 10px;
   }
 
   .witch-ticket::before {
-    inset: 5px;
-    border-radius: 9px;
+    inset: 4px;
+    border-radius: 7px;
   }
 
   .witch-ticket-frame {
-    inset: 8px;
+    inset: 6px;
   }
 
   .witch-ticket-header {
-    grid-template-columns: .72fr 1.55fr .72fr;
+    grid-template-columns: .7fr 1.45fr .7fr;
     gap: 4px;
-    min-height: 62px;
-    padding: 0 3px 4px;
+    min-height: clamp(32px, 11cqh, 46px);
+    padding: 0 3px 2px;
   }
 
   .witch-ticket-sidecopy {
     display: block;
-    font-size: 4px;
+    font-size: clamp(3px, .5cqw, 5px);
   }
 
   .witch-ticket-sidecopy span {
@@ -3061,94 +3055,100 @@
   }
 
   .witch-ticket-sigil {
-    font-size: 11px;
+    font-size: 10px;
   }
 
   .witch-ticket-brand {
-    font-size: clamp(26px, 8.7vw, 36px);
-    line-height: .8;
+    font-size: clamp(20px, 4.6cqw, 34px);
+    line-height: .78;
   }
 
   .witch-ticket-lockup small {
-    margin-top: 4px;
-    font-size: 3.5px;
-    letter-spacing: .22em;
+    margin-top: 2px;
+    font-size: clamp(2.5px, .44cqw, 4px);
+    letter-spacing: .18em;
   }
 
   .witch-ticket-price {
-    gap: 2px;
+    gap: 1px;
   }
 
   .witch-ticket-price small,
   .witch-ticket-price span {
-    font-size: 3.5px;
+    font-size: clamp(2.5px, .42cqw, 4px);
   }
 
   .witch-ticket-price strong {
-    min-width: 54px;
-    padding: 4px 5px 3px;
-    border-radius: 7px;
-    font-size: 13px;
+    min-width: 45px;
+    padding: 3px 4px 2px;
+    border-radius: 5px;
+    font-size: clamp(9px, 1.9cqw, 14px);
   }
 
   .witch-ticket-meta-row {
-    gap: 5px;
-    margin: 0 3px 5px;
-    padding: 4px 0;
-    font-size: 4.5px;
+    gap: 4px;
+    margin: 0 2px 3px;
+    padding: 3px 0;
+    font-size: clamp(3px, .48cqw, 4.5px);
   }
 
   .witch-board-wrap {
     width: 100%;
     margin: 0;
-    padding: 6px;
-    border-radius: 9px;
+    padding: clamp(3px, 1cqh, 5px);
+    border-radius: 7px;
   }
 
   .witch-board {
     width: 100%;
-    gap: 5px;
+    gap: clamp(2px, .55cqw, 4px);
   }
 
   .witch-cell {
     min-width: 0;
-    border-radius: 7px;
+    border-radius: 5px;
   }
 
   .witch-ticket-footer {
-    margin: 5px 3px 0;
-    font-size: 4px;
+    margin: 3px 2px 0;
+    font-size: clamp(2.5px, .42cqw, 4px);
   }
 
   .witch-ticket-footer strong {
-    font-size: 6px;
+    font-size: clamp(4px, .65cqw, 6px);
   }
 
   .witch-cell.is-safe .witch-cell-content {
-    width: clamp(28px, 9vw, 40px);
-    height: clamp(21px, 6.8vw, 30px);
+    width: clamp(24px, 6.2cqh, 38px);
+    height: clamp(18px, 4.8cqh, 28px);
   }
 
   .witch-cell.is-bomb .witch-cell-content {
-    width: clamp(28px, 8.8vw, 40px);
-    height: clamp(28px, 8.8vw, 40px);
+    width: clamp(24px, 6.2cqh, 38px);
+    height: clamp(24px, 6.2cqh, 38px);
   }
 
   .witch-cell.is-safe .witch-cell-content::before {
-    inset: 3px 5px 4px;
-    font-size: 5px;
+    inset: 3px 4px;
+    font-size: 4px;
   }
 
-  /* Advanced 25: compact but genuinely playable 5x5 card. */
+  .witch-cell-result-label {
+    bottom: 2px;
+    font-size: 3px;
+  }
+
+  /* ADVANCED 25 — fixed-height compact ticket, 5x5 board remains usable */
   .witch-ticket.is-advanced {
-    width: min(100%, 370px) !important;
-    padding: 7px 8px 6px;
+    width: min(94%, clamp(260px, 49cqw, 455px)) !important;
+    padding: clamp(4px, 1.2cqh, 6px);
+    overflow: hidden;
   }
 
   .witch-ticket.is-advanced .witch-ticket-header {
-    grid-template-columns: 1.45fr .65fr;
-    min-height: 40px;
-    padding: 0 4px 2px;
+    grid-template-columns: 1.35fr .65fr;
+    min-height: clamp(24px, 8.5cqh, 34px);
+    padding: 0 3px 1px;
   }
 
   .witch-ticket.is-advanced .witch-ticket-sidecopy,
@@ -3162,13 +3162,12 @@
   }
 
   .witch-ticket.is-advanced .witch-ticket-brand {
-    font-size: 19px;
-    line-height: .82;
+    font-size: clamp(14px, 2.5cqw, 20px);
   }
 
   .witch-ticket.is-advanced .witch-ticket-lockup small {
-    margin-top: 2px;
-    font-size: 3px;
+    margin-top: 1px;
+    font-size: 2.5px;
   }
 
   .witch-ticket.is-advanced .witch-ticket-price {
@@ -3176,69 +3175,65 @@
   }
 
   .witch-ticket.is-advanced .witch-ticket-price strong {
-    min-width: 48px;
-    padding: 3px 4px;
-    font-size: 10px;
+    min-width: 42px;
+    padding: 2px 3px;
+    font-size: clamp(7px, 1.25cqw, 10px);
   }
 
   .witch-ticket.is-advanced .witch-ticket-meta-row {
-    margin: 0 4px 3px;
-    padding: 3px 0;
-    font-size: 3.5px;
+    margin: 0 3px 2px;
+    padding: 2px 0;
+    font-size: 3px;
   }
 
   .witch-ticket.is-advanced .witch-board-wrap {
-    width: min(100%, 280px);
+    width: clamp(108px, 38cqh, 150px);
     margin: 0 auto;
-    padding: 4px;
+    padding: 3px;
   }
 
   .witch-ticket.is-advanced .witch-board {
     grid-template-columns: repeat(5, minmax(0, 1fr));
-    gap: 3px;
+    gap: 2px;
   }
 
   .witch-ticket.is-advanced .witch-cell {
     aspect-ratio: 1;
-    border-radius: 4px;
+    border-radius: 3px;
   }
 
   .witch-ticket.is-advanced .witch-cell-content {
-    transform: scale(.56);
+    transform: scale(.5);
   }
 
   .witch-ticket.is-advanced .witch-cell-result-label {
     right: 1px;
     bottom: 1px;
     left: 1px;
-    font-size: 3px;
+    font-size: 2.5px;
   }
 
   .witch-ticket.is-advanced .witch-ticket-footer {
     display: none;
   }
 
-  /* Mobile payout HUD: full width, compact, readable and below the card. */
+  /* PAYOUT HUD */
   .witch-payout-panel {
     grid-area: payout;
     position: relative !important;
-    top: auto !important;
-    right: auto !important;
-    bottom: auto !important;
-    left: auto !important;
+    inset: auto !important;
     z-index: 8;
     display: grid;
-    grid-template-columns: minmax(88px, .8fr) minmax(90px, .85fr) minmax(110px, 1fr);
-    grid-template-rows: minmax(52px, auto);
-    gap: 6px;
-    align-items: stretch;
+    grid-template-rows: auto auto 1fr auto;
+    align-content: stretch;
     width: 100% !important;
-    min-width: 0;
+    height: 100%;
+    min-width: 0 !important;
     min-height: 0 !important;
-    margin: 0;
-    padding: 7px;
+    margin: 0 !important;
+    padding: clamp(5px, 1.5cqh, 8px);
     overflow: hidden;
-    border-radius: 12px;
+    border-radius: 10px;
     transform: none !important;
   }
 
@@ -3249,91 +3244,93 @@
 
   .witch-payout-head {
     display: grid;
-    align-content: center;
-    justify-items: start;
-    gap: 2px;
-    min-width: 0;
-    padding: 0 7px 0 0;
-    border-right: 1px solid rgba(226,194,126,.12);
-    border-bottom: 0;
+    gap: 1px;
+    padding: 0 0 clamp(3px, 1cqh, 5px);
   }
 
   .witch-payout-head span {
-    font-size: 8px;
-    line-height: 1.1;
+    font-size: clamp(6px, .85cqw, 9px);
+    line-height: 1;
   }
 
   .witch-payout-head small {
-    font-size: 4px;
+    font-size: clamp(3px, .44cqw, 4px);
   }
 
   .witch-payout-hero {
     display: grid;
     align-content: center;
     justify-items: center;
-    gap: 1px;
     min-width: 0;
-    padding: 0 4px;
+    padding: clamp(3px, 1cqh, 6px) 0;
   }
 
   .witch-multiplier {
-    font-size: clamp(26px, 8vw, 35px);
+    font-size: clamp(22px, 7.8cqh, 34px);
     line-height: .82;
   }
 
   .witch-payout-amount {
-    margin: 2px 0 0;
-    font-size: 13px;
+    margin-top: 4px;
+    font-size: clamp(10px, 3.4cqh, 15px);
     line-height: 1;
   }
 
   .witch-payout-net {
     margin-top: 2px;
-    font-size: 4px;
+    font-size: clamp(3px, .55cqw, 5px);
   }
 
   .witch-payout-net b {
     margin-left: 2px;
-    font-size: 6px;
+    font-size: clamp(5px, .75cqw, 7px);
   }
 
-  .witch-payout-lines,
+  .witch-payout-lines {
+    align-self: end;
+    padding: 3px 0;
+    font-size: clamp(3px, .5cqw, 5px);
+  }
+
   .witch-payout-note {
     display: none;
   }
 
   .witch-cashout-button,
   .witch-secondary-button {
-    align-self: center;
-    min-height: 44px;
-    margin: 0;
-    padding: 0 10px;
-    border-radius: 9px;
-    font-size: 8px;
+    align-self: end;
+    min-height: clamp(32px, 10cqh, 42px);
+    margin: 3px 0 0;
+    padding: 0 8px;
+    border-radius: 7px;
+    font-size: clamp(6px, .9cqw, 9px);
   }
 
   .witch-table-feedback {
     display: none;
   }
 
-  /* Controls: responsive two-column sheet, never a squeezed desktop strip. */
+  /* CONTROL DOCK — one horizontal phone bar, no vertical stacking */
   .witch-control-dock {
     position: relative !important;
     inset: auto !important;
     z-index: 20;
     display: grid !important;
-    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-    grid-template-areas:
-      "modes modes"
-      "stake bomb"
-      "buy buy";
-    gap: 6px 7px;
+    grid-template-columns:
+      minmax(145px, 1.28fr)
+      minmax(110px, .95fr)
+      minmax(82px, .66fr)
+      minmax(115px, .9fr);
+    grid-template-areas: "modes stake bomb buy";
+    gap: clamp(3px, .65cqw, 6px);
+    align-items: stretch;
     width: 100% !important;
+    height: 100%;
     min-width: 0;
     min-height: 0 !important;
     margin: 0 !important;
-    padding: 8px;
-    border-radius: 14px;
+    padding: clamp(4px, 1.2cqh, 6px);
+    border-radius: 11px;
     transform: none !important;
   }
 
@@ -3341,15 +3338,15 @@
     grid-area: modes;
     display: grid;
     grid-template-columns: 1fr 1fr;
-    gap: 6px;
+    gap: 4px;
     min-width: 0;
   }
 
   .witch-mode-card {
     min-width: 0;
-    min-height: 42px;
-    padding: 6px 7px;
-    border-radius: 9px;
+    min-height: 0;
+    padding: 4px 5px;
+    border-radius: 7px;
   }
 
   .witch-mode-card span {
@@ -3357,54 +3354,62 @@
   }
 
   .witch-mode-card strong {
-    font-size: 9px;
+    font-size: clamp(6px, .95cqw, 9px);
   }
 
   .witch-mode-card small {
     overflow: hidden;
-    font-size: 5px;
+    font-size: clamp(3px, .52cqw, 5px);
     text-overflow: ellipsis;
     white-space: nowrap;
   }
 
   .witch-radio {
-    width: 12px;
-    height: 12px;
+    width: 10px;
+    height: 10px;
   }
 
-  .witch-control-separator {
+  .witch-control-separator,
+  .witch-round-summary,
+  .witch-dock-feedback {
     display: none;
   }
 
   .witch-stake-group {
     grid-area: stake;
     min-width: 0;
+    align-self: stretch;
   }
 
   .witch-alarm-field {
     grid-area: bomb;
     min-width: 0;
+    align-self: stretch;
   }
 
   .witch-control-group {
     min-width: 0;
-    gap: 3px;
+    gap: 2px;
   }
 
   .witch-control-group > label,
   .witch-alarm-field > span {
-    font-size: 5px;
+    font-size: clamp(4px, .6cqw, 6px);
   }
 
   .witch-stake-stepper,
   .witch-alarm-field select {
     width: 100%;
     min-width: 0;
-    min-height: 38px;
+    min-height: clamp(30px, 9cqh, 38px);
   }
 
   .witch-stake-stepper {
-    grid-template-columns: 34px minmax(0, 1fr) 34px;
+    grid-template-columns: 28px minmax(0, 1fr) 28px;
+  }
+
+  .witch-stake-stepper > button {
+    font-size: 12px;
   }
 
   .witch-input-wrap {
@@ -3412,41 +3417,34 @@
   }
 
   .witch-input-wrap i {
-    left: 8px;
-    font-size: 8px;
+    left: 6px;
+    font-size: 7px;
   }
 
   .witch-input-wrap input {
     width: 100%;
     min-width: 0;
-    padding: 0 4px 0 18px;
-    font-size: 10px;
+    padding: 0 3px 0 14px;
+    font-size: clamp(7px, 1cqw, 10px);
   }
 
   .witch-alarm-field select {
-    padding-left: 9px;
-    font-size: 9px;
+    padding-left: 7px;
+    font-size: clamp(7px, .9cqw, 9px);
   }
 
   .witch-stake-presets {
     display: none;
   }
 
-  .witch-round-summary {
-    display: none;
-  }
-
   .witch-primary-button {
     grid-area: buy;
     width: 100%;
-    min-height: 44px;
-    padding: 0 14px;
-    border-radius: 10px;
-    font-size: 9px;
-  }
-
-  .witch-dock-feedback {
-    display: none;
+    min-width: 0;
+    min-height: 0;
+    padding: 0 8px;
+    border-radius: 8px;
+    font-size: clamp(7px, 1cqw, 10px);
   }
 
   .witch-mobile-actions {
@@ -3454,167 +3452,56 @@
   }
 }
 
-/* Very narrow phones: preserve gameplay and tap targets, trim decorative copy only. */
-@media (max-width: 370px) {
+/* Portrait PHONE HOST: rotate the already-landscape scene exactly into viewport. */
+@media (max-width: 600px) and (orientation: portrait) {
   .witch-page {
-    gap: 5px;
-    padding-inline: 4px !important;
+    width: 100dvh !important;
+    height: 100dvw !important;
+    transform: translate(-50%, -50%) rotate(90deg) !important;
+  }
+}
+
+/* Landscape PHONE HOST: same scene, no rotation. */
+@media (max-height: 600px) and (orientation: landscape) and (max-width: 1200px) {
+  .witch-page {
+    width: 100dvw !important;
+    height: 100dvh !important;
+    transform: translate(-50%, -50%) !important;
+  }
+}
+
+/* Extreme small phones: preserve layout, trim only decorative/support text. */
+@media (max-width: 340px) and (orientation: portrait),
+       (max-height: 340px) and (orientation: landscape) and (max-width: 760px) {
+  .witch-appbrand small,
+  .witch-stat span,
+  .witch-stat small,
+  .witch-table-heading p,
+  .witch-ticket-sidecopy,
+  .witch-ticket-footer,
+  .witch-payout-head small,
+  .witch-payout-lines,
+  .witch-mode-card small {
+    display: none !important;
   }
 
   .witch-appbar {
-    grid-template-columns: 32px minmax(0, 1fr);
-    padding: 5px 6px;
-  }
-
-  .witch-back {
-    width: 30px;
-    height: 30px;
-  }
-
-  .witch-appbrand h1 {
-    font-size: 19px;
-  }
-
-  .witch-appbrand small {
-    display: none;
-  }
-
-  .witch-appstats {
-    grid-template-columns: 1.05fr .65fr .8fr auto;
-    min-height: 31px;
-  }
-
-  .witch-stat {
-    padding: 4px;
-  }
-
-  .witch-stat span,
-  .witch-stat small {
-    font-size: 4px;
-  }
-
-  .witch-stat strong,
-  .witch-stat-balance strong {
-    font-size: 7px;
-  }
-
-  .witch-connection {
-    padding-inline: 5px;
-    font-size: 4px;
+    grid-template-columns: 32px minmax(105px, .68fr) minmax(0, 1.7fr);
   }
 
   .witch-stage-shell {
-    gap: 5px;
-    padding: 6px;
-  }
-
-  .witch-table-heading p {
-    display: none;
-  }
-
-  .witch-table-surface {
-    min-height: 220px;
-  }
-
-  .witch-ticket {
-    padding: 6px 7px;
-  }
-
-  .witch-ticket-header {
-    grid-template-columns: 1.65fr .7fr;
-    min-height: 50px;
-  }
-
-  .witch-ticket-sidecopy,
-  .witch-ticket-sigil {
-    display: none;
-  }
-
-  .witch-ticket-lockup {
-    justify-items: start;
-    text-align: left;
-  }
-
-  .witch-ticket-brand {
-    font-size: 23px;
-  }
-
-  .witch-ticket-lockup small {
-    font-size: 3px;
-  }
-
-  .witch-ticket-meta-row {
-    padding: 3px 0;
-  }
-
-  .witch-ticket-footer {
-    display: none;
-  }
-
-  .witch-ticket.is-advanced {
-    width: min(100%, 340px) !important;
+    grid-template-columns: minmax(0, 1fr) 112px;
   }
 
   .witch-ticket.is-advanced .witch-board-wrap {
-    width: min(100%, 250px);
-  }
-
-  .witch-payout-panel {
-    grid-template-columns: .8fr .82fr 1fr;
-    padding: 6px;
-  }
-
-  .witch-payout-head span {
-    font-size: 7px;
-  }
-
-  .witch-payout-head small {
-    display: none;
-  }
-
-  .witch-multiplier {
-    font-size: 25px;
-  }
-
-  .witch-payout-amount {
-    font-size: 11px;
-  }
-
-  .witch-payout-net {
-    display: none;
-  }
-
-  .witch-cashout-button,
-  .witch-secondary-button {
-    min-height: 40px;
-    font-size: 7px;
+    width: clamp(102px, 36cqh, 122px);
   }
 
   .witch-control-dock {
-    gap: 5px;
-    padding: 6px;
-  }
-
-  .witch-mode-card {
-    min-height: 38px;
-    padding: 5px 6px;
-  }
-
-  .witch-mode-card strong {
-    font-size: 8px;
-  }
-
-  .witch-mode-card small {
-    display: none;
-  }
-
-  .witch-stake-stepper,
-  .witch-alarm-field select {
-    min-height: 36px;
-  }
-
-  .witch-primary-button {
-    min-height: 40px;
-    font-size: 8px;
+    grid-template-columns:
+      minmax(130px, 1.22fr)
+      minmax(100px, .92fr)
+      minmax(76px, .64fr)
+      minmax(105px, .86fr);
   }
 }
