@@ -26,6 +26,8 @@ export default defineConfig({
       name: "android-chrome",
       use: {
         ...devices["Pixel 7"],
+        viewport: { width: 915, height: 412 },
+        screen: { width: 915, height: 412 },
         ...(hasWorkspaceChromium ? { launchOptions: { executablePath: chromiumPath } } : {}),
       },
     },
