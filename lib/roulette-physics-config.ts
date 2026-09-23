@@ -12,6 +12,25 @@ export const ROULETTE_BALL_RADIUS = 0.056;
 export const ROULETTE_GRAVITY_Y =
   -9.81 * ROULETTE_WORLD_UNITS_PER_METER;
 
+export const ROULETTE_DARK_RACE_RADIUS_BAND = [2.27, 2.54] as const;
+export const ROULETTE_DARK_RACE_LAUNCH_RADIUS = 2.39;
+export const ROULETTE_DARK_RACE_WOOD_INNER_RADIUS = 2.47;
+export const ROULETTE_DARK_RACE_INWARD_EDGE_RADIUS = 2.26;
+export const ROULETTE_DARK_RACE_CHANNEL_PROFILE = [
+  [2.18, -0.205],
+  [2.195, -0.270],
+  [2.22, -0.330],
+  [2.245, -0.355],
+  [2.27, -0.3672],
+  [2.34, -0.342],
+  [2.42, -0.300],
+  [2.47, -0.2477],
+  [2.525, -0.240],
+  [2.555, -0.200],
+  [2.558, -0.120],
+  [2.559, -0.040],
+] as const;
+
 export const ROULETTE_FIXED_TIMESTEP = 1 / 120;
 export const ROULETTE_MAX_CCD_SUBSTEPS = 8;
 export const ROULETTE_ROTATION_AXIS = "Y+" as const;
@@ -37,6 +56,11 @@ export const ROULETTE_PHYSICS_CONFIG = {
   metersPerWorldUnit: ROULETTE_METERS_PER_WORLD_UNIT,
   ballRadius: ROULETTE_BALL_RADIUS,
   gravityY: ROULETTE_GRAVITY_Y,
+  darkRaceRadiusBand: ROULETTE_DARK_RACE_RADIUS_BAND,
+  darkRaceLaunchRadius: ROULETTE_DARK_RACE_LAUNCH_RADIUS,
+  darkRaceWoodInnerRadius: ROULETTE_DARK_RACE_WOOD_INNER_RADIUS,
+  darkRaceInwardEdgeRadius: ROULETTE_DARK_RACE_INWARD_EDGE_RADIUS,
+  darkRaceChannelProfile: ROULETTE_DARK_RACE_CHANNEL_PROFILE,
   fixedTimestep: ROULETTE_FIXED_TIMESTEP,
   maxCcdSubsteps: ROULETTE_MAX_CCD_SUBSTEPS,
   rotationAxis: ROULETTE_ROTATION_AXIS,
