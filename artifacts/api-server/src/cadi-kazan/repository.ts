@@ -4,7 +4,6 @@ import { INITIAL_ROULETTE_BALANCE_CENTS } from "../roulette/types";
 import {
   ADVANCED_ALARM_OPTIONS,
   CADI_KAZAN_ADVANCED_CELL_COUNT,
-  CADI_KAZAN_MAX_STAKE_CENTS,
   CADI_KAZAN_MIN_STAKE_CENTS,
   CADI_KAZAN_MODES,
   CADI_KAZAN_STANDARD_CELL_COUNT,
@@ -14,6 +13,7 @@ import {
   type CadiKazanStatus,
   getCashoutMultiplierBps,
   getCashoutPayoutCents,
+  getMaxSafeStakeCents,
   getSafeCellCount,
   getVisibleBombCells,
 } from "./types";
@@ -50,8 +50,11 @@ function validateRoundInput(input: {
   stakeCents: number;
 }) {
   if (!CADI_KAZAN_MODES.includes(input.mode)) throw new Error("INVALID_CADI_KAZAN_MODE");
-  if (!Number.isInteger(input.stakeCents) || input.stakeCents < CADI_KAZAN_MIN_STAKE_CENTS || input.stakeCents > CADI_KAZAN_MAX_STAKE_CENTS) {
+  if (!Number.isSafeInteger(input.stakeCents) || input.stakeCents < CADI_KAZAN_MIN_STAKE_CENTS) {
     throw new Error("CADI_KAZAN_STAKE_OUT_OF_RANGE");
+  }
+  if (input.stakeCents > getMaxSafeStakeCents(input.mode, input.alarmCount)) {
+    throw new Error("CADI_KAZAN_STAKE_STORAGE_LIMIT");
   }
   if (input.mode === "STANDARD" && input.alarmCount !== 1) throw new Error("STANDARD_REQUIRES_ONE_BOMB");
   if (input.mode === "ADVANCED" && !ADVANCED_ALARM_OPTIONS.includes(input.alarmCount as (typeof ADVANCED_ALARM_OPTIONS)[number])) {
