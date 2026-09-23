@@ -1936,10 +1936,10 @@ function makePart2RaceChannelTrimesh(
       indices.push(bottomA, bottomB, bottomD, bottomB, bottomC, bottomD);
     }
   }
-  const closedRows =
-    openInnerRadius === null
-      ? [0, activeProfile.length - 1]
-      : [activeProfile.length - 1];
+  const closedRows = [
+    ...(openInnerRadius === null ? [0] : []),
+    ...(outerRadiusLimit === null ? [activeProfile.length - 1] : []),
+  ];
   for (const row of closedRows) {
     const nextRow = bottomOffset + row * segments;
     for (let segment = 0; segment < segments; segment += 1) {
