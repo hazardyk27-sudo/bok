@@ -12,12 +12,17 @@ if (!fs.existsSync(inputPath)) {
 }
 
 const runtime = JSON.parse(fs.readFileSync(inputPath, 'utf8'));
-const telemetry = runtime.telemetry;
-if (!telemetry || !Array.isArray(telemetry.results)) {
-  throw new Error('PART 6 runtime result has no structured telemetry.results payload.');
+const telemetry = runtime.telemetry ?? null;
+const results = Array.isArray(telemetry?.results)
+  ? telemetry.results
+  : Array.isArray(runtime.seedTelemetry)
+    ? runtime.seedTelemetry
+    : [];
+if (results.length === 0) {
+  throw new Error(
+    'PART 6 runtime result has neither final telemetry results nor partial seed telemetry.',
+  );
 }
-
-const results = telemetry.results;
 const quantile = (values, q) => {
   if (values.length === 0) return null;
   const sorted = [...values].sort((a, b) => a - b);
@@ -37,14 +42,17 @@ const contactRatios = results
   .filter(Number.isFinite);
 
 const evidence = {
-  schemaVersion: telemetry.schemaVersion ?? null,
+  schemaVersion: telemetry?.schemaVersion ?? null,
   runtimeCapturedAt: runtime.capturedAt ?? null,
-  telemetryStatus: telemetry.status ?? null,
-  safetyStatus: telemetry.safetyStatus ?? null,
-  calibrationStatus: telemetry.calibrationStatus ?? null,
+  telemetryStatus: telemetry?.status ?? null,
+  safetyStatus: telemetry?.safetyStatus ?? null,
+  calibrationStatus: telemetry?.calibrationStatus ?? null,
+  partialRuntime: telemetry === null,
   expectedSeedCount: 20,
   resultCount: results.length,
-  completedCount: telemetry.completedCount ?? null,
+  completedCount:
+    telemetry?.completedCount ??
+    results.filter((result) => result.telemetryComplete).length,
   seedResetFailureSeeds: seedsWhere((result) => !result.stateResetVerified),
   telemetryIncompleteSeeds: seedsWhere((result) => !result.telemetryComplete),
   timeoutSeeds: seedsWhere((result) => result.timedOut),
