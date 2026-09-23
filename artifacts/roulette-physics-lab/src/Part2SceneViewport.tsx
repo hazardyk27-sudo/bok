@@ -2596,7 +2596,18 @@ export function Part2SceneViewport({
         0,
         Math.cos(azimuth),
       );
-      const sampleHeights = [-0.24, -0.2, -0.16, -0.12, -0.08, -0.04, 0];
+      const sampleHeights = [
+        -0.36,
+        -0.32,
+        -0.28,
+        -0.24,
+        -0.2,
+        -0.16,
+        -0.12,
+        -0.08,
+        -0.04,
+        0,
+      ];
       const profile: Array<[number, number]> = [];
       for (const height of sampleHeights) {
         const raycaster = new THREE.Raycaster(
