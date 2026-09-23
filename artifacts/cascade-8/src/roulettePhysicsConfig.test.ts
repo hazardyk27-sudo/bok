@@ -17,6 +17,10 @@ import {
   ROULETTE_MODEL_PATH,
   ROULETTE_PHYSICS_SCHEMA_VERSION,
   ROULETTE_POCKET_COUNT,
+  ROULETTE_POCKET_FLOOR_OUTER_RADIUS,
+  ROULETTE_POCKET_FLOOR_Y,
+  ROULETTE_POCKET_OUTER_LIP_RADIUS,
+  ROULETTE_POCKET_OUTER_LIP_Y,
   ROULETTE_ROTOR_ANGULAR_SPEED,
   ROULETTE_ROTOR_BODY_MODE,
   ROULETTE_WHEEL_DIAMETER,
@@ -68,6 +72,18 @@ describe("authoritative roulette physics config", () => {
     ]);
   });
 
+  it("locks the continuous bowl-to-pocket seam", () => {
+    expect(ROULETTE_POCKET_FLOOR_OUTER_RADIUS).toBeCloseTo(1.9);
+    expect(ROULETTE_POCKET_FLOOR_Y).toBeCloseTo(-0.45);
+    expect(ROULETTE_POCKET_OUTER_LIP_RADIUS).toBeCloseTo(2.04);
+    expect(ROULETTE_POCKET_OUTER_LIP_Y).toBeCloseTo(-0.29);
+    expect(ROULETTE_DARK_RACE_CHANNEL_PROFILE[0][0]).toBeCloseTo(2.18);
+    expect(
+      ROULETTE_DARK_RACE_CHANNEL_PROFILE[0][0] -
+        ROULETTE_POCKET_OUTER_LIP_RADIUS,
+    ).toBeCloseTo(0.14);
+  });
+
   it("locks the European 37-pocket Y-axis kinematic rotor contract", () => {
     expect(ROULETTE_POCKET_COUNT).toBe(37);
     expect(CLIENT_POCKET_COUNT).toBe(37);
@@ -98,6 +114,29 @@ describe("authoritative roulette physics config", () => {
     );
     expect(part3ViewportSource).toContain(
       "return makePart2RaceChannelTrimesh(verticalOffset)",
+    );
+  });
+
+  it("keeps a single continuous stationary bowl bridge between race and rotor lip", () => {
+    expect(part3ViewportSource).toContain("function buildBowlBridgeTrimesh");
+    expect(part3ViewportSource).toContain("measureBowlBridgeProfile");
+    expect(part3ViewportSource).toContain(
+      "const BOWL_BRIDGE_INNER_RADIUS = POCKET_OUTER_LIP_RADIUS",
+    );
+    expect(part3ViewportSource).toContain(
+      "const BOWL_BRIDGE_OUTER_RADIUS = PART2_CHANNEL_PROFILE[0][0]",
+    );
+    expect(part3ViewportSource).toContain(
+      "'stationary-bowl-apron-bridge'",
+    );
+    expect(part3ViewportSource).toContain(
+      "[POCKET_OUTER_LIP_RADIUS, POCKET_OUTER_LIP_Y]",
+    );
+    expect(part3ViewportSource).toContain(
+      "targetOuterY = part2ChannelSurfaceAt",
+    );
+    expect(part3ViewportSource).toContain(
+      "setCollisionGroups(\n                   STATIONARY_COLLISION_GROUP",
     );
   });
 
