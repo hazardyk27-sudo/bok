@@ -4924,31 +4924,6 @@ export function Part2SceneViewport({
                   ? previousSpeed * 3
                   : 12,
               );
-            if (
-              part6DiagnosticMode &&
-              (velocitySpikeThisStep || artificialAccelerationThisStep)
-            ) {
-              console.info(
-                'PART6_SPEED_SPIKE',
-                JSON.stringify({
-                  seed: run.seed,
-                  step,
-                  elapsed: Number(elapsed.toFixed(4)),
-                  radius: Number(radius.toFixed(4)),
-                  y: Number(position.y.toFixed(4)),
-                  bottom: Number(bottom.toFixed(4)),
-                  speed: Number(speed.toFixed(4)),
-                  previousSpeed: Number(previousSpeed.toFixed(4)),
-                  rotorRelativeSpeed: Number(finalRotorRelativeSpeed.toFixed(4)),
-                  contactRoles: [...stepContactRoles],
-                  trackContact: trackPairContact,
-                  deflectorContact: deflectorPairContact,
-                  fretContact: fretPairContact,
-                  pocketFloorContact,
-                  pocketEntered,
-                }),
-              );
-            }
             velocitySpike ||= velocitySpikeThisStep;
             artificialAcceleration ||= artificialAccelerationThisStep;
 
