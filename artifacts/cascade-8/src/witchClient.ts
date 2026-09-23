@@ -583,16 +583,19 @@ export class WitchClient {
       if (content) content.textContent = presentation.symbol;
       const resultLabel = button.querySelector<HTMLElement>(".witch-cell-result-label");
       if (resultLabel) resultLabel.textContent = presentation.label;
-      const canvas = button.querySelector<HTMLCanvasElement>(".witch-scratch-canvas");
-      if (!canvas) return;
+      const layerCanvases = Array.from(button.querySelectorAll<HTMLCanvasElement>(".witch-scratch-layer"));
+      const interactionCanvas = button.querySelector<HTMLCanvasElement>(".witch-scratch-layer-lacquer") ?? layerCanvases.at(-1) ?? null;
+      if (!interactionCanvas || layerCanvases.length === 0) return;
       const debrisCanvas = button.querySelector<HTMLCanvasElement>(".witch-debris-canvas");
-      canvas.hidden = round.status !== "ACTIVE" ? isRevealed : false;
-      if (debrisCanvas) debrisCanvas.hidden = canvas.hidden;
+      const scratchHidden = round.status !== "ACTIVE" ? isRevealed : false;
+      layerCanvases.forEach((layer) => { layer.hidden = scratchHidden; });
+      if (debrisCanvas) debrisCanvas.hidden = scratchHidden;
       const surface = this.scratchSurfaces.get(index);
       if (round.status === "ACTIVE" && !surface) {
-        this.scratchSurfaces.set(index, new ScratchSurface(canvas, {
+        this.scratchSurfaces.set(index, new ScratchSurface(interactionCanvas, {
           audio: this.audio,
           debrisCanvas: debrisCanvas ?? undefined,
+          layerCanvases,
           resultReady: isActuallyRevealed,
           onCommit: async () => {
             if (this.state?.round?.revealedCells.includes(index)) return;
