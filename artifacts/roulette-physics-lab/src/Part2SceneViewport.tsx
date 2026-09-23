@@ -4615,6 +4615,26 @@ export function Part2SceneViewport({
               }
             }
 
+            if (
+              part6DiagnosticMode &&
+              pocketEntered &&
+              (step === 300 || step === 360 || step === 420 || step === maxSteps - 1)
+            ) {
+              console.info(
+                'PART6_POCKET_LATE_STEP',
+                JSON.stringify({
+                  seed: run.seed,
+                  step,
+                  elapsed: Number(elapsed.toFixed(4)),
+                  radius: Number(radius.toFixed(4)),
+                  y: Number(position.y.toFixed(4)),
+                  bottom: Number(bottom.toFixed(4)),
+                  speed: Number(speed.toFixed(4)),
+                  contactRoles: [...stepContactRoles],
+                }),
+              );
+            }
+
             const rotorTangentialVelocity = {
               x: TEST_ANGULAR_SPEED * position.z,
               y: 0,
