@@ -50,6 +50,7 @@ export class GameController {
   private autoStopping = false;
   private autoRemaining = 0;
   private walletReady = false;
+  private pendingSettledBalanceCents: number | null = null;
   private readonly wallet = new SlotWalletClient();
   readonly audio = new AudioManager();
   private readonly scene: GameScene;
@@ -222,6 +223,7 @@ export class GameController {
       return;
     }
      this.busy = true; this.currentWinCents = 0; this.bonusWinCents = 0; this.freeSpinsLeft = 0;
+     this.pendingSettledBalanceCents = null;
      this.resetTumbleWin();
     this.setBonusPrompt(false);
     this.setState("SPIN_INIT");
@@ -230,7 +232,10 @@ export class GameController {
      try {
        const serverSpin = await this.wallet.spin(this.betCents, crypto.randomUUID());
        result = serverSpin.result;
-       this.balanceCents = serverSpin.wallet.balanceCents;
+       this.pendingSettledBalanceCents = serverSpin.wallet.balanceCents;
+       // The server settles the whole round immediately, but the HUD must not
+       // reveal future base/bonus wins before their visual settlement.
+       this.balanceCents = Math.max(0, serverSpin.wallet.balanceCents - result.totalWinCents);
        this.updateHud();
      } catch (error) {
        this.busy = false;
@@ -250,6 +255,8 @@ export class GameController {
     }
      await this.scene.animateDrop(this.duration(ANIMATION.initialDrop), !this.turbo);
     await this.playTumbles(result, false);
+    // Credit the base-game portion only after explosions/Core settlement finish.
+    this.balanceCents += result.baseWinCents;
     this.currentWinCents = result.baseWinCents;
     this.updateHud();
     const baseMultiplier = result.baseWinCents / this.betCents;
@@ -307,6 +314,7 @@ export class GameController {
       index += 1;
       const freeSpin = result.freeSpins[index - 1];
       if (!freeSpin) {
+        this.commitPendingWalletBalance();
         this.busy = false;
         this.setState("IDLE");
         this.message("BONUS RESULT UNAVAILABLE");
@@ -344,7 +352,11 @@ export class GameController {
           440,
         );
         this.freeSpinAccounting = settleFreeSpinAccounting(this.freeSpinAccounting);
+        // Credit this Free Spin only after its full symbol/Core resolution and
+        // transfer animation, so BALANCE never spoils the result.
+        this.balanceCents += freeSpin.win;
         this.updateBonusTotalDisplay(true);
+        this.updateHud();
         await sleep(this.duration(360, true));
       }
        this.currentWinCents = Math.round(usedMultiplier * this.betCents);
@@ -376,7 +388,14 @@ export class GameController {
     }
   }
 
+  private commitPendingWalletBalance() {
+    if (this.pendingSettledBalanceCents === null) return;
+    this.balanceCents = this.pendingSettledBalanceCents;
+    this.pendingSettledBalanceCents = null;
+  }
+
   private async finishSpin(result: SpinResult) {
+    this.commitPendingWalletBalance();
     this.currentWinCents = result.totalWinCents;
     if (result.maxWinReached) this.setState("MAX_WIN");
     else if (result.totalMultiplier >= 10) this.setState("BIG_WIN");
