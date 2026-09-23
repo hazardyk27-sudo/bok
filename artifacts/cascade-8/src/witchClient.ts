@@ -35,6 +35,7 @@ type CadiKazanMutation = {
 };
 
 const API_BASE = "/api/cadi-kazan";
+const SCRATCH_BRUSH_RADIUS_PX = 14;
 
 const formatMoney = (cents: number, options: { compactInteger?: boolean; signed?: boolean } = {}) => {
   const absolute = Math.abs(cents) / 100;
@@ -423,6 +424,7 @@ export class WitchClient {
       if (resultRound) this.telemetry.recordRevealResult(cellIndex, data.outcome, resultRound.revealedSafeCount, resultRound.currentMultiplierBps);
       if (data.outcome === "BUST") triggerScratchHaptic("BOMB");
       else if (data.outcome === "SAFE" || data.outcome === "COMPLETED") triggerScratchHaptic("GOLD");
+      if (data.outcome === "COMPLETED") this.playCashRegisterSound();
       if (data.outcome === "BUST" || data.outcome === "COMPLETED") {
         if (resultRound) this.telemetry.recordSettlement(data.outcome, resultRound.revealedSafeCount, resultRound.currentMultiplierBps, resultRound.payoutCents);
       }
@@ -458,7 +460,10 @@ export class WitchClient {
       const data = await response.json() as CadiKazanMutation & { error?: string };
       if (!response.ok) throw new Error(data.error ?? "Cash Out başarısız");
       this.applyState(data.state, data.state.round?.status !== "ACTIVE");
-      if (data.outcome === "CASHED_OUT") triggerScratchHaptic("CASH_OUT");
+      if (data.outcome === "CASHED_OUT") {
+        triggerScratchHaptic("CASH_OUT");
+        this.playCashRegisterSound();
+      }
       if (data.state.round) this.telemetry.recordSettlement(data.outcome, data.state.round.revealedSafeCount, data.state.round.currentMultiplierBps, data.state.round.payoutCents);
       this.setFeedback(data.outcome === "CASHED_OUT" ? "Kazanç wallet’a aktarıldı." : "Round zaten kapalı.");
     } catch (error) {
@@ -467,6 +472,16 @@ export class WitchClient {
       this.busy = false;
       this.render();
     }
+  }
+
+  private playCashRegisterSound() {
+    // Short drawer clack + bright coin/bell tail. Uses the existing app audio
+    // engine, so global mute/volume preferences still apply.
+    this.audio.tone(155, 0.035, "square");
+    window.setTimeout(() => this.audio.tone(920, 0.055, "triangle"), 34);
+    window.setTimeout(() => this.audio.tone(1320, 0.09, "triangle"), 78);
+    window.setTimeout(() => this.audio.tone(1840, 0.16, "sine"), 132);
+    window.setTimeout(() => this.audio.tone(2280, 0.12, "sine"), 185);
   }
 
   private setStatus(value: string, connected: boolean) {
@@ -560,6 +575,7 @@ export class WitchClient {
     const hasRound = Boolean(round);
     this.root.classList.toggle("has-round", hasRound);
     this.root.classList.toggle("is-active-round", hasActiveRound);
+    this.root.classList.toggle("is-advanced-focus", Boolean(round && round.mode === "ADVANCED"));
     this.root.querySelectorAll<HTMLButtonElement>("[data-witch-mode]").forEach((button) => {
       button.classList.toggle("is-selected", button.dataset.witchMode === this.mode);
       button.disabled = this.busy || hasActiveRound;
@@ -650,6 +666,7 @@ export class WitchClient {
       if (round.status === "ACTIVE" && !surface) {
         this.scratchSurfaces.set(index, new ScratchSurface(interactionCanvas, {
           audio: this.audio,
+          brushRadiusPx: SCRATCH_BRUSH_RADIUS_PX,
           debrisCanvas: debrisCanvas ?? undefined,
           layerCanvases,
           resultReady: isActuallyRevealed,
