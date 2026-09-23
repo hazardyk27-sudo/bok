@@ -6,6 +6,7 @@ on:
       - feature/slot
     paths:
       - .github/workflows/temp-atomic-slot-db-check.yml
+      - artifacts/api-server/src/slot/repository.ts
 
 permissions:
   contents: read
