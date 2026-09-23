@@ -96,10 +96,11 @@ export class ScratchSurface {
     const localWidth = Math.max(1, this.interactionCanvas.clientWidth);
     const localHeight = Math.max(1, this.interactionCanvas.clientHeight);
     const initialRadius = this.getBrushRadiusPx(localWidth, localHeight) / Math.max(1, Math.min(localWidth, localHeight));
-    const initialDepthGain = this.abrasionConfig.depthPerSample * 0.72;
+    const initialDepthGain = this.abrasionConfig.depthPerSample * 1.15;
     this.progress.sampleCircle(this.lastPoint.x, this.lastPoint.y, initialRadius, initialDepthGain);
     this.rememberTrail(this.lastPoint, 0, 0.08);
     this.applyThreeLayerAbrasion(this.lastPoint, 0, 0.08, this.resultReady);
+    this.eraseLayer("lacquer", this.lastPoint, 0, 0.08, 0.82);
 
     this.interactionCanvas.setPointerCapture(event.pointerId);
     this.interactionCanvas.classList.add("is-scratching");
@@ -132,6 +133,10 @@ export class ScratchSurface {
       this.rememberTrail(sample, angle, speed);
       this.applyThreeLayerAbrasion(sample, angle, speed, this.resultReady);
     }
+
+    // Keep the visible scratch head centered under the live pointer. This only
+    // clears the top lacquer; deeper result reveal still follows abrasion depth.
+    this.eraseLayer("lacquer", point, angle, speed, 0.78);
 
     this.maybeCommitResult(now);
     this.emitDebris(point, angle, speed);
