@@ -134,7 +134,7 @@ export class SlotRepository {
              (id, session_id, round_id, kind, amount_cents, idempotency_key)
            SELECT *
              FROM (VALUES
-               ($8::text, $2::text, $3::text, 'STAKE_DEBIT'::text, (-$10)::integer, $11::text),
+               ($8::text, $2::text, $3::text, 'STAKE_DEBIT'::text, ($10::integer * -1), $11::text),
                ($9::text, $2::text, $3::text, 'PAYOUT_CREDIT'::text, $5::integer, $12::text)
              ) AS entries(id, session_id, round_id, kind, amount_cents, idempotency_key)
             WHERE kind <> 'STAKE_DEBIT' OR $10 > 0
