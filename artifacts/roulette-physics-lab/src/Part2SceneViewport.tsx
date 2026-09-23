@@ -6675,7 +6675,7 @@ export function Part2SceneViewport({
                      PART3_POCKET_PROBE_RADIUS + BALL_RADIUS + 0.02,
                    ),
                  )
-                   .setTranslation(0, POCKET_FLOOR_Y - 0.04, 0)
+                   .setTranslation(0, POCKET_FLOOR_Y - BALL_RADIUS - 0.04, 0)
                    .setFriction(0.42)
                    .setRestitution(0.02)
                    .setCollisionGroups(
