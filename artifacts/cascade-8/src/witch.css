@@ -3557,3 +3557,201 @@
       minmax(105px, .86fr);
   }
 }
+
+
+/* =========================================================
+   MOBILE ADVANCED 25 — HORIZONTAL PREMIUM TICKET
+   Keeps the original mobile scene/HUD/control bar, but gives
+   Advanced 25 its own wide ticket composition.
+   ========================================================= */
+@media (max-width: 600px) and (orientation: portrait),
+       (max-height: 600px) and (orientation: landscape) and (max-width: 1200px) {
+  .witch-ticket.is-advanced {
+    display: grid;
+    grid-template-columns: minmax(120px, .9fr) minmax(168px, 1.15fr);
+    grid-template-rows: auto auto minmax(0, 1fr);
+    grid-template-areas:
+      "header board"
+      "meta board"
+      "footer board";
+    column-gap: clamp(6px, 1.3cqw, 12px);
+    row-gap: 2px;
+    width: min(97%, 620px) !important;
+    min-width: 0 !important;
+    max-width: 100% !important;
+    max-height: 100% !important;
+    padding: clamp(6px, 1.6cqh, 9px) clamp(7px, 1.25cqw, 11px);
+    overflow: hidden;
+    border-radius: 11px;
+  }
+
+  .witch-ticket.is-advanced .witch-ticket-header {
+    grid-area: header;
+    display: grid;
+    grid-template-columns: 1fr;
+    align-content: center;
+    justify-items: start;
+    min-width: 0;
+    min-height: 0;
+    padding: 2px 0 3px;
+    border-bottom: 1px solid rgba(107, 76, 32, .22);
+  }
+
+  .witch-ticket.is-advanced .witch-ticket-sidecopy,
+  .witch-ticket.is-advanced .witch-ticket-sigil {
+    display: none;
+  }
+
+  .witch-ticket.is-advanced .witch-ticket-lockup {
+    display: grid;
+    justify-items: start;
+    text-align: left;
+  }
+
+  .witch-ticket.is-advanced .witch-ticket-brand {
+    font-size: clamp(20px, 3.7cqw, 30px);
+    line-height: .78;
+    letter-spacing: -.035em;
+  }
+
+  .witch-ticket.is-advanced .witch-ticket-lockup small {
+    margin-top: 3px;
+    font-size: clamp(3px, .48cqw, 4.5px);
+    letter-spacing: .18em;
+  }
+
+  .witch-ticket.is-advanced .witch-ticket-price {
+    display: grid;
+    grid-template-columns: auto auto;
+    gap: 4px;
+    align-items: center;
+    justify-items: start;
+    margin-top: 5px;
+  }
+
+  .witch-ticket.is-advanced .witch-ticket-price small {
+    display: inline;
+    font-size: clamp(3px, .46cqw, 4px);
+  }
+
+  .witch-ticket.is-advanced .witch-ticket-price strong {
+    min-width: 46px;
+    padding: 3px 5px 2px;
+    font-size: clamp(9px, 1.45cqw, 12px);
+  }
+
+  .witch-ticket.is-advanced .witch-ticket-price span {
+    display: none;
+  }
+
+  .witch-ticket.is-advanced .witch-ticket-meta-row {
+    grid-area: meta;
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 2px;
+    align-content: start;
+    min-width: 0;
+    margin: 0;
+    padding: 4px 0;
+    border-top: 0;
+    border-bottom: 0;
+    font-size: clamp(4px, .58cqw, 5px);
+    text-align: left;
+  }
+
+  .witch-ticket.is-advanced .witch-ticket-meta-row > i {
+    display: none;
+  }
+
+  .witch-ticket.is-advanced .witch-ticket-meta-row > span:last-child {
+    display: grid;
+    gap: 1px;
+  }
+
+  .witch-ticket.is-advanced .witch-board-wrap {
+    grid-area: board;
+    align-self: center;
+    justify-self: end;
+    width: min(100%, clamp(168px, 47cqh, 214px));
+    aspect-ratio: 1;
+    margin: 0;
+    padding: clamp(4px, 1.1cqh, 6px);
+    border-radius: 8px;
+  }
+
+  .witch-ticket.is-advanced .witch-board {
+    width: 100%;
+    height: 100%;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    grid-template-rows: repeat(5, minmax(0, 1fr));
+    gap: clamp(2px, .5cqh, 4px);
+  }
+
+  .witch-ticket.is-advanced .witch-cell {
+    width: 100%;
+    height: 100%;
+    min-width: 0;
+    min-height: 0;
+    aspect-ratio: 1;
+    border-radius: 4px;
+  }
+
+  .witch-ticket.is-advanced .witch-cell-content {
+    transform: scale(.56);
+  }
+
+  .witch-ticket.is-advanced .witch-cell-result-label {
+    right: 1px;
+    bottom: 1px;
+    left: 1px;
+    font-size: clamp(2.5px, .4cqh, 3px);
+  }
+
+  .witch-ticket.is-advanced .witch-ticket-footer {
+    grid-area: footer;
+    display: grid;
+    align-content: end;
+    gap: 2px;
+    min-width: 0;
+    margin: 0;
+    padding: 4px 0 1px;
+    font-size: clamp(3px, .46cqw, 4px);
+    text-align: left;
+  }
+
+  .witch-ticket.is-advanced .witch-ticket-footer strong {
+    justify-self: start;
+    font-size: clamp(5px, .72cqw, 7px);
+  }
+
+  .witch-ticket.is-advanced .witch-ticket-footer span:last-child {
+    overflow: hidden;
+    max-width: 100%;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+}
+
+/* Extra-tight phone height: keep the ticket horizontal and preserve board size. */
+@media (max-width: 340px) and (orientation: portrait),
+       (max-height: 340px) and (orientation: landscape) and (max-width: 760px) {
+  .witch-ticket.is-advanced {
+    grid-template-columns: minmax(104px, .78fr) minmax(158px, 1.22fr);
+    column-gap: 5px;
+    padding: 5px 6px;
+  }
+
+  .witch-ticket.is-advanced .witch-ticket-brand {
+    font-size: 18px;
+  }
+
+  .witch-ticket.is-advanced .witch-ticket-lockup small,
+  .witch-ticket.is-advanced .witch-ticket-price small,
+  .witch-ticket.is-advanced .witch-ticket-footer > span:first-child {
+    display: none;
+  }
+
+  .witch-ticket.is-advanced .witch-board-wrap {
+    width: min(100%, clamp(158px, 48cqh, 184px));
+  }
+}
