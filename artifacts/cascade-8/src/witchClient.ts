@@ -50,62 +50,59 @@ const newIdempotencyKey = (prefix: string) => `${prefix}-${crypto.randomUUID()}-
 
 export const CADI_KAZAN_MARKUP = `
   <main class="witch-page" aria-labelledby="witch-title">
-    <header class="witch-heading">
-      <a class="back-link" href="/" aria-label="Ana menüye dön">←</a>
-      <div class="witch-brand">
-        <span class="menu-kicker">KAZI · KEŞFET · KATLA</span>
-        <h1 id="witch-title">CADI KAZAN</h1>
+    <header class="witch-appbar">
+      <a class="witch-back" href="/" aria-label="Ana menüye dön">←</a>
+      <div class="witch-appbrand">
+        <span class="witch-brand-mark" aria-hidden="true">✦</span>
+        <div>
+          <small>FAHRİNİN YOLU · LUCKY SCRATCH</small>
+          <h1 id="witch-title">CADI KAZAN</h1>
+        </div>
       </div>
+
+      <section class="witch-appstats" aria-label="Cadı Kazan durumu">
+        <div class="witch-stat witch-stat-balance">
+          <span>BAKİYE</span>
+          <strong data-witch-balance>0,00</strong>
+          <small>CR</small>
+        </div>
+        <div class="witch-stat">
+          <span>ROUND</span>
+          <strong data-witch-round>—</strong>
+        </div>
+        <div class="witch-stat witch-stat-status">
+          <span>DURUM</span>
+          <strong data-witch-round-status>HAZIR</strong>
+          <small data-witch-round-note>MASA BOŞ</small>
+        </div>
+      </section>
+
       <div class="witch-connection" data-witch-status role="status" aria-live="polite">BAĞLANIYOR</div>
     </header>
 
-    <section class="witch-wallet-bar" aria-label="Cadı Kazan bakiyesi ve round durumu">
-      <div class="witch-wallet-balance">
-        <span>BAKİYE</span>
-        <strong data-witch-balance>0,00</strong>
-        <small>CR</small>
-      </div>
-      <div>
-        <span>ROUND</span>
-        <strong data-witch-round>—</strong>
-      </div>
-      <div class="witch-wallet-status">
-        <span>DURUM</span>
-        <strong data-witch-round-status>HAZIR</strong>
-        <small data-witch-round-note>MASA BOŞ</small>
-      </div>
-    </section>
-
     <div class="witch-layout">
       <aside class="witch-controls" data-witch-lobby aria-label="Bilet ayarları">
-        <div class="witch-panel-title">
-          <span class="witch-panel-icon" aria-hidden="true">✤</span>
+        <div class="witch-panel-head">
           <div>
-            <strong>OYUN</strong>
-            <small>Nasıl oynamak istersin?</small>
+            <span>OYUN</span>
+            <strong>Biletini hazırla</strong>
           </div>
+          <i aria-hidden="true">✦</i>
         </div>
 
         <div class="witch-mode-grid" role="group" aria-label="Cadı Kazan oyun modu">
           <button type="button" class="witch-mode-card is-selected" data-witch-mode="STANDARD">
-            <span class="witch-mode-symbol" aria-hidden="true">✦</span>
-            <span class="witch-mode-copy"><strong>Standard 5</strong><small>1 bomba · 5 alan</small></span>
+            <span><strong>Standard 5</strong><small>5 alan · 1 bomba</small></span>
             <i class="witch-radio" aria-hidden="true"></i>
           </button>
           <button type="button" class="witch-mode-card" data-witch-mode="ADVANCED">
-            <span class="witch-mode-symbol" aria-hidden="true">◇</span>
-            <span class="witch-mode-copy"><strong>Advanced 25</strong><small>5×5 · riski seç</small></span>
+            <span><strong>Advanced 25</strong><small>5×5 · riski seç</small></span>
             <i class="witch-radio" aria-hidden="true"></i>
           </button>
         </div>
 
-        <div class="witch-control-divider"><span></span></div>
-
-        <div class="witch-stake-block">
-          <div class="witch-field-heading">
-            <span class="witch-field-icon" aria-hidden="true">◉</span>
-            <div><strong>STAKE</strong><small>Bilet miktarını seç</small></div>
-          </div>
+        <div class="witch-control-group">
+          <label>STAKE</label>
           <div class="witch-stake-stepper">
             <button type="button" data-witch-stake-step="-1" aria-label="Stake azalt">−</button>
             <div class="witch-input-wrap">
@@ -114,19 +111,10 @@ export const CADI_KAZAN_MARKUP = `
             </div>
             <button type="button" data-witch-stake-step="1" aria-label="Stake artır">+</button>
           </div>
-          <div class="witch-stake-presets" aria-label="Hızlı stake seçimleri">
-            <button type="button" data-witch-stake-preset="1">1</button>
-            <button type="button" data-witch-stake-preset="5">5</button>
-            <button type="button" data-witch-stake-preset="10">10</button>
-            <button type="button" data-witch-stake-preset="25">25</button>
-          </div>
         </div>
 
-        <label class="witch-field witch-alarm-field">
-          <span class="witch-field-heading">
-            <span class="witch-field-icon" aria-hidden="true">✹</span>
-            <span><strong>BOMBA</strong><small>Bomba sayısını seç</small></span>
-          </span>
+        <label class="witch-control-group witch-alarm-field">
+          <span>BOMBA</span>
           <select data-witch-alarms disabled aria-label="Advanced bomba sayısı">
             <option value="1">1 BOMBA</option>
             <option value="3">3 BOMBA</option>
@@ -136,65 +124,56 @@ export const CADI_KAZAN_MARKUP = `
           </select>
         </label>
 
-        <div class="witch-risk-note" data-witch-risk-note>STANDARD / 1 BOMBA</div>
+        <div class="witch-round-summary" data-witch-risk-note>STANDARD · 1 BOMBA</div>
 
         <button class="witch-primary-button" type="button" data-witch-action="start">
-          <span class="witch-button-icon" aria-hidden="true">◆</span>
           <span>BİLETİ SATIN AL</span>
-          <b>›</b>
+          <b aria-hidden="true">→</b>
         </button>
 
-        <p class="witch-feedback" data-witch-feedback role="status">Tarzını seç, biletini al ve kazımaya başla.</p>
+        <p class="witch-feedback" data-witch-feedback role="status">Biletini seç ve masaya bırak.</p>
       </aside>
 
       <section class="witch-table-stage" data-witch-play aria-label="Cadı Kazan oyun masası">
         <div class="witch-table-heading">
           <div>
-            <span class="witch-table-eyebrow">MASA <i>● LIVE</i></span>
-            <h2 data-witch-play-title>Masaya bir bilet bırak.</h2>
+            <span class="witch-table-eyebrow"><i>●</i> LIVE TABLE</span>
+            <strong data-witch-play-mode>NO TICKET</strong>
           </div>
-          <div class="witch-table-count" data-witch-play-mode>NO TICKET</div>
+          <p data-witch-play-title>Bir bilet seç ve kazımaya başla.</p>
         </div>
 
         <div class="witch-table-surface">
-          <div class="witch-scene-props" aria-hidden="true">
-            <span class="witch-prop-candle"></span>
-            <span class="witch-prop-book"></span>
-            <span class="witch-prop-orb"></span>
-            <span class="witch-prop-coins"></span>
-          </div>
+          <div class="witch-table-light" aria-hidden="true"></div>
+          <div class="witch-table-emblem" aria-hidden="true"><span>☾</span></div>
 
           <div class="witch-empty-table" data-witch-empty>
-            <div class="witch-empty-ring" aria-hidden="true">✦</div>
-            <strong>BİLETİN BURAYA GELECEK</strong>
-            <span>Modu ve stake’i seç, sonra bileti satın al.</span>
+            <span class="witch-empty-seal" aria-hidden="true">✦</span>
+            <strong>BİLETİNİ MASAYA BIRAK</strong>
+            <small>Modu ve stake’i seç, ardından bileti satın al.</small>
           </div>
 
           <article class="witch-ticket" data-witch-ticket hidden aria-label="Kazınabilir Cadı Kazan bileti">
-            <div class="witch-ticket-edge"></div>
-            <div class="witch-ticket-corner witch-ticket-corner-a" aria-hidden="true"></div>
-            <div class="witch-ticket-corner witch-ticket-corner-b" aria-hidden="true"></div>
+            <div class="witch-ticket-frame" aria-hidden="true"></div>
 
             <header class="witch-ticket-header">
-              <div class="witch-ticket-poem">
-                <small>ŞANS CESURLARI</small>
-                <strong>SEVER</strong>
+              <div class="witch-ticket-sidecopy">
+                <small>ŞANS CESURLARI SEVER</small>
               </div>
               <div class="witch-ticket-lockup">
-                <span class="witch-ticket-hat" aria-hidden="true">☾</span>
-                <span class="witch-ticket-brand">CADI KAZAN</span>
+                <span class="witch-ticket-sigil" aria-hidden="true">☾</span>
+                <strong class="witch-ticket-brand">CADI KAZAN</strong>
                 <small>KAZI · KEŞFET · KATLA</small>
               </div>
-              <div class="witch-ticket-poem is-right">
-                <small>KÜÇÜK BİR KAZIMA</small>
-                <strong>BÜYÜK HİKAYELER YAZAR</strong>
+              <div class="witch-ticket-sidecopy is-right">
+                <small>KÜÇÜK BİR KAZIMA · BÜYÜK BİR İHTİMAL</small>
               </div>
             </header>
 
             <div class="witch-ticket-meta-row">
               <span data-witch-ticket-mode>STANDARD 5</span>
-              <span class="witch-ticket-meta-seal">✦</span>
-              <span><b data-witch-ticket-stake>0,00 CR</b> · <i data-witch-ticket-bombs>01 BOMB</i></span>
+              <i aria-hidden="true">✦</i>
+              <span><b data-witch-ticket-stake>0,00 CR</b> · <b data-witch-ticket-bombs>01 BOMB</b></span>
             </div>
 
             <div class="witch-board-wrap">
@@ -202,8 +181,8 @@ export const CADI_KAZAN_MARKUP = `
             </div>
 
             <footer class="witch-ticket-footer">
-              <span>HER KAZIMADA YENİ BİR İHTİMAL</span>
-              <strong>İYİ ŞANSLAR!</strong>
+              <span>KAZIDIĞIN KADARINI GÖRÜRSÜN</span>
+              <strong>İYİ ŞANSLAR</strong>
               <span data-witch-ticket-id>—</span>
             </footer>
           </article>
@@ -211,16 +190,20 @@ export const CADI_KAZAN_MARKUP = `
 
         <div class="witch-table-feedback">
           <span class="witch-feedback" data-witch-play-feedback role="status">Bilet satın alındığında kart masaya gelir.</span>
-          <span class="witch-table-hint">Kazıdığın kadarını görürsün.</span>
+          <span>Kazı ve sonucu altta anında gör.</span>
         </div>
       </section>
 
       <aside class="witch-payout-panel" data-witch-desktop-payout aria-label="Kazanç ve Cash Out">
-        <div class="witch-payout-kicker"><span aria-hidden="true">▮▮▮</span> KAZANÇ</div>
-        <small class="witch-payout-support">Kazancını güvenle al</small>
-        <div class="witch-payout-orbit" aria-hidden="true"></div>
-        <strong class="witch-multiplier" data-witch-multiplier>0.00x</strong>
-        <div class="witch-payout-amount" data-witch-payout>0,00 kredi</div>
+        <div class="witch-payout-head">
+          <span>KAZANÇ</span>
+          <small>MASADAKİ DEĞER</small>
+        </div>
+
+        <div class="witch-payout-hero">
+          <strong class="witch-multiplier" data-witch-multiplier>0.00x</strong>
+          <div class="witch-payout-amount" data-witch-payout>0,00 kredi</div>
+        </div>
 
         <div class="witch-payout-lines">
           <span>STAKE <b data-witch-stake-display>—</b></span>
@@ -228,12 +211,12 @@ export const CADI_KAZAN_MARKUP = `
         </div>
 
         <button class="witch-cashout-button" type="button" data-witch-action="cashout">
-          <span class="witch-button-icon" aria-hidden="true">↗</span>
           <span>CASH OUT</span>
+          <b aria-hidden="true">↗</b>
         </button>
         <button class="witch-secondary-button" type="button" data-witch-action="new" hidden>YENİ KART</button>
+
         <p class="witch-payout-note" data-witch-payout-note>İlk güvenli alan cash out’u açar.</p>
-        <div class="witch-payout-motto"><span>☾</span><small>CESARET HER ZAMAN KAZANDIRIR</small></div>
       </aside>
     </div>
 
@@ -355,7 +338,7 @@ export class WitchClient {
         });
       }
       this.setStatus("SERVER’A BAĞLI", true);
-      this.setFeedback("Kart hazır. Aynı noktayı tekrar tekrar kazı.");
+      this.setFeedback("Kart hazır. Folyonun üzerinde parmağını veya fareyi gezdir.");
     } catch (error) {
       this.setFeedback(error instanceof Error ? error.message : "Bilet başlatılamadı");
     } finally {
@@ -556,7 +539,7 @@ export class WitchClient {
       const playMode = this.root.querySelector<HTMLElement>("[data-witch-play-mode]");
       const playTitle = this.root.querySelector<HTMLElement>("[data-witch-play-title]");
       if (playMode) playMode.textContent = "NO TICKET";
-      if (playTitle) playTitle.textContent = "Masaya bir bilet bırak.";
+      if (playTitle) playTitle.textContent = "Bir bilet seç ve kazımaya başla.";
       this.updatePayout(null);
       return;
     }
@@ -633,7 +616,7 @@ export class WitchClient {
     const ticketBombs = this.root.querySelector<HTMLElement>("[data-witch-ticket-bombs]");
     const ticketId = this.root.querySelector<HTMLElement>("[data-witch-ticket-id]");
     if (playMode) playMode.textContent = round.mode === "STANDARD" ? "STANDARD 5 / 01 BOMB" : `ADVANCED 25 / ${String(round.alarmCount).padStart(2, "0")} BOMBS`;
-    if (playTitle) playTitle.textContent = round.status === "BUST" ? "Bomba açıldı." : round.status === "CASHED_OUT" ? "Kazanç alındı." : round.status === "COMPLETED" ? "Kart tamamlandı." : "Aynı noktayı kazı.";
+    if (playTitle) playTitle.textContent = round.status === "BUST" ? "Bomba açıldı." : round.status === "CASHED_OUT" ? "Kazanç alındı." : round.status === "COMPLETED" ? "Kart tamamlandı." : "Folyo kazındıkça alttaki sonuç görünür.";
     if (ticketMode) ticketMode.textContent = round.mode === "STANDARD" ? "STANDARD 5" : "ADVANCED 25";
     if (ticketStake) ticketStake.textContent = `${formatCredits(round.stakeCents)} CR`;
     if (ticketBombs) ticketBombs.textContent = `${String(round.alarmCount).padStart(2, "0")} ${round.alarmCount === 1 ? "BOMB" : "BOMBS"}`;
