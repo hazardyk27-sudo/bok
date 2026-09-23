@@ -50,6 +50,7 @@ export type ScratchSurfaceOptions = {
   debrisCanvas?: HTMLCanvasElement;
   resultReady?: boolean;
   layerCanvases?: HTMLCanvasElement[];
+  coverImageUrl?: string;
   onCommit: () => Promise<void>;
 };
 
@@ -81,6 +82,8 @@ export class ScratchSurface {
   private debris: DebrisParticle[] = [];
   private resizeObserver?: ResizeObserver;
   private resizeFrame: number | null = null;
+  private coverImage?: HTMLImageElement;
+  private coverImageReady = false;
 
   private readonly handlePointerDown = (event: PointerEvent) => {
     if (event.pointerType === "mouse" && event.button !== 0) return;
@@ -185,6 +188,17 @@ export class ScratchSurface {
     this.debrisContext = options.debrisCanvas?.getContext("2d") ?? undefined;
     this.resultReady = options.resultReady ?? false;
     if (this.resultReady) this.resultRequest = Promise.resolve();
+
+    if (options.coverImageUrl) {
+      const cover = new Image();
+      cover.decoding = "async";
+      cover.src = options.coverImageUrl;
+      cover.addEventListener("load", () => {
+        this.coverImageReady = true;
+        this.repaintAfterCoverLoad();
+      }, { once: true });
+      this.coverImage = cover;
+    }
 
     this.resizeCanvases(true);
     this.paintLayers();
@@ -329,6 +343,13 @@ export class ScratchSurface {
     return true;
   }
 
+  private repaintAfterCoverLoad() {
+    this.paintLayers();
+    for (const sample of this.trail) {
+      this.applyThreeLayerAbrasion(sample.point, sample.angle, sample.speed, this.resultReady);
+    }
+  }
+
   private paintLayers() {
     for (const layer of this.layers) this.paintLayer(layer);
   }
@@ -391,6 +412,30 @@ export class ScratchSurface {
       band.addColorStop(1, "rgba(35,18,8,.12)");
       context.globalAlpha = 1;
       context.fillStyle = band;
+      context.fillRect(0, 0, width, height);
+      context.restore();
+      return;
+    }
+
+    if (this.coverImageReady && this.coverImage) {
+      context.fillStyle = "#fffdf7";
+      context.fillRect(0, 0, width, height);
+
+      const image = this.coverImage;
+      const scale = Math.min(width / Math.max(1, image.naturalWidth), height / Math.max(1, image.naturalHeight));
+      const drawWidth = image.naturalWidth * scale;
+      const drawHeight = image.naturalHeight * scale;
+      const drawX = (width - drawWidth) / 2;
+      const drawY = (height - drawHeight) / 2;
+      context.drawImage(image, drawX, drawY, drawWidth, drawHeight);
+
+      context.save();
+      context.globalAlpha = .11;
+      const sheen = context.createLinearGradient(0, 0, width, height);
+      sheen.addColorStop(0, "#ffffff");
+      sheen.addColorStop(.45, "rgba(255,255,255,0)");
+      sheen.addColorStop(1, "#d7d0bd");
+      context.fillStyle = sheen;
       context.fillRect(0, 0, width, height);
       context.restore();
       return;
