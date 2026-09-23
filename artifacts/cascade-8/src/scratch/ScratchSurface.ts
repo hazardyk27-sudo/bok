@@ -357,6 +357,16 @@ export class ScratchSurface {
 
   private pointFromEvent(event: PointerEvent): ScratchPoint {
     const rect = this.interactionCanvas.getBoundingClientRect();
+    const portraitLandscapeScene =
+      window.matchMedia?.("(max-width: 600px) and (orientation: portrait)").matches ?? false;
+
+    if (portraitLandscapeScene) {
+      return {
+        x: Math.max(0, Math.min(1, (event.clientY - rect.top) / Math.max(1, rect.height))),
+        y: Math.max(0, Math.min(1, 1 - ((event.clientX - rect.left) / Math.max(1, rect.width)))),
+      };
+    }
+
     return {
       x: Math.max(0, Math.min(1, (event.clientX - rect.left) / Math.max(1, rect.width))),
       y: Math.max(0, Math.min(1, (event.clientY - rect.top) / Math.max(1, rect.height))),
