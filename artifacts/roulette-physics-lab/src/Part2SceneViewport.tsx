@@ -2089,7 +2089,7 @@ export function Part2SceneViewport({
     let part3TrackCollider: RAPIER.Collider | null = null;
     let part3BowlBridgeColliders: RAPIER.Collider[] = [];
     let part3BowlBridgeProfile: Array<[number, number]> = [];
-    let part3BowlBridgeOuterRadius = BOWL_BRIDGE_OUTER_RADIUS;
+    let part3BowlBridgeOuterRadius: number = BOWL_BRIDGE_OUTER_RADIUS;
     let part3InnerFloorCollider: RAPIER.Collider | null = null;
     let part3DeflectorColliders: RAPIER.Collider[] = [];
     let part4DeflectorAudit: Part4DeflectorAudit | null = null;
