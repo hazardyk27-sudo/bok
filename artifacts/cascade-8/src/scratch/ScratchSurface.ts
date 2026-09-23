@@ -13,8 +13,8 @@ const RESULT_COMMIT_MIN_COVERAGE = 0.2;
 const RESULT_COMMIT_MIN_MS = 420;
 const RESULT_COMMIT_MIN_DISTANCE_FACTOR = 1.5;
 const MAX_TRAIL_SAMPLES = 1800;
-const MAX_DEBRIS_PARTICLES = 16;
-const MOBILE_DEBRIS_PARTICLES = 9;
+const MAX_DEBRIS_PARTICLES = 24;
+const MOBILE_DEBRIS_PARTICLES = 12;
 
 type ScratchLayerName = "lacquer" | "foil" | "base";
 
@@ -103,11 +103,12 @@ export class ScratchSurface {
     const distancePx = distance * Math.max(1, this.interactionCanvas.clientWidth);
     const elapsed = Math.max(8, now - this.lastMoveAt);
     const speed = clamp(distancePx / elapsed / 1.05);
+    const pressure = event.pressure > 0 ? clamp(event.pressure, .35, 1) : .62;
     const angle = Math.atan2(deltaY, deltaX);
     this.scratchDistancePx += distancePx;
 
-    for (const sample of interpolateScratchPoints(this.lastPoint, point, 0.014)) {
-      const depthGain = this.abrasionConfig.depthPerSample * (0.86 + speed * 0.34);
+    for (const sample of interpolateScratchPoints(this.lastPoint, point, 0.012)) {
+      const depthGain = this.abrasionConfig.depthPerSample * (0.78 + speed * 0.24) * (0.86 + pressure * 0.32);
       this.progress.sampleCircle(sample.x, sample.y, this.abrasionConfig.brushRadius, depthGain);
       this.rememberTrail(sample, angle, speed);
       this.applyThreeLayerAbrasion(sample, angle, speed, this.resultReady);
@@ -272,59 +273,85 @@ export class ScratchSurface {
 
     if (layer.name === "base") {
       const base = context.createLinearGradient(0, 0, width, height);
-      base.addColorStop(0, "#9c6d39");
-      base.addColorStop(.48, "#c89a56");
-      base.addColorStop(1, "#79502c");
+      base.addColorStop(0, "#6f4728");
+      base.addColorStop(.46, "#9f6d3d");
+      base.addColorStop(1, "#52331f");
       context.fillStyle = base;
-      context.fillRect(0, 0, width, height);
-      context.globalAlpha = .18;
-      context.fillStyle = "#f0d291";
-      for (let y = 6; y < height; y += 9) context.fillRect(0, y, width, .6);
-      context.globalAlpha = 1;
-      return;
-    }
-
-    if (layer.name === "foil") {
-      const foil = context.createLinearGradient(0, height, width, 0);
-      foil.addColorStop(0, "#b07a39");
-      foil.addColorStop(.22, "#e1bd72");
-      foil.addColorStop(.5, "#8d6033");
-      foil.addColorStop(.78, "#d5aa5f");
-      foil.addColorStop(1, "#7d522e");
-      context.fillStyle = foil;
       context.fillRect(0, 0, width, height);
 
       context.save();
-      context.globalAlpha = .18;
-      context.lineCap = "round";
-      for (let index = -10; index < Math.ceil(width / 7) + 18; index += 1) {
-        const x = index * 7;
-        context.beginPath();
-        context.moveTo(x, 0);
-        context.lineTo(x + height * .95, height);
-        context.lineWidth = index % 4 === 0 ? 1.1 : .45;
-        context.strokeStyle = index % 3 === 0 ? "#fff0bd" : "#3d2819";
-        context.stroke();
+      context.globalAlpha = .24;
+      for (let y = 4; y < height; y += 7) {
+        context.fillStyle = y % 14 === 0 ? "#d2a363" : "#3b2618";
+        context.fillRect(0, y, width, .55);
+      }
+      for (let x = 8; x < width; x += 13) {
+        const y = 6 + ((x * 17) % Math.max(8, height - 12));
+        context.fillStyle = x % 26 === 0 ? "#e6bd7a" : "#2d1b12";
+        context.fillRect(x, y, 1.1, .8);
       }
       context.restore();
       return;
     }
 
-    const lacquer = context.createLinearGradient(0, 0, width, height);
-    lacquer.addColorStop(0, "rgba(249, 218, 145, .96)");
-    lacquer.addColorStop(.28, "rgba(177, 119, 55, .95)");
-    lacquer.addColorStop(.52, "rgba(225, 181, 97, .94)");
-    lacquer.addColorStop(.78, "rgba(132, 86, 43, .96)");
-    lacquer.addColorStop(1, "rgba(239, 202, 126, .95)");
-    context.fillStyle = lacquer;
+    if (layer.name === "foil") {
+      const foil = context.createLinearGradient(0, height, width, 0);
+      foil.addColorStop(0, "#8d5928");
+      foil.addColorStop(.16, "#d7a952");
+      foil.addColorStop(.34, "#f0cf82");
+      foil.addColorStop(.53, "#a56a2f");
+      foil.addColorStop(.74, "#e2b75f");
+      foil.addColorStop(1, "#73451f");
+      context.fillStyle = foil;
+      context.fillRect(0, 0, width, height);
+
+      context.save();
+      context.lineCap = "round";
+      for (let index = -14; index < Math.ceil(width / 5) + 24; index += 1) {
+        const x = index * 5;
+        context.beginPath();
+        context.moveTo(x, 0);
+        context.lineTo(x + height * .82, height);
+        context.lineWidth = index % 5 === 0 ? 1.05 : .34;
+        context.globalAlpha = index % 4 === 0 ? .22 : .11;
+        context.strokeStyle = index % 3 === 0 ? "#fff0b6" : "#56351c";
+        context.stroke();
+      }
+      const band = context.createLinearGradient(0, 0, width, height);
+      band.addColorStop(0, "rgba(255,255,255,.02)");
+      band.addColorStop(.42, "rgba(255,244,199,.22)");
+      band.addColorStop(.54, "rgba(255,255,255,.05)");
+      band.addColorStop(1, "rgba(35,18,8,.12)");
+      context.globalAlpha = 1;
+      context.fillStyle = band;
+      context.fillRect(0, 0, width, height);
+      context.restore();
+      return;
+    }
+
+    context.fillStyle = "rgba(255, 231, 168, .24)";
     context.fillRect(0, 0, width, height);
 
-    const shine = context.createRadialGradient(width * .28, height * .16, 0, width * .28, height * .16, width * .86);
-    shine.addColorStop(0, "rgba(255,255,230,.34)");
-    shine.addColorStop(.38, "rgba(255,235,177,.06)");
-    shine.addColorStop(1, "rgba(44,26,15,.12)");
-    context.fillStyle = shine;
+    const gloss = context.createLinearGradient(0, 0, width, height);
+    gloss.addColorStop(0, "rgba(255,255,239,.36)");
+    gloss.addColorStop(.20, "rgba(255,246,210,.10)");
+    gloss.addColorStop(.43, "rgba(255,255,255,.30)");
+    gloss.addColorStop(.58, "rgba(255,238,189,.05)");
+    gloss.addColorStop(1, "rgba(67,35,17,.12)");
+    context.fillStyle = gloss;
     context.fillRect(0, 0, width, height);
+
+    context.save();
+    context.globalAlpha = .16;
+    context.strokeStyle = "#fff6d6";
+    context.lineWidth = .45;
+    for (let y = 3; y < height; y += 6) {
+      context.beginPath();
+      context.moveTo(0, y);
+      context.lineTo(width, y + Math.sin(y * .4) * .8);
+      context.stroke();
+    }
+    context.restore();
   }
 
   private pointFromEvent(event: PointerEvent): ScratchPoint {
@@ -337,9 +364,9 @@ export class ScratchSurface {
 
   private applyThreeLayerAbrasion(point: ScratchPoint, angle: number, speed: number, resultReady: boolean) {
     const depth = this.progress.depthAt(point.x, point.y);
-    const lacquerAmount = phase(depth, 0.02, 0.34);
-    const foilAmount = phase(depth, 0.24, 0.64);
-    const baseAmount = phase(depth, 0.48, 0.9);
+    const lacquerAmount = phase(depth, 0.015, 0.30);
+    const foilAmount = phase(depth, 0.20, 0.62);
+    const baseAmount = phase(depth, 0.50, 0.94);
 
     if (lacquerAmount > 0) this.eraseLayer("lacquer", point, angle, speed, lacquerAmount);
     if (foilAmount > 0) this.eraseLayer("foil", point, angle, speed, foilAmount);
@@ -370,9 +397,21 @@ export class ScratchSurface {
     layer.context.translate(x, y);
     layer.context.rotate(angle);
     layer.context.globalCompositeOperation = "destination-out";
-    layer.context.globalAlpha = clamp(.16 + amount * .5, .12, .72);
+    layer.context.globalAlpha = clamp(.11 + amount * .46, .10, .62);
     layer.context.fillStyle = "#000";
     this.drawBrushPath(layer.context, radius, speed, roughness);
+
+    layer.context.globalAlpha = clamp(.08 + amount * .24, .06, .34);
+    layer.context.lineCap = "round";
+    layer.context.strokeStyle = "#000";
+    for (let groove = -1; groove <= 1; groove += 1) {
+      const offset = groove * radius * .22;
+      layer.context.beginPath();
+      layer.context.moveTo(-radius * .72, offset);
+      layer.context.lineTo(radius * (.42 + speed * .28), offset + Math.sin(this.brushStep + groove) * radius * .06);
+      layer.context.lineWidth = Math.max(.55, radius * .045);
+      layer.context.stroke();
+    }
     layer.context.restore();
   }
 
@@ -411,12 +450,12 @@ export class ScratchSurface {
         y: point.y * height,
         vx: Math.cos(angle + Math.PI + spread) * (.22 + speed * .95),
         vy: Math.sin(angle + Math.PI + spread) * (.22 + speed * .95) - (.16 + speed * .55),
-        size: .65 + speed * 1.05,
+        size: .75 + speed * 1.25,
         rotation: angle + index,
         spin: (index % 2 ? 1 : -1) * (.04 + speed * .08),
         life: 0,
-        maxLife: 200 + speed * 170,
-        alpha: .3 + speed * .26,
+        maxLife: 250 + speed * 190,
+        alpha: .34 + speed * .30,
       });
     }
 
@@ -450,8 +489,8 @@ export class ScratchSurface {
       this.debrisContext!.translate(particle.x, particle.y);
       this.debrisContext!.rotate(particle.rotation);
       this.debrisContext!.globalAlpha = particle.alpha * (1 - lifeProgress);
-      this.debrisContext!.fillStyle = lifeProgress < .42 ? "#f0d69a" : "#9e713f";
-      this.debrisContext!.fillRect(-particle.size / 2, -particle.size / 2, particle.size, particle.size * .52);
+      this.debrisContext!.fillStyle = lifeProgress < .34 ? "#f4dfaa" : lifeProgress < .68 ? "#bd8a48" : "#6c4728";
+      this.debrisContext!.fillRect(-particle.size / 2, -particle.size / 2, particle.size * 1.35, particle.size * .42);
       this.debrisContext!.restore();
 
       return particle.x > -8 && particle.x < width + 8 && particle.y > -8 && particle.y < height + 8;
