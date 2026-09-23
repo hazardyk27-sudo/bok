@@ -2016,6 +2016,13 @@ export function Part2SceneViewport({
     const activePart3AngularDamping = outerLaneSpinOnly
       ? PART3_OUTER_SPIN_ANGULAR_DAMPING
       : PART3_TRACK_DAMPING;
+    // Full-spin validation uses hard CCD only. A 0.14 wu soft-CCD
+    // prediction envelope creates speculative outer-wall contacts before
+    // the 0.056 wu ball is geometrically touching the measured wall.
+    const activeBallSoftCcdPrediction =
+      validationMode === 'part3' && outerLaneSpinOnly
+        ? 0
+        : BALL_RADIUS * 2.5;
     let dropStarted = false;
     let dropSteps = 0;
     let previousVerticalVelocity = 0;
@@ -6274,10 +6281,10 @@ export function Part2SceneViewport({
                 validationMode === 'part3' ? activePart3AngularDamping : 0.08,
               )
               .setCcdEnabled(true)
-              .setSoftCcdPrediction(BALL_RADIUS * 2.5),
+              .setSoftCcdPrediction(activeBallSoftCcdPrediction),
           );
           ballBody.enableCcd(true);
-          ballBody.setSoftCcdPrediction(BALL_RADIUS * 2.5);
+          ballBody.setSoftCcdPrediction(activeBallSoftCcdPrediction);
           ccdEnabled = true;
           const ballColliderDescriptor = RAPIER.ColliderDesc.ball(BALL_RADIUS)
               .setFriction(validationMode === 'part3' ? activePart3TrackFriction : 0.42)
