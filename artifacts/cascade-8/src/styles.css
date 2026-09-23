@@ -19,12 +19,40 @@
   --safe-area-inset-left: env(safe-area-inset-left, 0px);
 }
 * { box-sizing: border-box; }
-html, body, #app { width: 100%; max-width: 100%; min-height: 100%; margin: 0; overflow-x: hidden; }
-body { min-width: 0; background: radial-gradient(circle at 50% -15%, #263871 0, #111a3b 28%, #080b1b 70%); }
+html, body, #app {
+  width: 100%;
+  max-width: 100%;
+  min-height: 100%;
+  margin: 0;
+  overflow-x: hidden;
+}
+html {
+  min-height: 100%;
+  overflow-y: auto;
+  scrollbar-gutter: stable;
+}
+body {
+  min-width: 0;
+  min-height: 100dvh;
+  overflow-y: auto;
+  overscroll-behavior-y: auto;
+  background: radial-gradient(circle at 50% -15%, #263871 0, #111a3b 28%, #080b1b 70%);
+}
+#app {
+  min-height: 100dvh;
+  overflow: visible;
+}
 button, input { font: inherit; }
 button { color: inherit; cursor: pointer; }
 button:focus-visible, input:focus-visible { outline: 2px solid var(--cyan); outline-offset: 3px; }
-.app-shell { position: relative; min-height: 100vh; overflow: hidden; padding: max(28px, var(--safe-area-inset-top)) max(clamp(18px, 4vw, 70px), var(--safe-area-inset-right)) max(22px, var(--safe-area-inset-bottom)) max(clamp(18px, 4vw, 70px), var(--safe-area-inset-left)); }
+.app-shell {
+  position: relative;
+  width: 100%;
+  min-height: 100dvh;
+  overflow-x: hidden;
+  overflow-y: visible;
+  padding: max(28px, var(--safe-area-inset-top)) max(clamp(18px, 4vw, 70px), var(--safe-area-inset-right)) max(22px, var(--safe-area-inset-bottom)) max(clamp(18px, 4vw, 70px), var(--safe-area-inset-left));
+}
 .app-shell::before { content: ""; position: absolute; inset: 0; pointer-events: none; background: linear-gradient(120deg, rgba(88, 127, 255, .06), transparent 44%, rgba(173, 104, 255, .04)); }
 .ambient { position: absolute; pointer-events: none; border-radius: 50%; filter: blur(10px); opacity: .28; }
 .ambient-a { width: 470px; height: 470px; background: #2d5de0; top: 18%; left: -220px; }
@@ -4022,17 +4050,22 @@ button:focus-visible, input:focus-visible { outline: 2px solid var(--cyan); outl
   }
 }
 
-/* Viewport-fit pass for the route surfaces.  These pages are play surfaces,
-   not documents: secondary details live in drawers or compact panels rather
-   than making the whole page scroll. */
+/* Route surfaces must fit the viewport when they can, but they must never
+   trap content outside the viewport.  The shell therefore owns horizontal
+   clipping only; vertical overflow belongs to the document scrollbar. */
 .route-shell {
-  height: 100dvh;
-  min-height: 0;
-  overflow: hidden;
+  width: 100%;
+  height: auto;
+  min-height: 100dvh;
+  overflow-x: hidden;
+  overflow-y: visible;
 }
 
 .route-shell.is-menu-page {
-  overflow: hidden;
+  height: auto;
+  min-height: 100dvh;
+  overflow-x: hidden;
+  overflow-y: visible;
 }
 
 .route-shell > .game-menu,
