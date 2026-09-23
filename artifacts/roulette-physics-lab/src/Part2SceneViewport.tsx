@@ -1269,7 +1269,7 @@ function addMeasuredOuterWallColliders(
       RAPIER.TriMeshFlags.FIX_INTERNAL_EDGES |
         RAPIER.TriMeshFlags.ORIENTED,
     )
-      .setFriction(friction)
+      .setFriction(Math.min(friction, 0.01))
       .setRestitution(0.01)
       .setCollisionGroups(
         STATIONARY_COLLISION_GROUP | (BALL_COLLISION_GROUP << 16),
