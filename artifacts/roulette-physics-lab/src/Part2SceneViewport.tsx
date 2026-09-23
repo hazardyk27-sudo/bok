@@ -4735,50 +4735,16 @@ export function Part2SceneViewport({
               velocity.y - rotorTangentialVelocity.y,
               velocity.z - rotorTangentialVelocity.z,
             );
-            const settleRelativeSpeedOk = finalRotorRelativeSpeed < 0.12;
-            const settleRadiusMinOk =
-              radius >= POCKET_FLOOR_INNER_RADIUS + BALL_RADIUS;
-            const settleRadiusMaxOk =
-              radius <= POCKET_OUTER_LIP_RADIUS - BALL_RADIUS;
-            const settleBottomOk =
-              Math.abs(bottom - POCKET_FLOOR_Y) <= 0.12;
-            const settleCandidate =
+            if (
               pocketEntered &&
-              settleRelativeSpeedOk &&
-              settleRadiusMinOk &&
-              settleRadiusMaxOk &&
-              settleBottomOk;
-            const settledFramesBeforeStep = settledFrames;
-            if (settleCandidate) {
+              finalRotorRelativeSpeed < 0.12 &&
+              radius >= POCKET_FLOOR_INNER_RADIUS + BALL_RADIUS &&
+              radius <= POCKET_OUTER_LIP_RADIUS - BALL_RADIUS &&
+              Math.abs(bottom - POCKET_FLOOR_Y) <= 0.12
+            ) {
               settledFrames += 1;
             } else {
               settledFrames = 0;
-            }
-            if (
-              part6DiagnosticMode &&
-              (run.seed === 61002 || run.seed === 61005) &&
-              pocketEntered &&
-              (settledFramesBeforeStep > 0 || step % 60 === 0)
-            ) {
-              console.info(
-                'PART6_SETTLE_CRITERIA',
-                JSON.stringify({
-                  seed: run.seed,
-                  step,
-                  elapsed: Number(elapsed.toFixed(4)),
-                  rotorRelativeSpeed: Number(finalRotorRelativeSpeed.toFixed(6)),
-                  radius: Number(radius.toFixed(6)),
-                  bottom: Number(bottom.toFixed(6)),
-                  pocketEntered,
-                  relativeSpeedOk: settleRelativeSpeedOk,
-                  radiusMinOk: settleRadiusMinOk,
-                  radiusMaxOk: settleRadiusMaxOk,
-                  bottomOk: settleBottomOk,
-                  settledFramesBeforeStep,
-                  settledFrames,
-                  reset: settledFramesBeforeStep > 0 && !settleCandidate,
-                }),
-              );
             }
             if (settledFrames >= settleFramesRequired) {
               settled = true;
