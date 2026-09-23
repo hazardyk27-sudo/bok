@@ -381,7 +381,7 @@ describe("authoritative roulette physics config", () => {
       "data-testid=\"part6-full-spin-telemetry-report\"",
     );
     expect(part3ViewportSource).toContain(
-      "const PART3_OUTER_SPIN_TRACK_FRICTION = 0.08",
+      "const PART3_OUTER_SPIN_TRACK_FRICTION = 0.02",
     );
     expect(part3ViewportSource).toContain(
       "const PART3_OUTER_SPIN_LINEAR_DAMPING = 0.01",
