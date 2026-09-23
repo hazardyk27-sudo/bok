@@ -4,6 +4,9 @@ on:
   push:
     branches:
       - roulette-physics-part6b
+  pull_request:
+    branches:
+      - roulette-physics-part6
     paths:
       - '.github/workflows/roulette-part6-runtime.yml'
       - 'artifacts/roulette-physics-lab/**'
