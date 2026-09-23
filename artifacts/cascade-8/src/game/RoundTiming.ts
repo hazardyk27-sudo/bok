@@ -5,6 +5,8 @@ export type MotionTiming = {
   tailMs: number;
   movingUnits: number;
   specialUnits: number;
+  maxFrameGapMs: number;
+  frameSamples: number;
 };
 
 export type RoundTimingEvent = {
@@ -64,6 +66,8 @@ export function motionTimingDetail(timing: MotionTiming) {
     tailMs: Math.round(timing.tailMs * 10) / 10,
     movingUnits: timing.movingUnits,
     specialUnits: timing.specialUnits,
+    maxFrameGapMs: Math.round(timing.maxFrameGapMs * 10) / 10,
+    frameSamples: timing.frameSamples,
   };
 }
 
@@ -82,9 +86,17 @@ export function publishRoundTiming(trace: RoundTimingTrace | null) {
     ms: Math.round((event.atMs - trace.events[index].atMs) * 10) / 10,
   })).sort((a, b) => b.ms - a.ms).slice(0, 5);
 
-  const serverResult = trace.events.find((event) => event.name === "SERVER_RESULT")?.detail ?? {};
+  const serverEvent = trace.events.find((event) => event.name === "SERVER_RESULT");
+  const serverResult = serverEvent?.detail ?? {};
+  const boardEvent = trace.events.find((event) => event.name === "BASE_BOARD_RENDERED");
+  const dropEvent = trace.events.find((event) => event.name === "BASE_DROP_DONE");
   const biggest = gaps[0];
   const durationMs = trace.events.at(-1)?.atMs ?? 0;
+  const requestEvent = trace.events.find((event) => event.name === "SPIN_REQUESTED");
+  const serverWaitMs = requestEvent && serverEvent ? Math.round((serverEvent.atMs - requestEvent.atMs) * 10) / 10 : null;
+  const renderWaitMs = serverEvent && boardEvent ? Math.round((boardEvent.atMs - serverEvent.atMs) * 10) / 10 : null;
+  const dropWaitMs = boardEvent && dropEvent ? Math.round((dropEvent.atMs - boardEvent.atMs) * 10) / 10 : null;
+  const dropDetail = dropEvent?.detail ?? {};
   const summary = [
     `ROUND ${Math.round(durationMs)}ms`,
     `mode=${trace.mode}`,
@@ -93,6 +105,11 @@ export function publishRoundTiming(trace: RoundTimingTrace | null) {
     `tumbles=${serverResult.tumbleCount ?? 0}`,
     `scatters=${serverResult.scatterCount ?? 0}`,
     `cores=${serverResult.settlementCoreCount ?? 0}`,
+    `server=${serverWaitMs ?? "n/a"}ms`,
+    `render=${renderWaitMs ?? "n/a"}ms`,
+    `drop=${dropWaitMs ?? "n/a"}ms`,
+    `dropTail=${dropDetail.tailMs ?? "n/a"}ms`,
+    `maxFrameGap=${dropDetail.maxFrameGapMs ?? "n/a"}ms`,
     biggest ? `BIGGEST ${biggest.ms}ms ${biggest.from} -> ${biggest.to}` : "BIGGEST n/a",
   ].join(" | ");
 
