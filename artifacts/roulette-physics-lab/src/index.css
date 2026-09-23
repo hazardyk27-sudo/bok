@@ -1540,6 +1540,59 @@ h1 {
   color: #9ac5b1;
 }
 
+.validation-issue-banner {
+  position: absolute;
+  top: 18px;
+  left: 18px;
+  z-index: 4;
+  display: flex;
+  align-items: flex-start;
+  gap: 9px;
+  width: min(430px, calc(100% - 36px));
+  padding: 10px 12px;
+  border: 1px solid rgba(211, 139, 114, 0.55);
+  border-radius: 3px;
+  background: rgba(45, 34, 32, 0.9);
+  color: #e8d6cc;
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.18);
+  pointer-events: none;
+}
+
+.validation-issue-banner > svg {
+  flex: 0 0 auto;
+  margin-top: 1px;
+  color: #d38b72;
+}
+
+.validation-issue-banner div {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+}
+
+.validation-issue-banner strong {
+  color: #f0d2c8;
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.validation-issue-banner span,
+.validation-issue-banner small {
+  font-family: 'DM Mono', monospace;
+  font-size: 8px;
+  line-height: 1.45;
+}
+
+.validation-issue-banner span {
+  color: #d9c5bb;
+}
+
+.validation-issue-banner small {
+  color: #aa9288;
+}
+
 .workbench-caption {
   display: flex;
   align-items: center;
