@@ -2,9 +2,6 @@ export class AudioManager {
   private context?: AudioContext;
   private gain?: GainNode;
   private sfxGain?: GainNode;
-  private musicGain?: GainNode;
-  private musicTimer?: number;
-  private musicStep = 0;
   private scratchBuffer?: AudioBuffer;
   private scratchLoopSource?: AudioBufferSourceNode;
   private scratchBodyFilter?: BiquadFilterNode;
@@ -19,7 +16,6 @@ export class AudioManager {
   private readonly pendingSfxTimers = new Set<number>();
   muted = localStorage.getItem("cascade8-muted") === "true";
   volume = Number(localStorage.getItem("cascade8-volume") ?? "0.38");
-  musicVolume = Number(localStorage.getItem("cascade8-music-volume") ?? "0.18");
 
   setMuted(value: boolean) {
     this.muted = value;
@@ -32,11 +28,6 @@ export class AudioManager {
     localStorage.setItem("cascade8-volume", String(value));
     if (this.sfxGain) this.sfxGain.gain.value = value;
   }
-  setMusicVolume(value: number) {
-    this.musicVolume = value;
-    localStorage.setItem("cascade8-music-volume", String(value));
-    if (this.musicGain) this.musicGain.gain.value = value;
-  }
   private ensure() {
     if (!this.context) {
       this.context = new AudioContext();
@@ -46,9 +37,6 @@ export class AudioManager {
       this.sfxGain = this.context.createGain();
       this.sfxGain.gain.value = this.volume;
       this.sfxGain.connect(this.gain);
-      this.musicGain = this.context.createGain();
-      this.musicGain.gain.value = this.musicVolume;
-      this.musicGain.connect(this.gain);
     }
     if (this.context.state === "suspended") void this.context.resume();
   }
@@ -593,39 +581,4 @@ export class AudioManager {
   }
   bigWin() { [440, 660, 880, 1320].forEach((tone, index) => this.delayedTone(tone, 0.22, "sawtooth", index * 110)); }
   bonusComplete() { [660, 880, 1100, 1320].forEach((tone, index) => this.delayedTone(tone, 0.18, "sine", index * 95)); }
-  startMusic() {
-    this.ensure();
-    if (this.musicTimer) return;
-    const notes = [110, 138.59, 164.81, 138.59, 123.47, 164.81, 185, 164.81];
-    this.musicTimer = window.setInterval(() => {
-      if (this.muted || !this.context || !this.musicGain) return;
-      const oscillator = this.context.createOscillator();
-      const envelope = this.context.createGain();
-      oscillator.type = "sine";
-      oscillator.frequency.value = notes[this.musicStep++ % notes.length];
-      envelope.gain.setValueAtTime(0.0001, this.context.currentTime);
-      envelope.gain.exponentialRampToValueAtTime(0.08, this.context.currentTime + 0.03);
-      envelope.gain.exponentialRampToValueAtTime(0.0001, this.context.currentTime + 0.55);
-      oscillator.connect(envelope); envelope.connect(this.musicGain);
-      oscillator.addEventListener("ended", () => {
-        oscillator.disconnect();
-        envelope.disconnect();
-      }, { once: true });
-      oscillator.start(); oscillator.stop(this.context.currentTime + 0.6);
-    }, 620);
-  }
-  stopMusic() {
-    if (this.musicTimer) window.clearInterval(this.musicTimer);
-    this.musicTimer = undefined;
-  }
-  duckMusic(ducked: boolean) {
-    if (this.musicGain) this.musicGain.gain.value = ducked ? this.musicVolume * 0.3 : this.musicVolume;
-  }
-  crossfadeMusic(targetVolume: number, duration = 520) {
-    this.ensure();
-    if (!this.musicGain || !this.context) return;
-    this.musicGain.gain.cancelScheduledValues(this.context.currentTime);
-    this.musicGain.gain.setValueAtTime(this.musicGain.gain.value, this.context.currentTime);
-    this.musicGain.gain.linearRampToValueAtTime(targetVolume, this.context.currentTime + duration / 1000);
-  }
 }
