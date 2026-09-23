@@ -755,12 +755,26 @@ export class GameScene extends Phaser.Scene {
         node.row = targetRow;
         if (Math.abs(node.container.y - targetY) < 0.5 && node.container.alpha >= 0.999) return;
         animations.push(new Promise<void>((resolve) => {
+          let completed = false;
+          const complete = () => {
+            if (completed) return;
+            completed = true;
+            resolve();
+          };
+          const mayResolveAtVisualSettle = node.symbol !== "SCATTER" && !isMultiplierCore(node.symbol);
           this.tweens.add({
             targets: node.container,
             y: targetY,
             duration: duration + col * 18,
             ease: "Cubic.easeInOut",
-            onComplete: () => resolve(),
+            onUpdate: (tween) => {
+              if (
+                mayResolveAtVisualSettle
+                && tween.progress >= 0.92
+                && Math.abs(node.container.y - targetY) <= 1.5
+              ) complete();
+            },
+            onComplete: complete,
           });
         }));
       });
