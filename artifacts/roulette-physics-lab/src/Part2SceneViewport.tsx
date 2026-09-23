@@ -1220,40 +1220,26 @@ function addMeasuredOuterWallColliders(
   body: RAPIER.RigidBody,
   profile: readonly [number, number][],
   friction: number,
+  verticalOffset = 0,
 ) {
   const measured = [...profile].sort((left, right) => left[1] - right[1]);
   const segments = 512;
-
-  // Use one smooth vertical containment wall at the measured dark-race outer
-  // boundary. The previous minimum-radius wall squeezed the launch lane, while
-  // the sloped measured wall converted radial speed into vertical launch.
   const innerFaceRadius =
     PART2_CHANNEL_PROFILE[PART2_CHANNEL_OUTER_WALL_FOOT_INDEX][0];
-  const minY = Math.min(...measured.map(([, height]) => height));
-  const maxY = Math.max(...measured.map(([, height]) => height));
-  const channelFloorMinY = Math.min(
-    ...PART2_CHANNEL_PROFILE.map(([, height]) => height),
-  );
-  const lowerY = Math.min(
-    minY - 0.025,
-    channelFloorMinY - BALL_RADIUS * 2 - 0.02,
-  );
-  const upperY = maxY + BALL_RADIUS + 0.04;
-  const profileRows: Array<[number, number]> = [
-    [innerFaceRadius, lowerY],
-    [innerFaceRadius, upperY],
-  ];
-
+  const lowerY =
+    part2ChannelSurfaceAt(innerFaceRadius, verticalOffset).y - 0.004;
+  const measuredMaxY = Math.max(...measured.map(([, height]) => height));
+  const upperY = Math.max(measuredMaxY + BALL_RADIUS + 0.10, lowerY + 0.20);
   const vertices: number[] = [];
   const indices: number[] = [];
 
-  for (const [radius, y] of profileRows) {
+  for (const y of [lowerY, upperY]) {
     for (let segment = 0; segment < segments; segment += 1) {
       const angle = (segment / segments) * TWO_PI;
       vertices.push(
-        Math.sin(angle) * radius,
+        Math.sin(angle) * innerFaceRadius,
         y,
-        Math.cos(angle) * radius,
+        Math.cos(angle) * innerFaceRadius,
       );
     }
   }
@@ -1291,7 +1277,7 @@ function addMeasuredOuterWallColliders(
 
   return {
     colliders: [collider],
-    samples: profileRows,
+    samples: [[innerFaceRadius, lowerY], [innerFaceRadius, upperY]] as Array<[number, number]>,
     segments,
   };
 }
@@ -1869,11 +1855,12 @@ function part2ChannelNormalAt(radius: number, angle: number) {
 function makePart2RaceChannelTrimesh(
   verticalOffset = 0,
   openInnerRadius: number | null = null,
+  outerRadiusLimit: number | null = null,
 ) {
   const vertices: number[] = [];
   const indices: number[] = [];
   const segments = 512;
-  const activeProfile: Array<[number, number]> =
+  const baseProfile: Array<[number, number]> =
     openInnerRadius === null
       ? PART2_CHANNEL_PROFILE.map(([radius, y]) => [radius, y])
       : [
@@ -1882,6 +1869,10 @@ function makePart2RaceChannelTrimesh(
             .filter(([radius]) => radius > openInnerRadius)
             .map(([radius, y]) => [radius, y] as [number, number]),
         ];
+  const activeProfile =
+    outerRadiusLimit === null
+      ? baseProfile
+      : baseProfile.filter(([radius]) => radius <= outerRadiusLimit);
   const appendProfile = (
     profile: readonly (readonly [number, number])[],
   ) => {
@@ -6283,6 +6274,9 @@ export function Part2SceneViewport({
                 part6FullSpinRouteActive
                   ? PART2_ACTUAL_INWARD_EDGE_RADIUS + BALL_RADIUS
                   : null,
+                part6FullSpinRouteActive
+                  ? PART2_CHANNEL_PROFILE[PART2_CHANNEL_OUTER_WALL_FOOT_INDEX][0]
+                  : null,
               );
               part3TrackCollider = world.createCollider(
                 RAPIER.ColliderDesc.trimesh(
@@ -6305,6 +6299,7 @@ export function Part2SceneViewport({
                 stationaryBody,
                 measuredOuterWallProfile,
                 activePart3TrackFriction,
+                part2RaceVerticalOffset,
               );
               outerWall.colliders.forEach((collider) => {
                 part3ColliderRoles.set(
