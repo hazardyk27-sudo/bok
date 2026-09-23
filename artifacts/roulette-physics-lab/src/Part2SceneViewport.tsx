@@ -1116,8 +1116,16 @@ function buildBowlBridgeTrimesh(
 function buildMeasuredOuterWallTrimesh(
   profile: readonly [number, number][],
 ) {
-  const samples = [...profile].sort((left, right) => left[1] - right[1]);
-  const segments = 128;
+  const measured = [...profile].sort((left, right) => left[1] - right[1]);
+  const samples =
+    measured.length <= 3
+      ? measured
+      : [
+          measured[0],
+          measured[Math.floor((measured.length - 1) / 2)],
+          measured.at(-1)!,
+        ];
+  const segments = 48;
   const vertices: number[] = [];
   const indices: number[] = [];
 
@@ -5996,7 +6004,11 @@ export function Part2SceneViewport({
               console.info(
                 'PART6_OUTER_WALL_COLLIDER',
                 JSON.stringify({
-                  samples: measuredOuterWallProfile.length,
+                  measuredSamples: measuredOuterWallProfile.length,
+                  colliderRings:
+                    measuredOuterWallProfile.length <= 3 ? measuredOuterWallProfile.length : 3,
+                  colliderSegments: 48,
+                  profile: measuredOuterWallProfile,
                   minRadius: Math.min(
                     ...measuredOuterWallProfile.map(([radius]) => radius),
                   ),
