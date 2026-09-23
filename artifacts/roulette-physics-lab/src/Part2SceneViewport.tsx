@@ -9,6 +9,7 @@ import {
   ROULETTE_BALL_RADIUS,
   ROULETTE_DARK_RACE_CHANNEL_PROFILE,
   ROULETTE_DARK_RACE_INWARD_EDGE_RADIUS,
+  ROULETTE_DARK_RACE_INNER_CONTAINMENT_RADIUS,
   ROULETTE_DARK_RACE_LAUNCH_RADIUS,
   ROULETTE_DARK_RACE_RADIUS_BAND,
   ROULETTE_DARK_RACE_WOOD_INNER_RADIUS,
@@ -59,7 +60,10 @@ const PART2_ACTUAL_WOOD_INNER_RADIUS =
 const PART2_ACTUAL_INWARD_EDGE_RADIUS =
   ROULETTE_DARK_RACE_INWARD_EDGE_RADIUS;
 const PART2_CHANNEL_PROFILE = ROULETTE_DARK_RACE_CHANNEL_PROFILE;
-const PART2_CHANNEL_INNER_CONTAINMENT_INDEX = 1;
+const PART2_INNER_CONTAINMENT_RADIUS =
+  ROULETTE_DARK_RACE_INNER_CONTAINMENT_RADIUS;
+const PART2_INNER_CONTAINMENT_CENTER_LIMIT =
+  PART2_INNER_CONTAINMENT_RADIUS + BALL_RADIUS;
 const PART2_CHANNEL_FLOOR_INNER_INDEX = 4;
 const PART2_CHANNEL_FLOOR_OUTER_INDEX = 7;
 const PART2_CHANNEL_OUTER_WALL_FOOT_INDEX = 8;
@@ -274,6 +278,9 @@ type Part3OuterLaneReport = {
   maxRadius: number;
   minRimClearance: number;
   minDeflectorClearance: number;
+  innerContainmentRadius: number;
+  innerContainmentCenterLimit: number;
+  minimumInnerContainmentClearance: number;
   staysOnOuterDarkLane: boolean;
   prematureDeflectorContact: boolean;
   woodContact: boolean;
@@ -2309,6 +2316,10 @@ export function Part2SceneViewport({
         maxRadius: chosenLaunchRadius,
         minRimClearance: part3OuterLaneMinRimClearance,
         minDeflectorClearance: part3OuterLaneMinDeflectorClearance,
+        innerContainmentRadius: PART2_INNER_CONTAINMENT_RADIUS,
+        innerContainmentCenterLimit: PART2_INNER_CONTAINMENT_CENTER_LIMIT,
+        minimumInnerContainmentClearance:
+          chosenLaunchRadius - PART2_INNER_CONTAINMENT_CENTER_LIMIT,
         staysOnOuterDarkLane: false,
         prematureDeflectorContact: false,
         woodContact: false,
@@ -2455,8 +2466,7 @@ export function Part2SceneViewport({
           provisionalCenterRadius <= centerFloorEnvelope[1],
         innerTransitionDistance:
           provisionalCenterRadius -
-          (PART2_CHANNEL_PROFILE[PART2_CHANNEL_INNER_CONTAINMENT_INDEX][0] +
-            BALL_RADIUS),
+          PART2_INNER_CONTAINMENT_CENTER_LIMIT,
         outerWallDistance:
           PART2_CHANNEL_PROFILE[PART2_CHANNEL_OUTER_WALL_FOOT_INDEX][0] -
           BALL_RADIUS -
@@ -2527,8 +2537,7 @@ export function Part2SceneViewport({
       );
       const lateralContainment =
         centerRadius >=
-          PART2_CHANNEL_PROFILE[PART2_CHANNEL_INNER_CONTAINMENT_INDEX][0] +
-            BALL_RADIUS &&
+          PART2_INNER_CONTAINMENT_CENTER_LIMIT &&
         centerRadius <=
           PART2_CHANNEL_PROFILE[PART2_CHANNEL_OUTER_WALL_FOOT_INDEX][0] -
             BALL_RADIUS;
@@ -2581,8 +2590,7 @@ export function Part2SceneViewport({
                centerInsideFloorEnvelope,
                innerTransitionDistance:
                  centerRadius -
-          (PART2_CHANNEL_PROFILE[PART2_CHANNEL_INNER_CONTAINMENT_INDEX][0] +
-            BALL_RADIUS),
+          PART2_INNER_CONTAINMENT_CENTER_LIMIT,
                outerWallDistance:
           PART2_CHANNEL_PROFILE[PART2_CHANNEL_OUTER_WALL_FOOT_INDEX][0] -
                  BALL_RADIUS -
@@ -4290,8 +4298,7 @@ export function Part2SceneViewport({
             }
             const ballCenterInsideOuterLane =
               radius >=
-                PART2_CHANNEL_PROFILE[PART2_CHANNEL_INNER_CONTAINMENT_INDEX][0] +
-                  BALL_RADIUS &&
+                PART2_INNER_CONTAINMENT_CENTER_LIMIT &&
               radius <=
                 PART2_CHANNEL_PROFILE[PART2_CHANNEL_OUTER_WALL_FOOT_INDEX][0] -
                   BALL_RADIUS;
@@ -4370,10 +4377,7 @@ export function Part2SceneViewport({
                 !part3OuterLaneDeflectorContact &&
                 !part3OuterLaneHover &&
                  part3OuterLaneMinRadius >=
-                   PART2_CHANNEL_PROFILE[
-                     PART2_CHANNEL_INNER_CONTAINMENT_INDEX
-                   ][0] +
-                     BALL_RADIUS &&
+                   PART2_INNER_CONTAINMENT_CENTER_LIMIT &&
                  part3OuterLaneMaxRadius <=
                    PART2_CHANNEL_PROFILE[PART2_CHANNEL_OUTER_WALL_FOOT_INDEX][0] -
                      BALL_RADIUS &&
@@ -4458,6 +4462,12 @@ export function Part2SceneViewport({
                 maxRadius: part3OuterLaneMaxRadius,
                 minRimClearance: part3OuterLaneMinRimClearance,
                 minDeflectorClearance: part3OuterLaneMinDeflectorClearance,
+                innerContainmentRadius: PART2_INNER_CONTAINMENT_RADIUS,
+                innerContainmentCenterLimit:
+                  PART2_INNER_CONTAINMENT_CENTER_LIMIT,
+                minimumInnerContainmentClearance:
+                  part3OuterLaneMinRadius -
+                  PART2_INNER_CONTAINMENT_CENTER_LIMIT,
                 staysOnOuterDarkLane,
                 prematureDeflectorContact: part3OuterLaneDeflectorContact,
                 woodContact: part3OuterLaneWoodContact,
@@ -5589,7 +5599,10 @@ export function Part2SceneViewport({
             radius {part3OuterLaneReport.minRadius.toFixed(4)}–
             {part3OuterLaneReport.maxRadius.toFixed(4)} · minimum rim clearance{' '}
             {part3OuterLaneReport.minRimClearance.toFixed(4)} · minimum deflector clearance{' '}
-            {part3OuterLaneReport.minDeflectorClearance.toFixed(4)} · peak speed{' '}
+            {part3OuterLaneReport.minDeflectorClearance.toFixed(4)} · inner containment r{' '}
+            {part3OuterLaneReport.innerContainmentRadius.toFixed(4)} / center limit{' '}
+            {part3OuterLaneReport.innerContainmentCenterLimit.toFixed(4)} · minimum inner clearance{' '}
+            {part3OuterLaneReport.minimumInnerContainmentClearance.toFixed(4)} · peak speed{' '}
             {part3OuterLaneReport.peakSpeed.toFixed(4)} · inward radial drift{' '}
             {part3OuterLaneReport.inwardRadialDrift.toFixed(4)} · track contact{' '}
             {part3OuterLaneReport.physicalTrackContact ? 'yes' : 'no'} · outer lane{' '}
