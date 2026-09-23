@@ -3538,6 +3538,12 @@ export function Part2SceneViewport({
       const maxSteps = Math.round(
         PART6_FULL_SPIN_MAX_DURATION_SECONDS / FIXED_TIMESTEP,
       );
+      const part6HeadlessFastMode =
+        new URLSearchParams(window.location.search).get('part6Headless') ===
+        '1';
+      const telemetryYieldSteps = part6HeadlessFastMode
+        ? maxSteps
+        : PART6_UI_YIELD_STEPS;
       const settleFramesRequired = Math.round(
         PART6_SETTLE_DURATION_SECONDS / FIXED_TIMESTEP,
       );
@@ -4264,7 +4270,7 @@ export function Part2SceneViewport({
 
             if (
               step > 0 &&
-              step % PART6_UI_YIELD_STEPS === 0
+              step % telemetryYieldSteps === 0
             ) {
               await yieldToBrowser();
               if (disposed) return;
@@ -4591,6 +4597,10 @@ export function Part2SceneViewport({
                     : 'full chain telemetry captured'),
           };
           results.push(result);
+          console.info(
+            'PART6_SEED_TELEMETRY',
+            JSON.stringify(result),
+          );
 
           publishPart6TelemetryReport(
             summarize(
