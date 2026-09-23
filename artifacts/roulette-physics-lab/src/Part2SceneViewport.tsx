@@ -945,18 +945,11 @@ function addMeasuredDeflectorColliders(
 ) {
   const colliders: RAPIER.Collider[] = [];
   for (const descriptor of descriptors) {
-    // The visible diamond relief can extend radially under the recessed race.
-    // Keep the collision-active deflector face inside the measured inward race edge
-    // so a ball still on the outer-race center band cannot strike it prematurely.
-    const collisionOuterRadius = Math.min(
-      descriptor.outerRadius,
-      PART2_ACTUAL_INWARD_EDGE_RADIUS,
-    );
     const centerRadius =
-      (descriptor.innerRadius + collisionOuterRadius) / 2;
+      (descriptor.innerRadius + descriptor.outerRadius) / 2;
     const halfRadialDepth = Math.max(
       BALL_RADIUS * 0.45,
-      (collisionOuterRadius - descriptor.innerRadius) / 2,
+      (descriptor.outerRadius - descriptor.innerRadius) / 2,
     );
     const halfHeight = Math.max(
       0.02,
@@ -1946,10 +1939,6 @@ export function Part2SceneViewport({
     const activePart3AngularDamping = outerLaneSpinOnly
       ? PART3_OUTER_SPIN_ANGULAR_DAMPING
       : PART3_TRACK_DAMPING;
-    const activeBallSoftCcdPrediction =
-      validationMode === 'part3' && outerLaneSpinOnly
-        ? 0
-        : BALL_RADIUS * 2.5;
     let dropStarted = false;
     let dropSteps = 0;
     let previousVerticalVelocity = 0;
@@ -4135,6 +4124,18 @@ export function Part2SceneViewport({
             activeWorld.contactPairsWith(
               activeBallCollider,
               (otherCollider) => {
+                let geometricContact = false;
+                activeWorld.contactPair(
+                  activeBallCollider,
+                  otherCollider,
+                  (manifold) => {
+                    if (manifold.numContacts() > 0) {
+                      geometricContact = true;
+                    }
+                  },
+                );
+                if (!geometricContact) return;
+
                 if (
                   otherCollider.handle === activeTrackCollider.handle
                 ) {
@@ -6116,10 +6117,10 @@ export function Part2SceneViewport({
                 validationMode === 'part3' ? activePart3AngularDamping : 0.08,
               )
               .setCcdEnabled(true)
-              .setSoftCcdPrediction(activeBallSoftCcdPrediction),
+              .setSoftCcdPrediction(BALL_RADIUS * 2.5),
           );
           ballBody.enableCcd(true);
-          ballBody.setSoftCcdPrediction(activeBallSoftCcdPrediction);
+          ballBody.setSoftCcdPrediction(BALL_RADIUS * 2.5);
           ccdEnabled = true;
           const ballColliderDescriptor = RAPIER.ColliderDesc.ball(BALL_RADIUS)
               .setFriction(validationMode === 'part3' ? activePart3TrackFriction : 0.42)
