@@ -1222,65 +1222,76 @@ function addMeasuredOuterWallColliders(
   friction: number,
 ) {
   const measured = [...profile].sort((left, right) => left[1] - right[1]);
-  const segments = 64;
-  const radialHalfDepth = 0.018;
-  const colliders: RAPIER.Collider[] = [];
+  const segments = 512;
 
-  // Use the measured innermost visible wall radius as one continuous vertical
-  // containment band. Stacking rings at different radii creates artificial
-  // horizontal ledges that a fast ball can climb.
+  // Build the measured outer containment wall as one continuous inward-facing
+  // trimesh. The previous ring of separate cuboids introduced collider seams
+  // that could kick the 30 wu/s ball upward as it crossed segment boundaries.
   const innerFaceRadius = Math.min(
     PART2_ACTUAL_WOOD_INNER_RADIUS,
     ...measured.map(([radius]) => radius),
   );
-  const centerRadius = innerFaceRadius + radialHalfDepth;
   const minY = Math.min(...measured.map(([, height]) => height));
   const maxY = Math.max(...measured.map(([, height]) => height));
   const channelFloorMinY = Math.min(
     ...PART2_CHANNEL_PROFILE.map(([, height]) => height),
   );
-  // Keep the cuboid's horizontal bottom face well below the race floor.
-  // If that face intersects the launch ball, it acts like a step and kicks
-  // the high-speed ball upward instead of providing purely radial containment.
   const lowerY = Math.min(
     minY - 0.025,
     channelFloorMinY - BALL_RADIUS * 2 - 0.02,
   );
   const upperY = maxY + BALL_RADIUS + 0.04;
-  const halfHeight = Math.max(0.02, (upperY - lowerY) / 2);
-  const centerY = (lowerY + upperY) / 2;
-  const halfTangentialWidth =
-    centerRadius * Math.tan(Math.PI / segments) * 1.03;
+  const vertices: number[] = [];
+  const indices: number[] = [];
 
+  for (const y of [lowerY, upperY]) {
+    for (let segment = 0; segment < segments; segment += 1) {
+      const angle = (segment / segments) * TWO_PI;
+      vertices.push(
+        Math.sin(angle) * innerFaceRadius,
+        y,
+        Math.cos(angle) * innerFaceRadius,
+      );
+    }
+  }
+
+  const upperOffset = segments;
   for (let segment = 0; segment < segments; segment += 1) {
-    const angle = (segment / segments) * TWO_PI;
-    const collider = RAPIER.ColliderDesc.roundCuboid(
-      halfTangentialWidth,
-      halfHeight,
-      radialHalfDepth,
-      0.01,
+    const next = (segment + 1) % segments;
+    const lowerA = segment;
+    const lowerB = next;
+    const upperA = upperOffset + segment;
+    const upperB = upperOffset + next;
+
+    // Reverse the winding so the oriented surface normal points inward toward
+    // the roulette race rather than outward into the wooden rim.
+    indices.push(
+      lowerA,
+      upperB,
+      lowerB,
+      lowerA,
+      upperA,
+      upperB,
+    );
+  }
+
+  const collider = world.createCollider(
+    RAPIER.ColliderDesc.trimesh(
+      new Float32Array(vertices),
+      new Uint32Array(indices),
+      RAPIER.TriMeshFlags.FIX_INTERNAL_EDGES |
+        RAPIER.TriMeshFlags.ORIENTED,
     )
-      .setTranslation(
-        Math.sin(angle) * centerRadius,
-        centerY,
-        Math.cos(angle) * centerRadius,
-      )
-      .setRotation({
-        x: 0,
-        y: Math.sin(angle / 2),
-        z: 0,
-        w: Math.cos(angle / 2),
-      })
       .setFriction(friction)
       .setRestitution(0.01)
       .setCollisionGroups(
         STATIONARY_COLLISION_GROUP | (BALL_COLLISION_GROUP << 16),
-      );
-    colliders.push(world.createCollider(collider, body));
-  }
+      ),
+    body,
+  );
 
   return {
-    colliders,
+    colliders: [collider],
     samples: [[innerFaceRadius, lowerY], [innerFaceRadius, upperY]] as Array<[number, number]>,
     segments,
   };
