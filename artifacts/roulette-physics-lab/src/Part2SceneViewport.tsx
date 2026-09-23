@@ -1901,6 +1901,15 @@ export function Part2SceneViewport({
     let lastTime = performance.now();
     let fixedStepCount = 0;
     let part6TelemetryBatchRunning = false;
+    const activePart3TrackFriction = outerLaneSpinOnly
+      ? PART3_OUTER_SPIN_TRACK_FRICTION
+      : PART3_TRACK_FRICTION;
+    const activePart3LinearDamping = outerLaneSpinOnly
+      ? PART3_OUTER_SPIN_LINEAR_DAMPING
+      : PART3_TRACK_DAMPING;
+    const activePart3AngularDamping = outerLaneSpinOnly
+      ? PART3_OUTER_SPIN_ANGULAR_DAMPING
+      : PART3_TRACK_DAMPING;
     let dropStarted = false;
     let dropSteps = 0;
     let previousVerticalVelocity = 0;
@@ -5629,7 +5638,7 @@ export function Part2SceneViewport({
                   RAPIER.TriMeshFlags.FIX_INTERNAL_EDGES |
                     RAPIER.TriMeshFlags.ORIENTED,
                 )
-                  .setFriction(PART3_TRACK_FRICTION)
+                  .setFriction(activePart3TrackFriction)
                   .setRestitution(0.01),
                 stationaryBody,
               );
@@ -5663,7 +5672,7 @@ export function Part2SceneViewport({
                 outerTrackMesh.indices,
                 RAPIER.TriMeshFlags.FIX_INTERNAL_EDGES | RAPIER.TriMeshFlags.ORIENTED,
               )
-                .setFriction(PART3_TRACK_FRICTION)
+                .setFriction(activePart3TrackFriction)
                 .setRestitution(0.01),
               stationaryBody,
             );
@@ -5680,7 +5689,7 @@ export function Part2SceneViewport({
                  RAPIER.TriMeshFlags.FIX_INTERNAL_EDGES |
                    RAPIER.TriMeshFlags.ORIENTED,
                )
-                 .setFriction(PART3_TRACK_FRICTION)
+                 .setFriction(activePart3TrackFriction)
                  .setRestitution(0.01),
                stationaryBody,
              );
@@ -5741,7 +5750,7 @@ export function Part2SceneViewport({
                  RAPIER.TriMeshFlags.FIX_INTERNAL_EDGES |
                    RAPIER.TriMeshFlags.ORIENTED,
                )
-                 .setFriction(PART3_TRACK_FRICTION)
+                 .setFriction(activePart3TrackFriction)
                  .setRestitution(0.01)
                  .setCollisionGroups(
                    STATIONARY_COLLISION_GROUP |
@@ -5834,10 +5843,10 @@ export function Part2SceneViewport({
               .setAngvel({ x: 0, y: 0, z: 0 })
               .setAdditionalMass(BALL_MASS)
               .setLinearDamping(
-                validationMode === 'part3' ? PART3_TRACK_DAMPING : 0.04,
+                validationMode === 'part3' ? activePart3LinearDamping : 0.04,
               )
               .setAngularDamping(
-                validationMode === 'part3' ? PART3_TRACK_DAMPING : 0.08,
+                validationMode === 'part3' ? activePart3AngularDamping : 0.08,
               )
               .setCcdEnabled(true)
               .setSoftCcdPrediction(BALL_RADIUS * 2.5),
@@ -5846,7 +5855,7 @@ export function Part2SceneViewport({
           ballBody.setSoftCcdPrediction(BALL_RADIUS * 2.5);
           ccdEnabled = true;
           const ballColliderDescriptor = RAPIER.ColliderDesc.ball(BALL_RADIUS)
-              .setFriction(validationMode === 'part3' ? PART3_TRACK_FRICTION : 0.42)
+              .setFriction(validationMode === 'part3' ? activePart3TrackFriction : 0.42)
               .setRestitution(validationMode === 'part3' ? 0.01 : 0.02)
               .setDensity(0.001);
            if (validationMode === 'part3' || validationMode === 'part4') {
