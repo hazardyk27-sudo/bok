@@ -924,6 +924,17 @@ One audit-only instruction was mistakenly sent to Replit before this rule was cl
 - menu, game routes and slot shell can now extend beyond the viewport instead of being clipped
 - removed the Cadı Kazan landscape-only height/overflow trap so short landscape screens can scroll vertically when needed
 
+### Stage 15 — True responsive portrait mobile
+- removed the failed portrait rotate/transform approach
+- portrait phones now render a dedicated responsive mobile composition rather than rotating the full desktop/landscape page
+- header is a compact two-row mobile header; payout becomes a horizontal summary card; ticket is centered and width-bounded; controls become a real portrait bottom control sheet
+- Standard 5 and Advanced 25 each receive portrait-specific sizing; Advanced 25 keeps a compact 5×5 board without forcing the ticket outside the stage
+- representative responsive breakpoints cover normal portrait phones and short/small phones; decorative elements are dropped before gameplay elements
+- scratch pointer mapping is back to direct local coordinates because portrait is no longer transformed
+- QA now includes 915×412 landscape, 412×915 portrait, and 360×640 small portrait Android viewports
+- the old rotate-device prompt remains hidden on portrait
+- Figma MCP Starter call limit is currently exhausted, so this responsive correction was implemented from the already-approved mobile design direction and must be visually checked in Replit Preview
+
 ### Stage 14 — Portrait auto-landscape fit
 - portrait phones no longer show a blocking "rotate device" screen
 - the existing landscape mobile UI is automatically rotated 90° and fitted inside the physical portrait viewport
@@ -990,7 +1001,7 @@ One audit-only instruction was mistakenly sent to Replit before this rule was cl
 
 As of this memory update, the next task is:
 
-> **Manually sync GitHub main in Replit Shell, then verify portrait-phone auto-landscape: game visible immediately without rotate prompt, full UI inside viewport, Advanced 25 fitted, touch/scratch coordinates correct, and no scroll/overflow.**
+> **Manually sync GitHub main in Replit Shell, then verify the true responsive mobile pass at 360×640, ~390×844, 412×915, and landscape: no rotation, no clipping, Standard/Advanced tickets fully visible, payout usable, controls reachable, scratch coordinates correct, and no overflow.**
 
 Priority checks:
 1. Desktop should visually read as the approved premium mockup, roughly 80%+ similar in hierarchy/composition.
