@@ -7,6 +7,11 @@ import {
   ROULETTE_ASSET_PATH,
   ROULETTE_AUTHORITATIVE_SCALE,
   ROULETTE_BALL_RADIUS,
+  ROULETTE_DARK_RACE_CHANNEL_PROFILE,
+  ROULETTE_DARK_RACE_INWARD_EDGE_RADIUS,
+  ROULETTE_DARK_RACE_LAUNCH_RADIUS,
+  ROULETTE_DARK_RACE_RADIUS_BAND,
+  ROULETTE_DARK_RACE_WOOD_INNER_RADIUS,
   ROULETTE_EUROPEAN_SEQUENCE,
   ROULETTE_FIXED_TIMESTEP,
   ROULETTE_GRAVITY_Y,
@@ -33,7 +38,6 @@ const DARK_OUTER_TRACK_HEIGHT = -0.338;
 const PART3_TRACK_FRICTION = 0.08;
 const PART3_TRACK_DAMPING = 0.01;
 const PART3_TRACK_DURATION_SECONDS = 30;
-const PART3_OPERATIONAL_LAUNCH_RADIUS = 2.784;
 const PART3_OUTER_SPIN_TRACK_FRICTION = 0.08;
 const PART3_OUTER_SPIN_LINEAR_DAMPING = 0.01;
 const PART3_OUTER_SPIN_ANGULAR_DAMPING = 0.01;
@@ -43,38 +47,25 @@ const PART3_OUTER_SPIN_RUNS = [
   { id: 'outer-spin-nominal', label: 'Outer spin · nominal launch', speed: 5.0 },
   { id: 'outer-spin-high', label: 'Outer spin · high launch variation', speed: 5.15 },
 ] as const;
-const PART2_ACTUAL_DARK_TRACK_RADIUS_BAND: readonly [number, number] = [
-  2.27,
-  2.54,
-];
+const PART2_ACTUAL_DARK_TRACK_RADIUS_BAND = ROULETTE_DARK_RACE_RADIUS_BAND;
 const PART2_ACTUAL_TRACK_CENTER_RADIUS_BAND: readonly [number, number] = [
   PART2_ACTUAL_DARK_TRACK_RADIUS_BAND[0] + BALL_RADIUS,
   PART2_ACTUAL_DARK_TRACK_RADIUS_BAND[1] - BALL_RADIUS,
 ];
-const PART2_ACTUAL_DARK_TRACK_LAUNCH_RADIUS = 2.39;
-const PART2_ACTUAL_WOOD_INNER_RADIUS = 2.47;
-const PART2_ACTUAL_INWARD_EDGE_RADIUS = 2.26;
-const PART2_CHANNEL_PROFILE: readonly [number, number][] = [
-  [2.18, -0.205], // inner transition / bowl-side lip
-  [2.195, -0.270], // measured curved bowl-side shoulder
-  [2.22, -0.330], // curved inner transition
-  [2.245, -0.355], // curved transition into the dark floor
-  [2.27, -0.3672], // measured dark-floor inner edge
-  [2.34, -0.342], // recessed running surface
-  [2.42, -0.300], // recessed running surface
-  [2.47, -0.2477], // measured dark-floor outer edge
-  [2.525, -0.240], // measured dark floor continuation into the outer wall foot
-  [2.555, -0.200], // measured outer wall lower face
-  [2.558, -0.120], // measured near-vertical retaining wall
-  [2.559, -0.040], // measured retaining wall crest
-];
+const PART2_ACTUAL_DARK_TRACK_LAUNCH_RADIUS =
+  ROULETTE_DARK_RACE_LAUNCH_RADIUS;
+const PART2_ACTUAL_WOOD_INNER_RADIUS =
+  ROULETTE_DARK_RACE_WOOD_INNER_RADIUS;
+const PART2_ACTUAL_INWARD_EDGE_RADIUS =
+  ROULETTE_DARK_RACE_INWARD_EDGE_RADIUS;
+const PART2_CHANNEL_PROFILE = ROULETTE_DARK_RACE_CHANNEL_PROFILE;
 const PART2_CHANNEL_INNER_CONTAINMENT_INDEX = 1;
 const PART2_CHANNEL_FLOOR_INNER_INDEX = 4;
 const PART2_CHANNEL_FLOOR_OUTER_INDEX = 7;
 const PART2_CHANNEL_OUTER_WALL_FOOT_INDEX = 8;
 const PART2_CHANNEL_BOTTOM_THICKNESS = 0.12;
-const PART3_LAUNCH_RADIUS = 2.82;
-const PART3_RETAINING_RIM_INNER_RADIUS = 2.95;
+const PART3_LAUNCH_RADIUS = PART2_ACTUAL_DARK_TRACK_LAUNCH_RADIUS;
+const PART3_RETAINING_RIM_INNER_RADIUS = PART2_ACTUAL_WOOD_INNER_RADIUS;
 const PART3_DEFLECTOR_INNER_RADIUS = 2.464;
 const PART3_DEFLECTOR_OUTER_RADIUS = 2.657;
 const PART3_DEFLECTOR_BOTTOM = -0.291;
@@ -88,18 +79,12 @@ const PART3_DEFLECTOR_HEIGHT = PART3_DEFLECTOR_TOP - PART3_DEFLECTOR_BOTTOM;
 const PART3_DEFLECTOR_TANGENTIAL_WIDTH =
   PART3_DEFLECTOR_RADIUS * THREE.MathUtils.degToRad(7.83);
 const PART3_DEFLECTOR_APPROACH_RADIUS = 2.74;
-const PART3_TRACK_INNER_RADIUS = 2.72;
-const PART3_TRACK_OUTER_RADIUS = 2.90;
+const PART3_TRACK_INNER_RADIUS = PART2_ACTUAL_DARK_TRACK_RADIUS_BAND[0];
+const PART3_TRACK_OUTER_RADIUS = PART2_ACTUAL_DARK_TRACK_RADIUS_BAND[1];
 const PART3_TRACK_CONTACT_TOLERANCE = 0.1;
 const PART3_OUTER_LANE_PROBE_DURATION_SECONDS = 1.2;
 const PART3_OUTER_LANE_CLEARANCE_MARGIN = 0.02;
-const PART3_DARK_TRACK_RADIUS_BAND: readonly [number, number] = [
-  PART3_TRACK_INNER_RADIUS,
-  PART3_TRACK_OUTER_RADIUS,
-];
-// Retained only as a diagnostic baseline. This was the incorrect highest-hit
-// wood-derived correction and must not be applied to the physics surface.
-const PART3_LEGACY_TRACK_VERTICAL_OFFSET = 0.2848;
+const PART3_DARK_TRACK_RADIUS_BAND = PART2_ACTUAL_DARK_TRACK_RADIUS_BAND;
 const PART3_POCKET_PROBE_DURATION_SECONDS = 3.5;
 const PART3_POCKET_PROBE_RADIUS = 1.62;
 const PART3_ALIGNMENT_PROBE_DURATION_SECONDS = 0.9;
@@ -744,77 +729,17 @@ function addPart3DeflectorColliders(
 }
 
 function part3TrackHeightBase(radius: number) {
-  const trackProfile: Array<[number, number]> = [
-    [1.95, -0.458],
-    [2.05, -0.39],
-    [2.12, -0.35],
-    [2.25, -0.343],
-    [2.35, -0.338],
-    [2.45, -0.33],
-    [2.65, -0.27],
-    [2.90, -0.27],
-    [2.95, -0.15],
-  ];
-  const clamped = Math.max(trackProfile[0][0], Math.min(trackProfile.at(-1)![0], radius));
-  for (let index = 1; index < trackProfile.length; index += 1) {
-    const [rightRadius, rightY] = trackProfile[index];
-    const [leftRadius, leftY] = trackProfile[index - 1];
-    if (clamped <= rightRadius) {
-      return THREE.MathUtils.lerp(
-        leftY,
-        rightY,
-        (clamped - leftRadius) / (rightRadius - leftRadius),
-      );
-    }
-  }
-  return trackProfile.at(-1)![1];
+  return part2ChannelSurfaceAt(radius).y;
 }
 
 function part3TrackHeight(radius: number, verticalOffset = 0) {
-  return part3TrackHeightBase(radius) + verticalOffset;
+  return part2ChannelSurfaceAt(radius, verticalOffset).y;
 }
 
-// This is an analytic lathed cross-section of the visible dark outer ray and
-// its retaining edge. It is not derived from or used as a raw GLB collider.
+// Legacy PART 3 callers now share the same measured recessed dark-race
+// collider as the active PART 2 path. There is no second outer-track profile.
 function makePart3OuterTrackTrimesh(verticalOffset = 0) {
-  const crossSection: Array<[number, number]> = [
-    [1.95, -0.458],
-    [2.05, -0.39],
-    [2.12, -0.35],
-    [2.25, -0.343],
-    [2.35, -0.338],
-    [2.45, -0.33],
-    [2.65, -0.27],
-    [2.90, -0.27],
-    [2.95, -0.15],
-  ];
-  const vertices: number[] = [];
-  const indices: number[] = [];
-  const segments = 128;
-  for (const [radius, y] of crossSection) {
-    for (let segment = 0; segment < segments; segment += 1) {
-      const angle = (segment / segments) * TWO_PI;
-       vertices.push(
-         Math.sin(angle) * radius,
-          y + verticalOffset,
-         Math.cos(angle) * radius,
-       );
-    }
-  }
-  for (let row = 0; row < crossSection.length - 1; row += 1) {
-    for (let segment = 0; segment < segments; segment += 1) {
-      const next = (segment + 1) % segments;
-      const a = row * segments + segment;
-      const b = row * segments + next;
-      const c = (row + 1) * segments + next;
-      const d = (row + 1) * segments + segment;
-      indices.push(a, d, b, b, d, c);
-    }
-  }
-  return {
-    vertices: new Float32Array(vertices),
-    indices: new Uint32Array(indices),
-  };
+  return makePart2RaceChannelTrimesh(verticalOffset);
 }
 
 function makeWorldTrimeshFromObject(object: THREE.Object3D) {
@@ -2192,7 +2117,7 @@ export function Part2SceneViewport({
         visibleSurfaceSource: visibleSurface?.source ?? null,
         darkTrackRadiusBand: PART3_DARK_TRACK_RADIUS_BAND,
         analyticColliderContactYBefore:
-          part3TrackHeightBase(radius) + PART3_LEGACY_TRACK_VERTICAL_OFFSET,
+          part3TrackHeight(radius, part3TrackVerticalOffset),
         analyticColliderContactYAfter: analyticContactY,
         rigidBodyCenterY: position[1],
         ballBottomY: position[1] - BALL_RADIUS,
@@ -3692,6 +3617,8 @@ export function Part2SceneViewport({
              const darkTrackSurface = measureVisibleSurfaceAt(
                launchSample[0],
                launchSample[2],
+               true,
+               PART2_ACTUAL_DARK_TRACK_RADIUS_BAND,
              );
              if (!darkTrackSurface) {
                throw new Error(
@@ -3711,7 +3638,7 @@ export function Part2SceneViewport({
                 .setRestitution(0.01),
               stationaryBody,
             );
-             part3ColliderRoles.set(part3TrackCollider.handle, 'outer-track-support-trimesh');
+             part3ColliderRoles.set(part3TrackCollider.handle, 'analytic-dark-recessed-channel');
             part3DeflectorColliders = addPart3DeflectorColliders(world, stationaryBody);
             for (const collider of part3DeflectorColliders) {
               part3ColliderRoles.set(collider.handle, 'visible-deflector-cuboid');
@@ -4840,7 +4767,7 @@ export function Part2SceneViewport({
                 visibleSurfaceSource: visibleSurface?.source ?? null,
                 darkTrackRadiusBand: PART3_DARK_TRACK_RADIUS_BAND,
                 analyticColliderContactYBefore:
-                  part3TrackHeightBase(radius) + PART3_LEGACY_TRACK_VERTICAL_OFFSET,
+                  part3TrackHeight(radius, part3TrackVerticalOffset),
                 analyticColliderContactYAfter: part3TrackHeight(
                   radius,
                   part3TrackVerticalOffset,
