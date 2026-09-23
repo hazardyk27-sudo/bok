@@ -8,11 +8,18 @@ import {
 } from "./ScratchProgress";
 import { prefersReducedMotion } from "./ScratchFeedback";
 
-const MIN_RESULT_COMMIT_DISTANCE_PX = 3;
 const MIN_AUDIO_INTERVAL_MS = 28;
-const MAX_TRAIL_SAMPLES = 1400;
-const MAX_DEBRIS_PARTICLES = 14;
-const MOBILE_DEBRIS_PARTICLES = 8;
+const MAX_TRAIL_SAMPLES = 1800;
+const MAX_DEBRIS_PARTICLES = 16;
+const MOBILE_DEBRIS_PARTICLES = 9;
+
+type ScratchLayerName = "lacquer" | "foil" | "base";
+
+type ScratchLayer = {
+  name: ScratchLayerName;
+  canvas: HTMLCanvasElement;
+  context: CanvasRenderingContext2D;
+};
 
 type DebrisParticle = {
   x: number;
@@ -38,13 +45,14 @@ export type ScratchSurfaceOptions = {
   audio?: AudioManager;
   debrisCanvas?: HTMLCanvasElement;
   resultReady?: boolean;
+  layerCanvases?: HTMLCanvasElement[];
   onCommit: () => Promise<void>;
 };
 
 const clamp = (value: number, minimum = 0, maximum = 1) => Math.max(minimum, Math.min(maximum, value));
+const phase = (depth: number, start: number, end: number) => clamp((depth - start) / Math.max(0.001, end - start));
 
 export class ScratchSurface {
-  private readonly context: CanvasRenderingContext2D;
   private readonly progress: ScratchProgressGrid;
   private readonly onCommit: () => Promise<void>;
   private readonly audio?: AudioManager;
@@ -53,8 +61,9 @@ export class ScratchSurface {
   private readonly debrisCanvas?: HTMLCanvasElement;
   private readonly debrisContext?: CanvasRenderingContext2D;
   private readonly pointerId: { value: number | null } = { value: null };
+  private readonly layers: ScratchLayer[];
+  private readonly interactionCanvas: HTMLCanvasElement;
   private lastPoint: ScratchPoint | null = null;
-  private gestureDistance = 0;
   private resultReady = false;
   private resultRequest: Promise<void> | null = null;
   private lastMoveAt = 0;
@@ -69,10 +78,10 @@ export class ScratchSurface {
     if (event.pointerType === "mouse" && event.button !== 0) return;
     this.pointerId.value = event.pointerId;
     this.lastPoint = this.pointFromEvent(event);
-    this.gestureDistance = 0;
     this.lastMoveAt = performance.now();
-    this.canvas.setPointerCapture(event.pointerId);
-    this.canvas.classList.add("is-scratching");
+    this.interactionCanvas.setPointerCapture(event.pointerId);
+    this.interactionCanvas.classList.add("is-scratching");
+    if (!this.resultReady) this.ensureResultCommitted();
     event.preventDefault();
   };
 
@@ -82,28 +91,19 @@ export class ScratchSurface {
     const deltaX = point.x - this.lastPoint.x;
     const deltaY = point.y - this.lastPoint.y;
     const distance = Math.hypot(deltaX, deltaY);
-    if (distance < 0.0006) return;
+    if (distance < 0.0005) return;
 
     const now = performance.now();
-    const distancePx = distance * Math.max(1, this.canvas.clientWidth);
+    const distancePx = distance * Math.max(1, this.interactionCanvas.clientWidth);
     const elapsed = Math.max(8, now - this.lastMoveAt);
     const speed = clamp(distancePx / elapsed / 1.05);
     const angle = Math.atan2(deltaY, deltaX);
-    this.gestureDistance += distancePx;
 
-    if (!this.resultReady && this.gestureDistance >= MIN_RESULT_COMMIT_DISTANCE_PX) {
-      this.ensureResultCommitted();
-    }
-
-    for (const sample of interpolateScratchPoints(this.lastPoint, point, 0.018)) {
-      const depthGain = this.abrasionConfig.depthPerSample * (0.92 + speed * 0.34);
+    for (const sample of interpolateScratchPoints(this.lastPoint, point, 0.014)) {
+      const depthGain = this.abrasionConfig.depthPerSample * (0.86 + speed * 0.34);
       this.progress.sampleCircle(sample.x, sample.y, this.abrasionConfig.brushRadius, depthGain);
       this.rememberTrail(sample, angle, speed);
-      if (this.resultReady && this.progress.isRevealableAt(sample.x, sample.y)) {
-        this.cutFoil(sample, angle, speed);
-      } else {
-        this.drawScuff(sample, angle, speed);
-      }
+      this.applyThreeLayerAbrasion(sample, angle, speed, this.resultReady);
     }
 
     this.emitDebris(point, angle, speed);
@@ -119,20 +119,29 @@ export class ScratchSurface {
 
   private readonly finishPointer = (event: PointerEvent) => {
     if (this.pointerId.value !== event.pointerId) return;
-    if (this.canvas.hasPointerCapture(event.pointerId)) this.canvas.releasePointerCapture(event.pointerId);
+    if (this.interactionCanvas.hasPointerCapture(event.pointerId)) this.interactionCanvas.releasePointerCapture(event.pointerId);
     this.pointerId.value = null;
     this.lastPoint = null;
     this.lastMoveAt = 0;
-    this.canvas.classList.remove("is-scratching");
+    this.interactionCanvas.classList.remove("is-scratching");
   };
 
   constructor(
-    private readonly canvas: HTMLCanvasElement,
+    fallbackCanvas: HTMLCanvasElement,
     options: ScratchSurfaceOptions,
   ) {
-    this.context = canvas.getContext("2d")!;
+    const canvases = options.layerCanvases?.length ? options.layerCanvases : [fallbackCanvas];
+    this.layers = canvases.map((canvas) => {
+      const name = (canvas.dataset.scratchLayer ?? "lacquer") as ScratchLayerName;
+      return { name, canvas, context: canvas.getContext("2d")! };
+    });
+    this.interactionCanvas =
+      this.layers.find((layer) => layer.name === "lacquer")?.canvas ??
+      this.layers.at(-1)?.canvas ??
+      fallbackCanvas;
+
     this.abrasionConfig = { ...SCRATCH_ABRASION_CONFIG, ...options.abrasion };
-    this.progress = new ScratchProgressGrid(18, 12, 1, this.abrasionConfig);
+    this.progress = new ScratchProgressGrid(22, 14, 1, this.abrasionConfig);
     this.onCommit = options.onCommit;
     this.audio = options.audio;
     this.reducedMotion = prefersReducedMotion();
@@ -140,37 +149,38 @@ export class ScratchSurface {
     this.debrisContext = options.debrisCanvas?.getContext("2d") ?? undefined;
     this.resultReady = options.resultReady ?? false;
     if (this.resultReady) this.resultRequest = Promise.resolve();
-    this.resizeCanvas();
-    this.paintCover();
-    canvas.addEventListener("pointerdown", this.handlePointerDown);
-    canvas.addEventListener("pointermove", this.handlePointerMove);
-    canvas.addEventListener("pointerup", this.finishPointer);
-    canvas.addEventListener("pointercancel", this.finishPointer);
-    canvas.addEventListener("lostpointercapture", this.finishPointer);
+
+    this.resizeCanvases();
+    this.paintLayers();
+
+    this.interactionCanvas.addEventListener("pointerdown", this.handlePointerDown);
+    this.interactionCanvas.addEventListener("pointermove", this.handlePointerMove);
+    this.interactionCanvas.addEventListener("pointerup", this.finishPointer);
+    this.interactionCanvas.addEventListener("pointercancel", this.finishPointer);
+    this.interactionCanvas.addEventListener("lostpointercapture", this.finishPointer);
   }
 
   destroy() {
     this.cancelDebris();
-    if (this.pointerId.value !== null && this.canvas.hasPointerCapture(this.pointerId.value)) {
-      this.canvas.releasePointerCapture(this.pointerId.value);
+    if (this.pointerId.value !== null && this.interactionCanvas.hasPointerCapture(this.pointerId.value)) {
+      this.interactionCanvas.releasePointerCapture(this.pointerId.value);
     }
     this.pointerId.value = null;
     this.lastPoint = null;
-    this.canvas.classList.remove("is-scratching");
-    this.canvas.removeEventListener("pointerdown", this.handlePointerDown);
-    this.canvas.removeEventListener("pointermove", this.handlePointerMove);
-    this.canvas.removeEventListener("pointerup", this.finishPointer);
-    this.canvas.removeEventListener("pointercancel", this.finishPointer);
-    this.canvas.removeEventListener("lostpointercapture", this.finishPointer);
+    this.interactionCanvas.classList.remove("is-scratching");
+    this.interactionCanvas.removeEventListener("pointerdown", this.handlePointerDown);
+    this.interactionCanvas.removeEventListener("pointermove", this.handlePointerMove);
+    this.interactionCanvas.removeEventListener("pointerup", this.finishPointer);
+    this.interactionCanvas.removeEventListener("pointercancel", this.finishPointer);
+    this.interactionCanvas.removeEventListener("lostpointercapture", this.finishPointer);
   }
 
   reset() {
-    if (this.pointerId.value !== null && this.canvas.hasPointerCapture(this.pointerId.value)) {
-      this.canvas.releasePointerCapture(this.pointerId.value);
+    if (this.pointerId.value !== null && this.interactionCanvas.hasPointerCapture(this.pointerId.value)) {
+      this.interactionCanvas.releasePointerCapture(this.pointerId.value);
     }
     this.pointerId.value = null;
     this.lastPoint = null;
-    this.gestureDistance = 0;
     this.lastMoveAt = 0;
     this.lastAudioAt = -Infinity;
     this.brushStep = 0;
@@ -178,9 +188,9 @@ export class ScratchSurface {
     this.resultReady = false;
     this.resultRequest = null;
     this.progress.reset();
-    this.context.clearRect(0, 0, this.canvas.clientWidth, this.canvas.clientHeight);
+    this.layers.forEach((layer) => layer.context.clearRect(0, 0, layer.canvas.clientWidth, layer.canvas.clientHeight));
     this.clearDebris();
-    this.paintCover();
+    this.paintLayers();
   }
 
   private rememberTrail(point: ScratchPoint, angle: number, speed: number) {
@@ -195,7 +205,7 @@ export class ScratchSurface {
     this.resultRequest = this.onCommit()
       .then(() => {
         this.resultReady = true;
-        this.replayTrail();
+        this.replayBaseLayer();
       })
       .catch(() => {
         this.resultReady = false;
@@ -203,20 +213,22 @@ export class ScratchSurface {
       });
   }
 
-  private replayTrail() {
+  private replayBaseLayer() {
     for (const sample of this.trail) {
-      if (this.progress.isRevealableAt(sample.point.x, sample.point.y)) {
-        this.cutFoil(sample.point, sample.angle, sample.speed);
-      }
+      const depth = this.progress.depthAt(sample.point.x, sample.point.y);
+      const baseAmount = phase(depth, 0.48, 0.9);
+      if (baseAmount > 0) this.eraseLayer("base", sample.point, sample.angle, sample.speed, baseAmount);
     }
   }
 
-  private resizeCanvas() {
-    const rect = this.canvas.getBoundingClientRect();
+  private resizeCanvases() {
+    const rect = this.interactionCanvas.getBoundingClientRect();
     const ratio = Math.max(1, Math.min(2, window.devicePixelRatio || 1));
-    this.canvas.width = Math.max(1, Math.round(rect.width * ratio));
-    this.canvas.height = Math.max(1, Math.round(rect.height * ratio));
-    this.context.setTransform(ratio, 0, 0, ratio, 0, 0);
+    for (const layer of this.layers) {
+      layer.canvas.width = Math.max(1, Math.round(rect.width * ratio));
+      layer.canvas.height = Math.max(1, Math.round(rect.height * ratio));
+      layer.context.setTransform(ratio, 0, 0, ratio, 0, 0);
+    }
     if (this.debrisCanvas && this.debrisContext) {
       this.debrisCanvas.width = Math.max(1, Math.round(rect.width * ratio));
       this.debrisCanvas.height = Math.max(1, Math.round(rect.height * ratio));
@@ -224,140 +236,162 @@ export class ScratchSurface {
     }
   }
 
-  private paintCover() {
-    const width = this.canvas.clientWidth;
-    const height = this.canvas.clientHeight;
-    const base = this.context.createLinearGradient(0, 0, width, height);
-    base.addColorStop(0, "#e0bb70");
-    base.addColorStop(.18, "#a57338");
-    base.addColorStop(.46, "#d1a457");
-    base.addColorStop(.72, "#8a5d31");
-    base.addColorStop(1, "#d9b36a");
-    this.context.fillStyle = base;
-    this.context.fillRect(0, 0, width, height);
+  private paintLayers() {
+    for (const layer of this.layers) this.paintLayer(layer);
+  }
 
-    const sheen = this.context.createLinearGradient(0, 0, width, height);
-    sheen.addColorStop(0, "rgba(255, 247, 205, .3)");
-    sheen.addColorStop(.32, "rgba(255, 240, 186, .05)");
-    sheen.addColorStop(.6, "rgba(36, 24, 18, .10)");
-    sheen.addColorStop(1, "rgba(255, 226, 155, .18)");
-    this.context.fillStyle = sheen;
-    this.context.fillRect(0, 0, width, height);
+  private paintLayer(layer: ScratchLayer) {
+    const width = layer.canvas.clientWidth;
+    const height = layer.canvas.clientHeight;
+    const context = layer.context;
 
-    this.context.save();
-    this.context.lineCap = "round";
-    for (let index = -12; index < Math.ceil(width / 8) + 16; index += 1) {
-      const x = index * 8;
-      this.context.beginPath();
-      this.context.moveTo(x, 0);
-      this.context.lineTo(x + height * .92, height);
-      this.context.lineWidth = index % 3 === 0 ? .7 : .4;
-      this.context.strokeStyle = index % 4 === 0
-        ? "rgba(255, 244, 198, .2)"
-        : "rgba(57, 36, 20, .11)";
-      this.context.stroke();
+    if (layer.name === "base") {
+      const base = context.createLinearGradient(0, 0, width, height);
+      base.addColorStop(0, "#9c6d39");
+      base.addColorStop(.48, "#c89a56");
+      base.addColorStop(1, "#79502c");
+      context.fillStyle = base;
+      context.fillRect(0, 0, width, height);
+      context.globalAlpha = .18;
+      context.fillStyle = "#f0d291";
+      for (let y = 6; y < height; y += 9) context.fillRect(0, y, width, .6);
+      context.globalAlpha = 1;
+      return;
     }
-    this.context.restore();
 
-    const vignette = this.context.createRadialGradient(width * .5, height * .45, 0, width * .5, height * .45, Math.max(width, height) * .8);
-    vignette.addColorStop(0, "rgba(255,255,255,.02)");
-    vignette.addColorStop(1, "rgba(45,25,11,.16)");
-    this.context.fillStyle = vignette;
-    this.context.fillRect(0, 0, width, height);
+    if (layer.name === "foil") {
+      const foil = context.createLinearGradient(0, height, width, 0);
+      foil.addColorStop(0, "#b07a39");
+      foil.addColorStop(.22, "#e1bd72");
+      foil.addColorStop(.5, "#8d6033");
+      foil.addColorStop(.78, "#d5aa5f");
+      foil.addColorStop(1, "#7d522e");
+      context.fillStyle = foil;
+      context.fillRect(0, 0, width, height);
+
+      context.save();
+      context.globalAlpha = .18;
+      context.lineCap = "round";
+      for (let index = -10; index < Math.ceil(width / 7) + 18; index += 1) {
+        const x = index * 7;
+        context.beginPath();
+        context.moveTo(x, 0);
+        context.lineTo(x + height * .95, height);
+        context.lineWidth = index % 4 === 0 ? 1.1 : .45;
+        context.strokeStyle = index % 3 === 0 ? "#fff0bd" : "#3d2819";
+        context.stroke();
+      }
+      context.restore();
+      return;
+    }
+
+    const lacquer = context.createLinearGradient(0, 0, width, height);
+    lacquer.addColorStop(0, "rgba(249, 218, 145, .96)");
+    lacquer.addColorStop(.28, "rgba(177, 119, 55, .95)");
+    lacquer.addColorStop(.52, "rgba(225, 181, 97, .94)");
+    lacquer.addColorStop(.78, "rgba(132, 86, 43, .96)");
+    lacquer.addColorStop(1, "rgba(239, 202, 126, .95)");
+    context.fillStyle = lacquer;
+    context.fillRect(0, 0, width, height);
+
+    const shine = context.createRadialGradient(width * .28, height * .16, 0, width * .28, height * .16, width * .86);
+    shine.addColorStop(0, "rgba(255,255,230,.34)");
+    shine.addColorStop(.38, "rgba(255,235,177,.06)");
+    shine.addColorStop(1, "rgba(44,26,15,.12)");
+    context.fillStyle = shine;
+    context.fillRect(0, 0, width, height);
   }
 
   private pointFromEvent(event: PointerEvent): ScratchPoint {
-    const rect = this.canvas.getBoundingClientRect();
+    const rect = this.interactionCanvas.getBoundingClientRect();
     return {
       x: Math.max(0, Math.min(1, (event.clientX - rect.left) / Math.max(1, rect.width))),
       y: Math.max(0, Math.min(1, (event.clientY - rect.top) / Math.max(1, rect.height))),
     };
   }
 
-  private drawScuff(point: ScratchPoint, angle: number, speed: number) {
-    const width = this.canvas.clientWidth;
-    const height = this.canvas.clientHeight;
-    const radius = Math.max(6, width * this.abrasionConfig.brushRadius);
-    const x = point.x * width;
-    const y = point.y * height;
+  private applyThreeLayerAbrasion(point: ScratchPoint, angle: number, speed: number, resultReady: boolean) {
+    const depth = this.progress.depthAt(point.x, point.y);
+    const lacquerAmount = phase(depth, 0.02, 0.34);
+    const foilAmount = phase(depth, 0.24, 0.64);
+    const baseAmount = phase(depth, 0.48, 0.9);
 
-    this.context.save();
-    this.context.translate(x, y);
-    this.context.rotate(angle);
-    this.context.globalCompositeOperation = "source-over";
-    this.context.globalAlpha = 0.16 + speed * 0.06;
-    this.context.strokeStyle = "rgba(255, 244, 204, .72)";
-    this.context.lineWidth = Math.max(.55, radius * .045);
-    this.context.beginPath();
-    this.context.moveTo(-radius * .52, -radius * .08);
-    this.context.lineTo(radius * .58, radius * .07);
-    this.context.stroke();
-
-    this.context.globalAlpha = .08;
-    this.context.strokeStyle = "rgba(66, 40, 21, .8)";
-    this.context.lineWidth = Math.max(.35, radius * .025);
-    this.context.beginPath();
-    this.context.moveTo(-radius * .36, radius * .18);
-    this.context.lineTo(radius * .44, radius * .24);
-    this.context.stroke();
-    this.context.restore();
+    if (lacquerAmount > 0) this.eraseLayer("lacquer", point, angle, speed, lacquerAmount);
+    if (foilAmount > 0) this.eraseLayer("foil", point, angle, speed, foilAmount);
+    if (resultReady && baseAmount > 0) this.eraseLayer("base", point, angle, speed, baseAmount);
   }
 
-  private cutFoil(point: ScratchPoint, angle: number, speed: number) {
-    const width = this.canvas.clientWidth;
-    const height = this.canvas.clientHeight;
-    const radius = Math.max(7, width * this.abrasionConfig.brushRadius * .82);
+  private eraseLayer(
+    name: ScratchLayerName,
+    point: ScratchPoint,
+    angle: number,
+    speed: number,
+    amount: number,
+  ) {
+    const layer = this.layers.find((candidate) => candidate.name === name);
+    if (!layer) return;
+
+    const width = layer.canvas.clientWidth;
+    const height = layer.canvas.clientHeight;
+    const baseRadius = Math.max(6, width * this.abrasionConfig.brushRadius);
+    const layerScale = name === "lacquer" ? .58 : name === "foil" ? .72 : .84;
+    const radius = baseRadius * layerScale;
     const x = point.x * width;
     const y = point.y * height;
-    const roughness = .9 + Math.sin(this.brushStep * 1.63) * .07;
+    const roughness = .9 + Math.sin(this.brushStep * 1.67 + (name === "foil" ? 1.3 : name === "base" ? 2.4 : 0)) * .07;
     this.brushStep += 1;
 
-    this.context.save();
-    this.context.translate(x, y);
-    this.context.rotate(angle);
-    this.context.globalCompositeOperation = "destination-out";
-    this.context.globalAlpha = .9;
-    this.context.fillStyle = "#000";
-    this.drawBrushPath(radius, speed, roughness);
-    this.context.restore();
+    layer.context.save();
+    layer.context.translate(x, y);
+    layer.context.rotate(angle);
+    layer.context.globalCompositeOperation = "destination-out";
+    layer.context.globalAlpha = clamp(.16 + amount * .5, .12, .72);
+    layer.context.fillStyle = "#000";
+    this.drawBrushPath(layer.context, radius, speed, roughness);
+    layer.context.restore();
   }
 
-  private drawBrushPath(radius: number, speed: number, roughness: number) {
-    this.context.beginPath();
-    for (let index = 0; index < 18; index += 1) {
-      const theta = (index / 18) * Math.PI * 2;
-      const variation = roughness + Math.sin(index * 3.91 + this.brushStep * .31) * .09;
+  private drawBrushPath(
+    context: CanvasRenderingContext2D,
+    radius: number,
+    speed: number,
+    roughness: number,
+  ) {
+    context.beginPath();
+    for (let index = 0; index < 20; index += 1) {
+      const theta = (index / 20) * Math.PI * 2;
+      const variation = roughness + Math.sin(index * 3.73 + this.brushStep * .29) * .085;
       const pointX = Math.cos(theta) * radius * variation;
-      const pointY = Math.sin(theta) * radius * (.72 + speed * .12) * variation;
-      if (index === 0) this.context.moveTo(pointX, pointY);
-      else this.context.lineTo(pointX, pointY);
+      const pointY = Math.sin(theta) * radius * (.68 + speed * .1) * variation;
+      if (index === 0) context.moveTo(pointX, pointY);
+      else context.lineTo(pointX, pointY);
     }
-    this.context.closePath();
-    this.context.fill();
+    context.closePath();
+    context.fill();
   }
 
   private emitDebris(point: ScratchPoint, angle: number, speed: number) {
-    if (this.reducedMotion || !this.debrisContext || speed < .1) return;
+    if (this.reducedMotion || !this.debrisContext || speed < .09) return;
     const isCompact = window.innerWidth <= 720 || (navigator.maxTouchPoints ?? 0) > 0;
     const limit = isCompact ? MOBILE_DEBRIS_PARTICLES : MAX_DEBRIS_PARTICLES;
-    const count = speed > .68 ? 2 : 1;
-    const width = this.canvas.clientWidth;
-    const height = this.canvas.clientHeight;
+    const count = speed > .66 ? 2 : 1;
+    const width = this.interactionCanvas.clientWidth;
+    const height = this.interactionCanvas.clientHeight;
 
     for (let index = 0; index < count; index += 1) {
       if (this.debris.length >= limit) this.debris.shift();
-      const spread = (index - (count - 1) / 2) * .3;
+      const spread = (index - (count - 1) / 2) * .32;
       this.debris.push({
         x: point.x * width,
         y: point.y * height,
-        vx: Math.cos(angle + Math.PI + spread) * (.2 + speed * .9),
-        vy: Math.sin(angle + Math.PI + spread) * (.2 + speed * .9) - (.15 + speed * .5),
-        size: .7 + speed * 1.1,
+        vx: Math.cos(angle + Math.PI + spread) * (.22 + speed * .95),
+        vy: Math.sin(angle + Math.PI + spread) * (.22 + speed * .95) - (.16 + speed * .55),
+        size: .65 + speed * 1.05,
         rotation: angle + index,
         spin: (index % 2 ? 1 : -1) * (.04 + speed * .08),
         life: 0,
-        maxLife: 190 + speed * 150,
-        alpha: .28 + speed * .24,
+        maxLife: 200 + speed * 170,
+        alpha: .3 + speed * .26,
       });
     }
 
@@ -391,8 +425,8 @@ export class ScratchSurface {
       this.debrisContext!.translate(particle.x, particle.y);
       this.debrisContext!.rotate(particle.rotation);
       this.debrisContext!.globalAlpha = particle.alpha * (1 - lifeProgress);
-      this.debrisContext!.fillStyle = lifeProgress < .45 ? "#f1d38c" : "#a87943";
-      this.debrisContext!.fillRect(-particle.size / 2, -particle.size / 2, particle.size, particle.size * .55);
+      this.debrisContext!.fillStyle = lifeProgress < .42 ? "#f0d69a" : "#9e713f";
+      this.debrisContext!.fillRect(-particle.size / 2, -particle.size / 2, particle.size, particle.size * .52);
       this.debrisContext!.restore();
 
       return particle.x > -8 && particle.x < width + 8 && particle.y > -8 && particle.y < height + 8;
