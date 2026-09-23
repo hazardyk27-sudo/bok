@@ -411,6 +411,18 @@ describe("authoritative roulette physics config", () => {
       "'simulation-step-0-after'",
     );
     expect(part3ViewportSource).toContain(
+      "'static-gate-start'",
+    );
+    expect(part3ViewportSource).toContain(
+      "'static-world-step-before'",
+    );
+    expect(part3ViewportSource).toContain(
+      "'static-contact-query-after'",
+    );
+    expect(part3ViewportSource).toContain(
+      "'part6-batch-dispatch'",
+    );
+    expect(part3ViewportSource).toContain(
       "ballMeshVisible: activeBallMesh.visible",
     );
     expect(part3ViewportSource).toContain(

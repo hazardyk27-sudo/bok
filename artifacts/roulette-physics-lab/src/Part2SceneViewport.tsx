@@ -2997,6 +2997,23 @@ export function Part2SceneViewport({
 
     const runPart2RaceStaticPlacementCheck = () => {
       if (!world || !ballBody || !ballMesh || !part3TrackCollider) return;
+      const part6RouteDiagnostic =
+        outerLaneSpinOnly &&
+        (new URLSearchParams(window.location.search).has('part6SeedCount') ||
+          new URLSearchParams(window.location.search).has(
+            'part6MaxDurationSeconds',
+          ));
+      const logStaticGateStage = (
+        stage: string,
+        extra: Record<string, number | string | boolean | null> = {},
+      ) => {
+        if (!part6RouteDiagnostic) return;
+        console.info(
+          'PART6_DIAGNOSTIC_STAGE',
+          JSON.stringify({ stage, ...extra }),
+        );
+      };
+      logStaticGateStage('static-gate-start');
       const launchAzimuth = 0.37;
       const spawnRadius = PART2_ACTUAL_DARK_TRACK_LAUNCH_RADIUS;
       const surface = part2ChannelSurfaceAt(spawnRadius, part2RaceVerticalOffset);
@@ -3004,16 +3021,32 @@ export function Part2SceneViewport({
       const spawnPoint = new THREE.Vector3(
         ...radialPosition(spawnRadius, launchAzimuth, surface.y),
       ).addScaledVector(contactNormal, BALL_RADIUS + 0.002);
+      logStaticGateStage('visible-surface-before');
       const visibleSurface = measureVisibleSurfaceAt(
         spawnPoint.x,
         spawnPoint.z,
         true,
         PART2_ACTUAL_DARK_TRACK_RADIUS_BAND,
       );
+      logStaticGateStage('visible-surface-after', {
+        found: Boolean(visibleSurface),
+      });
+      logStaticGateStage('inner-transition-profile-before');
       const visibleInnerTransitionProfile =
         measureVisibleInnerTransitionProfile();
+      logStaticGateStage('inner-transition-profile-after', {
+        samples: visibleInnerTransitionProfile.length,
+      });
+      logStaticGateStage('inner-surface-profile-before');
       const visibleInnerSurfaceProfile = measureVisibleInnerSurfaceProfile();
+      logStaticGateStage('inner-surface-profile-after', {
+        samples: visibleInnerSurfaceProfile.length,
+      });
+      logStaticGateStage('outer-wall-profile-before');
       const visibleOuterWallProfile = measureVisibleOuterWallProfile();
+      logStaticGateStage('outer-wall-profile-after', {
+        samples: visibleOuterWallProfile.length,
+      });
       const analyticSurfaceY = surface.y;
       const visualHeightError = visibleSurface
         ? Math.abs(visibleSurface.y - analyticSurfaceY)
@@ -3060,6 +3093,7 @@ export function Part2SceneViewport({
           role === 'outer-track-support-trimesh' ||
           role === 'actual-glb-outside-trimesh',
       );
+      logStaticGateStage('static-report-before');
       setPart2RacePlacementReport({
         status: 'running',
         channelInnerRadius: PART2_CHANNEL_PROFILE[0][0],
@@ -3153,16 +3187,22 @@ export function Part2SceneViewport({
       ballBody.setRotation({ x: 0, y: 0, z: 0, w: 1 }, true);
       ballMesh.position.copy(spawnPoint);
       ballMesh.quaternion.identity();
+      logStaticGateStage('static-world-step-before');
       world.step();
+      logStaticGateStage('static-world-step-after');
 
       const position = ballBody.translation();
       let physicalContact = false;
       const raceColliderHandle = part3TrackCollider.handle;
+      logStaticGateStage('static-contact-query-before');
       if (physicsBallCollider) {
         world.contactPairsWith(physicsBallCollider, (otherCollider) => {
           physicalContact ||= otherCollider.handle === raceColliderHandle;
         });
       }
+      logStaticGateStage('static-contact-query-after', {
+        physicalContact,
+      });
       const centerRadius = Math.hypot(position.x, position.z);
       const centerSurface = part2ChannelSurfaceAt(
         centerRadius,
@@ -3226,6 +3266,11 @@ export function Part2SceneViewport({
         bottomGap >= -0.03;
       const visualGateVerified = visibleSurfaceMatch;
       const passed = numericPlacementPassed && visualGateVerified;
+      logStaticGateStage('static-gate-evaluated', {
+        numericPlacementPassed,
+        visualGateVerified,
+        physicalContact,
+      });
       ballMesh.position.set(position.x, position.y, position.z);
       const rotation = ballBody.rotation();
       ballMesh.quaternion.set(rotation.x, rotation.y, rotation.z, rotation.w);
@@ -3303,6 +3348,7 @@ export function Part2SceneViewport({
       );
       if (numericPlacementPassed) {
         if (outerLaneSpinOnly) {
+          logStaticGateStage('part6-batch-dispatch');
           void runPart6FullSpinTelemetryBatch();
         } else {
           startPart3OuterLaneProbe();
