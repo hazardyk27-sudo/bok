@@ -327,8 +327,9 @@ test.describe("Cadı Kazan critical round lifecycle", () => {
     expect(layout.dockInsideViewport).toBe(true);
     expect(Math.abs(layout.sceneWidth - layout.viewportWidth)).toBeLessThanOrEqual(2);
     expect(Math.abs(layout.sceneHeight - layout.viewportHeight)).toBeLessThanOrEqual(2);
-    expect(Math.min(layout.firstCellWidth, layout.firstCellHeight)).toBeGreaterThanOrEqual(30);
+    expect(Math.min(layout.firstCellWidth, layout.firstCellHeight)).toBeGreaterThanOrEqual(36);
     expect(layout.ticketWidth / Math.max(1, layout.ticketHeight)).toBeGreaterThanOrEqual(1.55);
+    await expect(page.locator(".witch-page")).toHaveClass(/is-advanced-round/);
     expect(layout.pageTransform).not.toBe("none");
     await expect(page.locator(".witch-rotate-hint")).toHaveCount(0);
   });
