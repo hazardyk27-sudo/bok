@@ -4121,21 +4121,34 @@ export function Part2SceneViewport({
             return;
           }
 
-          const launchNormal = part2ChannelNormalAt(
-            PART2_ACTUAL_DARK_TRACK_LAUNCH_RADIUS,
+          const launchClearance = BALL_RADIUS + 0.002;
+          let launchContactRadius =
+            PART2_ACTUAL_DARK_TRACK_LAUNCH_RADIUS;
+          let launchNormal = part2ChannelNormalAt(
+            launchContactRadius,
             run.launchAzimuth,
           );
+          for (let iteration = 0; iteration < 3; iteration += 1) {
+            const radialNormal =
+              launchNormal.x * Math.sin(run.launchAzimuth) +
+              launchNormal.z * Math.cos(run.launchAzimuth);
+            launchContactRadius =
+              PART2_ACTUAL_DARK_TRACK_LAUNCH_RADIUS -
+              radialNormal * launchClearance;
+            launchNormal = part2ChannelNormalAt(
+              launchContactRadius,
+              run.launchAzimuth,
+            );
+          }
           const launchChannelSurface = part2ChannelSurfaceAt(
-            PART2_ACTUAL_DARK_TRACK_LAUNCH_RADIUS,
+            launchContactRadius,
             part2RaceVerticalOffset,
           );
           const launchPosition = new THREE.Vector3(
-            Math.sin(run.launchAzimuth) *
-              PART2_ACTUAL_DARK_TRACK_LAUNCH_RADIUS,
+            Math.sin(run.launchAzimuth) * launchContactRadius,
             launchChannelSurface.y,
-            Math.cos(run.launchAzimuth) *
-              PART2_ACTUAL_DARK_TRACK_LAUNCH_RADIUS,
-          ).addScaledVector(launchNormal, BALL_RADIUS + 0.002);
+            Math.cos(run.launchAzimuth) * launchContactRadius,
+          ).addScaledVector(launchNormal, launchClearance);
           const tangent = new THREE.Vector3(
             Math.cos(run.launchAzimuth),
             0,
