@@ -3173,7 +3173,8 @@ export function Part2SceneViewport({
       part3OuterLaneSpinMinDeflectorClearance =
         launchRadius -
         BALL_RADIUS -
-        PART2_ACTUAL_INWARD_EDGE_RADIUS;
+        (part4MeasuredDeflectorOuterRadius ??
+          PART2_ACTUAL_INWARD_EDGE_RADIUS);
       part3OuterLaneSpinMaxPenetration = 0;
       part3OuterLaneSpinMaxSeparation = 0;
       part3OuterLaneSpinWoodContact = false;
@@ -4202,22 +4203,6 @@ export function Part2SceneViewport({
               stationaryBody,
             );
              part3ColliderRoles.set(part3TrackCollider.handle, 'analytic-dark-recessed-channel');
-            if (!part4DeflectorAudit?.passed) {
-              throw new Error(
-                `PART 4 requires a credible visible-deflector audit before creating colliders: ${part4DeflectorAudit?.detail ?? 'audit unavailable'}`,
-              );
-            }
-            part3DeflectorColliders = addMeasuredDeflectorColliders(
-              world,
-              stationaryBody,
-              part4DeflectorAudit.descriptors,
-            );
-            for (const collider of part3DeflectorColliders) {
-              part3ColliderRoles.set(
-                collider.handle,
-                'asset-measured-visible-deflector-cuboid',
-              );
-            }
            } else if (
              validationMode === 'part3' &&
              (geometryDiagnosticOnly || part1ProbeOnly)
@@ -4257,6 +4242,23 @@ export function Part2SceneViewport({
              !part1ProbeOnly &&
              part3TrackCollider
            ) {
+             if (!part4DeflectorAudit?.passed) {
+               throw new Error(
+                 `PART 4 requires a credible visible-deflector audit before creating colliders: ${part4DeflectorAudit?.detail ?? 'audit unavailable'}`,
+               );
+             }
+             part3DeflectorColliders = addMeasuredDeflectorColliders(
+               world,
+               stationaryBody,
+               part4DeflectorAudit.descriptors,
+             );
+             for (const collider of part3DeflectorColliders) {
+               part3ColliderRoles.set(
+                 collider.handle,
+                 'asset-measured-visible-deflector-cuboid',
+               );
+             }
+
              const activeTrackVerticalOffset =
                outerLaneOnly || outerLaneSpinOnly
                  ? part2RaceVerticalOffset
@@ -4909,7 +4911,10 @@ export function Part2SceneViewport({
             const rimClearance =
               PART2_ACTUAL_WOOD_INNER_RADIUS - BALL_RADIUS - radius;
             const deflectorClearance =
-              radius - BALL_RADIUS - PART2_ACTUAL_INWARD_EDGE_RADIUS;
+              radius -
+              BALL_RADIUS -
+              (part4MeasuredDeflectorOuterRadius ??
+                PART2_ACTUAL_INWARD_EDGE_RADIUS);
             const woodContact =
               radius + BALL_RADIUS >= PART2_ACTUAL_WOOD_INNER_RADIUS - 0.005;
             const escaped =
@@ -5014,7 +5019,8 @@ export function Part2SceneViewport({
                 radialClearanceToDeflector:
                   part3OuterLaneLaunchRadius -
                   BALL_RADIUS -
-                  PART2_ACTUAL_INWARD_EDGE_RADIUS,
+                  (part4MeasuredDeflectorOuterRadius ??
+                    PART2_ACTUAL_INWARD_EDGE_RADIUS),
                 outerTrackEdgeClearance:
                   PART2_ACTUAL_DARK_TRACK_RADIUS_BAND[1] -
                   BALL_RADIUS -
@@ -5201,7 +5207,10 @@ export function Part2SceneViewport({
             const rimClearance =
               PART2_ACTUAL_WOOD_INNER_RADIUS - BALL_RADIUS - radius;
             const inwardClearance =
-              radius - BALL_RADIUS - PART2_ACTUAL_INWARD_EDGE_RADIUS;
+              radius -
+              BALL_RADIUS -
+              (part4MeasuredDeflectorOuterRadius ??
+                PART2_ACTUAL_INWARD_EDGE_RADIUS);
             const woodContact =
               radius + BALL_RADIUS >= PART2_ACTUAL_WOOD_INNER_RADIUS - 0.005;
             const escaped =
