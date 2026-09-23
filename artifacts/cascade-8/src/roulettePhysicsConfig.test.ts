@@ -41,6 +41,16 @@ const part3ViewportSource = readFileSync(
   "utf8",
 );
 
+const physicsLabAppSource = readFileSync(
+  fileURLToPath(
+    new URL(
+      "../../roulette-physics-lab/src/App.tsx",
+      import.meta.url,
+    ),
+  ),
+  "utf8",
+);
+
 describe("authoritative roulette physics config", () => {
   it("locks the rou-lp-test-04 physical scale and ball standard", () => {
     expect(ROULETTE_PHYSICS_SCHEMA_VERSION).toBe(
@@ -215,7 +225,7 @@ describe("authoritative roulette physics config", () => {
     );
   });
 
-  it("locks PART 6A deterministic full-spin telemetry without tuning physics", () => {
+  it("locks PART 6A.1 deterministic full-spin hardening without tuning physics", () => {
     expect(part3ViewportSource).toContain(
       "const PART6_TELEMETRY_SCHEMA_VERSION = 'roulette-part6-full-spin-telemetry-v1'",
     );
@@ -228,10 +238,58 @@ describe("authoritative roulette physics config", () => {
       "return (value >>> 0) / 0x100000000;",
     );
     expect(part3ViewportSource).toContain(
-      "const runPart6FullSpinTelemetryBatch = () =>",
+      "const runPart6FullSpinTelemetryBatch = async () =>",
     );
     expect(part3ViewportSource).toContain(
-      "runPart6FullSpinTelemetryBatch();",
+      "void runPart6FullSpinTelemetryBatch();",
+    );
+    expect(part3ViewportSource).toContain(
+      "let part6TelemetryBatchRunning = false;",
+    );
+    expect(part3ViewportSource).toContain(
+      "rotorPivot && !part6TelemetryBatchRunning",
+    );
+    expect(part3ViewportSource).toContain(
+      "const PART6_UI_YIELD_STEPS = 240;",
+    );
+    expect(part3ViewportSource).toContain(
+      "window.setTimeout(resolve, 0);",
+    );
+    expect(part3ViewportSource).toContain(
+      "stateResetVerified",
+    );
+    expect(part3ViewportSource).toContain(
+      "'OUTER_RACE'",
+    );
+    expect(part3ViewportSource).toContain(
+      "'INWARD_DESCENT'",
+    );
+    expect(part3ViewportSource).toContain(
+      "'DEFLECTOR_ZONE'",
+    );
+    expect(part3ViewportSource).toContain(
+      "'ROTOR_ENTRY'",
+    );
+    expect(part3ViewportSource).toContain(
+      "'FRETS'",
+    );
+    expect(part3ViewportSource).toContain(
+      "'POCKET'",
+    );
+    expect(part3ViewportSource).toContain(
+      "'SETTLED'",
+    );
+    expect(part3ViewportSource).toContain(
+      "phaseSequenceValid",
+    );
+    expect(part3ViewportSource).toContain(
+      "transitionMaxSurfacePenetration",
+    );
+    expect(part3ViewportSource).toContain(
+      "transitionContactRoles",
+    );
+    expect(part3ViewportSource).toContain(
+      "maxUnsupportedTransitionDuration",
     );
     expect(part3ViewportSource).toContain(
       "role === 'asset-measured-visible-deflector-cuboid'",
@@ -244,6 +302,21 @@ describe("authoritative roulette physics config", () => {
     );
     expect(part3ViewportSource).toContain(
       "settledFrames >= settleFramesRequired",
+    );
+    expect(part3ViewportSource).toContain(
+      "safetyStatus:",
+    );
+    expect(part3ViewportSource).toContain(
+      "calibrationStatus: 'not-evaluated'",
+    );
+    expect(part3ViewportSource).toContain(
+      "medianLapCount",
+    );
+    expect(part3ViewportSource).toContain(
+      "medianTrackContactRatio",
+    );
+    expect(part3ViewportSource).toContain(
+      "safetyFailureRate",
     );
     expect(part3ViewportSource).toContain(
       "PART6_FULL_SPIN_TELEMETRY",
@@ -263,6 +336,24 @@ describe("authoritative roulette physics config", () => {
     expect(part3ViewportSource).not.toContain(".addForce(");
     expect(part3ViewportSource).not.toContain(".applyImpulse(");
     expect(part3ViewportSource).not.toContain(".addTorque(");
+  });
+
+  it("shows validation-specific errors instead of labeling every failure as WebGL", () => {
+    expect(physicsLabAppSource).toContain(
+      "VALIDATION_ERROR_TITLES",
+    );
+    expect(physicsLabAppSource).toContain(
+      "'physics-validation': 'Physics validation failed'",
+    );
+    expect(physicsLabAppSource).toContain(
+      "telemetry: 'PART 6 telemetry failed'",
+    );
+    expect(physicsLabAppSource).toContain(
+      "'geometry-audit': 'Geometry audit failed'",
+    );
+    expect(physicsLabAppSource).not.toContain(
+      "<strong>WebGL unavailable</strong>",
+    );
   });
 
   it("keeps the PART 2 containment correction geometric only", () => {
