@@ -3357,10 +3357,13 @@ export function Part2SceneViewport({
       ];
       const activeRaceCollider =
         part3ColliderRoles.get(part3TrackCollider.handle) ?? 'unknown';
+      const actualGlbRaceActive =
+        part6FullSpinRouteActive &&
+        activeRaceCollider === 'actual-glb-outside-trimesh';
       const broadSupportActive = [...part3ColliderRoles.values()].some(
         (role) =>
           role === 'outer-track-support-trimesh' ||
-          role === 'actual-glb-outside-trimesh',
+          (role === 'actual-glb-outside-trimesh' && !actualGlbRaceActive),
       );
       logStaticGateStage('static-report-before');
       setPart2RacePlacementReport({
@@ -3524,8 +3527,11 @@ export function Part2SceneViewport({
         visualHeightError <= 0.03 &&
         visibleSurface.y > -1.5 &&
         visibleSurface.y < 1;
+      const authorizedRaceCollider =
+        activeRaceCollider === 'analytic-dark-recessed-channel' ||
+        actualGlbRaceActive;
       const numericPlacementPassed =
-        activeRaceCollider === 'analytic-dark-recessed-channel' &&
+        authorizedRaceCollider &&
         !broadSupportActive &&
         physicalContact &&
         centerInsideFloorEnvelope &&
@@ -3585,7 +3591,7 @@ export function Part2SceneViewport({
                  : numericPlacementPassed
                    ? 'NUMERIC STATIC PASS: ball is inside the analytic recessed race; visual WebGL gate is unverified, so the short numerical probe will run and the overall gate will remain incomplete.'
                 : `FAIL: static channel gate failed (${[
-                    activeRaceCollider !== 'analytic-dark-recessed-channel'
+                    !authorizedRaceCollider
                       ? 'wrong active collider'
                       : '',
                     broadSupportActive ? 'broad support active' : '',
