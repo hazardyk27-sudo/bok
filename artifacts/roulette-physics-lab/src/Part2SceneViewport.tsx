@@ -6298,6 +6298,15 @@ export function Part2SceneViewport({
                activeTrackVerticalOffset,
                part3BowlBridgeOuterRadius,
              );
+             if (part6FullSpinRouteActive) {
+               console.info(
+                 'PART6_BOWL_BRIDGE_PROFILE',
+                 JSON.stringify({
+                   outerRadius: part3BowlBridgeOuterRadius,
+                   profile: part3BowlBridgeProfile,
+                 }),
+               );
+             }
              part3BowlBridgeColliders = addBowlBridgePrimitiveColliders(
                world,
                stationaryBody,
