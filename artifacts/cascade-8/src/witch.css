@@ -1868,9 +1868,11 @@
   }
 
   .witch-page {
-    height: 100dvh;
+    min-height: 100dvh;
+    height: auto;
     padding: 5px 8px 7px;
-    overflow: hidden;
+    overflow-x: hidden;
+    overflow-y: visible;
   }
 
   .witch-heading {
@@ -1918,7 +1920,8 @@
   }
 
   .witch-layout {
-    height: calc(100dvh - 82px);
+    min-height: calc(100dvh - 82px);
+    height: auto;
     grid-template-columns: 180px minmax(0, 1fr) 180px;
     gap: 7px;
   }
@@ -1926,8 +1929,9 @@
   .witch-controls,
   .witch-payout-panel {
     display: block !important;
-    height: 100%;
-    overflow: hidden;
+    min-height: 0;
+    height: auto;
+    overflow: visible;
     padding: 8px;
     border-radius: 10px;
   }
