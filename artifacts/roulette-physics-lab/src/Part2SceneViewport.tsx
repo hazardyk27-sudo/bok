@@ -1338,6 +1338,44 @@ function buildPocketFloorTrimesh() {
   };
 }
 
+function addKinematicPocketInnerGuard(
+  world: RAPIER.World,
+  body: RAPIER.RigidBody,
+) {
+  const colliders: RAPIER.Collider[] = [];
+  const segments = 64;
+  const radialHalfDepth = 0.03;
+  const guardRadius = POCKET_FLOOR_INNER_RADIUS - radialHalfDepth;
+  const verticalHalfHeight = 0.11;
+  const centerY = POCKET_FLOOR_Y + verticalHalfHeight;
+  const halfTangentialWidth =
+    guardRadius * Math.tan(Math.PI / segments) * 1.04;
+
+  for (let index = 0; index < segments; index += 1) {
+    const angle = (index / segments) * TWO_PI;
+    const collider = RAPIER.ColliderDesc.roundCuboid(
+      halfTangentialWidth,
+      verticalHalfHeight,
+      radialHalfDepth,
+      0.012,
+    )
+      .setTranslation(...radialPosition(guardRadius, angle, centerY))
+      .setRotation({
+        x: 0,
+        y: Math.sin(angle / 2),
+        z: 0,
+        w: Math.cos(angle / 2),
+      })
+      .setFriction(0.42)
+      .setRestitution(0.02)
+      .setCollisionGroups(
+        ROTOR_COLLISION_GROUP | (BALL_COLLISION_GROUP << 16),
+      );
+    colliders.push(world.createCollider(collider, body));
+  }
+  return colliders;
+}
+
 function addKinematicPocketSystem(world: RAPIER.World, body: RAPIER.RigidBody) {
   const colliders: RAPIER.Collider[] = [];
   const floorMesh = buildPocketFloorTrimesh();
@@ -6380,6 +6418,17 @@ export function Part2SceneViewport({
                  part3ColliderRoles.set(
                    collider.handle,
                    index === 0 ? 'pocket-floor-trimesh' : 'pocket-fret-cuboid',
+                 );
+               });
+               const pocketInnerGuard = addKinematicPocketInnerGuard(
+                 world,
+                 rotorBody,
+               );
+               part3PocketColliders.push(...pocketInnerGuard);
+               pocketInnerGuard.forEach((collider) => {
+                 part3ColliderRoles.set(
+                   collider.handle,
+                   'pocket-inner-retaining-ring',
                  );
                });
                const pocketCatchFloor = world.createCollider(
