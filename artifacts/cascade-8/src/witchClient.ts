@@ -575,7 +575,6 @@ export class WitchClient {
     const hasRound = Boolean(round);
     this.root.classList.toggle("has-round", hasRound);
     this.root.classList.toggle("is-active-round", hasActiveRound);
-    this.root.classList.toggle("is-advanced-focus", Boolean(round && round.mode === "ADVANCED"));
     this.root.querySelectorAll<HTMLButtonElement>("[data-witch-mode]").forEach((button) => {
       button.classList.toggle("is-selected", button.dataset.witchMode === this.mode);
       button.disabled = this.busy || hasActiveRound;
