@@ -19,6 +19,63 @@ let telemetry = null;
 const seedTelemetry = [];
 let lastStepProgress = null;
 let lastDiagnosticStage = null;
+const startupConsole = [];
+const pageErrors = [];
+const requestFailures = [];
+const responseEvents = [];
+const startupSnapshots = [];
+
+const pushBounded = (target, value, limit = 120) => {
+  if (target.length < limit) target.push(value);
+};
+
+const captureStartupSnapshot = async (page, label) => {
+  const snapshot = await page
+    .evaluate((snapshotLabel) => {
+      const byTestId = (id) =>
+        document.querySelector(`[data-testid="${id}"]`);
+      const text = (element) =>
+        element?.textContent?.replace(/\s+/g, ' ').trim() ?? null;
+      const report = byTestId('part6-full-spin-telemetry-report');
+      const error = byTestId('status-error');
+      const loading = byTestId('status-loading');
+      const loaded = byTestId('status-loaded');
+      const validationIssue = byTestId('status-validation-issue');
+      const viewport = byTestId('canvas-viewport');
+      const canvas = viewport?.querySelector('canvas') ?? null;
+
+      return {
+        label: snapshotLabel,
+        href: window.location.href,
+        readyState: document.readyState,
+        bodyTextExcerpt:
+          document.body?.innerText?.replace(/\s+/g, ' ').trim().slice(0, 1800) ??
+          '',
+        reportExists: Boolean(report),
+        reportStatus: report?.getAttribute('data-status') ?? null,
+        reportSafety: report?.getAttribute('data-safety') ?? null,
+        loadingVisible: Boolean(loading),
+        loadedVisible: Boolean(loaded),
+        errorVisible: Boolean(error),
+        errorText: text(error),
+        validationIssueVisible: Boolean(validationIssue),
+        validationIssueText: text(validationIssue),
+        buildMarker: text(byTestId('build-part6b')),
+        viewportExists: Boolean(viewport),
+        canvasExists: Boolean(canvas),
+        canvasWidth: canvas instanceof HTMLCanvasElement ? canvas.width : null,
+        canvasHeight: canvas instanceof HTMLCanvasElement ? canvas.height : null,
+      };
+    }, label)
+    .catch((error) => ({
+      label,
+      snapshotError: error instanceof Error ? error.message : String(error),
+    }));
+
+  startupSnapshots.push(snapshot);
+  console.log('PART6_STARTUP_SNAPSHOT ' + JSON.stringify(snapshot));
+  return snapshot;
+};
 
 const persistPartialResult = (extra = {}) => {
   const partial = {
@@ -28,6 +85,11 @@ const persistPartialResult = (extra = {}) => {
     partial: true,
     seedTelemetry,
     telemetry,
+    startupConsole,
+    pageErrors,
+    requestFailures,
+    responseEvents,
+    startupSnapshots,
     ...extra,
   };
   fs.writeFileSync(outputPath, JSON.stringify(partial, null, 2));
@@ -50,6 +112,19 @@ try {
 
   page.on('console', (message) => {
     const text = message.text();
+    pushBounded(startupConsole, {
+      type: message.type(),
+      text,
+      location: message.location(),
+    });
+    console.log(
+      'BROWSER_CONSOLE ' +
+        JSON.stringify({
+          type: message.type(),
+          text,
+          location: message.location(),
+        }),
+    );
 
     if (text.startsWith('PART6_DIAGNOSTIC_STAGE ')) {
       const raw = text.slice('PART6_DIAGNOSTIC_STAGE '.length);
@@ -130,18 +205,81 @@ try {
   });
 
   page.on('pageerror', (error) => {
-    console.error('PAGE_ERROR', error);
+    const value = {
+      name: error.name,
+      message: error.message,
+      stack: error.stack ?? null,
+    };
+    pushBounded(pageErrors, value, 40);
+    console.error('PAGE_ERROR ' + JSON.stringify(value));
+    persistPartialResult({ expectedSeedCount, phase: 'pageerror' });
+  });
+
+  page.on('requestfailed', (request) => {
+    const value = {
+      url: request.url(),
+      method: request.method(),
+      resourceType: request.resourceType(),
+      failure: request.failure()?.errorText ?? null,
+    };
+    pushBounded(requestFailures, value, 80);
+    console.error('REQUEST_FAILED ' + JSON.stringify(value));
+    persistPartialResult({ expectedSeedCount, phase: 'requestfailed' });
+  });
+
+  page.on('response', (response) => {
+    const request = response.request();
+    const resourceType = request.resourceType();
+    const url = response.url();
+    if (
+      resourceType === 'document' ||
+      resourceType === 'script' ||
+      url.includes('.glb')
+    ) {
+      const value = {
+        url,
+        status: response.status(),
+        ok: response.ok(),
+        resourceType,
+      };
+      pushBounded(responseEvents, value, 100);
+      console.log('NETWORK_RESPONSE ' + JSON.stringify(value));
+    }
   });
 
   await page.goto(targetUrl, {
     waitUntil: 'domcontentloaded',
-    timeout: 60_000,
+    timeout: 15_000,
   });
+
+  await captureStartupSnapshot(page, 'domcontentloaded');
 
   const report = page.locator(
     '[data-testid="part6-full-spin-telemetry-report"]',
   );
-  await report.waitFor({ state: 'visible', timeout: 60_000 });
+
+  let reportWaitError = null;
+  try {
+    await report.waitFor({ state: 'visible', timeout: 10_000 });
+  } catch (error) {
+    reportWaitError = error instanceof Error ? error.message : String(error);
+  }
+
+  await captureStartupSnapshot(page, 'report-wait-complete');
+
+  if (reportWaitError) {
+    persistPartialResult({
+      expectedSeedCount,
+      reportWaitError,
+      lastDiagnosticStage,
+      lastStepProgress,
+      seedResultsCaptured: seedTelemetry.length,
+    });
+    throw new Error(
+      'PART 6 startup probe could not see the telemetry report: ' +
+        reportWaitError,
+    );
+  }
 
   let terminalWaitError = null;
   try {
@@ -161,8 +299,10 @@ try {
       error instanceof Error ? error.message : String(error);
   }
 
+  await captureStartupSnapshot(page, 'terminal-wait-complete');
+
   const status = terminalWaitError
-    ? null
+    ? await report.getAttribute('data-status').catch(() => null)
     : await report.getAttribute('data-status');
   const reportText = terminalWaitError
     ? ''
@@ -178,6 +318,11 @@ try {
     url: targetUrl,
     terminalTimeoutMs,
     expectedSeedCount,
+    startupConsole,
+    pageErrors,
+    requestFailures,
+    responseEvents,
+    startupSnapshots,
     lastStepProgress,
     lastDiagnosticStage,
     domStatus: status,
