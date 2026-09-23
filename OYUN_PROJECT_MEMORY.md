@@ -924,6 +924,17 @@ One audit-only instruction was mistakenly sent to Replit before this rule was cl
 - menu, game routes and slot shell can now extend beyond the viewport instead of being clipped
 - removed the Cadı Kazan landscape-only height/overflow trap so short landscape screens can scroll vertically when needed
 
+### Stage 13 — Cadı Kazan V2 fit, dollars, landscape mobile
+- created Figma V2 frames before coding: Desktop Standard `9:2`, Desktop Advanced 25 `9:54`, Mobile Landscape `9:132`
+- the Advanced 25 ticket now has a dedicated compact layout intended to keep the full 5×5 grid inside the stage without colliding with the payout HUD
+- reserved a separate payout lane and increased spacing between the ticket and payout HUD
+- Cadı Kazan user-facing money display is now dollar-based (`$100.00`, `+$20.00`) rather than CR/kredi
+- stake input is direct text entry with $25/$50/$100/$250/$500/MAX shortcuts; the old apparent $100 UI ceiling is removed, while server wallet/storage-safety validation remains authoritative
+- mobile is landscape-first: portrait shows a rotate-device handoff; landscape uses a compact header, fitted ticket/HUD, and fixed touch-friendly bottom control dock
+- scratch material was refined with pressure-sensitive abrasion, denser stroke interpolation, translucent lacquer, brushed foil, textured base coat, grooves and richer debris while preserving anti-spoiler settlement thresholds
+- Playwright Cadı Kazan QA was updated to exercise a $250 Standard stake and an Android landscape Advanced-25 fit check
+- runtime/visual verification in Replit Preview is still required after manual sync; do not call this pass finished until the Preview is checked
+
 ### Stage 12 — Figma master → code
 - user explicitly required the workflow to be Figma first, then code
 - created Figma file `Cadı Kazan Premium UI Master` and built an editable desktop master screen with compact header, centered ivory scratch ticket, floating payout HUD, and bottom control dock
@@ -970,7 +981,7 @@ One audit-only instruction was mistakenly sent to Replit before this rule was cl
 
 As of this memory update, the next task is:
 
-> **Manually sync GitHub main in Replit Shell and visually compare the new Cadı Kazan implementation against the Figma master. Fix any major spacing, scale, or hierarchy mismatch before further feature work.**
+> **Manually sync GitHub main in Replit Shell, then verify the Cadı Kazan V2 Preview: Standard and Advanced 25 fit, $250+ stake, dollar-only display, ticket/HUD gap, landscape mobile, text alignment and premium scratch feel.**
 
 Priority checks:
 1. Desktop should visually read as the approved premium mockup, roughly 80%+ similar in hierarchy/composition.
