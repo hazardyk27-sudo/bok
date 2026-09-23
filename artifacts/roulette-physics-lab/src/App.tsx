@@ -126,7 +126,21 @@ const PHYSICAL_MEASUREMENTS = [
 ];
 
 type LoadState = 'loading' | 'loaded' | 'error';
+type ValidationErrorKind =
+  | 'asset'
+  | 'geometry-audit'
+  | 'physics-validation'
+  | 'telemetry'
+  | 'initialization';
 type InspectionView = 'top' | 'angled' | 'side';
+
+const VALIDATION_ERROR_TITLES: Record<ValidationErrorKind, string> = {
+  asset: 'Roulette asset could not be loaded',
+  'geometry-audit': 'Geometry audit failed',
+  'physics-validation': 'Physics validation failed',
+  telemetry: 'PART 6 telemetry failed',
+  initialization: 'Physics scene initialization failed',
+};
 type ProbeOutcome = 'resting' | 'leak' | 'pass-through' | 'trap';
 type BallCommandKind = 'apply' | 'release' | 'varied' | 'reset';
 
@@ -3404,6 +3418,7 @@ function App() {
   const [loadKey, setLoadKey] = useState(0);
   const [loadState, setLoadState] = useState<LoadState>('loading');
   const [errorDetail, setErrorDetail] = useState('');
+  const [errorKind, setErrorKind] = useState<ValidationErrorKind | null>(null);
   const [view, setView] = useState<InspectionView>('angled');
   const [showGrid, setShowGrid] = useState(true);
   const [showPhysicsDebug, setShowPhysicsDebug] = useState(false);
@@ -3444,10 +3459,18 @@ function App() {
   const [part5Report, setPart5Report] =
     useState<Part5ValidationReport>(EMPTY_PART5_REPORT);
 
-  const handleStateChange = useCallback((state: LoadState, detail?: string) => {
-    setLoadState(state);
-    setErrorDetail(detail ?? '');
-  }, []);
+  const handleStateChange = useCallback(
+    (
+      state: LoadState,
+      detail?: string,
+      nextErrorKind?: ValidationErrorKind,
+    ) => {
+      setLoadState(state);
+      setErrorDetail(detail ?? '');
+      setErrorKind(state === 'error' ? nextErrorKind ?? 'initialization' : null);
+    },
+    [],
+  );
 
   const resetView = () => window.dispatchEvent(new Event('roulette-reset-view'));
   const resetRotor = () => {
@@ -3499,6 +3522,9 @@ function App() {
   };
   const retryLoad = () => {
     setAudit(null);
+    setErrorDetail('');
+    setErrorKind(null);
+    setLoadState('loading');
     setLoadKey((current) => current + 1);
   };
   const handleRotorTestState = useCallback(
@@ -4269,8 +4295,15 @@ function App() {
             {loadState === 'error' && (
               <div className="viewport-overlay error-overlay" data-testid="status-error" role="alert">
                 <TriangleAlert size={21} />
-                <strong>WebGL unavailable</strong>
-                <span>{errorDetail || 'Enable a WebGL-capable preview to view the uploaded roulette asset.'}</span>
+                <strong>
+                  {errorKind
+                    ? VALIDATION_ERROR_TITLES[errorKind]
+                    : 'Roulette validation failed'}
+                </strong>
+                <span>
+                  {errorDetail ||
+                    'The roulette validation did not complete successfully.'}
+                </span>
                 <button type="button" onClick={retryLoad} data-testid="button-load-retry">
                   Retry load
                 </button>
