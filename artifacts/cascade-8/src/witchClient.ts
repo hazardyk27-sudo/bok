@@ -127,6 +127,24 @@ export const CADI_KAZAN_MARKUP = `
           <div class="witch-ticket-frame" aria-hidden="true"></div>
           <div class="witch-standard-price-badge" data-witch-standard-price hidden>$1</div>
 
+          <div class="witch-bcs-card-art" aria-hidden="true">
+            <div class="witch-bcs-topbar">IN LEGAL TROUBLE?</div>
+            <div class="witch-bcs-main">
+              <div class="witch-bcs-copy">
+                <div class="witch-bcs-script">“Better Call Saul”</div>
+                <div class="witch-bcs-name">
+                  <span>SAUL</span>
+                  <i>⚖</i>
+                  <span>GOODMAN</span>
+                </div>
+                <div class="witch-bcs-law">ATTORNEY AT LAW</div>
+                <div class="witch-bcs-phone">(505) 503-4455</div>
+                <div class="witch-bcs-call">CALL SAUL NOW!</div>
+              </div>
+            </div>
+            <div class="witch-bcs-bottombar">NOT TOLL FREE <b>•</b> SE HABLA ESPAÑOL</div>
+          </div>
+
           <header class="witch-ticket-header">
             <div class="witch-ticket-sidecopy">
               <small>ŞANS CESURLARI SEVER</small>
