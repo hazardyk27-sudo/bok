@@ -926,13 +926,25 @@ One audit-only instruction was mistakenly sent to Replit before this rule was cl
 - menu, game routes and slot shell can now extend beyond the viewport instead of being clipped
 - removed the Cadı Kazan landscape-only height/overflow trap so short landscape screens can scroll vertically when needed
 
+### Stage 9 — Cadı Kazan hierarchy + scratch rebuild
+- removed the duplicated Cadı Kazan route-header look by hiding the generic route topbar on this page and using one integrated app header
+- rebuilt desktop hierarchy around a single aligned shell: app header, compact setup panel, hero ticket table, compact payout panel
+- removed noisy fake tabletop props and replaced them with restrained light/emblem layers
+- rebuilt the ticket material toward ivory/champagne paper with stronger print contrast and cleaner borders
+- simplified controls by removing stake preset clutter from the visible UI
+- rewrote scratch interaction so pre-result scratch movement is buffered; when server result commits, the entire already-scratched trail is replayed as real foil removal
+- removed the dark blotch-style scratch painting; pre-result feedback is now fine metallic scuff lines
+- lowered local abrasion reveal depth so the result becomes visible naturally as foil is scratched
+- safe result is rendered as a premium gold medallion/symbol rather than a dark hole
+- responsive rules were rebuilt for desktop, portrait mobile and landscape mobile
+
 ---
 
 # 10) CURRENT NEXT TASK
 
 As of this memory update, the next task is:
 
-> **Sync GitHub main to Replit Preview and visually QA the Cadı Kazan rebuild plus the global page-scroll fix.**
+> **Sync GitHub main to Replit Preview and visually QA the Stage 9 Cadı Kazan rebuild, especially viewport fit and progressive scratch reveal.**
 
 Priority checks:
 1. Desktop should visually read as the approved premium mockup, roughly 80%+ similar in hierarchy/composition.
