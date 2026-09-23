@@ -387,7 +387,7 @@ describe("authoritative roulette physics config", () => {
     expect(part3ViewportSource).not.toContain(".addTorque(");
   });
 
-  it("shows validation-specific errors instead of labeling every failure as WebGL", () => {
+  it("keeps validation failures visible without blocking the loaded roulette preview", () => {
     expect(physicsLabAppSource).toContain(
       "VALIDATION_ERROR_TITLES",
     );
@@ -400,8 +400,50 @@ describe("authoritative roulette physics config", () => {
     expect(physicsLabAppSource).toContain(
       "'geometry-audit': 'Geometry audit failed'",
     );
+    expect(physicsLabAppSource).toContain(
+      "const blockingFailure =",
+    );
+    expect(physicsLabAppSource).toContain(
+      "resolvedKind === 'asset' || resolvedKind === 'initialization'",
+    );
+    expect(physicsLabAppSource).toContain(
+      "setValidationIssue({",
+    );
+    expect(physicsLabAppSource).toContain(
+      "data-testid=\"status-validation-issue\"",
+    );
+    expect(physicsLabAppSource).toContain(
+      "Preview remains interactive for diagnosis.",
+    );
+    expect(physicsLabAppSource).toContain(
+      "label: 'Asset unavailable'",
+    );
+    expect(physicsLabAppSource).not.toContain(
+      "label: 'WebGL blocked'",
+    );
     expect(physicsLabAppSource).not.toContain(
       "<strong>WebGL unavailable</strong>",
+    );
+  });
+
+  it("locks the active PART 6B route away from legacy PART B and PART C loops", () => {
+    expect(part3ViewportSource).toContain(
+      "const part6FullSpinRouteActive =",
+    );
+    expect(part3ViewportSource).toContain(
+      "validationMode === 'part3' && outerLaneSpinOnly",
+    );
+    expect(part3ViewportSource).toContain(
+      "} else if (part6FullSpinRouteActive) {",
+    );
+    expect(part3ViewportSource).toContain(
+      "'PART 6B full-spin route active · recessed dark-race static gate running'",
+    );
+    expect(part3ViewportSource).toContain(
+      "outerLaneOnly &&\n            !part6FullSpinRouteActive",
+    );
+    expect(part3ViewportSource).toContain(
+      "outerLaneSpinOnly &&\n            !part6FullSpinRouteActive",
     );
   });
 
