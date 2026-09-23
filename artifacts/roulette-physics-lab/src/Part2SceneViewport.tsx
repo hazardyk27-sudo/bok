@@ -1633,7 +1633,9 @@ function makePart2RaceChannelTrimesh(verticalOffset = 0) {
   const vertices: number[] = [];
   const indices: number[] = [];
   const segments = 128;
-  const appendProfile = (profile: readonly [number, number][]) => {
+  const appendProfile = (
+    profile: readonly (readonly [number, number])[],
+  ) => {
     for (const [radius, y] of profile) {
       for (let segment = 0; segment < segments; segment += 1) {
         const angle = (segment / segments) * TWO_PI;
@@ -2106,7 +2108,8 @@ export function Part2SceneViewport({
       x: number,
       z: number,
       darkTrackOnly = true,
-      darkTrackBand = PART3_DARK_TRACK_RADIUS_BAND,
+      darkTrackBand: readonly [number, number] =
+        PART3_DARK_TRACK_RADIUS_BAND,
     ) => {
       if (!stationaryGroup) return null;
       stationaryGroup.updateMatrixWorld(true);
