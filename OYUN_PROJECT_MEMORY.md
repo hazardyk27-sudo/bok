@@ -10,18 +10,27 @@
 
 
 ### Git workflow isolation rule — 2026-09-23
-- GitHub feature branches are now permanently split by game:
+- GitHub feature branches are permanently split by game:
   - `feature/cadi-kazan`
   - `feature/roulette`
   - `feature/slot`
-- Replit workspace must remain on local `main`; do not switch Replit to a feature branch for normal work.
 - All coding from the Cadı Kazan chat goes to `feature/cadi-kazan`; Roulette goes to `feature/roulette`; Slot goes to `feature/slot`.
-- Approved feature work is merged into GitHub `main`; only then is Replit updated from `github/main`.
-- Normal Replit sync must never use `reset --hard`, rebase, or a merge commit. If fast-forward is impossible, stop and inspect divergence.
+- The shared Replit root workspace is **integration/preview only** and must stay on local `main`.
+- **Never switch the shared Replit root workspace to a feature branch.** Do not use `git switch feature/...`, checkout, reset, rebase, or local feature commits in the shared root.
+- If a chat needs to run Shell commands against its own feature branch, it must use a **separate Git worktree / separate physical directory** for that game. Recommended conceptual layout:
+  - root workspace → `main`
+  - sibling worktree → `feature/cadi-kazan`
+  - sibling worktree → `feature/roulette`
+  - sibling worktree → `feature/slot`
+- A Shell command run inside one feature worktree may affect only that worktree. It must never change the branch or files of the shared root workspace.
+- Approved feature work is merged on GitHub into `main`; only after that is the shared Replit root updated from `github/main`.
+- Normal root-workspace sync must never use `reset --hard`, rebase, conflict-resolution merge, stash/clean, or force checkout. If fast-forward is impossible, stop and inspect divergence.
 - Safe sync helper exists at `scripts/replit-sync-main.sh`. Normal user command after an approved merge is:
   `bash scripts/replit-sync-main.sh`
 - The helper aborts if Replit is not on `main`, if the working tree is dirty, or if local `main` contains commits that are not on GitHub `main`. It does not reset or overwrite local work.
-- Avoid editing shared coordination files such as `OYUN_PROJECT_MEMORY.md` on parallel feature branches; update them on `main` after integration when possible.
+- If the user is working in multiple ChatGPT conversations at once, every conversation must respect the branch/worktree ownership above. A Roulette task must not modify Cadı Kazan or Slot feature branches, and vice versa.
+- Shared files such as `OYUN_PROJECT_MEMORY.md`, shared wallet/session code, root config, package/lock files, and global app shell files require extra integration care. Prefer updating coordination files on `main` after feature integration. If two features must touch the same shared file, resolve that deliberately on GitHub before updating Replit.
+- Canonical detailed workflow is also documented in root file `GIT_WORKFLOW_RULES.md`.
 
 ## 0) NEW CHAT BOOTSTRAP — READ THIS FIRST
 
