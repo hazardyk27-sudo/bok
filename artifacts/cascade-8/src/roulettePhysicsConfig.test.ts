@@ -140,6 +140,33 @@ describe("authoritative roulette physics config", () => {
     );
   });
 
+  it("derives visible deflectors from the authoritative GLB instead of the 37-pocket ring", () => {
+    expect(part3ViewportSource).not.toContain(
+      "const PART3_DEFLECTOR_COUNT = 37",
+    );
+    expect(part3ViewportSource).not.toContain(
+      "addPart3DeflectorColliders",
+    );
+    expect(part3ViewportSource).toContain(
+      "const PART4_DEFLECTOR_AZIMUTH_SAMPLE_COUNT = 360",
+    );
+    expect(part3ViewportSource).toContain(
+      "const measureVisibleDeflectors = (): Part4DeflectorAudit",
+    );
+    expect(part3ViewportSource).toContain(
+      "addMeasuredDeflectorColliders",
+    );
+    expect(part3ViewportSource).toContain(
+      "'asset-measured-visible-deflector-cuboid'",
+    );
+    expect(part3ViewportSource).toContain(
+      "PART4_DEFLECTOR_AUDIT",
+    );
+    expect(part3ViewportSource).toContain(
+      "part4DeflectorAudit?.passed",
+    );
+  });
+
   it("keeps the PART 2 containment correction geometric only", () => {
     expect(part3ViewportSource).toContain("speed: 5,");
     expect(part3ViewportSource).toContain(
