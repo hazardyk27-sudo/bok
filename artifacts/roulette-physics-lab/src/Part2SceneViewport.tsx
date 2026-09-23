@@ -1747,10 +1747,22 @@ function part2ChannelNormalAt(radius: number, angle: number) {
   ).normalize();
 }
 
-function makePart2RaceChannelTrimesh(verticalOffset = 0) {
+function makePart2RaceChannelTrimesh(
+  verticalOffset = 0,
+  openInnerRadius: number | null = null,
+) {
   const vertices: number[] = [];
   const indices: number[] = [];
   const segments = 128;
+  const activeProfile: Array<[number, number]> =
+    openInnerRadius === null
+      ? activeProfile.map(([radius, y]) => [radius, y])
+      : [
+          [openInnerRadius, part2ChannelSurfaceAt(openInnerRadius).y],
+          ...PART2_CHANNEL_PROFILE
+            .filter(([radius]) => radius > openInnerRadius)
+            .map(([radius, y]) => [radius, y] as [number, number]),
+        ];
   const appendProfile = (
     profile: readonly (readonly [number, number])[],
   ) => {
@@ -1765,15 +1777,15 @@ function makePart2RaceChannelTrimesh(verticalOffset = 0) {
       }
     }
   };
-  const bottomProfile = PART2_CHANNEL_PROFILE.map(
+  const bottomProfile = activeProfile.map(
     ([radius, y]) =>
       [radius, y - PART2_CHANNEL_BOTTOM_THICKNESS] as [number, number],
   );
-  appendProfile(PART2_CHANNEL_PROFILE);
-  const bottomOffset = PART2_CHANNEL_PROFILE.length * segments;
+  appendProfile(activeProfile);
+  const bottomOffset = activeProfile.length * segments;
   appendProfile(bottomProfile);
 
-  for (let row = 0; row < PART2_CHANNEL_PROFILE.length - 1; row += 1) {
+  for (let row = 0; row < activeProfile.length - 1; row += 1) {
     for (let segment = 0; segment < segments; segment += 1) {
       const next = (segment + 1) % segments;
       const topA = row * segments + segment;
@@ -1789,7 +1801,7 @@ function makePart2RaceChannelTrimesh(verticalOffset = 0) {
       indices.push(bottomA, bottomB, bottomD, bottomB, bottomC, bottomD);
     }
   }
-  for (const row of [0, PART2_CHANNEL_PROFILE.length - 1]) {
+  for (const row of [0, activeProfile.length - 1]) {
     const nextRow = bottomOffset + row * segments;
     for (let segment = 0; segment < segments; segment += 1) {
       const next = (segment + 1) % segments;
@@ -2009,6 +2021,7 @@ export function Part2SceneViewport({
     let part3TrackCollider: RAPIER.Collider | null = null;
     let part3BowlBridgeCollider: RAPIER.Collider | null = null;
     let part3BowlBridgeProfile: Array<[number, number]> = [];
+    let part3BowlBridgeOuterRadius = BOWL_BRIDGE_OUTER_RADIUS;
     let part3InnerFloorCollider: RAPIER.Collider | null = null;
     let part3DeflectorColliders: RAPIER.Collider[] = [];
     let part4DeflectorAudit: Part4DeflectorAudit | null = null;
@@ -2562,13 +2575,14 @@ export function Part2SceneViewport({
 
     const measureBowlBridgeProfile = (
       channelVerticalOffset: number,
+      outerRadius = BOWL_BRIDGE_OUTER_RADIUS,
     ): Array<[number, number]> => {
       const radii = Array.from(
         { length: BOWL_BRIDGE_SAMPLE_COUNT },
         (_, index) =>
           THREE.MathUtils.lerp(
             BOWL_BRIDGE_INNER_RADIUS,
-            BOWL_BRIDGE_OUTER_RADIUS,
+            outerRadius,
             index / (BOWL_BRIDGE_SAMPLE_COUNT - 1),
           ),
       );
@@ -2592,7 +2606,7 @@ export function Part2SceneViewport({
 
       const targetInnerY = POCKET_OUTER_LIP_Y;
       const targetOuterY = part2ChannelSurfaceAt(
-        BOWL_BRIDGE_OUTER_RADIUS,
+        outerRadius,
         channelVerticalOffset,
       ).y;
       const measuredInnerY = measured[0] ?? null;
@@ -3840,7 +3854,7 @@ export function Part2SceneViewport({
       };
 
       const transitionSurfaceY = (radius: number) => {
-        if (radius >= BOWL_BRIDGE_OUTER_RADIUS) {
+        if (radius >= part3BowlBridgeOuterRadius) {
           return part2ChannelSurfaceAt(
             radius,
             part2RaceVerticalOffset,
@@ -6046,6 +6060,9 @@ export function Part2SceneViewport({
                 part2ChannelSurfaceAt(PART2_ACTUAL_DARK_TRACK_LAUNCH_RADIUS).y;
               const channelMesh = makePart2RaceChannelTrimesh(
                 part2RaceVerticalOffset,
+                part6FullSpinRouteActive
+                  ? PART2_ACTUAL_INWARD_EDGE_RADIUS
+                  : null,
               );
               part3TrackCollider = world.createCollider(
                 RAPIER.ColliderDesc.trimesh(
