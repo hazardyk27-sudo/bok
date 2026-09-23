@@ -66,6 +66,9 @@ jobs:
         run: pnpm --filter @workspace/roulette-physics-lab run typecheck
 
       - name: Run roulette physics contract tests
+        env:
+          PORT: '4173'
+          BASE_PATH: /
         run: pnpm --filter @workspace/cascade-8 exec vitest run src/roulettePhysicsConfig.test.ts
 
       - name: Start roulette physics lab
