@@ -920,13 +920,19 @@ One audit-only instruction was mistakenly sent to Replit before this rule was cl
 - removed active-round threshold-driven full-mask auto-clear behavior
 - safe scratch result is now a gold lucky symbol
 
+### Stage 8 — Global scroll fix
+- root cause of non-scrolling pages was global viewport locking in `styles.css`: `.app-shell { overflow: hidden }`, `.route-shell { height: 100dvh; overflow: hidden }`, and `.route-shell.is-menu-page { overflow: hidden }`
+- restored document-level vertical scrolling while retaining horizontal clipping
+- menu, game routes and slot shell can now extend beyond the viewport instead of being clipped
+- removed the Cadı Kazan landscape-only height/overflow trap so short landscape screens can scroll vertically when needed
+
 ---
 
 # 10) CURRENT NEXT TASK
 
 As of this memory update, the next task is:
 
-> **Sync GitHub main to Replit Preview and visually QA the new Cadı Kazan rebuild against the approved premium mockup.**
+> **Sync GitHub main to Replit Preview and visually QA the Cadı Kazan rebuild plus the global page-scroll fix.**
 
 Priority checks:
 1. Desktop should visually read as the approved premium mockup, roughly 80%+ similar in hierarchy/composition.
