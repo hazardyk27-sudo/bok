@@ -1130,17 +1130,10 @@ function addMeasuredOuterWallColliders(
   profile: readonly [number, number][],
   friction: number,
 ) {
-  const measured = [...profile]
-    .filter(([, height]) => height <= -0.08)
-    .sort((left, right) => left[1] - right[1]);
-  const samples =
-    measured.length <= 3
-      ? measured
-      : [
-          measured[0],
-          measured[Math.floor((measured.length - 1) / 2)],
-          measured.at(-1)!,
-        ];
+  // Preserve the full measured retaining-wall height. Omitting the
+  // upper -0.04/0.00 samples leaves a physical gap that a fast ball can clear
+  // after riding up the race profile.
+  const samples = [...profile].sort((left, right) => left[1] - right[1]);
   const segments = 48;
   const radialHalfDepth = 0.018;
   const colliders: RAPIER.Collider[] = [];
