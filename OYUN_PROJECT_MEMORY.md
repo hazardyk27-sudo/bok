@@ -8,6 +8,21 @@
 
 ---
 
+
+### Git workflow isolation rule — 2026-09-23
+- GitHub feature branches are now permanently split by game:
+  - `feature/cadi-kazan`
+  - `feature/roulette`
+  - `feature/slot`
+- Replit workspace must remain on local `main`; do not switch Replit to a feature branch for normal work.
+- All coding from the Cadı Kazan chat goes to `feature/cadi-kazan`; Roulette goes to `feature/roulette`; Slot goes to `feature/slot`.
+- Approved feature work is merged into GitHub `main`; only then is Replit updated from `github/main`.
+- Normal Replit sync must never use `reset --hard`, rebase, or a merge commit. If fast-forward is impossible, stop and inspect divergence.
+- Safe sync helper exists at `scripts/replit-sync-main.sh`. Normal user command after an approved merge is:
+  `bash scripts/replit-sync-main.sh`
+- The helper aborts if Replit is not on `main`, if the working tree is dirty, or if local `main` contains commits that are not on GitHub `main`. It does not reset or overwrite local work.
+- Avoid editing shared coordination files such as `OYUN_PROJECT_MEMORY.md` on parallel feature branches; update them on `main` after integration when possible.
+
 ## 0) NEW CHAT BOOTSTRAP — READ THIS FIRST
 
 This file exists so a new ChatGPT conversation can continue the OYUN project without reconstructing the whole history.
