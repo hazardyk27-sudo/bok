@@ -96,7 +96,7 @@ export function publishRoundTiming(trace: RoundTimingTrace | null) {
     biggest ? `BIGGEST ${biggest.ms}ms ${biggest.from} -> ${biggest.to}` : "BIGGEST n/a",
   ].join(" | ");
 
-  console.info("[CASCADE8_GAP]", summary);
+  console.warn("[CASCADE8_GAP]", summary);
   console.info("[CASCADE8_TIMING]", {
     id: trace.id,
     mode: trace.mode,
