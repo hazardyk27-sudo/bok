@@ -6,7 +6,9 @@ describe("scratch result presentation", () => {
     const markup = getScratchCellLayerMarkup();
 
     expect(markup.indexOf("witch-cell-result-layer")).toBeGreaterThanOrEqual(0);
-    expect(markup.indexOf("witch-scratch-canvas")).toBeGreaterThan(markup.indexOf("witch-cell-result-layer"));
+    expect(markup.indexOf("witch-scratch-layer-base")).toBeGreaterThan(markup.indexOf("witch-cell-result-layer"));
+    expect(markup.indexOf("witch-scratch-layer-foil")).toBeGreaterThan(markup.indexOf("witch-scratch-layer-base"));
+    expect(markup.indexOf("witch-scratch-layer-lacquer")).toBeGreaterThan(markup.indexOf("witch-scratch-layer-foil"));
     expect(markup).not.toContain("data-witch-cell");
   });
 
