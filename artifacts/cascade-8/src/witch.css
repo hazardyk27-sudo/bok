@@ -2237,7 +2237,7 @@
 
 .witch-ticket.is-advanced .witch-board-wrap {
   margin: 0 auto;
-  width: min(100%, 402px);
+  width: min(100%, clamp(310px, 27vw, 350px));
   padding: 7px;
   border-radius: 10px;
 }
