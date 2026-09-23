@@ -924,6 +924,15 @@ One audit-only instruction was mistakenly sent to Replit before this rule was cl
 - menu, game routes and slot shell can now extend beyond the viewport instead of being clipped
 - removed the Cadı Kazan landscape-only height/overflow trap so short landscape screens can scroll vertically when needed
 
+### Stage 14 — Portrait auto-landscape fit
+- portrait phones no longer show a blocking "rotate device" screen
+- the existing landscape mobile UI is automatically rotated 90° and fitted inside the physical portrait viewport
+- portrait uses the same gameplay layout rather than a separate stacked mobile redesign
+- scratch canvas sizing now uses untransformed client dimensions so rotated UI does not distort the drawing buffer
+- scratch pointer mapping detects portrait auto-landscape and inverts the rotated screen coordinates back into local scratch coordinates
+- added Android portrait Playwright coverage alongside landscape mobile QA
+- Figma MCP Starter limit was reached while attempting to create a dedicated portrait presentation frame; the implementation therefore reuses the already-approved Mobile Landscape V2 visual master rather than changing its design
+
 ### Stage 13 — Cadı Kazan V2 fit, dollars, landscape mobile
 - created Figma V2 frames before coding: Desktop Standard `9:2`, Desktop Advanced 25 `9:54`, Mobile Landscape `9:132`
 - the Advanced 25 ticket now has a dedicated compact layout intended to keep the full 5×5 grid inside the stage without colliding with the payout HUD
@@ -981,7 +990,7 @@ One audit-only instruction was mistakenly sent to Replit before this rule was cl
 
 As of this memory update, the next task is:
 
-> **Manually sync GitHub main in Replit Shell, then verify the Cadı Kazan V2 Preview: Standard and Advanced 25 fit, $250+ stake, dollar-only display, ticket/HUD gap, landscape mobile, text alignment and premium scratch feel.**
+> **Manually sync GitHub main in Replit Shell, then verify portrait-phone auto-landscape: game visible immediately without rotate prompt, full UI inside viewport, Advanced 25 fitted, touch/scratch coordinates correct, and no scroll/overflow.**
 
 Priority checks:
 1. Desktop should visually read as the approved premium mockup, roughly 80%+ similar in hierarchy/composition.
