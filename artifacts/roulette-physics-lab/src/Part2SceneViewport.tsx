@@ -1845,6 +1845,8 @@ export function Part2SceneViewport({
   onAudit,
   onRotorAngleChange,
 }: Part2SceneViewportProps) {
+  const part6FullSpinRouteActive =
+    validationMode === 'part3' && outerLaneSpinOnly;
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const stageRef = useRef<HTMLDivElement | null>(null);
   const viewRef = useRef(view);
@@ -5963,11 +5965,11 @@ export function Part2SceneViewport({
                   'loaded',
                   'PART C diagnostic radial geometry profile running',
                 );
-              } else if (outerLaneSpinOnly) {
+              } else if (part6FullSpinRouteActive) {
                  runPart2RaceStaticPlacementCheck();
                  callbacksRef.current.onStateChange(
                    'loaded',
-                   'PART 2 recessed dark-race static gate running',
+                   'PART 6B full-spin route active · recessed dark-race static gate running',
                  );
               } else if (outerLaneOnly) {
                 startPart3OuterLaneProbe();
@@ -6348,7 +6350,8 @@ export function Part2SceneViewport({
 
           if (
             validationMode === 'part3' &&
-            (outerLaneOnly || outerLaneSpinOnly) &&
+            outerLaneOnly &&
+            !part6FullSpinRouteActive &&
             world &&
             ballBody &&
             ballMesh &&
@@ -6623,6 +6626,7 @@ export function Part2SceneViewport({
           if (
             validationMode === 'part3' &&
             outerLaneSpinOnly &&
+            !part6FullSpinRouteActive &&
             world &&
             ballBody &&
             ballMesh &&
