@@ -51,6 +51,16 @@ const physicsLabAppSource = readFileSync(
   "utf8",
 );
 
+const rouletteRuntimeWorkflowSource = readFileSync(
+  fileURLToPath(
+    new URL(
+      "../../../.github/workflows/roulette-part6-runtime.yml",
+      import.meta.url,
+    ),
+  ),
+  "utf8",
+);
+
 describe("authoritative roulette physics config", () => {
   it("locks the rou-lp-test-04 physical scale and ball standard", () => {
     expect(ROULETTE_PHYSICS_SCHEMA_VERSION).toBe(
@@ -492,6 +502,24 @@ describe("authoritative roulette physics config", () => {
     );
     expect(part3ViewportSource).toContain(
       "outerLaneSpinOnly &&\n            !part6FullSpinRouteActive",
+    );
+  });
+
+  it("locks roulette runtime validation to the canonical feature branch", () => {
+    expect(rouletteRuntimeWorkflowSource).toContain(
+      "- feature/roulette",
+    );
+    expect(rouletteRuntimeWorkflowSource).toContain(
+      "- main",
+    );
+    expect(rouletteRuntimeWorkflowSource).not.toContain(
+      "roulette-physics-part6b",
+    );
+    expect(rouletteRuntimeWorkflowSource).not.toContain(
+      "roulette-physics-part6\n",
+    );
+    expect(rouletteRuntimeWorkflowSource).toContain(
+      "ROULETTE_PART6_TIMEOUT_MS: '900000'",
     );
   });
 
