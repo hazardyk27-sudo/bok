@@ -1213,7 +1213,16 @@ function addMeasuredOuterWallColliders(
   const centerRadius = innerFaceRadius + radialHalfDepth;
   const minY = Math.min(...measured.map(([, height]) => height));
   const maxY = Math.max(...measured.map(([, height]) => height));
-  const lowerY = minY - 0.025;
+  const channelFloorMinY = Math.min(
+    ...PART2_CHANNEL_PROFILE.map(([, height]) => height),
+  );
+  // Keep the cuboid's horizontal bottom face well below the race floor.
+  // If that face intersects the launch ball, it acts like a step and kicks
+  // the high-speed ball upward instead of providing purely radial containment.
+  const lowerY = Math.min(
+    minY - 0.025,
+    channelFloorMinY - BALL_RADIUS * 2 - 0.02,
+  );
   const upperY = maxY + BALL_RADIUS + 0.04;
   const halfHeight = Math.max(0.02, (upperY - lowerY) / 2);
   const centerY = (lowerY + upperY) / 2;
