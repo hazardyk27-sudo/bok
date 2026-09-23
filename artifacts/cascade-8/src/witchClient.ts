@@ -145,7 +145,7 @@ export const CADI_KAZAN_MARKUP = `
           <div class="witch-ticket-meta-row">
             <span data-witch-ticket-mode>STANDARD 5</span>
             <i aria-hidden="true">✦</i>
-            <span><b data-witch-ticket-stake>$0.00</b> · <b data-witch-ticket-bombs>01 BOMB</b></span>
+            <span><b data-witch-ticket-stake>$0.00</b> · <b data-witch-ticket-bombs>01 BOMBA</b></span>
           </div>
 
           <div class="witch-board-wrap">
@@ -681,11 +681,11 @@ export class WitchClient {
     const ticketBombs = this.root.querySelector<HTMLElement>("[data-witch-ticket-bombs]");
     const ticketPrice = this.root.querySelector<HTMLElement>("[data-witch-ticket-price]");
     const ticketId = this.root.querySelector<HTMLElement>("[data-witch-ticket-id]");
-    if (playMode) playMode.textContent = round.mode === "STANDARD" ? "STANDARD 5 / 01 BOMB" : `ADVANCED 25 / ${String(round.alarmCount).padStart(2, "0")} BOMBS`;
+    if (playMode) playMode.textContent = round.mode === "STANDARD" ? "STANDARD 5 / 01 BOMBA" : `ADVANCED 25 / ${String(round.alarmCount).padStart(2, "0")} BOMBA`;
     if (playTitle) playTitle.textContent = round.status === "BUST" ? "Bomba açıldı." : round.status === "CASHED_OUT" ? "Kazanç alındı." : round.status === "COMPLETED" ? "Kart tamamlandı." : "Folyo kazındıkça alttaki sonuç görünür.";
     if (ticketMode) ticketMode.textContent = round.mode === "STANDARD" ? "STANDARD 5" : "ADVANCED 25";
     if (ticketStake) ticketStake.textContent = formatMoney(round.stakeCents);
-    if (ticketBombs) ticketBombs.textContent = `${String(round.alarmCount).padStart(2, "0")} ${round.alarmCount === 1 ? "BOMB" : "BOMBS"}`;
+    if (ticketBombs) ticketBombs.textContent = `${String(round.alarmCount).padStart(2, "0")} BOMBA`;
     if (ticketPrice) ticketPrice.textContent = formatTicketPrice(round.stakeCents);
     if (ticketId) ticketId.textContent = `#${round.id.slice(0, 8).toUpperCase()}`;
     if (riskNote) {
