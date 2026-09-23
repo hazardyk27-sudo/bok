@@ -1,6 +1,15 @@
 import * as THREE from "three";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
 import { EUROPEAN_WHEEL_ORDER, ROULETTE_SEGMENT_DEGREES } from "./rouletteGeometry";
+import {
+  ROULETTE_AUTHORITATIVE_SCALE,
+  ROULETTE_BALL_RADIUS,
+  ROULETTE_MODEL_PATH,
+  ROULETTE_PHYSICS_SCHEMA_VERSION,
+  ROULETTE_RAW_SOURCE_CENTER,
+  ROULETTE_WHEEL_DIAMETER,
+  ROULETTE_Y_ORIGIN,
+} from "../../../lib/roulette-physics-config";
 
 type Vec3 = { x: number; y: number; z: number };
 type Quaternion = { x: number; y: number; z: number; w: number };
@@ -18,8 +27,8 @@ type PhysicsReplay = {
 };
 
 const REPLAY_URL = "/api/physics-lab/rounds/current";
-const MODEL_URL = "/physics-lab/roulette-visual-source.glb";
-const TARGET_WHEEL_DIAMETER = 6;
+const MODEL_URL = ROULETTE_MODEL_PATH;
+const TARGET_WHEEL_DIAMETER = ROULETTE_WHEEL_DIAMETER;
 
 function indexFor(number: number) {
   return EUROPEAN_WHEEL_ORDER.indexOf(number as typeof EUROPEAN_WHEEL_ORDER[number]);
@@ -34,7 +43,7 @@ export class RoulettePhysicsReplay {
   private readonly scene = new THREE.Scene();
   private readonly camera = new THREE.PerspectiveCamera(28, 1, 0.1, 100);
   private readonly ball = new THREE.Mesh(
-    new THREE.SphereGeometry(0.095, 24, 18),
+    new THREE.SphereGeometry(ROULETTE_BALL_RADIUS, 24, 18),
     new THREE.MeshStandardMaterial({ color: 0xfff8dc, metalness: 0.18, roughness: 0.24 }),
   );
   private rotor?: THREE.Group;
@@ -73,6 +82,7 @@ export class RoulettePhysicsReplay {
     await Promise.all([player.loadModel(), player.loadReplay()]);
     player.resize();
     player.renderFrame();
+    canvas.dataset.physicsSchema = ROULETTE_PHYSICS_SCHEMA_VERSION;
     canvas.dataset.ready = "true";
     return player;
   }
@@ -135,29 +145,67 @@ export class RoulettePhysicsReplay {
     const gltf = await new GLTFLoader().loadAsync(MODEL_URL);
     const runtime = gltf.scene.clone(true);
     runtime.getObjectByName("Sphere_16")?.removeFromParent();
+
+    const embeddedScaleNode = runtime.getObjectByName("GLTF_SceneRootNode");
+    if (!embeddedScaleNode) {
+      throw new Error("ROULETTE_MODEL_SCALE_ROOT_MISSING");
+    }
+    embeddedScaleNode.scale.set(1, 1, 1);
     runtime.updateMatrixWorld(true);
-    const bounds = new THREE.Box3().setFromObject(runtime);
-    const center = bounds.getCenter(new THREE.Vector3());
-    const size = bounds.getSize(new THREE.Vector3());
-    const scale = TARGET_WHEEL_DIAMETER / Math.max(size.x, size.z);
-    const sourceRoot = runtime.getObjectByName("GLTF_SceneRootNode") ?? runtime;
-    const stationary = new THREE.Group();
-    const rotor = new THREE.Group();
-    [...sourceRoot.children].forEach((child) => {
-      const isRotor = child.name.startsWith("Text_29") || child.name.startsWith("Plane");
-      (isRotor ? rotor : stationary).attach(child);
-    });
+
+    const outside = runtime.getObjectByName("geo1_outside_0");
+    const inside = runtime.getObjectByName("geo1_inside_0");
+    const turret = runtime.getObjectByName("geo1_turret_0");
+    if (!outside || !inside || !turret) {
+      throw new Error("ROULETTE_MODEL_REQUIRED_NODES_MISSING");
+    }
+
+    const sourceCenter = new THREE.Vector3(
+      ROULETTE_RAW_SOURCE_CENTER.x,
+      ROULETTE_RAW_SOURCE_CENTER.y,
+      ROULETTE_RAW_SOURCE_CENTER.z,
+    );
+
     const wheel = new THREE.Group();
-    wheel.add(stationary, rotor);
-    wheel.scale.setScalar(scale);
-    wheel.position.copy(center).multiplyScalar(-scale);
+    wheel.position.set(0, ROULETTE_Y_ORIGIN, 0);
+
+    const runtimeOffset = new THREE.Group();
+    runtimeOffset.position.set(-sourceCenter.x, -sourceCenter.y, -sourceCenter.z);
+    runtimeOffset.scale.setScalar(ROULETTE_AUTHORITATIVE_SCALE);
+    runtimeOffset.add(runtime);
+    wheel.add(runtimeOffset);
+    wheel.updateMatrixWorld(true);
+
+    const normalizedBounds = new THREE.Box3().setFromObject(runtime);
+    runtimeOffset.position.sub(normalizedBounds.getCenter(new THREE.Vector3()));
+    wheel.updateMatrixWorld(true);
+
+    const stationary = new THREE.Group();
+    const rotorPivot = new THREE.Group();
+    const rotorVisual = new THREE.Group();
+    rotorPivot.add(rotorVisual);
+    wheel.add(stationary, rotorPivot);
+    stationary.attach(outside);
+    stationary.attach(turret);
+    rotorVisual.attach(inside);
+    wheel.remove(runtimeOffset);
+    wheel.updateMatrixWorld(true);
+
+    const finalBounds = new THREE.Box3().setFromObject(wheel);
+    const finalSize = finalBounds.getSize(new THREE.Vector3());
+    const diameterError =
+      Math.abs(Math.max(finalSize.x, finalSize.z) - TARGET_WHEEL_DIAMETER);
+    if (diameterError > 0.03) {
+      throw new Error("ROULETTE_MODEL_AUTHORITATIVE_SCALE_MISMATCH");
+    }
+
     wheel.traverse((object) => {
       if (object instanceof THREE.Mesh) {
         object.castShadow = true;
         object.receiveShadow = true;
       }
     });
-    this.rotor = rotor;
+    this.rotor = rotorPivot;
     this.scene.add(wheel);
   }
 
