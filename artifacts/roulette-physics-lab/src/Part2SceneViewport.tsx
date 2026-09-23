@@ -8224,9 +8224,11 @@ export function Part2SceneViewport({
         <span>
           {validationMode === 'part4'
             ? 'PART 4 · KINEMATIC ROTOR INTERACTION'
-            : validationMode === 'part3'
-              ? 'PART 3 · DYNAMIC BALL VALIDATION'
-              : 'PART 2 · ZERO-VELOCITY CONTACT'}
+            : part6FullSpinRouteActive
+              ? 'PART 6B · FULL-SPIN CALIBRATION'
+              : validationMode === 'part3'
+                ? 'PART 3 · DYNAMIC BALL VALIDATION'
+                : 'PART 2 · ZERO-VELOCITY CONTACT'}
         </span>
         <span>ANGLE {THREE.MathUtils.radToDeg(angleReadout).toFixed(2)}° · PIVOT [0, 0, 0] · Y+</span>
         <span>
@@ -8238,7 +8240,7 @@ export function Part2SceneViewport({
               ? outerLaneOnly
                 ? `PART B OUTER LANE ${part3OuterLaneReport?.status.toUpperCase() ?? 'WAITING'} · TANGENTIAL LAUNCH · CCD`
                 : outerLaneSpinOnly
-                  ? `PART 6A TELEMETRY ${part6TelemetryReport?.status.toUpperCase() ?? 'WAITING'} · 20 DETERMINISTIC FULL SPINS · CCD`
+                  ? `PART 6B ROUTE · 6A.1 TELEMETRY ${part6TelemetryReport?.status.toUpperCase() ?? 'WAITING'} · 20 DETERMINISTIC FULL SPINS · CCD`
                 : geometryDiagnosticOnly
                   ? `GEOMETRY DIAGNOSTIC ${part3GeometryDiagnosticReport?.status.toUpperCase() ?? 'WAITING'} · STATIC CONTACT`
                 : alignmentOnly
