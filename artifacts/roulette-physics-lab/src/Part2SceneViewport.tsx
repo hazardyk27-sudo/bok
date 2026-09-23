@@ -1113,6 +1113,52 @@ function buildBowlBridgeTrimesh(
   };
 }
 
+function buildMeasuredOuterWallTrimesh(
+  profile: readonly [number, number][],
+) {
+  const samples = [...profile].sort((left, right) => left[1] - right[1]);
+  const segments = 128;
+  const vertices: number[] = [];
+  const indices: number[] = [];
+
+  for (const [radius, height] of samples) {
+    for (let segment = 0; segment < segments; segment += 1) {
+      const angle = (segment / segments) * TWO_PI;
+      vertices.push(
+        Math.sin(angle) * radius,
+        height,
+        Math.cos(angle) * radius,
+      );
+    }
+  }
+
+  for (let row = 0; row < samples.length - 1; row += 1) {
+    for (let segment = 0; segment < segments; segment += 1) {
+      const next = (segment + 1) % segments;
+      const lowerA = row * segments + segment;
+      const lowerB = row * segments + next;
+      const upperA = (row + 1) * segments + segment;
+      const upperB = (row + 1) * segments + next;
+
+      // Reverse winding so the authoritative inner wall face points toward
+      // the ball/race interior when ORIENTED trimesh collision is enabled.
+      indices.push(
+        lowerA,
+        upperA,
+        lowerB,
+        lowerB,
+        upperA,
+        upperB,
+      );
+    }
+  }
+
+  return {
+    vertices: new Float32Array(vertices),
+    indices: new Uint32Array(indices),
+  };
+}
+
 function buildPocketFloorTrimesh() {
   const vertices: number[] = [];
   const indices: number[] = [];
@@ -5833,6 +5879,17 @@ export function Part2SceneViewport({
             },
           });
 
+          const measuredOuterWallProfile =
+            measureVisibleOuterWallProfile();
+          if (
+            part6FullSpinRouteActive &&
+            measuredOuterWallProfile.length < 4
+          ) {
+            throw new Error(
+              'PART 6 requires the measured visible outer retaining wall before full-spin validation',
+            );
+          }
+
           part4DeflectorAudit = measureVisibleDeflectors();
           if (part4DeflectorAudit.descriptors.length > 0) {
             part4MeasuredDeflectorInnerRadius = Math.min(
@@ -5913,6 +5970,46 @@ export function Part2SceneViewport({
               part3ColliderRoles.set(
                 part3TrackCollider.handle,
                 'analytic-dark-recessed-channel',
+              );
+
+              const outerWallMesh =
+                buildMeasuredOuterWallTrimesh(measuredOuterWallProfile);
+              const outerWallCollider = world.createCollider(
+                RAPIER.ColliderDesc.trimesh(
+                  outerWallMesh.vertices,
+                  outerWallMesh.indices,
+                  RAPIER.TriMeshFlags.FIX_INTERNAL_EDGES |
+                    RAPIER.TriMeshFlags.ORIENTED,
+                )
+                  .setFriction(activePart3TrackFriction)
+                  .setRestitution(0.01)
+                  .setCollisionGroups(
+                    STATIONARY_COLLISION_GROUP |
+                      (BALL_COLLISION_GROUP << 16),
+                  ),
+                stationaryBody,
+              );
+              part3ColliderRoles.set(
+                outerWallCollider.handle,
+                'measured-visible-outer-wall-trimesh',
+              );
+              console.info(
+                'PART6_OUTER_WALL_COLLIDER',
+                JSON.stringify({
+                  samples: measuredOuterWallProfile.length,
+                  minRadius: Math.min(
+                    ...measuredOuterWallProfile.map(([radius]) => radius),
+                  ),
+                  maxRadius: Math.max(
+                    ...measuredOuterWallProfile.map(([radius]) => radius),
+                  ),
+                  minY: Math.min(
+                    ...measuredOuterWallProfile.map(([, height]) => height),
+                  ),
+                  maxY: Math.max(
+                    ...measuredOuterWallProfile.map(([, height]) => height),
+                  ),
+                }),
               );
             } else if (
               validationMode === 'part3' &&
