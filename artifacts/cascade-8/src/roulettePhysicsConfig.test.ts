@@ -561,10 +561,10 @@ describe("authoritative roulette physics config", () => {
       "roulette-physics-part6\n",
     );
     expect(rouletteRuntimeWorkflowSource).toContain(
-      "ROULETTE_PART6_TIMEOUT_MS: '20000'",
+      "ROULETTE_PART6_TIMEOUT_MS: '40000'",
     );
     expect(rouletteRuntimeWorkflowSource).toContain(
-      "part6SeedCount=1&part6MaxDurationSeconds=2",
+      "part6SeedCount=1&part6MaxDurationSeconds=4",
     );
     expect(rouletteRuntimeWorkflowSource).toContain(
       "ROULETTE_PART6_EXPECTED_SEEDS: '1'",
