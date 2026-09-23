@@ -45,3 +45,4 @@
 - [Roulette true dark track](roulette-true-dark-track.md) — transformed GLB sampling places the recessed channel near r 2.2700–2.5400, not the former assumed outer band.
 - [Cadı Kazan payout targets](cadi-kazan-payout-targets.md) — keep mobile payout value selectors separate from the sticky action container so render updates cannot replace the action UI.
 - [Game route viewport fit](game-route-viewport-fit.md) — fixed play surfaces must fit the viewport; move secondary history/tools into drawers or phase-specific surfaces instead of page scrolling.
+- [Temporary workflow isolation](temporary-workflow-isolation.md) — custom preview workflows can persist launch entries in root `.replit`; restore root config when isolation must leave the shared tree clean.
