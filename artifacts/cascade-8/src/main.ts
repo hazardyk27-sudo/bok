@@ -328,7 +328,7 @@ if (isRouletteRoute) {
   app.innerHTML = routeShell(mainMenuMarkup, "is-route-page is-menu-page");
 } else {
 app.innerHTML = `
-  <div class="app-shell ${isLab ? "is-lab" : ""} ${isWinLabelPreview ? "is-label-preview" : ""} ${isMultiplierCollectionPreview ? "is-multiplier-preview" : ""}">
+  <div class="app-shell is-slot-game ${isLab ? "is-lab" : ""} ${isWinLabelPreview ? "is-label-preview" : ""} ${isMultiplierCollectionPreview ? "is-multiplier-preview" : ""}">
     <div class="ambient ambient-a"></div><div class="ambient ambient-b"></div><div class="stars"></div>
     <header class="topbar">
       <div class="brand">
