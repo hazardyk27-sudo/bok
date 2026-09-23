@@ -44,11 +44,11 @@ const formatMoney = (cents: number, options: { compactInteger?: boolean; signed?
     maximumFractionDigits: 2,
   });
   const sign = options.signed ? (cents > 0 ? "+" : cents < 0 ? "−" : "") : (cents < 0 ? "−" : "");
-  return `${sign}${amount}`;
+  return sign + "$" + amount;
 };
 
 const parseStakeDollars = (value: string) => {
-  const raw = value.trim().replace(/[$\\s]/g, "");
+  const raw = value.trim().replaceAll("$", "").replace(/\\s/g, "");
   const normalized = raw.includes(".") ? raw.replace(/,/g, "") : raw.replace(",", ".");
   const dollars = Number(normalized);
   return Number.isFinite(dollars) ? dollars : NaN;
