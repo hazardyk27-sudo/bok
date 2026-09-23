@@ -197,7 +197,7 @@ const POCKET_FRET_VERTICAL_HALF_EXTENT = 0.11;
 // separator extend through the floor creates a moving edge that can inject a
 // downward impulse when a ball approaches from the side.
 const POCKET_FRET_Y =
-  POCKET_FLOOR_Y + POCKET_FRET_VERTICAL_HALF_EXTENT + 0.01;
+  POCKET_FLOOR_Y + POCKET_FRET_VERTICAL_HALF_EXTENT + 0.022;
 const EUROPEAN_SEQUENCE = ROULETTE_EUROPEAN_SEQUENCE;
 
 type InspectionView = 'top' | 'angled' | 'side';
