@@ -115,6 +115,18 @@ const PART2_ACTUAL_WOOD_INNER_RADIUS =
 const PART2_ACTUAL_INWARD_EDGE_RADIUS =
   ROULETTE_DARK_RACE_INWARD_EDGE_RADIUS;
 const PART2_CHANNEL_PROFILE = ROULETTE_DARK_RACE_CHANNEL_PROFILE;
+const PART2_COLLISION_CHANNEL_PROFILE: Array<[number, number]> = [
+  ...PART2_CHANNEL_PROFILE
+    .filter(([radius]) => radius <= 2.5)
+    .map(([radius, y]) => [radius, y] as [number, number]),
+  [2.520, -0.2820],
+  [2.535, -0.2740],
+  [2.545, -0.2630],
+  [2.552, -0.2450],
+  [2.556, -0.2100],
+  [2.558, -0.1450],
+  [2.559, -0.0400],
+];
 const PART2_INNER_CONTAINMENT_RADIUS =
   ROULETTE_DARK_RACE_INNER_CONTAINMENT_RADIUS;
 const PART2_INNER_CONTAINMENT_CENTER_LIMIT =
@@ -1818,14 +1830,18 @@ function radialPosition(radius: number, angle: number, y: number): [number, numb
   return [Math.sin(angle) * radius, y, Math.cos(angle) * radius];
 }
 
-function part2ChannelSurfaceAt(radius: number, verticalOffset = 0) {
+function part2ChannelSurfaceAt(
+  radius: number,
+  verticalOffset = 0,
+  profile: readonly (readonly [number, number])[] = PART2_CHANNEL_PROFILE,
+) {
   const clamped = Math.max(
-    PART2_CHANNEL_PROFILE[0][0],
-    Math.min(PART2_CHANNEL_PROFILE.at(-1)![0], radius),
+    profile[0][0],
+    Math.min(profile.at(-1)![0], radius),
   );
-  for (let index = 1; index < PART2_CHANNEL_PROFILE.length; index += 1) {
-    const [rightRadius, rightY] = PART2_CHANNEL_PROFILE[index];
-    const [leftRadius, leftY] = PART2_CHANNEL_PROFILE[index - 1];
+  for (let index = 1; index < profile.length; index += 1) {
+    const [rightRadius, rightY] = profile[index];
+    const [leftRadius, leftY] = profile[index - 1];
     if (clamped <= rightRadius) {
       const alpha = (clamped - leftRadius) / (rightRadius - leftRadius);
       return {
@@ -1835,12 +1851,12 @@ function part2ChannelSurfaceAt(radius: number, verticalOffset = 0) {
       };
     }
   }
-  const last = PART2_CHANNEL_PROFILE.at(-1)!;
-  const previous = PART2_CHANNEL_PROFILE.at(-2)!;
+  const last = profile.at(-1)!;
+  const previous = profile.at(-2)!;
   return {
     y: last[1] + verticalOffset,
     slope: (last[1] - previous[1]) / (last[0] - previous[0]),
-    segment: PART2_CHANNEL_PROFILE.length - 2,
+    segment: profile.length - 2,
   };
 }
 
@@ -1864,10 +1880,17 @@ function makePart2RaceChannelTrimesh(
   const segments = 512;
   const baseProfile: Array<[number, number]> =
     openInnerRadius === null
-      ? PART2_CHANNEL_PROFILE.map(([radius, y]) => [radius, y])
+      ? PART2_COLLISION_CHANNEL_PROFILE.map(([radius, y]) => [radius, y])
       : [
-          [openInnerRadius, part2ChannelSurfaceAt(openInnerRadius).y],
-          ...PART2_CHANNEL_PROFILE
+          [
+            openInnerRadius,
+            part2ChannelSurfaceAt(
+              openInnerRadius,
+              0,
+              PART2_COLLISION_CHANNEL_PROFILE,
+            ).y,
+          ],
+          ...PART2_COLLISION_CHANNEL_PROFILE
             .filter(([radius]) => radius > openInnerRadius)
             .map(([radius, y]) => [radius, y] as [number, number]),
         ];
