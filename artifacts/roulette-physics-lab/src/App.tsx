@@ -3603,12 +3603,12 @@ function App() {
             <Layers3 size={18} strokeWidth={1.7} />
           </div>
           <div>
-              <div className="eyebrow">ISOLATED PHYSICS LAB · PART 3</div>
+              <div className="eyebrow">ISOLATED PHYSICS LAB · PART 6B</div>
                <h1>Roulette / uploaded visual asset + rigid-body V1</h1>
           </div>
         </div>
         <div className="header-meta">
-          <span className="build-tag">LAB-01</span>
+          <span className="build-tag" data-testid="build-part6b">PART 6B · FULL-SPIN</span>
           <StatusChip state={loadState} />
         </div>
       </header>
@@ -3617,7 +3617,7 @@ function App() {
         <aside className="inspector-rail">
           <div className="rail-intro">
               <div className="section-kicker">
-              <Crosshair size={13} /> PART 3 · DYNAMIC BALL
+              <Crosshair size={13} /> PART 6B · FULL-SPIN PHYSICS
             </div>
             <p>The uploaded wheel drives the visible shell and rotor; the validated European 37-pocket layout remains the source of truth for physics and results.</p>
           </div>
@@ -4554,7 +4554,7 @@ function App() {
       </div>
 
       <footer className="lab-footer">
-       <span>ROULETTE PHYSICS LAB · PART 3</span>
+       <span>ROULETTE PHYSICS LAB · PART 6B</span>
         <span className="footer-rule" />
        <span>Real dynamic ball · isolated collision validation</span>
         <span className="footer-build">
