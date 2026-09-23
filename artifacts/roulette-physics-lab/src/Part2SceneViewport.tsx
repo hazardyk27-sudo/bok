@@ -6374,6 +6374,9 @@ export function Part2SceneViewport({
           );
           ballBody.enableCcd(true);
           ballBody.setSoftCcdPrediction(activeBallSoftCcdPrediction);
+          if (validationMode === 'part3' && outerLaneSpinOnly) {
+            ballBody.setAdditionalSolverIterations(8);
+          }
           ccdEnabled = true;
           const ballColliderDescriptor = RAPIER.ColliderDesc.ball(BALL_RADIUS)
               .setFriction(validationMode === 'part3' ? activePart3TrackFriction : 0.42)
