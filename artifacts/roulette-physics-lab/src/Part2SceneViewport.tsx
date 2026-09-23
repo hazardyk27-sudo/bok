@@ -1113,10 +1113,15 @@ function buildBowlBridgeTrimesh(
   };
 }
 
-function buildMeasuredOuterWallTrimesh(
+function addMeasuredOuterWallColliders(
+  world: RAPIER.World,
+  body: RAPIER.RigidBody,
   profile: readonly [number, number][],
+  friction: number,
 ) {
-  const measured = [...profile].sort((left, right) => left[1] - right[1]);
+  const measured = [...profile]
+    .filter(([, height]) => height <= -0.08)
+    .sort((left, right) => left[1] - right[1]);
   const samples =
     measured.length <= 3
       ? measured
@@ -1126,45 +1131,52 @@ function buildMeasuredOuterWallTrimesh(
           measured.at(-1)!,
         ];
   const segments = 48;
-  const vertices: number[] = [];
-  const indices: number[] = [];
+  const radialHalfDepth = 0.018;
+  const colliders: RAPIER.Collider[] = [];
 
-  for (const [radius, height] of samples) {
+  samples.forEach(([radius, height], sampleIndex) => {
+    const lowerY =
+      sampleIndex === 0
+        ? height - 0.025
+        : (samples[sampleIndex - 1][1] + height) / 2;
+    const upperY =
+      sampleIndex === samples.length - 1
+        ? height + 0.04
+        : (height + samples[sampleIndex + 1][1]) / 2;
+    const halfHeight = Math.max(0.02, (upperY - lowerY) / 2);
+    const centerY = (lowerY + upperY) / 2;
+    const centerRadius = radius + radialHalfDepth;
+    const halfTangentialWidth =
+      centerRadius * Math.tan(Math.PI / segments) * 1.04;
+
     for (let segment = 0; segment < segments; segment += 1) {
       const angle = (segment / segments) * TWO_PI;
-      vertices.push(
-        Math.sin(angle) * radius,
-        height,
-        Math.cos(angle) * radius,
-      );
+      const collider = RAPIER.ColliderDesc.cuboid(
+        halfTangentialWidth,
+        halfHeight,
+        radialHalfDepth,
+      )
+        .setTranslation(
+          Math.sin(angle) * centerRadius,
+          centerY,
+          Math.cos(angle) * centerRadius,
+        )
+        .setRotation({
+          x: 0,
+          y: Math.sin(angle / 2),
+          z: 0,
+          w: Math.cos(angle / 2),
+        })
+        .setFriction(friction)
+        .setRestitution(0.01)
+        .setCollisionGroups(
+          STATIONARY_COLLISION_GROUP | (BALL_COLLISION_GROUP << 16),
+        );
+      colliders.push(world.createCollider(collider, body));
     }
-  }
+  });
 
-  for (let row = 0; row < samples.length - 1; row += 1) {
-    for (let segment = 0; segment < segments; segment += 1) {
-      const next = (segment + 1) % segments;
-      const lowerA = row * segments + segment;
-      const lowerB = row * segments + next;
-      const upperA = (row + 1) * segments + segment;
-      const upperB = (row + 1) * segments + next;
-
-      // Reverse winding so the authoritative inner wall face points toward
-      // the ball/race interior when ORIENTED trimesh collision is enabled.
-      indices.push(
-        lowerA,
-        upperA,
-        lowerB,
-        lowerB,
-        upperA,
-        upperB,
-      );
-    }
-  }
-
-  return {
-    vertices: new Float32Array(vertices),
-    indices: new Uint32Array(indices),
-  };
+  return { colliders, samples, segments };
 }
 
 function buildPocketFloorTrimesh() {
@@ -5991,34 +6003,26 @@ export function Part2SceneViewport({
                 'analytic-dark-recessed-channel',
               );
 
-              const outerWallMesh =
-                buildMeasuredOuterWallTrimesh(measuredOuterWallProfile);
-              const outerWallCollider = world.createCollider(
-                RAPIER.ColliderDesc.trimesh(
-                  outerWallMesh.vertices,
-                  outerWallMesh.indices,
-                  RAPIER.TriMeshFlags.FIX_INTERNAL_EDGES |
-                    RAPIER.TriMeshFlags.ORIENTED,
-                )
-                  .setFriction(activePart3TrackFriction)
-                  .setRestitution(0.01)
-                  .setCollisionGroups(
-                    STATIONARY_COLLISION_GROUP |
-                      (BALL_COLLISION_GROUP << 16),
-                  ),
+              const outerWall = addMeasuredOuterWallColliders(
+                world,
                 stationaryBody,
+                measuredOuterWallProfile,
+                activePart3TrackFriction,
               );
-              part3ColliderRoles.set(
-                outerWallCollider.handle,
-                'measured-visible-outer-wall-trimesh',
-              );
+              outerWall.colliders.forEach((collider) => {
+                part3ColliderRoles.set(
+                  collider.handle,
+                  'measured-visible-outer-wall-cuboid',
+                );
+              });
               console.info(
                 'PART6_OUTER_WALL_COLLIDER',
                 JSON.stringify({
                   measuredSamples: measuredOuterWallProfile.length,
-                  colliderRings:
-                    measuredOuterWallProfile.length <= 3 ? measuredOuterWallProfile.length : 3,
-                  colliderSegments: 48,
+                  colliderRings: outerWall.samples.length,
+                  colliderSegments: outerWall.segments,
+                  primitiveColliderCount: outerWall.colliders.length,
+                  colliderProfile: outerWall.samples,
                   profile: measuredOuterWallProfile,
                   minRadius: Math.min(
                     ...measuredOuterWallProfile.map(([radius]) => radius),
