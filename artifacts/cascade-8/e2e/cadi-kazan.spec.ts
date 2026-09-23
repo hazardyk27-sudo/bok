@@ -160,6 +160,18 @@ async function installCadiKazanFixture(page: Page): Promise<CadiKazanFixture> {
   return { page, startBodies, revealBodies, cashoutBodies };
 }
 
+async function lightlyScratchCell(page: Page, cellIndex: number) {
+  const canvas = page.locator(`[data-witch-cell="${cellIndex}"] .witch-scratch-layer-lacquer`);
+  const box = await canvas.boundingBox();
+  if (!box) throw new Error("Scratch canvas is not laid out");
+
+  const y = box.y + box.height * 0.5;
+  await page.mouse.move(box.x + box.width * 0.38, y);
+  await page.mouse.down();
+  await page.mouse.move(box.x + box.width * 0.58, y, { steps: 4 });
+  await page.mouse.up();
+}
+
 async function scratchCell(page: Page, cellIndex: number) {
   const canvas = page.locator(`[data-witch-cell="${cellIndex}"] .witch-scratch-layer-lacquer`);
   const box = await canvas.boundingBox();
@@ -222,7 +234,15 @@ test.describe("Cadı Kazan critical round lifecycle", () => {
       expect(fixture.startBodies[0]).toMatchObject({ mode: "STANDARD", alarmCount: 1, stakeCents: 100 });
     });
 
-    await test.step("scratch one safe cell and show the real GOLD presentation", async () => {
+    await test.step("a light scratch does not spoil or settle the hidden result", async () => {
+      await lightlyScratchCell(page, 0);
+      await page.waitForTimeout(120);
+      expect(fixture.revealBodies).toHaveLength(0);
+      await expect(page.locator("[data-witch-action='cashout']:visible")).toBeDisabled();
+      await expect(page.locator("[data-witch-cell='0'] .witch-cell-result-label")).toHaveText("");
+    });
+
+    await test.step("a meaningful scratch settles and reveals the real result", async () => {
       await scratchCell(page, 0);
       await expect.poll(() => fixture.revealBodies.length).toBe(1);
       await expect(page.locator("[data-witch-cell='0']")).toHaveClass(/is-safe/);
