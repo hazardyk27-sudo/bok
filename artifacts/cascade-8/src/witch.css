@@ -2780,7 +2780,7 @@
     top: 50dvh !important;
     left: 50dvw !important;
     display: grid !important;
-    grid-template-rows: clamp(38px, 12cqh, 50px) minmax(0, 1fr) clamp(56px, 18cqh, 72px);
+    grid-template-rows: var(--witch-phone-header-h, 42px) minmax(0, 1fr) var(--witch-phone-controls-h, 60px);
     gap: clamp(3px, 1.2cqh, 6px);
     container-type: size;
     max-width: none !important;
@@ -3455,6 +3455,8 @@
 /* Portrait PHONE HOST: rotate the already-landscape scene exactly into viewport. */
 @media (max-width: 600px) and (orientation: portrait) {
   .witch-page {
+    --witch-phone-header-h: clamp(38px, 12dvw, 50px);
+    --witch-phone-controls-h: clamp(56px, 18dvw, 72px);
     width: 100dvh !important;
     height: 100dvw !important;
     transform: translate(-50%, -50%) rotate(90deg) !important;
@@ -3464,6 +3466,8 @@
 /* Landscape PHONE HOST: same scene, no rotation. */
 @media (max-height: 600px) and (orientation: landscape) and (max-width: 1200px) {
   .witch-page {
+    --witch-phone-header-h: clamp(38px, 12dvh, 50px);
+    --witch-phone-controls-h: clamp(56px, 18dvh, 72px);
     width: 100dvw !important;
     height: 100dvh !important;
     transform: translate(-50%, -50%) !important;
