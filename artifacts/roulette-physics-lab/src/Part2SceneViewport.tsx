@@ -3728,6 +3728,22 @@ export function Part2SceneViewport({
 
           const resetPosition = activeBallBody.translation();
           const resetVelocity = activeBallBody.linvel();
+          const resetAngularVelocity = activeBallBody.angvel();
+          const resetRotation = activeBallBody.rotation();
+          const resetRotorRotation = activeRotorBody.rotation();
+          const resetRotorAngle = normalizedAngle(
+            2 *
+              Math.atan2(
+                resetRotorRotation.y,
+                resetRotorRotation.w,
+              ),
+          );
+          const resetRotorAngleError = Math.abs(
+            THREE.MathUtils.euclideanModulo(
+              resetRotorAngle - rotorAngle + Math.PI,
+              TWO_PI,
+            ) - Math.PI,
+          );
           const stateResetVerified =
             Math.hypot(
               resetPosition.x - launchPosition.x,
@@ -3738,7 +3754,17 @@ export function Part2SceneViewport({
               resetVelocity.x - launchVelocity.x,
               resetVelocity.y - launchVelocity.y,
               resetVelocity.z - launchVelocity.z,
-            ) <= 0.000001;
+            ) <= 0.000001 &&
+            Math.hypot(
+              resetAngularVelocity.x - launchAngularVelocity.x,
+              resetAngularVelocity.y - launchAngularVelocity.y,
+              resetAngularVelocity.z - launchAngularVelocity.z,
+            ) <= 0.000001 &&
+            Math.abs(resetRotation.x) <= 0.000001 &&
+            Math.abs(resetRotation.y) <= 0.000001 &&
+            Math.abs(resetRotation.z) <= 0.000001 &&
+            Math.abs(resetRotation.w - 1) <= 0.000001 &&
+            resetRotorAngleError <= 0.000001;
 
           let elapsed = 0;
           let minRadius = Math.hypot(
@@ -4312,14 +4338,27 @@ export function Part2SceneViewport({
               EUROPEAN_SEQUENCE[finalPocketIndex];
           }
 
-          const phaseSequenceValid = phases.every(
-            (event, index) =>
-              index === 0 ||
-              phaseOrder.indexOf(event.phase) >=
-                phaseOrder.indexOf(
-                  phases[index - 1].phase,
-                ),
+          const observedPhaseIndices = phases.map((event) =>
+            phaseOrder.indexOf(event.phase),
           );
+          const phaseSequenceMonotonic = observedPhaseIndices.every(
+            (phaseIndex, index) =>
+              index === 0 ||
+              phaseIndex >= observedPhaseIndices[index - 1],
+          );
+          const deepestObservedPhase =
+            observedPhaseIndices.length > 0
+              ? Math.max(...observedPhaseIndices)
+              : -1;
+          const noSkippedObservedPhases =
+            deepestObservedPhase < 0 ||
+            phaseOrder
+              .slice(0, deepestObservedPhase + 1)
+              .every((phase) => recordedPhases.has(phase));
+          const phaseSequenceValid =
+            phases[0]?.phase === 'OUTER_RACE' &&
+            phaseSequenceMonotonic &&
+            noSkippedObservedPhases;
           const timedOut =
             !settled &&
             !escaped &&
