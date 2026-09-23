@@ -10,7 +10,7 @@ describe("scratch result presentation", () => {
     expect(markup).not.toContain("data-witch-cell");
   });
 
-  it("does not expose a cell index for an unrevealed surface", () => {
+  it("does not expose a result before the server commits the cell", () => {
     expect(getScratchCellPresentation("STANDARD", false, false)).toEqual({
       symbol: "",
       label: "",
@@ -18,23 +18,23 @@ describe("scratch result presentation", () => {
     });
   });
 
-  it("uses an obvious bomb result for Standard", () => {
+  it("uses the shared bomb presentation for both modes", () => {
     expect(getScratchCellPresentation("STANDARD", true, true)).toEqual({
-      symbol: "💣",
+      symbol: "●",
+      label: "BOMBA",
+      resultClass: "bomb",
+    });
+    expect(getScratchCellPresentation("ADVANCED", true, true)).toEqual({
+      symbol: "●",
       label: "BOMBA",
       resultClass: "bomb",
     });
   });
 
-  it("uses the shared bomb result for both modes and a gold result for safe cells", () => {
-    expect(getScratchCellPresentation("ADVANCED", true, true)).toEqual({
-      symbol: "💣",
-      label: "BOMBA",
-      resultClass: "bomb",
-    });
+  it("uses a premium gold lucky symbol for safe cells", () => {
     expect(getScratchCellPresentation("ADVANCED", true, false)).toEqual({
-      symbol: "✦",
-      label: "GOLD",
+      symbol: "☘",
+      label: "ALTIN",
       resultClass: "safe",
     });
   });
