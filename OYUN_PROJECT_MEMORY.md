@@ -948,6 +948,17 @@ One audit-only instruction was mistakenly sent to Replit before this rule was cl
 - menu, game routes and slot shell can now extend beyond the viewport instead of being clipped
 - removed the Cadı Kazan landscape-only height/overflow trap so short landscape screens can scroll vertically when needed
 
+### Stage 17 — Cadı Kazan always-landscape mobile viewport lock
+- Mobile product rule is now explicit: **Cadı Kazan is always a landscape game UI on phones**, even when the physical phone is held portrait.
+- Portrait phones rotate only the dedicated mobile landscape scene by 90°; the desktop layout is never blindly rotated.
+- Landscape phones use the exact same mobile landscape scene without rotation.
+- The mobile scene is fixed to the dynamic viewport and must not allow horizontal scroll, vertical scroll, or off-screen controls.
+- Layout: compact header, scratch ticket in the main stage, payout HUD on the right, one horizontal control dock at the bottom.
+- Standard 5 and Advanced 25 are both height-bounded for the phone scene; Advanced keeps a 5×5 playable board.
+- Portrait scratch pointer coordinates are remapped for the rotated scene; canvas sizing remains based on local client dimensions.
+- Mobile QA now covers 320×568, 360×640, 390×844, 412×915, 430×932 portrait and 915×412 landscape.
+- Merged to GitHub `main` in commit `18bd39e`.
+
 ### Stage 16 — Cadı Kazan Mobile V4 true responsive phone UI
 - Removed all obsolete portrait handoff / auto-landscape rotate CSS from Cadı Kazan.
 - Removed the rotate-device prompt markup entirely.
