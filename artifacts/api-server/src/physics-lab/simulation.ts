@@ -1,15 +1,21 @@
 import { createHash, randomBytes } from "node:crypto";
 import RAPIER from "@dimforge/rapier3d-compat";
+import {
+  ROULETTE_BALL_RADIUS,
+  ROULETTE_EUROPEAN_SEQUENCE,
+  ROULETTE_FIXED_TIMESTEP,
+  ROULETTE_GRAVITY_Y,
+  ROULETTE_MAX_CCD_SUBSTEPS,
+  ROULETTE_POCKET_COUNT,
+  ROULETTE_ROTOR_ANGULAR_SPEED,
+} from "../../../../lib/roulette-physics-config";
 
-export const PHYSICS_LAB_FIXED_TIMESTEP = 1 / 120;
+export const PHYSICS_LAB_FIXED_TIMESTEP = ROULETTE_FIXED_TIMESTEP;
 export const PHYSICS_LAB_DURATION_LIMIT_SECONDS = 24;
 export const PHYSICS_LAB_STABLE_WINDOW_FRAMES = 180;
-export const PHYSICS_LAB_SECTOR_COUNT = 37;
-export const PHYSICS_LAB_BALL_RADIUS = 0.095;
-export const PHYSICS_LAB_EUROPEAN_SEQUENCE = [
-  0, 32, 15, 19, 4, 21, 2, 25, 17, 34, 6, 27, 13, 36, 11, 30, 8, 23, 10,
-  5, 24, 16, 33, 1, 20, 14, 31, 9, 22, 18, 29, 7, 28, 12, 35, 3, 26,
-] as const;
+export const PHYSICS_LAB_SECTOR_COUNT = ROULETTE_POCKET_COUNT;
+export const PHYSICS_LAB_BALL_RADIUS = ROULETTE_BALL_RADIUS;
+export const PHYSICS_LAB_EUROPEAN_SEQUENCE = ROULETTE_EUROPEAN_SEQUENCE;
 
 const SECTOR_STEP_RADIANS = (Math.PI * 2) / PHYSICS_LAB_SECTOR_COUNT;
 const BALL_COLLISION_GROUP = 0x0001;
@@ -29,12 +35,6 @@ const BALL_PARAMETERS = {
   linearDamping: 0.12,
   angularDamping: 0.07,
   initialAngularVelocity: 22,
-} as const;
-
-const ROTOR_PARAMETERS = {
-  initialAngularVelocity: 2.8,
-  angularDamping: 0.25,
-  mass: 2.8,
 } as const;
 
 type Vec3 = { x: number; y: number; z: number };
@@ -375,8 +375,7 @@ function buildStartConditions(seed: string): PhysicsLabStartConditions {
   const launchSpeed = 4 + (hashToUnit(seed, 2) - 0.5) * 0.24;
   const ballSpin = 22.5 + (hashToUnit(seed, 3) - 0.5) * 4.2;
   const rotorInitialAngleRadians = hashToUnit(seed, 4) * Math.PI * 2;
-  const rotorInitialAngularVelocity =
-    2.8 + (hashToUnit(seed, 5) - 0.5) * 0.28;
+  const rotorInitialAngularVelocity = ROULETTE_ROTOR_ANGULAR_SPEED;
   const position = radialPosition(
     2.455 + (hashToUnit(seed, 6) - 0.5) * 0.003,
     launchAzimuthRadians,
@@ -434,21 +433,14 @@ export async function simulatePhysicsLabRound(
   const startConditions = buildStartConditions(seed);
   const events: PhysicsLabEvent[] = [];
   const trajectory: PhysicsLabTrajectorySample[] = [];
-  const world = new RAPIER.World({ x: 0, y: -9.81, z: 0 });
+  const world = new RAPIER.World({ x: 0, y: ROULETTE_GRAVITY_Y, z: 0 });
   world.timestep = PHYSICS_LAB_FIXED_TIMESTEP;
-  world.maxCcdSubsteps = 8;
+  world.maxCcdSubsteps = ROULETTE_MAX_CCD_SUBSTEPS;
 
   const stationaryBody = world.createRigidBody(RAPIER.RigidBodyDesc.fixed());
   const rotorBody = world.createRigidBody(
-    RAPIER.RigidBodyDesc.dynamic()
-      .setTranslation(0, 0, 0)
-      .setGravityScale(0)
-      .setAngvel({ x: 0, y: startConditions.rotorInitialAngularVelocity, z: 0 })
-      .setAdditionalMass(ROTOR_PARAMETERS.mass)
-      .setAngularDamping(ROTOR_PARAMETERS.angularDamping)
-      .setCanSleep(false)
-      .enabledTranslations(false, false, false)
-      .enabledRotations(false, true, false),
+    RAPIER.RigidBodyDesc.kinematicPositionBased()
+      .setTranslation(0, 0, 0),
   );
   rotorBody.setRotation(
     {
@@ -506,7 +498,8 @@ export async function simulatePhysicsLabRound(
   let pocketInteraction = false;
   let previousPocketIndex: number | null = null;
   let previousBallSpeed = Math.hypot(...startConditions.ballVelocity);
-  let previousRotorSpeed = Math.abs(rotorBody.angvel().y);
+  let previousRotorSpeed = Math.abs(startConditions.rotorInitialAngularVelocity);
+  let rotorAngle = startConditions.rotorInitialAngleRadians;
   let previousRadialVelocity = 0;
   let previousVerticalVelocity = startConditions.ballVelocity[1];
   let minRadius = Number.POSITIVE_INFINITY;
@@ -523,13 +516,28 @@ export async function simulatePhysicsLabRound(
       PHYSICS_LAB_DURATION_LIMIT_SECONDS / PHYSICS_LAB_FIXED_TIMESTEP,
     );
     for (let step = 0; step < durationLimitSteps; step += 1) {
+      rotorAngle = normalizedAngle(
+        rotorAngle +
+          startConditions.rotorInitialAngularVelocity *
+            PHYSICS_LAB_FIXED_TIMESTEP,
+      );
+      rotorBody.setNextKinematicRotation({
+        x: 0,
+        y: Math.sin(rotorAngle / 2),
+        z: 0,
+        w: Math.cos(rotorAngle / 2),
+      });
       world.step();
       const translation = ballBody.translation();
       const velocity = ballBody.linvel();
       const rotation = ballBody.rotation();
       const angularVelocity = ballBody.angvel();
       const rotorRotation = rotorBody.rotation();
-      const rotorVelocity = rotorBody.angvel();
+      const rotorVelocity: Vec3 = {
+        x: 0,
+        y: startConditions.rotorInitialAngularVelocity,
+        z: 0,
+      };
       const ballSpeed = Math.hypot(velocity.x, velocity.y, velocity.z);
       const ballAngularSpeed = Math.hypot(
         angularVelocity.x,
