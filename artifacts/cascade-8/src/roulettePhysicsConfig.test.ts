@@ -138,7 +138,7 @@ describe("authoritative roulette physics config", () => {
   });
 
   it("keeps a single continuous stationary bowl bridge between race and rotor lip", () => {
-    expect(part3ViewportSource).toContain("function buildBowlBridgeTrimesh");
+    expect(part3ViewportSource).toContain("function addBowlBridgePrimitiveColliders");
     expect(part3ViewportSource).toContain("measureBowlBridgeProfile");
     expect(part3ViewportSource).toContain(
       "const BOWL_BRIDGE_INNER_RADIUS = POCKET_OUTER_LIP_RADIUS",
@@ -156,7 +156,13 @@ describe("authoritative roulette physics config", () => {
       "targetOuterY = part2ChannelSurfaceAt",
     );
     expect(part3ViewportSource).toContain(
-      "setCollisionGroups(\n                   STATIONARY_COLLISION_GROUP",
+      "STATIONARY_COLLISION_GROUP | (BALL_COLLISION_GROUP << 16)",
+    );
+    expect(part3ViewportSource).toContain(
+      "part3BowlBridgeColliders = addBowlBridgePrimitiveColliders",
+    );
+    expect(part3ViewportSource).toContain(
+      "for (const collider of part3BowlBridgeColliders)",
     );
   });
 
@@ -216,7 +222,7 @@ describe("authoritative roulette physics config", () => {
       "part3TrackCollider = world.createCollider",
     );
     expect(part3ViewportSource).toContain(
-      "part3BowlBridgeCollider = world.createCollider",
+      "part3BowlBridgeColliders = addBowlBridgePrimitiveColliders",
     );
     expect(part3ViewportSource).toContain(
       "part3DeflectorColliders = addMeasuredDeflectorColliders",
