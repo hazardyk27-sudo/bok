@@ -948,6 +948,14 @@ One audit-only instruction was mistakenly sent to Replit before this rule was cl
 - menu, game routes and slot shell can now extend beyond the viewport instead of being clipped
 - removed the Cadı Kazan landscape-only height/overflow trap so short landscape screens can scroll vertically when needed
 
+### Stage 21 — Approved Advanced 25 horizontal mobile card
+- Implemented the approved Advanced 25 mobile visual direction: large horizontal premium parchment card, compact identity/info rail on the left, dominant 5×5 scratch board on the right.
+- Existing mobile payout HUD and bottom control dock remain visible; only the Advanced card itself is redesigned.
+- Advanced board minimum mobile size was raised so cells remain materially larger; E2E now guards for at least 38 CSS px per cell on supported phone viewports.
+- First pointer/finger contact now immediately produces a light surface scuff exactly under the contact point while existing anti-spoiler settlement thresholds remain unchanged.
+- Exact portrait-rotation pointer mapping, standardized 24px scratch diameter, and dedicated cash-register SFX on CASH_OUT / COMPLETED are preserved.
+- Merged into GitHub `main` via PR #10, merge commit `7395b65`.
+
 ### Stage 20 — Advanced 25 large-cell mobile + exact scratch + cash register SFX
 - Mobile Advanced 25 keeps the established landscape shell, right-side payout HUD, and bottom control dock.
 - During an Advanced round, header/control chrome is compressed but not removed; freed height is reassigned to the ticket/board.
@@ -1086,7 +1094,7 @@ One audit-only instruction was mistakenly sent to Replit before this rule was cl
 
 As of this memory update, the next task is:
 
-> **Manually sync GitHub main in Replit Shell, then verify Advanced 25 mobile on a real phone: cells must be visibly larger and separable, the scratch center must sit directly beneath the pointer/finger, the existing mobile HUD/control shell must remain, and CASH OUT / COMPLETED must play the cash-register payout sound.**
+> **Manually sync GitHub main in Replit Shell, then verify the approved Advanced 25 mobile card: wide parchment card, compact left info rail, large separable 5×5 board on the right, payout HUD and control dock still visible, first scratch mark directly under pointer/finger, and cash-register sound on CASH OUT / COMPLETED.**
 
 Priority checks:
 1. Desktop should visually read as the approved premium mockup, roughly 80%+ similar in hierarchy/composition.
