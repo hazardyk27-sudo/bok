@@ -954,6 +954,17 @@ One audit-only instruction was mistakenly sent to Replit before this rule was cl
 - menu, game routes and slot shell can now extend beyond the viewport instead of being clipped
 - removed the Cadı Kazan landscape-only height/overflow trap so short landscape screens can scroll vertically when needed
 
+### Stage 27 — Standard 5 Better Call Saul visual rebuild
+- Standard 5 now uses the user-supplied Better Call Saul scratch-card reference as the visual master instead of the prior ivory/gold Cadı Kazan ticket.
+- Standard result mapping: safe result = Saul Goodman pointing artwork; losing/bomb result = I AM THE DANGER artwork; closed scratch cover = cactus artwork.
+- The five interactive scratch cells are registered over the five printed card squares; scratch mechanics remain server-authoritative and preserve the existing multi-layer abrasion system.
+- A dynamic ticket-value badge is overlaid on the card and updates from the actual stake.
+- Standard-mode page chrome now matches the card: warm dark table, red/yellow header/control styling, yellow/orange Buy button, and matching payout HUD accents.
+- Advanced 25 remains a separate design and was not replaced by the Better Call Saul ticket.
+- E2E coverage was updated to guard the Standard card background/aspect, five-cell placement, dynamic price badge, Saul safe artwork, and I AM THE DANGER terminal artwork. Runtime/visual Preview verification is still required before calling the match final.
+- PR #32 changed only Cadı Kazan files/assets; Slot/Roulette source files were not modified.
+- Merged into GitHub `main` via PR #32, merge commit `696a0cd`.
+
 ### Stage 26 — Scratch audio rebuilt from reference-video behavior
 - The two previously uploaded physical scratch-ticket videos were re-used as the behavior reference for Cadı Kazan scratch audio.
 - Old audio model (short independent noise bursts on pointer-move intervals) was removed from the active scratch path because it sounded like repeated digital hiss rather than one physical scrape.
