@@ -74,19 +74,18 @@ const PART2_CHANNEL_OUTER_WALL_FOOT_INDEX = 8;
 const PART2_CHANNEL_BOTTOM_THICKNESS = 0.12;
 const PART3_LAUNCH_RADIUS = PART2_ACTUAL_DARK_TRACK_LAUNCH_RADIUS;
 const PART3_RETAINING_RIM_INNER_RADIUS = PART2_ACTUAL_WOOD_INNER_RADIUS;
-const PART3_DEFLECTOR_INNER_RADIUS = 2.464;
-const PART3_DEFLECTOR_OUTER_RADIUS = 2.657;
-const PART3_DEFLECTOR_BOTTOM = -0.291;
-const PART3_DEFLECTOR_TOP = 0.015;
-const PART3_DEFLECTOR_COUNT = 37;
-const PART3_DEFLECTOR_PITCH = TWO_PI / PART3_DEFLECTOR_COUNT;
+const PART4_DEFLECTOR_SCAN_INNER_RADIUS =
+  ROULETTE_POCKET_OUTER_LIP_RADIUS - 0.02;
+const PART4_DEFLECTOR_SCAN_OUTER_RADIUS =
+  PART2_ACTUAL_DARK_TRACK_RADIUS_BAND[0] + 0.03;
+const PART4_DEFLECTOR_RADIAL_SAMPLE_COUNT = 15;
+const PART4_DEFLECTOR_AZIMUTH_SAMPLE_COUNT = 360;
+const PART4_DEFLECTOR_MIN_PROMINENCE = 0.012;
+const PART4_DEFLECTOR_MIN_CLUSTER_SAMPLES = 3;
+const PART4_DEFLECTOR_MIN_COUNT = 4;
+const PART4_DEFLECTOR_MAX_COUNT = 12;
 const PART3_DEFLECTOR_FRICTION = 0.28;
 const PART3_DEFLECTOR_RESTITUTION = 0.16;
-const PART3_DEFLECTOR_RADIUS = (PART3_DEFLECTOR_INNER_RADIUS + PART3_DEFLECTOR_OUTER_RADIUS) / 2;
-const PART3_DEFLECTOR_HEIGHT = PART3_DEFLECTOR_TOP - PART3_DEFLECTOR_BOTTOM;
-const PART3_DEFLECTOR_TANGENTIAL_WIDTH =
-  PART3_DEFLECTOR_RADIUS * THREE.MathUtils.degToRad(7.83);
-const PART3_DEFLECTOR_APPROACH_RADIUS = 2.74;
 const PART3_TRACK_INNER_RADIUS = PART2_ACTUAL_DARK_TRACK_RADIUS_BAND[0];
 const PART3_TRACK_OUTER_RADIUS = PART2_ACTUAL_DARK_TRACK_RADIUS_BAND[1];
 const PART3_TRACK_CONTACT_TOLERANCE = 0.1;
@@ -411,6 +410,25 @@ type Part3GeometryProfileSample = {
   hits: Part3GeometryProfileHit[];
 };
 
+type Part4VisibleDeflector = {
+  angle: number;
+  angularWidth: number;
+  innerRadius: number;
+  outerRadius: number;
+  bottomY: number;
+  topY: number;
+  peakProminence: number;
+};
+
+type Part4DeflectorAudit = {
+  passed: boolean;
+  descriptors: Part4VisibleDeflector[];
+  prominenceThreshold: number;
+  peakProminence: number;
+  maxSpacingDeviationRatio: number | null;
+  detail: string;
+};
+
 type Part3GeometryDiagnosticReport = {
   status: 'running' | 'passed' | 'failed';
   trueDarkTrackInnerRadius: number | null;
@@ -419,6 +437,9 @@ type Part3GeometryDiagnosticReport = {
   darkTrackSurfaceYRange: readonly [number, number] | null;
   outerWoodRingRadiusBand: readonly [number, number] | null;
   nearestDeflectorRadiusBand: readonly [number, number] | null;
+  visibleDeflectorCount: number | null;
+  visibleDeflectorAnglesDegrees: number[];
+  visibleDeflectorAuditPassed: boolean;
   proposedLaunchRadius: number | null;
   proposedLaunchHeight: number | null;
   ballRadius: number;
@@ -605,7 +626,7 @@ const PART3_PROBES = [
     id: 'controlled-deflector-approach',
     label: 'Controlled inward deflector approach',
     angle: 0.37,
-    radius: PART3_DEFLECTOR_APPROACH_RADIUS,
+    radius: PART2_ACTUAL_INWARD_EDGE_RADIUS + BALL_RADIUS + 0.18,
     speed: 1.4,
     spinFactor: 0,
     kind: 'deflector-approach',
@@ -664,13 +685,20 @@ const PART1_PROBES = [
 function part3SpawnPosition(
   probe: (typeof PART3_PROBES)[number],
   verticalOffset = 0,
+  measuredDeflector: Part4VisibleDeflector | null = null,
 ) {
   if (probe.kind === 'deflector-approach') {
-    return radialPosition(
-      probe.radius,
-      probe.angle,
-      (PART3_DEFLECTOR_BOTTOM + PART3_DEFLECTOR_TOP) / 2,
-    );
+    const angle = measuredDeflector?.angle ?? probe.angle;
+    const radius = measuredDeflector
+      ? measuredDeflector.outerRadius + BALL_RADIUS + 0.16
+      : probe.radius;
+    const height = measuredDeflector
+      ? (measuredDeflector.bottomY + measuredDeflector.topY) / 2
+      : part2ChannelSurfaceAt(
+          PART2_ACTUAL_INWARD_EDGE_RADIUS,
+          verticalOffset,
+        ).y + BALL_RADIUS;
+    return radialPosition(radius, angle, height);
   }
   const surface = part2ChannelSurfaceAt(probe.radius, verticalOffset);
   const surfacePoint = new THREE.Vector3(
@@ -684,12 +712,16 @@ function part3SpawnPosition(
     .toArray() as [number, number, number];
 }
 
-function part3InitialVelocity(probe: (typeof PART3_PROBES)[number]): VectorReadout {
+function part3InitialVelocity(
+  probe: (typeof PART3_PROBES)[number],
+  measuredAngle: number | null = null,
+): VectorReadout {
   if (probe.kind === 'deflector-approach') {
+    const angle = measuredAngle ?? probe.angle;
     return {
-      x: Number((-Math.sin(probe.angle) * probe.speed).toFixed(4)),
+      x: Number((-Math.sin(angle) * probe.speed).toFixed(4)),
       y: 0,
-      z: Number((-Math.cos(probe.angle) * probe.speed).toFixed(4)),
+      z: Number((-Math.cos(angle) * probe.speed).toFixed(4)),
     };
   }
   return {
@@ -719,27 +751,39 @@ function part3InitialAngularSpin(probe: (typeof PART3_PROBES)[number]): VectorRe
   };
 }
 
-function addPart3DeflectorColliders(
+function addMeasuredDeflectorColliders(
   world: RAPIER.World,
   stationaryBody: RAPIER.RigidBody,
+  descriptors: readonly Part4VisibleDeflector[],
 ) {
   const colliders: RAPIER.Collider[] = [];
-  const halfTangentialWidth = PART3_DEFLECTOR_TANGENTIAL_WIDTH / 2;
-  const halfHeight = PART3_DEFLECTOR_HEIGHT / 2;
-  const halfRadialDepth =
-    (PART3_DEFLECTOR_OUTER_RADIUS - PART3_DEFLECTOR_INNER_RADIUS) / 2;
-  const centerY = (PART3_DEFLECTOR_BOTTOM + PART3_DEFLECTOR_TOP) / 2;
-  for (let index = 0; index < PART3_DEFLECTOR_COUNT; index += 1) {
-    const angle = (index + 0.5) * PART3_DEFLECTOR_PITCH;
+  for (const descriptor of descriptors) {
+    const centerRadius =
+      (descriptor.innerRadius + descriptor.outerRadius) / 2;
+    const halfRadialDepth = Math.max(
+      BALL_RADIUS * 0.45,
+      (descriptor.outerRadius - descriptor.innerRadius) / 2,
+    );
+    const halfHeight = Math.max(
+      0.02,
+      (descriptor.topY - descriptor.bottomY) / 2,
+    );
+    const centerY = (descriptor.bottomY + descriptor.topY) / 2;
+    const halfTangentialWidth = THREE.MathUtils.clamp(
+      centerRadius * descriptor.angularWidth * 0.5,
+      BALL_RADIUS * 0.9,
+      0.22,
+    );
+    const angle = descriptor.angle;
     const collider = RAPIER.ColliderDesc.cuboid(
       halfTangentialWidth,
       halfHeight,
       halfRadialDepth,
     )
       .setTranslation(
-        Math.sin(angle) * PART3_DEFLECTOR_RADIUS,
+        Math.sin(angle) * centerRadius,
         centerY,
-        Math.cos(angle) * PART3_DEFLECTOR_RADIUS,
+        Math.cos(angle) * centerRadius,
       )
       .setRotation({
         x: 0,
@@ -748,7 +792,10 @@ function addPart3DeflectorColliders(
         w: Math.cos(angle / 2),
       })
       .setFriction(PART3_DEFLECTOR_FRICTION)
-      .setRestitution(PART3_DEFLECTOR_RESTITUTION);
+      .setRestitution(PART3_DEFLECTOR_RESTITUTION)
+      .setCollisionGroups(
+        STATIONARY_COLLISION_GROUP | (BALL_COLLISION_GROUP << 16),
+      );
     colliders.push(world.createCollider(collider, stationaryBody));
   }
   return colliders;
@@ -1680,6 +1727,9 @@ export function Part2SceneViewport({
     let part3BowlBridgeProfile: Array<[number, number]> = [];
     let part3InnerFloorCollider: RAPIER.Collider | null = null;
     let part3DeflectorColliders: RAPIER.Collider[] = [];
+    let part4DeflectorAudit: Part4DeflectorAudit | null = null;
+    let part4MeasuredDeflectorInnerRadius: number | null = null;
+    let part4MeasuredDeflectorOuterRadius: number | null = null;
     let part3PocketColliders: RAPIER.Collider[] = [];
     const part3ColliderRoles = new Map<number, string>();
     let rotorColliders: RAPIER.Collider[] = [];
@@ -1945,6 +1995,260 @@ export function Part2SceneViewport({
           y: normal.y,
           z: normal.z,
         },
+      };
+    };
+
+    const measureVisibleDeflectors = (): Part4DeflectorAudit => {
+      const radialStep =
+        (PART4_DEFLECTOR_SCAN_OUTER_RADIUS -
+          PART4_DEFLECTOR_SCAN_INNER_RADIUS) /
+        (PART4_DEFLECTOR_RADIAL_SAMPLE_COUNT - 1);
+      const angularStep = TWO_PI / PART4_DEFLECTOR_AZIMUTH_SAMPLE_COUNT;
+      const rows: Array<{
+        radius: number;
+        baseline: number;
+        heights: number[];
+      }> = [];
+
+      for (
+        let radialIndex = 0;
+        radialIndex < PART4_DEFLECTOR_RADIAL_SAMPLE_COUNT;
+        radialIndex += 1
+      ) {
+        const radius =
+          PART4_DEFLECTOR_SCAN_INNER_RADIUS + radialIndex * radialStep;
+        const heights = Array.from(
+          { length: PART4_DEFLECTOR_AZIMUTH_SAMPLE_COUNT },
+          (_, angleIndex) => {
+            const angle = angleIndex * angularStep;
+            const hit = measureVisibleSurfaceAt(
+              Math.sin(angle) * radius,
+              Math.cos(angle) * radius,
+              false,
+            );
+            return hit?.y ?? Number.NaN;
+          },
+        );
+        const valid = heights
+          .filter((height) => Number.isFinite(height))
+          .sort((left, right) => left - right);
+        if (
+          valid.length <
+          Math.floor(PART4_DEFLECTOR_AZIMUTH_SAMPLE_COUNT * 0.8)
+        ) {
+          continue;
+        }
+        rows.push({
+          radius,
+          baseline: valid[Math.floor(valid.length / 2)],
+          heights,
+        });
+      }
+
+      if (rows.length < 3) {
+        return {
+          passed: false,
+          descriptors: [],
+          prominenceThreshold: PART4_DEFLECTOR_MIN_PROMINENCE,
+          peakProminence: 0,
+          maxSpacingDeviationRatio: null,
+          detail:
+            'Deflector audit failed: insufficient visible geo1_outside_0 samples in the bowl/inner-transition band.',
+        };
+      }
+
+      const rawProminence = Array.from(
+        { length: PART4_DEFLECTOR_AZIMUTH_SAMPLE_COUNT },
+        (_, angleIndex) =>
+          Math.max(
+            0,
+            ...rows.map((row) => {
+              const height = row.heights[angleIndex];
+              return Number.isFinite(height)
+                ? height - row.baseline
+                : Number.NEGATIVE_INFINITY;
+            }),
+          ),
+      );
+      const prominence = rawProminence.map((_, angleIndex) => {
+        let sum = 0;
+        let count = 0;
+        for (let offset = -2; offset <= 2; offset += 1) {
+          const sampleIndex =
+            (angleIndex +
+              offset +
+              PART4_DEFLECTOR_AZIMUTH_SAMPLE_COUNT) %
+            PART4_DEFLECTOR_AZIMUTH_SAMPLE_COUNT;
+          const value = rawProminence[sampleIndex];
+          if (Number.isFinite(value)) {
+            sum += value;
+            count += 1;
+          }
+        }
+        return count > 0 ? sum / count : 0;
+      });
+      const peakProminence = Math.max(...prominence);
+      const prominenceThreshold = Math.max(
+        PART4_DEFLECTOR_MIN_PROMINENCE,
+        peakProminence * 0.35,
+      );
+      const active = prominence.map(
+        (value) => value >= prominenceThreshold,
+      );
+      const firstInactiveIndex = active.findIndex((value) => !value);
+      if (firstInactiveIndex < 0 || !active.some(Boolean)) {
+        return {
+          passed: false,
+          descriptors: [],
+          prominenceThreshold,
+          peakProminence,
+          maxSpacingDeviationRatio: null,
+          detail:
+            'Deflector audit failed: angular prominence did not separate into discrete visible deflectors.',
+        };
+      }
+
+      const clusters: number[][] = [];
+      let current: number[] = [];
+      for (
+        let offset = 1;
+        offset <= PART4_DEFLECTOR_AZIMUTH_SAMPLE_COUNT;
+        offset += 1
+      ) {
+        const index =
+          (firstInactiveIndex + offset) %
+          PART4_DEFLECTOR_AZIMUTH_SAMPLE_COUNT;
+        if (active[index]) {
+          current.push(index);
+        } else if (current.length > 0) {
+          if (current.length >= PART4_DEFLECTOR_MIN_CLUSTER_SAMPLES) {
+            clusters.push(current);
+          }
+          current = [];
+        }
+      }
+      if (current.length >= PART4_DEFLECTOR_MIN_CLUSTER_SAMPLES) {
+        clusters.push(current);
+      }
+
+      const descriptors = clusters
+        .map((cluster): Part4VisibleDeflector | null => {
+          let weightedSin = 0;
+          let weightedCos = 0;
+          let weightTotal = 0;
+          for (const index of cluster) {
+            const angle = index * angularStep;
+            const weight = Math.max(
+              PART4_DEFLECTOR_MIN_PROMINENCE,
+              prominence[index],
+            );
+            weightedSin += Math.sin(angle) * weight;
+            weightedCos += Math.cos(angle) * weight;
+            weightTotal += weight;
+          }
+          if (weightTotal <= 0) return null;
+          const angle = normalizedAngle(
+            Math.atan2(
+              weightedSin / weightTotal,
+              weightedCos / weightTotal,
+            ),
+          );
+          const supportingRows = rows.filter((row) => {
+            const rowPeak = Math.max(
+              ...cluster.map((index) => {
+                const height = row.heights[index];
+                return Number.isFinite(height)
+                  ? height - row.baseline
+                  : Number.NEGATIVE_INFINITY;
+              }),
+            );
+            return rowPeak >= prominenceThreshold * 0.45;
+          });
+          if (supportingRows.length === 0) return null;
+          const innerRadius = Math.max(
+            PART4_DEFLECTOR_SCAN_INNER_RADIUS,
+            supportingRows[0].radius - radialStep * 0.5,
+          );
+          const outerRadius = Math.min(
+            PART4_DEFLECTOR_SCAN_OUTER_RADIUS,
+            supportingRows[supportingRows.length - 1].radius +
+              radialStep * 0.5,
+          );
+          const topY = Math.max(
+            ...supportingRows.flatMap((row) =>
+              cluster
+                .map((index) => row.heights[index])
+                .filter((height) => Number.isFinite(height)),
+            ),
+          );
+          const sortedBaselines = supportingRows
+            .map((row) => row.baseline)
+            .sort((left, right) => left - right);
+          const bottomY =
+            sortedBaselines[Math.floor(sortedBaselines.length / 2)];
+          if (
+            !Number.isFinite(topY) ||
+            !Number.isFinite(bottomY) ||
+            topY - bottomY < PART4_DEFLECTOR_MIN_PROMINENCE
+          ) {
+            return null;
+          }
+          return {
+            angle,
+            angularWidth: Math.max(
+              angularStep * PART4_DEFLECTOR_MIN_CLUSTER_SAMPLES,
+              cluster.length * angularStep,
+            ),
+            innerRadius,
+            outerRadius,
+            bottomY,
+            topY,
+            peakProminence: Math.max(
+              ...cluster.map((index) => prominence[index]),
+            ),
+          };
+        })
+        .filter(
+          (descriptor): descriptor is Part4VisibleDeflector =>
+            descriptor !== null,
+        )
+        .sort((left, right) => left.angle - right.angle);
+
+      const spacing =
+        descriptors.length > 1
+          ? descriptors.map((descriptor, index) => {
+              const next =
+                descriptors[(index + 1) % descriptors.length];
+              return normalizedAngle(next.angle - descriptor.angle);
+            })
+          : [];
+      const expectedSpacing =
+        descriptors.length > 1 ? TWO_PI / descriptors.length : 0;
+      const maxSpacingDeviationRatio =
+        spacing.length > 0 && expectedSpacing > 0
+          ? Math.max(
+              ...spacing.map(
+                (value) =>
+                  Math.abs(value - expectedSpacing) / expectedSpacing,
+              ),
+            )
+          : null;
+      const passed =
+        descriptors.length >= PART4_DEFLECTOR_MIN_COUNT &&
+        descriptors.length <= PART4_DEFLECTOR_MAX_COUNT &&
+        peakProminence >= PART4_DEFLECTOR_MIN_PROMINENCE &&
+        maxSpacingDeviationRatio !== null &&
+        maxSpacingDeviationRatio <= 0.35;
+
+      return {
+        passed,
+        descriptors,
+        prominenceThreshold,
+        peakProminence,
+        maxSpacingDeviationRatio,
+        detail: passed
+          ? `PASS: measured ${descriptors.length} discrete visible deflectors directly from geo1_outside_0.`
+          : `Deflector audit failed: measured ${descriptors.length} candidate clusters; spacing/prominence sanity check did not pass.`,
       };
     };
 
@@ -2329,7 +2633,9 @@ export function Part2SceneViewport({
       const darkTrackInnerRadius = PART2_ACTUAL_DARK_TRACK_RADIUS_BAND[0];
       const darkTrackOuterRadius = PART2_ACTUAL_DARK_TRACK_RADIUS_BAND[1];
       const retainingRimInnerRadius = PART2_ACTUAL_WOOD_INNER_RADIUS;
-      const nearestDeflectorOuterRadius = PART2_ACTUAL_INWARD_EDGE_RADIUS;
+      const nearestDeflectorOuterRadius =
+        part4MeasuredDeflectorOuterRadius ??
+        PART2_ACTUAL_INWARD_EDGE_RADIUS;
       const chosenLaunchRadius = PART2_ACTUAL_DARK_TRACK_LAUNCH_RADIUS;
       const channelSurface = part2ChannelSurfaceAt(
         chosenLaunchRadius,
@@ -2928,8 +3234,26 @@ export function Part2SceneViewport({
     const startPart3Probe = (index: number) => {
       const probe = PART3_PROBES[index];
       if (!probe || !ballBody || !ballMesh) return;
-      const position = part3SpawnPosition(probe, part3TrackVerticalOffset);
-      const velocity = part3InitialVelocity(probe);
+      const measuredDeflector =
+        probe.kind === 'deflector-approach'
+          ? part4DeflectorAudit?.descriptors[0] ?? null
+          : null;
+      if (probe.kind === 'deflector-approach' && !measuredDeflector) {
+        publishPart3Report(
+          'failed',
+          'PART 4 deflector approach cannot start because no measured visible deflector is available.',
+        );
+        return;
+      }
+      const position = part3SpawnPosition(
+        probe,
+        part3TrackVerticalOffset,
+        measuredDeflector,
+      );
+      const velocity = part3InitialVelocity(
+        probe,
+        measuredDeflector?.angle ?? null,
+      );
       ballBody.setTranslation({ x: position[0], y: position[1], z: position[2] }, true);
       ballBody.setLinvel({ x: velocity.x, y: velocity.y, z: velocity.z }, true);
       const angularSpin = part3InitialAngularSpin(probe);
@@ -2940,8 +3264,9 @@ export function Part2SceneViewport({
       part3ProbeIndex = index;
       part3Elapsed = 0;
       part3PeakSpeed = 0;
-      part3MinRadius = probe.radius;
-      part3MaxRadius = probe.radius;
+      const actualSpawnRadius = Math.hypot(position[0], position[2]);
+      part3MinRadius = actualSpawnRadius;
+      part3MaxRadius = actualSpawnRadius;
       part3MaxPenetration = 0;
       part3MaxSeparation = 0;
       part3ContactFrames = 0;
@@ -3343,9 +3668,25 @@ export function Part2SceneViewport({
             ? [woodInner, woodOuter]
             : null,
         nearestDeflectorRadiusBand:
-          deflectorInner !== null && deflectorOuter !== null
-            ? [deflectorInner, deflectorOuter]
-            : null,
+          part4MeasuredDeflectorInnerRadius !== null &&
+          part4MeasuredDeflectorOuterRadius !== null
+            ? [
+                Number(part4MeasuredDeflectorInnerRadius.toFixed(4)),
+                Number(part4MeasuredDeflectorOuterRadius.toFixed(4)),
+              ]
+            : deflectorInner !== null && deflectorOuter !== null
+              ? [deflectorInner, deflectorOuter]
+              : null,
+        visibleDeflectorCount:
+          part4DeflectorAudit?.descriptors.length ?? null,
+        visibleDeflectorAnglesDegrees:
+          part4DeflectorAudit?.descriptors.map((descriptor) =>
+            Number(
+              THREE.MathUtils.radToDeg(descriptor.angle).toFixed(3),
+            ),
+          ) ?? [],
+        visibleDeflectorAuditPassed:
+          part4DeflectorAudit?.passed ?? false,
         proposedLaunchRadius,
         proposedLaunchHeight,
         ballRadius: BALL_RADIUS,
@@ -3744,6 +4085,40 @@ export function Part2SceneViewport({
             },
           });
 
+          part4DeflectorAudit = measureVisibleDeflectors();
+          if (part4DeflectorAudit.descriptors.length > 0) {
+            part4MeasuredDeflectorInnerRadius = Math.min(
+              ...part4DeflectorAudit.descriptors.map(
+                (descriptor) => descriptor.innerRadius,
+              ),
+            );
+            part4MeasuredDeflectorOuterRadius = Math.max(
+              ...part4DeflectorAudit.descriptors.map(
+                (descriptor) => descriptor.outerRadius,
+              ),
+            );
+          }
+          console.info(
+            'PART4_DEFLECTOR_AUDIT',
+            JSON.stringify({
+              passed: part4DeflectorAudit.passed,
+              count: part4DeflectorAudit.descriptors.length,
+              anglesDegrees: part4DeflectorAudit.descriptors.map(
+                (descriptor) =>
+                  Number(
+                    THREE.MathUtils.radToDeg(descriptor.angle).toFixed(3),
+                  ),
+              ),
+              innerRadius: part4MeasuredDeflectorInnerRadius,
+              outerRadius: part4MeasuredDeflectorOuterRadius,
+              prominenceThreshold:
+                part4DeflectorAudit.prominenceThreshold,
+              peakProminence: part4DeflectorAudit.peakProminence,
+              maxSpacingDeviationRatio:
+                part4DeflectorAudit.maxSpacingDeviationRatio,
+            }),
+          );
+
           await RAPIER.init();
           if (disposed) return;
           world = new RAPIER.World({ x: 0, y: GRAVITY_Y, z: 0 });
@@ -3822,9 +4197,21 @@ export function Part2SceneViewport({
               stationaryBody,
             );
              part3ColliderRoles.set(part3TrackCollider.handle, 'analytic-dark-recessed-channel');
-            part3DeflectorColliders = addPart3DeflectorColliders(world, stationaryBody);
+            if (!part4DeflectorAudit?.passed) {
+              throw new Error(
+                `PART 4 requires a credible visible-deflector audit before creating colliders: ${part4DeflectorAudit?.detail ?? 'audit unavailable'}`,
+              );
+            }
+            part3DeflectorColliders = addMeasuredDeflectorColliders(
+              world,
+              stationaryBody,
+              part4DeflectorAudit.descriptors,
+            );
             for (const collider of part3DeflectorColliders) {
-              part3ColliderRoles.set(collider.handle, 'visible-deflector-cuboid');
+              part3ColliderRoles.set(
+                collider.handle,
+                'asset-measured-visible-deflector-cuboid',
+              );
             }
            } else if (
              validationMode === 'part3' &&
@@ -4044,7 +4431,31 @@ export function Part2SceneViewport({
                     trueDarkTrackCenterRadius: null,
                     darkTrackSurfaceYRange: null,
                     outerWoodRingRadiusBand: null,
-                    nearestDeflectorRadiusBand: null,
+                    nearestDeflectorRadiusBand:
+                      part4MeasuredDeflectorInnerRadius !== null &&
+                      part4MeasuredDeflectorOuterRadius !== null
+                        ? [
+                            Number(
+                              part4MeasuredDeflectorInnerRadius.toFixed(4),
+                            ),
+                            Number(
+                              part4MeasuredDeflectorOuterRadius.toFixed(4),
+                            ),
+                          ]
+                        : null,
+                    visibleDeflectorCount:
+                      part4DeflectorAudit?.descriptors.length ?? null,
+                    visibleDeflectorAnglesDegrees:
+                      part4DeflectorAudit?.descriptors.map(
+                        (descriptor) =>
+                          Number(
+                            THREE.MathUtils.radToDeg(
+                              descriptor.angle,
+                            ).toFixed(3),
+                          ),
+                      ) ?? [],
+                    visibleDeflectorAuditPassed:
+                      part4DeflectorAudit?.passed ?? false,
                     proposedLaunchRadius: null,
                     proposedLaunchHeight: null,
                     ballRadius: BALL_RADIUS,
@@ -4207,10 +4618,9 @@ export function Part2SceneViewport({
             : null;
         const noPassThrough = !part3DeflectorPassThrough;
         const visualContactAlignmentCredible =
-          PART3_DEFLECTOR_INNER_RADIUS >= 2.46 &&
-          PART3_DEFLECTOR_OUTER_RADIUS <= 2.67 &&
-          PART3_DEFLECTOR_BOTTOM <= -0.28 &&
-          PART3_DEFLECTOR_TOP >= 0.01;
+          Boolean(part4DeflectorAudit?.passed) &&
+          part3DeflectorColliders.length ===
+            (part4DeflectorAudit?.descriptors.length ?? -1);
         const passed =
           isDeflectorApproach
             ? part3DeflectorContact &&
@@ -4288,8 +4698,10 @@ export function Part2SceneViewport({
           retainingRimRadius: PART3_RETAINING_RIM_INNER_RADIUS,
           nearestDeflectorRadius:
             isDeflectorApproach
-              ? PART3_DEFLECTOR_INNER_RADIUS
-              : PART3_DEFLECTOR_OUTER_RADIUS,
+              ? part4MeasuredDeflectorInnerRadius ??
+                PART2_ACTUAL_INWARD_EDGE_RADIUS
+              : part4MeasuredDeflectorOuterRadius ??
+                PART2_ACTUAL_INWARD_EDGE_RADIUS,
           earlyLapMinimumDeflectorClearance:
             part3EarlyLapMinimumDeflectorClearance === null
               ? null
@@ -4585,7 +4997,9 @@ export function Part2SceneViewport({
                 darkTrackOuterRadius:
                   PART2_ACTUAL_DARK_TRACK_RADIUS_BAND[1],
                 retainingRimInnerRadius: PART2_ACTUAL_WOOD_INNER_RADIUS,
-                nearestDeflectorOuterRadius: PART2_ACTUAL_INWARD_EDGE_RADIUS,
+                nearestDeflectorOuterRadius:
+                  part4MeasuredDeflectorOuterRadius ??
+                  PART2_ACTUAL_INWARD_EDGE_RADIUS,
                 ballRadius: BALL_RADIUS,
                 chosenLaunchRadius: part3OuterLaneLaunchRadius,
                 radialClearanceToRim:
@@ -5072,10 +5486,16 @@ export function Part2SceneViewport({
             const onTrack = geometricTrackContact && trackPairContact;
             const trackAngle = normalizedAngle(Math.atan2(position.x, position.z));
             if (probe.kind === 'outer-track' && part3InwardDescentTime === null) {
+              const measuredInner =
+                part4MeasuredDeflectorInnerRadius ??
+                PART2_ACTUAL_INWARD_EDGE_RADIUS;
+              const measuredOuter =
+                part4MeasuredDeflectorOuterRadius ??
+                PART2_ACTUAL_INWARD_EDGE_RADIUS;
               const deflectorClearance =
-                radius >= PART3_DEFLECTOR_OUTER_RADIUS
-                  ? radius - BALL_RADIUS - PART3_DEFLECTOR_OUTER_RADIUS
-                  : PART3_DEFLECTOR_INNER_RADIUS - radius - BALL_RADIUS;
+                radius >= measuredOuter
+                  ? radius - BALL_RADIUS - measuredOuter
+                  : measuredInner - radius - BALL_RADIUS;
               part3EarlyLapMinimumDeflectorClearance =
                 part3EarlyLapMinimumDeflectorClearance === null
                   ? deflectorClearance
@@ -5125,7 +5545,10 @@ export function Part2SceneViewport({
               }
               part3DeflectorPassThrough ||=
                 radius <
-                  PART3_DEFLECTOR_INNER_RADIUS - BALL_RADIUS - 0.01 &&
+                  (part4MeasuredDeflectorInnerRadius ??
+                    PART2_ACTUAL_INWARD_EDGE_RADIUS) -
+                    BALL_RADIUS -
+                    0.01 &&
                 !part3DeflectorContact;
             }
             const leftValidVolume =
@@ -6001,6 +6424,20 @@ export function Part2SceneViewport({
               · nearest deflector r{' '}
               {part3GeometryDiagnosticReport.nearestDeflectorRadiusBand
                 ? `${part3GeometryDiagnosticReport.nearestDeflectorRadiusBand[0].toFixed(4)}–${part3GeometryDiagnosticReport.nearestDeflectorRadiusBand[1].toFixed(4)}`
+                : '—'}
+            </span>
+            <span>
+              visible deflectors{' '}
+              {part3GeometryDiagnosticReport.visibleDeflectorCount ?? '—'} ·
+              audit{' '}
+              {part3GeometryDiagnosticReport.visibleDeflectorAuditPassed
+                ? 'PASS'
+                : 'FAIL'}{' '}
+              · angles{' '}
+              {part3GeometryDiagnosticReport.visibleDeflectorAnglesDegrees.length
+                ? part3GeometryDiagnosticReport.visibleDeflectorAnglesDegrees
+                    .map((angle) => `${angle.toFixed(1)}°`)
+                    .join(', ')
                 : '—'}
             </span>
             <span>
