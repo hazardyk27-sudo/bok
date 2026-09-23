@@ -4526,3 +4526,14 @@ button:focus-visible, input:focus-visible { outline: 2px solid var(--cyan); outl
     min-height: 68px;
   }
 }
+
+
+/* Installed-slot viewport normalization */
+@media (max-width: 620px) {
+  .app-shell.is-slot-game:not(.is-lab) {
+    height: var(--slot-visual-height, 100dvh);
+    min-height: var(--slot-visual-height, 100dvh);
+    max-height: var(--slot-visual-height, 100dvh);
+    overflow: hidden;
+  }
+}
