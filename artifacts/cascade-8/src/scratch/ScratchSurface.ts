@@ -8,7 +8,6 @@ import {
 } from "./ScratchProgress";
 import { prefersReducedMotion } from "./ScratchFeedback";
 
-const MIN_AUDIO_INTERVAL_MS = 28;
 const RESULT_COMMIT_MIN_COVERAGE = 0.2;
 const RESULT_COMMIT_MIN_MS = 420;
 const RESULT_COMMIT_MIN_DISTANCE_FACTOR = 1.5;
@@ -75,7 +74,6 @@ export class ScratchSurface {
   private resultReady = false;
   private resultRequest: Promise<void> | null = null;
   private lastMoveAt = 0;
-  private lastAudioAt = -Infinity;
   private brushStep = 0;
   private trail: TrailSample[] = [];
   private debrisFrame: number | null = null;
@@ -104,6 +102,7 @@ export class ScratchSurface {
     this.applyThreeLayerAbrasion(this.lastPoint, 0, 0.08, this.resultReady);
     this.eraseLayer("lacquer", this.lastPoint, 0, 0.08, 0.82);
 
+    this.audio?.scratchStart(0.12, this.progress.depthAt(this.lastPoint.x, this.lastPoint.y));
     this.interactionCanvas.setPointerCapture(event.pointerId);
     this.interactionCanvas.classList.add("is-scratching");
     event.preventDefault();
@@ -142,10 +141,7 @@ export class ScratchSurface {
 
     this.maybeCommitResult(now);
     this.emitDebris(point, angle, speed);
-    if (now - this.lastAudioAt >= MIN_AUDIO_INTERVAL_MS) {
-      this.audio?.scratch(speed, this.progress.depthAt(point.x, point.y));
-      this.lastAudioAt = now;
-    }
+    this.audio?.scratchUpdate(speed, this.progress.depthAt(point.x, point.y));
 
     this.lastPoint = point;
     this.lastMoveAt = now;
@@ -161,6 +157,7 @@ export class ScratchSurface {
     this.gestureStartedAt = 0;
     this.scratchDistancePx = 0;
     this.lastMoveAt = 0;
+    this.audio?.scratchStop();
     this.interactionCanvas.classList.remove("is-scratching");
   };
 
@@ -205,6 +202,7 @@ export class ScratchSurface {
   }
 
   destroy() {
+    this.audio?.scratchStop();
     this.cancelDebris();
     this.resizeObserver?.disconnect();
     this.resizeObserver = undefined;
@@ -234,7 +232,7 @@ export class ScratchSurface {
     this.gestureStartedAt = 0;
     this.scratchDistancePx = 0;
     this.lastMoveAt = 0;
-    this.lastAudioAt = -Infinity;
+    this.audio?.scratchStop();
     this.brushStep = 0;
     this.trail = [];
     this.resultReady = false;
