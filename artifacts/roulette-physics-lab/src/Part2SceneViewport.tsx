@@ -2643,7 +2643,7 @@ export function Part2SceneViewport({
 
     const measureBowlBridgeProfile = (
       channelVerticalOffset: number,
-      outerRadius = BOWL_BRIDGE_OUTER_RADIUS,
+      outerRadius: number = BOWL_BRIDGE_OUTER_RADIUS,
     ): Array<[number, number]> => {
       const radii = Array.from(
         { length: BOWL_BRIDGE_SAMPLE_COUNT },
