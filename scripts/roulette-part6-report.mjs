@@ -18,6 +18,12 @@ const results = Array.isArray(telemetry?.results)
   : Array.isArray(runtime.seedTelemetry)
     ? runtime.seedTelemetry
     : [];
+const expectedSeedCount = Number(
+  runtime.expectedSeedCount ??
+    telemetry?.seedCount ??
+    process.env.ROULETTE_PART6_EXPECTED_SEEDS ??
+    20,
+);
 if (results.length === 0) {
   throw new Error(
     'PART 6 runtime result has neither final telemetry results nor partial seed telemetry.',
@@ -48,7 +54,7 @@ const evidence = {
   safetyStatus: telemetry?.safetyStatus ?? null,
   calibrationStatus: telemetry?.calibrationStatus ?? null,
   partialRuntime: telemetry === null,
-  expectedSeedCount: 20,
+  expectedSeedCount,
   resultCount: results.length,
   completedCount:
     telemetry?.completedCount ??

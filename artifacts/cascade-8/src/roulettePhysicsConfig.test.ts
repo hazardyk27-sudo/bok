@@ -396,6 +396,12 @@ describe("authoritative roulette physics config", () => {
       "const PART6_INTERACTIVE_YIELD_STEPS = 30",
     );
     expect(part3ViewportSource).toContain(
+      "const PART6_DIAGNOSTIC_YIELD_STEPS = 5",
+    );
+    expect(part3ViewportSource).toContain(
+      "PART6_STEP_PROGRESS",
+    );
+    expect(part3ViewportSource).toContain(
       "ballMeshVisible: activeBallMesh.visible",
     );
     expect(part3ViewportSource).toContain(
@@ -519,7 +525,13 @@ describe("authoritative roulette physics config", () => {
       "roulette-physics-part6\n",
     );
     expect(rouletteRuntimeWorkflowSource).toContain(
-      "ROULETTE_PART6_TIMEOUT_MS: '900000'",
+      "ROULETTE_PART6_TIMEOUT_MS: '180000'",
+    );
+    expect(rouletteRuntimeWorkflowSource).toContain(
+      "part6SeedCount=1&part6MaxDurationSeconds=2",
+    );
+    expect(rouletteRuntimeWorkflowSource).toContain(
+      "ROULETTE_PART6_EXPECTED_SEEDS: '1'",
     );
   });
 

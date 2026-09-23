@@ -9,11 +9,15 @@ const outputPath =
   process.env.ROULETTE_PART6_OUTPUT ??
   'artifacts/roulette-physics-lab/part6-runtime-result.json';
 const terminalTimeoutMs = Number(
-  process.env.ROULETTE_PART6_TIMEOUT_MS ?? 900_000,
+  process.env.ROULETTE_PART6_TIMEOUT_MS ?? 180_000,
+);
+const expectedSeedCount = Number(
+  process.env.ROULETTE_PART6_EXPECTED_SEEDS ?? 20,
 );
 
 let telemetry = null;
 const seedTelemetry = [];
+let lastStepProgress = null;
 
 const persistPartialResult = (extra = {}) => {
   const partial = {
@@ -45,6 +49,23 @@ try {
 
   page.on('console', (message) => {
     const text = message.text();
+
+    if (text.startsWith('PART6_STEP_PROGRESS ')) {
+      const raw = text.slice('PART6_STEP_PROGRESS '.length);
+      try {
+        lastStepProgress = JSON.parse(raw);
+        console.log('PART6_RUNTIME_STEP ' + raw);
+        persistPartialResult({
+          expectedSeedCount,
+          lastStepProgress,
+          seedResultsCaptured: seedTelemetry.length,
+        });
+      } catch (error) {
+        console.error('Could not parse PART 6 step progress payload:', error);
+      }
+      return;
+    }
+
     const prefixes = [
       ['PART6_FULL_SPIN_TELEMETRY ', 'full'],
       ['PART6_SEED_TELEMETRY ', 'seed'],
@@ -64,7 +85,9 @@ try {
           console.log(
             'PART6_RUNTIME_SEED ' +
               String(current) +
-              '/20 seed=' +
+              '/' +
+              String(expectedSeedCount) +
+              ' seed=' +
               String(parsed.seed) +
               ' laps=' +
               String(parsed.lapCount) +
@@ -136,6 +159,8 @@ try {
     capturedAt: new Date().toISOString(),
     url: targetUrl,
     terminalTimeoutMs,
+    expectedSeedCount,
+    lastStepProgress,
     domStatus: status,
     errorVisible,
     errorText,
@@ -153,6 +178,8 @@ try {
   const summary = {
     domStatus: status,
     terminalWaitError,
+    expectedSeedCount,
+    lastStepProgress,
     seedResultsCaptured: seedTelemetry.length,
     telemetryStatus: telemetry?.status ?? null,
     safetyStatus: telemetry?.safetyStatus ?? null,

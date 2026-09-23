@@ -1,4 +1,4 @@
-name: Roulette PART 6 Runtime
+name: Roulette PART 6B.1 Smoke
 
 concurrency:
   group: roulette-part6-runtime-${{ github.ref }}
@@ -36,7 +36,7 @@ on:
 jobs:
   runtime:
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 10
 
     steps:
       - name: Checkout
@@ -85,21 +85,23 @@ jobs:
           cat /tmp/roulette-part6-vite.log
           exit 1
 
-      - name: Run 20-seed PART 6 batch
+      - name: Run 1-seed PART 6B.1 diagnostic smoke
         env:
-          ROULETTE_LAB_URL: http://127.0.0.1:4173/?part6Headless=1
+          ROULETTE_LAB_URL: http://127.0.0.1:4173/?part6Headless=1&part6SeedCount=1&part6MaxDurationSeconds=2
           ROULETTE_PART6_OUTPUT: artifacts/roulette-physics-lab/part6-runtime-result.json
-          ROULETTE_PART6_TIMEOUT_MS: '900000'
+          ROULETTE_PART6_TIMEOUT_MS: '180000'
+          ROULETTE_PART6_EXPECTED_SEEDS: '1'
         shell: bash
         run: |
           set -o pipefail
           node scripts/roulette-part6-runtime.mjs | tee part6-runtime.log
 
-      - name: Summarize PART 6 calibration evidence
+      - name: Summarize PART 6B.1 diagnostic evidence
         if: always()
         env:
           ROULETTE_PART6_OUTPUT: artifacts/roulette-physics-lab/part6-runtime-result.json
           ROULETTE_PART6_EVIDENCE: artifacts/roulette-physics-lab/part6-calibration-evidence.json
+          ROULETTE_PART6_EXPECTED_SEEDS: '1'
         run: |
           if [ -f "$ROULETTE_PART6_OUTPUT" ]; then
             node scripts/roulette-part6-report.mjs | tee part6-calibration-evidence.log
@@ -115,7 +117,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: roulette-part6-runtime
+          name: roulette-part6b1-smoke
           path: |
             artifacts/roulette-physics-lab/part6-runtime-result.json
             artifacts/roulette-physics-lab/part6-calibration-evidence.json

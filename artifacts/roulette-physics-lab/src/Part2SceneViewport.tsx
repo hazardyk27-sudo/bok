@@ -67,6 +67,8 @@ const PART6_FULL_SPIN_MAX_DURATION_SECONDS = 30;
 const PART6_SETTLE_DURATION_SECONDS = 0.5;
 const PART6_UI_YIELD_STEPS = 240;
 const PART6_INTERACTIVE_YIELD_STEPS = 30;
+const PART6_DIAGNOSTIC_YIELD_STEPS = 5;
+const PART6_DIAGNOSTIC_PROGRESS_STEPS = 20;
 const PART6_STATE_RESET_VECTOR_EPSILON = 0.0005;
 const PART6_STATE_RESET_ANGLE_EPSILON = 0.00001;
 const PART6_TRANSITION_HOVER_GRACE_SECONDS = 0.25;
@@ -3439,6 +3441,43 @@ export function Part2SceneViewport({
       const activeTrackCollider = part3TrackCollider;
       const activeRotorPivot = rotorPivot;
 
+      const part6Params = new URLSearchParams(window.location.search);
+      const requestedSeedCount = Number(
+        part6Params.get('part6SeedCount') ?? PART6_FULL_SPIN_RUNS.length,
+      );
+      const activePart6SeedCount = Number.isFinite(requestedSeedCount)
+        ? Math.max(
+            1,
+            Math.min(
+              PART6_FULL_SPIN_RUNS.length,
+              Math.floor(requestedSeedCount),
+            ),
+          )
+        : PART6_FULL_SPIN_RUNS.length;
+      const activePart6Runs = PART6_FULL_SPIN_RUNS.slice(
+        0,
+        activePart6SeedCount,
+      );
+      const requestedMaxDurationSeconds = Number(
+        part6Params.get('part6MaxDurationSeconds') ??
+          PART6_FULL_SPIN_MAX_DURATION_SECONDS,
+      );
+      const activePart6MaxDurationSeconds = Number.isFinite(
+        requestedMaxDurationSeconds,
+      )
+        ? Math.max(
+            FIXED_TIMESTEP * 2,
+            Math.min(
+              PART6_FULL_SPIN_MAX_DURATION_SECONDS,
+              requestedMaxDurationSeconds,
+            ),
+          )
+        : PART6_FULL_SPIN_MAX_DURATION_SECONDS;
+      const part6DiagnosticMode =
+        activePart6Runs.length !== PART6_FULL_SPIN_RUNS.length ||
+        activePart6MaxDurationSeconds !==
+          PART6_FULL_SPIN_MAX_DURATION_SECONDS;
+
       const summarize = (
         results: Part6FullSpinTelemetryResult[],
         status: Part6FullSpinTelemetryReport['status'],
@@ -3492,15 +3531,15 @@ export function Part2SceneViewport({
             status === 'running'
               ? 'pending'
               : status === 'captured' &&
-                  results.length === PART6_FULL_SPIN_RUNS.length &&
+                  results.length === activePart6Runs.length &&
                   safetyFailureCount === 0
                 ? 'passed'
                 : 'failed',
           calibrationStatus: 'not-evaluated',
           schemaVersion: PART6_TELEMETRY_SCHEMA_VERSION,
           fixedTimestep: FIXED_TIMESTEP,
-          maxDurationSeconds: PART6_FULL_SPIN_MAX_DURATION_SECONDS,
-          seedCount: PART6_FULL_SPIN_RUNS.length,
+          maxDurationSeconds: activePart6MaxDurationSeconds,
+          seedCount: activePart6Runs.length,
           completedCount: results.filter(
             (result) => result.telemetryComplete,
           ).length,
@@ -3569,14 +3608,15 @@ export function Part2SceneViewport({
 
       const results: Part6FullSpinTelemetryResult[] = [];
       const maxSteps = Math.round(
-        PART6_FULL_SPIN_MAX_DURATION_SECONDS / FIXED_TIMESTEP,
+        activePart6MaxDurationSeconds / FIXED_TIMESTEP,
       );
       const part6HeadlessFastMode =
-        new URLSearchParams(window.location.search).get('part6Headless') ===
-        '1';
-      const telemetryYieldSteps = part6HeadlessFastMode
-        ? PART6_UI_YIELD_STEPS * 2
-        : PART6_INTERACTIVE_YIELD_STEPS;
+        part6Params.get('part6Headless') === '1';
+      const telemetryYieldSteps = part6DiagnosticMode
+        ? PART6_DIAGNOSTIC_YIELD_STEPS
+        : part6HeadlessFastMode
+          ? PART6_UI_YIELD_STEPS * 2
+          : PART6_INTERACTIVE_YIELD_STEPS;
 
       const previewSnapshot = {
         ballTranslation: { ...activeBallBody.translation() },
@@ -3674,7 +3714,9 @@ export function Part2SceneViewport({
         summarize(
           results,
           'running',
-          'PART 6A.1 deterministic full-spin telemetry is running with isolated seed resets and phase tracking; physics coefficients are unchanged.',
+          part6DiagnosticMode
+            ? 'PART 6B.1 diagnostic telemetry is running on a bounded seed/time slice; physics coefficients are unchanged.'
+            : 'PART 6A.1 deterministic full-spin telemetry is running with isolated seed resets and phase tracking; physics coefficients are unchanged.',
         ),
       );
       // Commit the running report before heavy deterministic stepping starts.
@@ -3684,7 +3726,7 @@ export function Part2SceneViewport({
       if (disposed) return;
 
       try {
-        for (const run of PART6_FULL_SPIN_RUNS) {
+        for (const run of activePart6Runs) {
           if (disposed) return;
 
           const launchSurface = measureVisibleSurfaceAt(
@@ -3964,6 +4006,24 @@ export function Part2SceneViewport({
             maxRadius = Math.max(maxRadius, radius);
             finalSpeed = speed;
             peakSpeed = Math.max(peakSpeed, speed);
+
+            if (
+              part6DiagnosticMode &&
+              step > 0 &&
+              step % PART6_DIAGNOSTIC_PROGRESS_STEPS === 0
+            ) {
+              console.info(
+                'PART6_STEP_PROGRESS',
+                JSON.stringify({
+                  seed: run.seed,
+                  step,
+                  maxSteps,
+                  elapsed: Number(elapsed.toFixed(4)),
+                  radius: Number(radius.toFixed(4)),
+                  speed: Number(speed.toFixed(4)),
+                }),
+              );
+            }
 
             let trackPairContact = false;
             let deflectorPairContact = false;
@@ -4465,7 +4525,7 @@ export function Part2SceneViewport({
             !escaped &&
             !tunneling &&
             elapsed >=
-              PART6_FULL_SPIN_MAX_DURATION_SECONDS -
+              activePart6MaxDurationSeconds -
                 FIXED_TIMESTEP;
           const safetyPassed =
             stateResetVerified &&
@@ -4683,7 +4743,7 @@ export function Part2SceneViewport({
               'PART 6A.1 captured ' +
                 String(results.length) +
                 '/' +
-                String(PART6_FULL_SPIN_RUNS.length) +
+                String(activePart6Runs.length) +
                 ' deterministic runs; remaining seeds continue.',
             ),
           );
@@ -4692,7 +4752,7 @@ export function Part2SceneViewport({
         }
 
         const telemetryCaptured =
-          results.length === PART6_FULL_SPIN_RUNS.length &&
+          results.length === activePart6Runs.length &&
           results.every(
             (result) => result.telemetryComplete,
           );
@@ -4708,8 +4768,8 @@ export function Part2SceneViewport({
 
         if (results.length > 0) {
           const lastRun =
-            PART6_FULL_SPIN_RUNS[
-              PART6_FULL_SPIN_RUNS.length - 1
+            activePart6Runs[
+              activePart6Runs.length - 1
             ];
           rotorAngleRef.current = normalizedAngle(
             lastRun.rotorStartAngle +
