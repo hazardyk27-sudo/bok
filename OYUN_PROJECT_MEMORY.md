@@ -924,6 +924,16 @@ One audit-only instruction was mistakenly sent to Replit before this rule was cl
 - menu, game routes and slot shell can now extend beyond the viewport instead of being clipped
 - removed the Cadı Kazan landscape-only height/overflow trap so short landscape screens can scroll vertically when needed
 
+### Stage 12 — Figma master → code
+- user explicitly required the workflow to be Figma first, then code
+- created Figma file `Cadı Kazan Premium UI Master` and built an editable desktop master screen with compact header, centered ivory scratch ticket, floating payout HUD, and bottom control dock
+- implemented that Figma hierarchy in GitHub instead of continuing the old left-panel/right-panel dashboard composition
+- Cadı Kazan desktop shell now uses a single cinematic stage, hero ticket, floating payout panel, and one horizontal control dock
+- preserved existing scratch/server/gameplay selectors and logic while replacing the visible layout and visual system
+- responsive portrait and landscape mobile rules were rebuilt around the new shell
+- current Figma file key: `XgXVR6fYzZ6Tj11J8M6bha`
+- current design master node: `3:2`
+
 ### Stage 11 — Scratch anti-spoiler + premium visual pass
 - result settlement is no longer requested on pointer-down; a tiny scratch does not immediately trigger bomb/multiplier outcome
 - reveal request now requires meaningful local scratch: minimum deep coverage, minimum gesture duration and minimum scratch travel
@@ -960,7 +970,7 @@ One audit-only instruction was mistakenly sent to Replit before this rule was cl
 
 As of this memory update, the next task is:
 
-> **Manually sync GitHub main in Replit Shell, then visually QA Stage 11: anti-spoiler scratch timing, realistic symbols, dynamic ticket price, larger stakes, and the premium petrol/aubergine UI pass.**
+> **Manually sync GitHub main in Replit Shell and visually compare the new Cadı Kazan implementation against the Figma master. Fix any major spacing, scale, or hierarchy mismatch before further feature work.**
 
 Priority checks:
 1. Desktop should visually read as the approved premium mockup, roughly 80%+ similar in hierarchy/composition.
