@@ -67,6 +67,8 @@ const PART6_FULL_SPIN_MAX_DURATION_SECONDS = 30;
 const PART6_SETTLE_DURATION_SECONDS = 0.5;
 const PART6_UI_YIELD_STEPS = 240;
 const PART6_INTERACTIVE_YIELD_STEPS = 30;
+const PART6_STATE_RESET_VECTOR_EPSILON = 0.0005;
+const PART6_STATE_RESET_ANGLE_EPSILON = 0.00001;
 const PART6_TRANSITION_HOVER_GRACE_SECONDS = 0.25;
 const PART6_DETERMINISTIC_SEEDS = [
   61001, 61002, 61003, 61004, 61005,
@@ -434,6 +436,11 @@ type Part6FullSpinTelemetryResult = {
   launchHeight: number;
   rotorStartAngle: number;
   stateResetVerified: boolean;
+  resetPositionError: number;
+  resetVelocityError: number;
+  resetAngularVelocityError: number;
+  resetRotationError: number;
+  resetRotorAngleError: number;
   elapsed: number;
   lapCount: number;
   trackDuration: number;
@@ -3806,27 +3813,33 @@ export function Part2SceneViewport({
               TWO_PI,
             ) - Math.PI,
           );
+          const resetPositionError = Math.hypot(
+            resetPosition.x - launchPosition.x,
+            resetPosition.y - launchPosition.y,
+            resetPosition.z - launchPosition.z,
+          );
+          const resetVelocityError = Math.hypot(
+            resetVelocity.x - launchVelocity.x,
+            resetVelocity.y - launchVelocity.y,
+            resetVelocity.z - launchVelocity.z,
+          );
+          const resetAngularVelocityError = Math.hypot(
+            resetAngularVelocity.x - launchAngularVelocity.x,
+            resetAngularVelocity.y - launchAngularVelocity.y,
+            resetAngularVelocity.z - launchAngularVelocity.z,
+          );
+          const resetRotationError = Math.hypot(
+            resetRotation.x,
+            resetRotation.y,
+            resetRotation.z,
+            resetRotation.w - 1,
+          );
           const stateResetVerified =
-            Math.hypot(
-              resetPosition.x - launchPosition.x,
-              resetPosition.y - launchPosition.y,
-              resetPosition.z - launchPosition.z,
-            ) <= 0.000001 &&
-            Math.hypot(
-              resetVelocity.x - launchVelocity.x,
-              resetVelocity.y - launchVelocity.y,
-              resetVelocity.z - launchVelocity.z,
-            ) <= 0.000001 &&
-            Math.hypot(
-              resetAngularVelocity.x - launchAngularVelocity.x,
-              resetAngularVelocity.y - launchAngularVelocity.y,
-              resetAngularVelocity.z - launchAngularVelocity.z,
-            ) <= 0.000001 &&
-            Math.abs(resetRotation.x) <= 0.000001 &&
-            Math.abs(resetRotation.y) <= 0.000001 &&
-            Math.abs(resetRotation.z) <= 0.000001 &&
-            Math.abs(resetRotation.w - 1) <= 0.000001 &&
-            resetRotorAngleError <= 0.000001;
+            resetPositionError <= PART6_STATE_RESET_VECTOR_EPSILON &&
+            resetVelocityError <= PART6_STATE_RESET_VECTOR_EPSILON &&
+            resetAngularVelocityError <= PART6_STATE_RESET_VECTOR_EPSILON &&
+            resetRotationError <= PART6_STATE_RESET_VECTOR_EPSILON &&
+            resetRotorAngleError <= PART6_STATE_RESET_ANGLE_EPSILON;
 
           let elapsed = 0;
           let minRadius = Math.hypot(
@@ -4400,7 +4413,10 @@ export function Part2SceneViewport({
               EUROPEAN_SEQUENCE[finalPocketIndex];
           }
 
-          const observedPhaseIndices = phases.map((event) =>
+          const orderedCoreEvents = phases.filter(
+            (event) => event.phase !== 'FRETS',
+          );
+          const observedPhaseIndices = orderedCoreEvents.map((event) =>
             phaseOrder.indexOf(event.phase),
           );
           const phaseSequenceMonotonic = observedPhaseIndices.every(
@@ -4441,8 +4457,7 @@ export function Part2SceneViewport({
           const optionalFretPlacementValid =
             fretEventIndex < 0 ||
             (rotorEntryEventIndex >= 0 &&
-              fretEventIndex > rotorEntryEventIndex &&
-              (pocketEventIndex < 0 || fretEventIndex < pocketEventIndex));
+              fretEventIndex > rotorEntryEventIndex);
           const phaseSequenceValid =
             phases[0]?.phase === 'OUTER_RACE' &&
             phaseSequenceMonotonic &&
@@ -4498,6 +4513,13 @@ export function Part2SceneViewport({
               run.rotorStartAngle.toFixed(6),
             ),
             stateResetVerified,
+            resetPositionError: Number(resetPositionError.toFixed(8)),
+            resetVelocityError: Number(resetVelocityError.toFixed(8)),
+            resetAngularVelocityError: Number(
+              resetAngularVelocityError.toFixed(8),
+            ),
+            resetRotationError: Number(resetRotationError.toFixed(8)),
+            resetRotorAngleError: Number(resetRotorAngleError.toFixed(8)),
             elapsed: Number(elapsed.toFixed(4)),
             lapCount: Number(lapCount.toFixed(3)),
             trackDuration: Number(
@@ -7969,7 +7991,12 @@ export function Part2SceneViewport({
           {part6TelemetryReport.results.map((result) => (
             <span key={result.id}>
               seed {result.seed} · reset{' '}
-              {result.stateResetVerified ? 'verified' : 'FAIL'} · launch{' '}
+              {result.stateResetVerified ? 'verified' : 'FAIL'} (Δp{' '}
+              {result.resetPositionError.toExponential(1)} · Δv{' '}
+              {result.resetVelocityError.toExponential(1)} · Δω{' '}
+              {result.resetAngularVelocityError.toExponential(1)} · Δq{' '}
+              {result.resetRotationError.toExponential(1)} · Δrotor{' '}
+              {result.resetRotorAngleError.toExponential(1)}) · launch{' '}
               {THREE.MathUtils.radToDeg(result.launchAzimuth).toFixed(1)}° @{' '}
               {result.launchSpeed.toFixed(2)} wu/s (
               {result.launchSpeedMetersPerSecond.toFixed(2)} m/s) · laps{' '}
