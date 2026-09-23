@@ -3204,7 +3204,7 @@ function StatusChip({ state }: { state: LoadState }) {
       icon: <Check className="status-icon" size={13} />,
     },
     error: {
-      label: 'Asset unavailable',
+      label: 'Scene unavailable',
       icon: <AlertTriangle className="status-icon" size={13} />,
     },
   }[state];
