@@ -75,7 +75,6 @@ export class GameController {
     this.ui = ui;
     this.state = "IDLE";
     this.bind();
-    this.audio.startMusic();
     this.updateHud();
     void this.initializeWallet();
   }
@@ -339,7 +338,6 @@ export class GameController {
     this.scene.setFreeSpinMode(true);
     this.freeSpinAccounting = createFreeSpinAccounting();
     this.setFreeSpinPresentation(true);
-    this.audio.crossfadeMusic(this.audio.musicVolume * 1.35);
     this.ui.boardWrap.classList.add("free-spin-mode");
     this.setState("BONUS_INTRO");
     this.message("BONUS REALM // FREE SPINS");
@@ -439,7 +437,6 @@ export class GameController {
     this.freeSpinsLeft = 0;
      this.setFreeSpinPresentation(false);
     this.scene.setFreeSpinMode(false);
-    this.audio.crossfadeMusic(this.audio.musicVolume);
     this.ui.boardWrap.classList.remove("free-spin-mode");
     const resumeAuto = shouldResumeAutoSpin(this.pendingAutoResume, this.autoRemaining);
     this.pendingAutoResume = false;
@@ -1048,12 +1045,7 @@ export class GameController {
     this.message(`${maxWin ? "MAX WIN" : winTier(multiplier)} // ${multiplier.toFixed(2)}x`);
     this.scene.sparkle();
     this.audio.bigWin();
-    this.audio.duckMusic(true);
-    try {
-      await this.showBigWin(multiplier, amountCents, maxWin ? "MAX WIN" : undefined);
-    } finally {
-      this.audio.duckMusic(false);
-    }
+    await this.showBigWin(multiplier, amountCents, maxWin ? "MAX WIN" : undefined);
   }
   private async presentCurrentFreeSpinResolution(freeSpin: SpinResult["freeSpins"][number]) {
     this.freeSpinAccounting = resolveFreeSpinAccounting(

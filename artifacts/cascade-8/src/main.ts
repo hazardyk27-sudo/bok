@@ -445,7 +445,6 @@ function showModal(name: string | null) {
       <label class="setting-row"><span><b>Sound effects</b><small>WebAudio tones only</small></span><input id="setting-sound" type="checkbox" checked><i></i></label>
       <label class="setting-row"><span><b>Turbo mode</b><small>Shorter animation timing</small></span><input id="setting-turbo" type="checkbox"><i></i></label>
        <label class="volume-row"><span>SFX VOLUME</span><input id="setting-volume" type="range" min="0" max="1" step="0.01" value="0.38"></label>
-       <label class="volume-row"><span>MUSIC VOLUME</span><input id="setting-music-volume" type="range" min="0" max="1" step="0.01" value="0.18"></label>
        <button id="main-menu-button" class="outline-button full menu-exit-button">ANA MENÜ <small>BACK TO GAME SELECT</small></button>
       <div class="modal-footnote">Preferences are stored locally. No secret RNG state or personal data is stored.</div>
     </section></div>`;
@@ -455,8 +454,6 @@ function showModal(name: string | null) {
     sound.onchange = () => { controller.audio.setMuted(!sound.checked); controller.updateForModal(); };
     turbo.onchange = () => { controller.turbo = turbo.checked; localStorage.setItem("cascade8-turbo", String(turbo.checked)); controller.updateForModal(); };
      volume.oninput = () => controller.audio.setVolume(Number(volume.value));
-     const musicVolume = byId<HTMLInputElement>("setting-music-volume"); musicVolume.value = String(controller.audio.musicVolume);
-     musicVolume.oninput = () => controller.audio.setMusicVolume(Number(musicVolume.value));
      byId<HTMLButtonElement>("main-menu-button").onclick = () => { window.location.assign("/"); };
   } else {
     modalRoot.innerHTML = `<div class="modal-backdrop"><section class="modal-card info-modal"><button class="modal-close" data-close>×</button><div class="modal-kicker">CASCADE 8 // FIELD GUIDE</div><h2>How to play</h2><p class="modal-lead">Match 8 or more of a club logo anywhere on the field. Winning logos burst, the field falls, and fresh logos tumble in.</p>
