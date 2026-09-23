@@ -573,10 +573,10 @@ describe("authoritative roulette physics config", () => {
       "ROULETTE_PART6_TIMEOUT_MS: '120000'",
     );
     expect(rouletteRuntimeWorkflowSource).toContain(
-      "part6SeedCount=1&part6MaxDurationSeconds=30",
+      "part6SeedCount=5&part6MaxDurationSeconds=30",
     );
     expect(rouletteRuntimeWorkflowSource).toContain(
-      "ROULETTE_PART6_EXPECTED_SEEDS: '1'",
+      "ROULETTE_PART6_EXPECTED_SEEDS: '5'",
     );
     expect(physicsLabAppSource).toContain(
       "new URLSearchParams(window.location.search).get('part6Headless') === '1'",
