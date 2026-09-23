@@ -82,12 +82,27 @@ export function publishRoundTiming(trace: RoundTimingTrace | null) {
     ms: Math.round((event.atMs - trace.events[index].atMs) * 10) / 10,
   })).sort((a, b) => b.ms - a.ms).slice(0, 5);
 
+  const serverResult = trace.events.find((event) => event.name === "SERVER_RESULT")?.detail ?? {};
+  const biggest = gaps[0];
+  const durationMs = trace.events.at(-1)?.atMs ?? 0;
+  const summary = [
+    `ROUND ${Math.round(durationMs)}ms`,
+    `mode=${trace.mode}`,
+    `turbo=${trace.turbo}`,
+    `win=${serverResult.baseWinCents ?? 0}`,
+    `tumbles=${serverResult.tumbleCount ?? 0}`,
+    `scatters=${serverResult.scatterCount ?? 0}`,
+    `cores=${serverResult.settlementCoreCount ?? 0}`,
+    biggest ? `BIGGEST ${biggest.ms}ms ${biggest.from} -> ${biggest.to}` : "BIGGEST n/a",
+  ].join(" | ");
+
+  console.info("[CASCADE8_GAP]", summary);
   console.info("[CASCADE8_TIMING]", {
     id: trace.id,
     mode: trace.mode,
     turbo: trace.turbo,
     auto: trace.auto,
-    durationMs: trace.events.at(-1)?.atMs ?? 0,
+    durationMs,
     largestGaps: gaps,
     events: trace.events,
   });
