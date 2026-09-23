@@ -36,7 +36,7 @@ on:
 jobs:
   runtime:
     runs-on: ubuntu-latest
-    timeout-minutes: 355
+    timeout-minutes: 30
 
     steps:
       - name: Checkout
@@ -83,7 +83,7 @@ jobs:
         env:
           ROULETTE_LAB_URL: http://127.0.0.1:4173/?part6Headless=1
           ROULETTE_PART6_OUTPUT: artifacts/roulette-physics-lab/part6-runtime-result.json
-          ROULETTE_PART6_TIMEOUT_MS: '20700000'
+          ROULETTE_PART6_TIMEOUT_MS: '900000'
         shell: bash
         run: |
           set -o pipefail
