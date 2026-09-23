@@ -13,7 +13,9 @@ export function getScratchCellLayerMarkup() {
       <span class="witch-cell-content"></span>
       <span class="witch-cell-result-label"></span>
     </span>
-    <canvas class="witch-scratch-canvas" aria-hidden="true"></canvas>
+    <canvas class="witch-scratch-layer witch-scratch-layer-base" data-scratch-layer="base" aria-hidden="true"></canvas>
+    <canvas class="witch-scratch-layer witch-scratch-layer-foil" data-scratch-layer="foil" aria-hidden="true"></canvas>
+    <canvas class="witch-scratch-layer witch-scratch-layer-lacquer" data-scratch-layer="lacquer" aria-hidden="true"></canvas>
     <canvas class="witch-debris-canvas" aria-hidden="true"></canvas>
   `;
 }
