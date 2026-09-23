@@ -292,10 +292,25 @@ describe("authoritative roulette physics config", () => {
       "fretEventIndex < 0 ||",
     );
     expect(part3ViewportSource).toContain(
+      "const orderedCoreEvents = phases.filter",
+    );
+    expect(part3ViewportSource).toContain(
+      "event.phase !== 'FRETS'",
+    );
+    expect(part3ViewportSource).toContain(
       "!timedOut &&",
     );
     expect(part3ViewportSource).toContain(
-      "resetRotorAngleError <= 0.000001",
+      "const PART6_STATE_RESET_VECTOR_EPSILON = 0.0005",
+    );
+    expect(part3ViewportSource).toContain(
+      "const PART6_STATE_RESET_ANGLE_EPSILON = 0.00001",
+    );
+    expect(part3ViewportSource).toContain(
+      "resetRotorAngleError <= PART6_STATE_RESET_ANGLE_EPSILON",
+    );
+    expect(part3ViewportSource).toContain(
+      "resetAngularVelocityError",
     );
 
     expect(part3ViewportSource).toContain(
