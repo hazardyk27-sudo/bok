@@ -2692,11 +2692,18 @@ export function Part2SceneViewport({
           : null;
       });
 
-      const targetInnerY = POCKET_OUTER_LIP_Y;
       const targetOuterY = part2ChannelSurfaceAt(
         outerRadius,
         channelVerticalOffset,
       ).y;
+      // For the full-spin route the apron must descend toward the rotor.
+      // A higher inner lip turns this transition into a launch ramp at speed.
+      const targetInnerY = part6FullSpinRouteActive
+        ? Math.min(
+            POCKET_OUTER_LIP_Y,
+            targetOuterY - BALL_RADIUS * 0.75,
+          )
+        : POCKET_OUTER_LIP_Y;
       const measuredInnerY = measured[0] ?? null;
       const measuredOuterY = measured[measured.length - 1] ?? null;
       const canAlignMeasuredProfile =
