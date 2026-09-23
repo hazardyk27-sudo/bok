@@ -89,6 +89,18 @@ export class ScratchSurface {
     this.gestureStartedAt = performance.now();
     this.scratchDistancePx = 0;
     this.lastMoveAt = this.gestureStartedAt;
+
+    // Make the first physical contact visible exactly under the pointer/finger.
+    // This is only a surface scuff; settlement still requires the existing
+    // coverage/time/distance anti-spoiler thresholds.
+    const localWidth = Math.max(1, this.interactionCanvas.clientWidth);
+    const localHeight = Math.max(1, this.interactionCanvas.clientHeight);
+    const initialRadius = this.getBrushRadiusPx(localWidth, localHeight) / Math.max(1, Math.min(localWidth, localHeight));
+    const initialDepthGain = this.abrasionConfig.depthPerSample * 0.72;
+    this.progress.sampleCircle(this.lastPoint.x, this.lastPoint.y, initialRadius, initialDepthGain);
+    this.rememberTrail(this.lastPoint, 0, 0.08);
+    this.applyThreeLayerAbrasion(this.lastPoint, 0, 0.08, this.resultReady);
+
     this.interactionCanvas.setPointerCapture(event.pointerId);
     this.interactionCanvas.classList.add("is-scratching");
     event.preventDefault();
