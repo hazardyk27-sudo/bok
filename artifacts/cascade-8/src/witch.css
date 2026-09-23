@@ -3509,3 +3509,160 @@
       minmax(105px, .86fr);
   }
 }
+
+
+/* =========================================================
+   MOBILE ADVANCED 25 FOCUS MODE
+   During an Advanced round the lobby dock disappears and its
+   entire height is given to the 5×5 scratch board.
+   ========================================================= */
+@media (max-width: 600px) and (orientation: portrait),
+       (max-height: 600px) and (orientation: landscape) and (max-width: 1200px) {
+  .witch-page.is-advanced-focus {
+    grid-template-rows: clamp(32px, 10cqh, 40px) minmax(0, 1fr);
+    gap: clamp(2px, .8cqh, 4px);
+  }
+
+  .witch-page.is-advanced-focus .witch-control-dock {
+    display: none !important;
+  }
+
+  .witch-page.is-advanced-focus .witch-appbar {
+    grid-template-columns: 32px minmax(110px, .68fr) minmax(0, 1.75fr);
+    padding-block: 3px;
+  }
+
+  .witch-page.is-advanced-focus .witch-back {
+    width: 28px;
+    height: 28px;
+    font-size: 15px;
+  }
+
+  .witch-page.is-advanced-focus .witch-appbrand h1 {
+    font-size: clamp(17px, 3.2cqw, 23px);
+  }
+
+  .witch-page.is-advanced-focus .witch-appbrand small {
+    display: none;
+  }
+
+  .witch-page.is-advanced-focus .witch-appstats {
+    min-height: 26px;
+  }
+
+  .witch-page.is-advanced-focus .witch-stat {
+    padding-block: 2px;
+  }
+
+  .witch-page.is-advanced-focus .witch-stage-shell {
+    grid-template-columns: minmax(0, 1fr) clamp(104px, 17cqw, 152px);
+    grid-template-rows: clamp(12px, 3.8cqh, 16px) minmax(0, 1fr);
+    gap: 3px;
+    padding: 4px;
+  }
+
+  .witch-page.is-advanced-focus .witch-table-heading p {
+    display: none;
+  }
+
+  .witch-page.is-advanced-focus .witch-table-surface {
+    padding: 0;
+  }
+
+  .witch-page.is-advanced-focus .witch-ticket.is-advanced {
+    width: min(96%, 430px) !important;
+    max-height: 100% !important;
+    padding: 3px 5px 4px;
+    border-radius: 8px;
+  }
+
+  .witch-page.is-advanced-focus .witch-ticket.is-advanced::before {
+    inset: 3px;
+    border-radius: 6px;
+  }
+
+  .witch-page.is-advanced-focus .witch-ticket.is-advanced .witch-ticket-frame {
+    inset: 5px;
+  }
+
+  .witch-page.is-advanced-focus .witch-ticket.is-advanced .witch-ticket-header {
+    grid-template-columns: 1.4fr .6fr;
+    min-height: clamp(19px, 6.5cqh, 26px);
+    padding: 0 3px;
+  }
+
+  .witch-page.is-advanced-focus .witch-ticket.is-advanced .witch-ticket-brand {
+    font-size: clamp(12px, 2.1cqw, 17px);
+    line-height: .82;
+  }
+
+  .witch-page.is-advanced-focus .witch-ticket.is-advanced .witch-ticket-lockup small,
+  .witch-page.is-advanced-focus .witch-ticket.is-advanced .witch-ticket-price small,
+  .witch-page.is-advanced-focus .witch-ticket.is-advanced .witch-ticket-price span {
+    display: none;
+  }
+
+  .witch-page.is-advanced-focus .witch-ticket.is-advanced .witch-ticket-price strong {
+    min-width: 38px;
+    padding: 1px 3px;
+    font-size: clamp(7px, 1.1cqw, 9px);
+  }
+
+  .witch-page.is-advanced-focus .witch-ticket.is-advanced .witch-ticket-meta-row {
+    margin: 0 3px 2px;
+    padding: 1px 0 2px;
+    font-size: clamp(2.7px, .45cqw, 3.5px);
+  }
+
+  .witch-page.is-advanced-focus .witch-ticket.is-advanced .witch-board-wrap {
+    width: min(72cqh, calc(100% - 6px));
+    margin: 0 auto;
+    padding: 3px;
+    border-radius: 6px;
+  }
+
+  .witch-page.is-advanced-focus .witch-ticket.is-advanced .witch-board {
+    gap: 2px;
+  }
+
+  .witch-page.is-advanced-focus .witch-ticket.is-advanced .witch-cell {
+    aspect-ratio: 1;
+    border-radius: 4px;
+  }
+
+  .witch-page.is-advanced-focus .witch-ticket.is-advanced .witch-cell-result-label {
+    bottom: 1px;
+    font-size: 2.5px;
+  }
+
+  .witch-page.is-advanced-focus .witch-payout-panel {
+    padding: 5px;
+  }
+
+  .witch-page.is-advanced-focus .witch-payout-head {
+    padding-bottom: 2px;
+  }
+
+  .witch-page.is-advanced-focus .witch-payout-head span {
+    font-size: clamp(6px, .8cqw, 8px);
+  }
+
+  .witch-page.is-advanced-focus .witch-payout-head small,
+  .witch-page.is-advanced-focus .witch-payout-lines {
+    display: none;
+  }
+
+  .witch-page.is-advanced-focus .witch-payout-hero {
+    padding: 2px 0;
+  }
+
+  .witch-page.is-advanced-focus .witch-multiplier {
+    font-size: clamp(22px, 7cqh, 32px);
+  }
+
+  .witch-page.is-advanced-focus .witch-cashout-button,
+  .witch-page.is-advanced-focus .witch-secondary-button {
+    min-height: clamp(34px, 9cqh, 42px);
+    font-size: clamp(6px, .85cqw, 8px);
+  }
+}
