@@ -242,7 +242,7 @@ export class ScratchSurface {
   private replayBaseLayer() {
     for (const sample of this.trail) {
       const depth = this.progress.depthAt(sample.point.x, sample.point.y);
-      const baseAmount = phase(depth, 0.48, 0.9);
+      const baseAmount = phase(depth, 0.50, 0.94);
       if (baseAmount > 0) this.eraseLayer("base", sample.point, sample.angle, sample.speed, baseAmount);
     }
   }
