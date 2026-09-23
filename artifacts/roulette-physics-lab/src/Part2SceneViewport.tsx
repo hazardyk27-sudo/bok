@@ -2630,6 +2630,12 @@ export function Part2SceneViewport({
         -0.08,
         -0.04,
         0,
+        0.04,
+        0.08,
+        0.12,
+        0.16,
+        0.2,
+        0.24,
       ];
       const profile: Array<[number, number]> = [];
       for (const height of sampleHeights) {
