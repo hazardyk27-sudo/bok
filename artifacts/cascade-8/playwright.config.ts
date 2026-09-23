@@ -42,6 +42,16 @@ export default defineConfig({
       },
     },
     {
+      name: "android-small-portrait",
+      testMatch: /cadi-kazan\.spec\.ts/,
+      use: {
+        ...devices["Pixel 7"],
+        viewport: { width: 360, height: 640 },
+        screen: { width: 360, height: 640 },
+        ...(hasWorkspaceChromium ? { launchOptions: { executablePath: chromiumPath } } : {}),
+      },
+    },
+    {
       name: "desktop-chromium",
       testMatch: /cadi-kazan\.spec\.ts/,
       use: {
