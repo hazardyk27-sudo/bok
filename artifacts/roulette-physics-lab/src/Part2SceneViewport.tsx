@@ -6146,7 +6146,7 @@ export function Part2SceneViewport({
               const channelMesh = makePart2RaceChannelTrimesh(
                 part2RaceVerticalOffset,
                 part6FullSpinRouteActive
-                  ? PART2_CHANNEL_PROFILE[PART2_CHANNEL_FLOOR_INNER_INDEX][0]
+                  ? PART2_ACTUAL_INWARD_EDGE_RADIUS + BALL_RADIUS
                   : null,
               );
               part3TrackCollider = world.createCollider(
