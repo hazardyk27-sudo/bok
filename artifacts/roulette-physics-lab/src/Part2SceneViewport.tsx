@@ -4122,10 +4122,8 @@ export function Part2SceneViewport({
           }
 
           const launchClearance = BALL_RADIUS + 0.002;
-          const operationalLaunchCenterRadius = Math.max(
-            PART2_ACTUAL_DARK_TRACK_LAUNCH_RADIUS,
-            PART2_ACTUAL_WOOD_INNER_RADIUS - BALL_RADIUS - 0.001,
-          );
+          const operationalLaunchCenterRadius =
+            PART2_ACTUAL_DARK_TRACK_LAUNCH_RADIUS;
           let launchContactRadius = operationalLaunchCenterRadius;
           let launchNormal = part2ChannelNormalAt(
             launchContactRadius,
