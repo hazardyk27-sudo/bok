@@ -389,6 +389,12 @@ export class GameScene extends Phaser.Scene {
       const finalY = node.container.y;
       node.container.y = finalY - 260 - (index % BOARD_COLUMNS) * 18;
       node.container.alpha = 0.2;
+      let completed = false;
+      const complete = () => {
+        if (completed) return;
+        completed = true;
+        resolve();
+      };
       this.tweens.add({
         targets: node.container,
         y: finalY,
@@ -396,15 +402,23 @@ export class GameScene extends Phaser.Scene {
         duration: duration + (index % BOARD_COLUMNS) * 24,
         delay: (index % BOARD_COLUMNS) * 20,
         ease: "Back.easeOut",
+        onUpdate: (tween) => {
+          if (
+            node.symbol !== "SCATTER"
+            && tween.progress >= 0.92
+            && Math.abs(node.container.y - finalY) <= 1.5
+            && node.container.alpha >= 0.995
+          ) complete();
+        },
          onComplete: () => {
            if (node.symbol === "SCATTER") {
              const landing = this.animateScatterLanding(node);
-             if (awaitScatterLanding) void landing.then(resolve);
+             if (awaitScatterLanding) void landing.then(complete);
              else {
                void landing;
-               resolve();
+               complete();
              }
-           } else resolve();
+           } else complete();
          },
       });
     })));
@@ -770,19 +784,31 @@ export class GameScene extends Phaser.Scene {
         const starts = group.map((node) => node.container.y);
         animations.push(new Promise<void>((resolve) => {
           const motion = { progress: 0 };
+          let completed = false;
+          const complete = () => {
+            if (completed) return;
+            completed = true;
+            resolve();
+          };
+          const hasSpecialSymbol = group.some((node) => node.symbol === "SCATTER" || isMultiplierCore(node.symbol));
           this.tweens.add({
             targets: motion,
             progress: 1,
             duration: duration + col * 18,
             delay: col * 20 + (group.length > 1 ? 44 : 0),
             ease: "Back.easeOut",
-            onUpdate: () => {
+            onUpdate: (tween) => {
               group.forEach((node, index) => {
                 node.container.y = starts[index] + (targetYs[index] - starts[index]) * motion.progress;
                 node.container.alpha = 0.2 + motion.progress * 0.8;
               });
+              if (
+                !hasSpecialSymbol
+                && tween.progress >= 0.92
+                && group.every((node, index) => Math.abs(node.container.y - targetYs[index]) <= 1.5 && node.container.alpha >= 0.995)
+              ) complete();
             },
-            onComplete: () => resolve(),
+            onComplete: complete,
           });
         }));
       });
