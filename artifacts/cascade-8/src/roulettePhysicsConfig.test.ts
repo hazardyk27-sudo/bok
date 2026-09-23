@@ -563,6 +563,12 @@ describe("authoritative roulette physics config", () => {
     expect(rouletteRuntimeWorkflowSource).toContain(
       "ROULETTE_PART6_EXPECTED_SEEDS: '1'",
     );
+    expect(physicsLabAppSource).toContain(
+      "new URLSearchParams(window.location.search).get('part6Headless') === '1'",
+    );
+    expect(physicsLabAppSource).toContain(
+      "{!part6HeadlessRouteActive && <AuthoritativeRoundPanel />}",
+    );
   });
 
   it("keeps the PART 2 containment correction geometric only", () => {
