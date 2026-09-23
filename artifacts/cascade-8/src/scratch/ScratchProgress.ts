@@ -10,9 +10,9 @@ export type ScratchAbrasionConfig = {
 };
 
 export const SCRATCH_ABRASION_CONFIG: Readonly<ScratchAbrasionConfig> = {
-  depthPerSample: 0.11,
-  revealDepth: 0.16,
-  brushRadius: 0.10,
+  depthPerSample: 0.055,
+  revealDepth: 0.72,
+  brushRadius: 0.085,
 };
 
 const clamp = (value: number) => Math.max(0, Math.min(1, value));
