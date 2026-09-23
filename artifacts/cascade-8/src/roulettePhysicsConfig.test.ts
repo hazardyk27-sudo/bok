@@ -188,6 +188,33 @@ describe("authoritative roulette physics config", () => {
     );
   });
 
+  it("keeps the authoritative roulette chain in one Rapier world", () => {
+    expect(
+      part3ViewportSource.match(/new RAPIER\.World/g)?.length ?? 0,
+    ).toBe(1);
+    expect(part3ViewportSource).toContain(
+      "part3TrackCollider = world.createCollider",
+    );
+    expect(part3ViewportSource).toContain(
+      "part3BowlBridgeCollider = world.createCollider",
+    );
+    expect(part3ViewportSource).toContain(
+      "part3DeflectorColliders = addMeasuredDeflectorColliders",
+    );
+    expect(part3ViewportSource).toContain(
+      "RAPIER.RigidBodyDesc.kinematicPositionBased()",
+    );
+    expect(part3ViewportSource).toContain(
+      "part3PocketColliders = addKinematicPocketSystem(world, rotorBody)",
+    );
+    expect(part3ViewportSource).toContain(
+      "for (let index = 0; index < EUROPEAN_POCKET_COUNT; index += 1)",
+    );
+    expect(part3ViewportSource).toContain(
+      "physicsBallCollider = world.createCollider(ballColliderDescriptor, ballBody)",
+    );
+  });
+
   it("keeps the PART 2 containment correction geometric only", () => {
     expect(part3ViewportSource).toContain("speed: 5,");
     expect(part3ViewportSource).toContain(
