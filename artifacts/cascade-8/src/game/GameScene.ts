@@ -370,38 +370,6 @@ export class GameScene extends Phaser.Scene {
        });
   }
 
-  private wallClockMotion(
-    duration: number,
-    delay: number,
-    ease: (value: number) => number,
-    onFrame: (easedProgress: number, linearProgress: number) => void,
-  ) {
-    const requestedAt = performance.now();
-    const startAt = requestedAt + Math.max(0, delay);
-    const motionDuration = Math.max(1, duration);
-
-    return new Promise<void>((resolve) => {
-      const step = (now: number) => {
-        if (now < startAt) {
-          window.requestAnimationFrame(step);
-          return;
-        }
-
-        const linearProgress = Math.min(1, Math.max(0, (now - startAt) / motionDuration));
-        const easedProgress = ease(linearProgress);
-        onFrame(easedProgress, linearProgress);
-
-        if (linearProgress >= 1) {
-          resolve();
-          return;
-        }
-        window.requestAnimationFrame(step);
-      };
-
-      window.requestAnimationFrame(step);
-    });
-  }
-
   renderBoard(board: Board, winningCells: Cell[] = []) {
     const startedAt = performance.now();
     this.clearSymbols();
@@ -445,47 +413,72 @@ export class GameScene extends Phaser.Scene {
       frameSamples += 1;
     };
 
-    await Promise.all(this.nodes.map(async (node, index) => {
+    await Promise.all(this.nodes.map((node, index) => new Promise<void>((resolve) => {
       const finalY = node.container.y;
-      const startY = finalY - 260 - (index % BOARD_COLUMNS) * 18;
-      node.container.y = startY;
+      const tweenDuration = duration + (index % BOARD_COLUMNS) * 24;
+      const tweenDelay = (index % BOARD_COLUMNS) * 20;
+      node.container.y = finalY - 260 - (index % BOARD_COLUMNS) * 18;
       node.container.alpha = 0.2;
       let visuallySettled = false;
+      let completed = false;
+      let watchdog: number | null = null;
       const markVisualSettled = () => {
         if (visuallySettled) return;
         visuallySettled = true;
         visualSettledUnits += 1;
         if (visualSettledUnits === movingUnits) visualSettledAt = performance.now();
       };
-
-      await this.wallClockMotion(
-        duration + (index % BOARD_COLUMNS) * 24,
-        (index % BOARD_COLUMNS) * 20,
-        Phaser.Math.Easing.Back.Out,
-        (easedProgress, linearProgress) => {
+      const complete = () => {
+        if (completed) return;
+        completed = true;
+        if (watchdog !== null) window.clearTimeout(watchdog);
+        resolve();
+      };
+      const finishScatterLanding = () => {
+        const landing = this.animateScatterLanding(node);
+        if (awaitScatterLanding) void landing.then(complete);
+        else {
+          void landing;
+          complete();
+        }
+      };
+      const tween = this.tweens.add({
+        targets: node.container,
+        y: finalY,
+        alpha: 1,
+        duration: tweenDuration,
+        delay: tweenDelay,
+        ease: "Back.easeOut",
+        onUpdate: (activeTween) => {
           sampleFrameGap();
-          node.container.y = startY + (finalY - startY) * easedProgress;
-          node.container.alpha = 0.2 + easedProgress * 0.8;
           if (
-            linearProgress >= 0.92
+            activeTween.progress >= 0.92
             && Math.abs(node.container.y - finalY) <= 1.5
             && node.container.alpha >= 0.995
           ) {
             markVisualSettled();
+            if (node.symbol !== "SCATTER") complete();
           }
         },
-      );
+        onComplete: () => {
+          sampleFrameGap();
+          markVisualSettled();
+          if (node.symbol === "SCATTER") finishScatterLanding();
+          else complete();
+        },
+      });
 
-      node.container.y = finalY;
-      node.container.alpha = 1;
-      sampleFrameGap();
-      markVisualSettled();
-
-      if (node.symbol === "SCATTER") {
-        const landing = this.animateScatterLanding(node);
-        if (awaitScatterLanding) await landing;
-      }
-    }));
+      watchdog = window.setTimeout(() => {
+        if (completed) return;
+        tween.stop();
+        node.container.y = finalY;
+        node.container.alpha = 1;
+        sampleFrameGap();
+        markVisualSettled();
+        if (node.symbol === "SCATTER") finishScatterLanding();
+        else complete();
+      }, tweenDelay + tweenDuration + 120);
+    })));
 
     const completedAt = performance.now();
     const settledAt = visualSettledAt ?? completedAt;
@@ -852,31 +845,53 @@ export class GameScene extends Phaser.Scene {
         if (Math.abs(node.container.y - targetY) < 0.5 && node.container.alpha >= 0.999) return;
         movingUnits += 1;
         if (node.symbol === "SCATTER" || isMultiplierCore(node.symbol)) specialUnits += 1;
-        animations.push((async () => {
-          const startY = node.container.y;
+        animations.push(new Promise<void>((resolve) => {
+          const tweenDuration = duration + col * 18;
           let visuallySettled = false;
+          let completed = false;
+          let watchdog: number | null = null;
           const markVisualSettled = () => {
             if (visuallySettled) return;
             visuallySettled = true;
             markUnitVisualSettled();
           };
-
-          await this.wallClockMotion(
-            duration + col * 18,
-            0,
-            Phaser.Math.Easing.Cubic.InOut,
-            (easedProgress, linearProgress) => {
+          const complete = () => {
+            if (completed) return;
+            completed = true;
+            if (watchdog !== null) window.clearTimeout(watchdog);
+            resolve();
+          };
+          const mayResolveAtVisualSettle = node.symbol !== "SCATTER" && !isMultiplierCore(node.symbol);
+          const tween = this.tweens.add({
+            targets: node.container,
+            y: targetY,
+            duration: tweenDuration,
+            ease: "Cubic.easeInOut",
+            onUpdate: (activeTween) => {
               sampleFrameGap();
-              node.container.y = startY + (targetY - startY) * easedProgress;
-              if (linearProgress >= 0.92 && Math.abs(node.container.y - targetY) <= 1.5) {
+              if (
+                activeTween.progress >= 0.92
+                && Math.abs(node.container.y - targetY) <= 1.5
+              ) {
                 markVisualSettled();
+                if (mayResolveAtVisualSettle) complete();
               }
             },
-          );
+            onComplete: () => {
+              markVisualSettled();
+              complete();
+            },
+          });
 
-          node.container.y = targetY;
-          markVisualSettled();
-        })());
+          watchdog = window.setTimeout(() => {
+            if (completed) return;
+            tween.stop();
+            node.container.y = targetY;
+            sampleFrameGap();
+            markVisualSettled();
+            complete();
+          }, tweenDuration + 120);
+        }));
       });
       const incomingGroups = new Map<string, BoardNode[]>();
       for (let row = 0; row < generatedCount; row += 1) {
@@ -899,39 +914,63 @@ export class GameScene extends Phaser.Scene {
         movingUnits += 1;
         const hasSpecialSymbol = group.some((node) => node.symbol === "SCATTER" || isMultiplierCore(node.symbol));
         if (hasSpecialSymbol) specialUnits += 1;
-        animations.push((async () => {
+        animations.push(new Promise<void>((resolve) => {
+          const motion = { progress: 0 };
+          const tweenDuration = duration + col * 18;
+          const tweenDelay = col * 20 + (group.length > 1 ? 44 : 0);
           let visuallySettled = false;
+          let completed = false;
+          let watchdog: number | null = null;
           const markVisualSettled = () => {
             if (visuallySettled) return;
             visuallySettled = true;
             markUnitVisualSettled();
           };
-
-          await this.wallClockMotion(
-            duration + col * 18,
-            col * 20 + (group.length > 1 ? 44 : 0),
-            Phaser.Math.Easing.Back.Out,
-            (easedProgress, linearProgress) => {
+          const complete = () => {
+            if (completed) return;
+            completed = true;
+            if (watchdog !== null) window.clearTimeout(watchdog);
+            resolve();
+          };
+          const tween = this.tweens.add({
+            targets: motion,
+            progress: 1,
+            duration: tweenDuration,
+            delay: tweenDelay,
+            ease: "Back.easeOut",
+            onUpdate: (activeTween) => {
               sampleFrameGap();
               group.forEach((node, index) => {
-                node.container.y = starts[index] + (targetYs[index] - starts[index]) * easedProgress;
-                node.container.alpha = 0.2 + easedProgress * 0.8;
+                node.container.y = starts[index] + (targetYs[index] - starts[index]) * motion.progress;
+                node.container.alpha = 0.2 + motion.progress * 0.8;
               });
               if (
-                linearProgress >= 0.92
+                activeTween.progress >= 0.92
                 && group.every((node, index) => Math.abs(node.container.y - targetYs[index]) <= 1.5 && node.container.alpha >= 0.995)
               ) {
                 markVisualSettled();
+                if (!hasSpecialSymbol) complete();
               }
             },
-          );
-
-          group.forEach((node, index) => {
-            node.container.y = targetYs[index];
-            node.container.alpha = 1;
+            onComplete: () => {
+              markVisualSettled();
+              complete();
+            },
           });
-          markVisualSettled();
-        })());
+
+          watchdog = window.setTimeout(() => {
+            if (completed) return;
+            tween.stop();
+            motion.progress = 1;
+            group.forEach((node, index) => {
+              node.container.y = targetYs[index];
+              node.container.alpha = 1;
+            });
+            sampleFrameGap();
+            markVisualSettled();
+            complete();
+          }, tweenDelay + tweenDuration + 120);
+        }));
       });
     }
 
