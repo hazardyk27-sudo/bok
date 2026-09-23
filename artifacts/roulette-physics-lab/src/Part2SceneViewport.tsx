@@ -1238,7 +1238,9 @@ function addMeasuredOuterWallColliders(
   const segments = 512;
   const innerFaceRadius = PART2_ACTUAL_WOOD_INNER_RADIUS;
   const lowerY =
-    part2ChannelSurfaceAt(innerFaceRadius, verticalOffset).y - 0.004;
+    part2ChannelSurfaceAt(innerFaceRadius, verticalOffset).y -
+    BALL_RADIUS * 2 -
+    0.02;
   const measuredMaxY = Math.max(...measured.map(([, height]) => height));
   const upperY = Math.max(
     measuredMaxY + BALL_RADIUS + 0.10,
