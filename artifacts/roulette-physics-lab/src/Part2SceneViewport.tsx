@@ -977,10 +977,16 @@ function addMeasuredDeflectorColliders(
       0.22,
     );
     const angle = descriptor.angle;
-    const collider = RAPIER.ColliderDesc.cuboid(
+    const deflectorRoundRadius = Math.min(
+      BALL_RADIUS * 0.32,
+      halfHeight * 0.7,
+      halfRadialDepth * 0.7,
+    );
+    const collider = RAPIER.ColliderDesc.roundCuboid(
       halfTangentialWidth,
       halfHeight,
       halfRadialDepth,
+      deflectorRoundRadius,
     )
       .setTranslation(
         Math.sin(angle) * centerRadius,
