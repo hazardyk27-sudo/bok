@@ -93,84 +93,135 @@ export class SlotRepository {
 
   async spin(sessionId: string, input: { stakeCents: number; idempotencyKey: string }) {
     validateInput(input.stakeCents, input.idempotencyKey);
-    const client = await pool.connect();
-    try {
-      await client.query("BEGIN");
-      let balanceCents = await ensureWalletForUpdate(client, sessionId);
-      const duplicate = await client.query<SlotRoundRow>(
-        "SELECT * FROM slot_rounds WHERE idempotency_key = $1 FOR UPDATE",
-        [input.idempotencyKey],
-      );
-      if (duplicate.rows[0]) {
-        if (duplicate.rows[0].session_id !== sessionId) throw new Error("IDEMPOTENCY_KEY_REUSED");
-        await client.query("COMMIT");
-        return response(sessionId, balanceCents, duplicate.rows[0]);
-      }
 
-      const isFreeBet = input.stakeCents === FREE_BET_CENTS;
-      if (!isFreeBet && balanceCents < input.stakeCents) throw new Error("INSUFFICIENT_SLOT_CREDITS");
+    const isFreeBet = input.stakeCents === FREE_BET_CENTS;
+    const result = playSpin(input.stakeCents, new SeededRNG(randomUUID()));
+    const roundId = randomUUID();
+    const debitCents = isFreeBet ? 0 : input.stakeCents;
+    const payoutCents = result.totalWinCents;
 
-      const result = playSpin(input.stakeCents, new SeededRNG(randomUUID()));
-      const roundId = randomUUID();
-      const debitCents = isFreeBet ? 0 : input.stakeCents;
-      const payoutCents = result.totalWinCents;
+    type AtomicSpinRow = SlotRoundRow & WalletRow & {
+      outcome: "SETTLED" | "DUPLICATE" | "INSUFFICIENT";
+      existing_session_id: string;
+    };
 
-      const settlement = await client.query<SlotRoundRow & WalletRow>(
-        `WITH updated_wallet AS (
-           UPDATE roulette_wallets
-              SET balance_cents = balance_cents + $1,
-                  updated_at = now()
-            WHERE session_id = $2
-            RETURNING balance_cents
-         ),
-         inserted_round AS (
-           INSERT INTO slot_rounds
-             (id, session_id, stake_cents, payout_cents, result, idempotency_key)
-           VALUES ($3, $2, $4, $5, $6::jsonb, $7)
-           RETURNING *
-         ),
-         inserted_ledger AS (
-           INSERT INTO slot_ledger
-             (id, session_id, round_id, kind, amount_cents, idempotency_key)
-           SELECT *
-             FROM (VALUES
-               ($8::text, $2::text, $3::text, 'STAKE_DEBIT'::text, ($10::integer * -1), $11::text),
-               ($9::text, $2::text, $3::text, 'PAYOUT_CREDIT'::text, $5::integer, $12::text)
-             ) AS entries(id, session_id, round_id, kind, amount_cents, idempotency_key)
-            WHERE kind <> 'STAKE_DEBIT' OR $10 > 0
-           RETURNING id
-         )
-         SELECT inserted_round.*,
-                updated_wallet.balance_cents,
+    const atomic = await pool.query<AtomicSpinRow>(
+      `WITH lock_key AS MATERIALIZED (
+         SELECT pg_advisory_xact_lock(hashtextextended($7::text, 0)) AS locked
+       ),
+       duplicate AS MATERIALIZED (
+         SELECT r.*
+           FROM slot_rounds r
+           CROSS JOIN lock_key
+          WHERE r.idempotency_key = $7
+          LIMIT 1
+       ),
+       settled_wallet AS (
+         INSERT INTO roulette_wallets (session_id, balance_cents, updated_at)
+         SELECT $2, $13 + $1, now()
+          WHERE NOT EXISTS (SELECT 1 FROM duplicate)
+            AND ($10 = 0 OR $13 >= $10)
+         ON CONFLICT (session_id) DO UPDATE
+           SET balance_cents = roulette_wallets.balance_cents + $1,
+               updated_at = now()
+         WHERE NOT EXISTS (SELECT 1 FROM duplicate)
+           AND ($10 = 0 OR roulette_wallets.balance_cents >= $10)
+         RETURNING balance_cents
+       ),
+       inserted_round AS (
+         INSERT INTO slot_rounds
+           (id, session_id, stake_cents, payout_cents, result, idempotency_key)
+         SELECT $3, $2, $4, $5, $6::jsonb, $7
+          WHERE EXISTS (SELECT 1 FROM settled_wallet)
+         RETURNING *
+       ),
+       inserted_ledger AS (
+         INSERT INTO slot_ledger
+           (id, session_id, round_id, kind, amount_cents, idempotency_key)
+         SELECT entries.*
+           FROM (VALUES
+             ($8::text, $2::text, $3::text, 'STAKE_DEBIT'::text, ($10::integer * -1), $11::text),
+             ($9::text, $2::text, $3::text, 'PAYOUT_CREDIT'::text, $5::integer, $12::text)
+           ) AS entries(id, session_id, round_id, kind, amount_cents, idempotency_key)
+          WHERE EXISTS (SELECT 1 FROM inserted_round)
+            AND (entries.kind <> 'STAKE_DEBIT' OR $10 > 0)
+         RETURNING id
+       ),
+       settled_result AS (
+         SELECT 'SETTLED'::text AS outcome,
+                inserted_round.*,
+                settled_wallet.balance_cents,
+                inserted_round.session_id AS existing_session_id,
                 (SELECT count(*) FROM inserted_ledger) AS ledger_count
            FROM inserted_round
-           CROSS JOIN updated_wallet`,
-        [
-          payoutCents - debitCents,
-          sessionId,
-          roundId,
-          input.stakeCents,
-          payoutCents,
-          JSON.stringify(result),
-          input.idempotencyKey,
-          randomUUID(),
-          randomUUID(),
-          debitCents,
-          `stake:${input.idempotencyKey}`,
-          `payout:${roundId}`,
-        ],
-      );
-      const settled = settlement.rows[0];
-      if (!settled) throw new Error("SLOT_SETTLEMENT_FAILED");
-      balanceCents = Number(settled.balance_cents);
-      await client.query("COMMIT");
-      return response(sessionId, balanceCents, settled);
-    } catch (error) {
-      await client.query("ROLLBACK");
-      throw error;
-    } finally {
-      client.release();
+           CROSS JOIN settled_wallet
+       ),
+       duplicate_result AS (
+         SELECT 'DUPLICATE'::text AS outcome,
+                duplicate.*,
+                COALESCE(
+                  (SELECT balance_cents FROM roulette_wallets WHERE session_id = $2),
+                  $13
+                ) AS balance_cents,
+                duplicate.session_id AS existing_session_id,
+                0::bigint AS ledger_count
+           FROM duplicate
+       ),
+       insufficient_result AS (
+         SELECT 'INSUFFICIENT'::text AS outcome,
+                NULL::text AS id,
+                $2::text AS session_id,
+                $4::integer AS stake_cents,
+                0::integer AS payout_cents,
+                $6::jsonb AS result,
+                $7::text AS idempotency_key,
+                now() AS created_at,
+                COALESCE(
+                  (SELECT balance_cents FROM roulette_wallets WHERE session_id = $2),
+                  $13
+                ) AS balance_cents,
+                $2::text AS existing_session_id,
+                0::bigint AS ledger_count
+          WHERE NOT EXISTS (SELECT 1 FROM duplicate)
+            AND NOT EXISTS (SELECT 1 FROM settled_wallet)
+       )
+       SELECT outcome, id, session_id, stake_cents, payout_cents, result,
+              idempotency_key, created_at, balance_cents, existing_session_id
+         FROM settled_result
+       UNION ALL
+       SELECT outcome, id, session_id, stake_cents, payout_cents, result,
+              idempotency_key, created_at, balance_cents, existing_session_id
+         FROM duplicate_result
+       UNION ALL
+       SELECT outcome, id, session_id, stake_cents, payout_cents, result,
+              idempotency_key, created_at, balance_cents, existing_session_id
+         FROM insufficient_result
+       LIMIT 1`,
+      [
+        payoutCents - debitCents,
+        sessionId,
+        roundId,
+        input.stakeCents,
+        payoutCents,
+        JSON.stringify(result),
+        input.idempotencyKey,
+        randomUUID(),
+        randomUUID(),
+        debitCents,
+        `stake:${input.idempotencyKey}`,
+        `payout:${roundId}`,
+        INITIAL_ROULETTE_BALANCE_CENTS,
+      ],
+    );
+
+    const row = atomic.rows[0];
+    if (!row) throw new Error("SLOT_SETTLEMENT_FAILED");
+    if (row.outcome === "INSUFFICIENT") throw new Error("INSUFFICIENT_SLOT_CREDITS");
+    if (row.outcome === "DUPLICATE" && row.existing_session_id !== sessionId) {
+      throw new Error("IDEMPOTENCY_KEY_REUSED");
     }
+
+    return response(sessionId, Number(row.balance_cents), row);
   }
 }
 
