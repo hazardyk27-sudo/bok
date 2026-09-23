@@ -3569,7 +3569,28 @@ export function Part2SceneViewport({
         '1';
       const telemetryYieldSteps = part6HeadlessFastMode
         ? PART6_UI_YIELD_STEPS * 2
-        : PART6_UI_YIELD_STEPS;
+        : PART6_INTERACTIVE_YIELD_STEPS;
+
+      const previewSnapshot = {
+        ballTranslation: { ...activeBallBody.translation() },
+        ballRotation: { ...activeBallBody.rotation() },
+        ballLinvel: { ...activeBallBody.linvel() },
+        ballAngvel: { ...activeBallBody.angvel() },
+        ballMeshPosition: activeBallMesh.position.clone(),
+        ballMeshQuaternion: activeBallMesh.quaternion.clone(),
+        ballMeshVisible: activeBallMesh.visible,
+        rotorRotation: { ...activeRotorBody.rotation() },
+        rotorAngle: rotorAngleRef.current,
+        rotorPivotAngle:
+          activeRotorPivot?.rotation.y ?? rotorAngleRef.current,
+      };
+
+      // The 20-seed batch is an accelerated validation workload, not the
+      // real-time presentation spin. Hide the visible ball while the batch
+      // owns the authoritative body so browser yields cannot render seed jumps.
+      if (!part6HeadlessFastMode) {
+        activeBallMesh.visible = false;
+      }
       const settleFramesRequired = Math.round(
         PART6_SETTLE_DURATION_SECONDS / FIXED_TIMESTEP,
       );
@@ -4461,6 +4482,9 @@ export function Part2SceneViewport({
               run.launchAzimuth.toFixed(6),
             ),
             launchSpeed: Number(run.speed.toFixed(4)),
+            launchSpeedMetersPerSecond: Number(
+              (run.speed / ROULETTE_WORLD_UNITS_PER_METER).toFixed(4),
+            ),
             launchRadius: Number(
               Math.hypot(
                 launchPosition.x,
@@ -4704,6 +4728,48 @@ export function Part2SceneViewport({
             : String(error));
         failInfrastructure(detail, 'telemetry', results);
       } finally {
+        if (!disposed) {
+          activeBallBody.setTranslation(
+            previewSnapshot.ballTranslation,
+            true,
+          );
+          activeBallBody.setRotation(
+            previewSnapshot.ballRotation,
+            true,
+          );
+          activeBallBody.setLinvel(
+            previewSnapshot.ballLinvel,
+            true,
+          );
+          activeBallBody.setAngvel(
+            previewSnapshot.ballAngvel,
+            true,
+          );
+          activeRotorBody.setRotation(
+            previewSnapshot.rotorRotation,
+            true,
+          );
+          activeRotorBody.setNextKinematicRotation(
+            previewSnapshot.rotorRotation,
+          );
+          rotorAngleRef.current = previewSnapshot.rotorAngle;
+          activeRotorPivot?.rotation.set(
+            0,
+            previewSnapshot.rotorPivotAngle,
+            0,
+          );
+          activeBallMesh.position.copy(
+            previewSnapshot.ballMeshPosition,
+          );
+          activeBallMesh.quaternion.copy(
+            previewSnapshot.ballMeshQuaternion,
+          );
+          activeBallMesh.visible = previewSnapshot.ballMeshVisible;
+          setAngleReadout(previewSnapshot.rotorAngle);
+          callbacksRef.current.onRotorAngleChange(
+            previewSnapshot.rotorAngle,
+          );
+        }
         part6TelemetryBatchRunning = false;
       }
     };
@@ -7905,7 +7971,8 @@ export function Part2SceneViewport({
               seed {result.seed} · reset{' '}
               {result.stateResetVerified ? 'verified' : 'FAIL'} · launch{' '}
               {THREE.MathUtils.radToDeg(result.launchAzimuth).toFixed(1)}° @{' '}
-              {result.launchSpeed.toFixed(3)} · laps{' '}
+              {result.launchSpeed.toFixed(2)} wu/s (
+              {result.launchSpeedMetersPerSecond.toFixed(2)} m/s) · laps{' '}
               {result.lapCount.toFixed(3)} · contact{' '}
               {(result.trackContactRatio * 100).toFixed(1)}% · speed{' '}
               {result.trackStartSpeed.toFixed(3)}→
