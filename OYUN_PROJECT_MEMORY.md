@@ -64,28 +64,26 @@ Replit must not be asked to “audit itself” unless the user explicitly asks f
 
 ## B. When the user says “change / fix / implement”
 
-Preferred path:
+Mandatory approval flow:
 
 1. ChatGPT inspects the relevant GitHub files.
-2. ChatGPT writes the code change in GitHub directly.
-3. Commit the change.
-4. Replit is used only to sync the new GitHub state and run Preview.
-5. User checks the result visually in Replit Preview.
-6. If rejected, revise/revert with another GitHub commit.
+2. **Before changing code, ChatGPT explains the implementation plan to the user.**
+3. **Do not edit GitHub until the user explicitly approves with wording such as “tamam / kodla / uygula”.**
+4. After approval, ChatGPT writes the code change in GitHub directly and commits it.
+5. User manually syncs GitHub `main` into Replit from Shell and refreshes Preview.
+6. User checks the result visually in Replit Preview.
+7. If rejected, repeat the same plan → approval → code cycle.
 
 **Replit Agent is not the primary code author in this workflow.**
 
-## C. GitHub → Replit sync-only rule
+## C. GitHub → Replit manual Shell sync rule
 
-After ChatGPT changes `main`, Replit should receive **only one short sync instruction**. Do not send long explanations, implementation notes, audit requests, or extra commentary to Replit.
+The user has chosen **manual Shell sync after every GitHub change**. Do not ask Replit Agent to sync unless the user explicitly changes this rule.
 
-Canonical Replit sync instruction:
+After ChatGPT changes `main`, give the user the short Shell flow:
 
-> **GitHub main branch’ini mevcut workspace’e fast-forward sync et ve Preview’ı yenile. Dosyalarda başka değişiklik yapma.**
-
-This is the default wording unless a genuine sync/auth/branch problem requires a different instruction.
-
-After ChatGPT changes `main`, Replit may be instructed only to synchronize the workspace.
+`git fetch github main`  
+`git merge --ff-only FETCH_HEAD`
 
 Safe sync logic:
 
@@ -926,6 +924,16 @@ One audit-only instruction was mistakenly sent to Replit before this rule was cl
 - menu, game routes and slot shell can now extend beyond the viewport instead of being clipped
 - removed the Cadı Kazan landscape-only height/overflow trap so short landscape screens can scroll vertically when needed
 
+### Stage 11 — Scratch anti-spoiler + premium visual pass
+- result settlement is no longer requested on pointer-down; a tiny scratch does not immediately trigger bomb/multiplier outcome
+- reveal request now requires meaningful local scratch: minimum deep coverage, minimum gesture duration and minimum scratch travel
+- three coating layers still wear progressively before the committed result is exposed
+- added E2E coverage ensuring a light scratch does not settle/reveal the result
+- replaced flat safe/bomb artwork with CSS-rendered gold-ingot and dark-metal bomb treatments
+- introduced a more distinctive petrol / aubergine / antique-gold interface palette and fixed the desktop back/menu alignment
+- ticket now includes a dynamic printed price badge such as `$100`
+- removed the old frontend 100-credit stake cap; server accepts larger stakes subject to wallet and storage-safe payout bounds
+
 ### Stage 10 — Three-layer scratch coating
 - scratch cells now use three real stacked canvases above the result: base coat, metallic foil and glossy lacquer
 - abrasion is intentionally progressive: first passes wear lacquer, repeated passes expose foil, deeper repeated passes remove the base coat and reveal the committed result
@@ -952,7 +960,7 @@ One audit-only instruction was mistakenly sent to Replit before this rule was cl
 
 As of this memory update, the next task is:
 
-> **Sync GitHub main to Replit Preview and visually QA the Stage 9 Cadı Kazan rebuild, especially viewport fit and progressive scratch reveal.**
+> **Manually sync GitHub main in Replit Shell, then visually QA Stage 11: anti-spoiler scratch timing, realistic symbols, dynamic ticket price, larger stakes, and the premium petrol/aubergine UI pass.**
 
 Priority checks:
 1. Desktop should visually read as the approved premium mockup, roughly 80%+ similar in hierarchy/composition.
