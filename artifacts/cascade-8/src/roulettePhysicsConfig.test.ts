@@ -215,6 +215,53 @@ describe("authoritative roulette physics config", () => {
     );
   });
 
+  it("locks PART 6A deterministic full-spin telemetry without tuning physics", () => {
+    expect(part3ViewportSource).toContain(
+      "const PART6_TELEMETRY_SCHEMA_VERSION = 'roulette-part6-full-spin-telemetry-v1'",
+    );
+    const seedBlock = part3ViewportSource.match(
+      /const PART6_DETERMINISTIC_SEEDS = \[([\s\S]*?)\] as const;/,
+    );
+    expect(seedBlock).not.toBeNull();
+    expect(seedBlock?.[1].match(/\b610\d+\b/g) ?? []).toHaveLength(20);
+    expect(part3ViewportSource).toContain(
+      "const runPart6FullSpinTelemetryBatch = () =>",
+    );
+    expect(part3ViewportSource).toContain(
+      "runPart6FullSpinTelemetryBatch();",
+    );
+    expect(part3ViewportSource).toContain(
+      "role === 'asset-measured-visible-deflector-cuboid'",
+    );
+    expect(part3ViewportSource).toContain(
+      "role === 'pocket-fret-cuboid'",
+    );
+    expect(part3ViewportSource).toContain(
+      "role === 'pocket-floor-trimesh'",
+    );
+    expect(part3ViewportSource).toContain(
+      "settledFrames >= settleFramesRequired",
+    );
+    expect(part3ViewportSource).toContain(
+      "PART6_FULL_SPIN_TELEMETRY",
+    );
+    expect(part3ViewportSource).toContain(
+      "data-testid=\"part6-full-spin-telemetry-report\"",
+    );
+    expect(part3ViewportSource).toContain(
+      "const PART3_OUTER_SPIN_TRACK_FRICTION = 0.08",
+    );
+    expect(part3ViewportSource).toContain(
+      "const PART3_OUTER_SPIN_LINEAR_DAMPING = 0.01",
+    );
+    expect(part3ViewportSource).toContain(
+      "const PART3_OUTER_SPIN_ANGULAR_DAMPING = 0.01",
+    );
+    expect(part3ViewportSource).not.toContain(".addForce(");
+    expect(part3ViewportSource).not.toContain(".applyImpulse(");
+    expect(part3ViewportSource).not.toContain(".addTorque(");
+  });
+
   it("keeps the PART 2 containment correction geometric only", () => {
     expect(part3ViewportSource).toContain("speed: 5,");
     expect(part3ViewportSource).toContain(
