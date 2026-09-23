@@ -283,7 +283,16 @@ describe("authoritative roulette physics config", () => {
       "phaseSequenceValid",
     );
     expect(part3ViewportSource).toContain(
-      "noSkippedObservedPhases",
+      "noSkippedRequiredPhases",
+    );
+    expect(part3ViewportSource).toContain(
+      "const optionalFretPlacementValid =",
+    );
+    expect(part3ViewportSource).toContain(
+      "fretEventIndex < 0 ||",
+    );
+    expect(part3ViewportSource).toContain(
+      "!timedOut &&",
     );
     expect(part3ViewportSource).toContain(
       "resetRotorAngleError <= 0.000001",
