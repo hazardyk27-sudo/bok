@@ -69,7 +69,7 @@ function part6DeterministicUnit(seed: number, salt: number) {
   value ^= value >>> 15;
   value = Math.imul(value, 0x846ca68b) >>> 0;
   value ^= value >>> 16;
-  return value / 0x100000000;
+  return (value >>> 0) / 0x100000000;
 }
 
 const PART6_FULL_SPIN_RUNS = PART6_DETERMINISTIC_SEEDS.map((seed, index) => ({
