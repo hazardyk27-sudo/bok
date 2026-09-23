@@ -7,15 +7,32 @@ import {
   ROULETTE_ASSET_PATH,
   ROULETTE_AUTHORITATIVE_SCALE,
   ROULETTE_BALL_RADIUS,
+  ROULETTE_DARK_RACE_CHANNEL_PROFILE,
+  ROULETTE_DARK_RACE_INWARD_EDGE_RADIUS,
+  ROULETTE_DARK_RACE_INNER_CONTAINMENT_RADIUS,
+  ROULETTE_DARK_RACE_LAUNCH_RADIUS,
+  ROULETTE_DARK_RACE_RADIUS_BAND,
+  ROULETTE_DARK_RACE_WOOD_INNER_RADIUS,
+  ROULETTE_EUROPEAN_SEQUENCE,
+  ROULETTE_FIXED_TIMESTEP,
+  ROULETTE_GRAVITY_Y,
+  ROULETTE_MAX_CCD_SUBSTEPS,
   ROULETTE_NORMALIZED_DIAMETER,
+  ROULETTE_POCKET_COUNT,
+  ROULETTE_POCKET_FLOOR_OUTER_RADIUS,
+  ROULETTE_POCKET_FLOOR_Y,
+  ROULETTE_POCKET_OUTER_LIP_RADIUS,
+  ROULETTE_POCKET_OUTER_LIP_Y,
   ROULETTE_RAW_SOURCE_CENTER,
   ROULETTE_ROTATION_AXIS,
+  ROULETTE_ROTOR_ANGULAR_SPEED,
+  ROULETTE_WORLD_UNITS_PER_METER,
   ROULETTE_Y_ORIGIN,
 } from './roulette-scene-config';
 
-const FIXED_TIMESTEP = 1 / 120;
-const TEST_ANGULAR_SPEED = 0.35;
-const GRAVITY_Y = -58.86;
+const FIXED_TIMESTEP = ROULETTE_FIXED_TIMESTEP;
+const TEST_ANGULAR_SPEED = ROULETTE_ROTOR_ANGULAR_SPEED;
+const GRAVITY_Y = ROULETTE_GRAVITY_Y;
 const BALL_RADIUS = ROULETTE_BALL_RADIUS;
 const BALL_MASS = 0.0027;
 const TWO_PI = Math.PI * 2;
@@ -27,73 +44,100 @@ const DARK_OUTER_TRACK_HEIGHT = -0.338;
 const PART3_TRACK_FRICTION = 0.08;
 const PART3_TRACK_DAMPING = 0.01;
 const PART3_TRACK_DURATION_SECONDS = 30;
-const PART3_OPERATIONAL_LAUNCH_RADIUS = 2.784;
 const PART3_OUTER_SPIN_TRACK_FRICTION = 0.08;
 const PART3_OUTER_SPIN_LINEAR_DAMPING = 0.01;
 const PART3_OUTER_SPIN_ANGULAR_DAMPING = 0.01;
+const PART6_LAUNCH_SPEED_METERS_PER_SECOND_BASE = 5.0;
+const PART6_LAUNCH_SPEED_METERS_PER_SECOND_VARIATION = 0.15;
+const PART6_LAUNCH_SPEED_BASE =
+  PART6_LAUNCH_SPEED_METERS_PER_SECOND_BASE *
+  ROULETTE_WORLD_UNITS_PER_METER;
+const PART6_LAUNCH_SPEED_VARIATION =
+  PART6_LAUNCH_SPEED_METERS_PER_SECOND_VARIATION *
+  ROULETTE_WORLD_UNITS_PER_METER;
+const PART6_BALL_SPIN_FACTOR = 1.0;
 const PART3_OUTER_SPIN_DURATION_SECONDS = 14.0;
 const PART3_OUTER_SPIN_RUNS = [
   { id: 'outer-spin-low', label: 'Outer spin · low launch variation', speed: 4.85 },
   { id: 'outer-spin-nominal', label: 'Outer spin · nominal launch', speed: 5.0 },
   { id: 'outer-spin-high', label: 'Outer spin · high launch variation', speed: 5.15 },
 ] as const;
-const PART2_ACTUAL_DARK_TRACK_RADIUS_BAND: readonly [number, number] = [
-  2.27,
-  2.54,
-];
+const PART6_TELEMETRY_SCHEMA_VERSION = 'roulette-part6-full-spin-telemetry-v1';
+const PART6_FULL_SPIN_MAX_DURATION_SECONDS = 30;
+const PART6_SETTLE_DURATION_SECONDS = 0.5;
+const PART6_UI_YIELD_STEPS = 240;
+const PART6_INTERACTIVE_YIELD_STEPS = 30;
+const PART6_STATE_RESET_VECTOR_EPSILON = 0.0005;
+const PART6_STATE_RESET_ANGLE_EPSILON = 0.00001;
+const PART6_TRANSITION_HOVER_GRACE_SECONDS = 0.25;
+const PART6_DETERMINISTIC_SEEDS = [
+  61001, 61002, 61003, 61004, 61005,
+  61006, 61007, 61008, 61009, 61010,
+  61011, 61012, 61013, 61014, 61015,
+  61016, 61017, 61018, 61019, 61020,
+] as const;
+
+function part6DeterministicUnit(seed: number, salt: number) {
+  let value = (seed ^ Math.imul(salt + 1, 0x9e3779b1)) >>> 0;
+  value ^= value >>> 16;
+  value = Math.imul(value, 0x7feb352d) >>> 0;
+  value ^= value >>> 15;
+  value = Math.imul(value, 0x846ca68b) >>> 0;
+  value ^= value >>> 16;
+  return (value >>> 0) / 0x100000000;
+}
+
+const PART6_FULL_SPIN_RUNS = PART6_DETERMINISTIC_SEEDS.map((seed, index) => ({
+  id: 'part6-seed-' + String(seed),
+  label: 'PART 6 deterministic spin ' + String(index + 1),
+  seed,
+  speed:
+    PART6_LAUNCH_SPEED_BASE +
+    (part6DeterministicUnit(seed, 1) * 2 - 1) *
+      PART6_LAUNCH_SPEED_VARIATION,
+  launchAzimuth: part6DeterministicUnit(seed, 2) * TWO_PI,
+  rotorStartAngle: part6DeterministicUnit(seed, 3) * TWO_PI,
+}));
+const PART2_ACTUAL_DARK_TRACK_RADIUS_BAND = ROULETTE_DARK_RACE_RADIUS_BAND;
 const PART2_ACTUAL_TRACK_CENTER_RADIUS_BAND: readonly [number, number] = [
   PART2_ACTUAL_DARK_TRACK_RADIUS_BAND[0] + BALL_RADIUS,
   PART2_ACTUAL_DARK_TRACK_RADIUS_BAND[1] - BALL_RADIUS,
 ];
-const PART2_ACTUAL_DARK_TRACK_LAUNCH_RADIUS = 2.39;
-const PART2_ACTUAL_WOOD_INNER_RADIUS = 2.47;
-const PART2_ACTUAL_INWARD_EDGE_RADIUS = 2.26;
-const PART2_CHANNEL_PROFILE: readonly [number, number][] = [
-  [2.18, -0.205], // inner transition / bowl-side lip
-  [2.195, -0.270], // measured curved bowl-side shoulder
-  [2.22, -0.330], // curved inner transition
-  [2.245, -0.355], // curved transition into the dark floor
-  [2.27, -0.3672], // measured dark-floor inner edge
-  [2.34, -0.342], // recessed running surface
-  [2.42, -0.300], // recessed running surface
-  [2.47, -0.2477], // measured dark-floor outer edge
-  [2.525, -0.240], // measured dark floor continuation into the outer wall foot
-  [2.555, -0.200], // measured outer wall lower face
-  [2.558, -0.120], // measured near-vertical retaining wall
-  [2.559, -0.040], // measured retaining wall crest
-];
-const PART2_CHANNEL_INNER_CONTAINMENT_INDEX = 1;
+const PART2_ACTUAL_DARK_TRACK_LAUNCH_RADIUS =
+  ROULETTE_DARK_RACE_LAUNCH_RADIUS;
+const PART2_ACTUAL_WOOD_INNER_RADIUS =
+  ROULETTE_DARK_RACE_WOOD_INNER_RADIUS;
+const PART2_ACTUAL_INWARD_EDGE_RADIUS =
+  ROULETTE_DARK_RACE_INWARD_EDGE_RADIUS;
+const PART2_CHANNEL_PROFILE = ROULETTE_DARK_RACE_CHANNEL_PROFILE;
+const PART2_INNER_CONTAINMENT_RADIUS =
+  ROULETTE_DARK_RACE_INNER_CONTAINMENT_RADIUS;
+const PART2_INNER_CONTAINMENT_CENTER_LIMIT =
+  PART2_INNER_CONTAINMENT_RADIUS + BALL_RADIUS;
 const PART2_CHANNEL_FLOOR_INNER_INDEX = 4;
 const PART2_CHANNEL_FLOOR_OUTER_INDEX = 7;
 const PART2_CHANNEL_OUTER_WALL_FOOT_INDEX = 8;
 const PART2_CHANNEL_BOTTOM_THICKNESS = 0.12;
-const PART3_LAUNCH_RADIUS = 2.82;
-const PART3_RETAINING_RIM_INNER_RADIUS = 2.95;
-const PART3_DEFLECTOR_INNER_RADIUS = 2.464;
-const PART3_DEFLECTOR_OUTER_RADIUS = 2.657;
-const PART3_DEFLECTOR_BOTTOM = -0.291;
-const PART3_DEFLECTOR_TOP = 0.015;
-const PART3_DEFLECTOR_COUNT = 37;
-const PART3_DEFLECTOR_PITCH = TWO_PI / PART3_DEFLECTOR_COUNT;
+const PART3_LAUNCH_RADIUS = PART2_ACTUAL_DARK_TRACK_LAUNCH_RADIUS;
+const PART3_RETAINING_RIM_INNER_RADIUS = PART2_ACTUAL_WOOD_INNER_RADIUS;
+const PART4_DEFLECTOR_SCAN_INNER_RADIUS =
+  ROULETTE_POCKET_FLOOR_OUTER_RADIUS + 0.02;
+const PART4_DEFLECTOR_SCAN_OUTER_RADIUS =
+  ROULETTE_DARK_RACE_WOOD_INNER_RADIUS + 0.22;
+const PART4_DEFLECTOR_RADIAL_SAMPLE_COUNT = 31;
+const PART4_DEFLECTOR_AZIMUTH_SAMPLE_COUNT = 360;
+const PART4_DEFLECTOR_MIN_PROMINENCE = 0.012;
+const PART4_DEFLECTOR_MIN_CLUSTER_SAMPLES = 3;
+const PART4_DEFLECTOR_MIN_COUNT = 4;
+const PART4_DEFLECTOR_MAX_COUNT = 12;
 const PART3_DEFLECTOR_FRICTION = 0.28;
 const PART3_DEFLECTOR_RESTITUTION = 0.16;
-const PART3_DEFLECTOR_RADIUS = (PART3_DEFLECTOR_INNER_RADIUS + PART3_DEFLECTOR_OUTER_RADIUS) / 2;
-const PART3_DEFLECTOR_HEIGHT = PART3_DEFLECTOR_TOP - PART3_DEFLECTOR_BOTTOM;
-const PART3_DEFLECTOR_TANGENTIAL_WIDTH =
-  PART3_DEFLECTOR_RADIUS * THREE.MathUtils.degToRad(7.83);
-const PART3_DEFLECTOR_APPROACH_RADIUS = 2.74;
-const PART3_TRACK_INNER_RADIUS = 2.72;
-const PART3_TRACK_OUTER_RADIUS = 2.90;
+const PART3_TRACK_INNER_RADIUS = PART2_ACTUAL_DARK_TRACK_RADIUS_BAND[0];
+const PART3_TRACK_OUTER_RADIUS = PART2_ACTUAL_DARK_TRACK_RADIUS_BAND[1];
 const PART3_TRACK_CONTACT_TOLERANCE = 0.1;
 const PART3_OUTER_LANE_PROBE_DURATION_SECONDS = 1.2;
 const PART3_OUTER_LANE_CLEARANCE_MARGIN = 0.02;
-const PART3_DARK_TRACK_RADIUS_BAND: readonly [number, number] = [
-  PART3_TRACK_INNER_RADIUS,
-  PART3_TRACK_OUTER_RADIUS,
-];
-// Retained only as a diagnostic baseline. This was the incorrect highest-hit
-// wood-derived correction and must not be applied to the physics surface.
-const PART3_LEGACY_TRACK_VERTICAL_OFFSET = 0.2848;
+const PART3_DARK_TRACK_RADIUS_BAND = PART2_ACTUAL_DARK_TRACK_RADIUS_BAND;
 const PART3_POCKET_PROBE_DURATION_SECONDS = 3.5;
 const PART3_POCKET_PROBE_RADIUS = 1.62;
 const PART3_ALIGNMENT_PROBE_DURATION_SECONDS = 0.9;
@@ -110,13 +154,20 @@ const STATIONARY_COLLISION_GROUP = 0x0002;
 const ROTOR_COLLISION_GROUP = 0x0004;
 const ROTOR_CONTACT_RADIUS = 1.72;
 const ROTOR_CONTACT_SEGMENTS = 32;
-const EUROPEAN_POCKET_COUNT = 37;
+const EUROPEAN_POCKET_COUNT = ROULETTE_POCKET_COUNT;
 const POCKET_STEP_RADIANS = TWO_PI / EUROPEAN_POCKET_COUNT;
 const POCKET_FLOOR_INNER_RADIUS = 1.48;
-const POCKET_FLOOR_OUTER_RADIUS = 1.90;
-const POCKET_FLOOR_Y = -0.45;
+const POCKET_FLOOR_OUTER_RADIUS = ROULETTE_POCKET_FLOOR_OUTER_RADIUS;
+const POCKET_FLOOR_Y = ROULETTE_POCKET_FLOOR_Y;
+const POCKET_OUTER_LIP_RADIUS = ROULETTE_POCKET_OUTER_LIP_RADIUS;
+const POCKET_OUTER_LIP_Y = ROULETTE_POCKET_OUTER_LIP_Y;
 const POCKET_FLOOR_THICKNESS = 0.06;
 const POCKET_FLOOR_SEGMENTS = 74;
+const BOWL_BRIDGE_INNER_RADIUS = POCKET_OUTER_LIP_RADIUS;
+const BOWL_BRIDGE_OUTER_RADIUS = PART2_CHANNEL_PROFILE[0][0];
+const BOWL_BRIDGE_SEGMENTS = 128;
+const BOWL_BRIDGE_SAMPLE_COUNT = 9;
+const BOWL_BRIDGE_THICKNESS = 0.08;
 const POCKET_FRET_RADIUS = 1.73;
 const POCKET_FRET_TANGENTIAL_HALF_EXTENT = 0.105;
 const POCKET_FRET_RADIAL_HALF_EXTENT = 0.032;
@@ -126,13 +177,16 @@ const POCKET_FRET_VERTICAL_HALF_EXTENT = 0.11;
 // downward impulse when a ball approaches from the side.
 const POCKET_FRET_Y =
   POCKET_FLOOR_Y + POCKET_FRET_VERTICAL_HALF_EXTENT + 0.01;
-const EUROPEAN_SEQUENCE = [
-  0, 32, 15, 19, 4, 21, 2, 25, 17, 34, 6, 27, 13, 36, 11, 30, 8, 23, 10,
-  5, 24, 16, 33, 1, 20, 14, 31, 9, 22, 18, 29, 7, 28, 12, 35, 3, 26,
-];
+const EUROPEAN_SEQUENCE = ROULETTE_EUROPEAN_SEQUENCE;
 
 type InspectionView = 'top' | 'angled' | 'side';
 type LoadState = 'loading' | 'loaded' | 'error';
+type ValidationErrorKind =
+  | 'asset'
+  | 'geometry-audit'
+  | 'physics-validation'
+  | 'telemetry'
+  | 'initialization';
 type VectorReadout = { x: number; y: number; z: number };
 
 type Part2AssetAudit = {
@@ -286,6 +340,9 @@ type Part3OuterLaneReport = {
   maxRadius: number;
   minRimClearance: number;
   minDeflectorClearance: number;
+  innerContainmentRadius: number;
+  innerContainmentCenterLimit: number;
+  minimumInnerContainmentClearance: number;
   staysOnOuterDarkLane: boolean;
   prematureDeflectorContact: boolean;
   woodContact: boolean;
@@ -350,6 +407,132 @@ type Part3OuterLaneSpinReport = {
   detail: string;
 };
 
+type Part6SpinPhase =
+  | 'OUTER_RACE'
+  | 'INWARD_DESCENT'
+  | 'DEFLECTOR_ZONE'
+  | 'ROTOR_ENTRY'
+  | 'FRETS'
+  | 'POCKET'
+  | 'SETTLED';
+
+type Part6PhaseEvent = {
+  phase: Part6SpinPhase;
+  time: number;
+  radius: number;
+  y: number;
+  speed: number;
+  contactRole: string | null;
+};
+
+type Part6FullSpinTelemetryResult = {
+  id: string;
+  seed: number;
+  label: string;
+  launchAzimuth: number;
+  launchSpeed: number;
+  launchSpeedMetersPerSecond: number;
+  launchRadius: number;
+  launchHeight: number;
+  rotorStartAngle: number;
+  stateResetVerified: boolean;
+  resetPositionError: number;
+  resetVelocityError: number;
+  resetAngularVelocityError: number;
+  resetRotationError: number;
+  resetRotorAngleError: number;
+  elapsed: number;
+  lapCount: number;
+  trackDuration: number;
+  trackContactRatio: number;
+  trackStartSpeed: number;
+  trackEndSpeed: number;
+  peakSpeed: number;
+  lapSpeeds: number[];
+  speedDegradesAcrossLaps: boolean;
+  outerLapTargetMet: boolean;
+  minRadius: number;
+  maxRadius: number;
+  inwardTransitionTime: number | null;
+  inwardTransitionRadius: number | null;
+  phases: Part6PhaseEvent[];
+  phaseSequenceValid: boolean;
+  transitionMinRadius: number | null;
+  transitionMaxRadius: number | null;
+  transitionMinY: number | null;
+  transitionMaxY: number | null;
+  transitionMaxSurfacePenetration: number;
+  transitionMaxSurfaceSeparation: number;
+  transitionContactRoles: string[];
+  maxUnsupportedTransitionDuration: number;
+  rotorEntryTime: number | null;
+  deflectorContactCount: number;
+  firstDeflectorContactTime: number | null;
+  impactSpeedBefore: number | null;
+  impactSpeedAfter: number | null;
+  impactDirectionChangeDegrees: number | null;
+  fretContact: boolean;
+  firstFretContactTime: number | null;
+  pocketEntered: boolean;
+  pocketEntryTime: number | null;
+  settled: boolean;
+  settleTime: number | null;
+  finalPocketIndex: number | null;
+  finalPocketNumber: number | null;
+  finalSpeed: number;
+  finalRotorRelativeSpeed: number;
+  hover: boolean;
+  clipping: boolean;
+  tunneling: boolean;
+  escaped: boolean;
+  velocitySpike: boolean;
+  artificialAcceleration: boolean;
+  maxTrackPenetration: number;
+  maxTrackSeparation: number;
+  maxPocketFloorPenetration: number;
+  maxPocketFloorSeparation: number;
+  maxVisualBodySyncError: number;
+  maxRotorSyncError: number;
+  timedOut: boolean;
+  safetyPassed: boolean;
+  telemetryComplete: boolean;
+  detail: string;
+};
+
+type Part6FullSpinTelemetryReport = {
+  status: 'running' | 'captured' | 'failed';
+  safetyStatus: 'pending' | 'passed' | 'failed';
+  calibrationStatus: 'not-evaluated';
+  schemaVersion: string;
+  fixedTimestep: number;
+  maxDurationSeconds: number;
+  seedCount: number;
+  completedCount: number;
+  timedOutCount: number;
+  phaseSequenceFailureCount: number;
+  fourToFiveLapCount: number;
+  inwardTransitionCount: number;
+  deflectorContactCount: number;
+  fretContactCount: number;
+  pocketEntryCount: number;
+  settledCount: number;
+  safetyFailureCount: number;
+  medianLapCount: number | null;
+  minLapCount: number | null;
+  maxLapCount: number | null;
+  medianTrackContactRatio: number | null;
+  inwardTransitionRate: number;
+  deflectorContactRate: number;
+  pocketEntryRate: number;
+  settleRate: number;
+  safetyFailureRate: number;
+  trackFriction: number;
+  linearDamping: number;
+  angularDamping: number;
+  results: Part6FullSpinTelemetryResult[];
+  detail: string;
+};
+
 type Part2RacePlacementReport = {
   status: 'running' | 'passed' | 'failed';
   channelInnerRadius: number;
@@ -405,6 +588,25 @@ type Part3GeometryProfileSample = {
   hits: Part3GeometryProfileHit[];
 };
 
+type Part4VisibleDeflector = {
+  angle: number;
+  angularWidth: number;
+  innerRadius: number;
+  outerRadius: number;
+  bottomY: number;
+  topY: number;
+  peakProminence: number;
+};
+
+type Part4DeflectorAudit = {
+  passed: boolean;
+  descriptors: Part4VisibleDeflector[];
+  prominenceThreshold: number;
+  peakProminence: number;
+  maxSpacingDeviationRatio: number | null;
+  detail: string;
+};
+
 type Part3GeometryDiagnosticReport = {
   status: 'running' | 'passed' | 'failed';
   trueDarkTrackInnerRadius: number | null;
@@ -413,6 +615,9 @@ type Part3GeometryDiagnosticReport = {
   darkTrackSurfaceYRange: readonly [number, number] | null;
   outerWoodRingRadiusBand: readonly [number, number] | null;
   nearestDeflectorRadiusBand: readonly [number, number] | null;
+  visibleDeflectorCount: number | null;
+  visibleDeflectorAnglesDegrees: number[];
+  visibleDeflectorAuditPassed: boolean;
   proposedLaunchRadius: number | null;
   proposedLaunchHeight: number | null;
   ballRadius: number;
@@ -545,7 +750,11 @@ type Part2SceneViewportProps = {
   showStationaryGroup: boolean;
   showRotorGroup: boolean;
   rotorAngle: number;
-  onStateChange: (state: LoadState, detail?: string) => void;
+  onStateChange: (
+    state: LoadState,
+    detail?: string,
+    errorKind?: ValidationErrorKind,
+  ) => void;
   onAudit: (audit: Part2AssetAudit) => void;
   onRotorAngleChange: (angle: number) => void;
 };
@@ -599,7 +808,7 @@ const PART3_PROBES = [
     id: 'controlled-deflector-approach',
     label: 'Controlled inward deflector approach',
     angle: 0.37,
-    radius: PART3_DEFLECTOR_APPROACH_RADIUS,
+    radius: PART2_ACTUAL_INWARD_EDGE_RADIUS + BALL_RADIUS + 0.18,
     speed: 1.4,
     spinFactor: 0,
     kind: 'deflector-approach',
@@ -658,24 +867,43 @@ const PART1_PROBES = [
 function part3SpawnPosition(
   probe: (typeof PART3_PROBES)[number],
   verticalOffset = 0,
+  measuredDeflector: Part4VisibleDeflector | null = null,
 ) {
-  const y =
-    probe.kind === 'deflector-approach'
-      ? (PART3_DEFLECTOR_BOTTOM + PART3_DEFLECTOR_TOP) / 2
-      : part3TrackHeight(probe.radius, verticalOffset);
-  return radialPosition(
-    probe.radius,
-    probe.angle,
-    y + (probe.kind === 'deflector-approach' ? 0 : BALL_RADIUS + 0.002),
+  if (probe.kind === 'deflector-approach') {
+    const angle = measuredDeflector?.angle ?? probe.angle;
+    const radius = measuredDeflector
+      ? measuredDeflector.outerRadius + BALL_RADIUS + 0.16
+      : probe.radius;
+    const height = measuredDeflector
+      ? (measuredDeflector.bottomY + measuredDeflector.topY) / 2
+      : part2ChannelSurfaceAt(
+          PART2_ACTUAL_INWARD_EDGE_RADIUS,
+          verticalOffset,
+        ).y + BALL_RADIUS;
+    return radialPosition(radius, angle, height);
+  }
+  const surface = part2ChannelSurfaceAt(probe.radius, verticalOffset);
+  const surfacePoint = new THREE.Vector3(
+    ...radialPosition(probe.radius, probe.angle, surface.y),
   );
+  return surfacePoint
+    .addScaledVector(
+      part2ChannelNormalAt(probe.radius, probe.angle),
+      BALL_RADIUS + 0.002,
+    )
+    .toArray() as [number, number, number];
 }
 
-function part3InitialVelocity(probe: (typeof PART3_PROBES)[number]): VectorReadout {
+function part3InitialVelocity(
+  probe: (typeof PART3_PROBES)[number],
+  measuredAngle: number | null = null,
+): VectorReadout {
   if (probe.kind === 'deflector-approach') {
+    const angle = measuredAngle ?? probe.angle;
     return {
-      x: Number((-Math.sin(probe.angle) * probe.speed).toFixed(4)),
+      x: Number((-Math.sin(angle) * probe.speed).toFixed(4)),
       y: 0,
-      z: Number((-Math.cos(probe.angle) * probe.speed).toFixed(4)),
+      z: Number((-Math.cos(angle) * probe.speed).toFixed(4)),
     };
   }
   return {
@@ -705,27 +933,39 @@ function part3InitialAngularSpin(probe: (typeof PART3_PROBES)[number]): VectorRe
   };
 }
 
-function addPart3DeflectorColliders(
+function addMeasuredDeflectorColliders(
   world: RAPIER.World,
   stationaryBody: RAPIER.RigidBody,
+  descriptors: readonly Part4VisibleDeflector[],
 ) {
   const colliders: RAPIER.Collider[] = [];
-  const halfTangentialWidth = PART3_DEFLECTOR_TANGENTIAL_WIDTH / 2;
-  const halfHeight = PART3_DEFLECTOR_HEIGHT / 2;
-  const halfRadialDepth =
-    (PART3_DEFLECTOR_OUTER_RADIUS - PART3_DEFLECTOR_INNER_RADIUS) / 2;
-  const centerY = (PART3_DEFLECTOR_BOTTOM + PART3_DEFLECTOR_TOP) / 2;
-  for (let index = 0; index < PART3_DEFLECTOR_COUNT; index += 1) {
-    const angle = (index + 0.5) * PART3_DEFLECTOR_PITCH;
+  for (const descriptor of descriptors) {
+    const centerRadius =
+      (descriptor.innerRadius + descriptor.outerRadius) / 2;
+    const halfRadialDepth = Math.max(
+      BALL_RADIUS * 0.45,
+      (descriptor.outerRadius - descriptor.innerRadius) / 2,
+    );
+    const halfHeight = Math.max(
+      0.02,
+      (descriptor.topY - descriptor.bottomY) / 2,
+    );
+    const centerY = (descriptor.bottomY + descriptor.topY) / 2;
+    const halfTangentialWidth = THREE.MathUtils.clamp(
+      centerRadius * descriptor.angularWidth * 0.5,
+      BALL_RADIUS * 0.9,
+      0.22,
+    );
+    const angle = descriptor.angle;
     const collider = RAPIER.ColliderDesc.cuboid(
       halfTangentialWidth,
       halfHeight,
       halfRadialDepth,
     )
       .setTranslation(
-        Math.sin(angle) * PART3_DEFLECTOR_RADIUS,
+        Math.sin(angle) * centerRadius,
         centerY,
-        Math.cos(angle) * PART3_DEFLECTOR_RADIUS,
+        Math.cos(angle) * centerRadius,
       )
       .setRotation({
         x: 0,
@@ -734,84 +974,27 @@ function addPart3DeflectorColliders(
         w: Math.cos(angle / 2),
       })
       .setFriction(PART3_DEFLECTOR_FRICTION)
-      .setRestitution(PART3_DEFLECTOR_RESTITUTION);
+      .setRestitution(PART3_DEFLECTOR_RESTITUTION)
+      .setCollisionGroups(
+        STATIONARY_COLLISION_GROUP | (BALL_COLLISION_GROUP << 16),
+      );
     colliders.push(world.createCollider(collider, stationaryBody));
   }
   return colliders;
 }
 
 function part3TrackHeightBase(radius: number) {
-  const trackProfile: Array<[number, number]> = [
-    [1.95, -0.458],
-    [2.05, -0.39],
-    [2.12, -0.35],
-    [2.25, -0.343],
-    [2.35, -0.338],
-    [2.45, -0.33],
-    [2.65, -0.27],
-    [2.90, -0.27],
-    [2.95, -0.15],
-  ];
-  const clamped = Math.max(trackProfile[0][0], Math.min(trackProfile.at(-1)![0], radius));
-  for (let index = 1; index < trackProfile.length; index += 1) {
-    const [rightRadius, rightY] = trackProfile[index];
-    const [leftRadius, leftY] = trackProfile[index - 1];
-    if (clamped <= rightRadius) {
-      return THREE.MathUtils.lerp(
-        leftY,
-        rightY,
-        (clamped - leftRadius) / (rightRadius - leftRadius),
-      );
-    }
-  }
-  return trackProfile.at(-1)![1];
+  return part2ChannelSurfaceAt(radius).y;
 }
 
 function part3TrackHeight(radius: number, verticalOffset = 0) {
-  return part3TrackHeightBase(radius) + verticalOffset;
+  return part2ChannelSurfaceAt(radius, verticalOffset).y;
 }
 
-// This is an analytic lathed cross-section of the visible dark outer ray and
-// its retaining edge. It is not derived from or used as a raw GLB collider.
+// Legacy PART 3 callers now share the same measured recessed dark-race
+// collider as the active PART 2 path. There is no second outer-track profile.
 function makePart3OuterTrackTrimesh(verticalOffset = 0) {
-  const crossSection: Array<[number, number]> = [
-    [1.95, -0.458],
-    [2.05, -0.39],
-    [2.12, -0.35],
-    [2.25, -0.343],
-    [2.35, -0.338],
-    [2.45, -0.33],
-    [2.65, -0.27],
-    [2.90, -0.27],
-    [2.95, -0.15],
-  ];
-  const vertices: number[] = [];
-  const indices: number[] = [];
-  const segments = 128;
-  for (const [radius, y] of crossSection) {
-    for (let segment = 0; segment < segments; segment += 1) {
-      const angle = (segment / segments) * TWO_PI;
-       vertices.push(
-         Math.sin(angle) * radius,
-          y + verticalOffset,
-         Math.cos(angle) * radius,
-       );
-    }
-  }
-  for (let row = 0; row < crossSection.length - 1; row += 1) {
-    for (let segment = 0; segment < segments; segment += 1) {
-      const next = (segment + 1) % segments;
-      const a = row * segments + segment;
-      const b = row * segments + next;
-      const c = (row + 1) * segments + next;
-      const d = (row + 1) * segments + segment;
-      indices.push(a, d, b, b, d, c);
-    }
-  }
-  return {
-    vertices: new Float32Array(vertices),
-    indices: new Uint32Array(indices),
-  };
+  return makePart2RaceChannelTrimesh(verticalOffset);
 }
 
 function makeWorldTrimeshFromObject(object: THREE.Object3D) {
@@ -863,13 +1046,75 @@ function part4InitialVelocity(probe: (typeof PART4_PROBES)[number]): VectorReado
   };
 }
 
+function buildBowlBridgeTrimesh(
+  profile: readonly [number, number][],
+) {
+  const vertices: number[] = [];
+  const indices: number[] = [];
+  const bottomProfile = profile.map(
+    ([radius, height]) =>
+      [radius, height - BOWL_BRIDGE_THICKNESS] as [number, number],
+  );
+
+  const appendProfile = (rings: readonly [number, number][]) => {
+    for (const [radius, height] of rings) {
+      for (let segment = 0; segment < BOWL_BRIDGE_SEGMENTS; segment += 1) {
+        const angle = (segment / BOWL_BRIDGE_SEGMENTS) * TWO_PI;
+        vertices.push(
+          Math.sin(angle) * radius,
+          height,
+          Math.cos(angle) * radius,
+        );
+      }
+    }
+  };
+
+  appendProfile(profile);
+  const bottomOffset = profile.length * BOWL_BRIDGE_SEGMENTS;
+  appendProfile(bottomProfile);
+
+  for (let row = 0; row < profile.length - 1; row += 1) {
+    for (let segment = 0; segment < BOWL_BRIDGE_SEGMENTS; segment += 1) {
+      const next = (segment + 1) % BOWL_BRIDGE_SEGMENTS;
+      const topA = row * BOWL_BRIDGE_SEGMENTS + segment;
+      const topB = row * BOWL_BRIDGE_SEGMENTS + next;
+      const topC = (row + 1) * BOWL_BRIDGE_SEGMENTS + next;
+      const topD = (row + 1) * BOWL_BRIDGE_SEGMENTS + segment;
+      indices.push(topA, topD, topB, topB, topD, topC);
+
+      const bottomA = bottomOffset + topA;
+      const bottomB = bottomOffset + topB;
+      const bottomC = bottomOffset + topC;
+      const bottomD = bottomOffset + topD;
+      indices.push(bottomA, bottomB, bottomD, bottomB, bottomC, bottomD);
+    }
+  }
+
+  for (const row of [0, profile.length - 1]) {
+    const bottomRow = bottomOffset + row * BOWL_BRIDGE_SEGMENTS;
+    for (let segment = 0; segment < BOWL_BRIDGE_SEGMENTS; segment += 1) {
+      const next = (segment + 1) % BOWL_BRIDGE_SEGMENTS;
+      const topA = row * BOWL_BRIDGE_SEGMENTS + segment;
+      const topB = row * BOWL_BRIDGE_SEGMENTS + next;
+      const bottomA = bottomRow + segment;
+      const bottomB = bottomRow + next;
+      indices.push(topA, topB, bottomB, topA, bottomB, bottomA);
+    }
+  }
+
+  return {
+    vertices: new Float32Array(vertices),
+    indices: new Uint32Array(indices),
+  };
+}
+
 function buildPocketFloorTrimesh() {
   const vertices: number[] = [];
   const indices: number[] = [];
   const topProfile: Array<[number, number]> = [
     [POCKET_FLOOR_INNER_RADIUS, POCKET_FLOOR_Y],
     [POCKET_FLOOR_OUTER_RADIUS, POCKET_FLOOR_Y],
-    [POCKET_FLOOR_OUTER_RADIUS + 0.14, POCKET_FLOOR_Y + 0.16],
+    [POCKET_OUTER_LIP_RADIUS, POCKET_OUTER_LIP_Y],
   ];
   const bottomProfile = topProfile.map(
     ([radius, height]) =>
@@ -1170,7 +1415,7 @@ function runPocketEntryValidation(
             : 1.72;
       const maximumValidRadius =
         probe.kind === 'pocket-aperture'
-          ? POCKET_FLOOR_OUTER_RADIUS + 0.14
+          ? POCKET_OUTER_LIP_RADIUS
           : probe.kind === 'side-track'
             ? 2.62
             : 2.42;
@@ -1410,7 +1655,9 @@ function makePart2RaceChannelTrimesh(verticalOffset = 0) {
   const vertices: number[] = [];
   const indices: number[] = [];
   const segments = 128;
-  const appendProfile = (profile: readonly [number, number][]) => {
+  const appendProfile = (
+    profile: readonly (readonly [number, number])[],
+  ) => {
     for (const [radius, y] of profile) {
       for (let segment = 0; segment < segments; segment += 1) {
         const angle = (segment / segments) * TWO_PI;
@@ -1614,6 +1861,8 @@ export function Part2SceneViewport({
   onAudit,
   onRotorAngleChange,
 }: Part2SceneViewportProps) {
+  const part6FullSpinRouteActive =
+    validationMode === 'part3' && outerLaneSpinOnly;
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const stageRef = useRef<HTMLDivElement | null>(null);
   const viewRef = useRef(view);
@@ -1626,6 +1875,8 @@ export function Part2SceneViewport({
     useState<Part3OuterLaneReport | null>(null);
   const [part3OuterLaneSpinReport, setPart3OuterLaneSpinReport] =
     useState<Part3OuterLaneSpinReport | null>(null);
+  const [part6TelemetryReport, setPart6TelemetryReport] =
+    useState<Part6FullSpinTelemetryReport | null>(null);
   const [part2RacePlacementReport, setPart2RacePlacementReport] =
     useState<Part2RacePlacementReport | null>(null);
   const [part3GeometryDiagnosticReport, setPart3GeometryDiagnosticReport] =
@@ -1660,14 +1911,29 @@ export function Part2SceneViewport({
     let rotorBody: RAPIER.RigidBody | null = null;
     let physicsBallCollider: RAPIER.Collider | null = null;
     let part3TrackCollider: RAPIER.Collider | null = null;
+    let part3BowlBridgeCollider: RAPIER.Collider | null = null;
+    let part3BowlBridgeProfile: Array<[number, number]> = [];
     let part3InnerFloorCollider: RAPIER.Collider | null = null;
     let part3DeflectorColliders: RAPIER.Collider[] = [];
+    let part4DeflectorAudit: Part4DeflectorAudit | null = null;
+    let part4MeasuredDeflectorInnerRadius: number | null = null;
+    let part4MeasuredDeflectorOuterRadius: number | null = null;
     let part3PocketColliders: RAPIER.Collider[] = [];
     const part3ColliderRoles = new Map<number, string>();
     let rotorColliders: RAPIER.Collider[] = [];
     let accumulator = 0;
     let lastTime = performance.now();
     let fixedStepCount = 0;
+    let part6TelemetryBatchRunning = false;
+    const activePart3TrackFriction = outerLaneSpinOnly
+      ? PART3_OUTER_SPIN_TRACK_FRICTION
+      : PART3_TRACK_FRICTION;
+    const activePart3LinearDamping = outerLaneSpinOnly
+      ? PART3_OUTER_SPIN_LINEAR_DAMPING
+      : PART3_TRACK_DAMPING;
+    const activePart3AngularDamping = outerLaneSpinOnly
+      ? PART3_OUTER_SPIN_ANGULAR_DAMPING
+      : PART3_TRACK_DAMPING;
     let dropStarted = false;
     let dropSteps = 0;
     let previousVerticalVelocity = 0;
@@ -1859,6 +2125,12 @@ export function Part2SceneViewport({
       setPart3OuterLaneSpinReport(report);
     };
 
+    const publishPart6TelemetryReport = (
+      report: Part6FullSpinTelemetryReport,
+    ) => {
+      setPart6TelemetryReport(report);
+    };
+
     const publishPart3GeometryDiagnosticReport = (
       report: Part3GeometryDiagnosticReport,
     ) => {
@@ -1869,7 +2141,8 @@ export function Part2SceneViewport({
       x: number,
       z: number,
       darkTrackOnly = true,
-      darkTrackBand = PART3_DARK_TRACK_RADIUS_BAND,
+      darkTrackBand: readonly [number, number] =
+        PART3_DARK_TRACK_RADIUS_BAND,
     ) => {
       if (!stationaryGroup) return null;
       stationaryGroup.updateMatrixWorld(true);
@@ -1928,6 +2201,331 @@ export function Part2SceneViewport({
           z: normal.z,
         },
       };
+    };
+
+    const measureVisibleDeflectors = (): Part4DeflectorAudit => {
+      const radialStep =
+        (PART4_DEFLECTOR_SCAN_OUTER_RADIUS -
+          PART4_DEFLECTOR_SCAN_INNER_RADIUS) /
+        (PART4_DEFLECTOR_RADIAL_SAMPLE_COUNT - 1);
+      const angularStep = TWO_PI / PART4_DEFLECTOR_AZIMUTH_SAMPLE_COUNT;
+      const rows: Array<{
+        radius: number;
+        baseline: number;
+        heights: number[];
+      }> = [];
+
+      for (
+        let radialIndex = 0;
+        radialIndex < PART4_DEFLECTOR_RADIAL_SAMPLE_COUNT;
+        radialIndex += 1
+      ) {
+        const radius =
+          PART4_DEFLECTOR_SCAN_INNER_RADIUS + radialIndex * radialStep;
+        const heights = Array.from(
+          { length: PART4_DEFLECTOR_AZIMUTH_SAMPLE_COUNT },
+          (_, angleIndex) => {
+            const angle = angleIndex * angularStep;
+            const hit = measureVisibleSurfaceAt(
+              Math.sin(angle) * radius,
+              Math.cos(angle) * radius,
+              false,
+            );
+            return hit?.y ?? Number.NaN;
+          },
+        );
+        const valid = heights
+          .filter((height) => Number.isFinite(height))
+          .sort((left, right) => left - right);
+        if (
+          valid.length <
+          Math.floor(PART4_DEFLECTOR_AZIMUTH_SAMPLE_COUNT * 0.8)
+        ) {
+          continue;
+        }
+        rows.push({
+          radius,
+          baseline: valid[Math.floor(valid.length / 2)],
+          heights,
+        });
+      }
+
+      if (rows.length < 3) {
+        return {
+          passed: false,
+          descriptors: [],
+          prominenceThreshold: PART4_DEFLECTOR_MIN_PROMINENCE,
+          peakProminence: 0,
+          maxSpacingDeviationRatio: null,
+          detail:
+            'Deflector audit failed: insufficient visible geo1_outside_0 samples in the bowl/inner-transition band.',
+        };
+      }
+
+      const rawProminence = Array.from(
+        { length: PART4_DEFLECTOR_AZIMUTH_SAMPLE_COUNT },
+        (_, angleIndex) =>
+          Math.max(
+            0,
+            ...rows.map((row) => {
+              const height = row.heights[angleIndex];
+              return Number.isFinite(height)
+                ? height - row.baseline
+                : Number.NEGATIVE_INFINITY;
+            }),
+          ),
+      );
+      const prominence = rawProminence.map((_, angleIndex) => {
+        let sum = 0;
+        let count = 0;
+        for (let offset = -2; offset <= 2; offset += 1) {
+          const sampleIndex =
+            (angleIndex +
+              offset +
+              PART4_DEFLECTOR_AZIMUTH_SAMPLE_COUNT) %
+            PART4_DEFLECTOR_AZIMUTH_SAMPLE_COUNT;
+          const value = rawProminence[sampleIndex];
+          if (Number.isFinite(value)) {
+            sum += value;
+            count += 1;
+          }
+        }
+        return count > 0 ? sum / count : 0;
+      });
+      const peakProminence = Math.max(...prominence);
+      const prominenceThreshold = Math.max(
+        PART4_DEFLECTOR_MIN_PROMINENCE,
+        peakProminence * 0.35,
+      );
+      const active = prominence.map(
+        (value) => value >= prominenceThreshold,
+      );
+      const firstInactiveIndex = active.findIndex((value) => !value);
+      if (firstInactiveIndex < 0 || !active.some(Boolean)) {
+        return {
+          passed: false,
+          descriptors: [],
+          prominenceThreshold,
+          peakProminence,
+          maxSpacingDeviationRatio: null,
+          detail:
+            'Deflector audit failed: angular prominence did not separate into discrete visible deflectors.',
+        };
+      }
+
+      const clusters: number[][] = [];
+      let current: number[] = [];
+      for (
+        let offset = 1;
+        offset <= PART4_DEFLECTOR_AZIMUTH_SAMPLE_COUNT;
+        offset += 1
+      ) {
+        const index =
+          (firstInactiveIndex + offset) %
+          PART4_DEFLECTOR_AZIMUTH_SAMPLE_COUNT;
+        if (active[index]) {
+          current.push(index);
+        } else if (current.length > 0) {
+          if (current.length >= PART4_DEFLECTOR_MIN_CLUSTER_SAMPLES) {
+            clusters.push(current);
+          }
+          current = [];
+        }
+      }
+      if (current.length >= PART4_DEFLECTOR_MIN_CLUSTER_SAMPLES) {
+        clusters.push(current);
+      }
+
+      const descriptors = clusters
+        .map((cluster): Part4VisibleDeflector | null => {
+          let weightedSin = 0;
+          let weightedCos = 0;
+          let weightTotal = 0;
+          for (const index of cluster) {
+            const angle = index * angularStep;
+            const weight = Math.max(
+              PART4_DEFLECTOR_MIN_PROMINENCE,
+              prominence[index],
+            );
+            weightedSin += Math.sin(angle) * weight;
+            weightedCos += Math.cos(angle) * weight;
+            weightTotal += weight;
+          }
+          if (weightTotal <= 0) return null;
+          const angle = normalizedAngle(
+            Math.atan2(
+              weightedSin / weightTotal,
+              weightedCos / weightTotal,
+            ),
+          );
+          const supportingRows = rows.filter((row) => {
+            const rowPeak = Math.max(
+              ...cluster.map((index) => {
+                const height = row.heights[index];
+                return Number.isFinite(height)
+                  ? height - row.baseline
+                  : Number.NEGATIVE_INFINITY;
+              }),
+            );
+            return rowPeak >= prominenceThreshold * 0.45;
+          });
+          if (supportingRows.length === 0) return null;
+          const innerRadius = Math.max(
+            PART4_DEFLECTOR_SCAN_INNER_RADIUS,
+            supportingRows[0].radius - radialStep * 0.5,
+          );
+          const outerRadius = Math.min(
+            PART4_DEFLECTOR_SCAN_OUTER_RADIUS,
+            supportingRows[supportingRows.length - 1].radius +
+              radialStep * 0.5,
+          );
+          const topY = Math.max(
+            ...supportingRows.flatMap((row) =>
+              cluster
+                .map((index) => row.heights[index])
+                .filter((height) => Number.isFinite(height)),
+            ),
+          );
+          const sortedBaselines = supportingRows
+            .map((row) => row.baseline)
+            .sort((left, right) => left - right);
+          const bottomY =
+            sortedBaselines[Math.floor(sortedBaselines.length / 2)];
+          if (
+            !Number.isFinite(topY) ||
+            !Number.isFinite(bottomY) ||
+            topY - bottomY < PART4_DEFLECTOR_MIN_PROMINENCE
+          ) {
+            return null;
+          }
+          return {
+            angle,
+            angularWidth: Math.max(
+              angularStep * PART4_DEFLECTOR_MIN_CLUSTER_SAMPLES,
+              cluster.length * angularStep,
+            ),
+            innerRadius,
+            outerRadius,
+            bottomY,
+            topY,
+            peakProminence: Math.max(
+              ...cluster.map((index) => prominence[index]),
+            ),
+          };
+        })
+        .filter(
+          (descriptor): descriptor is Part4VisibleDeflector =>
+            descriptor !== null,
+        )
+        .sort((left, right) => left.angle - right.angle);
+
+      const spacing =
+        descriptors.length > 1
+          ? descriptors.map((descriptor, index) => {
+              const next =
+                descriptors[(index + 1) % descriptors.length];
+              return normalizedAngle(next.angle - descriptor.angle);
+            })
+          : [];
+      const expectedSpacing =
+        descriptors.length > 1 ? TWO_PI / descriptors.length : 0;
+      const maxSpacingDeviationRatio =
+        spacing.length > 0 && expectedSpacing > 0
+          ? Math.max(
+              ...spacing.map(
+                (value) =>
+                  Math.abs(value - expectedSpacing) / expectedSpacing,
+              ),
+            )
+          : null;
+      const passed =
+        descriptors.length >= PART4_DEFLECTOR_MIN_COUNT &&
+        descriptors.length <= PART4_DEFLECTOR_MAX_COUNT &&
+        peakProminence >= PART4_DEFLECTOR_MIN_PROMINENCE &&
+        maxSpacingDeviationRatio !== null &&
+        maxSpacingDeviationRatio <= 0.35;
+
+      return {
+        passed,
+        descriptors,
+        prominenceThreshold,
+        peakProminence,
+        maxSpacingDeviationRatio,
+        detail: passed
+          ? `PASS: measured ${descriptors.length} discrete visible deflectors directly from geo1_outside_0.`
+          : `Deflector audit failed: measured ${descriptors.length} candidate clusters; spacing/prominence sanity check did not pass.`,
+      };
+    };
+
+    const measureBowlBridgeProfile = (
+      channelVerticalOffset: number,
+    ): Array<[number, number]> => {
+      const radii = Array.from(
+        { length: BOWL_BRIDGE_SAMPLE_COUNT },
+        (_, index) =>
+          THREE.MathUtils.lerp(
+            BOWL_BRIDGE_INNER_RADIUS,
+            BOWL_BRIDGE_OUTER_RADIUS,
+            index / (BOWL_BRIDGE_SAMPLE_COUNT - 1),
+          ),
+      );
+      const sampleAzimuths = [0.37, 2.464, 4.558];
+      const measured = radii.map((radius) => {
+        const heights = sampleAzimuths
+          .map((azimuth) => {
+            const hit = measureVisibleSurfaceAt(
+              Math.sin(azimuth) * radius,
+              Math.cos(azimuth) * radius,
+              false,
+            );
+            return hit?.y ?? null;
+          })
+          .filter((value): value is number => value !== null)
+          .sort((left, right) => left - right);
+        return heights.length > 0
+          ? heights[Math.floor(heights.length / 2)]
+          : null;
+      });
+
+      const targetInnerY = POCKET_OUTER_LIP_Y;
+      const targetOuterY = part2ChannelSurfaceAt(
+        BOWL_BRIDGE_OUTER_RADIUS,
+        channelVerticalOffset,
+      ).y;
+      const measuredInnerY = measured[0] ?? null;
+      const measuredOuterY = measured[measured.length - 1] ?? null;
+      const canAlignMeasuredProfile =
+        measuredInnerY !== null &&
+        measuredOuterY !== null &&
+        Number.isFinite(measuredInnerY) &&
+        Number.isFinite(measuredOuterY);
+
+      return radii.map((radius, index) => {
+        const alpha = index / (radii.length - 1);
+        const fallbackY = THREE.MathUtils.lerp(
+          targetInnerY,
+          targetOuterY,
+          alpha,
+        );
+        if (index === 0) return [radius, targetInnerY];
+        if (index === radii.length - 1) return [radius, targetOuterY];
+        const visibleY = measured[index];
+        if (!canAlignMeasuredProfile || visibleY == null) {
+          return [radius, fallbackY];
+        }
+        const seamCorrection = THREE.MathUtils.lerp(
+          targetInnerY - measuredInnerY!,
+          targetOuterY - measuredOuterY!,
+          alpha,
+        );
+        const correctedY = visibleY + seamCorrection;
+        const envelopeMin = Math.min(targetInnerY, targetOuterY) - 0.04;
+        const envelopeMax = Math.max(targetInnerY, targetOuterY) + 0.04;
+        return [
+          radius,
+          THREE.MathUtils.clamp(correctedY, envelopeMin, envelopeMax),
+        ];
+      });
     };
 
     const measureVisibleOuterWallProfile = () => {
@@ -2159,18 +2757,39 @@ export function Part2SceneViewport({
       if (!ballBody || !ballMesh) return;
       const radius = PART3_LAUNCH_RADIUS;
       const azimuth = 0.37;
-      const position = radialPosition(
+      const channelSurface = part2ChannelSurfaceAt(
         radius,
-        azimuth,
-        part3TrackHeight(radius, part3TrackVerticalOffset) + BALL_RADIUS + 0.002,
+        part3TrackVerticalOffset,
       );
+      const channelNormal = part2ChannelNormalAt(radius, azimuth);
+      const positionVector = new THREE.Vector3(
+        ...radialPosition(radius, azimuth, channelSurface.y),
+      ).addScaledVector(channelNormal, BALL_RADIUS + 0.002);
+      const position: [number, number, number] = [
+        positionVector.x,
+        positionVector.y,
+        positionVector.z,
+      ];
+      const velocityVector = new THREE.Vector3(
+        Math.cos(azimuth),
+        0,
+        -Math.sin(azimuth),
+      )
+        .projectOnPlane(channelNormal)
+        .normalize()
+        .multiplyScalar(PART3_ALIGNMENT_PROBE_SPEED);
       const velocity = {
-        x: Math.cos(azimuth) * PART3_ALIGNMENT_PROBE_SPEED,
-        y: 0,
-        z: -Math.sin(azimuth) * PART3_ALIGNMENT_PROBE_SPEED,
+        x: velocityVector.x,
+        y: velocityVector.y,
+        z: velocityVector.z,
       };
-      const visibleSurface = measureVisibleSurfaceAt(position[0], position[2]);
-      const analyticContactY = part3TrackHeight(radius, part3TrackVerticalOffset);
+      const visibleSurface = measureVisibleSurfaceAt(
+        position[0],
+        position[2],
+        true,
+        PART2_ACTUAL_DARK_TRACK_RADIUS_BAND,
+      );
+      const analyticContactY = channelSurface.y;
       ballBody.setTranslation({ x: position[0], y: position[1], z: position[2] }, true);
       ballBody.setLinvel(velocity, true);
       ballBody.setAngvel({ x: 0, y: 0, z: 0 }, true);
@@ -2189,7 +2808,7 @@ export function Part2SceneViewport({
         visibleSurfaceSource: visibleSurface?.source ?? null,
         darkTrackRadiusBand: PART3_DARK_TRACK_RADIUS_BAND,
         analyticColliderContactYBefore:
-          part3TrackHeightBase(radius) + PART3_LEGACY_TRACK_VERTICAL_OFFSET,
+          part3TrackHeight(radius, part3TrackVerticalOffset),
         analyticColliderContactYAfter: analyticContactY,
         rigidBodyCenterY: position[1],
         ballBottomY: position[1] - BALL_RADIUS,
@@ -2219,7 +2838,9 @@ export function Part2SceneViewport({
       const darkTrackInnerRadius = PART2_ACTUAL_DARK_TRACK_RADIUS_BAND[0];
       const darkTrackOuterRadius = PART2_ACTUAL_DARK_TRACK_RADIUS_BAND[1];
       const retainingRimInnerRadius = PART2_ACTUAL_WOOD_INNER_RADIUS;
-      const nearestDeflectorOuterRadius = PART2_ACTUAL_INWARD_EDGE_RADIUS;
+      const nearestDeflectorOuterRadius =
+        part4MeasuredDeflectorOuterRadius ??
+        PART2_ACTUAL_INWARD_EDGE_RADIUS;
       const chosenLaunchRadius = PART2_ACTUAL_DARK_TRACK_LAUNCH_RADIUS;
       const channelSurface = part2ChannelSurfaceAt(
         chosenLaunchRadius,
@@ -2352,6 +2973,10 @@ export function Part2SceneViewport({
         maxRadius: chosenLaunchRadius,
         minRimClearance: part3OuterLaneMinRimClearance,
         minDeflectorClearance: part3OuterLaneMinDeflectorClearance,
+        innerContainmentRadius: PART2_INNER_CONTAINMENT_RADIUS,
+        innerContainmentCenterLimit: PART2_INNER_CONTAINMENT_CENTER_LIMIT,
+        minimumInnerContainmentClearance:
+          chosenLaunchRadius - PART2_INNER_CONTAINMENT_CENTER_LIMIT,
         staysOnOuterDarkLane: false,
         prematureDeflectorContact: false,
         woodContact: false,
@@ -2498,8 +3123,7 @@ export function Part2SceneViewport({
           provisionalCenterRadius <= centerFloorEnvelope[1],
         innerTransitionDistance:
           provisionalCenterRadius -
-          (PART2_CHANNEL_PROFILE[PART2_CHANNEL_INNER_CONTAINMENT_INDEX][0] +
-            BALL_RADIUS),
+          PART2_INNER_CONTAINMENT_CENTER_LIMIT,
         outerWallDistance:
           PART2_CHANNEL_PROFILE[PART2_CHANNEL_OUTER_WALL_FOOT_INDEX][0] -
           BALL_RADIUS -
@@ -2570,8 +3194,7 @@ export function Part2SceneViewport({
       );
       const lateralContainment =
         centerRadius >=
-          PART2_CHANNEL_PROFILE[PART2_CHANNEL_INNER_CONTAINMENT_INDEX][0] +
-            BALL_RADIUS &&
+          PART2_INNER_CONTAINMENT_CENTER_LIMIT &&
         centerRadius <=
           PART2_CHANNEL_PROFILE[PART2_CHANNEL_OUTER_WALL_FOOT_INDEX][0] -
             BALL_RADIUS;
@@ -2624,8 +3247,7 @@ export function Part2SceneViewport({
                centerInsideFloorEnvelope,
                innerTransitionDistance:
                  centerRadius -
-          (PART2_CHANNEL_PROFILE[PART2_CHANNEL_INNER_CONTAINMENT_INDEX][0] +
-            BALL_RADIUS),
+          PART2_INNER_CONTAINMENT_CENTER_LIMIT,
                outerWallDistance:
           PART2_CHANNEL_PROFILE[PART2_CHANNEL_OUTER_WALL_FOOT_INDEX][0] -
                  BALL_RADIUS -
@@ -2675,9 +3297,14 @@ export function Part2SceneViewport({
           : numericPlacementPassed
             ? 'PART 2 recessed dark-race static placement numerically passed; visual gate unavailable'
             : 'PART 2 recessed dark-race static placement failed',
+        numericPlacementPassed ? undefined : 'physics-validation',
       );
       if (numericPlacementPassed) {
-        startPart3OuterLaneProbe();
+        if (outerLaneSpinOnly) {
+          void runPart6FullSpinTelemetryBatch();
+        } else {
+          startPart3OuterLaneProbe();
+        }
       }
     };
 
@@ -2756,7 +3383,8 @@ export function Part2SceneViewport({
       part3OuterLaneSpinMinDeflectorClearance =
         launchRadius -
         BALL_RADIUS -
-        PART2_ACTUAL_INWARD_EDGE_RADIUS;
+        (part4MeasuredDeflectorOuterRadius ??
+          PART2_ACTUAL_INWARD_EDGE_RADIUS);
       part3OuterLaneSpinMaxPenetration = 0;
       part3OuterLaneSpinMaxSeparation = 0;
       part3OuterLaneSpinWoodContact = false;
@@ -2800,6 +3428,1371 @@ export function Part2SceneViewport({
       });
     };
 
+    const runPart6FullSpinTelemetryBatch = async () => {
+      if (part6TelemetryBatchRunning) return;
+
+      const activeWorld = world;
+      const activeBallBody = ballBody;
+      const activeBallMesh = ballMesh;
+      const activeBallCollider = physicsBallCollider;
+      const activeRotorBody = rotorBody;
+      const activeTrackCollider = part3TrackCollider;
+      const activeRotorPivot = rotorPivot;
+
+      const summarize = (
+        results: Part6FullSpinTelemetryResult[],
+        status: Part6FullSpinTelemetryReport['status'],
+        detail: string,
+      ): Part6FullSpinTelemetryReport => {
+        const lapCounts = results
+          .map((result) => result.lapCount)
+          .filter(Number.isFinite)
+          .sort((left, right) => left - right);
+        const contactRatios = results
+          .map((result) => result.trackContactRatio)
+          .filter(Number.isFinite)
+          .sort((left, right) => left - right);
+        const median = (values: number[]) => {
+          if (values.length === 0) return null;
+          const middle = Math.floor(values.length / 2);
+          return values.length % 2 === 0
+            ? (values[middle - 1] + values[middle]) / 2
+            : values[middle];
+        };
+        const count = results.length;
+        const safeRate = (value: number) =>
+          count > 0 ? Number((value / count).toFixed(4)) : 0;
+        const timedOutCount = results.filter((result) => result.timedOut).length;
+        const phaseSequenceFailureCount = results.filter(
+          (result) => !result.phaseSequenceValid,
+        ).length;
+        const fourToFiveLapCount = results.filter(
+          (result) => result.outerLapTargetMet,
+        ).length;
+        const inwardTransitionCount = results.filter(
+          (result) => result.inwardTransitionTime !== null,
+        ).length;
+        const deflectorContactCount = results.filter(
+          (result) => result.deflectorContactCount > 0,
+        ).length;
+        const fretContactCount = results.filter(
+          (result) => result.fretContact,
+        ).length;
+        const pocketEntryCount = results.filter(
+          (result) => result.pocketEntered,
+        ).length;
+        const settledCount = results.filter((result) => result.settled).length;
+        const safetyFailureCount = results.filter(
+          (result) => !result.safetyPassed,
+        ).length;
+
+        return {
+          status,
+          safetyStatus:
+            status === 'running'
+              ? 'pending'
+              : status === 'captured' &&
+                  results.length === PART6_FULL_SPIN_RUNS.length &&
+                  safetyFailureCount === 0
+                ? 'passed'
+                : 'failed',
+          calibrationStatus: 'not-evaluated',
+          schemaVersion: PART6_TELEMETRY_SCHEMA_VERSION,
+          fixedTimestep: FIXED_TIMESTEP,
+          maxDurationSeconds: PART6_FULL_SPIN_MAX_DURATION_SECONDS,
+          seedCount: PART6_FULL_SPIN_RUNS.length,
+          completedCount: results.filter(
+            (result) => result.telemetryComplete,
+          ).length,
+          timedOutCount,
+          phaseSequenceFailureCount,
+          fourToFiveLapCount,
+          inwardTransitionCount,
+          deflectorContactCount,
+          fretContactCount,
+          pocketEntryCount,
+          settledCount,
+          safetyFailureCount,
+          medianLapCount: median(lapCounts),
+          minLapCount: lapCounts.length > 0 ? lapCounts[0] : null,
+          maxLapCount:
+            lapCounts.length > 0 ? lapCounts[lapCounts.length - 1] : null,
+          medianTrackContactRatio: median(contactRatios),
+          inwardTransitionRate: safeRate(inwardTransitionCount),
+          deflectorContactRate: safeRate(deflectorContactCount),
+          pocketEntryRate: safeRate(pocketEntryCount),
+          settleRate: safeRate(settledCount),
+          safetyFailureRate: safeRate(safetyFailureCount),
+          trackFriction: PART3_OUTER_SPIN_TRACK_FRICTION,
+          linearDamping: PART3_OUTER_SPIN_LINEAR_DAMPING,
+          angularDamping: PART3_OUTER_SPIN_ANGULAR_DAMPING,
+          results,
+          detail,
+        };
+      };
+
+      const failInfrastructure = (
+        detail: string,
+        errorKind: ValidationErrorKind,
+        results: Part6FullSpinTelemetryResult[] = [],
+      ) => {
+        const report = summarize(results, 'failed', detail);
+        publishPart6TelemetryReport(report);
+        callbacksRef.current.onStateChange(
+          'error',
+          report.detail,
+          errorKind,
+        );
+      };
+
+      if (
+        !activeWorld ||
+        !activeBallBody ||
+        !activeBallMesh ||
+        !activeBallCollider ||
+        !activeRotorBody ||
+        !activeTrackCollider
+      ) {
+        failInfrastructure(
+          'PART 6 telemetry could not start because the authoritative Rapier chain is incomplete.',
+          'telemetry',
+        );
+        return;
+      }
+      if (!part4DeflectorAudit?.passed) {
+        failInfrastructure(
+          'PART 6 telemetry refused to run without the asset-measured visible-deflector audit.',
+          'geometry-audit',
+        );
+        return;
+      }
+
+      const results: Part6FullSpinTelemetryResult[] = [];
+      const maxSteps = Math.round(
+        PART6_FULL_SPIN_MAX_DURATION_SECONDS / FIXED_TIMESTEP,
+      );
+      const part6HeadlessFastMode =
+        new URLSearchParams(window.location.search).get('part6Headless') ===
+        '1';
+      const telemetryYieldSteps = part6HeadlessFastMode
+        ? PART6_UI_YIELD_STEPS * 2
+        : PART6_INTERACTIVE_YIELD_STEPS;
+
+      const previewSnapshot = {
+        ballTranslation: { ...activeBallBody.translation() },
+        ballRotation: { ...activeBallBody.rotation() },
+        ballLinvel: { ...activeBallBody.linvel() },
+        ballAngvel: { ...activeBallBody.angvel() },
+        ballMeshPosition: activeBallMesh.position.clone(),
+        ballMeshQuaternion: activeBallMesh.quaternion.clone(),
+        ballMeshVisible: activeBallMesh.visible,
+        rotorRotation: { ...activeRotorBody.rotation() },
+        rotorAngle: rotorAngleRef.current,
+        rotorPivotAngle:
+          activeRotorPivot?.rotation.y ?? rotorAngleRef.current,
+      };
+
+      // The 20-seed batch is an accelerated validation workload, not the
+      // real-time presentation spin. Hide the visible ball while the batch
+      // owns the authoritative body so browser yields cannot render seed jumps.
+      if (!part6HeadlessFastMode) {
+        activeBallMesh.visible = false;
+      }
+      const settleFramesRequired = Math.round(
+        PART6_SETTLE_DURATION_SECONDS / FIXED_TIMESTEP,
+      );
+      const hoverGraceFrames = Math.round(
+        PART6_TRANSITION_HOVER_GRACE_SECONDS / FIXED_TIMESTEP,
+      );
+      const phaseOrder: Part6SpinPhase[] = [
+        'OUTER_RACE',
+        'INWARD_DESCENT',
+        'DEFLECTOR_ZONE',
+        'ROTOR_ENTRY',
+        'FRETS',
+        'POCKET',
+        'SETTLED',
+      ];
+
+      const interpolateProfileY = (
+        profile: readonly [number, number][],
+        radius: number,
+      ) => {
+        if (profile.length === 0) return null;
+        if (radius <= profile[0][0]) return profile[0][1];
+        if (radius >= profile[profile.length - 1][0]) {
+          return profile[profile.length - 1][1];
+        }
+        for (let index = 1; index < profile.length; index += 1) {
+          const [rightRadius, rightY] = profile[index];
+          const [leftRadius, leftY] = profile[index - 1];
+          if (radius <= rightRadius) {
+            const alpha =
+              (radius - leftRadius) / (rightRadius - leftRadius);
+            return THREE.MathUtils.lerp(leftY, rightY, alpha);
+          }
+        }
+        return null;
+      };
+
+      const transitionSurfaceY = (radius: number) => {
+        if (radius >= BOWL_BRIDGE_OUTER_RADIUS) {
+          return part2ChannelSurfaceAt(
+            radius,
+            part2RaceVerticalOffset,
+          ).y;
+        }
+        if (radius >= BOWL_BRIDGE_INNER_RADIUS) {
+          return interpolateProfileY(part3BowlBridgeProfile, radius);
+        }
+        if (
+          radius >= POCKET_FLOOR_OUTER_RADIUS &&
+          radius <= POCKET_OUTER_LIP_RADIUS
+        ) {
+          const alpha =
+            (radius - POCKET_FLOOR_OUTER_RADIUS) /
+            (POCKET_OUTER_LIP_RADIUS - POCKET_FLOOR_OUTER_RADIUS);
+          return THREE.MathUtils.lerp(
+            POCKET_FLOOR_Y,
+            POCKET_OUTER_LIP_Y,
+            alpha,
+          );
+        }
+        if (radius >= POCKET_FLOOR_INNER_RADIUS) {
+          return POCKET_FLOOR_Y;
+        }
+        return null;
+      };
+
+      const yieldToBrowser = () =>
+        new Promise<void>((resolve) => {
+          window.setTimeout(resolve, 0);
+        });
+
+      part6TelemetryBatchRunning = true;
+      publishPart6TelemetryReport(
+        summarize(
+          results,
+          'running',
+          'PART 6A.1 deterministic full-spin telemetry is running with isolated seed resets and phase tracking; physics coefficients are unchanged.',
+        ),
+      );
+      // Commit the running report before heavy deterministic stepping starts.
+      // Headless mode remains faster, but never monopolizes the browser task
+      // for an entire 30-second simulated seed.
+      await yieldToBrowser();
+      if (disposed) return;
+
+      try {
+        for (const run of PART6_FULL_SPIN_RUNS) {
+          if (disposed) return;
+
+          const launchSurface = measureVisibleSurfaceAt(
+            Math.sin(run.launchAzimuth) *
+              PART2_ACTUAL_DARK_TRACK_LAUNCH_RADIUS,
+            Math.cos(run.launchAzimuth) *
+              PART2_ACTUAL_DARK_TRACK_LAUNCH_RADIUS,
+            true,
+            PART2_ACTUAL_DARK_TRACK_RADIUS_BAND,
+          );
+          if (!launchSurface) {
+            failInfrastructure(
+              'PART 6 geometry audit stopped the batch because seed ' +
+                String(run.seed) +
+                ' has no measurable visible dark-race launch surface.',
+              'geometry-audit',
+              results,
+            );
+            return;
+          }
+
+          const launchNormal = new THREE.Vector3(
+            launchSurface.normal.x,
+            launchSurface.normal.y,
+            launchSurface.normal.z,
+          ).normalize();
+          const launchPosition = new THREE.Vector3(
+            launchSurface.point.x,
+            launchSurface.point.y,
+            launchSurface.point.z,
+          ).addScaledVector(launchNormal, BALL_RADIUS + 0.002);
+          const tangent = new THREE.Vector3(
+            Math.cos(run.launchAzimuth),
+            0,
+            -Math.sin(run.launchAzimuth),
+          )
+            .projectOnPlane(launchNormal)
+            .normalize();
+          const launchVelocity = tangent.clone().multiplyScalar(run.speed);
+          const launchAngularVelocity = launchNormal
+            .clone()
+            .cross(launchVelocity)
+            .multiplyScalar(PART6_BALL_SPIN_FACTOR / BALL_RADIUS);
+
+          // Flush the previous seed's dynamic state and contact manifold before
+          // applying this seed's launch. No impulse/force is used.
+          activeBallBody.setLinvel({ x: 0, y: 0, z: 0 }, true);
+          activeBallBody.setAngvel({ x: 0, y: 0, z: 0 }, true);
+          activeBallBody.setTranslation(
+            {
+              x: launchPosition.x,
+              y: launchPosition.y,
+              z: launchPosition.z,
+            },
+            true,
+          );
+          activeBallBody.setRotation(
+            { x: 0, y: 0, z: 0, w: 1 },
+            true,
+          );
+          let rotorAngle = normalizedAngle(run.rotorStartAngle);
+          rotorAngleRef.current = rotorAngle;
+          activeRotorBody.setRotation(
+            {
+              x: 0,
+              y: Math.sin(rotorAngle / 2),
+              z: 0,
+              w: Math.cos(rotorAngle / 2),
+            },
+            true,
+          );
+          activeRotorBody.setNextKinematicRotation({
+            x: 0,
+            y: Math.sin(rotorAngle / 2),
+            z: 0,
+            w: Math.cos(rotorAngle / 2),
+          });
+          activeRotorPivot?.rotation.set(0, rotorAngle, 0);
+          activeWorld.step();
+
+          activeBallBody.setTranslation(
+            {
+              x: launchPosition.x,
+              y: launchPosition.y,
+              z: launchPosition.z,
+            },
+            true,
+          );
+          activeBallBody.setRotation(
+            { x: 0, y: 0, z: 0, w: 1 },
+            true,
+          );
+          activeBallBody.setLinvel(
+            {
+              x: launchVelocity.x,
+              y: launchVelocity.y,
+              z: launchVelocity.z,
+            },
+            true,
+          );
+          activeBallBody.setAngvel(
+            {
+              x: launchAngularVelocity.x,
+              y: launchAngularVelocity.y,
+              z: launchAngularVelocity.z,
+            },
+            true,
+          );
+          activeBallBody.wakeUp();
+
+          const resetPosition = activeBallBody.translation();
+          const resetVelocity = activeBallBody.linvel();
+          const resetAngularVelocity = activeBallBody.angvel();
+          const resetRotation = activeBallBody.rotation();
+          const resetRotorRotation = activeRotorBody.rotation();
+          const resetRotorAngle = normalizedAngle(
+            2 *
+              Math.atan2(
+                resetRotorRotation.y,
+                resetRotorRotation.w,
+              ),
+          );
+          const resetRotorAngleError = Math.abs(
+            THREE.MathUtils.euclideanModulo(
+              resetRotorAngle - rotorAngle + Math.PI,
+              TWO_PI,
+            ) - Math.PI,
+          );
+          const resetPositionError = Math.hypot(
+            resetPosition.x - launchPosition.x,
+            resetPosition.y - launchPosition.y,
+            resetPosition.z - launchPosition.z,
+          );
+          const resetVelocityError = Math.hypot(
+            resetVelocity.x - launchVelocity.x,
+            resetVelocity.y - launchVelocity.y,
+            resetVelocity.z - launchVelocity.z,
+          );
+          const resetAngularVelocityError = Math.hypot(
+            resetAngularVelocity.x - launchAngularVelocity.x,
+            resetAngularVelocity.y - launchAngularVelocity.y,
+            resetAngularVelocity.z - launchAngularVelocity.z,
+          );
+          const resetRotationError = Math.hypot(
+            resetRotation.x,
+            resetRotation.y,
+            resetRotation.z,
+            resetRotation.w - 1,
+          );
+          const stateResetVerified =
+            resetPositionError <= PART6_STATE_RESET_VECTOR_EPSILON &&
+            resetVelocityError <= PART6_STATE_RESET_VECTOR_EPSILON &&
+            resetAngularVelocityError <= PART6_STATE_RESET_VECTOR_EPSILON &&
+            resetRotationError <= PART6_STATE_RESET_VECTOR_EPSILON &&
+            resetRotorAngleError <= PART6_STATE_RESET_ANGLE_EPSILON;
+
+          let elapsed = 0;
+          let minRadius = Math.hypot(
+            launchPosition.x,
+            launchPosition.z,
+          );
+          let maxRadius = minRadius;
+          let trackAngle: number | null = null;
+          let trackAngleStart: number | null = null;
+          let trackAngleEnd: number | null = null;
+          let completedLaps = 0;
+          const lapSpeeds: number[] = [];
+          let trackFrames = 0;
+          let trackContactFrames = 0;
+          let trackStartSpeed = 0;
+          let trackEndSpeed = run.speed;
+          let peakSpeed = run.speed;
+          let maxTrackPenetration = 0;
+          let maxTrackSeparation = 0;
+          let maxPocketFloorPenetration = 0;
+          let maxPocketFloorSeparation = 0;
+          let inwardTransitionTime: number | null = null;
+          let inwardTransitionRadius: number | null = null;
+          const phases: Part6PhaseEvent[] = [];
+          const recordedPhases = new Set<Part6SpinPhase>();
+          let transitionMinRadius = Number.POSITIVE_INFINITY;
+          let transitionMaxRadius = Number.NEGATIVE_INFINITY;
+          let transitionMinY = Number.POSITIVE_INFINITY;
+          let transitionMaxY = Number.NEGATIVE_INFINITY;
+          let transitionMaxSurfacePenetration = 0;
+          let transitionMaxSurfaceSeparation = 0;
+          const transitionContactRoles = new Set<string>();
+          let unsupportedTransitionFrames = 0;
+          let maxUnsupportedTransitionFrames = 0;
+          let rotorEntryTime: number | null = null;
+          let deflectorContactCount = 0;
+          let deflectorContactActive = false;
+          let firstDeflectorContactTime: number | null = null;
+          let impactSpeedBefore: number | null = null;
+          let impactSpeedAfter: number | null = null;
+          let impactDirectionBefore: THREE.Vector3 | null = null;
+          let impactDirectionAfter: THREE.Vector3 | null = null;
+          let fretContact = false;
+          let firstFretContactTime: number | null = null;
+          let pocketEntered = false;
+          let pocketEntryTime: number | null = null;
+          let settledFrames = 0;
+          let settled = false;
+          let settleTime: number | null = null;
+          let hover = false;
+          let clipping = false;
+          let tunneling = false;
+          let escaped = false;
+          let velocitySpike = false;
+          let artificialAcceleration = false;
+          let maxVisualBodySyncError = 0;
+          let maxRotorSyncError = 0;
+          let previousSpeed = run.speed;
+          let previousPlanarDirection = tangent.clone();
+          let finalSpeed = run.speed;
+          let finalRotorRelativeSpeed = run.speed;
+          let finalPocketIndex: number | null = null;
+          let finalPocketNumber: number | null = null;
+
+          const recordPhase = (
+            phase: Part6SpinPhase,
+            position: { x: number; y: number; z: number },
+            speed: number,
+            contactRole: string | null = null,
+          ) => {
+            if (recordedPhases.has(phase)) return;
+            recordedPhases.add(phase);
+            phases.push({
+              phase,
+              time: Number(elapsed.toFixed(4)),
+              radius: Number(
+                Math.hypot(position.x, position.z).toFixed(4),
+              ),
+              y: Number(position.y.toFixed(4)),
+              speed: Number(speed.toFixed(4)),
+              contactRole,
+            });
+          };
+
+          recordPhase(
+            'OUTER_RACE',
+            {
+              x: launchPosition.x,
+              y: launchPosition.y,
+              z: launchPosition.z,
+            },
+            run.speed,
+          );
+
+          for (let step = 0; step < maxSteps; step += 1) {
+            if (disposed) return;
+
+            rotorAngle = normalizedAngle(
+              rotorAngle + TEST_ANGULAR_SPEED * FIXED_TIMESTEP,
+            );
+            rotorAngleRef.current = rotorAngle;
+            activeRotorBody.setNextKinematicRotation({
+              x: 0,
+              y: Math.sin(rotorAngle / 2),
+              z: 0,
+              w: Math.cos(rotorAngle / 2),
+            });
+            activeRotorPivot?.rotation.set(0, rotorAngle, 0);
+            activeWorld.step();
+            elapsed += FIXED_TIMESTEP;
+
+            const position = activeBallBody.translation();
+            const velocity = activeBallBody.linvel();
+            const speed = Math.hypot(
+              velocity.x,
+              velocity.y,
+              velocity.z,
+            );
+            const radius = Math.hypot(position.x, position.z);
+            const bottom = position.y - BALL_RADIUS;
+            minRadius = Math.min(minRadius, radius);
+            maxRadius = Math.max(maxRadius, radius);
+            finalSpeed = speed;
+            peakSpeed = Math.max(peakSpeed, speed);
+
+            let trackPairContact = false;
+            let deflectorPairContact = false;
+            let fretPairContact = false;
+            let pocketFloorContact = false;
+            const stepContactRoles = new Set<string>();
+            activeWorld.contactPairsWith(
+              activeBallCollider,
+              (otherCollider) => {
+                if (
+                  otherCollider.handle === activeTrackCollider.handle
+                ) {
+                  trackPairContact = true;
+                }
+                const role = part3ColliderRoles.get(
+                  otherCollider.handle,
+                );
+                if (role) stepContactRoles.add(role);
+                if (
+                  role === 'asset-measured-visible-deflector-cuboid'
+                ) {
+                  deflectorPairContact = true;
+                }
+                if (role === 'pocket-fret-cuboid') {
+                  fretPairContact = true;
+                }
+                if (
+                  role === 'pocket-floor-trimesh' ||
+                  role === 'pocket-floor-catch-underlay'
+                ) {
+                  pocketFloorContact = true;
+                }
+              },
+            );
+
+            const inTrackCenterBand =
+              radius >= PART2_ACTUAL_TRACK_CENTER_RADIUS_BAND[0] &&
+              radius <= PART2_ACTUAL_TRACK_CENTER_RADIUS_BAND[1];
+            if (inTrackCenterBand) {
+              trackFrames += 1;
+              if (trackPairContact) trackContactFrames += 1;
+              const raceSurfaceY = part2ChannelSurfaceAt(
+                radius,
+                part2RaceVerticalOffset,
+              ).y;
+              const signedRaceGap = bottom - raceSurfaceY;
+              maxTrackPenetration = Math.max(
+                maxTrackPenetration,
+                Math.max(0, -signedRaceGap),
+              );
+              maxTrackSeparation = Math.max(
+                maxTrackSeparation,
+                Math.max(0, signedRaceGap),
+              );
+              clipping ||= signedRaceGap < -0.03;
+              tunneling ||= signedRaceGap < -0.08;
+            }
+
+            const angle = normalizedAngle(
+              Math.atan2(position.x, position.z),
+            );
+            if (
+              inTrackCenterBand &&
+              trackPairContact &&
+              inwardTransitionTime === null
+            ) {
+              if (trackAngle === null) {
+                trackAngle = angle;
+                trackAngleStart = angle;
+                trackStartSpeed = speed;
+              } else {
+                const delta =
+                  THREE.MathUtils.euclideanModulo(
+                    angle -
+                      normalizedAngle(trackAngle) +
+                      Math.PI,
+                    TWO_PI,
+                  ) - Math.PI;
+                trackAngle += delta;
+                trackAngleEnd = trackAngle;
+                const lapCountNow = Math.floor(
+                  Math.abs(trackAngle - trackAngleStart!) / TWO_PI,
+                );
+                if (lapCountNow > completedLaps) {
+                  completedLaps = lapCountNow;
+                  lapSpeeds.push(speed);
+                }
+              }
+              trackEndSpeed = speed;
+            } else if (
+              inwardTransitionTime === null &&
+              trackAngleStart !== null &&
+              radius < PART2_ACTUAL_TRACK_CENTER_RADIUS_BAND[0]
+            ) {
+              inwardTransitionTime = elapsed;
+              inwardTransitionRadius = radius;
+              trackAngleEnd ??= trackAngle;
+              recordPhase(
+                'INWARD_DESCENT',
+                position,
+                speed,
+                [...stepContactRoles][0] ?? null,
+              );
+            }
+
+            const deflectorZoneThreshold =
+              (part4MeasuredDeflectorOuterRadius ??
+                PART2_ACTUAL_INWARD_EDGE_RADIUS) +
+              BALL_RADIUS +
+              0.12;
+            if (
+              inwardTransitionTime !== null &&
+              radius <= deflectorZoneThreshold
+            ) {
+              recordPhase(
+                'DEFLECTOR_ZONE',
+                position,
+                speed,
+                deflectorPairContact
+                  ? 'asset-measured-visible-deflector-cuboid'
+                  : [...stepContactRoles][0] ?? null,
+              );
+            }
+
+            const rotorEntryThreshold =
+              POCKET_OUTER_LIP_RADIUS + BALL_RADIUS + 0.08;
+            if (
+              inwardTransitionTime !== null &&
+              radius <= rotorEntryThreshold
+            ) {
+              rotorEntryTime ??= elapsed;
+              recordPhase(
+                'ROTOR_ENTRY',
+                position,
+                speed,
+                [...stepContactRoles][0] ?? null,
+              );
+            }
+
+            if (deflectorPairContact && !deflectorContactActive) {
+              deflectorContactCount += 1;
+              firstDeflectorContactTime ??= elapsed;
+              impactSpeedBefore ??= previousSpeed;
+              impactDirectionBefore ??=
+                previousPlanarDirection.clone();
+              recordPhase(
+                'DEFLECTOR_ZONE',
+                position,
+                speed,
+                'asset-measured-visible-deflector-cuboid',
+              );
+            }
+            if (
+              !deflectorPairContact &&
+              deflectorContactActive &&
+              impactSpeedAfter === null
+            ) {
+              impactSpeedAfter = speed;
+              const postImpactDirection = new THREE.Vector3(
+                velocity.x,
+                0,
+                velocity.z,
+              );
+              if (postImpactDirection.lengthSq() > 0.000001) {
+                impactDirectionAfter =
+                  postImpactDirection.normalize();
+              }
+            }
+            deflectorContactActive = deflectorPairContact;
+
+            if (fretPairContact) {
+              fretContact = true;
+              firstFretContactTime ??= elapsed;
+              recordPhase(
+                'FRETS',
+                position,
+                speed,
+                'pocket-fret-cuboid',
+              );
+            }
+
+            const insidePocket =
+              radius >= POCKET_FLOOR_INNER_RADIUS + BALL_RADIUS &&
+              radius <= POCKET_FLOOR_OUTER_RADIUS - BALL_RADIUS &&
+              bottom >= POCKET_FLOOR_Y - 0.08 &&
+              bottom <= POCKET_FLOOR_Y + 0.16;
+            if (insidePocket || pocketFloorContact) {
+              pocketEntered = true;
+              pocketEntryTime ??= elapsed;
+              recordPhase(
+                'POCKET',
+                position,
+                speed,
+                pocketFloorContact
+                  ? [...stepContactRoles].find(
+                      (role) =>
+                        role === 'pocket-floor-trimesh' ||
+                        role === 'pocket-floor-catch-underlay',
+                    ) ?? null
+                  : null,
+              );
+            }
+
+            if (
+              inwardTransitionTime !== null &&
+              !pocketEntered
+            ) {
+              transitionMinRadius = Math.min(
+                transitionMinRadius,
+                radius,
+              );
+              transitionMaxRadius = Math.max(
+                transitionMaxRadius,
+                radius,
+              );
+              transitionMinY = Math.min(transitionMinY, position.y);
+              transitionMaxY = Math.max(transitionMaxY, position.y);
+              for (const role of stepContactRoles) {
+                transitionContactRoles.add(role);
+              }
+              const expectedSurfaceY = transitionSurfaceY(radius);
+              if (expectedSurfaceY !== null) {
+                const signedTransitionGap =
+                  bottom - expectedSurfaceY;
+                transitionMaxSurfacePenetration = Math.max(
+                  transitionMaxSurfacePenetration,
+                  Math.max(0, -signedTransitionGap),
+                );
+                transitionMaxSurfaceSeparation = Math.max(
+                  transitionMaxSurfaceSeparation,
+                  Math.max(0, signedTransitionGap),
+                );
+                clipping ||= signedTransitionGap < -0.04;
+                tunneling ||= signedTransitionGap < -0.1;
+                if (
+                  signedTransitionGap > 0.08 &&
+                  stepContactRoles.size === 0
+                ) {
+                  unsupportedTransitionFrames += 1;
+                  maxUnsupportedTransitionFrames = Math.max(
+                    maxUnsupportedTransitionFrames,
+                    unsupportedTransitionFrames,
+                  );
+                } else {
+                  unsupportedTransitionFrames = 0;
+                }
+              }
+            }
+
+            const rotorTangentialVelocity = {
+              x: TEST_ANGULAR_SPEED * position.z,
+              y: 0,
+              z: -TEST_ANGULAR_SPEED * position.x,
+            };
+            finalRotorRelativeSpeed = Math.hypot(
+              velocity.x - rotorTangentialVelocity.x,
+              velocity.y - rotorTangentialVelocity.y,
+              velocity.z - rotorTangentialVelocity.z,
+            );
+            if (
+              pocketEntered &&
+              finalRotorRelativeSpeed < 0.12 &&
+              radius >= POCKET_FLOOR_INNER_RADIUS + BALL_RADIUS &&
+              radius <= POCKET_FLOOR_OUTER_RADIUS - BALL_RADIUS &&
+              Math.abs(bottom - POCKET_FLOOR_Y) <= 0.12
+            ) {
+              settledFrames += 1;
+            } else {
+              settledFrames = 0;
+            }
+            if (settledFrames >= settleFramesRequired) {
+              settled = true;
+              settleTime = elapsed;
+              recordPhase(
+                'SETTLED',
+                position,
+                speed,
+                [...stepContactRoles][0] ?? null,
+              );
+            }
+
+            const floorPenetration =
+              pocketEntered
+                ? Math.max(0, POCKET_FLOOR_Y - bottom)
+                : 0;
+            const floorSeparation =
+              pocketEntered
+                ? Math.max(0, bottom - POCKET_FLOOR_Y)
+                : 0;
+            maxPocketFloorPenetration = Math.max(
+              maxPocketFloorPenetration,
+              floorPenetration,
+            );
+            maxPocketFloorSeparation = Math.max(
+              maxPocketFloorSeparation,
+              floorSeparation,
+            );
+            clipping ||= floorPenetration > 0.03;
+            tunneling ||= floorPenetration > 0.08;
+            escaped ||=
+              !Number.isFinite(position.x) ||
+              !Number.isFinite(position.y) ||
+              !Number.isFinite(position.z) ||
+              radius < 0.18 ||
+              radius > 3.08 ||
+              position.y <
+                POCKET_FLOOR_Y - BALL_RADIUS - 0.18;
+            velocitySpike ||=
+              speed > Math.max(8, previousSpeed * 4);
+            artificialAcceleration ||=
+              speed >
+              Math.max(
+                12,
+                previousSpeed > 0
+                  ? previousSpeed * 3
+                  : 12,
+              );
+
+            const rotorRotation = activeRotorBody.rotation();
+            const bodyRotorAngle = normalizedAngle(
+              2 *
+                Math.atan2(
+                  rotorRotation.y,
+                  rotorRotation.w,
+                ),
+            );
+            const rotorSyncError = Math.abs(
+              THREE.MathUtils.euclideanModulo(
+                bodyRotorAngle - rotorAngle + Math.PI,
+                TWO_PI,
+              ) - Math.PI,
+            );
+            maxRotorSyncError = Math.max(
+              maxRotorSyncError,
+              rotorSyncError,
+            );
+
+            activeBallMesh.position.set(
+              position.x,
+              position.y,
+              position.z,
+            );
+            const ballRotation = activeBallBody.rotation();
+            activeBallMesh.quaternion.set(
+              ballRotation.x,
+              ballRotation.y,
+              ballRotation.z,
+              ballRotation.w,
+            );
+            maxVisualBodySyncError = Math.max(
+              maxVisualBodySyncError,
+              Math.hypot(
+                activeBallMesh.position.x - position.x,
+                activeBallMesh.position.y - position.y,
+                activeBallMesh.position.z - position.z,
+              ),
+            );
+
+            const planarDirection = new THREE.Vector3(
+              velocity.x,
+              0,
+              velocity.z,
+            );
+            if (planarDirection.lengthSq() > 0.000001) {
+              previousPlanarDirection =
+                planarDirection.normalize();
+            }
+            previousSpeed = speed;
+
+            if (
+              step > 0 &&
+              step % telemetryYieldSteps === 0
+            ) {
+              await yieldToBrowser();
+              if (disposed) return;
+            }
+
+            if (settled || escaped || tunneling) break;
+          }
+
+          hover ||=
+            maxUnsupportedTransitionFrames > hoverGraceFrames;
+
+          if (
+            impactSpeedAfter === null &&
+            deflectorContactCount > 0
+          ) {
+            impactSpeedAfter = finalSpeed;
+            impactDirectionAfter ??=
+              previousPlanarDirection.clone();
+          }
+
+          const lapCount =
+            trackAngleStart === null ||
+            trackAngleEnd === null
+              ? 0
+              : Math.abs(trackAngleEnd - trackAngleStart) /
+                TWO_PI;
+          const trackDuration =
+            inwardTransitionTime ?? elapsed;
+          const trackContactRatio =
+            trackFrames > 0
+              ? trackContactFrames / trackFrames
+              : 0;
+          const speedDegradesAcrossLaps =
+            lapSpeeds.length > 0 &&
+            lapSpeeds.every(
+              (speed, index) =>
+                index === 0 ||
+                speed <= lapSpeeds[index - 1] * 1.03,
+            );
+          const outerLapTargetMet =
+            lapCount >= 4 && lapCount <= 5;
+          const impactDirectionChangeDegrees =
+            impactDirectionBefore && impactDirectionAfter
+              ? THREE.MathUtils.radToDeg(
+                  impactDirectionBefore.angleTo(
+                    impactDirectionAfter,
+                  ),
+                )
+              : null;
+
+          const finalPosition = activeBallBody.translation();
+          const finalRadius = Math.hypot(
+            finalPosition.x,
+            finalPosition.z,
+          );
+          if (
+            pocketEntered &&
+            finalRadius >=
+              POCKET_FLOOR_INNER_RADIUS + BALL_RADIUS &&
+            finalRadius <=
+              POCKET_FLOOR_OUTER_RADIUS - BALL_RADIUS
+          ) {
+            const finalAngle = normalizedAngle(
+              Math.atan2(
+                finalPosition.x,
+                finalPosition.z,
+              ) - rotorAngle,
+            );
+            finalPocketIndex =
+              pocketIndexFromLocalPosition(
+                Math.sin(finalAngle),
+                Math.cos(finalAngle),
+              );
+            finalPocketNumber =
+              EUROPEAN_SEQUENCE[finalPocketIndex];
+          }
+
+          const orderedCoreEvents = phases.filter(
+            (event) => event.phase !== 'FRETS',
+          );
+          const observedPhaseIndices = orderedCoreEvents.map((event) =>
+            phaseOrder.indexOf(event.phase),
+          );
+          const phaseSequenceMonotonic = observedPhaseIndices.every(
+            (phaseIndex, index) =>
+              index === 0 ||
+              phaseIndex >= observedPhaseIndices[index - 1],
+          );
+          // Fret contact is physically possible but not mandatory: a ball can
+          // enter a pocket cleanly between two separators. Keep FRETS optional
+          // while still requiring the radial/settling chain to remain ordered.
+          const requiredPhaseOrder: Part6SpinPhase[] = [
+            'OUTER_RACE',
+            'INWARD_DESCENT',
+            'DEFLECTOR_ZONE',
+            'ROTOR_ENTRY',
+            'POCKET',
+            'SETTLED',
+          ];
+          const deepestRequiredPhase = requiredPhaseOrder.reduce(
+            (deepest, phase, index) =>
+              recordedPhases.has(phase) ? Math.max(deepest, index) : deepest,
+            -1,
+          );
+          const noSkippedRequiredPhases =
+            deepestRequiredPhase < 0 ||
+            requiredPhaseOrder
+              .slice(0, deepestRequiredPhase + 1)
+              .every((phase) => recordedPhases.has(phase));
+          const fretEventIndex = phases.findIndex(
+            (event) => event.phase === 'FRETS',
+          );
+          const rotorEntryEventIndex = phases.findIndex(
+            (event) => event.phase === 'ROTOR_ENTRY',
+          );
+          const optionalFretPlacementValid =
+            fretEventIndex < 0 ||
+            (rotorEntryEventIndex >= 0 &&
+              fretEventIndex > rotorEntryEventIndex);
+          const phaseSequenceValid =
+            phases[0]?.phase === 'OUTER_RACE' &&
+            phaseSequenceMonotonic &&
+            noSkippedRequiredPhases &&
+            optionalFretPlacementValid;
+          const timedOut =
+            !settled &&
+            !escaped &&
+            !tunneling &&
+            elapsed >=
+              PART6_FULL_SPIN_MAX_DURATION_SECONDS -
+                FIXED_TIMESTEP;
+          const safetyPassed =
+            stateResetVerified &&
+            phaseSequenceValid &&
+            !timedOut &&
+            !hover &&
+            !clipping &&
+            !tunneling &&
+            !escaped &&
+            !velocitySpike &&
+            !artificialAcceleration;
+          const telemetryComplete =
+            stateResetVerified &&
+            Number.isFinite(elapsed) &&
+            Number.isFinite(lapCount) &&
+            Number.isFinite(minRadius) &&
+            Number.isFinite(maxRadius) &&
+            Number.isFinite(finalSpeed) &&
+            Number.isFinite(finalRotorRelativeSpeed);
+
+          const result: Part6FullSpinTelemetryResult = {
+            id: run.id,
+            seed: run.seed,
+            label: run.label,
+            launchAzimuth: Number(
+              run.launchAzimuth.toFixed(6),
+            ),
+            launchSpeed: Number(run.speed.toFixed(4)),
+            launchSpeedMetersPerSecond: Number(
+              (run.speed / ROULETTE_WORLD_UNITS_PER_METER).toFixed(4),
+            ),
+            launchRadius: Number(
+              Math.hypot(
+                launchPosition.x,
+                launchPosition.z,
+              ).toFixed(4),
+            ),
+            launchHeight: Number(
+              launchPosition.y.toFixed(4),
+            ),
+            rotorStartAngle: Number(
+              run.rotorStartAngle.toFixed(6),
+            ),
+            stateResetVerified,
+            resetPositionError: Number(resetPositionError.toFixed(8)),
+            resetVelocityError: Number(resetVelocityError.toFixed(8)),
+            resetAngularVelocityError: Number(
+              resetAngularVelocityError.toFixed(8),
+            ),
+            resetRotationError: Number(resetRotationError.toFixed(8)),
+            resetRotorAngleError: Number(resetRotorAngleError.toFixed(8)),
+            elapsed: Number(elapsed.toFixed(4)),
+            lapCount: Number(lapCount.toFixed(3)),
+            trackDuration: Number(
+              trackDuration.toFixed(4),
+            ),
+            trackContactRatio: Number(
+              trackContactRatio.toFixed(4),
+            ),
+            trackStartSpeed: Number(
+              trackStartSpeed.toFixed(4),
+            ),
+            trackEndSpeed: Number(
+              trackEndSpeed.toFixed(4),
+            ),
+            peakSpeed: Number(peakSpeed.toFixed(4)),
+            lapSpeeds: lapSpeeds.map((speed) =>
+              Number(speed.toFixed(4)),
+            ),
+            speedDegradesAcrossLaps,
+            outerLapTargetMet,
+            minRadius: Number(minRadius.toFixed(4)),
+            maxRadius: Number(maxRadius.toFixed(4)),
+            inwardTransitionTime:
+              inwardTransitionTime === null
+                ? null
+                : Number(
+                    inwardTransitionTime.toFixed(4),
+                  ),
+            inwardTransitionRadius:
+              inwardTransitionRadius === null
+                ? null
+                : Number(
+                    inwardTransitionRadius.toFixed(4),
+                  ),
+            phases,
+            phaseSequenceValid,
+            transitionMinRadius: Number.isFinite(
+              transitionMinRadius,
+            )
+              ? Number(transitionMinRadius.toFixed(4))
+              : null,
+            transitionMaxRadius: Number.isFinite(
+              transitionMaxRadius,
+            )
+              ? Number(transitionMaxRadius.toFixed(4))
+              : null,
+            transitionMinY: Number.isFinite(transitionMinY)
+              ? Number(transitionMinY.toFixed(4))
+              : null,
+            transitionMaxY: Number.isFinite(transitionMaxY)
+              ? Number(transitionMaxY.toFixed(4))
+              : null,
+            transitionMaxSurfacePenetration: Number(
+              transitionMaxSurfacePenetration.toFixed(4),
+            ),
+            transitionMaxSurfaceSeparation: Number(
+              transitionMaxSurfaceSeparation.toFixed(4),
+            ),
+            transitionContactRoles:
+              [...transitionContactRoles].sort(),
+            maxUnsupportedTransitionDuration: Number(
+              (
+                maxUnsupportedTransitionFrames *
+                FIXED_TIMESTEP
+              ).toFixed(4),
+            ),
+            rotorEntryTime:
+              rotorEntryTime === null
+                ? null
+                : Number(rotorEntryTime.toFixed(4)),
+            deflectorContactCount,
+            firstDeflectorContactTime:
+              firstDeflectorContactTime === null
+                ? null
+                : Number(
+                    firstDeflectorContactTime.toFixed(4),
+                  ),
+            impactSpeedBefore:
+              impactSpeedBefore === null
+                ? null
+                : Number(impactSpeedBefore.toFixed(4)),
+            impactSpeedAfter:
+              impactSpeedAfter === null
+                ? null
+                : Number(impactSpeedAfter.toFixed(4)),
+            impactDirectionChangeDegrees:
+              impactDirectionChangeDegrees === null
+                ? null
+                : Number(
+                    impactDirectionChangeDegrees.toFixed(2),
+                  ),
+            fretContact,
+            firstFretContactTime:
+              firstFretContactTime === null
+                ? null
+                : Number(
+                    firstFretContactTime.toFixed(4),
+                  ),
+            pocketEntered,
+            pocketEntryTime:
+              pocketEntryTime === null
+                ? null
+                : Number(pocketEntryTime.toFixed(4)),
+            settled,
+            settleTime:
+              settleTime === null
+                ? null
+                : Number(settleTime.toFixed(4)),
+            finalPocketIndex,
+            finalPocketNumber,
+            finalSpeed: Number(finalSpeed.toFixed(4)),
+            finalRotorRelativeSpeed: Number(
+              finalRotorRelativeSpeed.toFixed(4),
+            ),
+            hover,
+            clipping,
+            tunneling,
+            escaped,
+            velocitySpike,
+            artificialAcceleration,
+            maxTrackPenetration: Number(
+              maxTrackPenetration.toFixed(4),
+            ),
+            maxTrackSeparation: Number(
+              maxTrackSeparation.toFixed(4),
+            ),
+            maxPocketFloorPenetration: Number(
+              maxPocketFloorPenetration.toFixed(4),
+            ),
+            maxPocketFloorSeparation: Number(
+              maxPocketFloorSeparation.toFixed(4),
+            ),
+            maxVisualBodySyncError: Number(
+              maxVisualBodySyncError.toFixed(6),
+            ),
+            maxRotorSyncError: Number(
+              maxRotorSyncError.toFixed(6),
+            ),
+            timedOut,
+            safetyPassed,
+            telemetryComplete,
+            detail:
+              'seed ' +
+              String(run.seed) +
+              ': ' +
+              (timedOut
+                ? 'telemetry captured but the chain did not settle before timeout'
+                : settled
+                  ? 'full chain settled'
+                  : escaped || tunneling
+                    ? 'safety failure recorded; batch continued'
+                    : 'full chain telemetry captured'),
+          };
+          results.push(result);
+          console.info(
+            'PART6_SEED_TELEMETRY',
+            JSON.stringify(result),
+          );
+
+          publishPart6TelemetryReport(
+            summarize(
+              results,
+              'running',
+              'PART 6A.1 captured ' +
+                String(results.length) +
+                '/' +
+                String(PART6_FULL_SPIN_RUNS.length) +
+                ' deterministic runs; remaining seeds continue.',
+            ),
+          );
+          await yieldToBrowser();
+          if (disposed) return;
+        }
+
+        const telemetryCaptured =
+          results.length === PART6_FULL_SPIN_RUNS.length &&
+          results.every(
+            (result) => result.telemetryComplete,
+          );
+        const report = summarize(
+          results,
+          telemetryCaptured ? 'captured' : 'failed',
+          telemetryCaptured
+            ? 'PART 6A.1 telemetry captured all ' +
+                String(results.length) +
+                ' deterministic full-spin runs. Safety is reported separately; 4–5 lap calibration remains NOT EVALUATED.'
+            : 'PART 6A.1 telemetry did not capture every deterministic run.',
+        );
+
+        if (results.length > 0) {
+          const lastRun =
+            PART6_FULL_SPIN_RUNS[
+              PART6_FULL_SPIN_RUNS.length - 1
+            ];
+          rotorAngleRef.current = normalizedAngle(
+            lastRun.rotorStartAngle +
+              TEST_ANGULAR_SPEED *
+                (results[results.length - 1]?.elapsed ?? 0),
+          );
+          activeRotorPivot?.rotation.set(
+            0,
+            rotorAngleRef.current,
+            0,
+          );
+          setAngleReadout(rotorAngleRef.current);
+        }
+
+        publishPart6TelemetryReport(report);
+        console.info(
+          'PART6_FULL_SPIN_TELEMETRY',
+          JSON.stringify(report),
+        );
+        callbacksRef.current.onStateChange(
+          report.status === 'captured'
+            ? 'loaded'
+            : 'error',
+          report.detail,
+          report.status === 'captured'
+            ? undefined
+            : 'telemetry',
+        );
+      } catch (error) {
+        if (disposed) return;
+        const detail =
+          'PART 6 telemetry execution failed: ' +
+          (error instanceof Error
+            ? error.message
+            : String(error));
+        failInfrastructure(detail, 'telemetry', results);
+      } finally {
+        if (!disposed) {
+          activeBallBody.setTranslation(
+            previewSnapshot.ballTranslation,
+            true,
+          );
+          activeBallBody.setRotation(
+            previewSnapshot.ballRotation,
+            true,
+          );
+          activeBallBody.setLinvel(
+            previewSnapshot.ballLinvel,
+            true,
+          );
+          activeBallBody.setAngvel(
+            previewSnapshot.ballAngvel,
+            true,
+          );
+          activeRotorBody.setRotation(
+            previewSnapshot.rotorRotation,
+            true,
+          );
+          activeRotorBody.setNextKinematicRotation(
+            previewSnapshot.rotorRotation,
+          );
+          rotorAngleRef.current = previewSnapshot.rotorAngle;
+          activeRotorPivot?.rotation.set(
+            0,
+            previewSnapshot.rotorPivotAngle,
+            0,
+          );
+          activeBallMesh.position.copy(
+            previewSnapshot.ballMeshPosition,
+          );
+          activeBallMesh.quaternion.copy(
+            previewSnapshot.ballMeshQuaternion,
+          );
+          activeBallMesh.visible = previewSnapshot.ballMeshVisible;
+          setAngleReadout(previewSnapshot.rotorAngle);
+          callbacksRef.current.onRotorAngleChange(
+            previewSnapshot.rotorAngle,
+          );
+        }
+        part6TelemetryBatchRunning = false;
+      }
+    };
+
     const publishPart4Report = (
       status: Part4ValidationReport['status'],
       detail: string,
@@ -2817,8 +4810,26 @@ export function Part2SceneViewport({
     const startPart3Probe = (index: number) => {
       const probe = PART3_PROBES[index];
       if (!probe || !ballBody || !ballMesh) return;
-      const position = part3SpawnPosition(probe, part3TrackVerticalOffset);
-      const velocity = part3InitialVelocity(probe);
+      const measuredDeflector =
+        probe.kind === 'deflector-approach'
+          ? part4DeflectorAudit?.descriptors[0] ?? null
+          : null;
+      if (probe.kind === 'deflector-approach' && !measuredDeflector) {
+        publishPart3Report(
+          'failed',
+          'PART 4 deflector approach cannot start because no measured visible deflector is available.',
+        );
+        return;
+      }
+      const position = part3SpawnPosition(
+        probe,
+        part3TrackVerticalOffset,
+        measuredDeflector,
+      );
+      const velocity = part3InitialVelocity(
+        probe,
+        measuredDeflector?.angle ?? null,
+      );
       ballBody.setTranslation({ x: position[0], y: position[1], z: position[2] }, true);
       ballBody.setLinvel({ x: velocity.x, y: velocity.y, z: velocity.z }, true);
       const angularSpin = part3InitialAngularSpin(probe);
@@ -2829,8 +4840,9 @@ export function Part2SceneViewport({
       part3ProbeIndex = index;
       part3Elapsed = 0;
       part3PeakSpeed = 0;
-      part3MinRadius = probe.radius;
-      part3MaxRadius = probe.radius;
+      const actualSpawnRadius = Math.hypot(position[0], position[2]);
+      part3MinRadius = actualSpawnRadius;
+      part3MaxRadius = actualSpawnRadius;
       part3MaxPenetration = 0;
       part3MaxSeparation = 0;
       part3ContactFrames = 0;
@@ -3103,8 +5115,14 @@ export function Part2SceneViewport({
       const darkSurfaceYValues = validMeasures.flatMap(
         (measure) => measure.darkY,
       );
+      const effectiveDeflectorInner =
+        part4MeasuredDeflectorInnerRadius ?? deflectorInner;
+      const effectiveDeflectorOuter =
+        part4MeasuredDeflectorOuterRadius ?? deflectorOuter;
       const proposedLaunchRadius =
-        darkOuter !== null && woodInner !== null && deflectorOuter !== null
+        darkOuter !== null &&
+        woodInner !== null &&
+        effectiveDeflectorOuter !== null
           ? Number(
               Math.min(
                 Math.floor(
@@ -3186,7 +5204,7 @@ export function Part2SceneViewport({
           proposedLaunchRadius + BALL_RADIUS >= (woodInner ?? Infinity);
         staticInsideWheel =
           proposedLaunchRadius - BALL_RADIUS <=
-          (deflectorOuter ?? -Infinity);
+          (effectiveDeflectorOuter ?? -Infinity);
         staticHover = finalBottom - surfaceY > 0.02;
       }
       const passed =
@@ -3202,10 +5220,10 @@ export function Part2SceneViewport({
             proposedLaunchRadius -
             BALL_RADIUS >=
             0.02) &&
-        (deflectorOuter === null ||
+        (effectiveDeflectorOuter === null ||
           proposedLaunchRadius === null ||
           proposedLaunchRadius -
-            deflectorOuter -
+            effectiveDeflectorOuter -
             BALL_RADIUS >=
             0.02);
       console.info(
@@ -3232,9 +5250,23 @@ export function Part2SceneViewport({
             ? [woodInner, woodOuter]
             : null,
         nearestDeflectorRadiusBand:
-          deflectorInner !== null && deflectorOuter !== null
-            ? [deflectorInner, deflectorOuter]
+          effectiveDeflectorInner !== null &&
+          effectiveDeflectorOuter !== null
+            ? [
+                Number(effectiveDeflectorInner.toFixed(4)),
+                Number(effectiveDeflectorOuter.toFixed(4)),
+              ]
             : null,
+        visibleDeflectorCount:
+          part4DeflectorAudit?.descriptors.length ?? null,
+        visibleDeflectorAnglesDegrees:
+          part4DeflectorAudit?.descriptors.map((descriptor) =>
+            Number(
+              THREE.MathUtils.radToDeg(descriptor.angle).toFixed(3),
+            ),
+          ) ?? [],
+        visibleDeflectorAuditPassed:
+          part4DeflectorAudit?.passed ?? false,
         proposedLaunchRadius,
         proposedLaunchHeight,
         ballRadius: BALL_RADIUS,
@@ -3249,11 +5281,12 @@ export function Part2SceneViewport({
               )
             : null,
         deflectorClearance:
-          deflectorOuter !== null && proposedLaunchRadius !== null
+          effectiveDeflectorOuter !== null &&
+          proposedLaunchRadius !== null
             ? Number(
                 (
                   proposedLaunchRadius -
-                  deflectorOuter -
+                  effectiveDeflectorOuter -
                   BALL_RADIUS
                 ).toFixed(4),
               )
@@ -3462,6 +5495,7 @@ export function Part2SceneViewport({
         passed
           ? 'PART C outer-track spin tuning passed'
           : 'PART C outer-track spin tuning failed',
+        passed ? undefined : 'physics-validation',
       );
     };
 
@@ -3633,11 +5667,45 @@ export function Part2SceneViewport({
             },
           });
 
+          part4DeflectorAudit = measureVisibleDeflectors();
+          if (part4DeflectorAudit.descriptors.length > 0) {
+            part4MeasuredDeflectorInnerRadius = Math.min(
+              ...part4DeflectorAudit.descriptors.map(
+                (descriptor) => descriptor.innerRadius,
+              ),
+            );
+            part4MeasuredDeflectorOuterRadius = Math.max(
+              ...part4DeflectorAudit.descriptors.map(
+                (descriptor) => descriptor.outerRadius,
+              ),
+            );
+          }
+          console.info(
+            'PART4_DEFLECTOR_AUDIT',
+            JSON.stringify({
+              passed: part4DeflectorAudit.passed,
+              count: part4DeflectorAudit.descriptors.length,
+              anglesDegrees: part4DeflectorAudit.descriptors.map(
+                (descriptor) =>
+                  Number(
+                    THREE.MathUtils.radToDeg(descriptor.angle).toFixed(3),
+                  ),
+              ),
+              innerRadius: part4MeasuredDeflectorInnerRadius,
+              outerRadius: part4MeasuredDeflectorOuterRadius,
+              prominenceThreshold:
+                part4DeflectorAudit.prominenceThreshold,
+              peakProminence: part4DeflectorAudit.peakProminence,
+              maxSpacingDeviationRatio:
+                part4DeflectorAudit.maxSpacingDeviationRatio,
+            }),
+          );
+
           await RAPIER.init();
           if (disposed) return;
           world = new RAPIER.World({ x: 0, y: GRAVITY_Y, z: 0 });
           world.timestep = FIXED_TIMESTEP;
-          world.maxCcdSubsteps = 8;
+          world.maxCcdSubsteps = ROULETTE_MAX_CCD_SUBSTEPS;
           const stationaryBody = world.createRigidBody(RAPIER.RigidBodyDesc.fixed());
             if (
               validationMode === 'part3' &&
@@ -3672,7 +5740,7 @@ export function Part2SceneViewport({
                   RAPIER.TriMeshFlags.FIX_INTERNAL_EDGES |
                     RAPIER.TriMeshFlags.ORIENTED,
                 )
-                  .setFriction(PART3_TRACK_FRICTION)
+                  .setFriction(activePart3TrackFriction)
                   .setRestitution(0.01),
                 stationaryBody,
               );
@@ -3689,6 +5757,8 @@ export function Part2SceneViewport({
              const darkTrackSurface = measureVisibleSurfaceAt(
                launchSample[0],
                launchSample[2],
+               true,
+               PART2_ACTUAL_DARK_TRACK_RADIUS_BAND,
              );
              if (!darkTrackSurface) {
                throw new Error(
@@ -3704,15 +5774,11 @@ export function Part2SceneViewport({
                 outerTrackMesh.indices,
                 RAPIER.TriMeshFlags.FIX_INTERNAL_EDGES | RAPIER.TriMeshFlags.ORIENTED,
               )
-                .setFriction(PART3_TRACK_FRICTION)
+                .setFriction(activePart3TrackFriction)
                 .setRestitution(0.01),
               stationaryBody,
             );
-             part3ColliderRoles.set(part3TrackCollider.handle, 'outer-track-support-trimesh');
-            part3DeflectorColliders = addPart3DeflectorColliders(world, stationaryBody);
-            for (const collider of part3DeflectorColliders) {
-              part3ColliderRoles.set(collider.handle, 'visible-deflector-cuboid');
-            }
+             part3ColliderRoles.set(part3TrackCollider.handle, 'analytic-dark-recessed-channel');
            } else if (
              validationMode === 'part3' &&
              (geometryDiagnosticOnly || part1ProbeOnly)
@@ -3725,7 +5791,7 @@ export function Part2SceneViewport({
                  RAPIER.TriMeshFlags.FIX_INTERNAL_EDGES |
                    RAPIER.TriMeshFlags.ORIENTED,
                )
-                 .setFriction(PART3_TRACK_FRICTION)
+                 .setFriction(activePart3TrackFriction)
                  .setRestitution(0.01),
                stationaryBody,
              );
@@ -3746,6 +5812,60 @@ export function Part2SceneViewport({
             addProfileSupportRings(world, stationaryBody);
             addRetainingRim(world, stationaryBody, 2.94, -0.02);
           }
+           if (
+             validationMode === 'part3' &&
+             !geometryDiagnosticOnly &&
+             !part1ProbeOnly &&
+             part3TrackCollider
+           ) {
+             if (!part4DeflectorAudit?.passed) {
+               throw new Error(
+                 `PART 4 requires a credible visible-deflector audit before creating colliders: ${part4DeflectorAudit?.detail ?? 'audit unavailable'}`,
+               );
+             }
+             part3DeflectorColliders = addMeasuredDeflectorColliders(
+               world,
+               stationaryBody,
+               part4DeflectorAudit.descriptors,
+             );
+             for (const collider of part3DeflectorColliders) {
+               part3ColliderRoles.set(
+                 collider.handle,
+                 'asset-measured-visible-deflector-cuboid',
+               );
+             }
+
+             const activeTrackVerticalOffset =
+               outerLaneOnly || outerLaneSpinOnly
+                 ? part2RaceVerticalOffset
+                 : part3TrackVerticalOffset;
+             part3BowlBridgeProfile = measureBowlBridgeProfile(
+               activeTrackVerticalOffset,
+             );
+             const bowlBridgeMesh = buildBowlBridgeTrimesh(
+               part3BowlBridgeProfile,
+             );
+             part3BowlBridgeCollider = world.createCollider(
+               RAPIER.ColliderDesc.trimesh(
+                 bowlBridgeMesh.vertices,
+                 bowlBridgeMesh.indices,
+                 RAPIER.TriMeshFlags.FIX_INTERNAL_EDGES |
+                   RAPIER.TriMeshFlags.ORIENTED,
+               )
+                 .setFriction(activePart3TrackFriction)
+                 .setRestitution(0.01)
+                 .setCollisionGroups(
+                   STATIONARY_COLLISION_GROUP |
+                     (BALL_COLLISION_GROUP << 16),
+                 ),
+               stationaryBody,
+             );
+             part3ColliderRoles.set(
+               part3BowlBridgeCollider.handle,
+               'stationary-bowl-apron-bridge',
+             );
+           }
+
            if (validationMode !== 'part3') {
              part3InnerFloorCollider = world.createCollider(
                RAPIER.ColliderDesc.cylinder(1.88, 0.04)
@@ -3825,10 +5945,10 @@ export function Part2SceneViewport({
               .setAngvel({ x: 0, y: 0, z: 0 })
               .setAdditionalMass(BALL_MASS)
               .setLinearDamping(
-                validationMode === 'part3' ? PART3_TRACK_DAMPING : 0.04,
+                validationMode === 'part3' ? activePart3LinearDamping : 0.04,
               )
               .setAngularDamping(
-                validationMode === 'part3' ? PART3_TRACK_DAMPING : 0.08,
+                validationMode === 'part3' ? activePart3AngularDamping : 0.08,
               )
               .setCcdEnabled(true)
               .setSoftCcdPrediction(BALL_RADIUS * 2.5),
@@ -3837,7 +5957,7 @@ export function Part2SceneViewport({
           ballBody.setSoftCcdPrediction(BALL_RADIUS * 2.5);
           ccdEnabled = true;
           const ballColliderDescriptor = RAPIER.ColliderDesc.ball(BALL_RADIUS)
-              .setFriction(validationMode === 'part3' ? PART3_TRACK_FRICTION : 0.42)
+              .setFriction(validationMode === 'part3' ? activePart3TrackFriction : 0.42)
               .setRestitution(validationMode === 'part3' ? 0.01 : 0.02)
               .setDensity(0.001);
            if (validationMode === 'part3' || validationMode === 'part4') {
@@ -3894,7 +6014,31 @@ export function Part2SceneViewport({
                     trueDarkTrackCenterRadius: null,
                     darkTrackSurfaceYRange: null,
                     outerWoodRingRadiusBand: null,
-                    nearestDeflectorRadiusBand: null,
+                    nearestDeflectorRadiusBand:
+                      part4MeasuredDeflectorInnerRadius !== null &&
+                      part4MeasuredDeflectorOuterRadius !== null
+                        ? [
+                            Number(
+                              part4MeasuredDeflectorInnerRadius.toFixed(4),
+                            ),
+                            Number(
+                              part4MeasuredDeflectorOuterRadius.toFixed(4),
+                            ),
+                          ]
+                        : null,
+                    visibleDeflectorCount:
+                      part4DeflectorAudit?.descriptors.length ?? null,
+                    visibleDeflectorAnglesDegrees:
+                      part4DeflectorAudit?.descriptors.map(
+                        (descriptor) =>
+                          Number(
+                            THREE.MathUtils.radToDeg(
+                              descriptor.angle,
+                            ).toFixed(3),
+                          ),
+                      ) ?? [],
+                    visibleDeflectorAuditPassed:
+                      part4DeflectorAudit?.passed ?? false,
                     proposedLaunchRadius: null,
                     proposedLaunchHeight: null,
                     ballRadius: BALL_RADIUS,
@@ -3915,11 +6059,11 @@ export function Part2SceneViewport({
                   'loaded',
                   'PART C diagnostic radial geometry profile running',
                 );
-              } else if (outerLaneSpinOnly) {
+              } else if (part6FullSpinRouteActive) {
                  runPart2RaceStaticPlacementCheck();
                  callbacksRef.current.onStateChange(
                    'loaded',
-                   'PART 2 recessed dark-race static gate running',
+                   'PART 6B full-spin route active · recessed dark-race static gate running',
                  );
               } else if (outerLaneOnly) {
                 startPart3OuterLaneProbe();
@@ -3966,7 +6110,11 @@ export function Part2SceneViewport({
         (error) => {
           if (disposed) return;
           console.error('PART 2 roulette visual source failed to load', error);
-          callbacksRef.current.onStateChange('error', 'The rou_LP_Test_04 visual source could not be read.');
+          callbacksRef.current.onStateChange(
+            'error',
+            'The rou_LP_Test_04 visual source could not be read.',
+            'asset',
+          );
         },
       );
 
@@ -4057,10 +6205,9 @@ export function Part2SceneViewport({
             : null;
         const noPassThrough = !part3DeflectorPassThrough;
         const visualContactAlignmentCredible =
-          PART3_DEFLECTOR_INNER_RADIUS >= 2.46 &&
-          PART3_DEFLECTOR_OUTER_RADIUS <= 2.67 &&
-          PART3_DEFLECTOR_BOTTOM <= -0.28 &&
-          PART3_DEFLECTOR_TOP >= 0.01;
+          Boolean(part4DeflectorAudit?.passed) &&
+          part3DeflectorColliders.length ===
+            (part4DeflectorAudit?.descriptors.length ?? -1);
         const passed =
           isDeflectorApproach
             ? part3DeflectorContact &&
@@ -4138,14 +6285,16 @@ export function Part2SceneViewport({
           retainingRimRadius: PART3_RETAINING_RIM_INNER_RADIUS,
           nearestDeflectorRadius:
             isDeflectorApproach
-              ? PART3_DEFLECTOR_INNER_RADIUS
-              : PART3_DEFLECTOR_OUTER_RADIUS,
+              ? part4MeasuredDeflectorInnerRadius ??
+                PART2_ACTUAL_INWARD_EDGE_RADIUS
+              : part4MeasuredDeflectorOuterRadius ??
+                PART2_ACTUAL_INWARD_EDGE_RADIUS,
           earlyLapMinimumDeflectorClearance:
             part3EarlyLapMinimumDeflectorClearance === null
               ? null
               : Number(part3EarlyLapMinimumDeflectorClearance.toFixed(4)),
           deflectorColliderCount: part3DeflectorColliders.length,
-          deflectorColliderType: 'cuboid',
+          deflectorColliderType: 'asset-measured-cuboid',
           deflectorColliderFriction: PART3_DEFLECTOR_FRICTION,
           deflectorColliderRestitution: PART3_DEFLECTOR_RESTITUTION,
           bouncePlausible: part3BouncePlausible,
@@ -4272,7 +6421,7 @@ export function Part2SceneViewport({
         accumulator += Math.min((now - lastTime) / 1000, 0.1);
         lastTime = now;
         while (accumulator >= FIXED_TIMESTEP) {
-          if (rotorPivot) {
+          if (rotorPivot && !part6TelemetryBatchRunning) {
             rotorAngleRef.current = normalizedAngle(rotorAngleRef.current + TEST_ANGULAR_SPEED * FIXED_TIMESTEP);
             rotorPivot.rotation.set(0, rotorAngleRef.current, 0);
             if (
@@ -4295,7 +6444,8 @@ export function Part2SceneViewport({
 
           if (
             validationMode === 'part3' &&
-            (outerLaneOnly || outerLaneSpinOnly) &&
+            outerLaneOnly &&
+            !part6FullSpinRouteActive &&
             world &&
             ballBody &&
             ballMesh &&
@@ -4331,8 +6481,7 @@ export function Part2SceneViewport({
             }
             const ballCenterInsideOuterLane =
               radius >=
-                PART2_CHANNEL_PROFILE[PART2_CHANNEL_INNER_CONTAINMENT_INDEX][0] +
-                  BALL_RADIUS &&
+                PART2_INNER_CONTAINMENT_CENTER_LIMIT &&
               radius <=
                 PART2_CHANNEL_PROFILE[PART2_CHANNEL_OUTER_WALL_FOOT_INDEX][0] -
                   BALL_RADIUS;
@@ -4343,7 +6492,10 @@ export function Part2SceneViewport({
             const rimClearance =
               PART2_ACTUAL_WOOD_INNER_RADIUS - BALL_RADIUS - radius;
             const deflectorClearance =
-              radius - BALL_RADIUS - PART2_ACTUAL_INWARD_EDGE_RADIUS;
+              radius -
+              BALL_RADIUS -
+              (part4MeasuredDeflectorOuterRadius ??
+                PART2_ACTUAL_INWARD_EDGE_RADIUS);
             const woodContact =
               radius + BALL_RADIUS >= PART2_ACTUAL_WOOD_INNER_RADIUS - 0.005;
             const escaped =
@@ -4411,10 +6563,7 @@ export function Part2SceneViewport({
                 !part3OuterLaneDeflectorContact &&
                 !part3OuterLaneHover &&
                  part3OuterLaneMinRadius >=
-                   PART2_CHANNEL_PROFILE[
-                     PART2_CHANNEL_INNER_CONTAINMENT_INDEX
-                   ][0] +
-                     BALL_RADIUS &&
+                   PART2_INNER_CONTAINMENT_CENTER_LIMIT &&
                  part3OuterLaneMaxRadius <=
                    PART2_CHANNEL_PROFILE[PART2_CHANNEL_OUTER_WALL_FOOT_INDEX][0] -
                      BALL_RADIUS &&
@@ -4439,7 +6588,9 @@ export function Part2SceneViewport({
                 darkTrackOuterRadius:
                   PART2_ACTUAL_DARK_TRACK_RADIUS_BAND[1],
                 retainingRimInnerRadius: PART2_ACTUAL_WOOD_INNER_RADIUS,
-                nearestDeflectorOuterRadius: PART2_ACTUAL_INWARD_EDGE_RADIUS,
+                nearestDeflectorOuterRadius:
+                  part4MeasuredDeflectorOuterRadius ??
+                  PART2_ACTUAL_INWARD_EDGE_RADIUS,
                 ballRadius: BALL_RADIUS,
                 chosenLaunchRadius: part3OuterLaneLaunchRadius,
                 radialClearanceToRim:
@@ -4449,7 +6600,8 @@ export function Part2SceneViewport({
                 radialClearanceToDeflector:
                   part3OuterLaneLaunchRadius -
                   BALL_RADIUS -
-                  PART2_ACTUAL_INWARD_EDGE_RADIUS,
+                  (part4MeasuredDeflectorOuterRadius ??
+                    PART2_ACTUAL_INWARD_EDGE_RADIUS),
                 outerTrackEdgeClearance:
                   PART2_ACTUAL_DARK_TRACK_RADIUS_BAND[1] -
                   BALL_RADIUS -
@@ -4499,6 +6651,12 @@ export function Part2SceneViewport({
                 maxRadius: part3OuterLaneMaxRadius,
                 minRimClearance: part3OuterLaneMinRimClearance,
                 minDeflectorClearance: part3OuterLaneMinDeflectorClearance,
+                innerContainmentRadius: PART2_INNER_CONTAINMENT_RADIUS,
+                innerContainmentCenterLimit:
+                  PART2_INNER_CONTAINMENT_CENTER_LIMIT,
+                minimumInnerContainmentClearance:
+                  part3OuterLaneMinRadius -
+                  PART2_INNER_CONTAINMENT_CENTER_LIMIT,
                 staysOnOuterDarkLane,
                 prematureDeflectorContact: part3OuterLaneDeflectorContact,
                 woodContact: part3OuterLaneWoodContact,
@@ -4520,6 +6678,7 @@ export function Part2SceneViewport({
                 passed
                   ? 'PART B outer dark-track launch lane passed'
                   : 'PART B outer dark-track launch lane failed',
+                passed ? undefined : 'physics-validation',
               );
               setPart2RacePlacementReport((previous) =>
                 previous
@@ -4561,6 +6720,7 @@ export function Part2SceneViewport({
           if (
             validationMode === 'part3' &&
             outerLaneSpinOnly &&
+            !part6FullSpinRouteActive &&
             world &&
             ballBody &&
             ballMesh &&
@@ -4630,7 +6790,10 @@ export function Part2SceneViewport({
             const rimClearance =
               PART2_ACTUAL_WOOD_INNER_RADIUS - BALL_RADIUS - radius;
             const inwardClearance =
-              radius - BALL_RADIUS - PART2_ACTUAL_INWARD_EDGE_RADIUS;
+              radius -
+              BALL_RADIUS -
+              (part4MeasuredDeflectorOuterRadius ??
+                PART2_ACTUAL_INWARD_EDGE_RADIUS);
             const woodContact =
               radius + BALL_RADIUS >= PART2_ACTUAL_WOOD_INNER_RADIUS - 0.005;
             const escaped =
@@ -4837,7 +7000,7 @@ export function Part2SceneViewport({
                 visibleSurfaceSource: visibleSurface?.source ?? null,
                 darkTrackRadiusBand: PART3_DARK_TRACK_RADIUS_BAND,
                 analyticColliderContactYBefore:
-                  part3TrackHeightBase(radius) + PART3_LEGACY_TRACK_VERTICAL_OFFSET,
+                  part3TrackHeight(radius, part3TrackVerticalOffset),
                 analyticColliderContactYAfter: part3TrackHeight(
                   radius,
                   part3TrackVerticalOffset,
@@ -4864,6 +7027,7 @@ export function Part2SceneViewport({
                 passed
                   ? 'PART 3 short visual/physics alignment probe passed'
                   : 'PART 3 short visual/physics alignment probe failed',
+                passed ? undefined : 'physics-validation',
               );
             }
           }
@@ -4920,10 +7084,16 @@ export function Part2SceneViewport({
             const onTrack = geometricTrackContact && trackPairContact;
             const trackAngle = normalizedAngle(Math.atan2(position.x, position.z));
             if (probe.kind === 'outer-track' && part3InwardDescentTime === null) {
+              const measuredInner =
+                part4MeasuredDeflectorInnerRadius ??
+                PART2_ACTUAL_INWARD_EDGE_RADIUS;
+              const measuredOuter =
+                part4MeasuredDeflectorOuterRadius ??
+                PART2_ACTUAL_INWARD_EDGE_RADIUS;
               const deflectorClearance =
-                radius >= PART3_DEFLECTOR_OUTER_RADIUS
-                  ? radius - BALL_RADIUS - PART3_DEFLECTOR_OUTER_RADIUS
-                  : PART3_DEFLECTOR_INNER_RADIUS - radius - BALL_RADIUS;
+                radius >= measuredOuter
+                  ? radius - BALL_RADIUS - measuredOuter
+                  : measuredInner - radius - BALL_RADIUS;
               part3EarlyLapMinimumDeflectorClearance =
                 part3EarlyLapMinimumDeflectorClearance === null
                   ? deflectorClearance
@@ -4973,7 +7143,10 @@ export function Part2SceneViewport({
               }
               part3DeflectorPassThrough ||=
                 radius <
-                  PART3_DEFLECTOR_INNER_RADIUS - BALL_RADIUS - 0.01 &&
+                  (part4MeasuredDeflectorInnerRadius ??
+                    PART2_ACTUAL_INWARD_EDGE_RADIUS) -
+                    BALL_RADIUS -
+                    0.01 &&
                 !part3DeflectorContact;
             }
             const leftValidVolume =
@@ -5450,7 +7623,16 @@ export function Part2SceneViewport({
       };
     } catch (error) {
       console.error('PART 2 roulette scene failed to initialize', error);
-      callbacksRef.current.onStateChange('error', 'WebGL or Rapier could not initialize in this browser.');
+      const initializationDetail =
+        error instanceof Error ? error.message : String(error);
+      callbacksRef.current.onStateChange(
+        'error',
+        initializationDetail,
+        initializationDetail.includes('visible-deflector audit') ||
+          initializationDetail.includes('Deflector audit')
+          ? 'geometry-audit'
+          : 'initialization',
+      );
       return () => renderer?.dispose();
     }
   }, [loadKey]);
@@ -5630,7 +7812,10 @@ export function Part2SceneViewport({
             radius {part3OuterLaneReport.minRadius.toFixed(4)}–
             {part3OuterLaneReport.maxRadius.toFixed(4)} · minimum rim clearance{' '}
             {part3OuterLaneReport.minRimClearance.toFixed(4)} · minimum deflector clearance{' '}
-            {part3OuterLaneReport.minDeflectorClearance.toFixed(4)} · peak speed{' '}
+            {part3OuterLaneReport.minDeflectorClearance.toFixed(4)} · inner containment r{' '}
+            {part3OuterLaneReport.innerContainmentRadius.toFixed(4)} / center limit{' '}
+            {part3OuterLaneReport.innerContainmentCenterLimit.toFixed(4)} · minimum inner clearance{' '}
+            {part3OuterLaneReport.minimumInnerContainmentClearance.toFixed(4)} · peak speed{' '}
             {part3OuterLaneReport.peakSpeed.toFixed(4)} · inward radial drift{' '}
             {part3OuterLaneReport.inwardRadialDrift.toFixed(4)} · track contact{' '}
             {part3OuterLaneReport.physicalTrackContact ? 'yes' : 'no'} · outer lane{' '}
@@ -5741,6 +7926,128 @@ export function Part2SceneViewport({
     </div>
   );
 
+  const renderPart6TelemetryReport = () => (
+    <div
+      className="part2-drop-report"
+      data-testid="part6-full-spin-telemetry-report"
+      data-status={part6TelemetryReport?.status ?? 'waiting'}
+      data-safety={part6TelemetryReport?.safetyStatus ?? 'pending'}
+      data-calibration={
+        part6TelemetryReport?.calibrationStatus ?? 'not-evaluated'
+      }
+      aria-live="polite"
+    >
+      {part6TelemetryReport ? (
+        <>
+          <strong>{part6TelemetryReport.detail}</strong>
+          <span>
+            Telemetry {part6TelemetryReport.status.toUpperCase()} · Safety{' '}
+            {part6TelemetryReport.safetyStatus.toUpperCase()} · Calibration{' '}
+            {part6TelemetryReport.calibrationStatus
+              .replace('-', ' ')
+              .toUpperCase()}
+          </span>
+          <span>
+            schema {part6TelemetryReport.schemaVersion} · seeds{' '}
+            {part6TelemetryReport.completedCount}/
+            {part6TelemetryReport.seedCount} · fixed step{' '}
+            {part6TelemetryReport.fixedTimestep.toFixed(6)} s · max spin{' '}
+            {part6TelemetryReport.maxDurationSeconds.toFixed(1)} s ·
+            timeouts {part6TelemetryReport.timedOutCount}
+          </span>
+          <span>
+            laps median/min/max{' '}
+            {part6TelemetryReport.medianLapCount?.toFixed(3) ?? '—'} /{' '}
+            {part6TelemetryReport.minLapCount?.toFixed(3) ?? '—'} /{' '}
+            {part6TelemetryReport.maxLapCount?.toFixed(3) ?? '—'} ·
+            4–5 laps {part6TelemetryReport.fourToFiveLapCount}/
+            {part6TelemetryReport.seedCount} · median track contact{' '}
+            {part6TelemetryReport.medianTrackContactRatio === null
+              ? '—'
+              : (
+                  part6TelemetryReport.medianTrackContactRatio * 100
+                ).toFixed(1)}
+            %
+          </span>
+          <span>
+            inward {(part6TelemetryReport.inwardTransitionRate * 100).toFixed(1)}
+            % · deflector{' '}
+            {(part6TelemetryReport.deflectorContactRate * 100).toFixed(1)}% ·
+            pocket {(part6TelemetryReport.pocketEntryRate * 100).toFixed(1)}% ·
+            settled {(part6TelemetryReport.settleRate * 100).toFixed(1)}% ·
+            safety fail{' '}
+            {(part6TelemetryReport.safetyFailureRate * 100).toFixed(1)}% ·
+            phase-order failures {part6TelemetryReport.phaseSequenceFailureCount}
+          </span>
+          <span>
+            unchanged physics: μ{' '}
+            {part6TelemetryReport.trackFriction.toFixed(2)} · linear/angular
+            damping {part6TelemetryReport.linearDamping.toFixed(2)} /{' '}
+            {part6TelemetryReport.angularDamping.toFixed(2)}
+          </span>
+          {part6TelemetryReport.results.map((result) => (
+            <span key={result.id}>
+              seed {result.seed} · reset{' '}
+              {result.stateResetVerified ? 'verified' : 'FAIL'} (Δp{' '}
+              {result.resetPositionError.toExponential(1)} · Δv{' '}
+              {result.resetVelocityError.toExponential(1)} · Δω{' '}
+              {result.resetAngularVelocityError.toExponential(1)} · Δq{' '}
+              {result.resetRotationError.toExponential(1)} · Δrotor{' '}
+              {result.resetRotorAngleError.toExponential(1)}) · launch{' '}
+              {THREE.MathUtils.radToDeg(result.launchAzimuth).toFixed(1)}° @{' '}
+              {result.launchSpeed.toFixed(2)} wu/s (
+              {result.launchSpeedMetersPerSecond.toFixed(2)} m/s) · laps{' '}
+              {result.lapCount.toFixed(3)} · contact{' '}
+              {(result.trackContactRatio * 100).toFixed(1)}% · speed{' '}
+              {result.trackStartSpeed.toFixed(3)}→
+              {result.trackEndSpeed.toFixed(3)} / peak{' '}
+              {result.peakSpeed.toFixed(3)} · inward{' '}
+              {result.inwardTransitionTime?.toFixed(3) ?? '—'} s · rotor entry{' '}
+              {result.rotorEntryTime?.toFixed(3) ?? '—'} s
+            </span>
+          ))}
+          {part6TelemetryReport.results.map((result) => (
+            <span key={`${result.id}-chain`}>
+              seed {result.seed} phases{' '}
+              {result.phases.map((event) => event.phase).join(' → ') || '—'} ·
+              order {result.phaseSequenceValid ? 'valid' : 'FAIL'} ·
+              deflector {result.deflectorContactCount} @{' '}
+              {result.firstDeflectorContactTime?.toFixed(3) ?? '—'} s · impact{' '}
+              {result.impactSpeedBefore?.toFixed(3) ?? '—'}→
+              {result.impactSpeedAfter?.toFixed(3) ?? '—'} / Δ{' '}
+              {result.impactDirectionChangeDegrees?.toFixed(1) ?? '—'}° · fret{' '}
+              {result.fretContact ? 'yes' : 'no'} · pocket{' '}
+              {result.pocketEntered ? 'yes' : 'no'} · settled{' '}
+              {result.settled ? 'yes' : 'no'} · final{' '}
+              {result.finalPocketNumber ?? '—'} · timeout{' '}
+              {result.timedOut ? 'yes' : 'no'}
+            </span>
+          ))}
+          {part6TelemetryReport.results.map((result) => (
+            <span key={`${result.id}-transition`}>
+              seed {result.seed} transition r{' '}
+              {result.transitionMinRadius?.toFixed(3) ?? '—'}–
+              {result.transitionMaxRadius?.toFixed(3) ?? '—'} / Y{' '}
+              {result.transitionMinY?.toFixed(3) ?? '—'}–
+              {result.transitionMaxY?.toFixed(3) ?? '—'} · surface pen/sep{' '}
+              {result.transitionMaxSurfacePenetration.toFixed(3)}/
+              {result.transitionMaxSurfaceSeparation.toFixed(3)} · unsupported{' '}
+              {result.maxUnsupportedTransitionDuration.toFixed(3)} s · roles{' '}
+              {result.transitionContactRoles.join(', ') || '—'} · track pen/sep{' '}
+              {result.maxTrackPenetration.toFixed(3)}/
+              {result.maxTrackSeparation.toFixed(3)} · pocket pen/sep{' '}
+              {result.maxPocketFloorPenetration.toFixed(3)}/
+              {result.maxPocketFloorSeparation.toFixed(3)} · safety{' '}
+              {result.safetyPassed ? 'PASS' : 'FAIL'}
+            </span>
+          ))}
+        </>
+      ) : (
+        'Waiting for the PART 6A.1 deterministic full-spin telemetry batch.'
+      )}
+    </div>
+  );
+
   const renderPart2OuterLaneSpinReport = () => (
     <div
       className="part2-drop-report"
@@ -5846,6 +8153,20 @@ export function Part2SceneViewport({
               · nearest deflector r{' '}
               {part3GeometryDiagnosticReport.nearestDeflectorRadiusBand
                 ? `${part3GeometryDiagnosticReport.nearestDeflectorRadiusBand[0].toFixed(4)}–${part3GeometryDiagnosticReport.nearestDeflectorRadiusBand[1].toFixed(4)}`
+                : '—'}
+            </span>
+            <span>
+              visible deflectors{' '}
+              {part3GeometryDiagnosticReport.visibleDeflectorCount ?? '—'} ·
+              audit{' '}
+              {part3GeometryDiagnosticReport.visibleDeflectorAuditPassed
+                ? 'PASS'
+                : 'FAIL'}{' '}
+              · angles{' '}
+              {part3GeometryDiagnosticReport.visibleDeflectorAnglesDegrees.length
+                ? part3GeometryDiagnosticReport.visibleDeflectorAnglesDegrees
+                    .map((angle) => `${angle.toFixed(1)}°`)
+                    .join(', ')
                 : '—'}
             </span>
             <span>
@@ -6003,9 +8324,11 @@ export function Part2SceneViewport({
         <span>
           {validationMode === 'part4'
             ? 'PART 4 · KINEMATIC ROTOR INTERACTION'
-            : validationMode === 'part3'
-              ? 'PART 3 · DYNAMIC BALL VALIDATION'
-              : 'PART 2 · ZERO-VELOCITY CONTACT'}
+            : part6FullSpinRouteActive
+              ? 'PART 6B · FULL-SPIN CALIBRATION'
+              : validationMode === 'part3'
+                ? 'PART 3 · DYNAMIC BALL VALIDATION'
+                : 'PART 2 · ZERO-VELOCITY CONTACT'}
         </span>
         <span>ANGLE {THREE.MathUtils.radToDeg(angleReadout).toFixed(2)}° · PIVOT [0, 0, 0] · Y+</span>
         <span>
@@ -6017,7 +8340,7 @@ export function Part2SceneViewport({
               ? outerLaneOnly
                 ? `PART B OUTER LANE ${part3OuterLaneReport?.status.toUpperCase() ?? 'WAITING'} · TANGENTIAL LAUNCH · CCD`
                 : outerLaneSpinOnly
-                  ? `PART 2 DARK RACE GATE ${part2RacePlacementReport?.status.toUpperCase() ?? 'WAITING'} · STATIC + SHORT PROBE · CCD`
+                  ? `PART 6B ROUTE · 6A.1 TELEMETRY ${part6TelemetryReport?.status.toUpperCase() ?? 'WAITING'} · 20 DETERMINISTIC FULL SPINS · CCD`
                 : geometryDiagnosticOnly
                   ? `GEOMETRY DIAGNOSTIC ${part3GeometryDiagnosticReport?.status.toUpperCase() ?? 'WAITING'} · STATIC CONTACT`
                 : alignmentOnly
@@ -6041,7 +8364,7 @@ export function Part2SceneViewport({
           : outerLaneSpinOnly
             ? <>
                 {renderPart2RacePlacementReport()}
-                {renderPart3OuterLaneReport()}
+                {renderPart6TelemetryReport()}
               </>
           : alignmentOnly
             ? renderPart3AlignmentReport()

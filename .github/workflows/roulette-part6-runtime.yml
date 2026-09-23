@@ -1,0 +1,106 @@
+name: Roulette PART 6 Runtime
+
+concurrency:
+  group: roulette-part6-runtime-${{ github.ref }}
+  cancel-in-progress: true
+
+on:
+  push:
+    branches:
+      - roulette-physics-part6b
+  pull_request:
+    branches:
+      - roulette-physics-part6
+    paths:
+      - '.github/workflows/roulette-part6-runtime.yml'
+      - 'artifacts/roulette-physics-lab/**'
+      - 'scripts/roulette-part6-runtime.mjs'
+      - 'package.json'
+      - 'pnpm-lock.yaml'
+      - 'pnpm-workspace.yaml'
+  workflow_dispatch:
+
+jobs:
+  runtime:
+    runs-on: ubuntu-latest
+    timeout-minutes: 355
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10.15.0
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install workspace
+        run: pnpm install --frozen-lockfile
+
+      - name: Install Chromium
+        run: pnpm exec playwright install --with-deps chromium
+
+      - name: Build TypeScript project references
+        run: pnpm run typecheck:libs
+
+      - name: Typecheck roulette physics lab
+        run: pnpm --filter @workspace/roulette-physics-lab run typecheck
+
+      - name: Start roulette physics lab
+        shell: bash
+        run: |
+          PORT=4173 BASE_PATH=/ pnpm --filter @workspace/roulette-physics-lab run dev > /tmp/roulette-part6-vite.log 2>&1 &
+          echo $! > /tmp/roulette-part6-vite.pid
+          for attempt in {1..60}; do
+            if curl --fail --silent http://127.0.0.1:4173/ > /dev/null; then
+              exit 0
+            fi
+            sleep 1
+          done
+          cat /tmp/roulette-part6-vite.log
+          exit 1
+
+      - name: Run 20-seed PART 6 batch
+        env:
+          ROULETTE_LAB_URL: http://127.0.0.1:4173/?part6Headless=1
+          ROULETTE_PART6_OUTPUT: artifacts/roulette-physics-lab/part6-runtime-result.json
+          ROULETTE_PART6_TIMEOUT_MS: '20700000'
+        shell: bash
+        run: |
+          set -o pipefail
+          node scripts/roulette-part6-runtime.mjs | tee part6-runtime.log
+
+      - name: Summarize PART 6 calibration evidence
+        if: always()
+        env:
+          ROULETTE_PART6_OUTPUT: artifacts/roulette-physics-lab/part6-runtime-result.json
+          ROULETTE_PART6_EVIDENCE: artifacts/roulette-physics-lab/part6-calibration-evidence.json
+        run: |
+          if [ -f "$ROULETTE_PART6_OUTPUT" ]; then
+            node scripts/roulette-part6-report.mjs | tee part6-calibration-evidence.log
+          else
+            echo "PART 6 runtime result was not produced."
+          fi
+
+      - name: Show Vite log on failure
+        if: failure()
+        run: cat /tmp/roulette-part6-vite.log || true
+
+      - name: Upload PART 6 runtime result
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: roulette-part6-runtime
+          path: |
+            artifacts/roulette-physics-lab/part6-runtime-result.json
+            artifacts/roulette-physics-lab/part6-calibration-evidence.json
+            part6-runtime.log
+            part6-calibration-evidence.log
+            /tmp/roulette-part6-vite.log
+          if-no-files-found: warn

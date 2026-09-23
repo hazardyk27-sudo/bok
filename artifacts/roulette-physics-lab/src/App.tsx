@@ -4,7 +4,18 @@ import RAPIER from '@dimforge/rapier3d-compat';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import { Part2SceneViewport } from './Part2SceneViewport';
-import { ROULETTE_ASSET_PATH } from './roulette-scene-config';
+import {
+  ROULETTE_ASSET_PATH,
+  ROULETTE_BALL_RADIUS,
+  ROULETTE_EUROPEAN_SEQUENCE,
+  ROULETTE_FIXED_TIMESTEP,
+  ROULETTE_GRAVITY_Y,
+  ROULETTE_METERS_PER_WORLD_UNIT,
+  ROULETTE_NORMALIZED_DIAMETER,
+  ROULETTE_POCKET_COUNT,
+  ROULETTE_ROTOR_ANGULAR_SPEED,
+  ROULETTE_WORLD_UNITS_PER_METER,
+} from './roulette-scene-config';
 import {
   getGetPhysicsLabCurrentRoundQueryKey,
   useCreatePhysicsLabRound,
@@ -33,15 +44,15 @@ import {
 } from 'lucide-react';
 
 const ASSET_PATH = ROULETTE_ASSET_PATH;
-const TARGET_WHEEL_DIAMETER = 6;
+const TARGET_WHEEL_DIAMETER = ROULETTE_NORMALIZED_DIAMETER;
 const SOURCE_BALL_NODE = 'Sphere_16';
-const METERS_PER_WORLD_UNIT = 1 / 6;
-const WORLD_UNITS_PER_METER = 6;
-const WORLD_GRAVITY_Y = -58.86;
-const SECTOR_COUNT = 37;
+const METERS_PER_WORLD_UNIT = ROULETTE_METERS_PER_WORLD_UNIT;
+const WORLD_UNITS_PER_METER = ROULETTE_WORLD_UNITS_PER_METER;
+const WORLD_GRAVITY_Y = ROULETTE_GRAVITY_Y;
+const SECTOR_COUNT = ROULETTE_POCKET_COUNT;
 const SECTOR_STEP_RADIANS = (Math.PI * 2) / SECTOR_COUNT;
-const FIXED_TIMESTEP = 1 / 120;
-const BALL_RADIUS = 0.056;
+const FIXED_TIMESTEP = ROULETTE_FIXED_TIMESTEP;
+const BALL_RADIUS = ROULETTE_BALL_RADIUS;
 const ROTOR_RADIUS = 1.72;
 const OUTER_TRACK_RADIUS = 2.48;
 const OUTER_TRACK_WALL_RADIUS = 2.531;
@@ -84,7 +95,7 @@ const DEFAULT_BALL_PARAMETERS = {
   initialAngularVelocity: 230,
 } as const;
 const DEFAULT_ROTOR_PARAMETERS = {
-  initialAngularVelocity: 2.4,
+  initialAngularVelocity: ROULETTE_ROTOR_ANGULAR_SPEED,
   angularDamping: 0.28,
   mass: 3.2,
 } as const;
@@ -100,10 +111,7 @@ function legacyRouletteWorldDisabled(): RAPIER.World {
     'Legacy roulette physics is disabled. Use the authoritative GLB world in Part2SceneViewport.',
   );
 }
-const EUROPEAN_SEQUENCE = [
-  0, 32, 15, 19, 4, 21, 2, 25, 17, 34, 6, 27, 13, 36, 11, 30, 8, 23, 10,
-  5, 24, 16, 33, 1, 20, 14, 31, 9, 22, 18, 29, 7, 28, 12, 35, 3, 26,
-];
+const EUROPEAN_SEQUENCE = ROULETTE_EUROPEAN_SEQUENCE;
 
 const PHYSICAL_MEASUREMENTS = [
   { label: 'Overall diameter', value: '1.000 m', detail: '6.000 normalized world units' },
@@ -118,7 +126,21 @@ const PHYSICAL_MEASUREMENTS = [
 ];
 
 type LoadState = 'loading' | 'loaded' | 'error';
+type ValidationErrorKind =
+  | 'asset'
+  | 'geometry-audit'
+  | 'physics-validation'
+  | 'telemetry'
+  | 'initialization';
 type InspectionView = 'top' | 'angled' | 'side';
+
+const VALIDATION_ERROR_TITLES: Record<ValidationErrorKind, string> = {
+  asset: 'Roulette asset could not be loaded',
+  'geometry-audit': 'Geometry audit failed',
+  'physics-validation': 'Physics validation failed',
+  telemetry: 'PART 6 telemetry failed',
+  initialization: 'Physics scene initialization failed',
+};
 type ProbeOutcome = 'resting' | 'leak' | 'pass-through' | 'trap';
 type BallCommandKind = 'apply' | 'release' | 'varied' | 'reset';
 
@@ -3173,13 +3195,16 @@ function SceneViewport({
 
 function StatusChip({ state }: { state: LoadState }) {
   const content = {
-      loading: {
+    loading: {
       label: 'Building wheel',
       icon: <CircleDot className="status-icon status-pulse" size={13} />,
     },
-    loaded: { label: 'Asset ready', icon: <Check className="status-icon" size={13} /> },
+    loaded: {
+      label: 'Asset ready',
+      icon: <Check className="status-icon" size={13} />,
+    },
     error: {
-      label: 'WebGL blocked',
+      label: 'Scene unavailable',
       icon: <AlertTriangle className="status-icon" size={13} />,
     },
   }[state];
@@ -3396,6 +3421,11 @@ function App() {
   const [loadKey, setLoadKey] = useState(0);
   const [loadState, setLoadState] = useState<LoadState>('loading');
   const [errorDetail, setErrorDetail] = useState('');
+  const [errorKind, setErrorKind] = useState<ValidationErrorKind | null>(null);
+  const [validationIssue, setValidationIssue] = useState<{
+    kind: ValidationErrorKind;
+    detail: string;
+  } | null>(null);
   const [view, setView] = useState<InspectionView>('angled');
   const [showGrid, setShowGrid] = useState(true);
   const [showPhysicsDebug, setShowPhysicsDebug] = useState(false);
@@ -3436,10 +3466,56 @@ function App() {
   const [part5Report, setPart5Report] =
     useState<Part5ValidationReport>(EMPTY_PART5_REPORT);
 
-  const handleStateChange = useCallback((state: LoadState, detail?: string) => {
-    setLoadState(state);
-    setErrorDetail(detail ?? '');
-  }, []);
+  const handleStateChange = useCallback(
+    (
+      state: LoadState,
+      detail?: string,
+      nextErrorKind?: ValidationErrorKind,
+    ) => {
+      if (state === 'loading') {
+        setLoadState('loading');
+        setErrorDetail('');
+        setErrorKind(null);
+        setValidationIssue(null);
+        return;
+      }
+
+      if (state === 'error') {
+        const resolvedKind = nextErrorKind ?? 'initialization';
+        const blockingFailure =
+          resolvedKind === 'asset' || resolvedKind === 'initialization';
+
+        if (blockingFailure) {
+          setLoadState('error');
+          setErrorDetail(
+            detail ?? 'The roulette scene could not be initialized.',
+          );
+          setErrorKind(resolvedKind);
+          setValidationIssue(null);
+          return;
+        }
+
+        // Geometry/physics/telemetry failures are diagnostics, not renderer
+        // failures. Keep the already-loaded scene interactive so the failed
+        // contact/trajectory can be inspected visually.
+        setLoadState('loaded');
+        setErrorDetail('');
+        setErrorKind(null);
+        setValidationIssue({
+          kind: resolvedKind,
+          detail:
+            detail ??
+            'Roulette physics validation failed while the visual scene remained available.',
+        });
+        return;
+      }
+
+      setLoadState('loaded');
+      setErrorDetail('');
+      setErrorKind(null);
+    },
+    [],
+  );
 
   const resetView = () => window.dispatchEvent(new Event('roulette-reset-view'));
   const resetRotor = () => {
@@ -3491,6 +3567,10 @@ function App() {
   };
   const retryLoad = () => {
     setAudit(null);
+    setErrorDetail('');
+    setErrorKind(null);
+    setValidationIssue(null);
+    setLoadState('loading');
     setLoadKey((current) => current + 1);
   };
   const handleRotorTestState = useCallback(
@@ -3523,12 +3603,12 @@ function App() {
             <Layers3 size={18} strokeWidth={1.7} />
           </div>
           <div>
-              <div className="eyebrow">ISOLATED PHYSICS LAB · PART 3</div>
+              <div className="eyebrow">ISOLATED PHYSICS LAB · PART 6B</div>
                <h1>Roulette / uploaded visual asset + rigid-body V1</h1>
           </div>
         </div>
         <div className="header-meta">
-          <span className="build-tag">LAB-01</span>
+          <span className="build-tag" data-testid="build-part6b">PART 6B · FULL-SPIN</span>
           <StatusChip state={loadState} />
         </div>
       </header>
@@ -3537,7 +3617,7 @@ function App() {
         <aside className="inspector-rail">
           <div className="rail-intro">
               <div className="section-kicker">
-              <Crosshair size={13} /> PART 3 · DYNAMIC BALL
+              <Crosshair size={13} /> PART 6B · FULL-SPIN PHYSICS
             </div>
             <p>The uploaded wheel drives the visible shell and rotor; the validated European 37-pocket layout remains the source of truth for physics and results.</p>
           </div>
@@ -4261,8 +4341,15 @@ function App() {
             {loadState === 'error' && (
               <div className="viewport-overlay error-overlay" data-testid="status-error" role="alert">
                 <TriangleAlert size={21} />
-                <strong>WebGL unavailable</strong>
-                <span>{errorDetail || 'Enable a WebGL-capable preview to view the uploaded roulette asset.'}</span>
+                <strong>
+                  {errorKind
+                    ? VALIDATION_ERROR_TITLES[errorKind]
+                    : 'Roulette validation failed'}
+                </strong>
+                <span>
+                  {errorDetail ||
+                    'The roulette validation did not complete successfully.'}
+                </span>
                 <button type="button" onClick={retryLoad} data-testid="button-load-retry">
                   Retry load
                 </button>
@@ -4271,6 +4358,22 @@ function App() {
             {loadState === 'loaded' && (
               <div className="loaded-stamp" data-testid="status-loaded">
                 <Check size={13} /> ASSET READY
+              </div>
+            )}
+            {loadState === 'loaded' && validationIssue && (
+              <div
+                className="validation-issue-banner"
+                data-testid="status-validation-issue"
+                data-error-kind={validationIssue.kind}
+                role="status"
+                aria-live="polite"
+              >
+                <AlertTriangle size={14} />
+                <div>
+                  <strong>{VALIDATION_ERROR_TITLES[validationIssue.kind]}</strong>
+                  <span>{validationIssue.detail}</span>
+                  <small>Preview remains interactive for diagnosis.</small>
+                </div>
               </div>
             )}
           </div>
@@ -4451,7 +4554,7 @@ function App() {
       </div>
 
       <footer className="lab-footer">
-       <span>ROULETTE PHYSICS LAB · PART 3</span>
+       <span>ROULETTE PHYSICS LAB · PART 6B</span>
         <span className="footer-rule" />
        <span>Real dynamic ball · isolated collision validation</span>
         <span className="footer-build">
