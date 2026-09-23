@@ -4073,15 +4073,20 @@ export function Part2SceneViewport({
             return;
           }
 
-          const launchNormal = new THREE.Vector3(
-            launchSurface.normal.x,
-            launchSurface.normal.y,
-            launchSurface.normal.z,
-          ).normalize();
+          const launchNormal = part2ChannelNormalAt(
+            PART2_ACTUAL_DARK_TRACK_LAUNCH_RADIUS,
+            run.launchAzimuth,
+          );
+          const launchChannelSurface = part2ChannelSurfaceAt(
+            PART2_ACTUAL_DARK_TRACK_LAUNCH_RADIUS,
+            part2RaceVerticalOffset,
+          );
           const launchPosition = new THREE.Vector3(
-            launchSurface.point.x,
-            launchSurface.point.y,
-            launchSurface.point.z,
+            Math.sin(run.launchAzimuth) *
+              PART2_ACTUAL_DARK_TRACK_LAUNCH_RADIUS,
+            launchChannelSurface.y,
+            Math.cos(run.launchAzimuth) *
+              PART2_ACTUAL_DARK_TRACK_LAUNCH_RADIUS,
           ).addScaledVector(launchNormal, BALL_RADIUS + 0.002);
           const tangent = new THREE.Vector3(
             Math.cos(run.launchAzimuth),
