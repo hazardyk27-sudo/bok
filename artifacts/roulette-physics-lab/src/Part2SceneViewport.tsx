@@ -1862,7 +1862,7 @@ function makePart2RaceChannelTrimesh(
 ) {
   const vertices: number[] = [];
   const indices: number[] = [];
-  const segments = 128;
+  const segments = 512;
   const activeProfile: Array<[number, number]> =
     openInnerRadius === null
       ? PART2_CHANNEL_PROFILE.map(([radius, y]) => [radius, y])
