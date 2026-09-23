@@ -33,7 +33,7 @@ describe("scratch result presentation", () => {
 
   it("uses a premium gold lucky symbol for safe cells", () => {
     expect(getScratchCellPresentation("ADVANCED", true, false)).toEqual({
-      symbol: "☘",
+      symbol: "✦",
       label: "ALTIN",
       resultClass: "safe",
     });
