@@ -9,11 +9,25 @@ const outputPath =
   process.env.ROULETTE_PART6_OUTPUT ??
   'artifacts/roulette-physics-lab/part6-runtime-result.json';
 const terminalTimeoutMs = Number(
-  process.env.ROULETTE_PART6_TIMEOUT_MS ?? 20_700_000,
+  process.env.ROULETTE_PART6_TIMEOUT_MS ?? 900_000,
 );
 
 let telemetry = null;
 const seedTelemetry = [];
+
+const persistPartialResult = (extra = {}) => {
+  const partial = {
+    capturedAt: new Date().toISOString(),
+    url: targetUrl,
+    terminalTimeoutMs,
+    partial: true,
+    seedTelemetry,
+    telemetry,
+    ...extra,
+  };
+  fs.writeFileSync(outputPath, JSON.stringify(partial, null, 2));
+};
+
 const browser = await chromium.launch({
   headless: true,
   args: [
@@ -41,8 +55,29 @@ try {
       const raw = text.slice(prefix.length);
       try {
         const parsed = JSON.parse(raw);
-        if (kind === 'full') telemetry = parsed;
-        else seedTelemetry.push(parsed);
+        if (kind === 'full') {
+          telemetry = parsed;
+          persistPartialResult({ partial: false });
+        } else {
+          seedTelemetry.push(parsed);
+          const current = seedTelemetry.length;
+          console.log(
+            'PART6_RUNTIME_SEED ' +
+              String(current) +
+              '/20 seed=' +
+              String(parsed.seed) +
+              ' laps=' +
+              String(parsed.lapCount) +
+              ' settled=' +
+              String(parsed.settled) +
+              ' safety=' +
+              String(parsed.safetyPassed),
+          );
+          persistPartialResult({
+            lastSeed: parsed.seed,
+            seedResultsCaptured: current,
+          });
+        }
       } catch (error) {
         console.error(
           'Could not parse PART 6 ' + kind + ' telemetry payload:',
