@@ -1220,22 +1220,29 @@ function addMeasuredOuterWallColliders(
   body: RAPIER.RigidBody,
   profile: readonly [number, number][],
   friction: number,
-  verticalOffset = 0,
 ) {
   const measured = [...profile].sort((left, right) => left[1] - right[1]);
   const segments = 512;
 
-  // The analytic dark-race trimesh already contains the full lower outer-wall
-  // rise. This collider is only a smooth containment extension above that
-  // surface, so the fast ball never receives duplicate solver contacts below
-  // the channel's top edge.
-  const [channelTopRadius, channelTopY] = PART2_CHANNEL_PROFILE.at(-1)!;
-  const lowerY = channelTopY + verticalOffset - 0.004;
-  const measuredMaxY = Math.max(...measured.map(([, height]) => height));
-  const upperY = Math.max(measuredMaxY, lowerY) + BALL_RADIUS + 0.04;
+  // Build one continuous wall that follows the measured radius-vs-height
+  // profile. This avoids both segmented cuboid seams and the artificial
+  // narrow vertical wall created by collapsing every height to the minimum
+  // measured radius.
+  const minY = Math.min(...measured.map(([, height]) => height));
+  const maxY = Math.max(...measured.map(([, height]) => height));
+  const channelFloorMinY = Math.min(
+    ...PART2_CHANNEL_PROFILE.map(([, height]) => height),
+  );
+  const lowerY = Math.min(
+    minY - 0.025,
+    channelFloorMinY - BALL_RADIUS * 2 - 0.02,
+  );
+  const upperY = maxY + BALL_RADIUS + 0.04;
+
   const profileRows: Array<[number, number]> = [
-    [channelTopRadius, lowerY],
-    [channelTopRadius, upperY],
+    [measured[0][0], lowerY],
+    ...measured,
+    [measured[measured.length - 1][0], upperY],
   ];
 
   const vertices: number[] = [];
@@ -1252,22 +1259,26 @@ function addMeasuredOuterWallColliders(
     }
   }
 
-  for (let segment = 0; segment < segments; segment += 1) {
-    const next = (segment + 1) % segments;
-    const lowerA = segment;
-    const lowerB = next;
-    const upperA = segments + segment;
-    const upperB = segments + next;
+  for (let row = 0; row < profileRows.length - 1; row += 1) {
+    const lowerOffset = row * segments;
+    const upperOffset = (row + 1) * segments;
+    for (let segment = 0; segment < segments; segment += 1) {
+      const next = (segment + 1) % segments;
+      const lowerA = lowerOffset + segment;
+      const lowerB = lowerOffset + next;
+      const upperA = upperOffset + segment;
+      const upperB = upperOffset + next;
 
-    // Inward-facing winding toward the roulette race.
-    indices.push(
-      lowerA,
-      upperB,
-      lowerB,
-      lowerA,
-      upperA,
-      upperB,
-    );
+      // Winding is inward-facing toward the roulette race.
+      indices.push(
+        lowerA,
+        upperB,
+        lowerB,
+        lowerA,
+        upperA,
+        upperB,
+      );
+    }
   }
 
   const collider = world.createCollider(
@@ -6301,7 +6312,6 @@ export function Part2SceneViewport({
                 stationaryBody,
                 measuredOuterWallProfile,
                 activePart3TrackFriction,
-                part2RaceVerticalOffset,
               );
               outerWall.colliders.forEach((collider) => {
                 part3ColliderRoles.set(
