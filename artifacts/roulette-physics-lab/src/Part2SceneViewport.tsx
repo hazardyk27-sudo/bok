@@ -4122,8 +4122,11 @@ export function Part2SceneViewport({
           }
 
           const launchClearance = BALL_RADIUS + 0.002;
-          let launchContactRadius =
-            PART2_ACTUAL_DARK_TRACK_LAUNCH_RADIUS;
+          const operationalLaunchCenterRadius = Math.max(
+            PART2_ACTUAL_DARK_TRACK_LAUNCH_RADIUS,
+            PART2_ACTUAL_WOOD_INNER_RADIUS - BALL_RADIUS - 0.001,
+          );
+          let launchContactRadius = operationalLaunchCenterRadius;
           let launchNormal = part2ChannelNormalAt(
             launchContactRadius,
             run.launchAzimuth,
@@ -4133,7 +4136,7 @@ export function Part2SceneViewport({
               launchNormal.x * Math.sin(run.launchAzimuth) +
               launchNormal.z * Math.cos(run.launchAzimuth);
             launchContactRadius =
-              PART2_ACTUAL_DARK_TRACK_LAUNCH_RADIUS -
+              operationalLaunchCenterRadius -
               radialNormal * launchClearance;
             launchNormal = part2ChannelNormalAt(
               launchContactRadius,
