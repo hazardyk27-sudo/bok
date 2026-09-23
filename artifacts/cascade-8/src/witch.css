@@ -3560,32 +3560,31 @@
 
 
 /* =========================================================
-   MOBILE ADVANCED 25 — APPROVED HORIZONTAL CARD
-   Matches the approved concept: large premium parchment card,
-   compact identity/info rail on the left, dominant 5×5 board on
-   the right, existing payout HUD and bottom controls preserved.
+   MOBILE ADVANCED 25 — APPROVED MOCKUP MATCH
+   30/70 horizontal premium ticket: compact info rail left,
+   dominant 5x5 scratch board right, large rectangular cells.
    ========================================================= */
 @media (max-width: 600px) and (orientation: portrait),
        (max-height: 600px) and (orientation: landscape) and (max-width: 1200px) {
   .witch-page.is-advanced-round {
-    --witch-phone-header-h: 32px;
-    --witch-phone-controls-h: 44px;
+    --witch-phone-header-h: 31px;
+    --witch-phone-controls-h: 43px;
   }
 
   .witch-page.is-advanced-round .witch-appbar {
-    grid-template-columns: 28px minmax(102px, .62fr) minmax(0, 1.82fr);
+    grid-template-columns: 27px minmax(112px, .68fr) minmax(0, 1.75fr);
     gap: 5px;
     padding: 2px 5px;
   }
 
   .witch-page.is-advanced-round .witch-back {
-    width: 26px;
-    height: 26px;
-    font-size: 14px;
+    width: 25px;
+    height: 25px;
+    font-size: 13px;
   }
 
   .witch-page.is-advanced-round .witch-appbrand h1 {
-    font-size: clamp(16px, 2.9cqw, 21px);
+    font-size: clamp(16px, 2.85cqw, 21px);
   }
 
   .witch-page.is-advanced-round .witch-appbrand small,
@@ -3595,7 +3594,7 @@
   }
 
   .witch-page.is-advanced-round .witch-appstats {
-    min-height: 24px;
+    min-height: 23px;
   }
 
   .witch-page.is-advanced-round .witch-stat {
@@ -3603,8 +3602,8 @@
   }
 
   .witch-page.is-advanced-round .witch-stage-shell {
-    grid-template-columns: minmax(0, 1fr) clamp(102px, 16cqw, 142px);
-    grid-template-rows: 12px minmax(0, 1fr);
+    grid-template-columns: minmax(0, 1fr) clamp(98px, 15.5cqw, 138px);
+    grid-template-rows: 11px minmax(0, 1fr);
     gap: 3px;
     padding: 4px;
   }
@@ -3616,6 +3615,7 @@
   }
 
   .witch-page.is-advanced-round .witch-table-surface {
+    padding: 0;
     overflow: hidden;
   }
 
@@ -3624,15 +3624,20 @@
   }
 
   .witch-page.is-advanced-round .witch-payout-hero {
-    padding-block: 2px;
+    padding-block: 1px;
+  }
+
+  .witch-page.is-advanced-round .witch-cashout-button,
+  .witch-page.is-advanced-round .witch-secondary-button {
+    min-height: clamp(29px, 8.5cqh, 38px);
   }
 
   .witch-page.is-advanced-round .witch-control-dock {
     grid-template-columns:
-      minmax(128px, 1.2fr)
+      minmax(132px, 1.22fr)
       minmax(96px, .9fr)
       minmax(72px, .62fr)
-      minmax(100px, .82fr);
+      minmax(104px, .84fr);
     gap: 3px;
     padding: 3px 4px;
   }
@@ -3649,7 +3654,7 @@
 
   .witch-page.is-advanced-round .witch-stake-stepper,
   .witch-page.is-advanced-round .witch-alarm-field select {
-    min-height: 30px;
+    min-height: 29px;
   }
 
   .witch-page.is-advanced-round .witch-primary-button {
@@ -3657,59 +3662,79 @@
   }
 
   .witch-ticket.is-advanced {
+    position: relative !important;
     display: grid;
-    grid-template-columns: minmax(118px, 1fr) auto;
+    grid-template-columns: minmax(150px, 30%) minmax(0, 70%);
     grid-template-rows: auto auto minmax(0, 1fr);
     grid-template-areas:
       "header board"
       "meta board"
       "footer board";
-    column-gap: clamp(7px, 1.25cqw, 12px);
+    column-gap: clamp(7px, 1.1cqw, 11px);
     row-gap: 2px;
-    width: min(98%, 680px) !important;
+    width: min(99%, 720px) !important;
     height: calc(100% - 2px) !important;
     min-width: 0 !important;
     max-width: 100% !important;
     max-height: 100% !important;
     margin: 0 auto !important;
-    padding: clamp(6px, 1.35cqh, 9px) clamp(7px, 1.15cqw, 11px);
+    padding: clamp(6px, 1.3cqh, 9px) clamp(7px, 1.05cqw, 10px);
     overflow: hidden;
     border-radius: 12px;
     background:
-      radial-gradient(circle at 14% 34%, rgba(183, 137, 57, .12), transparent 24%),
-      radial-gradient(circle at 22% 72%, rgba(139, 94, 42, .08), transparent 28%),
-      linear-gradient(104deg, #f8e9c3 0%, #f1ddb0 47%, #f7e8c4 100%);
+      radial-gradient(circle at 13% 30%, rgba(170, 123, 43, .14), transparent 24%),
+      radial-gradient(circle at 23% 72%, rgba(126, 81, 31, .08), transparent 27%),
+      linear-gradient(103deg, #f8e9c3 0%, #f0daaa 44%, #f7e6bd 100%);
     box-shadow:
-      0 12px 28px rgba(0, 0, 0, .42),
-      inset 0 0 0 1px rgba(116, 77, 26, .36),
-      inset 0 0 0 5px rgba(255, 250, 230, .38);
+      0 10px 24px rgba(0, 0, 0, .42),
+      inset 0 0 0 1px rgba(112, 74, 27, .34),
+      inset 0 0 0 5px rgba(255, 250, 232, .40);
   }
 
   .witch-ticket.is-advanced::before {
     inset: 5px;
+    z-index: 0;
+    border: 1px solid rgba(129, 84, 26, .42);
     border-radius: 9px;
-    border: 1px solid rgba(126, 83, 25, .42);
     box-shadow:
-      inset 0 0 0 1px rgba(255,255,255,.34),
-      inset 0 0 28px rgba(113,75,29,.05);
+      inset 0 0 0 1px rgba(255,255,255,.32),
+      inset 0 0 26px rgba(98,62,22,.05);
+  }
+
+  .witch-ticket.is-advanced::after {
+    content: "☾";
+    position: absolute;
+    z-index: 0;
+    left: 4.5%;
+    top: 27%;
+    color: rgba(107, 69, 22, .11);
+    font-family: Georgia, "Times New Roman", serif;
+    font-size: clamp(56px, 10cqw, 86px);
+    line-height: 1;
+    pointer-events: none;
+  }
+
+  .witch-ticket.is-advanced > * {
+    position: relative;
+    z-index: 1;
   }
 
   .witch-ticket.is-advanced .witch-ticket-frame {
     inset: 8px;
-    border-color: rgba(137, 91, 28, .24);
-    opacity: .8;
+    border-color: rgba(131, 86, 28, .22);
+    opacity: .82;
   }
 
   .witch-ticket.is-advanced .witch-ticket-header {
     grid-area: header;
     display: grid;
     grid-template-columns: 1fr;
-    align-content: center;
+    align-content: start;
     justify-items: start;
     min-width: 0;
     min-height: 0;
-    padding: 2px 3px 5px;
-    border-bottom: 1px solid rgba(100, 65, 22, .22);
+    padding: 4px 8px 6px;
+    border-bottom: 1px solid rgba(103, 68, 25, .20);
   }
 
   .witch-ticket.is-advanced .witch-ticket-sidecopy,
@@ -3725,30 +3750,30 @@
 
   .witch-ticket.is-advanced .witch-ticket-lockup::before {
     content: "✦  ☾  ✦";
-    margin-bottom: 3px;
-    color: rgba(121, 78, 24, .76);
+    margin-bottom: 4px;
+    color: rgba(120, 78, 24, .72);
     font-size: clamp(6px, .9cqw, 9px);
-    letter-spacing: .3em;
+    letter-spacing: .28em;
   }
 
   .witch-ticket.is-advanced .witch-ticket-brand {
-    font-size: clamp(23px, 4.1cqw, 34px);
-    line-height: .76;
-    letter-spacing: -.04em;
-    text-shadow: 0 1px 0 rgba(255,255,255,.42);
+    font-size: clamp(24px, 4.25cqw, 35px);
+    line-height: .74;
+    letter-spacing: -.045em;
+    text-shadow: 0 1px 0 rgba(255,255,255,.45);
   }
 
   .witch-ticket.is-advanced .witch-ticket-lockup small {
     margin-top: 4px;
-    color: rgba(93, 63, 29, .75);
-    font-size: clamp(3px, .46cqw, 4.5px);
+    color: rgba(91, 60, 26, .74);
+    font-size: clamp(3px, .45cqw, 4.5px);
     letter-spacing: .22em;
   }
 
   .witch-ticket.is-advanced .witch-ticket-price {
     display: grid;
     grid-template-columns: auto auto;
-    gap: 5px;
+    gap: 6px;
     align-items: center;
     justify-items: start;
     width: 100%;
@@ -3757,17 +3782,19 @@
 
   .witch-ticket.is-advanced .witch-ticket-price small {
     display: inline;
-    color: rgba(85, 58, 29, .76);
-    font-size: clamp(3px, .46cqw, 4.5px);
+    color: rgba(82, 55, 28, .76);
+    font-size: clamp(3px, .45cqw, 4.5px);
   }
 
   .witch-ticket.is-advanced .witch-ticket-price strong {
-    min-width: 48px;
-    padding: 4px 7px 3px;
-    border: 1px solid rgba(122, 81, 27, .36);
+    min-width: 52px;
+    padding: 4px 8px 3px;
+    border: 1px solid rgba(120, 79, 28, .38);
     border-radius: 6px;
-    background: rgba(255, 247, 220, .42);
-    box-shadow: inset 0 1px 0 rgba(255,255,255,.62);
+    background: rgba(255, 247, 220, .48);
+    box-shadow:
+      inset 0 1px 0 rgba(255,255,255,.68),
+      0 2px 5px rgba(88,58,24,.08);
     font-size: clamp(10px, 1.55cqw, 13px);
   }
 
@@ -3779,14 +3806,14 @@
     grid-area: meta;
     display: grid;
     grid-template-columns: 1fr;
-    gap: 4px;
+    gap: 5px;
     align-content: start;
     min-width: 0;
     margin: 0;
-    padding: 5px 3px;
+    padding: 7px 8px 4px;
     border: 0;
-    color: #4f351b;
-    font-size: clamp(4px, .6cqw, 5px);
+    color: #4e351d;
+    font-size: clamp(4px, .58cqw, 5px);
     text-align: left;
   }
 
@@ -3796,8 +3823,8 @@
 
   .witch-ticket.is-advanced .witch-ticket-meta-row > span {
     width: fit-content;
-    padding: 3px 6px;
-    border: 1px solid rgba(132, 91, 34, .22);
+    padding: 3px 7px;
+    border: 1px solid rgba(132, 91, 34, .24);
     border-radius: 5px;
     background: rgba(255,255,255,.12);
   }
@@ -3808,27 +3835,55 @@
   }
 
   .witch-ticket.is-advanced .witch-ticket-meta-row b {
-    color: #2f2116;
+    color: #2e2015;
+  }
+
+  .witch-ticket.is-advanced .witch-ticket-footer {
+    grid-area: footer;
+    display: grid;
+    align-content: end;
+    gap: 3px;
+    min-width: 0;
+    margin: 0;
+    padding: 6px 8px 4px;
+    color: rgba(74, 50, 27, .70);
+    font-size: clamp(3px, .45cqw, 4px);
+    text-align: left;
+  }
+
+  .witch-ticket.is-advanced .witch-ticket-footer strong {
+    justify-self: start;
+    color: #6d4920;
+    font-size: clamp(5px, .72cqw, 7px);
+    letter-spacing: .18em;
+  }
+
+  .witch-ticket.is-advanced .witch-ticket-footer span:last-child {
+    overflow: hidden;
+    max-width: 100%;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
 
   .witch-ticket.is-advanced .witch-board-wrap {
     grid-area: board;
-    align-self: center;
-    justify-self: end;
-    width: clamp(214px, 66cqh, 286px);
-    max-width: 100%;
-    aspect-ratio: 1;
+    align-self: stretch;
+    justify-self: stretch;
+    width: 100%;
+    height: 100%;
+    min-width: 0;
+    min-height: 0;
     margin: 0;
-    padding: clamp(5px, 1.15cqh, 7px);
-    border: 1px solid rgba(118, 77, 25, .28);
+    padding: clamp(5px, 1.05cqh, 7px);
+    border: 1px solid rgba(118, 77, 25, .30);
     border-radius: 10px;
     background:
-      linear-gradient(145deg, rgba(255,255,255,.42), rgba(129,83,24,.08)),
-      #ead29e;
+      linear-gradient(145deg, rgba(255,255,255,.40), rgba(130,84,25,.09)),
+      #e8cf96;
     box-shadow:
-      inset 0 0 0 2px rgba(255,255,255,.25),
-      inset 0 8px 18px rgba(255,255,255,.17),
-      0 5px 12px rgba(67, 41, 15, .16);
+      inset 0 0 0 2px rgba(255,255,255,.24),
+      inset 0 8px 18px rgba(255,255,255,.14),
+      0 5px 12px rgba(67,41,15,.14);
   }
 
   .witch-ticket.is-advanced .witch-board {
@@ -3844,12 +3899,12 @@
     height: 100%;
     min-width: 0;
     min-height: 0;
-    aspect-ratio: 1;
-    border: 1px solid rgba(105, 67, 22, .44);
-    border-radius: clamp(5px, 1.1cqh, 8px);
+    aspect-ratio: auto;
+    border: 1px solid rgba(101, 65, 22, .46);
+    border-radius: clamp(6px, 1.15cqh, 9px);
     box-shadow:
-      0 2px 4px rgba(65, 41, 17, .22),
-      inset 0 0 0 1px rgba(255,255,255,.25);
+      0 2px 5px rgba(62, 38, 14, .24),
+      inset 0 0 0 1px rgba(255,255,255,.28);
   }
 
   .witch-ticket.is-advanced .witch-cell::before {
@@ -3857,62 +3912,36 @@
   }
 
   .witch-ticket.is-advanced .witch-cell-content {
-    transform: scale(.7);
+    transform: scale(.76);
   }
 
   .witch-ticket.is-advanced .witch-cell-result-label {
     right: 2px;
     bottom: 2px;
     left: 2px;
-    font-size: clamp(2.8px, .46cqh, 3.4px);
-  }
-
-  .witch-ticket.is-advanced .witch-ticket-footer {
-    grid-area: footer;
-    display: grid;
-    align-content: end;
-    gap: 3px;
-    min-width: 0;
-    margin: 0;
-    padding: 5px 3px 2px;
-    color: rgba(75, 51, 27, .72);
-    font-size: clamp(3px, .46cqw, 4px);
-    text-align: left;
-  }
-
-  .witch-ticket.is-advanced .witch-ticket-footer strong {
-    justify-self: start;
-    color: #6d4a20;
-    font-size: clamp(5px, .72cqw, 7px);
-    letter-spacing: .18em;
-  }
-
-  .witch-ticket.is-advanced .witch-ticket-footer span:last-child {
-    overflow: hidden;
-    max-width: 100%;
-    text-overflow: ellipsis;
-    white-space: nowrap;
+    font-size: clamp(3px, .48cqh, 3.6px);
   }
 }
 
-/* Smallest supported phone: cells stay usable, decoration gives way first. */
+/* Very short phone heights: remove ornament before shrinking the grid. */
 @media (max-width: 340px) and (orientation: portrait),
        (max-height: 340px) and (orientation: landscape) and (max-width: 760px) {
   .witch-page.is-advanced-round {
-    --witch-phone-header-h: 29px;
-    --witch-phone-controls-h: 40px;
+    --witch-phone-header-h: 28px;
+    --witch-phone-controls-h: 39px;
   }
 
   .witch-page.is-advanced-round .witch-stage-shell {
-    grid-template-columns: minmax(0, 1fr) 96px;
+    grid-template-columns: minmax(0, 1fr) 94px;
   }
 
   .witch-ticket.is-advanced {
-    grid-template-columns: minmax(98px, .72fr) auto;
+    grid-template-columns: minmax(126px, 28%) minmax(0, 72%);
     column-gap: 5px;
     padding: 4px 5px;
   }
 
+  .witch-ticket.is-advanced::after,
   .witch-ticket.is-advanced .witch-ticket-lockup::before,
   .witch-ticket.is-advanced .witch-ticket-lockup small,
   .witch-ticket.is-advanced .witch-ticket-price small,
@@ -3921,11 +3950,16 @@
   }
 
   .witch-ticket.is-advanced .witch-ticket-brand {
-    font-size: 19px;
+    font-size: 20px;
+  }
+
+  .witch-ticket.is-advanced .witch-ticket-header,
+  .witch-ticket.is-advanced .witch-ticket-meta-row,
+  .witch-ticket.is-advanced .witch-ticket-footer {
+    padding-inline: 4px;
   }
 
   .witch-ticket.is-advanced .witch-board-wrap {
-    width: clamp(212px, 66cqh, 224px);
     padding: 4px;
   }
 
