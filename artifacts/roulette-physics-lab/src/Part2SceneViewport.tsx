@@ -1223,21 +1223,16 @@ function addMeasuredOuterWallColliders(
 ) {
   const measured = [...profile].sort((left, right) => left[1] - right[1]);
   const segments = 512;
-  const continuousMeasured: Array<[number, number]> = [];
-  for (const sample of measured) {
-    const previous = continuousMeasured.at(-1);
-    if (
-      previous &&
-      Math.abs(sample[0] - previous[0]) > BALL_RADIUS
-    ) {
-      break;
-    }
-    continuousMeasured.push(sample);
-  }
-  const activeMeasured =
-    continuousMeasured.length >= 2 ? continuousMeasured : measured;
-  const minY = Math.min(...activeMeasured.map(([, height]) => height));
-  const maxY = Math.max(...activeMeasured.map(([, height]) => height));
+
+  // Build the measured outer containment wall as one continuous inward-facing
+  // trimesh. The previous ring of separate cuboids introduced collider seams
+  // that could kick the 30 wu/s ball upward as it crossed segment boundaries.
+  const innerFaceRadius = Math.min(
+    PART2_ACTUAL_WOOD_INNER_RADIUS,
+    ...measured.map(([radius]) => radius),
+  );
+  const minY = Math.min(...measured.map(([, height]) => height));
+  const maxY = Math.max(...measured.map(([, height]) => height));
   const channelFloorMinY = Math.min(
     ...PART2_CHANNEL_PROFILE.map(([, height]) => height),
   );
@@ -1246,50 +1241,38 @@ function addMeasuredOuterWallColliders(
     channelFloorMinY - BALL_RADIUS * 2 - 0.02,
   );
   const upperY = maxY + BALL_RADIUS + 0.04;
-
-  // Preserve the measured height->radius wall shape instead of collapsing all
-  // samples onto the innermost radius. That previous vertical cylinder pinched
-  // the race where the real wall sits farther out and created a launch ramp
-  // when the fast ball contacted the channel and wall simultaneously.
-  const wallProfile: Array<[number, number]> = [
-    [activeMeasured[0][0], lowerY],
-    ...activeMeasured,
-    [activeMeasured[activeMeasured.length - 1][0], upperY],
-  ];
-
   const vertices: number[] = [];
   const indices: number[] = [];
-  for (const [radius, y] of wallProfile) {
+
+  for (const y of [lowerY, upperY]) {
     for (let segment = 0; segment < segments; segment += 1) {
       const angle = (segment / segments) * TWO_PI;
       vertices.push(
-        Math.sin(angle) * radius,
+        Math.sin(angle) * innerFaceRadius,
         y,
-        Math.cos(angle) * radius,
+        Math.cos(angle) * innerFaceRadius,
       );
     }
   }
 
-  for (let row = 0; row < wallProfile.length - 1; row += 1) {
-    const current = row * segments;
-    const nextRow = (row + 1) * segments;
-    for (let segment = 0; segment < segments; segment += 1) {
-      const next = (segment + 1) % segments;
-      const lowerA = current + segment;
-      const lowerB = current + next;
-      const upperA = nextRow + segment;
-      const upperB = nextRow + next;
+  const upperOffset = segments;
+  for (let segment = 0; segment < segments; segment += 1) {
+    const next = (segment + 1) % segments;
+    const lowerA = segment;
+    const lowerB = next;
+    const upperA = upperOffset + segment;
+    const upperB = upperOffset + next;
 
-      // Inward-facing winding: the playable race is inside this measured wall.
-      indices.push(
-        lowerA,
-        upperB,
-        lowerB,
-        lowerA,
-        upperA,
-        upperB,
-      );
-    }
+    // Reverse the winding so the oriented surface normal points inward toward
+    // the roulette race rather than outward into the wooden rim.
+    indices.push(
+      lowerA,
+      upperB,
+      lowerB,
+      lowerA,
+      upperA,
+      upperB,
+    );
   }
 
   const collider = world.createCollider(
@@ -1309,7 +1292,7 @@ function addMeasuredOuterWallColliders(
 
   return {
     colliders: [collider],
-    samples: wallProfile,
+    samples: [[innerFaceRadius, lowerY], [innerFaceRadius, upperY]] as Array<[number, number]>,
     segments,
   };
 }
@@ -6318,12 +6301,18 @@ export function Part2SceneViewport({
                 'analytic-dark-recessed-channel',
               );
 
-              const outerWall = addMeasuredOuterWallColliders(
-                world,
-                stationaryBody,
-                measuredOuterWallProfile,
-                activePart3TrackFriction,
-              );
+              const outerWall = part6FullSpinRouteActive
+                ? {
+                    colliders: [] as RAPIER.Collider[],
+                    samples: measuredOuterWallProfile,
+                    segments: 0,
+                  }
+                : addMeasuredOuterWallColliders(
+                    world,
+                    stationaryBody,
+                    measuredOuterWallProfile,
+                    activePart3TrackFriction,
+                  );
               outerWall.colliders.forEach((collider) => {
                 part3ColliderRoles.set(
                   collider.handle,
