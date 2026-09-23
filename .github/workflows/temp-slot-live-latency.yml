@@ -89,9 +89,9 @@ jobs:
       - name: Benchmark slot engine without API or database
         shell: bash
         run: |
-          cat > /tmp/slot-engine-bench.ts <<'TS'
-          import { playSpin } from process.cwd() + "/artifacts/cascade-8/src/engine/SlotEngine.ts";
-          import { SeededRNG } from process.cwd() + "/artifacts/cascade-8/src/engine/RNG.ts";
+          cat > artifacts/cascade-8/src/simulation/liveLatencyBench.ts <<'TS'
+          import { playSpin } from "../engine/SlotEngine";
+          import { SeededRNG } from "../engine/RNG";
           import { performance } from "node:perf_hooks";
 
           const samples:number[]=[];
@@ -106,4 +106,4 @@ jobs:
           const avg=samples.reduce((a,b)=>a+b,0)/samples.length;
           console.log("ENGINE n="+samples.length+" avg="+avg.toFixed(3)+"ms median="+pick(.5).toFixed(3)+"ms p95="+pick(.95).toFixed(3)+"ms p99="+pick(.99).toFixed(3)+"ms max="+samples.at(-1)!.toFixed(3)+"ms");
           TS
-          pnpm exec tsx /tmp/slot-engine-bench.ts
+          pnpm --filter @workspace/cascade-8 exec tsx src/simulation/liveLatencyBench.ts
