@@ -1,0 +1,109 @@
+name: Temporary Slot Live Latency Diagnostic
+
+on:
+  push:
+    branches:
+      - feature/slot
+    paths:
+      - .github/workflows/temp-slot-live-latency.yml
+
+permissions:
+  contents: read
+
+jobs:
+  diagnose:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Measure published slot endpoints
+        shell: bash
+        run: |
+          set -euo pipefail
+          BASE="https://cascade-8-slot-game.replit.app"
+          COOKIE="$(mktemp)"
+          OUT="$RUNNER_TEMP/slot-latency.tsv"
+
+          echo "kind idx code dns connect tls ttfb total size" > "$OUT"
+
+          measure_get() {
+            local kind="$1"
+            local path="$2"
+            local count="$3"
+            for i in $(seq 1 "$count"); do
+              curl -sS --max-time 20 -b "$COOKIE" -c "$COOKIE" -o /dev/null \
+                -w "$kind $i %{http_code} %{time_namelookup} %{time_connect} %{time_appconnect} %{time_starttransfer} %{time_total} %{size_download}\\n" \
+                "$BASE$path" >> "$OUT"
+            done
+          }
+
+          measure_get "root" "/" 10
+          measure_get "state" "/api/slot/state" 20
+
+          for i in $(seq 1 40); do
+            KEY="diag-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}-${i}-$(date +%s%N)"
+            curl -sS --max-time 30 -b "$COOKIE" -c "$COOKIE" -o /dev/null \
+              -H "Content-Type: application/json" \
+              -d "{\"stakeCents\":100,\"idempotencyKey\":\"$KEY\"}" \
+              -w "spin $i %{http_code} %{time_namelookup} %{time_connect} %{time_appconnect} %{time_starttransfer} %{time_total} %{size_download}\\n" \
+              "$BASE/api/slot/spins" >> "$OUT"
+          done
+
+          cat "$OUT"
+
+          python - "$OUT" <<'PY'
+          import sys, statistics
+          p=sys.argv[1]
+          rows=[]
+          with open(p) as f:
+              next(f)
+              for line in f:
+                  kind,idx,code,dns,conn,tls,ttfb,total,size=line.split()
+                  rows.append(dict(kind=kind,idx=int(idx),code=int(code),dns=float(dns),conn=float(conn),tls=float(tls),ttfb=float(ttfb),total=float(total),size=int(float(size))))
+          def pct(v,p):
+              if not v:return 0
+              s=sorted(v)
+              k=max(0,min(len(s)-1,round((len(s)-1)*p)))
+              return s[k]
+          for kind in ("root","state","spin"):
+              rs=[r for r in rows if r["kind"]==kind]
+              vals=[r["total"]*1000 for r in rs]
+              ttfb=[r["ttfb"]*1000 for r in rs]
+              sizes=[r["size"] for r in rs]
+              print(f"SUMMARY {kind}: n={len(rs)} status={sorted(set(r['code'] for r in rs))} median_total={statistics.median(vals):.1f}ms p95_total={pct(vals,.95):.1f}ms max_total={max(vals):.1f}ms median_ttfb={statistics.median(ttfb):.1f}ms p95_ttfb={pct(ttfb,.95):.1f}ms median_size={statistics.median(sizes):.0f}B")
+              slow=sorted(rs,key=lambda r:r["total"],reverse=True)[:5]
+              for r in slow:
+                  print(f"SLOW {kind} #{r['idx']}: code={r['code']} total={r['total']*1000:.1f}ms ttfb={r['ttfb']*1000:.1f}ms connect={r['conn']*1000:.1f}ms tls={r['tls']*1000:.1f}ms size={r['size']}B")
+          PY
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+
+      - name: Benchmark slot engine without API or database
+        shell: bash
+        run: |
+          cat > /tmp/slot-engine-bench.ts <<'TS'
+          import { playSpin } from process.cwd() + "/artifacts/cascade-8/src/engine/SlotEngine.ts";
+          import { SeededRNG } from process.cwd() + "/artifacts/cascade-8/src/engine/RNG.ts";
+          import { performance } from "node:perf_hooks";
+
+          const samples:number[]=[];
+          for(let i=0;i<2000;i++){
+            const rng=new SeededRNG("live-latency-"+i);
+            const t=performance.now();
+            playSpin(100,rng);
+            samples.push(performance.now()-t);
+          }
+          samples.sort((a,b)=>a-b);
+          const pick=(p:number)=>samples[Math.min(samples.length-1,Math.round((samples.length-1)*p))];
+          const avg=samples.reduce((a,b)=>a+b,0)/samples.length;
+          console.log("ENGINE n="+samples.length+" avg="+avg.toFixed(3)+"ms median="+pick(.5).toFixed(3)+"ms p95="+pick(.95).toFixed(3)+"ms p99="+pick(.99).toFixed(3)+"ms max="+samples.at(-1)!.toFixed(3)+"ms");
+          TS
+          pnpm exec tsx /tmp/slot-engine-bench.ts
