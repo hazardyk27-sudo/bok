@@ -9,6 +9,7 @@ export type ScratchCellPresentation = {
 export function getScratchCellLayerMarkup() {
   return `
     <span class="witch-cell-result-layer" aria-hidden="true">
+      <span class="witch-cell-aura"></span>
       <span class="witch-cell-content"></span>
       <span class="witch-cell-result-label"></span>
     </span>
@@ -25,10 +26,10 @@ export function getScratchCellPresentation(
   if (!revealed) return { symbol: "", label: "", resultClass: null };
   if (bomb) {
     return {
-      symbol: "💣",
+      symbol: "●",
       label: "BOMBA",
       resultClass: "bomb",
     };
   }
-  return { symbol: "✦", label: "GOLD", resultClass: "safe" };
+  return { symbol: "☘", label: "ALTIN", resultClass: "safe" };
 }
