@@ -174,6 +174,18 @@ describe("authoritative roulette physics config", () => {
     expect(part3ViewportSource).toContain(
       "part4DeflectorAudit?.passed",
     );
+    expect(part3ViewportSource).toContain(
+      "part3DeflectorColliders = addMeasuredDeflectorColliders",
+    );
+    expect(part3ViewportSource).toContain(
+      "outerLaneOnly || outerLaneSpinOnly",
+    );
+    expect(part3ViewportSource).toContain(
+      "part4MeasuredDeflectorOuterRadius ??",
+    );
+    expect(part3ViewportSource).not.toContain(
+      "radius - BALL_RADIUS - PART2_ACTUAL_INWARD_EDGE_RADIUS",
+    );
   });
 
   it("keeps the PART 2 containment correction geometric only", () => {
