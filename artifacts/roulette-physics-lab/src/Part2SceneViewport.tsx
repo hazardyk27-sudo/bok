@@ -3261,6 +3261,7 @@ export function Part2SceneViewport({
           : numericPlacementPassed
             ? 'PART 2 recessed dark-race static placement numerically passed; visual gate unavailable'
             : 'PART 2 recessed dark-race static placement failed',
+        numericPlacementPassed ? undefined : 'physics-validation',
       );
       if (numericPlacementPassed) {
         if (outerLaneSpinOnly) {
@@ -6519,6 +6520,7 @@ export function Part2SceneViewport({
                 passed
                   ? 'PART B outer dark-track launch lane passed'
                   : 'PART B outer dark-track launch lane failed',
+                passed ? undefined : 'physics-validation',
               );
               setPart2RacePlacementReport((previous) =>
                 previous
@@ -6866,6 +6868,7 @@ export function Part2SceneViewport({
                 passed
                   ? 'PART 3 short visual/physics alignment probe passed'
                   : 'PART 3 short visual/physics alignment probe failed',
+                passed ? undefined : 'physics-validation',
               );
             }
           }
