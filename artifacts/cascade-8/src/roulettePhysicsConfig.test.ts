@@ -416,13 +416,19 @@ describe("authoritative roulette physics config", () => {
       "Preview remains interactive for diagnosis.",
     );
     expect(physicsLabAppSource).toContain(
-      "label: 'Asset unavailable'",
+      "label: 'Scene unavailable'",
     );
     expect(physicsLabAppSource).not.toContain(
       "label: 'WebGL blocked'",
     );
     expect(physicsLabAppSource).not.toContain(
       "<strong>WebGL unavailable</strong>",
+    );
+    expect(physicsLabAppSource).toContain(
+      'data-testid="build-part6b"',
+    );
+    expect(physicsLabAppSource).toContain(
+      'PART 6B · FULL-SPIN',
     );
   });
 
@@ -438,6 +444,12 @@ describe("authoritative roulette physics config", () => {
     );
     expect(part3ViewportSource).toContain(
       "'PART 6B full-spin route active · recessed dark-race static gate running'",
+    );
+    expect(part3ViewportSource).toContain(
+      "'PART 6B · FULL-SPIN CALIBRATION'",
+    );
+    expect(part3ViewportSource).toContain(
+      "PART 6B ROUTE · 6A.1 TELEMETRY",
     );
     expect(part3ViewportSource).toContain(
       "outerLaneOnly &&\n            !part6FullSpinRouteActive",
