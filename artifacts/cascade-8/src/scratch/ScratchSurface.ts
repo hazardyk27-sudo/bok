@@ -81,6 +81,8 @@ export class ScratchSurface {
   private debrisFrame: number | null = null;
   private debrisFrameAt = 0;
   private debris: DebrisParticle[] = [];
+  private resizeObserver?: ResizeObserver;
+  private resizeFrame: number | null = null;
 
   private readonly handlePointerDown = (event: PointerEvent) => {
     if (event.pointerType === "mouse" && event.button !== 0) return;
@@ -187,8 +189,13 @@ export class ScratchSurface {
     this.resultReady = options.resultReady ?? false;
     if (this.resultReady) this.resultRequest = Promise.resolve();
 
-    this.resizeCanvases();
+    this.resizeCanvases(true);
     this.paintLayers();
+
+    if (typeof ResizeObserver !== "undefined") {
+      this.resizeObserver = new ResizeObserver(() => this.scheduleCanvasResize());
+      this.resizeObserver.observe(this.interactionCanvas);
+    }
 
     this.interactionCanvas.addEventListener("pointerdown", this.handlePointerDown);
     this.interactionCanvas.addEventListener("pointermove", this.handlePointerMove);
@@ -199,6 +206,12 @@ export class ScratchSurface {
 
   destroy() {
     this.cancelDebris();
+    this.resizeObserver?.disconnect();
+    this.resizeObserver = undefined;
+    if (this.resizeFrame !== null) {
+      window.cancelAnimationFrame(this.resizeFrame);
+      this.resizeFrame = null;
+    }
     if (this.pointerId.value !== null && this.interactionCanvas.hasPointerCapture(this.pointerId.value)) {
       this.interactionCanvas.releasePointerCapture(this.pointerId.value);
     }
@@ -272,20 +285,50 @@ export class ScratchSurface {
     }
   }
 
-  private resizeCanvases() {
+  private scheduleCanvasResize() {
+    if (this.resizeFrame !== null) return;
+    this.resizeFrame = window.requestAnimationFrame(() => {
+      this.resizeFrame = null;
+      if (!this.resizeCanvases()) return;
+
+      // Canvas backing stores are cleared whenever their dimensions change.
+      // Repaint the physical material and replay the normalized scratch trail
+      // so the visible abrasion stays registered with the DOM box after any
+      // responsive/layout/font/orientation resize.
+      this.paintLayers();
+      for (const sample of this.trail) {
+        this.applyThreeLayerAbrasion(sample.point, sample.angle, sample.speed, this.resultReady);
+      }
+      this.clearDebris();
+    });
+  }
+
+  private resizeCanvases(force = false) {
     const width = Math.max(1, this.interactionCanvas.clientWidth);
     const height = Math.max(1, this.interactionCanvas.clientHeight);
     const ratio = Math.max(1, Math.min(2, window.devicePixelRatio || 1));
+    const targetWidth = Math.max(1, Math.round(width * ratio));
+    const targetHeight = Math.max(1, Math.round(height * ratio));
+    const needsResize = force || this.layers.some((layer) =>
+      layer.canvas.width !== targetWidth || layer.canvas.height !== targetHeight
+    ) || Boolean(
+      this.debrisCanvas &&
+      (this.debrisCanvas.width !== targetWidth || this.debrisCanvas.height !== targetHeight)
+    );
+
+    if (!needsResize) return false;
+
     for (const layer of this.layers) {
-      layer.canvas.width = Math.max(1, Math.round(width * ratio));
-      layer.canvas.height = Math.max(1, Math.round(height * ratio));
+      layer.canvas.width = targetWidth;
+      layer.canvas.height = targetHeight;
       layer.context.setTransform(ratio, 0, 0, ratio, 0, 0);
     }
     if (this.debrisCanvas && this.debrisContext) {
-      this.debrisCanvas.width = Math.max(1, Math.round(width * ratio));
-      this.debrisCanvas.height = Math.max(1, Math.round(height * ratio));
+      this.debrisCanvas.width = targetWidth;
+      this.debrisCanvas.height = targetHeight;
       this.debrisContext.setTransform(ratio, 0, 0, ratio, 0, 0);
     }
+    return true;
   }
 
   private paintLayers() {
