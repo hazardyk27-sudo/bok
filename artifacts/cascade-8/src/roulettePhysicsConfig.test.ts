@@ -402,6 +402,15 @@ describe("authoritative roulette physics config", () => {
       "PART6_STEP_PROGRESS",
     );
     expect(part3ViewportSource).toContain(
+      "ROULETTE_RUNTIME_ASSET_PATH",
+    );
+    expect(part3ViewportSource).toContain(
+      "import.meta.env.BASE_URL",
+    );
+    expect(part3ViewportSource).toContain(
+      "loader.load(\n        ROULETTE_RUNTIME_ASSET_PATH",
+    );
+    expect(part3ViewportSource).toContain(
       "PART6_DIAGNOSTIC_STAGE",
     );
     expect(part3ViewportSource).toContain(

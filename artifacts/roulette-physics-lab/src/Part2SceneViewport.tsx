@@ -30,6 +30,9 @@ import {
   ROULETTE_Y_ORIGIN,
 } from './roulette-scene-config';
 
+const ROULETTE_RUNTIME_ASSET_PATH =
+  import.meta.env.BASE_URL.replace(/\/?$/, '/') +
+  ROULETTE_ASSET_PATH.split('/').at(-1)!;
 const FIXED_TIMESTEP = ROULETTE_FIXED_TIMESTEP;
 const TEST_ANGULAR_SPEED = ROULETTE_ROTOR_ANGULAR_SPEED;
 const GRAVITY_Y = ROULETTE_GRAVITY_Y;
@@ -5706,7 +5709,7 @@ export function Part2SceneViewport({
 
       const loader = new GLTFLoader();
       loader.load(
-        ROULETTE_ASSET_PATH,
+        ROULETTE_RUNTIME_ASSET_PATH,
         async (gltf) => {
           if (disposed) return;
           const runtimeScene = gltf.scene.clone(true);
