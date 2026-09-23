@@ -65,6 +65,9 @@ jobs:
       - name: Typecheck roulette physics lab
         run: pnpm --filter @workspace/roulette-physics-lab run typecheck
 
+      - name: Run roulette physics contract tests
+        run: pnpm --filter @workspace/cascade-8 exec vitest run src/roulettePhysicsConfig.test.ts
+
       - name: Start roulette physics lab
         shell: bash
         run: |
