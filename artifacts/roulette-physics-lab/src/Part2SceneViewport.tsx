@@ -1224,10 +1224,10 @@ function addMeasuredOuterWallColliders(
   const measured = [...profile].sort((left, right) => left[1] - right[1]);
   const segments = 512;
 
-  // Build one continuous wall that follows the measured radius-vs-height
-  // profile. This avoids both segmented cuboid seams and the artificial
-  // narrow vertical wall created by collapsing every height to the minimum
-  // measured radius.
+  // Use one smooth vertical containment wall at the measured dark-race outer
+  // boundary. The previous minimum-radius wall squeezed the launch lane, while
+  // the sloped measured wall converted radial speed into vertical launch.
+  const innerFaceRadius = PART2_ACTUAL_DARK_TRACK_RADIUS_BAND[1];
   const minY = Math.min(...measured.map(([, height]) => height));
   const maxY = Math.max(...measured.map(([, height]) => height));
   const channelFloorMinY = Math.min(
@@ -1238,11 +1238,9 @@ function addMeasuredOuterWallColliders(
     channelFloorMinY - BALL_RADIUS * 2 - 0.02,
   );
   const upperY = maxY + BALL_RADIUS + 0.04;
-
   const profileRows: Array<[number, number]> = [
-    [measured[0][0], lowerY],
-    ...measured,
-    [measured[measured.length - 1][0], upperY],
+    [innerFaceRadius, lowerY],
+    [innerFaceRadius, upperY],
   ];
 
   const vertices: number[] = [];
@@ -1259,26 +1257,20 @@ function addMeasuredOuterWallColliders(
     }
   }
 
-  for (let row = 0; row < profileRows.length - 1; row += 1) {
-    const lowerOffset = row * segments;
-    const upperOffset = (row + 1) * segments;
-    for (let segment = 0; segment < segments; segment += 1) {
-      const next = (segment + 1) % segments;
-      const lowerA = lowerOffset + segment;
-      const lowerB = lowerOffset + next;
-      const upperA = upperOffset + segment;
-      const upperB = upperOffset + next;
-
-      // Winding is inward-facing toward the roulette race.
-      indices.push(
-        lowerA,
-        upperB,
-        lowerB,
-        lowerA,
-        upperA,
-        upperB,
-      );
-    }
+  for (let segment = 0; segment < segments; segment += 1) {
+    const next = (segment + 1) % segments;
+    const lowerA = segment;
+    const lowerB = next;
+    const upperA = segments + segment;
+    const upperB = segments + next;
+    indices.push(
+      lowerA,
+      upperB,
+      lowerB,
+      lowerA,
+      upperA,
+      upperB,
+    );
   }
 
   const collider = world.createCollider(
