@@ -957,6 +957,15 @@ One audit-only instruction was mistakenly sent to Replit before this rule was cl
 - Mobile QA now expects the dock to remain visible and Advanced cells to stay at least ~34 CSS px on supported phone viewports.
 - Merged via PR #7 into GitHub `main`, merge commit `ac238c6`.
 
+### Stage 19 — Restore old mobile shell + horizontal Advanced 25 ticket
+- Rejected Advanced 25 focus mode was removed; the prior mobile landscape shell, right-side payout HUD, and bottom control dock remain visible during Advanced rounds.
+- Advanced 25 now uses a dedicated **horizontal premium ticket** instead of a tall/stacked card.
+- Horizontal Advanced ticket layout: title/price/meta/footer on the left, 5×5 scratch board on the right.
+- Advanced ticket keeps the same ivory/gold visual language but uses its width more efficiently so the board can stay larger without hiding the rest of the mobile UI.
+- Precise scratch mapping, standardized 14px local brush radius, and cash-register payout sound from Stage 18 are preserved.
+- Mobile QA now checks that the Advanced ticket is truly horizontal, remains inside the viewport, keeps the control dock visible, and preserves usable cell size.
+- Merged into GitHub `main` via PR #8, merge commit `12ad23e`.
+
 ### Stage 18 — Advanced 25 mobile focus + precise scratch + payout sound
 - Mobile Advanced 25 now enters a dedicated focus mode whenever an Advanced round exists.
 - In Advanced focus, the lobby control dock is hidden and its height is reassigned to the ticket/board.
@@ -1067,7 +1076,7 @@ One audit-only instruction was mistakenly sent to Replit before this rule was cl
 
 As of this memory update, the next task is:
 
-> **Manually sync GitHub main in Replit Shell, then verify the true responsive mobile pass at 360×640, ~390×844, 412×915, and landscape: no rotation, no clipping, Standard/Advanced tickets fully visible, payout usable, controls reachable, scratch coordinates correct, and no overflow.**
+> **Manually sync GitHub main in Replit Shell, then verify the restored mobile landscape shell and the new horizontal Advanced 25 ticket: ticket should look premium and wide, 5×5 board should be on the right side of the ticket, payout HUD/control dock must remain visible, scratch must follow the pointer exactly, and there must be no viewport overflow.**
 
 Priority checks:
 1. Desktop should visually read as the approved premium mockup, roughly 80%+ similar in hierarchy/composition.
