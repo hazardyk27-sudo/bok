@@ -23,6 +23,36 @@ const isRouletteRoute = currentPath === "/roulette";
 const isWitchRoute = currentPath === "/cadi-kazan";
 const isWinLabelPreview = isLab && new URLSearchParams(window.location.search).get("preview") === "win-labels";
 const isMultiplierCollectionPreview = isLab && new URLSearchParams(window.location.search).get("preview") === "multiplier-collection";
+
+const syncSlotVisualViewport = () => {
+  if (!isSlotRoute) return;
+  const viewport = window.visualViewport;
+  const viewportHeight = Math.round(viewport?.height ?? window.innerHeight);
+  const viewportTop = Math.max(0, Math.round(viewport?.offsetTop ?? 0));
+  const layoutHeight = Math.round(window.innerHeight);
+  const browserOcclusion = Math.max(0, layoutHeight - viewportHeight - viewportTop);
+  const standalone = window.matchMedia("(display-mode: standalone)").matches
+    || Boolean((navigator as Navigator & { standalone?: boolean }).standalone);
+  const portrait = window.innerHeight >= window.innerWidth;
+
+  // Chrome's installed-app WebView can report a viewport that extends behind
+  // Android's 3-button navigation bar while env(safe-area-inset-bottom) stays 0.
+  // Browsers do not have this mismatch because their visual viewport is already
+  // reduced by browser chrome. Keep one usable-height variable for both modes.
+  const standaloneBottomGuard = standalone && portrait && browserOcclusion < 8 ? 44 : 0;
+  const usableHeight = Math.max(320, viewportHeight - standaloneBottomGuard);
+  document.documentElement.style.setProperty("--slot-visual-height", `${usableHeight}px`);
+  document.documentElement.dataset.slotDisplayMode = standalone ? "standalone" : "browser";
+};
+
+if (isSlotRoute) {
+  syncSlotVisualViewport();
+  window.visualViewport?.addEventListener("resize", syncSlotVisualViewport, { passive: true });
+  window.visualViewport?.addEventListener("scroll", syncSlotVisualViewport, { passive: true });
+  window.addEventListener("resize", syncSlotVisualViewport, { passive: true });
+  window.addEventListener("orientationchange", syncSlotVisualViewport, { passive: true });
+}
+
 const describeStreamCell = (cell: BoardCell) => {
   const symbol = getNormalSymbol(cell);
   if (!symbol) return cell === "SCATTER" ? "SCATTER" : "CORE";
