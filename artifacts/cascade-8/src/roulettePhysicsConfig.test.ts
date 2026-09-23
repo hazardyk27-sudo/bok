@@ -349,6 +349,27 @@ describe("authoritative roulette physics config", () => {
     expect(part3ViewportSource).toContain(
       "const PART3_OUTER_SPIN_ANGULAR_DAMPING = 0.01",
     );
+    expect(part3ViewportSource).toContain(
+      "const activePart3TrackFriction = outerLaneSpinOnly",
+    );
+    expect(part3ViewportSource).toContain(
+      "? PART3_OUTER_SPIN_TRACK_FRICTION",
+    );
+    expect(part3ViewportSource).toContain(
+      "? PART3_OUTER_SPIN_LINEAR_DAMPING",
+    );
+    expect(part3ViewportSource).toContain(
+      "? PART3_OUTER_SPIN_ANGULAR_DAMPING",
+    );
+    expect(part3ViewportSource).toContain(
+      ".setFriction(activePart3TrackFriction)",
+    );
+    expect(part3ViewportSource).toContain(
+      "validationMode === 'part3' ? activePart3LinearDamping : 0.04",
+    );
+    expect(part3ViewportSource).toContain(
+      "validationMode === 'part3' ? activePart3AngularDamping : 0.08",
+    );
     expect(part3ViewportSource).not.toContain(".addForce(");
     expect(part3ViewportSource).not.toContain(".applyImpulse(");
     expect(part3ViewportSource).not.toContain(".addTorque(");
