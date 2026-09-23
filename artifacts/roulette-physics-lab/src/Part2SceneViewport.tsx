@@ -1227,7 +1227,8 @@ function addMeasuredOuterWallColliders(
   // Use one smooth vertical containment wall at the measured dark-race outer
   // boundary. The previous minimum-radius wall squeezed the launch lane, while
   // the sloped measured wall converted radial speed into vertical launch.
-  const innerFaceRadius = PART2_ACTUAL_DARK_TRACK_RADIUS_BAND[1];
+  const innerFaceRadius =
+    PART2_CHANNEL_PROFILE[PART2_CHANNEL_OUTER_WALL_FOOT_INDEX][0];
   const minY = Math.min(...measured.map(([, height]) => height));
   const maxY = Math.max(...measured.map(([, height]) => height));
   const channelFloorMinY = Math.min(
