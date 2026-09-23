@@ -64,9 +64,12 @@ jobs:
 
       - name: Run 20-seed PART 6 batch
         env:
-          ROULETTE_LAB_URL: http://127.0.0.1:4173/
+          ROULETTE_LAB_URL: http://127.0.0.1:4173/?part6Headless=1
           ROULETTE_PART6_OUTPUT: artifacts/roulette-physics-lab/part6-runtime-result.json
-        run: node scripts/roulette-part6-runtime.mjs | tee part6-runtime.log
+        shell: bash
+        run: |
+          set -o pipefail
+          node scripts/roulette-part6-runtime.mjs | tee part6-runtime.log
 
       - name: Show Vite log on failure
         if: failure()
