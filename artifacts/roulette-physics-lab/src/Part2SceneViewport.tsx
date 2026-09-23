@@ -1223,8 +1223,21 @@ function addMeasuredOuterWallColliders(
 ) {
   const measured = [...profile].sort((left, right) => left[1] - right[1]);
   const segments = 512;
-  const minY = Math.min(...measured.map(([, height]) => height));
-  const maxY = Math.max(...measured.map(([, height]) => height));
+  const continuousMeasured: Array<[number, number]> = [];
+  for (const sample of measured) {
+    const previous = continuousMeasured.at(-1);
+    if (
+      previous &&
+      Math.abs(sample[0] - previous[0]) > BALL_RADIUS
+    ) {
+      break;
+    }
+    continuousMeasured.push(sample);
+  }
+  const activeMeasured =
+    continuousMeasured.length >= 2 ? continuousMeasured : measured;
+  const minY = Math.min(...activeMeasured.map(([, height]) => height));
+  const maxY = Math.max(...activeMeasured.map(([, height]) => height));
   const channelFloorMinY = Math.min(
     ...PART2_CHANNEL_PROFILE.map(([, height]) => height),
   );
@@ -1239,9 +1252,9 @@ function addMeasuredOuterWallColliders(
   // the race where the real wall sits farther out and created a launch ramp
   // when the fast ball contacted the channel and wall simultaneously.
   const wallProfile: Array<[number, number]> = [
-    [measured[0][0], lowerY],
-    ...measured,
-    [measured[measured.length - 1][0], upperY],
+    [activeMeasured[0][0], lowerY],
+    ...activeMeasured,
+    [activeMeasured[activeMeasured.length - 1][0], upperY],
   ];
 
   const vertices: number[] = [];
