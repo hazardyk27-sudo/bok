@@ -6292,7 +6292,7 @@ export function Part2SceneViewport({
                  ? part2RaceVerticalOffset
                  : part3TrackVerticalOffset;
              part3BowlBridgeOuterRadius = part6FullSpinRouteActive
-               ? PART2_ACTUAL_INWARD_EDGE_RADIUS
+               ? PART2_ACTUAL_INWARD_EDGE_RADIUS + BALL_RADIUS
                : BOWL_BRIDGE_OUTER_RADIUS;
              part3BowlBridgeProfile = measureBowlBridgeProfile(
                activeTrackVerticalOffset,
