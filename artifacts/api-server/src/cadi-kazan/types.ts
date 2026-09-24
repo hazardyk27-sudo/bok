@@ -14,7 +14,7 @@ export const CADI_KAZAN_ADVANCED_CELL_COUNT = 25;
 export const ADVANCED_PAYOUT_TABLE_VERSION = "advanced-final-v1";
 export const ADVANCED_TARGET_RTP_BPS = 9_600;
 export const ADVANCED_MAX_MULTIPLIER_BPS = 100_000;
-const POSTGRES_INT_MAX_CENTS = 2_147_483_647;
+const CADI_KAZAN_MAX_SAFE_MONEY_CENTS = Number.MAX_SAFE_INTEGER;
 
 type AdvancedPayoutTable = {
   alarmCount: AdvancedAlarmCount;
@@ -79,7 +79,8 @@ export function getMaxSafeStakeCents(mode: CadiKazanMode, alarmCount: number) {
     : ADVANCED_ALARM_OPTIONS.includes(alarmCount as AdvancedAlarmCount)
       ? Math.max(...ADVANCED_PAYOUT_TABLES[alarmCount as AdvancedAlarmCount].multipliersBps)
       : ADVANCED_MAX_MULTIPLIER_BPS;
-  return Math.floor((POSTGRES_INT_MAX_CENTS * 100) / Math.max(100, maxMultiplierBps));
+  const maxMultiplier = Math.max(1, maxMultiplierBps / 100);
+  return Math.floor(CADI_KAZAN_MAX_SAFE_MONEY_CENTS / maxMultiplier);
 }
 
 export function getCashoutPayoutCents(stakeCents: number, multiplierBps: number) {

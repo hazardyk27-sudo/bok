@@ -57,8 +57,9 @@ describe("Cadı Kazan payout configuration", () => {
     expect(getCashoutPayoutCents(333, 157)).toBe(522);
   });
 
-  it("removes the old 100-credit product cap while keeping storage-safe payouts", () => {
-    expect(getMaxSafeStakeCents("STANDARD", 1)).toBeGreaterThan(10_000);
-    expect(getMaxSafeStakeCents("ADVANCED", 1)).toBeGreaterThan(10_000);
+  it("supports million-scale stakes while keeping payouts inside JavaScript-safe money bounds", () => {
+    expect(getMaxSafeStakeCents("STANDARD", 1)).toBeGreaterThanOrEqual(100_000_000);
+    expect(getMaxSafeStakeCents("ADVANCED", 1)).toBeGreaterThanOrEqual(100_000_000);
+    expect(getCashoutPayoutCents(100_000_000, 100_000)).toBe(100_000_000_000);
   });
 });
