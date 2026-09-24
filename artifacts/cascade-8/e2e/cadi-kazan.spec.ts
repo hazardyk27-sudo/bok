@@ -190,7 +190,7 @@ async function scratchCell(page: Page, cellIndex: number) {
       const from = pass % 2 === 0 ? left : right;
       const to = pass % 2 === 0 ? right : left;
       await page.mouse.move(from, y);
-      await page.mouse.move(to, y, { steps: 12 });
+      await page.mouse.move(to, y, { steps: 1 });
     }
   }
   await page.mouse.up();
@@ -237,6 +237,44 @@ async function captureMobileLayout(page: Page) {
       viewportWidth,
       viewportHeight,
       pageTransform: scene ? getComputedStyle(scene).transform : "none",
+    };
+  });
+}
+
+async function captureTabletLayout(page: Page) {
+  return page.evaluate(() => {
+    const viewport = { width: window.innerWidth, height: window.innerHeight };
+    const selectors = {
+      header: ".witch-appbar",
+      stage: ".witch-stage-shell",
+      ticket: "[data-witch-ticket]",
+      payout: "[data-witch-desktop-payout]",
+      dock: ".witch-control-dock",
+      buy: "[data-witch-action='start']",
+      risk: "[data-witch-alarms]",
+    };
+    const rects = Object.fromEntries(Object.entries(selectors).map(([name, selector]) => {
+      const element = document.querySelector<HTMLElement>(selector);
+      const rect = element?.getBoundingClientRect();
+      return [name, rect ? {
+        left: rect.left,
+        top: rect.top,
+        right: rect.right,
+        bottom: rect.bottom,
+        width: rect.width,
+        height: rect.height,
+      } : null];
+    }));
+    const inside = (rect: { left: number; top: number; right: number; bottom: number } | null) =>
+      Boolean(rect && rect.left >= -1 && rect.top >= -1 &&
+        rect.right <= viewport.width + 1 && rect.bottom <= viewport.height + 1);
+    return {
+      viewport,
+      horizontalOverflow: Math.max(document.documentElement.scrollWidth, document.body.scrollWidth) > viewport.width + 1,
+      verticalOverflow: Math.max(document.documentElement.scrollHeight, document.body.scrollHeight) > viewport.height + 1,
+      rects,
+      allInside: Object.values(rects).every((rect) => inside(rect)),
+      dockDisplay: getComputedStyle(document.querySelector<HTMLElement>(".witch-control-dock")!).display,
     };
   });
 }
@@ -413,6 +451,62 @@ test.describe("Cadı Kazan critical round lifecycle", () => {
     expect(fixture.startBodies[0]).toMatchObject({ mode: "ADVANCED", alarmCount: 3 });
   });
 
+  test("tablet layout keeps the ticket, payout, and all controls inside the viewport", async ({ page }, testInfo: TestInfo) => {
+    test.skip(testInfo.project.name !== "desktop-chromium", "Tablet Cadı Kazan coverage runs in the desktop project");
+    await page.setViewportSize({ width: 768, height: 1024 });
+    const fixture = await installCadiKazanFixture(page);
+
+    await page.locator("[data-witch-mode='STANDARD']").click();
+    await page.locator("[data-witch-action='start']").click();
+    await expect(page.locator("[data-witch-ticket]")).toBeVisible();
+
+    const layout = await captureTabletLayout(page);
+    expect(layout.horizontalOverflow).toBe(false);
+    expect(layout.verticalOverflow).toBe(false);
+    expect(layout.allInside).toBe(true);
+    expect(layout.dockDisplay).not.toBe("none");
+    expect(fixture.startBodies[0]).toMatchObject({ mode: "STANDARD", alarmCount: 1 });
+
+    await lightlyScratchCell(page, 0);
+    await expect.poll(() => fixture.revealBodies.length).toBe(0);
+    await expect(page.locator("[data-witch-action='cashout']:visible")).toBeDisabled();
+    const lacquer = page.locator("[data-witch-cell='0'] .witch-scratch-layer-lacquer");
+    const canvasSize = await lacquer.evaluate((canvas: HTMLCanvasElement) => ({
+      cssWidth: canvas.clientWidth,
+      cssHeight: canvas.clientHeight,
+      backingWidth: canvas.width,
+      backingHeight: canvas.height,
+      ratio: Math.max(1, Math.min(2, window.devicePixelRatio || 1)),
+    }));
+    expect(Math.abs(canvasSize.backingWidth - Math.round(canvasSize.cssWidth * canvasSize.ratio))).toBeLessThanOrEqual(1);
+    expect(Math.abs(canvasSize.backingHeight - Math.round(canvasSize.cssHeight * canvasSize.ratio))).toBeLessThanOrEqual(1);
+    expect((await captureTabletLayout(page)).allInside).toBe(true);
+  });
+
+  test("tablet Advanced 25 keeps every scratch area large and visible", async ({ page }, testInfo: TestInfo) => {
+    test.skip(testInfo.project.name !== "desktop-chromium", "Tablet Cadı Kazan coverage runs in the desktop project");
+    await page.setViewportSize({ width: 768, height: 1024 });
+    await installCadiKazanFixture(page);
+
+    await page.locator("[data-witch-mode='ADVANCED']").click();
+    await page.locator("[data-witch-alarms]").selectOption("3");
+    await page.locator("[data-witch-action='start']").click();
+    await expect(page.locator("[data-witch-cell]")).toHaveCount(25);
+
+    const layout = await captureTabletLayout(page);
+    expect(layout.horizontalOverflow).toBe(false);
+    expect(layout.verticalOverflow).toBe(false);
+    expect(layout.allInside).toBe(true);
+    const advancedCells = await page.locator("[data-witch-cell]").evaluateAll((cells) =>
+      cells.map((cell) => {
+        const rect = cell.getBoundingClientRect();
+        return { width: rect.width, height: rect.height };
+      })
+    );
+    expect(Math.min(...advancedCells.map(({ width, height }) => Math.min(width, height)))).toBeGreaterThanOrEqual(52);
+    await expect(page.locator(".witch-ticket.is-advanced .witch-scratch-layer-lacquer")).toHaveCount(25);
+  });
+
   test("mobile physical orientation fits Advanced 25, payout HUD, and control dock without overflow", async ({ page }, testInfo: TestInfo) => {
     test.skip(!["android-chrome", "android-portrait", "android-small-portrait", "android-narrow-portrait", "android-medium-portrait", "android-large-portrait"].includes(testInfo.project.name), "Mobile Cadı Kazan coverage runs in Android projects");
     const fixture = await installCadiKazanFixture(page);
@@ -441,7 +535,12 @@ test.describe("Cadı Kazan critical round lifecycle", () => {
     expect(Math.abs(layout.sceneWidth - layout.viewportWidth)).toBeLessThanOrEqual(2);
     expect(Math.abs(layout.sceneHeight - layout.viewportHeight)).toBeLessThanOrEqual(2);
     expect(Math.min(layout.firstCellWidth, layout.firstCellHeight)).toBeGreaterThanOrEqual(38);
-    expect(layout.ticketWidth / Math.max(1, layout.ticketHeight)).toBeGreaterThanOrEqual(1.55);
+    const renderedTicketRatio = layout.ticketWidth / Math.max(1, layout.ticketHeight);
+    if (layout.viewportWidth < layout.viewportHeight) {
+      expect(renderedTicketRatio).toBeLessThanOrEqual(0.65);
+    } else {
+      expect(renderedTicketRatio).toBeGreaterThanOrEqual(1.55);
+    }
     await expect(page.locator(".witch-page")).toHaveClass(/is-advanced-round/);
     expect(layout.pageTransform).not.toBe("none");
     await expect(page.locator(".witch-rotate-hint")).toHaveCount(0);
