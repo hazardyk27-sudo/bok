@@ -1730,14 +1730,14 @@
   body:has(.witch-page),
   .app-shell.is-witch-page {
     width: 100% !important;
-    height: calc(var(--witch-vh) * 100) !important;
-    min-height: calc(var(--witch-vh) * 100) !important;
+    height: 100dvh !important;
+    min-height: 100dvh !important;
     overflow: hidden !important;
   }
 
   .witch-page {
-    --witch-vw: calc(var(--witch-vw) * 1);
-    --witch-vh: calc(var(--witch-vh) * 1);
+    --witch-vw: 1dvw;
+    --witch-vh: 1dvh;
     position: relative !important;
     inset: auto !important;
     top: auto !important;
