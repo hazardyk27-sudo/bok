@@ -17,12 +17,19 @@ export class AudioManager {
   private dangerBustBuffer?: AudioBuffer;
   private dangerBustLoad?: Promise<AudioBuffer | undefined>;
   private dangerBustSource?: AudioBufferSourceNode;
-  muted = localStorage.getItem("cascade8-muted") === "true";
-  volume = Number(localStorage.getItem("cascade8-volume") ?? "0.38");
+  private readonly storagePrefix: string;
+  muted: boolean;
+  volume: number;
+
+  constructor(storagePrefix = "cascade8") {
+    this.storagePrefix = storagePrefix;
+    this.muted = localStorage.getItem(`${storagePrefix}-muted`) === "true";
+    this.volume = Number(localStorage.getItem(`${storagePrefix}-volume`) ?? "0.38");
+  }
 
   setMuted(value: boolean) {
     this.muted = value;
-    localStorage.setItem("cascade8-muted", String(value));
+    localStorage.setItem(`${this.storagePrefix}-muted`, String(value));
     if (value) {
       this.scratchStop();
       if (this.dangerBustSource) {
@@ -34,7 +41,7 @@ export class AudioManager {
   }
   setVolume(value: number) {
     this.volume = value;
-    localStorage.setItem("cascade8-volume", String(value));
+    localStorage.setItem(`${this.storagePrefix}-volume`, String(value));
     if (this.sfxGain) this.sfxGain.gain.value = value;
   }
   private ensure() {
