@@ -738,14 +738,25 @@ function buildStartConditions(seed: string): PhysicsLabStartConditions {
     Math.cos(launchAzimuthRadians) * launchContactRadius +
       launchPlacementNormal[2] * launchClearance,
   ];
-  const tangent: [number, number] = [
+  const rawTangent: [number, number, number] = [
     Math.cos(launchAzimuthRadians),
+    0,
     -Math.sin(launchAzimuthRadians),
   ];
+  const tangentDotNormal =
+    rawTangent[0] * launchPlacementNormal[0] +
+    rawTangent[1] * launchPlacementNormal[1] +
+    rawTangent[2] * launchPlacementNormal[2];
+  const projectedTangent: [number, number, number] = [
+    rawTangent[0] - launchPlacementNormal[0] * tangentDotNormal,
+    rawTangent[1] - launchPlacementNormal[1] * tangentDotNormal,
+    rawTangent[2] - launchPlacementNormal[2] * tangentDotNormal,
+  ];
+  const projectedTangentLength = Math.hypot(...projectedTangent);
   const velocity: [number, number, number] = [
-    tangent[0] * launchSpeed,
-    0,
-    tangent[1] * launchSpeed,
+    (projectedTangent[0] / projectedTangentLength) * launchSpeed,
+    (projectedTangent[1] / projectedTangentLength) * launchSpeed,
+    (projectedTangent[2] / projectedTangentLength) * launchSpeed,
   ];
   const angularVelocity: [number, number, number] = [
     (launchPlacementNormal[1] * velocity[2] -
