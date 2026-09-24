@@ -918,12 +918,24 @@ export async function simulatePhysicsLabRound(
   let stableSettleStep: number | null = null;
   let errorCode: string | null = null;
   let maxBallSpeed = 0;
+  let pocketHardCcdActivated = false;
 
   try {
     const durationLimitSteps = Math.round(
       PHYSICS_LAB_DURATION_LIMIT_SECONDS / PHYSICS_LAB_FIXED_TIMESTEP,
     );
     for (let step = 0; step < durationLimitSteps; step += 1) {
+      if (!pocketHardCcdActivated) {
+        const preStepTranslation = ballBody.translation();
+        const preStepRadius = Math.hypot(
+          preStepTranslation.x,
+          preStepTranslation.z,
+        );
+        if (preStepRadius <= ROULETTE_POCKET_OUTER_LIP_RADIUS) {
+          ballBody.setSoftCcdPrediction(0);
+          pocketHardCcdActivated = true;
+        }
+      }
       rotorAngle = normalizedAngle(
         rotorAngle +
           startConditions.rotorInitialAngularVelocity *
