@@ -66,7 +66,12 @@ const formatMultiplier = (basisPoints: number) => `${(basisPoints / 100).toLocal
   maximumFractionDigits: 2,
 })}x`;
 
-const formatTicketPrice = (cents: number) => formatMoney(cents, { compactInteger: true });
+const formatTicketPrice = (cents: number) => {
+  const dollars = cents / 100;
+  if (dollars >= 1_000_000) return `${(dollars / 1_000_000).toFixed(dollars >= 10_000_000 ? 1 : 2).replace(/\.0+$/, "").replace(/(\.\d*[1-9])0$/, "$1")}M`;
+  if (dollars >= 1_000) return `${(dollars / 1_000).toFixed(dollars >= 100_000 ? 0 : dollars >= 10_000 ? 1 : 2).replace(/\.0+$/, "").replace(/(\.\d*[1-9])0$/, "$1")}K`;
+  return formatMoney(cents, { compactInteger: true });
+};
 
 const newIdempotencyKey = (prefix: string) => `${prefix}-${crypto.randomUUID()}-${Date.now()}`;
 
@@ -96,7 +101,14 @@ export const CADI_KAZAN_MARKUP = `
           <strong data-witch-round-status>HAZIR</strong>
           <small data-witch-round-note>MASA BOŞ</small>
         </div>
-        <div class="witch-connection" data-witch-status role="status" aria-live="polite">BAĞLANIYOR</div>
+        <button class="witch-menu-button" type="button" data-witch-menu-toggle aria-label="Oyun menüsünü aç" aria-expanded="false">☰</button>
+      <div class="witch-game-menu" data-witch-menu hidden>
+        <strong>OYUN MENÜSÜ</strong>
+        <button type="button" data-witch-sound-toggle>SES: AÇIK</button>
+        <label>SES SEVİYESİ <input type="range" min="0" max="1" step="0.05" data-witch-volume></label>
+        <a href="/">ANA MENÜYE DÖN</a>
+        <small data-witch-status role="status" aria-live="polite">BAĞLANIYOR</small>
+      </div>
       </section>
     </header>
 
@@ -291,7 +303,7 @@ export class WitchClient {
   private readonly terminalRevealTimers = new Set<number>();
   private terminalRevealAnimating = false;
   private readonly scratchSurfaces = new Map<number, ScratchSurface>();
-  private readonly audio = new AudioManager();
+  private readonly audio = new AudioManager("cadi-kazan");
   private readonly telemetry = new ScratchTelemetry();
   private lastRevealInput: "pointer" | "keyboard" = "pointer";
   private entranceRoundId: string | null = null;
@@ -304,6 +316,31 @@ export class WitchClient {
   }
 
   private bind() {
+    const menuToggle = this.root.querySelector<HTMLButtonElement>("[data-witch-menu-toggle]");
+    const menu = this.root.querySelector<HTMLElement>("[data-witch-menu]");
+    const soundToggle = this.root.querySelector<HTMLButtonElement>("[data-witch-sound-toggle]");
+    const volume = this.root.querySelector<HTMLInputElement>("[data-witch-volume]");
+    const syncAudioMenu = () => {
+      if (soundToggle) soundToggle.textContent = this.audio.muted ? "SES: KAPALI" : "SES: AÇIK";
+      if (volume) volume.value = String(this.audio.volume);
+    };
+    syncAudioMenu();
+    menuToggle?.addEventListener("click", () => {
+      if (!menu) return;
+      menu.hidden = !menu.hidden;
+      menuToggle.setAttribute("aria-expanded", String(!menu.hidden));
+    });
+    soundToggle?.addEventListener("click", () => {
+      this.audio.setMuted(!this.audio.muted);
+      if (!this.audio.muted) this.audio.unlock();
+      syncAudioMenu();
+    });
+    volume?.addEventListener("input", () => {
+      this.audio.setVolume(Number(volume.value));
+      if (this.audio.muted && Number(volume.value) > 0) this.audio.setMuted(false);
+      this.audio.unlock();
+      syncAudioMenu();
+    });
     this.root.querySelectorAll<HTMLButtonElement>("[data-witch-mode]").forEach((button) => {
       button.addEventListener("click", () => {
         if (this.busy || this.state?.round?.status === "ACTIVE") return;
