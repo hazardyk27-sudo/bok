@@ -551,22 +551,6 @@ function buildColliderSpecs(): ColliderSpec[] {
     halfExtents: [0.16, 0.08, 0.1],
     radialOffset: Math.PI / 2 + 0.35,
   });
-  specs.push({
-    id: "bowl-spindle-guard",
-    label: "Bowl center spindle",
-    body: "stationary",
-    position: [0, 0.34, 0],
-    halfExtents: [1.05, 0.34, 1.05],
-    rotation: [0, 0, 0, 1],
-  });
-  specs.push({
-    id: "bowl-center-floor",
-    label: "Bowl center safety floor",
-    body: "stationary",
-    position: [0, -0.04, 0],
-    halfExtents: [1.52, 0.05, 1.52],
-    rotation: [0, 0, 0, 1],
-  });
   return specs;
 }
 
