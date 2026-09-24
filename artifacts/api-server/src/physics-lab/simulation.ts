@@ -2,12 +2,14 @@ import { createHash, randomBytes } from "node:crypto";
 import RAPIER from "@dimforge/rapier3d-compat";
 import {
   ROULETTE_BALL_RADIUS,
+  ROULETTE_DARK_RACE_LAUNCH_RADIUS,
   ROULETTE_EUROPEAN_SEQUENCE,
   ROULETTE_FIXED_TIMESTEP,
   ROULETTE_GRAVITY_Y,
   ROULETTE_MAX_CCD_SUBSTEPS,
   ROULETTE_POCKET_COUNT,
   ROULETTE_ROTOR_ANGULAR_SPEED,
+  ROULETTE_WORLD_UNITS_PER_METER,
 } from "../../../../lib/roulette-physics-config";
 
 export const PHYSICS_LAB_FIXED_TIMESTEP = ROULETTE_FIXED_TIMESTEP;
@@ -363,21 +365,17 @@ function quaternion(value: Quaternion): Quaternion {
 }
 
 function buildStartConditions(seed: string): PhysicsLabStartConditions {
-  // Part 5's accepted release band is intentionally preserved. The secure
-  // variation is applied inside that safe sector; the remaining initial
-  // conditions are independently randomized from the same cryptographic seed.
-  const safeSector = 13;
-  const launchAzimuthRadians =
-    (safeSector + 0.5) * SECTOR_STEP_RADIANS +
-    0.0015 +
-    hashToUnit(seed, 0) * 0.0018;
-  const launchAngleDegrees = 4 + (hashToUnit(seed, 1) - 0.5) * 0.32;
-  const launchSpeed = 4 + (hashToUnit(seed, 2) - 0.5) * 0.24;
-  const ballSpin = 22.5 + (hashToUnit(seed, 3) - 0.5) * 4.2;
+  const launchAzimuthRadians = hashToUnit(seed, 0) * Math.PI * 2;
+  const launchAngleDegrees = 0;
+  const launchSpeedMetersPerSecond =
+    5 + (hashToUnit(seed, 2) * 2 - 1) * 0.15;
+  const launchSpeed =
+    launchSpeedMetersPerSecond * ROULETTE_WORLD_UNITS_PER_METER;
+  const ballSpin = launchSpeed / PHYSICS_LAB_BALL_RADIUS;
   const rotorInitialAngleRadians = hashToUnit(seed, 4) * Math.PI * 2;
   const rotorInitialAngularVelocity = ROULETTE_ROTOR_ANGULAR_SPEED;
   const position = radialPosition(
-    2.455 + (hashToUnit(seed, 6) - 0.5) * 0.003,
+    ROULETTE_DARK_RACE_LAUNCH_RADIUS,
     launchAzimuthRadians,
     0.962 + (hashToUnit(seed, 7) - 0.5) * 0.004,
   );
@@ -389,13 +387,10 @@ function buildStartConditions(seed: string): PhysicsLabStartConditions {
     Math.sin(launchAzimuthRadians),
     Math.cos(launchAzimuthRadians),
   ];
-  const launchAngleRadians = (launchAngleDegrees * Math.PI) / 180;
-  const inwardSpeed = launchSpeed * Math.sin(launchAngleRadians);
-  const tangentSpeed = launchSpeed * Math.cos(launchAngleRadians);
   const velocity: [number, number, number] = [
-    tangent[0] * -tangentSpeed - radial[0] * inwardSpeed,
-    -0.12 - hashToUnit(seed, 8) * 0.05,
-    tangent[1] * -tangentSpeed - radial[1] * inwardSpeed,
+    tangent[0] * launchSpeed,
+    0,
+    tangent[1] * launchSpeed,
   ];
   return {
     seed,
