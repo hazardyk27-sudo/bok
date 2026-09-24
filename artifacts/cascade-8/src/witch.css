@@ -6464,3 +6464,132 @@
     transform: translateY(-50%) !important;
   }
 }
+
+
+/* =========================================================
+   STAGE 43 — DESKTOP MASTER GEOMETRY
+   Diagnosis fixed at the layout root:
+   header / table / deck are one viewport composition.
+   The table itself fills the flexible middle row; Standard 5
+   uses a real two-column table grid (ticket + payout), not
+   absolute positioning. Mobile horizontal rules are untouched.
+   ========================================================= */
+@media (min-width: 821px) {
+  .witch-page {
+    display: grid !important;
+    grid-template-rows: auto minmax(0, 1fr) 114px !important;
+    gap: 8px !important;
+    width: min(calc(100vw - 24px), 1640px) !important;
+    height: 100dvh !important;
+    min-height: 100dvh !important;
+    margin: 0 auto !important;
+    padding: 8px 0 0 !important;
+    overflow: hidden !important;
+    box-sizing: border-box !important;
+  }
+
+  .witch-appbar {
+    width: 100% !important;
+    margin: 0 !important;
+  }
+
+  /* The middle row must actually fill the viewport. This is the
+     root fix for the giant black dead-zone seen on large desktops. */
+  .witch-stage-shell,
+  .is-standard-theme .witch-stage-shell {
+    align-self: stretch !important;
+    width: 100% !important;
+    height: 100% !important;
+    min-height: 0 !important;
+    max-height: none !important;
+    margin: 0 !important;
+    box-sizing: border-box !important;
+  }
+
+  /* Standard 5 becomes a stable desktop table grid:
+     one flexible ticket lane + one fixed HUD lane. */
+  .is-standard-theme .witch-stage-shell {
+    display: grid !important;
+    grid-template-columns: minmax(0, 1fr) 232px !important;
+    grid-template-rows: minmax(0, 1fr) !important;
+    grid-template-areas: "table payout" !important;
+    gap: 18px !important;
+    align-items: stretch !important;
+    padding: 18px !important;
+  }
+
+  .is-standard-theme .witch-table-surface {
+    grid-area: table !important;
+    position: relative !important;
+    inset: auto !important;
+    display: grid !important;
+    width: 100% !important;
+    height: 100% !important;
+    min-width: 0 !important;
+    min-height: 0 !important;
+    place-items: center !important;
+    padding: 0 !important;
+    overflow: hidden !important;
+  }
+
+  .is-standard-theme .witch-ticket:not(.is-advanced) {
+    position: relative !important;
+    inset: auto !important;
+    top: auto !important;
+    left: auto !important;
+    width: min(97%, 1080px) !important;
+    max-width: 1080px !important;
+    max-height: calc(100% - 18px) !important;
+    margin: 0 auto !important;
+    transform: none !important;
+  }
+
+  .is-standard-theme .witch-payout-panel {
+    grid-area: payout !important;
+    position: relative !important;
+    inset: auto !important;
+    top: auto !important;
+    right: auto !important;
+    align-self: center !important;
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: none !important;
+    margin: 0 !important;
+    transform: none !important;
+  }
+
+  /* Deck belongs to the same composition and occupies the final
+     viewport row; it is at the bottom without being detached. */
+  .witch-control-dock {
+    position: relative !important;
+    z-index: 20 !important;
+    right: auto !important;
+    bottom: auto !important;
+    left: auto !important;
+    align-self: stretch !important;
+    width: 100% !important;
+    height: 114px !important;
+    min-height: 114px !important;
+    margin: 0 !important;
+    padding: 12px 16px 13px !important;
+    border-radius: 16px 16px 0 0 !important;
+    transform: none !important;
+    box-shadow:
+      0 -8px 24px rgba(0,0,0,.20),
+      inset 0 1px 0 rgba(255,255,255,.028) !important;
+  }
+
+  /* Large desktop: use the space instead of leaving side gutters. */
+  @media (min-width: 1500px) {
+    .is-standard-theme .witch-stage-shell {
+      grid-template-columns: minmax(0, 1fr) 244px !important;
+      gap: 20px !important;
+      padding: 20px !important;
+    }
+
+    .is-standard-theme .witch-ticket:not(.is-advanced) {
+      width: min(96%, 1160px) !important;
+      max-width: 1160px !important;
+    }
+  }
+}
