@@ -29,11 +29,11 @@ const MAX_TRAJECTORY_SAMPLES = Math.ceil(
 
 const BALL_PARAMETERS = {
   radius: PHYSICS_LAB_BALL_RADIUS,
-  mass: 0.032,
-  friction: 0.4,
-  restitution: 0.34,
-  linearDamping: 0.12,
-  angularDamping: 0.07,
+  mass: 0.0027,
+  friction: 0.028,
+  restitution: 0.01,
+  linearDamping: 0.01,
+  angularDamping: 0.01,
   initialAngularVelocity: 22,
 } as const;
 
