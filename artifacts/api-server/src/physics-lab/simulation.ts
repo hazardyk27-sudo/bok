@@ -4,6 +4,7 @@ import {
   ROULETTE_BALL_RADIUS,
   ROULETTE_DARK_RACE_CHANNEL_PROFILE,
   ROULETTE_DARK_RACE_INWARD_EDGE_RADIUS,
+  ROULETTE_DARK_RACE_RADIUS_BAND,
   ROULETTE_DARK_RACE_LAUNCH_RADIUS,
   ROULETTE_EUROPEAN_SEQUENCE,
   ROULETTE_FIXED_TIMESTEP,
@@ -827,11 +828,19 @@ export async function simulatePhysicsLabRound(
         events.push(event("INVALID", step, { detail: errorCode }));
         break;
       }
+      const trackCenterBandMin =
+        ROULETTE_DARK_RACE_RADIUS_BAND[0] + PHYSICS_LAB_BALL_RADIUS;
+      const trackCenterBandMax =
+        ROULETTE_DARK_RACE_RADIUS_BAND[1] - PHYSICS_LAB_BALL_RADIUS;
+      const trackSurfaceGap =
+        translation.y -
+        PHYSICS_LAB_BALL_RADIUS -
+        darkRaceSurfaceYAt(radius);
       if (
         !outerTrackEntered &&
-        radius > 2.32 &&
-        radius < 2.66 &&
-        translation.y > 0.52
+        radius >= trackCenterBandMin &&
+        radius <= trackCenterBandMax &&
+        Math.abs(trackSurfaceGap) <= 0.08
       ) {
         outerTrackEntered = true;
         events.push(event("TRACK_ENTRY", step));
