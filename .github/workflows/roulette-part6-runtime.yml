@@ -101,6 +101,18 @@ jobs:
           echo "ROULETTE_GLB_BYTES=$bytes"
           test "$bytes" = "4663292"
 
+      - name: Run isolated 61004-61006 post-fret diagnostic
+        continue-on-error: true
+        env:
+          ROULETTE_LAB_URL: http://127.0.0.1:4173/?part6Headless=1&part6SeedStartIndex=3&part6SeedCount=3&part6MaxDurationSeconds=8
+          ROULETTE_PART6_OUTPUT: artifacts/roulette-physics-lab/part6-runtime-post-fret-result.json
+          ROULETTE_PART6_TIMEOUT_MS: '120000'
+          ROULETTE_PART6_EXPECTED_SEEDS: '3'
+        shell: bash
+        run: |
+          set -o pipefail
+          node scripts/roulette-part6-runtime.mjs | tee part6-post-fret-trace.log
+
       - name: Run PART 6B.1A startup-gate probe
         env:
           ROULETTE_LAB_URL: http://127.0.0.1:4173/?part6Headless=1&part6SeedCount=5&part6MaxDurationSeconds=30
@@ -111,18 +123,6 @@ jobs:
         run: |
           set -o pipefail
           node scripts/roulette-part6-runtime.mjs | tee part6-runtime.log
-
-      - name: Run six-seed post-fret diagnostic probe
-        continue-on-error: true
-        env:
-          ROULETTE_LAB_URL: http://127.0.0.1:4173/?part6Headless=1&part6SeedCount=6&part6MaxDurationSeconds=30
-          ROULETTE_PART6_OUTPUT: artifacts/roulette-physics-lab/part6-runtime-six-seed-result.json
-          ROULETTE_PART6_TIMEOUT_MS: '120000'
-          ROULETTE_PART6_EXPECTED_SEEDS: '6'
-        shell: bash
-        run: |
-          set -o pipefail
-          node scripts/roulette-part6-runtime.mjs | tee part6-six-seed-trace.log
 
       - name: Summarize PART 6B.1 diagnostic evidence
         if: always()
