@@ -668,8 +668,12 @@ export class WitchClient {
 
     const empty = this.root.querySelector<HTMLElement>("[data-witch-empty]");
     const ticket = this.root.querySelector<HTMLElement>("[data-witch-ticket]");
-    if (empty) empty.hidden = hasRound;
-    if (ticket) ticket.hidden = !hasRound;
+    const showStandardPreview = !hasRound && visualMode === "STANDARD";
+    if (empty) empty.hidden = hasRound || showStandardPreview;
+    if (ticket) {
+      ticket.hidden = !(hasRound || showStandardPreview);
+      ticket.classList.toggle("is-preview", showStandardPreview);
+    }
 
     const riskNote = this.root.querySelector<HTMLElement>("[data-witch-risk-note]");
     if (riskNote) {
@@ -677,17 +681,55 @@ export class WitchClient {
       riskNote.textContent = `${this.mode === "STANDARD" ? "STANDARD" : "ADVANCED"} / ${selectedBombs} BOMBA`;
     }
 
+    const board = this.root.querySelector<HTMLElement>("[data-witch-board]");
+
     if (!round) {
       const playMode = this.root.querySelector<HTMLElement>("[data-witch-play-mode]");
       const playTitle = this.root.querySelector<HTMLElement>("[data-witch-play-title]");
-      if (playMode) playMode.textContent = "NO TICKET";
-      if (playTitle) playTitle.textContent = "Bir bilet seç ve kazımaya başla.";
+      if (playMode) playMode.textContent = showStandardPreview ? "STANDARD 5 / 01 BOMBA" : "NO TICKET";
+      if (playTitle) playTitle.textContent = showStandardPreview ? "Biletini al ve kazımaya başla." : "Bir bilet seç ve kazımaya başla.";
+
+      if (showStandardPreview && board) {
+        if (board.dataset.preview !== "standard") {
+          this.destroyScratchSurfaces();
+          board.dataset.preview = "standard";
+          board.innerHTML = Array.from({ length: 5 }, (_, index) => `
+            <button type="button" class="witch-cell witch-preview-cell" disabled aria-label="Bilet satın alındığında kazınabilir alan ${index + 1}">
+              <span class="witch-preview-coating" aria-hidden="true">
+                <img src="/cadi-kazan/bcs-cactus.webp" alt="" draggable="false">
+              </span>
+            </button>
+          `).join("");
+        }
+
+        const previewStakeDollars = parseStakeDollars(stakeInput?.value ?? "1");
+        const previewStakeCents = Math.max(100, Math.round((Number.isFinite(previewStakeDollars) ? previewStakeDollars : 1) * 100));
+        const ticketMode = this.root.querySelector<HTMLElement>("[data-witch-ticket-mode]");
+        const ticketStake = this.root.querySelector<HTMLElement>("[data-witch-ticket-stake]");
+        const ticketBombs = this.root.querySelector<HTMLElement>("[data-witch-ticket-bombs]");
+        const ticketPrice = this.root.querySelector<HTMLElement>("[data-witch-ticket-price]");
+        const standardPrice = this.root.querySelector<HTMLElement>("[data-witch-standard-price]");
+        const ticketId = this.root.querySelector<HTMLElement>("[data-witch-ticket-id]");
+        if (ticketMode) ticketMode.textContent = "STANDARD 5";
+        if (ticketStake) ticketStake.textContent = formatMoney(previewStakeCents);
+        if (ticketBombs) ticketBombs.textContent = "01 BOMBA";
+        if (ticketPrice) ticketPrice.textContent = formatTicketPrice(previewStakeCents);
+        if (standardPrice) {
+          standardPrice.textContent = formatTicketPrice(previewStakeCents);
+          standardPrice.hidden = false;
+        }
+        if (ticketId) ticketId.textContent = "PREVIEW";
+      } else if (board?.dataset.preview) {
+        board.replaceChildren();
+        delete board.dataset.preview;
+      }
+
       this.updatePayout(null);
       return;
     }
 
-    const board = this.root.querySelector<HTMLElement>("[data-witch-board]");
-    if (board && board.childElementCount !== round.cellCount) {
+    if (board && (board.childElementCount !== round.cellCount || Boolean(board.dataset.preview))) {
+      delete board.dataset.preview;
       this.destroyScratchSurfaces();
       board.innerHTML = Array.from({ length: round.cellCount }, (_, index) => `
         <button type="button" class="witch-cell" data-witch-cell="${index}" aria-label="Kazınabilir kapalı alan">
