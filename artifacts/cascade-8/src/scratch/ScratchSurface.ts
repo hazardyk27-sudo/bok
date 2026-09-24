@@ -418,8 +418,30 @@ export class ScratchSurface {
     }
 
     if (this.coverImageReady && this.coverImage) {
-      context.fillStyle = "#fffdf7";
+      // Standard 5 uses the cactus artwork as part of the scratch coating.
+      // The source artwork contains a white field, so draw it with multiply
+      // over a metallic-grey substrate: white becomes grey while the cactus
+      // remains visible and scratches away with the lacquer layer.
+      const metal = context.createLinearGradient(0, 0, width, height);
+      metal.addColorStop(0, "#d9d9d7");
+      metal.addColorStop(.18, "#b8b9b8");
+      metal.addColorStop(.46, "#e5e5e2");
+      metal.addColorStop(.72, "#a9aaa9");
+      metal.addColorStop(1, "#d0d0cd");
+      context.fillStyle = metal;
       context.fillRect(0, 0, width, height);
+
+      context.save();
+      context.globalAlpha = .24;
+      context.strokeStyle = "rgba(255,255,255,.72)";
+      context.lineWidth = .55;
+      for (let y = 2; y < height; y += 4) {
+        context.beginPath();
+        context.moveTo(0, y);
+        context.lineTo(width, y + Math.sin(y * .55) * .45);
+        context.stroke();
+      }
+      context.restore();
 
       const image = this.coverImage;
       const scale = Math.min(width / Math.max(1, image.naturalWidth), height / Math.max(1, image.naturalHeight));
@@ -427,16 +449,33 @@ export class ScratchSurface {
       const drawHeight = image.naturalHeight * scale;
       const drawX = (width - drawWidth) / 2;
       const drawY = (height - drawHeight) / 2;
-      context.drawImage(image, drawX, drawY, drawWidth, drawHeight);
 
       context.save();
-      context.globalAlpha = .11;
-      const sheen = context.createLinearGradient(0, 0, width, height);
-      sheen.addColorStop(0, "#ffffff");
-      sheen.addColorStop(.45, "rgba(255,255,255,0)");
-      sheen.addColorStop(1, "#d7d0bd");
-      context.fillStyle = sheen;
+      context.globalCompositeOperation = "multiply";
+      context.globalAlpha = .98;
+      context.drawImage(image, drawX, drawY, drawWidth, drawHeight);
+      context.restore();
+
+      // Embossed scratch-card finish: a soft top-left lift and darker
+      // lower-right edge without obscuring the cactus.
+      context.save();
+      const emboss = context.createLinearGradient(0, 0, width, height);
+      emboss.addColorStop(0, "rgba(255,255,255,.32)");
+      emboss.addColorStop(.34, "rgba(255,255,255,.06)");
+      emboss.addColorStop(.68, "rgba(0,0,0,.03)");
+      emboss.addColorStop(1, "rgba(54,54,54,.18)");
+      context.fillStyle = emboss;
       context.fillRect(0, 0, width, height);
+
+      context.globalAlpha = .34;
+      context.strokeStyle = "rgba(255,255,255,.72)";
+      context.lineWidth = .8;
+      context.strokeRect(.8, .8, Math.max(0, width - 1.6), Math.max(0, height - 1.6));
+
+      context.globalAlpha = .18;
+      context.strokeStyle = "rgba(46,46,46,.78)";
+      context.lineWidth = .8;
+      context.strokeRect(1.8, 1.8, Math.max(0, width - 3.6), Math.max(0, height - 3.6));
       context.restore();
       return;
     }
