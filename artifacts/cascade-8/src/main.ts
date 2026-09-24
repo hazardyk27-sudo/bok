@@ -2,6 +2,7 @@ import Phaser from "phaser";
 import "./styles.css";
 import "./roulette.css";
 import "./witch.css";
+import "./witch.visual-lock.css";
 import { getSymbolDefinition, PAYTABLE, NORMAL_SYMBOLS, BASE_REEL_CONFIG, ANIMATION, NORMAL_PAIR_COPY_CHANCE } from "./config/GameConfig";
 import { evaluateBoard } from "./engine/WinEvaluator";
 import { calculateSequenceSettlement } from "./engine/SlotEngine";
