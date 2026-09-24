@@ -1315,7 +1315,7 @@ function buildPocketFloorTrimesh(
   const appendProfile = (profile: Array<[number, number]>) => {
     for (const [radius, height] of profile) {
       for (let index = 0; index < POCKET_FLOOR_SEGMENTS; index += 1) {
-        const angle = (index / POCKET_FLOOR_SEGMENTS) * TWO_PI;
+        const angle = ((index + 0.5) / POCKET_FLOOR_SEGMENTS) * TWO_PI;
         vertices.push(
           Math.sin(angle) * radius,
           height,
