@@ -215,7 +215,7 @@ function addDarkRaceChannelCollider(
     }
   }
 
-  for (const row of [0, profile.length - 1]) {
+  for (const row of [profile.length - 1]) {
     const bottomRow = bottomOffset + row * segments;
     for (let segment = 0; segment < segments; segment += 1) {
       const next = (segment + 1) % segments;
