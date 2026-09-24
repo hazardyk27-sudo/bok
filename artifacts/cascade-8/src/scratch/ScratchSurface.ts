@@ -383,13 +383,15 @@ export class ScratchSurface {
     }
 
     if (layer.name === "foil") {
+      // The intermediate scratch layer should stay in the same metallic-grey
+      // family as the cactus coating instead of flashing brown/gold mid-scratch.
       const foil = context.createLinearGradient(0, height, width, 0);
-      foil.addColorStop(0, "#8d5928");
-      foil.addColorStop(.16, "#d7a952");
-      foil.addColorStop(.34, "#f0cf82");
-      foil.addColorStop(.53, "#a56a2f");
-      foil.addColorStop(.74, "#e2b75f");
-      foil.addColorStop(1, "#73451f");
+      foil.addColorStop(0, "#9fa19f");
+      foil.addColorStop(.16, "#c7c8c5");
+      foil.addColorStop(.34, "#e4e4e1");
+      foil.addColorStop(.53, "#b3b4b1");
+      foil.addColorStop(.74, "#d5d6d2");
+      foil.addColorStop(1, "#8f918f");
       context.fillStyle = foil;
       context.fillRect(0, 0, width, height);
 
@@ -402,14 +404,14 @@ export class ScratchSurface {
         context.lineTo(x + height * .82, height);
         context.lineWidth = index % 5 === 0 ? 1.05 : .34;
         context.globalAlpha = index % 4 === 0 ? .22 : .11;
-        context.strokeStyle = index % 3 === 0 ? "#fff0b6" : "#56351c";
+        context.strokeStyle = index % 3 === 0 ? "#f4f4f1" : "#777977";
         context.stroke();
       }
       const band = context.createLinearGradient(0, 0, width, height);
-      band.addColorStop(0, "rgba(255,255,255,.02)");
-      band.addColorStop(.42, "rgba(255,244,199,.22)");
-      band.addColorStop(.54, "rgba(255,255,255,.05)");
-      band.addColorStop(1, "rgba(35,18,8,.12)");
+      band.addColorStop(0, "rgba(255,255,255,.03)");
+      band.addColorStop(.42, "rgba(255,255,255,.22)");
+      band.addColorStop(.54, "rgba(255,255,255,.06)");
+      band.addColorStop(1, "rgba(45,45,43,.10)");
       context.globalAlpha = 1;
       context.fillStyle = band;
       context.fillRect(0, 0, width, height);

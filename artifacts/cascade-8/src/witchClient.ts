@@ -219,7 +219,6 @@ export const CADI_KAZAN_MARKUP = `
           <span>CASH OUT</span>
           <b aria-hidden="true">↗</b>
         </button>
-        <button class="witch-secondary-button" type="button" data-witch-action="new" hidden>YENİ KART</button>
 
         <p class="witch-payout-note" data-witch-payout-note>İlk güvenli alan cash out’u açar.</p>
       </aside>
@@ -231,17 +230,30 @@ export const CADI_KAZAN_MARKUP = `
     </section>
 
     <section class="witch-control-dock" data-witch-lobby aria-label="Bilet ayarları">
-      <div class="witch-control-group witch-mode-group">
+      <div class="witch-control-group witch-card-picker">
         <label>KART</label>
-        <div class="witch-mode-grid" role="group" aria-label="Cadı Kazan oyun modu">
-        <button type="button" class="witch-mode-card is-selected" data-witch-mode="STANDARD">
-          <i class="witch-radio" aria-hidden="true"></i>
-          <span><strong>Standard 5</strong><small>5 alan · 1 bomba</small></span>
+        <button
+          type="button"
+          class="witch-cards-button"
+          data-witch-cards-toggle
+          aria-expanded="false"
+          aria-haspopup="true"
+        >
+          <span>
+            <strong>KARTLAR</strong>
+            <small data-witch-card-current>Standard 5</small>
+          </span>
+          <b aria-hidden="true">⌃</b>
         </button>
-        <button type="button" class="witch-mode-card" data-witch-mode="ADVANCED">
-          <i class="witch-radio" aria-hidden="true"></i>
-          <span><strong>Advanced 25</strong><small>25 alan · risk seçimi</small></span>
-        </button>
+        <div class="witch-card-menu" data-witch-card-menu hidden role="group" aria-label="Kazı Kazan çeşitleri">
+          <button type="button" class="witch-card-option is-selected" data-witch-mode="STANDARD">
+            <span><strong>Standard 5</strong><small>5 alan · 1 bomba</small></span>
+            <b aria-hidden="true">✓</b>
+          </button>
+          <button type="button" class="witch-card-option" data-witch-mode="ADVANCED">
+            <span><strong>Advanced 25</strong><small>25 alan · risk seçimi</small></span>
+            <b aria-hidden="true">25</b>
+          </button>
         </div>
       </div>
 
@@ -297,7 +309,6 @@ export const CADI_KAZAN_MARKUP = `
         <b data-witch-mobile-payout>$0.00</b>
       </div>
       <button class="witch-cashout-button" type="button" data-witch-action="cashout">CASH OUT <b>↗</b></button>
-      <button class="witch-secondary-button" type="button" data-witch-action="new" hidden>YENİ KART</button>
     </div>
   </main>
 `;
@@ -351,10 +362,20 @@ export class WitchClient {
       this.audio.unlock();
       syncAudioMenu();
     });
+    const cardsToggle = this.root.querySelector<HTMLButtonElement>("[data-witch-cards-toggle]");
+    const cardsMenu = this.root.querySelector<HTMLElement>("[data-witch-card-menu]");
+    cardsToggle?.addEventListener("click", () => {
+      if (this.busy || this.state?.round?.status === "ACTIVE" || !cardsMenu) return;
+      cardsMenu.hidden = !cardsMenu.hidden;
+      cardsToggle.setAttribute("aria-expanded", String(!cardsMenu.hidden));
+    });
+
     this.root.querySelectorAll<HTMLButtonElement>("[data-witch-mode]").forEach((button) => {
       button.addEventListener("click", () => {
         if (this.busy || this.state?.round?.status === "ACTIVE") return;
         this.mode = button.dataset.witchMode as CadiKazanMode;
+        if (cardsMenu) cardsMenu.hidden = true;
+        cardsToggle?.setAttribute("aria-expanded", "false");
         this.render();
       });
     });
@@ -405,11 +426,6 @@ export class WitchClient {
       button.addEventListener("click", () => {
         this.audio.unlock();
         void this.cashOut();
-      });
-    });
-    this.root.querySelectorAll<HTMLButtonElement>("[data-witch-action='new']").forEach((button) => {
-      button.addEventListener("click", () => {
-        if (this.state) this.applyState({ ...this.state, round: null });
       });
     });
   }
@@ -650,6 +666,17 @@ export class WitchClient {
       button.classList.toggle("is-selected", button.dataset.witchMode === this.mode);
       button.disabled = this.busy || hasActiveRound;
     });
+    const cardsToggle = this.root.querySelector<HTMLButtonElement>("[data-witch-cards-toggle]");
+    const cardsMenu = this.root.querySelector<HTMLElement>("[data-witch-card-menu]");
+    const currentCard = this.root.querySelector<HTMLElement>("[data-witch-card-current]");
+    if (currentCard) currentCard.textContent = this.mode === "STANDARD" ? "Standard 5" : "Advanced 25";
+    if (cardsToggle) {
+      cardsToggle.disabled = this.busy || hasActiveRound;
+      if (this.busy || hasActiveRound) {
+        cardsToggle.setAttribute("aria-expanded", "false");
+        if (cardsMenu) cardsMenu.hidden = true;
+      }
+    }
     const alarms = this.root.querySelector<HTMLSelectElement>("[data-witch-alarms]");
     if (alarms) alarms.disabled = this.busy || hasActiveRound || this.mode !== "ADVANCED";
     const stakeInput = this.root.querySelector<HTMLInputElement>("[data-witch-stake]");
@@ -855,9 +882,6 @@ export class WitchClient {
     if (payoutNote) payoutNote.textContent = !round ? "Güvenli bir alan açıldığında cash out aktif olur." : round.status === "ACTIVE" ? (round.revealedSafeCount > 0 ? "Kazancı şimdi alabilir veya devam edebilirsin." : "İlk güvenli alan cash out’u açar.") : round.status === "BUST" ? "Bomba kartı kapattı. Payout: $0.00." : "Bu round server tarafından kapatıldı.";
     this.root.querySelectorAll<HTMLButtonElement>("[data-witch-action='cashout']").forEach((button) => {
       button.disabled = this.busy || !round || round.status !== "ACTIVE" || round.revealedSafeCount < 1;
-    });
-    this.root.querySelectorAll<HTMLButtonElement>("[data-witch-action='new']").forEach((button) => {
-      button.hidden = !round || round.status === "ACTIVE";
     });
     const mobileActions = this.root.querySelector<HTMLElement>("[data-witch-mobile-payout]")?.closest<HTMLElement>(".witch-mobile-actions");
     if (mobileActions) mobileActions.hidden = !round;
