@@ -3,12 +3,15 @@ import RAPIER from "@dimforge/rapier3d-compat";
 import {
   ROULETTE_BALL_RADIUS,
   ROULETTE_DARK_RACE_CHANNEL_PROFILE,
+  ROULETTE_DARK_RACE_INWARD_EDGE_RADIUS,
   ROULETTE_DARK_RACE_LAUNCH_RADIUS,
   ROULETTE_EUROPEAN_SEQUENCE,
   ROULETTE_FIXED_TIMESTEP,
   ROULETTE_GRAVITY_Y,
   ROULETTE_MAX_CCD_SUBSTEPS,
   ROULETTE_POCKET_COUNT,
+  ROULETTE_POCKET_OUTER_LIP_RADIUS,
+  ROULETTE_POCKET_OUTER_LIP_Y,
   ROULETTE_ROTOR_ANGULAR_SPEED,
   ROULETTE_WORLD_UNITS_PER_METER,
 } from "../../../../lib/roulette-physics-config";
@@ -164,9 +167,12 @@ function addDarkRaceChannelCollider(
   world: RAPIER.World,
   body: RAPIER.RigidBody,
 ) {
+  const openInnerRadius =
+    ROULETTE_DARK_RACE_INWARD_EDGE_RADIUS + PHYSICS_LAB_BALL_RADIUS;
   const profile: Array<[number, number]> = [
+    [openInnerRadius, darkRaceSurfaceYAt(openInnerRadius)],
     ...ROULETTE_DARK_RACE_CHANNEL_PROFILE
-      .filter(([radius]) => radius <= 2.5)
+      .filter(([radius]) => radius > openInnerRadius && radius <= 2.5)
       .map(([radius, y]) => [radius, y] as [number, number]),
     [2.520, -0.2820],
     [2.535, -0.2740],
@@ -197,6 +203,97 @@ function addDarkRaceChannelCollider(
   appendProfile(profile);
   const bottomOffset = profile.length * segments;
   appendProfile(profile.map(([radius, y]) => [radius, y - thickness] as [number, number]));
+
+  for (let row = 0; row < profile.length - 1; row += 1) {
+    for (let segment = 0; segment < segments; segment += 1) {
+      const next = (segment + 1) % segments;
+      const topA = row * segments + segment;
+      const topB = row * segments + next;
+      const topC = (row + 1) * segments + next;
+      const topD = (row + 1) * segments + segment;
+      indices.push(topA, topD, topB, topB, topD, topC);
+
+      const bottomA = bottomOffset + topA;
+      const bottomB = bottomOffset + topB;
+      const bottomC = bottomOffset + topC;
+      const bottomD = bottomOffset + topD;
+      indices.push(bottomA, bottomB, bottomD, bottomB, bottomC, bottomD);
+    }
+  }
+
+  for (const row of [0, profile.length - 1]) {
+    const bottomRow = bottomOffset + row * segments;
+    for (let segment = 0; segment < segments; segment += 1) {
+      const next = (segment + 1) % segments;
+      const topA = row * segments + segment;
+      const topB = row * segments + next;
+      const bottomA = bottomRow + segment;
+      const bottomB = bottomRow + next;
+      indices.push(topA, topB, bottomB, topA, bottomB, bottomA);
+    }
+  }
+
+  return world.createCollider(
+    RAPIER.ColliderDesc.trimesh(
+      new Float32Array(vertices),
+      new Uint32Array(indices),
+      RAPIER.TriMeshFlags.FIX_INTERNAL_EDGES | RAPIER.TriMeshFlags.ORIENTED,
+    )
+      .setFriction(BALL_PARAMETERS.friction)
+      .setRestitution(BALL_PARAMETERS.restitution)
+      .setCollisionGroups(
+        STATIONARY_COLLISION_GROUP | (BALL_COLLISION_GROUP << 16),
+      ),
+    body,
+  );
+}
+
+function addBowlBridgeCollider(
+  world: RAPIER.World,
+  body: RAPIER.RigidBody,
+) {
+  const innerRadius = ROULETTE_POCKET_OUTER_LIP_RADIUS;
+  const outerRadius =
+    ROULETTE_DARK_RACE_INWARD_EDGE_RADIUS + PHYSICS_LAB_BALL_RADIUS;
+  const sampleCount = 9;
+  const segments = 128;
+  const thickness = 0.08;
+  const outerY = darkRaceSurfaceYAt(outerRadius);
+  const innerY = Math.min(
+    ROULETTE_POCKET_OUTER_LIP_Y,
+    outerY - PHYSICS_LAB_BALL_RADIUS * 0.75,
+  );
+  const profile: Array<[number, number]> = Array.from(
+    { length: sampleCount },
+    (_, index) => {
+      const alpha = index / (sampleCount - 1);
+      return [
+        innerRadius + (outerRadius - innerRadius) * alpha,
+        innerY + (outerY - innerY) * alpha,
+      ];
+    },
+  );
+  const vertices: number[] = [];
+  const indices: number[] = [];
+
+  const appendProfile = (rows: readonly (readonly [number, number])[]) => {
+    for (const [radius, y] of rows) {
+      for (let segment = 0; segment < segments; segment += 1) {
+        const angle = (segment / segments) * Math.PI * 2;
+        vertices.push(
+          Math.sin(angle) * radius,
+          y,
+          Math.cos(angle) * radius,
+        );
+      }
+    }
+  };
+
+  appendProfile(profile);
+  const bottomOffset = profile.length * segments;
+  appendProfile(
+    profile.map(([radius, y]) => [radius, y - thickness] as [number, number]),
+  );
 
   for (let row = 0; row < profile.length - 1; row += 1) {
     for (let segment = 0; segment < segments; segment += 1) {
@@ -293,34 +390,6 @@ function addRingSpecs(
 
 function buildColliderSpecs(): ColliderSpec[] {
   const specs: ColliderSpec[] = [];
-  addRingSpecs(specs, {
-    id: "bowl-transition-outer",
-    label: "Bowl transition",
-    body: "stationary",
-    count: 48,
-    radius: 2.3,
-    y: 0.48,
-    halfExtents: [0.15, 0.045, 0.1],
-  });
-  addRingSpecs(specs, {
-    id: "bowl-transition-inner",
-    label: "Bowl transition",
-    body: "stationary",
-    count: 48,
-    radius: 2.05,
-    y: 0.28,
-    halfExtents: [0.14, 0.045, 0.1],
-    tilt: -0.45,
-  });
-  addRingSpecs(specs, {
-    id: "bowl-floor",
-    label: "Bowl floor",
-    body: "stationary",
-    count: 48,
-    radius: 1.86,
-    y: 0.1,
-    halfExtents: [0.13, 0.045, 0.12],
-  });
   addRingSpecs(specs, {
     id: "deflector",
     label: "Deflector",
@@ -523,6 +592,7 @@ export async function simulatePhysicsLabRound(
     true,
   );
   addDarkRaceChannelCollider(world, stationaryBody);
+  addBowlBridgeCollider(world, stationaryBody);
   const specs = buildColliderSpecs();
   for (const spec of specs) {
     addRapierCollider(
