@@ -735,10 +735,10 @@ export async function simulatePhysicsLabRound(
       .setAngularDamping(BALL_PARAMETERS.angularDamping)
       .setCanSleep(false)
       .setCcdEnabled(true)
-      .setSoftCcdPrediction(0),
+      .setSoftCcdPrediction(Math.max(BALL_PARAMETERS.radius * 2.2, 0.08)),
   );
   ballBody.enableCcd(true);
-  ballBody.setSoftCcdPrediction(0);
+  ballBody.setSoftCcdPrediction(Math.max(BALL_PARAMETERS.radius * 2.2, 0.08));
   const ballCollider = world.createCollider(
     RAPIER.ColliderDesc.ball(BALL_PARAMETERS.radius)
       .setFriction(BALL_PARAMETERS.friction)
