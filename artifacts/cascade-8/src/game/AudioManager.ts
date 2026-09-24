@@ -72,15 +72,28 @@ export class AudioManager {
         this.dangerBustBuffer = buffer;
         return buffer;
       })
-      .catch(() => undefined);
+      .catch(() => {
+        // A transient fetch/decode failure must not poison every later round.
+        this.dangerBustLoad = undefined;
+        return undefined;
+      });
 
     return this.dangerBustLoad;
   }
 
-  private playDangerBustBuffer(buffer: AudioBuffer) {
-    if (this.muted) return;
+  private async playDangerBustBuffer(buffer: AudioBuffer) {
+    if (this.muted) return false;
     this.ensure();
     const context = this.context!;
+
+    // A reveal finishes after a server round-trip. Some browsers can suspend the
+    // context again before that async result arrives, so explicitly resume the
+    // already-unlocked context before scheduling this Cadı Kazan clip.
+    if (context.state === "suspended") {
+      try { await context.resume(); } catch { return false; }
+    }
+    if (this.muted || context.state !== "running") return false;
+
     const source = context.createBufferSource();
     source.buffer = buffer;
     source.connect(this.sfxGain!);
@@ -95,7 +108,8 @@ export class AudioManager {
       if (this.dangerBustSource === source) this.dangerBustSource = undefined;
     }, { once: true });
 
-    source.start(context.currentTime);
+    source.start();
+    return true;
   }
 
   private makeNoiseBuffer(duration: number, decay = 1.6, warmth = 0.18) {
@@ -482,19 +496,23 @@ export class AudioManager {
 
     this.ensure();
     if (this.dangerBustBuffer) {
-      this.playDangerBustBuffer(this.dangerBustBuffer);
+      void this.playDangerBustBuffer(this.dangerBustBuffer).then((played) => {
+        if (!played && !this.muted) {
+          this.tone(155, 0.28, "sawtooth");
+          this.delayedTone(92, 0.34, "triangle", 90);
+        }
+      });
       return;
     }
 
-    void this.loadDangerBustBuffer().then((buffer) => {
-      if (buffer && !this.muted) {
-        this.playDangerBustBuffer(buffer);
-        return;
-      }
+    void this.loadDangerBustBuffer().then(async (buffer) => {
+      if (buffer && !this.muted && await this.playDangerBustBuffer(buffer)) return;
 
-      // Only if the real clip cannot be fetched/decoded.
-      this.tone(155, 0.28, "sawtooth");
-      this.delayedTone(92, 0.34, "triangle", 90);
+      // Only if the real clip cannot be fetched/decoded/resumed.
+      if (!this.muted) {
+        this.tone(155, 0.28, "sawtooth");
+        this.delayedTone(92, 0.34, "triangle", 90);
+      }
     });
   }
 
