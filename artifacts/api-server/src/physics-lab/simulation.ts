@@ -827,6 +827,25 @@ export async function simulatePhysicsLabRound(
         translation.y < -0.82 ||
         translation.y > 2.8
       ) {
+        console.info(
+          "SERVER_GEOMETRY_ESCAPE",
+          JSON.stringify({
+            seed,
+            step,
+            simulatedAtMs: Math.round(
+              step * PHYSICS_LAB_FIXED_TIMESTEP * 1000,
+            ),
+            radius,
+            y: translation.y,
+            bottom: translation.y - PHYSICS_LAB_BALL_RADIUS,
+            speed: ballSpeed,
+            velocity: {
+              x: velocity.x,
+              y: velocity.y,
+              z: velocity.z,
+            },
+          }),
+        );
         errorCode = "GEOMETRY_ESCAPE";
         events.push(event("INVALID", step, { detail: errorCode }));
         break;
