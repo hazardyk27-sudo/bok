@@ -324,8 +324,33 @@ export class WitchClient {
   private entranceRoundId: string | null = null;
   private entranceTimer: number | null = null;
 
+  private readonly syncMobileViewport = () => {
+    const page = this.root.querySelector<HTMLElement>(".witch-page");
+    if (!page) return;
+    const shortSide = Math.min(window.innerWidth, window.innerHeight);
+    const longSide = Math.max(window.innerWidth, window.innerHeight);
+    const useMobileFit = shortSide <= 820 && longSide <= 1200;
+
+    this.root.classList.toggle("witch-mobile-fit", useMobileFit);
+    if (!useMobileFit) {
+      page.style.removeProperty("--witch-mobile-scale");
+      return;
+    }
+
+    // Keep the mobile game horizontal even when the device/browser viewport is portrait.
+    // The whole 860×400 logical scene is scaled uniformly into the available viewport,
+    // so there is no horizontal/vertical scrolling and no portrait reflow.
+    const logicalWidth = 860;
+    const logicalHeight = 400;
+    const scale = Math.min(window.innerWidth / logicalWidth, window.innerHeight / logicalHeight);
+    page.style.setProperty("--witch-mobile-scale", String(Math.max(0.1, Math.min(1, scale))));
+  };
+
   constructor(root: HTMLElement) {
     this.root = root;
+    this.syncMobileViewport();
+    window.addEventListener("resize", this.syncMobileViewport, { passive: true });
+    window.addEventListener("orientationchange", this.syncMobileViewport, { passive: true });
     this.bind();
     void this.load();
   }
