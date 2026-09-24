@@ -1,0 +1,769 @@
+/*
+ * CADI KAZAN — VISUAL LOCK
+ * Desktop reference target: cinematic Better Call Saul law-office table.
+ * This file is imported AFTER witch.css and owns desktop visual convergence.
+ */
+
+@media (min-width: 821px) {
+  html:has(.witch-page),
+  body:has(.witch-page) {
+    width: 100%;
+    height: 100%;
+    margin: 0;
+    overflow: hidden !important;
+    background: #090403 !important;
+  }
+
+  .app-shell.is-witch-page {
+    min-height: 100dvh !important;
+    height: 100dvh !important;
+    overflow: hidden !important;
+    background:
+      radial-gradient(circle at 50% 16%, rgba(133, 55, 17, .16), transparent 36%),
+      linear-gradient(180deg, #1a0906 0%, #0a0504 100%) !important;
+  }
+
+  .app-shell.is-witch-page > .ambient,
+  .app-shell.is-witch-page > .stars {
+    display: none !important;
+  }
+
+  .witch-page {
+    position: relative !important;
+    top: auto !important;
+    left: auto !important;
+    display: grid !important;
+    grid-template-rows: clamp(64px, 7.7vh, 82px) minmax(0, 1fr) clamp(146px, 17.6vh, 190px) !important;
+    gap: 0 !important;
+    width: 100vw !important;
+    max-width: none !important;
+    height: 100dvh !important;
+    min-height: 100dvh !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    overflow: hidden !important;
+    transform: none !important;
+    color: #f7edd6 !important;
+  }
+
+  /* HEADER */
+  .witch-appbar {
+    position: relative !important;
+    z-index: 50 !important;
+    display: grid !important;
+    grid-template-columns: 58px minmax(0, 1fr) auto !important;
+    align-items: center !important;
+    gap: 20px !important;
+    width: 100% !important;
+    min-height: 0 !important;
+    height: 100% !important;
+    margin: 0 !important;
+    padding: 10px 34px !important;
+    border: 0 !important;
+    border-bottom: 1px solid rgba(219, 154, 39, .58) !important;
+    border-radius: 0 !important;
+    background:
+      linear-gradient(90deg, rgba(74, 19, 11, .96), rgba(34, 12, 8, .985) 42%, rgba(26, 10, 8, .99)) !important;
+    box-shadow:
+      0 8px 26px rgba(0, 0, 0, .34),
+      inset 0 -1px 0 rgba(255, 199, 73, .07) !important;
+    backdrop-filter: none !important;
+  }
+
+  .witch-back {
+    width: 52px !important;
+    height: 52px !important;
+    border: 1px solid rgba(239, 179, 48, .66) !important;
+    border-radius: 12px !important;
+    color: #ffc936 !important;
+    background: rgba(28, 13, 9, .92) !important;
+    box-shadow: inset 0 0 0 1px rgba(255, 209, 95, .03) !important;
+    font-size: 28px !important;
+  }
+
+  .witch-appbrand > div {
+    display: flex !important;
+    align-items: center !important;
+    gap: 18px !important;
+  }
+
+  .witch-appbrand h1 {
+    margin: 0 !important;
+    color: #fff0d2 !important;
+    font-family: Impact, "Arial Black", "DM Sans", sans-serif !important;
+    font-size: clamp(31px, 2.55vw, 48px) !important;
+    font-weight: 900 !important;
+    letter-spacing: .035em !important;
+    line-height: .9 !important;
+    text-shadow: 0 2px 0 rgba(0,0,0,.28) !important;
+  }
+
+  .witch-appbrand small {
+    position: relative !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    gap: 14px !important;
+    color: #efb936 !important;
+    font-size: clamp(10px, .83vw, 15px) !important;
+    font-weight: 800 !important;
+    letter-spacing: .18em !important;
+  }
+
+  .witch-appbrand small::after {
+    content: "" !important;
+    display: block !important;
+    width: clamp(42px, 4.4vw, 82px) !important;
+    height: 1px !important;
+    background: linear-gradient(90deg, rgba(224,162,47,.65), transparent) !important;
+  }
+
+  .witch-appstats {
+    display: grid !important;
+    grid-template-columns: minmax(260px, auto) 56px !important;
+    width: auto !important;
+    min-width: 0 !important;
+    min-height: 52px !important;
+    border: 1px solid rgba(221, 157, 42, .34) !important;
+    border-radius: 12px !important;
+    background: rgba(14, 8, 6, .80) !important;
+  }
+
+  .witch-stat-balance {
+    display: grid !important;
+    grid-template-columns: auto 1fr !important;
+    gap: 28px !important;
+    align-items: center !important;
+    padding: 0 18px !important;
+  }
+
+  .witch-stat-balance span {
+    color: #a99476 !important;
+    font-size: 10px !important;
+    font-weight: 800 !important;
+    letter-spacing: .13em !important;
+  }
+
+  .witch-stat-balance strong {
+    color: #ffd74c !important;
+    font-size: clamp(16px, 1.45vw, 26px) !important;
+    font-weight: 900 !important;
+    white-space: nowrap !important;
+  }
+
+  .witch-menu-button {
+    width: 56px !important;
+    height: 52px !important;
+    min-width: 56px !important;
+    min-height: 52px !important;
+    border: 0 !important;
+    border-left: 1px solid rgba(221,157,42,.24) !important;
+    border-radius: 0 11px 11px 0 !important;
+    color: #ffc62f !important;
+    background: rgba(18, 10, 7, .64) !important;
+    font-size: 25px !important;
+  }
+
+  /* CINEMATIC TABLE */
+  .is-standard-theme .witch-stage-shell {
+    position: relative !important;
+    z-index: 1 !important;
+    display: grid !important;
+    grid-template-columns: minmax(0, 1fr) clamp(248px, 16.7vw, 320px) !important;
+    grid-template-rows: minmax(0, 1fr) !important;
+    grid-template-areas: "table payout" !important;
+    gap: clamp(20px, 1.7vw, 34px) !important;
+    align-items: center !important;
+    width: 100% !important;
+    height: 100% !important;
+    min-height: 0 !important;
+    max-height: none !important;
+    margin: 0 !important;
+    padding:
+      clamp(34px, 4.4vh, 58px)
+      clamp(42px, 4.4vw, 84px)
+      clamp(26px, 3.2vh, 42px)
+      clamp(76px, 6.2vw, 118px) !important;
+    overflow: hidden !important;
+    border: 0 !important;
+    border-radius: 0 !important;
+    background:
+      radial-gradient(ellipse at 13% 4%, rgba(255, 186, 65, .44) 0%, rgba(133, 52, 17, .17) 13%, transparent 28%),
+      radial-gradient(ellipse at 90% 43%, rgba(199, 111, 28, .13), transparent 23%),
+      linear-gradient(90deg, rgba(60, 24, 12, .46), transparent 18%, transparent 82%, rgba(47, 18, 11, .42)),
+      repeating-linear-gradient(0deg, rgba(255,255,255,.012) 0 1px, rgba(0,0,0,.016) 1px 5px),
+      linear-gradient(180deg, #4a1e0e 0%, #251108 16%, #120a07 63%, #0a0705 100%) !important;
+    box-shadow:
+      inset 0 14px 44px rgba(0,0,0,.34),
+      inset 0 -20px 46px rgba(0,0,0,.38) !important;
+  }
+
+  .is-standard-theme .witch-stage-shell::before {
+    content: "" !important;
+    position: absolute !important;
+    z-index: 0 !important;
+    top: clamp(72px, 8.8vh, 108px) !important;
+    right: clamp(330px, 21.5vw, 410px) !important;
+    bottom: clamp(36px, 4.5vh, 58px) !important;
+    left: clamp(150px, 11.5vw, 220px) !important;
+    display: block !important;
+    border: 1px solid rgba(190, 126, 42, .20) !important;
+    border-radius: 22px !important;
+    background:
+      linear-gradient(115deg, rgba(255,255,255,.025), transparent 24% 78%, rgba(0,0,0,.12)),
+      repeating-linear-gradient(90deg, rgba(216,161,86,.018) 0 1px, transparent 1px 6px),
+      linear-gradient(150deg, rgba(47, 27, 18, .86), rgba(15, 10, 8, .88)) !important;
+    box-shadow:
+      inset 0 0 0 8px rgba(77, 45, 27, .12),
+      inset 0 0 70px rgba(0,0,0,.46),
+      0 26px 70px rgba(0,0,0,.24) !important;
+    pointer-events: none !important;
+  }
+
+  .is-standard-theme .witch-stage-shell::after {
+    content: "SAUL GOODMAN\A ATTORNEY AT LAW" !important;
+    position: absolute !important;
+    z-index: 1 !important;
+    top: clamp(18px, 2.2vh, 28px) !important;
+    right: clamp(92px, 6.8vw, 130px) !important;
+    display: grid !important;
+    width: clamp(220px, 16vw, 305px) !important;
+    min-height: clamp(58px, 6.6vh, 80px) !important;
+    place-items: center !important;
+    padding: 8px 16px !important;
+    border: 2px solid rgba(213, 144, 35, .72) !important;
+    border-radius: 3px !important;
+    color: #d99a31 !important;
+    background: linear-gradient(180deg, #17100c, #080706) !important;
+    box-shadow:
+      0 0 0 4px rgba(28, 16, 10, .78),
+      0 12px 30px rgba(0,0,0,.34) !important;
+    font-family: Georgia, "Times New Roman", serif !important;
+    font-size: clamp(13px, 1.05vw, 20px) !important;
+    font-weight: 800 !important;
+    line-height: 1.2 !important;
+    text-align: center !important;
+    white-space: pre-line !important;
+    transform: rotate(5deg) !important;
+    pointer-events: none !important;
+  }
+
+  .witch-stage-decor,
+  .witch-table-heading,
+  .witch-table-feedback,
+  .witch-empty-table {
+    display: none !important;
+  }
+
+  .is-standard-theme .witch-table-surface {
+    grid-area: table !important;
+    position: relative !important;
+    z-index: 3 !important;
+    inset: auto !important;
+    display: grid !important;
+    width: 100% !important;
+    height: 100% !important;
+    min-width: 0 !important;
+    min-height: 0 !important;
+    place-items: center !important;
+    padding: 0 !important;
+    overflow: visible !important;
+  }
+
+  /* MAIN SCRATCH TICKET */
+  .is-standard-theme .witch-ticket:not(.is-advanced) {
+    position: relative !important;
+    inset: auto !important;
+    top: auto !important;
+    left: auto !important;
+    width: min(100%, 1160px) !important;
+    max-width: 1160px !important;
+    height: auto !important;
+    max-height: 100% !important;
+    margin: 0 auto !important;
+    aspect-ratio: 2.62 / 1 !important;
+    overflow: hidden !important;
+    border: 1px solid rgba(123, 35, 23, .76) !important;
+    border-radius: 7px !important;
+    transform: none !important;
+    filter: drop-shadow(0 22px 28px rgba(0,0,0,.42)) !important;
+    box-shadow:
+      0 0 0 1px rgba(255, 216, 116, .15),
+      inset 0 1px 0 rgba(255,255,255,.15) !important;
+  }
+
+  .is-standard-theme .witch-ticket:not(.is-advanced) .witch-bcs-card-art {
+    background:
+      radial-gradient(circle at 22% 35%, rgba(255,255,255,.20), transparent 24%),
+      repeating-linear-gradient(35deg, rgba(119,76,13,.03) 0 1px, transparent 1px 5px),
+      linear-gradient(180deg, #ffd960 0%, #ffd250 52%, #f3be36 100%) !important;
+  }
+
+  .is-standard-theme .witch-ticket:not(.is-advanced) .witch-bcs-topbar,
+  .is-standard-theme .witch-ticket:not(.is-advanced) .witch-bcs-bottombar {
+    background: linear-gradient(180deg, #d52d22, #c92319) !important;
+  }
+
+  .is-standard-theme .witch-ticket:not(.is-advanced) .witch-board-wrap {
+    position: absolute !important;
+    z-index: 5 !important;
+    top: 38.5% !important;
+    right: 2.6% !important;
+    bottom: auto !important;
+    left: 39.4% !important;
+    width: auto !important;
+    height: 35.8% !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    background: transparent !important;
+    border: 0 !important;
+    box-shadow: none !important;
+  }
+
+  .is-standard-theme .witch-ticket:not(.is-advanced) .witch-board {
+    display: grid !important;
+    grid-template-columns: repeat(5, minmax(0, 1fr)) !important;
+    grid-template-rows: 1fr !important;
+    gap: clamp(7px, .62vw, 12px) !important;
+    width: 100% !important;
+    height: 100% !important;
+  }
+
+  .is-standard-theme .witch-ticket:not(.is-advanced) .witch-cell {
+    width: 100% !important;
+    height: 100% !important;
+    min-width: 0 !important;
+    min-height: 0 !important;
+    aspect-ratio: auto !important;
+    border: 1px solid rgba(221, 72, 35, .88) !important;
+    border-radius: 1px !important;
+    box-shadow:
+      0 2px 4px rgba(81,32,19,.16),
+      inset 0 0 0 1px rgba(255,255,255,.18) !important;
+  }
+
+  /* PAYOUT HUD */
+  .is-standard-theme .witch-payout-panel {
+    grid-area: payout !important;
+    position: relative !important;
+    z-index: 4 !important;
+    inset: auto !important;
+    top: auto !important;
+    right: auto !important;
+    display: grid !important;
+    grid-template-rows: auto auto auto auto !important;
+    align-self: center !important;
+    width: 100% !important;
+    height: auto !important;
+    min-width: 0 !important;
+    min-height: 0 !important;
+    margin: 0 !important;
+    padding: clamp(20px, 2.15vh, 28px) 20px !important;
+    overflow: hidden !important;
+    border: 1px solid rgba(210, 150, 43, .68) !important;
+    border-radius: 18px !important;
+    background:
+      linear-gradient(145deg, rgba(49, 24, 16, .985), rgba(19, 12, 9, .985)) !important;
+    transform: none !important;
+    box-shadow:
+      0 0 0 4px rgba(8,5,4,.66),
+      0 18px 36px rgba(0,0,0,.32),
+      inset 0 1px 0 rgba(255,255,255,.035) !important;
+  }
+
+  .witch-payout-head {
+    padding: 0 0 18px !important;
+    border-bottom: 1px solid rgba(215, 158, 58, .24) !important;
+    text-align: center !important;
+  }
+
+  .witch-payout-head span {
+    display: block !important;
+    color: #fff1d7 !important;
+    font-size: clamp(13px, 1vw, 18px) !important;
+    font-weight: 900 !important;
+    letter-spacing: .06em !important;
+  }
+
+  .witch-payout-head small,
+  .witch-payout-note {
+    display: none !important;
+  }
+
+  .witch-payout-hero {
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important;
+    padding: clamp(20px, 2.2vh, 28px) 0 16px !important;
+  }
+
+  .witch-payout-amount {
+    order: 1 !important;
+    margin: 0 !important;
+    overflow: visible !important;
+    color: #ffd86a !important;
+    font-family: Impact, "Arial Black", "DM Sans", sans-serif !important;
+    font-size: clamp(48px, 3.4vw, 72px) !important;
+    font-weight: 900 !important;
+    line-height: .95 !important;
+    letter-spacing: .015em !important;
+    white-space: nowrap !important;
+    text-shadow: 0 3px 10px rgba(114,62,10,.22) !important;
+  }
+
+  .witch-multiplier {
+    order: 2 !important;
+    margin: 14px 0 0 !important;
+    color: #e7b53d !important;
+    font-size: clamp(24px, 1.7vw, 34px) !important;
+    font-weight: 900 !important;
+  }
+
+  .witch-payout-net {
+    order: 3 !important;
+    width: 100% !important;
+    margin-top: 18px !important;
+    padding-top: 14px !important;
+    border-top: 1px solid rgba(215,158,58,.18) !important;
+    color: #baa78d !important;
+    font-size: 12px !important;
+    letter-spacing: .08em !important;
+  }
+
+  .witch-payout-net b {
+    float: right !important;
+    color: #f6e9d6 !important;
+    font-size: 15px !important;
+  }
+
+  .witch-payout-lines {
+    display: block !important;
+    margin: 0 0 14px !important;
+    padding: 12px 0 0 !important;
+    color: #887966 !important;
+    font-size: 11px !important;
+    letter-spacing: .08em !important;
+  }
+
+  .witch-payout-lines span {
+    display: flex !important;
+    justify-content: space-between !important;
+    align-items: center !important;
+  }
+
+  .witch-payout-lines b {
+    color: #f1e8dc !important;
+    font-size: 14px !important;
+  }
+
+  .witch-cashout-button {
+    min-height: 58px !important;
+    margin: 0 !important;
+    border: 1px solid rgba(255,255,255,.16) !important;
+    border-radius: 11px !important;
+    color: rgba(255,245,232,.48) !important;
+    background: linear-gradient(180deg, #4b4036, #332a23) !important;
+    font-size: 16px !important;
+    font-weight: 900 !important;
+    letter-spacing: .06em !important;
+  }
+
+  /* BOTTOM DECK */
+  .witch-control-dock {
+    position: relative !important;
+    z-index: 30 !important;
+    right: auto !important;
+    bottom: auto !important;
+    left: auto !important;
+    display: grid !important;
+    grid-template-columns: minmax(360px, 1.05fr) minmax(430px, 1.38fr) minmax(170px, .58fr) minmax(250px, .86fr) !important;
+    grid-template-areas: "modes stake bomb buy" !important;
+    gap: clamp(14px, 1.25vw, 24px) !important;
+    align-items: center !important;
+    width: 100% !important;
+    height: 100% !important;
+    min-height: 0 !important;
+    margin: 0 !important;
+    padding: clamp(14px, 1.6vh, 20px) clamp(22px, 2.6vw, 50px) !important;
+    overflow: hidden !important;
+    border: 0 !important;
+    border-top: 1px solid rgba(201, 131, 31, .62) !important;
+    border-radius: 0 !important;
+    background:
+      linear-gradient(180deg, rgba(47,21,14,.985), rgba(18,11,8,.995)) !important;
+    transform: none !important;
+    box-shadow:
+      0 -10px 28px rgba(0,0,0,.30),
+      inset 0 1px 0 rgba(255,255,255,.025) !important;
+  }
+
+  .witch-mode-group {
+    grid-area: modes !important;
+    min-width: 0 !important;
+  }
+
+  .witch-mode-group > label,
+  .witch-control-group > label,
+  .witch-alarm-field > span {
+    display: block !important;
+    margin: 0 0 8px !important;
+    color: #d9b86f !important;
+    font-size: 11px !important;
+    font-weight: 900 !important;
+    letter-spacing: .12em !important;
+  }
+
+  .witch-mode-grid {
+    display: grid !important;
+    grid-template-columns: 1fr 1fr !important;
+    gap: 10px !important;
+    height: 100px !important;
+  }
+
+  .witch-mode-card {
+    display: grid !important;
+    grid-template-columns: 20px 1fr !important;
+    gap: 12px !important;
+    align-items: center !important;
+    min-width: 0 !important;
+    height: 100% !important;
+    padding: 15px 16px !important;
+    border: 1px solid rgba(168, 112, 33, .24) !important;
+    border-radius: 12px !important;
+    background: rgba(18, 10, 8, .74) !important;
+  }
+
+  .witch-mode-card.is-selected {
+    border-color: #ffc431 !important;
+    background: linear-gradient(145deg, rgba(67,31,15,.86), rgba(25,14,10,.92)) !important;
+    box-shadow:
+      inset 0 0 0 1px rgba(255,199,49,.22),
+      0 0 0 1px rgba(0,0,0,.18) !important;
+  }
+
+  .witch-radio {
+    width: 18px !important;
+    height: 18px !important;
+  }
+
+  .witch-mode-card strong {
+    color: #f3e4c5 !important;
+    font-size: 17px !important;
+  }
+
+  .witch-mode-card small {
+    margin-top: 4px !important;
+    color: #9d8972 !important;
+    font-size: 11px !important;
+    white-space: nowrap !important;
+  }
+
+  .witch-stake-group {
+    grid-area: stake !important;
+    display: grid !important;
+    grid-template-rows: auto 62px 38px !important;
+    gap: 8px !important;
+    min-width: 0 !important;
+  }
+
+  .witch-stake-stepper {
+    display: grid !important;
+    grid-template-columns: 72px minmax(0,1fr) 72px !important;
+    width: 100% !important;
+    height: 62px !important;
+    min-height: 62px !important;
+    border: 1px solid rgba(207,143,41,.44) !important;
+    border-radius: 10px !important;
+    background: rgba(10,7,5,.80) !important;
+  }
+
+  .witch-stake-stepper > button {
+    min-width: 72px !important;
+    min-height: 62px !important;
+    border: 0 !important;
+    color: #d6a734 !important;
+    background: rgba(49,29,17,.58) !important;
+    font-size: 28px !important;
+  }
+
+  .witch-input-wrap input {
+    height: 62px !important;
+    min-height: 62px !important;
+    color: #fff4df !important;
+    background: transparent !important;
+    font-size: clamp(26px, 2vw, 38px) !important;
+    font-weight: 900 !important;
+    text-align: center !important;
+  }
+
+  .witch-input-wrap > i {
+    display: none !important;
+  }
+
+  .witch-stake-presets {
+    display: grid !important;
+    grid-template-columns: repeat(6, minmax(0,1fr)) !important;
+    gap: 7px !important;
+  }
+
+  .witch-stake-presets button {
+    min-width: 0 !important;
+    height: 38px !important;
+    min-height: 38px !important;
+    padding: 0 5px !important;
+    border: 1px solid rgba(207,143,41,.36) !important;
+    border-radius: 8px !important;
+    color: #eadfca !important;
+    background: rgba(11,8,6,.62) !important;
+    font-size: 11px !important;
+    font-weight: 900 !important;
+  }
+
+  .witch-alarm-field {
+    grid-area: bomb !important;
+    display: grid !important;
+    align-content: center !important;
+    min-width: 0 !important;
+  }
+
+  .witch-alarm-field select {
+    width: 100% !important;
+    height: 62px !important;
+    min-height: 62px !important;
+    padding: 0 44px 0 18px !important;
+    border: 1px solid rgba(207,143,41,.38) !important;
+    border-radius: 10px !important;
+    color: #f2e9db !important;
+    background-color: rgba(15,10,8,.82) !important;
+    font-size: 15px !important;
+    font-weight: 900 !important;
+  }
+
+  .witch-primary-button {
+    grid-area: buy !important;
+    width: 100% !important;
+    min-width: 0 !important;
+    height: 72px !important;
+    min-height: 72px !important;
+    margin: 22px 0 0 !important;
+    padding: 0 22px !important;
+    border: 1px solid #ffcb44 !important;
+    border-radius: 11px !important;
+    color: #251506 !important;
+    background: linear-gradient(180deg, #f8ca47, #dca12f) !important;
+    box-shadow:
+      inset 0 1px 0 rgba(255,255,255,.35),
+      0 8px 20px rgba(118,65,10,.20) !important;
+    font-size: clamp(16px, 1.25vw, 23px) !important;
+    font-weight: 950 !important;
+    letter-spacing: .04em !important;
+  }
+
+  .witch-primary-button b {
+    font-size: 22px !important;
+  }
+
+  .witch-control-separator,
+  .witch-round-summary,
+  .witch-dock-feedback,
+  .witch-mobile-actions {
+    display: none !important;
+  }
+}
+
+@media (min-width: 821px) and (max-width: 1499px) {
+  .witch-page {
+    grid-template-rows: 64px minmax(0,1fr) 150px !important;
+  }
+
+  .witch-appbar {
+    padding-inline: 18px !important;
+  }
+
+  .witch-back {
+    width: 44px !important;
+    height: 44px !important;
+    font-size: 23px !important;
+  }
+
+  .witch-appstats {
+    grid-template-columns: minmax(220px,auto) 48px !important;
+    min-height: 46px !important;
+  }
+
+  .witch-menu-button {
+    width: 48px !important;
+    min-width: 48px !important;
+    height: 46px !important;
+    min-height: 46px !important;
+  }
+
+  .is-standard-theme .witch-stage-shell {
+    grid-template-columns: minmax(0,1fr) 230px !important;
+    gap: 18px !important;
+    padding: 34px 34px 26px 58px !important;
+  }
+
+  .is-standard-theme .witch-stage-shell::after {
+    right: 58px !important;
+    width: 205px !important;
+  }
+
+  .is-standard-theme .witch-ticket:not(.is-advanced) {
+    width: min(100%, 920px) !important;
+  }
+
+  .witch-control-dock {
+    grid-template-columns: minmax(300px,.95fr) minmax(380px,1.32fr) minmax(150px,.56fr) minmax(220px,.82fr) !important;
+    gap: 12px !important;
+    padding: 12px 22px !important;
+  }
+
+  .witch-mode-grid {
+    height: 78px !important;
+  }
+
+  .witch-mode-card {
+    padding: 10px 11px !important;
+  }
+
+  .witch-mode-card strong {
+    font-size: 14px !important;
+  }
+
+  .witch-mode-card small {
+    font-size: 9px !important;
+  }
+
+  .witch-stake-group {
+    grid-template-rows: auto 52px 30px !important;
+    gap: 6px !important;
+  }
+
+  .witch-stake-stepper,
+  .witch-stake-stepper > button,
+  .witch-input-wrap input,
+  .witch-alarm-field select {
+    height: 52px !important;
+    min-height: 52px !important;
+  }
+
+  .witch-stake-stepper {
+    grid-template-columns: 54px minmax(0,1fr) 54px !important;
+  }
+
+  .witch-stake-stepper > button {
+    min-width: 54px !important;
+  }
+
+  .witch-stake-presets button {
+    height: 30px !important;
+    min-height: 30px !important;
+    font-size: 9px !important;
+  }
+
+  .witch-primary-button {
+    height: 58px !important;
+    min-height: 58px !important;
+    margin-top: 18px !important;
+  }
+}
