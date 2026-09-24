@@ -1,4 +1,4 @@
-import { index, integer, jsonb, pgTable, text, timestamp, uniqueIndex } from "drizzle-orm/pg-core";
+import { bigint, index, integer, jsonb, pgTable, text, timestamp, uniqueIndex } from "drizzle-orm/pg-core";
 
 export const rouletteRounds = pgTable(
   "roulette_rounds",
@@ -55,7 +55,7 @@ export const rouletteBets = pgTable(
 
 export const rouletteWallets = pgTable("roulette_wallets", {
   sessionId: text("session_id").primaryKey(),
-  balanceCents: integer("balance_cents").notNull(),
+  balanceCents: bigint("balance_cents", { mode: "number" }).notNull(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
 });
 
@@ -128,13 +128,13 @@ export const cadiKazanRounds = pgTable(
     mode: text("mode").notNull(),
     alarmCount: integer("alarm_count").notNull(),
     cellCount: integer("cell_count").notNull(),
-    stakeCents: integer("stake_cents").notNull(),
+    stakeCents: bigint("stake_cents", { mode: "number" }).notNull(),
     bombIndices: jsonb("bomb_indices").notNull(),
     revealedCells: jsonb("revealed_cells").notNull().default([]),
     revealedSafeCount: integer("revealed_safe_count").notNull().default(0),
     currentMultiplierBps: integer("current_multiplier_bps").notNull().default(0),
     status: text("status").notNull().default("ACTIVE"),
-    payoutCents: integer("payout_cents").notNull().default(0),
+    payoutCents: bigint("payout_cents", { mode: "number" }).notNull().default(0),
     startIdempotencyKey: text("start_idempotency_key").notNull(),
     cashoutIdempotencyKey: text("cashout_idempotency_key"),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
@@ -155,7 +155,7 @@ export const cadiKazanLedger = pgTable(
     sessionId: text("session_id").notNull(),
     roundId: text("round_id").notNull(),
     kind: text("kind").notNull(),
-    amountCents: integer("amount_cents").notNull(),
+    amountCents: bigint("amount_cents", { mode: "number" }).notNull(),
     idempotencyKey: text("idempotency_key").notNull(),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },

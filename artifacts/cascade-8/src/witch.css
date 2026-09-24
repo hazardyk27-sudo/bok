@@ -1,3 +1,4 @@
+@import url("/cadi-kazan/visual-lock.css");
 
 .app-shell.is-witch-page {
   --witch-bg: #06090a;
@@ -4892,4 +4893,1704 @@
   object-position: center !important;
   filter: none !important;
   transform: none !important;
+}
+
+/* =========================================================
+   STAGE 36 — CONSOLIDATED PREMIUM GAME UI SYSTEM
+   Research-informed targets:
+   - 44px+ touch targets on mobile
+   - one functional UI typeface (DM Sans)
+   - dark neutral canvas + one warm accent family
+   - clear hierarchy: balance / payout / primary action
+   ========================================================= */
+
+.app-shell.is-witch-page {
+  --ui-bg: #0d0908;
+  --ui-surface: #17100d;
+  --ui-surface-2: #21140f;
+  --ui-surface-3: #2a1811;
+  --ui-border: rgba(224, 177, 93, .22);
+  --ui-border-strong: rgba(245, 195, 68, .52);
+  --ui-text: #f5ead6;
+  --ui-text-2: #c9baa3;
+  --ui-text-3: #8f8375;
+  --ui-accent: #f5c344;
+  --ui-accent-2: #df9f28;
+  --ui-danger: #d94a38;
+  --ui-positive: #eab56a;
+  min-height: 100dvh;
+  overflow-x: clip;
+  overflow-y: auto;
+  background:
+    radial-gradient(circle at 50% -10%, rgba(118, 38, 24, .10), transparent 36%),
+    linear-gradient(180deg, #110b09 0%, #0a0706 62%, #100806 100%) !important;
+}
+
+.app-shell.is-witch-page > .stars,
+.is-standard-theme .witch-stage-decor,
+.is-standard-theme .witch-stage-shell::before {
+  display: none !important;
+}
+
+.witch-page {
+  width: min(100%, 1440px) !important;
+  min-height: 100dvh;
+  margin: 0 auto;
+  padding: 14px 20px 18px !important;
+  overflow: visible !important;
+  color: var(--ui-text);
+  font-family: "DM Sans", Arial, sans-serif;
+}
+
+.witch-visually-hidden {
+  position: absolute !important;
+  width: 1px !important;
+  height: 1px !important;
+  padding: 0 !important;
+  margin: -1px !important;
+  overflow: hidden !important;
+  clip: rect(0, 0, 0, 0) !important;
+  white-space: nowrap !important;
+  border: 0 !important;
+}
+.witch-landscape-gate { display: none; }
+
+/* ---------- HEADER ---------- */
+.witch-appbar {
+  position: relative !important;
+  z-index: 400 !important;
+  display: grid !important;
+  grid-template-columns: 48px minmax(220px, 1fr) auto !important;
+  gap: 14px !important;
+  align-items: center !important;
+  min-height: 62px !important;
+  padding: 8px 12px !important;
+  overflow: visible !important;
+  border: 1px solid var(--ui-border) !important;
+  border-radius: 16px !important;
+  background: linear-gradient(180deg, rgba(38, 19, 14, .98), rgba(22, 13, 10, .98)) !important;
+  box-shadow:
+    0 14px 32px rgba(0, 0, 0, .26),
+    inset 0 1px 0 rgba(255, 255, 255, .03) !important;
+  backdrop-filter: blur(14px);
+}
+
+.witch-back {
+  width: 44px !important;
+  height: 44px !important;
+  border: 1px solid rgba(245, 195, 68, .40) !important;
+  border-radius: 12px !important;
+  color: #f0ca66 !important;
+  background: #24130e !important;
+  font: 700 20px/1 "DM Sans", sans-serif !important;
+}
+.witch-back:hover {
+  border-color: rgba(245, 195, 68, .66) !important;
+  background: #30170f !important;
+}
+
+.witch-appbrand > div {
+  display: flex !important;
+  align-items: center !important;
+  gap: 16px !important;
+}
+.witch-appbrand h1 {
+  margin: 0 !important;
+  color: var(--ui-text) !important;
+  font: 800 26px/1 "DM Sans", sans-serif !important;
+  letter-spacing: .035em !important;
+}
+.witch-appbrand small {
+  color: #bca16d !important;
+  font: 700 9px/1 "DM Sans", sans-serif !important;
+  letter-spacing: .16em !important;
+}
+.witch-appbrand small::before { display: none !important; }
+
+.witch-appstats {
+  position: relative !important;
+  display: grid !important;
+  grid-template-columns: minmax(190px, auto) 48px !important;
+  min-width: 286px !important;
+  min-height: 46px !important;
+  align-items: center !important;
+  overflow: visible !important;
+  border: 1px solid rgba(245, 195, 68, .14) !important;
+  border-radius: 13px !important;
+  background: rgba(10, 7, 6, .54) !important;
+}
+.witch-stat-runtime { display: none !important; }
+.witch-stat-balance {
+  display: grid !important;
+  grid-template-columns: auto 1fr !important;
+  gap: 12px !important;
+  align-items: center !important;
+  padding: 0 16px !important;
+  border: 0 !important;
+}
+.witch-stat-balance span {
+  color: var(--ui-text-3) !important;
+  font: 700 9px/1 "DM Sans", sans-serif !important;
+  letter-spacing: .11em !important;
+}
+.witch-stat-balance strong {
+  color: #ffe184 !important;
+  font: 800 16px/1 "DM Sans", sans-serif !important;
+  font-variant-numeric: tabular-nums;
+  text-align: right !important;
+}
+
+.witch-menu-button {
+  display: grid !important;
+  width: 48px !important;
+  height: 46px !important;
+  place-items: center !important;
+  border: 0 !important;
+  border-left: 1px solid rgba(245, 195, 68, .14) !important;
+  border-radius: 0 12px 12px 0 !important;
+  color: var(--ui-accent) !important;
+  background: transparent !important;
+  font: 700 22px/1 "DM Sans", sans-serif !important;
+  cursor: pointer;
+}
+.witch-menu-button:hover { background: rgba(245, 195, 68, .06) !important; }
+
+/* Fixed overlay avoids clipping by the game table. */
+.witch-game-menu {
+  position: fixed !important;
+  z-index: 9999 !important;
+  top: 82px !important;
+  right: clamp(12px, calc((100vw - 1400px) / 2 + 20px), 40px) !important;
+  display: grid !important;
+  width: 280px !important;
+  gap: 12px !important;
+  padding: 16px !important;
+  border: 1px solid rgba(245, 195, 68, .30) !important;
+  border-radius: 16px !important;
+  background: linear-gradient(180deg, #25140f 0%, #120c09 100%) !important;
+  box-shadow:
+    0 24px 70px rgba(0,0,0,.62),
+    inset 0 1px 0 rgba(255,255,255,.035) !important;
+  backdrop-filter: blur(18px);
+}
+.witch-game-menu[hidden] { display: none !important; }
+.witch-game-menu strong {
+  color: var(--ui-text) !important;
+  font: 800 13px/1.2 "DM Sans", sans-serif !important;
+  letter-spacing: .06em !important;
+}
+.witch-game-menu button,
+.witch-game-menu a {
+  display: flex !important;
+  align-items: center !important;
+  min-height: 48px !important;
+  padding: 0 14px !important;
+  border: 1px solid rgba(245,195,68,.18) !important;
+  border-radius: 11px !important;
+  color: var(--ui-text) !important;
+  background: #1b100d !important;
+  font: 700 13px/1 "DM Sans", sans-serif !important;
+  text-decoration: none !important;
+}
+.witch-game-menu button:hover,
+.witch-game-menu a:hover {
+  border-color: rgba(245,195,68,.40) !important;
+  background: #28140f !important;
+}
+.witch-game-menu label {
+  display: grid !important;
+  gap: 9px !important;
+  color: var(--ui-text-2) !important;
+  font: 700 11px/1.2 "DM Sans", sans-serif !important;
+}
+.witch-game-menu input {
+  width: 100% !important;
+  min-height: 32px;
+  accent-color: var(--ui-accent);
+}
+.witch-game-menu small {
+  color: var(--ui-text-3) !important;
+  font: 600 10px/1.3 "DM Sans", sans-serif !important;
+}
+
+/* ---------- GAME TABLE ---------- */
+.witch-stage-shell {
+  position: relative !important;
+  z-index: 1 !important;
+  width: 100% !important;
+  height: clamp(430px, calc(100dvh - 232px), 560px) !important;
+  min-height: 430px !important;
+  max-height: 560px !important;
+  margin: 12px 0 0 !important;
+  overflow: hidden !important;
+  border: 1px solid rgba(189, 82, 44, .34) !important;
+  border-radius: 20px !important;
+  background:
+    radial-gradient(ellipse at 44% 45%, rgba(174, 72, 34, .14) 0%, transparent 40%),
+    radial-gradient(circle at 70% 18%, rgba(245,195,68,.045), transparent 28%),
+    repeating-linear-gradient(0deg, rgba(255,255,255,.008) 0 1px, transparent 1px 4px),
+    linear-gradient(145deg, #1b0f0b 0%, #0c0807 52%, #170b08 100%) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.024),
+    inset 0 0 0 12px rgba(86,33,20,.045),
+    inset 0 0 100px rgba(0,0,0,.28),
+    0 16px 38px rgba(0,0,0,.22) !important;
+}
+.witch-stage-shell::before {
+  display: block !important;
+  position: absolute !important;
+  inset: 16px !important;
+  border: 1px solid rgba(245,195,68,.065) !important;
+  border-radius: 15px !important;
+  background:
+    linear-gradient(115deg, rgba(255,255,255,.012), transparent 24% 76%, rgba(0,0,0,.08)),
+    radial-gradient(ellipse at 42% 48%, rgba(130,58,29,.08), transparent 52%) !important;
+  box-shadow: inset 0 0 36px rgba(0,0,0,.12) !important;
+  content: "" !important;
+  pointer-events: none !important;
+}
+.witch-stage-shell::after {
+  position: absolute !important;
+  inset: 0 !important;
+  display: block !important;
+  background:
+    linear-gradient(90deg, rgba(0,0,0,.13), transparent 12% 88%, rgba(0,0,0,.15)),
+    linear-gradient(180deg, rgba(255,255,255,.008), transparent 18% 82%, rgba(0,0,0,.12)) !important;
+  content: "" !important;
+  pointer-events: none !important;
+}
+.witch-table-heading,
+.witch-table-feedback {
+  display: none !important;
+}
+
+.is-standard-theme .witch-table-surface {
+  position: absolute !important;
+  inset: 20px 266px 16px 16px !important;
+  display: grid !important;
+  place-items: center !important;
+}
+.is-standard-theme .witch-ticket {
+  top: 50% !important;
+  left: 50% !important;
+  width: min(95%, 940px) !important;
+  max-width: 940px !important;
+  min-width: 0 !important;
+  max-height: calc(100% - 12px) !important;
+  transform: translate(-50%, -50%) !important;
+}
+
+/* Printed scratch windows */
+.is-standard-theme .witch-cell {
+  border: 1px solid rgba(189, 61, 43, .55) !important;
+  border-radius: 2px !important;
+  background: #f5e8d2 !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.62),
+    0 1px 3px rgba(70,29,15,.12) !important;
+}
+.is-standard-theme .witch-cell-result-layer {
+  background:
+    radial-gradient(circle at 50% 40%, rgba(255,255,255,.30), transparent 43%),
+    linear-gradient(145deg, #f7eddd, #e9d7ba) !important;
+}
+
+/* ---------- PAYOUT PANEL ---------- */
+.witch-payout-panel {
+  position: absolute !important;
+  z-index: 10 !important;
+  top: 50% !important;
+  right: 18px !important;
+  width: 228px !important;
+  min-height: 328px !important;
+  padding: 18px !important;
+  overflow: hidden !important;
+  border: 1px solid rgba(245,195,68,.30) !important;
+  border-radius: 18px !important;
+  background: linear-gradient(180deg, #24130f 0%, #130c09 100%) !important;
+  box-shadow:
+    0 20px 46px rgba(0,0,0,.34),
+    inset 0 1px 0 rgba(255,255,255,.03) !important;
+  transform: translateY(-50%) !important;
+  backdrop-filter: blur(14px);
+}
+.witch-payout-panel::before,
+.witch-payout-panel::after { display: none !important; }
+
+.witch-payout-head {
+  display: block !important;
+  padding: 0 0 14px !important;
+  border-bottom: 1px solid rgba(245,195,68,.12) !important;
+  text-align: center !important;
+}
+.witch-payout-head span {
+  color: var(--ui-text) !important;
+  font: 800 13px/1.2 "DM Sans", sans-serif !important;
+  letter-spacing: .055em !important;
+}
+.witch-payout-head small { display: none !important; }
+
+.witch-payout-hero {
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+  padding: 24px 0 18px !important;
+  text-align: center !important;
+}
+.witch-payout-amount {
+  order: 1 !important;
+  margin: 0 !important;
+  color: #ffe184 !important;
+  max-width: 100% !important;
+  overflow: hidden !important;
+  color: #ffe184 !important;
+  font: 800 clamp(34px, 2.7vw, 46px)/1 "DM Sans", sans-serif !important;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -.035em !important;
+  text-overflow: clip !important;
+  white-space: nowrap !important;
+}
+.witch-multiplier {
+  order: 2 !important;
+  margin-top: 14px !important;
+  color: #efc758 !important;
+  font: 800 24px/1 "DM Sans", sans-serif !important;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -.02em !important;
+}
+.witch-payout-net {
+  order: 3 !important;
+  margin-top: 16px !important;
+  color: var(--ui-text-2) !important;
+  font: 700 12px/1 "DM Sans", sans-serif !important;
+  letter-spacing: .05em !important;
+}
+.witch-payout-net b {
+  margin-left: 6px !important;
+  color: var(--ui-positive) !important;
+  font: 800 14px/1 "DM Sans", sans-serif !important;
+  font-variant-numeric: tabular-nums;
+}
+.witch-payout-lines {
+  padding: 10px 0 !important;
+  border-top: 1px solid rgba(245,195,68,.10) !important;
+  color: var(--ui-text-3) !important;
+  font: 700 10px/1 "DM Sans", sans-serif !important;
+  letter-spacing: .06em !important;
+}
+.witch-payout-lines b {
+  color: var(--ui-text) !important;
+  font: 800 12px/1 "DM Sans", sans-serif !important;
+}
+.witch-payout-note { display: none !important; }
+
+.witch-cashout-button {
+  min-height: 54px !important;
+  margin-top: 12px !important;
+  padding: 0 16px !important;
+  border: 0 !important;
+  border-radius: 12px !important;
+  color: #24160b !important;
+  background: linear-gradient(180deg, #f6cc5d 0%, #e3a52d 100%) !important;
+  box-shadow:
+    0 8px 20px rgba(196,125,31,.14),
+    inset 0 1px 0 rgba(255,255,255,.42) !important;
+  font: 800 14px/1 "DM Sans", sans-serif !important;
+  letter-spacing: .04em !important;
+}
+.witch-cashout-button:hover:not(:disabled) {
+  filter: brightness(1.04);
+  transform: translateY(-1px);
+}
+.witch-cashout-button:disabled {
+  color: #6f6254 !important;
+  background: #3b3026 !important;
+  opacity: 1 !important;
+  filter: none !important;
+}
+.witch-secondary-button {
+  min-height: 44px !important;
+  margin-top: 8px !important;
+  border: 1px solid rgba(245,195,68,.24) !important;
+  border-radius: 11px !important;
+  color: #dfc17b !important;
+  background: #24120e !important;
+  font: 800 11px/1 "DM Sans", sans-serif !important;
+}
+
+/* ---------- CONTROL DECK ---------- */
+.witch-control-dock {
+  position: relative !important;
+  z-index: 2 !important;
+  display: grid !important;
+  grid-template-columns: minmax(286px, .92fr) minmax(340px, 1.2fr) minmax(138px, .48fr) minmax(210px, .72fr) !important;
+  gap: 14px !important;
+  align-items: stretch !important;
+  width: 100% !important;
+  min-height: 106px !important;
+  margin: 8px 0 0 !important;
+  padding: 12px 14px !important;
+  overflow: visible !important;
+  border: 1px solid var(--ui-border) !important;
+  border-radius: 18px !important;
+  background: linear-gradient(180deg, #21120e 0%, #150d0a 100%) !important;
+  box-shadow:
+    0 14px 34px rgba(0,0,0,.22),
+    inset 0 1px 0 rgba(255,255,255,.024) !important;
+}
+.witch-control-separator { display: none !important; }
+
+.witch-mode-group,
+.witch-stake-group,
+.witch-alarm-field {
+  align-content: end !important;
+}
+.witch-mode-group > label,
+.witch-alarm-field > span {
+  color: #bba983 !important;
+  font: 800 10px/1 "DM Sans", sans-serif !important;
+  letter-spacing: .08em !important;
+}
+.witch-mode-grid {
+  display: grid !important;
+  grid-template-columns: 1fr 1fr !important;
+  gap: 8px !important;
+}
+.witch-mode-card {
+  display: grid !important;
+  grid-template-columns: 18px 1fr !important;
+  gap: 10px !important;
+  align-items: center !important;
+  min-height: 66px !important;
+  padding: 10px 12px !important;
+  border: 1px solid rgba(205,181,147,.16) !important;
+  border-radius: 12px !important;
+  color: var(--ui-text-2) !important;
+  background: #140d0a !important;
+  opacity: 1 !important;
+  filter: none !important;
+  text-align: left !important;
+  box-shadow: none !important;
+}
+.witch-mode-card strong {
+  color: #e7ddca !important;
+  font: 800 14px/1.1 "DM Sans", sans-serif !important;
+}
+.witch-mode-card small {
+  margin-top: 5px !important;
+  color: var(--ui-text-3) !important;
+  font: 600 11px/1.25 "DM Sans", sans-serif !important;
+}
+.witch-mode-card.is-selected {
+  border-color: rgba(245,195,68,.56) !important;
+  background: linear-gradient(180deg, #2c1710 0%, #21110d 100%) !important;
+  box-shadow:
+    inset 3px 0 0 var(--ui-accent),
+    inset 0 1px 0 rgba(255,255,255,.025) !important;
+}
+.witch-mode-card.is-selected strong { color: #ffe18b !important; }
+.witch-mode-card.is-selected small { color: #c8b89e !important; }
+.witch-mode-card:disabled:not(.is-selected) { opacity: .45 !important; }
+.witch-mode-card.is-selected:disabled { opacity: 1 !important; }
+
+.witch-radio {
+  width: 16px !important;
+  height: 16px !important;
+  border: 1px solid #817365 !important;
+  border-radius: 50% !important;
+  background: transparent !important;
+}
+.witch-mode-card.is-selected .witch-radio {
+  border-color: var(--ui-accent) !important;
+  background: var(--ui-accent) !important;
+  box-shadow: inset 0 0 0 4px #24130e !important;
+}
+
+.witch-control-group {
+  display: grid !important;
+  gap: 8px !important;
+}
+.witch-control-group > label {
+  color: #bba983 !important;
+  font: 800 10px/1 "DM Sans", sans-serif !important;
+  letter-spacing: .08em !important;
+}
+
+.witch-stake-stepper {
+  display: grid !important;
+  grid-template-columns: 54px minmax(130px,1fr) 54px !important;
+  min-height: 54px !important;
+  overflow: hidden !important;
+  border: 1px solid rgba(245,195,68,.22) !important;
+  border-radius: 12px !important;
+  background: #0f0a08 !important;
+}
+.witch-stake-stepper > button {
+  min-width: 54px !important;
+  min-height: 54px !important;
+  border: 0 !important;
+  color: #f0c95e !important;
+  background: #21120e !important;
+  font: 800 26px/1 "DM Sans", sans-serif !important;
+}
+.witch-stake-stepper > button:first-child {
+  border-right: 1px solid rgba(245,195,68,.11) !important;
+}
+.witch-stake-stepper > button:last-child {
+  border-left: 1px solid rgba(245,195,68,.11) !important;
+}
+.witch-stake-stepper > button:hover:not(:disabled) { background: #2c1710 !important; }
+.witch-stake-stepper > button:active:not(:disabled) { transform: scale(.97); }
+
+.witch-input-wrap i,
+.witch-input-wrap::before { display: none !important; }
+.witch-input-wrap input {
+  width: 100% !important;
+  height: 54px !important;
+  padding: 0 10px !important;
+  color: var(--ui-text) !important;
+  background: transparent !important;
+  font: 800 19px/1 "DM Sans", sans-serif !important;
+  font-variant-numeric: tabular-nums;
+  text-align: center !important;
+}
+
+.witch-stake-presets {
+  display: grid !important;
+  grid-template-columns: repeat(6, minmax(42px,1fr)) !important;
+  gap: 5px !important;
+}
+.witch-stake-presets button {
+  min-height: 34px !important;
+  padding: 0 6px !important;
+  border: 1px solid rgba(245,195,68,.18) !important;
+  border-radius: 9px !important;
+  color: #d9c9ad !important;
+  background: #150d0a !important;
+  font: 800 10px/1 "DM Sans", sans-serif !important;
+}
+.witch-stake-presets button:hover:not(:disabled) {
+  border-color: rgba(245,195,68,.40) !important;
+  background: #24130e !important;
+}
+
+.witch-alarm-field {
+  display: grid !important;
+  gap: 8px !important;
+  align-self: stretch !important;
+  align-content: end !important;
+}
+.witch-alarm-field select {
+  width: 100% !important;
+  min-height: 54px !important;
+  padding: 0 36px 0 14px !important;
+  border: 1px solid rgba(245,195,68,.18) !important;
+  border-radius: 12px !important;
+  color: var(--ui-text) !important;
+  background: #140d0a !important;
+  font: 800 12px/1 "DM Sans", sans-serif !important;
+}
+.witch-alarm-field select:disabled { opacity: .56 !important; }
+
+.witch-primary-button {
+  min-height: 56px !important;
+  align-self: end !important;
+  margin-top: 18px !important;
+  padding: 0 18px !important;
+  border: 0 !important;
+  border-radius: 12px !important;
+  color: #24160b !important;
+  background: #f1bd3e !important;
+  box-shadow:
+    0 8px 20px rgba(187,113,24,.14),
+    inset 0 1px 0 rgba(255,255,255,.36) !important;
+  font: 900 15px/1 "DM Sans", sans-serif !important;
+  letter-spacing: .035em !important;
+}
+.witch-primary-button:hover:not(:disabled) {
+  background: #f5c84d !important;
+  transform: translateY(-1px);
+}
+.witch-primary-button:disabled,
+.witch-stake-stepper button:disabled,
+.witch-stake-presets button:disabled {
+  cursor: not-allowed !important;
+}
+.witch-dock-feedback { display: none !important; }
+
+/* ---------- RESPONSIVE DESKTOP ---------- */
+@media (min-width: 821px) and (max-width: 1120px) {
+  .witch-page { padding-inline: 14px !important; }
+  .witch-control-dock {
+    grid-template-columns: minmax(250px, .9fr) minmax(280px, 1fr) 138px 190px !important;
+    gap: 9px !important;
+  }
+  .witch-mode-card { padding-inline: 10px !important; }
+  .witch-mode-card strong { font-size: 13px !important; }
+  .witch-mode-card small { font-size: 10px !important; }
+  .witch-stake-presets {
+    grid-template-columns: repeat(3, 1fr) !important;
+  }
+  .witch-primary-button { font-size: 13px !important; }
+}
+
+/* =========================================================
+   STAGE 39 — FINAL MOBILE MASTER
+   One horizontal game composition on phones.
+   Portrait hosts rotate that exact horizontal composition.
+   No JS scaler, no portrait reflow, no page scroll.
+   ========================================================= */
+
+/* Desktop spacing polish requested with the mobile repair. */
+@media (min-width: 821px) {
+  .witch-stage-shell {
+    height: clamp(410px, calc(100dvh - 270px), 500px) !important;
+    min-height: 410px !important;
+    max-height: 500px !important;
+  }
+
+  .witch-control-dock {
+    min-height: 116px !important;
+    padding: 14px 16px !important;
+    gap: 14px !important;
+  }
+
+  .witch-mode-group,
+  .witch-stake-group,
+  .witch-alarm-field {
+    min-width: 0 !important;
+  }
+}
+
+/* Shared phone scene rules. */
+@media (max-width: 600px) and (orientation: portrait),
+       (max-height: 600px) and (orientation: landscape) and (max-width: 1200px) {
+  html:has(.witch-page),
+  body:has(.witch-page) {
+    width: 100% !important;
+    height: 100% !important;
+    margin: 0 !important;
+    overflow: hidden !important;
+    overscroll-behavior: none !important;
+    background: #090706 !important;
+  }
+
+  .app-shell.is-witch-page {
+    position: fixed !important;
+    inset: 0 !important;
+    width: 100dvw !important;
+    height: 100dvh !important;
+    min-width: 0 !important;
+    min-height: 0 !important;
+    padding: 0 !important;
+    overflow: hidden !important;
+    background:
+      radial-gradient(circle at 50% 48%, rgba(93,35,20,.10), transparent 56%),
+      #090706 !important;
+  }
+
+  .witch-page {
+    position: fixed !important;
+    z-index: 20 !important;
+    top: 50dvh !important;
+    left: 50dvw !important;
+    display: grid !important;
+    grid-template-rows: 42px minmax(0, 1fr) 70px !important;
+    gap: 4px !important;
+    max-width: none !important;
+    min-width: 0 !important;
+    min-height: 0 !important;
+    margin: 0 !important;
+    padding: 4px !important;
+    overflow: hidden !important;
+    container-type: size !important;
+    transform-origin: center center !important;
+  }
+
+  /* HEADER */
+  .witch-appbar {
+    position: relative !important;
+    z-index: 500 !important;
+    display: grid !important;
+    grid-template-columns: 32px minmax(115px, .72fr) minmax(0, 1.55fr) !important;
+    gap: 6px !important;
+    width: 100% !important;
+    height: 42px !important;
+    min-height: 42px !important;
+    padding: 3px 6px !important;
+    overflow: visible !important;
+    border-radius: 10px !important;
+  }
+
+  .witch-back {
+    width: 30px !important;
+    height: 30px !important;
+    border-radius: 8px !important;
+    font-size: 15px !important;
+  }
+
+  .witch-appbrand {
+    min-width: 0 !important;
+  }
+
+  .witch-appbrand > div {
+    display: flex !important;
+    min-width: 0 !important;
+    gap: 7px !important;
+    align-items: baseline !important;
+  }
+
+  .witch-appbrand h1 {
+    overflow: hidden !important;
+    margin: 0 !important;
+    font-size: clamp(15px, 3.1cqw, 22px) !important;
+    line-height: 1 !important;
+    text-overflow: ellipsis !important;
+    white-space: nowrap !important;
+  }
+
+  .witch-appbrand small {
+    display: none !important;
+  }
+
+  .witch-appstats {
+    display: grid !important;
+    grid-template-columns: minmax(0, 1fr) 34px !important;
+    min-width: 0 !important;
+    width: 100% !important;
+    min-height: 32px !important;
+    border-radius: 8px !important;
+  }
+
+  .witch-stat-runtime {
+    display: none !important;
+  }
+
+  .witch-stat-balance {
+    display: grid !important;
+    grid-template-columns: auto minmax(0,1fr) !important;
+    gap: 6px !important;
+    min-width: 0 !important;
+    padding: 0 7px !important;
+  }
+
+  .witch-stat-balance span {
+    font-size: clamp(4px, .65cqw, 6px) !important;
+  }
+
+  .witch-stat-balance strong {
+    overflow: hidden !important;
+    font-size: clamp(8px, 1.25cqw, 11px) !important;
+    text-overflow: ellipsis !important;
+    white-space: nowrap !important;
+  }
+
+  .witch-menu-button {
+    display: grid !important;
+    width: 34px !important;
+    min-width: 34px !important;
+    height: 32px !important;
+    min-height: 32px !important;
+    place-items: center !important;
+    border-left: 1px solid rgba(245,195,68,.14) !important;
+    border-radius: 0 8px 8px 0 !important;
+    font-size: 15px !important;
+  }
+
+  .witch-game-menu {
+    position: fixed !important;
+    z-index: 9999 !important;
+    top: 6px !important;
+    right: 6px !important;
+    width: min(220px, 48dvh) !important;
+    max-height: calc(100dvh - 12px) !important;
+    overflow-y: auto !important;
+  }
+
+  /* TABLE / PAYOUT: same relationship as desktop, compressed. */
+  .witch-stage-shell {
+    position: relative !important;
+    z-index: 1 !important;
+    display: grid !important;
+    grid-template-columns: minmax(0, 1fr) clamp(118px, 18.5cqw, 154px) !important;
+    grid-template-rows: minmax(0,1fr) !important;
+    grid-template-areas: "table payout" !important;
+    gap: 5px !important;
+    width: 100% !important;
+    height: 100% !important;
+    min-width: 0 !important;
+    min-height: 0 !important;
+    max-height: none !important;
+    margin: 0 !important;
+    padding: 5px !important;
+    overflow: hidden !important;
+    border-radius: 12px !important;
+  }
+
+  .witch-stage-shell::before {
+    display: block !important;
+    inset: 7px !important;
+    border-radius: 9px !important;
+  }
+
+  .witch-stage-shell::after {
+    display: block !important;
+  }
+
+  .witch-stage-decor,
+  .witch-table-heading,
+  .witch-table-feedback {
+    display: none !important;
+  }
+
+  .witch-table-surface {
+    grid-area: table !important;
+    position: relative !important;
+    inset: auto !important;
+    display: grid !important;
+    width: 100% !important;
+    height: 100% !important;
+    min-width: 0 !important;
+    min-height: 0 !important;
+    place-items: center !important;
+    padding: 0 !important;
+    overflow: hidden !important;
+  }
+
+  .witch-empty-table {
+    width: min(92%, 260px) !important;
+    padding: 10px 12px !important;
+  }
+
+  /* Standard BCS card: keep desktop card language, only fit it. */
+  .witch-page.is-standard-theme .witch-ticket:not(.is-advanced) {
+    position: relative !important;
+    inset: auto !important;
+    top: auto !important;
+    left: auto !important;
+    width: min(98%, 600px) !important;
+    min-width: 0 !important;
+    max-width: 100% !important;
+    height: auto !important;
+    max-height: 96% !important;
+    margin: 0 auto !important;
+    padding: 0 !important;
+    transform: none !important;
+  }
+
+  .witch-page.is-standard-theme .witch-ticket:not(.is-advanced) .witch-standard-price-badge:not([hidden]) {
+    width: clamp(34px, 9%, 52px) !important;
+    font-size: clamp(10px, 1.75cqw, 15px) !important;
+  }
+
+  .witch-page.is-standard-theme .witch-ticket:not(.is-advanced) .witch-cell {
+    border-width: 1px !important;
+  }
+
+  /* Advanced: horizontal info rail + dominant board. */
+  .witch-ticket.is-advanced {
+    position: relative !important;
+    inset: auto !important;
+    top: auto !important;
+    left: auto !important;
+    display: grid !important;
+    grid-template-columns: minmax(104px, 29%) minmax(0, 71%) !important;
+    grid-template-rows: auto auto minmax(0,1fr) !important;
+    grid-template-areas:
+      "header board"
+      "meta board"
+      "footer board" !important;
+    column-gap: 6px !important;
+    row-gap: 2px !important;
+    width: min(98%, 610px) !important;
+    height: min(96%, 300px) !important;
+    min-width: 0 !important;
+    max-width: 100% !important;
+    max-height: 96% !important;
+    margin: 0 auto !important;
+    padding: 5px 6px !important;
+    overflow: hidden !important;
+    transform: none !important;
+    border-radius: 10px !important;
+  }
+
+  .witch-ticket.is-advanced .witch-ticket-header {
+    grid-area: header !important;
+    display: grid !important;
+    grid-template-columns: 1fr !important;
+    align-content: start !important;
+    justify-items: start !important;
+    min-width: 0 !important;
+    min-height: 0 !important;
+    padding: 4px 5px 3px !important;
+  }
+
+  .witch-ticket.is-advanced .witch-ticket-sidecopy,
+  .witch-ticket.is-advanced .witch-ticket-sigil {
+    display: none !important;
+  }
+
+  .witch-ticket.is-advanced .witch-ticket-lockup {
+    justify-items: start !important;
+    text-align: left !important;
+  }
+
+  .witch-ticket.is-advanced .witch-ticket-lockup::before {
+    display: none !important;
+  }
+
+  .witch-ticket.is-advanced .witch-ticket-brand {
+    font-size: clamp(17px, 3.3cqw, 25px) !important;
+    line-height: .78 !important;
+  }
+
+  .witch-ticket.is-advanced .witch-ticket-lockup small {
+    margin-top: 3px !important;
+    font-size: 3px !important;
+  }
+
+  .witch-ticket.is-advanced .witch-ticket-price {
+    display: grid !important;
+    grid-template-columns: 1fr !important;
+    justify-items: start !important;
+    width: 100% !important;
+    margin-top: 6px !important;
+  }
+
+  .witch-ticket.is-advanced .witch-ticket-price small {
+    font-size: 3px !important;
+  }
+
+  .witch-ticket.is-advanced .witch-ticket-price strong {
+    min-width: 44px !important;
+    padding: 3px 5px !important;
+    font-size: clamp(8px, 1.35cqw, 11px) !important;
+  }
+
+  .witch-ticket.is-advanced .witch-ticket-price span {
+    display: none !important;
+  }
+
+  .witch-ticket.is-advanced .witch-ticket-meta-row {
+    grid-area: meta !important;
+    display: grid !important;
+    grid-template-columns: 1fr !important;
+    gap: 3px !important;
+    align-content: start !important;
+    justify-items: start !important;
+    min-width: 0 !important;
+    margin: 0 !important;
+    padding: 4px 5px !important;
+    font-size: 3.4px !important;
+    text-align: left !important;
+  }
+
+  .witch-ticket.is-advanced .witch-ticket-meta-row > i {
+    display: none !important;
+  }
+
+  .witch-ticket.is-advanced .witch-ticket-footer {
+    grid-area: footer !important;
+    display: grid !important;
+    align-content: end !important;
+    gap: 2px !important;
+    margin: 0 !important;
+    padding: 4px 5px !important;
+    font-size: 3px !important;
+    text-align: left !important;
+  }
+
+  .witch-ticket.is-advanced .witch-ticket-footer strong {
+    justify-self: start !important;
+    font-size: 5px !important;
+  }
+
+  .witch-ticket.is-advanced .witch-board-wrap {
+    grid-area: board !important;
+    align-self: stretch !important;
+    justify-self: stretch !important;
+    width: 100% !important;
+    height: 100% !important;
+    min-width: 0 !important;
+    min-height: 0 !important;
+    margin: 0 !important;
+    padding: 4px !important;
+    border-radius: 8px !important;
+  }
+
+  .witch-ticket.is-advanced .witch-board {
+    width: 100% !important;
+    height: 100% !important;
+    grid-template-columns: repeat(5, minmax(0,1fr)) !important;
+    grid-template-rows: repeat(5, minmax(0,1fr)) !important;
+    gap: 3px !important;
+  }
+
+  .witch-ticket.is-advanced .witch-cell {
+    width: 100% !important;
+    height: 100% !important;
+    min-width: 0 !important;
+    min-height: 0 !important;
+    aspect-ratio: auto !important;
+    border-radius: 5px !important;
+  }
+
+  /* Payout HUD */
+  .witch-payout-panel {
+    grid-area: payout !important;
+    position: relative !important;
+    inset: auto !important;
+    top: auto !important;
+    right: auto !important;
+    display: grid !important;
+    grid-template-rows: auto auto 1fr auto !important;
+    width: 100% !important;
+    height: 100% !important;
+    min-width: 0 !important;
+    min-height: 0 !important;
+    margin: 0 !important;
+    padding: 7px !important;
+    overflow: hidden !important;
+    border-radius: 10px !important;
+    transform: none !important;
+  }
+
+  .witch-payout-head {
+    padding-bottom: 5px !important;
+  }
+
+  .witch-payout-head span {
+    font-size: clamp(6px, .95cqw, 8px) !important;
+  }
+
+  .witch-payout-hero {
+    min-width: 0 !important;
+    padding: 5px 0 4px !important;
+  }
+
+  .witch-payout-amount {
+    max-width: 100% !important;
+    margin: 0 !important;
+    overflow: hidden !important;
+    font-size: clamp(15px, 4.5cqh, 23px) !important;
+    line-height: 1 !important;
+    text-overflow: clip !important;
+    white-space: nowrap !important;
+  }
+
+  .witch-multiplier {
+    margin-top: 5px !important;
+    font-size: clamp(12px, 3.5cqh, 17px) !important;
+  }
+
+  .witch-payout-net {
+    margin-top: 5px !important;
+    font-size: clamp(4px, .62cqw, 6px) !important;
+  }
+
+  .witch-payout-net b {
+    font-size: clamp(6px, .82cqw, 8px) !important;
+  }
+
+  .witch-payout-lines {
+    align-self: end !important;
+    padding: 4px 0 !important;
+    font-size: 4px !important;
+  }
+
+  .witch-payout-lines b {
+    font-size: 6px !important;
+  }
+
+  .witch-cashout-button {
+    min-height: clamp(30px, 9cqh, 38px) !important;
+    margin-top: 4px !important;
+    padding: 0 7px !important;
+    border-radius: 7px !important;
+    font-size: clamp(6px, .9cqw, 8px) !important;
+  }
+
+  .witch-secondary-button {
+    min-height: 28px !important;
+    margin-top: 3px !important;
+    font-size: 6px !important;
+  }
+
+  /* DECK: four clean horizontal zones, no clipping. */
+  .witch-control-dock {
+    position: relative !important;
+    z-index: 20 !important;
+    display: grid !important;
+    grid-template-columns: 1.24fr 1fr .62fr .82fr !important;
+    grid-template-areas: "modes stake bomb buy" !important;
+    gap: 5px !important;
+    align-items: stretch !important;
+    width: 100% !important;
+    height: 70px !important;
+    min-width: 0 !important;
+    min-height: 70px !important;
+    margin: 0 !important;
+    padding: 5px !important;
+    overflow: hidden !important;
+    border-radius: 10px !important;
+  }
+
+  .witch-mode-group {
+    grid-area: modes !important;
+    display: grid !important;
+    min-width: 0 !important;
+    align-content: stretch !important;
+  }
+
+  .witch-mode-group > label,
+  .witch-control-group > label,
+  .witch-alarm-field > span {
+    display: none !important;
+  }
+
+  .witch-mode-grid {
+    display: grid !important;
+    grid-template-columns: 1fr 1fr !important;
+    gap: 3px !important;
+    min-width: 0 !important;
+    height: 100% !important;
+  }
+
+  .witch-mode-card {
+    min-width: 0 !important;
+    min-height: 0 !important;
+    height: 100% !important;
+    padding: 4px 5px !important;
+    grid-template-columns: 10px 1fr !important;
+    gap: 4px !important;
+    border-radius: 7px !important;
+  }
+
+  .witch-radio {
+    width: 9px !important;
+    height: 9px !important;
+  }
+
+  .witch-mode-card strong {
+    font-size: clamp(6px, .88cqw, 8px) !important;
+  }
+
+  .witch-mode-card small {
+    overflow: hidden !important;
+    margin-top: 2px !important;
+    font-size: clamp(3px, .48cqw, 4px) !important;
+    text-overflow: ellipsis !important;
+    white-space: nowrap !important;
+  }
+
+  .witch-stake-group {
+    grid-area: stake !important;
+    display: grid !important;
+    grid-template-rows: 36px 20px !important;
+    gap: 3px !important;
+    min-width: 0 !important;
+  }
+
+  .witch-stake-stepper {
+    grid-template-columns: 30px minmax(0,1fr) 30px !important;
+    min-height: 36px !important;
+    height: 36px !important;
+    border-radius: 7px !important;
+  }
+
+  .witch-stake-stepper > button {
+    min-width: 30px !important;
+    min-height: 36px !important;
+    font-size: 15px !important;
+  }
+
+  .witch-input-wrap input {
+    height: 36px !important;
+    min-height: 36px !important;
+    padding: 0 3px !important;
+    font-size: clamp(7px, 1.05cqw, 10px) !important;
+  }
+
+  .witch-stake-presets {
+    display: grid !important;
+    grid-template-columns: repeat(6, minmax(0,1fr)) !important;
+    gap: 2px !important;
+  }
+
+  .witch-stake-presets button {
+    min-width: 0 !important;
+    min-height: 20px !important;
+    height: 20px !important;
+    padding: 0 2px !important;
+    border-radius: 5px !important;
+    font-size: 3.5px !important;
+  }
+
+  .witch-alarm-field {
+    grid-area: bomb !important;
+    display: grid !important;
+    min-width: 0 !important;
+    align-content: center !important;
+  }
+
+  .witch-alarm-field select {
+    width: 100% !important;
+    min-width: 0 !important;
+    min-height: 36px !important;
+    height: 36px !important;
+    padding: 0 20px 0 6px !important;
+    border-radius: 7px !important;
+    font-size: clamp(6px, .82cqw, 8px) !important;
+  }
+
+  .witch-primary-button {
+    grid-area: buy !important;
+    width: 100% !important;
+    min-width: 0 !important;
+    min-height: 38px !important;
+    height: 100% !important;
+    margin: 0 !important;
+    padding: 0 6px !important;
+    border-radius: 7px !important;
+    font-size: clamp(6px, .9cqw, 9px) !important;
+  }
+
+  .witch-control-separator,
+  .witch-round-summary,
+  .witch-dock-feedback,
+  .witch-mobile-actions {
+    display: none !important;
+  }
+}
+
+/* Portrait host: rotate the exact horizontal scene into the screen. */
+@media (max-width: 600px) and (orientation: portrait) {
+  .witch-page {
+    width: 100dvh !important;
+    height: 100dvw !important;
+    transform: translate(-50%, -50%) rotate(90deg) !important;
+  }
+}
+
+/* Landscape host: same composition, no rotation. */
+@media (max-height: 600px) and (orientation: landscape) and (max-width: 1200px) {
+  .witch-page {
+    width: 100dvw !important;
+    height: 100dvh !important;
+    transform: translate(-50%, -50%) !important;
+  }
+}
+
+/* Very short devices: preserve the horizontal hierarchy and trim support copy only. */
+@media (max-width: 340px) and (orientation: portrait),
+       (max-height: 340px) and (orientation: landscape) and (max-width: 760px) {
+  .witch-appbrand small,
+  .witch-mode-card small,
+  .witch-payout-lines,
+  .witch-ticket.is-advanced .witch-ticket-lockup small,
+  .witch-ticket.is-advanced .witch-ticket-footer > span:first-child {
+    display: none !important;
+  }
+
+  .witch-page {
+    grid-template-rows: 36px minmax(0,1fr) 60px !important;
+  }
+
+  .witch-control-dock {
+    height: 60px !important;
+    min-height: 60px !important;
+  }
+
+  .witch-stake-group {
+    grid-template-rows: 32px 16px !important;
+  }
+
+  .witch-stake-stepper,
+  .witch-stake-stepper > button,
+  .witch-input-wrap input,
+  .witch-alarm-field select {
+    height: 32px !important;
+    min-height: 32px !important;
+  }
+
+  .witch-stake-presets button {
+    height: 16px !important;
+    min-height: 16px !important;
+  }
+}
+
+
+/* =========================================================
+   STAGE 40 — BETTER CALL SAUL TABLE / SCENE ART DIRECTION
+   Standard 5 only. Keeps the card face intact and gives it a
+   premium dark-walnut law-office desk environment.
+   ========================================================= */
+
+.is-standard-theme .witch-stage-shell {
+  isolation: isolate !important;
+  background:
+    /* warm desk-lamp pool behind the ticket */
+    radial-gradient(ellipse at 42% 46%, rgba(244, 171, 63, .115) 0%, rgba(149, 67, 28, .055) 30%, transparent 58%),
+    /* restrained Saul-red warmth on the far left */
+    radial-gradient(circle at 12% 24%, rgba(190, 49, 32, .075) 0%, transparent 28%),
+    /* soft reflected brass light near the payout lane */
+    radial-gradient(circle at 88% 34%, rgba(240, 190, 82, .050) 0%, transparent 22%),
+    /* fine desk-grain */
+    repeating-linear-gradient(
+      0deg,
+      rgba(255,255,255,.009) 0px,
+      rgba(255,255,255,.009) 1px,
+      rgba(0,0,0,.012) 1px,
+      rgba(0,0,0,.012) 4px
+    ),
+    linear-gradient(145deg, #21110d 0%, #120b09 38%, #090706 66%, #170b08 100%) !important;
+  border-color: rgba(165, 73, 39, .38) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.025),
+    inset 0 0 0 1px rgba(75,35,23,.22),
+    inset 0 0 110px rgba(0,0,0,.30),
+    0 18px 44px rgba(0,0,0,.24) !important;
+}
+
+/* Inner desk rail: quiet, architectural, never competes with the ticket. */
+.is-standard-theme .witch-stage-shell::before {
+  display: block !important;
+  position: absolute !important;
+  z-index: 0 !important;
+  inset: 14px !important;
+  border: 1px solid rgba(238, 188, 91, .075) !important;
+  border-radius: 15px !important;
+  background:
+    linear-gradient(120deg, rgba(255,255,255,.012), transparent 20% 80%, rgba(0,0,0,.08)),
+    radial-gradient(ellipse at 42% 48%, rgba(222, 137, 53, .035), transparent 58%) !important;
+  box-shadow:
+    inset 0 0 34px rgba(0,0,0,.16),
+    0 0 0 1px rgba(75,35,22,.12) !important;
+  content: "" !important;
+  pointer-events: none !important;
+}
+
+/* A very subtle legal-paper / business-card stack silhouette on the desk.
+   No readable fake copy: it behaves as set dressing, not UI. */
+.is-standard-theme .witch-stage-shell::after {
+  display: block !important;
+  position: absolute !important;
+  z-index: 0 !important;
+  left: -26px !important;
+  bottom: 22px !important;
+  width: 190px !important;
+  height: 118px !important;
+  border: 1px solid rgba(233, 202, 137, .055) !important;
+  border-radius: 10px !important;
+  background:
+    linear-gradient(90deg, transparent 0 14%, rgba(197,53,37,.06) 14% 15%, transparent 15%),
+    repeating-linear-gradient(0deg, rgba(235,215,174,.035) 0 1px, transparent 1px 14px),
+    linear-gradient(145deg, rgba(83,63,47,.075), rgba(18,12,10,.02)) !important;
+  box-shadow:
+    24px -18px 0 -2px rgba(74,47,35,.035),
+    24px -18px 0 -1px rgba(236,196,117,.028) !important;
+  opacity: .9 !important;
+  transform: rotate(-8deg) !important;
+  content: "" !important;
+  pointer-events: none !important;
+}
+
+/* Keep interactive game surfaces above the desk dressing. */
+.is-standard-theme .witch-table-surface,
+.is-standard-theme .witch-payout-panel {
+  z-index: 2 !important;
+}
+
+/* Ticket now feels physically placed on the desk instead of floating in empty space. */
+.is-standard-theme .witch-ticket:not(.is-advanced) {
+  filter: drop-shadow(0 20px 24px rgba(0,0,0,.25)) !important;
+}
+
+/* Desktop scene proportions: reduce dead air and give the ticket/payout a tighter relationship. */
+@media (min-width: 821px) {
+  .is-standard-theme .witch-stage-shell {
+    height: clamp(400px, calc(100dvh - 312px), 455px) !important;
+    min-height: 400px !important;
+    max-height: 455px !important;
+  }
+
+  .is-standard-theme .witch-table-surface {
+    inset: 18px 252px 14px 18px !important;
+  }
+
+  .is-standard-theme .witch-ticket:not(.is-advanced) {
+    top: 50% !important;
+    left: 50% !important;
+    width: min(96%, 950px) !important;
+    max-width: 950px !important;
+    max-height: calc(100% - 14px) !important;
+    transform: translate(-50%, -50%) !important;
+  }
+
+  .is-standard-theme .witch-payout-panel {
+    top: 50% !important;
+    right: 18px !important;
+    width: 220px !important;
+    transform: translateY(-50%) !important;
+  }
+}
+
+/* The same desk language survives the horizontal mobile scene,
+   but decoration is simplified so it never steals precious space. */
+@media (max-width: 600px) and (orientation: portrait),
+       (max-height: 600px) and (orientation: landscape) and (max-width: 1200px) {
+  .is-standard-theme .witch-stage-shell {
+    background:
+      radial-gradient(ellipse at 40% 46%, rgba(244,171,63,.10) 0%, rgba(143,61,26,.045) 34%, transparent 62%),
+      repeating-linear-gradient(0deg, rgba(255,255,255,.008) 0 1px, rgba(0,0,0,.008) 1px 4px),
+      linear-gradient(145deg, #1d100c 0%, #0d0907 58%, #160a08 100%) !important;
+  }
+
+  .is-standard-theme .witch-stage-shell::before {
+    inset: 6px !important;
+    border-radius: 9px !important;
+    opacity: .82 !important;
+  }
+
+  .is-standard-theme .witch-stage-shell::after {
+    display: none !important;
+  }
+
+  .is-standard-theme .witch-ticket:not(.is-advanced) {
+    filter: drop-shadow(0 10px 14px rgba(0,0,0,.24)) !important;
+  }
+}
+
+
+/* =========================================================
+   STAGE 41 — DESKTOP BOTTOM-DOCK ANCHOR
+   Keep the control deck visually attached to the viewport edge.
+   Mobile keeps its existing horizontal-scene grid.
+   ========================================================= */
+@media (min-width: 821px) {
+  .witch-page {
+    min-height: 100dvh !important;
+    padding-bottom: 132px !important;
+  }
+
+  .witch-control-dock {
+    position: fixed !important;
+    z-index: 320 !important;
+    right: auto !important;
+    bottom: 0 !important;
+    left: 50% !important;
+    width: min(calc(100vw - 40px), 1400px) !important;
+    margin: 0 !important;
+    border-radius: 18px 18px 0 0 !important;
+    transform: translateX(-50%) !important;
+    box-shadow:
+      0 -18px 44px rgba(0,0,0,.34),
+      inset 0 1px 0 rgba(255,255,255,.028) !important;
+    backdrop-filter: blur(16px);
+  }
+
+  /* Let the table use the freed vertical room without hiding behind the fixed deck. */
+  .witch-stage-shell {
+    margin-bottom: 0 !important;
+  }
+}
+
+
+/* =========================================================
+   STAGE 42 — DESKTOP VIEWPORT GRID
+   Deck stays at the screen bottom WITHOUT floating away from
+   the table: header + flexible table + deck share one viewport.
+   ========================================================= */
+@media (min-width: 821px) {
+  .witch-page {
+    display: grid !important;
+    grid-template-rows: auto minmax(0, 1fr) auto !important;
+    gap: 8px !important;
+    width: min(100%, 1440px) !important;
+    height: 100dvh !important;
+    min-height: 100dvh !important;
+    margin: 0 auto !important;
+    padding: 10px 20px 0 !important;
+    overflow: hidden !important;
+  }
+
+  .witch-appbar {
+    margin: 0 !important;
+  }
+
+  .witch-stage-shell,
+  .is-standard-theme .witch-stage-shell {
+    width: 100% !important;
+    height: auto !important;
+    min-height: 0 !important;
+    max-height: none !important;
+    margin: 0 !important;
+  }
+
+  .witch-control-dock {
+    position: relative !important;
+    z-index: 20 !important;
+    right: auto !important;
+    bottom: auto !important;
+    left: auto !important;
+    width: 100% !important;
+    min-height: 112px !important;
+    margin: 0 !important;
+    padding: 12px 16px 13px !important;
+    border-radius: 16px 16px 0 0 !important;
+    transform: none !important;
+    box-shadow:
+      0 -8px 24px rgba(0,0,0,.20),
+      inset 0 1px 0 rgba(255,255,255,.028) !important;
+    backdrop-filter: blur(14px);
+  }
+
+  /* Keep the BCS card/payout centered inside the now-flexible table. */
+  .is-standard-theme .witch-table-surface {
+    inset: 14px 252px 12px 16px !important;
+  }
+
+  .is-standard-theme .witch-ticket:not(.is-advanced) {
+    top: 50% !important;
+    left: 50% !important;
+    width: min(96%, 950px) !important;
+    max-width: 950px !important;
+    max-height: calc(100% - 12px) !important;
+    transform: translate(-50%, -50%) !important;
+  }
+
+  .is-standard-theme .witch-payout-panel {
+    top: 50% !important;
+    right: 16px !important;
+    transform: translateY(-50%) !important;
+  }
+}
+
+
+/* =========================================================
+   STAGE 43 — DESKTOP MASTER GEOMETRY
+   Diagnosis fixed at the layout root:
+   header / table / deck are one viewport composition.
+   The table itself fills the flexible middle row; Standard 5
+   uses a real two-column table grid (ticket + payout), not
+   absolute positioning. Mobile horizontal rules are untouched.
+   ========================================================= */
+@media (min-width: 821px) {
+  .witch-page {
+    display: grid !important;
+    grid-template-rows: auto minmax(0, 1fr) 114px !important;
+    gap: 8px !important;
+    width: min(calc(100vw - 24px), 1640px) !important;
+    height: 100dvh !important;
+    min-height: 100dvh !important;
+    margin: 0 auto !important;
+    padding: 8px 0 0 !important;
+    overflow: hidden !important;
+    box-sizing: border-box !important;
+  }
+
+  .witch-appbar {
+    width: 100% !important;
+    margin: 0 !important;
+  }
+
+  /* The middle row must actually fill the viewport. This is the
+     root fix for the giant black dead-zone seen on large desktops. */
+  .witch-stage-shell,
+  .is-standard-theme .witch-stage-shell {
+    align-self: stretch !important;
+    width: 100% !important;
+    height: 100% !important;
+    min-height: 0 !important;
+    max-height: none !important;
+    margin: 0 !important;
+    box-sizing: border-box !important;
+  }
+
+  /* Standard 5 becomes a stable desktop table grid:
+     one flexible ticket lane + one fixed HUD lane. */
+  .is-standard-theme .witch-stage-shell {
+    display: grid !important;
+    grid-template-columns: minmax(0, 1fr) 232px !important;
+    grid-template-rows: minmax(0, 1fr) !important;
+    grid-template-areas: "table payout" !important;
+    gap: 18px !important;
+    align-items: stretch !important;
+    padding: 18px !important;
+  }
+
+  .is-standard-theme .witch-table-surface {
+    grid-area: table !important;
+    position: relative !important;
+    inset: auto !important;
+    display: grid !important;
+    width: 100% !important;
+    height: 100% !important;
+    min-width: 0 !important;
+    min-height: 0 !important;
+    place-items: center !important;
+    padding: 0 !important;
+    overflow: hidden !important;
+  }
+
+  .is-standard-theme .witch-ticket:not(.is-advanced) {
+    position: relative !important;
+    inset: auto !important;
+    top: auto !important;
+    left: auto !important;
+    width: min(97%, 1080px) !important;
+    max-width: 1080px !important;
+    max-height: calc(100% - 18px) !important;
+    margin: 0 auto !important;
+    transform: none !important;
+  }
+
+  .is-standard-theme .witch-payout-panel {
+    grid-area: payout !important;
+    position: relative !important;
+    inset: auto !important;
+    top: auto !important;
+    right: auto !important;
+    align-self: center !important;
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: none !important;
+    margin: 0 !important;
+    transform: none !important;
+  }
+
+  /* Deck belongs to the same composition and occupies the final
+     viewport row; it is at the bottom without being detached. */
+  .witch-control-dock {
+    position: relative !important;
+    z-index: 20 !important;
+    right: auto !important;
+    bottom: auto !important;
+    left: auto !important;
+    align-self: stretch !important;
+    width: 100% !important;
+    height: 114px !important;
+    min-height: 114px !important;
+    margin: 0 !important;
+    padding: 12px 16px 13px !important;
+    border-radius: 16px 16px 0 0 !important;
+    transform: none !important;
+    box-shadow:
+      0 -8px 24px rgba(0,0,0,.20),
+      inset 0 1px 0 rgba(255,255,255,.028) !important;
+  }
+
+  /* Large desktop: use the space instead of leaving side gutters. */
+  @media (min-width: 1500px) {
+    .is-standard-theme .witch-stage-shell {
+      grid-template-columns: minmax(0, 1fr) 244px !important;
+      gap: 20px !important;
+      padding: 20px !important;
+    }
+
+    .is-standard-theme .witch-ticket:not(.is-advanced) {
+      width: min(96%, 1160px) !important;
+      max-width: 1160px !important;
+    }
+  }
 }

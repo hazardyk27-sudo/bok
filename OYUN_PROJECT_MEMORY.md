@@ -954,6 +954,22 @@ One audit-only instruction was mistakenly sent to Replit before this rule was cl
 - menu, game routes and slot shell can now extend beyond the viewport instead of being clipped
 - removed the Cadı Kazan landscape-only height/overflow trap so short landscape screens can scroll vertically when needed
 
+### Stage 31 — Danger SFX moved into AudioContext
+- Previous HTMLAudio playback of the uploaded 01:32–01:34 negative clip did not work reliably in Preview.
+- `AudioManager` now preloads the same-origin `/cadi-kazan/sfx-danger-negative.ogg` file on audio unlock, decodes it with `AudioContext.decodeAudioData`, and plays it through the existing SFX gain chain using `AudioBufferSourceNode`.
+- Global mute/volume continue to apply; repeated busts stop/restart cleanly.
+- Synth fallback is retained only if fetch/decode fails.
+- PR #38 changed only `artifacts/cascade-8/src/game/AudioManager.ts`; Slot/Roulette files were untouched.
+- PR #38 merged into `main` as `484f654`.
+
+### Stage 30 — Video-derived I AM THE DANGER negative SFX
+- User uploaded `videoplayback (6).mp4` and explicitly selected the `01:32–01:34` segment for the Cadı Kazan negative result cue.
+- Extracted exactly that 2-second segment, encoded it as OGG/Opus, and added it as `artifacts/cascade-8/public/cadi-kazan/sfx-danger-negative.ogg`.
+- `AudioManager.bombBust()` now plays this uploaded-video clip for BOMBA / I AM THE DANGER instead of the old procedural blast/failure cue.
+- Global mute and volume settings still apply; a tiny synthesized fallback is used only if a strict browser policy rejects media playback.
+- Before merging, `feature/cadi-kazan` was deliberately realigned to current `main` after backing up its prior WIP as `backup/cadi-kazan-danger-sfx-wip-2026-09-24`; PR #37 was ahead by 2 / behind by 0 and clean.
+- PR #37 merged into `main` as `f75db61`. Slot/Roulette event logic was not changed.
+
 ### Stage 29 — Standard 5 card made asset-independent
 - Preview proved that the prior Better Call Saul Standard 5 background asset still did not render even though main contained the expected commit and the cactus/Saul/Danger cell art rendered correctly.
 - Verified GitHub main before the fix: `b525e74`; the broken card asset existed at `artifacts/cascade-8/public/cadi-kazan/bcs-standard5-card.webp`.

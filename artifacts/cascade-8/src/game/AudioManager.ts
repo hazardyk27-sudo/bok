@@ -14,18 +14,34 @@ export class AudioManager {
   private readonly scratchSources = new Set<AudioBufferSourceNode>();
   private readonly activeTones = new Set<OscillatorNode>();
   private readonly pendingSfxTimers = new Set<number>();
-  muted = localStorage.getItem("cascade8-muted") === "true";
-  volume = Number(localStorage.getItem("cascade8-volume") ?? "0.38");
+  private dangerBustBuffer?: AudioBuffer;
+  private dangerBustLoad?: Promise<AudioBuffer | undefined>;
+  private dangerBustSource?: AudioBufferSourceNode;
+  private readonly storagePrefix: string;
+  muted: boolean;
+  volume: number;
+
+  constructor(storagePrefix = "cascade8") {
+    this.storagePrefix = storagePrefix;
+    this.muted = localStorage.getItem(`${storagePrefix}-muted`) === "true";
+    this.volume = Number(localStorage.getItem(`${storagePrefix}-volume`) ?? "0.38");
+  }
 
   setMuted(value: boolean) {
     this.muted = value;
-    localStorage.setItem("cascade8-muted", String(value));
-    if (value) this.scratchStop();
+    localStorage.setItem(`${this.storagePrefix}-muted`, String(value));
+    if (value) {
+      this.scratchStop();
+      if (this.dangerBustSource) {
+        try { this.dangerBustSource.stop(); } catch {}
+        this.dangerBustSource = undefined;
+      }
+    }
     if (this.gain) this.gain.gain.value = value ? 0 : 1;
   }
   setVolume(value: number) {
     this.volume = value;
-    localStorage.setItem("cascade8-volume", String(value));
+    localStorage.setItem(`${this.storagePrefix}-volume`, String(value));
     if (this.sfxGain) this.sfxGain.gain.value = value;
   }
   private ensure() {
@@ -44,6 +60,63 @@ export class AudioManager {
   unlock() {
     if (this.muted) return;
     this.ensure();
+    void this.loadDangerBustBuffer();
+  }
+
+  private loadDangerBustBuffer() {
+    if (this.dangerBustBuffer) return Promise.resolve(this.dangerBustBuffer);
+    if (this.dangerBustLoad) return this.dangerBustLoad;
+
+    this.ensure();
+    const context = this.context!;
+    this.dangerBustLoad = fetch("/cadi-kazan/sfx-danger-negative.ogg", { cache: "force-cache" })
+      .then((response) => {
+        if (!response.ok) throw new Error(`Danger SFX HTTP ${response.status}`);
+        return response.arrayBuffer();
+      })
+      .then((bytes) => context.decodeAudioData(bytes))
+      .then((buffer) => {
+        this.dangerBustBuffer = buffer;
+        return buffer;
+      })
+      .catch(() => {
+        // A transient fetch/decode failure must not poison every later round.
+        this.dangerBustLoad = undefined;
+        return undefined;
+      });
+
+    return this.dangerBustLoad;
+  }
+
+  private async playDangerBustBuffer(buffer: AudioBuffer) {
+    if (this.muted) return false;
+    this.ensure();
+    const context = this.context!;
+
+    // A reveal finishes after a server round-trip. Some browsers can suspend the
+    // context again before that async result arrives, so explicitly resume the
+    // already-unlocked context before scheduling this Cadı Kazan clip.
+    if (context.state === "suspended") {
+      try { await context.resume(); } catch { return false; }
+    }
+    if (this.muted || context.state !== "running") return false;
+
+    const source = context.createBufferSource();
+    source.buffer = buffer;
+    source.connect(this.sfxGain!);
+
+    if (this.dangerBustSource) {
+      try { this.dangerBustSource.stop(); } catch {}
+    }
+    this.dangerBustSource = source;
+
+    source.addEventListener("ended", () => {
+      source.disconnect();
+      if (this.dangerBustSource === source) this.dangerBustSource = undefined;
+    }, { once: true });
+
+    source.start();
+    return true;
   }
 
   private makeNoiseBuffer(duration: number, decay = 1.6, warmth = 0.18) {
@@ -427,53 +500,27 @@ export class AudioManager {
 
   bombBust() {
     if (this.muted) return;
+
     this.ensure();
-    const context = this.context!;
-    const output = this.sfxGain!;
-    const start = context.currentTime;
+    if (this.dangerBustBuffer) {
+      void this.playDangerBustBuffer(this.dangerBustBuffer).then((played) => {
+        if (!played && !this.muted) {
+          this.tone(155, 0.28, "sawtooth");
+          this.delayedTone(92, 0.34, "triangle", 90);
+        }
+      });
+      return;
+    }
 
-    // Airy blast + body thump.
-    this.playNoiseBurst({ at: 0, duration: 0.22, gain: 0.16, frequency: 260, q: 0.7, decay: 1.25, warmth: 0.72 });
-    this.playNoiseBurst({ at: 0.012, duration: 0.09, gain: 0.07, frequency: 2_300, q: 0.55, decay: 2.7, warmth: 0.08 });
+    void this.loadDangerBustBuffer().then(async (buffer) => {
+      if (buffer && !this.muted && await this.playDangerBustBuffer(buffer)) return;
 
-    const thump = context.createOscillator();
-    const thumpGain = context.createGain();
-    thump.type = "sine";
-    thump.frequency.setValueAtTime(105, start);
-    thump.frequency.exponentialRampToValueAtTime(38, start + 0.34);
-    thumpGain.gain.setValueAtTime(0.0001, start);
-    thumpGain.gain.exponentialRampToValueAtTime(0.24, start + 0.008);
-    thumpGain.gain.exponentialRampToValueAtTime(0.0001, start + 0.38);
-    thump.connect(thumpGain);
-    thumpGain.connect(output);
-    this.activeTones.add(thump);
-    thump.addEventListener("ended", () => {
-      this.activeTones.delete(thump);
-      thump.disconnect();
-      thumpGain.disconnect();
-    }, { once: true });
-    thump.start(start);
-    thump.stop(start + 0.40);
-
-    // Dissonant descending failure cue after the impact.
-    const fail = context.createOscillator();
-    const failGain = context.createGain();
-    fail.type = "triangle";
-    fail.frequency.setValueAtTime(310, start + 0.06);
-    fail.frequency.exponentialRampToValueAtTime(146, start + 0.42);
-    failGain.gain.setValueAtTime(0.0001, start + 0.06);
-    failGain.gain.exponentialRampToValueAtTime(0.075, start + 0.085);
-    failGain.gain.exponentialRampToValueAtTime(0.0001, start + 0.43);
-    fail.connect(failGain);
-    failGain.connect(output);
-    this.activeTones.add(fail);
-    fail.addEventListener("ended", () => {
-      this.activeTones.delete(fail);
-      fail.disconnect();
-      failGain.disconnect();
-    }, { once: true });
-    fail.start(start + 0.06);
-    fail.stop(start + 0.45);
+      // Only if the real clip cannot be fetched/decoded/resumed.
+      if (!this.muted) {
+        this.tone(155, 0.28, "sawtooth");
+        this.delayedTone(92, 0.34, "triangle", 90);
+      }
+    });
   }
 
   cashRegister() {

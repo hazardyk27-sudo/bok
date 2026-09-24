@@ -44,6 +44,55 @@ type CadiActionRow = { session_id: string; round_id: string; kind: string };
 const safeNumberArray = (value: unknown) => (Array.isArray(value) ? value.map(Number).filter(Number.isInteger) : []);
 const asIso = (value: Date) => value.toISOString();
 
+let bigMoneyStorageReady: Promise<void> | null = null;
+
+async function ensureBigMoneyStorage() {
+  if (bigMoneyStorageReady) return bigMoneyStorageReady;
+  bigMoneyStorageReady = (async () => {
+    const expected = new Map([
+      ["roulette_wallets.balance_cents", "BIGINT"],
+      ["cadi_kazan_rounds.stake_cents", "BIGINT"],
+      ["cadi_kazan_rounds.payout_cents", "BIGINT"],
+      ["cadi_kazan_ledger.amount_cents", "BIGINT"],
+    ]);
+    const result = await pool.query<{ table_name: string; column_name: string; data_type: string }>(
+      `SELECT table_name, column_name, data_type
+         FROM information_schema.columns
+        WHERE table_schema = current_schema()
+          AND (
+            (table_name = 'roulette_wallets' AND column_name = 'balance_cents')
+            OR (table_name = 'cadi_kazan_rounds' AND column_name IN ('stake_cents', 'payout_cents'))
+            OR (table_name = 'cadi_kazan_ledger' AND column_name = 'amount_cents')
+          )`,
+    );
+    const current = new Map(result.rows.map((row) => [`${row.table_name}.${row.column_name}`, row.data_type.toUpperCase()]));
+    const statements = [
+      ["roulette_wallets.balance_cents", "ALTER TABLE roulette_wallets ALTER COLUMN balance_cents TYPE BIGINT USING balance_cents::BIGINT"],
+      ["cadi_kazan_rounds.stake_cents", "ALTER TABLE cadi_kazan_rounds ALTER COLUMN stake_cents TYPE BIGINT USING stake_cents::BIGINT"],
+      ["cadi_kazan_rounds.payout_cents", "ALTER TABLE cadi_kazan_rounds ALTER COLUMN payout_cents TYPE BIGINT USING payout_cents::BIGINT"],
+      ["cadi_kazan_ledger.amount_cents", "ALTER TABLE cadi_kazan_ledger ALTER COLUMN amount_cents TYPE BIGINT USING amount_cents::BIGINT"],
+    ] as const;
+    const pending = statements.filter(([key]) => current.get(key) !== expected.get(key));
+    if (pending.length === 0) return;
+
+    const client = await pool.connect();
+    try {
+      await client.query("BEGIN");
+      for (const [, sql] of pending) await client.query(sql);
+      await client.query("COMMIT");
+    } catch (error) {
+      await client.query("ROLLBACK");
+      throw error;
+    } finally {
+      client.release();
+    }
+  })().catch((error) => {
+    bigMoneyStorageReady = null;
+    throw error;
+  });
+  return bigMoneyStorageReady;
+}
+
 function validateRoundInput(input: {
   mode: CadiKazanMode;
   alarmCount: number;
@@ -130,6 +179,7 @@ function stateFrom(sessionId: string, balanceCents: number, row: CadiRoundRow | 
 
 export class CadiKazanRepository {
   async getState(sessionId: string): Promise<CadiKazanState> {
+    await ensureBigMoneyStorage();
     const [balanceCents, row] = await Promise.all([walletBalance(sessionId), latestRound(sessionId)]);
     return stateFrom(sessionId, balanceCents, row);
   }
@@ -138,6 +188,7 @@ export class CadiKazanRepository {
     sessionId: string,
     input: { mode: CadiKazanMode; alarmCount: number; stakeCents: number; idempotencyKey: string },
   ) {
+    await ensureBigMoneyStorage();
     validateRoundInput(input);
     if (!/^[a-zA-Z0-9_-]{12,100}$/.test(input.idempotencyKey)) throw new Error("INVALID_IDEMPOTENCY_KEY");
     const cellCount = input.mode === "STANDARD" ? CADI_KAZAN_STANDARD_CELL_COUNT : CADI_KAZAN_ADVANCED_CELL_COUNT;
@@ -189,6 +240,7 @@ export class CadiKazanRepository {
   }
 
   async revealCell(sessionId: string, roundId: string, cellIndex: number, idempotencyKey: string) {
+    await ensureBigMoneyStorage();
     if (!/^[a-zA-Z0-9_-]{12,100}$/.test(idempotencyKey)) throw new Error("INVALID_IDEMPOTENCY_KEY");
     if (!Number.isInteger(cellIndex)) throw new Error("INVALID_CADI_KAZAN_CELL");
     const client = await pool.connect();
@@ -277,6 +329,7 @@ export class CadiKazanRepository {
   }
 
   async cashOut(sessionId: string, roundId: string, idempotencyKey: string) {
+    await ensureBigMoneyStorage();
     if (!/^[a-zA-Z0-9_-]{12,100}$/.test(idempotencyKey)) throw new Error("INVALID_IDEMPOTENCY_KEY");
     const client = await pool.connect();
     try {

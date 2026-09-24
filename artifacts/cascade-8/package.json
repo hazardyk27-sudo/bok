@@ -11,7 +11,12 @@
     "test": "PORT=4173 BASE_PATH=/ vitest run src",
     "test:mobile": "playwright test --project=android-chrome",
     "test:mobile:ios": "ROULETTE_IOS=1 playwright test --project=ios-safari",
-    "typecheck": "tsc -p tsconfig.json --noEmit"
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test:visual:install": "playwright install chromium",
+    "test:visual:cadi": "playwright test -c playwright.visual.config.ts",
+    "test:visual:cadi:desktop": "playwright test -c playwright.visual.config.ts --project=desktop-1920x1080 --project=desktop-1366x768",
+    "test:visual:cadi:mobile": "playwright test -c playwright.visual.config.ts --project=mobile-667x375 --project=mobile-736x414 --project=mobile-844x390 --project=mobile-932x430",
+    "test:visual:cadi:update": "playwright test -c playwright.visual.config.ts --update-snapshots"
   },
   "devDependencies": {
     "@hookform/resolvers": "^3.10.0",

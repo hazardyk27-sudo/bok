@@ -360,22 +360,24 @@ export class ScratchSurface {
     const context = layer.context;
 
     if (layer.name === "base") {
+      // Keep the deepest abrasion layer in the same metallic-grey family as
+      // the visible cactus coating so no brown strip flashes mid-scratch.
       const base = context.createLinearGradient(0, 0, width, height);
-      base.addColorStop(0, "#6f4728");
-      base.addColorStop(.46, "#9f6d3d");
-      base.addColorStop(1, "#52331f");
+      base.addColorStop(0, "#8f9290");
+      base.addColorStop(.46, "#b9bbb8");
+      base.addColorStop(1, "#777a78");
       context.fillStyle = base;
       context.fillRect(0, 0, width, height);
 
       context.save();
-      context.globalAlpha = .24;
+      context.globalAlpha = .22;
       for (let y = 4; y < height; y += 7) {
-        context.fillStyle = y % 14 === 0 ? "#d2a363" : "#3b2618";
+        context.fillStyle = y % 14 === 0 ? "#dfe0dc" : "#666966";
         context.fillRect(0, y, width, .55);
       }
       for (let x = 8; x < width; x += 13) {
         const y = 6 + ((x * 17) % Math.max(8, height - 12));
-        context.fillStyle = x % 26 === 0 ? "#e6bd7a" : "#2d1b12";
+        context.fillStyle = x % 26 === 0 ? "#ecece8" : "#5a5d5a";
         context.fillRect(x, y, 1.1, .8);
       }
       context.restore();
@@ -383,13 +385,15 @@ export class ScratchSurface {
     }
 
     if (layer.name === "foil") {
+      // The intermediate scratch layer should stay in the same metallic-grey
+      // family as the cactus coating instead of flashing brown/gold mid-scratch.
       const foil = context.createLinearGradient(0, height, width, 0);
-      foil.addColorStop(0, "#8d5928");
-      foil.addColorStop(.16, "#d7a952");
-      foil.addColorStop(.34, "#f0cf82");
-      foil.addColorStop(.53, "#a56a2f");
-      foil.addColorStop(.74, "#e2b75f");
-      foil.addColorStop(1, "#73451f");
+      foil.addColorStop(0, "#9fa19f");
+      foil.addColorStop(.16, "#c7c8c5");
+      foil.addColorStop(.34, "#e4e4e1");
+      foil.addColorStop(.53, "#b3b4b1");
+      foil.addColorStop(.74, "#d5d6d2");
+      foil.addColorStop(1, "#8f918f");
       context.fillStyle = foil;
       context.fillRect(0, 0, width, height);
 
@@ -402,14 +406,14 @@ export class ScratchSurface {
         context.lineTo(x + height * .82, height);
         context.lineWidth = index % 5 === 0 ? 1.05 : .34;
         context.globalAlpha = index % 4 === 0 ? .22 : .11;
-        context.strokeStyle = index % 3 === 0 ? "#fff0b6" : "#56351c";
+        context.strokeStyle = index % 3 === 0 ? "#f4f4f1" : "#777977";
         context.stroke();
       }
       const band = context.createLinearGradient(0, 0, width, height);
-      band.addColorStop(0, "rgba(255,255,255,.02)");
-      band.addColorStop(.42, "rgba(255,244,199,.22)");
-      band.addColorStop(.54, "rgba(255,255,255,.05)");
-      band.addColorStop(1, "rgba(35,18,8,.12)");
+      band.addColorStop(0, "rgba(255,255,255,.03)");
+      band.addColorStop(.42, "rgba(255,255,255,.22)");
+      band.addColorStop(.54, "rgba(255,255,255,.06)");
+      band.addColorStop(1, "rgba(45,45,43,.10)");
       context.globalAlpha = 1;
       context.fillStyle = band;
       context.fillRect(0, 0, width, height);
@@ -418,8 +422,30 @@ export class ScratchSurface {
     }
 
     if (this.coverImageReady && this.coverImage) {
-      context.fillStyle = "#fffdf7";
+      // Standard 5 uses the cactus artwork as part of the scratch coating.
+      // The source artwork contains a white field, so draw it with multiply
+      // over a metallic-grey substrate: white becomes grey while the cactus
+      // remains visible and scratches away with the lacquer layer.
+      const metal = context.createLinearGradient(0, 0, width, height);
+      metal.addColorStop(0, "#d9d9d7");
+      metal.addColorStop(.18, "#b8b9b8");
+      metal.addColorStop(.46, "#e5e5e2");
+      metal.addColorStop(.72, "#a9aaa9");
+      metal.addColorStop(1, "#d0d0cd");
+      context.fillStyle = metal;
       context.fillRect(0, 0, width, height);
+
+      context.save();
+      context.globalAlpha = .24;
+      context.strokeStyle = "rgba(255,255,255,.72)";
+      context.lineWidth = .55;
+      for (let y = 2; y < height; y += 4) {
+        context.beginPath();
+        context.moveTo(0, y);
+        context.lineTo(width, y + Math.sin(y * .55) * .45);
+        context.stroke();
+      }
+      context.restore();
 
       const image = this.coverImage;
       const scale = Math.min(width / Math.max(1, image.naturalWidth), height / Math.max(1, image.naturalHeight));
@@ -427,16 +453,33 @@ export class ScratchSurface {
       const drawHeight = image.naturalHeight * scale;
       const drawX = (width - drawWidth) / 2;
       const drawY = (height - drawHeight) / 2;
-      context.drawImage(image, drawX, drawY, drawWidth, drawHeight);
 
       context.save();
-      context.globalAlpha = .11;
-      const sheen = context.createLinearGradient(0, 0, width, height);
-      sheen.addColorStop(0, "#ffffff");
-      sheen.addColorStop(.45, "rgba(255,255,255,0)");
-      sheen.addColorStop(1, "#d7d0bd");
-      context.fillStyle = sheen;
+      context.globalCompositeOperation = "multiply";
+      context.globalAlpha = .98;
+      context.drawImage(image, drawX, drawY, drawWidth, drawHeight);
+      context.restore();
+
+      // Embossed scratch-card finish: a soft top-left lift and darker
+      // lower-right edge without obscuring the cactus.
+      context.save();
+      const emboss = context.createLinearGradient(0, 0, width, height);
+      emboss.addColorStop(0, "rgba(255,255,255,.32)");
+      emboss.addColorStop(.34, "rgba(255,255,255,.06)");
+      emboss.addColorStop(.68, "rgba(0,0,0,.03)");
+      emboss.addColorStop(1, "rgba(54,54,54,.18)");
+      context.fillStyle = emboss;
       context.fillRect(0, 0, width, height);
+
+      context.globalAlpha = .34;
+      context.strokeStyle = "rgba(255,255,255,.72)";
+      context.lineWidth = .8;
+      context.strokeRect(.8, .8, Math.max(0, width - 1.6), Math.max(0, height - 1.6));
+
+      context.globalAlpha = .18;
+      context.strokeStyle = "rgba(46,46,46,.78)";
+      context.lineWidth = .8;
+      context.strokeRect(1.8, 1.8, Math.max(0, width - 3.6), Math.max(0, height - 3.6));
       context.restore();
       return;
     }
@@ -621,7 +664,7 @@ export class ScratchSurface {
       this.debrisContext!.translate(particle.x, particle.y);
       this.debrisContext!.rotate(particle.rotation);
       this.debrisContext!.globalAlpha = particle.alpha * (1 - lifeProgress);
-      this.debrisContext!.fillStyle = lifeProgress < .34 ? "#f4dfaa" : lifeProgress < .68 ? "#bd8a48" : "#6c4728";
+      this.debrisContext!.fillStyle = lifeProgress < .34 ? "#eeeeea" : lifeProgress < .68 ? "#b8bbb8" : "#6f7370";
       this.debrisContext!.fillRect(-particle.size / 2, -particle.size / 2, particle.size * 1.35, particle.size * .42);
       this.debrisContext!.restore();
 
