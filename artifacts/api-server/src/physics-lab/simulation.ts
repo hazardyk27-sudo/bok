@@ -47,17 +47,6 @@ const BALL_PARAMETERS = {
 
 type Vec3 = { x: number; y: number; z: number };
 type Quaternion = { x: number; y: number; z: number; w: number };
-type ColliderBody = "stationary" | "rotor";
-
-type ColliderSpec = {
-  id: string;
-  label: string;
-  body: ColliderBody;
-  position: [number, number, number];
-  halfExtents: [number, number, number];
-  rotation: [number, number, number, number];
-};
-
 export type PhysicsLabRoundStatus = "SETTLED" | "INVALID";
 
 export type PhysicsLabStartConditions = {
@@ -601,90 +590,6 @@ function addMeasuredDeflectorColliders(
   return colliders;
 }
 
-function yQuaternion(angle: number): [number, number, number, number] {
-  return [0, Math.sin(angle / 2), 0, Math.cos(angle / 2)];
-}
-
-function tiltedYQuaternion(
-  angle: number,
-  tilt: number,
-): [number, number, number, number] {
-  const [x, y, z, w] = yQuaternion(angle);
-  const localX = Math.sin(tilt / 2);
-  const localW = Math.cos(tilt / 2);
-  return [
-    w * localX + x * localW,
-    y * localW + z * localX,
-    z * localW - y * localX,
-    w * localW - x * localX,
-  ];
-}
-
-function addRingSpecs(
-  specs: ColliderSpec[],
-  options: {
-    id: string;
-    label: string;
-    body: ColliderBody;
-    count: number;
-    radius: number;
-    y: number;
-    halfExtents: [number, number, number];
-    radialOffset?: number;
-    tilt?: number;
-  },
-) {
-  for (let index = 0; index < options.count; index += 1) {
-    const angle = (index / options.count) * Math.PI * 2;
-    specs.push({
-      id: `${options.id}-${index}`,
-      label: options.label,
-      body: options.body,
-      position: radialPosition(options.radius, angle, options.y),
-      halfExtents: options.halfExtents,
-      rotation: tiltedYQuaternion(
-        angle + (options.radialOffset ?? 0),
-        options.tilt ?? 0,
-      ),
-    });
-  }
-}
-
-function buildColliderSpecs(): ColliderSpec[] {
-  const specs: ColliderSpec[] = [];
-  return specs;
-}
-
-function addRapierCollider(
-  world: RAPIER.World,
-  body: RAPIER.RigidBody,
-  spec: ColliderSpec,
-  friction: number,
-  restitution: number,
-) {
-  const isDeflector = spec.label === "Deflector";
-  const membership =
-    spec.body === "rotor"
-      ? ROTOR_COLLISION_GROUP
-      : STATIONARY_COLLISION_GROUP;
-  const filter =
-    spec.body === "rotor"
-      ? BALL_COLLISION_GROUP | ROTOR_COLLISION_GROUP
-      : BALL_COLLISION_GROUP | STATIONARY_COLLISION_GROUP;
-  const descriptor = RAPIER.ColliderDesc.cuboid(...spec.halfExtents)
-    .setTranslation(...spec.position)
-    .setRotation({
-      x: spec.rotation[0],
-      y: spec.rotation[1],
-      z: spec.rotation[2],
-      w: spec.rotation[3],
-    })
-    .setFriction(isDeflector ? 0.28 : friction)
-    .setRestitution(isDeflector ? 0.42 : restitution)
-    .setCollisionGroups(membership | (filter << 16));
-  world.createCollider(descriptor, body);
-}
-
 function pocketIndexFromState(
   translation: { x: number; z: number },
   rotation: { y: number; w: number },
@@ -796,16 +701,6 @@ export async function simulatePhysicsLabRound(
   addPocketFloorAndOuterLipColliders(world, rotorBody);
   addPocketFretColliders(world, rotorBody);
   addPocketInnerGuardCollider(world, rotorBody);
-  const specs = buildColliderSpecs();
-  for (const spec of specs) {
-    addRapierCollider(
-      world,
-      spec.body === "rotor" ? rotorBody : stationaryBody,
-      spec,
-      spec.body === "rotor" ? 0.4 : 0.72,
-      spec.body === "rotor" ? 0.18 : 0.22,
-    );
-  }
   const ballBody = world.createRigidBody(
     RAPIER.RigidBodyDesc.dynamic()
       .setTranslation(...startConditions.ballPosition)
