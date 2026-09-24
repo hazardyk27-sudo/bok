@@ -811,3 +811,269 @@
     filter: saturate(.92) contrast(1.03) !important;
   }
 }
+
+
+/* PASS 2 — move the live DOM toward the approved cinematic master.
+   No raster mockup is embedded; all elements below are real CSS/DOM. */
+@media (min-width: 821px) {
+  .witch-page {
+    grid-template-rows:
+      clamp(68px, 8.2vh, 84px)
+      minmax(0, 1fr)
+      clamp(164px, 20.5vh, 210px) !important;
+  }
+
+  .is-standard-theme .witch-stage-shell {
+    align-items: end !important;
+    padding:
+      clamp(26px, 3.2vh, 42px)
+      clamp(34px, 3.8vw, 72px)
+      clamp(30px, 4.1vh, 46px)
+      clamp(66px, 5.8vw, 108px) !important;
+    background:
+      radial-gradient(ellipse at 9% 2%, rgba(255,205,108,.58) 0%, rgba(173,77,24,.24) 14%, transparent 29%),
+      radial-gradient(ellipse at 18% 25%, rgba(207,96,27,.20), transparent 26%),
+      radial-gradient(ellipse at 87% 31%, rgba(222,145,46,.13), transparent 19%),
+      linear-gradient(180deg, rgba(59,23,11,.24), rgba(13,8,5,.54)),
+      repeating-linear-gradient(0deg, rgba(255,255,255,.012) 0 1px, rgba(0,0,0,.016) 1px 5px),
+      linear-gradient(180deg, #4b2110 0%, #241108 19%, #130b07 63%, #0a0705 100%) !important;
+  }
+
+  .is-standard-theme .witch-stage-shell::before {
+    top: clamp(86px, 11vh, 122px) !important;
+    right: clamp(300px, 20vw, 380px) !important;
+    bottom: clamp(24px, 3.4vh, 40px) !important;
+    left: clamp(128px, 10vw, 188px) !important;
+    border-radius: 18px !important;
+    background:
+      linear-gradient(135deg, rgba(255,255,255,.026), transparent 21% 79%, rgba(0,0,0,.11)),
+      repeating-linear-gradient(90deg, rgba(218,160,79,.018) 0 1px, transparent 1px 6px),
+      linear-gradient(150deg, #2d1b12 0%, #17100b 46%, #0c0907 100%) !important;
+    box-shadow:
+      inset 0 0 0 7px rgba(95,56,31,.14),
+      inset 0 0 80px rgba(0,0,0,.52),
+      0 24px 68px rgba(0,0,0,.28) !important;
+  }
+
+  /* Correct vertical hierarchy from the reference:
+     generous decor band above, ticket/payout close to the deck below. */
+  .is-standard-theme .witch-table-surface,
+  .is-standard-theme .witch-payout-panel {
+    align-self: end !important;
+    transform: translateY(0) !important;
+  }
+
+  .is-standard-theme .witch-ticket:not(.is-advanced) {
+    width: min(100%, 1140px) !important;
+    max-width: 1140px !important;
+    margin: 0 auto !important;
+  }
+
+  .is-standard-theme .witch-payout-panel {
+    margin-bottom: 2px !important;
+    padding: clamp(18px, 2vh, 26px) 20px !important;
+  }
+
+  /* Lamp silhouette + warm halo, top-left. */
+  .is-standard-theme .witch-stage-decor-coin {
+    position: absolute !important;
+    z-index: 2 !important;
+    top: -28px !important;
+    left: -22px !important;
+    display: block !important;
+    width: clamp(230px, 18vw, 340px) !important;
+    height: clamp(118px, 12vh, 158px) !important;
+    overflow: visible !important;
+    border: 0 !important;
+    border-radius: 0 0 54% 54% !important;
+    color: transparent !important;
+    background:
+      radial-gradient(ellipse at 52% 70%, rgba(255,227,151,.96) 0 10%, rgba(255,171,52,.70) 11% 24%, rgba(105,48,15,.92) 25% 38%, rgba(10,7,5,.96) 40% 55%, transparent 57%) !important;
+    box-shadow: none !important;
+    transform: none !important;
+    pointer-events: none !important;
+  }
+
+  .is-standard-theme .witch-stage-decor-coin::before {
+    content: "" !important;
+    position: absolute !important;
+    left: 26% !important;
+    top: 4% !important;
+    width: 49% !important;
+    height: 12% !important;
+    border-radius: 999px !important;
+    background: linear-gradient(180deg, #8c5322, #2b160b) !important;
+    box-shadow: 0 2px 0 rgba(255,203,93,.28) inset !important;
+  }
+
+  /* Better Call Saul mug, left edge. */
+  .is-standard-theme .witch-stage-decor-book {
+    position: absolute !important;
+    z-index: 4 !important;
+    top: clamp(98px, 14vh, 148px) !important;
+    left: clamp(10px, 1.2vw, 24px) !important;
+    display: grid !important;
+    width: clamp(94px, 7.4vw, 132px) !important;
+    height: clamp(126px, 16vh, 176px) !important;
+    place-items: center !important;
+    padding: 18px 10px !important;
+    overflow: visible !important;
+    border: 1px solid rgba(189,113,37,.33) !important;
+    border-radius: 10px 10px 20px 20px !important;
+    color: #c98a37 !important;
+    background:
+      radial-gradient(circle at 38% 22%, rgba(255,255,255,.04), transparent 30%),
+      linear-gradient(160deg, #0d0b09, #19100b 70%, #080706) !important;
+    box-shadow: 0 16px 24px rgba(0,0,0,.32) !important;
+    transform: rotate(-3deg) !important;
+    pointer-events: none !important;
+  }
+
+  .is-standard-theme .witch-stage-decor-book::after {
+    content: "" !important;
+    position: absolute !important;
+    right: -28% !important;
+    top: 25% !important;
+    width: 38% !important;
+    height: 45% !important;
+    border: 7px solid #100b08 !important;
+    border-left: 0 !important;
+    border-radius: 0 50% 50% 0 !important;
+    box-shadow: 1px 0 0 rgba(182,110,35,.18) !important;
+  }
+
+  .is-standard-theme .witch-stage-decor-book span {
+    display: block !important;
+    width: 100% !important;
+    color: transparent !important;
+    font-size: 0 !important;
+    text-align: center !important;
+  }
+
+  .is-standard-theme .witch-stage-decor-book span::before {
+    content: "Better\A Call\A Saul" !important;
+    display: block !important;
+    color: #c88b36 !important;
+    font-family: Georgia, "Times New Roman", serif !important;
+    font-size: clamp(16px, 1.35vw, 24px) !important;
+    font-style: italic !important;
+    font-weight: 700 !important;
+    line-height: .94 !important;
+    white-space: pre-line !important;
+  }
+
+  .is-standard-theme .witch-stage-decor-book small {
+    display: none !important;
+  }
+
+  /* Brass scales suggestion at the far right. */
+  .is-standard-theme .witch-stage-decor-candle {
+    position: absolute !important;
+    z-index: 3 !important;
+    right: -2px !important;
+    bottom: clamp(42px, 6vh, 76px) !important;
+    display: block !important;
+    width: clamp(92px, 7vw, 126px) !important;
+    height: clamp(188px, 24vh, 250px) !important;
+    border: 0 !important;
+    background:
+      linear-gradient(90deg, transparent 46%, #7f4c1d 47% 53%, transparent 54%),
+      radial-gradient(circle at 50% 9%, #d5a24e 0 5%, #6e421b 6% 11%, transparent 12%),
+      linear-gradient(180deg, transparent 0 80%, rgba(173,104,33,.85) 81% 84%, transparent 85%) !important;
+    box-shadow: none !important;
+    opacity: .92 !important;
+    pointer-events: none !important;
+  }
+
+  .is-standard-theme .witch-stage-decor-candle::before,
+  .is-standard-theme .witch-stage-decor-candle::after {
+    content: "" !important;
+    position: absolute !important;
+    top: 26% !important;
+    width: 44% !important;
+    height: 26% !important;
+    border: 2px solid rgba(185,120,44,.80) !important;
+    border-top: 0 !important;
+    border-radius: 0 0 50% 50% !important;
+    background: linear-gradient(180deg, rgba(206,144,59,.08), rgba(83,45,17,.20)) !important;
+  }
+
+  .is-standard-theme .witch-stage-decor-candle::before {
+    left: 0 !important;
+    transform: rotate(5deg) !important;
+  }
+
+  .is-standard-theme .witch-stage-decor-candle::after {
+    right: 0 !important;
+    transform: rotate(-5deg) !important;
+  }
+
+  /* Handwritten legal-note prop, lower-left. */
+  .is-standard-theme .witch-table-surface::before {
+    content: "People\A Deserve\A a Second\A Chance." !important;
+    position: absolute !important;
+    z-index: 1 !important;
+    left: clamp(-74px, -4.2vw, -34px) !important;
+    bottom: clamp(-22px, -1.2vh, -8px) !important;
+    display: grid !important;
+    width: clamp(150px, 12vw, 220px) !important;
+    height: clamp(112px, 14vh, 156px) !important;
+    align-content: center !important;
+    padding: 18px 20px !important;
+    color: #2e2016 !important;
+    background:
+      repeating-linear-gradient(180deg, #f0dfb9 0 22px, #d9c69e 23px, #f0dfb9 24px) !important;
+    box-shadow: 0 10px 24px rgba(0,0,0,.26) !important;
+    font-family: "Segoe Print", "Bradley Hand", cursive !important;
+    font-size: clamp(16px, 1.35vw, 23px) !important;
+    line-height: 1.05 !important;
+    white-space: pre-line !important;
+    transform: rotate(-10deg) !important;
+    pointer-events: none !important;
+  }
+
+  /* Thin pen across the left desk zone. */
+  .is-standard-theme .witch-table-surface::after {
+    content: "" !important;
+    position: absolute !important;
+    z-index: 2 !important;
+    left: clamp(-90px, -5vw, -44px) !important;
+    bottom: clamp(116px, 15vh, 154px) !important;
+    width: clamp(150px, 12vw, 220px) !important;
+    height: 12px !important;
+    border-radius: 999px !important;
+    background:
+      linear-gradient(180deg, #15100c 0 45%, #040303 46% 68%, #684019 69% 76%, #0b0806 77% 100%) !important;
+    box-shadow: 0 5px 8px rgba(0,0,0,.34) !important;
+    transform: rotate(-14deg) !important;
+    pointer-events: none !important;
+  }
+
+  .witch-control-dock {
+    padding-top: clamp(16px, 2vh, 22px) !important;
+    padding-bottom: clamp(16px, 2vh, 22px) !important;
+  }
+}
+
+@media (min-width: 821px) and (max-width: 1499px) {
+  .witch-page {
+    grid-template-rows: 66px minmax(0,1fr) 164px !important;
+  }
+
+  .is-standard-theme .witch-stage-shell {
+    padding: 24px 28px 28px 54px !important;
+  }
+
+  .is-standard-theme .witch-ticket:not(.is-advanced) {
+    width: min(100%, 900px) !important;
+  }
+
+  .is-standard-theme .witch-stage-decor-book {
+    left: 6px !important;
+    top: 72px !important;
+  }
+
+  .is-standard-theme .witch-stage-decor-candle {
+    right: -22px !important;
+  }
+}
