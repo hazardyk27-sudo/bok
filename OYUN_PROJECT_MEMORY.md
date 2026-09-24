@@ -954,6 +954,14 @@ One audit-only instruction was mistakenly sent to Replit before this rule was cl
 - menu, game routes and slot shell can now extend beyond the viewport instead of being clipped
 - removed the Cadı Kazan landscape-only height/overflow trap so short landscape screens can scroll vertically when needed
 
+### Stage 31 — Danger SFX moved into AudioContext
+- Previous HTMLAudio playback of the uploaded 01:32–01:34 negative clip did not work reliably in Preview.
+- `AudioManager` now preloads the same-origin `/cadi-kazan/sfx-danger-negative.ogg` file on audio unlock, decodes it with `AudioContext.decodeAudioData`, and plays it through the existing SFX gain chain using `AudioBufferSourceNode`.
+- Global mute/volume continue to apply; repeated busts stop/restart cleanly.
+- Synth fallback is retained only if fetch/decode fails.
+- PR #38 changed only `artifacts/cascade-8/src/game/AudioManager.ts`; Slot/Roulette files were untouched.
+- PR #38 merged into `main` as `484f654`.
+
 ### Stage 30 — Video-derived I AM THE DANGER negative SFX
 - User uploaded `videoplayback (6).mp4` and explicitly selected the `01:32–01:34` segment for the Cadı Kazan negative result cue.
 - Extracted exactly that 2-second segment, encoded it as OGG/Opus, and added it as `artifacts/cascade-8/public/cadi-kazan/sfx-danger-negative.ogg`.
