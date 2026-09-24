@@ -1137,3 +1137,111 @@
       cover !important;
   }
 }
+
+
+/* PASS 4 — payout card alignment, embossed typography, active cash-out state. */
+@media (min-width: 821px) {
+  .is-standard-theme .witch-payout-panel {
+    align-self: center !important;
+    height: min(100%, clamp(340px, 46vh, 430px)) !important;
+    min-height: 340px !important;
+    max-height: 430px !important;
+    margin: 0 !important;
+    padding: clamp(18px, 2vh, 26px) 20px !important;
+    transform: translateY(-2px) !important;
+  }
+
+  .is-standard-theme .witch-payout-head span {
+    color: #fff1d7 !important;
+    text-shadow:
+      0 1px 0 rgba(97, 52, 21, .95),
+      0 2px 0 rgba(54, 27, 11, .72),
+      0 4px 8px rgba(0, 0, 0, .44) !important;
+  }
+
+  .is-standard-theme .witch-payout-amount {
+    color: #ffd967 !important;
+    text-shadow:
+      0 1px 0 #a96a16,
+      0 2px 0 #8a4f0f,
+      0 3px 0 #633307,
+      0 6px 10px rgba(0, 0, 0, .42),
+      0 0 18px rgba(255, 191, 55, .12) !important;
+  }
+
+  .is-standard-theme .witch-multiplier {
+    color: #efbd40 !important;
+    text-shadow:
+      0 1px 0 #8b5310,
+      0 2px 0 #5c3207,
+      0 4px 7px rgba(0, 0, 0, .36) !important;
+  }
+
+  .is-standard-theme .witch-payout-net,
+  .is-standard-theme .witch-payout-lines {
+    text-shadow: 0 1px 2px rgba(0,0,0,.58) !important;
+  }
+
+  .is-standard-theme .witch-payout-net b,
+  .is-standard-theme .witch-payout-lines b {
+    color: #fff3de !important;
+    text-shadow:
+      0 1px 0 rgba(99,55,26,.75),
+      0 2px 4px rgba(0,0,0,.48) !important;
+  }
+
+  .is-standard-theme .witch-cashout-button {
+    transition:
+      transform 140ms ease,
+      box-shadow 140ms ease,
+      border-color 140ms ease,
+      background 140ms ease,
+      color 140ms ease !important;
+  }
+
+  .is-standard-theme .witch-cashout-button:not(:disabled) {
+    border-color: #ffd052 !important;
+    color: #281405 !important;
+    background:
+      linear-gradient(180deg, #ffd75d 0%, #efb635 52%, #cf8d1f 100%) !important;
+    box-shadow:
+      inset 0 1px 0 rgba(255,255,255,.55),
+      inset 0 -2px 0 rgba(117,65,9,.34),
+      0 7px 15px rgba(83,41,5,.32),
+      0 0 0 1px rgba(255,196,59,.12) !important;
+    text-shadow: 0 1px 0 rgba(255,241,190,.50) !important;
+    cursor: pointer !important;
+  }
+
+  .is-standard-theme .witch-cashout-button:not(:disabled):hover {
+    transform: translateY(-1px) !important;
+    box-shadow:
+      inset 0 1px 0 rgba(255,255,255,.62),
+      inset 0 -2px 0 rgba(117,65,9,.32),
+      0 9px 18px rgba(83,41,5,.38),
+      0 0 16px rgba(245,180,44,.14) !important;
+  }
+
+  .is-standard-theme .witch-cashout-button:not(:disabled):active {
+    transform: translateY(1px) !important;
+  }
+
+  .is-standard-theme .witch-cashout-button:disabled {
+    opacity: 1 !important;
+    border-color: rgba(255,255,255,.14) !important;
+    color: rgba(255,245,232,.42) !important;
+    background: linear-gradient(180deg, #4a4037, #312923) !important;
+    box-shadow:
+      inset 0 1px 0 rgba(255,255,255,.04),
+      0 3px 10px rgba(0,0,0,.18) !important;
+    cursor: not-allowed !important;
+  }
+}
+
+@media (min-width: 821px) and (max-width: 1499px) {
+  .is-standard-theme .witch-payout-panel {
+    height: min(100%, clamp(332px, 46vh, 378px)) !important;
+    min-height: 332px !important;
+    max-height: 378px !important;
+  }
+}
