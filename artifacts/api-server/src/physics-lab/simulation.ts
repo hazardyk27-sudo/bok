@@ -422,6 +422,51 @@ function addPocketFloorAndOuterLipColliders(
   return colliders;
 }
 
+function addPocketFretColliders(
+  world: RAPIER.World,
+  body: RAPIER.RigidBody,
+) {
+  const pocketFloorInnerRadius = 1.48;
+  const innerEdgeRadius =
+    pocketFloorInnerRadius + PHYSICS_LAB_BALL_RADIUS * 2 + 0.02;
+  const outerEdgeRadius = ROULETTE_POCKET_FLOOR_OUTER_RADIUS - 0.02;
+  const centerRadius = (innerEdgeRadius + outerEdgeRadius) / 2;
+  const tangentialHalfExtent = 0.03;
+  const radialHalfExtent = (outerEdgeRadius - innerEdgeRadius) / 2;
+  const verticalHalfExtent = 0.11;
+  const centerY =
+    ROULETTE_POCKET_FLOOR_Y + verticalHalfExtent + 0.022;
+  const colliders: RAPIER.Collider[] = [];
+
+  for (let index = 0; index < PHYSICS_LAB_SECTOR_COUNT; index += 1) {
+    const angle = (index + 0.5) * SECTOR_STEP_RADIANS;
+    colliders.push(
+      world.createCollider(
+        RAPIER.ColliderDesc.cuboid(
+          tangentialHalfExtent,
+          verticalHalfExtent,
+          radialHalfExtent,
+        )
+          .setTranslation(...radialPosition(centerRadius, angle, centerY))
+          .setRotation({
+            x: 0,
+            y: Math.sin(angle / 2),
+            z: 0,
+            w: Math.cos(angle / 2),
+          })
+          .setFriction(0.42)
+          .setRestitution(0.02)
+          .setCollisionGroups(
+            ROTOR_COLLISION_GROUP | (BALL_COLLISION_GROUP << 16),
+          ),
+        body,
+      ),
+    );
+  }
+
+  return colliders;
+}
+
 function yQuaternion(angle: number): [number, number, number, number] {
   return [0, Math.sin(angle / 2), 0, Math.cos(angle / 2)];
 }
@@ -491,16 +536,6 @@ function buildColliderSpecs(): ColliderSpec[] {
     radius: 1.42,
     y: 0.15,
     halfExtents: [0.13, 0.15, 0.045],
-  });
-  addRingSpecs(specs, {
-    id: "rotor-fret",
-    label: "Pocket fret / separator",
-    body: "rotor",
-    count: PHYSICS_LAB_SECTOR_COUNT,
-    radius: 1.73,
-    y: 0.15,
-    halfExtents: [0.35, 0.13, 0.022],
-    radialOffset: -Math.PI / 2,
   });
   specs.push({
     id: "bowl-spindle-guard",
@@ -659,6 +694,7 @@ export async function simulatePhysicsLabRound(
   addDarkRaceChannelCollider(world, stationaryBody);
   addBowlBridgeCollider(world, stationaryBody);
   addPocketFloorAndOuterLipColliders(world, rotorBody);
+  addPocketFretColliders(world, rotorBody);
   const specs = buildColliderSpecs();
   for (const spec of specs) {
     addRapierCollider(
