@@ -160,6 +160,88 @@ function darkRaceSurfaceYAt(radius: number) {
   return profile[profile.length - 1][1];
 }
 
+function addDarkRaceChannelCollider(
+  world: RAPIER.World,
+  body: RAPIER.RigidBody,
+) {
+  const profile: Array<[number, number]> = [
+    ...ROULETTE_DARK_RACE_CHANNEL_PROFILE
+      .filter(([radius]) => radius <= 2.5)
+      .map(([radius, y]) => [radius, y] as [number, number]),
+    [2.520, -0.2820],
+    [2.535, -0.2740],
+    [2.545, -0.2630],
+    [2.552, -0.2450],
+    [2.556, -0.2100],
+    [2.558, -0.1450],
+    [2.559, -0.0400],
+  ];
+  const segments = 512;
+  const thickness = 0.12;
+  const vertices: number[] = [];
+  const indices: number[] = [];
+
+  const appendProfile = (rows: readonly (readonly [number, number])[]) => {
+    for (const [radius, y] of rows) {
+      for (let segment = 0; segment < segments; segment += 1) {
+        const angle = (segment / segments) * Math.PI * 2;
+        vertices.push(
+          Math.sin(angle) * radius,
+          y,
+          Math.cos(angle) * radius,
+        );
+      }
+    }
+  };
+
+  appendProfile(profile);
+  const bottomOffset = profile.length * segments;
+  appendProfile(profile.map(([radius, y]) => [radius, y - thickness] as [number, number]));
+
+  for (let row = 0; row < profile.length - 1; row += 1) {
+    for (let segment = 0; segment < segments; segment += 1) {
+      const next = (segment + 1) % segments;
+      const topA = row * segments + segment;
+      const topB = row * segments + next;
+      const topC = (row + 1) * segments + next;
+      const topD = (row + 1) * segments + segment;
+      indices.push(topA, topD, topB, topB, topD, topC);
+
+      const bottomA = bottomOffset + topA;
+      const bottomB = bottomOffset + topB;
+      const bottomC = bottomOffset + topC;
+      const bottomD = bottomOffset + topD;
+      indices.push(bottomA, bottomB, bottomD, bottomB, bottomC, bottomD);
+    }
+  }
+
+  for (const row of [0, profile.length - 1]) {
+    const bottomRow = bottomOffset + row * segments;
+    for (let segment = 0; segment < segments; segment += 1) {
+      const next = (segment + 1) % segments;
+      const topA = row * segments + segment;
+      const topB = row * segments + next;
+      const bottomA = bottomRow + segment;
+      const bottomB = bottomRow + next;
+      indices.push(topA, topB, bottomB, topA, bottomB, bottomA);
+    }
+  }
+
+  return world.createCollider(
+    RAPIER.ColliderDesc.trimesh(
+      new Float32Array(vertices),
+      new Uint32Array(indices),
+      RAPIER.TriMeshFlags.FIX_INTERNAL_EDGES | RAPIER.TriMeshFlags.ORIENTED,
+    )
+      .setFriction(BALL_PARAMETERS.friction)
+      .setRestitution(BALL_PARAMETERS.restitution)
+      .setCollisionGroups(
+        STATIONARY_COLLISION_GROUP | (BALL_COLLISION_GROUP << 16),
+      ),
+    body,
+  );
+}
+
 function yQuaternion(angle: number): [number, number, number, number] {
   return [0, Math.sin(angle / 2), 0, Math.cos(angle / 2)];
 }
@@ -238,33 +320,6 @@ function buildColliderSpecs(): ColliderSpec[] {
     radius: 1.86,
     y: 0.1,
     halfExtents: [0.13, 0.045, 0.12],
-  });
-  addRingSpecs(specs, {
-    id: "track-floor",
-    label: "Ball track",
-    body: "stationary",
-    count: 96,
-    radius: 2.48,
-    y: 0.61,
-    halfExtents: [0.11, 0.045, 0.17],
-  });
-  addRingSpecs(specs, {
-    id: "outer-rim",
-    label: "Outer rim",
-    body: "stationary",
-    count: 96,
-    radius: 2.7,
-    y: 0.85,
-    halfExtents: [0.12, 0.17, 0.1],
-  });
-  addRingSpecs(specs, {
-    id: "track-inner-rail",
-    label: "Track inner rail",
-    body: "stationary",
-    count: 64,
-    radius: 2.2,
-    y: 0.58,
-    halfExtents: [0.13, 0.025, 0.055],
   });
   addRingSpecs(specs, {
     id: "deflector",
@@ -467,6 +522,7 @@ export async function simulatePhysicsLabRound(
     },
     true,
   );
+  addDarkRaceChannelCollider(world, stationaryBody);
   const specs = buildColliderSpecs();
   for (const spec of specs) {
     addRapierCollider(
