@@ -4894,676 +4894,741 @@
   transform: none !important;
 }
 
+/* =========================================================
+   STAGE 36 — CONSOLIDATED PREMIUM GAME UI SYSTEM
+   Research-informed targets:
+   - 44px+ touch targets on mobile
+   - one functional UI typeface (DM Sans)
+   - dark neutral canvas + one warm accent family
+   - clear hierarchy: balance / payout / primary action
+   ========================================================= */
 
-/* Stage 31 — Cadı Kazan usability/premium layout refinement */
-.is-standard-theme .witch-stage-decor,
-.is-standard-theme .witch-stage-shell::before { display: none; }
-.is-standard-theme .witch-stage-shell {
-  background:
-    radial-gradient(ellipse at 50% 48%, rgba(96, 38, 20, .24), transparent 46%),
-    linear-gradient(145deg, #1d0b07 0%, #0e0807 48%, #180906 100%);
-}
-.is-standard-theme .witch-table-surface { inset: 34px 245px 10px 20px; }
-.is-standard-theme .witch-ticket {
-  top: 50%;
-  left: 50%;
-  width: min(100%, 910px);
-  min-width: 0;
-  max-height: calc(100% - 30px);
-  transform: translate(-50%, -50%);
-}
-.is-standard-theme .witch-payout-panel {
-  right: 22px;
-  top: 50%;
-  transform: translateY(-50%);
-}
-.witch-table-heading p,
-.witch-table-feedback > span:last-child,
-.witch-ticket-footer,
-.witch-ticket-meta-row { display: none; }
-
-.witch-payout-head span { font-size: 12px; letter-spacing: .08em; }
-.witch-payout-head small { font-size: 7px; }
-.witch-payout-hero { display: flex; flex-direction: column; align-items: center; }
-.witch-payout-amount {
-  order: 1;
-  color: #ffe08a;
-  font-family: Georgia, "Times New Roman", serif;
-  font-size: clamp(34px, 3.4vw, 52px);
-  font-weight: 700;
-  line-height: 1;
-}
-.witch-multiplier {
-  order: 2;
-  margin-top: 12px;
-  font-family: "DM Sans", sans-serif;
-  font-size: clamp(24px, 2.5vw, 36px);
-  font-weight: 800;
-}
-.witch-payout-net {
-  order: 3;
-  margin-top: 12px;
-  font-size: 10px;
-  letter-spacing: .09em;
-}
-.witch-payout-net b { font-size: 15px; }
-
-.witch-appstats { position: relative; overflow: visible; }
-.witch-menu-button {
-  display: grid;
-  width: 42px;
-  height: 42px;
-  place-items: center;
-  border: 1px solid rgba(241, 190, 71, .65);
-  border-radius: 11px;
-  color: #ffd75f;
-  background: #24100b;
-  font-size: 20px;
-  cursor: pointer;
-}
-.witch-game-menu {
-  position: absolute;
-  z-index: 100;
-  top: calc(100% + 10px);
-  right: 0;
-  display: grid;
-  width: 230px;
-  gap: 10px;
-  padding: 16px;
-  border: 1px solid #a86e1d;
-  border-radius: 14px;
-  background: #1d0b08;
-  box-shadow: 0 18px 48px rgba(0,0,0,.55);
-}
-.witch-game-menu[hidden] { display: none !important; }
-.witch-game-menu strong { color: #ffd75f; font: 800 11px/1 "DM Sans",sans-serif; letter-spacing: .1em; }
-.witch-game-menu button,
-.witch-game-menu a {
-  min-height: 42px;
-  padding: 0 12px;
-  border: 1px solid rgba(241,190,71,.38);
-  border-radius: 9px;
-  color: #f7e5b0;
-  background: #32110c;
-  font: 800 10px/1 "DM Sans",sans-serif;
-  text-decoration: none;
-  display: flex;
-  align-items: center;
-}
-.witch-game-menu label { display: grid; gap: 7px; color:#d7b96e; font:700 8px/1 "DM Sans",sans-serif; }
-.witch-game-menu input { width:100%; accent-color:#e8b437; }
-.witch-game-menu small { color:#8d8a80; font:600 7px/1.2 "DM Sans",sans-serif; }
-
-.witch-input-wrap { position: relative; }
-.witch-input-wrap i { display: none; }
-.witch-input-wrap input {
-  min-width: 120px;
-  font-size: 18px !important;
-  font-weight: 800 !important;
-  text-align: center;
-}
-.witch-input-wrap::before {
-  position: absolute;
-  z-index: 2;
-  top: 50%;
-  left: 50%;
-  color: currentColor;
-  content: "$";
-  font: 800 18px/1 "DM Sans",sans-serif;
-  transform: translate(calc(-50% - 34px), -50%);
-  pointer-events: none;
-}
-.witch-stake-stepper > button {
-  min-width: 52px;
-  min-height: 48px;
-  font-size: 24px !important;
-  font-weight: 900 !important;
-}
-.witch-stake-presets button {
-  min-height: 28px;
-  padding-inline: 12px !important;
-  font-size: 8px !important;
-}
-.witch-mode-card { min-height: 62px; }
-.witch-mode-card strong { font-size: 13px !important; }
-.witch-mode-card small { font-size: 8px !important; opacity: .85; }
-
-@media (max-width: 760px) {
-  .witch-page { padding: 6px; }
-  .witch-appbar { grid-template-columns: 38px 1fr auto; padding: 6px 8px; }
-  .witch-appstats > .witch-stat { display: none; }
-  .witch-appstats { display: block; min-height: 0; border: 0; background: transparent; }
-  .witch-menu-button { width: 40px; height: 40px; }
-  .witch-stage-shell { min-height: 0; height: calc(100dvh - 236px); margin-top: 6px; border-radius: 14px; }
-  .is-standard-theme .witch-table-surface { inset: 30px 8px 8px; }
-  .is-standard-theme .witch-ticket {
-    width: min(96%, 760px);
-    max-height: calc(100% - 8px);
-  }
-  .witch-payout-panel { display: none !important; }
-  .witch-control-dock {
-    gap: 8px !important;
-    padding: 8px !important;
-    overflow: visible !important;
-  }
-  .witch-mode-grid { gap: 6px; }
-  .witch-mode-card { min-height: 52px; padding: 8px 10px !important; }
-  .witch-mode-card strong { font-size: 12px !important; }
-  .witch-mode-card small { font-size: 7px !important; }
-  .witch-stake-stepper > button { min-width: 48px; min-height: 46px; }
-  .witch-input-wrap input { min-width: 108px; min-height: 46px; font-size: 17px !important; }
-  .witch-stake-presets {
-    display: grid !important;
-    grid-template-columns: repeat(6, minmax(42px,1fr));
-    gap: 5px !important;
-  }
-  .witch-stake-presets button { min-height: 34px; font-size: 9px !important; }
-  .witch-primary-button { min-height: 52px; font-size: 13px !important; }
-  .witch-game-menu { position: fixed; top: 58px; right: 8px; width: min(260px, calc(100vw - 16px)); }
-}
-
-@media (max-width: 520px) {
-  .witch-control-dock { grid-template-columns: 1fr !important; }
-  .witch-mode-grid { grid-template-columns: 1fr 1fr; }
-  .witch-stake-group { width: 100%; }
-  .witch-stake-stepper { width: 100%; }
-  .witch-input-wrap { flex: 1; }
-  .witch-input-wrap input { width: 100%; }
-}
-
-
-/* Stage 32 — requested usability corrections */
-.is-standard-theme .witch-stage-shell {
-  background:
-    radial-gradient(ellipse at 50% 48%, rgba(218,42,31,.09), transparent 38%),
-    linear-gradient(145deg,#170b08 0%,#080706 52%,#160906 100%) !important;
-}
-.is-standard-theme .witch-stage-shell::before,
-.is-standard-theme .witch-stage-decor { display:none !important; }
-
-@media (min-width:821px) {
-  .is-standard-theme .witch-table-surface {
-    inset: 38px 282px 12px 18px !important;
-  }
-  .is-standard-theme .witch-ticket {
-    top:50% !important;
-    left:50% !important;
-    width:min(94%, 930px) !important;
-    min-width:0 !important;
-    max-width:930px !important;
-    max-height:calc(100% - 18px) !important;
-    transform:translate(-50%,-50%) !important;
-  }
-  .is-standard-theme .witch-payout-panel {
-    top:50% !important;
-    right:22px !important;
-    width:238px;
-    transform:translateY(-50%) !important;
-  }
-}
-
-.witch-payout-hero { display:flex !important; flex-direction:column; align-items:center; padding:24px 0 16px; }
-.witch-payout-amount {
-  order:1 !important;
-  margin:0 !important;
-  color:#ffe18c !important;
-  font-family:Georgia,"Times New Roman",serif !important;
-  font-size:clamp(38px,3.5vw,54px) !important;
-  font-weight:700 !important;
-  line-height:1 !important;
-}
-.witch-multiplier {
-  order:2 !important;
-  margin-top:13px !important;
-  font-family:"DM Sans",sans-serif !important;
-  font-size:clamp(23px,2.1vw,32px) !important;
-  font-weight:800 !important;
-  letter-spacing:-.02em !important;
-}
-.witch-payout-net {
-  order:3 !important;
-  margin-top:13px !important;
-  color:#b6aaa0 !important;
-  font-size:9px !important;
-}
-.witch-payout-net b { font-size:16px !important; font-weight:900; }
-.witch-payout-head span { font-size:15px !important; }
-.witch-payout-head small { font-size:8px !important; color:#b4a58d !important; }
-.witch-payout-note,.witch-table-feedback>span:last-child,.witch-ticket-footer { display:none !important; }
-
-.witch-control-dock {
-  grid-template-columns:minmax(330px,1.15fr) 1px minmax(300px,1fr) 1px minmax(170px,.55fr) minmax(230px,.8fr) !important;
-  min-height:112px !important;
-  padding:14px 18px 16px !important;
-}
-.witch-mode-card { min-height:70px !important; padding:12px 14px !important; }
-.witch-mode-card strong { font-size:15px !important; }
-.witch-mode-card small { margin-top:4px; color:#c0b8aa !important; font-size:9px !important; line-height:1.25 !important; }
-.witch-control-group>label,.witch-alarm-field>span { font-size:9px !important; }
-.witch-stake-stepper { grid-template-columns:58px minmax(130px,1fr) 58px !important; min-height:58px !important; }
-.witch-stake-stepper>button { min-width:58px !important; min-height:58px !important; font-size:28px !important; }
-.witch-input-wrap input { min-height:58px !important; padding:0 10px !important; font-size:19px !important; }
-.witch-input-wrap::before { display:none !important; }
-.witch-stake-presets { display:grid !important; grid-template-columns:repeat(6,minmax(46px,1fr)); gap:6px !important; }
-.witch-stake-presets button { min-height:32px !important; padding:0 7px !important; font-size:9px !important; }
-.witch-primary-button { min-height:68px !important; font-size:15px !important; }
-.witch-alarm-field select { min-height:58px !important; font-size:12px !important; }
-
-.witch-menu-button { min-width:44px; min-height:44px; font-size:22px; }
-.witch-game-menu button,.witch-game-menu a { font-size:11px !important; }
-
-@media (max-width:820px) {
-  .witch-stage-shell { height:auto !important; min-height:390px !important; }
-  .is-standard-theme .witch-table-surface { inset:32px 8px 8px !important; }
-  .is-standard-theme .witch-ticket {
-    top:50% !important; left:50% !important;
-    width:min(96%,760px) !important; min-width:0 !important;
-    transform:translate(-50%,-50%) !important;
-  }
-  .witch-control-dock {
-    grid-template-columns:1fr !important;
-    gap:10px !important;
-    min-height:0 !important;
-    margin:8px 0 0 !important;
-    padding:12px !important;
-  }
-  .witch-control-separator { display:none !important; }
-  .witch-mode-grid { grid-template-columns:1fr 1fr !important; gap:8px !important; }
-  .witch-mode-card { min-height:60px !important; }
-  .witch-mode-card strong { font-size:14px !important; }
-  .witch-mode-card small { font-size:9px !important; }
-  .witch-stake-stepper { grid-template-columns:60px minmax(0,1fr) 60px !important; }
-  .witch-stake-stepper>button { min-width:60px !important; min-height:58px !important; font-size:30px !important; }
-  .witch-input-wrap input { min-height:58px !important; font-size:20px !important; }
-  .witch-stake-presets { grid-template-columns:repeat(3,1fr) !important; }
-  .witch-stake-presets button { min-height:40px !important; font-size:11px !important; }
-  .witch-alarm-field select { min-height:54px !important; font-size:13px !important; }
-  .witch-primary-button { min-height:60px !important; font-size:15px !important; }
-}
-
-
-/* Stage 33 — Saul Legal Casino design system */
 .app-shell.is-witch-page {
-  --saul-ink:#100a08;
-  --saul-panel:#21100c;
-  --saul-panel-2:#2b120d;
-  --saul-red:#d92d20;
-  --saul-yellow:#f5c344;
-  --saul-cream:#f4e7c8;
-  --saul-muted:#a89982;
-  --saul-line:rgba(176,105,58,.32);
-  --saul-money:#ffe08a;
-  --saul-positive:#e8b76a;
-  background:linear-gradient(145deg,#120a08,#080706 52%,#170906) !important;
+  --ui-bg: #0d0908;
+  --ui-surface: #17100d;
+  --ui-surface-2: #21140f;
+  --ui-surface-3: #2a1811;
+  --ui-border: rgba(224, 177, 93, .22);
+  --ui-border-strong: rgba(245, 195, 68, .52);
+  --ui-text: #f5ead6;
+  --ui-text-2: #c9baa3;
+  --ui-text-3: #8f8375;
+  --ui-accent: #f5c344;
+  --ui-accent-2: #df9f28;
+  --ui-danger: #d94a38;
+  --ui-positive: #eab56a;
+  min-height: 100dvh;
+  overflow-x: clip;
+  overflow-y: auto;
+  background:
+    radial-gradient(circle at 50% -10%, rgba(118, 38, 24, .10), transparent 36%),
+    linear-gradient(180deg, #110b09 0%, #0a0706 62%, #100806 100%) !important;
 }
-.app-shell.is-witch-page > .stars { display:none !important; }
-.witch-page { color:var(--saul-cream); }
 
-/* restrained premium header */
-.witch-appbar {
-  grid-template-columns:48px minmax(250px,1fr) auto !important;
-  min-height:64px;
-  border-color:var(--saul-line) !important;
-  border-radius:16px !important;
-  background:linear-gradient(100deg,#35100b 0%,#1c0d0a 56%,#100a08 100%) !important;
-  box-shadow:0 16px 38px rgba(0,0,0,.30),inset 0 1px rgba(255,255,255,.035) !important;
+.app-shell.is-witch-page > .stars,
+.is-standard-theme .witch-stage-decor,
+.is-standard-theme .witch-stage-shell::before {
+  display: none !important;
 }
+
+.witch-page {
+  width: min(100%, 1440px) !important;
+  min-height: 100dvh;
+  margin: 0 auto;
+  padding: 14px 20px 18px !important;
+  overflow: visible !important;
+  color: var(--ui-text);
+  font-family: "DM Sans", Arial, sans-serif;
+}
+
+.witch-visually-hidden {
+  position: absolute !important;
+  width: 1px !important;
+  height: 1px !important;
+  padding: 0 !important;
+  margin: -1px !important;
+  overflow: hidden !important;
+  clip: rect(0, 0, 0, 0) !important;
+  white-space: nowrap !important;
+  border: 0 !important;
+}
+
+/* ---------- HEADER ---------- */
+.witch-appbar {
+  position: relative !important;
+  z-index: 400 !important;
+  display: grid !important;
+  grid-template-columns: 48px minmax(220px, 1fr) auto !important;
+  gap: 14px !important;
+  align-items: center !important;
+  min-height: 62px !important;
+  padding: 8px 12px !important;
+  overflow: visible !important;
+  border: 1px solid var(--ui-border) !important;
+  border-radius: 16px !important;
+  background: linear-gradient(180deg, rgba(38, 19, 14, .98), rgba(22, 13, 10, .98)) !important;
+  box-shadow:
+    0 14px 32px rgba(0, 0, 0, .26),
+    inset 0 1px 0 rgba(255, 255, 255, .03) !important;
+  backdrop-filter: blur(14px);
+}
+
 .witch-back {
-  border-color:rgba(245,195,68,.5) !important;
-  color:var(--saul-yellow) !important;
-  background:#24100c !important;
+  width: 44px !important;
+  height: 44px !important;
+  border: 1px solid rgba(245, 195, 68, .40) !important;
+  border-radius: 12px !important;
+  color: #f0ca66 !important;
+  background: #24130e !important;
+  font: 700 20px/1 "DM Sans", sans-serif !important;
+}
+.witch-back:hover {
+  border-color: rgba(245, 195, 68, .66) !important;
+  background: #30170f !important;
+}
+
+.witch-appbrand > div {
+  display: flex !important;
+  align-items: center !important;
+  gap: 16px !important;
 }
 .witch-appbrand h1 {
-  color:var(--saul-cream) !important;
-  font-family:Georgia,"Times New Roman",serif !important;
-  font-weight:700 !important;
-  letter-spacing:.025em !important;
+  margin: 0 !important;
+  color: var(--ui-text) !important;
+  font: 800 26px/1 "DM Sans", sans-serif !important;
+  letter-spacing: .035em !important;
 }
-.witch-appbrand small { color:#c7a96c !important; font:700 8px/1 "DM Sans",sans-serif !important; }
+.witch-appbrand small {
+  color: #bca16d !important;
+  font: 700 9px/1 "DM Sans", sans-serif !important;
+  letter-spacing: .16em !important;
+}
+.witch-appbrand small::before { display: none !important; }
+
 .witch-appstats {
-  border-color:rgba(245,195,68,.18) !important;
-  background:rgba(11,7,6,.55) !important;
+  position: relative !important;
+  display: grid !important;
+  grid-template-columns: minmax(190px, auto) 48px !important;
+  min-width: 286px !important;
+  min-height: 46px !important;
+  align-items: center !important;
+  overflow: visible !important;
+  border: 1px solid rgba(245, 195, 68, .14) !important;
+  border-radius: 13px !important;
+  background: rgba(10, 7, 6, .54) !important;
 }
-.witch-stat { border-color:rgba(245,195,68,.10) !important; }
-.witch-stat span { color:#998c7d !important; font:700 6px/1 "DM Sans",sans-serif !important; }
-.witch-stat strong { color:var(--saul-cream) !important; font-family:"DM Sans",sans-serif !important; }
-.witch-stat:first-child strong { color:var(--saul-money) !important; font-size:17px !important; }
+.witch-stat-runtime { display: none !important; }
+.witch-stat-balance {
+  display: grid !important;
+  grid-template-columns: auto 1fr !important;
+  gap: 12px !important;
+  align-items: center !important;
+  padding: 0 16px !important;
+  border: 0 !important;
+}
+.witch-stat-balance span {
+  color: var(--ui-text-3) !important;
+  font: 700 9px/1 "DM Sans", sans-serif !important;
+  letter-spacing: .11em !important;
+}
+.witch-stat-balance strong {
+  color: #ffe184 !important;
+  font: 800 16px/1 "DM Sans", sans-serif !important;
+  font-variant-numeric: tabular-nums;
+  text-align: right !important;
+}
+
 .witch-menu-button {
-  border-color:rgba(245,195,68,.55) !important;
-  color:var(--saul-yellow) !important;
-  background:#25100c !important;
+  display: grid !important;
+  width: 48px !important;
+  height: 46px !important;
+  place-items: center !important;
+  border: 0 !important;
+  border-left: 1px solid rgba(245, 195, 68, .14) !important;
+  border-radius: 0 12px 12px 0 !important;
+  color: var(--ui-accent) !important;
+  background: transparent !important;
+  font: 700 22px/1 "DM Sans", sans-serif !important;
+  cursor: pointer;
+}
+.witch-menu-button:hover { background: rgba(245, 195, 68, .06) !important; }
+
+/* Fixed overlay avoids clipping by the game table. */
+.witch-game-menu {
+  position: fixed !important;
+  z-index: 9999 !important;
+  top: 82px !important;
+  right: clamp(12px, calc((100vw - 1400px) / 2 + 20px), 40px) !important;
+  display: grid !important;
+  width: 280px !important;
+  gap: 12px !important;
+  padding: 16px !important;
+  border: 1px solid rgba(245, 195, 68, .30) !important;
+  border-radius: 16px !important;
+  background: linear-gradient(180deg, #25140f 0%, #120c09 100%) !important;
+  box-shadow:
+    0 24px 70px rgba(0,0,0,.62),
+    inset 0 1px 0 rgba(255,255,255,.035) !important;
+  backdrop-filter: blur(18px);
+}
+.witch-game-menu[hidden] { display: none !important; }
+.witch-game-menu strong {
+  color: var(--ui-text) !important;
+  font: 800 13px/1.2 "DM Sans", sans-serif !important;
+  letter-spacing: .06em !important;
+}
+.witch-game-menu button,
+.witch-game-menu a {
+  display: flex !important;
+  align-items: center !important;
+  min-height: 48px !important;
+  padding: 0 14px !important;
+  border: 1px solid rgba(245,195,68,.18) !important;
+  border-radius: 11px !important;
+  color: var(--ui-text) !important;
+  background: #1b100d !important;
+  font: 700 13px/1 "DM Sans", sans-serif !important;
+  text-decoration: none !important;
+}
+.witch-game-menu button:hover,
+.witch-game-menu a:hover {
+  border-color: rgba(245,195,68,.40) !important;
+  background: #28140f !important;
+}
+.witch-game-menu label {
+  display: grid !important;
+  gap: 9px !important;
+  color: var(--ui-text-2) !important;
+  font: 700 11px/1.2 "DM Sans", sans-serif !important;
+}
+.witch-game-menu input {
+  width: 100% !important;
+  min-height: 32px;
+  accent-color: var(--ui-accent);
+}
+.witch-game-menu small {
+  color: var(--ui-text-3) !important;
+  font: 600 10px/1.3 "DM Sans", sans-serif !important;
 }
 
-/* remove developer-like micro status from the table */
-.witch-table-heading { min-height:18px; }
-.witch-table-eyebrow { color:#b6a083 !important; font-size:8px !important; letter-spacing:.08em !important; }
-.witch-table-eyebrow i { color:var(--saul-yellow) !important; }
-.witch-table-heading strong { display:none !important; }
-.witch-table-feedback { display:none !important; }
-
-/* payout: money is the hero, all UI copy uses one functional face */
-.witch-payout-panel {
-  border-color:rgba(245,195,68,.34) !important;
-  border-radius:20px !important;
-  background:linear-gradient(165deg,#25110d,#130a08 62%,#1d0c09) !important;
-  box-shadow:0 24px 50px rgba(0,0,0,.34),inset 0 1px rgba(255,255,255,.03) !important;
+/* ---------- GAME TABLE ---------- */
+.witch-stage-shell {
+  position: relative !important;
+  z-index: 1 !important;
+  width: 100% !important;
+  height: clamp(430px, calc(100dvh - 232px), 560px) !important;
+  min-height: 430px !important;
+  max-height: 560px !important;
+  margin: 12px 0 0 !important;
+  overflow: hidden !important;
+  border: 1px solid rgba(189, 82, 44, .34) !important;
+  border-radius: 20px !important;
+  background:
+    radial-gradient(ellipse at 43% 45%, rgba(91, 34, 20, .16), transparent 42%),
+    linear-gradient(145deg, #130b09 0%, #090706 56%, #160a08 100%) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.018),
+    inset 0 0 90px rgba(0,0,0,.20),
+    0 16px 38px rgba(0,0,0,.20) !important;
 }
-.witch-payout-panel::before,.witch-payout-panel::after { display:none !important; }
-.witch-payout-head { border-color:rgba(245,195,68,.14) !important; }
-.witch-payout-head span {
-  color:var(--saul-cream) !important;
-  font-family:"DM Sans",sans-serif !important;
-  font-size:13px !important;
-  font-weight:800 !important;
-  letter-spacing:.07em !important;
-}
-.witch-payout-head small { display:none !important; }
-.witch-payout-amount {
-  color:var(--saul-money) !important;
-  font-family:Georgia,"Times New Roman",serif !important;
-  font-variant-numeric:tabular-nums;
-  letter-spacing:-.025em !important;
-  text-shadow:0 6px 22px rgba(245,195,68,.10);
-}
-.witch-multiplier {
-  color:#f1c95d !important;
-  font-family:"DM Sans",sans-serif !important;
-  font-variant-numeric:tabular-nums;
-}
-.witch-payout-net {
-  color:var(--saul-muted) !important;
-  font-family:"DM Sans",sans-serif !important;
-  letter-spacing:.08em !important;
-}
-.witch-payout-net b { color:#f0b17a !important; font-variant-numeric:tabular-nums; }
-.witch-payout-lines { border-color:rgba(245,195,68,.11) !important; color:#9d8f7f !important; }
-.witch-payout-lines b { color:var(--saul-cream) !important; font-size:10px; }
-.witch-cashout-button {
-  border:0 !important;
-  border-radius:12px !important;
-  color:#241209 !important;
-  background:linear-gradient(180deg,#ffd35b,#e9a72d) !important;
-  box-shadow:0 10px 24px rgba(211,133,26,.18),inset 0 1px rgba(255,255,255,.5) !important;
-  font-family:"DM Sans",sans-serif !important;
-  font-weight:900 !important;
+.witch-table-heading,
+.witch-table-feedback {
+  display: none !important;
 }
 
-/* coherent control deck */
-.witch-control-dock {
-  border-color:var(--saul-line) !important;
-  border-radius:18px !important;
-  background:linear-gradient(100deg,#29100c,#130a08 55%,#1e0c09) !important;
-  box-shadow:0 18px 42px rgba(0,0,0,.28),inset 0 1px rgba(255,255,255,.025) !important;
+.is-standard-theme .witch-table-surface {
+  position: absolute !important;
+  inset: 20px 266px 16px 16px !important;
+  display: grid !important;
+  place-items: center !important;
 }
-.witch-control-separator { background:rgba(245,195,68,.12) !important; }
-.witch-control-group>label,.witch-alarm-field>span {
-  color:#c7aa72 !important;
-  font-family:"DM Sans",sans-serif !important;
-  letter-spacing:.08em !important;
-}
-.witch-mode-card {
-  border-color:rgba(168,153,130,.20) !important;
-  color:var(--saul-cream) !important;
-  background:#170c09 !important;
-  border-radius:12px !important;
-}
-.witch-mode-card.is-selected {
-  border-color:rgba(245,195,68,.72) !important;
-  background:linear-gradient(145deg,#3a170f,#24100c) !important;
-  box-shadow:inset 3px 0 0 var(--saul-yellow);
-}
-.witch-mode-card strong { font-family:"DM Sans",sans-serif !important; font-weight:800 !important; }
-.witch-mode-card small { color:#a99c8c !important; font-family:"DM Sans",sans-serif !important; }
-.witch-radio { border-color:#8e8172 !important; }
-.witch-mode-card.is-selected .witch-radio { border-color:var(--saul-yellow) !important; background:var(--saul-yellow) !important; box-shadow:inset 0 0 0 4px #25110c !important; }
-.witch-stake-stepper {
-  border-color:rgba(245,195,68,.28) !important;
-  background:#0f0b09 !important;
-}
-.witch-stake-stepper>button {
-  color:var(--saul-yellow) !important;
-  background:#25120d !important;
-}
-.witch-input-wrap input {
-  color:var(--saul-cream) !important;
-  font-family:"DM Sans",sans-serif !important;
-  font-weight:800 !important;
-  font-variant-numeric:tabular-nums;
-}
-.witch-stake-presets button {
-  border-color:rgba(245,195,68,.25) !important;
-  color:#d9c7a7 !important;
-  background:#170c09 !important;
-  border-radius:8px !important;
-  font-family:"DM Sans",sans-serif !important;
-  font-weight:800 !important;
-}
-.witch-alarm-field select {
-  border-color:rgba(245,195,68,.20) !important;
-  color:var(--saul-cream) !important;
-  background:#130b09 !important;
-}
-.witch-primary-button {
-  border:0 !important;
-  border-radius:12px !important;
-  color:#241209 !important;
-  background:linear-gradient(180deg,#ffd35b,#e9a72d) !important;
-  box-shadow:0 10px 24px rgba(211,133,26,.16),inset 0 1px rgba(255,255,255,.52) !important;
-  font-family:"DM Sans",sans-serif !important;
-  font-weight:900 !important;
+.is-standard-theme .witch-ticket {
+  top: 50% !important;
+  left: 50% !important;
+  width: min(95%, 940px) !important;
+  max-width: 940px !important;
+  min-width: 0 !important;
+  max-height: calc(100% - 12px) !important;
+  transform: translate(-50%, -50%) !important;
 }
 
-/* cells should read as printed parts of the ticket, not white web cards */
+/* Printed scratch windows */
 .is-standard-theme .witch-cell {
-  border-color:rgba(194,56,38,.55) !important;
-  border-radius:4px !important;
-  background:#f4e9d3 !important;
-  box-shadow:0 2px 5px rgba(70,29,15,.12),inset 0 1px rgba(255,255,255,.7) !important;
-}
-.is-standard-theme .witch-cell-result-layer {
-  background:linear-gradient(145deg,#f8efdf,#eadbc2) !important;
-}
-
-
-/* Stage 34 — premium cleanup / control usability */
-.witch-visually-hidden {
-  position:absolute !important;width:1px !important;height:1px !important;padding:0 !important;
-  margin:-1px !important;overflow:hidden !important;clip:rect(0,0,0,0) !important;
-  white-space:nowrap !important;border:0 !important;
-}
-.witch-stat-runtime { display:none !important; }
-.witch-appstats {
-  grid-template-columns:minmax(190px,auto) 48px !important;
-  min-width:290px !important;
-}
-.witch-stat-balance { border-right:0 !important; padding-inline:18px !important; }
-.witch-table-heading { left:22px !important; top:14px !important; }
-.witch-table-eyebrow { font-size:9px !important; color:#c7b69c !important; }
-
-/* give the physical ticket more authority on the table */
-@media (min-width:821px) {
-  .is-standard-theme .witch-table-surface { inset:38px 270px 10px 12px !important; }
-  .is-standard-theme .witch-ticket {
-    width:min(97%,980px) !important;
-    max-width:980px !important;
-  }
-}
-
-/* premium payout proportions */
-.witch-payout-panel { padding:22px 20px 20px !important; }
-.witch-payout-head { padding-bottom:15px !important; }
-.witch-payout-hero { padding:26px 0 20px !important; }
-.witch-payout-amount { font-size:clamp(42px,3.7vw,58px) !important; }
-.witch-multiplier { margin-top:15px !important; font-size:27px !important; }
-.witch-payout-net { margin-top:16px !important; font-size:10px !important; }
-.witch-payout-net b { margin-left:7px !important; font-size:16px !important; }
-.witch-payout-lines { padding:12px 0 !important; font-size:8px !important; }
-.witch-cashout-button { min-height:64px !important; margin-top:12px !important; }
-.witch-secondary-button {
-  min-height:46px !important;border-color:rgba(245,195,68,.30) !important;
-  color:#e8ca82 !important;background:#2a100b !important;font-size:10px !important;
-}
-
-/* deck: larger readable choices, less tiny copy */
-.witch-control-dock { min-height:124px !important; }
-.witch-mode-grid { gap:10px !important; }
-.witch-mode-card { min-height:78px !important; grid-template-columns:18px 1fr !important; }
-.witch-mode-card strong { font-size:16px !important; line-height:1.1 !important; }
-.witch-mode-card small { font-size:10px !important; line-height:1.3 !important; }
-.witch-radio { width:16px !important;height:16px !important; }
-.witch-control-group { gap:9px !important; }
-.witch-control-group>label { font-size:10px !important; }
-.witch-stake-stepper { min-height:62px !important; grid-template-columns:64px minmax(140px,1fr) 64px !important; }
-.witch-stake-stepper>button {
-  min-width:64px !important;min-height:62px !important;font-size:31px !important;
-  transition:background .15s ease,transform .15s ease;
-}
-.witch-stake-stepper>button:hover:not(:disabled) { background:#3b190f !important; }
-.witch-stake-stepper>button:active:not(:disabled) { transform:scale(.96); }
-.witch-input-wrap input { min-height:62px !important;font-size:21px !important;letter-spacing:.01em !important; }
-.witch-stake-presets { gap:7px !important; }
-.witch-stake-presets button {
-  min-height:38px !important;font-size:10px !important;border-radius:9px !important;
-  cursor:pointer;
-}
-.witch-stake-presets button:hover { border-color:rgba(245,195,68,.55) !important;background:#29120d !important; }
-.witch-alarm-field select { min-height:62px !important;font-size:13px !important;padding-left:17px !important; }
-.witch-primary-button {
-  min-height:72px !important;font-size:16px !important;
-  background:#f2bd3f !important;
-  box-shadow:0 9px 20px rgba(211,133,26,.15),inset 0 1px rgba(255,255,255,.35) !important;
-}
-.witch-primary-button:hover:not(:disabled) { background:#f7c84f !important; }
-
-/* warmer printed scratch windows */
-.is-standard-theme .witch-cell {
-  border:1px solid rgba(185,61,43,.46) !important;
-  background:#f2e4cb !important;
+  border: 1px solid rgba(189, 61, 43, .55) !important;
+  border-radius: 2px !important;
+  background: #f5e8d2 !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.62),
+    0 1px 3px rgba(70,29,15,.12) !important;
 }
 .is-standard-theme .witch-cell-result-layer {
   background:
-    radial-gradient(circle at 50% 38%,rgba(255,255,255,.38),transparent 42%),
-    linear-gradient(145deg,#f5ead7,#e7d5b9) !important;
+    radial-gradient(circle at 50% 40%, rgba(255,255,255,.30), transparent 43%),
+    linear-gradient(145deg, #f7eddd, #e9d7ba) !important;
 }
 
-/* mobile controls: genuine touch targets */
-@media (max-width:820px) {
-  .witch-appstats { min-width:0 !important; }
-  .witch-stat-balance { display:none !important; }
-  .witch-control-dock { padding:14px !important; }
-  .witch-mode-card { min-height:68px !important; }
-  .witch-mode-card strong { font-size:15px !important; }
-  .witch-mode-card small { font-size:10px !important; }
-  .witch-stake-stepper { grid-template-columns:68px minmax(0,1fr) 68px !important; }
-  .witch-stake-stepper>button { min-width:68px !important;min-height:64px !important;font-size:32px !important; }
-  .witch-input-wrap input { min-height:64px !important;font-size:22px !important; }
-  .witch-stake-presets { grid-template-columns:repeat(3,1fr) !important; }
-  .witch-stake-presets button { min-height:44px !important;font-size:12px !important; }
-  .witch-alarm-field select { min-height:58px !important;font-size:14px !important; }
-  .witch-primary-button { min-height:64px !important;font-size:16px !important; }
+/* ---------- PAYOUT PANEL ---------- */
+.witch-payout-panel {
+  position: absolute !important;
+  z-index: 10 !important;
+  top: 50% !important;
+  right: 18px !important;
+  width: 228px !important;
+  min-height: 328px !important;
+  padding: 18px !important;
+  overflow: hidden !important;
+  border: 1px solid rgba(245,195,68,.30) !important;
+  border-radius: 18px !important;
+  background: linear-gradient(180deg, #24130f 0%, #130c09 100%) !important;
+  box-shadow:
+    0 20px 46px rgba(0,0,0,.34),
+    inset 0 1px 0 rgba(255,255,255,.03) !important;
+  transform: translateY(-50%) !important;
+  backdrop-filter: blur(14px);
+}
+.witch-payout-panel::before,
+.witch-payout-panel::after { display: none !important; }
+
+.witch-payout-head {
+  display: block !important;
+  padding: 0 0 14px !important;
+  border-bottom: 1px solid rgba(245,195,68,.12) !important;
+  text-align: center !important;
+}
+.witch-payout-head span {
+  color: var(--ui-text) !important;
+  font: 800 13px/1.2 "DM Sans", sans-serif !important;
+  letter-spacing: .055em !important;
+}
+.witch-payout-head small { display: none !important; }
+
+.witch-payout-hero {
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+  padding: 24px 0 18px !important;
+  text-align: center !important;
+}
+.witch-payout-amount {
+  order: 1 !important;
+  margin: 0 !important;
+  color: #ffe184 !important;
+  font: 800 clamp(42px, 3.4vw, 52px)/1 "DM Sans", sans-serif !important;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -.035em !important;
+}
+.witch-multiplier {
+  order: 2 !important;
+  margin-top: 14px !important;
+  color: #efc758 !important;
+  font: 800 24px/1 "DM Sans", sans-serif !important;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -.02em !important;
+}
+.witch-payout-net {
+  order: 3 !important;
+  margin-top: 16px !important;
+  color: var(--ui-text-2) !important;
+  font: 700 12px/1 "DM Sans", sans-serif !important;
+  letter-spacing: .05em !important;
+}
+.witch-payout-net b {
+  margin-left: 6px !important;
+  color: var(--ui-positive) !important;
+  font: 800 14px/1 "DM Sans", sans-serif !important;
+  font-variant-numeric: tabular-nums;
+}
+.witch-payout-lines {
+  padding: 10px 0 !important;
+  border-top: 1px solid rgba(245,195,68,.10) !important;
+  color: var(--ui-text-3) !important;
+  font: 700 10px/1 "DM Sans", sans-serif !important;
+  letter-spacing: .06em !important;
+}
+.witch-payout-lines b {
+  color: var(--ui-text) !important;
+  font: 800 12px/1 "DM Sans", sans-serif !important;
+}
+.witch-payout-note { display: none !important; }
+
+.witch-cashout-button {
+  min-height: 54px !important;
+  margin-top: 12px !important;
+  padding: 0 16px !important;
+  border: 0 !important;
+  border-radius: 12px !important;
+  color: #24160b !important;
+  background: linear-gradient(180deg, #f6cc5d 0%, #e3a52d 100%) !important;
+  box-shadow:
+    0 8px 20px rgba(196,125,31,.14),
+    inset 0 1px 0 rgba(255,255,255,.42) !important;
+  font: 800 14px/1 "DM Sans", sans-serif !important;
+  letter-spacing: .04em !important;
+}
+.witch-cashout-button:hover:not(:disabled) {
+  filter: brightness(1.04);
+  transform: translateY(-1px);
+}
+.witch-cashout-button:disabled {
+  color: #6f6254 !important;
+  background: #3b3026 !important;
+  opacity: 1 !important;
+  filter: none !important;
+}
+.witch-secondary-button {
+  min-height: 44px !important;
+  margin-top: 8px !important;
+  border: 1px solid rgba(245,195,68,.24) !important;
+  border-radius: 11px !important;
+  color: #dfc17b !important;
+  background: #24120e !important;
+  font: 800 11px/1 "DM Sans", sans-serif !important;
 }
 
-
-/* Stage 35 — viewport alignment + menu layering + premium mode selector fix */
-.witch-page { overflow:visible !important; }
-.witch-appbar { position:relative !important; z-index:300 !important; overflow:visible !important; }
-.witch-appstats { position:relative !important; overflow:visible !important; }
-.witch-game-menu { z-index:1000 !important; }
-.witch-stage-shell { position:relative !important; z-index:1 !important; }
-.witch-control-dock { position:relative !important; z-index:2 !important; }
-
-/* desktop geometry: table and deck share exactly the same visual rails */
-@media (min-width:821px) {
-  .witch-page {
-    width:min(100%,1440px) !important;
-    padding:14px 22px 18px !important;
-  }
-  .witch-stage-shell,
-  .witch-control-dock {
-    width:100% !important;
-    margin-left:auto !important;
-    margin-right:auto !important;
-  }
-  .witch-stage-shell {
-    min-height:0 !important;
-    height:calc(100dvh - 214px) !important;
-    max-height:610px !important;
-    margin-top:14px !important;
-  }
-  .witch-control-dock {
-    grid-template-columns:minmax(310px,.95fr) 1px minmax(320px,1fr) 1px minmax(170px,.48fr) minmax(230px,.68fr) !important;
-    min-height:116px !important;
-    margin-top:8px !important;
-    padding:12px 18px !important;
-  }
-  .witch-mode-card { min-height:68px !important; padding:10px 14px !important; }
-  .witch-mode-card strong { font-size:14px !important; }
-  .witch-mode-card small { font-size:9px !important; }
-  .witch-stake-stepper { min-height:54px !important; grid-template-columns:56px minmax(130px,1fr) 56px !important; }
-  .witch-stake-stepper>button { min-width:56px !important; min-height:54px !important; font-size:27px !important; }
-  .witch-input-wrap input { min-height:54px !important; font-size:19px !important; }
-  .witch-stake-presets button { min-height:30px !important; }
-  .witch-alarm-field select { min-height:54px !important; }
-  .witch-primary-button { min-height:62px !important; }
+/* ---------- CONTROL DECK ---------- */
+.witch-control-dock {
+  position: relative !important;
+  z-index: 2 !important;
+  display: grid !important;
+  grid-template-columns: minmax(300px, 330px) minmax(310px, 1fr) 150px 220px !important;
+  gap: 12px !important;
+  align-items: end !important;
+  width: 100% !important;
+  min-height: 106px !important;
+  margin: 8px 0 0 !important;
+  padding: 12px 14px !important;
+  overflow: visible !important;
+  border: 1px solid var(--ui-border) !important;
+  border-radius: 18px !important;
+  background: linear-gradient(180deg, #21120e 0%, #150d0a 100%) !important;
+  box-shadow:
+    0 14px 34px rgba(0,0,0,.22),
+    inset 0 1px 0 rgba(255,255,255,.024) !important;
 }
+.witch-control-separator { display: none !important; }
 
-/* mode cards: selected must look active, never disabled */
+.witch-mode-grid {
+  display: grid !important;
+  grid-template-columns: 1fr 1fr !important;
+  gap: 8px !important;
+}
 .witch-mode-card {
-  opacity:1 !important;
-  filter:none !important;
-  box-shadow:none !important;
+  display: grid !important;
+  grid-template-columns: 18px 1fr !important;
+  gap: 10px !important;
+  align-items: center !important;
+  min-height: 66px !important;
+  padding: 10px 12px !important;
+  border: 1px solid rgba(205,181,147,.16) !important;
+  border-radius: 12px !important;
+  color: var(--ui-text-2) !important;
+  background: #140d0a !important;
+  opacity: 1 !important;
+  filter: none !important;
+  text-align: left !important;
+  box-shadow: none !important;
 }
-.witch-mode-card:not(.is-selected) {
-  color:#cfc0aa !important;
-  background:#140c09 !important;
-  border-color:rgba(194,163,112,.18) !important;
+.witch-mode-card strong {
+  color: #e7ddca !important;
+  font: 800 14px/1.1 "DM Sans", sans-serif !important;
 }
-.witch-mode-card:not(.is-selected):hover {
-  border-color:rgba(245,195,68,.42) !important;
-  background:#1d0f0b !important;
+.witch-mode-card small {
+  margin-top: 5px !important;
+  color: var(--ui-text-3) !important;
+  font: 600 11px/1.25 "DM Sans", sans-serif !important;
 }
 .witch-mode-card.is-selected {
-  color:#fff0ca !important;
-  border:1px solid rgba(245,195,68,.76) !important;
-  background:linear-gradient(180deg,#35160f,#24100c) !important;
-  box-shadow:inset 0 0 0 1px rgba(255,225,139,.08),0 8px 18px rgba(0,0,0,.16) !important;
+  border-color: rgba(245,195,68,.56) !important;
+  background: linear-gradient(180deg, #2c1710 0%, #21110d 100%) !important;
+  box-shadow:
+    inset 3px 0 0 var(--ui-accent),
+    inset 0 1px 0 rgba(255,255,255,.025) !important;
 }
-.witch-mode-card.is-selected strong { color:#ffe08a !important; }
-.witch-mode-card.is-selected small { color:#cdbb9e !important; }
-.witch-mode-card:disabled { opacity:.55 !important; }
+.witch-mode-card.is-selected strong { color: #ffe18b !important; }
+.witch-mode-card.is-selected small { color: #c8b89e !important; }
+.witch-mode-card:disabled:not(.is-selected) { opacity: .45 !important; }
+.witch-mode-card.is-selected:disabled { opacity: 1 !important; }
 
-/* menu is a true overlay, not clipped behind the table */
-.witch-game-menu {
-  position:absolute !important;
-  top:calc(100% + 8px) !important;
-  right:0 !important;
-  width:250px !important;
-  border:1px solid rgba(245,195,68,.38) !important;
-  background:linear-gradient(160deg,#2b120d,#120a08) !important;
-  box-shadow:0 24px 60px rgba(0,0,0,.62) !important;
+.witch-radio {
+  width: 16px !important;
+  height: 16px !important;
+  border: 1px solid #817365 !important;
+  border-radius: 50% !important;
+  background: transparent !important;
+}
+.witch-mode-card.is-selected .witch-radio {
+  border-color: var(--ui-accent) !important;
+  background: var(--ui-accent) !important;
+  box-shadow: inset 0 0 0 4px #24130e !important;
 }
 
-/* medium desktop: keep every deck control inside the viewport */
-@media (min-width:821px) and (max-width:1180px) {
+.witch-control-group {
+  display: grid !important;
+  gap: 8px !important;
+}
+.witch-control-group > label {
+  color: #bba983 !important;
+  font: 800 10px/1 "DM Sans", sans-serif !important;
+  letter-spacing: .08em !important;
+}
+
+.witch-stake-stepper {
+  display: grid !important;
+  grid-template-columns: 54px minmax(130px,1fr) 54px !important;
+  min-height: 54px !important;
+  overflow: hidden !important;
+  border: 1px solid rgba(245,195,68,.22) !important;
+  border-radius: 12px !important;
+  background: #0f0a08 !important;
+}
+.witch-stake-stepper > button {
+  min-width: 54px !important;
+  min-height: 54px !important;
+  border: 0 !important;
+  color: #f0c95e !important;
+  background: #21120e !important;
+  font: 800 26px/1 "DM Sans", sans-serif !important;
+}
+.witch-stake-stepper > button:first-child {
+  border-right: 1px solid rgba(245,195,68,.11) !important;
+}
+.witch-stake-stepper > button:last-child {
+  border-left: 1px solid rgba(245,195,68,.11) !important;
+}
+.witch-stake-stepper > button:hover:not(:disabled) { background: #2c1710 !important; }
+.witch-stake-stepper > button:active:not(:disabled) { transform: scale(.97); }
+
+.witch-input-wrap i,
+.witch-input-wrap::before { display: none !important; }
+.witch-input-wrap input {
+  width: 100% !important;
+  height: 54px !important;
+  padding: 0 10px !important;
+  color: var(--ui-text) !important;
+  background: transparent !important;
+  font: 800 19px/1 "DM Sans", sans-serif !important;
+  font-variant-numeric: tabular-nums;
+  text-align: center !important;
+}
+
+.witch-stake-presets {
+  display: grid !important;
+  grid-template-columns: repeat(6, minmax(42px,1fr)) !important;
+  gap: 5px !important;
+}
+.witch-stake-presets button {
+  min-height: 34px !important;
+  padding: 0 6px !important;
+  border: 1px solid rgba(245,195,68,.18) !important;
+  border-radius: 9px !important;
+  color: #d9c9ad !important;
+  background: #150d0a !important;
+  font: 800 10px/1 "DM Sans", sans-serif !important;
+}
+.witch-stake-presets button:hover:not(:disabled) {
+  border-color: rgba(245,195,68,.40) !important;
+  background: #24130e !important;
+}
+
+.witch-alarm-field {
+  align-self: end !important;
+}
+.witch-alarm-field select {
+  width: 100% !important;
+  min-height: 54px !important;
+  padding: 0 36px 0 14px !important;
+  border: 1px solid rgba(245,195,68,.18) !important;
+  border-radius: 12px !important;
+  color: var(--ui-text) !important;
+  background: #140d0a !important;
+  font: 800 12px/1 "DM Sans", sans-serif !important;
+}
+.witch-alarm-field select:disabled { opacity: .56 !important; }
+
+.witch-primary-button {
+  min-height: 56px !important;
+  align-self: end !important;
+  padding: 0 18px !important;
+  border: 0 !important;
+  border-radius: 12px !important;
+  color: #24160b !important;
+  background: #f1bd3e !important;
+  box-shadow:
+    0 8px 20px rgba(187,113,24,.14),
+    inset 0 1px 0 rgba(255,255,255,.36) !important;
+  font: 900 15px/1 "DM Sans", sans-serif !important;
+  letter-spacing: .035em !important;
+}
+.witch-primary-button:hover:not(:disabled) {
+  background: #f5c84d !important;
+  transform: translateY(-1px);
+}
+.witch-primary-button:disabled,
+.witch-stake-stepper button:disabled,
+.witch-stake-presets button:disabled {
+  cursor: not-allowed !important;
+}
+.witch-dock-feedback { display: none !important; }
+
+/* ---------- RESPONSIVE DESKTOP ---------- */
+@media (min-width: 821px) and (max-width: 1120px) {
+  .witch-page { padding-inline: 14px !important; }
   .witch-control-dock {
-    grid-template-columns:minmax(250px,.9fr) minmax(285px,1fr) minmax(145px,.48fr) minmax(190px,.68fr) !important;
-    gap:10px !important;
+    grid-template-columns: minmax(250px, .9fr) minmax(280px, 1fr) 138px 190px !important;
+    gap: 9px !important;
   }
-  .witch-control-separator { display:none !important; }
-  .witch-mode-card { padding:9px 11px !important; }
-  .witch-stake-presets { grid-template-columns:repeat(3,1fr) !important; }
-  .witch-primary-button { font-size:14px !important; }
+  .witch-mode-card { padding-inline: 10px !important; }
+  .witch-mode-card strong { font-size: 13px !important; }
+  .witch-mode-card small { font-size: 10px !important; }
+  .witch-stake-presets {
+    grid-template-columns: repeat(3, 1fr) !important;
+  }
+  .witch-primary-button { font-size: 13px !important; }
 }
 
-/* small screens: deck stacks instead of overflowing */
-@media (max-width:820px) {
-  .witch-page { padding:8px !important; }
-  .witch-stage-shell,.witch-control-dock { width:100% !important; }
-  .witch-control-dock {
-    grid-template-columns:1fr !important;
-    margin-top:8px !important;
-    overflow:visible !important;
+/* ---------- MOBILE / TABLET PORTRAIT ---------- */
+@media (max-width: 820px) {
+  .witch-page {
+    padding: 8px 8px 14px !important;
   }
-  .witch-mode-grid { grid-template-columns:1fr 1fr !important; }
-  .witch-game-menu { position:fixed !important; top:64px !important; right:8px !important; }
+  .witch-appbar {
+    grid-template-columns: 44px 1fr 48px !important;
+    min-height: 56px !important;
+    gap: 8px !important;
+    padding: 6px 8px !important;
+  }
+  .witch-back {
+    width: 42px !important;
+    height: 42px !important;
+  }
+  .witch-appbrand > div {
+    display: grid !important;
+    gap: 2px !important;
+  }
+  .witch-appbrand h1 {
+    font-size: 20px !important;
+  }
+  .witch-appbrand small {
+    font-size: 8px !important;
+  }
+  .witch-appstats {
+    min-width: 0 !important;
+    display: contents !important;
+  }
+  .witch-stat-balance { display: none !important; }
+  .witch-menu-button {
+    width: 44px !important;
+    height: 42px !important;
+    border: 1px solid rgba(245,195,68,.28) !important;
+    border-radius: 11px !important;
+    background: #20110d !important;
+  }
+  .witch-game-menu {
+    top: 70px !important;
+    right: 8px !important;
+    width: min(290px, calc(100vw - 16px)) !important;
+  }
+
+  .witch-stage-shell {
+    height: auto !important;
+    min-height: 390px !important;
+    max-height: none !important;
+    margin-top: 8px !important;
+  }
+  .is-standard-theme .witch-table-surface {
+    position: relative !important;
+    inset: auto !important;
+    min-height: 360px !important;
+    padding: 30px 6px 10px !important;
+  }
+  .is-standard-theme .witch-ticket {
+    position: relative !important;
+    top: auto !important;
+    left: auto !important;
+    width: min(98%, 760px) !important;
+    max-width: 760px !important;
+    max-height: none !important;
+    transform: none !important;
+  }
+  .witch-payout-panel { display: none !important; }
+
+  .witch-control-dock {
+    grid-template-columns: 1fr !important;
+    gap: 12px !important;
+    min-height: 0 !important;
+    margin-top: 8px !important;
+    padding: 12px !important;
+  }
+  .witch-mode-grid {
+    grid-template-columns: 1fr 1fr !important;
+    gap: 8px !important;
+  }
+  .witch-mode-card {
+    min-height: 64px !important;
+    padding: 10px !important;
+  }
+  .witch-mode-card strong {
+    font-size: 14px !important;
+  }
+  .witch-mode-card small {
+    font-size: 11px !important;
+  }
+
+  .witch-control-group > label {
+    font-size: 11px !important;
+  }
+  .witch-stake-stepper {
+    grid-template-columns: 56px minmax(0,1fr) 56px !important;
+    min-height: 56px !important;
+  }
+  .witch-stake-stepper > button {
+    min-width: 56px !important;
+    min-height: 56px !important;
+    font-size: 28px !important;
+  }
+  .witch-input-wrap input {
+    height: 56px !important;
+    font-size: 20px !important;
+  }
+  .witch-stake-presets {
+    grid-template-columns: repeat(3,1fr) !important;
+    gap: 7px !important;
+  }
+  .witch-stake-presets button {
+    min-height: 44px !important;
+    font-size: 12px !important;
+  }
+  .witch-alarm-field select {
+    min-height: 52px !important;
+    font-size: 13px !important;
+  }
+  .witch-primary-button {
+    min-height: 56px !important;
+    font-size: 15px !important;
+  }
+}
+
+/* landscape phones / short viewports */
+@media (max-height: 600px) and (orientation: landscape) and (max-width: 1200px) {
+  .witch-page { padding: 6px 8px 10px !important; }
+  .witch-appbar { min-height: 50px !important; }
+  .witch-stage-shell {
+    height: calc(100dvh - 176px) !important;
+    min-height: 320px !important;
+    margin-top: 6px !important;
+  }
+  .witch-control-dock {
+    min-height: 92px !important;
+    margin-top: 6px !important;
+    padding: 8px 10px !important;
+  }
+  .witch-mode-card { min-height: 54px !important; }
+  .witch-stake-stepper,
+  .witch-input-wrap input,
+  .witch-stake-stepper > button,
+  .witch-alarm-field select {
+    min-height: 48px !important;
+    height: 48px !important;
+  }
+  .witch-primary-button { min-height: 50px !important; }
 }
