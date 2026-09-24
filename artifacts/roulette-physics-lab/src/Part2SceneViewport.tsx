@@ -4355,6 +4355,7 @@ export function Part2SceneViewport({
           let impactDirectionAfter: THREE.Vector3 | null = null;
           let fretContact = false;
           let firstFretContactTime: number | null = null;
+          let firstFretContactStep: number | null = null;
           let pocketEntered = false;
           let pocketEntryTime: number | null = null;
           let settledFrames = 0;
@@ -4760,6 +4761,7 @@ export function Part2SceneViewport({
             if (fretPairContact) {
               fretContact = true;
               firstFretContactTime ??= elapsed;
+              firstFretContactStep ??= step;
               recordPhase(
                 'FRETS',
                 position,
@@ -4869,6 +4871,40 @@ export function Part2SceneViewport({
               velocity.y - rotorTangentialVelocity.y,
               velocity.z - rotorTangentialVelocity.z,
             );
+            if (
+              (run.seed === 61004 || run.seed === 61005 || run.seed === 61006) &&
+              firstFretContactStep !== null &&
+              step >= firstFretContactStep &&
+              step < firstFretContactStep + 20
+            ) {
+              console.info(
+                'PART6_POST_FRET_TRACE',
+                JSON.stringify({
+                  seed: run.seed,
+                  step,
+                  offset: step - firstFretContactStep,
+                  elapsed: Number(elapsed.toFixed(6)),
+                  radius: Number(radius.toFixed(6)),
+                  position: {
+                    x: Number(position.x.toFixed(6)),
+                    y: Number(position.y.toFixed(6)),
+                    z: Number(position.z.toFixed(6)),
+                  },
+                  velocity: {
+                    x: Number(velocity.x.toFixed(6)),
+                    y: Number(velocity.y.toFixed(6)),
+                    z: Number(velocity.z.toFixed(6)),
+                  },
+                  speed: Number(speed.toFixed(6)),
+                  rotorRelativeSpeed: Number(finalRotorRelativeSpeed.toFixed(6)),
+                  fretContact: fretPairContact,
+                  innerGuardContact: stepContactRoles.has(
+                    'pocket-inner-retaining-ring',
+                  ),
+                  contactRoles: [...stepContactRoles],
+                }),
+              );
+            }
             if (
               pocketEntered &&
               finalRotorRelativeSpeed < 0.12 &&
