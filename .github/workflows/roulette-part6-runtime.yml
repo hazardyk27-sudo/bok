@@ -103,10 +103,10 @@ jobs:
 
       - name: Run PART 6B.1A startup-gate probe
         env:
-          ROULETTE_LAB_URL: http://127.0.0.1:4173/?part6Headless=1&part6SeedCount=5&part6MaxDurationSeconds=30
+          ROULETTE_LAB_URL: http://127.0.0.1:4173/?part6Headless=1&part6SeedCount=6&part6MaxDurationSeconds=30
           ROULETTE_PART6_OUTPUT: artifacts/roulette-physics-lab/part6-runtime-result.json
           ROULETTE_PART6_TIMEOUT_MS: '120000'
-          ROULETTE_PART6_EXPECTED_SEEDS: '5'
+          ROULETTE_PART6_EXPECTED_SEEDS: '6'
         shell: bash
         run: |
           set -o pipefail
@@ -117,7 +117,7 @@ jobs:
         env:
           ROULETTE_PART6_OUTPUT: artifacts/roulette-physics-lab/part6-runtime-result.json
           ROULETTE_PART6_EVIDENCE: artifacts/roulette-physics-lab/part6-calibration-evidence.json
-          ROULETTE_PART6_EXPECTED_SEEDS: '5'
+          ROULETTE_PART6_EXPECTED_SEEDS: '6'
         run: |
           if [ -f "$ROULETTE_PART6_OUTPUT" ]; then
             node scripts/roulette-part6-report.mjs | tee part6-calibration-evidence.log
