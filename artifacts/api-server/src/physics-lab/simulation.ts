@@ -1030,6 +1030,81 @@ export async function simulatePhysicsLabRound(
       }
 
       if (seed === "61004" && step >= 868 && step <= 876) {
+        const pocketFloorInnerRadius = 1.48;
+        const fretInnerEdgeRadius =
+          pocketFloorInnerRadius + PHYSICS_LAB_BALL_RADIUS * 2 + 0.02;
+        const fretOuterEdgeRadius =
+          ROULETTE_POCKET_FLOOR_OUTER_RADIUS - 0.02;
+        const fretCenterRadius =
+          (fretInnerEdgeRadius + fretOuterEdgeRadius) / 2;
+        const fretTangentialHalfExtent = 0.03;
+        const fretRadialHalfExtent =
+          (fretOuterEdgeRadius - fretInnerEdgeRadius) / 2;
+        const fretVerticalHalfExtent = 0.11;
+        const fretCenterY =
+          ROULETTE_POCKET_FLOOR_Y + fretVerticalHalfExtent + 0.022;
+        const rotorAngleNow = 2 * Math.atan2(rotorRotation.y, rotorRotation.w);
+        const ballWorldAngle = Math.atan2(translation.x, translation.z);
+        let nearestFret:
+          | {
+              index: number;
+              angle: number;
+              localTangential: number;
+              localRadial: number;
+              localY: number;
+              centerDistanceToBox: number;
+              sphereSurfaceSeparation: number;
+            }
+          | null = null;
+        for (let fretIndex = 0; fretIndex < PHYSICS_LAB_SECTOR_COUNT; fretIndex += 1) {
+          const fretAngle =
+            rotorAngleNow + (fretIndex + 0.5) * SECTOR_STEP_RADIANS;
+          const centerX = Math.sin(fretAngle) * fretCenterRadius;
+          const centerZ = Math.cos(fretAngle) * fretCenterRadius;
+          const dx = translation.x - centerX;
+          const dz = translation.z - centerZ;
+          const localTangential =
+            dx * Math.cos(fretAngle) - dz * Math.sin(fretAngle);
+          const localRadial =
+            dx * Math.sin(fretAngle) + dz * Math.cos(fretAngle);
+          const localY = translation.y - fretCenterY;
+          const outsideTangential = Math.max(
+            Math.abs(localTangential) - fretTangentialHalfExtent,
+            0,
+          );
+          const outsideRadial = Math.max(
+            Math.abs(localRadial) - fretRadialHalfExtent,
+            0,
+          );
+          const outsideY = Math.max(
+            Math.abs(localY) - fretVerticalHalfExtent,
+            0,
+          );
+          const centerDistanceToBox = Math.hypot(
+            outsideTangential,
+            outsideRadial,
+            outsideY,
+          );
+          const sphereSurfaceSeparation =
+            centerDistanceToBox - PHYSICS_LAB_BALL_RADIUS;
+          if (
+            nearestFret === null ||
+            sphereSurfaceSeparation < nearestFret.sphereSurfaceSeparation
+          ) {
+            nearestFret = {
+              index: fretIndex,
+              angle: fretAngle,
+              localTangential,
+              localRadial,
+              localY,
+              centerDistanceToBox,
+              sphereSurfaceSeparation,
+            };
+          }
+        }
+        const guardSurfaceSeparation =
+          radius -
+          (pocketFloorInnerRadius + PHYSICS_LAB_BALL_RADIUS);
         const contacts: Array<Record<string, unknown>> = [];
         world.contactPairsWith(ballCollider, (otherCollider) => {
           world.contactPair(ballCollider, otherCollider, (manifold, flipped) => {
@@ -1098,6 +1173,12 @@ export async function simulatePhysicsLabRound(
               z: velocity.z - previousVelocity.z,
             },
             angularSpeed: ballAngularSpeed,
+            geometricClearance: {
+              guardSurfaceSeparation,
+              nearestFret,
+              ballWorldAngle,
+              rotorAngle: rotorAngleNow,
+            },
             contacts,
           }),
         );
