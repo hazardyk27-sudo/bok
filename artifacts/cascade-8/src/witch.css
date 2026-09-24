@@ -6393,3 +6393,74 @@
     margin-bottom: 0 !important;
   }
 }
+
+
+/* =========================================================
+   STAGE 42 — DESKTOP VIEWPORT GRID
+   Deck stays at the screen bottom WITHOUT floating away from
+   the table: header + flexible table + deck share one viewport.
+   ========================================================= */
+@media (min-width: 821px) {
+  .witch-page {
+    display: grid !important;
+    grid-template-rows: auto minmax(0, 1fr) auto !important;
+    gap: 8px !important;
+    width: min(100%, 1440px) !important;
+    height: 100dvh !important;
+    min-height: 100dvh !important;
+    margin: 0 auto !important;
+    padding: 10px 20px 0 !important;
+    overflow: hidden !important;
+  }
+
+  .witch-appbar {
+    margin: 0 !important;
+  }
+
+  .witch-stage-shell,
+  .is-standard-theme .witch-stage-shell {
+    width: 100% !important;
+    height: auto !important;
+    min-height: 0 !important;
+    max-height: none !important;
+    margin: 0 !important;
+  }
+
+  .witch-control-dock {
+    position: relative !important;
+    z-index: 20 !important;
+    right: auto !important;
+    bottom: auto !important;
+    left: auto !important;
+    width: 100% !important;
+    min-height: 112px !important;
+    margin: 0 !important;
+    padding: 12px 16px 13px !important;
+    border-radius: 16px 16px 0 0 !important;
+    transform: none !important;
+    box-shadow:
+      0 -8px 24px rgba(0,0,0,.20),
+      inset 0 1px 0 rgba(255,255,255,.028) !important;
+    backdrop-filter: blur(14px);
+  }
+
+  /* Keep the BCS card/payout centered inside the now-flexible table. */
+  .is-standard-theme .witch-table-surface {
+    inset: 14px 252px 12px 16px !important;
+  }
+
+  .is-standard-theme .witch-ticket:not(.is-advanced) {
+    top: 50% !important;
+    left: 50% !important;
+    width: min(96%, 950px) !important;
+    max-width: 950px !important;
+    max-height: calc(100% - 12px) !important;
+    transform: translate(-50%, -50%) !important;
+  }
+
+  .is-standard-theme .witch-payout-panel {
+    top: 50% !important;
+    right: 16px !important;
+    transform: translateY(-50%) !important;
+  }
+}
