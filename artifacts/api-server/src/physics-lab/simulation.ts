@@ -250,10 +250,7 @@ function addDarkRaceChannelCollider(
       RAPIER.TriMeshFlags.FIX_INTERNAL_EDGES | RAPIER.TriMeshFlags.ORIENTED,
     )
       .setFriction(BALL_PARAMETERS.friction)
-      .setRestitution(BALL_PARAMETERS.restitution)
-      .setCollisionGroups(
-        STATIONARY_COLLISION_GROUP | (BALL_COLLISION_GROUP << 16),
-      ),
+      .setRestitution(BALL_PARAMETERS.restitution),
     body,
   );
 }
