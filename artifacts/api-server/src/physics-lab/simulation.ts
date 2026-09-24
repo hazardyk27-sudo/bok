@@ -767,6 +767,11 @@ export async function simulatePhysicsLabRound(
   let rotorAngle = startConditions.rotorInitialAngleRadians;
   let previousRadialVelocity = 0;
   let previousVerticalVelocity = startConditions.ballVelocity[1];
+  let previousVelocity: Vec3 = {
+    x: startConditions.ballVelocity[0],
+    y: startConditions.ballVelocity[1],
+    z: startConditions.ballVelocity[2],
+  };
   let minRadius = Number.POSITIVE_INFINITY;
   let maxRadius = 0;
   let stableFrames = 0;
@@ -815,20 +820,54 @@ export async function simulatePhysicsLabRound(
         radius > 0
           ? (translation.x * velocity.x + translation.z * velocity.z) / radius
           : 0;
-      if (seed === "61001" && step <= 35) {
-        const contactRoles = new Set<string>();
+      if ((seed === "61001" || seed === "61003") && step <= 35) {
+        const contacts: Array<Record<string, unknown>> = [];
         world.contactPairsWith(ballCollider, (otherCollider) => {
-          world.contactPair(ballCollider, otherCollider, (manifold) => {
-            if (manifold.numContacts() > 0) {
-              contactRoles.add(
-                colliderRoles.get(otherCollider.handle) ?? "unknown",
-              );
+          world.contactPair(ballCollider, otherCollider, (manifold, flipped) => {
+            if (manifold.numContacts() <= 0) return;
+            const diagnosticManifold = manifold as unknown as {
+              normal?: () => { x: number; y: number; z: number };
+              numSolverContacts?: () => number;
+              contactImpulse?: (index: number) => number;
+              solverContactImpulse?: (index: number) => number;
+            };
+            const normal =
+              typeof diagnosticManifold.normal === "function"
+                ? diagnosticManifold.normal()
+                : null;
+            const solverContactCount =
+              typeof diagnosticManifold.numSolverContacts === "function"
+                ? diagnosticManifold.numSolverContacts()
+                : manifold.numContacts();
+            const impulses: number[] = [];
+            for (let index = 0; index < solverContactCount; index += 1) {
+              const impulse =
+                typeof diagnosticManifold.contactImpulse === "function"
+                  ? diagnosticManifold.contactImpulse(index)
+                  : typeof diagnosticManifold.solverContactImpulse === "function"
+                    ? diagnosticManifold.solverContactImpulse(index)
+                    : null;
+              if (impulse !== null && Number.isFinite(impulse)) {
+                impulses.push(impulse);
+              }
             }
+            contacts.push({
+              role: colliderRoles.get(otherCollider.handle) ?? "unknown",
+              flipped,
+              contactCount: manifold.numContacts(),
+              solverContactCount,
+              normal:
+                normal === null
+                  ? null
+                  : { x: normal.x, y: normal.y, z: normal.z },
+              impulses,
+            });
           });
         });
         console.info(
-          "SERVER_61001_STEP",
+          "SERVER_SEAM_STEP",
           JSON.stringify({
+            seed,
             step,
             simulatedAtMs: Math.round(
               step * PHYSICS_LAB_FIXED_TIMESTEP * 1000,
@@ -842,7 +881,12 @@ export async function simulatePhysicsLabRound(
               y: velocity.y,
               z: velocity.z,
             },
-            contacts: [...contactRoles],
+            deltaVelocity: {
+              x: velocity.x - previousVelocity.x,
+              y: velocity.y - previousVelocity.y,
+              z: velocity.z - previousVelocity.z,
+            },
+            contacts,
           }),
         );
       }
@@ -1044,6 +1088,11 @@ export async function simulatePhysicsLabRound(
       previousRotorSpeed = rotorSpeed;
       previousRadialVelocity = radialVelocity;
       previousVerticalVelocity = velocity.y;
+      previousVelocity = {
+        x: velocity.x,
+        y: velocity.y,
+        z: velocity.z,
+      };
     }
   } catch (error) {
     errorCode = error instanceof Error ? "SIMULATION_EXCEPTION" : "SIMULATION_FAILED";
