@@ -4410,6 +4410,94 @@ export function Part2SceneViewport({
             });
           };
 
+          const preFretTraceSeed =
+            run.seed === 61004 || run.seed === 61005 || run.seed === 61006;
+          const preFretCheckpoints = new Set<string>();
+          const logPreFretCheckpoint = (
+            checkpoint:
+              | 'INWARD_DESCENT'
+              | 'DEFLECTOR_CONTACT'
+              | 'ROTOR_ENTRY'
+              | 'POCKET_ENTRY'
+              | 'PHYSICAL_FRET_CONTACT',
+            step: number,
+            position: { x: number; y: number; z: number },
+            velocity: { x: number; y: number; z: number },
+            speed: number,
+            radius: number,
+            contactRoles: Set<string>,
+          ) => {
+            if (!preFretTraceSeed || preFretCheckpoints.has(checkpoint)) return;
+            preFretCheckpoints.add(checkpoint);
+            const radialVelocity =
+              radius > 0
+                ? (position.x * velocity.x + position.z * velocity.z) / radius
+                : 0;
+            const rotorTangentialVelocity = {
+              x: TEST_ANGULAR_SPEED * position.z,
+              y: 0,
+              z: -TEST_ANGULAR_SPEED * position.x,
+            };
+            const rotorRelativeSpeed = Math.hypot(
+              velocity.x - rotorTangentialVelocity.x,
+              velocity.y - rotorTangentialVelocity.y,
+              velocity.z - rotorTangentialVelocity.z,
+            );
+            const rotorRotation = activeRotorBody.rotation();
+            const bodyRotorAngle = normalizedAngle(
+              2 * Math.atan2(rotorRotation.y, rotorRotation.w),
+            );
+            const localAngle = normalizedAngle(
+              Math.atan2(position.x, position.z) - bodyRotorAngle,
+            );
+            const pocketIndex =
+              radius > 1.18 && radius < 1.98
+                ? pocketIndexFromLocalPosition(
+                    Math.sin(localAngle),
+                    Math.cos(localAngle),
+                  )
+                : null;
+            console.info(
+              'ROULETTE_PRE_FRET_CHECKPOINT',
+              JSON.stringify({
+                source: 'browser',
+                seed: String(run.seed),
+                checkpoint,
+                simulationTimeSeconds: Number(elapsed.toFixed(6)),
+                step,
+                rotorAngle: Number(bodyRotorAngle.toFixed(9)),
+                position: {
+                  x: Number(position.x.toFixed(6)),
+                  y: Number(position.y.toFixed(6)),
+                  z: Number(position.z.toFixed(6)),
+                },
+                velocity: {
+                  x: Number(velocity.x.toFixed(6)),
+                  y: Number(velocity.y.toFixed(6)),
+                  z: Number(velocity.z.toFixed(6)),
+                },
+                speed: Number(speed.toFixed(6)),
+                radius: Number(radius.toFixed(6)),
+                radialVelocity: Number(radialVelocity.toFixed(6)),
+                verticalVelocity: Number(velocity.y.toFixed(6)),
+                rotorRelativeSpeed: Number(rotorRelativeSpeed.toFixed(6)),
+                contactRoles: [...contactRoles].sort(),
+                deflectorContact: contactRoles.has(
+                  'asset-measured-visible-deflector-cuboid',
+                ),
+                bowlBridgeContact: contactRoles.has(
+                  'stationary-bowl-apron-bridge',
+                ),
+                outerLipContact: contactRoles.has('pocket-outer-lip-trimesh'),
+                pocketFloorContact:
+                  contactRoles.has('pocket-floor-trimesh') ||
+                  contactRoles.has('pocket-floor-catch-underlay'),
+                fretContact: contactRoles.has('pocket-fret-cuboid'),
+                pocketIndex,
+              }),
+            );
+          };
+
           recordPhase(
             'OUTER_RACE',
             {
@@ -4525,74 +4613,6 @@ export function Part2SceneViewport({
               },
             );
 
-            if (part6DiagnosticMode && step < 12) {
-              console.info(
-                'PART6_EARLY_STEP',
-                JSON.stringify({
-                  seed: run.seed,
-                  step,
-                  elapsed: Number(elapsed.toFixed(4)),
-                  radius: Number(radius.toFixed(4)),
-                  y: Number(position.y.toFixed(4)),
-                  speed: Number(speed.toFixed(4)),
-                  velocity: {
-                    x: Number(velocity.x.toFixed(4)),
-                    y: Number(velocity.y.toFixed(4)),
-                    z: Number(velocity.z.toFixed(4)),
-                  },
-                  contactRoles: [...stepContactRoles],
-                  trackContact: trackPairContact,
-                  deflectorContact: deflectorPairContact,
-                  pocketFloorContact,
-                }),
-              );
-            }
-
-            if (
-              part6DiagnosticMode &&
-              (run.seed === 61004 || run.seed === 61005) &&
-              step >= 12 &&
-              step <= 48
-            ) {
-              console.info(
-                'PART6_ESCAPE_TRACE',
-                JSON.stringify({
-                  seed: run.seed,
-                  step,
-                  elapsed: Number(elapsed.toFixed(4)),
-                  radius: Number(radius.toFixed(4)),
-                  y: Number(position.y.toFixed(4)),
-                  speed: Number(speed.toFixed(4)),
-                  contactRoles: [...stepContactRoles],
-                  trackContact: trackPairContact,
-                  deflectorContact: deflectorPairContact,
-                  pocketFloorContact,
-                }),
-              );
-            }
-
-            if (
-              part6DiagnosticMode &&
-              speed < 0.5 &&
-              step % 10 === 0
-            ) {
-              console.info(
-                'PART6_STALL_STEP',
-                JSON.stringify({
-                  seed: run.seed,
-                  step,
-                  elapsed: Number(elapsed.toFixed(4)),
-                  radius: Number(radius.toFixed(4)),
-                  y: Number(position.y.toFixed(4)),
-                  speed: Number(speed.toFixed(4)),
-                  contactRoles: [...stepContactRoles],
-                  trackContact: trackPairContact,
-                  deflectorContact: deflectorPairContact,
-                  pocketFloorContact,
-                }),
-              );
-            }
-
             const inTrackCenterBand =
               radius >= PART2_ACTUAL_TRACK_CENTER_RADIUS_BAND[0] &&
               radius <= PART2_ACTUAL_TRACK_CENTER_RADIUS_BAND[1];
@@ -4695,6 +4715,15 @@ export function Part2SceneViewport({
               inwardTransitionTime = elapsed;
               inwardTransitionRadius = radius;
               trackAngleEnd ??= trackAngle;
+              logPreFretCheckpoint(
+                'INWARD_DESCENT',
+                step,
+                position,
+                velocity,
+                speed,
+                radius,
+                stepContactRoles,
+              );
               recordPhase(
                 'INWARD_DESCENT',
                 position,
@@ -4728,6 +4757,17 @@ export function Part2SceneViewport({
               inwardTransitionTime !== null &&
               radius <= rotorEntryThreshold
             ) {
+              if (rotorEntryTime === null) {
+                logPreFretCheckpoint(
+                  'ROTOR_ENTRY',
+                  step,
+                  position,
+                  velocity,
+                  speed,
+                  radius,
+                  stepContactRoles,
+                );
+              }
               rotorEntryTime ??= elapsed;
               recordPhase(
                 'ROTOR_ENTRY',
@@ -4743,6 +4783,15 @@ export function Part2SceneViewport({
               !deflectorContactActive
             ) {
               deflectorContactCount += 1;
+              logPreFretCheckpoint(
+                'DEFLECTOR_CONTACT',
+                step,
+                position,
+                velocity,
+                speed,
+                radius,
+                stepContactRoles,
+              );
               firstDeflectorContactTime ??= elapsed;
               impactSpeedBefore ??= previousSpeed;
               impactDirectionBefore ??=
@@ -4774,6 +4823,17 @@ export function Part2SceneViewport({
 
             if (fretPairContact) {
               fretContact = true;
+              if (firstFretContactStep === null) {
+                logPreFretCheckpoint(
+                  'PHYSICAL_FRET_CONTACT',
+                  step,
+                  position,
+                  velocity,
+                  speed,
+                  radius,
+                  stepContactRoles,
+                );
+              }
               firstFretContactTime ??= elapsed;
               firstFretContactStep ??= step;
               recordPhase(
@@ -4794,6 +4854,17 @@ export function Part2SceneViewport({
               radius <= POCKET_OUTER_LIP_RADIUS + BALL_RADIUS + 0.04;
             if (insidePocket || pocketContactInsideRotorEnvelope) {
               pocketEntered = true;
+              if (pocketEntryTime === null) {
+                logPreFretCheckpoint(
+                  'POCKET_ENTRY',
+                  step,
+                  position,
+                  velocity,
+                  speed,
+                  radius,
+                  stepContactRoles,
+                );
+              }
               pocketEntryTime ??= elapsed;
               recordPhase(
                 'POCKET',
@@ -4855,26 +4926,6 @@ export function Part2SceneViewport({
               }
             }
 
-            if (
-              part6DiagnosticMode &&
-              pocketEntered &&
-              (step === 300 || step === 360 || step === 420 || step === maxSteps - 1)
-            ) {
-              console.info(
-                'PART6_POCKET_LATE_STEP',
-                JSON.stringify({
-                  seed: run.seed,
-                  step,
-                  elapsed: Number(elapsed.toFixed(4)),
-                  radius: Number(radius.toFixed(4)),
-                  y: Number(position.y.toFixed(4)),
-                  bottom: Number(bottom.toFixed(4)),
-                  speed: Number(speed.toFixed(4)),
-                  contactRoles: [...stepContactRoles],
-                }),
-              );
-            }
-
             const rotorTangentialVelocity = {
               x: TEST_ANGULAR_SPEED * position.z,
               y: 0,
@@ -4885,40 +4936,6 @@ export function Part2SceneViewport({
               velocity.y - rotorTangentialVelocity.y,
               velocity.z - rotorTangentialVelocity.z,
             );
-            if (
-              (run.seed === 61004 || run.seed === 61005 || run.seed === 61006) &&
-              firstFretContactStep !== null &&
-              step >= firstFretContactStep &&
-              step < firstFretContactStep + 20
-            ) {
-              console.info(
-                'PART6_POST_FRET_TRACE',
-                JSON.stringify({
-                  seed: run.seed,
-                  step,
-                  offset: step - firstFretContactStep,
-                  elapsed: Number(elapsed.toFixed(6)),
-                  radius: Number(radius.toFixed(6)),
-                  position: {
-                    x: Number(position.x.toFixed(6)),
-                    y: Number(position.y.toFixed(6)),
-                    z: Number(position.z.toFixed(6)),
-                  },
-                  velocity: {
-                    x: Number(velocity.x.toFixed(6)),
-                    y: Number(velocity.y.toFixed(6)),
-                    z: Number(velocity.z.toFixed(6)),
-                  },
-                  speed: Number(speed.toFixed(6)),
-                  rotorRelativeSpeed: Number(finalRotorRelativeSpeed.toFixed(6)),
-                  fretContact: fretPairContact,
-                  innerGuardContact: stepContactRoles.has(
-                    'pocket-inner-retaining-ring',
-                  ),
-                  contactRoles: [...stepContactRoles],
-                }),
-              );
-            }
             if (
               pocketEntered &&
               finalRotorRelativeSpeed < 0.12 &&
