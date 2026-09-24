@@ -6,6 +6,7 @@ import {
   ROULETTE_DARK_RACE_INWARD_EDGE_RADIUS,
   ROULETTE_DARK_RACE_RADIUS_BAND,
   ROULETTE_DARK_RACE_LAUNCH_RADIUS,
+  ROULETTE_DARK_RACE_WOOD_INNER_RADIUS,
   ROULETTE_EUROPEAN_SEQUENCE,
   ROULETTE_FIXED_TIMESTEP,
   ROULETTE_GRAVITY_Y,
@@ -180,15 +181,12 @@ function addDarkRaceChannelCollider(
   const profile: Array<[number, number]> = [
     [openInnerRadius, darkRaceSurfaceYAt(openInnerRadius)],
     ...ROULETTE_DARK_RACE_CHANNEL_PROFILE
-      .filter(([radius]) => radius > openInnerRadius && radius <= 2.5)
+      .filter(
+        ([radius]) =>
+          radius > openInnerRadius &&
+          radius <= ROULETTE_DARK_RACE_WOOD_INNER_RADIUS,
+      )
       .map(([radius, y]) => [radius, y] as [number, number]),
-    [2.520, -0.2820],
-    [2.535, -0.2740],
-    [2.545, -0.2630],
-    [2.552, -0.2450],
-    [2.556, -0.2100],
-    [2.558, -0.1450],
-    [2.559, -0.0400],
   ];
   const segments = 512;
   const thickness = 0.12;
@@ -229,18 +227,6 @@ function addDarkRaceChannelCollider(
     }
   }
 
-  for (const row of [profile.length - 1]) {
-    const bottomRow = bottomOffset + row * segments;
-    for (let segment = 0; segment < segments; segment += 1) {
-      const next = (segment + 1) % segments;
-      const topA = row * segments + segment;
-      const topB = row * segments + next;
-      const bottomA = bottomRow + segment;
-      const bottomB = bottomRow + next;
-      indices.push(topA, topB, bottomB, topA, bottomB, bottomA);
-    }
-  }
-
   return world.createCollider(
     RAPIER.ColliderDesc.trimesh(
       new Float32Array(vertices),
@@ -249,6 +235,69 @@ function addDarkRaceChannelCollider(
     )
       .setFriction(BALL_PARAMETERS.friction)
       .setRestitution(BALL_PARAMETERS.restitution)
+      .setCollisionGroups(
+        STATIONARY_COLLISION_GROUP | (BALL_COLLISION_GROUP << 16),
+      ),
+    body,
+  );
+}
+
+function addDarkRaceOuterWallCollider(
+  world: RAPIER.World,
+  body: RAPIER.RigidBody,
+) {
+  const segments = 512;
+  const innerFaceRadius = ROULETTE_DARK_RACE_WOOD_INNER_RADIUS;
+  const lowerY =
+    darkRaceSurfaceYAt(innerFaceRadius) -
+    PHYSICS_LAB_BALL_RADIUS * 2 -
+    0.02;
+  const configuredWallTopY =
+    ROULETTE_DARK_RACE_CHANNEL_PROFILE[
+      ROULETTE_DARK_RACE_CHANNEL_PROFILE.length - 1
+    ][1];
+  const upperY = Math.max(
+    configuredWallTopY + PHYSICS_LAB_BALL_RADIUS + 0.1,
+    lowerY + 0.24,
+  );
+  const vertices: number[] = [];
+  const indices: number[] = [];
+
+  for (const y of [lowerY, upperY]) {
+    for (let segment = 0; segment < segments; segment += 1) {
+      const angle = (segment / segments) * Math.PI * 2;
+      vertices.push(
+        Math.sin(angle) * innerFaceRadius,
+        y,
+        Math.cos(angle) * innerFaceRadius,
+      );
+    }
+  }
+
+  for (let segment = 0; segment < segments; segment += 1) {
+    const next = (segment + 1) % segments;
+    const lowerA = segment;
+    const lowerB = next;
+    const upperA = segments + segment;
+    const upperB = segments + next;
+    indices.push(
+      lowerA,
+      upperB,
+      lowerB,
+      lowerA,
+      upperA,
+      upperB,
+    );
+  }
+
+  return world.createCollider(
+    RAPIER.ColliderDesc.trimesh(
+      new Float32Array(vertices),
+      new Uint32Array(indices),
+      RAPIER.TriMeshFlags.FIX_INTERNAL_EDGES | RAPIER.TriMeshFlags.ORIENTED,
+    )
+      .setFriction(Math.min(BALL_PARAMETERS.friction, 0.01))
+      .setRestitution(0.01)
       .setCollisionGroups(
         STATIONARY_COLLISION_GROUP | (BALL_COLLISION_GROUP << 16),
       ),
@@ -755,6 +804,11 @@ export async function simulatePhysicsLabRound(
   const colliderRoles = new Map<number, string>();
   const darkRaceCollider = addDarkRaceChannelCollider(world, stationaryBody);
   colliderRoles.set(darkRaceCollider.handle, "dark-race");
+  const darkRaceOuterWallCollider = addDarkRaceOuterWallCollider(
+    world,
+    stationaryBody,
+  );
+  colliderRoles.set(darkRaceOuterWallCollider.handle, "dark-race-outer-wall");
   const bowlBridgeCollider = addBowlBridgeCollider(world, stationaryBody);
   colliderRoles.set(bowlBridgeCollider.handle, "bowl-bridge");
   const deflectorColliders = addMeasuredDeflectorColliders(
