@@ -411,9 +411,9 @@ export class GameController {
         );
         this.markTiming(`FS_${index}_TRANSFER_DONE`);
         this.freeSpinAccounting = settleFreeSpinAccounting(this.freeSpinAccounting);
-        // Credit this Free Spin only after its full symbol/Core resolution and
-        // transfer animation, so BALANCE never spoils the result.
-        this.balanceCents += freeSpin.win;
+        // Keep the main BALANCE frozen throughout the entire Free Spin feature.
+        // Individual Free Spin wins accumulate only in the bonus presentation;
+        // the authoritative settled wallet is committed once the bonus finishes.
         this.updateBonusTotalDisplay(true);
         this.updateHud();
         this.markTiming(`FS_${index}_POST_TRANSFER_HOLD_START`);
