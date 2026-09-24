@@ -490,6 +490,97 @@ function addPocketInnerGuardCollider(
   );
 }
 
+function addMeasuredDeflectorColliders(
+  world: RAPIER.World,
+  body: RAPIER.RigidBody,
+) {
+  const descriptors = [
+    { angleDegrees: 22.501, innerRadius: 2.1638333333333333, outerRadius: 2.2665, bottomY: -0.3740904798673158, topY: -0.3341760459978076, angularWidth: 0.13962634015954636 },
+    { angleDegrees: 67.499, innerRadius: 2.0611666666666664, outerRadius: 2.3435, bottomY: -0.38207411055479956, topY: -0.33297679580798023, angularWidth: 0.06981317007977318 },
+    { angleDegrees: 112.501, innerRadius: 2.1638333333333333, outerRadius: 2.2665, bottomY: -0.3740904798673158, topY: -0.3341760459978076, angularWidth: 0.13962634015954636 },
+    { angleDegrees: 157.499, innerRadius: 2.0611666666666664, outerRadius: 2.3435, bottomY: -0.38207411055479956, topY: -0.33297679580798023, angularWidth: 0.06981317007977318 },
+    { angleDegrees: 202.501, innerRadius: 2.1638333333333333, outerRadius: 2.2665, bottomY: -0.3740904798673158, topY: -0.3341760459978076, angularWidth: 0.13962634015954636 },
+    { angleDegrees: 247.499, innerRadius: 2.0611666666666664, outerRadius: 2.3435, bottomY: -0.38207411055479956, topY: -0.33297679580798056, angularWidth: 0.06981317007977318 },
+    { angleDegrees: 292.501, innerRadius: 2.1638333333333333, outerRadius: 2.2665, bottomY: -0.3740904798673158, topY: -0.33417604599780726, angularWidth: 0.13962634015954636 },
+    { angleDegrees: 337.499, innerRadius: 2.0611666666666664, outerRadius: 2.3435, bottomY: -0.38207411055479956, topY: -0.33297679580798056, angularWidth: 0.06981317007977318 },
+  ] as const;
+  const colliders: RAPIER.Collider[] = [];
+
+  for (const descriptor of descriptors) {
+    const effectiveOuterRadius = Math.min(
+      descriptor.outerRadius,
+      ROULETTE_DARK_RACE_INWARD_EDGE_RADIUS,
+    );
+    const effectiveInnerRadius = Math.min(
+      descriptor.innerRadius,
+      effectiveOuterRadius - PHYSICS_LAB_BALL_RADIUS * 0.5,
+    );
+    const centerRadius = (effectiveInnerRadius + effectiveOuterRadius) / 2;
+    const halfRadialDepth = Math.max(
+      PHYSICS_LAB_BALL_RADIUS * 0.25,
+      (effectiveOuterRadius - effectiveInnerRadius) / 2,
+    );
+    const halfHeight = Math.max(
+      0.02,
+      (descriptor.topY - descriptor.bottomY) / 2,
+    );
+    const centerY = (descriptor.bottomY + descriptor.topY) / 2;
+    const halfTangentialWidth = Math.min(
+      0.22,
+      Math.max(
+        PHYSICS_LAB_BALL_RADIUS * 0.9,
+        centerRadius * descriptor.angularWidth * 0.5,
+      ),
+    );
+    const angle = (descriptor.angleDegrees * Math.PI) / 180;
+    const vertices = new Float32Array([
+      -halfTangentialWidth, -halfHeight, -halfRadialDepth,
+       halfTangentialWidth, -halfHeight, -halfRadialDepth,
+       halfTangentialWidth,  halfHeight, -halfRadialDepth,
+      -halfTangentialWidth,  halfHeight, -halfRadialDepth,
+      -halfTangentialWidth, -halfHeight,  halfRadialDepth,
+       halfTangentialWidth, -halfHeight,  halfRadialDepth,
+       halfTangentialWidth,  halfHeight,  halfRadialDepth,
+      -halfTangentialWidth,  halfHeight,  halfRadialDepth,
+    ]);
+    const indices = new Uint32Array([
+      0, 2, 1, 0, 3, 2,
+      4, 5, 6, 4, 6, 7,
+      0, 4, 7, 0, 7, 3,
+      1, 2, 6, 1, 6, 5,
+    ]);
+
+    colliders.push(
+      world.createCollider(
+        RAPIER.ColliderDesc.trimesh(
+          vertices,
+          indices,
+          RAPIER.TriMeshFlags.FIX_INTERNAL_EDGES,
+        )
+          .setTranslation(
+            Math.sin(angle) * centerRadius,
+            centerY,
+            Math.cos(angle) * centerRadius,
+          )
+          .setRotation({
+            x: 0,
+            y: Math.sin(angle / 2),
+            z: 0,
+            w: Math.cos(angle / 2),
+          })
+          .setFriction(0.28)
+          .setRestitution(0.16)
+          .setCollisionGroups(
+            STATIONARY_COLLISION_GROUP | (BALL_COLLISION_GROUP << 16),
+          ),
+        body,
+      ),
+    );
+  }
+
+  return colliders;
+}
+
 function yQuaternion(angle: number): [number, number, number, number] {
   return [0, Math.sin(angle / 2), 0, Math.cos(angle / 2)];
 }
@@ -541,16 +632,6 @@ function addRingSpecs(
 
 function buildColliderSpecs(): ColliderSpec[] {
   const specs: ColliderSpec[] = [];
-  addRingSpecs(specs, {
-    id: "deflector",
-    label: "Deflector",
-    body: "stationary",
-    count: 8,
-    radius: 2.33,
-    y: 0.78,
-    halfExtents: [0.16, 0.08, 0.1],
-    radialOffset: Math.PI / 2 + 0.35,
-  });
   return specs;
 }
 
@@ -691,6 +772,7 @@ export async function simulatePhysicsLabRound(
   );
   addDarkRaceChannelCollider(world, stationaryBody);
   addBowlBridgeCollider(world, stationaryBody);
+  addMeasuredDeflectorColliders(world, stationaryBody);
   addPocketFloorAndOuterLipColliders(world, rotorBody);
   addPocketFretColliders(world, rotorBody);
   addPocketInnerGuardCollider(world, rotorBody);
