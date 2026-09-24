@@ -419,6 +419,26 @@ function addPocketFloorAndOuterLipColliders(
     ),
   );
 
+  colliders.push(
+    world.createCollider(
+      RAPIER.ColliderDesc.cylinder(
+        0.04,
+        ROULETTE_POCKET_FLOOR_OUTER_RADIUS + 0.06,
+      )
+        .setTranslation(
+          0,
+          ROULETTE_POCKET_FLOOR_Y - PHYSICS_LAB_BALL_RADIUS - 0.04,
+          0,
+        )
+        .setFriction(0.42)
+        .setRestitution(0.02)
+        .setCollisionGroups(
+          ROTOR_COLLISION_GROUP | (BALL_COLLISION_GROUP << 16),
+        ),
+      body,
+    ),
+  );
+
   return colliders;
 }
 
