@@ -52,6 +52,7 @@ type RoundRow = {
   settling_until: Date;
   intermission_until: Date;
   winning_number: number | null;
+  physics_round_id: string | null;
   lucky_numbers: number[];
   multipliers: RouletteMultiplier[];
   commitment_hash: string;
@@ -281,6 +282,7 @@ export class RouletteRepository {
       id: row.id,
       sequence: row.sequence,
       winningNumber: row.winning_number,
+      physicsRoundId: row.physics_round_id ?? null,
       luckyNumbers: safeJson<number[]>(row.lucky_numbers, []),
       multipliers: safeJson<RouletteMultiplier[]>(row.multipliers, []),
       settledAt: row.updated_at ?? null,

@@ -103,6 +103,7 @@ export type RouletteRoundRecord = {
   settlingUntil: Date;
   intermissionUntil: Date;
   winningNumber: number | null;
+  physicsRoundId: string | null;
   luckyNumbers: number[];
   multipliers: RouletteMultiplier[];
   commitmentHash: string;
