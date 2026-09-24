@@ -917,9 +917,6 @@ export async function simulatePhysicsLabRound(
   let deflectorHit = false;
   let movingFretContact = false;
   let pocketInteraction = false;
-  let firstPhysicalFretContactStep: number | null = null;
-  let firstInnerGuardContactStep: number | null = null;
-  let firstPocketEntryStep: number | null = null;
   let previousPocketIndex: number | null = null;
   let previousBallSpeed = Math.hypot(...startConditions.ballVelocity);
   let previousRotorSpeed = Math.abs(startConditions.rotorInitialAngularVelocity);
@@ -939,6 +936,87 @@ export async function simulatePhysicsLabRound(
   let stableSettleStep: number | null = null;
   let errorCode: string | null = null;
   let maxBallSpeed = 0;
+
+  const preFretTraceSeed =
+    seed === "61004" || seed === "61005" || seed === "61006";
+  const preFretCheckpoints = new Set<string>();
+  let preFretTrackContactObserved = false;
+  const logPreFretCheckpoint = (
+    checkpoint:
+      | "INWARD_DESCENT"
+      | "DEFLECTOR_CONTACT"
+      | "ROTOR_ENTRY"
+      | "POCKET_ENTRY"
+      | "PHYSICAL_FRET_CONTACT",
+    step: number,
+    translation: Vec3,
+    velocity: Vec3,
+    ballSpeed: number,
+    radius: number,
+    rotorRotation: Quaternion,
+    contactRoles: Set<string>,
+  ) => {
+    if (!preFretTraceSeed || preFretCheckpoints.has(checkpoint)) return;
+    preFretCheckpoints.add(checkpoint);
+    const radialVelocity =
+      radius > 0
+        ? (translation.x * velocity.x + translation.z * velocity.z) / radius
+        : 0;
+    const rotorTangentialVelocity = {
+      x: startConditions.rotorInitialAngularVelocity * translation.z,
+      y: 0,
+      z: -startConditions.rotorInitialAngularVelocity * translation.x,
+    };
+    const rotorRelativeSpeed = Math.hypot(
+      velocity.x - rotorTangentialVelocity.x,
+      velocity.y - rotorTangentialVelocity.y,
+      velocity.z - rotorTangentialVelocity.z,
+    );
+    const bodyRotorAngle = normalizedAngle(
+      2 * Math.atan2(rotorRotation.y, rotorRotation.w),
+    );
+    const pocketIndex =
+      radius > 1.18 && radius < 1.98
+        ? pocketIndexFromState(translation, rotorRotation)
+        : null;
+    console.info(
+      "ROULETTE_PRE_FRET_CHECKPOINT",
+      JSON.stringify({
+        source: "server",
+        seed,
+        checkpoint,
+        simulationTimeSeconds: Number(
+          ((step + 1) * PHYSICS_LAB_FIXED_TIMESTEP).toFixed(6),
+        ),
+        step,
+        rotorAngle: Number(bodyRotorAngle.toFixed(9)),
+        position: {
+          x: Number(translation.x.toFixed(6)),
+          y: Number(translation.y.toFixed(6)),
+          z: Number(translation.z.toFixed(6)),
+        },
+        velocity: {
+          x: Number(velocity.x.toFixed(6)),
+          y: Number(velocity.y.toFixed(6)),
+          z: Number(velocity.z.toFixed(6)),
+        },
+        speed: Number(ballSpeed.toFixed(6)),
+        radius: Number(radius.toFixed(6)),
+        radialVelocity: Number(radialVelocity.toFixed(6)),
+        verticalVelocity: Number(velocity.y.toFixed(6)),
+        rotorRelativeSpeed: Number(rotorRelativeSpeed.toFixed(6)),
+        contactRoles: [...contactRoles].sort(),
+        deflectorContact: contactRoles.has("deflector"),
+        bowlBridgeContact: contactRoles.has("bowl-bridge"),
+        outerLipContact: contactRoles.has("pocket-outer-lip"),
+        pocketFloorContact:
+          contactRoles.has("pocket-floor") ||
+          contactRoles.has("pocket-catch-underlay"),
+        fretContact: contactRoles.has("pocket-fret"),
+        pocketIndex,
+      }),
+    );
+  };
 
   try {
     const durationLimitSteps = Math.round(
@@ -1072,6 +1150,7 @@ export async function simulatePhysicsLabRound(
       let physicalFretPairContact = false;
       let innerGuardPairContact = false;
       let pocketFloorPairContact = false;
+      const stepContactRoles = new Set<string>();
       let contactedFretHandle: number | null = null;
       let fretManifoldNormal: Vec3 | null = null;
       let fretSolverContactPoint: Vec3 | null = null;
@@ -1104,6 +1183,7 @@ export async function simulatePhysicsLabRound(
             innerGuardPairContact = true;
           }
           const contactRole = colliderRoles.get(otherCollider.handle);
+          if (contactRole) stepContactRoles.add(contactRole);
           if (
             contactRole === "pocket-floor" ||
             contactRole === "pocket-outer-lip" ||
@@ -1113,74 +1193,95 @@ export async function simulatePhysicsLabRound(
           }
         });
       });
+      preFretTrackContactObserved ||=
+        stepContactRoles.has("dark-race") &&
+        radius >= trackCenterBandMin &&
+        radius <= trackCenterBandMax;
       if (
-        (seed === "61004" || seed === "61005" || seed === "61006") &&
-        physicalFretPairContact &&
-        firstPhysicalFretContactStep === null
+        preFretTrackContactObserved &&
+        radius < trackCenterBandMin
       ) {
-        firstPhysicalFretContactStep = step;
-        const fretIndex =
-          contactedFretHandle === null
-            ? -1
-            : fretColliders.findIndex(
-                (collider) => collider.handle === contactedFretHandle,
-              );
-        const fretCollider = fretIndex >= 0 ? fretColliders[fretIndex] : null;
-        const fretTranslation = fretCollider?.translation() ?? null;
-        const fretRotation = fretCollider?.rotation() ?? null;
-        const contactRotorTangentialVelocity = {
-          x: startConditions.rotorInitialAngularVelocity * translation.z,
-          y: 0,
-          z: -startConditions.rotorInitialAngularVelocity * translation.x,
-        };
-        console.info(
-          "SERVER_CONTACT_SEQUENCE",
-          JSON.stringify({
-            seed,
-            kind: "PHYSICAL_FRET_CONTACT",
-            step,
-            simulatedAtMs: Math.round(
-              step * PHYSICS_LAB_FIXED_TIMESTEP * 1000,
-            ),
-            radius,
-            position: vec3(translation),
-            velocity: vec3(velocity),
-            y: translation.y,
-            ballSpeed,
-            rotorRelativeSpeed: Math.hypot(
-              velocity.x - contactRotorTangentialVelocity.x,
-              velocity.y - contactRotorTangentialVelocity.y,
-              velocity.z - contactRotorTangentialVelocity.z,
-            ),
-            fretIndex,
-            fretTranslation: fretTranslation ? vec3(fretTranslation) : null,
-            fretRotation: fretRotation
-              ? quaternion(fretRotation)
-              : null,
-            manifoldNormal: fretManifoldNormal,
-            solverContactPoint: fretSolverContactPoint,
-          }),
+        logPreFretCheckpoint(
+          "INWARD_DESCENT",
+          step,
+          vec3(translation),
+          vec3(velocity),
+          ballSpeed,
+          radius,
+          quaternion(rotorRotation),
+          stepContactRoles,
+        );
+      }
+      if (deflectorPairContact) {
+        logPreFretCheckpoint(
+          "DEFLECTOR_CONTACT",
+          step,
+          vec3(translation),
+          vec3(velocity),
+          ballSpeed,
+          radius,
+          quaternion(rotorRotation),
+          stepContactRoles,
         );
       }
       if (
-        (seed === "61004" || seed === "61005" || seed === "61006") &&
-        innerGuardPairContact &&
-        firstInnerGuardContactStep === null
+        preFretCheckpoints.has("INWARD_DESCENT") &&
+        radius <=
+          ROULETTE_POCKET_OUTER_LIP_RADIUS + PHYSICS_LAB_BALL_RADIUS + 0.08
       ) {
-        firstInnerGuardContactStep = step;
-        console.info(
-          "SERVER_CONTACT_SEQUENCE",
-          JSON.stringify({
-            seed,
-            kind: "INNER_GUARD_CONTACT",
-            step,
-            simulatedAtMs: Math.round(
-              step * PHYSICS_LAB_FIXED_TIMESTEP * 1000,
-            ),
-            radius,
-            y: translation.y,
-            ballSpeed,
-          }),
+        logPreFretCheckpoint(
+          "ROTOR_ENTRY",
+          step,
+          vec3(translation),
+          vec3(velocity),
+          ballSpeed,
+          radius,
+          quaternion(rotorRotation),
+          stepContactRoles,
+        );
+      }
+      const checkpointBallBottom =
+        translation.y - PHYSICS_LAB_BALL_RADIUS;
+      const checkpointPocketFloorContact =
+        stepContactRoles.has("pocket-floor") ||
+        stepContactRoles.has("pocket-catch-underlay");
+      const checkpointInsidePocket =
+        radius >= 1.48 + PHYSICS_LAB_BALL_RADIUS &&
+        radius <=
+          ROULETTE_POCKET_OUTER_LIP_RADIUS - PHYSICS_LAB_BALL_RADIUS &&
+        checkpointBallBottom >= ROULETTE_POCKET_FLOOR_Y - 0.08 &&
+        checkpointBallBottom <= ROULETTE_POCKET_FLOOR_Y + 0.16;
+      const checkpointPocketContactInsideRotorEnvelope =
+        checkpointPocketFloorContact &&
+        radius <=
+          ROULETTE_POCKET_OUTER_LIP_RADIUS +
+            PHYSICS_LAB_BALL_RADIUS +
+            0.04;
+      if (
+        checkpointInsidePocket ||
+        checkpointPocketContactInsideRotorEnvelope
+      ) {
+        logPreFretCheckpoint(
+          "POCKET_ENTRY",
+          step,
+          vec3(translation),
+          vec3(velocity),
+          ballSpeed,
+          radius,
+          quaternion(rotorRotation),
+          stepContactRoles,
+        );
+      }
+      if (physicalFretPairContact) {
+        logPreFretCheckpoint(
+          "PHYSICAL_FRET_CONTACT",
+          step,
+          vec3(translation),
+          vec3(velocity),
+          ballSpeed,
+          radius,
+          quaternion(rotorRotation),
+          stepContactRoles,
         );
       }
       if (!deflectorHit && deflectorPairContact) {
@@ -1228,28 +1329,6 @@ export async function simulatePhysicsLabRound(
         pocketInteraction = true;
         if (previousPocketIndex === null) {
           events.push(event("POCKET_ENTRY", step, { pocketIndex }));
-          if (
-            (seed === "61004" || seed === "61005" || seed === "61006") &&
-            firstPocketEntryStep === null
-          ) {
-            firstPocketEntryStep = step;
-            console.info(
-              "SERVER_CONTACT_SEQUENCE",
-              JSON.stringify({
-                seed,
-                kind: "POCKET_ENTRY",
-                step,
-                simulatedAtMs: Math.round(
-                  step * PHYSICS_LAB_FIXED_TIMESTEP * 1000,
-                ),
-                radius,
-                y: translation.y,
-                ballSpeed,
-                firstPhysicalFretContactStep,
-                firstInnerGuardContactStep,
-              }),
-            );
-          }
         } else if (previousPocketIndex !== pocketIndex) {
           events.push(event("POCKET_CHANGE", step, { pocketIndex }));
         }
@@ -1272,40 +1351,6 @@ export async function simulatePhysicsLabRound(
         velocity.y - rotorTangentialVelocity.y,
         velocity.z - rotorTangentialVelocity.z,
       );
-      if (
-        (seed === "61004" || seed === "61005" || seed === "61006") &&
-        firstPhysicalFretContactStep !== null &&
-        step >= firstPhysicalFretContactStep &&
-        step < firstPhysicalFretContactStep + 20
-      ) {
-        console.info(
-          "SERVER_POST_FRET_TRACE",
-          JSON.stringify({
-            seed,
-            step,
-            offset: step - firstPhysicalFretContactStep,
-            simulatedAtMs: Number(
-              (step * PHYSICS_LAB_FIXED_TIMESTEP * 1000).toFixed(3),
-            ),
-            radius: Number(radius.toFixed(6)),
-            position: {
-              x: Number(translation.x.toFixed(6)),
-              y: Number(translation.y.toFixed(6)),
-              z: Number(translation.z.toFixed(6)),
-            },
-            velocity: {
-              x: Number(velocity.x.toFixed(6)),
-              y: Number(velocity.y.toFixed(6)),
-              z: Number(velocity.z.toFixed(6)),
-            },
-            speed: Number(ballSpeed.toFixed(6)),
-            rotorRelativeSpeed: Number(rotorRelativeSpeed.toFixed(6)),
-            fretContact: physicalFretPairContact,
-            innerGuardContact: innerGuardPairContact,
-            pocketFloorContact: pocketFloorPairContact,
-          }),
-        );
-      }
       const ballBottom = translation.y - PHYSICS_LAB_BALL_RADIUS;
       const settlePocketInteraction = pocketInteraction;
       const settleRelativeSpeed = rotorRelativeSpeed < 0.12;
