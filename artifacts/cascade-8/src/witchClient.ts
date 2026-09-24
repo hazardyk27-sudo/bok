@@ -66,10 +66,21 @@ const formatMultiplier = (basisPoints: number) => `${(basisPoints / 100).toLocal
   maximumFractionDigits: 2,
 })}×`;
 
+const compactNumber = (value: number) => {
+  if (value >= 1_000_000) return `${(value / 1_000_000).toFixed(value >= 10_000_000 ? 1 : 2).replace(/\.0+$/, "").replace(/(\.\d*[1-9])0$/, "$1")}M`;
+  if (value >= 1_000) return `${(value / 1_000).toFixed(value >= 100_000 ? 0 : value >= 10_000 ? 1 : 2).replace(/\.0+$/, "").replace(/(\.\d*[1-9])0$/, "$1")}K`;
+  return value.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+};
+
+const formatCompactMoney = (cents: number, signed = false) => {
+  const absolute = Math.abs(cents) / 100;
+  const sign = signed ? (cents > 0 ? "+" : cents < 0 ? "−" : "") : (cents < 0 ? "−" : "");
+  return `${sign}${compactNumber(absolute)}`;
+};
+
 const formatTicketPrice = (cents: number) => {
   const dollars = cents / 100;
-  if (dollars >= 1_000_000) return `${(dollars / 1_000_000).toFixed(dollars >= 10_000_000 ? 1 : 2).replace(/\.0+$/, "").replace(/(\.\d*[1-9])0$/, "$1")}M`;
-  if (dollars >= 1_000) return `${(dollars / 1_000).toFixed(dollars >= 100_000 ? 0 : dollars >= 10_000 ? 1 : 2).replace(/\.0+$/, "").replace(/(\.\d*[1-9])0$/, "$1")}K`;
+  if (dollars >= 1_000) return `${compactNumber(dollars)}`;
   return formatMoney(cents, { compactInteger: true });
 };
 
@@ -77,6 +88,11 @@ const newIdempotencyKey = (prefix: string) => `${prefix}-${crypto.randomUUID()}-
 
 export const CADI_KAZAN_MARKUP = `
   <main class="witch-page" aria-labelledby="witch-title">
+    <div class="witch-landscape-gate" aria-hidden="true">
+      <span class="witch-landscape-icon">↻</span>
+      <strong>YATAY MOD</strong>
+      <small>Cadı Kazan mobilde yatay ekran için tasarlandı.</small>
+    </div>
     <header class="witch-appbar">
       <a class="witch-back" href="/" aria-label="Ana menüye dön">←</a>
 
@@ -220,7 +236,9 @@ export const CADI_KAZAN_MARKUP = `
     </section>
 
     <section class="witch-control-dock" data-witch-lobby aria-label="Bilet ayarları">
-      <div class="witch-mode-grid" role="group" aria-label="Cadı Kazan oyun modu">
+      <div class="witch-control-group witch-mode-group">
+        <label>KART</label>
+        <div class="witch-mode-grid" role="group" aria-label="Cadı Kazan oyun modu">
         <button type="button" class="witch-mode-card is-selected" data-witch-mode="STANDARD">
           <i class="witch-radio" aria-hidden="true"></i>
           <span><strong>Standard 5</strong><small>5 alan · 1 bomba</small></span>
@@ -229,6 +247,7 @@ export const CADI_KAZAN_MARKUP = `
           <i class="witch-radio" aria-hidden="true"></i>
           <span><strong>Advanced 25</strong><small>25 alan · risk seçimi</small></span>
         </button>
+        </div>
       </div>
 
       <div class="witch-control-separator" aria-hidden="true"></div>
@@ -256,7 +275,7 @@ export const CADI_KAZAN_MARKUP = `
       <div class="witch-control-separator" aria-hidden="true"></div>
 
       <label class="witch-control-group witch-alarm-field">
-        <span class="witch-visually-hidden">Bomba sayısı</span>
+        <span>RİSK</span>
         <select data-witch-alarms disabled aria-label="Advanced bomba sayısı">
           <option value="1">1 BOMBA</option>
           <option value="3">3 BOMBA</option>
@@ -790,9 +809,9 @@ export class WitchClient {
     const displayedPayout = round ? (round.status === "ACTIVE" ? round.currentCashoutCents : round.payoutCents) : 0;
     const multiplier = round ? formatMultiplier(round.currentMultiplierBps) : "0.00x";
     this.root.querySelectorAll<HTMLElement>("[data-witch-multiplier], [data-witch-mobile-multiplier]").forEach((element) => { element.textContent = multiplier; });
-    this.root.querySelectorAll<HTMLElement>("[data-witch-payout], [data-witch-mobile-payout]").forEach((element) => { element.textContent = formatMoney(displayedPayout); });
-    const stake = round ? formatMoney(round.stakeCents) : "—";
-    const net = round ? formatMoney(displayedPayout - round.stakeCents, { signed: true }) : "—";
+    this.root.querySelectorAll<HTMLElement>("[data-witch-payout], [data-witch-mobile-payout]").forEach((element) => { element.textContent = formatCompactMoney(displayedPayout); });
+    const stake = round ? formatCompactMoney(round.stakeCents) : "—";
+    const net = round ? formatCompactMoney(displayedPayout - round.stakeCents, true) : "—";
     this.root.querySelectorAll<HTMLElement>("[data-witch-stake-display]").forEach((element) => { element.textContent = stake; });
     this.root.querySelectorAll<HTMLElement>("[data-witch-net]").forEach((element) => { element.textContent = net; });
     const payoutNote = this.root.querySelector<HTMLElement>("[data-witch-payout-note]");
