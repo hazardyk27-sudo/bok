@@ -664,7 +664,7 @@ export class ScratchSurface {
       this.debrisContext!.translate(particle.x, particle.y);
       this.debrisContext!.rotate(particle.rotation);
       this.debrisContext!.globalAlpha = particle.alpha * (1 - lifeProgress);
-      this.debrisContext!.fillStyle = lifeProgress < .34 ? "#f4dfaa" : lifeProgress < .68 ? "#bd8a48" : "#6c4728";
+      this.debrisContext!.fillStyle = lifeProgress < .34 ? "#eeeeea" : lifeProgress < .68 ? "#b8bbb8" : "#6f7370";
       this.debrisContext!.fillRect(-particle.size / 2, -particle.size / 2, particle.size * 1.35, particle.size * .42);
       this.debrisContext!.restore();
 
