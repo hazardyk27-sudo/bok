@@ -797,7 +797,11 @@ export async function simulatePhysicsLabRound(
     RAPIER.ColliderDesc.ball(BALL_PARAMETERS.radius)
       .setFriction(BALL_PARAMETERS.friction)
       .setRestitution(BALL_PARAMETERS.restitution)
-      .setDensity(0.001),
+      .setDensity(0.001)
+      .setCollisionGroups(
+        BALL_COLLISION_GROUP |
+          ((STATIONARY_COLLISION_GROUP | ROTOR_COLLISION_GROUP) << 16),
+      ),
     ballBody,
   );
   ballBody.setAngvel(
