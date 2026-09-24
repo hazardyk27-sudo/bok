@@ -268,12 +268,12 @@ function addDarkRaceOuterWallCollider(
     darkRaceSurfaceYAt(innerFaceRadius) -
     PHYSICS_LAB_BALL_RADIUS * 2 -
     0.02;
-  const configuredWallTopY =
-    ROULETTE_DARK_RACE_CHANNEL_PROFILE[
-      ROULETTE_DARK_RACE_CHANNEL_PROFILE.length - 1
-    ][1];
+  // Browser full-spin measures the visible GLB outer wall up to y=0.
+  // Match that validated measured top so the 512-segment wall uses the
+  // same triangle diagonals/contact features in server Rapier.
+  const measuredWallTopY = 0;
   const upperY = Math.max(
-    configuredWallTopY + PHYSICS_LAB_BALL_RADIUS + 0.1,
+    measuredWallTopY + PHYSICS_LAB_BALL_RADIUS + 0.1,
     lowerY + 0.24,
   );
   const vertices: number[] = [];
