@@ -837,7 +837,8 @@ export async function simulatePhysicsLabRound(
   const ballBody = world.createRigidBody(
     RAPIER.RigidBodyDesc.dynamic()
       .setTranslation(...startConditions.ballPosition)
-      .setLinvel(...startConditions.ballVelocity)
+      .setLinvel(0, 0, 0)
+      .setAngvel({ x: 0, y: 0, z: 0 })
       .setAdditionalMass(BALL_PARAMETERS.mass)
       .setLinearDamping(BALL_PARAMETERS.linearDamping)
       .setAngularDamping(BALL_PARAMETERS.angularDamping)
@@ -858,6 +859,31 @@ export async function simulatePhysicsLabRound(
       ),
     ballBody,
   );
+  rotorBody.setNextKinematicRotation({
+    x: 0,
+    y: Math.sin(startConditions.rotorInitialAngleRadians / 2),
+    z: 0,
+    w: Math.cos(startConditions.rotorInitialAngleRadians / 2),
+  });
+  world.step();
+
+  ballBody.setTranslation(
+    {
+      x: startConditions.ballPosition[0],
+      y: startConditions.ballPosition[1],
+      z: startConditions.ballPosition[2],
+    },
+    true,
+  );
+  ballBody.setRotation({ x: 0, y: 0, z: 0, w: 1 }, true);
+  ballBody.setLinvel(
+    {
+      x: startConditions.ballVelocity[0],
+      y: startConditions.ballVelocity[1],
+      z: startConditions.ballVelocity[2],
+    },
+    true,
+  );
   ballBody.setAngvel(
     {
       x: startConditions.ballSpinAxis[0] * startConditions.ballSpin,
@@ -866,6 +892,7 @@ export async function simulatePhysicsLabRound(
     },
     true,
   );
+  ballBody.wakeUp();
 
   let outerTrackEntered = false;
   let energyLossObserved = false;
