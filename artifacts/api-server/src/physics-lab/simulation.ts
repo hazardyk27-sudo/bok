@@ -10,6 +10,8 @@ import {
   ROULETTE_GRAVITY_Y,
   ROULETTE_MAX_CCD_SUBSTEPS,
   ROULETTE_POCKET_COUNT,
+  ROULETTE_POCKET_FLOOR_OUTER_RADIUS,
+  ROULETTE_POCKET_FLOOR_Y,
   ROULETTE_POCKET_OUTER_LIP_RADIUS,
   ROULETTE_POCKET_OUTER_LIP_Y,
   ROULETTE_ROTOR_ANGULAR_SPEED,
@@ -339,6 +341,87 @@ function addBowlBridgeCollider(
   );
 }
 
+function addPocketFloorAndOuterLipColliders(
+  world: RAPIER.World,
+  body: RAPIER.RigidBody,
+) {
+  const colliders: RAPIER.Collider[] = [];
+  const floorThickness = 0.06;
+  const lipSegments = 74;
+  const bridgeOuterRadius =
+    ROULETTE_DARK_RACE_INWARD_EDGE_RADIUS + PHYSICS_LAB_BALL_RADIUS;
+  const bridgeOuterY = darkRaceSurfaceYAt(bridgeOuterRadius);
+  const outerLipY = Math.min(
+    ROULETTE_POCKET_OUTER_LIP_Y,
+    bridgeOuterY - PHYSICS_LAB_BALL_RADIUS * 0.75,
+  );
+
+  colliders.push(
+    world.createCollider(
+      RAPIER.ColliderDesc.cylinder(
+        floorThickness / 2,
+        ROULETTE_POCKET_FLOOR_OUTER_RADIUS,
+      )
+        .setTranslation(
+          0,
+          ROULETTE_POCKET_FLOOR_Y - floorThickness / 2,
+          0,
+        )
+        .setFriction(0.42)
+        .setRestitution(0.02)
+        .setCollisionGroups(
+          ROTOR_COLLISION_GROUP | (BALL_COLLISION_GROUP << 16),
+        ),
+      body,
+    ),
+  );
+
+  const vertices: number[] = [];
+  const indices: number[] = [];
+  const profile: Array<[number, number]> = [
+    [ROULETTE_POCKET_FLOOR_OUTER_RADIUS, ROULETTE_POCKET_FLOOR_Y],
+    [ROULETTE_POCKET_OUTER_LIP_RADIUS, outerLipY],
+  ];
+
+  for (const [radius, y] of profile) {
+    for (let segment = 0; segment < lipSegments; segment += 1) {
+      const angle = (segment / lipSegments) * Math.PI * 2;
+      vertices.push(
+        Math.sin(angle) * radius,
+        y,
+        Math.cos(angle) * radius,
+      );
+    }
+  }
+
+  for (let segment = 0; segment < lipSegments; segment += 1) {
+    const next = (segment + 1) % lipSegments;
+    const innerA = segment;
+    const outerA = lipSegments + segment;
+    const outerB = lipSegments + next;
+    const innerB = next;
+    indices.push(innerA, outerA, outerB, innerA, outerB, innerB);
+  }
+
+  colliders.push(
+    world.createCollider(
+      RAPIER.ColliderDesc.trimesh(
+        new Float32Array(vertices),
+        new Uint32Array(indices),
+        RAPIER.TriMeshFlags.FIX_INTERNAL_EDGES | RAPIER.TriMeshFlags.ORIENTED,
+      )
+        .setFriction(0.42)
+        .setRestitution(0.02)
+        .setCollisionGroups(
+          ROTOR_COLLISION_GROUP | (BALL_COLLISION_GROUP << 16),
+        ),
+      body,
+    ),
+  );
+
+  return colliders;
+}
+
 function yQuaternion(angle: number): [number, number, number, number] {
   return [0, Math.sin(angle / 2), 0, Math.cos(angle / 2)];
 }
@@ -401,15 +484,6 @@ function buildColliderSpecs(): ColliderSpec[] {
     radialOffset: Math.PI / 2 + 0.35,
   });
   addRingSpecs(specs, {
-    id: "rotor-pocket-floor",
-    label: "Pocket floor",
-    body: "rotor",
-    count: PHYSICS_LAB_SECTOR_COUNT,
-    radius: 1.72,
-    y: 0.15,
-    halfExtents: [0.13, 0.055, 0.16],
-  });
-  addRingSpecs(specs, {
     id: "rotor-inner-wall",
     label: "Pocket inner wall",
     body: "rotor",
@@ -417,15 +491,6 @@ function buildColliderSpecs(): ColliderSpec[] {
     radius: 1.42,
     y: 0.15,
     halfExtents: [0.13, 0.15, 0.045],
-  });
-  addRingSpecs(specs, {
-    id: "rotor-outer-wall",
-    label: "Pocket outer wall",
-    body: "rotor",
-    count: PHYSICS_LAB_SECTOR_COUNT,
-    radius: 1.92,
-    y: 0.16,
-    halfExtents: [0.13, 0.025, 0.045],
   });
   addRingSpecs(specs, {
     id: "rotor-fret",
@@ -593,6 +658,7 @@ export async function simulatePhysicsLabRound(
   );
   addDarkRaceChannelCollider(world, stationaryBody);
   addBowlBridgeCollider(world, stationaryBody);
+  addPocketFloorAndOuterLipColliders(world, rotorBody);
   const specs = buildColliderSpecs();
   for (const spec of specs) {
     addRapierCollider(
