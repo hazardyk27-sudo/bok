@@ -1303,68 +1303,31 @@ function buildPocketFloorTrimesh(
 ) {
   const vertices: number[] = [];
   const indices: number[] = [];
-  const topProfile: Array<[number, number]> = [
-    [POCKET_FLOOR_INNER_RADIUS, POCKET_FLOOR_Y],
+  const profile: Array<[number, number]> = [
     [POCKET_FLOOR_OUTER_RADIUS, POCKET_FLOOR_Y],
     [POCKET_OUTER_LIP_RADIUS, outerLipY],
   ];
-  const bottomProfile = topProfile.map(
-    ([radius, height]) =>
-      [radius, height - POCKET_FLOOR_THICKNESS] as [number, number],
-  );
-  const appendProfile = (profile: Array<[number, number]>) => {
-    for (const [radius, height] of profile) {
-      for (let index = 0; index < POCKET_FLOOR_SEGMENTS; index += 1) {
-        const angle = ((index + 0.5) / POCKET_FLOOR_SEGMENTS) * TWO_PI;
-        vertices.push(
-          Math.sin(angle) * radius,
-          height,
-          Math.cos(angle) * radius,
-        );
-      }
-    }
-  };
-  appendProfile(topProfile);
-  appendProfile(bottomProfile);
 
-  const appendStrip = (
-    startRing: number,
-    profileLength: number,
-    reverse: boolean,
-  ) => {
-    for (let ring = 0; ring < profileLength - 1; ring += 1) {
-      const current = (startRing + ring) * POCKET_FLOOR_SEGMENTS;
-      const nextRing = (startRing + ring + 1) * POCKET_FLOOR_SEGMENTS;
-      for (let index = 0; index < POCKET_FLOOR_SEGMENTS; index += 1) {
-        const next = (index + 1) % POCKET_FLOOR_SEGMENTS;
-        const topA = current + index;
-        const topB = nextRing + index;
-        const topC = nextRing + next;
-        const topD = current + next;
-        if (reverse) {
-          indices.push(topA, topC, topB, topA, topD, topC);
-        } else {
-          indices.push(topA, topB, topC, topA, topC, topD);
-        }
-      }
+  for (const [radius, height] of profile) {
+    for (let index = 0; index < POCKET_FLOOR_SEGMENTS; index += 1) {
+      const angle = (index / POCKET_FLOOR_SEGMENTS) * TWO_PI;
+      vertices.push(
+        Math.sin(angle) * radius,
+        height,
+        Math.cos(angle) * radius,
+      );
     }
-  };
-  appendStrip(0, topProfile.length, false);
-  appendStrip(topProfile.length, bottomProfile.length, true);
+  }
 
-  const innerTop = 0;
-  const innerBottom = topProfile.length * POCKET_FLOOR_SEGMENTS;
   for (let index = 0; index < POCKET_FLOOR_SEGMENTS; index += 1) {
     const next = (index + 1) % POCKET_FLOOR_SEGMENTS;
-    indices.push(
-      innerTop + index,
-      innerTop + next,
-      innerBottom + index,
-      innerTop + next,
-      innerBottom + next,
-      innerBottom + index,
-    );
+    const innerA = index;
+    const outerA = POCKET_FLOOR_SEGMENTS + index;
+    const outerB = POCKET_FLOOR_SEGMENTS + next;
+    const innerB = next;
+    indices.push(innerA, outerA, outerB, innerA, outerB, innerB);
   }
+
   return {
     vertices: new Float32Array(vertices),
     indices: new Uint32Array(indices),
@@ -1398,6 +1361,23 @@ function addKinematicPocketSystem(
   outerLipY: number = POCKET_OUTER_LIP_Y,
 ) {
   const colliders: RAPIER.Collider[] = [];
+  colliders.push(
+    world.createCollider(
+      RAPIER.ColliderDesc.cylinder(
+        POCKET_FLOOR_THICKNESS / 2,
+        POCKET_FLOOR_OUTER_RADIUS,
+      )
+        .setTranslation(
+          0,
+          POCKET_FLOOR_Y - POCKET_FLOOR_THICKNESS / 2,
+          0,
+        )
+        .setFriction(0.42)
+        .setRestitution(0.02)
+        .setCollisionGroups(ROTOR_COLLISION_GROUP | (BALL_COLLISION_GROUP << 16)),
+      body,
+    ),
+  );
   const floorMesh = buildPocketFloorTrimesh(outerLipY);
   colliders.push(
     world.createCollider(
@@ -6675,7 +6655,11 @@ export function Part2SceneViewport({
                part3PocketColliders.forEach((collider, index) => {
                  part3ColliderRoles.set(
                    collider.handle,
-                   index === 0 ? 'pocket-floor-trimesh' : 'pocket-fret-cuboid',
+                   index === 0
+                     ? 'pocket-floor-trimesh'
+                     : index === 1
+                       ? 'pocket-outer-lip-trimesh'
+                       : 'pocket-fret-cuboid',
                  );
                });
                const pocketInnerGuard = addKinematicPocketInnerGuard(
