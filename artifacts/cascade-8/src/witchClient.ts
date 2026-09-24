@@ -741,11 +741,14 @@ export class WitchClient {
 
     const empty = this.root.querySelector<HTMLElement>("[data-witch-empty]");
     const ticket = this.root.querySelector<HTMLElement>("[data-witch-ticket]");
-    const showStandardPreview = !hasRound && visualMode === "STANDARD";
-    if (empty) empty.hidden = hasRound || showStandardPreview;
+    const showPreview = !hasRound;
+    const showStandardPreview = showPreview && visualMode === "STANDARD";
+    const showAdvancedPreview = showPreview && visualMode === "ADVANCED";
+    if (empty) empty.hidden = hasRound || showPreview;
     if (ticket) {
-      ticket.hidden = !(hasRound || showStandardPreview);
-      ticket.classList.toggle("is-preview", showStandardPreview);
+      ticket.hidden = !(hasRound || showPreview);
+      ticket.classList.toggle("is-preview", showPreview);
+      ticket.classList.toggle("is-advanced", visualMode === "ADVANCED");
     }
 
     const riskNote = this.root.querySelector<HTMLElement>("[data-witch-risk-note]");
@@ -759,17 +762,28 @@ export class WitchClient {
     if (!round) {
       const playMode = this.root.querySelector<HTMLElement>("[data-witch-play-mode]");
       const playTitle = this.root.querySelector<HTMLElement>("[data-witch-play-title]");
-      if (playMode) playMode.textContent = showStandardPreview ? "STANDARD 5 / 01 BOMBA" : "NO TICKET";
-      if (playTitle) playTitle.textContent = showStandardPreview ? "Biletini al ve kazımaya başla." : "Bir bilet seç ve kazımaya başla.";
+      if (playMode) {
+        playMode.textContent = showAdvancedPreview
+          ? `ADVANCED 25 / ${String(Number(alarms?.value ?? 1)).padStart(2, "0")} BOMBA`
+          : "STANDARD 5 / 01 BOMBA";
+      }
+      if (playTitle) playTitle.textContent = "Biletini al ve kazımaya başla.";
 
-      if (showStandardPreview && board) {
-        if (board.dataset.preview !== "standard") {
+      if (showPreview && board) {
+        const previewKind = showAdvancedPreview ? "advanced" : "standard";
+        const previewCellCount = showAdvancedPreview ? 25 : 5;
+        if (board.dataset.preview !== previewKind) {
           this.destroyScratchSurfaces();
-          board.dataset.preview = "standard";
-          board.innerHTML = Array.from({ length: 5 }, (_, index) => `
-            <button type="button" class="witch-cell witch-preview-cell" disabled aria-label="Bilet satın alındığında kazınabilir alan ${index + 1}">
-              <span class="witch-preview-coating" aria-hidden="true">
-                <img src="/cadi-kazan/bcs-cactus.webp" alt="" draggable="false">
+          board.dataset.preview = previewKind;
+          board.innerHTML = Array.from({ length: previewCellCount }, (_, index) => `
+            <button
+              type="button"
+              class="witch-cell witch-preview-cell ${showAdvancedPreview ? "witch-preview-cell-advanced" : ""}"
+              disabled
+              aria-label="Bilet satın alındığında kazınabilir alan ${index + 1}"
+            >
+              <span class="witch-preview-coating ${showAdvancedPreview ? "witch-preview-coating-advanced" : ""}" aria-hidden="true">
+                ${showStandardPreview ? '<img src="/cadi-kazan/bcs-cactus.webp" alt="" draggable="false">' : '<i></i>'}
               </span>
             </button>
           `).join("");
@@ -777,19 +791,20 @@ export class WitchClient {
 
         const previewStakeDollars = parseStakeDollars(stakeInput?.value ?? "1");
         const previewStakeCents = Math.max(100, Math.round((Number.isFinite(previewStakeDollars) ? previewStakeDollars : 1) * 100));
+        const selectedBombs = showAdvancedPreview ? Number(alarms?.value ?? 1) : 1;
         const ticketMode = this.root.querySelector<HTMLElement>("[data-witch-ticket-mode]");
         const ticketStake = this.root.querySelector<HTMLElement>("[data-witch-ticket-stake]");
         const ticketBombs = this.root.querySelector<HTMLElement>("[data-witch-ticket-bombs]");
         const ticketPrice = this.root.querySelector<HTMLElement>("[data-witch-ticket-price]");
         const standardPrice = this.root.querySelector<HTMLElement>("[data-witch-standard-price]");
         const ticketId = this.root.querySelector<HTMLElement>("[data-witch-ticket-id]");
-        if (ticketMode) ticketMode.textContent = "STANDARD 5";
+        if (ticketMode) ticketMode.textContent = showAdvancedPreview ? "ADVANCED 25" : "STANDARD 5";
         if (ticketStake) ticketStake.textContent = formatMoney(previewStakeCents);
-        if (ticketBombs) ticketBombs.textContent = "01 BOMBA";
+        if (ticketBombs) ticketBombs.textContent = `${String(selectedBombs).padStart(2, "0")} BOMBA`;
         if (ticketPrice) ticketPrice.textContent = formatTicketPrice(previewStakeCents);
         if (standardPrice) {
           standardPrice.textContent = formatTicketPrice(previewStakeCents);
-          standardPrice.hidden = false;
+          standardPrice.hidden = showAdvancedPreview;
         }
         if (ticketId) ticketId.textContent = "PREVIEW";
       } else if (board?.dataset.preview) {
