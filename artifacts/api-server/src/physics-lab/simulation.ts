@@ -1071,6 +1071,9 @@ export async function simulatePhysicsLabRound(
       let deflectorPairContact = false;
       let physicalFretPairContact = false;
       let innerGuardPairContact = false;
+      let contactedFretHandle: number | null = null;
+      let fretManifoldNormal: Vec3 | null = null;
+      let fretSolverContactPoint: Vec3 | null = null;
       world.contactPairsWith(ballCollider, (otherCollider) => {
         world.contactPair(ballCollider, otherCollider, (manifold) => {
           if (manifold.numContacts() <= 0) return;
@@ -1079,6 +1082,22 @@ export async function simulatePhysicsLabRound(
           }
           if (fretColliderHandles.has(otherCollider.handle)) {
             physicalFretPairContact = true;
+            contactedFretHandle ??= otherCollider.handle;
+            const diagnosticManifold = manifold as unknown as {
+              normal?: () => Vec3;
+              solverContactPoint?: (index: number) => Vec3;
+            };
+            if (!fretManifoldNormal && diagnosticManifold.normal) {
+              fretManifoldNormal = vec3(diagnosticManifold.normal());
+            }
+            if (
+              !fretSolverContactPoint &&
+              diagnosticManifold.solverContactPoint
+            ) {
+              fretSolverContactPoint = vec3(
+                diagnosticManifold.solverContactPoint(0),
+              );
+            }
           }
           if (otherCollider.handle === innerGuardCollider.handle) {
             innerGuardPairContact = true;
@@ -1091,6 +1110,20 @@ export async function simulatePhysicsLabRound(
         firstPhysicalFretContactStep === null
       ) {
         firstPhysicalFretContactStep = step;
+        const fretIndex =
+          contactedFretHandle === null
+            ? -1
+            : fretColliders.findIndex(
+                (collider) => collider.handle === contactedFretHandle,
+              );
+        const fretCollider = fretIndex >= 0 ? fretColliders[fretIndex] : null;
+        const fretTranslation = fretCollider?.translation() ?? null;
+        const fretRotation = fretCollider?.rotation() ?? null;
+        const contactRotorTangentialVelocity = {
+          x: startConditions.rotorInitialAngularVelocity * translation.z,
+          y: 0,
+          z: -startConditions.rotorInitialAngularVelocity * translation.x,
+        };
         console.info(
           "SERVER_CONTACT_SEQUENCE",
           JSON.stringify({
@@ -1101,8 +1134,22 @@ export async function simulatePhysicsLabRound(
               step * PHYSICS_LAB_FIXED_TIMESTEP * 1000,
             ),
             radius,
+            position: vec3(translation),
+            velocity: vec3(velocity),
             y: translation.y,
             ballSpeed,
+            rotorRelativeSpeed: Math.hypot(
+              velocity.x - contactRotorTangentialVelocity.x,
+              velocity.y - contactRotorTangentialVelocity.y,
+              velocity.z - contactRotorTangentialVelocity.z,
+            ),
+            fretIndex,
+            fretTranslation: fretTranslation ? vec3(fretTranslation) : null,
+            fretRotation: fretRotation
+              ? quaternion(fretRotation)
+              : null,
+            manifoldNormal: fretManifoldNormal,
+            solverContactPoint: fretSolverContactPoint,
           }),
         );
       }
