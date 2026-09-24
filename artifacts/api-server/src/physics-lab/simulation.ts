@@ -487,26 +487,6 @@ function addPocketFloorAndOuterLipColliders(
     ),
   );
 
-  colliders.push(
-    world.createCollider(
-      RAPIER.ColliderDesc.cylinder(
-        0.04,
-        ROULETTE_POCKET_FLOOR_OUTER_RADIUS + 0.06,
-      )
-        .setTranslation(
-          0,
-          ROULETTE_POCKET_FLOOR_Y - PHYSICS_LAB_BALL_RADIUS - 0.04,
-          0,
-        )
-        .setFriction(0.42)
-        .setRestitution(0.02)
-        .setCollisionGroups(
-          ROTOR_COLLISION_GROUP | (BALL_COLLISION_GROUP << 16),
-        ),
-      body,
-    ),
-  );
-
   return colliders;
 }
 
@@ -842,7 +822,6 @@ export async function simulatePhysicsLabRound(
   );
   if (pocketColliders[0]) colliderRoles.set(pocketColliders[0].handle, "pocket-floor");
   if (pocketColliders[1]) colliderRoles.set(pocketColliders[1].handle, "pocket-outer-lip");
-  if (pocketColliders[2]) colliderRoles.set(pocketColliders[2].handle, "pocket-catch-underlay");
   const fretColliders = addPocketFretColliders(world, rotorBody);
   const fretColliderHandles = new Set(
     fretColliders.map((collider) => collider.handle),
@@ -852,6 +831,30 @@ export async function simulatePhysicsLabRound(
   }
   const innerGuardCollider = addPocketInnerGuardCollider(world, rotorBody);
   colliderRoles.set(innerGuardCollider.handle, "pocket-inner-guard");
+  const pocketCatchUnderlayCollider = world.createCollider(
+    RAPIER.ColliderDesc.cylinder(
+      0.04,
+      Math.max(
+        ROULETTE_POCKET_FLOOR_OUTER_RADIUS + 0.06,
+        1.62 + PHYSICS_LAB_BALL_RADIUS + 0.02,
+      ),
+    )
+      .setTranslation(
+        0,
+        ROULETTE_POCKET_FLOOR_Y - PHYSICS_LAB_BALL_RADIUS - 0.04,
+        0,
+      )
+      .setFriction(0.42)
+      .setRestitution(0.02)
+      .setCollisionGroups(
+        ROTOR_COLLISION_GROUP | (BALL_COLLISION_GROUP << 16),
+      ),
+    rotorBody,
+  );
+  colliderRoles.set(
+    pocketCatchUnderlayCollider.handle,
+    "pocket-catch-underlay",
+  );
   const ballBody = world.createRigidBody(
     RAPIER.RigidBodyDesc.dynamic()
       .setTranslation(...startConditions.ballPosition)
