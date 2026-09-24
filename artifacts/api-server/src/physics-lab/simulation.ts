@@ -1159,6 +1159,17 @@ export async function simulatePhysicsLabRound(
         step >= 1800 &&
         (step % 120 === 0 || step >= 2868 || stableFrames > 0)
       ) {
+        const contactRoles: string[] = [];
+        world.contactPairsWith(ballCollider, (otherCollider) => {
+          world.contactPair(ballCollider, otherCollider, (manifold) => {
+            if (manifold.numContacts() > 0) {
+              contactRoles.push(
+                colliderRoles.get(otherCollider.handle) ?? "unknown",
+              );
+            }
+          });
+        });
+        const actualRotorAngularVelocity = rotorBody.angvel();
         console.info(
           "SERVER_SETTLE_DIAGNOSTIC",
           JSON.stringify({
@@ -1175,6 +1186,12 @@ export async function simulatePhysicsLabRound(
             floorDelta: ballBottom - ROULETTE_POCKET_FLOOR_Y,
             previousPocketIndex,
             stableFrames,
+            actualRotorAngularVelocity: {
+              x: actualRotorAngularVelocity.x,
+              y: actualRotorAngularVelocity.y,
+              z: actualRotorAngularVelocity.z,
+            },
+            contactRoles,
             gate: {
               pocketInteraction: settlePocketInteraction,
               relativeSpeed: settleRelativeSpeed,
