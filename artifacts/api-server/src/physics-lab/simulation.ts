@@ -2,6 +2,7 @@ import { createHash, randomBytes } from "node:crypto";
 import RAPIER from "@dimforge/rapier3d-compat";
 import {
   ROULETTE_BALL_RADIUS,
+  ROULETTE_DARK_RACE_CHANNEL_PROFILE,
   ROULETTE_DARK_RACE_LAUNCH_RADIUS,
   ROULETTE_EUROPEAN_SEQUENCE,
   ROULETTE_FIXED_TIMESTEP,
@@ -139,6 +140,24 @@ function radialPosition(
   y: number,
 ): [number, number, number] {
   return [Math.sin(angle) * radius, y, Math.cos(angle) * radius];
+}
+
+function darkRaceSurfaceYAt(radius: number) {
+  const profile = ROULETTE_DARK_RACE_CHANNEL_PROFILE;
+  if (radius <= profile[0][0]) return profile[0][1];
+  if (radius >= profile[profile.length - 1][0]) {
+    return profile[profile.length - 1][1];
+  }
+  for (let index = 1; index < profile.length; index += 1) {
+    const [rightRadius, rightY] = profile[index];
+    const [leftRadius, leftY] = profile[index - 1];
+    if (radius <= rightRadius) {
+      const alpha =
+        (radius - leftRadius) / Math.max(1e-9, rightRadius - leftRadius);
+      return leftY + (rightY - leftY) * alpha;
+    }
+  }
+  return profile[profile.length - 1][1];
 }
 
 function yQuaternion(angle: number): [number, number, number, number] {
@@ -377,7 +396,9 @@ function buildStartConditions(seed: string): PhysicsLabStartConditions {
   const position = radialPosition(
     ROULETTE_DARK_RACE_LAUNCH_RADIUS,
     launchAzimuthRadians,
-    0.962 + (hashToUnit(seed, 7) - 0.5) * 0.004,
+    darkRaceSurfaceYAt(ROULETTE_DARK_RACE_LAUNCH_RADIUS) +
+      PHYSICS_LAB_BALL_RADIUS +
+      0.01,
   );
   const tangent: [number, number] = [
     Math.cos(launchAzimuthRadians),
