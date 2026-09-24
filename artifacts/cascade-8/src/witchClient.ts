@@ -55,9 +55,9 @@ const parseStakeDollars = (value: string) => {
   return Number.isFinite(dollars) ? dollars : NaN;
 };
 
-const formatStakeInput = (dollars: number) => dollars.toLocaleString("en-US", {
+const formatStakeInput = (dollars: number) => "$" + dollars.toLocaleString("en-US", {
   useGrouping: false,
-  minimumFractionDigits: Number.isInteger(dollars) ? 0 : 2,
+  minimumFractionDigits: 2,
   maximumFractionDigits: 2,
 });
 
