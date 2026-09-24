@@ -1071,6 +1071,7 @@ export async function simulatePhysicsLabRound(
       let deflectorPairContact = false;
       let physicalFretPairContact = false;
       let innerGuardPairContact = false;
+      let pocketFloorPairContact = false;
       let contactedFretHandle: number | null = null;
       let fretManifoldNormal: Vec3 | null = null;
       let fretSolverContactPoint: Vec3 | null = null;
@@ -1101,6 +1102,14 @@ export async function simulatePhysicsLabRound(
           }
           if (otherCollider.handle === innerGuardCollider.handle) {
             innerGuardPairContact = true;
+          }
+          const contactRole = colliderRoles.get(otherCollider.handle);
+          if (
+            contactRole === "pocket-floor" ||
+            contactRole === "pocket-outer-lip" ||
+            contactRole === "pocket-catch-underlay"
+          ) {
+            pocketFloorPairContact = true;
           }
         });
       });
@@ -1263,6 +1272,40 @@ export async function simulatePhysicsLabRound(
         velocity.y - rotorTangentialVelocity.y,
         velocity.z - rotorTangentialVelocity.z,
       );
+      if (
+        (seed === "61004" || seed === "61005" || seed === "61006") &&
+        firstPhysicalFretContactStep !== null &&
+        step >= firstPhysicalFretContactStep &&
+        step < firstPhysicalFretContactStep + 20
+      ) {
+        console.info(
+          "SERVER_POST_FRET_TRACE",
+          JSON.stringify({
+            seed,
+            step,
+            offset: step - firstPhysicalFretContactStep,
+            simulatedAtMs: Number(
+              (step * PHYSICS_LAB_FIXED_TIMESTEP * 1000).toFixed(3),
+            ),
+            radius: Number(radius.toFixed(6)),
+            position: {
+              x: Number(translation.x.toFixed(6)),
+              y: Number(translation.y.toFixed(6)),
+              z: Number(translation.z.toFixed(6)),
+            },
+            velocity: {
+              x: Number(velocity.x.toFixed(6)),
+              y: Number(velocity.y.toFixed(6)),
+              z: Number(velocity.z.toFixed(6)),
+            },
+            speed: Number(ballSpeed.toFixed(6)),
+            rotorRelativeSpeed: Number(rotorRelativeSpeed.toFixed(6)),
+            fretContact: physicalFretPairContact,
+            innerGuardContact: innerGuardPairContact,
+            pocketFloorContact: pocketFloorPairContact,
+          }),
+        );
+      }
       const ballBottom = translation.y - PHYSICS_LAB_BALL_RADIUS;
       const settlePocketInteraction = pocketInteraction;
       const settleRelativeSpeed = rotorRelativeSpeed < 0.12;
