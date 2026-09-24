@@ -349,10 +349,24 @@ export class WitchClient {
       if (volume) volume.value = String(this.audio.volume);
     };
     syncAudioMenu();
-    menuToggle?.addEventListener("click", () => {
+    const closeGameMenu = () => {
       if (!menu) return;
-      menu.hidden = !menu.hidden;
-      menuToggle.setAttribute("aria-expanded", String(!menu.hidden));
+      menu.hidden = true;
+      menuToggle?.setAttribute("aria-expanded", "false");
+    };
+    const closeCardsMenu = () => {
+      if (!cardsMenu) return;
+      cardsMenu.hidden = true;
+      cardsToggle?.setAttribute("aria-expanded", "false");
+    };
+
+    menuToggle?.addEventListener("click", (event) => {
+      event.stopPropagation();
+      if (!menu) return;
+      const willOpen = menu.hidden;
+      closeCardsMenu();
+      menu.hidden = !willOpen;
+      menuToggle.setAttribute("aria-expanded", String(willOpen));
     });
     soundToggle?.addEventListener("click", () => {
       this.audio.setMuted(!this.audio.muted);
@@ -367,10 +381,26 @@ export class WitchClient {
     });
     const cardsToggle = this.root.querySelector<HTMLButtonElement>("[data-witch-cards-toggle]");
     const cardsMenu = this.root.querySelector<HTMLElement>("[data-witch-card-menu]");
-    cardsToggle?.addEventListener("click", () => {
+    cardsToggle?.addEventListener("click", (event) => {
+      event.stopPropagation();
       if (this.busy || this.state?.round?.status === "ACTIVE" || !cardsMenu) return;
-      cardsMenu.hidden = !cardsMenu.hidden;
-      cardsToggle.setAttribute("aria-expanded", String(!cardsMenu.hidden));
+      const willOpen = cardsMenu.hidden;
+      closeGameMenu();
+      cardsMenu.hidden = !willOpen;
+      cardsToggle.setAttribute("aria-expanded", String(willOpen));
+    });
+
+    menu?.addEventListener("click", (event) => event.stopPropagation());
+    cardsMenu?.addEventListener("click", (event) => event.stopPropagation());
+    this.root.addEventListener("click", () => {
+      closeGameMenu();
+      closeCardsMenu();
+    });
+    this.root.addEventListener("keydown", (event) => {
+      if (event.key !== "Escape") return;
+      closeGameMenu();
+      closeCardsMenu();
+      menuToggle?.focus();
     });
 
     this.root.querySelectorAll<HTMLButtonElement>("[data-witch-mode]").forEach((button) => {
