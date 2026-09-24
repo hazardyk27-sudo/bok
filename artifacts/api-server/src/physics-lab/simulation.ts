@@ -844,6 +844,9 @@ export async function simulatePhysicsLabRound(
   if (pocketColliders[1]) colliderRoles.set(pocketColliders[1].handle, "pocket-outer-lip");
   if (pocketColliders[2]) colliderRoles.set(pocketColliders[2].handle, "pocket-catch-underlay");
   const fretColliders = addPocketFretColliders(world, rotorBody);
+  const fretColliderHandles = new Set(
+    fretColliders.map((collider) => collider.handle),
+  );
   for (const collider of fretColliders) {
     colliderRoles.set(collider.handle, "pocket-fret");
   }
@@ -914,6 +917,9 @@ export async function simulatePhysicsLabRound(
   let deflectorHit = false;
   let movingFretContact = false;
   let pocketInteraction = false;
+  let firstPhysicalFretContactStep: number | null = null;
+  let firstInnerGuardContactStep: number | null = null;
+  let firstPocketEntryStep: number | null = null;
   let previousPocketIndex: number | null = null;
   let previousBallSpeed = Math.hypot(...startConditions.ballVelocity);
   let previousRotorSpeed = Math.abs(startConditions.rotorInitialAngularVelocity);
@@ -1063,12 +1069,64 @@ export async function simulatePhysicsLabRound(
         events.push(event("NATURAL_INWARD_EXIT", step));
       }
       let deflectorPairContact = false;
+      let physicalFretPairContact = false;
+      let innerGuardPairContact = false;
       world.contactPairsWith(ballCollider, (otherCollider) => {
-        if (!deflectorColliderHandles.has(otherCollider.handle)) return;
         world.contactPair(ballCollider, otherCollider, (manifold) => {
-          if (manifold.numContacts() > 0) deflectorPairContact = true;
+          if (manifold.numContacts() <= 0) return;
+          if (deflectorColliderHandles.has(otherCollider.handle)) {
+            deflectorPairContact = true;
+          }
+          if (fretColliderHandles.has(otherCollider.handle)) {
+            physicalFretPairContact = true;
+          }
+          if (otherCollider.handle === innerGuardCollider.handle) {
+            innerGuardPairContact = true;
+          }
         });
       });
+      if (
+        (seed === "61004" || seed === "61005" || seed === "61006") &&
+        physicalFretPairContact &&
+        firstPhysicalFretContactStep === null
+      ) {
+        firstPhysicalFretContactStep = step;
+        console.info(
+          "SERVER_CONTACT_SEQUENCE",
+          JSON.stringify({
+            seed,
+            kind: "PHYSICAL_FRET_CONTACT",
+            step,
+            simulatedAtMs: Math.round(
+              step * PHYSICS_LAB_FIXED_TIMESTEP * 1000,
+            ),
+            radius,
+            y: translation.y,
+            ballSpeed,
+          }),
+        );
+      }
+      if (
+        (seed === "61004" || seed === "61005" || seed === "61006") &&
+        innerGuardPairContact &&
+        firstInnerGuardContactStep === null
+      ) {
+        firstInnerGuardContactStep = step;
+        console.info(
+          "SERVER_CONTACT_SEQUENCE",
+          JSON.stringify({
+            seed,
+            kind: "INNER_GUARD_CONTACT",
+            step,
+            simulatedAtMs: Math.round(
+              step * PHYSICS_LAB_FIXED_TIMESTEP * 1000,
+            ),
+            radius,
+            y: translation.y,
+            ballSpeed,
+          }),
+        );
+      }
       if (!deflectorHit && deflectorPairContact) {
         deflectorHit = true;
         events.push(event("DEFLECTOR_IMPACT", step));
@@ -1114,6 +1172,28 @@ export async function simulatePhysicsLabRound(
         pocketInteraction = true;
         if (previousPocketIndex === null) {
           events.push(event("POCKET_ENTRY", step, { pocketIndex }));
+          if (
+            (seed === "61004" || seed === "61005" || seed === "61006") &&
+            firstPocketEntryStep === null
+          ) {
+            firstPocketEntryStep = step;
+            console.info(
+              "SERVER_CONTACT_SEQUENCE",
+              JSON.stringify({
+                seed,
+                kind: "POCKET_ENTRY",
+                step,
+                simulatedAtMs: Math.round(
+                  step * PHYSICS_LAB_FIXED_TIMESTEP * 1000,
+                ),
+                radius,
+                y: translation.y,
+                ballSpeed,
+                firstPhysicalFretContactStep,
+                firstInnerGuardContactStep,
+              }),
+            );
+          }
         } else if (previousPocketIndex !== pocketIndex) {
           events.push(event("POCKET_CHANGE", step, { pocketIndex }));
         }
