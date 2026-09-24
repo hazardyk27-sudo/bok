@@ -84,6 +84,9 @@ export class ScratchSurface {
   private resizeFrame: number | null = null;
   private coverImage?: HTMLImageElement;
   private coverImageReady = false;
+  private readonly handleViewportChange = () => {
+    this.scheduleCanvasResize();
+  };
 
   private readonly handlePointerDown = (event: PointerEvent) => {
     if (event.pointerType === "mouse" && event.button !== 0) return;
@@ -213,6 +216,9 @@ export class ScratchSurface {
     this.interactionCanvas.addEventListener("pointerup", this.finishPointer);
     this.interactionCanvas.addEventListener("pointercancel", this.finishPointer);
     this.interactionCanvas.addEventListener("lostpointercapture", this.finishPointer);
+    window.addEventListener("resize", this.handleViewportChange, { passive: true });
+    window.addEventListener("orientationchange", this.handleViewportChange, { passive: true });
+    window.requestAnimationFrame(() => this.scheduleCanvasResize());
   }
 
   destroy() {
@@ -235,6 +241,8 @@ export class ScratchSurface {
     this.interactionCanvas.removeEventListener("pointerup", this.finishPointer);
     this.interactionCanvas.removeEventListener("pointercancel", this.finishPointer);
     this.interactionCanvas.removeEventListener("lostpointercapture", this.finishPointer);
+    window.removeEventListener("resize", this.handleViewportChange);
+    window.removeEventListener("orientationchange", this.handleViewportChange);
   }
 
   reset() {
