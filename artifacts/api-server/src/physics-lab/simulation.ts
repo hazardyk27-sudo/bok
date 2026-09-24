@@ -1331,7 +1331,7 @@ export async function simulatePhysicsLabRound(
 
       const pocketIndex =
         radius > 1.18 && radius < 1.98
-          ? pocketIndexFromState(translation, rotation)
+          ? pocketIndexFromState(translation, rotorRotation)
           : null;
       if (pocketIndex !== null && ballSpeed > 0.08) {
         pocketInteraction = true;
