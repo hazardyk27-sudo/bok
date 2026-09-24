@@ -698,7 +698,13 @@ export async function simulatePhysicsLabRound(
   );
   addDarkRaceChannelCollider(world, stationaryBody);
   addBowlBridgeCollider(world, stationaryBody);
-  addMeasuredDeflectorColliders(world, stationaryBody);
+  const deflectorColliders = addMeasuredDeflectorColliders(
+    world,
+    stationaryBody,
+  );
+  const deflectorColliderHandles = new Set(
+    deflectorColliders.map((collider) => collider.handle),
+  );
   addPocketFloorAndOuterLipColliders(world, rotorBody);
   addPocketFretColliders(world, rotorBody);
   addPocketInnerGuardCollider(world, rotorBody);
@@ -715,7 +721,7 @@ export async function simulatePhysicsLabRound(
   );
   ballBody.enableCcd(true);
   ballBody.setSoftCcdPrediction(Math.max(BALL_PARAMETERS.radius * 2.2, 0.08));
-  world.createCollider(
+  const ballCollider = world.createCollider(
     RAPIER.ColliderDesc.ball(BALL_PARAMETERS.radius)
       .setFriction(BALL_PARAMETERS.friction)
       .setRestitution(BALL_PARAMETERS.restitution)
@@ -861,15 +867,14 @@ export async function simulatePhysicsLabRound(
         inwardMovementObserved = true;
         events.push(event("NATURAL_INWARD_EXIT", step));
       }
-      if (
-        !deflectorHit &&
-        radius > 2.18 &&
-        radius < 2.48 &&
-        translation.y > 0.62 &&
-        translation.y < 1.1 &&
-        Math.abs(radialVelocity - previousRadialVelocity) > 0.035 &&
-        ballSpeed > 0.22
-      ) {
+      let deflectorPairContact = false;
+      world.contactPairsWith(ballCollider, (otherCollider) => {
+        if (!deflectorColliderHandles.has(otherCollider.handle)) return;
+        world.contactPair(ballCollider, otherCollider, (manifold) => {
+          if (manifold.numContacts() > 0) deflectorPairContact = true;
+        });
+      });
+      if (!deflectorHit && deflectorPairContact) {
         deflectorHit = true;
         events.push(event("DEFLECTOR_IMPACT", step));
       }
