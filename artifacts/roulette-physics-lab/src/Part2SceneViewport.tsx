@@ -3825,8 +3825,8 @@ export function Part2SceneViewport({
           )
         : PART6_FULL_SPIN_RUNS.length;
       const activePart6Runs = PART6_FULL_SPIN_RUNS.slice(
-        0,
-        activePart6SeedCount,
+        5,
+        5 + activePart6SeedCount,
       );
       const requestedMaxDurationSeconds = Number(
         part6Params.get('part6MaxDurationSeconds') ??
