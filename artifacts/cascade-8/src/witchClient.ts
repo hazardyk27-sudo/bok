@@ -269,13 +269,12 @@ export const CADI_KAZAN_MARKUP = `
           </div>
           <button type="button" data-witch-stake-step="1" aria-label="Stake artır">+</button>
         </div>
-        <div class="witch-stake-presets" aria-label="Hızlı stake seçenekleri">
+        <div class="witch-stake-presets" aria-label="Hızlı bahis seçenekleri">
+          <button type="button" data-witch-stake-preset="10">$10</button>
           <button type="button" data-witch-stake-preset="25">$25</button>
           <button type="button" data-witch-stake-preset="50">$50</button>
-          <button type="button" data-witch-stake-preset="100">$100</button>
-          <button type="button" data-witch-stake-preset="250">$250</button>
-          <button type="button" data-witch-stake-preset="500">$500</button>
-          <button type="button" data-witch-stake-preset="MAX">MAX</button>
+          <button type="button" class="witch-stake-scale" data-witch-stake-scale="2">X2</button>
+          <button type="button" class="witch-stake-scale" data-witch-stake-scale="0.5">/2</button>
         </div>
       </div>
 
@@ -294,10 +293,13 @@ export const CADI_KAZAN_MARKUP = `
 
       <div class="witch-round-summary" data-witch-risk-note>STANDARD · 1 BOMBA</div>
 
-      <button class="witch-primary-button" type="button" data-witch-action="start">
-        <span>BİLETİ SATIN AL</span>
-        <b aria-hidden="true">◇</b>
-      </button>
+      <div class="witch-control-group witch-buy-group">
+        <label aria-hidden="true">&nbsp;</label>
+        <button class="witch-primary-button" type="button" data-witch-action="start">
+          <span>BİLETİ SATIN AL</span>
+          <b aria-hidden="true">◇</b>
+        </button>
+      </div>
 
       <p class="witch-feedback witch-dock-feedback" data-witch-feedback role="status">Biletini seç ve masaya bırak.</p>
     </section>
@@ -399,9 +401,20 @@ export class WitchClient {
         const input = this.root.querySelector<HTMLInputElement>("[data-witch-stake]");
         if (!input) return;
         const preset = button.dataset.witchStakePreset ?? "1";
-        const walletDollars = (this.state?.wallet.balanceCents ?? 0) / 100;
-        const next = preset === "MAX" ? Math.max(1, walletDollars) : Math.max(1, Number(preset));
-        input.value = formatStakeInput(next);
+        input.value = formatStakeInput(Math.max(1, Number(preset)));
+        this.render();
+      });
+    });
+    this.root.querySelectorAll<HTMLButtonElement>("[data-witch-stake-scale]").forEach((button) => {
+      button.addEventListener("click", () => {
+        if (this.busy || this.state?.round?.status === "ACTIVE") return;
+        const input = this.root.querySelector<HTMLInputElement>("[data-witch-stake]");
+        if (!input) return;
+        const factor = Number(button.dataset.witchStakeScale ?? "1");
+        if (!Number.isFinite(factor) || factor <= 0) return;
+        const current = parseStakeDollars(input.value || "1");
+        const safeCurrent = Number.isFinite(current) ? Math.max(1, current) : 1;
+        input.value = formatStakeInput(Math.max(1, safeCurrent * factor));
         this.render();
       });
     });
@@ -683,7 +696,7 @@ export class WitchClient {
     if (stakeInput) stakeInput.disabled = this.busy || hasActiveRound;
     const start = this.root.querySelector<HTMLButtonElement>("[data-witch-action='start']");
     if (start) start.disabled = this.busy || hasActiveRound;
-    this.root.querySelectorAll<HTMLButtonElement>("[data-witch-stake-step], [data-witch-stake-preset]").forEach((button) => {
+    this.root.querySelectorAll<HTMLButtonElement>("[data-witch-stake-step], [data-witch-stake-preset], [data-witch-stake-scale]").forEach((button) => {
       button.disabled = this.busy || hasActiveRound;
     });
     this.root.querySelectorAll<HTMLButtonElement>("[data-witch-stake-preset]").forEach((button) => {

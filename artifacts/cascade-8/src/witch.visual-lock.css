@@ -1565,3 +1565,157 @@
     display: none !important;
   }
 }
+
+
+/* PASS 6 — exact deck alignment + compact quick stake controls. */
+@media (min-width: 821px) {
+  .witch-control-dock {
+    align-items: start !important;
+  }
+
+  .witch-card-picker,
+  .witch-stake-group,
+  .witch-alarm-field,
+  .witch-buy-group {
+    align-self: start !important;
+    min-width: 0 !important;
+  }
+
+  .witch-card-picker {
+    grid-template-rows: 14px 62px !important;
+    gap: 8px !important;
+  }
+
+  .witch-stake-group {
+    grid-template-rows: 14px 62px 38px !important;
+    gap: 8px !important;
+  }
+
+  .witch-alarm-field {
+    grid-template-rows: 14px 62px !important;
+    gap: 8px !important;
+  }
+
+  .witch-buy-group {
+    grid-area: buy !important;
+    display: grid !important;
+    grid-template-rows: 14px 62px !important;
+    gap: 8px !important;
+  }
+
+  .witch-card-picker > label,
+  .witch-stake-group > label,
+  .witch-alarm-field > span,
+  .witch-buy-group > label {
+    display: block !important;
+    height: 14px !important;
+    min-height: 14px !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    line-height: 14px !important;
+  }
+
+  .witch-buy-group > label {
+    visibility: hidden !important;
+  }
+
+  .witch-cards-button,
+  .witch-stake-stepper,
+  .witch-stake-stepper > button,
+  .witch-input-wrap input,
+  .witch-alarm-field select,
+  .witch-primary-button {
+    height: 62px !important;
+    min-height: 62px !important;
+  }
+
+  .witch-primary-button {
+    grid-area: auto !important;
+    align-self: stretch !important;
+    margin: 0 !important;
+  }
+
+  .witch-stake-presets {
+    display: grid !important;
+    grid-template-columns: repeat(5, minmax(0, 1fr)) !important;
+    gap: 7px !important;
+    height: 38px !important;
+  }
+
+  .witch-stake-presets button {
+    height: 38px !important;
+    min-height: 38px !important;
+    padding: 0 6px !important;
+  }
+
+  .witch-stake-presets .witch-stake-scale {
+    border-color: rgba(239, 181, 54, .58) !important;
+    color: #ffd45f !important;
+    background:
+      linear-gradient(180deg, rgba(68,38,18,.90), rgba(28,17,11,.92)) !important;
+    font-weight: 950 !important;
+  }
+
+  .witch-stake-presets .witch-stake-scale:hover:not(:disabled) {
+    border-color: #f2bd39 !important;
+    background:
+      linear-gradient(180deg, rgba(88,48,20,.96), rgba(38,20,12,.96)) !important;
+  }
+}
+
+@media (min-width: 821px) and (max-width: 1499px) {
+  .witch-card-picker {
+    grid-template-rows: 13px 52px !important;
+    gap: 6px !important;
+  }
+
+  .witch-stake-group {
+    grid-template-rows: 13px 52px 30px !important;
+    gap: 6px !important;
+  }
+
+  .witch-alarm-field,
+  .witch-buy-group {
+    grid-template-rows: 13px 52px !important;
+    gap: 6px !important;
+  }
+
+  .witch-card-picker > label,
+  .witch-stake-group > label,
+  .witch-alarm-field > span,
+  .witch-buy-group > label {
+    height: 13px !important;
+    min-height: 13px !important;
+    line-height: 13px !important;
+  }
+
+  .witch-cards-button,
+  .witch-stake-stepper,
+  .witch-stake-stepper > button,
+  .witch-input-wrap input,
+  .witch-alarm-field select,
+  .witch-primary-button {
+    height: 52px !important;
+    min-height: 52px !important;
+  }
+
+  .witch-stake-presets {
+    height: 30px !important;
+  }
+
+  .witch-stake-presets button {
+    height: 30px !important;
+    min-height: 30px !important;
+  }
+}
+
+@media (max-width: 820px) {
+  .witch-stake-presets {
+    grid-template-columns: repeat(5, minmax(0,1fr)) !important;
+  }
+
+  .witch-stake-presets .witch-stake-scale {
+    color: #ffd45f !important;
+    border-color: rgba(239,181,54,.48) !important;
+  }
+}
