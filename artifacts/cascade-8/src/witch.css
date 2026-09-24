@@ -4952,6 +4952,7 @@
   white-space: nowrap !important;
   border: 0 !important;
 }
+.witch-landscape-gate { display: none; }
 
 /* ---------- HEADER ---------- */
 .witch-appbar {
@@ -5124,12 +5125,38 @@
   border: 1px solid rgba(189, 82, 44, .34) !important;
   border-radius: 20px !important;
   background:
-    radial-gradient(ellipse at 43% 45%, rgba(91, 34, 20, .16), transparent 42%),
-    linear-gradient(145deg, #130b09 0%, #090706 56%, #160a08 100%) !important;
+    radial-gradient(ellipse at 44% 45%, rgba(174, 72, 34, .14) 0%, transparent 40%),
+    radial-gradient(circle at 70% 18%, rgba(245,195,68,.045), transparent 28%),
+    repeating-linear-gradient(0deg, rgba(255,255,255,.008) 0 1px, transparent 1px 4px),
+    linear-gradient(145deg, #1b0f0b 0%, #0c0807 52%, #170b08 100%) !important;
   box-shadow:
-    inset 0 1px 0 rgba(255,255,255,.018),
-    inset 0 0 90px rgba(0,0,0,.20),
-    0 16px 38px rgba(0,0,0,.20) !important;
+    inset 0 1px 0 rgba(255,255,255,.024),
+    inset 0 0 0 12px rgba(86,33,20,.045),
+    inset 0 0 100px rgba(0,0,0,.28),
+    0 16px 38px rgba(0,0,0,.22) !important;
+}
+.witch-stage-shell::before {
+  display: block !important;
+  position: absolute !important;
+  inset: 16px !important;
+  border: 1px solid rgba(245,195,68,.065) !important;
+  border-radius: 15px !important;
+  background:
+    linear-gradient(115deg, rgba(255,255,255,.012), transparent 24% 76%, rgba(0,0,0,.08)),
+    radial-gradient(ellipse at 42% 48%, rgba(130,58,29,.08), transparent 52%) !important;
+  box-shadow: inset 0 0 36px rgba(0,0,0,.12) !important;
+  content: "" !important;
+  pointer-events: none !important;
+}
+.witch-stage-shell::after {
+  position: absolute !important;
+  inset: 0 !important;
+  display: block !important;
+  background:
+    linear-gradient(90deg, rgba(0,0,0,.13), transparent 12% 88%, rgba(0,0,0,.15)),
+    linear-gradient(180deg, rgba(255,255,255,.008), transparent 18% 82%, rgba(0,0,0,.12)) !important;
+  content: "" !important;
+  pointer-events: none !important;
 }
 .witch-table-heading,
 .witch-table-feedback {
@@ -5213,9 +5240,14 @@
   order: 1 !important;
   margin: 0 !important;
   color: #ffe184 !important;
-  font: 800 clamp(42px, 3.4vw, 52px)/1 "DM Sans", sans-serif !important;
+  max-width: 100% !important;
+  overflow: hidden !important;
+  color: #ffe184 !important;
+  font: 800 clamp(34px, 2.7vw, 46px)/1 "DM Sans", sans-serif !important;
   font-variant-numeric: tabular-nums;
   letter-spacing: -.035em !important;
+  text-overflow: clip !important;
+  white-space: nowrap !important;
 }
 .witch-multiplier {
   order: 2 !important;
@@ -5290,9 +5322,9 @@
   position: relative !important;
   z-index: 2 !important;
   display: grid !important;
-  grid-template-columns: minmax(300px, 330px) minmax(310px, 1fr) 150px 220px !important;
-  gap: 12px !important;
-  align-items: end !important;
+  grid-template-columns: minmax(286px, .92fr) minmax(340px, 1.2fr) minmax(138px, .48fr) minmax(210px, .72fr) !important;
+  gap: 14px !important;
+  align-items: stretch !important;
   width: 100% !important;
   min-height: 106px !important;
   margin: 8px 0 0 !important;
@@ -5307,6 +5339,17 @@
 }
 .witch-control-separator { display: none !important; }
 
+.witch-mode-group,
+.witch-stake-group,
+.witch-alarm-field {
+  align-content: end !important;
+}
+.witch-mode-group > label,
+.witch-alarm-field > span {
+  color: #bba983 !important;
+  font: 800 10px/1 "DM Sans", sans-serif !important;
+  letter-spacing: .08em !important;
+}
 .witch-mode-grid {
   display: grid !important;
   grid-template-columns: 1fr 1fr !important;
@@ -5431,7 +5474,10 @@
 }
 
 .witch-alarm-field {
-  align-self: end !important;
+  display: grid !important;
+  gap: 8px !important;
+  align-self: stretch !important;
+  align-content: end !important;
 }
 .witch-alarm-field select {
   width: 100% !important;
@@ -5448,6 +5494,7 @@
 .witch-primary-button {
   min-height: 56px !important;
   align-self: end !important;
+  margin-top: 18px !important;
   padding: 0 18px !important;
   border: 0 !important;
   border-radius: 12px !important;
@@ -5486,149 +5533,188 @@
   .witch-primary-button { font-size: 13px !important; }
 }
 
-/* ---------- MOBILE / TABLET PORTRAIT ---------- */
-@media (max-width: 820px) {
+/* ---------- MOBILE PORTRAIT: LANDSCAPE-ONLY EXPERIENCE ---------- */
+@media (max-width: 820px) and (orientation: portrait) {
+  .app-shell.is-witch-page {
+    width: 100vw !important;
+    height: 100dvh !important;
+    min-height: 100dvh !important;
+    overflow: hidden !important;
+  }
   .witch-page {
-    padding: 8px 8px 14px !important;
-  }
-  .witch-appbar {
-    grid-template-columns: 44px 1fr 48px !important;
-    min-height: 56px !important;
-    gap: 8px !important;
-    padding: 6px 8px !important;
-  }
-  .witch-back {
-    width: 42px !important;
-    height: 42px !important;
-  }
-  .witch-appbrand > div {
     display: grid !important;
-    gap: 2px !important;
+    width: 100vw !important;
+    height: 100dvh !important;
+    min-height: 100dvh !important;
+    place-items: center !important;
+    padding: 18px !important;
+    overflow: hidden !important;
   }
-  .witch-appbrand h1 {
-    font-size: 20px !important;
+  .witch-appbar,
+  .witch-stage-shell,
+  .witch-control-dock,
+  .witch-mobile-actions {
+    display: none !important;
   }
-  .witch-appbrand small {
-    font-size: 8px !important;
-  }
-  .witch-appstats {
-    min-width: 0 !important;
-    display: contents !important;
-  }
-  .witch-stat-balance { display: none !important; }
-  .witch-menu-button {
-    width: 44px !important;
-    height: 42px !important;
+  .witch-landscape-gate {
+    display: grid !important;
+    width: min(92vw, 360px) !important;
+    place-items: center !important;
+    gap: 10px !important;
+    padding: 28px 22px !important;
     border: 1px solid rgba(245,195,68,.28) !important;
-    border-radius: 11px !important;
-    background: #20110d !important;
+    border-radius: 18px !important;
+    color: var(--ui-text) !important;
+    background: linear-gradient(180deg,#25140f,#120c09) !important;
+    box-shadow: 0 22px 60px rgba(0,0,0,.45) !important;
+    text-align: center !important;
   }
+  .witch-landscape-icon {
+    color: var(--ui-accent) !important;
+    font: 700 38px/1 "DM Sans",sans-serif !important;
+  }
+  .witch-landscape-gate strong {
+    font: 900 18px/1 "DM Sans",sans-serif !important;
+    letter-spacing: .06em !important;
+  }
+  .witch-landscape-gate small {
+    color: var(--ui-text-2) !important;
+    font: 600 13px/1.4 "DM Sans",sans-serif !important;
+  }
+}
+
+/* ---------- MOBILE LANDSCAPE: SINGLE-SCREEN HORIZONTAL LAYOUT ---------- */
+@media (max-width: 1000px) and (orientation: landscape),
+       (max-height: 600px) and (orientation: landscape) {
+  .app-shell.is-witch-page {
+    height: 100dvh !important;
+    min-height: 100dvh !important;
+    overflow: hidden !important;
+  }
+  .witch-page {
+    display: grid !important;
+    grid-template-rows: 48px minmax(0,1fr) 96px !important;
+    gap: 6px !important;
+    width: 100vw !important;
+    height: 100dvh !important;
+    min-height: 100dvh !important;
+    padding: 6px 8px !important;
+    overflow: hidden !important;
+  }
+  .witch-landscape-gate { display: none !important; }
+
+  .witch-appbar {
+    grid-template-columns: 42px 1fr auto !important;
+    min-height: 48px !important;
+    height: 48px !important;
+    padding: 3px 6px !important;
+    border-radius: 12px !important;
+  }
+  .witch-back { width: 38px !important; height: 38px !important; border-radius: 10px !important; }
+  .witch-appbrand h1 { font-size: 18px !important; }
+  .witch-appbrand small { display: none !important; }
+  .witch-appstats { min-width: 220px !important; min-height: 38px !important; grid-template-columns:minmax(150px,auto) 42px !important; }
+  .witch-stat-balance { padding-inline: 10px !important; }
+  .witch-stat-balance span { font-size: 8px !important; }
+  .witch-stat-balance strong { font-size: 13px !important; }
+  .witch-menu-button { width: 42px !important; height: 38px !important; }
   .witch-game-menu {
-    top: 70px !important;
+    top: 58px !important;
     right: 8px !important;
-    width: min(290px, calc(100vw - 16px)) !important;
+    width: 250px !important;
   }
 
   .witch-stage-shell {
     height: auto !important;
-    min-height: 390px !important;
+    min-height: 0 !important;
     max-height: none !important;
-    margin-top: 8px !important;
+    margin: 0 !important;
+    border-radius: 14px !important;
   }
+  .witch-stage-shell::before { inset: 10px !important; border-radius: 11px !important; }
+
   .is-standard-theme .witch-table-surface {
-    position: relative !important;
-    inset: auto !important;
-    min-height: 360px !important;
-    padding: 30px 6px 10px !important;
+    inset: 8px 176px 8px 8px !important;
   }
   .is-standard-theme .witch-ticket {
-    position: relative !important;
-    top: auto !important;
-    left: auto !important;
     width: min(98%, 760px) !important;
     max-width: 760px !important;
-    max-height: none !important;
-    transform: none !important;
+    max-height: calc(100% - 4px) !important;
   }
-  .witch-payout-panel { display: none !important; }
+  .witch-payout-panel {
+    right: 8px !important;
+    width: 158px !important;
+    min-height: 0 !important;
+    padding: 10px !important;
+    border-radius: 13px !important;
+  }
+  .witch-payout-head { padding-bottom: 8px !important; }
+  .witch-payout-head span { font-size: 10px !important; }
+  .witch-payout-hero { padding: 12px 0 10px !important; }
+  .witch-payout-amount { font-size: 27px !important; }
+  .witch-multiplier { margin-top: 7px !important; font-size: 17px !important; }
+  .witch-payout-net { margin-top: 8px !important; font-size: 9px !important; }
+  .witch-payout-net b { font-size: 10px !important; }
+  .witch-payout-lines { padding: 7px 0 !important; font-size: 8px !important; }
+  .witch-payout-lines b { font-size: 9px !important; }
+  .witch-cashout-button { min-height: 42px !important; margin-top: 7px !important; font-size: 11px !important; }
+  .witch-secondary-button { min-height: 34px !important; font-size: 9px !important; }
 
   .witch-control-dock {
-    grid-template-columns: 1fr !important;
-    gap: 12px !important;
-    min-height: 0 !important;
-    margin-top: 8px !important;
-    padding: 12px !important;
+    grid-template-columns: 210px minmax(255px,1fr) 108px 162px !important;
+    gap: 7px !important;
+    min-height: 96px !important;
+    height: 96px !important;
+    margin: 0 !important;
+    padding: 6px 8px !important;
+    border-radius: 13px !important;
+    overflow: hidden !important;
   }
-  .witch-mode-grid {
-    grid-template-columns: 1fr 1fr !important;
-    gap: 8px !important;
+  .witch-mode-group > label,
+  .witch-control-group > label,
+  .witch-alarm-field > span {
+    display: none !important;
   }
+  .witch-mode-grid { gap: 5px !important; }
   .witch-mode-card {
-    min-height: 64px !important;
-    padding: 10px !important;
+    min-height: 50px !important;
+    padding: 6px 8px !important;
+    grid-template-columns: 14px 1fr !important;
+    gap: 6px !important;
+    border-radius: 9px !important;
   }
-  .witch-mode-card strong {
-    font-size: 14px !important;
-  }
-  .witch-mode-card small {
-    font-size: 11px !important;
-  }
+  .witch-radio { width: 13px !important; height: 13px !important; }
+  .witch-mode-card strong { font-size: 11px !important; }
+  .witch-mode-card small { margin-top: 3px !important; font-size: 8px !important; }
 
-  .witch-control-group > label {
-    font-size: 11px !important;
-  }
+  .witch-stake-group { gap: 4px !important; }
   .witch-stake-stepper {
-    grid-template-columns: 56px minmax(0,1fr) 56px !important;
-    min-height: 56px !important;
+    grid-template-columns: 42px minmax(0,1fr) 42px !important;
+    min-height: 42px !important;
+    border-radius: 9px !important;
   }
   .witch-stake-stepper > button {
-    min-width: 56px !important;
-    min-height: 56px !important;
-    font-size: 28px !important;
+    min-width: 42px !important;
+    min-height: 42px !important;
+    font-size: 22px !important;
   }
-  .witch-input-wrap input {
-    height: 56px !important;
-    font-size: 20px !important;
-  }
-  .witch-stake-presets {
-    grid-template-columns: repeat(3,1fr) !important;
-    gap: 7px !important;
-  }
-  .witch-stake-presets button {
-    min-height: 44px !important;
-    font-size: 12px !important;
-  }
+  .witch-input-wrap input { height: 42px !important; font-size: 15px !important; }
+  .witch-stake-presets { grid-template-columns: repeat(6,1fr) !important; gap: 3px !important; }
+  .witch-stake-presets button { min-height: 27px !important; padding:0 3px !important; font-size: 8px !important; border-radius: 7px !important; }
+
+  .witch-alarm-field { gap: 0 !important; }
   .witch-alarm-field select {
-    min-height: 52px !important;
-    font-size: 13px !important;
+    min-height: 42px !important;
+    padding: 0 24px 0 9px !important;
+    border-radius: 9px !important;
+    font-size: 10px !important;
   }
   .witch-primary-button {
-    min-height: 56px !important;
-    font-size: 15px !important;
+    min-height: 44px !important;
+    margin-top: 0 !important;
+    padding: 0 10px !important;
+    border-radius: 9px !important;
+    font-size: 11px !important;
   }
-}
-
-/* landscape phones / short viewports */
-@media (max-height: 600px) and (orientation: landscape) and (max-width: 1200px) {
-  .witch-page { padding: 6px 8px 10px !important; }
-  .witch-appbar { min-height: 50px !important; }
-  .witch-stage-shell {
-    height: calc(100dvh - 176px) !important;
-    min-height: 320px !important;
-    margin-top: 6px !important;
-  }
-  .witch-control-dock {
-    min-height: 92px !important;
-    margin-top: 6px !important;
-    padding: 8px 10px !important;
-  }
-  .witch-mode-card { min-height: 54px !important; }
-  .witch-stake-stepper,
-  .witch-input-wrap input,
-  .witch-stake-stepper > button,
-  .witch-alarm-field select {
-    min-height: 48px !important;
-    height: 48px !important;
-  }
-  .witch-primary-button { min-height: 50px !important; }
+  .witch-mobile-actions { display: none !important; }
 }
