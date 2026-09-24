@@ -4498,6 +4498,72 @@ export function Part2SceneViewport({
             );
           };
 
+          const preInwardCheckpoints = new Set<string>();
+          const logPreInwardCheckpoint = (
+            checkpoint: string,
+            step: number,
+            position: { x: number; y: number; z: number },
+            velocity: { x: number; y: number; z: number },
+            speed: number,
+            radius: number,
+            contactRoles: Set<string>,
+            trackContact: boolean,
+          ) => {
+            if (!preFretTraceSeed || preInwardCheckpoints.has(checkpoint)) return;
+            preInwardCheckpoints.add(checkpoint);
+            const radialVelocity =
+              radius > 0
+                ? (position.x * velocity.x + position.z * velocity.z) / radius
+                : 0;
+            const rotorRotation = activeRotorBody.rotation();
+            const bodyRotorAngle = normalizedAngle(
+              2 * Math.atan2(rotorRotation.y, rotorRotation.w),
+            );
+            const ballAngularVelocity = activeBallBody.angvel();
+            console.info(
+              'ROULETTE_PRE_INWARD_CHECKPOINT',
+              JSON.stringify({
+                source: 'browser',
+                seed: String(run.seed),
+                checkpoint,
+                simulationTimeSeconds: Number(elapsed.toFixed(6)),
+                step,
+                rotorAngle: Number(bodyRotorAngle.toFixed(9)),
+                worldAzimuth: Number(
+                  normalizedAngle(Math.atan2(position.x, position.z)).toFixed(9),
+                ),
+                position: {
+                  x: Number(position.x.toFixed(6)),
+                  y: Number(position.y.toFixed(6)),
+                  z: Number(position.z.toFixed(6)),
+                },
+                velocity: {
+                  x: Number(velocity.x.toFixed(6)),
+                  y: Number(velocity.y.toFixed(6)),
+                  z: Number(velocity.z.toFixed(6)),
+                },
+                speed: Number(speed.toFixed(6)),
+                radius: Number(radius.toFixed(6)),
+                radialVelocity: Number(radialVelocity.toFixed(6)),
+                verticalVelocity: Number(velocity.y.toFixed(6)),
+                angularVelocity: {
+                  x: Number(ballAngularVelocity.x.toFixed(6)),
+                  y: Number(ballAngularVelocity.y.toFixed(6)),
+                  z: Number(ballAngularVelocity.z.toFixed(6)),
+                },
+                angularSpeed: Number(
+                  Math.hypot(
+                    ballAngularVelocity.x,
+                    ballAngularVelocity.y,
+                    ballAngularVelocity.z,
+                  ).toFixed(6),
+                ),
+                contactRoles: [...contactRoles].sort(),
+                trackContact,
+              }),
+            );
+          };
+
           recordPhase(
             'OUTER_RACE',
             {
@@ -4613,6 +4679,19 @@ export function Part2SceneViewport({
               },
             );
 
+            if (step === 0) {
+              logPreInwardCheckpoint(
+                'LAUNCH_STEP_0',
+                step,
+                position,
+                velocity,
+                speed,
+                radius,
+                stepContactRoles,
+                trackPairContact,
+              );
+            }
+
             const inTrackCenterBand =
               radius >= PART2_ACTUAL_TRACK_CENTER_RADIUS_BAND[0] &&
               radius <= PART2_ACTUAL_TRACK_CENTER_RADIUS_BAND[1];
@@ -4704,6 +4783,18 @@ export function Part2SceneViewport({
                 if (lapCountNow > completedLaps) {
                   completedLaps = lapCountNow;
                   lapSpeeds.push(speed);
+                  if (lapCountNow <= 4) {
+                    logPreInwardCheckpoint(
+                      `LAP_${lapCountNow}`,
+                      step,
+                      position,
+                      velocity,
+                      speed,
+                      radius,
+                      stepContactRoles,
+                      trackPairContact,
+                    );
+                  }
                 }
               }
               trackEndSpeed = speed;
@@ -4715,6 +4806,16 @@ export function Part2SceneViewport({
               inwardTransitionTime = elapsed;
               inwardTransitionRadius = radius;
               trackAngleEnd ??= trackAngle;
+              logPreInwardCheckpoint(
+                'INWARD_DESCENT',
+                step,
+                position,
+                velocity,
+                speed,
+                radius,
+                stepContactRoles,
+                trackPairContact,
+              );
               logPreFretCheckpoint(
                 'INWARD_DESCENT',
                 step,
