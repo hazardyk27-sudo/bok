@@ -638,13 +638,42 @@ function buildStartConditions(seed: string): PhysicsLabStartConditions {
   const ballSpin = launchSpeed / PHYSICS_LAB_BALL_RADIUS;
   const rotorInitialAngleRadians = hashToUnit(seed, 4) * Math.PI * 2;
   const rotorInitialAngularVelocity = ROULETTE_ROTOR_ANGULAR_SPEED;
-  const position = radialPosition(
-    ROULETTE_DARK_RACE_LAUNCH_RADIUS,
-    launchAzimuthRadians,
-    darkRaceSurfaceYAt(ROULETTE_DARK_RACE_LAUNCH_RADIUS) +
-      PHYSICS_LAB_BALL_RADIUS +
-      0.01,
-  );
+  const launchClearance = PHYSICS_LAB_BALL_RADIUS + 0.01;
+  const operationalLaunchCenterRadius = ROULETTE_DARK_RACE_LAUNCH_RADIUS;
+  let launchContactRadius = operationalLaunchCenterRadius;
+  let launchPlacementSlope = darkRaceSurfaceSlopeAt(launchContactRadius);
+  let launchPlacementNormalLength = Math.hypot(launchPlacementSlope, 1);
+  let launchPlacementNormal: [number, number, number] = [
+    (-launchPlacementSlope * Math.sin(launchAzimuthRadians)) /
+      launchPlacementNormalLength,
+    1 / launchPlacementNormalLength,
+    (-launchPlacementSlope * Math.cos(launchAzimuthRadians)) /
+      launchPlacementNormalLength,
+  ];
+  for (let iteration = 0; iteration < 3; iteration += 1) {
+    const radialNormal =
+      launchPlacementNormal[0] * Math.sin(launchAzimuthRadians) +
+      launchPlacementNormal[2] * Math.cos(launchAzimuthRadians);
+    launchContactRadius =
+      operationalLaunchCenterRadius - radialNormal * launchClearance;
+    launchPlacementSlope = darkRaceSurfaceSlopeAt(launchContactRadius);
+    launchPlacementNormalLength = Math.hypot(launchPlacementSlope, 1);
+    launchPlacementNormal = [
+      (-launchPlacementSlope * Math.sin(launchAzimuthRadians)) /
+        launchPlacementNormalLength,
+      1 / launchPlacementNormalLength,
+      (-launchPlacementSlope * Math.cos(launchAzimuthRadians)) /
+        launchPlacementNormalLength,
+    ];
+  }
+  const launchSurfaceY = darkRaceSurfaceYAt(launchContactRadius);
+  const position: [number, number, number] = [
+    Math.sin(launchAzimuthRadians) * launchContactRadius +
+      launchPlacementNormal[0] * launchClearance,
+    launchSurfaceY + launchPlacementNormal[1] * launchClearance,
+    Math.cos(launchAzimuthRadians) * launchContactRadius +
+      launchPlacementNormal[2] * launchClearance,
+  ];
   const tangent: [number, number] = [
     Math.cos(launchAzimuthRadians),
     -Math.sin(launchAzimuthRadians),
