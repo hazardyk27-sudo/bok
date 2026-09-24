@@ -1,0 +1,28 @@
+name: Temporary Slot Free Spin Balance Check
+
+on:
+  push:
+    branches:
+      - feature/slot
+    paths:
+      - .github/workflows/temp-slot-fs-balance-check.yml
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm --filter @workspace/cascade-8 run typecheck
+      - run: pnpm --filter @workspace/cascade-8 run test
