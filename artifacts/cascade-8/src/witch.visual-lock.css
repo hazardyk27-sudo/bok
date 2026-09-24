@@ -1077,3 +1077,42 @@
     right: -22px !important;
   }
 }
+
+
+/* PASS 3 — real desk artwork.
+   The generated law-office scene is now the non-interactive table layer.
+   All gameplay UI remains live DOM above it. */
+.is-standard-theme .witch-stage-shell {
+  background:
+    linear-gradient(180deg, rgba(8,4,3,.08), rgba(8,4,3,.18)),
+    url("/cadi-kazan/law-desk-bg.webp") center 46% / cover no-repeat !important;
+}
+
+/* Remove the CSS-painted scenery now that the real artwork owns the set. */
+.is-standard-theme .witch-stage-shell::before,
+.is-standard-theme .witch-stage-shell::after,
+.is-standard-theme .witch-stage-decor,
+.is-standard-theme .witch-table-surface::before,
+.is-standard-theme .witch-table-surface::after {
+  display: none !important;
+  content: none !important;
+}
+
+/* Keep functional layers cleanly above the background artwork. */
+.is-standard-theme .witch-table-surface,
+.is-standard-theme .witch-payout-panel {
+  position: relative !important;
+  z-index: 3 !important;
+}
+
+@media (min-width: 821px) {
+  .is-standard-theme .witch-stage-shell {
+    background-position: center 48% !important;
+  }
+}
+
+@media (max-width: 820px) {
+  .is-standard-theme .witch-stage-shell {
+    background-position: center center !important;
+  }
+}
