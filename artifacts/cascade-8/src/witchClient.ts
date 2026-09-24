@@ -274,7 +274,8 @@ export const CADI_KAZAN_MARKUP = `
           <button type="button" data-witch-stake-preset="25">$25</button>
           <button type="button" data-witch-stake-preset="50">$50</button>
           <button type="button" class="witch-stake-scale" data-witch-stake-scale="2">X2</button>
-          <button type="button" class="witch-stake-scale" data-witch-stake-scale="0.5">/2</button>
+          <button type="button" class="witch-stake-scale" data-witch-stake-scale="0.5">÷2</button>
+          <button type="button" data-witch-stake-preset="MAX">MAX</button>
         </div>
       </div>
 
@@ -401,7 +402,9 @@ export class WitchClient {
         const input = this.root.querySelector<HTMLInputElement>("[data-witch-stake]");
         if (!input) return;
         const preset = button.dataset.witchStakePreset ?? "1";
-        input.value = formatStakeInput(Math.max(1, Number(preset)));
+        const walletDollars = (this.state?.wallet.balanceCents ?? 0) / 100;
+        const next = preset === "MAX" ? Math.max(1, walletDollars) : Math.max(1, Number(preset));
+        input.value = formatStakeInput(next);
         this.render();
       });
     });
