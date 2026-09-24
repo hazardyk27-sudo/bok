@@ -842,7 +842,6 @@ export async function simulatePhysicsLabRound(
       .setAdditionalMass(BALL_PARAMETERS.mass)
       .setLinearDamping(BALL_PARAMETERS.linearDamping)
       .setAngularDamping(BALL_PARAMETERS.angularDamping)
-      .setCanSleep(false)
       .setCcdEnabled(true)
       .setSoftCcdPrediction(Math.max(BALL_PARAMETERS.radius * 2.2, 0.08)),
   );
