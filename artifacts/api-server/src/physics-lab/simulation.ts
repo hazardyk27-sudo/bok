@@ -698,8 +698,11 @@ export async function simulatePhysicsLabRound(
     },
     true,
   );
-  addDarkRaceChannelCollider(world, stationaryBody);
-  addBowlBridgeCollider(world, stationaryBody);
+  const colliderRoles = new Map<number, string>();
+  const darkRaceCollider = addDarkRaceChannelCollider(world, stationaryBody);
+  colliderRoles.set(darkRaceCollider.handle, "dark-race");
+  const bowlBridgeCollider = addBowlBridgeCollider(world, stationaryBody);
+  colliderRoles.set(bowlBridgeCollider.handle, "bowl-bridge");
   const deflectorColliders = addMeasuredDeflectorColliders(
     world,
     stationaryBody,
@@ -707,9 +710,22 @@ export async function simulatePhysicsLabRound(
   const deflectorColliderHandles = new Set(
     deflectorColliders.map((collider) => collider.handle),
   );
-  addPocketFloorAndOuterLipColliders(world, rotorBody);
-  addPocketFretColliders(world, rotorBody);
-  addPocketInnerGuardCollider(world, rotorBody);
+  for (const collider of deflectorColliders) {
+    colliderRoles.set(collider.handle, "deflector");
+  }
+  const pocketColliders = addPocketFloorAndOuterLipColliders(
+    world,
+    rotorBody,
+  );
+  if (pocketColliders[0]) colliderRoles.set(pocketColliders[0].handle, "pocket-floor");
+  if (pocketColliders[1]) colliderRoles.set(pocketColliders[1].handle, "pocket-outer-lip");
+  if (pocketColliders[2]) colliderRoles.set(pocketColliders[2].handle, "pocket-catch-underlay");
+  const fretColliders = addPocketFretColliders(world, rotorBody);
+  for (const collider of fretColliders) {
+    colliderRoles.set(collider.handle, "pocket-fret");
+  }
+  const innerGuardCollider = addPocketInnerGuardCollider(world, rotorBody);
+  colliderRoles.set(innerGuardCollider.handle, "pocket-inner-guard");
   const ballBody = world.createRigidBody(
     RAPIER.RigidBodyDesc.dynamic()
       .setTranslation(...startConditions.ballPosition)
@@ -799,6 +815,38 @@ export async function simulatePhysicsLabRound(
         radius > 0
           ? (translation.x * velocity.x + translation.z * velocity.z) / radius
           : 0;
+      if (seed === "61001" && step <= 35) {
+        const contactRoles = new Set<string>();
+        world.contactPairsWith(ballCollider, (otherCollider) => {
+          world.contactPair(ballCollider, otherCollider, (manifold) => {
+            if (manifold.numContacts() > 0) {
+              contactRoles.add(
+                colliderRoles.get(otherCollider.handle) ?? "unknown",
+              );
+            }
+          });
+        });
+        console.info(
+          "SERVER_61001_STEP",
+          JSON.stringify({
+            step,
+            simulatedAtMs: Math.round(
+              step * PHYSICS_LAB_FIXED_TIMESTEP * 1000,
+            ),
+            radius,
+            y: translation.y,
+            speed: ballSpeed,
+            radialVelocity,
+            velocity: {
+              x: velocity.x,
+              y: velocity.y,
+              z: velocity.z,
+            },
+            contacts: [...contactRoles],
+          }),
+        );
+      }
+
       const finiteState = [
         translation.x,
         translation.y,
