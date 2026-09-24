@@ -1,4 +1,4 @@
-import { index, integer, jsonb, pgTable, text, timestamp, uniqueIndex } from "drizzle-orm/pg-core";
+import { bigint, index, integer, jsonb, pgTable, text, timestamp, uniqueIndex } from "drizzle-orm/pg-core";
 
 export const rouletteRounds = pgTable(
   "roulette_rounds",
@@ -39,10 +39,10 @@ export const rouletteBets = pgTable(
     betType: text("bet_type").notNull().default("STRAIGHT"),
     numbers: jsonb("numbers").notNull().default([]),
     batchId: text("batch_id").notNull().default(""),
-    stakeCents: integer("stake_cents").notNull(),
+    stakeCents: bigint("stake_cents", { mode: "number" }).notNull(),
     idempotencyKey: text("idempotency_key").notNull(),
     status: text("status").notNull().default("ACCEPTED"),
-    payoutCents: integer("payout_cents").notNull().default(0),
+    payoutCents: bigint("payout_cents", { mode: "number" }).notNull().default(0),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     settledAt: timestamp("settled_at", { withTimezone: true }),
   },
@@ -55,7 +55,7 @@ export const rouletteBets = pgTable(
 
 export const rouletteWallets = pgTable("roulette_wallets", {
   sessionId: text("session_id").primaryKey(),
-  balanceCents: integer("balance_cents").notNull(),
+  balanceCents: bigint("balance_cents", { mode: "number" }).notNull(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
 });
 
@@ -67,7 +67,7 @@ export const rouletteLedger = pgTable(
     roundId: text("round_id").notNull(),
     betId: text("bet_id").notNull(),
     kind: text("kind").notNull(),
-    amountCents: integer("amount_cents").notNull(),
+    amountCents: bigint("amount_cents", { mode: "number" }).notNull(),
     idempotencyKey: text("idempotency_key").notNull(),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
