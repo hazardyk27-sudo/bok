@@ -258,7 +258,7 @@ describe("authoritative roulette physics config", () => {
       /const PART6_DETERMINISTIC_SEEDS = \[([\s\S]*?)\] as const;/,
     );
     expect(seedBlock).not.toBeNull();
-    expect(seedBlock?.[1].match(/\b610\d+\b/g) ?? []).toHaveLength(20);
+    expect(seedBlock?.[1].match(/\b610\d+\b/g) ?? []).toHaveLength(30);
     expect(part3ViewportSource).toContain(
       "return (value >>> 0) / 0x100000000;",
     );
