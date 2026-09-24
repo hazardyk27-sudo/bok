@@ -5462,3 +5462,108 @@
   .witch-alarm-field select { min-height:58px !important;font-size:14px !important; }
   .witch-primary-button { min-height:64px !important;font-size:16px !important; }
 }
+
+
+/* Stage 35 — viewport alignment + menu layering + premium mode selector fix */
+.witch-page { overflow:visible !important; }
+.witch-appbar { position:relative !important; z-index:300 !important; overflow:visible !important; }
+.witch-appstats { position:relative !important; overflow:visible !important; }
+.witch-game-menu { z-index:1000 !important; }
+.witch-stage-shell { position:relative !important; z-index:1 !important; }
+.witch-control-dock { position:relative !important; z-index:2 !important; }
+
+/* desktop geometry: table and deck share exactly the same visual rails */
+@media (min-width:821px) {
+  .witch-page {
+    width:min(100%,1440px) !important;
+    padding:14px 22px 18px !important;
+  }
+  .witch-stage-shell,
+  .witch-control-dock {
+    width:100% !important;
+    margin-left:auto !important;
+    margin-right:auto !important;
+  }
+  .witch-stage-shell {
+    min-height:0 !important;
+    height:calc(100dvh - 214px) !important;
+    max-height:610px !important;
+    margin-top:14px !important;
+  }
+  .witch-control-dock {
+    grid-template-columns:minmax(310px,.95fr) 1px minmax(320px,1fr) 1px minmax(170px,.48fr) minmax(230px,.68fr) !important;
+    min-height:116px !important;
+    margin-top:8px !important;
+    padding:12px 18px !important;
+  }
+  .witch-mode-card { min-height:68px !important; padding:10px 14px !important; }
+  .witch-mode-card strong { font-size:14px !important; }
+  .witch-mode-card small { font-size:9px !important; }
+  .witch-stake-stepper { min-height:54px !important; grid-template-columns:56px minmax(130px,1fr) 56px !important; }
+  .witch-stake-stepper>button { min-width:56px !important; min-height:54px !important; font-size:27px !important; }
+  .witch-input-wrap input { min-height:54px !important; font-size:19px !important; }
+  .witch-stake-presets button { min-height:30px !important; }
+  .witch-alarm-field select { min-height:54px !important; }
+  .witch-primary-button { min-height:62px !important; }
+}
+
+/* mode cards: selected must look active, never disabled */
+.witch-mode-card {
+  opacity:1 !important;
+  filter:none !important;
+  box-shadow:none !important;
+}
+.witch-mode-card:not(.is-selected) {
+  color:#cfc0aa !important;
+  background:#140c09 !important;
+  border-color:rgba(194,163,112,.18) !important;
+}
+.witch-mode-card:not(.is-selected):hover {
+  border-color:rgba(245,195,68,.42) !important;
+  background:#1d0f0b !important;
+}
+.witch-mode-card.is-selected {
+  color:#fff0ca !important;
+  border:1px solid rgba(245,195,68,.76) !important;
+  background:linear-gradient(180deg,#35160f,#24100c) !important;
+  box-shadow:inset 0 0 0 1px rgba(255,225,139,.08),0 8px 18px rgba(0,0,0,.16) !important;
+}
+.witch-mode-card.is-selected strong { color:#ffe08a !important; }
+.witch-mode-card.is-selected small { color:#cdbb9e !important; }
+.witch-mode-card:disabled { opacity:.55 !important; }
+
+/* menu is a true overlay, not clipped behind the table */
+.witch-game-menu {
+  position:absolute !important;
+  top:calc(100% + 8px) !important;
+  right:0 !important;
+  width:250px !important;
+  border:1px solid rgba(245,195,68,.38) !important;
+  background:linear-gradient(160deg,#2b120d,#120a08) !important;
+  box-shadow:0 24px 60px rgba(0,0,0,.62) !important;
+}
+
+/* medium desktop: keep every deck control inside the viewport */
+@media (min-width:821px) and (max-width:1180px) {
+  .witch-control-dock {
+    grid-template-columns:minmax(250px,.9fr) minmax(285px,1fr) minmax(145px,.48fr) minmax(190px,.68fr) !important;
+    gap:10px !important;
+  }
+  .witch-control-separator { display:none !important; }
+  .witch-mode-card { padding:9px 11px !important; }
+  .witch-stake-presets { grid-template-columns:repeat(3,1fr) !important; }
+  .witch-primary-button { font-size:14px !important; }
+}
+
+/* small screens: deck stacks instead of overflowing */
+@media (max-width:820px) {
+  .witch-page { padding:8px !important; }
+  .witch-stage-shell,.witch-control-dock { width:100% !important; }
+  .witch-control-dock {
+    grid-template-columns:1fr !important;
+    margin-top:8px !important;
+    overflow:visible !important;
+  }
+  .witch-mode-grid { grid-template-columns:1fr 1fr !important; }
+  .witch-game-menu { position:fixed !important; top:64px !important; right:8px !important; }
+}
