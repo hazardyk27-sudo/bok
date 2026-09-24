@@ -843,10 +843,10 @@ export async function simulatePhysicsLabRound(
       .setLinearDamping(BALL_PARAMETERS.linearDamping)
       .setAngularDamping(BALL_PARAMETERS.angularDamping)
       .setCcdEnabled(true)
-      .setSoftCcdPrediction(Math.max(BALL_PARAMETERS.radius * 2.2, 0.08)),
+      .setSoftCcdPrediction(0),
   );
   ballBody.enableCcd(true);
-  ballBody.setSoftCcdPrediction(Math.max(BALL_PARAMETERS.radius * 2.2, 0.08));
+  ballBody.setSoftCcdPrediction(0);
   const ballCollider = world.createCollider(
     RAPIER.ColliderDesc.ball(BALL_PARAMETERS.radius)
       .setFriction(BALL_PARAMETERS.friction)
@@ -918,24 +918,12 @@ export async function simulatePhysicsLabRound(
   let stableSettleStep: number | null = null;
   let errorCode: string | null = null;
   let maxBallSpeed = 0;
-  let pocketHardCcdActivated = false;
 
   try {
     const durationLimitSteps = Math.round(
       PHYSICS_LAB_DURATION_LIMIT_SECONDS / PHYSICS_LAB_FIXED_TIMESTEP,
     );
     for (let step = 0; step < durationLimitSteps; step += 1) {
-      if (!pocketHardCcdActivated) {
-        const preStepTranslation = ballBody.translation();
-        const preStepRadius = Math.hypot(
-          preStepTranslation.x,
-          preStepTranslation.z,
-        );
-        if (preStepRadius <= ROULETTE_POCKET_OUTER_LIP_RADIUS) {
-          ballBody.setSoftCcdPrediction(0);
-          pocketHardCcdActivated = true;
-        }
-      }
       rotorAngle = normalizedAngle(
         rotorAngle +
           startConditions.rotorInitialAngularVelocity *
