@@ -360,22 +360,24 @@ export class ScratchSurface {
     const context = layer.context;
 
     if (layer.name === "base") {
+      // Keep the deepest abrasion layer in the same metallic-grey family as
+      // the visible cactus coating so no brown strip flashes mid-scratch.
       const base = context.createLinearGradient(0, 0, width, height);
-      base.addColorStop(0, "#6f4728");
-      base.addColorStop(.46, "#9f6d3d");
-      base.addColorStop(1, "#52331f");
+      base.addColorStop(0, "#8f9290");
+      base.addColorStop(.46, "#b9bbb8");
+      base.addColorStop(1, "#777a78");
       context.fillStyle = base;
       context.fillRect(0, 0, width, height);
 
       context.save();
-      context.globalAlpha = .24;
+      context.globalAlpha = .22;
       for (let y = 4; y < height; y += 7) {
-        context.fillStyle = y % 14 === 0 ? "#d2a363" : "#3b2618";
+        context.fillStyle = y % 14 === 0 ? "#dfe0dc" : "#666966";
         context.fillRect(0, y, width, .55);
       }
       for (let x = 8; x < width; x += 13) {
         const y = 6 + ((x * 17) % Math.max(8, height - 12));
-        context.fillStyle = x % 26 === 0 ? "#e6bd7a" : "#2d1b12";
+        context.fillStyle = x % 26 === 0 ? "#ecece8" : "#5a5d5a";
         context.fillRect(x, y, 1.1, .8);
       }
       context.restore();
