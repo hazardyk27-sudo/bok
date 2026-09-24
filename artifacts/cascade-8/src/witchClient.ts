@@ -92,12 +92,8 @@ export const CADI_KAZAN_MARKUP = `
           <span>BAKİYE</span>
           <strong data-witch-balance>$0.00</strong>
         </div>
-        <div class="witch-stat">
-          <span>ROUND</span>
+        <div class="witch-stat witch-stat-runtime" aria-hidden="true">
           <strong data-witch-round>—</strong>
-        </div>
-        <div class="witch-stat witch-stat-status">
-          <span>DURUM</span>
           <strong data-witch-round-status>HAZIR</strong>
           <small data-witch-round-note>MASA BOŞ</small>
         </div>
@@ -122,7 +118,7 @@ export const CADI_KAZAN_MARKUP = `
 
       <div class="witch-table-heading">
         <div>
-          <span class="witch-table-eyebrow"><i>●</i> LIVE TABLE</span>
+          <span class="witch-table-eyebrow"><i>●</i> OYUN MASASI</span>
           <strong data-witch-play-mode>NO TICKET</strong>
         </div>
         <p data-witch-play-title>Bir bilet seç ve kazımaya başla.</p>
@@ -238,12 +234,12 @@ export const CADI_KAZAN_MARKUP = `
       <div class="witch-control-separator" aria-hidden="true"></div>
 
       <div class="witch-control-group witch-stake-group">
-        <label>STAKE</label>
+        <label>BAHİS</label>
         <div class="witch-stake-stepper">
           <button type="button" data-witch-stake-step="-1" aria-label="Stake azalt">−</button>
           <div class="witch-input-wrap">
             <i>$</i>
-            <input data-witch-stake type="text" value="1.00" inputmode="decimal" autocomplete="off" aria-label="Bilet bedeli">
+            <input data-witch-stake type="text" value="$1.00" inputmode="decimal" autocomplete="off" aria-label="Bilet bedeli">
           </div>
           <button type="button" data-witch-stake-step="1" aria-label="Stake artır">+</button>
         </div>
@@ -260,7 +256,7 @@ export const CADI_KAZAN_MARKUP = `
       <div class="witch-control-separator" aria-hidden="true"></div>
 
       <label class="witch-control-group witch-alarm-field">
-        <span>BOMBA</span>
+        <span class="witch-visually-hidden">Bomba sayısı</span>
         <select data-witch-alarms disabled aria-label="Advanced bomba sayısı">
           <option value="1">1 BOMBA</option>
           <option value="3">3 BOMBA</option>
