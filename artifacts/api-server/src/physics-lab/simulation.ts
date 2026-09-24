@@ -121,9 +121,25 @@ function initRapier() {
   return rapierReady;
 }
 
-function hashToUnit(seed: string, counter: number) {
+function deterministicUnit(seed: string, salt: number) {
+  const numericSeed = Number(seed);
+  if (
+    Number.isInteger(numericSeed) &&
+    numericSeed >= 0 &&
+    numericSeed <= 0xffff_ffff
+  ) {
+    let value =
+      (numericSeed ^ Math.imul(salt + 1, 0x9e3779b1)) >>> 0;
+    value ^= value >>> 16;
+    value = Math.imul(value, 0x7feb352d) >>> 0;
+    value ^= value >>> 15;
+    value = Math.imul(value, 0x846ca68b) >>> 0;
+    value ^= value >>> 16;
+    return (value >>> 0) / 0x1_0000_0000;
+  }
+
   const digest = createHash("sha256")
-    .update(`${seed}:${counter}`)
+    .update(`${seed}:${salt}`)
     .digest();
   return digest.readUInt32BE(0) / 0x1_0000_0000;
 }
@@ -678,14 +694,16 @@ function quaternion(value: Quaternion): Quaternion {
 }
 
 function buildStartConditions(seed: string): PhysicsLabStartConditions {
-  const launchAzimuthRadians = hashToUnit(seed, 0) * Math.PI * 2;
+  const launchAzimuthRadians =
+    deterministicUnit(seed, 2) * Math.PI * 2;
   const launchAngleDegrees = 0;
   const launchSpeedMetersPerSecond =
-    5 + (hashToUnit(seed, 2) * 2 - 1) * 0.15;
+    5 + (deterministicUnit(seed, 1) * 2 - 1) * 0.15;
   const launchSpeed =
     launchSpeedMetersPerSecond * ROULETTE_WORLD_UNITS_PER_METER;
   const ballSpin = launchSpeed / PHYSICS_LAB_BALL_RADIUS;
-  const rotorInitialAngleRadians = hashToUnit(seed, 4) * Math.PI * 2;
+  const rotorInitialAngleRadians =
+    deterministicUnit(seed, 3) * Math.PI * 2;
   const rotorInitialAngularVelocity = ROULETTE_ROTOR_ANGULAR_SPEED;
   const launchClearance = PHYSICS_LAB_BALL_RADIUS + 0.01;
   const operationalLaunchCenterRadius = ROULETTE_DARK_RACE_LAUNCH_RADIUS;
