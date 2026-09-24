@@ -157,6 +157,20 @@ function darkRaceSurfaceYAt(radius: number) {
   return profile[profile.length - 1][1];
 }
 
+function darkRaceSurfaceSlopeAt(radius: number) {
+  const profile = ROULETTE_DARK_RACE_CHANNEL_PROFILE;
+  for (let index = 1; index < profile.length; index += 1) {
+    const [rightRadius, rightY] = profile[index];
+    const [leftRadius, leftY] = profile[index - 1];
+    if (radius <= rightRadius) {
+      return (rightY - leftY) / Math.max(1e-9, rightRadius - leftRadius);
+    }
+  }
+  const last = profile[profile.length - 1];
+  const previous = profile[profile.length - 2];
+  return (last[1] - previous[1]) / Math.max(1e-9, last[0] - previous[0]);
+}
+
 function addDarkRaceChannelCollider(
   world: RAPIER.World,
   body: RAPIER.RigidBody,
@@ -644,6 +658,21 @@ function buildStartConditions(seed: string): PhysicsLabStartConditions {
     0,
     tangent[1] * launchSpeed,
   ];
+  const slope = darkRaceSurfaceSlopeAt(ROULETTE_DARK_RACE_LAUNCH_RADIUS);
+  const normalLength = Math.hypot(slope, 1);
+  const normal: [number, number, number] = [
+    (-slope * radial[0]) / normalLength,
+    1 / normalLength,
+    (-slope * radial[1]) / normalLength,
+  ];
+  const angularVelocity: [number, number, number] = [
+    (normal[1] * velocity[2] - normal[2] * velocity[1]) /
+      PHYSICS_LAB_BALL_RADIUS,
+    (normal[2] * velocity[0] - normal[0] * velocity[2]) /
+      PHYSICS_LAB_BALL_RADIUS,
+    (normal[0] * velocity[1] - normal[1] * velocity[0]) /
+      PHYSICS_LAB_BALL_RADIUS,
+  ];
   return {
     seed,
     launchAzimuthRadians,
@@ -654,7 +683,11 @@ function buildStartConditions(seed: string): PhysicsLabStartConditions {
     rotorInitialAngularVelocity,
     ballPosition: position,
     ballVelocity: velocity,
-    ballSpinAxis: [radial[1], 0, -radial[0]],
+    ballSpinAxis: angularVelocity.map((value) => value / ballSpin) as [
+      number,
+      number,
+      number,
+    ],
   };
 }
 
@@ -749,7 +782,7 @@ export async function simulatePhysicsLabRound(
   ballBody.setAngvel(
     {
       x: startConditions.ballSpinAxis[0] * startConditions.ballSpin,
-      y: 0,
+      y: startConditions.ballSpinAxis[1] * startConditions.ballSpin,
       z: startConditions.ballSpinAxis[2] * startConditions.ballSpin,
     },
     true,
