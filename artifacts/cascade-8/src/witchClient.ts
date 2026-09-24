@@ -75,12 +75,12 @@ const compactNumber = (value: number) => {
 const formatCompactMoney = (cents: number, signed = false) => {
   const absolute = Math.abs(cents) / 100;
   const sign = signed ? (cents > 0 ? "+" : cents < 0 ? "−" : "") : (cents < 0 ? "−" : "");
-  return `${sign}${compactNumber(absolute)}`;
+  return `${sign}$${compactNumber(absolute)}`;
 };
 
 const formatTicketPrice = (cents: number) => {
   const dollars = cents / 100;
-  if (dollars >= 1_000) return `${compactNumber(dollars)}`;
+  if (dollars >= 1_000) return `$${compactNumber(dollars)}`;
   return formatMoney(cents, { compactInteger: true });
 };
 
