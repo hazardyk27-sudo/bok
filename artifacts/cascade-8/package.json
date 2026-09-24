@@ -15,7 +15,7 @@
     "test:visual:install": "playwright install chromium",
     "test:visual:cadi": "playwright test -c playwright.visual.config.ts",
     "test:visual:cadi:desktop": "playwright test -c playwright.visual.config.ts --project=desktop-1920x1080 --project=desktop-1366x768",
-    "test:visual:cadi:mobile": "playwright test -c playwright.visual.config.ts --project=mobile-844x390",
+    "test:visual:cadi:mobile": "playwright test -c playwright.visual.config.ts --project=mobile-667x375 --project=mobile-736x414 --project=mobile-844x390 --project=mobile-932x430",
     "test:visual:cadi:update": "playwright test -c playwright.visual.config.ts --update-snapshots"
   },
   "devDependencies": {
