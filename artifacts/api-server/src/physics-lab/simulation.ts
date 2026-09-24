@@ -1148,12 +1148,7 @@ export async function simulatePhysicsLabRound(
       }
       let deflectorPairContact = false;
       let physicalFretPairContact = false;
-      let innerGuardPairContact = false;
-      let pocketFloorPairContact = false;
       const stepContactRoles = new Set<string>();
-      let contactedFretHandle: number | null = null;
-      let fretManifoldNormal: Vec3 | null = null;
-      let fretSolverContactPoint: Vec3 | null = null;
       world.contactPairsWith(ballCollider, (otherCollider) => {
         world.contactPair(ballCollider, otherCollider, (manifold) => {
           if (manifold.numContacts() <= 0) return;
@@ -1162,35 +1157,9 @@ export async function simulatePhysicsLabRound(
           }
           if (fretColliderHandles.has(otherCollider.handle)) {
             physicalFretPairContact = true;
-            contactedFretHandle ??= otherCollider.handle;
-            const diagnosticManifold = manifold as unknown as {
-              normal?: () => Vec3;
-              solverContactPoint?: (index: number) => Vec3;
-            };
-            if (!fretManifoldNormal && diagnosticManifold.normal) {
-              fretManifoldNormal = vec3(diagnosticManifold.normal());
-            }
-            if (
-              !fretSolverContactPoint &&
-              diagnosticManifold.solverContactPoint
-            ) {
-              fretSolverContactPoint = vec3(
-                diagnosticManifold.solverContactPoint(0),
-              );
-            }
-          }
-          if (otherCollider.handle === innerGuardCollider.handle) {
-            innerGuardPairContact = true;
           }
           const contactRole = colliderRoles.get(otherCollider.handle);
           if (contactRole) stepContactRoles.add(contactRole);
-          if (
-            contactRole === "pocket-floor" ||
-            contactRole === "pocket-outer-lip" ||
-            contactRole === "pocket-catch-underlay"
-          ) {
-            pocketFloorPairContact = true;
-          }
         });
       });
       preFretTrackContactObserved ||=
