@@ -3805,9 +3805,23 @@ export function Part2SceneViewport({
             ),
           )
         : PART6_FULL_SPIN_RUNS.length;
+      const requestedSeedStartIndex = Number(
+        part6Params.get('part6SeedStartIndex') ?? 0,
+      );
+      const activePart6SeedStartIndex = Number.isFinite(
+        requestedSeedStartIndex,
+      )
+        ? Math.max(
+            0,
+            Math.min(
+              PART6_FULL_SPIN_RUNS.length - 1,
+              Math.floor(requestedSeedStartIndex),
+            ),
+          )
+        : 0;
       const activePart6Runs = PART6_FULL_SPIN_RUNS.slice(
-        0,
-        activePart6SeedCount,
+        activePart6SeedStartIndex,
+        activePart6SeedStartIndex + activePart6SeedCount,
       );
       const requestedMaxDurationSeconds = Number(
         part6Params.get('part6MaxDurationSeconds') ??
