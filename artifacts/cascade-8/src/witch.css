@@ -5721,312 +5721,1293 @@
 
 
 /* =========================================================
-   STAGE 37 — FIXED HORIZONTAL MOBILE FIT
-   Mobile never reflows into a portrait layout. The 860×400
-   horizontal scene is uniformly scaled into the viewport.
+   MOBILE V5 — FIXED LANDSCAPE GAME SCENE
+   The game is always laid out horizontally on phones.
+   Portrait hosts rotate the LANDSCAPE scene, never the desktop layout.
+   The scene exactly matches the dynamic visual viewport: no page scroll.
    ========================================================= */
-@media (max-width: 1200px) {
-  .app-shell.is-witch-page.witch-mobile-fit {
-    position: fixed !important;
-    inset: 0 !important;
-    width: 100vw !important;
-    height: 100dvh !important;
-    min-height: 100dvh !important;
+@media (max-width: 600px) and (orientation: portrait),
+       (max-height: 600px) and (orientation: landscape) and (max-width: 1200px) {
+  html:has(.witch-page),
+  body:has(.witch-page) {
+    width: 100%;
+    height: 100%;
+    margin: 0;
     overflow: hidden !important;
-    background:
-      radial-gradient(circle at 50% 50%, rgba(90,35,22,.10), transparent 52%),
-      #0a0706 !important;
+    overscroll-behavior: none;
+    touch-action: manipulation;
   }
 
-  .app-shell.is-witch-page.witch-mobile-fit .witch-page {
-    position: absolute !important;
-    top: 50% !important;
-    left: 50% !important;
-    display: grid !important;
-    grid-template-rows: 48px minmax(0, 1fr) 96px !important;
-    gap: 6px !important;
-    width: 860px !important;
-    height: 400px !important;
-    min-height: 400px !important;
-    max-width: none !important;
-    margin: 0 !important;
-    padding: 6px 8px !important;
+  .app-shell.is-witch-page {
+    position: fixed !important;
+    inset: 0 !important;
+    width: 100dvw !important;
+    height: 100dvh !important;
+    min-width: 0 !important;
+    min-height: 0 !important;
+    padding: 0 !important;
     overflow: hidden !important;
-    transform: translate(-50%, -50%) scale(var(--witch-mobile-scale, 1)) !important;
+  }
+
+  .witch-page {
+    position: fixed !important;
+    z-index: 20;
+    top: 50dvh !important;
+    left: 50dvw !important;
+    display: grid !important;
+    grid-template-rows: var(--witch-phone-header-h, 42px) minmax(0, 1fr) var(--witch-phone-controls-h, 60px);
+    gap: clamp(3px, 1.2cqh, 6px);
+    container-type: size;
+    max-width: none !important;
+    min-width: 0 !important;
+    min-height: 0 !important;
+    margin: 0 !important;
+    padding: clamp(3px, 1cqh, 6px) !important;
+    overflow: hidden !important;
     transform-origin: center center !important;
   }
 
-  .app-shell.is-witch-page.witch-mobile-fit .witch-landscape-gate {
+  .witch-rotate-hint {
     display: none !important;
   }
 
-  .app-shell.is-witch-page.witch-mobile-fit .witch-appbar {
-    position: relative !important;
-    z-index: 500 !important;
+  .witch-appbar,
+  .witch-stage-shell,
+  .witch-control-dock {
+    visibility: visible !important;
+    pointer-events: auto !important;
+  }
+
+  /* LANDSCAPE PHONE HEADER */
+  .witch-appbar {
     display: grid !important;
-    grid-template-columns: 42px 1fr auto !important;
-    gap: 8px !important;
-    width: 100% !important;
-    height: 48px !important;
-    min-height: 48px !important;
-    padding: 3px 6px !important;
-    border-radius: 12px !important;
-  }
-
-  .app-shell.is-witch-page.witch-mobile-fit .witch-back {
-    width: 38px !important;
-    height: 38px !important;
-    border-radius: 10px !important;
-  }
-
-  .app-shell.is-witch-page.witch-mobile-fit .witch-appbrand > div {
-    display: flex !important;
-    gap: 10px !important;
-  }
-
-  .app-shell.is-witch-page.witch-mobile-fit .witch-appbrand h1 {
-    font-size: 18px !important;
-  }
-
-  .app-shell.is-witch-page.witch-mobile-fit .witch-appbrand small {
-    display: none !important;
-  }
-
-  .app-shell.is-witch-page.witch-mobile-fit .witch-appstats {
-    display: grid !important;
-    grid-template-columns: minmax(150px, auto) 42px !important;
-    min-width: 220px !important;
-    min-height: 38px !important;
-  }
-
-  .app-shell.is-witch-page.witch-mobile-fit .witch-stat-balance {
-    display: grid !important;
-    padding-inline: 10px !important;
-  }
-
-  .app-shell.is-witch-page.witch-mobile-fit .witch-stat-balance span {
-    font-size: 8px !important;
-  }
-
-  .app-shell.is-witch-page.witch-mobile-fit .witch-stat-balance strong {
-    font-size: 13px !important;
-  }
-
-  .app-shell.is-witch-page.witch-mobile-fit .witch-menu-button {
-    display: grid !important;
-    width: 42px !important;
-    height: 38px !important;
-    border-radius: 0 10px 10px 0 !important;
-  }
-
-  .app-shell.is-witch-page.witch-mobile-fit .witch-game-menu {
-    position: absolute !important;
-    z-index: 9999 !important;
-    top: 46px !important;
-    right: 0 !important;
-    width: 250px !important;
-  }
-
-  .app-shell.is-witch-page.witch-mobile-fit .witch-stage-shell {
-    position: relative !important;
-    display: block !important;
-    width: 100% !important;
-    height: auto !important;
+    grid-template-columns: 34px minmax(118px, .72fr) minmax(0, 1.65fr);
+    grid-template-areas: "back brand stats";
+    gap: 7px;
+    align-items: center;
+    width: 100%;
+    min-width: 0;
     min-height: 0 !important;
-    max-height: none !important;
-    margin: 0 !important;
-    overflow: hidden !important;
-    border-radius: 14px !important;
+    padding: 4px 7px;
+    border-radius: 11px;
   }
 
-  .app-shell.is-witch-page.witch-mobile-fit .witch-stage-shell::before {
-    inset: 9px !important;
-    border-radius: 11px !important;
+  .witch-back {
+    grid-area: back;
+    width: 30px;
+    height: 30px;
+    font-size: 16px;
   }
 
-  .app-shell.is-witch-page.witch-mobile-fit.is-standard-theme .witch-table-surface {
-    position: absolute !important;
-    inset: 8px 176px 8px 8px !important;
+  .witch-appbrand {
+    grid-area: brand;
+    min-width: 0;
+  }
+
+  .witch-appbrand > div {
+    display: flex;
+    min-width: 0;
+    gap: 7px;
+    align-items: baseline;
+  }
+
+  .witch-appbrand h1 {
+    overflow: hidden;
+    margin: 0;
+    font-size: clamp(18px, 3.8cqw, 27px);
+    line-height: 1;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .witch-appbrand small {
+    overflow: hidden;
+    min-width: 0;
+    color: #b7c0bc;
+    font-size: clamp(4px, .75cqw, 6px);
+    letter-spacing: .12em;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .witch-appbrand small::before {
+    display: none;
+  }
+
+  .witch-appstats {
+    grid-area: stats;
+    display: grid;
+    grid-template-columns: 1.05fr .72fr .9fr auto;
+    width: 100%;
+    min-width: 0;
+    min-height: 30px;
+    border-radius: 9px;
+  }
+
+  .witch-stat {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 1px;
+    min-width: 0;
+    padding: 3px 5px;
+  }
+
+  .witch-stat span,
+  .witch-stat small {
+    overflow: hidden;
+    font-size: clamp(4px, .62cqw, 6px);
+    line-height: 1;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .witch-stat strong {
+    overflow: hidden;
+    font-size: clamp(6px, .9cqw, 9px);
+    line-height: 1;
+    text-align: left;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .witch-stat-balance strong {
+    font-size: clamp(8px, 1.15cqw, 11px);
+  }
+
+  .witch-stat-status small {
+    display: none;
+  }
+
+  .witch-connection {
+    min-width: 0;
+    padding: 0 6px;
+    font-size: clamp(4px, .58cqw, 5px);
+  }
+
+  .witch-connection::before {
+    flex: 0 0 auto;
+    width: 6px;
+    height: 6px;
+  }
+
+  /* STAGE: CARD LEFT/CENTER + PAYOUT HUD RIGHT */
+  .witch-stage-shell {
+    position: relative;
     display: grid !important;
-    place-items: center !important;
-    padding: 0 !important;
+    grid-template-columns: minmax(0, 1fr) clamp(116px, 19cqw, 176px);
+    grid-template-rows: clamp(13px, 4.6cqh, 18px) minmax(0, 1fr);
+    grid-template-areas:
+      "heading heading"
+      "table payout";
+    gap: clamp(3px, 1cqh, 6px);
+    width: 100%;
+    height: 100% !important;
+    min-width: 0;
+    min-height: 0 !important;
+    margin: 0 !important;
+    padding: clamp(4px, 1.2cqh, 7px);
+    overflow: hidden !important;
+    border-radius: 13px;
   }
 
-  .app-shell.is-witch-page.witch-mobile-fit.is-standard-theme .witch-ticket {
-    position: absolute !important;
-    top: 50% !important;
-    left: 50% !important;
-    width: min(98%, 760px) !important;
-    max-width: 760px !important;
+  .witch-stage-shell::before {
+    inset: 4% 7% 2% 2%;
+    opacity: .62;
+  }
+
+  .witch-stage-decor {
+    display: none !important;
+  }
+
+  .witch-table-heading {
+    grid-area: heading;
+    position: relative !important;
+    inset: auto !important;
+    z-index: 8;
+    display: flex;
+    min-width: 0;
+    min-height: 0;
+    padding: 0 2px;
+  }
+
+  .witch-table-heading > div {
+    min-width: 0;
+    gap: 5px;
+  }
+
+  .witch-table-eyebrow,
+  .witch-table-heading strong {
+    font-size: clamp(4px, .65cqw, 6px);
+    line-height: 1;
+  }
+
+  .witch-table-heading p {
+    overflow: hidden;
+    max-width: 42%;
+    color: #aeb6b2;
+    font-size: clamp(4px, .62cqw, 6px);
+    line-height: 1;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .witch-table-surface {
+    grid-area: table;
+    position: relative !important;
+    inset: auto !important;
+    display: grid;
+    width: 100%;
+    height: 100%;
+    min-width: 0;
+    min-height: 0;
+    place-items: center;
+    padding: 0;
+    overflow: hidden;
+  }
+
+  .witch-empty-table {
+    width: min(92%, 280px);
+    max-width: none;
+    gap: 5px;
+    padding: 12px 14px;
+    border-radius: 11px;
+  }
+
+  .witch-empty-seal {
+    width: 34px;
+    height: 34px;
+  }
+
+  .witch-empty-table strong {
+    font-size: 8px;
+  }
+
+  .witch-empty-table small {
+    font-size: 6px;
+  }
+
+  /* STANDARD 5 — premium desktop card language, compressed for phone height */
+  .witch-ticket,
+  .witch-ticket.is-advanced {
+    position: relative !important;
+    inset: auto !important;
     min-width: 0 !important;
-    max-height: calc(100% - 4px) !important;
+    max-width: 100% !important;
+    max-height: 100% !important;
+    margin: 0 auto !important;
+    transform: none !important;
+  }
+
+  .witch-ticket {
+    width: min(96%, clamp(330px, 62cqw, 610px)) !important;
+    padding: clamp(5px, 1.7cqh, 8px) clamp(6px, 1.2cqw, 10px);
+    border-radius: 10px;
+  }
+
+  .witch-ticket::before {
+    inset: 4px;
+    border-radius: 7px;
+  }
+
+  .witch-ticket-frame {
+    inset: 6px;
+  }
+
+  .witch-ticket-header {
+    grid-template-columns: .7fr 1.45fr .7fr;
+    gap: 4px;
+    min-height: clamp(32px, 11cqh, 46px);
+    padding: 0 3px 2px;
+  }
+
+  .witch-ticket-sidecopy {
+    display: block;
+    font-size: clamp(3px, .5cqw, 5px);
+  }
+
+  .witch-ticket-sidecopy span {
+    display: none;
+  }
+
+  .witch-ticket-sigil {
+    font-size: 10px;
+  }
+
+  .witch-ticket-brand {
+    font-size: clamp(20px, 4.6cqw, 34px);
+    line-height: .78;
+  }
+
+  .witch-ticket-lockup small {
+    margin-top: 2px;
+    font-size: clamp(2.5px, .44cqw, 4px);
+    letter-spacing: .18em;
+  }
+
+  .witch-ticket-price {
+    gap: 1px;
+  }
+
+  .witch-ticket-price small,
+  .witch-ticket-price span {
+    font-size: clamp(2.5px, .42cqw, 4px);
+  }
+
+  .witch-ticket-price strong {
+    min-width: 45px;
+    padding: 3px 4px 2px;
+    border-radius: 5px;
+    font-size: clamp(9px, 1.9cqw, 14px);
+  }
+
+  .witch-ticket-meta-row {
+    gap: 4px;
+    margin: 0 2px 3px;
+    padding: 3px 0;
+    font-size: clamp(3px, .48cqw, 4.5px);
+  }
+
+  .witch-board-wrap {
+    width: 100%;
+    margin: 0;
+    padding: clamp(3px, 1cqh, 5px);
+    border-radius: 7px;
+  }
+
+  .witch-board {
+    width: 100%;
+    gap: clamp(2px, .55cqw, 4px);
+  }
+
+  .witch-cell {
+    min-width: 0;
+    border-radius: 5px;
+  }
+
+  .witch-ticket-footer {
+    margin: 3px 2px 0;
+    font-size: clamp(2.5px, .42cqw, 4px);
+  }
+
+  .witch-ticket-footer strong {
+    font-size: clamp(4px, .65cqw, 6px);
+  }
+
+  .witch-cell.is-safe .witch-cell-content {
+    width: clamp(24px, 6.2cqh, 38px);
+    height: clamp(18px, 4.8cqh, 28px);
+  }
+
+  .witch-cell.is-bomb .witch-cell-content {
+    width: clamp(24px, 6.2cqh, 38px);
+    height: clamp(24px, 6.2cqh, 38px);
+  }
+
+  .witch-cell.is-safe .witch-cell-content::before {
+    inset: 3px 4px;
+    font-size: 4px;
+  }
+
+  .witch-cell-result-label {
+    bottom: 2px;
+    font-size: 3px;
+  }
+
+  /* ADVANCED 25 — mobile-specific compact landscape ticket.
+     Keep the old overall mobile composition; redesign only the ticket so the
+     board is large without creating a huge empty ivory card. */
+  .witch-ticket.is-advanced {
+    display: grid;
+    grid-template-columns: minmax(86px, .62fr) minmax(0, 1.55fr);
+    grid-template-areas:
+      "advanced-head advanced-board"
+      "advanced-meta advanced-board";
+    grid-template-rows: minmax(0, 1fr) auto;
+    column-gap: clamp(5px, .9cqw, 9px);
+    row-gap: 3px;
+    align-items: stretch;
+    width: min(96%, clamp(315px, 60cqw, 520px)) !important;
+    max-height: 100% !important;
+    padding: clamp(4px, 1.1cqh, 6px);
+    overflow: hidden;
+  }
+
+  .witch-ticket.is-advanced .witch-ticket-header {
+    grid-area: advanced-head;
+    display: grid;
+    grid-template-columns: 1fr;
+    grid-template-rows: auto auto;
+    gap: 5px;
+    align-content: center;
+    min-width: 0;
+    min-height: 0;
+    padding: 3px 4px 2px;
+    border-right: 1px solid rgba(112, 74, 28, .16);
+  }
+
+  .witch-ticket.is-advanced .witch-ticket-sidecopy,
+  .witch-ticket.is-advanced .witch-ticket-sigil {
+    display: none;
+  }
+
+  .witch-ticket.is-advanced .witch-ticket-lockup {
+    justify-items: start;
+    align-self: end;
+    text-align: left;
+  }
+
+  .witch-ticket.is-advanced .witch-ticket-brand {
+    font-size: clamp(17px, 3.1cqw, 24px);
+    line-height: .8;
+  }
+
+  .witch-ticket.is-advanced .witch-ticket-lockup small {
+    margin-top: 3px;
+    font-size: clamp(2.5px, .42cqw, 4px);
+  }
+
+  .witch-ticket.is-advanced .witch-ticket-price {
+    justify-items: start;
+    align-self: start;
+    gap: 1px;
+  }
+
+  .witch-ticket.is-advanced .witch-ticket-price small {
+    font-size: 3px;
+  }
+
+  .witch-ticket.is-advanced .witch-ticket-price strong {
+    min-width: 44px;
+    padding: 2px 4px;
+    font-size: clamp(8px, 1.3cqw, 11px);
+  }
+
+  .witch-ticket.is-advanced .witch-ticket-price span {
+    display: none;
+  }
+
+  .witch-ticket.is-advanced .witch-ticket-meta-row {
+    grid-area: advanced-meta;
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 2px;
+    align-content: end;
+    justify-items: start;
+    margin: 0;
+    padding: 3px 4px;
+    border-top: 1px solid rgba(112, 74, 28, .14);
+    font-size: clamp(3px, .48cqw, 4px);
+    line-height: 1.15;
+  }
+
+  .witch-ticket.is-advanced .witch-ticket-meta-row i {
+    display: none;
+  }
+
+  .witch-ticket.is-advanced .witch-board-wrap {
+    grid-area: advanced-board;
+    align-self: center;
+    justify-self: center;
+    width: min(100%, clamp(178px, 61cqh, 222px));
+    margin: 0;
+    padding: 4px;
+    border-radius: 7px;
+  }
+
+  .witch-ticket.is-advanced .witch-board {
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    gap: clamp(2px, .45cqw, 4px);
+  }
+
+  .witch-ticket.is-advanced .witch-cell {
+    aspect-ratio: 1;
+    min-width: 0;
+    border-radius: 4px;
+  }
+
+  .witch-ticket.is-advanced .witch-cell-content {
+    transform: scale(.58);
+  }
+
+  .witch-ticket.is-advanced .witch-cell-result-label {
+    right: 1px;
+    bottom: 1px;
+    left: 1px;
+    font-size: 2.7px;
+  }
+
+  .witch-ticket.is-advanced .witch-ticket-footer {
+    display: none;
+  }
+
+  /* PAYOUT HUD */
+  .witch-payout-panel {
+    grid-area: payout;
+    position: relative !important;
+    inset: auto !important;
+    z-index: 8;
+    display: grid;
+    grid-template-rows: auto auto 1fr auto;
+    align-content: stretch;
+    width: 100% !important;
+    height: 100%;
+    min-width: 0 !important;
+    min-height: 0 !important;
+    margin: 0 !important;
+    padding: clamp(5px, 1.5cqh, 8px);
+    overflow: hidden;
+    border-radius: 10px;
+    transform: none !important;
+  }
+
+  .witch-payout-panel::before,
+  .witch-payout-panel::after {
+    display: none;
+  }
+
+  .witch-payout-head {
+    display: grid;
+    gap: 1px;
+    padding: 0 0 clamp(3px, 1cqh, 5px);
+  }
+
+  .witch-payout-head span {
+    font-size: clamp(6px, .85cqw, 9px);
+    line-height: 1;
+  }
+
+  .witch-payout-head small {
+    font-size: clamp(3px, .44cqw, 4px);
+  }
+
+  .witch-payout-hero {
+    display: grid;
+    align-content: center;
+    justify-items: center;
+    min-width: 0;
+    padding: clamp(3px, 1cqh, 6px) 0;
+  }
+
+  .witch-multiplier {
+    font-size: clamp(22px, 7.8cqh, 34px);
+    line-height: .82;
+  }
+
+  .witch-payout-amount {
+    margin-top: 4px;
+    font-size: clamp(10px, 3.4cqh, 15px);
+    line-height: 1;
+  }
+
+  .witch-payout-net {
+    margin-top: 2px;
+    font-size: clamp(3px, .55cqw, 5px);
+  }
+
+  .witch-payout-net b {
+    margin-left: 2px;
+    font-size: clamp(5px, .75cqw, 7px);
+  }
+
+  .witch-payout-lines {
+    align-self: end;
+    padding: 3px 0;
+    font-size: clamp(3px, .5cqw, 5px);
+  }
+
+  .witch-payout-note {
+    display: none;
+  }
+
+  .witch-cashout-button,
+  .witch-secondary-button {
+    align-self: end;
+    min-height: clamp(32px, 10cqh, 42px);
+    margin: 3px 0 0;
+    padding: 0 8px;
+    border-radius: 7px;
+    font-size: clamp(6px, .9cqw, 9px);
+  }
+
+  .witch-table-feedback {
+    display: none;
+  }
+
+  /* CONTROL DOCK — one horizontal phone bar, no vertical stacking */
+  .witch-control-dock {
+    position: relative !important;
+    inset: auto !important;
+    z-index: 20;
+    display: grid !important;
+    grid-template-columns:
+      minmax(145px, 1.28fr)
+      minmax(110px, .95fr)
+      minmax(82px, .66fr)
+      minmax(115px, .9fr);
+    grid-template-areas: "modes stake bomb buy";
+    gap: clamp(3px, .65cqw, 6px);
+    align-items: stretch;
+    width: 100% !important;
+    height: 100%;
+    min-width: 0;
+    min-height: 0 !important;
+    margin: 0 !important;
+    padding: clamp(4px, 1.2cqh, 6px);
+    border-radius: 11px;
+    transform: none !important;
+  }
+
+  .witch-mode-grid {
+    grid-area: modes;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 4px;
+    min-width: 0;
+  }
+
+  .witch-mode-card {
+    min-width: 0;
+    min-height: 0;
+    padding: 4px 5px;
+    border-radius: 7px;
+  }
+
+  .witch-mode-card span {
+    min-width: 0;
+  }
+
+  .witch-mode-card strong {
+    font-size: clamp(6px, .95cqw, 9px);
+  }
+
+  .witch-mode-card small {
+    overflow: hidden;
+    font-size: clamp(3px, .52cqw, 5px);
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .witch-radio {
+    width: 10px;
+    height: 10px;
+  }
+
+  .witch-control-separator,
+  .witch-round-summary,
+  .witch-dock-feedback {
+    display: none;
+  }
+
+  .witch-stake-group {
+    grid-area: stake;
+    min-width: 0;
+    align-self: stretch;
+  }
+
+  .witch-alarm-field {
+    grid-area: bomb;
+    min-width: 0;
+    align-self: stretch;
+  }
+
+  .witch-control-group {
+    min-width: 0;
+    gap: 2px;
+  }
+
+  .witch-control-group > label,
+  .witch-alarm-field > span {
+    font-size: clamp(4px, .6cqw, 6px);
+  }
+
+  .witch-stake-stepper,
+  .witch-alarm-field select {
+    width: 100%;
+    min-width: 0;
+    min-height: clamp(30px, 9cqh, 38px);
+  }
+
+  .witch-stake-stepper {
+    grid-template-columns: 28px minmax(0, 1fr) 28px;
+  }
+
+  .witch-stake-stepper > button {
+    font-size: 12px;
+  }
+
+  .witch-input-wrap {
+    min-width: 0;
+  }
+
+  .witch-input-wrap i {
+    left: 6px;
+    font-size: 7px;
+  }
+
+  .witch-input-wrap input {
+    width: 100%;
+    min-width: 0;
+    padding: 0 3px 0 14px;
+    font-size: clamp(7px, 1cqw, 10px);
+  }
+
+  .witch-alarm-field select {
+    padding-left: 7px;
+    font-size: clamp(7px, .9cqw, 9px);
+  }
+
+  .witch-stake-presets {
+    display: none;
+  }
+
+  .witch-primary-button {
+    grid-area: buy;
+    width: 100%;
+    min-width: 0;
+    min-height: 0;
+    padding: 0 8px;
+    border-radius: 8px;
+    font-size: clamp(7px, 1cqw, 10px);
+  }
+
+  .witch-mobile-actions {
+    display: none !important;
+  }
+}
+
+/* Portrait PHONE HOST: rotate the already-landscape scene exactly into viewport. */
+@media (max-width: 600px) and (orientation: portrait) {
+  .witch-page {
+    --witch-phone-header-h: clamp(38px, 12dvw, 50px);
+    --witch-phone-controls-h: clamp(56px, 18dvw, 72px);
+    width: 100dvh !important;
+    height: 100dvw !important;
+    transform: translate(-50%, -50%) rotate(90deg) !important;
+  }
+}
+
+/* Landscape PHONE HOST: same scene, no rotation. */
+@media (max-height: 600px) and (orientation: landscape) and (max-width: 1200px) {
+  .witch-page {
+    --witch-phone-header-h: clamp(38px, 12dvh, 50px);
+    --witch-phone-controls-h: clamp(56px, 18dvh, 72px);
+    width: 100dvw !important;
+    height: 100dvh !important;
     transform: translate(-50%, -50%) !important;
   }
+}
 
-  .app-shell.is-witch-page.witch-mobile-fit .witch-payout-panel {
-    display: block !important;
-    top: 50% !important;
-    right: 8px !important;
-    width: 158px !important;
-    min-height: 0 !important;
-    padding: 10px !important;
-    border-radius: 13px !important;
-    transform: translateY(-50%) !important;
-  }
-
-  .app-shell.is-witch-page.witch-mobile-fit .witch-payout-head {
-    padding-bottom: 8px !important;
-  }
-
-  .app-shell.is-witch-page.witch-mobile-fit .witch-payout-head span {
-    font-size: 10px !important;
-  }
-
-  .app-shell.is-witch-page.witch-mobile-fit .witch-payout-hero {
-    padding: 11px 0 9px !important;
-  }
-
-  .app-shell.is-witch-page.witch-mobile-fit .witch-payout-amount {
-    max-width: 100% !important;
-    font-size: 26px !important;
-  }
-
-  .app-shell.is-witch-page.witch-mobile-fit .witch-multiplier {
-    margin-top: 7px !important;
-    font-size: 17px !important;
-  }
-
-  .app-shell.is-witch-page.witch-mobile-fit .witch-payout-net {
-    margin-top: 8px !important;
-    font-size: 9px !important;
-  }
-
-  .app-shell.is-witch-page.witch-mobile-fit .witch-payout-net b {
-    font-size: 10px !important;
-  }
-
-  .app-shell.is-witch-page.witch-mobile-fit .witch-payout-lines {
-    padding: 7px 0 !important;
-    font-size: 8px !important;
-  }
-
-  .app-shell.is-witch-page.witch-mobile-fit .witch-payout-lines b {
-    font-size: 9px !important;
-  }
-
-  .app-shell.is-witch-page.witch-mobile-fit .witch-cashout-button {
-    min-height: 42px !important;
-    margin-top: 7px !important;
-    font-size: 11px !important;
-  }
-
-  .app-shell.is-witch-page.witch-mobile-fit .witch-secondary-button {
-    min-height: 34px !important;
-    font-size: 9px !important;
-  }
-
-  .app-shell.is-witch-page.witch-mobile-fit .witch-control-dock {
-    position: relative !important;
-    display: grid !important;
-    grid-template-columns: 210px minmax(255px, 1fr) 108px 162px !important;
-    gap: 7px !important;
-    width: 100% !important;
-    height: 96px !important;
-    min-height: 96px !important;
-    margin: 0 !important;
-    padding: 6px 8px !important;
-    overflow: hidden !important;
-    border-radius: 13px !important;
-  }
-
-  .app-shell.is-witch-page.witch-mobile-fit .witch-mode-group > label,
-  .app-shell.is-witch-page.witch-mobile-fit .witch-control-group > label,
-  .app-shell.is-witch-page.witch-mobile-fit .witch-alarm-field > span {
+/* Extreme small phones: preserve layout, trim only decorative/support text. */
+@media (max-width: 340px) and (orientation: portrait),
+       (max-height: 340px) and (orientation: landscape) and (max-width: 760px) {
+  .witch-appbrand small,
+  .witch-stat span,
+  .witch-stat small,
+  .witch-table-heading p,
+  .witch-ticket-sidecopy,
+  .witch-ticket-footer,
+  .witch-payout-head small,
+  .witch-payout-lines,
+  .witch-mode-card small {
     display: none !important;
   }
 
-  .app-shell.is-witch-page.witch-mobile-fit .witch-mode-grid {
-    grid-template-columns: 1fr 1fr !important;
-    gap: 5px !important;
+  .witch-appbar {
+    grid-template-columns: 32px minmax(105px, .68fr) minmax(0, 1.7fr);
   }
 
-  .app-shell.is-witch-page.witch-mobile-fit .witch-mode-card {
-    min-height: 50px !important;
-    padding: 6px 8px !important;
-    grid-template-columns: 14px 1fr !important;
-    gap: 6px !important;
-    border-radius: 9px !important;
+  .witch-stage-shell {
+    grid-template-columns: minmax(0, 1fr) 112px;
   }
 
-  .app-shell.is-witch-page.witch-mobile-fit .witch-radio {
-    width: 13px !important;
-    height: 13px !important;
+  .witch-ticket.is-advanced .witch-board-wrap {
+    width: clamp(102px, 36cqh, 122px);
   }
 
-  .app-shell.is-witch-page.witch-mobile-fit .witch-mode-card strong {
-    font-size: 11px !important;
+  .witch-control-dock {
+    grid-template-columns:
+      minmax(130px, 1.22fr)
+      minmax(100px, .92fr)
+      minmax(76px, .64fr)
+      minmax(105px, .86fr);
+  }
+}
+
+
+/* =========================================================
+   MOBILE ADVANCED 25 — APPROVED MOCKUP MATCH
+   30/70 horizontal premium ticket: compact info rail left,
+   dominant 5x5 scratch board right, large rectangular cells.
+   ========================================================= */
+@media (max-width: 600px) and (orientation: portrait),
+       (max-height: 600px) and (orientation: landscape) and (max-width: 1200px) {
+  .witch-page.is-advanced-round {
+    --witch-phone-header-h: 31px;
+    --witch-phone-controls-h: 43px;
   }
 
-  .app-shell.is-witch-page.witch-mobile-fit .witch-mode-card small {
-    margin-top: 3px !important;
-    font-size: 8px !important;
+  .witch-page.is-advanced-round .witch-appbar {
+    grid-template-columns: 27px minmax(112px, .68fr) minmax(0, 1.75fr);
+    gap: 5px;
+    padding: 2px 5px;
   }
 
-  .app-shell.is-witch-page.witch-mobile-fit .witch-stake-group {
-    gap: 4px !important;
+  .witch-page.is-advanced-round .witch-back {
+    width: 25px;
+    height: 25px;
+    font-size: 13px;
   }
 
-  .app-shell.is-witch-page.witch-mobile-fit .witch-stake-stepper {
-    grid-template-columns: 42px minmax(0,1fr) 42px !important;
-    min-height: 42px !important;
-    border-radius: 9px !important;
+  .witch-page.is-advanced-round .witch-appbrand h1 {
+    font-size: clamp(16px, 2.85cqw, 21px);
   }
 
-  .app-shell.is-witch-page.witch-mobile-fit .witch-stake-stepper > button {
-    min-width: 42px !important;
-    min-height: 42px !important;
-    font-size: 22px !important;
+  .witch-page.is-advanced-round .witch-appbrand small,
+  .witch-page.is-advanced-round .witch-stat span,
+  .witch-page.is-advanced-round .witch-stat small {
+    display: none;
   }
 
-  .app-shell.is-witch-page.witch-mobile-fit .witch-input-wrap input {
-    height: 42px !important;
+  .witch-page.is-advanced-round .witch-appstats {
+    min-height: 23px;
+  }
+
+  .witch-page.is-advanced-round .witch-stat {
+    padding: 2px 4px;
+  }
+
+  .witch-page.is-advanced-round .witch-stage-shell {
+    grid-template-columns: minmax(0, 1fr) clamp(98px, 15.5cqw, 138px);
+    grid-template-rows: 11px minmax(0, 1fr);
+    gap: 3px;
+    padding: 4px;
+  }
+
+  .witch-page.is-advanced-round .witch-table-heading p,
+  .witch-page.is-advanced-round .witch-payout-head small,
+  .witch-page.is-advanced-round .witch-payout-lines {
+    display: none;
+  }
+
+  .witch-page.is-advanced-round .witch-table-surface {
+    padding: 0;
+    overflow: hidden;
+  }
+
+  .witch-page.is-advanced-round .witch-payout-panel {
+    padding: 4px;
+  }
+
+  .witch-page.is-advanced-round .witch-payout-hero {
+    padding-block: 1px;
+  }
+
+  .witch-page.is-advanced-round .witch-cashout-button,
+  .witch-page.is-advanced-round .witch-secondary-button {
+    min-height: clamp(29px, 8.5cqh, 38px);
+  }
+
+  .witch-page.is-advanced-round .witch-control-dock {
+    grid-template-columns:
+      minmax(132px, 1.22fr)
+      minmax(96px, .9fr)
+      minmax(72px, .62fr)
+      minmax(104px, .84fr);
+    gap: 3px;
+    padding: 3px 4px;
+  }
+
+  .witch-page.is-advanced-round .witch-mode-card {
+    padding: 2px 4px;
+  }
+
+  .witch-page.is-advanced-round .witch-mode-card small,
+  .witch-page.is-advanced-round .witch-control-group > label,
+  .witch-page.is-advanced-round .witch-alarm-field > span {
+    display: none;
+  }
+
+  .witch-page.is-advanced-round .witch-stake-stepper,
+  .witch-page.is-advanced-round .witch-alarm-field select {
+    min-height: 29px;
+  }
+
+  .witch-page.is-advanced-round .witch-primary-button {
+    min-height: 0;
+  }
+
+  .witch-ticket.is-advanced {
+    position: relative !important;
+    display: grid;
+    grid-template-columns: minmax(150px, 30%) minmax(0, 70%);
+    grid-template-rows: auto auto minmax(0, 1fr);
+    grid-template-areas:
+      "header board"
+      "meta board"
+      "footer board";
+    column-gap: clamp(7px, 1.1cqw, 11px);
+    row-gap: 2px;
+    width: min(99%, 720px) !important;
+    height: calc(100% - 2px) !important;
+    min-width: 0 !important;
+    max-width: 100% !important;
+    max-height: 100% !important;
+    margin: 0 auto !important;
+    padding: clamp(6px, 1.3cqh, 9px) clamp(7px, 1.05cqw, 10px);
+    overflow: hidden;
+    border-radius: 12px;
+    background:
+      radial-gradient(circle at 13% 30%, rgba(170, 123, 43, .14), transparent 24%),
+      radial-gradient(circle at 23% 72%, rgba(126, 81, 31, .08), transparent 27%),
+      linear-gradient(103deg, #f8e9c3 0%, #f0daaa 44%, #f7e6bd 100%);
+    box-shadow:
+      0 10px 24px rgba(0, 0, 0, .42),
+      inset 0 0 0 1px rgba(112, 74, 27, .34),
+      inset 0 0 0 5px rgba(255, 250, 232, .40);
+  }
+
+  .witch-ticket.is-advanced::before {
+    inset: 5px;
+    z-index: 0;
+    border: 1px solid rgba(129, 84, 26, .42);
+    border-radius: 9px;
+    box-shadow:
+      inset 0 0 0 1px rgba(255,255,255,.32),
+      inset 0 0 26px rgba(98,62,22,.05);
+  }
+
+  .witch-ticket.is-advanced::after {
+    content: "☾";
+    position: absolute;
+    z-index: 0;
+    left: 4.5%;
+    top: 27%;
+    color: rgba(107, 69, 22, .11);
+    font-family: Georgia, "Times New Roman", serif;
+    font-size: clamp(56px, 10cqw, 86px);
+    line-height: 1;
+    pointer-events: none;
+  }
+
+  .witch-ticket.is-advanced > * {
+    position: relative;
+    z-index: 1;
+  }
+
+  .witch-ticket.is-advanced .witch-ticket-frame {
+    inset: 8px;
+    border-color: rgba(131, 86, 28, .22);
+    opacity: .82;
+  }
+
+  .witch-ticket.is-advanced .witch-ticket-header {
+    grid-area: header;
+    display: grid;
+    grid-template-columns: 1fr;
+    align-content: start;
+    justify-items: start;
+    min-width: 0;
+    min-height: 0;
+    padding: 4px 8px 6px;
+    border-bottom: 1px solid rgba(103, 68, 25, .20);
+  }
+
+  .witch-ticket.is-advanced .witch-ticket-sidecopy,
+  .witch-ticket.is-advanced .witch-ticket-sigil {
+    display: none;
+  }
+
+  .witch-ticket.is-advanced .witch-ticket-lockup {
+    display: grid;
+    justify-items: start;
+    text-align: left;
+  }
+
+  .witch-ticket.is-advanced .witch-ticket-lockup::before {
+    content: "✦  ☾  ✦";
+    margin-bottom: 4px;
+    color: rgba(120, 78, 24, .72);
+    font-size: clamp(6px, .9cqw, 9px);
+    letter-spacing: .28em;
+  }
+
+  .witch-ticket.is-advanced .witch-ticket-brand {
+    font-size: clamp(24px, 4.25cqw, 35px);
+    line-height: .74;
+    letter-spacing: -.045em;
+    text-shadow: 0 1px 0 rgba(255,255,255,.45);
+  }
+
+  .witch-ticket.is-advanced .witch-ticket-lockup small {
+    margin-top: 4px;
+    color: rgba(91, 60, 26, .74);
+    font-size: clamp(3px, .45cqw, 4.5px);
+    letter-spacing: .22em;
+  }
+
+  .witch-ticket.is-advanced .witch-ticket-price {
+    display: grid;
+    grid-template-columns: auto auto;
+    gap: 6px;
+    align-items: center;
+    justify-items: start;
+    width: 100%;
+    margin-top: 7px;
+  }
+
+  .witch-ticket.is-advanced .witch-ticket-price small {
+    display: inline;
+    color: rgba(82, 55, 28, .76);
+    font-size: clamp(3px, .45cqw, 4.5px);
+  }
+
+  .witch-ticket.is-advanced .witch-ticket-price strong {
+    min-width: 52px;
+    padding: 4px 8px 3px;
+    border: 1px solid rgba(120, 79, 28, .38);
+    border-radius: 6px;
+    background: rgba(255, 247, 220, .48);
+    box-shadow:
+      inset 0 1px 0 rgba(255,255,255,.68),
+      0 2px 5px rgba(88,58,24,.08);
+    font-size: clamp(10px, 1.55cqw, 13px);
+  }
+
+  .witch-ticket.is-advanced .witch-ticket-price span {
+    display: none;
+  }
+
+  .witch-ticket.is-advanced .witch-ticket-meta-row {
+    grid-area: meta;
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 5px;
+    align-content: start;
+    min-width: 0;
+    margin: 0;
+    padding: 7px 8px 4px;
+    border: 0;
+    color: #4e351d;
+    font-size: clamp(4px, .58cqw, 5px);
+    text-align: left;
+  }
+
+  .witch-ticket.is-advanced .witch-ticket-meta-row > i {
+    display: none;
+  }
+
+  .witch-ticket.is-advanced .witch-ticket-meta-row > span {
+    width: fit-content;
+    padding: 3px 7px;
+    border: 1px solid rgba(132, 91, 34, .24);
+    border-radius: 5px;
+    background: rgba(255,255,255,.12);
+  }
+
+  .witch-ticket.is-advanced .witch-ticket-meta-row > span:last-child {
+    display: grid;
+    gap: 2px;
+  }
+
+  .witch-ticket.is-advanced .witch-ticket-meta-row b {
+    color: #2e2015;
+  }
+
+  .witch-ticket.is-advanced .witch-ticket-footer {
+    grid-area: footer;
+    display: grid;
+    align-content: end;
+    gap: 3px;
+    min-width: 0;
+    margin: 0;
+    padding: 6px 8px 4px;
+    color: rgba(74, 50, 27, .70);
+    font-size: clamp(3px, .45cqw, 4px);
+    text-align: left;
+  }
+
+  .witch-ticket.is-advanced .witch-ticket-footer strong {
+    justify-self: start;
+    color: #6d4920;
+    font-size: clamp(5px, .72cqw, 7px);
+    letter-spacing: .18em;
+  }
+
+  .witch-ticket.is-advanced .witch-ticket-footer span:last-child {
+    overflow: hidden;
+    max-width: 100%;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .witch-ticket.is-advanced .witch-board-wrap {
+    grid-area: board;
+    align-self: stretch;
+    justify-self: stretch;
+    width: 100%;
+    height: 100%;
+    min-width: 0;
+    min-height: 0;
+    margin: 0;
+    padding: clamp(5px, 1.05cqh, 7px);
+    border: 1px solid rgba(118, 77, 25, .30);
+    border-radius: 10px;
+    background:
+      linear-gradient(145deg, rgba(255,255,255,.40), rgba(130,84,25,.09)),
+      #e8cf96;
+    box-shadow:
+      inset 0 0 0 2px rgba(255,255,255,.24),
+      inset 0 8px 18px rgba(255,255,255,.14),
+      0 5px 12px rgba(67,41,15,.14);
+  }
+
+  .witch-ticket.is-advanced .witch-board {
+    width: 100%;
+    height: 100%;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    grid-template-rows: repeat(5, minmax(0, 1fr));
+    gap: clamp(3px, .72cqh, 5px);
+  }
+
+  .witch-ticket.is-advanced .witch-cell {
+    width: 100%;
+    height: 100%;
+    min-width: 0;
+    min-height: 0;
+    aspect-ratio: auto;
+    border: 1px solid rgba(101, 65, 22, .46);
+    border-radius: clamp(6px, 1.15cqh, 9px);
+    box-shadow:
+      0 2px 5px rgba(62, 38, 14, .24),
+      inset 0 0 0 1px rgba(255,255,255,.28);
+  }
+
+  .witch-ticket.is-advanced .witch-cell::before {
+    border-radius: inherit;
+  }
+
+  .witch-ticket.is-advanced .witch-cell-content {
+    transform: scale(.76);
+  }
+
+  .witch-ticket.is-advanced .witch-cell-result-label {
+    right: 2px;
+    bottom: 2px;
+    left: 2px;
+    font-size: clamp(3px, .48cqh, 3.6px);
+  }
+}
+
+/* Very short phone heights: remove ornament before shrinking the grid. */
+@media (max-width: 340px) and (orientation: portrait),
+       (max-height: 340px) and (orientation: landscape) and (max-width: 760px) {
+  .witch-page.is-advanced-round {
+    --witch-phone-header-h: 28px;
+    --witch-phone-controls-h: 39px;
+  }
+
+  .witch-page.is-advanced-round .witch-stage-shell {
+    grid-template-columns: minmax(0, 1fr) 94px;
+  }
+
+  .witch-ticket.is-advanced {
+    grid-template-columns: minmax(126px, 28%) minmax(0, 72%);
+    column-gap: 5px;
+    padding: 4px 5px;
+  }
+
+  .witch-ticket.is-advanced::after,
+  .witch-ticket.is-advanced .witch-ticket-lockup::before,
+  .witch-ticket.is-advanced .witch-ticket-lockup small,
+  .witch-ticket.is-advanced .witch-ticket-price small,
+  .witch-ticket.is-advanced .witch-ticket-footer > span:first-child {
+    display: none;
+  }
+
+  .witch-ticket.is-advanced .witch-ticket-brand {
+    font-size: 20px;
+  }
+
+  .witch-ticket.is-advanced .witch-ticket-header,
+  .witch-ticket.is-advanced .witch-ticket-meta-row,
+  .witch-ticket.is-advanced .witch-ticket-footer {
+    padding-inline: 4px;
+  }
+
+  .witch-ticket.is-advanced .witch-board-wrap {
+    padding: 4px;
+  }
+
+  .witch-ticket.is-advanced .witch-board {
+    gap: 3px;
+  }
+}
+
+
+
+/* STAGE 38 — current markup compatibility + desktop spacing */
+@media (min-width: 821px) {
+  .witch-stage-shell {
+    height: clamp(420px, calc(100dvh - 258px), 510px) !important;
+    min-height: 420px !important;
+    max-height: 510px !important;
+  }
+
+  .witch-control-dock {
+    min-height: 112px !important;
+    padding-block: 13px !important;
+  }
+
+  .witch-mode-group,
+  .witch-stake-group,
+  .witch-alarm-field {
+    padding: 0 2px !important;
+  }
+}
+
+@media (max-width: 600px) and (orientation: portrait),
+       (max-height: 600px) and (orientation: landscape) and (max-width: 1200px) {
+  .witch-appstats {
+    grid-template-columns: minmax(150px, 1fr) auto !important;
+  }
+
+  .witch-stat-runtime {
+    display: none !important;
+  }
+
+  .witch-menu-button {
+    display: grid !important;
+    width: 34px !important;
+    min-width: 34px !important;
+    height: 30px !important;
+    min-height: 30px !important;
+    place-items: center !important;
+    border: 1px solid rgba(245,195,68,.28) !important;
+    border-radius: 8px !important;
+    color: #f5c344 !important;
+    background: rgba(30,15,11,.82) !important;
     font-size: 15px !important;
   }
 
-  .app-shell.is-witch-page.witch-mobile-fit .witch-stake-presets {
-    grid-template-columns: repeat(6,1fr) !important;
-    gap: 3px !important;
+  .witch-game-menu {
+    position: fixed !important;
+    z-index: 9999 !important;
+    top: 6px !important;
+    right: 6px !important;
+    width: min(230px, 48dvh) !important;
+    max-height: calc(100dvh - 12px) !important;
+    overflow-y: auto !important;
   }
 
-  .app-shell.is-witch-page.witch-mobile-fit .witch-stake-presets button {
-    min-height: 27px !important;
-    padding: 0 3px !important;
-    font-size: 8px !important;
-    border-radius: 7px !important;
-  }
-
-  .app-shell.is-witch-page.witch-mobile-fit .witch-alarm-field {
-    display: grid !important;
-    gap: 0 !important;
-    align-content: end !important;
-  }
-
-  .app-shell.is-witch-page.witch-mobile-fit .witch-alarm-field select {
-    min-height: 42px !important;
-    padding: 0 24px 0 9px !important;
-    border-radius: 9px !important;
-    font-size: 10px !important;
-  }
-
-  .app-shell.is-witch-page.witch-mobile-fit .witch-primary-button {
-    min-height: 44px !important;
-    margin-top: 0 !important;
-    padding: 0 10px !important;
-    border-radius: 9px !important;
-    font-size: 11px !important;
-  }
-
-  .app-shell.is-witch-page.witch-mobile-fit .witch-mobile-actions {
+  .witch-mode-group > label,
+  .witch-alarm-field > span {
     display: none !important;
+  }
+
+  .witch-payout-amount {
+    max-width: 100% !important;
+    overflow: hidden !important;
+    white-space: nowrap !important;
+    text-overflow: clip !important;
   }
 }
