@@ -80,6 +80,8 @@ const PART6_DETERMINISTIC_SEEDS = [
   61006, 61007, 61008, 61009, 61010,
   61011, 61012, 61013, 61014, 61015,
   61016, 61017, 61018, 61019, 61020,
+  61021, 61022, 61023, 61024, 61025,
+  61026, 61027, 61028, 61029, 61030,
 ] as const;
 
 function part6DeterministicUnit(seed: number, salt: number) {
