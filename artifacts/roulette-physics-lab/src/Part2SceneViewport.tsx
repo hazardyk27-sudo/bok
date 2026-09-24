@@ -193,11 +193,11 @@ const POCKET_FRET_TANGENTIAL_HALF_EXTENT = 0.03;
 const POCKET_FRET_RADIAL_HALF_EXTENT =
   (POCKET_FRET_OUTER_EDGE_RADIUS - POCKET_FRET_INNER_EDGE_RADIUS) / 2;
 const POCKET_FRET_VERTICAL_HALF_EXTENT = 0.11;
-// Keep the fret's lower face just above the continuous floor. Letting the
-// separator extend through the floor creates a moving edge that can inject a
-// downward impulse when a ball approaches from the side.
+const POCKET_FRET_COLLIDER_VERTICAL_HALF_EXTENT =
+  POCKET_FRET_VERTICAL_HALF_EXTENT + BALL_RADIUS;
 const POCKET_FRET_Y =
   POCKET_FLOOR_Y + POCKET_FRET_VERTICAL_HALF_EXTENT + 0.022;
+const POCKET_FRET_COLLIDER_Y = POCKET_FRET_Y - BALL_RADIUS;
 const EUROPEAN_SEQUENCE = ROULETTE_EUROPEAN_SEQUENCE;
 
 type InspectionView = 'top' | 'angled' | 'side';
@@ -1418,10 +1418,12 @@ function addKinematicPocketSystem(
     const angle = (index + 0.5) * POCKET_STEP_RADIANS;
     const collider = RAPIER.ColliderDesc.cuboid(
       POCKET_FRET_TANGENTIAL_HALF_EXTENT,
-      POCKET_FRET_VERTICAL_HALF_EXTENT,
+      POCKET_FRET_COLLIDER_VERTICAL_HALF_EXTENT,
       POCKET_FRET_RADIAL_HALF_EXTENT,
     )
-      .setTranslation(...radialPosition(POCKET_FRET_RADIUS, angle, POCKET_FRET_Y))
+      .setTranslation(
+        ...radialPosition(POCKET_FRET_RADIUS, angle, POCKET_FRET_COLLIDER_Y),
+      )
       .setRotation({ x: 0, y: Math.sin(angle / 2), z: 0, w: Math.cos(angle / 2) })
       .setFriction(0.42)
       .setRestitution(0.02)
