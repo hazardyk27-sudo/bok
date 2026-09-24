@@ -941,6 +941,9 @@ export async function simulatePhysicsLabRound(
     seed === "61004" || seed === "61005" || seed === "61006";
   const preFretCheckpoints = new Set<string>();
   let preFretTrackContactObserved = false;
+  let preInwardTrackAngle: number | null = null;
+  let preInwardTrackAngleStart: number | null = null;
+  let preInwardCompletedLaps = 0;
   const logPreFretCheckpoint = (
     checkpoint:
       | "INWARD_DESCENT"
@@ -1014,6 +1017,74 @@ export async function simulatePhysicsLabRound(
           contactRoles.has("pocket-catch-underlay"),
         fretContact: contactRoles.has("pocket-fret"),
         pocketIndex,
+      }),
+    );
+  };
+
+  const preInwardCheckpoints = new Set<string>();
+  const logPreInwardCheckpoint = (
+    checkpoint: string,
+    step: number,
+    translation: Vec3,
+    velocity: Vec3,
+    ballSpeed: number,
+    radius: number,
+    rotorRotation: Quaternion,
+    contactRoles: Set<string>,
+    trackContact: boolean,
+  ) => {
+    if (!preFretTraceSeed || preInwardCheckpoints.has(checkpoint)) return;
+    preInwardCheckpoints.add(checkpoint);
+    const radialVelocity =
+      radius > 0
+        ? (translation.x * velocity.x + translation.z * velocity.z) / radius
+        : 0;
+    const bodyRotorAngle = normalizedAngle(
+      2 * Math.atan2(rotorRotation.y, rotorRotation.w),
+    );
+    const ballAngularVelocity = ballBody.angvel();
+    console.info(
+      "ROULETTE_PRE_INWARD_CHECKPOINT",
+      JSON.stringify({
+        source: "server",
+        seed,
+        checkpoint,
+        simulationTimeSeconds: Number(
+          ((step + 1) * PHYSICS_LAB_FIXED_TIMESTEP).toFixed(6),
+        ),
+        step,
+        rotorAngle: Number(bodyRotorAngle.toFixed(9)),
+        worldAzimuth: Number(
+          normalizedAngle(Math.atan2(translation.x, translation.z)).toFixed(9),
+        ),
+        position: {
+          x: Number(translation.x.toFixed(6)),
+          y: Number(translation.y.toFixed(6)),
+          z: Number(translation.z.toFixed(6)),
+        },
+        velocity: {
+          x: Number(velocity.x.toFixed(6)),
+          y: Number(velocity.y.toFixed(6)),
+          z: Number(velocity.z.toFixed(6)),
+        },
+        speed: Number(ballSpeed.toFixed(6)),
+        radius: Number(radius.toFixed(6)),
+        radialVelocity: Number(radialVelocity.toFixed(6)),
+        verticalVelocity: Number(velocity.y.toFixed(6)),
+        angularVelocity: {
+          x: Number(ballAngularVelocity.x.toFixed(6)),
+          y: Number(ballAngularVelocity.y.toFixed(6)),
+          z: Number(ballAngularVelocity.z.toFixed(6)),
+        },
+        angularSpeed: Number(
+          Math.hypot(
+            ballAngularVelocity.x,
+            ballAngularVelocity.y,
+            ballAngularVelocity.z,
+          ).toFixed(6),
+        ),
+        contactRoles: [...contactRoles].sort(),
+        trackContact,
       }),
     );
   };
@@ -1162,6 +1233,82 @@ export async function simulatePhysicsLabRound(
           if (contactRole) stepContactRoles.add(contactRole);
         });
       });
+
+      const preInwardTrackContact = stepContactRoles.has("dark-race");
+      if (step === 0) {
+        logPreInwardCheckpoint(
+          "LAUNCH_STEP_0",
+          step,
+          vec3(translation),
+          vec3(velocity),
+          ballSpeed,
+          radius,
+          quaternion(rotorRotation),
+          stepContactRoles,
+          preInwardTrackContact,
+        );
+      }
+      const preInwardInTrackBand =
+        radius >= trackCenterBandMin && radius <= trackCenterBandMax;
+      const preInwardAngle = normalizedAngle(
+        Math.atan2(translation.x, translation.z),
+      );
+      if (
+        preInwardInTrackBand &&
+        preInwardTrackContact &&
+        !preInwardCheckpoints.has("INWARD_DESCENT")
+      ) {
+        if (preInwardTrackAngle === null) {
+          preInwardTrackAngle = preInwardAngle;
+          preInwardTrackAngleStart = preInwardAngle;
+        } else {
+          let delta =
+            preInwardAngle - normalizedAngle(preInwardTrackAngle);
+          if (delta > Math.PI) delta -= Math.PI * 2;
+          if (delta < -Math.PI) delta += Math.PI * 2;
+          preInwardTrackAngle += delta;
+          const lapCountNow = Math.floor(
+            Math.abs(preInwardTrackAngle - preInwardTrackAngleStart!) /
+              (Math.PI * 2),
+          );
+          if (lapCountNow > preInwardCompletedLaps) {
+            for (
+              let lap = preInwardCompletedLaps + 1;
+              lap <= Math.min(lapCountNow, 4);
+              lap += 1
+            ) {
+              logPreInwardCheckpoint(
+                `LAP_${lap}`,
+                step,
+                vec3(translation),
+                vec3(velocity),
+                ballSpeed,
+                radius,
+                quaternion(rotorRotation),
+                stepContactRoles,
+                preInwardTrackContact,
+              );
+            }
+            preInwardCompletedLaps = lapCountNow;
+          }
+        }
+      } else if (
+        preInwardTrackAngleStart !== null &&
+        radius < trackCenterBandMin
+      ) {
+        logPreInwardCheckpoint(
+          "INWARD_DESCENT",
+          step,
+          vec3(translation),
+          vec3(velocity),
+          ballSpeed,
+          radius,
+          quaternion(rotorRotation),
+          stepContactRoles,
+          preInwardTrackContact,
+        );
+      }
+
       preFretTrackContactObserved ||=
         stepContactRoles.has("dark-race") &&
         radius >= trackCenterBandMin &&
