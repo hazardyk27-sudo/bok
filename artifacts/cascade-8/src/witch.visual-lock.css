@@ -1245,3 +1245,323 @@
     max-height: 378px !important;
   }
 }
+
+
+/* PASS 5 — simplified deck: one Cards picker, aligned controls, no dead New Card action. */
+@media (min-width: 821px) {
+  .witch-control-dock {
+    grid-template-columns:
+      minmax(190px, .62fr)
+      minmax(430px, 1.38fr)
+      minmax(190px, .62fr)
+      minmax(270px, .88fr) !important;
+    grid-template-areas: "cards stake bomb buy" !important;
+    gap: clamp(14px, 1.15vw, 22px) !important;
+    align-items: start !important;
+    overflow: visible !important;
+  }
+
+  .witch-card-picker {
+    grid-area: cards !important;
+    position: relative !important;
+    display: grid !important;
+    grid-template-rows: auto 62px !important;
+    gap: 8px !important;
+    min-width: 0 !important;
+    align-self: start !important;
+  }
+
+  .witch-card-picker > label {
+    display: block !important;
+    margin: 0 !important;
+    color: #d9b86f !important;
+    font-size: 11px !important;
+    font-weight: 900 !important;
+    letter-spacing: .12em !important;
+  }
+
+  .witch-cards-button {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+    width: 100% !important;
+    height: 62px !important;
+    min-height: 62px !important;
+    padding: 0 18px !important;
+    border: 1px solid rgba(207,143,41,.42) !important;
+    border-radius: 10px !important;
+    color: #f5e9d2 !important;
+    background: linear-gradient(180deg, rgba(52,29,18,.94), rgba(24,14,10,.96)) !important;
+    box-shadow:
+      inset 0 1px 0 rgba(255,255,255,.035),
+      0 4px 12px rgba(0,0,0,.16) !important;
+    cursor: pointer !important;
+  }
+
+  .witch-cards-button > span {
+    display: grid !important;
+    gap: 3px !important;
+    min-width: 0 !important;
+    text-align: left !important;
+  }
+
+  .witch-cards-button strong {
+    color: #ffe08a !important;
+    font-size: 15px !important;
+    font-weight: 950 !important;
+    letter-spacing: .08em !important;
+  }
+
+  .witch-cards-button small {
+    overflow: hidden !important;
+    color: #ad967b !important;
+    font-size: 10px !important;
+    font-weight: 800 !important;
+    text-overflow: ellipsis !important;
+    white-space: nowrap !important;
+  }
+
+  .witch-cards-button > b {
+    color: #d7a836 !important;
+    font-size: 18px !important;
+    transform: translateY(-1px) !important;
+  }
+
+  .witch-cards-button:disabled {
+    opacity: .50 !important;
+    cursor: not-allowed !important;
+  }
+
+  .witch-card-menu {
+    position: absolute !important;
+    z-index: 120 !important;
+    right: 0 !important;
+    bottom: calc(100% + 12px) !important;
+    left: 0 !important;
+    display: grid !important;
+    gap: 8px !important;
+    min-width: 250px !important;
+    padding: 10px !important;
+    border: 1px solid rgba(218,151,42,.58) !important;
+    border-radius: 12px !important;
+    background:
+      linear-gradient(155deg, rgba(52,26,16,.985), rgba(16,10,8,.995)) !important;
+    box-shadow:
+      0 18px 34px rgba(0,0,0,.48),
+      inset 0 1px 0 rgba(255,255,255,.04) !important;
+  }
+
+  .witch-card-menu[hidden] {
+    display: none !important;
+  }
+
+  .witch-card-option {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+    width: 100% !important;
+    min-height: 64px !important;
+    padding: 10px 12px !important;
+    border: 1px solid rgba(173,113,36,.20) !important;
+    border-radius: 9px !important;
+    color: #e9dbc4 !important;
+    background: rgba(13,9,7,.74) !important;
+    text-align: left !important;
+    cursor: pointer !important;
+  }
+
+  .witch-card-option > span {
+    display: grid !important;
+    gap: 4px !important;
+  }
+
+  .witch-card-option strong {
+    font-size: 14px !important;
+    font-weight: 900 !important;
+  }
+
+  .witch-card-option small {
+    color: #99846d !important;
+    font-size: 10px !important;
+  }
+
+  .witch-card-option > b {
+    display: grid !important;
+    width: 30px !important;
+    height: 30px !important;
+    place-items: center !important;
+    border: 1px solid rgba(211,149,45,.26) !important;
+    border-radius: 999px !important;
+    color: #bd9142 !important;
+    font-size: 11px !important;
+  }
+
+  .witch-card-option.is-selected {
+    border-color: #f4bd35 !important;
+    background: linear-gradient(145deg, rgba(70,35,17,.94), rgba(30,16,11,.96)) !important;
+    box-shadow: inset 0 0 0 1px rgba(255,201,70,.12) !important;
+  }
+
+  .witch-card-option.is-selected strong,
+  .witch-card-option.is-selected > b {
+    color: #ffd75d !important;
+  }
+
+  .witch-stake-group {
+    align-self: start !important;
+  }
+
+  .witch-alarm-field {
+    grid-area: bomb !important;
+    display: grid !important;
+    grid-template-rows: auto 62px !important;
+    gap: 8px !important;
+    align-content: start !important;
+    align-self: start !important;
+    min-width: 0 !important;
+  }
+
+  .witch-alarm-field > span {
+    margin: 0 !important;
+  }
+
+  .witch-alarm-field select {
+    height: 62px !important;
+    min-height: 62px !important;
+  }
+
+  .witch-primary-button {
+    grid-area: buy !important;
+    align-self: start !important;
+    width: 100% !important;
+    height: 62px !important;
+    min-height: 62px !important;
+    margin: 27px 0 0 !important;
+    padding-inline: 20px !important;
+  }
+
+  /* Legacy two-card selector is no longer part of the dock. */
+  .witch-mode-group,
+  .witch-mode-grid {
+    display: none !important;
+  }
+}
+
+@media (min-width: 821px) and (max-width: 1499px) {
+  .witch-control-dock {
+    grid-template-columns:
+      minmax(170px, .60fr)
+      minmax(360px, 1.32fr)
+      minmax(160px, .58fr)
+      minmax(230px, .82fr) !important;
+  }
+
+  .witch-card-picker {
+    grid-template-rows: auto 52px !important;
+    gap: 6px !important;
+  }
+
+  .witch-cards-button,
+  .witch-alarm-field select,
+  .witch-primary-button {
+    height: 52px !important;
+    min-height: 52px !important;
+  }
+
+  .witch-alarm-field {
+    grid-template-rows: auto 52px !important;
+    gap: 6px !important;
+  }
+
+  .witch-primary-button {
+    margin-top: 22px !important;
+  }
+
+  .witch-card-menu {
+    min-width: 225px !important;
+  }
+}
+
+@media (max-width: 820px) {
+  .witch-card-picker {
+    position: relative !important;
+  }
+
+  .witch-cards-button {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+    width: 100% !important;
+    min-height: 46px !important;
+    padding: 0 12px !important;
+    border: 1px solid rgba(207,143,41,.40) !important;
+    border-radius: 9px !important;
+    color: #f4e7cf !important;
+    background: rgba(24,14,10,.94) !important;
+  }
+
+  .witch-cards-button > span {
+    display: flex !important;
+    gap: 8px !important;
+    align-items: baseline !important;
+  }
+
+  .witch-cards-button strong {
+    color: #ffd45a !important;
+    font-size: 12px !important;
+  }
+
+  .witch-cards-button small {
+    color: #a9957d !important;
+    font-size: 9px !important;
+  }
+
+  .witch-card-menu {
+    position: absolute !important;
+    z-index: 150 !important;
+    right: 0 !important;
+    bottom: calc(100% + 8px) !important;
+    left: 0 !important;
+    display: grid !important;
+    gap: 6px !important;
+    padding: 8px !important;
+    border: 1px solid rgba(218,151,42,.56) !important;
+    border-radius: 10px !important;
+    background: rgba(25,14,10,.985) !important;
+    box-shadow: 0 14px 30px rgba(0,0,0,.46) !important;
+  }
+
+  .witch-card-menu[hidden] {
+    display: none !important;
+  }
+
+  .witch-card-option {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+    min-height: 48px !important;
+    padding: 8px 10px !important;
+    border: 1px solid rgba(173,113,36,.22) !important;
+    border-radius: 8px !important;
+    color: #eadbc4 !important;
+    background: rgba(11,8,6,.74) !important;
+  }
+
+  .witch-card-option > span {
+    display: grid !important;
+  }
+
+  .witch-card-option small {
+    font-size: 9px !important;
+    color: #99856e !important;
+  }
+
+  .witch-card-option.is-selected {
+    border-color: #f0b934 !important;
+  }
+
+  .witch-mode-group,
+  .witch-mode-grid {
+    display: none !important;
+  }
+}
