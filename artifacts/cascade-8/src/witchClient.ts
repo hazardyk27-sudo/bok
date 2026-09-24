@@ -401,9 +401,7 @@ export class WitchClient {
         const input = this.root.querySelector<HTMLInputElement>("[data-witch-stake]");
         if (!input) return;
         const preset = button.dataset.witchStakePreset ?? "1";
-        const walletDollars = (this.state?.wallet.balanceCents ?? 0) / 100;
-        const next = preset === "MAX" ? Math.max(1, walletDollars) : Math.max(1, Number(preset));
-        input.value = formatStakeInput(next);
+        input.value = formatStakeInput(Math.max(1, Number(preset)));
         this.render();
       });
     });
