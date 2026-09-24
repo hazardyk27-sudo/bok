@@ -1154,6 +1154,38 @@ export async function simulatePhysicsLabRound(
         settleRadiusMax &&
         settleFloor &&
         settlePocketIndex;
+      if (
+        (seed === "61004" || seed === "61005" || seed === "61006") &&
+        step >= 1800 &&
+        (step % 120 === 0 || step >= 2868 || stableFrames > 0)
+      ) {
+        console.info(
+          "SERVER_SETTLE_DIAGNOSTIC",
+          JSON.stringify({
+            seed,
+            step,
+            simulatedAtMs: Math.round(
+              step * PHYSICS_LAB_FIXED_TIMESTEP * 1000,
+            ),
+            ballSpeed,
+            rotorRelativeSpeed,
+            radius,
+            y: translation.y,
+            ballBottom,
+            floorDelta: ballBottom - ROULETTE_POCKET_FLOOR_Y,
+            previousPocketIndex,
+            stableFrames,
+            gate: {
+              pocketInteraction: settlePocketInteraction,
+              relativeSpeed: settleRelativeSpeed,
+              radiusMin: settleRadiusMin,
+              radiusMax: settleRadiusMax,
+              floor: settleFloor,
+              pocketIndex: settlePocketIndex,
+            },
+          }),
+        );
+      }
       if (settleGatePassed) {
         stableFrames += 1;
         if (stableFrames >= PHYSICS_LAB_STABLE_WINDOW_FRAMES && !completed) {
