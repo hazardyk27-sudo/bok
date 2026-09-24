@@ -14,7 +14,9 @@ export class AudioManager {
   private readonly scratchSources = new Set<AudioBufferSourceNode>();
   private readonly activeTones = new Set<OscillatorNode>();
   private readonly pendingSfxTimers = new Set<number>();
-  private dangerBustAudio?: HTMLAudioElement;
+  private dangerBustBuffer?: AudioBuffer;
+  private dangerBustLoad?: Promise<AudioBuffer | undefined>;
+  private dangerBustSource?: AudioBufferSourceNode;
   muted = localStorage.getItem("cascade8-muted") === "true";
   volume = Number(localStorage.getItem("cascade8-volume") ?? "0.38");
 
@@ -23,9 +25,9 @@ export class AudioManager {
     localStorage.setItem("cascade8-muted", String(value));
     if (value) {
       this.scratchStop();
-      if (this.dangerBustAudio) {
-        this.dangerBustAudio.pause();
-        this.dangerBustAudio.currentTime = 0;
+      if (this.dangerBustSource) {
+        try { this.dangerBustSource.stop(); } catch {}
+        this.dangerBustSource = undefined;
       }
     }
     if (this.gain) this.gain.gain.value = value ? 0 : 1;
@@ -34,7 +36,6 @@ export class AudioManager {
     this.volume = value;
     localStorage.setItem("cascade8-volume", String(value));
     if (this.sfxGain) this.sfxGain.gain.value = value;
-    if (this.dangerBustAudio) this.dangerBustAudio.volume = Math.max(0, Math.min(1, value));
   }
   private ensure() {
     if (!this.context) {
@@ -52,6 +53,49 @@ export class AudioManager {
   unlock() {
     if (this.muted) return;
     this.ensure();
+    void this.loadDangerBustBuffer();
+  }
+
+  private loadDangerBustBuffer() {
+    if (this.dangerBustBuffer) return Promise.resolve(this.dangerBustBuffer);
+    if (this.dangerBustLoad) return this.dangerBustLoad;
+
+    this.ensure();
+    const context = this.context!;
+    this.dangerBustLoad = fetch("/cadi-kazan/sfx-danger-negative.ogg", { cache: "force-cache" })
+      .then((response) => {
+        if (!response.ok) throw new Error(`Danger SFX HTTP ${response.status}`);
+        return response.arrayBuffer();
+      })
+      .then((bytes) => context.decodeAudioData(bytes))
+      .then((buffer) => {
+        this.dangerBustBuffer = buffer;
+        return buffer;
+      })
+      .catch(() => undefined);
+
+    return this.dangerBustLoad;
+  }
+
+  private playDangerBustBuffer(buffer: AudioBuffer) {
+    if (this.muted) return;
+    this.ensure();
+    const context = this.context!;
+    const source = context.createBufferSource();
+    source.buffer = buffer;
+    source.connect(this.sfxGain!);
+
+    if (this.dangerBustSource) {
+      try { this.dangerBustSource.stop(); } catch {}
+    }
+    this.dangerBustSource = source;
+
+    source.addEventListener("ended", () => {
+      source.disconnect();
+      if (this.dangerBustSource === source) this.dangerBustSource = undefined;
+    }, { once: true });
+
+    source.start(context.currentTime);
   }
 
   private makeNoiseBuffer(duration: number, decay = 1.6, warmth = 0.18) {
@@ -436,21 +480,19 @@ export class AudioManager {
   bombBust() {
     if (this.muted) return;
 
-    // Exact 01:32–01:34 segment from the uploaded reference video.
-    // This is the Cadı Kazan BOMBA / I AM THE DANGER negative cue.
-    if (!this.dangerBustAudio) {
-      const audio = new Audio("/cadi-kazan/sfx-danger-negative.ogg");
-      audio.preload = "auto";
-      this.dangerBustAudio = audio;
+    this.ensure();
+    if (this.dangerBustBuffer) {
+      this.playDangerBustBuffer(this.dangerBustBuffer);
+      return;
     }
 
-    const audio = this.dangerBustAudio;
-    audio.volume = Math.max(0, Math.min(1, this.volume));
-    audio.pause();
-    audio.currentTime = 0;
-    void audio.play().catch(() => {
-      // Fallback only if a strict browser policy blocks media playback.
-      this.ensure();
+    void this.loadDangerBustBuffer().then((buffer) => {
+      if (buffer && !this.muted) {
+        this.playDangerBustBuffer(buffer);
+        return;
+      }
+
+      // Only if the real clip cannot be fetched/decoded.
       this.tone(155, 0.28, "sawtooth");
       this.delayedTone(92, 0.34, "triangle", 90);
     });
