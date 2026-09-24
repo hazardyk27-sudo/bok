@@ -1003,6 +1003,80 @@ export async function simulatePhysicsLabRound(
         );
       }
 
+      if (seed === "61004" && step >= 868 && step <= 876) {
+        const contacts: Array<Record<string, unknown>> = [];
+        world.contactPairsWith(ballCollider, (otherCollider) => {
+          world.contactPair(ballCollider, otherCollider, (manifold, flipped) => {
+            if (manifold.numContacts() <= 0) return;
+            const diagnosticManifold = manifold as unknown as {
+              normal?: () => { x: number; y: number; z: number };
+              numSolverContacts?: () => number;
+              contactImpulse?: (index: number) => number;
+              solverContactImpulse?: (index: number) => number;
+            };
+            const normal =
+              typeof diagnosticManifold.normal === "function"
+                ? diagnosticManifold.normal()
+                : null;
+            const solverContactCount =
+              typeof diagnosticManifold.numSolverContacts === "function"
+                ? diagnosticManifold.numSolverContacts()
+                : manifold.numContacts();
+            const impulses: number[] = [];
+            for (let index = 0; index < solverContactCount; index += 1) {
+              const impulse =
+                typeof diagnosticManifold.contactImpulse === "function"
+                  ? diagnosticManifold.contactImpulse(index)
+                  : typeof diagnosticManifold.solverContactImpulse === "function"
+                    ? diagnosticManifold.solverContactImpulse(index)
+                    : null;
+              if (impulse !== null && Number.isFinite(impulse)) {
+                impulses.push(impulse);
+              }
+            }
+            contacts.push({
+              role: colliderRoles.get(otherCollider.handle) ?? "unknown",
+              handle: otherCollider.handle,
+              flipped,
+              contactCount: manifold.numContacts(),
+              solverContactCount,
+              normal:
+                normal === null
+                  ? null
+                  : { x: normal.x, y: normal.y, z: normal.z },
+              impulses,
+            });
+          });
+        });
+        console.info(
+          "SERVER_VELOCITY_STEP",
+          JSON.stringify({
+            seed,
+            step,
+            simulatedAtMs: Math.round(
+              step * PHYSICS_LAB_FIXED_TIMESTEP * 1000,
+            ),
+            radius,
+            y: translation.y,
+            speed: ballSpeed,
+            previousSpeed: previousBallSpeed,
+            velocity: {
+              x: velocity.x,
+              y: velocity.y,
+              z: velocity.z,
+            },
+            previousVelocity,
+            deltaVelocity: {
+              x: velocity.x - previousVelocity.x,
+              y: velocity.y - previousVelocity.y,
+              z: velocity.z - previousVelocity.z,
+            },
+            angularSpeed: ballAngularSpeed,
+            contacts,
+          }),
+        );
+      }
+
       const finiteState = [
         translation.x,
         translation.y,
