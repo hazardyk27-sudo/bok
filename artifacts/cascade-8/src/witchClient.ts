@@ -61,10 +61,10 @@ const formatStakeInput = (dollars: number) => "$" + dollars.toLocaleString("en-U
   maximumFractionDigits: 2,
 });
 
-const formatMultiplier = (basisPoints: number) => `${(basisPoints / 100).toLocaleString("tr-TR", {
+const formatMultiplier = (basisPoints: number) => `${(basisPoints / 100).toLocaleString("en-US", {
   minimumFractionDigits: 2,
   maximumFractionDigits: 2,
-})}x`;
+})}×`;
 
 const formatTicketPrice = (cents: number) => {
   const dollars = cents / 100;
@@ -223,11 +223,11 @@ export const CADI_KAZAN_MARKUP = `
       <div class="witch-mode-grid" role="group" aria-label="Cadı Kazan oyun modu">
         <button type="button" class="witch-mode-card is-selected" data-witch-mode="STANDARD">
           <i class="witch-radio" aria-hidden="true"></i>
-          <span><strong>Standard 5</strong><small>5 şans · 1 bomba</small></span>
+          <span><strong>Standard 5</strong><small>5 alan · 1 bomba</small></span>
         </button>
         <button type="button" class="witch-mode-card" data-witch-mode="ADVANCED">
           <i class="witch-radio" aria-hidden="true"></i>
-          <span><strong>Advanced 25</strong><small>5×5 · riskli seçim</small></span>
+          <span><strong>Advanced 25</strong><small>25 alan · risk seçimi</small></span>
         </button>
       </div>
 
