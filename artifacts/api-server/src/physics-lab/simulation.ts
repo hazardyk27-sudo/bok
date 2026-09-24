@@ -21,7 +21,9 @@ import {
 
 export const PHYSICS_LAB_FIXED_TIMESTEP = ROULETTE_FIXED_TIMESTEP;
 export const PHYSICS_LAB_DURATION_LIMIT_SECONDS = 24;
-export const PHYSICS_LAB_STABLE_WINDOW_FRAMES = 180;
+export const PHYSICS_LAB_STABLE_WINDOW_FRAMES = Math.round(
+  0.5 / PHYSICS_LAB_FIXED_TIMESTEP,
+);
 export const PHYSICS_LAB_SECTOR_COUNT = ROULETTE_POCKET_COUNT;
 export const PHYSICS_LAB_BALL_RADIUS = ROULETTE_BALL_RADIUS;
 export const PHYSICS_LAB_EUROPEAN_SEQUENCE = ROULETTE_EUROPEAN_SEQUENCE;
@@ -931,13 +933,24 @@ export async function simulatePhysicsLabRound(
       ) {
         events.push(event("POCKET_BOUNCE", step, { pocketIndex: previousPocketIndex ?? undefined }));
       }
+      const rotorTangentialVelocity = {
+        x: startConditions.rotorInitialAngularVelocity * translation.z,
+        y: 0,
+        z: -startConditions.rotorInitialAngularVelocity * translation.x,
+      };
+      const rotorRelativeSpeed = Math.hypot(
+        velocity.x - rotorTangentialVelocity.x,
+        velocity.y - rotorTangentialVelocity.y,
+        velocity.z - rotorTangentialVelocity.z,
+      );
+      const ballBottom = translation.y - PHYSICS_LAB_BALL_RADIUS;
       if (
-        ballSpeed < 0.18 &&
-        ballAngularSpeed < 5 &&
-        radius > 1.18 &&
-        radius < 1.98 &&
-        translation.y > -0.42 &&
-        translation.y < 1.3 &&
+        pocketInteraction &&
+        rotorRelativeSpeed < 0.12 &&
+        radius >= 1.48 + PHYSICS_LAB_BALL_RADIUS &&
+        radius <=
+          ROULETTE_POCKET_OUTER_LIP_RADIUS - PHYSICS_LAB_BALL_RADIUS &&
+        Math.abs(ballBottom - ROULETTE_POCKET_FLOOR_Y) <= 0.12 &&
         previousPocketIndex !== null
       ) {
         stableFrames += 1;
