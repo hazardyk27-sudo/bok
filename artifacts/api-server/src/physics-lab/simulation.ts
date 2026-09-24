@@ -678,28 +678,20 @@ function buildStartConditions(seed: string): PhysicsLabStartConditions {
     Math.cos(launchAzimuthRadians),
     -Math.sin(launchAzimuthRadians),
   ];
-  const radial: [number, number] = [
-    Math.sin(launchAzimuthRadians),
-    Math.cos(launchAzimuthRadians),
-  ];
   const velocity: [number, number, number] = [
     tangent[0] * launchSpeed,
     0,
     tangent[1] * launchSpeed,
   ];
-  const slope = darkRaceSurfaceSlopeAt(ROULETTE_DARK_RACE_LAUNCH_RADIUS);
-  const normalLength = Math.hypot(slope, 1);
-  const normal: [number, number, number] = [
-    (-slope * radial[0]) / normalLength,
-    1 / normalLength,
-    (-slope * radial[1]) / normalLength,
-  ];
   const angularVelocity: [number, number, number] = [
-    (normal[1] * velocity[2] - normal[2] * velocity[1]) /
+    (launchPlacementNormal[1] * velocity[2] -
+      launchPlacementNormal[2] * velocity[1]) /
       PHYSICS_LAB_BALL_RADIUS,
-    (normal[2] * velocity[0] - normal[0] * velocity[2]) /
+    (launchPlacementNormal[2] * velocity[0] -
+      launchPlacementNormal[0] * velocity[2]) /
       PHYSICS_LAB_BALL_RADIUS,
-    (normal[0] * velocity[1] - normal[1] * velocity[0]) /
+    (launchPlacementNormal[0] * velocity[1] -
+      launchPlacementNormal[1] * velocity[0]) /
       PHYSICS_LAB_BALL_RADIUS,
   ];
   return {
