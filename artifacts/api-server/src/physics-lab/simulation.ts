@@ -822,7 +822,7 @@ export async function simulatePhysicsLabRound(
         events.push(event("INVALID", step, { detail: errorCode }));
         break;
       }
-      if (ballSpeed > Math.max(16, 4 * 4 + 4)) {
+      if (ballSpeed > Math.max(8, previousBallSpeed * 4)) {
         errorCode = "VELOCITY_EXPLOSION";
         events.push(event("INVALID", step, { detail: errorCode }));
         break;
