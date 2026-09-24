@@ -980,13 +980,11 @@ export async function simulatePhysicsLabRound(
         ? "TRACK_ENTRY_TIMEOUT"
         : !inwardMovementObserved
           ? "INWARD_DROP_TIMEOUT"
-          : !deflectorHit
-            ? "DEFLECTOR_TIMEOUT"
-            : !movingFretContact
-              ? "MOVING_FRET_TIMEOUT"
-              : !pocketInteraction
-                ? "POCKET_TIMEOUT"
-                : "STABLE_SETTLE_TIMEOUT";
+          : !movingFretContact
+            ? "MOVING_FRET_TIMEOUT"
+            : !pocketInteraction
+              ? "POCKET_TIMEOUT"
+              : "STABLE_SETTLE_TIMEOUT";
     events.push(event("INVALID", trajectory.at(-1)?.step ?? 0, { detail: errorCode }));
   }
   const simulationDurationMs = Math.round(performance.now() - startedAt);
