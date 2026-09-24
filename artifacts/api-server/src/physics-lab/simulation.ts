@@ -1360,15 +1360,56 @@ export async function simulatePhysicsLabRound(
         velocity.z - rotorTangentialVelocity.z,
       );
       const ballBottom = translation.y - PHYSICS_LAB_BALL_RADIUS;
-      if (
-        pocketInteraction &&
-        rotorRelativeSpeed < 0.12 &&
-        radius >= 1.48 + PHYSICS_LAB_BALL_RADIUS &&
+      const settlePocketInteraction = pocketInteraction;
+      const settleRelativeSpeed = rotorRelativeSpeed < 0.12;
+      const settleRadiusMin =
+        radius >= 1.48 + PHYSICS_LAB_BALL_RADIUS;
+      const settleRadiusMax =
         radius <=
-          ROULETTE_POCKET_OUTER_LIP_RADIUS - PHYSICS_LAB_BALL_RADIUS &&
-        Math.abs(ballBottom - ROULETTE_POCKET_FLOOR_Y) <= 0.12 &&
-        previousPocketIndex !== null
+        ROULETTE_POCKET_OUTER_LIP_RADIUS - PHYSICS_LAB_BALL_RADIUS;
+      const settleFloor =
+        Math.abs(ballBottom - ROULETTE_POCKET_FLOOR_Y) <= 0.12;
+      const settlePocketIndex = previousPocketIndex !== null;
+      const settleGatePassed =
+        settlePocketInteraction &&
+        settleRelativeSpeed &&
+        settleRadiusMin &&
+        settleRadiusMax &&
+        settleFloor &&
+        settlePocketIndex;
+      if (
+        seed === "61004" &&
+        step >= 2200 &&
+        (step % 120 === 0 || stableFrames > 0 || settleGatePassed)
       ) {
+        console.info(
+          "SERVER_SETTLE_GATE",
+          JSON.stringify({
+            seed,
+            step,
+            simulatedAtMs: Math.round(
+              step * PHYSICS_LAB_FIXED_TIMESTEP * 1000,
+            ),
+            ballSpeed,
+            rotorRelativeSpeed,
+            radius,
+            y: translation.y,
+            ballBottom,
+            floorDelta: ballBottom - ROULETTE_POCKET_FLOOR_Y,
+            previousPocketIndex,
+            stableFrames,
+            gate: {
+              pocketInteraction: settlePocketInteraction,
+              relativeSpeed: settleRelativeSpeed,
+              radiusMin: settleRadiusMin,
+              radiusMax: settleRadiusMax,
+              floor: settleFloor,
+              pocketIndex: settlePocketIndex,
+            },
+          }),
+        );
+      }
+      if (settleGatePassed) {
         stableFrames += 1;
         if (stableFrames >= PHYSICS_LAB_STABLE_WINDOW_FRAMES && !completed) {
           completed = true;
