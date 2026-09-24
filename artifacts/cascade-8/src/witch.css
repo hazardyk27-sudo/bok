@@ -6359,3 +6359,37 @@
     filter: drop-shadow(0 10px 14px rgba(0,0,0,.24)) !important;
   }
 }
+
+
+/* =========================================================
+   STAGE 41 — DESKTOP BOTTOM-DOCK ANCHOR
+   Keep the control deck visually attached to the viewport edge.
+   Mobile keeps its existing horizontal-scene grid.
+   ========================================================= */
+@media (min-width: 821px) {
+  .witch-page {
+    min-height: 100dvh !important;
+    padding-bottom: 132px !important;
+  }
+
+  .witch-control-dock {
+    position: fixed !important;
+    z-index: 320 !important;
+    right: auto !important;
+    bottom: 0 !important;
+    left: 50% !important;
+    width: min(calc(100vw - 40px), 1400px) !important;
+    margin: 0 !important;
+    border-radius: 18px 18px 0 0 !important;
+    transform: translateX(-50%) !important;
+    box-shadow:
+      0 -18px 44px rgba(0,0,0,.34),
+      inset 0 1px 0 rgba(255,255,255,.028) !important;
+    backdrop-filter: blur(16px);
+  }
+
+  /* Let the table use the freed vertical room without hiding behind the fixed deck. */
+  .witch-stage-shell {
+    margin-bottom: 0 !important;
+  }
+}
