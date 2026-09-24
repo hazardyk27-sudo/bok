@@ -14,19 +14,27 @@ export class AudioManager {
   private readonly scratchSources = new Set<AudioBufferSourceNode>();
   private readonly activeTones = new Set<OscillatorNode>();
   private readonly pendingSfxTimers = new Set<number>();
+  private dangerBustAudio?: HTMLAudioElement;
   muted = localStorage.getItem("cascade8-muted") === "true";
   volume = Number(localStorage.getItem("cascade8-volume") ?? "0.38");
 
   setMuted(value: boolean) {
     this.muted = value;
     localStorage.setItem("cascade8-muted", String(value));
-    if (value) this.scratchStop();
+    if (value) {
+      this.scratchStop();
+      if (this.dangerBustAudio) {
+        this.dangerBustAudio.pause();
+        this.dangerBustAudio.currentTime = 0;
+      }
+    }
     if (this.gain) this.gain.gain.value = value ? 0 : 1;
   }
   setVolume(value: number) {
     this.volume = value;
     localStorage.setItem("cascade8-volume", String(value));
     if (this.sfxGain) this.sfxGain.gain.value = value;
+    if (this.dangerBustAudio) this.dangerBustAudio.volume = Math.max(0, Math.min(1, value));
   }
   private ensure() {
     if (!this.context) {
@@ -427,53 +435,27 @@ export class AudioManager {
 
   bombBust() {
     if (this.muted) return;
-    this.ensure();
-    const context = this.context!;
-    const output = this.sfxGain!;
-    const start = context.currentTime;
 
-    // Airy blast + body thump.
-    this.playNoiseBurst({ at: 0, duration: 0.22, gain: 0.16, frequency: 260, q: 0.7, decay: 1.25, warmth: 0.72 });
-    this.playNoiseBurst({ at: 0.012, duration: 0.09, gain: 0.07, frequency: 2_300, q: 0.55, decay: 2.7, warmth: 0.08 });
+    // User-supplied reference clip: exact 01:32–01:34 segment from the
+    // uploaded video. This replaces the procedural blast/failure cue for
+    // Cadı Kazan BOMBA / I AM THE DANGER.
+    if (!this.dangerBustAudio) {
+      const audio = new Audio("/cadi-kazan/sfx-danger-negative.ogg");
+      audio.preload = "auto";
+      this.dangerBustAudio = audio;
+    }
 
-    const thump = context.createOscillator();
-    const thumpGain = context.createGain();
-    thump.type = "sine";
-    thump.frequency.setValueAtTime(105, start);
-    thump.frequency.exponentialRampToValueAtTime(38, start + 0.34);
-    thumpGain.gain.setValueAtTime(0.0001, start);
-    thumpGain.gain.exponentialRampToValueAtTime(0.24, start + 0.008);
-    thumpGain.gain.exponentialRampToValueAtTime(0.0001, start + 0.38);
-    thump.connect(thumpGain);
-    thumpGain.connect(output);
-    this.activeTones.add(thump);
-    thump.addEventListener("ended", () => {
-      this.activeTones.delete(thump);
-      thump.disconnect();
-      thumpGain.disconnect();
-    }, { once: true });
-    thump.start(start);
-    thump.stop(start + 0.40);
-
-    // Dissonant descending failure cue after the impact.
-    const fail = context.createOscillator();
-    const failGain = context.createGain();
-    fail.type = "triangle";
-    fail.frequency.setValueAtTime(310, start + 0.06);
-    fail.frequency.exponentialRampToValueAtTime(146, start + 0.42);
-    failGain.gain.setValueAtTime(0.0001, start + 0.06);
-    failGain.gain.exponentialRampToValueAtTime(0.075, start + 0.085);
-    failGain.gain.exponentialRampToValueAtTime(0.0001, start + 0.43);
-    fail.connect(failGain);
-    failGain.connect(output);
-    this.activeTones.add(fail);
-    fail.addEventListener("ended", () => {
-      this.activeTones.delete(fail);
-      fail.disconnect();
-      failGain.disconnect();
-    }, { once: true });
-    fail.start(start + 0.06);
-    fail.stop(start + 0.45);
+    const audio = this.dangerBustAudio;
+    audio.volume = Math.max(0, Math.min(1, this.volume));
+    audio.pause();
+    audio.currentTime = 0;
+    void audio.play().catch(() => {
+      // Very old/strict autoplay policies can reject media playback after an
+      // async reveal request. Keep a tiny audible fallback instead of silence.
+      this.ensure();
+      this.tone(155, 0.28, "sawtooth");
+      this.delayedTone(92, 0.34, "triangle", 90);
+    });
   }
 
   cashRegister() {
