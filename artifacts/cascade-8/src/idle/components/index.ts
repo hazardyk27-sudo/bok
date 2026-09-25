@@ -359,7 +359,7 @@ ${renderBusinessArt(businessId)}
             <strong>${meta.definition.label}</strong>
             <span data-business-level>Yükleniyor…</span>
           </div>
-          <span class="business-card-level-mark" aria-hidden="true">FY</span>
+          <span class="business-card-level-mark" data-business-level-mark aria-hidden="true">FY</span>
         </header>
 
         <div class="business-row-metrics business-card-metrics">
@@ -469,6 +469,7 @@ export function updateBusinessRow(
   const collectNoteNode = row.querySelector<HTMLElement>("[data-business-collect-note]");
   const cardStateNode = row.querySelector<HTMLElement>("[data-business-card-state]");
   const milestoneNode = row.querySelector<HTMLElement>("[data-business-milestone]");
+  const levelMarkNode = row.querySelector<HTMLElement>("[data-business-level-mark]");
 
   if (
     !levelNode
@@ -490,6 +491,7 @@ export function updateBusinessRow(
     || !collectButton
     || !collectNoteNode
     || !cardStateNode
+    || !levelMarkNode
   ) {
     throw new Error("IDLE_BUSINESS_ROW_INCOMPLETE");
   }
@@ -683,4 +685,15 @@ export function updateBusinessRow(
       : nextStage
         ? "AKTİF"
         : "MAX SEVİYE";
+
+  levelMarkNode.textContent = !currentStage
+    ? "LOCK"
+    : nextStage
+      ? `LV${currentStage.level}`
+      : "MAX";
+  levelMarkNode.dataset.levelState = !currentStage
+    ? "locked"
+    : nextStage
+      ? "active"
+      : "max";
 }
