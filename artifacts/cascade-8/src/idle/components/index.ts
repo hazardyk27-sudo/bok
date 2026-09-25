@@ -65,8 +65,81 @@ function getDefinition(businessId: BusinessId) {
 function renderBusinessArt(businessId: BusinessId) {
   if (businessId === "fan-club") {
     return `
-      <div class="business-card-art ${BUSINESS_META[businessId].artClass}" aria-hidden="true">
-        <i></i><b></b><em></em>
+      <div class="business-card-art business-card-art--fan-club business-card-fan-scene" aria-hidden="true">
+        <svg viewBox="0 0 420 190" preserveAspectRatio="xMidYMid slice" role="presentation">
+          <defs>
+            <linearGradient id="fan-night" x1="0" y1="0" x2="1" y2="1">
+              <stop offset="0%" stop-color="#0b1a29"/>
+              <stop offset="55%" stop-color="#10283a"/>
+              <stop offset="100%" stop-color="#061019"/>
+            </linearGradient>
+            <linearGradient id="fan-lounge" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stop-color="#15364d"/>
+              <stop offset="100%" stop-color="#07131f"/>
+            </linearGradient>
+            <linearGradient id="fan-screen" x1="0" y1="0" x2="1" y2="1">
+              <stop offset="0%" stop-color="#17435a"/>
+              <stop offset="100%" stop-color="#0b202d"/>
+            </linearGradient>
+            <linearGradient id="fan-banner" x1="0" y1="0" x2="1" y2="0">
+              <stop offset="0%" stop-color="#46c8ff"/>
+              <stop offset="52%" stop-color="#7ddfff"/>
+              <stop offset="100%" stop-color="#7258ff"/>
+            </linearGradient>
+            <filter id="fan-soft-glow" x="-50%" y="-50%" width="200%" height="200%">
+              <feGaussianBlur stdDeviation="3.5"/>
+            </filter>
+          </defs>
+
+          <rect class="fan-night" width="420" height="190" fill="url(#fan-night)"/>
+          <ellipse class="fan-room-glow" cx="215" cy="126" rx="160" ry="64" fill="#46c8ff" opacity=".055" filter="url(#fan-soft-glow)"/>
+
+          <g class="fan-lounge-shell">
+            <path class="fan-roof" d="M45 52H376L354 74H68Z" fill="#10283b" stroke="#93e1ff" stroke-opacity=".2"/>
+            <rect class="fan-lounge-wall" x="60" y="69" width="302" height="87" rx="8" fill="url(#fan-lounge)" stroke="#83dfff" stroke-opacity=".18"/>
+            <path class="fan-backlight" d="M78 81H344" stroke="url(#fan-banner)" stroke-width="2.2" stroke-linecap="round" opacity=".58"/>
+            <path class="fan-floor" d="M54 157H368L395 190H24Z" fill="#07121d" stroke="#6fdcff" stroke-opacity=".08"/>
+          </g>
+
+          <g class="fan-media">
+            <rect class="fan-main-screen" x="161" y="83" width="98" height="48" rx="5" fill="url(#fan-screen)" stroke="#92e4ff" stroke-opacity=".24"/>
+            <path d="M172 122l18-15 18 9 17-18 23 24" fill="none" stroke="#7ddfff" stroke-opacity=".24" stroke-width="2"/>
+            <rect class="fan-side-screen fan-side-screen-left" x="83" y="87" width="59" height="36" rx="4" fill="#0c2432" stroke="#7ddfff" stroke-opacity=".16"/>
+            <rect class="fan-side-screen fan-side-screen-right" x="278" y="87" width="59" height="36" rx="4" fill="#0c2432" stroke="#7ddfff" stroke-opacity=".16"/>
+          </g>
+
+          <g class="fan-seating">
+            <path d="M80 141C112 124 142 126 166 141V156H80Z" fill="#0b2231" stroke="#75d8ef" stroke-opacity=".14"/>
+            <path d="M254 141C278 126 308 124 340 141V156H254Z" fill="#0b2231" stroke="#75d8ef" stroke-opacity=".14"/>
+            <rect x="181" y="139" width="58" height="17" rx="8" fill="#0d2635" stroke="#87dff5" stroke-opacity=".12"/>
+          </g>
+
+          <g class="fan-supporters" fill="#9ce9ff" opacity=".46">
+            <circle cx="95" cy="133" r="4"/><circle cx="111" cy="129" r="4"/><circle cx="127" cy="132" r="4"/>
+            <circle cx="143" cy="128" r="4"/><circle cx="278" cy="131" r="4"/><circle cx="294" cy="127" r="4"/>
+            <circle cx="310" cy="130" r="4"/><circle cx="326" cy="126" r="4"/>
+            <path d="M91 138v13M107 134v17M123 137v14M139 133v18M274 136v15M290 132v19M306 135v16M322 131v20" stroke="#9ce9ff" stroke-width="3" stroke-linecap="round"/>
+          </g>
+
+          <g class="fan-flags" opacity=".34">
+            <path d="M72 79v52M348 78v53" stroke="#b8efff" stroke-width="2"/>
+            <path d="M74 82l30 8-30 11zM346 82l-30 8 30 11z" fill="url(#fan-banner)"/>
+          </g>
+
+          <g class="fan-scarves" opacity=".28">
+            <path d="M106 72h62M252 72h62" stroke="#7ddfff" stroke-width="4" stroke-linecap="round"/>
+            <path d="M106 68v8M168 68v8M252 68v8M314 68v8" stroke="#b6f0ff" stroke-width="2"/>
+          </g>
+
+          <g class="fan-vip-lighting" opacity=".12" filter="url(#fan-soft-glow)">
+            <path d="M96 62L153 146M324 62L267 146" stroke="#7ddfff" stroke-width="10"/>
+          </g>
+
+          <g class="fan-icon-crown" opacity="0" fill="none" stroke="#c9f5ff" stroke-width="1.5">
+            <path d="M210 25l7 9 11 1-7 8 2 11-13-6-13 6 2-11-7-8 11-1z"/>
+            <circle cx="210" cy="40" r="22" stroke-opacity=".2"/>
+          </g>
+        </svg>
       </div>
     `;
   }
@@ -274,7 +347,7 @@ export function renderBusinessRowShell(businessId: BusinessId) {
       <div class="business-card-visual" role="img" aria-label="${meta.visualLabel}">
 ${renderBusinessArt(businessId)}
         <span class="business-card-code">${meta.code}</span>
-        ${businessId !== "fan-club" ? `<span class="business-card-milestone" data-business-milestone>${businessId === "stadium" ? "STADIUM" : "CLUB STORE"} // BASE</span>` : ""}
+        <span class="business-card-milestone" data-business-milestone>${businessId === "stadium" ? "STADIUM" : businessId === "club-store" ? "CLUB STORE" : "FAN CLUB"} // BASE</span>
         <span class="business-card-state" data-business-card-state>YÜKLENİYOR</span>
         <div class="business-card-visual-shade" aria-hidden="true"></div>
       </div>
@@ -576,7 +649,11 @@ export function updateBusinessRow(
   const visualStage = getBusinessVisualStage(business);
   row.dataset.visualStage = visualStage;
   if (milestoneNode) {
-    const visualPrefix = business.businessId === "club-store" ? "CLUB STORE" : "STADIUM";
+    const visualPrefix = business.businessId === "stadium"
+      ? "STADIUM"
+      : business.businessId === "club-store"
+        ? "CLUB STORE"
+        : "FAN CLUB";
     milestoneNode.textContent = visualStage === "locked"
       ? `${visualPrefix} // LOCKED`
       : visualStage === "local"
