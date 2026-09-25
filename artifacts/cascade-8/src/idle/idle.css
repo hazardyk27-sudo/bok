@@ -978,3 +978,23 @@
     font-size: 9px;
   }
 }
+
+
+/* Businesses owns its vertical scroll on small screens. */
+@media (max-width: 620px) {
+  html.businesses-route,
+  body.businesses-route,
+  html.businesses-route #app {
+    height: auto;
+    min-height: 100%;
+    overflow-x: hidden;
+    overflow-y: auto;
+  }
+
+  html.businesses-route .app-shell.is-businesses-page {
+    height: auto;
+    min-height: 100dvh;
+    overflow-x: hidden;
+    overflow-y: visible;
+  }
+}
