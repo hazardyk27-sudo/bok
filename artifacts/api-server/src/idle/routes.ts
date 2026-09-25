@@ -46,6 +46,7 @@ router.get("/idle/state", async (req, res) => {
     res.json({
       sessionId,
       serverTime: state.serverNow.toISOString(),
+      wallet: state.wallet,
       businesses: state.businesses.map(serializeBusiness),
     });
   } catch (error) {
