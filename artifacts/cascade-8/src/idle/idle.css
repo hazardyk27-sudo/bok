@@ -157,6 +157,29 @@
   white-space: nowrap;
 }
 
+.business-vault-upgrade {
+  display: inline-flex;
+  align-items: center;
+  min-height: 22px;
+  margin-top: 6px;
+  padding: 0;
+  border: 0;
+  color: #38bdf8;
+  background: transparent;
+  font: 700 7px/1 "DM Mono", monospace;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+}
+
+.business-vault-upgrade:not(:disabled) {
+  cursor: pointer;
+}
+
+.business-vault-upgrade:disabled {
+  color: #7f8da3;
+  opacity: .5;
+}
+
 .business-row-actions {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -661,6 +684,12 @@
   .business-row-metric strong {
     margin-top: 2px;
     font-size: 10px;
+  }
+
+  .business-vault-upgrade {
+    min-height: 18px;
+    margin-top: 3px;
+    font-size: 6px;
   }
 }
 
