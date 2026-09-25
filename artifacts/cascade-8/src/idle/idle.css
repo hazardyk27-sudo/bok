@@ -291,6 +291,73 @@
   }
 }
 
+/* Tablet transition pass */
+@media (min-width: 761px) and (max-width: 900px) {
+  .businesses-page {
+    width: 100%;
+    padding: 18px 18px 24px;
+  }
+
+  .businesses-header {
+    grid-template-columns: minmax(0, 1fr) 138px;
+    align-items: start;
+    gap: 10px 14px;
+  }
+
+  .businesses-header .back-link {
+    grid-column: 1 / -1;
+    margin: 0;
+  }
+
+  .businesses-heading h1 {
+    font-size: clamp(30px, 5vw, 38px);
+  }
+
+  .businesses-heading p {
+    max-width: 470px;
+  }
+
+  .businesses-wallet {
+    width: 138px;
+  }
+
+  .business-row {
+    grid-template-columns: minmax(156px, .72fr) minmax(0, 1.55fr);
+    grid-template-areas:
+      "title metrics"
+      "title actions";
+    align-items: center;
+    gap: 8px 14px;
+    min-height: 108px;
+    padding: 11px 2px;
+  }
+
+  .business-row-title {
+    grid-area: title;
+  }
+
+  .business-row-metrics {
+    grid-area: metrics;
+    min-width: 0;
+  }
+
+  .business-row-actions {
+    grid-area: actions;
+    justify-self: end;
+    width: min(100%, 280px);
+  }
+
+  .business-row-metric {
+    min-width: 0;
+    padding-inline: 7px;
+  }
+
+  .business-row-metric strong {
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+}
+
 @media (max-width: 760px) {
   .businesses-page {
     padding: 12px 10px 20px;
