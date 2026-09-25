@@ -30,7 +30,10 @@ export type IdleBusinessAccrualProjection = IdleBusinessStorageState & {
   serverNow: Date;
   elapsedMs: number;
   vaultCapacityMicrocents: number;
+  earnedSinceCheckpointMicrocents: number;
+  creditedSinceCheckpointMicrocents: number;
   projectedAccruedMicrocents: number;
+  remainingCapacityMicrocents: number;
   isVaultFull: boolean;
 };
 
@@ -130,7 +133,10 @@ export function projectBusinessAccrual(
       serverNow,
       elapsedMs,
       vaultCapacityMicrocents: 0,
+      earnedSinceCheckpointMicrocents: 0,
+      creditedSinceCheckpointMicrocents: 0,
       projectedAccruedMicrocents: 0,
+      remainingCapacityMicrocents: 0,
       isVaultFull: false,
     };
   }
@@ -146,14 +152,26 @@ export function projectBusinessAccrual(
     businessLevel.dailyIncomeCents,
     vault.capacityHours,
   );
-  const earnedMicrocents = exactMicrocentsForElapsed(
+  const earnedSinceCheckpointMicrocents = exactMicrocentsForElapsed(
     businessLevel.dailyIncomeCents,
     elapsedMs,
   );
-  const storedMicrocents = Math.max(0, Math.floor(state.accruedMicrocents));
-  const projectedAccruedMicrocents = Math.min(
+  const storedMicrocents = Math.min(
     vaultCapacityMicrocents,
-    storedMicrocents + earnedMicrocents,
+    Math.max(0, Math.floor(state.accruedMicrocents)),
+  );
+  const availableCapacityMicrocents = Math.max(
+    0,
+    vaultCapacityMicrocents - storedMicrocents,
+  );
+  const creditedSinceCheckpointMicrocents = Math.min(
+    availableCapacityMicrocents,
+    earnedSinceCheckpointMicrocents,
+  );
+  const projectedAccruedMicrocents = storedMicrocents + creditedSinceCheckpointMicrocents;
+  const remainingCapacityMicrocents = Math.max(
+    0,
+    vaultCapacityMicrocents - projectedAccruedMicrocents,
   );
 
   return {
@@ -161,8 +179,11 @@ export function projectBusinessAccrual(
     serverNow,
     elapsedMs,
     vaultCapacityMicrocents,
+    earnedSinceCheckpointMicrocents,
+    creditedSinceCheckpointMicrocents,
     projectedAccruedMicrocents,
-    isVaultFull: projectedAccruedMicrocents >= vaultCapacityMicrocents,
+    remainingCapacityMicrocents,
+    isVaultFull: remainingCapacityMicrocents === 0,
   };
 }
 
