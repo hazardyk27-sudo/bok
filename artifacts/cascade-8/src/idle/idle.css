@@ -3623,3 +3623,258 @@ body.businesses-route {
     transition: none;
   }
 }
+
+
+/* Part 11 — Fan Club visual system / supporter progression */
+.business-card--fan-club .business-card-visual {
+  min-height: 168px;
+  background:
+    radial-gradient(circle at 70% 18%, rgba(70, 200, 255, .15), transparent 34%),
+    linear-gradient(145deg, #10283a 0%, #0a1927 56%, #061019 100%);
+}
+
+.business-card-fan-scene {
+  inset: 0;
+  opacity: 1;
+  pointer-events: none;
+}
+
+.business-card-fan-scene svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+  min-height: 168px;
+  transform: scale(1.02);
+  transform-origin: 52% 69%;
+  transition:
+    filter .35s ease,
+    transform .35s ease,
+    opacity .35s ease;
+}
+
+.business-card--fan-club .business-card-visual-shade {
+  z-index: 2;
+  background:
+    linear-gradient(90deg, rgba(5, 8, 22, .15), transparent 38%, rgba(5, 8, 22, .04)),
+    linear-gradient(180deg, transparent 45%, rgba(5, 8, 22, .8) 100%);
+}
+
+.business-card--fan-club .business-card-code,
+.business-card--fan-club .business-card-state,
+.business-card--fan-club .business-card-milestone {
+  z-index: 5;
+}
+
+.business-card--fan-club .fan-lounge-shell,
+.business-card--fan-club .fan-media,
+.business-card--fan-club .fan-seating,
+.business-card--fan-club .fan-supporters,
+.business-card--fan-club .fan-flags,
+.business-card--fan-club .fan-scarves,
+.business-card--fan-club .fan-vip-lighting,
+.business-card--fan-club .fan-icon-crown {
+  transform-origin: 210px 132px;
+  transition:
+    opacity .35s ease,
+    transform .35s ease,
+    filter .35s ease;
+}
+
+/* Locked — dark lounge silhouette with muted supporters. */
+.business-card--fan-club[data-visual-stage="locked"] .business-card-fan-scene svg {
+  filter: grayscale(.62) saturate(.5) brightness(.58);
+  opacity: .74;
+}
+
+.business-card--fan-club[data-visual-stage="locked"] .fan-supporters,
+.business-card--fan-club[data-visual-stage="locked"] .fan-media,
+.business-card--fan-club[data-visual-stage="locked"] .fan-flags,
+.business-card--fan-club[data-visual-stage="locked"] .fan-scarves {
+  opacity: .1;
+}
+
+.business-card--fan-club[data-visual-stage="locked"] .business-card-milestone {
+  color: var(--idle-text-muted);
+  border-color: rgba(157, 174, 196, .1);
+}
+
+/* Lv0–2 — small supporters room, limited crowd and media. */
+.business-card--fan-club[data-visual-stage="local"] .fan-lounge-shell {
+  transform: scale(.9) translateY(6px);
+}
+
+.business-card--fan-club[data-visual-stage="local"] .fan-media {
+  opacity: .48;
+}
+
+.business-card--fan-club[data-visual-stage="local"] .fan-supporters {
+  opacity: .3;
+}
+
+.business-card--fan-club[data-visual-stage="local"] .fan-flags,
+.business-card--fan-club[data-visual-stage="local"] .fan-scarves {
+  opacity: .14;
+}
+
+.business-card--fan-club[data-visual-stage="local"] .fan-vip-lighting {
+  opacity: .03;
+}
+
+.business-card--fan-club[data-visual-stage="local"] .business-card-milestone {
+  color: #bcd7e2;
+}
+
+/* Lv3–5 — professional fan lounge, stronger screens and supporter identity. */
+.business-card--fan-club[data-visual-stage="pro"] .business-card-fan-scene svg {
+  filter: saturate(1.06) brightness(1.04);
+}
+
+.business-card--fan-club[data-visual-stage="pro"] .fan-lounge-shell {
+  transform: scale(.97) translateY(2px);
+}
+
+.business-card--fan-club[data-visual-stage="pro"] .fan-media {
+  opacity: .76;
+}
+
+.business-card--fan-club[data-visual-stage="pro"] .fan-supporters {
+  opacity: .58;
+}
+
+.business-card--fan-club[data-visual-stage="pro"] .fan-flags,
+.business-card--fan-club[data-visual-stage="pro"] .fan-scarves {
+  opacity: .42;
+}
+
+.business-card--fan-club[data-visual-stage="pro"] .fan-vip-lighting {
+  opacity: .12;
+}
+
+.business-card--fan-club[data-visual-stage="pro"] .business-card-milestone {
+  color: var(--idle-cyan);
+  border-color: rgba(70, 200, 255, .24);
+}
+
+/* Lv6–7 — elite supporters club: dense crowd, banners and premium lounge lighting. */
+.business-card--fan-club[data-visual-stage="elite"] .business-card-fan-scene svg {
+  filter: saturate(1.14) brightness(1.08) contrast(1.02);
+  transform: scale(1.05);
+}
+
+.business-card--fan-club[data-visual-stage="elite"] .fan-lounge-shell {
+  filter: drop-shadow(0 0 8px rgba(70, 200, 255, .12));
+}
+
+.business-card--fan-club[data-visual-stage="elite"] .fan-media,
+.business-card--fan-club[data-visual-stage="elite"] .fan-supporters {
+  opacity: .9;
+}
+
+.business-card--fan-club[data-visual-stage="elite"] .fan-flags,
+.business-card--fan-club[data-visual-stage="elite"] .fan-scarves {
+  opacity: .72;
+}
+
+.business-card--fan-club[data-visual-stage="elite"] .fan-vip-lighting {
+  opacity: .28;
+}
+
+.business-card--fan-club[data-visual-stage="elite"] .business-card-milestone {
+  color: var(--idle-cyan-bright);
+  border-color: rgba(125, 223, 255, .34);
+  box-shadow: 0 0 18px rgba(70, 200, 255, .08);
+}
+
+/* Lv8 — iconic supporter headquarters: full atmosphere + crown. */
+.business-card--fan-club[data-visual-stage="landmark"] .business-card-fan-scene svg {
+  filter: saturate(1.2) brightness(1.12) contrast(1.04);
+  transform: scale(1.07);
+}
+
+.business-card--fan-club[data-visual-stage="landmark"] .fan-lounge-shell {
+  filter: drop-shadow(0 0 11px rgba(125, 223, 255, .17));
+}
+
+.business-card--fan-club[data-visual-stage="landmark"] .fan-media,
+.business-card--fan-club[data-visual-stage="landmark"] .fan-supporters,
+.business-card--fan-club[data-visual-stage="landmark"] .fan-flags,
+.business-card--fan-club[data-visual-stage="landmark"] .fan-scarves {
+  opacity: 1;
+}
+
+.business-card--fan-club[data-visual-stage="landmark"] .fan-vip-lighting {
+  opacity: .44;
+}
+
+.business-card--fan-club[data-visual-stage="landmark"] .fan-icon-crown {
+  opacity: .92;
+  filter: drop-shadow(0 0 8px rgba(125, 223, 255, .28));
+}
+
+.business-card--fan-club[data-visual-stage="landmark"] .business-card-milestone {
+  color: #e2faff;
+  border-color: rgba(125, 223, 255, .42);
+  background: rgba(9, 29, 40, .62);
+  box-shadow:
+    0 0 0 1px rgba(70, 200, 255, .05),
+    0 0 22px rgba(70, 200, 255, .13);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .business-card--fan-club:hover .business-card-fan-scene svg {
+    transform: scale(1.05);
+  }
+
+  .business-card--fan-club[data-visual-stage="elite"]:hover .business-card-fan-scene svg,
+  .business-card--fan-club[data-visual-stage="landmark"]:hover .business-card-fan-scene svg {
+    transform: scale(1.09);
+  }
+}
+
+@media (max-width: 760px) {
+  .route-shell.is-businesses-page .business-card--fan-club .business-card-visual {
+    min-height: 148px;
+  }
+
+  .route-shell.is-businesses-page .business-card--fan-club .business-card-fan-scene {
+    inset: 0;
+  }
+
+  .route-shell.is-businesses-page .business-card--fan-club .business-card-fan-scene svg {
+    min-height: 148px;
+    transform-origin: 56% 70%;
+  }
+
+  .route-shell.is-businesses-page .business-card--fan-club .business-card-milestone {
+    left: 12px;
+    bottom: 30px;
+    min-height: 20px;
+    padding: 5px 7px 4px;
+    font-size: 6px;
+  }
+}
+
+@media (max-width: 420px) {
+  .route-shell.is-businesses-page .business-card--fan-club .business-card-visual,
+  .route-shell.is-businesses-page .business-card--fan-club .business-card-fan-scene svg {
+    min-height: 134px;
+  }
+
+  .route-shell.is-businesses-page .business-card--fan-club .business-card-milestone {
+    bottom: 27px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .business-card-fan-scene svg,
+  .business-card--fan-club .fan-lounge-shell,
+  .business-card--fan-club .fan-media,
+  .business-card--fan-club .fan-seating,
+  .business-card--fan-club .fan-supporters,
+  .business-card--fan-club .fan-flags,
+  .business-card--fan-club .fan-scarves,
+  .business-card--fan-club .fan-vip-lighting,
+  .business-card--fan-club .fan-icon-crown {
+    transition: none;
+  }
+}
