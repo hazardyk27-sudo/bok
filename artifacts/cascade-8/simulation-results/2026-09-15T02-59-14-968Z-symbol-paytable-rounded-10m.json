@@ -1,0 +1,287 @@
+{
+  "seed": "symbol-paytable-rounded-10m",
+  "totalSpins": 10000000,
+  "betCents": 100,
+  "configSnapshot": {
+    "boardColumns": 6,
+    "boardRows": 5,
+    "maxWinMultiplier": 10000,
+    "normalPairCopyChance": 0.75,
+    "symbols": [
+      {
+        "id": "S1",
+        "weight": 13
+      },
+      {
+        "id": "S5",
+        "weight": 13
+      },
+      {
+        "id": "S6",
+        "weight": 13
+      },
+      {
+        "id": "S7",
+        "weight": 13
+      },
+      {
+        "id": "S4",
+        "weight": 12.5
+      },
+      {
+        "id": "S2",
+        "weight": 11.5
+      },
+      {
+        "id": "S3",
+        "weight": 10.5
+      },
+      {
+        "id": "S9",
+        "weight": 9.5
+      },
+      {
+        "id": "S8",
+        "weight": 4
+      },
+      {
+        "id": "SCATTER",
+        "weight": 2.5
+      }
+    ],
+    "baseInitialScatterChance": 0.04,
+    "baseRefillScatterChance": 0.04,
+    "baseRefillCoreChance": 0.01,
+    "bonusInitialScatterChance": 0.035,
+    "bonusRefillScatterChance": 0.035,
+    "bonusInitialCoreChance": 0.05,
+    "bonusRefillCoreChance": 0.03
+  },
+  "totalBetCents": 1000000000,
+  "totalReturnCents": 2148241750,
+  "overallRtp": 214.8242,
+  "baseGameRtp": 122.0101,
+  "bonusRtp": 92.8141,
+  "hitRate": 40.3299,
+  "zeroWinRate": 59.6701,
+  "bonusTriggerCount": 104279,
+  "bonusFrequency": "1 in 95.90",
+  "averageBonusWinMultiplier": 89.0055,
+  "medianBonusWinMultiplier": 36.75,
+  "averageTumblesPerPaidSpin": 0.7892,
+  "maximumTumblesSeen": 55,
+  "averageWinningTumbles": 0.7892,
+  "averageWinMultiplier": 2.1482,
+  "medianWinMultiplier": 0,
+  "maxObservedWinMultiplier": 10000,
+  "frequency100x": 0.2819,
+  "frequency250x": 0.0821,
+  "frequency500x": 0.0308,
+  "frequency1000x": 0.0111,
+  "frequency2500x": 0.0029,
+  "frequency5000x": 0.0006,
+  "freeSpinRetriggerRate": 18.2633,
+  "averageFreeSpinsPerBonus": 13.3811,
+  "multiplierCoreFrequency": 1.3749,
+  "averageCoreCellsPerFreeRefill": 0.1292,
+  "baseCoreSpawnFrequency": 0.4492,
+  "baseCorePaidSpinFrequency": 2.8503,
+  "baseCoreAverageValue": 5.0745,
+  "baseCore50xFrequency": 0.015,
+  "baseCore100xFrequency": 0.0092,
+  "baseCore250xFrequency": 0.0036,
+  "baseCore500xFrequency": 0.0014,
+  "bonusCoreSpawnFrequency": 1.3749,
+  "bonusInitialCoreSpawnFrequency": 3.0238,
+  "bonusCoreAverageValue": 8.5573,
+  "bonusRefillCoreAverageValue": 8.688,
+  "bonusInitialCoreAverageValue": 8.5459,
+  "bonusCore50xFrequency": 0.204,
+  "bonusCore100xFrequency": 0.1389,
+  "bonusCore250xFrequency": 0.0412,
+  "bonusCore500xFrequency": 0.0203,
+  "averageCombinedCoreMultiplier": 11.3679,
+  "highestCoreTotalObserved": 1507,
+  "coreRtpContribution": 123.0941,
+  "returnDecompositionDifferenceCents": 0,
+  "averageRawSequenceMultiplier": 0.805,
+  "averageFinalSequenceMultiplier": 1.8852,
+  "averageCoreUpliftMultiplier": 1.0802,
+  "chainRate": 17.3538,
+  "runLengthDistribution": {
+    "1": 108033662,
+    "2": 103475645
+  },
+  "symbolHitCounts": {
+    "S6": 1301781,
+    "S5": 1303389,
+    "S2": 917409,
+    "S7": 1301278,
+    "S4": 1164377,
+    "S3": 701107,
+    "S9": 515249,
+    "S1": 1302872,
+    "S8": 28696
+  },
+  "initialEightPlusFrequency": 39.9344,
+  "twoTumbleFrequency": 17.4448,
+  "threeTumbleFrequency": 8.0743,
+  "fourTumbleFrequency": 4.1594,
+  "exactTwoTumbleFrequency": 9.3705,
+  "exactThreeTumbleFrequency": 3.9149,
+  "exactFourTumbleFrequency": 1.7757,
+  "totalTumbleEvents": 7891982,
+  "bonusRetriggerRate": 33.2147,
+  "configuredCopyBranchProbability": 75,
+  "observedCopyBranchProbability": 74.9621,
+  "observedSecondSameProbability": 77.9053,
+  "sampledNormalPairs": 1000000,
+  "thirdPositionSamples": 999999,
+  "thirdMatchesPreviousSecondProbability": 11.7607,
+  "initialBoardPairFrequency": 100,
+  "refillPairFrequency": 96.4473,
+  "observedSingleProbability": 51.0775,
+  "observedPairProbability": 48.9225,
+  "maximumContiguousNormal": 5,
+  "averageUniqueNormalSymbolsPerColumn": 2.9015,
+  "visiblePairFrequency": 96.0099,
+  "columnThreeSameFrequency": 17.7741,
+  "columnFourSameFrequency": 7.0643,
+  "columnFiveSameFrequency": 0.7612,
+  "symbolAppearanceCounts": {
+    "initialBoard": {
+      "S1": 43239677,
+      "S5": 43224030,
+      "S6": 43221119,
+      "S7": 43229100,
+      "S4": 41539785,
+      "S2": 38226563,
+      "S3": 34915981,
+      "S9": 31592920,
+      "S8": 13298848,
+      "SCATTER": 8107174,
+      "MULTIPLIER_CORE": 1265813
+    },
+    "refill": {
+      "S1": 9583376,
+      "S5": 9580924,
+      "S6": 9582749,
+      "S7": 9584206,
+      "S4": 9179202,
+      "S2": 8389816,
+      "S3": 7617665,
+      "S9": 6859712,
+      "S8": 2840292,
+      "SCATTER": 1332778,
+      "MULTIPLIER_CORE": 410979
+    },
+    "visible": {
+      "S1": 71635954,
+      "S5": 71598333,
+      "S6": 71611294,
+      "S7": 71634257,
+      "S4": 69470306,
+      "S2": 65042935,
+      "S3": 60342371,
+      "S9": 55356630,
+      "S8": 24226716,
+      "SCATTER": 15098845,
+      "MULTIPLIER_CORE": 2602829
+    }
+  },
+  "symbolAppearanceDenominators": {
+    "initialBoardCells": 341861010,
+    "refillCells": 74961699,
+    "visibleCells": 578620470
+  },
+  "symbolAppearanceRates": {
+    "initialBoard": {
+      "S1": 12.6483,
+      "S5": 12.6437,
+      "S6": 12.6429,
+      "S7": 12.6452,
+      "S4": 12.1511,
+      "S2": 11.1819,
+      "S3": 10.2135,
+      "S9": 9.2415,
+      "S8": 3.8901,
+      "SCATTER": 2.3715,
+      "MULTIPLIER_CORE": 0.3703
+    },
+    "refill": {
+      "S1": 12.7844,
+      "S5": 12.7811,
+      "S6": 12.7835,
+      "S7": 12.7855,
+      "S4": 12.2452,
+      "S2": 11.1921,
+      "S3": 10.1621,
+      "S9": 9.151,
+      "S8": 3.789,
+      "SCATTER": 1.7779,
+      "MULTIPLIER_CORE": 0.5483
+    },
+    "visible": {
+      "S1": 12.3805,
+      "S5": 12.374,
+      "S6": 12.3762,
+      "S7": 12.3802,
+      "S4": 12.0062,
+      "S2": 11.241,
+      "S3": 10.4287,
+      "S9": 9.567,
+      "S8": 4.187,
+      "SCATTER": 2.6095,
+      "MULTIPLIER_CORE": 0.4498
+    }
+  },
+  "galatasarayExplosionCount": 28696,
+  "galatasarayExplosionRate": 0.3636,
+  "galatasarayExplosionPerPaidSpinRate": 0.287,
+  "galatasarayExplosionCounts": {
+    "8": 20241,
+    "9": 6175,
+    "10": 1747,
+    "11": 424,
+    "12+": 109
+  },
+  "galatasarayExplosionRates": {
+    "8": 0.2565,
+    "9": 0.0782,
+    "10": 0.0221,
+    "11": 0.0054,
+    "12+": 0.0014
+  },
+  "sequenceCorePercentage": 10.2683,
+  "averageActiveCoresAtSettlement": 1.433,
+  "coreValueDistribution": {
+    "2": 705655,
+    "3": 422781,
+    "5": 242853,
+    "10": 125269,
+    "15": 61471,
+    "20": 44790,
+    "25": 29798,
+    "50": 21904,
+    "100": 14810,
+    "250": 4478,
+    "500": 2173,
+    "1000": 810
+  },
+  "histogram": {
+    "0x": 5967012,
+    "0-1x": 1601560,
+    "1-2x": 936266,
+    "2-5x": 875729,
+    "5-10x": 386045,
+    "10-25x": 130640,
+    "25-50x": 44641,
+    "50-100x": 29912,
+    "100-250x": 19988,
+    "250-500x": 5126,
+    "500-1000x": 1967,
+    "1000-2500x": 828,
+    "2500-5000x": 222,
+    "5000x": 64
+  }
+}

@@ -1,0 +1,129 @@
+name: Roulette Settled-Result Regression Controls
+
+on:
+  push:
+    branches:
+      - feature/roulette
+    paths:
+      - '.github/workflows/roulette-null-regression-controls.yml'
+  workflow_dispatch:
+
+jobs:
+  control-seeds:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10.15.0
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install workspace
+        run: pnpm install --frozen-lockfile
+
+      - name: Install Chromium
+        run: pnpm exec playwright install --with-deps chromium
+
+      - name: Build TypeScript project references
+        run: pnpm run typecheck:libs
+
+      - name: Typecheck roulette physics lab
+        run: pnpm --filter @workspace/roulette-physics-lab run typecheck
+
+      - name: Start roulette physics lab
+        shell: bash
+        run: |
+          PORT=4173 BASE_PATH=/ pnpm --filter @workspace/roulette-physics-lab run dev > /tmp/roulette-null-regression-vite.log 2>&1 &
+          for attempt in {1..60}; do
+            if curl --fail --silent http://127.0.0.1:4173/ > /dev/null; then
+              exit 0
+            fi
+            sleep 1
+          done
+          cat /tmp/roulette-null-regression-vite.log
+          exit 1
+
+      - name: Run six control seeds
+        shell: bash
+        run: |
+          set -euo pipefail
+          ROULETTE_LAB_URL="http://127.0.0.1:4173/?part6Headless=1&part6SeedStartIndex=1&part6SeedCount=3&part6MaxDurationSeconds=12" \
+          ROULETTE_PART6_OUTPUT="artifacts/roulette-physics-lab/part6-null-regression-a.json" \
+          ROULETTE_PART6_TIMEOUT_MS='90000' \
+          ROULETTE_PART6_EXPECTED_SEEDS='3' \
+          node scripts/roulette-part6-runtime.mjs > part6-null-regression-a.log 2>&1
+
+          ROULETTE_LAB_URL="http://127.0.0.1:4173/?part6Headless=1&part6SeedStartIndex=9&part6SeedCount=3&part6MaxDurationSeconds=12" \
+          ROULETTE_PART6_OUTPUT="artifacts/roulette-physics-lab/part6-null-regression-b.json" \
+          ROULETTE_PART6_TIMEOUT_MS='90000' \
+          ROULETTE_PART6_EXPECTED_SEEDS='3' \
+          node scripts/roulette-part6-runtime.mjs > part6-null-regression-b.log 2>&1
+
+          node - <<'NODE'
+          const fs = require('fs');
+          const expected = new Map([
+            [61002, 30],
+            [61003, 36],
+            [61004, 17],
+            [61010, 18],
+            [61011, 6],
+            [61012, 3],
+          ]);
+          const files = [
+            'artifacts/roulette-physics-lab/part6-null-regression-a.json',
+            'artifacts/roulette-physics-lab/part6-null-regression-b.json',
+          ];
+          const rows = [];
+          for (const file of files) {
+            const data = JSON.parse(fs.readFileSync(file, 'utf8'));
+            rows.push(...(data.telemetry?.results ?? data.seedTelemetry ?? []));
+          }
+          const failures = [];
+          for (const result of rows) {
+            const expectedNumber = expected.get(result.seed);
+            const row = {
+              seed: result.seed,
+              settled: result.settled,
+              timedOut: result.timedOut,
+              finalPocketNumber: result.finalPocketNumber,
+              finalPocketIndex: result.finalPocketIndex,
+              safetyPassed: result.safetyPassed,
+              laps: result.lapCount,
+            };
+            console.log('NULL_REGRESSION_CONTROL_CASE ' + JSON.stringify(row));
+            if (
+              !result.settled ||
+              result.timedOut ||
+              result.finalPocketNumber === null ||
+              result.finalPocketIndex === null ||
+              !result.safetyPassed ||
+              result.finalPocketNumber !== expectedNumber
+            ) failures.push({...row, expectedNumber});
+          }
+          console.log('NULL_REGRESSION_CONTROL_SUMMARY ' + JSON.stringify({
+            passed: rows.length - failures.length,
+            total: rows.length,
+            failures,
+          }));
+          if (rows.length !== 6 || failures.length) process.exit(1);
+          NODE
+
+      - name: Upload evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: roulette-null-regression-controls
+          path: |
+            artifacts/roulette-physics-lab/part6-null-regression-*.json
+            part6-null-regression-*.log
+            /tmp/roulette-null-regression-vite.log
+          if-no-files-found: warn

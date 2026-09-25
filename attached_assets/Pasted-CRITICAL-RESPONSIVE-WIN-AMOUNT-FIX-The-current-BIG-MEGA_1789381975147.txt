@@ -1,0 +1,446 @@
+CRITICAL RESPONSIVE WIN-AMOUNT FIX
+
+The current BIG / MEGA / EPIC / MAX WIN amount typography is broken.
+
+Example:
+
+40,850.00
+
+already overflows and is clipped by the reward modal.
+
+With values such as:
+
+1,000,000.00
+5,750,000.00
+25,000,000.00
+
+the UI will completely fail.
+
+Fix the amount rendering system properly.
+
+DO NOT simply reduce the default font size globally.
+
+==================================================
+1. WIN AMOUNT MUST ALWAYS FIT
+==================================================
+
+Every reward amount must remain:
+
+- on ONE LINE
+- fully visible
+- centered
+- never clipped
+- never horizontally scrollable
+- never ellipsized
+- never truncated
+- never wrap to a second line
+
+This applies to:
+
+BIG WIN
+MEGA WIN
+EPIC WIN
+LEGENDARY WIN
+SUPER WIN
+MONSTER WIN
+COLOSSAL WIN
+MAX WIN
+BONUS COMPLETE
+
+==================================================
+2. USE DYNAMIC FONT FITTING
+==================================================
+
+The amount font size must adapt dynamically to the available width.
+
+Do not use one fixed:
+
+font-size: 110px
+
+for all amounts.
+
+Create a reusable component such as:
+
+<ResponsiveWinAmount />
+
+or equivalent.
+
+It must measure the available amount container and reduce font size until the full formatted value fits.
+
+==================================================
+3. PREFERRED IMPLEMENTATION
+==================================================
+
+Use a robust approach such as:
+
+ResizeObserver
++
+element scrollWidth/clientWidth measurement
+
+or an equivalent reliable fitting algorithm.
+
+Conceptual behavior:
+
+start from preferred maximum font size
+
+measure rendered amount
+
+while:
+scrollWidth > availableWidth
+
+reduce font size
+
+until it fits
+
+respect a configured minimum font size.
+
+Do not rely only on character-count guesses.
+
+==================================================
+4. CSS CLAMP MAY BE USED AS FIRST PASS
+==================================================
+
+Use responsive CSS for the normal range:
+
+font-size:
+clamp(...)
+
+But dynamic measurement must still protect against very large values.
+
+CSS-only sizing is not sufficient for arbitrary monetary values.
+
+==================================================
+5. AMOUNT CONTAINER
+==================================================
+
+Give the amount its own dedicated width.
+
+Example:
+
+width: 100%;
+max-width: 100%;
+padding-inline: 24px;
+
+box-sizing: border-box;
+
+The amount must never extend behind the modal edges.
+
+==================================================
+6. REMOVE CLIPPING BUG
+==================================================
+
+Inspect parent containers for:
+
+overflow: hidden
+
+combined with oversized text.
+
+The amount must not be visually chopped by the reward-card boundary.
+
+Decorative effects may be clipped if necessary,
+but the TEXT itself must remain fully visible.
+
+==================================================
+7. MODAL SHOULD ALSO USE MORE WIDTH INTELLIGENTLY
+==================================================
+
+The current reward card is unnecessarily narrow for large monetary values.
+
+Desktop reward modal may use approximately:
+
+width:
+min(92vw, 680px)
+
+depending on viewport.
+
+Do not make the modal excessively narrow when the hero content is a large win amount.
+
+Mobile:
+
+width:
+min(92vw, 520px)
+
+with appropriate padding.
+
+==================================================
+8. DESKTOP FONT TARGETS
+==================================================
+
+For a short value such as:
+
+850.00
+
+the amount can remain very large and dramatic.
+
+For:
+
+40,850.00
+
+reduce slightly.
+
+For:
+
+1,250,000.00
+
+reduce further.
+
+For:
+
+25,000,000.00
+
+reduce enough to fit cleanly.
+
+The visual hierarchy must remain:
+
+AMOUNT > TITLE > SUPPORTING INFO.
+
+==================================================
+9. DO NOT ABBREVIATE BY DEFAULT
+==================================================
+
+Do NOT automatically convert:
+
+1,250,000.00
+
+into:
+
+1.25M
+
+The player should see the real exact win amount.
+
+Use abbreviation only if we explicitly decide to add it later.
+
+Current requirement:
+
+DISPLAY THE FULL FORMATTED NUMBER.
+
+==================================================
+10. NUMBER FORMATTING
+==================================================
+
+Use proper thousands separators.
+
+Examples:
+
+40,850.00
+
+1,000,000.00
+
+12,750,450.00
+
+125,000,000.00
+
+Keep exactly two decimal places if that is the game's current money format.
+
+Use:
+
+font-variant-numeric: tabular-nums;
+
+where supported.
+
+==================================================
+11. SAFE INTERNAL PADDING
+==================================================
+
+The text must have breathing room from the modal edge.
+
+Minimum horizontal safe area:
+
+desktop:
+24-36px
+
+mobile:
+16-24px
+
+The fitting algorithm must fit within the SAFE INNER WIDTH,
+not the full outer card width.
+
+==================================================
+12. REWARD TITLE MUST NOT COMPETE WITH AMOUNT
+==================================================
+
+If the amount becomes very long,
+do not shrink the entire modal.
+
+Only scale the amount typography.
+
+Keep:
+
+EPIC WIN
+MEGA WIN
+etc.
+
+stable and readable.
+
+==================================================
+13. COUNT-UP ANIMATION MUST RESPECT DYNAMIC WIDTH
+==================================================
+
+During count-up:
+
+24.00
+→
+850.00
+→
+12,500.00
+→
+1,250,000.00
+
+the amount component must continuously remain inside its container.
+
+Do not wait until the final number to resize.
+
+The resizing should be smooth and not visibly jump around.
+
+Recommended:
+
+determine appropriate final font size based on FINAL target amount before the count begins.
+
+Then use that font size during the entire count-up.
+
+This prevents typography from repeatedly shrinking mid-animation.
+
+==================================================
+14. REWARD AMOUNT GLOW MUST SCALE TOO
+==================================================
+
+Glow/shadow effects must follow the responsive text size.
+
+Do not use enormous fixed blur values that make smaller fitted text unreadable.
+
+Scale the glow subtly with the font size.
+
+==================================================
+15. TEST THESE EXACT VALUES
+==================================================
+
+Visually test:
+
+9.00
+
+99.00
+
+999.00
+
+9,999.00
+
+40,850.00
+
+99,999.99
+
+100,000.00
+
+999,999.99
+
+1,000,000.00
+
+9,999,999.99
+
+25,000,000.00
+
+99,999,999.99
+
+999,999,999.99
+
+All must fit in one line.
+
+==================================================
+16. VIEWPORT TESTS
+==================================================
+
+Test at minimum:
+
+390x844
+430x932
+768x1024
+1366x768
+1920x1080
+
+No amount may clip.
+
+==================================================
+17. BIG WIN / BONUS COMPLETE SHARED COMPONENT
+==================================================
+
+Do not implement this fix separately in five different overlays.
+
+Create one shared:
+
+ResponsiveWinAmount
+
+component / utility used by:
+
+Major Win overlay
+Bonus Complete
+Max Win
+other large reward screens
+
+This prevents future inconsistency.
+
+==================================================
+18. NEVER SOLVE THIS WITH TRANSFORM SCALEX
+==================================================
+
+Do NOT horizontally squash the text with:
+
+transform: scaleX(...)
+
+That looks cheap and distorts numerals.
+
+Reduce the actual font size proportionally.
+
+==================================================
+19. ACCESSIBILITY / READABILITY
+==================================================
+
+Set a sensible minimum font size.
+
+If an extraordinarily large value ever reaches the minimum,
+the modal may widen up to its viewport-safe maximum before reducing further.
+
+Priority order:
+
+1. increase usable modal width
+2. reduce amount font size
+3. preserve exact full number
+4. never clip
+
+==================================================
+20. CURRENT SCREEN ACCEPTANCE
+==================================================
+
+Specifically retest the current example:
+
+EPIC WIN
+
+40,850.00
+
+81.70x BET
+
+The complete:
+
+40,850.00
+
+must be visible with comfortable left/right breathing space.
+
+No digits may touch or cross the modal border.
+
+==================================================
+21. FINAL REPORT
+==================================================
+
+Report:
+
+- new modal max width
+- amount inner safe width
+- maximum amount font size
+- minimum amount font size
+- dynamic fitting method used
+- whether final target size is calculated before count-up
+- results for 40,850.00
+- results for 1,000,000.00
+- results for 25,000,000.00
+- mobile viewport results
+- build/test status
+
+Do not mark complete if any test amount clips.
