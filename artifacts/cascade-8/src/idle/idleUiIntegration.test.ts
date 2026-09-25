@@ -24,7 +24,7 @@ describe("final Idle UI integration", () => {
     expect(componentsSource).toContain("data-business-vault-upgrade");
     expect(componentsSource).toContain("getIdleVaultUpgradePreview(business)");
     expect(componentsSource).toContain("vaultUpgrade.isMaxLevel");
-    expect(componentsSource).toContain("walletBalanceCents < vaultUpgrade.costCents");
+    expect(componentsSource).toContain("walletBalanceCents >= vaultCostCents");
   });
 
   it("wires the Kasa control to the real vault upgrade service", () => {
