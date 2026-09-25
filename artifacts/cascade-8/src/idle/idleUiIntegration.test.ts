@@ -272,9 +272,12 @@ describe("Businesses card information hierarchy", () => {
     expect(componentsSource).toContain("business-card-operations");
     expect(componentsSource).toContain("business-card-vault-heading");
     expect(componentsSource).toContain("business-card-vault-meta");
+    expect(componentsSource).toContain("business-card-vault-meter");
     expect(idleCssSource).toContain("/* Main-card refinement — simplified hierarchy / unified economy panel */");
+    expect(idleCssSource).toContain("/* Main-card refinement — Parts 3–4 meter + action layout */");
     expect(idleCssSource).toContain("grid-template-columns: minmax(0, .84fr) minmax(0, 1.16fr)");
-    expect(idleCssSource).toContain("height: 7px");
+    expect(idleCssSource).toContain("grid-column: 1 / -1");
+    expect(idleCssSource).toContain("height: 8px");
   });
 });
 
@@ -299,6 +302,14 @@ describe("Businesses premium action states", () => {
     expect(componentsSource).toContain("Kasa maksimum seviyede.");
     expect(idleIndexSource).toContain("Yükseltme sonrası Kasa Lv1'e döner");
     expect(idleIndexSource).toContain("İşletme gelişiminin zirvesindesin");
+  });
+
+  it("replaces the removed main-card upgrade slot with a single Details action", () => {
+    expect(componentsSource).toContain("business-card-action--details");
+    expect(componentsSource).toContain("business-card-secondary business-card-details");
+    expect((componentsSource.match(/data-business-details/g) ?? []).length).toBe(1);
+    expect(idleCssSource).toContain("grid-template-columns: minmax(0, 1.12fr) minmax(0, .88fr)");
+    expect(idleCssSource).toContain(".business-card-action--details .business-card-details");
   });
 
   it("styles ready, insufficient, max, locked and busy actions distinctly", () => {
@@ -326,6 +337,7 @@ describe("Businesses dedicated mobile cards", () => {
     expect(idleCssSource).toContain("border-radius: 18px");
     expect(idleCssSource).toContain("grid-template-columns: 1fr");
     expect(idleCssSource).toContain(".business-card-action--collect");
+    expect(idleCssSource).toContain(".business-card-action--details");
     expect(idleCssSource).toContain(".business-card-operations");
   });
 
