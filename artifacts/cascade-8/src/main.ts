@@ -15,6 +15,7 @@ import { createGameScene, GameScene } from "./game/GameScene";
 import { RouletteClient } from "./rouletteClient";
 import { CADI_KAZAN_MARKUP, WitchClient } from "./witchClient";
 import { EUROPEAN_WHEEL_ORDER, ROULETTE_SEGMENT_DEGREES } from "./rouletteGeometry";
+import { BUSINESSES_MARKUP } from "./idle";
 
 const app = document.querySelector<HTMLDivElement>("#app")!;
 const currentPath = window.location.pathname.replace(/\/+$/, "") || "/";
@@ -132,17 +133,6 @@ const mainMenuMarkup = `
       <span class="menu-footer-line"></span>
        <span>ONE LOUNGE · FOUR WORLDS</span>
       <span class="menu-footer-line"></span>
-    </div>
-  </main>
-`;
-
-const businessesMarkup = `
-  <main class="game-menu businesses-page" aria-labelledby="businesses-title">
-    <div class="menu-intro">
-      <span class="menu-kicker">FAHRİNİN YOLU // İŞLETMELER</span>
-      <h1 id="businesses-title">İŞLETMELER</h1>
-      <p>İşletme sistemi hazırlanıyor.</p>
-      <a class="back-link" href="/">← ANA MENÜ</a>
     </div>
   </main>
 `;
@@ -348,7 +338,7 @@ if (isRouletteRoute) {
 } else if (isWitchRoute) {
   app.innerHTML = routeShell(CADI_KAZAN_MARKUP, "is-route-page is-witch-page");
 } else if (isBusinessesRoute) {
-  app.innerHTML = routeShell(businessesMarkup, "is-route-page is-businesses-page");
+  app.innerHTML = routeShell(BUSINESSES_MARKUP, "is-route-page is-businesses-page");
 } else if (!isSlotRoute) {
   app.innerHTML = routeShell(mainMenuMarkup, "is-route-page is-menu-page");
 } else {
