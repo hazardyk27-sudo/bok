@@ -106,10 +106,9 @@ export function projectIdleBusinessLive(
     Math.max(0, business.remainingCapacityMicrocents),
     earnedMicrocents,
   );
-  const liveAccruedMicrocents = Math.min(
-    business.vaultCapacityMicrocents,
-    business.accruedMicrocents + creditedMicrocents,
-  );
+  // Already-earned money can legitimately sit above the new Lv1 Kasa cap
+  // immediately after a main business upgrade. Preserve it until Collect.
+  const liveAccruedMicrocents = business.accruedMicrocents + creditedMicrocents;
   const liveRemainingCapacityMicrocents = Math.max(
     0,
     business.vaultCapacityMicrocents - liveAccruedMicrocents,
