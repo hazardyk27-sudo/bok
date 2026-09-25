@@ -214,3 +214,24 @@ export const slotWalletMigrations = pgTable(
     uniqueIndex("slot_wallet_migrations_session_unique").on(table.sessionId),
   ],
 );
+
+export const idleBusinessStates = pgTable(
+  "idle_business_states",
+  {
+    id: text("id").primaryKey(),
+    sessionId: text("session_id").notNull(),
+    businessId: text("business_id").notNull(),
+    // null means the entry level has not been purchased yet.
+    businessLevel: integer("business_level"),
+    vaultLevel: integer("vault_level").notNull().default(1),
+    // 1 cent = 1,000,000 microcents. Keeps sub-cent passive accrual persistent.
+    accruedMicrocents: bigint("accrued_microcents", { mode: "number" }).notNull().default(0),
+    checkpointAt: timestamp("checkpoint_at", { withTimezone: true }).notNull().defaultNow(),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    uniqueIndex("idle_business_states_session_business_unique").on(table.sessionId, table.businessId),
+    index("idle_business_states_session_idx").on(table.sessionId),
+  ],
+);
