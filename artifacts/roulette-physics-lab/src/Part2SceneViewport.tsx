@@ -1352,7 +1352,7 @@ function addKinematicPocketInnerGuard(
       POCKET_INNER_GUARD_EDGE_ROUNDING,
     )
       .setTranslation(0, centerY, 0)
-      .setFriction(0.42)
+      .setFriction(0.65)
       .setRestitution(0.02)
       .setCollisionGroups(
         ROTOR_COLLISION_GROUP | (BALL_COLLISION_GROUP << 16),
