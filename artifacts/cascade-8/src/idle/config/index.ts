@@ -158,3 +158,83 @@ export const CLUB_STORE_BUSINESS = {
     },
   ],
 } as const satisfies BusinessDefinition;
+
+
+export const FAN_CLUB_BUSINESS = {
+  id: "fan-club",
+  label: "Taraftar Kulübü",
+  levels: [
+    {
+      level: 0,
+      name: "Yerel Taraftar Grubu",
+      costCents: 10_000,
+      dailyIncomeCents: 3_300,
+      hourlyIncomeDisplayCents: 139,
+      targetRoiDays: 3,
+    },
+    {
+      level: 1,
+      name: "Resmî Taraftar Kulübü",
+      costCents: 40_000,
+      dailyIncomeCents: 11_300,
+      hourlyIncomeDisplayCents: 472,
+      targetRoiDays: 5,
+    },
+    {
+      level: 2,
+      name: "Üyelik Programı",
+      costCents: 100_000,
+      dailyIncomeCents: 23_800,
+      hourlyIncomeDisplayCents: 993,
+      targetRoiDays: 8,
+    },
+    {
+      level: 3,
+      name: "Premium Üyelik",
+      costCents: 300_000,
+      dailyIncomeCents: 40_500,
+      hourlyIncomeDisplayCents: 1_688,
+      targetRoiDays: 18,
+    },
+    {
+      level: 4,
+      name: "Ulusal Taraftar Ağı",
+      costCents: 1_000_000,
+      dailyIncomeCents: 69_100,
+      hourlyIncomeDisplayCents: 2_878,
+      targetRoiDays: 35,
+    },
+    {
+      level: 5,
+      name: "Uluslararası Taraftar Kulübü",
+      costCents: 3_500_000,
+      dailyIncomeCents: 127_400,
+      hourlyIncomeDisplayCents: 5_309,
+      targetRoiDays: 60,
+    },
+    {
+      level: 6,
+      name: "Taraftar Ağı ★1",
+      costCents: 12_000_000,
+      dailyIncomeCents: 247_400,
+      hourlyIncomeDisplayCents: 10_309,
+      targetRoiDays: 100,
+    },
+    {
+      level: 7,
+      name: "Taraftar Ağı ★2",
+      costCents: 45_000_000,
+      dailyIncomeCents: 547_400,
+      hourlyIncomeDisplayCents: 22_809,
+      targetRoiDays: 150,
+    },
+    {
+      level: 8,
+      name: "Taraftar Ağı ★3",
+      costCents: 150_000_000,
+      dailyIncomeCents: 1_297_400,
+      hourlyIncomeDisplayCents: 54_059,
+      targetRoiDays: 200,
+    },
+  ],
+} as const satisfies BusinessDefinition;
