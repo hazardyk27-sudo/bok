@@ -387,6 +387,9 @@ ${renderBusinessArt(businessId)}
                 <small data-business-vault-fill>Doluluk —</small>
                 <small class="business-vault-eta" data-business-vault-eta>—</small>
               </div>
+            </div>
+
+            <div class="business-card-vault-meter">
               <div class="business-vault-progress" aria-hidden="true"><i data-business-vault-progress></i></div>
               <button type="button" class="business-vault-upgrade" disabled data-action-state="loading" data-business-vault-upgrade>GELİŞTİR</button>
             </div>
@@ -405,6 +408,17 @@ ${renderBusinessArt(businessId)}
               data-business-collect
             >TOPLA</button>
           </div>
+          <div class="business-card-action business-card-action--details">
+            <button
+              type="button"
+              class="business-card-secondary business-card-details"
+              data-business-details
+              aria-label="${meta.definition.label} detaylarını aç"
+            >
+              <span>DETAYLAR</span>
+              <i aria-hidden="true">→</i>
+            </button>
+          </div>
         </div>
 
         <div class="business-card-footer">
@@ -412,15 +426,6 @@ ${renderBusinessArt(businessId)}
             <span>9 SEVİYELİ GELİŞİM</span>
             <span>LV0 → LV8</span>
           </div>
-          <button
-            type="button"
-            class="business-card-details"
-            data-business-details
-            aria-label="${meta.definition.label} detaylarını aç"
-          >
-            <span>DETAYLAR</span>
-            <i aria-hidden="true">→</i>
-          </button>
         </div>
       </div>
     </article>
