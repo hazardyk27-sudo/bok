@@ -25,6 +25,23 @@ export type IdleBusinessUpgradeStage = {
   costCents: number;
 };
 
+export function debitIdleCredits(
+  balanceCents: number,
+  costCents: number,
+) {
+  if (!Number.isSafeInteger(balanceCents) || balanceCents < 0) {
+    throw new Error("INVALID_IDLE_WALLET_BALANCE");
+  }
+  if (!Number.isSafeInteger(costCents) || costCents < 0) {
+    throw new Error("INVALID_IDLE_DEBIT_COST");
+  }
+  if (balanceCents < costCents) {
+    throw new Error("INSUFFICIENT_IDLE_CREDITS");
+  }
+
+  return balanceCents - costCents;
+}
+
 export function resolveBusinessUpgrade(
   currentBusinessLevel: number | null,
   levels: readonly IdleBusinessUpgradeStage[],
@@ -38,17 +55,10 @@ export function resolveBusinessUpgrade(
   );
 
   if (!targetStage) throw new Error("IDLE_BUSINESS_MAX_LEVEL");
-  if (!Number.isSafeInteger(balanceCents) || balanceCents < 0) {
-    throw new Error("INVALID_IDLE_WALLET_BALANCE");
-  }
-  if (balanceCents < targetStage.costCents) {
-    throw new Error("INSUFFICIENT_IDLE_CREDITS");
-  }
-
   return {
     targetBusinessLevel,
     costCents: targetStage.costCents,
-    balanceAfterCents: balanceCents - targetStage.costCents,
+    balanceAfterCents: debitIdleCredits(balanceCents, targetStage.costCents),
     resetVaultLevel: 1 as const,
   };
 }
@@ -77,16 +87,9 @@ export function resolveVaultUpgrade(
   if (!Number.isSafeInteger(costCents) || costCents < 0) {
     throw new Error("INVALID_IDLE_VAULT_UPGRADE_COST");
   }
-  if (!Number.isSafeInteger(balanceCents) || balanceCents < 0) {
-    throw new Error("INVALID_IDLE_WALLET_BALANCE");
-  }
-  if (balanceCents < costCents) {
-    throw new Error("INSUFFICIENT_IDLE_CREDITS");
-  }
-
   return {
     targetVaultLevel: step.toLevel,
     costCents,
-    balanceAfterCents: balanceCents - costCents,
+    balanceAfterCents: debitIdleCredits(balanceCents, costCents),
   };
 }
