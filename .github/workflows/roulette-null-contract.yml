@@ -37,6 +37,9 @@ jobs:
       - name: Install Chromium
         run: pnpm exec playwright install --with-deps chromium
 
+      - name: Build TypeScript project references
+        run: pnpm run typecheck:libs
+
       - name: Typecheck roulette physics lab
         run: pnpm --filter @workspace/roulette-physics-lab run typecheck
 
