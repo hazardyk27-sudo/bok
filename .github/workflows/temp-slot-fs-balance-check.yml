@@ -25,4 +25,26 @@ jobs:
           cache: pnpm
       - run: pnpm install --frozen-lockfile
       - run: pnpm --filter @workspace/cascade-8 run typecheck
-      - run: pnpm --filter @workspace/cascade-8 run test
+      - name: Verify Free Spin balance is deferred until bonus completion
+        shell: bash
+        run: |
+          set -euo pipefail
+          FILE="artifacts/cascade-8/src/game/GameController.ts"
+          if grep -Fq "this.balanceCents += freeSpin.win" "$FILE"; then
+            echo "Free Spin win is still credited to BALANCE per round"
+            exit 1
+          fi
+          node - "$FILE" <<'NODE'
+          const fs = require("node:fs");
+          const source = fs.readFileSync(process.argv[2], "utf8");
+          const summary = source.indexOf("await this.showBonusSummary(result);");
+          const finish = source.indexOf("await this.finishSpin(result);", summary);
+          const commitMethod = source.indexOf("private commitPendingWalletBalance()");
+          const commitInFinish = source.indexOf("this.commitPendingWalletBalance();", commitMethod);
+          if (summary < 0 || finish < 0 || commitMethod < 0 || commitInFinish < 0) {
+            throw new Error("Expected deferred wallet settlement flow is missing");
+          }
+          if (finish <= summary) throw new Error("Wallet finish occurs before bonus summary");
+          console.log("FREE_SPIN_BALANCE_DEFERRED_OK");
+          NODE
+      - run: pnpm --filter @workspace/cascade-8 exec vitest run src/game/GameControllerFormatting.test.ts
