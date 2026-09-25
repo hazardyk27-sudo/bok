@@ -52,8 +52,14 @@ export type IdleStateEnvelope = {
   receivedAtMs: number;
 };
 
+export type IdleVaultStatus = "UNOWNED" | "EARNING" | "FULL";
+
 export type IdleLiveBusinessState = IdleBusinessServerState & {
   liveAccruedMicrocents: number;
   liveRemainingCapacityMicrocents: number;
   liveIsVaultFull: boolean;
+  vaultFillRatio: number;
+  vaultStatus: IdleVaultStatus;
+  collectableCents: number;
+  canCollect: boolean;
 };
