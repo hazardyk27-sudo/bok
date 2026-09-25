@@ -62,6 +62,31 @@ function getDefinition(businessId: BusinessId) {
   return BUSINESS_META[businessId].definition;
 }
 
+function formatVaultEta(
+  business: IdleLiveBusinessState,
+  dailyIncomeCents: number | null,
+) {
+  if (business.businessLevel === null || dailyIncomeCents === null || dailyIncomeCents <= 0) {
+    return "Satın alındıktan sonra aktif";
+  }
+  if (business.liveIsVaultFull) return "Kasa dolu · toplamaya hazır";
+
+  const hourlyMicrocents = dailyIncomeCents * MICRO_CENTS_PER_CENT / 24;
+  if (hourlyMicrocents <= 0) return "Gelir bekleniyor";
+
+  const remainingHours = business.liveRemainingCapacityMicrocents / hourlyMicrocents;
+  if (!Number.isFinite(remainingHours) || remainingHours <= 0) return "Kasa dolmak üzere";
+
+  if (remainingHours < 1) {
+    return `Yaklaşık ${Math.max(1, Math.ceil(remainingHours * 60))} dk sonra dolar`;
+  }
+
+  const wholeHours = Math.floor(remainingHours);
+  const minutes = Math.round((remainingHours - wholeHours) * 60);
+  if (minutes <= 0) return `Yaklaşık ${wholeHours}sa sonra dolar`;
+  return `Yaklaşık ${wholeHours}sa ${minutes}dk sonra dolar`;
+}
+
 export function renderBusinessRowShell(businessId: BusinessId) {
   const meta = BUSINESS_META[businessId];
   return `
@@ -92,7 +117,10 @@ export function renderBusinessRowShell(businessId: BusinessId) {
 
         <div class="business-row-metrics business-card-metrics">
           <div class="business-row-metric business-card-accrued">
-            <span>BİRİKMİŞ</span>
+            <div class="business-card-accrued-heading">
+              <span>BİRİKMİŞ</span>
+              <small data-business-accrued-status>KASADA HAZIR</small>
+            </div>
             <strong data-business-accrued>—</strong>
           </div>
           <div class="business-row-metric business-card-income">
@@ -105,9 +133,22 @@ export function renderBusinessRowShell(businessId: BusinessId) {
             <strong data-business-vault>Lv— · —</strong>
             <small data-business-vault-fill>Doluluk —</small>
             <div class="business-vault-progress" aria-hidden="true"><i data-business-vault-progress></i></div>
+            <small class="business-vault-eta" data-business-vault-eta>—</small>
             <button type="button" class="business-vault-upgrade" disabled data-business-vault-upgrade>GELİŞTİR</button>
           </div>
         </div>
+
+        <section class="business-card-next" data-business-next-panel aria-label="Sonraki işletme gelişimi">
+          <div class="business-card-next-copy">
+            <span>SONRAKİ GELİŞİM</span>
+            <strong data-business-next-name>—</strong>
+            <small data-business-next-cost>—</small>
+          </div>
+          <div class="business-card-next-gain">
+            <span>GELİR ARTIŞI</span>
+            <strong data-business-next-gain>—</strong>
+          </div>
+        </section>
 
         <div class="business-card-divider" aria-hidden="true"></div>
 
@@ -139,12 +180,36 @@ export function updateBusinessRow(
   const vaultNode = row.querySelector<HTMLElement>("[data-business-vault]");
   const vaultFillNode = row.querySelector<HTMLElement>("[data-business-vault-fill]");
   const vaultProgressNode = row.querySelector<HTMLElement>("[data-business-vault-progress]");
+  const vaultEtaNode = row.querySelector<HTMLElement>("[data-business-vault-eta]");
+  const accruedStatusNode = row.querySelector<HTMLElement>("[data-business-accrued-status]");
+  const nextPanelNode = row.querySelector<HTMLElement>("[data-business-next-panel]");
+  const nextNameNode = row.querySelector<HTMLElement>("[data-business-next-name]");
+  const nextCostNode = row.querySelector<HTMLElement>("[data-business-next-cost]");
+  const nextGainNode = row.querySelector<HTMLElement>("[data-business-next-gain]");
   const vaultUpgradeButton = row.querySelector<HTMLButtonElement>("[data-business-vault-upgrade]");
   const upgradeButton = row.querySelector<HTMLButtonElement>("[data-business-upgrade]");
   const collectButton = row.querySelector<HTMLButtonElement>("[data-business-collect]");
   const cardStateNode = row.querySelector<HTMLElement>("[data-business-card-state]");
 
-  if (!levelNode || !accruedNode || !incomeNode || !dailyNode || !vaultNode || !vaultFillNode || !vaultProgressNode || !vaultUpgradeButton || !upgradeButton || !collectButton || !cardStateNode) {
+  if (
+    !levelNode
+    || !accruedNode
+    || !incomeNode
+    || !dailyNode
+    || !vaultNode
+    || !vaultFillNode
+    || !vaultProgressNode
+    || !vaultEtaNode
+    || !accruedStatusNode
+    || !nextPanelNode
+    || !nextNameNode
+    || !nextCostNode
+    || !nextGainNode
+    || !vaultUpgradeButton
+    || !upgradeButton
+    || !collectButton
+    || !cardStateNode
+  ) {
     throw new Error("IDLE_BUSINESS_ROW_INCOMPLETE");
   }
 
@@ -180,6 +245,38 @@ export function updateBusinessRow(
     ? "Satın alındıktan sonra aktif"
     : `Doluluk %${fillPercent}`;
   vaultProgressNode.style.width = `${fillPercent}%`;
+  vaultEtaNode.textContent = formatVaultEta(
+    business,
+    currentStage?.dailyIncomeCents ?? null,
+  );
+  accruedStatusNode.textContent = business.businessLevel === null
+    ? "İŞLETME KAPALI"
+    : business.canCollect
+      ? "TOPLAMAYA HAZIR"
+      : "GELİR BİRİKİYOR";
+
+  if (nextStage) {
+    const currentHourlyCents = currentStage?.hourlyIncomeDisplayCents ?? 0;
+    const incomeGainCents = Math.max(
+      0,
+      nextStage.hourlyIncomeDisplayCents - currentHourlyCents,
+    );
+    const incomeGainPercent = currentHourlyCents > 0
+      ? Math.round(incomeGainCents / currentHourlyCents * 100)
+      : null;
+
+    nextPanelNode.dataset.nextState = currentStage ? "upgrade" : "purchase";
+    nextNameNode.textContent = `Lv${nextStage.level} · ${nextStage.name}`;
+    nextCostNode.textContent = `Maliyet · ${formatCreditsFromCents(nextStage.costCents)}`;
+    nextGainNode.textContent = incomeGainPercent === null
+      ? `${formatCreditsFromCents(nextStage.hourlyIncomeDisplayCents)} /sa`
+      : `+${formatCreditsFromCents(incomeGainCents)} /sa · +%${incomeGainPercent}`;
+  } else {
+    nextPanelNode.dataset.nextState = "max";
+    nextNameNode.textContent = "ZİRVEYE ULAŞTI";
+    nextCostNode.textContent = "Tüm işletme seviyeleri tamamlandı";
+    nextGainNode.textContent = "MAX";
+  }
 
   if (!vaultUpgrade.isOwned || vaultUpgrade.isMaxLevel || !vaultUpgrade.canUpgrade) {
     vaultUpgradeButton.hidden = true;
