@@ -16,7 +16,7 @@ import {
   type IdleBusinessStorageState,
 } from "./storage";
 import { settleIdleMicrocents } from "./money";
-import { assertIdleActionReceiptReplay } from "./policy";
+import { assertIdleActionReceiptReplay, resolveBusinessUpgrade } from "./policy";
 
 type IdleActionReceiptRow = {
   session_id: string;
@@ -469,12 +469,19 @@ export class IdleRepository {
         );
         const receipt = duplicate.rows[0];
         if (!receipt) throw new Error("IDLE_IDEMPOTENCY_RECEIPT_MISSING");
-        if (
-          receipt.session_id !== sessionId
-          || receipt.business_id !== businessId
-          || receipt.action_type !== "BUSINESS_UPGRADE"
-          || receipt.target_business_level === null
-        ) {
+        assertIdleActionReceiptReplay(
+          {
+            sessionId: receipt.session_id,
+            businessId: receipt.business_id,
+            actionType: receipt.action_type,
+          },
+          {
+            sessionId,
+            businessId,
+            actionType: "BUSINESS_UPGRADE",
+          },
+        );
+        if (receipt.target_business_level === null) {
           throw new Error("IDEMPOTENCY_KEY_REUSED");
         }
 
@@ -503,22 +510,21 @@ export class IdleRepository {
       const state = states.find((entry) => entry.businessId === businessId);
       if (!state) throw new Error("IDLE_BUSINESS_NOT_FOUND");
 
-      const targetBusinessLevel = state.businessLevel === null
-        ? 0
-        : state.businessLevel + 1;
       const definition = BUSINESS_CONFIGS[businessId];
+      const balanceBeforeCents = await ensureWalletForUpdate(client, sessionId);
+      const upgrade = resolveBusinessUpgrade(
+        state.businessLevel,
+        definition.levels,
+        balanceBeforeCents,
+      );
+      const targetBusinessLevel = upgrade.targetBusinessLevel;
       const targetStage = definition.levels.find(
         (entry) => entry.level === targetBusinessLevel,
       );
       if (!targetStage) throw new Error("IDLE_BUSINESS_MAX_LEVEL");
 
-      const balanceBeforeCents = await ensureWalletForUpdate(client, sessionId);
-      if (balanceBeforeCents < targetStage.costCents) {
-        throw new Error("INSUFFICIENT_IDLE_CREDITS");
-      }
-
       const checkpoint = projectBusinessAccrual(state, serverNow);
-      const balanceCents = balanceBeforeCents - targetStage.costCents;
+      const balanceCents = upgrade.balanceAfterCents;
 
       await client.query(
         `UPDATE roulette_wallets
@@ -531,7 +537,7 @@ export class IdleRepository {
       await client.query(
         `UPDATE idle_business_states
             SET business_level = $3,
-                vault_level = 1,
+                vault_level = $6,
                 accrued_microcents = $4,
                 checkpoint_at = $5,
                 updated_at = now()
@@ -543,6 +549,7 @@ export class IdleRepository {
           targetBusinessLevel,
           checkpoint.projectedAccruedMicrocents,
           serverNow,
+          upgrade.resetVaultLevel,
         ],
       );
 
