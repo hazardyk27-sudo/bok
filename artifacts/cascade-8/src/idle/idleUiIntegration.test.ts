@@ -555,3 +555,49 @@ describe("Businesses real level tree", () => {
     expect(idleCssSource).toContain("grid-template-columns: 1fr");
   });
 });
+
+
+describe("Businesses next-level comparison card", () => {
+  it("shows current and target income side-by-side with real upgrade economics", () => {
+    expect(idleIndexSource).toContain("data-idle-next-comparison");
+    expect(idleIndexSource).toContain("data-idle-next-current-hourly");
+    expect(idleIndexSource).toContain("data-idle-next-target-hourly");
+    expect(idleIndexSource).toContain("data-idle-next-hourly-gain");
+    expect(idleIndexSource).toContain("data-idle-next-daily-gain");
+    expect(idleIndexSource).toContain("data-idle-next-cost");
+  });
+
+  it("calculates hourly, daily and percentage gains from real level definitions", () => {
+    expect(idleIndexSource).toContain("hourlyGainCents");
+    expect(idleIndexSource).toContain("dailyGainCents");
+    expect(idleIndexSource).toContain("gainPercent");
+    expect(idleIndexSource).toContain("nextStage.hourlyIncomeDisplayCents");
+    expect(idleIndexSource).toContain("nextStage.dailyIncomeCents");
+    expect(idleIndexSource).toContain("nextStage.costCents");
+  });
+
+  it("connects the detail CTA to the existing business upgrade action", () => {
+    expect(idleIndexSource).toContain("data-idle-detail-upgrade");
+    expect(idleIndexSource).toContain('button.matches("[data-idle-detail-upgrade]")');
+    expect(idleIndexSource).toContain("upgradeIdleBusiness(businessId)");
+    expect(idleIndexSource).toContain("detailUpgradeButton.dataset.actionState");
+    expect(idleIndexSource).toContain('"insufficient"');
+    expect(idleIndexSource).toContain('"purchase"');
+    expect(idleIndexSource).toContain('"max"');
+  });
+
+  it("warns about vault reset and insufficient balance in the comparison card", () => {
+    expect(idleIndexSource).toContain("Yükseltme sonrası Kasa Lv1'e döner");
+    expect(idleIndexSource).toContain("Bakiye yetersiz");
+    expect(idleIndexSource).toContain("shortfallCents");
+  });
+
+  it("has premium desktop and mobile comparison layouts", () => {
+    expect(idleCssSource).toContain("/* Part 14 — next-level comparison card */");
+    expect(idleCssSource).toContain(".business-next-comparison-flow");
+    expect(idleCssSource).toContain(".business-next-comparison-deltas");
+    expect(idleCssSource).toContain(".business-next-comparison-cta");
+    expect(idleCssSource).toContain("grid-template-columns: minmax(0, 1fr) 36px minmax(0, 1fr)");
+    expect(idleCssSource).toContain("grid-template-columns: 1fr 1fr");
+  });
+});
