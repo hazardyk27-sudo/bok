@@ -394,7 +394,7 @@ describe("Businesses Club Store milestone visuals", () => {
   });
 
   it("keeps the shared level milestone mapping while using Club Store labels", () => {
-    expect(componentsSource).toContain('businessId === "club-store" ? "CLUB STORE" : "STADIUM"');
+    expect(componentsSource).toContain('business.businessId === "club-store"');
     expect(componentsSource).toContain("data-business-milestone");
     expect(componentsSource).toContain("row.dataset.visualStage = visualStage");
   });
@@ -413,5 +413,41 @@ describe("Businesses Club Store milestone visuals", () => {
     expect(idleCssSource).toContain(".business-card--club-store .business-card-store-scene svg");
     expect(idleCssSource).toContain("min-height: 148px");
     expect(idleCssSource).toContain("min-height: 134px");
+  });
+});
+
+
+describe("Businesses Fan Club milestone visuals", () => {
+  it("renders a real supporter lounge scene with media, seating and fan atmosphere", () => {
+    expect(componentsSource).toContain("business-card-fan-scene");
+    expect(componentsSource).toContain("fan-lounge-shell");
+    expect(componentsSource).toContain("fan-media");
+    expect(componentsSource).toContain("fan-seating");
+    expect(componentsSource).toContain("fan-supporters");
+    expect(componentsSource).toContain("fan-flags");
+    expect(componentsSource).toContain("fan-scarves");
+  });
+
+  it("uses Fan Club milestone labels through the shared progression stage map", () => {
+    expect(componentsSource).toContain('"FAN CLUB"');
+    expect(componentsSource).toContain("data-business-milestone");
+    expect(componentsSource).toContain("row.dataset.visualStage = visualStage");
+  });
+
+  it("styles locked, local, pro, elite and iconic supporter headquarters states", () => {
+    expect(idleCssSource).toContain("/* Part 11 — Fan Club visual system / supporter progression */");
+    expect(idleCssSource).toContain('.business-card--fan-club[data-visual-stage="locked"]');
+    expect(idleCssSource).toContain('.business-card--fan-club[data-visual-stage="local"]');
+    expect(idleCssSource).toContain('.business-card--fan-club[data-visual-stage="pro"]');
+    expect(idleCssSource).toContain('.business-card--fan-club[data-visual-stage="elite"]');
+    expect(idleCssSource).toContain('.business-card--fan-club[data-visual-stage="landmark"]');
+    expect(idleCssSource).toContain(".fan-icon-crown");
+  });
+
+  it("keeps the Fan Club hero tuned for mobile and reduced motion", () => {
+    expect(idleCssSource).toContain(".business-card--fan-club .business-card-fan-scene svg");
+    expect(idleCssSource).toContain("min-height: 148px");
+    expect(idleCssSource).toContain("min-height: 134px");
+    expect(idleCssSource).toContain("@media (prefers-reduced-motion: reduce)");
   });
 });
