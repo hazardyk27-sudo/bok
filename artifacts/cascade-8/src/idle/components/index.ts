@@ -63,10 +63,97 @@ function getDefinition(businessId: BusinessId) {
 }
 
 function renderBusinessArt(businessId: BusinessId) {
-  if (businessId !== "stadium") {
+  if (businessId === "fan-club") {
     return `
       <div class="business-card-art ${BUSINESS_META[businessId].artClass}" aria-hidden="true">
         <i></i><b></b><em></em>
+      </div>
+    `;
+  }
+
+  if (businessId === "club-store") {
+    return `
+      <div class="business-card-art business-card-art--club-store business-card-store-scene" aria-hidden="true">
+        <svg viewBox="0 0 420 190" preserveAspectRatio="xMidYMid slice" role="presentation">
+          <defs>
+            <linearGradient id="store-night" x1="0" y1="0" x2="1" y2="1">
+              <stop offset="0%" stop-color="#11192d"/>
+              <stop offset="54%" stop-color="#18233d"/>
+              <stop offset="100%" stop-color="#080f1b"/>
+            </linearGradient>
+            <linearGradient id="store-glass" x1="0" y1="0" x2="1" y2="1">
+              <stop offset="0%" stop-color="#173557" stop-opacity=".92"/>
+              <stop offset="100%" stop-color="#091725" stop-opacity=".95"/>
+            </linearGradient>
+            <linearGradient id="store-floor" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stop-color="#172039"/>
+              <stop offset="100%" stop-color="#070d17"/>
+            </linearGradient>
+            <linearGradient id="store-neon" x1="0" y1="0" x2="1" y2="0">
+              <stop offset="0%" stop-color="#46c8ff"/>
+              <stop offset="55%" stop-color="#8d7dff"/>
+              <stop offset="100%" stop-color="#46c8ff"/>
+            </linearGradient>
+            <filter id="store-soft-glow" x="-50%" y="-50%" width="200%" height="200%">
+              <feGaussianBlur stdDeviation="3.5"/>
+            </filter>
+          </defs>
+
+          <rect class="store-night" width="420" height="190" fill="url(#store-night)"/>
+          <path class="store-pavement" d="M0 153L420 144V190H0Z" fill="url(#store-floor)"/>
+          <ellipse class="store-ground-glow" cx="230" cy="158" rx="146" ry="22" fill="#7258ff" opacity=".07" filter="url(#store-soft-glow)"/>
+
+          <g class="store-shell">
+            <path class="store-canopy" d="M56 49H365L349 69H70Z" fill="#111d32" stroke="#a2dfff" stroke-opacity=".2"/>
+            <rect class="store-facade" x="67" y="66" width="290" height="90" rx="7" fill="#0a1525" stroke="#91ddff" stroke-opacity=".18"/>
+            <rect class="store-window store-window-left" x="78" y="77" width="86" height="66" rx="4" fill="url(#store-glass)" stroke="#7bdcff" stroke-opacity=".19"/>
+            <rect class="store-window store-window-center" x="171" y="77" width="86" height="66" rx="4" fill="url(#store-glass)" stroke="#9a8cff" stroke-opacity=".2"/>
+            <rect class="store-window store-window-right" x="264" y="77" width="82" height="66" rx="4" fill="url(#store-glass)" stroke="#7bdcff" stroke-opacity=".19"/>
+            <path class="store-door" d="M198 93H230V155H198Z" fill="#0b1a2c" stroke="#b4ebff" stroke-opacity=".24"/>
+            <circle class="store-door-handle" cx="224" cy="125" r="1.5" fill="#bdefff" opacity=".55"/>
+          </g>
+
+          <g class="store-signage">
+            <rect x="118" y="51" width="184" height="16" rx="8" fill="#07111d" stroke="#8fdfff" stroke-opacity=".2"/>
+            <path class="store-sign-line" d="M144 59H277" stroke="url(#store-neon)" stroke-width="2.5" stroke-linecap="round"/>
+            <circle class="store-sign-mark" cx="131" cy="59" r="4" fill="none" stroke="#7ddfff" stroke-opacity=".72"/>
+          </g>
+
+          <g class="store-merch">
+            <g class="store-jersey store-jersey-left">
+              <path d="M100 88l12-6 12 6 10-4 8 13-10 6v27H92v-27l-10-6 8-13z" fill="#183e61" stroke="#8de5ff" stroke-opacity=".28"/>
+              <path d="M112 82v48M96 103h32" stroke="#8de5ff" stroke-opacity=".16"/>
+            </g>
+            <g class="store-jersey store-jersey-center">
+              <path d="M193 89l12-6 12 6 10-4 8 13-10 6v26h-40v-26l-10-6 8-13z" fill="#29285a" stroke="#aa9cff" stroke-opacity=".3"/>
+              <path d="M205 83v47M189 104h32" stroke="#aa9cff" stroke-opacity=".17"/>
+            </g>
+            <g class="store-jersey store-jersey-right">
+              <path d="M289 89l11-6 11 6 9-4 8 12-9 6v27h-38v-27l-9-6 8-12z" fill="#143c55" stroke="#8de5ff" stroke-opacity=".26"/>
+              <path d="M300 83v47M286 104h28" stroke="#8de5ff" stroke-opacity=".15"/>
+            </g>
+          </g>
+
+          <g class="store-shelves" opacity=".46">
+            <path d="M84 136h68M270 136h68" stroke="#9edfff" stroke-opacity=".32"/>
+            <rect x="91" y="126" width="10" height="7" rx="1" fill="#79dfff"/>
+            <rect x="106" y="123" width="12" height="10" rx="1" fill="#8f83ff"/>
+            <rect x="124" y="127" width="17" height="6" rx="1" fill="#79dfff"/>
+            <rect x="277" y="126" width="12" height="7" rx="1" fill="#79dfff"/>
+            <rect x="294" y="122" width="15" height="11" rx="1" fill="#8f83ff"/>
+            <rect x="314" y="127" width="15" height="6" rx="1" fill="#79dfff"/>
+          </g>
+
+          <g class="store-premium-rack" opacity=".25">
+            <path d="M206 80v58M184 91h44" stroke="#d4f6ff" stroke-opacity=".34"/>
+            <circle cx="206" cy="76" r="4" fill="#bcefff" opacity=".35"/>
+          </g>
+
+          <g class="store-flagship-mark" opacity="0" fill="none" stroke="#c8f4ff" stroke-width="1.5">
+            <path d="M210 26l7 9 11 1-7 8 2 11-13-6-13 6 2-11-7-8 11-1z"/>
+            <circle cx="210" cy="40" r="22" stroke-opacity=".2"/>
+          </g>
+        </svg>
       </div>
     `;
   }
@@ -187,7 +274,7 @@ export function renderBusinessRowShell(businessId: BusinessId) {
       <div class="business-card-visual" role="img" aria-label="${meta.visualLabel}">
 ${renderBusinessArt(businessId)}
         <span class="business-card-code">${meta.code}</span>
-        ${businessId === "stadium" ? '<span class="business-card-milestone" data-business-milestone>STADIUM // BASE</span>' : ""}
+        ${businessId !== "fan-club" ? `<span class="business-card-milestone" data-business-milestone>${businessId === "stadium" ? "STADIUM" : "CLUB STORE"} // BASE</span>` : ""}
         <span class="business-card-state" data-business-card-state>YÜKLENİYOR</span>
         <div class="business-card-visual-shade" aria-hidden="true"></div>
       </div>
@@ -489,15 +576,16 @@ export function updateBusinessRow(
   const visualStage = getBusinessVisualStage(business);
   row.dataset.visualStage = visualStage;
   if (milestoneNode) {
+    const visualPrefix = business.businessId === "club-store" ? "CLUB STORE" : "STADIUM";
     milestoneNode.textContent = visualStage === "locked"
-      ? "STADIUM // LOCKED"
+      ? `${visualPrefix} // LOCKED`
       : visualStage === "local"
-        ? "STADIUM // LOCAL"
+        ? `${visualPrefix} // LOCAL`
         : visualStage === "pro"
-          ? "STADIUM // PRO"
+          ? `${visualPrefix} // PRO`
           : visualStage === "elite"
-            ? "STADIUM // ELITE"
-            : "STADIUM // ICON";
+            ? `${visualPrefix} // ELITE`
+            : `${visualPrefix} // ICON`;
   }
 
   cardStateNode.textContent = !currentStage
