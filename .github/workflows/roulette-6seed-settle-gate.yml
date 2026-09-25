@@ -6,6 +6,7 @@ on:
       - feature/roulette
     paths:
       - '.github/workflows/roulette-6seed-settle-gate.yml'
+      - 'artifacts/roulette-physics-lab/src/Part2SceneViewport.tsx'
   workflow_dispatch:
 
 jobs:
@@ -83,6 +84,7 @@ jobs:
           ROULETTE_PART6_TIMEOUT_MS='120000' \
           ROULETTE_PART6_EXPECTED_SEEDS='1' \
           node scripts/roulette-part6-runtime.mjs > "settle-gate-$SEED.log" 2>&1
+          grep 'PART6_SETTLE_GATE_MEASUREMENT' "settle-gate-$SEED.log" || true
 
           node - "$SEED" <<'NODE'
           const fs = require('fs');
