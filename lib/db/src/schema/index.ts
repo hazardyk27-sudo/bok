@@ -249,6 +249,7 @@ export const idleActionReceipts = pgTable(
     remainderMicrocents: bigint("remainder_microcents", { mode: "number" }).notNull().default(0),
     costCents: bigint("cost_cents", { mode: "number" }).notNull().default(0),
     targetBusinessLevel: integer("target_business_level"),
+    targetVaultLevel: integer("target_vault_level"),
     balanceCents: bigint("balance_cents", { mode: "number" }).notNull().default(0),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
