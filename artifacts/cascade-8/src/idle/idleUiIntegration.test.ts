@@ -743,6 +743,13 @@ describe("Businesses final responsive QA", () => {
     expect(idleCssSource).toContain("max(8px, env(safe-area-inset-bottom))");
   });
 
+  it("keeps primary mobile touch targets at least 44px tall", () => {
+    expect(idleCssSource).toContain("/* Part 18 — final mobile touch-target QA */");
+    expect(idleCssSource).toContain(".route-shell.is-businesses-page .business-vault-upgrade,");
+    expect(idleCssSource).toContain(".route-shell.is-businesses-page .business-card-details");
+    expect(idleCssSource).toContain("min-height: 44px");
+  });
+
   it("keeps the short landscape Details content scrollable and touch-safe", () => {
     expect(idleCssSource).toContain(".business-detail-scroll");
     expect(idleCssSource).toContain("-webkit-overflow-scrolling: touch");
