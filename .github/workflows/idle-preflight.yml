@@ -14,6 +14,24 @@ jobs:
   preflight:
     runs-on: ubuntu-latest
     timeout-minutes: 20
+    env:
+      DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/idle_test
+      IDLE_DB_INTEGRATION: "1"
+
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: idle_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d idle_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
 
     steps:
       - name: Checkout
@@ -49,6 +67,9 @@ jobs:
             src/slotSmoke.test.ts \
             src/rouletteSmoke.test.ts \
             src/cadiKazanSmoke.test.ts
+
+      - name: Push test database schema
+        run: pnpm --filter @workspace/db run push
 
       - name: Test API including Idle
         run: pnpm --filter @workspace/api-server run test
