@@ -563,11 +563,7 @@ function addPocketInnerGuardCollider(
 ) {
   const pocketFloorInnerRadius = 1.48;
   const verticalHalfHeight = 0.11;
-  // Match the browser seam fix: overlap the guard into the floor slightly so
-  // the ball never resolves a coplanar floor/cylinder-bottom edge contact.
-  const floorOverlap = 0.03;
-  const centerY =
-    ROULETTE_POCKET_FLOOR_Y + verticalHalfHeight - floorOverlap;
+  const centerY = ROULETTE_POCKET_FLOOR_Y + verticalHalfHeight;
 
   return world.createCollider(
     RAPIER.ColliderDesc.cylinder(
