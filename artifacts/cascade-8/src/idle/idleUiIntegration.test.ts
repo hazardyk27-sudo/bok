@@ -277,3 +277,42 @@ describe("Businesses card information hierarchy", () => {
     expect(idleCssSource).toContain('.business-card-next[data-next-state="max"]');
   });
 });
+
+
+describe("Businesses premium action states", () => {
+  it("exposes explicit collect, upgrade and vault action states", () => {
+    expect(componentsSource).toContain('data-action-state="loading"');
+    expect(componentsSource).toContain('collectButton.dataset.actionState = busy');
+    expect(componentsSource).toContain('upgradeButton.dataset.actionState = busy');
+    expect(componentsSource).toContain('vaultUpgradeButton.dataset.actionState = busy');
+    expect(componentsSource).toContain('"insufficient"');
+    expect(componentsSource).toContain('"purchase"');
+    expect(componentsSource).toContain('"max"');
+    expect(componentsSource).toContain('"full"');
+  });
+
+  it("shows visible guidance for disabled and risky upgrade states", () => {
+    expect(componentsSource).toContain("data-business-collect-note");
+    expect(componentsSource).toContain("data-business-upgrade-note");
+    expect(componentsSource).toContain("Bakiye yetersiz.");
+    expect(componentsSource).toContain("Yükseltmede Kasa Lv1'e döner");
+    expect(componentsSource).toContain("Tüm seviyeler tamamlandı");
+    expect(componentsSource).toContain("Kasa maksimum seviyede.");
+  });
+
+  it("styles ready, insufficient, max, locked and busy actions distinctly", () => {
+    expect(idleCssSource).toContain("/* Part 7 — premium action / state system */");
+    expect(idleCssSource).toContain('[data-action-state="ready"]');
+    expect(idleCssSource).toContain('[data-action-state="insufficient"]');
+    expect(idleCssSource).toContain('[data-action-state="max"]');
+    expect(idleCssSource).toContain('[data-action-state="locked"]');
+    expect(idleCssSource).toContain('[data-action-state="busy"]');
+    expect(idleCssSource).toContain("@keyframes idle-action-busy");
+    expect(idleCssSource).toContain(":focus-visible");
+  });
+
+  it("keeps touch targets premium-sized and honors reduced motion", () => {
+    expect(idleCssSource).toContain("min-height: 48px");
+    expect(idleCssSource).toContain("@media (prefers-reduced-motion: reduce)");
+  });
+});
