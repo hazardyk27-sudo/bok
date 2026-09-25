@@ -48,6 +48,7 @@ const BUSINESS_DETAIL_EYEBROWS: Record<BusinessId, string> = {
 };
 
 type BusinessDetailTab = "business" | "vault";
+type UpgradeFeedbackKind = "business" | "vault";
 
 function getBusinessLevelState(stageLevel: number, currentLevel: number | null) {
   if (currentLevel === null) return stageLevel === 0 ? "future" : "locked";
@@ -697,14 +698,22 @@ export class BusinessesClient {
     if (button.matches("[data-idle-detail-upgrade]")) {
       const businessId = this.detailBusinessId;
       if (!businessId || this.busyBusinesses.has(businessId)) return;
-      void this.runBusinessAction(businessId, () => upgradeIdleBusiness(businessId));
+      void this.runBusinessAction(
+        businessId,
+        () => upgradeIdleBusiness(businessId),
+        "business",
+      );
       return;
     }
 
     if (button.matches("[data-idle-detail-vault-upgrade]")) {
       const businessId = this.detailBusinessId;
       if (!businessId || this.busyBusinesses.has(businessId)) return;
-      void this.runBusinessAction(businessId, () => upgradeIdleVault(businessId));
+      void this.runBusinessAction(
+        businessId,
+        () => upgradeIdleVault(businessId),
+        "vault",
+      );
       return;
     }
 
@@ -1033,15 +1042,129 @@ export class BusinessesClient {
     }
   }
 
+  private getBusinessSnapshot(businessId: BusinessId) {
+    return this.envelope?.snapshot.businesses.find(
+      (business) => business.businessId === businessId,
+    ) ?? null;
+  }
+
+  private playUpgradeFeedback(
+    businessId: BusinessId,
+    kind: UpgradeFeedbackKind,
+    before: ReturnType<BusinessesClient["getBusinessSnapshot"]>,
+    after: ReturnType<BusinessesClient["getBusinessSnapshot"]>,
+  ) {
+    if (!before || !after) return;
+
+    const changed = kind === "business"
+      ? before.businessLevel !== after.businessLevel
+      : before.vaultLevel !== after.vaultLevel;
+    if (!changed) return;
+
+    const row = this.root.querySelector<HTMLElement>(
+      `[data-business-id="${businessId}"]`,
+    );
+    const drawer = this.root.querySelector<HTMLElement>("[data-idle-detail-drawer]");
+    const detailIsOpen = this.detailBusinessId === businessId
+      && this.root.querySelector<HTMLElement>("[data-idle-detail-layer]")?.dataset.open === "true";
+    const target = detailIsOpen ? drawer : row;
+    if (!target) return;
+
+    target.dataset.upgradeFeedback = kind;
+
+    const toast = document.createElement("div");
+    toast.className = "business-upgrade-toast";
+    toast.setAttribute("role", "status");
+    toast.setAttribute("aria-live", "polite");
+    toast.dataset.upgradeKind = kind;
+
+    const label = document.createElement("span");
+    const value = document.createElement("strong");
+    const meta = document.createElement("small");
+
+    toast.append(label, value, meta);
+    target.append(toast);
+
+    const reducedMotion = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches ?? false;
+    const duration = reducedMotion ? 0 : 860;
+
+    if (kind === "business") {
+      const definition = BUSINESS_DETAIL_DEFINITIONS[businessId];
+      const beforeStage = before.businessLevel === null
+        ? null
+        : definition.levels.find((stage) => stage.level === before.businessLevel) ?? null;
+      const afterStage = after.businessLevel === null
+        ? null
+        : definition.levels.find((stage) => stage.level === after.businessLevel) ?? null;
+      if (!afterStage) return;
+
+      const fromHourly = beforeStage?.hourlyIncomeDisplayCents ?? 0;
+      const toHourly = afterStage.hourlyIncomeDisplayCents;
+      const deltaHourly = Math.max(0, toHourly - fromHourly);
+
+      label.textContent = beforeStage ? "SEVİYE YÜKSELDİ" : "İŞLETME AÇILDI";
+      meta.textContent = `Lv${afterStage.level} · ${afterStage.name}`;
+
+      const start = performance.now();
+      const update = (now: number) => {
+        const progress = duration === 0
+          ? 1
+          : Math.min(1, Math.max(0, (now - start) / duration));
+        const eased = 1 - Math.pow(1 - progress, 3);
+        const current = deltaHourly * eased;
+        value.textContent = `+${formatCredits(current)} /sa`;
+        if (progress < 1) window.requestAnimationFrame(update);
+      };
+      window.requestAnimationFrame(update);
+    } else {
+      const beforeVault = VAULT_LEVELS.find((entry) => entry.level === before.vaultLevel);
+      const afterVault = VAULT_LEVELS.find((entry) => entry.level === after.vaultLevel);
+      if (!beforeVault || !afterVault) return;
+
+      label.textContent = "KASA GELİŞTİ";
+      meta.textContent = `Kasa Lv${after.vaultLevel}`;
+
+      const start = performance.now();
+      const update = (now: number) => {
+        const progress = duration === 0
+          ? 1
+          : Math.min(1, Math.max(0, (now - start) / duration));
+        const eased = 1 - Math.pow(1 - progress, 3);
+        const hours = beforeVault.capacityHours
+          + (afterVault.capacityHours - beforeVault.capacityHours) * eased;
+        value.textContent = `${Math.round(hours)} SAAT`;
+        if (progress < 1) window.requestAnimationFrame(update);
+      };
+      window.requestAnimationFrame(update);
+    }
+
+    window.setTimeout(() => {
+      toast.dataset.leaving = "true";
+      window.setTimeout(() => toast.remove(), reducedMotion ? 0 : 180);
+      if (target.dataset.upgradeFeedback === kind) {
+        delete target.dataset.upgradeFeedback;
+      }
+    }, reducedMotion ? 600 : 1040);
+  }
+
   private async runBusinessAction(
     businessId: BusinessId,
     action: () => Promise<unknown>,
+    upgradeFeedback?: UpgradeFeedbackKind,
   ) {
+    const before = upgradeFeedback
+      ? this.getBusinessSnapshot(businessId)
+      : null;
+
     this.busyBusinesses.add(businessId);
     this.render();
     try {
       await action();
       await this.refresh();
+      if (upgradeFeedback) {
+        const after = this.getBusinessSnapshot(businessId);
+        this.playUpgradeFeedback(businessId, upgradeFeedback, before, after);
+      }
     } catch (error) {
       this.setError(this.getErrorMessage(error));
     } finally {
