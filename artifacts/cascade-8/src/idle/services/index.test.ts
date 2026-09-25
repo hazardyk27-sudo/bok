@@ -103,3 +103,68 @@ describe("Lv6 twenty-four-hour vault", () => {
     expect(threeDaysLater.collectableCents).toBe(dailyIncomeCents);
   });
 });
+
+
+describe("offline accrual handoff", () => {
+  it("starts from the server-projected offline balance and only adds browser elapsed time once", () => {
+    const base = createStadiumLevelZeroState();
+    const sixHoursOffline = projectIdleBusinessLive(base, ONE_HOUR_MS * 6);
+
+    const serverSnapshot: IdleBusinessServerState = {
+      businessId: sixHoursOffline.businessId,
+      businessLevel: sixHoursOffline.businessLevel,
+      vaultLevel: sixHoursOffline.vaultLevel,
+      accruedMicrocents: sixHoursOffline.liveAccruedMicrocents,
+      vaultCapacityMicrocents: sixHoursOffline.vaultCapacityMicrocents,
+      remainingCapacityMicrocents: sixHoursOffline.liveRemainingCapacityMicrocents,
+      isVaultFull: sixHoursOffline.liveIsVaultFull,
+      checkpointAt: "2026-09-25T06:00:00.000Z",
+    };
+
+    const envelope: IdleStateEnvelope = {
+      snapshot: {
+        sessionId: "offline-test",
+        serverTime: "2026-09-25T06:00:00.000Z",
+        wallet: { sessionId: "offline-test", balanceCents: 100_000 },
+        businesses: [serverSnapshot],
+      },
+      receivedAtMs: 1_000_000,
+    };
+
+    const onArrival = projectIdleStateLive(envelope, envelope.receivedAtMs)
+      .businesses[0];
+    const thirtyMinutesLater = projectIdleStateLive(
+      envelope,
+      envelope.receivedAtMs + ONE_HOUR_MS / 2,
+    ).businesses[0];
+
+    expect(onArrival.liveAccruedMicrocents).toBe(
+      serverSnapshot.accruedMicrocents,
+    );
+    expect(thirtyMinutesLater.liveAccruedMicrocents).toBe(
+      Math.min(
+        serverSnapshot.vaultCapacityMicrocents,
+        serverSnapshot.accruedMicrocents
+          + Math.floor(10_000 * MICRO_CENTS_PER_CENT / 48),
+      ),
+    );
+  });
+
+  it("never uses serverTime versus the device clock to invent offline income", () => {
+    const base = createStadiumLevelZeroState();
+    const envelope: IdleStateEnvelope = {
+      snapshot: {
+        sessionId: "clock-skew-test",
+        serverTime: "2000-01-01T00:00:00.000Z",
+        wallet: { sessionId: "clock-skew-test", balanceCents: 100_000 },
+        businesses: [base],
+      },
+      receivedAtMs: 5_000,
+    };
+
+    const live = projectIdleStateLive(envelope, 5_000).businesses[0];
+
+    expect(live.liveAccruedMicrocents).toBe(0);
+    expect(live.liveIsVaultFull).toBe(false);
+  });
+});
