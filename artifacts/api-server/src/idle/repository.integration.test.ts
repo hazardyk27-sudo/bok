@@ -119,6 +119,135 @@ describe.skipIf(!enabled)("IdleRepository PostgreSQL integration", () => {
     expect(body.business.vaultLevel).toBe(1);
   });
 
+  it("collects through the real HTTP endpoint and replays without double credit", async () => {
+    const stateResponse = await fetch(`${baseUrl}/api/idle/state`);
+    const cookie = stateResponse.headers.get("set-cookie")?.split(";")[0];
+    const stateBody = await stateResponse.json() as { sessionId: string };
+    const purchaseAt = new Date("2026-09-25T11:00:00.000Z");
+    const collectAt = new Date("2026-09-25T12:00:00.000Z");
+
+    await idleRepository.upgradeBusiness(
+      stateBody.sessionId,
+      "stadium",
+      randomUUID(),
+      purchaseAt,
+    );
+    await pool.query(
+      `UPDATE idle_business_states
+          SET accrued_microcents = 0,
+              checkpoint_at = $3,
+              updated_at = $3
+        WHERE session_id = $1 AND business_id = $2`,
+      [stateBody.sessionId, "stadium", purchaseAt],
+    );
+
+    const key = randomUUID();
+    const request = () => fetch(
+      `${baseUrl}/api/idle/businesses/stadium/collect`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Cookie: cookie ?? "",
+        },
+        body: JSON.stringify({ idempotencyKey: key }),
+      },
+    );
+
+    const first = await request();
+    expect(first.status).toBe(200);
+    const firstBody = await first.json() as {
+      collectedCents: number;
+      balanceCents: number;
+      replayed: boolean;
+    };
+    expect(firstBody.collectedCents).toBeGreaterThanOrEqual(416);
+    expect(firstBody.balanceCents).toBeGreaterThanOrEqual(50_416);
+    expect(firstBody.replayed).toBe(false);
+
+    const replay = await request();
+    expect(replay.status).toBe(200);
+    const replayBody = await replay.json() as {
+      collectedCents: number;
+      balanceCents: number;
+      replayed: boolean;
+    };
+    expect(replayBody.collectedCents).toBe(firstBody.collectedCents);
+    expect(replayBody.balanceCents).toBe(firstBody.balanceCents);
+    expect(replayBody.replayed).toBe(true);
+  });
+
+  it("upgrades Kasa through the real HTTP endpoint", async () => {
+    const stateResponse = await fetch(`${baseUrl}/api/idle/state`);
+    const cookie = stateResponse.headers.get("set-cookie")?.split(";")[0];
+
+    const purchase = await fetch(
+      `${baseUrl}/api/idle/businesses/fan-club/upgrade`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Cookie: cookie ?? "",
+        },
+        body: JSON.stringify({ idempotencyKey: randomUUID() }),
+      },
+    );
+    expect(purchase.status).toBe(200);
+
+    const response = await fetch(
+      `${baseUrl}/api/idle/businesses/fan-club/vault/upgrade`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Cookie: cookie ?? "",
+        },
+        body: JSON.stringify({ idempotencyKey: randomUUID() }),
+      },
+    );
+
+    expect(response.status).toBe(200);
+    const body = await response.json() as {
+      targetVaultLevel: number;
+      costCents: number;
+      balanceCents: number;
+      business: { vaultLevel: number };
+    };
+    expect(body.targetVaultLevel).toBe(2);
+    expect(body.costCents).toBe(500);
+    expect(body.balanceCents).toBe(89_500);
+    expect(body.business.vaultLevel).toBe(2);
+  });
+
+  it("returns HTTP 402 for a real insufficient-balance purchase and keeps state unchanged", async () => {
+    const stateResponse = await fetch(`${baseUrl}/api/idle/state`);
+    const cookie = stateResponse.headers.get("set-cookie")?.split(";")[0];
+    const stateBody = await stateResponse.json() as { sessionId: string };
+
+    await pool.query(
+      "UPDATE roulette_wallets SET balance_cents = $2 WHERE session_id = $1",
+      [stateBody.sessionId, 9_999],
+    );
+
+    const response = await fetch(
+      `${baseUrl}/api/idle/businesses/fan-club/upgrade`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Cookie: cookie ?? "",
+        },
+        body: JSON.stringify({ idempotencyKey: randomUUID() }),
+      },
+    );
+
+    expect(response.status).toBe(402);
+    expect(await response.json()).toEqual({ error: "INSUFFICIENT_IDLE_CREDITS" });
+    expect(await walletBalance(stateBody.sessionId)).toBe(9_999);
+    expect((await businessRow(stateBody.sessionId, "fan-club"))?.business_level)
+      .toBeNull();
+  });
+
   it("creates the shared wallet and exactly three unowned business rows", async () => {
     const sessionId = randomUUID();
     const now = new Date("2026-09-25T12:00:00.000Z");
