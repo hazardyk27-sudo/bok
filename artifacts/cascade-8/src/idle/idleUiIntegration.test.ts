@@ -78,3 +78,22 @@ describe("Businesses mobile scrolling", () => {
     expect(idleCssSource).toContain("overflow-y: auto");
   });
 });
+
+
+describe("Businesses premium design tokens", () => {
+  it("scopes the premium palette, spacing and elevation system to Businesses", () => {
+    expect(idleCssSource).toContain("--idle-canvas: #050816");
+    expect(idleCssSource).toContain("--idle-surface-raised: #10213c");
+    expect(idleCssSource).toContain("--idle-text: #f4f8ff");
+    expect(idleCssSource).toContain("--idle-cyan: #46c8ff");
+    expect(idleCssSource).toContain("--idle-violet-ambient: #7258ff");
+    expect(idleCssSource).toContain("--idle-space-7: 48px");
+    expect(idleCssSource).toContain("--idle-shadow-raised");
+  });
+
+  it("uses the token system in the current Businesses surface instead of leaving it unused", () => {
+    expect(idleCssSource).toContain("color: var(--idle-text)");
+    expect(idleCssSource).toContain("background: var(--idle-surface-2)");
+    expect(idleCssSource).toContain("color: var(--idle-cyan)");
+  });
+});
