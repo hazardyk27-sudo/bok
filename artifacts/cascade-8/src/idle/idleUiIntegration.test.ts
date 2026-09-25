@@ -35,7 +35,7 @@ describe("final Idle UI integration", () => {
     expect(idleIndexSource).toContain("upgradeIdleVault(businessId)");
   });
 
-  it("keeps collect and main business upgrade actions alongside Kasa", () => {
+  it("keeps collect plus Details-backed business upgrade actions alongside Kasa", () => {
     expect(idleIndexSource).toContain("collectIdleBusiness(businessId)");
     expect(idleIndexSource).toContain("upgradeIdleBusiness(businessId)");
   });
@@ -800,5 +800,49 @@ describe("Businesses premium typography pass", () => {
     expect(idleCssSource).toContain("Mobile remains readable instead of collapsing into 5–7px labels.");
     expect(idleCssSource).toContain("@media (orientation: landscape) and (max-height: 520px) and (max-width: 950px)");
     expect(idleCssSource).toContain("font-size: 8px");
+  });
+});
+
+
+describe("Businesses refinement final responsive regression", () => {
+  it("gives both 390px and 430px phones a single-column economy panel", () => {
+    expect(idleCssSource).toContain("/* Refinement Parts 7–8 — responsive readability + overflow hardening */");
+    expect(idleCssSource).toContain("@media (max-width: 520px)");
+    expect(idleCssSource).toContain(".business-card .business-card-operations");
+    expect(idleCssSource).toContain("grid-template-columns: 1fr");
+  });
+
+  it("lets live vault timing wrap rather than disappear behind ellipsis", () => {
+    expect(idleCssSource).toContain(".business-card .business-card-vault-meta small");
+    expect(idleCssSource).toContain("text-overflow: clip");
+    expect(idleCssSource).toContain("white-space: normal");
+    expect(idleCssSource).toContain("flex-wrap: wrap");
+  });
+
+  it("stacks dense Details comparisons and vault nodes on phone widths", () => {
+    expect(idleCssSource).toContain(".business-detail-summary");
+    expect(idleCssSource).toContain(".business-next-comparison-flow,");
+    expect(idleCssSource).toContain(".business-vault-next-flow");
+    expect(idleCssSource).toContain(".vault-level-node-card");
+    expect(idleCssSource).toContain(".vault-level-node-cost");
+  });
+
+  it("keeps the simplified main-card action contract intact", () => {
+    expect(componentsSource).toContain("business-card-action--collect");
+    expect(componentsSource).toContain("business-card-action--details");
+    expect(componentsSource).not.toContain("data-business-upgrade");
+    expect((componentsSource.match(/data-business-details/g) ?? []).length).toBe(1);
+    expect(idleIndexSource).toContain('button.matches("[data-business-details]")');
+  });
+
+  it("retains all critical live state and Details upgrade regression hooks", () => {
+    expect(componentsSource).toContain('"KASA DOLU"');
+    expect(componentsSource).toContain('"MAX SEVİYE"');
+    expect(componentsSource).toContain('"insufficient"');
+    expect(componentsSource).toContain('"full"');
+    expect(idleIndexSource).toContain("runCollectBusiness");
+    expect(idleIndexSource).toContain("runCollectAll");
+    expect(idleIndexSource).toContain("data-idle-detail-upgrade");
+    expect(idleIndexSource).toContain("data-idle-detail-vault-upgrade");
   });
 });
