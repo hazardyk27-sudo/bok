@@ -47,4 +47,4 @@ jobs:
           if (finish <= summary) throw new Error("Wallet finish occurs before bonus summary");
           console.log("FREE_SPIN_BALANCE_DEFERRED_OK");
           NODE
-      - run: pnpm --filter @workspace/cascade-8 exec vitest run src/game/GameControllerFormatting.test.ts
+      - run: PORT=4173 BASE_PATH=/ pnpm --filter @workspace/cascade-8 exec vitest run src/game/GameControllerFormatting.test.ts
