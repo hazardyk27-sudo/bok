@@ -5051,7 +5051,7 @@ export function Part2SceneViewport({
               velocity.z - rotorTangentialVelocity.z,
             );
             if (
-              ([61001, 61004, 61005, 61006].includes(run.seed)) &&
+              ([61001, 61004, 61005, 61006, 61007, 61008].includes(run.seed)) &&
               elapsed >= activePart6MaxDurationSeconds - 2 &&
               step % 12 === 0
             ) {
