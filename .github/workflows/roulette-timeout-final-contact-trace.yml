@@ -16,10 +16,10 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - seed: 61001
-            start: 0
-          - seed: 61004
-            start: 3
+          - seed: 61005
+            start: 4
+          - seed: 61006
+            start: 5
 
     steps:
       - name: Checkout
