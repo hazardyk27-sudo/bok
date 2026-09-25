@@ -1,0 +1,113 @@
+name: Roulette 5 Seed Spike Regression
+
+on:
+  push:
+    branches:
+      - feature/roulette
+    paths:
+      - '.github/workflows/roulette-5seed-spike-regression.yml'
+  workflow_dispatch:
+
+jobs:
+  spike-regression:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    strategy:
+      fail-fast: false
+      matrix:
+        start_index: [1, 2, 7, 9, 21]
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10.15.0
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install workspace
+        run: pnpm install --frozen-lockfile
+
+      - name: Install Chromium
+        run: pnpm exec playwright install --with-deps chromium
+
+      - name: Build TypeScript project references
+        run: pnpm run typecheck:libs
+
+      - name: Typecheck roulette physics lab
+        run: pnpm --filter @workspace/roulette-physics-lab run typecheck
+
+      - name: Start roulette physics lab
+        shell: bash
+        run: |
+          PORT=4173 BASE_PATH=/ pnpm --filter @workspace/roulette-physics-lab run dev > /tmp/roulette-5seed-${{ matrix.start_index }}.log 2>&1 &
+          for attempt in {1..60}; do
+            if curl --fail --silent http://127.0.0.1:4173/ > /dev/null; then
+              exit 0
+            fi
+            sleep 1
+          done
+          cat /tmp/roulette-5seed-${{ matrix.start_index }}.log
+          exit 1
+
+      - name: Run targeted seed
+        env:
+          START_INDEX: ${{ matrix.start_index }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          ROULETTE_LAB_URL="http://127.0.0.1:4173/?part6Headless=1&part6SeedStartIndex=$START_INDEX&part6SeedCount=1&part6MaxDurationSeconds=15" \
+          ROULETTE_PART6_OUTPUT="artifacts/roulette-physics-lab/spike-regression-$START_INDEX.json" \
+          ROULETTE_PART6_TIMEOUT_MS='90000' \
+          ROULETTE_PART6_EXPECTED_SEEDS='1' \
+          node scripts/roulette-part6-runtime.mjs > "spike-regression-$START_INDEX.log" 2>&1
+
+          node - "$START_INDEX" <<'NODE'
+          const fs = require('fs');
+          const start = process.argv[2];
+          const path = 'artifacts/roulette-physics-lab/spike-regression-' + start + '.json';
+          const data = JSON.parse(fs.readFileSync(path, 'utf8'));
+          const rows = data.telemetry?.results ?? data.seedTelemetry ?? [];
+          if (rows.length !== 1) throw new Error('Expected one result row, got ' + rows.length);
+          const row = rows[0];
+          const out = {
+            seed: row.seed,
+            settled: row.settled,
+            timedOut: row.timedOut,
+            finalPocketNumber: row.finalPocketNumber,
+            lapCount: row.lapCount,
+            peakSpeed: row.peakSpeed,
+            finalSpeed: row.finalSpeed,
+            finalRotorRelativeSpeed: row.finalRotorRelativeSpeed,
+            velocitySpike: row.velocitySpike,
+            artificialAcceleration: row.artificialAcceleration,
+            escaped: row.escaped,
+            clipping: row.clipping,
+            tunneling: row.tunneling,
+          };
+          console.log('SPIKE_REGRESSION_RESULT ' + JSON.stringify(out));
+          if (row.velocitySpike || row.artificialAcceleration) {
+            throw new Error('Spike regression failed for seed ' + row.seed);
+          }
+          if (row.escaped || row.clipping || row.tunneling) {
+            throw new Error('Containment regression for seed ' + row.seed);
+          }
+          NODE
+
+      - name: Upload evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: roulette-5seed-spike-${{ matrix.start_index }}
+          path: |
+            artifacts/roulette-physics-lab/spike-regression-${{ matrix.start_index }}.json
+            spike-regression-${{ matrix.start_index }}.log
+            /tmp/roulette-5seed-${{ matrix.start_index }}.log
+          if-no-files-found: warn
