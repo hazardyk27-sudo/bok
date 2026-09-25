@@ -75,21 +75,35 @@ export const BUSINESSES_MARKUP = `
       </section>
     </header>
 
-    <section class="business-summary" aria-label="İşletme özeti">
-      <div>
-        <span>TOPLAM SAATLİK GELİR</span>
+    <section class="business-summary business-command-bar" aria-label="İşletme komuta özeti" data-idle-command-bar>
+      <div class="business-command-stat business-command-income">
+        <span class="business-command-label">TOPLAM SAATLİK GELİR</span>
         <strong data-idle-total-hourly>—</strong>
+        <small>PASİF GELİR HIZI</small>
       </div>
-      <div>
-        <span>TOPLANABİLİR</span>
+      <div class="business-command-stat business-command-ready">
+        <span class="business-command-label">TOPLANABİLİR</span>
         <strong data-idle-total-collectable>—</strong>
+        <small>KASALARDA HAZIR</small>
       </div>
-      <div>
-        <span>AKTİF İŞLETME</span>
+      <div class="business-command-stat business-command-active">
+        <span class="business-command-label">AKTİF İŞLETME</span>
         <strong data-idle-active-businesses>— / 3</strong>
+        <small>GELİR ÜRETİYOR</small>
       </div>
-      <button type="button" class="business-summary-collect-all" data-idle-collect-all disabled>
-        TÜMÜNÜ TOPLA
+      <button
+        type="button"
+        class="business-summary-collect-all"
+        data-idle-collect-all
+        aria-label="Tüm işletmelerdeki biriken parayı topla"
+        disabled
+      >
+        <span class="business-collect-all-copy">
+          <small>TÜM KASALAR</small>
+          <strong>TÜMÜNÜ TOPLA</strong>
+        </span>
+        <span class="business-collect-all-value" data-idle-collect-all-value>$0.00</span>
+        <span class="business-collect-all-arrow" aria-hidden="true">→</span>
       </button>
     </section>
 
@@ -154,6 +168,8 @@ export class BusinessesClient {
     const collectableNode = this.root.querySelector<HTMLElement>("[data-idle-total-collectable]");
     const activeNode = this.root.querySelector<HTMLElement>("[data-idle-active-businesses]");
     const collectAllButton = this.root.querySelector<HTMLButtonElement>("[data-idle-collect-all]");
+    const collectAllValueNode = this.root.querySelector<HTMLElement>("[data-idle-collect-all-value]");
+    const commandBarNode = this.root.querySelector<HTMLElement>("[data-idle-command-bar]");
     const progressionLevelsNode = this.root.querySelector<HTMLElement>("[data-idle-progression-levels]");
     const progressionTrackNode = this.root.querySelector<HTMLElement>("[data-idle-progression-track]");
     const progressionBarNode = this.root.querySelector<HTMLElement>("[data-idle-progression-bar]");
@@ -165,6 +181,8 @@ export class BusinessesClient {
       || !collectableNode
       || !activeNode
       || !collectAllButton
+      || !collectAllValueNode
+      || !commandBarNode
       || !progressionLevelsNode
       || !progressionTrackNode
       || !progressionBarNode
@@ -221,10 +239,17 @@ export class BusinessesClient {
     hourlyNode.textContent = `${formatCredits(totalHourlyCents)} /sa`;
     collectableNode.textContent = formatCredits(totalCollectableCents);
     activeNode.textContent = `${activeBusinesses} / ${BUSINESS_IDS.length}`;
-    collectAllButton.textContent = totalCollectableCents > 0
-      ? `TÜMÜNÜ TOPLA · ${formatCredits(totalCollectableCents)}`
-      : "TÜMÜNÜ TOPLA";
+    collectAllValueNode.textContent = formatCredits(totalCollectableCents);
     collectAllButton.disabled = this.collectingAll || totalCollectableCents <= 0;
+    collectAllButton.setAttribute(
+      "aria-label",
+      totalCollectableCents > 0
+        ? `Tüm işletmelerden ${formatCredits(totalCollectableCents)} topla`
+        : "Toplanabilir işletme geliri yok",
+    );
+    commandBarNode.dataset.collectable =
+      totalCollectableCents > 0 ? "ready" : "empty";
+    commandBarNode.dataset.collecting = this.collectingAll ? "true" : "false";
   }
 
   private handleClick = (event: Event) => {
