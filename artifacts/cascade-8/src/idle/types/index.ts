@@ -75,3 +75,14 @@ export type IdleCollectResponse = {
   replayed: boolean;
   business: IdleBusinessServerState;
 };
+
+
+export type IdleBusinessUpgradeResponse = {
+  serverTime: string;
+  businessId: BusinessId;
+  targetBusinessLevel: BusinessLevel;
+  costCents: number;
+  balanceCents: number;
+  replayed: boolean;
+  business: IdleBusinessServerState;
+};
