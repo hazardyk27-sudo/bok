@@ -736,11 +736,22 @@ export class BusinessesClient {
     if (this.busyBusinesses.has(businessId)) return;
 
     if (button.matches("[data-business-upgrade]")) {
-      void this.runBusinessAction(businessId, () => upgradeIdleBusiness(businessId));
+      void this.runBusinessAction(
+        businessId,
+        () => upgradeIdleBusiness(businessId),
+        "business",
+      );
     } else if (button.matches("[data-business-collect]")) {
-      void this.runBusinessAction(businessId, () => collectIdleBusiness(businessId));
+      void this.runBusinessAction(
+        businessId,
+        () => collectIdleBusiness(businessId),
+      );
     } else if (button.matches("[data-business-vault-upgrade]")) {
-      void this.runBusinessAction(businessId, () => upgradeIdleVault(businessId));
+      void this.runBusinessAction(
+        businessId,
+        () => upgradeIdleVault(businessId),
+        "vault",
+      );
     }
   };
 
