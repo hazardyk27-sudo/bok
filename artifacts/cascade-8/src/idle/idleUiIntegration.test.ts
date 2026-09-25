@@ -731,3 +731,21 @@ describe("Businesses collect and completion polish", () => {
     expect(idleCssSource).toContain("@media (prefers-reduced-motion: reduce)");
   });
 });
+
+
+describe("Businesses final responsive QA", () => {
+  it("covers real phone landscape widths with a short-height fullscreen Details layout", () => {
+    expect(idleCssSource).toContain("/* Part 18 — final responsive QA / short mobile landscape */");
+    expect(idleCssSource).toContain("@media (orientation: landscape) and (max-height: 520px) and (max-width: 950px)");
+    expect(idleCssSource).toContain("width: 100vw");
+    expect(idleCssSource).toContain("height: 100dvh");
+    expect(idleCssSource).toContain("transform: translateY(102%)");
+    expect(idleCssSource).toContain("max(8px, env(safe-area-inset-bottom))");
+  });
+
+  it("keeps the short landscape Details content scrollable and touch-safe", () => {
+    expect(idleCssSource).toContain(".business-detail-scroll");
+    expect(idleCssSource).toContain("-webkit-overflow-scrolling: touch");
+    expect(idleCssSource).toContain("padding-bottom: max(18px, env(safe-area-inset-bottom))");
+  });
+});
