@@ -11,10 +11,28 @@ import type {
   IdleLiveBusinessState,
 } from "../types";
 
-const BUSINESS_META: Record<BusinessId, { eyebrow: string; definition: BusinessDefinition }> = {
-  stadium: { eyebrow: "STADIUM", definition: STADIUM_BUSINESS },
-  "club-store": { eyebrow: "CLUB STORE", definition: CLUB_STORE_BUSINESS },
-  "fan-club": { eyebrow: "FAN CLUB", definition: FAN_CLUB_BUSINESS },
+const BUSINESS_META: Record<
+  BusinessId,
+  { eyebrow: string; code: string; visualLabel: string; definition: BusinessDefinition }
+> = {
+  stadium: {
+    eyebrow: "STADIUM",
+    code: "01",
+    visualLabel: "Stadyum gelişim görsel alanı",
+    definition: STADIUM_BUSINESS,
+  },
+  "club-store": {
+    eyebrow: "CLUB STORE",
+    code: "02",
+    visualLabel: "Kulüp mağazası gelişim görsel alanı",
+    definition: CLUB_STORE_BUSINESS,
+  },
+  "fan-club": {
+    eyebrow: "FAN CLUB",
+    code: "03",
+    visualLabel: "Taraftar kulübü gelişim görsel alanı",
+    definition: FAN_CLUB_BUSINESS,
+  },
 };
 
 const MICRO_CENTS_PER_CENT = 1_000_000;
@@ -38,35 +56,61 @@ function getDefinition(businessId: BusinessId) {
 export function renderBusinessRowShell(businessId: BusinessId) {
   const meta = BUSINESS_META[businessId];
   return `
-    <article class="business-row" data-business-id="${businessId}" data-business-status="loading">
-      <div class="business-row-title">
-        <small>${meta.eyebrow}</small>
-        <strong>${meta.definition.label}</strong>
-        <span data-business-level>Yükleniyor…</span>
+    <article
+      class="business-row business-card business-card--${businessId}"
+      data-business-id="${businessId}"
+      data-business-status="loading"
+      data-business-ownership="loading"
+    >
+      <div class="business-card-visual" role="img" aria-label="${meta.visualLabel}">
+        <div class="business-card-art business-card-art--${businessId}" aria-hidden="true">
+          <i></i><b></b><em></em>
+        </div>
+        <span class="business-card-code">${meta.code}</span>
+        <span class="business-card-state" data-business-card-state>YÜKLENİYOR</span>
+        <div class="business-card-visual-shade" aria-hidden="true"></div>
       </div>
 
-      <div class="business-row-metrics">
-        <div class="business-row-metric">
-          <span>BİRİKMİŞ</span>
-          <strong data-business-accrued>—</strong>
-        </div>
-        <div class="business-row-metric">
-          <span>SAATLİK GELİR</span>
-          <strong data-business-income>— /sa</strong>
-          <small data-business-daily>— /gün</small>
-        </div>
-        <div class="business-row-metric business-vault-metric">
-          <span>KASA KAPASİTESİ</span>
-          <strong data-business-vault>Lv— · —</strong>
-          <small data-business-vault-fill>Doluluk —</small>
-          <div class="business-vault-progress" aria-hidden="true"><i data-business-vault-progress></i></div>
-          <button type="button" class="business-vault-upgrade" disabled data-business-vault-upgrade>GELİŞTİR</button>
-        </div>
-      </div>
+      <div class="business-card-body">
+        <header class="business-card-header">
+          <div class="business-row-title">
+            <small>${meta.eyebrow}</small>
+            <strong>${meta.definition.label}</strong>
+            <span data-business-level>Yükleniyor…</span>
+          </div>
+          <span class="business-card-level-mark" aria-hidden="true">FY</span>
+        </header>
 
-      <div class="business-row-actions">
-        <button type="button" disabled data-business-upgrade>YÜKSELT</button>
-        <button type="button" disabled data-business-collect>TOPLA</button>
+        <div class="business-row-metrics business-card-metrics">
+          <div class="business-row-metric business-card-accrued">
+            <span>BİRİKMİŞ</span>
+            <strong data-business-accrued>—</strong>
+          </div>
+          <div class="business-row-metric business-card-income">
+            <span>SAATLİK GELİR</span>
+            <strong data-business-income>— /sa</strong>
+            <small data-business-daily>— /gün</small>
+          </div>
+          <div class="business-row-metric business-vault-metric business-card-vault">
+            <span>KASA KAPASİTESİ</span>
+            <strong data-business-vault>Lv— · —</strong>
+            <small data-business-vault-fill>Doluluk —</small>
+            <div class="business-vault-progress" aria-hidden="true"><i data-business-vault-progress></i></div>
+            <button type="button" class="business-vault-upgrade" disabled data-business-vault-upgrade>GELİŞTİR</button>
+          </div>
+        </div>
+
+        <div class="business-card-divider" aria-hidden="true"></div>
+
+        <div class="business-row-actions business-card-actions">
+          <button type="button" class="business-card-primary" disabled data-business-collect>TOPLA</button>
+          <button type="button" class="business-card-secondary" disabled data-business-upgrade>YÜKSELT</button>
+        </div>
+
+        <div class="business-card-footer">
+          <span>9 SEVİYELİ GELİŞİM</span>
+          <span>DETAYLAR YAKINDA →</span>
+        </div>
       </div>
     </article>
   `;
@@ -89,8 +133,9 @@ export function updateBusinessRow(
   const vaultUpgradeButton = row.querySelector<HTMLButtonElement>("[data-business-vault-upgrade]");
   const upgradeButton = row.querySelector<HTMLButtonElement>("[data-business-upgrade]");
   const collectButton = row.querySelector<HTMLButtonElement>("[data-business-collect]");
+  const cardStateNode = row.querySelector<HTMLElement>("[data-business-card-state]");
 
-  if (!levelNode || !accruedNode || !incomeNode || !dailyNode || !vaultNode || !vaultFillNode || !vaultProgressNode || !vaultUpgradeButton || !upgradeButton || !collectButton) {
+  if (!levelNode || !accruedNode || !incomeNode || !dailyNode || !vaultNode || !vaultFillNode || !vaultProgressNode || !vaultUpgradeButton || !upgradeButton || !collectButton || !cardStateNode) {
     throw new Error("IDLE_BUSINESS_ROW_INCOMPLETE");
   }
 
@@ -154,4 +199,14 @@ export function updateBusinessRow(
   collectButton.disabled = busy || !business.canCollect;
 
   row.dataset.businessStatus = business.vaultStatus.toLowerCase();
+  row.dataset.businessOwnership = currentStage ? "owned" : "locked";
+  row.dataset.businessLevel = currentStage ? String(currentStage.level) : "unowned";
+
+  cardStateNode.textContent = !currentStage
+    ? "SATIN ALINMADI"
+    : business.liveIsVaultFull
+      ? "KASA DOLU"
+      : nextStage
+        ? "AKTİF"
+        : "MAX SEVİYE";
 }
