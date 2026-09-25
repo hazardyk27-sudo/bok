@@ -316,3 +316,28 @@ describe("Businesses premium action states", () => {
     expect(idleCssSource).toContain("@media (prefers-reduced-motion: reduce)");
   });
 });
+
+
+describe("Businesses dedicated mobile cards", () => {
+  it("uses a mobile-specific layered card composition instead of shrinking desktop cards", () => {
+    expect(idleCssSource).toContain("/* Part 8 — dedicated mobile business-card architecture */");
+    expect(idleCssSource).toContain("margin-top: -24px");
+    expect(idleCssSource).toContain("border-radius: 18px");
+    expect(idleCssSource).toContain("grid-template-columns: 1fr");
+    expect(idleCssSource).toContain(".business-card-action--collect");
+    expect(idleCssSource).toContain(".business-card-action--upgrade");
+  });
+
+  it("keeps the mobile value hierarchy large and touch-first", () => {
+    expect(idleCssSource).toContain("font-size: clamp(28px, 9vw, 34px)");
+    expect(idleCssSource).toContain("min-height: 50px");
+    expect(idleCssSource).toContain("min-height: 132px");
+  });
+
+  it("includes small-phone and mobile-landscape card adaptations", () => {
+    expect(idleCssSource).toContain("@media (max-width: 420px)");
+    expect(idleCssSource).toContain("@media (max-width: 760px) and (orientation: landscape)");
+    expect(idleCssSource).toContain("min-height: 118px");
+    expect(idleCssSource).toContain("min-height: 110px");
+  });
+});
