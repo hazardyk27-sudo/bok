@@ -3,6 +3,7 @@ import { renderBusinessRowShell, updateBusinessRow } from "./components";
 import {
   collectIdleBusiness,
   fetchIdleState,
+  getIdleTotalCollectableCents,
   getIdleTotalPassiveIncomeCentsPerHour,
   projectIdleStateLive,
   upgradeIdleBusiness,
@@ -92,7 +93,9 @@ export class BusinessesClient {
     const totalHourlyCents = getIdleTotalPassiveIncomeCentsPerHour(
       live.businesses,
     );
-    let totalCollectableCents = 0;
+    const totalCollectableCents = getIdleTotalCollectableCents(
+      live.businesses,
+    );
 
     for (const business of live.businesses) {
       const row = this.root.querySelector<HTMLElement>(
@@ -107,7 +110,6 @@ export class BusinessesClient {
         this.busyBusinesses.has(business.businessId),
       );
 
-      totalCollectableCents += business.collectableCents;
     }
 
     hourlyNode.textContent = `${formatCredits(totalHourlyCents)} /sa`;
