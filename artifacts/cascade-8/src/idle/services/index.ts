@@ -12,6 +12,7 @@ import type {
   IdleLiveBusinessState,
   IdleStateEnvelope,
   IdleStateResponse,
+  IdleVaultUpgradeResponse,
 } from "../types";
 import { MILLISECONDS_PER_DAY } from "../utils";
 
@@ -206,4 +207,30 @@ export async function upgradeIdleBusiness(
   }
 
   return response.json() as Promise<IdleBusinessUpgradeResponse>;
+}
+
+
+export async function upgradeIdleVault(
+  businessId: BusinessId,
+  idempotencyKey = crypto.randomUUID(),
+): Promise<IdleVaultUpgradeResponse> {
+  const response = await fetch(
+    `/api/idle/businesses/${encodeURIComponent(businessId)}/vault/upgrade`,
+    {
+      method: "POST",
+      credentials: "same-origin",
+      headers: {
+        Accept: "application/json",
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ idempotencyKey }),
+    },
+  );
+
+  if (!response.ok) {
+    const body = await response.json().catch(() => null) as { error?: string } | null;
+    throw new Error(body?.error ?? "IDLE_VAULT_UPGRADE_REQUEST_FAILED");
+  }
+
+  return response.json() as Promise<IdleVaultUpgradeResponse>;
 }
