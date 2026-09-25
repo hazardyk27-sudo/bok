@@ -4,6 +4,7 @@ import {
   STADIUM_BUSINESS,
   VAULT_LEVELS,
 } from "../config";
+import { getIdleVaultUpgradePreview } from "../services";
 import type {
   BusinessDefinition,
   BusinessId,
@@ -53,9 +54,10 @@ export function renderBusinessRowShell(businessId: BusinessId) {
           <span>GELİR</span>
           <strong data-business-income>— /sa</strong>
         </div>
-        <div class="business-row-metric">
+        <div class="business-row-metric business-vault-metric">
           <span>KASA</span>
           <strong data-business-vault>Lv— · —</strong>
+          <button type="button" class="business-vault-upgrade" disabled data-business-vault-upgrade>GELİŞTİR</button>
         </div>
       </div>
 
@@ -78,10 +80,11 @@ export function updateBusinessRow(
   const accruedNode = row.querySelector<HTMLElement>("[data-business-accrued]");
   const incomeNode = row.querySelector<HTMLElement>("[data-business-income]");
   const vaultNode = row.querySelector<HTMLElement>("[data-business-vault]");
+  const vaultUpgradeButton = row.querySelector<HTMLButtonElement>("[data-business-vault-upgrade]");
   const upgradeButton = row.querySelector<HTMLButtonElement>("[data-business-upgrade]");
   const collectButton = row.querySelector<HTMLButtonElement>("[data-business-collect]");
 
-  if (!levelNode || !accruedNode || !incomeNode || !vaultNode || !upgradeButton || !collectButton) {
+  if (!levelNode || !accruedNode || !incomeNode || !vaultNode || !vaultUpgradeButton || !upgradeButton || !collectButton) {
     throw new Error("IDLE_BUSINESS_ROW_INCOMPLETE");
   }
 
@@ -105,7 +108,19 @@ export function updateBusinessRow(
   incomeNode.textContent = currentStage
     ? `${formatCreditsFromCents(currentStage.hourlyIncomeDisplayCents)} /sa`
     : "$0.00 /sa";
-  vaultNode.textContent = `Lv${business.vaultLevel} · ${vault.capacityHours}sa${business.liveIsVaultFull ? " · DOLU" : ""}`;
+  const vaultUpgrade = getIdleVaultUpgradePreview(business);
+  vaultNode.textContent = `Lv${business.vaultLevel} · ${vault.capacityHours}sa${vaultUpgrade.isMaxLevel ? " · MAX" : business.liveIsVaultFull ? " · DOLU" : ""}`;
+
+  if (!vaultUpgrade.isOwned || vaultUpgrade.isMaxLevel || !vaultUpgrade.canUpgrade) {
+    vaultUpgradeButton.hidden = true;
+    vaultUpgradeButton.disabled = true;
+  } else {
+    vaultUpgradeButton.hidden = false;
+    vaultUpgradeButton.textContent = `GELİŞTİR · ${formatCreditsFromCents(vaultUpgrade.costCents ?? 0)}`;
+    vaultUpgradeButton.disabled = busy
+      || vaultUpgrade.costCents === null
+      || walletBalanceCents < vaultUpgrade.costCents;
+  }
 
   if (nextStage) {
     upgradeButton.textContent = business.businessLevel === null
