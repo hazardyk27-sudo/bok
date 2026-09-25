@@ -16,6 +16,7 @@ import {
   type IdleBusinessStorageState,
 } from "./storage";
 import { settleIdleMicrocents } from "./money";
+import { assertIdleActionReceiptReplay } from "./policy";
 
 type IdleActionReceiptRow = {
   session_id: string;
@@ -306,13 +307,18 @@ export class IdleRepository {
         );
         const receipt = duplicate.rows[0];
         if (!receipt) throw new Error("IDLE_IDEMPOTENCY_RECEIPT_MISSING");
-        if (
-          receipt.session_id !== sessionId
-          || receipt.business_id !== businessId
-          || receipt.action_type !== "COLLECT"
-        ) {
-          throw new Error("IDEMPOTENCY_KEY_REUSED");
-        }
+        assertIdleActionReceiptReplay(
+          {
+            sessionId: receipt.session_id,
+            businessId: receipt.business_id,
+            actionType: receipt.action_type,
+          },
+          {
+            sessionId,
+            businessId,
+            actionType: "COLLECT",
+          },
+        );
 
         await insertMissingSessionStates(client, sessionId);
         const states = await loadSessionStates(client, sessionId);
