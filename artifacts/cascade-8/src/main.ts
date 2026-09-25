@@ -15,6 +15,7 @@ import { createGameScene, GameScene } from "./game/GameScene";
 import { RouletteClient } from "./rouletteClient";
 import { CADI_KAZAN_MARKUP, WitchClient } from "./witchClient";
 import { EUROPEAN_WHEEL_ORDER, ROULETTE_SEGMENT_DEGREES } from "./rouletteGeometry";
+import { BUSINESSES_MARKUP, BusinessesClient } from "./idle";
 
 const app = document.querySelector<HTMLDivElement>("#app")!;
 const currentPath = window.location.pathname.replace(/\/+$/, "") || "/";
@@ -22,6 +23,7 @@ const isLab = currentPath === "/lab";
 const isSlotRoute = currentPath === "/slot" || isLab;
 const isRouletteRoute = currentPath === "/roulette";
 const isWitchRoute = currentPath === "/cadi-kazan";
+const isBusinessesRoute = currentPath === "/businesses";
 const isWinLabelPreview = isLab && new URLSearchParams(window.location.search).get("preview") === "win-labels";
 const isMultiplierCollectionPreview = isLab && new URLSearchParams(window.location.search).get("preview") === "multiplier-collection";
 
@@ -83,7 +85,7 @@ const mainMenuMarkup = `
     <div class="menu-intro">
       <span class="menu-kicker">FAHRİNİN YOLU // PLAY LOUNGE</span>
       <h1 id="game-menu-title">OYUNUNU <em>SEÇ</em></h1>
-       <p>Gece açıldı. Üç ayrı masa seni bekliyor. Hangi dünyaya gireceğine karar ver.</p>
+       <p>Gece açıldı. Dört ayrı dünya seni bekliyor. Hangi dünyaya gireceğine karar ver.</p>
     </div>
     <div class="game-choice-grid">
       <a class="game-choice game-choice-slot" href="/slot">
@@ -116,10 +118,20 @@ const mainMenuMarkup = `
          </span>
          <span class="choice-footer"><span>5 OR 25 CELLS</span><span class="choice-arrow" aria-hidden="true">→</span></span>
        </a>
+       <a class="game-choice game-choice-businesses" href="/businesses" aria-label="İşletmeler ekranını aç">
+         <span class="choice-status is-live">AVAILABLE NOW</span>
+         <span class="choice-art choice-art-businesses" aria-hidden="true"><span>▦</span></span>
+         <span class="choice-copy">
+           <span class="choice-overline">IDLE EMPIRE</span>
+           <strong>İŞLETMELER</strong>
+           <span class="choice-type">BUSINESS EXPERIENCE</span>
+         </span>
+         <span class="choice-footer"><span>BUILD & EARN</span><span class="choice-arrow" aria-hidden="true">→</span></span>
+       </a>
     </div>
     <div class="menu-footer">
       <span class="menu-footer-line"></span>
-       <span>ONE LOUNGE · THREE WORLDS</span>
+       <span>ONE LOUNGE · FOUR WORLDS</span>
       <span class="menu-footer-line"></span>
     </div>
   </main>
@@ -325,6 +337,8 @@ if (isRouletteRoute) {
   app.innerHTML = routeShell(rouletteMarkup, "is-route-page is-roulette-page");
 } else if (isWitchRoute) {
   app.innerHTML = routeShell(CADI_KAZAN_MARKUP, "is-route-page is-witch-page");
+} else if (isBusinessesRoute) {
+  app.innerHTML = routeShell(BUSINESSES_MARKUP, "is-route-page is-businesses-page");
 } else if (!isSlotRoute) {
   app.innerHTML = routeShell(mainMenuMarkup, "is-route-page is-menu-page");
 } else {
@@ -474,6 +488,9 @@ let controller: GameController;
 if (isRouletteRoute) {
   const rouletteRoot = document.querySelector<HTMLElement>(".roulette-page");
   if (rouletteRoot) new RouletteClient(rouletteRoot);
+} else if (isBusinessesRoute) {
+  const businessesRoot = document.querySelector<HTMLElement>(".businesses-page");
+  if (businessesRoot) new BusinessesClient(businessesRoot);
 } else if (isWitchRoute) {
   const witchRoot = document.querySelector<HTMLElement>(".witch-page");
   if (witchRoot) new WitchClient(witchRoot);

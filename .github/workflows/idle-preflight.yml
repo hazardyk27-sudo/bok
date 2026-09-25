@@ -1,0 +1,63 @@
+name: Idle Feature Preflight
+
+concurrency:
+  group: idle-feature-preflight-${{ github.ref }}
+  cancel-in-progress: true
+
+on:
+  push:
+    branches:
+      - feature/idle
+  workflow_dispatch:
+
+jobs:
+  preflight:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10.15.0
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install workspace
+        run: pnpm install --frozen-lockfile
+
+      - name: Typecheck workspace
+        run: pnpm run typecheck
+
+      - name: Build Cascade 8
+        run: pnpm --filter @workspace/cascade-8 run build
+
+      - name: Test Idle frontend integration
+        run: |
+          PORT=4173 BASE_PATH=/ pnpm --filter @workspace/cascade-8 exec vitest run \
+            src/idle/services/index.test.ts \
+            src/idle/economySmoke.test.ts \
+            src/idle/idleUiIntegration.test.ts \
+            src/mainMenuRegression.test.ts \
+            src/slotSmoke.test.ts \
+            src/rouletteSmoke.test.ts \
+            src/cadiKazanSmoke.test.ts
+
+      - name: Test API including Idle
+        run: pnpm --filter @workspace/api-server run test
+
+      - name: Lint availability
+        shell: bash
+        run: |
+          if node -e "const p=require('./package.json'); process.exit(p.scripts?.lint ? 0 : 1)"; then
+            pnpm run lint
+          else
+            echo "No repository lint script is configured; lint execution skipped explicitly."
+          fi
