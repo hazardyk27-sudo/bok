@@ -1,0 +1,127 @@
+name: Roulette Settled-Result Contract
+
+on:
+  push:
+    branches:
+      - feature/roulette
+    paths:
+      - '.github/workflows/roulette-null-contract.yml'
+      - 'artifacts/roulette-physics-lab/src/Part2SceneViewport.tsx'
+      - 'artifacts/cascade-8/src/roulettePhysicsConfig.test.ts'
+      - 'lib/roulette-physics-config.ts'
+      - 'scripts/roulette-part6-runtime.mjs'
+  workflow_dispatch:
+
+jobs:
+  affected-seeds:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10.15.0
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install workspace
+        run: pnpm install --frozen-lockfile
+
+      - name: Install Chromium
+        run: pnpm exec playwright install --with-deps chromium
+
+      - name: Typecheck roulette physics lab
+        run: pnpm --filter @workspace/roulette-physics-lab run typecheck
+
+      - name: Start roulette physics lab
+        shell: bash
+        run: |
+          PORT=4173 BASE_PATH=/ pnpm --filter @workspace/roulette-physics-lab run dev > /tmp/roulette-null-contract-vite.log 2>&1 &
+          for attempt in {1..60}; do
+            if curl --fail --silent http://127.0.0.1:4173/ > /dev/null; then
+              exit 0
+            fi
+            sleep 1
+          done
+          cat /tmp/roulette-null-contract-vite.log
+          exit 1
+
+      - name: Run affected settled-null seeds
+        shell: bash
+        run: |
+          set -euo pipefail
+          starts=(12 26 27 29)
+          seeds=(61013 61027 61028 61030)
+          for i in 0 1 2 3; do
+            start="${starts[$i]}"
+            seed="${seeds[$i]}"
+            ROULETTE_LAB_URL="http://127.0.0.1:4173/?part6Headless=1&part6SeedStartIndex=$start&part6SeedCount=1&part6MaxDurationSeconds=30" \
+            ROULETTE_PART6_OUTPUT="artifacts/roulette-physics-lab/part6-null-contract-$seed.json" \
+            ROULETTE_PART6_TIMEOUT_MS='120000' \
+            ROULETTE_PART6_EXPECTED_SEEDS='1' \
+            node scripts/roulette-part6-runtime.mjs > "part6-null-contract-$seed.log" 2>&1
+          done
+
+          node - <<'NODE'
+          const fs = require('fs');
+          const seeds = [61013, 61027, 61028, 61030];
+          const rows = seeds.map((seed) => {
+            const data = JSON.parse(
+              fs.readFileSync(
+                `artifacts/roulette-physics-lab/part6-null-contract-${seed}.json`,
+                'utf8',
+              ),
+            );
+            const result = data.telemetry?.results?.[0] ?? data.seedTelemetry?.[0];
+            if (!result) throw new Error(`Missing telemetry for seed ${seed}`);
+            const row = {
+              seed,
+              settled: result.settled,
+              timedOut: result.timedOut,
+              finalPocketIndex: result.finalPocketIndex,
+              finalPocketNumber: result.finalPocketNumber,
+              finalRotorRelativeSpeed: result.finalRotorRelativeSpeed,
+              settleTime: result.settleTime,
+              safetyPassed: result.safetyPassed,
+            };
+            console.log('SETTLED_NULL_CONTRACT_CASE ' + JSON.stringify(row));
+            return row;
+          });
+          const failures = rows.filter(
+            (row) =>
+              !row.settled ||
+              row.timedOut ||
+              row.finalPocketIndex === null ||
+              row.finalPocketNumber === null ||
+              row.finalPocketNumber < 0 ||
+              row.finalPocketNumber > 36 ||
+              !row.safetyPassed,
+          );
+          console.log(
+            'SETTLED_NULL_CONTRACT_SUMMARY ' +
+              JSON.stringify({
+                passed: rows.length - failures.length,
+                total: rows.length,
+                failures,
+              }),
+          );
+          if (failures.length) process.exit(1);
+          NODE
+
+      - name: Upload contract evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: roulette-settled-result-contract
+          path: |
+            artifacts/roulette-physics-lab/part6-null-contract-*.json
+            part6-null-contract-*.log
+            /tmp/roulette-null-contract-vite.log
+          if-no-files-found: warn
