@@ -4033,7 +4033,7 @@ export function Part2SceneViewport({
       const pocketResultCenterRadiusMin =
         POCKET_FLOOR_INNER_RADIUS + BALL_RADIUS;
       const pocketResultCenterRadiusMax =
-        POCKET_FLOOR_OUTER_RADIUS - BALL_RADIUS;
+        POCKET_OUTER_LIP_RADIUS - BALL_RADIUS;
       const hoverGraceFrames = Math.round(
         PART6_TRANSITION_HOVER_GRACE_SECONDS / FIXED_TIMESTEP,
       );
