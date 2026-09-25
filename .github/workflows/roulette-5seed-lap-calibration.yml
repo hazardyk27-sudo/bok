@@ -8,6 +8,10 @@ on:
       - '.github/workflows/roulette-5seed-lap-calibration.yml'
   workflow_dispatch:
 
+permissions:
+  contents: read
+  statuses: write
+
 jobs:
   lap-gate:
     runs-on: ubuntu-latest
@@ -114,6 +118,62 @@ jobs:
           if (row.velocitySpike || row.artificialAcceleration) throw new Error(seed + ' spike/artificial acceleration');
           if (row.escaped || row.clipping || row.tunneling) throw new Error(seed + ' containment failure');
           NODE
+
+
+      - name: Publish lap status
+        if: always()
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          SEED: ${{ matrix.seed }}
+        shell: bash
+        run: |
+          node - "$SEED" <<'NODE'
+          const fs = require('fs');
+          const seed = Number(process.argv[2]);
+          const path = 'artifacts/roulette-physics-lab/lap-gate-' + seed + '.json';
+          let state = 'failure';
+          let description = 'seed ' + seed + ': telemetry missing';
+          if (fs.existsSync(path)) {
+            const data = JSON.parse(fs.readFileSync(path, 'utf8'));
+            const rows = data.telemetry?.results ?? data.seedTelemetry ?? [];
+            const row = rows[0];
+            if (row) {
+              const ok = Boolean(
+                row.settled &&
+                !row.timedOut &&
+                row.finalPocketNumber != null &&
+                row.lapCount >= 5 &&
+                !row.velocitySpike &&
+                !row.artificialAcceleration &&
+                !row.escaped &&
+                !row.clipping &&
+                !row.tunneling
+              );
+              state = ok ? 'success' : 'failure';
+              const lap = Number.isFinite(Number(row.lapCount))
+                ? Number(row.lapCount).toFixed(3)
+                : 'n/a';
+              description =
+                'seed ' + seed +
+                ': lap=' + lap +
+                ' settled=' + Boolean(row.settled) +
+                ' safety=' + Boolean(row.safetyPassed);
+            }
+          }
+          const body = {
+            state,
+            context: 'roulette/lap-' + seed,
+            description: description.slice(0, 140),
+            target_url:
+              'https://github.com/' +
+              process.env.GITHUB_REPOSITORY +
+              '/actions/runs/' +
+              process.env.GITHUB_RUN_ID,
+          };
+          fs.writeFileSync('/tmp/lap-status.json', JSON.stringify(body));
+          NODE
+
+          curl --fail-with-body --silent --show-error             -X POST             -H "Accept: application/vnd.github+json"             -H "Authorization: Bearer $GH_TOKEN"             -H "X-GitHub-Api-Version: 2022-11-28"             "https://api.github.com/repos/$GITHUB_REPOSITORY/statuses/$GITHUB_SHA"             --data-binary @/tmp/lap-status.json
 
       - name: Upload evidence
         if: always()
