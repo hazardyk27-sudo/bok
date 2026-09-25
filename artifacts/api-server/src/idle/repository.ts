@@ -16,7 +16,7 @@ import {
   type IdleBusinessStorageState,
 } from "./storage";
 import { settleIdleMicrocents } from "./money";
-import { assertIdleActionReceiptReplay, resolveBusinessUpgrade } from "./policy";
+import { assertIdleActionReceiptReplay, resolveBusinessUpgrade, resolveVaultUpgrade } from "./policy";
 
 type IdleActionReceiptRow = {
   session_id: string;
@@ -641,12 +641,19 @@ export class IdleRepository {
         );
         const receipt = duplicate.rows[0];
         if (!receipt) throw new Error("IDLE_IDEMPOTENCY_RECEIPT_MISSING");
-        if (
-          receipt.session_id !== sessionId
-          || receipt.business_id !== businessId
-          || receipt.action_type !== "VAULT_UPGRADE"
-          || receipt.target_vault_level === null
-        ) {
+        assertIdleActionReceiptReplay(
+          {
+            sessionId: receipt.session_id,
+            businessId: receipt.business_id,
+            actionType: receipt.action_type,
+          },
+          {
+            sessionId,
+            businessId,
+            actionType: "VAULT_UPGRADE",
+          },
+        );
+        if (receipt.target_vault_level === null) {
           throw new Error("IDEMPOTENCY_KEY_REUSED");
         }
 
@@ -674,33 +681,27 @@ export class IdleRepository {
 
       const state = states.find((entry) => entry.businessId === businessId);
       if (!state) throw new Error("IDLE_BUSINESS_NOT_FOUND");
-      if (state.businessLevel === null) throw new Error("IDLE_BUSINESS_NOT_OWNED");
-
-      const step = VAULT_UPGRADE_STEPS.find(
-        (entry) => entry.fromLevel === state.vaultLevel,
-      );
-      if (!step) throw new Error("IDLE_VAULT_MAX_LEVEL");
-
       const definition = BUSINESS_CONFIGS[businessId];
-      const currentStage = definition.levels.find(
-        (entry) => entry.level === state.businessLevel,
-      );
-      if (!currentStage) throw new Error("INVALID_IDLE_BUSINESS_LEVEL");
-
-      const costCents = currentStage.costCents * step.costPercent / 100;
-      if (!Number.isSafeInteger(costCents) || costCents < 0) {
-        throw new Error("INVALID_IDLE_VAULT_UPGRADE_COST");
+      const currentStage = state.businessLevel === null
+        ? null
+        : definition.levels.find((entry) => entry.level === state.businessLevel);
+      if (state.businessLevel !== null && !currentStage) {
+        throw new Error("INVALID_IDLE_BUSINESS_LEVEL");
       }
 
       const balanceBeforeCents = await ensureWalletForUpdate(client, sessionId);
-      if (balanceBeforeCents < costCents) {
-        throw new Error("INSUFFICIENT_IDLE_CREDITS");
-      }
+      const upgrade = resolveVaultUpgrade(
+        state.vaultLevel,
+        currentStage?.costCents ?? null,
+        VAULT_UPGRADE_STEPS,
+        balanceBeforeCents,
+      );
 
       // Checkpoint at the old Kasa capacity first. This prevents a Kasa upgrade
       // from retroactively applying the larger cap to time that already passed.
       const checkpoint = projectBusinessAccrual(state, serverNow);
-      const balanceCents = balanceBeforeCents - costCents;
+      const costCents = upgrade.costCents;
+      const balanceCents = upgrade.balanceAfterCents;
 
       await client.query(
         `UPDATE roulette_wallets
@@ -721,7 +722,7 @@ export class IdleRepository {
         [
           sessionId,
           businessId,
-          step.toLevel,
+          upgrade.targetVaultLevel,
           checkpoint.projectedAccruedMicrocents,
           serverNow,
         ],
@@ -749,7 +750,7 @@ export class IdleRepository {
         [
           idempotencyKey,
           costCents,
-          step.toLevel,
+          upgrade.targetVaultLevel,
           balanceCents,
         ],
       );
@@ -766,7 +767,7 @@ export class IdleRepository {
       return {
         serverNow,
         businessId,
-        targetVaultLevel: step.toLevel,
+        targetVaultLevel: upgrade.targetVaultLevel,
         costCents,
         balanceCents,
         business: projectBusinessAccrual(refreshed, serverNow),
