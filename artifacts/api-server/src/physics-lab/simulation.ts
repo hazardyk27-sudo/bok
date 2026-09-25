@@ -700,7 +700,7 @@ function buildStartConditions(seed: string): PhysicsLabStartConditions {
     deterministicUnit(seed, 2) * Math.PI * 2;
   const launchAngleDegrees = 0;
   const launchSpeedMetersPerSecond =
-    5.25 + (deterministicUnit(seed, 1) * 2 - 1) * 0.15;
+    5.4 + (deterministicUnit(seed, 1) * 2 - 1) * 0.15;
   const launchSpeed =
     launchSpeedMetersPerSecond * ROULETTE_WORLD_UNITS_PER_METER;
   const ballSpin = launchSpeed / PHYSICS_LAB_BALL_RADIUS;
