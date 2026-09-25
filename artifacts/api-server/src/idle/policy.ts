@@ -52,3 +52,41 @@ export function resolveBusinessUpgrade(
     resetVaultLevel: 1 as const,
   };
 }
+
+
+export type IdleVaultUpgradeStep = {
+  fromLevel: number;
+  toLevel: number;
+  costPercent: number;
+};
+
+export function resolveVaultUpgrade(
+  currentVaultLevel: number,
+  currentBusinessCostCents: number | null,
+  steps: readonly IdleVaultUpgradeStep[],
+  balanceCents: number,
+) {
+  if (currentBusinessCostCents === null) {
+    throw new Error("IDLE_BUSINESS_NOT_OWNED");
+  }
+
+  const step = steps.find((entry) => entry.fromLevel === currentVaultLevel);
+  if (!step) throw new Error("IDLE_VAULT_MAX_LEVEL");
+
+  const costCents = currentBusinessCostCents * step.costPercent / 100;
+  if (!Number.isSafeInteger(costCents) || costCents < 0) {
+    throw new Error("INVALID_IDLE_VAULT_UPGRADE_COST");
+  }
+  if (!Number.isSafeInteger(balanceCents) || balanceCents < 0) {
+    throw new Error("INVALID_IDLE_WALLET_BALANCE");
+  }
+  if (balanceCents < costCents) {
+    throw new Error("INSUFFICIENT_IDLE_CREDITS");
+  }
+
+  return {
+    targetVaultLevel: step.toLevel,
+    costCents,
+    balanceAfterCents: balanceCents - costCents,
+  };
+}
