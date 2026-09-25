@@ -37,9 +37,10 @@ function serializeBusiness(business: Awaited<ReturnType<typeof idleRepository.ge
 
 function sendError(res: Response, error: unknown) {
   const message = error instanceof Error ? error.message : "IDLE_REQUEST_FAILED";
-  const status = message === "IDEMPOTENCY_KEY_REUSED" ? 409
-    : message === "IDLE_BUSINESS_NOT_FOUND" ? 404
-      : 400;
+  const status = message === "IDEMPOTENCY_KEY_REUSED" || message === "IDLE_BUSINESS_MAX_LEVEL" ? 409
+    : message === "INSUFFICIENT_IDLE_CREDITS" ? 402
+      : message === "IDLE_BUSINESS_NOT_FOUND" ? 404
+        : 400;
   res.status(status).json({ error: message });
 }
 
@@ -84,6 +85,41 @@ router.post("/idle/businesses/:businessId/collect", async (req, res) => {
       businessId: result.businessId,
       collectedCents: result.collectedCents,
       remainderMicrocents: result.remainderMicrocents,
+      balanceCents: result.balanceCents,
+      replayed: result.replayed,
+      business: serializeBusiness(result.business),
+    });
+  } catch (error) {
+    sendError(res, error);
+  }
+});
+
+
+router.post("/idle/businesses/:businessId/upgrade", async (req, res) => {
+  try {
+    const businessId = req.params.businessId as IdleBusinessId;
+    if (!IDLE_BUSINESS_IDS.includes(businessId)) {
+      res.status(404).json({ error: "IDLE_BUSINESS_NOT_FOUND" });
+      return;
+    }
+
+    const { idempotencyKey } = req.body as { idempotencyKey?: unknown };
+    if (typeof idempotencyKey !== "string" || !IDEMPOTENCY_PATTERN.test(idempotencyKey)) {
+      res.status(400).json({ error: "VALID_IDEMPOTENCY_KEY_REQUIRED" });
+      return;
+    }
+
+    const result = await idleRepository.upgradeBusiness(
+      getSessionId(req, res),
+      businessId,
+      idempotencyKey,
+    );
+
+    res.json({
+      serverTime: result.serverNow.toISOString(),
+      businessId: result.businessId,
+      targetBusinessLevel: result.targetBusinessLevel,
+      costCents: result.costCents,
       balanceCents: result.balanceCents,
       replayed: result.replayed,
       business: serializeBusiness(result.business),
