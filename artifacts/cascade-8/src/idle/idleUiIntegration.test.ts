@@ -506,3 +506,52 @@ describe("Businesses detail panel architecture", () => {
     expect(idleCssSource).toContain("@media (prefers-reduced-motion: reduce)");
   });
 });
+
+
+describe("Businesses real level tree", () => {
+  it("replaces the business roadmap placeholder with a live Lv0-Lv8 tree", () => {
+    expect(idleIndexSource).toContain("data-idle-business-level-tree");
+    expect(idleIndexSource).toContain("renderBusinessLevelTree");
+    expect(idleIndexSource).toContain("definition.levels.map");
+    expect(idleIndexSource).toContain("businessLevelTreeNode.innerHTML");
+  });
+
+  it("derives completed, current, future and locked states from the real current level", () => {
+    expect(idleIndexSource).toContain("function getBusinessLevelState");
+    expect(idleIndexSource).toContain('return "completed"');
+    expect(idleIndexSource).toContain('return "current"');
+    expect(idleIndexSource).toContain('return stageLevel === 0 ? "future" : "locked"');
+    expect(idleIndexSource).toContain('return "locked"');
+    expect(idleIndexSource).toContain('data-level-state="');
+  });
+
+  it("keeps every real stage name, cost and passive-income target visible", () => {
+    expect(idleIndexSource).toContain("stage.name");
+    expect(idleIndexSource).toContain("stage.hourlyIncomeDisplayCents");
+    expect(idleIndexSource).toContain("stage.dailyIncomeCents");
+    expect(idleIndexSource).toContain("stage.costCents");
+    expect(idleIndexSource).toContain("stage.targetRoiDays");
+  });
+
+  it("surfaces star milestones as aspirational progression targets", () => {
+    expect(idleIndexSource).toContain('stage.level >= 6');
+    expect(idleIndexSource).toContain('★');
+    expect(idleIndexSource).toContain("getBusinessLevelMilestone");
+    expect(idleIndexSource).toContain('"ICON"');
+  });
+
+  it("visually distinguishes completed, current, future and locked nodes", () => {
+    expect(idleCssSource).toContain("/* Part 13 — real Lv0–Lv8 business level tree */");
+    expect(idleCssSource).toContain('.business-level-node[data-level-state="completed"]');
+    expect(idleCssSource).toContain('.business-level-node[data-level-state="current"]');
+    expect(idleCssSource).toContain('.business-level-node[data-level-state="future"]');
+    expect(idleCssSource).toContain('.business-level-node[data-level-state="locked"]');
+    expect(idleCssSource).toContain('.business-level-node[data-level="8"]');
+  });
+
+  it("keeps the nine-stage tree readable on small mobile screens", () => {
+    expect(idleCssSource).toContain(".business-level-tree-legend");
+    expect(idleCssSource).toContain("grid-template-columns: repeat(4, minmax(0, 1fr))");
+    expect(idleCssSource).toContain("grid-template-columns: 1fr");
+  });
+});
