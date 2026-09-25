@@ -13,23 +13,32 @@ import type {
 
 const BUSINESS_META: Record<
   BusinessId,
-  { eyebrow: string; code: string; visualLabel: string; definition: BusinessDefinition }
+  {
+    eyebrow: string;
+    code: string;
+    artClass: string;
+    visualLabel: string;
+    definition: BusinessDefinition;
+  }
 > = {
   stadium: {
     eyebrow: "STADIUM",
     code: "01",
+    artClass: "business-card-art--stadium",
     visualLabel: "Stadyum gelişim görsel alanı",
     definition: STADIUM_BUSINESS,
   },
   "club-store": {
     eyebrow: "CLUB STORE",
     code: "02",
+    artClass: "business-card-art--club-store",
     visualLabel: "Kulüp mağazası gelişim görsel alanı",
     definition: CLUB_STORE_BUSINESS,
   },
   "fan-club": {
     eyebrow: "FAN CLUB",
     code: "03",
+    artClass: "business-card-art--fan-club",
     visualLabel: "Taraftar kulübü gelişim görsel alanı",
     definition: FAN_CLUB_BUSINESS,
   },
@@ -63,7 +72,7 @@ export function renderBusinessRowShell(businessId: BusinessId) {
       data-business-ownership="loading"
     >
       <div class="business-card-visual" role="img" aria-label="${meta.visualLabel}">
-        <div class="business-card-art business-card-art--${businessId}" aria-hidden="true">
+        <div class="business-card-art ${meta.artClass}" aria-hidden="true">
           <i></i><b></b><em></em>
         </div>
         <span class="business-card-code">${meta.code}</span>
