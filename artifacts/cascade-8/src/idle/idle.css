@@ -7270,3 +7270,129 @@ body.business-detail-open {
     font-size: 12px;
   }
 }
+
+
+/* Refinement Parts 7–8 — responsive readability + overflow hardening */
+/* Allow live vault copy to remain readable instead of truncating after the typography pass. */
+.route-shell.is-businesses-page .business-card .business-card-vault-meta {
+  align-items: flex-start;
+  flex-wrap: wrap;
+  row-gap: 5px;
+}
+
+.route-shell.is-businesses-page .business-card .business-card-vault-meta small {
+  overflow: visible;
+  text-overflow: clip;
+  white-space: normal;
+}
+
+.route-shell.is-businesses-page .business-card .business-card-vault-meta > small:first-child {
+  flex: 0 0 auto;
+}
+
+.route-shell.is-businesses-page .business-card .business-card-vault-meta .business-vault-eta {
+  flex: 1 1 132px;
+  text-align: right;
+}
+
+/* 390×844 and 430×932 both get a deliberate phone composition. */
+@media (max-width: 520px) {
+  .route-shell.is-businesses-page .business-card .business-card-operations {
+    grid-template-columns: 1fr;
+  }
+
+  .route-shell.is-businesses-page .business-card .business-card-income {
+    padding: 14px 13px;
+  }
+
+  .route-shell.is-businesses-page .business-card .business-card-vault {
+    padding: 13px 13px 10px;
+    border-top: 1px solid var(--idle-line-soft);
+    border-left: 0;
+  }
+
+  .route-shell.is-businesses-page .business-card .business-card-vault-meter {
+    padding: 0 13px 11px;
+  }
+
+  .route-shell.is-businesses-page .business-card .business-card-vault-meta .business-vault-eta {
+    flex-basis: 150px;
+  }
+
+  .business-detail-summary {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .business-detail-summary > div:last-child {
+    grid-column: 1 / -1;
+  }
+
+  .business-next-comparison-header {
+    grid-template-columns: 1fr;
+  }
+
+  .business-next-comparison-gain {
+    justify-self: start;
+  }
+
+  .business-next-comparison-flow,
+  .business-vault-next-flow {
+    grid-template-columns: 1fr;
+  }
+
+  .business-next-comparison-arrow {
+    height: 24px;
+  }
+
+  .business-next-comparison-arrow span,
+  .business-vault-next-flow > i {
+    transform: rotate(90deg);
+  }
+
+  .business-next-comparison-deltas {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .business-next-comparison-deltas > div:last-child {
+    grid-column: 1 / -1;
+  }
+
+  .vault-level-node-card {
+    grid-template-columns: 1fr;
+    align-items: start;
+  }
+
+  .vault-level-node-main {
+    grid-template-columns: 1fr;
+  }
+
+  .vault-level-node-cost {
+    padding-top: 9px;
+    padding-left: 0;
+    border-top: 1px solid rgba(157, 174, 196, .08);
+    border-left: 0;
+  }
+
+  .vault-level-node-state {
+    justify-self: start;
+  }
+}
+
+/* Tiny phones keep the two primary card actions usable without label clipping. */
+@media (max-width: 390px) {
+  .route-shell.is-businesses-page .business-card-actions {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .route-shell.is-businesses-page .business-card-actions button,
+  .route-shell.is-businesses-page .business-card-action--details .business-card-details {
+    padding-inline: 8px;
+    font-size: 9px;
+    letter-spacing: .02em;
+  }
+
+  .business-detail-drawer {
+    padding-right: max(12px, env(safe-area-inset-right));
+    padding-left: max(12px, env(safe-area-inset-left));
+  }
+}
