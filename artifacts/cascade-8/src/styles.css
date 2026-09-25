@@ -3540,6 +3540,19 @@ button:focus-visible, input:focus-visible { outline: 2px solid var(--cyan); outl
   transform: rotate(40deg);
 }
 .choice-art-roulette b { transform: rotate(-40deg); }
+.choice-art-businesses {
+  border: 1px solid rgba(112, 213, 255, .38);
+  border-radius: 24px 24px 24px 8px;
+  color: #dff8ff;
+  background: linear-gradient(145deg, rgba(31, 78, 132, .38), rgba(11, 29, 65, .28));
+  box-shadow: 0 0 30px rgba(74, 185, 255, .14), inset 0 1px 0 rgba(220, 246, 255, .08);
+}
+.choice-art-businesses span {
+  color: #dff8ff;
+  font: 700 38px "DM Mono", monospace;
+  line-height: 1;
+  text-shadow: 0 0 20px rgba(112, 213, 255, .38);
+}
 .choice-copy {
   position: relative;
   z-index: 1;
@@ -4204,12 +4217,6 @@ button:focus-visible, input:focus-visible { outline: 2px solid var(--cyan); outl
 
   .route-shell.is-menu-page .choice-arrow {
     font-size: 15px;
-  }
-
-  .route-shell.is-menu-page .game-choice:last-child {
-    grid-column: 1 / -1;
-    width: calc(50% - 4px);
-    justify-self: center;
   }
 
   .route-shell.is-menu-page .menu-footer {
