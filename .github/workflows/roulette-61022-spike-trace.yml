@@ -157,3 +157,5 @@ jobs:
             part6-spike-fix-control-61004.log
             /tmp/roulette-61022-vite.log
           if-no-files-found: warn
+
+# Part 6 targeted rerun marker: restored inner guard position + 0.03 fret clearance
