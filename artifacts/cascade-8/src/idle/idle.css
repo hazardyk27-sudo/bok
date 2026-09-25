@@ -769,3 +769,19 @@
     font-size: 7px;
   }
 }
+
+
+.businesses-error {
+  margin: 10px 0 0;
+  padding: 9px 11px;
+  border: 1px solid rgba(248, 113, 113, .28);
+  border-radius: 10px;
+  color: #fecaca;
+  background: rgba(127, 29, 29, .16);
+  font-size: 11px;
+  line-height: 1.35;
+}
+
+.businesses-error[hidden] {
+  display: none;
+}
