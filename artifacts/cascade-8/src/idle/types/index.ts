@@ -64,3 +64,14 @@ export type IdleLiveBusinessState = IdleBusinessServerState & {
   collectableCents: number;
   canCollect: boolean;
 };
+
+
+export type IdleCollectResponse = {
+  serverTime: string;
+  businessId: BusinessId;
+  collectedCents: number;
+  remainderMicrocents: number;
+  balanceCents: number;
+  replayed: boolean;
+  business: IdleBusinessServerState;
+};
