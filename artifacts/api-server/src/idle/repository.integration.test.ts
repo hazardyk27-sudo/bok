@@ -4,7 +4,7 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 const enabled = process.env.IDLE_DB_INTEGRATION === "1";
 
 describe.skipIf(!enabled)("IdleRepository PostgreSQL integration", () => {
-  let pool: import("pg").Pool;
+  let pool: (typeof import("@workspace/db"))["pool"];
   let idleRepository: import("./repository").IdleRepository;
 
   beforeAll(async () => {
