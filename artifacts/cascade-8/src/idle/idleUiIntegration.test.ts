@@ -178,3 +178,35 @@ describe("Businesses premium KPI command bar", () => {
     expect(idleIndexSource).toContain("return `$");
   });
 });
+
+
+describe("Businesses premium desktop cards", () => {
+  it("renders three semantic premium business cards with dedicated visual and body regions", () => {
+    expect(componentsSource).toContain("business-card business-card--");
+    expect(componentsSource).toContain("business-card-visual");
+    expect(componentsSource).toContain("business-card-body");
+    expect(componentsSource).toContain("business-card-header");
+    expect(componentsSource).toContain("business-card-metrics");
+    expect(componentsSource).toContain("business-card-actions");
+    expect(componentsSource).toContain("9 SEVİYELİ GELİŞİM");
+    expect(componentsSource).toContain("LV0 → LV8");
+  });
+
+  it("tracks owned, locked, active, full and max states on the card shell", () => {
+    expect(componentsSource).toContain("data-business-card-state");
+    expect(componentsSource).toContain('row.dataset.businessOwnership = currentStage ? "owned" : "locked"');
+    expect(componentsSource).toContain('row.dataset.businessLevel = currentStage ? String(currentStage.level) : "unowned"');
+    expect(componentsSource).toContain('"SATIN ALINMADI"');
+    expect(componentsSource).toContain('"KASA DOLU"');
+    expect(componentsSource).toContain('"MAX SEVİYE"');
+  });
+
+  it("uses a three-card desktop grid with tablet and mobile fallbacks", () => {
+    expect(idleCssSource).toContain("/* Part 5 — desktop premium business card skeleton */");
+    expect(idleCssSource).toContain("grid-template-columns: repeat(3, minmax(0, 1fr))");
+    expect(idleCssSource).toContain("@media (min-width: 761px) and (max-width: 1100px)");
+    expect(idleCssSource).toContain("grid-template-columns: repeat(2, minmax(0, 1fr))");
+    expect(idleCssSource).toContain(".business-card-visual");
+    expect(idleCssSource).toContain(".business-card-body");
+  });
+});
