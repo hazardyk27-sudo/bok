@@ -365,10 +365,11 @@ describe("Businesses Stadium milestone visuals", () => {
 
   it("shows a Stadium milestone badge that changes with progression", () => {
     expect(componentsSource).toContain("data-business-milestone");
-    expect(componentsSource).toContain("STADIUM // LOCAL");
-    expect(componentsSource).toContain("STADIUM // PRO");
-    expect(componentsSource).toContain("STADIUM // ELITE");
-    expect(componentsSource).toContain("STADIUM // ICON");
+    expect(componentsSource).toContain('"STADIUM"');
+    expect(componentsSource).toContain('`${visualPrefix} // LOCAL`');
+    expect(componentsSource).toContain('`${visualPrefix} // PRO`');
+    expect(componentsSource).toContain('`${visualPrefix} // ELITE`');
+    expect(componentsSource).toContain('`${visualPrefix} // ICON`');
   });
 
   it("styles each milestone with increasingly premium lighting and architecture", () => {
