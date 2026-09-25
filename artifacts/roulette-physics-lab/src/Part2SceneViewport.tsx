@@ -4390,6 +4390,9 @@ export function Part2SceneViewport({
           let maxVisualBodySyncError = 0;
           let maxRotorSyncError = 0;
           let previousSpeed = run.speed;
+          const previousTracePosition = launchPosition.clone();
+          const previousTraceVelocity = launchVelocity.clone();
+          let seed61022SpikeTraceLogged = false;
           let previousPlanarDirection = tangent.clone();
           let finalSpeed = run.speed;
           let finalRotorRelativeSpeed = run.speed;
@@ -5102,21 +5105,60 @@ export function Part2SceneViewport({
                   : 12,
               );
             if (
-              run.seed === 61019 &&
+              run.seed === 61022 &&
+              !seed61022SpikeTraceLogged &&
               (velocitySpikeThisStep || artificialAccelerationThisStep)
             ) {
+              seed61022SpikeTraceLogged = true;
+              const ballAngularVelocity = activeBallBody.angvel();
               console.info(
-                'PART6_SEED_61019_SPIKE',
+                'PART6_SEED_61022_FIRST_SPIKE',
                 JSON.stringify({
                   step,
-                  elapsed: Number(elapsed.toFixed(4)),
-                  radius: Number(radius.toFixed(4)),
-                  y: Number(position.y.toFixed(4)),
-                  bottom: Number(bottom.toFixed(4)),
-                  speed: Number(speed.toFixed(4)),
-                  previousSpeed: Number(previousSpeed.toFixed(4)),
-                  rotorRelativeSpeed: Number(finalRotorRelativeSpeed.toFixed(4)),
-                  contactRoles: [...stepContactRoles],
+                  elapsed: Number(elapsed.toFixed(6)),
+                  previous: {
+                    position: {
+                      x: Number(previousTracePosition.x.toFixed(6)),
+                      y: Number(previousTracePosition.y.toFixed(6)),
+                      z: Number(previousTracePosition.z.toFixed(6)),
+                    },
+                    velocity: {
+                      x: Number(previousTraceVelocity.x.toFixed(6)),
+                      y: Number(previousTraceVelocity.y.toFixed(6)),
+                      z: Number(previousTraceVelocity.z.toFixed(6)),
+                    },
+                    speed: Number(previousSpeed.toFixed(6)),
+                  },
+                  current: {
+                    position: {
+                      x: Number(position.x.toFixed(6)),
+                      y: Number(position.y.toFixed(6)),
+                      z: Number(position.z.toFixed(6)),
+                    },
+                    velocity: {
+                      x: Number(velocity.x.toFixed(6)),
+                      y: Number(velocity.y.toFixed(6)),
+                      z: Number(velocity.z.toFixed(6)),
+                    },
+                    speed: Number(speed.toFixed(6)),
+                    radius: Number(radius.toFixed(6)),
+                    bottom: Number(bottom.toFixed(6)),
+                    angularVelocity: {
+                      x: Number(ballAngularVelocity.x.toFixed(6)),
+                      y: Number(ballAngularVelocity.y.toFixed(6)),
+                      z: Number(ballAngularVelocity.z.toFixed(6)),
+                    },
+                    rotorRelativeSpeed: Number(
+                      finalRotorRelativeSpeed.toFixed(6),
+                    ),
+                  },
+                  speedRatio:
+                    previousSpeed > 0
+                      ? Number((speed / previousSpeed).toFixed(6))
+                      : null,
+                  velocitySpikeThisStep,
+                  artificialAccelerationThisStep,
+                  contactRoles: [...stepContactRoles].sort(),
                   trackContact: trackPairContact,
                   deflectorContact: deflectorPairContact,
                   fretContact: fretPairContact,
@@ -5178,6 +5220,8 @@ export function Part2SceneViewport({
                 planarDirection.normalize();
             }
             previousSpeed = speed;
+            previousTracePosition.set(position.x, position.y, position.z);
+            previousTraceVelocity.set(velocity.x, velocity.y, velocity.z);
 
             if (
               step > 0 &&
