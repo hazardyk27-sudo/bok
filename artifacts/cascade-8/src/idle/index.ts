@@ -17,25 +17,62 @@ import {
 } from "./types";
 
 function formatCredits(cents: number) {
-  return `$${(cents / 100).toLocaleString("en-US", {
+  return `${(cents / 100).toLocaleString("en-US", {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
   })}`;
 }
 
+const BUSINESS_LEVELS_PER_BUSINESS = 9;
+const TOTAL_BUSINESS_PROGRESSION_LEVELS =
+  BUSINESS_IDS.length * BUSINESS_LEVELS_PER_BUSINESS;
+
 export const BUSINESSES_MARKUP = `
   <main class="businesses-page" aria-labelledby="businesses-title">
     <header class="businesses-header">
-      <a class="back-link" href="/">← ANA MENÜ</a>
-      <div class="businesses-heading">
-        <span class="businesses-kicker">FAHRİNİN YOLU // İŞLETMELER</span>
-        <h1 id="businesses-title">İŞLETMELER</h1>
-        <p>Üç işletmeyi büyüt, Kasalarını geliştir ve biriken geliri ortak bakiyene aktar.</p>
+      <div class="businesses-header-nav">
+        <a class="back-link" href="/">← ANA MENÜ</a>
+        <span class="businesses-header-status"><i aria-hidden="true"></i>KULÜP OPERASYON MERKEZİ</span>
       </div>
-      <div class="businesses-wallet" aria-label="Ortak bakiye">
-        <span>BAKİYE</span>
-        <strong data-idle-balance>—</strong>
+
+      <div class="businesses-header-main">
+        <div class="businesses-heading">
+          <span class="businesses-kicker">FAHRİNİN YOLU // CLUB EMPIRE</span>
+          <h1 id="businesses-title">İŞLETMELER</h1>
+          <p>Kulübünün gelir kaynaklarını büyüt, kapasiteni geliştir ve biriken kazancı tek merkezden yönet.</p>
+        </div>
+
+        <div class="businesses-wallet" aria-label="Ortak oyun bakiyesi">
+          <span>ORTAK BAKİYE</span>
+          <strong data-idle-balance>—</strong>
+          <small>TÜM OYUNLARDA KULLANILIR</small>
+        </div>
       </div>
+
+      <section class="businesses-progression" aria-label="Kulüp imparatorluğu ilerlemesi">
+        <div class="businesses-progression-copy">
+          <span>KULÜP İMPARATORLUĞU</span>
+          <strong>
+            <b data-idle-progression-levels>— / ${TOTAL_BUSINESS_PROGRESSION_LEVELS}</b>
+            <small>İŞLETME SEVİYESİ</small>
+          </strong>
+        </div>
+        <div
+          class="businesses-progression-track"
+          role="progressbar"
+          aria-label="Toplam işletme gelişimi"
+          aria-valuemin="0"
+          aria-valuemax="${TOTAL_BUSINESS_PROGRESSION_LEVELS}"
+          aria-valuenow="0"
+          data-idle-progression-track
+        >
+          <i data-idle-progression-bar></i>
+        </div>
+        <div class="businesses-progression-meta">
+          <span data-idle-progression-percent>0%</span>
+          <span>3 İŞLETME · ${TOTAL_BUSINESS_PROGRESSION_LEVELS} SEVİYE</span>
+        </div>
+      </section>
     </header>
 
     <section class="business-summary" aria-label="İşletme özeti">
@@ -117,8 +154,22 @@ export class BusinessesClient {
     const collectableNode = this.root.querySelector<HTMLElement>("[data-idle-total-collectable]");
     const activeNode = this.root.querySelector<HTMLElement>("[data-idle-active-businesses]");
     const collectAllButton = this.root.querySelector<HTMLButtonElement>("[data-idle-collect-all]");
+    const progressionLevelsNode = this.root.querySelector<HTMLElement>("[data-idle-progression-levels]");
+    const progressionTrackNode = this.root.querySelector<HTMLElement>("[data-idle-progression-track]");
+    const progressionBarNode = this.root.querySelector<HTMLElement>("[data-idle-progression-bar]");
+    const progressionPercentNode = this.root.querySelector<HTMLElement>("[data-idle-progression-percent]");
 
-    if (!balanceNode || !hourlyNode || !collectableNode || !activeNode || !collectAllButton) {
+    if (
+      !balanceNode
+      || !hourlyNode
+      || !collectableNode
+      || !activeNode
+      || !collectAllButton
+      || !progressionLevelsNode
+      || !progressionTrackNode
+      || !progressionBarNode
+      || !progressionPercentNode
+    ) {
       throw new Error("IDLE_PAGE_SHELL_INCOMPLETE");
     }
 
@@ -149,6 +200,23 @@ export class BusinessesClient {
     const activeBusinesses = live.businesses.filter(
       (business) => business.businessLevel !== null,
     ).length;
+    const completedBusinessLevels = live.businesses.reduce(
+      (total, business) =>
+        total + (business.businessLevel === null ? 0 : business.businessLevel + 1),
+      0,
+    );
+    const progressionPercent = Math.round(
+      completedBusinessLevels / TOTAL_BUSINESS_PROGRESSION_LEVELS * 100,
+    );
+
+    progressionLevelsNode.textContent =
+      `${completedBusinessLevels} / ${TOTAL_BUSINESS_PROGRESSION_LEVELS}`;
+    progressionPercentNode.textContent = `%${progressionPercent}`;
+    progressionBarNode.style.width = `${progressionPercent}%`;
+    progressionTrackNode.setAttribute(
+      "aria-valuenow",
+      String(completedBusinessLevels),
+    );
 
     hourlyNode.textContent = `${formatCredits(totalHourlyCents)} /sa`;
     collectableNode.textContent = formatCredits(totalCollectableCents);
