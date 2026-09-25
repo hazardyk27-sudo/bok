@@ -2,6 +2,9 @@ import {
   CLUB_STORE_BUSINESS,
   FAN_CLUB_BUSINESS,
   STADIUM_BUSINESS,
+  MAX_VAULT_LEVEL,
+  VAULT_LEVELS,
+  VAULT_UPGRADE_STEPS,
 } from "../config";
 import type {
   BusinessDefinition,
@@ -12,6 +15,7 @@ import type {
   IdleLiveBusinessState,
   IdleStateEnvelope,
   IdleStateResponse,
+  IdleVaultUpgradePreview,
   IdleVaultUpgradeResponse,
 } from "../types";
 import { MILLISECONDS_PER_DAY } from "../utils";
@@ -233,4 +237,70 @@ export async function upgradeIdleVault(
   }
 
   return response.json() as Promise<IdleVaultUpgradeResponse>;
+}
+
+
+export function getIdleVaultUpgradePreview(
+  business: IdleBusinessServerState,
+): IdleVaultUpgradePreview {
+  const currentVault = VAULT_LEVELS.find(
+    (entry) => entry.level === business.vaultLevel,
+  );
+  if (!currentVault) throw new Error("INVALID_IDLE_VAULT_LEVEL");
+
+  if (business.businessLevel === null) {
+    return {
+      isOwned: false,
+      isMaxLevel: false,
+      canUpgrade: false,
+      currentVaultLevel: business.vaultLevel,
+      currentCapacityHours: currentVault.capacityHours,
+      nextVaultLevel: null,
+      nextCapacityHours: null,
+      costCents: null,
+    };
+  }
+
+  if (business.vaultLevel === MAX_VAULT_LEVEL) {
+    return {
+      isOwned: true,
+      isMaxLevel: true,
+      canUpgrade: false,
+      currentVaultLevel: business.vaultLevel,
+      currentCapacityHours: currentVault.capacityHours,
+      nextVaultLevel: null,
+      nextCapacityHours: null,
+      costCents: null,
+    };
+  }
+
+  const step = VAULT_UPGRADE_STEPS.find(
+    (entry) => entry.fromLevel === business.vaultLevel,
+  );
+  if (!step) throw new Error("INVALID_IDLE_VAULT_UPGRADE_STEP");
+
+  const nextVault = VAULT_LEVELS.find((entry) => entry.level === step.toLevel);
+  if (!nextVault) throw new Error("INVALID_IDLE_VAULT_LEVEL");
+
+  const definition = getBusinessDefinition(business.businessId);
+  const stage = definition.levels.find(
+    (entry) => entry.level === business.businessLevel,
+  );
+  if (!stage) throw new Error("INVALID_IDLE_BUSINESS_LEVEL");
+
+  const costCents = stage.costCents * step.costPercent / 100;
+  if (!Number.isSafeInteger(costCents) || costCents < 0) {
+    throw new Error("INVALID_IDLE_VAULT_UPGRADE_COST");
+  }
+
+  return {
+    isOwned: true,
+    isMaxLevel: false,
+    canUpgrade: true,
+    currentVaultLevel: business.vaultLevel,
+    currentCapacityHours: currentVault.capacityHours,
+    nextVaultLevel: step.toLevel,
+    nextCapacityHours: nextVault.capacityHours,
+    costCents,
+  };
 }
