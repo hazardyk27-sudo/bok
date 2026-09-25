@@ -351,16 +351,18 @@ export class IdleRepository {
         projection.projectedAccruedMicrocents,
       );
 
+      const initialBalanceWithCreditCents =
+        INITIAL_ROULETTE_BALANCE_CENTS + settlement.walletCreditCents;
       const walletResult = await client.query<{ balance_cents: number }>(
         `INSERT INTO roulette_wallets (session_id, balance_cents, updated_at)
-         VALUES ($1, $2 + $3, now())
+         VALUES ($1, $2, now())
          ON CONFLICT (session_id) DO UPDATE
            SET balance_cents = roulette_wallets.balance_cents + $3,
                updated_at = now()
          RETURNING balance_cents`,
         [
           sessionId,
-          INITIAL_ROULETTE_BALANCE_CENTS,
+          initialBalanceWithCreditCents,
           settlement.walletCreditCents,
         ],
       );
