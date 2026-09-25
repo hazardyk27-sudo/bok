@@ -5055,7 +5055,7 @@ body.business-detail-open {
 }
 
 .route-shell.is-businesses-page .business-card[data-upgrade-feedback="vault"] .business-vault-progress,
-.business-detail-drawer[data-upgrade-feedback="vault"] .business-vault-next {
+.business-detail-drawer[data-upgrade-feedback="vault"] .vault-level-node[data-vault-state="current"] .vault-level-node-card {
   animation: idle-upgrade-vault-pulse 820ms cubic-bezier(.2, .78, .2, 1) both;
 }
 
@@ -5218,7 +5218,7 @@ body.business-detail-open {
   .route-shell.is-businesses-page .business-card[data-upgrade-feedback="vault"] [data-business-vault],
   .business-detail-drawer[data-upgrade-feedback="vault"] [data-idle-detail-vault],
   .route-shell.is-businesses-page .business-card[data-upgrade-feedback="vault"] .business-vault-progress,
-  .business-detail-drawer[data-upgrade-feedback="vault"] .business-vault-next {
+  .business-detail-drawer[data-upgrade-feedback="vault"] .vault-level-node[data-vault-state="current"] .vault-level-node-card {
     animation: none;
   }
 
