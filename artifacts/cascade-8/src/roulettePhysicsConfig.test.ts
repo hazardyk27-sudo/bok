@@ -287,7 +287,7 @@ describe("authoritative roulette physics config", () => {
       "const pocketResultCenterRadiusMax =",
     );
     expect(part3ViewportSource).toContain(
-      "POCKET_FLOOR_OUTER_RADIUS - BALL_RADIUS",
+      "POCKET_OUTER_LIP_RADIUS - BALL_RADIUS",
     );
     expect(part3ViewportSource).toContain(
       "const settledResultContractValid =",
