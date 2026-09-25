@@ -188,7 +188,7 @@ function renderVaultLevelTree(
         ? "İŞLETME GEREKLİ"
         : costCents === null
           ? "—"
-          : `$${formatCredits(costCents)}`;
+          : formatCredits(costCents);
     const costMeta = vault.level === 1
       ? "İşletme açıldığında aktif"
       : step
