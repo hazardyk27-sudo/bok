@@ -5051,6 +5051,40 @@ export function Part2SceneViewport({
               velocity.z - rotorTangentialVelocity.z,
             );
             if (
+              [61004, 61005, 61006].includes(run.seed) &&
+              pocketEntryTime !== null &&
+              elapsed - pocketEntryTime <= 2 &&
+              step % 12 === 0
+            ) {
+              const invRadius = radius > 0 ? 1 / radius : 0;
+              const radialX = position.x * invRadius;
+              const radialZ = position.z * invRadius;
+              const tangentX = position.z * invRadius;
+              const tangentZ = -position.x * invRadius;
+              const relativeX = velocity.x - rotorTangentialVelocity.x;
+              const relativeZ = velocity.z - rotorTangentialVelocity.z;
+              console.info(
+                'PART6_POCKET_SLIP_TRACE',
+                JSON.stringify({
+                  seed: run.seed,
+                  step,
+                  sincePocketEntry: Number((elapsed - pocketEntryTime).toFixed(6)),
+                  radius: Number(radius.toFixed(6)),
+                  speed: Number(speed.toFixed(6)),
+                  rotorRelativeSpeed: Number(finalRotorRelativeSpeed.toFixed(6)),
+                  tangentialSlip: Number(
+                    (relativeX * tangentX + relativeZ * tangentZ).toFixed(6),
+                  ),
+                  radialSlip: Number(
+                    (relativeX * radialX + relativeZ * radialZ).toFixed(6),
+                  ),
+                  verticalSlip: Number(velocity.y.toFixed(6)),
+                  settledFrames,
+                  contactRoles: [...stepContactRoles].sort(),
+                }),
+              );
+            }
+            if (
               ([61001, 61004, 61005, 61006, 61007, 61008].includes(run.seed)) &&
               elapsed >= activePart6MaxDurationSeconds - 2 &&
               step % 12 === 0
