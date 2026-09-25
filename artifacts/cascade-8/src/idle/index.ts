@@ -48,6 +48,8 @@ export const BUSINESSES_MARKUP = `
       </div>
     </section>
 
+    <p class="businesses-error" data-idle-error role="status" hidden></p>
+
     <section class="business-list" aria-label="İşletmeler">
       ${BUSINESS_IDS.map(renderBusinessRowShell).join("")}
     </section>
@@ -72,8 +74,28 @@ export class BusinessesClient {
   }
 
   private async refresh() {
-    this.envelope = await fetchIdleState();
-    this.render();
+    try {
+      this.envelope = await fetchIdleState();
+      this.setError(null);
+      this.render();
+    } catch (error) {
+      this.setError(this.getErrorMessage(error));
+    }
+  }
+
+  private getErrorMessage(error: unknown) {
+    const message = error instanceof Error ? error.message : "";
+    if (message === "INSUFFICIENT_IDLE_CREDITS") return "Bakiye yetersiz.";
+    if (message === "IDLE_BUSINESS_MAX_LEVEL") return "İşletme maksimum seviyede.";
+    if (message === "IDLE_VAULT_MAX_LEVEL") return "Kasa maksimum seviyede.";
+    return "İşletmeler sunucusuna bağlanılamadı. Lütfen tekrar dene.";
+  }
+
+  private setError(message: string | null) {
+    const node = this.root.querySelector<HTMLElement>("[data-idle-error]");
+    if (!node) return;
+    node.hidden = message === null;
+    node.textContent = message ?? "";
   }
 
   private render() {
@@ -145,6 +167,8 @@ export class BusinessesClient {
     try {
       await action();
       await this.refresh();
+    } catch (error) {
+      this.setError(this.getErrorMessage(error));
     } finally {
       this.busyBusinesses.delete(businessId);
       this.render();
