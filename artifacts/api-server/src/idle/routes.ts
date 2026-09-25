@@ -37,7 +37,7 @@ function serializeBusiness(business: Awaited<ReturnType<typeof idleRepository.ge
 
 function sendError(res: Response, error: unknown) {
   const message = error instanceof Error ? error.message : "IDLE_REQUEST_FAILED";
-  const status = message === "IDEMPOTENCY_KEY_REUSED" || message === "IDLE_BUSINESS_MAX_LEVEL" ? 409
+  const status = message === "IDEMPOTENCY_KEY_REUSED" || message === "IDLE_BUSINESS_MAX_LEVEL" || message === "IDLE_VAULT_MAX_LEVEL" ? 409
     : message === "INSUFFICIENT_IDLE_CREDITS" ? 402
       : message === "IDLE_BUSINESS_NOT_FOUND" ? 404
         : 400;
@@ -119,6 +119,41 @@ router.post("/idle/businesses/:businessId/upgrade", async (req, res) => {
       serverTime: result.serverNow.toISOString(),
       businessId: result.businessId,
       targetBusinessLevel: result.targetBusinessLevel,
+      costCents: result.costCents,
+      balanceCents: result.balanceCents,
+      replayed: result.replayed,
+      business: serializeBusiness(result.business),
+    });
+  } catch (error) {
+    sendError(res, error);
+  }
+});
+
+
+router.post("/idle/businesses/:businessId/vault/upgrade", async (req, res) => {
+  try {
+    const businessId = req.params.businessId as IdleBusinessId;
+    if (!IDLE_BUSINESS_IDS.includes(businessId)) {
+      res.status(404).json({ error: "IDLE_BUSINESS_NOT_FOUND" });
+      return;
+    }
+
+    const { idempotencyKey } = req.body as { idempotencyKey?: unknown };
+    if (typeof idempotencyKey !== "string" || !IDEMPOTENCY_PATTERN.test(idempotencyKey)) {
+      res.status(400).json({ error: "VALID_IDEMPOTENCY_KEY_REQUIRED" });
+      return;
+    }
+
+    const result = await idleRepository.upgradeVault(
+      getSessionId(req, res),
+      businessId,
+      idempotencyKey,
+    );
+
+    res.json({
+      serverTime: result.serverNow.toISOString(),
+      businessId: result.businessId,
+      targetVaultLevel: result.targetVaultLevel,
       costCents: result.costCents,
       balanceCents: result.balanceCents,
       replayed: result.replayed,
