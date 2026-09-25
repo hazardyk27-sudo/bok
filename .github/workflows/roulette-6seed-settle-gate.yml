@@ -1,4 +1,4 @@
-name: Roulette 6 Seed Settle Gate
+name: Roulette 7 Seed Settle Gate
 
 on:
   push:
@@ -28,6 +28,8 @@ jobs:
             start: 6
           - seed: 61008
             start: 7
+          - seed: 61022
+            start: 21
 
     steps:
       - name: Checkout
