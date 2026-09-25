@@ -6,6 +6,8 @@ on:
       - feature/roulette
     paths:
       - '.github/workflows/roulette-5seed-lap-calibration.yml'
+      - 'artifacts/roulette-physics-lab/src/Part2SceneViewport.tsx'
+      - 'artifacts/api-server/src/physics-lab/simulation.ts'
   workflow_dispatch:
 
 permissions:
