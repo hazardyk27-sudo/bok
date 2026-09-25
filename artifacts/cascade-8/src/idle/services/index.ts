@@ -64,12 +64,32 @@ export function projectIdleBusinessLive(
   business: IdleBusinessServerState,
   elapsedSinceSnapshotMs: number,
 ): IdleLiveBusinessState {
-  if (business.businessLevel === null || business.isVaultFull) {
+  if (business.businessLevel === null) {
+    return {
+      ...business,
+      liveAccruedMicrocents: 0,
+      liveRemainingCapacityMicrocents: 0,
+      liveIsVaultFull: false,
+      vaultFillRatio: 0,
+      vaultStatus: "UNOWNED",
+      collectableCents: 0,
+      canCollect: false,
+    };
+  }
+
+  if (business.isVaultFull) {
+    const collectableCents = Math.floor(
+      business.accruedMicrocents / MICRO_CENTS_PER_CENT,
+    );
     return {
       ...business,
       liveAccruedMicrocents: business.accruedMicrocents,
-      liveRemainingCapacityMicrocents: business.remainingCapacityMicrocents,
-      liveIsVaultFull: business.isVaultFull,
+      liveRemainingCapacityMicrocents: 0,
+      liveIsVaultFull: true,
+      vaultFillRatio: 1,
+      vaultStatus: "FULL",
+      collectableCents,
+      canCollect: collectableCents > 0,
     };
   }
 
@@ -94,11 +114,23 @@ export function projectIdleBusinessLive(
     business.vaultCapacityMicrocents - liveAccruedMicrocents,
   );
 
+  const liveIsVaultFull = liveRemainingCapacityMicrocents === 0;
+  const vaultFillRatio = business.vaultCapacityMicrocents > 0
+    ? Math.min(1, Math.max(0, liveAccruedMicrocents / business.vaultCapacityMicrocents))
+    : 0;
+  const collectableCents = Math.floor(
+    liveAccruedMicrocents / MICRO_CENTS_PER_CENT,
+  );
+
   return {
     ...business,
     liveAccruedMicrocents,
     liveRemainingCapacityMicrocents,
-    liveIsVaultFull: liveRemainingCapacityMicrocents === 0,
+    liveIsVaultFull,
+    vaultFillRatio,
+    vaultStatus: liveIsVaultFull ? "FULL" : "EARNING",
+    collectableCents,
+    canCollect: collectableCents > 0,
   };
 }
 
