@@ -664,7 +664,8 @@ describe("Businesses upgrade feedback choreography", () => {
   it("wires both card and Details upgrade actions into feedback without affecting Collect", () => {
     expect(idleIndexSource).toContain('() => upgradeIdleBusiness(businessId),\n        "business"');
     expect(idleIndexSource).toContain('() => upgradeIdleVault(businessId),\n        "vault"');
-    expect(idleIndexSource).toContain("() => collectIdleBusiness(businessId)");
+    expect(idleIndexSource).toContain("void this.runCollectBusiness(businessId)");
+    expect(idleIndexSource).toContain("const result = await collectIdleBusiness(businessId);");
     expect(idleIndexSource).toContain("upgradeFeedback?: UpgradeFeedbackKind");
   });
 
