@@ -650,3 +650,45 @@ describe("Businesses vault progression tree", () => {
     expect(idleCssSource).toContain(".business-vault-detail-cta");
   });
 });
+
+
+describe("Businesses upgrade feedback choreography", () => {
+  it("captures before and after server-backed state for successful upgrades", () => {
+    expect(idleIndexSource).toContain("getBusinessSnapshot");
+    expect(idleIndexSource).toContain("playUpgradeFeedback");
+    expect(idleIndexSource).toContain('type UpgradeFeedbackKind = "business" | "vault"');
+    expect(idleIndexSource).toContain("before.businessLevel !== after.businessLevel");
+    expect(idleIndexSource).toContain("before.vaultLevel !== after.vaultLevel");
+  });
+
+  it("wires both card and Details upgrade actions into feedback without affecting Collect", () => {
+    expect(idleIndexSource).toContain('() => upgradeIdleBusiness(businessId),\n        "business"');
+    expect(idleIndexSource).toContain('() => upgradeIdleVault(businessId),\n        "vault"');
+    expect(idleIndexSource).toContain("() => collectIdleBusiness(businessId)");
+    expect(idleIndexSource).toContain("upgradeFeedback?: UpgradeFeedbackKind");
+  });
+
+  it("shows a live count-up status toast for income and vault capacity", () => {
+    expect(idleIndexSource).toContain("business-upgrade-toast");
+    expect(idleIndexSource).toContain('toast.setAttribute("aria-live", "polite")');
+    expect(idleIndexSource).toContain("deltaHourly * eased");
+    expect(idleIndexSource).toContain("afterVault.capacityHours - beforeVault.capacityHours");
+    expect(idleIndexSource).toContain("const duration = reducedMotion ? 0 : 860");
+  });
+
+  it("applies restrained cyan sweep, level, number and visual transition animations", () => {
+    expect(idleCssSource).toContain("/* Part 16 — premium upgrade feedback choreography */");
+    expect(idleCssSource).toContain("@keyframes idle-upgrade-sweep");
+    expect(idleCssSource).toContain("@keyframes idle-upgrade-level-pop");
+    expect(idleCssSource).toContain("@keyframes idle-upgrade-number-rise");
+    expect(idleCssSource).toContain("@keyframes idle-upgrade-visual-lift");
+    expect(idleCssSource).toContain("@keyframes idle-upgrade-vault-pulse");
+  });
+
+  it("keeps upgrade feedback mobile-safe and honors reduced motion", () => {
+    expect(idleCssSource).toContain(".business-detail-drawer > .business-upgrade-toast");
+    expect(idleCssSource).toContain("@media (max-width: 420px)");
+    expect(idleCssSource).toContain("@media (prefers-reduced-motion: reduce)");
+    expect(idleCssSource).toContain("animation: none");
+  });
+});
