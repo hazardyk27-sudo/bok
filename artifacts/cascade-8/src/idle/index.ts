@@ -1,6 +1,12 @@
 import "./idle.css";
 import { renderBusinessRowShell, updateBusinessRow } from "./components";
 import {
+  CLUB_STORE_BUSINESS,
+  FAN_CLUB_BUSINESS,
+  STADIUM_BUSINESS,
+  VAULT_LEVELS,
+} from "./config";
+import {
   collectAllIdleBusinesses,
   collectIdleBusiness,
   fetchIdleState,
@@ -26,6 +32,20 @@ function formatCredits(cents: number) {
 const BUSINESS_LEVELS_PER_BUSINESS = 9;
 const TOTAL_BUSINESS_PROGRESSION_LEVELS =
   BUSINESS_IDS.length * BUSINESS_LEVELS_PER_BUSINESS;
+
+const BUSINESS_DETAIL_DEFINITIONS = {
+  stadium: STADIUM_BUSINESS,
+  "club-store": CLUB_STORE_BUSINESS,
+  "fan-club": FAN_CLUB_BUSINESS,
+} as const;
+
+const BUSINESS_DETAIL_EYEBROWS: Record<BusinessId, string> = {
+  stadium: "STADIUM OPERATIONS",
+  "club-store": "RETAIL OPERATIONS",
+  "fan-club": "SUPPORTER OPERATIONS",
+};
+
+type BusinessDetailTab = "business" | "vault";
 
 export const BUSINESSES_MARKUP = `
   <main class="businesses-page" aria-labelledby="businesses-title">
@@ -112,6 +132,105 @@ export const BUSINESSES_MARKUP = `
     <section class="business-list" aria-label="İşletmeler">
       ${BUSINESS_IDS.map(renderBusinessRowShell).join("")}
     </section>
+
+    <div class="business-detail-layer" data-idle-detail-layer data-open="false" hidden>
+      <button
+        type="button"
+        class="business-detail-backdrop"
+        data-idle-detail-backdrop
+        aria-label="İşletme detaylarını kapat"
+        tabindex="-1"
+      ></button>
+
+      <aside
+        class="business-detail-drawer"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="business-detail-title"
+        data-idle-detail-drawer
+      >
+        <header class="business-detail-header">
+          <div class="business-detail-heading">
+            <span data-idle-detail-eyebrow>KULÜP OPERASYONLARI</span>
+            <h2 id="business-detail-title" data-idle-detail-title>İŞLETME</h2>
+            <p data-idle-detail-level>Seviye bilgisi yükleniyor…</p>
+          </div>
+          <button
+            type="button"
+            class="business-detail-close"
+            data-idle-detail-close
+            aria-label="Detayları kapat"
+          >×</button>
+        </header>
+
+        <div class="business-detail-status-row">
+          <span class="business-detail-level-badge" data-idle-detail-level-badge>—</span>
+          <span class="business-detail-state" data-idle-detail-state>YÜKLENİYOR</span>
+        </div>
+
+        <nav class="business-detail-tabs" role="tablist" aria-label="İşletme detayları">
+          <button
+            type="button"
+            role="tab"
+            aria-selected="true"
+            data-idle-detail-tab="business"
+          >İŞLETME GELİŞİMİ</button>
+          <button
+            type="button"
+            role="tab"
+            aria-selected="false"
+            data-idle-detail-tab="vault"
+          >KASA</button>
+        </nav>
+
+        <section class="business-detail-summary" aria-label="Mevcut işletme özeti">
+          <div>
+            <span>SAATLİK GELİR</span>
+            <strong data-idle-detail-hourly>—</strong>
+          </div>
+          <div>
+            <span>GÜNLÜK GELİR</span>
+            <strong data-idle-detail-daily>—</strong>
+          </div>
+          <div>
+            <span>KASA</span>
+            <strong data-idle-detail-vault>—</strong>
+          </div>
+        </section>
+
+        <div class="business-detail-scroll">
+          <section class="business-detail-panel" data-idle-detail-panel="business">
+            <div class="business-detail-section-heading">
+              <span>GELİŞİM ROTASI</span>
+              <strong>LV0 → LV8</strong>
+            </div>
+            <div class="business-detail-preview-card">
+              <span>MEVCUT KONUM</span>
+              <strong data-idle-detail-current>—</strong>
+              <small data-idle-detail-next>Sonraki seviye bilgisi yükleniyor…</small>
+            </div>
+            <div class="business-detail-roadmap-placeholder" aria-hidden="true">
+              <i></i><i></i><i></i><i></i><i></i>
+            </div>
+          </section>
+
+          <section class="business-detail-panel" data-idle-detail-panel="vault" hidden>
+            <div class="business-detail-section-heading">
+              <span>KASA GELİŞİMİ</span>
+              <strong>1SA → 24SA</strong>
+            </div>
+            <div class="business-detail-preview-card">
+              <span>MEVCUT KAPASİTE</span>
+              <strong data-idle-detail-vault-current>—</strong>
+              <small>İşletme yükseltildiğinde Kasa Lv1'e döner.</small>
+            </div>
+            <div class="business-detail-roadmap-placeholder business-detail-roadmap-placeholder--vault" aria-hidden="true">
+              <i></i><i></i><i></i><i></i><i></i><i></i>
+            </div>
+          </section>
+        </div>
+      </aside>
+    </div>
   </main>
 `;
 
@@ -120,15 +239,21 @@ export class BusinessesClient {
   private timer: number | null = null;
   private readonly busyBusinesses = new Set<BusinessId>();
   private collectingAll = false;
+  private detailBusinessId: BusinessId | null = null;
+  private detailTab: BusinessDetailTab = "business";
+  private lastDetailTrigger: HTMLElement | null = null;
 
   constructor(private readonly root: HTMLElement) {
     this.root.addEventListener("click", this.handleClick);
+    this.root.addEventListener("keydown", this.handleKeyDown);
     void this.refresh();
     this.timer = window.setInterval(() => this.render(), 1_000);
   }
 
   destroy() {
     this.root.removeEventListener("click", this.handleClick);
+    this.root.removeEventListener("keydown", this.handleKeyDown);
+    document.body.classList.remove("business-detail-open");
     if (this.timer !== null) window.clearInterval(this.timer);
     this.timer = null;
   }
@@ -212,7 +337,13 @@ export class BusinessesClient {
         walletBalanceCents,
         this.busyBusinesses.has(business.businessId),
       );
+    }
 
+    if (this.detailBusinessId) {
+      const detailBusiness = live.businesses.find(
+        (business) => business.businessId === this.detailBusinessId,
+      );
+      if (detailBusiness) this.renderBusinessDetails(detailBusiness);
     }
 
     const activeBusinesses = live.businesses.filter(
@@ -257,6 +388,17 @@ export class BusinessesClient {
     const button = target?.closest<HTMLButtonElement>("button");
     if (!button) return;
 
+    if (button.matches("[data-idle-detail-close], [data-idle-detail-backdrop]")) {
+      this.closeBusinessDetails();
+      return;
+    }
+
+    if (button.matches("[data-idle-detail-tab]")) {
+      const tab = button.dataset.idleDetailTab as BusinessDetailTab | undefined;
+      if (tab === "business" || tab === "vault") this.setDetailTab(tab);
+      return;
+    }
+
     if (button.matches("[data-idle-collect-all]")) {
       if (!this.collectingAll) void this.runCollectAll();
       return;
@@ -267,6 +409,12 @@ export class BusinessesClient {
 
     const businessId = row.dataset.businessId as BusinessId | undefined;
     if (!businessId || !BUSINESS_IDS.includes(businessId)) return;
+
+    if (button.matches("[data-business-details]")) {
+      this.openBusinessDetails(businessId, button);
+      return;
+    }
+
     if (this.busyBusinesses.has(businessId)) return;
 
     if (button.matches("[data-business-upgrade]")) {
@@ -277,6 +425,133 @@ export class BusinessesClient {
       void this.runBusinessAction(businessId, () => upgradeIdleVault(businessId));
     }
   };
+
+  private handleKeyDown = (event: KeyboardEvent) => {
+    if (event.key === "Escape" && this.detailBusinessId) {
+      event.preventDefault();
+      this.closeBusinessDetails();
+    }
+  };
+
+  private openBusinessDetails(businessId: BusinessId, trigger: HTMLElement) {
+    const layer = this.root.querySelector<HTMLElement>("[data-idle-detail-layer]");
+    if (!layer) throw new Error("IDLE_DETAIL_LAYER_MISSING");
+
+    this.detailBusinessId = businessId;
+    this.detailTab = "business";
+    this.lastDetailTrigger = trigger;
+    layer.hidden = false;
+    document.body.classList.add("business-detail-open");
+    this.setDetailTab("business");
+
+    if (this.envelope) this.render();
+
+    window.requestAnimationFrame(() => {
+      layer.dataset.open = "true";
+      this.root.querySelector<HTMLButtonElement>("[data-idle-detail-close]")?.focus();
+    });
+  }
+
+  private closeBusinessDetails() {
+    const layer = this.root.querySelector<HTMLElement>("[data-idle-detail-layer]");
+    if (!layer) return;
+
+    const focusTarget = this.lastDetailTrigger;
+    this.detailBusinessId = null;
+    this.lastDetailTrigger = null;
+    layer.dataset.open = "false";
+    document.body.classList.remove("business-detail-open");
+
+    window.setTimeout(() => {
+      if (this.detailBusinessId === null) layer.hidden = true;
+    }, 220);
+
+    focusTarget?.focus();
+  }
+
+  private setDetailTab(tab: BusinessDetailTab) {
+    this.detailTab = tab;
+
+    for (const tabButton of this.root.querySelectorAll<HTMLButtonElement>("[data-idle-detail-tab]")) {
+      const selected = tabButton.dataset.idleDetailTab === tab;
+      tabButton.setAttribute("aria-selected", selected ? "true" : "false");
+      tabButton.dataset.active = selected ? "true" : "false";
+    }
+
+    for (const panel of this.root.querySelectorAll<HTMLElement>("[data-idle-detail-panel]")) {
+      panel.hidden = panel.dataset.idleDetailPanel !== tab;
+    }
+  }
+
+  private renderBusinessDetails(business: ReturnType<typeof projectIdleStateLive>["businesses"][number]) {
+    const definition = BUSINESS_DETAIL_DEFINITIONS[business.businessId];
+    const currentStage = business.businessLevel === null
+      ? null
+      : definition.levels.find((stage) => stage.level === business.businessLevel) ?? null;
+    const nextStage = business.businessLevel === null
+      ? definition.levels[0]
+      : definition.levels.find((stage) => stage.level === business.businessLevel! + 1) ?? null;
+    const vault = VAULT_LEVELS.find((entry) => entry.level === business.vaultLevel);
+
+    const eyebrowNode = this.root.querySelector<HTMLElement>("[data-idle-detail-eyebrow]");
+    const titleNode = this.root.querySelector<HTMLElement>("[data-idle-detail-title]");
+    const levelNode = this.root.querySelector<HTMLElement>("[data-idle-detail-level]");
+    const levelBadgeNode = this.root.querySelector<HTMLElement>("[data-idle-detail-level-badge]");
+    const stateNode = this.root.querySelector<HTMLElement>("[data-idle-detail-state]");
+    const hourlyNode = this.root.querySelector<HTMLElement>("[data-idle-detail-hourly]");
+    const dailyNode = this.root.querySelector<HTMLElement>("[data-idle-detail-daily]");
+    const vaultNode = this.root.querySelector<HTMLElement>("[data-idle-detail-vault]");
+    const currentNode = this.root.querySelector<HTMLElement>("[data-idle-detail-current]");
+    const nextNode = this.root.querySelector<HTMLElement>("[data-idle-detail-next]");
+    const vaultCurrentNode = this.root.querySelector<HTMLElement>("[data-idle-detail-vault-current]");
+
+    if (
+      !eyebrowNode
+      || !titleNode
+      || !levelNode
+      || !levelBadgeNode
+      || !stateNode
+      || !hourlyNode
+      || !dailyNode
+      || !vaultNode
+      || !currentNode
+      || !nextNode
+      || !vaultCurrentNode
+      || !vault
+    ) {
+      throw new Error("IDLE_DETAIL_SHELL_INCOMPLETE");
+    }
+
+    eyebrowNode.textContent = BUSINESS_DETAIL_EYEBROWS[business.businessId];
+    titleNode.textContent = definition.label;
+    levelNode.textContent = currentStage
+      ? `Lv${currentStage.level} · ${currentStage.name}`
+      : "Henüz satın alınmadı";
+    levelBadgeNode.textContent = currentStage ? `LV${currentStage.level}` : "LOCKED";
+    stateNode.textContent = business.businessLevel === null
+      ? "SATIN ALINMADI"
+      : business.liveIsVaultFull
+        ? "KASA DOLU"
+        : nextStage
+          ? "AKTİF"
+          : "MAX SEVİYE";
+
+    hourlyNode.textContent = currentStage
+      ? `${formatCredits(currentStage.hourlyIncomeDisplayCents)} /sa`
+      : "$0.00 /sa";
+    dailyNode.textContent = currentStage
+      ? `${formatCredits(currentStage.dailyIncomeCents)} /gün`
+      : "$0.00 /gün";
+    vaultNode.textContent = `Lv${business.vaultLevel} · ${vault.capacityHours}sa`;
+
+    currentNode.textContent = currentStage
+      ? `Lv${currentStage.level} · ${currentStage.name}`
+      : "Başlangıç seviyesi kilitli";
+    nextNode.textContent = nextStage
+      ? `Sonraki hedef: Lv${nextStage.level} · ${nextStage.name} · ${formatCredits(nextStage.costCents)}`
+      : "Tüm işletme seviyeleri tamamlandı.";
+    vaultCurrentNode.textContent = `Kasa Lv${business.vaultLevel} · ${vault.capacityHours} saat kapasite`;
+  }
 
   private async runBusinessAction(
     businessId: BusinessId,
