@@ -5787,3 +5787,291 @@ body.business-detail-open {
     animation: none;
   }
 }
+
+
+/* Part 16 — premium upgrade feedback choreography */
+.route-shell.is-businesses-page .business-card,
+.route-shell.is-businesses-page .business-card-body,
+.business-detail-drawer {
+  position: relative;
+}
+
+.business-upgrade-toast {
+  position: absolute;
+  z-index: 18;
+  top: 14px;
+  right: 14px;
+  display: grid;
+  min-width: 158px;
+  gap: 4px;
+  padding: 11px 12px 10px;
+  border: 1px solid rgba(125, 223, 255, .34);
+  border-radius: 13px;
+  color: var(--idle-text);
+  background:
+    linear-gradient(135deg, rgba(70, 200, 255, .12), rgba(114, 88, 255, .055)),
+    rgba(6, 17, 30, .94);
+  box-shadow:
+    0 14px 34px rgba(0, 0, 0, .28),
+    inset 0 1px 0 rgba(255, 255, 255, .035);
+  backdrop-filter: blur(10px);
+  pointer-events: none;
+  animation: idle-upgrade-toast-in 240ms cubic-bezier(.22, .74, .2, 1) both;
+}
+
+.business-detail-drawer > .business-upgrade-toast {
+  top: 88px;
+  right: 24px;
+}
+
+.business-upgrade-toast[data-upgrade-kind="vault"] {
+  border-color: rgba(157, 174, 196, .24);
+  background:
+    linear-gradient(135deg, rgba(70, 200, 255, .08), transparent 62%),
+    rgba(6, 17, 30, .94);
+}
+
+.business-upgrade-toast[data-leaving="true"] {
+  animation: idle-upgrade-toast-out 180ms ease both;
+}
+
+.business-upgrade-toast > span {
+  color: var(--idle-cyan);
+  font: 800 7px/1 "DM Mono", monospace;
+  letter-spacing: .1em;
+}
+
+.business-upgrade-toast > strong {
+  color: #f4fdff;
+  font-size: 17px;
+  font-variant-numeric: tabular-nums;
+  font-weight: 850;
+  letter-spacing: -.025em;
+}
+
+.business-upgrade-toast > small {
+  color: var(--idle-text-secondary);
+  font-size: 8px;
+  line-height: 1.25;
+}
+
+.route-shell.is-businesses-page .business-card[data-upgrade-feedback] .business-card-body::after,
+.business-detail-drawer[data-upgrade-feedback]::after {
+  position: absolute;
+  z-index: 12;
+  inset: 0;
+  content: "";
+  border-radius: inherit;
+  background:
+    linear-gradient(
+      110deg,
+      transparent 20%,
+      rgba(125, 223, 255, .02) 38%,
+      rgba(125, 223, 255, .18) 49%,
+      rgba(125, 223, 255, .035) 58%,
+      transparent 76%
+    );
+  transform: translateX(-115%);
+  pointer-events: none;
+  animation: idle-upgrade-sweep 920ms cubic-bezier(.18, .68, .18, 1) both;
+}
+
+.business-detail-drawer[data-upgrade-feedback]::after {
+  z-index: 4;
+  border-radius: 0;
+}
+
+.route-shell.is-businesses-page .business-card[data-upgrade-feedback="business"] .business-card-level-mark,
+.business-detail-drawer[data-upgrade-feedback="business"] .business-detail-level-badge {
+  animation: idle-upgrade-level-pop 760ms cubic-bezier(.2, .78, .2, 1) both;
+}
+
+.route-shell.is-businesses-page .business-card[data-upgrade-feedback="business"] [data-business-level],
+.business-detail-drawer[data-upgrade-feedback="business"] [data-idle-detail-level] {
+  animation: idle-upgrade-text-rise 760ms cubic-bezier(.2, .78, .2, 1) both;
+}
+
+.route-shell.is-businesses-page .business-card[data-upgrade-feedback="business"] .business-card-visual {
+  animation: idle-upgrade-visual-lift 940ms cubic-bezier(.2, .74, .18, 1) both;
+}
+
+.route-shell.is-businesses-page .business-card[data-upgrade-feedback="business"] [data-business-income],
+.business-detail-drawer[data-upgrade-feedback="business"] [data-idle-detail-hourly],
+.route-shell.is-businesses-page .business-card[data-upgrade-feedback="vault"] [data-business-vault],
+.business-detail-drawer[data-upgrade-feedback="vault"] [data-idle-detail-vault] {
+  animation: idle-upgrade-number-rise 820ms cubic-bezier(.2, .78, .2, 1) both;
+}
+
+.route-shell.is-businesses-page .business-card[data-upgrade-feedback="vault"] .business-vault-progress,
+.business-detail-drawer[data-upgrade-feedback="vault"] .business-vault-next {
+  animation: idle-upgrade-vault-pulse 820ms cubic-bezier(.2, .78, .2, 1) both;
+}
+
+@keyframes idle-upgrade-toast-in {
+  from {
+    opacity: 0;
+    transform: translateY(-8px) scale(.97);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes idle-upgrade-toast-out {
+  from {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+  to {
+    opacity: 0;
+    transform: translateY(-5px) scale(.985);
+  }
+}
+
+@keyframes idle-upgrade-sweep {
+  0% {
+    opacity: 0;
+    transform: translateX(-115%);
+  }
+  16% {
+    opacity: 1;
+  }
+  72% {
+    opacity: .9;
+  }
+  100% {
+    opacity: 0;
+    transform: translateX(115%);
+  }
+}
+
+@keyframes idle-upgrade-level-pop {
+  0% {
+    transform: scale(.9);
+    border-color: rgba(70, 200, 255, .15);
+    box-shadow: none;
+  }
+  42% {
+    transform: scale(1.1);
+    border-color: rgba(125, 223, 255, .72);
+    box-shadow: 0 0 22px rgba(70, 200, 255, .22);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+@keyframes idle-upgrade-text-rise {
+  0% {
+    opacity: .45;
+    transform: translateY(5px);
+  }
+  46% {
+    opacity: 1;
+    transform: translateY(-2px);
+  }
+  100% {
+    transform: translateY(0);
+  }
+}
+
+@keyframes idle-upgrade-number-rise {
+  0% {
+    opacity: .5;
+    transform: translateY(4px);
+    text-shadow: none;
+  }
+  48% {
+    opacity: 1;
+    transform: translateY(-2px);
+    text-shadow: 0 0 18px rgba(70, 200, 255, .18);
+  }
+  100% {
+    transform: translateY(0);
+    text-shadow: none;
+  }
+}
+
+@keyframes idle-upgrade-visual-lift {
+  0% {
+    filter: brightness(1);
+  }
+  42% {
+    filter: brightness(1.12) saturate(1.08);
+  }
+  100% {
+    filter: brightness(1);
+  }
+}
+
+@keyframes idle-upgrade-vault-pulse {
+  0% {
+    border-color: rgba(70, 200, 255, .12);
+    box-shadow: none;
+  }
+  46% {
+    border-color: rgba(125, 223, 255, .42);
+    box-shadow: 0 0 18px rgba(70, 200, 255, .12);
+  }
+  100% {
+    box-shadow: none;
+  }
+}
+
+@media (max-width: 760px) {
+  .business-upgrade-toast {
+    top: 10px;
+    right: 10px;
+    min-width: 146px;
+    padding: 10px 11px 9px;
+  }
+
+  .business-detail-drawer > .business-upgrade-toast {
+    top: max(72px, calc(env(safe-area-inset-top) + 58px));
+    right: max(12px, env(safe-area-inset-right));
+  }
+
+  .business-upgrade-toast > strong {
+    font-size: 15px;
+  }
+}
+
+@media (max-width: 420px) {
+  .business-upgrade-toast {
+    left: 10px;
+    right: 10px;
+    width: auto;
+    min-width: 0;
+  }
+
+  .business-detail-drawer > .business-upgrade-toast {
+    left: max(12px, env(safe-area-inset-left));
+    right: max(12px, env(safe-area-inset-right));
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .business-upgrade-toast,
+  .business-upgrade-toast[data-leaving="true"],
+  .route-shell.is-businesses-page .business-card[data-upgrade-feedback] .business-card-body::after,
+  .business-detail-drawer[data-upgrade-feedback]::after,
+  .route-shell.is-businesses-page .business-card[data-upgrade-feedback="business"] .business-card-level-mark,
+  .business-detail-drawer[data-upgrade-feedback="business"] .business-detail-level-badge,
+  .route-shell.is-businesses-page .business-card[data-upgrade-feedback="business"] [data-business-level],
+  .business-detail-drawer[data-upgrade-feedback="business"] [data-idle-detail-level],
+  .route-shell.is-businesses-page .business-card[data-upgrade-feedback="business"] .business-card-visual,
+  .route-shell.is-businesses-page .business-card[data-upgrade-feedback="business"] [data-business-income],
+  .business-detail-drawer[data-upgrade-feedback="business"] [data-idle-detail-hourly],
+  .route-shell.is-businesses-page .business-card[data-upgrade-feedback="vault"] [data-business-vault],
+  .business-detail-drawer[data-upgrade-feedback="vault"] [data-idle-detail-vault],
+  .route-shell.is-businesses-page .business-card[data-upgrade-feedback="vault"] .business-vault-progress,
+  .business-detail-drawer[data-upgrade-feedback="vault"] .business-vault-next {
+    animation: none;
+  }
+
+  .route-shell.is-businesses-page .business-card[data-upgrade-feedback] .business-card-body::after,
+  .business-detail-drawer[data-upgrade-feedback]::after {
+    display: none;
+  }
+}
