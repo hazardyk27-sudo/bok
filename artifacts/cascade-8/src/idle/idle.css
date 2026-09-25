@@ -6341,3 +6341,116 @@ body.business-detail-open {
     animation: none;
   }
 }
+
+
+/* Part 18 — final responsive QA / short mobile landscape */
+@media (orientation: landscape) and (max-height: 520px) and (max-width: 950px) {
+  .route-shell.is-businesses-page {
+    --idle-page-gutter: 14px;
+  }
+
+  .route-shell.is-businesses-page .businesses-page {
+    padding-top: 12px;
+  }
+
+  .business-detail-layer {
+    z-index: 160;
+  }
+
+  .business-detail-backdrop {
+    display: none;
+  }
+
+  .business-detail-drawer {
+    position: fixed;
+    inset: 0;
+    width: 100vw;
+    height: 100dvh;
+    padding:
+      max(8px, env(safe-area-inset-top))
+      max(12px, env(safe-area-inset-right))
+      max(8px, env(safe-area-inset-bottom))
+      max(12px, env(safe-area-inset-left));
+    border-left: 0;
+    box-shadow: none;
+    transform: translateY(102%);
+  }
+
+  .business-detail-layer[data-open="true"] .business-detail-drawer {
+    transform: translateY(0);
+  }
+
+  .business-detail-header {
+    align-items: center;
+    gap: 12px;
+    padding-bottom: 7px;
+  }
+
+  .business-detail-heading > span {
+    font-size: 6px;
+  }
+
+  .business-detail-heading h2 {
+    margin-top: 4px;
+    font-size: clamp(22px, 5.2vw, 28px);
+  }
+
+  .business-detail-heading p {
+    margin-top: 3px;
+    font-size: 9px;
+    line-height: 1.2;
+  }
+
+  .business-detail-close {
+    width: 40px;
+    height: 40px;
+  }
+
+  .business-detail-status-row {
+    padding: 6px 0 7px;
+  }
+
+  .business-detail-level-badge,
+  .business-detail-state {
+    min-height: 21px;
+    font-size: 6px;
+  }
+
+  .business-detail-tabs button {
+    min-height: 36px;
+    font-size: 7px;
+  }
+
+  .business-detail-summary {
+    gap: 6px;
+    margin-top: 7px;
+  }
+
+  .business-detail-summary > div {
+    padding: 7px 8px;
+  }
+
+  .business-detail-summary span {
+    font-size: 6px;
+  }
+
+  .business-detail-summary strong {
+    margin-top: 4px;
+    font-size: 10px;
+  }
+
+  .business-detail-scroll {
+    margin-top: 7px;
+    padding-right: 0;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .business-detail-panel {
+    padding-bottom: max(18px, env(safe-area-inset-bottom));
+  }
+
+  .business-detail-drawer > .business-upgrade-toast {
+    top: max(54px, calc(env(safe-area-inset-top) + 46px));
+    right: max(10px, env(safe-area-inset-right));
+  }
+}
