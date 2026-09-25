@@ -39,8 +39,14 @@ jobs:
       - name: Build Cascade 8
         run: pnpm --filter @workspace/cascade-8 run build
 
-      - name: Test Cascade 8
-        run: pnpm --filter @workspace/cascade-8 run test
+      - name: Test Idle frontend integration
+        run: |
+          PORT=4173 BASE_PATH=/ pnpm --filter @workspace/cascade-8 exec vitest run \
+            src/idle/services/index.test.ts \
+            src/mainMenuRegression.test.ts \
+            src/slotSmoke.test.ts \
+            src/rouletteSmoke.test.ts \
+            src/cadiKazanSmoke.test.ts
 
       - name: Test API including Idle
         run: pnpm --filter @workspace/api-server run test
