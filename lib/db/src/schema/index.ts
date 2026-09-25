@@ -235,3 +235,24 @@ export const idleBusinessStates = pgTable(
     index("idle_business_states_session_idx").on(table.sessionId),
   ],
 );
+
+
+export const idleActionReceipts = pgTable(
+  "idle_action_receipts",
+  {
+    id: text("id").primaryKey(),
+    sessionId: text("session_id").notNull(),
+    businessId: text("business_id").notNull(),
+    actionType: text("action_type").notNull(),
+    idempotencyKey: text("idempotency_key").notNull(),
+    collectedCents: bigint("collected_cents", { mode: "number" }).notNull().default(0),
+    remainderMicrocents: bigint("remainder_microcents", { mode: "number" }).notNull().default(0),
+    balanceCents: bigint("balance_cents", { mode: "number" }).notNull().default(0),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    uniqueIndex("idle_action_receipts_idempotency_unique").on(table.idempotencyKey),
+    index("idle_action_receipts_session_idx").on(table.sessionId),
+    index("idle_action_receipts_business_idx").on(table.businessId),
+  ],
+);
