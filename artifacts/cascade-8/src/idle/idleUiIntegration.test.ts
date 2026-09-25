@@ -341,3 +341,43 @@ describe("Businesses dedicated mobile cards", () => {
     expect(idleCssSource).toContain("min-height: 110px");
   });
 });
+
+
+describe("Businesses Stadium milestone visuals", () => {
+  it("renders a real vector Stadium scene instead of the generic placeholder geometry", () => {
+    expect(componentsSource).toContain("business-card-stadium-scene");
+    expect(componentsSource).toContain('viewBox="0 0 420 190"');
+    expect(componentsSource).toContain("stadium-floodlights");
+    expect(componentsSource).toContain("stadium-shell");
+    expect(componentsSource).toContain("stadium-pitch");
+    expect(componentsSource).toContain("stadium-crowd");
+  });
+
+  it("maps real business levels into locked, local, pro, elite and landmark visual milestones", () => {
+    expect(componentsSource).toContain("function getBusinessVisualStage");
+    expect(componentsSource).toContain('return "locked"');
+    expect(componentsSource).toContain('return "local"');
+    expect(componentsSource).toContain('return "pro"');
+    expect(componentsSource).toContain('return "elite"');
+    expect(componentsSource).toContain('return "landmark"');
+    expect(componentsSource).toContain("row.dataset.visualStage = visualStage");
+  });
+
+  it("shows a Stadium milestone badge that changes with progression", () => {
+    expect(componentsSource).toContain("data-business-milestone");
+    expect(componentsSource).toContain("STADIUM // LOCAL");
+    expect(componentsSource).toContain("STADIUM // PRO");
+    expect(componentsSource).toContain("STADIUM // ELITE");
+    expect(componentsSource).toContain("STADIUM // ICON");
+  });
+
+  it("styles each milestone with increasingly premium lighting and architecture", () => {
+    expect(idleCssSource).toContain("/* Part 9 — Stadium visual system / milestone art direction */");
+    expect(idleCssSource).toContain('[data-visual-stage="locked"]');
+    expect(idleCssSource).toContain('[data-visual-stage="local"]');
+    expect(idleCssSource).toContain('[data-visual-stage="pro"]');
+    expect(idleCssSource).toContain('[data-visual-stage="elite"]');
+    expect(idleCssSource).toContain('[data-visual-stage="landmark"]');
+    expect(idleCssSource).toContain(".stadium-star-crown");
+  });
+});
