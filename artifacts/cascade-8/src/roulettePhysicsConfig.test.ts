@@ -284,6 +284,15 @@ describe("authoritative roulette physics config", () => {
       "stateResetVerified",
     );
     expect(part3ViewportSource).toContain(
+      "const pocketResultCenterRadiusMax =",
+    );
+    expect(part3ViewportSource).toContain(
+      "POCKET_FLOOR_OUTER_RADIUS - BALL_RADIUS",
+    );
+    expect(part3ViewportSource).toContain(
+      "const settledResultContractValid =",
+    );
+    expect(part3ViewportSource).toContain(
       "'OUTER_RACE'",
     );
     expect(part3ViewportSource).toContain(
