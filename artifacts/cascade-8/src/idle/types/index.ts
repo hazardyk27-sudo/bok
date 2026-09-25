@@ -28,3 +28,32 @@ export type BusinessDefinition = {
   label: string;
   levels: readonly BusinessStageConfig[];
 };
+
+
+export type IdleBusinessServerState = {
+  businessId: BusinessId;
+  businessLevel: BusinessLevel | null;
+  vaultLevel: number;
+  accruedMicrocents: number;
+  vaultCapacityMicrocents: number;
+  remainingCapacityMicrocents: number;
+  isVaultFull: boolean;
+  checkpointAt: string;
+};
+
+export type IdleStateResponse = {
+  sessionId: string;
+  serverTime: string;
+  businesses: IdleBusinessServerState[];
+};
+
+export type IdleStateEnvelope = {
+  snapshot: IdleStateResponse;
+  receivedAtMs: number;
+};
+
+export type IdleLiveBusinessState = IdleBusinessServerState & {
+  liveAccruedMicrocents: number;
+  liveRemainingCapacityMicrocents: number;
+  liveIsVaultFull: boolean;
+};
