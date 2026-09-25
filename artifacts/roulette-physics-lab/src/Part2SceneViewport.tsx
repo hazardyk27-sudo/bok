@@ -197,6 +197,7 @@ const POCKET_FRET_RADIAL_HALF_EXTENT =
   (POCKET_FRET_OUTER_EDGE_RADIUS - POCKET_FRET_INNER_EDGE_RADIUS) / 2;
 const POCKET_FRET_VERTICAL_HALF_EXTENT = 0.11;
 const POCKET_FRET_EDGE_ROUNDING = 0.005;
+const POCKET_INNER_GUARD_EDGE_ROUNDING = 0.02;
 // Keep the fret's lower face just above the continuous floor. Letting the
 // separator extend through the floor creates a moving edge that can inject a
 // downward impulse when a ball approaches from the side.
@@ -1345,9 +1346,10 @@ function addKinematicPocketInnerGuard(
   const verticalHalfHeight = 0.11;
   const centerY = POCKET_FLOOR_Y + verticalHalfHeight;
   return world.createCollider(
-    RAPIER.ColliderDesc.cylinder(
-      verticalHalfHeight,
-      POCKET_FLOOR_INNER_RADIUS,
+    RAPIER.ColliderDesc.roundCylinder(
+      verticalHalfHeight - POCKET_INNER_GUARD_EDGE_ROUNDING,
+      POCKET_FLOOR_INNER_RADIUS - POCKET_INNER_GUARD_EDGE_ROUNDING,
+      POCKET_INNER_GUARD_EDGE_ROUNDING,
     )
       .setTranslation(0, centerY, 0)
       .setFriction(0.42)
