@@ -4394,7 +4394,7 @@ export function Part2SceneViewport({
           let previousSpeed = run.speed;
           const previousTracePosition = launchPosition.clone();
           const previousTraceVelocity = launchVelocity.clone();
-          let seed61022SpikeTraceLogged = false;
+          let firstSpikeTraceLogged = false;
           let previousPlanarDirection = tangent.clone();
           let finalSpeed = run.speed;
           let finalRotorRelativeSpeed = run.speed;
@@ -5107,14 +5107,16 @@ export function Part2SceneViewport({
                   : 12,
               );
             if (
-              run.seed === 61022 &&
-              !seed61022SpikeTraceLogged &&
+              (run.seed === 61008 || run.seed === 61022) &&
+              !firstSpikeTraceLogged &&
               (velocitySpikeThisStep || artificialAccelerationThisStep)
             ) {
-              seed61022SpikeTraceLogged = true;
+              firstSpikeTraceLogged = true;
               const ballAngularVelocity = activeBallBody.angvel();
               console.info(
-                'PART6_SEED_61022_FIRST_SPIKE',
+                run.seed === 61008
+                  ? 'PART6_SEED_61008_FIRST_SPIKE'
+                  : 'PART6_SEED_61022_FIRST_SPIKE',
                 JSON.stringify({
                   step,
                   elapsed: Number(elapsed.toFixed(6)),
