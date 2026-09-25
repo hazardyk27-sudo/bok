@@ -6,6 +6,7 @@ import {
   FAN_CLUB_BUSINESS,
   STADIUM_BUSINESS,
   VAULT_LEVELS,
+  VAULT_UPGRADE_STEPS,
 } from "../../../cascade-8/src/idle/config";
 import { MILLISECONDS_PER_DAY } from "../../../cascade-8/src/idle/utils";
 import {
@@ -24,6 +25,7 @@ type IdleActionReceiptRow = {
   remainder_microcents: number;
   cost_cents: number;
   target_business_level: number | null;
+  target_vault_level: number | null;
   balance_cents: number;
 };
 
@@ -579,6 +581,180 @@ export class IdleRepository {
         businessId,
         targetBusinessLevel,
         costCents: targetStage.costCents,
+        balanceCents,
+        business: projectBusinessAccrual(refreshed, serverNow),
+        replayed: false,
+      };
+    } catch (error) {
+      await client.query("ROLLBACK");
+      throw error;
+    } finally {
+      client.release();
+    }
+  }
+
+  /**
+   * Advances the Kasa by exactly one level. Pricing is derived from the
+   * currently active main business tier and the approved vault percentage step.
+   * Existing accrued money is checkpointed and preserved.
+   */
+  async upgradeVault(
+    sessionId: string,
+    businessId: IdleBusinessId,
+    idempotencyKey: string,
+    serverNow = new Date(),
+  ) {
+    const client = await pool.connect();
+    try {
+      await client.query("BEGIN");
+
+      const reserved = await client.query<{ id: string }>(
+        `INSERT INTO idle_action_receipts
+           (id, session_id, business_id, action_type, idempotency_key)
+         VALUES ($1, $2, $3, 'VAULT_UPGRADE', $4)
+         ON CONFLICT (idempotency_key) DO NOTHING
+         RETURNING id`,
+        [randomUUID(), sessionId, businessId, idempotencyKey],
+      );
+
+      if (!reserved.rows[0]) {
+        const duplicate = await client.query<IdleActionReceiptRow>(
+          `SELECT session_id, business_id, action_type, collected_cents,
+                  remainder_microcents, cost_cents, target_business_level,
+                  target_vault_level, balance_cents
+             FROM idle_action_receipts
+            WHERE idempotency_key = $1`,
+          [idempotencyKey],
+        );
+        const receipt = duplicate.rows[0];
+        if (!receipt) throw new Error("IDLE_IDEMPOTENCY_RECEIPT_MISSING");
+        if (
+          receipt.session_id !== sessionId
+          || receipt.business_id !== businessId
+          || receipt.action_type !== "VAULT_UPGRADE"
+          || receipt.target_vault_level === null
+        ) {
+          throw new Error("IDEMPOTENCY_KEY_REUSED");
+        }
+
+        await insertMissingSessionStates(client, sessionId);
+        const states = await loadSessionStates(client, sessionId);
+        requireCompleteState(states);
+        const state = states.find((entry) => entry.businessId === businessId);
+        if (!state) throw new Error("IDLE_BUSINESS_NOT_FOUND");
+
+        await client.query("COMMIT");
+        return {
+          serverNow,
+          businessId,
+          targetVaultLevel: Number(receipt.target_vault_level),
+          costCents: Number(receipt.cost_cents),
+          balanceCents: Number(receipt.balance_cents),
+          business: projectBusinessAccrual(state, serverNow),
+          replayed: true,
+        };
+      }
+
+      await insertMissingSessionStates(client, sessionId);
+      const states = await loadSessionStates(client, sessionId, true);
+      requireCompleteState(states);
+
+      const state = states.find((entry) => entry.businessId === businessId);
+      if (!state) throw new Error("IDLE_BUSINESS_NOT_FOUND");
+      if (state.businessLevel === null) throw new Error("IDLE_BUSINESS_NOT_OWNED");
+
+      const step = VAULT_UPGRADE_STEPS.find(
+        (entry) => entry.fromLevel === state.vaultLevel,
+      );
+      if (!step) throw new Error("IDLE_VAULT_MAX_LEVEL");
+
+      const definition = BUSINESS_CONFIGS[businessId];
+      const currentStage = definition.levels.find(
+        (entry) => entry.level === state.businessLevel,
+      );
+      if (!currentStage) throw new Error("INVALID_IDLE_BUSINESS_LEVEL");
+
+      const costCents = currentStage.costCents * step.costPercent / 100;
+      if (!Number.isSafeInteger(costCents) || costCents < 0) {
+        throw new Error("INVALID_IDLE_VAULT_UPGRADE_COST");
+      }
+
+      const balanceBeforeCents = await ensureWalletForUpdate(client, sessionId);
+      if (balanceBeforeCents < costCents) {
+        throw new Error("INSUFFICIENT_IDLE_CREDITS");
+      }
+
+      // Checkpoint at the old Kasa capacity first. This prevents a Kasa upgrade
+      // from retroactively applying the larger cap to time that already passed.
+      const checkpoint = projectBusinessAccrual(state, serverNow);
+      const balanceCents = balanceBeforeCents - costCents;
+
+      await client.query(
+        `UPDATE roulette_wallets
+            SET balance_cents = $2,
+                updated_at = now()
+          WHERE session_id = $1`,
+        [sessionId, balanceCents],
+      );
+
+      await client.query(
+        `UPDATE idle_business_states
+            SET vault_level = $3,
+                accrued_microcents = $4,
+                checkpoint_at = $5,
+                updated_at = now()
+          WHERE session_id = $1
+            AND business_id = $2`,
+        [
+          sessionId,
+          businessId,
+          step.toLevel,
+          checkpoint.projectedAccruedMicrocents,
+          serverNow,
+        ],
+      );
+
+      await client.query(
+        `INSERT INTO idle_ledger
+           (id, session_id, business_id, kind, amount_cents, idempotency_key)
+         VALUES ($1, $2, $3, 'VAULT_UPGRADE_DEBIT', $4, $5)`,
+        [
+          randomUUID(),
+          sessionId,
+          businessId,
+          -costCents,
+          `vault-upgrade:${idempotencyKey}`,
+        ],
+      );
+
+      await client.query(
+        `UPDATE idle_action_receipts
+            SET cost_cents = $2,
+                target_vault_level = $3,
+                balance_cents = $4
+          WHERE idempotency_key = $1`,
+        [
+          idempotencyKey,
+          costCents,
+          step.toLevel,
+          balanceCents,
+        ],
+      );
+
+      const refreshedStates = await loadSessionStates(client, sessionId);
+      requireCompleteState(refreshedStates);
+      const refreshed = refreshedStates.find(
+        (entry) => entry.businessId === businessId,
+      );
+      if (!refreshed) throw new Error("IDLE_BUSINESS_NOT_FOUND");
+
+      await client.query("COMMIT");
+
+      return {
+        serverNow,
+        businessId,
+        targetVaultLevel: step.toLevel,
+        costCents,
         balanceCents,
         business: projectBusinessAccrual(refreshed, serverNow),
         replayed: false,
