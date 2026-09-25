@@ -423,8 +423,19 @@ ${renderBusinessArt(businessId)}
         </div>
 
         <div class="business-card-footer">
-          <span>9 SEVİYELİ GELİŞİM</span>
-          <span>LV0 → LV8</span>
+          <div class="business-card-footer-progress">
+            <span>9 SEVİYELİ GELİŞİM</span>
+            <span>LV0 → LV8</span>
+          </div>
+          <button
+            type="button"
+            class="business-card-details"
+            data-business-details
+            aria-label="${meta.definition.label} detaylarını aç"
+          >
+            <span>DETAYLAR</span>
+            <i aria-hidden="true">→</i>
+          </button>
         </div>
       </div>
     </article>
