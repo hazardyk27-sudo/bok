@@ -109,7 +109,7 @@ export function renderBusinessRowShell(businessId: BusinessId) {
 
         <div class="business-card-footer">
           <span>9 SEVİYELİ GELİŞİM</span>
-          <span>DETAYLAR YAKINDA →</span>
+          <span>LV0 → LV8</span>
         </div>
       </div>
     </article>
