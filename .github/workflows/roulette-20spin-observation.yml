@@ -11,7 +11,11 @@ on:
 jobs:
   observe:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 10
+    strategy:
+      fail-fast: false
+      matrix:
+        start: [0, 5, 10, 15]
 
     steps:
       - name: Checkout
@@ -43,96 +47,90 @@ jobs:
       - name: Start roulette physics lab
         shell: bash
         run: |
-          PORT=4173 BASE_PATH=/ pnpm --filter @workspace/roulette-physics-lab run dev > /tmp/roulette-20spin-vite.log 2>&1 &
-          echo $! > /tmp/roulette-20spin-vite.pid
+          PORT=4173 BASE_PATH=/ pnpm --filter @workspace/roulette-physics-lab run dev > /tmp/roulette-20spin-vite-${{ matrix.start }}.log 2>&1 &
+          echo $! > /tmp/roulette-20spin-vite-${{ matrix.start }}.pid
           for attempt in {1..60}; do
             if curl --fail --silent http://127.0.0.1:4173/ > /dev/null; then
               exit 0
             fi
             sleep 1
           done
-          cat /tmp/roulette-20spin-vite.log
+          cat /tmp/roulette-20spin-vite-${{ matrix.start }}.log
           exit 1
 
-      - name: Run browser 20-spin observation
+      - name: Run five-spin observation
         env:
+          START_INDEX: ${{ matrix.start }}
           ROULETTE_PART6_TIMEOUT_MS: '240000'
         shell: bash
         run: |
-          set -euo pipefail
-          for start in 0 10; do
-            batch=$((start / 10 + 1))
-            echo "OBS20_BATCH_START batch=$batch startIndex=$start"
-            ROULETTE_LAB_URL="http://127.0.0.1:4173/?part6Headless=1&part6SeedStartIndex=$start&part6SeedCount=10&part6MaxDurationSeconds=30" \
-            ROULETTE_PART6_OUTPUT="artifacts/roulette-physics-lab/part6-observation-20spin-batch-$batch.json" \
-            ROULETTE_PART6_EXPECTED_SEEDS='10' \
-            node scripts/roulette-part6-runtime.mjs > "observation-20spin-batch-$batch.log" 2>&1
-            cat "observation-20spin-batch-$batch.log"
-          done
-          node - <<'NODE'
+          set +e
+          ROULETTE_LAB_URL="http://127.0.0.1:4173/?part6Headless=1&part6SeedStartIndex=$START_INDEX&part6SeedCount=5&part6MaxDurationSeconds=30" \
+          ROULETTE_PART6_OUTPUT="artifacts/roulette-physics-lab/obs20-$START_INDEX.json" \
+          ROULETTE_PART6_EXPECTED_SEEDS='5' \
+          node scripts/roulette-part6-runtime.mjs > "obs20-$START_INDEX.log" 2>&1
+          runtime_rc=$?
+          set -e
+          cat "obs20-$START_INDEX.log"
+          node - "$START_INDEX" <<'NODE'
           const fs = require('fs');
-          const all = [];
-          for (let batch = 1; batch <= 2; batch += 1) {
-            const path = `artifacts/roulette-physics-lab/part6-observation-20spin-batch-${batch}.json`;
-            const data = JSON.parse(fs.readFileSync(path, 'utf8'));
-            const results = data.telemetry?.results ?? data.seedTelemetry ?? [];
-            for (const result of results) {
-              const safetyIssues = [
-                result.escaped ? 'ESCAPED' : null,
-                result.clipping ? 'CLIPPING' : null,
-                result.tunneling ? 'TUNNELING' : null,
-                result.velocitySpike ? 'VELOCITY_SPIKE' : null,
-                result.artificialAcceleration ? 'ARTIFICIAL_ACCELERATION' : null,
-              ].filter(Boolean);
-              let classification = 'UNSETTLED_OTHER';
-              if (safetyIssues.length) classification = 'SAFETY_ERROR';
-              else if (result.settled && result.finalPocketNumber == null) classification = 'SETTLED_NULL_NUMBER';
-              else if (result.settled && result.finalPocketNumber != null) classification = 'SETTLED_VALID';
-              else if (result.timedOut) classification = 'TIMEOUT';
-              const row = {
-                spin: all.length + 1,
-                seed: result.seed,
-                classification,
-                number: result.finalPocketNumber ?? null,
-                pocketIndex: result.finalPocketIndex ?? null,
-                laps: result.lapCount ?? null,
-                settled: !!result.settled,
-                timedOut: !!result.timedOut,
-                settleTime: result.settleTime ?? null,
-                finalSpeed: result.finalSpeed ?? null,
-                finalRotorRelativeSpeed: result.finalRotorRelativeSpeed ?? null,
-                safetyIssues,
-                escaped: !!result.escaped,
-                clipping: !!result.clipping,
-                tunneling: !!result.tunneling,
-                velocitySpike: !!result.velocitySpike,
-                artificialAcceleration: !!result.artificialAcceleration,
-                safetyPassed: !!result.safetyPassed,
-                detail: result.detail ?? null,
-              };
-              all.push(row);
-              console.log('OBS20_CASE ' + JSON.stringify(row));
-            }
+          const start = process.argv[2];
+          const path = 'artifacts/roulette-physics-lab/obs20-' + start + '.json';
+          if (!fs.existsSync(path)) {
+            console.log('OBS20_BATCH_ERROR ' + JSON.stringify({start, error:'missing output'}));
+            process.exit(0);
           }
-          const count = key => all.filter(x => x.classification === key).length;
-          console.log('OBS20_SUMMARY ' + JSON.stringify({
-            total: all.length,
-            settledValid: count('SETTLED_VALID'),
-            settledNullNumber: count('SETTLED_NULL_NUMBER'),
-            timeout: count('TIMEOUT'),
-            safetyError: count('SAFETY_ERROR'),
-            unsettledOther: count('UNSETTLED_OTHER'),
-            safetyPassed: all.filter(x => x.safetyPassed).length,
+          const data = JSON.parse(fs.readFileSync(path, 'utf8'));
+          const results = data.telemetry?.results ?? data.seedTelemetry ?? [];
+          for (const result of results) {
+            const safetyIssues = [
+              result.escaped ? 'ESCAPED' : null,
+              result.clipping ? 'CLIPPING' : null,
+              result.tunneling ? 'TUNNELING' : null,
+              result.velocitySpike ? 'VELOCITY_SPIKE' : null,
+              result.artificialAcceleration ? 'ARTIFICIAL_ACCELERATION' : null,
+            ].filter(Boolean);
+            let classification = 'UNSETTLED_OTHER';
+            if (safetyIssues.length) classification = 'SAFETY_ERROR';
+            else if (result.settled && result.finalPocketNumber == null) classification = 'SETTLED_NULL_NUMBER';
+            else if (result.settled && result.finalPocketNumber != null) classification = 'SETTLED_VALID';
+            else if (result.timedOut) classification = 'TIMEOUT';
+            console.log('OBS20_CASE ' + JSON.stringify({
+              seed: result.seed,
+              classification,
+              number: result.finalPocketNumber ?? null,
+              pocketIndex: result.finalPocketIndex ?? null,
+              laps: result.lapCount ?? null,
+              settled: !!result.settled,
+              timedOut: !!result.timedOut,
+              settleTime: result.settleTime ?? null,
+              finalSpeed: result.finalSpeed ?? null,
+              finalRotorRelativeSpeed: result.finalRotorRelativeSpeed ?? null,
+              safetyIssues,
+              escaped: !!result.escaped,
+              clipping: !!result.clipping,
+              tunneling: !!result.tunneling,
+              velocitySpike: !!result.velocitySpike,
+              artificialAcceleration: !!result.artificialAcceleration,
+              safetyPassed: !!result.safetyPassed,
+              detail: result.detail ?? null
+            }));
+          }
+          console.log('OBS20_BATCH_SUMMARY ' + JSON.stringify({
+            startIndex:Number(start),
+            captured:results.length,
+            seeds:results.map(x=>x.seed)
           }));
           NODE
+          echo "OBS20_RUNTIME_EXIT_CODE=$runtime_rc"
 
-      - name: Upload 20-spin evidence
+      - name: Upload five-spin evidence
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: roulette-20spin-observation
+          name: roulette-20spin-observation-${{ matrix.start }}
           path: |
-            artifacts/roulette-physics-lab/part6-observation-20spin-batch-*.json
-            observation-20spin-batch-*.log
-            /tmp/roulette-20spin-vite.log
+            artifacts/roulette-physics-lab/obs20-${{ matrix.start }}.json
+            obs20-${{ matrix.start }}.log
+            /tmp/roulette-20spin-vite-${{ matrix.start }}.log
           if-no-files-found: warn
