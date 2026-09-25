@@ -256,3 +256,22 @@ export const idleActionReceipts = pgTable(
     index("idle_action_receipts_business_idx").on(table.businessId),
   ],
 );
+
+
+export const idleLedger = pgTable(
+  "idle_ledger",
+  {
+    id: text("id").primaryKey(),
+    sessionId: text("session_id").notNull(),
+    businessId: text("business_id").notNull(),
+    kind: text("kind").notNull(),
+    amountCents: bigint("amount_cents", { mode: "number" }).notNull(),
+    idempotencyKey: text("idempotency_key").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    uniqueIndex("idle_ledger_idempotency_unique").on(table.idempotencyKey),
+    index("idle_ledger_session_idx").on(table.sessionId),
+    index("idle_ledger_business_idx").on(table.businessId),
+  ],
+);
