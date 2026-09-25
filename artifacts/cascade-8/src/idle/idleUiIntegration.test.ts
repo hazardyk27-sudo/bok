@@ -692,3 +692,41 @@ describe("Businesses upgrade feedback choreography", () => {
     expect(idleCssSource).toContain("animation: none");
   });
 });
+
+
+describe("Businesses collect and completion polish", () => {
+  it("uses the server-confirmed collected amount for individual and collect-all feedback", () => {
+    expect(idleIndexSource).toContain("runCollectBusiness");
+    expect(idleIndexSource).toContain("result.collectedCents");
+    expect(idleIndexSource).toContain("playCollectFeedback");
+    expect(idleIndexSource).toContain("playCollectAllFeedback");
+    expect(idleIndexSource).toContain("GELİR TOPLANDI");
+    expect(idleIndexSource).toContain("TÜM KASALAR TOPLANDI");
+  });
+
+  it("keeps visible money formatting currency-prefixed", () => {
+    expect(idleIndexSource).toContain("return `$");
+  });
+
+  it("exposes explicit locked, active and max card-level marks", () => {
+    expect(componentsSource).toContain("data-business-level-mark");
+    expect(componentsSource).toContain("levelMarkNode.dataset.levelState");
+    expect(componentsSource).toContain("\"LOCK\"");
+    expect(componentsSource).toContain("\"MAX\"");
+  });
+
+  it("visually distinguishes full vault and max-level completion without changing economy logic", () => {
+    expect(idleCssSource).toContain("/* Part 17 — collect / full-vault / max-level polish */");
+    expect(idleCssSource).toContain(".business-card[data-business-status=\"full\"]");
+    expect(idleCssSource).toContain(".business-card[data-business-level=\"8\"]");
+    expect(idleCssSource).toContain(".business-card-level-mark[data-level-state=\"max\"]");
+    expect(idleCssSource).toContain(".business-collect-toast");
+    expect(idleCssSource).toContain(".business-collect-all-toast");
+  });
+
+  it("keeps collection feedback restrained and reduced-motion safe", () => {
+    expect(idleCssSource).toContain("@keyframes idle-collect-card-flash");
+    expect(idleCssSource).toContain("@keyframes idle-collect-toast-in");
+    expect(idleCssSource).toContain("@media (prefers-reduced-motion: reduce)");
+  });
+});
