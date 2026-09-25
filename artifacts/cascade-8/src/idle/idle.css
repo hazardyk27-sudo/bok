@@ -2604,3 +2604,237 @@ body.businesses-route {
     text-align: left;
   }
 }
+
+
+/* Part 7 — premium action / state system */
+.route-shell.is-businesses-page .business-card-actions {
+  align-items: stretch;
+  gap: 10px;
+}
+
+.business-card-action {
+  display: grid;
+  align-content: start;
+  gap: 7px;
+  min-width: 0;
+}
+
+.route-shell.is-businesses-page .business-card-action > small {
+  display: block;
+  min-height: 18px;
+  color: var(--idle-text-muted);
+  font-size: 8px;
+  line-height: 1.25;
+}
+
+.route-shell.is-businesses-page .business-card-actions button,
+.route-shell.is-businesses-page .business-vault-upgrade {
+  position: relative;
+  overflow: hidden;
+  outline: none;
+  transition:
+    transform .16s ease,
+    border-color .16s ease,
+    background .16s ease,
+    color .16s ease,
+    box-shadow .16s ease,
+    opacity .16s ease;
+}
+
+.route-shell.is-businesses-page .business-card-actions button {
+  min-height: 48px;
+  border-radius: 12px;
+}
+
+.route-shell.is-businesses-page .business-card-actions button::after,
+.route-shell.is-businesses-page .business-vault-upgrade::after {
+  position: absolute;
+  top: 50%;
+  right: 12px;
+  transform: translateY(-50%);
+  opacity: 0;
+  content: "→";
+  color: currentColor;
+  font-size: 13px;
+  transition: opacity .16s ease, transform .16s ease;
+}
+
+.route-shell.is-businesses-page .business-card-actions button[data-action-state="ready"],
+.route-shell.is-businesses-page .business-card-actions button[data-action-state="purchase"],
+.route-shell.is-businesses-page .business-card-actions button[data-action-state="full"] {
+  padding-right: 34px;
+}
+
+.route-shell.is-businesses-page .business-card-actions button[data-action-state="ready"]::after,
+.route-shell.is-businesses-page .business-card-actions button[data-action-state="purchase"]::after,
+.route-shell.is-businesses-page .business-card-actions button[data-action-state="full"]::after {
+  opacity: .9;
+}
+
+.route-shell.is-businesses-page .business-card-primary[data-action-state="ready"],
+.route-shell.is-businesses-page .business-card-primary[data-action-state="full"] {
+  border-color: rgba(70, 200, 255, .5);
+  color: #f8fdff;
+  background:
+    linear-gradient(135deg, rgba(70, 200, 255, .18), rgba(24, 69, 124, .28)),
+    var(--idle-surface-raised);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, .04),
+    0 8px 24px rgba(0, 0, 0, .16);
+}
+
+.route-shell.is-businesses-page .business-card-primary[data-action-state="full"] {
+  border-color: rgba(125, 223, 255, .7);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, .05),
+    0 0 0 1px rgba(70, 200, 255, .07),
+    0 10px 28px rgba(0, 0, 0, .18);
+}
+
+.route-shell.is-businesses-page .business-card-secondary[data-action-state="ready"],
+.route-shell.is-businesses-page .business-card-secondary[data-action-state="purchase"] {
+  border-color: rgba(125, 223, 255, .28);
+  color: var(--idle-text);
+  background:
+    linear-gradient(135deg, rgba(70, 200, 255, .08), transparent 62%),
+    rgba(12, 25, 48, .86);
+}
+
+.route-shell.is-businesses-page .business-card-secondary[data-action-state="purchase"] {
+  border-color: rgba(70, 200, 255, .42);
+  color: var(--idle-cyan-bright);
+}
+
+.route-shell.is-businesses-page .business-card-actions button[data-action-state="insufficient"] {
+  border-color: rgba(157, 174, 196, .12);
+  color: var(--idle-text-muted);
+  background:
+    linear-gradient(135deg, rgba(157, 174, 196, .025), transparent 62%),
+    rgba(7, 16, 29, .78);
+  opacity: 1;
+}
+
+.route-shell.is-businesses-page .business-card-action:has(button[data-action-state="insufficient"]) > small {
+  color: #8e9caf;
+}
+
+.route-shell.is-businesses-page .business-card-actions button[data-action-state="max"] {
+  border-color: rgba(157, 174, 196, .1);
+  color: rgba(157, 174, 196, .58);
+  background: rgba(7, 16, 29, .54);
+  opacity: 1;
+}
+
+.route-shell.is-businesses-page .business-card-actions button[data-action-state="locked"],
+.route-shell.is-businesses-page .business-card-actions button[data-action-state="empty"] {
+  border-color: rgba(157, 174, 196, .1);
+  color: rgba(157, 174, 196, .52);
+  background: rgba(7, 16, 29, .58);
+  opacity: 1;
+}
+
+.route-shell.is-businesses-page .business-card-actions button[data-action-state="busy"],
+.route-shell.is-businesses-page .business-vault-upgrade[data-action-state="busy"] {
+  color: var(--idle-text-secondary);
+  background:
+    linear-gradient(90deg, rgba(70, 200, 255, .04), rgba(157, 174, 196, .035), rgba(70, 200, 255, .04)),
+    rgba(7, 16, 29, .76);
+  background-size: 200% 100%;
+  animation: idle-action-busy 1.2s linear infinite;
+  opacity: .88;
+}
+
+@keyframes idle-action-busy {
+  from { background-position: 200% 0; }
+  to { background-position: -200% 0; }
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .route-shell.is-businesses-page .business-card-actions button:not(:disabled):hover,
+  .route-shell.is-businesses-page .business-vault-upgrade:not(:disabled):hover {
+    transform: translateY(-1px);
+    border-color: rgba(125, 223, 255, .58);
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, .045),
+      0 10px 24px rgba(0, 0, 0, .18);
+  }
+
+  .route-shell.is-businesses-page .business-card-actions button:not(:disabled):hover::after,
+  .route-shell.is-businesses-page .business-vault-upgrade:not(:disabled):hover::after {
+    opacity: 1;
+    transform: translate(2px, -50%);
+  }
+}
+
+.route-shell.is-businesses-page .business-card-actions button:not(:disabled):active,
+.route-shell.is-businesses-page .business-vault-upgrade:not(:disabled):active {
+  transform: translateY(1px);
+  box-shadow: none;
+}
+
+.route-shell.is-businesses-page .business-card-actions button:focus-visible,
+.route-shell.is-businesses-page .business-vault-upgrade:focus-visible {
+  box-shadow: var(--idle-focus-ring);
+}
+
+.route-shell.is-businesses-page .business-card-actions button:disabled {
+  cursor: default;
+}
+
+.route-shell.is-businesses-page .business-vault-upgrade {
+  width: 100%;
+  min-height: 30px;
+  padding: 0 30px 0 0;
+  justify-content: flex-start;
+  border-top: 1px solid rgba(157, 174, 196, .08);
+  color: var(--idle-cyan);
+  font-size: 7px;
+  text-align: left;
+}
+
+.route-shell.is-businesses-page .business-vault-upgrade[data-action-state="ready"]::after {
+  opacity: .8;
+}
+
+.route-shell.is-businesses-page .business-vault-upgrade[data-action-state="insufficient"],
+.route-shell.is-businesses-page .business-vault-upgrade[data-action-state="max"] {
+  color: var(--idle-text-muted);
+  opacity: .72;
+}
+
+.route-shell.is-businesses-page .business-vault-upgrade[data-action-state="max"] {
+  cursor: default;
+}
+
+@media (max-width: 760px) {
+  .route-shell.is-businesses-page .business-card-actions {
+    gap: 8px;
+  }
+
+  .route-shell.is-businesses-page .business-card-actions button {
+    min-height: 48px;
+    font-size: 9px;
+  }
+
+  .route-shell.is-businesses-page .business-card-action > small {
+    min-height: 17px;
+    font-size: 7px;
+  }
+
+  .route-shell.is-businesses-page .business-vault-upgrade {
+    min-height: 32px;
+    font-size: 7px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .route-shell.is-businesses-page .business-card-actions button,
+  .route-shell.is-businesses-page .business-vault-upgrade {
+    transition: none;
+  }
+
+  .route-shell.is-businesses-page .business-card-actions button[data-action-state="busy"],
+  .route-shell.is-businesses-page .business-vault-upgrade[data-action-state="busy"] {
+    animation: none;
+  }
+}
