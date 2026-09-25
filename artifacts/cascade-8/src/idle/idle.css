@@ -3114,3 +3114,261 @@ body.businesses-route {
     margin-top: -18px;
   }
 }
+
+
+/* Part 9 — Stadium visual system / milestone art direction */
+.business-card--stadium .business-card-visual {
+  min-height: 168px;
+  background:
+    radial-gradient(circle at 70% 18%, rgba(70, 200, 255, .18), transparent 34%),
+    linear-gradient(145deg, #102642 0%, #091727 56%, #050b14 100%);
+}
+
+.business-card-stadium-scene {
+  inset: 0;
+  opacity: 1;
+  color: #7ddfff;
+  pointer-events: none;
+}
+
+.business-card-stadium-scene svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+  min-height: 168px;
+  transform: scale(1.025);
+  transform-origin: 50% 68%;
+  transition:
+    filter .35s ease,
+    transform .35s ease,
+    opacity .35s ease;
+}
+
+.business-card--stadium .business-card-visual-shade {
+  z-index: 2;
+  background:
+    linear-gradient(90deg, rgba(5, 8, 22, .2), transparent 38%, rgba(5, 8, 22, .04)),
+    linear-gradient(180deg, transparent 46%, rgba(5, 8, 22, .78) 100%);
+}
+
+.business-card--stadium .business-card-code,
+.business-card--stadium .business-card-state,
+.business-card--stadium .business-card-milestone {
+  z-index: 5;
+}
+
+.business-card-milestone {
+  position: absolute;
+  z-index: 5;
+  left: 15px;
+  bottom: 14px;
+  display: inline-flex;
+  align-items: center;
+  min-height: 22px;
+  padding: 6px 8px 5px;
+  border: 1px solid rgba(125, 223, 255, .14);
+  border-radius: 999px;
+  color: rgba(216, 244, 255, .78);
+  background: rgba(5, 8, 22, .42);
+  backdrop-filter: blur(8px);
+  font: 800 7px/1 "DM Mono", monospace;
+  letter-spacing: .08em;
+}
+
+.business-card--stadium .stadium-city {
+  fill: #18334d;
+}
+
+.business-card--stadium .stadium-floodlights {
+  color: #6fdcff;
+}
+
+.business-card--stadium .stadium-shell,
+.business-card--stadium .stadium-floodlights,
+.business-card--stadium .stadium-crowd,
+.business-card--stadium .stadium-star-crown {
+  transform-origin: 210px 140px;
+  transition:
+    opacity .35s ease,
+    transform .35s ease,
+    filter .35s ease;
+}
+
+/* Locked / unowned — recognizable silhouette, intentionally aspirational. */
+.business-card--stadium[data-visual-stage="locked"] .business-card-stadium-scene svg {
+  filter: grayscale(.68) saturate(.45) brightness(.6);
+  opacity: .72;
+}
+
+.business-card--stadium[data-visual-stage="locked"] .stadium-light-beams,
+.business-card--stadium[data-visual-stage="locked"] .stadium-crowd {
+  opacity: .08;
+}
+
+.business-card--stadium[data-visual-stage="locked"] .stadium-roof {
+  opacity: .46;
+}
+
+.business-card--stadium[data-visual-stage="locked"] .business-card-milestone {
+  color: var(--idle-text-muted);
+  border-color: rgba(157, 174, 196, .1);
+}
+
+/* Lv0–2 — small/local ground, restrained lighting and crowd. */
+.business-card--stadium[data-visual-stage="local"] .stadium-shell {
+  transform: scale(.88) translateY(8px);
+}
+
+.business-card--stadium[data-visual-stage="local"] .stadium-roof {
+  opacity: .56;
+}
+
+.business-card--stadium[data-visual-stage="local"] .stadium-light-beams {
+  opacity: .12;
+}
+
+.business-card--stadium[data-visual-stage="local"] .stadium-crowd {
+  opacity: .26;
+}
+
+.business-card--stadium[data-visual-stage="local"] .business-card-milestone {
+  color: #b9d4e4;
+}
+
+/* Lv3–5 — professional venue with stronger bowl, lights and crowd. */
+.business-card--stadium[data-visual-stage="pro"] .business-card-stadium-scene svg {
+  filter: saturate(1.05) brightness(1.04);
+}
+
+.business-card--stadium[data-visual-stage="pro"] .stadium-shell {
+  transform: scale(.96) translateY(3px);
+}
+
+.business-card--stadium[data-visual-stage="pro"] .stadium-light-beams {
+  opacity: .28;
+}
+
+.business-card--stadium[data-visual-stage="pro"] .stadium-crowd {
+  opacity: .54;
+}
+
+.business-card--stadium[data-visual-stage="pro"] .business-card-milestone {
+  color: var(--idle-cyan);
+  border-color: rgba(70, 200, 255, .22);
+}
+
+/* Lv6–7 — elite arena, brighter architecture and premium lighting. */
+.business-card--stadium[data-visual-stage="elite"] .business-card-stadium-scene svg {
+  filter: saturate(1.13) brightness(1.08) contrast(1.02);
+  transform: scale(1.055);
+}
+
+.business-card--stadium[data-visual-stage="elite"] .stadium-shell {
+  filter: drop-shadow(0 0 8px rgba(70, 200, 255, .12));
+}
+
+.business-card--stadium[data-visual-stage="elite"] .stadium-roof {
+  opacity: 1;
+  stroke-opacity: .58;
+}
+
+.business-card--stadium[data-visual-stage="elite"] .stadium-light-beams {
+  opacity: .42;
+}
+
+.business-card--stadium[data-visual-stage="elite"] .stadium-crowd {
+  opacity: .72;
+}
+
+.business-card--stadium[data-visual-stage="elite"] .business-card-milestone {
+  color: var(--idle-cyan-bright);
+  border-color: rgba(125, 223, 255, .32);
+  box-shadow: 0 0 18px rgba(70, 200, 255, .07);
+}
+
+/* Lv8 — landmark/icon stadium: full illumination + crown. */
+.business-card--stadium[data-visual-stage="landmark"] .business-card-stadium-scene svg {
+  filter: saturate(1.2) brightness(1.12) contrast(1.04);
+  transform: scale(1.075);
+}
+
+.business-card--stadium[data-visual-stage="landmark"] .stadium-shell {
+  filter: drop-shadow(0 0 11px rgba(125, 223, 255, .18));
+}
+
+.business-card--stadium[data-visual-stage="landmark"] .stadium-light-beams {
+  opacity: .58;
+}
+
+.business-card--stadium[data-visual-stage="landmark"] .stadium-crowd {
+  opacity: .9;
+}
+
+.business-card--stadium[data-visual-stage="landmark"] .stadium-star-crown {
+  opacity: .9;
+  filter: drop-shadow(0 0 8px rgba(125, 223, 255, .28));
+}
+
+.business-card--stadium[data-visual-stage="landmark"] .business-card-milestone {
+  color: #dff8ff;
+  border-color: rgba(125, 223, 255, .42);
+  background: rgba(9, 29, 48, .62);
+  box-shadow:
+    0 0 0 1px rgba(70, 200, 255, .04),
+    0 0 22px rgba(70, 200, 255, .12);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .business-card--stadium:hover .business-card-stadium-scene svg {
+    transform: scale(1.055);
+  }
+
+  .business-card--stadium[data-visual-stage="elite"]:hover .business-card-stadium-scene svg,
+  .business-card--stadium[data-visual-stage="landmark"]:hover .business-card-stadium-scene svg {
+    transform: scale(1.095);
+  }
+}
+
+@media (max-width: 760px) {
+  .route-shell.is-businesses-page .business-card--stadium .business-card-visual {
+    min-height: 148px;
+  }
+
+  .route-shell.is-businesses-page .business-card--stadium .business-card-stadium-scene {
+    inset: 0;
+  }
+
+  .route-shell.is-businesses-page .business-card--stadium .business-card-stadium-scene svg {
+    min-height: 148px;
+    transform-origin: 54% 70%;
+  }
+
+  .route-shell.is-businesses-page .business-card--stadium .business-card-milestone {
+    left: 12px;
+    bottom: 30px;
+    min-height: 20px;
+    padding: 5px 7px 4px;
+    font-size: 6px;
+  }
+}
+
+@media (max-width: 420px) {
+  .route-shell.is-businesses-page .business-card--stadium .business-card-visual,
+  .route-shell.is-businesses-page .business-card--stadium .business-card-stadium-scene svg {
+    min-height: 134px;
+  }
+
+  .route-shell.is-businesses-page .business-card--stadium .business-card-milestone {
+    bottom: 27px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .business-card-stadium-scene svg,
+  .business-card--stadium .stadium-shell,
+  .business-card--stadium .stadium-floodlights,
+  .business-card--stadium .stadium-crowd,
+  .business-card--stadium .stadium-star-crown {
+    transition: none;
+  }
+}
