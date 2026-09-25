@@ -6454,3 +6454,12 @@ body.business-detail-open {
     right: max(10px, env(safe-area-inset-right));
   }
 }
+
+
+/* Part 18 — final mobile touch-target QA */
+@media (max-width: 760px) {
+  .route-shell.is-businesses-page .business-vault-upgrade,
+  .route-shell.is-businesses-page .business-card-details {
+    min-height: 44px;
+  }
+}
