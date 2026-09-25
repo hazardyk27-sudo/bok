@@ -6644,3 +6644,112 @@ body.business-detail-open {
     align-items: flex-start;
   }
 }
+
+
+/* Main-card refinement — Parts 3–4 meter + action layout */
+.route-shell.is-businesses-page .business-card .business-card-operations {
+  grid-template-rows: auto auto;
+}
+
+.route-shell.is-businesses-page .business-card .business-card-vault {
+  border-left: 1px solid var(--idle-line-soft);
+}
+
+.route-shell.is-businesses-page .business-card .business-card-vault-meter {
+  grid-column: 1 / -1;
+  padding: 0 14px 12px;
+  border-top: 1px solid rgba(157, 174, 196, .07);
+}
+
+.route-shell.is-businesses-page .business-card .business-card-vault-meter .business-vault-progress {
+  width: 100%;
+  height: 8px;
+  margin-top: 11px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: rgba(157, 174, 196, .13);
+  box-shadow:
+    inset 0 0 0 1px rgba(157, 174, 196, .045),
+    0 1px 0 rgba(255, 255, 255, .015);
+}
+
+.route-shell.is-businesses-page .business-card .business-card-vault-meter .business-vault-progress > i {
+  min-width: 0;
+  box-shadow: 0 0 12px rgba(70, 200, 255, .12);
+}
+
+.route-shell.is-businesses-page .business-card .business-card-vault-meter .business-vault-upgrade {
+  width: 100%;
+  min-height: 32px;
+  margin-top: 9px;
+}
+
+.route-shell.is-businesses-page .business-card-actions {
+  grid-template-columns: minmax(0, 1.12fr) minmax(0, .88fr);
+  gap: 8px;
+}
+
+.route-shell.is-businesses-page .business-card-action--collect,
+.route-shell.is-businesses-page .business-card-action--details {
+  width: 100%;
+  min-width: 0;
+}
+
+.route-shell.is-businesses-page .business-card-action--collect .business-card-primary,
+.route-shell.is-businesses-page .business-card-action--details .business-card-details {
+  width: 100%;
+  min-width: 0;
+  min-height: 44px;
+}
+
+.route-shell.is-businesses-page .business-card-action--details .business-card-details {
+  border-color: rgba(125, 223, 255, .18);
+  color: var(--idle-cyan-bright);
+  background:
+    linear-gradient(135deg, rgba(70, 200, 255, .055), rgba(24, 69, 124, .08)),
+    rgba(12, 25, 48, .7);
+}
+
+.route-shell.is-businesses-page .business-card-footer {
+  justify-content: flex-start;
+  margin-top: 11px;
+}
+
+.route-shell.is-businesses-page .business-card-footer-progress {
+  width: 100%;
+}
+
+@media (max-width: 760px) {
+  .route-shell.is-businesses-page .business-card .business-card-vault-meter {
+    padding: 0 12px 10px;
+  }
+
+  .route-shell.is-businesses-page .business-card .business-card-vault-meter .business-vault-progress {
+    height: 8px;
+    margin-top: 10px;
+  }
+
+  .route-shell.is-businesses-page .business-card-actions {
+    grid-template-columns: minmax(0, 1.12fr) minmax(0, .88fr);
+    gap: 8px;
+  }
+
+  .route-shell.is-businesses-page .business-card-action--collect .business-card-primary,
+  .route-shell.is-businesses-page .business-card-action--details .business-card-details {
+    min-height: 48px;
+  }
+}
+
+@media (max-width: 420px) {
+  .route-shell.is-businesses-page .business-card .business-card-vault {
+    border-left: 0;
+  }
+
+  .route-shell.is-businesses-page .business-card .business-card-vault-meter {
+    border-top-color: rgba(157, 174, 196, .1);
+  }
+
+  .route-shell.is-businesses-page .business-card-actions {
+    grid-template-columns: minmax(0, 1.08fr) minmax(0, .92fr);
+  }
+}
