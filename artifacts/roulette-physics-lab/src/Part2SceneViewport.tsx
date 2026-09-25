@@ -6802,9 +6802,12 @@ export function Part2SceneViewport({
                   'PART 2 could not measure the visible dark recessed race at the configured launch radius',
                 );
               }
-              part2RaceVerticalOffset =
+              const measuredPart2RaceVerticalOffset =
                 darkTrackSurface.y -
                 part2ChannelSurfaceAt(PART2_ACTUAL_DARK_TRACK_LAUNCH_RADIUS).y;
+              part2RaceVerticalOffset = part6FullSpinRouteActive
+                ? 0
+                : measuredPart2RaceVerticalOffset;
               const channelMesh = makePart2RaceChannelTrimesh(
                 part2RaceVerticalOffset,
                 part6FullSpinRouteActive
