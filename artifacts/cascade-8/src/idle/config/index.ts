@@ -253,3 +253,17 @@ export type VaultLevel = (typeof VAULT_LEVELS)[number]["level"];
 
 export const DEFAULT_VAULT_LEVEL: VaultLevel = 1;
 export const MAX_VAULT_LEVEL: VaultLevel = 6;
+
+
+export const VAULT_UPGRADE_STEPS = [
+  { fromLevel: 1, toLevel: 2, costPercent: 5 },
+  { fromLevel: 2, toLevel: 3, costPercent: 10 },
+  { fromLevel: 3, toLevel: 4, costPercent: 15 },
+  { fromLevel: 4, toLevel: 5, costPercent: 25 },
+  { fromLevel: 5, toLevel: 6, costPercent: 40 },
+] as const;
+
+export const TOTAL_VAULT_UPGRADE_COST_PERCENT = VAULT_UPGRADE_STEPS.reduce(
+  (total, step) => total + step.costPercent,
+  0,
+);
