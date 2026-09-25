@@ -742,10 +742,7 @@ export class BusinessesClient {
         "business",
       );
     } else if (button.matches("[data-business-collect]")) {
-      void this.runBusinessAction(
-        businessId,
-        () => collectIdleBusiness(businessId),
-      );
+      void this.runCollectBusiness(businessId);
     } else if (button.matches("[data-business-vault-upgrade]")) {
       void this.runBusinessAction(
         businessId,
@@ -1158,6 +1155,86 @@ export class BusinessesClient {
     }, reducedMotion ? 600 : 1040);
   }
 
+  private playCollectFeedback(
+    businessId: BusinessId,
+    collectedCents: number,
+  ) {
+    if (collectedCents <= 0) return;
+
+    const row = this.root.querySelector<HTMLElement>(
+      `[data-business-id="${businessId}"]`,
+    );
+    if (!row) return;
+
+    row.dataset.collectFeedback = "true";
+
+    const toast = document.createElement("div");
+    toast.className = "business-collect-toast";
+    toast.setAttribute("role", "status");
+    toast.setAttribute("aria-live", "polite");
+
+    const label = document.createElement("span");
+    const value = document.createElement("strong");
+    const meta = document.createElement("small");
+
+    label.textContent = "GELİR TOPLANDI";
+    value.textContent = `+${formatCredits(collectedCents)}`;
+    meta.textContent = "Ortak bakiyeye aktarıldı";
+
+    toast.append(label, value, meta);
+    row.append(toast);
+
+    const reducedMotion = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches ?? false;
+    window.setTimeout(() => {
+      toast.dataset.leaving = "true";
+      window.setTimeout(() => toast.remove(), reducedMotion ? 0 : 180);
+      delete row.dataset.collectFeedback;
+    }, reducedMotion ? 650 : 1100);
+  }
+
+  private playCollectAllFeedback(collectedCents: number) {
+    if (collectedCents <= 0) return;
+
+    const commandBar = this.root.querySelector<HTMLElement>("[data-idle-command-bar]");
+    if (!commandBar) return;
+
+    commandBar.dataset.collectFeedback = "true";
+
+    const toast = document.createElement("div");
+    toast.className = "business-collect-all-toast";
+    toast.setAttribute("role", "status");
+    toast.setAttribute("aria-live", "polite");
+    toast.innerHTML = `
+      <span>TÜM KASALAR TOPLANDI</span>
+      <strong>+${formatCredits(collectedCents)}</strong>
+      <small>Ortak bakiye güncellendi</small>
+    `;
+    commandBar.append(toast);
+
+    const reducedMotion = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches ?? false;
+    window.setTimeout(() => {
+      toast.dataset.leaving = "true";
+      window.setTimeout(() => toast.remove(), reducedMotion ? 0 : 180);
+      delete commandBar.dataset.collectFeedback;
+    }, reducedMotion ? 650 : 1100);
+  }
+
+  private async runCollectBusiness(businessId: BusinessId) {
+    this.busyBusinesses.add(businessId);
+    this.render();
+
+    try {
+      const result = await collectIdleBusiness(businessId);
+      await this.refresh();
+      this.playCollectFeedback(businessId, result.collectedCents);
+    } catch (error) {
+      this.setError(this.getErrorMessage(error));
+    } finally {
+      this.busyBusinesses.delete(businessId);
+      this.render();
+    }
+  }
+
   private async runBusinessAction(
     businessId: BusinessId,
     action: () => Promise<unknown>,
@@ -1190,8 +1267,9 @@ export class BusinessesClient {
     this.render();
 
     try {
-      await collectAllIdleBusinesses();
+      const result = await collectAllIdleBusinesses();
       await this.refresh();
+      this.playCollectAllFeedback(result.collectedCents);
     } catch (error) {
       this.setError(this.getErrorMessage(error));
       await this.refresh();
