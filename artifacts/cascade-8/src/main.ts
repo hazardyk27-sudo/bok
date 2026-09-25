@@ -84,7 +84,7 @@ const mainMenuMarkup = `
     <div class="menu-intro">
       <span class="menu-kicker">FAHRİNİN YOLU // PLAY LOUNGE</span>
       <h1 id="game-menu-title">OYUNUNU <em>SEÇ</em></h1>
-       <p>Gece açıldı. Üç ayrı masa seni bekliyor. Hangi dünyaya gireceğine karar ver.</p>
+       <p>Gece açıldı. Dört ayrı dünya seni bekliyor. Hangi dünyaya gireceğine karar ver.</p>
     </div>
     <div class="game-choice-grid">
       <a class="game-choice game-choice-slot" href="/slot">
@@ -117,10 +117,20 @@ const mainMenuMarkup = `
          </span>
          <span class="choice-footer"><span>5 OR 25 CELLS</span><span class="choice-arrow" aria-hidden="true">→</span></span>
        </a>
+       <a class="game-choice game-choice-businesses" href="/businesses" aria-label="İşletmeler ekranını aç">
+         <span class="choice-status is-live">AVAILABLE NOW</span>
+         <span class="choice-art choice-art-businesses" aria-hidden="true"><span>▦</span></span>
+         <span class="choice-copy">
+           <span class="choice-overline">IDLE EMPIRE</span>
+           <strong>İŞLETMELER</strong>
+           <span class="choice-type">BUSINESS EXPERIENCE</span>
+         </span>
+         <span class="choice-footer"><span>BUILD & EARN</span><span class="choice-arrow" aria-hidden="true">→</span></span>
+       </a>
     </div>
     <div class="menu-footer">
       <span class="menu-footer-line"></span>
-       <span>ONE LOUNGE · THREE WORLDS</span>
+       <span>ONE LOUNGE · FOUR WORLDS</span>
       <span class="menu-footer-line"></span>
     </div>
   </main>
