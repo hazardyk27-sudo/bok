@@ -134,7 +134,7 @@ export function renderBusinessRowShell(businessId: BusinessId) {
             <small data-business-vault-fill>Doluluk —</small>
             <div class="business-vault-progress" aria-hidden="true"><i data-business-vault-progress></i></div>
             <small class="business-vault-eta" data-business-vault-eta>—</small>
-            <button type="button" class="business-vault-upgrade" disabled data-business-vault-upgrade>GELİŞTİR</button>
+            <button type="button" class="business-vault-upgrade" disabled data-action-state="loading" data-business-vault-upgrade>GELİŞTİR</button>
           </div>
         </div>
 
