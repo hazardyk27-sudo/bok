@@ -210,3 +210,40 @@ describe("Businesses premium desktop cards", () => {
     expect(idleCssSource).toContain(".business-card-body");
   });
 });
+
+
+describe("Businesses premium card skeleton", () => {
+  it("renders each business as a visual premium card rather than a table row", () => {
+    expect(componentsSource).toContain("business-row business-card business-card--");
+    expect(componentsSource).toContain("business-card-visual");
+    expect(componentsSource).toContain("business-card-body");
+    expect(componentsSource).toContain("business-card-header");
+    expect(componentsSource).toContain("business-card-metrics");
+    expect(componentsSource).toContain("business-card-actions");
+  });
+
+  it("keeps live ownership and card state connected to real business data", () => {
+    expect(componentsSource).toContain("data-business-ownership");
+    expect(componentsSource).toContain("data-business-card-state");
+    expect(componentsSource).toContain('row.dataset.businessOwnership = currentStage ? "owned" : "locked"');
+    expect(componentsSource).toContain('"SATIN ALINMADI"');
+    expect(componentsSource).toContain('"KASA DOLU"');
+    expect(componentsSource).toContain('"MAX SEVİYE"');
+  });
+
+  it("uses a three-card desktop grid with tablet and mobile fallbacks", () => {
+    expect(idleCssSource).toContain("/* Part 5 — desktop premium business card skeleton */");
+    expect(idleCssSource).toContain("grid-template-columns: repeat(3, minmax(0, 1fr))");
+    expect(idleCssSource).toContain("grid-template-columns: repeat(2, minmax(0, 1fr))");
+    expect(idleCssSource).toContain(".business-card:last-child");
+    expect(idleCssSource).toContain("grid-template-columns: 1fr");
+  });
+
+  it("reserves distinct visual identity areas for Stadium, Club Store and Fan Club", () => {
+    expect(componentsSource).toContain("business-card-art--stadium");
+    expect(componentsSource).toContain("business-card-art--club-store");
+    expect(componentsSource).toContain("business-card-art--fan-club");
+    expect(idleCssSource).toContain(".business-card--club-store .business-card-visual");
+    expect(idleCssSource).toContain(".business-card--fan-club .business-card-visual");
+  });
+});
