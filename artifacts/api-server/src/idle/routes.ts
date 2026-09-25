@@ -60,6 +60,37 @@ router.get("/idle/state", async (req, res) => {
 });
 
 
+router.post("/idle/collect-all", async (req, res) => {
+  try {
+    const { idempotencyKey } = req.body as { idempotencyKey?: unknown };
+    if (typeof idempotencyKey !== "string" || !IDEMPOTENCY_PATTERN.test(idempotencyKey)) {
+      res.status(400).json({ error: "VALID_IDEMPOTENCY_KEY_REQUIRED" });
+      return;
+    }
+
+    const result = await idleRepository.collectAllBusinesses(
+      getSessionId(req, res),
+      idempotencyKey,
+    );
+
+    res.json({
+      serverTime: result.serverNow.toISOString(),
+      collectedCents: result.collectedCents,
+      balanceCents: result.balanceCents,
+      replayed: result.replayed,
+      collections: result.collections.map((collection) => ({
+        businessId: collection.businessId,
+        collectedCents: collection.collectedCents,
+        replayed: collection.replayed,
+      })),
+      businesses: result.businesses.map(serializeBusiness),
+    });
+  } catch (error) {
+    sendError(res, error);
+  }
+});
+
+
 router.post("/idle/businesses/:businessId/collect", async (req, res) => {
   try {
     const businessId = req.params.businessId as IdleBusinessId;
