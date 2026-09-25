@@ -381,3 +381,37 @@ describe("Businesses Stadium milestone visuals", () => {
     expect(idleCssSource).toContain(".stadium-star-crown");
   });
 });
+
+
+describe("Businesses Club Store milestone visuals", () => {
+  it("renders a real Club Store vector scene with retail merchandise details", () => {
+    expect(componentsSource).toContain("business-card-store-scene");
+    expect(componentsSource).toContain("store-shell");
+    expect(componentsSource).toContain("store-signage");
+    expect(componentsSource).toContain("store-merch");
+    expect(componentsSource).toContain("store-shelves");
+    expect(componentsSource).toContain("store-premium-rack");
+  });
+
+  it("keeps the shared level milestone mapping while using Club Store labels", () => {
+    expect(componentsSource).toContain('businessId === "club-store" ? "CLUB STORE" : "STADIUM"');
+    expect(componentsSource).toContain("CLUB STORE // BASE");
+    expect(componentsSource).toContain("row.dataset.visualStage = visualStage");
+  });
+
+  it("styles the Store across locked, local, pro, elite and iconic flagship states", () => {
+    expect(idleCssSource).toContain("/* Part 10 — Club Store visual system / merchandise progression */");
+    expect(idleCssSource).toContain('.business-card--club-store[data-visual-stage="locked"]');
+    expect(idleCssSource).toContain('.business-card--club-store[data-visual-stage="local"]');
+    expect(idleCssSource).toContain('.business-card--club-store[data-visual-stage="pro"]');
+    expect(idleCssSource).toContain('.business-card--club-store[data-visual-stage="elite"]');
+    expect(idleCssSource).toContain('.business-card--club-store[data-visual-stage="landmark"]');
+    expect(idleCssSource).toContain(".store-flagship-mark");
+  });
+
+  it("includes dedicated mobile sizing for the Club Store hero art", () => {
+    expect(idleCssSource).toContain(".business-card--club-store .business-card-store-scene svg");
+    expect(idleCssSource).toContain("min-height: 148px");
+    expect(idleCssSource).toContain("min-height: 134px");
+  });
+});
