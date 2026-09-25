@@ -24,6 +24,11 @@ const isSlotRoute = currentPath === "/slot" || isLab;
 const isRouletteRoute = currentPath === "/roulette";
 const isWitchRoute = currentPath === "/cadi-kazan";
 const isBusinessesRoute = currentPath === "/businesses";
+
+if (isBusinessesRoute) {
+  document.documentElement.classList.add("businesses-route");
+  document.body.classList.add("businesses-route");
+}
 const isWinLabelPreview = isLab && new URLSearchParams(window.location.search).get("preview") === "win-labels";
 const isMultiplierCollectionPreview = isLab && new URLSearchParams(window.location.search).get("preview") === "multiplier-collection";
 

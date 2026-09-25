@@ -51,12 +51,15 @@ export function renderBusinessRowShell(businessId: BusinessId) {
           <strong data-business-accrued>—</strong>
         </div>
         <div class="business-row-metric">
-          <span>GELİR</span>
+          <span>SAATLİK GELİR</span>
           <strong data-business-income>— /sa</strong>
+          <small data-business-daily>— /gün</small>
         </div>
         <div class="business-row-metric business-vault-metric">
-          <span>KASA</span>
+          <span>KASA KAPASİTESİ</span>
           <strong data-business-vault>Lv— · —</strong>
+          <small data-business-vault-fill>Doluluk —</small>
+          <div class="business-vault-progress" aria-hidden="true"><i data-business-vault-progress></i></div>
           <button type="button" class="business-vault-upgrade" disabled data-business-vault-upgrade>GELİŞTİR</button>
         </div>
       </div>
@@ -79,12 +82,15 @@ export function updateBusinessRow(
   const levelNode = row.querySelector<HTMLElement>("[data-business-level]");
   const accruedNode = row.querySelector<HTMLElement>("[data-business-accrued]");
   const incomeNode = row.querySelector<HTMLElement>("[data-business-income]");
+  const dailyNode = row.querySelector<HTMLElement>("[data-business-daily]");
   const vaultNode = row.querySelector<HTMLElement>("[data-business-vault]");
+  const vaultFillNode = row.querySelector<HTMLElement>("[data-business-vault-fill]");
+  const vaultProgressNode = row.querySelector<HTMLElement>("[data-business-vault-progress]");
   const vaultUpgradeButton = row.querySelector<HTMLButtonElement>("[data-business-vault-upgrade]");
   const upgradeButton = row.querySelector<HTMLButtonElement>("[data-business-upgrade]");
   const collectButton = row.querySelector<HTMLButtonElement>("[data-business-collect]");
 
-  if (!levelNode || !accruedNode || !incomeNode || !vaultNode || !vaultUpgradeButton || !upgradeButton || !collectButton) {
+  if (!levelNode || !accruedNode || !incomeNode || !dailyNode || !vaultNode || !vaultFillNode || !vaultProgressNode || !vaultUpgradeButton || !upgradeButton || !collectButton) {
     throw new Error("IDLE_BUSINESS_ROW_INCOMPLETE");
   }
 
@@ -108,8 +114,18 @@ export function updateBusinessRow(
   incomeNode.textContent = currentStage
     ? `${formatCreditsFromCents(currentStage.hourlyIncomeDisplayCents)} /sa`
     : "$0.00 /sa";
+  dailyNode.textContent = currentStage
+    ? `${formatCreditsFromCents(currentStage.dailyIncomeCents)} /gün`
+    : "$0.00 /gün";
   const vaultUpgrade = getIdleVaultUpgradePreview(business);
   vaultNode.textContent = `Lv${business.vaultLevel} · ${vault.capacityHours}sa${vaultUpgrade.isMaxLevel ? " · MAX" : business.liveIsVaultFull ? " · DOLU" : ""}`;
+  const fillPercent = business.businessLevel === null
+    ? 0
+    : Math.round(Math.min(1, Math.max(0, business.vaultFillRatio)) * 100);
+  vaultFillNode.textContent = business.businessLevel === null
+    ? "Satın alındıktan sonra aktif"
+    : `Doluluk %${fillPercent}`;
+  vaultProgressNode.style.width = `${fillPercent}%`;
 
   if (!vaultUpgrade.isOwned || vaultUpgrade.isMaxLevel || !vaultUpgrade.canUpgrade) {
     vaultUpgradeButton.hidden = true;

@@ -177,6 +177,71 @@ describe.skipIf(!enabled)("IdleRepository PostgreSQL integration", () => {
     expect(replayBody.replayed).toBe(true);
   });
 
+  it("collects every owned business through one HTTP action without double credit on replay", async () => {
+    const stateResponse = await fetch(`${baseUrl}/api/idle/state`);
+    const cookie = stateResponse.headers.get("set-cookie")?.split(";")[0];
+    const stateBody = await stateResponse.json() as { sessionId: string };
+    const checkpointAt = new Date("2026-09-25T11:00:00.000Z");
+
+    await idleRepository.upgradeBusiness(
+      stateBody.sessionId,
+      "stadium",
+      randomUUID(),
+      checkpointAt,
+    );
+    await idleRepository.upgradeBusiness(
+      stateBody.sessionId,
+      "fan-club",
+      randomUUID(),
+      checkpointAt,
+    );
+    await pool.query(
+      `UPDATE idle_business_states
+          SET accrued_microcents = 0,
+              checkpoint_at = $2,
+              updated_at = $2
+        WHERE session_id = $1
+          AND business_id IN ('stadium', 'fan-club')`,
+      [stateBody.sessionId, checkpointAt],
+    );
+
+    const key = randomUUID();
+    const request = () => fetch(`${baseUrl}/api/idle/collect-all`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Cookie: cookie ?? "",
+      },
+      body: JSON.stringify({ idempotencyKey: key }),
+    });
+
+    const first = await request();
+    expect(first.status).toBe(200);
+    const firstBody = await first.json() as {
+      collectedCents: number;
+      balanceCents: number;
+      replayed: boolean;
+      collections: Array<{ businessId: string; collectedCents: number }>;
+    };
+    expect(firstBody.replayed).toBe(false);
+    expect(firstBody.collections.map((entry) => entry.businessId).sort())
+      .toEqual(["fan-club", "stadium"]);
+    expect(firstBody.collectedCents).toBeGreaterThan(0);
+
+    const balanceAfterFirst = firstBody.balanceCents;
+    const replay = await request();
+    expect(replay.status).toBe(200);
+    const replayBody = await replay.json() as {
+      collectedCents: number;
+      balanceCents: number;
+      replayed: boolean;
+    };
+    expect(replayBody.replayed).toBe(true);
+    expect(replayBody.collectedCents).toBe(firstBody.collectedCents);
+    expect(replayBody.balanceCents).toBe(balanceAfterFirst);
+    expect(await walletBalance(stateBody.sessionId)).toBe(balanceAfterFirst);
+  });
+
   it("upgrades Kasa through the real HTTP endpoint", async () => {
     const stateResponse = await fetch(`${baseUrl}/api/idle/state`);
     const cookie = stateResponse.headers.get("set-cookie")?.split(";")[0];

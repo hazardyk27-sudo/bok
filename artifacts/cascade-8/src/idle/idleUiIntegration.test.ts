@@ -10,6 +10,14 @@ const idleIndexSource = readFileSync(
   fileURLToPath(new URL("./index.ts", import.meta.url)),
   "utf8",
 );
+const idleCssSource = readFileSync(
+  fileURLToPath(new URL("./idle.css", import.meta.url)),
+  "utf8",
+);
+const mainSource = readFileSync(
+  fileURLToPath(new URL("../main.ts", import.meta.url)),
+  "utf8",
+);
 
 describe("final Idle UI integration", () => {
   it("exposes Kasa upgrade as a secondary control on every business row", () => {
@@ -39,5 +47,34 @@ describe("Idle request failure handling", () => {
     expect(idleIndexSource).toContain("data-idle-error");
     expect(idleIndexSource).toContain("this.setError(this.getErrorMessage(error))");
     expect(idleIndexSource).toContain('return "İşletmeler sunucusuna bağlanılamadı. Lütfen tekrar dene."');
+  });
+});
+
+
+describe("Idle collect all integration", () => {
+  it("shows one summary action for collecting every business", () => {
+    expect(idleIndexSource).toContain("data-idle-collect-all");
+    expect(idleIndexSource).toContain("collectAllIdleBusinesses,");
+    expect(idleIndexSource).toContain("TÜMÜNÜ TOPLA");
+    expect(idleIndexSource).toContain("this.runCollectAll()");
+  });
+
+  it("shows richer business information for readability", () => {
+    expect(componentsSource).toContain("SAATLİK GELİR");
+    expect(componentsSource).toContain("data-business-daily");
+    expect(componentsSource).toContain("KASA KAPASİTESİ");
+    expect(componentsSource).toContain("data-business-vault-fill");
+    expect(componentsSource).toContain("data-business-vault-progress");
+  });
+});
+
+
+describe("Businesses mobile scrolling", () => {
+  it("keeps Businesses vertically scrollable on small screens without changing other game routes", () => {
+    expect(mainSource).toContain('document.documentElement.classList.add("businesses-route")');
+    expect(mainSource).toContain('document.body.classList.add("businesses-route")');
+    expect(idleCssSource).toContain("html.businesses-route #app");
+    expect(idleCssSource).toContain("html.businesses-route .app-shell.is-businesses-page");
+    expect(idleCssSource).toContain("overflow-y: auto");
   });
 });
