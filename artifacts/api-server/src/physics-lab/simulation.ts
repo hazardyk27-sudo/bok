@@ -516,7 +516,7 @@ function addPocketFretColliders(
 ) {
   const pocketFloorInnerRadius = 1.48;
   const innerEdgeRadius =
-    pocketFloorInnerRadius + PHYSICS_LAB_BALL_RADIUS * 2 + 0.03;
+    pocketFloorInnerRadius + PHYSICS_LAB_BALL_RADIUS * 2 + 0.025;
   const outerEdgeRadius = ROULETTE_POCKET_FLOOR_OUTER_RADIUS - 0.02;
   const centerRadius = (innerEdgeRadius + outerEdgeRadius) / 2;
   const tangentialHalfExtent = 0.03;
