@@ -522,7 +522,7 @@ function addPocketFretColliders(
   const tangentialHalfExtent = 0.03;
   const radialHalfExtent = (outerEdgeRadius - innerEdgeRadius) / 2;
   const verticalHalfExtent = 0.11;
-  const edgeRounding = 0.01;
+  const edgeRounding = 0.005;
   const centerY =
     ROULETTE_POCKET_FLOOR_Y + verticalHalfExtent + 0.022;
   const colliders: RAPIER.Collider[] = [];
