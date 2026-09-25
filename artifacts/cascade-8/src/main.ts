@@ -15,7 +15,7 @@ import { createGameScene, GameScene } from "./game/GameScene";
 import { RouletteClient } from "./rouletteClient";
 import { CADI_KAZAN_MARKUP, WitchClient } from "./witchClient";
 import { EUROPEAN_WHEEL_ORDER, ROULETTE_SEGMENT_DEGREES } from "./rouletteGeometry";
-import { BUSINESSES_MARKUP } from "./idle";
+import { BUSINESSES_MARKUP, BusinessesClient } from "./idle";
 
 const app = document.querySelector<HTMLDivElement>("#app")!;
 const currentPath = window.location.pathname.replace(/\/+$/, "") || "/";
@@ -488,6 +488,9 @@ let controller: GameController;
 if (isRouletteRoute) {
   const rouletteRoot = document.querySelector<HTMLElement>(".roulette-page");
   if (rouletteRoot) new RouletteClient(rouletteRoot);
+} else if (isBusinessesRoute) {
+  const businessesRoot = document.querySelector<HTMLElement>(".businesses-page");
+  if (businessesRoot) new BusinessesClient(businessesRoot);
 } else if (isWitchRoute) {
   const witchRoot = document.querySelector<HTMLElement>(".witch-page");
   if (witchRoot) new WitchClient(witchRoot);
