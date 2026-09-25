@@ -1,7 +1,15 @@
 import { randomUUID } from "node:crypto";
 import { pool, type PoolClient } from "@workspace/db";
 import {
+  CLUB_STORE_BUSINESS,
+  FAN_CLUB_BUSINESS,
+  STADIUM_BUSINESS,
+  VAULT_LEVELS,
+} from "../../../cascade-8/src/idle/config";
+import { MILLISECONDS_PER_DAY } from "../../../cascade-8/src/idle/utils";
+import {
   IDLE_BUSINESS_IDS,
+  IDLE_MICROCENTS_PER_CENT,
   type IdleBusinessId,
   type IdleBusinessStorageState,
 } from "./storage";
@@ -17,6 +25,20 @@ type IdleBusinessRow = {
   created_at: Date;
   updated_at: Date;
 };
+
+export type IdleBusinessAccrualProjection = IdleBusinessStorageState & {
+  serverNow: Date;
+  elapsedMs: number;
+  vaultCapacityMicrocents: number;
+  projectedAccruedMicrocents: number;
+  isVaultFull: boolean;
+};
+
+const BUSINESS_CONFIGS = {
+  stadium: STADIUM_BUSINESS,
+  "club-store": CLUB_STORE_BUSINESS,
+  "fan-club": FAN_CLUB_BUSINESS,
+} as const;
 
 function toStorageState(row: IdleBusinessRow): IdleBusinessStorageState {
   return {
@@ -72,6 +94,78 @@ async function loadSessionStates(client: PoolClient, sessionId: string, forUpdat
   return result.rows.map(toStorageState);
 }
 
+function requireCompleteState(states: readonly IdleBusinessStorageState[]) {
+  if (states.length !== IDLE_BUSINESS_IDS.length) {
+    throw new Error("IDLE_SESSION_STATE_INCOMPLETE");
+  }
+}
+
+function exactMicrocentsForElapsed(dailyIncomeCents: number, elapsedMs: number) {
+  const numerator = BigInt(dailyIncomeCents)
+    * BigInt(IDLE_MICROCENTS_PER_CENT)
+    * BigInt(elapsedMs);
+  return Number(numerator / BigInt(MILLISECONDS_PER_DAY));
+}
+
+function exactVaultCapacityMicrocents(dailyIncomeCents: number, capacityHours: number) {
+  const numerator = BigInt(dailyIncomeCents)
+    * BigInt(IDLE_MICROCENTS_PER_CENT)
+    * BigInt(capacityHours);
+  return Number(numerator / 24n);
+}
+
+/**
+ * Projects live passive income from the server clock without writing to SQL.
+ * Persistent writes happen only on explicit checkpoint/action boundaries.
+ */
+export function projectBusinessAccrual(
+  state: IdleBusinessStorageState,
+  serverNow = new Date(),
+): IdleBusinessAccrualProjection {
+  const elapsedMs = Math.max(0, Math.floor(serverNow.getTime() - state.checkpointAt.getTime()));
+
+  if (state.businessLevel === null) {
+    return {
+      ...state,
+      serverNow,
+      elapsedMs,
+      vaultCapacityMicrocents: 0,
+      projectedAccruedMicrocents: 0,
+      isVaultFull: false,
+    };
+  }
+
+  const business = BUSINESS_CONFIGS[state.businessId];
+  const businessLevel = business.levels.find((level) => level.level === state.businessLevel);
+  if (!businessLevel) throw new Error("INVALID_IDLE_BUSINESS_LEVEL");
+
+  const vault = VAULT_LEVELS.find((entry) => entry.level === state.vaultLevel);
+  if (!vault) throw new Error("INVALID_IDLE_VAULT_LEVEL");
+
+  const vaultCapacityMicrocents = exactVaultCapacityMicrocents(
+    businessLevel.dailyIncomeCents,
+    vault.capacityHours,
+  );
+  const earnedMicrocents = exactMicrocentsForElapsed(
+    businessLevel.dailyIncomeCents,
+    elapsedMs,
+  );
+  const storedMicrocents = Math.max(0, Math.floor(state.accruedMicrocents));
+  const projectedAccruedMicrocents = Math.min(
+    vaultCapacityMicrocents,
+    storedMicrocents + earnedMicrocents,
+  );
+
+  return {
+    ...state,
+    serverNow,
+    elapsedMs,
+    vaultCapacityMicrocents,
+    projectedAccruedMicrocents,
+    isVaultFull: projectedAccruedMicrocents >= vaultCapacityMicrocents,
+  };
+}
+
 export class IdleRepository {
   /**
    * Ensures every session owns exactly one persistent state row per business.
@@ -83,11 +177,67 @@ export class IdleRepository {
       await client.query("BEGIN");
       await insertMissingSessionStates(client, sessionId);
       const states = await loadSessionStates(client, sessionId);
-      if (states.length !== IDLE_BUSINESS_IDS.length) {
-        throw new Error("IDLE_SESSION_STATE_INCOMPLETE");
-      }
+      requireCompleteState(states);
       await client.query("COMMIT");
       return states;
+    } catch (error) {
+      await client.query("ROLLBACK");
+      throw error;
+    } finally {
+      client.release();
+    }
+  }
+
+  /**
+   * Returns server-authoritative live accrual without persisting a ticking
+   * balance. The client may animate this projection between requests.
+   */
+  async getSessionState(sessionId: string, serverNow = new Date()) {
+    const states = await this.ensureSessionState(sessionId);
+    return {
+      serverNow,
+      businesses: states.map((state) => projectBusinessAccrual(state, serverNow)),
+    };
+  }
+
+  /**
+   * Persists one accrual checkpoint for a meaningful action boundary.
+   * This is intentionally not a timer/minute write loop.
+   */
+  async checkpointSessionState(sessionId: string, serverNow = new Date()) {
+    const client = await pool.connect();
+    try {
+      await client.query("BEGIN");
+      await insertMissingSessionStates(client, sessionId);
+      const states = await loadSessionStates(client, sessionId, true);
+      requireCompleteState(states);
+
+      for (const state of states) {
+        const projection = projectBusinessAccrual(state, serverNow);
+        await client.query(
+          `UPDATE idle_business_states
+              SET accrued_microcents = $3,
+                  checkpoint_at = $4,
+                  updated_at = now()
+            WHERE session_id = $1
+              AND business_id = $2`,
+          [
+            sessionId,
+            state.businessId,
+            projection.projectedAccruedMicrocents,
+            serverNow,
+          ],
+        );
+      }
+
+      const checkpointed = await loadSessionStates(client, sessionId);
+      requireCompleteState(checkpointed);
+      await client.query("COMMIT");
+
+      return {
+        serverNow,
+        businesses: checkpointed.map((state) => projectBusinessAccrual(state, serverNow)),
+      };
     } catch (error) {
       await client.query("ROLLBACK");
       throw error;
