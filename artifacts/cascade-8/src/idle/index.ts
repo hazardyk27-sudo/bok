@@ -1,11 +1,35 @@
 import "./idle.css";
-import { renderBusinessRowShell } from "./components";
+import {
+  CLUB_STORE_BUSINESS,
+  FAN_CLUB_BUSINESS,
+  STADIUM_BUSINESS,
+} from "./config";
+import { renderBusinessRowShell, updateBusinessRow } from "./components";
+import {
+  collectIdleBusiness,
+  fetchIdleState,
+  projectIdleStateLive,
+  upgradeIdleBusiness,
+} from "./services";
+import {
+  BUSINESS_IDS,
+  type BusinessDefinition,
+  type BusinessId,
+  type IdleStateEnvelope,
+} from "./types";
 
-const BUSINESS_SHELL_ROWS = [
-  { id: "stadium", eyebrow: "STADIUM", title: "Stadyum" },
-  { id: "club-store", eyebrow: "CLUB STORE", title: "Kulüp Mağazası" },
-  { id: "fan-club", eyebrow: "FAN CLUB", title: "Taraftar Kulübü" },
-] as const;
+const BUSINESS_DEFINITIONS: Record<BusinessId, BusinessDefinition> = {
+  stadium: STADIUM_BUSINESS,
+  "club-store": CLUB_STORE_BUSINESS,
+  "fan-club": FAN_CLUB_BUSINESS,
+};
+
+function formatCredits(cents: number) {
+  return `$${(cents / 100).toLocaleString("en-US", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  })}`;
+}
 
 export const BUSINESSES_MARKUP = `
   <main class="businesses-page" aria-labelledby="businesses-title">
@@ -34,25 +58,107 @@ export const BUSINESSES_MARKUP = `
     </section>
 
     <section class="business-list" aria-label="İşletmeler">
-      ${renderBusinessRowShell("stadium")}
-      ${BUSINESS_SHELL_ROWS.filter((business) => business.id !== "stadium").map((business) => `
-        <article class="business-row" data-business-id="${business.id}" data-business-status="loading">
-          <div class="business-row-title">
-            <small>${business.eyebrow}</small>
-            <strong>${business.title}</strong>
-            <span data-business-level>Seviye —</span>
-          </div>
-          <div class="business-row-metrics">
-            <div class="business-row-metric"><span>BİRİKMİŞ</span><strong data-business-accrued>—</strong></div>
-            <div class="business-row-metric"><span>GELİR</span><strong data-business-income>— /sa</strong></div>
-            <div class="business-row-metric"><span>KASA</span><strong data-business-vault>Lv— · —</strong></div>
-          </div>
-          <div class="business-row-actions">
-            <button type="button" disabled data-business-upgrade>YÜKSELT</button>
-            <button type="button" disabled data-business-collect>TOPLA</button>
-          </div>
-        </article>
-      `).join("")}
+      ${BUSINESS_IDS.map(renderBusinessRowShell).join("")}
     </section>
   </main>
 `;
+
+export class BusinessesClient {
+  private envelope: IdleStateEnvelope | null = null;
+  private timer: number | null = null;
+  private readonly busyBusinesses = new Set<BusinessId>();
+
+  constructor(private readonly root: HTMLElement) {
+    this.root.addEventListener("click", this.handleClick);
+    void this.refresh();
+    this.timer = window.setInterval(() => this.render(), 1_000);
+  }
+
+  destroy() {
+    this.root.removeEventListener("click", this.handleClick);
+    if (this.timer !== null) window.clearInterval(this.timer);
+    this.timer = null;
+  }
+
+  private async refresh() {
+    this.envelope = await fetchIdleState();
+    this.render();
+  }
+
+  private render() {
+    if (!this.envelope) return;
+
+    const live = projectIdleStateLive(this.envelope);
+    const walletBalanceCents = live.wallet.balanceCents;
+    const balanceNode = this.root.querySelector<HTMLElement>("[data-idle-balance]");
+    const hourlyNode = this.root.querySelector<HTMLElement>("[data-idle-total-hourly]");
+    const collectableNode = this.root.querySelector<HTMLElement>("[data-idle-total-collectable]");
+
+    if (!balanceNode || !hourlyNode || !collectableNode) {
+      throw new Error("IDLE_PAGE_SHELL_INCOMPLETE");
+    }
+
+    balanceNode.textContent = formatCredits(walletBalanceCents);
+
+    let totalHourlyCents = 0;
+    let totalCollectableCents = 0;
+
+    for (const business of live.businesses) {
+      const row = this.root.querySelector<HTMLElement>(
+        `[data-business-id="${business.businessId}"]`,
+      );
+      if (!row) throw new Error("IDLE_BUSINESS_ROW_MISSING");
+
+      updateBusinessRow(
+        row,
+        business,
+        walletBalanceCents,
+        this.busyBusinesses.has(business.businessId),
+      );
+
+      if (business.businessLevel !== null) {
+        const stage = BUSINESS_DEFINITIONS[business.businessId].levels.find(
+          (entry) => entry.level === business.businessLevel,
+        );
+        if (!stage) throw new Error("INVALID_IDLE_BUSINESS_LEVEL");
+        totalHourlyCents += stage.hourlyIncomeDisplayCents;
+      }
+      totalCollectableCents += business.collectableCents;
+    }
+
+    hourlyNode.textContent = `${formatCredits(totalHourlyCents)} /sa`;
+    collectableNode.textContent = formatCredits(totalCollectableCents);
+  }
+
+  private handleClick = (event: Event) => {
+    const target = event.target as HTMLElement | null;
+    const button = target?.closest<HTMLButtonElement>("button");
+    const row = target?.closest<HTMLElement>("[data-business-id]");
+    if (!button || !row) return;
+
+    const businessId = row.dataset.businessId as BusinessId | undefined;
+    if (!businessId || !BUSINESS_IDS.includes(businessId)) return;
+    if (this.busyBusinesses.has(businessId)) return;
+
+    if (button.matches("[data-business-upgrade]")) {
+      void this.runBusinessAction(businessId, () => upgradeIdleBusiness(businessId));
+    } else if (button.matches("[data-business-collect]")) {
+      void this.runBusinessAction(businessId, () => collectIdleBusiness(businessId));
+    }
+  };
+
+  private async runBusinessAction(
+    businessId: BusinessId,
+    action: () => Promise<unknown>,
+  ) {
+    this.busyBusinesses.add(businessId);
+    this.render();
+    try {
+      await action();
+      await this.refresh();
+    } finally {
+      this.busyBusinesses.delete(businessId);
+      this.render();
+    }
+  }
+}
