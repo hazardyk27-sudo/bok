@@ -1041,3 +1041,151 @@
     overflow-y: visible;
   }
 }
+
+
+/* Part 2 — premium route shell / responsive viewport foundation */
+html.businesses-route {
+  background: var(--idle-canvas, #050816);
+}
+
+body.businesses-route {
+  min-width: 320px;
+  min-height: 100dvh;
+  background:
+    radial-gradient(circle at 14% 18%, rgba(70, 200, 255, .055), transparent 34%),
+    radial-gradient(circle at 88% 12%, rgba(114, 88, 255, .06), transparent 30%),
+    linear-gradient(180deg, #07101e 0%, var(--idle-canvas, #050816) 48%, #040712 100%);
+}
+
+.route-shell.is-businesses-page {
+  --idle-page-max: 1240px;
+  --idle-page-gutter: clamp(18px, 3.1vw, 48px);
+
+  position: relative;
+  width: 100%;
+  height: auto;
+  min-height: 100dvh;
+  overflow-x: clip;
+  overflow-y: visible;
+  padding:
+    max(18px, env(safe-area-inset-top))
+    max(var(--idle-page-gutter), env(safe-area-inset-right))
+    max(24px, env(safe-area-inset-bottom))
+    max(var(--idle-page-gutter), env(safe-area-inset-left));
+  background: transparent;
+  isolation: isolate;
+}
+
+.route-shell.is-businesses-page::before {
+  position: fixed;
+  z-index: -1;
+  inset: 0;
+  pointer-events: none;
+  content: "";
+  background:
+    linear-gradient(90deg, rgba(70, 200, 255, .018) 1px, transparent 1px),
+    linear-gradient(rgba(70, 200, 255, .014) 1px, transparent 1px);
+  background-size: 72px 72px;
+  mask-image: linear-gradient(to bottom, rgba(0, 0, 0, .52), transparent 72%);
+}
+
+.route-shell.is-businesses-page > .ambient {
+  opacity: .24;
+  filter: blur(14px) saturate(.82);
+}
+
+.route-shell.is-businesses-page .route-topbar {
+  z-index: 2;
+  width: min(100%, var(--idle-page-max));
+  margin-inline: auto;
+  flex: 0 0 auto;
+}
+
+.route-shell.is-businesses-page .businesses-page {
+  position: relative;
+  z-index: 1;
+  width: min(100%, var(--idle-page-max));
+  min-height: 0;
+  margin-inline: auto;
+  padding: clamp(26px, 4.4vh, 48px) 0 max(44px, env(safe-area-inset-bottom));
+}
+
+.route-shell.is-businesses-page .demo-note {
+  width: min(100%, var(--idle-page-max));
+  margin: auto auto 0;
+}
+
+@media (min-width: 1280px) {
+  .route-shell.is-businesses-page {
+    --idle-page-gutter: 36px;
+  }
+
+  .route-shell.is-businesses-page .businesses-page {
+    padding-top: clamp(30px, 4.2vh, 52px);
+  }
+}
+
+@media (min-width: 761px) and (max-width: 1100px) {
+  .route-shell.is-businesses-page {
+    --idle-page-gutter: clamp(18px, 2.6vw, 28px);
+  }
+
+  .route-shell.is-businesses-page .businesses-page {
+    width: 100%;
+    padding-top: 28px;
+  }
+}
+
+@media (max-width: 760px) {
+  html.businesses-route,
+  body.businesses-route,
+  html.businesses-route #app {
+    width: 100%;
+    height: auto;
+    min-height: 100%;
+    overflow-x: hidden;
+    overflow-y: auto;
+  }
+
+  body.businesses-route {
+    touch-action: pan-y;
+    overscroll-behavior-x: none;
+    overscroll-behavior-y: contain;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .route-shell.is-businesses-page {
+    --idle-page-gutter: clamp(12px, 4vw, 18px);
+
+    height: auto;
+    min-height: 100dvh;
+    overflow-x: hidden;
+    overflow-y: visible;
+    padding:
+      max(12px, env(safe-area-inset-top))
+      max(var(--idle-page-gutter), env(safe-area-inset-right))
+      max(24px, env(safe-area-inset-bottom))
+      max(var(--idle-page-gutter), env(safe-area-inset-left));
+  }
+
+  .route-shell.is-businesses-page .businesses-page {
+    width: 100%;
+    min-height: 0;
+    padding: 20px 0 max(36px, env(safe-area-inset-bottom));
+  }
+
+  .route-shell.is-businesses-page .route-topbar,
+  .route-shell.is-businesses-page .demo-note {
+    width: 100%;
+  }
+}
+
+@media (max-width: 420px) {
+  .route-shell.is-businesses-page {
+    --idle-page-gutter: 12px;
+  }
+
+  .route-shell.is-businesses-page .businesses-page {
+    padding-top: 16px;
+  }
+}
