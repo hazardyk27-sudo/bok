@@ -97,3 +97,15 @@ export type IdleVaultUpgradeResponse = {
   replayed: boolean;
   business: IdleBusinessServerState;
 };
+
+
+export type IdleVaultUpgradePreview = {
+  isOwned: boolean;
+  isMaxLevel: boolean;
+  canUpgrade: boolean;
+  currentVaultLevel: number;
+  currentCapacityHours: number;
+  nextVaultLevel: number | null;
+  nextCapacityHours: number | null;
+  costCents: number | null;
+};
