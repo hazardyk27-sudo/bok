@@ -44,6 +44,7 @@ export type IdleBusinessServerState = {
 export type IdleStateResponse = {
   sessionId: string;
   serverTime: string;
+  wallet: { sessionId: string; balanceCents: number };
   businesses: IdleBusinessServerState[];
 };
 
