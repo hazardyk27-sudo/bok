@@ -1,4 +1,5 @@
 import "./idle.css";
+import { renderBusinessRowShell } from "./components";
 
 const BUSINESS_SHELL_ROWS = [
   { id: "stadium", eyebrow: "STADIUM", title: "Stadyum" },
@@ -33,29 +34,19 @@ export const BUSINESSES_MARKUP = `
     </section>
 
     <section class="business-list" aria-label="İşletmeler">
-      ${BUSINESS_SHELL_ROWS.map((business) => `
-        <article class="business-row" data-business-id="${business.id}">
+      ${renderBusinessRowShell("stadium")}
+      ${BUSINESS_SHELL_ROWS.filter((business) => business.id !== "stadium").map((business) => `
+        <article class="business-row" data-business-id="${business.id}" data-business-status="loading">
           <div class="business-row-title">
             <small>${business.eyebrow}</small>
             <strong>${business.title}</strong>
             <span data-business-level>Seviye —</span>
           </div>
-
           <div class="business-row-metrics">
-            <div class="business-row-metric">
-              <span>BİRİKMİŞ</span>
-              <strong data-business-accrued>—</strong>
-            </div>
-            <div class="business-row-metric">
-              <span>GELİR</span>
-              <strong data-business-income>— /sa</strong>
-            </div>
-            <div class="business-row-metric">
-              <span>KASA</span>
-              <strong data-business-vault>Lv— · —</strong>
-            </div>
+            <div class="business-row-metric"><span>BİRİKMİŞ</span><strong data-business-accrued>—</strong></div>
+            <div class="business-row-metric"><span>GELİR</span><strong data-business-income>— /sa</strong></div>
+            <div class="business-row-metric"><span>KASA</span><strong data-business-vault>Lv— · —</strong></div>
           </div>
-
           <div class="business-row-actions">
             <button type="button" disabled data-business-upgrade>YÜKSELT</button>
             <button type="button" disabled data-business-collect>TOPLA</button>
