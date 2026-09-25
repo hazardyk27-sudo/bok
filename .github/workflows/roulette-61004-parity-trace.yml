@@ -1,0 +1,228 @@
+name: Roulette 61004 Browser Server Parity Trace
+
+on:
+  push:
+    branches:
+      - feature/roulette
+    paths:
+      - '.github/workflows/roulette-61004-parity-trace.yml'
+      - 'artifacts/roulette-physics-lab/src/Part2SceneViewport.tsx'
+      - 'artifacts/api-server/src/physics-lab/simulation.ts'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  statuses: write
+
+jobs:
+  parity:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10.15.0
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install workspace
+        run: pnpm install --frozen-lockfile
+
+      - name: Install Chromium
+        run: pnpm exec playwright install --with-deps chromium
+
+      - name: Build TypeScript project references
+        run: pnpm run typecheck:libs
+
+      - name: Typecheck roulette physics lab
+        run: pnpm --filter @workspace/roulette-physics-lab run typecheck
+
+      - name: Start roulette physics lab
+        shell: bash
+        run: |
+          PORT=4173 BASE_PATH=/ pnpm --filter @workspace/roulette-physics-lab run dev > /tmp/roulette-parity-vite.log 2>&1 &
+          for attempt in {1..60}; do
+            if curl --fail --silent http://127.0.0.1:4173/ > /dev/null; then
+              exit 0
+            fi
+            sleep 1
+          done
+          cat /tmp/roulette-parity-vite.log
+          exit 1
+
+      - name: Run browser seed 61004
+        shell: bash
+        run: |
+          set -euo pipefail
+          ROULETTE_LAB_URL="http://127.0.0.1:4173/?part6Headless=1&part6SeedStartIndex=3&part6SeedCount=1&part6MaxDurationSeconds=20" \
+          ROULETTE_PART6_OUTPUT="artifacts/roulette-physics-lab/parity-browser-61004.json" \
+          ROULETTE_PART6_TIMEOUT_MS='120000' \
+          ROULETTE_PART6_EXPECTED_SEEDS='1' \
+          node scripts/roulette-part6-runtime.mjs > parity-browser-61004.log 2>&1
+
+      - name: Run server seed 61004
+        shell: bash
+        run: |
+          set -euo pipefail
+          pnpm exec tsx -e "(async()=>{const {simulatePhysicsLabRound}=await import('./artifacts/api-server/src/physics-lab/simulation.ts');const r=await simulatePhysicsLabRound('parity-61004','61004');console.log('SERVER_PARITY_RESULT '+JSON.stringify({status:r.status,errorCode:r.errorCode,finalPocketIndex:r.finalPocketIndex,finalPocketNumber:r.finalPocketNumber,stableSettleStep:r.stableSettleStep}));})().catch(error=>{console.error(error);process.exit(1)})" > parity-server-61004.log 2>&1
+
+      - name: Compare first 91 physics steps
+        shell: bash
+        run: |
+          set -euo pipefail
+          node <<'NODE'
+          const fs = require('fs');
+
+          const browserLines = fs.readFileSync('parity-browser-61004.log', 'utf8').split(/\r?\n/);
+          const serverLines = fs.readFileSync('parity-server-61004.log', 'utf8').split(/\r?\n/);
+
+          const browser = [];
+          for (const line of browserLines) {
+            const marker = 'BROWSER_CONSOLE ';
+            const index = line.indexOf(marker);
+            if (index < 0) continue;
+            try {
+              const outer = JSON.parse(line.slice(index + marker.length));
+              const prefix = 'ROULETTE_PARITY_STEP ';
+              if (!outer.text?.startsWith(prefix)) continue;
+              browser.push(JSON.parse(outer.text.slice(prefix.length)));
+            } catch {}
+          }
+
+          const server = [];
+          for (const line of serverLines) {
+            const prefix = 'ROULETTE_PARITY_STEP ';
+            const index = line.indexOf(prefix);
+            if (index < 0) continue;
+            try {
+              server.push(JSON.parse(line.slice(index + prefix.length)));
+            } catch {}
+          }
+
+          if (browser.length !== 91 || server.length !== 91) {
+            throw new Error('Expected 91 parity steps per source, got browser=' + browser.length + ' server=' + server.length);
+          }
+
+          const bMap = new Map(browser.map(row => [row.step, row]));
+          const sMap = new Map(server.map(row => [row.step, row]));
+          const norm3 = (a, b, key) => Math.hypot(
+            a[key].x - b[key].x,
+            a[key].y - b[key].y,
+            a[key].z - b[key].z,
+          );
+          const thresholds = [1e-6, 1e-5, 1e-4, 1e-3, 1e-2, 1e-1];
+          const firstVelocityThreshold = Object.fromEntries(thresholds.map(t => [String(t), null]));
+          const firstPositionThreshold = Object.fromEntries(thresholds.map(t => [String(t), null]));
+          let firstContactMismatch = null;
+          let maxVelocityDelta = 0;
+          let maxPositionDelta = 0;
+          const rows = [];
+
+          for (let step = 0; step <= 90; step += 1) {
+            const b = bMap.get(step);
+            const s = sMap.get(step);
+            if (!b || !s) throw new Error('Missing parity step ' + step);
+            const velocityDelta = norm3(b, s, 'velocity');
+            const positionDelta = norm3(b, s, 'position');
+            const angularVelocityDelta = norm3(b, s, 'angularVelocity');
+            maxVelocityDelta = Math.max(maxVelocityDelta, velocityDelta);
+            maxPositionDelta = Math.max(maxPositionDelta, positionDelta);
+            for (const threshold of thresholds) {
+              const key = String(threshold);
+              if (firstVelocityThreshold[key] === null && velocityDelta > threshold) {
+                firstVelocityThreshold[key] = step;
+              }
+              if (firstPositionThreshold[key] === null && positionDelta > threshold) {
+                firstPositionThreshold[key] = step;
+              }
+            }
+            const contactMismatch =
+              Boolean(b.darkRaceContact) !== Boolean(s.darkRaceContact) ||
+              Boolean(b.outerWallContact) !== Boolean(s.outerWallContact);
+            if (firstContactMismatch === null && contactMismatch) firstContactMismatch = step;
+            const row = {
+              step,
+              velocityDelta: Number(velocityDelta.toFixed(9)),
+              positionDelta: Number(positionDelta.toFixed(9)),
+              radialVelocityDelta: Number(Math.abs(b.radialVelocity - s.radialVelocity).toFixed(9)),
+              verticalVelocityDelta: Number(Math.abs(b.verticalVelocity - s.verticalVelocity).toFixed(9)),
+              angularVelocityDelta: Number(angularVelocityDelta.toFixed(9)),
+              browserDarkRace: b.darkRaceContact,
+              serverDarkRace: s.darkRaceContact,
+              browserOuterWall: b.outerWallContact,
+              serverOuterWall: s.outerWallContact,
+              browserContacts: b.contactRoles,
+              serverContacts: s.contactRoles,
+            };
+            rows.push(row);
+            console.log('PARITY_STEP_DELTA ' + JSON.stringify(row));
+          }
+
+          const summary = {
+            seed: 61004,
+            comparedSteps: rows.length,
+            firstVelocityThreshold,
+            firstPositionThreshold,
+            firstContactMismatch,
+            maxVelocityDelta: Number(maxVelocityDelta.toFixed(9)),
+            maxPositionDelta: Number(maxPositionDelta.toFixed(9)),
+          };
+          fs.writeFileSync('parity-61004-summary.json', JSON.stringify({summary, rows}, null, 2));
+          console.log('PARITY_61004_SUMMARY ' + JSON.stringify(summary));
+          NODE
+
+      - name: Publish parity diagnostic status
+        if: always()
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        shell: bash
+        run: |
+          node <<'NODE'
+          const fs = require('fs');
+          let state = 'failure';
+          let description = '61004 parity summary missing';
+          if (fs.existsSync('parity-61004-summary.json')) {
+            const {summary} = JSON.parse(fs.readFileSync('parity-61004-summary.json', 'utf8'));
+            state = 'success';
+            description =
+              '61004 v>0.01=' + summary.firstVelocityThreshold['0.01'] +
+              ' v>0.1=' + summary.firstVelocityThreshold['0.1'] +
+              ' contact=' + summary.firstContactMismatch;
+          }
+          fs.writeFileSync('/tmp/parity-status.json', JSON.stringify({
+            state,
+            context: 'roulette/parity-61004',
+            description: description.slice(0, 140),
+            target_url:
+              'https://github.com/' + process.env.GITHUB_REPOSITORY +
+              '/actions/runs/' + process.env.GITHUB_RUN_ID,
+          }));
+          NODE
+          curl --fail-with-body --silent --show-error \
+            -X POST \
+            -H "Accept: application/vnd.github+json" \
+            -H "Authorization: Bearer $GH_TOKEN" \
+            -H "X-GitHub-Api-Version: 2022-11-28" \
+            "https://api.github.com/repos/$GITHUB_REPOSITORY/statuses/$GITHUB_SHA" \
+            --data-binary @/tmp/parity-status.json
+
+      - name: Upload evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: roulette-61004-parity-trace
+          path: |
+            artifacts/roulette-physics-lab/parity-browser-61004.json
+            parity-browser-61004.log
+            parity-server-61004.log
+            parity-61004-summary.json
+            /tmp/roulette-parity-vite.log
+          if-no-files-found: warn
