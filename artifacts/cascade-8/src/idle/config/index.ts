@@ -238,3 +238,18 @@ export const FAN_CLUB_BUSINESS = {
     },
   ],
 } as const satisfies BusinessDefinition;
+
+
+export const VAULT_LEVELS = [
+  { level: 1, capacityHours: 1 },
+  { level: 2, capacityHours: 2 },
+  { level: 3, capacityHours: 4 },
+  { level: 4, capacityHours: 8 },
+  { level: 5, capacityHours: 12 },
+  { level: 6, capacityHours: 24 },
+] as const;
+
+export type VaultLevel = (typeof VAULT_LEVELS)[number]["level"];
+
+export const DEFAULT_VAULT_LEVEL: VaultLevel = 1;
+export const MAX_VAULT_LEVEL: VaultLevel = 6;
