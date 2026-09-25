@@ -35,7 +35,7 @@ describe("final Idle UI integration", () => {
     expect(idleIndexSource).toContain("upgradeIdleVault(businessId)");
   });
 
-  it("keeps collect and main business upgrade actions alongside Kasa", () => {
+  it("keeps collect plus Details-backed business upgrade actions alongside Kasa", () => {
     expect(idleIndexSource).toContain("collectIdleBusiness(businessId)");
     expect(idleIndexSource).toContain("upgradeIdleBusiness(businessId)");
   });
@@ -259,45 +259,57 @@ describe("Businesses card information hierarchy", () => {
     expect(componentsSource).toContain('"GELİR BİRİKİYOR"');
   });
 
-  it("shows the next business target with cost and real hourly income gain", () => {
-    expect(componentsSource).toContain("data-business-next-panel");
-    expect(componentsSource).toContain("data-business-next-name");
-    expect(componentsSource).toContain("data-business-next-cost");
-    expect(componentsSource).toContain("data-business-next-gain");
-    expect(componentsSource).toContain("incomeGainCents");
-    expect(componentsSource).toContain("incomeGainPercent");
-    expect(componentsSource).toContain('"ZİRVEYE ULAŞTI"');
+  it("removes upgrade comparison content from the main card while keeping it for Details", () => {
+    expect(componentsSource).not.toContain("data-business-next-panel");
+    expect(componentsSource).not.toContain("data-business-next-name");
+    expect(componentsSource).not.toContain("data-business-next-cost");
+    expect(componentsSource).not.toContain("data-business-next-gain");
+    expect(idleIndexSource).toContain("data-idle-next-comparison");
+    expect(idleIndexSource).toContain('"ZİRVEYE ULAŞTI"');
   });
 
-  it("styles accrued cash and the next-upgrade panel as the dominant hierarchy", () => {
-    expect(idleCssSource).toContain("/* Part 6 — card information hierarchy / upgrade target */");
-    expect(idleCssSource).toContain(".business-card-accrued-heading");
-    expect(idleCssSource).toContain("font-size: clamp(29px, 2.4vw, 36px)");
-    expect(idleCssSource).toContain(".business-card-next");
-    expect(idleCssSource).toContain('.business-card-next[data-next-state="max"]');
+  it("merges hourly income and vault capacity into one main-card panel", () => {
+    expect(componentsSource).toContain("business-card-operations");
+    expect(componentsSource).toContain("business-card-vault-heading");
+    expect(componentsSource).toContain("business-card-vault-meta");
+    expect(componentsSource).toContain("business-card-vault-meter");
+    expect(idleCssSource).toContain("/* Main-card refinement — simplified hierarchy / unified economy panel */");
+    expect(idleCssSource).toContain("/* Main-card refinement — Parts 3–4 meter + action layout */");
+    expect(idleCssSource).toContain("grid-template-columns: minmax(0, .84fr) minmax(0, 1.16fr)");
+    expect(idleCssSource).toContain("grid-column: 1 / -1");
+    expect(idleCssSource).toContain("height: 8px");
   });
 });
 
 
 describe("Businesses premium action states", () => {
-  it("exposes explicit collect, upgrade and vault action states", () => {
+  it("keeps collect and vault actions on the main card while business upgrades stay in Details", () => {
     expect(componentsSource).toContain('data-action-state="loading"');
     expect(componentsSource).toContain('collectButton.dataset.actionState = busy');
-    expect(componentsSource).toContain('upgradeButton.dataset.actionState = busy');
     expect(componentsSource).toContain('vaultUpgradeButton.dataset.actionState = busy');
+    expect(componentsSource).not.toContain('data-business-upgrade');
+    expect(idleIndexSource).toContain('data-idle-detail-upgrade');
+    expect(idleIndexSource).toContain('"purchase"');
     expect(componentsSource).toContain('"insufficient"');
-    expect(componentsSource).toContain('"purchase"');
     expect(componentsSource).toContain('"max"');
     expect(componentsSource).toContain('"full"');
   });
 
-  it("shows visible guidance for disabled and risky upgrade states", () => {
-    expect(componentsSource).toContain("data-business-collect-note");
-    expect(componentsSource).toContain("data-business-upgrade-note");
+  it("removes tiny action notes from main cards without removing Details guidance", () => {
+    expect(componentsSource).not.toContain("data-business-collect-note");
+    expect(componentsSource).not.toContain("data-business-upgrade-note");
     expect(componentsSource).toContain("Bakiye yetersiz.");
-    expect(componentsSource).toContain("Yükseltmede Kasa Lv1'e döner");
-    expect(componentsSource).toContain("Tüm seviyeler tamamlandı");
     expect(componentsSource).toContain("Kasa maksimum seviyede.");
+    expect(idleIndexSource).toContain("Yükseltme sonrası Kasa Lv1'e döner");
+    expect(idleIndexSource).toContain("İşletme gelişiminin zirvesindesin");
+  });
+
+  it("replaces the removed main-card upgrade slot with a single Details action", () => {
+    expect(componentsSource).toContain("business-card-action--details");
+    expect(componentsSource).toContain("business-card-secondary business-card-details");
+    expect((componentsSource.match(/data-business-details/g) ?? []).length).toBe(1);
+    expect(idleCssSource).toContain("grid-template-columns: minmax(0, 1.12fr) minmax(0, .88fr)");
+    expect(idleCssSource).toContain(".business-card-action--details .business-card-details");
   });
 
   it("styles ready, insufficient, max, locked and busy actions distinctly", () => {
@@ -325,7 +337,8 @@ describe("Businesses dedicated mobile cards", () => {
     expect(idleCssSource).toContain("border-radius: 18px");
     expect(idleCssSource).toContain("grid-template-columns: 1fr");
     expect(idleCssSource).toContain(".business-card-action--collect");
-    expect(idleCssSource).toContain(".business-card-action--upgrade");
+    expect(idleCssSource).toContain(".business-card-action--details");
+    expect(idleCssSource).toContain(".business-card-operations");
   });
 
   it("keeps the mobile value hierarchy large and touch-first", () => {
@@ -754,5 +767,82 @@ describe("Businesses final responsive QA", () => {
     expect(idleCssSource).toContain(".business-detail-scroll");
     expect(idleCssSource).toContain("-webkit-overflow-scrolling: touch");
     expect(idleCssSource).toContain("padding-bottom: max(18px, env(safe-area-inset-bottom))");
+  });
+});
+
+
+describe("Businesses premium typography pass", () => {
+  it("uses one corporate UI font stack across the main Businesses screen and Details", () => {
+    expect(idleCssSource).toContain("/* Premium typography pass — main cards + Details */");
+    expect(idleCssSource).toContain('--idle-font-ui: Inter, ui-sans-serif, system-ui');
+    expect(idleCssSource).toContain(".business-detail-drawer {");
+    expect(idleCssSource).toContain("font-family: var(--idle-font-ui)");
+  });
+
+  it("raises formerly micro-sized main-card labels and actions into a readable hierarchy", () => {
+    expect(idleCssSource).toContain(".business-card .business-row-title small");
+    expect(idleCssSource).toContain("font-size: 10px");
+    expect(idleCssSource).toContain("font-size: 23px");
+    expect(idleCssSource).toContain("font-size: 12px");
+    expect(idleCssSource).toContain("font-size: 11px");
+  });
+
+  it("raises Details tabs, summaries, progression trees and CTAs above the old 5–8px treatment", () => {
+    expect(idleCssSource).toContain(".business-detail-tabs button");
+    expect(idleCssSource).toContain(".business-level-tree-legend span");
+    expect(idleCssSource).toContain(".business-vault-tree-legend span");
+    expect(idleCssSource).toContain(".business-next-comparison-cta");
+    expect(idleCssSource).toContain(".business-vault-detail-cta");
+    expect(idleCssSource).toContain("min-height: 48px");
+  });
+
+  it("keeps mobile and short landscape Details readable instead of collapsing labels", () => {
+    expect(idleCssSource).toContain("Mobile remains readable instead of collapsing into 5–7px labels.");
+    expect(idleCssSource).toContain("@media (orientation: landscape) and (max-height: 520px) and (max-width: 950px)");
+    expect(idleCssSource).toContain("font-size: 8px");
+  });
+});
+
+
+describe("Businesses refinement final responsive regression", () => {
+  it("gives both 390px and 430px phones a single-column economy panel", () => {
+    expect(idleCssSource).toContain("/* Refinement Parts 7–8 — responsive readability + overflow hardening */");
+    expect(idleCssSource).toContain("@media (max-width: 520px)");
+    expect(idleCssSource).toContain(".business-card .business-card-operations");
+    expect(idleCssSource).toContain("grid-template-columns: 1fr");
+  });
+
+  it("lets live vault timing wrap rather than disappear behind ellipsis", () => {
+    expect(idleCssSource).toContain(".business-card .business-card-vault-meta small");
+    expect(idleCssSource).toContain("text-overflow: clip");
+    expect(idleCssSource).toContain("white-space: normal");
+    expect(idleCssSource).toContain("flex-wrap: wrap");
+  });
+
+  it("stacks dense Details comparisons and vault nodes on phone widths", () => {
+    expect(idleCssSource).toContain(".business-detail-summary");
+    expect(idleCssSource).toContain(".business-next-comparison-flow,");
+    expect(idleCssSource).toContain(".business-vault-next-flow");
+    expect(idleCssSource).toContain(".vault-level-node-card");
+    expect(idleCssSource).toContain(".vault-level-node-cost");
+  });
+
+  it("keeps the simplified main-card action contract intact", () => {
+    expect(componentsSource).toContain("business-card-action--collect");
+    expect(componentsSource).toContain("business-card-action--details");
+    expect(componentsSource).not.toContain("data-business-upgrade");
+    expect((componentsSource.match(/data-business-details/g) ?? []).length).toBe(1);
+    expect(idleIndexSource).toContain('button.matches("[data-business-details]")');
+  });
+
+  it("retains all critical live state and Details upgrade regression hooks", () => {
+    expect(componentsSource).toContain('"KASA DOLU"');
+    expect(componentsSource).toContain('"MAX SEVİYE"');
+    expect(componentsSource).toContain('"insufficient"');
+    expect(componentsSource).toContain('"full"');
+    expect(idleIndexSource).toContain("runCollectBusiness");
+    expect(idleIndexSource).toContain("runCollectAll");
+    expect(idleIndexSource).toContain("data-idle-detail-upgrade");
+    expect(idleIndexSource).toContain("data-idle-detail-vault-upgrade");
   });
 });
