@@ -121,3 +121,30 @@ describe("Businesses premium route shell", () => {
     expect(idleCssSource).toContain("@media (max-width: 420px)");
   });
 });
+
+
+describe("Businesses premium command header", () => {
+  it("shows a clear club-operations identity and shared wallet hierarchy", () => {
+    expect(idleIndexSource).toContain("KULÜP OPERASYON MERKEZİ");
+    expect(idleIndexSource).toContain("FAHRİNİN YOLU // CLUB EMPIRE");
+    expect(idleIndexSource).toContain("ORTAK BAKİYE");
+    expect(idleIndexSource).toContain("TÜM OYUNLARDA KULLANILIR");
+  });
+
+  it("renders and updates the global 27-level club progression", () => {
+    expect(idleIndexSource).toContain("TOTAL_BUSINESS_PROGRESSION_LEVELS");
+    expect(idleIndexSource).toContain("data-idle-progression-levels");
+    expect(idleIndexSource).toContain("data-idle-progression-track");
+    expect(idleIndexSource).toContain("data-idle-progression-bar");
+    expect(idleIndexSource).toContain("completedBusinessLevels");
+    expect(idleIndexSource).toContain('progressionTrackNode.setAttribute(');
+  });
+
+  it("uses a responsive premium header layout on desktop and mobile", () => {
+    expect(idleCssSource).toContain("/* Part 3 — premium command header */");
+    expect(idleCssSource).toContain(".businesses-header-main");
+    expect(idleCssSource).toContain(".businesses-progression");
+    expect(idleCssSource).toContain("grid-template-columns: minmax(0, 1fr) minmax(270px, 330px)");
+    expect(idleCssSource).toContain("grid-template-columns: minmax(0, 1fr) minmax(128px, 42%)");
+  });
+});
