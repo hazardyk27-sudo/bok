@@ -361,6 +361,19 @@ export class IdleRepository {
       );
 
       await client.query(
+        `INSERT INTO idle_ledger
+           (id, session_id, business_id, kind, amount_cents, idempotency_key)
+         VALUES ($1, $2, $3, 'COLLECT_CREDIT', $4, $5)`,
+        [
+          randomUUID(),
+          sessionId,
+          businessId,
+          settlement.walletCreditCents,
+          `collect:${idempotencyKey}`,
+        ],
+      );
+
+      await client.query(
         `UPDATE idle_action_receipts
             SET collected_cents = $2,
                 remainder_microcents = $3,
