@@ -291,6 +291,64 @@ export const BUSINESSES_MARKUP = `
               <strong data-idle-detail-current>—</strong>
               <small data-idle-detail-next>Sonraki seviye bilgisi yükleniyor…</small>
             </div>
+
+            <section
+              class="business-next-comparison"
+              data-idle-next-comparison
+              data-comparison-state="loading"
+              aria-label="Sonraki seviye karşılaştırması"
+            >
+              <header class="business-next-comparison-header">
+                <div>
+                  <span>SONRAKİ YÜKSELTME</span>
+                  <strong data-idle-next-comparison-title>—</strong>
+                </div>
+                <span class="business-next-comparison-gain" data-idle-next-comparison-percent>—</span>
+              </header>
+
+              <div class="business-next-comparison-flow">
+                <div class="business-next-comparison-side business-next-comparison-side--current">
+                  <span>MEVCUT</span>
+                  <strong data-idle-next-current-hourly>—</strong>
+                  <small data-idle-next-current-daily>—</small>
+                </div>
+
+                <div class="business-next-comparison-arrow" aria-hidden="true">
+                  <span>→</span>
+                </div>
+
+                <div class="business-next-comparison-side business-next-comparison-side--next">
+                  <span>SONRAKİ</span>
+                  <strong data-idle-next-target-hourly>—</strong>
+                  <small data-idle-next-target-daily>—</small>
+                </div>
+              </div>
+
+              <div class="business-next-comparison-deltas">
+                <div>
+                  <span>SAATLİK ARTIŞ</span>
+                  <strong data-idle-next-hourly-gain>—</strong>
+                </div>
+                <div>
+                  <span>GÜNLÜK ARTIŞ</span>
+                  <strong data-idle-next-daily-gain>—</strong>
+                </div>
+                <div>
+                  <span>YATIRIM</span>
+                  <strong data-idle-next-cost>—</strong>
+                </div>
+              </div>
+
+              <button
+                type="button"
+                class="business-next-comparison-cta"
+                data-idle-detail-upgrade
+                data-action-state="loading"
+                disabled
+              >YÜKLENİYOR</button>
+              <small class="business-next-comparison-note" data-idle-detail-upgrade-note>—</small>
+            </section>
+
             <div class="business-level-tree-legend" aria-label="Seviye durumları">
               <span data-legend-state="completed">TAMAMLANDI</span>
               <span data-legend-state="current">MEVCUT</span>
@@ -433,7 +491,7 @@ export class BusinessesClient {
       const detailBusiness = live.businesses.find(
         (business) => business.businessId === this.detailBusinessId,
       );
-      if (detailBusiness) this.renderBusinessDetails(detailBusiness);
+      if (detailBusiness) this.renderBusinessDetails(detailBusiness, walletBalanceCents);
     }
 
     const activeBusinesses = live.businesses.filter(
@@ -486,6 +544,13 @@ export class BusinessesClient {
     if (button.matches("[data-idle-detail-tab]")) {
       const tab = button.dataset.idleDetailTab as BusinessDetailTab | undefined;
       if (tab === "business" || tab === "vault") this.setDetailTab(tab);
+      return;
+    }
+
+    if (button.matches("[data-idle-detail-upgrade]")) {
+      const businessId = this.detailBusinessId;
+      if (!businessId || this.busyBusinesses.has(businessId)) return;
+      void this.runBusinessAction(businessId, () => upgradeIdleBusiness(businessId));
       return;
     }
 
@@ -573,7 +638,10 @@ export class BusinessesClient {
     }
   }
 
-  private renderBusinessDetails(business: ReturnType<typeof projectIdleStateLive>["businesses"][number]) {
+  private renderBusinessDetails(
+    business: ReturnType<typeof projectIdleStateLive>["businesses"][number],
+    walletBalanceCents: number,
+  ) {
     const definition = BUSINESS_DETAIL_DEFINITIONS[business.businessId];
     const currentStage = business.businessLevel === null
       ? null
@@ -595,6 +663,18 @@ export class BusinessesClient {
     const nextNode = this.root.querySelector<HTMLElement>("[data-idle-detail-next]");
     const vaultCurrentNode = this.root.querySelector<HTMLElement>("[data-idle-detail-vault-current]");
     const businessLevelTreeNode = this.root.querySelector<HTMLElement>("[data-idle-business-level-tree]");
+    const comparisonNode = this.root.querySelector<HTMLElement>("[data-idle-next-comparison]");
+    const comparisonTitleNode = this.root.querySelector<HTMLElement>("[data-idle-next-comparison-title]");
+    const comparisonPercentNode = this.root.querySelector<HTMLElement>("[data-idle-next-comparison-percent]");
+    const currentHourlyNode = this.root.querySelector<HTMLElement>("[data-idle-next-current-hourly]");
+    const currentDailyNode = this.root.querySelector<HTMLElement>("[data-idle-next-current-daily]");
+    const targetHourlyNode = this.root.querySelector<HTMLElement>("[data-idle-next-target-hourly]");
+    const targetDailyNode = this.root.querySelector<HTMLElement>("[data-idle-next-target-daily]");
+    const hourlyGainNode = this.root.querySelector<HTMLElement>("[data-idle-next-hourly-gain]");
+    const dailyGainNode = this.root.querySelector<HTMLElement>("[data-idle-next-daily-gain]");
+    const nextCostNode = this.root.querySelector<HTMLElement>("[data-idle-next-cost]");
+    const detailUpgradeButton = this.root.querySelector<HTMLButtonElement>("[data-idle-detail-upgrade]");
+    const detailUpgradeNoteNode = this.root.querySelector<HTMLElement>("[data-idle-detail-upgrade-note]");
 
     if (
       !eyebrowNode
@@ -609,6 +689,18 @@ export class BusinessesClient {
       || !nextNode
       || !vaultCurrentNode
       || !businessLevelTreeNode
+      || !comparisonNode
+      || !comparisonTitleNode
+      || !comparisonPercentNode
+      || !currentHourlyNode
+      || !currentDailyNode
+      || !targetHourlyNode
+      || !targetDailyNode
+      || !hourlyGainNode
+      || !dailyGainNode
+      || !nextCostNode
+      || !detailUpgradeButton
+      || !detailUpgradeNoteNode
       || !vault
     ) {
       throw new Error("IDLE_DETAIL_SHELL_INCOMPLETE");
@@ -647,6 +739,80 @@ export class BusinessesClient {
       business.businessId,
       business.businessLevel,
     );
+
+    if (nextStage) {
+      const currentHourlyCents = currentStage?.hourlyIncomeDisplayCents ?? 0;
+      const currentDailyCents = currentStage?.dailyIncomeCents ?? 0;
+      const hourlyGainCents = Math.max(
+        0,
+        nextStage.hourlyIncomeDisplayCents - currentHourlyCents,
+      );
+      const dailyGainCents = Math.max(
+        0,
+        nextStage.dailyIncomeCents - currentDailyCents,
+      );
+      const gainPercent = currentHourlyCents > 0
+        ? Math.round(hourlyGainCents / currentHourlyCents * 100)
+        : null;
+      const shortfallCents = Math.max(0, nextStage.costCents - walletBalanceCents);
+      const canAfford = walletBalanceCents >= nextStage.costCents;
+      const busy = this.busyBusinesses.has(business.businessId);
+      const isPurchase = currentStage === null;
+
+      comparisonNode.dataset.comparisonState = isPurchase ? "purchase" : "upgrade";
+      comparisonTitleNode.textContent = `Lv${nextStage.level} · ${nextStage.name}`;
+      comparisonPercentNode.textContent = gainPercent === null
+        ? "YENİ GELİR"
+        : `+%${gainPercent}`;
+
+      currentHourlyNode.textContent = currentStage
+        ? `${formatCredits(currentHourlyCents)} /sa`
+        : "$0.00 /sa";
+      currentDailyNode.textContent = currentStage
+        ? `${formatCredits(currentDailyCents)} /gün`
+        : "$0.00 /gün";
+      targetHourlyNode.textContent = `${formatCredits(nextStage.hourlyIncomeDisplayCents)} /sa`;
+      targetDailyNode.textContent = `${formatCredits(nextStage.dailyIncomeCents)} /gün`;
+      hourlyGainNode.textContent = `+${formatCredits(hourlyGainCents)} /sa`;
+      dailyGainNode.textContent = `+${formatCredits(dailyGainCents)} /gün`;
+      nextCostNode.textContent = `${formatCredits(nextStage.costCents)}`;
+
+      detailUpgradeButton.textContent = isPurchase
+        ? `SATIN AL · ${formatCredits(nextStage.costCents)}`
+        : `YÜKSELT · ${formatCredits(nextStage.costCents)}`;
+      detailUpgradeButton.disabled = busy || !canAfford;
+      detailUpgradeButton.dataset.actionState = busy
+        ? "busy"
+        : canAfford
+          ? isPurchase ? "purchase" : "ready"
+          : "insufficient";
+      detailUpgradeNoteNode.textContent = busy
+        ? "İşlem sürüyor"
+        : canAfford
+          ? isPurchase
+            ? "İşletmeyi aç ve pasif gelir üretmeye başla"
+            : "Yükseltme sonrası Kasa Lv1'e döner"
+          : `Bakiye yetersiz · ${formatCredits(shortfallCents)} eksik`;
+    } else {
+      comparisonNode.dataset.comparisonState = "max";
+      comparisonTitleNode.textContent = "ZİRVEYE ULAŞTI";
+      comparisonPercentNode.textContent = "MAX";
+      currentHourlyNode.textContent = currentStage
+        ? `${formatCredits(currentStage.hourlyIncomeDisplayCents)} /sa`
+        : "$0.00 /sa";
+      currentDailyNode.textContent = currentStage
+        ? `${formatCredits(currentStage.dailyIncomeCents)} /gün`
+        : "$0.00 /gün";
+      targetHourlyNode.textContent = "—";
+      targetDailyNode.textContent = "Tüm seviyeler tamamlandı";
+      hourlyGainNode.textContent = "MAX";
+      dailyGainNode.textContent = "MAX";
+      nextCostNode.textContent = "—";
+      detailUpgradeButton.textContent = "MAX SEVİYE";
+      detailUpgradeButton.disabled = true;
+      detailUpgradeButton.dataset.actionState = "max";
+      detailUpgradeNoteNode.textContent = "İşletme gelişiminin zirvesindesin";
+    }
   }
 
   private async runBusinessAction(
