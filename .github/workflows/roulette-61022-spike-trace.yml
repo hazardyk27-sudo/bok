@@ -1,4 +1,4 @@
-name: Roulette 61022 Spike Trace
+name: Roulette 61022 Spike Verification
 
 on:
   push:
@@ -6,12 +6,14 @@ on:
       - feature/roulette
     paths:
       - '.github/workflows/roulette-61022-spike-trace.yml'
+      - 'artifacts/roulette-physics-lab/src/Part2SceneViewport.tsx'
+      - 'artifacts/api-server/src/physics-lab/simulation.ts'
   workflow_dispatch:
 
 jobs:
-  trace:
+  verify:
     runs-on: ubuntu-latest
-    timeout-minutes: 7
+    timeout-minutes: 8
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -52,7 +54,7 @@ jobs:
           cat /tmp/roulette-61022-vite.log
           exit 1
 
-      - name: Run seed 61022 spike trace
+      - name: Verify seed 61022 has no spike
         shell: bash
         run: |
           set -euo pipefail
@@ -60,17 +62,99 @@ jobs:
           ROULETTE_PART6_OUTPUT="artifacts/roulette-physics-lab/part6-seed-61022-spike.json" \
           ROULETTE_PART6_TIMEOUT_MS='90000' \
           ROULETTE_PART6_EXPECTED_SEEDS='1' \
-          node scripts/roulette-part6-runtime.mjs | tee part6-seed-61022-spike.log
+          node scripts/roulette-part6-runtime.mjs > part6-seed-61022-spike.log 2>&1
 
-          grep 'PART6_SEED_61022_FIRST_SPIKE' part6-seed-61022-spike.log
+          node - <<'NODE'
+          const fs = require('fs');
+          const data = JSON.parse(fs.readFileSync(
+            'artifacts/roulette-physics-lab/part6-seed-61022-spike.json',
+            'utf8',
+          ));
+          const rows = data.telemetry?.results ?? data.seedTelemetry ?? [];
+          if (rows.length !== 1) throw new Error(`Expected one 61022 row, got ${rows.length}`);
+          const row = rows[0];
+          const out = {
+            seed: row.seed,
+            settled: row.settled,
+            timedOut: row.timedOut,
+            finalPocketNumber: row.finalPocketNumber,
+            peakSpeed: row.peakSpeed,
+            velocitySpike: row.velocitySpike,
+            artificialAcceleration: row.artificialAcceleration,
+            escaped: row.escaped,
+            clipping: row.clipping,
+            tunneling: row.tunneling,
+          };
+          console.log('SEED_61022_SPIKE_FIX_RESULT ' + JSON.stringify(out));
+          if (row.seed !== 61022) throw new Error('Unexpected seed');
+          if (row.velocitySpike || row.artificialAcceleration) {
+            throw new Error('61022 still has artificial energy injection');
+          }
+          if (row.escaped || row.clipping || row.tunneling) {
+            throw new Error('61022 introduced a containment regression');
+          }
+          NODE
+
+      - name: Run three short control seeds
+        shell: bash
+        run: |
+          set -euo pipefail
+          ROULETTE_LAB_URL="http://127.0.0.1:4173/?part6Headless=1&part6SeedStartIndex=1&part6SeedCount=3&part6MaxDurationSeconds=12" \
+          ROULETTE_PART6_OUTPUT="artifacts/roulette-physics-lab/part6-spike-fix-controls.json" \
+          ROULETTE_PART6_TIMEOUT_MS='90000' \
+          ROULETTE_PART6_EXPECTED_SEEDS='3' \
+          node scripts/roulette-part6-runtime.mjs > part6-spike-fix-controls.log 2>&1
+
+          node - <<'NODE'
+          const fs = require('fs');
+          const expected = new Map([[61002,30],[61003,36],[61004,17]]);
+          const data = JSON.parse(fs.readFileSync(
+            'artifacts/roulette-physics-lab/part6-spike-fix-controls.json',
+            'utf8',
+          ));
+          const rows = data.telemetry?.results ?? data.seedTelemetry ?? [];
+          const failures = [];
+          for (const row of rows) {
+            const view = {
+              seed: row.seed,
+              settled: row.settled,
+              timedOut: row.timedOut,
+              finalPocketNumber: row.finalPocketNumber,
+              velocitySpike: row.velocitySpike,
+              artificialAcceleration: row.artificialAcceleration,
+              escaped: row.escaped,
+              clipping: row.clipping,
+              tunneling: row.tunneling,
+            };
+            console.log('SPIKE_FIX_CONTROL_CASE ' + JSON.stringify(view));
+            if (
+              !row.settled ||
+              row.timedOut ||
+              row.finalPocketNumber !== expected.get(row.seed) ||
+              row.velocitySpike ||
+              row.artificialAcceleration ||
+              row.escaped ||
+              row.clipping ||
+              row.tunneling
+            ) failures.push(view);
+          }
+          console.log('SPIKE_FIX_CONTROL_SUMMARY ' + JSON.stringify({
+            passed: rows.length - failures.length,
+            total: rows.length,
+            failures,
+          }));
+          if (rows.length !== 3 || failures.length) process.exit(1);
+          NODE
 
       - name: Upload evidence
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: roulette-61022-spike-trace
+          name: roulette-61022-spike-verification
           path: |
             artifacts/roulette-physics-lab/part6-seed-61022-spike.json
+            artifacts/roulette-physics-lab/part6-spike-fix-controls.json
             part6-seed-61022-spike.log
+            part6-spike-fix-controls.log
             /tmp/roulette-61022-vite.log
           if-no-files-found: warn
