@@ -327,3 +327,18 @@ export function getIdleTotalPassiveIncomeCentsPerHour(
 
   return totalDailyIncomeCents / 24;
 }
+
+
+/**
+ * Returns exactly what can be transferred if every business is collected now.
+ * Each business is settled to whole cents independently, so fractional
+ * microcents from different businesses must never be pooled together.
+ */
+export function getIdleTotalCollectableCents(
+  businesses: readonly IdleLiveBusinessState[],
+) {
+  return businesses.reduce(
+    (total, business) => total + business.collectableCents,
+    0,
+  );
+}
