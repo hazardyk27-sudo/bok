@@ -7,6 +7,7 @@ import type {
   BusinessDefinition,
   BusinessId,
   IdleBusinessServerState,
+  IdleBusinessUpgradeResponse,
   IdleCollectResponse,
   IdleLiveBusinessState,
   IdleStateEnvelope,
@@ -179,4 +180,30 @@ export async function collectIdleBusiness(
   }
 
   return response.json() as Promise<IdleCollectResponse>;
+}
+
+
+export async function upgradeIdleBusiness(
+  businessId: BusinessId,
+  idempotencyKey = crypto.randomUUID(),
+): Promise<IdleBusinessUpgradeResponse> {
+  const response = await fetch(
+    `/api/idle/businesses/${encodeURIComponent(businessId)}/upgrade`,
+    {
+      method: "POST",
+      credentials: "same-origin",
+      headers: {
+        Accept: "application/json",
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ idempotencyKey }),
+    },
+  );
+
+  if (!response.ok) {
+    const body = await response.json().catch(() => null) as { error?: string } | null;
+    throw new Error(body?.error ?? "IDLE_BUSINESS_UPGRADE_REQUEST_FAILED");
+  }
+
+  return response.json() as Promise<IdleBusinessUpgradeResponse>;
 }
