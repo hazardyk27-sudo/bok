@@ -32,3 +32,12 @@ describe("final Idle UI integration", () => {
     expect(idleIndexSource).toContain("upgradeIdleBusiness(businessId)");
   });
 });
+
+
+describe("Idle request failure handling", () => {
+  it("keeps request failures inside the page instead of leaking unhandled promises", () => {
+    expect(idleIndexSource).toContain("data-idle-error");
+    expect(idleIndexSource).toContain("this.setError(this.getErrorMessage(error))");
+    expect(idleIndexSource).toContain('return "İşletmeler sunucusuna bağlanılamadı. Lütfen tekrar dene."');
+  });
+});
