@@ -1240,6 +1240,50 @@ export async function simulatePhysicsLabRound(
       });
 
       const preInwardTrackContact = stepContactRoles.has("dark-race");
+      if (seed === "61004" && step <= 90) {
+        const parityAngularVelocity = ballBody.angvel();
+        const parityRadialVelocity =
+          radius > 0
+            ? (translation.x * velocity.x + translation.z * velocity.z) / radius
+            : 0;
+        console.info(
+          "ROULETTE_PARITY_STEP",
+          JSON.stringify({
+            source: "server",
+            seed,
+            step,
+            position: {
+              x: Number(translation.x.toFixed(9)),
+              y: Number(translation.y.toFixed(9)),
+              z: Number(translation.z.toFixed(9)),
+            },
+            velocity: {
+              x: Number(velocity.x.toFixed(9)),
+              y: Number(velocity.y.toFixed(9)),
+              z: Number(velocity.z.toFixed(9)),
+            },
+            speed: Number(ballSpeed.toFixed(9)),
+            radius: Number(radius.toFixed(9)),
+            radialVelocity: Number(parityRadialVelocity.toFixed(9)),
+            verticalVelocity: Number(velocity.y.toFixed(9)),
+            angularVelocity: {
+              x: Number(parityAngularVelocity.x.toFixed(9)),
+              y: Number(parityAngularVelocity.y.toFixed(9)),
+              z: Number(parityAngularVelocity.z.toFixed(9)),
+            },
+            angularSpeed: Number(
+              Math.hypot(
+                parityAngularVelocity.x,
+                parityAngularVelocity.y,
+                parityAngularVelocity.z,
+              ).toFixed(9),
+            ),
+            contactRoles: [...stepContactRoles].sort(),
+            darkRaceContact: preInwardTrackContact,
+            outerWallContact: stepContactRoles.has("dark-race-outer-wall"),
+          }),
+        );
+      }
       if (step === 0) {
         logPreInwardCheckpoint(
           "LAUNCH_STEP_0",
