@@ -18,3 +18,37 @@ export function assertIdleActionReceiptReplay(
     throw new Error("IDEMPOTENCY_KEY_REUSED");
   }
 }
+
+
+export type IdleBusinessUpgradeStage = {
+  level: number;
+  costCents: number;
+};
+
+export function resolveBusinessUpgrade(
+  currentBusinessLevel: number | null,
+  levels: readonly IdleBusinessUpgradeStage[],
+  balanceCents: number,
+) {
+  const targetBusinessLevel = currentBusinessLevel === null
+    ? 0
+    : currentBusinessLevel + 1;
+  const targetStage = levels.find(
+    (stage) => stage.level === targetBusinessLevel,
+  );
+
+  if (!targetStage) throw new Error("IDLE_BUSINESS_MAX_LEVEL");
+  if (!Number.isSafeInteger(balanceCents) || balanceCents < 0) {
+    throw new Error("INVALID_IDLE_WALLET_BALANCE");
+  }
+  if (balanceCents < targetStage.costCents) {
+    throw new Error("INSUFFICIENT_IDLE_CREDITS");
+  }
+
+  return {
+    targetBusinessLevel,
+    costCents: targetStage.costCents,
+    balanceAfterCents: balanceCents - targetStage.costCents,
+    resetVaultLevel: 1 as const,
+  };
+}
