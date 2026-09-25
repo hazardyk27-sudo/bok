@@ -5051,6 +5051,50 @@ export function Part2SceneViewport({
               velocity.z - rotorTangentialVelocity.z,
             );
             if (
+              (run.seed === 61001 || run.seed === 61004) &&
+              elapsed >= activePart6MaxDurationSeconds - 2 &&
+              step % 12 === 0
+            ) {
+              const localPocketAngle = normalizedAngle(
+                Math.atan2(position.x, position.z) - rotorAngle,
+              );
+              const tracePocketIndex =
+                radius >= pocketResultCenterRadiusMin &&
+                radius <= pocketResultCenterRadiusMax
+                  ? pocketIndexFromLocalPosition(
+                      Math.sin(localPocketAngle),
+                      Math.cos(localPocketAngle),
+                    )
+                  : null;
+              console.info(
+                'PART6_TIMEOUT_FINAL_CONTACT_TRACE',
+                JSON.stringify({
+                  seed: run.seed,
+                  step,
+                  elapsed: Number(elapsed.toFixed(6)),
+                  radius: Number(radius.toFixed(6)),
+                  bottom: Number(bottom.toFixed(6)),
+                  speed: Number(speed.toFixed(6)),
+                  rotorRelativeSpeed: Number(
+                    finalRotorRelativeSpeed.toFixed(6),
+                  ),
+                  pocketIndex: tracePocketIndex,
+                  pocketEntered,
+                  settledFrames,
+                  settleChecks: {
+                    rotorRelative:
+                      finalRotorRelativeSpeed < 0.12,
+                    radius:
+                      radius >= pocketResultCenterRadiusMin &&
+                      radius <= pocketResultCenterRadiusMax,
+                    floor:
+                      Math.abs(bottom - POCKET_FLOOR_Y) <= 0.12,
+                  },
+                  contactRoles: [...stepContactRoles].sort(),
+                }),
+              );
+            }
+            if (
               pocketEntered &&
               finalRotorRelativeSpeed < 0.12 &&
               radius >= pocketResultCenterRadiusMin &&
