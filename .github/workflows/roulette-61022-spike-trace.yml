@@ -64,6 +64,8 @@ jobs:
           ROULETTE_PART6_EXPECTED_SEEDS='1' \
           node scripts/roulette-part6-runtime.mjs > part6-seed-61022-spike.log 2>&1
 
+          grep 'PART6_SEED_61022_FIRST_SPIKE' part6-seed-61022-spike.log || true
+
           node - <<'NODE'
           const fs = require('fs');
           const data = JSON.parse(fs.readFileSync(
