@@ -1,12 +1,18 @@
 import { describe, expect, it } from "vitest";
-import type { IdleBusinessServerState, IdleLiveBusinessState } from "../types";
+import type {
+  IdleBusinessServerState,
+  IdleLiveBusinessState,
+  IdleStateEnvelope,
+} from "../types";
 import {
   getIdleTotalCollectableCents,
   projectIdleBusinessLive,
+  projectIdleStateLive,
 } from "./index";
 
 const MICRO_CENTS_PER_CENT = 1_000_000;
 const ONE_HOUR_MS = 60 * 60 * 1000;
+const ONE_DAY_MS = 24 * ONE_HOUR_MS;
 
 function createStadiumLevelZeroState(): IdleBusinessServerState {
   const dailyIncomeCents = 10_000;
@@ -65,5 +71,35 @@ describe("Lv1 one-hour vault", () => {
     expect(longAfterFull.collectableCents).toBe(
       Math.floor(state.vaultCapacityMicrocents / MICRO_CENTS_PER_CENT),
     );
+  });
+});
+
+
+describe("Lv6 twenty-four-hour vault", () => {
+  it("fills exactly at 24 hours and never grows beyond one full day", () => {
+    const dailyIncomeCents = 10_000;
+    const capacityMicrocents = dailyIncomeCents * MICRO_CENTS_PER_CENT;
+    const state: IdleBusinessServerState = {
+      ...createStadiumLevelZeroState(),
+      vaultLevel: 6,
+      vaultCapacityMicrocents: capacityMicrocents,
+      remainingCapacityMicrocents: capacityMicrocents,
+    };
+
+    const beforeFull = projectIdleBusinessLive(state, ONE_DAY_MS - 1);
+    const atFull = projectIdleBusinessLive(state, ONE_DAY_MS);
+    const threeDaysLater = projectIdleBusinessLive(state, ONE_DAY_MS * 3);
+
+    expect(beforeFull.liveIsVaultFull).toBe(false);
+    expect(beforeFull.liveAccruedMicrocents).toBeLessThan(capacityMicrocents);
+
+    expect(atFull.liveIsVaultFull).toBe(true);
+    expect(atFull.liveAccruedMicrocents).toBe(capacityMicrocents);
+    expect(atFull.liveRemainingCapacityMicrocents).toBe(0);
+    expect(atFull.collectableCents).toBe(dailyIncomeCents);
+
+    expect(threeDaysLater.liveIsVaultFull).toBe(true);
+    expect(threeDaysLater.liveAccruedMicrocents).toBe(capacityMicrocents);
+    expect(threeDaysLater.collectableCents).toBe(dailyIncomeCents);
   });
 });
