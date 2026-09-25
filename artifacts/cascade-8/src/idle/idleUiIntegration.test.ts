@@ -601,3 +601,52 @@ describe("Businesses next-level comparison card", () => {
     expect(idleCssSource).toContain("grid-template-columns: 1fr 1fr");
   });
 });
+
+
+describe("Businesses vault progression tree", () => {
+  it("replaces the vault placeholder with the real 1h-24h progression tree", () => {
+    expect(idleIndexSource).toContain("data-idle-vault-level-tree");
+    expect(idleIndexSource).toContain("renderVaultLevelTree");
+    expect(idleIndexSource).toContain("VAULT_LEVELS.map");
+    expect(idleIndexSource).toContain("1SA → 24SA");
+  });
+
+  it("uses the approved 1, 2, 4, 8, 12 and 24 hour capacity ladder", () => {
+    expect(idleIndexSource).toContain("vault.capacityHours");
+    expect(idleIndexSource).toContain("VAULT_UPGRADE_STEPS");
+    expect(idleIndexSource).toContain("getVaultUpgradeCostCents");
+    expect(idleIndexSource).toContain("step.costPercent");
+  });
+
+  it("derives completed, current, next and locked vault states from live level", () => {
+    expect(idleIndexSource).toContain("function getVaultLevelState");
+    expect(idleIndexSource).toContain('data-vault-state="');
+    expect(idleIndexSource).toContain('"completed"');
+    expect(idleIndexSource).toContain('"current"');
+    expect(idleIndexSource).toContain('"future"');
+    expect(idleIndexSource).toContain('"locked"');
+  });
+
+  it("connects the Details vault CTA to the existing server-backed upgrade action", () => {
+    expect(idleIndexSource).toContain("data-idle-detail-vault-upgrade");
+    expect(idleIndexSource).toContain('button.matches("[data-idle-detail-vault-upgrade]")');
+    expect(idleIndexSource).toContain("upgradeIdleVault(businessId)");
+    expect(idleIndexSource).toContain("getIdleVaultUpgradePreview(business)");
+    expect(idleIndexSource).toContain("detailVaultUpgradeButton.dataset.actionState");
+  });
+
+  it("keeps the vault reset rule clearly visible without changing the economy", () => {
+    expect(idleIndexSource).toContain("İŞLETME YÜKSELTME UYARISI");
+    expect(idleIndexSource).toContain("Kasa Lv1'e sıfırlanır");
+    expect(idleIndexSource).toContain("Birikmiş gelir korunur");
+  });
+
+  it("styles a premium responsive vault timeline with max-level treatment", () => {
+    expect(idleCssSource).toContain("/* Part 15 — real 1h→24h vault progression tree */");
+    expect(idleCssSource).toContain(".vault-level-tree");
+    expect(idleCssSource).toContain('.vault-level-node[data-vault-state="current"]');
+    expect(idleCssSource).toContain('.vault-level-node[data-vault-state="future"]');
+    expect(idleCssSource).toContain('.vault-level-node[data-vault-level="6"]');
+    expect(idleCssSource).toContain(".business-vault-detail-cta");
+  });
+});
