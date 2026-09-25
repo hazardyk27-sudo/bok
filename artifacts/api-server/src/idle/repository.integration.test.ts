@@ -6,16 +6,30 @@ const enabled = process.env.IDLE_DB_INTEGRATION === "1";
 describe.skipIf(!enabled)("IdleRepository PostgreSQL integration", () => {
   let pool: (typeof import("@workspace/db"))["pool"];
   let idleRepository: import("./repository").IdleRepository;
+  let server: import("node:http").Server;
+  let baseUrl = "";
 
   beforeAll(async () => {
     const dbModule = await import("@workspace/db");
     const repositoryModule = await import("./repository");
+    const appModule = await import("../app");
     pool = dbModule.pool;
     idleRepository = repositoryModule.idleRepository;
+
+    await new Promise<void>((resolve) => {
+      server = appModule.default.listen(0, "127.0.0.1", resolve);
+    });
+    const address = server.address();
+    if (!address || typeof address === "string") {
+      throw new Error("IDLE_TEST_SERVER_ADDRESS_UNAVAILABLE");
+    }
+    baseUrl = `http://127.0.0.1:${address.port}`;
   });
 
   afterAll(async () => {
-    await pool?.end();
+    await new Promise<void>((resolve, reject) => {
+      server.close((error) => error ? reject(error) : resolve());
+    });
   });
 
   async function walletBalance(sessionId: string) {
@@ -53,6 +67,57 @@ describe.skipIf(!enabled)("IdleRepository PostgreSQL integration", () => {
     );
     return Number(result.rows[0]?.count ?? 0);
   }
+
+  it("serves Idle state through the real /api route and session cookie", async () => {
+    const response = await fetch(`${baseUrl}/api/idle/state`);
+
+    expect(response.status).toBe(200);
+    expect(response.headers.get("content-type")).toContain("application/json");
+    expect(response.headers.get("set-cookie")).toContain("roulette_session=");
+
+    const body = await response.json() as {
+      sessionId: string;
+      wallet: { balanceCents: number };
+      businesses: Array<{ businessId: string; businessLevel: number | null }>;
+    };
+
+    expect(body.sessionId).toMatch(/^[a-f0-9-]{20,80}$/);
+    expect(body.wallet.balanceCents).toBe(100_000);
+    expect(body.businesses).toHaveLength(3);
+    expect(body.businesses.every((business) => business.businessLevel === null))
+      .toBe(true);
+  });
+
+  it("purchases through the real HTTP endpoint and returns the updated wallet", async () => {
+    const stateResponse = await fetch(`${baseUrl}/api/idle/state`);
+    const cookie = stateResponse.headers.get("set-cookie")?.split(";")[0];
+    expect(cookie).toBeTruthy();
+
+    const response = await fetch(
+      `${baseUrl}/api/idle/businesses/fan-club/upgrade`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Cookie: cookie ?? "",
+        },
+        body: JSON.stringify({ idempotencyKey: randomUUID() }),
+      },
+    );
+
+    expect(response.status).toBe(200);
+    const body = await response.json() as {
+      targetBusinessLevel: number;
+      costCents: number;
+      balanceCents: number;
+      business: { businessLevel: number | null; vaultLevel: number };
+    };
+    expect(body.targetBusinessLevel).toBe(0);
+    expect(body.costCents).toBe(10_000);
+    expect(body.balanceCents).toBe(90_000);
+    expect(body.business.businessLevel).toBe(0);
+    expect(body.business.vaultLevel).toBe(1);
+  });
 
   it("creates the shared wallet and exactly three unowned business rows", async () => {
     const sessionId = randomUUID();
