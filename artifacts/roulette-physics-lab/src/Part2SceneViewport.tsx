@@ -5142,6 +5142,36 @@ export function Part2SceneViewport({
             if (settledFrames >= settleFramesRequired) {
               settled = true;
               settleTime = elapsed;
+              console.info(
+                'PART6_SETTLE_GATE_MEASUREMENT',
+                JSON.stringify({
+                  seed: run.seed,
+                  step,
+                  elapsed: Number(elapsed.toFixed(6)),
+                  radius: Number(radius.toFixed(6)),
+                  radiusMinMargin: Number(
+                    (radius - pocketResultCenterRadiusMin).toFixed(6),
+                  ),
+                  radiusMaxMargin: Number(
+                    (pocketResultCenterRadiusMax - radius).toFixed(6),
+                  ),
+                  bottom: Number(bottom.toFixed(6)),
+                  floorDelta: Number(
+                    Math.abs(bottom - POCKET_FLOOR_Y).toFixed(6),
+                  ),
+                  floorMargin: Number(
+                    (0.12 - Math.abs(bottom - POCKET_FLOOR_Y)).toFixed(6),
+                  ),
+                  rotorRelativeSpeed: Number(
+                    finalRotorRelativeSpeed.toFixed(6),
+                  ),
+                  rotorRelativeMargin: Number(
+                    (0.12 - finalRotorRelativeSpeed).toFixed(6),
+                  ),
+                  settledFrames,
+                  contactRoles: [...stepContactRoles].sort(),
+                }),
+              );
               recordPhase(
                 'SETTLED',
                 position,
