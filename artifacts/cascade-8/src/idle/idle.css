@@ -458,6 +458,52 @@
   }
 }
 
+/* Mobile action controls */
+@media (max-width: 760px) {
+  .business-row-actions {
+    grid-template-columns: minmax(0, 1.2fr) minmax(0, .8fr);
+    gap: 5px;
+  }
+
+  .business-row-actions button {
+    width: 100%;
+    min-width: 0;
+    min-height: 42px;
+    overflow: hidden;
+    padding: 0 8px;
+    touch-action: manipulation;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  .business-row-actions [data-business-collect] {
+    order: -1;
+    border-color: rgba(56, 189, 248, .52);
+    background: #0d1a30;
+  }
+
+  .business-row-actions [data-business-collect]:not(:disabled) {
+    border-color: rgba(56, 189, 248, .8);
+    color: #f3fbff;
+    background: #102744;
+  }
+
+  .business-row-actions [data-business-upgrade]:not(:disabled) {
+    border-color: rgba(127, 141, 163, .26);
+    color: #c8d8ea;
+    background: #0a1426;
+  }
+
+  .business-row-actions button:active:not(:disabled) {
+    transform: translateY(1px);
+  }
+
+  .business-row-actions button:disabled {
+    opacity: .4;
+  }
+}
+
 @media (max-width: 420px) {
   .businesses-page {
     padding-inline: 8px;
