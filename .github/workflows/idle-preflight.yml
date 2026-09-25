@@ -44,6 +44,7 @@ jobs:
           PORT=4173 BASE_PATH=/ pnpm --filter @workspace/cascade-8 exec vitest run \
             src/idle/services/index.test.ts \
             src/idle/economySmoke.test.ts \
+            src/idle/idleUiIntegration.test.ts \
             src/mainMenuRegression.test.ts \
             src/slotSmoke.test.ts \
             src/rouletteSmoke.test.ts \
