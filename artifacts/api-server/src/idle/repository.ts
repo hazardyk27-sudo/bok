@@ -1,5 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { pool, type PoolClient } from "@workspace/db";
+import { INITIAL_ROULETTE_BALANCE_CENTS } from "../roulette/types";
 import {
   CLUB_STORE_BUSINESS,
   FAN_CLUB_BUSINESS,
@@ -13,6 +14,7 @@ import {
   type IdleBusinessId,
   type IdleBusinessStorageState,
 } from "./storage";
+import { settleIdleMicrocents } from "./money";
 
 type IdleBusinessRow = {
   id: string;
@@ -219,6 +221,86 @@ export class IdleRepository {
       serverNow,
       businesses: states.map((state) => projectBusinessAccrual(state, serverNow)),
     };
+  }
+
+  /**
+   * Collects one business at a server-authoritative checkpoint. Whole cents
+   * are credited to the shared wallet inside the same SQL transaction, while
+   * the sub-cent remainder stays in idle storage.
+   */
+  async collectBusiness(
+    sessionId: string,
+    businessId: IdleBusinessId,
+    serverNow = new Date(),
+  ) {
+    const client = await pool.connect();
+    try {
+      await client.query("BEGIN");
+      await insertMissingSessionStates(client, sessionId);
+      const states = await loadSessionStates(client, sessionId, true);
+      requireCompleteState(states);
+
+      const state = states.find((entry) => entry.businessId === businessId);
+      if (!state) throw new Error("IDLE_BUSINESS_NOT_FOUND");
+      if (state.businessLevel === null) throw new Error("IDLE_BUSINESS_NOT_OWNED");
+
+      const projection = projectBusinessAccrual(state, serverNow);
+      const settlement = settleIdleMicrocents(
+        projection.projectedAccruedMicrocents,
+      );
+
+      const walletResult = await client.query<{ balance_cents: number }>(
+        `INSERT INTO roulette_wallets (session_id, balance_cents, updated_at)
+         VALUES ($1, $2 + $3, now())
+         ON CONFLICT (session_id) DO UPDATE
+           SET balance_cents = roulette_wallets.balance_cents + $3,
+               updated_at = now()
+         RETURNING balance_cents`,
+        [
+          sessionId,
+          INITIAL_ROULETTE_BALANCE_CENTS,
+          settlement.walletCreditCents,
+        ],
+      );
+
+      await client.query(
+        `UPDATE idle_business_states
+            SET accrued_microcents = $3,
+                checkpoint_at = $4,
+                updated_at = now()
+          WHERE session_id = $1
+            AND business_id = $2`,
+        [
+          sessionId,
+          businessId,
+          settlement.remainderMicrocents,
+          serverNow,
+        ],
+      );
+
+      const refreshedStates = await loadSessionStates(client, sessionId);
+      requireCompleteState(refreshedStates);
+      const refreshed = refreshedStates.find(
+        (entry) => entry.businessId === businessId,
+      );
+      if (!refreshed) throw new Error("IDLE_BUSINESS_NOT_FOUND");
+
+      await client.query("COMMIT");
+
+      return {
+        serverNow,
+        businessId,
+        collectedCents: settlement.walletCreditCents,
+        remainderMicrocents: settlement.remainderMicrocents,
+        balanceCents: Number(walletResult.rows[0]?.balance_cents ?? 0),
+        business: projectBusinessAccrual(refreshed, serverNow),
+      };
+    } catch (error) {
+      await client.query("ROLLBACK");
+      throw error;
+    } finally {
+      client.release();
+    }
   }
 
   /**
