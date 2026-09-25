@@ -395,7 +395,7 @@ describe("Businesses Club Store milestone visuals", () => {
 
   it("keeps the shared level milestone mapping while using Club Store labels", () => {
     expect(componentsSource).toContain('businessId === "club-store" ? "CLUB STORE" : "STADIUM"');
-    expect(componentsSource).toContain("CLUB STORE // BASE");
+    expect(componentsSource).toContain("data-business-milestone");
     expect(componentsSource).toContain("row.dataset.visualStage = visualStage");
   });
 
