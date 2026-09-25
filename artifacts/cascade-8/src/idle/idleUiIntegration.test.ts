@@ -451,3 +451,57 @@ describe("Businesses Fan Club milestone visuals", () => {
     expect(idleCssSource).toContain("@media (prefers-reduced-motion: reduce)");
   });
 });
+
+
+describe("Businesses detail panel architecture", () => {
+  it("adds a Details entry point to every business card", () => {
+    expect(componentsSource).toContain("data-business-details");
+    expect(componentsSource).toContain("business-card-details");
+    expect(componentsSource).toContain("DETAYLAR");
+  });
+
+  it("renders an accessible dialog shell with business and vault tabs", () => {
+    expect(idleIndexSource).toContain("data-idle-detail-layer");
+    expect(idleIndexSource).toContain('role="dialog"');
+    expect(idleIndexSource).toContain('aria-modal="true"');
+    expect(idleIndexSource).toContain('data-idle-detail-tab="business"');
+    expect(idleIndexSource).toContain('data-idle-detail-tab="vault"');
+    expect(idleIndexSource).toContain('data-idle-detail-panel="business"');
+    expect(idleIndexSource).toContain('data-idle-detail-panel="vault"');
+  });
+
+  it("opens, closes and switches detail tabs without touching backend actions", () => {
+    expect(idleIndexSource).toContain("openBusinessDetails");
+    expect(idleIndexSource).toContain("closeBusinessDetails");
+    expect(idleIndexSource).toContain("setDetailTab");
+    expect(idleIndexSource).toContain('event.key === "Escape"');
+    expect(idleIndexSource).toContain('button.matches("[data-business-details]")');
+    expect(idleIndexSource).toContain('button.matches("[data-idle-detail-tab]")');
+  });
+
+  it("keeps the detail header and summary synchronized with live business state", () => {
+    expect(idleIndexSource).toContain("renderBusinessDetails");
+    expect(idleIndexSource).toContain("BUSINESS_DETAIL_DEFINITIONS");
+    expect(idleIndexSource).toContain("data-idle-detail-hourly");
+    expect(idleIndexSource).toContain("data-idle-detail-daily");
+    expect(idleIndexSource).toContain("data-idle-detail-vault");
+    expect(idleIndexSource).toContain("data-idle-detail-current");
+    expect(idleIndexSource).toContain("data-idle-detail-next");
+  });
+
+  it("uses a desktop side drawer and a mobile fullscreen details composition", () => {
+    expect(idleCssSource).toContain("/* Part 12 — premium detail drawer / mobile fullscreen architecture */");
+    expect(idleCssSource).toContain(".business-detail-drawer");
+    expect(idleCssSource).toContain("width: min(560px, 96vw)");
+    expect(idleCssSource).toContain("transform: translateX(104%)");
+    expect(idleCssSource).toContain("width: 100vw");
+    expect(idleCssSource).toContain("height: 100dvh");
+    expect(idleCssSource).toContain("transform: translateY(102%)");
+  });
+
+  it("locks background scrolling and restores reduced-motion behavior", () => {
+    expect(idleCssSource).toContain("body.business-detail-open");
+    expect(idleCssSource).toContain("overflow: hidden");
+    expect(idleCssSource).toContain("@media (prefers-reduced-motion: reduce)");
+  });
+});
