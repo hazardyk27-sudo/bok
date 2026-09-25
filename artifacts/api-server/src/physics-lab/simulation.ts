@@ -516,12 +516,13 @@ function addPocketFretColliders(
 ) {
   const pocketFloorInnerRadius = 1.48;
   const innerEdgeRadius =
-    pocketFloorInnerRadius + PHYSICS_LAB_BALL_RADIUS * 2 + 0.04;
+    pocketFloorInnerRadius + PHYSICS_LAB_BALL_RADIUS * 2 + 0.02;
   const outerEdgeRadius = ROULETTE_POCKET_FLOOR_OUTER_RADIUS - 0.02;
   const centerRadius = (innerEdgeRadius + outerEdgeRadius) / 2;
   const tangentialHalfExtent = 0.03;
   const radialHalfExtent = (outerEdgeRadius - innerEdgeRadius) / 2;
   const verticalHalfExtent = 0.11;
+  const edgeRounding = 0.01;
   const centerY =
     ROULETTE_POCKET_FLOOR_Y + verticalHalfExtent + 0.022;
   const colliders: RAPIER.Collider[] = [];
@@ -530,10 +531,11 @@ function addPocketFretColliders(
     const angle = (index + 0.5) * SECTOR_STEP_RADIANS;
     colliders.push(
       world.createCollider(
-        RAPIER.ColliderDesc.cuboid(
-          tangentialHalfExtent,
-          verticalHalfExtent,
-          radialHalfExtent,
+        RAPIER.ColliderDesc.roundCuboid(
+          tangentialHalfExtent - edgeRounding,
+          verticalHalfExtent - edgeRounding,
+          radialHalfExtent - edgeRounding,
+          edgeRounding,
         )
           .setTranslation(...radialPosition(centerRadius, angle, centerY))
           .setRotation({
