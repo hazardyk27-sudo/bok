@@ -565,10 +565,13 @@ function addPocketInnerGuardCollider(
   const verticalHalfHeight = 0.11;
   const centerY = ROULETTE_POCKET_FLOOR_Y + verticalHalfHeight;
 
+  const edgeRounding = 0.02;
+
   return world.createCollider(
-    RAPIER.ColliderDesc.cylinder(
-      verticalHalfHeight,
-      pocketFloorInnerRadius,
+    RAPIER.ColliderDesc.roundCylinder(
+      verticalHalfHeight - edgeRounding,
+      pocketFloorInnerRadius - edgeRounding,
+      edgeRounding,
     )
       .setTranslation(0, centerY, 0)
       .setFriction(0.42)
