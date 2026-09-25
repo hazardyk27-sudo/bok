@@ -182,6 +182,115 @@
   opacity: .48;
 }
 
+/* Desktop density pass */
+@media (min-width: 761px) {
+  .businesses-page {
+    width: min(100%, 1080px);
+    padding: 22px 26px 28px;
+  }
+
+  .businesses-header {
+    grid-template-columns: auto minmax(0, 1fr) 154px;
+    gap: 18px;
+    padding-bottom: 15px;
+  }
+
+  .businesses-heading h1 {
+    font-size: clamp(28px, 3.2vw, 42px);
+  }
+
+  .businesses-heading p {
+    max-width: 540px;
+    margin-top: 6px;
+    font-size: 11px;
+  }
+
+  .businesses-wallet {
+    min-width: 0;
+    padding: 9px 12px;
+    border-radius: 8px;
+  }
+
+  .businesses-wallet strong {
+    margin-top: 4px;
+    font-size: 16px;
+  }
+
+  .business-summary {
+    margin-top: 12px;
+    border-radius: 8px;
+  }
+
+  .business-summary > div {
+    min-height: 50px;
+    padding: 9px 12px;
+  }
+
+  .business-summary strong {
+    margin-top: 4px;
+    font-size: 14px;
+  }
+
+  .business-list {
+    margin-top: 12px;
+  }
+
+  .business-row {
+    grid-template-columns: minmax(190px, 1.08fr) minmax(340px, 1.65fr) minmax(190px, .82fr);
+    gap: 14px;
+    min-height: 94px;
+    padding: 12px 2px;
+  }
+
+  .business-row-title small {
+    margin-bottom: 4px;
+  }
+
+  .business-row-title strong {
+    font-size: 16px;
+  }
+
+  .business-row-title span {
+    margin-top: 4px;
+    font-size: 9px;
+  }
+
+  .business-row-metrics {
+    gap: 4px;
+  }
+
+  .business-row-metric {
+    padding: 7px 9px;
+  }
+
+  .business-row-metric strong {
+    margin-top: 4px;
+    font-size: 12px;
+  }
+
+  .business-row-metric:first-child strong {
+    color: #dff7ff;
+    font-size: 14px;
+  }
+
+  .business-row-actions {
+    gap: 6px;
+  }
+
+  .business-row-actions button {
+    min-height: 38px;
+    padding-inline: 7px;
+    border-radius: 7px;
+    font-size: 8px;
+    letter-spacing: .05em;
+  }
+
+  .business-row-actions [data-business-collect]:not(:disabled) {
+    border-color: rgba(56, 189, 248, .48);
+    background: #0d1a30;
+  }
+}
+
 @media (max-width: 760px) {
   .businesses-page {
     padding: 18px 14px 28px;
