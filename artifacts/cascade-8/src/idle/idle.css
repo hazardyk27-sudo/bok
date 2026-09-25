@@ -4875,3 +4875,360 @@ body.business-detail-open {
     transition: none;
   }
 }
+
+
+/* Part 14 — next-level comparison card */
+.business-next-comparison {
+  margin-top: 14px;
+  padding: 16px;
+  border: 1px solid rgba(70, 200, 255, .16);
+  border-radius: 16px;
+  background:
+    radial-gradient(circle at 88% 12%, rgba(70, 200, 255, .07), transparent 28%),
+    linear-gradient(145deg, rgba(13, 31, 52, .92), rgba(7, 16, 29, .92));
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, .02),
+    0 12px 28px rgba(0, 0, 0, .12);
+}
+
+.business-next-comparison-header {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: start;
+  gap: 12px;
+}
+
+.business-next-comparison-header > div {
+  min-width: 0;
+}
+
+.business-next-comparison-header span:first-child {
+  display: block;
+  color: var(--idle-text-muted);
+  font: 800 7px/1 "DM Mono", monospace;
+  letter-spacing: .1em;
+}
+
+.business-next-comparison-header strong {
+  display: block;
+  margin-top: 7px;
+  color: var(--idle-text);
+  font-size: 16px;
+  font-weight: 850;
+  line-height: 1.15;
+  letter-spacing: -.02em;
+}
+
+.business-next-comparison-gain {
+  display: inline-flex;
+  align-items: center;
+  min-height: 28px;
+  padding: 0 10px;
+  border: 1px solid rgba(125, 223, 255, .3);
+  border-radius: 999px;
+  color: var(--idle-cyan-bright);
+  background: rgba(70, 200, 255, .06);
+  font: 850 8px/1 "DM Mono", monospace;
+  letter-spacing: .06em;
+  white-space: nowrap;
+}
+
+.business-next-comparison-flow {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 36px minmax(0, 1fr);
+  align-items: stretch;
+  gap: 8px;
+  margin-top: 14px;
+}
+
+.business-next-comparison-side {
+  min-width: 0;
+  padding: 12px;
+  border: 1px solid rgba(157, 174, 196, .1);
+  border-radius: 12px;
+  background: rgba(5, 12, 23, .66);
+}
+
+.business-next-comparison-side > span {
+  display: block;
+  color: var(--idle-text-muted);
+  font: 800 6px/1 "DM Mono", monospace;
+  letter-spacing: .08em;
+}
+
+.business-next-comparison-side > strong {
+  display: block;
+  margin-top: 7px;
+  overflow: hidden;
+  color: var(--idle-text-secondary);
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+  font-weight: 850;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.business-next-comparison-side > small {
+  display: block;
+  margin-top: 5px;
+  color: var(--idle-text-muted);
+  font-size: 8px;
+  line-height: 1.25;
+}
+
+.business-next-comparison-side--next {
+  border-color: rgba(70, 200, 255, .2);
+  background:
+    linear-gradient(135deg, rgba(70, 200, 255, .065), transparent 60%),
+    rgba(7, 20, 34, .78);
+}
+
+.business-next-comparison-side--next > span,
+.business-next-comparison-side--next > strong {
+  color: var(--idle-cyan-bright);
+}
+
+.business-next-comparison-arrow {
+  display: grid;
+  place-items: center;
+}
+
+.business-next-comparison-arrow span {
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  border: 1px solid rgba(70, 200, 255, .16);
+  border-radius: 50%;
+  color: var(--idle-cyan);
+  background: rgba(70, 200, 255, .04);
+  font-size: 15px;
+}
+
+.business-next-comparison-deltas {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 7px;
+  margin-top: 9px;
+}
+
+.business-next-comparison-deltas > div {
+  min-width: 0;
+  padding: 10px 9px;
+  border: 1px solid rgba(157, 174, 196, .08);
+  border-radius: 10px;
+  background: rgba(6, 13, 24, .48);
+}
+
+.business-next-comparison-deltas span {
+  display: block;
+  color: var(--idle-text-muted);
+  font: 800 6px/1 "DM Mono", monospace;
+  letter-spacing: .07em;
+}
+
+.business-next-comparison-deltas strong {
+  display: block;
+  margin-top: 6px;
+  overflow: hidden;
+  color: var(--idle-text-secondary);
+  font-size: 10px;
+  font-variant-numeric: tabular-nums;
+  font-weight: 850;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.business-next-comparison-deltas > div:first-child strong,
+.business-next-comparison-deltas > div:nth-child(2) strong {
+  color: var(--idle-cyan);
+}
+
+.business-next-comparison-cta {
+  width: 100%;
+  min-height: 46px;
+  margin-top: 12px;
+  padding: 0 14px;
+  border: 1px solid rgba(125, 223, 255, .28);
+  border-radius: 12px;
+  color: var(--idle-text);
+  background:
+    linear-gradient(135deg, rgba(70, 200, 255, .12), rgba(24, 69, 124, .18)),
+    rgba(12, 25, 48, .88);
+  font: 850 8px/1 "DM Mono", monospace;
+  letter-spacing: .06em;
+  cursor: pointer;
+  transition:
+    transform .16s ease,
+    border-color .16s ease,
+    background .16s ease,
+    color .16s ease,
+    box-shadow .16s ease;
+}
+
+.business-next-comparison-cta[data-action-state="purchase"] {
+  color: var(--idle-cyan-bright);
+  border-color: rgba(125, 223, 255, .42);
+}
+
+.business-next-comparison-cta[data-action-state="insufficient"] {
+  color: var(--idle-text-muted);
+  border-color: rgba(157, 174, 196, .12);
+  background: rgba(7, 16, 29, .68);
+  cursor: default;
+}
+
+.business-next-comparison-cta[data-action-state="busy"] {
+  color: var(--idle-text-secondary);
+  background:
+    linear-gradient(90deg, rgba(70, 200, 255, .04), rgba(157, 174, 196, .035), rgba(70, 200, 255, .04)),
+    rgba(7, 16, 29, .76);
+  background-size: 200% 100%;
+  animation: idle-action-busy 1.2s linear infinite;
+}
+
+.business-next-comparison-cta[data-action-state="max"] {
+  color: rgba(157, 174, 196, .62);
+  border-color: rgba(157, 174, 196, .1);
+  background: rgba(7, 16, 29, .5);
+  cursor: default;
+}
+
+.business-next-comparison-note {
+  display: block;
+  min-height: 16px;
+  margin-top: 7px;
+  color: var(--idle-text-muted);
+  font-size: 8px;
+  line-height: 1.3;
+  text-align: center;
+}
+
+.business-next-comparison[data-comparison-state="purchase"] {
+  border-color: rgba(70, 200, 255, .2);
+}
+
+.business-next-comparison[data-comparison-state="max"] {
+  border-color: rgba(157, 174, 196, .1);
+  background: rgba(7, 16, 29, .62);
+}
+
+.business-next-comparison[data-comparison-state="max"] .business-next-comparison-gain,
+.business-next-comparison[data-comparison-state="max"] .business-next-comparison-side--next {
+  color: var(--idle-text-muted);
+  border-color: rgba(157, 174, 196, .1);
+  background: rgba(7, 16, 29, .52);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .business-next-comparison-cta:not(:disabled):hover {
+    transform: translateY(-1px);
+    border-color: rgba(125, 223, 255, .5);
+    box-shadow: 0 10px 24px rgba(0, 0, 0, .16);
+  }
+}
+
+.business-next-comparison-cta:not(:disabled):active {
+  transform: translateY(1px);
+}
+
+.business-next-comparison-cta:focus-visible {
+  outline: none;
+  box-shadow: var(--idle-focus-ring);
+}
+
+@media (max-width: 760px) {
+  .business-next-comparison {
+    margin-top: 12px;
+    padding: 14px;
+    border-radius: 14px;
+  }
+
+  .business-next-comparison-header strong {
+    font-size: 15px;
+  }
+
+  .business-next-comparison-flow {
+    grid-template-columns: minmax(0, 1fr) 30px minmax(0, 1fr);
+    gap: 6px;
+    margin-top: 12px;
+  }
+
+  .business-next-comparison-side {
+    padding: 10px 9px;
+  }
+
+  .business-next-comparison-side > strong {
+    font-size: 11px;
+  }
+
+  .business-next-comparison-side > small {
+    font-size: 7px;
+  }
+
+  .business-next-comparison-arrow span {
+    width: 26px;
+    height: 26px;
+    font-size: 13px;
+  }
+
+  .business-next-comparison-deltas {
+    gap: 5px;
+  }
+
+  .business-next-comparison-deltas > div {
+    padding: 9px 7px;
+  }
+
+  .business-next-comparison-deltas strong {
+    font-size: 9px;
+  }
+
+  .business-next-comparison-cta {
+    min-height: 48px;
+    font-size: 8px;
+  }
+}
+
+@media (max-width: 420px) {
+  .business-next-comparison-header {
+    grid-template-columns: 1fr;
+  }
+
+  .business-next-comparison-gain {
+    justify-self: start;
+    min-height: 24px;
+  }
+
+  .business-next-comparison-flow {
+    grid-template-columns: 1fr;
+  }
+
+  .business-next-comparison-arrow {
+    height: 22px;
+  }
+
+  .business-next-comparison-arrow span {
+    width: 24px;
+    height: 24px;
+    transform: rotate(90deg);
+  }
+
+  .business-next-comparison-deltas {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .business-next-comparison-deltas > div:last-child {
+    grid-column: 1 / -1;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .business-next-comparison-cta {
+    transition: none;
+  }
+
+  .business-next-comparison-cta[data-action-state="busy"] {
+    animation: none;
+  }
+}
