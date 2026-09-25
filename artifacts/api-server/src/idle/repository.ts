@@ -105,6 +105,27 @@ function requireCompleteState(states: readonly IdleBusinessStorageState[]) {
   }
 }
 
+async function sharedWalletBalance(sessionId: string) {
+  const existing = await pool.query<{ balance_cents: number }>(
+    "SELECT balance_cents FROM roulette_wallets WHERE session_id = $1",
+    [sessionId],
+  );
+  if (existing.rows[0]) return Number(existing.rows[0].balance_cents);
+
+  await pool.query(
+    `INSERT INTO roulette_wallets (session_id, balance_cents)
+     VALUES ($1, $2)
+     ON CONFLICT (session_id) DO NOTHING`,
+    [sessionId, INITIAL_ROULETTE_BALANCE_CENTS],
+  );
+
+  const created = await pool.query<{ balance_cents: number }>(
+    "SELECT balance_cents FROM roulette_wallets WHERE session_id = $1",
+    [sessionId],
+  );
+  return Number(created.rows[0]?.balance_cents ?? INITIAL_ROULETTE_BALANCE_CENTS);
+}
+
 function exactMicrocentsForElapsed(dailyIncomeCents: number, elapsedMs: number) {
   const numerator = BigInt(dailyIncomeCents)
     * BigInt(IDLE_MICROCENTS_PER_CENT)
@@ -216,9 +237,13 @@ export class IdleRepository {
    * balance. The client may animate this projection between requests.
    */
   async getSessionState(sessionId: string, serverNow = new Date()) {
-    const states = await this.ensureSessionState(sessionId);
+    const [states, balanceCents] = await Promise.all([
+      this.ensureSessionState(sessionId),
+      sharedWalletBalance(sessionId),
+    ]);
     return {
       serverNow,
+      wallet: { sessionId, balanceCents },
       businesses: states.map((state) => projectBusinessAccrual(state, serverNow)),
     };
   }
