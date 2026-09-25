@@ -86,3 +86,14 @@ export type IdleBusinessUpgradeResponse = {
   replayed: boolean;
   business: IdleBusinessServerState;
 };
+
+
+export type IdleVaultUpgradeResponse = {
+  serverTime: string;
+  businessId: BusinessId;
+  targetVaultLevel: number;
+  costCents: number;
+  balanceCents: number;
+  replayed: boolean;
+  business: IdleBusinessServerState;
+};
