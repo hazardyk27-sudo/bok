@@ -7,6 +7,7 @@ import {
   getIdleTotalPassiveIncomeCentsPerHour,
   projectIdleStateLive,
   upgradeIdleBusiness,
+  upgradeIdleVault,
 } from "./services";
 import {
   BUSINESS_IDS,
@@ -130,6 +131,8 @@ export class BusinessesClient {
       void this.runBusinessAction(businessId, () => upgradeIdleBusiness(businessId));
     } else if (button.matches("[data-business-collect]")) {
       void this.runBusinessAction(businessId, () => collectIdleBusiness(businessId));
+    } else if (button.matches("[data-business-vault-upgrade]")) {
+      void this.runBusinessAction(businessId, () => upgradeIdleVault(businessId));
     }
   };
 
