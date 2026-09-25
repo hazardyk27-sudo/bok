@@ -78,3 +78,83 @@ export const STADIUM_BUSINESS = {
     },
   ],
 } as const satisfies BusinessDefinition;
+
+
+export const CLUB_STORE_BUSINESS = {
+  id: "club-store",
+  label: "Kulüp Mağazası",
+  levels: [
+    {
+      level: 0,
+      name: "Taraftar Ürün Standı",
+      costCents: 30_000,
+      dailyIncomeCents: 7_500,
+      hourlyIncomeDisplayCents: 313,
+      targetRoiDays: 4,
+    },
+    {
+      level: 1,
+      name: "Kulüp Mağazası",
+      costCents: 120_000,
+      dailyIncomeCents: 27_500,
+      hourlyIncomeDisplayCents: 1_146,
+      targetRoiDays: 6,
+    },
+    {
+      level: 2,
+      name: "Resmî Kulüp Mağazası",
+      costCents: 300_000,
+      dailyIncomeCents: 57_500,
+      hourlyIncomeDisplayCents: 2_396,
+      targetRoiDays: 10,
+    },
+    {
+      level: 3,
+      name: "Ana Kulüp Mağazası",
+      costCents: 1_000_000,
+      dailyIncomeCents: 97_500,
+      hourlyIncomeDisplayCents: 4_063,
+      targetRoiDays: 25,
+    },
+    {
+      level: 4,
+      name: "Ulusal Mağaza Ağı",
+      costCents: 3_500_000,
+      dailyIncomeCents: 167_500,
+      hourlyIncomeDisplayCents: 6_979,
+      targetRoiDays: 50,
+    },
+    {
+      level: 5,
+      name: "Uluslararası Mağaza Ağı",
+      costCents: 12_000_000,
+      dailyIncomeCents: 317_500,
+      hourlyIncomeDisplayCents: 13_229,
+      targetRoiDays: 80,
+    },
+    {
+      level: 6,
+      name: "Kulüp Markası ★1",
+      costCents: 45_000_000,
+      dailyIncomeCents: 692_500,
+      hourlyIncomeDisplayCents: 28_854,
+      targetRoiDays: 120,
+    },
+    {
+      level: 7,
+      name: "Kulüp Markası ★2",
+      costCents: 180_000_000,
+      dailyIncomeCents: 1_751_300,
+      hourlyIncomeDisplayCents: 72_972,
+      targetRoiDays: 170,
+    },
+    {
+      level: 8,
+      name: "Kulüp Markası ★3",
+      costCents: 700_000_000,
+      dailyIncomeCents: 4_933_100,
+      hourlyIncomeDisplayCents: 205_545,
+      targetRoiDays: 220,
+    },
+  ],
+} as const satisfies BusinessDefinition;
