@@ -5,6 +5,7 @@ import {
   FAN_CLUB_BUSINESS,
   STADIUM_BUSINESS,
   VAULT_LEVELS,
+  VAULT_UPGRADE_STEPS,
 } from "./config";
 import {
   collectAllIdleBusinesses,
@@ -12,6 +13,7 @@ import {
   fetchIdleState,
   getIdleTotalCollectableCents,
   getIdleTotalPassiveIncomeCentsPerHour,
+  getIdleVaultUpgradePreview,
   projectIdleStateLive,
   upgradeIdleBusiness,
   upgradeIdleVault,
@@ -123,6 +125,103 @@ function renderBusinessLevelTree(
               <small>ROI hedefi · ${stage.targetRoiDays} gün</small>
             </div>
           </div>
+        </div>
+      </article>
+    `;
+  }).join("");
+}
+
+
+function getVaultLevelState(
+  targetLevel: number,
+  currentLevel: number,
+  isOwned: boolean,
+) {
+  if (!isOwned) return "locked";
+  if (targetLevel < currentLevel) return "completed";
+  if (targetLevel === currentLevel) return "current";
+  if (targetLevel === currentLevel + 1) return "future";
+  return "locked";
+}
+
+function getVaultUpgradeCostCents(
+  businessId: BusinessId,
+  businessLevel: number | null,
+  targetVaultLevel: number,
+) {
+  if (targetVaultLevel === 1 || businessLevel === null) return null;
+
+  const definition = BUSINESS_DETAIL_DEFINITIONS[businessId];
+  const stage = definition.levels.find((entry) => entry.level === businessLevel);
+  const step = VAULT_UPGRADE_STEPS.find((entry) => entry.toLevel === targetVaultLevel);
+  if (!stage || !step) return null;
+
+  return stage.costCents * step.costPercent / 100;
+}
+
+function renderVaultLevelTree(
+  businessId: BusinessId,
+  businessLevel: number | null,
+  currentVaultLevel: number,
+) {
+  const isOwned = businessLevel !== null;
+
+  return VAULT_LEVELS.map((vault) => {
+    const state = getVaultLevelState(vault.level, currentVaultLevel, isOwned);
+    const stateLabel = state === "completed"
+      ? "TAMAMLANDI"
+      : state === "current"
+        ? "MEVCUT"
+        : state === "future"
+          ? "SONRAKİ"
+          : "KİLİTLİ";
+    const step = VAULT_UPGRADE_STEPS.find((entry) => entry.toLevel === vault.level);
+    const costCents = getVaultUpgradeCostCents(
+      businessId,
+      businessLevel,
+      vault.level,
+    );
+    const costLabel = vault.level === 1
+      ? "BAŞLANGIÇ"
+      : !isOwned
+        ? "İŞLETME GEREKLİ"
+        : costCents === null
+          ? "—"
+          : `$${formatCredits(costCents)}`;
+    const costMeta = vault.level === 1
+      ? "İşletme açıldığında aktif"
+      : step
+        ? `İşletme bedelinin %${step.costPercent}'i`
+        : "";
+
+    return `
+      <article
+        class="vault-level-node"
+        data-vault-level="${vault.level}"
+        data-vault-state="${state}"
+        aria-label="Kasa Lv${vault.level}, ${vault.capacityHours} saat, ${stateLabel.toLocaleLowerCase("tr-TR")}"
+      >
+        <div class="vault-level-node-rail" aria-hidden="true">
+          <span class="vault-level-node-dot">
+            ${state === "completed" ? "✓" : vault.level}
+          </span>
+        </div>
+
+        <div class="vault-level-node-card">
+          <div class="vault-level-node-main">
+            <div>
+              <span>KASA LV${vault.level}</span>
+              <strong>${vault.capacityHours} SAAT</strong>
+              <small>Kapasite</small>
+            </div>
+            <div class="vault-level-node-cost">
+              <span>${vault.level === 1 ? "BAŞLANGIÇ" : "YÜKSELTME"}</span>
+              <strong>${costLabel}</strong>
+              <small>${costMeta}</small>
+            </div>
+          </div>
+
+          <span class="vault-level-node-state">${stateLabel}</span>
         </div>
       </article>
     `;
@@ -370,11 +469,59 @@ export const BUSINESSES_MARKUP = `
             <div class="business-detail-preview-card">
               <span>MEVCUT KAPASİTE</span>
               <strong data-idle-detail-vault-current>—</strong>
-              <small>İşletme yükseltildiğinde Kasa Lv1'e döner.</small>
+              <small>Kasa, işletmenin pasif gelirini çevrimdışıyken de depolar.</small>
             </div>
-            <div class="business-detail-roadmap-placeholder business-detail-roadmap-placeholder--vault" aria-hidden="true">
-              <i></i><i></i><i></i><i></i><i></i><i></i>
+
+            <div class="business-vault-reset-warning" role="note">
+              <span aria-hidden="true">↺</span>
+              <div>
+                <strong>İŞLETME YÜKSELTME UYARISI</strong>
+                <p>İşletme ana seviyesi yükseltildiğinde Kasa Lv1'e sıfırlanır. Birikmiş gelir korunur.</p>
+              </div>
             </div>
+
+            <section
+              class="business-vault-next"
+              data-idle-vault-next
+              data-vault-next-state="loading"
+              aria-label="Sonraki Kasa yükseltmesi"
+            >
+              <div class="business-vault-next-flow">
+                <div>
+                  <span>MEVCUT</span>
+                  <strong data-idle-vault-next-current>—</strong>
+                </div>
+                <i aria-hidden="true">→</i>
+                <div>
+                  <span>SONRAKİ</span>
+                  <strong data-idle-vault-next-target>—</strong>
+                </div>
+              </div>
+              <div class="business-vault-next-cost">
+                <span>YÜKSELTME MALİYETİ</span>
+                <strong data-idle-vault-next-cost>—</strong>
+              </div>
+              <button
+                type="button"
+                class="business-vault-detail-cta"
+                data-idle-detail-vault-upgrade
+                data-action-state="loading"
+                disabled
+              >YÜKLENİYOR</button>
+              <small data-idle-detail-vault-upgrade-note>—</small>
+            </section>
+
+            <div class="business-vault-tree-legend" aria-label="Kasa seviye durumları">
+              <span data-legend-state="completed">TAMAMLANDI</span>
+              <span data-legend-state="current">MEVCUT</span>
+              <span data-legend-state="future">SONRAKİ</span>
+              <span data-legend-state="locked">KİLİTLİ</span>
+            </div>
+            <div
+              class="vault-level-tree"
+              data-idle-vault-level-tree
+              aria-label="Kasa seviye ağacı"
+            ></div>
           </section>
         </div>
       </aside>
@@ -554,6 +701,13 @@ export class BusinessesClient {
       return;
     }
 
+    if (button.matches("[data-idle-detail-vault-upgrade]")) {
+      const businessId = this.detailBusinessId;
+      if (!businessId || this.busyBusinesses.has(businessId)) return;
+      void this.runBusinessAction(businessId, () => upgradeIdleVault(businessId));
+      return;
+    }
+
     if (button.matches("[data-idle-collect-all]")) {
       if (!this.collectingAll) void this.runCollectAll();
       return;
@@ -675,6 +829,13 @@ export class BusinessesClient {
     const nextCostNode = this.root.querySelector<HTMLElement>("[data-idle-next-cost]");
     const detailUpgradeButton = this.root.querySelector<HTMLButtonElement>("[data-idle-detail-upgrade]");
     const detailUpgradeNoteNode = this.root.querySelector<HTMLElement>("[data-idle-detail-upgrade-note]");
+    const vaultLevelTreeNode = this.root.querySelector<HTMLElement>("[data-idle-vault-level-tree]");
+    const vaultNextNode = this.root.querySelector<HTMLElement>("[data-idle-vault-next]");
+    const vaultNextCurrentNode = this.root.querySelector<HTMLElement>("[data-idle-vault-next-current]");
+    const vaultNextTargetNode = this.root.querySelector<HTMLElement>("[data-idle-vault-next-target]");
+    const vaultNextCostNode = this.root.querySelector<HTMLElement>("[data-idle-vault-next-cost]");
+    const detailVaultUpgradeButton = this.root.querySelector<HTMLButtonElement>("[data-idle-detail-vault-upgrade]");
+    const detailVaultUpgradeNoteNode = this.root.querySelector<HTMLElement>("[data-idle-detail-vault-upgrade-note]");
 
     if (
       !eyebrowNode
@@ -701,6 +862,13 @@ export class BusinessesClient {
       || !nextCostNode
       || !detailUpgradeButton
       || !detailUpgradeNoteNode
+      || !vaultLevelTreeNode
+      || !vaultNextNode
+      || !vaultNextCurrentNode
+      || !vaultNextTargetNode
+      || !vaultNextCostNode
+      || !detailVaultUpgradeButton
+      || !detailVaultUpgradeNoteNode
       || !vault
     ) {
       throw new Error("IDLE_DETAIL_SHELL_INCOMPLETE");
@@ -739,6 +907,56 @@ export class BusinessesClient {
       business.businessId,
       business.businessLevel,
     );
+    vaultLevelTreeNode.innerHTML = renderVaultLevelTree(
+      business.businessId,
+      business.businessLevel,
+      business.vaultLevel,
+    );
+
+    const vaultUpgrade = getIdleVaultUpgradePreview(business);
+    const detailBusy = this.busyBusinesses.has(business.businessId);
+
+    vaultNextCurrentNode.textContent = `Lv${business.vaultLevel} · ${vault.capacityHours}sa`;
+
+    if (!vaultUpgrade.isOwned) {
+      vaultNextNode.dataset.vaultNextState = "locked";
+      vaultNextTargetNode.textContent = "İşletme gerekli";
+      vaultNextCostNode.textContent = "—";
+      detailVaultUpgradeButton.textContent = "İŞLETME GEREKLİ";
+      detailVaultUpgradeButton.disabled = true;
+      detailVaultUpgradeButton.dataset.actionState = "locked";
+      detailVaultUpgradeNoteNode.textContent = "Önce işletmeyi satın al";
+    } else if (vaultUpgrade.isMaxLevel) {
+      vaultNextNode.dataset.vaultNextState = "max";
+      vaultNextTargetNode.textContent = "24sa · maksimum";
+      vaultNextCostNode.textContent = "—";
+      detailVaultUpgradeButton.textContent = "KASA MAX";
+      detailVaultUpgradeButton.disabled = true;
+      detailVaultUpgradeButton.dataset.actionState = "max";
+      detailVaultUpgradeNoteNode.textContent = "Maksimum 24 saat kapasite";
+    } else {
+      const vaultCostCents = vaultUpgrade.costCents ?? 0;
+      const vaultShortfallCents = Math.max(0, vaultCostCents - walletBalanceCents);
+      const canAffordVault = walletBalanceCents >= vaultCostCents;
+
+      vaultNextNode.dataset.vaultNextState = "upgrade";
+      vaultNextTargetNode.textContent =
+        `Lv${vaultUpgrade.nextVaultLevel} · ${vaultUpgrade.nextCapacityHours}sa`;
+      vaultNextCostNode.textContent = `${formatCredits(vaultCostCents)}`;
+      detailVaultUpgradeButton.textContent =
+        `KASA GELİŞTİR · ${formatCredits(vaultCostCents)}`;
+      detailVaultUpgradeButton.disabled = detailBusy || !canAffordVault;
+      detailVaultUpgradeButton.dataset.actionState = detailBusy
+        ? "busy"
+        : canAffordVault
+          ? "ready"
+          : "insufficient";
+      detailVaultUpgradeNoteNode.textContent = detailBusy
+        ? "İşlem sürüyor"
+        : canAffordVault
+          ? `${vault.capacityHours} saat → ${vaultUpgrade.nextCapacityHours} saat kapasite`
+          : `Bakiye yetersiz · ${formatCredits(vaultShortfallCents)} eksik`;
+    }
 
     if (nextStage) {
       const currentHourlyCents = currentStage?.hourlyIncomeDisplayCents ?? 0;
