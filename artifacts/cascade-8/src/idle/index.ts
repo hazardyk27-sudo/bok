@@ -1,28 +1,17 @@
 import "./idle.css";
-import {
-  CLUB_STORE_BUSINESS,
-  FAN_CLUB_BUSINESS,
-  STADIUM_BUSINESS,
-} from "./config";
 import { renderBusinessRowShell, updateBusinessRow } from "./components";
 import {
   collectIdleBusiness,
   fetchIdleState,
+  getIdleTotalPassiveIncomeCentsPerHour,
   projectIdleStateLive,
   upgradeIdleBusiness,
 } from "./services";
 import {
   BUSINESS_IDS,
-  type BusinessDefinition,
   type BusinessId,
   type IdleStateEnvelope,
 } from "./types";
-
-const BUSINESS_DEFINITIONS: Record<BusinessId, BusinessDefinition> = {
-  stadium: STADIUM_BUSINESS,
-  "club-store": CLUB_STORE_BUSINESS,
-  "fan-club": FAN_CLUB_BUSINESS,
-};
 
 function formatCredits(cents: number) {
   return `$${(cents / 100).toLocaleString("en-US", {
@@ -100,7 +89,9 @@ export class BusinessesClient {
 
     balanceNode.textContent = formatCredits(walletBalanceCents);
 
-    let totalHourlyCents = 0;
+    const totalHourlyCents = getIdleTotalPassiveIncomeCentsPerHour(
+      live.businesses,
+    );
     let totalCollectableCents = 0;
 
     for (const business of live.businesses) {
@@ -116,13 +107,6 @@ export class BusinessesClient {
         this.busyBusinesses.has(business.businessId),
       );
 
-      if (business.businessLevel !== null) {
-        const stage = BUSINESS_DEFINITIONS[business.businessId].levels.find(
-          (entry) => entry.level === business.businessLevel,
-        );
-        if (!stage) throw new Error("INVALID_IDLE_BUSINESS_LEVEL");
-        totalHourlyCents += stage.hourlyIncomeDisplayCents;
-      }
       totalCollectableCents += business.collectableCents;
     }
 
