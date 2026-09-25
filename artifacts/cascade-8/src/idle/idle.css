@@ -6753,3 +6753,520 @@ body.business-detail-open {
     grid-template-columns: minmax(0, 1.08fr) minmax(0, .92fr);
   }
 }
+
+
+/* Premium typography pass — main cards + Details */
+.route-shell.is-businesses-page .businesses-page,
+.business-detail-drawer {
+  --idle-font-ui: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --idle-font-label: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-family: var(--idle-font-ui);
+}
+
+/* Shared page/header readability */
+.route-shell.is-businesses-page .businesses-kicker,
+.route-shell.is-businesses-page .businesses-wallet span,
+.route-shell.is-businesses-page .business-command-label,
+.route-shell.is-businesses-page .businesses-progression-copy > span,
+.route-shell.is-businesses-page .businesses-progression-meta {
+  font-family: var(--idle-font-label);
+  font-size: 9px;
+  font-weight: 750;
+  letter-spacing: .09em;
+}
+
+.route-shell.is-businesses-page .businesses-heading p {
+  color: var(--idle-text-secondary);
+  font-size: 13px;
+  line-height: 1.55;
+}
+
+.route-shell.is-businesses-page .businesses-wallet strong,
+.route-shell.is-businesses-page .business-command-stat strong {
+  font-family: var(--idle-font-ui);
+  font-weight: 800;
+}
+
+/* Main business cards */
+.route-shell.is-businesses-page .business-card-code,
+.route-shell.is-businesses-page .business-card-state {
+  font-family: var(--idle-font-label);
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: .06em;
+}
+
+.route-shell.is-businesses-page .business-card .business-row-title small {
+  margin-bottom: 7px;
+  font-family: var(--idle-font-label);
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: .09em;
+}
+
+.route-shell.is-businesses-page .business-card .business-row-title strong {
+  font-family: var(--idle-font-ui);
+  font-size: 23px;
+  font-weight: 850;
+  letter-spacing: -.025em;
+  line-height: 1.05;
+}
+
+.route-shell.is-businesses-page .business-card .business-row-title span {
+  margin-top: 8px;
+  color: var(--idle-text-secondary);
+  font-family: var(--idle-font-ui);
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1.35;
+}
+
+.route-shell.is-businesses-page .business-card-level-mark {
+  min-width: 38px;
+  height: 36px;
+  font-family: var(--idle-font-label);
+  font-size: 9px;
+  font-weight: 800;
+}
+
+.route-shell.is-businesses-page .business-card .business-card-accrued-heading > span,
+.route-shell.is-businesses-page .business-card .business-card-accrued-heading > small {
+  font-family: var(--idle-font-label);
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: .07em;
+}
+
+.route-shell.is-businesses-page .business-card .business-card-accrued strong {
+  font-family: var(--idle-font-ui);
+  font-size: clamp(31px, 2.55vw, 38px);
+  font-weight: 850;
+}
+
+.route-shell.is-businesses-page .business-card .business-card-income > span,
+.route-shell.is-businesses-page .business-card .business-card-vault-heading > span {
+  font-family: var(--idle-font-label);
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: .07em;
+}
+
+.route-shell.is-businesses-page .business-card .business-card-income strong {
+  font-family: var(--idle-font-ui);
+  font-size: 20px;
+  font-weight: 850;
+}
+
+.route-shell.is-businesses-page .business-card .business-card-income small {
+  color: var(--idle-text-secondary);
+  font-family: var(--idle-font-ui);
+  font-size: 11px;
+  font-weight: 650;
+}
+
+.route-shell.is-businesses-page .business-card .business-card-vault-heading strong {
+  font-family: var(--idle-font-ui);
+  font-size: 16px;
+  font-weight: 850;
+}
+
+.route-shell.is-businesses-page .business-card .business-card-vault-meta small {
+  color: var(--idle-text-secondary);
+  font-family: var(--idle-font-ui);
+  font-size: 10px;
+  font-weight: 650;
+  line-height: 1.3;
+}
+
+.route-shell.is-businesses-page .business-card .business-card-vault-meta .business-vault-eta {
+  color: var(--idle-text-secondary);
+}
+
+.route-shell.is-businesses-page .business-card .business-card-vault-meter .business-vault-upgrade {
+  min-height: 36px;
+  font-family: var(--idle-font-label);
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: .04em;
+}
+
+.route-shell.is-businesses-page .business-card-actions button,
+.route-shell.is-businesses-page .business-card-action--details .business-card-details {
+  font-family: var(--idle-font-label);
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: .035em;
+}
+
+.route-shell.is-businesses-page .business-card-footer {
+  font-family: var(--idle-font-label);
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: .05em;
+}
+
+/* Details header / summary */
+.business-detail-heading > span {
+  font-family: var(--idle-font-label);
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: .09em;
+}
+
+.business-detail-heading h2 {
+  font-family: var(--idle-font-ui);
+  font-size: clamp(32px, 3.4vw, 44px);
+  font-weight: 850;
+}
+
+.business-detail-heading p {
+  color: var(--idle-text-secondary);
+  font-family: var(--idle-font-ui);
+  font-size: 13px;
+  font-weight: 550;
+  line-height: 1.5;
+}
+
+.business-detail-level-badge,
+.business-detail-state {
+  min-height: 27px;
+  font-family: var(--idle-font-label);
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: .07em;
+}
+
+.business-detail-tabs button {
+  min-height: 44px;
+  font-family: var(--idle-font-label);
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: .05em;
+}
+
+.business-detail-summary span {
+  font-family: var(--idle-font-label);
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: .05em;
+}
+
+.business-detail-summary strong {
+  margin-top: 8px;
+  font-family: var(--idle-font-ui);
+  font-size: 15px;
+  font-weight: 800;
+}
+
+.business-detail-section-heading > span,
+.business-detail-section-heading > strong {
+  font-family: var(--idle-font-label);
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: .07em;
+}
+
+.business-detail-preview-card > span {
+  font-family: var(--idle-font-label);
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: .07em;
+}
+
+.business-detail-preview-card > strong {
+  font-family: var(--idle-font-ui);
+  font-size: 19px;
+  font-weight: 850;
+}
+
+.business-detail-preview-card > small {
+  color: var(--idle-text-secondary);
+  font-family: var(--idle-font-ui);
+  font-size: 11px;
+  font-weight: 550;
+  line-height: 1.5;
+}
+
+/* Business progression tree */
+.business-level-tree-legend span,
+.business-vault-tree-legend span {
+  min-height: 24px;
+  font-family: var(--idle-font-label);
+  font-size: 8px;
+  font-weight: 750;
+  letter-spacing: .05em;
+}
+
+.business-level-node-dot,
+.vault-level-node-dot {
+  font-family: var(--idle-font-label);
+  font-size: 9px;
+  font-weight: 800;
+}
+
+.business-level-node-kicker,
+.business-level-node-economy span,
+.vault-level-node-main span,
+.vault-level-node-state {
+  font-family: var(--idle-font-label);
+  font-size: 8px;
+  font-weight: 750;
+  letter-spacing: .05em;
+}
+
+.business-level-node-header strong {
+  font-family: var(--idle-font-ui);
+  font-size: 14px;
+  font-weight: 800;
+  line-height: 1.22;
+}
+
+.business-level-node[data-level-state="current"] .business-level-node-header strong {
+  font-size: 15px;
+}
+
+.business-level-node-state b,
+.business-level-node-state span {
+  min-height: 22px;
+  font-family: var(--idle-font-label);
+  font-size: 8px;
+  font-weight: 750;
+  letter-spacing: .04em;
+}
+
+.business-level-node-economy strong,
+.vault-level-node-main strong {
+  font-family: var(--idle-font-ui);
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.business-level-node-economy small,
+.vault-level-node-main small {
+  color: var(--idle-text-secondary);
+  font-family: var(--idle-font-ui);
+  font-size: 9px;
+  font-weight: 550;
+  line-height: 1.35;
+}
+
+/* Next-level comparison */
+.business-next-comparison-header span:first-child,
+.business-next-comparison-side > span,
+.business-next-comparison-deltas span {
+  font-family: var(--idle-font-label);
+  font-size: 8px;
+  font-weight: 750;
+  letter-spacing: .05em;
+}
+
+.business-next-comparison-header strong {
+  font-family: var(--idle-font-ui);
+  font-size: 17px;
+  font-weight: 850;
+}
+
+.business-next-comparison-gain {
+  min-height: 30px;
+  font-family: var(--idle-font-label);
+  font-size: 9px;
+  font-weight: 800;
+}
+
+.business-next-comparison-side > strong {
+  font-family: var(--idle-font-ui);
+  font-size: 14px;
+  font-weight: 800;
+}
+
+.business-next-comparison-side > small {
+  color: var(--idle-text-secondary);
+  font-family: var(--idle-font-ui);
+  font-size: 10px;
+  font-weight: 550;
+  line-height: 1.35;
+}
+
+.business-next-comparison-deltas strong {
+  font-family: var(--idle-font-ui);
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.business-next-comparison-cta,
+.business-vault-detail-cta {
+  min-height: 48px;
+  font-family: var(--idle-font-label);
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: .04em;
+}
+
+.business-next-comparison-note,
+.business-vault-next > small {
+  min-height: 18px;
+  color: var(--idle-text-secondary);
+  font-family: var(--idle-font-ui);
+  font-size: 10px;
+  font-weight: 550;
+  line-height: 1.4;
+}
+
+/* Vault detail typography */
+.business-vault-reset-warning strong {
+  font-family: var(--idle-font-label);
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: .05em;
+}
+
+.business-vault-reset-warning p {
+  color: var(--idle-text-secondary);
+  font-family: var(--idle-font-ui);
+  font-size: 10px;
+  font-weight: 550;
+  line-height: 1.5;
+}
+
+.business-vault-next-flow span,
+.business-vault-next-cost > span {
+  font-family: var(--idle-font-label);
+  font-size: 8px;
+  font-weight: 750;
+  letter-spacing: .05em;
+}
+
+.business-vault-next-flow strong,
+.business-vault-next-cost strong {
+  font-family: var(--idle-font-ui);
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.vault-level-node-state {
+  min-height: 22px;
+  padding-inline: 7px;
+}
+
+/* Mobile remains readable instead of collapsing into 5–7px labels. */
+@media (max-width: 760px) {
+  .route-shell.is-businesses-page .business-card .business-row-title small {
+    font-size: 9px;
+  }
+
+  .route-shell.is-businesses-page .business-card .business-row-title strong {
+    font-size: 21px;
+  }
+
+  .route-shell.is-businesses-page .business-card .business-row-title span {
+    font-size: 11px;
+  }
+
+  .route-shell.is-businesses-page .business-card .business-card-accrued strong {
+    font-size: clamp(29px, 8.5vw, 34px);
+  }
+
+  .route-shell.is-businesses-page .business-card .business-card-vault-meta small {
+    font-size: 9px;
+  }
+
+  .route-shell.is-businesses-page .business-card .business-card-vault-meter .business-vault-upgrade,
+  .route-shell.is-businesses-page .business-card-actions button,
+  .route-shell.is-businesses-page .business-card-action--details .business-card-details {
+    font-size: 10px;
+  }
+
+  .business-detail-heading > span {
+    font-size: 9px;
+  }
+
+  .business-detail-heading p {
+    font-size: 12px;
+  }
+
+  .business-detail-level-badge,
+  .business-detail-state {
+    font-size: 8px;
+  }
+
+  .business-detail-tabs button,
+  .business-detail-section-heading > span,
+  .business-detail-section-heading > strong {
+    font-size: 9px;
+  }
+
+  .business-detail-summary span {
+    font-size: 8px;
+  }
+
+  .business-detail-summary strong {
+    font-size: 13px;
+  }
+
+  .business-level-tree-legend span,
+  .business-vault-tree-legend span {
+    min-height: 23px;
+    font-size: 7px;
+  }
+
+  .business-level-node-kicker,
+  .business-level-node-state b,
+  .business-level-node-state span,
+  .business-level-node-economy span,
+  .vault-level-node-main span,
+  .vault-level-node-state,
+  .business-next-comparison-header span:first-child,
+  .business-next-comparison-side > span,
+  .business-next-comparison-deltas span,
+  .business-vault-next-flow span,
+  .business-vault-next-cost > span {
+    font-size: 7px;
+  }
+
+  .business-level-node-header strong,
+  .business-level-node[data-level-state="current"] .business-level-node-header strong {
+    font-size: 13px;
+  }
+
+  .business-level-node-economy strong,
+  .vault-level-node-main strong {
+    font-size: 11px;
+  }
+
+  .business-level-node-economy small,
+  .vault-level-node-main small,
+  .business-next-comparison-side > small {
+    font-size: 9px;
+  }
+
+  .business-next-comparison-cta,
+  .business-vault-detail-cta {
+    font-size: 10px;
+  }
+
+  .business-next-comparison-note,
+  .business-vault-next > small,
+  .business-vault-reset-warning p {
+    font-size: 9px;
+  }
+}
+
+@media (orientation: landscape) and (max-height: 520px) and (max-width: 950px) {
+  .business-detail-heading > span,
+  .business-detail-level-badge,
+  .business-detail-state,
+  .business-detail-tabs button,
+  .business-detail-summary span,
+  .business-detail-section-heading > span,
+  .business-detail-section-heading > strong {
+    font-size: 8px;
+  }
+
+  .business-detail-heading p {
+    font-size: 10px;
+  }
+
+  .business-detail-summary strong {
+    font-size: 12px;
+  }
+}
