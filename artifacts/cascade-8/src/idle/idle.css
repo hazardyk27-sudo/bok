@@ -3372,3 +3372,254 @@ body.businesses-route {
     transition: none;
   }
 }
+
+
+/* Part 10 — Club Store visual system / merchandise progression */
+.business-card--club-store .business-card-visual {
+  min-height: 168px;
+  background:
+    radial-gradient(circle at 68% 20%, rgba(114, 88, 255, .18), transparent 34%),
+    linear-gradient(145deg, #171f38 0%, #0d1830 56%, #070d18 100%);
+}
+
+.business-card-store-scene {
+  inset: 0;
+  opacity: 1;
+  pointer-events: none;
+}
+
+.business-card-store-scene svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+  min-height: 168px;
+  transform: scale(1.02);
+  transform-origin: 52% 67%;
+  transition:
+    filter .35s ease,
+    transform .35s ease,
+    opacity .35s ease;
+}
+
+.business-card--club-store .business-card-visual-shade {
+  z-index: 2;
+  background:
+    linear-gradient(90deg, rgba(5, 8, 22, .17), transparent 38%, rgba(5, 8, 22, .05)),
+    linear-gradient(180deg, transparent 45%, rgba(5, 8, 22, .8) 100%);
+}
+
+.business-card--club-store .business-card-code,
+.business-card--club-store .business-card-state,
+.business-card--club-store .business-card-milestone {
+  z-index: 5;
+}
+
+.business-card--club-store .store-shell,
+.business-card--club-store .store-signage,
+.business-card--club-store .store-merch,
+.business-card--club-store .store-shelves,
+.business-card--club-store .store-premium-rack,
+.business-card--club-store .store-flagship-mark {
+  transform-origin: 210px 130px;
+  transition:
+    opacity .35s ease,
+    transform .35s ease,
+    filter .35s ease;
+}
+
+/* Locked — dark showcase, still readable as a future retail destination. */
+.business-card--club-store[data-visual-stage="locked"] .business-card-store-scene svg {
+  filter: grayscale(.62) saturate(.48) brightness(.58);
+  opacity: .74;
+}
+
+.business-card--club-store[data-visual-stage="locked"] .store-merch,
+.business-card--club-store[data-visual-stage="locked"] .store-shelves,
+.business-card--club-store[data-visual-stage="locked"] .store-signage {
+  opacity: .16;
+}
+
+.business-card--club-store[data-visual-stage="locked"] .business-card-milestone {
+  color: var(--idle-text-muted);
+  border-color: rgba(157, 174, 196, .1);
+}
+
+/* Lv0–2 — compact club shop with limited display stock. */
+.business-card--club-store[data-visual-stage="local"] .store-shell {
+  transform: scale(.9) translateY(6px);
+}
+
+.business-card--club-store[data-visual-stage="local"] .store-signage {
+  opacity: .42;
+}
+
+.business-card--club-store[data-visual-stage="local"] .store-merch {
+  opacity: .56;
+}
+
+.business-card--club-store[data-visual-stage="local"] .store-shelves {
+  opacity: .24;
+}
+
+.business-card--club-store[data-visual-stage="local"] .store-premium-rack {
+  opacity: .08;
+}
+
+.business-card--club-store[data-visual-stage="local"] .business-card-milestone {
+  color: #c0c8db;
+}
+
+/* Lv3–5 — professional retail floor with stronger merchandising. */
+.business-card--club-store[data-visual-stage="pro"] .business-card-store-scene svg {
+  filter: saturate(1.06) brightness(1.04);
+}
+
+.business-card--club-store[data-visual-stage="pro"] .store-shell {
+  transform: scale(.97) translateY(2px);
+}
+
+.business-card--club-store[data-visual-stage="pro"] .store-signage {
+  opacity: .72;
+}
+
+.business-card--club-store[data-visual-stage="pro"] .store-merch {
+  opacity: .82;
+}
+
+.business-card--club-store[data-visual-stage="pro"] .store-shelves {
+  opacity: .58;
+}
+
+.business-card--club-store[data-visual-stage="pro"] .store-premium-rack {
+  opacity: .28;
+}
+
+.business-card--club-store[data-visual-stage="pro"] .business-card-milestone {
+  color: #9ea2ff;
+  border-color: rgba(141, 125, 255, .24);
+}
+
+/* Lv6–7 — premium flagship retail: glass, neon and full collection. */
+.business-card--club-store[data-visual-stage="elite"] .business-card-store-scene svg {
+  filter: saturate(1.14) brightness(1.08) contrast(1.02);
+  transform: scale(1.05);
+}
+
+.business-card--club-store[data-visual-stage="elite"] .store-shell {
+  filter: drop-shadow(0 0 8px rgba(114, 88, 255, .13));
+}
+
+.business-card--club-store[data-visual-stage="elite"] .store-signage {
+  opacity: .92;
+  filter: drop-shadow(0 0 7px rgba(114, 88, 255, .18));
+}
+
+.business-card--club-store[data-visual-stage="elite"] .store-merch {
+  opacity: 1;
+}
+
+.business-card--club-store[data-visual-stage="elite"] .store-shelves {
+  opacity: .8;
+}
+
+.business-card--club-store[data-visual-stage="elite"] .store-premium-rack {
+  opacity: .58;
+}
+
+.business-card--club-store[data-visual-stage="elite"] .business-card-milestone {
+  color: #c8c5ff;
+  border-color: rgba(154, 140, 255, .34);
+  box-shadow: 0 0 18px rgba(114, 88, 255, .08);
+}
+
+/* Lv8 — iconic flagship store: full neon treatment + retail crown. */
+.business-card--club-store[data-visual-stage="landmark"] .business-card-store-scene svg {
+  filter: saturate(1.22) brightness(1.12) contrast(1.04);
+  transform: scale(1.07);
+}
+
+.business-card--club-store[data-visual-stage="landmark"] .store-shell {
+  filter: drop-shadow(0 0 11px rgba(125, 223, 255, .12));
+}
+
+.business-card--club-store[data-visual-stage="landmark"] .store-signage {
+  opacity: 1;
+  filter: drop-shadow(0 0 9px rgba(141, 125, 255, .28));
+}
+
+.business-card--club-store[data-visual-stage="landmark"] .store-merch,
+.business-card--club-store[data-visual-stage="landmark"] .store-shelves,
+.business-card--club-store[data-visual-stage="landmark"] .store-premium-rack {
+  opacity: 1;
+}
+
+.business-card--club-store[data-visual-stage="landmark"] .store-flagship-mark {
+  opacity: .92;
+  filter: drop-shadow(0 0 8px rgba(125, 223, 255, .24));
+}
+
+.business-card--club-store[data-visual-stage="landmark"] .business-card-milestone {
+  color: #ecebff;
+  border-color: rgba(171, 159, 255, .44);
+  background: rgba(22, 20, 48, .62);
+  box-shadow:
+    0 0 0 1px rgba(114, 88, 255, .05),
+    0 0 22px rgba(114, 88, 255, .14);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .business-card--club-store:hover .business-card-store-scene svg {
+    transform: scale(1.05);
+  }
+
+  .business-card--club-store[data-visual-stage="elite"]:hover .business-card-store-scene svg,
+  .business-card--club-store[data-visual-stage="landmark"]:hover .business-card-store-scene svg {
+    transform: scale(1.09);
+  }
+}
+
+@media (max-width: 760px) {
+  .route-shell.is-businesses-page .business-card--club-store .business-card-visual {
+    min-height: 148px;
+  }
+
+  .route-shell.is-businesses-page .business-card--club-store .business-card-store-scene {
+    inset: 0;
+  }
+
+  .route-shell.is-businesses-page .business-card--club-store .business-card-store-scene svg {
+    min-height: 148px;
+    transform-origin: 56% 70%;
+  }
+
+  .route-shell.is-businesses-page .business-card--club-store .business-card-milestone {
+    left: 12px;
+    bottom: 30px;
+    min-height: 20px;
+    padding: 5px 7px 4px;
+    font-size: 6px;
+  }
+}
+
+@media (max-width: 420px) {
+  .route-shell.is-businesses-page .business-card--club-store .business-card-visual,
+  .route-shell.is-businesses-page .business-card--club-store .business-card-store-scene svg {
+    min-height: 134px;
+  }
+
+  .route-shell.is-businesses-page .business-card--club-store .business-card-milestone {
+    bottom: 27px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .business-card-store-scene svg,
+  .business-card--club-store .store-shell,
+  .business-card--club-store .store-signage,
+  .business-card--club-store .store-merch,
+  .business-card--club-store .store-shelves,
+  .business-card--club-store .store-premium-rack,
+  .business-card--club-store .store-flagship-mark {
+    transition: none;
+  }
+}
