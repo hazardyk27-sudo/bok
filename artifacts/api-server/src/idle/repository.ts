@@ -609,6 +609,46 @@ export class IdleRepository {
   }
 
   /**
+   * Collects every currently owned business with one user action. Each
+   * business keeps its own idempotent child receipt, so retries never
+   * double-credit a successful partial attempt.
+   */
+  async collectAllBusinesses(
+    sessionId: string,
+    idempotencyKey: string,
+    serverNow = new Date(),
+  ) {
+    const snapshot = await this.getSessionState(sessionId, serverNow);
+    const ownedBusinessIds = snapshot.businesses
+      .filter((business) => business.businessLevel !== null)
+      .map((business) => business.businessId);
+
+    const collections = [];
+    for (const businessId of ownedBusinessIds) {
+      const result = await this.collectBusiness(
+        sessionId,
+        businessId,
+        `${idempotencyKey}-${businessId}`,
+        serverNow,
+      );
+      collections.push(result);
+    }
+
+    const refreshed = await this.getSessionState(sessionId, serverNow);
+    return {
+      serverNow,
+      collectedCents: collections.reduce(
+        (total, result) => total + result.collectedCents,
+        0,
+      ),
+      balanceCents: refreshed.wallet.balanceCents,
+      replayed: collections.length > 0 && collections.every((result) => result.replayed),
+      collections,
+      businesses: refreshed.businesses,
+    };
+  }
+
+  /**
    * Advances the Kasa by exactly one level. Pricing is derived from the
    * currently active main business tier and the approved vault percentage step.
    * Existing accrued money is checkpointed and preserved.

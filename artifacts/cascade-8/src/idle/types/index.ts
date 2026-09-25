@@ -109,3 +109,17 @@ export type IdleVaultUpgradePreview = {
   nextCapacityHours: number | null;
   costCents: number | null;
 };
+
+
+export type IdleCollectAllResponse = {
+  serverTime: string;
+  collectedCents: number;
+  balanceCents: number;
+  replayed: boolean;
+  collections: Array<{
+    businessId: BusinessId;
+    collectedCents: number;
+    replayed: boolean;
+  }>;
+  businesses: IdleBusinessServerState[];
+};

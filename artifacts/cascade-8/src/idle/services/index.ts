@@ -12,6 +12,7 @@ import type {
   IdleBusinessServerState,
   IdleBusinessUpgradeResponse,
   IdleCollectResponse,
+  IdleCollectAllResponse,
   IdleLiveBusinessState,
   IdleStateEnvelope,
   IdleStateResponse,
@@ -159,6 +160,28 @@ export function projectIdleStateLive(
       projectIdleBusinessLive(business, elapsedSinceSnapshotMs),
     ),
   };
+}
+
+
+export async function collectAllIdleBusinesses(
+  idempotencyKey = crypto.randomUUID(),
+): Promise<IdleCollectAllResponse> {
+  const response = await fetch("/api/idle/collect-all", {
+    method: "POST",
+    credentials: "same-origin",
+    headers: {
+      Accept: "application/json",
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ idempotencyKey }),
+  });
+
+  if (!response.ok) {
+    const body = await response.json().catch(() => null) as { error?: string } | null;
+    throw new Error(body?.error ?? "IDLE_COLLECT_ALL_REQUEST_FAILED");
+  }
+
+  return response.json() as Promise<IdleCollectAllResponse>;
 }
 
 

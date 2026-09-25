@@ -1,6 +1,7 @@
 import "./idle.css";
 import { renderBusinessRowShell, updateBusinessRow } from "./components";
 import {
+  collectAllIdleBusinesses,
   collectIdleBusiness,
   fetchIdleState,
   getIdleTotalCollectableCents,
@@ -46,6 +47,13 @@ export const BUSINESSES_MARKUP = `
         <span>TOPLANABİLİR</span>
         <strong data-idle-total-collectable>—</strong>
       </div>
+      <div>
+        <span>AKTİF İŞLETME</span>
+        <strong data-idle-active-businesses>— / 3</strong>
+      </div>
+      <button type="button" class="business-summary-collect-all" data-idle-collect-all disabled>
+        TÜMÜNÜ TOPLA
+      </button>
     </section>
 
     <p class="businesses-error" data-idle-error role="status" hidden></p>
@@ -60,6 +68,7 @@ export class BusinessesClient {
   private envelope: IdleStateEnvelope | null = null;
   private timer: number | null = null;
   private readonly busyBusinesses = new Set<BusinessId>();
+  private collectingAll = false;
 
   constructor(private readonly root: HTMLElement) {
     this.root.addEventListener("click", this.handleClick);
@@ -106,8 +115,10 @@ export class BusinessesClient {
     const balanceNode = this.root.querySelector<HTMLElement>("[data-idle-balance]");
     const hourlyNode = this.root.querySelector<HTMLElement>("[data-idle-total-hourly]");
     const collectableNode = this.root.querySelector<HTMLElement>("[data-idle-total-collectable]");
+    const activeNode = this.root.querySelector<HTMLElement>("[data-idle-active-businesses]");
+    const collectAllButton = this.root.querySelector<HTMLButtonElement>("[data-idle-collect-all]");
 
-    if (!balanceNode || !hourlyNode || !collectableNode) {
+    if (!balanceNode || !hourlyNode || !collectableNode || !activeNode || !collectAllButton) {
       throw new Error("IDLE_PAGE_SHELL_INCOMPLETE");
     }
 
@@ -135,15 +146,31 @@ export class BusinessesClient {
 
     }
 
+    const activeBusinesses = live.businesses.filter(
+      (business) => business.businessLevel !== null,
+    ).length;
+
     hourlyNode.textContent = `${formatCredits(totalHourlyCents)} /sa`;
     collectableNode.textContent = formatCredits(totalCollectableCents);
+    activeNode.textContent = `${activeBusinesses} / ${BUSINESS_IDS.length}`;
+    collectAllButton.textContent = totalCollectableCents > 0
+      ? `TÜMÜNÜ TOPLA · ${formatCredits(totalCollectableCents)}`
+      : "TÜMÜNÜ TOPLA";
+    collectAllButton.disabled = this.collectingAll || totalCollectableCents <= 0;
   }
 
   private handleClick = (event: Event) => {
     const target = event.target as HTMLElement | null;
     const button = target?.closest<HTMLButtonElement>("button");
+    if (!button) return;
+
+    if (button.matches("[data-idle-collect-all]")) {
+      if (!this.collectingAll) void this.runCollectAll();
+      return;
+    }
+
     const row = target?.closest<HTMLElement>("[data-business-id]");
-    if (!button || !row) return;
+    if (!row) return;
 
     const businessId = row.dataset.businessId as BusinessId | undefined;
     if (!businessId || !BUSINESS_IDS.includes(businessId)) return;
@@ -171,6 +198,24 @@ export class BusinessesClient {
       this.setError(this.getErrorMessage(error));
     } finally {
       this.busyBusinesses.delete(businessId);
+      this.render();
+    }
+  }
+
+  private async runCollectAll() {
+    this.collectingAll = true;
+    for (const businessId of BUSINESS_IDS) this.busyBusinesses.add(businessId);
+    this.render();
+
+    try {
+      await collectAllIdleBusinesses();
+      await this.refresh();
+    } catch (error) {
+      this.setError(this.getErrorMessage(error));
+      await this.refresh();
+    } finally {
+      this.collectingAll = false;
+      this.busyBusinesses.clear();
       this.render();
     }
   }
