@@ -10,6 +10,14 @@ const idleIndexSource = readFileSync(
   fileURLToPath(new URL("./index.ts", import.meta.url)),
   "utf8",
 );
+const idleCssSource = readFileSync(
+  fileURLToPath(new URL("./idle.css", import.meta.url)),
+  "utf8",
+);
+const mainSource = readFileSync(
+  fileURLToPath(new URL("../main.ts", import.meta.url)),
+  "utf8",
+);
 
 describe("final Idle UI integration", () => {
   it("exposes Kasa upgrade as a secondary control on every business row", () => {
@@ -57,5 +65,16 @@ describe("Idle collect all integration", () => {
     expect(componentsSource).toContain("KASA KAPASİTESİ");
     expect(componentsSource).toContain("data-business-vault-fill");
     expect(componentsSource).toContain("data-business-vault-progress");
+  });
+});
+
+
+describe("Businesses mobile scrolling", () => {
+  it("keeps Businesses vertically scrollable on small screens without changing other game routes", () => {
+    expect(mainSource).toContain('document.documentElement.classList.add("businesses-route")');
+    expect(mainSource).toContain('document.body.classList.add("businesses-route")');
+    expect(idleCssSource).toContain("html.businesses-route #app");
+    expect(idleCssSource).toContain("html.businesses-route .app-shell.is-businesses-page");
+    expect(idleCssSource).toContain("overflow-y: auto");
   });
 });
