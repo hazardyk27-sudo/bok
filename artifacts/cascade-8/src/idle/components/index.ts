@@ -187,6 +187,7 @@ export function renderBusinessRowShell(businessId: BusinessId) {
       <div class="business-card-visual" role="img" aria-label="${meta.visualLabel}">
 ${renderBusinessArt(businessId)}
         <span class="business-card-code">${meta.code}</span>
+        ${businessId === "stadium" ? '<span class="business-card-milestone" data-business-milestone>STADIUM // BASE</span>' : ""}
         <span class="business-card-state" data-business-card-state>YÜKLENİYOR</span>
         <div class="business-card-visual-shade" aria-hidden="true"></div>
       </div>
@@ -296,6 +297,7 @@ export function updateBusinessRow(
   const collectButton = row.querySelector<HTMLButtonElement>("[data-business-collect]");
   const collectNoteNode = row.querySelector<HTMLElement>("[data-business-collect-note]");
   const cardStateNode = row.querySelector<HTMLElement>("[data-business-card-state]");
+  const milestoneNode = row.querySelector<HTMLElement>("[data-business-milestone]");
 
   if (
     !levelNode
@@ -484,7 +486,19 @@ export function updateBusinessRow(
   row.dataset.businessStatus = business.vaultStatus.toLowerCase();
   row.dataset.businessOwnership = currentStage ? "owned" : "locked";
   row.dataset.businessLevel = currentStage ? String(currentStage.level) : "unowned";
-  row.dataset.visualStage = getBusinessVisualStage(business);
+  const visualStage = getBusinessVisualStage(business);
+  row.dataset.visualStage = visualStage;
+  if (milestoneNode) {
+    milestoneNode.textContent = visualStage === "locked"
+      ? "STADIUM // LOCKED"
+      : visualStage === "local"
+        ? "STADIUM // LOCAL"
+        : visualStage === "pro"
+          ? "STADIUM // PRO"
+          : visualStage === "elite"
+            ? "STADIUM // ELITE"
+            : "STADIUM // ICON";
+  }
 
   cardStateNode.textContent = !currentStage
     ? "SATIN ALINMADI"
