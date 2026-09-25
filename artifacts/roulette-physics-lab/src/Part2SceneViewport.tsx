@@ -1343,10 +1343,7 @@ function addKinematicPocketInnerGuard(
   body: RAPIER.RigidBody,
 ) {
   const verticalHalfHeight = 0.11;
-  // Sink the guard slightly below the pocket floor so its lower cylinder edge
-  // does not coincide with the floor plane and create a degenerate contact seam.
-  const floorOverlap = 0.03;
-  const centerY = POCKET_FLOOR_Y + verticalHalfHeight - floorOverlap;
+  const centerY = POCKET_FLOOR_Y + verticalHalfHeight;
   return world.createCollider(
     RAPIER.ColliderDesc.cylinder(
       verticalHalfHeight,
