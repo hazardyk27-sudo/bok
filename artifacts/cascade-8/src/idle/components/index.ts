@@ -153,8 +153,26 @@ export function renderBusinessRowShell(businessId: BusinessId) {
         <div class="business-card-divider" aria-hidden="true"></div>
 
         <div class="business-row-actions business-card-actions">
-          <button type="button" class="business-card-primary" disabled data-business-collect>TOPLA</button>
-          <button type="button" class="business-card-secondary" disabled data-business-upgrade>YÜKSELT</button>
+          <div class="business-card-action business-card-action--collect">
+            <button
+              type="button"
+              class="business-card-primary"
+              disabled
+              data-action-state="loading"
+              data-business-collect
+            >TOPLA</button>
+            <small data-business-collect-note>Yükleniyor…</small>
+          </div>
+          <div class="business-card-action business-card-action--upgrade">
+            <button
+              type="button"
+              class="business-card-secondary"
+              disabled
+              data-action-state="loading"
+              data-business-upgrade
+            >YÜKSELT</button>
+            <small data-business-upgrade-note>Yükleniyor…</small>
+          </div>
         </div>
 
         <div class="business-card-footer">
@@ -188,7 +206,9 @@ export function updateBusinessRow(
   const nextGainNode = row.querySelector<HTMLElement>("[data-business-next-gain]");
   const vaultUpgradeButton = row.querySelector<HTMLButtonElement>("[data-business-vault-upgrade]");
   const upgradeButton = row.querySelector<HTMLButtonElement>("[data-business-upgrade]");
+  const upgradeNoteNode = row.querySelector<HTMLElement>("[data-business-upgrade-note]");
   const collectButton = row.querySelector<HTMLButtonElement>("[data-business-collect]");
+  const collectNoteNode = row.querySelector<HTMLElement>("[data-business-collect-note]");
   const cardStateNode = row.querySelector<HTMLElement>("[data-business-card-state]");
 
   if (
@@ -207,7 +227,9 @@ export function updateBusinessRow(
     || !nextGainNode
     || !vaultUpgradeButton
     || !upgradeButton
+    || !upgradeNoteNode
     || !collectButton
+    || !collectNoteNode
     || !cardStateNode
   ) {
     throw new Error("IDLE_BUSINESS_ROW_INCOMPLETE");
@@ -278,31 +300,100 @@ export function updateBusinessRow(
     nextGainNode.textContent = "MAX";
   }
 
-  if (!vaultUpgrade.isOwned || vaultUpgrade.isMaxLevel || !vaultUpgrade.canUpgrade) {
+  if (!vaultUpgrade.isOwned) {
     vaultUpgradeButton.hidden = true;
     vaultUpgradeButton.disabled = true;
-  } else {
+    vaultUpgradeButton.dataset.actionState = "locked";
+    vaultUpgradeButton.title = "Kasa, işletme satın alındıktan sonra geliştirilebilir.";
+  } else if (vaultUpgrade.isMaxLevel || !vaultUpgrade.canUpgrade) {
     vaultUpgradeButton.hidden = false;
-    vaultUpgradeButton.textContent = `GELİŞTİR · ${formatCreditsFromCents(vaultUpgrade.costCents ?? 0)}`;
-    vaultUpgradeButton.disabled = busy
-      || vaultUpgrade.costCents === null
-      || walletBalanceCents < vaultUpgrade.costCents;
+    vaultUpgradeButton.disabled = true;
+    vaultUpgradeButton.textContent = "KASA MAX";
+    vaultUpgradeButton.dataset.actionState = "max";
+    vaultUpgradeButton.title = "Kasa maksimum seviyede.";
+  } else {
+    const vaultCostCents = vaultUpgrade.costCents ?? 0;
+    const vaultShortfallCents = Math.max(0, vaultCostCents - walletBalanceCents);
+    const canAffordVault = walletBalanceCents >= vaultCostCents;
+
+    vaultUpgradeButton.hidden = false;
+    vaultUpgradeButton.textContent = `KASA GELİŞTİR · ${formatCreditsFromCents(vaultCostCents)}`;
+    vaultUpgradeButton.disabled = busy || !canAffordVault;
+    vaultUpgradeButton.dataset.actionState = busy
+      ? "busy"
+      : canAffordVault
+        ? "ready"
+        : "insufficient";
+    vaultUpgradeButton.title = busy
+      ? "İşlem sürüyor."
+      : canAffordVault
+        ? `Kasayı ${vaultUpgrade.nextCapacityHours} saate çıkar.`
+        : `Bakiye yetersiz. ${formatCreditsFromCents(vaultShortfallCents)} eksik.`;
   }
 
   if (nextStage) {
-    upgradeButton.textContent = business.businessLevel === null
+    const shortfallCents = Math.max(0, nextStage.costCents - walletBalanceCents);
+    const canAffordUpgrade = walletBalanceCents >= nextStage.costCents;
+    const isPurchase = business.businessLevel === null;
+
+    upgradeButton.textContent = isPurchase
       ? `SATIN AL · ${formatCreditsFromCents(nextStage.costCents)}`
       : `YÜKSELT · ${formatCreditsFromCents(nextStage.costCents)}`;
-    upgradeButton.disabled = busy || walletBalanceCents < nextStage.costCents;
+    upgradeButton.disabled = busy || !canAffordUpgrade;
+    upgradeButton.dataset.actionState = busy
+      ? "busy"
+      : canAffordUpgrade
+        ? isPurchase ? "purchase" : "ready"
+        : "insufficient";
+    upgradeButton.title = busy
+      ? "İşlem sürüyor."
+      : canAffordUpgrade
+        ? isPurchase
+          ? "İşletmeyi aç ve pasif gelir üretmeye başla."
+          : "İşletme yükseltildiğinde Kasa Lv1'e döner."
+        : `Bakiye yetersiz. ${formatCreditsFromCents(shortfallCents)} eksik.`;
+    upgradeNoteNode.textContent = busy
+      ? "İşlem sürüyor"
+      : canAffordUpgrade
+        ? isPurchase
+          ? "Aç ve gelir üretmeye başla"
+          : "Yükseltmede Kasa Lv1'e döner"
+        : `${formatCreditsFromCents(shortfallCents)} eksik`;
   } else {
     upgradeButton.textContent = "MAX SEVİYE";
     upgradeButton.disabled = true;
+    upgradeButton.dataset.actionState = "max";
+    upgradeButton.title = "Tüm işletme seviyeleri tamamlandı.";
+    upgradeNoteNode.textContent = "Tüm seviyeler tamamlandı";
   }
 
   collectButton.textContent = business.canCollect
     ? `TOPLA · ${formatCreditsFromCents(business.collectableCents)}`
     : "TOPLA";
   collectButton.disabled = busy || !business.canCollect;
+  collectButton.dataset.actionState = busy
+    ? "busy"
+    : business.businessLevel === null
+      ? "locked"
+      : business.canCollect
+        ? business.liveIsVaultFull ? "full" : "ready"
+        : "empty";
+  collectButton.title = busy
+    ? "İşlem sürüyor."
+    : business.businessLevel === null
+      ? "İşletme satın alındıktan sonra gelir toplanabilir."
+      : business.canCollect
+        ? "Kasadaki birikmiş tutarı ortak bakiyeye aktar."
+        : "Toplanabilir gelir henüz oluşmadı.";
+  collectNoteNode.textContent = busy
+    ? "İşlem sürüyor"
+    : business.businessLevel === null
+      ? "İşletme kapalı"
+      : business.liveIsVaultFull
+        ? "Kasa dolu · şimdi topla"
+        : business.canCollect
+          ? "Ortak bakiyeye aktar"
+          : "Gelir birikiyor";
 
   row.dataset.businessStatus = business.vaultStatus.toLowerCase();
   row.dataset.businessOwnership = currentStage ? "owned" : "locked";
