@@ -1,4 +1,5 @@
 import { randomUUID } from "node:crypto";
+import { once } from "node:events";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
 const enabled = process.env.IDLE_DB_INTEGRATION === "1";
@@ -16,9 +17,8 @@ describe.skipIf(!enabled)("IdleRepository PostgreSQL integration", () => {
     pool = dbModule.pool;
     idleRepository = repositoryModule.idleRepository;
 
-    await new Promise<void>((resolve) => {
-      server = appModule.default.listen(0, "127.0.0.1", resolve);
-    });
+    server = appModule.default.listen(0, "127.0.0.1");
+    await once(server, "listening");
     const address = server.address();
     if (!address || typeof address === "string") {
       throw new Error("IDLE_TEST_SERVER_ADDRESS_UNAVAILABLE");
