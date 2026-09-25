@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { assertIdleActionReceiptReplay, resolveBusinessUpgrade } from "./policy";
+import { assertIdleActionReceiptReplay, resolveBusinessUpgrade, resolveVaultUpgrade } from "./policy";
 
 describe("idle collect idempotency replay", () => {
   const receipt = {
@@ -71,5 +71,42 @@ describe("main business upgrade policy", () => {
   it("rejects upgrades beyond the configured maximum", () => {
     expect(() => resolveBusinessUpgrade(8, levels, 3_000_000_000))
       .toThrow("IDLE_BUSINESS_MAX_LEVEL");
+  });
+});
+
+
+describe("vault upgrade policy", () => {
+  const steps = [
+    { fromLevel: 1, toLevel: 2, costPercent: 5 },
+    { fromLevel: 2, toLevel: 3, costPercent: 10 },
+    { fromLevel: 3, toLevel: 4, costPercent: 15 },
+    { fromLevel: 4, toLevel: 5, costPercent: 25 },
+    { fromLevel: 5, toLevel: 6, costPercent: 40 },
+  ] as const;
+
+  it("prices Lv1 to Lv2 at five percent of the current main tier", () => {
+    expect(resolveVaultUpgrade(1, 200_000, steps, 50_000)).toEqual({
+      targetVaultLevel: 2,
+      costCents: 10_000,
+      balanceAfterCents: 40_000,
+    });
+  });
+
+  it("prices Lv5 to Lv6 at forty percent of the current main tier", () => {
+    expect(resolveVaultUpgrade(5, 500_000, steps, 250_000)).toEqual({
+      targetVaultLevel: 6,
+      costCents: 200_000,
+      balanceAfterCents: 50_000,
+    });
+  });
+
+  it("rejects Kasa upgrades for an unowned business", () => {
+    expect(() => resolveVaultUpgrade(1, null, steps, 100_000))
+      .toThrow("IDLE_BUSINESS_NOT_OWNED");
+  });
+
+  it("rejects Kasa upgrades beyond Lv6", () => {
+    expect(() => resolveVaultUpgrade(6, 200_000, steps, 500_000))
+      .toThrow("IDLE_VAULT_MAX_LEVEL");
   });
 });
