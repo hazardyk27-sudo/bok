@@ -97,3 +97,27 @@ describe("Businesses premium design tokens", () => {
     expect(idleCssSource).toContain("color: var(--idle-cyan)");
   });
 });
+
+
+describe("Businesses premium route shell", () => {
+  it("gives Businesses a wider premium desktop canvas without affecting other routes", () => {
+    expect(idleCssSource).toContain("--idle-page-max: 1240px");
+    expect(idleCssSource).toContain(".route-shell.is-businesses-page");
+    expect(idleCssSource).toContain("width: min(100%, var(--idle-page-max))");
+    expect(idleCssSource).toContain("overflow-x: clip");
+  });
+
+  it("keeps the Businesses route vertically scrollable and safe-area aware on mobile", () => {
+    expect(idleCssSource).toContain("body.businesses-route");
+    expect(idleCssSource).toContain("touch-action: pan-y");
+    expect(idleCssSource).toContain("overscroll-behavior-y: contain");
+    expect(idleCssSource).toContain("max(24px, env(safe-area-inset-bottom))");
+    expect(idleCssSource).toContain("@media (max-width: 760px)");
+  });
+
+  it("provides dedicated desktop, tablet and small-phone breakpoints for the premium shell", () => {
+    expect(idleCssSource).toContain("@media (min-width: 1280px)");
+    expect(idleCssSource).toContain("@media (min-width: 761px) and (max-width: 1100px)");
+    expect(idleCssSource).toContain("@media (max-width: 420px)");
+  });
+});
