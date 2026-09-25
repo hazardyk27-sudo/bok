@@ -247,3 +247,33 @@ describe("Businesses premium card skeleton", () => {
     expect(idleCssSource).toContain(".business-card--fan-club .business-card-visual");
   });
 });
+
+
+describe("Businesses card information hierarchy", () => {
+  it("makes accrued cash the primary card value and exposes live vault timing", () => {
+    expect(componentsSource).toContain("business-card-accrued-heading");
+    expect(componentsSource).toContain("data-business-accrued-status");
+    expect(componentsSource).toContain("data-business-vault-eta");
+    expect(componentsSource).toContain("formatVaultEta(");
+    expect(componentsSource).toContain('"TOPLAMAYA HAZIR"');
+    expect(componentsSource).toContain('"GELİR BİRİKİYOR"');
+  });
+
+  it("shows the next business target with cost and real hourly income gain", () => {
+    expect(componentsSource).toContain("data-business-next-panel");
+    expect(componentsSource).toContain("data-business-next-name");
+    expect(componentsSource).toContain("data-business-next-cost");
+    expect(componentsSource).toContain("data-business-next-gain");
+    expect(componentsSource).toContain("incomeGainCents");
+    expect(componentsSource).toContain("incomeGainPercent");
+    expect(componentsSource).toContain('"ZİRVEYE ULAŞTI"');
+  });
+
+  it("styles accrued cash and the next-upgrade panel as the dominant hierarchy", () => {
+    expect(idleCssSource).toContain("/* Part 6 — card information hierarchy / upgrade target */");
+    expect(idleCssSource).toContain(".business-card-accrued-heading");
+    expect(idleCssSource).toContain("font-size: clamp(29px, 2.4vw, 36px)");
+    expect(idleCssSource).toContain(".business-card-next");
+    expect(idleCssSource).toContain('.business-card-next[data-next-state="max"]');
+  });
+});
