@@ -22,6 +22,7 @@ const isLab = currentPath === "/lab";
 const isSlotRoute = currentPath === "/slot" || isLab;
 const isRouletteRoute = currentPath === "/roulette";
 const isWitchRoute = currentPath === "/cadi-kazan";
+const isBusinessesRoute = currentPath === "/businesses";
 const isWinLabelPreview = isLab && new URLSearchParams(window.location.search).get("preview") === "win-labels";
 const isMultiplierCollectionPreview = isLab && new URLSearchParams(window.location.search).get("preview") === "multiplier-collection";
 
@@ -121,6 +122,17 @@ const mainMenuMarkup = `
       <span class="menu-footer-line"></span>
        <span>ONE LOUNGE · THREE WORLDS</span>
       <span class="menu-footer-line"></span>
+    </div>
+  </main>
+`;
+
+const businessesMarkup = `
+  <main class="game-menu businesses-page" aria-labelledby="businesses-title">
+    <div class="menu-intro">
+      <span class="menu-kicker">FAHRİNİN YOLU // İŞLETMELER</span>
+      <h1 id="businesses-title">İŞLETMELER</h1>
+      <p>İşletme sistemi hazırlanıyor.</p>
+      <a class="back-link" href="/">← ANA MENÜ</a>
     </div>
   </main>
 `;
@@ -325,6 +337,8 @@ if (isRouletteRoute) {
   app.innerHTML = routeShell(rouletteMarkup, "is-route-page is-roulette-page");
 } else if (isWitchRoute) {
   app.innerHTML = routeShell(CADI_KAZAN_MARKUP, "is-route-page is-witch-page");
+} else if (isBusinessesRoute) {
+  app.innerHTML = routeShell(businessesMarkup, "is-route-page is-businesses-page");
 } else if (!isSlotRoute) {
   app.innerHTML = routeShell(mainMenuMarkup, "is-route-page is-menu-page");
 } else {
