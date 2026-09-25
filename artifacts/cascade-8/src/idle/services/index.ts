@@ -304,3 +304,26 @@ export function getIdleVaultUpgradePreview(
     costCents,
   };
 }
+
+
+/**
+ * Returns the aggregate passive income per hour using canonical daily income,
+ * not the rounded per-business hourly display values.
+ */
+export function getIdleTotalPassiveIncomeCentsPerHour(
+  businesses: readonly IdleBusinessServerState[],
+) {
+  const totalDailyIncomeCents = businesses.reduce((total, business) => {
+    if (business.businessLevel === null) return total;
+
+    const definition = getBusinessDefinition(business.businessId);
+    const stage = definition.levels.find(
+      (entry) => entry.level === business.businessLevel,
+    );
+    if (!stage) throw new Error("INVALID_IDLE_BUSINESS_LEVEL");
+
+    return total + stage.dailyIncomeCents;
+  }, 0);
+
+  return totalDailyIncomeCents / 24;
+}
