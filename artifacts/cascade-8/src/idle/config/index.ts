@@ -1,2 +1,80 @@
-// Idle economy and vault configuration will live here.
-export {};
+import type { BusinessDefinition } from "../types";
+
+export const STADIUM_BUSINESS = {
+  id: "stadium",
+  label: "Stadyum",
+  levels: [
+    {
+      level: 0,
+      name: "Yerel Stadyum",
+      costCents: 50_000,
+      dailyIncomeCents: 10_000,
+      hourlyIncomeDisplayCents: 417,
+      targetRoiDays: 5,
+    },
+    {
+      level: 1,
+      name: "Kulüp Stadyumu",
+      costCents: 200_000,
+      dailyIncomeCents: 36_000,
+      hourlyIncomeDisplayCents: 1_500,
+      targetRoiDays: 5.6,
+    },
+    {
+      level: 2,
+      name: "Profesyonel Stadyum",
+      costCents: 500_000,
+      dailyIncomeCents: 86_000,
+      hourlyIncomeDisplayCents: 3_583,
+      targetRoiDays: 10,
+    },
+    {
+      level: 3,
+      name: "Büyük Stadyum",
+      costCents: 2_000_000,
+      dailyIncomeCents: 152_700,
+      hourlyIncomeDisplayCents: 6_361,
+      targetRoiDays: 30,
+    },
+    {
+      level: 4,
+      name: "Ulusal Stadyum",
+      costCents: 8_000_000,
+      dailyIncomeCents: 286_000,
+      hourlyIncomeDisplayCents: 11_917,
+      targetRoiDays: 60,
+    },
+    {
+      level: 5,
+      name: "Elit Stadyum",
+      costCents: 30_000_000,
+      dailyIncomeCents: 619_300,
+      hourlyIncomeDisplayCents: 25_806,
+      targetRoiDays: 90,
+    },
+    {
+      level: 6,
+      name: "Stadyum ★1",
+      costCents: 120_000_000,
+      dailyIncomeCents: 1_476_500,
+      hourlyIncomeDisplayCents: 61_520,
+      targetRoiDays: 140,
+    },
+    {
+      level: 7,
+      name: "Stadyum ★2",
+      costCents: 500_000_000,
+      dailyIncomeCents: 4_108_100,
+      hourlyIncomeDisplayCents: 171_169,
+      targetRoiDays: 190,
+    },
+    {
+      level: 8,
+      name: "Stadyum ★3",
+      costCents: 2_000_000_000,
+      dailyIncomeCents: 12_441_400,
+      hourlyIncomeDisplayCents: 518_391,
+      targetRoiDays: 240,
+    },
+  ],
+} as const satisfies BusinessDefinition;
