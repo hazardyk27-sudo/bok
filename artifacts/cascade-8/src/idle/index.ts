@@ -47,6 +47,88 @@ const BUSINESS_DETAIL_EYEBROWS: Record<BusinessId, string> = {
 
 type BusinessDetailTab = "business" | "vault";
 
+function getBusinessLevelState(stageLevel: number, currentLevel: number | null) {
+  if (currentLevel === null) return stageLevel === 0 ? "future" : "locked";
+  if (stageLevel < currentLevel) return "completed";
+  if (stageLevel === currentLevel) return "current";
+  if (stageLevel === currentLevel + 1) return "future";
+  return "locked";
+}
+
+function getBusinessLevelMilestone(stageLevel: number) {
+  if (stageLevel <= 2) return "LOCAL";
+  if (stageLevel <= 5) return "PRO";
+  if (stageLevel <= 7) return "ELITE";
+  return "ICON";
+}
+
+function renderBusinessLevelTree(
+  businessId: BusinessId,
+  currentLevel: number | null,
+) {
+  const definition = BUSINESS_DETAIL_DEFINITIONS[businessId];
+
+  return definition.levels.map((stage) => {
+    const state = getBusinessLevelState(stage.level, currentLevel);
+    const isImmediateFuture = state === "future";
+    const stateLabel = state === "completed"
+      ? "TAMAMLANDI"
+      : state === "current"
+        ? "MEVCUT"
+        : isImmediateFuture
+          ? "SONRAKİ"
+          : "KİLİTLİ";
+    const starLabel = stage.level >= 6 ? `★${stage.level - 5}` : "";
+    const incomeLabel = `${formatCredits(stage.hourlyIncomeDisplayCents)} /sa`;
+    const dailyLabel = `${formatCredits(stage.dailyIncomeCents)} /gün`;
+    const costLabel = `${formatCredits(stage.costCents)}`;
+
+    return `
+      <article
+        class="business-level-node"
+        data-level="${stage.level}"
+        data-level-state="${state}"
+        data-level-next="${isImmediateFuture ? "true" : "false"}"
+        aria-label="Lv${stage.level} ${stage.name}, ${stateLabel.toLocaleLowerCase("tr-TR")}"
+      >
+        <div class="business-level-node-rail" aria-hidden="true">
+          <span class="business-level-node-dot">
+            ${state === "completed" ? "✓" : stage.level}
+          </span>
+        </div>
+
+        <div class="business-level-node-card">
+          <header class="business-level-node-header">
+            <div>
+              <span class="business-level-node-kicker">
+                LV${stage.level} · ${getBusinessLevelMilestone(stage.level)}
+              </span>
+              <strong>${stage.name}</strong>
+            </div>
+            <div class="business-level-node-state">
+              ${starLabel ? `<b>${starLabel}</b>` : ""}
+              <span>${stateLabel}</span>
+            </div>
+          </header>
+
+          <div class="business-level-node-economy">
+            <div>
+              <span>SAATLİK</span>
+              <strong>${incomeLabel}</strong>
+              <small>${dailyLabel}</small>
+            </div>
+            <div>
+              <span>YATIRIM</span>
+              <strong>${costLabel}</strong>
+              <small>ROI hedefi · ${stage.targetRoiDays} gün</small>
+            </div>
+          </div>
+        </div>
+      </article>
+    `;
+  }).join("");
+}
+
 export const BUSINESSES_MARKUP = `
   <main class="businesses-page" aria-labelledby="businesses-title">
     <header class="businesses-header">
@@ -209,9 +291,17 @@ export const BUSINESSES_MARKUP = `
               <strong data-idle-detail-current>—</strong>
               <small data-idle-detail-next>Sonraki seviye bilgisi yükleniyor…</small>
             </div>
-            <div class="business-detail-roadmap-placeholder" aria-hidden="true">
-              <i></i><i></i><i></i><i></i><i></i>
+            <div class="business-level-tree-legend" aria-label="Seviye durumları">
+              <span data-legend-state="completed">TAMAMLANDI</span>
+              <span data-legend-state="current">MEVCUT</span>
+              <span data-legend-state="future">SONRAKİ</span>
+              <span data-legend-state="locked">KİLİTLİ</span>
             </div>
+            <div
+              class="business-level-tree"
+              data-idle-business-level-tree
+              aria-label="İşletme seviye ağacı"
+            ></div>
           </section>
 
           <section class="business-detail-panel" data-idle-detail-panel="vault" hidden>
@@ -504,6 +594,7 @@ export class BusinessesClient {
     const currentNode = this.root.querySelector<HTMLElement>("[data-idle-detail-current]");
     const nextNode = this.root.querySelector<HTMLElement>("[data-idle-detail-next]");
     const vaultCurrentNode = this.root.querySelector<HTMLElement>("[data-idle-detail-vault-current]");
+    const businessLevelTreeNode = this.root.querySelector<HTMLElement>("[data-idle-business-level-tree]");
 
     if (
       !eyebrowNode
@@ -517,6 +608,7 @@ export class BusinessesClient {
       || !currentNode
       || !nextNode
       || !vaultCurrentNode
+      || !businessLevelTreeNode
       || !vault
     ) {
       throw new Error("IDLE_DETAIL_SHELL_INCOMPLETE");
@@ -551,6 +643,10 @@ export class BusinessesClient {
       ? `Sonraki hedef: Lv${nextStage.level} · ${nextStage.name} · ${formatCredits(nextStage.costCents)}`
       : "Tüm işletme seviyeleri tamamlandı.";
     vaultCurrentNode.textContent = `Kasa Lv${business.vaultLevel} · ${vault.capacityHours} saat kapasite`;
+    businessLevelTreeNode.innerHTML = renderBusinessLevelTree(
+      business.businessId,
+      business.businessLevel,
+    );
   }
 
   private async runBusinessAction(
