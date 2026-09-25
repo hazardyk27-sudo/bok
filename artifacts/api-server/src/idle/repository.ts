@@ -16,6 +16,15 @@ import {
 } from "./storage";
 import { settleIdleMicrocents } from "./money";
 
+type IdleCollectReceiptRow = {
+  session_id: string;
+  business_id: IdleBusinessId;
+  action_type: string;
+  collected_cents: number;
+  remainder_microcents: number;
+  balance_cents: number;
+};
+
 type IdleBusinessRow = {
   id: string;
   session_id: string;
@@ -256,11 +265,58 @@ export class IdleRepository {
   async collectBusiness(
     sessionId: string,
     businessId: IdleBusinessId,
+    idempotencyKey: string,
     serverNow = new Date(),
   ) {
     const client = await pool.connect();
     try {
       await client.query("BEGIN");
+
+      const reserved = await client.query<{ id: string }>(
+        `INSERT INTO idle_action_receipts
+           (id, session_id, business_id, action_type, idempotency_key)
+         VALUES ($1, $2, $3, 'COLLECT', $4)
+         ON CONFLICT (idempotency_key) DO NOTHING
+         RETURNING id`,
+        [randomUUID(), sessionId, businessId, idempotencyKey],
+      );
+
+      if (!reserved.rows[0]) {
+        const duplicate = await client.query<IdleCollectReceiptRow>(
+          `SELECT session_id, business_id, action_type, collected_cents,
+                  remainder_microcents, balance_cents
+             FROM idle_action_receipts
+            WHERE idempotency_key = $1`,
+          [idempotencyKey],
+        );
+        const receipt = duplicate.rows[0];
+        if (!receipt) throw new Error("IDLE_IDEMPOTENCY_RECEIPT_MISSING");
+        if (
+          receipt.session_id !== sessionId
+          || receipt.business_id !== businessId
+          || receipt.action_type !== "COLLECT"
+        ) {
+          throw new Error("IDEMPOTENCY_KEY_REUSED");
+        }
+
+        await insertMissingSessionStates(client, sessionId);
+        const states = await loadSessionStates(client, sessionId);
+        requireCompleteState(states);
+        const state = states.find((entry) => entry.businessId === businessId);
+        if (!state) throw new Error("IDLE_BUSINESS_NOT_FOUND");
+
+        await client.query("COMMIT");
+        return {
+          serverNow,
+          businessId,
+          collectedCents: Number(receipt.collected_cents),
+          remainderMicrocents: Number(receipt.remainder_microcents),
+          balanceCents: Number(receipt.balance_cents),
+          business: projectBusinessAccrual(state, serverNow),
+          replayed: true,
+        };
+      }
+
       await insertMissingSessionStates(client, sessionId);
       const states = await loadSessionStates(client, sessionId, true);
       requireCompleteState(states);
@@ -287,6 +343,7 @@ export class IdleRepository {
           settlement.walletCreditCents,
         ],
       );
+      const balanceCents = Number(walletResult.rows[0]?.balance_cents ?? 0);
 
       await client.query(
         `UPDATE idle_business_states
@@ -300,6 +357,20 @@ export class IdleRepository {
           businessId,
           settlement.remainderMicrocents,
           serverNow,
+        ],
+      );
+
+      await client.query(
+        `UPDATE idle_action_receipts
+            SET collected_cents = $2,
+                remainder_microcents = $3,
+                balance_cents = $4
+          WHERE idempotency_key = $1`,
+        [
+          idempotencyKey,
+          settlement.walletCreditCents,
+          settlement.remainderMicrocents,
+          balanceCents,
         ],
       );
 
@@ -317,8 +388,9 @@ export class IdleRepository {
         businessId,
         collectedCents: settlement.walletCreditCents,
         remainderMicrocents: settlement.remainderMicrocents,
-        balanceCents: Number(walletResult.rows[0]?.balance_cents ?? 0),
+        balanceCents,
         business: projectBusinessAccrual(refreshed, serverNow),
+        replayed: false,
       };
     } catch (error) {
       await client.query("ROLLBACK");
