@@ -62,6 +62,94 @@ function getDefinition(businessId: BusinessId) {
   return BUSINESS_META[businessId].definition;
 }
 
+function renderBusinessArt(businessId: BusinessId) {
+  if (businessId !== "stadium") {
+    return `
+      <div class="business-card-art ${BUSINESS_META[businessId].artClass}" aria-hidden="true">
+        <i></i><b></b><em></em>
+      </div>
+    `;
+  }
+
+  return `
+    <div class="business-card-art business-card-art--stadium business-card-stadium-scene" aria-hidden="true">
+      <svg viewBox="0 0 420 190" preserveAspectRatio="xMidYMid slice" role="presentation">
+        <defs>
+          <linearGradient id="stadium-sky" x1="0" y1="0" x2="1" y2="1">
+            <stop offset="0%" stop-color="#0a1a2e"/>
+            <stop offset="52%" stop-color="#102b48"/>
+            <stop offset="100%" stop-color="#07111f"/>
+          </linearGradient>
+          <linearGradient id="stadium-stand" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stop-color="#193a5c"/>
+            <stop offset="100%" stop-color="#07111d"/>
+          </linearGradient>
+          <linearGradient id="stadium-pitch" x1="0" y1="0" x2="1" y2="1">
+            <stop offset="0%" stop-color="#1d6e63"/>
+            <stop offset="100%" stop-color="#0c3535"/>
+          </linearGradient>
+          <radialGradient id="stadium-glow">
+            <stop offset="0%" stop-color="#9be9ff" stop-opacity=".75"/>
+            <stop offset="100%" stop-color="#46c8ff" stop-opacity="0"/>
+          </radialGradient>
+          <filter id="stadium-soft-glow" x="-50%" y="-50%" width="200%" height="200%">
+            <feGaussianBlur stdDeviation="4"/>
+          </filter>
+        </defs>
+
+        <rect class="stadium-sky" width="420" height="190" fill="url(#stadium-sky)"/>
+        <circle class="stadium-moon-glow" cx="326" cy="33" r="52" fill="url(#stadium-glow)" opacity=".24"/>
+
+        <g class="stadium-city" opacity=".44">
+          <rect x="8" y="78" width="25" height="36" rx="2"/>
+          <rect x="36" y="66" width="34" height="48" rx="2"/>
+          <rect x="74" y="82" width="24" height="32" rx="2"/>
+          <rect x="328" y="74" width="28" height="40" rx="2"/>
+          <rect x="360" y="58" width="40" height="56" rx="2"/>
+        </g>
+
+        <g class="stadium-floodlights">
+          <path d="M48 20v88M372 20v88" stroke="currentColor" stroke-width="3" opacity=".58"/>
+          <path d="M29 23h38M353 23h38" stroke="currentColor" stroke-width="5" stroke-linecap="round"/>
+          <g class="stadium-light-beams" opacity=".25" filter="url(#stadium-soft-glow)">
+            <path d="M31 26L118 127M65 26L143 126M355 26L277 127M389 26L302 126" stroke="#7ddfff" stroke-width="8"/>
+          </g>
+        </g>
+
+        <g class="stadium-shell">
+          <path class="stadium-roof" d="M54 108C77 54 343 54 366 108L340 112C319 82 101 82 80 112Z" fill="#153855" stroke="#69d8ff" stroke-opacity=".33" stroke-width="2"/>
+          <path class="stadium-upper-tier" d="M62 111C96 77 324 77 358 111L334 146H86Z" fill="url(#stadium-stand)" stroke="#8ae5ff" stroke-opacity=".22"/>
+          <path class="stadium-lower-tier" d="M86 121C118 101 302 101 334 121L313 158H107Z" fill="#0b2034" stroke="#73d8ff" stroke-opacity=".2"/>
+          <ellipse class="stadium-bowl" cx="210" cy="139" rx="103" ry="35" fill="#06111d" stroke="#74dcff" stroke-opacity=".24"/>
+          <ellipse class="stadium-pitch" cx="210" cy="143" rx="76" ry="23" fill="url(#stadium-pitch)" stroke="#a0f3db" stroke-opacity=".25"/>
+          <path class="stadium-midline" d="M210 121v44M135 143h150" stroke="#c4fff1" stroke-opacity=".22" stroke-width="1"/>
+          <circle class="stadium-center-circle" cx="210" cy="143" r="12" fill="none" stroke="#c4fff1" stroke-opacity=".2"/>
+        </g>
+
+        <g class="stadium-crowd" fill="#7ddfff" opacity=".52">
+          <circle cx="108" cy="109" r="1.2"/><circle cx="124" cy="105" r="1.1"/><circle cx="142" cy="101" r="1.3"/>
+          <circle cx="163" cy="99" r="1.1"/><circle cx="184" cy="98" r="1.2"/><circle cx="208" cy="97" r="1.1"/>
+          <circle cx="234" cy="98" r="1.2"/><circle cx="258" cy="100" r="1.1"/><circle cx="281" cy="103" r="1.3"/>
+          <circle cx="304" cy="107" r="1.1"/>
+        </g>
+
+        <g class="stadium-star-crown" fill="none" stroke="#a7eeff" stroke-width="1.5" opacity="0">
+          <path d="M210 49l5 10 11 2-8 8 2 11-10-5-10 5 2-11-8-8 11-2z"/>
+          <circle cx="210" cy="64" r="24" stroke-opacity=".22"/>
+        </g>
+      </svg>
+    </div>
+  `;
+}
+
+function getBusinessVisualStage(business: IdleLiveBusinessState) {
+  if (business.businessLevel === null) return "locked";
+  if (business.businessLevel <= 2) return "local";
+  if (business.businessLevel <= 5) return "pro";
+  if (business.businessLevel <= 7) return "elite";
+  return "landmark";
+}
+
 function formatVaultEta(
   business: IdleLiveBusinessState,
   dailyIncomeCents: number | null,
@@ -97,9 +185,7 @@ export function renderBusinessRowShell(businessId: BusinessId) {
       data-business-ownership="loading"
     >
       <div class="business-card-visual" role="img" aria-label="${meta.visualLabel}">
-        <div class="business-card-art ${meta.artClass}" aria-hidden="true">
-          <i></i><b></b><em></em>
-        </div>
+${renderBusinessArt(businessId)}
         <span class="business-card-code">${meta.code}</span>
         <span class="business-card-state" data-business-card-state>YÜKLENİYOR</span>
         <div class="business-card-visual-shade" aria-hidden="true"></div>
@@ -398,6 +484,7 @@ export function updateBusinessRow(
   row.dataset.businessStatus = business.vaultStatus.toLowerCase();
   row.dataset.businessOwnership = currentStage ? "owned" : "locked";
   row.dataset.businessLevel = currentStage ? String(currentStage.level) : "unowned";
+  row.dataset.visualStage = getBusinessVisualStage(business);
 
   cardStateNode.textContent = !currentStage
     ? "SATIN ALINMADI"
