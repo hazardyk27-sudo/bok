@@ -769,3 +769,36 @@ describe("Businesses final responsive QA", () => {
     expect(idleCssSource).toContain("padding-bottom: max(18px, env(safe-area-inset-bottom))");
   });
 });
+
+
+describe("Businesses premium typography pass", () => {
+  it("uses one corporate UI font stack across the main Businesses screen and Details", () => {
+    expect(idleCssSource).toContain("/* Premium typography pass — main cards + Details */");
+    expect(idleCssSource).toContain('--idle-font-ui: Inter, ui-sans-serif, system-ui');
+    expect(idleCssSource).toContain(".business-detail-drawer {");
+    expect(idleCssSource).toContain("font-family: var(--idle-font-ui)");
+  });
+
+  it("raises formerly micro-sized main-card labels and actions into a readable hierarchy", () => {
+    expect(idleCssSource).toContain(".business-card .business-row-title small");
+    expect(idleCssSource).toContain("font-size: 10px");
+    expect(idleCssSource).toContain("font-size: 23px");
+    expect(idleCssSource).toContain("font-size: 12px");
+    expect(idleCssSource).toContain("font-size: 11px");
+  });
+
+  it("raises Details tabs, summaries, progression trees and CTAs above the old 5–8px treatment", () => {
+    expect(idleCssSource).toContain(".business-detail-tabs button");
+    expect(idleCssSource).toContain(".business-level-tree-legend span");
+    expect(idleCssSource).toContain(".business-vault-tree-legend span");
+    expect(idleCssSource).toContain(".business-next-comparison-cta");
+    expect(idleCssSource).toContain(".business-vault-detail-cta");
+    expect(idleCssSource).toContain("min-height: 48px");
+  });
+
+  it("keeps mobile and short landscape Details readable instead of collapsing labels", () => {
+    expect(idleCssSource).toContain("Mobile remains readable instead of collapsing into 5–7px labels.");
+    expect(idleCssSource).toContain("@media (orientation: landscape) and (max-height: 520px) and (max-width: 950px)");
+    expect(idleCssSource).toContain("font-size: 8px");
+  });
+});
