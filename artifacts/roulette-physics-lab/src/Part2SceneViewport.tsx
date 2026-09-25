@@ -4030,6 +4030,10 @@ export function Part2SceneViewport({
       const settleFramesRequired = Math.round(
         PART6_SETTLE_DURATION_SECONDS / FIXED_TIMESTEP,
       );
+      const pocketResultCenterRadiusMin =
+        POCKET_FLOOR_INNER_RADIUS + BALL_RADIUS;
+      const pocketResultCenterRadiusMax =
+        POCKET_FLOOR_OUTER_RADIUS - BALL_RADIUS;
       const hoverGraceFrames = Math.round(
         PART6_TRANSITION_HOVER_GRACE_SECONDS / FIXED_TIMESTEP,
       );
@@ -5042,8 +5046,8 @@ export function Part2SceneViewport({
             if (
               pocketEntered &&
               finalRotorRelativeSpeed < 0.12 &&
-              radius >= POCKET_FLOOR_INNER_RADIUS + BALL_RADIUS &&
-              radius <= POCKET_OUTER_LIP_RADIUS - BALL_RADIUS &&
+              radius >= pocketResultCenterRadiusMin &&
+              radius <= pocketResultCenterRadiusMax &&
               Math.abs(bottom - POCKET_FLOOR_Y) <= 0.12
             ) {
               settledFrames += 1;
@@ -5235,10 +5239,8 @@ export function Part2SceneViewport({
           );
           if (
             pocketEntered &&
-            finalRadius >=
-              POCKET_FLOOR_INNER_RADIUS + BALL_RADIUS &&
-            finalRadius <=
-              POCKET_FLOOR_OUTER_RADIUS - BALL_RADIUS
+            finalRadius >= pocketResultCenterRadiusMin &&
+            finalRadius <= pocketResultCenterRadiusMax
           ) {
             const finalAngle = normalizedAngle(
               Math.atan2(
@@ -5309,9 +5311,14 @@ export function Part2SceneViewport({
             elapsed >=
               activePart6MaxDurationSeconds -
                 FIXED_TIMESTEP;
+          const settledResultContractValid =
+            !settled ||
+            (finalPocketIndex !== null &&
+              finalPocketNumber !== null);
           const safetyPassed =
             stateResetVerified &&
             phaseSequenceValid &&
+            settledResultContractValid &&
             !timedOut &&
             !hover &&
             !clipping &&
