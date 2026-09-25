@@ -1872,3 +1872,517 @@ body.businesses-route {
     font-size: 15px;
   }
 }
+
+
+/* Part 5 — desktop premium business card skeleton */
+.route-shell.is-businesses-page .business-list {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 18px;
+  margin-top: 24px;
+  border: 0;
+}
+
+.route-shell.is-businesses-page .business-card {
+  position: relative;
+  display: grid;
+  grid-template-columns: 1fr;
+  align-content: start;
+  gap: 0;
+  min-width: 0;
+  min-height: 520px;
+  padding: 0;
+  overflow: hidden;
+  border: 1px solid var(--idle-line);
+  border-radius: var(--idle-radius-xl);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, .018), transparent 34%),
+    var(--idle-surface);
+  box-shadow:
+    var(--idle-shadow-card),
+    inset 0 1px 0 rgba(255, 255, 255, .025);
+  transition:
+    transform .2s ease,
+    border-color .2s ease,
+    box-shadow .2s ease;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .route-shell.is-businesses-page .business-card:hover {
+    transform: translateY(-3px);
+    border-color: rgba(70, 200, 255, .24);
+    box-shadow:
+      0 22px 58px rgba(0, 0, 0, .28),
+      inset 0 1px 0 rgba(255, 255, 255, .035);
+  }
+}
+
+.business-card-visual {
+  position: relative;
+  min-height: 154px;
+  overflow: hidden;
+  border-bottom: 1px solid var(--idle-line-soft);
+  background:
+    radial-gradient(circle at 72% 22%, rgba(70, 200, 255, .16), transparent 34%),
+    linear-gradient(145deg, #122642 0%, #0a1628 52%, #07101d 100%);
+  isolation: isolate;
+}
+
+.business-card--club-store .business-card-visual {
+  background:
+    radial-gradient(circle at 70% 24%, rgba(114, 88, 255, .15), transparent 34%),
+    linear-gradient(145deg, #17213a 0%, #0d1830 54%, #07101d 100%);
+}
+
+.business-card--fan-club .business-card-visual {
+  background:
+    radial-gradient(circle at 72% 24%, rgba(70, 200, 255, .11), transparent 34%),
+    linear-gradient(145deg, #10273a 0%, #0a1927 52%, #07101d 100%);
+}
+
+.business-card-visual::after {
+  position: absolute;
+  z-index: 3;
+  inset: auto 0 0;
+  height: 54%;
+  pointer-events: none;
+  content: "";
+  background: linear-gradient(to bottom, transparent, rgba(5, 8, 22, .88));
+}
+
+.business-card-visual-shade {
+  position: absolute;
+  z-index: 2;
+  inset: 0;
+  pointer-events: none;
+  background:
+    linear-gradient(90deg, rgba(5, 8, 22, .16), transparent 38%, rgba(5, 8, 22, .08)),
+    linear-gradient(180deg, transparent 52%, rgba(5, 8, 22, .28));
+}
+
+.business-card-code {
+  position: absolute;
+  z-index: 4;
+  top: 14px;
+  left: 15px;
+  display: grid;
+  place-items: center;
+  min-width: 30px;
+  height: 24px;
+  padding: 0 7px;
+  border: 1px solid rgba(255, 255, 255, .08);
+  border-radius: 999px;
+  color: rgba(244, 248, 255, .72);
+  background: rgba(5, 8, 22, .46);
+  backdrop-filter: blur(8px);
+  font: 800 8px/1 "DM Mono", monospace;
+  letter-spacing: .08em;
+}
+
+.business-card-state {
+  position: absolute;
+  z-index: 4;
+  top: 14px;
+  right: 15px;
+  min-height: 24px;
+  padding: 7px 9px 6px;
+  border: 1px solid rgba(70, 200, 255, .2);
+  border-radius: 999px;
+  color: var(--idle-cyan-bright);
+  background: rgba(5, 8, 22, .54);
+  backdrop-filter: blur(8px);
+  font: 800 7px/1 "DM Mono", monospace;
+  letter-spacing: .08em;
+}
+
+.business-card[data-business-ownership="locked"] .business-card-state {
+  border-color: rgba(157, 174, 196, .16);
+  color: var(--idle-text-muted);
+}
+
+.business-card-art {
+  position: absolute;
+  z-index: 1;
+  inset: 18px 18px 0;
+  opacity: .66;
+}
+
+.business-card-art > i,
+.business-card-art > b,
+.business-card-art > em {
+  position: absolute;
+  display: block;
+  margin: 0;
+  font-style: normal;
+}
+
+.business-card-art--stadium > i {
+  right: 10%;
+  bottom: 13px;
+  width: 68%;
+  height: 64px;
+  border: 2px solid rgba(125, 223, 255, .25);
+  border-top-width: 5px;
+  border-radius: 50% 50% 14px 14px / 72% 72% 14px 14px;
+  transform: perspective(120px) rotateX(6deg);
+}
+
+.business-card-art--stadium > b {
+  right: 20%;
+  bottom: 29px;
+  width: 48%;
+  height: 30px;
+  border: 1px solid rgba(125, 223, 255, .2);
+  border-radius: 50%;
+}
+
+.business-card-art--stadium > em {
+  top: 12px;
+  right: 20%;
+  width: 2px;
+  height: 72px;
+  background: linear-gradient(rgba(125, 223, 255, .45), transparent);
+  box-shadow: 48px 5px 0 rgba(125, 223, 255, .18);
+}
+
+.business-card-art--club-store > i {
+  right: 10%;
+  bottom: 13px;
+  width: 68%;
+  height: 76px;
+  border: 2px solid rgba(157, 174, 196, .2);
+  border-radius: 5px 5px 14px 14px;
+  transform: skewX(-4deg);
+}
+
+.business-card-art--club-store > b {
+  right: 22%;
+  bottom: 27px;
+  width: 44%;
+  height: 40px;
+  border: 1px solid rgba(125, 223, 255, .17);
+  background:
+    linear-gradient(90deg, transparent 48%, rgba(125, 223, 255, .13) 49%, rgba(125, 223, 255, .13) 51%, transparent 52%),
+    linear-gradient(rgba(125, 223, 255, .05), transparent);
+}
+
+.business-card-art--club-store > em {
+  right: 10%;
+  bottom: 89px;
+  width: 68%;
+  height: 5px;
+  background: linear-gradient(90deg, transparent, rgba(114, 88, 255, .36), transparent);
+}
+
+.business-card-art--fan-club > i {
+  right: 9%;
+  bottom: 14px;
+  width: 70%;
+  height: 68px;
+  border: 2px solid rgba(125, 223, 255, .18);
+  border-radius: 56px 56px 12px 12px;
+}
+
+.business-card-art--fan-club > b {
+  right: 19%;
+  bottom: 24px;
+  width: 50%;
+  height: 34px;
+  border-bottom: 2px solid rgba(125, 223, 255, .22);
+  border-radius: 50%;
+  box-shadow:
+    0 -9px 0 -7px rgba(125, 223, 255, .28),
+    16px -5px 0 -7px rgba(125, 223, 255, .18),
+    -16px -5px 0 -7px rgba(125, 223, 255, .18);
+}
+
+.business-card-art--fan-club > em {
+  top: 20px;
+  right: 16%;
+  width: 54%;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(125, 223, 255, .3), transparent);
+  box-shadow: 0 14px 0 rgba(125, 223, 255, .08);
+}
+
+.business-card-body {
+  display: grid;
+  grid-template-rows: auto auto auto auto auto;
+  align-content: start;
+  min-width: 0;
+  padding: 18px;
+}
+
+.business-card-header {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 34px;
+  align-items: start;
+  gap: 12px;
+}
+
+.route-shell.is-businesses-page .business-card .business-row-title {
+  display: block;
+  min-width: 0;
+}
+
+.route-shell.is-businesses-page .business-card .business-row-title small {
+  display: block;
+  margin: 0 0 6px;
+  color: var(--idle-cyan);
+  font: 800 8px/1 "DM Mono", monospace;
+  letter-spacing: .14em;
+}
+
+.route-shell.is-businesses-page .business-card .business-row-title strong {
+  display: block;
+  overflow: hidden;
+  color: var(--idle-text);
+  font-size: 21px;
+  font-weight: 800;
+  letter-spacing: -.025em;
+  line-height: 1.05;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.route-shell.is-businesses-page .business-card .business-row-title span {
+  display: block;
+  margin-top: 7px;
+  overflow: hidden;
+  color: var(--idle-text-secondary);
+  font-size: 11px;
+  line-height: 1.25;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.business-card-level-mark {
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  border: 1px solid var(--idle-line-soft);
+  border-radius: 10px;
+  color: var(--idle-text-muted);
+  background: rgba(255, 255, 255, .018);
+  font: 800 8px/1 "DM Mono", monospace;
+  letter-spacing: .06em;
+}
+
+.route-shell.is-businesses-page .business-card-metrics {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin-top: 18px;
+  overflow: visible;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+}
+
+.route-shell.is-businesses-page .business-card .business-row-metric {
+  min-width: 0;
+  padding: 12px;
+  border: 1px solid var(--idle-line-soft);
+  border-radius: var(--idle-radius-md);
+  background: rgba(12, 25, 48, .62);
+}
+
+.route-shell.is-businesses-page .business-card .business-card-accrued {
+  grid-column: 1 / -1;
+  padding: 14px 14px 13px;
+  background:
+    linear-gradient(135deg, rgba(70, 200, 255, .055), transparent 50%),
+    rgba(12, 25, 48, .7);
+}
+
+.route-shell.is-businesses-page .business-card .business-row-metric > span {
+  display: block;
+  color: var(--idle-text-muted);
+  font: 800 7px/1 "DM Mono", monospace;
+  letter-spacing: .11em;
+}
+
+.route-shell.is-businesses-page .business-card .business-row-metric strong {
+  display: block;
+  margin-top: 7px;
+  overflow: hidden;
+  color: var(--idle-text);
+  font-size: 15px;
+  font-variant-numeric: tabular-nums;
+  font-weight: 800;
+  letter-spacing: -.02em;
+  line-height: 1.08;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.route-shell.is-businesses-page .business-card .business-card-accrued strong {
+  color: var(--idle-cyan-bright);
+  font-size: 25px;
+}
+
+.route-shell.is-businesses-page .business-card .business-row-metric small {
+  display: block;
+  margin-top: 6px;
+  overflow: hidden;
+  color: var(--idle-text-secondary);
+  font-size: 9px;
+  line-height: 1.2;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.route-shell.is-businesses-page .business-card .business-vault-progress {
+  height: 5px;
+  margin-top: 9px;
+  border-radius: 999px;
+  background: rgba(157, 174, 196, .1);
+}
+
+.route-shell.is-businesses-page .business-card .business-vault-upgrade {
+  min-height: 24px;
+  margin-top: 7px;
+  color: var(--idle-cyan);
+  font-size: 7px;
+}
+
+.business-card-divider {
+  height: 1px;
+  margin: 16px 0 14px;
+  background: linear-gradient(90deg, transparent, var(--idle-line), transparent);
+}
+
+.route-shell.is-businesses-page .business-card-actions {
+  display: grid;
+  grid-template-columns: 1.12fr .88fr;
+  gap: 8px;
+}
+
+.route-shell.is-businesses-page .business-card-actions button {
+  min-width: 0;
+  min-height: 44px;
+  padding: 0 10px;
+  border-radius: 10px;
+  font: 800 9px/1 "DM Mono", monospace;
+  letter-spacing: .04em;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.route-shell.is-businesses-page .business-card-primary {
+  border: 1px solid rgba(70, 200, 255, .32);
+  color: var(--idle-text);
+  background:
+    linear-gradient(135deg, rgba(70, 200, 255, .12), rgba(24, 69, 124, .18)),
+    var(--idle-surface-raised);
+}
+
+.route-shell.is-businesses-page .business-card-secondary {
+  border: 1px solid var(--idle-line);
+  color: var(--idle-text-secondary);
+  background: rgba(12, 25, 48, .66);
+}
+
+.route-shell.is-businesses-page .business-card-actions button:disabled {
+  opacity: .42;
+}
+
+.business-card-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-top: 13px;
+  color: var(--idle-text-muted);
+  font: 700 7px/1 "DM Mono", monospace;
+  letter-spacing: .07em;
+}
+
+.business-card-footer span:last-child {
+  color: rgba(157, 174, 196, .72);
+}
+
+.business-card[data-business-ownership="locked"] .business-card-visual,
+.business-card[data-business-ownership="locked"] .business-card-art {
+  filter: grayscale(.48) saturate(.56);
+}
+
+.business-card[data-business-ownership="locked"] .business-card-art {
+  opacity: .35;
+}
+
+.business-card[data-business-status="full"] {
+  border-color: rgba(70, 200, 255, .28);
+}
+
+@media (min-width: 1101px) {
+  .route-shell.is-businesses-page .business-card {
+    min-height: 532px;
+  }
+}
+
+@media (min-width: 761px) and (max-width: 1100px) {
+  .route-shell.is-businesses-page .business-list {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .route-shell.is-businesses-page .business-card:last-child {
+    grid-column: 1 / -1;
+  }
+}
+
+@media (max-width: 760px) {
+  .route-shell.is-businesses-page .business-list {
+    grid-template-columns: 1fr;
+    gap: 12px;
+    margin-top: 18px;
+  }
+
+  .route-shell.is-businesses-page .business-card {
+    min-height: 0;
+    border-radius: var(--idle-radius-lg);
+  }
+
+  .business-card-visual {
+    min-height: 116px;
+  }
+
+  .business-card-body {
+    padding: 15px;
+  }
+
+  .route-shell.is-businesses-page .business-card .business-row-title strong {
+    font-size: 19px;
+  }
+
+  .route-shell.is-businesses-page .business-card-metrics {
+    margin-top: 15px;
+  }
+
+  .route-shell.is-businesses-page .business-card .business-card-accrued strong {
+    font-size: 23px;
+  }
+
+  .business-card-footer {
+    margin-top: 11px;
+  }
+}
+
+@media (max-width: 420px) {
+  .business-card-visual {
+    min-height: 104px;
+  }
+
+  .business-card-body {
+    padding: 13px;
+  }
+
+  .route-shell.is-businesses-page .business-card .business-row-metric {
+    padding: 10px;
+  }
+
+  .route-shell.is-businesses-page .business-card .business-card-accrued {
+    padding: 12px;
+  }
+}
