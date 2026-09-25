@@ -259,45 +259,46 @@ describe("Businesses card information hierarchy", () => {
     expect(componentsSource).toContain('"GELİR BİRİKİYOR"');
   });
 
-  it("shows the next business target with cost and real hourly income gain", () => {
-    expect(componentsSource).toContain("data-business-next-panel");
-    expect(componentsSource).toContain("data-business-next-name");
-    expect(componentsSource).toContain("data-business-next-cost");
-    expect(componentsSource).toContain("data-business-next-gain");
-    expect(componentsSource).toContain("incomeGainCents");
-    expect(componentsSource).toContain("incomeGainPercent");
-    expect(componentsSource).toContain('"ZİRVEYE ULAŞTI"');
+  it("removes upgrade comparison content from the main card while keeping it for Details", () => {
+    expect(componentsSource).not.toContain("data-business-next-panel");
+    expect(componentsSource).not.toContain("data-business-next-name");
+    expect(componentsSource).not.toContain("data-business-next-cost");
+    expect(componentsSource).not.toContain("data-business-next-gain");
+    expect(idleIndexSource).toContain("data-idle-next-comparison");
+    expect(idleIndexSource).toContain('"ZİRVEYE ULAŞTI"');
   });
 
-  it("styles accrued cash and the next-upgrade panel as the dominant hierarchy", () => {
-    expect(idleCssSource).toContain("/* Part 6 — card information hierarchy / upgrade target */");
-    expect(idleCssSource).toContain(".business-card-accrued-heading");
-    expect(idleCssSource).toContain("font-size: clamp(29px, 2.4vw, 36px)");
-    expect(idleCssSource).toContain(".business-card-next");
-    expect(idleCssSource).toContain('.business-card-next[data-next-state="max"]');
+  it("merges hourly income and vault capacity into one main-card panel", () => {
+    expect(componentsSource).toContain("business-card-operations");
+    expect(componentsSource).toContain("business-card-vault-heading");
+    expect(componentsSource).toContain("business-card-vault-meta");
+    expect(idleCssSource).toContain("/* Main-card refinement — simplified hierarchy / unified economy panel */");
+    expect(idleCssSource).toContain("grid-template-columns: minmax(0, .84fr) minmax(0, 1.16fr)");
+    expect(idleCssSource).toContain("height: 7px");
   });
 });
 
 
 describe("Businesses premium action states", () => {
-  it("exposes explicit collect, upgrade and vault action states", () => {
+  it("keeps collect and vault actions on the main card while business upgrades stay in Details", () => {
     expect(componentsSource).toContain('data-action-state="loading"');
     expect(componentsSource).toContain('collectButton.dataset.actionState = busy');
-    expect(componentsSource).toContain('upgradeButton.dataset.actionState = busy');
     expect(componentsSource).toContain('vaultUpgradeButton.dataset.actionState = busy');
+    expect(componentsSource).not.toContain('data-business-upgrade');
+    expect(idleIndexSource).toContain('data-idle-detail-upgrade');
+    expect(idleIndexSource).toContain('"purchase"');
     expect(componentsSource).toContain('"insufficient"');
-    expect(componentsSource).toContain('"purchase"');
     expect(componentsSource).toContain('"max"');
     expect(componentsSource).toContain('"full"');
   });
 
-  it("shows visible guidance for disabled and risky upgrade states", () => {
-    expect(componentsSource).toContain("data-business-collect-note");
-    expect(componentsSource).toContain("data-business-upgrade-note");
+  it("removes tiny action notes from main cards without removing Details guidance", () => {
+    expect(componentsSource).not.toContain("data-business-collect-note");
+    expect(componentsSource).not.toContain("data-business-upgrade-note");
     expect(componentsSource).toContain("Bakiye yetersiz.");
-    expect(componentsSource).toContain("Yükseltmede Kasa Lv1'e döner");
-    expect(componentsSource).toContain("Tüm seviyeler tamamlandı");
     expect(componentsSource).toContain("Kasa maksimum seviyede.");
+    expect(idleIndexSource).toContain("Yükseltme sonrası Kasa Lv1'e döner");
+    expect(idleIndexSource).toContain("İşletme gelişiminin zirvesindesin");
   });
 
   it("styles ready, insufficient, max, locked and busy actions distinctly", () => {
@@ -325,7 +326,7 @@ describe("Businesses dedicated mobile cards", () => {
     expect(idleCssSource).toContain("border-radius: 18px");
     expect(idleCssSource).toContain("grid-template-columns: 1fr");
     expect(idleCssSource).toContain(".business-card-action--collect");
-    expect(idleCssSource).toContain(".business-card-action--upgrade");
+    expect(idleCssSource).toContain(".business-card-operations");
   });
 
   it("keeps the mobile value hierarchy large and touch-first", () => {
