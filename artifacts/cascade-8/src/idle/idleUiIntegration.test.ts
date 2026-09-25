@@ -41,3 +41,21 @@ describe("Idle request failure handling", () => {
     expect(idleIndexSource).toContain('return "İşletmeler sunucusuna bağlanılamadı. Lütfen tekrar dene."');
   });
 });
+
+
+describe("Idle collect all integration", () => {
+  it("shows one summary action for collecting every business", () => {
+    expect(idleIndexSource).toContain("data-idle-collect-all");
+    expect(idleIndexSource).toContain("collectAllIdleBusinesses,");
+    expect(idleIndexSource).toContain("TÜMÜNÜ TOPLA");
+    expect(idleIndexSource).toContain("this.runCollectAll()");
+  });
+
+  it("shows richer business information for readability", () => {
+    expect(componentsSource).toContain("SAATLİK GELİR");
+    expect(componentsSource).toContain("data-business-daily");
+    expect(componentsSource).toContain("KASA KAPASİTESİ");
+    expect(componentsSource).toContain("data-business-vault-fill");
+    expect(componentsSource).toContain("data-business-vault-progress");
+  });
+});
