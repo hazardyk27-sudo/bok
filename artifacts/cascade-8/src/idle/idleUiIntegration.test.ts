@@ -301,7 +301,7 @@ describe("Businesses premium action states", () => {
     expect(componentsSource).toContain("Bakiye yetersiz.");
     expect(componentsSource).toContain("Kasa maksimum seviyede.");
     expect(idleIndexSource).toContain("Yükseltme sonrası Kasa Lv1'e döner");
-    expect(idleIndexSource).toContain("İşletme gelişiminin zirvesindesin");
+    expect(idleIndexSource).toContain("business-level-node-upgrade");
   });
 
   it("replaces the removed main-card upgrade slot with a single Details action", () => {
