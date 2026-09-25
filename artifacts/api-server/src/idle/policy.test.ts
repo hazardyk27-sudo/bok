@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { assertIdleActionReceiptReplay, resolveBusinessUpgrade, resolveVaultUpgrade } from "./policy";
+import { assertIdleActionReceiptReplay, debitIdleCredits, resolveBusinessUpgrade, resolveVaultUpgrade } from "./policy";
 
 describe("idle collect idempotency replay", () => {
   const receipt = {
@@ -108,5 +108,41 @@ describe("vault upgrade policy", () => {
   it("rejects Kasa upgrades beyond Lv6", () => {
     expect(() => resolveVaultUpgrade(6, 200_000, steps, 500_000))
       .toThrow("IDLE_VAULT_MAX_LEVEL");
+  });
+});
+
+
+describe("insufficient idle balance policy", () => {
+  const vaultSteps = [
+    { fromLevel: 1, toLevel: 2, costPercent: 5 },
+    { fromLevel: 2, toLevel: 3, costPercent: 10 },
+    { fromLevel: 3, toLevel: 4, costPercent: 15 },
+    { fromLevel: 4, toLevel: 5, costPercent: 25 },
+    { fromLevel: 5, toLevel: 6, costPercent: 40 },
+  ] as const;
+
+  it("allows an exact-balance debit and leaves zero", () => {
+    expect(debitIdleCredits(50_000, 50_000)).toBe(0);
+  });
+
+  it("rejects a one-cent-short main business purchase", () => {
+    const levels = [{ level: 0, costCents: 50_000 }] as const;
+    expect(() => resolveBusinessUpgrade(null, levels, 49_999))
+      .toThrow("INSUFFICIENT_IDLE_CREDITS");
+  });
+
+  it("rejects a one-cent-short Kasa upgrade", () => {
+    expect(() => resolveVaultUpgrade(1, 200_000, vaultSteps, 9_999))
+      .toThrow("INSUFFICIENT_IDLE_CREDITS");
+  });
+
+  it("rejects invalid negative wallet balances before any debit", () => {
+    expect(() => debitIdleCredits(-1, 0))
+      .toThrow("INVALID_IDLE_WALLET_BALANCE");
+  });
+
+  it("rejects invalid debit costs", () => {
+    expect(() => debitIdleCredits(10_000, -1))
+      .toThrow("INVALID_IDLE_DEBIT_COST");
   });
 });
