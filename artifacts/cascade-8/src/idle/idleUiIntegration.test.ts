@@ -148,3 +148,33 @@ describe("Businesses premium command header", () => {
     expect(idleCssSource).toContain("grid-template-columns: minmax(0, 1fr) minmax(128px, 42%)");
   });
 });
+
+
+describe("Businesses premium KPI command bar", () => {
+  it("presents the three core KPIs as a dedicated command surface", () => {
+    expect(idleIndexSource).toContain("business-command-bar");
+    expect(idleIndexSource).toContain("PASİF GELİR HIZI");
+    expect(idleIndexSource).toContain("KASALARDA HAZIR");
+    expect(idleIndexSource).toContain("GELİR ÜRETİYOR");
+  });
+
+  it("keeps Collect All as a persistent primary action with a live amount", () => {
+    expect(idleIndexSource).toContain("data-idle-collect-all-value");
+    expect(idleIndexSource).toContain("TÜM KASALAR");
+    expect(idleIndexSource).toContain("business-collect-all-arrow");
+    expect(idleIndexSource).toContain("collectAllValueNode.textContent = formatCredits(totalCollectableCents)");
+    expect(idleIndexSource).toContain("commandBarNode.dataset.collectable");
+  });
+
+  it("styles the KPI surface responsively for desktop, tablet and mobile", () => {
+    expect(idleCssSource).toContain("/* Part 4 — premium KPI command bar */");
+    expect(idleCssSource).toContain("grid-template-columns: repeat(3, minmax(0, 1fr)) minmax(240px, 1.12fr)");
+    expect(idleCssSource).toContain(".business-collect-all-value");
+    expect(idleCssSource).toContain(".business-command-bar[data-collectable=\"ready\"]");
+    expect(idleCssSource).toContain("grid-template-columns: repeat(2, minmax(0, 1fr))");
+  });
+
+  it("keeps visible money values currency-prefixed", () => {
+    expect(idleIndexSource).toContain("return `$");
+  });
+});
