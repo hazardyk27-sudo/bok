@@ -65,6 +65,12 @@ jobs:
       - name: Typecheck roulette physics lab
         run: pnpm --filter @workspace/roulette-physics-lab run typecheck
 
+      - name: Typecheck production roulette client
+        run: pnpm --filter @workspace/cascade-8 run typecheck
+
+      - name: Typecheck roulette API server
+        run: pnpm --filter @workspace/api-server run typecheck
+
       - name: Run roulette physics contract tests
         env:
           PORT: '4173'
