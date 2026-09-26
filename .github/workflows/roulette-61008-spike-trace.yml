@@ -1,13 +1,6 @@
 name: Roulette 61008 Spike Trace
 
 on:
-  push:
-    branches:
-      - feature/roulette
-    paths:
-      - '.github/workflows/roulette-61008-spike-trace.yml'
-      - 'artifacts/roulette-physics-lab/src/Part2SceneViewport.tsx'
-      - 'artifacts/api-server/src/physics-lab/simulation.ts'
   workflow_dispatch:
 
 jobs:
