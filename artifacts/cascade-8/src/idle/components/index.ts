@@ -15,6 +15,7 @@ const BUSINESS_META: Record<
   BusinessId,
   {
     eyebrow: string;
+    icon: string;
     imagePath: string;
     placeholderLabel: string;
     visualLabel: string;
@@ -23,6 +24,7 @@ const BUSINESS_META: Record<
 > = {
   stadium: {
     eyebrow: "STADIUM",
+    icon: "◉",
     imagePath: "/businesses/stadium.png",
     placeholderLabel: "STADYUM GÖRSELİ",
     visualLabel: "Stadyum görsel alanı",
@@ -30,6 +32,7 @@ const BUSINESS_META: Record<
   },
   "club-store": {
     eyebrow: "CLUB STORE",
+    icon: "▦",
     imagePath: "/businesses/club-store.png",
     placeholderLabel: "KULÜP MAĞAZASI GÖRSELİ",
     visualLabel: "Kulüp mağazası görsel alanı",
@@ -37,6 +40,7 @@ const BUSINESS_META: Record<
   },
   "fan-club": {
     eyebrow: "FAN CLUB",
+    icon: "✦",
     imagePath: "/businesses/fan-club.png",
     placeholderLabel: "TARAFTAR KULÜBÜ GÖRSELİ",
     visualLabel: "Taraftar kulübü görsel alanı",
@@ -129,20 +133,22 @@ export function renderBusinessRowShell(businessId: BusinessId) {
         aria-label="${meta.visualLabel}"
       >
 ${renderBusinessMedia(businessId)}
-        <span class="business-card-state" data-business-card-state>YÜKLENİYOR</span>
         <div class="business-card-visual-shade" aria-hidden="true"></div>
-      </div>
 
-      <div class="business-card-content business-card-body">
-        <header class="business-card-identity business-card-header">
+        <span class="business-card-state" data-business-card-state>YÜKLENİYOR</span>
+        <span class="business-card-level-mark" data-business-level-mark aria-hidden="true">FY</span>
+
+        <div class="business-card-identity-overlay">
+          <span class="business-card-identity-icon" aria-hidden="true">${meta.icon}</span>
           <div class="business-card-title business-row-title">
             <small>${meta.eyebrow}</small>
             <strong>${meta.definition.label}</strong>
             <span data-business-level>Yükleniyor…</span>
           </div>
-          <span class="business-card-level-mark" data-business-level-mark aria-hidden="true">FY</span>
-        </header>
+        </div>
+      </div>
 
+      <div class="business-card-content business-card-body">
         <section class="business-card-balance business-card-accrued" aria-label="Biriken gelir">
           <div class="business-card-balance-heading business-card-accrued-heading">
             <span>BİRİKMİŞ GELİR</span>
