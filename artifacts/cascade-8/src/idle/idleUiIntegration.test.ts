@@ -854,7 +854,10 @@ describe("Businesses legacy CSS cleanup", () => {
     expect(idleCssSource).toContain("min-height: 168px");
   });
 
-  it("cuts the stylesheet down instead of stacking another override layer", () => {
-    expect(idleCssSource.split("\n").length).toBeLessThan(4000);
+  it("keeps new parts canonical without reintroducing the deleted legacy layer", () => {
+    expect(idleCssSource).not.toContain("/* Hotfix — reset legacy Businesses grid inheritance */");
+    expect(idleCssSource).not.toContain("/* Mobile readability hotfix — titles, vault copy, primary actions */");
+    expect(idleCssSource).not.toContain("/* Mobile main-menu hard alignment */");
+    expect(idleCssSource).not.toContain("grid-template-columns: minmax(210px, 1.3fr)");
   });
 });
