@@ -8512,7 +8512,10 @@ export function Part2SceneViewport({
                    RAPIER.ColliderDesc.trimesh(
                      actualRotorMesh.vertices,
                      actualRotorMesh.indices,
-                     RAPIER.TriMeshFlags.ORIENTED,
+                     RAPIER.TriMeshFlags.ORIENTED |
+        RAPIER.TriMeshFlags.MERGE_DUPLICATE_VERTICES |
+        RAPIER.TriMeshFlags.DELETE_DEGENERATE_TRIANGLES |
+        RAPIER.TriMeshFlags.DELETE_DUPLICATE_TRIANGLES,
                    )
                      .setFriction(0.42)
                      .setRestitution(0.02)
