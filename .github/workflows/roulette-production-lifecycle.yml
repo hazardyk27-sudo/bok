@@ -92,7 +92,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          PORT=8080 pnpm --filter @workspace/api-server run start > /tmp/roulette-production-api.log 2>&1 &
+          PORT=8080 node artifacts/api-server/dist/index.mjs > /tmp/roulette-production-api.log 2>&1 &
           echo $! > /tmp/roulette-production-api.pid
           for attempt in {1..120}; do
             if curl --fail --silent http://127.0.0.1:8080/api/healthz > /tmp/roulette-health.json; then
@@ -144,8 +144,13 @@ jobs:
         run: |
           set -euo pipefail
           kill "$(cat /tmp/roulette-production-api.pid)" || true
-          sleep 1
-          PORT=8080 pnpm --filter @workspace/api-server run start >> /tmp/roulette-production-api.log 2>&1 &
+          for attempt in {1..40}; do
+            if ! kill -0 "$(cat /tmp/roulette-production-api.pid)" 2>/dev/null; then
+              break
+            fi
+            sleep 0.1
+          done
+          PORT=8080 node artifacts/api-server/dist/index.mjs >> /tmp/roulette-production-api.log 2>&1 &
           echo $! > /tmp/roulette-production-api.pid
           for attempt in {1..80}; do
             if curl --fail --silent http://127.0.0.1:8080/api/healthz > /dev/null; then
