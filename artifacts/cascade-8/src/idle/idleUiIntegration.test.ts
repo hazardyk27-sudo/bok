@@ -800,7 +800,7 @@ describe("Businesses detail panel architecture", () => {
 
 describe("Businesses Brand Asset navy Details shell", () => {
   it("uses the approved Brand Asset navy surface and wider desktop drawer", () => {
-    expect(idleCssSource).toContain("/* Part 13 — azure/black Details shell */");
+    expect(idleCssSource).toContain("/* Part 13 — brand navy Details shell */");
     expect(idleCssSource).toContain("width: min(680px, 72vw)");
     expect(idleCssSource).toContain("border-left: 1px solid rgba(18, 52, 153, .14)");
     expect(idleCssSource).toContain("linear-gradient(180deg, #0d1718 0%, #0a1415 48%, #081011 100%)");
