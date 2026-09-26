@@ -41,7 +41,13 @@ jobs:
         run: >
           PORT=4173 BASE_PATH=/
           pnpm --filter @workspace/cascade-8 exec vitest run
-          src/mainMenuRegression.test.ts
-          src/cadiKazanSmoke.test.ts
+          src/hub/mainMenuRegression.test.ts
+          src/slot/slotSmoke.test.ts
+          src/cadi-kazan/cadiKazanSmoke.test.ts
           src/rouletteSmoke.test.ts
+          src/rouletteGeometry.test.ts
+          src/roulettePhysicsConfig.test.ts
           src/idle/idleUiIntegration.test.ts
+
+      - name: Backend isolation regression
+        run: pnpm --filter @workspace/api-server exec vitest run src/backendIsolation.test.ts

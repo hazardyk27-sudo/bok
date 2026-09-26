@@ -7,9 +7,9 @@ import {
   ROULETTE_ROTOR_ANGULAR_SPEED,
   ROULETTE_WHEEL_DIAMETER,
   ROULETTE_WORLD_UNITS_PER_METER,
-} from "../../../lib/roulette-physics-config";
-import { prepareAuthoritativeRouletteGlb } from "../../../lib/roulette-gltf-transform";
-import { measureRouletteVisualSurfaceAt } from "../../../lib/roulette-glb-surface";
+} from "../../../../lib/roulette-physics-config";
+import { prepareAuthoritativeRouletteGlb } from "../../../../lib/roulette-gltf-transform";
+import { measureRouletteVisualSurfaceAt } from "../../../../lib/roulette-glb-surface";
 
 type Vec3 = { x: number; y: number; z: number };
 type Quaternion = { x: number; y: number; z: number; w: number };

@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { pool, type PoolClient } from "@workspace/db";
-import { INITIAL_ROULETTE_BALANCE_CENTS } from "../roulette/types";
+import { INITIAL_SHARED_BALANCE_CENTS } from "../platform/wallet";
 import {
   CLUB_STORE_BUSINESS,
   FAN_CLUB_BUSINESS,
@@ -124,13 +124,13 @@ async function ensureWalletForUpdate(client: PoolClient, sessionId: string) {
     `INSERT INTO roulette_wallets (session_id, balance_cents)
      VALUES ($1, $2)
      ON CONFLICT (session_id) DO NOTHING`,
-    [sessionId, INITIAL_ROULETTE_BALANCE_CENTS],
+    [sessionId, INITIAL_SHARED_BALANCE_CENTS],
   );
   const result = await client.query<{ balance_cents: number }>(
     "SELECT balance_cents FROM roulette_wallets WHERE session_id = $1 FOR UPDATE",
     [sessionId],
   );
-  return Number(result.rows[0]?.balance_cents ?? INITIAL_ROULETTE_BALANCE_CENTS);
+  return Number(result.rows[0]?.balance_cents ?? INITIAL_SHARED_BALANCE_CENTS);
 }
 
 async function sharedWalletBalance(sessionId: string) {
@@ -144,14 +144,14 @@ async function sharedWalletBalance(sessionId: string) {
     `INSERT INTO roulette_wallets (session_id, balance_cents)
      VALUES ($1, $2)
      ON CONFLICT (session_id) DO NOTHING`,
-    [sessionId, INITIAL_ROULETTE_BALANCE_CENTS],
+    [sessionId, INITIAL_SHARED_BALANCE_CENTS],
   );
 
   const created = await pool.query<{ balance_cents: number }>(
     "SELECT balance_cents FROM roulette_wallets WHERE session_id = $1",
     [sessionId],
   );
-  return Number(created.rows[0]?.balance_cents ?? INITIAL_ROULETTE_BALANCE_CENTS);
+  return Number(created.rows[0]?.balance_cents ?? INITIAL_SHARED_BALANCE_CENTS);
 }
 
 function exactMicrocentsForElapsed(dailyIncomeCents: number, elapsedMs: number) {
@@ -352,7 +352,7 @@ export class IdleRepository {
       );
 
       const initialBalanceWithCreditCents =
-        INITIAL_ROULETTE_BALANCE_CENTS + settlement.walletCreditCents;
+        INITIAL_SHARED_BALANCE_CENTS + settlement.walletCreditCents;
       const walletResult = await client.query<{ balance_cents: number }>(
         `INSERT INTO roulette_wallets (session_id, balance_cents, updated_at)
          VALUES ($1, $2, now())
