@@ -369,6 +369,10 @@ export const BUSINESSES_MARKUP = `
     <main class="businesses-page" aria-labelledby="businesses-title">
     <header class="businesses-header">
       <div class="businesses-header-nav">
+        <a class="businesses-mobile-brand" href="/" aria-label="Fahrinin Yolu ana menü">
+          <span class="businesses-mobile-brand-crest" aria-hidden="true">FY</span>
+          <span>FAHRİNİN YOLU</span>
+        </a>
         <span class="businesses-header-status"><i aria-hidden="true"></i>KULÜP OPERASYON MERKEZİ</span>
         <a class="back-link" href="/" aria-label="Ana menüye dön">
           <span class="back-link-icon" aria-hidden="true">←</span>
