@@ -28,4 +28,5 @@ This branch builds the permanent isolation model without changing the Replit pre
 - Part 4: Cadı Kazan mount, client, CSS, scratch runtime/tests and Cadı-specific audio moved into Cadı Kazan ownership — complete.
 - Part 5: Slot markup/bootstrap and an independent Slot stylesheet moved into Slot ownership; the root main.ts is now a route dispatcher — complete.
 - Part 6: Idle now owns its route shell, body route state, browser reset and complete CSS foundation; main.ts only dispatches to Idle — complete.
-- Parts 7–8 remain on this migration branch until final validation.
+- Part 7: Backend modules now expose stable owned entrypoints; shared wallet configuration moved to platform ownership; DB schema is split into wallet/roulette/physics-lab/cadi-kazan/slot/idle files with index.ts as aggregation only — complete.
+- Part 8 remains for final promotion/hash validation and rollout.
