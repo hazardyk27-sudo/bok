@@ -19,28 +19,28 @@ const mainSource = readFileSync(
   "utf8",
 );
 
+
 describe("final Idle UI integration", () => {
-  it("exposes Kasa upgrade as a secondary control on every business row", () => {
-    expect(componentsSource).toContain("data-business-vault-upgrade");
-    expect(componentsSource).toContain("getIdleVaultUpgradePreview(business)");
-    expect(componentsSource).toContain("vaultUpgrade.isMaxLevel");
-    expect(componentsSource).toContain("walletBalanceCents >= vaultCostCents");
+  it("keeps the main cards focused on collect and Details only", () => {
+    expect(componentsSource).toContain("data-business-collect");
+    expect(componentsSource).toContain("data-business-details");
+    expect(componentsSource).not.toContain("data-business-upgrade");
+    expect(componentsSource).not.toContain("data-business-vault-upgrade");
+    expect(idleIndexSource).not.toContain('button.matches("[data-business-vault-upgrade]")');
   });
 
-  it("wires the Kasa control to the real vault upgrade service", () => {
-    expect(idleIndexSource).toContain("upgradeIdleVault,");
-    expect(idleIndexSource).toContain(
-      'button.matches("[data-business-vault-upgrade]")',
-    );
+  it("keeps both business and Kasa upgrades inside the Details stage cards", () => {
+    expect(idleIndexSource).toContain("data-idle-detail-upgrade");
+    expect(idleIndexSource).toContain("data-idle-detail-vault-upgrade");
+    expect(idleIndexSource).toContain("upgradeIdleBusiness(businessId)");
     expect(idleIndexSource).toContain("upgradeIdleVault(businessId)");
   });
 
-  it("keeps collect plus Details-backed business upgrade actions alongside Kasa", () => {
+  it("keeps individual collection connected to the real service", () => {
     expect(idleIndexSource).toContain("collectIdleBusiness(businessId)");
-    expect(idleIndexSource).toContain("upgradeIdleBusiness(businessId)");
+    expect(idleIndexSource).toContain('button.matches("[data-business-collect]")');
   });
 });
-
 
 describe("Idle request failure handling", () => {
   it("keeps request failures inside the page instead of leaking unhandled promises", () => {
@@ -51,6 +51,7 @@ describe("Idle request failure handling", () => {
 });
 
 
+
 describe("Idle collect all integration", () => {
   it("shows one summary action for collecting every business", () => {
     expect(idleIndexSource).toContain("data-idle-collect-all");
@@ -59,15 +60,17 @@ describe("Idle collect all integration", () => {
     expect(idleIndexSource).toContain("this.runCollectAll()");
   });
 
-  it("shows richer business information for readability", () => {
+  it("keeps only core at-a-glance information on each main card", () => {
+    expect(componentsSource).toContain("BİRİKMİŞ");
     expect(componentsSource).toContain("SAATLİK GELİR");
-    expect(componentsSource).toContain("data-business-daily");
-    expect(componentsSource).toContain("KASA KAPASİTESİ");
+    expect(componentsSource).toContain("data-business-vault");
     expect(componentsSource).toContain("data-business-vault-fill");
     expect(componentsSource).toContain("data-business-vault-progress");
+    expect(componentsSource).toContain("data-business-vault-eta");
+    expect(componentsSource).not.toContain("data-business-daily");
+    expect(componentsSource).not.toContain("KASA GELİŞTİR");
   });
 });
-
 
 describe("Businesses mobile scrolling", () => {
   it("keeps Businesses vertically scrollable on small screens without changing other game routes", () => {
