@@ -552,6 +552,31 @@ export const BUSINESSES_MARKUP = `
   </div>
 `;
 
+function hydrateBusinessMedia(root: HTMLElement) {
+  const images = root.querySelectorAll<HTMLImageElement>("[data-business-image]");
+
+  for (const image of images) {
+    const slot = image.closest<HTMLElement>("[data-business-image-slot]");
+    if (!slot) continue;
+
+    const markReady = () => {
+      slot.dataset.imageState = "ready";
+    };
+    const markPlaceholder = () => {
+      slot.dataset.imageState = "placeholder";
+    };
+
+    if (image.complete) {
+      if (image.naturalWidth > 0) markReady();
+      else markPlaceholder();
+      continue;
+    }
+
+    image.addEventListener("load", markReady, { once: true });
+    image.addEventListener("error", markPlaceholder, { once: true });
+  }
+}
+
 export class BusinessesClient {
   private envelope: IdleStateEnvelope | null = null;
   private timer: number | null = null;
@@ -564,6 +589,7 @@ export class BusinessesClient {
   constructor(private readonly root: HTMLElement) {
     this.root.addEventListener("click", this.handleClick);
     this.root.addEventListener("keydown", this.handleKeyDown);
+    hydrateBusinessMedia(this.root);
     void this.refresh();
     this.timer = window.setInterval(() => this.render(), 1_000);
   }
