@@ -4,7 +4,10 @@ import RAPIER from '@dimforge/rapier3d-compat';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import { prepareAuthoritativeRouletteGlb } from '../../../lib/roulette-gltf-transform';
-import { measureRouletteVisualSurfaceAt } from '../../../lib/roulette-glb-surface';
+import {
+  measureRouletteVisualSurfaceAt,
+  sampleRouletteVisualTextureColorAt,
+} from '../../../lib/roulette-glb-surface';
 import {
   ROULETTE_ASSET_PATH,
   ROULETTE_AUTHORITATIVE_SCALE,
@@ -75,6 +78,19 @@ const GLB_COLLIDER_PARITY_SCAN_INNER_RADIUS = 1.48;
 const GLB_COLLIDER_PARITY_SCAN_OUTER_RADIUS = 2.44;
 const GLB_COLLIDER_PARITY_RADIAL_SAMPLES = 25;
 const GLB_COLLIDER_PARITY_ANGULAR_SAMPLES = 72;
+const GLB_POCKET_PHASE_PROBE_RADII = [1.49, 1.52, 1.55] as const;
+const GLB_POCKET_PHASE_CANDIDATES = 90;
+const GLB_POCKET_PROFILE_INNER_RADIUS = 1.48;
+const GLB_POCKET_PROFILE_OUTER_RADIUS = 2.04;
+const GLB_POCKET_PROFILE_STEP = 0.01;
+const GLB_NUMBER_MAPPING_RADIUS_MIN = 1.48;
+const GLB_NUMBER_MAPPING_RADIUS_MAX = 2.04;
+const GLB_NUMBER_MAPPING_RADIUS_STEP = 0.04;
+const GLB_NUMBER_MAPPING_PHASE_STEPS = 49;
+const EUROPEAN_RED_NUMBERS = new Set([
+  1, 3, 5, 7, 9, 12, 14, 16, 18,
+  19, 21, 23, 25, 27, 30, 32, 34, 36,
+]);
 const PART6_FULL_SPIN_MAX_DURATION_SECONDS = 30;
 const PART6_SETTLE_DURATION_SECONDS = 0.5;
 const PART6_UI_YIELD_STEPS = 240;
