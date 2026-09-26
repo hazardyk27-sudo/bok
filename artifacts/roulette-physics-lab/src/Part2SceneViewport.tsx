@@ -8101,6 +8101,21 @@ export function Part2SceneViewport({
             !geometryDiagnosticOnly &&
             !part1ProbeOnly
           ) {
+            // Rapier scene queries reuse a broad-phase BVH that is refreshed
+            // by stepping the world. The exact GLB colliders were just
+            // inserted, so perform one zero-launch synchronization step before
+            // the parity raycasts, then restore the ball to its exact start.
+            // This step exists only to make the query pipeline see the freshly
+            // inserted mesh colliders; it must not alter the test launch.
+            world.step();
+            ballBody.setTranslation(
+              { x: initialPosition[0], y: initialPosition[1], z: initialPosition[2] },
+              true,
+            );
+            ballBody.setLinvel({ x: 0, y: 0, z: 0 }, true);
+            ballBody.setAngvel({ x: 0, y: 0, z: 0 }, true);
+            ballBody.setRotation({ x: 0, y: 0, z: 0, w: 1 }, true);
+            ballMesh.position.set(...initialPosition);
             const parityReport = runGlbColliderParityAudit();
             if (parityReport) {
               console.info(
