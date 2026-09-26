@@ -3426,8 +3426,9 @@ function AuthoritativeRoundDetails({ round }: { round: PhysicsLabRound }) {
 }
 
 function App() {
-  const part6HeadlessRouteActive =
-    new URLSearchParams(window.location.search).get('part6Headless') === '1';
+  const part6Params = new URLSearchParams(window.location.search);
+  const part6HeadlessRouteActive = part6Params.get('part6Headless') === '1';
+  const part6ReplayProbeActive = part6Params.get('part6ReplayProbe') === '1';
   const [loadKey, setLoadKey] = useState(0);
   const [loadState, setLoadState] = useState<LoadState>('loading');
   const [errorDetail, setErrorDetail] = useState('');
@@ -3477,6 +3478,41 @@ function App() {
   const [part5RunRequest, setPart5RunRequest] = useState(0);
   const [part5Report, setPart5Report] =
     useState<Part5ValidationReport>(EMPTY_PART5_REPORT);
+
+  useEffect(() => {
+    if (!part6ReplayProbeActive) return undefined;
+
+    let cancelled = false;
+    const fixtureUrl =
+      import.meta.env.BASE_URL.replace(/\/?$/, '/') +
+      'roulette-replay-fixture.json';
+
+    void fetch(fixtureUrl, { cache: 'no-store' })
+      .then(async (response) => {
+        if (!response.ok) {
+          throw new Error(
+            `Replay fixture request failed with HTTP ${response.status}`,
+          );
+        }
+        return (await response.json()) as PhysicsLabRound;
+      })
+      .then((round) => {
+        if (!cancelled) setAuthoritativeRound(round);
+      })
+      .catch((error) => {
+        if (cancelled) return;
+        setValidationIssue({
+          kind: 'telemetry',
+          detail:
+            'Authoritative replay probe fixture failed: ' +
+            (error instanceof Error ? error.message : String(error)),
+        });
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [part6ReplayProbeActive]);
 
   const handleStateChange = useCallback(
     (
@@ -4277,7 +4313,7 @@ function App() {
             )}
           </section>
 
-          {!part6HeadlessRouteActive && (
+          {!part6HeadlessRouteActive && !part6ReplayProbeActive && (
             <AuthoritativeRoundPanel onRoundChange={setAuthoritativeRound} />
           )}
 
