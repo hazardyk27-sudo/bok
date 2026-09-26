@@ -76,7 +76,10 @@ jobs:
               const text = message.text();
               if (
                 text.startsWith('GLB_POCKET_GEOMETRY_REPORT ') ||
-                text.startsWith('GLB_NUMBER_MAPPING_REPORT ')
+                text.startsWith('GLB_NUMBER_MAPPING_REPORT ') ||
+                text.startsWith('GLB_COLLIDER_PARITY_REPORT ') ||
+                text.startsWith('GLB_EXACT_STATIONARY_COLLIDER ') ||
+                text.startsWith('GLB_EXACT_ROTOR_COLLIDER ')
               ) {
                 console.log(text);
               }
@@ -90,7 +93,8 @@ jobs:
                 const stage = document.querySelector('[data-glb-pocket-geometry-report]');
                 return Boolean(
                   stage?.getAttribute('data-glb-pocket-geometry-report') &&
-                  stage?.getAttribute('data-glb-number-mapping-report'),
+                  stage?.getAttribute('data-glb-number-mapping-report') &&
+                  stage?.getAttribute('data-glb-collider-parity-report'),
                 );
               },
               undefined,
@@ -105,10 +109,37 @@ jobs:
               const numbers = JSON.parse(
                 stage.getAttribute('data-glb-number-mapping-report') ?? 'null',
               );
-              return { pocket, numbers };
+              const parity = JSON.parse(
+                stage.getAttribute('data-glb-collider-parity-report') ?? 'null',
+              );
+              return { pocket, numbers, parity };
             });
-            if (!result.pocket || !result.numbers) {
-              throw new Error('Structured GLB mapping report missing');
+            if (!result.pocket || !result.numbers || !result.parity) {
+              throw new Error('Structured GLB mapping/parity report missing');
+            }
+            if (result.parity.passed !== true) {
+              throw new Error(
+                'Exact GLB collider parity failed: ' +
+                  JSON.stringify(result.parity),
+              );
+            }
+            if (Number(result.parity.missingVisual) !== 0) {
+              throw new Error(
+                'Exact GLB collider parity has missing visual probes: ' +
+                  String(result.parity.missingVisual),
+              );
+            }
+            if (Number(result.parity.missingCollider) !== 0) {
+              throw new Error(
+                'Exact GLB collider parity has missing collider probes: ' +
+                  String(result.parity.missingCollider),
+              );
+            }
+            if (Number(result.parity.comparedCount) !== 17640) {
+              throw new Error(
+                'Exact GLB collider parity sample count mismatch: ' +
+                  String(result.parity.comparedCount),
+              );
             }
 
             const signedZero = (() => {
@@ -173,6 +204,11 @@ jobs:
                   colorMatches: result.numbers.colorMatches,
                   colorMatchRate: result.numbers.colorMatchRate,
                   radius: result.numbers.radius,
+                  colliderParitySamples: result.parity.comparedCount,
+                  colliderParityMaxMm: result.parity.maxAbsMm,
+                  colliderParityMaxNormalDegrees:
+                    result.parity.maxNormalAngleDegrees,
+                  colliderParityWorstSample: result.parity.maxSample,
                 }),
             );
           } finally {
