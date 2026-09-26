@@ -9,6 +9,19 @@ const source = process.env.SOURCE_COMMIT;
 if (!game || !manifest.games[game]) throw new Error("Unknown GAME");
 if (!source) throw new Error("SOURCE_COMMIT is required");
 
+const declaredBranch = manifest.games[game].branch;
+const declaredRemoteRef = `refs/remotes/origin/${declaredBranch}`;
+try {
+  execFileSync("git", ["fetch", "origin", `${declaredBranch}:${declaredRemoteRef}`], {
+    stdio: ["ignore", "ignore", "pipe"],
+  });
+  execFileSync("git", ["merge-base", "--is-ancestor", source, declaredRemoteRef], {
+    stdio: ["ignore", "ignore", "pipe"],
+  });
+} catch {
+  throw new Error(`Source commit is not part of the declared ${game} branch (${declaredBranch})`);
+}
+
 const normalize = (p) => p.replace(/\/+$/, "");
 const ownedRoots = manifest.games[game].roots.map(normalize);
 const foreignRoots = Object.entries(manifest.games)
