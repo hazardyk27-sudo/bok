@@ -93,21 +93,20 @@
 
 /* Part 2 — premium route shell / responsive viewport foundation */
 html.businesses-route {
-  background: var(--idle-canvas, #050816);
+  background: var(--idle-canvas, #0b1418);
 }
 
 body.businesses-route {
   min-width: 320px;
   min-height: 100dvh;
   background:
-    radial-gradient(circle at 14% 18%, rgba(70, 200, 255, .055), transparent 34%),
-    radial-gradient(circle at 88% 12%, rgba(114, 88, 255, .06), transparent 30%),
-    linear-gradient(180deg, #07101e 0%, var(--idle-canvas, #050816) 48%, #040712 100%);
+    radial-gradient(circle at 82% 8%, rgba(84, 242, 163, .035), transparent 30%),
+    linear-gradient(180deg, #091114 0%, var(--idle-canvas, #0b1418) 54%, #080f12 100%);
 }
 
 .route-shell.is-businesses-page {
-  --idle-page-max: 1240px;
-  --idle-page-gutter: clamp(18px, 3.1vw, 48px);
+  --idle-page-max: 1400px;
+  --idle-page-gutter: clamp(18px, 2.1vw, 32px);
 
   position: relative;
   width: 100%;
@@ -131,9 +130,9 @@ body.businesses-route {
   pointer-events: none;
   content: "";
   background:
-    linear-gradient(90deg, rgba(70, 200, 255, .018) 1px, transparent 1px),
-    linear-gradient(rgba(70, 200, 255, .014) 1px, transparent 1px);
-  background-size: 72px 72px;
+    linear-gradient(90deg, rgba(84, 242, 163, .012) 1px, transparent 1px),
+    linear-gradient(rgba(84, 242, 163, .010) 1px, transparent 1px);
+  background-size: 80px 80px;
   mask-image: linear-gradient(to bottom, rgba(0, 0, 0, .52), transparent 72%);
 }
 
@@ -238,6 +237,211 @@ body.businesses-route {
   }
 }
 
+
+/* Part 3 — measured desktop workspace + sidebar */
+.businesses-workspace {
+  width: min(100%, var(--idle-page-max, 1400px));
+  margin-inline: auto;
+}
+
+.businesses-sidebar {
+  display: none;
+}
+
+.businesses-sidebar-brand,
+.businesses-sidebar-item {
+  color: inherit;
+  text-decoration: none;
+}
+
+@media (min-width: 1101px) {
+  .route-shell.is-businesses-page {
+    padding:
+      max(18px, env(safe-area-inset-top))
+      max(18px, env(safe-area-inset-right))
+      max(24px, env(safe-area-inset-bottom))
+      max(18px, env(safe-area-inset-left));
+  }
+
+  .route-shell.is-businesses-page > .route-topbar {
+    display: none;
+  }
+
+  .businesses-workspace {
+    display: grid;
+    grid-template-columns: var(--idle-sidebar-width) minmax(0, 1fr);
+    gap: var(--idle-content-gap);
+    align-items: stretch;
+    min-height: calc(100dvh - 42px);
+  }
+
+  .route-shell.is-businesses-page .businesses-page {
+    width: 100%;
+    min-width: 0;
+    margin: 0;
+    padding: 30px 0 max(44px, env(safe-area-inset-bottom));
+  }
+
+  .businesses-sidebar {
+    position: sticky;
+    top: max(18px, env(safe-area-inset-top));
+    display: flex;
+    flex-direction: column;
+    width: var(--idle-sidebar-width);
+    height: calc(100dvh - 42px);
+    min-height: 620px;
+    overflow: hidden;
+    border: 1px solid var(--idle-line-soft);
+    border-radius: var(--idle-radius-card);
+    background:
+      linear-gradient(180deg, rgba(255, 255, 255, .018), transparent 18%),
+      var(--idle-sidebar);
+    box-shadow: var(--idle-shadow-card);
+  }
+
+  .businesses-sidebar-brand {
+    display: grid;
+    grid-template-columns: 38px minmax(0, 1fr);
+    align-items: center;
+    gap: 10px;
+    min-height: 78px;
+    padding: 16px 14px;
+    border-bottom: 1px solid var(--idle-line-soft);
+  }
+
+  .businesses-sidebar-crest {
+    display: grid;
+    place-items: center;
+    width: 38px;
+    height: 38px;
+    border: 1px solid var(--idle-green-medium);
+    border-radius: 10px;
+    color: var(--idle-green-bright);
+    background: var(--idle-green-soft);
+    font-family: var(--idle-font-display);
+    font-size: 12px;
+    font-weight: 800;
+    letter-spacing: -.02em;
+  }
+
+  .businesses-sidebar-brand strong,
+  .businesses-sidebar-brand small {
+    display: block;
+    min-width: 0;
+  }
+
+  .businesses-sidebar-brand strong {
+    color: var(--idle-text);
+    font-family: var(--idle-font-ui);
+    font-size: 12px;
+    font-weight: 750;
+    letter-spacing: .055em;
+    line-height: 1.15;
+  }
+
+  .businesses-sidebar-brand small {
+    margin-top: 4px;
+    color: var(--idle-text-muted);
+    font-size: 8px;
+    font-weight: 650;
+    letter-spacing: .09em;
+  }
+
+  .businesses-sidebar-nav {
+    display: grid;
+    gap: 4px;
+    padding: 14px 10px;
+  }
+
+  .businesses-sidebar-section {
+    padding: 4px 10px 6px;
+    color: var(--idle-text-muted);
+    font-size: 8px;
+    font-weight: 700;
+    letter-spacing: .11em;
+  }
+
+  .businesses-sidebar-section--club {
+    margin-top: 10px;
+  }
+
+  .businesses-sidebar-item {
+    display: grid;
+    grid-template-columns: 28px minmax(0, 1fr);
+    align-items: center;
+    gap: 9px;
+    min-height: 42px;
+    padding: 0 10px;
+    border: 1px solid transparent;
+    border-radius: 9px;
+    color: var(--idle-text-secondary);
+    font-family: var(--idle-font-ui);
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: .01em;
+  }
+
+  .businesses-sidebar-item-icon {
+    display: grid;
+    place-items: center;
+    width: 28px;
+    height: 28px;
+    border-radius: 8px;
+    color: var(--idle-text-muted);
+    background: rgba(255, 255, 255, .025);
+    font-size: 13px;
+  }
+
+  .businesses-sidebar-item.is-active {
+    border-color: rgba(84, 242, 163, .16);
+    color: #f5fff9;
+    background:
+      linear-gradient(90deg, rgba(84, 242, 163, .16), rgba(84, 242, 163, .075));
+    box-shadow: inset 2px 0 0 var(--idle-green);
+  }
+
+  .businesses-sidebar-item.is-active .businesses-sidebar-item-icon {
+    color: #07130d;
+    background: var(--idle-green);
+  }
+
+  .businesses-sidebar-item.is-disabled {
+    opacity: .56;
+    cursor: default;
+  }
+
+  .businesses-sidebar-footer {
+    display: grid;
+    gap: 4px;
+    margin-top: auto;
+    padding: 14px 18px 16px;
+    border-top: 1px solid var(--idle-line-soft);
+    color: var(--idle-text-muted);
+  }
+
+  .businesses-sidebar-footer span {
+    font-size: 8px;
+    font-weight: 700;
+    letter-spacing: .08em;
+  }
+
+  .businesses-sidebar-footer small {
+    font-size: 7px;
+    letter-spacing: .06em;
+  }
+
+  @media (hover: hover) and (pointer: fine) {
+    .businesses-sidebar-item[href]:not(.is-active):hover {
+      color: var(--idle-text);
+      background: rgba(255, 255, 255, .035);
+    }
+
+    .businesses-sidebar-brand:hover .businesses-sidebar-crest {
+      border-color: var(--idle-green-medium);
+      background: rgba(84, 242, 163, .14);
+    }
+  }
+}
 
 /* Part 3–8 — final Businesses command + card architecture */
 .route-shell.is-businesses-page .businesses-page {
