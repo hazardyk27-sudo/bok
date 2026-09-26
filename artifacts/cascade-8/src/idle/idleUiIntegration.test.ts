@@ -331,9 +331,9 @@ describe("Businesses measured desktop workspace", () => {
     expect(idleIndexSource).toContain(">AYARLAR</span>");
   });
 
-  it("uses the approved black-azure shell instead of the old blue ambient foundation", () => {
+  it("uses the approved Brand Asset navy shell instead of the old ambient foundation", () => {
     expect(idleCssSource).toContain("background: var(--idle-canvas, #00072d)");
-    expect(idleCssSource).toContain("rgba(56, 138, 156, .035)");
+    expect(idleCssSource).toContain("rgba(18, 52, 153, .035)");
     expect(idleCssSource).toContain("var(--idle-sidebar)");
     expect(idleCssSource).toContain("var(--idle-accent)");
   });
@@ -611,8 +611,8 @@ describe("Businesses desktop visual parity polish", () => {
   });
 
   it("uses only restrained blue hover and focus treatment on the final desktop cards", () => {
-    expect(idleCssSource).toContain("border-color: rgba(56, 138, 156, .24)");
-    expect(idleCssSource).toContain("background: rgba(56, 138, 156, .06)");
+    expect(idleCssSource).toContain("border-color: rgba(13, 52, 233, .22)");
+    expect(idleCssSource).toContain("background-color: rgba(18, 52, 153, .07)");
     expect(idleCssSource).toContain("box-shadow: var(--idle-focus-ring)");
     expect(idleCssSource).toContain("transform: translateY(-2px)");
   });
@@ -648,8 +648,8 @@ describe("Businesses dedicated tablet composition", () => {
   });
 
   it("removes old cyan hover treatment from the tablet surface with final blue overrides", () => {
-    expect(idleCssSource).toContain("border-color: rgba(56, 138, 156, .2)");
-    expect(idleCssSource).toContain("background: rgba(56, 138, 156, .05)");
+    expect(idleCssSource).toContain("border-color: rgba(18, 52, 153, .2)");
+    expect(idleCssSource).toContain("background: rgba(18, 52, 153, .05)");
     expect(idleCssSource).toContain("box-shadow: var(--idle-focus-ring)");
   });
 });
@@ -781,7 +781,7 @@ describe("Businesses detail panel architecture", () => {
 
   it("keeps the drawer behavior while the final desktop shell overrides its visual system", () => {
     expect(idleCssSource).toContain("/* Part 12 — premium detail drawer / mobile fullscreen architecture */");
-    expect(idleCssSource).toContain("/* Part 13 — azure/black Details shell */");
+    expect(idleCssSource).toContain("/* Part 13 — brand navy Details shell */");
     expect(idleCssSource).toContain(".business-detail-drawer");
     expect(idleCssSource).toContain("width: min(680px, 72vw)");
     expect(idleCssSource).toContain("transform: translateX(104%)");
@@ -798,11 +798,11 @@ describe("Businesses detail panel architecture", () => {
 });
 
 
-describe("Businesses azure black Details shell", () => {
-  it("uses the approved azure black surface and wider desktop drawer", () => {
+describe("Businesses Brand Asset navy Details shell", () => {
+  it("uses the approved Brand Asset navy surface and wider desktop drawer", () => {
     expect(idleCssSource).toContain("/* Part 13 — azure/black Details shell */");
     expect(idleCssSource).toContain("width: min(680px, 72vw)");
-    expect(idleCssSource).toContain("border-left: 1px solid rgba(56, 138, 156, .14)");
+    expect(idleCssSource).toContain("border-left: 1px solid rgba(18, 52, 153, .14)");
     expect(idleCssSource).toContain("linear-gradient(180deg, #0d1718 0%, #0a1415 48%, #081011 100%)");
   });
 
