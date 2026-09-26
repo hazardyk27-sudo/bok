@@ -126,62 +126,49 @@ describe("Businesses premium route shell", () => {
 });
 
 
+
 describe("Businesses premium command header", () => {
-  it("shows a clear club-operations identity and shared wallet hierarchy", () => {
-    expect(idleIndexSource).toContain("KULÜP OPERASYON MERKEZİ");
+  it("keeps title, wallet and compact club progression as the global hierarchy", () => {
     expect(idleIndexSource).toContain("FAHRİNİN YOLU // CLUB EMPIRE");
     expect(idleIndexSource).toContain("ORTAK BAKİYE");
-    expect(idleIndexSource).toContain("TÜM OYUNLARDA KULLANILIR");
-  });
-
-  it("renders and updates the global 27-level club progression", () => {
-    expect(idleIndexSource).toContain("TOTAL_BUSINESS_PROGRESSION_LEVELS");
+    expect(idleIndexSource).toContain("KULÜP GELİŞİMİ");
     expect(idleIndexSource).toContain("data-idle-progression-levels");
     expect(idleIndexSource).toContain("data-idle-progression-track");
-    expect(idleIndexSource).toContain("data-idle-progression-bar");
-    expect(idleIndexSource).toContain("completedBusinessLevels");
-    expect(idleIndexSource).toContain('progressionTrackNode.setAttribute(');
+    expect(idleIndexSource).toContain("data-idle-active-businesses");
   });
 
-  it("uses a responsive premium header layout on desktop and mobile", () => {
-    expect(idleCssSource).toContain("/* Part 3 — premium command header */");
+  it("uses the rebuilt responsive header architecture", () => {
+    expect(idleCssSource).toContain("/* Part 3–8 — final Businesses command + card architecture */");
     expect(idleCssSource).toContain(".businesses-header-main");
     expect(idleCssSource).toContain(".businesses-progression");
-    expect(idleCssSource).toContain("grid-template-columns: minmax(0, 1fr) minmax(270px, 330px)");
-    expect(idleCssSource).toContain("grid-template-columns: minmax(0, 1fr) minmax(128px, 42%)");
+    expect(idleCssSource).toContain("minmax(250px, 300px)");
+    expect(idleCssSource).toContain("@media (max-width: 760px)");
   });
 });
 
 
 describe("Businesses premium KPI command bar", () => {
-  it("presents the three core KPIs as a dedicated command surface", () => {
-    expect(idleIndexSource).toContain("business-command-bar");
-    expect(idleIndexSource).toContain("PASİF GELİR HIZI");
-    expect(idleIndexSource).toContain("KASALARDA HAZIR");
-    expect(idleIndexSource).toContain("GELİR ÜRETİYOR");
+  it("reduces the command surface to hourly income, collectable cash and Collect All", () => {
+    expect(idleIndexSource).toContain("business-command-income");
+    expect(idleIndexSource).toContain("business-command-ready");
+    expect(idleIndexSource).toContain("SAATLİK GELİR");
+    expect(idleIndexSource).toContain("TOPLANABİLİR");
+    expect(idleIndexSource).not.toContain("business-command-active");
   });
 
-  it("keeps Collect All as a persistent primary action with a live amount", () => {
+  it("keeps Collect All persistent with the live amount", () => {
     expect(idleIndexSource).toContain("data-idle-collect-all-value");
     expect(idleIndexSource).toContain("TÜM KASALAR");
     expect(idleIndexSource).toContain("business-collect-all-arrow");
     expect(idleIndexSource).toContain("collectAllValueNode.textContent = formatCredits(totalCollectableCents)");
-    expect(idleIndexSource).toContain("commandBarNode.dataset.collectable");
   });
 
-  it("styles the KPI surface responsively for desktop, tablet and mobile", () => {
-    expect(idleCssSource).toContain("/* Part 4 — premium KPI command bar */");
-    expect(idleCssSource).toContain("grid-template-columns: repeat(3, minmax(0, 1fr)) minmax(240px, 1.12fr)");
-    expect(idleCssSource).toContain(".business-collect-all-value");
-    expect(idleCssSource).toContain(".business-command-bar[data-collectable=\"ready\"]");
+  it("uses a simpler three-part desktop surface and mobile fallback", () => {
+    expect(idleCssSource).toContain("minmax(280px, 1.2fr)");
+    expect(idleCssSource).toContain(".business-summary-collect-all");
     expect(idleCssSource).toContain("grid-template-columns: repeat(2, minmax(0, 1fr))");
   });
-
-  it("keeps visible money values currency-prefixed", () => {
-    expect(idleIndexSource).toContain("return `$");
-  });
 });
-
 
 describe("Businesses premium desktop cards", () => {
   it("renders three semantic premium business cards with dedicated visual and body regions", () => {
