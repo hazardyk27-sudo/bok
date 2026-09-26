@@ -394,7 +394,8 @@ function buildMesh(nodeSet, applyRotorBasis) {
     if (applyRotorBasis) {
       // Reflecting X changes handedness. Preserve the visible surface exactly
       // but reverse each reflected triangle winding so its outward/top normal
-      // stays outward instead of pointing into the wheel.
+      // stays outward instead of pointing into the wheel. This ordering is
+      // deterministic because the generated server payload is hash-locked.
       for (let index = 0; index < primitive.indices.length; index += 3) {
         indices.push(
           base + primitive.indices[index],
