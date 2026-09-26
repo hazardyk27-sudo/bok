@@ -1,0 +1,44 @@
+name: Integration Preview Guard
+
+on:
+  push:
+    branches:
+      - integration/replit-preview
+  pull_request:
+    branches:
+      - integration/replit-preview
+
+jobs:
+  verify-preview:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install
+        run: pnpm install --frozen-lockfile
+
+      - name: Typecheck
+        run: pnpm run typecheck
+
+      - name: Build Cascade 8 hub
+        run: pnpm --filter @workspace/cascade-8 run build
+
+      - name: Four-world integration regression
+        run: >
+          pnpm --filter @workspace/cascade-8 exec vitest run
+          src/mainMenuRegression.test.ts
+          src/cadiKazanSmoke.test.ts
+          src/rouletteSmoke.test.ts
+          src/idle/idleUiIntegration.test.ts
