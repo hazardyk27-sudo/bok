@@ -293,18 +293,22 @@ function renderVaultLevelTree(
             <span class="vault-level-node-state">${stateLabel}</span>
           </header>
 
-          <div class="vault-level-node-economy">
-            <div>
-              <span>KAPASİTE</span>
-              <strong>${vault.capacityHours} saat</strong>
-              <small>Pasif gelir depolama süresi</small>
-            </div>
-            <div>
-              <span>${vault.level === 1 ? "BAŞLANGIÇ" : "YÜKSELTME BEDELİ"}</span>
-              <strong>${costLabel}</strong>
-              <small>${costMeta}</small>
-            </div>
+          <div class="vault-level-node-capacity">
+            <span>KAPASİTE</span>
+            <strong>${vault.capacityHours} saat</strong>
+            <small>Pasif gelir depolama süresi</small>
           </div>
+
+          <dl class="vault-level-node-meta">
+            <div>
+              <dt>${vault.level === 1 ? "BAŞLANGIÇ" : "YÜKSELTME BEDELİ"}</dt>
+              <dd>${costLabel}</dd>
+            </div>
+            <div>
+              <dt>MALİYET KURALI</dt>
+              <dd>${costMeta || "—"}</dd>
+            </div>
+          </dl>
 
           ${actionMarkup}
         </div>
