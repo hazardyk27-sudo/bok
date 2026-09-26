@@ -154,24 +154,22 @@ function renderBusinessLevelTree(
             </div>
           </header>
 
-          <div class="business-level-node-economy">
-            <div>
-              <span>SAATLİK GELİR</span>
-              <strong>${incomeLabel}</strong>
-            </div>
-            <div>
-              <span>GÜNLÜK GELİR</span>
-              <strong>${dailyLabel}</strong>
-            </div>
-            <div>
-              <span>YATIRIM</span>
-              <strong>${costLabel}</strong>
-            </div>
-            <div>
-              <span>GERİ DÖNÜŞ</span>
-              <strong>${stage.targetRoiDays} gün</strong>
-            </div>
+          <div class="business-level-node-income">
+            <span>SAATLİK GELİR</span>
+            <strong>${incomeLabel}</strong>
+            <small>${dailyLabel}</small>
           </div>
+
+          <dl class="business-level-node-meta">
+            <div>
+              <dt>YATIRIM</dt>
+              <dd>${costLabel}</dd>
+            </div>
+            <div>
+              <dt>GERİ DÖNÜŞ</dt>
+              <dd>${stage.targetRoiDays} gün</dd>
+            </div>
+          </dl>
 
           ${actionMarkup}
         </div>
