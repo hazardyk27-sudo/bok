@@ -775,6 +775,8 @@ type AuthoritativeReplaySample = {
 type AuthoritativeReplayRound = {
   roundId: string;
   status: string;
+  finalPocketIndex: number | null;
+  finalPocketNumber: number | null;
   trajectoryHash: string;
   trajectory: AuthoritativeReplaySample[];
 };
@@ -1442,6 +1444,22 @@ function pocketIndexFromLocalPosition(x: number, z: number) {
     Math.round(normalizedAngle(Math.atan2(x, z)) / POCKET_STEP_RADIANS) %
     EUROPEAN_POCKET_COUNT
   );
+}
+
+function authoritativeReplayPocketIndexFromWorldState(
+  position: { x: number; z: number },
+  rotorOrientation: { y: number; w: number },
+) {
+  const worldAngle = Math.atan2(position.x, position.z);
+  const rotorAngle = 2 * Math.atan2(
+    rotorOrientation.y,
+    rotorOrientation.w,
+  );
+  const relativeAngle = normalizedAngle(worldAngle - rotorAngle);
+  const rawIndex = Math.round(relativeAngle / POCKET_STEP_RADIANS);
+  return (
+    (rawIndex % EUROPEAN_POCKET_COUNT) + EUROPEAN_POCKET_COUNT
+  ) % EUROPEAN_POCKET_COUNT;
 }
 
 function pocketEntryVelocity(angle: number, tangentialSpeed: number): VectorReadout {
@@ -7704,6 +7722,14 @@ export function Part2SceneViewport({
           );
 
           if (replayElapsedMs >= finalSample.simulatedAtMs) {
+            const visiblePocketIndex =
+              authoritativeReplayPocketIndexFromWorldState(
+                replayBallMesh.position,
+                replayRotorPivot.quaternion,
+              );
+            const visiblePocketNumber =
+              EUROPEAN_SEQUENCE[visiblePocketIndex] ?? null;
+
             stage.dataset.authoritativeReplayComplete = 'true';
             stage.dataset.authoritativeReplayFinal = JSON.stringify({
               roundId: authoritativeReplay.roundId,
@@ -7726,11 +7752,15 @@ export function Part2SceneViewport({
                   z: replayRotorPivot.quaternion.z,
                   w: replayRotorPivot.quaternion.w,
                 },
+                visiblePocketIndex,
+                visiblePocketNumber,
               },
               expected: {
                 ballPosition: finalSample.ball.position,
                 ballOrientation: finalSample.ball.orientation,
                 rotorOrientation: finalSample.rotor.orientation,
+                finalPocketIndex: authoritativeReplay.finalPocketIndex,
+                finalPocketNumber: authoritativeReplay.finalPocketNumber,
               },
             });
           }
