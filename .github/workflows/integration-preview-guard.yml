@@ -48,3 +48,6 @@ jobs:
           src/rouletteGeometry.test.ts
           src/roulettePhysicsConfig.test.ts
           src/idle/idleUiIntegration.test.ts
+
+      - name: Backend isolation regression
+        run: pnpm --filter @workspace/api-server exec vitest run src/backendIsolation.test.ts
