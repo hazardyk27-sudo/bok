@@ -399,7 +399,7 @@ describe("authoritative roulette physics config", () => {
       "const PART3_OUTER_SPIN_ANGULAR_DAMPING = 0.01",
     );
     expect(part3ViewportSource).toContain(
-      "const PART6_LAUNCH_SPEED_METERS_PER_SECOND_BASE = 5.25",
+      "const PART6_LAUNCH_SPEED_METERS_PER_SECOND_BASE = 5.45",
     );
     expect(part3ViewportSource).toContain(
       "const PART6_LAUNCH_SPEED_METERS_PER_SECOND_VARIATION = 0.15",
