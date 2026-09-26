@@ -11,7 +11,7 @@ describe("Idle repository SQL regression", () => {
   it("does not ask PostgreSQL to add two untyped collect parameters", () => {
     expect(repositorySource).not.toContain("VALUES ($1, $2 + $3, now())");
     expect(repositorySource).toContain(
-      "INITIAL_ROULETTE_BALANCE_CENTS + settlement.walletCreditCents",
+      "INITIAL_SHARED_BALANCE_CENTS + settlement.walletCreditCents",
     );
     expect(repositorySource).toContain("VALUES ($1, $2, now())");
   });
