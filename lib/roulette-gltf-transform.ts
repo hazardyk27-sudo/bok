@@ -4,6 +4,9 @@ import {
   ROULETTE_RAW_SOURCE_CENTER,
   ROULETTE_Y_ORIGIN,
 } from "./roulette-physics-config";
+import {
+  ROULETTE_GLB_VISIBLE_ZERO_ANGLE_RADIANS,
+} from "./roulette-pocket-mapping";
 
 const EMBEDDED_SCALE = 0.01;
 const EMBEDDED_SCALE_EPSILON = 0.000001;
@@ -88,5 +91,29 @@ export function prepareAuthoritativeRouletteGlb(
     normalizedBounds: new THREE.Box3().setFromObject(runtimeScene),
     normalizedCenterWorld,
     runtimeSceneWorldMatrix: runtimeScene.matrixWorld.clone(),
+  };
+}
+
+
+/**
+ * Converts the raw GLB rotor basis into the authoritative physics basis.
+ *
+ * Raw GLB sequence: theta = visibleZero - index * step
+ * Physics sequence: theta = index * step
+ *
+ * Reflecting X maps theta -> -theta, then rotating by visibleZero maps
+ * theta -> visibleZero - theta. The exact same group transform must be used
+ * by render geometry and every mesh-derived rotor collider.
+ */
+export function applyAuthoritativeRouletteRotorBasis(
+  rotorVisual: THREE.Group,
+) {
+  rotorVisual.scale.set(-1, 1, 1);
+  rotorVisual.rotation.set(0, ROULETTE_GLB_VISIBLE_ZERO_ANGLE_RADIANS, 0);
+  rotorVisual.updateMatrix();
+  rotorVisual.updateMatrixWorld(true);
+  rotorVisual.userData.rouletteRotorBasis = {
+    reflectX: true,
+    rotationYRadians: ROULETTE_GLB_VISIBLE_ZERO_ANGLE_RADIANS,
   };
 }
