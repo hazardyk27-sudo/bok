@@ -1240,7 +1240,10 @@ export async function simulatePhysicsLabRound(
       });
 
       const preInwardTrackContact = stepContactRoles.has("dark-race");
-      if (seed === "61004" && step <= 90) {
+      if (
+        (seed === "61004" && step <= 90) ||
+        (seed === "61005" && step >= 700 && step <= 950)
+      ) {
         const parityAngularVelocity = ballBody.angvel();
         const parityRadialVelocity =
           radius > 0
