@@ -11,7 +11,11 @@
     "lib/db/src/schema/index.ts",
     "package.json",
     "pnpm-lock.yaml",
-    "pnpm-workspace.yaml"
+    "pnpm-workspace.yaml",
+    "artifacts/api-server/src/routes/index.ts",
+    "artifacts/api-server/src/platform",
+    "artifacts/api-server/src/backendIsolation.test.ts",
+    "lib/db/src/schema/wallet.ts"
   ],
   "games": {
     "slot": {
@@ -22,7 +26,8 @@
         "artifacts/cascade-8/src/engine",
         "artifacts/cascade-8/src/game",
         "artifacts/cascade-8/src/simulation",
-        "artifacts/api-server/src/slot"
+        "artifacts/api-server/src/slot",
+        "lib/db/src/schema/slot.ts"
       ]
     },
     "roulette": {
@@ -42,14 +47,17 @@
         "scripts/roulette-authoritative-replay-runtime.mjs",
         "scripts/roulette-part6-report.mjs",
         "scripts/roulette-part6-runtime.mjs",
-        "scripts/roulette-production-lifecycle-browser.mjs"
+        "scripts/roulette-production-lifecycle-browser.mjs",
+        "lib/db/src/schema/roulette.ts",
+        "lib/db/src/schema/physics-lab.ts"
       ]
     },
     "cadi-kazan": {
       "branch": "feature/cadi-kazan",
       "roots": [
         "artifacts/cascade-8/src/cadi-kazan",
-        "artifacts/api-server/src/cadi-kazan"
+        "artifacts/api-server/src/cadi-kazan",
+        "lib/db/src/schema/cadi-kazan.ts"
       ]
     },
     "idle": {
@@ -57,7 +65,8 @@
       "roots": [
         "artifacts/cascade-8/src/idle",
         "artifacts/cascade-8/public/businesses",
-        "artifacts/api-server/src/idle"
+        "artifacts/api-server/src/idle",
+        "lib/db/src/schema/idle.ts"
       ]
     },
     "hub": {
