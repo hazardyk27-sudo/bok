@@ -250,6 +250,44 @@ function addExactGlbStationaryCollider(
   );
 }
 
+function addExactGlbRotorCollider(
+  world: RAPIER.World,
+  body: RAPIER.RigidBody,
+) {
+  const geometry = getRouletteExactGlbColliderGeometry().rotor;
+  return world.createCollider(
+    RAPIER.ColliderDesc.trimesh(
+      geometry.vertices,
+      geometry.indices,
+      RAPIER.TriMeshFlags.FIX_INTERNAL_EDGES,
+    )
+      .setFriction(0.42)
+      .setRestitution(0.02)
+      .setCollisionGroups(
+        ROTOR_COLLISION_GROUP | (BALL_COLLISION_GROUP << 16),
+      ),
+    body,
+  );
+}
+
+function rotorLocalAngleFromState(
+  translation: { x: number; z: number },
+  rotation: { y: number; w: number },
+) {
+  const worldAngle = Math.atan2(translation.x, translation.z);
+  const rotorAngle = 2 * Math.atan2(rotation.y, rotation.w);
+  return normalizedAngle(worldAngle - rotorAngle);
+}
+
+function distanceToNearestPocketFret(localAngle: number) {
+  const normalizedPocketCoordinate = localAngle / SECTOR_STEP_RADIANS;
+  const nearestFretCoordinate =
+    Math.round(normalizedPocketCoordinate - 0.5) + 0.5;
+  return Math.abs(
+    normalizedPocketCoordinate - nearestFretCoordinate,
+  ) * SECTOR_STEP_RADIANS;
+}
+
 function addDarkRaceChannelCollider(
   world: RAPIER.World,
   body: RAPIER.RigidBody,
@@ -903,22 +941,25 @@ export async function simulatePhysicsLabRound(
       triangles: ROULETTE_EXACT_GLB_COLLIDER_METADATA.stationaryTriangles,
     }),
   );
-  const pocketColliders = addPocketFloorAndOuterLipColliders(
+  const exactGlbRotorCollider = addExactGlbRotorCollider(
     world,
     rotorBody,
   );
-  if (pocketColliders[0]) colliderRoles.set(pocketColliders[0].handle, "pocket-floor");
-  if (pocketColliders[1]) colliderRoles.set(pocketColliders[1].handle, "pocket-outer-lip");
-  if (pocketColliders[2]) colliderRoles.set(pocketColliders[2].handle, "pocket-catch-underlay");
-  const fretColliders = addPocketFretColliders(world, rotorBody);
-  const fretColliderHandles = new Set(
-    fretColliders.map((collider) => collider.handle),
+  colliderRoles.set(
+    exactGlbRotorCollider.handle,
+    "exact-glb-rotor-trimesh",
   );
-  for (const collider of fretColliders) {
-    colliderRoles.set(collider.handle, "pocket-fret");
-  }
-  const innerGuardCollider = addPocketInnerGuardCollider(world, rotorBody);
-  colliderRoles.set(innerGuardCollider.handle, "pocket-inner-guard");
+  console.info(
+    "ROULETTE_EXACT_ROTOR_COLLIDER",
+    JSON.stringify({
+      sourceSha256: ROULETTE_EXACT_GLB_COLLIDER_METADATA.sourceSha256,
+      geometrySha256: ROULETTE_EXACT_GLB_COLLIDER_METADATA.geometrySha256,
+      weldEpsilonWorld:
+        ROULETTE_EXACT_GLB_COLLIDER_METADATA.weldEpsilonWorld,
+      vertices: ROULETTE_EXACT_GLB_COLLIDER_METADATA.rotorVertices,
+      triangles: ROULETTE_EXACT_GLB_COLLIDER_METADATA.rotorTriangles,
+    }),
+  );
   const ballBody = world.createRigidBody(
     RAPIER.RigidBodyDesc.dynamic()
       .setTranslation(...startConditions.ballPosition)
@@ -1287,6 +1328,7 @@ export async function simulatePhysicsLabRound(
       let deflectorPairContact = false;
       let physicalFretPairContact = false;
       let exactStationaryContact = false;
+      let exactRotorContact = false;
       const stepContactRoles = new Set<string>();
       world.contactPairsWith(ballCollider, (otherCollider) => {
         world.contactPair(ballCollider, otherCollider, (manifold) => {
@@ -1294,8 +1336,8 @@ export async function simulatePhysicsLabRound(
           if (otherCollider.handle === exactGlbStationaryCollider.handle) {
             exactStationaryContact = true;
           }
-          if (fretColliderHandles.has(otherCollider.handle)) {
-            physicalFretPairContact = true;
+          if (otherCollider.handle === exactGlbRotorCollider.handle) {
+            exactRotorContact = true;
           }
           const contactRole = colliderRoles.get(otherCollider.handle);
           if (contactRole) stepContactRoles.add(contactRole);
@@ -1337,6 +1379,56 @@ export async function simulatePhysicsLabRound(
       if (deflectorPairContact) {
         stepContactRoles.add("deflector");
       }
+
+      // Rotor role aliases are diagnostic only. The physical contact source is
+      // always exact-glb-rotor-trimesh; no pocket-floor, lip, catch-underlay,
+      // fret or inner-guard primitive is active in the world.
+      const rotorLocalAngle = rotorLocalAngleFromState(
+        translation,
+        rotorRotation,
+      );
+      const ballBottom = translation.y - PHYSICS_LAB_BALL_RADIUS;
+      const fretInnerRadius =
+        1.48 + PHYSICS_LAB_BALL_RADIUS * 2 - 0.002;
+      const fretOuterRadius = ROULETTE_POCKET_FLOOR_OUTER_RADIUS - 0.02;
+      const fretAngularTolerance =
+        (0.03 + PHYSICS_LAB_BALL_RADIUS) /
+        Math.max(radius, PHYSICS_LAB_BALL_RADIUS);
+      const nearPocketFret =
+        exactRotorContact &&
+        radius >= fretInnerRadius - PHYSICS_LAB_BALL_RADIUS &&
+        radius <= fretOuterRadius + PHYSICS_LAB_BALL_RADIUS &&
+        distanceToNearestPocketFret(rotorLocalAngle) <=
+          fretAngularTolerance;
+      physicalFretPairContact = nearPocketFret;
+      if (nearPocketFret) {
+        stepContactRoles.add("pocket-fret");
+      }
+
+      if (
+        exactRotorContact &&
+        radius >= 1.48 + PHYSICS_LAB_BALL_RADIUS * 0.5 &&
+        radius <=
+          ROULETTE_POCKET_FLOOR_OUTER_RADIUS -
+            PHYSICS_LAB_BALL_RADIUS * 0.35 &&
+        Math.abs(ballBottom - ROULETTE_POCKET_FLOOR_Y) <= 0.16
+      ) {
+        stepContactRoles.add("pocket-floor");
+      }
+      if (
+        exactRotorContact &&
+        Math.abs(radius - ROULETTE_POCKET_OUTER_LIP_RADIUS) <=
+          PHYSICS_LAB_BALL_RADIUS * 1.75
+      ) {
+        stepContactRoles.add("pocket-outer-lip");
+      }
+      if (
+        exactRotorContact &&
+        radius <= 1.48 + PHYSICS_LAB_BALL_RADIUS * 1.75
+      ) {
+        stepContactRoles.add("pocket-inner-guard");
+      }
+
       if (
         (seed === "61004" && step <= 90) ||
         (seed === "61005" && step >= 700 && step <= 950)
