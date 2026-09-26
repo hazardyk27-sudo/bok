@@ -4,7 +4,6 @@ import {
   STADIUM_BUSINESS,
   VAULT_LEVELS,
 } from "../config";
-import { getIdleVaultUpgradePreview } from "../services";
 import type {
   BusinessDefinition,
   BusinessId,
@@ -262,7 +261,6 @@ export function updateBusinessRow(
   incomeNode.textContent = currentStage
     ? `${formatCreditsFromCents(currentStage.hourlyIncomeDisplayCents)} /sa`
     : "$0.00 /sa";
-  const vaultUpgrade = getIdleVaultUpgradePreview(business);
   const vaultCapacityMicrocents = business.businessLevel === null
     ? 0
     : business.liveAccruedMicrocents + business.liveRemainingCapacityMicrocents;
