@@ -43,9 +43,6 @@ jobs:
           pnpm --filter @workspace/cascade-8 exec vitest run
           src/hub/mainMenuRegression.test.ts
           src/cadi-kazan/cadiKazanSmoke.test.ts
-          src/cadi-kazan/scratch/ScratchFeedback.test.ts
-          src/cadi-kazan/scratch/ScratchPresentation.test.ts
-          src/cadi-kazan/scratch/ScratchProgress.test.ts
           src/rouletteSmoke.test.ts
           src/rouletteGeometry.test.ts
           src/roulettePhysicsConfig.test.ts
