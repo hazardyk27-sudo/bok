@@ -74,8 +74,8 @@ describe("Idle collect all integration", () => {
 
 describe("Businesses mobile scrolling", () => {
   it("uses the Businesses route shell as the explicit mobile touch-scroll container", () => {
-    expect(mainSource).toContain('document.documentElement.classList.add("businesses-route")');
-    expect(mainSource).toContain('document.body.classList.add("businesses-route")');
+    expect(idleIndexSource).toContain('document.documentElement.classList.add("businesses-route")');
+    expect(idleIndexSource).toContain('document.body.classList.add("businesses-route")');
     expect(idleCssSource).toContain("html.businesses-route #app");
     expect(idleCssSource).toContain(".route-shell.is-businesses-page {");
     expect(idleCssSource).toContain("height: 100dvh");
