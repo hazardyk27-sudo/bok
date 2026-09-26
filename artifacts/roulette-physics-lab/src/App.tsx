@@ -3426,9 +3426,10 @@ function AuthoritativeRoundDetails({ round }: { round: PhysicsLabRound }) {
 }
 
 function App() {
-  const part6Params = new URLSearchParams(window.location.search);
-  const part6HeadlessRouteActive = part6Params.get('part6Headless') === '1';
-  const part6ReplayProbeActive = part6Params.get('part6ReplayProbe') === '1';
+  const part6HeadlessRouteActive =
+    new URLSearchParams(window.location.search).get('part6Headless') === '1';
+  const part6ReplayProbeActive =
+    new URLSearchParams(window.location.search).get('part6ReplayProbe') === '1';
   const [loadKey, setLoadKey] = useState(0);
   const [loadState, setLoadState] = useState<LoadState>('loading');
   const [errorDetail, setErrorDetail] = useState('');
