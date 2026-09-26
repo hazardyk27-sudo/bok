@@ -1,108 +1,158 @@
-# OYUN — Git Workflow Rules
+# OYUN — Git Workflow Rules (Isolation v2)
 
-This file is mandatory project process for parallel ChatGPT/Replit work.
+This file is mandatory project process for parallel ChatGPT/GitHub/Replit work.
+It is aligned with root `AGENTS.md` and `.github/game-ownership.json`.
 
-## 1. Branch ownership
+## 1. Permanent branch ownership
 
-Each game has one isolated GitHub feature branch:
+Each product area has one development branch:
 
-- Cadı Kazan: `feature/cadi-kazan`
-- Roulette: `feature/roulette`
 - Slot: `feature/slot`
+- Roulette: `feature/roulette`
+- Cadı Kazan: `feature/cadi-kazan`
+- Idle / İşletmeler: `feature/idle`
+- Hub / site: `feature/hub`
 
-A chat working on one game must not write code to another game's feature branch.
+The shared preview branch is:
 
-## 2. Shared Replit root workspace
+`integration/replit-preview`
 
-The normal Replit project directory is an **integration and Preview workspace only**.
+GitHub `main` is not the Replit preview branch and must not be used as a substitute for the integration branch.
+
+A game chat works only on its own feature branch and only inside the owned/development roots declared for that game in `.github/game-ownership.json`.
+
+## 2. Replit workspace rule
+
+The normal Replit project directory is an integration/preview workspace only.
 
 It must remain on:
 
-`main`
+`integration/replit-preview`
 
-Do not use the shared root for normal feature-branch development.
+Do not develop normal game changes directly in Replit and do not switch the shared Replit workspace to a feature branch.
 
-Forbidden in the shared root during normal work:
+Forbidden in the shared Replit workspace:
 
 - `git switch feature/...`
 - `git checkout feature/...`
 - `git reset --hard ...`
 - rebase
-- conflict-resolution merge
-- force checkout
 - force push
+- force checkout
 - destructive clean/stash workflows used to hide divergence
-- creating local feature commits that have not first been integrated through GitHub
+- conflict-resolution merges used to force a preview
+- local feature commits made directly in Replit
 
-## 3. Parallel Shell work requires worktrees
+## 3. Commit is not release
 
-If Cadı Kazan and Roulette are being developed at the same time and both need Shell access, they must use separate physical Git worktrees.
+A commit on a feature branch only saves that game's work.
 
-Conceptual layout:
+It does **not** update Replit and does **not** update `integration/replit-preview`.
 
-```text
-shared-root/          -> main
-worktree-cadi/        -> feature/cadi-kazan
-worktree-roulette/    -> feature/roulette
-worktree-slot/        -> feature/slot
-```
-
-Commands executed in one worktree must stay inside that worktree.
-
-Never change the branch of the shared root in order to test a feature.
-
-## 4. Integration flow
-
-The required flow is:
+The release path is:
 
 ```text
-feature/cadi-kazan  ─┐
-feature/roulette    ─┼─> GitHub main ─> shared Replit main ─> Preview
-feature/slot        ─┘
+feature/<game>
+    ↓  one-game promotion: owned roots only
+integration/replit-preview
+    ↓  fast-forward sync only
+shared Replit preview
 ```
 
-A feature is first committed to its own GitHub branch. After it is approved, integrate it into GitHub `main`. Only then update the shared Replit root.
+Never merge an entire feature branch into the preview branch for a routine game release.
 
-## 5. Safe Replit sync
+## 4. One-game promotion
 
-After GitHub `main` is ready, the preferred Replit root command is:
+Use the `Promote One Game To Replit Preview` workflow.
+
+Promotion must:
+
+- accept only a source commit that belongs to the declared game branch
+- require the current isolation layout version
+- copy only the selected game's promotion roots
+- preserve every non-target game's tree
+- reject foreign/shared changes
+- pass typecheck, build, frontend integration regression and backend isolation regression before preview push
+
+Development-only roots/prefixes may be used by a game's feature branch when declared in the ownership manifest, but they are not automatically promoted unless they are also promotion roots.
+
+## 5. Shared/platform changes
+
+Shared/platform files are not normal game work. Examples include:
+
+- root router/app shell
+- wallet/session platform code
+- workspace/package/lock files
+- shared build/config
+- shared DB schema aggregator or wallet schema
+- ownership/promotion infrastructure
+
+If the correct fix requires a shared/platform or foreign-game file, stop normal game work and hand that dependency to the central integration flow.
+
+Do not hide a shared dependency with duplicate code, a workaround, or a cross-game import.
+
+## 6. Safe Replit refresh
+
+After the approved promotion has updated GitHub `integration/replit-preview`, refresh Replit with:
 
 ```bash
-bash scripts/replit-sync-main.sh
+bash scripts/replit-sync-preview.sh
 ```
 
-That helper must abort rather than overwrite work when:
+The helper must abort instead of overwriting work when:
 
-- the root is not on `main`
+- the Replit workspace is not on `integration/replit-preview`
 - the working tree is dirty
-- local `main` contains commits not present on GitHub `main`
-- fast-forward is not safe
+- local preview contains commits not present on GitHub preview
+- a fast-forward is not safe
 
-If it aborts, investigate first. Do not replace the failure with a hard reset.
+Success criteria are exact:
 
-## 6. Shared-file rule
+- branch prints `integration/replit-preview`
+- ahead/behind prints `0 0`
+- porcelain working-tree status prints nothing
 
-These areas can affect more than one game and require deliberate integration:
+If the helper aborts, investigate first. Never replace the failure with hard reset, rebase, force checkout, or force push.
 
-- `OYUN_PROJECT_MEMORY.md`
-- shared wallet/session code
-- root routing / app shell
-- package or lock files
-- global CSS/config
-- database schema used by multiple games
+The old `scripts/replit-sync-main.sh` name is compatibility-only and delegates to the preview sync helper; it must never sync `main`.
 
-Feature branches should minimize unrelated edits to shared files.
+## 7. Replit Agent usage
 
-If two feature branches modify the same shared file, resolve the integration on GitHub before Replit is synced.
+Do not connect to Replit Agent for routine status questions or normal sync.
 
-## 7. Multi-chat rule
+Prefer the deterministic shell sync/check above.
 
-When multiple ChatGPT conversations are active:
+Query Replit only when:
 
-- Cadı Kazan conversation owns `feature/cadi-kazan`
-- Roulette conversation owns `feature/roulette`
-- Slot conversation owns `feature/slot`
-- no conversation may change the shared Replit root branch away from `main`
-- no conversation may use destructive Git commands in the shared root to make its own Preview appear
+- the shell reports an error
+- the branch is wrong
+- the working tree is not clean
+- ahead/behind is unexpected
+- fast-forward fails
+- runtime diagnosis is explicitly needed
+- the user explicitly asks for Replit-side inspection
 
-This rule exists specifically to prevent one game's Shell workflow from rolling back or overwriting another game's work.
+## 8. Parallel work
+
+If multiple feature branches need local Shell work at the same time, use separate physical worktrees or separate isolated environments.
+
+Conceptually:
+
+```text
+shared-replit/        -> integration/replit-preview
+worktree-slot/        -> feature/slot
+worktree-roulette/    -> feature/roulette
+worktree-cadi/        -> feature/cadi-kazan
+worktree-idle/        -> feature/idle
+worktree-hub/         -> feature/hub
+```
+
+Never change the shared Replit branch to make one feature appear in Preview.
+
+## 9. Multi-chat invariant
+
+Every game conversation owns only its declared game branch and ownership roots.
+
+Routine work in one game must produce zero code/artifact changes in every other game.
+
+If any older note or document says Replit should stay on `main`, that instruction is obsolete. Isolation v2 uses `integration/replit-preview`.
