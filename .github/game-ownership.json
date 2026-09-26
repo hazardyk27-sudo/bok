@@ -48,11 +48,7 @@
     "cadi-kazan": {
       "branch": "feature/cadi-kazan",
       "roots": [
-        "artifacts/cascade-8/src/witchClient.ts",
-        "artifacts/cascade-8/src/witch.css",
-        "artifacts/cascade-8/src/witch.visual-lock.css",
-        "artifacts/cascade-8/src/scratch",
-        "artifacts/cascade-8/src/cadiKazanSmoke.test.ts",
+        "artifacts/cascade-8/src/cadi-kazan",
         "artifacts/api-server/src/cadi-kazan"
       ]
     },

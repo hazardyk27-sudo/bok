@@ -2,8 +2,8 @@ import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 
-const mainSource = readFileSync(
-  fileURLToPath(new URL("./main.ts", import.meta.url)),
+const cadiRouteSource = readFileSync(
+  fileURLToPath(new URL("./index.ts", import.meta.url)),
   "utf8",
 );
 const witchClientSource = readFileSync(
@@ -12,12 +12,12 @@ const witchClientSource = readFileSync(
 );
 
 describe("cadi kazan route smoke contract", () => {
-  it("keeps /cadi-kazan routed to the witch page shell", () => {
-    expect(mainSource).toContain(
-      'const isWitchRoute = currentPath === "/cadi-kazan";',
+  it("keeps Cadı Kazan fully mounted inside its owned route module", () => {
+    expect(cadiRouteSource).toContain(
+      "export function mountCadiKazan(app: HTMLElement)",
     );
-    expect(mainSource).toContain(
-      'app.innerHTML = routeShell(witchModule!.CADI_KAZAN_MARKUP, "is-route-page is-witch-page");',
+    expect(cadiRouteSource).toContain(
+      "app.innerHTML = cadiKazanRouteShell(CADI_KAZAN_MARKUP);",
     );
     expect(witchClientSource).toContain('<main class="witch-page"');
   });
@@ -41,14 +41,19 @@ describe("cadi kazan route smoke contract", () => {
     }
   });
 
-  it("still mounts WitchClient only for the Cadı Kazan route", () => {
-    expect(mainSource).toContain(
-      'const witchRoot = document.querySelector<HTMLElement>(".witch-page");',
+  it("mounts WitchClient from the Cadı Kazan-owned module", () => {
+    expect(cadiRouteSource).toContain(
+      'const witchRoot = app.querySelector<HTMLElement>(".witch-page");',
     );
-    expect(mainSource).toContain(
-      "if (witchRoot) new witchModule!.WitchClient(witchRoot);",
+    expect(cadiRouteSource).toContain(
+      "if (witchRoot) new WitchClient(witchRoot);",
     );
     expect(witchClientSource).toContain("export class WitchClient");
     expect(witchClientSource).toContain('const API_BASE = "/api/cadi-kazan";');
+  });
+
+  it("owns its audio dependency instead of importing Slot audio", () => {
+    expect(witchClientSource).toContain('from "./AudioManager"');
+    expect(witchClientSource).not.toContain('from "./game/AudioManager"');
   });
 });

@@ -20,17 +20,11 @@ const isHubRoute = !isSlotRoute && !isRouletteRoute && !isWitchRoute && !isBusin
 
 const rouletteModule = isRouletteRoute ? await import("./roulette") : null;
 const hubModule = isHubRoute ? await import("./hub") : null;
-const witchModule = isWitchRoute ? await import("./witchClient") : null;
+const witchModule = isWitchRoute ? await import("./cadi-kazan") : null;
 const businessesModule = isBusinessesRoute ? await import("./idle") : null;
 
 if (!isBusinessesRoute) {
   await import("./styles.css");
-}
-if (isWitchRoute) {
-  await Promise.all([
-    import("./witch.css"),
-    import("./witch.visual-lock.css"),
-  ]);
 }
 
 if (isBusinessesRoute) {
@@ -78,21 +72,6 @@ const describeStreamCell = (cell: BoardCell) => {
     : symbol;
 };
 
-const routeShell = (content: string, className = "") => `
-  <div class="app-shell route-shell ${className}">
-    <div class="ambient ambient-a"></div><div class="ambient ambient-b"></div><div class="stars"></div>
-    <header class="topbar route-topbar">
-      <a class="brand brand-link" href="/" aria-label="Fahrinin Yolu ana menü">
-        <div class="brand-mark"><span>✦</span></div>
-        <div><div class="brand-name">FAHRİNİN <em>YOLU</em></div><div class="brand-sub">FAHRİYİ BEKLEYECEK KADAR SABIRLI MISIN?</div></div>
-      </a>
-      <span class="route-context">SELECT YOUR GAME</span>
-    </header>
-    ${content}
-    <div class="demo-note"><span>✧</span> VIRTUAL CREDITS ONLY <span class="note-separator">•</span> NO REAL-MONEY GAMBLING <span class="note-separator">•</span> RNG DEMO PROTOTYPE</div>
-  </div>
-`;
-
 /**
  * Businesses owns a dedicated visual shell. Do not mount the legacy game-route
  * ambient lights, star field, topbar or demo footer here: those belong to the
@@ -108,7 +87,7 @@ const businessesRouteShell = (content: string) => `
 if (isRouletteRoute) {
   rouletteModule!.mountRoulette(app);
 } else if (isWitchRoute) {
-  app.innerHTML = routeShell(witchModule!.CADI_KAZAN_MARKUP, "is-route-page is-witch-page");
+  witchModule!.mountCadiKazan(app);
 } else if (isBusinessesRoute) {
   app.innerHTML = businessesRouteShell(businessesModule!.BUSINESSES_MARKUP);
 } else if (isHubRoute) {
@@ -260,9 +239,6 @@ let controller: GameController;
 if (isBusinessesRoute) {
   const businessesRoot = document.querySelector<HTMLElement>(".businesses-page");
   if (businessesRoot) new businessesModule!.BusinessesClient(businessesRoot);
-} else if (isWitchRoute) {
-  const witchRoot = document.querySelector<HTMLElement>(".witch-page");
-  if (witchRoot) new witchModule!.WitchClient(witchRoot);
 } else if (isSlotRoute) {
 const game = createGameScene(byId("phaser-board"));
 window.setTimeout(() => {
