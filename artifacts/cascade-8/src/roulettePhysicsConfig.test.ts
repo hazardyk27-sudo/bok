@@ -636,8 +636,17 @@ describe("authoritative roulette physics config", () => {
     expect(part3ViewportSource).toContain(
       "data-authoritative-replay={",
     );
+    expect(
+      part3ViewportSource.match(/authoritativeReplay\\.winningNumber/g) ?? [],
+    ).toHaveLength(1);
+    expect(part3ViewportSource).toContain(
+      "winningNumber: authoritativeReplay.winningNumber",
+    );
+    expect(part3ViewportSource).toContain(
+      "authoritativeReplayPocketIndexFromWorldState(",
+    );
     expect(part3ViewportSource).not.toContain(
-      "authoritativeReplay.winningNumber",
+      "replayBallMesh.position.set(authoritativeReplay",
     );
   });
 
