@@ -2591,6 +2591,12 @@ export function Part2SceneViewport({
       const normalAngleDeltas: number[] = [];
       let missingVisual = 0;
       let missingCollider = 0;
+      let numericalEdgeRecovered = 0;
+      const unresolvedColliderSamples: Array<{
+        radius: number;
+        angleDegrees: number;
+        visualSource: string;
+      }> = [];
       let maxSample:
         | {
             radius: number;
@@ -2626,19 +2632,101 @@ export function Part2SceneViewport({
             (angleIndex / GLB_COLLIDER_PARITY_ANGULAR_SAMPLES) * TWO_PI;
           const x = Math.sin(angle) * radius;
           const z = Math.cos(angle) * radius;
-          const visual = measureFullVisibleSurfaceAt(x, z);
-          const collider = measureColliderSurfaceAt(x, z);
+          let visual = measureFullVisibleSurfaceAt(x, z);
+          let collider = measureColliderSurfaceAt(x, z);
 
           if (!visual) {
             missingVisual += 1;
             continue;
           }
           if (!collider) {
-            missingCollider += 1;
-            continue;
+            // A ray aimed exactly at a shared triangle edge/vertex can be
+            // rejected by one geometry kernel and accepted by another even
+            // when the surfaces are mathematically identical. Do not waive
+            // such a point. Prove its immediate neighborhood from four sides
+            // at a sub-micron physical distance. A real hole will fail one or
+            // more of these probes and remains a hard failure.
+            const micro = 2e-6;
+            const radialX = Math.sin(angle);
+            const radialZ = Math.cos(angle);
+            const tangentX = Math.cos(angle);
+            const tangentZ = -Math.sin(angle);
+            const neighbors = [
+              [x + radialX * micro, z + radialZ * micro],
+              [x - radialX * micro, z - radialZ * micro],
+              [x + tangentX * micro, z + tangentZ * micro],
+              [x - tangentX * micro, z - tangentZ * micro],
+            ] as const;
+            const recovered = neighbors.map(([sampleX, sampleZ]) => ({
+              visual: measureFullVisibleSurfaceAt(sampleX, sampleZ),
+              collider: measureColliderSurfaceAt(sampleX, sampleZ),
+            }));
+            const allRecovered = recovered.every(
+              (sample) => sample.visual !== null && sample.collider !== null,
+            );
+            if (!allRecovered) {
+              missingCollider += 1;
+              unresolvedColliderSamples.push({
+                radius: Number(radius.toFixed(6)),
+                angleDegrees: Number(
+                  THREE.MathUtils.radToDeg(angle).toFixed(6),
+                ),
+                visualSource: visual.source,
+              });
+              continue;
+            }
+
+            const neighborParityPassed = recovered.every((sample) => {
+              const sampleVisual = sample.visual!;
+              const sampleCollider = sample.collider!;
+              const sampleDelta = Math.abs(
+                sampleCollider.y - sampleVisual.y,
+              );
+              const sampleVisualNormal = new THREE.Vector3(
+                sampleVisual.normal.x,
+                sampleVisual.normal.y,
+                sampleVisual.normal.z,
+              ).normalize();
+              const sampleColliderNormal = new THREE.Vector3(
+                sampleCollider.normal.x,
+                sampleCollider.normal.y,
+                sampleCollider.normal.z,
+              ).normalize();
+              const sampleNormalAngle = THREE.MathUtils.radToDeg(
+                Math.acos(
+                  THREE.MathUtils.clamp(
+                    sampleVisualNormal.dot(sampleColliderNormal),
+                    -1,
+                    1,
+                  ),
+                ),
+              );
+              return (
+                sampleDelta <= GLB_COLLIDER_PARITY_EPSILON_WORLD &&
+                sampleNormalAngle <=
+                  GLB_COLLIDER_PARITY_NORMAL_EPSILON_DEGREES
+              );
+            });
+            if (!neighborParityPassed) {
+              missingCollider += 1;
+              unresolvedColliderSamples.push({
+                radius: Number(radius.toFixed(6)),
+                angleDegrees: Number(
+                  THREE.MathUtils.radToDeg(angle).toFixed(6),
+                ),
+                visualSource: visual.source,
+              });
+              continue;
+            }
+
+            // Use the first recovered point only for aggregate error metrics;
+            // all four neighbors above were required to pass.
+            visual = recovered[0].visual!;
+            collider = recovered[0].collider!;
+            numericalEdgeRecovered += 1;
           }
 
-          const deltaWorld = collider.y - visual.y;
+          const deltaWorld = collider.y - visual.y
           const absDelta = Math.abs(deltaWorld);
           const visualNormal = new THREE.Vector3(
             visual.normal.x,
@@ -2727,6 +2815,8 @@ export function Part2SceneViewport({
         comparedCount: deltas.length,
         missingVisual,
         missingCollider,
+        numericalEdgeRecovered,
+        unresolvedColliderSamples,
         medianAbsWorld:
           medianAbsWorld === null
             ? null
