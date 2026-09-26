@@ -17,6 +17,9 @@ describe("roulette route smoke contract", () => {
       'const isRouletteRoute = currentPath === "/roulette";',
     );
     expect(mainSource).toContain(
+      'const rouletteModule = isRouletteRoute ? await import("./rouletteClient") : null;',
+    );
+    expect(mainSource).toContain(
       'app.innerHTML = routeShell(rouletteMarkup, "is-route-page is-roulette-page");',
     );
     expect(mainSource).toContain('<main class="roulette-page"');
@@ -49,7 +52,7 @@ describe("roulette route smoke contract", () => {
       'const rouletteRoot = document.querySelector<HTMLElement>(".roulette-page");',
     );
     expect(mainSource).toContain(
-      "if (rouletteRoot) new RouletteClient(rouletteRoot);",
+      "if (rouletteRoot) new rouletteModule!.RouletteClient(rouletteRoot);",
     );
     expect(rouletteClientSource).toContain("export class RouletteClient");
     expect(rouletteClientSource).toContain('const API_BASE = "/api/roulette";');
