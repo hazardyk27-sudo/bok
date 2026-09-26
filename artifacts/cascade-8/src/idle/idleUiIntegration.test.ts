@@ -674,21 +674,24 @@ describe("Businesses detail panel architecture", () => {
     expect(idleIndexSource).toContain('button.matches("[data-idle-detail-tab]")');
   });
 
-  it("keeps the compact header summary synchronized with live business state", () => {
+  it("keeps only the three live essentials in the Details header summary", () => {
     expect(idleIndexSource).toContain("renderBusinessDetails");
     expect(idleIndexSource).toContain("BUSINESS_DETAIL_DEFINITIONS");
+    expect(idleIndexSource).toContain("data-idle-detail-accrued");
     expect(idleIndexSource).toContain("data-idle-detail-hourly");
-    expect(idleIndexSource).toContain("data-idle-detail-daily");
     expect(idleIndexSource).toContain("data-idle-detail-vault");
+    expect(idleIndexSource).not.toContain("data-idle-detail-daily");
+    expect(idleIndexSource).toContain("business.liveAccruedMicrocents + business.liveRemainingCapacityMicrocents");
     expect(idleIndexSource).not.toContain("data-idle-detail-current");
     expect(idleIndexSource).not.toContain("data-idle-next-comparison");
     expect(idleIndexSource).not.toContain("data-idle-vault-next");
   });
 
-  it("uses a desktop side drawer and a mobile fullscreen details composition", () => {
+  it("keeps the drawer behavior while the final desktop shell overrides its visual system", () => {
     expect(idleCssSource).toContain("/* Part 12 — premium detail drawer / mobile fullscreen architecture */");
+    expect(idleCssSource).toContain("/* Part 13 — green/charcoal Details shell */");
     expect(idleCssSource).toContain(".business-detail-drawer");
-    expect(idleCssSource).toContain("width: min(560px, 96vw)");
+    expect(idleCssSource).toContain("width: min(680px, 72vw)");
     expect(idleCssSource).toContain("transform: translateX(104%)");
     expect(idleCssSource).toContain("width: 100vw");
     expect(idleCssSource).toContain("height: 100dvh");
@@ -699,6 +702,38 @@ describe("Businesses detail panel architecture", () => {
     expect(idleCssSource).toContain("body.business-detail-open");
     expect(idleCssSource).toContain("overflow: hidden");
     expect(idleCssSource).toContain("@media (prefers-reduced-motion: reduce)");
+  });
+});
+
+
+describe("Businesses green charcoal Details shell", () => {
+  it("uses the approved green charcoal surface and wider desktop drawer", () => {
+    expect(idleCssSource).toContain("/* Part 13 — green/charcoal Details shell */");
+    expect(idleCssSource).toContain("width: min(680px, 72vw)");
+    expect(idleCssSource).toContain("border-left: 1px solid rgba(84, 242, 163, .14)");
+    expect(idleCssSource).toContain("linear-gradient(180deg, #0d1718 0%, #0a1415 48%, #081011 100%)");
+  });
+
+  it("uses product typography instead of the old mono-heavy Details chrome", () => {
+    expect(idleCssSource).toContain(".business-detail-heading h2");
+    expect(idleCssSource).toContain("font-family: var(--idle-font-display)");
+    expect(idleCssSource).toContain(".business-detail-tabs button");
+    expect(idleCssSource).toContain("font-family: var(--idle-font-ui)");
+  });
+
+  it("renders three clean summary cards for accrued, hourly income and vault capacity", () => {
+    expect(idleIndexSource).toContain("BİRİKMİŞ GELİR");
+    expect(idleIndexSource).toContain("SAATLİK GELİR");
+    expect(idleIndexSource).toContain("KASA KAPASİTESİ");
+    expect(idleCssSource).toContain("grid-template-columns: repeat(3, minmax(0, 1fr))");
+    expect(idleCssSource).toContain("min-height: 78px");
+  });
+
+  it("uses restrained green active tabs, status badges and focus treatment", () => {
+    expect(idleCssSource).toContain('business-detail-tabs button[data-active="true"]');
+    expect(idleCssSource).toContain("linear-gradient(135deg, var(--idle-green-bright), var(--idle-green))");
+    expect(idleCssSource).toContain("color: var(--idle-green-bright)");
+    expect(idleCssSource).toContain("box-shadow: var(--idle-focus-ring)");
   });
 });
 
