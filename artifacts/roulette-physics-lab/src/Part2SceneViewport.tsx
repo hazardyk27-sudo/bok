@@ -2559,9 +2559,7 @@ export function Part2SceneViewport({
         radialIndex += 1
       ) {
         const radialAlpha =
-          GLB_COLLIDER_PARITY_RADIAL_SAMPLES === 1
-            ? 0
-            : radialIndex / (GLB_COLLIDER_PARITY_RADIAL_SAMPLES - 1);
+          radialIndex / (GLB_COLLIDER_PARITY_RADIAL_SAMPLES - 1);
         const radius = THREE.MathUtils.lerp(
           GLB_COLLIDER_PARITY_SCAN_INNER_RADIUS,
           GLB_COLLIDER_PARITY_SCAN_OUTER_RADIUS,
