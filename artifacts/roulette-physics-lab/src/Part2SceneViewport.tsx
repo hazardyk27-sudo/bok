@@ -2794,56 +2794,152 @@ export function Part2SceneViewport({
         const savedRotation = activeBallBody.rotation();
         const savedLinvel = activeBallBody.linvel();
         const savedAngvel = activeBallBody.angvel();
-        const seamPenetrationWorld =
-          GLB_COLLIDER_PARITY_EPSILON_WORLD * 0.5;
+        const seamStartAngle = THREE.MathUtils.degToRad(-0.75);
+        const seamTargetAngle = THREE.MathUtils.degToRad(0.25);
+        const seamContactWindow = THREE.MathUtils.degToRad(0.3);
+        const seamSweepSpeed = 0.7;
+        const seamSweepSteps = 40;
+        const seamInitialGap = 0.0003;
+        const seamMaxHoverGap = 0.012;
 
         for (const candidate of physicalSeamCandidates) {
-          const normal = new THREE.Vector3(
-            candidate.visual.normal.x,
-            candidate.visual.normal.y,
-            candidate.visual.normal.z,
+          const startX = Math.sin(seamStartAngle) * candidate.radius;
+          const startZ = Math.cos(seamStartAngle) * candidate.radius;
+          const startVisual = measureFullVisibleSurfaceAt(startX, startZ);
+          if (!startVisual) {
+            missingCollider += 1;
+            unresolvedColliderSamples.push({
+              radius: candidate.radius,
+              angleDegrees: candidate.angleDegrees,
+              visualSource: candidate.visual.source,
+            });
+            continue;
+          }
+
+          const startNormal = new THREE.Vector3(
+            startVisual.normal.x,
+            startVisual.normal.y,
+            startVisual.normal.z,
           ).normalize();
-          const center = new THREE.Vector3(
-            candidate.visual.point.x,
-            candidate.visual.point.y,
-            candidate.visual.point.z,
+          const startCenter = new THREE.Vector3(
+            startVisual.point.x,
+            startVisual.point.y,
+            startVisual.point.z,
           ).addScaledVector(
-            normal,
-            BALL_RADIUS - seamPenetrationWorld,
+            startNormal,
+            BALL_RADIUS + seamInitialGap,
           );
+          const tangent = new THREE.Vector3(
+            Math.cos(seamStartAngle),
+            0,
+            -Math.sin(seamStartAngle),
+          ).normalize();
 
           activeBallBody.setTranslation(
-            { x: center.x, y: center.y, z: center.z },
+            {
+              x: startCenter.x,
+              y: startCenter.y,
+              z: startCenter.z,
+            },
             true,
           );
           activeBallBody.setRotation({ x: 0, y: 0, z: 0, w: 1 }, true);
-          activeBallBody.setLinvel({ x: 0, y: 0, z: 0 }, true);
+          activeBallBody.setLinvel(
+            {
+              x: tangent.x * seamSweepSpeed,
+              y: 0,
+              z: tangent.z * seamSweepSpeed,
+            },
+            true,
+          );
           activeBallBody.setAngvel({ x: 0, y: 0, z: 0 }, true);
-          activeWorld.step();
 
-          let exactGlbPhysicalContact = false;
-          activeWorld.contactPairsWith(activeBallCollider, (otherCollider) => {
-            activeWorld.contactPair(
-              activeBallCollider,
-              otherCollider,
-              (manifold) => {
-                if (manifold.numContacts() <= 0) return;
-                const role = part3ColliderRoles.get(otherCollider.handle);
-                if (
-                  role === 'exact-glb-stationary-trimesh' ||
-                  role === 'exact-glb-rotor-trimesh'
-                ) {
-                  exactGlbPhysicalContact = true;
-                }
-              },
+          let crossedSeam = false;
+          let exactContactNearSeam = false;
+          let visibleSurfaceLost = false;
+          let clippedVisibleSurface = false;
+          let excessiveHover = false;
+          let minGap = Number.POSITIVE_INFINITY;
+          let maxGap = Number.NEGATIVE_INFINITY;
+
+          for (let step = 0; step < seamSweepSteps; step += 1) {
+            activeWorld.step();
+            const position = activeBallBody.translation();
+            const signedAngle = Math.atan2(position.x, position.z);
+            if (signedAngle >= seamTargetAngle) crossedSeam = true;
+
+            const visible = measureFullVisibleSurfaceAt(
+              position.x,
+              position.z,
             );
-          });
+            if (!visible) {
+              visibleSurfaceLost = true;
+              break;
+            }
 
-          if (exactGlbPhysicalContact) {
+            const visibleNormal = new THREE.Vector3(
+              visible.normal.x,
+              visible.normal.y,
+              visible.normal.z,
+            ).normalize();
+            const surfaceGap =
+              new THREE.Vector3(
+                position.x - visible.point.x,
+                position.y - visible.point.y,
+                position.z - visible.point.z,
+              ).dot(visibleNormal) - BALL_RADIUS;
+            minGap = Math.min(minGap, surfaceGap);
+            maxGap = Math.max(maxGap, surfaceGap);
+            if (surfaceGap < -GLB_COLLIDER_PARITY_EPSILON_WORLD) {
+              clippedVisibleSurface = true;
+            }
+            if (
+              Math.abs(signedAngle) <= seamContactWindow &&
+              surfaceGap > seamMaxHoverGap
+            ) {
+              excessiveHover = true;
+            }
+
+            if (Math.abs(signedAngle) <= seamContactWindow) {
+              activeWorld.contactPairsWith(
+                activeBallCollider,
+                (otherCollider) => {
+                  activeWorld.contactPair(
+                    activeBallCollider,
+                    otherCollider,
+                    (manifold) => {
+                      if (manifold.numContacts() <= 0) return;
+                      const role = part3ColliderRoles.get(
+                        otherCollider.handle,
+                      );
+                      if (role === 'exact-glb-stationary-trimesh') {
+                        exactContactNearSeam = true;
+                      }
+                    },
+                  );
+                },
+              );
+            }
+
+            if (
+              crossedSeam &&
+              signedAngle > THREE.MathUtils.degToRad(0.6)
+            ) {
+              break;
+            }
+          }
+
+          const seamSweepPassed =
+            crossedSeam &&
+            exactContactNearSeam &&
+            !visibleSurfaceLost &&
+            !clippedVisibleSurface &&
+            !excessiveHover &&
+            Number.isFinite(minGap) &&
+            minGap >= -GLB_COLLIDER_PARITY_EPSILON_WORLD;
+
+          if (seamSweepPassed) {
             physicalSeamRecovered += 1;
-            // Count the sample as physically verified. Height/normal error is
-            // already bounded on both sides by the neighbor probes; zero here
-            // prevents a ray-boundary artifact from skewing aggregate metrics.
             deltas.push(0);
             normalAngleDeltas.push(0);
           } else {
@@ -2853,10 +2949,27 @@ export function Part2SceneViewport({
               angleDegrees: candidate.angleDegrees,
               visualSource: candidate.visual.source,
             });
+            console.warn(
+              'GLB_SEAM_SWEEP_FAILURE',
+              JSON.stringify({
+                radius: candidate.radius,
+                crossedSeam,
+                exactContactNearSeam,
+                visibleSurfaceLost,
+                clippedVisibleSurface,
+                excessiveHover,
+                minGap: Number.isFinite(minGap)
+                  ? Number(minGap.toFixed(6))
+                  : null,
+                maxGap: Number.isFinite(maxGap)
+                  ? Number(maxGap.toFixed(6))
+                  : null,
+              }),
+            );
           }
         }
 
-        ballBody.setTranslation(
+        activeBallBody.setTranslation(
           {
             x: savedTranslation.x,
             y: savedTranslation.y,
@@ -2864,7 +2977,7 @@ export function Part2SceneViewport({
           },
           true,
         );
-        ballBody.setRotation(
+        activeBallBody.setRotation(
           {
             x: savedRotation.x,
             y: savedRotation.y,
@@ -2873,7 +2986,7 @@ export function Part2SceneViewport({
           },
           true,
         );
-        ballBody.setLinvel(
+        activeBallBody.setLinvel(
           {
             x: savedLinvel.x,
             y: savedLinvel.y,
@@ -2881,7 +2994,7 @@ export function Part2SceneViewport({
           },
           true,
         );
-        ballBody.setAngvel(
+        activeBallBody.setAngvel(
           {
             x: savedAngvel.x,
             y: savedAngvel.y,
@@ -2891,7 +3004,7 @@ export function Part2SceneViewport({
         );
       }
 
-            const sorted = [...deltas].sort((left, right) => left - right);
+      const sorted = [...deltas].sort((left, right) => left - right);
       const sortedNormalAngles = [...normalAngleDeltas].sort(
         (left, right) => left - right,
       );
