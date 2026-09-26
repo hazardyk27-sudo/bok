@@ -1,6 +1,5 @@
 import * as THREE from "three";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
-import { EUROPEAN_WHEEL_ORDER, ROULETTE_SEGMENT_DEGREES } from "./rouletteGeometry";
 import {
   ROULETTE_AUTHORITATIVE_SCALE,
   ROULETTE_BALL_RADIUS,
@@ -21,18 +20,15 @@ type ReplaySample = {
 };
 
 type PhysicsReplay = {
+  roundId: string;
   status: "SETTLED" | "INVALID";
+  winningNumber: number | null;
   finalPocket: { index: number; number: number } | null;
+  trajectoryHash: string;
   trajectory: ReplaySample[];
 };
-
-const REPLAY_URL = "/api/physics-lab/rounds/current";
 const MODEL_URL = ROULETTE_MODEL_PATH;
 const TARGET_WHEEL_DIAMETER = ROULETTE_WHEEL_DIAMETER;
-
-function indexFor(number: number) {
-  return EUROPEAN_WHEEL_ORDER.indexOf(number as typeof EUROPEAN_WHEEL_ORDER[number]);
-}
 
 function copyQuaternion(target: THREE.Quaternion, source: Quaternion) {
   target.set(source.x, source.y, source.z, source.w);
@@ -51,8 +47,8 @@ export class RoulettePhysicsReplay {
   private frame = 0;
   private playbackStartedAt = 0;
   private playbackDurationMs = 0;
-  private targetNumber: number | null = null;
-  private looping = false;
+  private loadedRouletteRoundId = "";
+  private playbackComplete = false;
   private onComplete?: () => void;
   private resizeObserver: ResizeObserver;
 
@@ -79,7 +75,7 @@ export class RoulettePhysicsReplay {
 
   static async create(canvas: HTMLCanvasElement) {
     const player = new RoulettePhysicsReplay(canvas);
-    await Promise.all([player.loadModel(), player.loadReplay()]);
+    await player.loadModel();
     player.resize();
     player.renderFrame();
     canvas.dataset.physicsSchema = ROULETTE_PHYSICS_SCHEMA_VERSION;
@@ -87,42 +83,58 @@ export class RoulettePhysicsReplay {
     return player;
   }
 
-  startLoop() {
+  async startLoop(roundId: string, elapsedMs = 0) {
+    await this.loadReplay(roundId);
     if (!this.replay?.trajectory.length) return;
-    this.looping = true;
-    this.targetNumber = null;
+    this.playbackComplete = false;
     this.canvas.dataset.replayState = "spinning";
     delete this.canvas.dataset.replayPocket;
-    this.playbackStartedAt = performance.now();
-    this.playbackDurationMs = Math.max(1, this.replay.trajectory.at(-1)!.simulatedAtMs);
+    this.playbackDurationMs = Math.max(
+      1,
+      this.replay.trajectory.at(-1)!.simulatedAtMs,
+    );
+    this.playbackStartedAt =
+      performance.now() -
+      Math.min(this.playbackDurationMs, Math.max(0, elapsedMs));
     this.onComplete = undefined;
     this.startFrames();
   }
 
-  playTo(number: number, durationMs: number, elapsedMs: number, onComplete: () => void) {
-    if (!this.replay?.trajectory.length) {
-      onComplete();
+  async playTo(
+    roundId: string,
+    expectedNumber: number,
+    onComplete: () => void,
+  ) {
+    await this.loadReplay(roundId);
+    this.assertExpectedNumber(expectedNumber);
+    if (!this.replay?.trajectory.length) throw new Error("PHYSICS_REPLAY_UNAVAILABLE");
+
+    this.canvas.dataset.replayState = "landing";
+    this.canvas.dataset.replayPocket = String(expectedNumber);
+    this.onComplete = onComplete;
+
+    if (this.playbackComplete || this.playbackStartedAt === 0) {
+      this.applySample(this.replay.trajectory.at(-1)!);
+      this.renderFrame();
+      this.playbackComplete = true;
+      this.finishPlayback();
       return;
     }
-    this.looping = false;
-    this.targetNumber = number;
-    this.canvas.dataset.replayState = "landing";
-    this.canvas.dataset.replayPocket = String(number);
-    this.playbackDurationMs = Math.max(1, durationMs);
-    this.playbackStartedAt = performance.now() - Math.min(durationMs, Math.max(0, elapsedMs));
-    this.onComplete = onComplete;
+
     this.startFrames();
   }
 
-  settle(number: number) {
-    if (!this.replay?.trajectory.length) return;
-    this.looping = false;
-    this.targetNumber = number;
+  async settle(roundId: string, expectedNumber: number) {
+    await this.loadReplay(roundId);
+    this.assertExpectedNumber(expectedNumber);
+    if (!this.replay?.trajectory.length) throw new Error("PHYSICS_REPLAY_UNAVAILABLE");
+
+    cancelAnimationFrame(this.frame);
+    this.playbackComplete = true;
     this.canvas.dataset.replayState = "settled";
-    this.canvas.dataset.replayPocket = String(number);
+    this.canvas.dataset.replayPocket = String(expectedNumber);
     this.applySample(this.replay.trajectory.at(-1)!);
     this.renderFrame();
-    cancelAnimationFrame(this.frame);
   }
 
   destroy() {
@@ -131,14 +143,46 @@ export class RoulettePhysicsReplay {
     this.renderer.dispose();
   }
 
-  private async loadReplay() {
-    const response = await fetch(REPLAY_URL, { credentials: "same-origin", signal: AbortSignal.timeout(8_000) });
+  private async loadReplay(rouletteRoundId: string) {
+    if (
+      this.loadedRouletteRoundId === rouletteRoundId &&
+      this.replay?.trajectory.length
+    ) {
+      return;
+    }
+
+    const response = await fetch(
+      `/api/roulette/rounds/${encodeURIComponent(rouletteRoundId)}/replay`,
+      {
+        credentials: "same-origin",
+        signal: AbortSignal.timeout(8_000),
+      },
+    );
     if (!response.ok) throw new Error("PHYSICS_REPLAY_UNAVAILABLE");
     const replay = await response.json() as PhysicsReplay;
-    if (replay.status !== "SETTLED" || !replay.finalPocket || replay.trajectory.length < 2) {
+    if (
+      replay.status !== "SETTLED" ||
+      !replay.finalPocket ||
+      replay.winningNumber === null ||
+      replay.finalPocket.number !== replay.winningNumber ||
+      replay.trajectory.length < 2
+    ) {
       throw new Error("PHYSICS_REPLAY_NOT_SETTLED");
     }
     this.replay = replay;
+    this.loadedRouletteRoundId = rouletteRoundId;
+    this.playbackStartedAt = 0;
+    this.playbackComplete = false;
+  }
+
+  private assertExpectedNumber(expectedNumber: number) {
+    if (
+      !this.replay?.finalPocket ||
+      this.replay.finalPocket.number !== expectedNumber ||
+      this.replay.winningNumber !== expectedNumber
+    ) {
+      throw new Error("ROULETTE_PHYSICS_RESULT_MISMATCH");
+    }
   }
 
   private async loadModel() {
@@ -215,22 +259,28 @@ export class RoulettePhysicsReplay {
       const replay = this.replay;
       if (!replay?.trajectory.length) return;
       const elapsed = performance.now() - this.playbackStartedAt;
-      const progress = this.looping
-        ? (elapsed % this.playbackDurationMs) / this.playbackDurationMs
-        : Math.min(1, elapsed / this.playbackDurationMs);
-      const replayMs = progress * replay.trajectory.at(-1)!.simulatedAtMs;
+      const replayMs = Math.min(
+        replay.trajectory.at(-1)!.simulatedAtMs,
+        Math.max(0, elapsed),
+      );
       this.applyAt(replayMs);
       this.renderFrame();
-      if (!this.looping && progress >= 1) {
-        this.canvas.dataset.replayState = "settled";
-        const complete = this.onComplete;
-        this.onComplete = undefined;
-        complete?.();
+
+      if (replayMs >= replay.trajectory.at(-1)!.simulatedAtMs) {
+        this.playbackComplete = true;
+        if (this.onComplete) this.finishPlayback();
         return;
       }
       this.frame = requestAnimationFrame(tick);
     };
     this.frame = requestAnimationFrame(tick);
+  }
+
+  private finishPlayback() {
+    this.canvas.dataset.replayState = "settled";
+    const complete = this.onComplete;
+    this.onComplete = undefined;
+    complete?.();
   }
 
   private applyAt(simulatedAtMs: number) {
@@ -269,13 +319,12 @@ export class RoulettePhysicsReplay {
   }
 
   private applySample(sample: ReplaySample) {
-    const templateIndex = this.replay?.finalPocket?.index ?? 0;
-    const targetIndex = this.targetNumber === null ? templateIndex : Math.max(0, indexFor(this.targetNumber));
-    const yaw = THREE.MathUtils.degToRad((targetIndex - templateIndex) * ROULETTE_SEGMENT_DEGREES);
-    const yawRotation = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), yaw);
-    this.ball.position.set(sample.ball.position.x, sample.ball.position.y, sample.ball.position.z).applyQuaternion(yawRotation);
+    this.ball.position.set(
+      sample.ball.position.x,
+      sample.ball.position.y,
+      sample.ball.position.z,
+    );
     copyQuaternion(this.ball.quaternion, sample.ball.orientation);
-    this.ball.quaternion.premultiply(yawRotation);
     if (this.rotor) copyQuaternion(this.rotor.quaternion, sample.rotor.orientation);
   }
 
