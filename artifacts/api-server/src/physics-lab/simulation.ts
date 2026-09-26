@@ -56,6 +56,9 @@ const BALL_PARAMETERS = {
   linearDamping: 0.01,
   angularDamping: 0.01,
   initialAngularVelocity: 22,
+  // Preserve exact GLB geometry while preventing a fast sphere from missing
+  // the stationary/kinematic trimesh handoff at the shared visible seam.
+  softCcdPrediction: PHYSICS_LAB_BALL_RADIUS,
 } as const;
 
 type Vec3 = { x: number; y: number; z: number };
@@ -969,10 +972,10 @@ export async function simulatePhysicsLabRound(
       .setLinearDamping(BALL_PARAMETERS.linearDamping)
       .setAngularDamping(BALL_PARAMETERS.angularDamping)
       .setCcdEnabled(true)
-      .setSoftCcdPrediction(0),
+      .setSoftCcdPrediction(BALL_PARAMETERS.softCcdPrediction),
   );
   ballBody.enableCcd(true);
-  ballBody.setSoftCcdPrediction(0);
+  ballBody.setSoftCcdPrediction(BALL_PARAMETERS.softCcdPrediction);
   const ballCollider = world.createCollider(
     RAPIER.ColliderDesc.ball(BALL_PARAMETERS.radius)
       .setFriction(BALL_PARAMETERS.friction)
