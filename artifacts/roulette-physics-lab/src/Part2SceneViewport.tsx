@@ -2175,6 +2175,8 @@ export function Part2SceneViewport({
     validationMode === 'part3' && outerLaneSpinOnly;
   const part6ReplayProbeActive =
     new URLSearchParams(window.location.search).get('part6ReplayProbe') === '1';
+  const glbMappingAuditRequested =
+    new URLSearchParams(window.location.search).get('glbMappingAudit') === '1';
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const stageRef = useRef<HTMLDivElement | null>(null);
   const viewRef = useRef(view);
@@ -7524,6 +7526,21 @@ export function Part2SceneViewport({
           wheelRoot.remove(runtimeOffset);
           wheelRoot.updateMatrixWorld(true);
           scene.add(wheelRoot);
+
+          if (glbMappingAuditRequested) {
+            const pocketGeometryReport = runGlbPocketGeometryAudit();
+            const numberMappingReport = runVisibleNumberMappingAudit();
+            if (!pocketGeometryReport) {
+              throw new Error(
+                'GLB pocket geometry audit could not resolve the 37-pocket surface profile',
+              );
+            }
+            if (!numberMappingReport) {
+              throw new Error(
+                'GLB number mapping audit could not resolve the visible European sequence',
+              );
+            }
+          }
 
           const runtimeBounds = new THREE.Box3().setFromObject(wheelRoot);
           const runtimeSize = runtimeBounds.getSize(new THREE.Vector3());
