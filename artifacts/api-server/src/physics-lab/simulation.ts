@@ -19,6 +19,7 @@ import {
   ROULETTE_ROTOR_ANGULAR_SPEED,
   ROULETTE_WORLD_UNITS_PER_METER,
 } from "../../../../lib/roulette-physics-config";
+import { rouletteNumberForPhysicsPocketIndex } from "../../../../lib/roulette-pocket-mapping";
 
 export const PHYSICS_LAB_FIXED_TIMESTEP = ROULETTE_FIXED_TIMESTEP;
 export const PHYSICS_LAB_DURATION_LIMIT_SECONDS = 24;
@@ -1602,7 +1603,7 @@ export async function simulatePhysicsLabRound(
               pocketNumber:
                 finalPocketIndex === null
                   ? undefined
-                  : PHYSICS_LAB_EUROPEAN_SEQUENCE[finalPocketIndex],
+                  : rouletteNumberForPhysicsPocketIndex(finalPocketIndex),
             }),
           );
           if (!sampledThisStep) captureTrajectorySample();
@@ -1653,7 +1654,7 @@ export async function simulatePhysicsLabRound(
     finalPocketIndex: completed ? finalPocketIndex : null,
     finalPocketNumber:
       completed && finalPocketIndex !== null
-        ? PHYSICS_LAB_EUROPEAN_SEQUENCE[finalPocketIndex]
+        ? rouletteNumberForPhysicsPocketIndex(finalPocketIndex)
         : null,
     stableSettleStep,
     simulationDurationMs,
