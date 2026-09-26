@@ -5,6 +5,7 @@ const manifest = JSON.parse(readFileSync(new URL("../.github/game-ownership.json
 const game = process.env.GAME_SCOPE;
 const base = process.env.BASE_SHA;
 const head = process.env.HEAD_SHA || "HEAD";
+const preview = process.env.PREVIEW_SHA || "";
 
 if (!game || !manifest.games[game]) {
   console.error("GAME_SCOPE must name a game from .github/game-ownership.json");
@@ -17,22 +18,32 @@ if (!base) {
 
 const roots = manifest.games[game].roots.map((root) => root.replace(/\/+$/, ""));
 const shared = manifest.shared.map((root) => root.replace(/\/+$/, ""));
-const out = execFileSync("git", ["diff", "--name-only", base, head], { encoding: "utf8" }).trim();
-const files = out ? out.split("\n").filter(Boolean) : [];
-
+const git = (...args) => execFileSync("git", args, { encoding: "utf8" }).trim();
 const inside = (file, root) => file === root || file.startsWith(root + "/");
 const owned = (file) => roots.some((root) => inside(file, root));
 const sharedFile = (file) => shared.some((root) => inside(file, root));
+
+const parents = git("rev-list", "--parents", "-n", "1", head).split(/\s+/).slice(1);
+const isBaselineMerge = Boolean(
+  preview &&
+  parents.includes(base) &&
+  parents.includes(preview),
+);
+const compareBase = isBaselineMerge ? preview : base;
+
+const out = git("diff", "--name-only", compareBase, head);
+const files = out ? out.split("\n").filter(Boolean) : [];
 const violations = files.filter((file) => !owned(file));
 const sharedTouches = violations.filter(sharedFile);
 const foreignTouches = violations.filter((file) => !sharedFile(file));
 
 console.log(`Ownership scope: ${game}`);
+console.log(`Mode: ${isBaselineMerge ? "isolation-baseline-merge" : "normal-game-change"}`);
 console.log(`Changed files: ${files.length}`);
 console.log(`Owned changes: ${files.filter(owned).length}`);
 
 if (sharedTouches.length) {
-  console.error("\nShared/platform files changed by a game branch:");
+  console.error("\nShared/platform files changed outside the approved baseline:");
   sharedTouches.forEach((file) => console.error(`  - ${file}`));
 }
 if (foreignTouches.length) {
