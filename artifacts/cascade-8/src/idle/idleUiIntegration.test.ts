@@ -322,7 +322,7 @@ describe("Businesses premium action states", () => {
 
   it("keeps touch targets large and focus-visible", () => {
     expect(idleCssSource).toContain("min-height: 46px");
-    expect(idleCssSource).toContain("min-height: 48px");
+    expect(idleCssSource).toContain("--idle-touch-height: 48px");
     expect(idleCssSource).toContain(":focus-visible");
   });
 });
@@ -697,7 +697,7 @@ describe("Businesses final responsive QA", () => {
   it("keeps primary mobile touch targets comfortably large", () => {
     expect(idleCssSource).toContain(".business-card-primary,");
     expect(idleCssSource).toContain(".business-card-details");
-    expect(idleCssSource).toContain("min-height: 48px");
+    expect(idleCssSource).toContain("--idle-touch-height: 48px");
   });
 
   it("keeps the short landscape Details content scrollable and touch-safe", () => {
@@ -732,7 +732,7 @@ describe("Businesses premium typography pass", () => {
     expect(idleCssSource).toContain(".business-detail-tabs button");
     expect(idleCssSource).toContain(".business-level-node-upgrade");
     expect(idleCssSource).toContain(".vault-level-node-upgrade");
-    expect(idleCssSource).toContain("min-height: 48px");
+    expect(idleCssSource).toContain("--idle-touch-height: 48px");
   });
 });
 
