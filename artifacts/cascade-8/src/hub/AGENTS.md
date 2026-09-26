@@ -13,3 +13,17 @@ This directory belongs only to the main game selector / site hub.
 - Do not touch Replit. Replit stays on `integration/replit-preview`.
 - A commit only saves Hub work. Preview release is a separate central promotion that copies only Hub-owned roots.
 - If a task appears to require a game, wallet/platform, shared router/build/schema files, stop and hand it to the central integration conversation.
+
+## Milestone continuity
+- Read `Current milestones` before starting substantial work in this category.
+- Add a milestone only for durable state that the next agent would otherwise have to rediscover: an important decision, completed phase, validated baseline, major root cause/blocker, or next agreed checkpoint.
+- Do not log routine micro-edits, every commit, raw test output, failed experiments, or temporary observations.
+- Keep the list curated and short (normally 5–10 bullets), newest first. Replace or remove superseded items instead of appending forever.
+- Preferred format: `YYYY-MM-DD — Milestone — current result/state. Next: ...`
+- Before a meaningful handoff/new chat, update this section if the durable state changed.
+- This milestone section belongs to Hub; updating it is allowed on `feature/hub` because this `AGENTS.md` is inside the category's owned root.
+- If a note conflicts with code/tests/ownership rules, the validated repository state wins.
+
+## Current milestones
+- 2026-09-26 — Isolation v2 active — Hub development stays on `feature/hub`; preview release is ownership-scoped into `integration/replit-preview`, not a whole-branch merge.
+
