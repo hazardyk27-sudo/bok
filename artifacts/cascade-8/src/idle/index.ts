@@ -331,13 +331,10 @@ export const BUSINESSES_MARKUP = `
         </div>
       </div>
 
-      <section class="businesses-progression" aria-label="Kulüp imparatorluğu ilerlemesi">
+      <section class="businesses-progression" aria-label="Kulüp gelişimi">
         <div class="businesses-progression-copy">
-          <span>KULÜP İMPARATORLUĞU</span>
-          <strong>
-            <b data-idle-progression-levels>— / ${TOTAL_BUSINESS_PROGRESSION_LEVELS}</b>
-            <small>İŞLETME SEVİYESİ</small>
-          </strong>
+          <span>KULÜP GELİŞİMİ</span>
+          <strong data-idle-progression-levels>— / ${TOTAL_BUSINESS_PROGRESSION_LEVELS}</strong>
         </div>
         <div
           class="businesses-progression-track"
@@ -352,26 +349,19 @@ export const BUSINESSES_MARKUP = `
         </div>
         <div class="businesses-progression-meta">
           <span data-idle-progression-percent>0%</span>
-          <span>3 İŞLETME · ${TOTAL_BUSINESS_PROGRESSION_LEVELS} SEVİYE</span>
+          <span data-idle-active-businesses>— / 3 AKTİF</span>
         </div>
       </section>
     </header>
 
-    <section class="business-summary business-command-bar" aria-label="İşletme komuta özeti" data-idle-command-bar>
+    <section class="business-summary business-command-bar" aria-label="İşletme özeti" data-idle-command-bar>
       <div class="business-command-stat business-command-income">
-        <span class="business-command-label">TOPLAM SAATLİK GELİR</span>
+        <span class="business-command-label">SAATLİK GELİR</span>
         <strong data-idle-total-hourly>—</strong>
-        <small>PASİF GELİR HIZI</small>
       </div>
       <div class="business-command-stat business-command-ready">
         <span class="business-command-label">TOPLANABİLİR</span>
         <strong data-idle-total-collectable>—</strong>
-        <small>KASALARDA HAZIR</small>
-      </div>
-      <div class="business-command-stat business-command-active">
-        <span class="business-command-label">AKTİF İŞLETME</span>
-        <strong data-idle-active-businesses>— / 3</strong>
-        <small>GELİR ÜRETİYOR</small>
       </div>
       <button
         type="button"
@@ -637,7 +627,7 @@ export class BusinessesClient {
 
     hourlyNode.textContent = `${formatCredits(totalHourlyCents)} /sa`;
     collectableNode.textContent = formatCredits(totalCollectableCents);
-    activeNode.textContent = `${activeBusinesses} / ${BUSINESS_IDS.length}`;
+    activeNode.textContent = `${activeBusinesses} / ${BUSINESS_IDS.length} AKTİF`;
     collectAllValueNode.textContent = formatCredits(totalCollectableCents);
     collectAllButton.disabled = this.collectingAll || totalCollectableCents <= 0;
     collectAllButton.setAttribute(
