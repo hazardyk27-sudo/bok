@@ -48,3 +48,17 @@ Isolation layout v2 is active. Game agents only develop and commit inside their 
 - State the exact success criteria with the snippet: branch must print `integration/replit-preview`; ahead/behind must print `0 0`; working-tree status must print nothing.
 - Never use reset --hard, rebase, force-push, or feature-branch switching in Replit.
 - Query Replit only when the user's shell output shows an error, wrong branch, non-clean tree, non-fast-forward/ahead-behind problem, or when the user explicitly asks for Replit-side diagnosis.
+
+
+## Milestone continuity
+- At the start of a game/category task, read the closest owned `AGENTS.md` and its `Current milestones` section before changing code.
+- Record a milestone only when it materially changes what the next agent needs to know: a durable architecture/behavior decision, a completed phase, a validated baseline, a significant blocker/root cause, or the next agreed checkpoint.
+- Game agents update milestones only in their own game/category `AGENTS.md`. Shared/platform/integration milestones are maintained only by the central integration flow in this root `AGENTS.md`.
+- Keep milestones curated, not chronological noise: newest first, normally 5–10 bullets maximum, replace/remove superseded items, and never paste raw logs, long failed experiments, or full chat history.
+- Preferred format: `YYYY-MM-DD — Milestone — current result/state. Next: ...`
+- Before ending a substantial task or handing work to a new chat, update the milestone section if the durable state changed. If nothing important changed, do not add a milestone.
+- Code, tests, ownership manifest, and validated runtime behavior remain the source of truth if a milestone note becomes stale.
+
+## Shared/platform current milestones
+- 2026-09-26 — Isolation v2 active — game work is branch- and ownership-scoped; preview promotion copies only the selected game's owned roots into `integration/replit-preview`.
+- 2026-09-26 — Replit workflow normalized — Replit stays on `integration/replit-preview`; legacy `main` preview instructions are obsolete; normal refresh is fast-forward only.
