@@ -278,15 +278,16 @@ describe("Businesses premium KPI command bar", () => {
 
 
 describe("Businesses premium desktop cards", () => {
-  it("renders three clear business cards with one visual region and one information body", () => {
+  it("renders the canonical hero-content card stack", () => {
     expect(componentsSource).toContain("business-card business-card--");
-    expect(componentsSource).toContain("business-card-visual");
-    expect(componentsSource).toContain("business-card-body");
-    expect(componentsSource).toContain("business-card-header");
-    expect(componentsSource).toContain("business-card-accrued");
-    expect(componentsSource).toContain("business-card-quick-stats");
-    expect(componentsSource).toContain("business-card-vault-status");
+    expect(componentsSource).toContain("business-card-hero");
+    expect(componentsSource).toContain("business-card-content");
+    expect(componentsSource).toContain("business-card-identity");
+    expect(componentsSource).toContain("business-card-balance");
+    expect(componentsSource).toContain("business-card-stats");
+    expect(componentsSource).toContain("business-card-vault");
     expect(componentsSource).toContain("business-card-actions");
+    expect(componentsSource).not.toContain('class="business-row business-card');
   });
 
   it("tracks owned, locked, active, full and max states on the card shell", () => {
@@ -307,12 +308,15 @@ describe("Businesses premium desktop cards", () => {
 
 
 describe("Businesses premium card skeleton", () => {
-  it("avoids the old mini-dashboard structure on each card", () => {
+  it("uses one canonical hierarchy without old business-row/action wrapper dependencies", () => {
     expect(componentsSource).not.toContain("business-card-metrics");
     expect(componentsSource).not.toContain("business-card-operations");
     expect(componentsSource).not.toContain("business-card-footer");
     expect(componentsSource).not.toContain("business-card-code");
     expect(componentsSource).not.toContain("business-card-milestone");
+    expect(componentsSource).not.toContain("business-card-action--collect");
+    expect(componentsSource).not.toContain("business-card-action--details");
+    expect(idleCssSource).toContain("/* Part 5 — canonical BusinessCard skeleton */");
   });
 
   it("reserves distinct visual identity areas for Stadium, Club Store and Fan Club", () => {
@@ -326,35 +330,37 @@ describe("Businesses premium card skeleton", () => {
 
 
 describe("Businesses card information hierarchy", () => {
-  it("makes accrued cash the dominant card value", () => {
-    expect(componentsSource).toContain("business-card-accrued-heading");
+  it("makes accrued cash the dominant canonical card value", () => {
+    expect(componentsSource).toContain("business-card-balance-heading");
     expect(componentsSource).toContain("data-business-accrued-status");
-    expect(idleCssSource).toContain(".business-card-accrued > strong");
-    expect(idleCssSource).toContain("font-size: clamp(28px, 2.5vw, 35px)");
+    expect(idleCssSource).toContain(".business-card-balance > strong");
+    expect(idleCssSource).toContain("font-size: var(--idle-type-money-xl)");
   });
 
-  it("keeps only hourly income and Kasa as quick stats", () => {
-    expect(componentsSource).toContain("business-card-quick-stats");
+  it("keeps only hourly income and Kasa Kapasitesi as the two canonical stats", () => {
+    expect(componentsSource).toContain("business-card-stats");
     expect(componentsSource).toContain("SAATLİK GELİR");
-    expect(componentsSource).toContain("<span>KASA</span>");
+    expect(componentsSource).toContain("KASA KAPASİTESİ");
     expect(componentsSource).not.toContain("data-business-daily");
   });
 
   it("keeps vault fullness and ETA as one readable status line plus progress bar", () => {
-    expect(componentsSource).toContain("business-card-vault-status");
+    expect(componentsSource).toContain("business-card-vault");
     expect(componentsSource).toContain("data-business-vault-fill");
     expect(componentsSource).toContain("data-business-vault-eta");
     expect(componentsSource).toContain("data-business-vault-progress");
     expect(componentsSource).toContain("formatVaultEta(");
-    expect(idleCssSource).toContain("height: 8px");
+    expect(idleCssSource).toContain("height: 10px");
   });
 });
 
 
 describe("Businesses premium action states", () => {
-  it("keeps exactly two main-card actions: Collect and Details", () => {
-    expect(componentsSource).toContain("business-card-action--collect");
-    expect(componentsSource).toContain("business-card-action--details");
+  it("keeps exactly two direct main-card actions: Collect and Details", () => {
+    expect(componentsSource).toContain("data-business-collect");
+    expect(componentsSource).toContain("data-business-details");
+    expect(componentsSource).not.toContain("business-card-action--collect");
+    expect(componentsSource).not.toContain("business-card-action--details");
     expect(componentsSource).not.toContain("data-business-upgrade");
     expect(componentsSource).not.toContain("data-business-vault-upgrade");
     expect((componentsSource.match(/data-business-details/g) ?? []).length).toBe(1);
@@ -817,8 +823,10 @@ describe("Businesses refinement final responsive regression", () => {
   });
 
   it("keeps the simplified main-card action contract intact", () => {
-    expect(componentsSource).toContain("business-card-action--collect");
-    expect(componentsSource).toContain("business-card-action--details");
+    expect(componentsSource).toContain("data-business-collect");
+    expect(componentsSource).toContain("data-business-details");
+    expect(componentsSource).not.toContain("business-card-action--collect");
+    expect(componentsSource).not.toContain("business-card-action--details");
     expect(componentsSource).not.toContain("data-business-upgrade");
     expect(componentsSource).not.toContain("data-business-vault-upgrade");
     expect((componentsSource.match(/data-business-details/g) ?? []).length).toBe(1);
