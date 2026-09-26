@@ -17,7 +17,7 @@ describe("cadi kazan route smoke contract", () => {
       'const isWitchRoute = currentPath === "/cadi-kazan";',
     );
     expect(mainSource).toContain(
-      'app.innerHTML = routeShell(CADI_KAZAN_MARKUP, "is-route-page is-witch-page");',
+      'app.innerHTML = routeShell(witchModule!.CADI_KAZAN_MARKUP, "is-route-page is-witch-page");',
     );
     expect(witchClientSource).toContain('<main class="witch-page"');
   });
@@ -46,7 +46,7 @@ describe("cadi kazan route smoke contract", () => {
       'const witchRoot = document.querySelector<HTMLElement>(".witch-page");',
     );
     expect(mainSource).toContain(
-      "if (witchRoot) new WitchClient(witchRoot);",
+      "if (witchRoot) new witchModule!.WitchClient(witchRoot);",
     );
     expect(witchClientSource).toContain("export class WitchClient");
     expect(witchClientSource).toContain('const API_BASE = "/api/cadi-kazan";');
