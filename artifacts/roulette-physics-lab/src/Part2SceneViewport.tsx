@@ -4113,6 +4113,9 @@ export function Part2SceneViewport({
         const safetyFailureCount = results.filter(
           (result) => !result.safetyPassed,
         ).length;
+        const visualParityFailureCount = results.filter(
+          (result) => !result.visualSurfaceParityPassed,
+        ).length;
         const medianLapCount = median(lapCounts);
         const calibrationPassed =
           status === 'captured' &&
@@ -4163,6 +4166,15 @@ export function Part2SceneViewport({
           pocketEntryCount,
           settledCount,
           safetyFailureCount,
+          visualParityFailureCount,
+          visualParityStatus:
+            status === 'running'
+              ? 'pending'
+              : status === 'captured' &&
+                  results.length === activePart6Runs.length &&
+                  visualParityFailureCount === 0
+                ? 'passed'
+                : 'failed',
           medianLapCount,
           minLapCount: lapCounts.length > 0 ? lapCounts[0] : null,
           maxLapCount:
@@ -5683,6 +5695,44 @@ export function Part2SceneViewport({
               EUROPEAN_SEQUENCE[finalPocketIndex];
           }
 
+          let visualSurfaceY: number | null = null;
+          let visualSurfaceGapWorld: number | null = null;
+          if (rotorPivot && stationaryGroup) {
+            const previousRotorQuaternion = rotorPivot.quaternion.clone();
+            rotorPivot.quaternion.set(
+              0,
+              Math.sin(rotorAngle / 2),
+              0,
+              Math.cos(rotorAngle / 2),
+            );
+            rotorPivot.updateMatrixWorld(true);
+            const visualSurface = measureFullVisibleSurfaceAt(
+              finalPosition.x,
+              finalPosition.z,
+            );
+            visualSurfaceY = visualSurface?.y ?? null;
+            visualSurfaceGapWorld =
+              visualSurfaceY === null
+                ? null
+                : finalPosition.y - BALL_RADIUS - visualSurfaceY;
+            rotorPivot.quaternion.copy(previousRotorQuaternion);
+            rotorPivot.updateMatrixWorld(true);
+          }
+          const visualSurfaceGapMm =
+            visualSurfaceGapWorld === null
+              ? null
+              : visualSurfaceGapWorld * MM_PER_WORLD_UNIT;
+          const visualHover =
+            visualSurfaceGapWorld !== null &&
+            visualSurfaceGapWorld > GLB_COLLIDER_PARITY_EPSILON_WORLD;
+          const visualClipping =
+            visualSurfaceGapWorld !== null &&
+            visualSurfaceGapWorld < -GLB_COLLIDER_PARITY_EPSILON_WORLD;
+          const visualSurfaceParityPassed =
+            visualSurfaceGapWorld !== null &&
+            Math.abs(visualSurfaceGapWorld) <=
+              GLB_COLLIDER_PARITY_EPSILON_WORLD;
+
           const orderedCoreEvents = phases.filter(
             (event) => event.phase !== 'FRETS',
           );
@@ -5906,6 +5956,21 @@ export function Part2SceneViewport({
             finalRotorRelativeSpeed: Number(
               finalRotorRelativeSpeed.toFixed(4),
             ),
+            visualSurfaceY:
+              visualSurfaceY === null
+                ? null
+                : Number(visualSurfaceY.toFixed(6)),
+            visualSurfaceGapWorld:
+              visualSurfaceGapWorld === null
+                ? null
+                : Number(visualSurfaceGapWorld.toFixed(6)),
+            visualSurfaceGapMm:
+              visualSurfaceGapMm === null
+                ? null
+                : Number(visualSurfaceGapMm.toFixed(3)),
+            visualHover,
+            visualClipping,
+            visualSurfaceParityPassed,
             hover,
             clipping,
             tunneling,
