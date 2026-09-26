@@ -679,7 +679,7 @@ describe("authoritative roulette physics config", () => {
       "physicsLabRepository.createRound()",
     );
     expect(rouletteServerRepositorySource).toContain(
-      "const winningNumber = physicsRound.winningNumber",
+      "const winningNumber = physicsRound.finalPocket.number",
     );
     expect(rouletteServerRepositorySource).toContain(
       "physics_round_id",
