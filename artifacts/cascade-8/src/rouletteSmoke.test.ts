@@ -12,15 +12,12 @@ const rouletteClientSource = readFileSync(
 );
 
 describe("roulette route smoke contract", () => {
-  it("keeps /roulette routed to the roulette page shell", () => {
+  it("keeps Roulette fully mounted inside its owned route module", () => {
     expect(rouletteRouteSource).toContain(
-      'const isRouletteRoute = currentPath === "/roulette";',
+      "export function mountRoulette(app: HTMLElement)",
     );
     expect(rouletteRouteSource).toContain(
-      'const rouletteModule = isRouletteRoute ? await import("./rouletteClient") : null;',
-    );
-    expect(rouletteRouteSource).toContain(
-      'app.innerHTML = routeShell(rouletteMarkup, "is-route-page is-roulette-page");',
+      "app.innerHTML = rouletteRouteShell(ROULETTE_MARKUP);",
     );
     expect(rouletteRouteSource).toContain('<main class="roulette-page"');
   });
@@ -47,9 +44,9 @@ describe("roulette route smoke contract", () => {
     }
   });
 
-  it("still mounts RouletteClient only for the roulette route", () => {
+  it("mounts RouletteClient from the Roulette-owned module", () => {
     expect(rouletteRouteSource).toContain(
-      'const rouletteRoot = document.querySelector<HTMLElement>(".roulette-page");',
+      'const rouletteRoot = app.querySelector<HTMLElement>(".roulette-page");',
     );
     expect(rouletteRouteSource).toContain(
       "if (rouletteRoot) new RouletteClient(rouletteRoot);",
