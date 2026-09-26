@@ -2,27 +2,27 @@ import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 
-const mainSource = readFileSync(
-  fileURLToPath(new URL("./main.ts", import.meta.url)),
+const rouletteRouteSource = readFileSync(
+  fileURLToPath(new URL("./roulette/index.ts", import.meta.url)),
   "utf8",
 );
 const rouletteClientSource = readFileSync(
-  fileURLToPath(new URL("./rouletteClient.ts", import.meta.url)),
+  fileURLToPath(new URL("./roulette/rouletteClient.ts", import.meta.url)),
   "utf8",
 );
 
 describe("roulette route smoke contract", () => {
   it("keeps /roulette routed to the roulette page shell", () => {
-    expect(mainSource).toContain(
+    expect(rouletteRouteSource).toContain(
       'const isRouletteRoute = currentPath === "/roulette";',
     );
-    expect(mainSource).toContain(
+    expect(rouletteRouteSource).toContain(
       'const rouletteModule = isRouletteRoute ? await import("./rouletteClient") : null;',
     );
-    expect(mainSource).toContain(
+    expect(rouletteRouteSource).toContain(
       'app.innerHTML = routeShell(rouletteMarkup, "is-route-page is-roulette-page");',
     );
-    expect(mainSource).toContain('<main class="roulette-page"');
+    expect(rouletteRouteSource).toContain('<main class="roulette-page"');
   });
 
   it("keeps critical roulette markup anchors", () => {
@@ -43,16 +43,16 @@ describe("roulette route smoke contract", () => {
     ];
 
     for (const anchor of requiredAnchors) {
-      expect(mainSource).toContain(anchor);
+      expect(rouletteRouteSource).toContain(anchor);
     }
   });
 
   it("still mounts RouletteClient only for the roulette route", () => {
-    expect(mainSource).toContain(
+    expect(rouletteRouteSource).toContain(
       'const rouletteRoot = document.querySelector<HTMLElement>(".roulette-page");',
     );
-    expect(mainSource).toContain(
-      "if (rouletteRoot) new rouletteModule!.RouletteClient(rouletteRoot);",
+    expect(rouletteRouteSource).toContain(
+      "if (rouletteRoot) new RouletteClient(rouletteRoot);",
     );
     expect(rouletteClientSource).toContain("export class RouletteClient");
     expect(rouletteClientSource).toContain('const API_BASE = "/api/roulette";');

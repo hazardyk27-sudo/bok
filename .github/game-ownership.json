@@ -28,13 +28,9 @@
     "roulette": {
       "branch": "feature/roulette",
       "roots": [
-        "artifacts/cascade-8/src/roulette.css",
-        "artifacts/cascade-8/src/rouletteClient.ts",
-        "artifacts/cascade-8/src/rouletteGeometry.ts",
+        "artifacts/cascade-8/src/roulette",
         "artifacts/cascade-8/src/rouletteGeometry.test.ts",
         "artifacts/cascade-8/src/roulettePhysicsConfig.test.ts",
-        "artifacts/cascade-8/src/roulettePhysicsReplay.ts",
-        "artifacts/cascade-8/src/rouletteProductionReplayProbe.ts",
         "artifacts/cascade-8/src/rouletteSmoke.test.ts",
         "artifacts/cascade-8/roulette-production-replay-probe.html",
         "artifacts/roulette-physics-lab",
