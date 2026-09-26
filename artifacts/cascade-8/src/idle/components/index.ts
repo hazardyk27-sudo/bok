@@ -89,14 +89,6 @@ function renderBusinessMedia(businessId: BusinessId) {
   `;
 }
 
-function getBusinessVisualStage(business: IdleLiveBusinessState) {
-  if (business.businessLevel === null) return "locked";
-  if (business.businessLevel <= 2) return "local";
-  if (business.businessLevel <= 5) return "pro";
-  if (business.businessLevel <= 7) return "elite";
-  return "landmark";
-}
-
 function formatVaultEta(
   business: IdleLiveBusinessState,
   dailyIncomeCents: number | null,
@@ -298,8 +290,6 @@ export function updateBusinessRow(
   row.dataset.businessStatus = business.vaultStatus.toLowerCase();
   row.dataset.businessOwnership = currentStage ? "owned" : "locked";
   row.dataset.businessLevel = currentStage ? String(currentStage.level) : "unowned";
-  const visualStage = getBusinessVisualStage(business);
-  row.dataset.visualStage = visualStage;
   cardStateNode.textContent = !currentStage
     ? "SATIN ALINMADI"
     : business.liveIsVaultFull
