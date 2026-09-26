@@ -1,10 +1,10 @@
 import { Router, type IRouter } from "express";
 import healthRouter from "./health";
-import rouletteRouter from "../roulette/routes";
-import physicsLabRouter from "../physics-lab/routes";
-import cadiKazanRouter from "../cadi-kazan/routes";
-import slotRouter from "../slot/routes";
-import idleRouter from "../idle/routes";
+import { router as rouletteRouter } from "../roulette";
+import { router as physicsLabRouter } from "../physics-lab";
+import { router as cadiKazanRouter } from "../cadi-kazan";
+import { router as slotRouter } from "../slot";
+import { router as idleRouter } from "../idle";
 
 const router: IRouter = Router();
 
