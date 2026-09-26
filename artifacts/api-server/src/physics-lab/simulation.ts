@@ -294,6 +294,78 @@ function distanceToNearestPocketFret(localAngle: number) {
   ) * SECTOR_STEP_RADIANS;
 }
 
+function exactRotorSurfaceYAt(
+  worldX: number,
+  worldZ: number,
+  rotation: { y: number; w: number },
+  targetY: number,
+) {
+  const geometry = getRouletteExactGlbColliderGeometry().rotor;
+  const angle = 2 * Math.atan2(rotation.y, rotation.w);
+  const cosine = Math.cos(angle);
+  const sine = Math.sin(angle);
+  const x = cosine * worldX - sine * worldZ;
+  const z = sine * worldX + cosine * worldZ;
+  const vertices = geometry.vertices;
+  const indices = geometry.indices;
+  const barycentricEpsilon = 1e-6;
+  let bestY: number | null = null;
+  let bestDistance = Number.POSITIVE_INFINITY;
+
+  for (let index = 0; index < indices.length; index += 3) {
+    const a = indices[index] * 3;
+    const b = indices[index + 1] * 3;
+    const d = indices[index + 2] * 3;
+    const ax = vertices[a];
+    const az = vertices[a + 2];
+    const bx = vertices[b];
+    const bz = vertices[b + 2];
+    const dx = vertices[d];
+    const dz = vertices[d + 2];
+
+    if (
+      x < Math.min(ax, bx, dx) - barycentricEpsilon ||
+      x > Math.max(ax, bx, dx) + barycentricEpsilon ||
+      z < Math.min(az, bz, dz) - barycentricEpsilon ||
+      z > Math.max(az, bz, dz) + barycentricEpsilon
+    ) {
+      continue;
+    }
+
+    const determinant =
+      (bz - dz) * (ax - dx) + (dx - bx) * (az - dz);
+    // Vertical walls do not define a floor Y at a unique (x,z).
+    if (Math.abs(determinant) <= 1e-10) continue;
+
+    const alpha =
+      ((bz - dz) * (x - dx) + (dx - bx) * (z - dz)) /
+      determinant;
+    const beta =
+      ((dz - az) * (x - dx) + (ax - dx) * (z - dz)) /
+      determinant;
+    const gamma = 1 - alpha - beta;
+    if (
+      alpha < -barycentricEpsilon ||
+      beta < -barycentricEpsilon ||
+      gamma < -barycentricEpsilon
+    ) {
+      continue;
+    }
+
+    const y =
+      alpha * vertices[a + 1] +
+      beta * vertices[b + 1] +
+      gamma * vertices[d + 1];
+    const distance = Math.abs(y - targetY);
+    if (distance < bestDistance) {
+      bestDistance = distance;
+      bestY = y;
+    }
+  }
+
+  return bestY;
+}
+
 function addDarkRaceChannelCollider(
   world: RAPIER.World,
   body: RAPIER.RigidBody,
@@ -1776,8 +1848,21 @@ export async function simulatePhysicsLabRound(
       const settleRadiusMax =
         radius <=
         ROULETTE_POCKET_OUTER_LIP_RADIUS - PHYSICS_LAB_BALL_RADIUS;
+      const exactRotorFloorY =
+        settlePocketInteraction &&
+        settleRelativeSpeed &&
+        settleRadiusMin &&
+        settleRadiusMax
+          ? exactRotorSurfaceYAt(
+              translation.x,
+              translation.z,
+              rotorRotation,
+              ballBottom,
+            )
+          : null;
       const settleFloor =
-        Math.abs(ballBottom - ROULETTE_POCKET_FLOOR_Y) <= 0.12;
+        exactRotorFloorY !== null &&
+        Math.abs(ballBottom - exactRotorFloorY) <= 0.02;
       const settlePocketIndex = previousPocketIndex !== null;
       const settleGatePassed =
         settlePocketInteraction &&
@@ -1815,7 +1900,11 @@ export async function simulatePhysicsLabRound(
             radius,
             y: translation.y,
             ballBottom,
-            floorDelta: ballBottom - ROULETTE_POCKET_FLOOR_Y,
+            exactRotorFloorY,
+            floorDelta:
+              exactRotorFloorY === null
+                ? null
+                : ballBottom - exactRotorFloorY,
             previousPocketIndex,
             stableFrames,
             actualRotorAngularVelocity: {
