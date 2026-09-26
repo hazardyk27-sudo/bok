@@ -1023,22 +1023,28 @@
 }
 
 
-/* Businesses owns its vertical scroll on small screens. */
+/* Businesses owns its vertical scroll on small screens.
+   Keep the document locked like the game routes, but make this route shell
+   the explicit touch-scroll container so global slot viewport rules cannot
+   trap the Businesses page. */
 @media (max-width: 620px) {
   html.businesses-route,
   body.businesses-route,
   html.businesses-route #app {
-    height: auto;
+    width: 100%;
+    height: 100%;
     min-height: 100%;
-    overflow-x: hidden;
-    overflow-y: auto;
+    overflow: hidden;
   }
 
   html.businesses-route .app-shell.is-businesses-page {
-    height: auto;
+    height: 100dvh;
     min-height: 100dvh;
     overflow-x: hidden;
-    overflow-y: visible;
+    overflow-y: auto;
+    overscroll-behavior-y: contain;
+    -webkit-overflow-scrolling: touch;
+    touch-action: pan-y;
   }
 }
 
@@ -1141,26 +1147,26 @@ body.businesses-route {
   body.businesses-route,
   html.businesses-route #app {
     width: 100%;
-    height: auto;
+    height: 100%;
     min-height: 100%;
-    overflow-x: hidden;
-    overflow-y: auto;
+    overflow: hidden;
   }
 
   body.businesses-route {
-    touch-action: pan-y;
-    overscroll-behavior-x: none;
-    overscroll-behavior-y: contain;
-    -webkit-overflow-scrolling: touch;
+    overscroll-behavior: none;
   }
 
   .route-shell.is-businesses-page {
     --idle-page-gutter: clamp(12px, 4vw, 18px);
 
-    height: auto;
+    height: 100dvh;
     min-height: 100dvh;
     overflow-x: hidden;
-    overflow-y: visible;
+    overflow-y: auto;
+    overscroll-behavior-x: none;
+    overscroll-behavior-y: contain;
+    -webkit-overflow-scrolling: touch;
+    touch-action: pan-y;
     padding:
       max(12px, env(safe-area-inset-top))
       max(var(--idle-page-gutter), env(safe-area-inset-right))
@@ -1210,21 +1216,62 @@ body.businesses-route {
   align-items: center;
   justify-content: space-between;
   gap: 16px;
-  min-height: 28px;
+  min-height: 44px;
 }
 
 .route-shell.is-businesses-page .businesses-header .back-link,
 .businesses-header-status {
-  color: var(--idle-text-muted);
   font-family: var(--idle-font-label);
-  font-size: 9px;
   font-weight: 800;
-  letter-spacing: .08em;
+  letter-spacing: .06em;
 }
 
 .route-shell.is-businesses-page .businesses-header .back-link {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: fit-content;
+  min-height: 42px;
+  padding: 0 13px 0 9px;
+  border: 1px solid rgba(125, 223, 255, .18);
+  border-radius: 11px;
   color: var(--idle-text-secondary);
+  background:
+    linear-gradient(135deg, rgba(70, 200, 255, .055), transparent 64%),
+    rgba(8, 18, 34, .72);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .02);
+  font-size: 10px;
   text-decoration: none;
+  touch-action: manipulation;
+  transition:
+    border-color .16s ease,
+    color .16s ease,
+    background .16s ease,
+    transform .16s ease;
+}
+
+.route-shell.is-businesses-page .businesses-header .back-link-icon {
+  display: grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  border: 1px solid rgba(125, 223, 255, .18);
+  border-radius: 8px;
+  color: var(--idle-cyan-bright);
+  background: rgba(70, 200, 255, .06);
+  font-size: 14px;
+  line-height: 1;
+}
+
+.route-shell.is-businesses-page .businesses-header .back-link:focus-visible {
+  outline: none;
+  box-shadow: var(--idle-focus-ring);
+}
+
+.businesses-header-status {
+  color: var(--idle-text-muted);
+  font-size: 9px;
 }
 
 .businesses-header-status {
@@ -1827,6 +1874,15 @@ body.businesses-route {
 }
 
 @media (hover: hover) and (pointer: fine) {
+  .route-shell.is-businesses-page .businesses-header .back-link:hover {
+    transform: translateY(-1px);
+    border-color: rgba(125, 223, 255, .34);
+    color: var(--idle-text);
+    background:
+      linear-gradient(135deg, rgba(70, 200, 255, .09), transparent 64%),
+      rgba(10, 24, 44, .86);
+  }
+
   .business-card-details:hover,
   .business-summary-collect-all:not(:disabled):hover {
     border-color: rgba(125, 223, 255, .36);
@@ -1877,6 +1933,17 @@ body.businesses-route {
 
   .businesses-header-status {
     display: none;
+  }
+
+  .businesses-header-nav {
+    justify-content: flex-start;
+    min-height: 44px;
+  }
+
+  .route-shell.is-businesses-page .businesses-header .back-link {
+    min-height: 44px;
+    padding-right: 14px;
+    font-size: 10px;
   }
 
   .businesses-header-main {
