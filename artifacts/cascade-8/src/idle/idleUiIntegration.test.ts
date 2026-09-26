@@ -319,12 +319,12 @@ describe("Businesses premium card skeleton", () => {
     expect(idleCssSource).toContain("/* Part 5 — canonical BusinessCard skeleton */");
   });
 
-  it("reserves distinct visual identity areas for Stadium, Club Store and Fan Club", () => {
-    expect(componentsSource).toContain("business-card-art--stadium");
-    expect(componentsSource).toContain("business-card-art--club-store");
-    expect(componentsSource).toContain("business-card-art--fan-club");
-    expect(idleCssSource).toContain(".business-card--club-store .business-card-visual");
-    expect(idleCssSource).toContain(".business-card--fan-club .business-card-visual");
+  it("reserves distinct production media slots for Stadium, Club Store and Fan Club", () => {
+    expect(componentsSource).toContain('imagePath: "/businesses/stadium.png"');
+    expect(componentsSource).toContain('imagePath: "/businesses/club-store.png"');
+    expect(componentsSource).toContain('imagePath: "/businesses/fan-club.png"');
+    expect(componentsSource).toContain("business-card-media-slot");
+    expect(componentsSource).toContain("business-card-media-placeholder");
   });
 });
 
@@ -412,107 +412,48 @@ describe("Businesses dedicated mobile cards", () => {
   });
 });
 
-describe("Businesses Stadium milestone visuals", () => {
-  it("renders a real vector Stadium scene instead of the generic placeholder geometry", () => {
-    expect(componentsSource).toContain("business-card-stadium-scene");
-    expect(componentsSource).toContain('viewBox="0 0 420 190"');
-    expect(componentsSource).toContain("stadium-floodlights");
-    expect(componentsSource).toContain("stadium-shell");
-    expect(componentsSource).toContain("stadium-pitch");
-    expect(componentsSource).toContain("stadium-crowd");
+describe("Businesses production image slots", () => {
+  it("uses fixed drop-in asset paths so later PNG uploads need no layout changes", () => {
+    expect(componentsSource).toContain('imagePath: "/businesses/stadium.png"');
+    expect(componentsSource).toContain('imagePath: "/businesses/club-store.png"');
+    expect(componentsSource).toContain('imagePath: "/businesses/fan-club.png"');
+    expect(componentsSource).toContain("1600 × 900 PNG / WEBP");
   });
 
-  it("maps real business levels into locked, local, pro, elite and landmark visual milestones", () => {
-    expect(componentsSource).toContain("function getBusinessVisualStage");
-    expect(componentsSource).toContain('return "locked"');
-    expect(componentsSource).toContain('return "local"');
-    expect(componentsSource).toContain('return "pro"');
-    expect(componentsSource).toContain('return "elite"');
-    expect(componentsSource).toContain('return "landmark"');
-    expect(componentsSource).toContain("row.dataset.visualStage = visualStage");
+  it("renders real image elements with a safe placeholder fallback", () => {
+    expect(componentsSource).toContain("function renderBusinessMedia");
+    expect(componentsSource).toContain("data-business-image-slot");
+    expect(componentsSource).toContain("data-business-image");
+    expect(componentsSource).toContain('data-image-state="loading"');
+    expect(componentsSource).not.toContain("<svg");
+    expect(componentsSource).not.toContain("business-card-stadium-scene");
+    expect(componentsSource).not.toContain("business-card-store-scene");
+    expect(componentsSource).not.toContain("business-card-fan-scene");
   });
 
-  it("keeps Stadium progression visual-only instead of adding another card label", () => {
-    expect(componentsSource).not.toContain("data-business-milestone");
-    expect(componentsSource).toContain("row.dataset.visualStage = visualStage");
+  it("hydrates loaded assets and leaves missing files as placeholders without broken-image chrome", () => {
+    expect(idleIndexSource).toContain("function hydrateBusinessMedia");
+    expect(idleIndexSource).toContain('slot.dataset.imageState = "ready"');
+    expect(idleIndexSource).toContain('slot.dataset.imageState = "placeholder"');
+    expect(idleIndexSource).toContain("image.naturalWidth > 0");
+    expect(idleIndexSource).toContain("hydrateBusinessMedia(this.root)");
   });
 
-  it("styles each milestone with increasingly premium lighting and architecture", () => {
-    expect(idleCssSource).toContain("/* Part 9 — Stadium visual system / milestone art direction */");
-    expect(idleCssSource).toContain('[data-visual-stage="locked"]');
-    expect(idleCssSource).toContain('[data-visual-stage="local"]');
-    expect(idleCssSource).toContain('[data-visual-stage="pro"]');
-    expect(idleCssSource).toContain('[data-visual-stage="elite"]');
-    expect(idleCssSource).toContain('[data-visual-stage="landmark"]');
-    expect(idleCssSource).toContain(".stadium-star-crown");
-  });
-});
-
-
-describe("Businesses Club Store milestone visuals", () => {
-  it("renders a real Club Store vector scene with retail merchandise details", () => {
-    expect(componentsSource).toContain("business-card-store-scene");
-    expect(componentsSource).toContain("store-shell");
-    expect(componentsSource).toContain("store-signage");
-    expect(componentsSource).toContain("store-merch");
-    expect(componentsSource).toContain("store-shelves");
-    expect(componentsSource).toContain("store-premium-rack");
+  it("locks the media region to the approved 16:9 production geometry", () => {
+    expect(idleCssSource).toContain("/* Part 6 — production image slots / placeholder system */");
+    expect(idleCssSource).toContain("aspect-ratio: var(--idle-business-image-ratio)");
+    expect(idleCssSource).toContain("min-height: var(--idle-business-image-min-height)");
+    expect(idleCssSource).toContain("object-fit: cover");
+    expect(idleCssSource).toContain('data-image-state="ready"');
+    expect(idleCssSource).toContain('data-image-state="placeholder"');
   });
 
-  it("keeps the shared level milestone mapping without an extra Club Store text badge", () => {
-    expect(componentsSource).not.toContain("data-business-milestone");
-    expect(componentsSource).toContain("row.dataset.visualStage = visualStage");
-  });
-
-  it("styles the Store across locked, local, pro, elite and iconic flagship states", () => {
-    expect(idleCssSource).toContain("/* Part 10 — Club Store visual system / merchandise progression */");
-    expect(idleCssSource).toContain('.business-card--club-store[data-visual-stage="locked"]');
-    expect(idleCssSource).toContain('.business-card--club-store[data-visual-stage="local"]');
-    expect(idleCssSource).toContain('.business-card--club-store[data-visual-stage="pro"]');
-    expect(idleCssSource).toContain('.business-card--club-store[data-visual-stage="elite"]');
-    expect(idleCssSource).toContain('.business-card--club-store[data-visual-stage="landmark"]');
-    expect(idleCssSource).toContain(".store-flagship-mark");
-  });
-
-  it("includes dedicated mobile sizing for the Club Store hero art", () => {
-    expect(idleCssSource).toContain(".business-card--club-store .business-card-store-scene svg");
-    expect(idleCssSource).toContain("min-height: 148px");
-    expect(idleCssSource).toContain("min-height: 134px");
-  });
-});
-
-
-describe("Businesses Fan Club milestone visuals", () => {
-  it("renders a real supporter lounge scene with media, seating and fan atmosphere", () => {
-    expect(componentsSource).toContain("business-card-fan-scene");
-    expect(componentsSource).toContain("fan-lounge-shell");
-    expect(componentsSource).toContain("fan-media");
-    expect(componentsSource).toContain("fan-seating");
-    expect(componentsSource).toContain("fan-supporters");
-    expect(componentsSource).toContain("fan-flags");
-    expect(componentsSource).toContain("fan-scarves");
-  });
-
-  it("uses the shared progression stage map without an extra Fan Club text badge", () => {
-    expect(componentsSource).not.toContain("data-business-milestone");
-    expect(componentsSource).toContain("row.dataset.visualStage = visualStage");
-  });
-
-  it("styles locked, local, pro, elite and iconic supporter headquarters states", () => {
-    expect(idleCssSource).toContain("/* Part 11 — Fan Club visual system / supporter progression */");
-    expect(idleCssSource).toContain('.business-card--fan-club[data-visual-stage="locked"]');
-    expect(idleCssSource).toContain('.business-card--fan-club[data-visual-stage="local"]');
-    expect(idleCssSource).toContain('.business-card--fan-club[data-visual-stage="pro"]');
-    expect(idleCssSource).toContain('.business-card--fan-club[data-visual-stage="elite"]');
-    expect(idleCssSource).toContain('.business-card--fan-club[data-visual-stage="landmark"]');
-    expect(idleCssSource).toContain(".fan-icon-crown");
-  });
-
-  it("keeps the Fan Club hero tuned for mobile and reduced motion", () => {
-    expect(idleCssSource).toContain(".business-card--fan-club .business-card-fan-scene svg");
-    expect(idleCssSource).toContain("min-height: 148px");
-    expect(idleCssSource).toContain("min-height: 134px");
-    expect(idleCssSource).toContain("@media (prefers-reduced-motion: reduce)");
+  it("removes the obsolete SVG milestone visual systems instead of keeping dead art CSS", () => {
+    expect(idleCssSource).not.toContain("/* Part 9 — Stadium visual system / milestone art direction */");
+    expect(idleCssSource).not.toContain("/* Part 10 — Club Store visual system / merchandise progression */");
+    expect(idleCssSource).not.toContain("/* Part 11 — Fan Club visual system / supporter progression */");
+    expect(componentsSource).not.toContain("getBusinessVisualStage");
+    expect(componentsSource).not.toContain("row.dataset.visualStage");
   });
 });
 
