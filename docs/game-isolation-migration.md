@@ -37,3 +37,5 @@ This branch builds the permanent isolation model without changing the Replit pre
 - Promotion refuses a source missing any owned root.
 - Promotion runs typecheck, build, frontend regressions and backend isolation regression before pushing preview.
 - Feature-branch baseline merge is accepted only when its second parent is the exact current preview baseline and every difference from preview is inside that game's ownership.
+
+- Dry-run promotion verification executes the real promotion script against all migrated feature branches in disposable Git worktrees. The workflow fails before preview rollout if any game promotion touches a foreign ownership path.
