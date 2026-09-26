@@ -127,6 +127,10 @@ try {
     final.actual.rotorOrientation,
     final.expected.rotorOrientation,
   );
+  const pocketIndexMatches =
+    final.actual.visiblePocketIndex === final.expected.finalPocketIndex;
+  const pocketNumberMatches =
+    final.actual.visiblePocketNumber === final.expected.finalPocketNumber;
 
   const passed =
     snapshot.complete &&
@@ -134,6 +138,10 @@ try {
     ballPositionDelta <= tolerance &&
     ballOrientationDelta <= tolerance &&
     rotorOrientationDelta <= tolerance &&
+    pocketIndexMatches &&
+    pocketNumberMatches &&
+    final.expected.finalPocketIndex !== null &&
+    final.expected.finalPocketNumber !== null &&
     result.pageErrors.length === 0 &&
     result.requestFailures.length === 0 &&
     result.authoritativeRoundRequests.length === 0 &&
@@ -147,6 +155,12 @@ try {
     ballPositionDelta,
     ballOrientationDelta,
     rotorOrientationDelta,
+    pocketIndexMatches,
+    pocketNumberMatches,
+    visiblePocketIndex: final.actual.visiblePocketIndex,
+    visiblePocketNumber: final.actual.visiblePocketNumber,
+    finalPocketIndex: final.expected.finalPocketIndex,
+    finalPocketNumber: final.expected.finalPocketNumber,
     validationIssue: snapshot.validationIssue,
     actual: final.actual,
     expected: final.expected,
