@@ -19,3 +19,10 @@ This branch builds the permanent isolation model without changing the Replit pre
 7. Split DB schema exports by game; leave only aggregation in the shared index.
 8. Validate build, typecheck, smoke tests and route parity.
 9. Promote the migration only after all four games match their approved snapshots.
+
+
+## Progress
+- Part 1: ownership and promotion foundation — complete.
+- Part 2: Hub markup/mount/test moved into Hub ownership — complete.
+- Part 3: Roulette markup, mount, CSS, client, geometry and production replay runtime moved into Roulette ownership — complete.
+- Parts 4–8 remain on this migration branch until final validation.
