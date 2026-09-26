@@ -30,3 +30,10 @@ This branch builds the permanent isolation model without changing the Replit pre
 - Part 6: Idle now owns its route shell, body route state, browser reset and complete CSS foundation; main.ts only dispatches to Idle — complete.
 - Part 7: Backend modules now expose stable owned entrypoints; shared wallet configuration moved to platform ownership; DB schema is split into wallet/roulette/physics-lab/cadi-kazan/slot/idle files with index.ts as aggregation only — complete.
 - Part 8 remains for final promotion/hash validation and rollout.
+
+
+## Part 8 safety foundation
+- Isolation layout version is explicit and promotions reject legacy/unmigrated source refs.
+- Promotion refuses a source missing any owned root.
+- Promotion runs typecheck, build, frontend regressions and backend isolation regression before pushing preview.
+- Feature-branch baseline merge is accepted only when its second parent is the exact current preview baseline and every difference from preview is inside that game's ownership.
