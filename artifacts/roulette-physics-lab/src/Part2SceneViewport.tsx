@@ -8379,7 +8379,7 @@ export function Part2SceneViewport({
             );
           }
           physicsBallCollider = world.createCollider(ballColliderDescriptor, ballBody);
-          activeBallBody.setTranslation({ x: initialPosition[0], y: initialPosition[1], z: initialPosition[2] }, true);
+          ballBody.setTranslation({ x: initialPosition[0], y: initialPosition[1], z: initialPosition[2] }, true);
           ballMesh.position.set(...initialPosition);
 
           if (
@@ -8393,14 +8393,14 @@ export function Part2SceneViewport({
             // the parity raycasts, then restore the ball to its exact start.
             // This step exists only to make the query pipeline see the freshly
             // inserted mesh colliders; it must not alter the test launch.
-            activeWorld.step();
-            activeBallBody.setTranslation(
+            world.step();
+            ballBody.setTranslation(
               { x: initialPosition[0], y: initialPosition[1], z: initialPosition[2] },
               true,
             );
-            activeBallBody.setLinvel({ x: 0, y: 0, z: 0 }, true);
-            activeBallBody.setAngvel({ x: 0, y: 0, z: 0 }, true);
-            activeBallBody.setRotation({ x: 0, y: 0, z: 0, w: 1 }, true);
+            ballBody.setLinvel({ x: 0, y: 0, z: 0 }, true);
+            ballBody.setAngvel({ x: 0, y: 0, z: 0 }, true);
+            ballBody.setRotation({ x: 0, y: 0, z: 0, w: 1 }, true);
             ballMesh.position.set(...initialPosition);
             const parityReport = runGlbColliderParityAudit();
             if (parityReport) {
@@ -9037,7 +9037,7 @@ export function Part2SceneViewport({
             ballMesh &&
             part3OuterLaneRunning
           ) {
-            activeWorld.step();
+            world.step();
             const position = ballBody.translation();
             const velocity = ballBody.linvel();
             const speed = Math.hypot(velocity.x, velocity.y, velocity.z);
@@ -9052,7 +9052,7 @@ export function Part2SceneViewport({
             let trackPairContact = false;
             let deflectorPairContact = false;
             if (physicsBallCollider) {
-              activeWorld.contactPairsWith(activeBallCollider, (otherCollider) => {
+              world.contactPairsWith(physicsBallCollider, (otherCollider) => {
                 if (otherCollider.handle === part3TrackCollider?.handle) {
                   trackPairContact = true;
                 }
@@ -9312,7 +9312,7 @@ export function Part2SceneViewport({
             ballMesh &&
             part3OuterLaneSpinRunning
           ) {
-            activeWorld.step();
+            world.step();
             const position = ballBody.translation();
             const velocity = ballBody.linvel();
             const angularVelocity = ballBody.angvel();
@@ -9351,7 +9351,7 @@ export function Part2SceneViewport({
                 : 0;
             let trackPairContact = false;
             if (physicsBallCollider && part3TrackCollider) {
-              activeWorld.contactPairsWith(activeBallCollider, (otherCollider) => {
+              world.contactPairsWith(physicsBallCollider, (otherCollider) => {
                 if (otherCollider.handle === part3TrackCollider?.handle) {
                   trackPairContact = true;
                 }
@@ -9521,7 +9521,7 @@ export function Part2SceneViewport({
             ballMesh &&
             part3AlignmentRunning
           ) {
-            activeWorld.step();
+            world.step();
             const position = ballBody.translation();
             const velocity = ballBody.linvel();
             const speed = Math.hypot(velocity.x, velocity.y, velocity.z);
@@ -9534,7 +9534,7 @@ export function Part2SceneViewport({
             const signedColliderContactMismatch = bottom - analyticContactY;
             let trackPairContact = false;
             if (physicsBallCollider && part3TrackCollider) {
-              activeWorld.contactPairsWith(activeBallCollider, (otherCollider) => {
+              world.contactPairsWith(physicsBallCollider, (otherCollider) => {
                 if (otherCollider.handle === part3TrackCollider?.handle) {
                   trackPairContact = true;
                 }
@@ -9630,7 +9630,7 @@ export function Part2SceneViewport({
           ) {
             const probe = PART3_PROBES[part3ProbeIndex];
             if (!part3Finished) {
-              activeWorld.step();
+              world.step();
             const position = ballBody.translation();
             const velocity = ballBody.linvel();
             const speed = Math.hypot(velocity.x, velocity.y, velocity.z);
@@ -9644,7 +9644,7 @@ export function Part2SceneViewport({
             const separation = Math.max(0, bottom - surfaceY);
             let trackPairContact = false;
             if (physicsBallCollider && part3TrackCollider) {
-              activeWorld.contactPairsWith(activeBallCollider, (otherCollider) => {
+              world.contactPairsWith(physicsBallCollider, (otherCollider) => {
                 if (otherCollider.handle === part3TrackCollider?.handle) {
                   trackPairContact = true;
                 }
@@ -9652,7 +9652,7 @@ export function Part2SceneViewport({
             }
             let deflectorPairContact = false;
             if (physicsBallCollider && part3DeflectorColliders.length > 0) {
-              activeWorld.contactPairsWith(activeBallCollider, (otherCollider) => {
+              world.contactPairsWith(physicsBallCollider, (otherCollider) => {
                 if (
                   part3DeflectorColliders.some(
                     (deflectorCollider) => deflectorCollider.handle === otherCollider.handle,
@@ -9817,7 +9817,7 @@ export function Part2SceneViewport({
             ballMesh &&
             part3PocketRunning
           ) {
-            activeWorld.step();
+            world.step();
             const position = ballBody.translation();
             const velocity = ballBody.linvel();
             const speed = Math.hypot(velocity.x, velocity.y, velocity.z);
@@ -9852,7 +9852,7 @@ export function Part2SceneViewport({
             let pocketFloorContact = false;
             let pocketFretContact = false;
             if (physicsBallCollider) {
-              activeWorld.contactPairsWith(activeBallCollider, (otherCollider) => {
+              world.contactPairsWith(physicsBallCollider, (otherCollider) => {
                 const role = part3ColliderRoles.get(otherCollider.handle);
                 if (
                   part3PocketBlockingColliderHandle === null &&
@@ -10054,7 +10054,7 @@ export function Part2SceneViewport({
 
           if (validationMode === 'part4' && world && ballBody && ballMesh && rotorBody && !part4Finished) {
             const probe = PART4_PROBES[part4ProbeIndex];
-            activeWorld.step();
+            world.step();
             const position = ballBody.translation();
             const velocity = ballBody.linvel();
             const radius = Math.hypot(position.x, position.z);
@@ -10121,7 +10121,7 @@ export function Part2SceneViewport({
           }
 
           if (validationMode === 'part2' && world && ballBody && ballMesh && dropStarted && dropSteps < DROP_DURATION_SECONDS / FIXED_TIMESTEP) {
-            activeWorld.step();
+            world.step();
             const position = ballBody.translation();
             const velocity = ballBody.linvel();
             const radius = Math.hypot(position.x, position.z);
