@@ -117,6 +117,46 @@ describe("Businesses main menu control", () => {
 });
 
 
+describe("Businesses dedicated minimal mobile shell", () => {
+  it("renders one compact mobile brand row with Ana Menü on the right", () => {
+    expect(idleIndexSource).toContain('class="businesses-mobile-brand"');
+    expect(idleIndexSource).toContain('class="businesses-mobile-brand-crest"');
+    expect(idleIndexSource).toContain(">FAHRİNİN YOLU</span>");
+    expect(idleIndexSource).toContain('aria-label="Ana menüye dön"');
+  });
+
+  it("hides the redundant route topbar and desktop sidebar on phones", () => {
+    expect(idleCssSource).toContain("/* Part 11 — dedicated minimal mobile shell */");
+    expect(idleCssSource).toContain(".route-shell.is-businesses-page > .route-topbar");
+    expect(idleCssSource).toContain(".route-shell.is-businesses-page .businesses-sidebar");
+    expect(idleCssSource).toContain("display: none");
+  });
+
+  it("locks the mobile page title, wallet and club progress to the approved minimal hierarchy", () => {
+    expect(idleCssSource).toContain("font-size: var(--idle-type-display-mobile)");
+    expect(idleCssSource).toContain("min-height: 88px");
+    expect(idleCssSource).toContain("font-size: 28px");
+    expect(idleCssSource).toContain("min-height: 72px");
+    expect(idleCssSource).toContain("height: 10px");
+  });
+
+  it("keeps two compact KPIs and one full-width green Collect All action", () => {
+    expect(idleCssSource).toContain("grid-template-columns: repeat(2, minmax(0, 1fr))");
+    expect(idleCssSource).toContain("min-height: 70px");
+    expect(idleCssSource).toContain("grid-column: 1 / -1");
+    expect(idleCssSource).toContain("min-height: 58px");
+    expect(idleCssSource).toContain("linear-gradient(135deg, #68f4ac, #4be995 62%, #39da83)");
+  });
+
+  it("keeps a 390px-specific fallback without changing the tablet breakpoint", () => {
+    expect(idleCssSource).toContain("@media (max-width: 390px)");
+    expect(idleCssSource).toContain("font-size: 38px");
+    expect(idleCssSource).toContain("max-width: 126px");
+    expect(idleCssSource).toContain("font-size: 26px");
+  });
+});
+
+
 describe("Businesses premium design tokens", () => {
   it("locks the approved green-charcoal palette and restrained elevation system", () => {
     expect(idleCssSource).toContain("/* Businesses visual system v2");
