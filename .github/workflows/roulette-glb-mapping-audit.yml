@@ -1,0 +1,128 @@
+name: Roulette GLB Mapping Audit
+
+on:
+  push:
+    branches:
+      - feature/roulette
+    paths:
+      - '.github/workflows/roulette-glb-mapping-audit.yml'
+      - 'artifacts/roulette-physics-lab/**'
+      - 'lib/roulette-glb-surface.ts'
+      - 'lib/roulette-gltf-transform.ts'
+      - 'lib/roulette-physics-config.ts'
+      - 'pnpm-lock.yaml'
+      - 'pnpm-workspace.yaml'
+  workflow_dispatch:
+
+jobs:
+  mapping:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10.15.0
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install workspace
+        run: pnpm install --frozen-lockfile
+
+      - name: Install Chromium
+        run: pnpm exec playwright install --with-deps chromium
+
+      - name: Typecheck roulette physics lab
+        run: pnpm --filter @workspace/roulette-physics-lab run typecheck
+
+      - name: Start roulette physics lab
+        shell: bash
+        run: |
+          PORT=4173 BASE_PATH=/ pnpm --filter @workspace/roulette-physics-lab run dev > /tmp/roulette-glb-mapping-vite.log 2>&1 &
+          for attempt in {1..60}; do
+            if curl --fail --silent http://127.0.0.1:4173/ > /dev/null; then
+              exit 0
+            fi
+            sleep 1
+          done
+          cat /tmp/roulette-glb-mapping-vite.log
+          exit 1
+
+      - name: Measure GLB pocket geometry and number mapping
+        shell: bash
+        run: |
+          pnpm exec node --input-type=module <<'NODE'
+          import { chromium } from '@playwright/test';
+
+          const browser = await chromium.launch({
+            headless: true,
+            args: ['--use-gl=swiftshader', '--enable-webgl', '--ignore-gpu-blocklist'],
+          });
+          try {
+            const page = await browser.newPage({ viewport: { width: 1280, height: 1000 } });
+            page.on('console', (message) => {
+              const text = message.text();
+              if (
+                text.startsWith('GLB_POCKET_GEOMETRY_REPORT ') ||
+                text.startsWith('GLB_NUMBER_MAPPING_REPORT ')
+              ) {
+                console.log(text);
+              }
+            });
+            await page.goto('http://127.0.0.1:4173/?glbMappingAudit=1', {
+              waitUntil: 'domcontentloaded',
+              timeout: 30000,
+            });
+            await page.waitForFunction(
+              () => {
+                const stage = document.querySelector('[data-glb-pocket-geometry-report]');
+                return Boolean(
+                  stage?.getAttribute('data-glb-pocket-geometry-report') &&
+                  stage?.getAttribute('data-glb-number-mapping-report'),
+                );
+              },
+              undefined,
+              { timeout: 120000 },
+            );
+            const result = await page.evaluate(() => {
+              const stage = document.querySelector('[data-glb-pocket-geometry-report]');
+              if (!stage) throw new Error('GLB audit stage missing');
+              const pocket = JSON.parse(
+                stage.getAttribute('data-glb-pocket-geometry-report') ?? 'null',
+              );
+              const numbers = JSON.parse(
+                stage.getAttribute('data-glb-number-mapping-report') ?? 'null',
+              );
+              return { pocket, numbers };
+            });
+            if (!result.pocket || !result.numbers) {
+              throw new Error('Structured GLB mapping report missing');
+            }
+            console.log(
+              'GLB_MAPPING_AUDIT_RESULT ' +
+                JSON.stringify({
+                  pocketCount: result.pocket.pocketCount,
+                  pocketPhaseDegrees: result.pocket.detectedPhaseDegrees,
+                  pocketPhaseScoreMm: result.pocket.phaseScoreMm,
+                  reliefEndRadius: result.pocket.reliefEndRadius,
+                  visibleZeroAngleDegrees: result.numbers.visibleZeroAngleDegrees,
+                  sequenceDirection: result.numbers.sequenceDirection,
+                  signedPhysicsMinusVisibleZeroDegrees:
+                    result.numbers.signedPhysicsMinusVisibleZeroDegrees,
+                  colorMatches: result.numbers.colorMatches,
+                  colorMatchRate: result.numbers.colorMatchRate,
+                  radius: result.numbers.radius,
+                }),
+            );
+          } finally {
+            await browser.close();
+          }
+          NODE
