@@ -103,8 +103,8 @@ describe("Businesses main menu control", () => {
     expect(idleIndexSource).toContain("<span>ANA MENÜ</span>");
   });
 
-  it("structurally anchors the control to the right on desktop and mobile", () => {
-    expect(idleCssSource).toContain("/* Final Ana Menü nav placement — structural override */");
+  it("anchors the control from the canonical header rules without a trailing hotfix", () => {
+    expect(idleCssSource).not.toContain("/* Final Ana Menü nav placement — structural override */");
     expect(idleCssSource).toContain(".businesses-header-status {");
     expect(idleCssSource).toContain("order: 1");
     expect(idleCssSource).toContain(".businesses-header-nav .back-link");
@@ -143,7 +143,7 @@ describe("Businesses premium design tokens", () => {
     expect(idleCssSource).toContain("--idle-business-image-ratio: 16 / 9");
   });
 
-  it("keeps temporary cyan compatibility aliases until legacy CSS is removed in Part 2", () => {
+  it("keeps temporary cyan compatibility aliases only while the remaining Part 3–18 sections migrate", () => {
     expect(idleCssSource).toContain("--idle-cyan: var(--idle-green)");
     expect(idleCssSource).toContain("--idle-cyan-bright: var(--idle-green-bright)");
     expect(idleCssSource).toContain("--idle-cyan-soft: var(--idle-green-soft)");
@@ -716,15 +716,15 @@ describe("Businesses premium typography pass", () => {
     expect(idleCssSource).toContain("font-family: var(--idle-font-ui)");
   });
 
-  it("keeps main-card names, vault copy and actions comfortably readable on mobile", () => {
-    expect(idleCssSource).toContain("/* Mobile readability hotfix — titles, vault copy, primary actions */");
-    expect(idleCssSource).toContain(".business-card .business-row-title strong");
+  it("keeps main-card names, vault copy and actions readable from canonical mobile rules", () => {
+    expect(idleCssSource).not.toContain("/* Mobile readability hotfix — titles, vault copy, primary actions */");
+    expect(idleCssSource).toContain(".business-row-title strong");
     expect(idleCssSource).toContain("font-size: 22px");
     expect(idleCssSource).toContain("text-overflow: clip");
     expect(idleCssSource).toContain("white-space: normal");
-    expect(idleCssSource).toContain(".business-card .business-card-vault-meta small");
+    expect(idleCssSource).toContain(".business-card-vault-meta small");
     expect(idleCssSource).toContain("font-size: 12px");
-    expect(idleCssSource).toContain(".business-row-actions .business-card-primary");
+    expect(idleCssSource).toContain(".business-card-primary,");
     expect(idleCssSource).toContain("font-size: 13px");
   });
 
@@ -780,25 +780,25 @@ describe("Businesses refinement final responsive regression", () => {
 });
 
 
-describe("Businesses legacy grid hotfix", () => {
-  it("forces the header back to one vertical flow instead of the old three-column shell", () => {
-    expect(idleCssSource).toContain("/* Hotfix — reset legacy Businesses grid inheritance */");
+describe("Businesses legacy CSS cleanup", () => {
+  it("removes the pre-v2 legacy Businesses layer and temporary hotfix blocks", () => {
+    expect(idleCssSource).not.toContain("/* Hotfix — reset legacy Businesses grid inheritance */");
+    expect(idleCssSource).not.toContain("/* Mobile main-menu hard alignment */");
+    expect(idleCssSource).not.toContain("/* Final Ana Menü nav placement — structural override */");
+    expect(idleCssSource).not.toContain("grid-template-columns: minmax(210px, 1.3fr)");
+    expect(idleCssSource).not.toContain('font: 700 8px/1.2 "DM Mono", monospace');
+  });
+
+  it("keeps the needed header and tablet behavior inside the canonical Part 3–8 rules", () => {
+    expect(idleCssSource).toContain("/* Part 3–8 — final Businesses command + card architecture */");
     expect(idleCssSource).toContain(".route-shell.is-businesses-page .businesses-header {");
     expect(idleCssSource).toContain("grid-template-columns: minmax(0, 1fr)");
     expect(idleCssSource).toContain("align-items: stretch");
-  });
-
-  it("forces business-row cards into vertical visual-plus-body composition", () => {
-    expect(idleCssSource).toContain(".business-card.business-row");
-    expect(idleCssSource).toContain("grid-template-rows: auto auto");
-    expect(idleCssSource).toContain("gap: 0");
-    expect(idleCssSource).toContain("padding: 0");
-  });
-
-  it("keeps desktop/tablet/mobile card artwork full-width instead of a squeezed side column", () => {
-    expect(idleCssSource).toContain(".business-card .business-card-visual");
-    expect(idleCssSource).toContain("width: 100%");
-    expect(idleCssSource).toContain("border-right: 0");
     expect(idleCssSource).toContain("grid-template-columns: repeat(2, minmax(0, 1fr))");
+    expect(idleCssSource).toContain("min-height: 168px");
+  });
+
+  it("cuts the stylesheet down instead of stacking another override layer", () => {
+    expect(idleCssSource.split("\n").length).toBeLessThan(4000);
   });
 });
