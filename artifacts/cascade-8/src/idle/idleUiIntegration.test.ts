@@ -99,8 +99,9 @@ describe("Businesses main menu control", () => {
     expect(idleIndexSource).toContain("<span>ANA MENÜ</span>");
   });
 
-  it("keeps the control comfortably tappable and visually separated from the title", () => {
+  it("keeps the control comfortably tappable and right-aligned on mobile", () => {
     expect(idleCssSource).toContain(".businesses-header-nav");
+    expect(idleCssSource).toContain("justify-content: flex-end");
     expect(idleCssSource).toContain(".businesses-header .back-link {");
     expect(idleCssSource).toContain("min-height: 44px");
     expect(idleCssSource).toContain(".businesses-header .back-link-icon");
@@ -692,13 +693,16 @@ describe("Businesses premium typography pass", () => {
     expect(idleCssSource).toContain("font-family: var(--idle-font-ui)");
   });
 
-  it("keeps main-card labels and values comfortably readable", () => {
-    expect(idleCssSource).toContain(".business-row-title strong");
-    expect(idleCssSource).toContain("font-size: 21px");
-    expect(idleCssSource).toContain(".business-card-quick-stat strong");
-    expect(idleCssSource).toContain("font-size: 16px");
-    expect(idleCssSource).toContain(".business-card-vault-meta small");
-    expect(idleCssSource).toContain("font-size: 10px");
+  it("keeps main-card names, vault copy and actions comfortably readable on mobile", () => {
+    expect(idleCssSource).toContain("/* Mobile readability hotfix — titles, vault copy, primary actions */");
+    expect(idleCssSource).toContain(".business-card .business-row-title strong");
+    expect(idleCssSource).toContain("font-size: 22px");
+    expect(idleCssSource).toContain("text-overflow: clip");
+    expect(idleCssSource).toContain("white-space: normal");
+    expect(idleCssSource).toContain(".business-card .business-card-vault-meta small");
+    expect(idleCssSource).toContain("font-size: 12px");
+    expect(idleCssSource).toContain(".business-row-actions .business-card-primary");
+    expect(idleCssSource).toContain("font-size: 13px");
   });
 
   it("keeps Details tabs and stage-card CTAs readable", () => {
