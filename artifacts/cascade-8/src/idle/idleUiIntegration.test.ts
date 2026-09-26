@@ -460,6 +460,33 @@ describe("Businesses premium action states", () => {
 });
 
 
+describe("Businesses desktop visual parity polish", () => {
+  it("locks the approved 1440-style card rhythm and equal desktop baselines", () => {
+    expect(idleCssSource).toContain("/* Part 9 — desktop visual parity polish */");
+    expect(idleCssSource).toContain("gap: var(--idle-card-gap)");
+    expect(idleCssSource).toContain("min-height: 520px");
+    expect(idleCssSource).toContain("aspect-ratio: 16 / 9");
+    expect(idleCssSource).toContain("min-height: 210px");
+    expect(idleCssSource).toContain("grid-template-rows: auto auto auto 1fr");
+  });
+
+  it("keeps measured value, stat, progress and action sizing consistent across all three cards", () => {
+    expect(idleCssSource).toContain("min-height: 31px");
+    expect(idleCssSource).toContain("min-height: 64px");
+    expect(idleCssSource).toContain("min-height: 67px");
+    expect(idleCssSource).toContain("height: var(--idle-progress-height)");
+    expect(idleCssSource).toContain("min-height: 52px");
+  });
+
+  it("uses only restrained green hover and focus treatment on the final desktop cards", () => {
+    expect(idleCssSource).toContain("border-color: rgba(84, 242, 163, .24)");
+    expect(idleCssSource).toContain("background: rgba(84, 242, 163, .06)");
+    expect(idleCssSource).toContain("box-shadow: var(--idle-focus-ring)");
+    expect(idleCssSource).toContain("transform: translateY(-2px)");
+  });
+});
+
+
 describe("Businesses dedicated mobile cards", () => {
   it("uses a single-column card flow instead of shrinking the desktop grid", () => {
     expect(idleCssSource).toContain("@media (max-width: 760px)");
