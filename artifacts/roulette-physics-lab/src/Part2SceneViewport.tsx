@@ -7616,7 +7616,7 @@ export function Part2SceneViewport({
         const authoritativeReplayActive =
           validationMode === 'part3' &&
           outerLaneSpinOnly &&
-          !new URLSearchParams(window.location.search).has('part6Headless') &&
+          new URLSearchParams(window.location.search).get('part6Headless') !== '1' &&
           authoritativeReplay?.status === 'SETTLED' &&
           authoritativeReplay.trajectory.length > 0 &&
           replayBallMesh !== null &&
