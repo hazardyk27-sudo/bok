@@ -4692,7 +4692,10 @@ export function Part2SceneViewport({
               },
             );
 
-            if (run.seed === 61004 && step <= 90) {
+            if (
+              (run.seed === 61004 && step <= 90) ||
+              (run.seed === 61005 && step >= 700 && step <= 950)
+            ) {
               const parityAngularVelocity = activeBallBody.angvel();
               const parityRadialVelocity =
                 radius > 0
