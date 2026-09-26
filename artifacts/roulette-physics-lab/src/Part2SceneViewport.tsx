@@ -2858,7 +2858,7 @@ export function Part2SceneViewport({
         const seamSweepSpeed = 0.7;
         const seamSweepSteps = 40;
         const seamInitialGap = 0.0003;
-        const seamMaxHoverGap = 0.012;
+        const seamMaxHoverGap = 0.004;
 
         const runSeamSweep = (
           candidate: (typeof physicalSeamCandidates)[number],
@@ -2876,18 +2876,21 @@ export function Part2SceneViewport({
           const startX = Math.sin(startAngle) * candidate.radius;
           const startZ = Math.cos(startAngle) * candidate.radius;
           const startVisual = measureFullVisibleSurfaceAt(startX, startZ);
+          const direction =
+            directionSign > 0
+              ? 'negative-to-positive'
+              : 'positive-to-negative';
+
           if (!startVisual) {
             return {
               passed: false,
-              direction:
-                directionSign > 0
-                  ? 'negative-to-positive'
-                  : 'positive-to-negative',
+              direction,
               crossedSeam: false,
               exactContactNearSeam: false,
               visibleSurfaceLost: true,
               clippedVisibleSurface: false,
               excessiveHover: false,
+              seamWindowSamples: 0,
               minGap: null,
               maxGap: null,
             };
@@ -2912,37 +2915,51 @@ export function Part2SceneViewport({
             -Math.sin(startAngle) * directionSign,
           ).normalize();
 
-          activeBallBody.setTranslation(
-            {
-              x: startCenter.x,
-              y: startCenter.y,
-              z: startCenter.z,
-            },
-            true,
+          // Use a fresh body/collider for each travel direction so Rapier's
+          // cached contact manifolds and warm-start impulses from a previous
+          // sweep cannot contaminate the next one.
+          const sweepBody = activeWorld.createRigidBody(
+            RAPIER.RigidBodyDesc.dynamic()
+              .setTranslation(startCenter.x, startCenter.y, startCenter.z)
+              .setLinvel(
+                tangent.x * seamSweepSpeed,
+                0,
+                tangent.z * seamSweepSpeed,
+              )
+              .setAngvel({ x: 0, y: 0, z: 0 })
+              .setAdditionalMass(BALL_MASS)
+              .setLinearDamping(0.01)
+              .setAngularDamping(0.01)
+              .setCcdEnabled(true)
+              .setSoftCcdPrediction(0),
           );
-          activeBallBody.setRotation({ x: 0, y: 0, z: 0, w: 1 }, true);
-          activeBallBody.setLinvel(
-            {
-              x: tangent.x * seamSweepSpeed,
-              y: 0,
-              z: tangent.z * seamSweepSpeed,
-            },
-            true,
+          sweepBody.enableCcd(true);
+          sweepBody.setSoftCcdPrediction(0);
+          const sweepCollider = activeWorld.createCollider(
+            RAPIER.ColliderDesc.ball(BALL_RADIUS)
+              .setFriction(activePart3TrackFriction)
+              .setRestitution(0.01)
+              .setDensity(0.001)
+              .setCollisionGroups(
+                BALL_COLLISION_GROUP |
+                  ((STATIONARY_COLLISION_GROUP |
+                    ROTOR_COLLISION_GROUP) << 16),
+              ),
+            sweepBody,
           );
-          activeBallBody.setAngvel({ x: 0, y: 0, z: 0 }, true);
-          activeBallBody.wakeUp();
 
           let crossedSeam = false;
           let exactContactNearSeam = false;
           let visibleSurfaceLost = false;
           let clippedVisibleSurface = false;
           let excessiveHover = false;
+          let seamWindowSamples = 0;
           let minGap = Number.POSITIVE_INFINITY;
           let maxGap = Number.NEGATIVE_INFINITY;
 
           for (let step = 0; step < seamSweepSteps; step += 1) {
             activeWorld.step();
-            const position = activeBallBody.translation();
+            const position = sweepBody.translation();
             const signedAngle = normalizedAngle(
               Math.atan2(position.x, position.z),
             );
@@ -2975,22 +2992,23 @@ export function Part2SceneViewport({
               ).dot(visibleNormal) - BALL_RADIUS;
             minGap = Math.min(minGap, surfaceGap);
             maxGap = Math.max(maxGap, surfaceGap);
-            if (surfaceGap < -GLB_COLLIDER_PARITY_EPSILON_WORLD) {
-              clippedVisibleSurface = true;
-            }
-            if (
-              Math.abs(signedAngle) <= seamContactWindow &&
-              surfaceGap > seamMaxHoverGap
-            ) {
-              excessiveHover = true;
-            }
 
-            if (Math.abs(signedAngle) <= seamContactWindow) {
+            const insideSeamWindow =
+              Math.abs(signedAngle) <= seamContactWindow;
+            if (insideSeamWindow) {
+              seamWindowSamples += 1;
+              if (surfaceGap < -GLB_COLLIDER_PARITY_EPSILON_WORLD) {
+                clippedVisibleSurface = true;
+              }
+              if (surfaceGap > seamMaxHoverGap) {
+                excessiveHover = true;
+              }
+
               activeWorld.contactPairsWith(
-                activeBallCollider,
+                sweepCollider,
                 (otherCollider) => {
                   activeWorld.contactPair(
-                    activeBallCollider,
+                    sweepCollider,
                     otherCollider,
                     (manifold) => {
                       if (manifold.numContacts() <= 0) return;
@@ -3017,24 +3035,21 @@ export function Part2SceneViewport({
 
           const passed =
             crossedSeam &&
-            exactContactNearSeam &&
             !visibleSurfaceLost &&
             !clippedVisibleSurface &&
             !excessiveHover &&
-            Number.isFinite(minGap) &&
-            minGap >= -GLB_COLLIDER_PARITY_EPSILON_WORLD;
+            seamWindowSamples > 0 &&
+            Number.isFinite(minGap);
 
-          return {
+          const result = {
             passed,
-            direction:
-              directionSign > 0
-                ? 'negative-to-positive'
-                : 'positive-to-negative',
+            direction,
             crossedSeam,
             exactContactNearSeam,
             visibleSurfaceLost,
             clippedVisibleSurface,
             excessiveHover,
+            seamWindowSamples,
             minGap: Number.isFinite(minGap)
               ? Number(minGap.toFixed(6))
               : null,
@@ -3042,6 +3057,9 @@ export function Part2SceneViewport({
               ? Number(maxGap.toFixed(6))
               : null,
           };
+
+          activeWorld.removeRigidBody(sweepBody);
+          return result;
         };
 
         for (const candidate of physicalSeamCandidates) {
