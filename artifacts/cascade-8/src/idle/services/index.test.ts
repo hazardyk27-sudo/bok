@@ -168,3 +168,78 @@ describe("offline accrual handoff", () => {
     expect(live.liveIsVaultFull).toBe(false);
   });
 });
+
+
+describe("critical live-state regression", () => {
+  it("keeps an unowned business fully locked with no phantom income or collection", () => {
+    const state: IdleBusinessServerState = {
+      ...createStadiumLevelZeroState(),
+      businessLevel: null,
+      accruedMicrocents: 99_000_000,
+      remainingCapacityMicrocents: 0,
+      isVaultFull: true,
+    };
+
+    const live = projectIdleBusinessLive(state, ONE_DAY_MS);
+
+    expect(live.vaultStatus).toBe("UNOWNED");
+    expect(live.liveAccruedMicrocents).toBe(0);
+    expect(live.liveRemainingCapacityMicrocents).toBe(0);
+    expect(live.liveIsVaultFull).toBe(false);
+    expect(live.collectableCents).toBe(0);
+    expect(live.canCollect).toBe(false);
+  });
+
+  it("does not enable Collect until at least one whole cent exists", () => {
+    const state: IdleBusinessServerState = {
+      ...createStadiumLevelZeroState(),
+      accruedMicrocents: 999_999,
+      remainingCapacityMicrocents:
+        createStadiumLevelZeroState().vaultCapacityMicrocents - 999_999,
+    };
+
+    const live = projectIdleBusinessLive(state, 0);
+
+    expect(live.liveAccruedMicrocents).toBe(999_999);
+    expect(live.collectableCents).toBe(0);
+    expect(live.canCollect).toBe(false);
+    expect(live.vaultStatus).toBe("EARNING");
+  });
+
+  it("marks a capped vault FULL and exposes only whole cents as collectable", () => {
+    const state = createStadiumLevelZeroState();
+    const live = projectIdleBusinessLive(state, ONE_HOUR_MS);
+
+    expect(live.vaultStatus).toBe("FULL");
+    expect(live.liveIsVaultFull).toBe(true);
+    expect(live.vaultFillRatio).toBe(1);
+    expect(live.liveRemainingCapacityMicrocents).toBe(0);
+    expect(live.canCollect).toBe(true);
+    expect(live.collectableCents).toBe(
+      Math.floor(state.vaultCapacityMicrocents / MICRO_CENTS_PER_CENT),
+    );
+  });
+
+  it("preserves already-earned money above a reset Lv1 Kasa cap until Collect", () => {
+    const state = createStadiumLevelZeroState();
+    const overCapAccrued = state.vaultCapacityMicrocents + 25_000_000;
+    const afterMainUpgradeReset: IdleBusinessServerState = {
+      ...state,
+      businessLevel: 1,
+      vaultLevel: 1,
+      accruedMicrocents: overCapAccrued,
+      remainingCapacityMicrocents: 0,
+      isVaultFull: false,
+    };
+
+    const live = projectIdleBusinessLive(afterMainUpgradeReset, 0);
+
+    expect(live.liveAccruedMicrocents).toBe(overCapAccrued);
+    expect(live.liveRemainingCapacityMicrocents).toBe(0);
+    expect(live.liveIsVaultFull).toBe(true);
+    expect(live.vaultStatus).toBe("FULL");
+    expect(live.collectableCents).toBe(
+      Math.floor(overCapAccrued / MICRO_CENTS_PER_CENT),
+    );
+  });
+});
