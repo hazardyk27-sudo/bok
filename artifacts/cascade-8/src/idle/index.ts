@@ -157,7 +157,7 @@ function renderBusinessLevelTree(
           <div class="business-level-node-income">
             <span>SAATLİK GELİR</span>
             <strong>${incomeLabel}</strong>
-            <small>${dailyLabel}</small>
+            <small>GÜNLÜK GELİR · ${dailyLabel}</small>
           </div>
 
           <dl class="business-level-node-meta">
