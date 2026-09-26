@@ -20,6 +20,10 @@ import {
   ROULETTE_WORLD_UNITS_PER_METER,
 } from "../../../../lib/roulette-physics-config";
 import { rouletteNumberForPhysicsPocketIndex } from "../../../../lib/roulette-pocket-mapping";
+import {
+  getRouletteExactGlbColliderGeometry,
+  ROULETTE_EXACT_GLB_COLLIDER_METADATA,
+} from "./glbColliderData";
 
 export const PHYSICS_LAB_FIXED_TIMESTEP = ROULETTE_FIXED_TIMESTEP;
 export const PHYSICS_LAB_DURATION_LIMIT_SECONDS = 24;
@@ -191,6 +195,59 @@ function darkRaceSurfaceSlopeAt(radius: number) {
   const last = profile[profile.length - 1];
   const previous = profile[profile.length - 2];
   return (last[1] - previous[1]) / Math.max(1e-9, last[0] - previous[0]);
+}
+
+const VISIBLE_DEFLECTOR_CONTACT_ZONES = [
+  { angleDegrees: 22.501, innerRadius: 2.1638333333333333, outerRadius: 2.2665, angularWidth: 0.13962634015954636 },
+  { angleDegrees: 67.499, innerRadius: 2.0611666666666664, outerRadius: 2.3435, angularWidth: 0.06981317007977318 },
+  { angleDegrees: 112.501, innerRadius: 2.1638333333333333, outerRadius: 2.2665, angularWidth: 0.13962634015954636 },
+  { angleDegrees: 157.499, innerRadius: 2.0611666666666664, outerRadius: 2.3435, angularWidth: 0.06981317007977318 },
+  { angleDegrees: 202.501, innerRadius: 2.1638333333333333, outerRadius: 2.2665, angularWidth: 0.13962634015954636 },
+  { angleDegrees: 247.499, innerRadius: 2.0611666666666664, outerRadius: 2.3435, angularWidth: 0.06981317007977318 },
+  { angleDegrees: 292.501, innerRadius: 2.1638333333333333, outerRadius: 2.2665, angularWidth: 0.13962634015954636 },
+  { angleDegrees: 337.499, innerRadius: 2.0611666666666664, outerRadius: 2.3435, angularWidth: 0.06981317007977318 },
+] as const;
+
+function smallestAngularDistance(left: number, right: number) {
+  let delta = left - right;
+  while (delta > Math.PI) delta -= Math.PI * 2;
+  while (delta < -Math.PI) delta += Math.PI * 2;
+  return Math.abs(delta);
+}
+
+function isVisibleDeflectorContactZone(radius: number, worldAngle: number) {
+  return VISIBLE_DEFLECTOR_CONTACT_ZONES.some((zone) => {
+    const centerAngle = (zone.angleDegrees * Math.PI) / 180;
+    const radialMargin = PHYSICS_LAB_BALL_RADIUS;
+    const angularMargin =
+      PHYSICS_LAB_BALL_RADIUS / Math.max(radius, PHYSICS_LAB_BALL_RADIUS);
+    return (
+      radius >= zone.innerRadius - radialMargin &&
+      radius <= zone.outerRadius + radialMargin &&
+      smallestAngularDistance(worldAngle, centerAngle) <=
+        zone.angularWidth / 2 + angularMargin
+    );
+  });
+}
+
+function addExactGlbStationaryCollider(
+  world: RAPIER.World,
+  body: RAPIER.RigidBody,
+) {
+  const geometry = getRouletteExactGlbColliderGeometry().stationary;
+  return world.createCollider(
+    RAPIER.ColliderDesc.trimesh(
+      geometry.vertices,
+      geometry.indices,
+      RAPIER.TriMeshFlags.FIX_INTERNAL_EDGES,
+    )
+      .setFriction(BALL_PARAMETERS.friction)
+      .setRestitution(BALL_PARAMETERS.restitution)
+      .setCollisionGroups(
+        STATIONARY_COLLISION_GROUP | (BALL_COLLISION_GROUP << 16),
+      ),
+    body,
+  );
 }
 
 function addDarkRaceChannelCollider(
@@ -827,25 +884,25 @@ export async function simulatePhysicsLabRound(
     true,
   );
   const colliderRoles = new Map<number, string>();
-  const darkRaceCollider = addDarkRaceChannelCollider(world, stationaryBody);
-  colliderRoles.set(darkRaceCollider.handle, "dark-race");
-  const darkRaceOuterWallCollider = addDarkRaceOuterWallCollider(
+  const exactGlbStationaryCollider = addExactGlbStationaryCollider(
     world,
     stationaryBody,
   );
-  colliderRoles.set(darkRaceOuterWallCollider.handle, "dark-race-outer-wall");
-  const bowlBridgeCollider = addBowlBridgeCollider(world, stationaryBody);
-  colliderRoles.set(bowlBridgeCollider.handle, "bowl-bridge");
-  const deflectorColliders = addMeasuredDeflectorColliders(
-    world,
-    stationaryBody,
+  colliderRoles.set(
+    exactGlbStationaryCollider.handle,
+    "exact-glb-stationary-trimesh",
   );
-  const deflectorColliderHandles = new Set(
-    deflectorColliders.map((collider) => collider.handle),
+  console.info(
+    "ROULETTE_EXACT_STATIONARY_COLLIDER",
+    JSON.stringify({
+      sourceSha256: ROULETTE_EXACT_GLB_COLLIDER_METADATA.sourceSha256,
+      geometrySha256: ROULETTE_EXACT_GLB_COLLIDER_METADATA.geometrySha256,
+      weldEpsilonWorld:
+        ROULETTE_EXACT_GLB_COLLIDER_METADATA.weldEpsilonWorld,
+      vertices: ROULETTE_EXACT_GLB_COLLIDER_METADATA.stationaryVertices,
+      triangles: ROULETTE_EXACT_GLB_COLLIDER_METADATA.stationaryTriangles,
+    }),
   );
-  for (const collider of deflectorColliders) {
-    colliderRoles.set(collider.handle, "deflector");
-  }
   const pocketColliders = addPocketFloorAndOuterLipColliders(
     world,
     rotorBody,
@@ -1229,12 +1286,13 @@ export async function simulatePhysicsLabRound(
       }
       let deflectorPairContact = false;
       let physicalFretPairContact = false;
+      let exactStationaryContact = false;
       const stepContactRoles = new Set<string>();
       world.contactPairsWith(ballCollider, (otherCollider) => {
         world.contactPair(ballCollider, otherCollider, (manifold) => {
           if (manifold.numContacts() <= 0) return;
-          if (deflectorColliderHandles.has(otherCollider.handle)) {
-            deflectorPairContact = true;
+          if (otherCollider.handle === exactGlbStationaryCollider.handle) {
+            exactStationaryContact = true;
           }
           if (fretColliderHandles.has(otherCollider.handle)) {
             physicalFretPairContact = true;
@@ -1244,7 +1302,41 @@ export async function simulatePhysicsLabRound(
         });
       });
 
-      const preInwardTrackContact = stepContactRoles.has("dark-race");
+      // Diagnostic aliases only. They do not create collision geometry.
+      // Physics contact always comes from exact-glb-stationary-trimesh.
+      const contactWorldAngle = Math.atan2(translation.x, translation.z);
+      const preInwardTrackContact =
+        exactStationaryContact &&
+        radius >= trackCenterBandMin &&
+        radius <= trackCenterBandMax;
+      if (preInwardTrackContact) {
+        stepContactRoles.add("dark-race");
+      }
+      if (
+        exactStationaryContact &&
+        radius >=
+          ROULETTE_DARK_RACE_WOOD_INNER_RADIUS -
+            PHYSICS_LAB_BALL_RADIUS * 1.5
+      ) {
+        stepContactRoles.add("dark-race-outer-wall");
+      }
+      if (
+        exactStationaryContact &&
+        radius <
+          ROULETTE_DARK_RACE_INWARD_EDGE_RADIUS +
+            PHYSICS_LAB_BALL_RADIUS &&
+        radius >
+          ROULETTE_POCKET_OUTER_LIP_RADIUS -
+            PHYSICS_LAB_BALL_RADIUS
+      ) {
+        stepContactRoles.add("bowl-bridge");
+      }
+      deflectorPairContact =
+        exactStationaryContact &&
+        isVisibleDeflectorContactZone(radius, contactWorldAngle);
+      if (deflectorPairContact) {
+        stepContactRoles.add("deflector");
+      }
       if (
         (seed === "61004" && step <= 90) ||
         (seed === "61005" && step >= 700 && step <= 950)
