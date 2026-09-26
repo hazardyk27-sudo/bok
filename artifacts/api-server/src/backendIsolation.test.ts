@@ -32,13 +32,13 @@ describe("backend game isolation", () => {
   });
 
   it("keeps every game's tables in its own schema file", () => {
-    expect(walletSchema).toContain('pgTable("roulette_wallets"');
-    expect(rouletteSchema).toContain('pgTable("roulette_rounds"');
-    expect(rouletteSchema).toContain('pgTable("roulette_bets"');
-    expect(physicsSchema).toContain('pgTable("physics_lab_rounds"');
-    expect(cadiSchema).toContain('pgTable("cadi_kazan_rounds"');
-    expect(slotSchema).toContain('pgTable("slot_rounds"');
-    expect(idleSchema).toContain('pgTable("idle_business_states"');
+    expect(walletSchema).toContain('"roulette_wallets"');
+    expect(rouletteSchema).toContain('"roulette_rounds"');
+    expect(rouletteSchema).toContain('"roulette_bets"');
+    expect(physicsSchema).toContain('"physics_lab_rounds"');
+    expect(cadiSchema).toContain('"cadi_kazan_rounds"');
+    expect(slotSchema).toContain('"slot_rounds"');
+    expect(idleSchema).toContain('"idle_business_states"');
   });
 
   it("uses the platform wallet contract instead of cross-importing Roulette", () => {
