@@ -28,5 +28,6 @@ An Idle commit never publishes itself to Replit; only the central one-game promo
 - If a note conflicts with code/tests/ownership rules, the validated repository state wins.
 
 ## Current milestones
+- 2026-09-27 — Businesses surface/action palette locked — primary containers use Rich Black `#00072D`; every `TOPLA` / `TÜMÜNÜ TOPLA` button state uses Caribbean Green `#123499`. Next: preserve this mapping during later UI polish.
 - 2026-09-26 — Isolation v2 active — Idle / İşletmeler development stays on `feature/idle`; preview release is ownership-scoped into `integration/replit-preview`, not a whole-branch merge.
 
