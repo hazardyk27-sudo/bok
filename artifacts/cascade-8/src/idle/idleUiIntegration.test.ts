@@ -20,6 +20,30 @@ const mainSource = readFileSync(
 );
 
 
+describe("Businesses canonical class isolation", () => {
+  it("does not mount legacy card aliases that would reactivate old CSS generations", () => {
+    const legacyAliases = [
+      "business-card-visual",
+      "business-row-title",
+      "business-card-body",
+      "business-card-accrued",
+      "business-card-accrued-heading",
+      "business-card-quick-stats",
+      "business-card-quick-stat",
+      "business-card-vault-status",
+      "business-card-secondary",
+    ];
+
+    for (const className of legacyAliases) {
+      expect(componentsSource).not.toContain(`class="${className}`);
+      expect(componentsSource).not.toContain(` ${className}`);
+    }
+
+    expect(idleIndexSource).not.toContain("business-summary business-command-bar");
+    expect(idleIndexSource).toContain('class="business-command-bar"');
+  });
+});
+
 describe("final Idle UI integration", () => {
   it("keeps the main cards focused on collect and Details only", () => {
     expect(componentsSource).toContain("data-business-collect");
