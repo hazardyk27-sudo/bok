@@ -1118,6 +1118,48 @@ function makePart3OuterTrackTrimesh(verticalOffset = 0) {
   return makePart2RaceChannelTrimesh(verticalOffset);
 }
 
+const GLB_COLLIDER_WELD_EPSILON_WORLD = 1e-6;
+
+function weldTrimeshVertices(
+  vertices: Float32Array,
+  indices: Uint32Array,
+) {
+  const weldedVertices: number[] = [];
+  const remap = new Uint32Array(vertices.length / 3);
+  const byPosition = new Map<string, number>();
+  const inverseEpsilon = 1 / GLB_COLLIDER_WELD_EPSILON_WORLD;
+
+  for (let vertexIndex = 0; vertexIndex < remap.length; vertexIndex += 1) {
+    const offset = vertexIndex * 3;
+    const x = vertices[offset];
+    const y = vertices[offset + 1];
+    const z = vertices[offset + 2];
+    const key =
+      `${Math.round(x * inverseEpsilon)}:${Math.round(y * inverseEpsilon)}:${Math.round(z * inverseEpsilon)}`;
+    let weldedIndex = byPosition.get(key);
+    if (weldedIndex === undefined) {
+      weldedIndex = weldedVertices.length / 3;
+      byPosition.set(key, weldedIndex);
+      // Preserve the first GLB-derived coordinate exactly. Welding changes
+      // topology/index sharing only; it never moves the visible surface.
+      weldedVertices.push(x, y, z);
+    }
+    remap[vertexIndex] = weldedIndex;
+  }
+
+  const weldedIndices = new Uint32Array(indices.length);
+  for (let index = 0; index < indices.length; index += 1) {
+    weldedIndices[index] = remap[indices[index]];
+  }
+
+  return {
+    vertices: new Float32Array(weldedVertices),
+    indices: weldedIndices,
+    sourceVertexCount: remap.length,
+    weldedVertexCount: weldedVertices.length / 3,
+  };
+}
+
 function makeTrimeshFromObjectRelativeTo(
   object: THREE.Object3D,
   reference: THREE.Object3D | null,
@@ -1163,9 +1205,26 @@ function makeTrimeshFromObjectRelativeTo(
     );
   }
 
+  const welded = weldTrimeshVertices(
+    new Float32Array(vertices),
+    new Uint32Array(indices),
+  );
+  if (welded.weldedVertexCount < welded.sourceVertexCount) {
+    console.info(
+      'GLB_COLLIDER_VERTEX_WELD',
+      JSON.stringify({
+        object: object.name || 'unnamed-object',
+        epsilonWorld: GLB_COLLIDER_WELD_EPSILON_WORLD,
+        sourceVertices: welded.sourceVertexCount,
+        weldedVertices: welded.weldedVertexCount,
+        mergedVertices:
+          welded.sourceVertexCount - welded.weldedVertexCount,
+      }),
+    );
+  }
   return {
-    vertices: new Float32Array(vertices),
-    indices: new Uint32Array(indices),
+    vertices: welded.vertices,
+    indices: welded.indices,
   };
 }
 
