@@ -9,6 +9,7 @@ on:
       - 'artifacts/roulette-physics-lab/**'
       - 'lib/roulette-glb-surface.ts'
       - 'lib/roulette-gltf-transform.ts'
+      - 'lib/roulette-pocket-mapping.ts'
       - 'lib/roulette-physics-config.ts'
       - 'pnpm-lock.yaml'
       - 'pnpm-workspace.yaml'
