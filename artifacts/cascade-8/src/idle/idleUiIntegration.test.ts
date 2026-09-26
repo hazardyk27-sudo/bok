@@ -282,7 +282,7 @@ describe("Businesses premium desktop cards", () => {
     expect(componentsSource).toContain("business-card business-card--");
     expect(componentsSource).toContain("business-card-hero");
     expect(componentsSource).toContain("business-card-content");
-    expect(componentsSource).toContain("business-card-identity");
+    expect(componentsSource).toContain("business-card-identity-overlay");
     expect(componentsSource).toContain("business-card-balance");
     expect(componentsSource).toContain("business-card-stats");
     expect(componentsSource).toContain("business-card-vault");
@@ -325,6 +325,47 @@ describe("Businesses premium card skeleton", () => {
     expect(componentsSource).toContain('imagePath: "/businesses/fan-club.png"');
     expect(componentsSource).toContain("business-card-media-slot");
     expect(componentsSource).toContain("business-card-media-placeholder");
+  });
+});
+
+
+describe("Businesses hero identity overlay", () => {
+  it("moves business identity out of the card body and onto the hero image", () => {
+    const heroIndex = componentsSource.indexOf('class="business-card-hero business-card-visual"');
+    const overlayIndex = componentsSource.indexOf('class="business-card-identity-overlay"');
+    const contentIndex = componentsSource.indexOf('class="business-card-content business-card-body"');
+
+    expect(heroIndex).toBeGreaterThanOrEqual(0);
+    expect(overlayIndex).toBeGreaterThan(heroIndex);
+    expect(contentIndex).toBeGreaterThan(overlayIndex);
+    expect(componentsSource).not.toContain('class="business-card-identity business-card-header"');
+  });
+
+  it("renders a dedicated icon, name, live level subtitle and level badge on the hero", () => {
+    expect(componentsSource).toContain("business-card-identity-icon");
+    expect(componentsSource).toContain('icon: "◉"');
+    expect(componentsSource).toContain('icon: "▦"');
+    expect(componentsSource).toContain('icon: "✦"');
+    expect(componentsSource).toContain("data-business-level");
+    expect(componentsSource).toContain("data-business-level-mark");
+  });
+
+  it("anchors the identity bottom-left and the level badge top-right with readable image contrast", () => {
+    expect(idleCssSource).toContain("/* Part 7 — business identity overlay on hero */");
+    expect(idleCssSource).toContain(".business-card-identity-overlay");
+    expect(idleCssSource).toContain("left: 14px");
+    expect(idleCssSource).toContain("bottom: 14px");
+    expect(idleCssSource).toContain(".business-card-identity-icon");
+    expect(idleCssSource).toContain(".business-card-hero .business-card-level-mark");
+    expect(idleCssSource).toContain("top: 12px");
+    expect(idleCssSource).toContain("right: 12px");
+    expect(idleCssSource).toContain("rgba(3, 8, 7, .78)");
+  });
+
+  it("keeps the live state badge separate at the hero top-left", () => {
+    expect(idleCssSource).toContain(".business-card-state");
+    expect(idleCssSource).toContain("left: 12px");
+    expect(componentsSource).toContain("data-business-card-state");
   });
 });
 
