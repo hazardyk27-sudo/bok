@@ -1359,4 +1359,3 @@ describe("Businesses final Rich Black / Caribbean Green palette lock", () => {
     expect(idleCssSource).toContain("background: var(--idle-caribbean-green)");
   });
 });
-
