@@ -61,6 +61,30 @@ const physicsLabSimulationSource = readFileSync(
   "utf8",
 );
 
+const rouletteProductionReplaySource = readFileSync(
+  fileURLToPath(new URL("./roulettePhysicsReplay.ts", import.meta.url)),
+  "utf8",
+);
+
+const rouletteProductionClientSource = readFileSync(
+  fileURLToPath(new URL("./rouletteClient.ts", import.meta.url)),
+  "utf8",
+);
+
+const rouletteServerRepositorySource = readFileSync(
+  fileURLToPath(
+    new URL("../../api-server/src/roulette/repository.ts", import.meta.url),
+  ),
+  "utf8",
+);
+
+const physicsLabRoutesSource = readFileSync(
+  fileURLToPath(
+    new URL("../../api-server/src/physics-lab/routes.ts", import.meta.url),
+  ),
+  "utf8",
+);
+
 const rouletteRuntimeWorkflowSource = readFileSync(
   fileURLToPath(
     new URL(
@@ -647,6 +671,56 @@ describe("authoritative roulette physics config", () => {
     );
     expect(part3ViewportSource).not.toContain(
       "replayBallMesh.position.set(authoritativeReplay",
+    );
+  });
+
+  it("keeps the production roulette result physics-authoritative", () => {
+    expect(rouletteServerRepositorySource).toContain(
+      "physicsLabRepository.createRound()",
+    );
+    expect(rouletteServerRepositorySource).toContain(
+      "const winningNumber = physicsRound.winningNumber",
+    );
+    expect(rouletteServerRepositorySource).toContain(
+      "physics_round_id",
+    );
+    expect(rouletteServerRepositorySource).not.toContain(
+      "uniformWinningNumber()",
+    );
+
+    expect(rouletteProductionReplaySource).toContain(
+      "/api/roulette/rounds/${encodeURIComponent(rouletteRoundId)}/replay",
+    );
+    expect(rouletteProductionReplaySource).toContain(
+      "this.replay.finalPocket.number !== expectedNumber",
+    );
+    expect(rouletteProductionReplaySource).toContain(
+      "this.replay.winningNumber !== expectedNumber",
+    );
+    expect(rouletteProductionReplaySource).not.toContain(
+      "/api/physics-lab/rounds/current",
+    );
+    expect(rouletteProductionReplaySource).not.toContain("yawRotation");
+    expect(rouletteProductionReplaySource).not.toContain("targetNumber");
+    expect(rouletteProductionReplaySource).not.toContain(
+      "ROULETTE_SEGMENT_DEGREES",
+    );
+
+    expect(rouletteProductionClientSource).toContain(
+      "startLoop(roundId, phaseElapsed)",
+    );
+    expect(rouletteProductionClientSource).toContain(
+      ".playTo(roundId, winningNumber",
+    );
+    expect(rouletteProductionClientSource).not.toContain(
+      "getWheelLandingPlan(",
+    );
+
+    expect(physicsLabRoutesSource).toContain(
+      'process.env.NODE_ENV === "production"',
+    );
+    expect(physicsLabRoutesSource).toContain(
+      "PHYSICS_LAB_CURRENT_DISABLED",
     );
   });
 
