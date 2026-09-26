@@ -339,20 +339,24 @@ export function renderBusinessRowShell(businessId: BusinessId) {
   const meta = BUSINESS_META[businessId];
   return `
     <article
-      class="business-row business-card business-card--${businessId}"
+      class="business-card business-card--${businessId}"
       data-business-id="${businessId}"
       data-business-status="loading"
       data-business-ownership="loading"
     >
-      <div class="business-card-visual" role="img" aria-label="${meta.visualLabel}">
+      <div
+        class="business-card-hero business-card-visual"
+        role="img"
+        aria-label="${meta.visualLabel}"
+      >
 ${renderBusinessArt(businessId)}
         <span class="business-card-state" data-business-card-state>YÜKLENİYOR</span>
         <div class="business-card-visual-shade" aria-hidden="true"></div>
       </div>
 
-      <div class="business-card-body">
-        <header class="business-card-header">
-          <div class="business-row-title">
+      <div class="business-card-content business-card-body">
+        <header class="business-card-identity business-card-header">
+          <div class="business-card-title business-row-title">
             <small>${meta.eyebrow}</small>
             <strong>${meta.definition.label}</strong>
             <span data-business-level>Yükleniyor…</span>
@@ -360,26 +364,26 @@ ${renderBusinessArt(businessId)}
           <span class="business-card-level-mark" data-business-level-mark aria-hidden="true">FY</span>
         </header>
 
-        <section class="business-card-accrued" aria-label="Biriken gelir">
-          <div class="business-card-accrued-heading">
-            <span>BİRİKMİŞ</span>
+        <section class="business-card-balance business-card-accrued" aria-label="Biriken gelir">
+          <div class="business-card-balance-heading business-card-accrued-heading">
+            <span>BİRİKMİŞ GELİR</span>
             <small data-business-accrued-status>KASADA HAZIR</small>
           </div>
           <strong data-business-accrued>—</strong>
         </section>
 
-        <section class="business-card-quick-stats" aria-label="İşletme özeti">
-          <div class="business-card-quick-stat">
+        <section class="business-card-stats business-card-quick-stats" aria-label="İşletme özeti">
+          <div class="business-card-stat business-card-quick-stat">
             <span>SAATLİK GELİR</span>
             <strong data-business-income>— /sa</strong>
           </div>
-          <div class="business-card-quick-stat">
-            <span>KASA</span>
+          <div class="business-card-stat business-card-quick-stat">
+            <span>KASA KAPASİTESİ</span>
             <strong data-business-vault>Lv— · —</strong>
           </div>
         </section>
 
-        <section class="business-card-vault-status" aria-label="Kasa doluluk durumu">
+        <section class="business-card-vault business-card-vault-status" aria-label="Kasa doluluk durumu">
           <div class="business-card-vault-meta">
             <small data-business-vault-fill>Doluluk —</small>
             <small class="business-vault-eta" data-business-vault-eta>—</small>
@@ -389,33 +393,28 @@ ${renderBusinessArt(businessId)}
           </div>
         </section>
 
-        <div class="business-row-actions business-card-actions">
-          <div class="business-card-action business-card-action--collect">
-            <button
-              type="button"
-              class="business-card-primary"
-              disabled
-              data-action-state="loading"
-              data-business-collect
-            >TOPLA</button>
-          </div>
-          <div class="business-card-action business-card-action--details">
-            <button
-              type="button"
-              class="business-card-secondary business-card-details"
-              data-business-details
-              aria-label="${meta.definition.label} detaylarını aç"
-            >
-              <span>DETAYLAR</span>
-              <i aria-hidden="true">→</i>
-            </button>
-          </div>
+        <div class="business-card-actions">
+          <button
+            type="button"
+            class="business-card-primary"
+            disabled
+            data-action-state="loading"
+            data-business-collect
+          >TOPLA</button>
+          <button
+            type="button"
+            class="business-card-secondary business-card-details"
+            data-business-details
+            aria-label="${meta.definition.label} detaylarını aç"
+          >
+            <span>DETAYLAR</span>
+            <i aria-hidden="true">→</i>
+          </button>
         </div>
       </div>
     </article>
   `;
 }
-
 
 export function updateBusinessRow(
   row: HTMLElement,
