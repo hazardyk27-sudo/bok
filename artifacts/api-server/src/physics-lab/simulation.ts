@@ -40,7 +40,8 @@ const MAX_TRAJECTORY_SAMPLES = Math.ceil(
 ) + 1;
 
 const POCKET_FRET_RESTITUTION = 0.06;
-const DEFLECTOR_RESTITUTION = 0.22;
+const DEFLECTOR_FRICTION = 0.12;
+const DEFLECTOR_RESTITUTION = 0.38;
 
 const BALL_PARAMETERS = {
   radius: PHYSICS_LAB_BALL_RADIUS,
@@ -664,7 +665,7 @@ function addMeasuredDeflectorColliders(
             z: 0,
             w: Math.cos(angle / 2),
           })
-          .setFriction(0.28)
+          .setFriction(DEFLECTOR_FRICTION)
           .setRestitution(DEFLECTOR_RESTITUTION)
           .setCollisionGroups(
             STATIONARY_COLLISION_GROUP | (BALL_COLLISION_GROUP << 16),
