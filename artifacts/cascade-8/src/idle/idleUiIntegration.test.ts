@@ -174,7 +174,7 @@ describe("Businesses dedicated minimal mobile shell", () => {
     expect(idleCssSource).toContain("min-height: 70px");
     expect(idleCssSource).toContain("grid-column: 1 / -1");
     expect(idleCssSource).toContain("min-height: 58px");
-    expect(idleCssSource).toContain("linear-gradient(135deg, #3c84ff, #4273dc 62%, #388a9c)");
+    expect(idleCssSource).toContain("linear-gradient(135deg, #0d34e9, #1a43bf 62%, #123499)");
   });
 
   it("keeps a 390px-specific fallback without changing the tablet breakpoint", () => {
@@ -202,18 +202,22 @@ describe("Businesses token inheritance", () => {
 
 
 describe("Businesses premium design tokens", () => {
-  it("locks the uploaded Black / Deep Azure / Salzburg / Sapphire / Cerulean palette", () => {
+  it("locks the uploaded Rich Black / Dark Green / Bangladesh / Caribbean / White palette", () => {
     expect(idleCssSource).toContain("/* Businesses visual system v2");
-    expect(idleCssSource).toContain("--idle-black: #000000");
-    expect(idleCssSource).toContain("--idle-deep-azure: #0b0e0f");
-    expect(idleCssSource).toContain("--idle-salzburg-blue: #388a9c");
-    expect(idleCssSource).toContain("--idle-sapphire: #4273dc");
-    expect(idleCssSource).toContain("--idle-cerulean: #3c84ff");
-    expect(idleCssSource).toContain("--idle-canvas: #0b0e0f");
-    expect(idleCssSource).toContain("--idle-sidebar: #000000");
-    expect(idleCssSource).toContain("--idle-accent: #388a9c");
-    expect(idleCssSource).toContain("--idle-accent-secondary: #4273dc");
-    expect(idleCssSource).toContain("--idle-accent-bright: #3c84ff");
+    expect(idleCssSource).toContain("--idle-secondary-ink: #01011d");
+    expect(idleCssSource).toContain("--idle-rich-black: #00072d");
+    expect(idleCssSource).toContain("--idle-dark-green: #051650");
+    expect(idleCssSource).toContain("--idle-bangladesh-green: #0a2472");
+    expect(idleCssSource).toContain("--idle-caribbean-green: #123499");
+    expect(idleCssSource).toContain("--idle-palette-white: #dde2f6");
+    expect(idleCssSource).toContain("--idle-secondary-blue-1: #1a43bf");
+    expect(idleCssSource).toContain("--idle-secondary-blue-2: #0d34e9");
+    expect(idleCssSource).toContain("--idle-secondary-blue-3: #0a0ba4");
+    expect(idleCssSource).toContain("--idle-canvas: #00072d");
+    expect(idleCssSource).toContain("--idle-sidebar: #01011d");
+    expect(idleCssSource).toContain("--idle-accent: #123499");
+    expect(idleCssSource).toContain("--idle-accent-secondary: #1a43bf");
+    expect(idleCssSource).toContain("--idle-accent-bright: #0d34e9");
     expect(idleCssSource).toContain("--idle-shadow-accent");
   });
 
@@ -327,9 +331,9 @@ describe("Businesses measured desktop workspace", () => {
     expect(idleIndexSource).toContain(">AYARLAR</span>");
   });
 
-  it("uses the approved black-azure shell instead of the old blue ambient foundation", () => {
-    expect(idleCssSource).toContain("background: var(--idle-canvas, #0b0e0f)");
-    expect(idleCssSource).toContain("rgba(56, 138, 156, .035)");
+  it("uses the approved Brand Asset navy shell instead of the old ambient foundation", () => {
+    expect(idleCssSource).toContain("background: var(--idle-canvas, #00072d)");
+    expect(idleCssSource).toContain("rgba(18, 52, 153, .035)");
     expect(idleCssSource).toContain("var(--idle-sidebar)");
     expect(idleCssSource).toContain("var(--idle-accent)");
   });
@@ -396,8 +400,8 @@ describe("Businesses premium KPI command bar", () => {
   });
 
   it("uses the approved blue primary treatment for Tümünü Topla", () => {
-    expect(idleCssSource).toContain("#3c84ff");
-    expect(idleCssSource).toContain("#4273dc");
+    expect(idleCssSource).toContain("#0d34e9");
+    expect(idleCssSource).toContain("#1a43bf");
     expect(idleCssSource).toContain("color: #000000");
     expect(idleCssSource).toContain("width: 34px");
     expect(idleCssSource).toContain("height: 34px");
@@ -607,8 +611,8 @@ describe("Businesses desktop visual parity polish", () => {
   });
 
   it("uses only restrained blue hover and focus treatment on the final desktop cards", () => {
-    expect(idleCssSource).toContain("border-color: rgba(56, 138, 156, .24)");
-    expect(idleCssSource).toContain("background: rgba(56, 138, 156, .06)");
+    expect(idleCssSource).toContain("border-color: rgba(13, 52, 233, .22)");
+    expect(idleCssSource).toContain("background-color: rgba(18, 52, 153, .07)");
     expect(idleCssSource).toContain("box-shadow: var(--idle-focus-ring)");
     expect(idleCssSource).toContain("transform: translateY(-2px)");
   });
@@ -644,8 +648,8 @@ describe("Businesses dedicated tablet composition", () => {
   });
 
   it("removes old cyan hover treatment from the tablet surface with final blue overrides", () => {
-    expect(idleCssSource).toContain("border-color: rgba(56, 138, 156, .2)");
-    expect(idleCssSource).toContain("background: rgba(56, 138, 156, .05)");
+    expect(idleCssSource).toContain("border-color: rgba(18, 52, 153, .2)");
+    expect(idleCssSource).toContain("background: rgba(18, 52, 153, .05)");
     expect(idleCssSource).toContain("box-shadow: var(--idle-focus-ring)");
   });
 });
@@ -777,7 +781,7 @@ describe("Businesses detail panel architecture", () => {
 
   it("keeps the drawer behavior while the final desktop shell overrides its visual system", () => {
     expect(idleCssSource).toContain("/* Part 12 — premium detail drawer / mobile fullscreen architecture */");
-    expect(idleCssSource).toContain("/* Part 13 — azure/black Details shell */");
+    expect(idleCssSource).toContain("/* Part 13 — brand navy Details shell */");
     expect(idleCssSource).toContain(".business-detail-drawer");
     expect(idleCssSource).toContain("width: min(680px, 72vw)");
     expect(idleCssSource).toContain("transform: translateX(104%)");
@@ -794,11 +798,11 @@ describe("Businesses detail panel architecture", () => {
 });
 
 
-describe("Businesses azure black Details shell", () => {
-  it("uses the approved azure black surface and wider desktop drawer", () => {
-    expect(idleCssSource).toContain("/* Part 13 — azure/black Details shell */");
+describe("Businesses Brand Asset navy Details shell", () => {
+  it("uses the approved Brand Asset navy surface and wider desktop drawer", () => {
+    expect(idleCssSource).toContain("/* Part 13 — brand navy Details shell */");
     expect(idleCssSource).toContain("width: min(680px, 72vw)");
-    expect(idleCssSource).toContain("border-left: 1px solid rgba(56, 138, 156, .14)");
+    expect(idleCssSource).toContain("border-left: 1px solid rgba(18, 52, 153, .14)");
     expect(idleCssSource).toContain("linear-gradient(180deg, #0d1718 0%, #0a1415 48%, #081011 100%)");
   });
 
@@ -1206,7 +1210,7 @@ describe("Businesses final responsive QA", () => {
 
 
 describe("Businesses Part 18 final QA guardrails", () => {
-  it("removes the retired green palette after the uploaded blue palette migration", () => {
+  it("removes the retired green palette after the Brand Asset palette migration", () => {
     expect(idleCssSource).not.toContain("--idle-green");
     expect(idleCssSource).not.toContain("#54f2a3");
     expect(idleCssSource).not.toContain("#78f0aa");
@@ -1214,6 +1218,9 @@ describe("Businesses Part 18 final QA guardrails", () => {
     expect(idleCssSource).not.toContain("rgba(84, 242, 163,");
     expect(idleCssSource).not.toContain("rgba(120, 240, 170,");
     expect(idleCssSource).not.toContain("rgba(35, 150, 92,");
+    expect(idleCssSource).not.toContain("#388a9c");
+    expect(idleCssSource).not.toContain("#4273dc");
+    expect(idleCssSource).not.toContain("#3c84ff");
   });
 
   it("keeps one explicit final QA guardrail layer for overflow, touch and motion safety", () => {
