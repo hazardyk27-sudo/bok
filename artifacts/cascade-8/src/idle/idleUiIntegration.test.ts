@@ -1341,21 +1341,35 @@ describe("Businesses legacy CSS cleanup", () => {
   });
 });
 
-describe("Businesses final Rich Black / Caribbean Green palette lock", () => {
-  it("keeps the visible Businesses containers on the approved Rich Black token", () => {
-    expect(idleCssSource).toContain("/* 2026-09-27 — Rich Black containers / Caribbean Green collection actions */");
-    expect(idleCssSource).toContain("--idle-rich-black: #00072d");
-    expect(idleCssSource).toContain(".route-shell.is-businesses-page .business-command-stat");
-    expect(idleCssSource).toContain(".route-shell.is-businesses-page .business-card-content");
-    expect(idleCssSource).toContain("background: var(--idle-rich-black)");
+describe("Businesses approved Slate Blue Parts 1–3", () => {
+  it("locks the approved restrained premium color hierarchy", () => {
+    expect(idleCssSource).toContain("/* 2026-09-27 — Parts 1–3: approved Slate Blue hierarchy + 16:9 desktop frame */");
+    expect(idleCssSource).toContain("--idle-canvas: #050b17");
+    expect(idleCssSource).toContain("--idle-surface: #0b1524");
+    expect(idleCssSource).toContain("--idle-text: #eef4ff");
+    expect(idleCssSource).toContain("--idle-text-secondary: #b7c5e3");
+    expect(idleCssSource).toContain("--idle-text-muted: #7f8daa");
+    expect(idleCssSource).toContain("--idle-accent: #6f97ff");
   });
 
-  it("keeps every Collect and Collect All state on Caribbean Green", () => {
-    expect(idleCssSource).toContain("--idle-caribbean-green: #123499");
-    expect(idleCssSource).toContain(".route-shell.is-businesses-page .business-summary-collect-all:disabled");
+  it("fits the desktop workspace into a true 16 by 9 frame", () => {
+    expect(idleCssSource).toContain("@media (min-width: 1101px)");
+    expect(idleCssSource).toContain("aspect-ratio: 16 / 9");
+    expect(idleCssSource).toContain("calc((100dvh - 36px) * 1.7777778)");
+    expect(idleCssSource).toContain("grid-template-columns: repeat(3, minmax(0, 1fr))");
+    expect(idleCssSource).toContain("overflow: hidden");
+  });
+
+  it("uses muted blue primary actions and dark ghost Details actions", () => {
+    expect(idleCssSource).toContain("background: linear-gradient(180deg, #6f97ff 0%, #577fdc 100%)");
+    expect(idleCssSource).toContain(".route-shell.is-businesses-page .business-card-details:hover");
+    expect(idleCssSource).toContain("rgba(7, 16, 29, .74)");
     expect(idleCssSource).toContain(".route-shell.is-businesses-page .business-summary-collect-all:not(:disabled):hover");
-    expect(idleCssSource).toContain(".route-shell.is-businesses-page .business-card-primary:disabled");
-    expect(idleCssSource).toContain(".route-shell.is-businesses-page .business-card-primary:not(:disabled):hover");
-    expect(idleCssSource).toContain("background: var(--idle-caribbean-green)");
+  });
+
+  it("carries the same surface hierarchy into Details", () => {
+    expect(idleCssSource).toContain(".business-detail-drawer");
+    expect(idleCssSource).toContain("linear-gradient(180deg, #091421 0%, #07101d 54%, #050b17 100%)");
+    expect(idleCssSource).toContain(".business-detail-tabs button[aria-selected=\"true\"]");
   });
 });

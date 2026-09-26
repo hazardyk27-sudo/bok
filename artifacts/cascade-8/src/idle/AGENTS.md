@@ -28,6 +28,5 @@ An Idle commit never publishes itself to Replit; only the central one-game promo
 - If a note conflicts with code/tests/ownership rules, the validated repository state wins.
 
 ## Current milestones
-- 2026-09-27 — Businesses surface/action palette locked — primary containers use Rich Black `#00072D`; every `TOPLA` / `TÜMÜNÜ TOPLA` button state uses Caribbean Green `#123499`. Next: preserve this mapping during later UI polish.
+- 2026-09-27 — Approved Slate Blue redesign Parts 1–3 active — desktop workspace is framed at `16:9`; palette/surface hierarchy follows the restrained dark SaaS reference (`#050B17` canvas, muted blue accent), primary collect actions are soft filled blue, `DETAYLAR` is dark ghost, and Details inherits the same surface language. Next: Parts 4–6 typography + dynamic progress/level system.
 - 2026-09-26 — Isolation v2 active — Idle / İşletmeler development stays on `feature/idle`; preview release is ownership-scoped into `integration/replit-preview`, not a whole-branch merge.
-
