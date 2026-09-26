@@ -4446,3 +4446,275 @@ body.business-detail-open {
     padding: 15px;
   }
 }
+
+
+/* Part 10 — tablet composition / 768–1100px */
+@media (min-width: 761px) and (max-width: 1100px) {
+  .route-shell.is-businesses-page {
+    --idle-page-gutter: clamp(18px, 3vw, 28px);
+  }
+
+  .route-shell.is-businesses-page .businesses-page {
+    width: min(100%, 980px);
+    padding-top: 24px;
+    padding-bottom: max(40px, env(safe-area-inset-bottom));
+  }
+
+  .route-shell.is-businesses-page .businesses-header {
+    gap: 16px;
+  }
+
+  .route-shell.is-businesses-page .businesses-header-nav {
+    min-height: 44px;
+  }
+
+  .route-shell.is-businesses-page .businesses-header .back-link {
+    min-height: 44px;
+    border-color: var(--idle-line);
+    color: var(--idle-text-secondary);
+    background: var(--idle-surface);
+  }
+
+  .route-shell.is-businesses-page .businesses-header-main {
+    grid-template-columns: minmax(0, 1fr) 248px;
+    align-items: end;
+    gap: 20px;
+  }
+
+  .route-shell.is-businesses-page .businesses-heading h1 {
+    font-family: var(--idle-font-display);
+    font-size: clamp(44px, 6vw, 54px);
+    font-weight: var(--idle-weight-display);
+    letter-spacing: -.042em;
+    line-height: .98;
+  }
+
+  .route-shell.is-businesses-page .businesses-heading p {
+    max-width: 580px;
+    margin-top: 10px;
+    color: var(--idle-text-secondary);
+    font-size: 13px;
+    line-height: 1.5;
+  }
+
+  .route-shell.is-businesses-page .businesses-wallet {
+    min-height: 96px;
+    padding: 15px 16px;
+    border-color: var(--idle-line);
+    border-radius: var(--idle-radius-card);
+    background:
+      linear-gradient(145deg, rgba(84, 242, 163, .04), transparent 58%),
+      var(--idle-surface);
+    box-shadow: var(--idle-shadow-card);
+  }
+
+  .route-shell.is-businesses-page .businesses-wallet strong {
+    margin-top: 9px;
+    font-size: 25px;
+    letter-spacing: -.035em;
+  }
+
+  .route-shell.is-businesses-page .businesses-progression {
+    grid-template-columns: 190px minmax(0, 1fr) auto;
+    min-height: 64px;
+    gap: 14px;
+    padding: 12px 14px;
+    border-color: var(--idle-line);
+    border-radius: var(--idle-radius-card);
+    background: var(--idle-surface);
+  }
+
+  .route-shell.is-businesses-page .businesses-progression-track {
+    height: 12px;
+    border-radius: var(--idle-radius-pill);
+    background:
+      repeating-linear-gradient(
+        90deg,
+        rgba(255, 255, 255, .045) 0,
+        rgba(255, 255, 255, .045) calc((100% / 27) - 2px),
+        transparent calc((100% / 27) - 2px),
+        transparent calc(100% / 27)
+      ),
+      var(--idle-surface-raised);
+  }
+
+  .route-shell.is-businesses-page .businesses-progression-track > i {
+    background: linear-gradient(90deg, var(--idle-green-deep), var(--idle-green));
+    box-shadow: 0 0 14px rgba(84, 242, 163, .14);
+  }
+
+  .route-shell.is-businesses-page .business-command-bar {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
+    margin-top: 14px;
+    overflow: visible;
+    border: 0;
+    background: transparent;
+  }
+
+  .route-shell.is-businesses-page .business-command-stat,
+  .route-shell.is-businesses-page .business-summary-collect-all {
+    min-height: 82px;
+    border: 1px solid var(--idle-line);
+    border-radius: var(--idle-radius-card);
+    box-shadow: var(--idle-shadow-card);
+  }
+
+  .route-shell.is-businesses-page .business-command-stat {
+    padding: 14px 16px;
+    background: var(--idle-surface);
+  }
+
+  .route-shell.is-businesses-page .business-command-stat strong {
+    margin-top: 10px;
+    font-size: 23px;
+  }
+
+  .route-shell.is-businesses-page .business-summary-collect-all {
+    grid-column: 1 / -1;
+    min-height: 68px;
+    padding: 12px 14px 12px 16px;
+    border-color: rgba(84, 242, 163, .45);
+    color: #06130c;
+    background: linear-gradient(135deg, #64f5aa, #47e995 62%, #36d981);
+  }
+
+  .route-shell.is-businesses-page .business-collect-all-copy small,
+  .route-shell.is-businesses-page .business-collect-all-copy strong,
+  .route-shell.is-businesses-page .business-collect-all-value {
+    color: #06130c;
+  }
+
+  .route-shell.is-businesses-page .business-list {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    align-items: stretch;
+    gap: 14px;
+    max-width: none;
+    margin: 16px 0 0;
+  }
+
+  .route-shell.is-businesses-page .business-card {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: auto auto;
+    min-height: 500px;
+    border-color: var(--idle-line);
+    border-radius: var(--idle-radius-card);
+    background: var(--idle-surface);
+    box-shadow: var(--idle-shadow-card);
+  }
+
+  .route-shell.is-businesses-page .business-card-hero,
+  .route-shell.is-businesses-page .business-card-visual {
+    aspect-ratio: 16 / 9;
+    min-height: 180px;
+    border-right: 0;
+    border-bottom: 1px solid var(--idle-line-soft);
+  }
+
+  .route-shell.is-businesses-page .business-card-content {
+    grid-template-rows: auto auto auto 1fr;
+    gap: 14px;
+    padding: 15px;
+  }
+
+  .route-shell.is-businesses-page .business-card-identity-overlay {
+    left: 14px;
+    right: 70px;
+    bottom: 13px;
+    grid-template-columns: 40px minmax(0, 1fr);
+    gap: 10px;
+  }
+
+  .route-shell.is-businesses-page .business-card-identity-icon {
+    width: 40px;
+    height: 40px;
+  }
+
+  .route-shell.is-businesses-page .business-card-identity-overlay .business-card-title strong {
+    font-size: 20px;
+  }
+
+  .route-shell.is-businesses-page .business-card-balance > strong {
+    font-size: 28px;
+  }
+
+  .route-shell.is-businesses-page .business-card-stat {
+    min-height: 62px;
+    padding: 11px 12px;
+  }
+
+  .route-shell.is-businesses-page .business-card-stat strong {
+    font-size: 15px;
+  }
+
+  .route-shell.is-businesses-page .business-vault-progress {
+    height: 13px;
+  }
+
+  .route-shell.is-businesses-page .business-card-primary,
+  .route-shell.is-businesses-page .business-card-details {
+    min-height: 50px;
+    border-radius: 10px;
+    font-size: 12px;
+  }
+
+  .route-shell.is-businesses-page .business-card-details {
+    border-color: rgba(84, 242, 163, .18);
+    color: var(--idle-text);
+    background: var(--idle-surface-raised);
+  }
+
+  .route-shell.is-businesses-page .business-card-primary:focus-visible,
+  .route-shell.is-businesses-page .business-card-details:focus-visible,
+  .route-shell.is-businesses-page .business-summary-collect-all:focus-visible,
+  .route-shell.is-businesses-page .businesses-header .back-link:focus-visible {
+    outline: none;
+    box-shadow: var(--idle-focus-ring);
+  }
+
+  @media (hover: hover) and (pointer: fine) {
+    .route-shell.is-businesses-page .business-card:hover {
+      border-color: rgba(84, 242, 163, .2);
+    }
+
+    .route-shell.is-businesses-page .business-card-details:hover,
+    .route-shell.is-businesses-page .businesses-header .back-link:hover {
+      border-color: rgba(84, 242, 163, .3);
+      color: var(--idle-text);
+      background: rgba(84, 242, 163, .05);
+    }
+  }
+}
+
+@media (min-width: 761px) and (max-width: 860px) {
+  .route-shell.is-businesses-page .businesses-header-main {
+    grid-template-columns: minmax(0, 1fr) 220px;
+    gap: 16px;
+  }
+
+  .route-shell.is-businesses-page .businesses-heading h1 {
+    font-size: 42px;
+  }
+
+  .route-shell.is-businesses-page .businesses-progression {
+    grid-template-columns: 170px minmax(0, 1fr);
+  }
+
+  .route-shell.is-businesses-page .businesses-progression-meta {
+    grid-column: 1 / -1;
+    justify-content: flex-end;
+  }
+
+  .route-shell.is-businesses-page .business-card {
+    min-height: 488px;
+  }
+
+  .route-shell.is-businesses-page .business-card-hero,
+  .route-shell.is-businesses-page .business-card-visual {
+    min-height: 168px;
+  }
+
+  .route-shell.is-businesses-page .business-card-content {
+    padding: 14px;
+  }
+}
