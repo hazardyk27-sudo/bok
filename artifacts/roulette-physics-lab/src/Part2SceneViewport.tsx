@@ -2728,6 +2728,521 @@ export function Part2SceneViewport({
       return report;
     };
 
+
+    const runGlbPocketGeometryAudit = () => {
+      if (!stationaryGroup || !rotorPivot) return null;
+
+      const previousRotorQuaternion = rotorPivot.quaternion.clone();
+      rotorPivot.quaternion.identity();
+      rotorPivot.updateMatrixWorld(true);
+
+      try {
+        const pocketStep = TWO_PI / EUROPEAN_POCKET_COUNT;
+        let bestPhase = 0;
+        let bestPhaseScore = -Infinity;
+        let bestPhaseSamples = 0;
+
+        for (
+          let candidateIndex = 0;
+          candidateIndex < GLB_POCKET_PHASE_CANDIDATES;
+          candidateIndex += 1
+        ) {
+          const phase =
+            (candidateIndex / GLB_POCKET_PHASE_CANDIDATES) * pocketStep;
+          let score = 0;
+          let samples = 0;
+
+          for (let pocketIndex = 0; pocketIndex < EUROPEAN_POCKET_COUNT; pocketIndex += 1) {
+            const centerAngle = phase + pocketIndex * pocketStep;
+            const leftBoundaryAngle = centerAngle - pocketStep / 2;
+            const rightBoundaryAngle = centerAngle + pocketStep / 2;
+
+            for (const radius of GLB_POCKET_PHASE_PROBE_RADII) {
+              const center = measureFullVisibleSurfaceAt(
+                Math.sin(centerAngle) * radius,
+                Math.cos(centerAngle) * radius,
+              );
+              const leftBoundary = measureFullVisibleSurfaceAt(
+                Math.sin(leftBoundaryAngle) * radius,
+                Math.cos(leftBoundaryAngle) * radius,
+              );
+              const rightBoundary = measureFullVisibleSurfaceAt(
+                Math.sin(rightBoundaryAngle) * radius,
+                Math.cos(rightBoundaryAngle) * radius,
+              );
+              if (!center || !leftBoundary || !rightBoundary) continue;
+              const boundaryY = (leftBoundary.y + rightBoundary.y) / 2;
+              score += boundaryY - center.y;
+              samples += 1;
+            }
+          }
+
+          const averageScore = samples > 0 ? score / samples : -Infinity;
+          if (averageScore > bestPhaseScore) {
+            bestPhaseScore = averageScore;
+            bestPhase = phase;
+            bestPhaseSamples = samples;
+          }
+        }
+
+        const radii: number[] = [];
+        for (
+          let radius = GLB_POCKET_PROFILE_INNER_RADIUS;
+          radius <= GLB_POCKET_PROFILE_OUTER_RADIUS + 0.000001;
+          radius += GLB_POCKET_PROFILE_STEP
+        ) {
+          radii.push(Number(radius.toFixed(6)));
+        }
+
+        const sectors = Array.from(
+          { length: EUROPEAN_POCKET_COUNT },
+          (_, pocketIndex) => {
+            const centerAngle = bestPhase + pocketIndex * pocketStep;
+            const leftBoundaryAngle = centerAngle - pocketStep / 2;
+            const rightBoundaryAngle = centerAngle + pocketStep / 2;
+
+            const profile = radii.map((radius) => {
+              const center = measureFullVisibleSurfaceAt(
+                Math.sin(centerAngle) * radius,
+                Math.cos(centerAngle) * radius,
+              );
+              const leftBoundary = measureFullVisibleSurfaceAt(
+                Math.sin(leftBoundaryAngle) * radius,
+                Math.cos(leftBoundaryAngle) * radius,
+              );
+              const rightBoundary = measureFullVisibleSurfaceAt(
+                Math.sin(rightBoundaryAngle) * radius,
+                Math.cos(rightBoundaryAngle) * radius,
+              );
+              const boundaryY =
+                leftBoundary && rightBoundary
+                  ? (leftBoundary.y + rightBoundary.y) / 2
+                  : null;
+              const reliefWorld =
+                center && boundaryY !== null ? boundaryY - center.y : null;
+              return {
+                radius,
+                centerY: center === null ? null : Number(center.y.toFixed(6)),
+                leftBoundaryY:
+                  leftBoundary === null
+                    ? null
+                    : Number(leftBoundary.y.toFixed(6)),
+                rightBoundaryY:
+                  rightBoundary === null
+                    ? null
+                    : Number(rightBoundary.y.toFixed(6)),
+                reliefWorld:
+                  reliefWorld === null
+                    ? null
+                    : Number(reliefWorld.toFixed(6)),
+                reliefMm:
+                  reliefWorld === null
+                    ? null
+                    : Number((reliefWorld * MM_PER_WORLD_UNIT).toFixed(3)),
+              };
+            });
+
+            const reliefSamples = profile.filter(
+              (sample) => sample.reliefWorld !== null,
+            );
+            const maxReliefSample = reliefSamples.reduce<
+              (typeof reliefSamples)[number] | null
+            >(
+              (best, sample) =>
+                best === null ||
+                (sample.reliefWorld ?? -Infinity) >
+                  (best.reliefWorld ?? -Infinity)
+                  ? sample
+                  : best,
+              null,
+            );
+
+            return {
+              pocketIndex,
+              centerAngleRadians: Number(
+                normalizedAngle(centerAngle).toFixed(9),
+              ),
+              centerAngleDegrees: Number(
+                THREE.MathUtils.radToDeg(
+                  normalizedAngle(centerAngle),
+                ).toFixed(6),
+              ),
+              maxReliefWorld: maxReliefSample?.reliefWorld ?? null,
+              maxReliefMm: maxReliefSample?.reliefMm ?? null,
+              maxReliefRadius: maxReliefSample?.radius ?? null,
+              profile,
+            };
+          },
+        );
+
+        const meanRadialProfile = radii.map((radius, radiusIndex) => {
+          const samples = sectors
+            .map((sector) => sector.profile[radiusIndex])
+            .filter(
+              (sample) =>
+                sample?.centerY !== null &&
+                sample?.leftBoundaryY !== null &&
+                sample?.rightBoundaryY !== null &&
+                sample?.reliefWorld !== null,
+            );
+          if (samples.length === 0) {
+            return {
+              radius,
+              centerY: null,
+              boundaryY: null,
+              reliefWorld: null,
+              reliefMm: null,
+            };
+          }
+          const mean = (values: number[]) =>
+            values.reduce((sum, value) => sum + value, 0) / values.length;
+          const centerY = mean(samples.map((sample) => sample.centerY!));
+          const boundaryY = mean(
+            samples.map(
+              (sample) =>
+                (sample.leftBoundaryY! + sample.rightBoundaryY!) / 2,
+            ),
+          );
+          const reliefWorld = boundaryY - centerY;
+          return {
+            radius,
+            centerY: Number(centerY.toFixed(6)),
+            boundaryY: Number(boundaryY.toFixed(6)),
+            reliefWorld: Number(reliefWorld.toFixed(6)),
+            reliefMm: Number(
+              (reliefWorld * MM_PER_WORLD_UNIT).toFixed(3),
+            ),
+          };
+        });
+
+        const reliefThresholdWorld = 0.005;
+        const relievedSamples = meanRadialProfile.filter(
+          (sample) =>
+            sample.reliefWorld !== null &&
+            sample.reliefWorld > reliefThresholdWorld,
+        );
+        const reliefEndRadius =
+          relievedSamples.length === 0
+            ? null
+            : relievedSamples[relievedSamples.length - 1].radius;
+
+        const report = {
+          schemaVersion: 'roulette-glb-pocket-geometry-v1',
+          pocketCount: EUROPEAN_POCKET_COUNT,
+          detectedPhaseRadians: Number(
+            normalizedAngle(bestPhase).toFixed(9),
+          ),
+          detectedPhaseDegrees: Number(
+            THREE.MathUtils.radToDeg(
+              normalizedAngle(bestPhase),
+            ).toFixed(6),
+          ),
+          phaseScoreWorld: Number(bestPhaseScore.toFixed(6)),
+          phaseScoreMm: Number(
+            (bestPhaseScore * MM_PER_WORLD_UNIT).toFixed(3),
+          ),
+          phaseSamples: bestPhaseSamples,
+          profileInnerRadius: GLB_POCKET_PROFILE_INNER_RADIUS,
+          profileOuterRadius: GLB_POCKET_PROFILE_OUTER_RADIUS,
+          profileStep: GLB_POCKET_PROFILE_STEP,
+          reliefThresholdWorld,
+          reliefThresholdMm:
+            reliefThresholdWorld * MM_PER_WORLD_UNIT,
+          reliefEndRadius,
+          meanRadialProfile,
+          sectors,
+        };
+
+        stage.dataset.glbPocketGeometryReport = JSON.stringify(report);
+        console.info(
+          'GLB_POCKET_GEOMETRY_REPORT',
+          JSON.stringify({
+            schemaVersion: report.schemaVersion,
+            pocketCount: report.pocketCount,
+            detectedPhaseDegrees: report.detectedPhaseDegrees,
+            phaseScoreMm: report.phaseScoreMm,
+            reliefEndRadius: report.reliefEndRadius,
+            meanRadialProfile: report.meanRadialProfile,
+            sectors: report.sectors.map((sector) => ({
+              pocketIndex: sector.pocketIndex,
+              centerAngleDegrees: sector.centerAngleDegrees,
+              maxReliefMm: sector.maxReliefMm,
+              maxReliefRadius: sector.maxReliefRadius,
+            })),
+          }),
+        );
+        return report;
+      } finally {
+        rotorPivot.quaternion.copy(previousRotorQuaternion);
+        rotorPivot.updateMatrixWorld(true);
+      }
+    };
+
+    const runVisibleNumberMappingAudit = () => {
+      if (!rotorPivot) return null;
+
+      const previousRotorQuaternion = rotorPivot.quaternion.clone();
+      rotorPivot.quaternion.identity();
+      rotorPivot.updateMatrixWorld(true);
+
+      const pocketStep = TWO_PI / EUROPEAN_POCKET_COUNT;
+      const normalizeSignedAngle = (angle: number) => {
+        let result = angle % TWO_PI;
+        if (result > Math.PI) result -= TWO_PI;
+        if (result < -Math.PI) result += TWO_PI;
+        return result;
+      };
+      const classify = (sample: {
+        r: number;
+        g: number;
+        b: number;
+      } | null) => {
+        if (!sample) {
+          return {
+            kind: 'missing' as const,
+            greenScore: -1,
+            redScore: -1,
+            darkness: -1,
+          };
+        }
+        const r = sample.r / 255;
+        const g = sample.g / 255;
+        const b = sample.b / 255;
+        const greenScore = g - (r + b) / 2;
+        const redScore = r - (g + b) / 2;
+        const darkness = 1 - (r + g + b) / 3;
+        const kind =
+          greenScore > 0.08 && greenScore > redScore
+            ? ('green' as const)
+            : redScore > 0.07
+              ? ('red' as const)
+              : ('black' as const);
+        return { kind, greenScore, redScore, darkness };
+      };
+      const expectedKind = (number: number) =>
+        number === 0
+          ? ('green' as const)
+          : EUROPEAN_RED_NUMBERS.has(number)
+            ? ('red' as const)
+            : ('black' as const);
+      const scoreExpected = (
+        sample: ReturnType<typeof classify>,
+        expected: 'green' | 'red' | 'black',
+      ) => {
+        if (sample.kind === 'missing') return -4;
+        if (expected === 'green') {
+          return sample.greenScore * 5 - Math.max(0, sample.redScore) * 2;
+        }
+        if (expected === 'red') {
+          return sample.redScore * 3 - Math.max(0, sample.greenScore);
+        }
+        return (
+          sample.darkness * 1.5 -
+          Math.max(0, sample.redScore) * 1.5 -
+          Math.max(0, sample.greenScore)
+        );
+      };
+
+      try {
+        let best:
+          | {
+              radius: number;
+              zeroAngle: number;
+              direction: 1 | -1;
+              score: number;
+              matches: number;
+            }
+          | null = null;
+
+        for (
+          let radius = GLB_NUMBER_MAPPING_RADIUS_MIN;
+          radius <= GLB_NUMBER_MAPPING_RADIUS_MAX + 0.000001;
+          radius += GLB_NUMBER_MAPPING_RADIUS_STEP
+        ) {
+          let coarseZeroAngle = 0;
+          let coarseGreenScore = -Infinity;
+
+          for (let degree = 0; degree < 360; degree += 1) {
+            const angle = THREE.MathUtils.degToRad(degree);
+            const sample = sampleRouletteVisualTextureColorAt(
+              [rotorPivot],
+              Math.sin(angle) * radius,
+              Math.cos(angle) * radius,
+            );
+            const classified = classify(sample);
+            if (classified.greenScore > coarseGreenScore) {
+              coarseGreenScore = classified.greenScore;
+              coarseZeroAngle = angle;
+            }
+          }
+
+          for (
+            let phaseIndex = 0;
+            phaseIndex < GLB_NUMBER_MAPPING_PHASE_STEPS;
+            phaseIndex += 1
+          ) {
+            const phaseAlpha =
+              GLB_NUMBER_MAPPING_PHASE_STEPS === 1
+                ? 0.5
+                : phaseIndex / (GLB_NUMBER_MAPPING_PHASE_STEPS - 1);
+            const zeroAngle =
+              coarseZeroAngle +
+              THREE.MathUtils.lerp(-pocketStep / 2, pocketStep / 2, phaseAlpha);
+
+            for (const direction of [1, -1] as const) {
+              let score = 0;
+              let matches = 0;
+
+              for (
+                let sequenceIndex = 0;
+                sequenceIndex < EUROPEAN_SEQUENCE.length;
+                sequenceIndex += 1
+              ) {
+                const number = EUROPEAN_SEQUENCE[sequenceIndex];
+                const angle =
+                  zeroAngle + direction * sequenceIndex * pocketStep;
+                const sample = sampleRouletteVisualTextureColorAt(
+                  [rotorPivot],
+                  Math.sin(angle) * radius,
+                  Math.cos(angle) * radius,
+                );
+                const classified = classify(sample);
+                const expected = expectedKind(number);
+                score += scoreExpected(classified, expected);
+                if (classified.kind === expected) matches += 1;
+              }
+
+              if (
+                best === null ||
+                matches > best.matches ||
+                (matches === best.matches && score > best.score)
+              ) {
+                best = {
+                  radius: Number(radius.toFixed(6)),
+                  zeroAngle,
+                  direction,
+                  score,
+                  matches,
+                };
+              }
+            }
+          }
+        }
+
+        if (!best) return null;
+
+        let refined = best;
+        const coarseResolution =
+          pocketStep / Math.max(1, GLB_NUMBER_MAPPING_PHASE_STEPS - 1);
+        for (let refineIndex = 0; refineIndex <= 20; refineIndex += 1) {
+          const offset =
+            THREE.MathUtils.lerp(-coarseResolution, coarseResolution, refineIndex / 20);
+          const zeroAngle = best.zeroAngle + offset;
+          let score = 0;
+          let matches = 0;
+
+          for (
+            let sequenceIndex = 0;
+            sequenceIndex < EUROPEAN_SEQUENCE.length;
+            sequenceIndex += 1
+          ) {
+            const number = EUROPEAN_SEQUENCE[sequenceIndex];
+            const angle =
+              zeroAngle + best.direction * sequenceIndex * pocketStep;
+            const sample = sampleRouletteVisualTextureColorAt(
+              [rotorPivot],
+              Math.sin(angle) * best.radius,
+              Math.cos(angle) * best.radius,
+            );
+            const classified = classify(sample);
+            const expected = expectedKind(number);
+            score += scoreExpected(classified, expected);
+            if (classified.kind === expected) matches += 1;
+          }
+
+          if (
+            matches > refined.matches ||
+            (matches === refined.matches && score > refined.score)
+          ) {
+            refined = {
+              radius: best.radius,
+              zeroAngle,
+              direction: best.direction,
+              score,
+              matches,
+            };
+          }
+        }
+
+        const zeroAngle = normalizedAngle(refined.zeroAngle);
+        const sequence = EUROPEAN_SEQUENCE.map((number, sequenceIndex) => {
+          const angle = normalizedAngle(
+            refined.zeroAngle +
+              refined.direction * sequenceIndex * pocketStep,
+          );
+          const sample = sampleRouletteVisualTextureColorAt(
+            [rotorPivot],
+            Math.sin(angle) * refined.radius,
+            Math.cos(angle) * refined.radius,
+          );
+          const classified = classify(sample);
+          return {
+            textureIndex: sequenceIndex,
+            number,
+            angleRadians: Number(angle.toFixed(9)),
+            angleDegrees: Number(
+              THREE.MathUtils.radToDeg(angle).toFixed(6),
+            ),
+            expectedColor: expectedKind(number),
+            observedColor: classified.kind,
+            rgb: sample
+              ? { r: sample.r, g: sample.g, b: sample.b }
+              : null,
+            uv: sample?.uv ?? null,
+            source: sample?.source ?? null,
+            texture: sample?.texture ?? null,
+          };
+        });
+
+        const report = {
+          schemaVersion: 'roulette-glb-number-mapping-v1',
+          radius: refined.radius,
+          visibleZeroAngleRadians: Number(zeroAngle.toFixed(9)),
+          visibleZeroAngleDegrees: Number(
+            THREE.MathUtils.radToDeg(zeroAngle).toFixed(6),
+          ),
+          sequenceDirection:
+            refined.direction === 1 ? 'positive' : 'negative',
+          directionSign: refined.direction,
+          sectorStepDegrees: Number(
+            THREE.MathUtils.radToDeg(pocketStep).toFixed(9),
+          ),
+          colorMatches: refined.matches,
+          colorMatchRate: Number(
+            (refined.matches / EUROPEAN_SEQUENCE.length).toFixed(6),
+          ),
+          colorScore: Number(refined.score.toFixed(6)),
+          physicsZeroAngleDegrees: 0,
+          signedPhysicsMinusVisibleZeroDegrees: Number(
+            THREE.MathUtils.radToDeg(
+              normalizeSignedAngle(-zeroAngle),
+            ).toFixed(6),
+          ),
+          sequence,
+        };
+
+        stage.dataset.glbNumberMappingReport = JSON.stringify(report);
+        console.info(
+          'GLB_NUMBER_MAPPING_REPORT',
+          JSON.stringify(report),
+        );
+        return report;
+      } finally {
+        rotorPivot.quaternion.copy(previousRotorQuaternion);
+        rotorPivot.updateMatrixWorld(true);
+      }
+    };
+
     const measureVisibleDeflectors = (): Part4DeflectorAudit => {
       const radialStep =
         (PART4_DEFLECTOR_SCAN_OUTER_RADIUS -
