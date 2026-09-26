@@ -1,12 +1,6 @@
 name: Roulette Pocket Slip Diagnosis
 
 on:
-  push:
-    branches:
-      - feature/roulette
-    paths:
-      - '.github/workflows/roulette-pocket-slip-diagnosis.yml'
-      - 'artifacts/roulette-physics-lab/src/Part2SceneViewport.tsx'
   workflow_dispatch:
 
 jobs:
