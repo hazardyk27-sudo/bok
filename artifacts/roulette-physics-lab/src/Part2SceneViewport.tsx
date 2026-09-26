@@ -80,8 +80,11 @@ const GLB_COLLIDER_PARITY_NORMAL_EPSILON_DEGREES = 0.1;
 const MM_PER_WORLD_UNIT = 1000 / ROULETTE_WORLD_UNITS_PER_METER;
 const GLB_COLLIDER_PARITY_SCAN_INNER_RADIUS = 1.48;
 const GLB_COLLIDER_PARITY_SCAN_OUTER_RADIUS = 2.44;
-const GLB_COLLIDER_PARITY_RADIAL_SAMPLES = 25;
-const GLB_COLLIDER_PARITY_ANGULAR_SAMPLES = 72;
+// Exact-geometry mode is intentionally sampled far more densely than the
+// legacy approximation audit. 49 radial rings x 360 azimuths gives 17,640
+// independent visual-vs-physics probes across the complete ball contact band.
+const GLB_COLLIDER_PARITY_RADIAL_SAMPLES = 49;
+const GLB_COLLIDER_PARITY_ANGULAR_SAMPLES = 360;
 const GLB_POCKET_PHASE_PROBE_RADII = [1.49, 1.52, 1.55] as const;
 const GLB_POCKET_PHASE_CANDIDATES = 45;
 const GLB_POCKET_PROFILE_INNER_RADIUS = 1.48;
@@ -1115,20 +1118,33 @@ function makePart3OuterTrackTrimesh(verticalOffset = 0) {
   return makePart2RaceChannelTrimesh(verticalOffset);
 }
 
-function makeWorldTrimeshFromObject(object: THREE.Object3D) {
+function makeTrimeshFromObjectRelativeTo(
+  object: THREE.Object3D,
+  reference: THREE.Object3D | null,
+) {
   const vertices: number[] = [];
   const indices: number[] = [];
-  object.updateMatrixWorld(true);
+  object.updateWorldMatrix(true, true);
+  reference?.updateWorldMatrix(true, false);
+  const worldToReference = reference
+    ? new THREE.Matrix4().copy(reference.matrixWorld).invert()
+    : new THREE.Matrix4().identity();
+  const localFromMesh = new THREE.Matrix4();
+  const localPosition = new THREE.Vector3();
+
   object.traverse((child) => {
     if (!(child instanceof THREE.Mesh)) return;
     const geometry = child.geometry;
     const position = geometry.getAttribute('position');
     if (!position) return;
+
+    localFromMesh.multiplyMatrices(worldToReference, child.matrixWorld);
     const base = vertices.length / 3;
-    const worldPosition = new THREE.Vector3();
     for (let index = 0; index < position.count; index += 1) {
-      worldPosition.fromBufferAttribute(position, index).applyMatrix4(child.matrixWorld);
-      vertices.push(worldPosition.x, worldPosition.y, worldPosition.z);
+      localPosition
+        .fromBufferAttribute(position, index)
+        .applyMatrix4(localFromMesh);
+      vertices.push(localPosition.x, localPosition.y, localPosition.z);
     }
     if (geometry.index) {
       for (let index = 0; index < geometry.index.count; index += 1) {
@@ -1140,10 +1156,21 @@ function makeWorldTrimeshFromObject(object: THREE.Object3D) {
       }
     }
   });
+
+  if (vertices.length === 0 || indices.length === 0) {
+    throw new Error(
+      `GLB collider extraction produced no triangles for ${object.name || 'unnamed-object'}`,
+    );
+  }
+
   return {
     vertices: new Float32Array(vertices),
     indices: new Uint32Array(indices),
   };
+}
+
+function makeWorldTrimeshFromObject(object: THREE.Object3D) {
+  return makeTrimeshFromObjectRelativeTo(object, null);
 }
 
 function part4SpawnPosition(probe: (typeof PART4_PROBES)[number]) {
@@ -7526,7 +7553,7 @@ export function Part2SceneViewport({
             },
             sharedTransformPipeline: true,
             part2Only: true,
-            rawGlbUsedAsCollider: false,
+            rawGlbUsedAsCollider: part6FullSpinRouteActive,
           };
 
           stationaryGroup = new THREE.Group();
@@ -7652,6 +7679,46 @@ export function Part2SceneViewport({
           world.maxCcdSubsteps = ROULETTE_MAX_CCD_SUBSTEPS;
           const stationaryBody = world.createRigidBody(RAPIER.RigidBodyDesc.fixed());
             if (
+              validationMode === 'part3' &&
+              part6FullSpinRouteActive
+            ) {
+              // Exact parity mode: the collider IS the same normalized GLB
+              // stationary geometry that Three.js renders. No analytic race,
+              // measured cuboids, bowl bridge or hidden support geometry is
+              // allowed in this path.
+              const actualStationaryMesh = makeTrimeshFromObjectRelativeTo(
+                stationaryGroup,
+                wheelRoot,
+              );
+              part3TrackCollider = world.createCollider(
+                RAPIER.ColliderDesc.trimesh(
+                  actualStationaryMesh.vertices,
+                  actualStationaryMesh.indices,
+                  RAPIER.TriMeshFlags.FIX_INTERNAL_EDGES |
+                    RAPIER.TriMeshFlags.ORIENTED,
+                )
+                  .setFriction(activePart3TrackFriction)
+                  .setRestitution(0.01)
+                  .setCollisionGroups(
+                    STATIONARY_COLLISION_GROUP |
+                      (BALL_COLLISION_GROUP << 16),
+                  ),
+                stationaryBody,
+              );
+              part3TrackVerticalOffset = 0;
+              part2RaceVerticalOffset = 0;
+              part3ColliderRoles.set(
+                part3TrackCollider.handle,
+                'exact-glb-stationary-trimesh',
+              );
+              console.info(
+                'GLB_EXACT_STATIONARY_COLLIDER',
+                JSON.stringify({
+                  vertices: actualStationaryMesh.vertices.length / 3,
+                  triangles: actualStationaryMesh.indices.length / 3,
+                }),
+              );
+            } else if (
               validationMode === 'part3' &&
               (outerLaneOnly || outerLaneSpinOnly)
             ) {
@@ -7790,6 +7857,7 @@ export function Part2SceneViewport({
           }
            if (
              validationMode === 'part3' &&
+             !part6FullSpinRouteActive &&
              !geometryDiagnosticOnly &&
              !part1ProbeOnly &&
              part3TrackCollider
@@ -7876,13 +7944,15 @@ export function Part2SceneViewport({
                stationaryBody,
              );
            }
-          world.createCollider(
-            RAPIER.ColliderDesc.cylinder(0.34, COLLIDER_PROFILE.centerGuardRadius)
-              .setTranslation(0, -0.10, 0)
-              .setFriction(0.38)
-              .setRestitution(0.01),
-            stationaryBody,
-          );
+          if (!part6FullSpinRouteActive) {
+            world.createCollider(
+              RAPIER.ColliderDesc.cylinder(0.34, COLLIDER_PROFILE.centerGuardRadius)
+                .setTranslation(0, -0.10, 0)
+                .setFriction(0.38)
+                .setRestitution(0.01),
+              stationaryBody,
+            );
+          }
 
             if (validationMode === 'part3' || validationMode === 'part4') {
             const initialRotorAngle = normalizedAngle(rotorAngleRef.current);
@@ -7897,56 +7967,89 @@ export function Part2SceneViewport({
                 }),
             );
               if (validationMode === 'part3') {
-               const activePocketOuterLipY =
-                 part6FullSpinRouteActive &&
-                 part3BowlBridgeProfile.length > 0
-                   ? part3BowlBridgeProfile[0][1]
-                   : POCKET_OUTER_LIP_Y;
-               part3PocketColliders = addKinematicPocketSystem(
-                 world,
-                 rotorBody,
-                 activePocketOuterLipY,
-               );
-               part3PocketColliders.forEach((collider, index) => {
-                 part3ColliderRoles.set(
-                   collider.handle,
-                   index === 0
-                     ? 'pocket-floor-trimesh'
-                     : index === 1
-                       ? 'pocket-outer-lip-trimesh'
-                       : 'pocket-fret-cuboid',
+               if (part6FullSpinRouteActive) {
+                 // Extract the rendered rotor in rotorPivot-local coordinates.
+                 // The Rapier body receives the same Y rotation as rotorPivot,
+                 // so this avoids both double-rotation and any basis mismatch.
+                 const actualRotorMesh = makeTrimeshFromObjectRelativeTo(
+                   rotorGroup,
+                   rotorPivot,
                  );
-               });
-               const pocketInnerGuard = addKinematicPocketInnerGuard(
-                 world,
-                 rotorBody,
-               );
-               part3PocketColliders.push(pocketInnerGuard);
-               part3ColliderRoles.set(
-                 pocketInnerGuard.handle,
-                 'pocket-inner-retaining-ring',
-               );
-               const pocketCatchFloor = world.createCollider(
-                 RAPIER.ColliderDesc.cylinder(
-                   0.04,
-                   Math.max(
-                     POCKET_FLOOR_OUTER_RADIUS + 0.06,
-                     PART3_POCKET_PROBE_RADIUS + BALL_RADIUS + 0.02,
-                   ),
-                 )
-                   .setTranslation(0, POCKET_FLOOR_Y - BALL_RADIUS - 0.04, 0)
-                   .setFriction(0.42)
-                   .setRestitution(0.02)
-                   .setCollisionGroups(
-                     ROTOR_COLLISION_GROUP | (BALL_COLLISION_GROUP << 16),
-                   ),
-                 rotorBody,
-               );
-               part3PocketColliders.push(pocketCatchFloor);
-               part3ColliderRoles.set(
-                 pocketCatchFloor.handle,
-                 'pocket-floor-catch-underlay',
-               );
+                 const exactRotorCollider = world.createCollider(
+                   RAPIER.ColliderDesc.trimesh(
+                     actualRotorMesh.vertices,
+                     actualRotorMesh.indices,
+                     RAPIER.TriMeshFlags.FIX_INTERNAL_EDGES |
+                       RAPIER.TriMeshFlags.ORIENTED,
+                   )
+                     .setFriction(0.42)
+                     .setRestitution(0.02)
+                     .setCollisionGroups(
+                       ROTOR_COLLISION_GROUP |
+                         (BALL_COLLISION_GROUP << 16),
+                     ),
+                   rotorBody,
+                 );
+                 part3PocketColliders = [exactRotorCollider];
+                 part3ColliderRoles.set(
+                   exactRotorCollider.handle,
+                   'exact-glb-rotor-trimesh',
+                 );
+                 console.info(
+                   'GLB_EXACT_ROTOR_COLLIDER',
+                   JSON.stringify({
+                     vertices: actualRotorMesh.vertices.length / 3,
+                     triangles: actualRotorMesh.indices.length / 3,
+                   }),
+                 );
+               } else {
+                 const activePocketOuterLipY = POCKET_OUTER_LIP_Y;
+                 part3PocketColliders = addKinematicPocketSystem(
+                   world,
+                   rotorBody,
+                   activePocketOuterLipY,
+                 );
+                 part3PocketColliders.forEach((collider, index) => {
+                   part3ColliderRoles.set(
+                     collider.handle,
+                     index === 0
+                       ? 'pocket-floor-trimesh'
+                       : index === 1
+                         ? 'pocket-outer-lip-trimesh'
+                         : 'pocket-fret-cuboid',
+                   );
+                 });
+                 const pocketInnerGuard = addKinematicPocketInnerGuard(
+                   world,
+                   rotorBody,
+                 );
+                 part3PocketColliders.push(pocketInnerGuard);
+                 part3ColliderRoles.set(
+                   pocketInnerGuard.handle,
+                   'pocket-inner-retaining-ring',
+                 );
+                 const pocketCatchFloor = world.createCollider(
+                   RAPIER.ColliderDesc.cylinder(
+                     0.04,
+                     Math.max(
+                       POCKET_FLOOR_OUTER_RADIUS + 0.06,
+                       PART3_POCKET_PROBE_RADIUS + BALL_RADIUS + 0.02,
+                     ),
+                   )
+                     .setTranslation(0, POCKET_FLOOR_Y - BALL_RADIUS - 0.04, 0)
+                     .setFriction(0.42)
+                     .setRestitution(0.02)
+                     .setCollisionGroups(
+                       ROTOR_COLLISION_GROUP | (BALL_COLLISION_GROUP << 16),
+                     ),
+                   rotorBody,
+                 );
+                 part3PocketColliders.push(pocketCatchFloor);
+                 part3ColliderRoles.set(
+                   pocketCatchFloor.handle,
+                   'pocket-floor-catch-underlay',
+                 );
+               }
              } else {
                rotorColliders = addKinematicRotorBand(world, rotorBody);
              }
