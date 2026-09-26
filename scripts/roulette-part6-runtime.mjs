@@ -16,6 +16,7 @@ const expectedSeedCount = Number(
 );
 
 let telemetry = null;
+let glbColliderParity = null;
 const seedTelemetry = [];
 let lastStepProgress = null;
 let lastDiagnosticStage = null;
@@ -85,6 +86,7 @@ const persistPartialResult = (extra = {}) => {
     partial: true,
     seedTelemetry,
     telemetry,
+    glbColliderParity,
     startupConsole,
     pageErrors,
     requestFailures,
@@ -125,6 +127,22 @@ try {
           location: message.location(),
         }),
     );
+
+    if (text.startsWith('GLB_COLLIDER_PARITY_REPORT ')) {
+      const raw = text.slice('GLB_COLLIDER_PARITY_REPORT '.length);
+      try {
+        glbColliderParity = JSON.parse(raw);
+        console.log('PART6_GLB_COLLIDER_PARITY ' + raw);
+        persistPartialResult({
+          expectedSeedCount,
+          glbColliderParity,
+          seedResultsCaptured: seedTelemetry.length,
+        });
+      } catch (error) {
+        console.error('Could not parse GLB collider parity payload:', error);
+      }
+      return;
+    }
 
     if (text.startsWith('PART6_DIAGNOSTIC_STAGE ')) {
       const raw = text.slice('PART6_DIAGNOSTIC_STAGE '.length);
@@ -331,6 +349,7 @@ try {
     terminalWaitError,
     seedTelemetry,
     telemetry,
+    glbColliderParity,
     reportText,
   };
 
@@ -356,6 +375,12 @@ try {
     pocketEntryRate: telemetry?.pocketEntryRate ?? null,
     settleRate: telemetry?.settleRate ?? null,
     safetyFailureRate: telemetry?.safetyFailureRate ?? null,
+    visualParityStatus: telemetry?.visualParityStatus ?? null,
+    visualParityFailureCount: telemetry?.visualParityFailureCount ?? null,
+    glbColliderParityPassed: glbColliderParity?.passed ?? null,
+    glbColliderParityMaxAbsMm: glbColliderParity?.maxAbsMm ?? null,
+    glbColliderParityMaxNormalAngleDegrees:
+      glbColliderParity?.maxNormalAngleDegrees ?? null,
   };
   console.log('PART6_RUNTIME_SUMMARY ' + JSON.stringify(summary));
 
@@ -368,6 +393,27 @@ try {
   if (!telemetry) {
     throw new Error(
       'PART 6 report reached a terminal DOM state without a structured telemetry payload.',
+    );
+  }
+  if (telemetry.visualParityStatus !== 'passed') {
+    throw new Error(
+      'ROULETTE_VISUAL_SURFACE_PARITY_FAILED: ' +
+        String(telemetry.visualParityFailureCount ?? 'unknown') +
+        ' seed(s) failed GLB surface contact parity.',
+    );
+  }
+  if (!glbColliderParity) {
+    throw new Error(
+      'ROULETTE_GLB_COLLIDER_PARITY_MISSING: no structured GLB/collider parity report was captured.',
+    );
+  }
+  if (glbColliderParity.passed !== true) {
+    throw new Error(
+      'ROULETTE_GLB_COLLIDER_PARITY_FAILED: max gap ' +
+        String(glbColliderParity.maxAbsMm ?? 'unknown') +
+        ' mm, max normal delta ' +
+        String(glbColliderParity.maxNormalAngleDegrees ?? 'unknown') +
+        ' deg.',
     );
   }
 } finally {
