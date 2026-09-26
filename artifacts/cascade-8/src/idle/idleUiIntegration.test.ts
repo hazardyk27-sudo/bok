@@ -320,13 +320,9 @@ describe("Businesses Stadium milestone visuals", () => {
     expect(componentsSource).toContain("row.dataset.visualStage = visualStage");
   });
 
-  it("shows a Stadium milestone badge that changes with progression", () => {
-    expect(componentsSource).toContain("data-business-milestone");
-    expect(componentsSource).toContain('"STADIUM"');
-    expect(componentsSource).toContain('`${visualPrefix} // LOCAL`');
-    expect(componentsSource).toContain('`${visualPrefix} // PRO`');
-    expect(componentsSource).toContain('`${visualPrefix} // ELITE`');
-    expect(componentsSource).toContain('`${visualPrefix} // ICON`');
+  it("keeps Stadium progression visual-only instead of adding another card label", () => {
+    expect(componentsSource).not.toContain("data-business-milestone");
+    expect(componentsSource).toContain("row.dataset.visualStage = visualStage");
   });
 
   it("styles each milestone with increasingly premium lighting and architecture", () => {
@@ -351,9 +347,8 @@ describe("Businesses Club Store milestone visuals", () => {
     expect(componentsSource).toContain("store-premium-rack");
   });
 
-  it("keeps the shared level milestone mapping while using Club Store labels", () => {
-    expect(componentsSource).toContain('business.businessId === "club-store"');
-    expect(componentsSource).toContain("data-business-milestone");
+  it("keeps the shared level milestone mapping without an extra Club Store text badge", () => {
+    expect(componentsSource).not.toContain("data-business-milestone");
     expect(componentsSource).toContain("row.dataset.visualStage = visualStage");
   });
 
@@ -386,9 +381,8 @@ describe("Businesses Fan Club milestone visuals", () => {
     expect(componentsSource).toContain("fan-scarves");
   });
 
-  it("uses Fan Club milestone labels through the shared progression stage map", () => {
-    expect(componentsSource).toContain('"FAN CLUB"');
-    expect(componentsSource).toContain("data-business-milestone");
+  it("uses the shared progression stage map without an extra Fan Club text badge", () => {
+    expect(componentsSource).not.toContain("data-business-milestone");
     expect(componentsSource).toContain("row.dataset.visualStage = visualStage");
   });
 
