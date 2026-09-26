@@ -2755,12 +2755,24 @@ export function Part2SceneViewport({
           let score = 0;
           let samples = 0;
 
-          for (let pocketIndex = 0; pocketIndex < EUROPEAN_POCKET_COUNT; pocketIndex += 1) {
+          const representativePocketIndices = Array.from(
+            { length: 12 },
+            (_, index) =>
+              Math.floor((index * EUROPEAN_POCKET_COUNT) / 12),
+          );
+          const representativeRadii = [
+            GLB_POCKET_PHASE_PROBE_RADII[0],
+            GLB_POCKET_PHASE_PROBE_RADII[
+              GLB_POCKET_PHASE_PROBE_RADII.length - 1
+            ],
+          ];
+
+          for (const pocketIndex of representativePocketIndices) {
             const centerAngle = phase + pocketIndex * pocketStep;
             const leftBoundaryAngle = centerAngle - pocketStep / 2;
             const rightBoundaryAngle = centerAngle + pocketStep / 2;
 
-            for (const radius of GLB_POCKET_PHASE_PROBE_RADII) {
+            for (const radius of representativeRadii) {
               const center = measureFullVisibleSurfaceAt(
                 Math.sin(centerAngle) * radius,
                 Math.cos(centerAngle) * radius,
@@ -3058,14 +3070,15 @@ export function Part2SceneViewport({
             }
           | null = null;
 
+        let coarseRadius = GLB_NUMBER_MAPPING_RADIUS_MIN;
+        let coarseZeroAngle = 0;
+        let coarseGreenScore = -Infinity;
+
         for (
           let radius = GLB_NUMBER_MAPPING_RADIUS_MIN;
           radius <= GLB_NUMBER_MAPPING_RADIUS_MAX + 0.000001;
           radius += GLB_NUMBER_MAPPING_RADIUS_STEP
         ) {
-          let coarseZeroAngle = 0;
-          let coarseGreenScore = -Infinity;
-
           for (let degree = 0; degree < 360; degree += 2) {
             const angle = THREE.MathUtils.degToRad(degree);
             const sample = sampleRouletteVisualTextureColorAt(
@@ -3077,56 +3090,61 @@ export function Part2SceneViewport({
             if (classified.greenScore > coarseGreenScore) {
               coarseGreenScore = classified.greenScore;
               coarseZeroAngle = angle;
+              coarseRadius = radius;
             }
           }
+        }
 
-          for (
-            let phaseIndex = 0;
-            phaseIndex < GLB_NUMBER_MAPPING_PHASE_STEPS;
-            phaseIndex += 1
-          ) {
-            const phaseAlpha =
-              phaseIndex / (GLB_NUMBER_MAPPING_PHASE_STEPS - 1);
-            const zeroAngle =
-              coarseZeroAngle +
-              THREE.MathUtils.lerp(-pocketStep / 2, pocketStep / 2, phaseAlpha);
+        for (
+          let phaseIndex = 0;
+          phaseIndex < GLB_NUMBER_MAPPING_PHASE_STEPS;
+          phaseIndex += 1
+        ) {
+          const phaseAlpha =
+            phaseIndex / (GLB_NUMBER_MAPPING_PHASE_STEPS - 1);
+          const zeroAngle =
+            coarseZeroAngle +
+            THREE.MathUtils.lerp(
+              -pocketStep / 2,
+              pocketStep / 2,
+              phaseAlpha,
+            );
 
-            for (const direction of [1, -1] as const) {
-              let score = 0;
-              let matches = 0;
+          for (const direction of [1, -1] as const) {
+            let score = 0;
+            let matches = 0;
 
-              for (
-                let sequenceIndex = 0;
-                sequenceIndex < EUROPEAN_SEQUENCE.length;
-                sequenceIndex += 1
-              ) {
-                const number = EUROPEAN_SEQUENCE[sequenceIndex];
-                const angle =
-                  zeroAngle + direction * sequenceIndex * pocketStep;
-                const sample = sampleRouletteVisualTextureColorAt(
-                  [activeRotorPivot],
-                  Math.sin(angle) * radius,
-                  Math.cos(angle) * radius,
-                );
-                const classified = classify(sample);
-                const expected = expectedKind(number);
-                score += scoreExpected(classified, expected);
-                if (classified.kind === expected) matches += 1;
-              }
+            for (
+              let sequenceIndex = 0;
+              sequenceIndex < EUROPEAN_SEQUENCE.length;
+              sequenceIndex += 1
+            ) {
+              const number = EUROPEAN_SEQUENCE[sequenceIndex];
+              const angle =
+                zeroAngle + direction * sequenceIndex * pocketStep;
+              const sample = sampleRouletteVisualTextureColorAt(
+                [activeRotorPivot],
+                Math.sin(angle) * coarseRadius,
+                Math.cos(angle) * coarseRadius,
+              );
+              const classified = classify(sample);
+              const expected = expectedKind(number);
+              score += scoreExpected(classified, expected);
+              if (classified.kind === expected) matches += 1;
+            }
 
-              if (
-                best === null ||
-                matches > best.matches ||
-                (matches === best.matches && score > best.score)
-              ) {
-                best = {
-                  radius: Number(radius.toFixed(6)),
-                  zeroAngle,
-                  direction,
-                  score,
-                  matches,
-                };
-              }
+            if (
+              best === null ||
+              matches > best.matches ||
+              (matches === best.matches && score > best.score)
+            ) {
+              best = {
+                radius: Number(coarseRadius.toFixed(6)),
+                zeroAngle,
+                direction,
+                score,
+                matches,
+              };
             }
           }
         }
