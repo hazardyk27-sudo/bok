@@ -1870,769 +1870,137 @@ body.businesses-route {
   }
 }
 
-/* Part 9 — Stadium visual system / milestone art direction */
-.business-card--stadium .business-card-visual {
-  min-height: 168px;
+/* Part 6 — production image slots / placeholder system */
+.route-shell.is-businesses-page .business-card-hero {
+  aspect-ratio: var(--idle-business-image-ratio);
+  min-height: var(--idle-business-image-min-height);
   background:
-    radial-gradient(circle at 70% 18%, rgba(70, 200, 255, .18), transparent 34%),
-    linear-gradient(145deg, #102642 0%, #091727 56%, #050b14 100%);
+    radial-gradient(circle at 76% 18%, rgba(84, 242, 163, .08), transparent 34%),
+    linear-gradient(145deg, #111f1d 0%, #0d1717 58%, #091112 100%);
 }
 
-.business-card-stadium-scene {
-  inset: 0;
-  opacity: 1;
-  color: #7ddfff;
-  pointer-events: none;
-}
-
-.business-card-stadium-scene svg {
-  display: block;
-  width: 100%;
-  height: 100%;
-  min-height: 168px;
-  transform: scale(1.025);
-  transform-origin: 50% 68%;
-  transition:
-    filter .35s ease,
-    transform .35s ease,
-    opacity .35s ease;
-}
-
-.business-card--stadium .business-card-visual-shade {
-  z-index: 2;
-  background:
-    linear-gradient(90deg, rgba(5, 8, 22, .2), transparent 38%, rgba(5, 8, 22, .04)),
-    linear-gradient(180deg, transparent 46%, rgba(5, 8, 22, .78) 100%);
-}
-
-.business-card--stadium .business-card-code,
-.business-card--stadium .business-card-state,
-.business-card--stadium .business-card-milestone {
-  z-index: 5;
-}
-
-.business-card-milestone {
+.business-card-media-slot {
   position: absolute;
-  z-index: 5;
-  left: 15px;
-  bottom: 14px;
-  display: inline-flex;
-  align-items: center;
-  min-height: 22px;
-  padding: 6px 8px 5px;
-  border: 1px solid rgba(125, 223, 255, .14);
-  border-radius: 999px;
-  color: rgba(216, 244, 255, .78);
-  background: rgba(5, 8, 22, .42);
-  backdrop-filter: blur(8px);
-  font: 800 7px/1 "DM Mono", monospace;
-  letter-spacing: .08em;
-}
-
-.business-card--stadium .stadium-city {
-  fill: #18334d;
-}
-
-.business-card--stadium .stadium-floodlights {
-  color: #6fdcff;
-}
-
-.business-card--stadium .stadium-shell,
-.business-card--stadium .stadium-floodlights,
-.business-card--stadium .stadium-crowd,
-.business-card--stadium .stadium-star-crown {
-  transform-origin: 210px 140px;
-  transition:
-    opacity .35s ease,
-    transform .35s ease,
-    filter .35s ease;
-}
-
-/* Locked / unowned — recognizable silhouette, intentionally aspirational. */
-.business-card--stadium[data-visual-stage="locked"] .business-card-stadium-scene svg {
-  filter: grayscale(.68) saturate(.45) brightness(.6);
-  opacity: .72;
-}
-
-.business-card--stadium[data-visual-stage="locked"] .stadium-light-beams,
-.business-card--stadium[data-visual-stage="locked"] .stadium-crowd {
-  opacity: .08;
-}
-
-.business-card--stadium[data-visual-stage="locked"] .stadium-roof {
-  opacity: .46;
-}
-
-.business-card--stadium[data-visual-stage="locked"] .business-card-milestone {
-  color: var(--idle-text-muted);
-  border-color: rgba(157, 174, 196, .1);
-}
-
-/* Lv0–2 — small/local ground, restrained lighting and crowd. */
-.business-card--stadium[data-visual-stage="local"] .stadium-shell {
-  transform: scale(.88) translateY(8px);
-}
-
-.business-card--stadium[data-visual-stage="local"] .stadium-roof {
-  opacity: .56;
-}
-
-.business-card--stadium[data-visual-stage="local"] .stadium-light-beams {
-  opacity: .12;
-}
-
-.business-card--stadium[data-visual-stage="local"] .stadium-crowd {
-  opacity: .26;
-}
-
-.business-card--stadium[data-visual-stage="local"] .business-card-milestone {
-  color: #b9d4e4;
-}
-
-/* Lv3–5 — professional venue with stronger bowl, lights and crowd. */
-.business-card--stadium[data-visual-stage="pro"] .business-card-stadium-scene svg {
-  filter: saturate(1.05) brightness(1.04);
-}
-
-.business-card--stadium[data-visual-stage="pro"] .stadium-shell {
-  transform: scale(.96) translateY(3px);
-}
-
-.business-card--stadium[data-visual-stage="pro"] .stadium-light-beams {
-  opacity: .28;
-}
-
-.business-card--stadium[data-visual-stage="pro"] .stadium-crowd {
-  opacity: .54;
-}
-
-.business-card--stadium[data-visual-stage="pro"] .business-card-milestone {
-  color: var(--idle-cyan);
-  border-color: rgba(70, 200, 255, .22);
-}
-
-/* Lv6–7 — elite arena, brighter architecture and premium lighting. */
-.business-card--stadium[data-visual-stage="elite"] .business-card-stadium-scene svg {
-  filter: saturate(1.13) brightness(1.08) contrast(1.02);
-  transform: scale(1.055);
-}
-
-.business-card--stadium[data-visual-stage="elite"] .stadium-shell {
-  filter: drop-shadow(0 0 8px rgba(70, 200, 255, .12));
-}
-
-.business-card--stadium[data-visual-stage="elite"] .stadium-roof {
-  opacity: 1;
-  stroke-opacity: .58;
-}
-
-.business-card--stadium[data-visual-stage="elite"] .stadium-light-beams {
-  opacity: .42;
-}
-
-.business-card--stadium[data-visual-stage="elite"] .stadium-crowd {
-  opacity: .72;
-}
-
-.business-card--stadium[data-visual-stage="elite"] .business-card-milestone {
-  color: var(--idle-cyan-bright);
-  border-color: rgba(125, 223, 255, .32);
-  box-shadow: 0 0 18px rgba(70, 200, 255, .07);
-}
-
-/* Lv8 — landmark/icon stadium: full illumination + crown. */
-.business-card--stadium[data-visual-stage="landmark"] .business-card-stadium-scene svg {
-  filter: saturate(1.2) brightness(1.12) contrast(1.04);
-  transform: scale(1.075);
-}
-
-.business-card--stadium[data-visual-stage="landmark"] .stadium-shell {
-  filter: drop-shadow(0 0 11px rgba(125, 223, 255, .18));
-}
-
-.business-card--stadium[data-visual-stage="landmark"] .stadium-light-beams {
-  opacity: .58;
-}
-
-.business-card--stadium[data-visual-stage="landmark"] .stadium-crowd {
-  opacity: .9;
-}
-
-.business-card--stadium[data-visual-stage="landmark"] .stadium-star-crown {
-  opacity: .9;
-  filter: drop-shadow(0 0 8px rgba(125, 223, 255, .28));
-}
-
-.business-card--stadium[data-visual-stage="landmark"] .business-card-milestone {
-  color: #dff8ff;
-  border-color: rgba(125, 223, 255, .42);
-  background: rgba(9, 29, 48, .62);
-  box-shadow:
-    0 0 0 1px rgba(70, 200, 255, .04),
-    0 0 22px rgba(70, 200, 255, .12);
-}
-
-@media (hover: hover) and (pointer: fine) {
-  .business-card--stadium:hover .business-card-stadium-scene svg {
-    transform: scale(1.055);
-  }
-
-  .business-card--stadium[data-visual-stage="elite"]:hover .business-card-stadium-scene svg,
-  .business-card--stadium[data-visual-stage="landmark"]:hover .business-card-stadium-scene svg {
-    transform: scale(1.095);
-  }
-}
-
-@media (max-width: 760px) {
-  .route-shell.is-businesses-page .business-card--stadium .business-card-visual {
-    min-height: 148px;
-  }
-
-  .route-shell.is-businesses-page .business-card--stadium .business-card-stadium-scene {
-    inset: 0;
-  }
-
-  .route-shell.is-businesses-page .business-card--stadium .business-card-stadium-scene svg {
-    min-height: 148px;
-    transform-origin: 54% 70%;
-  }
-
-  .route-shell.is-businesses-page .business-card--stadium .business-card-milestone {
-    left: 12px;
-    bottom: 30px;
-    min-height: 20px;
-    padding: 5px 7px 4px;
-    font-size: 6px;
-  }
-}
-
-@media (max-width: 420px) {
-  .route-shell.is-businesses-page .business-card--stadium .business-card-visual,
-  .route-shell.is-businesses-page .business-card--stadium .business-card-stadium-scene svg {
-    min-height: 134px;
-  }
-
-  .route-shell.is-businesses-page .business-card--stadium .business-card-milestone {
-    bottom: 27px;
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .business-card-stadium-scene svg,
-  .business-card--stadium .stadium-shell,
-  .business-card--stadium .stadium-floodlights,
-  .business-card--stadium .stadium-crowd,
-  .business-card--stadium .stadium-star-crown {
-    transition: none;
-  }
-}
-
-
-/* Part 10 — Club Store visual system / merchandise progression */
-.business-card--club-store .business-card-visual {
-  min-height: 168px;
-  background:
-    radial-gradient(circle at 68% 20%, rgba(114, 88, 255, .18), transparent 34%),
-    linear-gradient(145deg, #171f38 0%, #0d1830 56%, #070d18 100%);
-}
-
-.business-card-store-scene {
+  z-index: 1;
   inset: 0;
+  overflow: hidden;
+  background:
+    radial-gradient(circle at 74% 20%, rgba(84, 242, 163, .065), transparent 34%),
+    linear-gradient(145deg, #14221f 0%, #0e1818 58%, #091112 100%);
+}
+
+.business-card-media {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center;
+  opacity: 0;
+  transform: scale(1.001);
+  transition: opacity .22s ease;
+}
+
+.business-card-media-placeholder {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-content: center;
+  justify-items: center;
+  gap: 7px;
+  padding: 18px;
+  color: var(--idle-text-muted);
+  background:
+    linear-gradient(135deg, rgba(84, 242, 163, .025), transparent 54%),
+    repeating-linear-gradient(
+      135deg,
+      rgba(255, 255, 255, .015) 0,
+      rgba(255, 255, 255, .015) 1px,
+      transparent 1px,
+      transparent 12px
+    );
+  text-align: center;
+  transition: opacity .18s ease;
+}
+
+.business-card-media-placeholder-icon {
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  border: 1px solid var(--idle-line);
+  border-radius: 10px;
+  color: var(--idle-green);
+  background: var(--idle-green-soft);
+  font-family: var(--idle-font-ui);
+  font-size: 18px;
+  font-weight: 500;
+}
+
+.business-card-media-placeholder > span:not(.business-card-media-placeholder-icon) {
+  color: var(--idle-text-secondary);
+  font-family: var(--idle-font-ui);
+  font-size: 11px;
+  font-weight: 650;
+  letter-spacing: .055em;
+}
+
+.business-card-media-placeholder small {
+  color: var(--idle-text-muted);
+  font-family: var(--idle-font-ui);
+  font-size: 9px;
+  font-weight: 500;
+  letter-spacing: .03em;
+}
+
+.business-card-media-slot[data-image-state="ready"] .business-card-media {
   opacity: 1;
+}
+
+.business-card-media-slot[data-image-state="ready"] .business-card-media-placeholder {
+  opacity: 0;
   pointer-events: none;
 }
 
-.business-card-store-scene svg {
-  display: block;
-  width: 100%;
-  height: 100%;
-  min-height: 168px;
-  transform: scale(1.02);
-  transform-origin: 52% 67%;
-  transition:
-    filter .35s ease,
-    transform .35s ease,
-    opacity .35s ease;
+.business-card-media-slot[data-image-state="placeholder"] .business-card-media {
+  display: none;
 }
 
-.business-card--club-store .business-card-visual-shade {
+.route-shell.is-businesses-page .business-card-visual-shade {
   z-index: 2;
   background:
-    linear-gradient(90deg, rgba(5, 8, 22, .17), transparent 38%, rgba(5, 8, 22, .05)),
-    linear-gradient(180deg, transparent 45%, rgba(5, 8, 22, .8) 100%);
+    linear-gradient(180deg, rgba(3, 8, 7, .03) 0%, transparent 46%, rgba(3, 8, 7, .44) 100%);
 }
 
-.business-card--club-store .business-card-code,
-.business-card--club-store .business-card-state,
-.business-card--club-store .business-card-milestone {
-  z-index: 5;
+.route-shell.is-businesses-page .business-card-state {
+  z-index: 4;
 }
 
-.business-card--club-store .store-shell,
-.business-card--club-store .store-signage,
-.business-card--club-store .store-merch,
-.business-card--club-store .store-shelves,
-.business-card--club-store .store-premium-rack,
-.business-card--club-store .store-flagship-mark {
-  transform-origin: 210px 130px;
-  transition:
-    opacity .35s ease,
-    transform .35s ease,
-    filter .35s ease;
-}
-
-/* Locked — dark showcase, still readable as a future retail destination. */
-.business-card--club-store[data-visual-stage="locked"] .business-card-store-scene svg {
-  filter: grayscale(.62) saturate(.48) brightness(.58);
-  opacity: .74;
-}
-
-.business-card--club-store[data-visual-stage="locked"] .store-merch,
-.business-card--club-store[data-visual-stage="locked"] .store-shelves,
-.business-card--club-store[data-visual-stage="locked"] .store-signage {
-  opacity: .16;
-}
-
-.business-card--club-store[data-visual-stage="locked"] .business-card-milestone {
-  color: var(--idle-text-muted);
-  border-color: rgba(157, 174, 196, .1);
-}
-
-/* Lv0–2 — compact club shop with limited display stock. */
-.business-card--club-store[data-visual-stage="local"] .store-shell {
-  transform: scale(.9) translateY(6px);
-}
-
-.business-card--club-store[data-visual-stage="local"] .store-signage {
-  opacity: .42;
-}
-
-.business-card--club-store[data-visual-stage="local"] .store-merch {
-  opacity: .56;
-}
-
-.business-card--club-store[data-visual-stage="local"] .store-shelves {
-  opacity: .24;
-}
-
-.business-card--club-store[data-visual-stage="local"] .store-premium-rack {
-  opacity: .08;
-}
-
-.business-card--club-store[data-visual-stage="local"] .business-card-milestone {
-  color: #c0c8db;
-}
-
-/* Lv3–5 — professional retail floor with stronger merchandising. */
-.business-card--club-store[data-visual-stage="pro"] .business-card-store-scene svg {
-  filter: saturate(1.06) brightness(1.04);
-}
-
-.business-card--club-store[data-visual-stage="pro"] .store-shell {
-  transform: scale(.97) translateY(2px);
-}
-
-.business-card--club-store[data-visual-stage="pro"] .store-signage {
-  opacity: .72;
-}
-
-.business-card--club-store[data-visual-stage="pro"] .store-merch {
-  opacity: .82;
-}
-
-.business-card--club-store[data-visual-stage="pro"] .store-shelves {
-  opacity: .58;
-}
-
-.business-card--club-store[data-visual-stage="pro"] .store-premium-rack {
-  opacity: .28;
-}
-
-.business-card--club-store[data-visual-stage="pro"] .business-card-milestone {
-  color: #9ea2ff;
-  border-color: rgba(141, 125, 255, .24);
-}
-
-/* Lv6–7 — premium flagship retail: glass, neon and full collection. */
-.business-card--club-store[data-visual-stage="elite"] .business-card-store-scene svg {
-  filter: saturate(1.14) brightness(1.08) contrast(1.02);
-  transform: scale(1.05);
-}
-
-.business-card--club-store[data-visual-stage="elite"] .store-shell {
-  filter: drop-shadow(0 0 8px rgba(114, 88, 255, .13));
-}
-
-.business-card--club-store[data-visual-stage="elite"] .store-signage {
-  opacity: .92;
-  filter: drop-shadow(0 0 7px rgba(114, 88, 255, .18));
-}
-
-.business-card--club-store[data-visual-stage="elite"] .store-merch {
-  opacity: 1;
-}
-
-.business-card--club-store[data-visual-stage="elite"] .store-shelves {
-  opacity: .8;
-}
-
-.business-card--club-store[data-visual-stage="elite"] .store-premium-rack {
-  opacity: .58;
-}
-
-.business-card--club-store[data-visual-stage="elite"] .business-card-milestone {
-  color: #c8c5ff;
-  border-color: rgba(154, 140, 255, .34);
-  box-shadow: 0 0 18px rgba(114, 88, 255, .08);
-}
-
-/* Lv8 — iconic flagship store: full neon treatment + retail crown. */
-.business-card--club-store[data-visual-stage="landmark"] .business-card-store-scene svg {
-  filter: saturate(1.22) brightness(1.12) contrast(1.04);
-  transform: scale(1.07);
-}
-
-.business-card--club-store[data-visual-stage="landmark"] .store-shell {
-  filter: drop-shadow(0 0 11px rgba(125, 223, 255, .12));
-}
-
-.business-card--club-store[data-visual-stage="landmark"] .store-signage {
-  opacity: 1;
-  filter: drop-shadow(0 0 9px rgba(141, 125, 255, .28));
-}
-
-.business-card--club-store[data-visual-stage="landmark"] .store-merch,
-.business-card--club-store[data-visual-stage="landmark"] .store-shelves,
-.business-card--club-store[data-visual-stage="landmark"] .store-premium-rack {
-  opacity: 1;
-}
-
-.business-card--club-store[data-visual-stage="landmark"] .store-flagship-mark {
-  opacity: .92;
-  filter: drop-shadow(0 0 8px rgba(125, 223, 255, .24));
-}
-
-.business-card--club-store[data-visual-stage="landmark"] .business-card-milestone {
-  color: #ecebff;
-  border-color: rgba(171, 159, 255, .44);
-  background: rgba(22, 20, 48, .62);
-  box-shadow:
-    0 0 0 1px rgba(114, 88, 255, .05),
-    0 0 22px rgba(114, 88, 255, .14);
-}
-
-@media (hover: hover) and (pointer: fine) {
-  .business-card--club-store:hover .business-card-store-scene svg {
-    transform: scale(1.05);
+@media (min-width: 1101px) {
+  .route-shell.is-businesses-page .business-card-hero {
+    min-height: var(--idle-business-image-min-height);
   }
+}
 
-  .business-card--club-store[data-visual-stage="elite"]:hover .business-card-store-scene svg,
-  .business-card--club-store[data-visual-stage="landmark"]:hover .business-card-store-scene svg {
-    transform: scale(1.09);
+@media (max-width: 1100px) {
+  .route-shell.is-businesses-page .business-card-hero {
+    min-height: 180px;
   }
 }
 
 @media (max-width: 760px) {
-  .route-shell.is-businesses-page .business-card--club-store .business-card-visual {
+  .route-shell.is-businesses-page .business-card-hero {
     min-height: 148px;
   }
 
-  .route-shell.is-businesses-page .business-card--club-store .business-card-store-scene {
-    inset: 0;
+  .business-card-media-placeholder > span:not(.business-card-media-placeholder-icon) {
+    font-size: 10px;
   }
 
-  .route-shell.is-businesses-page .business-card--club-store .business-card-store-scene svg {
-    min-height: 148px;
-    transform-origin: 56% 70%;
-  }
-
-  .route-shell.is-businesses-page .business-card--club-store .business-card-milestone {
-    left: 12px;
-    bottom: 30px;
-    min-height: 20px;
-    padding: 5px 7px 4px;
-    font-size: 6px;
+  .business-card-media-placeholder small {
+    font-size: 8px;
   }
 }
-
-@media (max-width: 420px) {
-  .route-shell.is-businesses-page .business-card--club-store .business-card-visual,
-  .route-shell.is-businesses-page .business-card--club-store .business-card-store-scene svg {
-    min-height: 134px;
-  }
-
-  .route-shell.is-businesses-page .business-card--club-store .business-card-milestone {
-    bottom: 27px;
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .business-card-store-scene svg,
-  .business-card--club-store .store-shell,
-  .business-card--club-store .store-signage,
-  .business-card--club-store .store-merch,
-  .business-card--club-store .store-shelves,
-  .business-card--club-store .store-premium-rack,
-  .business-card--club-store .store-flagship-mark {
-    transition: none;
-  }
-}
-
-
-/* Part 11 — Fan Club visual system / supporter progression */
-.business-card--fan-club .business-card-visual {
-  min-height: 168px;
-  background:
-    radial-gradient(circle at 70% 18%, rgba(70, 200, 255, .15), transparent 34%),
-    linear-gradient(145deg, #10283a 0%, #0a1927 56%, #061019 100%);
-}
-
-.business-card-fan-scene {
-  inset: 0;
-  opacity: 1;
-  pointer-events: none;
-}
-
-.business-card-fan-scene svg {
-  display: block;
-  width: 100%;
-  height: 100%;
-  min-height: 168px;
-  transform: scale(1.02);
-  transform-origin: 52% 69%;
-  transition:
-    filter .35s ease,
-    transform .35s ease,
-    opacity .35s ease;
-}
-
-.business-card--fan-club .business-card-visual-shade {
-  z-index: 2;
-  background:
-    linear-gradient(90deg, rgba(5, 8, 22, .15), transparent 38%, rgba(5, 8, 22, .04)),
-    linear-gradient(180deg, transparent 45%, rgba(5, 8, 22, .8) 100%);
-}
-
-.business-card--fan-club .business-card-code,
-.business-card--fan-club .business-card-state,
-.business-card--fan-club .business-card-milestone {
-  z-index: 5;
-}
-
-.business-card--fan-club .fan-lounge-shell,
-.business-card--fan-club .fan-media,
-.business-card--fan-club .fan-seating,
-.business-card--fan-club .fan-supporters,
-.business-card--fan-club .fan-flags,
-.business-card--fan-club .fan-scarves,
-.business-card--fan-club .fan-vip-lighting,
-.business-card--fan-club .fan-icon-crown {
-  transform-origin: 210px 132px;
-  transition:
-    opacity .35s ease,
-    transform .35s ease,
-    filter .35s ease;
-}
-
-/* Locked — dark lounge silhouette with muted supporters. */
-.business-card--fan-club[data-visual-stage="locked"] .business-card-fan-scene svg {
-  filter: grayscale(.62) saturate(.5) brightness(.58);
-  opacity: .74;
-}
-
-.business-card--fan-club[data-visual-stage="locked"] .fan-supporters,
-.business-card--fan-club[data-visual-stage="locked"] .fan-media,
-.business-card--fan-club[data-visual-stage="locked"] .fan-flags,
-.business-card--fan-club[data-visual-stage="locked"] .fan-scarves {
-  opacity: .1;
-}
-
-.business-card--fan-club[data-visual-stage="locked"] .business-card-milestone {
-  color: var(--idle-text-muted);
-  border-color: rgba(157, 174, 196, .1);
-}
-
-/* Lv0–2 — small supporters room, limited crowd and media. */
-.business-card--fan-club[data-visual-stage="local"] .fan-lounge-shell {
-  transform: scale(.9) translateY(6px);
-}
-
-.business-card--fan-club[data-visual-stage="local"] .fan-media {
-  opacity: .48;
-}
-
-.business-card--fan-club[data-visual-stage="local"] .fan-supporters {
-  opacity: .3;
-}
-
-.business-card--fan-club[data-visual-stage="local"] .fan-flags,
-.business-card--fan-club[data-visual-stage="local"] .fan-scarves {
-  opacity: .14;
-}
-
-.business-card--fan-club[data-visual-stage="local"] .fan-vip-lighting {
-  opacity: .03;
-}
-
-.business-card--fan-club[data-visual-stage="local"] .business-card-milestone {
-  color: #bcd7e2;
-}
-
-/* Lv3–5 — professional fan lounge, stronger screens and supporter identity. */
-.business-card--fan-club[data-visual-stage="pro"] .business-card-fan-scene svg {
-  filter: saturate(1.06) brightness(1.04);
-}
-
-.business-card--fan-club[data-visual-stage="pro"] .fan-lounge-shell {
-  transform: scale(.97) translateY(2px);
-}
-
-.business-card--fan-club[data-visual-stage="pro"] .fan-media {
-  opacity: .76;
-}
-
-.business-card--fan-club[data-visual-stage="pro"] .fan-supporters {
-  opacity: .58;
-}
-
-.business-card--fan-club[data-visual-stage="pro"] .fan-flags,
-.business-card--fan-club[data-visual-stage="pro"] .fan-scarves {
-  opacity: .42;
-}
-
-.business-card--fan-club[data-visual-stage="pro"] .fan-vip-lighting {
-  opacity: .12;
-}
-
-.business-card--fan-club[data-visual-stage="pro"] .business-card-milestone {
-  color: var(--idle-cyan);
-  border-color: rgba(70, 200, 255, .24);
-}
-
-/* Lv6–7 — elite supporters club: dense crowd, banners and premium lounge lighting. */
-.business-card--fan-club[data-visual-stage="elite"] .business-card-fan-scene svg {
-  filter: saturate(1.14) brightness(1.08) contrast(1.02);
-  transform: scale(1.05);
-}
-
-.business-card--fan-club[data-visual-stage="elite"] .fan-lounge-shell {
-  filter: drop-shadow(0 0 8px rgba(70, 200, 255, .12));
-}
-
-.business-card--fan-club[data-visual-stage="elite"] .fan-media,
-.business-card--fan-club[data-visual-stage="elite"] .fan-supporters {
-  opacity: .9;
-}
-
-.business-card--fan-club[data-visual-stage="elite"] .fan-flags,
-.business-card--fan-club[data-visual-stage="elite"] .fan-scarves {
-  opacity: .72;
-}
-
-.business-card--fan-club[data-visual-stage="elite"] .fan-vip-lighting {
-  opacity: .28;
-}
-
-.business-card--fan-club[data-visual-stage="elite"] .business-card-milestone {
-  color: var(--idle-cyan-bright);
-  border-color: rgba(125, 223, 255, .34);
-  box-shadow: 0 0 18px rgba(70, 200, 255, .08);
-}
-
-/* Lv8 — iconic supporter headquarters: full atmosphere + crown. */
-.business-card--fan-club[data-visual-stage="landmark"] .business-card-fan-scene svg {
-  filter: saturate(1.2) brightness(1.12) contrast(1.04);
-  transform: scale(1.07);
-}
-
-.business-card--fan-club[data-visual-stage="landmark"] .fan-lounge-shell {
-  filter: drop-shadow(0 0 11px rgba(125, 223, 255, .17));
-}
-
-.business-card--fan-club[data-visual-stage="landmark"] .fan-media,
-.business-card--fan-club[data-visual-stage="landmark"] .fan-supporters,
-.business-card--fan-club[data-visual-stage="landmark"] .fan-flags,
-.business-card--fan-club[data-visual-stage="landmark"] .fan-scarves {
-  opacity: 1;
-}
-
-.business-card--fan-club[data-visual-stage="landmark"] .fan-vip-lighting {
-  opacity: .44;
-}
-
-.business-card--fan-club[data-visual-stage="landmark"] .fan-icon-crown {
-  opacity: .92;
-  filter: drop-shadow(0 0 8px rgba(125, 223, 255, .28));
-}
-
-.business-card--fan-club[data-visual-stage="landmark"] .business-card-milestone {
-  color: #e2faff;
-  border-color: rgba(125, 223, 255, .42);
-  background: rgba(9, 29, 40, .62);
-  box-shadow:
-    0 0 0 1px rgba(70, 200, 255, .05),
-    0 0 22px rgba(70, 200, 255, .13);
-}
-
-@media (hover: hover) and (pointer: fine) {
-  .business-card--fan-club:hover .business-card-fan-scene svg {
-    transform: scale(1.05);
-  }
-
-  .business-card--fan-club[data-visual-stage="elite"]:hover .business-card-fan-scene svg,
-  .business-card--fan-club[data-visual-stage="landmark"]:hover .business-card-fan-scene svg {
-    transform: scale(1.09);
-  }
-}
-
-@media (max-width: 760px) {
-  .route-shell.is-businesses-page .business-card--fan-club .business-card-visual {
-    min-height: 148px;
-  }
-
-  .route-shell.is-businesses-page .business-card--fan-club .business-card-fan-scene {
-    inset: 0;
-  }
-
-  .route-shell.is-businesses-page .business-card--fan-club .business-card-fan-scene svg {
-    min-height: 148px;
-    transform-origin: 56% 70%;
-  }
-
-  .route-shell.is-businesses-page .business-card--fan-club .business-card-milestone {
-    left: 12px;
-    bottom: 30px;
-    min-height: 20px;
-    padding: 5px 7px 4px;
-    font-size: 6px;
-  }
-}
-
-@media (max-width: 420px) {
-  .route-shell.is-businesses-page .business-card--fan-club .business-card-visual,
-  .route-shell.is-businesses-page .business-card--fan-club .business-card-fan-scene svg {
-    min-height: 134px;
-  }
-
-  .route-shell.is-businesses-page .business-card--fan-club .business-card-milestone {
-    bottom: 27px;
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .business-card-fan-scene svg,
-  .business-card--fan-club .fan-lounge-shell,
-  .business-card--fan-club .fan-media,
-  .business-card--fan-club .fan-seating,
-  .business-card--fan-club .fan-supporters,
-  .business-card--fan-club .fan-flags,
-  .business-card--fan-club .fan-scarves,
-  .business-card--fan-club .fan-vip-lighting,
-  .business-card--fan-club .fan-icon-crown {
-    transition: none;
-  }
-}
-
 
 /* Part 12 — premium detail drawer / mobile fullscreen architecture */
 .business-card-footer {
