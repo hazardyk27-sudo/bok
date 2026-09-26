@@ -213,6 +213,8 @@ describe("Businesses route module isolation", () => {
     expect(mainSource).toContain(
       'const businessesModule = await import("./idle");',
     );
+    expect(mainSource).toContain("businessesModule.mountBusinesses(app);");
+    expect(idleIndexSource).toContain("export function mountBusinesses(app: HTMLDivElement)");
     expect(mainSource).toContain(
       'if (isRouletteRoute || isWitchRoute || isHubRoute) {\n  await import("./styles.css");\n}',
     );
@@ -223,14 +225,27 @@ describe("Businesses route module isolation", () => {
 
 describe("Businesses route shell isolation", () => {
   it("does not mount the legacy game-route chrome around Businesses", () => {
-    expect(mainSource).toContain(
+    expect(mainSource).not.toContain("businesses-page");
+    expect(mainSource).not.toContain("BUSINESSES_MARKUP");
+    expect(mainSource).not.toContain("document.body.classList.add(\"businesses-route\")");
+    expect(idleIndexSource).toContain(
       '<div class="app-shell route-shell is-route-page is-businesses-page">',
     );
-    expect(mainSource).toContain('${businessesModule.BUSINESSES_MARKUP}');
-    expect(mainSource).not.toContain("const routeShell =");
+    expect(idleIndexSource).toContain('${BUSINESSES_MARKUP}');
+    expect(idleIndexSource).toContain('document.body.classList.add("businesses-route")');
   });
 });
 
+
+describe("Businesses standalone CSS foundation", () => {
+  it("owns the browser reset required for standalone geometry", () => {
+    expect(idleCssSource).toContain("html.businesses-route #app");
+    expect(idleCssSource).toContain("box-sizing: border-box");
+    expect(idleCssSource).toContain("body.businesses-route button");
+    expect(idleCssSource).toContain("font: inherit");
+    expect(mainSource).not.toContain('if (!isBusinessesRoute)');
+  });
+});
 
 describe("Businesses premium route shell", () => {
   it("gives Businesses a wider premium desktop canvas without affecting other routes", () => {
