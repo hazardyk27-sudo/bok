@@ -118,20 +118,36 @@ describe("Businesses main menu control", () => {
 
 
 describe("Businesses premium design tokens", () => {
-  it("scopes the premium palette, spacing and elevation system to Businesses", () => {
-    expect(idleCssSource).toContain("--idle-canvas: #050816");
-    expect(idleCssSource).toContain("--idle-surface-raised: #10213c");
-    expect(idleCssSource).toContain("--idle-text: #f4f8ff");
-    expect(idleCssSource).toContain("--idle-cyan: #46c8ff");
-    expect(idleCssSource).toContain("--idle-violet-ambient: #7258ff");
-    expect(idleCssSource).toContain("--idle-space-7: 48px");
-    expect(idleCssSource).toContain("--idle-shadow-raised");
+  it("locks the approved green-charcoal palette and restrained elevation system", () => {
+    expect(idleCssSource).toContain("/* Businesses visual system v2");
+    expect(idleCssSource).toContain("--idle-canvas: #0b1418");
+    expect(idleCssSource).toContain("--idle-sidebar: #060c11");
+    expect(idleCssSource).toContain("--idle-surface-raised: #151f25");
+    expect(idleCssSource).toContain("--idle-text: #f2f4f3");
+    expect(idleCssSource).toContain("--idle-green: #54f2a3");
+    expect(idleCssSource).toContain("--idle-green-bright: #78f0aa");
+    expect(idleCssSource).toContain("--idle-shadow-green");
   });
 
-  it("uses the token system in the current Businesses surface instead of leaving it unused", () => {
-    expect(idleCssSource).toContain("color: var(--idle-text)");
-    expect(idleCssSource).toContain("background: var(--idle-surface-2)");
-    expect(idleCssSource).toContain("color: var(--idle-cyan)");
+  it("locks the measured typography, geometry and spacing values from the approved references", () => {
+    expect(idleCssSource).toContain('--idle-font-display: "Inter Tight"');
+    expect(idleCssSource).toContain('--idle-font-ui: "Inter"');
+    expect(idleCssSource).toContain("--idle-type-display-desktop: 60px");
+    expect(idleCssSource).toContain("--idle-type-display-mobile: 40px");
+    expect(idleCssSource).toContain("--idle-sidebar-width: 186px");
+    expect(idleCssSource).toContain("--idle-content-gap: 25px");
+    expect(idleCssSource).toContain("--idle-card-gap: 14px");
+    expect(idleCssSource).toContain("--idle-radius-card: 14px");
+    expect(idleCssSource).toContain("--idle-button-height: 52px");
+    expect(idleCssSource).toContain("--idle-progress-height: 14px");
+    expect(idleCssSource).toContain("--idle-business-image-ratio: 16 / 9");
+  });
+
+  it("keeps temporary cyan compatibility aliases until legacy CSS is removed in Part 2", () => {
+    expect(idleCssSource).toContain("--idle-cyan: var(--idle-green)");
+    expect(idleCssSource).toContain("--idle-cyan-bright: var(--idle-green-bright)");
+    expect(idleCssSource).toContain("--idle-cyan-soft: var(--idle-green-soft)");
+    expect(idleCssSource).toContain("font-family: var(--idle-font-ui)");
   });
 });
 
