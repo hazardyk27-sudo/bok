@@ -346,8 +346,6 @@ export function renderBusinessRowShell(businessId: BusinessId) {
     >
       <div class="business-card-visual" role="img" aria-label="${meta.visualLabel}">
 ${renderBusinessArt(businessId)}
-        <span class="business-card-code">${meta.code}</span>
-        <span class="business-card-milestone" data-business-milestone>${businessId === "stadium" ? "STADIUM" : businessId === "club-store" ? "CLUB STORE" : "FAN CLUB"} // BASE</span>
         <span class="business-card-state" data-business-card-state>YÜKLENİYOR</span>
         <div class="business-card-visual-shade" aria-hidden="true"></div>
       </div>
@@ -362,41 +360,34 @@ ${renderBusinessArt(businessId)}
           <span class="business-card-level-mark" data-business-level-mark aria-hidden="true">FY</span>
         </header>
 
-        <div class="business-row-metrics business-card-metrics">
-          <div class="business-row-metric business-card-accrued">
-            <div class="business-card-accrued-heading">
-              <span>BİRİKMİŞ</span>
-              <small data-business-accrued-status>KASADA HAZIR</small>
-            </div>
-            <strong data-business-accrued>—</strong>
+        <section class="business-card-accrued" aria-label="Biriken gelir">
+          <div class="business-card-accrued-heading">
+            <span>BİRİKMİŞ</span>
+            <small data-business-accrued-status>KASADA HAZIR</small>
           </div>
+          <strong data-business-accrued>—</strong>
+        </section>
 
-          <div class="business-row-metric business-card-operations">
-            <div class="business-card-income">
-              <span>SAATLİK GELİR</span>
-              <strong data-business-income>— /sa</strong>
-              <small data-business-daily>— /gün</small>
-            </div>
-
-            <div class="business-vault-metric business-card-vault">
-              <div class="business-card-vault-heading">
-                <span>KASA KAPASİTESİ</span>
-                <strong data-business-vault>Lv— · —</strong>
-              </div>
-              <div class="business-card-vault-meta">
-                <small data-business-vault-fill>Doluluk —</small>
-                <small class="business-vault-eta" data-business-vault-eta>—</small>
-              </div>
-            </div>
-
-            <div class="business-card-vault-meter">
-              <div class="business-vault-progress" aria-hidden="true"><i data-business-vault-progress></i></div>
-              <button type="button" class="business-vault-upgrade" disabled data-action-state="loading" data-business-vault-upgrade>GELİŞTİR</button>
-            </div>
+        <section class="business-card-quick-stats" aria-label="İşletme özeti">
+          <div class="business-card-quick-stat">
+            <span>SAATLİK GELİR</span>
+            <strong data-business-income>— /sa</strong>
           </div>
-        </div>
+          <div class="business-card-quick-stat">
+            <span>KASA</span>
+            <strong data-business-vault>Lv— · —</strong>
+          </div>
+        </section>
 
-        <div class="business-card-divider" aria-hidden="true"></div>
+        <section class="business-card-vault-status" aria-label="Kasa doluluk durumu">
+          <div class="business-card-vault-meta">
+            <small data-business-vault-fill>Doluluk —</small>
+            <small class="business-vault-eta" data-business-vault-eta>—</small>
+          </div>
+          <div class="business-vault-progress" aria-hidden="true">
+            <i data-business-vault-progress></i>
+          </div>
+        </section>
 
         <div class="business-row-actions business-card-actions">
           <div class="business-card-action business-card-action--collect">
@@ -420,17 +411,11 @@ ${renderBusinessArt(businessId)}
             </button>
           </div>
         </div>
-
-        <div class="business-card-footer">
-          <div class="business-card-footer-progress">
-            <span>9 SEVİYELİ GELİŞİM</span>
-            <span>LV0 → LV8</span>
-          </div>
-        </div>
       </div>
     </article>
   `;
 }
+
 
 export function updateBusinessRow(
   row: HTMLElement,
@@ -442,29 +427,24 @@ export function updateBusinessRow(
   const levelNode = row.querySelector<HTMLElement>("[data-business-level]");
   const accruedNode = row.querySelector<HTMLElement>("[data-business-accrued]");
   const incomeNode = row.querySelector<HTMLElement>("[data-business-income]");
-  const dailyNode = row.querySelector<HTMLElement>("[data-business-daily]");
   const vaultNode = row.querySelector<HTMLElement>("[data-business-vault]");
   const vaultFillNode = row.querySelector<HTMLElement>("[data-business-vault-fill]");
   const vaultProgressNode = row.querySelector<HTMLElement>("[data-business-vault-progress]");
   const vaultEtaNode = row.querySelector<HTMLElement>("[data-business-vault-eta]");
   const accruedStatusNode = row.querySelector<HTMLElement>("[data-business-accrued-status]");
-  const vaultUpgradeButton = row.querySelector<HTMLButtonElement>("[data-business-vault-upgrade]");
   const collectButton = row.querySelector<HTMLButtonElement>("[data-business-collect]");
   const cardStateNode = row.querySelector<HTMLElement>("[data-business-card-state]");
-  const milestoneNode = row.querySelector<HTMLElement>("[data-business-milestone]");
   const levelMarkNode = row.querySelector<HTMLElement>("[data-business-level-mark]");
 
   if (
     !levelNode
     || !accruedNode
     || !incomeNode
-    || !dailyNode
     || !vaultNode
     || !vaultFillNode
     || !vaultProgressNode
     || !vaultEtaNode
     || !accruedStatusNode
-    || !vaultUpgradeButton
     || !collectButton
     || !cardStateNode
     || !levelMarkNode
@@ -492,16 +472,13 @@ export function updateBusinessRow(
   incomeNode.textContent = currentStage
     ? `${formatCreditsFromCents(currentStage.hourlyIncomeDisplayCents)} /sa`
     : "$0.00 /sa";
-  dailyNode.textContent = currentStage
-    ? `${formatCreditsFromCents(currentStage.dailyIncomeCents)} /gün`
-    : "$0.00 /gün";
   const vaultUpgrade = getIdleVaultUpgradePreview(business);
   vaultNode.textContent = `Lv${business.vaultLevel} · ${vault.capacityHours}sa${vaultUpgrade.isMaxLevel ? " · MAX" : business.liveIsVaultFull ? " · DOLU" : ""}`;
   const fillPercent = business.businessLevel === null
     ? 0
     : Math.round(Math.min(1, Math.max(0, business.vaultFillRatio)) * 100);
   vaultFillNode.textContent = business.businessLevel === null
-    ? "Satın alındıktan sonra aktif"
+    ? "İşletme kapalı"
     : `Doluluk %${fillPercent}`;
   vaultProgressNode.style.width = `${fillPercent}%`;
   vaultEtaNode.textContent = formatVaultEta(
@@ -513,37 +490,6 @@ export function updateBusinessRow(
     : business.canCollect
       ? "TOPLAMAYA HAZIR"
       : "GELİR BİRİKİYOR";
-
-  if (!vaultUpgrade.isOwned) {
-    vaultUpgradeButton.hidden = true;
-    vaultUpgradeButton.disabled = true;
-    vaultUpgradeButton.dataset.actionState = "locked";
-    vaultUpgradeButton.title = "Kasa, işletme satın alındıktan sonra geliştirilebilir.";
-  } else if (vaultUpgrade.isMaxLevel || !vaultUpgrade.canUpgrade) {
-    vaultUpgradeButton.hidden = false;
-    vaultUpgradeButton.disabled = true;
-    vaultUpgradeButton.textContent = "KASA MAX";
-    vaultUpgradeButton.dataset.actionState = "max";
-    vaultUpgradeButton.title = "Kasa maksimum seviyede.";
-  } else {
-    const vaultCostCents = vaultUpgrade.costCents ?? 0;
-    const vaultShortfallCents = Math.max(0, vaultCostCents - walletBalanceCents);
-    const canAffordVault = walletBalanceCents >= vaultCostCents;
-
-    vaultUpgradeButton.hidden = false;
-    vaultUpgradeButton.textContent = `KASA GELİŞTİR · ${formatCreditsFromCents(vaultCostCents)}`;
-    vaultUpgradeButton.disabled = busy || !canAffordVault;
-    vaultUpgradeButton.dataset.actionState = busy
-      ? "busy"
-      : canAffordVault
-        ? "ready"
-        : "insufficient";
-    vaultUpgradeButton.title = busy
-      ? "İşlem sürüyor."
-      : canAffordVault
-        ? `Kasayı ${vaultUpgrade.nextCapacityHours} saate çıkar.`
-        : `Bakiye yetersiz. ${formatCreditsFromCents(vaultShortfallCents)} eksik.`;
-  }
 
   collectButton.textContent = business.canCollect
     ? `TOPLA · ${formatCreditsFromCents(business.collectableCents)}`
@@ -568,23 +514,6 @@ export function updateBusinessRow(
   row.dataset.businessLevel = currentStage ? String(currentStage.level) : "unowned";
   const visualStage = getBusinessVisualStage(business);
   row.dataset.visualStage = visualStage;
-  if (milestoneNode) {
-    const visualPrefix = business.businessId === "stadium"
-      ? "STADIUM"
-      : business.businessId === "club-store"
-        ? "CLUB STORE"
-        : "FAN CLUB";
-    milestoneNode.textContent = visualStage === "locked"
-      ? `${visualPrefix} // LOCKED`
-      : visualStage === "local"
-        ? `${visualPrefix} // LOCAL`
-        : visualStage === "pro"
-          ? `${visualPrefix} // PRO`
-          : visualStage === "elite"
-            ? `${visualPrefix} // ELITE`
-            : `${visualPrefix} // ICON`;
-  }
-
   cardStateNode.textContent = !currentStage
     ? "SATIN ALINMADI"
     : business.liveIsVaultFull
