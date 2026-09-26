@@ -174,7 +174,7 @@ describe("Businesses dedicated minimal mobile shell", () => {
     expect(idleCssSource).toContain("min-height: 70px");
     expect(idleCssSource).toContain("grid-column: 1 / -1");
     expect(idleCssSource).toContain("min-height: 58px");
-    expect(idleCssSource).toContain("linear-gradient(135deg, #3c84ff, #4273dc 62%, #388a9c)");
+    expect(idleCssSource).toContain("linear-gradient(135deg, #0d34e9, #1a43bf 62%, #123499)");
   });
 
   it("keeps a 390px-specific fallback without changing the tablet breakpoint", () => {
@@ -202,18 +202,22 @@ describe("Businesses token inheritance", () => {
 
 
 describe("Businesses premium design tokens", () => {
-  it("locks the uploaded Black / Deep Azure / Salzburg / Sapphire / Cerulean palette", () => {
+  it("locks the uploaded Rich Black / Dark Green / Bangladesh / Caribbean / White palette", () => {
     expect(idleCssSource).toContain("/* Businesses visual system v2");
-    expect(idleCssSource).toContain("--idle-black: #000000");
-    expect(idleCssSource).toContain("--idle-deep-azure: #0b0e0f");
-    expect(idleCssSource).toContain("--idle-salzburg-blue: #388a9c");
-    expect(idleCssSource).toContain("--idle-sapphire: #4273dc");
-    expect(idleCssSource).toContain("--idle-cerulean: #3c84ff");
-    expect(idleCssSource).toContain("--idle-canvas: #0b0e0f");
-    expect(idleCssSource).toContain("--idle-sidebar: #000000");
-    expect(idleCssSource).toContain("--idle-accent: #388a9c");
-    expect(idleCssSource).toContain("--idle-accent-secondary: #4273dc");
-    expect(idleCssSource).toContain("--idle-accent-bright: #3c84ff");
+    expect(idleCssSource).toContain("--idle-secondary-ink: #01011d");
+    expect(idleCssSource).toContain("--idle-rich-black: #00072d");
+    expect(idleCssSource).toContain("--idle-dark-green: #051650");
+    expect(idleCssSource).toContain("--idle-bangladesh-green: #0a2472");
+    expect(idleCssSource).toContain("--idle-caribbean-green: #123499");
+    expect(idleCssSource).toContain("--idle-palette-white: #dde2f6");
+    expect(idleCssSource).toContain("--idle-secondary-blue-1: #1a43bf");
+    expect(idleCssSource).toContain("--idle-secondary-blue-2: #0d34e9");
+    expect(idleCssSource).toContain("--idle-secondary-blue-3: #0a0ba4");
+    expect(idleCssSource).toContain("--idle-canvas: #00072d");
+    expect(idleCssSource).toContain("--idle-sidebar: #01011d");
+    expect(idleCssSource).toContain("--idle-accent: #123499");
+    expect(idleCssSource).toContain("--idle-accent-secondary: #1a43bf");
+    expect(idleCssSource).toContain("--idle-accent-bright: #0d34e9");
     expect(idleCssSource).toContain("--idle-shadow-accent");
   });
 
@@ -328,7 +332,7 @@ describe("Businesses measured desktop workspace", () => {
   });
 
   it("uses the approved black-azure shell instead of the old blue ambient foundation", () => {
-    expect(idleCssSource).toContain("background: var(--idle-canvas, #0b0e0f)");
+    expect(idleCssSource).toContain("background: var(--idle-canvas, #00072d)");
     expect(idleCssSource).toContain("rgba(56, 138, 156, .035)");
     expect(idleCssSource).toContain("var(--idle-sidebar)");
     expect(idleCssSource).toContain("var(--idle-accent)");
@@ -396,8 +400,8 @@ describe("Businesses premium KPI command bar", () => {
   });
 
   it("uses the approved blue primary treatment for Tümünü Topla", () => {
-    expect(idleCssSource).toContain("#3c84ff");
-    expect(idleCssSource).toContain("#4273dc");
+    expect(idleCssSource).toContain("#0d34e9");
+    expect(idleCssSource).toContain("#1a43bf");
     expect(idleCssSource).toContain("color: #000000");
     expect(idleCssSource).toContain("width: 34px");
     expect(idleCssSource).toContain("height: 34px");
@@ -1206,7 +1210,7 @@ describe("Businesses final responsive QA", () => {
 
 
 describe("Businesses Part 18 final QA guardrails", () => {
-  it("removes the retired green palette after the uploaded blue palette migration", () => {
+  it("removes the retired green palette after the Brand Asset palette migration", () => {
     expect(idleCssSource).not.toContain("--idle-green");
     expect(idleCssSource).not.toContain("#54f2a3");
     expect(idleCssSource).not.toContain("#78f0aa");
@@ -1214,6 +1218,9 @@ describe("Businesses Part 18 final QA guardrails", () => {
     expect(idleCssSource).not.toContain("rgba(84, 242, 163,");
     expect(idleCssSource).not.toContain("rgba(120, 240, 170,");
     expect(idleCssSource).not.toContain("rgba(35, 150, 92,");
+    expect(idleCssSource).not.toContain("#388a9c");
+    expect(idleCssSource).not.toContain("#4273dc");
+    expect(idleCssSource).not.toContain("#3c84ff");
   });
 
   it("keeps one explicit final QA guardrail layer for overflow, touch and motion safety", () => {
