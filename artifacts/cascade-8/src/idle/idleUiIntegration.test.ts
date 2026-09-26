@@ -99,8 +99,9 @@ describe("Businesses main menu control", () => {
     expect(idleIndexSource).toContain("<span>ANA MENÜ</span>");
   });
 
-  it("keeps the control comfortably tappable and visually separated from the title", () => {
+  it("keeps the control comfortably tappable and right-aligned on mobile", () => {
     expect(idleCssSource).toContain(".businesses-header-nav");
+    expect(idleCssSource).toContain("justify-content: flex-end");
     expect(idleCssSource).toContain(".businesses-header .back-link {");
     expect(idleCssSource).toContain("min-height: 44px");
     expect(idleCssSource).toContain(".businesses-header .back-link-icon");
