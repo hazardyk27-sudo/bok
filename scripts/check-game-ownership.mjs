@@ -17,10 +17,15 @@ if (!base) {
 }
 
 const roots = manifest.games[game].roots.map((root) => root.replace(/\/+$/, ""));
+const developmentRoots = (manifest.games[game].developmentRoots ?? []).map((root) => root.replace(/\/+$/, ""));
+const developmentPrefixes = manifest.games[game].developmentPrefixes ?? [];
+const allowedRoots = [...roots, ...developmentRoots];
 const shared = manifest.shared.map((root) => root.replace(/\/+$/, ""));
 const git = (...args) => execFileSync("git", args, { encoding: "utf8" }).trim();
 const inside = (file, root) => file === root || file.startsWith(root + "/");
-const owned = (file) => roots.some((root) => inside(file, root));
+const owned = (file) =>
+  allowedRoots.some((root) => inside(file, root)) ||
+  developmentPrefixes.some((prefix) => file.startsWith(prefix));
 const sharedFile = (file) => shared.some((root) => inside(file, root));
 
 const parents = git("rev-list", "--parents", "-n", "1", head).split(/\s+/).slice(1);
