@@ -135,6 +135,7 @@ export class RoulettePhysicsReplay {
     this.canvas.dataset.replayPocket = String(expectedNumber);
     this.applySample(this.replay.trajectory.at(-1)!);
     this.renderFrame();
+    this.exposeFinalReplayState();
   }
 
   destroy() {
@@ -278,9 +279,43 @@ export class RoulettePhysicsReplay {
 
   private finishPlayback() {
     this.canvas.dataset.replayState = "settled";
+    this.exposeFinalReplayState();
     const complete = this.onComplete;
     this.onComplete = undefined;
     complete?.();
+  }
+
+  private exposeFinalReplayState() {
+    const replay = this.replay;
+    if (!replay?.finalPocket || replay.winningNumber === null || !this.rotor) return;
+    this.canvas.dataset.replayRoundId = replay.roundId;
+    this.canvas.dataset.replayTrajectoryHash = replay.trajectoryHash;
+    this.canvas.dataset.replayFinal = JSON.stringify({
+      actual: {
+        ballPosition: {
+          x: this.ball.position.x,
+          y: this.ball.position.y,
+          z: this.ball.position.z,
+        },
+        ballOrientation: {
+          x: this.ball.quaternion.x,
+          y: this.ball.quaternion.y,
+          z: this.ball.quaternion.z,
+          w: this.ball.quaternion.w,
+        },
+        rotorOrientation: {
+          x: this.rotor.quaternion.x,
+          y: this.rotor.quaternion.y,
+          z: this.rotor.quaternion.z,
+          w: this.rotor.quaternion.w,
+        },
+      },
+      expected: {
+        finalPocket: replay.finalPocket,
+        winningNumber: replay.winningNumber,
+        finalSample: replay.trajectory.at(-1) ?? null,
+      },
+    });
   }
 
   private applyAt(simulatedAtMs: number) {
