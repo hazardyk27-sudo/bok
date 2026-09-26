@@ -33,11 +33,14 @@ const SECTOR_STEP_RADIANS = (Math.PI * 2) / PHYSICS_LAB_SECTOR_COUNT;
 const BALL_COLLISION_GROUP = 0x0001;
 const STATIONARY_COLLISION_GROUP = 0x0002;
 const ROTOR_COLLISION_GROUP = 0x0004;
-const TRAJECTORY_SAMPLE_EVERY_STEPS = 4;
+const TRAJECTORY_SAMPLE_EVERY_STEPS = 1;
 const MAX_TRAJECTORY_SAMPLES = Math.ceil(
   (PHYSICS_LAB_DURATION_LIMIT_SECONDS / PHYSICS_LAB_FIXED_TIMESTEP) /
     TRAJECTORY_SAMPLE_EVERY_STEPS,
 ) + 1;
+
+const POCKET_FRET_RESTITUTION = 0.06;
+const DEFLECTOR_RESTITUTION = 0.22;
 
 const BALL_PARAMETERS = {
   radius: PHYSICS_LAB_BALL_RADIUS,
@@ -545,7 +548,7 @@ function addPocketFretColliders(
             w: Math.cos(angle / 2),
           })
           .setFriction(0.42)
-          .setRestitution(0.02)
+          .setRestitution(POCKET_FRET_RESTITUTION)
           .setCollisionGroups(
             ROTOR_COLLISION_GROUP | (BALL_COLLISION_GROUP << 16),
           ),
@@ -662,7 +665,7 @@ function addMeasuredDeflectorColliders(
             w: Math.cos(angle / 2),
           })
           .setFriction(0.28)
-          .setRestitution(0.16)
+          .setRestitution(DEFLECTOR_RESTITUTION)
           .setCollisionGroups(
             STATIONARY_COLLISION_GROUP | (BALL_COLLISION_GROUP << 16),
           ),
