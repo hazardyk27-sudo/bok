@@ -1,15 +1,13 @@
 import * as THREE from "three";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
 import {
-  ROULETTE_AUTHORITATIVE_SCALE,
   ROULETTE_BALL_RADIUS,
   ROULETTE_MODEL_PATH,
   ROULETTE_PHYSICS_SCHEMA_VERSION,
-  ROULETTE_RAW_SOURCE_CENTER,
   ROULETTE_ROTOR_ANGULAR_SPEED,
   ROULETTE_WHEEL_DIAMETER,
-  ROULETTE_Y_ORIGIN,
 } from "../../../lib/roulette-physics-config";
+import { prepareAuthoritativeRouletteGlb } from "../../../lib/roulette-gltf-transform";
 
 type Vec3 = { x: number; y: number; z: number };
 type Quaternion = { x: number; y: number; z: number; w: number };
@@ -204,52 +202,13 @@ export class RoulettePhysicsReplay {
     const runtime = gltf.scene.clone(true);
     runtime.getObjectByName("Sphere_16")?.removeFromParent();
 
-    const embeddedScaleNode = (() => {
-      let found: THREE.Object3D | undefined;
-      runtime.traverse((child) => {
-        if (
-          !found &&
-          Math.abs(child.scale.x - 0.01) < 0.000001 &&
-          Math.abs(child.scale.y - 0.01) < 0.000001 &&
-          Math.abs(child.scale.z - 0.01) < 0.000001
-        ) {
-          found = child;
-        }
-      });
-      return found;
-    })();
-    if (!embeddedScaleNode) {
-      throw new Error("ROULETTE_MODEL_SCALE_ROOT_MISSING");
-    }
-    embeddedScaleNode.scale.set(1, 1, 1);
-    runtime.updateMatrixWorld(true);
-
-    const outside = runtime.getObjectByName("geo1_outside_0");
-    const inside = runtime.getObjectByName("geo1_inside_0");
-    const turret = runtime.getObjectByName("geo1_turret_0");
-    if (!outside || !inside || !turret) {
-      throw new Error("ROULETTE_MODEL_REQUIRED_NODES_MISSING");
-    }
-
-    const sourceCenter = new THREE.Vector3(
-      ROULETTE_RAW_SOURCE_CENTER.x,
-      ROULETTE_RAW_SOURCE_CENTER.y,
-      ROULETTE_RAW_SOURCE_CENTER.z,
-    );
-
     const wheel = new THREE.Group();
-    wheel.position.set(0, ROULETTE_Y_ORIGIN, 0);
-
-    const runtimeOffset = new THREE.Group();
-    runtimeOffset.position.set(-sourceCenter.x, -sourceCenter.y, -sourceCenter.z);
-    runtimeOffset.scale.setScalar(ROULETTE_AUTHORITATIVE_SCALE);
-    runtimeOffset.add(runtime);
-    wheel.add(runtimeOffset);
-    wheel.updateMatrixWorld(true);
-
-    const normalizedBounds = new THREE.Box3().setFromObject(runtime);
-    runtimeOffset.position.sub(normalizedBounds.getCenter(new THREE.Vector3()));
-    wheel.updateMatrixWorld(true);
+    const {
+      runtimeOffset,
+      outside,
+      inside,
+      turret,
+    } = prepareAuthoritativeRouletteGlb(runtime, wheel);
 
     const stationary = new THREE.Group();
     const rotorPivot = new THREE.Group();
