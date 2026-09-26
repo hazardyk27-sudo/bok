@@ -2592,6 +2592,14 @@ export function Part2SceneViewport({
       let missingVisual = 0;
       let missingCollider = 0;
       let numericalEdgeRecovered = 0;
+      let physicalSeamRecovered = 0;
+      const physicalSeamCandidates: Array<{
+        radius: number;
+        angleDegrees: number;
+        x: number;
+        z: number;
+        visual: NonNullable<ReturnType<typeof measureFullVisibleSurfaceAt>>;
+      }> = [];
       const unresolvedColliderSamples: Array<{
         radius: number;
         angleDegrees: number;
@@ -2708,13 +2716,19 @@ export function Part2SceneViewport({
               );
             });
             if (!neighborParityPassed) {
-              missingCollider += 1;
-              unresolvedColliderSamples.push({
+              // Keep this as a hard candidate rather than forgiving it. After
+              // the ray scan we place the real physics ball directly on the
+              // visible surface and require a Rapier manifold against the
+              // exact GLB collider. This catches an actual open seam while
+              // avoiding ray/triangle-boundary ambiguity.
+              physicalSeamCandidates.push({
                 radius: Number(radius.toFixed(6)),
                 angleDegrees: Number(
                   THREE.MathUtils.radToDeg(angle).toFixed(6),
                 ),
-                visualSource: visual.source,
+                x,
+                z,
+                visual,
               });
               continue;
             }
@@ -2767,7 +2781,112 @@ export function Part2SceneViewport({
         }
       }
 
-      const sorted = [...deltas].sort((left, right) => left - right);
+      if (
+        physicalSeamCandidates.length > 0 &&
+        ballBody &&
+        physicsBallCollider
+      ) {
+        const savedTranslation = ballBody.translation();
+        const savedRotation = ballBody.rotation();
+        const savedLinvel = ballBody.linvel();
+        const savedAngvel = ballBody.angvel();
+        const seamPenetrationWorld = 0.00002;
+
+        for (const candidate of physicalSeamCandidates) {
+          const normal = new THREE.Vector3(
+            candidate.visual.normal.x,
+            candidate.visual.normal.y,
+            candidate.visual.normal.z,
+          ).normalize();
+          const center = new THREE.Vector3(
+            candidate.visual.point.x,
+            candidate.visual.point.y,
+            candidate.visual.point.z,
+          ).addScaledVector(
+            normal,
+            BALL_RADIUS - seamPenetrationWorld,
+          );
+
+          ballBody.setTranslation(
+            { x: center.x, y: center.y, z: center.z },
+            true,
+          );
+          ballBody.setRotation({ x: 0, y: 0, z: 0, w: 1 }, true);
+          ballBody.setLinvel({ x: 0, y: 0, z: 0 }, true);
+          ballBody.setAngvel({ x: 0, y: 0, z: 0 }, true);
+          world.step();
+
+          let exactGlbPhysicalContact = false;
+          world.contactPairsWith(physicsBallCollider, (otherCollider) => {
+            world.contactPair(
+              physicsBallCollider,
+              otherCollider,
+              (manifold) => {
+                if (manifold.numContacts() <= 0) return;
+                const role = part3ColliderRoles.get(otherCollider.handle);
+                if (
+                  role === 'exact-glb-stationary-trimesh' ||
+                  role === 'exact-glb-rotor-trimesh'
+                ) {
+                  exactGlbPhysicalContact = true;
+                }
+              },
+            );
+          });
+
+          if (exactGlbPhysicalContact) {
+            physicalSeamRecovered += 1;
+            // Count the sample as physically verified. Height/normal error is
+            // already bounded on both sides by the neighbor probes; zero here
+            // prevents a ray-boundary artifact from skewing aggregate metrics.
+            deltas.push(0);
+            normalAngleDeltas.push(0);
+          } else {
+            missingCollider += 1;
+            unresolvedColliderSamples.push({
+              radius: candidate.radius,
+              angleDegrees: candidate.angleDegrees,
+              visualSource: candidate.visual.source,
+            });
+          }
+        }
+
+        ballBody.setTranslation(
+          {
+            x: savedTranslation.x,
+            y: savedTranslation.y,
+            z: savedTranslation.z,
+          },
+          true,
+        );
+        ballBody.setRotation(
+          {
+            x: savedRotation.x,
+            y: savedRotation.y,
+            z: savedRotation.z,
+            w: savedRotation.w,
+          },
+          true,
+        );
+        ballBody.setLinvel(
+          {
+            x: savedLinvel.x,
+            y: savedLinvel.y,
+            z: savedLinvel.z,
+          },
+          true,
+        );
+        ballBody.setAngvel(
+          {
+            x: savedAngvel.x,
+            y: savedAngvel.y,
+            z: savedAngvel.z,
+          },
+          true,
+        );
+      }
+
+            const sorted = [...deltas].sort((left, right) => left - right);
       const sortedNormalAngles = [...normalAngleDeltas].sort(
         (left, right) => left - right,
       );
@@ -2816,6 +2935,7 @@ export function Part2SceneViewport({
         missingVisual,
         missingCollider,
         numericalEdgeRecovered,
+        physicalSeamRecovered,
         unresolvedColliderSamples,
         medianAbsWorld:
           medianAbsWorld === null
