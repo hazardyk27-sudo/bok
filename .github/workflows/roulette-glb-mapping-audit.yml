@@ -80,7 +80,7 @@ jobs:
                 console.log(text);
               }
             });
-            await page.goto('http://127.0.0.1:4173/?glbMappingAudit=1', {
+            await page.goto('http://127.0.0.1:4173/?part6Headless=1&part6SeedCount=1&part6MaxDurationSeconds=1&glbMappingAudit=1', {
               waitUntil: 'domcontentloaded',
               timeout: 30000,
             });
