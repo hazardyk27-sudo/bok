@@ -903,6 +903,49 @@ describe("Businesses premium vault stage cards", () => {
 });
 
 
+describe("Businesses final mobile Details composition", () => {
+  it("locks Details to a true fullscreen mobile drawer with a single scroll region", () => {
+    expect(idleCssSource).toContain("/* Part 16 — final mobile Details fullscreen composition */");
+    expect(idleCssSource).toContain("width: 100%");
+    expect(idleCssSource).toContain("height: 100dvh");
+    expect(idleCssSource).toContain("grid-template-rows: auto auto auto auto minmax(0, 1fr)");
+    expect(idleCssSource).toContain("overflow: hidden");
+    expect(idleCssSource).toContain("touch-action: none");
+    expect(idleCssSource).toContain("touch-action: pan-y");
+  });
+
+  it("keeps the mobile header tabs and summary outside the scrolling stage list", () => {
+    expect(idleCssSource).toContain(".business-detail-header");
+    expect(idleCssSource).toContain(".business-detail-tabs");
+    expect(idleCssSource).toContain(".business-detail-summary");
+    expect(idleCssSource).toContain(".business-detail-scroll");
+    expect(idleCssSource).toContain("min-height: 0");
+    expect(idleCssSource).toContain("overflow-y: auto");
+    expect(idleCssSource).toContain("overscroll-behavior-y: contain");
+  });
+
+  it("uses a readable mobile summary with accrued money dominant", () => {
+    expect(idleCssSource).toContain(".business-detail-summary > div:first-child");
+    expect(idleCssSource).toContain("grid-column: 1 / -1");
+    expect(idleCssSource).toContain("font-size: 20px");
+    expect(idleCssSource).toContain("font-size: 15px");
+  });
+
+  it("keeps core Details touch targets at least 44-48px", () => {
+    expect(idleCssSource).toContain("min-height: 46px");
+    expect(idleCssSource).toContain("min-height: 48px");
+    expect(idleCssSource).toContain("touch-action: manipulation");
+  });
+
+  it("keeps short phone landscape usable with a two-column fullscreen layout", () => {
+    expect(idleCssSource).toContain("@media (orientation: landscape) and (max-height: 520px) and (max-width: 950px)");
+    expect(idleCssSource).toContain("grid-template-columns: minmax(220px, .7fr) minmax(0, 1.3fr)");
+    expect(idleCssSource).toContain("grid-row: 2 / 4");
+    expect(idleCssSource).toContain("padding-bottom: max(18px, env(safe-area-inset-bottom))");
+  });
+});
+
+
 describe("Businesses upgrade feedback choreography", () => {
   it("captures before and after server-backed state for successful upgrades", () => {
     expect(idleIndexSource).toContain("getBusinessSnapshot");
