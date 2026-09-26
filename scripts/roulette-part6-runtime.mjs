@@ -4,7 +4,7 @@ import fs from 'node:fs';
 // Runtime probe intentionally runs only in GitHub Actions for PART 6B validation.
 const targetUrl =
   process.env.ROULETTE_LAB_URL ??
-  'http://127.0.0.1:4173/?part6Headless=1';
+  'http://127.0.0.1:4173/?part6Headless=1&glbMappingAudit=1';
 const outputPath =
   process.env.ROULETTE_PART6_OUTPUT ??
   'artifacts/roulette-physics-lab/part6-runtime-result.json';
@@ -17,6 +17,8 @@ const expectedSeedCount = Number(
 
 let telemetry = null;
 let glbColliderParity = null;
+let glbPocketGeometry = null;
+let glbNumberMapping = null;
 const seedTelemetry = [];
 let lastStepProgress = null;
 let lastDiagnosticStage = null;
@@ -87,6 +89,8 @@ const persistPartialResult = (extra = {}) => {
     seedTelemetry,
     telemetry,
     glbColliderParity,
+    glbPocketGeometry,
+    glbNumberMapping,
     startupConsole,
     pageErrors,
     requestFailures,
@@ -127,6 +131,38 @@ try {
           location: message.location(),
         }),
     );
+
+    if (text.startsWith('GLB_POCKET_GEOMETRY_REPORT ')) {
+      const raw = text.slice('GLB_POCKET_GEOMETRY_REPORT '.length);
+      try {
+        glbPocketGeometry = JSON.parse(raw);
+        console.log('PART6_GLB_POCKET_GEOMETRY ' + raw);
+        persistPartialResult({
+          expectedSeedCount,
+          glbPocketGeometry,
+          seedResultsCaptured: seedTelemetry.length,
+        });
+      } catch (error) {
+        console.error('Could not parse GLB pocket geometry payload:', error);
+      }
+      return;
+    }
+
+    if (text.startsWith('GLB_NUMBER_MAPPING_REPORT ')) {
+      const raw = text.slice('GLB_NUMBER_MAPPING_REPORT '.length);
+      try {
+        glbNumberMapping = JSON.parse(raw);
+        console.log('PART6_GLB_NUMBER_MAPPING ' + raw);
+        persistPartialResult({
+          expectedSeedCount,
+          glbNumberMapping,
+          seedResultsCaptured: seedTelemetry.length,
+        });
+      } catch (error) {
+        console.error('Could not parse GLB number mapping payload:', error);
+      }
+      return;
+    }
 
     if (text.startsWith('GLB_COLLIDER_PARITY_REPORT ')) {
       const raw = text.slice('GLB_COLLIDER_PARITY_REPORT '.length);
@@ -350,6 +386,8 @@ try {
     seedTelemetry,
     telemetry,
     glbColliderParity,
+    glbPocketGeometry,
+    glbNumberMapping,
     reportText,
   };
 
@@ -381,6 +419,16 @@ try {
     glbColliderParityMaxAbsMm: glbColliderParity?.maxAbsMm ?? null,
     glbColliderParityMaxNormalAngleDegrees:
       glbColliderParity?.maxNormalAngleDegrees ?? null,
+    glbPocketPhaseDegrees:
+      glbPocketGeometry?.detectedPhaseDegrees ?? null,
+    glbPocketReliefEndRadius:
+      glbPocketGeometry?.reliefEndRadius ?? null,
+    glbVisibleZeroAngleDegrees:
+      glbNumberMapping?.visibleZeroAngleDegrees ?? null,
+    glbVisibleSequenceDirection:
+      glbNumberMapping?.sequenceDirection ?? null,
+    glbVisibleColorMatchRate:
+      glbNumberMapping?.colorMatchRate ?? null,
   };
   console.log('PART6_RUNTIME_SUMMARY ' + JSON.stringify(summary));
 
@@ -394,6 +442,18 @@ try {
     throw new Error(
       'PART 6 report reached a terminal DOM state without a structured telemetry payload.',
     );
+  }
+  if (targetUrl.includes('glbMappingAudit=1')) {
+    if (!glbPocketGeometry) {
+      throw new Error(
+        'ROULETTE_GLB_POCKET_GEOMETRY_MISSING: no structured pocket geometry report was captured.',
+      );
+    }
+    if (!glbNumberMapping) {
+      throw new Error(
+        'ROULETTE_GLB_NUMBER_MAPPING_MISSING: no structured visible-number mapping report was captured.',
+      );
+    }
   }
   if (telemetry.visualParityStatus !== 'passed') {
     throw new Error(
