@@ -183,10 +183,11 @@ describe("Businesses premium design tokens", () => {
     expect(idleCssSource).toContain("--idle-business-image-ratio: 16 / 9");
   });
 
-  it("keeps temporary cyan compatibility aliases only while the remaining Part 3–18 sections migrate", () => {
-    expect(idleCssSource).toContain("--idle-cyan: var(--idle-green)");
-    expect(idleCssSource).toContain("--idle-cyan-bright: var(--idle-green-bright)");
-    expect(idleCssSource).toContain("--idle-cyan-soft: var(--idle-green-soft)");
+  it("removes temporary cyan compatibility aliases after the final migration", () => {
+    expect(idleCssSource).not.toContain("--idle-cyan:");
+    expect(idleCssSource).not.toContain("--idle-cyan-bright:");
+    expect(idleCssSource).not.toContain("--idle-cyan-soft:");
+    expect(idleCssSource).not.toContain("--idle-blue-deep:");
     expect(idleCssSource).toContain("font-family: var(--idle-font-ui)");
   });
 });
@@ -972,7 +973,7 @@ describe("Businesses upgrade feedback choreography", () => {
   });
 
   it("applies restrained cyan sweep, level, number and visual transition animations", () => {
-    expect(idleCssSource).toContain("/* Part 16 — premium upgrade feedback choreography */");
+    expect(idleCssSource).toContain("/* Upgrade feedback choreography */");
     expect(idleCssSource).toContain("@keyframes idle-upgrade-sweep");
     expect(idleCssSource).toContain("@keyframes idle-upgrade-level-pop");
     expect(idleCssSource).toContain("@keyframes idle-upgrade-number-rise");
@@ -1062,7 +1063,7 @@ describe("Businesses collect and completion polish", () => {
   });
 
   it("visually distinguishes full vault and max-level completion without changing economy logic", () => {
-    expect(idleCssSource).toContain("/* Part 17 — collect / full-vault / max-level polish */");
+    expect(idleCssSource).toContain("/* Collect / full-vault / max-level polish */");
     expect(idleCssSource).toContain(".business-card[data-business-status=\"full\"]");
     expect(idleCssSource).toContain(".business-card[data-business-level=\"8\"]");
     expect(idleCssSource).toContain(".business-card-level-mark[data-level-state=\"max\"]");
@@ -1080,7 +1081,7 @@ describe("Businesses collect and completion polish", () => {
 
 describe("Businesses final responsive QA", () => {
   it("covers real phone landscape widths with a short-height fullscreen Details layout", () => {
-    expect(idleCssSource).toContain("/* Part 18 — final responsive QA / short mobile landscape */");
+    expect(idleCssSource).toContain("/* Short mobile landscape safety */");
     expect(idleCssSource).toContain("@media (orientation: landscape) and (max-height: 520px) and (max-width: 950px)");
     expect(idleCssSource).toContain("width: 100vw");
     expect(idleCssSource).toContain("height: 100dvh");
@@ -1101,6 +1102,33 @@ describe("Businesses final responsive QA", () => {
   });
 });
 
+
+
+describe("Businesses Part 18 final QA guardrails", () => {
+  it("removes hard-coded legacy blue and violet accents from the Idle stylesheet", () => {
+    expect(idleCssSource).not.toContain("rgba(70, 200, 255,");
+    expect(idleCssSource).not.toContain("rgba(125, 223, 255,");
+    expect(idleCssSource).not.toContain("rgba(24, 69, 124,");
+    expect(idleCssSource).not.toContain("rgba(114, 88, 255,");
+    expect(idleCssSource).not.toContain("var(--idle-cyan");
+    expect(idleCssSource).not.toContain("var(--idle-blue-deep");
+  });
+
+  it("keeps one explicit final QA guardrail layer for overflow, touch and motion safety", () => {
+    expect(idleCssSource).toContain("/* Part 18 — final QA guardrails */");
+    expect(idleCssSource).toContain("overflow-x: clip");
+    expect(idleCssSource).toContain("-webkit-tap-highlight-color: transparent");
+    expect(idleCssSource).toContain("@media (prefers-reduced-motion: reduce)");
+    expect(idleCssSource).toContain("transition: none");
+  });
+
+  it("keeps desktop tablet phone and short-landscape breakpoints present together", () => {
+    expect(idleCssSource).toContain("@media (min-width: 1101px)");
+    expect(idleCssSource).toContain("@media (min-width: 761px) and (max-width: 1100px)");
+    expect(idleCssSource).toContain("@media (max-width: 760px)");
+    expect(idleCssSource).toContain("@media (orientation: landscape) and (max-height: 520px) and (max-width: 950px)");
+  });
+});
 
 
 describe("Businesses premium typography pass", () => {
