@@ -69,6 +69,7 @@ const PART3_OUTER_SPIN_RUNS = [
 ] as const;
 const PART6_TELEMETRY_SCHEMA_VERSION = 'roulette-part6-full-spin-telemetry-v1';
 const GLB_COLLIDER_PARITY_EPSILON_WORLD = 0.0006;
+const GLB_COLLIDER_PARITY_NORMAL_EPSILON_DEGREES = 0.1;
 const MM_PER_WORLD_UNIT = 1000 / ROULETTE_WORLD_UNITS_PER_METER;
 const GLB_COLLIDER_PARITY_SCAN_INNER_RADIUS = 1.48;
 const GLB_COLLIDER_PARITY_SCAN_OUTER_RADIUS = 2.44;
@@ -2538,6 +2539,7 @@ export function Part2SceneViewport({
       if (!world || !stationaryGroup || !rotorPivot) return null;
 
       const deltas: number[] = [];
+      const normalAngleDeltas: number[] = [];
       let missingVisual = 0;
       let missingCollider = 0;
       let maxSample:
@@ -2589,7 +2591,26 @@ export function Part2SceneViewport({
 
           const deltaWorld = collider.y - visual.y;
           const absDelta = Math.abs(deltaWorld);
+          const visualNormal = new THREE.Vector3(
+            visual.normal.x,
+            visual.normal.y,
+            visual.normal.z,
+          ).normalize();
+          const colliderNormal = new THREE.Vector3(
+            collider.normal.x,
+            collider.normal.y,
+            collider.normal.z,
+          ).normalize();
+          const normalDot = THREE.MathUtils.clamp(
+            visualNormal.dot(colliderNormal),
+            -1,
+            1,
+          );
+          const normalAngleDegrees = THREE.MathUtils.radToDeg(
+            Math.acos(normalDot),
+          );
           deltas.push(absDelta);
+          normalAngleDeltas.push(normalAngleDegrees);
           if (!maxSample || absDelta > Math.abs(maxSample.deltaWorld)) {
             maxSample = {
               radius: Number(radius.toFixed(6)),
@@ -2610,6 +2631,22 @@ export function Part2SceneViewport({
       }
 
       const sorted = [...deltas].sort((left, right) => left - right);
+      const sortedNormalAngles = [...normalAngleDeltas].sort(
+        (left, right) => left - right,
+      );
+      const maxNormalAngleDegrees =
+        sortedNormalAngles.length === 0
+          ? null
+          : sortedNormalAngles[sortedNormalAngles.length - 1];
+      const medianNormalAngleDegrees =
+        sortedNormalAngles.length === 0
+          ? null
+          : sortedNormalAngles.length % 2 === 0
+            ? (
+                sortedNormalAngles[sortedNormalAngles.length / 2 - 1] +
+                sortedNormalAngles[sortedNormalAngles.length / 2]
+              ) / 2
+            : sortedNormalAngles[Math.floor(sortedNormalAngles.length / 2)];
       const medianAbsWorld =
         sorted.length === 0
           ? null
@@ -2622,7 +2659,10 @@ export function Part2SceneViewport({
         missingVisual === 0 &&
         missingCollider === 0 &&
         maxAbsWorld !== null &&
-        maxAbsWorld <= GLB_COLLIDER_PARITY_EPSILON_WORLD;
+        maxAbsWorld <= GLB_COLLIDER_PARITY_EPSILON_WORLD &&
+        maxNormalAngleDegrees !== null &&
+        maxNormalAngleDegrees <=
+          GLB_COLLIDER_PARITY_NORMAL_EPSILON_DEGREES;
 
       const report = {
         schemaVersion: 'roulette-glb-collider-parity-v1',
@@ -2630,6 +2670,8 @@ export function Part2SceneViewport({
         toleranceWorld: GLB_COLLIDER_PARITY_EPSILON_WORLD,
         toleranceMm:
           GLB_COLLIDER_PARITY_EPSILON_WORLD * MM_PER_WORLD_UNIT,
+        normalToleranceDegrees:
+          GLB_COLLIDER_PARITY_NORMAL_EPSILON_DEGREES,
         sampleCount:
           GLB_COLLIDER_PARITY_RADIAL_SAMPLES *
           GLB_COLLIDER_PARITY_ANGULAR_SAMPLES,
@@ -2650,6 +2692,14 @@ export function Part2SceneViewport({
           maxAbsWorld === null
             ? null
             : Number((maxAbsWorld * MM_PER_WORLD_UNIT).toFixed(3)),
+        medianNormalAngleDegrees:
+          medianNormalAngleDegrees === null
+            ? null
+            : Number(medianNormalAngleDegrees.toFixed(6)),
+        maxNormalAngleDegrees:
+          maxNormalAngleDegrees === null
+            ? null
+            : Number(maxNormalAngleDegrees.toFixed(6)),
         maxSample,
       };
 
