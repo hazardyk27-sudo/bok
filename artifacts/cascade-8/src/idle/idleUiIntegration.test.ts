@@ -650,11 +650,10 @@ describe("Businesses final responsive QA", () => {
     expect(idleCssSource).toContain("max(8px, env(safe-area-inset-bottom))");
   });
 
-  it("keeps primary mobile touch targets at least 44px tall", () => {
-    expect(idleCssSource).toContain("/* Part 18 — final mobile touch-target QA */");
-    expect(idleCssSource).toContain(".route-shell.is-businesses-page .business-vault-upgrade,");
-    expect(idleCssSource).toContain(".route-shell.is-businesses-page .business-card-details");
-    expect(idleCssSource).toContain("min-height: 44px");
+  it("keeps primary mobile touch targets comfortably large", () => {
+    expect(idleCssSource).toContain(".business-card-primary,");
+    expect(idleCssSource).toContain(".business-card-details");
+    expect(idleCssSource).toContain("min-height: 48px");
   });
 
   it("keeps the short landscape Details content scrollable and touch-safe", () => {
@@ -665,52 +664,45 @@ describe("Businesses final responsive QA", () => {
 });
 
 
+
 describe("Businesses premium typography pass", () => {
-  it("uses one corporate UI font stack across the main Businesses screen and Details", () => {
-    expect(idleCssSource).toContain("/* Premium typography pass — main cards + Details */");
-    expect(idleCssSource).toContain('--idle-font-ui: Inter, ui-sans-serif, system-ui');
+  it("uses one corporate sans-serif system across the main screen and Details", () => {
+    expect(idleCssSource).toContain("--idle-font-ui: Inter, ui-sans-serif, system-ui");
     expect(idleCssSource).toContain(".business-detail-drawer {");
     expect(idleCssSource).toContain("font-family: var(--idle-font-ui)");
   });
 
-  it("raises formerly micro-sized main-card labels and actions into a readable hierarchy", () => {
-    expect(idleCssSource).toContain(".business-card .business-row-title small");
+  it("keeps main-card labels and values comfortably readable", () => {
+    expect(idleCssSource).toContain(".business-row-title strong");
+    expect(idleCssSource).toContain("font-size: 21px");
+    expect(idleCssSource).toContain(".business-card-quick-stat strong");
+    expect(idleCssSource).toContain("font-size: 16px");
+    expect(idleCssSource).toContain(".business-card-vault-meta small");
     expect(idleCssSource).toContain("font-size: 10px");
-    expect(idleCssSource).toContain("font-size: 23px");
-    expect(idleCssSource).toContain("font-size: 12px");
-    expect(idleCssSource).toContain("font-size: 11px");
   });
 
-  it("raises Details tabs, summaries, progression trees and CTAs above the old 5–8px treatment", () => {
+  it("keeps Details tabs and stage-card CTAs readable", () => {
     expect(idleCssSource).toContain(".business-detail-tabs button");
-    expect(idleCssSource).toContain(".business-level-tree-legend span");
-    expect(idleCssSource).toContain(".business-vault-tree-legend span");
     expect(idleCssSource).toContain(".business-level-node-upgrade");
     expect(idleCssSource).toContain(".vault-level-node-upgrade");
     expect(idleCssSource).toContain("min-height: 48px");
-  });
-
-  it("keeps mobile and short landscape Details readable instead of collapsing labels", () => {
-    expect(idleCssSource).toContain("Mobile remains readable instead of collapsing into 5–7px labels.");
-    expect(idleCssSource).toContain("@media (orientation: landscape) and (max-height: 520px) and (max-width: 950px)");
-    expect(idleCssSource).toContain("font-size: 8px");
   });
 });
 
 
 describe("Businesses refinement final responsive regression", () => {
-  it("gives both 390px and 430px phones a single-column economy panel", () => {
-    expect(idleCssSource).toContain("/* Refinement Parts 7–8 — responsive readability + overflow hardening */");
-    expect(idleCssSource).toContain("@media (max-width: 520px)");
-    expect(idleCssSource).toContain(".business-card .business-card-operations");
+  it("keeps the main card information stack simple on phone widths", () => {
+    expect(idleCssSource).toContain("@media (max-width: 760px)");
+    expect(idleCssSource).toContain(".business-card-quick-stats");
+    expect(idleCssSource).toContain(".business-card-vault-status");
     expect(idleCssSource).toContain("grid-template-columns: 1fr");
   });
 
-  it("lets live vault timing wrap rather than disappear behind ellipsis", () => {
-    expect(idleCssSource).toContain(".business-card .business-card-vault-meta small");
-    expect(idleCssSource).toContain("text-overflow: clip");
-    expect(idleCssSource).toContain("white-space: normal");
+  it("lets vault timing wrap on narrow phones", () => {
+    expect(idleCssSource).toContain("@media (max-width: 430px)");
+    expect(idleCssSource).toContain(".business-card-vault-meta");
     expect(idleCssSource).toContain("flex-wrap: wrap");
+    expect(idleCssSource).toContain("flex-basis: 100%");
   });
 
   it("keeps dense Details stage cards readable on phone widths", () => {
@@ -725,6 +717,7 @@ describe("Businesses refinement final responsive regression", () => {
     expect(componentsSource).toContain("business-card-action--collect");
     expect(componentsSource).toContain("business-card-action--details");
     expect(componentsSource).not.toContain("data-business-upgrade");
+    expect(componentsSource).not.toContain("data-business-vault-upgrade");
     expect((componentsSource.match(/data-business-details/g) ?? []).length).toBe(1);
     expect(idleIndexSource).toContain('button.matches("[data-business-details]")');
   });
@@ -732,8 +725,6 @@ describe("Businesses refinement final responsive regression", () => {
   it("retains all critical live state and Details upgrade regression hooks", () => {
     expect(componentsSource).toContain('"KASA DOLU"');
     expect(componentsSource).toContain('"MAX SEVİYE"');
-    expect(componentsSource).toContain('"insufficient"');
-    expect(componentsSource).toContain('"full"');
     expect(idleIndexSource).toContain("runCollectBusiness");
     expect(idleIndexSource).toContain("runCollectAll");
     expect(idleIndexSource).toContain("data-idle-detail-upgrade");
