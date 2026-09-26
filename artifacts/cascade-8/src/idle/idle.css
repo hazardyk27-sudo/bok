@@ -4877,3 +4877,40 @@ body.business-detail-open {
     margin-right: 0;
   }
 }
+
+
+/* Final Ana Menü nav placement — structural override */
+.route-shell.is-businesses-page .businesses-header-nav {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.route-shell.is-businesses-page .businesses-header-status {
+  order: 1;
+  margin-right: auto;
+}
+
+.route-shell.is-businesses-page .businesses-header-nav .back-link {
+  order: 2;
+  grid-column: auto;
+  justify-self: auto;
+  margin-left: auto;
+  margin-right: 0;
+}
+
+@media (max-width: 760px) {
+  .route-shell.is-businesses-page .businesses-header-status {
+    display: none;
+  }
+
+  .route-shell.is-businesses-page .businesses-header-nav {
+    justify-content: flex-end;
+  }
+
+  .route-shell.is-businesses-page .businesses-header-nav .back-link {
+    margin-left: auto;
+    margin-right: 0;
+  }
+}
