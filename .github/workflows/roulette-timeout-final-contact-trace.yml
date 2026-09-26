@@ -1,11 +1,6 @@
 name: Roulette Timeout Final Contact Trace
 
 on:
-  push:
-    branches:
-      - feature/roulette
-    paths:
-      - '.github/workflows/roulette-timeout-final-contact-trace.yml'
   workflow_dispatch:
 
 jobs:
