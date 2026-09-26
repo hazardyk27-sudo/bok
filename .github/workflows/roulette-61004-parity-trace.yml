@@ -1,18 +1,7 @@
 name: Roulette 61004 Browser Server Parity Trace
 
 on:
-  push:
-    branches:
-      - feature/roulette
-    paths:
-      - '.github/workflows/roulette-61004-parity-trace.yml'
-      - 'artifacts/roulette-physics-lab/src/Part2SceneViewport.tsx'
-      - 'artifacts/api-server/src/physics-lab/simulation.ts'
   workflow_dispatch:
-
-permissions:
-  contents: read
-  statuses: write
 
 jobs:
   parity:
