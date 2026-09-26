@@ -1289,6 +1289,57 @@ export async function simulatePhysicsLabRound(
         break;
       }
       if (ballSpeed > Math.max(8, previousBallSpeed * 4)) {
+        const explosionContacts: Array<{
+          role: string;
+          manifolds: number;
+          contacts: number;
+        }> = [];
+        world.contactPairsWith(ballCollider, (otherCollider) => {
+          let manifolds = 0;
+          let contacts = 0;
+          world.contactPair(ballCollider, otherCollider, (manifold) => {
+            manifolds += 1;
+            contacts += manifold.numContacts();
+          });
+          explosionContacts.push({
+            role: colliderRoles.get(otherCollider.handle) ?? "unknown",
+            manifolds,
+            contacts,
+          });
+        });
+        console.info(
+          "SERVER_VELOCITY_EXPLOSION",
+          JSON.stringify({
+            seed,
+            step,
+            simulatedAtMs: Math.round(
+              step * PHYSICS_LAB_FIXED_TIMESTEP * 1000,
+            ),
+            previousBallSpeed,
+            ballSpeed,
+            speedRatio:
+              previousBallSpeed > 0 ? ballSpeed / previousBallSpeed : null,
+            position: {
+              x: translation.x,
+              y: translation.y,
+              z: translation.z,
+            },
+            radius,
+            velocity: {
+              x: velocity.x,
+              y: velocity.y,
+              z: velocity.z,
+            },
+            previousVelocity,
+            rotorRotation: {
+              x: rotorRotation.x,
+              y: rotorRotation.y,
+              z: rotorRotation.z,
+              w: rotorRotation.w,
+            },
+            contacts: explosionContacts,
+          }),
+        );
         errorCode = "VELOCITY_EXPLOSION";
         events.push(event("INVALID", step, { detail: errorCode }));
         break;
