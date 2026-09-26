@@ -2,6 +2,13 @@
 
 Virtual-credit cascading slot-style browser game with a Phaser board, pure TypeScript math engine, deterministic simulator, and responsive controls.
 
+## Isolation v2 / Replit branch
+
+- Replit must stay on `integration/replit-preview`; `main` is not the preview branch.
+- Normal game development happens on the game's feature branch and inside its ownership roots.
+- Feature commit != preview release. Use the one-game promotion flow, then fast-forward Replit with `bash scripts/replit-sync-preview.sh`.
+- Do not switch Replit to feature branches and do not use hard reset/rebase/force push to repair preview state.
+
 ## Run & Operate
 
 - `pnpm run dev` — run the `artifacts/cascade-8` Vite preview
@@ -25,7 +32,7 @@ Virtual-credit cascading slot-style browser game with a Phaser board, pure TypeS
 - `artifacts/cascade-8/src/engine/` — Phaser-independent board generation, evaluation, cascades, bonus logic, and seeded/crypto RNG.
 - `artifacts/cascade-8/src/game/` — Phaser scene, controller state machine, and WebAudio effects.
 - `artifacts/cascade-8/src/simulation/` — high-speed simulator, CLI, and saved reports.
-- `artifacts/cascade-8/src/main.ts` and `artifacts/cascade-8/src/styles.css` — responsive surrounding interface and modals.
+- `artifacts/cascade-8/src/main.ts` — route dispatcher only. Game-specific mount/runtime/CSS live in their owned areas; shared `styles.css` is platform/shared and not a normal game-edit target.
 - `/lab` — development-only deterministic board harness in the canonical artifact.
 
 ## Architecture decisions
