@@ -829,8 +829,6 @@ export async function simulatePhysicsLabRound(
     stationaryBody,
   );
   colliderRoles.set(darkRaceOuterWallCollider.handle, "dark-race-outer-wall");
-  const bowlBridgeCollider = addBowlBridgeCollider(world, stationaryBody);
-  colliderRoles.set(bowlBridgeCollider.handle, "bowl-bridge");
   const deflectorColliders = addMeasuredDeflectorColliders(
     world,
     stationaryBody,
@@ -841,6 +839,8 @@ export async function simulatePhysicsLabRound(
   for (const collider of deflectorColliders) {
     colliderRoles.set(collider.handle, "deflector");
   }
+  const bowlBridgeCollider = addBowlBridgeCollider(world, stationaryBody);
+  colliderRoles.set(bowlBridgeCollider.handle, "bowl-bridge");
   const pocketColliders = addPocketFloorAndOuterLipColliders(
     world,
     rotorBody,
