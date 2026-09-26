@@ -310,7 +310,63 @@ function renderVaultLevelTree(
 }
 
 export const BUSINESSES_MARKUP = `
-  <main class="businesses-page" aria-labelledby="businesses-title">
+  <div class="businesses-workspace">
+    <aside class="businesses-sidebar" aria-label="Fahrinin Yolu navigasyon">
+      <a class="businesses-sidebar-brand" href="/" aria-label="Fahrinin Yolu ana menü">
+        <span class="businesses-sidebar-crest" aria-hidden="true">FY</span>
+        <span>
+          <strong>FAHRİNİN YOLU</strong>
+          <small>CLUB EMPIRE</small>
+        </span>
+      </a>
+
+      <nav class="businesses-sidebar-nav" aria-label="Oyunlar ve kulüp bölümleri">
+        <span class="businesses-sidebar-section">OYUNLAR</span>
+
+        <a class="businesses-sidebar-item" href="/slot">
+          <span class="businesses-sidebar-item-icon" aria-hidden="true">▦</span>
+          <span>SLOT</span>
+        </a>
+        <a class="businesses-sidebar-item" href="/roulette">
+          <span class="businesses-sidebar-item-icon" aria-hidden="true">◎</span>
+          <span>RULET</span>
+        </a>
+        <a class="businesses-sidebar-item" href="/cadi-kazan">
+          <span class="businesses-sidebar-item-icon" aria-hidden="true">✦</span>
+          <span>CADI KAZAN</span>
+        </a>
+
+        <span class="businesses-sidebar-section businesses-sidebar-section--club">KULÜP</span>
+
+        <a
+          class="businesses-sidebar-item is-active"
+          href="/businesses"
+          aria-current="page"
+        >
+          <span class="businesses-sidebar-item-icon" aria-hidden="true">▣</span>
+          <span>İŞLETMELER</span>
+        </a>
+        <span class="businesses-sidebar-item is-disabled" aria-disabled="true">
+          <span class="businesses-sidebar-item-icon" aria-hidden="true">$</span>
+          <span>FİNANS</span>
+        </span>
+        <span class="businesses-sidebar-item is-disabled" aria-disabled="true">
+          <span class="businesses-sidebar-item-icon" aria-hidden="true">◆</span>
+          <span>KULÜP</span>
+        </span>
+        <span class="businesses-sidebar-item is-disabled" aria-disabled="true">
+          <span class="businesses-sidebar-item-icon" aria-hidden="true">⚙</span>
+          <span>AYARLAR</span>
+        </span>
+      </nav>
+
+      <div class="businesses-sidebar-footer">
+        <span>FAHRİNİN YOLU</span>
+        <small>KULÜP OPERASYON SİSTEMİ</small>
+      </div>
+    </aside>
+
+    <main class="businesses-page" aria-labelledby="businesses-title">
     <header class="businesses-header">
       <div class="businesses-header-nav">
         <span class="businesses-header-status"><i aria-hidden="true"></i>KULÜP OPERASYON MERKEZİ</span>
@@ -492,7 +548,8 @@ export const BUSINESSES_MARKUP = `
         </div>
       </aside>
     </div>
-  </main>
+    </main>
+  </div>
 `;
 
 export class BusinessesClient {
