@@ -214,9 +214,9 @@ function addDarkRaceChannelCollider(
       for (let segment = 0; segment < segments; segment += 1) {
         const angle = (segment / segments) * Math.PI * 2;
         vertices.push(
-          Math.sin(angle) * radius,
-          y,
-          Math.cos(angle) * radius,
+          quantizeBridgeScalar(Math.sin(angle) * radius),
+          quantizeBridgeScalar(y),
+          quantizeBridgeScalar(Math.cos(angle) * radius),
         );
       }
     }
@@ -322,6 +322,8 @@ function addBowlBridgeCollider(
   world: RAPIER.World,
   body: RAPIER.RigidBody,
 ) {
+  const quantizeBridgeScalar = (value: number) =>
+    Math.round(value * 1_000_000) / 1_000_000;
   const innerRadius = ROULETTE_POCKET_OUTER_LIP_RADIUS;
   const outerRadius =
     ROULETTE_DARK_RACE_INWARD_EDGE_RADIUS + PHYSICS_LAB_BALL_RADIUS;
