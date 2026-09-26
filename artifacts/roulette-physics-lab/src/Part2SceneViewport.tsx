@@ -2673,13 +2673,14 @@ export function Part2SceneViewport({
               (sample) => sample.visual !== null && sample.collider !== null,
             );
             if (!allRecovered) {
-              missingCollider += 1;
-              unresolvedColliderSamples.push({
+              physicalSeamCandidates.push({
                 radius: Number(radius.toFixed(6)),
                 angleDegrees: Number(
                   THREE.MathUtils.radToDeg(angle).toFixed(6),
                 ),
-                visualSource: visual.source,
+                x,
+                z,
+                visual,
               });
               continue;
             }
