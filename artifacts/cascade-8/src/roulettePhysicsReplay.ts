@@ -6,14 +6,18 @@ import {
   ROULETTE_PHYSICS_SCHEMA_VERSION,
   ROULETTE_ROTOR_ANGULAR_SPEED,
   ROULETTE_WHEEL_DIAMETER,
+  ROULETTE_WORLD_UNITS_PER_METER,
 } from "../../../lib/roulette-physics-config";
 import { prepareAuthoritativeRouletteGlb } from "../../../lib/roulette-gltf-transform";
+import { measureRouletteVisualSurfaceAt } from "../../../lib/roulette-glb-surface";
 
 type Vec3 = { x: number; y: number; z: number };
 type Quaternion = { x: number; y: number; z: number; w: number };
 
 const ROULETTE_VISUAL_BALL_SCALE = 1.5;
 const ROULETTE_VISUAL_BALL_RADIUS = ROULETTE_BALL_RADIUS * ROULETTE_VISUAL_BALL_SCALE;
+const ROULETTE_GLTF_PARITY_EPSILON_WORLD = 0.0006;
+const ROULETTE_MM_PER_WORLD_UNIT = 1000 / ROULETTE_WORLD_UNITS_PER_METER;
 
 type ReplaySample = {
   simulatedAtMs: number;
@@ -45,6 +49,7 @@ export class RoulettePhysicsReplay {
     new THREE.MeshStandardMaterial({ color: 0xfff8dc, metalness: 0.18, roughness: 0.24 }),
   );
   private rotor?: THREE.Group;
+  private visualSurfaceRoots: THREE.Object3D[] = [];
   private replay?: PhysicsReplay;
   private frame = 0;
   private playbackStartedAt = 0;
@@ -218,6 +223,7 @@ export class RoulettePhysicsReplay {
     stationary.attach(outside);
     stationary.attach(turret);
     rotorVisual.attach(inside);
+    this.visualSurfaceRoots = [stationary, rotorVisual];
     wheel.remove(runtimeOffset);
     wheel.updateMatrixWorld(true);
 
@@ -323,6 +329,30 @@ export class RoulettePhysicsReplay {
     if (!replay?.finalPocket || replay.winningNumber === null || !this.rotor) return;
     const finalSample = replay.trajectory.at(-1);
     if (!finalSample) return;
+    const visualSurface = measureRouletteVisualSurfaceAt(
+      this.visualSurfaceRoots,
+      finalSample.ball.position.x,
+      finalSample.ball.position.z,
+    );
+    const physicsBallBottomY =
+      finalSample.ball.position.y - ROULETTE_BALL_RADIUS;
+    const renderedBallBottomY =
+      finalSample.ball.position.y - ROULETTE_VISUAL_BALL_RADIUS;
+    const physicsVisualSurfaceGapWorld =
+      visualSurface === null ? null : physicsBallBottomY - visualSurface.y;
+    const renderedVisualSurfaceGapWorld =
+      visualSurface === null ? null : renderedBallBottomY - visualSurface.y;
+    const visualParityPassed =
+      physicsVisualSurfaceGapWorld !== null &&
+      Math.abs(physicsVisualSurfaceGapWorld) <= ROULETTE_GLTF_PARITY_EPSILON_WORLD;
+
+    this.canvas.dataset.visualSurfaceParity =
+      visualParityPassed ? "passed" : "failed";
+    this.canvas.dataset.visualSurfaceGapMm =
+      physicsVisualSurfaceGapWorld === null
+        ? "unavailable"
+        : (physicsVisualSurfaceGapWorld * ROULETTE_MM_PER_WORLD_UNIT).toFixed(3);
+
     this.canvas.dataset.replayRoundId = replay.roundId;
     this.canvas.dataset.replayTrajectoryHash = replay.trajectoryHash;
     this.canvas.dataset.replayFinal = JSON.stringify({
@@ -337,7 +367,23 @@ export class RoulettePhysicsReplay {
           y: this.ball.position.y,
           z: this.ball.position.z,
         },
+        visualBallRadius: ROULETTE_VISUAL_BALL_RADIUS,
       },
+      visualSurface: visualSurface
+        ? {
+            ...visualSurface,
+            physicsBallBottomY,
+            renderedBallBottomY,
+            physicsGapWorld: physicsVisualSurfaceGapWorld,
+            physicsGapMm:
+              physicsVisualSurfaceGapWorld! * ROULETTE_MM_PER_WORLD_UNIT,
+            renderedGapWorld: renderedVisualSurfaceGapWorld,
+            renderedGapMm:
+              renderedVisualSurfaceGapWorld! * ROULETTE_MM_PER_WORLD_UNIT,
+            parityEpsilonWorld: ROULETTE_GLTF_PARITY_EPSILON_WORLD,
+            parityPassed: visualParityPassed,
+          }
+        : null,
       expected: {
         finalPocket: replay.finalPocket,
         winningNumber: replay.winningNumber,
