@@ -109,6 +109,55 @@ jobs:
             if (!result.pocket || !result.numbers) {
               throw new Error('Structured GLB mapping report missing');
             }
+
+            const signedZero = (() => {
+              let value = Number(result.numbers.visibleZeroAngleDegrees) % 360;
+              if (value > 180) value -= 360;
+              if (value < -180) value += 360;
+              return value;
+            })();
+            if (result.numbers.sequenceDirection !== 'positive') {
+              throw new Error(
+                'GLB rotor handedness mismatch after authoritative basis: ' +
+                  String(result.numbers.sequenceDirection),
+              );
+            }
+            if (Number(result.numbers.colorMatches) !== 37) {
+              throw new Error(
+                'GLB number mapping is not 37/37 after authoritative basis: ' +
+                  String(result.numbers.colorMatches),
+              );
+            }
+            if (Math.abs(signedZero) > 0.35) {
+              throw new Error(
+                'GLB zero origin mismatch after authoritative basis: ' +
+                  String(signedZero) +
+                  ' degrees',
+              );
+            }
+            const sequence = Array.isArray(result.numbers.sequence)
+              ? result.numbers.sequence
+              : [];
+            if (sequence.length !== 37) {
+              throw new Error(
+                'GLB corrected sequence length mismatch: ' +
+                  String(sequence.length),
+              );
+            }
+            const badAngularEntries = sequence.filter((entry, index) => {
+              const expected = (index * (360 / 37)) % 360;
+              let delta = Number(entry.angleDegrees) - expected;
+              while (delta > 180) delta -= 360;
+              while (delta < -180) delta += 360;
+              return Math.abs(delta) > 0.35;
+            });
+            if (badAngularEntries.length > 0) {
+              throw new Error(
+                'GLB 37-pocket angular parity failed for indices: ' +
+                  badAngularEntries.map((entry) => entry.textureIndex).join(','),
+              );
+            }
+
             console.log(
               'GLB_MAPPING_AUDIT_RESULT ' +
                 JSON.stringify({
