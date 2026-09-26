@@ -80,14 +80,14 @@ const GLB_COLLIDER_PARITY_SCAN_OUTER_RADIUS = 2.44;
 const GLB_COLLIDER_PARITY_RADIAL_SAMPLES = 25;
 const GLB_COLLIDER_PARITY_ANGULAR_SAMPLES = 72;
 const GLB_POCKET_PHASE_PROBE_RADII = [1.49, 1.52, 1.55] as const;
-const GLB_POCKET_PHASE_CANDIDATES = 90;
+const GLB_POCKET_PHASE_CANDIDATES = 45;
 const GLB_POCKET_PROFILE_INNER_RADIUS = 1.48;
 const GLB_POCKET_PROFILE_OUTER_RADIUS = 2.04;
 const GLB_POCKET_PROFILE_STEP = 0.01;
 const GLB_NUMBER_MAPPING_RADIUS_MIN = 1.48;
 const GLB_NUMBER_MAPPING_RADIUS_MAX = 2.04;
-const GLB_NUMBER_MAPPING_RADIUS_STEP = 0.04;
-const GLB_NUMBER_MAPPING_PHASE_STEPS = 49;
+const GLB_NUMBER_MAPPING_RADIUS_STEP = 0.08;
+const GLB_NUMBER_MAPPING_PHASE_STEPS = 17;
 const EUROPEAN_RED_NUMBERS = new Set([
   1, 3, 5, 7, 9, 12, 14, 16, 18,
   19, 21, 23, 25, 27, 30, 32, 34, 36,
@@ -3066,7 +3066,7 @@ export function Part2SceneViewport({
           let coarseZeroAngle = 0;
           let coarseGreenScore = -Infinity;
 
-          for (let degree = 0; degree < 360; degree += 1) {
+          for (let degree = 0; degree < 360; degree += 2) {
             const angle = THREE.MathUtils.degToRad(degree);
             const sample = sampleRouletteVisualTextureColorAt(
               [activeRotorPivot],
