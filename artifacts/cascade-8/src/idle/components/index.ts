@@ -168,13 +168,17 @@ ${renderBusinessMedia(businessId)}
           </div>
         </section>
 
-        <section class="business-card-vault business-card-vault-status" aria-label="Kasa doluluk durumu">
-          <div class="business-card-vault-meta">
-            <small data-business-vault-fill>Doluluk —</small>
-            <small class="business-vault-eta" data-business-vault-eta>—</small>
+        <section class="business-card-vault business-card-vault-status" aria-label="Kasada biriken para">
+          <div class="business-card-vault-heading">
+            <span>KASADA BİRİKEN</span>
+            <strong data-business-vault-fill>%—</strong>
           </div>
           <div class="business-vault-progress" aria-hidden="true">
             <i data-business-vault-progress></i>
+          </div>
+          <div class="business-card-vault-helper">
+            <small data-business-vault-remaining>Kalan kapasite —</small>
+            <small class="business-vault-eta" data-business-vault-eta>—</small>
           </div>
         </section>
 
@@ -213,6 +217,7 @@ export function updateBusinessRow(
   const incomeNode = row.querySelector<HTMLElement>("[data-business-income]");
   const vaultNode = row.querySelector<HTMLElement>("[data-business-vault]");
   const vaultFillNode = row.querySelector<HTMLElement>("[data-business-vault-fill]");
+  const vaultRemainingNode = row.querySelector<HTMLElement>("[data-business-vault-remaining]");
   const vaultProgressNode = row.querySelector<HTMLElement>("[data-business-vault-progress]");
   const vaultEtaNode = row.querySelector<HTMLElement>("[data-business-vault-eta]");
   const accruedStatusNode = row.querySelector<HTMLElement>("[data-business-accrued-status]");
@@ -226,6 +231,7 @@ export function updateBusinessRow(
     || !incomeNode
     || !vaultNode
     || !vaultFillNode
+    || !vaultRemainingNode
     || !vaultProgressNode
     || !vaultEtaNode
     || !accruedStatusNode
@@ -257,13 +263,24 @@ export function updateBusinessRow(
     ? `${formatCreditsFromCents(currentStage.hourlyIncomeDisplayCents)} /sa`
     : "$0.00 /sa";
   const vaultUpgrade = getIdleVaultUpgradePreview(business);
-  vaultNode.textContent = `Lv${business.vaultLevel} · ${vault.capacityHours}sa${vaultUpgrade.isMaxLevel ? " · MAX" : business.liveIsVaultFull ? " · DOLU" : ""}`;
+  const vaultCapacityMicrocents = business.businessLevel === null
+    ? 0
+    : business.liveAccruedMicrocents + business.liveRemainingCapacityMicrocents;
+  vaultNode.textContent = business.businessLevel === null
+    ? "$0.00"
+    : formatCreditsFromMicrocents(vaultCapacityMicrocents);
+
   const fillPercent = business.businessLevel === null
     ? 0
     : Math.round(Math.min(1, Math.max(0, business.vaultFillRatio)) * 100);
   vaultFillNode.textContent = business.businessLevel === null
-    ? "İşletme kapalı"
-    : `Doluluk %${fillPercent}`;
+    ? "%0"
+    : `%${fillPercent}`;
+  vaultRemainingNode.textContent = business.businessLevel === null
+    ? "Kasa aktif değil"
+    : business.liveIsVaultFull
+      ? "Kapasite doldu"
+      : `Kalan kapasite ${formatCreditsFromMicrocents(business.liveRemainingCapacityMicrocents)}`;
   vaultProgressNode.style.width = `${fillPercent}%`;
   vaultEtaNode.textContent = formatVaultEta(
     business,
