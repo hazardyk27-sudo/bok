@@ -7607,16 +7607,23 @@ export function Part2SceneViewport({
         if (disposed) return;
         const now = performance.now();
         const authoritativeReplay = authoritativeReplayRoundRef.current;
+        const replayBallMesh = ballMesh;
+        const replayRotorPivot = rotorPivot;
         const authoritativeReplayActive =
           validationMode === 'part3' &&
           outerLaneSpinOnly &&
           new URLSearchParams(window.location.search).get('part6Headless') !== '1' &&
           authoritativeReplay?.status === 'SETTLED' &&
           authoritativeReplay.trajectory.length > 0 &&
-          ballMesh !== null &&
-          rotorPivot !== null;
+          replayBallMesh !== null &&
+          replayRotorPivot !== null;
 
-        if (authoritativeReplayActive) {
+        if (
+          authoritativeReplayActive &&
+          authoritativeReplay &&
+          replayBallMesh &&
+          replayRotorPivot
+        ) {
           if (authoritativeReplayStartedAtRef.current === null) {
             authoritativeReplayStartedAtRef.current = now;
             authoritativeReplayCursorRef.current = 0;
@@ -7653,7 +7660,7 @@ export function Part2SceneViewport({
                   1,
                 );
 
-          ballMesh.position.set(
+          replayBallMesh.position.set(
             THREE.MathUtils.lerp(from.ball.position.x, to.ball.position.x, alpha),
             THREE.MathUtils.lerp(from.ball.position.y, to.ball.position.y, alpha),
             THREE.MathUtils.lerp(from.ball.position.z, to.ball.position.z, alpha),
@@ -7670,7 +7677,7 @@ export function Part2SceneViewport({
             to.ball.orientation.z,
             to.ball.orientation.w,
           );
-          ballMesh.quaternion.copy(ballFrom.slerp(ballTo, alpha));
+          replayBallMesh.quaternion.copy(ballFrom.slerp(ballTo, alpha));
 
           const rotorFrom = new THREE.Quaternion(
             from.rotor.orientation.x,
@@ -7684,9 +7691,12 @@ export function Part2SceneViewport({
             to.rotor.orientation.z,
             to.rotor.orientation.w,
           );
-          rotorPivot.quaternion.copy(rotorFrom.slerp(rotorTo, alpha));
+          replayRotorPivot.quaternion.copy(rotorFrom.slerp(rotorTo, alpha));
           rotorAngleRef.current = normalizedAngle(
-            2 * Math.atan2(rotorPivot.quaternion.y, rotorPivot.quaternion.w),
+            2 * Math.atan2(
+              replayRotorPivot.quaternion.y,
+              replayRotorPivot.quaternion.w,
+            ),
           );
 
           controls?.update();
