@@ -1,0 +1,72 @@
+name: Promote One Game To Replit Preview
+
+on:
+  workflow_dispatch:
+    inputs:
+      game:
+        description: Game to promote
+        required: true
+        type: choice
+        options:
+          - slot
+          - roulette
+          - cadi-kazan
+          - idle
+          - hub
+      source_ref:
+        description: Feature branch, tag, or commit to promote
+        required: true
+        type: string
+
+permissions:
+  contents: write
+
+concurrency:
+  group: replit-preview-promotion
+  cancel-in-progress: false
+
+jobs:
+  promote:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout preview branch
+        uses: actions/checkout@v4
+        with:
+          ref: integration/replit-preview
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Fetch source
+        shell: bash
+        run: git fetch origin "${{ inputs.source_ref }}"
+      - name: Resolve source
+        id: refs
+        shell: bash
+        run: |
+          source_commit="$(git rev-parse FETCH_HEAD)"
+          target_commit="$(git rev-parse HEAD)"
+          echo "source_commit=$source_commit" >> "$GITHUB_OUTPUT"
+          echo "target_commit=$target_commit" >> "$GITHUB_OUTPUT"
+      - name: Copy only selected game ownership
+        env:
+          GAME: ${{ inputs.game }}
+          SOURCE_COMMIT: ${{ steps.refs.outputs.source_commit }}
+          TARGET_COMMIT: ${{ steps.refs.outputs.target_commit }}
+        run: node scripts/promote-game.mjs
+      - name: Reject foreign changes
+        shell: bash
+        run: |
+          git diff --check
+          test -n "$(git status --porcelain)" || { echo "No game changes to promote."; exit 0; }
+      - name: Commit promotion
+        shell: bash
+        run: |
+          if [ -z "$(git status --porcelain)" ]; then
+            exit 0
+          fi
+          git config user.name "OYUN Preview Bot"
+          git config user.email "actions@users.noreply.github.com"
+          git add -A
+          git commit -m "promote(${{ inputs.game }}): ${{ inputs.source_ref }}"
+          git push origin HEAD:integration/replit-preview
