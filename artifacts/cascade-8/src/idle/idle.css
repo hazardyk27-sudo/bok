@@ -4278,3 +4278,171 @@ body.business-detail-open {
     font-size: 12px;
   }
 }
+
+
+/* Part 9 — desktop visual parity polish */
+@media (min-width: 1101px) {
+  .route-shell.is-businesses-page .businesses-workspace {
+    width: min(100%, 1400px);
+  }
+
+  .route-shell.is-businesses-page .businesses-page {
+    padding-top: 26px;
+  }
+
+  .route-shell.is-businesses-page .businesses-header {
+    gap: 20px;
+  }
+
+  .route-shell.is-businesses-page .businesses-header-main {
+    gap: 30px;
+  }
+
+  .route-shell.is-businesses-page .business-command-bar {
+    gap: 14px;
+    margin-top: 16px;
+  }
+
+  .route-shell.is-businesses-page .business-list {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    align-items: stretch;
+    gap: var(--idle-card-gap);
+    margin-top: 18px;
+  }
+
+  .route-shell.is-businesses-page .business-card {
+    min-height: 520px;
+    border-color: var(--idle-line);
+    border-radius: var(--idle-radius-card);
+    background:
+      linear-gradient(180deg, rgba(255, 255, 255, .008), transparent 24%),
+      var(--idle-surface);
+    box-shadow:
+      0 16px 38px rgba(0, 0, 0, .2),
+      inset 0 1px 0 rgba(255, 255, 255, .018);
+    transition:
+      transform .18s ease,
+      border-color .18s ease,
+      box-shadow .18s ease;
+  }
+
+  .route-shell.is-businesses-page .business-card-hero {
+    aspect-ratio: 16 / 9;
+    min-height: 210px;
+    max-height: 228px;
+  }
+
+  .route-shell.is-businesses-page .business-card-identity-overlay {
+    left: 16px;
+    right: 76px;
+    bottom: 15px;
+    grid-template-columns: 42px minmax(0, 1fr);
+    gap: 11px;
+  }
+
+  .route-shell.is-businesses-page .business-card-identity-icon {
+    width: 42px;
+    height: 42px;
+    border-radius: 11px;
+  }
+
+  .route-shell.is-businesses-page .business-card-identity-overlay .business-card-title strong {
+    font-size: 21px;
+    line-height: 1.08;
+  }
+
+  .route-shell.is-businesses-page .business-card-content {
+    grid-template-rows: auto auto auto 1fr;
+    gap: 15px;
+    padding: 16px;
+  }
+
+  .route-shell.is-businesses-page .business-card-balance-heading {
+    min-height: 24px;
+  }
+
+  .route-shell.is-businesses-page .business-card-balance > strong {
+    min-height: 31px;
+    font-size: 30px;
+    line-height: 1;
+  }
+
+  .route-shell.is-businesses-page .business-card-stats {
+    min-height: 64px;
+  }
+
+  .route-shell.is-businesses-page .business-card-stat {
+    display: grid;
+    align-content: center;
+    min-height: 64px;
+    padding: 11px 13px;
+  }
+
+  .route-shell.is-businesses-page .business-card-stat strong {
+    font-size: 16px;
+  }
+
+  .route-shell.is-businesses-page .business-card-vault {
+    align-self: end;
+    min-height: 67px;
+  }
+
+  .route-shell.is-businesses-page .business-vault-progress {
+    height: var(--idle-progress-height);
+    box-shadow: inset 0 1px 2px rgba(0, 0, 0, .22);
+  }
+
+  .route-shell.is-businesses-page .business-card-vault-helper {
+    min-height: 30px;
+  }
+
+  .route-shell.is-businesses-page .business-card-vault-helper small {
+    font-size: 11px;
+  }
+
+  .route-shell.is-businesses-page .business-card-actions {
+    align-self: end;
+    gap: 10px;
+  }
+
+  .route-shell.is-businesses-page .business-card-primary,
+  .route-shell.is-businesses-page .business-card-details {
+    min-height: 52px;
+    border-radius: 11px;
+    font-size: 13px;
+  }
+
+  .route-shell.is-businesses-page .business-card-primary:focus-visible,
+  .route-shell.is-businesses-page .business-card-details:focus-visible,
+  .route-shell.is-businesses-page .business-summary-collect-all:focus-visible,
+  .route-shell.is-businesses-page .businesses-sidebar-item[href]:focus-visible {
+    outline: none;
+    box-shadow: var(--idle-focus-ring);
+  }
+
+  @media (hover: hover) and (pointer: fine) {
+    .route-shell.is-businesses-page .business-card:hover {
+      transform: translateY(-2px);
+      border-color: rgba(84, 242, 163, .24);
+      box-shadow:
+        0 20px 44px rgba(0, 0, 0, .24),
+        0 0 0 1px rgba(84, 242, 163, .025),
+        inset 0 1px 0 rgba(255, 255, 255, .022);
+    }
+
+    .route-shell.is-businesses-page .business-card-details:hover {
+      border-color: rgba(84, 242, 163, .34);
+      background: rgba(84, 242, 163, .06);
+    }
+  }
+}
+
+@media (min-width: 1280px) and (max-width: 1365px) {
+  .route-shell.is-businesses-page .business-card-hero {
+    min-height: 202px;
+  }
+
+  .route-shell.is-businesses-page .business-card-content {
+    padding: 15px;
+  }
+}
