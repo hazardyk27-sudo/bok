@@ -1,6 +1,6 @@
 # Game isolation migration
 
-This branch builds the permanent isolation model without changing the Replit preview until validation is complete.
+This document records the permanent game-isolation model now used by the shared Replit preview.
 
 ## Invariants
 - Existing game visuals and behavior must remain unchanged during migration.
@@ -29,7 +29,7 @@ This branch builds the permanent isolation model without changing the Replit pre
 - Part 5: Slot markup/bootstrap and an independent Slot stylesheet moved into Slot ownership; the root main.ts is now a route dispatcher — complete.
 - Part 6: Idle now owns its route shell, body route state, browser reset and complete CSS foundation; main.ts only dispatches to Idle — complete.
 - Part 7: Backend modules now expose stable owned entrypoints; shared wallet configuration moved to platform ownership; DB schema is split into wallet/roulette/physics-lab/cadi-kazan/slot/idle files with index.ts as aggregation only — complete.
-- Part 8 remains for final promotion/hash validation and rollout.
+- Part 8: feature branches were migrated onto isolation layout v2; the real promotion script was dry-run against Slot, Roulette, Cadı Kazan, Idle and Hub in disposable worktrees; all frontend/backend/build/typecheck checks passed — complete.
 
 
 ## Part 8 safety foundation
@@ -37,3 +37,15 @@ This branch builds the permanent isolation model without changing the Replit pre
 - Promotion refuses a source missing any owned root.
 - Promotion runs typecheck, build, frontend regressions and backend isolation regression before pushing preview.
 - Feature-branch baseline merge is accepted only when its second parent is the exact current preview baseline and every difference from preview is inside that game's ownership.
+
+- Dry-run promotion verification executes the real promotion script against all migrated feature branches in disposable Git worktrees. The workflow fails before preview rollout if any game promotion touches a foreign ownership path.
+
+
+## Final state
+- `integration/replit-preview` is the only Replit preview branch.
+- `feature/slot`, `feature/roulette`, `feature/cadi-kazan`, `feature/idle`, and `feature/hub` all use isolation layout v2.
+- A normal game commit is not a release.
+- Preview releases use `Promote One Game To Replit Preview`.
+- Promotion rejects legacy source refs, wrong-game source commits, missing ownership roots, and any foreign game changes.
+- Promotion runs typecheck, build, frontend integration regressions and backend isolation regression before it may push preview.
+- The integration guard dry-runs every game's promotion path on each preview update.
