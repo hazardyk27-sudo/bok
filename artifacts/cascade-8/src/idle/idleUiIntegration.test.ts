@@ -170,63 +170,43 @@ describe("Businesses premium KPI command bar", () => {
   });
 });
 
+
 describe("Businesses premium desktop cards", () => {
-  it("renders three semantic premium business cards with dedicated visual and body regions", () => {
+  it("renders three clear business cards with one visual region and one information body", () => {
     expect(componentsSource).toContain("business-card business-card--");
     expect(componentsSource).toContain("business-card-visual");
     expect(componentsSource).toContain("business-card-body");
     expect(componentsSource).toContain("business-card-header");
-    expect(componentsSource).toContain("business-card-metrics");
+    expect(componentsSource).toContain("business-card-accrued");
+    expect(componentsSource).toContain("business-card-quick-stats");
+    expect(componentsSource).toContain("business-card-vault-status");
     expect(componentsSource).toContain("business-card-actions");
-    expect(componentsSource).toContain("9 SEVİYELİ GELİŞİM");
-    expect(componentsSource).toContain("LV0 → LV8");
   });
 
   it("tracks owned, locked, active, full and max states on the card shell", () => {
     expect(componentsSource).toContain("data-business-card-state");
     expect(componentsSource).toContain('row.dataset.businessOwnership = currentStage ? "owned" : "locked"');
-    expect(componentsSource).toContain('row.dataset.businessLevel = currentStage ? String(currentStage.level) : "unowned"');
     expect(componentsSource).toContain('"SATIN ALINMADI"');
     expect(componentsSource).toContain('"KASA DOLU"');
     expect(componentsSource).toContain('"MAX SEVİYE"');
   });
 
-  it("uses a three-card desktop grid with tablet and mobile fallbacks", () => {
-    expect(idleCssSource).toContain("/* Part 5 — desktop premium business card skeleton */");
+  it("uses a three-card desktop grid and deliberate single-card tablet/mobile flow", () => {
     expect(idleCssSource).toContain("grid-template-columns: repeat(3, minmax(0, 1fr))");
     expect(idleCssSource).toContain("@media (min-width: 761px) and (max-width: 1100px)");
-    expect(idleCssSource).toContain("grid-template-columns: repeat(2, minmax(0, 1fr))");
-    expect(idleCssSource).toContain(".business-card-visual");
-    expect(idleCssSource).toContain(".business-card-body");
+    expect(idleCssSource).toContain("max-width: 760px");
+    expect(idleCssSource).toContain("grid-template-columns: 1fr");
   });
 });
 
 
 describe("Businesses premium card skeleton", () => {
-  it("renders each business as a visual premium card rather than a table row", () => {
-    expect(componentsSource).toContain("business-row business-card business-card--");
-    expect(componentsSource).toContain("business-card-visual");
-    expect(componentsSource).toContain("business-card-body");
-    expect(componentsSource).toContain("business-card-header");
-    expect(componentsSource).toContain("business-card-metrics");
-    expect(componentsSource).toContain("business-card-actions");
-  });
-
-  it("keeps live ownership and card state connected to real business data", () => {
-    expect(componentsSource).toContain("data-business-ownership");
-    expect(componentsSource).toContain("data-business-card-state");
-    expect(componentsSource).toContain('row.dataset.businessOwnership = currentStage ? "owned" : "locked"');
-    expect(componentsSource).toContain('"SATIN ALINMADI"');
-    expect(componentsSource).toContain('"KASA DOLU"');
-    expect(componentsSource).toContain('"MAX SEVİYE"');
-  });
-
-  it("uses a three-card desktop grid with tablet and mobile fallbacks", () => {
-    expect(idleCssSource).toContain("/* Part 5 — desktop premium business card skeleton */");
-    expect(idleCssSource).toContain("grid-template-columns: repeat(3, minmax(0, 1fr))");
-    expect(idleCssSource).toContain("grid-template-columns: repeat(2, minmax(0, 1fr))");
-    expect(idleCssSource).toContain(".business-card:last-child");
-    expect(idleCssSource).toContain("grid-template-columns: 1fr");
+  it("avoids the old mini-dashboard structure on each card", () => {
+    expect(componentsSource).not.toContain("business-card-metrics");
+    expect(componentsSource).not.toContain("business-card-operations");
+    expect(componentsSource).not.toContain("business-card-footer");
+    expect(componentsSource).not.toContain("business-card-code");
+    expect(componentsSource).not.toContain("business-card-milestone");
   });
 
   it("reserves distinct visual identity areas for Stadium, Club Store and Fan Club", () => {
@@ -240,37 +220,29 @@ describe("Businesses premium card skeleton", () => {
 
 
 describe("Businesses card information hierarchy", () => {
-  it("makes accrued cash the primary card value and exposes live vault timing", () => {
+  it("makes accrued cash the dominant card value", () => {
     expect(componentsSource).toContain("business-card-accrued-heading");
     expect(componentsSource).toContain("data-business-accrued-status");
+    expect(idleCssSource).toContain(".business-card-accrued > strong");
+    expect(idleCssSource).toContain("font-size: clamp(28px, 2.5vw, 35px)");
+  });
+
+  it("keeps only hourly income and Kasa as quick stats", () => {
+    expect(componentsSource).toContain("business-card-quick-stats");
+    expect(componentsSource).toContain("SAATLİK GELİR");
+    expect(componentsSource).toContain("<span>KASA</span>");
+    expect(componentsSource).not.toContain("data-business-daily");
+  });
+
+  it("keeps vault fullness and ETA as one readable status line plus progress bar", () => {
+    expect(componentsSource).toContain("business-card-vault-status");
+    expect(componentsSource).toContain("data-business-vault-fill");
     expect(componentsSource).toContain("data-business-vault-eta");
+    expect(componentsSource).toContain("data-business-vault-progress");
     expect(componentsSource).toContain("formatVaultEta(");
-    expect(componentsSource).toContain('"TOPLAMAYA HAZIR"');
-    expect(componentsSource).toContain('"GELİR BİRİKİYOR"');
-  });
-
-  it("removes duplicated upgrade content from the main card while keeping upgrades inside Details stages", () => {
-    expect(componentsSource).not.toContain("data-business-next-panel");
-    expect(componentsSource).not.toContain("data-business-next-name");
-    expect(componentsSource).not.toContain("data-business-next-cost");
-    expect(componentsSource).not.toContain("data-business-next-gain");
-    expect(idleIndexSource).toContain("business-level-node-action");
-    expect(idleIndexSource).toContain("data-idle-detail-upgrade");
-  });
-
-  it("merges hourly income and vault capacity into one main-card panel", () => {
-    expect(componentsSource).toContain("business-card-operations");
-    expect(componentsSource).toContain("business-card-vault-heading");
-    expect(componentsSource).toContain("business-card-vault-meta");
-    expect(componentsSource).toContain("business-card-vault-meter");
-    expect(idleCssSource).toContain("/* Main-card refinement — simplified hierarchy / unified economy panel */");
-    expect(idleCssSource).toContain("/* Main-card refinement — Parts 3–4 meter + action layout */");
-    expect(idleCssSource).toContain("grid-template-columns: minmax(0, .84fr) minmax(0, 1.16fr)");
-    expect(idleCssSource).toContain("grid-column: 1 / -1");
     expect(idleCssSource).toContain("height: 8px");
   });
 });
-
 
 describe("Businesses premium action states", () => {
   it("keeps collect and vault actions on the main card while business upgrades stay in Details", () => {
