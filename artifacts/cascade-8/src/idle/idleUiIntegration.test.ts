@@ -73,12 +73,38 @@ describe("Idle collect all integration", () => {
 });
 
 describe("Businesses mobile scrolling", () => {
-  it("keeps Businesses vertically scrollable on small screens without changing other game routes", () => {
+  it("uses the Businesses route shell as the explicit mobile touch-scroll container", () => {
     expect(mainSource).toContain('document.documentElement.classList.add("businesses-route")');
     expect(mainSource).toContain('document.body.classList.add("businesses-route")');
     expect(idleCssSource).toContain("html.businesses-route #app");
     expect(idleCssSource).toContain("html.businesses-route .app-shell.is-businesses-page");
+    expect(idleCssSource).toContain("height: 100dvh");
     expect(idleCssSource).toContain("overflow-y: auto");
+    expect(idleCssSource).toContain("touch-action: pan-y");
+    expect(idleCssSource).toContain("-webkit-overflow-scrolling: touch");
+  });
+
+  it("keeps the document locked so the global slot viewport rules cannot steal mobile scroll", () => {
+    expect(idleCssSource).toContain("body.businesses-route,");
+    expect(idleCssSource).toContain("overflow: hidden");
+    expect(idleCssSource).toContain("overscroll-behavior-y: contain");
+  });
+});
+
+
+describe("Businesses main menu control", () => {
+  it("renders the main-menu link as an accessible two-part button", () => {
+    expect(idleIndexSource).toContain('aria-label="Ana menüye dön"');
+    expect(idleIndexSource).toContain('class="back-link-icon"');
+    expect(idleIndexSource).toContain("<span>ANA MENÜ</span>");
+  });
+
+  it("keeps the control comfortably tappable and visually separated from the title", () => {
+    expect(idleCssSource).toContain(".businesses-header-nav");
+    expect(idleCssSource).toContain(".businesses-header .back-link {");
+    expect(idleCssSource).toContain("min-height: 44px");
+    expect(idleCssSource).toContain(".businesses-header .back-link-icon");
+    expect(idleCssSource).toContain("touch-action: manipulation");
   });
 });
 

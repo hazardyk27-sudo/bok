@@ -313,7 +313,10 @@ export const BUSINESSES_MARKUP = `
   <main class="businesses-page" aria-labelledby="businesses-title">
     <header class="businesses-header">
       <div class="businesses-header-nav">
-        <a class="back-link" href="/">← ANA MENÜ</a>
+        <a class="back-link" href="/" aria-label="Ana menüye dön">
+          <span class="back-link-icon" aria-hidden="true">←</span>
+          <span>ANA MENÜ</span>
+        </a>
         <span class="businesses-header-status"><i aria-hidden="true"></i>KULÜP OPERASYON MERKEZİ</span>
       </div>
 
