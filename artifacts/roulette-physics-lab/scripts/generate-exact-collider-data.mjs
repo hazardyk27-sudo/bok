@@ -427,11 +427,56 @@ function mergeMeshes(meshes) {
   return { vertices, indices, triangleCount: indexCount / 3 };
 }
 
-const stationary = mergeMeshes([
-  buildMesh(outsideSet, false),
-  buildMesh(turretSet, false),
-]);
-const rotor = buildMesh(insideSet, true);
+const GLB_COLLIDER_WELD_EPSILON_WORLD = 1e-6;
+
+function weldMeshVertices(mesh) {
+  const sourceVertexCount = mesh.vertices.length / 3;
+  const weldedVertices = [];
+  const remap = new Uint32Array(sourceVertexCount);
+  const byPosition = new Map();
+  const inverseEpsilon = 1 / GLB_COLLIDER_WELD_EPSILON_WORLD;
+
+  for (let vertexIndex = 0; vertexIndex < sourceVertexCount; vertexIndex += 1) {
+    const offset = vertexIndex * 3;
+    const x = mesh.vertices[offset];
+    const y = mesh.vertices[offset + 1];
+    const z = mesh.vertices[offset + 2];
+    const key =
+      Math.round(x * inverseEpsilon) + ':' +
+      Math.round(y * inverseEpsilon) + ':' +
+      Math.round(z * inverseEpsilon);
+    let weldedIndex = byPosition.get(key);
+    if (weldedIndex === undefined) {
+      weldedIndex = weldedVertices.length / 3;
+      byPosition.set(key, weldedIndex);
+      // Preserve the first GLB-derived coordinate exactly. Only index
+      // topology is welded so the collision surface remains GLB-authored.
+      weldedVertices.push(x, y, z);
+    }
+    remap[vertexIndex] = weldedIndex;
+  }
+
+  const weldedIndices = new Uint32Array(mesh.indices.length);
+  for (let index = 0; index < mesh.indices.length; index += 1) {
+    weldedIndices[index] = remap[mesh.indices[index]];
+  }
+
+  return {
+    vertices: new Float32Array(weldedVertices),
+    indices: weldedIndices,
+    triangleCount: weldedIndices.length / 3,
+    sourceVertexCount,
+    weldedVertexCount: weldedVertices.length / 3,
+  };
+}
+
+const stationary = weldMeshVertices(
+  mergeMeshes([
+    buildMesh(outsideSet, false),
+    buildMesh(turretSet, false),
+  ]),
+);
+const rotor = weldMeshVertices(buildMesh(insideSet, true));
 
 function base64TypedArray(typed) {
   return Buffer.from(typed.buffer, typed.byteOffset, typed.byteLength).toString('base64');
@@ -461,9 +506,15 @@ export const ROULETTE_EXACT_GLB_COLLIDER_METADATA = ${JSON.stringify({
   rawSourceCenter: RAW_SOURCE_CENTER,
   yOrigin: Y_ORIGIN,
   visibleZeroDegrees: VISIBLE_ZERO_DEGREES,
+  weldEpsilonWorld: GLB_COLLIDER_WELD_EPSILON_WORLD,
+  stationarySourceVertices: stationary.sourceVertexCount,
   stationaryVertices: stationary.vertices.length / 3,
+  stationaryMergedVertices:
+    stationary.sourceVertexCount - stationary.weldedVertexCount,
   stationaryTriangles: stationary.indices.length / 3,
+  rotorSourceVertices: rotor.sourceVertexCount,
   rotorVertices: rotor.vertices.length / 3,
+  rotorMergedVertices: rotor.sourceVertexCount - rotor.weldedVertexCount,
   rotorTriangles: rotor.indices.length / 3,
 }, null, 2)} as const;
 
@@ -515,9 +566,15 @@ writeFileSync(OUTPUT_PATH, output);
 console.log(JSON.stringify({
   sourceSha256,
   geometryHash,
+  weldEpsilonWorld: GLB_COLLIDER_WELD_EPSILON_WORLD,
+  stationarySourceVertices: stationary.sourceVertexCount,
   stationaryVertices: stationary.vertices.length / 3,
+  stationaryMergedVertices:
+    stationary.sourceVertexCount - stationary.weldedVertexCount,
   stationaryTriangles: stationary.indices.length / 3,
+  rotorSourceVertices: rotor.sourceVertexCount,
   rotorVertices: rotor.vertices.length / 3,
+  rotorMergedVertices: rotor.sourceVertexCount - rotor.weldedVertexCount,
   rotorTriangles: rotor.indices.length / 3,
   output: OUTPUT_PATH,
 }, null, 2));
