@@ -44,4 +44,6 @@ jobs:
           src/hub/mainMenuRegression.test.ts
           src/cadiKazanSmoke.test.ts
           src/rouletteSmoke.test.ts
+          src/rouletteGeometry.test.ts
+          src/roulettePhysicsConfig.test.ts
           src/idle/idleUiIntegration.test.ts
