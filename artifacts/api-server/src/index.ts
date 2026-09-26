@@ -1,8 +1,11 @@
 import { createServer } from "node:http";
 import app from "./app";
 import { logger } from "./lib/logger";
-import { rouletteRepository } from "./roulette/repository";
-import { attachRouletteWebSocket } from "./roulette/realtime";
+import {
+  attachRuntime as attachRouletteRuntime,
+  startRuntime as startRouletteRuntime,
+  stopRuntime as stopRouletteRuntime,
+} from "./roulette";
 
 const rawPort = process.env["PORT"];
 
@@ -19,11 +22,11 @@ if (Number.isNaN(port) || port <= 0) {
 }
 
 const server = createServer(app);
-attachRouletteWebSocket(server);
+attachRouletteRuntime(server);
 
-void rouletteRepository.start()
-  .then(() => {
-    server.listen(port, () => logger.info({ port, coordinator: rouletteRepository.leadership }, "Server listening"));
+void startRouletteRuntime()
+  .then((coordinator) => {
+    server.listen(port, () => logger.info({ port, coordinator }, "Server listening"));
   })
   .catch((err: unknown) => {
     logger.error({ err }, "Unable to start roulette coordinator");
@@ -31,7 +34,7 @@ void rouletteRepository.start()
   });
 
 const shutdown = () => {
-  void rouletteRepository.stop().finally(() => server.close());
+  void stopRouletteRuntime().finally(() => server.close());
 };
 process.once("SIGTERM", shutdown);
 process.once("SIGINT", shutdown);
