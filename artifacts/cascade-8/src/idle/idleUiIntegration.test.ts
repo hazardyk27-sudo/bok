@@ -409,7 +409,7 @@ describe("Businesses final card economy presentation", () => {
   it("labels the lower bar as money accumulated in the vault instead of level progress", () => {
     expect(componentsSource).toContain("KASADA BİRİKEN");
     expect(componentsSource).toContain("vaultFillNode.textContent");
-    expect(componentsSource).toContain(`%${fillPercent}`);
+    expect(componentsSource).toContain("`%${fillPercent}`");
     expect(componentsSource).toContain("vaultProgressNode.style.width");
   });
 
