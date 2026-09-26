@@ -425,7 +425,7 @@ export const BUSINESSES_MARKUP = `
       </section>
     </header>
 
-    <section class="business-summary business-command-bar" aria-label="İşletme özeti" data-idle-command-bar>
+    <section class="business-command-bar" aria-label="İşletme özeti" data-idle-command-bar>
       <div class="business-command-stat business-command-income">
         <span class="business-command-label">SAATLİK GELİR</span>
         <strong data-idle-total-hourly>—</strong>
