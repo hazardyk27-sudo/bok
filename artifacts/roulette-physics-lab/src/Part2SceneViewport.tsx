@@ -1175,6 +1175,8 @@ function buildBowlBridgeTrimesh(
 ) {
   const vertices: number[] = [];
   const indices: number[] = [];
+  const quantizeBridgeScalar = (value: number) =>
+    Math.round(value * 1_000_000) / 1_000_000;
   const bottomProfile = profile.map(
     ([radius, height]) =>
       [radius, height - BOWL_BRIDGE_THICKNESS] as [number, number],
@@ -1185,9 +1187,9 @@ function buildBowlBridgeTrimesh(
       for (let segment = 0; segment < BOWL_BRIDGE_SEGMENTS; segment += 1) {
         const angle = (segment / BOWL_BRIDGE_SEGMENTS) * TWO_PI;
         vertices.push(
-          Math.sin(angle) * radius,
-          height,
-          Math.cos(angle) * radius,
+          quantizeBridgeScalar(Math.sin(angle) * radius),
+          quantizeBridgeScalar(height),
+          quantizeBridgeScalar(Math.cos(angle) * radius),
         );
       }
     }
