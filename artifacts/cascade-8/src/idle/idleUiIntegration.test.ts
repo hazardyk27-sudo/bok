@@ -216,7 +216,7 @@ describe("Businesses measured desktop workspace", () => {
 
 
 describe("Businesses premium command header", () => {
-  it("keeps title, wallet and compact club progression as the global hierarchy", () => {
+  it("keeps title, wallet and club progression as the global desktop hierarchy", () => {
     expect(idleIndexSource).toContain("FAHRİNİN YOLU // CLUB EMPIRE");
     expect(idleIndexSource).toContain("ORTAK BAKİYE");
     expect(idleIndexSource).toContain("KULÜP GELİŞİMİ");
@@ -225,18 +225,26 @@ describe("Businesses premium command header", () => {
     expect(idleIndexSource).toContain("data-idle-active-businesses");
   });
 
-  it("uses the rebuilt responsive header architecture", () => {
-    expect(idleCssSource).toContain("/* Part 3–8 — final Businesses command + card architecture */");
-    expect(idleCssSource).toContain(".businesses-header-main");
-    expect(idleCssSource).toContain(".businesses-progression");
-    expect(idleCssSource).toContain("minmax(250px, 300px)");
-    expect(idleCssSource).toContain("@media (max-width: 760px)");
+  it("uses the measured Part 4 desktop composition and hides the redundant old nav row", () => {
+    expect(idleCssSource).toContain("/* Part 4 — measured desktop header + overview */");
+    expect(idleCssSource).toContain(".businesses-header-nav");
+    expect(idleCssSource).toContain("display: none");
+    expect(idleCssSource).toContain("grid-template-columns: minmax(0, 1fr) 292px");
+    expect(idleCssSource).toContain("font-size: var(--idle-type-display-desktop)");
+    expect(idleCssSource).toContain("min-height: 108px");
+  });
+
+  it("renders the club progression as a segmented green 27-step progress surface", () => {
+    expect(idleCssSource).toContain("grid-template-columns: 210px minmax(0, 1fr) auto");
+    expect(idleCssSource).toContain("height: var(--idle-progress-height)");
+    expect(idleCssSource).toContain("calc((100% / 27) - 2px)");
+    expect(idleCssSource).toContain("linear-gradient(90deg, var(--idle-green-deep), var(--idle-green))");
   });
 });
 
 
 describe("Businesses premium KPI command bar", () => {
-  it("reduces the command surface to hourly income, collectable cash and Collect All", () => {
+  it("keeps hourly income, collectable cash and Collect All as the only command-level actions", () => {
     expect(idleIndexSource).toContain("business-command-income");
     expect(idleIndexSource).toContain("business-command-ready");
     expect(idleIndexSource).toContain("SAATLİK GELİR");
@@ -251,10 +259,20 @@ describe("Businesses premium KPI command bar", () => {
     expect(idleIndexSource).toContain("collectAllValueNode.textContent = formatCredits(totalCollectableCents)");
   });
 
-  it("uses a simpler three-part desktop surface and mobile fallback", () => {
-    expect(idleCssSource).toContain("minmax(280px, 1.2fr)");
-    expect(idleCssSource).toContain(".business-summary-collect-all");
-    expect(idleCssSource).toContain("grid-template-columns: repeat(2, minmax(0, 1fr))");
+  it("uses three separate measured desktop cards rather than one fused dashboard strip", () => {
+    expect(idleCssSource).toContain("grid-template-columns: minmax(0, .92fr) minmax(0, .92fr) minmax(0, 1.16fr)");
+    expect(idleCssSource).toContain("gap: 12px");
+    expect(idleCssSource).toContain("min-height: 92px");
+    expect(idleCssSource).toContain("background: transparent");
+    expect(idleCssSource).toContain("font-size: var(--idle-type-kpi)");
+  });
+
+  it("uses the approved green primary treatment for Tümünü Topla", () => {
+    expect(idleCssSource).toContain("#64f5aa");
+    expect(idleCssSource).toContain("#47e995");
+    expect(idleCssSource).toContain("color: #06130c");
+    expect(idleCssSource).toContain("width: 34px");
+    expect(idleCssSource).toContain("height: 34px");
   });
 });
 
