@@ -1862,7 +1862,7 @@ export async function simulatePhysicsLabRound(
           : null;
       const settleFloor =
         exactRotorFloorY !== null &&
-        Math.abs(ballBottom - exactRotorFloorY) <= 0.02;
+        Math.abs(ballBottom - exactRotorFloorY) <= 0.006;
       const settlePocketIndex = previousPocketIndex !== null;
       const settleGatePassed =
         settlePocketInteraction &&
