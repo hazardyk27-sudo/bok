@@ -542,10 +542,38 @@ export class RouletteClient {
     const physicsCanvas = this.root.querySelector<HTMLCanvasElement>("[data-physics-wheel]");
     if (physicsCanvas) {
       void RoulettePhysicsReplay.create(physicsCanvas)
-        .then((replay) => { this.physicsReplay = replay; })
+        .then((replay) => {
+          this.physicsReplay = replay;
+          const round = this.snapshot?.round;
+          if (round?.phase === "SPINNING") {
+            const elapsed = Math.max(
+              0,
+              Date.now() + this.serverOffsetMs - Date.parse(round.phaseStartedAt),
+            );
+            void replay.startLoop(round.id, elapsed).catch((error) => {
+              physicsCanvas.dataset.error =
+                error instanceof Error
+                  ? error.message
+                  : "PHYSICS_REPLAY_UNAVAILABLE";
+            });
+          } else if (
+            round?.winningNumber !== null &&
+            ["RESULT", "MULTIPLIER_REVEAL", "SETTLING", "INTERMISSION"].includes(
+              round.phase,
+            )
+          ) {
+            void replay.settle(round.id, round.winningNumber).catch((error) => {
+              physicsCanvas.dataset.error =
+                error instanceof Error
+                  ? error.message
+                  : "PHYSICS_REPLAY_UNAVAILABLE";
+            });
+          }
+        })
         .catch((error) => {
-          physicsCanvas.dataset.error = error instanceof Error ? error.message : "PHYSICS_REPLAY_UNAVAILABLE";
-          console.warn("3D physics replay unavailable; keeping the existing wheel fallback.", error);
+          physicsCanvas.dataset.error =
+            error instanceof Error ? error.message : "PHYSICS_REPLAY_UNAVAILABLE";
+          console.warn("3D physics replay unavailable; keeping the non-forcing wheel fallback.", error);
         });
     }
     void this.load();
