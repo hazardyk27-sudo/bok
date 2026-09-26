@@ -39,6 +39,7 @@ jobs:
 
       - name: Four-world integration regression
         run: >
+          PORT=4173 BASE_PATH=/
           pnpm --filter @workspace/cascade-8 exec vitest run
           src/mainMenuRegression.test.ts
           src/cadiKazanSmoke.test.ts
