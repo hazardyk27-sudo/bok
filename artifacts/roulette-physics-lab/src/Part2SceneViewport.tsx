@@ -761,6 +761,24 @@ type PocketValidationReport = {
   detail: string;
 };
 
+type AuthoritativeReplaySample = {
+  simulatedAtMs: number;
+  ball: {
+    position: { x: number; y: number; z: number };
+    orientation: { x: number; y: number; z: number; w: number };
+  };
+  rotor: {
+    orientation: { x: number; y: number; z: number; w: number };
+  };
+};
+
+type AuthoritativeReplayRound = {
+  roundId: string;
+  status: string;
+  trajectoryHash: string;
+  trajectory: AuthoritativeReplaySample[];
+};
+
 type Part2SceneViewportProps = {
   loadKey: number;
   validationMode?: 'part2' | 'part3' | 'part4';
@@ -776,6 +794,7 @@ type Part2SceneViewportProps = {
   showStationaryGroup: boolean;
   showRotorGroup: boolean;
   rotorAngle: number;
+  authoritativeReplayRound?: AuthoritativeReplayRound | null;
   onStateChange: (
     state: LoadState,
     detail?: string,
@@ -2092,6 +2111,7 @@ export function Part2SceneViewport({
   showStationaryGroup,
   showRotorGroup,
   rotorAngle,
+  authoritativeReplayRound = null,
   onStateChange,
   onAudit,
   onRotorAngleChange,
@@ -2103,6 +2123,11 @@ export function Part2SceneViewport({
   const viewRef = useRef(view);
   const callbacksRef = useRef({ onStateChange, onAudit, onRotorAngleChange });
   const rotorAngleRef = useRef(normalizedAngle(rotorAngle));
+  const authoritativeReplayRoundRef = useRef<AuthoritativeReplayRound | null>(
+    authoritativeReplayRound,
+  );
+  const authoritativeReplayStartedAtRef = useRef<number | null>(null);
+  const authoritativeReplayCursorRef = useRef(0);
   const [angleReadout, setAngleReadout] = useState(normalizedAngle(rotorAngle));
   const [dropReport, setDropReport] = useState<Part2DropReport | null>(null);
   const [part3Report, setPart3Report] = useState<Part3ValidationReport | null>(null);
@@ -2127,6 +2152,12 @@ export function Part2SceneViewport({
   useEffect(() => {
     rotorAngleRef.current = normalizedAngle(rotorAngle);
   }, [rotorAngle]);
+
+  useEffect(() => {
+    authoritativeReplayRoundRef.current = authoritativeReplayRound;
+    authoritativeReplayStartedAtRef.current = null;
+    authoritativeReplayCursorRef.current = 0;
+  }, [authoritativeReplayRound]);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -7575,6 +7606,95 @@ export function Part2SceneViewport({
       const render = () => {
         if (disposed) return;
         const now = performance.now();
+        const authoritativeReplay = authoritativeReplayRoundRef.current;
+        const authoritativeReplayActive =
+          validationMode === 'part3' &&
+          outerLaneSpinOnly &&
+          new URLSearchParams(window.location.search).get('part6Headless') !== '1' &&
+          authoritativeReplay?.status === 'SETTLED' &&
+          authoritativeReplay.trajectory.length > 0 &&
+          ballMesh !== null &&
+          rotorPivot !== null;
+
+        if (authoritativeReplayActive) {
+          if (authoritativeReplayStartedAtRef.current === null) {
+            authoritativeReplayStartedAtRef.current = now;
+            authoritativeReplayCursorRef.current = 0;
+          }
+          const trajectory = authoritativeReplay.trajectory;
+          const finalSample = trajectory[trajectory.length - 1];
+          const replayElapsedMs = Math.min(
+            now - authoritativeReplayStartedAtRef.current,
+            finalSample.simulatedAtMs,
+          );
+          let cursor = Math.min(
+            authoritativeReplayCursorRef.current,
+            Math.max(0, trajectory.length - 1),
+          );
+          while (
+            cursor < trajectory.length - 2 &&
+            trajectory[cursor + 1].simulatedAtMs <= replayElapsedMs
+          ) {
+            cursor += 1;
+          }
+          authoritativeReplayCursorRef.current = cursor;
+          const from = trajectory[cursor];
+          const to = trajectory[Math.min(cursor + 1, trajectory.length - 1)];
+          const sampleDurationMs = Math.max(
+            1,
+            to.simulatedAtMs - from.simulatedAtMs,
+          );
+          const alpha =
+            from === to
+              ? 0
+              : THREE.MathUtils.clamp(
+                  (replayElapsedMs - from.simulatedAtMs) / sampleDurationMs,
+                  0,
+                  1,
+                );
+
+          ballMesh.position.set(
+            THREE.MathUtils.lerp(from.ball.position.x, to.ball.position.x, alpha),
+            THREE.MathUtils.lerp(from.ball.position.y, to.ball.position.y, alpha),
+            THREE.MathUtils.lerp(from.ball.position.z, to.ball.position.z, alpha),
+          );
+          const ballFrom = new THREE.Quaternion(
+            from.ball.orientation.x,
+            from.ball.orientation.y,
+            from.ball.orientation.z,
+            from.ball.orientation.w,
+          );
+          const ballTo = new THREE.Quaternion(
+            to.ball.orientation.x,
+            to.ball.orientation.y,
+            to.ball.orientation.z,
+            to.ball.orientation.w,
+          );
+          ballMesh.quaternion.copy(ballFrom.slerp(ballTo, alpha));
+
+          const rotorFrom = new THREE.Quaternion(
+            from.rotor.orientation.x,
+            from.rotor.orientation.y,
+            from.rotor.orientation.z,
+            from.rotor.orientation.w,
+          );
+          const rotorTo = new THREE.Quaternion(
+            to.rotor.orientation.x,
+            to.rotor.orientation.y,
+            to.rotor.orientation.z,
+            to.rotor.orientation.w,
+          );
+          rotorPivot.quaternion.copy(rotorFrom.slerp(rotorTo, alpha));
+          rotorAngleRef.current = normalizedAngle(
+            2 * Math.atan2(rotorPivot.quaternion.y, rotorPivot.quaternion.w),
+          );
+
+          controls?.update();
+          renderer?.render(scene, camera);
+          frame = requestAnimationFrame(render);
+          return;
+        }
+
         accumulator += Math.min((now - lastTime) / 1000, 0.1);
         lastTime = now;
         while (accumulator >= FIXED_TIMESTEP) {
@@ -9463,7 +9583,17 @@ export function Part2SceneViewport({
   );
 
   return (
-    <div ref={stageRef} className="scene-stage" data-testid="canvas-viewport">
+    <div
+      ref={stageRef}
+      className="scene-stage"
+      data-testid="canvas-viewport"
+      data-authoritative-replay={
+        authoritativeReplayRound?.status === 'SETTLED' &&
+        authoritativeReplayRound.trajectory.length > 0
+          ? authoritativeReplayRound.trajectoryHash
+          : undefined
+      }
+    >
       <canvas
         ref={canvasRef}
         tabIndex={0}
