@@ -67,7 +67,7 @@ const PART3_OUTER_SPIN_RUNS = [
   { id: 'outer-spin-nominal', label: 'Outer spin · nominal launch', speed: 5.0 },
   { id: 'outer-spin-high', label: 'Outer spin · high launch variation', speed: 5.15 },
 ] as const;
-const PART6_TELEMETRY_SCHEMA_VERSION = 'roulette-part6-full-spin-telemetry-v2';
+const PART6_TELEMETRY_SCHEMA_VERSION = 'roulette-part6-full-spin-telemetry-v1';
 const GLB_COLLIDER_PARITY_EPSILON_WORLD = 0.0006;
 const MM_PER_WORLD_UNIT = 1000 / ROULETTE_WORLD_UNITS_PER_METER;
 const GLB_COLLIDER_PARITY_SCAN_INNER_RADIUS = 1.48;
