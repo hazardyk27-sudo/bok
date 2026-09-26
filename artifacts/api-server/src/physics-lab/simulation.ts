@@ -262,7 +262,10 @@ function addExactGlbRotorCollider(
       // Pocket floors, frets and retaining faces are intentionally sharp
       // visible GLB edges. Keep their authored triangle normals instead of
       // smoothing them as "internal" edges.
-      RAPIER.TriMeshFlags.ORIENTED,
+      RAPIER.TriMeshFlags.ORIENTED |
+        RAPIER.TriMeshFlags.MERGE_DUPLICATE_VERTICES |
+        RAPIER.TriMeshFlags.DELETE_DEGENERATE_TRIANGLES |
+        RAPIER.TriMeshFlags.DELETE_DUPLICATE_TRIANGLES,
     )
       .setFriction(0.42)
       .setRestitution(0.02)
