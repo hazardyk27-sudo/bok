@@ -3,6 +3,7 @@ import * as THREE from 'three';
 import RAPIER from '@dimforge/rapier3d-compat';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
+import { prepareAuthoritativeRouletteGlb } from '../../../lib/roulette-gltf-transform';
 import {
   ROULETTE_ASSET_PATH,
   ROULETTE_AUTHORITATIVE_SCALE,
@@ -6676,43 +6677,16 @@ export function Part2SceneViewport({
         async (gltf) => {
           if (disposed) return;
           const runtimeScene = gltf.scene.clone(true);
-          const embeddedScaleNode = (() => {
-            let found: THREE.Object3D | undefined;
-            runtimeScene.traverse((child) => {
-              if (
-                !found &&
-                Math.abs(child.scale.x - 0.01) < 0.000001 &&
-                Math.abs(child.scale.y - 0.01) < 0.000001 &&
-                Math.abs(child.scale.z - 0.01) < 0.000001
-              ) {
-                found = child;
-              }
-            });
-            return found;
-          })();
-          if (!embeddedScaleNode) {
-            throw new Error('PART 2 requires the embedded 0.01 GLB transform for scale normalization');
-          }
-          embeddedScaleNode.scale.set(1, 1, 1);
-          runtimeScene.updateMatrixWorld(true);
-          const sourceMeshCount = countMeshes(runtimeScene);
-          const sourceTriangles = countTriangles(runtimeScene);
-          const sourceCenter = new THREE.Vector3(
-            ROULETTE_RAW_SOURCE_CENTER.x,
-            ROULETTE_RAW_SOURCE_CENTER.y,
-            ROULETTE_RAW_SOURCE_CENTER.z,
-          );
-
-          const outside = runtimeScene.getObjectByName('geo1_outside_0');
-          const inside = runtimeScene.getObjectByName('geo1_inside_0');
-          const turret = runtimeScene.getObjectByName('geo1_turret_0');
-          if (!outside || !inside || !turret) {
-            throw new Error('PART 2 requires geo1_outside_0, geo1_inside_0, and geo1_turret_0');
-          }
-
           wheelRoot = new THREE.Group();
           wheelRoot.name = 'Part2__AuthoritativeWheelRoot';
-          wheelRoot.position.set(0, ROULETTE_Y_ORIGIN, 0);
+          const {
+            runtimeOffset,
+            outside,
+            inside,
+            turret,
+          } = prepareAuthoritativeRouletteGlb(runtimeScene, wheelRoot);
+          const sourceMeshCount = countMeshes(runtimeScene);
+          const sourceTriangles = countTriangles(runtimeScene);
           wheelRoot.userData = {
             sourceAsset: ROULETTE_ASSET_PATH,
             authoritativeTransform: {
@@ -6723,18 +6697,10 @@ export function Part2SceneViewport({
               yOrigin: ROULETTE_Y_ORIGIN,
               rotationAxis: ROULETTE_ROTATION_AXIS,
             },
+            sharedTransformPipeline: true,
             part2Only: true,
             rawGlbUsedAsCollider: false,
           };
-          const runtimeOffset = new THREE.Group();
-          runtimeOffset.position.set(-sourceCenter.x, -sourceCenter.y, -sourceCenter.z);
-          runtimeOffset.scale.setScalar(ROULETTE_AUTHORITATIVE_SCALE);
-          runtimeOffset.add(runtimeScene);
-          wheelRoot.add(runtimeOffset);
-          wheelRoot.updateMatrixWorld(true);
-          const normalizedBounds = new THREE.Box3().setFromObject(runtimeScene);
-          runtimeOffset.position.sub(normalizedBounds.getCenter(new THREE.Vector3()));
-          wheelRoot.updateMatrixWorld(true);
 
           stationaryGroup = new THREE.Group();
           stationaryGroup.name = 'Part2__StationaryOutsideAndTurret';
