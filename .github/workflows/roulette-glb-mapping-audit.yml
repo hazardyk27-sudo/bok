@@ -78,6 +78,7 @@ jobs:
                 text.startsWith('GLB_POCKET_GEOMETRY_REPORT ') ||
                 text.startsWith('GLB_NUMBER_MAPPING_REPORT ') ||
                 text.startsWith('GLB_COLLIDER_PARITY_REPORT ') ||
+                text.startsWith('GLB_SEAM_SWEEP_FAILURE ') ||
                 text.startsWith('GLB_EXACT_STATIONARY_COLLIDER ') ||
                 text.startsWith('GLB_EXACT_ROTOR_COLLIDER ')
               ) {
