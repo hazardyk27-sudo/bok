@@ -4,6 +4,7 @@ import RAPIER from '@dimforge/rapier3d-compat';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import { prepareAuthoritativeRouletteGlb } from '../../../lib/roulette-gltf-transform';
+import { measureRouletteVisualSurfaceAt } from '../../../lib/roulette-glb-surface';
 import {
   ROULETTE_ASSET_PATH,
   ROULETTE_AUTHORITATIVE_SCALE,
@@ -2446,62 +2447,35 @@ export function Part2SceneViewport({
         PART3_DARK_TRACK_RADIUS_BAND,
     ) => {
       if (!stationaryGroup) return null;
-      stationaryGroup.updateMatrixWorld(true);
       const sampleRadius = Math.hypot(x, z);
-      const raycaster = new THREE.Raycaster(
-        new THREE.Vector3(x, 1.5, z),
-        new THREE.Vector3(0, -1, 0),
-        0,
-        4,
+      return measureRouletteVisualSurfaceAt(
+        [stationaryGroup],
+        x,
+        z,
+        {
+          accept: (intersection) => {
+            const hitRadius = Math.hypot(
+              intersection.point.x,
+              intersection.point.z,
+            );
+            const objectName = intersection.object.name;
+            const material = (intersection.object as THREE.Mesh).material;
+            const materialNames = Array.isArray(material)
+              ? material.map((entry) => entry.name)
+              : [material?.name];
+            const isOutsideGeometry = objectName === 'geo1_outside_0';
+            const isOutsideMaterial = materialNames.includes('outside');
+            return (
+              (!darkTrackOnly ||
+                (sampleRadius >= darkTrackBand[0] &&
+                  sampleRadius <= darkTrackBand[1] &&
+                  hitRadius >= darkTrackBand[0] &&
+                  hitRadius <= darkTrackBand[1])) &&
+              (isOutsideGeometry || isOutsideMaterial)
+            );
+          },
+        },
       );
-      const intersections = raycaster.intersectObject(stationaryGroup, true);
-      const hit = intersections
-        .filter((intersection) => {
-          const hitRadius = Math.hypot(intersection.point.x, intersection.point.z);
-          const objectName = intersection.object.name;
-          const material = (intersection.object as THREE.Mesh).material;
-          const materialNames = Array.isArray(material)
-            ? material.map((entry) => entry.name)
-            : [material?.name];
-          const isOutsideGeometry = objectName === 'geo1_outside_0';
-          const isOutsideMaterial = materialNames.includes('outside');
-          return (
-            (!darkTrackOnly ||
-              (sampleRadius >= darkTrackBand[0] &&
-                sampleRadius <= darkTrackBand[1] &&
-                hitRadius >= darkTrackBand[0] &&
-                hitRadius <= darkTrackBand[1])) &&
-            (isOutsideGeometry || isOutsideMaterial) &&
-            intersection.point.y > -1.5 &&
-            intersection.point.y < 1
-          );
-        })
-        .sort((left, right) => right.point.y - left.point.y)[0];
-      if (!hit) return null;
-      const normal = hit.face
-        ? hit.face.normal
-            .clone()
-            .transformDirection(
-              new THREE.Matrix4().extractRotation(hit.object.matrixWorld),
-            )
-            .normalize()
-        : new THREE.Vector3(0, 1, 0);
-      const rayOrigin = new THREE.Vector3(x, 1.5, z);
-      if (normal.dot(rayOrigin.sub(hit.point)) < 0) normal.negate();
-      return {
-        y: hit.point.y,
-        source: hit.object.name || hit.object.parent?.name || 'unnamed-mesh',
-        point: {
-          x: hit.point.x,
-          y: hit.point.y,
-          z: hit.point.z,
-        },
-        normal: {
-          x: normal.x,
-          y: normal.y,
-          z: normal.z,
-        },
-      };
     };
 
     const measureVisibleDeflectors = (): Part4DeflectorAudit => {
