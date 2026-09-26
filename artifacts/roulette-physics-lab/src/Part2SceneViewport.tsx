@@ -1188,13 +1188,25 @@ function makeTrimeshFromObjectRelativeTo(
         .applyMatrix4(localFromMesh);
       vertices.push(localPosition.x, localPosition.y, localPosition.z);
     }
+    const reversesWinding = localFromMesh.determinant() < 0;
     if (geometry.index) {
-      for (let index = 0; index < geometry.index.count; index += 1) {
-        indices.push(base + geometry.index.getX(index));
+      for (let index = 0; index < geometry.index.count; index += 3) {
+        const a = geometry.index.getX(index);
+        const b = geometry.index.getX(index + 1);
+        const c = geometry.index.getX(index + 2);
+        indices.push(
+          base + a,
+          base + (reversesWinding ? c : b),
+          base + (reversesWinding ? b : c),
+        );
       }
     } else {
       for (let index = 0; index < position.count; index += 3) {
-        indices.push(base + index, base + index + 1, base + index + 2);
+        indices.push(
+          base + index,
+          base + index + (reversesWinding ? 2 : 1),
+          base + index + (reversesWinding ? 1 : 2),
+        );
       }
     }
   });
@@ -8500,7 +8512,8 @@ export function Part2SceneViewport({
                    RAPIER.ColliderDesc.trimesh(
                      actualRotorMesh.vertices,
                      actualRotorMesh.indices,
-                     RAPIER.TriMeshFlags.FIX_INTERNAL_EDGES,
+                     RAPIER.TriMeshFlags.FIX_INTERNAL_EDGES |
+                       RAPIER.TriMeshFlags.ORIENTED,
                    )
                      .setFriction(0.42)
                      .setRestitution(0.02)
