@@ -1008,15 +1008,16 @@ describe("Businesses final mobile Details composition", () => {
     expect(idleCssSource).toContain("overscroll-behavior-y: contain");
   });
 
-  it("uses a readable mobile summary with accrued money dominant", () => {
+  it("uses one compact three-column mobile summary so the stage list starts higher", () => {
     expect(idleCssSource).toContain(".business-detail-summary > div:first-child");
-    expect(idleCssSource).toContain("grid-column: 1 / -1");
-    expect(idleCssSource).toContain("font-size: 20px");
-    expect(idleCssSource).toContain("font-size: 15px");
+    expect(idleCssSource).toContain("grid-template-columns: repeat(3, minmax(0, 1fr))");
+    expect(idleCssSource).toContain("grid-column: auto");
+    expect(idleCssSource).toContain("min-height: 50px");
+    expect(idleCssSource).toContain("font-size: 13px");
   });
 
-  it("keeps core Details touch targets at least 44-48px", () => {
-    expect(idleCssSource).toContain("min-height: 46px");
+  it("keeps upgrade CTAs at 48px while allowing compact navigation chrome", () => {
+    expect(idleCssSource).toContain("min-height: 38px");
     expect(idleCssSource).toContain("min-height: 48px");
     expect(idleCssSource).toContain("touch-action: manipulation");
   });
@@ -1064,9 +1065,12 @@ describe("Businesses upgrade feedback choreography", () => {
     expect(idleCssSource).toContain("@keyframes idle-upgrade-vault-pulse");
   });
 
-  it("keeps upgrade feedback mobile-safe and honors reduced motion", () => {
-    expect(idleCssSource).toContain(".business-detail-drawer > .business-upgrade-toast");
-    expect(idleCssSource).toContain("@media (max-width: 420px)");
+  it("mounts upgrade feedback in the viewport toolbar and honors reduced motion", () => {
+    expect(idleIndexSource).toContain("mountFeedbackToast");
+    expect(idleIndexSource).toContain("business-feedback-toast business-upgrade-toast");
+    expect(idleCssSource).toContain("/* Viewport feedback toolbar");
+    expect(idleCssSource).toContain("position: fixed");
+    expect(idleCssSource).toContain("z-index: 260");
     expect(idleCssSource).toContain("@media (prefers-reduced-motion: reduce)");
     expect(idleCssSource).toContain("animation: none");
   });
@@ -1158,6 +1162,12 @@ describe("Businesses collect and completion polish", () => {
     expect(idleCssSource).toContain("@keyframes idle-collect-card-flash");
     expect(idleCssSource).toContain("@keyframes idle-collect-toast-in");
     expect(idleCssSource).toContain("@media (prefers-reduced-motion: reduce)");
+  });
+
+  it("routes collect notifications through the same top-of-screen toolbar", () => {
+    expect(idleIndexSource).toContain("business-feedback-toast business-collect-toast");
+    expect(idleIndexSource).toContain("business-feedback-toast business-collect-all-toast");
+    expect(idleIndexSource).toContain("this.mountFeedbackToast(toast)");
   });
 });
 
