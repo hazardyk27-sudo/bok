@@ -38,6 +38,7 @@ const SECTOR_STEP_RADIANS = (Math.PI * 2) / PHYSICS_LAB_SECTOR_COUNT;
 const BALL_COLLISION_GROUP = 0x0001;
 const STATIONARY_COLLISION_GROUP = 0x0002;
 const ROTOR_COLLISION_GROUP = 0x0004;
+const EXACT_GLB_POCKET_PROFILE_INNER_RADIUS = 1.48;
 const TRAJECTORY_SAMPLE_EVERY_STEPS = 1;
 const MAX_TRAJECTORY_SAMPLES = Math.ceil(
   (PHYSICS_LAB_DURATION_LIMIT_SECONDS / PHYSICS_LAB_FIXED_TIMESTEP) /
@@ -1844,7 +1845,7 @@ export async function simulatePhysicsLabRound(
       const settlePocketInteraction = pocketInteraction;
       const settleRelativeSpeed = rotorRelativeSpeed < 0.12;
       const settleRadiusMin =
-        radius >= 1.48 + PHYSICS_LAB_BALL_RADIUS;
+        radius >= EXACT_GLB_POCKET_PROFILE_INNER_RADIUS;
       const settleRadiusMax =
         radius <=
         ROULETTE_POCKET_OUTER_LIP_RADIUS - PHYSICS_LAB_BALL_RADIUS;
