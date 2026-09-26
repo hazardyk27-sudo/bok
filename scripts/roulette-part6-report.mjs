@@ -56,6 +56,8 @@ const evidence = {
   visualParityStatus: telemetry?.visualParityStatus ?? null,
   visualParityFailureCount: telemetry?.visualParityFailureCount ?? null,
   glbColliderParity: runtime.glbColliderParity ?? null,
+  glbPocketGeometry: runtime.glbPocketGeometry ?? null,
+  glbNumberMapping: runtime.glbNumberMapping ?? null,
   partialRuntime: telemetry === null,
   expectedSeedCount,
   resultCount: results.length,
