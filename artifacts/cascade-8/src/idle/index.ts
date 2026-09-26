@@ -425,7 +425,7 @@ export const BUSINESSES_MARKUP = `
       </section>
     </header>
 
-    <section class="business-summary business-command-bar" aria-label="İşletme özeti" data-idle-command-bar>
+    <section class="business-command-bar" aria-label="İşletme özeti" data-idle-command-bar>
       <div class="business-command-stat business-command-income">
         <span class="business-command-label">SAATLİK GELİR</span>
         <strong data-idle-total-hourly>—</strong>
@@ -947,6 +947,14 @@ export class BusinessesClient {
     ) ?? null;
   }
 
+  private mountFeedbackToast(toast: HTMLElement) {
+    const existingToasts = this.root.querySelectorAll<HTMLElement>(
+      ".business-upgrade-toast, .business-collect-toast, .business-collect-all-toast",
+    );
+    for (const existingToast of existingToasts) existingToast.remove();
+    this.root.append(toast);
+  }
+
   private playUpgradeFeedback(
     businessId: BusinessId,
     kind: UpgradeFeedbackKind,
@@ -972,7 +980,7 @@ export class BusinessesClient {
     target.dataset.upgradeFeedback = kind;
 
     const toast = document.createElement("div");
-    toast.className = "business-upgrade-toast";
+    toast.className = "business-feedback-toast business-upgrade-toast";
     toast.setAttribute("role", "status");
     toast.setAttribute("aria-live", "polite");
     toast.dataset.upgradeKind = kind;
@@ -982,7 +990,7 @@ export class BusinessesClient {
     const meta = document.createElement("small");
 
     toast.append(label, value, meta);
-    target.append(toast);
+    this.mountFeedbackToast(toast);
 
     const reducedMotion = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches ?? false;
     const duration = reducedMotion ? 0 : 860;
@@ -1060,7 +1068,7 @@ export class BusinessesClient {
     row.dataset.collectFeedback = "true";
 
     const toast = document.createElement("div");
-    toast.className = "business-collect-toast";
+    toast.className = "business-feedback-toast business-collect-toast";
     toast.setAttribute("role", "status");
     toast.setAttribute("aria-live", "polite");
 
@@ -1073,7 +1081,7 @@ export class BusinessesClient {
     meta.textContent = "Ortak bakiyeye aktarıldı";
 
     toast.append(label, value, meta);
-    row.append(toast);
+    this.mountFeedbackToast(toast);
 
     const reducedMotion = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches ?? false;
     window.setTimeout(() => {
@@ -1092,7 +1100,7 @@ export class BusinessesClient {
     commandBar.dataset.collectFeedback = "true";
 
     const toast = document.createElement("div");
-    toast.className = "business-collect-all-toast";
+    toast.className = "business-feedback-toast business-collect-all-toast";
     toast.setAttribute("role", "status");
     toast.setAttribute("aria-live", "polite");
     toast.innerHTML = `
@@ -1100,7 +1108,7 @@ export class BusinessesClient {
       <strong>+${formatCredits(collectedCents)}</strong>
       <small>Ortak bakiye güncellendi</small>
     `;
-    commandBar.append(toast);
+    this.mountFeedbackToast(toast);
 
     const reducedMotion = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches ?? false;
     window.setTimeout(() => {
