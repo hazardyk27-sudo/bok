@@ -5428,7 +5428,9 @@ export function Part2SceneViewport({
         PART6_SETTLE_DURATION_SECONDS / FIXED_TIMESTEP,
       );
       const pocketResultCenterRadiusMin =
-        POCKET_FLOOR_INNER_RADIUS + BALL_RADIUS;
+        part6FullSpinRouteActive
+          ? GLB_POCKET_PROFILE_INNER_RADIUS
+          : POCKET_FLOOR_INNER_RADIUS + BALL_RADIUS;
       const pocketResultCenterRadiusMax =
         POCKET_OUTER_LIP_RADIUS - BALL_RADIUS;
       const hoverGraceFrames = Math.round(
