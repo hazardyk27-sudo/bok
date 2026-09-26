@@ -7374,6 +7374,21 @@ export function Part2SceneViewport({
           physicsBallCollider = world.createCollider(ballColliderDescriptor, ballBody);
           ballBody.setTranslation({ x: initialPosition[0], y: initialPosition[1], z: initialPosition[2] }, true);
           ballMesh.position.set(...initialPosition);
+
+          if (
+            validationMode === 'part3' &&
+            !geometryDiagnosticOnly &&
+            !part1ProbeOnly
+          ) {
+            const parityReport = runGlbColliderParityAudit();
+            if (parityReport) {
+              console.info(
+                'GLB_COLLIDER_PARITY_STATUS',
+                parityReport.passed ? 'PASS' : 'FAIL',
+              );
+            }
+          }
+
             if (
               part1ProbeOnly &&
               validationMode === 'part3' &&
