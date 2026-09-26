@@ -989,6 +989,57 @@ describe("Businesses upgrade feedback choreography", () => {
 });
 
 
+describe("Businesses Part 17 functional regression", () => {
+  it("keeps main-card Collect disabled for locked, empty and busy states", () => {
+    expect(componentsSource).toContain("collectButton.disabled = busy || !business.canCollect");
+    expect(componentsSource).toContain('business.businessLevel === null');
+    expect(componentsSource).toContain('"locked"');
+    expect(componentsSource).toContain('"empty"');
+    expect(componentsSource).toContain('"busy"');
+    expect(componentsSource).toContain('"ready"');
+    expect(componentsSource).toContain('"full"');
+  });
+
+  it("keeps Collect All disabled with no whole-cent income and while a collect-all request is running", () => {
+    expect(idleIndexSource).toContain("collectAllButton.disabled = this.collectingAll || totalCollectableCents <= 0");
+    expect(idleIndexSource).toContain("this.collectingAll = true");
+    expect(idleIndexSource).toContain("this.collectingAll = false");
+    expect(idleIndexSource).toContain("this.busyBusinesses.clear()");
+  });
+
+  it("keeps upgrades in Details and only on the immediate next business or vault stage", () => {
+    expect(componentsSource).not.toContain("data-business-upgrade");
+    expect(componentsSource).not.toContain("data-business-vault-upgrade");
+    expect(idleIndexSource).toContain("const actionMarkup = isImmediateFuture");
+    expect(idleIndexSource).toContain('state === "future" && costCents !== null');
+    expect(idleIndexSource).toContain("upgradeIdleBusiness(businessId)");
+    expect(idleIndexSource).toContain("upgradeIdleVault(businessId)");
+  });
+
+  it("keeps locked, full and max UI state labels explicit", () => {
+    expect(componentsSource).toContain('"SATIN ALINMADI"');
+    expect(componentsSource).toContain('"KASA DOLU"');
+    expect(componentsSource).toContain('"MAX SEVİYE"');
+    expect(componentsSource).toContain('"LOCK"');
+    expect(componentsSource).toContain('"MAX"');
+  });
+
+  it("keeps insufficient, max-level and offline/server errors user-readable", () => {
+    expect(idleIndexSource).toContain('message === "INSUFFICIENT_IDLE_CREDITS"');
+    expect(idleIndexSource).toContain('message === "IDLE_BUSINESS_MAX_LEVEL"');
+    expect(idleIndexSource).toContain('message === "IDLE_VAULT_MAX_LEVEL"');
+    expect(idleIndexSource).toContain("İşletmeler sunucusuna bağlanılamadı. Lütfen tekrar dene.");
+  });
+
+  it("always clears busy state after collect and upgrade actions, including failures", () => {
+    expect(idleIndexSource).toContain("finally {");
+    expect(idleIndexSource).toContain("this.busyBusinesses.delete(businessId)");
+    expect(idleIndexSource).toContain("this.render()");
+    expect(idleIndexSource).toContain("this.setError(this.getErrorMessage(error))");
+  });
+});
+
+
 describe("Businesses collect and completion polish", () => {
   it("uses the server-confirmed collected amount for individual and collect-all feedback", () => {
     expect(idleIndexSource).toContain("runCollectBusiness");
