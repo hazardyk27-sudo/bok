@@ -157,6 +157,21 @@ describe("Businesses dedicated minimal mobile shell", () => {
 });
 
 
+describe("Businesses token inheritance", () => {
+  it("defines the visual-system tokens on the shared route-shell ancestor", () => {
+    expect(idleCssSource).toContain(
+      "Tokens live on the route shell so both the sidebar and the page inherit them.",
+    );
+    expect(idleCssSource).toContain(
+      ".route-shell.is-businesses-page {\n  /* Typography */",
+    );
+    expect(idleCssSource).not.toContain(
+      ".businesses-page {\n  /* Typography */",
+    );
+  });
+});
+
+
 describe("Businesses premium design tokens", () => {
   it("locks the approved green-charcoal palette and restrained elevation system", () => {
     expect(idleCssSource).toContain("/* Businesses visual system v2");
