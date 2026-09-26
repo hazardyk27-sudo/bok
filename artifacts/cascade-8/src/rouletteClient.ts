@@ -1101,7 +1101,16 @@ export class RouletteClient {
     rotor.style.transform = "rotate(0deg)";
     wheel.classList.add("is-spinning");
     this.voice.startSpin(profile.ballOrbitMs);
-    this.physicsReplay?.startLoop();
+    if (this.physicsReplay) {
+      void this.physicsReplay.startLoop(roundId, phaseElapsed).catch((error) => {
+        const physicsCanvas = this.root.querySelector<HTMLCanvasElement>("[data-physics-wheel]");
+        if (physicsCanvas) {
+          physicsCanvas.dataset.error =
+            error instanceof Error ? error.message : "PHYSICS_REPLAY_UNAVAILABLE";
+        }
+        console.warn("Authoritative roulette replay could not start.", error);
+      });
+    }
     const { outerRadius } = this.readWheelRadii(wheel);
     ball.style.transform = `rotate(${profile.initialBallAngle}deg) translateY(-${outerRadius}px)`;
     if (this.prefersReducedMotion()) {
@@ -1167,23 +1176,41 @@ export class RouletteClient {
       this.ballAnimation?.cancel();
       this.wheelAnimation?.cancel();
       wheel.classList.remove("is-spinning");
-      this.physicsReplay.playTo(
-        winningNumber,
-        BALL_LANDING_DURATION_MS,
-        animationElapsedMs,
-        () => {
+      const roundId = this.snapshot?.round.id ?? "";
+      void this.physicsReplay
+        .playTo(roundId, winningNumber, () => {
           if (this.animatedResultKey !== resultKey) return;
           this.settledResultKey = resultKey;
           this.voice.cue("settle");
           this.announceSettledResult();
           this.render();
-        },
-      );
+        })
+        .catch((error) => {
+          const physicsCanvas = this.root.querySelector<HTMLCanvasElement>("[data-physics-wheel]");
+          if (physicsCanvas) {
+            physicsCanvas.dataset.error =
+              error instanceof Error ? error.message : "PHYSICS_REPLAY_UNAVAILABLE";
+          }
+          if (this.animatedResultKey !== resultKey) return;
+          this.settledResultKey = resultKey;
+          this.announceSettledResult();
+          this.render();
+        });
       return;
     }
     this.clearBallSoundTimers();
     if (this.ballDropTimer) window.clearTimeout(this.ballDropTimer);
     this.ballDropTimer = undefined;
+    this.ballAnimation?.cancel();
+    this.wheelAnimation?.cancel();
+    this.stopLabelOrientationSync();
+    wheel.classList.remove("is-spinning");
+    this.settledResultKey = resultKey;
+    this.voice.cue("settle");
+    this.announceSettledResult();
+    this.render();
+    return;
+
     const currentRotation = this.readRotation(rotor);
     const currentBallAngle = this.readBallAngle(ball);
     const profile = getRouletteMotionProfile(this.snapshot?.round.id ?? resultKey);
@@ -1315,25 +1342,37 @@ export class RouletteClient {
       this.ballAnimation?.cancel();
       this.wheelAnimation?.cancel();
       wheel.classList.remove("is-spinning");
-      this.physicsReplay.settle(winningNumber);
-      this.wheelAnimation = undefined;
-      this.ballAnimation = undefined;
-      this.settledResultKey = resultKey;
-      this.announceSettledResult();
-      this.render();
+      const roundId = this.snapshot?.round.id ?? "";
+      void this.physicsReplay
+        .settle(roundId, winningNumber)
+        .then(() => {
+          if (this.settledResultKey === resultKey) return;
+          this.wheelAnimation = undefined;
+          this.ballAnimation = undefined;
+          this.settledResultKey = resultKey;
+          this.announceSettledResult();
+          this.render();
+        })
+        .catch((error) => {
+          const physicsCanvas = this.root.querySelector<HTMLCanvasElement>("[data-physics-wheel]");
+          if (physicsCanvas) {
+            physicsCanvas.dataset.error =
+              error instanceof Error ? error.message : "PHYSICS_REPLAY_UNAVAILABLE";
+          }
+          this.wheelAnimation = undefined;
+          this.ballAnimation = undefined;
+          this.settledResultKey = resultKey;
+          this.announceSettledResult();
+          this.render();
+        });
       return;
     }
     this.ballAnimation?.cancel();
     this.wheelAnimation?.cancel();
     wheel.classList.remove("is-spinning");
-    const { finalRotation, outerRadius, pocketRadius } = getWheelLandingPlan(winningNumber, currentRotation, this.readWheelRadii(wheel));
-    const finalPocketRadius = Math.max(0, pocketRadius - Math.max(9, outerRadius * .025));
     this.stopLabelOrientationSync();
     this.wheelAnimation = undefined;
     this.ballAnimation = undefined;
-    rotor.style.transform = `rotate(${finalRotation}deg)`;
-    this.updateLabelOrientations(wheel, finalRotation);
-    ball.style.transform = `rotate(-1440deg) translateY(-${finalPocketRadius}px)`;
     this.settledResultKey = resultKey;
     this.announceSettledResult();
     this.render();
