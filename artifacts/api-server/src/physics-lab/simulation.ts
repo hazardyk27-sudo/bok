@@ -1208,11 +1208,12 @@ export async function simulatePhysicsLabRound(
       PHYSICS_LAB_DURATION_LIMIT_SECONDS / PHYSICS_LAB_FIXED_TIMESTEP,
     );
     for (let step = 0; step < durationLimitSteps; step += 1) {
-      rotorAngle = normalizedAngle(
-        rotorAngle +
-          startConditions.rotorInitialAngularVelocity *
-            PHYSICS_LAB_FIXED_TIMESTEP,
-      );
+      // Keep the physical kinematic angle continuous. Wrapping at ±PI
+      // flips the quaternion sign for an equivalent orientation and can make
+      // a position-based kinematic body infer a catastrophic angular jump.
+      rotorAngle +=
+        startConditions.rotorInitialAngularVelocity *
+        PHYSICS_LAB_FIXED_TIMESTEP;
       rotorBody.setNextKinematicRotation({
         x: 0,
         y: Math.sin(rotorAngle / 2),
