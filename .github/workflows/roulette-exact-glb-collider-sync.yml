@@ -39,12 +39,15 @@ jobs:
       - name: Commit generated collider payload when changed
         shell: bash
         run: |
-          if git diff --quiet -- artifacts/api-server/src/physics-lab/glbColliderData.ts; then
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          # The generated payload is intentionally not a hand-authored source
+          # file and may match a broad ignore rule. Force-stage it first so an
+          # untracked first generation cannot be mistaken for a clean diff.
+          git add -f artifacts/api-server/src/physics-lab/glbColliderData.ts
+          if git diff --cached --quiet -- artifacts/api-server/src/physics-lab/glbColliderData.ts; then
             echo "Exact GLB collider payload already current."
             exit 0
           fi
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add artifacts/api-server/src/physics-lab/glbColliderData.ts
           git commit -m "physics: sync exact GLB collider payload"
           git push origin HEAD:feature/roulette
