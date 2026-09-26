@@ -1012,12 +1012,14 @@ describe("Businesses final mobile Details composition", () => {
     expect(idleCssSource).toContain(".business-detail-summary > div:first-child");
     expect(idleCssSource).toContain("grid-template-columns: repeat(3, minmax(0, 1fr))");
     expect(idleCssSource).toContain("grid-column: auto");
-    expect(idleCssSource).toContain("min-height: 50px");
+    expect(idleCssSource).toContain("min-height: 42px");
     expect(idleCssSource).toContain("font-size: 13px");
+    expect(idleCssSource).toContain("margin-top: 4px");
+    expect(idleCssSource).toContain("grid-template-columns: minmax(0, 1fr) 36px");
   });
 
   it("keeps upgrade CTAs at 48px while allowing compact navigation chrome", () => {
-    expect(idleCssSource).toContain("min-height: 38px");
+    expect(idleCssSource).toContain("min-height: 33px");
     expect(idleCssSource).toContain("min-height: 48px");
     expect(idleCssSource).toContain("touch-action: manipulation");
   });
@@ -1070,7 +1072,9 @@ describe("Businesses upgrade feedback choreography", () => {
     expect(idleIndexSource).toContain("business-feedback-toast business-upgrade-toast");
     expect(idleCssSource).toContain("/* Viewport feedback toolbar");
     expect(idleCssSource).toContain("position: fixed");
-    expect(idleCssSource).toContain("z-index: 260");
+    expect(idleCssSource).toContain("z-index: 360");
+    expect(idleCssSource).toContain("top: max(12px, calc(env(safe-area-inset-top) + 8px))");
+    expect(idleCssSource).toContain("margin: 0 auto");
     expect(idleCssSource).toContain("@media (prefers-reduced-motion: reduce)");
     expect(idleCssSource).toContain("animation: none");
   });
