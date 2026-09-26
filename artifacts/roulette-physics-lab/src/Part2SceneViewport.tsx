@@ -1175,8 +1175,6 @@ function buildBowlBridgeTrimesh(
 ) {
   const vertices: number[] = [];
   const indices: number[] = [];
-  const quantizeBridgeScalar = (value: number) =>
-    Math.round(value * 1_000_000) / 1_000_000;
   const bottomProfile = profile.map(
     ([radius, height]) =>
       [radius, height - BOWL_BRIDGE_THICKNESS] as [number, number],
@@ -1187,9 +1185,9 @@ function buildBowlBridgeTrimesh(
       for (let segment = 0; segment < BOWL_BRIDGE_SEGMENTS; segment += 1) {
         const angle = (segment / BOWL_BRIDGE_SEGMENTS) * TWO_PI;
         vertices.push(
-          quantizeBridgeScalar(Math.sin(angle) * radius),
-          quantizeBridgeScalar(height),
-          quantizeBridgeScalar(Math.cos(angle) * radius),
+          Math.sin(angle) * radius,
+          height,
+          Math.cos(angle) * radius,
         );
       }
     }
@@ -6954,47 +6952,18 @@ export function Part2SceneViewport({
              part3BowlBridgeOuterRadius = part6FullSpinRouteActive
                ? PART2_ACTUAL_INWARD_EDGE_RADIUS + BALL_RADIUS
                : BOWL_BRIDGE_OUTER_RADIUS;
-             const measuredBowlBridgeProfile = measureBowlBridgeProfile(
+             part3BowlBridgeProfile = measureBowlBridgeProfile(
                activeTrackVerticalOffset,
                part3BowlBridgeOuterRadius,
              );
              if (part6FullSpinRouteActive) {
-               const fullSpinBridgeOuterY = part2ChannelSurfaceAt(
-                 part3BowlBridgeOuterRadius,
-                 activeTrackVerticalOffset,
-               ).y;
-               const fullSpinBridgeInnerY = Math.min(
-                 POCKET_OUTER_LIP_Y,
-                 fullSpinBridgeOuterY - BALL_RADIUS * 0.75,
-               );
-               part3BowlBridgeProfile = Array.from(
-                 { length: BOWL_BRIDGE_SAMPLE_COUNT },
-                 (_, index) => {
-                   const alpha = index / (BOWL_BRIDGE_SAMPLE_COUNT - 1);
-                   return [
-                     THREE.MathUtils.lerp(
-                       BOWL_BRIDGE_INNER_RADIUS,
-                       part3BowlBridgeOuterRadius,
-                       alpha,
-                     ),
-                     THREE.MathUtils.lerp(
-                       fullSpinBridgeInnerY,
-                       fullSpinBridgeOuterY,
-                       alpha,
-                     ),
-                   ] as [number, number];
-                 },
-               );
                console.info(
                  'PART6_BOWL_BRIDGE_PROFILE',
                  JSON.stringify({
                    outerRadius: part3BowlBridgeOuterRadius,
-                   measuredProfile: measuredBowlBridgeProfile,
                    profile: part3BowlBridgeProfile,
                  }),
                );
-             } else {
-               part3BowlBridgeProfile = measuredBowlBridgeProfile;
              }
              if (part6FullSpinRouteActive) {
                const bridgeMesh = buildBowlBridgeTrimesh(
