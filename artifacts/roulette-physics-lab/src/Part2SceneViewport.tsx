@@ -5988,9 +5988,9 @@ export function Part2SceneViewport({
               });
             }
 
-            rotorAngle = normalizedAngle(
-              rotorAngle + TEST_ANGULAR_SPEED * FIXED_TIMESTEP,
-            );
+            // Rapier position-based kinematics requires a continuous
+            // quaternion path. Do not wrap the physical angle at ±PI.
+            rotorAngle += TEST_ANGULAR_SPEED * FIXED_TIMESTEP;
             rotorAngleRef.current = rotorAngle;
             activeRotorBody.setNextKinematicRotation({
               x: 0,
@@ -9257,7 +9257,10 @@ export function Part2SceneViewport({
         lastTime = now;
         while (accumulator >= FIXED_TIMESTEP) {
           if (rotorPivot && !part6TelemetryBatchRunning) {
-            rotorAngleRef.current = normalizedAngle(rotorAngleRef.current + TEST_ANGULAR_SPEED * FIXED_TIMESTEP);
+            // Keep render and kinematic physics on the same continuous
+            // angle path; normalize only where an angle is displayed/read.
+            rotorAngleRef.current +=
+              TEST_ANGULAR_SPEED * FIXED_TIMESTEP;
             rotorPivot.rotation.set(0, rotorAngleRef.current, 0);
             if (
               (validationMode === 'part3' || validationMode === 'part4') &&
