@@ -85,6 +85,18 @@ const routeShell = (content: string, className = "") => `
   </div>
 `;
 
+/**
+ * Businesses owns a dedicated visual shell. Do not mount the legacy game-route
+ * ambient lights, star field, topbar or demo footer here: those belong to the
+ * slot/menu visual system and cause the old blue/violet theme to bleed into
+ * the charcoal/green Businesses workspace.
+ */
+const businessesRouteShell = (content: string) => `
+  <div class="app-shell route-shell is-route-page is-businesses-page">
+    ${content}
+  </div>
+`;
+
 const mainMenuMarkup = `
   <main class="game-menu" aria-labelledby="game-menu-title">
     <div class="menu-intro">
@@ -343,7 +355,7 @@ if (isRouletteRoute) {
 } else if (isWitchRoute) {
   app.innerHTML = routeShell(CADI_KAZAN_MARKUP, "is-route-page is-witch-page");
 } else if (isBusinessesRoute) {
-  app.innerHTML = routeShell(BUSINESSES_MARKUP, "is-route-page is-businesses-page");
+  app.innerHTML = businessesRouteShell(BUSINESSES_MARKUP);
 } else if (!isSlotRoute) {
   app.innerHTML = routeShell(mainMenuMarkup, "is-route-page is-menu-page");
 } else {
