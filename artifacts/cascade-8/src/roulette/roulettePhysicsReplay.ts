@@ -7,16 +7,9 @@ import {
   ROULETTE_ROTOR_ANGULAR_SPEED,
   ROULETTE_WHEEL_DIAMETER,
   ROULETTE_WORLD_UNITS_PER_METER,
-} from "../../../lib/roulette-physics-config";
-import {
-  applyAuthoritativeRouletteRotorBasis,
-  prepareAuthoritativeRouletteGlb,
-} from "../../../lib/roulette-gltf-transform";
-import { measureRouletteVisualSurfaceAt } from "../../../lib/roulette-glb-surface";
-import {
-  rouletteNumberForPhysicsPocketIndex,
-  rouletteVisibleGlbIndexForPhysicsPocketIndex,
-} from "../../../lib/roulette-pocket-mapping";
+} from "../../../../lib/roulette-physics-config";
+import { prepareAuthoritativeRouletteGlb } from "../../../../lib/roulette-gltf-transform";
+import { measureRouletteVisualSurfaceAt } from "../../../../lib/roulette-glb-surface";
 
 type Vec3 = { x: number; y: number; z: number };
 type Quaternion = { x: number; y: number; z: number; w: number };
@@ -184,20 +177,11 @@ export class RoulettePhysicsReplay {
     );
     if (!response.ok) throw new Error("PHYSICS_REPLAY_UNAVAILABLE");
     const replay = await response.json() as PhysicsReplay;
-    const mappedVisibleIndex = replay.finalPocket
-      ? rouletteVisibleGlbIndexForPhysicsPocketIndex(replay.finalPocket.index)
-      : null;
-    const mappedVisibleNumber =
-      mappedVisibleIndex === null
-        ? null
-        : rouletteNumberForPhysicsPocketIndex(mappedVisibleIndex);
     if (
       replay.status !== "SETTLED" ||
       !replay.finalPocket ||
       replay.winningNumber === null ||
       replay.finalPocket.number !== replay.winningNumber ||
-      mappedVisibleIndex !== replay.finalPocket.index ||
-      mappedVisibleNumber !== replay.finalPocket.number ||
       replay.trajectory.length < 2
     ) {
       throw new Error("PHYSICS_REPLAY_NOT_SETTLED");
@@ -239,7 +223,6 @@ export class RoulettePhysicsReplay {
     stationary.attach(outside);
     stationary.attach(turret);
     rotorVisual.attach(inside);
-    applyAuthoritativeRouletteRotorBasis(rotorVisual);
     this.visualSurfaceRoots = [stationary, rotorVisual];
     wheel.remove(runtimeOffset);
     wheel.updateMatrixWorld(true);
@@ -404,12 +387,6 @@ export class RoulettePhysicsReplay {
       expected: {
         finalPocket: replay.finalPocket,
         winningNumber: replay.winningNumber,
-        visibleGlbIndex: rouletteVisibleGlbIndexForPhysicsPocketIndex(
-          replay.finalPocket.index,
-        ),
-        visibleGlbNumber: rouletteNumberForPhysicsPocketIndex(
-          replay.finalPocket.index,
-        ),
         finalSample: replay.trajectory.at(-1) ?? null,
       },
     });

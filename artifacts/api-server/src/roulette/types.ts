@@ -85,7 +85,7 @@ export const PHASE_DURATIONS_MS: Record<RoulettePhase, number> = {
   INTERMISSION: 3_000,
 };
 
-export const INITIAL_ROULETTE_BALANCE_CENTS = 100_000;
+export { INITIAL_SHARED_BALANCE_CENTS as INITIAL_ROULETTE_BALANCE_CENTS } from "../platform/wallet";
 export const MIN_STAKE_CENTS = 100;
 export const MAX_STAKE_CENTS = 10_000;
 

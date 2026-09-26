@@ -30,7 +30,7 @@ export const ANIMATION = {
   multiplierLanding: 190,
   freeSpinPause: 260,
   spinPause: 250,
-  turboSpinPause: 60,
+  turboSpinPause: 0,
 } as const;
 
 export type NormalSymbolId = "S1" | "S2" | "S3" | "S4" | "S5" | "S6" | "S7" | "S8" | "S9";
@@ -68,8 +68,11 @@ export type ReelConfig = {
   symbolWeights: readonly { value: NormalSymbolId; weight: number }[];
 };
 
-export const NORMAL_PAIR_COPY_CHANCE = 0.75;
+export const NORMAL_PAIR_COPY_CHANCE = 0.85;
 export const NORMAL_THIRD_REPEAT_WEIGHT_FACTOR = 0.5;
+export const BONUS_INITIAL_PAIR_COPY_CHANCE = 1;
+export const BONUS_REFILL_PAIR_COPY_CHANCE = NORMAL_PAIR_COPY_CHANCE;
+export const BONUS_THIRD_REPEAT_WEIGHT_FACTOR = 0.75;
 
 export const BASE_REEL_CONFIG: ReelConfig = {
   name: "BASE",
@@ -109,15 +112,15 @@ export const SYMBOL_EFFECT_PROFILES: Record<NormalSymbolId, SymbolEffectProfile>
 };
 
 export const PAYTABLE: Record<NormalSymbolId, readonly { min: number; max: number; multiplier: number }[]> = {
-  S1: [{ min: 8, max: 8, multiplier: 0.3 }, { min: 9, max: 9, multiplier: 0.35 }, { min: 10, max: 10, multiplier: 0.4 }, { min: 11, max: 11, multiplier: 0.45 }, { min: 12, max: Infinity, multiplier: 1.0 }],
-  S5: [{ min: 8, max: 8, multiplier: 0.35 }, { min: 9, max: 9, multiplier: 0.4 }, { min: 10, max: 10, multiplier: 0.45 }, { min: 11, max: 11, multiplier: 0.55 }, { min: 12, max: Infinity, multiplier: 1.25 }],
-  S7: [{ min: 8, max: 8, multiplier: 0.5 }, { min: 9, max: 9, multiplier: 0.55 }, { min: 10, max: 10, multiplier: 0.65 }, { min: 11, max: 11, multiplier: 1.0 }, { min: 12, max: Infinity, multiplier: 1.5 }],
-  S6: [{ min: 8, max: 8, multiplier: 0.6 }, { min: 9, max: 9, multiplier: 0.65 }, { min: 10, max: 10, multiplier: 0.75 }, { min: 11, max: 11, multiplier: 1.1 }, { min: 12, max: Infinity, multiplier: 1.75 }],
-  S4: [{ min: 8, max: 8, multiplier: 0.75 }, { min: 9, max: 9, multiplier: 0.85 }, { min: 10, max: 10, multiplier: 1.0 }, { min: 11, max: 11, multiplier: 1.25 }, { min: 12, max: Infinity, multiplier: 1.9 }],
-  S2: [{ min: 8, max: 8, multiplier: 1.0 }, { min: 9, max: 9, multiplier: 1.1 }, { min: 10, max: 10, multiplier: 1.3 }, { min: 11, max: 11, multiplier: 1.75 }, { min: 12, max: Infinity, multiplier: 2.4 }],
-  S3: [{ min: 8, max: 8, multiplier: 1.75 }, { min: 9, max: 9, multiplier: 2.1 }, { min: 10, max: 10, multiplier: 2.6 }, { min: 11, max: 11, multiplier: 3.5 }, { min: 12, max: Infinity, multiplier: 5.0 }],
-  S9: [{ min: 8, max: 8, multiplier: 3.0 }, { min: 9, max: 9, multiplier: 4.5 }, { min: 10, max: 10, multiplier: 5.5 }, { min: 11, max: 11, multiplier: 7.5 }, { min: 12, max: Infinity, multiplier: 10.5 }],
-  S8: [{ min: 8, max: 8, multiplier: 6.0 }, { min: 9, max: 9, multiplier: 6.5 }, { min: 10, max: 10, multiplier: 8.0 }, { min: 11, max: 11, multiplier: 11.0 }, { min: 12, max: Infinity, multiplier: 15.0 }],
+  S1: [{ min: 8, max: 8, multiplier: 0.25 }, { min: 9, max: 9, multiplier: 0.3 }, { min: 10, max: 10, multiplier: 0.35 }, { min: 11, max: 11, multiplier: 0.45 }, { min: 12, max: Infinity, multiplier: 0.8 }],
+  S5: [{ min: 8, max: 8, multiplier: 0.3 }, { min: 9, max: 9, multiplier: 0.35 }, { min: 10, max: 10, multiplier: 0.45 }, { min: 11, max: 11, multiplier: 0.55 }, { min: 12, max: Infinity, multiplier: 1.0 }],
+  S7: [{ min: 8, max: 8, multiplier: 0.4 }, { min: 9, max: 9, multiplier: 0.5 }, { min: 10, max: 10, multiplier: 0.6 }, { min: 11, max: 11, multiplier: 0.85 }, { min: 12, max: Infinity, multiplier: 1.3 }],
+  S6: [{ min: 8, max: 8, multiplier: 0.5 }, { min: 9, max: 9, multiplier: 0.6 }, { min: 10, max: 10, multiplier: 0.75 }, { min: 11, max: 11, multiplier: 1.0 }, { min: 12, max: Infinity, multiplier: 1.6 }],
+  S4: [{ min: 8, max: 8, multiplier: 0.65 }, { min: 9, max: 9, multiplier: 0.8 }, { min: 10, max: 10, multiplier: 1.0 }, { min: 11, max: 11, multiplier: 1.3 }, { min: 12, max: Infinity, multiplier: 2.0 }],
+  S2: [{ min: 8, max: 8, multiplier: 0.9 }, { min: 9, max: 9, multiplier: 1.1 }, { min: 10, max: 10, multiplier: 1.35 }, { min: 11, max: 11, multiplier: 1.8 }, { min: 12, max: Infinity, multiplier: 2.6 }],
+  S3: [{ min: 8, max: 8, multiplier: 1.5 }, { min: 9, max: 9, multiplier: 1.9 }, { min: 10, max: 10, multiplier: 2.5 }, { min: 11, max: 11, multiplier: 3.5 }, { min: 12, max: Infinity, multiplier: 5.0 }],
+  S9: [{ min: 8, max: 8, multiplier: 2.75 }, { min: 9, max: 9, multiplier: 3.75 }, { min: 10, max: 10, multiplier: 5.0 }, { min: 11, max: 11, multiplier: 7.0 }, { min: 12, max: Infinity, multiplier: 10.0 }],
+  S8: [{ min: 8, max: 8, multiplier: 5.0 }, { min: 9, max: 9, multiplier: 6.5 }, { min: 10, max: 10, multiplier: 8.5 }, { min: 11, max: 11, multiplier: 11.5 }, { min: 12, max: Infinity, multiplier: 15.0 }],
 };
 
 // Context-specific special-symbol probabilities. Values are decimals, not percentages.
@@ -128,7 +131,7 @@ export const BASE_REFILL_CORE_CHANCE = 0.007;
 export const BONUS_INITIAL_SCATTER_CHANCE = 0.025;
 export const BONUS_REFILL_SCATTER_CHANCE = 0.035;
 export const BONUS_INITIAL_CORE_CHANCE = 0.035;
-export const BONUS_REFILL_CORE_CHANCE = 0.055;
+export const BONUS_REFILL_CORE_CHANCE = 0.04;
 
 export const BASE_MULTIPLIER_CORE_CHANCE = BASE_REFILL_CORE_CHANCE;
 export const BASE_MULTIPLIER_CORE_WEIGHTS = [

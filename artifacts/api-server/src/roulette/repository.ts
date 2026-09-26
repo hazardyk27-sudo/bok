@@ -1,8 +1,8 @@
 import { createHash } from "node:crypto";
 import { pool } from "@workspace/db";
+import { INITIAL_SHARED_BALANCE_CENTS } from "../platform/wallet";
 import { isRouletteRoundGenerationPaused } from "./config";
 import {
-  INITIAL_ROULETTE_BALANCE_CENTS,
   MAX_STAKE_CENTS,
   MIN_STAKE_CENTS,
   MULTIPLIER_VALUES,
@@ -221,7 +221,7 @@ export class RouletteRepository {
       const roundLock = await client.query("SELECT phase FROM roulette_rounds WHERE id = $1 FOR UPDATE", [round.id]);
       if (!["OPEN", "LAST_CALL"].includes(roundLock.rows[0]?.phase)) throw new Error("BETTING_CLOSED");
       const wallet = await client.query("SELECT balance_cents FROM roulette_wallets WHERE session_id = $1 FOR UPDATE", [sessionId]);
-      const balanceCents = wallet.rows[0]?.balance_cents ?? INITIAL_ROULETTE_BALANCE_CENTS;
+      const balanceCents = wallet.rows[0]?.balance_cents ?? INITIAL_SHARED_BALANCE_CENTS;
       if (!wallet.rows[0]) {
         await client.query("INSERT INTO roulette_wallets (session_id, balance_cents) VALUES ($1, $2)", [sessionId, balanceCents]);
       }
@@ -267,8 +267,8 @@ export class RouletteRepository {
   async getWallet(sessionId: string) {
     const result = await pool.query("SELECT session_id, balance_cents FROM roulette_wallets WHERE session_id = $1", [sessionId]);
     if (!result.rows[0]) {
-      await pool.query("INSERT INTO roulette_wallets (session_id, balance_cents) VALUES ($1, $2) ON CONFLICT (session_id) DO NOTHING", [sessionId, INITIAL_ROULETTE_BALANCE_CENTS]);
-      return { sessionId, balanceCents: INITIAL_ROULETTE_BALANCE_CENTS };
+      await pool.query("INSERT INTO roulette_wallets (session_id, balance_cents) VALUES ($1, $2) ON CONFLICT (session_id) DO NOTHING", [sessionId, INITIAL_SHARED_BALANCE_CENTS]);
+      return { sessionId, balanceCents: INITIAL_SHARED_BALANCE_CENTS };
     }
     return { sessionId: result.rows[0].session_id as string, balanceCents: result.rows[0].balance_cents as number };
   }

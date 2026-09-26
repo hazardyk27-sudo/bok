@@ -2,6 +2,7 @@ import Phaser from "phaser";
 import { BOARD_COLUMNS, BOARD_ROWS, NORMAL_SYMBOLS, getMultiplierCoreVisualTier, getSymbolDefinition, type SymbolId } from "../config/GameConfig";
 import { getNormalSymbol, getStackMetadata, isMultiplierCore, type Board, type BoardCell, type Cell, type CoreCell } from "../engine/types";
 import { CancelableCompletionRegistry } from "./CancelableCompletionRegistry";
+import type { MotionTiming } from "./RoundTiming";
 import { calculateWinLabelPositions, type WinLabelEvent } from "./WinLabel";
 
 type BoardNode = {
@@ -370,7 +371,9 @@ export class GameScene extends Phaser.Scene {
   }
 
   renderBoard(board: Board, winningCells: Cell[] = []) {
+    const startedAt = performance.now();
     this.clearSymbols();
+    const clearedAt = performance.now();
     const winning = new Set(winningCells.map((cell) => `${cell.row}:${cell.col}`));
     for (let row = 0; row < BOARD_ROWS; row += 1) {
       for (let col = 0; col < BOARD_COLUMNS; col += 1) {
@@ -382,32 +385,113 @@ export class GameScene extends Phaser.Scene {
         );
       }
     }
+    const completedAt = performance.now();
+    return {
+      totalMs: Math.round((completedAt - startedAt) * 10) / 10,
+      clearMs: Math.round((clearedAt - startedAt) * 10) / 10,
+      createMs: Math.round((completedAt - clearedAt) * 10) / 10,
+      nodes: this.nodes.length,
+      activeTweens: this.tweens.getTweens().length,
+      displayObjects: this.children.list.length,
+      fps: Math.round(this.game.loop.actualFps || 0),
+    };
   }
 
-  async animateDrop(duration: number, awaitScatterLanding = true) {
+  async animateDrop(duration: number, awaitScatterLanding = true): Promise<MotionTiming> {
+    const startedAt = performance.now();
+    const movingUnits = this.nodes.length;
+    const specialUnits = this.nodes.filter((node) => node.symbol === "SCATTER").length;
+    let visualSettledUnits = 0;
+    let visualSettledAt: number | null = movingUnits === 0 ? startedAt : null;
+    let lastUpdateAt = startedAt;
+    let maxFrameGapMs = 0;
+    let frameSamples = 0;
+    const sampleFrameGap = () => {
+      const now = performance.now();
+      maxFrameGapMs = Math.max(maxFrameGapMs, now - lastUpdateAt);
+      lastUpdateAt = now;
+      frameSamples += 1;
+    };
+
     await Promise.all(this.nodes.map((node, index) => new Promise<void>((resolve) => {
       const finalY = node.container.y;
+      const tweenDuration = duration + (index % BOARD_COLUMNS) * 24;
+      const tweenDelay = (index % BOARD_COLUMNS) * 20;
       node.container.y = finalY - 260 - (index % BOARD_COLUMNS) * 18;
       node.container.alpha = 0.2;
-      this.tweens.add({
+      let visuallySettled = false;
+      let completed = false;
+      let watchdog: number | null = null;
+      const markVisualSettled = () => {
+        if (visuallySettled) return;
+        visuallySettled = true;
+        visualSettledUnits += 1;
+        if (visualSettledUnits === movingUnits) visualSettledAt = performance.now();
+      };
+      const complete = () => {
+        if (completed) return;
+        completed = true;
+        if (watchdog !== null) window.clearTimeout(watchdog);
+        resolve();
+      };
+      const finishScatterLanding = () => {
+        const landing = this.animateScatterLanding(node);
+        if (awaitScatterLanding) void landing.then(complete);
+        else {
+          void landing;
+          complete();
+        }
+      };
+      const tween = this.tweens.add({
         targets: node.container,
         y: finalY,
         alpha: 1,
-        duration: duration + (index % BOARD_COLUMNS) * 24,
-        delay: (index % BOARD_COLUMNS) * 20,
+        duration: tweenDuration,
+        delay: tweenDelay,
         ease: "Back.easeOut",
-         onComplete: () => {
-           if (node.symbol === "SCATTER") {
-             const landing = this.animateScatterLanding(node);
-             if (awaitScatterLanding) void landing.then(resolve);
-             else {
-               void landing;
-               resolve();
-             }
-           } else resolve();
-         },
+        onUpdate: (activeTween) => {
+          sampleFrameGap();
+          if (
+            activeTween.progress >= 0.92
+            && Math.abs(node.container.y - finalY) <= 1.5
+            && node.container.alpha >= 0.995
+          ) {
+            markVisualSettled();
+            if (node.symbol !== "SCATTER") complete();
+          }
+        },
+        onComplete: () => {
+          sampleFrameGap();
+          markVisualSettled();
+          if (node.symbol === "SCATTER") finishScatterLanding();
+          else complete();
+        },
       });
+
+      watchdog = window.setTimeout(() => {
+        if (completed) return;
+        tween.stop();
+        node.container.y = finalY;
+        node.container.alpha = 1;
+        sampleFrameGap();
+        markVisualSettled();
+        if (node.symbol === "SCATTER") finishScatterLanding();
+        else complete();
+      }, tweenDelay + tweenDuration + 120);
     })));
+
+    const completedAt = performance.now();
+    const settledAt = visualSettledAt ?? completedAt;
+    return {
+      startedAt,
+      visualSettledAt: settledAt,
+      completedAt,
+      tailMs: Math.max(0, completedAt - settledAt),
+      movingUnits,
+      specialUnits,
+      maxFrameGapMs,
+      frameSamples,
+    };
   }
 
   async highlightCells(cells: Cell[], duration: number) {
@@ -727,9 +811,28 @@ export class GameScene extends Phaser.Scene {
     })));
   }
 
-  async animateCascade(board: Board, removedCells: Cell[], duration: number) {
+  async animateCascade(board: Board, removedCells: Cell[], duration: number): Promise<MotionTiming> {
+    const startedAt = performance.now();
+    let lastUpdateAt = startedAt;
+    let maxFrameGapMs = 0;
+    let frameSamples = 0;
+    const sampleFrameGap = () => {
+      const now = performance.now();
+      maxFrameGapMs = Math.max(maxFrameGapMs, now - lastUpdateAt);
+      lastUpdateAt = now;
+      frameSamples += 1;
+    };
     const winning = new Set(removedCells.map((cell) => `${cell.row}:${cell.col}`));
     const animations: Promise<void>[] = [];
+    let movingUnits = 0;
+    let specialUnits = 0;
+    let visualSettledUnits = 0;
+    let visualSettledAt: number | null = null;
+    const markUnitVisualSettled = () => {
+      visualSettledUnits += 1;
+      if (visualSettledUnits === movingUnits) visualSettledAt = performance.now();
+    };
+
     for (let col = 0; col < BOARD_COLUMNS; col += 1) {
       const survivors = this.nodes
         .filter((node) => node.col === col && !winning.has(`${node.row}:${node.col}`))
@@ -740,14 +843,54 @@ export class GameScene extends Phaser.Scene {
         const targetY = this.boardOrigin.y + targetRow * this.cellSize.height + 46;
         node.row = targetRow;
         if (Math.abs(node.container.y - targetY) < 0.5 && node.container.alpha >= 0.999) return;
+        movingUnits += 1;
+        if (node.symbol === "SCATTER" || isMultiplierCore(node.symbol)) specialUnits += 1;
         animations.push(new Promise<void>((resolve) => {
-          this.tweens.add({
+          const tweenDuration = duration + col * 18;
+          let visuallySettled = false;
+          let completed = false;
+          let watchdog: number | null = null;
+          const markVisualSettled = () => {
+            if (visuallySettled) return;
+            visuallySettled = true;
+            markUnitVisualSettled();
+          };
+          const complete = () => {
+            if (completed) return;
+            completed = true;
+            if (watchdog !== null) window.clearTimeout(watchdog);
+            resolve();
+          };
+          const mayResolveAtVisualSettle = node.symbol !== "SCATTER" && !isMultiplierCore(node.symbol);
+          const tween = this.tweens.add({
             targets: node.container,
             y: targetY,
-            duration: duration + col * 18,
+            duration: tweenDuration,
             ease: "Cubic.easeInOut",
-            onComplete: () => resolve(),
+            onUpdate: (activeTween) => {
+              sampleFrameGap();
+              if (
+                activeTween.progress >= 0.92
+                && Math.abs(node.container.y - targetY) <= 1.5
+              ) {
+                markVisualSettled();
+                if (mayResolveAtVisualSettle) complete();
+              }
+            },
+            onComplete: () => {
+              markVisualSettled();
+              complete();
+            },
           });
+
+          watchdog = window.setTimeout(() => {
+            if (completed) return;
+            tween.stop();
+            node.container.y = targetY;
+            sampleFrameGap();
+            markVisualSettled();
+            complete();
+          }, tweenDuration + 120);
         }));
       });
       const incomingGroups = new Map<string, BoardNode[]>();
@@ -768,26 +911,84 @@ export class GameScene extends Phaser.Scene {
       incomingGroups.forEach((group) => {
         const targetYs = group.map((node) => this.boardOrigin.y + node.row * this.cellSize.height + 46);
         const starts = group.map((node) => node.container.y);
+        movingUnits += 1;
+        const hasSpecialSymbol = group.some((node) => node.symbol === "SCATTER" || isMultiplierCore(node.symbol));
+        if (hasSpecialSymbol) specialUnits += 1;
         animations.push(new Promise<void>((resolve) => {
           const motion = { progress: 0 };
-          this.tweens.add({
+          const tweenDuration = duration + col * 18;
+          const tweenDelay = col * 20 + (group.length > 1 ? 44 : 0);
+          let visuallySettled = false;
+          let completed = false;
+          let watchdog: number | null = null;
+          const markVisualSettled = () => {
+            if (visuallySettled) return;
+            visuallySettled = true;
+            markUnitVisualSettled();
+          };
+          const complete = () => {
+            if (completed) return;
+            completed = true;
+            if (watchdog !== null) window.clearTimeout(watchdog);
+            resolve();
+          };
+          const tween = this.tweens.add({
             targets: motion,
             progress: 1,
-            duration: duration + col * 18,
-            delay: col * 20 + (group.length > 1 ? 44 : 0),
+            duration: tweenDuration,
+            delay: tweenDelay,
             ease: "Back.easeOut",
-            onUpdate: () => {
+            onUpdate: (activeTween) => {
+              sampleFrameGap();
               group.forEach((node, index) => {
                 node.container.y = starts[index] + (targetYs[index] - starts[index]) * motion.progress;
                 node.container.alpha = 0.2 + motion.progress * 0.8;
               });
+              if (
+                activeTween.progress >= 0.92
+                && group.every((node, index) => Math.abs(node.container.y - targetYs[index]) <= 1.5 && node.container.alpha >= 0.995)
+              ) {
+                markVisualSettled();
+                if (!hasSpecialSymbol) complete();
+              }
             },
-            onComplete: () => resolve(),
+            onComplete: () => {
+              markVisualSettled();
+              complete();
+            },
           });
+
+          watchdog = window.setTimeout(() => {
+            if (completed) return;
+            tween.stop();
+            motion.progress = 1;
+            group.forEach((node, index) => {
+              node.container.y = targetYs[index];
+              node.container.alpha = 1;
+            });
+            sampleFrameGap();
+            markVisualSettled();
+            complete();
+          }, tweenDelay + tweenDuration + 120);
         }));
       });
     }
+
+    if (movingUnits === 0) visualSettledAt = startedAt;
     await Promise.all(animations);
+    sampleFrameGap();
+    const completedAt = performance.now();
+    const settledAt = visualSettledAt ?? completedAt;
+    return {
+      startedAt,
+      visualSettledAt: settledAt,
+      completedAt,
+      tailMs: Math.max(0, completedAt - settledAt),
+      movingUnits,
+      specialUnits,
+      maxFrameGapMs,
+      frameSamples,
+    };
   }
 
   sparkle() {

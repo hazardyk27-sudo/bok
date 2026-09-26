@@ -1,0 +1,91 @@
+{
+  "version": 2,
+  "previewBranch": "integration/replit-preview",
+  "shared": [
+    "artifacts/cascade-8/src/main.ts",
+    "artifacts/cascade-8/src/styles.css",
+    "artifacts/cascade-8/vite.config.ts",
+    "artifacts/cascade-8/package.json",
+    "artifacts/api-server/src/app.ts",
+    "artifacts/api-server/src/index.ts",
+    "lib/db/src/schema/index.ts",
+    "package.json",
+    "pnpm-lock.yaml",
+    "pnpm-workspace.yaml",
+    "artifacts/api-server/src/routes/index.ts",
+    "artifacts/api-server/src/platform",
+    "artifacts/api-server/src/backendIsolation.test.ts",
+    "lib/db/src/schema/wallet.ts",
+    ".github/isolation-version"
+  ],
+  "games": {
+    "slot": {
+      "branch": "feature/slot",
+      "roots": [
+        "artifacts/cascade-8/src/slot",
+        "artifacts/cascade-8/src/config",
+        "artifacts/cascade-8/src/engine",
+        "artifacts/cascade-8/src/game",
+        "artifacts/cascade-8/src/simulation",
+        "artifacts/api-server/src/slot",
+        "lib/db/src/schema/slot.ts"
+      ]
+    },
+    "roulette": {
+      "branch": "feature/roulette",
+      "roots": [
+        "artifacts/cascade-8/src/roulette",
+        "artifacts/cascade-8/src/rouletteGeometry.test.ts",
+        "artifacts/cascade-8/src/roulettePhysicsConfig.test.ts",
+        "artifacts/cascade-8/src/rouletteSmoke.test.ts",
+        "artifacts/cascade-8/roulette-production-replay-probe.html",
+        "artifacts/roulette-physics-lab",
+        "artifacts/api-server/src/roulette",
+        "artifacts/api-server/src/physics-lab",
+        "lib/roulette-glb-surface.ts",
+        "lib/roulette-gltf-transform.ts",
+        "lib/roulette-physics-config.ts",
+        "scripts/roulette-authoritative-replay-runtime.mjs",
+        "scripts/roulette-part6-report.mjs",
+        "scripts/roulette-part6-runtime.mjs",
+        "scripts/roulette-production-lifecycle-browser.mjs",
+        "lib/db/src/schema/roulette.ts",
+        "lib/db/src/schema/physics-lab.ts",
+        "lib/roulette-pocket-mapping.ts"
+      ],
+      "developmentRoots": [
+        "artifacts/cascade-8/e2e/roulette-mobile.spec.ts"
+      ],
+      "developmentPrefixes": [
+        ".github/workflows/roulette-",
+        ".agents/memory/roulette-",
+        ".agents/memory/physics-lab-",
+        "screenshots/roulette-",
+        "screenshots/physics-lab-"
+      ]
+    },
+    "cadi-kazan": {
+      "branch": "feature/cadi-kazan",
+      "roots": [
+        "artifacts/cascade-8/src/cadi-kazan",
+        "artifacts/api-server/src/cadi-kazan",
+        "lib/db/src/schema/cadi-kazan.ts"
+      ]
+    },
+    "idle": {
+      "branch": "feature/idle",
+      "roots": [
+        "artifacts/cascade-8/src/idle",
+        "artifacts/cascade-8/public/businesses",
+        "artifacts/api-server/src/idle",
+        "lib/db/src/schema/idle.ts"
+      ]
+    },
+    "hub": {
+      "branch": "feature/hub",
+      "roots": [
+        "artifacts/cascade-8/src/hub"
+      ]
+    }
+  }
+}

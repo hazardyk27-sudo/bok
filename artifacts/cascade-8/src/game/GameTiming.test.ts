@@ -8,7 +8,7 @@ describe("game timing", () => {
   });
 
   it("uses Turbo timing outside Free Spins", () => {
-    expect(getAnimationDuration(820, true, false)).toBe(424);
+    expect(getAnimationDuration(820, true, false)).toBe(339);
     expect(getAnimationDuration(820, false, false)).toBe(943);
   });
 

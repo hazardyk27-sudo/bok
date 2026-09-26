@@ -1,4 +1,4 @@
-import { AudioManager } from "../game/AudioManager";
+import { AudioManager } from "../AudioManager";
 import {
   interpolateScratchPoints,
   SCRATCH_ABRASION_CONFIG,
@@ -8,13 +8,13 @@ import {
 } from "./ScratchProgress";
 import { prefersReducedMotion } from "./ScratchFeedback";
 
-const MIN_AUDIO_INTERVAL_MS = 28;
 const RESULT_COMMIT_MIN_COVERAGE = 0.2;
 const RESULT_COMMIT_MIN_MS = 420;
 const RESULT_COMMIT_MIN_DISTANCE_FACTOR = 1.5;
 const MAX_TRAIL_SAMPLES = 1800;
 const MAX_DEBRIS_PARTICLES = 24;
 const MOBILE_DEBRIS_PARTICLES = 12;
+const DEFAULT_BRUSH_RADIUS_PX = 14;
 
 type ScratchLayerName = "lacquer" | "foil" | "base";
 
@@ -45,10 +45,12 @@ type TrailSample = {
 
 export type ScratchSurfaceOptions = {
   abrasion?: Partial<ScratchAbrasionConfig>;
+  brushRadiusPx?: number;
   audio?: AudioManager;
   debrisCanvas?: HTMLCanvasElement;
   resultReady?: boolean;
   layerCanvases?: HTMLCanvasElement[];
+  coverImageUrl?: string;
   onCommit: () => Promise<void>;
 };
 
@@ -60,6 +62,7 @@ export class ScratchSurface {
   private readonly onCommit: () => Promise<void>;
   private readonly audio?: AudioManager;
   private readonly abrasionConfig: ScratchAbrasionConfig;
+  private readonly brushRadiusPx: number;
   private readonly reducedMotion: boolean;
   private readonly debrisCanvas?: HTMLCanvasElement;
   private readonly debrisContext?: CanvasRenderingContext2D;
@@ -72,12 +75,15 @@ export class ScratchSurface {
   private resultReady = false;
   private resultRequest: Promise<void> | null = null;
   private lastMoveAt = 0;
-  private lastAudioAt = -Infinity;
   private brushStep = 0;
   private trail: TrailSample[] = [];
   private debrisFrame: number | null = null;
   private debrisFrameAt = 0;
   private debris: DebrisParticle[] = [];
+  private resizeObserver?: ResizeObserver;
+  private resizeFrame: number | null = null;
+  private coverImage?: HTMLImageElement;
+  private coverImageReady = false;
 
   private readonly handlePointerDown = (event: PointerEvent) => {
     if (event.pointerType === "mouse" && event.button !== 0) return;
@@ -86,6 +92,20 @@ export class ScratchSurface {
     this.gestureStartedAt = performance.now();
     this.scratchDistancePx = 0;
     this.lastMoveAt = this.gestureStartedAt;
+
+    // Make the first physical contact visible exactly under the pointer/finger.
+    // This is only a surface scuff; settlement still requires the existing
+    // coverage/time/distance anti-spoiler thresholds.
+    const localWidth = Math.max(1, this.interactionCanvas.clientWidth);
+    const localHeight = Math.max(1, this.interactionCanvas.clientHeight);
+    const initialRadius = this.getBrushRadiusPx(localWidth, localHeight) / Math.max(1, Math.min(localWidth, localHeight));
+    const initialDepthGain = this.abrasionConfig.depthPerSample * 1.15;
+    this.progress.sampleCircle(this.lastPoint.x, this.lastPoint.y, initialRadius, initialDepthGain);
+    this.rememberTrail(this.lastPoint, 0, 0.08);
+    this.applyThreeLayerAbrasion(this.lastPoint, 0, 0.08, this.resultReady);
+    this.eraseLayer("lacquer", this.lastPoint, 0, 0.08, 0.82);
+
+    this.audio?.scratchStart(0, this.progress.depthAt(this.lastPoint.x, this.lastPoint.y));
     this.interactionCanvas.setPointerCapture(event.pointerId);
     this.interactionCanvas.classList.add("is-scratching");
     event.preventDefault();
@@ -107,19 +127,24 @@ export class ScratchSurface {
     const angle = Math.atan2(deltaY, deltaX);
     this.scratchDistancePx += distancePx;
 
+    const localWidth = Math.max(1, this.interactionCanvas.clientWidth);
+    const localHeight = Math.max(1, this.interactionCanvas.clientHeight);
+    const normalizedBrushRadius = this.getBrushRadiusPx(localWidth, localHeight) / Math.max(1, Math.min(localWidth, localHeight));
+
     for (const sample of interpolateScratchPoints(this.lastPoint, point, 0.012)) {
       const depthGain = this.abrasionConfig.depthPerSample * (0.78 + speed * 0.24) * (0.86 + pressure * 0.32);
-      this.progress.sampleCircle(sample.x, sample.y, this.abrasionConfig.brushRadius, depthGain);
+      this.progress.sampleCircle(sample.x, sample.y, normalizedBrushRadius, depthGain);
       this.rememberTrail(sample, angle, speed);
       this.applyThreeLayerAbrasion(sample, angle, speed, this.resultReady);
     }
 
+    // Keep the visible scratch head centered under the live pointer. This only
+    // clears the top lacquer; deeper result reveal still follows abrasion depth.
+    this.eraseLayer("lacquer", point, angle, speed, 0.78);
+
     this.maybeCommitResult(now);
     this.emitDebris(point, angle, speed);
-    if (now - this.lastAudioAt >= MIN_AUDIO_INTERVAL_MS) {
-      this.audio?.scratch(speed, this.progress.depthAt(point.x, point.y));
-      this.lastAudioAt = now;
-    }
+    this.audio?.scratchUpdate(speed, this.progress.depthAt(point.x, point.y));
 
     this.lastPoint = point;
     this.lastMoveAt = now;
@@ -135,6 +160,7 @@ export class ScratchSurface {
     this.gestureStartedAt = 0;
     this.scratchDistancePx = 0;
     this.lastMoveAt = 0;
+    this.audio?.scratchStop();
     this.interactionCanvas.classList.remove("is-scratching");
   };
 
@@ -153,6 +179,7 @@ export class ScratchSurface {
       fallbackCanvas;
 
     this.abrasionConfig = { ...SCRATCH_ABRASION_CONFIG, ...options.abrasion };
+    this.brushRadiusPx = Math.max(8, options.brushRadiusPx ?? DEFAULT_BRUSH_RADIUS_PX);
     this.progress = new ScratchProgressGrid(22, 14, 1, this.abrasionConfig);
     this.onCommit = options.onCommit;
     this.audio = options.audio;
@@ -162,8 +189,24 @@ export class ScratchSurface {
     this.resultReady = options.resultReady ?? false;
     if (this.resultReady) this.resultRequest = Promise.resolve();
 
-    this.resizeCanvases();
+    if (options.coverImageUrl) {
+      const cover = new Image();
+      cover.decoding = "async";
+      cover.src = options.coverImageUrl;
+      cover.addEventListener("load", () => {
+        this.coverImageReady = true;
+        this.repaintAfterCoverLoad();
+      }, { once: true });
+      this.coverImage = cover;
+    }
+
+    this.resizeCanvases(true);
     this.paintLayers();
+
+    if (typeof ResizeObserver !== "undefined") {
+      this.resizeObserver = new ResizeObserver(() => this.scheduleCanvasResize());
+      this.resizeObserver.observe(this.interactionCanvas);
+    }
 
     this.interactionCanvas.addEventListener("pointerdown", this.handlePointerDown);
     this.interactionCanvas.addEventListener("pointermove", this.handlePointerMove);
@@ -173,7 +216,14 @@ export class ScratchSurface {
   }
 
   destroy() {
+    this.audio?.scratchStop();
     this.cancelDebris();
+    this.resizeObserver?.disconnect();
+    this.resizeObserver = undefined;
+    if (this.resizeFrame !== null) {
+      window.cancelAnimationFrame(this.resizeFrame);
+      this.resizeFrame = null;
+    }
     if (this.pointerId.value !== null && this.interactionCanvas.hasPointerCapture(this.pointerId.value)) {
       this.interactionCanvas.releasePointerCapture(this.pointerId.value);
     }
@@ -196,7 +246,7 @@ export class ScratchSurface {
     this.gestureStartedAt = 0;
     this.scratchDistancePx = 0;
     this.lastMoveAt = 0;
-    this.lastAudioAt = -Infinity;
+    this.audio?.scratchStop();
     this.brushStep = 0;
     this.trail = [];
     this.resultReady = false;
@@ -247,19 +297,56 @@ export class ScratchSurface {
     }
   }
 
-  private resizeCanvases() {
+  private scheduleCanvasResize() {
+    if (this.resizeFrame !== null) return;
+    this.resizeFrame = window.requestAnimationFrame(() => {
+      this.resizeFrame = null;
+      if (!this.resizeCanvases()) return;
+
+      // Canvas backing stores are cleared whenever their dimensions change.
+      // Repaint the physical material and replay the normalized scratch trail
+      // so the visible abrasion stays registered with the DOM box after any
+      // responsive/layout/font/orientation resize.
+      this.paintLayers();
+      for (const sample of this.trail) {
+        this.applyThreeLayerAbrasion(sample.point, sample.angle, sample.speed, this.resultReady);
+      }
+      this.clearDebris();
+    });
+  }
+
+  private resizeCanvases(force = false) {
     const width = Math.max(1, this.interactionCanvas.clientWidth);
     const height = Math.max(1, this.interactionCanvas.clientHeight);
     const ratio = Math.max(1, Math.min(2, window.devicePixelRatio || 1));
+    const targetWidth = Math.max(1, Math.round(width * ratio));
+    const targetHeight = Math.max(1, Math.round(height * ratio));
+    const needsResize = force || this.layers.some((layer) =>
+      layer.canvas.width !== targetWidth || layer.canvas.height !== targetHeight
+    ) || Boolean(
+      this.debrisCanvas &&
+      (this.debrisCanvas.width !== targetWidth || this.debrisCanvas.height !== targetHeight)
+    );
+
+    if (!needsResize) return false;
+
     for (const layer of this.layers) {
-      layer.canvas.width = Math.max(1, Math.round(width * ratio));
-      layer.canvas.height = Math.max(1, Math.round(height * ratio));
+      layer.canvas.width = targetWidth;
+      layer.canvas.height = targetHeight;
       layer.context.setTransform(ratio, 0, 0, ratio, 0, 0);
     }
     if (this.debrisCanvas && this.debrisContext) {
-      this.debrisCanvas.width = Math.max(1, Math.round(width * ratio));
-      this.debrisCanvas.height = Math.max(1, Math.round(height * ratio));
+      this.debrisCanvas.width = targetWidth;
+      this.debrisCanvas.height = targetHeight;
       this.debrisContext.setTransform(ratio, 0, 0, ratio, 0, 0);
+    }
+    return true;
+  }
+
+  private repaintAfterCoverLoad() {
+    this.paintLayers();
+    for (const sample of this.trail) {
+      this.applyThreeLayerAbrasion(sample.point, sample.angle, sample.speed, this.resultReady);
     }
   }
 
@@ -273,22 +360,24 @@ export class ScratchSurface {
     const context = layer.context;
 
     if (layer.name === "base") {
+      // Keep the deepest abrasion layer in the same metallic-grey family as
+      // the visible cactus coating so no brown strip flashes mid-scratch.
       const base = context.createLinearGradient(0, 0, width, height);
-      base.addColorStop(0, "#6f4728");
-      base.addColorStop(.46, "#9f6d3d");
-      base.addColorStop(1, "#52331f");
+      base.addColorStop(0, "#8f9290");
+      base.addColorStop(.46, "#b9bbb8");
+      base.addColorStop(1, "#777a78");
       context.fillStyle = base;
       context.fillRect(0, 0, width, height);
 
       context.save();
-      context.globalAlpha = .24;
+      context.globalAlpha = .22;
       for (let y = 4; y < height; y += 7) {
-        context.fillStyle = y % 14 === 0 ? "#d2a363" : "#3b2618";
+        context.fillStyle = y % 14 === 0 ? "#dfe0dc" : "#666966";
         context.fillRect(0, y, width, .55);
       }
       for (let x = 8; x < width; x += 13) {
         const y = 6 + ((x * 17) % Math.max(8, height - 12));
-        context.fillStyle = x % 26 === 0 ? "#e6bd7a" : "#2d1b12";
+        context.fillStyle = x % 26 === 0 ? "#ecece8" : "#5a5d5a";
         context.fillRect(x, y, 1.1, .8);
       }
       context.restore();
@@ -296,13 +385,15 @@ export class ScratchSurface {
     }
 
     if (layer.name === "foil") {
+      // The intermediate scratch layer should stay in the same metallic-grey
+      // family as the cactus coating instead of flashing brown/gold mid-scratch.
       const foil = context.createLinearGradient(0, height, width, 0);
-      foil.addColorStop(0, "#8d5928");
-      foil.addColorStop(.16, "#d7a952");
-      foil.addColorStop(.34, "#f0cf82");
-      foil.addColorStop(.53, "#a56a2f");
-      foil.addColorStop(.74, "#e2b75f");
-      foil.addColorStop(1, "#73451f");
+      foil.addColorStop(0, "#9fa19f");
+      foil.addColorStop(.16, "#c7c8c5");
+      foil.addColorStop(.34, "#e4e4e1");
+      foil.addColorStop(.53, "#b3b4b1");
+      foil.addColorStop(.74, "#d5d6d2");
+      foil.addColorStop(1, "#8f918f");
       context.fillStyle = foil;
       context.fillRect(0, 0, width, height);
 
@@ -315,17 +406,80 @@ export class ScratchSurface {
         context.lineTo(x + height * .82, height);
         context.lineWidth = index % 5 === 0 ? 1.05 : .34;
         context.globalAlpha = index % 4 === 0 ? .22 : .11;
-        context.strokeStyle = index % 3 === 0 ? "#fff0b6" : "#56351c";
+        context.strokeStyle = index % 3 === 0 ? "#f4f4f1" : "#777977";
         context.stroke();
       }
       const band = context.createLinearGradient(0, 0, width, height);
-      band.addColorStop(0, "rgba(255,255,255,.02)");
-      band.addColorStop(.42, "rgba(255,244,199,.22)");
-      band.addColorStop(.54, "rgba(255,255,255,.05)");
-      band.addColorStop(1, "rgba(35,18,8,.12)");
+      band.addColorStop(0, "rgba(255,255,255,.03)");
+      band.addColorStop(.42, "rgba(255,255,255,.22)");
+      band.addColorStop(.54, "rgba(255,255,255,.06)");
+      band.addColorStop(1, "rgba(45,45,43,.10)");
       context.globalAlpha = 1;
       context.fillStyle = band;
       context.fillRect(0, 0, width, height);
+      context.restore();
+      return;
+    }
+
+    if (this.coverImageReady && this.coverImage) {
+      // Standard 5 uses the cactus artwork as part of the scratch coating.
+      // The source artwork contains a white field, so draw it with multiply
+      // over a metallic-grey substrate: white becomes grey while the cactus
+      // remains visible and scratches away with the lacquer layer.
+      const metal = context.createLinearGradient(0, 0, width, height);
+      metal.addColorStop(0, "#d9d9d7");
+      metal.addColorStop(.18, "#b8b9b8");
+      metal.addColorStop(.46, "#e5e5e2");
+      metal.addColorStop(.72, "#a9aaa9");
+      metal.addColorStop(1, "#d0d0cd");
+      context.fillStyle = metal;
+      context.fillRect(0, 0, width, height);
+
+      context.save();
+      context.globalAlpha = .24;
+      context.strokeStyle = "rgba(255,255,255,.72)";
+      context.lineWidth = .55;
+      for (let y = 2; y < height; y += 4) {
+        context.beginPath();
+        context.moveTo(0, y);
+        context.lineTo(width, y + Math.sin(y * .55) * .45);
+        context.stroke();
+      }
+      context.restore();
+
+      const image = this.coverImage;
+      const scale = Math.min(width / Math.max(1, image.naturalWidth), height / Math.max(1, image.naturalHeight));
+      const drawWidth = image.naturalWidth * scale;
+      const drawHeight = image.naturalHeight * scale;
+      const drawX = (width - drawWidth) / 2;
+      const drawY = (height - drawHeight) / 2;
+
+      context.save();
+      context.globalCompositeOperation = "multiply";
+      context.globalAlpha = .98;
+      context.drawImage(image, drawX, drawY, drawWidth, drawHeight);
+      context.restore();
+
+      // Embossed scratch-card finish: a soft top-left lift and darker
+      // lower-right edge without obscuring the cactus.
+      context.save();
+      const emboss = context.createLinearGradient(0, 0, width, height);
+      emboss.addColorStop(0, "rgba(255,255,255,.32)");
+      emboss.addColorStop(.34, "rgba(255,255,255,.06)");
+      emboss.addColorStop(.68, "rgba(0,0,0,.03)");
+      emboss.addColorStop(1, "rgba(54,54,54,.18)");
+      context.fillStyle = emboss;
+      context.fillRect(0, 0, width, height);
+
+      context.globalAlpha = .34;
+      context.strokeStyle = "rgba(255,255,255,.72)";
+      context.lineWidth = .8;
+      context.strokeRect(.8, .8, Math.max(0, width - 1.6), Math.max(0, height - 1.6));
+
+      context.globalAlpha = .18;
+      context.strokeStyle = "rgba(46,46,46,.78)";
+      context.lineWidth = .8;
+      context.strokeRect(1.8, 1.8, Math.max(0, width - 3.6), Math.max(0, height - 3.6));
       context.restore();
       return;
     }
@@ -357,10 +511,30 @@ export class ScratchSurface {
 
   private pointFromEvent(event: PointerEvent): ScratchPoint {
     const rect = this.interactionCanvas.getBoundingClientRect();
+    const portraitLandscapeScene =
+      window.matchMedia?.("(max-width: 600px) and (orientation: portrait)").matches ?? false;
+
+    // The whole mobile game scene is rotated 90deg in portrait. Convert the
+    // screen-space pointer back into the canvas' unrotated local coordinates.
+    // This intentionally uses clientX/clientY + the transformed canvas rect
+    // instead of offsetX/offsetY, whose behavior is inconsistent across
+    // browsers when an ancestor is transformed.
+    if (portraitLandscapeScene) {
+      return {
+        x: clamp((event.clientY - rect.top) / Math.max(1, rect.height)),
+        y: clamp((rect.right - event.clientX) / Math.max(1, rect.width)),
+      };
+    }
+
     return {
-      x: Math.max(0, Math.min(1, (event.clientX - rect.left) / Math.max(1, rect.width))),
-      y: Math.max(0, Math.min(1, (event.clientY - rect.top) / Math.max(1, rect.height))),
+      x: clamp((event.clientX - rect.left) / Math.max(1, rect.width)),
+      y: clamp((event.clientY - rect.top) / Math.max(1, rect.height)),
     };
+  }
+
+  private getBrushRadiusPx(width: number, height: number) {
+    const cellLimit = Math.max(8, Math.min(width, height) * 0.34);
+    return Math.min(this.brushRadiusPx, cellLimit);
   }
 
   private applyThreeLayerAbrasion(point: ScratchPoint, angle: number, speed: number, resultReady: boolean) {
@@ -386,8 +560,8 @@ export class ScratchSurface {
 
     const width = layer.canvas.clientWidth;
     const height = layer.canvas.clientHeight;
-    const baseRadius = Math.max(6, width * this.abrasionConfig.brushRadius);
-    const layerScale = name === "lacquer" ? .58 : name === "foil" ? .72 : .84;
+    const baseRadius = this.getBrushRadiusPx(width, height);
+    const layerScale = name === "lacquer" ? .72 : name === "foil" ? .86 : 1;
     const radius = baseRadius * layerScale;
     const x = point.x * width;
     const y = point.y * height;
@@ -490,7 +664,7 @@ export class ScratchSurface {
       this.debrisContext!.translate(particle.x, particle.y);
       this.debrisContext!.rotate(particle.rotation);
       this.debrisContext!.globalAlpha = particle.alpha * (1 - lifeProgress);
-      this.debrisContext!.fillStyle = lifeProgress < .34 ? "#f4dfaa" : lifeProgress < .68 ? "#bd8a48" : "#6c4728";
+      this.debrisContext!.fillStyle = lifeProgress < .34 ? "#eeeeea" : lifeProgress < .68 ? "#b8bbb8" : "#6f7370";
       this.debrisContext!.fillRect(-particle.size / 2, -particle.size / 2, particle.size * 1.35, particle.size * .42);
       this.debrisContext!.restore();
 

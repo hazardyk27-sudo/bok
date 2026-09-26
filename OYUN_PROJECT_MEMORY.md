@@ -9,19 +9,34 @@
 ---
 
 
+### Tool access rule — Figma + GitHub
+- This project has direct GitHub and Figma tool access available to the assistant.
+- Do not claim that GitHub/Figma access is unavailable when the tools are present.
+- For requested design/code work: use Figma directly for design work when the Figma MCP quota is available, and GitHub directly for code/branch/PR work.
+- A temporary Figma MCP Starter-plan rate limit is a quota condition, not a lack of access. When that quota blocks a call, report the quota specifically and continue any safe GitHub work that does not require another Figma write.
+
 ### Git workflow isolation rule — 2026-09-23
-- GitHub feature branches are now permanently split by game:
+- GitHub feature branches are permanently split by game:
   - `feature/cadi-kazan`
   - `feature/roulette`
   - `feature/slot`
-- Replit workspace must remain on local `main`; do not switch Replit to a feature branch for normal work.
 - All coding from the Cadı Kazan chat goes to `feature/cadi-kazan`; Roulette goes to `feature/roulette`; Slot goes to `feature/slot`.
-- Approved feature work is merged into GitHub `main`; only then is Replit updated from `github/main`.
-- Normal Replit sync must never use `reset --hard`, rebase, or a merge commit. If fast-forward is impossible, stop and inspect divergence.
+- The shared Replit root workspace is **integration/preview only** and must stay on local `main`.
+- **Never switch the shared Replit root workspace to a feature branch.** Do not use `git switch feature/...`, checkout, reset, rebase, or local feature commits in the shared root.
+- If a chat needs to run Shell commands against its own feature branch, it must use a **separate Git worktree / separate physical directory** for that game. Recommended conceptual layout:
+  - root workspace → `main`
+  - sibling worktree → `feature/cadi-kazan`
+  - sibling worktree → `feature/roulette`
+  - sibling worktree → `feature/slot`
+- A Shell command run inside one feature worktree may affect only that worktree. It must never change the branch or files of the shared root workspace.
+- Approved feature work is merged on GitHub into `main`; only after that is the shared Replit root updated from `github/main`.
+- Normal root-workspace sync must never use `reset --hard`, rebase, conflict-resolution merge, stash/clean, or force checkout. If fast-forward is impossible, stop and inspect divergence.
 - Safe sync helper exists at `scripts/replit-sync-main.sh`. Normal user command after an approved merge is:
   `bash scripts/replit-sync-main.sh`
 - The helper aborts if Replit is not on `main`, if the working tree is dirty, or if local `main` contains commits that are not on GitHub `main`. It does not reset or overwrite local work.
-- Avoid editing shared coordination files such as `OYUN_PROJECT_MEMORY.md` on parallel feature branches; update them on `main` after integration when possible.
+- If the user is working in multiple ChatGPT conversations at once, every conversation must respect the branch/worktree ownership above. A Roulette task must not modify Cadı Kazan or Slot feature branches, and vice versa.
+- Shared files such as `OYUN_PROJECT_MEMORY.md`, shared wallet/session code, root config, package/lock files, and global app shell files require extra integration care. Prefer updating coordination files on `main` after feature integration. If two features must touch the same shared file, resolve that deliberately on GitHub before updating Replit.
+- Canonical detailed workflow is also documented in root file `GIT_WORKFLOW_RULES.md`.
 
 ## 0) NEW CHAT BOOTSTRAP — READ THIS FIRST
 
@@ -939,6 +954,163 @@ One audit-only instruction was mistakenly sent to Replit before this rule was cl
 - menu, game routes and slot shell can now extend beyond the viewport instead of being clipped
 - removed the Cadı Kazan landscape-only height/overflow trap so short landscape screens can scroll vertically when needed
 
+### Stage 31 — Danger SFX moved into AudioContext
+- Previous HTMLAudio playback of the uploaded 01:32–01:34 negative clip did not work reliably in Preview.
+- `AudioManager` now preloads the same-origin `/cadi-kazan/sfx-danger-negative.ogg` file on audio unlock, decodes it with `AudioContext.decodeAudioData`, and plays it through the existing SFX gain chain using `AudioBufferSourceNode`.
+- Global mute/volume continue to apply; repeated busts stop/restart cleanly.
+- Synth fallback is retained only if fetch/decode fails.
+- PR #38 changed only `artifacts/cascade-8/src/game/AudioManager.ts`; Slot/Roulette files were untouched.
+- PR #38 merged into `main` as `484f654`.
+
+### Stage 30 — Video-derived I AM THE DANGER negative SFX
+- User uploaded `videoplayback (6).mp4` and explicitly selected the `01:32–01:34` segment for the Cadı Kazan negative result cue.
+- Extracted exactly that 2-second segment, encoded it as OGG/Opus, and added it as `artifacts/cascade-8/public/cadi-kazan/sfx-danger-negative.ogg`.
+- `AudioManager.bombBust()` now plays this uploaded-video clip for BOMBA / I AM THE DANGER instead of the old procedural blast/failure cue.
+- Global mute and volume settings still apply; a tiny synthesized fallback is used only if a strict browser policy rejects media playback.
+- Before merging, `feature/cadi-kazan` was deliberately realigned to current `main` after backing up its prior WIP as `backup/cadi-kazan-danger-sfx-wip-2026-09-24`; PR #37 was ahead by 2 / behind by 0 and clean.
+- PR #37 merged into `main` as `f75db61`. Slot/Roulette event logic was not changed.
+
+### Stage 29 — Standard 5 card made asset-independent
+- Preview proved that the prior Better Call Saul Standard 5 background asset still did not render even though main contained the expected commit and the cactus/Saul/Danger cell art rendered correctly.
+- Verified GitHub main before the fix: `b525e74`; the broken card asset existed at `artifacts/cascade-8/public/cadi-kazan/bcs-standard5-card.webp`.
+- To remove the failure mode entirely, Standard 5 no longer depends on that raster background. The ticket face is now built directly in HTML/CSS: red `IN LEGAL TROUBLE?` header, yellow body, Better Call Saul / SAUL GOODMAN / ATTORNEY AT LAW / phone / CALL SAUL NOW copy, red `NOT TOLL FREE • SE HABLA ESPAÑOL` footer, and the dynamic stake badge.
+- Existing five scratch cells remain registered over the right side; cactus closed art and Saul / I AM THE DANGER result art remain unchanged.
+- Advanced 25, Slot, and Roulette source files were untouched.
+- E2E visual guard now checks that the structural Standard 5 card face is actually visible instead of checking for the old background-image URL.
+- Merged via PR #34, merge commit `f98908d`.
+
+### Stage 28 — Standard 5 card asset fixed
+- The Standard 5 Better Call Saul card background was not rendering in Preview even though the five interactive cells and dynamic price badge were visible.
+- Root cause: the previously committed `bcs-standard5-card.webp` asset was invalid/corrupted for browser rendering.
+- Re-encoded the supplied closed-card reference crop as a valid WebP while preserving the original 2001×671 composition.
+- Replaced only `artifacts/cascade-8/public/cadi-kazan/bcs-standard5-card.webp`; cell registration, cactus scratch cover, Saul/Danger result art, theme CSS, Slot and Roulette source files were untouched.
+- Merged via PR #33, merge commit `506bfb0`.
+
+### Stage 27 — Standard 5 Better Call Saul visual rebuild
+- Standard 5 now uses the user-supplied Better Call Saul scratch-card reference as the visual master instead of the prior ivory/gold Cadı Kazan ticket.
+- Standard result mapping: safe result = Saul Goodman pointing artwork; losing/bomb result = I AM THE DANGER artwork; closed scratch cover = cactus artwork.
+- The five interactive scratch cells are registered over the five printed card squares; scratch mechanics remain server-authoritative and preserve the existing multi-layer abrasion system.
+- A dynamic ticket-value badge is overlaid on the card and updates from the actual stake.
+- Standard-mode page chrome now matches the card: warm dark table, red/yellow header/control styling, yellow/orange Buy button, and matching payout HUD accents.
+- Advanced 25 remains a separate design and was not replaced by the Better Call Saul ticket.
+- E2E coverage was updated to guard the Standard card background/aspect, five-cell placement, dynamic price badge, Saul safe artwork, and I AM THE DANGER terminal artwork. Runtime/visual Preview verification is still required before calling the match final.
+- PR #32 changed only Cadı Kazan files/assets; Slot/Roulette source files were not modified.
+- Merged into GitHub `main` via PR #32, merge commit `696a0cd`.
+
+### Stage 26 — Scratch audio rebuilt from reference-video behavior
+- The two previously uploaded physical scratch-ticket videos were re-used as the behavior reference for Cadı Kazan scratch audio.
+- Old audio model (short independent noise bursts on pointer-move intervals) was removed from the active scratch path because it sounded like repeated digital hiss rather than one physical scrape.
+- New scratch audio is gesture-based and continuous: one loop starts on pointer-down, updates from hand speed and abrasion depth, and fades/stops on pointer-up.
+- Texture layers: dry paper/foil rasp body, quieter high-frequency metallic foil edge, low contact rumble, irregular grit/catch transients, and a small initial contact tick.
+- Sound now decays toward silence when the pointer stops moving even if it is still held down, so friction is tied to motion rather than press state.
+- ScratchSurface now calls `scratchStart`, `scratchUpdate`, and `scratchStop` instead of retriggering one-shot scratch bursts every ~28 ms.
+- Existing ticket-purchase, BOMBA/BUST, Cash Out and COMPLETED payout sounds remain unchanged.
+- Merged into GitHub `main` via PR #27, merge commit `96bada1`.
+
+### Stage 25 — Cadı Kazan physical SFX pass
+- Scratch SFX was rebuilt as layered paper/foil friction instead of a single filtered-noise chirp: a mid-body rasp plus a quieter high-frequency metallic foil edge, both velocity/depth responsive.
+- Cash Out / automatic COMPLETED payout now uses a more physical cash-register cue: latch transient, two inharmonic register-bell strikes, drawer rail/body motion, and a final drawer-stop thump.
+- BUST/BOMBA now has a dedicated negative sound: low blast/thump body, short high-frequency impact texture, and a descending failure tone.
+- Successful ticket purchase now has its own cue: short paper/foil feed, mechanical stamp/cutter hit, and restrained confirmation bell.
+- AudioContext is explicitly unlocked synchronously on Buy and Cash Out user gestures to improve sound reliability on mobile browsers before async server responses finish.
+- Changes were limited to Cadı Kazan event wiring and shared AudioManager additions; Roulette/Slot event logic was not modified.
+- Merged into GitHub `main` via PR #26, merge commit `24a61e4`.
+
+### Stage 24 — Root scratch registration fix + desktop Advanced 25 rebuild
+- Root cause targeted for cursor/finger scratch offset: scratch canvas backing-store dimensions could drift from the live CSS box after responsive/layout/font/orientation changes because canvases were only sized at construction.
+- ScratchSurface now observes its interaction canvas with ResizeObserver. When the rendered size changes, all scratch/debris backing stores are resized to the current CSS size × DPR, material layers are repainted, and the normalized abrasion trail is replayed so visible scratch registration remains aligned.
+- E2E now guards both backing-store/CSS-size registration and that first contact at the visual canvas center actually reduces lacquer alpha at that same center.
+- Desktop Advanced 25 was rebuilt again with a final override placed after legacy/Figma precision rules; this prevents older CSS from silently overriding the intended design.
+- New desktop card target: centered horizontal ticket, compact ~28% left info rail, dominant ~72% 5×5 board, no giant empty parchment area, payout HUD kept separate.
+- Changes were limited to Cadı Kazan CSS, ScratchSurface, and Cadı Kazan E2E; Roulette and Slot source files were not modified.
+- Merged into GitHub `main` via PR #13, merge commit `ec469e7`.
+
+### Stage 23 — Advanced 25 desktop matches approved mobile card
+- Desktop Advanced 25 now uses the same approved horizontal card language as mobile: compact ~30% information rail on the left and dominant ~70% 5×5 scratch field on the right.
+- Desktop ticket uses the same parchment/gold hierarchy and keeps the payout HUD separate on the right.
+- Desktop QA now guards: wide ticket ratio, board occupying at least ~60% of ticket width, visible gap before payout HUD, and usable minimum cell size.
+- Changes were limited to Cadı Kazan CSS and its E2E test; Roulette and Slot source files were not modified.
+- Merged into GitHub `main` via PR #12, merge commit `aafbea1`.
+
+### Stage 22 — Approved 30/70 Advanced 25 mobile composition
+- Advanced 25 mobile card was rebuilt again around the approved mockup proportions: compact ~30% premium information rail on the left and dominant ~70% 5×5 scratch field on the right.
+- The 5×5 field now stretches to the ticket height/width instead of being forced into a small square, producing materially larger rectangular scratch cells while keeping the existing right payout HUD and bottom control dock.
+- Decorative parchment/moon treatment was strengthened to bring the in-game card closer to the approved visual concept.
+- Scratch feedback was adjusted so the first contact and live scratch head visibly erase the lacquer exactly at the current pointer/finger position; deeper reveal/settlement thresholds remain unchanged.
+- Standardized scratch brush was returned to 14 CSS px radius / 28 px diameter.
+- Existing dedicated cash-register payout SFX remains active on successful CASH_OUT and COMPLETED payout.
+- Figma write access was attempted for a new frame, but the Figma MCP Starter plan quota blocked the call; this was a quota/rate-limit issue, not an access/permission issue.
+- Merged into GitHub `main` via PR #11, merge commit `d787e29`.
+
+### Stage 21 — Approved Advanced 25 horizontal mobile card
+- Implemented the approved Advanced 25 mobile visual direction: large horizontal premium parchment card, compact identity/info rail on the left, dominant 5×5 scratch board on the right.
+- Existing mobile payout HUD and bottom control dock remain visible; only the Advanced card itself is redesigned.
+- Advanced board minimum mobile size was raised so cells remain materially larger; E2E now guards for at least 38 CSS px per cell on supported phone viewports.
+- First pointer/finger contact now immediately produces a light surface scuff exactly under the contact point while existing anti-spoiler settlement thresholds remain unchanged.
+- Exact portrait-rotation pointer mapping, standardized 24px scratch diameter, and dedicated cash-register SFX on CASH_OUT / COMPLETED are preserved.
+- Merged into GitHub `main` via PR #10, merge commit `7395b65`.
+
+### Stage 20 — Advanced 25 large-cell mobile + exact scratch + cash register SFX
+- Mobile Advanced 25 keeps the established landscape shell, right-side payout HUD, and bottom control dock.
+- During an Advanced round, header/control chrome is compressed but not removed; freed height is reassigned to the ticket/board.
+- Advanced ticket is height-driven and horizontal; the 5×5 board uses nearly the full available table height to make each cell materially larger.
+- Mobile QA now requires Advanced cells to be at least 36 CSS px on supported phone viewports.
+- Scratch input no longer prefers offsetX/offsetY in the rotated portrait host. Pointer mapping is calculated from clientX/clientY against the transformed canvas rect so the scratched center stays directly under the pointer/finger.
+- Scratch brush is standardized to a 12 CSS px local radius (24 px diameter) for both Standard and Advanced.
+- AudioManager now has a dedicated cash-register payout SFX (drawer clack + bright coin/bell tail). It plays on successful CASH_OUT and on automatic COMPLETED payout.
+- Merged into GitHub `main` via PR #9, merge commit `5a5214e`.
+
+### Stage 19 — Restore old mobile shell, redesign only Advanced 25 card
+- Rejected the Advanced focus-mode presentation because it looked visually unbalanced and removed too much of the previous mobile composition.
+- Restored the previous always-landscape mobile shell with header, stage, right-side payout HUD, and bottom control dock all visible.
+- Kept the newer scratch improvements: pointer-local scratch mapping, standardized ~14px scratch radius, and payout cash-register audio on CASHED_OUT / COMPLETED.
+- Mobile Advanced 25 ticket itself was redesigned as a compact horizontal premium ticket: info/price/meta in a narrow left rail and the 5×5 scratch board in a larger right section.
+- This avoids the prior huge empty ivory space and makes the board larger without hiding the rest of the game UI.
+- Mobile QA now expects the dock to remain visible and Advanced cells to stay at least ~34 CSS px on supported phone viewports.
+- Merged via PR #7 into GitHub `main`, merge commit `ac238c6`.
+
+### Stage 19 — Restore old mobile shell + horizontal Advanced 25 ticket
+- Rejected Advanced 25 focus mode was removed; the prior mobile landscape shell, right-side payout HUD, and bottom control dock remain visible during Advanced rounds.
+- Advanced 25 now uses a dedicated **horizontal premium ticket** instead of a tall/stacked card.
+- Horizontal Advanced ticket layout: title/price/meta/footer on the left, 5×5 scratch board on the right.
+- Advanced ticket keeps the same ivory/gold visual language but uses its width more efficiently so the board can stay larger without hiding the rest of the mobile UI.
+- Precise scratch mapping, standardized 14px local brush radius, and cash-register payout sound from Stage 18 are preserved.
+- Mobile QA now checks that the Advanced ticket is truly horizontal, remains inside the viewport, keeps the control dock visible, and preserves usable cell size.
+- Merged into GitHub `main` via PR #8, merge commit `12ad23e`.
+
+### Stage 18 — Advanced 25 mobile focus + precise scratch + payout sound
+- Mobile Advanced 25 now enters a dedicated focus mode whenever an Advanced round exists.
+- In Advanced focus, the lobby control dock is hidden and its height is reassigned to the ticket/board.
+- Advanced mobile board targets touchable cells; QA now requires the first 5×5 cell to be at least 40 CSS px on supported phone viewports.
+- Standard and Advanced use the same standardized scratch brush target: 14 CSS px local radius (28 px diameter), with a safety cap only if a cell is smaller than expected.
+- Scratch pointer mapping now prefers PointerEvent local `offsetX/offsetY`, which tracks the transformed canvas coordinate system directly; orientation-specific client-coordinate math remains only as fallback.
+- Cash-register-style payout audio now plays on successful `CASHED_OUT` and on automatic maximum-card `COMPLETED` settlement.
+- Changes were limited to Cadı Kazan source + its E2E test; Roulette and Slot source files were not modified.
+- Merged into GitHub `main` via PR #6, merge commit `6267365`.
+
+### Stage 17 — Cadı Kazan always-landscape mobile viewport lock
+- Mobile product rule is now explicit: **Cadı Kazan is always a landscape game UI on phones**, even when the physical phone is held portrait.
+- Portrait phones rotate only the dedicated mobile landscape scene by 90°; the desktop layout is never blindly rotated.
+- Landscape phones use the exact same mobile landscape scene without rotation.
+- The mobile scene is fixed to the dynamic viewport and must not allow horizontal scroll, vertical scroll, or off-screen controls.
+- Layout: compact header, scratch ticket in the main stage, payout HUD on the right, one horizontal control dock at the bottom.
+- Standard 5 and Advanced 25 are both height-bounded for the phone scene; Advanced keeps a 5×5 playable board.
+- Portrait scratch pointer coordinates are remapped for the rotated scene; canvas sizing remains based on local client dimensions.
+- Mobile QA now covers 320×568, 360×640, 390×844, 412×915, 430×932 portrait and 915×412 landscape.
+- Merged to GitHub `main` in commit `18bd39e`.
+
+### Stage 16 — Cadı Kazan Mobile V4 true responsive phone UI
+- Removed all obsolete portrait handoff / auto-landscape rotate CSS from Cadı Kazan.
+- Removed the rotate-device prompt markup entirely.
+- Mobile layout is now width-driven for phone widths up to 820px, independent of orientation media-query quirks.
+- No `rotate(90deg)` remains in `witch.css`.
+- Phone UI now uses: compact two-row header, natural stacked stage, centered responsive ticket, compact full-width payout HUD below the ticket, and a two-column control sheet.
+- Standard 5 and Advanced 25 have dedicated mobile sizing; Advanced keeps a playable 5×5 board without desktop min-width constraints.
+- Very narrow phones (down to 320px QA viewport) trim decorative copy before gameplay elements.
+- Mobile page allows vertical document flow when necessary but forbids horizontal overflow.
+- Mobile QA now covers 915×412 landscape, 412×915 portrait, 360×640 small portrait, and 320×568 narrow portrait.
+- Merged to GitHub `main` in commit `1c1ab3b` without modifying Roulette or Slot source files.
+
 ### Stage 15 — True responsive portrait mobile
 - removed the failed portrait rotate/transform approach
 - portrait phones now render a dedicated responsive mobile composition rather than rotating the full desktop/landscape page
@@ -1016,7 +1188,7 @@ One audit-only instruction was mistakenly sent to Replit before this rule was cl
 
 As of this memory update, the next task is:
 
-> **Manually sync GitHub main in Replit Shell, then verify the true responsive mobile pass at 360×640, ~390×844, 412×915, and landscape: no rotation, no clipping, Standard/Advanced tickets fully visible, payout usable, controls reachable, scratch coordinates correct, and no overflow.**
+> **Manually sync GitHub main in Replit Shell, then verify the Advanced 25 mobile card against the approved mockup: compact left info rail, dominant large 5×5 field on the right, payout HUD/control dock preserved, scratch head directly under pointer/finger, and cash-register sound on CASH OUT / COMPLETED.**
 
 Priority checks:
 1. Desktop should visually read as the approved premium mockup, roughly 80%+ similar in hierarchy/composition.

@@ -8,7 +8,7 @@
     "build": "node ./build.mjs",
     "start": "node --enable-source-maps ./dist/index.mjs",
     "typecheck": "tsc -p tsconfig.json --noEmit",
-    "test": "vitest run src/cadi-kazan"
+    "test": "vitest run src/cadi-kazan src/idle"
   },
   "dependencies": {
     "@dimforge/rapier3d-compat": "^0.20.0",

@@ -29,7 +29,7 @@ import {
   EUROPEAN_WHEEL_ORDER,
   ROULETTE_POCKET_COUNT as CLIENT_POCKET_COUNT,
   ROULETTE_SEGMENT_DEGREES,
-} from "./rouletteGeometry";
+} from "./roulette/rouletteGeometry";
 
 const part3ViewportSource = readFileSync(
   fileURLToPath(
@@ -62,12 +62,12 @@ const physicsLabSimulationSource = readFileSync(
 );
 
 const rouletteProductionReplaySource = readFileSync(
-  fileURLToPath(new URL("./roulettePhysicsReplay.ts", import.meta.url)),
+  fileURLToPath(new URL("./roulette/roulettePhysicsReplay.ts", import.meta.url)),
   "utf8",
 );
 
 const rouletteProductionClientSource = readFileSync(
-  fileURLToPath(new URL("./rouletteClient.ts", import.meta.url)),
+  fileURLToPath(new URL("./roulette/rouletteClient.ts", import.meta.url)),
   "utf8",
 );
 
