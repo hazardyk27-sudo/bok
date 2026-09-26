@@ -259,7 +259,8 @@ function addExactGlbRotorCollider(
     RAPIER.ColliderDesc.trimesh(
       geometry.vertices,
       geometry.indices,
-      RAPIER.TriMeshFlags.FIX_INTERNAL_EDGES,
+      RAPIER.TriMeshFlags.FIX_INTERNAL_EDGES |
+        RAPIER.TriMeshFlags.ORIENTED,
     )
       .setFriction(0.42)
       .setRestitution(0.02)
