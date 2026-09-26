@@ -7,6 +7,7 @@ This repository contains multiple games that must be developed and released inde
 - Roulette work: `feature/roulette`
 - Cadı Kazan work: `feature/cadi-kazan`
 - Idle / İşletmeler work: `feature/idle`
+- Hub/site work: `feature/hub`
 - Shared Replit preview: `integration/replit-preview`
 - Replit must stay on `integration/replit-preview`.
 
@@ -24,3 +25,7 @@ This repository contains multiple games that must be developed and released inde
 
 ## Goal
 Routine Slot updates must have zero file changes in Roulette, Cadı Kazan, Idle and Hub. The same rule applies symmetrically to every game.
+
+
+## Release workflow
+Isolation layout v2 is active. Game agents only develop and commit inside their declared ownership. The central integration/release flow selects a game and source commit and promotes only that game's owned roots to `integration/replit-preview`. Do not manually merge a full feature branch into preview.
