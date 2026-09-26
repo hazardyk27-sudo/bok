@@ -775,8 +775,11 @@ type AuthoritativeReplaySample = {
 type AuthoritativeReplayRound = {
   roundId: string;
   status: string;
-  finalPocketIndex: number | null;
-  finalPocketNumber: number | null;
+  winningNumber: number | null;
+  finalPocket: {
+    index: number;
+    number: number;
+  } | null;
   trajectoryHash: string;
   trajectory: AuthoritativeReplaySample[];
 };
@@ -7759,8 +7762,9 @@ export function Part2SceneViewport({
                 ballPosition: finalSample.ball.position,
                 ballOrientation: finalSample.ball.orientation,
                 rotorOrientation: finalSample.rotor.orientation,
-                finalPocketIndex: authoritativeReplay.finalPocketIndex,
-                finalPocketNumber: authoritativeReplay.finalPocketNumber,
+                finalPocketIndex: authoritativeReplay.finalPocket?.index ?? null,
+                finalPocketNumber: authoritativeReplay.finalPocket?.number ?? null,
+                winningNumber: authoritativeReplay.winningNumber,
               },
             });
           }
