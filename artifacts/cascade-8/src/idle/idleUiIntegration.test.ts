@@ -77,7 +77,7 @@ describe("Businesses mobile scrolling", () => {
     expect(mainSource).toContain('document.documentElement.classList.add("businesses-route")');
     expect(mainSource).toContain('document.body.classList.add("businesses-route")');
     expect(idleCssSource).toContain("html.businesses-route #app");
-    expect(idleCssSource).toContain("html.businesses-route .app-shell.is-businesses-page");
+    expect(idleCssSource).toContain(".route-shell.is-businesses-page {");
     expect(idleCssSource).toContain("height: 100dvh");
     expect(idleCssSource).toContain("overflow-y: auto");
     expect(idleCssSource).toContain("touch-action: pan-y");
