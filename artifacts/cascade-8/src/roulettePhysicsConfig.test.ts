@@ -51,6 +51,16 @@ const physicsLabAppSource = readFileSync(
   "utf8",
 );
 
+const physicsLabSimulationSource = readFileSync(
+  fileURLToPath(
+    new URL(
+      "../../api-server/src/physics-lab/simulation.ts",
+      import.meta.url,
+    ),
+  ),
+  "utf8",
+);
+
 const rouletteRuntimeWorkflowSource = readFileSync(
   fileURLToPath(
     new URL(
@@ -591,7 +601,43 @@ describe("authoritative roulette physics config", () => {
       "new URLSearchParams(window.location.search).get('part6Headless') === '1'",
     );
     expect(physicsLabAppSource).toContain(
-      "{!part6HeadlessRouteActive && <AuthoritativeRoundPanel />}",
+      "<AuthoritativeRoundPanel onRoundChange={setAuthoritativeRound} />",
+    );
+    expect(physicsLabAppSource).toContain(
+      "part6HeadlessRouteActive ? null : authoritativeRound",
+    );
+  });
+
+  it("replays the server-authoritative trajectory without client result forcing", () => {
+    expect(physicsLabSimulationSource).toContain(
+      "if (!sampledThisStep) captureTrajectorySample();",
+    );
+    expect(physicsLabSimulationSource).toContain(
+      "trajectoryHash",
+    );
+    expect(part3ViewportSource).toContain(
+      "authoritativeReplayRound?: AuthoritativeReplayRound | null",
+    );
+    expect(part3ViewportSource).toContain(
+      "const authoritativeReplayActive =",
+    );
+    expect(part3ViewportSource).toContain(
+      "authoritativeReplay?.status === 'SETTLED'",
+    );
+    expect(part3ViewportSource).toContain(
+      "new URLSearchParams(window.location.search).get('part6Headless') !== '1'",
+    );
+    expect(part3ViewportSource).toContain(
+      "ballMesh.position.set(",
+    );
+    expect(part3ViewportSource).toContain(
+      "rotorPivot.quaternion.copy(",
+    );
+    expect(part3ViewportSource).toContain(
+      "data-authoritative-replay={",
+    );
+    expect(part3ViewportSource).not.toContain(
+      "authoritativeReplay.winningNumber",
     );
   });
 
