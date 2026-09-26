@@ -631,7 +631,7 @@ describe("authoritative roulette physics config", () => {
       "ballMesh.position.set(",
     );
     expect(part3ViewportSource).toContain(
-      "rotorPivot.quaternion.copy(",
+      "replayRotorPivot.quaternion.copy(",
     );
     expect(part3ViewportSource).toContain(
       "data-authoritative-replay={",
