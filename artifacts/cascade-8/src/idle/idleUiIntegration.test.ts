@@ -99,9 +99,13 @@ describe("Businesses main menu control", () => {
     expect(idleIndexSource).toContain("<span>ANA MENÜ</span>");
   });
 
-  it("keeps the control comfortably tappable and right-aligned on mobile", () => {
+  it("keeps the control comfortably tappable and hard-aligned to the mobile right edge", () => {
+    expect(idleCssSource).toContain("/* Mobile main-menu hard alignment */");
     expect(idleCssSource).toContain(".businesses-header-nav");
+    expect(idleCssSource).toContain("width: 100%");
     expect(idleCssSource).toContain("justify-content: flex-end");
+    expect(idleCssSource).toContain("margin-left: auto");
+    expect(idleCssSource).toContain("margin-right: 0");
     expect(idleCssSource).toContain(".businesses-header .back-link {");
     expect(idleCssSource).toContain("min-height: 44px");
     expect(idleCssSource).toContain(".businesses-header .back-link-icon");
