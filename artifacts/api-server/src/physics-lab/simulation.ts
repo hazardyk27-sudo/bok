@@ -1594,7 +1594,7 @@ export async function simulatePhysicsLabRound(
           finalPocketIndex = previousPocketIndex;
           events.push(
             event("STABLE_SETTLE", step, {
-              pocketIndex: finalPocketIndex,
+              pocketIndex: finalPocketIndex ?? undefined,
               pocketNumber:
                 finalPocketIndex === null
                   ? undefined
