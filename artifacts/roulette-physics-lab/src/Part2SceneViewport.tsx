@@ -8,6 +8,7 @@ import {
   measureRouletteVisualSurfaceAt,
   sampleRouletteVisualTextureColorAt,
 } from '../../../lib/roulette-glb-surface';
+// PART 5-6 diagnostics derive pocket relief and visible-number mapping from the normalized GLB itself.
 import {
   ROULETTE_ASSET_PATH,
   ROULETTE_AUTHORITATIVE_SCALE,
