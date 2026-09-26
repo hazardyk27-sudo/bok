@@ -2794,7 +2794,8 @@ export function Part2SceneViewport({
         const savedRotation = activeBallBody.rotation();
         const savedLinvel = activeBallBody.linvel();
         const savedAngvel = activeBallBody.angvel();
-        const seamPenetrationWorld = 0.00002;
+        const seamPenetrationWorld =
+          GLB_COLLIDER_PARITY_EPSILON_WORLD * 0.5;
 
         for (const candidate of physicalSeamCandidates) {
           const normal = new THREE.Vector3(
