@@ -18,6 +18,12 @@ const results = Array.isArray(telemetry?.results)
   : Array.isArray(runtime.seedTelemetry)
     ? runtime.seedTelemetry
     : [];
+const expectedSeedCount = Number(
+  runtime.expectedSeedCount ??
+    telemetry?.seedCount ??
+    process.env.ROULETTE_PART6_EXPECTED_SEEDS ??
+    20,
+);
 if (results.length === 0) {
   throw new Error(
     'PART 6 runtime result has neither final telemetry results nor partial seed telemetry.',
@@ -47,8 +53,11 @@ const evidence = {
   telemetryStatus: telemetry?.status ?? null,
   safetyStatus: telemetry?.safetyStatus ?? null,
   calibrationStatus: telemetry?.calibrationStatus ?? null,
+  visualParityStatus: telemetry?.visualParityStatus ?? null,
+  visualParityFailureCount: telemetry?.visualParityFailureCount ?? null,
+  glbColliderParity: runtime.glbColliderParity ?? null,
   partialRuntime: telemetry === null,
-  expectedSeedCount: 20,
+  expectedSeedCount,
   resultCount: results.length,
   completedCount:
     telemetry?.completedCount ??
@@ -60,6 +69,11 @@ const evidence = {
   phaseSequenceFailureSeeds: seedsWhere((result) => !result.phaseSequenceValid),
   hoverSeeds: seedsWhere((result) => result.hover),
   clippingSeeds: seedsWhere((result) => result.clipping),
+  visualHoverSeeds: seedsWhere((result) => result.visualHover),
+  visualClippingSeeds: seedsWhere((result) => result.visualClipping),
+  visualSurfaceParityFailureSeeds: seedsWhere(
+    (result) => !result.visualSurfaceParityPassed,
+  ),
   tunnelingSeeds: seedsWhere((result) => result.tunneling),
   escapedSeeds: seedsWhere((result) => result.escaped),
   velocitySpikeSeeds: seedsWhere((result) => result.velocitySpike),
@@ -100,6 +114,11 @@ const evidence = {
     settled: result.settled,
     timedOut: result.timedOut,
     safetyPassed: result.safetyPassed,
+    visualSurfaceY: result.visualSurfaceY ?? null,
+    visualSurfaceGapMm: result.visualSurfaceGapMm ?? null,
+    visualHover: result.visualHover ?? null,
+    visualClipping: result.visualClipping ?? null,
+    visualSurfaceParityPassed: result.visualSurfaceParityPassed ?? null,
     phases: Array.isArray(result.phases)
       ? result.phases.map((event) => event.phase)
       : [],

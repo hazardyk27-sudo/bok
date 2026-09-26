@@ -8,6 +8,9 @@ import {
   BONUS_INITIAL_SCATTER_CHANCE,
   BONUS_REFILL_CORE_CHANCE,
   BONUS_REFILL_SCATTER_CHANCE,
+  BONUS_INITIAL_PAIR_COPY_CHANCE,
+  BONUS_REFILL_PAIR_COPY_CHANCE,
+  BONUS_THIRD_REPEAT_WEIGHT_FACTOR,
   BOARD_COLUMNS,
   BOARD_ROWS,
   BONUS_REEL_CONFIG,
@@ -182,6 +185,14 @@ export class ColumnStream {
           : context === "BONUS_REFILL"
             ? BONUS_REFILL_CORE_CHANCE
             : 0;
+    const pairCopyChance = context === "BONUS_INITIAL"
+      ? BONUS_INITIAL_PAIR_COPY_CHANCE
+      : context === "BONUS_REFILL"
+        ? BONUS_REFILL_PAIR_COPY_CHANCE
+        : NORMAL_PAIR_COPY_CHANCE;
+    const thirdRepeatWeightFactor = context === "BONUS_INITIAL" || context === "BONUS_REFILL"
+      ? BONUS_THIRD_REPEAT_WEIGHT_FACTOR
+      : NORMAL_THIRD_REPEAT_WEIGHT_FACTOR;
 
     // Once a normal group has emitted its first member, the second member
     // is the next physical stream position. Specials can begin a position,
@@ -222,7 +233,7 @@ export class ColumnStream {
           weightedChoicesWithAttenuatedValue(
             this.config.symbolWeights,
             visibleTopSymbol,
-            NORMAL_THIRD_REPEAT_WEIGHT_FACTOR,
+            thirdRepeatWeightFactor,
           ),
         );
       } else {
@@ -234,14 +245,14 @@ export class ColumnStream {
       stackIndex = 0;
     } else {
       const pairRoll = this.source.nextFloat();
-      const copied = pairRoll < NORMAL_PAIR_COPY_CHANCE;
+      const copied = pairRoll < pairCopyChance;
       if (visibleTopSymbol) {
         copyRoll = pairRoll;
         copiedFromVisibleTop = copied;
         symbol = copied
           ? visibleTopSymbol
           : weightedChoiceFromRoll(
-            (pairRoll - NORMAL_PAIR_COPY_CHANCE) / (1 - NORMAL_PAIR_COPY_CHANCE),
+            (pairRoll - pairCopyChance) / (1 - pairCopyChance),
             this.config.symbolWeights,
           );
       } else {
