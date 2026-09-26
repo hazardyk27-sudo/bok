@@ -3,9 +3,6 @@ import {
   FALLBACK_OUTER_RADIUS_RATIO,
   FALLBACK_POCKET_RADIUS_RATIO,
   getWheelAngle,
-  getWheelLandingPlan,
-  normalizeDegrees,
-  ROULETTE_SEGMENT_DEGREES,
 } from "./rouletteGeometry";
 import { RoulettePhysicsReplay } from "./roulettePhysicsReplay";
 
@@ -1161,7 +1158,7 @@ export class RouletteClient {
     if (this.ballAnimation) this.ballAnimation.currentTime = Math.min(elapsed, BALL_LANDING_DURATION_MS);
   }
 
-  private finishWheelSpinAt(winningNumber: number, animationElapsedMs: number) {
+  private finishWheelSpinAt(winningNumber: number, _animationElapsedMs: number) {
     const wheel = this.root.querySelector<HTMLElement>("[data-wheel]");
     const rotor = wheel?.querySelector<HTMLElement>(".wheel-rotor");
     const ball = this.root.querySelector<HTMLElement>(".wheel-ball");
@@ -1172,6 +1169,7 @@ export class RouletteClient {
     this.settledResultKey = "";
     this.activeSpinRoundId = "";
     this.voice.stopSpin();
+
     if (this.physicsReplay) {
       this.ballAnimation?.cancel();
       this.wheelAnimation?.cancel();
@@ -1186,10 +1184,13 @@ export class RouletteClient {
           this.render();
         })
         .catch((error) => {
-          const physicsCanvas = this.root.querySelector<HTMLCanvasElement>("[data-physics-wheel]");
+          const physicsCanvas =
+            this.root.querySelector<HTMLCanvasElement>("[data-physics-wheel]");
           if (physicsCanvas) {
             physicsCanvas.dataset.error =
-              error instanceof Error ? error.message : "PHYSICS_REPLAY_UNAVAILABLE";
+              error instanceof Error
+                ? error.message
+                : "PHYSICS_REPLAY_UNAVAILABLE";
           }
           if (this.animatedResultKey !== resultKey) return;
           this.settledResultKey = resultKey;
@@ -1198,6 +1199,7 @@ export class RouletteClient {
         });
       return;
     }
+
     this.clearBallSoundTimers();
     if (this.ballDropTimer) window.clearTimeout(this.ballDropTimer);
     this.ballDropTimer = undefined;
@@ -1209,119 +1211,6 @@ export class RouletteClient {
     this.voice.cue("settle");
     this.announceSettledResult();
     this.render();
-    return;
-
-    const currentRotation = this.readRotation(rotor);
-    const currentBallAngle = this.readBallAngle(ball);
-    const profile = getRouletteMotionProfile(this.snapshot?.round.id ?? resultKey);
-    this.ballAnimation?.cancel();
-    this.wheelAnimation?.cancel();
-    if (this.deflectorHitTimer) window.clearTimeout(this.deflectorHitTimer);
-    this.deflectorHitTimer = undefined;
-    wheel.classList.remove("is-spinning");
-    const plan = getWheelLandingPlan(winningNumber, currentRotation, this.readWheelRadii(wheel));
-    const { finalRotation, outerRadius, pocketRadius } = plan;
-    const finalPocketRadius = Math.max(0, pocketRadius - Math.max(9, outerRadius * .025));
-    if (this.prefersReducedMotion()) {
-      this.stopLabelOrientationSync();
-      this.wheelAnimation = undefined;
-      this.ballAnimation = undefined;
-      rotor.style.transform = `rotate(${finalRotation}deg)`;
-      this.updateLabelOrientations(wheel, finalRotation);
-      ball.style.transform = `rotate(-1440deg) translateY(-${finalPocketRadius}px)`;
-      this.settledResultKey = resultKey;
-      this.voice.cue("land");
-      this.announceSettledResult();
-      return;
-    }
-    const { landingDurationMs, resultRevealDelayMs } = ROULETTE_MOTION_TIMINGS;
-    const wheelDelta = finalRotation - currentRotation;
-    this.wheelAnimation = rotor.animate(
-      [
-        { transform: `rotate(${currentRotation}deg)` },
-        { transform: `rotate(${currentRotation + wheelDelta * .48}deg)`, offset: .48, easing: "cubic-bezier(.22,.05,.48,1)" },
-        { transform: `rotate(${currentRotation + wheelDelta * .78}deg)`, offset: .78, easing: "cubic-bezier(.18,.42,.25,1)" },
-        { transform: `rotate(${finalRotation}deg)`, offset: 1 },
-      ],
-      { duration: landingDurationMs, easing: "cubic-bezier(.16,.74,.2,1)", fill: "forwards" },
-    );
-    this.startLabelOrientationSync();
-    this.wheelAnimation.currentTime = Math.min(Math.max(0, animationElapsedMs), landingDurationMs);
-    this.wheelAnimation.finished.then(() => {
-      if (this.animatedResultKey !== resultKey) return;
-      this.stopLabelOrientationSync();
-      this.updateLabelOrientations(wheel, finalRotation);
-    }).catch(() => undefined);
-    const finalBallAngle = currentBallAngle - normalizeDegrees(currentBallAngle) - (profile.landingOuterTurns + 1) * 360;
-    const deflectorAngle = profile.deflectorIndex * 45 + 22.5;
-    const deflectorHitAngle = currentBallAngle
-      - normalizeDegrees(currentBallAngle - deflectorAngle)
-      - profile.landingOuterTurns * 360;
-    const deflectorRadius = Math.min(
-      outerRadius - 24,
-      Math.max(78, Math.min(pocketRadius - 22, outerRadius * .62)),
-    );
-    const innerTrackRadius = pocketRadius + (outerRadius - pocketRadius) * .18;
-    const ballTransform = (angle: number, radius: number, scale = 1) =>
-      `rotate(${angle}deg) translateY(-${radius}px) scale(${scale})`;
-    const keyframes: Keyframe[] = [
-      { transform: ballTransform(currentBallAngle, outerRadius), offset: 0 },
-      { transform: ballTransform(currentBallAngle - 105, outerRadius + 2), offset: .09, easing: "cubic-bezier(.18,.72,.28,1)" },
-      { transform: ballTransform(deflectorHitAngle + 228, outerRadius - 2), offset: .2, easing: "cubic-bezier(.18,.72,.28,1)" },
-      { transform: ballTransform(deflectorHitAngle + 96, outerRadius - 18), offset: .32, easing: "cubic-bezier(.2,.64,.3,1)" },
-      { transform: ballTransform(deflectorHitAngle + 35, deflectorRadius + 18), offset: .4, easing: "cubic-bezier(.2,.64,.3,1)" },
-      { transform: ballTransform(deflectorHitAngle, deflectorRadius, 1.16), offset: .45, easing: "cubic-bezier(.16,.8,.24,1)" },
-      { transform: ballTransform(deflectorHitAngle - 30, deflectorRadius + 12), offset: .49, easing: "cubic-bezier(.22,.68,.28,1)" },
-      { transform: ballTransform(deflectorHitAngle - 78, deflectorRadius - 4), offset: .54, easing: "cubic-bezier(.2,.65,.3,1)" },
-      { transform: ballTransform(deflectorHitAngle - 136, innerTrackRadius + 10), offset: .61, easing: "cubic-bezier(.18,.74,.25,1)" },
-      { transform: ballTransform(deflectorHitAngle - 198, innerTrackRadius), offset: .67, easing: "cubic-bezier(.18,.74,.25,1)" },
-    ];
-    const bounceStart = .67;
-    const bounceWindow = .28;
-    const bounceArc = 7 + (profile.bounceRhythm % 7);
-    for (let index = 0; index < profile.bounceCount; index += 1) {
-      const segment = bounceWindow / profile.bounceCount;
-      const start = bounceStart + segment * index;
-      const startAngle = finalBallAngle + (profile.bounceCount - index + 1) * bounceArc;
-      const impactAngle = finalBallAngle + (profile.bounceCount - index) * bounceArc;
-      keyframes.push(
-        { transform: ballTransform(startAngle, finalPocketRadius + 11), offset: start, easing: "cubic-bezier(.18,.8,.26,1)" },
-        { transform: ballTransform(impactAngle, finalPocketRadius - 3, 1.1), offset: start + segment * .42, easing: "cubic-bezier(.12,.86,.22,1)" },
-        { transform: ballTransform(finalBallAngle + Math.max(0, profile.bounceCount - index - 1) * bounceArc, finalPocketRadius + 7), offset: start + segment * .72, easing: "cubic-bezier(.2,.65,.3,1)" },
-      );
-    }
-    const settleStart = bounceStart + bounceWindow;
-    const settleProgress = Math.min(.99, settleStart + profile.settleDurationMs / resultRevealDelayMs);
-    keyframes.push(
-      { transform: ballTransform(finalBallAngle + 3, finalPocketRadius + 6), offset: settleStart, easing: "cubic-bezier(.2,.7,.28,1)" },
-      { transform: ballTransform(finalBallAngle - 1.5, finalPocketRadius - 1, 1.04), offset: settleProgress, easing: "cubic-bezier(.16,.75,.22,1)" },
-      { transform: ballTransform(finalBallAngle, finalPocketRadius), offset: 1 },
-    );
-    const outer = ball.animate(keyframes, {
-      duration: resultRevealDelayMs,
-      easing: "linear",
-      fill: "forwards",
-    });
-    this.ballAnimation = outer;
-    this.ballAnimation.currentTime = Math.min(Math.max(0, animationElapsedMs), BALL_LANDING_DURATION_MS);
-    const deflectorHitMs = Math.round(resultRevealDelayMs * .47);
-    const bounceSoundMs = Array.from({ length: profile.bounceCount }, (_, index) => (
-      Math.round(resultRevealDelayMs * (bounceStart + bounceWindow * (index + .42) / profile.bounceCount))
-    ));
-    this.scheduleBallSounds(resultKey, deflectorHitMs, bounceSoundMs);
-    const chosenDeflector = wheel.querySelectorAll<HTMLElement>(".wheel-deflectors i")[profile.deflectorIndex];
-    this.deflectorHitTimer = window.setTimeout(() => {
-      if (this.animatedResultKey !== resultKey) return;
-      chosenDeflector?.classList.add("is-hit");
-      window.setTimeout(() => chosenDeflector?.classList.remove("is-hit"), 260);
-    }, deflectorHitMs);
-    outer.finished.then(() => {
-      if (this.animatedResultKey !== resultKey) return;
-      this.settledResultKey = resultKey;
-      this.voice.cue("settle");
-      this.announceSettledResult();
-      this.render();
-    }).catch(() => undefined);
   }
 
   private settleWheelSpinImmediately(winningNumber: number) {
@@ -1337,7 +1226,6 @@ export class RouletteClient {
     this.activeSpinRoundId = "";
     this.voice.stopSpin();
     this.clearBallSoundTimers();
-    const currentRotation = this.readRotation(rotor);
     if (this.physicsReplay) {
       this.ballAnimation?.cancel();
       this.wheelAnimation?.cancel();
@@ -1378,18 +1266,6 @@ export class RouletteClient {
     this.render();
   }
 
-  private scheduleBallSounds(resultKey: string, deflectorHitMs: number, bounceSoundMs: number[]) {
-    this.clearBallSoundTimers();
-    this.ballSoundTimers.push(window.setTimeout(() => {
-      if (this.animatedResultKey === resultKey) this.voice.cue("deflector");
-    }, deflectorHitMs));
-    bounceSoundMs.forEach((delay) => {
-      this.ballSoundTimers.push(window.setTimeout(() => {
-        if (this.animatedResultKey === resultKey) this.voice.cue("fret");
-      }, delay));
-    });
-  }
-
   private announceSettledResult() {
     const round = this.snapshot?.round;
     if (!round || round.winningNumber === null) return;
@@ -1411,22 +1287,6 @@ export class RouletteClient {
   private clearBallSoundTimers() {
     this.ballSoundTimers.forEach((timer) => window.clearTimeout(timer));
     this.ballSoundTimers = [];
-  }
-
-  private readRotation(element: HTMLElement) {
-    const values = this.readTransformValues(element);
-    if (!values) return 0;
-    const [a, b] = values.length === 16 ? values : [values[0], values[1]];
-    return Math.atan2(b, a) * 180 / Math.PI;
-  }
-
-  private readBallAngle(element: HTMLElement) {
-    const values = this.readTransformValues(element);
-    if (!values) return 0;
-    const translateX = values.length === 16 ? values[12] : values[4];
-    const translateY = values.length === 16 ? values[13] : values[5];
-    if (!Number.isFinite(translateX) || !Number.isFinite(translateY) || Math.hypot(translateX, translateY) < 1) return 0;
-    return Math.atan2(translateX, -translateY) * 180 / Math.PI;
   }
 
   private readTransformValues(element: HTMLElement) {
