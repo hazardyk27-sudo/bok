@@ -7980,8 +7980,7 @@ export function Part2SceneViewport({
                 RAPIER.ColliderDesc.trimesh(
                   actualStationaryMesh.vertices,
                   actualStationaryMesh.indices,
-                  RAPIER.TriMeshFlags.FIX_INTERNAL_EDGES |
-                    RAPIER.TriMeshFlags.ORIENTED,
+                  RAPIER.TriMeshFlags.FIX_INTERNAL_EDGES,
                 )
                   .setFriction(activePart3TrackFriction)
                   .setRestitution(0.01)
@@ -8265,8 +8264,7 @@ export function Part2SceneViewport({
                    RAPIER.ColliderDesc.trimesh(
                      actualRotorMesh.vertices,
                      actualRotorMesh.indices,
-                     RAPIER.TriMeshFlags.FIX_INTERNAL_EDGES |
-                       RAPIER.TriMeshFlags.ORIENTED,
+                     RAPIER.TriMeshFlags.FIX_INTERNAL_EDGES,
                    )
                      .setFriction(0.42)
                      .setRestitution(0.02)
