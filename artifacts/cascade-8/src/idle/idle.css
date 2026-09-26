@@ -4718,3 +4718,373 @@ body.business-detail-open {
     padding: 14px;
   }
 }
+
+
+/* Part 11 — dedicated minimal mobile shell */
+.businesses-mobile-brand {
+  display: none;
+}
+
+@media (max-width: 760px) {
+  .route-shell.is-businesses-page {
+    --idle-page-gutter: 14px;
+    min-height: 100dvh;
+    padding:
+      max(10px, env(safe-area-inset-top))
+      max(14px, env(safe-area-inset-right))
+      max(24px, env(safe-area-inset-bottom))
+      max(14px, env(safe-area-inset-left));
+    background:
+      radial-gradient(circle at 82% 4%, rgba(84, 242, 163, .025), transparent 28%),
+      linear-gradient(180deg, #091113 0%, var(--idle-canvas) 52%, #080f11 100%);
+  }
+
+  .route-shell.is-businesses-page > .route-topbar,
+  .route-shell.is-businesses-page .businesses-sidebar {
+    display: none;
+  }
+
+  .route-shell.is-businesses-page .businesses-workspace,
+  .route-shell.is-businesses-page .businesses-page {
+    width: 100%;
+    max-width: none;
+    margin: 0;
+  }
+
+  .route-shell.is-businesses-page .businesses-page {
+    padding: 0 0 max(28px, env(safe-area-inset-bottom));
+  }
+
+  .route-shell.is-businesses-page .businesses-header {
+    gap: 14px;
+  }
+
+  .route-shell.is-businesses-page .businesses-header-nav {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+    min-height: 46px;
+    gap: 12px;
+  }
+
+  .route-shell.is-businesses-page .businesses-header-status {
+    display: none;
+  }
+
+  .route-shell.is-businesses-page .businesses-mobile-brand {
+    display: inline-flex;
+    align-items: center;
+    gap: 9px;
+    min-width: 0;
+    color: var(--idle-text);
+    text-decoration: none;
+  }
+
+  .route-shell.is-businesses-page .businesses-mobile-brand-crest {
+    display: grid;
+    place-items: center;
+    flex: 0 0 auto;
+    width: 34px;
+    height: 34px;
+    border: 1px solid rgba(84, 242, 163, .24);
+    border-radius: 10px;
+    color: var(--idle-green-bright);
+    background: rgba(84, 242, 163, .07);
+    font-family: var(--idle-font-display);
+    font-size: 10px;
+    font-weight: 800;
+    letter-spacing: -.02em;
+  }
+
+  .route-shell.is-businesses-page .businesses-mobile-brand > span:last-child {
+    overflow: hidden;
+    color: var(--idle-text);
+    font-family: var(--idle-font-ui);
+    font-size: 11px;
+    font-weight: 750;
+    letter-spacing: .055em;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .route-shell.is-businesses-page .businesses-header .back-link {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex: 0 0 auto;
+    min-height: 42px;
+    margin: 0;
+    padding: 0 12px;
+    border: 1px solid var(--idle-line);
+    border-radius: 10px;
+    color: var(--idle-text-secondary);
+    background: var(--idle-surface);
+    box-shadow: none;
+    font-family: var(--idle-font-ui);
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: .035em;
+  }
+
+  .route-shell.is-businesses-page .businesses-header .back-link-icon {
+    margin-right: 6px;
+    color: var(--idle-green);
+    font-size: 13px;
+  }
+
+  .route-shell.is-businesses-page .businesses-header-main {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+
+  .route-shell.is-businesses-page .businesses-kicker {
+    display: none;
+  }
+
+  .route-shell.is-businesses-page .businesses-heading h1 {
+    margin: 4px 0 0;
+    color: var(--idle-text);
+    font-family: var(--idle-font-display);
+    font-size: var(--idle-type-display-mobile);
+    font-weight: var(--idle-weight-display);
+    letter-spacing: -.045em;
+    line-height: .98;
+  }
+
+  .route-shell.is-businesses-page .businesses-heading p {
+    max-width: 34rem;
+    margin-top: 9px;
+    color: var(--idle-text-secondary);
+    font-family: var(--idle-font-ui);
+    font-size: 12px;
+    font-weight: 500;
+    line-height: 1.45;
+  }
+
+  .route-shell.is-businesses-page .businesses-wallet {
+    min-height: 88px;
+    padding: 14px 15px;
+    border: 1px solid var(--idle-line);
+    border-radius: 13px;
+    background:
+      linear-gradient(145deg, rgba(84, 242, 163, .045), transparent 58%),
+      var(--idle-surface);
+    box-shadow: var(--idle-shadow-card);
+  }
+
+  .route-shell.is-businesses-page .businesses-wallet::after {
+    top: 0;
+    right: 16px;
+    width: 52px;
+    height: 2px;
+    background: linear-gradient(90deg, transparent, var(--idle-green));
+  }
+
+  .route-shell.is-businesses-page .businesses-wallet span {
+    color: var(--idle-text-muted);
+    font-family: var(--idle-font-ui);
+    font-size: 10px;
+    font-weight: 650;
+    letter-spacing: .055em;
+  }
+
+  .route-shell.is-businesses-page .businesses-wallet strong {
+    margin-top: 9px;
+    color: var(--idle-text);
+    font-family: var(--idle-font-ui);
+    font-size: 28px;
+    font-variant-numeric: tabular-nums;
+    font-weight: 760;
+    letter-spacing: -.04em;
+    line-height: 1;
+  }
+
+  .route-shell.is-businesses-page .businesses-wallet small {
+    display: none;
+  }
+
+  .route-shell.is-businesses-page .businesses-progression {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 9px 12px;
+    min-height: 72px;
+    padding: 12px 13px;
+    border: 1px solid var(--idle-line);
+    border-radius: 13px;
+    background: var(--idle-surface);
+    box-shadow: var(--idle-shadow-card);
+  }
+
+  .route-shell.is-businesses-page .businesses-progression-copy {
+    grid-column: 1;
+    display: grid;
+    gap: 3px;
+  }
+
+  .route-shell.is-businesses-page .businesses-progression-copy > span {
+    color: var(--idle-text-muted);
+    font-size: 10px;
+    font-weight: 650;
+    letter-spacing: .05em;
+  }
+
+  .route-shell.is-businesses-page .businesses-progression-copy strong {
+    color: var(--idle-text);
+    font-size: 17px;
+    font-weight: 750;
+  }
+
+  .route-shell.is-businesses-page .businesses-progression-meta {
+    grid-column: 2;
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 8px;
+    color: var(--idle-text-muted);
+    font-size: 10px;
+  }
+
+  .route-shell.is-businesses-page .businesses-progression-meta span:first-child {
+    display: inline;
+    color: var(--idle-green-bright);
+    font-weight: 700;
+  }
+
+  .route-shell.is-businesses-page .businesses-progression-track {
+    grid-column: 1 / -1;
+    width: 100%;
+    height: 10px;
+    overflow: hidden;
+    border-radius: var(--idle-radius-pill);
+    background:
+      repeating-linear-gradient(
+        90deg,
+        rgba(255, 255, 255, .045) 0,
+        rgba(255, 255, 255, .045) calc((100% / 27) - 1.5px),
+        transparent calc((100% / 27) - 1.5px),
+        transparent calc(100% / 27)
+      ),
+      var(--idle-surface-raised);
+  }
+
+  .route-shell.is-businesses-page .businesses-progression-track > i {
+    height: 100%;
+    background: linear-gradient(90deg, var(--idle-green-deep), var(--idle-green));
+    box-shadow: 0 0 12px rgba(84, 242, 163, .14);
+  }
+
+  .route-shell.is-businesses-page .business-command-bar {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+    margin-top: 12px;
+    overflow: visible;
+    border: 0;
+    background: transparent;
+  }
+
+  .route-shell.is-businesses-page .business-command-stat {
+    min-height: 70px;
+    padding: 12px 13px;
+    border: 1px solid var(--idle-line);
+    border-radius: 12px;
+    background: var(--idle-surface);
+    box-shadow: var(--idle-shadow-card);
+  }
+
+  .route-shell.is-businesses-page .business-command-label {
+    color: var(--idle-text-muted);
+    font-size: 9px;
+    font-weight: 650;
+    letter-spacing: .05em;
+  }
+
+  .route-shell.is-businesses-page .business-command-stat strong {
+    margin-top: 9px;
+    color: var(--idle-text);
+    font-size: 19px;
+    font-weight: 740;
+    letter-spacing: -.03em;
+  }
+
+  .route-shell.is-businesses-page .business-command-ready strong {
+    color: var(--idle-green-bright);
+  }
+
+  .route-shell.is-businesses-page .business-summary-collect-all {
+    grid-column: 1 / -1;
+    grid-template-columns: minmax(0, 1fr) auto 32px;
+    gap: 10px;
+    min-height: 58px;
+    padding: 10px 11px 10px 14px;
+    border: 1px solid rgba(84, 242, 163, .48);
+    border-radius: 12px;
+    color: #06130c;
+    background: linear-gradient(135deg, #68f4ac, #4be995 62%, #39da83);
+    box-shadow: 0 12px 28px rgba(35, 150, 92, .13);
+  }
+
+  .route-shell.is-businesses-page .business-collect-all-copy {
+    gap: 2px;
+  }
+
+  .route-shell.is-businesses-page .business-collect-all-copy small,
+  .route-shell.is-businesses-page .business-collect-all-copy strong,
+  .route-shell.is-businesses-page .business-collect-all-value {
+    color: #06130c;
+  }
+
+  .route-shell.is-businesses-page .business-collect-all-copy small {
+    font-size: 8px;
+  }
+
+  .route-shell.is-businesses-page .business-collect-all-copy strong {
+    font-size: 12px;
+  }
+
+  .route-shell.is-businesses-page .business-collect-all-value {
+    font-size: 16px;
+  }
+
+  .route-shell.is-businesses-page .business-collect-all-arrow {
+    width: 32px;
+    height: 32px;
+    border-color: rgba(6, 19, 12, .2);
+    color: #06130c;
+    background: rgba(255, 255, 255, .2);
+  }
+
+  .route-shell.is-businesses-page .businesses-header .back-link:focus-visible,
+  .route-shell.is-businesses-page .businesses-mobile-brand:focus-visible,
+  .route-shell.is-businesses-page .business-summary-collect-all:focus-visible {
+    outline: none;
+    box-shadow: var(--idle-focus-ring);
+  }
+}
+
+@media (max-width: 390px) {
+  .route-shell.is-businesses-page {
+    padding-right: max(12px, env(safe-area-inset-right));
+    padding-left: max(12px, env(safe-area-inset-left));
+  }
+
+  .route-shell.is-businesses-page .businesses-heading h1 {
+    font-size: 38px;
+  }
+
+  .route-shell.is-businesses-page .businesses-mobile-brand > span:last-child {
+    max-width: 126px;
+  }
+
+  .route-shell.is-businesses-page .businesses-header .back-link {
+    min-height: 40px;
+    padding-inline: 10px;
+    font-size: 9px;
+  }
+
+  .route-shell.is-businesses-page .businesses-wallet strong {
+    font-size: 26px;
+  }
+}
