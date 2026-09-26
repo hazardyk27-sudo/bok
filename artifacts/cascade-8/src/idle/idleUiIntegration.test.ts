@@ -725,3 +725,27 @@ describe("Businesses refinement final responsive regression", () => {
     expect(idleIndexSource).toContain("data-idle-detail-vault-upgrade");
   });
 });
+
+
+describe("Businesses legacy grid hotfix", () => {
+  it("forces the header back to one vertical flow instead of the old three-column shell", () => {
+    expect(idleCssSource).toContain("/* Hotfix — reset legacy Businesses grid inheritance */");
+    expect(idleCssSource).toContain(".route-shell.is-businesses-page .businesses-header {");
+    expect(idleCssSource).toContain("grid-template-columns: minmax(0, 1fr)");
+    expect(idleCssSource).toContain("align-items: stretch");
+  });
+
+  it("forces business-row cards into vertical visual-plus-body composition", () => {
+    expect(idleCssSource).toContain(".business-card.business-row");
+    expect(idleCssSource).toContain("grid-template-rows: auto auto");
+    expect(idleCssSource).toContain("gap: 0");
+    expect(idleCssSource).toContain("padding: 0");
+  });
+
+  it("keeps desktop/tablet/mobile card artwork full-width instead of a squeezed side column", () => {
+    expect(idleCssSource).toContain(".business-card .business-card-visual");
+    expect(idleCssSource).toContain("width: 100%");
+    expect(idleCssSource).toContain("border-right: 0");
+    expect(idleCssSource).toContain("grid-template-columns: repeat(2, minmax(0, 1fr))");
+  });
+});
