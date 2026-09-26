@@ -11,6 +11,10 @@ pnpm run dev
 
 Open the Replit preview. The development harness is available at `/lab`.
 
+## Repository and preview model
+
+OYUN uses Isolation v2. Normal development happens on `feature/slot`, `feature/roulette`, `feature/cadi-kazan`, `feature/idle`, or `feature/hub`. Replit stays on `integration/replit-preview`. A feature commit is not a release: the approved game is promoted by copying only its owned roots into the integration preview branch, then Replit is refreshed by fast-forward only. See `AGENTS.md`, `GIT_WORKFLOW_RULES.md`, and `.github/game-ownership.json`.
+
 ## Build and test
 
 ```bash
@@ -36,7 +40,7 @@ Reports are printed to the console and written to `artifacts/cascade-8/simulatio
 - `artifacts/cascade-8/src/config/GameConfig.ts` is the single editable source for board dimensions, weights, paytable, bonus tables, crystal distribution, bets, and the max-win cap.
 - `artifacts/cascade-8/src/game/` contains Phaser rendering, animation orchestration, audio, and the explicit controller state machine.
 - `artifacts/cascade-8/src/simulation/` contains the non-Phaser simulator and CLI.
-- `artifacts/cascade-8/src/main.ts` builds the surrounding HTML/CSS interface and connects it to the Phaser scene.
+- `artifacts/cascade-8/src/main.ts` is the small route dispatcher. Each game owns its route mount/runtime under its isolated game area; Slot owns its Phaser/controller bootstrap under `src/slot` plus its declared engine/config/game/simulation roots.
 
 Phaser is never the source of truth. A board is pure symbol data; the scene renders it and animates the events produced by the engine.
 
