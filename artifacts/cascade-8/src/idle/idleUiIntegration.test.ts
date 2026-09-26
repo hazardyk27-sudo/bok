@@ -1340,3 +1340,22 @@ describe("Businesses legacy CSS cleanup", () => {
     expect(idleCssSource).not.toContain("grid-template-columns: minmax(210px, 1.3fr)");
   });
 });
+
+describe("Businesses final Rich Black / Caribbean Green palette lock", () => {
+  it("keeps the visible Businesses containers on the approved Rich Black token", () => {
+    expect(idleCssSource).toContain("/* 2026-09-27 — Rich Black containers / Caribbean Green collection actions */");
+    expect(idleCssSource).toContain("--idle-rich-black: #00072d");
+    expect(idleCssSource).toContain(".route-shell.is-businesses-page .business-command-stat");
+    expect(idleCssSource).toContain(".route-shell.is-businesses-page .business-card-content");
+    expect(idleCssSource).toContain("background: var(--idle-rich-black)");
+  });
+
+  it("keeps every Collect and Collect All state on Caribbean Green", () => {
+    expect(idleCssSource).toContain("--idle-caribbean-green: #123499");
+    expect(idleCssSource).toContain(".route-shell.is-businesses-page .business-summary-collect-all:disabled");
+    expect(idleCssSource).toContain(".route-shell.is-businesses-page .business-summary-collect-all:not(:disabled):hover");
+    expect(idleCssSource).toContain(".route-shell.is-businesses-page .business-card-primary:disabled");
+    expect(idleCssSource).toContain(".route-shell.is-businesses-page .business-card-primary:not(:disabled):hover");
+    expect(idleCssSource).toContain("background: var(--idle-caribbean-green)");
+  });
+});

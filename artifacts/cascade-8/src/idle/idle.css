@@ -6713,3 +6713,49 @@ body.business-detail-open {
     transition: none;
   }
 }
+
+/* 2026-09-27 — Rich Black containers / Caribbean Green collection actions */
+.route-shell.is-businesses-page {
+  --idle-surface: var(--idle-rich-black);
+  --idle-surface-2: var(--idle-rich-black);
+  --idle-surface-raised: var(--idle-rich-black);
+  --idle-surface-interactive: var(--idle-rich-black);
+}
+
+.route-shell.is-businesses-page .businesses-wallet,
+.route-shell.is-businesses-page .businesses-progression,
+.route-shell.is-businesses-page .business-command-stat,
+.route-shell.is-businesses-page .business-card,
+.route-shell.is-businesses-page .business-card-content,
+.route-shell.is-businesses-page .business-card-stats,
+.route-shell.is-businesses-page .business-card-stat,
+.business-detail-drawer,
+.business-detail-summary > div {
+  background: var(--idle-rich-black);
+}
+
+.route-shell.is-businesses-page .business-summary-collect-all,
+.route-shell.is-businesses-page .business-summary-collect-all:disabled,
+.route-shell.is-businesses-page .business-summary-collect-all:not(:disabled),
+.route-shell.is-businesses-page .business-summary-collect-all:not(:disabled):hover,
+.route-shell.is-businesses-page .business-card-primary,
+.route-shell.is-businesses-page .business-card-primary:disabled,
+.route-shell.is-businesses-page .business-card-primary:not(:disabled),
+.route-shell.is-businesses-page .business-card-primary:not(:disabled):hover {
+  color: var(--idle-palette-white);
+  border-color: var(--idle-caribbean-green);
+  background: var(--idle-caribbean-green);
+  box-shadow: none;
+}
+
+.route-shell.is-businesses-page .business-collect-all-copy small,
+.route-shell.is-businesses-page .business-collect-all-copy strong,
+.route-shell.is-businesses-page .business-collect-all-value,
+.route-shell.is-businesses-page .business-collect-all-arrow {
+  color: var(--idle-palette-white);
+}
+
+.route-shell.is-businesses-page .business-collect-all-arrow {
+  border-color: rgba(221, 226, 246, .24);
+  background: rgba(221, 226, 246, .10);
+}
