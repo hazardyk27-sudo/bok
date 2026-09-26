@@ -1,8 +1,4 @@
 import Phaser from "phaser";
-import "./styles.css";
-import "./roulette.css";
-import "./witch.css";
-import "./witch.visual-lock.css";
 import { getSymbolDefinition, PAYTABLE, NORMAL_SYMBOLS, BASE_REEL_CONFIG, ANIMATION, NORMAL_PAIR_COPY_CHANCE } from "./config/GameConfig";
 import { evaluateBoard } from "./engine/WinEvaluator";
 import { calculateSequenceSettlement } from "./engine/SlotEngine";
@@ -12,10 +8,7 @@ import { getNormalSymbol, getStackMetadata } from "./engine/types";
 import type { Board, BoardCell } from "./engine/types";
 import { GameController, formatCredits } from "./game/GameController";
 import { createGameScene, GameScene } from "./game/GameScene";
-import { RouletteClient } from "./rouletteClient";
-import { CADI_KAZAN_MARKUP, WitchClient } from "./witchClient";
 import { EUROPEAN_WHEEL_ORDER, ROULETTE_SEGMENT_DEGREES } from "./rouletteGeometry";
-import { BUSINESSES_MARKUP, BusinessesClient } from "./idle";
 
 const app = document.querySelector<HTMLDivElement>("#app")!;
 const currentPath = window.location.pathname.replace(/\/+$/, "") || "/";
@@ -24,6 +17,23 @@ const isSlotRoute = currentPath === "/slot" || isLab;
 const isRouletteRoute = currentPath === "/roulette";
 const isWitchRoute = currentPath === "/cadi-kazan";
 const isBusinessesRoute = currentPath === "/businesses";
+
+const rouletteModule = isRouletteRoute ? await import("./rouletteClient") : null;
+const witchModule = isWitchRoute ? await import("./witchClient") : null;
+const businessesModule = isBusinessesRoute ? await import("./idle") : null;
+
+if (!isBusinessesRoute) {
+  await import("./styles.css");
+}
+if (isRouletteRoute) {
+  await import("./roulette.css");
+}
+if (isWitchRoute) {
+  await Promise.all([
+    import("./witch.css"),
+    import("./witch.visual-lock.css"),
+  ]);
+}
 
 if (isBusinessesRoute) {
   document.documentElement.classList.add("businesses-route");
@@ -353,9 +363,9 @@ const rouletteMarkup = `
 if (isRouletteRoute) {
   app.innerHTML = routeShell(rouletteMarkup, "is-route-page is-roulette-page");
 } else if (isWitchRoute) {
-  app.innerHTML = routeShell(CADI_KAZAN_MARKUP, "is-route-page is-witch-page");
+  app.innerHTML = routeShell(witchModule!.CADI_KAZAN_MARKUP, "is-route-page is-witch-page");
 } else if (isBusinessesRoute) {
-  app.innerHTML = businessesRouteShell(BUSINESSES_MARKUP);
+  app.innerHTML = businessesRouteShell(businessesModule!.BUSINESSES_MARKUP);
 } else if (!isSlotRoute) {
   app.innerHTML = routeShell(mainMenuMarkup, "is-route-page is-menu-page");
 } else {
@@ -504,13 +514,13 @@ document.querySelectorAll<HTMLElement>("[data-modal]").forEach((button) => butto
 let controller: GameController;
 if (isRouletteRoute) {
   const rouletteRoot = document.querySelector<HTMLElement>(".roulette-page");
-  if (rouletteRoot) new RouletteClient(rouletteRoot);
+  if (rouletteRoot) new rouletteModule!.RouletteClient(rouletteRoot);
 } else if (isBusinessesRoute) {
   const businessesRoot = document.querySelector<HTMLElement>(".businesses-page");
-  if (businessesRoot) new BusinessesClient(businessesRoot);
+  if (businessesRoot) new businessesModule!.BusinessesClient(businessesRoot);
 } else if (isWitchRoute) {
   const witchRoot = document.querySelector<HTMLElement>(".witch-page");
-  if (witchRoot) new WitchClient(witchRoot);
+  if (witchRoot) new witchModule!.WitchClient(witchRoot);
 } else if (isSlotRoute) {
 const game = createGameScene(byId("phaser-board"));
 window.setTimeout(() => {
