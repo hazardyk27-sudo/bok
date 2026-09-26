@@ -70,6 +70,9 @@ export type ReelConfig = {
 
 export const NORMAL_PAIR_COPY_CHANCE = 0.85;
 export const NORMAL_THIRD_REPEAT_WEIGHT_FACTOR = 0.5;
+export const BONUS_INITIAL_PAIR_COPY_CHANCE = 1;
+export const BONUS_REFILL_PAIR_COPY_CHANCE = NORMAL_PAIR_COPY_CHANCE;
+export const BONUS_THIRD_REPEAT_WEIGHT_FACTOR = 0.75;
 
 export const BASE_REEL_CONFIG: ReelConfig = {
   name: "BASE",
