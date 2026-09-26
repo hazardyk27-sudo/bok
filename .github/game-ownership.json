@@ -1,5 +1,5 @@
 {
-  "version": 1,
+  "version": 2,
   "previewBranch": "integration/replit-preview",
   "shared": [
     "artifacts/cascade-8/src/main.ts",
@@ -15,7 +15,8 @@
     "artifacts/api-server/src/routes/index.ts",
     "artifacts/api-server/src/platform",
     "artifacts/api-server/src/backendIsolation.test.ts",
-    "lib/db/src/schema/wallet.ts"
+    "lib/db/src/schema/wallet.ts",
+    ".github/isolation-version"
   ],
   "games": {
     "slot": {
