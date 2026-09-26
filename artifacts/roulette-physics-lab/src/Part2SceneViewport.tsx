@@ -3,6 +3,8 @@ import * as THREE from 'three';
 import RAPIER from '@dimforge/rapier3d-compat';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
+import { prepareAuthoritativeRouletteGlb } from '../../../lib/roulette-gltf-transform';
+import { measureRouletteVisualSurfaceAt } from '../../../lib/roulette-glb-surface';
 import {
   ROULETTE_ASSET_PATH,
   ROULETTE_AUTHORITATIVE_SCALE,
@@ -30,6 +32,9 @@ import {
   ROULETTE_Y_ORIGIN,
 } from './roulette-scene-config';
 
+const ROULETTE_RUNTIME_ASSET_PATH =
+  import.meta.env.BASE_URL.replace(/\/?$/, '/') +
+  ROULETTE_ASSET_PATH.split('/').at(-1)!;
 const FIXED_TIMESTEP = ROULETTE_FIXED_TIMESTEP;
 const TEST_ANGULAR_SPEED = ROULETTE_ROTOR_ANGULAR_SPEED;
 const GRAVITY_Y = ROULETTE_GRAVITY_Y;
@@ -44,10 +49,10 @@ const DARK_OUTER_TRACK_HEIGHT = -0.338;
 const PART3_TRACK_FRICTION = 0.08;
 const PART3_TRACK_DAMPING = 0.01;
 const PART3_TRACK_DURATION_SECONDS = 30;
-const PART3_OUTER_SPIN_TRACK_FRICTION = 0.08;
+const PART3_OUTER_SPIN_TRACK_FRICTION = 0.028;
 const PART3_OUTER_SPIN_LINEAR_DAMPING = 0.01;
 const PART3_OUTER_SPIN_ANGULAR_DAMPING = 0.01;
-const PART6_LAUNCH_SPEED_METERS_PER_SECOND_BASE = 5.0;
+const PART6_LAUNCH_SPEED_METERS_PER_SECOND_BASE = 5.45;
 const PART6_LAUNCH_SPEED_METERS_PER_SECOND_VARIATION = 0.15;
 const PART6_LAUNCH_SPEED_BASE =
   PART6_LAUNCH_SPEED_METERS_PER_SECOND_BASE *
@@ -63,10 +68,19 @@ const PART3_OUTER_SPIN_RUNS = [
   { id: 'outer-spin-high', label: 'Outer spin · high launch variation', speed: 5.15 },
 ] as const;
 const PART6_TELEMETRY_SCHEMA_VERSION = 'roulette-part6-full-spin-telemetry-v1';
+const GLB_COLLIDER_PARITY_EPSILON_WORLD = 0.0006;
+const GLB_COLLIDER_PARITY_NORMAL_EPSILON_DEGREES = 0.1;
+const MM_PER_WORLD_UNIT = 1000 / ROULETTE_WORLD_UNITS_PER_METER;
+const GLB_COLLIDER_PARITY_SCAN_INNER_RADIUS = 1.48;
+const GLB_COLLIDER_PARITY_SCAN_OUTER_RADIUS = 2.44;
+const GLB_COLLIDER_PARITY_RADIAL_SAMPLES = 25;
+const GLB_COLLIDER_PARITY_ANGULAR_SAMPLES = 72;
 const PART6_FULL_SPIN_MAX_DURATION_SECONDS = 30;
 const PART6_SETTLE_DURATION_SECONDS = 0.5;
 const PART6_UI_YIELD_STEPS = 240;
 const PART6_INTERACTIVE_YIELD_STEPS = 30;
+const PART6_DIAGNOSTIC_YIELD_STEPS = 60;
+const PART6_DIAGNOSTIC_PROGRESS_STEPS = 20;
 const PART6_STATE_RESET_VECTOR_EPSILON = 0.0005;
 const PART6_STATE_RESET_ANGLE_EPSILON = 0.00001;
 const PART6_TRANSITION_HOVER_GRACE_SECONDS = 0.25;
@@ -75,6 +89,8 @@ const PART6_DETERMINISTIC_SEEDS = [
   61006, 61007, 61008, 61009, 61010,
   61011, 61012, 61013, 61014, 61015,
   61016, 61017, 61018, 61019, 61020,
+  61021, 61022, 61023, 61024, 61025,
+  61026, 61027, 61028, 61029, 61030,
 ] as const;
 
 function part6DeterministicUnit(seed: number, salt: number) {
@@ -110,13 +126,25 @@ const PART2_ACTUAL_WOOD_INNER_RADIUS =
 const PART2_ACTUAL_INWARD_EDGE_RADIUS =
   ROULETTE_DARK_RACE_INWARD_EDGE_RADIUS;
 const PART2_CHANNEL_PROFILE = ROULETTE_DARK_RACE_CHANNEL_PROFILE;
+const PART2_COLLISION_CHANNEL_PROFILE: Array<[number, number]> = [
+  ...PART2_CHANNEL_PROFILE
+    .filter(([radius]) => radius <= 2.5)
+    .map(([radius, y]) => [radius, y] as [number, number]),
+  [2.520, -0.2820],
+  [2.535, -0.2740],
+  [2.545, -0.2630],
+  [2.552, -0.2450],
+  [2.556, -0.2100],
+  [2.558, -0.1450],
+  [2.559, -0.0400],
+];
 const PART2_INNER_CONTAINMENT_RADIUS =
   ROULETTE_DARK_RACE_INNER_CONTAINMENT_RADIUS;
 const PART2_INNER_CONTAINMENT_CENTER_LIMIT =
   PART2_INNER_CONTAINMENT_RADIUS + BALL_RADIUS;
 const PART2_CHANNEL_FLOOR_INNER_INDEX = 4;
 const PART2_CHANNEL_FLOOR_OUTER_INDEX = 7;
-const PART2_CHANNEL_OUTER_WALL_FOOT_INDEX = 8;
+const PART2_CHANNEL_OUTER_WALL_FOOT_INDEX = 7;
 const PART2_CHANNEL_BOTTOM_THICKNESS = 0.12;
 const PART3_LAUNCH_RADIUS = PART2_ACTUAL_DARK_TRACK_LAUNCH_RADIUS;
 const PART3_RETAINING_RIM_INNER_RADIUS = PART2_ACTUAL_WOOD_INNER_RADIUS;
@@ -130,8 +158,8 @@ const PART4_DEFLECTOR_MIN_PROMINENCE = 0.012;
 const PART4_DEFLECTOR_MIN_CLUSTER_SAMPLES = 3;
 const PART4_DEFLECTOR_MIN_COUNT = 4;
 const PART4_DEFLECTOR_MAX_COUNT = 12;
-const PART3_DEFLECTOR_FRICTION = 0.28;
-const PART3_DEFLECTOR_RESTITUTION = 0.16;
+const PART3_DEFLECTOR_FRICTION = 0.12;
+const PART3_DEFLECTOR_RESTITUTION = 0.38;
 const PART3_TRACK_INNER_RADIUS = PART2_ACTUAL_DARK_TRACK_RADIUS_BAND[0];
 const PART3_TRACK_OUTER_RADIUS = PART2_ACTUAL_DARK_TRACK_RADIUS_BAND[1];
 const PART3_TRACK_CONTACT_TOLERANCE = 0.1;
@@ -168,15 +196,23 @@ const BOWL_BRIDGE_OUTER_RADIUS = PART2_CHANNEL_PROFILE[0][0];
 const BOWL_BRIDGE_SEGMENTS = 128;
 const BOWL_BRIDGE_SAMPLE_COUNT = 9;
 const BOWL_BRIDGE_THICKNESS = 0.08;
-const POCKET_FRET_RADIUS = 1.73;
-const POCKET_FRET_TANGENTIAL_HALF_EXTENT = 0.105;
-const POCKET_FRET_RADIAL_HALF_EXTENT = 0.032;
+const POCKET_FRET_INNER_EDGE_RADIUS =
+  POCKET_FLOOR_INNER_RADIUS + BALL_RADIUS * 2 - 0.002;
+const POCKET_FRET_OUTER_EDGE_RADIUS = POCKET_FLOOR_OUTER_RADIUS - 0.02;
+const POCKET_FRET_RADIUS =
+  (POCKET_FRET_INNER_EDGE_RADIUS + POCKET_FRET_OUTER_EDGE_RADIUS) / 2;
+const POCKET_FRET_TANGENTIAL_HALF_EXTENT = 0.03;
+const POCKET_FRET_RADIAL_HALF_EXTENT =
+  (POCKET_FRET_OUTER_EDGE_RADIUS - POCKET_FRET_INNER_EDGE_RADIUS) / 2;
 const POCKET_FRET_VERTICAL_HALF_EXTENT = 0.11;
+const POCKET_FRET_EDGE_ROUNDING = 0.005;
+const POCKET_FRET_RESTITUTION = 0.06;
+const POCKET_INNER_GUARD_EDGE_ROUNDING = 0.02;
 // Keep the fret's lower face just above the continuous floor. Letting the
 // separator extend through the floor creates a moving edge that can inject a
 // downward impulse when a ball approaches from the side.
 const POCKET_FRET_Y =
-  POCKET_FLOOR_Y + POCKET_FRET_VERTICAL_HALF_EXTENT + 0.01;
+  POCKET_FLOOR_Y + POCKET_FRET_VERTICAL_HALF_EXTENT + 0.022;
 const EUROPEAN_SEQUENCE = ROULETTE_EUROPEAN_SEQUENCE;
 
 type InspectionView = 'top' | 'angled' | 'side';
@@ -481,6 +517,12 @@ type Part6FullSpinTelemetryResult = {
   finalPocketNumber: number | null;
   finalSpeed: number;
   finalRotorRelativeSpeed: number;
+  visualSurfaceY: number | null;
+  visualSurfaceGapWorld: number | null;
+  visualSurfaceGapMm: number | null;
+  visualHover: boolean;
+  visualClipping: boolean;
+  visualSurfaceParityPassed: boolean;
   hover: boolean;
   clipping: boolean;
   tunneling: boolean;
@@ -502,7 +544,7 @@ type Part6FullSpinTelemetryResult = {
 type Part6FullSpinTelemetryReport = {
   status: 'running' | 'captured' | 'failed';
   safetyStatus: 'pending' | 'passed' | 'failed';
-  calibrationStatus: 'not-evaluated';
+  calibrationStatus: 'not-evaluated' | 'passed' | 'failed';
   schemaVersion: string;
   fixedTimestep: number;
   maxDurationSeconds: number;
@@ -517,6 +559,8 @@ type Part6FullSpinTelemetryReport = {
   pocketEntryCount: number;
   settledCount: number;
   safetyFailureCount: number;
+  visualParityFailureCount: number;
+  visualParityStatus: 'pending' | 'passed' | 'failed';
   medianLapCount: number | null;
   minLapCount: number | null;
   maxLapCount: number | null;
@@ -735,6 +779,29 @@ type PocketValidationReport = {
   detail: string;
 };
 
+type AuthoritativeReplaySample = {
+  simulatedAtMs: number;
+  ball: {
+    position: { x: number; y: number; z: number };
+    orientation: { x: number; y: number; z: number; w: number };
+  };
+  rotor: {
+    orientation: { x: number; y: number; z: number; w: number };
+  };
+};
+
+type AuthoritativeReplayRound = {
+  roundId: string;
+  status: string;
+  winningNumber: number | null;
+  finalPocket: {
+    index: number;
+    number: number;
+  } | null;
+  trajectoryHash: string;
+  trajectory: AuthoritativeReplaySample[];
+};
+
 type Part2SceneViewportProps = {
   loadKey: number;
   validationMode?: 'part2' | 'part3' | 'part4';
@@ -750,6 +817,7 @@ type Part2SceneViewportProps = {
   showStationaryGroup: boolean;
   showRotorGroup: boolean;
   rotorAngle: number;
+  authoritativeReplayRound?: AuthoritativeReplayRound | null;
   onStateChange: (
     state: LoadState,
     detail?: string,
@@ -940,11 +1008,22 @@ function addMeasuredDeflectorColliders(
 ) {
   const colliders: RAPIER.Collider[] = [];
   for (const descriptor of descriptors) {
+    // The visual prominence scan can include the sloped apron outside the
+    // actual inward edge. Never let the cuboid approximation protrude into
+    // the validated outer race, where it can strike the ball at launch.
+    const effectiveOuterRadius = Math.min(
+      descriptor.outerRadius,
+      PART2_ACTUAL_INWARD_EDGE_RADIUS,
+    );
+    const effectiveInnerRadius = Math.min(
+      descriptor.innerRadius,
+      effectiveOuterRadius - BALL_RADIUS * 0.5,
+    );
     const centerRadius =
-      (descriptor.innerRadius + descriptor.outerRadius) / 2;
+      (effectiveInnerRadius + effectiveOuterRadius) / 2;
     const halfRadialDepth = Math.max(
-      BALL_RADIUS * 0.45,
-      (descriptor.outerRadius - descriptor.innerRadius) / 2,
+      BALL_RADIUS * 0.25,
+      (effectiveOuterRadius - effectiveInnerRadius) / 2,
     );
     const halfHeight = Math.max(
       0.02,
@@ -957,10 +1036,29 @@ function addMeasuredDeflectorColliders(
       0.22,
     );
     const angle = descriptor.angle;
-    const collider = RAPIER.ColliderDesc.cuboid(
-      halfTangentialWidth,
-      halfHeight,
-      halfRadialDepth,
+    // Model only the vertical sides of the measured deflector volume.
+    // A capped box adds an artificial horizontal top shelf; high-speed balls
+    // that only graze the measured prominence can then be launched upward.
+    const deflectorVertices = new Float32Array([
+      -halfTangentialWidth, -halfHeight, -halfRadialDepth,
+       halfTangentialWidth, -halfHeight, -halfRadialDepth,
+       halfTangentialWidth,  halfHeight, -halfRadialDepth,
+      -halfTangentialWidth,  halfHeight, -halfRadialDepth,
+      -halfTangentialWidth, -halfHeight,  halfRadialDepth,
+       halfTangentialWidth, -halfHeight,  halfRadialDepth,
+       halfTangentialWidth,  halfHeight,  halfRadialDepth,
+      -halfTangentialWidth,  halfHeight,  halfRadialDepth,
+    ]);
+    const deflectorIndices = new Uint32Array([
+      0, 2, 1, 0, 3, 2,
+      4, 5, 6, 4, 6, 7,
+      0, 4, 7, 0, 7, 3,
+      1, 2, 6, 1, 6, 5,
+    ]);
+    const collider = RAPIER.ColliderDesc.trimesh(
+      deflectorVertices,
+      deflectorIndices,
+      RAPIER.TriMeshFlags.FIX_INTERNAL_EDGES,
     )
       .setTranslation(
         Math.sin(angle) * centerRadius,
@@ -1046,6 +1144,74 @@ function part4InitialVelocity(probe: (typeof PART4_PROBES)[number]): VectorReado
   };
 }
 
+function addBowlBridgePrimitiveColliders(
+  world: RAPIER.World,
+  body: RAPIER.RigidBody,
+  profile: readonly [number, number][],
+  friction: number,
+) {
+  const colliders: RAPIER.Collider[] = [];
+  const segments = 24;
+  const halfThickness = BOWL_BRIDGE_THICKNESS / 2;
+
+  for (let profileIndex = 0; profileIndex < profile.length - 1; profileIndex += 1) {
+    const [radiusA, yA] = profile[profileIndex];
+    const [radiusB, yB] = profile[profileIndex + 1];
+    const deltaRadius = radiusB - radiusA;
+    const deltaY = yB - yA;
+    const profileLength = Math.hypot(deltaRadius, deltaY);
+    if (profileLength <= 0.0001) continue;
+
+    const slopeAngle = Math.atan2(deltaRadius, deltaY);
+    const radialNormal = deltaY / profileLength;
+    const verticalNormal = -deltaRadius / profileLength;
+    const centerRadius =
+      (radiusA + radiusB) / 2 + radialNormal * halfThickness;
+    const centerY =
+      (yA + yB) / 2 + verticalNormal * halfThickness;
+    const halfProfileLength = profileLength / 2 + 0.003;
+    const halfTangentialWidth =
+      centerRadius * Math.tan(Math.PI / segments) * 1.04;
+
+    for (let segment = 0; segment < segments; segment += 1) {
+      const angle = (segment / segments) * TWO_PI;
+      const yaw = new THREE.Quaternion().setFromAxisAngle(
+        new THREE.Vector3(0, 1, 0),
+        angle,
+      );
+      const slope = new THREE.Quaternion().setFromAxisAngle(
+        new THREE.Vector3(1, 0, 0),
+        slopeAngle,
+      );
+      const rotation = yaw.multiply(slope);
+      const collider = RAPIER.ColliderDesc.cuboid(
+        halfTangentialWidth,
+        halfProfileLength,
+        halfThickness,
+      )
+        .setTranslation(
+          Math.sin(angle) * centerRadius,
+          centerY,
+          Math.cos(angle) * centerRadius,
+        )
+        .setRotation({
+          x: rotation.x,
+          y: rotation.y,
+          z: rotation.z,
+          w: rotation.w,
+        })
+        .setFriction(friction)
+        .setRestitution(0.01)
+        .setCollisionGroups(
+          STATIONARY_COLLISION_GROUP | (BALL_COLLISION_GROUP << 16),
+        );
+      colliders.push(world.createCollider(collider, body));
+    }
+  }
+
+  return colliders;
+}
+
 function buildBowlBridgeTrimesh(
   profile: readonly [number, number][],
 ) {
@@ -1108,80 +1274,159 @@ function buildBowlBridgeTrimesh(
   };
 }
 
-function buildPocketFloorTrimesh() {
+function addMeasuredOuterWallColliders(
+  world: RAPIER.World,
+  body: RAPIER.RigidBody,
+  profile: readonly [number, number][],
+  friction: number,
+  verticalOffset = 0,
+) {
+  const measured = [...profile].sort((left, right) => left[1] - right[1]);
+  const segments = 512;
+  const innerFaceRadius = PART2_ACTUAL_WOOD_INNER_RADIUS;
+  const lowerY =
+    part2ChannelSurfaceAt(innerFaceRadius, verticalOffset).y -
+    BALL_RADIUS * 2 -
+    0.02;
+  const measuredMaxY = Math.max(...measured.map(([, height]) => height));
+  const upperY = Math.max(
+    measuredMaxY + BALL_RADIUS + 0.10,
+    lowerY + 0.24,
+  );
   const vertices: number[] = [];
   const indices: number[] = [];
-  const topProfile: Array<[number, number]> = [
-    [POCKET_FLOOR_INNER_RADIUS, POCKET_FLOOR_Y],
-    [POCKET_FLOOR_OUTER_RADIUS, POCKET_FLOOR_Y],
-    [POCKET_OUTER_LIP_RADIUS, POCKET_OUTER_LIP_Y],
-  ];
-  const bottomProfile = topProfile.map(
-    ([radius, height]) =>
-      [radius, height - POCKET_FLOOR_THICKNESS] as [number, number],
-  );
-  const appendProfile = (profile: Array<[number, number]>) => {
-    for (const [radius, height] of profile) {
-      for (let index = 0; index < POCKET_FLOOR_SEGMENTS; index += 1) {
-        const angle = (index / POCKET_FLOOR_SEGMENTS) * TWO_PI;
-        vertices.push(
-          Math.sin(angle) * radius,
-          height,
-          Math.cos(angle) * radius,
-        );
-      }
-    }
-  };
-  appendProfile(topProfile);
-  appendProfile(bottomProfile);
 
-  const appendStrip = (
-    startRing: number,
-    profileLength: number,
-    reverse: boolean,
-  ) => {
-    for (let ring = 0; ring < profileLength - 1; ring += 1) {
-      const current = (startRing + ring) * POCKET_FLOOR_SEGMENTS;
-      const nextRing = (startRing + ring + 1) * POCKET_FLOOR_SEGMENTS;
-      for (let index = 0; index < POCKET_FLOOR_SEGMENTS; index += 1) {
-        const next = (index + 1) % POCKET_FLOOR_SEGMENTS;
-        const topA = current + index;
-        const topB = nextRing + index;
-        const topC = nextRing + next;
-        const topD = current + next;
-        if (reverse) {
-          indices.push(topA, topC, topB, topA, topD, topC);
-        } else {
-          indices.push(topA, topB, topC, topA, topC, topD);
-        }
-      }
+  for (const y of [lowerY, upperY]) {
+    for (let segment = 0; segment < segments; segment += 1) {
+      const angle = (segment / segments) * TWO_PI;
+      vertices.push(
+        Math.sin(angle) * innerFaceRadius,
+        y,
+        Math.cos(angle) * innerFaceRadius,
+      );
     }
-  };
-  appendStrip(0, topProfile.length, false);
-  appendStrip(topProfile.length, bottomProfile.length, true);
+  }
 
-  const innerTop = 0;
-  const innerBottom = topProfile.length * POCKET_FLOOR_SEGMENTS;
-  for (let index = 0; index < POCKET_FLOOR_SEGMENTS; index += 1) {
-    const next = (index + 1) % POCKET_FLOOR_SEGMENTS;
+  for (let segment = 0; segment < segments; segment += 1) {
+    const next = (segment + 1) % segments;
+    const lowerA = segment;
+    const lowerB = next;
+    const upperA = segments + segment;
+    const upperB = segments + next;
     indices.push(
-      innerTop + index,
-      innerTop + next,
-      innerBottom + index,
-      innerTop + next,
-      innerBottom + next,
-      innerBottom + index,
+      lowerA,
+      upperB,
+      lowerB,
+      lowerA,
+      upperA,
+      upperB,
     );
   }
+
+  const collider = world.createCollider(
+    RAPIER.ColliderDesc.trimesh(
+      new Float32Array(vertices),
+      new Uint32Array(indices),
+      RAPIER.TriMeshFlags.FIX_INTERNAL_EDGES |
+        RAPIER.TriMeshFlags.ORIENTED,
+    )
+      .setFriction(Math.min(friction, 0.01))
+      .setRestitution(0.01)
+      .setCollisionGroups(
+        STATIONARY_COLLISION_GROUP | (BALL_COLLISION_GROUP << 16),
+      ),
+    body,
+  );
+
+  return {
+    colliders: [collider],
+    samples: [[innerFaceRadius, lowerY], [innerFaceRadius, upperY]] as Array<[number, number]>,
+    segments,
+  };
+}
+
+function buildPocketFloorTrimesh(
+  outerLipY: number = POCKET_OUTER_LIP_Y,
+) {
+  const vertices: number[] = [];
+  const indices: number[] = [];
+  const profile: Array<[number, number]> = [
+    [POCKET_FLOOR_OUTER_RADIUS, POCKET_FLOOR_Y],
+    [POCKET_OUTER_LIP_RADIUS, outerLipY],
+  ];
+
+  for (const [radius, height] of profile) {
+    for (let index = 0; index < POCKET_FLOOR_SEGMENTS; index += 1) {
+      const angle = (index / POCKET_FLOOR_SEGMENTS) * TWO_PI;
+      vertices.push(
+        Math.sin(angle) * radius,
+        height,
+        Math.cos(angle) * radius,
+      );
+    }
+  }
+
+  for (let index = 0; index < POCKET_FLOOR_SEGMENTS; index += 1) {
+    const next = (index + 1) % POCKET_FLOOR_SEGMENTS;
+    const innerA = index;
+    const outerA = POCKET_FLOOR_SEGMENTS + index;
+    const outerB = POCKET_FLOOR_SEGMENTS + next;
+    const innerB = next;
+    indices.push(innerA, outerA, outerB, innerA, outerB, innerB);
+  }
+
   return {
     vertices: new Float32Array(vertices),
     indices: new Uint32Array(indices),
   };
 }
 
-function addKinematicPocketSystem(world: RAPIER.World, body: RAPIER.RigidBody) {
+function addKinematicPocketInnerGuard(
+  world: RAPIER.World,
+  body: RAPIER.RigidBody,
+) {
+  const verticalHalfHeight = 0.11;
+  const centerY = POCKET_FLOOR_Y + verticalHalfHeight;
+  return world.createCollider(
+    RAPIER.ColliderDesc.roundCylinder(
+      verticalHalfHeight - POCKET_INNER_GUARD_EDGE_ROUNDING,
+      POCKET_FLOOR_INNER_RADIUS - POCKET_INNER_GUARD_EDGE_ROUNDING,
+      POCKET_INNER_GUARD_EDGE_ROUNDING,
+    )
+      .setTranslation(0, centerY, 0)
+      .setFriction(0.42)
+      .setRestitution(0.02)
+      .setCollisionGroups(
+        ROTOR_COLLISION_GROUP | (BALL_COLLISION_GROUP << 16),
+      ),
+    body,
+  );
+}
+
+function addKinematicPocketSystem(
+  world: RAPIER.World,
+  body: RAPIER.RigidBody,
+  outerLipY: number = POCKET_OUTER_LIP_Y,
+) {
   const colliders: RAPIER.Collider[] = [];
-  const floorMesh = buildPocketFloorTrimesh();
+  colliders.push(
+    world.createCollider(
+      RAPIER.ColliderDesc.cylinder(
+        POCKET_FLOOR_THICKNESS / 2,
+        POCKET_FLOOR_OUTER_RADIUS,
+      )
+        .setTranslation(
+          0,
+          POCKET_FLOOR_Y - POCKET_FLOOR_THICKNESS / 2,
+          0,
+        )
+        .setFriction(0.42)
+        .setRestitution(0.02)
+        .setCollisionGroups(ROTOR_COLLISION_GROUP | (BALL_COLLISION_GROUP << 16)),
+      body,
+    ),
+  );
+  const floorMesh = buildPocketFloorTrimesh(outerLipY);
   colliders.push(
     world.createCollider(
       RAPIER.ColliderDesc.trimesh(
@@ -1200,15 +1445,15 @@ function addKinematicPocketSystem(world: RAPIER.World, body: RAPIER.RigidBody) {
   for (let index = 0; index < EUROPEAN_POCKET_COUNT; index += 1) {
     const angle = (index + 0.5) * POCKET_STEP_RADIANS;
     const collider = RAPIER.ColliderDesc.roundCuboid(
-      POCKET_FRET_TANGENTIAL_HALF_EXTENT,
-      POCKET_FRET_VERTICAL_HALF_EXTENT,
-      POCKET_FRET_RADIAL_HALF_EXTENT,
-      0.012,
+      POCKET_FRET_TANGENTIAL_HALF_EXTENT - POCKET_FRET_EDGE_ROUNDING,
+      POCKET_FRET_VERTICAL_HALF_EXTENT - POCKET_FRET_EDGE_ROUNDING,
+      POCKET_FRET_RADIAL_HALF_EXTENT - POCKET_FRET_EDGE_ROUNDING,
+      POCKET_FRET_EDGE_ROUNDING,
     )
       .setTranslation(...radialPosition(POCKET_FRET_RADIUS, angle, POCKET_FRET_Y))
       .setRotation({ x: 0, y: Math.sin(angle / 2), z: 0, w: Math.cos(angle / 2) })
       .setFriction(0.42)
-      .setRestitution(0.02)
+      .setRestitution(POCKET_FRET_RESTITUTION)
       .setCollisionGroups(ROTOR_COLLISION_GROUP | (BALL_COLLISION_GROUP << 16));
     colliders.push(world.createCollider(collider, body));
   }
@@ -1220,6 +1465,22 @@ function pocketIndexFromLocalPosition(x: number, z: number) {
     Math.round(normalizedAngle(Math.atan2(x, z)) / POCKET_STEP_RADIANS) %
     EUROPEAN_POCKET_COUNT
   );
+}
+
+function authoritativeReplayPocketIndexFromWorldState(
+  position: { x: number; z: number },
+  rotorOrientation: { y: number; w: number },
+) {
+  const worldAngle = Math.atan2(position.x, position.z);
+  const rotorAngle = 2 * Math.atan2(
+    rotorOrientation.y,
+    rotorOrientation.w,
+  );
+  const relativeAngle = normalizedAngle(worldAngle - rotorAngle);
+  const rawIndex = Math.round(relativeAngle / POCKET_STEP_RADIANS);
+  return (
+    (rawIndex % EUROPEAN_POCKET_COUNT) + EUROPEAN_POCKET_COUNT
+  ) % EUROPEAN_POCKET_COUNT;
 }
 
 function pocketEntryVelocity(angle: number, tangentialSpeed: number): VectorReadout {
@@ -1615,14 +1876,18 @@ function radialPosition(radius: number, angle: number, y: number): [number, numb
   return [Math.sin(angle) * radius, y, Math.cos(angle) * radius];
 }
 
-function part2ChannelSurfaceAt(radius: number, verticalOffset = 0) {
+function part2ChannelSurfaceAt(
+  radius: number,
+  verticalOffset = 0,
+  profile: readonly (readonly [number, number])[] = PART2_CHANNEL_PROFILE,
+) {
   const clamped = Math.max(
-    PART2_CHANNEL_PROFILE[0][0],
-    Math.min(PART2_CHANNEL_PROFILE.at(-1)![0], radius),
+    profile[0][0],
+    Math.min(profile.at(-1)![0], radius),
   );
-  for (let index = 1; index < PART2_CHANNEL_PROFILE.length; index += 1) {
-    const [rightRadius, rightY] = PART2_CHANNEL_PROFILE[index];
-    const [leftRadius, leftY] = PART2_CHANNEL_PROFILE[index - 1];
+  for (let index = 1; index < profile.length; index += 1) {
+    const [rightRadius, rightY] = profile[index];
+    const [leftRadius, leftY] = profile[index - 1];
     if (clamped <= rightRadius) {
       const alpha = (clamped - leftRadius) / (rightRadius - leftRadius);
       return {
@@ -1632,12 +1897,12 @@ function part2ChannelSurfaceAt(radius: number, verticalOffset = 0) {
       };
     }
   }
-  const last = PART2_CHANNEL_PROFILE.at(-1)!;
-  const previous = PART2_CHANNEL_PROFILE.at(-2)!;
+  const last = profile.at(-1)!;
+  const previous = profile.at(-2)!;
   return {
     y: last[1] + verticalOffset,
     slope: (last[1] - previous[1]) / (last[0] - previous[0]),
-    segment: PART2_CHANNEL_PROFILE.length - 2,
+    segment: profile.length - 2,
   };
 }
 
@@ -1651,10 +1916,34 @@ function part2ChannelNormalAt(radius: number, angle: number) {
   ).normalize();
 }
 
-function makePart2RaceChannelTrimesh(verticalOffset = 0) {
+function makePart2RaceChannelTrimesh(
+  verticalOffset = 0,
+  openInnerRadius: number | null = null,
+  outerRadiusLimit: number | null = null,
+) {
   const vertices: number[] = [];
   const indices: number[] = [];
-  const segments = 128;
+  const segments = 512;
+  const baseProfile: Array<[number, number]> =
+    openInnerRadius === null
+      ? PART2_COLLISION_CHANNEL_PROFILE.map(([radius, y]) => [radius, y])
+      : [
+          [
+            openInnerRadius,
+            part2ChannelSurfaceAt(
+              openInnerRadius,
+              0,
+              PART2_COLLISION_CHANNEL_PROFILE,
+            ).y,
+          ],
+          ...PART2_COLLISION_CHANNEL_PROFILE
+            .filter(([radius]) => radius > openInnerRadius)
+            .map(([radius, y]) => [radius, y] as [number, number]),
+        ];
+  const activeProfile =
+    outerRadiusLimit === null
+      ? baseProfile
+      : baseProfile.filter(([radius]) => radius <= outerRadiusLimit);
   const appendProfile = (
     profile: readonly (readonly [number, number])[],
   ) => {
@@ -1669,15 +1958,15 @@ function makePart2RaceChannelTrimesh(verticalOffset = 0) {
       }
     }
   };
-  const bottomProfile = PART2_CHANNEL_PROFILE.map(
+  const bottomProfile = activeProfile.map(
     ([radius, y]) =>
       [radius, y - PART2_CHANNEL_BOTTOM_THICKNESS] as [number, number],
   );
-  appendProfile(PART2_CHANNEL_PROFILE);
-  const bottomOffset = PART2_CHANNEL_PROFILE.length * segments;
+  appendProfile(activeProfile);
+  const bottomOffset = activeProfile.length * segments;
   appendProfile(bottomProfile);
 
-  for (let row = 0; row < PART2_CHANNEL_PROFILE.length - 1; row += 1) {
+  for (let row = 0; row < activeProfile.length - 1; row += 1) {
     for (let segment = 0; segment < segments; segment += 1) {
       const next = (segment + 1) % segments;
       const topA = row * segments + segment;
@@ -1693,7 +1982,11 @@ function makePart2RaceChannelTrimesh(verticalOffset = 0) {
       indices.push(bottomA, bottomB, bottomD, bottomB, bottomC, bottomD);
     }
   }
-  for (const row of [0, PART2_CHANNEL_PROFILE.length - 1]) {
+  const closedRows = [
+    ...(openInnerRadius === null ? [0] : []),
+    ...(outerRadiusLimit === null ? [activeProfile.length - 1] : []),
+  ];
+  for (const row of closedRows) {
     const nextRow = bottomOffset + row * segments;
     for (let segment = 0; segment < segments; segment += 1) {
       const next = (segment + 1) % segments;
@@ -1857,17 +2150,25 @@ export function Part2SceneViewport({
   showStationaryGroup,
   showRotorGroup,
   rotorAngle,
+  authoritativeReplayRound = null,
   onStateChange,
   onAudit,
   onRotorAngleChange,
 }: Part2SceneViewportProps) {
   const part6FullSpinRouteActive =
     validationMode === 'part3' && outerLaneSpinOnly;
+  const part6ReplayProbeActive =
+    new URLSearchParams(window.location.search).get('part6ReplayProbe') === '1';
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const stageRef = useRef<HTMLDivElement | null>(null);
   const viewRef = useRef(view);
   const callbacksRef = useRef({ onStateChange, onAudit, onRotorAngleChange });
   const rotorAngleRef = useRef(normalizedAngle(rotorAngle));
+  const authoritativeReplayRoundRef = useRef<AuthoritativeReplayRound | null>(
+    authoritativeReplayRound,
+  );
+  const authoritativeReplayStartedAtRef = useRef<number | null>(null);
+  const authoritativeReplayCursorRef = useRef(0);
   const [angleReadout, setAngleReadout] = useState(normalizedAngle(rotorAngle));
   const [dropReport, setDropReport] = useState<Part2DropReport | null>(null);
   const [part3Report, setPart3Report] = useState<Part3ValidationReport | null>(null);
@@ -1894,6 +2195,14 @@ export function Part2SceneViewport({
   }, [rotorAngle]);
 
   useEffect(() => {
+    authoritativeReplayRoundRef.current = authoritativeReplayRound;
+    authoritativeReplayStartedAtRef.current = null;
+    authoritativeReplayCursorRef.current = 0;
+    stageRef.current?.removeAttribute('data-authoritative-replay-complete');
+    stageRef.current?.removeAttribute('data-authoritative-replay-final');
+  }, [authoritativeReplayRound]);
+
+  useEffect(() => {
     const canvas = canvasRef.current;
     const stage = stageRef.current;
     if (!canvas || !stage) return undefined;
@@ -1911,8 +2220,9 @@ export function Part2SceneViewport({
     let rotorBody: RAPIER.RigidBody | null = null;
     let physicsBallCollider: RAPIER.Collider | null = null;
     let part3TrackCollider: RAPIER.Collider | null = null;
-    let part3BowlBridgeCollider: RAPIER.Collider | null = null;
+    let part3BowlBridgeColliders: RAPIER.Collider[] = [];
     let part3BowlBridgeProfile: Array<[number, number]> = [];
+    let part3BowlBridgeOuterRadius: number = BOWL_BRIDGE_OUTER_RADIUS;
     let part3InnerFloorCollider: RAPIER.Collider | null = null;
     let part3DeflectorColliders: RAPIER.Collider[] = [];
     let part4DeflectorAudit: Part4DeflectorAudit | null = null;
@@ -1934,6 +2244,13 @@ export function Part2SceneViewport({
     const activePart3AngularDamping = outerLaneSpinOnly
       ? PART3_OUTER_SPIN_ANGULAR_DAMPING
       : PART3_TRACK_DAMPING;
+    // Full-spin validation uses hard CCD only. A 0.14 wu soft-CCD
+    // prediction envelope creates speculative outer-wall contacts before
+    // the 0.056 wu ball is geometrically touching the measured wall.
+    const activeBallSoftCcdPrediction =
+      validationMode === 'part3' && outerLaneSpinOnly
+        ? 0
+        : BALL_RADIUS * 2.5;
     let dropStarted = false;
     let dropSteps = 0;
     let previousVerticalVelocity = 0;
@@ -2145,62 +2462,254 @@ export function Part2SceneViewport({
         PART3_DARK_TRACK_RADIUS_BAND,
     ) => {
       if (!stationaryGroup) return null;
-      stationaryGroup.updateMatrixWorld(true);
       const sampleRadius = Math.hypot(x, z);
-      const raycaster = new THREE.Raycaster(
-        new THREE.Vector3(x, 1.5, z),
-        new THREE.Vector3(0, -1, 0),
-        0,
-        4,
+      return measureRouletteVisualSurfaceAt(
+        [stationaryGroup],
+        x,
+        z,
+        {
+          accept: (intersection) => {
+            const hitRadius = Math.hypot(
+              intersection.point.x,
+              intersection.point.z,
+            );
+            const objectName = intersection.object.name;
+            const material = (intersection.object as THREE.Mesh).material;
+            const materialNames = Array.isArray(material)
+              ? material.map((entry) => entry.name)
+              : [material?.name];
+            const isOutsideGeometry = objectName === 'geo1_outside_0';
+            const isOutsideMaterial = materialNames.includes('outside');
+            return (
+              (!darkTrackOnly ||
+                (sampleRadius >= darkTrackBand[0] &&
+                  sampleRadius <= darkTrackBand[1] &&
+                  hitRadius >= darkTrackBand[0] &&
+                  hitRadius <= darkTrackBand[1])) &&
+              (isOutsideGeometry || isOutsideMaterial)
+            );
+          },
+        },
       );
-      const intersections = raycaster.intersectObject(stationaryGroup, true);
-      const hit = intersections
-        .filter((intersection) => {
-          const hitRadius = Math.hypot(intersection.point.x, intersection.point.z);
-          const objectName = intersection.object.name;
-          const material = (intersection.object as THREE.Mesh).material;
-          const materialNames = Array.isArray(material)
-            ? material.map((entry) => entry.name)
-            : [material?.name];
-          const isOutsideGeometry = objectName === 'geo1_outside_0';
-          const isOutsideMaterial = materialNames.includes('outside');
-          return (
-            (!darkTrackOnly ||
-              (sampleRadius >= darkTrackBand[0] &&
-                sampleRadius <= darkTrackBand[1] &&
-                hitRadius >= darkTrackBand[0] &&
-                hitRadius <= darkTrackBand[1])) &&
-            (isOutsideGeometry || isOutsideMaterial) &&
-            intersection.point.y > -1.5 &&
-            intersection.point.y < 1
-          );
-        })
-        .sort((left, right) => right.point.y - left.point.y)[0];
+    };
+
+    const measureColliderSurfaceAt = (x: number, z: number) => {
+      if (!world || part3ColliderRoles.size === 0) return null;
+      const ray = new RAPIER.Ray(
+        { x, y: 1.5, z },
+        { x: 0, y: -1, z: 0 },
+      );
+      const hit = world.castRayAndGetNormal(
+        ray,
+        4,
+        true,
+        undefined,
+        undefined,
+        undefined,
+        undefined,
+        (collider) => part3ColliderRoles.has(collider.handle),
+      );
       if (!hit) return null;
-      const normal = hit.face
-        ? hit.face.normal
-            .clone()
-            .transformDirection(
-              new THREE.Matrix4().extractRotation(hit.object.matrixWorld),
-            )
-            .normalize()
-        : new THREE.Vector3(0, 1, 0);
-      const rayOrigin = new THREE.Vector3(x, 1.5, z);
-      if (normal.dot(rayOrigin.sub(hit.point)) < 0) normal.negate();
+      const point = ray.pointAt(hit.timeOfImpact);
       return {
-        y: hit.point.y,
-        source: hit.object.name || hit.object.parent?.name || 'unnamed-mesh',
-        point: {
-          x: hit.point.x,
-          y: hit.point.y,
-          z: hit.point.z,
-        },
+        y: point.y,
+        point: { x: point.x, y: point.y, z: point.z },
         normal: {
-          x: normal.x,
-          y: normal.y,
-          z: normal.z,
+          x: hit.normal.x,
+          y: hit.normal.y,
+          z: hit.normal.z,
         },
+        role:
+          part3ColliderRoles.get(hit.collider.handle) ??
+          'unclassified-collider',
+        colliderHandle: hit.collider.handle,
       };
+    };
+
+    const measureFullVisibleSurfaceAt = (x: number, z: number) => {
+      if (!stationaryGroup || !rotorPivot) return null;
+      return measureRouletteVisualSurfaceAt(
+        [stationaryGroup, rotorPivot],
+        x,
+        z,
+      );
+    };
+
+    const runGlbColliderParityAudit = () => {
+      if (!world || !stationaryGroup || !rotorPivot) return null;
+
+      const deltas: number[] = [];
+      const normalAngleDeltas: number[] = [];
+      let missingVisual = 0;
+      let missingCollider = 0;
+      let maxSample:
+        | {
+            radius: number;
+            angleDegrees: number;
+            visualY: number;
+            colliderY: number;
+            deltaWorld: number;
+            deltaMm: number;
+            visualSource: string;
+            colliderRole: string;
+          }
+        | null = null;
+
+      for (
+        let radialIndex = 0;
+        radialIndex < GLB_COLLIDER_PARITY_RADIAL_SAMPLES;
+        radialIndex += 1
+      ) {
+        const radialAlpha =
+          radialIndex / (GLB_COLLIDER_PARITY_RADIAL_SAMPLES - 1);
+        const radius = THREE.MathUtils.lerp(
+          GLB_COLLIDER_PARITY_SCAN_INNER_RADIUS,
+          GLB_COLLIDER_PARITY_SCAN_OUTER_RADIUS,
+          radialAlpha,
+        );
+
+        for (
+          let angleIndex = 0;
+          angleIndex < GLB_COLLIDER_PARITY_ANGULAR_SAMPLES;
+          angleIndex += 1
+        ) {
+          const angle =
+            (angleIndex / GLB_COLLIDER_PARITY_ANGULAR_SAMPLES) * TWO_PI;
+          const x = Math.sin(angle) * radius;
+          const z = Math.cos(angle) * radius;
+          const visual = measureFullVisibleSurfaceAt(x, z);
+          const collider = measureColliderSurfaceAt(x, z);
+
+          if (!visual) {
+            missingVisual += 1;
+            continue;
+          }
+          if (!collider) {
+            missingCollider += 1;
+            continue;
+          }
+
+          const deltaWorld = collider.y - visual.y;
+          const absDelta = Math.abs(deltaWorld);
+          const visualNormal = new THREE.Vector3(
+            visual.normal.x,
+            visual.normal.y,
+            visual.normal.z,
+          ).normalize();
+          const colliderNormal = new THREE.Vector3(
+            collider.normal.x,
+            collider.normal.y,
+            collider.normal.z,
+          ).normalize();
+          const normalDot = THREE.MathUtils.clamp(
+            visualNormal.dot(colliderNormal),
+            -1,
+            1,
+          );
+          const normalAngleDegrees = THREE.MathUtils.radToDeg(
+            Math.acos(normalDot),
+          );
+          deltas.push(absDelta);
+          normalAngleDeltas.push(normalAngleDegrees);
+          if (!maxSample || absDelta > Math.abs(maxSample.deltaWorld)) {
+            maxSample = {
+              radius: Number(radius.toFixed(6)),
+              angleDegrees: Number(
+                THREE.MathUtils.radToDeg(angle).toFixed(4),
+              ),
+              visualY: Number(visual.y.toFixed(6)),
+              colliderY: Number(collider.y.toFixed(6)),
+              deltaWorld: Number(deltaWorld.toFixed(6)),
+              deltaMm: Number(
+                (deltaWorld * MM_PER_WORLD_UNIT).toFixed(3),
+              ),
+              visualSource: visual.source,
+              colliderRole: collider.role,
+            };
+          }
+        }
+      }
+
+      const sorted = [...deltas].sort((left, right) => left - right);
+      const sortedNormalAngles = [...normalAngleDeltas].sort(
+        (left, right) => left - right,
+      );
+      const maxNormalAngleDegrees =
+        sortedNormalAngles.length === 0
+          ? null
+          : sortedNormalAngles[sortedNormalAngles.length - 1];
+      const medianNormalAngleDegrees =
+        sortedNormalAngles.length === 0
+          ? null
+          : sortedNormalAngles.length % 2 === 0
+            ? (
+                sortedNormalAngles[sortedNormalAngles.length / 2 - 1] +
+                sortedNormalAngles[sortedNormalAngles.length / 2]
+              ) / 2
+            : sortedNormalAngles[Math.floor(sortedNormalAngles.length / 2)];
+      const medianAbsWorld =
+        sorted.length === 0
+          ? null
+          : sorted.length % 2 === 0
+            ? (sorted[sorted.length / 2 - 1] + sorted[sorted.length / 2]) / 2
+            : sorted[Math.floor(sorted.length / 2)];
+      const maxAbsWorld =
+        sorted.length === 0 ? null : sorted[sorted.length - 1];
+      const passed =
+        missingVisual === 0 &&
+        missingCollider === 0 &&
+        maxAbsWorld !== null &&
+        maxAbsWorld <= GLB_COLLIDER_PARITY_EPSILON_WORLD &&
+        maxNormalAngleDegrees !== null &&
+        maxNormalAngleDegrees <=
+          GLB_COLLIDER_PARITY_NORMAL_EPSILON_DEGREES;
+
+      const report = {
+        schemaVersion: 'roulette-glb-collider-parity-v1',
+        passed,
+        toleranceWorld: GLB_COLLIDER_PARITY_EPSILON_WORLD,
+        toleranceMm:
+          GLB_COLLIDER_PARITY_EPSILON_WORLD * MM_PER_WORLD_UNIT,
+        normalToleranceDegrees:
+          GLB_COLLIDER_PARITY_NORMAL_EPSILON_DEGREES,
+        sampleCount:
+          GLB_COLLIDER_PARITY_RADIAL_SAMPLES *
+          GLB_COLLIDER_PARITY_ANGULAR_SAMPLES,
+        comparedCount: deltas.length,
+        missingVisual,
+        missingCollider,
+        medianAbsWorld:
+          medianAbsWorld === null
+            ? null
+            : Number(medianAbsWorld.toFixed(6)),
+        medianAbsMm:
+          medianAbsWorld === null
+            ? null
+            : Number((medianAbsWorld * MM_PER_WORLD_UNIT).toFixed(3)),
+        maxAbsWorld:
+          maxAbsWorld === null ? null : Number(maxAbsWorld.toFixed(6)),
+        maxAbsMm:
+          maxAbsWorld === null
+            ? null
+            : Number((maxAbsWorld * MM_PER_WORLD_UNIT).toFixed(3)),
+        medianNormalAngleDegrees:
+          medianNormalAngleDegrees === null
+            ? null
+            : Number(medianNormalAngleDegrees.toFixed(6)),
+        maxNormalAngleDegrees:
+          maxNormalAngleDegrees === null
+            ? null
+            : Number(maxNormalAngleDegrees.toFixed(6)),
+        maxSample,
+      };
+
+      stage.dataset.glbColliderParity = passed ? 'passed' : 'failed';
+      stage.dataset.glbColliderParityReport = JSON.stringify(report);
+      console.info(
+        'GLB_COLLIDER_PARITY_REPORT',
+        JSON.stringify(report),
+      );
+      return report;
     };
 
     const measureVisibleDeflectors = (): Part4DeflectorAudit => {
@@ -2459,13 +2968,14 @@ export function Part2SceneViewport({
 
     const measureBowlBridgeProfile = (
       channelVerticalOffset: number,
+      outerRadius: number = BOWL_BRIDGE_OUTER_RADIUS,
     ): Array<[number, number]> => {
       const radii = Array.from(
         { length: BOWL_BRIDGE_SAMPLE_COUNT },
         (_, index) =>
           THREE.MathUtils.lerp(
             BOWL_BRIDGE_INNER_RADIUS,
-            BOWL_BRIDGE_OUTER_RADIUS,
+            outerRadius,
             index / (BOWL_BRIDGE_SAMPLE_COUNT - 1),
           ),
       );
@@ -2487,11 +2997,18 @@ export function Part2SceneViewport({
           : null;
       });
 
-      const targetInnerY = POCKET_OUTER_LIP_Y;
       const targetOuterY = part2ChannelSurfaceAt(
-        BOWL_BRIDGE_OUTER_RADIUS,
+        outerRadius,
         channelVerticalOffset,
       ).y;
+      // For the full-spin route the apron must descend toward the rotor.
+      // A higher inner lip turns this transition into a launch ramp at speed.
+      const targetInnerY = part6FullSpinRouteActive
+        ? Math.min(
+            POCKET_OUTER_LIP_Y,
+            targetOuterY - BALL_RADIUS * 0.75,
+          )
+        : POCKET_OUTER_LIP_Y;
       const measuredInnerY = measured[0] ?? null;
       const measuredOuterY = measured[measured.length - 1] ?? null;
       const canAlignMeasuredProfile =
@@ -2537,7 +3054,24 @@ export function Part2SceneViewport({
         0,
         Math.cos(azimuth),
       );
-      const sampleHeights = [-0.24, -0.2, -0.16, -0.12, -0.08, -0.04, 0];
+      const sampleHeights = [
+        -0.36,
+        -0.32,
+        -0.28,
+        -0.24,
+        -0.2,
+        -0.16,
+        -0.12,
+        -0.08,
+        -0.04,
+        0,
+        0.04,
+        0.08,
+        0.12,
+        0.16,
+        0.2,
+        0.24,
+      ];
       const profile: Array<[number, number]> = [];
       for (const height of sampleHeights) {
         const raycaster = new THREE.Raycaster(
@@ -2679,6 +3213,39 @@ export function Part2SceneViewport({
             Number(sample.y.toFixed(4)),
           ]);
         }
+      }
+      return profile;
+    };
+
+
+    const measureVisibleOuterRaceFloorProfile = () => {
+      const profile: Array<{
+        radius: number;
+        y: number;
+        normal: VectorReadout;
+      }> = [];
+      for (
+        let radius = PART2_ACTUAL_DARK_TRACK_RADIUS_BAND[0];
+        radius <= PART2_ACTUAL_DARK_TRACK_RADIUS_BAND[1] + 0.0001;
+        radius += 0.01
+      ) {
+        const azimuth = 0.37;
+        const sample = measureVisibleSurfaceAt(
+          Math.sin(azimuth) * radius,
+          Math.cos(azimuth) * radius,
+          true,
+          PART2_ACTUAL_DARK_TRACK_RADIUS_BAND,
+        );
+        if (!sample) continue;
+        profile.push({
+          radius: Number(radius.toFixed(4)),
+          y: Number(sample.y.toFixed(4)),
+          normal: {
+            x: Number(sample.normal.x.toFixed(4)),
+            y: Number(sample.normal.y.toFixed(4)),
+            z: Number(sample.normal.z.toFixed(4)),
+          },
+        });
       }
       return profile;
     };
@@ -2995,6 +3562,23 @@ export function Part2SceneViewport({
 
     const runPart2RaceStaticPlacementCheck = () => {
       if (!world || !ballBody || !ballMesh || !part3TrackCollider) return;
+      const part6RouteDiagnostic =
+        outerLaneSpinOnly &&
+        (new URLSearchParams(window.location.search).has('part6SeedCount') ||
+          new URLSearchParams(window.location.search).has(
+            'part6MaxDurationSeconds',
+          ));
+      const logStaticGateStage = (
+        stage: string,
+        extra: Record<string, number | string | boolean | null> = {},
+      ) => {
+        if (!part6RouteDiagnostic) return;
+        console.info(
+          'PART6_DIAGNOSTIC_STAGE',
+          JSON.stringify({ stage, ...extra }),
+        );
+      };
+      logStaticGateStage('static-gate-start');
       const launchAzimuth = 0.37;
       const spawnRadius = PART2_ACTUAL_DARK_TRACK_LAUNCH_RADIUS;
       const surface = part2ChannelSurfaceAt(spawnRadius, part2RaceVerticalOffset);
@@ -3002,16 +3586,38 @@ export function Part2SceneViewport({
       const spawnPoint = new THREE.Vector3(
         ...radialPosition(spawnRadius, launchAzimuth, surface.y),
       ).addScaledVector(contactNormal, BALL_RADIUS + 0.002);
+      logStaticGateStage('visible-surface-before');
       const visibleSurface = measureVisibleSurfaceAt(
         spawnPoint.x,
         spawnPoint.z,
         true,
         PART2_ACTUAL_DARK_TRACK_RADIUS_BAND,
       );
+      logStaticGateStage('visible-surface-after', {
+        found: Boolean(visibleSurface),
+      });
+      logStaticGateStage('inner-transition-profile-before');
       const visibleInnerTransitionProfile =
         measureVisibleInnerTransitionProfile();
+      logStaticGateStage('inner-transition-profile-after', {
+        samples: visibleInnerTransitionProfile.length,
+      });
+      logStaticGateStage('inner-surface-profile-before');
       const visibleInnerSurfaceProfile = measureVisibleInnerSurfaceProfile();
+      logStaticGateStage('inner-surface-profile-after', {
+        samples: visibleInnerSurfaceProfile.length,
+      });
+      logStaticGateStage('outer-wall-profile-before');
       const visibleOuterWallProfile = measureVisibleOuterWallProfile();
+      logStaticGateStage('outer-wall-profile-after', {
+        samples: visibleOuterWallProfile.length,
+      });
+      if (part6FullSpinRouteActive) {
+        console.info(
+          'PART6_ACTUAL_RACE_PROFILE',
+          JSON.stringify(measureVisibleOuterRaceFloorProfile()),
+        );
+      }
       const analyticSurfaceY = surface.y;
       const visualHeightError = visibleSurface
         ? Math.abs(visibleSurface.y - analyticSurfaceY)
@@ -3053,11 +3659,15 @@ export function Part2SceneViewport({
       ];
       const activeRaceCollider =
         part3ColliderRoles.get(part3TrackCollider.handle) ?? 'unknown';
+      const actualGlbRaceActive =
+        part6FullSpinRouteActive &&
+        activeRaceCollider === 'actual-glb-outside-trimesh';
       const broadSupportActive = [...part3ColliderRoles.values()].some(
         (role) =>
           role === 'outer-track-support-trimesh' ||
-          role === 'actual-glb-outside-trimesh',
+          (role === 'actual-glb-outside-trimesh' && !actualGlbRaceActive),
       );
+      logStaticGateStage('static-report-before');
       setPart2RacePlacementReport({
         status: 'running',
         channelInnerRadius: PART2_CHANNEL_PROFILE[0][0],
@@ -3151,16 +3761,22 @@ export function Part2SceneViewport({
       ballBody.setRotation({ x: 0, y: 0, z: 0, w: 1 }, true);
       ballMesh.position.copy(spawnPoint);
       ballMesh.quaternion.identity();
+      logStaticGateStage('static-world-step-before');
       world.step();
+      logStaticGateStage('static-world-step-after');
 
       const position = ballBody.translation();
       let physicalContact = false;
       const raceColliderHandle = part3TrackCollider.handle;
+      logStaticGateStage('static-contact-query-before');
       if (physicsBallCollider) {
         world.contactPairsWith(physicsBallCollider, (otherCollider) => {
           physicalContact ||= otherCollider.handle === raceColliderHandle;
         });
       }
+      logStaticGateStage('static-contact-query-after', {
+        physicalContact,
+      });
       const centerRadius = Math.hypot(position.x, position.z);
       const centerSurface = part2ChannelSurfaceAt(
         centerRadius,
@@ -3213,8 +3829,11 @@ export function Part2SceneViewport({
         visualHeightError <= 0.03 &&
         visibleSurface.y > -1.5 &&
         visibleSurface.y < 1;
+      const authorizedRaceCollider =
+        activeRaceCollider === 'analytic-dark-recessed-channel' ||
+        actualGlbRaceActive;
       const numericPlacementPassed =
-        activeRaceCollider === 'analytic-dark-recessed-channel' &&
+        authorizedRaceCollider &&
         !broadSupportActive &&
         physicalContact &&
         centerInsideFloorEnvelope &&
@@ -3224,6 +3843,11 @@ export function Part2SceneViewport({
         bottomGap >= -0.03;
       const visualGateVerified = visibleSurfaceMatch;
       const passed = numericPlacementPassed && visualGateVerified;
+      logStaticGateStage('static-gate-evaluated', {
+        numericPlacementPassed,
+        visualGateVerified,
+        physicalContact,
+      });
       ballMesh.position.set(position.x, position.y, position.z);
       const rotation = ballBody.rotation();
       ballMesh.quaternion.set(rotation.x, rotation.y, rotation.z, rotation.w);
@@ -3269,7 +3893,7 @@ export function Part2SceneViewport({
                  : numericPlacementPassed
                    ? 'NUMERIC STATIC PASS: ball is inside the analytic recessed race; visual WebGL gate is unverified, so the short numerical probe will run and the overall gate will remain incomplete.'
                 : `FAIL: static channel gate failed (${[
-                    activeRaceCollider !== 'analytic-dark-recessed-channel'
+                    !authorizedRaceCollider
                       ? 'wrong active collider'
                       : '',
                     broadSupportActive ? 'broad support active' : '',
@@ -3300,9 +3924,10 @@ export function Part2SceneViewport({
         numericPlacementPassed ? undefined : 'physics-validation',
       );
       if (numericPlacementPassed) {
-        if (outerLaneSpinOnly) {
+        if (outerLaneSpinOnly && !part6ReplayProbeActive) {
+          logStaticGateStage('part6-batch-dispatch');
           void runPart6FullSpinTelemetryBatch();
-        } else {
+        } else if (!outerLaneSpinOnly) {
           startPart3OuterLaneProbe();
         }
       }
@@ -3439,6 +4064,57 @@ export function Part2SceneViewport({
       const activeTrackCollider = part3TrackCollider;
       const activeRotorPivot = rotorPivot;
 
+      const part6Params = new URLSearchParams(window.location.search);
+      const requestedSeedCount = Number(
+        part6Params.get('part6SeedCount') ?? PART6_FULL_SPIN_RUNS.length,
+      );
+      const activePart6SeedCount = Number.isFinite(requestedSeedCount)
+        ? Math.max(
+            1,
+            Math.min(
+              PART6_FULL_SPIN_RUNS.length,
+              Math.floor(requestedSeedCount),
+            ),
+          )
+        : PART6_FULL_SPIN_RUNS.length;
+      const requestedSeedStartIndex = Number(
+        part6Params.get('part6SeedStartIndex') ?? 0,
+      );
+      const activePart6SeedStartIndex = Number.isFinite(
+        requestedSeedStartIndex,
+      )
+        ? Math.max(
+            0,
+            Math.min(
+              PART6_FULL_SPIN_RUNS.length - 1,
+              Math.floor(requestedSeedStartIndex),
+            ),
+          )
+        : 0;
+      const activePart6Runs = PART6_FULL_SPIN_RUNS.slice(
+        activePart6SeedStartIndex,
+        activePart6SeedStartIndex + activePart6SeedCount,
+      );
+      const requestedMaxDurationSeconds = Number(
+        part6Params.get('part6MaxDurationSeconds') ??
+          PART6_FULL_SPIN_MAX_DURATION_SECONDS,
+      );
+      const activePart6MaxDurationSeconds = Number.isFinite(
+        requestedMaxDurationSeconds,
+      )
+        ? Math.max(
+            FIXED_TIMESTEP * 2,
+            Math.min(
+              PART6_FULL_SPIN_MAX_DURATION_SECONDS,
+              requestedMaxDurationSeconds,
+            ),
+          )
+        : PART6_FULL_SPIN_MAX_DURATION_SECONDS;
+      const part6DiagnosticMode =
+        activePart6Runs.length !== PART6_FULL_SPIN_RUNS.length ||
+        activePart6MaxDurationSeconds !==
+          PART6_FULL_SPIN_MAX_DURATION_SECONDS;
+
       const summarize = (
         results: Part6FullSpinTelemetryResult[],
         status: Part6FullSpinTelemetryReport['status'],
@@ -3485,6 +4161,26 @@ export function Part2SceneViewport({
         const safetyFailureCount = results.filter(
           (result) => !result.safetyPassed,
         ).length;
+        const visualParityFailureCount = results.filter(
+          (result) => !result.visualSurfaceParityPassed,
+        ).length;
+        const medianLapCount = median(lapCounts);
+        const calibrationPassed =
+          status === 'captured' &&
+          activePart6Runs.length >= 5 &&
+          results.length === activePart6Runs.length &&
+          lapCounts.length === count &&
+          count > 0 &&
+          safetyFailureCount === 0 &&
+          phaseSequenceFailureCount === 0 &&
+          inwardTransitionCount === count &&
+          pocketEntryCount === count &&
+          settledCount === count &&
+          medianLapCount !== null &&
+          medianLapCount >= 4 &&
+          medianLapCount <= 5 &&
+          lapCounts[0] >= 3.5 &&
+          lapCounts[lapCounts.length - 1] <= 5.5;
 
         return {
           status,
@@ -3492,15 +4188,20 @@ export function Part2SceneViewport({
             status === 'running'
               ? 'pending'
               : status === 'captured' &&
-                  results.length === PART6_FULL_SPIN_RUNS.length &&
+                  results.length === activePart6Runs.length &&
                   safetyFailureCount === 0
                 ? 'passed'
                 : 'failed',
-          calibrationStatus: 'not-evaluated',
+          calibrationStatus:
+            status === 'running'
+              ? 'not-evaluated'
+              : calibrationPassed
+                ? 'passed'
+                : 'failed',
           schemaVersion: PART6_TELEMETRY_SCHEMA_VERSION,
           fixedTimestep: FIXED_TIMESTEP,
-          maxDurationSeconds: PART6_FULL_SPIN_MAX_DURATION_SECONDS,
-          seedCount: PART6_FULL_SPIN_RUNS.length,
+          maxDurationSeconds: activePart6MaxDurationSeconds,
+          seedCount: activePart6Runs.length,
           completedCount: results.filter(
             (result) => result.telemetryComplete,
           ).length,
@@ -3513,7 +4214,16 @@ export function Part2SceneViewport({
           pocketEntryCount,
           settledCount,
           safetyFailureCount,
-          medianLapCount: median(lapCounts),
+          visualParityFailureCount,
+          visualParityStatus:
+            status === 'running'
+              ? 'pending'
+              : status === 'captured' &&
+                  results.length === activePart6Runs.length &&
+                  visualParityFailureCount === 0
+                ? 'passed'
+                : 'failed',
+          medianLapCount,
           minLapCount: lapCounts.length > 0 ? lapCounts[0] : null,
           maxLapCount:
             lapCounts.length > 0 ? lapCounts[lapCounts.length - 1] : null,
@@ -3569,14 +4279,15 @@ export function Part2SceneViewport({
 
       const results: Part6FullSpinTelemetryResult[] = [];
       const maxSteps = Math.round(
-        PART6_FULL_SPIN_MAX_DURATION_SECONDS / FIXED_TIMESTEP,
+        activePart6MaxDurationSeconds / FIXED_TIMESTEP,
       );
       const part6HeadlessFastMode =
-        new URLSearchParams(window.location.search).get('part6Headless') ===
-        '1';
-      const telemetryYieldSteps = part6HeadlessFastMode
-        ? PART6_UI_YIELD_STEPS * 2
-        : PART6_INTERACTIVE_YIELD_STEPS;
+        part6Params.get('part6Headless') === '1';
+      const telemetryYieldSteps = part6DiagnosticMode
+        ? PART6_DIAGNOSTIC_YIELD_STEPS
+        : part6HeadlessFastMode
+          ? PART6_UI_YIELD_STEPS * 2
+          : PART6_INTERACTIVE_YIELD_STEPS;
 
       const previewSnapshot = {
         ballTranslation: { ...activeBallBody.translation() },
@@ -3601,6 +4312,10 @@ export function Part2SceneViewport({
       const settleFramesRequired = Math.round(
         PART6_SETTLE_DURATION_SECONDS / FIXED_TIMESTEP,
       );
+      const pocketResultCenterRadiusMin =
+        POCKET_FLOOR_INNER_RADIUS + BALL_RADIUS;
+      const pocketResultCenterRadiusMax =
+        POCKET_OUTER_LIP_RADIUS - BALL_RADIUS;
       const hoverGraceFrames = Math.round(
         PART6_TRANSITION_HOVER_GRACE_SECONDS / FIXED_TIMESTEP,
       );
@@ -3636,7 +4351,7 @@ export function Part2SceneViewport({
       };
 
       const transitionSurfaceY = (radius: number) => {
-        if (radius >= BOWL_BRIDGE_OUTER_RADIUS) {
+        if (radius >= part3BowlBridgeOuterRadius) {
           return part2ChannelSurfaceAt(
             radius,
             part2RaceVerticalOffset,
@@ -3652,9 +4367,14 @@ export function Part2SceneViewport({
           const alpha =
             (radius - POCKET_FLOOR_OUTER_RADIUS) /
             (POCKET_OUTER_LIP_RADIUS - POCKET_FLOOR_OUTER_RADIUS);
+          const activePocketOuterLipY =
+            part6FullSpinRouteActive &&
+            part3BowlBridgeProfile.length > 0
+              ? part3BowlBridgeProfile[0][1]
+              : POCKET_OUTER_LIP_Y;
           return THREE.MathUtils.lerp(
             POCKET_FLOOR_Y,
-            POCKET_OUTER_LIP_Y,
+            activePocketOuterLipY,
             alpha,
           );
         }
@@ -3668,13 +4388,30 @@ export function Part2SceneViewport({
         new Promise<void>((resolve) => {
           window.setTimeout(resolve, 0);
         });
+      const logPart6DiagnosticStage = (
+        stage: string,
+        extra: Record<string, number | string | boolean | null> = {},
+      ) => {
+        if (!part6DiagnosticMode) return;
+        console.info(
+          'PART6_DIAGNOSTIC_STAGE',
+          JSON.stringify({ stage, ...extra }),
+        );
+      };
 
+      logPart6DiagnosticStage('batch-ready', {
+        seedCount: activePart6Runs.length,
+        maxSteps,
+        maxDurationSeconds: activePart6MaxDurationSeconds,
+      });
       part6TelemetryBatchRunning = true;
       publishPart6TelemetryReport(
         summarize(
           results,
           'running',
-          'PART 6A.1 deterministic full-spin telemetry is running with isolated seed resets and phase tracking; physics coefficients are unchanged.',
+          part6DiagnosticMode
+            ? 'PART 6B.1 diagnostic telemetry is running on a bounded seed/time slice; physics coefficients are unchanged.'
+            : 'PART 6A.1 deterministic full-spin telemetry is running with isolated seed resets and phase tracking; physics coefficients are unchanged.',
         ),
       );
       // Commit the running report before heavy deterministic stepping starts.
@@ -3682,10 +4419,13 @@ export function Part2SceneViewport({
       // for an entire 30-second simulated seed.
       await yieldToBrowser();
       if (disposed) return;
+      logPart6DiagnosticStage('initial-yield-complete');
 
       try {
-        for (const run of PART6_FULL_SPIN_RUNS) {
+        for (const run of activePart6Runs) {
           if (disposed) return;
+          logPart6DiagnosticStage('seed-start', { seed: run.seed });
+          logPart6DiagnosticStage('launch-surface-before', { seed: run.seed });
 
           const launchSurface = measureVisibleSurfaceAt(
             Math.sin(run.launchAzimuth) *
@@ -3695,6 +4435,10 @@ export function Part2SceneViewport({
             true,
             PART2_ACTUAL_DARK_TRACK_RADIUS_BAND,
           );
+          logPart6DiagnosticStage('launch-surface-after', {
+            seed: run.seed,
+            found: Boolean(launchSurface),
+          });
           if (!launchSurface) {
             failInfrastructure(
               'PART 6 geometry audit stopped the batch because seed ' +
@@ -3706,16 +4450,35 @@ export function Part2SceneViewport({
             return;
           }
 
-          const launchNormal = new THREE.Vector3(
-            launchSurface.normal.x,
-            launchSurface.normal.y,
-            launchSurface.normal.z,
-          ).normalize();
+          const launchClearance = BALL_RADIUS + 0.01;
+          const operationalLaunchCenterRadius =
+            PART2_ACTUAL_DARK_TRACK_LAUNCH_RADIUS;
+          let launchContactRadius = operationalLaunchCenterRadius;
+          let launchNormal = part2ChannelNormalAt(
+            launchContactRadius,
+            run.launchAzimuth,
+          );
+          for (let iteration = 0; iteration < 3; iteration += 1) {
+            const radialNormal =
+              launchNormal.x * Math.sin(run.launchAzimuth) +
+              launchNormal.z * Math.cos(run.launchAzimuth);
+            launchContactRadius =
+              operationalLaunchCenterRadius -
+              radialNormal * launchClearance;
+            launchNormal = part2ChannelNormalAt(
+              launchContactRadius,
+              run.launchAzimuth,
+            );
+          }
+          const launchChannelSurface = part2ChannelSurfaceAt(
+            launchContactRadius,
+            part2RaceVerticalOffset,
+          );
           const launchPosition = new THREE.Vector3(
-            launchSurface.point.x,
-            launchSurface.point.y,
-            launchSurface.point.z,
-          ).addScaledVector(launchNormal, BALL_RADIUS + 0.002);
+            Math.sin(run.launchAzimuth) * launchContactRadius,
+            launchChannelSurface.y,
+            Math.cos(run.launchAzimuth) * launchContactRadius,
+          ).addScaledVector(launchNormal, launchClearance);
           const tangent = new THREE.Vector3(
             Math.cos(run.launchAzimuth),
             0,
@@ -3763,7 +4526,13 @@ export function Part2SceneViewport({
             w: Math.cos(rotorAngle / 2),
           });
           activeRotorPivot?.rotation.set(0, rotorAngle, 0);
+          logPart6DiagnosticStage('reset-world-step-before', {
+            seed: run.seed,
+          });
           activeWorld.step();
+          logPart6DiagnosticStage('reset-world-step-after', {
+            seed: run.seed,
+          });
 
           activeBallBody.setTranslation(
             {
@@ -3840,6 +4609,10 @@ export function Part2SceneViewport({
             resetAngularVelocityError <= PART6_STATE_RESET_VECTOR_EPSILON &&
             resetRotationError <= PART6_STATE_RESET_VECTOR_EPSILON &&
             resetRotorAngleError <= PART6_STATE_RESET_ANGLE_EPSILON;
+          logPart6DiagnosticStage('reset-verified', {
+            seed: run.seed,
+            stateResetVerified,
+          });
 
           let elapsed = 0;
           let minRadius = Math.hypot(
@@ -3884,6 +4657,7 @@ export function Part2SceneViewport({
           let impactDirectionAfter: THREE.Vector3 | null = null;
           let fretContact = false;
           let firstFretContactTime: number | null = null;
+          let firstFretContactStep: number | null = null;
           let pocketEntered = false;
           let pocketEntryTime: number | null = null;
           let settledFrames = 0;
@@ -3898,6 +4672,9 @@ export function Part2SceneViewport({
           let maxVisualBodySyncError = 0;
           let maxRotorSyncError = 0;
           let previousSpeed = run.speed;
+          const previousTracePosition = launchPosition.clone();
+          const previousTraceVelocity = launchVelocity.clone();
+          let firstSpikeTraceLogged = false;
           let previousPlanarDirection = tangent.clone();
           let finalSpeed = run.speed;
           let finalRotorRelativeSpeed = run.speed;
@@ -3924,6 +4701,160 @@ export function Part2SceneViewport({
             });
           };
 
+          const preFretTraceSeed =
+            run.seed === 61004 || run.seed === 61005 || run.seed === 61006;
+          const preFretCheckpoints = new Set<string>();
+          const logPreFretCheckpoint = (
+            checkpoint:
+              | 'INWARD_DESCENT'
+              | 'DEFLECTOR_CONTACT'
+              | 'ROTOR_ENTRY'
+              | 'POCKET_ENTRY'
+              | 'PHYSICAL_FRET_CONTACT',
+            step: number,
+            position: { x: number; y: number; z: number },
+            velocity: { x: number; y: number; z: number },
+            speed: number,
+            radius: number,
+            contactRoles: Set<string>,
+          ) => {
+            if (!preFretTraceSeed || preFretCheckpoints.has(checkpoint)) return;
+            preFretCheckpoints.add(checkpoint);
+            const radialVelocity =
+              radius > 0
+                ? (position.x * velocity.x + position.z * velocity.z) / radius
+                : 0;
+            const rotorTangentialVelocity = {
+              x: TEST_ANGULAR_SPEED * position.z,
+              y: 0,
+              z: -TEST_ANGULAR_SPEED * position.x,
+            };
+            const rotorRelativeSpeed = Math.hypot(
+              velocity.x - rotorTangentialVelocity.x,
+              velocity.y - rotorTangentialVelocity.y,
+              velocity.z - rotorTangentialVelocity.z,
+            );
+            const rotorRotation = activeRotorBody.rotation();
+            const bodyRotorAngle = normalizedAngle(
+              2 * Math.atan2(rotorRotation.y, rotorRotation.w),
+            );
+            const localAngle = normalizedAngle(
+              Math.atan2(position.x, position.z) - bodyRotorAngle,
+            );
+            const pocketIndex =
+              radius > 1.18 && radius < 1.98
+                ? pocketIndexFromLocalPosition(
+                    Math.sin(localAngle),
+                    Math.cos(localAngle),
+                  )
+                : null;
+            console.info(
+              'ROULETTE_PRE_FRET_CHECKPOINT',
+              JSON.stringify({
+                source: 'browser',
+                seed: String(run.seed),
+                checkpoint,
+                simulationTimeSeconds: Number(elapsed.toFixed(6)),
+                step,
+                rotorAngle: Number(bodyRotorAngle.toFixed(9)),
+                position: {
+                  x: Number(position.x.toFixed(6)),
+                  y: Number(position.y.toFixed(6)),
+                  z: Number(position.z.toFixed(6)),
+                },
+                velocity: {
+                  x: Number(velocity.x.toFixed(6)),
+                  y: Number(velocity.y.toFixed(6)),
+                  z: Number(velocity.z.toFixed(6)),
+                },
+                speed: Number(speed.toFixed(6)),
+                radius: Number(radius.toFixed(6)),
+                radialVelocity: Number(radialVelocity.toFixed(6)),
+                verticalVelocity: Number(velocity.y.toFixed(6)),
+                rotorRelativeSpeed: Number(rotorRelativeSpeed.toFixed(6)),
+                contactRoles: [...contactRoles].sort(),
+                deflectorContact: contactRoles.has(
+                  'asset-measured-visible-deflector-cuboid',
+                ),
+                bowlBridgeContact: contactRoles.has(
+                  'stationary-bowl-apron-bridge',
+                ),
+                outerLipContact: contactRoles.has('pocket-outer-lip-trimesh'),
+                pocketFloorContact:
+                  contactRoles.has('pocket-floor-trimesh') ||
+                  contactRoles.has('pocket-floor-catch-underlay'),
+                fretContact: contactRoles.has('pocket-fret-cuboid'),
+                pocketIndex,
+              }),
+            );
+          };
+
+          const preInwardCheckpoints = new Set<string>();
+          const logPreInwardCheckpoint = (
+            checkpoint: string,
+            step: number,
+            position: { x: number; y: number; z: number },
+            velocity: { x: number; y: number; z: number },
+            speed: number,
+            radius: number,
+            contactRoles: Set<string>,
+            trackContact: boolean,
+          ) => {
+            if (!preFretTraceSeed || preInwardCheckpoints.has(checkpoint)) return;
+            preInwardCheckpoints.add(checkpoint);
+            const radialVelocity =
+              radius > 0
+                ? (position.x * velocity.x + position.z * velocity.z) / radius
+                : 0;
+            const rotorRotation = activeRotorBody.rotation();
+            const bodyRotorAngle = normalizedAngle(
+              2 * Math.atan2(rotorRotation.y, rotorRotation.w),
+            );
+            const ballAngularVelocity = activeBallBody.angvel();
+            console.info(
+              'ROULETTE_PRE_INWARD_CHECKPOINT',
+              JSON.stringify({
+                source: 'browser',
+                seed: String(run.seed),
+                checkpoint,
+                simulationTimeSeconds: Number(elapsed.toFixed(6)),
+                step,
+                rotorAngle: Number(bodyRotorAngle.toFixed(9)),
+                worldAzimuth: Number(
+                  normalizedAngle(Math.atan2(position.x, position.z)).toFixed(9),
+                ),
+                position: {
+                  x: Number(position.x.toFixed(6)),
+                  y: Number(position.y.toFixed(6)),
+                  z: Number(position.z.toFixed(6)),
+                },
+                velocity: {
+                  x: Number(velocity.x.toFixed(6)),
+                  y: Number(velocity.y.toFixed(6)),
+                  z: Number(velocity.z.toFixed(6)),
+                },
+                speed: Number(speed.toFixed(6)),
+                radius: Number(radius.toFixed(6)),
+                radialVelocity: Number(radialVelocity.toFixed(6)),
+                verticalVelocity: Number(velocity.y.toFixed(6)),
+                angularVelocity: {
+                  x: Number(ballAngularVelocity.x.toFixed(6)),
+                  y: Number(ballAngularVelocity.y.toFixed(6)),
+                  z: Number(ballAngularVelocity.z.toFixed(6)),
+                },
+                angularSpeed: Number(
+                  Math.hypot(
+                    ballAngularVelocity.x,
+                    ballAngularVelocity.y,
+                    ballAngularVelocity.z,
+                  ).toFixed(6),
+                ),
+                contactRoles: [...contactRoles].sort(),
+                trackContact,
+              }),
+            );
+          };
+
           recordPhase(
             'OUTER_RACE',
             {
@@ -3936,6 +4867,11 @@ export function Part2SceneViewport({
 
           for (let step = 0; step < maxSteps; step += 1) {
             if (disposed) return;
+            if (step === 0) {
+              logPart6DiagnosticStage('simulation-step-0-before', {
+                seed: run.seed,
+              });
+            }
 
             rotorAngle = normalizedAngle(
               rotorAngle + TEST_ANGULAR_SPEED * FIXED_TIMESTEP,
@@ -3949,6 +4885,11 @@ export function Part2SceneViewport({
             });
             activeRotorPivot?.rotation.set(0, rotorAngle, 0);
             activeWorld.step();
+            if (step === 0) {
+              logPart6DiagnosticStage('simulation-step-0-after', {
+                seed: run.seed,
+              });
+            }
             elapsed += FIXED_TIMESTEP;
 
             const position = activeBallBody.translation();
@@ -3965,6 +4906,24 @@ export function Part2SceneViewport({
             finalSpeed = speed;
             peakSpeed = Math.max(peakSpeed, speed);
 
+            if (
+              part6DiagnosticMode &&
+              step > 0 &&
+              step % PART6_DIAGNOSTIC_PROGRESS_STEPS === 0
+            ) {
+              console.info(
+                'PART6_STEP_PROGRESS',
+                JSON.stringify({
+                  seed: run.seed,
+                  step,
+                  maxSteps,
+                  elapsed: Number(elapsed.toFixed(4)),
+                  radius: Number(radius.toFixed(4)),
+                  speed: Number(speed.toFixed(4)),
+                }),
+              );
+            }
+
             let trackPairContact = false;
             let deflectorPairContact = false;
             let fretPairContact = false;
@@ -3973,6 +4932,18 @@ export function Part2SceneViewport({
             activeWorld.contactPairsWith(
               activeBallCollider,
               (otherCollider) => {
+                let geometricContact = false;
+                activeWorld.contactPair(
+                  activeBallCollider,
+                  otherCollider,
+                  (manifold) => {
+                    if (manifold.numContacts() > 0) {
+                      geometricContact = true;
+                    }
+                  },
+                );
+                if (!geometricContact) return;
+
                 if (
                   otherCollider.handle === activeTrackCollider.handle
                 ) {
@@ -3999,17 +4970,120 @@ export function Part2SceneViewport({
               },
             );
 
+            if (
+              (run.seed === 61004 && step <= 90) ||
+              (run.seed === 61005 && step >= 700 && step <= 950)
+            ) {
+              const parityAngularVelocity = activeBallBody.angvel();
+              const parityRadialVelocity =
+                radius > 0
+                  ? (position.x * velocity.x + position.z * velocity.z) / radius
+                  : 0;
+              console.info(
+                'ROULETTE_PARITY_STEP',
+                JSON.stringify({
+                  source: 'browser',
+                  seed: String(run.seed),
+                  step,
+                  position: {
+                    x: Number(position.x.toFixed(9)),
+                    y: Number(position.y.toFixed(9)),
+                    z: Number(position.z.toFixed(9)),
+                  },
+                  velocity: {
+                    x: Number(velocity.x.toFixed(9)),
+                    y: Number(velocity.y.toFixed(9)),
+                    z: Number(velocity.z.toFixed(9)),
+                  },
+                  speed: Number(speed.toFixed(9)),
+                  radius: Number(radius.toFixed(9)),
+                  radialVelocity: Number(parityRadialVelocity.toFixed(9)),
+                  verticalVelocity: Number(velocity.y.toFixed(9)),
+                  angularVelocity: {
+                    x: Number(parityAngularVelocity.x.toFixed(9)),
+                    y: Number(parityAngularVelocity.y.toFixed(9)),
+                    z: Number(parityAngularVelocity.z.toFixed(9)),
+                  },
+                  angularSpeed: Number(
+                    Math.hypot(
+                      parityAngularVelocity.x,
+                      parityAngularVelocity.y,
+                      parityAngularVelocity.z,
+                    ).toFixed(9),
+                  ),
+                  contactRoles: [...stepContactRoles].sort(),
+                  darkRaceContact: trackPairContact,
+                  outerWallContact: stepContactRoles.has(
+                    'measured-visible-outer-wall-cuboid',
+                  ),
+                }),
+              );
+            }
+
+            if (step === 0) {
+              logPreInwardCheckpoint(
+                'LAUNCH_STEP_0',
+                step,
+                position,
+                velocity,
+                speed,
+                radius,
+                stepContactRoles,
+                trackPairContact,
+              );
+            }
+
             const inTrackCenterBand =
               radius >= PART2_ACTUAL_TRACK_CENTER_RADIUS_BAND[0] &&
               radius <= PART2_ACTUAL_TRACK_CENTER_RADIUS_BAND[1];
             if (inTrackCenterBand) {
               trackFrames += 1;
               if (trackPairContact) trackContactFrames += 1;
-              const raceSurfaceY = part2ChannelSurfaceAt(
-                radius,
-                part2RaceVerticalOffset,
-              ).y;
-              const signedRaceGap = bottom - raceSurfaceY;
+
+              const activeTrackRole =
+                part3ColliderRoles.get(activeTrackCollider.handle) ?? null;
+              const actualGlbTrackActive =
+                activeTrackRole === 'actual-glb-outside-trimesh';
+              let signedRaceGap: number;
+
+              if (actualGlbTrackActive) {
+                const visibleRaceSurface = measureVisibleSurfaceAt(
+                  position.x,
+                  position.z,
+                  true,
+                  PART2_ACTUAL_DARK_TRACK_RADIUS_BAND,
+                );
+                if (visibleRaceSurface) {
+                  const visiblePoint = new THREE.Vector3(
+                    visibleRaceSurface.point.x,
+                    visibleRaceSurface.point.y,
+                    visibleRaceSurface.point.z,
+                  );
+                  const visibleNormal = new THREE.Vector3(
+                    visibleRaceSurface.normal.x,
+                    visibleRaceSurface.normal.y,
+                    visibleRaceSurface.normal.z,
+                  ).normalize();
+                  signedRaceGap =
+                    new THREE.Vector3(
+                      position.x,
+                      position.y,
+                      position.z,
+                    )
+                      .sub(visiblePoint)
+                      .dot(visibleNormal) -
+                    BALL_RADIUS;
+                } else {
+                  signedRaceGap = 0;
+                }
+              } else {
+                const raceSurfaceY = part2ChannelSurfaceAt(
+                  radius,
+                  part2RaceVerticalOffset,
+                ).y;
+                signedRaceGap = bottom - raceSurfaceY;
+              }
+
               maxTrackPenetration = Math.max(
                 maxTrackPenetration,
                 Math.max(0, -signedRaceGap),
@@ -4050,6 +5124,18 @@ export function Part2SceneViewport({
                 if (lapCountNow > completedLaps) {
                   completedLaps = lapCountNow;
                   lapSpeeds.push(speed);
+                  if (lapCountNow <= 4) {
+                    logPreInwardCheckpoint(
+                      `LAP_${lapCountNow}`,
+                      step,
+                      position,
+                      velocity,
+                      speed,
+                      radius,
+                      stepContactRoles,
+                      trackPairContact,
+                    );
+                  }
                 }
               }
               trackEndSpeed = speed;
@@ -4061,6 +5147,25 @@ export function Part2SceneViewport({
               inwardTransitionTime = elapsed;
               inwardTransitionRadius = radius;
               trackAngleEnd ??= trackAngle;
+              logPreInwardCheckpoint(
+                'INWARD_DESCENT',
+                step,
+                position,
+                velocity,
+                speed,
+                radius,
+                stepContactRoles,
+                trackPairContact,
+              );
+              logPreFretCheckpoint(
+                'INWARD_DESCENT',
+                step,
+                position,
+                velocity,
+                speed,
+                radius,
+                stepContactRoles,
+              );
               recordPhase(
                 'INWARD_DESCENT',
                 position,
@@ -4094,6 +5199,17 @@ export function Part2SceneViewport({
               inwardTransitionTime !== null &&
               radius <= rotorEntryThreshold
             ) {
+              if (rotorEntryTime === null) {
+                logPreFretCheckpoint(
+                  'ROTOR_ENTRY',
+                  step,
+                  position,
+                  velocity,
+                  speed,
+                  radius,
+                  stepContactRoles,
+                );
+              }
               rotorEntryTime ??= elapsed;
               recordPhase(
                 'ROTOR_ENTRY',
@@ -4103,8 +5219,21 @@ export function Part2SceneViewport({
               );
             }
 
-            if (deflectorPairContact && !deflectorContactActive) {
+            if (
+              inwardTransitionTime !== null &&
+              deflectorPairContact &&
+              !deflectorContactActive
+            ) {
               deflectorContactCount += 1;
+              logPreFretCheckpoint(
+                'DEFLECTOR_CONTACT',
+                step,
+                position,
+                velocity,
+                speed,
+                radius,
+                stepContactRoles,
+              );
               firstDeflectorContactTime ??= elapsed;
               impactSpeedBefore ??= previousSpeed;
               impactDirectionBefore ??=
@@ -4136,7 +5265,19 @@ export function Part2SceneViewport({
 
             if (fretPairContact) {
               fretContact = true;
+              if (firstFretContactStep === null) {
+                logPreFretCheckpoint(
+                  'PHYSICAL_FRET_CONTACT',
+                  step,
+                  position,
+                  velocity,
+                  speed,
+                  radius,
+                  stepContactRoles,
+                );
+              }
               firstFretContactTime ??= elapsed;
+              firstFretContactStep ??= step;
               recordPhase(
                 'FRETS',
                 position,
@@ -4147,17 +5288,31 @@ export function Part2SceneViewport({
 
             const insidePocket =
               radius >= POCKET_FLOOR_INNER_RADIUS + BALL_RADIUS &&
-              radius <= POCKET_FLOOR_OUTER_RADIUS - BALL_RADIUS &&
+              radius <= POCKET_OUTER_LIP_RADIUS - BALL_RADIUS &&
               bottom >= POCKET_FLOOR_Y - 0.08 &&
               bottom <= POCKET_FLOOR_Y + 0.16;
-            if (insidePocket || pocketFloorContact) {
+            const pocketContactInsideRotorEnvelope =
+              pocketFloorContact &&
+              radius <= POCKET_OUTER_LIP_RADIUS + BALL_RADIUS + 0.04;
+            if (insidePocket || pocketContactInsideRotorEnvelope) {
               pocketEntered = true;
+              if (pocketEntryTime === null) {
+                logPreFretCheckpoint(
+                  'POCKET_ENTRY',
+                  step,
+                  position,
+                  velocity,
+                  speed,
+                  radius,
+                  stepContactRoles,
+                );
+              }
               pocketEntryTime ??= elapsed;
               recordPhase(
                 'POCKET',
                 position,
                 speed,
-                pocketFloorContact
+                pocketContactInsideRotorEnvelope
                   ? [...stepContactRoles].find(
                       (role) =>
                         role === 'pocket-floor-trimesh' ||
@@ -4224,10 +5379,88 @@ export function Part2SceneViewport({
               velocity.z - rotorTangentialVelocity.z,
             );
             if (
+              [61004, 61005, 61006].includes(run.seed) &&
+              pocketEntryTime !== null &&
+              elapsed - pocketEntryTime <= 2 &&
+              step % 12 === 0
+            ) {
+              const invRadius = radius > 0 ? 1 / radius : 0;
+              const radialX = position.x * invRadius;
+              const radialZ = position.z * invRadius;
+              const tangentX = position.z * invRadius;
+              const tangentZ = -position.x * invRadius;
+              const relativeX = velocity.x - rotorTangentialVelocity.x;
+              const relativeZ = velocity.z - rotorTangentialVelocity.z;
+              console.info(
+                'PART6_POCKET_SLIP_TRACE',
+                JSON.stringify({
+                  seed: run.seed,
+                  step,
+                  sincePocketEntry: Number((elapsed - pocketEntryTime).toFixed(6)),
+                  radius: Number(radius.toFixed(6)),
+                  speed: Number(speed.toFixed(6)),
+                  rotorRelativeSpeed: Number(finalRotorRelativeSpeed.toFixed(6)),
+                  tangentialSlip: Number(
+                    (relativeX * tangentX + relativeZ * tangentZ).toFixed(6),
+                  ),
+                  radialSlip: Number(
+                    (relativeX * radialX + relativeZ * radialZ).toFixed(6),
+                  ),
+                  verticalSlip: Number(velocity.y.toFixed(6)),
+                  settledFrames,
+                  contactRoles: [...stepContactRoles].sort(),
+                }),
+              );
+            }
+            if (
+              ([61001, 61004, 61005, 61006, 61007, 61008].includes(run.seed)) &&
+              elapsed >= activePart6MaxDurationSeconds - 2 &&
+              step % 12 === 0
+            ) {
+              const localPocketAngle = normalizedAngle(
+                Math.atan2(position.x, position.z) - rotorAngle,
+              );
+              const tracePocketIndex =
+                radius >= pocketResultCenterRadiusMin &&
+                radius <= pocketResultCenterRadiusMax
+                  ? pocketIndexFromLocalPosition(
+                      Math.sin(localPocketAngle),
+                      Math.cos(localPocketAngle),
+                    )
+                  : null;
+              console.info(
+                'PART6_TIMEOUT_FINAL_CONTACT_TRACE',
+                JSON.stringify({
+                  seed: run.seed,
+                  step,
+                  elapsed: Number(elapsed.toFixed(6)),
+                  radius: Number(radius.toFixed(6)),
+                  bottom: Number(bottom.toFixed(6)),
+                  speed: Number(speed.toFixed(6)),
+                  rotorRelativeSpeed: Number(
+                    finalRotorRelativeSpeed.toFixed(6),
+                  ),
+                  pocketIndex: tracePocketIndex,
+                  pocketEntered,
+                  settledFrames,
+                  settleChecks: {
+                    rotorRelative:
+                      finalRotorRelativeSpeed < 0.12,
+                    radius:
+                      radius >= pocketResultCenterRadiusMin &&
+                      radius <= pocketResultCenterRadiusMax,
+                    floor:
+                      Math.abs(bottom - POCKET_FLOOR_Y) <= 0.12,
+                  },
+                  contactRoles: [...stepContactRoles].sort(),
+                }),
+              );
+            }
+            if (
               pocketEntered &&
               finalRotorRelativeSpeed < 0.12 &&
-              radius >= POCKET_FLOOR_INNER_RADIUS + BALL_RADIUS &&
-              radius <= POCKET_FLOOR_OUTER_RADIUS - BALL_RADIUS &&
+              radius >= pocketResultCenterRadiusMin &&
+              radius <= pocketResultCenterRadiusMax &&
               Math.abs(bottom - POCKET_FLOOR_Y) <= 0.12
             ) {
               settledFrames += 1;
@@ -4237,6 +5470,36 @@ export function Part2SceneViewport({
             if (settledFrames >= settleFramesRequired) {
               settled = true;
               settleTime = elapsed;
+              console.info(
+                'PART6_SETTLE_GATE_MEASUREMENT',
+                JSON.stringify({
+                  seed: run.seed,
+                  step,
+                  elapsed: Number(elapsed.toFixed(6)),
+                  radius: Number(radius.toFixed(6)),
+                  radiusMinMargin: Number(
+                    (radius - pocketResultCenterRadiusMin).toFixed(6),
+                  ),
+                  radiusMaxMargin: Number(
+                    (pocketResultCenterRadiusMax - radius).toFixed(6),
+                  ),
+                  bottom: Number(bottom.toFixed(6)),
+                  floorDelta: Number(
+                    Math.abs(bottom - POCKET_FLOOR_Y).toFixed(6),
+                  ),
+                  floorMargin: Number(
+                    (0.12 - Math.abs(bottom - POCKET_FLOOR_Y)).toFixed(6),
+                  ),
+                  rotorRelativeSpeed: Number(
+                    finalRotorRelativeSpeed.toFixed(6),
+                  ),
+                  rotorRelativeMargin: Number(
+                    (0.12 - finalRotorRelativeSpeed).toFixed(6),
+                  ),
+                  settledFrames,
+                  contactRoles: [...stepContactRoles].sort(),
+                }),
+              );
               recordPhase(
                 'SETTLED',
                 position,
@@ -4271,9 +5534,9 @@ export function Part2SceneViewport({
               radius > 3.08 ||
               position.y <
                 POCKET_FLOOR_Y - BALL_RADIUS - 0.18;
-            velocitySpike ||=
+            const velocitySpikeThisStep =
               speed > Math.max(8, previousSpeed * 4);
-            artificialAcceleration ||=
+            const artificialAccelerationThisStep =
               speed >
               Math.max(
                 12,
@@ -4281,6 +5544,73 @@ export function Part2SceneViewport({
                   ? previousSpeed * 3
                   : 12,
               );
+            if (
+              (run.seed === 61008 || run.seed === 61022) &&
+              !firstSpikeTraceLogged &&
+              (velocitySpikeThisStep || artificialAccelerationThisStep)
+            ) {
+              firstSpikeTraceLogged = true;
+              const ballAngularVelocity = activeBallBody.angvel();
+              console.info(
+                run.seed === 61008
+                  ? 'PART6_SEED_61008_FIRST_SPIKE'
+                  : 'PART6_SEED_61022_FIRST_SPIKE',
+                JSON.stringify({
+                  step,
+                  elapsed: Number(elapsed.toFixed(6)),
+                  previous: {
+                    position: {
+                      x: Number(previousTracePosition.x.toFixed(6)),
+                      y: Number(previousTracePosition.y.toFixed(6)),
+                      z: Number(previousTracePosition.z.toFixed(6)),
+                    },
+                    velocity: {
+                      x: Number(previousTraceVelocity.x.toFixed(6)),
+                      y: Number(previousTraceVelocity.y.toFixed(6)),
+                      z: Number(previousTraceVelocity.z.toFixed(6)),
+                    },
+                    speed: Number(previousSpeed.toFixed(6)),
+                  },
+                  current: {
+                    position: {
+                      x: Number(position.x.toFixed(6)),
+                      y: Number(position.y.toFixed(6)),
+                      z: Number(position.z.toFixed(6)),
+                    },
+                    velocity: {
+                      x: Number(velocity.x.toFixed(6)),
+                      y: Number(velocity.y.toFixed(6)),
+                      z: Number(velocity.z.toFixed(6)),
+                    },
+                    speed: Number(speed.toFixed(6)),
+                    radius: Number(radius.toFixed(6)),
+                    bottom: Number(bottom.toFixed(6)),
+                    angularVelocity: {
+                      x: Number(ballAngularVelocity.x.toFixed(6)),
+                      y: Number(ballAngularVelocity.y.toFixed(6)),
+                      z: Number(ballAngularVelocity.z.toFixed(6)),
+                    },
+                    rotorRelativeSpeed: Number(
+                      finalRotorRelativeSpeed.toFixed(6),
+                    ),
+                  },
+                  speedRatio:
+                    previousSpeed > 0
+                      ? Number((speed / previousSpeed).toFixed(6))
+                      : null,
+                  velocitySpikeThisStep,
+                  artificialAccelerationThisStep,
+                  contactRoles: [...stepContactRoles].sort(),
+                  trackContact: trackPairContact,
+                  deflectorContact: deflectorPairContact,
+                  fretContact: fretPairContact,
+                  pocketFloorContact,
+                  pocketEntered,
+                }),
+              );
+            }
+            velocitySpike ||= velocitySpikeThisStep;
+            artificialAcceleration ||= artificialAccelerationThisStep;
 
             const rotorRotation = activeRotorBody.rotation();
             const bodyRotorAngle = normalizedAngle(
@@ -4332,6 +5662,8 @@ export function Part2SceneViewport({
                 planarDirection.normalize();
             }
             previousSpeed = speed;
+            previousTracePosition.set(position.x, position.y, position.z);
+            previousTraceVelocity.set(velocity.x, velocity.y, velocity.z);
 
             if (
               step > 0 &&
@@ -4393,10 +5725,8 @@ export function Part2SceneViewport({
           );
           if (
             pocketEntered &&
-            finalRadius >=
-              POCKET_FLOOR_INNER_RADIUS + BALL_RADIUS &&
-            finalRadius <=
-              POCKET_FLOOR_OUTER_RADIUS - BALL_RADIUS
+            finalRadius >= pocketResultCenterRadiusMin &&
+            finalRadius <= pocketResultCenterRadiusMax
           ) {
             const finalAngle = normalizedAngle(
               Math.atan2(
@@ -4412,6 +5742,44 @@ export function Part2SceneViewport({
             finalPocketNumber =
               EUROPEAN_SEQUENCE[finalPocketIndex];
           }
+
+          let visualSurfaceY: number | null = null;
+          let visualSurfaceGapWorld: number | null = null;
+          if (rotorPivot && stationaryGroup) {
+            const previousRotorQuaternion = rotorPivot.quaternion.clone();
+            rotorPivot.quaternion.set(
+              0,
+              Math.sin(rotorAngle / 2),
+              0,
+              Math.cos(rotorAngle / 2),
+            );
+            rotorPivot.updateMatrixWorld(true);
+            const visualSurface = measureFullVisibleSurfaceAt(
+              finalPosition.x,
+              finalPosition.z,
+            );
+            visualSurfaceY = visualSurface?.y ?? null;
+            visualSurfaceGapWorld =
+              visualSurfaceY === null
+                ? null
+                : finalPosition.y - BALL_RADIUS - visualSurfaceY;
+            rotorPivot.quaternion.copy(previousRotorQuaternion);
+            rotorPivot.updateMatrixWorld(true);
+          }
+          const visualSurfaceGapMm =
+            visualSurfaceGapWorld === null
+              ? null
+              : visualSurfaceGapWorld * MM_PER_WORLD_UNIT;
+          const visualHover =
+            visualSurfaceGapWorld !== null &&
+            visualSurfaceGapWorld > GLB_COLLIDER_PARITY_EPSILON_WORLD;
+          const visualClipping =
+            visualSurfaceGapWorld !== null &&
+            visualSurfaceGapWorld < -GLB_COLLIDER_PARITY_EPSILON_WORLD;
+          const visualSurfaceParityPassed =
+            visualSurfaceGapWorld !== null &&
+            Math.abs(visualSurfaceGapWorld) <=
+              GLB_COLLIDER_PARITY_EPSILON_WORLD;
 
           const orderedCoreEvents = phases.filter(
             (event) => event.phase !== 'FRETS',
@@ -4465,11 +5833,16 @@ export function Part2SceneViewport({
             !escaped &&
             !tunneling &&
             elapsed >=
-              PART6_FULL_SPIN_MAX_DURATION_SECONDS -
+              activePart6MaxDurationSeconds -
                 FIXED_TIMESTEP;
+          const settledResultContractValid =
+            !settled ||
+            (finalPocketIndex !== null &&
+              finalPocketNumber !== null);
           const safetyPassed =
             stateResetVerified &&
             phaseSequenceValid &&
+            settledResultContractValid &&
             !timedOut &&
             !hover &&
             !clipping &&
@@ -4631,6 +6004,21 @@ export function Part2SceneViewport({
             finalRotorRelativeSpeed: Number(
               finalRotorRelativeSpeed.toFixed(4),
             ),
+            visualSurfaceY:
+              visualSurfaceY === null
+                ? null
+                : Number(visualSurfaceY.toFixed(6)),
+            visualSurfaceGapWorld:
+              visualSurfaceGapWorld === null
+                ? null
+                : Number(visualSurfaceGapWorld.toFixed(6)),
+            visualSurfaceGapMm:
+              visualSurfaceGapMm === null
+                ? null
+                : Number(visualSurfaceGapMm.toFixed(3)),
+            visualHover,
+            visualClipping,
+            visualSurfaceParityPassed,
             hover,
             clipping,
             tunneling,
@@ -4683,7 +6071,7 @@ export function Part2SceneViewport({
               'PART 6A.1 captured ' +
                 String(results.length) +
                 '/' +
-                String(PART6_FULL_SPIN_RUNS.length) +
+                String(activePart6Runs.length) +
                 ' deterministic runs; remaining seeds continue.',
             ),
           );
@@ -4692,7 +6080,7 @@ export function Part2SceneViewport({
         }
 
         const telemetryCaptured =
-          results.length === PART6_FULL_SPIN_RUNS.length &&
+          results.length === activePart6Runs.length &&
           results.every(
             (result) => result.telemetryComplete,
           );
@@ -4702,14 +6090,14 @@ export function Part2SceneViewport({
           telemetryCaptured
             ? 'PART 6A.1 telemetry captured all ' +
                 String(results.length) +
-                ' deterministic full-spin runs. Safety is reported separately; 4–5 lap calibration remains NOT EVALUATED.'
+                ' deterministic full-spin runs. Safety and lap calibration are reported in the status fields.'
             : 'PART 6A.1 telemetry did not capture every deterministic run.',
         );
 
         if (results.length > 0) {
           const lastRun =
-            PART6_FULL_SPIN_RUNS[
-              PART6_FULL_SPIN_RUNS.length - 1
+            activePart6Runs[
+              activePart6Runs.length - 1
             ];
           rotorAngleRef.current = normalizedAngle(
             lastRun.rotorStartAngle +
@@ -5558,47 +6946,20 @@ export function Part2SceneViewport({
 
       const loader = new GLTFLoader();
       loader.load(
-        ROULETTE_ASSET_PATH,
+        ROULETTE_RUNTIME_ASSET_PATH,
         async (gltf) => {
           if (disposed) return;
           const runtimeScene = gltf.scene.clone(true);
-          const embeddedScaleNode = (() => {
-            let found: THREE.Object3D | undefined;
-            runtimeScene.traverse((child) => {
-              if (
-                !found &&
-                Math.abs(child.scale.x - 0.01) < 0.000001 &&
-                Math.abs(child.scale.y - 0.01) < 0.000001 &&
-                Math.abs(child.scale.z - 0.01) < 0.000001
-              ) {
-                found = child;
-              }
-            });
-            return found;
-          })();
-          if (!embeddedScaleNode) {
-            throw new Error('PART 2 requires the embedded 0.01 GLB transform for scale normalization');
-          }
-          embeddedScaleNode.scale.set(1, 1, 1);
-          runtimeScene.updateMatrixWorld(true);
-          const sourceMeshCount = countMeshes(runtimeScene);
-          const sourceTriangles = countTriangles(runtimeScene);
-          const sourceCenter = new THREE.Vector3(
-            ROULETTE_RAW_SOURCE_CENTER.x,
-            ROULETTE_RAW_SOURCE_CENTER.y,
-            ROULETTE_RAW_SOURCE_CENTER.z,
-          );
-
-          const outside = runtimeScene.getObjectByName('geo1_outside_0');
-          const inside = runtimeScene.getObjectByName('geo1_inside_0');
-          const turret = runtimeScene.getObjectByName('geo1_turret_0');
-          if (!outside || !inside || !turret) {
-            throw new Error('PART 2 requires geo1_outside_0, geo1_inside_0, and geo1_turret_0');
-          }
-
           wheelRoot = new THREE.Group();
           wheelRoot.name = 'Part2__AuthoritativeWheelRoot';
-          wheelRoot.position.set(0, ROULETTE_Y_ORIGIN, 0);
+          const {
+            runtimeOffset,
+            outside,
+            inside,
+            turret,
+          } = prepareAuthoritativeRouletteGlb(runtimeScene, wheelRoot);
+          const sourceMeshCount = countMeshes(runtimeScene);
+          const sourceTriangles = countTriangles(runtimeScene);
           wheelRoot.userData = {
             sourceAsset: ROULETTE_ASSET_PATH,
             authoritativeTransform: {
@@ -5609,18 +6970,10 @@ export function Part2SceneViewport({
               yOrigin: ROULETTE_Y_ORIGIN,
               rotationAxis: ROULETTE_ROTATION_AXIS,
             },
+            sharedTransformPipeline: true,
             part2Only: true,
             rawGlbUsedAsCollider: false,
           };
-          const runtimeOffset = new THREE.Group();
-          runtimeOffset.position.set(-sourceCenter.x, -sourceCenter.y, -sourceCenter.z);
-          runtimeOffset.scale.setScalar(ROULETTE_AUTHORITATIVE_SCALE);
-          runtimeOffset.add(runtimeScene);
-          wheelRoot.add(runtimeOffset);
-          wheelRoot.updateMatrixWorld(true);
-          const normalizedBounds = new THREE.Box3().setFromObject(runtimeScene);
-          runtimeOffset.position.sub(normalizedBounds.getCenter(new THREE.Vector3()));
-          wheelRoot.updateMatrixWorld(true);
 
           stationaryGroup = new THREE.Group();
           stationaryGroup.name = 'Part2__StationaryOutsideAndTurret';
@@ -5667,6 +7020,17 @@ export function Part2SceneViewport({
             },
           });
 
+          const measuredOuterWallProfile =
+            measureVisibleOuterWallProfile();
+          if (
+            part6FullSpinRouteActive &&
+            measuredOuterWallProfile.length < 4
+          ) {
+            throw new Error(
+              'PART 6 requires the measured visible outer retaining wall before full-spin validation',
+            );
+          }
+
           part4DeflectorAudit = measureVisibleDeflectors();
           if (part4DeflectorAudit.descriptors.length > 0) {
             part4MeasuredDeflectorInnerRadius = Math.min(
@@ -5698,6 +7062,16 @@ export function Part2SceneViewport({
               peakProminence: part4DeflectorAudit.peakProminence,
               maxSpacingDeviationRatio:
                 part4DeflectorAudit.maxSpacingDeviationRatio,
+              descriptors: part4DeflectorAudit.descriptors.map((descriptor) => ({
+                angleDegrees: Number(
+                  THREE.MathUtils.radToDeg(descriptor.angle).toFixed(3),
+                ),
+                innerRadius: descriptor.innerRadius,
+                outerRadius: descriptor.outerRadius,
+                bottomY: descriptor.bottomY,
+                topY: descriptor.topY,
+                angularWidth: descriptor.angularWidth,
+              })),
             }),
           );
 
@@ -5727,11 +7101,20 @@ export function Part2SceneViewport({
                   'PART 2 could not measure the visible dark recessed race at the configured launch radius',
                 );
               }
-              part2RaceVerticalOffset =
+              const measuredPart2RaceVerticalOffset =
                 darkTrackSurface.y -
                 part2ChannelSurfaceAt(PART2_ACTUAL_DARK_TRACK_LAUNCH_RADIUS).y;
+              part2RaceVerticalOffset = part6FullSpinRouteActive
+                ? 0
+                : measuredPart2RaceVerticalOffset;
               const channelMesh = makePart2RaceChannelTrimesh(
                 part2RaceVerticalOffset,
+                part6FullSpinRouteActive
+                  ? PART2_ACTUAL_INWARD_EDGE_RADIUS + BALL_RADIUS
+                  : null,
+                part6FullSpinRouteActive
+                  ? PART2_ACTUAL_WOOD_INNER_RADIUS
+                  : null,
               );
               part3TrackCollider = world.createCollider(
                 RAPIER.ColliderDesc.trimesh(
@@ -5747,6 +7130,29 @@ export function Part2SceneViewport({
               part3ColliderRoles.set(
                 part3TrackCollider.handle,
                 'analytic-dark-recessed-channel',
+              );
+
+              const outerWall = addMeasuredOuterWallColliders(
+                world,
+                stationaryBody,
+                measuredOuterWallProfile,
+                activePart3TrackFriction,
+                part2RaceVerticalOffset,
+              );
+              outerWall.colliders.forEach((collider) => {
+                part3ColliderRoles.set(
+                  collider.handle,
+                  'measured-visible-outer-wall-cuboid',
+                );
+              });
+              console.info(
+                'PART6_OUTER_WALL_COLLIDER',
+                JSON.stringify({
+                  mode: 'measured-floor-vertical-wall',
+                  colliderSegments: outerWall.segments,
+                  primitiveColliderCount: outerWall.colliders.length,
+                  colliderProfile: outerWall.samples,
+                }),
               );
             } else if (
               validationMode === 'part3' &&
@@ -5839,31 +7245,56 @@ export function Part2SceneViewport({
                outerLaneOnly || outerLaneSpinOnly
                  ? part2RaceVerticalOffset
                  : part3TrackVerticalOffset;
+             part3BowlBridgeOuterRadius = part6FullSpinRouteActive
+               ? PART2_ACTUAL_INWARD_EDGE_RADIUS + BALL_RADIUS
+               : BOWL_BRIDGE_OUTER_RADIUS;
              part3BowlBridgeProfile = measureBowlBridgeProfile(
                activeTrackVerticalOffset,
+               part3BowlBridgeOuterRadius,
              );
-             const bowlBridgeMesh = buildBowlBridgeTrimesh(
-               part3BowlBridgeProfile,
-             );
-             part3BowlBridgeCollider = world.createCollider(
-               RAPIER.ColliderDesc.trimesh(
-                 bowlBridgeMesh.vertices,
-                 bowlBridgeMesh.indices,
-                 RAPIER.TriMeshFlags.FIX_INTERNAL_EDGES |
-                   RAPIER.TriMeshFlags.ORIENTED,
-               )
-                 .setFriction(activePart3TrackFriction)
-                 .setRestitution(0.01)
-                 .setCollisionGroups(
-                   STATIONARY_COLLISION_GROUP |
-                     (BALL_COLLISION_GROUP << 16),
-                 ),
-               stationaryBody,
-             );
-             part3ColliderRoles.set(
-               part3BowlBridgeCollider.handle,
-               'stationary-bowl-apron-bridge',
-             );
+             if (part6FullSpinRouteActive) {
+               console.info(
+                 'PART6_BOWL_BRIDGE_PROFILE',
+                 JSON.stringify({
+                   outerRadius: part3BowlBridgeOuterRadius,
+                   profile: part3BowlBridgeProfile,
+                 }),
+               );
+             }
+             if (part6FullSpinRouteActive) {
+               const bridgeMesh = buildBowlBridgeTrimesh(
+                 part3BowlBridgeProfile,
+               );
+               const bridgeCollider = world.createCollider(
+                 RAPIER.ColliderDesc.trimesh(
+                   bridgeMesh.vertices,
+                   bridgeMesh.indices,
+                   RAPIER.TriMeshFlags.FIX_INTERNAL_EDGES |
+                     RAPIER.TriMeshFlags.ORIENTED,
+                 )
+                   .setFriction(activePart3TrackFriction)
+                   .setRestitution(0.01)
+                   .setCollisionGroups(
+                     STATIONARY_COLLISION_GROUP |
+                       (BALL_COLLISION_GROUP << 16),
+                   ),
+                 stationaryBody,
+               );
+               part3BowlBridgeColliders = [bridgeCollider];
+             } else {
+               part3BowlBridgeColliders = addBowlBridgePrimitiveColliders(
+                 world,
+                 stationaryBody,
+                 part3BowlBridgeProfile,
+                 activePart3TrackFriction,
+               );
+             }
+             for (const collider of part3BowlBridgeColliders) {
+               part3ColliderRoles.set(
+                 collider.handle,
+                 'stationary-bowl-apron-bridge',
+               );
+             }
            }
 
            if (validationMode !== 'part3') {
@@ -5896,13 +7327,35 @@ export function Part2SceneViewport({
                 }),
             );
               if (validationMode === 'part3') {
-               part3PocketColliders = addKinematicPocketSystem(world, rotorBody);
+               const activePocketOuterLipY =
+                 part6FullSpinRouteActive &&
+                 part3BowlBridgeProfile.length > 0
+                   ? part3BowlBridgeProfile[0][1]
+                   : POCKET_OUTER_LIP_Y;
+               part3PocketColliders = addKinematicPocketSystem(
+                 world,
+                 rotorBody,
+                 activePocketOuterLipY,
+               );
                part3PocketColliders.forEach((collider, index) => {
                  part3ColliderRoles.set(
                    collider.handle,
-                   index === 0 ? 'pocket-floor-trimesh' : 'pocket-fret-cuboid',
+                   index === 0
+                     ? 'pocket-floor-trimesh'
+                     : index === 1
+                       ? 'pocket-outer-lip-trimesh'
+                       : 'pocket-fret-cuboid',
                  );
                });
+               const pocketInnerGuard = addKinematicPocketInnerGuard(
+                 world,
+                 rotorBody,
+               );
+               part3PocketColliders.push(pocketInnerGuard);
+               part3ColliderRoles.set(
+                 pocketInnerGuard.handle,
+                 'pocket-inner-retaining-ring',
+               );
                const pocketCatchFloor = world.createCollider(
                  RAPIER.ColliderDesc.cylinder(
                    0.04,
@@ -5911,7 +7364,7 @@ export function Part2SceneViewport({
                      PART3_POCKET_PROBE_RADIUS + BALL_RADIUS + 0.02,
                    ),
                  )
-                   .setTranslation(0, POCKET_FLOOR_Y - 0.04, 0)
+                   .setTranslation(0, POCKET_FLOOR_Y - BALL_RADIUS - 0.04, 0)
                    .setFriction(0.42)
                    .setRestitution(0.02)
                    .setCollisionGroups(
@@ -5951,10 +7404,10 @@ export function Part2SceneViewport({
                 validationMode === 'part3' ? activePart3AngularDamping : 0.08,
               )
               .setCcdEnabled(true)
-              .setSoftCcdPrediction(BALL_RADIUS * 2.5),
+              .setSoftCcdPrediction(activeBallSoftCcdPrediction),
           );
           ballBody.enableCcd(true);
-          ballBody.setSoftCcdPrediction(BALL_RADIUS * 2.5);
+          ballBody.setSoftCcdPrediction(activeBallSoftCcdPrediction);
           ccdEnabled = true;
           const ballColliderDescriptor = RAPIER.ColliderDesc.ball(BALL_RADIUS)
               .setFriction(validationMode === 'part3' ? activePart3TrackFriction : 0.42)
@@ -5969,6 +7422,21 @@ export function Part2SceneViewport({
           physicsBallCollider = world.createCollider(ballColliderDescriptor, ballBody);
           ballBody.setTranslation({ x: initialPosition[0], y: initialPosition[1], z: initialPosition[2] }, true);
           ballMesh.position.set(...initialPosition);
+
+          if (
+            validationMode === 'part3' &&
+            !geometryDiagnosticOnly &&
+            !part1ProbeOnly
+          ) {
+            const parityReport = runGlbColliderParityAudit();
+            if (parityReport) {
+              console.info(
+                'GLB_COLLIDER_PARITY_STATUS',
+                parityReport.passed ? 'PASS' : 'FAIL',
+              );
+            }
+          }
+
             if (
               part1ProbeOnly &&
               validationMode === 'part3' &&
@@ -6418,6 +7886,150 @@ export function Part2SceneViewport({
       const render = () => {
         if (disposed) return;
         const now = performance.now();
+        const authoritativeReplay = authoritativeReplayRoundRef.current;
+        const replayBallMesh = ballMesh;
+        const replayRotorPivot = rotorPivot;
+        const authoritativeReplayActive =
+          validationMode === 'part3' &&
+          outerLaneSpinOnly &&
+          new URLSearchParams(window.location.search).get('part6Headless') !== '1' &&
+          authoritativeReplay?.status === 'SETTLED' &&
+          authoritativeReplay.trajectory.length > 0 &&
+          replayBallMesh !== null &&
+          replayRotorPivot !== null;
+
+        if (
+          authoritativeReplayActive &&
+          authoritativeReplay &&
+          replayBallMesh &&
+          replayRotorPivot
+        ) {
+          if (authoritativeReplayStartedAtRef.current === null) {
+            authoritativeReplayStartedAtRef.current = now;
+            authoritativeReplayCursorRef.current = 0;
+          }
+          const trajectory = authoritativeReplay.trajectory;
+          const finalSample = trajectory[trajectory.length - 1];
+          const replayElapsedMs = Math.min(
+            now - authoritativeReplayStartedAtRef.current,
+            finalSample.simulatedAtMs,
+          );
+          let cursor = Math.min(
+            authoritativeReplayCursorRef.current,
+            Math.max(0, trajectory.length - 1),
+          );
+          while (
+            cursor < trajectory.length - 2 &&
+            trajectory[cursor + 1].simulatedAtMs <= replayElapsedMs
+          ) {
+            cursor += 1;
+          }
+          authoritativeReplayCursorRef.current = cursor;
+          const from = trajectory[cursor];
+          const to = trajectory[Math.min(cursor + 1, trajectory.length - 1)];
+          const sampleDurationMs = Math.max(
+            1,
+            to.simulatedAtMs - from.simulatedAtMs,
+          );
+          const alpha =
+            from === to
+              ? 0
+              : THREE.MathUtils.clamp(
+                  (replayElapsedMs - from.simulatedAtMs) / sampleDurationMs,
+                  0,
+                  1,
+                );
+
+          replayBallMesh.position.set(
+            THREE.MathUtils.lerp(from.ball.position.x, to.ball.position.x, alpha),
+            THREE.MathUtils.lerp(from.ball.position.y, to.ball.position.y, alpha),
+            THREE.MathUtils.lerp(from.ball.position.z, to.ball.position.z, alpha),
+          );
+          const ballFrom = new THREE.Quaternion(
+            from.ball.orientation.x,
+            from.ball.orientation.y,
+            from.ball.orientation.z,
+            from.ball.orientation.w,
+          );
+          const ballTo = new THREE.Quaternion(
+            to.ball.orientation.x,
+            to.ball.orientation.y,
+            to.ball.orientation.z,
+            to.ball.orientation.w,
+          );
+          replayBallMesh.quaternion.copy(ballFrom.slerp(ballTo, alpha));
+
+          const rotorFrom = new THREE.Quaternion(
+            from.rotor.orientation.x,
+            from.rotor.orientation.y,
+            from.rotor.orientation.z,
+            from.rotor.orientation.w,
+          );
+          const rotorTo = new THREE.Quaternion(
+            to.rotor.orientation.x,
+            to.rotor.orientation.y,
+            to.rotor.orientation.z,
+            to.rotor.orientation.w,
+          );
+          replayRotorPivot.quaternion.copy(rotorFrom.slerp(rotorTo, alpha));
+          rotorAngleRef.current = normalizedAngle(
+            2 * Math.atan2(
+              replayRotorPivot.quaternion.y,
+              replayRotorPivot.quaternion.w,
+            ),
+          );
+
+          if (replayElapsedMs >= finalSample.simulatedAtMs) {
+            const visiblePocketIndex =
+              authoritativeReplayPocketIndexFromWorldState(
+                replayBallMesh.position,
+                replayRotorPivot.quaternion,
+              );
+            const visiblePocketNumber =
+              EUROPEAN_SEQUENCE[visiblePocketIndex] ?? null;
+
+            stage.dataset.authoritativeReplayComplete = 'true';
+            stage.dataset.authoritativeReplayFinal = JSON.stringify({
+              roundId: authoritativeReplay.roundId,
+              trajectoryHash: authoritativeReplay.trajectoryHash,
+              actual: {
+                ballPosition: {
+                  x: replayBallMesh.position.x,
+                  y: replayBallMesh.position.y,
+                  z: replayBallMesh.position.z,
+                },
+                ballOrientation: {
+                  x: replayBallMesh.quaternion.x,
+                  y: replayBallMesh.quaternion.y,
+                  z: replayBallMesh.quaternion.z,
+                  w: replayBallMesh.quaternion.w,
+                },
+                rotorOrientation: {
+                  x: replayRotorPivot.quaternion.x,
+                  y: replayRotorPivot.quaternion.y,
+                  z: replayRotorPivot.quaternion.z,
+                  w: replayRotorPivot.quaternion.w,
+                },
+                visiblePocketIndex,
+                visiblePocketNumber,
+              },
+              expected: {
+                ballPosition: finalSample.ball.position,
+                ballOrientation: finalSample.ball.orientation,
+                rotorOrientation: finalSample.rotor.orientation,
+                finalPocketIndex: authoritativeReplay.finalPocket?.index ?? null,
+                finalPocketNumber: authoritativeReplay.finalPocket?.number ?? null,
+                winningNumber: authoritativeReplay.winningNumber,
+              },
+            });
+          }
+
+          controls?.update();
+          renderer?.render(scene, camera);
+          frame = requestAnimationFrame(render);
+          return;
+        }
+
         accumulator += Math.min((now - lastTime) / 1000, 0.1);
         lastTime = now;
         while (accumulator >= FIXED_TIMESTEP) {
@@ -8306,7 +9918,17 @@ export function Part2SceneViewport({
   );
 
   return (
-    <div ref={stageRef} className="scene-stage" data-testid="canvas-viewport">
+    <div
+      ref={stageRef}
+      className="scene-stage"
+      data-testid="canvas-viewport"
+      data-authoritative-replay={
+        authoritativeReplayRound?.status === 'SETTLED' &&
+        authoritativeReplayRound.trajectory.length > 0
+          ? authoritativeReplayRound.trajectoryHash
+          : undefined
+      }
+    >
       <canvas
         ref={canvasRef}
         tabIndex={0}

@@ -25,10 +25,16 @@ import {
 } from "./types";
 
 function formatCredits(cents: number) {
-  return `$${(cents / 100).toLocaleString("en-US", {
+  return `${(cents / 100).toLocaleString("en-US", {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
   })}`;
+}
+
+const IDLE_MICRO_CENTS_PER_CENT = 1_000_000;
+
+function formatCreditsFromMicrocents(microcents: number) {
+  return formatCredits(microcents / IDLE_MICRO_CENTS_PER_CENT);
 }
 
 const BUSINESS_LEVELS_PER_BUSINESS = 9;
@@ -148,24 +154,22 @@ function renderBusinessLevelTree(
             </div>
           </header>
 
-          <div class="business-level-node-economy">
-            <div>
-              <span>SAATLİK GELİR</span>
-              <strong>${incomeLabel}</strong>
-            </div>
-            <div>
-              <span>GÜNLÜK GELİR</span>
-              <strong>${dailyLabel}</strong>
-            </div>
-            <div>
-              <span>YATIRIM</span>
-              <strong>${costLabel}</strong>
-            </div>
-            <div>
-              <span>GERİ DÖNÜŞ</span>
-              <strong>${stage.targetRoiDays} gün</strong>
-            </div>
+          <div class="business-level-node-income">
+            <span>SAATLİK GELİR</span>
+            <strong>${incomeLabel}</strong>
+            <small>GÜNLÜK GELİR · ${dailyLabel}</small>
           </div>
+
+          <dl class="business-level-node-meta">
+            <div>
+              <dt>YATIRIM</dt>
+              <dd>${costLabel}</dd>
+            </div>
+            <div>
+              <dt>GERİ DÖNÜŞ</dt>
+              <dd>${stage.targetRoiDays} gün</dd>
+            </div>
+          </dl>
 
           ${actionMarkup}
         </div>
@@ -289,18 +293,22 @@ function renderVaultLevelTree(
             <span class="vault-level-node-state">${stateLabel}</span>
           </header>
 
-          <div class="vault-level-node-economy">
-            <div>
-              <span>KAPASİTE</span>
-              <strong>${vault.capacityHours} saat</strong>
-              <small>Pasif gelir depolama süresi</small>
-            </div>
-            <div>
-              <span>${vault.level === 1 ? "BAŞLANGIÇ" : "YÜKSELTME BEDELİ"}</span>
-              <strong>${costLabel}</strong>
-              <small>${costMeta}</small>
-            </div>
+          <div class="vault-level-node-capacity">
+            <span>KAPASİTE</span>
+            <strong>${vault.capacityHours} saat</strong>
+            <small>Pasif gelir depolama süresi</small>
           </div>
+
+          <dl class="vault-level-node-meta">
+            <div>
+              <dt>${vault.level === 1 ? "BAŞLANGIÇ" : "YÜKSELTME BEDELİ"}</dt>
+              <dd>${costLabel}</dd>
+            </div>
+            <div>
+              <dt>MALİYET KURALI</dt>
+              <dd>${costMeta || "—"}</dd>
+            </div>
+          </dl>
 
           ${actionMarkup}
         </div>
@@ -310,9 +318,69 @@ function renderVaultLevelTree(
 }
 
 export const BUSINESSES_MARKUP = `
-  <main class="businesses-page" aria-labelledby="businesses-title">
+  <div class="businesses-workspace">
+    <aside class="businesses-sidebar" aria-label="Fahrinin Yolu navigasyon">
+      <a class="businesses-sidebar-brand" href="/" aria-label="Fahrinin Yolu ana menü">
+        <span class="businesses-sidebar-crest" aria-hidden="true">FY</span>
+        <span>
+          <strong>FAHRİNİN YOLU</strong>
+          <small>CLUB EMPIRE</small>
+        </span>
+      </a>
+
+      <nav class="businesses-sidebar-nav" aria-label="Oyunlar ve kulüp bölümleri">
+        <span class="businesses-sidebar-section">OYUNLAR</span>
+
+        <a class="businesses-sidebar-item" href="/slot">
+          <span class="businesses-sidebar-item-icon" aria-hidden="true">▦</span>
+          <span>SLOT</span>
+        </a>
+        <a class="businesses-sidebar-item" href="/roulette">
+          <span class="businesses-sidebar-item-icon" aria-hidden="true">◎</span>
+          <span>RULET</span>
+        </a>
+        <a class="businesses-sidebar-item" href="/cadi-kazan">
+          <span class="businesses-sidebar-item-icon" aria-hidden="true">✦</span>
+          <span>CADI KAZAN</span>
+        </a>
+
+        <span class="businesses-sidebar-section businesses-sidebar-section--club">KULÜP</span>
+
+        <a
+          class="businesses-sidebar-item is-active"
+          href="/businesses"
+          aria-current="page"
+        >
+          <span class="businesses-sidebar-item-icon" aria-hidden="true">▣</span>
+          <span>İŞLETMELER</span>
+        </a>
+        <span class="businesses-sidebar-item is-disabled" aria-disabled="true">
+          <span class="businesses-sidebar-item-icon" aria-hidden="true">$</span>
+          <span>FİNANS</span>
+        </span>
+        <span class="businesses-sidebar-item is-disabled" aria-disabled="true">
+          <span class="businesses-sidebar-item-icon" aria-hidden="true">◆</span>
+          <span>KULÜP</span>
+        </span>
+        <span class="businesses-sidebar-item is-disabled" aria-disabled="true">
+          <span class="businesses-sidebar-item-icon" aria-hidden="true">⚙</span>
+          <span>AYARLAR</span>
+        </span>
+      </nav>
+
+      <div class="businesses-sidebar-footer">
+        <span>FAHRİNİN YOLU</span>
+        <small>KULÜP OPERASYON SİSTEMİ</small>
+      </div>
+    </aside>
+
+    <main class="businesses-page" aria-labelledby="businesses-title">
     <header class="businesses-header">
       <div class="businesses-header-nav">
+        <a class="businesses-mobile-brand" href="/" aria-label="Fahrinin Yolu ana menü">
+          <span class="businesses-mobile-brand-crest" aria-hidden="true">FY</span>
+          <span>FAHRİNİN YOLU</span>
+        </a>
         <span class="businesses-header-status"><i aria-hidden="true"></i>KULÜP OPERASYON MERKEZİ</span>
         <a class="back-link" href="/" aria-label="Ana menüye dön">
           <span class="back-link-icon" aria-hidden="true">←</span>
@@ -440,15 +508,15 @@ export const BUSINESSES_MARKUP = `
 
         <section class="business-detail-summary" aria-label="Mevcut işletme özeti">
           <div>
+            <span>BİRİKMİŞ GELİR</span>
+            <strong data-idle-detail-accrued>—</strong>
+          </div>
+          <div>
             <span>SAATLİK GELİR</span>
             <strong data-idle-detail-hourly>—</strong>
           </div>
           <div>
-            <span>GÜNLÜK GELİR</span>
-            <strong data-idle-detail-daily>—</strong>
-          </div>
-          <div>
-            <span>KASA</span>
+            <span>KASA KAPASİTESİ</span>
             <strong data-idle-detail-vault>—</strong>
           </div>
         </section>
@@ -492,8 +560,34 @@ export const BUSINESSES_MARKUP = `
         </div>
       </aside>
     </div>
-  </main>
+    </main>
+  </div>
 `;
+
+function hydrateBusinessMedia(root: HTMLElement) {
+  const images = root.querySelectorAll<HTMLImageElement>("[data-business-image]");
+
+  for (const image of images) {
+    const slot = image.closest<HTMLElement>("[data-business-image-slot]");
+    if (!slot) continue;
+
+    const markReady = () => {
+      slot.dataset.imageState = "ready";
+    };
+    const markPlaceholder = () => {
+      slot.dataset.imageState = "placeholder";
+    };
+
+    if (image.complete) {
+      if (image.naturalWidth > 0) markReady();
+      else markPlaceholder();
+      continue;
+    }
+
+    image.addEventListener("load", markReady, { once: true });
+    image.addEventListener("error", markPlaceholder, { once: true });
+  }
+}
 
 export class BusinessesClient {
   private envelope: IdleStateEnvelope | null = null;
@@ -507,6 +601,7 @@ export class BusinessesClient {
   constructor(private readonly root: HTMLElement) {
     this.root.addEventListener("click", this.handleClick);
     this.root.addEventListener("keydown", this.handleKeyDown);
+    hydrateBusinessMedia(this.root);
     void this.refresh();
     this.timer = window.setInterval(() => this.render(), 1_000);
   }
@@ -780,8 +875,8 @@ export class BusinessesClient {
     const levelNode = this.root.querySelector<HTMLElement>("[data-idle-detail-level]");
     const levelBadgeNode = this.root.querySelector<HTMLElement>("[data-idle-detail-level-badge]");
     const stateNode = this.root.querySelector<HTMLElement>("[data-idle-detail-state]");
+    const accruedNode = this.root.querySelector<HTMLElement>("[data-idle-detail-accrued]");
     const hourlyNode = this.root.querySelector<HTMLElement>("[data-idle-detail-hourly]");
-    const dailyNode = this.root.querySelector<HTMLElement>("[data-idle-detail-daily]");
     const vaultNode = this.root.querySelector<HTMLElement>("[data-idle-detail-vault]");
     const businessLevelTreeNode = this.root.querySelector<HTMLElement>("[data-idle-business-level-tree]");
     const vaultLevelTreeNode = this.root.querySelector<HTMLElement>("[data-idle-vault-level-tree]");
@@ -792,8 +887,8 @@ export class BusinessesClient {
       || !levelNode
       || !levelBadgeNode
       || !stateNode
+      || !accruedNode
       || !hourlyNode
-      || !dailyNode
       || !vaultNode
       || !businessLevelTreeNode
       || !vaultLevelTreeNode
@@ -816,13 +911,18 @@ export class BusinessesClient {
           ? "AKTİF"
           : "MAX SEVİYE";
 
+    accruedNode.textContent = formatCreditsFromMicrocents(
+      business.liveAccruedMicrocents,
+    );
     hourlyNode.textContent = currentStage
       ? `${formatCredits(currentStage.hourlyIncomeDisplayCents)} /sa`
       : "$0.00 /sa";
-    dailyNode.textContent = currentStage
-      ? `${formatCredits(currentStage.dailyIncomeCents)} /gün`
-      : "$0.00 /gün";
-    vaultNode.textContent = `Lv${business.vaultLevel} · ${vault.capacityHours}sa`;
+    const vaultCapacityMicrocents = business.businessLevel === null
+      ? 0
+      : business.liveAccruedMicrocents + business.liveRemainingCapacityMicrocents;
+    vaultNode.textContent = business.businessLevel === null
+      ? "$0.00"
+      : formatCreditsFromMicrocents(vaultCapacityMicrocents);
 
     const detailBusy = this.busyBusinesses.has(business.businessId);
 

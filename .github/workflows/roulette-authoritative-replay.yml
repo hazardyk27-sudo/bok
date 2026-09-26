@@ -1,0 +1,110 @@
+name: Roulette Authoritative Replay Gate
+
+concurrency:
+  group: roulette-authoritative-replay-${{ github.ref }}
+  cancel-in-progress: true
+
+on:
+  push:
+    branches:
+      - feature/roulette
+    paths:
+      - '.github/workflows/roulette-authoritative-replay.yml'
+      - 'artifacts/roulette-physics-lab/src/App.tsx'
+      - 'artifacts/roulette-physics-lab/src/Part2SceneViewport.tsx'
+      - 'artifacts/api-server/src/physics-lab/simulation.ts'
+      - 'lib/roulette-physics-config.ts'
+      - 'scripts/roulette-authoritative-replay-runtime.mjs'
+      - 'artifacts/cascade-8/src/roulettePhysicsConfig.test.ts'
+      - 'package.json'
+      - 'pnpm-lock.yaml'
+      - 'pnpm-workspace.yaml'
+  workflow_dispatch:
+
+jobs:
+  replay:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10.15.0
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install workspace
+        run: pnpm install --frozen-lockfile
+
+      - name: Install Chromium
+        run: pnpm exec playwright install --with-deps chromium
+
+      - name: Build TypeScript project references
+        run: pnpm run typecheck:libs
+
+      - name: Typecheck roulette physics lab
+        run: pnpm --filter @workspace/roulette-physics-lab run typecheck
+
+      - name: Run roulette replay contract tests
+        env:
+          PORT: '4173'
+          BASE_PATH: /
+        run: pnpm --filter @workspace/cascade-8 exec vitest run src/roulettePhysicsConfig.test.ts
+
+      - name: Generate authoritative replay fixture
+        shell: bash
+        run: |
+          set -euo pipefail
+          pnpm exec tsx -e "(async()=>{const fs=await import('node:fs');const {simulatePhysicsLabRound}=await import('./artifacts/api-server/src/physics-lab/simulation.ts');const simulation=await simulatePhysicsLabRound('replay-probe-61005','61005');if(simulation.status!=='SETTLED'||simulation.finalPocketNumber===null||simulation.trajectory.length===0){console.error('REPLAY_FIXTURE_SIMULATION_INVALID',JSON.stringify({status:simulation.status,errorCode:simulation.errorCode,finalPocketNumber:simulation.finalPocketNumber,trajectory:simulation.trajectory.length}));process.exit(1)}const round={roundId:'replay-probe-61005',status:simulation.status,winningNumber:simulation.finalPocketNumber,finalPocket:simulation.finalPocketIndex===null||simulation.finalPocketNumber===null?null:{index:simulation.finalPocketIndex,number:simulation.finalPocketNumber},trajectoryHash:simulation.trajectoryHash,trajectory:simulation.trajectory};fs.writeFileSync('artifacts/roulette-physics-lab/public/roulette-replay-fixture.json',JSON.stringify(round));const finalSample=simulation.trajectory.at(-1);console.log('REPLAY_FIXTURE_READY',JSON.stringify({status:simulation.status,number:simulation.finalPocketNumber,stableSettleStep:simulation.stableSettleStep,samples:simulation.trajectory.length,trajectoryHash:simulation.trajectoryHash,finalStep:finalSample?.step,finalAtMs:finalSample?.simulatedAtMs}))})().catch(error=>{console.error(error);process.exit(1)})"
+
+      - name: Start roulette physics lab
+        shell: bash
+        run: |
+          PORT=4173 BASE_PATH=/ pnpm --filter @workspace/roulette-physics-lab run dev > /tmp/roulette-replay-vite.log 2>&1 &
+          echo $! > /tmp/roulette-replay-vite.pid
+          for attempt in {1..60}; do
+            if curl --fail --silent http://127.0.0.1:4173/ > /dev/null; then
+              exit 0
+            fi
+            sleep 1
+          done
+          cat /tmp/roulette-replay-vite.log
+          exit 1
+
+      - name: Run authoritative replay transform gate
+        env:
+          ROULETTE_REPLAY_URL: http://127.0.0.1:4173/?part6ReplayProbe=1
+          ROULETTE_REPLAY_TIMEOUT_MS: '45000'
+          ROULETTE_REPLAY_TOLERANCE: '0.000001'
+          ROULETTE_REPLAY_OUTPUT: artifacts/roulette-physics-lab/authoritative-replay-runtime.json
+        run: node scripts/roulette-authoritative-replay-runtime.mjs
+
+      - name: Show replay result
+        if: always()
+        shell: bash
+        run: |
+          if [ -f artifacts/roulette-physics-lab/authoritative-replay-runtime.json ]; then
+            cat artifacts/roulette-physics-lab/authoritative-replay-runtime.json
+          fi
+          if [ -f /tmp/roulette-replay-vite.log ]; then
+            tail -n 120 /tmp/roulette-replay-vite.log
+          fi
+
+      - name: Upload replay evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: roulette-authoritative-replay
+          path: |
+            artifacts/roulette-physics-lab/authoritative-replay-runtime.json
+            artifacts/roulette-physics-lab/public/roulette-replay-fixture.json
+            /tmp/roulette-replay-vite.log
+          if-no-files-found: warn

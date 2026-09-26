@@ -21,7 +21,8 @@ import {
   type RouletteRoundRecord,
   type RouletteSnapshot,
 } from "./types";
-import { chooseLuckyNumbers, chooseMultipliers, createCommitment, newId, uniformWinningNumber } from "./rng";
+import { chooseLuckyNumbers, chooseMultipliers, createCommitment, newId } from "./rng";
+import { physicsLabRepository } from "../physics-lab/repository";
 
 const LEADER_LOCK_KEY = 834_118;
 const REVEAL_STEP_MS = MULTIPLIER_REVEAL_CONFIG.stepMs;
@@ -52,6 +53,7 @@ type RoundRow = {
   settling_until: Date;
   intermission_until: Date;
   winning_number: number | null;
+  physics_round_id: string | null;
   lucky_numbers: number[];
   multipliers: RouletteMultiplier[];
   commitment_hash: string;
@@ -271,6 +273,33 @@ export class RouletteRepository {
     return { sessionId: result.rows[0].session_id as string, balanceCents: result.rows[0].balance_cents as number };
   }
 
+  async getReplayForRound(roundId: string) {
+    const result = await pool.query(
+      "SELECT * FROM roulette_rounds WHERE id = $1 LIMIT 1",
+      [roundId],
+    );
+    if (!result.rows[0]) throw new Error("ROULETTE_ROUND_NOT_FOUND");
+    const round = this.mapRound(result.rows[0] as RoundRow);
+    if (Date.now() < round.lockedUntil.getTime()) {
+      throw new Error("ROULETTE_REPLAY_NOT_AVAILABLE");
+    }
+    if (!round.physicsRoundId) throw new Error("ROULETTE_PHYSICS_ROUND_MISSING");
+    const replay = await physicsLabRepository.getRound(round.physicsRoundId);
+    if (
+      !replay ||
+      replay.status !== "SETTLED" ||
+      !replay.finalPocket ||
+      replay.winningNumber === null ||
+      replay.trajectory.length < 2
+    ) {
+      throw new Error("ROULETTE_PHYSICS_REPLAY_INVALID");
+    }
+    if (replay.winningNumber !== round.winningNumber) {
+      throw new Error("ROULETTE_PHYSICS_RESULT_MISMATCH");
+    }
+    return replay;
+  }
+
   async getRecentResults(limit = 12) {
     const bounded = Math.min(30, Math.max(1, Math.floor(limit)));
     const result = await pool.query(
@@ -336,6 +365,21 @@ export class RouletteRepository {
   }
 
   private async createRound(sequence: number): Promise<RouletteRoundRecord> {
+    let physicsRound: Awaited<ReturnType<typeof physicsLabRepository.createRound>> | null = null;
+    for (let attempt = 0; attempt < 3; attempt += 1) {
+      const candidate = await physicsLabRepository.createRound();
+      if (
+        candidate.status === "SETTLED" &&
+        candidate.finalPocket &&
+        candidate.winningNumber !== null &&
+        candidate.trajectory.length >= 2
+      ) {
+        physicsRound = candidate;
+        break;
+      }
+    }
+    if (!physicsRound) throw new Error("ROULETTE_PHYSICS_ROUND_INVALID");
+
     const startsAt = new Date();
     const boundaries: Date[] = [];
     let cursor = startsAt.getTime();
@@ -344,21 +388,50 @@ export class RouletteRepository {
       boundaries.push(new Date(cursor));
     }
     const [openUntil, lastCallUntil, lockedUntil, revealUntil, spinningUntil, resultUntil, settlingUntil, intermissionUntil] = boundaries;
+    if (
+      !physicsRound.finalPocket ||
+      physicsRound.winningNumber === null ||
+      physicsRound.finalPocket.number !== physicsRound.winningNumber
+    ) {
+      throw new Error("ROULETTE_PHYSICS_RESULT_MISMATCH");
+    }
+
     const id = newId();
-    const winningNumber = uniformWinningNumber();
+    const winningNumber = physicsRound.finalPocket.number;
     const luckyNumbers = chooseLuckyNumbers();
     const multipliers = chooseMultipliers(luckyNumbers.length);
     const commitmentHash = createCommitment(id, winningNumber, luckyNumbers, multipliers);
     const result = await pool.query(
       `INSERT INTO roulette_rounds
-       (id, sequence, phase, starts_at, open_until, last_call_until, locked_until, spinning_until, result_until, reveal_until, settling_until, intermission_until, winning_number, lucky_numbers, multipliers, commitment_hash, version)
-       VALUES ($1, $2, 'OPEN', $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13::jsonb, $14::jsonb, $15, 1)
+       (id, sequence, phase, starts_at, open_until, last_call_until, locked_until, spinning_until, result_until, reveal_until, settling_until, intermission_until, winning_number, physics_round_id, lucky_numbers, multipliers, commitment_hash, version)
+       VALUES ($1, $2, 'OPEN', $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14::jsonb, $15::jsonb, $16, 1)
        RETURNING *`,
-      [id, sequence, startsAt, openUntil, lastCallUntil, lockedUntil, spinningUntil, resultUntil, revealUntil, settlingUntil, intermissionUntil, winningNumber, JSON.stringify(luckyNumbers), JSON.stringify(multipliers), commitmentHash],
+      [
+        id,
+        sequence,
+        startsAt,
+        openUntil,
+        lastCallUntil,
+        lockedUntil,
+        spinningUntil,
+        resultUntil,
+        revealUntil,
+        settlingUntil,
+        intermissionUntil,
+        winningNumber,
+        physicsRound.roundId,
+        JSON.stringify(luckyNumbers),
+        JSON.stringify(multipliers),
+        commitmentHash,
+      ],
     );
     const round = this.mapRound(result.rows[0] as RoundRow);
     this.currentRound = round;
-    await this.recordEvent(round, "ROUND_OPEN", { phase: round.phase });
+    await this.recordEvent(round, "ROUND_OPEN", {
+      phase: round.phase,
+      physicsRoundId: physicsRound.roundId,
+      trajectoryHash: physicsRound.trajectoryHash,
+    });
     this.publish("phase", round);
     return round;
   }
@@ -575,6 +648,7 @@ export class RouletteRepository {
       settlingUntil: new Date(row.settling_until),
       intermissionUntil: new Date(row.intermission_until),
       winningNumber: row.winning_number,
+      physicsRoundId: row.physics_round_id ?? null,
       luckyNumbers: safeJson<number[]>(row.lucky_numbers, []),
       multipliers: safeJson<RouletteMultiplier[]>(row.multipliers, []),
       commitmentHash: row.commitment_hash,

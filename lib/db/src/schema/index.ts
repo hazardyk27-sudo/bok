@@ -16,6 +16,7 @@ export const rouletteRounds = pgTable(
     settlingUntil: timestamp("settling_until", { withTimezone: true }).notNull(),
     intermissionUntil: timestamp("intermission_until", { withTimezone: true }).notNull(),
     winningNumber: integer("winning_number"),
+    physicsRoundId: text("physics_round_id"),
     luckyNumbers: jsonb("lucky_numbers").notNull(),
     multipliers: jsonb("multipliers").notNull(),
     commitmentHash: text("commitment_hash").notNull(),

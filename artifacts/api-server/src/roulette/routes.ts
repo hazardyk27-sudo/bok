@@ -25,7 +25,13 @@ function sendError(res: Response, error: unknown) {
     : message === "INSUFFICIENT_ROULETTE_CREDITS" ? 402
       : message === "ROULETTE_COORDINATOR_UNAVAILABLE" ? 503
         : message === "ROULETTE_ROUND_GENERATION_PAUSED" ? 503
-        : 400;
+        : message === "ROULETTE_PHYSICS_ROUND_INVALID" ? 503
+          : message === "ROULETTE_PHYSICS_REPLAY_INVALID" ? 503
+            : message === "ROULETTE_PHYSICS_RESULT_MISMATCH" ? 503
+              : message === "ROULETTE_REPLAY_NOT_AVAILABLE" ? 409
+                : message === "ROULETTE_ROUND_NOT_FOUND" ? 404
+                  : message === "ROULETTE_PHYSICS_ROUND_MISSING" ? 503
+                    : 400;
   res.status(status).json({ error: message });
 }
 
@@ -60,6 +66,14 @@ router.get("/roulette/wallet", async (req, res) => {
 router.get("/roulette/history", async (req, res) => {
   try {
     res.json({ results: await rouletteRepository.getRecentResults(Number(req.query.limit ?? 12)) });
+  } catch (error) {
+    sendError(res, error);
+  }
+});
+
+router.get("/roulette/rounds/:roundId/replay", async (req, res) => {
+  try {
+    res.json(await rouletteRepository.getReplayForRound(req.params.roundId));
   } catch (error) {
     sendError(res, error);
   }

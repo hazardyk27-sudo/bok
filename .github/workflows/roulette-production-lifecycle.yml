@@ -1,0 +1,275 @@
+name: Roulette Production Lifecycle E2E
+
+concurrency:
+  group: roulette-production-lifecycle-${{ github.ref }}
+  cancel-in-progress: true
+
+on:
+  push:
+    branches:
+      - feature/roulette
+    paths:
+      - '.github/workflows/roulette-production-lifecycle.yml'
+      - 'artifacts/api-server/src/roulette/**'
+      - 'artifacts/api-server/src/physics-lab/**'
+      - 'artifacts/cascade-8/src/rouletteClient.ts'
+      - 'artifacts/cascade-8/src/roulettePhysicsReplay.ts'
+      - 'artifacts/cascade-8/src/rouletteProductionReplayProbe.ts'
+      - 'artifacts/cascade-8/roulette-production-replay-probe.html'
+      - 'lib/roulette-physics-config.ts'
+      - 'lib/db/src/schema/index.ts'
+      - 'scripts/roulette-production-lifecycle-browser.mjs'
+      - 'package.json'
+      - 'pnpm-lock.yaml'
+      - 'pnpm-workspace.yaml'
+  workflow_dispatch:
+
+jobs:
+  lifecycle:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/roulette_e2e
+      ROULETTE_ROUND_GENERATION_PAUSED: 'false'
+
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: roulette_e2e
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d roulette_e2e"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10.15.0
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install workspace
+        run: pnpm install --frozen-lockfile
+
+      - name: Install Chromium
+        run: pnpm exec playwright install --with-deps chromium
+
+      - name: Provision isolated roulette database
+        run: pnpm --filter @workspace/db run push-force
+
+      - name: Build TypeScript project references
+        run: pnpm run typecheck:libs
+
+      - name: Typecheck production roulette packages
+        run: |
+          pnpm --filter @workspace/api-server run typecheck
+          pnpm --filter @workspace/cascade-8 run typecheck
+
+      - name: Lock production authority contract
+        env:
+          PORT: '4173'
+          BASE_PATH: /
+        run: pnpm --filter @workspace/cascade-8 exec vitest run src/roulettePhysicsConfig.test.ts
+
+      - name: Build API server
+        run: pnpm --filter @workspace/api-server run build
+
+      - name: Start production API and create physics-authored roulette round
+        shell: bash
+        run: |
+          set -euo pipefail
+          PORT=8080 node artifacts/api-server/dist/index.mjs > /tmp/roulette-production-api.log 2>&1 &
+          echo $! > /tmp/roulette-production-api.pid
+          for attempt in {1..120}; do
+            if curl --fail --silent http://127.0.0.1:8080/api/healthz > /tmp/roulette-health.json; then
+              exit 0
+            fi
+            sleep 1
+          done
+          cat /tmp/roulette-production-api.log
+          exit 1
+
+      - name: Verify OPEN snapshot hides result and replay is locked
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl --fail --silent --show-error             http://127.0.0.1:8080/api/roulette/session             -o /tmp/roulette-production-open.json
+          node <<'NODE'
+          const fs = require('fs');
+          const payload = JSON.parse(fs.readFileSync('/tmp/roulette-production-open.json', 'utf8'));
+          const round = payload.snapshot?.round;
+          if (!round?.id) throw new Error('ROULETTE_E2E_OPEN_ROUND_MISSING');
+          if (round.phase !== 'OPEN') throw new Error('ROULETTE_E2E_EXPECTED_OPEN:' + round.phase);
+          if (round.winningNumber !== null) throw new Error('ROULETTE_E2E_RESULT_LEAKED_BEFORE_RESULT');
+          fs.writeFileSync('/tmp/roulette-production-round-id', round.id);
+          console.log('ROULETTE_PRODUCTION_OPEN_PASS ' + JSON.stringify({
+            roundId: round.id,
+            phase: round.phase,
+            winningNumber: round.winningNumber,
+            commitmentHash: round.commitmentHash,
+          }));
+          NODE
+          ROUND_ID="$(cat /tmp/roulette-production-round-id)"
+          STATUS="$(curl --silent --output /tmp/roulette-prelock-replay.json --write-out '%{http_code}'             "http://127.0.0.1:8080/api/roulette/rounds/$ROUND_ID/replay")"
+          if [ "$STATUS" != "409" ]; then
+            echo "Expected replay endpoint 409 before lock, got $STATUS"
+            cat /tmp/roulette-prelock-replay.json
+            exit 1
+          fi
+          echo "ROULETTE_PRODUCTION_PRELOCK_REPLAY_PASS status=$STATUS"
+
+      - name: Verify DB physics authority and fast-forward isolated round
+        shell: bash
+        run: |
+          set -euo pipefail
+          export ROULETTE_E2E_ROUND_ID="$(cat /tmp/roulette-production-round-id)"
+          pnpm --filter @workspace/api-server exec tsx src/roulette/productionLifecycleProbe.ts
+
+      - name: Restart API on fast-forwarded round
+        shell: bash
+        run: |
+          set -euo pipefail
+          kill "$(cat /tmp/roulette-production-api.pid)" || true
+          for attempt in {1..40}; do
+            if ! kill -0 "$(cat /tmp/roulette-production-api.pid)" 2>/dev/null; then
+              break
+            fi
+            sleep 0.1
+          done
+          PORT=8080 node artifacts/api-server/dist/index.mjs >> /tmp/roulette-production-api.log 2>&1 &
+          echo $! > /tmp/roulette-production-api.pid
+          for attempt in {1..80}; do
+            if curl --fail --silent http://127.0.0.1:8080/api/healthz > /dev/null; then
+              break
+            fi
+            sleep 1
+          done
+          ROUND_ID="$(cat /tmp/roulette-production-round-id)"
+          for attempt in {1..40}; do
+            curl --fail --silent --show-error               http://127.0.0.1:8080/api/roulette/snapshot               -o /tmp/roulette-production-result.json
+            PHASE="$(node -e "const p=require('/tmp/roulette-production-result.json');process.stdout.write(p.round.phase)")"
+            if [ "$PHASE" = "RESULT" ]; then
+              exit 0
+            fi
+            sleep 0.25
+          done
+          cat /tmp/roulette-production-result.json
+          cat /tmp/roulette-production-api.log
+          exit 1
+
+      - name: Verify RESULT snapshot and round-specific replay
+        shell: bash
+        run: |
+          set -euo pipefail
+          ROUND_ID="$(cat /tmp/roulette-production-round-id)"
+          curl --fail --silent --show-error             "http://127.0.0.1:8080/api/roulette/rounds/$ROUND_ID/replay"             -o /tmp/roulette-production-replay.json
+          node <<'NODE'
+          const fs = require('fs');
+          const snapshot = JSON.parse(fs.readFileSync('/tmp/roulette-production-result.json', 'utf8'));
+          const db = JSON.parse(fs.readFileSync('/tmp/roulette-production-db.json', 'utf8'));
+          const replay = JSON.parse(fs.readFileSync('/tmp/roulette-production-replay.json', 'utf8'));
+          const round = snapshot.round;
+          if (round.id !== db.rouletteRoundId) throw new Error('ROULETTE_E2E_ROUND_CHANGED');
+          if (round.phase !== 'RESULT') throw new Error('ROULETTE_E2E_RESULT_PHASE_MISSING');
+          if (round.winningNumber !== db.winningNumber) throw new Error('ROULETTE_E2E_SNAPSHOT_RESULT_MISMATCH');
+          if (replay.roundId !== db.physicsRoundId) throw new Error('ROULETTE_E2E_REPLAY_PHYSICS_ID_MISMATCH');
+          if (replay.status !== 'SETTLED') throw new Error('ROULETTE_E2E_REPLAY_NOT_SETTLED');
+          if (replay.trajectoryHash !== db.trajectoryHash) throw new Error('ROULETTE_E2E_TRAJECTORY_HASH_MISMATCH');
+          if (replay.finalPocket?.index !== db.finalPocketIndex) throw new Error('ROULETTE_E2E_POCKET_INDEX_MISMATCH');
+          if (replay.finalPocket?.number !== db.finalPocketNumber) throw new Error('ROULETTE_E2E_POCKET_NUMBER_MISMATCH');
+          if (replay.winningNumber !== db.winningNumber) throw new Error('ROULETTE_E2E_WINNING_NUMBER_MISMATCH');
+          if (!Array.isArray(replay.trajectory) || replay.trajectory.length !== db.trajectorySamples) {
+            throw new Error('ROULETTE_E2E_TRAJECTORY_SAMPLE_MISMATCH');
+          }
+          console.log('ROULETTE_PRODUCTION_RESULT_REPLAY_PASS ' + JSON.stringify({
+            rouletteRoundId: round.id,
+            physicsRoundId: replay.roundId,
+            winningNumber: round.winningNumber,
+            finalPocket: replay.finalPocket,
+            trajectoryHash: replay.trajectoryHash,
+            trajectorySamples: replay.trajectory.length,
+          }));
+          NODE
+
+      - name: Prepare production replay visual asset
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p artifacts/cascade-8/public/physics-lab
+          cp artifacts/roulette-physics-lab/public/rou-lp-test-04.glb             artifacts/cascade-8/public/physics-lab/rou-lp-test-04.glb
+          test "$(wc -c < artifacts/cascade-8/public/physics-lab/rou-lp-test-04.glb)" -eq 4663292
+
+      - name: Start production client Vite probe
+        shell: bash
+        run: |
+          set -euo pipefail
+          PORT=4173 BASE_PATH=/ pnpm --filter @workspace/cascade-8 run dev             > /tmp/roulette-production-vite.log 2>&1 &
+          echo $! > /tmp/roulette-production-vite.pid
+          for attempt in {1..60}; do
+            if curl --fail --silent               http://127.0.0.1:4173/roulette-production-replay-probe.html               > /dev/null; then
+              exit 0
+            fi
+            sleep 1
+          done
+          cat /tmp/roulette-production-vite.log
+          exit 1
+
+      - name: Verify production browser exact replay and visible pocket
+        shell: bash
+        run: |
+          set -euo pipefail
+          DB_META="$(cat /tmp/roulette-production-db.json)"
+          export ROULETTE_E2E_ROUND_ID="$(node -e "const p=JSON.parse(process.argv[1]);process.stdout.write(p.rouletteRoundId)" "$DB_META")"
+          export ROULETTE_E2E_WINNING_NUMBER="$(node -e "const p=JSON.parse(process.argv[1]);process.stdout.write(String(p.winningNumber))" "$DB_META")"
+          export ROULETTE_E2E_API_BASE="http://127.0.0.1:8080"
+          export ROULETTE_E2E_VITE_BASE="http://127.0.0.1:4173"
+          export ROULETTE_E2E_REPLAY_JSON="/tmp/roulette-production-replay.json"
+          node scripts/roulette-production-lifecycle-browser.mjs
+
+      - name: Show production lifecycle evidence
+        if: always()
+        shell: bash
+        run: |
+          for file in             /tmp/roulette-production-open.json             /tmp/roulette-production-db.json             /tmp/roulette-production-result.json             /tmp/roulette-production-browser.json; do
+            if [ -f "$file" ]; then
+              echo "===== $file ====="
+              cat "$file"
+            fi
+          done
+          if [ -f /tmp/roulette-production-api.log ]; then
+            echo "===== API LOG ====="
+            tail -n 160 /tmp/roulette-production-api.log
+          fi
+          if [ -f /tmp/roulette-production-vite.log ]; then
+            echo "===== VITE LOG ====="
+            tail -n 120 /tmp/roulette-production-vite.log
+          fi
+
+      - name: Upload production lifecycle evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: roulette-production-lifecycle
+          path: |
+            /tmp/roulette-production-open.json
+            /tmp/roulette-production-db.json
+            /tmp/roulette-production-result.json
+            /tmp/roulette-production-replay.json
+            /tmp/roulette-production-browser.json
+            /tmp/roulette-production-api.log
+            /tmp/roulette-production-vite.log
+          if-no-files-found: warn

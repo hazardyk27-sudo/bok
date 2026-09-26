@@ -1,0 +1,180 @@
+name: Roulette 20 Spin Reliability Checkpoint
+
+on:
+  push:
+    branches:
+      - feature/roulette
+    paths:
+      - '.github/workflows/roulette-20spin-reliability.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  statuses: write
+
+jobs:
+  reliability:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    strategy:
+      fail-fast: false
+      matrix:
+        start: [0, 5, 10, 15]
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10.15.0
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install workspace
+        run: pnpm install --frozen-lockfile
+
+      - name: Install Chromium
+        run: pnpm exec playwright install --with-deps chromium
+
+      - name: Build TypeScript project references
+        run: pnpm run typecheck:libs
+
+      - name: Typecheck roulette physics lab
+        run: pnpm --filter @workspace/roulette-physics-lab run typecheck
+
+      - name: Start roulette physics lab
+        shell: bash
+        run: |
+          PORT=4173 BASE_PATH=/ pnpm --filter @workspace/roulette-physics-lab run dev > /tmp/roulette-20spin-${{ matrix.start }}.log 2>&1 &
+          for attempt in {1..60}; do
+            if curl --fail --silent http://127.0.0.1:4173/ > /dev/null; then
+              exit 0
+            fi
+            sleep 1
+          done
+          cat /tmp/roulette-20spin-${{ matrix.start }}.log
+          exit 1
+
+      - name: Run five-spin reliability batch
+        env:
+          START_INDEX: ${{ matrix.start }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          ROULETTE_LAB_URL="http://127.0.0.1:4173/?part6Headless=1&part6SeedStartIndex=$START_INDEX&part6SeedCount=5&part6MaxDurationSeconds=20" \
+          ROULETTE_PART6_OUTPUT="artifacts/roulette-physics-lab/reliability20-$START_INDEX.json" \
+          ROULETTE_PART6_TIMEOUT_MS='180000' \
+          ROULETTE_PART6_EXPECTED_SEEDS='5' \
+          node scripts/roulette-part6-runtime.mjs > "reliability20-$START_INDEX.log" 2>&1
+
+          node - "$START_INDEX" <<'NODE'
+          const fs = require('fs');
+          const start = process.argv[2];
+          const path = 'artifacts/roulette-physics-lab/reliability20-' + start + '.json';
+          const data = JSON.parse(fs.readFileSync(path, 'utf8'));
+          const results = data.telemetry?.results ?? data.seedTelemetry ?? [];
+          if (results.length !== 5) throw new Error('Expected five results for batch ' + start);
+
+          for (const row of results) {
+            const out = {
+              seed: row.seed,
+              settled: row.settled,
+              timedOut: row.timedOut,
+              finalPocketNumber: row.finalPocketNumber,
+              finalPocketIndex: row.finalPocketIndex,
+              settleTime: row.settleTime,
+              lapCount: row.lapCount,
+              finalSpeed: row.finalSpeed,
+              finalRotorRelativeSpeed: row.finalRotorRelativeSpeed,
+              peakSpeed: row.peakSpeed,
+              velocitySpike: row.velocitySpike,
+              artificialAcceleration: row.artificialAcceleration,
+              escaped: row.escaped,
+              clipping: row.clipping,
+              tunneling: row.tunneling,
+              safetyPassed: row.safetyPassed,
+            };
+            console.log('RELIABILITY20_CASE ' + JSON.stringify(out));
+            if (!row.settled || row.timedOut) throw new Error(row.seed + ' did not settle');
+            if (row.finalPocketIndex == null || row.finalPocketNumber == null) throw new Error(row.seed + ' missing pocket result');
+            if (row.lapCount < 5) throw new Error(row.seed + ' below five laps: ' + row.lapCount);
+            if (row.velocitySpike || row.artificialAcceleration) throw new Error(row.seed + ' spike/artificial acceleration');
+            if (row.escaped || row.clipping || row.tunneling) throw new Error(row.seed + ' containment failure');
+          }
+
+          const minLapCount = Math.min(...results.map(x => Number(x.lapCount)));
+          console.log('RELIABILITY20_BATCH_PASS ' + JSON.stringify({
+            startIndex:Number(start),
+            seeds:results.map(x=>x.seed),
+            minLapCount,
+          }));
+          fs.writeFileSync(
+            'reliability20-' + start + '-summary.json',
+            JSON.stringify({
+              startIndex:Number(start),
+              seeds:results.map(x=>x.seed),
+              minLapCount,
+              allSettled:results.every(x=>x.settled && !x.timedOut),
+              allFiveLaps:results.every(x=>x.lapCount >= 5),
+              allSafety:results.every(x=>x.safetyPassed),
+            }, null, 2),
+          );
+          NODE
+
+      - name: Publish 20-spin batch status
+        if: always()
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          START_INDEX: ${{ matrix.start }}
+        shell: bash
+        run: |
+          node <<'NODE'
+          const fs = require('fs');
+          const start = process.env.START_INDEX;
+          const path = 'reliability20-' + start + '-summary.json';
+          let state = 'failure';
+          let description = 'batch ' + start + ': summary missing';
+          if (fs.existsSync(path)) {
+            const summary = JSON.parse(fs.readFileSync(path, 'utf8'));
+            const ok = summary.allSettled && summary.allFiveLaps && summary.allSafety;
+            state = ok ? 'success' : 'failure';
+            description =
+              'batch ' + start +
+              ': minLap=' + Number(summary.minLapCount).toFixed(3) +
+              ' settled=' + summary.allSettled +
+              ' safety=' + summary.allSafety;
+          }
+          fs.writeFileSync('/tmp/reliability20-status.json', JSON.stringify({
+            state,
+            context: 'roulette/reliability20-' + start,
+            description: description.slice(0, 140),
+            target_url:
+              'https://github.com/' + process.env.GITHUB_REPOSITORY +
+              '/actions/runs/' + process.env.GITHUB_RUN_ID,
+          }));
+          NODE
+          curl --fail-with-body --silent --show-error \
+            -X POST \
+            -H "Accept: application/vnd.github+json" \
+            -H "Authorization: Bearer $GH_TOKEN" \
+            -H "X-GitHub-Api-Version: 2022-11-28" \
+            "https://api.github.com/repos/$GITHUB_REPOSITORY/statuses/$GITHUB_SHA" \
+            --data-binary @/tmp/reliability20-status.json
+
+      - name: Upload evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: roulette-20spin-reliability-${{ matrix.start }}
+          path: |
+            artifacts/roulette-physics-lab/reliability20-${{ matrix.start }}.json
+            reliability20-${{ matrix.start }}.log
+            reliability20-${{ matrix.start }}-summary.json
+            /tmp/roulette-20spin-${{ matrix.start }}.log
+          if-no-files-found: warn

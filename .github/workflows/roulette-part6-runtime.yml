@@ -1,4 +1,4 @@
-name: Roulette PART 6 Runtime
+name: Roulette PART 6B.1 Smoke
 
 concurrency:
   group: roulette-part6-runtime-${{ github.ref }}
@@ -7,14 +7,27 @@ concurrency:
 on:
   push:
     branches:
-      - roulette-physics-part6b
-  pull_request:
-    branches:
-      - roulette-physics-part6
+      - feature/roulette
     paths:
       - '.github/workflows/roulette-part6-runtime.yml'
       - 'artifacts/roulette-physics-lab/**'
-      - 'scripts/roulette-part6-runtime.mjs'
+      - 'artifacts/api-server/src/physics-lab/**'
+      - 'artifacts/cascade-8/src/roulette*.ts'
+      - 'lib/roulette-physics-config.ts'
+      - 'scripts/roulette-part6-*.mjs'
+      - 'package.json'
+      - 'pnpm-lock.yaml'
+      - 'pnpm-workspace.yaml'
+  pull_request:
+    branches:
+      - main
+    paths:
+      - '.github/workflows/roulette-part6-runtime.yml'
+      - 'artifacts/roulette-physics-lab/**'
+      - 'artifacts/api-server/src/physics-lab/**'
+      - 'artifacts/cascade-8/src/roulette*.ts'
+      - 'lib/roulette-physics-config.ts'
+      - 'scripts/roulette-part6-*.mjs'
       - 'package.json'
       - 'pnpm-lock.yaml'
       - 'pnpm-workspace.yaml'
@@ -23,7 +36,7 @@ on:
 jobs:
   runtime:
     runs-on: ubuntu-latest
-    timeout-minutes: 355
+    timeout-minutes: 20
 
     steps:
       - name: Checkout
@@ -52,6 +65,23 @@ jobs:
       - name: Typecheck roulette physics lab
         run: pnpm --filter @workspace/roulette-physics-lab run typecheck
 
+      - name: Typecheck production roulette client
+        run: pnpm --filter @workspace/cascade-8 run typecheck
+
+      - name: Typecheck roulette API server
+        run: pnpm --filter @workspace/api-server run typecheck
+
+      - name: Run roulette physics contract tests
+        env:
+          PORT: '4173'
+          BASE_PATH: /
+        run: pnpm --filter @workspace/cascade-8 exec vitest run src/roulettePhysicsConfig.test.ts
+
+      - name: Run server twenty-seed full-spin reliability (4x5)
+        continue-on-error: true
+        run: >
+          pnpm exec tsx -e "(async()=>{const {simulatePhysicsLabRound}=await import('./artifacts/api-server/src/physics-lab/simulation.ts');const batches=[['61001','61002','61003','61004','61005'],['61006','61007','61008','61009','61010'],['61011','61012','61013','61014','61015'],['61016','61017','61018','61019','61020']];const all=[];for(let batchIndex=0;batchIndex<batches.length;batchIndex+=1){const results=[];for(const seed of batches[batchIndex]){const r=await simulatePhysicsLabRound('server-twenty-seed-'+seed,seed);const summary={seed,status:r.status,errorCode:r.errorCode,finalPocketIndex:r.finalPocketIndex,finalPocketNumber:r.finalPocketNumber,stableSettleStep:r.stableSettleStep,simulationDurationMs:r.simulationDurationMs,eventTypes:r.events.map(e=>e.type),lastEvent:r.events.at(-1)??null};results.push(summary);all.push(summary);console.log('SERVER_TWENTY_SEED_CASE',JSON.stringify({batch:batchIndex+1,...summary}));}const passed=results.filter(r=>r.status==='SETTLED'&&r.finalPocketNumber!==null).length;console.log('SERVER_FIVE_SEED_BATCH_SUMMARY',JSON.stringify({batch:batchIndex+1,passed,total:results.length,failed:results.filter(r=>r.status!=='SETTLED'||r.finalPocketNumber===null).map(r=>({seed:r.seed,errorCode:r.errorCode,lastEvent:r.lastEvent}))}));}const passed=all.filter(r=>r.status==='SETTLED'&&r.finalPocketNumber!==null).length;console.log('SERVER_TWENTY_SEED_SUMMARY',JSON.stringify({passed,total:all.length,failed:all.filter(r=>r.status!=='SETTLED'||r.finalPocketNumber===null).map(r=>({seed:r.seed,errorCode:r.errorCode,lastEvent:r.lastEvent}))}));if(passed!==all.length)process.exit(1)})().catch(error=>{console.error(error);process.exit(1)})"
+
       - name: Start roulette physics lab
         shell: bash
         run: |
@@ -66,21 +96,112 @@ jobs:
           cat /tmp/roulette-part6-vite.log
           exit 1
 
-      - name: Run 20-seed PART 6 batch
+      - name: Verify roulette GLB route
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl --fail --silent --show-error \
+            http://127.0.0.1:4173/rou-lp-test-04.glb \
+            --output /tmp/rou-lp-test-04.glb
+          bytes="$(wc -c < /tmp/rou-lp-test-04.glb | tr -d ' ')"
+          echo "ROULETTE_GLB_BYTES=$bytes"
+          test "$bytes" = "4663292"
+
+      - name: Run browser 30-spin audit
         env:
-          ROULETTE_LAB_URL: http://127.0.0.1:4173/?part6Headless=1
+          ROULETTE_PART6_TIMEOUT_MS: '300000'
+        shell: bash
+        run: |
+          set -euo pipefail
+          for start in 0 10 20; do
+            batch=$((start / 10 + 1))
+            echo "PART6_30_SPIN_BATCH_START batch=$batch startIndex=$start"
+            ROULETTE_LAB_URL="http://127.0.0.1:4173/?part6Headless=1&part6SeedStartIndex=$start&part6SeedCount=10&part6MaxDurationSeconds=30" \
+            ROULETTE_PART6_OUTPUT="artifacts/roulette-physics-lab/part6-runtime-30spin-batch-$batch.json" \
+            ROULETTE_PART6_EXPECTED_SEEDS='10' \
+            node scripts/roulette-part6-runtime.mjs > "part6-30spin-batch-$batch.log" 2>&1
+            cat "part6-30spin-batch-$batch.log"
+          done
+          node - <<'NODE'
+          const fs = require('fs');
+          const all = [];
+          for (let batch = 1; batch <= 3; batch += 1) {
+            const path = `artifacts/roulette-physics-lab/part6-runtime-30spin-batch-${batch}.json`;
+            const data = JSON.parse(fs.readFileSync(path, 'utf8'));
+            const results = data.telemetry?.results ?? data.seedTelemetry ?? [];
+            for (const result of results) {
+              const issue =
+                result.escaped ? 'ESCAPED' :
+                result.tunneling ? 'TUNNELING' :
+                result.clipping ? 'CLIPPING' :
+                result.velocitySpike ? 'VELOCITY_SPIKE' :
+                result.artificialAcceleration ? 'ARTIFICIAL_ACCELERATION' :
+                result.timedOut ? 'TIMEOUT' :
+                result.settled ? 'SETTLED' : 'UNSETTLED';
+              const row = {
+                spin: all.length + 1,
+                seed: result.seed,
+                status: issue,
+                number: result.finalPocketNumber ?? null,
+                pocketIndex: result.finalPocketIndex ?? null,
+                laps: result.lapCount,
+                settled: result.settled,
+                timedOut: result.timedOut,
+                escaped: result.escaped,
+                clipping: result.clipping,
+                tunneling: result.tunneling,
+                velocitySpike: result.velocitySpike,
+                artificialAcceleration: result.artificialAcceleration,
+                safetyPassed: result.safetyPassed,
+                settleTime: result.settleTime ?? null,
+                detail: result.detail ?? null,
+              };
+              all.push(row);
+              console.log('PART6_30_SPIN_CASE ' + JSON.stringify(row));
+            }
+          }
+          console.log('PART6_30_SPIN_SUMMARY ' + JSON.stringify({
+            total: all.length,
+            settled: all.filter(x => x.settled).length,
+            timedOut: all.filter(x => x.timedOut).length,
+            escaped: all.filter(x => x.escaped).length,
+            clipping: all.filter(x => x.clipping).length,
+            tunneling: all.filter(x => x.tunneling).length,
+            velocitySpike: all.filter(x => x.velocitySpike).length,
+            artificialAcceleration: all.filter(x => x.artificialAcceleration).length,
+            safetyPassed: all.filter(x => x.safetyPassed).length,
+          }));
+          NODE
+
+      - name: Run isolated 61004-61006 post-fret diagnostic
+        continue-on-error: true
+        env:
+          ROULETTE_LAB_URL: http://127.0.0.1:4173/?part6Headless=1&part6SeedStartIndex=3&part6SeedCount=3&part6MaxDurationSeconds=8
+          ROULETTE_PART6_OUTPUT: artifacts/roulette-physics-lab/part6-runtime-post-fret-result.json
+          ROULETTE_PART6_TIMEOUT_MS: '120000'
+          ROULETTE_PART6_EXPECTED_SEEDS: '3'
+        shell: bash
+        run: |
+          set -o pipefail
+          node scripts/roulette-part6-runtime.mjs | tee part6-post-fret-trace.log
+
+      - name: Run PART 6B.1A startup-gate probe
+        env:
+          ROULETTE_LAB_URL: http://127.0.0.1:4173/?part6Headless=1&part6SeedCount=5&part6MaxDurationSeconds=30
           ROULETTE_PART6_OUTPUT: artifacts/roulette-physics-lab/part6-runtime-result.json
-          ROULETTE_PART6_TIMEOUT_MS: '20700000'
+          ROULETTE_PART6_TIMEOUT_MS: '120000'
+          ROULETTE_PART6_EXPECTED_SEEDS: '5'
         shell: bash
         run: |
           set -o pipefail
           node scripts/roulette-part6-runtime.mjs | tee part6-runtime.log
 
-      - name: Summarize PART 6 calibration evidence
+      - name: Summarize PART 6B.1 diagnostic evidence
         if: always()
         env:
           ROULETTE_PART6_OUTPUT: artifacts/roulette-physics-lab/part6-runtime-result.json
           ROULETTE_PART6_EVIDENCE: artifacts/roulette-physics-lab/part6-calibration-evidence.json
+          ROULETTE_PART6_EXPECTED_SEEDS: '5'
         run: |
           if [ -f "$ROULETTE_PART6_OUTPUT" ]; then
             node scripts/roulette-part6-report.mjs | tee part6-calibration-evidence.log
@@ -96,8 +217,10 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: roulette-part6-runtime
+          name: roulette-part6b1-smoke
           path: |
+            artifacts/roulette-physics-lab/part6-runtime-30spin-batch-*.json
+            part6-30spin-batch-*.log
             artifacts/roulette-physics-lab/part6-runtime-result.json
             artifacts/roulette-physics-lab/part6-calibration-evidence.json
             part6-runtime.log

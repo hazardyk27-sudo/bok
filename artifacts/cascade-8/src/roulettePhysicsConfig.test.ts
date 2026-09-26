@@ -51,6 +51,50 @@ const physicsLabAppSource = readFileSync(
   "utf8",
 );
 
+const physicsLabSimulationSource = readFileSync(
+  fileURLToPath(
+    new URL(
+      "../../api-server/src/physics-lab/simulation.ts",
+      import.meta.url,
+    ),
+  ),
+  "utf8",
+);
+
+const rouletteProductionReplaySource = readFileSync(
+  fileURLToPath(new URL("./roulettePhysicsReplay.ts", import.meta.url)),
+  "utf8",
+);
+
+const rouletteProductionClientSource = readFileSync(
+  fileURLToPath(new URL("./rouletteClient.ts", import.meta.url)),
+  "utf8",
+);
+
+const rouletteServerRepositorySource = readFileSync(
+  fileURLToPath(
+    new URL("../../api-server/src/roulette/repository.ts", import.meta.url),
+  ),
+  "utf8",
+);
+
+const physicsLabRoutesSource = readFileSync(
+  fileURLToPath(
+    new URL("../../api-server/src/physics-lab/routes.ts", import.meta.url),
+  ),
+  "utf8",
+);
+
+const rouletteRuntimeWorkflowSource = readFileSync(
+  fileURLToPath(
+    new URL(
+      "../../../.github/workflows/roulette-part6-runtime.yml",
+      import.meta.url,
+    ),
+  ),
+  "utf8",
+);
+
 describe("authoritative roulette physics config", () => {
   it("locks the rou-lp-test-04 physical scale and ball standard", () => {
     expect(ROULETTE_PHYSICS_SCHEMA_VERSION).toBe(
@@ -128,7 +172,7 @@ describe("authoritative roulette physics config", () => {
   });
 
   it("keeps a single continuous stationary bowl bridge between race and rotor lip", () => {
-    expect(part3ViewportSource).toContain("function buildBowlBridgeTrimesh");
+    expect(part3ViewportSource).toContain("function addBowlBridgePrimitiveColliders");
     expect(part3ViewportSource).toContain("measureBowlBridgeProfile");
     expect(part3ViewportSource).toContain(
       "const BOWL_BRIDGE_INNER_RADIUS = POCKET_OUTER_LIP_RADIUS",
@@ -140,13 +184,25 @@ describe("authoritative roulette physics config", () => {
       "'stationary-bowl-apron-bridge'",
     );
     expect(part3ViewportSource).toContain(
-      "[POCKET_OUTER_LIP_RADIUS, POCKET_OUTER_LIP_Y]",
+      "[POCKET_OUTER_LIP_RADIUS, outerLipY]",
+    );
+    expect(part3ViewportSource).toContain(
+      "const activePocketOuterLipY =",
     );
     expect(part3ViewportSource).toContain(
       "targetOuterY = part2ChannelSurfaceAt",
     );
     expect(part3ViewportSource).toContain(
-      "setCollisionGroups(\n                   STATIONARY_COLLISION_GROUP",
+      "STATIONARY_COLLISION_GROUP | (BALL_COLLISION_GROUP << 16)",
+    );
+    expect(part3ViewportSource).toContain(
+      "const bridgeMesh = buildBowlBridgeTrimesh",
+    );
+    expect(part3ViewportSource).toContain(
+      "part3BowlBridgeColliders = [bridgeCollider]",
+    );
+    expect(part3ViewportSource).toContain(
+      "for (const collider of part3BowlBridgeColliders)",
     );
   });
 
@@ -206,7 +262,7 @@ describe("authoritative roulette physics config", () => {
       "part3TrackCollider = world.createCollider",
     );
     expect(part3ViewportSource).toContain(
-      "part3BowlBridgeCollider = world.createCollider",
+      "part3BowlBridgeColliders = addBowlBridgePrimitiveColliders",
     );
     expect(part3ViewportSource).toContain(
       "part3DeflectorColliders = addMeasuredDeflectorColliders",
@@ -215,7 +271,10 @@ describe("authoritative roulette physics config", () => {
       "RAPIER.RigidBodyDesc.kinematicPositionBased()",
     );
     expect(part3ViewportSource).toContain(
-      "part3PocketColliders = addKinematicPocketSystem(world, rotorBody)",
+      "part3PocketColliders = addKinematicPocketSystem(",
+    );
+    expect(part3ViewportSource).toContain(
+      "activePocketOuterLipY",
     );
     expect(part3ViewportSource).toContain(
       "for (let index = 0; index < EUROPEAN_POCKET_COUNT; index += 1)",
@@ -233,7 +292,7 @@ describe("authoritative roulette physics config", () => {
       /const PART6_DETERMINISTIC_SEEDS = \[([\s\S]*?)\] as const;/,
     );
     expect(seedBlock).not.toBeNull();
-    expect(seedBlock?.[1].match(/\b610\d+\b/g) ?? []).toHaveLength(20);
+    expect(seedBlock?.[1].match(/\b610\d+\b/g) ?? []).toHaveLength(30);
     expect(part3ViewportSource).toContain(
       "return (value >>> 0) / 0x100000000;",
     );
@@ -257,6 +316,15 @@ describe("authoritative roulette physics config", () => {
     );
     expect(part3ViewportSource).toContain(
       "stateResetVerified",
+    );
+    expect(part3ViewportSource).toContain(
+      "const pocketResultCenterRadiusMax =",
+    );
+    expect(part3ViewportSource).toContain(
+      "POCKET_OUTER_LIP_RADIUS - BALL_RADIUS",
+    );
+    expect(part3ViewportSource).toContain(
+      "const settledResultContractValid =",
     );
     expect(part3ViewportSource).toContain(
       "'OUTER_RACE'",
@@ -356,7 +424,7 @@ describe("authoritative roulette physics config", () => {
       "data-testid=\"part6-full-spin-telemetry-report\"",
     );
     expect(part3ViewportSource).toContain(
-      "const PART3_OUTER_SPIN_TRACK_FRICTION = 0.08",
+      "const PART3_OUTER_SPIN_TRACK_FRICTION = 0.028",
     );
     expect(part3ViewportSource).toContain(
       "const PART3_OUTER_SPIN_LINEAR_DAMPING = 0.01",
@@ -365,7 +433,7 @@ describe("authoritative roulette physics config", () => {
       "const PART3_OUTER_SPIN_ANGULAR_DAMPING = 0.01",
     );
     expect(part3ViewportSource).toContain(
-      "const PART6_LAUNCH_SPEED_METERS_PER_SECOND_BASE = 5.0",
+      "const PART6_LAUNCH_SPEED_METERS_PER_SECOND_BASE = 5.45",
     );
     expect(part3ViewportSource).toContain(
       "const PART6_LAUNCH_SPEED_METERS_PER_SECOND_VARIATION = 0.15",
@@ -384,6 +452,42 @@ describe("authoritative roulette physics config", () => {
     );
     expect(part3ViewportSource).toContain(
       "const PART6_INTERACTIVE_YIELD_STEPS = 30",
+    );
+    expect(part3ViewportSource).toContain(
+      "const PART6_DIAGNOSTIC_YIELD_STEPS = 60",
+    );
+    expect(part3ViewportSource).toContain(
+      "PART6_STEP_PROGRESS",
+    );
+    expect(part3ViewportSource).toContain(
+      "ROULETTE_RUNTIME_ASSET_PATH",
+    );
+    expect(part3ViewportSource).toContain(
+      "import.meta.env.BASE_URL",
+    );
+    expect(part3ViewportSource).toContain(
+      "loader.load(\n        ROULETTE_RUNTIME_ASSET_PATH",
+    );
+    expect(part3ViewportSource).toContain(
+      "PART6_DIAGNOSTIC_STAGE",
+    );
+    expect(part3ViewportSource).toContain(
+      "'reset-world-step-before'",
+    );
+    expect(part3ViewportSource).toContain(
+      "'simulation-step-0-after'",
+    );
+    expect(part3ViewportSource).toContain(
+      "'static-gate-start'",
+    );
+    expect(part3ViewportSource).toContain(
+      "'static-world-step-before'",
+    );
+    expect(part3ViewportSource).toContain(
+      "'static-contact-query-after'",
+    );
+    expect(part3ViewportSource).toContain(
+      "'part6-batch-dispatch'",
     );
     expect(part3ViewportSource).toContain(
       "ballMeshVisible: activeBallMesh.visible",
@@ -492,6 +596,131 @@ describe("authoritative roulette physics config", () => {
     );
     expect(part3ViewportSource).toContain(
       "outerLaneSpinOnly &&\n            !part6FullSpinRouteActive",
+    );
+  });
+
+  it("locks roulette runtime validation to the canonical feature branch", () => {
+    expect(rouletteRuntimeWorkflowSource).toContain(
+      "- feature/roulette",
+    );
+    expect(rouletteRuntimeWorkflowSource).toContain(
+      "- main",
+    );
+    expect(rouletteRuntimeWorkflowSource).not.toContain(
+      "roulette-physics-part6b",
+    );
+    expect(rouletteRuntimeWorkflowSource).not.toContain(
+      "roulette-physics-part6\n",
+    );
+    expect(rouletteRuntimeWorkflowSource).toContain(
+      "ROULETTE_PART6_TIMEOUT_MS: '120000'",
+    );
+    expect(rouletteRuntimeWorkflowSource).toContain(
+      "part6SeedCount=5&part6MaxDurationSeconds=30",
+    );
+    expect(rouletteRuntimeWorkflowSource).toContain(
+      "ROULETTE_PART6_EXPECTED_SEEDS: '5'",
+    );
+    expect(physicsLabAppSource).toContain(
+      "new URLSearchParams(window.location.search).get('part6Headless') === '1'",
+    );
+    expect(physicsLabAppSource).toContain(
+      "<AuthoritativeRoundPanel onRoundChange={setAuthoritativeRound} />",
+    );
+    expect(physicsLabAppSource).toContain(
+      "part6HeadlessRouteActive ? null : authoritativeRound",
+    );
+  });
+
+  it("replays the server-authoritative trajectory without client result forcing", () => {
+    expect(physicsLabSimulationSource).toContain(
+      "if (!sampledThisStep) captureTrajectorySample();",
+    );
+    expect(physicsLabSimulationSource).toContain(
+      "trajectoryHash",
+    );
+    expect(part3ViewportSource).toContain(
+      "authoritativeReplayRound?: AuthoritativeReplayRound | null",
+    );
+    expect(part3ViewportSource).toContain(
+      "const authoritativeReplayActive =",
+    );
+    expect(part3ViewportSource).toContain(
+      "authoritativeReplay?.status === 'SETTLED'",
+    );
+    expect(part3ViewportSource).toContain(
+      "new URLSearchParams(window.location.search).get('part6Headless') !== '1'",
+    );
+    expect(part3ViewportSource).toContain(
+      "ballMesh.position.set(",
+    );
+    expect(part3ViewportSource).toContain(
+      "replayRotorPivot.quaternion.copy(",
+    );
+    expect(part3ViewportSource).toContain(
+      "data-authoritative-replay={",
+    );
+    expect(
+      part3ViewportSource.match(/authoritativeReplay\.winningNumber/g) ?? [],
+    ).toHaveLength(1);
+    expect(part3ViewportSource).toContain(
+      "winningNumber: authoritativeReplay.winningNumber",
+    );
+    expect(part3ViewportSource).toContain(
+      "authoritativeReplayPocketIndexFromWorldState(",
+    );
+    expect(part3ViewportSource).not.toContain(
+      "replayBallMesh.position.set(authoritativeReplay",
+    );
+  });
+
+  it("keeps the production roulette result physics-authoritative", () => {
+    expect(rouletteServerRepositorySource).toContain(
+      "physicsLabRepository.createRound()",
+    );
+    expect(rouletteServerRepositorySource).toContain(
+      "const winningNumber = physicsRound.finalPocket.number",
+    );
+    expect(rouletteServerRepositorySource).toContain(
+      "physics_round_id",
+    );
+    expect(rouletteServerRepositorySource).not.toContain(
+      "uniformWinningNumber()",
+    );
+
+    expect(rouletteProductionReplaySource).toContain(
+      "/api/roulette/rounds/${encodeURIComponent(rouletteRoundId)}/replay",
+    );
+    expect(rouletteProductionReplaySource).toContain(
+      "this.replay.finalPocket.number !== expectedNumber",
+    );
+    expect(rouletteProductionReplaySource).toContain(
+      "this.replay.winningNumber !== expectedNumber",
+    );
+    expect(rouletteProductionReplaySource).not.toContain(
+      "/api/physics-lab/rounds/current",
+    );
+    expect(rouletteProductionReplaySource).not.toContain("yawRotation");
+    expect(rouletteProductionReplaySource).not.toContain("targetNumber");
+    expect(rouletteProductionReplaySource).not.toContain(
+      "ROULETTE_SEGMENT_DEGREES",
+    );
+
+    expect(rouletteProductionClientSource).toContain(
+      "startLoop(roundId, phaseElapsed)",
+    );
+    expect(rouletteProductionClientSource).toContain(
+      ".playTo(roundId, winningNumber",
+    );
+    expect(rouletteProductionClientSource).not.toContain(
+      "getWheelLandingPlan(",
+    );
+
+    expect(physicsLabRoutesSource).toContain(
+      'process.env.NODE_ENV === "production"',
+    );
+    expect(physicsLabRoutesSource).toContain(
+      "PHYSICS_LAB_CURRENT_DISABLED",
     );
   });
 
