@@ -193,6 +193,17 @@ describe("Businesses premium design tokens", () => {
 });
 
 
+describe("Businesses route shell isolation", () => {
+  it("does not mount the legacy game-route chrome around Businesses", () => {
+    expect(mainSource).toContain("const businessesRouteShell = (content: string)");
+    expect(mainSource).toContain("businessesRouteShell(BUSINESSES_MARKUP)");
+    expect(mainSource).not.toContain(
+      'routeShell(BUSINESSES_MARKUP, "is-route-page is-businesses-page")',
+    );
+  });
+});
+
+
 describe("Businesses premium route shell", () => {
   it("gives Businesses a wider premium desktop canvas without affecting other routes", () => {
     expect(idleCssSource).toContain("--idle-page-max: 1400px");
