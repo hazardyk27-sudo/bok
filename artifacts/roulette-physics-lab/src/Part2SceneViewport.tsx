@@ -6516,6 +6516,26 @@ export function Part2SceneViewport({
               velocity.y - rotorTangentialVelocity.y,
               velocity.z - rotorTangentialVelocity.z,
             );
+            const exactGlbRotorActive = part3PocketColliders.some(
+              (collider) =>
+                part3ColliderRoles.get(collider.handle) ===
+                'exact-glb-rotor-trimesh',
+            );
+            const exactPocketSurface =
+              exactGlbRotorActive && pocketEntered
+                ? measureFullVisibleSurfaceAt(position.x, position.z)
+                : null;
+            const pocketSurfaceGap = exactGlbRotorActive
+              ? exactPocketSurface === null
+                ? null
+                : bottom - exactPocketSurface.y
+              : bottom - POCKET_FLOOR_Y;
+            const pocketFloorSettleTolerance = exactGlbRotorActive
+              ? GLB_COLLIDER_PARITY_EPSILON_WORLD * 10
+              : 0.12;
+            const pocketFloorSettled =
+              pocketSurfaceGap !== null &&
+              Math.abs(pocketSurfaceGap) <= pocketFloorSettleTolerance;
             if (
               [61004, 61005, 61006].includes(run.seed) &&
               pocketEntryTime !== null &&
@@ -6587,8 +6607,8 @@ export function Part2SceneViewport({
                     radius:
                       radius >= pocketResultCenterRadiusMin &&
                       radius <= pocketResultCenterRadiusMax,
-                    floor:
-                      Math.abs(bottom - POCKET_FLOOR_Y) <= 0.12,
+                    floor: pocketFloorSettled,
+                    floorGap: pocketSurfaceGap,
                   },
                   contactRoles: [...stepContactRoles].sort(),
                 }),
@@ -6599,7 +6619,7 @@ export function Part2SceneViewport({
               finalRotorRelativeSpeed < 0.12 &&
               radius >= pocketResultCenterRadiusMin &&
               radius <= pocketResultCenterRadiusMax &&
-              Math.abs(bottom - POCKET_FLOOR_Y) <= 0.12
+              pocketFloorSettled
             ) {
               settledFrames += 1;
             } else {
@@ -6622,12 +6642,19 @@ export function Part2SceneViewport({
                     (pocketResultCenterRadiusMax - radius).toFixed(6),
                   ),
                   bottom: Number(bottom.toFixed(6)),
-                  floorDelta: Number(
-                    Math.abs(bottom - POCKET_FLOOR_Y).toFixed(6),
-                  ),
-                  floorMargin: Number(
-                    (0.12 - Math.abs(bottom - POCKET_FLOOR_Y)).toFixed(6),
-                  ),
+                  floorDelta:
+                    pocketSurfaceGap === null
+                      ? null
+                      : Number(Math.abs(pocketSurfaceGap).toFixed(6)),
+                  floorMargin:
+                    pocketSurfaceGap === null
+                      ? null
+                      : Number(
+                          (
+                            pocketFloorSettleTolerance -
+                            Math.abs(pocketSurfaceGap)
+                          ).toFixed(6),
+                        ),
                   rotorRelativeSpeed: Number(
                     finalRotorRelativeSpeed.toFixed(6),
                   ),
@@ -6647,12 +6674,12 @@ export function Part2SceneViewport({
             }
 
             const floorPenetration =
-              pocketEntered
-                ? Math.max(0, POCKET_FLOOR_Y - bottom)
+              pocketEntered && pocketSurfaceGap !== null
+                ? Math.max(0, -pocketSurfaceGap)
                 : 0;
             const floorSeparation =
-              pocketEntered
-                ? Math.max(0, bottom - POCKET_FLOOR_Y)
+              pocketEntered && pocketSurfaceGap !== null
+                ? Math.max(0, pocketSurfaceGap)
                 : 0;
             maxPocketFloorPenetration = Math.max(
               maxPocketFloorPenetration,
