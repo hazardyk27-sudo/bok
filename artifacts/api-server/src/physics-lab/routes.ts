@@ -12,6 +12,10 @@ function sendError(res: Parameters<IRouter["get"]>[1] extends never ? never : an
 }
 
 router.get("/physics-lab/rounds/current", async (req, res) => {
+  if (process.env.NODE_ENV === "production") {
+    res.status(404).json({ error: "PHYSICS_LAB_CURRENT_DISABLED" });
+    return;
+  }
   try {
     res.json(await physicsLabRepository.getCurrentRound());
   } catch (error) {
