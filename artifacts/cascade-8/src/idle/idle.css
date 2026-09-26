@@ -4861,3 +4861,19 @@ body.business-detail-open {
     font-size: 12px;
   }
 }
+
+
+/* Mobile main-menu hard alignment */
+@media (max-width: 760px) {
+  .route-shell.is-businesses-page .businesses-header-nav {
+    width: 100%;
+    display: flex;
+    justify-content: flex-end;
+  }
+
+  .route-shell.is-businesses-page .businesses-header-nav .back-link {
+    justify-self: end;
+    margin-left: auto;
+    margin-right: 0;
+  }
+}
