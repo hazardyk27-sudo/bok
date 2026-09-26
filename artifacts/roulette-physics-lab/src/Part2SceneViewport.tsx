@@ -2982,10 +2982,11 @@ export function Part2SceneViewport({
 
     const runVisibleNumberMappingAudit = () => {
       if (!rotorPivot) return null;
+      const activeRotorPivot = rotorPivot;
 
-      const previousRotorQuaternion = rotorPivot.quaternion.clone();
-      rotorPivot.quaternion.identity();
-      rotorPivot.updateMatrixWorld(true);
+      const previousRotorQuaternion = activeRotorPivot.quaternion.clone();
+      activeRotorPivot.quaternion.identity();
+      activeRotorPivot.updateMatrixWorld(true);
 
       const pocketStep = TWO_PI / EUROPEAN_POCKET_COUNT;
       const normalizeSignedAngle = (angle: number) => {
@@ -3067,7 +3068,7 @@ export function Part2SceneViewport({
           for (let degree = 0; degree < 360; degree += 1) {
             const angle = THREE.MathUtils.degToRad(degree);
             const sample = sampleRouletteVisualTextureColorAt(
-              [rotorPivot],
+              [activeRotorPivot],
               Math.sin(angle) * radius,
               Math.cos(angle) * radius,
             );
@@ -3084,9 +3085,7 @@ export function Part2SceneViewport({
             phaseIndex += 1
           ) {
             const phaseAlpha =
-              GLB_NUMBER_MAPPING_PHASE_STEPS === 1
-                ? 0.5
-                : phaseIndex / (GLB_NUMBER_MAPPING_PHASE_STEPS - 1);
+              phaseIndex / (GLB_NUMBER_MAPPING_PHASE_STEPS - 1);
             const zeroAngle =
               coarseZeroAngle +
               THREE.MathUtils.lerp(-pocketStep / 2, pocketStep / 2, phaseAlpha);
@@ -3104,7 +3103,7 @@ export function Part2SceneViewport({
                 const angle =
                   zeroAngle + direction * sequenceIndex * pocketStep;
                 const sample = sampleRouletteVisualTextureColorAt(
-                  [rotorPivot],
+                  [activeRotorPivot],
                   Math.sin(angle) * radius,
                   Math.cos(angle) * radius,
                 );
@@ -3152,7 +3151,7 @@ export function Part2SceneViewport({
             const angle =
               zeroAngle + best.direction * sequenceIndex * pocketStep;
             const sample = sampleRouletteVisualTextureColorAt(
-              [rotorPivot],
+              [activeRotorPivot],
               Math.sin(angle) * best.radius,
               Math.cos(angle) * best.radius,
             );
@@ -3183,7 +3182,7 @@ export function Part2SceneViewport({
               refined.direction * sequenceIndex * pocketStep,
           );
           const sample = sampleRouletteVisualTextureColorAt(
-            [rotorPivot],
+            [activeRotorPivot],
             Math.sin(angle) * refined.radius,
             Math.cos(angle) * refined.radius,
           );
@@ -3240,8 +3239,8 @@ export function Part2SceneViewport({
         );
         return report;
       } finally {
-        rotorPivot.quaternion.copy(previousRotorQuaternion);
-        rotorPivot.updateMatrixWorld(true);
+        activeRotorPivot.quaternion.copy(previousRotorQuaternion);
+        activeRotorPivot.updateMatrixWorld(true);
       }
     };
 
