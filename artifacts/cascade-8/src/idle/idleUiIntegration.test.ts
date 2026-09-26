@@ -93,22 +93,25 @@ describe("Businesses mobile scrolling", () => {
 
 
 describe("Businesses main menu control", () => {
-  it("renders the main-menu link as an accessible two-part button", () => {
-    expect(idleIndexSource).toContain('aria-label="Ana menüye dön"');
+  it("renders status first and Ana Menü last in the header nav", () => {
+    const statusIndex = idleIndexSource.indexOf("businesses-header-status");
+    const menuIndex = idleIndexSource.indexOf('aria-label="Ana menüye dön"');
+
+    expect(statusIndex).toBeGreaterThanOrEqual(0);
+    expect(menuIndex).toBeGreaterThan(statusIndex);
     expect(idleIndexSource).toContain('class="back-link-icon"');
     expect(idleIndexSource).toContain("<span>ANA MENÜ</span>");
   });
 
-  it("keeps the control comfortably tappable and hard-aligned to the mobile right edge", () => {
-    expect(idleCssSource).toContain("/* Mobile main-menu hard alignment */");
-    expect(idleCssSource).toContain(".businesses-header-nav");
-    expect(idleCssSource).toContain("width: 100%");
-    expect(idleCssSource).toContain("justify-content: flex-end");
+  it("structurally anchors the control to the right on desktop and mobile", () => {
+    expect(idleCssSource).toContain("/* Final Ana Menü nav placement — structural override */");
+    expect(idleCssSource).toContain(".businesses-header-status {");
+    expect(idleCssSource).toContain("order: 1");
+    expect(idleCssSource).toContain(".businesses-header-nav .back-link");
+    expect(idleCssSource).toContain("order: 2");
     expect(idleCssSource).toContain("margin-left: auto");
-    expect(idleCssSource).toContain("margin-right: 0");
-    expect(idleCssSource).toContain(".businesses-header .back-link {");
+    expect(idleCssSource).toContain("justify-content: flex-end");
     expect(idleCssSource).toContain("min-height: 44px");
-    expect(idleCssSource).toContain(".businesses-header .back-link-icon");
     expect(idleCssSource).toContain("touch-action: manipulation");
   });
 });
