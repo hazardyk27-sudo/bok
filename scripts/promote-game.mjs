@@ -28,7 +28,8 @@ const foreignRoots = Object.entries(manifest.games)
   .filter(([name]) => name !== game)
   .flatMap(([, cfg]) => cfg.roots.map(normalize));
 
-const git = (...args) => execFileSync("git", args, { encoding: "utf8", stdio: ["ignore", "pipe", "pipe"] }).trim();
+const MAX_GIT_BUFFER = 128 * 1024 * 1024;
+const git = (...args) => execFileSync("git", args, { encoding: "utf8", stdio: ["ignore", "pipe", "pipe"], maxBuffer: MAX_GIT_BUFFER }).trim();
 const isInside = (file, root) => file === root || file.startsWith(root + "/");
 
 let sourceVersion = "";
@@ -55,7 +56,7 @@ for (const root of ownedRoots) {
 const sourceFilesRaw = git("ls-tree", "-r", "--name-only", source, "--", ...ownedRoots);
 const sourceFiles = sourceFilesRaw ? sourceFilesRaw.split("\n").filter(Boolean) : [];
 for (const file of sourceFiles) {
-  const content = execFileSync("git", ["show", `${source}:${file}`]);
+  const content = execFileSync("git", ["show", `${source}:${file}`], { maxBuffer: MAX_GIT_BUFFER });
   mkdirSync(dirname(file), { recursive: true });
   writeFileSync(file, content);
 }
