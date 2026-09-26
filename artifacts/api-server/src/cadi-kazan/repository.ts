@@ -1,6 +1,6 @@
 import { randomInt, randomUUID } from "node:crypto";
 import { pool, type PoolClient } from "@workspace/db";
-import { INITIAL_ROULETTE_BALANCE_CENTS } from "../roulette/types";
+import { INITIAL_SHARED_BALANCE_CENTS } from "../platform/wallet";
 import {
   ADVANCED_ALARM_OPTIONS,
   CADI_KAZAN_ADVANCED_CELL_COUNT,
@@ -141,7 +141,7 @@ function toSnapshot(row: CadiRoundRow): CadiKazanRoundSnapshot {
 async function ensureWalletForUpdate(client: PoolClient, sessionId: string) {
   await client.query(
     "INSERT INTO roulette_wallets (session_id, balance_cents) VALUES ($1, $2) ON CONFLICT (session_id) DO NOTHING",
-    [sessionId, INITIAL_ROULETTE_BALANCE_CENTS],
+    [sessionId, INITIAL_SHARED_BALANCE_CENTS],
   );
   const result = await client.query<WalletRow>(
     "SELECT balance_cents FROM roulette_wallets WHERE session_id = $1 FOR UPDATE",
@@ -155,9 +155,9 @@ async function walletBalance(sessionId: string) {
   if (!result.rows[0]) {
     await pool.query(
       "INSERT INTO roulette_wallets (session_id, balance_cents) VALUES ($1, $2) ON CONFLICT (session_id) DO NOTHING",
-      [sessionId, INITIAL_ROULETTE_BALANCE_CENTS],
+      [sessionId, INITIAL_SHARED_BALANCE_CENTS],
     );
-    return INITIAL_ROULETTE_BALANCE_CENTS;
+    return INITIAL_SHARED_BALANCE_CENTS;
   }
   return Number(result.rows[0].balance_cents);
 }
