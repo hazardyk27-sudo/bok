@@ -6458,37 +6458,28 @@ export function Part2SceneViewport({
                 part3ColliderRoles.get(activeTrackCollider.handle) ?? null;
               const exactGlbStationaryActive =
                 activeTrackRole === 'exact-glb-stationary-trimesh';
-              const visibleTransitionSurface = exactGlbStationaryActive
-                ? measureVisibleSurfaceAt(
-                    position.x,
-                    position.z,
+              const exactStationaryProjection = exactGlbStationaryActive
+                ? activeWorld.projectPoint(
+                    position,
                     false,
+                    undefined,
+                    undefined,
+                    undefined,
+                    undefined,
+                    (collider) =>
+                      collider.handle === activeTrackCollider.handle,
                   )
                 : null;
               const expectedSurfaceY = exactGlbStationaryActive
-                ? visibleTransitionSurface?.y ?? null
+                ? exactStationaryProjection?.point.y ?? null
                 : transitionSurfaceY(radius);
               if (expectedSurfaceY !== null) {
-                const signedTransitionGap = visibleTransitionSurface
-                  ? new THREE.Vector3(
-                      position.x,
-                      position.y,
-                      position.z,
-                    )
-                      .sub(
-                        new THREE.Vector3(
-                          visibleTransitionSurface.point.x,
-                          visibleTransitionSurface.point.y,
-                          visibleTransitionSurface.point.z,
-                        ),
-                      )
-                      .dot(
-                        new THREE.Vector3(
-                          visibleTransitionSurface.normal.x,
-                          visibleTransitionSurface.normal.y,
-                          visibleTransitionSurface.normal.z,
-                        ).normalize(),
-                      ) - BALL_RADIUS
+                const signedTransitionGap = exactStationaryProjection
+                  ? Math.hypot(
+                      position.x - exactStationaryProjection.point.x,
+                      position.y - exactStationaryProjection.point.y,
+                      position.z - exactStationaryProjection.point.z,
+                    ) - BALL_RADIUS
                   : bottom - expectedSurfaceY;
                 transitionMaxSurfacePenetration = Math.max(
                   transitionMaxSurfacePenetration,
