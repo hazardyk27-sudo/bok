@@ -1,0 +1,100 @@
+name: Roulette 61008 Spike Trace
+
+on:
+  workflow_dispatch:
+
+jobs:
+  trace:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10.15.0
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install workspace
+        run: pnpm install --frozen-lockfile
+
+      - name: Install Chromium
+        run: pnpm exec playwright install --with-deps chromium
+
+      - name: Build TypeScript project references
+        run: pnpm run typecheck:libs
+
+      - name: Typecheck roulette physics lab
+        run: pnpm --filter @workspace/roulette-physics-lab run typecheck
+
+      - name: Start roulette physics lab
+        shell: bash
+        run: |
+          PORT=4173 BASE_PATH=/ pnpm --filter @workspace/roulette-physics-lab run dev > /tmp/roulette-61008-vite.log 2>&1 &
+          for attempt in {1..60}; do
+            if curl --fail --silent http://127.0.0.1:4173/ > /dev/null; then
+              exit 0
+            fi
+            sleep 1
+          done
+          cat /tmp/roulette-61008-vite.log
+          exit 1
+
+      - name: Trace seed 61008
+        shell: bash
+        run: |
+          set -euo pipefail
+          ROULETTE_LAB_URL="http://127.0.0.1:4173/?part6Headless=1&part6SeedStartIndex=7&part6SeedCount=1&part6MaxDurationSeconds=12" \
+          ROULETTE_PART6_OUTPUT="artifacts/roulette-physics-lab/part6-seed-61008-spike.json" \
+          ROULETTE_PART6_TIMEOUT_MS='90000' \
+          ROULETTE_PART6_EXPECTED_SEEDS='1' \
+          node scripts/roulette-part6-runtime.mjs > part6-seed-61008-spike.log 2>&1
+
+          grep 'PART6_SEED_61008_FIRST_SPIKE' part6-seed-61008-spike.log || true
+
+          node - <<'NODE'
+          const fs = require('fs');
+          const data = JSON.parse(fs.readFileSync(
+            'artifacts/roulette-physics-lab/part6-seed-61008-spike.json',
+            'utf8',
+          ));
+          const rows = data.telemetry?.results ?? data.seedTelemetry ?? [];
+          if (rows.length !== 1) throw new Error('Expected one 61008 row, got ' + rows.length);
+          const row = rows[0];
+          console.log('SEED_61008_TRACE_RESULT ' + JSON.stringify({
+            seed: row.seed,
+            settled: row.settled,
+            timedOut: row.timedOut,
+            finalPocketNumber: row.finalPocketNumber,
+            finalPocketIndex: row.finalPocketIndex,
+            finalSpeed: row.finalSpeed,
+            finalRotorRelativeSpeed: row.finalRotorRelativeSpeed,
+            peakSpeed: row.peakSpeed,
+            velocitySpike: row.velocitySpike,
+            artificialAcceleration: row.artificialAcceleration,
+            escaped: row.escaped,
+            clipping: row.clipping,
+            tunneling: row.tunneling,
+            lapCount: row.lapCount,
+          }));
+          if (row.seed !== 61008) throw new Error('Unexpected seed');
+          NODE
+
+      - name: Upload evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: roulette-61008-spike-trace
+          path: |
+            artifacts/roulette-physics-lab/part6-seed-61008-spike.json
+            part6-seed-61008-spike.log
+            /tmp/roulette-61008-vite.log
+          if-no-files-found: warn

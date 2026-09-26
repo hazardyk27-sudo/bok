@@ -74,8 +74,8 @@ describe("Idle collect all integration", () => {
 
 describe("Businesses mobile scrolling", () => {
   it("uses the Businesses route shell as the explicit mobile touch-scroll container", () => {
-    expect(mainSource).toContain('document.documentElement.classList.add("businesses-route")');
-    expect(mainSource).toContain('document.body.classList.add("businesses-route")');
+    expect(idleIndexSource).toContain('document.documentElement.classList.add("businesses-route")');
+    expect(idleIndexSource).toContain('document.body.classList.add("businesses-route")');
     expect(idleCssSource).toContain("html.businesses-route #app");
     expect(idleCssSource).toContain(".route-shell.is-businesses-page {");
     expect(idleCssSource).toContain("height: 100dvh");
@@ -208,16 +208,44 @@ describe("Businesses premium design tokens", () => {
 });
 
 
-describe("Businesses route shell isolation", () => {
-  it("does not mount the legacy game-route chrome around Businesses", () => {
-    expect(mainSource).toContain("const businessesRouteShell = (content: string)");
-    expect(mainSource).toContain("businessesRouteShell(BUSINESSES_MARKUP)");
-    expect(mainSource).not.toContain(
-      'routeShell(BUSINESSES_MARKUP, "is-route-page is-businesses-page")',
+describe("Businesses route module isolation", () => {
+  it("lazy-loads Businesses without the global slot/menu stylesheet", () => {
+    expect(mainSource).toContain(
+      'const businessesModule = await import("./idle");',
     );
+    expect(mainSource).toContain("businessesModule.mountBusinesses(app);");
+    expect(idleIndexSource).toContain("export function mountBusinesses(app: HTMLDivElement)");
+    expect(mainSource).toContain(
+      'if (isRouletteRoute || isWitchRoute || isHubRoute) {\n  await import("./styles.css");\n}',
+    );
+    expect(mainSource).not.toContain('import "./styles.css";');
+    expect(mainSource).not.toContain('import { BUSINESSES_MARKUP, BusinessesClient } from "./idle";');
   });
 });
 
+describe("Businesses route shell isolation", () => {
+  it("does not mount the legacy game-route chrome around Businesses", () => {
+    expect(mainSource).not.toContain("businesses-page");
+    expect(mainSource).not.toContain("BUSINESSES_MARKUP");
+    expect(mainSource).not.toContain("document.body.classList.add(\"businesses-route\")");
+    expect(idleIndexSource).toContain(
+      '<div class="app-shell route-shell is-route-page is-businesses-page">',
+    );
+    expect(idleIndexSource).toContain('${BUSINESSES_MARKUP}');
+    expect(idleIndexSource).toContain('document.body.classList.add("businesses-route")');
+  });
+});
+
+
+describe("Businesses standalone CSS foundation", () => {
+  it("owns the browser reset required for standalone geometry", () => {
+    expect(idleCssSource).toContain("html.businesses-route #app");
+    expect(idleCssSource).toContain("box-sizing: border-box");
+    expect(idleCssSource).toContain("body.businesses-route button");
+    expect(idleCssSource).toContain("font: inherit");
+    expect(mainSource).not.toContain('if (!isBusinessesRoute)');
+  });
+});
 
 describe("Businesses premium route shell", () => {
   it("gives Businesses a wider premium desktop canvas without affecting other routes", () => {

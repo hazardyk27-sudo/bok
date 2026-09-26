@@ -4,7 +4,7 @@ import { playSpin } from "../../../cascade-8/src/engine/SlotEngine";
 import { SeededRNG } from "../../../cascade-8/src/engine/RNG";
 import type { SpinResult } from "../../../cascade-8/src/engine/types";
 import { FREE_BET_CENTS, BETS_CENTS } from "../../../cascade-8/src/config/GameConfig";
-import { INITIAL_ROULETTE_BALANCE_CENTS } from "../roulette/types";
+import { INITIAL_SHARED_BALANCE_CENTS } from "../platform/wallet";
 
 type SlotRoundRow = {
   id: string;
@@ -33,7 +33,7 @@ async function ensureWalletForUpdate(client: PoolClient, sessionId: string) {
      ON CONFLICT (session_id) DO UPDATE
        SET balance_cents = roulette_wallets.balance_cents
      RETURNING balance_cents`,
-    [sessionId, INITIAL_ROULETTE_BALANCE_CENTS],
+    [sessionId, INITIAL_SHARED_BALANCE_CENTS],
   );
   return Number(result.rows[0]?.balance_cents ?? 0);
 }
@@ -46,9 +46,9 @@ async function walletBalance(sessionId: string) {
   if (result.rows[0]) return Number(result.rows[0].balance_cents);
   await pool.query(
     "INSERT INTO roulette_wallets (session_id, balance_cents) VALUES ($1, $2) ON CONFLICT (session_id) DO NOTHING",
-    [sessionId, INITIAL_ROULETTE_BALANCE_CENTS],
+    [sessionId, INITIAL_SHARED_BALANCE_CENTS],
   );
-  return INITIAL_ROULETTE_BALANCE_CENTS;
+  return INITIAL_SHARED_BALANCE_CENTS;
 }
 
 function response(sessionId: string, balanceCents: number, row: SlotRoundRow) {
@@ -210,7 +210,7 @@ export class SlotRepository {
         debitCents,
         `stake:${input.idempotencyKey}`,
         `payout:${roundId}`,
-        INITIAL_ROULETTE_BALANCE_CENTS,
+        INITIAL_SHARED_BALANCE_CENTS,
       ],
     );
 

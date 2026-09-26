@@ -1,4 +1,4 @@
-import { AudioManager } from "../game/AudioManager";
+import { AudioManager } from "../AudioManager";
 import {
   interpolateScratchPoints,
   SCRATCH_ABRASION_CONFIG,

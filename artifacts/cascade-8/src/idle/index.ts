@@ -1171,3 +1171,18 @@ export class BusinessesClient {
     }
   }
 }
+
+
+export function mountBusinesses(app: HTMLDivElement) {
+  document.documentElement.classList.add("businesses-route");
+  document.body.classList.add("businesses-route");
+
+  app.innerHTML = `
+    <div class="app-shell route-shell is-route-page is-businesses-page">
+      ${BUSINESSES_MARKUP}
+    </div>
+  `;
+
+  const businessesRoot = app.querySelector<HTMLElement>(".businesses-page");
+  if (businessesRoot) new BusinessesClient(businessesRoot);
+}

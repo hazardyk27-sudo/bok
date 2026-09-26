@@ -10,7 +10,7 @@ import {
   getWheelLandingPlan,
   ROULETTE_POCKET_COUNT,
   ROULETTE_SEGMENT_DEGREES,
-} from "./rouletteGeometry";
+} from "./roulette/rouletteGeometry";
 import {
   getRouletteAnimationLifecycleAction,
   getRouletteAnimationTransition,
@@ -23,7 +23,7 @@ import {
   isRouletteResultSettled,
   ROULETTE_MOTION_CSS_VARIABLES,
   ROULETTE_MOTION_TIMINGS,
-} from "./rouletteClient";
+} from "./roulette/rouletteClient";
 
 describe("roulette wheel geometry", () => {
   it("keeps the exact European pocket order used by the rendered wheel", () => {
@@ -247,4 +247,4 @@ describe("roulette motion timing contract", () => {
   });
 });
 
-const rouletteCss = readFileSync(fileURLToPath(new URL("./roulette.css", import.meta.url)), "utf8");
+const rouletteCss = readFileSync(fileURLToPath(new URL("./roulette/roulette.css", import.meta.url)), "utf8");

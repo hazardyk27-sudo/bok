@@ -1,3 +1,43 @@
+/* Businesses owns its complete browser/CSS foundation.
+   Do not depend on the Slot/Hub global stylesheet for resets or layout geometry. */
+html.businesses-route,
+body.businesses-route,
+html.businesses-route #app {
+  width: 100%;
+  max-width: 100%;
+  min-height: 100%;
+  margin: 0;
+}
+
+html.businesses-route #app {
+  min-height: 100dvh;
+}
+
+html.businesses-route .route-shell.is-businesses-page,
+html.businesses-route .route-shell.is-businesses-page *,
+html.businesses-route .route-shell.is-businesses-page *::before,
+html.businesses-route .route-shell.is-businesses-page *::after {
+  box-sizing: border-box;
+}
+
+body.businesses-route button,
+body.businesses-route input,
+body.businesses-route select {
+  font: inherit;
+}
+
+body.businesses-route button {
+  color: inherit;
+  cursor: pointer;
+}
+
+body.businesses-route button:focus-visible,
+body.businesses-route input:focus-visible,
+body.businesses-route select:focus-visible {
+  outline: 2px solid var(--idle-green, #54f2a3);
+  outline-offset: 3px;
+}
+
 /* Businesses visual system v2 — measured from the approved desktop/mobile references.
    Part 1 locks the system only; layout migration happens in later parts.
    Tokens live on the route shell so both the sidebar and the page inherit them. */
