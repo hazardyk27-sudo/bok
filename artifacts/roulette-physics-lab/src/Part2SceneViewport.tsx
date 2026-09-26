@@ -67,7 +67,13 @@ const PART3_OUTER_SPIN_RUNS = [
   { id: 'outer-spin-nominal', label: 'Outer spin · nominal launch', speed: 5.0 },
   { id: 'outer-spin-high', label: 'Outer spin · high launch variation', speed: 5.15 },
 ] as const;
-const PART6_TELEMETRY_SCHEMA_VERSION = 'roulette-part6-full-spin-telemetry-v1';
+const PART6_TELEMETRY_SCHEMA_VERSION = 'roulette-part6-full-spin-telemetry-v2';
+const GLB_COLLIDER_PARITY_EPSILON_WORLD = 0.0006;
+const MM_PER_WORLD_UNIT = 1000 / ROULETTE_WORLD_UNITS_PER_METER;
+const GLB_COLLIDER_PARITY_SCAN_INNER_RADIUS = 1.48;
+const GLB_COLLIDER_PARITY_SCAN_OUTER_RADIUS = 2.44;
+const GLB_COLLIDER_PARITY_RADIAL_SAMPLES = 25;
+const GLB_COLLIDER_PARITY_ANGULAR_SAMPLES = 72;
 const PART6_FULL_SPIN_MAX_DURATION_SECONDS = 30;
 const PART6_SETTLE_DURATION_SECONDS = 0.5;
 const PART6_UI_YIELD_STEPS = 240;
@@ -510,6 +516,12 @@ type Part6FullSpinTelemetryResult = {
   finalPocketNumber: number | null;
   finalSpeed: number;
   finalRotorRelativeSpeed: number;
+  visualSurfaceY: number | null;
+  visualSurfaceGapWorld: number | null;
+  visualSurfaceGapMm: number | null;
+  visualHover: boolean;
+  visualClipping: boolean;
+  visualSurfaceParityPassed: boolean;
   hover: boolean;
   clipping: boolean;
   tunneling: boolean;
@@ -546,6 +558,8 @@ type Part6FullSpinTelemetryReport = {
   pocketEntryCount: number;
   settledCount: number;
   safetyFailureCount: number;
+  visualParityFailureCount: number;
+  visualParityStatus: 'pending' | 'passed' | 'failed';
   medianLapCount: number | null;
   minLapCount: number | null;
   maxLapCount: number | null;
@@ -2476,6 +2490,178 @@ export function Part2SceneViewport({
           },
         },
       );
+    };
+
+    const measureColliderSurfaceAt = (x: number, z: number) => {
+      if (!world || part3ColliderRoles.size === 0) return null;
+      const ray = new RAPIER.Ray(
+        { x, y: 1.5, z },
+        { x: 0, y: -1, z: 0 },
+      );
+      const hit = world.castRayAndGetNormal(
+        ray,
+        4,
+        true,
+        undefined,
+        undefined,
+        undefined,
+        undefined,
+        (collider) => part3ColliderRoles.has(collider.handle),
+      );
+      if (!hit) return null;
+      const point = ray.pointAt(hit.timeOfImpact);
+      return {
+        y: point.y,
+        point: { x: point.x, y: point.y, z: point.z },
+        normal: {
+          x: hit.normal.x,
+          y: hit.normal.y,
+          z: hit.normal.z,
+        },
+        role:
+          part3ColliderRoles.get(hit.collider.handle) ??
+          'unclassified-collider',
+        colliderHandle: hit.collider.handle,
+      };
+    };
+
+    const measureFullVisibleSurfaceAt = (x: number, z: number) => {
+      if (!stationaryGroup || !rotorPivot) return null;
+      return measureRouletteVisualSurfaceAt(
+        [stationaryGroup, rotorPivot],
+        x,
+        z,
+      );
+    };
+
+    const runGlbColliderParityAudit = () => {
+      if (!world || !stationaryGroup || !rotorPivot) return null;
+
+      const deltas: number[] = [];
+      let missingVisual = 0;
+      let missingCollider = 0;
+      let maxSample:
+        | {
+            radius: number;
+            angleDegrees: number;
+            visualY: number;
+            colliderY: number;
+            deltaWorld: number;
+            deltaMm: number;
+            visualSource: string;
+            colliderRole: string;
+          }
+        | null = null;
+
+      for (
+        let radialIndex = 0;
+        radialIndex < GLB_COLLIDER_PARITY_RADIAL_SAMPLES;
+        radialIndex += 1
+      ) {
+        const radialAlpha =
+          GLB_COLLIDER_PARITY_RADIAL_SAMPLES === 1
+            ? 0
+            : radialIndex / (GLB_COLLIDER_PARITY_RADIAL_SAMPLES - 1);
+        const radius = THREE.MathUtils.lerp(
+          GLB_COLLIDER_PARITY_SCAN_INNER_RADIUS,
+          GLB_COLLIDER_PARITY_SCAN_OUTER_RADIUS,
+          radialAlpha,
+        );
+
+        for (
+          let angleIndex = 0;
+          angleIndex < GLB_COLLIDER_PARITY_ANGULAR_SAMPLES;
+          angleIndex += 1
+        ) {
+          const angle =
+            (angleIndex / GLB_COLLIDER_PARITY_ANGULAR_SAMPLES) * TWO_PI;
+          const x = Math.sin(angle) * radius;
+          const z = Math.cos(angle) * radius;
+          const visual = measureFullVisibleSurfaceAt(x, z);
+          const collider = measureColliderSurfaceAt(x, z);
+
+          if (!visual) {
+            missingVisual += 1;
+            continue;
+          }
+          if (!collider) {
+            missingCollider += 1;
+            continue;
+          }
+
+          const deltaWorld = collider.y - visual.y;
+          const absDelta = Math.abs(deltaWorld);
+          deltas.push(absDelta);
+          if (!maxSample || absDelta > Math.abs(maxSample.deltaWorld)) {
+            maxSample = {
+              radius: Number(radius.toFixed(6)),
+              angleDegrees: Number(
+                THREE.MathUtils.radToDeg(angle).toFixed(4),
+              ),
+              visualY: Number(visual.y.toFixed(6)),
+              colliderY: Number(collider.y.toFixed(6)),
+              deltaWorld: Number(deltaWorld.toFixed(6)),
+              deltaMm: Number(
+                (deltaWorld * MM_PER_WORLD_UNIT).toFixed(3),
+              ),
+              visualSource: visual.source,
+              colliderRole: collider.role,
+            };
+          }
+        }
+      }
+
+      const sorted = [...deltas].sort((left, right) => left - right);
+      const medianAbsWorld =
+        sorted.length === 0
+          ? null
+          : sorted.length % 2 === 0
+            ? (sorted[sorted.length / 2 - 1] + sorted[sorted.length / 2]) / 2
+            : sorted[Math.floor(sorted.length / 2)];
+      const maxAbsWorld =
+        sorted.length === 0 ? null : sorted[sorted.length - 1];
+      const passed =
+        missingVisual === 0 &&
+        missingCollider === 0 &&
+        maxAbsWorld !== null &&
+        maxAbsWorld <= GLB_COLLIDER_PARITY_EPSILON_WORLD;
+
+      const report = {
+        schemaVersion: 'roulette-glb-collider-parity-v1',
+        passed,
+        toleranceWorld: GLB_COLLIDER_PARITY_EPSILON_WORLD,
+        toleranceMm:
+          GLB_COLLIDER_PARITY_EPSILON_WORLD * MM_PER_WORLD_UNIT,
+        sampleCount:
+          GLB_COLLIDER_PARITY_RADIAL_SAMPLES *
+          GLB_COLLIDER_PARITY_ANGULAR_SAMPLES,
+        comparedCount: deltas.length,
+        missingVisual,
+        missingCollider,
+        medianAbsWorld:
+          medianAbsWorld === null
+            ? null
+            : Number(medianAbsWorld.toFixed(6)),
+        medianAbsMm:
+          medianAbsWorld === null
+            ? null
+            : Number((medianAbsWorld * MM_PER_WORLD_UNIT).toFixed(3)),
+        maxAbsWorld:
+          maxAbsWorld === null ? null : Number(maxAbsWorld.toFixed(6)),
+        maxAbsMm:
+          maxAbsWorld === null
+            ? null
+            : Number((maxAbsWorld * MM_PER_WORLD_UNIT).toFixed(3)),
+        maxSample,
+      };
+
+      stage.dataset.glbColliderParity = passed ? 'passed' : 'failed';
+      stage.dataset.glbColliderParityReport = JSON.stringify(report);
+      console.info(
+        'GLB_COLLIDER_PARITY_REPORT',
+        JSON.stringify(report),
+      );
+      return report;
     };
 
     const measureVisibleDeflectors = (): Part4DeflectorAudit => {
