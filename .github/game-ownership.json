@@ -1,0 +1,79 @@
+{
+  "version": 1,
+  "previewBranch": "integration/replit-preview",
+  "shared": [
+    "artifacts/cascade-8/src/main.ts",
+    "artifacts/cascade-8/src/styles.css",
+    "artifacts/cascade-8/vite.config.ts",
+    "artifacts/cascade-8/package.json",
+    "artifacts/api-server/src/app.ts",
+    "artifacts/api-server/src/index.ts",
+    "lib/db/src/schema/index.ts",
+    "package.json",
+    "pnpm-lock.yaml",
+    "pnpm-workspace.yaml"
+  ],
+  "games": {
+    "slot": {
+      "branch": "feature/slot",
+      "roots": [
+        "artifacts/cascade-8/src/config",
+        "artifacts/cascade-8/src/engine",
+        "artifacts/cascade-8/src/game",
+        "artifacts/cascade-8/src/simulation",
+        "artifacts/cascade-8/src/slotSmoke.test.ts",
+        "artifacts/api-server/src/slot"
+      ]
+    },
+    "roulette": {
+      "branch": "feature/roulette",
+      "roots": [
+        "artifacts/cascade-8/src/roulette.css",
+        "artifacts/cascade-8/src/rouletteClient.ts",
+        "artifacts/cascade-8/src/rouletteGeometry.ts",
+        "artifacts/cascade-8/src/rouletteGeometry.test.ts",
+        "artifacts/cascade-8/src/roulettePhysicsConfig.test.ts",
+        "artifacts/cascade-8/src/roulettePhysicsReplay.ts",
+        "artifacts/cascade-8/src/rouletteProductionReplayProbe.ts",
+        "artifacts/cascade-8/src/rouletteSmoke.test.ts",
+        "artifacts/cascade-8/roulette-production-replay-probe.html",
+        "artifacts/roulette-physics-lab",
+        "artifacts/api-server/src/roulette",
+        "artifacts/api-server/src/physics-lab",
+        "lib/roulette-glb-surface.ts",
+        "lib/roulette-gltf-transform.ts",
+        "lib/roulette-physics-config.ts",
+        "scripts/roulette-authoritative-replay-runtime.mjs",
+        "scripts/roulette-part6-report.mjs",
+        "scripts/roulette-part6-runtime.mjs",
+        "scripts/roulette-production-lifecycle-browser.mjs"
+      ]
+    },
+    "cadi-kazan": {
+      "branch": "feature/cadi-kazan",
+      "roots": [
+        "artifacts/cascade-8/src/witchClient.ts",
+        "artifacts/cascade-8/src/witch.css",
+        "artifacts/cascade-8/src/witch.visual-lock.css",
+        "artifacts/cascade-8/src/scratch",
+        "artifacts/cascade-8/src/cadiKazanSmoke.test.ts",
+        "artifacts/api-server/src/cadi-kazan"
+      ]
+    },
+    "idle": {
+      "branch": "feature/idle",
+      "roots": [
+        "artifacts/cascade-8/src/idle",
+        "artifacts/cascade-8/public/businesses",
+        "artifacts/api-server/src/idle"
+      ]
+    },
+    "hub": {
+      "branch": "feature/hub",
+      "roots": [
+        "artifacts/cascade-8/src/hub",
+        "artifacts/cascade-8/src/mainMenuRegression.test.ts"
+      ]
+    }
+  }
+}
