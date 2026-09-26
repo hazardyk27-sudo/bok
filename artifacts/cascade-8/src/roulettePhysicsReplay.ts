@@ -5,7 +5,6 @@ import {
   ROULETTE_BALL_RADIUS,
   ROULETTE_MODEL_PATH,
   ROULETTE_PHYSICS_SCHEMA_VERSION,
-  ROULETTE_POCKET_COUNT,
   ROULETTE_RAW_SOURCE_CENTER,
   ROULETTE_ROTOR_ANGULAR_SPEED,
   ROULETTE_WHEEL_DIAMETER,
@@ -16,22 +15,7 @@ type Vec3 = { x: number; y: number; z: number };
 type Quaternion = { x: number; y: number; z: number; w: number };
 
 const ROULETTE_VISUAL_BALL_SCALE = 1.5;
-const ROULETTE_VISUAL_POCKET_ALIGNMENT_RADIANS =
-  -(12.5 * Math.PI * 2) / ROULETTE_POCKET_COUNT;
-const ROULETTE_VISUAL_POCKET_SINK_Y = -0.06;
-const ROULETTE_VISUAL_POCKET_SINK_START_RADIUS = 2.04;
-const ROULETTE_VISUAL_POCKET_SINK_FULL_RADIUS = 1.90;
 const ROULETTE_VISUAL_BALL_RADIUS = ROULETTE_BALL_RADIUS * ROULETTE_VISUAL_BALL_SCALE;
-
-function visualPocketSinkForRadius(radius: number) {
-  if (radius >= ROULETTE_VISUAL_POCKET_SINK_START_RADIUS) return 0;
-  if (radius <= ROULETTE_VISUAL_POCKET_SINK_FULL_RADIUS) return ROULETTE_VISUAL_POCKET_SINK_Y;
-  const alpha =
-    (ROULETTE_VISUAL_POCKET_SINK_START_RADIUS - radius) /
-    (ROULETTE_VISUAL_POCKET_SINK_START_RADIUS - ROULETTE_VISUAL_POCKET_SINK_FULL_RADIUS);
-  const smooth = alpha * alpha * (3 - 2 * alpha);
-  return THREE.MathUtils.lerp(0, ROULETTE_VISUAL_POCKET_SINK_Y, smooth);
-}
 
 type ReplaySample = {
   simulatedAtMs: number;
@@ -275,7 +259,6 @@ export class RoulettePhysicsReplay {
     stationary.attach(outside);
     stationary.attach(turret);
     rotorVisual.attach(inside);
-    rotorVisual.rotation.y = ROULETTE_VISUAL_POCKET_ALIGNMENT_RADIANS;
     wheel.remove(runtimeOffset);
     wheel.updateMatrixWorld(true);
 
@@ -341,14 +324,9 @@ export class RoulettePhysicsReplay {
     copyQuaternion(anchorRotor, finalSample.rotor.orientation);
     const inverseAnchorRotor = anchorRotor.clone().invert();
 
-    const finalRadius = Math.hypot(
-      finalSample.ball.position.x,
-      finalSample.ball.position.z,
-    );
-    const finalVisualSinkY = visualPocketSinkForRadius(finalRadius);
     const localBallPosition = new THREE.Vector3(
       finalSample.ball.position.x,
-      finalSample.ball.position.y + finalVisualSinkY,
+      finalSample.ball.position.y,
       finalSample.ball.position.z,
     ).applyQuaternion(inverseAnchorRotor);
 
@@ -400,10 +378,6 @@ export class RoulettePhysicsReplay {
           y: this.ball.position.y,
           z: this.ball.position.z,
         },
-        visualPocketSinkY: visualPocketSinkForRadius(
-          Math.hypot(finalSample.ball.position.x, finalSample.ball.position.z),
-        ),
-        visualRotorOffsetRadians: ROULETTE_VISUAL_POCKET_ALIGNMENT_RADIANS,
       },
       expected: {
         finalPocket: replay.finalPocket,
@@ -449,11 +423,9 @@ export class RoulettePhysicsReplay {
   }
 
   private applySample(sample: ReplaySample) {
-    const radius = Math.hypot(sample.ball.position.x, sample.ball.position.z);
-    const visualSinkY = visualPocketSinkForRadius(radius);
     this.ball.position.set(
       sample.ball.position.x,
-      sample.ball.position.y + visualSinkY,
+      sample.ball.position.y,
       sample.ball.position.z,
     );
     copyQuaternion(this.ball.quaternion, sample.ball.orientation);
