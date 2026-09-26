@@ -10,6 +10,13 @@ The Businesses route shell, route body state, CSS reset/foundation, UI, componen
 
 An Idle commit never publishes itself to Replit; only the central one-game promotion workflow may update the Idle slice of `integration/replit-preview`.
 
+## Isolation v2 is active
+- Work only on `feature/idle` and only inside Idle-owned roots from `.github/game-ownership.json`.
+- Do not merge or push the whole feature branch into `integration/replit-preview`.
+- Do not touch Replit. Replit stays on `integration/replit-preview`.
+- A commit only saves Idle work. Preview release is a separate central promotion that copies only Idle-owned roots.
+- If a task appears to require Hub, another game, wallet/platform, shared router/build/schema files, stop and hand it to the central integration conversation.
+
 ## Milestone continuity
 - Read `Current milestones` before starting substantial work in this category.
 - Add a milestone only for durable state that the next agent would otherwise have to rediscover: an important decision, completed phase, validated baseline, major root cause/blocker, or next agreed checkpoint.

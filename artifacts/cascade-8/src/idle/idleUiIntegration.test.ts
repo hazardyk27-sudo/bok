@@ -174,7 +174,7 @@ describe("Businesses dedicated minimal mobile shell", () => {
     expect(idleCssSource).toContain("min-height: 70px");
     expect(idleCssSource).toContain("grid-column: 1 / -1");
     expect(idleCssSource).toContain("min-height: 58px");
-    expect(idleCssSource).toContain("linear-gradient(135deg, #68f4ac, #4be995 62%, #39da83)");
+    expect(idleCssSource).toContain("linear-gradient(135deg, #3c84ff, #4273dc 62%, #388a9c)");
   });
 
   it("keeps a 390px-specific fallback without changing the tablet breakpoint", () => {
@@ -202,15 +202,19 @@ describe("Businesses token inheritance", () => {
 
 
 describe("Businesses premium design tokens", () => {
-  it("locks the approved green-charcoal palette and restrained elevation system", () => {
+  it("locks the uploaded Black / Deep Azure / Salzburg / Sapphire / Cerulean palette", () => {
     expect(idleCssSource).toContain("/* Businesses visual system v2");
-    expect(idleCssSource).toContain("--idle-canvas: #0b1418");
-    expect(idleCssSource).toContain("--idle-sidebar: #060c11");
-    expect(idleCssSource).toContain("--idle-surface-raised: #151f25");
-    expect(idleCssSource).toContain("--idle-text: #f2f4f3");
-    expect(idleCssSource).toContain("--idle-green: #54f2a3");
-    expect(idleCssSource).toContain("--idle-green-bright: #78f0aa");
-    expect(idleCssSource).toContain("--idle-shadow-green");
+    expect(idleCssSource).toContain("--idle-black: #000000");
+    expect(idleCssSource).toContain("--idle-deep-azure: #0b0e0f");
+    expect(idleCssSource).toContain("--idle-salzburg-blue: #388a9c");
+    expect(idleCssSource).toContain("--idle-sapphire: #4273dc");
+    expect(idleCssSource).toContain("--idle-cerulean: #3c84ff");
+    expect(idleCssSource).toContain("--idle-canvas: #0b0e0f");
+    expect(idleCssSource).toContain("--idle-sidebar: #000000");
+    expect(idleCssSource).toContain("--idle-accent: #388a9c");
+    expect(idleCssSource).toContain("--idle-accent-secondary: #4273dc");
+    expect(idleCssSource).toContain("--idle-accent-bright: #3c84ff");
+    expect(idleCssSource).toContain("--idle-shadow-accent");
   });
 
   it("locks the measured typography, geometry and spacing values from the approved references", () => {
@@ -323,11 +327,11 @@ describe("Businesses measured desktop workspace", () => {
     expect(idleIndexSource).toContain(">AYARLAR</span>");
   });
 
-  it("uses the approved charcoal-green shell instead of the old blue ambient foundation", () => {
-    expect(idleCssSource).toContain("background: var(--idle-canvas, #0b1418)");
-    expect(idleCssSource).toContain("rgba(84, 242, 163, .035)");
+  it("uses the approved black-azure shell instead of the old blue ambient foundation", () => {
+    expect(idleCssSource).toContain("background: var(--idle-canvas, #0b0e0f)");
+    expect(idleCssSource).toContain("rgba(56, 138, 156, .035)");
     expect(idleCssSource).toContain("var(--idle-sidebar)");
-    expect(idleCssSource).toContain("var(--idle-green)");
+    expect(idleCssSource).toContain("var(--idle-accent)");
   });
 
   it("keeps the sidebar desktop-only until the dedicated mobile composition is built", () => {
@@ -358,11 +362,11 @@ describe("Businesses premium command header", () => {
     expect(idleCssSource).toContain("min-height: 108px");
   });
 
-  it("renders the club progression as a segmented green 27-step progress surface", () => {
+  it("renders the club progression as a segmented blue 27-step progress surface", () => {
     expect(idleCssSource).toContain("grid-template-columns: 210px minmax(0, 1fr) auto");
     expect(idleCssSource).toContain("height: var(--idle-progress-height)");
     expect(idleCssSource).toContain("calc((100% / 27) - 2px)");
-    expect(idleCssSource).toContain("linear-gradient(90deg, var(--idle-green-deep), var(--idle-green))");
+    expect(idleCssSource).toContain("linear-gradient(90deg, var(--idle-accent-deep), var(--idle-accent))");
   });
 });
 
@@ -391,10 +395,10 @@ describe("Businesses premium KPI command bar", () => {
     expect(idleCssSource).toContain("font-size: var(--idle-type-kpi)");
   });
 
-  it("uses the approved green primary treatment for Tümünü Topla", () => {
-    expect(idleCssSource).toContain("#64f5aa");
-    expect(idleCssSource).toContain("#47e995");
-    expect(idleCssSource).toContain("color: #06130c");
+  it("uses the approved blue primary treatment for Tümünü Topla", () => {
+    expect(idleCssSource).toContain("#3c84ff");
+    expect(idleCssSource).toContain("#4273dc");
+    expect(idleCssSource).toContain("color: #000000");
     expect(idleCssSource).toContain("width: 34px");
     expect(idleCssSource).toContain("height: 34px");
   });
@@ -537,12 +541,12 @@ describe("Businesses final card economy presentation", () => {
     expect(componentsSource).toContain("vaultProgressNode.style.width");
   });
 
-  it("locks the final reference-like card geometry and green primary actions", () => {
+  it("locks the final reference-like card geometry and blue primary actions", () => {
     expect(idleCssSource).toContain("/* Part 8 — final business card economy + vault presentation */");
     expect(idleCssSource).toContain("height: var(--idle-progress-height)");
     expect(idleCssSource).toContain("calc(12.5% - 2px)");
     expect(idleCssSource).toContain("min-height: var(--idle-button-height)");
-    expect(idleCssSource).toContain("linear-gradient(135deg, var(--idle-green-bright), var(--idle-green))");
+    expect(idleCssSource).toContain("linear-gradient(135deg, var(--idle-accent-bright), var(--idle-accent-secondary) 58%, var(--idle-accent))");
     expect(idleCssSource).toContain(".business-card-vault-heading");
     expect(idleCssSource).toContain(".business-card-vault-helper");
   });
@@ -602,9 +606,9 @@ describe("Businesses desktop visual parity polish", () => {
     expect(idleCssSource).toContain("min-height: 52px");
   });
 
-  it("uses only restrained green hover and focus treatment on the final desktop cards", () => {
-    expect(idleCssSource).toContain("border-color: rgba(84, 242, 163, .24)");
-    expect(idleCssSource).toContain("background: rgba(84, 242, 163, .06)");
+  it("uses only restrained blue hover and focus treatment on the final desktop cards", () => {
+    expect(idleCssSource).toContain("border-color: rgba(56, 138, 156, .24)");
+    expect(idleCssSource).toContain("background: rgba(56, 138, 156, .06)");
     expect(idleCssSource).toContain("box-shadow: var(--idle-focus-ring)");
     expect(idleCssSource).toContain("transform: translateY(-2px)");
   });
@@ -639,9 +643,9 @@ describe("Businesses dedicated tablet composition", () => {
     expect(idleCssSource).toContain("min-height: 488px");
   });
 
-  it("removes old cyan hover treatment from the tablet surface with final green overrides", () => {
-    expect(idleCssSource).toContain("border-color: rgba(84, 242, 163, .2)");
-    expect(idleCssSource).toContain("background: rgba(84, 242, 163, .05)");
+  it("removes old cyan hover treatment from the tablet surface with final blue overrides", () => {
+    expect(idleCssSource).toContain("border-color: rgba(56, 138, 156, .2)");
+    expect(idleCssSource).toContain("background: rgba(56, 138, 156, .05)");
     expect(idleCssSource).toContain("box-shadow: var(--idle-focus-ring)");
   });
 });
@@ -773,7 +777,7 @@ describe("Businesses detail panel architecture", () => {
 
   it("keeps the drawer behavior while the final desktop shell overrides its visual system", () => {
     expect(idleCssSource).toContain("/* Part 12 — premium detail drawer / mobile fullscreen architecture */");
-    expect(idleCssSource).toContain("/* Part 13 — green/charcoal Details shell */");
+    expect(idleCssSource).toContain("/* Part 13 — azure/black Details shell */");
     expect(idleCssSource).toContain(".business-detail-drawer");
     expect(idleCssSource).toContain("width: min(680px, 72vw)");
     expect(idleCssSource).toContain("transform: translateX(104%)");
@@ -790,11 +794,11 @@ describe("Businesses detail panel architecture", () => {
 });
 
 
-describe("Businesses green charcoal Details shell", () => {
-  it("uses the approved green charcoal surface and wider desktop drawer", () => {
-    expect(idleCssSource).toContain("/* Part 13 — green/charcoal Details shell */");
+describe("Businesses azure black Details shell", () => {
+  it("uses the approved azure black surface and wider desktop drawer", () => {
+    expect(idleCssSource).toContain("/* Part 13 — azure/black Details shell */");
     expect(idleCssSource).toContain("width: min(680px, 72vw)");
-    expect(idleCssSource).toContain("border-left: 1px solid rgba(84, 242, 163, .14)");
+    expect(idleCssSource).toContain("border-left: 1px solid rgba(56, 138, 156, .14)");
     expect(idleCssSource).toContain("linear-gradient(180deg, #0d1718 0%, #0a1415 48%, #081011 100%)");
   });
 
@@ -813,10 +817,10 @@ describe("Businesses green charcoal Details shell", () => {
     expect(idleCssSource).toContain("min-height: 78px");
   });
 
-  it("uses restrained green active tabs, status badges and focus treatment", () => {
+  it("uses restrained blue active tabs, status badges and focus treatment", () => {
     expect(idleCssSource).toContain('business-detail-tabs button[data-active="true"]');
-    expect(idleCssSource).toContain("linear-gradient(135deg, var(--idle-green-bright), var(--idle-green))");
-    expect(idleCssSource).toContain("color: var(--idle-green-bright)");
+    expect(idleCssSource).toContain("linear-gradient(135deg, var(--idle-accent-bright), var(--idle-accent-secondary) 58%, var(--idle-accent))");
+    expect(idleCssSource).toContain("color: var(--idle-accent-bright)");
     expect(idleCssSource).toContain("box-shadow: var(--idle-focus-ring)");
   });
 });
@@ -887,21 +891,21 @@ describe("Businesses premium business stage cards", () => {
     expect(idleCssSource).toContain("grid-template-columns: repeat(2, minmax(0, 1fr))");
   });
 
-  it("uses green state treatment for completed, current, next and locked stages", () => {
+  it("uses blue state treatment for completed, current, next and locked stages", () => {
     expect(idleCssSource).toContain('.business-level-node[data-level-state="completed"]');
     expect(idleCssSource).toContain('.business-level-node[data-level-state="current"]');
     expect(idleCssSource).toContain('.business-level-node[data-level-state="future"]');
     expect(idleCssSource).toContain('.business-level-node[data-level-state="locked"]');
-    expect(idleCssSource).toContain("background: var(--idle-green)");
-    expect(idleCssSource).toContain("background: var(--idle-green-deep)");
+    expect(idleCssSource).toContain("background: var(--idle-accent)");
+    expect(idleCssSource).toContain("background: var(--idle-accent-deep)");
   });
 
-  it("keeps the upgrade CTA only on the immediate next stage and makes it a 48px green action", () => {
+  it("keeps the upgrade CTA only on the immediate next stage and makes it a 48px blue action", () => {
     expect(idleIndexSource).toContain("const actionMarkup = isImmediateFuture");
     expect(idleIndexSource).toContain("data-idle-detail-upgrade");
     expect(idleCssSource).toContain(".business-level-node-upgrade");
     expect(idleCssSource).toContain("min-height: 48px");
-    expect(idleCssSource).toContain("linear-gradient(135deg, var(--idle-green-bright), var(--idle-green))");
+    expect(idleCssSource).toContain("linear-gradient(135deg, var(--idle-accent-bright), var(--idle-accent-secondary) 58%, var(--idle-accent))");
   });
 });
 
@@ -968,13 +972,13 @@ describe("Businesses premium vault stage cards", () => {
     expect(idleCssSource).toContain("grid-template-columns: repeat(2, minmax(0, 1fr))");
   });
 
-  it("uses the same green progression states as business stages", () => {
+  it("uses the same blue progression states as business stages", () => {
     expect(idleCssSource).toContain('.vault-level-node[data-vault-state="completed"]');
     expect(idleCssSource).toContain('.vault-level-node[data-vault-state="current"]');
     expect(idleCssSource).toContain('.vault-level-node[data-vault-state="future"]');
     expect(idleCssSource).toContain('.vault-level-node[data-vault-state="locked"]');
-    expect(idleCssSource).toContain("background: var(--idle-green)");
-    expect(idleCssSource).toContain("background: var(--idle-green-deep)");
+    expect(idleCssSource).toContain("background: var(--idle-accent)");
+    expect(idleCssSource).toContain("background: var(--idle-accent-deep)");
   });
 
   it("keeps the next-stage Kasa CTA 48px and gives 24h max a distinct final treatment", () => {
@@ -1012,12 +1016,14 @@ describe("Businesses final mobile Details composition", () => {
     expect(idleCssSource).toContain(".business-detail-summary > div:first-child");
     expect(idleCssSource).toContain("grid-template-columns: repeat(3, minmax(0, 1fr))");
     expect(idleCssSource).toContain("grid-column: auto");
-    expect(idleCssSource).toContain("min-height: 50px");
+    expect(idleCssSource).toContain("min-height: 42px");
     expect(idleCssSource).toContain("font-size: 13px");
+    expect(idleCssSource).toContain("margin-top: 4px");
+    expect(idleCssSource).toContain("grid-template-columns: minmax(0, 1fr) 36px");
   });
 
   it("keeps upgrade CTAs at 48px while allowing compact navigation chrome", () => {
-    expect(idleCssSource).toContain("min-height: 38px");
+    expect(idleCssSource).toContain("min-height: 33px");
     expect(idleCssSource).toContain("min-height: 48px");
     expect(idleCssSource).toContain("touch-action: manipulation");
   });
@@ -1070,7 +1076,9 @@ describe("Businesses upgrade feedback choreography", () => {
     expect(idleIndexSource).toContain("business-feedback-toast business-upgrade-toast");
     expect(idleCssSource).toContain("/* Viewport feedback toolbar");
     expect(idleCssSource).toContain("position: fixed");
-    expect(idleCssSource).toContain("z-index: 260");
+    expect(idleCssSource).toContain("z-index: 360");
+    expect(idleCssSource).toContain("top: max(12px, calc(env(safe-area-inset-top) + 8px))");
+    expect(idleCssSource).toContain("margin: 0 auto");
     expect(idleCssSource).toContain("@media (prefers-reduced-motion: reduce)");
     expect(idleCssSource).toContain("animation: none");
   });
@@ -1198,13 +1206,14 @@ describe("Businesses final responsive QA", () => {
 
 
 describe("Businesses Part 18 final QA guardrails", () => {
-  it("removes hard-coded legacy blue and violet accents from the Idle stylesheet", () => {
-    expect(idleCssSource).not.toContain("rgba(70, 200, 255,");
-    expect(idleCssSource).not.toContain("rgba(125, 223, 255,");
-    expect(idleCssSource).not.toContain("rgba(24, 69, 124,");
-    expect(idleCssSource).not.toContain("rgba(114, 88, 255,");
-    expect(idleCssSource).not.toContain("var(--idle-cyan");
-    expect(idleCssSource).not.toContain("var(--idle-blue-deep");
+  it("removes the retired green palette after the uploaded blue palette migration", () => {
+    expect(idleCssSource).not.toContain("--idle-green");
+    expect(idleCssSource).not.toContain("#54f2a3");
+    expect(idleCssSource).not.toContain("#78f0aa");
+    expect(idleCssSource).not.toContain("#1c4b32");
+    expect(idleCssSource).not.toContain("rgba(84, 242, 163,");
+    expect(idleCssSource).not.toContain("rgba(120, 240, 170,");
+    expect(idleCssSource).not.toContain("rgba(35, 150, 92,");
   });
 
   it("keeps one explicit final QA guardrail layer for overflow, touch and motion safety", () => {
