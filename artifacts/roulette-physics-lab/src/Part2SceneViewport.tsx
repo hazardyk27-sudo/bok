@@ -150,7 +150,7 @@ const PART4_DEFLECTOR_MIN_CLUSTER_SAMPLES = 3;
 const PART4_DEFLECTOR_MIN_COUNT = 4;
 const PART4_DEFLECTOR_MAX_COUNT = 12;
 const PART3_DEFLECTOR_FRICTION = 0.28;
-const PART3_DEFLECTOR_RESTITUTION = 0.16;
+const PART3_DEFLECTOR_RESTITUTION = 0.22;
 const PART3_TRACK_INNER_RADIUS = PART2_ACTUAL_DARK_TRACK_RADIUS_BAND[0];
 const PART3_TRACK_OUTER_RADIUS = PART2_ACTUAL_DARK_TRACK_RADIUS_BAND[1];
 const PART3_TRACK_CONTACT_TOLERANCE = 0.1;
@@ -197,6 +197,7 @@ const POCKET_FRET_RADIAL_HALF_EXTENT =
   (POCKET_FRET_OUTER_EDGE_RADIUS - POCKET_FRET_INNER_EDGE_RADIUS) / 2;
 const POCKET_FRET_VERTICAL_HALF_EXTENT = 0.11;
 const POCKET_FRET_EDGE_ROUNDING = 0.005;
+const POCKET_FRET_RESTITUTION = 0.06;
 const POCKET_INNER_GUARD_EDGE_ROUNDING = 0.02;
 // Keep the fret's lower face just above the continuous floor. Letting the
 // separator extend through the floor creates a moving edge that can inject a
@@ -1435,7 +1436,7 @@ function addKinematicPocketSystem(
       .setTranslation(...radialPosition(POCKET_FRET_RADIUS, angle, POCKET_FRET_Y))
       .setRotation({ x: 0, y: Math.sin(angle / 2), z: 0, w: Math.cos(angle / 2) })
       .setFriction(0.42)
-      .setRestitution(0.02)
+      .setRestitution(POCKET_FRET_RESTITUTION)
       .setCollisionGroups(ROTOR_COLLISION_GROUP | (BALL_COLLISION_GROUP << 16));
     colliders.push(world.createCollider(collider, body));
   }
