@@ -244,79 +244,61 @@ describe("Businesses card information hierarchy", () => {
   });
 });
 
+
 describe("Businesses premium action states", () => {
-  it("keeps collect and vault actions on the main card while business upgrades stay in Details", () => {
-    expect(componentsSource).toContain('data-action-state="loading"');
-    expect(componentsSource).toContain('collectButton.dataset.actionState = busy');
-    expect(componentsSource).toContain('vaultUpgradeButton.dataset.actionState = busy');
-    expect(componentsSource).not.toContain('data-business-upgrade');
-    expect(idleIndexSource).toContain('data-idle-detail-upgrade');
-    expect(idleIndexSource).toContain('"purchase"');
-    expect(componentsSource).toContain('"insufficient"');
-    expect(componentsSource).toContain('"max"');
-    expect(componentsSource).toContain('"full"');
-  });
-
-  it("removes tiny action notes from main cards without removing Details guidance", () => {
-    expect(componentsSource).not.toContain("data-business-collect-note");
-    expect(componentsSource).not.toContain("data-business-upgrade-note");
-    expect(componentsSource).toContain("Bakiye yetersiz.");
-    expect(componentsSource).toContain("Kasa maksimum seviyede.");
-    expect(idleIndexSource).toContain("Yükseltme sonrası Kasa Lv1'e döner");
-    expect(idleIndexSource).toContain("business-level-node-upgrade");
-  });
-
-  it("replaces the removed main-card upgrade slot with a single Details action", () => {
+  it("keeps exactly two main-card actions: Collect and Details", () => {
+    expect(componentsSource).toContain("business-card-action--collect");
     expect(componentsSource).toContain("business-card-action--details");
-    expect(componentsSource).toContain("business-card-secondary business-card-details");
+    expect(componentsSource).not.toContain("data-business-upgrade");
+    expect(componentsSource).not.toContain("data-business-vault-upgrade");
     expect((componentsSource.match(/data-business-details/g) ?? []).length).toBe(1);
-    expect(idleCssSource).toContain("grid-template-columns: minmax(0, 1.12fr) minmax(0, .88fr)");
-    expect(idleCssSource).toContain(".business-card-action--details .business-card-details");
   });
 
-  it("styles ready, insufficient, max, locked and busy actions distinctly", () => {
-    expect(idleCssSource).toContain("/* Part 7 — premium action / state system */");
-    expect(idleCssSource).toContain('[data-action-state="ready"]');
-    expect(idleCssSource).toContain('[data-action-state="insufficient"]');
-    expect(idleCssSource).toContain('[data-action-state="max"]');
-    expect(idleCssSource).toContain('[data-action-state="locked"]');
-    expect(idleCssSource).toContain('[data-action-state="busy"]');
-    expect(idleCssSource).toContain("@keyframes idle-action-busy");
-    expect(idleCssSource).toContain(":focus-visible");
+  it("keeps the collect state server-driven and the Details action always available", () => {
+    expect(componentsSource).toContain("collectButton.dataset.actionState");
+    expect(componentsSource).toContain('"full"');
+    expect(componentsSource).toContain('"ready"');
+    expect(componentsSource).toContain('"empty"');
+    expect(idleCssSource).toContain(".business-card-primary:disabled");
+    expect(idleCssSource).toContain(".business-card-details");
   });
 
-  it("keeps touch targets premium-sized and honors reduced motion", () => {
+  it("keeps upgrades and insufficient-balance guidance in Details", () => {
+    expect(idleIndexSource).toContain("business-level-node-upgrade");
+    expect(idleIndexSource).toContain("vault-level-node-upgrade");
+    expect(idleIndexSource).toContain("Bakiye yetersiz");
+    expect(idleIndexSource).toContain("Yükseltme sonrası Kasa Lv1'e döner");
+  });
+
+  it("keeps touch targets large and focus-visible", () => {
+    expect(idleCssSource).toContain("min-height: 46px");
     expect(idleCssSource).toContain("min-height: 48px");
-    expect(idleCssSource).toContain("@media (prefers-reduced-motion: reduce)");
+    expect(idleCssSource).toContain(":focus-visible");
   });
 });
 
 
 describe("Businesses dedicated mobile cards", () => {
-  it("uses a mobile-specific layered card composition instead of shrinking desktop cards", () => {
-    expect(idleCssSource).toContain("/* Part 8 — dedicated mobile business-card architecture */");
-    expect(idleCssSource).toContain("margin-top: -24px");
-    expect(idleCssSource).toContain("border-radius: 18px");
+  it("uses a single-column card flow instead of shrinking the desktop grid", () => {
+    expect(idleCssSource).toContain("@media (max-width: 760px)");
+    expect(idleCssSource).toContain(".business-list");
     expect(idleCssSource).toContain("grid-template-columns: 1fr");
-    expect(idleCssSource).toContain(".business-card-action--collect");
-    expect(idleCssSource).toContain(".business-card-action--details");
-    expect(idleCssSource).toContain(".business-card-operations");
+    expect(idleCssSource).toContain("grid-template-rows: 126px auto");
   });
 
-  it("keeps the mobile value hierarchy large and touch-first", () => {
-    expect(idleCssSource).toContain("font-size: clamp(28px, 9vw, 34px)");
-    expect(idleCssSource).toContain("min-height: 50px");
-    expect(idleCssSource).toContain("min-height: 132px");
+  it("keeps the two primary actions side-by-side on phone widths", () => {
+    expect(idleCssSource).toContain(".business-card-actions");
+    expect(idleCssSource).toContain("minmax(0, 1.08fr) minmax(0, .92fr)");
+    expect(idleCssSource).toContain("@media (max-width: 430px)");
+    expect(idleCssSource).toContain("grid-template-columns: 1fr 1fr");
   });
 
-  it("includes small-phone and mobile-landscape card adaptations", () => {
-    expect(idleCssSource).toContain("@media (max-width: 420px)");
-    expect(idleCssSource).toContain("@media (max-width: 760px) and (orientation: landscape)");
-    expect(idleCssSource).toContain("min-height: 118px");
-    expect(idleCssSource).toContain("min-height: 110px");
+  it("lets vault timing wrap instead of becoming unreadable", () => {
+    expect(idleCssSource).toContain(".business-card-vault-meta");
+    expect(idleCssSource).toContain("flex-wrap: wrap");
+    expect(idleCssSource).toContain("flex-basis: 100%");
   });
 });
-
 
 describe("Businesses Stadium milestone visuals", () => {
   it("renders a real vector Stadium scene instead of the generic placeholder geometry", () => {
