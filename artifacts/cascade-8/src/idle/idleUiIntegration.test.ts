@@ -208,10 +208,21 @@ describe("Businesses premium design tokens", () => {
 });
 
 
+describe("Businesses route module isolation", () => {
+  it("lazy-loads Businesses without the global slot/menu stylesheet", () => {
+    expect(mainSource).toContain(
+      'const businessesModule = isBusinessesRoute ? await import("./idle") : null;',
+    );
+    expect(mainSource).toContain('if (!isBusinessesRoute) {\n  await import("./styles.css");\n}');
+    expect(mainSource).not.toContain('import "./styles.css";');
+    expect(mainSource).not.toContain('import { BUSINESSES_MARKUP, BusinessesClient } from "./idle";');
+  });
+});
+
 describe("Businesses route shell isolation", () => {
   it("does not mount the legacy game-route chrome around Businesses", () => {
     expect(mainSource).toContain("const businessesRouteShell = (content: string)");
-    expect(mainSource).toContain("businessesRouteShell(BUSINESSES_MARKUP)");
+    expect(mainSource).toContain("businessesRouteShell(businessesModule!.BUSINESSES_MARKUP)");
     expect(mainSource).not.toContain(
       'routeShell(BUSINESSES_MARKUP, "is-route-page is-businesses-page")',
     );
