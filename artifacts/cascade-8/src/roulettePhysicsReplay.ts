@@ -5,7 +5,9 @@ import {
   ROULETTE_BALL_RADIUS,
   ROULETTE_MODEL_PATH,
   ROULETTE_PHYSICS_SCHEMA_VERSION,
+  ROULETTE_POCKET_COUNT,
   ROULETTE_RAW_SOURCE_CENTER,
+  ROULETTE_ROTOR_ANGULAR_SPEED,
   ROULETTE_WHEEL_DIAMETER,
   ROULETTE_Y_ORIGIN,
 } from "../../../lib/roulette-physics-config";
@@ -13,7 +15,8 @@ import {
 type Vec3 = { x: number; y: number; z: number };
 type Quaternion = { x: number; y: number; z: number; w: number };
 
-const ROULETTE_VISUAL_BALL_SCALE = 1.2;
+const ROULETTE_VISUAL_BALL_SCALE = 1.5;
+const ROULETTE_VISUAL_POCKET_ALIGNMENT_RADIANS = -Math.PI / ROULETTE_POCKET_COUNT;
 const ROULETTE_VISUAL_BALL_RADIUS = ROULETTE_BALL_RADIUS * ROULETTE_VISUAL_BALL_SCALE;
 
 type ReplaySample = {
@@ -52,6 +55,7 @@ export class RoulettePhysicsReplay {
   private playbackDurationMs = 0;
   private loadedRouletteRoundId = "";
   private playbackComplete = false;
+  private settledContinuationActive = false;
   private onComplete?: () => void;
   private resizeObserver: ResizeObserver;
 
@@ -90,6 +94,7 @@ export class RoulettePhysicsReplay {
     await this.loadReplay(roundId);
     if (!this.replay?.trajectory.length) return;
     this.playbackComplete = false;
+    this.settledContinuationActive = false;
     this.canvas.dataset.replayState = "spinning";
     delete this.canvas.dataset.replayPocket;
     this.playbackDurationMs = Math.max(
@@ -116,7 +121,12 @@ export class RoulettePhysicsReplay {
     this.canvas.dataset.replayPocket = String(expectedNumber);
     this.onComplete = onComplete;
 
-    if (this.playbackComplete || this.playbackStartedAt === 0) {
+    if (this.playbackComplete) {
+      this.finishPlayback();
+      return;
+    }
+
+    if (this.playbackStartedAt === 0) {
       this.applySample(this.replay.trajectory.at(-1)!);
       this.renderFrame();
       this.playbackComplete = true;
@@ -133,12 +143,14 @@ export class RoulettePhysicsReplay {
     if (!this.replay?.trajectory.length) throw new Error("PHYSICS_REPLAY_UNAVAILABLE");
 
     cancelAnimationFrame(this.frame);
+    this.settledContinuationActive = false;
     this.playbackComplete = true;
     this.canvas.dataset.replayState = "settled";
     this.canvas.dataset.replayPocket = String(expectedNumber);
     this.applySample(this.replay.trajectory.at(-1)!);
     this.renderFrame();
     this.exposeFinalReplayState();
+    this.startSettledContinuation();
   }
 
   destroy() {
@@ -249,6 +261,7 @@ export class RoulettePhysicsReplay {
     stationary.attach(outside);
     stationary.attach(turret);
     rotorVisual.attach(inside);
+    rotorVisual.rotation.y = ROULETTE_VISUAL_POCKET_ALIGNMENT_RADIANS;
     wheel.remove(runtimeOffset);
     wheel.updateMatrixWorld(true);
 
@@ -285,7 +298,7 @@ export class RoulettePhysicsReplay {
 
       if (replayMs >= replay.trajectory.at(-1)!.simulatedAtMs) {
         this.playbackComplete = true;
-        if (this.onComplete) this.finishPlayback();
+        this.finishPlayback();
         return;
       }
       this.frame = requestAnimationFrame(tick);
@@ -299,32 +312,68 @@ export class RoulettePhysicsReplay {
     const complete = this.onComplete;
     this.onComplete = undefined;
     complete?.();
+    if (!this.settledContinuationActive) this.startSettledContinuation();
+  }
+
+  private startSettledContinuation() {
+    const replay = this.replay;
+    const finalSample = replay?.trajectory.at(-1);
+    if (!finalSample || !this.rotor) return;
+
+    cancelAnimationFrame(this.frame);
+    this.settledContinuationActive = true;
+
+    const anchorRotor = new THREE.Quaternion();
+    copyQuaternion(anchorRotor, finalSample.rotor.orientation);
+    const inverseAnchorRotor = anchorRotor.clone().invert();
+
+    const localBallPosition = new THREE.Vector3(
+      finalSample.ball.position.x,
+      finalSample.ball.position.y,
+      finalSample.ball.position.z,
+    ).applyQuaternion(inverseAnchorRotor);
+
+    const anchorBallOrientation = new THREE.Quaternion();
+    copyQuaternion(anchorBallOrientation, finalSample.ball.orientation);
+    const localBallOrientation =
+      inverseAnchorRotor.clone().multiply(anchorBallOrientation);
+
+    const startedAt = performance.now();
+    const yAxis = new THREE.Vector3(0, 1, 0);
+
+    const tick = () => {
+      if (!this.rotor || !this.settledContinuationActive) return;
+      const elapsedSeconds = Math.max(0, performance.now() - startedAt) / 1000;
+      const deltaRotation = new THREE.Quaternion().setFromAxisAngle(
+        yAxis,
+        ROULETTE_ROTOR_ANGULAR_SPEED * elapsedSeconds,
+      );
+      const rotorOrientation = anchorRotor.clone().multiply(deltaRotation);
+
+      this.rotor.quaternion.copy(rotorOrientation);
+      this.ball.position.copy(localBallPosition).applyQuaternion(rotorOrientation);
+      this.ball.quaternion.copy(
+        rotorOrientation.clone().multiply(localBallOrientation),
+      );
+      this.renderFrame();
+      this.frame = requestAnimationFrame(tick);
+    };
+
+    this.frame = requestAnimationFrame(tick);
   }
 
   private exposeFinalReplayState() {
     const replay = this.replay;
     if (!replay?.finalPocket || replay.winningNumber === null || !this.rotor) return;
+    const finalSample = replay.trajectory.at(-1);
+    if (!finalSample) return;
     this.canvas.dataset.replayRoundId = replay.roundId;
     this.canvas.dataset.replayTrajectoryHash = replay.trajectoryHash;
     this.canvas.dataset.replayFinal = JSON.stringify({
       actual: {
-        ballPosition: {
-          x: this.ball.position.x,
-          y: this.ball.position.y,
-          z: this.ball.position.z,
-        },
-        ballOrientation: {
-          x: this.ball.quaternion.x,
-          y: this.ball.quaternion.y,
-          z: this.ball.quaternion.z,
-          w: this.ball.quaternion.w,
-        },
-        rotorOrientation: {
-          x: this.rotor.quaternion.x,
-          y: this.rotor.quaternion.y,
-          z: this.rotor.quaternion.z,
-          w: this.rotor.quaternion.w,
-        },
+        ballPosition: { ...finalSample.ball.position },
+        ballOrientation: { ...finalSample.ball.orientation },
+        rotorOrientation: { ...finalSample.rotor.orientation },
       },
       expected: {
         finalPocket: replay.finalPocket,
