@@ -20,6 +20,35 @@ const mainSource = readFileSync(
 );
 
 
+describe("Businesses canonical class isolation", () => {
+  it("does not mount legacy card aliases that would reactivate old CSS generations", () => {
+    const legacyAliases = [
+      "business-card-visual",
+      "business-row-title",
+      "business-card-body",
+      "business-card-accrued",
+      "business-card-accrued-heading",
+      "business-card-quick-stats",
+      "business-card-quick-stat",
+      "business-card-vault-status",
+      "business-card-secondary",
+    ];
+    const mountedClassTokens = [...componentsSource.matchAll(/class="([^"]+)"/g)]
+      .flatMap((match) => match[1].split(/\s+/).filter(Boolean));
+
+    for (const className of legacyAliases) {
+      expect(mountedClassTokens).not.toContain(className);
+      expect(idleCssSource).not.toMatch(
+        new RegExp(`\\.${className}(?![A-Za-z0-9_-])`),
+      );
+    }
+
+    expect(idleIndexSource).not.toContain("business-summary business-command-bar");
+    expect(idleIndexSource).toContain('class="business-command-bar"');
+    expect(idleCssSource).not.toMatch(/\.business-summary(?![A-Za-z0-9_-])/);
+  });
+});
+
 describe("final Idle UI integration", () => {
   it("keeps the main cards focused on collect and Details only", () => {
     expect(componentsSource).toContain("data-business-collect");
@@ -426,9 +455,9 @@ describe("Businesses premium card skeleton", () => {
 
 describe("Businesses hero identity overlay", () => {
   it("moves business identity out of the card body and onto the hero image", () => {
-    const heroIndex = componentsSource.indexOf('class="business-card-hero business-card-visual"');
+    const heroIndex = componentsSource.indexOf('class="business-card-hero"');
     const overlayIndex = componentsSource.indexOf('class="business-card-identity-overlay"');
-    const contentIndex = componentsSource.indexOf('class="business-card-content business-card-body"');
+    const contentIndex = componentsSource.indexOf('class="business-card-content"');
 
     expect(heroIndex).toBeGreaterThanOrEqual(0);
     expect(overlayIndex).toBeGreaterThan(heroIndex);
@@ -979,15 +1008,16 @@ describe("Businesses final mobile Details composition", () => {
     expect(idleCssSource).toContain("overscroll-behavior-y: contain");
   });
 
-  it("uses a readable mobile summary with accrued money dominant", () => {
+  it("uses one compact three-column mobile summary so the stage list starts higher", () => {
     expect(idleCssSource).toContain(".business-detail-summary > div:first-child");
-    expect(idleCssSource).toContain("grid-column: 1 / -1");
-    expect(idleCssSource).toContain("font-size: 20px");
-    expect(idleCssSource).toContain("font-size: 15px");
+    expect(idleCssSource).toContain("grid-template-columns: repeat(3, minmax(0, 1fr))");
+    expect(idleCssSource).toContain("grid-column: auto");
+    expect(idleCssSource).toContain("min-height: 50px");
+    expect(idleCssSource).toContain("font-size: 13px");
   });
 
-  it("keeps core Details touch targets at least 44-48px", () => {
-    expect(idleCssSource).toContain("min-height: 46px");
+  it("keeps upgrade CTAs at 48px while allowing compact navigation chrome", () => {
+    expect(idleCssSource).toContain("min-height: 38px");
     expect(idleCssSource).toContain("min-height: 48px");
     expect(idleCssSource).toContain("touch-action: manipulation");
   });
@@ -1035,9 +1065,12 @@ describe("Businesses upgrade feedback choreography", () => {
     expect(idleCssSource).toContain("@keyframes idle-upgrade-vault-pulse");
   });
 
-  it("keeps upgrade feedback mobile-safe and honors reduced motion", () => {
-    expect(idleCssSource).toContain(".business-detail-drawer > .business-upgrade-toast");
-    expect(idleCssSource).toContain("@media (max-width: 420px)");
+  it("mounts upgrade feedback in the viewport toolbar and honors reduced motion", () => {
+    expect(idleIndexSource).toContain("mountFeedbackToast");
+    expect(idleIndexSource).toContain("business-feedback-toast business-upgrade-toast");
+    expect(idleCssSource).toContain("/* Viewport feedback toolbar");
+    expect(idleCssSource).toContain("position: fixed");
+    expect(idleCssSource).toContain("z-index: 260");
     expect(idleCssSource).toContain("@media (prefers-reduced-motion: reduce)");
     expect(idleCssSource).toContain("animation: none");
   });
@@ -1130,6 +1163,12 @@ describe("Businesses collect and completion polish", () => {
     expect(idleCssSource).toContain("@keyframes idle-collect-toast-in");
     expect(idleCssSource).toContain("@media (prefers-reduced-motion: reduce)");
   });
+
+  it("routes collect notifications through the same top-of-screen toolbar", () => {
+    expect(idleIndexSource).toContain("business-feedback-toast business-collect-toast");
+    expect(idleIndexSource).toContain("business-feedback-toast business-collect-all-toast");
+    expect(idleIndexSource).toContain("this.mountFeedbackToast(toast)");
+  });
 });
 
 
@@ -1194,7 +1233,7 @@ describe("Businesses premium typography pass", () => {
 
   it("keeps main-card names, vault copy and actions readable from canonical mobile rules", () => {
     expect(idleCssSource).not.toContain("/* Mobile readability hotfix — titles, vault copy, primary actions */");
-    expect(idleCssSource).toContain(".business-row-title strong");
+    expect(idleCssSource).toContain(".business-card-title strong");
     expect(idleCssSource).toContain("font-size: 22px");
     expect(idleCssSource).toContain("text-overflow: clip");
     expect(idleCssSource).toContain("white-space: normal");
@@ -1216,8 +1255,8 @@ describe("Businesses premium typography pass", () => {
 describe("Businesses refinement final responsive regression", () => {
   it("keeps the main card information stack simple on phone widths", () => {
     expect(idleCssSource).toContain("@media (max-width: 760px)");
-    expect(idleCssSource).toContain(".business-card-quick-stats");
-    expect(idleCssSource).toContain(".business-card-vault-status");
+    expect(idleCssSource).toContain(".business-card-stats");
+    expect(idleCssSource).toContain(".business-card-vault {");
     expect(idleCssSource).toContain("grid-template-columns: 1fr");
   });
 
