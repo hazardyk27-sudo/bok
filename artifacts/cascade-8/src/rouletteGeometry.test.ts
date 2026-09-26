@@ -247,4 +247,4 @@ describe("roulette motion timing contract", () => {
   });
 });
 
-const rouletteCss = readFileSync(fileURLToPath(new URL("./roulette.css", import.meta.url)), "utf8");
+const rouletteCss = readFileSync(fileURLToPath(new URL("./roulette/roulette.css", import.meta.url)), "utf8");
