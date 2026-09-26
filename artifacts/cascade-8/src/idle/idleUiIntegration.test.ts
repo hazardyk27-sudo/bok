@@ -154,7 +154,7 @@ describe("Businesses premium design tokens", () => {
 
 describe("Businesses premium route shell", () => {
   it("gives Businesses a wider premium desktop canvas without affecting other routes", () => {
-    expect(idleCssSource).toContain("--idle-page-max: 1240px");
+    expect(idleCssSource).toContain("--idle-page-max: 1400px");
     expect(idleCssSource).toContain(".route-shell.is-businesses-page");
     expect(idleCssSource).toContain("width: min(100%, var(--idle-page-max))");
     expect(idleCssSource).toContain("overflow-x: clip");
@@ -175,6 +175,44 @@ describe("Businesses premium route shell", () => {
   });
 });
 
+
+
+describe("Businesses measured desktop workspace", () => {
+  it("renders the approved 186px sidebar shell and keeps the content column independent", () => {
+    expect(idleIndexSource).toContain('class="businesses-workspace"');
+    expect(idleIndexSource).toContain('class="businesses-sidebar"');
+    expect(idleCssSource).toContain("/* Part 3 — measured desktop workspace + sidebar */");
+    expect(idleCssSource).toContain("grid-template-columns: var(--idle-sidebar-width) minmax(0, 1fr)");
+    expect(idleCssSource).toContain("gap: var(--idle-content-gap)");
+    expect(idleCssSource).toContain("--idle-sidebar-width: 186px");
+    expect(idleCssSource).toContain("--idle-content-gap: 25px");
+  });
+
+  it("shows the game navigation required by the approved reference", () => {
+    expect(idleIndexSource).toContain(">SLOT</span>");
+    expect(idleIndexSource).toContain(">RULET</span>");
+    expect(idleIndexSource).toContain(">CADI KAZAN</span>");
+    expect(idleIndexSource).toContain(">İŞLETMELER</span>");
+    expect(idleIndexSource).toContain('aria-current="page"');
+    expect(idleIndexSource).toContain(">FİNANS</span>");
+    expect(idleIndexSource).toContain(">KULÜP</span>");
+    expect(idleIndexSource).toContain(">AYARLAR</span>");
+  });
+
+  it("uses the approved charcoal-green shell instead of the old blue ambient foundation", () => {
+    expect(idleCssSource).toContain("background: var(--idle-canvas, #0b1418)");
+    expect(idleCssSource).toContain("rgba(84, 242, 163, .035)");
+    expect(idleCssSource).toContain("var(--idle-sidebar)");
+    expect(idleCssSource).toContain("var(--idle-green)");
+  });
+
+  it("keeps the sidebar desktop-only until the dedicated mobile composition is built", () => {
+    expect(idleCssSource).toContain(".businesses-sidebar {");
+    expect(idleCssSource).toContain("display: none");
+    expect(idleCssSource).toContain("@media (min-width: 1101px)");
+    expect(idleCssSource).toContain(".route-shell.is-businesses-page > .route-topbar");
+  });
+});
 
 
 describe("Businesses premium command header", () => {
