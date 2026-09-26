@@ -1,44 +1,94 @@
-/* Businesses premium design system — scoped so other games keep their own art direction. */
+/* Businesses visual system v2 — measured from the approved desktop/mobile references.
+   Part 1 locks the system only; layout migration happens in later parts. */
 .businesses-page {
-  --idle-canvas: #050816;
-  --idle-surface: #081222;
-  --idle-surface-2: #0c1930;
-  --idle-surface-raised: #10213c;
-  --idle-surface-interactive: #102744;
+  /* Typography */
+  --idle-font-display: "Inter Tight", "Inter", ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --idle-font-ui: "Inter", ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
 
-  --idle-text: #f4f8ff;
-  --idle-text-secondary: #9daec4;
-  --idle-text-muted: #66758b;
+  --idle-type-display-desktop: 60px;
+  --idle-type-display-mobile: 40px;
+  --idle-type-business-title: 21px;
+  --idle-type-money-xl: 30px;
+  --idle-type-kpi: 26px;
+  --idle-type-ui: 14px;
+  --idle-type-ui-sm: 12px;
+  --idle-type-label: 11px;
+  --idle-type-button: 13px;
 
-  --idle-cyan: #46c8ff;
-  --idle-cyan-bright: #7ddfff;
-  --idle-blue-deep: #18457c;
-  --idle-violet-ambient: #7258ff;
+  --idle-weight-display: 800;
+  --idle-weight-strong: 700;
+  --idle-weight-ui: 500;
+  --idle-weight-label: 600;
 
-  --idle-line-soft: rgba(157, 174, 196, .12);
-  --idle-line: rgba(157, 174, 196, .18);
-  --idle-line-strong: rgba(70, 200, 255, .34);
-  --idle-cyan-soft: rgba(70, 200, 255, .12);
-  --idle-cyan-medium: rgba(70, 200, 255, .28);
+  /* Approved green/charcoal palette */
+  --idle-canvas: #0b1418;
+  --idle-sidebar: #060c11;
+  --idle-surface: #0e181c;
+  --idle-surface-2: #111d22;
+  --idle-surface-raised: #151f25;
+  --idle-surface-interactive: #18262a;
 
-  --idle-radius-sm: 8px;
-  --idle-radius-md: 12px;
-  --idle-radius-lg: 18px;
-  --idle-radius-xl: 24px;
+  --idle-text: #f2f4f3;
+  --idle-text-secondary: #9c9f9e;
+  --idle-text-muted: #66716f;
 
+  --idle-green: #54f2a3;
+  --idle-green-bright: #78f0aa;
+  --idle-green-deep: #1c4b32;
+  --idle-green-soft: rgba(84, 242, 163, .10);
+  --idle-green-medium: rgba(84, 242, 163, .28);
+
+  --idle-line-soft: rgba(160, 190, 180, .10);
+  --idle-line: rgba(160, 190, 180, .14);
+  --idle-line-strong: rgba(84, 242, 163, .38);
+
+  /* Compatibility aliases removed in Part 2 after legacy CSS is deleted. */
+  --idle-cyan: var(--idle-green);
+  --idle-cyan-bright: var(--idle-green-bright);
+  --idle-blue-deep: var(--idle-green-deep);
+  --idle-violet-ambient: rgba(54, 93, 76, .18);
+  --idle-cyan-soft: var(--idle-green-soft);
+  --idle-cyan-medium: var(--idle-green-medium);
+
+  /* 4px spacing rhythm normalized to the approved references */
   --idle-space-1: 4px;
   --idle-space-2: 8px;
   --idle-space-3: 12px;
   --idle-space-4: 16px;
-  --idle-space-5: 24px;
-  --idle-space-6: 32px;
-  --idle-space-7: 48px;
+  --idle-space-5: 20px;
+  --idle-space-6: 24px;
+  --idle-space-7: 32px;
+  --idle-space-8: 40px;
+  --idle-space-9: 48px;
 
-  --idle-shadow-card: 0 18px 48px rgba(0, 0, 0, .22);
-  --idle-shadow-raised: 0 24px 70px rgba(0, 0, 0, .32);
-  --idle-focus-ring: 0 0 0 3px rgba(70, 200, 255, .18);
+  /* Component geometry */
+  --idle-radius-sm: 8px;
+  --idle-radius-md: 10px;
+  --idle-radius-card: 14px;
+  --idle-radius-lg: 16px;
+  --idle-radius-xl: 18px;
+  --idle-radius-pill: 999px;
+
+  --idle-sidebar-width: 186px;
+  --idle-content-gap: 25px;
+  --idle-page-max: 1400px;
+  --idle-card-gap: 14px;
+  --idle-card-padding: 14px;
+  --idle-panel-padding: 16px;
+  --idle-button-height: 52px;
+  --idle-touch-height: 48px;
+  --idle-progress-height: 14px;
+  --idle-business-image-ratio: 16 / 9;
+  --idle-business-image-min-height: 210px;
+
+  /* Restrained depth from the approved SaaS-like references */
+  --idle-shadow-card: 0 12px 32px rgba(0, 0, 0, .22);
+  --idle-shadow-raised: 0 18px 44px rgba(0, 0, 0, .28);
+  --idle-shadow-green: 0 12px 30px rgba(35, 150, 92, .10);
+  --idle-focus-ring: 0 0 0 3px rgba(84, 242, 163, .18);
 
   color: var(--idle-text);
+  font-family: var(--idle-font-ui);
 }
 
 .businesses-page {
