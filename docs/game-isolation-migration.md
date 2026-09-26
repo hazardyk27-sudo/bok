@@ -26,4 +26,5 @@ This branch builds the permanent isolation model without changing the Replit pre
 - Part 2: Hub markup/mount/test moved into Hub ownership — complete.
 - Part 3: Roulette markup, mount, CSS, client, geometry and production replay runtime moved into Roulette ownership — complete.
 - Part 4: Cadı Kazan mount, client, CSS, scratch runtime/tests and Cadı-specific audio moved into Cadı Kazan ownership — complete.
-- Parts 5–8 remain on this migration branch until final validation.
+- Part 5: Slot markup/bootstrap and an independent Slot stylesheet moved into Slot ownership; the root main.ts is now a route dispatcher — complete.
+- Parts 6–8 remain on this migration branch until final validation.

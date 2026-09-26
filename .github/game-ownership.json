@@ -17,11 +17,11 @@
     "slot": {
       "branch": "feature/slot",
       "roots": [
+        "artifacts/cascade-8/src/slot",
         "artifacts/cascade-8/src/config",
         "artifacts/cascade-8/src/engine",
         "artifacts/cascade-8/src/game",
         "artifacts/cascade-8/src/simulation",
-        "artifacts/cascade-8/src/slotSmoke.test.ts",
         "artifacts/api-server/src/slot"
       ]
     },
