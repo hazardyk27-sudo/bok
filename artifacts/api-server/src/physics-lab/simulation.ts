@@ -214,9 +214,9 @@ function addDarkRaceChannelCollider(
       for (let segment = 0; segment < segments; segment += 1) {
         const angle = (segment / segments) * Math.PI * 2;
         vertices.push(
-          quantizeBridgeScalar(Math.sin(angle) * radius),
-          quantizeBridgeScalar(y),
-          quantizeBridgeScalar(Math.cos(angle) * radius),
+          Math.sin(angle) * radius,
+          y,
+          Math.cos(angle) * radius,
         );
       }
     }
@@ -353,9 +353,9 @@ function addBowlBridgeCollider(
       for (let segment = 0; segment < segments; segment += 1) {
         const angle = (segment / segments) * Math.PI * 2;
         vertices.push(
-          Math.sin(angle) * radius,
-          y,
-          Math.cos(angle) * radius,
+          quantizeBridgeScalar(Math.sin(angle) * radius),
+          quantizeBridgeScalar(y),
+          quantizeBridgeScalar(Math.cos(angle) * radius),
         );
       }
     }
