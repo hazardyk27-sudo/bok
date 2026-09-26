@@ -67,8 +67,7 @@
     "hub": {
       "branch": "feature/hub",
       "roots": [
-        "artifacts/cascade-8/src/hub",
-        "artifacts/cascade-8/src/mainMenuRegression.test.ts"
+        "artifacts/cascade-8/src/hub"
       ]
     }
   }
