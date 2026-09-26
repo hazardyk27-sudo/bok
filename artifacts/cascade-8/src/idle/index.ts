@@ -25,10 +25,16 @@ import {
 } from "./types";
 
 function formatCredits(cents: number) {
-  return `$${(cents / 100).toLocaleString("en-US", {
+  return `${(cents / 100).toLocaleString("en-US", {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
   })}`;
+}
+
+const IDLE_MICRO_CENTS_PER_CENT = 1_000_000;
+
+function formatCreditsFromMicrocents(microcents: number) {
+  return formatCredits(microcents / IDLE_MICRO_CENTS_PER_CENT);
 }
 
 const BUSINESS_LEVELS_PER_BUSINESS = 9;
