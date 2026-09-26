@@ -13,6 +13,9 @@ import {
 type Vec3 = { x: number; y: number; z: number };
 type Quaternion = { x: number; y: number; z: number; w: number };
 
+const ROULETTE_VISUAL_BALL_SCALE = 1.4;
+const ROULETTE_VISUAL_BALL_RADIUS = ROULETTE_BALL_RADIUS * ROULETTE_VISUAL_BALL_SCALE;
+
 type ReplaySample = {
   simulatedAtMs: number;
   ball: { position: Vec3; orientation: Quaternion };
@@ -39,7 +42,7 @@ export class RoulettePhysicsReplay {
   private readonly scene = new THREE.Scene();
   private readonly camera = new THREE.PerspectiveCamera(28, 1, 0.1, 100);
   private readonly ball = new THREE.Mesh(
-    new THREE.SphereGeometry(ROULETTE_BALL_RADIUS, 24, 18),
+    new THREE.SphereGeometry(ROULETTE_VISUAL_BALL_RADIUS, 24, 18),
     new THREE.MeshStandardMaterial({ color: 0xfff8dc, metalness: 0.18, roughness: 0.24 }),
   );
   private rotor?: THREE.Group;
