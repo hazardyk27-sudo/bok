@@ -637,7 +637,7 @@ describe("authoritative roulette physics config", () => {
       "data-authoritative-replay={",
     );
     expect(
-      part3ViewportSource.match(/authoritativeReplay\\.winningNumber/g) ?? [],
+      part3ViewportSource.match(/authoritativeReplay\.winningNumber/g) ?? [],
     ).toHaveLength(1);
     expect(part3ViewportSource).toContain(
       "winningNumber: authoritativeReplay.winningNumber",
