@@ -2960,9 +2960,11 @@ export function Part2SceneViewport({
           for (let step = 0; step < seamSweepSteps; step += 1) {
             activeWorld.step();
             const position = sweepBody.translation();
-            const signedAngle = normalizedAngle(
-              Math.atan2(position.x, position.z),
-            );
+            // Math.atan2 already returns the signed [-PI, PI] angle
+            // required for crossing the 0-degree GLB seam in either
+            // direction. normalizedAngle() intentionally maps into [0, 2PI)
+            // and would turn -0.1deg into 359.9deg, corrupting this test.
+            const signedAngle = Math.atan2(position.x, position.z);
             if (
               (directionSign > 0 && signedAngle >= targetAngle) ||
               (directionSign < 0 && signedAngle <= targetAngle)
