@@ -487,6 +487,42 @@ describe("Businesses desktop visual parity polish", () => {
 });
 
 
+describe("Businesses dedicated tablet composition", () => {
+  it("uses a two-column tablet business grid instead of shrinking the desktop layout", () => {
+    expect(idleCssSource).toContain("/* Part 10 — tablet composition / 768–1100px */");
+    expect(idleCssSource).toContain("@media (min-width: 761px) and (max-width: 1100px)");
+    expect(idleCssSource).toContain("grid-template-columns: repeat(2, minmax(0, 1fr))");
+    expect(idleCssSource).toContain("min-height: 500px");
+  });
+
+  it("keeps tablet cards on a 16:9 hero with reference-like spacing and action sizing", () => {
+    expect(idleCssSource).toContain("aspect-ratio: 16 / 9");
+    expect(idleCssSource).toContain("min-height: 180px");
+    expect(idleCssSource).toContain("gap: 14px");
+    expect(idleCssSource).toContain("min-height: 50px");
+  });
+
+  it("wraps KPI cards cleanly and keeps Collect All full-width", () => {
+    expect(idleCssSource).toContain("grid-template-columns: repeat(2, minmax(0, 1fr))");
+    expect(idleCssSource).toContain("grid-column: 1 / -1");
+    expect(idleCssSource).toContain("min-height: 68px");
+  });
+
+  it("uses a tighter low-tablet fallback without switching to mobile composition early", () => {
+    expect(idleCssSource).toContain("@media (min-width: 761px) and (max-width: 860px)");
+    expect(idleCssSource).toContain("grid-template-columns: minmax(0, 1fr) 220px");
+    expect(idleCssSource).toContain("font-size: 42px");
+    expect(idleCssSource).toContain("min-height: 488px");
+  });
+
+  it("removes old cyan hover treatment from the tablet surface with final green overrides", () => {
+    expect(idleCssSource).toContain("border-color: rgba(84, 242, 163, .2)");
+    expect(idleCssSource).toContain("background: rgba(84, 242, 163, .05)");
+    expect(idleCssSource).toContain("box-shadow: var(--idle-focus-ring)");
+  });
+});
+
+
 describe("Businesses dedicated mobile cards", () => {
   it("uses a single-column card flow instead of shrinking the desktop grid", () => {
     expect(idleCssSource).toContain("@media (max-width: 760px)");
