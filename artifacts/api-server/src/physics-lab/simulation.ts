@@ -322,8 +322,6 @@ function addBowlBridgeCollider(
   world: RAPIER.World,
   body: RAPIER.RigidBody,
 ) {
-  const quantizeBridgeScalar = (value: number) =>
-    Math.round(value * 1_000_000) / 1_000_000;
   const innerRadius = ROULETTE_POCKET_OUTER_LIP_RADIUS;
   const outerRadius =
     ROULETTE_DARK_RACE_INWARD_EDGE_RADIUS + PHYSICS_LAB_BALL_RADIUS;
@@ -353,9 +351,9 @@ function addBowlBridgeCollider(
       for (let segment = 0; segment < segments; segment += 1) {
         const angle = (segment / segments) * Math.PI * 2;
         vertices.push(
-          quantizeBridgeScalar(Math.sin(angle) * radius),
-          quantizeBridgeScalar(y),
-          quantizeBridgeScalar(Math.cos(angle) * radius),
+          Math.sin(angle) * radius,
+          y,
+          Math.cos(angle) * radius,
         );
       }
     }
@@ -831,6 +829,8 @@ export async function simulatePhysicsLabRound(
     stationaryBody,
   );
   colliderRoles.set(darkRaceOuterWallCollider.handle, "dark-race-outer-wall");
+  const bowlBridgeCollider = addBowlBridgeCollider(world, stationaryBody);
+  colliderRoles.set(bowlBridgeCollider.handle, "bowl-bridge");
   const deflectorColliders = addMeasuredDeflectorColliders(
     world,
     stationaryBody,
@@ -841,8 +841,6 @@ export async function simulatePhysicsLabRound(
   for (const collider of deflectorColliders) {
     colliderRoles.set(collider.handle, "deflector");
   }
-  const bowlBridgeCollider = addBowlBridgeCollider(world, stationaryBody);
-  colliderRoles.set(bowlBridgeCollider.handle, "bowl-bridge");
   const pocketColliders = addPocketFloorAndOuterLipColliders(
     world,
     rotorBody,
