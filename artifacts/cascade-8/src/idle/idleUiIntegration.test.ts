@@ -828,7 +828,8 @@ describe("Businesses stage-card vault progression", () => {
     expect(idleIndexSource).toContain("renderVaultLevelTree");
     expect(idleIndexSource).toContain("VAULT_LEVELS.map");
     expect(idleIndexSource).toContain("1SA → 24SA");
-    expect(idleIndexSource).toContain("vault-level-node-economy");
+    expect(idleIndexSource).toContain("vault-level-node-capacity");
+    expect(idleIndexSource).toContain("vault-level-node-meta");
   });
 
   it("uses the approved vault costs without changing economy math", () => {
@@ -857,12 +858,47 @@ describe("Businesses stage-card vault progression", () => {
   });
 
   it("styles a premium responsive vault timeline with max-level treatment", () => {
-    expect(idleCssSource).toContain("/* Part 15 — stage-card vault progression */");
+    expect(idleCssSource).toContain("/* Part 15 — premium vault stage cards */");
     expect(idleCssSource).toContain(".vault-level-tree");
     expect(idleCssSource).toContain('.vault-level-node[data-vault-state="current"]');
     expect(idleCssSource).toContain('.vault-level-node[data-vault-state="future"]');
     expect(idleCssSource).toContain('.vault-level-node[data-vault-level="6"]');
     expect(idleCssSource).toContain(".vault-level-node-upgrade");
+  });
+});
+
+
+describe("Businesses premium vault stage cards", () => {
+  it("replaces the old two-box vault economy layout with a capacity-first hierarchy", () => {
+    expect(idleIndexSource).toContain("vault-level-node-capacity");
+    expect(idleIndexSource).toContain("vault-level-node-meta");
+    expect(idleIndexSource).not.toContain("vault-level-node-economy");
+    expect(idleCssSource).toContain("/* Part 15 — premium vault stage cards */");
+    expect(idleCssSource).toContain("font-size: 22px");
+  });
+
+  it("keeps upgrade cost and the approved percent rule visible as secondary metadata", () => {
+    expect(idleIndexSource).toContain("<dl class=\"vault-level-node-meta\">");
+    expect(idleIndexSource).toContain("<dt>MALİYET KURALI</dt>");
+    expect(idleIndexSource).toContain("İşletme bedelinin %");
+    expect(idleCssSource).toContain("grid-template-columns: repeat(2, minmax(0, 1fr))");
+  });
+
+  it("uses the same green progression states as business stages", () => {
+    expect(idleCssSource).toContain('.vault-level-node[data-vault-state="completed"]');
+    expect(idleCssSource).toContain('.vault-level-node[data-vault-state="current"]');
+    expect(idleCssSource).toContain('.vault-level-node[data-vault-state="future"]');
+    expect(idleCssSource).toContain('.vault-level-node[data-vault-state="locked"]');
+    expect(idleCssSource).toContain("background: var(--idle-green)");
+    expect(idleCssSource).toContain("background: var(--idle-green-deep)");
+  });
+
+  it("keeps the next-stage Kasa CTA 48px and gives 24h max a distinct final treatment", () => {
+    expect(idleIndexSource).toContain('state === "future" && costCents !== null');
+    expect(idleIndexSource).toContain("data-idle-detail-vault-upgrade");
+    expect(idleCssSource).toContain(".vault-level-node-upgrade");
+    expect(idleCssSource).toContain("min-height: 48px");
+    expect(idleCssSource).toContain('.vault-level-node[data-vault-level="6"][data-vault-state="current"]');
   });
 });
 
@@ -1020,7 +1056,8 @@ describe("Businesses refinement final responsive regression", () => {
     expect(idleCssSource).toContain(".business-detail-summary");
     expect(idleCssSource).toContain(".business-level-node-income");
     expect(idleCssSource).toContain(".business-level-node-meta");
-    expect(idleCssSource).toContain(".vault-level-node-economy");
+    expect(idleCssSource).toContain(".vault-level-node-capacity");
+    expect(idleCssSource).toContain(".vault-level-node-meta");
     expect(idleCssSource).toContain(".business-level-node-card");
     expect(idleCssSource).toContain(".vault-level-node-card");
   });
