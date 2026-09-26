@@ -2795,26 +2795,43 @@ export function Part2SceneViewport({
         const savedRotation = activeBallBody.rotation();
         const savedLinvel = activeBallBody.linvel();
         const savedAngvel = activeBallBody.angvel();
-        const seamStartAngle = THREE.MathUtils.degToRad(-0.75);
-        const seamTargetAngle = THREE.MathUtils.degToRad(0.25);
         const seamContactWindow = THREE.MathUtils.degToRad(0.3);
         const seamSweepSpeed = 0.7;
         const seamSweepSteps = 40;
         const seamInitialGap = 0.0003;
         const seamMaxHoverGap = 0.012;
 
-        for (const candidate of physicalSeamCandidates) {
-          const startX = Math.sin(seamStartAngle) * candidate.radius;
-          const startZ = Math.cos(seamStartAngle) * candidate.radius;
+        const runSeamSweep = (
+          candidate: (typeof physicalSeamCandidates)[number],
+          directionSign: -1 | 1,
+        ) => {
+          const startAngle = THREE.MathUtils.degToRad(
+            directionSign > 0 ? -0.75 : 0.75,
+          );
+          const targetAngle = THREE.MathUtils.degToRad(
+            directionSign > 0 ? 0.25 : -0.25,
+          );
+          const exitAngle = THREE.MathUtils.degToRad(
+            directionSign > 0 ? 0.6 : -0.6,
+          );
+          const startX = Math.sin(startAngle) * candidate.radius;
+          const startZ = Math.cos(startAngle) * candidate.radius;
           const startVisual = measureFullVisibleSurfaceAt(startX, startZ);
           if (!startVisual) {
-            missingCollider += 1;
-            unresolvedColliderSamples.push({
-              radius: candidate.radius,
-              angleDegrees: candidate.angleDegrees,
-              visualSource: candidate.visual.source,
-            });
-            continue;
+            return {
+              passed: false,
+              direction:
+                directionSign > 0
+                  ? 'negative-to-positive'
+                  : 'positive-to-negative',
+              crossedSeam: false,
+              exactContactNearSeam: false,
+              visibleSurfaceLost: true,
+              clippedVisibleSurface: false,
+              excessiveHover: false,
+              minGap: null,
+              maxGap: null,
+            };
           }
 
           const startNormal = new THREE.Vector3(
@@ -2831,9 +2848,9 @@ export function Part2SceneViewport({
             BALL_RADIUS + seamInitialGap,
           );
           const tangent = new THREE.Vector3(
-            Math.cos(seamStartAngle),
+            Math.cos(startAngle) * directionSign,
             0,
-            -Math.sin(seamStartAngle),
+            -Math.sin(startAngle) * directionSign,
           ).normalize();
 
           activeBallBody.setTranslation(
@@ -2854,6 +2871,7 @@ export function Part2SceneViewport({
             true,
           );
           activeBallBody.setAngvel({ x: 0, y: 0, z: 0 }, true);
+          activeBallBody.wakeUp();
 
           let crossedSeam = false;
           let exactContactNearSeam = false;
@@ -2866,8 +2884,15 @@ export function Part2SceneViewport({
           for (let step = 0; step < seamSweepSteps; step += 1) {
             activeWorld.step();
             const position = activeBallBody.translation();
-            const signedAngle = Math.atan2(position.x, position.z);
-            if (signedAngle >= seamTargetAngle) crossedSeam = true;
+            const signedAngle = normalizedAngle(
+              Math.atan2(position.x, position.z),
+            );
+            if (
+              (directionSign > 0 && signedAngle >= targetAngle) ||
+              (directionSign < 0 && signedAngle <= targetAngle)
+            ) {
+              crossedSeam = true;
+            }
 
             const visible = measureFullVisibleSurfaceAt(
               position.x,
@@ -2924,13 +2949,14 @@ export function Part2SceneViewport({
 
             if (
               crossedSeam &&
-              signedAngle > THREE.MathUtils.degToRad(0.6)
+              ((directionSign > 0 && signedAngle > exitAngle) ||
+                (directionSign < 0 && signedAngle < exitAngle))
             ) {
               break;
             }
           }
 
-          const seamSweepPassed =
+          const passed =
             crossedSeam &&
             exactContactNearSeam &&
             !visibleSurfaceLost &&
@@ -2938,6 +2964,31 @@ export function Part2SceneViewport({
             !excessiveHover &&
             Number.isFinite(minGap) &&
             minGap >= -GLB_COLLIDER_PARITY_EPSILON_WORLD;
+
+          return {
+            passed,
+            direction:
+              directionSign > 0
+                ? 'negative-to-positive'
+                : 'positive-to-negative',
+            crossedSeam,
+            exactContactNearSeam,
+            visibleSurfaceLost,
+            clippedVisibleSurface,
+            excessiveHover,
+            minGap: Number.isFinite(minGap)
+              ? Number(minGap.toFixed(6))
+              : null,
+            maxGap: Number.isFinite(maxGap)
+              ? Number(maxGap.toFixed(6))
+              : null,
+          };
+        };
+
+        for (const candidate of physicalSeamCandidates) {
+          const forward = runSeamSweep(candidate, 1);
+          const reverse = runSeamSweep(candidate, -1);
+          const seamSweepPassed = forward.passed && reverse.passed;
 
           if (seamSweepPassed) {
             physicalSeamRecovered += 1;
@@ -2954,17 +3005,8 @@ export function Part2SceneViewport({
               'GLB_SEAM_SWEEP_FAILURE',
               JSON.stringify({
                 radius: candidate.radius,
-                crossedSeam,
-                exactContactNearSeam,
-                visibleSurfaceLost,
-                clippedVisibleSurface,
-                excessiveHover,
-                minGap: Number.isFinite(minGap)
-                  ? Number(minGap.toFixed(6))
-                  : null,
-                maxGap: Number.isFinite(maxGap)
-                  ? Number(maxGap.toFixed(6))
-                  : null,
+                forward,
+                reverse,
               }),
             );
           }
