@@ -557,7 +557,8 @@ export class RouletteClient {
                   : "PHYSICS_REPLAY_UNAVAILABLE";
             });
           } else if (
-            round?.winningNumber !== null &&
+            round &&
+            round.winningNumber !== null &&
             ["RESULT", "MULTIPLIER_REVEAL", "SETTLING", "INTERMISSION"].includes(
               round.phase,
             )
