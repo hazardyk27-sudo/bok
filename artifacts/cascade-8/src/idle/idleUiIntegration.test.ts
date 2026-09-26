@@ -744,7 +744,8 @@ describe("Businesses stage-card level progression", () => {
     expect(idleIndexSource).toContain("renderBusinessLevelTree");
     expect(idleIndexSource).toContain("definition.levels.map");
     expect(idleIndexSource).toContain("businessLevelTreeNode.innerHTML");
-    expect(idleIndexSource).toContain("business-level-node-economy");
+    expect(idleIndexSource).toContain("business-level-node-income");
+    expect(idleIndexSource).toContain("business-level-node-meta");
   });
 
   it("derives completed, current, next and locked states from the real current level", () => {
@@ -777,11 +778,46 @@ describe("Businesses stage-card level progression", () => {
     expect(idleIndexSource).toContain('stage.level >= 6');
     expect(idleIndexSource).toContain('★');
     expect(idleIndexSource).toContain("getBusinessLevelMilestone");
-    expect(idleCssSource).toContain("/* Part 13 — stage-card business progression */");
+    expect(idleCssSource).toContain("/* Part 14 — premium business stage cards */");
     expect(idleCssSource).toContain('.business-level-node[data-level-state="completed"]');
     expect(idleCssSource).toContain('.business-level-node[data-level-state="current"]');
     expect(idleCssSource).toContain('.business-level-node[data-level-state="future"]');
     expect(idleCssSource).toContain('.business-level-node[data-level-state="locked"]');
+  });
+});
+
+
+describe("Businesses premium business stage cards", () => {
+  it("replaces the old four-box economy grid with a clearer income-first hierarchy", () => {
+    expect(idleIndexSource).toContain("business-level-node-income");
+    expect(idleIndexSource).toContain("business-level-node-meta");
+    expect(idleIndexSource).not.toContain("business-level-node-economy");
+    expect(idleCssSource).toContain("/* Part 14 — premium business stage cards */");
+    expect(idleCssSource).toContain("font-size: 22px");
+  });
+
+  it("keeps investment and payback as secondary metadata instead of extra dashboard cards", () => {
+    expect(idleIndexSource).toContain("<dl class=\"business-level-node-meta\">");
+    expect(idleIndexSource).toContain("<dt>YATIRIM</dt>");
+    expect(idleIndexSource).toContain("<dt>GERİ DÖNÜŞ</dt>");
+    expect(idleCssSource).toContain("grid-template-columns: repeat(2, minmax(0, 1fr))");
+  });
+
+  it("uses green state treatment for completed, current, next and locked stages", () => {
+    expect(idleCssSource).toContain('.business-level-node[data-level-state="completed"]');
+    expect(idleCssSource).toContain('.business-level-node[data-level-state="current"]');
+    expect(idleCssSource).toContain('.business-level-node[data-level-state="future"]');
+    expect(idleCssSource).toContain('.business-level-node[data-level-state="locked"]');
+    expect(idleCssSource).toContain("background: var(--idle-green)");
+    expect(idleCssSource).toContain("background: var(--idle-green-deep)");
+  });
+
+  it("keeps the upgrade CTA only on the immediate next stage and makes it a 48px green action", () => {
+    expect(idleIndexSource).toContain("const actionMarkup = isImmediateFuture");
+    expect(idleIndexSource).toContain("data-idle-detail-upgrade");
+    expect(idleCssSource).toContain(".business-level-node-upgrade");
+    expect(idleCssSource).toContain("min-height: 48px");
+    expect(idleCssSource).toContain("linear-gradient(135deg, var(--idle-green-bright), var(--idle-green))");
   });
 });
 
@@ -982,7 +1018,8 @@ describe("Businesses refinement final responsive regression", () => {
 
   it("keeps dense Details stage cards readable on phone widths", () => {
     expect(idleCssSource).toContain(".business-detail-summary");
-    expect(idleCssSource).toContain(".business-level-node-economy");
+    expect(idleCssSource).toContain(".business-level-node-income");
+    expect(idleCssSource).toContain(".business-level-node-meta");
     expect(idleCssSource).toContain(".vault-level-node-economy");
     expect(idleCssSource).toContain(".business-level-node-card");
     expect(idleCssSource).toContain(".vault-level-node-card");
