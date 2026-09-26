@@ -2118,6 +2118,8 @@ export function Part2SceneViewport({
 }: Part2SceneViewportProps) {
   const part6FullSpinRouteActive =
     validationMode === 'part3' && outerLaneSpinOnly;
+  const part6ReplayProbeActive =
+    new URLSearchParams(window.location.search).get('part6ReplayProbe') === '1';
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const stageRef = useRef<HTMLDivElement | null>(null);
   const viewRef = useRef(view);
@@ -2157,6 +2159,8 @@ export function Part2SceneViewport({
     authoritativeReplayRoundRef.current = authoritativeReplayRound;
     authoritativeReplayStartedAtRef.current = null;
     authoritativeReplayCursorRef.current = 0;
+    stageRef.current?.removeAttribute('data-authoritative-replay-complete');
+    stageRef.current?.removeAttribute('data-authoritative-replay-final');
   }, [authoritativeReplayRound]);
 
   useEffect(() => {
@@ -3689,10 +3693,10 @@ export function Part2SceneViewport({
         numericPlacementPassed ? undefined : 'physics-validation',
       );
       if (numericPlacementPassed) {
-        if (outerLaneSpinOnly) {
+        if (outerLaneSpinOnly && !part6ReplayProbeActive) {
           logStaticGateStage('part6-batch-dispatch');
           void runPart6FullSpinTelemetryBatch();
-        } else {
+        } else if (!outerLaneSpinOnly) {
           startPart3OuterLaneProbe();
         }
       }
@@ -7612,7 +7616,7 @@ export function Part2SceneViewport({
         const authoritativeReplayActive =
           validationMode === 'part3' &&
           outerLaneSpinOnly &&
-          new URLSearchParams(window.location.search).get('part6Headless') !== '1' &&
+          !new URLSearchParams(window.location.search).has('part6Headless') &&
           authoritativeReplay?.status === 'SETTLED' &&
           authoritativeReplay.trajectory.length > 0 &&
           replayBallMesh !== null &&
@@ -7698,6 +7702,38 @@ export function Part2SceneViewport({
               replayRotorPivot.quaternion.w,
             ),
           );
+
+          if (replayElapsedMs >= finalSample.simulatedAtMs) {
+            stage.dataset.authoritativeReplayComplete = 'true';
+            stage.dataset.authoritativeReplayFinal = JSON.stringify({
+              roundId: authoritativeReplay.roundId,
+              trajectoryHash: authoritativeReplay.trajectoryHash,
+              actual: {
+                ballPosition: {
+                  x: replayBallMesh.position.x,
+                  y: replayBallMesh.position.y,
+                  z: replayBallMesh.position.z,
+                },
+                ballOrientation: {
+                  x: replayBallMesh.quaternion.x,
+                  y: replayBallMesh.quaternion.y,
+                  z: replayBallMesh.quaternion.z,
+                  w: replayBallMesh.quaternion.w,
+                },
+                rotorOrientation: {
+                  x: replayRotorPivot.quaternion.x,
+                  y: replayRotorPivot.quaternion.y,
+                  z: replayRotorPivot.quaternion.z,
+                  w: replayRotorPivot.quaternion.w,
+                },
+              },
+              expected: {
+                ballPosition: finalSample.ball.position,
+                ballOrientation: finalSample.ball.orientation,
+                rotorOrientation: finalSample.rotor.orientation,
+              },
+            });
+          }
 
           controls?.update();
           renderer?.render(scene, camera);
