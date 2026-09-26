@@ -564,24 +564,41 @@ describe("Businesses dedicated tablet composition", () => {
 
 
 describe("Businesses dedicated mobile cards", () => {
-  it("uses a single-column card flow instead of shrinking the desktop grid", () => {
+  it("uses the Part 12 single-column minimal card flow instead of shrinking desktop cards", () => {
+    expect(idleCssSource).toContain("/* Part 12 — minimal mobile BusinessCard composition */");
     expect(idleCssSource).toContain("@media (max-width: 760px)");
-    expect(idleCssSource).toContain(".business-list");
     expect(idleCssSource).toContain("grid-template-columns: 1fr");
-    expect(idleCssSource).toContain("grid-template-rows: 126px auto");
+    expect(idleCssSource).toContain("grid-template-rows: auto auto");
+    expect(idleCssSource).toContain("gap: 12px");
   });
 
-  it("keeps the two primary actions side-by-side on phone widths", () => {
-    expect(idleCssSource).toContain(".business-card-actions");
-    expect(idleCssSource).toContain("minmax(0, 1.08fr) minmax(0, .92fr)");
-    expect(idleCssSource).toContain("@media (max-width: 430px)");
-    expect(idleCssSource).toContain("grid-template-columns: 1fr 1fr");
+  it("keeps a compact hero with name and live level over the image", () => {
+    expect(idleCssSource).toContain("aspect-ratio: 16 / 7.4");
+    expect(idleCssSource).toContain("min-height: 132px");
+    expect(idleCssSource).toContain(".business-card-identity-overlay");
+    expect(idleCssSource).toContain("grid-template-columns: 36px minmax(0, 1fr)");
+    expect(idleCssSource).toContain("font-size: 19px");
   });
 
-  it("lets the final vault helper wrap instead of becoming unreadable", () => {
+  it("keeps accrued money dominant and the two supporting stats in one compact row", () => {
+    expect(idleCssSource).toContain("font-size: 27px");
+    expect(idleCssSource).toContain("min-height: 54px");
+    expect(idleCssSource).toContain("grid-template-columns: repeat(2, minmax(0, 1fr))");
+    expect(idleCssSource).toContain("font-size: 13px");
+  });
+
+  it("keeps vault progress readable without turning it into another dashboard panel", () => {
+    expect(idleCssSource).toContain("height: 12px");
     expect(idleCssSource).toContain(".business-card-vault-helper");
-    expect(idleCssSource).toContain("flex-wrap: wrap");
-    expect(idleCssSource).toContain("flex-basis: 100%");
+    expect(idleCssSource).toContain("grid-template-columns: minmax(0, 1fr) auto");
+    expect(idleCssSource).toContain("font-size: 10px");
+  });
+
+  it("keeps Topla and Detaylar as equal 48px mobile actions", () => {
+    expect(idleCssSource).toContain(".business-card-actions");
+    expect(idleCssSource).toContain("grid-template-columns: repeat(2, minmax(0, 1fr))");
+    expect(idleCssSource).toContain("min-height: 48px");
+    expect(idleCssSource).toContain("@media (max-width: 430px)");
   });
 });
 
