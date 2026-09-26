@@ -385,13 +385,42 @@ describe("Businesses card information hierarchy", () => {
     expect(componentsSource).not.toContain("data-business-daily");
   });
 
-  it("keeps vault fullness and ETA as one readable status line plus progress bar", () => {
-    expect(componentsSource).toContain("business-card-vault");
+  it("shows the real collected-money vault progress with remaining capacity and ETA", () => {
+    expect(componentsSource).toContain("KASADA BİRİKEN");
     expect(componentsSource).toContain("data-business-vault-fill");
+    expect(componentsSource).toContain("data-business-vault-remaining");
     expect(componentsSource).toContain("data-business-vault-eta");
     expect(componentsSource).toContain("data-business-vault-progress");
+    expect(componentsSource).toContain("business.liveAccruedMicrocents + business.liveRemainingCapacityMicrocents");
     expect(componentsSource).toContain("formatVaultEta(");
-    expect(idleCssSource).toContain("height: 10px");
+    expect(idleCssSource).toContain("height: var(--idle-progress-height)");
+  });
+});
+
+
+describe("Businesses final card economy presentation", () => {
+  it("uses exact live vault capacity rather than a display-only hourly approximation", () => {
+    expect(componentsSource).toContain("const vaultCapacityMicrocents");
+    expect(componentsSource).toContain("business.liveAccruedMicrocents + business.liveRemainingCapacityMicrocents");
+    expect(componentsSource).toContain("formatCreditsFromMicrocents(vaultCapacityMicrocents)");
+    expect(componentsSource).toContain("formatCreditsFromMicrocents(business.liveRemainingCapacityMicrocents)");
+  });
+
+  it("labels the lower bar as money accumulated in the vault instead of level progress", () => {
+    expect(componentsSource).toContain("KASADA BİRİKEN");
+    expect(componentsSource).toContain("vaultFillNode.textContent");
+    expect(componentsSource).toContain(`%${fillPercent}`);
+    expect(componentsSource).toContain("vaultProgressNode.style.width");
+  });
+
+  it("locks the final reference-like card geometry and green primary actions", () => {
+    expect(idleCssSource).toContain("/* Part 8 — final business card economy + vault presentation */");
+    expect(idleCssSource).toContain("height: var(--idle-progress-height)");
+    expect(idleCssSource).toContain("calc(12.5% - 2px)");
+    expect(idleCssSource).toContain("min-height: var(--idle-button-height)");
+    expect(idleCssSource).toContain("linear-gradient(135deg, var(--idle-green-bright), var(--idle-green))");
+    expect(idleCssSource).toContain(".business-card-vault-heading");
+    expect(idleCssSource).toContain(".business-card-vault-helper");
   });
 });
 
@@ -446,8 +475,8 @@ describe("Businesses dedicated mobile cards", () => {
     expect(idleCssSource).toContain("grid-template-columns: 1fr 1fr");
   });
 
-  it("lets vault timing wrap instead of becoming unreadable", () => {
-    expect(idleCssSource).toContain(".business-card-vault-meta");
+  it("lets the final vault helper wrap instead of becoming unreadable", () => {
+    expect(idleCssSource).toContain(".business-card-vault-helper");
     expect(idleCssSource).toContain("flex-wrap: wrap");
     expect(idleCssSource).toContain("flex-basis: 100%");
   });
@@ -766,7 +795,7 @@ describe("Businesses premium typography pass", () => {
     expect(idleCssSource).toContain("font-size: 22px");
     expect(idleCssSource).toContain("text-overflow: clip");
     expect(idleCssSource).toContain("white-space: normal");
-    expect(idleCssSource).toContain(".business-card-vault-meta small");
+    expect(idleCssSource).toContain(".business-card-vault-helper small");
     expect(idleCssSource).toContain("font-size: 12px");
     expect(idleCssSource).toContain(".business-card-primary,");
     expect(idleCssSource).toContain("font-size: 13px");
@@ -790,8 +819,8 @@ describe("Businesses refinement final responsive regression", () => {
   });
 
   it("lets vault timing wrap on narrow phones", () => {
-    expect(idleCssSource).toContain("@media (max-width: 430px)");
-    expect(idleCssSource).toContain(".business-card-vault-meta");
+    expect(idleCssSource).toContain("@media (max-width: 760px)");
+    expect(idleCssSource).toContain(".business-card-vault-helper");
     expect(idleCssSource).toContain("flex-wrap: wrap");
     expect(idleCssSource).toContain("flex-basis: 100%");
   });
