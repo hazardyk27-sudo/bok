@@ -127,7 +127,7 @@ export function renderBusinessRowShell(businessId: BusinessId) {
       data-business-ownership="loading"
     >
       <div
-        class="business-card-hero business-card-visual"
+        class="business-card-hero"
         role="img"
         aria-label="${meta.visualLabel}"
       >
@@ -139,7 +139,7 @@ ${renderBusinessMedia(businessId)}
 
         <div class="business-card-identity-overlay">
           <span class="business-card-identity-icon" aria-hidden="true">${meta.icon}</span>
-          <div class="business-card-title business-row-title">
+          <div class="business-card-title">
             <small>${meta.eyebrow}</small>
             <strong>${meta.definition.label}</strong>
             <span data-business-level>Yükleniyor…</span>
@@ -147,27 +147,27 @@ ${renderBusinessMedia(businessId)}
         </div>
       </div>
 
-      <div class="business-card-content business-card-body">
-        <section class="business-card-balance business-card-accrued" aria-label="Biriken gelir">
-          <div class="business-card-balance-heading business-card-accrued-heading">
+      <div class="business-card-content">
+        <section class="business-card-balance" aria-label="Biriken gelir">
+          <div class="business-card-balance-heading">
             <span>BİRİKMİŞ GELİR</span>
             <small data-business-accrued-status>KASADA HAZIR</small>
           </div>
           <strong data-business-accrued>—</strong>
         </section>
 
-        <section class="business-card-stats business-card-quick-stats" aria-label="İşletme özeti">
-          <div class="business-card-stat business-card-quick-stat">
+        <section class="business-card-stats" aria-label="İşletme özeti">
+          <div class="business-card-stat">
             <span>SAATLİK GELİR</span>
             <strong data-business-income>— /sa</strong>
           </div>
-          <div class="business-card-stat business-card-quick-stat">
+          <div class="business-card-stat">
             <span>KASA KAPASİTESİ</span>
             <strong data-business-vault>Lv— · —</strong>
           </div>
         </section>
 
-        <section class="business-card-vault business-card-vault-status" aria-label="Kasada biriken para">
+        <section class="business-card-vault" aria-label="Kasada biriken para">
           <div class="business-card-vault-heading">
             <span>KASADA BİRİKEN</span>
             <strong data-business-vault-fill>%—</strong>
@@ -191,7 +191,7 @@ ${renderBusinessMedia(businessId)}
           >TOPLA</button>
           <button
             type="button"
-            class="business-card-secondary business-card-details"
+            class="business-card-details"
             data-business-details
             aria-label="${meta.definition.label} detaylarını aç"
           >
