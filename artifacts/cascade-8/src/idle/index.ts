@@ -500,15 +500,15 @@ export const BUSINESSES_MARKUP = `
 
         <section class="business-detail-summary" aria-label="Mevcut işletme özeti">
           <div>
+            <span>BİRİKMİŞ GELİR</span>
+            <strong data-idle-detail-accrued>—</strong>
+          </div>
+          <div>
             <span>SAATLİK GELİR</span>
             <strong data-idle-detail-hourly>—</strong>
           </div>
           <div>
-            <span>GÜNLÜK GELİR</span>
-            <strong data-idle-detail-daily>—</strong>
-          </div>
-          <div>
-            <span>KASA</span>
+            <span>KASA KAPASİTESİ</span>
             <strong data-idle-detail-vault>—</strong>
           </div>
         </section>
@@ -867,8 +867,8 @@ export class BusinessesClient {
     const levelNode = this.root.querySelector<HTMLElement>("[data-idle-detail-level]");
     const levelBadgeNode = this.root.querySelector<HTMLElement>("[data-idle-detail-level-badge]");
     const stateNode = this.root.querySelector<HTMLElement>("[data-idle-detail-state]");
+    const accruedNode = this.root.querySelector<HTMLElement>("[data-idle-detail-accrued]");
     const hourlyNode = this.root.querySelector<HTMLElement>("[data-idle-detail-hourly]");
-    const dailyNode = this.root.querySelector<HTMLElement>("[data-idle-detail-daily]");
     const vaultNode = this.root.querySelector<HTMLElement>("[data-idle-detail-vault]");
     const businessLevelTreeNode = this.root.querySelector<HTMLElement>("[data-idle-business-level-tree]");
     const vaultLevelTreeNode = this.root.querySelector<HTMLElement>("[data-idle-vault-level-tree]");
@@ -879,8 +879,8 @@ export class BusinessesClient {
       || !levelNode
       || !levelBadgeNode
       || !stateNode
+      || !accruedNode
       || !hourlyNode
-      || !dailyNode
       || !vaultNode
       || !businessLevelTreeNode
       || !vaultLevelTreeNode
@@ -903,13 +903,18 @@ export class BusinessesClient {
           ? "AKTİF"
           : "MAX SEVİYE";
 
+    accruedNode.textContent = formatCreditsFromMicrocents(
+      business.liveAccruedMicrocents,
+    );
     hourlyNode.textContent = currentStage
       ? `${formatCredits(currentStage.hourlyIncomeDisplayCents)} /sa`
       : "$0.00 /sa";
-    dailyNode.textContent = currentStage
-      ? `${formatCredits(currentStage.dailyIncomeCents)} /gün`
-      : "$0.00 /gün";
-    vaultNode.textContent = `Lv${business.vaultLevel} · ${vault.capacityHours}sa`;
+    const vaultCapacityMicrocents = business.businessLevel === null
+      ? 0
+      : business.liveAccruedMicrocents + business.liveRemainingCapacityMicrocents;
+    vaultNode.textContent = business.businessLevel === null
+      ? "$0.00"
+      : formatCreditsFromMicrocents(vaultCapacityMicrocents);
 
     const detailBusy = this.busyBusinesses.has(business.businessId);
 
