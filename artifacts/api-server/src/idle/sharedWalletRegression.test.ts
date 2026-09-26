@@ -47,14 +47,12 @@ describe("shared game wallet integration", () => {
     }
   });
 
-  it("keeps the common initial wallet value as the fallback source", () => {
-    for (const repositorySource of [
-      slotRepository,
-      cadiRepository,
-      idleRepository,
-    ]) {
-      expect(repositorySource).toContain("INITIAL_ROULETTE_BALANCE_CENTS");
-    }
+  it("keeps the common platform initial wallet value as Idle's fallback source", () => {
+    expect(idleRepository).toContain(
+      'import { INITIAL_SHARED_BALANCE_CENTS } from "../platform/wallet";',
+    );
+    expect(idleRepository).toContain("INITIAL_SHARED_BALANCE_CENTS");
+    expect(idleRepository).not.toContain("INITIAL_ROULETTE_BALANCE_CENTS");
   });
 
   it("keeps Idle collect and upgrades writing the same shared wallet", () => {
