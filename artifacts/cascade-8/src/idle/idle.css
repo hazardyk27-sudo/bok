@@ -42,14 +42,6 @@
   --idle-line: rgba(160, 190, 180, .14);
   --idle-line-strong: rgba(84, 242, 163, .38);
 
-  /* Temporary compatibility aliases for the current Part 3–18 selectors; removed as those sections migrate. */
-  --idle-cyan: var(--idle-green);
-  --idle-cyan-bright: var(--idle-green-bright);
-  --idle-blue-deep: var(--idle-green-deep);
-  --idle-violet-ambient: rgba(54, 93, 76, .18);
-  --idle-cyan-soft: var(--idle-green-soft);
-  --idle-cyan-medium: var(--idle-green-medium);
-
   /* 4px spacing rhythm normalized to the approved references */
   --idle-space-1: 4px;
   --idle-space-2: 8px;
@@ -755,11 +747,11 @@ body.businesses-route {
   width: fit-content;
   min-height: 42px;
   padding: 0 13px 0 9px;
-  border: 1px solid rgba(125, 223, 255, .18);
+  border: 1px solid rgba(120, 240, 170, .18);
   border-radius: 11px;
   color: var(--idle-text-secondary);
   background:
-    linear-gradient(135deg, rgba(70, 200, 255, .055), transparent 64%),
+    linear-gradient(135deg, rgba(84, 242, 163, .055), transparent 64%),
     rgba(8, 18, 34, .72);
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, .02);
   font-size: 10px;
@@ -777,10 +769,10 @@ body.businesses-route {
   place-items: center;
   width: 24px;
   height: 24px;
-  border: 1px solid rgba(125, 223, 255, .18);
+  border: 1px solid rgba(120, 240, 170, .18);
   border-radius: 8px;
-  color: var(--idle-cyan-bright);
-  background: rgba(70, 200, 255, .06);
+  color: var(--idle-green-bright);
+  background: rgba(84, 242, 163, .06);
   font-size: 14px;
   line-height: 1;
 }
@@ -804,9 +796,9 @@ body.businesses-route {
 .businesses-header-status i {
   width: 6px;
   height: 6px;
-  border: 1px solid rgba(125, 223, 255, .58);
+  border: 1px solid rgba(120, 240, 170, .58);
   border-radius: 50%;
-  background: rgba(70, 200, 255, .18);
+  background: rgba(84, 242, 163, .18);
 }
 
 .businesses-header-main {
@@ -823,7 +815,7 @@ body.businesses-route {
 .route-shell.is-businesses-page .businesses-kicker {
   display: block;
   margin-bottom: 8px;
-  color: var(--idle-cyan);
+  color: var(--idle-green);
   font-family: var(--idle-font-label);
   font-size: 9px;
   font-weight: 800;
@@ -852,7 +844,7 @@ body.businesses-route {
   position: relative;
   min-width: 0;
   padding: 17px 18px;
-  border: 1px solid rgba(125, 223, 255, .18);
+  border: 1px solid rgba(120, 240, 170, .18);
   border-radius: 14px;
   background: rgba(10, 24, 44, .82);
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, .02);
@@ -865,7 +857,7 @@ body.businesses-route {
   width: 56px;
   height: 2px;
   content: "";
-  background: linear-gradient(90deg, transparent, var(--idle-cyan));
+  background: linear-gradient(90deg, transparent, var(--idle-green));
 }
 
 .route-shell.is-businesses-page .businesses-wallet span,
@@ -945,8 +937,8 @@ body.businesses-route {
   width: 0;
   height: 100%;
   border-radius: inherit;
-  background: linear-gradient(90deg, var(--idle-blue-deep), var(--idle-cyan), var(--idle-cyan-bright));
-  box-shadow: 0 0 14px rgba(70, 200, 255, .18);
+  background: linear-gradient(90deg, var(--idle-green-deep), var(--idle-green), var(--idle-green-bright));
+  box-shadow: 0 0 14px rgba(84, 242, 163, .18);
   transition: width .3s ease;
 }
 
@@ -958,7 +950,7 @@ body.businesses-route {
 }
 
 .businesses-progression-meta span:first-child {
-  color: var(--idle-cyan-bright);
+  color: var(--idle-green-bright);
   font-size: 12px;
 }
 
@@ -1002,7 +994,7 @@ body.businesses-route {
 }
 
 .route-shell.is-businesses-page .business-command-ready strong {
-  color: var(--idle-cyan-bright);
+  color: var(--idle-green-bright);
 }
 
 .route-shell.is-businesses-page .business-summary-collect-all {
@@ -1016,7 +1008,7 @@ body.businesses-route {
   border: 0;
   color: var(--idle-text);
   background:
-    linear-gradient(135deg, rgba(70, 200, 255, .11), rgba(24, 69, 124, .12)),
+    linear-gradient(135deg, rgba(84, 242, 163, .11), rgba(28, 75, 50, .12)),
     rgba(10, 22, 40, .9);
   text-align: left;
 }
@@ -1036,7 +1028,7 @@ body.businesses-route {
 }
 
 .business-collect-all-copy small {
-  color: var(--idle-cyan);
+  color: var(--idle-green);
   font-family: var(--idle-font-label);
   font-size: 8px;
   font-weight: 800;
@@ -1050,7 +1042,7 @@ body.businesses-route {
 }
 
 .business-collect-all-value {
-  color: var(--idle-cyan-bright);
+  color: var(--idle-green-bright);
   font-size: 18px;
   font-variant-numeric: tabular-nums;
   font-weight: 850;
@@ -1062,10 +1054,10 @@ body.businesses-route {
   place-items: center;
   width: 30px;
   height: 30px;
-  border: 1px solid rgba(125, 223, 255, .22);
+  border: 1px solid rgba(120, 240, 170, .22);
   border-radius: 50%;
-  color: var(--idle-cyan-bright);
-  background: rgba(70, 200, 255, .045);
+  color: var(--idle-green-bright);
+  background: rgba(84, 242, 163, .045);
 }
 
 .route-shell.is-businesses-page .business-list {
@@ -1096,20 +1088,20 @@ body.businesses-route {
   overflow: hidden;
   border-bottom: 1px solid var(--idle-line-soft);
   background:
-    radial-gradient(circle at 72% 22%, rgba(70, 200, 255, .17), transparent 34%),
+    radial-gradient(circle at 72% 22%, rgba(84, 242, 163, .17), transparent 34%),
     linear-gradient(145deg, #132944 0%, #0b1b2f 54%, #081322 100%);
   isolation: isolate;
 }
 
 .business-card--club-store .business-card-visual {
   background:
-    radial-gradient(circle at 70% 24%, rgba(114, 88, 255, .2), transparent 36%),
+    radial-gradient(circle at 70% 24%, rgba(54, 93, 76, .2), transparent 36%),
     linear-gradient(145deg, #172844 0%, #101d35 54%, #081322 100%);
 }
 
 .business-card--fan-club .business-card-visual {
   background:
-    radial-gradient(circle at 72% 24%, rgba(70, 200, 255, .15), transparent 36%),
+    radial-gradient(circle at 72% 24%, rgba(84, 242, 163, .15), transparent 36%),
     linear-gradient(145deg, #123047 0%, #0c2132 54%, #081322 100%);
 }
 
@@ -1140,9 +1132,9 @@ body.businesses-route {
   align-items: center;
   min-height: 24px;
   padding: 0 8px;
-  border: 1px solid rgba(125, 223, 255, .18);
+  border: 1px solid rgba(120, 240, 170, .18);
   border-radius: 999px;
-  color: var(--idle-cyan-bright);
+  color: var(--idle-green-bright);
   background: rgba(5, 12, 24, .68);
   backdrop-filter: blur(8px);
   font-family: var(--idle-font-label);
@@ -1173,7 +1165,7 @@ body.businesses-route {
 .business-row-title small {
   display: block;
   margin-bottom: 5px;
-  color: var(--idle-cyan);
+  color: var(--idle-green);
   font-family: var(--idle-font-label);
   font-size: 9px;
   font-weight: 800;
@@ -1215,10 +1207,10 @@ body.businesses-route {
 
 .business-card-accrued {
   padding: 14px;
-  border: 1px solid rgba(70, 200, 255, .12);
+  border: 1px solid rgba(84, 242, 163, .12);
   border-radius: 13px;
   background:
-    linear-gradient(135deg, rgba(70, 200, 255, .08), transparent 58%),
+    linear-gradient(135deg, rgba(84, 242, 163, .08), transparent 58%),
     rgba(10, 24, 44, .82);
 }
 
@@ -1239,14 +1231,14 @@ body.businesses-route {
 }
 
 .business-card-accrued-heading > small {
-  color: var(--idle-cyan-bright);
+  color: var(--idle-green-bright);
   text-align: right;
 }
 
 .business-card-accrued > strong {
   display: block;
   margin-top: 9px;
-  color: var(--idle-cyan-bright);
+  color: var(--idle-green-bright);
   font-size: clamp(28px, 2.5vw, 35px);
   font-variant-numeric: tabular-nums;
   font-weight: 850;
@@ -1332,7 +1324,7 @@ body.businesses-route {
   width: 0;
   height: 100%;
   border-radius: inherit;
-  background: linear-gradient(90deg, var(--idle-blue-deep), var(--idle-cyan), var(--idle-cyan-bright));
+  background: linear-gradient(90deg, var(--idle-green-deep), var(--idle-green), var(--idle-green-bright));
   transition: width .25s ease;
 }
 
@@ -1361,9 +1353,9 @@ body.businesses-route {
 }
 
 .business-card-primary {
-  border: 1px solid rgba(125, 223, 255, .34);
+  border: 1px solid rgba(120, 240, 170, .34);
   color: #07111f;
-  background: linear-gradient(135deg, var(--idle-cyan-bright), var(--idle-cyan));
+  background: linear-gradient(135deg, var(--idle-green-bright), var(--idle-green));
 }
 
 .business-card-primary:disabled {
@@ -1377,8 +1369,8 @@ body.businesses-route {
   align-items: center;
   justify-content: center;
   gap: 8px;
-  border: 1px solid rgba(125, 223, 255, .16);
-  color: var(--idle-cyan-bright);
+  border: 1px solid rgba(120, 240, 170, .16);
+  color: var(--idle-green-bright);
   background: rgba(12, 25, 48, .72);
   cursor: pointer;
 }
@@ -1397,21 +1389,21 @@ body.businesses-route {
 @media (hover: hover) and (pointer: fine) {
   .route-shell.is-businesses-page .businesses-header .back-link:hover {
     transform: translateY(-1px);
-    border-color: rgba(125, 223, 255, .34);
+    border-color: rgba(120, 240, 170, .34);
     color: var(--idle-text);
     background:
-      linear-gradient(135deg, rgba(70, 200, 255, .09), transparent 64%),
+      linear-gradient(135deg, rgba(84, 242, 163, .09), transparent 64%),
       rgba(10, 24, 44, .86);
   }
 
   .business-card-details:hover,
   .business-summary-collect-all:not(:disabled):hover {
-    border-color: rgba(125, 223, 255, .36);
-    background-color: rgba(70, 200, 255, .07);
+    border-color: rgba(120, 240, 170, .36);
+    background-color: rgba(84, 242, 163, .07);
   }
 
   .route-shell.is-businesses-page .business-card:hover {
-    border-color: rgba(125, 223, 255, .22);
+    border-color: rgba(120, 240, 170, .22);
   }
 }
 
@@ -2176,10 +2168,10 @@ body.businesses-route {
   min-width: 96px;
   min-height: 34px;
   padding: 0 11px;
-  border: 1px solid rgba(70, 200, 255, .16);
+  border: 1px solid rgba(84, 242, 163, .16);
   border-radius: 10px;
-  color: var(--idle-cyan);
-  background: rgba(70, 200, 255, .035);
+  color: var(--idle-green);
+  background: rgba(84, 242, 163, .035);
   font: 800 8px/1 "DM Mono", monospace;
   letter-spacing: .08em;
   cursor: pointer;
@@ -2198,9 +2190,9 @@ body.businesses-route {
 @media (hover: hover) and (pointer: fine) {
   .business-card-details:hover {
     transform: translateY(-1px);
-    color: var(--idle-cyan-bright);
-    border-color: rgba(125, 223, 255, .34);
-    background: rgba(70, 200, 255, .065);
+    color: var(--idle-green-bright);
+    border-color: rgba(120, 240, 170, .34);
+    background: rgba(84, 242, 163, .065);
   }
 
   .business-card-details:hover i {
@@ -2237,7 +2229,7 @@ body.business-detail-open {
   border: 0;
   opacity: 0;
   background:
-    radial-gradient(circle at 78% 28%, rgba(70, 200, 255, .055), transparent 30%),
+    radial-gradient(circle at 78% 28%, rgba(84, 242, 163, .055), transparent 30%),
     rgba(2, 6, 14, .7);
   backdrop-filter: blur(6px);
   cursor: default;
@@ -2259,11 +2251,11 @@ body.business-detail-open {
     22px;
   overflow: hidden;
   border: 0;
-  border-left: 1px solid rgba(125, 223, 255, .16);
+  border-left: 1px solid rgba(120, 240, 170, .16);
   color: var(--idle-text);
   background:
-    radial-gradient(circle at 86% 2%, rgba(70, 200, 255, .09), transparent 28%),
-    radial-gradient(circle at 24% 14%, rgba(114, 88, 255, .055), transparent 30%),
+    radial-gradient(circle at 86% 2%, rgba(84, 242, 163, .09), transparent 28%),
+    radial-gradient(circle at 24% 14%, rgba(54, 93, 76, .055), transparent 30%),
     linear-gradient(180deg, #0b1728 0%, #07111f 48%, #050b15 100%);
   box-shadow: -28px 0 80px rgba(0, 0, 0, .34);
   transform: translateX(104%);
@@ -2296,7 +2288,7 @@ body.business-detail-open {
 
 .business-detail-heading > span {
   display: block;
-  color: var(--idle-cyan);
+  color: var(--idle-green);
   font: 800 8px/1 "DM Mono", monospace;
   letter-spacing: .14em;
 }
@@ -2339,8 +2331,8 @@ body.business-detail-open {
 
 .business-detail-close:hover {
   color: var(--idle-text);
-  border-color: rgba(125, 223, 255, .26);
-  background: rgba(70, 200, 255, .05);
+  border-color: rgba(120, 240, 170, .26);
+  background: rgba(84, 242, 163, .05);
 }
 
 .business-detail-close:active {
@@ -2373,9 +2365,9 @@ body.business-detail-open {
 }
 
 .business-detail-level-badge {
-  border: 1px solid rgba(70, 200, 255, .2);
-  color: var(--idle-cyan-bright);
-  background: rgba(70, 200, 255, .055);
+  border: 1px solid rgba(84, 242, 163, .2);
+  color: var(--idle-green-bright);
+  background: rgba(84, 242, 163, .055);
 }
 
 .business-detail-state {
@@ -2411,10 +2403,10 @@ body.business-detail-open {
 }
 
 .business-detail-tabs button[data-active="true"] {
-  border-color: rgba(70, 200, 255, .18);
-  color: var(--idle-cyan-bright);
+  border-color: rgba(84, 242, 163, .18);
+  color: var(--idle-green-bright);
   background:
-    linear-gradient(135deg, rgba(70, 200, 255, .08), transparent),
+    linear-gradient(135deg, rgba(84, 242, 163, .08), transparent),
     rgba(16, 33, 60, .7);
 }
 
@@ -2491,17 +2483,17 @@ body.business-detail-open {
 }
 
 .business-detail-section-heading > strong {
-  color: var(--idle-cyan);
+  color: var(--idle-green);
   font: 800 8px/1 "DM Mono", monospace;
   letter-spacing: .08em;
 }
 
 .business-detail-preview-card {
   padding: 18px;
-  border: 1px solid rgba(70, 200, 255, .14);
+  border: 1px solid rgba(84, 242, 163, .14);
   border-radius: 16px;
   background:
-    linear-gradient(135deg, rgba(70, 200, 255, .07), transparent 48%),
+    linear-gradient(135deg, rgba(84, 242, 163, .07), transparent 48%),
     rgba(9, 21, 38, .82);
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, .02);
 }
@@ -2547,7 +2539,7 @@ body.business-detail-open {
   left: 8%;
   height: 1px;
   content: "";
-  background: linear-gradient(90deg, rgba(70, 200, 255, .3), rgba(157, 174, 196, .12));
+  background: linear-gradient(90deg, rgba(84, 242, 163, .3), rgba(157, 174, 196, .12));
 }
 
 .business-detail-roadmap-placeholder i {
@@ -2556,15 +2548,15 @@ body.business-detail-open {
   justify-self: center;
   width: 14px;
   height: 14px;
-  border: 2px solid rgba(70, 200, 255, .2);
+  border: 2px solid rgba(84, 242, 163, .2);
   border-radius: 50%;
   background: #0a1728;
 }
 
 .business-detail-roadmap-placeholder i:first-child {
-  border-color: rgba(125, 223, 255, .72);
-  background: rgba(70, 200, 255, .16);
-  box-shadow: 0 0 0 5px rgba(70, 200, 255, .04);
+  border-color: rgba(120, 240, 170, .72);
+  background: rgba(84, 242, 163, .16);
+  box-shadow: 0 0 0 5px rgba(84, 242, 163, .04);
 }
 
 .business-detail-roadmap-placeholder--vault {
@@ -2602,7 +2594,7 @@ body.business-detail-open {
       max(14px, env(safe-area-inset-left));
     border-left: 0;
     background:
-      radial-gradient(circle at 82% 0%, rgba(70, 200, 255, .085), transparent 28%),
+      radial-gradient(circle at 82% 0%, rgba(84, 242, 163, .085), transparent 28%),
       linear-gradient(180deg, #0a1627 0%, #06101d 52%, #040a13 100%);
     box-shadow: none;
     transform: translateY(102%);
@@ -2738,14 +2730,14 @@ body.business-detail-open {
 .business-level-tree-legend [data-legend-state="completed"],
 .business-vault-tree-legend [data-legend-state="completed"] {
   color: #8fc9d8;
-  border-color: rgba(70, 200, 255, .16);
+  border-color: rgba(84, 242, 163, .16);
 }
 
 .business-level-tree-legend [data-legend-state="current"],
 .business-vault-tree-legend [data-legend-state="current"] {
-  color: var(--idle-cyan-bright);
-  border-color: rgba(125, 223, 255, .36);
-  background: rgba(70, 200, 255, .065);
+  color: var(--idle-green-bright);
+  border-color: rgba(120, 240, 170, .36);
+  background: rgba(84, 242, 163, .065);
 }
 
 .business-level-tree-legend [data-legend-state="future"],
@@ -2866,9 +2858,9 @@ body.business-detail-open {
 }
 
 .business-level-node-state b {
-  color: var(--idle-cyan-bright);
-  border-color: rgba(125, 223, 255, .18);
-  background: rgba(70, 200, 255, .05);
+  color: var(--idle-green-bright);
+  border-color: rgba(120, 240, 170, .18);
+  background: rgba(84, 242, 163, .05);
 }
 
 .business-level-node-economy {
@@ -2916,7 +2908,7 @@ body.business-detail-open {
 .vault-level-node-action {
   margin-top: 12px;
   padding-top: 12px;
-  border-top: 1px solid rgba(125, 223, 255, .1);
+  border-top: 1px solid rgba(120, 240, 170, .1);
 }
 
 .business-level-node-upgrade,
@@ -2924,11 +2916,11 @@ body.business-detail-open {
   width: 100%;
   min-height: 46px;
   padding: 0 14px;
-  border: 1px solid rgba(125, 223, 255, .3);
+  border: 1px solid rgba(120, 240, 170, .3);
   border-radius: 11px;
   color: var(--idle-text);
   background:
-    linear-gradient(135deg, rgba(70, 200, 255, .12), rgba(24, 69, 124, .18)),
+    linear-gradient(135deg, rgba(84, 242, 163, .12), rgba(28, 75, 50, .18)),
     rgba(12, 25, 48, .9);
   font: 850 10px/1 var(--idle-font-label, Inter, ui-sans-serif, system-ui, sans-serif);
   letter-spacing: .035em;
@@ -2955,40 +2947,40 @@ body.business-detail-open {
 }
 
 .business-level-node[data-level-state="completed"] .business-level-node-dot {
-  border-color: rgba(70, 200, 255, .42);
+  border-color: rgba(84, 242, 163, .42);
   color: #c8f3ff;
-  background: rgba(24, 69, 124, .72);
+  background: rgba(28, 75, 50, .72);
 }
 
 .business-level-node[data-level-state="completed"] .business-level-node-rail::after {
-  background: linear-gradient(180deg, rgba(70, 200, 255, .48), rgba(70, 200, 255, .16));
+  background: linear-gradient(180deg, rgba(84, 242, 163, .48), rgba(84, 242, 163, .16));
 }
 
 .business-level-node[data-level-state="current"] .business-level-node-dot,
 .business-level-node[data-level-state="future"] .business-level-node-dot {
-  border-color: rgba(125, 223, 255, .72);
+  border-color: rgba(120, 240, 170, .72);
   color: #f4fdff;
   background: linear-gradient(145deg, #1d6688, #16445f);
 }
 
 .business-level-node[data-level-state="current"] .business-level-node-card {
-  border-color: rgba(125, 223, 255, .32);
+  border-color: rgba(120, 240, 170, .32);
   background:
-    linear-gradient(135deg, rgba(70, 200, 255, .08), transparent 48%),
+    linear-gradient(135deg, rgba(84, 242, 163, .08), transparent 48%),
     rgba(9, 24, 41, .84);
 }
 
 .business-level-node[data-level-state="future"] .business-level-node-card {
-  border-color: rgba(125, 223, 255, .36);
+  border-color: rgba(120, 240, 170, .36);
   background:
-    linear-gradient(135deg, rgba(70, 200, 255, .09), transparent 52%),
+    linear-gradient(135deg, rgba(84, 242, 163, .09), transparent 52%),
     rgba(8, 22, 38, .88);
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, .02);
 }
 
 .business-level-node[data-level-state="future"] .business-level-node-state span {
-  color: var(--idle-cyan-bright);
-  border-color: rgba(125, 223, 255, .28);
+  color: var(--idle-green-bright);
+  border-color: rgba(120, 240, 170, .28);
 }
 
 .business-level-node[data-level-state="locked"] .business-level-node-card {
@@ -2997,14 +2989,14 @@ body.business-detail-open {
 }
 
 .business-level-node[data-level="8"][data-level-state="current"] .business-level-node-card {
-  border-color: rgba(125, 223, 255, .5);
+  border-color: rgba(120, 240, 170, .5);
 }
 
 @media (hover: hover) and (pointer: fine) {
   .business-level-node-upgrade:not(:disabled):hover,
   .vault-level-node-upgrade:not(:disabled):hover {
     transform: translateY(-1px);
-    border-color: rgba(125, 223, 255, .48);
+    border-color: rgba(120, 240, 170, .48);
   }
 }
 
@@ -3144,39 +3136,39 @@ body.business-detail-open {
 }
 
 .vault-level-node[data-vault-state="completed"] .vault-level-node-dot {
-  border-color: rgba(70, 200, 255, .38);
+  border-color: rgba(84, 242, 163, .38);
   color: #c8f3ff;
-  background: rgba(24, 69, 124, .7);
+  background: rgba(28, 75, 50, .7);
 }
 
 .vault-level-node[data-vault-state="completed"] .vault-level-node-rail::after {
-  background: linear-gradient(180deg, rgba(70, 200, 255, .46), rgba(70, 200, 255, .15));
+  background: linear-gradient(180deg, rgba(84, 242, 163, .46), rgba(84, 242, 163, .15));
 }
 
 .vault-level-node[data-vault-state="current"] .vault-level-node-dot,
 .vault-level-node[data-vault-state="future"] .vault-level-node-dot {
-  border-color: rgba(125, 223, 255, .72);
+  border-color: rgba(120, 240, 170, .72);
   color: #f4fdff;
   background: linear-gradient(145deg, #1d6688, #16445f);
 }
 
 .vault-level-node[data-vault-state="current"] .vault-level-node-card {
-  border-color: rgba(125, 223, 255, .3);
+  border-color: rgba(120, 240, 170, .3);
   background:
-    linear-gradient(135deg, rgba(70, 200, 255, .08), transparent 50%),
+    linear-gradient(135deg, rgba(84, 242, 163, .08), transparent 50%),
     rgba(9, 24, 41, .84);
 }
 
 .vault-level-node[data-vault-state="future"] .vault-level-node-card {
-  border-color: rgba(125, 223, 255, .36);
+  border-color: rgba(120, 240, 170, .36);
   background:
-    linear-gradient(135deg, rgba(70, 200, 255, .09), transparent 52%),
+    linear-gradient(135deg, rgba(84, 242, 163, .09), transparent 52%),
     rgba(8, 22, 38, .88);
 }
 
 .vault-level-node[data-vault-state="future"] .vault-level-node-state {
-  color: var(--idle-cyan-bright);
-  border-color: rgba(125, 223, 255, .28);
+  color: var(--idle-green-bright);
+  border-color: rgba(120, 240, 170, .28);
 }
 
 .vault-level-node[data-vault-state="locked"] .vault-level-node-card {
@@ -3185,7 +3177,7 @@ body.business-detail-open {
 }
 
 .vault-level-node[data-vault-level="6"][data-vault-state="current"] .vault-level-node-card {
-  border-color: rgba(125, 223, 255, .5);
+  border-color: rgba(120, 240, 170, .5);
 }
 
 @media (max-width: 520px) {
@@ -3211,7 +3203,7 @@ body.business-detail-open {
 }
 
 
-/* Part 16 — premium upgrade feedback choreography */
+/* Upgrade feedback choreography */
 .route-shell.is-businesses-page .business-card,
 .route-shell.is-businesses-page .business-card-body,
 .business-detail-drawer {
@@ -3227,11 +3219,11 @@ body.business-detail-open {
   min-width: 158px;
   gap: 4px;
   padding: 11px 12px 10px;
-  border: 1px solid rgba(125, 223, 255, .34);
+  border: 1px solid rgba(120, 240, 170, .34);
   border-radius: 13px;
   color: var(--idle-text);
   background:
-    linear-gradient(135deg, rgba(70, 200, 255, .12), rgba(114, 88, 255, .055)),
+    linear-gradient(135deg, rgba(84, 242, 163, .12), rgba(54, 93, 76, .055)),
     rgba(6, 17, 30, .94);
   box-shadow:
     0 14px 34px rgba(0, 0, 0, .28),
@@ -3249,7 +3241,7 @@ body.business-detail-open {
 .business-upgrade-toast[data-upgrade-kind="vault"] {
   border-color: rgba(157, 174, 196, .24);
   background:
-    linear-gradient(135deg, rgba(70, 200, 255, .08), transparent 62%),
+    linear-gradient(135deg, rgba(84, 242, 163, .08), transparent 62%),
     rgba(6, 17, 30, .94);
 }
 
@@ -3258,7 +3250,7 @@ body.business-detail-open {
 }
 
 .business-upgrade-toast > span {
-  color: var(--idle-cyan);
+  color: var(--idle-green);
   font: 800 7px/1 "DM Mono", monospace;
   letter-spacing: .1em;
 }
@@ -3288,9 +3280,9 @@ body.business-detail-open {
     linear-gradient(
       110deg,
       transparent 20%,
-      rgba(125, 223, 255, .02) 38%,
-      rgba(125, 223, 255, .18) 49%,
-      rgba(125, 223, 255, .035) 58%,
+      rgba(120, 240, 170, .02) 38%,
+      rgba(120, 240, 170, .18) 49%,
+      rgba(120, 240, 170, .035) 58%,
       transparent 76%
     );
   transform: translateX(-115%);
@@ -3371,13 +3363,13 @@ body.business-detail-open {
 @keyframes idle-upgrade-level-pop {
   0% {
     transform: scale(.9);
-    border-color: rgba(70, 200, 255, .15);
+    border-color: rgba(84, 242, 163, .15);
     box-shadow: none;
   }
   42% {
     transform: scale(1.1);
-    border-color: rgba(125, 223, 255, .72);
-    box-shadow: 0 0 22px rgba(70, 200, 255, .22);
+    border-color: rgba(120, 240, 170, .72);
+    box-shadow: 0 0 22px rgba(84, 242, 163, .22);
   }
   100% {
     transform: scale(1);
@@ -3407,7 +3399,7 @@ body.business-detail-open {
   48% {
     opacity: 1;
     transform: translateY(-2px);
-    text-shadow: 0 0 18px rgba(70, 200, 255, .18);
+    text-shadow: 0 0 18px rgba(84, 242, 163, .18);
   }
   100% {
     transform: translateY(0);
@@ -3429,12 +3421,12 @@ body.business-detail-open {
 
 @keyframes idle-upgrade-vault-pulse {
   0% {
-    border-color: rgba(70, 200, 255, .12);
+    border-color: rgba(84, 242, 163, .12);
     box-shadow: none;
   }
   46% {
-    border-color: rgba(125, 223, 255, .42);
-    box-shadow: 0 0 18px rgba(70, 200, 255, .12);
+    border-color: rgba(120, 240, 170, .42);
+    box-shadow: 0 0 18px rgba(84, 242, 163, .12);
   }
   100% {
     box-shadow: none;
@@ -3499,64 +3491,64 @@ body.business-detail-open {
 }
 
 
-/* Part 17 — collect / full-vault / max-level polish */
+/* Collect / full-vault / max-level polish */
 .route-shell.is-businesses-page .business-card[data-business-status="full"] {
-  border-color: rgba(125, 223, 255, .42);
+  border-color: rgba(120, 240, 170, .42);
   box-shadow:
     0 22px 56px rgba(0, 0, 0, .28),
-    0 0 0 1px rgba(70, 200, 255, .045),
+    0 0 0 1px rgba(84, 242, 163, .045),
     inset 0 1px 0 rgba(255, 255, 255, .025);
 }
 
 .route-shell.is-businesses-page .business-card[data-business-status="full"] .business-card-state {
-  border-color: rgba(125, 223, 255, .48);
+  border-color: rgba(120, 240, 170, .48);
   color: #e9fbff;
   background:
-    linear-gradient(135deg, rgba(70, 200, 255, .18), rgba(24, 69, 124, .22)),
+    linear-gradient(135deg, rgba(84, 242, 163, .18), rgba(28, 75, 50, .22)),
     rgba(7, 20, 35, .9);
-  box-shadow: 0 0 18px rgba(70, 200, 255, .11);
+  box-shadow: 0 0 18px rgba(84, 242, 163, .11);
 }
 
 .route-shell.is-businesses-page .business-card[data-business-status="full"] .business-card-accrued {
-  border-color: rgba(125, 223, 255, .25);
+  border-color: rgba(120, 240, 170, .25);
   background:
-    linear-gradient(135deg, rgba(70, 200, 255, .13), transparent 56%),
+    linear-gradient(135deg, rgba(84, 242, 163, .13), transparent 56%),
     linear-gradient(180deg, rgba(255, 255, 255, .024), transparent),
     rgba(12, 25, 48, .86);
 }
 
 .route-shell.is-businesses-page .business-card[data-business-status="full"] .business-card-accrued-heading > small,
 .route-shell.is-businesses-page .business-card[data-business-status="full"] .business-vault-eta {
-  color: var(--idle-cyan-bright);
+  color: var(--idle-green-bright);
 }
 
 .route-shell.is-businesses-page .business-card[data-business-status="full"] .business-vault-progress {
-  background: rgba(70, 200, 255, .12);
-  box-shadow: inset 0 0 0 1px rgba(125, 223, 255, .08);
+  background: rgba(84, 242, 163, .12);
+  box-shadow: inset 0 0 0 1px rgba(120, 240, 170, .08);
 }
 
 .route-shell.is-businesses-page .business-card[data-business-status="full"] .business-vault-progress > i {
-  background: linear-gradient(90deg, var(--idle-blue-deep), var(--idle-cyan), var(--idle-cyan-bright));
-  box-shadow: 0 0 14px rgba(70, 200, 255, .2);
+  background: linear-gradient(90deg, var(--idle-green-deep), var(--idle-green), var(--idle-green-bright));
+  box-shadow: 0 0 14px rgba(84, 242, 163, .2);
 }
 
 .route-shell.is-businesses-page .business-card[data-business-level="8"] {
-  border-color: rgba(125, 223, 255, .32);
+  border-color: rgba(120, 240, 170, .32);
   background:
-    radial-gradient(circle at 88% 4%, rgba(114, 88, 255, .07), transparent 27%),
+    radial-gradient(circle at 88% 4%, rgba(54, 93, 76, .07), transparent 27%),
     var(--idle-surface);
 }
 
 .route-shell.is-businesses-page .business-card-level-mark[data-level-state="max"] {
   min-width: 46px;
-  border-color: rgba(125, 223, 255, .42);
+  border-color: rgba(120, 240, 170, .42);
   color: #f4fdff;
   background:
-    linear-gradient(135deg, rgba(70, 200, 255, .16), rgba(114, 88, 255, .12)),
+    linear-gradient(135deg, rgba(84, 242, 163, .16), rgba(54, 93, 76, .12)),
     rgba(10, 29, 48, .92);
   box-shadow:
     inset 0 1px 0 rgba(255, 255, 255, .035),
-    0 0 20px rgba(70, 200, 255, .08);
+    0 0 20px rgba(84, 242, 163, .08);
 }
 
 .route-shell.is-businesses-page .business-card-level-mark[data-level-state="locked"] {
@@ -3566,15 +3558,15 @@ body.business-detail-open {
 }
 
 .route-shell.is-businesses-page .business-card[data-business-level="8"] .business-card-next[data-next-state="max"] {
-  border-color: rgba(125, 223, 255, .16);
+  border-color: rgba(120, 240, 170, .16);
   background:
-    linear-gradient(135deg, rgba(70, 200, 255, .055), rgba(114, 88, 255, .035) 58%, transparent),
+    linear-gradient(135deg, rgba(84, 242, 163, .055), rgba(54, 93, 76, .035) 58%, transparent),
     rgba(7, 16, 29, .62);
 }
 
 .route-shell.is-businesses-page .business-card[data-business-level="8"] .business-card-next[data-next-state="max"] .business-card-next-copy > strong,
 .route-shell.is-businesses-page .business-card[data-business-level="8"] .business-card-next[data-next-state="max"] .business-card-next-gain > strong {
-  color: var(--idle-cyan-bright);
+  color: var(--idle-green-bright);
 }
 
 .route-shell.is-businesses-page .business-card[data-business-level="8"] .stadium-star-crown,
@@ -3596,11 +3588,11 @@ body.business-detail-open {
   z-index: 24;
   display: grid;
   gap: 4px;
-  border: 1px solid rgba(125, 223, 255, .34);
+  border: 1px solid rgba(120, 240, 170, .34);
   border-radius: 13px;
   color: var(--idle-text);
   background:
-    linear-gradient(135deg, rgba(70, 200, 255, .12), rgba(24, 69, 124, .08)),
+    linear-gradient(135deg, rgba(84, 242, 163, .12), rgba(28, 75, 50, .08)),
     rgba(6, 17, 30, .96);
   box-shadow:
     0 16px 36px rgba(0, 0, 0, .3),
@@ -3639,7 +3631,7 @@ body.business-detail-open {
 
 .business-collect-toast > span,
 .business-collect-all-toast > span {
-  color: var(--idle-cyan);
+  color: var(--idle-green);
   font: 800 7px/1 "DM Mono", monospace;
   letter-spacing: .1em;
 }
@@ -3662,8 +3654,8 @@ body.business-detail-open {
 
 .route-shell.is-businesses-page .business-command-bar[data-collect-feedback="true"] .business-summary-collect-all {
   box-shadow:
-    inset 0 0 0 1px rgba(125, 223, 255, .18),
-    inset 0 0 26px rgba(70, 200, 255, .055);
+    inset 0 0 0 1px rgba(120, 240, 170, .18),
+    inset 0 0 26px rgba(84, 242, 163, .055);
 }
 
 @keyframes idle-collect-toast-in {
@@ -3690,15 +3682,15 @@ body.business-detail-open {
 
 @keyframes idle-collect-card-flash {
   0% {
-    border-color: rgba(125, 223, 255, .34);
-    box-shadow: 0 0 0 rgba(70, 200, 255, 0);
+    border-color: rgba(120, 240, 170, .34);
+    box-shadow: 0 0 0 rgba(84, 242, 163, 0);
   }
   45% {
-    border-color: rgba(125, 223, 255, .54);
-    box-shadow: 0 0 22px rgba(70, 200, 255, .1);
+    border-color: rgba(120, 240, 170, .54);
+    box-shadow: 0 0 22px rgba(84, 242, 163, .1);
   }
   100% {
-    box-shadow: 0 0 0 rgba(70, 200, 255, 0);
+    box-shadow: 0 0 0 rgba(84, 242, 163, 0);
   }
 }
 
@@ -3765,7 +3757,7 @@ body.business-detail-open {
 }
 
 
-/* Part 18 — final responsive QA / short mobile landscape */
+/* Short mobile landscape safety */
 @media (orientation: landscape) and (max-height: 520px) and (max-width: 950px) {
   .route-shell.is-businesses-page {
     --idle-page-gutter: 14px;
@@ -6890,6 +6882,59 @@ body.business-detail-open {
 
 @media (prefers-reduced-motion: reduce) {
   .business-detail-drawer {
+    transition: none;
+  }
+}
+
+
+/* Part 18 — final QA guardrails */
+.route-shell.is-businesses-page,
+.route-shell.is-businesses-page .businesses-workspace,
+.route-shell.is-businesses-page .businesses-page,
+.route-shell.is-businesses-page .business-list,
+.route-shell.is-businesses-page .business-card,
+.business-detail-drawer,
+.business-detail-scroll,
+.business-level-node-card,
+.vault-level-node-card {
+  min-width: 0;
+}
+
+.route-shell.is-businesses-page {
+  overflow-x: clip;
+}
+
+.route-shell.is-businesses-page button,
+.route-shell.is-businesses-page a,
+.business-detail-drawer button {
+  -webkit-tap-highlight-color: transparent;
+}
+
+.route-shell.is-businesses-page .business-card-primary,
+.route-shell.is-businesses-page .business-card-details,
+.route-shell.is-businesses-page .business-summary-collect-all,
+.business-level-node-upgrade,
+.vault-level-node-upgrade,
+.business-detail-tabs button,
+.business-detail-close {
+  transition:
+    transform .16s ease,
+    border-color .16s ease,
+    background-color .16s ease,
+    box-shadow .16s ease,
+    color .16s ease;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .route-shell.is-businesses-page .business-card,
+  .route-shell.is-businesses-page .business-card-primary,
+  .route-shell.is-businesses-page .business-card-details,
+  .route-shell.is-businesses-page .business-summary-collect-all,
+  .business-level-node-upgrade,
+  .vault-level-node-upgrade,
+  .business-detail-tabs button,
+  .business-detail-close {
+    scroll-behavior: auto;
     transition: none;
   }
 }
