@@ -33,29 +33,19 @@ describe("Businesses canonical class isolation", () => {
       "business-card-vault-status",
       "business-card-secondary",
     ];
+    const mountedClassTokens = [...componentsSource.matchAll(/class="([^"]+)"/g)]
+      .flatMap((match) => match[1].split(/\s+/).filter(Boolean));
 
     for (const className of legacyAliases) {
-      expect(componentsSource).not.toContain(`class="${className}`);
-      expect(componentsSource).not.toContain(` ${className}`);
+      expect(mountedClassTokens).not.toContain(className);
+      expect(idleCssSource).not.toMatch(
+        new RegExp(`\\.${className}(?![A-Za-z0-9_-])`),
+      );
     }
 
     expect(idleIndexSource).not.toContain("business-summary business-command-bar");
     expect(idleIndexSource).toContain('class="business-command-bar"');
-
-    const legacyCssClasses = [
-      ".business-card-visual",
-      ".business-row-title",
-      ".business-card-body",
-      ".business-card-accrued",
-      ".business-card-quick-stats",
-      ".business-card-quick-stat",
-      ".business-card-vault-status",
-      ".business-card-secondary",
-      ".business-summary {",
-    ];
-    for (const selector of legacyCssClasses) {
-      expect(idleCssSource).not.toContain(selector);
-    }
+    expect(idleCssSource).not.toMatch(/\.business-summary(?![A-Za-z0-9_-])/);
   });
 });
 
@@ -465,9 +455,9 @@ describe("Businesses premium card skeleton", () => {
 
 describe("Businesses hero identity overlay", () => {
   it("moves business identity out of the card body and onto the hero image", () => {
-    const heroIndex = componentsSource.indexOf('class="business-card-hero business-card-visual"');
+    const heroIndex = componentsSource.indexOf('class="business-card-hero"');
     const overlayIndex = componentsSource.indexOf('class="business-card-identity-overlay"');
-    const contentIndex = componentsSource.indexOf('class="business-card-content business-card-body"');
+    const contentIndex = componentsSource.indexOf('class="business-card-content"');
 
     expect(heroIndex).toBeGreaterThanOrEqual(0);
     expect(overlayIndex).toBeGreaterThan(heroIndex);
@@ -1233,7 +1223,7 @@ describe("Businesses premium typography pass", () => {
 
   it("keeps main-card names, vault copy and actions readable from canonical mobile rules", () => {
     expect(idleCssSource).not.toContain("/* Mobile readability hotfix — titles, vault copy, primary actions */");
-    expect(idleCssSource).toContain(".business-row-title strong");
+    expect(idleCssSource).toContain(".business-card-title strong");
     expect(idleCssSource).toContain("font-size: 22px");
     expect(idleCssSource).toContain("text-overflow: clip");
     expect(idleCssSource).toContain("white-space: normal");
@@ -1255,8 +1245,8 @@ describe("Businesses premium typography pass", () => {
 describe("Businesses refinement final responsive regression", () => {
   it("keeps the main card information stack simple on phone widths", () => {
     expect(idleCssSource).toContain("@media (max-width: 760px)");
-    expect(idleCssSource).toContain(".business-card-quick-stats");
-    expect(idleCssSource).toContain(".business-card-vault-status");
+    expect(idleCssSource).toContain(".business-card-stats");
+    expect(idleCssSource).toContain(".business-card-vault {");
     expect(idleCssSource).toContain("grid-template-columns: 1fr");
   });
 
