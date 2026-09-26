@@ -2,14 +2,12 @@ import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 
-const mainSource = readFileSync(
-  fileURLToPath(new URL("./main.ts", import.meta.url)),
+const hubSource = readFileSync(
+  fileURLToPath(new URL("./index.ts", import.meta.url)),
   "utf8",
 );
 
-const menuStart = mainSource.indexOf("const mainMenuMarkup =");
-const menuEnd = mainSource.indexOf("const rouletteRedNumbers", menuStart);
-const menuSource = mainSource.slice(menuStart, menuEnd);
+const menuSource = hubSource;
 
 describe("main menu regression", () => {
   it("keeps the three existing game destinations and adds Businesses as the fourth card", () => {
@@ -36,9 +34,8 @@ describe("main menu regression", () => {
     expect(menuSource).toContain("<span class=\"choice-type\">SCRATCH EXPERIENCE</span>");
   });
 
-  it("keeps unknown non-game paths on the main selector instead of entering a game", () => {
-    expect(mainSource).toContain(
-      '} else if (!isSlotRoute) {\n  app.innerHTML = routeShell(mainMenuMarkup, "is-route-page is-menu-page");',
-    );
+  it("keeps the Hub mount isolated from game runtime code", () => {
+    expect(hubSource).toContain("export function mountHub(app: HTMLElement)");
+    expect(hubSource).toContain("hubRouteShell(HUB_MARKUP)");
   });
 });

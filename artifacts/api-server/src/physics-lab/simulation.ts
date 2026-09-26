@@ -2,17 +2,29 @@ import { createHash, randomBytes } from "node:crypto";
 import RAPIER from "@dimforge/rapier3d-compat";
 import {
   ROULETTE_BALL_RADIUS,
+  ROULETTE_DARK_RACE_CHANNEL_PROFILE,
+  ROULETTE_DARK_RACE_INWARD_EDGE_RADIUS,
+  ROULETTE_DARK_RACE_RADIUS_BAND,
+  ROULETTE_DARK_RACE_LAUNCH_RADIUS,
+  ROULETTE_DARK_RACE_WOOD_INNER_RADIUS,
   ROULETTE_EUROPEAN_SEQUENCE,
   ROULETTE_FIXED_TIMESTEP,
   ROULETTE_GRAVITY_Y,
   ROULETTE_MAX_CCD_SUBSTEPS,
   ROULETTE_POCKET_COUNT,
+  ROULETTE_POCKET_FLOOR_OUTER_RADIUS,
+  ROULETTE_POCKET_FLOOR_Y,
+  ROULETTE_POCKET_OUTER_LIP_RADIUS,
+  ROULETTE_POCKET_OUTER_LIP_Y,
   ROULETTE_ROTOR_ANGULAR_SPEED,
+  ROULETTE_WORLD_UNITS_PER_METER,
 } from "../../../../lib/roulette-physics-config";
 
 export const PHYSICS_LAB_FIXED_TIMESTEP = ROULETTE_FIXED_TIMESTEP;
 export const PHYSICS_LAB_DURATION_LIMIT_SECONDS = 24;
-export const PHYSICS_LAB_STABLE_WINDOW_FRAMES = 180;
+export const PHYSICS_LAB_STABLE_WINDOW_FRAMES = Math.round(
+  0.5 / PHYSICS_LAB_FIXED_TIMESTEP,
+);
 export const PHYSICS_LAB_SECTOR_COUNT = ROULETTE_POCKET_COUNT;
 export const PHYSICS_LAB_BALL_RADIUS = ROULETTE_BALL_RADIUS;
 export const PHYSICS_LAB_EUROPEAN_SEQUENCE = ROULETTE_EUROPEAN_SEQUENCE;
@@ -21,35 +33,28 @@ const SECTOR_STEP_RADIANS = (Math.PI * 2) / PHYSICS_LAB_SECTOR_COUNT;
 const BALL_COLLISION_GROUP = 0x0001;
 const STATIONARY_COLLISION_GROUP = 0x0002;
 const ROTOR_COLLISION_GROUP = 0x0004;
-const TRAJECTORY_SAMPLE_EVERY_STEPS = 4;
+const TRAJECTORY_SAMPLE_EVERY_STEPS = 1;
 const MAX_TRAJECTORY_SAMPLES = Math.ceil(
   (PHYSICS_LAB_DURATION_LIMIT_SECONDS / PHYSICS_LAB_FIXED_TIMESTEP) /
     TRAJECTORY_SAMPLE_EVERY_STEPS,
 ) + 1;
 
+const POCKET_FRET_RESTITUTION = 0.06;
+const DEFLECTOR_FRICTION = 0.12;
+const DEFLECTOR_RESTITUTION = 0.38;
+
 const BALL_PARAMETERS = {
   radius: PHYSICS_LAB_BALL_RADIUS,
-  mass: 0.032,
-  friction: 0.4,
-  restitution: 0.34,
-  linearDamping: 0.12,
-  angularDamping: 0.07,
+  mass: 0.0027,
+  friction: 0.028,
+  restitution: 0.01,
+  linearDamping: 0.01,
+  angularDamping: 0.01,
   initialAngularVelocity: 22,
 } as const;
 
 type Vec3 = { x: number; y: number; z: number };
 type Quaternion = { x: number; y: number; z: number; w: number };
-type ColliderBody = "stationary" | "rotor";
-
-type ColliderSpec = {
-  id: string;
-  label: string;
-  body: ColliderBody;
-  position: [number, number, number];
-  halfExtents: [number, number, number];
-  rotation: [number, number, number, number];
-};
-
 export type PhysicsLabRoundStatus = "SETTLED" | "INVALID";
 
 export type PhysicsLabStartConditions = {
@@ -120,9 +125,25 @@ function initRapier() {
   return rapierReady;
 }
 
-function hashToUnit(seed: string, counter: number) {
+function deterministicUnit(seed: string, salt: number) {
+  const numericSeed = Number(seed);
+  if (
+    Number.isInteger(numericSeed) &&
+    numericSeed >= 0 &&
+    numericSeed <= 0xffff_ffff
+  ) {
+    let value =
+      (numericSeed ^ Math.imul(salt + 1, 0x9e3779b1)) >>> 0;
+    value ^= value >>> 16;
+    value = Math.imul(value, 0x7feb352d) >>> 0;
+    value ^= value >>> 15;
+    value = Math.imul(value, 0x846ca68b) >>> 0;
+    value ^= value >>> 16;
+    return (value >>> 0) / 0x1_0000_0000;
+  }
+
   const digest = createHash("sha256")
-    .update(`${seed}:${counter}`)
+    .update(`${seed}:${salt}`)
     .digest();
   return digest.readUInt32BE(0) / 0x1_0000_0000;
 }
@@ -139,206 +160,522 @@ function radialPosition(
   return [Math.sin(angle) * radius, y, Math.cos(angle) * radius];
 }
 
-function yQuaternion(angle: number): [number, number, number, number] {
-  return [0, Math.sin(angle / 2), 0, Math.cos(angle / 2)];
-}
-
-function tiltedYQuaternion(
-  angle: number,
-  tilt: number,
-): [number, number, number, number] {
-  const [x, y, z, w] = yQuaternion(angle);
-  const localX = Math.sin(tilt / 2);
-  const localW = Math.cos(tilt / 2);
-  return [
-    w * localX + x * localW,
-    y * localW + z * localX,
-    z * localW - y * localX,
-    w * localW - x * localX,
-  ];
-}
-
-function addRingSpecs(
-  specs: ColliderSpec[],
-  options: {
-    id: string;
-    label: string;
-    body: ColliderBody;
-    count: number;
-    radius: number;
-    y: number;
-    halfExtents: [number, number, number];
-    radialOffset?: number;
-    tilt?: number;
-  },
-) {
-  for (let index = 0; index < options.count; index += 1) {
-    const angle = (index / options.count) * Math.PI * 2;
-    specs.push({
-      id: `${options.id}-${index}`,
-      label: options.label,
-      body: options.body,
-      position: radialPosition(options.radius, angle, options.y),
-      halfExtents: options.halfExtents,
-      rotation: tiltedYQuaternion(
-        angle + (options.radialOffset ?? 0),
-        options.tilt ?? 0,
-      ),
-    });
+function darkRaceSurfaceYAt(radius: number) {
+  const profile = ROULETTE_DARK_RACE_CHANNEL_PROFILE;
+  if (radius <= profile[0][0]) return profile[0][1];
+  if (radius >= profile[profile.length - 1][0]) {
+    return profile[profile.length - 1][1];
   }
+  for (let index = 1; index < profile.length; index += 1) {
+    const [rightRadius, rightY] = profile[index];
+    const [leftRadius, leftY] = profile[index - 1];
+    if (radius <= rightRadius) {
+      const alpha =
+        (radius - leftRadius) / Math.max(1e-9, rightRadius - leftRadius);
+      return leftY + (rightY - leftY) * alpha;
+    }
+  }
+  return profile[profile.length - 1][1];
 }
 
-function buildColliderSpecs(): ColliderSpec[] {
-  const specs: ColliderSpec[] = [];
-  addRingSpecs(specs, {
-    id: "bowl-transition-outer",
-    label: "Bowl transition",
-    body: "stationary",
-    count: 48,
-    radius: 2.3,
-    y: 0.48,
-    halfExtents: [0.15, 0.045, 0.1],
-  });
-  addRingSpecs(specs, {
-    id: "bowl-transition-inner",
-    label: "Bowl transition",
-    body: "stationary",
-    count: 48,
-    radius: 2.05,
-    y: 0.28,
-    halfExtents: [0.14, 0.045, 0.1],
-    tilt: -0.45,
-  });
-  addRingSpecs(specs, {
-    id: "bowl-floor",
-    label: "Bowl floor",
-    body: "stationary",
-    count: 48,
-    radius: 1.86,
-    y: 0.1,
-    halfExtents: [0.13, 0.045, 0.12],
-  });
-  addRingSpecs(specs, {
-    id: "track-floor",
-    label: "Ball track",
-    body: "stationary",
-    count: 96,
-    radius: 2.48,
-    y: 0.61,
-    halfExtents: [0.11, 0.045, 0.17],
-  });
-  addRingSpecs(specs, {
-    id: "outer-rim",
-    label: "Outer rim",
-    body: "stationary",
-    count: 96,
-    radius: 2.7,
-    y: 0.85,
-    halfExtents: [0.12, 0.17, 0.1],
-  });
-  addRingSpecs(specs, {
-    id: "track-inner-rail",
-    label: "Track inner rail",
-    body: "stationary",
-    count: 64,
-    radius: 2.2,
-    y: 0.58,
-    halfExtents: [0.13, 0.025, 0.055],
-  });
-  addRingSpecs(specs, {
-    id: "deflector",
-    label: "Deflector",
-    body: "stationary",
-    count: 8,
-    radius: 2.33,
-    y: 0.78,
-    halfExtents: [0.16, 0.08, 0.1],
-    radialOffset: Math.PI / 2 + 0.35,
-  });
-  addRingSpecs(specs, {
-    id: "rotor-pocket-floor",
-    label: "Pocket floor",
-    body: "rotor",
-    count: PHYSICS_LAB_SECTOR_COUNT,
-    radius: 1.72,
-    y: 0.15,
-    halfExtents: [0.13, 0.055, 0.16],
-  });
-  addRingSpecs(specs, {
-    id: "rotor-inner-wall",
-    label: "Pocket inner wall",
-    body: "rotor",
-    count: PHYSICS_LAB_SECTOR_COUNT,
-    radius: 1.42,
-    y: 0.15,
-    halfExtents: [0.13, 0.15, 0.045],
-  });
-  addRingSpecs(specs, {
-    id: "rotor-outer-wall",
-    label: "Pocket outer wall",
-    body: "rotor",
-    count: PHYSICS_LAB_SECTOR_COUNT,
-    radius: 1.92,
-    y: 0.16,
-    halfExtents: [0.13, 0.025, 0.045],
-  });
-  addRingSpecs(specs, {
-    id: "rotor-fret",
-    label: "Pocket fret / separator",
-    body: "rotor",
-    count: PHYSICS_LAB_SECTOR_COUNT,
-    radius: 1.73,
-    y: 0.15,
-    halfExtents: [0.35, 0.13, 0.022],
-    radialOffset: -Math.PI / 2,
-  });
-  specs.push({
-    id: "bowl-spindle-guard",
-    label: "Bowl center spindle",
-    body: "stationary",
-    position: [0, 0.34, 0],
-    halfExtents: [1.05, 0.34, 1.05],
-    rotation: [0, 0, 0, 1],
-  });
-  specs.push({
-    id: "bowl-center-floor",
-    label: "Bowl center safety floor",
-    body: "stationary",
-    position: [0, -0.04, 0],
-    halfExtents: [1.52, 0.05, 1.52],
-    rotation: [0, 0, 0, 1],
-  });
-  return specs;
+function darkRaceSurfaceSlopeAt(radius: number) {
+  const profile = ROULETTE_DARK_RACE_CHANNEL_PROFILE;
+  for (let index = 1; index < profile.length; index += 1) {
+    const [rightRadius, rightY] = profile[index];
+    const [leftRadius, leftY] = profile[index - 1];
+    if (radius <= rightRadius) {
+      return (rightY - leftY) / Math.max(1e-9, rightRadius - leftRadius);
+    }
+  }
+  const last = profile[profile.length - 1];
+  const previous = profile[profile.length - 2];
+  return (last[1] - previous[1]) / Math.max(1e-9, last[0] - previous[0]);
 }
 
-function addRapierCollider(
+function addDarkRaceChannelCollider(
   world: RAPIER.World,
   body: RAPIER.RigidBody,
-  spec: ColliderSpec,
-  friction: number,
-  restitution: number,
 ) {
-  const isDeflector = spec.label === "Deflector";
-  const membership =
-    spec.body === "rotor"
-      ? ROTOR_COLLISION_GROUP
-      : STATIONARY_COLLISION_GROUP;
-  const filter =
-    spec.body === "rotor"
-      ? BALL_COLLISION_GROUP | ROTOR_COLLISION_GROUP
-      : BALL_COLLISION_GROUP | STATIONARY_COLLISION_GROUP;
-  const descriptor = RAPIER.ColliderDesc.cuboid(...spec.halfExtents)
-    .setTranslation(...spec.position)
-    .setRotation({
-      x: spec.rotation[0],
-      y: spec.rotation[1],
-      z: spec.rotation[2],
-      w: spec.rotation[3],
-    })
-    .setFriction(isDeflector ? 0.28 : friction)
-    .setRestitution(isDeflector ? 0.42 : restitution)
-    .setCollisionGroups(membership | (filter << 16));
-  world.createCollider(descriptor, body);
+  const openInnerRadius =
+    ROULETTE_DARK_RACE_INWARD_EDGE_RADIUS + PHYSICS_LAB_BALL_RADIUS;
+  const profile: Array<[number, number]> = [
+    [openInnerRadius, darkRaceSurfaceYAt(openInnerRadius)],
+    ...ROULETTE_DARK_RACE_CHANNEL_PROFILE
+      .filter(
+        ([radius]) =>
+          radius > openInnerRadius &&
+          radius <= ROULETTE_DARK_RACE_WOOD_INNER_RADIUS,
+      )
+      .map(([radius, y]) => [radius, y] as [number, number]),
+  ];
+  const segments = 512;
+  const thickness = 0.12;
+  const vertices: number[] = [];
+  const indices: number[] = [];
+
+  const appendProfile = (rows: readonly (readonly [number, number])[]) => {
+    for (const [radius, y] of rows) {
+      for (let segment = 0; segment < segments; segment += 1) {
+        const angle = (segment / segments) * Math.PI * 2;
+        vertices.push(
+          Math.sin(angle) * radius,
+          y,
+          Math.cos(angle) * radius,
+        );
+      }
+    }
+  };
+
+  appendProfile(profile);
+  const bottomOffset = profile.length * segments;
+  appendProfile(profile.map(([radius, y]) => [radius, y - thickness] as [number, number]));
+
+  for (let row = 0; row < profile.length - 1; row += 1) {
+    for (let segment = 0; segment < segments; segment += 1) {
+      const next = (segment + 1) % segments;
+      const topA = row * segments + segment;
+      const topB = row * segments + next;
+      const topC = (row + 1) * segments + next;
+      const topD = (row + 1) * segments + segment;
+      indices.push(topA, topD, topB, topB, topD, topC);
+
+      const bottomA = bottomOffset + topA;
+      const bottomB = bottomOffset + topB;
+      const bottomC = bottomOffset + topC;
+      const bottomD = bottomOffset + topD;
+      indices.push(bottomA, bottomB, bottomD, bottomB, bottomC, bottomD);
+    }
+  }
+
+  return world.createCollider(
+    RAPIER.ColliderDesc.trimesh(
+      new Float32Array(vertices),
+      new Uint32Array(indices),
+      RAPIER.TriMeshFlags.FIX_INTERNAL_EDGES | RAPIER.TriMeshFlags.ORIENTED,
+    )
+      .setFriction(BALL_PARAMETERS.friction)
+      .setRestitution(BALL_PARAMETERS.restitution),
+    body,
+  );
+}
+
+function addDarkRaceOuterWallCollider(
+  world: RAPIER.World,
+  body: RAPIER.RigidBody,
+) {
+  const segments = 512;
+  const innerFaceRadius = ROULETTE_DARK_RACE_WOOD_INNER_RADIUS;
+  const lowerY =
+    darkRaceSurfaceYAt(innerFaceRadius) -
+    PHYSICS_LAB_BALL_RADIUS * 2 -
+    0.02;
+  // Browser full-spin measures the visible GLB outer wall up to y=0.
+  // Match that validated measured top so the 512-segment wall uses the
+  // same triangle diagonals/contact features in server Rapier.
+  const measuredWallTopY = 0;
+  const upperY = Math.max(
+    measuredWallTopY + PHYSICS_LAB_BALL_RADIUS + 0.1,
+    lowerY + 0.24,
+  );
+  const vertices: number[] = [];
+  const indices: number[] = [];
+
+  for (const y of [lowerY, upperY]) {
+    for (let segment = 0; segment < segments; segment += 1) {
+      const angle = (segment / segments) * Math.PI * 2;
+      vertices.push(
+        Math.sin(angle) * innerFaceRadius,
+        y,
+        Math.cos(angle) * innerFaceRadius,
+      );
+    }
+  }
+
+  for (let segment = 0; segment < segments; segment += 1) {
+    const next = (segment + 1) % segments;
+    const lowerA = segment;
+    const lowerB = next;
+    const upperA = segments + segment;
+    const upperB = segments + next;
+    indices.push(
+      lowerA,
+      upperB,
+      lowerB,
+      lowerA,
+      upperA,
+      upperB,
+    );
+  }
+
+  return world.createCollider(
+    RAPIER.ColliderDesc.trimesh(
+      new Float32Array(vertices),
+      new Uint32Array(indices),
+      RAPIER.TriMeshFlags.FIX_INTERNAL_EDGES | RAPIER.TriMeshFlags.ORIENTED,
+    )
+      .setFriction(Math.min(BALL_PARAMETERS.friction, 0.01))
+      .setRestitution(0.01)
+      .setCollisionGroups(
+        STATIONARY_COLLISION_GROUP | (BALL_COLLISION_GROUP << 16),
+      ),
+    body,
+  );
+}
+
+function addBowlBridgeCollider(
+  world: RAPIER.World,
+  body: RAPIER.RigidBody,
+) {
+  const innerRadius = ROULETTE_POCKET_OUTER_LIP_RADIUS;
+  const outerRadius =
+    ROULETTE_DARK_RACE_INWARD_EDGE_RADIUS + PHYSICS_LAB_BALL_RADIUS;
+  const sampleCount = 9;
+  const segments = 128;
+  const thickness = 0.08;
+  const outerY = darkRaceSurfaceYAt(outerRadius);
+  const innerY = Math.min(
+    ROULETTE_POCKET_OUTER_LIP_Y,
+    outerY - PHYSICS_LAB_BALL_RADIUS * 0.75,
+  );
+  const profile: Array<[number, number]> = Array.from(
+    { length: sampleCount },
+    (_, index) => {
+      const alpha = index / (sampleCount - 1);
+      return [
+        innerRadius + (outerRadius - innerRadius) * alpha,
+        innerY + (outerY - innerY) * alpha,
+      ];
+    },
+  );
+  const vertices: number[] = [];
+  const indices: number[] = [];
+
+  const appendProfile = (rows: readonly (readonly [number, number])[]) => {
+    for (const [radius, y] of rows) {
+      for (let segment = 0; segment < segments; segment += 1) {
+        const angle = (segment / segments) * Math.PI * 2;
+        vertices.push(
+          Math.sin(angle) * radius,
+          y,
+          Math.cos(angle) * radius,
+        );
+      }
+    }
+  };
+
+  appendProfile(profile);
+  const bottomOffset = profile.length * segments;
+  appendProfile(
+    profile.map(([radius, y]) => [radius, y - thickness] as [number, number]),
+  );
+
+  for (let row = 0; row < profile.length - 1; row += 1) {
+    for (let segment = 0; segment < segments; segment += 1) {
+      const next = (segment + 1) % segments;
+      const topA = row * segments + segment;
+      const topB = row * segments + next;
+      const topC = (row + 1) * segments + next;
+      const topD = (row + 1) * segments + segment;
+      indices.push(topA, topD, topB, topB, topD, topC);
+
+      const bottomA = bottomOffset + topA;
+      const bottomB = bottomOffset + topB;
+      const bottomC = bottomOffset + topC;
+      const bottomD = bottomOffset + topD;
+      indices.push(bottomA, bottomB, bottomD, bottomB, bottomC, bottomD);
+    }
+  }
+
+  for (const row of [0, profile.length - 1]) {
+    const bottomRow = bottomOffset + row * segments;
+    for (let segment = 0; segment < segments; segment += 1) {
+      const next = (segment + 1) % segments;
+      const topA = row * segments + segment;
+      const topB = row * segments + next;
+      const bottomA = bottomRow + segment;
+      const bottomB = bottomRow + next;
+      indices.push(topA, topB, bottomB, topA, bottomB, bottomA);
+    }
+  }
+
+  return world.createCollider(
+    RAPIER.ColliderDesc.trimesh(
+      new Float32Array(vertices),
+      new Uint32Array(indices),
+      RAPIER.TriMeshFlags.FIX_INTERNAL_EDGES | RAPIER.TriMeshFlags.ORIENTED,
+    )
+      .setFriction(BALL_PARAMETERS.friction)
+      .setRestitution(BALL_PARAMETERS.restitution)
+      .setCollisionGroups(
+        STATIONARY_COLLISION_GROUP | (BALL_COLLISION_GROUP << 16),
+      ),
+    body,
+  );
+}
+
+function addPocketFloorAndOuterLipColliders(
+  world: RAPIER.World,
+  body: RAPIER.RigidBody,
+) {
+  const colliders: RAPIER.Collider[] = [];
+  const floorThickness = 0.06;
+  const lipSegments = 74;
+  const bridgeOuterRadius =
+    ROULETTE_DARK_RACE_INWARD_EDGE_RADIUS + PHYSICS_LAB_BALL_RADIUS;
+  const bridgeOuterY = darkRaceSurfaceYAt(bridgeOuterRadius);
+  const outerLipY = Math.min(
+    ROULETTE_POCKET_OUTER_LIP_Y,
+    bridgeOuterY - PHYSICS_LAB_BALL_RADIUS * 0.75,
+  );
+
+  colliders.push(
+    world.createCollider(
+      RAPIER.ColliderDesc.cylinder(
+        floorThickness / 2,
+        ROULETTE_POCKET_FLOOR_OUTER_RADIUS,
+      )
+        .setTranslation(
+          0,
+          ROULETTE_POCKET_FLOOR_Y - floorThickness / 2,
+          0,
+        )
+        .setFriction(0.42)
+        .setRestitution(0.02)
+        .setCollisionGroups(
+          ROTOR_COLLISION_GROUP | (BALL_COLLISION_GROUP << 16),
+        ),
+      body,
+    ),
+  );
+
+  const vertices: number[] = [];
+  const indices: number[] = [];
+  const profile: Array<[number, number]> = [
+    [ROULETTE_POCKET_FLOOR_OUTER_RADIUS, ROULETTE_POCKET_FLOOR_Y],
+    [ROULETTE_POCKET_OUTER_LIP_RADIUS, outerLipY],
+  ];
+
+  for (const [radius, y] of profile) {
+    for (let segment = 0; segment < lipSegments; segment += 1) {
+      const angle = (segment / lipSegments) * Math.PI * 2;
+      vertices.push(
+        Math.sin(angle) * radius,
+        y,
+        Math.cos(angle) * radius,
+      );
+    }
+  }
+
+  for (let segment = 0; segment < lipSegments; segment += 1) {
+    const next = (segment + 1) % lipSegments;
+    const innerA = segment;
+    const outerA = lipSegments + segment;
+    const outerB = lipSegments + next;
+    const innerB = next;
+    indices.push(innerA, outerA, outerB, innerA, outerB, innerB);
+  }
+
+  colliders.push(
+    world.createCollider(
+      RAPIER.ColliderDesc.trimesh(
+        new Float32Array(vertices),
+        new Uint32Array(indices),
+        RAPIER.TriMeshFlags.FIX_INTERNAL_EDGES | RAPIER.TriMeshFlags.ORIENTED,
+      )
+        .setFriction(0.42)
+        .setRestitution(0.02)
+        .setCollisionGroups(
+          ROTOR_COLLISION_GROUP | (BALL_COLLISION_GROUP << 16),
+        ),
+      body,
+    ),
+  );
+
+  colliders.push(
+    world.createCollider(
+      RAPIER.ColliderDesc.cylinder(
+        0.04,
+        ROULETTE_POCKET_FLOOR_OUTER_RADIUS + 0.06,
+      )
+        .setTranslation(
+          0,
+          ROULETTE_POCKET_FLOOR_Y - PHYSICS_LAB_BALL_RADIUS - 0.04,
+          0,
+        )
+        .setFriction(0.42)
+        .setRestitution(0.02)
+        .setCollisionGroups(
+          ROTOR_COLLISION_GROUP | (BALL_COLLISION_GROUP << 16),
+        ),
+      body,
+    ),
+  );
+
+  return colliders;
+}
+
+function addPocketFretColliders(
+  world: RAPIER.World,
+  body: RAPIER.RigidBody,
+) {
+  const pocketFloorInnerRadius = 1.48;
+  const innerEdgeRadius =
+    pocketFloorInnerRadius + PHYSICS_LAB_BALL_RADIUS * 2 - 0.002;
+  const outerEdgeRadius = ROULETTE_POCKET_FLOOR_OUTER_RADIUS - 0.02;
+  const centerRadius = (innerEdgeRadius + outerEdgeRadius) / 2;
+  const tangentialHalfExtent = 0.03;
+  const radialHalfExtent = (outerEdgeRadius - innerEdgeRadius) / 2;
+  const verticalHalfExtent = 0.11;
+  const edgeRounding = 0.005;
+  const centerY =
+    ROULETTE_POCKET_FLOOR_Y + verticalHalfExtent + 0.022;
+  const colliders: RAPIER.Collider[] = [];
+
+  for (let index = 0; index < PHYSICS_LAB_SECTOR_COUNT; index += 1) {
+    const angle = (index + 0.5) * SECTOR_STEP_RADIANS;
+    colliders.push(
+      world.createCollider(
+        RAPIER.ColliderDesc.roundCuboid(
+          tangentialHalfExtent - edgeRounding,
+          verticalHalfExtent - edgeRounding,
+          radialHalfExtent - edgeRounding,
+          edgeRounding,
+        )
+          .setTranslation(...radialPosition(centerRadius, angle, centerY))
+          .setRotation({
+            x: 0,
+            y: Math.sin(angle / 2),
+            z: 0,
+            w: Math.cos(angle / 2),
+          })
+          .setFriction(0.42)
+          .setRestitution(POCKET_FRET_RESTITUTION)
+          .setCollisionGroups(
+            ROTOR_COLLISION_GROUP | (BALL_COLLISION_GROUP << 16),
+          ),
+        body,
+      ),
+    );
+  }
+
+  return colliders;
+}
+
+function addPocketInnerGuardCollider(
+  world: RAPIER.World,
+  body: RAPIER.RigidBody,
+) {
+  const pocketFloorInnerRadius = 1.48;
+  const verticalHalfHeight = 0.11;
+  const centerY = ROULETTE_POCKET_FLOOR_Y + verticalHalfHeight;
+
+  const edgeRounding = 0.02;
+
+  return world.createCollider(
+    RAPIER.ColliderDesc.roundCylinder(
+      verticalHalfHeight - edgeRounding,
+      pocketFloorInnerRadius - edgeRounding,
+      edgeRounding,
+    )
+      .setTranslation(0, centerY, 0)
+      .setFriction(0.42)
+      .setRestitution(0.02)
+      .setCollisionGroups(
+        ROTOR_COLLISION_GROUP | (BALL_COLLISION_GROUP << 16),
+      ),
+    body,
+  );
+}
+
+function addMeasuredDeflectorColliders(
+  world: RAPIER.World,
+  body: RAPIER.RigidBody,
+) {
+  const descriptors = [
+    { angleDegrees: 22.501, innerRadius: 2.1638333333333333, outerRadius: 2.2665, bottomY: -0.3740904798673158, topY: -0.3341760459978076, angularWidth: 0.13962634015954636 },
+    { angleDegrees: 67.499, innerRadius: 2.0611666666666664, outerRadius: 2.3435, bottomY: -0.38207411055479956, topY: -0.33297679580798023, angularWidth: 0.06981317007977318 },
+    { angleDegrees: 112.501, innerRadius: 2.1638333333333333, outerRadius: 2.2665, bottomY: -0.3740904798673158, topY: -0.3341760459978076, angularWidth: 0.13962634015954636 },
+    { angleDegrees: 157.499, innerRadius: 2.0611666666666664, outerRadius: 2.3435, bottomY: -0.38207411055479956, topY: -0.33297679580798023, angularWidth: 0.06981317007977318 },
+    { angleDegrees: 202.501, innerRadius: 2.1638333333333333, outerRadius: 2.2665, bottomY: -0.3740904798673158, topY: -0.3341760459978076, angularWidth: 0.13962634015954636 },
+    { angleDegrees: 247.499, innerRadius: 2.0611666666666664, outerRadius: 2.3435, bottomY: -0.38207411055479956, topY: -0.33297679580798056, angularWidth: 0.06981317007977318 },
+    { angleDegrees: 292.501, innerRadius: 2.1638333333333333, outerRadius: 2.2665, bottomY: -0.3740904798673158, topY: -0.33417604599780726, angularWidth: 0.13962634015954636 },
+    { angleDegrees: 337.499, innerRadius: 2.0611666666666664, outerRadius: 2.3435, bottomY: -0.38207411055479956, topY: -0.33297679580798056, angularWidth: 0.06981317007977318 },
+  ] as const;
+  const colliders: RAPIER.Collider[] = [];
+
+  for (const descriptor of descriptors) {
+    const effectiveOuterRadius = Math.min(
+      descriptor.outerRadius,
+      ROULETTE_DARK_RACE_INWARD_EDGE_RADIUS,
+    );
+    const effectiveInnerRadius = Math.min(
+      descriptor.innerRadius,
+      effectiveOuterRadius - PHYSICS_LAB_BALL_RADIUS * 0.5,
+    );
+    const centerRadius = (effectiveInnerRadius + effectiveOuterRadius) / 2;
+    const halfRadialDepth = Math.max(
+      PHYSICS_LAB_BALL_RADIUS * 0.25,
+      (effectiveOuterRadius - effectiveInnerRadius) / 2,
+    );
+    const halfHeight = Math.max(
+      0.02,
+      (descriptor.topY - descriptor.bottomY) / 2,
+    );
+    const centerY = (descriptor.bottomY + descriptor.topY) / 2;
+    const halfTangentialWidth = Math.min(
+      0.22,
+      Math.max(
+        PHYSICS_LAB_BALL_RADIUS * 0.9,
+        centerRadius * descriptor.angularWidth * 0.5,
+      ),
+    );
+    const angle = (descriptor.angleDegrees * Math.PI) / 180;
+    const vertices = new Float32Array([
+      -halfTangentialWidth, -halfHeight, -halfRadialDepth,
+       halfTangentialWidth, -halfHeight, -halfRadialDepth,
+       halfTangentialWidth,  halfHeight, -halfRadialDepth,
+      -halfTangentialWidth,  halfHeight, -halfRadialDepth,
+      -halfTangentialWidth, -halfHeight,  halfRadialDepth,
+       halfTangentialWidth, -halfHeight,  halfRadialDepth,
+       halfTangentialWidth,  halfHeight,  halfRadialDepth,
+      -halfTangentialWidth,  halfHeight,  halfRadialDepth,
+    ]);
+    const indices = new Uint32Array([
+      0, 2, 1, 0, 3, 2,
+      4, 5, 6, 4, 6, 7,
+      0, 4, 7, 0, 7, 3,
+      1, 2, 6, 1, 6, 5,
+    ]);
+
+    colliders.push(
+      world.createCollider(
+        RAPIER.ColliderDesc.trimesh(
+          vertices,
+          indices,
+          RAPIER.TriMeshFlags.FIX_INTERNAL_EDGES,
+        )
+          .setTranslation(
+            Math.sin(angle) * centerRadius,
+            centerY,
+            Math.cos(angle) * centerRadius,
+          )
+          .setRotation({
+            x: 0,
+            y: Math.sin(angle / 2),
+            z: 0,
+            w: Math.cos(angle / 2),
+          })
+          .setFriction(DEFLECTOR_FRICTION)
+          .setRestitution(DEFLECTOR_RESTITUTION)
+          .setCollisionGroups(
+            STATIONARY_COLLISION_GROUP | (BALL_COLLISION_GROUP << 16),
+          ),
+        body,
+      ),
+    );
+  }
+
+  return colliders;
 }
 
 function pocketIndexFromState(
@@ -363,39 +700,72 @@ function quaternion(value: Quaternion): Quaternion {
 }
 
 function buildStartConditions(seed: string): PhysicsLabStartConditions {
-  // Part 5's accepted release band is intentionally preserved. The secure
-  // variation is applied inside that safe sector; the remaining initial
-  // conditions are independently randomized from the same cryptographic seed.
-  const safeSector = 13;
   const launchAzimuthRadians =
-    (safeSector + 0.5) * SECTOR_STEP_RADIANS +
-    0.0015 +
-    hashToUnit(seed, 0) * 0.0018;
-  const launchAngleDegrees = 4 + (hashToUnit(seed, 1) - 0.5) * 0.32;
-  const launchSpeed = 4 + (hashToUnit(seed, 2) - 0.5) * 0.24;
-  const ballSpin = 22.5 + (hashToUnit(seed, 3) - 0.5) * 4.2;
-  const rotorInitialAngleRadians = hashToUnit(seed, 4) * Math.PI * 2;
+    deterministicUnit(seed, 2) * Math.PI * 2;
+  const launchAngleDegrees = 0;
+  const launchSpeedMetersPerSecond =
+    5.45 + (deterministicUnit(seed, 1) * 2 - 1) * 0.15;
+  const launchSpeed =
+    launchSpeedMetersPerSecond * ROULETTE_WORLD_UNITS_PER_METER;
+  const ballSpin = launchSpeed / PHYSICS_LAB_BALL_RADIUS;
+  const rotorInitialAngleRadians =
+    deterministicUnit(seed, 3) * Math.PI * 2;
   const rotorInitialAngularVelocity = ROULETTE_ROTOR_ANGULAR_SPEED;
-  const position = radialPosition(
-    2.455 + (hashToUnit(seed, 6) - 0.5) * 0.003,
-    launchAzimuthRadians,
-    0.962 + (hashToUnit(seed, 7) - 0.5) * 0.004,
-  );
+  const launchClearance = PHYSICS_LAB_BALL_RADIUS + 0.01;
+  const operationalLaunchCenterRadius = ROULETTE_DARK_RACE_LAUNCH_RADIUS;
+  let launchContactRadius = operationalLaunchCenterRadius;
+  let launchPlacementSlope = darkRaceSurfaceSlopeAt(launchContactRadius);
+  let launchPlacementNormalLength = Math.hypot(launchPlacementSlope, 1);
+  let launchPlacementNormal: [number, number, number] = [
+    (-launchPlacementSlope * Math.sin(launchAzimuthRadians)) /
+      launchPlacementNormalLength,
+    1 / launchPlacementNormalLength,
+    (-launchPlacementSlope * Math.cos(launchAzimuthRadians)) /
+      launchPlacementNormalLength,
+  ];
+  for (let iteration = 0; iteration < 3; iteration += 1) {
+    const radialNormal =
+      launchPlacementNormal[0] * Math.sin(launchAzimuthRadians) +
+      launchPlacementNormal[2] * Math.cos(launchAzimuthRadians);
+    launchContactRadius =
+      operationalLaunchCenterRadius - radialNormal * launchClearance;
+    launchPlacementSlope = darkRaceSurfaceSlopeAt(launchContactRadius);
+    launchPlacementNormalLength = Math.hypot(launchPlacementSlope, 1);
+    launchPlacementNormal = [
+      (-launchPlacementSlope * Math.sin(launchAzimuthRadians)) /
+        launchPlacementNormalLength,
+      1 / launchPlacementNormalLength,
+      (-launchPlacementSlope * Math.cos(launchAzimuthRadians)) /
+        launchPlacementNormalLength,
+    ];
+  }
+  const launchSurfaceY = darkRaceSurfaceYAt(launchContactRadius);
+  const position: [number, number, number] = [
+    Math.sin(launchAzimuthRadians) * launchContactRadius +
+      launchPlacementNormal[0] * launchClearance,
+    launchSurfaceY + launchPlacementNormal[1] * launchClearance,
+    Math.cos(launchAzimuthRadians) * launchContactRadius +
+      launchPlacementNormal[2] * launchClearance,
+  ];
   const tangent: [number, number] = [
     Math.cos(launchAzimuthRadians),
     -Math.sin(launchAzimuthRadians),
   ];
-  const radial: [number, number] = [
-    Math.sin(launchAzimuthRadians),
-    Math.cos(launchAzimuthRadians),
-  ];
-  const launchAngleRadians = (launchAngleDegrees * Math.PI) / 180;
-  const inwardSpeed = launchSpeed * Math.sin(launchAngleRadians);
-  const tangentSpeed = launchSpeed * Math.cos(launchAngleRadians);
   const velocity: [number, number, number] = [
-    tangent[0] * -tangentSpeed - radial[0] * inwardSpeed,
-    -0.12 - hashToUnit(seed, 8) * 0.05,
-    tangent[1] * -tangentSpeed - radial[1] * inwardSpeed,
+    tangent[0] * launchSpeed,
+    0,
+    tangent[1] * launchSpeed,
+  ];
+  const angularVelocity: [number, number, number] = [
+    (launchPlacementNormal[1] * velocity[2] -
+      launchPlacementNormal[2] * velocity[1]) /
+      PHYSICS_LAB_BALL_RADIUS,
+    (launchPlacementNormal[2] * velocity[0] -
+      launchPlacementNormal[0] * velocity[2]) /
+      PHYSICS_LAB_BALL_RADIUS,
+    (launchPlacementNormal[0] * velocity[1] -
+      launchPlacementNormal[1] * velocity[0]) /
+      PHYSICS_LAB_BALL_RADIUS,
   ];
   return {
     seed,
@@ -407,7 +777,11 @@ function buildStartConditions(seed: string): PhysicsLabStartConditions {
     rotorInitialAngularVelocity,
     ballPosition: position,
     ballVelocity: velocity,
-    ballSpinAxis: [radial[1], 0, -radial[0]],
+    ballSpinAxis: angularVelocity.map((value) => value / ballSpin) as [
+      number,
+      number,
+      number,
+    ],
   };
 }
 
@@ -451,44 +825,100 @@ export async function simulatePhysicsLabRound(
     },
     true,
   );
-  const specs = buildColliderSpecs();
-  for (const spec of specs) {
-    addRapierCollider(
-      world,
-      spec.body === "rotor" ? rotorBody : stationaryBody,
-      spec,
-      spec.body === "rotor" ? 0.4 : 0.72,
-      spec.body === "rotor" ? 0.18 : 0.22,
-    );
+  const colliderRoles = new Map<number, string>();
+  const darkRaceCollider = addDarkRaceChannelCollider(world, stationaryBody);
+  colliderRoles.set(darkRaceCollider.handle, "dark-race");
+  const darkRaceOuterWallCollider = addDarkRaceOuterWallCollider(
+    world,
+    stationaryBody,
+  );
+  colliderRoles.set(darkRaceOuterWallCollider.handle, "dark-race-outer-wall");
+  const bowlBridgeCollider = addBowlBridgeCollider(world, stationaryBody);
+  colliderRoles.set(bowlBridgeCollider.handle, "bowl-bridge");
+  const deflectorColliders = addMeasuredDeflectorColliders(
+    world,
+    stationaryBody,
+  );
+  const deflectorColliderHandles = new Set(
+    deflectorColliders.map((collider) => collider.handle),
+  );
+  for (const collider of deflectorColliders) {
+    colliderRoles.set(collider.handle, "deflector");
   }
+  const pocketColliders = addPocketFloorAndOuterLipColliders(
+    world,
+    rotorBody,
+  );
+  if (pocketColliders[0]) colliderRoles.set(pocketColliders[0].handle, "pocket-floor");
+  if (pocketColliders[1]) colliderRoles.set(pocketColliders[1].handle, "pocket-outer-lip");
+  if (pocketColliders[2]) colliderRoles.set(pocketColliders[2].handle, "pocket-catch-underlay");
+  const fretColliders = addPocketFretColliders(world, rotorBody);
+  const fretColliderHandles = new Set(
+    fretColliders.map((collider) => collider.handle),
+  );
+  for (const collider of fretColliders) {
+    colliderRoles.set(collider.handle, "pocket-fret");
+  }
+  const innerGuardCollider = addPocketInnerGuardCollider(world, rotorBody);
+  colliderRoles.set(innerGuardCollider.handle, "pocket-inner-guard");
   const ballBody = world.createRigidBody(
     RAPIER.RigidBodyDesc.dynamic()
       .setTranslation(...startConditions.ballPosition)
-      .setLinvel(...startConditions.ballVelocity)
+      .setLinvel(0, 0, 0)
+      .setAngvel({ x: 0, y: 0, z: 0 })
       .setAdditionalMass(BALL_PARAMETERS.mass)
       .setLinearDamping(BALL_PARAMETERS.linearDamping)
       .setAngularDamping(BALL_PARAMETERS.angularDamping)
-      .setCanSleep(false)
       .setCcdEnabled(true)
-      .setSoftCcdPrediction(Math.max(BALL_PARAMETERS.radius * 2.2, 0.08)),
+      .setSoftCcdPrediction(0),
   );
   ballBody.enableCcd(true);
-  ballBody.setSoftCcdPrediction(Math.max(BALL_PARAMETERS.radius * 2.2, 0.08));
-  world.createCollider(
+  ballBody.setSoftCcdPrediction(0);
+  const ballCollider = world.createCollider(
     RAPIER.ColliderDesc.ball(BALL_PARAMETERS.radius)
       .setFriction(BALL_PARAMETERS.friction)
       .setRestitution(BALL_PARAMETERS.restitution)
-      .setDensity(0.001),
+      .setDensity(0.001)
+      .setCollisionGroups(
+        BALL_COLLISION_GROUP |
+          ((STATIONARY_COLLISION_GROUP | ROTOR_COLLISION_GROUP) << 16),
+      ),
     ballBody,
+  );
+  rotorBody.setNextKinematicRotation({
+    x: 0,
+    y: Math.sin(startConditions.rotorInitialAngleRadians / 2),
+    z: 0,
+    w: Math.cos(startConditions.rotorInitialAngleRadians / 2),
+  });
+  world.step();
+
+  ballBody.setTranslation(
+    {
+      x: startConditions.ballPosition[0],
+      y: startConditions.ballPosition[1],
+      z: startConditions.ballPosition[2],
+    },
+    true,
+  );
+  ballBody.setRotation({ x: 0, y: 0, z: 0, w: 1 }, true);
+  ballBody.setLinvel(
+    {
+      x: startConditions.ballVelocity[0],
+      y: startConditions.ballVelocity[1],
+      z: startConditions.ballVelocity[2],
+    },
+    true,
   );
   ballBody.setAngvel(
     {
       x: startConditions.ballSpinAxis[0] * startConditions.ballSpin,
-      y: 0,
+      y: startConditions.ballSpinAxis[1] * startConditions.ballSpin,
       z: startConditions.ballSpinAxis[2] * startConditions.ballSpin,
     },
     true,
   );
+  ballBody.wakeUp();
 
   let outerTrackEntered = false;
   let energyLossObserved = false;
@@ -502,6 +932,11 @@ export async function simulatePhysicsLabRound(
   let rotorAngle = startConditions.rotorInitialAngleRadians;
   let previousRadialVelocity = 0;
   let previousVerticalVelocity = startConditions.ballVelocity[1];
+  let previousVelocity: Vec3 = {
+    x: startConditions.ballVelocity[0],
+    y: startConditions.ballVelocity[1],
+    z: startConditions.ballVelocity[2],
+  };
   let minRadius = Number.POSITIVE_INFINITY;
   let maxRadius = 0;
   let stableFrames = 0;
@@ -510,6 +945,158 @@ export async function simulatePhysicsLabRound(
   let stableSettleStep: number | null = null;
   let errorCode: string | null = null;
   let maxBallSpeed = 0;
+
+  const preFretTraceSeed =
+    seed === "61004" || seed === "61005" || seed === "61006";
+  const preFretCheckpoints = new Set<string>();
+  let preFretTrackContactObserved = false;
+  let preInwardTrackAngle: number | null = null;
+  let preInwardTrackAngleStart: number | null = null;
+  let preInwardCompletedLaps = 0;
+  const logPreFretCheckpoint = (
+    checkpoint:
+      | "INWARD_DESCENT"
+      | "DEFLECTOR_CONTACT"
+      | "ROTOR_ENTRY"
+      | "POCKET_ENTRY"
+      | "PHYSICAL_FRET_CONTACT",
+    step: number,
+    translation: Vec3,
+    velocity: Vec3,
+    ballSpeed: number,
+    radius: number,
+    rotorRotation: Quaternion,
+    contactRoles: Set<string>,
+  ) => {
+    if (!preFretTraceSeed || preFretCheckpoints.has(checkpoint)) return;
+    preFretCheckpoints.add(checkpoint);
+    const radialVelocity =
+      radius > 0
+        ? (translation.x * velocity.x + translation.z * velocity.z) / radius
+        : 0;
+    const rotorTangentialVelocity = {
+      x: startConditions.rotorInitialAngularVelocity * translation.z,
+      y: 0,
+      z: -startConditions.rotorInitialAngularVelocity * translation.x,
+    };
+    const rotorRelativeSpeed = Math.hypot(
+      velocity.x - rotorTangentialVelocity.x,
+      velocity.y - rotorTangentialVelocity.y,
+      velocity.z - rotorTangentialVelocity.z,
+    );
+    const bodyRotorAngle = normalizedAngle(
+      2 * Math.atan2(rotorRotation.y, rotorRotation.w),
+    );
+    const pocketIndex =
+      radius > 1.18 && radius < 1.98
+        ? pocketIndexFromState(translation, rotorRotation)
+        : null;
+    console.info(
+      "ROULETTE_PRE_FRET_CHECKPOINT",
+      JSON.stringify({
+        source: "server",
+        seed,
+        checkpoint,
+        simulationTimeSeconds: Number(
+          ((step + 1) * PHYSICS_LAB_FIXED_TIMESTEP).toFixed(6),
+        ),
+        step,
+        rotorAngle: Number(bodyRotorAngle.toFixed(9)),
+        position: {
+          x: Number(translation.x.toFixed(6)),
+          y: Number(translation.y.toFixed(6)),
+          z: Number(translation.z.toFixed(6)),
+        },
+        velocity: {
+          x: Number(velocity.x.toFixed(6)),
+          y: Number(velocity.y.toFixed(6)),
+          z: Number(velocity.z.toFixed(6)),
+        },
+        speed: Number(ballSpeed.toFixed(6)),
+        radius: Number(radius.toFixed(6)),
+        radialVelocity: Number(radialVelocity.toFixed(6)),
+        verticalVelocity: Number(velocity.y.toFixed(6)),
+        rotorRelativeSpeed: Number(rotorRelativeSpeed.toFixed(6)),
+        contactRoles: [...contactRoles].sort(),
+        deflectorContact: contactRoles.has("deflector"),
+        bowlBridgeContact: contactRoles.has("bowl-bridge"),
+        outerLipContact: contactRoles.has("pocket-outer-lip"),
+        pocketFloorContact:
+          contactRoles.has("pocket-floor") ||
+          contactRoles.has("pocket-catch-underlay"),
+        fretContact: contactRoles.has("pocket-fret"),
+        pocketIndex,
+      }),
+    );
+  };
+
+  const preInwardCheckpoints = new Set<string>();
+  const logPreInwardCheckpoint = (
+    checkpoint: string,
+    step: number,
+    translation: Vec3,
+    velocity: Vec3,
+    ballSpeed: number,
+    radius: number,
+    rotorRotation: Quaternion,
+    contactRoles: Set<string>,
+    trackContact: boolean,
+  ) => {
+    if (!preFretTraceSeed || preInwardCheckpoints.has(checkpoint)) return;
+    preInwardCheckpoints.add(checkpoint);
+    const radialVelocity =
+      radius > 0
+        ? (translation.x * velocity.x + translation.z * velocity.z) / radius
+        : 0;
+    const bodyRotorAngle = normalizedAngle(
+      2 * Math.atan2(rotorRotation.y, rotorRotation.w),
+    );
+    const ballAngularVelocity = ballBody.angvel();
+    console.info(
+      "ROULETTE_PRE_INWARD_CHECKPOINT",
+      JSON.stringify({
+        source: "server",
+        seed,
+        checkpoint,
+        simulationTimeSeconds: Number(
+          ((step + 1) * PHYSICS_LAB_FIXED_TIMESTEP).toFixed(6),
+        ),
+        step,
+        rotorAngle: Number(bodyRotorAngle.toFixed(9)),
+        worldAzimuth: Number(
+          normalizedAngle(Math.atan2(translation.x, translation.z)).toFixed(9),
+        ),
+        position: {
+          x: Number(translation.x.toFixed(6)),
+          y: Number(translation.y.toFixed(6)),
+          z: Number(translation.z.toFixed(6)),
+        },
+        velocity: {
+          x: Number(velocity.x.toFixed(6)),
+          y: Number(velocity.y.toFixed(6)),
+          z: Number(velocity.z.toFixed(6)),
+        },
+        speed: Number(ballSpeed.toFixed(6)),
+        radius: Number(radius.toFixed(6)),
+        radialVelocity: Number(radialVelocity.toFixed(6)),
+        verticalVelocity: Number(velocity.y.toFixed(6)),
+        angularVelocity: {
+          x: Number(ballAngularVelocity.x.toFixed(6)),
+          y: Number(ballAngularVelocity.y.toFixed(6)),
+          z: Number(ballAngularVelocity.z.toFixed(6)),
+        },
+        angularSpeed: Number(
+          Math.hypot(
+            ballAngularVelocity.x,
+            ballAngularVelocity.y,
+            ballAngularVelocity.z,
+          ).toFixed(6),
+        ),
+        contactRoles: [...contactRoles].sort(),
+        trackContact,
+      }),
+    );
+  };
 
   try {
     const durationLimitSteps = Math.round(
@@ -578,20 +1165,47 @@ export async function simulatePhysicsLabRound(
         translation.y < -0.82 ||
         translation.y > 2.8
       ) {
+        console.info(
+          "SERVER_GEOMETRY_ESCAPE",
+          JSON.stringify({
+            seed,
+            step,
+            simulatedAtMs: Math.round(
+              step * PHYSICS_LAB_FIXED_TIMESTEP * 1000,
+            ),
+            radius,
+            y: translation.y,
+            bottom: translation.y - PHYSICS_LAB_BALL_RADIUS,
+            speed: ballSpeed,
+            velocity: {
+              x: velocity.x,
+              y: velocity.y,
+              z: velocity.z,
+            },
+          }),
+        );
         errorCode = "GEOMETRY_ESCAPE";
         events.push(event("INVALID", step, { detail: errorCode }));
         break;
       }
-      if (ballSpeed > Math.max(16, 4 * 4 + 4)) {
+      if (ballSpeed > Math.max(8, previousBallSpeed * 4)) {
         errorCode = "VELOCITY_EXPLOSION";
         events.push(event("INVALID", step, { detail: errorCode }));
         break;
       }
+      const trackCenterBandMin =
+        ROULETTE_DARK_RACE_RADIUS_BAND[0] + PHYSICS_LAB_BALL_RADIUS;
+      const trackCenterBandMax =
+        ROULETTE_DARK_RACE_RADIUS_BAND[1] - PHYSICS_LAB_BALL_RADIUS;
+      const trackSurfaceGap =
+        translation.y -
+        PHYSICS_LAB_BALL_RADIUS -
+        darkRaceSurfaceYAt(radius);
       if (
         !outerTrackEntered &&
-        radius > 2.32 &&
-        radius < 2.66 &&
-        translation.y > 0.52
+        radius >= trackCenterBandMin &&
+        radius <= trackCenterBandMax &&
+        Math.abs(trackSurfaceGap) <= 0.08
       ) {
         outerTrackEntered = true;
         events.push(event("TRACK_ENTRY", step));
@@ -612,15 +1226,237 @@ export async function simulatePhysicsLabRound(
         inwardMovementObserved = true;
         events.push(event("NATURAL_INWARD_EXIT", step));
       }
+      let deflectorPairContact = false;
+      let physicalFretPairContact = false;
+      const stepContactRoles = new Set<string>();
+      world.contactPairsWith(ballCollider, (otherCollider) => {
+        world.contactPair(ballCollider, otherCollider, (manifold) => {
+          if (manifold.numContacts() <= 0) return;
+          if (deflectorColliderHandles.has(otherCollider.handle)) {
+            deflectorPairContact = true;
+          }
+          if (fretColliderHandles.has(otherCollider.handle)) {
+            physicalFretPairContact = true;
+          }
+          const contactRole = colliderRoles.get(otherCollider.handle);
+          if (contactRole) stepContactRoles.add(contactRole);
+        });
+      });
+
+      const preInwardTrackContact = stepContactRoles.has("dark-race");
       if (
-        !deflectorHit &&
-        radius > 2.18 &&
-        radius < 2.48 &&
-        translation.y > 0.62 &&
-        translation.y < 1.1 &&
-        Math.abs(radialVelocity - previousRadialVelocity) > 0.035 &&
-        ballSpeed > 0.22
+        (seed === "61004" && step <= 90) ||
+        (seed === "61005" && step >= 700 && step <= 950)
       ) {
+        const parityAngularVelocity = ballBody.angvel();
+        const parityRadialVelocity =
+          radius > 0
+            ? (translation.x * velocity.x + translation.z * velocity.z) / radius
+            : 0;
+        console.info(
+          "ROULETTE_PARITY_STEP",
+          JSON.stringify({
+            source: "server",
+            seed,
+            step,
+            position: {
+              x: Number(translation.x.toFixed(9)),
+              y: Number(translation.y.toFixed(9)),
+              z: Number(translation.z.toFixed(9)),
+            },
+            velocity: {
+              x: Number(velocity.x.toFixed(9)),
+              y: Number(velocity.y.toFixed(9)),
+              z: Number(velocity.z.toFixed(9)),
+            },
+            speed: Number(ballSpeed.toFixed(9)),
+            radius: Number(radius.toFixed(9)),
+            radialVelocity: Number(parityRadialVelocity.toFixed(9)),
+            verticalVelocity: Number(velocity.y.toFixed(9)),
+            angularVelocity: {
+              x: Number(parityAngularVelocity.x.toFixed(9)),
+              y: Number(parityAngularVelocity.y.toFixed(9)),
+              z: Number(parityAngularVelocity.z.toFixed(9)),
+            },
+            angularSpeed: Number(
+              Math.hypot(
+                parityAngularVelocity.x,
+                parityAngularVelocity.y,
+                parityAngularVelocity.z,
+              ).toFixed(9),
+            ),
+            contactRoles: [...stepContactRoles].sort(),
+            darkRaceContact: preInwardTrackContact,
+            outerWallContact: stepContactRoles.has("dark-race-outer-wall"),
+          }),
+        );
+      }
+      if (step === 0) {
+        logPreInwardCheckpoint(
+          "LAUNCH_STEP_0",
+          step,
+          vec3(translation),
+          vec3(velocity),
+          ballSpeed,
+          radius,
+          quaternion(rotorRotation),
+          stepContactRoles,
+          preInwardTrackContact,
+        );
+      }
+      const preInwardInTrackBand =
+        radius >= trackCenterBandMin && radius <= trackCenterBandMax;
+      const preInwardAngle = normalizedAngle(
+        Math.atan2(translation.x, translation.z),
+      );
+      if (
+        preInwardInTrackBand &&
+        preInwardTrackContact &&
+        !preInwardCheckpoints.has("INWARD_DESCENT")
+      ) {
+        if (preInwardTrackAngle === null) {
+          preInwardTrackAngle = preInwardAngle;
+          preInwardTrackAngleStart = preInwardAngle;
+        } else {
+          let delta =
+            preInwardAngle - normalizedAngle(preInwardTrackAngle);
+          if (delta > Math.PI) delta -= Math.PI * 2;
+          if (delta < -Math.PI) delta += Math.PI * 2;
+          preInwardTrackAngle += delta;
+          const lapCountNow = Math.floor(
+            Math.abs(preInwardTrackAngle - preInwardTrackAngleStart!) /
+              (Math.PI * 2),
+          );
+          if (lapCountNow > preInwardCompletedLaps) {
+            for (
+              let lap = preInwardCompletedLaps + 1;
+              lap <= Math.min(lapCountNow, 4);
+              lap += 1
+            ) {
+              logPreInwardCheckpoint(
+                `LAP_${lap}`,
+                step,
+                vec3(translation),
+                vec3(velocity),
+                ballSpeed,
+                radius,
+                quaternion(rotorRotation),
+                stepContactRoles,
+                preInwardTrackContact,
+              );
+            }
+            preInwardCompletedLaps = lapCountNow;
+          }
+        }
+      } else if (
+        preInwardTrackAngleStart !== null &&
+        radius < trackCenterBandMin
+      ) {
+        logPreInwardCheckpoint(
+          "INWARD_DESCENT",
+          step,
+          vec3(translation),
+          vec3(velocity),
+          ballSpeed,
+          radius,
+          quaternion(rotorRotation),
+          stepContactRoles,
+          preInwardTrackContact,
+        );
+      }
+
+      preFretTrackContactObserved ||=
+        stepContactRoles.has("dark-race") &&
+        radius >= trackCenterBandMin &&
+        radius <= trackCenterBandMax;
+      if (
+        preFretTrackContactObserved &&
+        radius < trackCenterBandMin
+      ) {
+        logPreFretCheckpoint(
+          "INWARD_DESCENT",
+          step,
+          vec3(translation),
+          vec3(velocity),
+          ballSpeed,
+          radius,
+          quaternion(rotorRotation),
+          stepContactRoles,
+        );
+      }
+      if (deflectorPairContact) {
+        logPreFretCheckpoint(
+          "DEFLECTOR_CONTACT",
+          step,
+          vec3(translation),
+          vec3(velocity),
+          ballSpeed,
+          radius,
+          quaternion(rotorRotation),
+          stepContactRoles,
+        );
+      }
+      if (
+        preFretCheckpoints.has("INWARD_DESCENT") &&
+        radius <=
+          ROULETTE_POCKET_OUTER_LIP_RADIUS + PHYSICS_LAB_BALL_RADIUS + 0.08
+      ) {
+        logPreFretCheckpoint(
+          "ROTOR_ENTRY",
+          step,
+          vec3(translation),
+          vec3(velocity),
+          ballSpeed,
+          radius,
+          quaternion(rotorRotation),
+          stepContactRoles,
+        );
+      }
+      const checkpointBallBottom =
+        translation.y - PHYSICS_LAB_BALL_RADIUS;
+      const checkpointPocketFloorContact =
+        stepContactRoles.has("pocket-floor") ||
+        stepContactRoles.has("pocket-catch-underlay");
+      const checkpointInsidePocket =
+        radius >= 1.48 + PHYSICS_LAB_BALL_RADIUS &&
+        radius <=
+          ROULETTE_POCKET_OUTER_LIP_RADIUS - PHYSICS_LAB_BALL_RADIUS &&
+        checkpointBallBottom >= ROULETTE_POCKET_FLOOR_Y - 0.08 &&
+        checkpointBallBottom <= ROULETTE_POCKET_FLOOR_Y + 0.16;
+      const checkpointPocketContactInsideRotorEnvelope =
+        checkpointPocketFloorContact &&
+        radius <=
+          ROULETTE_POCKET_OUTER_LIP_RADIUS +
+            PHYSICS_LAB_BALL_RADIUS +
+            0.04;
+      if (
+        checkpointInsidePocket ||
+        checkpointPocketContactInsideRotorEnvelope
+      ) {
+        logPreFretCheckpoint(
+          "POCKET_ENTRY",
+          step,
+          vec3(translation),
+          vec3(velocity),
+          ballSpeed,
+          radius,
+          quaternion(rotorRotation),
+          stepContactRoles,
+        );
+      }
+      if (physicalFretPairContact) {
+        logPreFretCheckpoint(
+          "PHYSICAL_FRET_CONTACT",
+          step,
+          vec3(translation),
+          vec3(velocity),
+          ballSpeed,
+          radius,
+          quaternion(rotorRotation),
+          stepContactRoles,
+        );
+      }
+      if (!deflectorHit && deflectorPairContact) {
         deflectorHit = true;
         events.push(event("DEFLECTOR_IMPACT", step));
       }
@@ -659,7 +1495,7 @@ export async function simulatePhysicsLabRound(
 
       const pocketIndex =
         radius > 1.18 && radius < 1.98
-          ? pocketIndexFromState(translation, rotation)
+          ? pocketIndexFromState(translation, rotorRotation)
           : null;
       if (pocketIndex !== null && ballSpeed > 0.08) {
         pocketInteraction = true;
@@ -677,15 +1513,84 @@ export async function simulatePhysicsLabRound(
       ) {
         events.push(event("POCKET_BOUNCE", step, { pocketIndex: previousPocketIndex ?? undefined }));
       }
+      const rotorTangentialVelocity = {
+        x: startConditions.rotorInitialAngularVelocity * translation.z,
+        y: 0,
+        z: -startConditions.rotorInitialAngularVelocity * translation.x,
+      };
+      const rotorRelativeSpeed = Math.hypot(
+        velocity.x - rotorTangentialVelocity.x,
+        velocity.y - rotorTangentialVelocity.y,
+        velocity.z - rotorTangentialVelocity.z,
+      );
+      const ballBottom = translation.y - PHYSICS_LAB_BALL_RADIUS;
+      const settlePocketInteraction = pocketInteraction;
+      const settleRelativeSpeed = rotorRelativeSpeed < 0.12;
+      const settleRadiusMin =
+        radius >= 1.48 + PHYSICS_LAB_BALL_RADIUS;
+      const settleRadiusMax =
+        radius <=
+        ROULETTE_POCKET_OUTER_LIP_RADIUS - PHYSICS_LAB_BALL_RADIUS;
+      const settleFloor =
+        Math.abs(ballBottom - ROULETTE_POCKET_FLOOR_Y) <= 0.12;
+      const settlePocketIndex = previousPocketIndex !== null;
+      const settleGatePassed =
+        settlePocketInteraction &&
+        settleRelativeSpeed &&
+        settleRadiusMin &&
+        settleRadiusMax &&
+        settleFloor &&
+        settlePocketIndex;
       if (
-        ballSpeed < 0.18 &&
-        ballAngularSpeed < 5 &&
-        radius > 1.18 &&
-        radius < 1.98 &&
-        translation.y > -0.42 &&
-        translation.y < 1.3 &&
-        previousPocketIndex !== null
+        (seed === "61004" || seed === "61005" || seed === "61006") &&
+        step >= 1800 &&
+        (step % 120 === 0 || step >= 2868 || stableFrames > 0)
       ) {
+        const contactRoles: string[] = [];
+        world.contactPairsWith(ballCollider, (otherCollider) => {
+          world.contactPair(ballCollider, otherCollider, (manifold) => {
+            if (manifold.numContacts() > 0) {
+              contactRoles.push(
+                colliderRoles.get(otherCollider.handle) ?? "unknown",
+              );
+            }
+          });
+        });
+        const actualRotorAngularVelocity = rotorBody.angvel();
+        console.info(
+          "SERVER_SETTLE_DIAGNOSTIC",
+          JSON.stringify({
+            seed,
+            step,
+            simulatedAtMs: Math.round(
+              step * PHYSICS_LAB_FIXED_TIMESTEP * 1000,
+            ),
+            ballSpeed,
+            rotorRelativeSpeed,
+            radius,
+            y: translation.y,
+            ballBottom,
+            floorDelta: ballBottom - ROULETTE_POCKET_FLOOR_Y,
+            previousPocketIndex,
+            stableFrames,
+            actualRotorAngularVelocity: {
+              x: actualRotorAngularVelocity.x,
+              y: actualRotorAngularVelocity.y,
+              z: actualRotorAngularVelocity.z,
+            },
+            contactRoles,
+            gate: {
+              pocketInteraction: settlePocketInteraction,
+              relativeSpeed: settleRelativeSpeed,
+              radiusMin: settleRadiusMin,
+              radiusMax: settleRadiusMax,
+              floor: settleFloor,
+              pocketIndex: settlePocketIndex,
+            },
+          }),
+        );
+      }
+      if (settleGatePassed) {
         stableFrames += 1;
         if (stableFrames >= PHYSICS_LAB_STABLE_WINDOW_FRAMES && !completed) {
           completed = true;
@@ -693,7 +1598,7 @@ export async function simulatePhysicsLabRound(
           finalPocketIndex = previousPocketIndex;
           events.push(
             event("STABLE_SETTLE", step, {
-              pocketIndex: finalPocketIndex,
+              pocketIndex: finalPocketIndex ?? undefined,
               pocketNumber:
                 finalPocketIndex === null
                   ? undefined
@@ -710,6 +1615,11 @@ export async function simulatePhysicsLabRound(
       previousRotorSpeed = rotorSpeed;
       previousRadialVelocity = radialVelocity;
       previousVerticalVelocity = velocity.y;
+      previousVelocity = {
+        x: velocity.x,
+        y: velocity.y,
+        z: velocity.z,
+      };
     }
   } catch (error) {
     errorCode = error instanceof Error ? "SIMULATION_EXCEPTION" : "SIMULATION_FAILED";
@@ -726,13 +1636,11 @@ export async function simulatePhysicsLabRound(
         ? "TRACK_ENTRY_TIMEOUT"
         : !inwardMovementObserved
           ? "INWARD_DROP_TIMEOUT"
-          : !deflectorHit
-            ? "DEFLECTOR_TIMEOUT"
-            : !movingFretContact
-              ? "MOVING_FRET_TIMEOUT"
-              : !pocketInteraction
-                ? "POCKET_TIMEOUT"
-                : "STABLE_SETTLE_TIMEOUT";
+          : !movingFretContact
+            ? "MOVING_FRET_TIMEOUT"
+            : !pocketInteraction
+              ? "POCKET_TIMEOUT"
+              : "STABLE_SETTLE_TIMEOUT";
     events.push(event("INVALID", trajectory.at(-1)?.step ?? 0, { detail: errorCode }));
   }
   const simulationDurationMs = Math.round(performance.now() - startedAt);

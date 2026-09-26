@@ -2,7 +2,7 @@ import { ScratchSurface } from "./scratch/ScratchSurface";
 import { getScratchCellLayerMarkup, getScratchCellPresentation } from "./scratch/ScratchPresentation";
 import { triggerScratchHaptic } from "./scratch/ScratchFeedback";
 import { ScratchTelemetry } from "./scratch/ScratchTelemetry";
-import { AudioManager } from "./game/AudioManager";
+import { AudioManager } from "./AudioManager";
 
 type CadiKazanMode = "STANDARD" | "ADVANCED";
 type CadiKazanStatus = "ACTIVE" | "CASHED_OUT" | "BUST" | "COMPLETED";

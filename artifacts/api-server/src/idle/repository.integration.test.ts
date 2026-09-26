@@ -500,4 +500,80 @@ describe.skipIf(!enabled)("IdleRepository PostgreSQL integration", () => {
     );
     expect(Number(receipt.rows[0]?.count ?? 0)).toBe(0);
   });
+
+  it("resets Kasa to Lv1 on a main business upgrade while preserving accrued income", async () => {
+    const sessionId = randomUUID();
+    const now = new Date("2026-09-25T12:00:00.000Z");
+
+    await idleRepository.upgradeBusiness(
+      sessionId,
+      "fan-club",
+      randomUUID(),
+      now,
+    );
+
+    const preservedAccruedMicrocents = 12_345_678;
+    await pool.query(
+      `UPDATE idle_business_states
+          SET vault_level = 4,
+              accrued_microcents = $3,
+              checkpoint_at = $4,
+              updated_at = $4
+        WHERE session_id = $1 AND business_id = $2`,
+      [sessionId, "fan-club", preservedAccruedMicrocents, now],
+    );
+
+    const result = await idleRepository.upgradeBusiness(
+      sessionId,
+      "fan-club",
+      randomUUID(),
+      now,
+    );
+
+    expect(result.targetBusinessLevel).toBe(1);
+    expect(result.business.businessLevel).toBe(1);
+    expect(result.business.vaultLevel).toBe(1);
+
+    const row = await businessRow(sessionId, "fan-club");
+    expect(row?.business_level).toBe(1);
+    expect(row?.vault_level).toBe(1);
+    expect(Number(row?.accrued_microcents)).toBe(preservedAccruedMicrocents);
+  });
+
+  it("keeps accrued income intact when Kasa capacity is upgraded", async () => {
+    const sessionId = randomUUID();
+    const now = new Date("2026-09-25T12:00:00.000Z");
+
+    await idleRepository.upgradeBusiness(
+      sessionId,
+      "fan-club",
+      randomUUID(),
+      now,
+    );
+
+    const preservedAccruedMicrocents = 7_654_321;
+    await pool.query(
+      `UPDATE idle_business_states
+          SET accrued_microcents = $3,
+              checkpoint_at = $4,
+              updated_at = $4
+        WHERE session_id = $1 AND business_id = $2`,
+      [sessionId, "fan-club", preservedAccruedMicrocents, now],
+    );
+
+    const result = await idleRepository.upgradeVault(
+      sessionId,
+      "fan-club",
+      randomUUID(),
+      now,
+    );
+
+    expect(result.targetVaultLevel).toBe(2);
+    expect(result.business.vaultLevel).toBe(2);
+
+    const row = await businessRow(sessionId, "fan-club");
+    expect(row?.vault_level).toBe(2);
+    expect(Number(row?.accrued_microcents)).toBe(preservedAccruedMicrocents);
+  });
+
 });
