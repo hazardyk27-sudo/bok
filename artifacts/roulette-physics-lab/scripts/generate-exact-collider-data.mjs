@@ -391,7 +391,20 @@ function buildMesh(nodeSet, applyRotorBasis) {
       const finalPoint = applyRotorBasis ? rotorBasis(p) : p;
       vertices.push(finalPoint[0], finalPoint[1], finalPoint[2]);
     }
-    for (const index of primitive.indices) indices.push(base + index);
+    if (applyRotorBasis) {
+      // Reflecting X changes handedness. Preserve the visible surface exactly
+      // but reverse each reflected triangle winding so its outward/top normal
+      // stays outward instead of pointing into the wheel.
+      for (let index = 0; index < primitive.indices.length; index += 3) {
+        indices.push(
+          base + primitive.indices[index],
+          base + primitive.indices[index + 2],
+          base + primitive.indices[index + 1],
+        );
+      }
+    } else {
+      for (const index of primitive.indices) indices.push(base + index);
+    }
     triangleCount += primitive.indices.length / 3;
   }
   if (vertices.length === 0 || indices.length === 0) throw new Error('Generated empty collider mesh');
