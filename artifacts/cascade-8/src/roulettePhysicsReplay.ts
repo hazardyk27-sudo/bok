@@ -191,7 +191,20 @@ export class RoulettePhysicsReplay {
     const runtime = gltf.scene.clone(true);
     runtime.getObjectByName("Sphere_16")?.removeFromParent();
 
-    const embeddedScaleNode = runtime.getObjectByName("GLTF_SceneRootNode");
+    const embeddedScaleNode = (() => {
+      let found: THREE.Object3D | undefined;
+      runtime.traverse((child) => {
+        if (
+          !found &&
+          Math.abs(child.scale.x - 0.01) < 0.000001 &&
+          Math.abs(child.scale.y - 0.01) < 0.000001 &&
+          Math.abs(child.scale.z - 0.01) < 0.000001
+        ) {
+          found = child;
+        }
+      });
+      return found;
+    })();
     if (!embeddedScaleNode) {
       throw new Error("ROULETTE_MODEL_SCALE_ROOT_MISSING");
     }
