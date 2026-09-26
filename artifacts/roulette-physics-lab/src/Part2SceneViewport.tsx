@@ -4163,20 +4163,39 @@ export function Part2SceneViewport({
       const launchAzimuth = 0.37;
       const spawnRadius = PART2_ACTUAL_DARK_TRACK_LAUNCH_RADIUS;
       const surface = part2ChannelSurfaceAt(spawnRadius, part2RaceVerticalOffset);
-      const contactNormal = part2ChannelNormalAt(spawnRadius, launchAzimuth);
-      const spawnPoint = new THREE.Vector3(
+      const analyticContactNormal = part2ChannelNormalAt(
+        spawnRadius,
+        launchAzimuth,
+      );
+      const analyticSpawnPoint = new THREE.Vector3(
         ...radialPosition(spawnRadius, launchAzimuth, surface.y),
-      ).addScaledVector(contactNormal, BALL_RADIUS + 0.002);
+      ).addScaledVector(analyticContactNormal, BALL_RADIUS + 0.002);
       logStaticGateStage('visible-surface-before');
       const visibleSurface = measureVisibleSurfaceAt(
-        spawnPoint.x,
-        spawnPoint.z,
+        analyticSpawnPoint.x,
+        analyticSpawnPoint.z,
         true,
         PART2_ACTUAL_DARK_TRACK_RADIUS_BAND,
       );
       logStaticGateStage('visible-surface-after', {
         found: Boolean(visibleSurface),
       });
+      const contactNormal =
+        part6FullSpinRouteActive && visibleSurface
+          ? new THREE.Vector3(
+              visibleSurface.normal.x,
+              visibleSurface.normal.y,
+              visibleSurface.normal.z,
+            ).normalize()
+          : analyticContactNormal;
+      const spawnPoint =
+        part6FullSpinRouteActive && visibleSurface
+          ? new THREE.Vector3(
+              visibleSurface.point.x,
+              visibleSurface.point.y,
+              visibleSurface.point.z,
+            ).addScaledVector(contactNormal, BALL_RADIUS + 0.002)
+          : analyticSpawnPoint;
       logStaticGateStage('inner-transition-profile-before');
       const visibleInnerTransitionProfile =
         measureVisibleInnerTransitionProfile();
@@ -4242,7 +4261,7 @@ export function Part2SceneViewport({
         part3ColliderRoles.get(part3TrackCollider.handle) ?? 'unknown';
       const actualGlbRaceActive =
         part6FullSpinRouteActive &&
-        activeRaceCollider === 'actual-glb-outside-trimesh';
+        activeRaceCollider === 'exact-glb-stationary-trimesh';
       const broadSupportActive = [...part3ColliderRoles.values()].some(
         (role) =>
           role === 'outer-track-support-trimesh' ||
@@ -4363,7 +4382,32 @@ export function Part2SceneViewport({
         centerRadius,
         part2RaceVerticalOffset,
       );
-      const bottomGap = position.y - BALL_RADIUS - centerSurface.y;
+      const exactCenterSurface = part6FullSpinRouteActive
+        ? measureVisibleSurfaceAt(
+            position.x,
+            position.z,
+            true,
+            PART2_ACTUAL_DARK_TRACK_RADIUS_BAND,
+          )
+        : null;
+      const exactSurfaceNormal = exactCenterSurface
+        ? new THREE.Vector3(
+            exactCenterSurface.normal.x,
+            exactCenterSurface.normal.y,
+            exactCenterSurface.normal.z,
+          ).normalize()
+        : null;
+      const exactSurfaceNormalGap =
+        exactCenterSurface && exactSurfaceNormal
+          ? new THREE.Vector3(
+              position.x - exactCenterSurface.point.x,
+              position.y - exactCenterSurface.point.y,
+              position.z - exactCenterSurface.point.z,
+            ).dot(exactSurfaceNormal) - BALL_RADIUS
+          : Number.POSITIVE_INFINITY;
+      const bottomGap = part6FullSpinRouteActive
+        ? exactSurfaceNormalGap
+        : position.y - BALL_RADIUS - centerSurface.y;
       const ballBottomContactPoint = new THREE.Vector3(
         position.x,
         position.y,
@@ -4400,29 +4444,46 @@ export function Part2SceneViewport({
         centerRadius <= centerFloorEnvelope[1];
       const onWoodTop =
         centerRadius + BALL_RADIUS >= PART2_ACTUAL_WOOD_INNER_RADIUS - 0.005;
-      const hover =
-        !physicalContact ||
-        bottomGap > 0.03 ||
-        !lateralContainment;
-      const visibleSurfaceMatch =
-        liveRendererAvailable &&
-        visibleSurface !== null &&
-        visualHeightError <= 0.03 &&
-        visibleSurface.y > -1.5 &&
-        visibleSurface.y < 1;
+      const exactGlbParityPassed =
+        !part6FullSpinRouteActive ||
+        stage.dataset.glbColliderParity === 'passed';
+      const hover = part6FullSpinRouteActive
+        ? !physicalContact ||
+          !exactCenterSurface ||
+          Math.abs(exactSurfaceNormalGap) > 0.03
+        : !physicalContact ||
+          bottomGap > 0.03 ||
+          !lateralContainment;
+      const visibleSurfaceMatch = part6FullSpinRouteActive
+        ? liveRendererAvailable &&
+          exactCenterSurface !== null &&
+          Number.isFinite(exactSurfaceNormalGap) &&
+          Math.abs(exactSurfaceNormalGap) <= 0.03
+        : liveRendererAvailable &&
+          visibleSurface !== null &&
+          visualHeightError <= 0.03 &&
+          visibleSurface.y > -1.5 &&
+          visibleSurface.y < 1;
       const authorizedRaceCollider =
         activeRaceCollider === 'analytic-dark-recessed-channel' ||
         actualGlbRaceActive;
-      const numericPlacementPassed =
-        authorizedRaceCollider &&
-        !broadSupportActive &&
-        physicalContact &&
-        centerInsideFloorEnvelope &&
-        lateralContainment &&
-        !onWoodTop &&
-        !hover &&
-        bottomGap >= -0.03;
-      const visualGateVerified = visibleSurfaceMatch;
+      const numericPlacementPassed = part6FullSpinRouteActive
+        ? authorizedRaceCollider &&
+          !broadSupportActive &&
+          physicalContact &&
+          exactGlbParityPassed &&
+          !hover &&
+          exactSurfaceNormalGap >= -0.03
+        : authorizedRaceCollider &&
+          !broadSupportActive &&
+          physicalContact &&
+          centerInsideFloorEnvelope &&
+          lateralContainment &&
+          !onWoodTop &&
+          !hover &&
+          bottomGap >= -0.03;
+      const visualGateVerified =
+        visibleSurfaceMatch && exactGlbParityPassed;
       const passed = numericPlacementPassed && visualGateVerified;
       logStaticGateStage('static-gate-evaluated', {
         numericPlacementPassed,
@@ -4470,9 +4531,13 @@ export function Part2SceneViewport({
               onWoodTop,
               hover,
                detail: passed
-                ? 'PASS: the live ball placement is inside the measured recessed dark race with analytic contact.'
+                ? part6FullSpinRouteActive
+                  ? 'PASS: ball center is placed from the visible GLB surface normal, has Rapier contact with the exact GLB stationary trimesh, and the dense GLB/collider parity gate passed.'
+                  : 'PASS: the live ball placement is inside the measured recessed dark race with analytic contact.'
                  : numericPlacementPassed
-                   ? 'NUMERIC STATIC PASS: ball is inside the analytic recessed race; visual WebGL gate is unverified, so the short numerical probe will run and the overall gate will remain incomplete.'
+                   ? part6FullSpinRouteActive
+                     ? 'NUMERIC STATIC PASS: exact GLB contact is valid; visual/parity gate remains incomplete.'
+                     : 'NUMERIC STATIC PASS: ball is inside the analytic recessed race; visual WebGL gate is unverified, so the short numerical probe will run and the overall gate will remain incomplete.'
                 : `FAIL: static channel gate failed (${[
                     !authorizedRaceCollider
                       ? 'wrong active collider'
@@ -4480,8 +4545,15 @@ export function Part2SceneViewport({
                     broadSupportActive ? 'broad support active' : '',
                     !physicalContact ? 'no Rapier contact' : '',
                     !visualGateVerified ? 'visible GLB gate unverified' : '',
-                    !centerInsideFloorEnvelope
+                    !part6FullSpinRouteActive && !centerInsideFloorEnvelope
                       ? 'ball center outside floor envelope'
+                      : '',
+                    part6FullSpinRouteActive && !exactGlbParityPassed
+                      ? 'dense GLB/collider parity failed'
+                      : '',
+                    part6FullSpinRouteActive &&
+                    Math.abs(exactSurfaceNormalGap) > 0.03
+                      ? 'GLB surface-normal gap exceeds tolerance'
                       : '',
                     !liveRendererAvailable
                       ? 'live renderer unavailable; screenshot-visible gate cannot pass'
