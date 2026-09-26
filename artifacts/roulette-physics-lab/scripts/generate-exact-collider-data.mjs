@@ -163,29 +163,69 @@ function transformPoint(m, x, y, z) {
   ];
 }
 
-const embeddedScaleNodes = [];
-for (let i = 0; i < (json.nodes?.length ?? 0); i += 1) {
-  const scale = json.nodes[i]?.scale;
+function matrixAxisScales(matrix) {
+  if (!Array.isArray(matrix) || matrix.length !== 16) return null;
+  return [
+    Math.hypot(Number(matrix[0]), Number(matrix[1]), Number(matrix[2])),
+    Math.hypot(Number(matrix[4]), Number(matrix[5]), Number(matrix[6])),
+    Math.hypot(Number(matrix[8]), Number(matrix[9]), Number(matrix[10])),
+  ];
+}
+
+function hasEmbeddedHundredthScale(node) {
+  const scale = node?.scale;
   if (
     Array.isArray(scale) &&
     scale.length === 3 &&
     scale.every((value) => Math.abs(Number(value) - 0.01) < 1e-6)
   ) {
+    return true;
+  }
+  const matrixScale = matrixAxisScales(node?.matrix);
+  return Boolean(
+    matrixScale &&
+      matrixScale.every((value) => Math.abs(value - 0.01) < 1e-6),
+  );
+}
+
+const embeddedScaleNodes = [];
+for (let i = 0; i < (json.nodes?.length ?? 0); i += 1) {
+  if (hasEmbeddedHundredthScale(json.nodes[i])) {
     embeddedScaleNodes.push(i);
   }
 }
 if (embeddedScaleNodes.length !== 1) {
-  throw new Error('Expected exactly one embedded 0.01 scale node, got ' + embeddedScaleNodes.length);
+  throw new Error(
+    'Expected exactly one embedded 0.01 scale node, got ' +
+      embeddedScaleNodes.length +
+      '; candidates=' +
+      JSON.stringify(
+        (json.nodes ?? []).map((node, index) => ({
+          index,
+          name: node?.name ?? null,
+          scale: node?.scale ?? null,
+          matrixScale: matrixAxisScales(node?.matrix),
+        })),
+      ),
+  );
 }
 const embeddedScaleNode = embeddedScaleNodes[0];
 
 function nodeLocalMatrix(index) {
   const node = json.nodes[index];
   if (node.matrix) {
+    const matrix = node.matrix.map(Number);
     if (index === embeddedScaleNode) {
-      throw new Error('Embedded scale node unexpectedly uses matrix transform');
+      // GLTFLoader decomposes this matrix and the runtime transform then
+      // replaces the embedded 0.01 scale with 1. Reproduce that operation
+      // without changing its rotation or translation.
+      for (const base of [0, 4, 8]) {
+        matrix[base] /= 0.01;
+        matrix[base + 1] /= 0.01;
+        matrix[base + 2] /= 0.01;
+      }
     }
-    return node.matrix.map(Number);
+    return matrix;
   }
   const translation = (node.translation ?? [0,0,0]).map(Number);
   const rotation = (node.rotation ?? [0,0,0,1]).map(Number);
