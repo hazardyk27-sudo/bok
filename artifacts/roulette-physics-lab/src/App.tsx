@@ -3276,7 +3276,11 @@ function BallParameterField({
   );
 }
 
-function AuthoritativeRoundPanel() {
+function AuthoritativeRoundPanel({
+  onRoundChange,
+}: {
+  onRoundChange?: (round: PhysicsLabRound | null) => void;
+}) {
   const queryClient = useQueryClient();
   const currentRound = useGetPhysicsLabCurrentRound({
     query: {
@@ -3287,6 +3291,10 @@ function AuthoritativeRoundPanel() {
   });
   const createRound = useCreatePhysicsLabRound();
   const round = currentRound.data;
+
+  useEffect(() => {
+    onRoundChange?.(round ?? null);
+  }, [onRoundChange, round]);
 
   const refreshRound = () => {
     void currentRound.refetch();
@@ -3436,6 +3444,8 @@ function App() {
   const [showRotorGroup, setShowRotorGroup] = useState(true);
   const [showSectorOverlay, setShowSectorOverlay] = useState(false);
   const [rotorAngle, setRotorAngle] = useState(0);
+  const [authoritativeRound, setAuthoritativeRound] =
+    useState<PhysicsLabRound | null>(null);
   const [rotorTestRequest, setRotorTestRequest] = useState(0);
   const [rotorTestState, setRotorTestState] = useState<'idle' | 'running' | 'passed'>('idle');
   const [rotorTestDetail, setRotorTestDetail] = useState('Reference angle · 0.0°');
@@ -4267,7 +4277,9 @@ function App() {
             )}
           </section>
 
-          {!part6HeadlessRouteActive && <AuthoritativeRoundPanel />}
+          {!part6HeadlessRouteActive && (
+            <AuthoritativeRoundPanel onRoundChange={setAuthoritativeRound} />
+          )}
 
           <section className="physics-note" data-testid="status-physics">
             <div className="note-icon">
@@ -4325,6 +4337,9 @@ function App() {
               showStationaryGroup={showStationaryGroup}
               showRotorGroup={showRotorGroup}
               rotorAngle={rotorAngle}
+              authoritativeReplayRound={
+                part6HeadlessRouteActive ? null : authoritativeRound
+              }
               onStateChange={handleStateChange}
               onAudit={(nextAudit) => setAudit(nextAudit)}
               onRotorAngleChange={setRotorAngle}
