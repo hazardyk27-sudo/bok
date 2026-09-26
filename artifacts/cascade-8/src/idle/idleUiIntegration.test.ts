@@ -41,6 +41,21 @@ describe("Businesses canonical class isolation", () => {
 
     expect(idleIndexSource).not.toContain("business-summary business-command-bar");
     expect(idleIndexSource).toContain('class="business-command-bar"');
+
+    const legacyCssClasses = [
+      ".business-card-visual",
+      ".business-row-title",
+      ".business-card-body",
+      ".business-card-accrued",
+      ".business-card-quick-stats",
+      ".business-card-quick-stat",
+      ".business-card-vault-status",
+      ".business-card-secondary",
+      ".business-summary {",
+    ];
+    for (const selector of legacyCssClasses) {
+      expect(idleCssSource).not.toContain(selector);
+    }
   });
 });
 
