@@ -131,6 +131,9 @@ try {
     final.actual.visiblePocketIndex === final.expected.finalPocketIndex;
   const pocketNumberMatches =
     final.actual.visiblePocketNumber === final.expected.finalPocketNumber;
+  const winningNumberMatches =
+    final.actual.visiblePocketNumber === final.expected.winningNumber &&
+    final.expected.finalPocketNumber === final.expected.winningNumber;
 
   const passed =
     snapshot.complete &&
@@ -140,8 +143,10 @@ try {
     rotorOrientationDelta <= tolerance &&
     pocketIndexMatches &&
     pocketNumberMatches &&
+    winningNumberMatches &&
     final.expected.finalPocketIndex !== null &&
     final.expected.finalPocketNumber !== null &&
+    final.expected.winningNumber !== null &&
     result.pageErrors.length === 0 &&
     result.requestFailures.length === 0 &&
     result.authoritativeRoundRequests.length === 0 &&
@@ -157,10 +162,12 @@ try {
     rotorOrientationDelta,
     pocketIndexMatches,
     pocketNumberMatches,
+    winningNumberMatches,
     visiblePocketIndex: final.actual.visiblePocketIndex,
     visiblePocketNumber: final.actual.visiblePocketNumber,
     finalPocketIndex: final.expected.finalPocketIndex,
     finalPocketNumber: final.expected.finalPocketNumber,
+    winningNumber: final.expected.winningNumber,
     validationIssue: snapshot.validationIssue,
     actual: final.actual,
     expected: final.expected,
