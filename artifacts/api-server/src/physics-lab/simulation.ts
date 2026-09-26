@@ -1387,7 +1387,8 @@ export async function simulatePhysicsLabRound(
         translation,
         rotorRotation,
       );
-      const ballBottom = translation.y - PHYSICS_LAB_BALL_RADIUS;
+      const diagnosticBallBottom =
+        translation.y - PHYSICS_LAB_BALL_RADIUS;
       const fretInnerRadius =
         1.48 + PHYSICS_LAB_BALL_RADIUS * 2 - 0.002;
       const fretOuterRadius = ROULETTE_POCKET_FLOOR_OUTER_RADIUS - 0.02;
@@ -1411,7 +1412,8 @@ export async function simulatePhysicsLabRound(
         radius <=
           ROULETTE_POCKET_FLOOR_OUTER_RADIUS -
             PHYSICS_LAB_BALL_RADIUS * 0.35 &&
-        Math.abs(ballBottom - ROULETTE_POCKET_FLOOR_Y) <= 0.16
+        Math.abs(diagnosticBallBottom - ROULETTE_POCKET_FLOOR_Y) <=
+          0.16
       ) {
         stepContactRoles.add("pocket-floor");
       }
