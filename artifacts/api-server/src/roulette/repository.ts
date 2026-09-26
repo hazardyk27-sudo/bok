@@ -388,8 +388,16 @@ export class RouletteRepository {
       boundaries.push(new Date(cursor));
     }
     const [openUntil, lastCallUntil, lockedUntil, revealUntil, spinningUntil, resultUntil, settlingUntil, intermissionUntil] = boundaries;
+    if (
+      !physicsRound.finalPocket ||
+      physicsRound.winningNumber === null ||
+      physicsRound.finalPocket.number !== physicsRound.winningNumber
+    ) {
+      throw new Error("ROULETTE_PHYSICS_RESULT_MISMATCH");
+    }
+
     const id = newId();
-    const winningNumber = physicsRound.winningNumber;
+    const winningNumber = physicsRound.finalPocket.number;
     const luckyNumbers = chooseLuckyNumbers();
     const multipliers = chooseMultipliers(luckyNumbers.length);
     const commitmentHash = createCommitment(id, winningNumber, luckyNumbers, multipliers);
