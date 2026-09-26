@@ -3,7 +3,10 @@ import * as THREE from 'three';
 import RAPIER from '@dimforge/rapier3d-compat';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
-import { prepareAuthoritativeRouletteGlb } from '../../../lib/roulette-gltf-transform';
+import {
+  applyAuthoritativeRouletteRotorBasis,
+  prepareAuthoritativeRouletteGlb,
+} from '../../../lib/roulette-gltf-transform';
 import {
   measureRouletteVisualSurfaceAt,
   sampleRouletteVisualTextureColorAt,
@@ -7538,6 +7541,7 @@ export function Part2SceneViewport({
           wheelRoot.add(stationaryGroup, rotorPivot);
           stationaryGroup.attach(outside);
           rotorGroup.attach(inside);
+          applyAuthoritativeRouletteRotorBasis(rotorGroup);
           stationaryGroup.attach(turret);
           stationaryBaselinePosition.copy(stationaryGroup.position);
           stationaryBaselineQuaternion.copy(stationaryGroup.quaternion);
