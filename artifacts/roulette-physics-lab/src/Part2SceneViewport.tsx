@@ -6952,18 +6952,47 @@ export function Part2SceneViewport({
              part3BowlBridgeOuterRadius = part6FullSpinRouteActive
                ? PART2_ACTUAL_INWARD_EDGE_RADIUS + BALL_RADIUS
                : BOWL_BRIDGE_OUTER_RADIUS;
-             part3BowlBridgeProfile = measureBowlBridgeProfile(
+             const measuredBowlBridgeProfile = measureBowlBridgeProfile(
                activeTrackVerticalOffset,
                part3BowlBridgeOuterRadius,
              );
              if (part6FullSpinRouteActive) {
+               const fullSpinBridgeOuterY = part2ChannelSurfaceAt(
+                 part3BowlBridgeOuterRadius,
+                 activeTrackVerticalOffset,
+               ).y;
+               const fullSpinBridgeInnerY = Math.min(
+                 POCKET_OUTER_LIP_Y,
+                 fullSpinBridgeOuterY - BALL_RADIUS * 0.75,
+               );
+               part3BowlBridgeProfile = Array.from(
+                 { length: BOWL_BRIDGE_SAMPLE_COUNT },
+                 (_, index) => {
+                   const alpha = index / (BOWL_BRIDGE_SAMPLE_COUNT - 1);
+                   return [
+                     THREE.MathUtils.lerp(
+                       BOWL_BRIDGE_INNER_RADIUS,
+                       part3BowlBridgeOuterRadius,
+                       alpha,
+                     ),
+                     THREE.MathUtils.lerp(
+                       fullSpinBridgeInnerY,
+                       fullSpinBridgeOuterY,
+                       alpha,
+                     ),
+                   ] as [number, number];
+                 },
+               );
                console.info(
                  'PART6_BOWL_BRIDGE_PROFILE',
                  JSON.stringify({
                    outerRadius: part3BowlBridgeOuterRadius,
+                   measuredProfile: measuredBowlBridgeProfile,
                    profile: part3BowlBridgeProfile,
                  }),
                );
+             } else {
+               part3BowlBridgeProfile = measuredBowlBridgeProfile;
              }
              if (part6FullSpinRouteActive) {
                const bridgeMesh = buildBowlBridgeTrimesh(
