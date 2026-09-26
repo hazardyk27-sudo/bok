@@ -13,7 +13,7 @@ import {
 type Vec3 = { x: number; y: number; z: number };
 type Quaternion = { x: number; y: number; z: number; w: number };
 
-const ROULETTE_VISUAL_BALL_SCALE = 1.4;
+const ROULETTE_VISUAL_BALL_SCALE = 1.2;
 const ROULETTE_VISUAL_BALL_RADIUS = ROULETTE_BALL_RADIUS * ROULETTE_VISUAL_BALL_SCALE;
 
 type ReplaySample = {
