@@ -133,7 +133,7 @@ body.businesses-route select:focus-visible {
 
 /* Part 2 — premium route shell / responsive viewport foundation */
 html.businesses-route {
-  background: var(--idle-canvas, #0b1418);
+  background: var(--idle-canvas, #0b0e0f);
 }
 
 body.businesses-route {
@@ -141,7 +141,7 @@ body.businesses-route {
   min-height: 100dvh;
   background:
     radial-gradient(circle at 82% 8%, rgba(56, 138, 156, .035), transparent 30%),
-    linear-gradient(180deg, #091114 0%, var(--idle-canvas, #0b1418) 54%, #080f12 100%);
+    linear-gradient(180deg, #091114 0%, var(--idle-canvas, #0b0e0f) 54%, #080f12 100%);
 }
 
 .route-shell.is-businesses-page {
