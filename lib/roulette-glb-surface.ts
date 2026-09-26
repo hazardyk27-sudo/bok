@@ -188,7 +188,8 @@ export function sampleRouletteVisualTextureColorAt(
       | THREE.MeshPhongMaterial
       | THREE.MeshBasicMaterial
       | null;
-    const texture = material?.map ?? null;
+    if (!material) continue;
+    const texture = material.map ?? null;
     if (!texture) continue;
     const pixels = readTexturePixels(texture);
     if (!pixels) continue;
