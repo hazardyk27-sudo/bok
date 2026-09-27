@@ -9,3 +9,4 @@ export * from "./rules";
 export * from "./shoe";
 export * from "./shuffle";
 export * from "./draw";
+export * from "./lifecycle";
