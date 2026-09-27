@@ -3,9 +3,15 @@ import { getScratchCellLayerMarkup, getScratchCellPresentation } from "./scratch
 import { triggerScratchHaptic } from "./scratch/ScratchFeedback";
 import { ScratchTelemetry } from "./scratch/ScratchTelemetry";
 import { AudioManager } from "./AudioManager";
+import { OFFICE_MATCH_SYMBOLS, type OfficeMatchSymbolId } from "./office/officeCardConfig";
 
-type CadiKazanMode = "STANDARD" | "ADVANCED";
+type CadiKazanMode = "STANDARD" | "ADVANCED" | "OFFICE_MATCH_6";
 type CadiKazanStatus = "ACTIVE" | "CASHED_OUT" | "BUST" | "COMPLETED";
+
+type CadiKazanOfficeVisibleCell = {
+  index: number;
+  symbolId: OfficeMatchSymbolId;
+};
 
 type CadiKazanRound = {
   id: string;
@@ -20,6 +26,7 @@ type CadiKazanRound = {
   status: CadiKazanStatus;
   payoutCents: number;
   revealedBombCells: number[];
+  revealedOfficeCells: CadiKazanOfficeVisibleCell[];
   createdAt: string;
   updatedAt: string;
 };
@@ -36,6 +43,23 @@ type CadiKazanMutation = {
 
 const API_BASE = "/api/cadi-kazan";
 const SCRATCH_BRUSH_RADIUS_PX = 14;
+const OFFICE_SYMBOL_BY_ID = new Map(OFFICE_MATCH_SYMBOLS.map((symbol) => [symbol.id, symbol] as const));
+
+const officeSymbolPresentation = (symbolId: OfficeMatchSymbolId | undefined, revealed: boolean) => {
+  if (!revealed || !symbolId) {
+    return { symbol: "", label: "", resultClass: null as "safe" | null, special: false };
+  }
+  const symbol = OFFICE_SYMBOL_BY_ID.get(symbolId);
+  if (!symbol) {
+    return { symbol: "", label: "", resultClass: null as "safe" | null, special: false };
+  }
+  return {
+    symbol: symbol.label.toUpperCase(),
+    label: `${symbol.label.toUpperCase()} · ${symbol.multiplierBps / 100}X`,
+    resultClass: "safe" as const,
+    special: symbol.special,
+  };
+};
 
 const formatMoney = (cents: number, options: { compactInteger?: boolean; signed?: boolean } = {}) => {
   const absolute = Math.abs(cents) / 100;
@@ -164,6 +188,21 @@ export const CADI_KAZAN_MARKUP = `
             <div class="witch-bcs-bottombar">NOT TOLL FREE <b>•</b> SE HABLA ESPAÑOL</div>
           </div>
 
+          <div class="witch-office-card-art" aria-hidden="true">
+            <section class="witch-office-left">
+              <strong class="witch-office-title"><span>The</span><span>Office</span></strong>
+              <div class="witch-office-parkour">
+                <span class="witch-office-parkour-bubble">Parkour!</span>
+                <div class="witch-office-parkour-line">⌁</div>
+              </div>
+              <small>3 AYNI KARAKTERİ BUL</small>
+            </section>
+            <section class="witch-office-rule">
+              <strong>3 AYNI = ÖDÜL</strong>
+              <span>2X · 5X · 10X · 20X · <b>100X</b></span>
+            </section>
+          </div>
+
           <header class="witch-ticket-header">
             <div class="witch-ticket-sidecopy">
               <small>ŞANS CESURLARI SEVER</small>
@@ -254,6 +293,10 @@ export const CADI_KAZAN_MARKUP = `
             <span><strong>Advanced 25</strong><small>25 alan · risk seçimi</small></span>
             <b aria-hidden="true">25</b>
           </button>
+          <button type="button" class="witch-card-option witch-card-option-office" data-witch-mode="OFFICE_MATCH_6">
+            <span><strong>The Office</strong><small>6 alan · 3 aynı sembol</small></span>
+            <b aria-hidden="true">3×</b>
+          </button>
         </div>
       </div>
 
@@ -289,6 +332,7 @@ export const CADI_KAZAN_MARKUP = `
           <option value="5">5 BOMBA</option>
           <option value="7">7 BOMBA</option>
           <option value="10">10 BOMBA</option>
+          <option value="0">3 AYNI</option>
         </select>
       </label>
 
@@ -496,7 +540,7 @@ export class WitchClient {
     const alarmInput = this.root.querySelector<HTMLSelectElement>("[data-witch-alarms]");
     const stakeDollars = parseStakeDollars(stakeInput?.value ?? "");
     const stakeCents = Math.round(stakeDollars * 100);
-    const alarmCount = this.mode === "STANDARD" ? 1 : Number(alarmInput?.value ?? 1);
+    const alarmCount = this.mode === "STANDARD" ? 1 : this.mode === "OFFICE_MATCH_6" ? 0 : Number(alarmInput?.value ?? 1);
     if (!Number.isSafeInteger(stakeCents) || stakeCents < 100) {
       this.setFeedback("Bilet bedeli en az $1.00 olmalı.");
       return;
@@ -586,7 +630,7 @@ export class WitchClient {
 
   private async cashOut() {
     const round = this.state?.round;
-    if (!round || round.status !== "ACTIVE" || round.revealedSafeCount < 1 || this.busy) return;
+    if (!round || round.mode === "OFFICE_MATCH_6" || round.status !== "ACTIVE" || round.revealedSafeCount < 1 || this.busy) return;
     this.busy = true;
     this.setFeedback("Cash Out server’da kesinleştiriliyor…");
     this.render();
@@ -706,8 +750,10 @@ export class WitchClient {
     this.root.classList.toggle("has-round", hasRound);
     this.root.classList.toggle("is-active-round", hasActiveRound);
     this.root.classList.toggle("is-advanced-round", Boolean(round && round.mode === "ADVANCED"));
+    this.root.classList.toggle("is-office-round", Boolean(round && round.mode === "OFFICE_MATCH_6"));
     const visualMode = round?.mode ?? this.mode;
     this.root.classList.toggle("is-standard-theme", visualMode === "STANDARD");
+    this.root.classList.toggle("is-office-theme", visualMode === "OFFICE_MATCH_6");
     this.root.querySelectorAll<HTMLButtonElement>("[data-witch-mode]").forEach((button) => {
       button.classList.toggle("is-selected", button.dataset.witchMode === this.mode);
       button.disabled = this.busy || hasActiveRound;
@@ -715,7 +761,13 @@ export class WitchClient {
     const cardsToggle = this.root.querySelector<HTMLButtonElement>("[data-witch-cards-toggle]");
     const cardsMenu = this.root.querySelector<HTMLElement>("[data-witch-card-menu]");
     const currentCard = this.root.querySelector<HTMLElement>("[data-witch-card-current]");
-    if (currentCard) currentCard.textContent = this.mode === "STANDARD" ? "Standard 5" : "Advanced 25";
+    if (currentCard) {
+      currentCard.textContent = this.mode === "STANDARD"
+        ? "Standard 5"
+        : this.mode === "ADVANCED"
+          ? "Advanced 25"
+          : "The Office";
+    }
     if (cardsToggle) {
       cardsToggle.disabled = this.busy || hasActiveRound;
       if (this.busy || hasActiveRound) {
@@ -724,7 +776,11 @@ export class WitchClient {
       }
     }
     const alarms = this.root.querySelector<HTMLSelectElement>("[data-witch-alarms]");
-    if (alarms) alarms.disabled = this.busy || hasActiveRound || this.mode !== "ADVANCED";
+    if (alarms) {
+      if (this.mode === "OFFICE_MATCH_6") alarms.value = "0";
+      else if (alarms.value === "0") alarms.value = "1";
+      alarms.disabled = this.busy || hasActiveRound || this.mode !== "ADVANCED";
+    }
     const stakeInput = this.root.querySelector<HTMLInputElement>("[data-witch-stake]");
     if (stakeInput) stakeInput.disabled = this.busy || hasActiveRound;
     const start = this.root.querySelector<HTMLButtonElement>("[data-witch-action='start']");
@@ -742,16 +798,26 @@ export class WitchClient {
     const empty = this.root.querySelector<HTMLElement>("[data-witch-empty]");
     const ticket = this.root.querySelector<HTMLElement>("[data-witch-ticket]");
     const showStandardPreview = !hasRound && visualMode === "STANDARD";
-    if (empty) empty.hidden = hasRound || showStandardPreview;
+    const showOfficePreview = !hasRound && visualMode === "OFFICE_MATCH_6";
+    const showCardPreview = showStandardPreview || showOfficePreview;
+    if (empty) empty.hidden = hasRound || showCardPreview;
     if (ticket) {
-      ticket.hidden = !(hasRound || showStandardPreview);
-      ticket.classList.toggle("is-preview", showStandardPreview);
+      ticket.hidden = !(hasRound || showCardPreview);
+      ticket.classList.toggle("is-preview", showCardPreview);
+      ticket.classList.toggle("is-office", visualMode === "OFFICE_MATCH_6");
+      ticket.classList.toggle("is-advanced", visualMode === "ADVANCED");
     }
 
     const riskNote = this.root.querySelector<HTMLElement>("[data-witch-risk-note]");
+    const riskLabel = this.root.querySelector<HTMLElement>(".witch-alarm-field > span");
+    if (riskLabel) riskLabel.textContent = this.mode === "OFFICE_MATCH_6" ? "KURAL" : "RİSK";
     if (riskNote) {
-      const selectedBombs = this.mode === "STANDARD" ? "1" : (alarms?.value ?? "1");
-      riskNote.textContent = `${this.mode === "STANDARD" ? "STANDARD" : "ADVANCED"} / ${selectedBombs} BOMBA`;
+      if (this.mode === "OFFICE_MATCH_6") {
+        riskNote.textContent = "THE OFFICE / 3 AYNI = ÖDÜL";
+      } else {
+        const selectedBombs = this.mode === "STANDARD" ? "1" : (alarms?.value ?? "1");
+        riskNote.textContent = `${this.mode === "STANDARD" ? "STANDARD" : "ADVANCED"} / ${selectedBombs} BOMBA`;
+      }
     }
 
     const board = this.root.querySelector<HTMLElement>("[data-witch-board]");
@@ -759,8 +825,20 @@ export class WitchClient {
     if (!round) {
       const playMode = this.root.querySelector<HTMLElement>("[data-witch-play-mode]");
       const playTitle = this.root.querySelector<HTMLElement>("[data-witch-play-title]");
-      if (playMode) playMode.textContent = showStandardPreview ? "STANDARD 5 / 01 BOMBA" : "NO TICKET";
-      if (playTitle) playTitle.textContent = showStandardPreview ? "Biletini al ve kazımaya başla." : "Bir bilet seç ve kazımaya başla.";
+      if (playMode) {
+        playMode.textContent = showStandardPreview
+          ? "STANDARD 5 / 01 BOMBA"
+          : showOfficePreview
+            ? "THE OFFICE / 3 AYNI"
+            : "NO TICKET";
+      }
+      if (playTitle) {
+        playTitle.textContent = showOfficePreview
+          ? "6 alanı kazı. 3 aynı karakteri bul ve ödülü kazan."
+          : showStandardPreview
+            ? "Biletini al ve kazımaya başla."
+            : "Bir bilet seç ve kazımaya başla.";
+      }
 
       if (showStandardPreview && board) {
         if (board.dataset.preview !== "standard") {
@@ -792,12 +870,41 @@ export class WitchClient {
           standardPrice.hidden = false;
         }
         if (ticketId) ticketId.textContent = "PREVIEW";
+      } else if (showOfficePreview && board) {
+        if (board.dataset.preview !== "office") {
+          this.destroyScratchSurfaces();
+          board.dataset.preview = "office";
+          board.innerHTML = Array.from({ length: 6 }, (_, index) => `
+            <button type="button" class="witch-cell witch-preview-cell witch-office-preview-cell" disabled aria-label="The Office kapalı kazıma alanı ${index + 1}">
+              <span class="witch-office-preview-coating" aria-hidden="true">
+                <strong>that's</strong>
+                <b>what</b>
+                <span>she said</span>
+              </span>
+            </button>
+          `).join("");
+        }
+
+        const previewStakeDollars = parseStakeDollars(stakeInput?.value ?? "1");
+        const previewStakeCents = Math.max(100, Math.round((Number.isFinite(previewStakeDollars) ? previewStakeDollars : 1) * 100));
+        const ticketMode = this.root.querySelector<HTMLElement>("[data-witch-ticket-mode]");
+        const ticketStake = this.root.querySelector<HTMLElement>("[data-witch-ticket-stake]");
+        const ticketBombs = this.root.querySelector<HTMLElement>("[data-witch-ticket-bombs]");
+        const ticketPrice = this.root.querySelector<HTMLElement>("[data-witch-ticket-price]");
+        const standardPrice = this.root.querySelector<HTMLElement>("[data-witch-standard-price]");
+        const ticketId = this.root.querySelector<HTMLElement>("[data-witch-ticket-id]");
+        if (ticketMode) ticketMode.textContent = "THE OFFICE";
+        if (ticketStake) ticketStake.textContent = formatMoney(previewStakeCents);
+        if (ticketBombs) ticketBombs.textContent = "3 AYNI";
+        if (ticketPrice) ticketPrice.textContent = formatTicketPrice(previewStakeCents);
+        if (standardPrice) standardPrice.hidden = true;
+        if (ticketId) ticketId.textContent = "PREVIEW";
       } else if (board?.dataset.preview) {
         board.replaceChildren();
         delete board.dataset.preview;
       }
 
-      this.updatePayout(null);
+      this.updatePayout(null, visualMode);
       return;
     }
 
@@ -821,24 +928,38 @@ export class WitchClient {
     }
 
     const revealedBombs = new Set(round.revealedBombCells);
+    const visibleOfficeSymbols = new Map(round.revealedOfficeCells.map((cell) => [cell.index, cell.symbolId] as const));
     this.root.querySelectorAll<HTMLButtonElement>("[data-witch-cell]").forEach((button) => {
       const index = Number(button.dataset.witchCell);
       const isActuallyRevealed = round.revealedCells.includes(index);
       const isTerminallyRevealed = this.terminalRevealRoundId === round.id && this.terminalRevealVisibleCells.has(index);
       const isRevealed = isActuallyRevealed || isTerminallyRevealed;
       const isBomb = round.status !== "ACTIVE" && revealedBombs.has(index) && isRevealed;
-      const presentation = getScratchCellPresentation(round.mode, isRevealed, isBomb);
+      const officePresentation = round.mode === "OFFICE_MATCH_6"
+        ? officeSymbolPresentation(visibleOfficeSymbols.get(index), isRevealed)
+        : null;
+      const presentation = officePresentation ?? getScratchCellPresentation(round.mode as "STANDARD" | "ADVANCED", isRevealed, isBomb);
       button.disabled = round.status !== "ACTIVE";
       button.dataset.cellState = presentation.resultClass ?? "covered";
       button.classList.toggle("is-revealed", isRevealed);
       button.classList.toggle("is-safe", presentation.resultClass === "safe");
       button.classList.toggle("is-bomb", presentation.resultClass === "bomb");
+      button.classList.toggle("is-office-cell", round.mode === "OFFICE_MATCH_6");
+      button.classList.toggle("is-office-special", Boolean(officePresentation?.special));
       button.classList.toggle("is-pending", this.pendingRevealCell === index);
       button.classList.toggle("is-terminal-reveal", this.terminalRevealAnimating && isTerminallyRevealed && !isActuallyRevealed);
       button.setAttribute("aria-label", presentation.resultClass ? presentation.label : "Kazınabilir kapalı alan");
       const content = button.querySelector<HTMLElement>(".witch-cell-content");
       if (content) {
-        if (presentation.artworkUrl) {
+        if (round.mode === "OFFICE_MATCH_6" && officePresentation?.symbol) {
+          const symbolId = visibleOfficeSymbols.get(index);
+          content.innerHTML = `
+            <span class="witch-office-result-symbol" data-office-symbol="${symbolId ?? ""}">
+              <strong>${officePresentation.symbol}</strong>
+              <b>${OFFICE_SYMBOL_BY_ID.get(symbolId!)?.multiplierBps ? OFFICE_SYMBOL_BY_ID.get(symbolId!)!.multiplierBps / 100 : 0}X</b>
+            </span>
+          `;
+        } else if ("artworkUrl" in presentation && presentation.artworkUrl) {
           content.innerHTML = `<img class="witch-cell-artwork" src="${presentation.artworkUrl}" alt="" draggable="false">`;
         } else {
           content.textContent = presentation.symbol;
@@ -885,11 +1006,29 @@ export class WitchClient {
     const ticketPrice = this.root.querySelector<HTMLElement>("[data-witch-ticket-price]");
     const standardPrice = this.root.querySelector<HTMLElement>("[data-witch-standard-price]");
     const ticketId = this.root.querySelector<HTMLElement>("[data-witch-ticket-id]");
-    if (playMode) playMode.textContent = round.mode === "STANDARD" ? "STANDARD 5 / 01 BOMBA" : `ADVANCED 25 / ${String(round.alarmCount).padStart(2, "0")} BOMBA`;
-    if (playTitle) playTitle.textContent = round.status === "BUST" ? "Bomba açıldı." : round.status === "CASHED_OUT" ? "Kazanç alındı." : round.status === "COMPLETED" ? "Kart tamamlandı." : "Folyo kazındıkça alttaki sonuç görünür.";
-    if (ticketMode) ticketMode.textContent = round.mode === "STANDARD" ? "STANDARD 5" : "ADVANCED 25";
+    if (playMode) {
+      playMode.textContent = round.mode === "STANDARD"
+        ? "STANDARD 5 / 01 BOMBA"
+        : round.mode === "ADVANCED"
+          ? `ADVANCED 25 / ${String(round.alarmCount).padStart(2, "0")} BOMBA`
+          : "THE OFFICE / 3 AYNI";
+    }
+    if (playTitle) {
+      playTitle.textContent = round.mode === "OFFICE_MATCH_6"
+        ? round.status === "COMPLETED"
+          ? (round.payoutCents > 0 ? "3 aynı karakter bulundu. Ödül tamamlandı." : "Kart tamamlandı. Eşleşme yok.")
+          : "6 alanı kazı. 3 aynı karakteri bul."
+        : round.status === "BUST"
+          ? "Bomba açıldı."
+          : round.status === "CASHED_OUT"
+            ? "Kazanç alındı."
+            : round.status === "COMPLETED"
+              ? "Kart tamamlandı."
+              : "Folyo kazındıkça alttaki sonuç görünür.";
+    }
+    if (ticketMode) ticketMode.textContent = round.mode === "STANDARD" ? "STANDARD 5" : round.mode === "ADVANCED" ? "ADVANCED 25" : "THE OFFICE";
     if (ticketStake) ticketStake.textContent = formatMoney(round.stakeCents);
-    if (ticketBombs) ticketBombs.textContent = `${String(round.alarmCount).padStart(2, "0")} BOMBA`;
+    if (ticketBombs) ticketBombs.textContent = round.mode === "OFFICE_MATCH_6" ? "3 AYNI" : `${String(round.alarmCount).padStart(2, "0")} BOMBA`;
     if (ticketPrice) ticketPrice.textContent = formatTicketPrice(round.stakeCents);
     if (standardPrice) {
       standardPrice.textContent = formatTicketPrice(round.stakeCents);
@@ -897,12 +1036,17 @@ export class WitchClient {
     }
     if (ticketId) ticketId.textContent = `#${round.id.slice(0, 8).toUpperCase()}`;
     if (riskNote) {
-      const selectedBombs = this.mode === "STANDARD" ? "1" : (alarms?.value ?? String(round.alarmCount));
-      riskNote.textContent = `${this.mode === "STANDARD" ? "STANDARD" : "ADVANCED"} / ${selectedBombs} BOMBA`;
+      if (round.mode === "OFFICE_MATCH_6") {
+        riskNote.textContent = "THE OFFICE / 3 AYNI = ÖDÜL";
+      } else {
+        const selectedBombs = this.mode === "STANDARD" ? "1" : (alarms?.value ?? String(round.alarmCount));
+        riskNote.textContent = `${this.mode === "STANDARD" ? "STANDARD" : "ADVANCED"} / ${selectedBombs} BOMBA`;
+      }
     }
     const ticketElement = this.root.querySelector<HTMLElement>("[data-witch-ticket]");
     if (ticketElement) {
       ticketElement.classList.toggle("is-advanced", round.mode === "ADVANCED");
+      ticketElement.classList.toggle("is-office", round.mode === "OFFICE_MATCH_6");
       ticketElement.classList.toggle("is-entering", this.entranceRoundId === round.id);
       if (this.entranceRoundId === round.id && this.entranceTimer === null) {
         this.entranceTimer = window.setTimeout(() => {
@@ -912,10 +1056,11 @@ export class WitchClient {
         }, 540);
       }
     }
-    this.updatePayout(round);
+    this.updatePayout(round, round.mode);
   }
 
-  private updatePayout(round: CadiKazanRound | null) {
+  private updatePayout(round: CadiKazanRound | null, visualMode: CadiKazanMode = this.mode) {
+    const isOffice = (round?.mode ?? visualMode) === "OFFICE_MATCH_6";
     const displayedPayout = round ? (round.status === "ACTIVE" ? round.currentCashoutCents : round.payoutCents) : 0;
     const multiplier = round ? formatMultiplier(round.currentMultiplierBps) : "0.00x";
     this.root.querySelectorAll<HTMLElement>("[data-witch-multiplier], [data-witch-mobile-multiplier]").forEach((element) => { element.textContent = multiplier; });
@@ -925,9 +1070,25 @@ export class WitchClient {
     this.root.querySelectorAll<HTMLElement>("[data-witch-stake-display]").forEach((element) => { element.textContent = stake; });
     this.root.querySelectorAll<HTMLElement>("[data-witch-net]").forEach((element) => { element.textContent = net; });
     const payoutNote = this.root.querySelector<HTMLElement>("[data-witch-payout-note]");
-    if (payoutNote) payoutNote.textContent = !round ? "Güvenli bir alan açıldığında cash out aktif olur." : round.status === "ACTIVE" ? (round.revealedSafeCount > 0 ? "Kazancı şimdi alabilir veya devam edebilirsin." : "İlk güvenli alan cash out’u açar.") : round.status === "BUST" ? "Bomba kartı kapattı. Payout: $0.00." : "Bu round server tarafından kapatıldı.";
+    if (payoutNote) {
+      payoutNote.textContent = isOffice
+        ? !round
+          ? "3 aynı karakteri bulduğunda ödül otomatik ödenir."
+          : round.status === "ACTIVE"
+            ? "Cash Out yok. 3 aynı karakteri tamamla."
+            : round.payoutCents > 0
+              ? "Eşleşme tamamlandı. Ödül wallet’a aktarıldı."
+              : "Kart tamamlandı. Eşleşme çıkmadı."
+        : !round
+          ? "Güvenli bir alan açıldığında cash out aktif olur."
+          : round.status === "ACTIVE"
+            ? (round.revealedSafeCount > 0 ? "Kazancı şimdi alabilir veya devam edebilirsin." : "İlk güvenli alan cash out’u açar.")
+            : round.status === "BUST"
+              ? "Bomba kartı kapattı. Payout: $0.00."
+              : "Bu round server tarafından kapatıldı.";
+    }
     this.root.querySelectorAll<HTMLButtonElement>("[data-witch-action='cashout']").forEach((button) => {
-      button.disabled = this.busy || !round || round.status !== "ACTIVE" || round.revealedSafeCount < 1;
+      button.disabled = this.busy || isOffice || !round || round.status !== "ACTIVE" || round.revealedSafeCount < 1;
     });
     const mobileActions = this.root.querySelector<HTMLElement>("[data-witch-mobile-payout]")?.closest<HTMLElement>(".witch-mobile-actions");
     if (mobileActions) mobileActions.hidden = !round;
