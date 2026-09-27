@@ -1341,21 +1341,158 @@ describe("Businesses legacy CSS cleanup", () => {
   });
 });
 
-describe("Businesses final Rich Black / Caribbean Green palette lock", () => {
-  it("keeps the visible Businesses containers on the approved Rich Black token", () => {
-    expect(idleCssSource).toContain("/* 2026-09-27 — Rich Black containers / Caribbean Green collection actions */");
-    expect(idleCssSource).toContain("--idle-rich-black: #00072d");
-    expect(idleCssSource).toContain(".route-shell.is-businesses-page .business-command-stat");
-    expect(idleCssSource).toContain(".route-shell.is-businesses-page .business-card-content");
-    expect(idleCssSource).toContain("background: var(--idle-rich-black)");
+describe("Businesses approved Slate Blue Parts 1–3", () => {
+  it("locks the approved restrained premium color hierarchy", () => {
+    expect(idleCssSource).toContain("/* 2026-09-27 — Parts 1–3: approved Slate Blue hierarchy + 16:9 desktop frame */");
+    expect(idleCssSource).toContain("--idle-canvas: #050b17");
+    expect(idleCssSource).toContain("--idle-surface: #0b1524");
+    expect(idleCssSource).toContain("--idle-text: #eef4ff");
+    expect(idleCssSource).toContain("--idle-text-secondary: #b7c5e3");
+    expect(idleCssSource).toContain("--idle-text-muted: #7f8daa");
+    expect(idleCssSource).toContain("--idle-accent: #6f97ff");
   });
 
-  it("keeps every Collect and Collect All state on Caribbean Green", () => {
-    expect(idleCssSource).toContain("--idle-caribbean-green: #123499");
-    expect(idleCssSource).toContain(".route-shell.is-businesses-page .business-summary-collect-all:disabled");
+  it("fits the desktop workspace into a true 16 by 9 frame", () => {
+    expect(idleCssSource).toContain("@media (min-width: 1101px)");
+    expect(idleCssSource).toContain("aspect-ratio: 16 / 9");
+    expect(idleCssSource).toContain("calc((100dvh - 36px) * 1.7777778)");
+    expect(idleCssSource).toContain("grid-template-columns: repeat(3, minmax(0, 1fr))");
+    expect(idleCssSource).toContain("overflow: hidden");
+  });
+
+  it("uses muted blue primary actions and dark ghost Details actions", () => {
+    expect(idleCssSource).toContain("background: linear-gradient(180deg, #6f97ff 0%, #577fdc 100%)");
+    expect(idleCssSource).toContain(".route-shell.is-businesses-page .business-card-details:hover");
+    expect(idleCssSource).toContain("rgba(7, 16, 29, .74)");
     expect(idleCssSource).toContain(".route-shell.is-businesses-page .business-summary-collect-all:not(:disabled):hover");
-    expect(idleCssSource).toContain(".route-shell.is-businesses-page .business-card-primary:disabled");
-    expect(idleCssSource).toContain(".route-shell.is-businesses-page .business-card-primary:not(:disabled):hover");
-    expect(idleCssSource).toContain("background: var(--idle-caribbean-green)");
+  });
+
+  it("carries the same surface hierarchy into Details", () => {
+    expect(idleCssSource).toContain(".business-detail-drawer");
+    expect(idleCssSource).toContain("linear-gradient(180deg, #091421 0%, #07101d 54%, #050b17 100%)");
+    expect(idleCssSource).toContain(".business-detail-tabs button[aria-selected=\"true\"]");
+  });
+});
+describe("Businesses Part 2 restrained surface hierarchy", () => {
+  it("keeps the approved dark SaaS surface ladder explicit", () => {
+    expect(idleCssSource).toContain("/* 2026-09-27 — Part 2: restrained premium surface hierarchy */");
+    expect(idleCssSource).toContain("--idle-surface-page: #050b17");
+    expect(idleCssSource).toContain("--idle-surface-sidebar: #07111f");
+    expect(idleCssSource).toContain("--idle-surface-kpi: #0b1524");
+    expect(idleCssSource).toContain("--idle-surface-card: #091421");
+    expect(idleCssSource).toContain("--idle-surface-detail: #091421");
+  });
+
+  it("separates sidebar KPI cards business cards and Details without neon glow", () => {
+    expect(idleCssSource).toContain(".route-shell.is-businesses-page .businesses-sidebar");
+    expect(idleCssSource).toContain(".route-shell.is-businesses-page .businesses-progression,");
+    expect(idleCssSource).toContain(".route-shell.is-businesses-page .business-card {");
+    expect(idleCssSource).toContain(".business-detail-summary > div,");
+    expect(idleCssSource).toContain("0 14px 36px rgba(0, 0, 0, .22)");
+  });
+
+  it("keeps inset card metrics quieter than their parent card", () => {
+    expect(idleCssSource).toContain(".route-shell.is-businesses-page .business-card-stats,");
+    expect(idleCssSource).toContain("background: rgba(7, 17, 31, .50)");
+    expect(idleCssSource).toContain(".route-shell.is-businesses-page .business-card-content");
+    expect(idleCssSource).toContain("background: transparent");
+  });
+});
+describe("Businesses Part 3 approved action hierarchy", () => {
+  it("locks the restrained blue primary action palette", () => {
+    expect(idleCssSource).toContain("/* 2026-09-27 — Part 3: approved premium action hierarchy */");
+    expect(idleCssSource).toContain("--idle-action-primary-start: #6f97ff");
+    expect(idleCssSource).toContain("--idle-action-primary-end: #577fdc");
+    expect(idleCssSource).toContain("--idle-action-ghost: rgba(7, 16, 29, .76)");
+    expect(idleCssSource).toContain("--idle-action-disabled: rgba(111, 151, 255, .075)");
+  });
+
+  it("keeps Collect and Details on separate primary and ghost treatments", () => {
+    expect(idleCssSource).toContain(".route-shell.is-businesses-page .business-card-primary,");
+    expect(idleCssSource).toContain(".route-shell.is-businesses-page .business-card-details {");
+    expect(idleCssSource).toContain("var(--idle-action-primary-start)");
+    expect(idleCssSource).toContain("var(--idle-action-ghost)");
+  });
+
+  it("keeps Collect All quieter than the card-level primary CTA", () => {
+    expect(idleCssSource).toContain(".route-shell.is-businesses-page .business-summary-collect-all:not(:disabled)");
+    expect(idleCssSource).toContain("linear-gradient(180deg, #17263e 0%, #111d31 100%)");
+    expect(idleCssSource).toContain(".route-shell.is-businesses-page .business-summary-collect-all:disabled");
+  });
+
+  it("extends the same action hierarchy into Details upgrade controls", () => {
+    expect(idleCssSource).toContain(".business-level-node-upgrade,");
+    expect(idleCssSource).toContain(".vault-level-node-upgrade {");
+    expect(idleCssSource).toContain(".business-detail-tabs button[aria-selected=\"true\"]");
+  });
+});
+describe("Businesses premium Parts 4–6", () => {
+  it("uses the restrained reference typography hierarchy", () => {
+    expect(idleCssSource).toContain("/* 2026-09-27 — Parts 4–6: typography, command bar and card hierarchy */");
+    expect(idleCssSource).toContain("--idle-type-card-title-premium: 20px");
+    expect(idleCssSource).toContain("--idle-type-money-premium: 26px");
+    expect(idleCssSource).toContain("--idle-type-kpi-premium: 25px");
+    expect(idleCssSource).toContain("font-weight: 720");
+  });
+
+  it("keeps progression and KPI cards quiet instead of neon", () => {
+    expect(idleCssSource).toContain(".route-shell.is-businesses-page .businesses-progression-track > i");
+    expect(idleCssSource).toContain("background: linear-gradient(90deg, #5578cf 0%, #6f97ff 58%, #8aa8eb 100%)");
+    expect(idleCssSource).toContain("box-shadow: none");
+    expect(idleCssSource).toContain(".route-shell.is-businesses-page .business-command-stat {");
+  });
+
+  it("creates a clear balance stats vault and actions hierarchy inside cards", () => {
+    expect(idleCssSource).toContain(".route-shell.is-businesses-page .business-card-balance {");
+    expect(idleCssSource).toContain(".route-shell.is-businesses-page .business-card-stats {");
+    expect(idleCssSource).toContain(".route-shell.is-businesses-page .business-card-vault {");
+    expect(idleCssSource).toContain(".route-shell.is-businesses-page .business-card-actions {");
+    expect(idleCssSource).toContain("background: rgba(7, 17, 31, .46)");
+  });
+
+  it("tones down hero identity chrome and preserves subtle interaction", () => {
+    expect(idleCssSource).toContain(".route-shell.is-businesses-page .business-card-identity-icon {");
+    expect(idleCssSource).toContain("background: rgba(75, 104, 166, .17)");
+    expect(idleCssSource).toContain("transform: translateY(-2px)");
+  });
+});
+describe("Businesses premium Parts 7–10", () => {
+  it("adds live business and vault roadmap hooks to Details", () => {
+    expect(idleIndexSource).toContain("renderBusinessLevelRoadmap");
+    expect(idleIndexSource).toContain("renderVaultLevelRoadmap");
+    expect(idleIndexSource).toContain("data-idle-business-level-roadmap");
+    expect(idleIndexSource).toContain("data-idle-vault-level-roadmap");
+    expect(idleIndexSource).toContain("businessRoadmapSignature");
+    expect(idleIndexSource).toContain("vaultRoadmapSignature");
+  });
+
+  it("drives roadmap fill and nodes from the live level state", () => {
+    expect(idleIndexSource).toContain("getRoadmapNodePosition");
+    expect(idleIndexSource).toContain("style=\"--detail-progress: ${progressPercent}%\"");
+    expect(idleIndexSource).toContain("data-roadmap-state=\"${state}\"");
+    expect(idleIndexSource).toContain("aria-valuenow=\"${progressPercent}\"");
+  });
+
+  it("uses a restrained premium Details surface instead of bright chrome", () => {
+    expect(idleCssSource).toContain("/* 2026-09-27 — Parts 7–10: premium Details + dynamic level roadmaps */");
+    expect(idleCssSource).toContain("width: min(610px, 96vw)");
+    expect(idleCssSource).toContain(".detail-roadmap-card {");
+    expect(idleCssSource).toContain("background: linear-gradient(90deg, #5578cf 0%, #6f97ff 68%, #89a5df 100%)");
+  });
+
+  it("keeps stage cards compact and removes the old blocky feel", () => {
+    expect(idleCssSource).toContain(".business-level-node-card,");
+    expect(idleCssSource).toContain(".vault-level-node-card {");
+    expect(idleCssSource).toContain("border-radius: 12px");
+    expect(idleCssSource).toContain("box-shadow: none");
+    expect(idleCssSource).toContain("opacity: .42");
+  });
+
+  it("keeps Details responsive and motion-safe", () => {
+    expect(idleCssSource).toContain("@media (max-width: 760px)");
+    expect(idleCssSource).toContain("width: 100vw");
+    expect(idleCssSource).toContain("@keyframes idle-detail-roadmap-fill");
+    expect(idleCssSource).toContain("@media (prefers-reduced-motion: reduce)");
+    expect(idleCssSource).toContain(".detail-roadmap-fill");
   });
 });
