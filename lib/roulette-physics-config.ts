@@ -44,7 +44,6 @@ export const ROULETTE_MAX_CCD_SUBSTEPS = 8;
 export const ROULETTE_ROTATION_AXIS = "Y+" as const;
 export const ROULETTE_ROTOR_BODY_MODE = "kinematic-position-y" as const;
 export const ROULETTE_ROTOR_ANGULAR_SPEED = 0.35;
-export const ROULETTE_ROTOR_FRICTION = 0.30;
 export const ROULETTE_Y_ORIGIN = 0;
 
 export const ROULETTE_EUROPEAN_SEQUENCE = [
@@ -186,7 +185,6 @@ export const ROULETTE_PHYSICS_CONFIG = {
   rotationAxis: ROULETTE_ROTATION_AXIS,
   rotorBodyMode: ROULETTE_ROTOR_BODY_MODE,
   rotorAngularSpeed: ROULETTE_ROTOR_ANGULAR_SPEED,
-  rotorFriction: ROULETTE_ROTOR_FRICTION,
   yOrigin: ROULETTE_Y_ORIGIN,
   pocketCount: ROULETTE_POCKET_COUNT,
   europeanSequence: ROULETTE_EUROPEAN_SEQUENCE,

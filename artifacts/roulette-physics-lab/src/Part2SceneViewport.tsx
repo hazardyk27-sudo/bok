@@ -12,7 +12,6 @@ import {
   sampleRouletteVisualTextureColorAt,
 } from '../../../lib/roulette-glb-surface';
 import { buildRouletteCanonicalLaunchState } from '../../../lib/roulette-physics-config';
-import { rouletteBallFitsWithinPocketAngularly } from '../../../lib/roulette-pocket-mapping';
 import {
   canonicalizeRouletteTrimeshVertices,
   rouletteTrimeshByteFingerprint,
@@ -41,7 +40,6 @@ import {
   ROULETTE_RAW_SOURCE_CENTER,
   ROULETTE_ROTATION_AXIS,
   ROULETTE_ROTOR_ANGULAR_SPEED,
-  ROULETTE_ROTOR_FRICTION,
   ROULETTE_WORLD_UNITS_PER_METER,
   ROULETTE_Y_ORIGIN,
 } from './roulette-scene-config';
@@ -6824,15 +6822,6 @@ export function Part2SceneViewport({
             const pocketFloorSettled =
               pocketSurfaceGap !== null &&
               Math.abs(pocketSurfaceGap) <= pocketFloorSettleTolerance;
-            const settleLocalPocketAngle = normalizedAngle(
-              Math.atan2(position.x, position.z) - rotorAngle,
-            );
-            const pocketAngularFit =
-              rouletteBallFitsWithinPocketAngularly({
-                physicsAngle: settleLocalPocketAngle,
-                radius,
-                ballRadius: BALL_RADIUS,
-              });
             if (
               [61004, 61005, 61006].includes(run.seed) &&
               pocketEntryTime !== null &&
@@ -6904,7 +6893,6 @@ export function Part2SceneViewport({
                     radius:
                       radius >= pocketResultCenterRadiusMin &&
                       radius <= pocketResultCenterRadiusMax,
-                    angularFit: pocketAngularFit,
                     floor: pocketFloorSettled,
                     floorGap: pocketSurfaceGap,
                   },
@@ -6917,7 +6905,6 @@ export function Part2SceneViewport({
               finalRotorRelativeSpeed < 0.12 &&
               radius >= pocketResultCenterRadiusMin &&
               radius <= pocketResultCenterRadiusMax &&
-              pocketAngularFit &&
               pocketFloorSettled
             ) {
               settledFrames += 1;
@@ -8923,7 +8910,7 @@ export function Part2SceneViewport({
         RAPIER.TriMeshFlags.DELETE_DEGENERATE_TRIANGLES |
         RAPIER.TriMeshFlags.DELETE_DUPLICATE_TRIANGLES,
                    )
-                     .setFriction(ROULETTE_ROTOR_FRICTION)
+                     .setFriction(0.42)
                      .setRestitution(0.02)
                      .setCollisionGroups(
                        ROTOR_COLLISION_GROUP |

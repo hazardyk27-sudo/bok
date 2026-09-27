@@ -18,13 +18,9 @@ import {
   ROULETTE_POCKET_OUTER_LIP_RADIUS,
   ROULETTE_POCKET_OUTER_LIP_Y,
   ROULETTE_ROTOR_ANGULAR_SPEED,
-  ROULETTE_ROTOR_FRICTION,
   ROULETTE_WORLD_UNITS_PER_METER,
 } from "../../../../lib/roulette-physics-config";
-import {
-  rouletteBallFitsWithinPocketAngularly,
-  rouletteNumberForPhysicsPocketIndex,
-} from "../../../../lib/roulette-pocket-mapping";
+import { rouletteNumberForPhysicsPocketIndex } from "../../../../lib/roulette-pocket-mapping";
 import {
   canonicalizeRouletteTrimeshVertices,
   rouletteTrimeshByteFingerprint,
@@ -288,7 +284,7 @@ function addExactGlbRotorCollider(
         RAPIER.TriMeshFlags.DELETE_DEGENERATE_TRIANGLES |
         RAPIER.TriMeshFlags.DELETE_DUPLICATE_TRIANGLES,
     )
-      .setFriction(ROULETTE_ROTOR_FRICTION)
+      .setFriction(0.42)
       .setRestitution(0.02)
       .setCollisionGroups(
         ROTOR_COLLISION_GROUP | (BALL_COLLISION_GROUP << 16),
@@ -2298,26 +2294,11 @@ export async function simulatePhysicsLabRound(
       const settleRadiusMax =
         radius <=
         ROULETTE_POCKET_OUTER_LIP_RADIUS - PHYSICS_LAB_BALL_RADIUS;
-      const settleWorldAngle = Math.atan2(translation.x, translation.z);
-      const settleRotorAngle = 2 * Math.atan2(
-        rotorRotation.y,
-        rotorRotation.w,
-      );
-      const settleRelativeAngle = normalizedAngle(
-        settleWorldAngle - settleRotorAngle,
-      );
-      const settlePocketAngularFit =
-        rouletteBallFitsWithinPocketAngularly({
-          physicsAngle: settleRelativeAngle,
-          radius,
-          ballRadius: PHYSICS_LAB_BALL_RADIUS,
-        });
       const exactRotorFloorY =
         settlePocketInteraction &&
         settleRelativeSpeed &&
         settleRadiusMin &&
-        settleRadiusMax &&
-        settlePocketAngularFit
+        settleRadiusMax
           ? exactRotorSurfaceYAt(
               translation.x,
               translation.z,
@@ -2334,7 +2315,6 @@ export async function simulatePhysicsLabRound(
         settleRelativeSpeed &&
         settleRadiusMin &&
         settleRadiusMax &&
-        settlePocketAngularFit &&
         settleFloor &&
         settlePocketIndex;
       if (
