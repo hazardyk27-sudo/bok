@@ -1100,6 +1100,7 @@ function buildStartConditions(seed: string): PhysicsLabStartConditions {
       z: exactLaunchSurface.normal[2],
     },
     launchSpeed,
+    launchAzimuthRadians,
     ballRadius: PHYSICS_LAB_BALL_RADIUS,
     launchClearance: 0.01,
     spinFactor: 1,
