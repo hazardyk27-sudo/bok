@@ -38,7 +38,7 @@ jobs:
         run: pnpm --filter @workspace/cascade-8 run build
 
       - name: Blackjack backend regression
-        run: pnpm --filter @workspace/api-server exec vitest run src/blackjack/domain.test.ts src/blackjack/rules.test.ts src/blackjack/shoe.test.ts src/blackjack/shuffle.test.ts src/blackjack/draw.test.ts src/blackjack/lifecycle.test.ts src/blackjack/shoeGate.test.ts src/blackjack/stateMachine.test.ts src/blackjack/seats.test.ts src/blackjack/participation.test.ts src/blackjack/initialDeal.test.ts src/blackjack/walletLedger.test.ts src/blackjack/reservations.test.ts src/blackjack/chips.test.ts
+        run: pnpm --filter @workspace/api-server exec vitest run src/blackjack/domain.test.ts src/blackjack/rules.test.ts src/blackjack/shoe.test.ts src/blackjack/shuffle.test.ts src/blackjack/draw.test.ts src/blackjack/lifecycle.test.ts src/blackjack/shoeGate.test.ts src/blackjack/stateMachine.test.ts src/blackjack/seats.test.ts src/blackjack/participation.test.ts src/blackjack/initialDeal.test.ts src/blackjack/walletLedger.test.ts src/blackjack/reservations.test.ts src/blackjack/chips.test.ts src/blackjack/betting.test.ts src/blackjack/turnEngine.test.ts src/blackjack/hit.test.ts src/blackjack/stand.test.ts src/blackjack/double.test.ts src/blackjack/split.test.ts
 
       - name: Multi-game integration regression
         run: >
