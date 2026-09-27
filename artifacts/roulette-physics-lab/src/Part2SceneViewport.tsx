@@ -12,6 +12,7 @@ import {
   sampleRouletteVisualTextureColorAt,
 } from '../../../lib/roulette-glb-surface';
 import { buildRouletteCanonicalLaunchState } from '../../../lib/roulette-physics-config';
+import { rouletteTrimeshByteFingerprint } from '../../../lib/roulette-trimesh-fingerprint';
 // PART 5-6 diagnostics derive pocket relief and visible-number mapping from the normalized GLB itself.
 import {
   ROULETTE_ASSET_PATH,
@@ -8512,6 +8513,12 @@ export function Part2SceneViewport({
                 JSON.stringify({
                   vertices: actualStationaryMesh.vertices.length / 3,
                   triangles: actualStationaryMesh.indices.length / 3,
+                  vertexFingerprint: rouletteTrimeshByteFingerprint(
+                    actualStationaryMesh.vertices,
+                  ),
+                  indexFingerprint: rouletteTrimeshByteFingerprint(
+                    actualStationaryMesh.indices,
+                  ),
                 }),
               );
             } else if (
@@ -8798,6 +8805,12 @@ export function Part2SceneViewport({
                    JSON.stringify({
                      vertices: actualRotorMesh.vertices.length / 3,
                      triangles: actualRotorMesh.indices.length / 3,
+                     vertexFingerprint: rouletteTrimeshByteFingerprint(
+                       actualRotorMesh.vertices,
+                     ),
+                     indexFingerprint: rouletteTrimeshByteFingerprint(
+                       actualRotorMesh.indices,
+                     ),
                    }),
                  );
                } else {
