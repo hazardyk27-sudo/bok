@@ -5,6 +5,11 @@ import {
   WebSocketServer,
 } from "ws";
 import type { BlackjackPublicSnapshot } from "./publicSnapshot";
+import {
+  buildBlackjackInitialSyncResponse,
+  evaluateBlackjackSyncRequest,
+  parseBlackjackSyncRequest,
+} from "./syncProtocol";
 
 export const BLACKJACK_WS_PATH = "/api/blackjack/ws" as const;
 
@@ -30,7 +35,7 @@ function send(socket: WebSocket, payload: unknown): void {
 }
 
 function parseMessage(message: string): unknown {
-  if (message === "sync") return { type: "sync" };
+  if (message === "sync") return "sync";
   try {
     return JSON.parse(message);
   } catch {
@@ -54,12 +59,50 @@ export function attachBlackjackWebSocket(
 
   const unsubscribe = source.subscribe(broadcastSnapshot);
 
-  const sendSnapshot = async (socket: WebSocket) => {
+  const sendInitialSnapshot = async (socket: WebSocket) => {
     if (closed || socket.readyState !== WebSocket.OPEN) return;
     try {
       const snapshot = await source.getSnapshot();
-      if (!closed) send(socket, { type: "snapshot", snapshot });
+      if (!closed) {
+        send(socket, buildBlackjackInitialSyncResponse(snapshot));
+      }
     } catch {
+      send(socket, {
+        type: "error",
+        error: "BLACKJACK_SNAPSHOT_UNAVAILABLE",
+      });
+    }
+  };
+
+  const handleSync = async (
+    socket: WebSocket,
+    rawMessage: unknown,
+  ) => {
+    if (closed || socket.readyState !== WebSocket.OPEN) return;
+
+    try {
+      const request = parseBlackjackSyncRequest(rawMessage);
+      if (request === null) {
+        send(socket, {
+          type: "error",
+          error: "BLACKJACK_ACTION_PROTOCOL_NOT_READY",
+        });
+        return;
+      }
+
+      const snapshot = await source.getSnapshot();
+      if (!closed) {
+        send(socket, evaluateBlackjackSyncRequest(snapshot, request));
+      }
+    } catch (error) {
+      if (error instanceof RangeError) {
+        send(socket, {
+          type: "error",
+          error: "BLACKJACK_INVALID_SYNC_REQUEST",
+        });
+        return;
+      }
+
       send(socket, {
         type: "error",
         error: "BLACKJACK_SNAPSHOT_UNAVAILABLE",
@@ -101,12 +144,15 @@ export function attachBlackjackWebSocket(
         const message = parseMessage(raw.toString());
 
         if (
-          typeof message === "object" &&
-          message !== null &&
-          "type" in message &&
-          (message as { type?: unknown }).type === "sync"
+          message === "sync" ||
+          (
+            typeof message === "object" &&
+            message !== null &&
+            "type" in message &&
+            (message as { type?: unknown }).type === "sync"
+          )
         ) {
-          void sendSnapshot(socket);
+          void handleSync(socket, message);
           return;
         }
 
@@ -122,7 +168,7 @@ export function attachBlackjackWebSocket(
       socket.once("close", cleanup);
       socket.once("error", cleanup);
 
-      void sendSnapshot(socket);
+      void sendInitialSnapshot(socket);
     },
   );
 
