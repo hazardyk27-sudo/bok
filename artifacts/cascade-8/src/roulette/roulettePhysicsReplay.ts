@@ -2,7 +2,6 @@ import * as THREE from "three";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
 import {
   ROULETTE_BALL_RADIUS,
-  ROULETTE_MODEL_PATH,
   ROULETTE_PHYSICS_SCHEMA_VERSION,
   ROULETTE_ROTOR_ANGULAR_SPEED,
   ROULETTE_WHEEL_DIAMETER,
@@ -33,7 +32,7 @@ type PhysicsReplay = {
   trajectoryHash: string;
   trajectory: ReplaySample[];
 };
-const MODEL_URL = ROULETTE_MODEL_PATH;
+const MODEL_URL = new URL("./assets/rou-lp-test-04.glb", import.meta.url).href;
 const TARGET_WHEEL_DIAMETER = ROULETTE_WHEEL_DIAMETER;
 
 function copyQuaternion(target: THREE.Quaternion, source: Quaternion) {

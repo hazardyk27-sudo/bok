@@ -15,3 +15,5 @@ export * from "./seats";
 export * from "./participation";
 export * from "./initialDeal";
 export * from "./walletLedger";
+export * from "./reservations";
+export * from "./chips";
