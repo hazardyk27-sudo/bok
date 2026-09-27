@@ -107,6 +107,13 @@ export function checkBlackjackIncomingEventSequence(
     receivedEventSequence,
   );
 
+  if (receivedEventSequence <= lastAppliedEventSequence) {
+    return Object.freeze({
+      status: "DUPLICATE_OR_OLD" as const,
+      eventSequence: receivedEventSequence,
+    });
+  }
+
   const expected = lastAppliedEventSequence + 1;
   if (!Number.isSafeInteger(expected)) {
     throw new RangeError("Blackjack expected eventSequence exceeds safe integer range");
@@ -115,13 +122,6 @@ export function checkBlackjackIncomingEventSequence(
   if (receivedEventSequence === expected) {
     return Object.freeze({
       status: "NEXT" as const,
-      eventSequence: receivedEventSequence,
-    });
-  }
-
-  if (receivedEventSequence <= lastAppliedEventSequence) {
-    return Object.freeze({
-      status: "DUPLICATE_OR_OLD" as const,
       eventSequence: receivedEventSequence,
     });
   }
