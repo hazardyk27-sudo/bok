@@ -176,4 +176,13 @@ describe("cadi kazan route smoke contract", () => {
     expect(witchClientSource).toContain("else this.audio.cashRegister()");
   });
 
+
+  it("removes the near-black matte around Office cutouts", () => {
+    expect(witchClientSource).toContain('id="witch-office-remove-black"');
+    expect(witchClientSource).toContain("8 8 8 0 -0.12");
+    expect(visualLockSource).toContain("PASS 18 — THE OFFICE supplied character cutouts on white");
+    expect(visualLockSource).toContain("filter: url(#witch-office-remove-black) !important");
+    expect(visualLockSource).toContain("background: transparent !important");
+  });
+
 });
