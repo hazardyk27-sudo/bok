@@ -90,4 +90,14 @@ describe("cadi kazan route smoke contract", () => {
     expect(visualLockSource).toContain("grid-template-rows: repeat(2");
   });
 
+
+  it("highlights only the resolved Office winning triple and reserves the premium effect for Michael 100x", () => {
+    expect(witchClientSource).toContain("winningOfficeSymbolId");
+    expect(witchClientSource).toContain("is-office-winning-match");
+    expect(witchClientSource).toContain('winningOfficeSymbolId === "MICHAEL"');
+    expect(visualLockSource).toContain("PASS 13 — THE OFFICE matched-triple win emphasis");
+    expect(visualLockSource).toContain("witch-office-100x-pulse");
+    expect(visualLockSource).toContain("prefers-reduced-motion: no-preference");
+  });
+
 });
