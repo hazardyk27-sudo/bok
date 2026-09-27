@@ -5568,40 +5568,28 @@ export function Part2SceneViewport({
           }
 
           const launchClearance = BALL_RADIUS + 0.01;
-          const operationalLaunchCenterRadius =
-            PART2_ACTUAL_DARK_TRACK_LAUNCH_RADIUS;
-          let launchContactRadius = operationalLaunchCenterRadius;
-          let launchNormal = part2ChannelNormalAt(
-            launchContactRadius,
-            run.launchAzimuth,
-          );
-          for (let iteration = 0; iteration < 3; iteration += 1) {
-            const radialNormal =
-              launchNormal.x * Math.sin(run.launchAzimuth) +
-              launchNormal.z * Math.cos(run.launchAzimuth);
-            launchContactRadius =
-              operationalLaunchCenterRadius -
-              radialNormal * launchClearance;
-            launchNormal = part2ChannelNormalAt(
-              launchContactRadius,
-              run.launchAzimuth,
-            );
-          }
-          const launchChannelSurface = part2ChannelSurfaceAt(
-            launchContactRadius,
-            part2RaceVerticalOffset,
-          );
+          const launchNormal = new THREE.Vector3(
+            launchSurface.normal.x,
+            launchSurface.normal.y,
+            launchSurface.normal.z,
+          ).normalize();
           const launchPosition = new THREE.Vector3(
-            Math.sin(run.launchAzimuth) * launchContactRadius,
-            launchChannelSurface.y,
-            Math.cos(run.launchAzimuth) * launchContactRadius,
+            launchSurface.point.x,
+            launchSurface.point.y,
+            launchSurface.point.z,
           ).addScaledVector(launchNormal, launchClearance);
-          const tangent = new THREE.Vector3(
-            Math.cos(run.launchAzimuth),
+          const launchRadial = new THREE.Vector3(
+            Math.sin(run.launchAzimuth),
             0,
-            -Math.sin(run.launchAzimuth),
-          )
-            .projectOnPlane(launchNormal)
+            Math.cos(run.launchAzimuth),
+          ).normalize();
+          // The exact GLB surface owns both placement and launch orientation.
+          // normal x radial yields the authored-surface tangent while keeping
+          // the initial radial velocity exactly zero, avoiding a solver-created
+          // outward impulse from an analytically mismatched start state.
+          const tangent = launchNormal
+            .clone()
+            .cross(launchRadial)
             .normalize();
           const launchVelocity = tangent.clone().multiplyScalar(run.speed);
           const launchAngularVelocity = launchNormal
