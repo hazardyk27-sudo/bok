@@ -28,5 +28,5 @@ An Idle commit never publishes itself to Replit; only the central one-game promo
 - If a note conflicts with code/tests/ownership rules, the validated repository state wins.
 
 ## Current milestones
-- 2026-09-27 — Slate Blue Parts 1–19 complete — Desktop business-card typography now uses the exact requested scale: accrued 45px, hourly/vault values 30px, vault label 20px, fill percent 25px, vault helper/ETA 20px, action labels 20px; vault meter is 20px and club progression is 15px. Next: visually QA and promote to `integration/replit-preview` when approved.
+- 2026-09-27 — Slate Blue Parts 1–20 complete — Desktop business-card typography remains at the requested scale; `BİRİKMİŞ GELİR` and its amount are now aligned to the same left column as hourly income, and the accrued readiness status (`TOPLAMAYA HAZIR` / related status text) has been removed from the card. Next: visually QA and promote to `integration/replit-preview` when approved.
 - 2026-09-26 — Isolation v2 active — Idle / İşletmeler development stays on `feature/idle`; preview release is ownership-scoped into `integration/replit-preview`, not a whole-branch merge.

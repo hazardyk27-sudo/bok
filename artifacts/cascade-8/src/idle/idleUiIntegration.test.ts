@@ -1614,3 +1614,17 @@ describe("Businesses Part 19 exact metric typography", () => {
     expect(idleCssSource).toContain("height: 15px");
   });
 });
+
+
+describe("Businesses Part 20 accrued heading cleanup", () => {
+  it("removes the accrued readiness status text from the card markup", () => {
+    expect(componentsSource).not.toContain("data-business-accrued-status");
+    expect(componentsSource).not.toContain("TOPLAMAYA HAZIR");
+  });
+
+  it("aligns both accrued label and value to the hourly-income content column", () => {
+    expect(idleCssSource).toContain("/* 2026-09-27 — Part 20: accrued label/value alignment + status cleanup */");
+    expect(idleCssSource).toContain(".business-card-balance-heading > span,");
+    expect(idleCssSource).toContain("margin-left: 14px");
+  });
+});

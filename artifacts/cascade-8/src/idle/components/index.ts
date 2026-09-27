@@ -152,7 +152,6 @@ ${renderBusinessMedia(businessId)}
         <section class="business-card-balance" aria-label="Biriken gelir">
           <div class="business-card-balance-heading">
             <span>BİRİKMİŞ GELİR</span>
-            <small data-business-accrued-status>KASADA HAZIR</small>
           </div>
           <strong data-business-accrued>—</strong>
         </section>
@@ -220,7 +219,6 @@ export function updateBusinessRow(
   const vaultRemainingNode = row.querySelector<HTMLElement>("[data-business-vault-remaining]");
   const vaultProgressNode = row.querySelector<HTMLElement>("[data-business-vault-progress]");
   const vaultEtaNode = row.querySelector<HTMLElement>("[data-business-vault-eta]");
-  const accruedStatusNode = row.querySelector<HTMLElement>("[data-business-accrued-status]");
   const collectButton = row.querySelector<HTMLButtonElement>("[data-business-collect]");
   const cardStateNode = row.querySelector<HTMLElement>("[data-business-card-state]");
   const levelMarkNode = row.querySelector<HTMLElement>("[data-business-level-mark]");
@@ -234,7 +232,6 @@ export function updateBusinessRow(
     || !vaultRemainingNode
     || !vaultProgressNode
     || !vaultEtaNode
-    || !accruedStatusNode
     || !collectButton
     || !cardStateNode
     || !levelMarkNode
@@ -285,12 +282,6 @@ export function updateBusinessRow(
     business,
     currentStage?.dailyIncomeCents ?? null,
   );
-  accruedStatusNode.textContent = business.businessLevel === null
-    ? "İŞLETME KAPALI"
-    : business.canCollect
-      ? "TOPLAMAYA HAZIR"
-      : "GELİR BİRİKİYOR";
-
   collectButton.textContent = business.canCollect
     ? `TOPLA · ${formatCreditsFromCents(business.collectableCents)}`
     : "TOPLA";
