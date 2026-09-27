@@ -3221,3 +3221,64 @@
   0%, 100% { filter: brightness(1); }
   50% { filter: brightness(1.09); }
 }
+
+
+/* PASS 14 — THE OFFICE table registration + live scratch interaction.
+   Clear legacy absolute-ticket offsets (top/left/translate) so the Office card
+   is geometrically centered in the table lane, and keep the live lacquer canvas
+   as the only pointer-capturing layer after purchase. */
+.is-office-theme .witch-table-surface {
+  display: grid !important;
+  place-items: center !important;
+  align-items: center !important;
+  justify-items: center !important;
+}
+
+.is-office-theme .witch-ticket {
+  position: relative !important;
+  inset: auto !important;
+  top: auto !important;
+  right: auto !important;
+  bottom: auto !important;
+  left: auto !important;
+  place-self: center !important;
+  margin: auto !important;
+  transform: none !important;
+}
+
+.is-office-theme .witch-ticket.is-preview,
+.is-office-theme .witch-ticket.is-preview .witch-cell {
+  pointer-events: none !important;
+}
+
+.is-office-theme .witch-ticket:not(.is-preview) .witch-cell {
+  pointer-events: auto !important;
+  touch-action: none !important;
+}
+
+.is-office-theme .witch-ticket:not(.is-preview) .witch-scratch-layer {
+  touch-action: none !important;
+}
+
+.is-office-theme .witch-ticket:not(.is-preview) .witch-scratch-layer-lacquer {
+  z-index: 12 !important;
+  pointer-events: auto !important;
+  touch-action: none !important;
+  cursor: crosshair !important;
+}
+
+@media (min-width: 821px) {
+  .is-office-theme .witch-table-surface {
+    position: absolute !important;
+    inset: 20px 252px 16px 18px !important;
+    overflow: visible !important;
+  }
+
+  .is-office-theme .witch-ticket {
+    width: min(96%, 980px) !important;
+    max-width: 980px !important;
+    height: auto !important;
+    max-height: calc(100% - 24px) !important;
+    aspect-ratio: 2.08 / 1 !important;
+  }
+}
