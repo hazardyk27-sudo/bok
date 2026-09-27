@@ -9126,3 +9126,48 @@ body.businesses-route {
     margin-left: 10px;
   }
 }
+
+
+/* 2026-09-27 — Part 24: restore desktop and tablet page scrolling */
+@media (min-width: 761px) {
+  html.businesses-route {
+    height: auto !important;
+    min-height: 100%;
+    overflow-x: hidden !important;
+    overflow-y: auto !important;
+  }
+
+  body.businesses-route {
+    height: auto !important;
+    min-height: 100dvh;
+    overflow-x: hidden !important;
+    overflow-y: auto !important;
+    overscroll-behavior-y: auto;
+  }
+
+  html.businesses-route #app {
+    height: auto !important;
+    min-height: 100dvh;
+    overflow: visible !important;
+  }
+
+  .route-shell.is-businesses-page {
+    height: auto !important;
+    min-height: 100dvh;
+    overflow-x: clip !important;
+    overflow-y: visible !important;
+    touch-action: pan-y;
+  }
+
+  .route-shell.is-businesses-page .businesses-workspace {
+    height: auto !important;
+    max-height: none !important;
+    min-height: 0;
+  }
+
+  .route-shell.is-businesses-page .businesses-page {
+    height: auto !important;
+    min-height: 0;
+    overflow: visible !important;
+  }
+}

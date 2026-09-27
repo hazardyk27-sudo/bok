@@ -1675,3 +1675,19 @@ describe("Businesses Part 23 mobile accrued alignment", () => {
     expect(idleCssSource).toContain("margin-left: 10px");
   });
 });
+
+
+describe("Businesses Part 24 desktop tablet scrolling", () => {
+  it("restores vertical page scrolling from tablet widths upward", () => {
+    expect(idleCssSource).toContain("/* 2026-09-27 — Part 24: restore desktop and tablet page scrolling */");
+    expect(idleCssSource).toContain("@media (min-width: 761px)");
+    expect(idleCssSource).toContain("overflow-y: auto !important");
+    expect(idleCssSource).toContain("overflow-y: visible !important");
+  });
+
+  it("removes viewport-height clipping from the workspace and page", () => {
+    expect(idleCssSource).toContain("height: auto !important");
+    expect(idleCssSource).toContain("max-height: none !important");
+    expect(idleCssSource).toContain("overflow: visible !important");
+  });
+});
