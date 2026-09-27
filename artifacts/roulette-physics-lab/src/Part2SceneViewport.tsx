@@ -6416,6 +6416,9 @@ export function Part2SceneViewport({
             if (
               (run.seed === 61004 && step <= 90) ||
               (part10aTrace61006 && run.seed === 61006 && step <= 240) ||
+              (part11Calibration &&
+                (run.seed === 61007 || run.seed === 61014) &&
+                step <= 240) ||
               (run.seed === 61005 && step >= 700 && step <= 950)
             ) {
               const parityAngularVelocity = activeBallBody.angvel();
