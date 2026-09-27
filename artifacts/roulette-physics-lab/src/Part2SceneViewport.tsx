@@ -8497,7 +8497,7 @@ export function Part2SceneViewport({
                 );
               part3TrackCollider = world.createCollider(
                 RAPIER.ColliderDesc.trimesh(
-                  canonicalStationaryVertices,
+                  actualStationaryMesh.vertices,
                   actualStationaryMesh.indices,
                   RAPIER.TriMeshFlags.FIX_INTERNAL_EDGES,
                 )
@@ -8794,7 +8794,7 @@ export function Part2SceneViewport({
                    );
                  const exactRotorCollider = world.createCollider(
                    RAPIER.ColliderDesc.trimesh(
-                     canonicalRotorVertices,
+                     actualRotorMesh.vertices,
                      actualRotorMesh.indices,
                      RAPIER.TriMeshFlags.ORIENTED |
         RAPIER.TriMeshFlags.MERGE_DUPLICATE_VERTICES |
@@ -8978,12 +8978,17 @@ export function Part2SceneViewport({
             !part1ProbeOnly
           ) {
             // Rapier scene queries reuse a broad-phase BVH that is refreshed
-            // by stepping the world. The exact GLB colliders were just
-            // inserted, so perform one zero-launch synchronization step before
-            // the parity raycasts, then restore the ball to its exact start.
-            // This step exists only to make the query pipeline see the freshly
-            // inserted mesh colliders; it must not alter the test launch.
+            // by stepping the world. Prime that query state without allowing
+            // the full-spin ball to create a contact manifold/warm-start cache:
+            // the server begins its seed launch from a fresh ball/contact pair.
+            // The ball collider is re-enabled before any launch state is applied.
+            if (part6FullSpinRouteActive) {
+              physicsBallCollider?.setEnabled(false);
+            }
             world.step();
+            if (part6FullSpinRouteActive) {
+              physicsBallCollider?.setEnabled(true);
+            }
             ballBody.setTranslation(
               { x: initialPosition[0], y: initialPosition[1], z: initialPosition[2] },
               true,
