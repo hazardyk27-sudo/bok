@@ -88,12 +88,23 @@ jobs:
 
           cat part5-browser-contract.log
           grep 'PART5_EXACT_GLB_COLLIDER_CONTRACT' part5-browser-contract.log
-          grep '"passed":true' part5-browser-contract.log
-          grep '"legacyColliderCount":0' part5-browser-contract.log
           if grep -q 'PART5_EXACT_GLB_COLLIDER_CONTRACT_VIOLATION' part5-browser-contract.log; then
             echo 'Browser exact GLB collider contract violated'
             exit 1
           fi
+
+          node <<'NODE'
+          const fs = require('fs');
+          const log = fs
+            .readFileSync('part5-browser-contract.log', 'utf8')
+            .replaceAll('\\\"', '"');
+          if (!log.includes('PART5_EXACT_GLB_COLLIDER_CONTRACT {"passed":true')) {
+            throw new Error('Browser exact GLB collider contract did not pass');
+          }
+          if (!log.includes('"legacyColliderCount":0')) {
+            throw new Error('Legacy collider count was not zero');
+          }
+          NODE
 
           node <<'NODE'
           const fs = require('fs');
