@@ -6227,7 +6227,12 @@ export function Part2SceneViewport({
             }
 
             let trackPairContact = false;
-            let trackSurfaceNormal: VectorReadout | null = null;
+            const trackSurfaceNormalCapture = {
+              found: false,
+              x: 0,
+              y: 0,
+              z: 0,
+            };
             let trackContactImpulse = 0;
             let deflectorPairContact = false;
             let fretPairContact = false;
@@ -6252,11 +6257,12 @@ export function Part2SceneViewport({
                       const stationaryNormal = flipped
                         ? manifold.localNormal1()
                         : manifold.localNormal2();
-                      trackSurfaceNormal ??= {
-                        x: stationaryNormal.x,
-                        y: stationaryNormal.y,
-                        z: stationaryNormal.z,
-                      };
+                      if (!trackSurfaceNormalCapture.found) {
+                        trackSurfaceNormalCapture.found = true;
+                        trackSurfaceNormalCapture.x = stationaryNormal.x;
+                        trackSurfaceNormalCapture.y = stationaryNormal.y;
+                        trackSurfaceNormalCapture.z = stationaryNormal.z;
+                      }
                       for (
                         let contactIndex = 0;
                         contactIndex < contactCount;
@@ -6451,11 +6457,11 @@ export function Part2SceneViewport({
                 radius > 0
                   ? (position.x * velocity.x + position.z * velocity.z) / radius
                   : 0;
-              const traceSurfaceNormal = trackSurfaceNormal
+              const traceSurfaceNormal = trackSurfaceNormalCapture.found
                 ? new THREE.Vector3(
-                    trackSurfaceNormal.x,
-                    trackSurfaceNormal.y,
-                    trackSurfaceNormal.z,
+                    trackSurfaceNormalCapture.x,
+                    trackSurfaceNormalCapture.y,
+                    trackSurfaceNormalCapture.z,
                   ).normalize()
                 : null;
               const traceAngularVelocity = new THREE.Vector3(
