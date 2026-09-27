@@ -26,6 +26,7 @@ The scratch system, styles, route mount, client, and Cadı-specific audio runtim
 - If a note conflicts with code/tests/ownership rules, the validated repository state wins.
 
 ## Current milestones
+- 2026-09-27 — The Office master-PNG card shell — the visible Office ticket is now one bundled 1511×707 PNG; legacy CSS-drawn Office/Parkour artwork is hidden, and only six live scratch cells overlay the PNG. Scratch union and all six cells use measured percentage coordinates from the PNG and each cell clips its canvases/debris so scratching cannot spill outside the printed white zones.
 - 2026-09-27 — The Office cutout matte fix — near-black matte pixels around the supplied character JPEGs are converted to transparency at render time, so the characters sit directly on the white scratch-result cells without black rectangles; source artwork sizing and prize badges stay unchanged.
 - 2026-09-27 — The Office scratch UX pass — Office-only result backgrounds are white, no-prize completion now plays a negative cue, Office brush radius is increased another 10% from the prior 1.30× setting to 1.43× baseline, and one continuous pointer drag can scratch across multiple Office cells while Standard/Advanced keep single-cell routing.
 - 2026-09-27 — The Office scratch brush +30% — only `OFFICE_MATCH_6` now uses a brush radius 1.3× the shared 14px baseline (18.2px effective). Standard/Advanced remain unchanged.
