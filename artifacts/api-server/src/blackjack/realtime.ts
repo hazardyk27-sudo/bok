@@ -1,4 +1,5 @@
 import type { IncomingMessage, Server } from "node:http";
+import type { Socket } from "node:net";
 import {
   WebSocket,
   WebSocketServer,
@@ -68,9 +69,7 @@ export function attachBlackjackWebSocket(
 
   const onUpgrade = (
     request: IncomingMessage,
-    socket: Parameters<Server["emit"]>[1] & {
-      destroy?: () => void;
-    },
+    socket: Socket,
     head: Buffer,
   ) => {
     const url = new URL(request.url ?? "/", "http://localhost");
@@ -78,7 +77,7 @@ export function attachBlackjackWebSocket(
 
     webSocketServer.handleUpgrade(
       request,
-      socket as never,
+      socket,
       head,
       (client) => {
         webSocketServer.emit("connection", client, request);
@@ -86,7 +85,7 @@ export function attachBlackjackWebSocket(
     );
   };
 
-  server.on("upgrade", onUpgrade as never);
+  server.on("upgrade", onUpgrade);
 
   webSocketServer.on(
     "connection",
@@ -134,7 +133,7 @@ export function attachBlackjackWebSocket(
       if (closed) return;
       closed = true;
       unsubscribe();
-      server.off("upgrade", onUpgrade as never);
+      server.off("upgrade", onUpgrade);
       for (const socket of connections) socket.terminate();
       connections.clear();
       webSocketServer.close();
