@@ -11,3 +11,4 @@ export * from "./shuffle";
 export * from "./draw";
 export * from "./lifecycle";
 export * from "./stateMachine";
+export * from "./seats";
