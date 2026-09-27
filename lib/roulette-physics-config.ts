@@ -40,7 +40,7 @@ export const ROULETTE_DARK_RACE_CHANNEL_PROFILE = [
 ] as const;
 
 export const ROULETTE_FIXED_TIMESTEP = 1 / 120;
-export const ROULETTE_MAX_CCD_SUBSTEPS = 16;
+export const ROULETTE_MAX_CCD_SUBSTEPS = 8;
 export const ROULETTE_ROTATION_AXIS = "Y+" as const;
 export const ROULETTE_ROTOR_BODY_MODE = "kinematic-position-y" as const;
 export const ROULETTE_ROTOR_ANGULAR_SPEED = 0.35;
