@@ -52,6 +52,17 @@ Isolation layout v2 is active. Game agents only develop and commit inside their 
 - Query Replit only when the user's shell output shows an error, wrong branch, non-clean tree, non-fast-forward/ahead-behind problem, or when the user explicitly asks for Replit-side diagnosis.
 
 
+## General game delivery protocol
+This protocol is mandatory for every game/category. Before commit, promotion, or Replit work, read `GAME_DELIVERY_PROTOCOL.md`.
+
+The repository has three separate lanes:
+1. **Development lane** — work and commits stay on the category's `feature/*` branch. Default rule: one active writer per feature branch. If the remote feature HEAD changes unexpectedly during a task, stop, fetch, inspect the new commits, and reconcile deliberately; never blind-merge, overwrite, or force-push. Parallel writers for the same game must use separate temporary task branches.
+2. **Promotion lane** — routine game releases reach `integration/replit-preview` only through the serialized one-game promotion workflow, using an immutable source commit SHA. Game agents and Replit must never manually merge/push routine game commits into the integration branch.
+3. **Replit lane** — Replit is a read-only consumer of `integration/replit-preview`. Replit never creates product commits and never pushes to GitHub. Normal refresh is fetch + fast-forward only through `scripts/replit-sync-preview.sh`.
+
+Race handling is fail-safe: if a feature branch or preview branch moves while an operation is in progress, abort/re-run from the newest verified HEAD instead of automatically merging unrelated work. A successful preview sync must prove both that Replit matches the current remote preview and, when an expected promoted preview SHA is supplied, that this SHA is an ancestor of the running HEAD.
+
+
 ## Milestone continuity
 - At the start of a game/category task, read the closest owned `AGENTS.md` and its `Current milestones` section before changing code.
 - Record a milestone only when it materially changes what the next agent needs to know: a durable architecture/behavior decision, a completed phase, a validated baseline, a significant blocker/root cause, or the next agreed checkpoint.

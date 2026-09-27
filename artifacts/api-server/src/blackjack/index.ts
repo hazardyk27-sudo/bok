@@ -29,3 +29,4 @@ export * from "./publicSnapshot";
 export * from "./realtime";
 export * from "./actionQueue";
 export * from "./actionProtocol";
+export * from "./eventStream";

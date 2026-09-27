@@ -158,3 +158,19 @@ Every game conversation owns only its declared game branch and ownership roots.
 Routine work in one game must produce zero code/artifact changes in every other game.
 
 If any older note or document says Replit should stay on `main`, that instruction is obsolete. Isolation v2 uses `integration/replit-preview`.
+
+
+## 10. Race and moving-HEAD rule
+
+The preview branch and feature branches may be active while multiple chats are open. Treat every branch HEAD as moving state.
+
+- Default: one active writer per canonical `feature/<game>` branch.
+- Before a feature push, fetch the remote feature branch again. If its HEAD changed unexpectedly since the task baseline, stop and inspect; do not blind-merge or force-push.
+- If same-game parallel work is required, use separate temporary task branches and integrate deliberately into the canonical feature branch.
+- Routine game releases must never manually push/merge into `integration/replit-preview`; only the serialized promotion workflow may write game changes there.
+- Promotion input is an immutable feature commit SHA, not a branch name.
+- Promotion records its preview base and re-checks remote preview immediately before push. If preview moved, abort/re-run; never auto-merge unrelated preview commits.
+- Replit never pushes to GitHub. It only fast-forwards from `integration/replit-preview`.
+- A rejected push or stale SHA is a synchronization signal, not permission to merge blindly.
+
+See `GAME_DELIVERY_PROTOCOL.md` for the complete commit → promotion → Replit procedure.
