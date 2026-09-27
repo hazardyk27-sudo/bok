@@ -54,8 +54,6 @@ export const ROULETTE_EUROPEAN_SEQUENCE = [
 export const ROULETTE_POCKET_COUNT = ROULETTE_EUROPEAN_SEQUENCE.length;
 export const ROULETTE_SEGMENT_DEGREES = 360 / ROULETTE_POCKET_COUNT;
 
-export const ROULETTE_CANONICAL_LAUNCH_SURFACE_QUANTUM = 1e-6;
-
 export type RouletteLaunchVector = {
   x: number;
   y: number;
@@ -70,17 +68,11 @@ export type RouletteCanonicalLaunchState = {
   angularVelocity: RouletteLaunchVector;
 };
 
-function canonicalLaunchScalar(value: number) {
-  return (
-    Math.round(value / ROULETTE_CANONICAL_LAUNCH_SURFACE_QUANTUM) *
-    ROULETTE_CANONICAL_LAUNCH_SURFACE_QUANTUM
-  );
-}
-
 export function buildRouletteCanonicalLaunchState({
   surfacePoint,
   surfaceNormal,
   launchSpeed,
+  launchAzimuthRadians,
   ballRadius = ROULETTE_BALL_RADIUS,
   launchClearance = 0.01,
   spinFactor = 1,
@@ -88,42 +80,34 @@ export function buildRouletteCanonicalLaunchState({
   surfacePoint: RouletteLaunchVector;
   surfaceNormal: RouletteLaunchVector;
   launchSpeed: number;
+  launchAzimuthRadians: number;
   ballRadius?: number;
   launchClearance?: number;
   spinFactor?: number;
 }): RouletteCanonicalLaunchState {
   const point = {
-    x: canonicalLaunchScalar(surfacePoint.x),
-    y: canonicalLaunchScalar(surfacePoint.y),
-    z: canonicalLaunchScalar(surfacePoint.z),
-  };
-  const quantizedNormal = {
-    x: canonicalLaunchScalar(surfaceNormal.x),
-    y: canonicalLaunchScalar(surfaceNormal.y),
-    z: canonicalLaunchScalar(surfaceNormal.z),
+    x: surfacePoint.x,
+    y: surfacePoint.y,
+    z: surfacePoint.z,
   };
   const normalLength = Math.hypot(
-    quantizedNormal.x,
-    quantizedNormal.y,
-    quantizedNormal.z,
+    surfaceNormal.x,
+    surfaceNormal.y,
+    surfaceNormal.z,
   );
   if (normalLength <= 1e-12) {
     throw new Error("ROULETTE_CANONICAL_LAUNCH_NORMAL_MISSING");
   }
   const normal = {
-    x: quantizedNormal.x / normalLength,
-    y: quantizedNormal.y / normalLength,
-    z: quantizedNormal.z / normalLength,
+    x: surfaceNormal.x / normalLength,
+    y: surfaceNormal.y / normalLength,
+    z: surfaceNormal.z / normalLength,
   };
 
-  const radialLength = Math.hypot(point.x, point.z);
-  if (radialLength <= 1e-12) {
-    throw new Error("ROULETTE_CANONICAL_LAUNCH_RADIAL_MISSING");
-  }
   const radial = {
-    x: point.x / radialLength,
+    x: Math.sin(launchAzimuthRadians),
     y: 0,
-    z: point.z / radialLength,
+    z: Math.cos(launchAzimuthRadians),
   };
   const tangentRaw = {
     x: normal.y * radial.z - normal.z * radial.y,
