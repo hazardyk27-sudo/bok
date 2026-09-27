@@ -14,3 +14,4 @@ export * from "./stateMachine";
 export * from "./seats";
 export * from "./participation";
 export * from "./initialDeal";
+export * from "./walletLedger";
