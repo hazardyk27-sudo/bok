@@ -1885,6 +1885,11 @@ export async function simulatePhysicsLabRound(
 
       if (
         (seed === "61004" && step <= 90) ||
+        (
+          process.env.ROULETTE_PART10A_TRACE_61006 === "1" &&
+          seed === "61006" &&
+          step <= 240
+        ) ||
         (seed === "61005" && step >= 700 && step <= 950)
       ) {
         const parityAngularVelocity = ballBody.angvel();

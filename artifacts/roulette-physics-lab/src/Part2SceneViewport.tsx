@@ -5189,6 +5189,8 @@ export function Part2SceneViewport({
       const activeRotorPivot = rotorPivot;
 
       const part6Params = new URLSearchParams(window.location.search);
+      const part10aTrace61006 =
+        part6Params.get('part10aTrace61006') === '1';
       const requestedSeedCount = Number(
         part6Params.get('part6SeedCount') ?? PART6_FULL_SPIN_RUNS.length,
       );
@@ -6231,6 +6233,7 @@ export function Part2SceneViewport({
 
             if (
               (run.seed === 61004 && step <= 90) ||
+              (part10aTrace61006 && run.seed === 61006 && step <= 240) ||
               (run.seed === 61005 && step >= 700 && step <= 950)
             ) {
               const parityAngularVelocity = activeBallBody.angvel();

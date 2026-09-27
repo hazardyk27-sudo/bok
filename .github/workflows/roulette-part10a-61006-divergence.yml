@@ -6,6 +6,9 @@ on:
       - feature/roulette
     paths:
       - '.github/workflows/roulette-part10a-61006-divergence.yml'
+      - 'artifacts/roulette-physics-lab/src/Part2SceneViewport.tsx'
+      - 'artifacts/api-server/src/physics-lab/simulation.ts'
+      - 'artifacts/roulette-physics-lab/scripts/part10a-compare.mjs'
   workflow_dispatch:
 
 permissions:
@@ -39,36 +42,7 @@ jobs:
       - name: Build TypeScript project references
         run: pnpm run typecheck:libs
 
-      - name: Enable local 61006 extended parity tracing
-        shell: bash
-        run: |
-          python - <<'PY'
-          from pathlib import Path
-
-          browser=Path('artifacts/roulette-physics-lab/src/Part2SceneViewport.tsx')
-          s=browser.read_text()
-          old="""(run.seed === 61004 && step <= 90) ||
-              (run.seed === 61005 && step >= 700 && step <= 950)"""
-          new="""(run.seed === 61004 && step <= 90) ||
-              (run.seed === 61006 && step <= 240) ||
-              (run.seed === 61005 && step >= 700 && step <= 950)"""
-          if old not in s:
-              raise SystemExit('browser parity condition not found')
-          browser.write_text(s.replace(old,new))
-
-          server=Path('artifacts/api-server/src/physics-lab/simulation.ts')
-          s=server.read_text()
-          old="""(seed === "61004" && step <= 90) ||
-        (seed === "61005" && step >= 700 && step <= 950)"""
-          new="""(seed === "61004" && step <= 90) ||
-        (seed === "61006" && step <= 240) ||
-        (seed === "61005" && step >= 700 && step <= 950)"""
-          if old not in s:
-              raise SystemExit('server parity condition not found')
-          server.write_text(s.replace(old,new))
-          PY
-
-      - name: Typecheck diagnostic patch
+      - name: Typecheck physics runtimes
         run: |
           pnpm --filter @workspace/roulette-physics-lab run typecheck
           pnpm --filter @workspace/api-server run typecheck
@@ -89,7 +63,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          ROULETTE_LAB_URL="http://127.0.0.1:4173/?part6Headless=1&part6SeedStartIndex=5&part6SeedCount=1&part6MaxDurationSeconds=30" \
+          ROULETTE_LAB_URL="http://127.0.0.1:4173/?part6Headless=1&part6SeedStartIndex=5&part6SeedCount=1&part6MaxDurationSeconds=30&part10aTrace61006=1" \
           ROULETTE_PART6_OUTPUT="artifacts/roulette-physics-lab/part10a-browser-61006.json" \
           ROULETTE_PART6_TIMEOUT_MS='180000' \
           ROULETTE_PART6_EXPECTED_SEEDS='1' \
@@ -99,166 +73,19 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+          ROULETTE_PART10A_TRACE_61006=1 \
           pnpm --filter @workspace/api-server exec tsx -e \
-            "(async()=>{const fs=await import('node:fs');const {simulatePhysicsLabRound}=await import('./src/physics-lab/simulation.ts');const r=await simulatePhysicsLabRound('part10a-61006','61006');fs.writeFileSync('part10a-server-result-61006.json',JSON.stringify({status:r.status,errorCode:r.errorCode,finalPocketIndex:r.finalPocketIndex,finalPocketNumber:r.finalPocketNumber,stableSettleStep:r.stableSettleStep,startConditions:r.startConditions,trajectory:r.trajectory},null,2));console.log('SERVER_PART10A_RESULT '+JSON.stringify({status:r.status,errorCode:r.errorCode,finalPocketIndex:r.finalPocketIndex,finalPocketNumber:r.finalPocketNumber,stableSettleStep:r.stableSettleStep,trajectorySamples:r.trajectory.length,startConditions:r.startConditions}));})().catch(error=>{console.error(error);process.exit(1)})" \
+            "(async()=>{const fs=await import('node:fs');const {simulatePhysicsLabRound}=await import('./src/physics-lab/simulation.ts');const r=await simulatePhysicsLabRound('part10a-61006','61006');fs.writeFileSync('part10a-server-result-61006.json',JSON.stringify({status:r.status,errorCode:r.errorCode,finalPocketIndex:r.finalPocketIndex,finalPocketNumber:r.finalPocketNumber,stableSettleStep:r.stableSettleStep,startConditions:r.startConditions,trajectory:r.trajectory},null,2));console.log('SERVER_PART10A_RESULT '+JSON.stringify({status:r.status,errorCode:r.errorCode,finalPocketIndex:r.finalPocketIndex,finalPocketNumber:r.finalPocketNumber,stableSettleStep:r.stableSettleStep,trajectorySamples:r.trajectory.length}));})().catch(error=>{console.error(error);process.exit(1)})" \
             > part10a-server-61006.log 2>&1
 
-      - name: Compare browser and server divergence
-        shell: bash
+      - name: Compare browser and server
         run: |
-          set -euo pipefail
-          node <<'NODE'
-          const fs=require('fs');
-
-          const browserLines=fs.readFileSync('part10a-browser-61006.log','utf8').split(/\r?\n/);
-          const serverLines=fs.readFileSync('part10a-server-61006.log','utf8').split(/\r?\n/);
-
-          const browser=[];
-          for(const line of browserLines){
-            const marker='BROWSER_CONSOLE ';
-            const i=line.indexOf(marker);
-            if(i<0) continue;
-            try{
-              const outer=JSON.parse(line.slice(i+marker.length));
-              const prefix='ROULETTE_PARITY_STEP ';
-              if(outer.text?.startsWith(prefix)){
-                const row=JSON.parse(outer.text.slice(prefix.length));
-                if(Number(row.seed)===61006) browser.push(row);
-              }
-            }catch{}
-          }
-
-          const server=[];
-          for(const line of serverLines){
-            const prefix='ROULETTE_PARITY_STEP ';
-            const i=line.indexOf(prefix);
-            if(i<0) continue;
-            try{
-              const row=JSON.parse(line.slice(i+prefix.length));
-              if(Number(row.seed)===61006) server.push(row);
-            }catch{}
-          }
-
-          const browserOutput=JSON.parse(
-            fs.readFileSync('artifacts/roulette-physics-lab/part10a-browser-61006.json','utf8'),
-          );
-          const browserRow=(browserOutput.telemetry?.results ?? browserOutput.seedTelemetry ?? [])[0] ?? null;
-          const serverResult=JSON.parse(
-            fs.readFileSync('part10a-server-result-61006.json','utf8'),
-          );
-
-          const bMap=new Map(browser.map(r=>[r.step,r]));
-          const sMap=new Map(server.map(r=>[r.step,r]));
-          const common=[...bMap.keys()].filter(step=>sMap.has(step)).sort((a,b)=>a-b);
-          if(common.length===0) throw new Error('No common 61006 parity rows');
-
-          const vecDelta=(a,b,key)=>Math.hypot(
-            a[key].x-b[key].x,
-            a[key].y-b[key].y,
-            a[key].z-b[key].z,
-          );
-          const thresholds=[1e-7,1e-6,1e-5,1e-4,1e-3,1e-2,1e-1];
-          const firstVelocity=Object.fromEntries(thresholds.map(t=>[String(t),null]));
-          const firstPosition=Object.fromEntries(thresholds.map(t=>[String(t),null]));
-          const firstAngular=Object.fromEntries(thresholds.map(t=>[String(t),null]));
-          let firstContactMismatch=null;
-          let maxVelocityDelta=0;
-          let maxPositionDelta=0;
-          let maxAngularDelta=0;
-          const rows=[];
-
-          for(const step of common){
-            const b=bMap.get(step), s=sMap.get(step);
-            const velocityDelta=vecDelta(b,s,'velocity');
-            const positionDelta=vecDelta(b,s,'position');
-            const angularDelta=vecDelta(b,s,'angularVelocity');
-            maxVelocityDelta=Math.max(maxVelocityDelta,velocityDelta);
-            maxPositionDelta=Math.max(maxPositionDelta,positionDelta);
-            maxAngularDelta=Math.max(maxAngularDelta,angularDelta);
-
-            for(const t of thresholds){
-              const k=String(t);
-              if(firstVelocity[k]===null&&velocityDelta>t) firstVelocity[k]=step;
-              if(firstPosition[k]===null&&positionDelta>t) firstPosition[k]=step;
-              if(firstAngular[k]===null&&angularDelta>t) firstAngular[k]=step;
-            }
-
-            const bContacts=JSON.stringify([...(b.contactRoles??[])].sort());
-            const sContacts=JSON.stringify([...(s.contactRoles??[])].sort());
-            if(firstContactMismatch===null&&bContacts!==sContacts){
-              firstContactMismatch=step;
-            }
-
-            rows.push({
-              step,
-              velocityDelta:Number(velocityDelta.toFixed(12)),
-              positionDelta:Number(positionDelta.toFixed(12)),
-              angularVelocityDelta:Number(angularDelta.toFixed(12)),
-              browserRadius:b.radius,
-              serverRadius:s.radius,
-              browserRadialVelocity:b.radialVelocity,
-              serverRadialVelocity:s.radialVelocity,
-              browserVerticalVelocity:b.verticalVelocity,
-              serverVerticalVelocity:s.verticalVelocity,
-              browserContacts:b.contactRoles,
-              serverContacts:s.contactRoles,
-            });
-          }
-
-          const firstMeaningful=Math.min(
-            ...[
-              firstVelocity['0.001'],
-              firstPosition['0.001'],
-              firstContactMismatch,
-            ].filter(v=>v!==null),
-          );
-          const window=Number.isFinite(firstMeaningful)
-            ? rows.filter(r=>Math.abs(r.step-firstMeaningful)<=5)
-            : rows.slice(0,12);
-
-          const summary={
-            seed:61006,
-            browserParityRows:browser.length,
-            serverParityRows:server.length,
-            commonRows:common.length,
-            browserFirstStep:browser[0]?.step??null,
-            browserLastStep:browser.at(-1)?.step??null,
-            serverFirstStep:server[0]?.step??null,
-            serverLastStep:server.at(-1)?.step??null,
-            firstVelocityThreshold:firstVelocity,
-            firstPositionThreshold:firstPosition,
-            firstAngularVelocityThreshold:firstAngular,
-            firstContactMismatch,
-            firstMeaningfulDivergence:Number.isFinite(firstMeaningful)?firstMeaningful:null,
-            maxVelocityDelta:Number(maxVelocityDelta.toFixed(12)),
-            maxPositionDelta:Number(maxPositionDelta.toFixed(12)),
-            maxAngularVelocityDelta:Number(maxAngularDelta.toFixed(12)),
-            browserLaunch:browserRow?{
-              launchAzimuth:browserRow.launchAzimuth,
-              launchSpeed:browserRow.launchSpeed,
-              launchSpeedMetersPerSecond:browserRow.launchSpeedMetersPerSecond,
-              launchRadius:browserRow.launchRadius,
-              launchHeight:browserRow.launchHeight,
-              rotorStartAngle:browserRow.rotorStartAngle,
-            }:null,
-            serverStartConditions:serverResult.startConditions,
-            browserSettled:browserRow?.settled??null,
-            browserFinalPocketNumber:browserRow?.finalPocketNumber??null,
-            serverStatus:serverResult.status,
-            serverErrorCode:serverResult.errorCode,
-            serverFinalPocketNumber:serverResult.finalPocketNumber,
-            serverStableSettleStep:serverResult.stableSettleStep,
-          };
-
-          fs.writeFileSync(
-            'part10a-61006-divergence-summary.json',
-            JSON.stringify({summary,window,rows},null,2),
-          );
-          console.log('PART10A_61006_SUMMARY '+JSON.stringify(summary));
-          for(const row of window){
-            console.log('PART10A_61006_WINDOW '+JSON.stringify(row));
-          }
-          NODE
+          node artifacts/roulette-physics-lab/scripts/part10a-compare.mjs \
+            part10a-browser-61006.log \
+            part10a-server-61006.log \
+            artifacts/roulette-physics-lab/part10a-browser-61006.json \
+            part10a-server-result-61006.json \
+            part10a-61006-divergence-summary.json
 
       - name: Upload evidence
         if: always()
