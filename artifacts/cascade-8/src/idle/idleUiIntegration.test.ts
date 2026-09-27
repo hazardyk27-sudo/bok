@@ -1645,3 +1645,24 @@ describe("Businesses Part 21 collect-all parity", () => {
     expect(idleCssSource).toContain("display: none");
   });
 });
+
+
+describe("Businesses Part 22 desktop card geometry", () => {
+  it("keeps all desktop cards equal height without restoring viewport-fill stretching", () => {
+    expect(idleCssSource).toContain("/* 2026-09-27 — Part 22: equal-height 16:9 desktop cards + no-wrap typography */");
+    expect(idleCssSource).toContain("grid-auto-rows: 1fr");
+    expect(idleCssSource).toContain("align-items: stretch");
+    expect(idleCssSource).toContain("grid-template-rows: auto 1fr");
+  });
+
+  it("forces the business hero to a true 16 by 9 frame", () => {
+    expect(idleCssSource).toContain("aspect-ratio: 16 / 9");
+    expect(idleCssSource).toContain("max-height: none");
+  });
+
+  it("uses responsive no-wrap typography for values and vault helper text", () => {
+    expect(idleCssSource).toContain("font-size: clamp(19px, 1.55vw, 23px)");
+    expect(idleCssSource).toContain("font-size: clamp(10px, .82vw, 12px)");
+    expect(idleCssSource).toContain("white-space: nowrap");
+  });
+});
