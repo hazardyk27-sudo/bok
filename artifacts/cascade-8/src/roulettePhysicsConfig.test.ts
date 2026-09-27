@@ -2,7 +2,9 @@ import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 import {
+  buildRouletteCanonicalLaunchState,
   ROULETTE_AUTHORITATIVE_SCALE,
+  ROULETTE_CANONICAL_LAUNCH_SURFACE_QUANTUM,
   ROULETTE_BALL_RADIUS,
   ROULETTE_DARK_RACE_CHANNEL_PROFILE,
   ROULETTE_DARK_RACE_INWARD_EDGE_RADIUS,
@@ -107,6 +109,45 @@ describe("authoritative roulette physics config", () => {
     expect(ROULETTE_GRAVITY_Y).toBeCloseTo(-58.86);
     expect(ROULETTE_FIXED_TIMESTEP).toBeCloseTo(1 / 120);
     expect(ROULETTE_MAX_CCD_SUBSTEPS).toBe(8);
+  });
+
+  it("canonicalizes exact-GLB launch micro-differences across runtimes", () => {
+    expect(ROULETTE_CANONICAL_LAUNCH_SURFACE_QUANTUM).toBe(1e-6);
+
+    const common = {
+      launchSpeed: 30.089121878379956,
+      ballRadius: ROULETTE_BALL_RADIUS,
+      launchClearance: 0.01,
+      spinFactor: 1,
+    };
+    const browserLike = buildRouletteCanonicalLaunchState({
+      ...common,
+      surfacePoint: {
+        x: 0.1730562356864774,
+        y: -0.3239485800538585,
+        z: 2.3837263977415755,
+      },
+      surfaceNormal: {
+        x: -0.03037715887293521,
+        y: 0.95486348,
+        z: -0.2954876818613334,
+      },
+    });
+    const serverLike = buildRouletteCanonicalLaunchState({
+      ...common,
+      surfacePoint: {
+        x: 0.1730562356864774,
+        y: -0.3239485898854644,
+        z: 2.3837263977415755,
+      },
+      surfaceNormal: {
+        x: -0.03037729107999999,
+        y: 0.95486349,
+        z: -0.2954876279519177,
+      },
+    });
+
+    expect(browserLike).toEqual(serverLike);
   });
 
   it("locks the measured recessed dark-race geometry", () => {
@@ -448,7 +489,10 @@ describe("authoritative roulette physics config", () => {
       "const PART6_BALL_SPIN_FACTOR = 1.0",
     );
     expect(part3ViewportSource).toContain(
-      ".multiplyScalar(PART6_BALL_SPIN_FACTOR / BALL_RADIUS)",
+      "buildRouletteCanonicalLaunchState({",
+    );
+    expect(physicsLabSimulationSource).toContain(
+      "buildRouletteCanonicalLaunchState({",
     );
     expect(part3ViewportSource).toContain(
       "const PART6_INTERACTIVE_YIELD_STEPS = 30",
