@@ -50,7 +50,16 @@ const ROULETTE_RUNTIME_ASSET_PATH =
 const FIXED_TIMESTEP = ROULETTE_FIXED_TIMESTEP;
 const TEST_ANGULAR_SPEED = ROULETTE_ROTOR_ANGULAR_SPEED;
 const GRAVITY_Y = ROULETTE_GRAVITY_Y;
-const BALL_RADIUS = ROULETTE_BALL_RADIUS;
+const PART11_TEST_BALL_SCALE = (() => {
+  if (typeof window === 'undefined') return 1;
+  const params = new URLSearchParams(window.location.search);
+  if (params.get('part11Calibration') !== '1') return 1;
+  const requested = Number(params.get('part11BallScale') ?? '1');
+  return Number.isFinite(requested)
+    ? Math.max(0.7, Math.min(1.3, requested))
+    : 1;
+})();
+const BALL_RADIUS = ROULETTE_BALL_RADIUS * PART11_TEST_BALL_SCALE;
 const BALL_MASS = 0.0027;
 const TWO_PI = Math.PI * 2;
 const DROP_RADIUS = 2.35;
