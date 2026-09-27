@@ -6,8 +6,10 @@ import {
   getCashoutMultiplierBps,
   getCashoutPayoutCents,
   getMaxSafeStakeCents,
+  getCellCount,
   getSafeCellCount,
   getVisibleBombCells,
+  getVisibleOfficeCells,
 } from "./types";
 
 describe("Cadı Kazan payout configuration", () => {
@@ -62,4 +64,26 @@ describe("Cadı Kazan payout configuration", () => {
     expect(getMaxSafeStakeCents("ADVANCED", 1)).toBeGreaterThanOrEqual(100_000_000);
     expect(getCashoutPayoutCents(100_000_000, 100_000)).toBe(100_000_000_000);
   });
+
+  it("exposes The Office as a six-cell no-cashout mode with redacted active symbols", () => {
+    expect(getCellCount("OFFICE_MATCH_6")).toBe(6);
+    expect(getSafeCellCount("OFFICE_MATCH_6", 0)).toBe(6);
+    expect(getCashoutMultiplierBps("OFFICE_MATCH_6", 0, 1)).toBe(0);
+    expect(getMaxSafeStakeCents("OFFICE_MATCH_6", 0)).toBeGreaterThanOrEqual(100_000_000);
+
+    const board = ["KEVIN", "JIM", "DWIGHT", "STANLEY", "KEVIN", "MICHAEL"] as const;
+    expect(getVisibleOfficeCells("ACTIVE", [1, 4], [...board])).toEqual([
+      { index: 1, symbolId: "JIM" },
+      { index: 4, symbolId: "KEVIN" },
+    ]);
+    expect(getVisibleOfficeCells("COMPLETED", [1, 4], [...board])).toEqual([
+      { index: 0, symbolId: "KEVIN" },
+      { index: 1, symbolId: "JIM" },
+      { index: 2, symbolId: "DWIGHT" },
+      { index: 3, symbolId: "STANLEY" },
+      { index: 4, symbolId: "KEVIN" },
+      { index: 5, symbolId: "MICHAEL" },
+    ]);
+  });
+
 });
