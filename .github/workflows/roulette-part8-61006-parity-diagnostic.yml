@@ -1,0 +1,180 @@
+name: Roulette Part 8 Seed 61006 Parity Diagnostic
+
+on:
+  push:
+    branches:
+      - feature/roulette
+    paths:
+      - '.github/workflows/roulette-part8-61006-parity-diagnostic.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  diagnose:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10.15.0
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install workspace
+        run: pnpm install --frozen-lockfile
+
+      - name: Install Chromium
+        run: pnpm exec playwright install --with-deps chromium
+
+      - name: Build TypeScript project references
+        run: pnpm run typecheck:libs
+
+      - name: Enable local 61006 parity tracing
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          p=Path('artifacts/roulette-physics-lab/src/Part2SceneViewport.tsx')
+          s=p.read_text()
+          old="(run.seed === 61004 && step <= 90) ||\n              (run.seed === 61005 && step >= 700 && step <= 950)"
+          new="(run.seed === 61004 && step <= 90) ||\n              (run.seed === 61006 && step <= 70) ||\n              (run.seed === 61005 && step >= 700 && step <= 950)"
+          if old not in s: raise SystemExit('browser parity condition not found')
+          p.write_text(s.replace(old,new))
+
+          p=Path('artifacts/api-server/src/physics-lab/simulation.ts')
+          s=p.read_text()
+          old='(seed === "61004" && step <= 90) ||\n        (seed === "61005" && step >= 700 && step <= 950)'
+          new='(seed === "61004" && step <= 90) ||\n        (seed === "61006" && step <= 70) ||\n        (seed === "61005" && step >= 700 && step <= 950)'
+          if old not in s: raise SystemExit('server parity condition not found')
+          p.write_text(s.replace(old,new))
+          PY
+
+      - name: Typecheck patched diagnostics
+        run: |
+          pnpm --filter @workspace/roulette-physics-lab run typecheck
+          pnpm --filter @workspace/api-server run typecheck
+
+      - name: Start roulette physics lab
+        run: |
+          PORT=4173 BASE_PATH=/ pnpm --filter @workspace/roulette-physics-lab run dev > /tmp/roulette-part8-61006-vite.log 2>&1 &
+          for attempt in {1..60}; do
+            if curl --fail --silent http://127.0.0.1:4173/ > /dev/null; then
+              exit 0
+            fi
+            sleep 1
+          done
+          cat /tmp/roulette-part8-61006-vite.log
+          exit 1
+
+      - name: Run browser seed 61006
+        run: |
+          ROULETTE_LAB_URL="http://127.0.0.1:4173/?part6Headless=1&part6SeedStartIndex=5&part6SeedCount=1&part6MaxDurationSeconds=30" \
+          ROULETTE_PART6_OUTPUT="artifacts/roulette-physics-lab/part8-parity-browser-61006.json" \
+          ROULETTE_PART6_TIMEOUT_MS='180000' \
+          ROULETTE_PART6_EXPECTED_SEEDS='1' \
+          node scripts/roulette-part6-runtime.mjs > part8-parity-browser-61006.log 2>&1
+
+      - name: Run server seed 61006
+        run: |
+          pnpm --filter @workspace/api-server exec tsx -e \
+            "(async()=>{const {simulatePhysicsLabRound}=await import('./src/physics-lab/simulation.ts');const r=await simulatePhysicsLabRound('part8-parity-61006','61006');console.log('SERVER_RESULT '+JSON.stringify({status:r.status,errorCode:r.errorCode,finalPocketIndex:r.finalPocketIndex,finalPocketNumber:r.finalPocketNumber}));})().catch(error=>{console.error(error);process.exit(1)})" \
+            > part8-parity-server-61006.log 2>&1
+
+      - name: Compare steps 0 through 59
+        run: |
+          node <<'NODE'
+          const fs=require('fs');
+          const browserLines=fs.readFileSync('part8-parity-browser-61006.log','utf8').split(/\r?\n/);
+          const serverLines=fs.readFileSync('part8-parity-server-61006.log','utf8').split(/\r?\n/);
+
+          const browser=[];
+          for(const line of browserLines){
+            const marker='BROWSER_CONSOLE ';
+            const i=line.indexOf(marker);
+            if(i<0) continue;
+            try{
+              const outer=JSON.parse(line.slice(i+marker.length));
+              const prefix='ROULETTE_PARITY_STEP ';
+              if(outer.text?.startsWith(prefix)) browser.push(JSON.parse(outer.text.slice(prefix.length)));
+            }catch{}
+          }
+          const server=[];
+          for(const line of serverLines){
+            const prefix='ROULETTE_PARITY_STEP ';
+            const i=line.indexOf(prefix);
+            if(i<0) continue;
+            try{server.push(JSON.parse(line.slice(i+prefix.length)));}catch{}
+          }
+
+          const bMap=new Map(browser.map(r=>[r.step,r]));
+          const sMap=new Map(server.map(r=>[r.step,r]));
+          const norm=(a,b,key)=>Math.hypot(a[key].x-b[key].x,a[key].y-b[key].y,a[key].z-b[key].z);
+          let firstVelocity001=null, firstVelocity01=null, firstPosition001=null, firstContactMismatch=null;
+          let maxVelocity=0,maxPosition=0;
+          const rows=[];
+
+          for(let step=0;step<=59;step++){
+            const b=bMap.get(step), s=sMap.get(step);
+            if(!b||!s) throw new Error('Missing parity row '+step+' browser='+!!b+' server='+!!s);
+            const vd=norm(b,s,'velocity');
+            const pd=norm(b,s,'position');
+            maxVelocity=Math.max(maxVelocity,vd);
+            maxPosition=Math.max(maxPosition,pd);
+            if(firstVelocity001===null&&vd>0.001) firstVelocity001=step;
+            if(firstVelocity01===null&&vd>0.1) firstVelocity01=step;
+            if(firstPosition001===null&&pd>0.001) firstPosition001=step;
+            const mismatch=Boolean(b.darkRaceContact)!==Boolean(s.darkRaceContact) ||
+              Boolean(b.outerWallContact)!==Boolean(s.outerWallContact);
+            if(firstContactMismatch===null&&mismatch) firstContactMismatch=step;
+            rows.push({
+              step,
+              velocityDelta:Number(vd.toFixed(9)),
+              positionDelta:Number(pd.toFixed(9)),
+              browserRadius:b.radius,
+              serverRadius:s.radius,
+              browserVerticalVelocity:b.verticalVelocity,
+              serverVerticalVelocity:s.verticalVelocity,
+              browserContacts:b.contactRoles,
+              serverContacts:s.contactRoles,
+            });
+          }
+          const summary={
+            seed:61006,
+            comparedSteps:60,
+            firstVelocity001,
+            firstVelocity01,
+            firstPosition001,
+            firstContactMismatch,
+            maxVelocityDelta:Number(maxVelocity.toFixed(9)),
+            maxPositionDelta:Number(maxPosition.toFixed(9)),
+          };
+          fs.writeFileSync('part8-61006-parity-summary.json',JSON.stringify({summary,rows},null,2));
+          console.log('PART8_61006_PARITY_SUMMARY '+JSON.stringify(summary));
+          for(const r of rows){
+            if(r.step<=5 || (summary.firstVelocity01!==null && Math.abs(r.step-summary.firstVelocity01)<=3) || r.step>=32&&r.step<=38){
+              console.log('PART8_61006_PARITY_ROW '+JSON.stringify(r));
+            }
+          }
+          NODE
+
+      - name: Upload evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: roulette-part8-61006-parity
+          path: |
+            artifacts/roulette-physics-lab/part8-parity-browser-61006.json
+            part8-parity-browser-61006.log
+            part8-parity-server-61006.log
+            part8-61006-parity-summary.json
+            /tmp/roulette-part8-61006-vite.log
+          if-no-files-found: warn
