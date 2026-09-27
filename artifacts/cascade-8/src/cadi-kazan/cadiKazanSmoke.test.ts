@@ -14,6 +14,14 @@ const visualLockSource = readFileSync(
   fileURLToPath(new URL("./witch.visual-lock.css", import.meta.url)),
   "utf8",
 );
+const scratchSurfaceSource = readFileSync(
+  fileURLToPath(new URL("./scratch/ScratchSurface.ts", import.meta.url)),
+  "utf8",
+);
+const audioManagerSource = readFileSync(
+  fileURLToPath(new URL("./AudioManager.ts", import.meta.url)),
+  "utf8",
+);
 
 describe("cadi kazan route smoke contract", () => {
   it("keeps Cadı Kazan fully mounted inside its owned route module", () => {
@@ -144,8 +152,28 @@ describe("cadi kazan route smoke contract", () => {
 
   it("uses a 30 percent larger scratch brush only for The Office", () => {
     expect(witchClientSource).toContain("const SCRATCH_BRUSH_RADIUS_PX = 14;");
-    expect(witchClientSource).toContain("const OFFICE_SCRATCH_BRUSH_RADIUS_PX = SCRATCH_BRUSH_RADIUS_PX * 1.3;");
+    expect(witchClientSource).toContain("const OFFICE_SCRATCH_BRUSH_RADIUS_PX = SCRATCH_BRUSH_RADIUS_PX * 1.43;");
     expect(witchClientSource).toContain('brushRadiusPx: round.mode === "OFFICE_MATCH_6" ? OFFICE_SCRATCH_BRUSH_RADIUS_PX : SCRATCH_BRUSH_RADIUS_PX');
+  });
+
+
+  it("keeps Office reveal cells white and routes one drag across multiple cells", () => {
+    expect(visualLockSource).toContain("PASS 17 — THE OFFICE white reveal stage");
+    expect(visualLockSource).toContain(".witch-cell.is-office-cell .witch-office-result-art");
+    expect(visualLockSource).toContain("background: #fff !important");
+    expect(witchClientSource).toContain("officeScratchPointerId");
+    expect(witchClientSource).toContain("officeScratchOriginIndex");
+    expect(witchClientSource).toContain("surface.scratchExternalPointer");
+    expect(witchClientSource).toContain("surface.finishExternalPointer");
+    expect(scratchSurfaceSource).toContain("scratchExternalPointer(");
+    expect(scratchSurfaceSource).toContain("finishExternalPointer(");
+  });
+
+  it("plays a negative cue only when an Office card completes with no prize", () => {
+    expect(audioManagerSource).toContain("officeLoss()");
+    expect(witchClientSource).toContain('resultRound?.mode === "OFFICE_MATCH_6" && resultRound.payoutCents === 0');
+    expect(witchClientSource).toContain("this.audio.officeLoss()");
+    expect(witchClientSource).toContain("else this.audio.cashRegister()");
   });
 
 });
