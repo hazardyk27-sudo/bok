@@ -4,16 +4,15 @@ import {
   type BlackjackDurableSnapshot,
 } from "./snapshotState";
 
-export type BlackjackSnapshotQueryResult<Row = Record<string, unknown>> =
-  Readonly<{
-    rows: readonly Row[];
-  }>;
+export type BlackjackSnapshotQueryResult = Readonly<{
+  rows: readonly Record<string, unknown>[];
+}>;
 
 export type BlackjackSnapshotDatabase = Readonly<{
-  query: <Row = Record<string, unknown>>(
+  query: (
     sql: string,
     params?: readonly unknown[],
-  ) => Promise<BlackjackSnapshotQueryResult<Row>>;
+  ) => Promise<BlackjackSnapshotQueryResult>;
 }>;
 
 export class BlackjackSnapshotConflictError extends Error {
@@ -44,7 +43,7 @@ export class BlackjackSnapshotRepository {
       throw new RangeError("Blackjack tableId must be a non-empty string");
     }
 
-    const result = await this.database.query<{ snapshot: unknown }>(
+    const result = await this.database.query(
       `SELECT snapshot
          FROM blackjack_table_snapshots
         WHERE table_id = $1
@@ -86,7 +85,7 @@ export class BlackjackSnapshotRepository {
 
     const result =
       expectedPreviousStateVersion === null
-        ? await this.database.query<{ snapshot: unknown }>(
+        ? await this.database.query(
             `INSERT INTO blackjack_table_snapshots
                (table_id, schema_version, state_version, event_sequence, phase,
                 snapshot, checksum, saved_at, updated_at)
@@ -95,7 +94,7 @@ export class BlackjackSnapshotRepository {
              RETURNING snapshot`,
             commonParams,
           )
-        : await this.database.query<{ snapshot: unknown }>(
+        : await this.database.query(
             `UPDATE blackjack_table_snapshots
                 SET schema_version = $2,
                     state_version = $3,
