@@ -448,6 +448,81 @@ describe("blackjack round settlement", () => {
     ).toThrow(/orphan reserved wager/);
   });
 
+  it("rejects duplicate hand identities, duplicate user accounts and corrupt dealer state", () => {
+    const h1 = hand({
+      handId: "dup",
+      ranks: ["10", "8"],
+      betCents: 4_000,
+    });
+    const h2 = hand({
+      handId: "dup",
+      playerId: "player-2",
+      seatNumber: 2,
+      ranks: ["9", "8"],
+      betCents: 4_000,
+    });
+
+    let account1 = emptyAccount("player-1", "user-1");
+    account1 = reserve(account1, {
+      reservationId: "dup-r1",
+      handId: "dup",
+      amountCents: 4_000,
+    });
+    let account2 = emptyAccount("player-2", "user-2");
+    account2 = reserve(account2, {
+      reservationId: "dup-r2",
+      handId: "dup",
+      amountCents: 4_000,
+    });
+
+    expect(() =>
+      settleBlackjackRound(
+        round([h1, h2], ["10", "7"]),
+        [account1, account2],
+        { transactionIdPrefix: "settle", nowMs: 95 },
+      ),
+    ).toThrow(/duplicate handId/);
+
+    const valid = hand({
+      handId: "valid-user-dup",
+      ranks: ["10", "8"],
+      betCents: 4_000,
+    });
+    let validAccount = emptyAccount("player-1", "user-1");
+    validAccount = reserve(validAccount, {
+      reservationId: "valid-user-dup-r",
+      handId: "valid-user-dup",
+      amountCents: 4_000,
+    });
+    const duplicateUserAccount = {
+      ...emptyAccount("player-2", "user-1"),
+    };
+
+    expect(() =>
+      settleBlackjackRound(
+        round([valid], ["10", "7"]),
+        [validAccount, duplicateUserAccount],
+        { transactionIdPrefix: "settle", nowMs: 96 },
+      ),
+    ).toThrow(/duplicate user account/);
+
+    const corruptDealer = {
+      ...round([valid], ["10", "7"]),
+      dealer: {
+        cards: [card("10")],
+        holeCardRevealed: true,
+      },
+    };
+
+    expect(() =>
+      settleBlackjackRound(
+        corruptDealer,
+        [validAccount],
+        { transactionIdPrefix: "settle", nowMs: 97 },
+      ),
+    ).toThrow(/two dealer cards/);
+  });
+
   it("rejects unresolved hands, hidden dealer card and missing player account", () => {
     const active = hand({
       handId: "active",
