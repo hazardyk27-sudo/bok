@@ -2,6 +2,7 @@ import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 import {
+  buildRouletteCanonicalLaunchState,
   ROULETTE_AUTHORITATIVE_SCALE,
   ROULETTE_BALL_RADIUS,
   ROULETTE_DARK_RACE_CHANNEL_PROFILE,
@@ -107,6 +108,41 @@ describe("authoritative roulette physics config", () => {
     expect(ROULETTE_GRAVITY_Y).toBeCloseTo(-58.86);
     expect(ROULETTE_FIXED_TIMESTEP).toBeCloseTo(1 / 120);
     expect(ROULETTE_MAX_CCD_SUBSTEPS).toBe(8);
+  });
+
+  it("builds launch state from the raw exact-GLB surface and deterministic azimuth", () => {
+    const launchSpeed = 30.089121878379956;
+    const launchAzimuthRadians = 0.07247188932794299;
+    const surfacePoint = {
+      x: 0.1730562356864774,
+      y: -0.3239485800538585,
+      z: 2.3837263977415755,
+    };
+    const surfaceNormal = {
+      x: -0.03037715887293521,
+      y: 0.95486348,
+      z: -0.2954876818613334,
+    };
+    const state = buildRouletteCanonicalLaunchState({
+      surfacePoint,
+      surfaceNormal,
+      launchSpeed,
+      launchAzimuthRadians,
+      ballRadius: ROULETTE_BALL_RADIUS,
+      launchClearance: 0.01,
+      spinFactor: 1,
+    });
+
+    expect(state.surfacePoint).toEqual(surfacePoint);
+    expect(Math.hypot(
+      state.velocity.x,
+      state.velocity.y,
+      state.velocity.z,
+    )).toBeCloseTo(launchSpeed, 12);
+    expect(
+      state.velocity.x * Math.sin(launchAzimuthRadians) +
+        state.velocity.z * Math.cos(launchAzimuthRadians),
+    ).toBeCloseTo(0, 12);
   });
 
   it("locks the measured recessed dark-race geometry", () => {
@@ -433,7 +469,7 @@ describe("authoritative roulette physics config", () => {
       "const PART3_OUTER_SPIN_ANGULAR_DAMPING = 0.01",
     );
     expect(part3ViewportSource).toContain(
-      "const PART6_LAUNCH_SPEED_METERS_PER_SECOND_BASE = 5.45",
+      "const PART6_LAUNCH_SPEED_METERS_PER_SECOND_BASE = 5.0",
     );
     expect(part3ViewportSource).toContain(
       "const PART6_LAUNCH_SPEED_METERS_PER_SECOND_VARIATION = 0.15",
@@ -448,7 +484,10 @@ describe("authoritative roulette physics config", () => {
       "const PART6_BALL_SPIN_FACTOR = 1.0",
     );
     expect(part3ViewportSource).toContain(
-      ".multiplyScalar(PART6_BALL_SPIN_FACTOR / BALL_RADIUS)",
+      "buildRouletteCanonicalLaunchState({",
+    );
+    expect(physicsLabSimulationSource).toContain(
+      "buildRouletteCanonicalLaunchState({",
     );
     expect(part3ViewportSource).toContain(
       "const PART6_INTERACTIVE_YIELD_STEPS = 30",
@@ -596,6 +635,69 @@ describe("authoritative roulette physics config", () => {
     );
     expect(part3ViewportSource).toContain(
       "outerLaneSpinOnly &&\n            !part6FullSpinRouteActive",
+    );
+  });
+
+  it("locks Part 5 full-spin physics to exact GLB colliders only", () => {
+    expect(part3ViewportSource).toContain(
+      "'PART5_EXACT_GLB_COLLIDER_CONTRACT'",
+    );
+    expect(part3ViewportSource).toContain(
+      "'PART5_EXACT_GLB_COLLIDER_CONTRACT_VIOLATION'",
+    );
+    expect(part3ViewportSource).toContain(
+      "'exact-glb-stationary-trimesh'",
+    );
+    expect(part3ViewportSource).toContain(
+      "'exact-glb-rotor-trimesh'",
+    );
+    expect(part3ViewportSource).toContain(
+      "legacyColliderCount === 0",
+    );
+    expect(physicsLabSimulationSource).toContain(
+      '"ROULETTE_PART5_EXACT_GLB_COLLIDER_CONTRACT"',
+    );
+    expect(physicsLabSimulationSource).toContain(
+      '"ROULETTE_PART5_EXACT_GLB_COLLIDER_CONTRACT_VIOLATION"',
+    );
+    expect(physicsLabSimulationSource).toContain(
+      "const exactGlbStationaryCollider = addExactGlbStationaryCollider(",
+    );
+    expect(physicsLabSimulationSource).toContain(
+      "const exactGlbRotorCollider = addExactGlbRotorCollider(",
+    );
+  });
+
+  it("locks Part 6 actual-contact micro-parity telemetry", () => {
+    expect(part3ViewportSource).toContain(
+      "'PART6_MICRO_PARITY_RESULT'",
+    );
+    expect(part3ViewportSource).toContain(
+      "microParityStationarySamples",
+    );
+    expect(part3ViewportSource).toContain(
+      "microParityRotorSamples",
+    );
+    expect(part3ViewportSource).toContain(
+      "microParityMaxPointDeltaWorld",
+    );
+    expect(part3ViewportSource).toContain(
+      "microParityMaxNormalAngleDegrees",
+    );
+    expect(part3ViewportSource).toContain(
+      "microParityMaxClearanceDeltaWorld",
+    );
+    expect(physicsLabSimulationSource).toContain(
+      '"SERVER_PART6_MICRO_PARITY_RESULT"',
+    );
+    expect(physicsLabSimulationSource).toContain(
+      "function exactRotorSurfaceAt(",
+    );
+    expect(physicsLabSimulationSource).toContain(
+      "function exactColliderSurfaceAt(",
+    );
+    expect(physicsLabSimulationSource).toContain(
+      "microParityPassed",
     );
   });
 

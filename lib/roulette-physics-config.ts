@@ -54,6 +54,112 @@ export const ROULETTE_EUROPEAN_SEQUENCE = [
 export const ROULETTE_POCKET_COUNT = ROULETTE_EUROPEAN_SEQUENCE.length;
 export const ROULETTE_SEGMENT_DEGREES = 360 / ROULETTE_POCKET_COUNT;
 
+export type RouletteLaunchVector = {
+  x: number;
+  y: number;
+  z: number;
+};
+
+export type RouletteCanonicalLaunchState = {
+  surfacePoint: RouletteLaunchVector;
+  surfaceNormal: RouletteLaunchVector;
+  position: RouletteLaunchVector;
+  velocity: RouletteLaunchVector;
+  angularVelocity: RouletteLaunchVector;
+};
+
+export function buildRouletteCanonicalLaunchState({
+  surfacePoint,
+  surfaceNormal,
+  launchSpeed,
+  launchAzimuthRadians,
+  ballRadius = ROULETTE_BALL_RADIUS,
+  launchClearance = 0.01,
+  spinFactor = 1,
+}: {
+  surfacePoint: RouletteLaunchVector;
+  surfaceNormal: RouletteLaunchVector;
+  launchSpeed: number;
+  launchAzimuthRadians: number;
+  ballRadius?: number;
+  launchClearance?: number;
+  spinFactor?: number;
+}): RouletteCanonicalLaunchState {
+  const point = {
+    x: surfacePoint.x,
+    y: surfacePoint.y,
+    z: surfacePoint.z,
+  };
+  const normalLength = Math.hypot(
+    surfaceNormal.x,
+    surfaceNormal.y,
+    surfaceNormal.z,
+  );
+  if (normalLength <= 1e-12) {
+    throw new Error("ROULETTE_CANONICAL_LAUNCH_NORMAL_MISSING");
+  }
+  const normal = {
+    x: surfaceNormal.x / normalLength,
+    y: surfaceNormal.y / normalLength,
+    z: surfaceNormal.z / normalLength,
+  };
+
+  const radial = {
+    x: Math.sin(launchAzimuthRadians),
+    y: 0,
+    z: Math.cos(launchAzimuthRadians),
+  };
+  const tangentRaw = {
+    x: normal.y * radial.z - normal.z * radial.y,
+    y: normal.z * radial.x - normal.x * radial.z,
+    z: normal.x * radial.y - normal.y * radial.x,
+  };
+  const tangentLength = Math.hypot(
+    tangentRaw.x,
+    tangentRaw.y,
+    tangentRaw.z,
+  );
+  if (tangentLength <= 1e-12) {
+    throw new Error("ROULETTE_CANONICAL_LAUNCH_TANGENT_MISSING");
+  }
+  const tangent = {
+    x: tangentRaw.x / tangentLength,
+    y: tangentRaw.y / tangentLength,
+    z: tangentRaw.z / tangentLength,
+  };
+
+  const clearance = ballRadius + launchClearance;
+  const position = {
+    x: point.x + normal.x * clearance,
+    y: point.y + normal.y * clearance,
+    z: point.z + normal.z * clearance,
+  };
+  const velocity = {
+    x: tangent.x * launchSpeed,
+    y: tangent.y * launchSpeed,
+    z: tangent.z * launchSpeed,
+  };
+  const angularVelocity = {
+    x:
+      (normal.y * velocity.z - normal.z * velocity.y) *
+      (spinFactor / ballRadius),
+    y:
+      (normal.z * velocity.x - normal.x * velocity.z) *
+      (spinFactor / ballRadius),
+    z:
+      (normal.x * velocity.y - normal.y * velocity.x) *
+      (spinFactor / ballRadius),
+  };
+
+  return {
+    surfacePoint: point,
+    surfaceNormal: normal,
+    position,
+    velocity,
+    angularVelocity,
+  };
+}
+
 export const ROULETTE_PHYSICS_CONFIG = {
   schemaVersion: ROULETTE_PHYSICS_SCHEMA_VERSION,
   modelPath: ROULETTE_MODEL_PATH,
