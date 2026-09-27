@@ -33,3 +33,4 @@ export * from "./eventStream";
 export * from "./syncProtocol";
 export * from "./reconnect";
 export * from "./connectionPolicy";
+export * from "./snapshotState";\nexport * from "./snapshotRepository";\n
