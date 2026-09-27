@@ -8884,3 +8884,82 @@ body.businesses-route {
     margin-left: 14px;
   }
 }
+
+
+/* 2026-09-27 — Part 21: collect-all matches card collect button */
+.route-shell.is-businesses-page .business-summary-collect-all,
+.route-shell.is-businesses-page .business-summary-collect-all:not(:disabled) {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  min-height: 54px;
+  padding: 0 13px;
+  border: 1px solid var(--idle-action-border);
+  border-radius: 11px;
+  color: var(--idle-action-primary-text);
+  background: linear-gradient(
+    180deg,
+    var(--idle-action-primary-start) 0%,
+    var(--idle-action-primary-end) 100%
+  );
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, .09),
+    0 8px 20px rgba(63, 98, 199, .16);
+  font-family: var(--idle-font-ui);
+  font-weight: 760;
+  letter-spacing: .015em;
+}
+
+.route-shell.is-businesses-page .business-collect-all-copy {
+  display: inline-flex;
+  align-items: center;
+  gap: 0;
+}
+
+.route-shell.is-businesses-page .business-collect-all-copy small,
+.route-shell.is-businesses-page .business-collect-all-arrow {
+  display: none;
+}
+
+.route-shell.is-businesses-page .business-collect-all-copy strong,
+.route-shell.is-businesses-page .business-collect-all-value {
+  color: inherit;
+  font: inherit;
+  letter-spacing: inherit;
+}
+
+.route-shell.is-businesses-page .business-summary-collect-all:not(:disabled):hover {
+  transform: translateY(-1px);
+  border-color: rgba(151, 181, 255, .28);
+  background: linear-gradient(
+    180deg,
+    var(--idle-action-primary-hover-start) 0%,
+    var(--idle-action-primary-hover-end) 100%
+  );
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, .11),
+    0 10px 24px rgba(63, 98, 199, .20);
+}
+
+.route-shell.is-businesses-page .business-summary-collect-all:disabled {
+  color: rgba(238, 244, 255, .46);
+  border-color: rgba(111, 151, 255, .09);
+  background: var(--idle-action-disabled);
+  box-shadow: none;
+  opacity: 1;
+}
+
+@media (min-width: 1101px) {
+  .route-shell.is-businesses-page .business-summary-collect-all {
+    font-size: 20px;
+  }
+}
+
+@media (max-width: 760px) {
+  .route-shell.is-businesses-page .business-summary-collect-all {
+    min-height: 48px;
+    border-radius: 10px;
+    font-size: 12px;
+  }
+}

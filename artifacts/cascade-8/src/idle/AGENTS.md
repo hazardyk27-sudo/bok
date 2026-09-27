@@ -28,5 +28,5 @@ An Idle commit never publishes itself to Replit; only the central one-game promo
 - If a note conflicts with code/tests/ownership rules, the validated repository state wins.
 
 ## Current milestones
-- 2026-09-27 — Slate Blue Parts 1–20 complete — Desktop business-card typography remains at the requested scale; `BİRİKMİŞ GELİR` and its amount are now aligned to the same left column as hourly income, and the accrued readiness status (`TOPLAMAYA HAZIR` / related status text) has been removed from the card. Next: visually QA and promote to `integration/replit-preview` when approved.
+- 2026-09-27 — Slate Blue Parts 1–21 complete — `TÜMÜNÜ TOPLA` now uses the same primary-action color, typography, radius, height, disabled state and hover treatment as each card's `TOPLA` button; its extra eyebrow and arrow are hidden so the two controls read as one system. Next: visually QA and promote to `integration/replit-preview` when approved.
 - 2026-09-26 — Isolation v2 active — Idle / İşletmeler development stays on `feature/idle`; preview release is ownership-scoped into `integration/replit-preview`, not a whole-branch merge.

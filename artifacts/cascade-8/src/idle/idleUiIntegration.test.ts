@@ -1628,3 +1628,20 @@ describe("Businesses Part 20 accrued heading cleanup", () => {
     expect(idleCssSource).toContain("margin-left: 14px");
   });
 });
+
+
+describe("Businesses Part 21 collect-all parity", () => {
+  it("uses the same primary action surface and typography as card collect buttons", () => {
+    expect(idleCssSource).toContain("/* 2026-09-27 — Part 21: collect-all matches card collect button */");
+    expect(idleCssSource).toContain("var(--idle-action-primary-start)");
+    expect(idleCssSource).toContain("var(--idle-action-primary-end)");
+    expect(idleCssSource).toContain("font-size: 20px");
+    expect(idleCssSource).toContain("font-weight: 760");
+  });
+
+  it("removes the extra eyebrow and arrow so the control reads like the card collect action", () => {
+    expect(idleCssSource).toContain(".business-collect-all-copy small,");
+    expect(idleCssSource).toContain(".business-collect-all-arrow");
+    expect(idleCssSource).toContain("display: none");
+  });
+});
