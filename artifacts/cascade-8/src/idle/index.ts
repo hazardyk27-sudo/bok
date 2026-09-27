@@ -71,6 +71,65 @@ function getBusinessLevelMilestone(stageLevel: number) {
   return "ICON";
 }
 
+
+function getRoadmapNodePosition(index: number, total: number) {
+  if (total <= 1) return 0;
+  return index / (total - 1) * 100;
+}
+
+function renderBusinessLevelRoadmap(
+  businessId: BusinessId,
+  currentLevel: number | null,
+) {
+  const definition = BUSINESS_DETAIL_DEFINITIONS[businessId];
+  const currentIndex = currentLevel === null
+    ? -1
+    : definition.levels.findIndex((stage) => stage.level === currentLevel);
+  const progressPercent = currentIndex < 0
+    ? 0
+    : Math.round((currentIndex + 1) / definition.levels.length * 100);
+  const currentStage = currentIndex < 0 ? null : definition.levels[currentIndex];
+  const nextStage = currentIndex < 0
+    ? definition.levels[0]
+    : definition.levels[currentIndex + 1] ?? null;
+
+  return `
+    <div class="detail-roadmap-card" style="--detail-progress: ${progressPercent}%">
+      <div class="detail-roadmap-head">
+        <span>SEVİYE İLERLEMESİ</span>
+        <strong>${currentStage ? `LV${currentStage.level}` : "KİLİTLİ"} · %${progressPercent}</strong>
+      </div>
+      <div
+        class="detail-roadmap-track"
+        role="progressbar"
+        aria-label="${definition.label} seviye ilerlemesi"
+        aria-valuemin="0"
+        aria-valuemax="100"
+        aria-valuenow="${progressPercent}"
+      >
+        <i class="detail-roadmap-fill" aria-hidden="true"></i>
+        ${definition.levels.map((stage, index) => {
+          const state = getBusinessLevelState(stage.level, currentLevel);
+          const position = getRoadmapNodePosition(index, definition.levels.length);
+          return `
+            <span
+              class="detail-roadmap-node"
+              data-roadmap-state="${state}"
+              style="--roadmap-node-x: ${position}%"
+              title="Lv${stage.level} · ${stage.name}"
+              aria-hidden="true"
+            ><b>${stage.level}</b></span>
+          `;
+        }).join("")}
+      </div>
+      <div class="detail-roadmap-meta">
+        <span>${currentStage ? currentStage.name : "İşletme henüz açılmadı"}</span>
+        <strong>${nextStage ? `SONRAKİ · LV${nextStage.level} ${nextStage.name}` : "TÜM SEVİYELER TAMAMLANDI"}</strong>
+      </div>
+    </div>
+  `;
+}
+
 function renderBusinessLevelTree(
   businessId: BusinessId,
   currentLevel: number | null,
@@ -189,6 +248,60 @@ function getVaultLevelState(
   if (targetLevel === currentLevel) return "current";
   if (targetLevel === currentLevel + 1) return "future";
   return "locked";
+}
+
+
+function renderVaultLevelRoadmap(
+  businessLevel: number | null,
+  currentVaultLevel: number,
+) {
+  const isOwned = businessLevel !== null;
+  const currentIndex = isOwned
+    ? VAULT_LEVELS.findIndex((vault) => vault.level === currentVaultLevel)
+    : -1;
+  const progressPercent = currentIndex < 0
+    ? 0
+    : Math.round((currentIndex + 1) / VAULT_LEVELS.length * 100);
+  const currentVault = currentIndex < 0 ? null : VAULT_LEVELS[currentIndex];
+  const nextVault = currentIndex < 0
+    ? VAULT_LEVELS[0]
+    : VAULT_LEVELS[currentIndex + 1] ?? null;
+
+  return `
+    <div class="detail-roadmap-card detail-roadmap-card--vault" style="--detail-progress: ${progressPercent}%">
+      <div class="detail-roadmap-head">
+        <span>KASA İLERLEMESİ</span>
+        <strong>${currentVault ? `LV${currentVault.level}` : "KİLİTLİ"} · %${progressPercent}</strong>
+      </div>
+      <div
+        class="detail-roadmap-track"
+        role="progressbar"
+        aria-label="Kasa seviye ilerlemesi"
+        aria-valuemin="0"
+        aria-valuemax="100"
+        aria-valuenow="${progressPercent}"
+      >
+        <i class="detail-roadmap-fill" aria-hidden="true"></i>
+        ${VAULT_LEVELS.map((vault, index) => {
+          const state = getVaultLevelState(vault.level, currentVaultLevel, isOwned);
+          const position = getRoadmapNodePosition(index, VAULT_LEVELS.length);
+          return `
+            <span
+              class="detail-roadmap-node"
+              data-roadmap-state="${state}"
+              style="--roadmap-node-x: ${position}%"
+              title="Kasa Lv${vault.level} · ${vault.capacityHours} saat"
+              aria-hidden="true"
+            ><b>${vault.capacityHours}</b></span>
+          `;
+        }).join("")}
+      </div>
+      <div class="detail-roadmap-meta">
+        <span>${currentVault ? `${currentVault.capacityHours} saat kapasite` : "İşletme satın alındığında açılır"}</span>
+        <strong>${nextVault ? `SONRAKİ · ${nextVault.capacityHours} SAAT` : "MAKSİMUM KASA KAPASİTESİ"}</strong>
+      </div>
+    </div>
+  `;
 }
 
 function getVaultUpgradeCostCents(
@@ -527,6 +640,11 @@ export const BUSINESSES_MARKUP = `
               <span>GELİŞİM ROTASI</span>
               <strong>LV0 → LV8</strong>
             </div>
+            <div
+              class="business-detail-roadmap"
+              data-idle-business-level-roadmap
+              aria-label="İşletme seviye ilerlemesi"
+            ></div>
             <div class="business-level-tree-legend" aria-label="Seviye durumları">
               <span data-legend-state="completed">TAMAMLANDI</span>
               <span data-legend-state="current">MEVCUT</span>
@@ -545,6 +663,11 @@ export const BUSINESSES_MARKUP = `
               <span>KASA GELİŞİMİ</span>
               <strong>1SA → 24SA</strong>
             </div>
+            <div
+              class="business-detail-roadmap"
+              data-idle-vault-level-roadmap
+              aria-label="Kasa seviye ilerlemesi"
+            ></div>
             <div class="business-vault-tree-legend" aria-label="Kasa seviye durumları">
               <span data-legend-state="completed">TAMAMLANDI</span>
               <span data-legend-state="current">MEVCUT</span>
@@ -878,6 +1001,8 @@ export class BusinessesClient {
     const accruedNode = this.root.querySelector<HTMLElement>("[data-idle-detail-accrued]");
     const hourlyNode = this.root.querySelector<HTMLElement>("[data-idle-detail-hourly]");
     const vaultNode = this.root.querySelector<HTMLElement>("[data-idle-detail-vault]");
+    const businessRoadmapNode = this.root.querySelector<HTMLElement>("[data-idle-business-level-roadmap]");
+    const vaultRoadmapNode = this.root.querySelector<HTMLElement>("[data-idle-vault-level-roadmap]");
     const businessLevelTreeNode = this.root.querySelector<HTMLElement>("[data-idle-business-level-tree]");
     const vaultLevelTreeNode = this.root.querySelector<HTMLElement>("[data-idle-vault-level-tree]");
 
@@ -890,6 +1015,8 @@ export class BusinessesClient {
       || !accruedNode
       || !hourlyNode
       || !vaultNode
+      || !businessRoadmapNode
+      || !vaultRoadmapNode
       || !businessLevelTreeNode
       || !vaultLevelTreeNode
       || !vault
@@ -925,6 +1052,26 @@ export class BusinessesClient {
       : formatCreditsFromMicrocents(vaultCapacityMicrocents);
 
     const detailBusy = this.busyBusinesses.has(business.businessId);
+
+    const businessRoadmapSignature =
+      `${business.businessId}:${business.businessLevel ?? "locked"}`;
+    if (businessRoadmapNode.dataset.roadmapSignature !== businessRoadmapSignature) {
+      businessRoadmapNode.innerHTML = renderBusinessLevelRoadmap(
+        business.businessId,
+        business.businessLevel,
+      );
+      businessRoadmapNode.dataset.roadmapSignature = businessRoadmapSignature;
+    }
+
+    const vaultRoadmapSignature =
+      `${business.businessLevel === null ? "locked" : "owned"}:${business.vaultLevel}`;
+    if (vaultRoadmapNode.dataset.roadmapSignature !== vaultRoadmapSignature) {
+      vaultRoadmapNode.innerHTML = renderVaultLevelRoadmap(
+        business.businessLevel,
+        business.vaultLevel,
+      );
+      vaultRoadmapNode.dataset.roadmapSignature = vaultRoadmapSignature;
+    }
 
     businessLevelTreeNode.innerHTML = renderBusinessLevelTree(
       business.businessId,

@@ -1456,3 +1456,43 @@ describe("Businesses premium Parts 4–6", () => {
     expect(idleCssSource).toContain("transform: translateY(-2px)");
   });
 });
+describe("Businesses premium Parts 7–10", () => {
+  it("adds live business and vault roadmap hooks to Details", () => {
+    expect(idleIndexSource).toContain("renderBusinessLevelRoadmap");
+    expect(idleIndexSource).toContain("renderVaultLevelRoadmap");
+    expect(idleIndexSource).toContain("data-idle-business-level-roadmap");
+    expect(idleIndexSource).toContain("data-idle-vault-level-roadmap");
+    expect(idleIndexSource).toContain("businessRoadmapSignature");
+    expect(idleIndexSource).toContain("vaultRoadmapSignature");
+  });
+
+  it("drives roadmap fill and nodes from the live level state", () => {
+    expect(idleIndexSource).toContain("getRoadmapNodePosition");
+    expect(idleIndexSource).toContain("style=\"--detail-progress: ${progressPercent}%\"");
+    expect(idleIndexSource).toContain("data-roadmap-state=\"${state}\"");
+    expect(idleIndexSource).toContain("aria-valuenow=\"${progressPercent}\"");
+  });
+
+  it("uses a restrained premium Details surface instead of bright chrome", () => {
+    expect(idleCssSource).toContain("/* 2026-09-27 — Parts 7–10: premium Details + dynamic level roadmaps */");
+    expect(idleCssSource).toContain("width: min(610px, 96vw)");
+    expect(idleCssSource).toContain(".detail-roadmap-card {");
+    expect(idleCssSource).toContain("background: linear-gradient(90deg, #5578cf 0%, #6f97ff 68%, #89a5df 100%)");
+  });
+
+  it("keeps stage cards compact and removes the old blocky feel", () => {
+    expect(idleCssSource).toContain(".business-level-node-card,");
+    expect(idleCssSource).toContain(".vault-level-node-card {");
+    expect(idleCssSource).toContain("border-radius: 12px");
+    expect(idleCssSource).toContain("box-shadow: none");
+    expect(idleCssSource).toContain("opacity: .42");
+  });
+
+  it("keeps Details responsive and motion-safe", () => {
+    expect(idleCssSource).toContain("@media (max-width: 760px)");
+    expect(idleCssSource).toContain("width: 100vw");
+    expect(idleCssSource).toContain("@keyframes idle-detail-roadmap-fill");
+    expect(idleCssSource).toContain("@media (prefers-reduced-motion: reduce)");
+    expect(idleCssSource).toContain(".detail-roadmap-fill");
+  });
+});

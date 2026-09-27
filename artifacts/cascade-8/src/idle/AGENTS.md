@@ -28,5 +28,5 @@ An Idle commit never publishes itself to Replit; only the central one-game promo
 - If a note conflicts with code/tests/ownership rules, the validated repository state wins.
 
 ## Current milestones
-- 2026-09-27 — Approved Slate Blue redesign Parts 1–6 active — restrained typography hierarchy, quiet progression/KPI treatment and layered card information hierarchy now match the selected dark SaaS reference; hero badges/icons are subdued and interactions stay low-glow. Next: Parts 7–10 premium Details, dynamic level/vault progress and final responsive regression.
+- 2026-09-27 — Approved Slate Blue redesign Parts 1–10 complete — Details now shares the same restrained dark SaaS hierarchy; business and vault progression have live horizontal roadmap bars driven by current levels, stage cards are compact/low-glow, and phone/desktop behavior includes reduced-motion safeguards. Next: promote this Idle slice to `integration/replit-preview` and visually QA the reference parity.
 - 2026-09-26 — Isolation v2 active — Idle / İşletmeler development stays on `feature/idle`; preview release is ownership-scoped into `integration/replit-preview`, not a whole-branch merge.

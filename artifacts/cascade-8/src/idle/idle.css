@@ -7633,3 +7633,577 @@ body.businesses-route {
     padding: 14px;
   }
 }
+/* 2026-09-27 — Parts 7–10: premium Details + dynamic level roadmaps */
+/* Part 7 — Details inherits the restrained Slate Blue language */
+.business-detail-drawer {
+  width: min(610px, 96vw);
+  padding:
+    max(22px, env(safe-area-inset-top))
+    max(24px, env(safe-area-inset-right))
+    max(20px, env(safe-area-inset-bottom))
+    24px;
+  border-left-color: rgba(111, 151, 255, .11);
+  background:
+    radial-gradient(circle at 82% 2%, rgba(92, 125, 255, .055), transparent 26%),
+    linear-gradient(180deg, #091421 0%, #07101d 56%, #050b17 100%);
+  box-shadow: -24px 0 68px rgba(0, 0, 0, .34);
+}
+
+.business-detail-header {
+  gap: 18px;
+  padding-bottom: 14px;
+  border-bottom: 1px solid rgba(111, 151, 255, .08);
+}
+
+.business-detail-heading > span {
+  color: #8ea9e2;
+  font-family: var(--idle-font-ui);
+  font-size: 8px;
+  font-weight: 700;
+  letter-spacing: .075em;
+}
+
+.business-detail-heading h2 {
+  margin-top: 7px;
+  color: #eef4ff;
+  font-size: clamp(31px, 3.1vw, 40px);
+  font-weight: 760;
+  letter-spacing: -.04em;
+}
+
+.business-detail-heading p {
+  margin-top: 7px;
+  color: var(--idle-text-secondary);
+  font-size: 12px;
+  font-weight: 520;
+}
+
+.business-detail-status-row {
+  gap: 8px;
+  padding: 11px 0 10px;
+}
+
+.business-detail-level-badge,
+.business-detail-state {
+  min-height: 25px;
+  padding-inline: 9px;
+  color: #a8bdec;
+  border-color: rgba(111, 151, 255, .11);
+  background: rgba(111, 151, 255, .045);
+  font-size: 8px;
+  font-weight: 700;
+}
+
+.business-detail-tabs {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 3px;
+  padding: 3px;
+  border: 1px solid rgba(111, 151, 255, .085);
+  border-radius: 12px;
+  background: rgba(5, 11, 23, .58);
+}
+
+.business-detail-tabs button {
+  min-height: 39px;
+  border: 0;
+  border-radius: 9px;
+  color: var(--idle-text-muted);
+  background: transparent;
+  font-family: var(--idle-font-ui);
+  font-size: 9px;
+  font-weight: 680;
+  letter-spacing: .035em;
+}
+
+.business-detail-tabs button[aria-selected="true"] {
+  color: #eaf0fc;
+  border: 0;
+  background: rgba(111, 151, 255, .105);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .025);
+}
+
+.business-detail-summary {
+  gap: 8px;
+  margin-top: 11px;
+}
+
+.business-detail-summary > div {
+  padding: 11px 12px;
+  border-color: rgba(111, 151, 255, .085);
+  border-radius: 11px;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, .009), transparent),
+    rgba(7, 17, 31, .58);
+  box-shadow: none;
+}
+
+.business-detail-summary span {
+  color: var(--idle-text-muted);
+  font-size: 8px;
+  font-weight: 650;
+  letter-spacing: .05em;
+}
+
+.business-detail-summary strong {
+  margin-top: 6px;
+  color: #e8effc;
+  font-size: 14px;
+  font-weight: 720;
+}
+
+.business-detail-scroll {
+  margin-top: 11px;
+  padding-right: 3px;
+}
+
+.business-detail-section-heading {
+  padding: 10px 1px 8px;
+}
+
+.business-detail-section-heading > span,
+.business-detail-section-heading > strong {
+  font-family: var(--idle-font-ui);
+  font-size: 8px;
+  font-weight: 680;
+  letter-spacing: .055em;
+}
+
+.business-detail-section-heading > span {
+  color: var(--idle-text-secondary);
+}
+
+.business-detail-section-heading > strong {
+  color: #9eb5e7;
+}
+
+/* Part 8 — dynamic business level roadmap */
+.business-detail-roadmap {
+  margin-bottom: 12px;
+}
+
+.detail-roadmap-card {
+  --detail-progress: 0%;
+  padding: 13px 14px 12px;
+  border: 1px solid rgba(111, 151, 255, .09);
+  border-radius: 13px;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, .009), transparent),
+    rgba(7, 17, 31, .52);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .012);
+}
+
+.detail-roadmap-head,
+.detail-roadmap-meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-width: 0;
+}
+
+.detail-roadmap-head span {
+  color: var(--idle-text-muted);
+  font-size: 8px;
+  font-weight: 680;
+  letter-spacing: .06em;
+}
+
+.detail-roadmap-head strong {
+  color: #c9d7f5;
+  font-size: 10px;
+  font-variant-numeric: tabular-nums;
+  font-weight: 720;
+  white-space: nowrap;
+}
+
+.detail-roadmap-track {
+  position: relative;
+  height: 7px;
+  margin: 20px 9px 17px;
+  border-radius: 999px;
+  background: rgba(155, 172, 205, .09);
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, .24);
+}
+
+.detail-roadmap-fill {
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: var(--detail-progress);
+  border-radius: inherit;
+  background: linear-gradient(90deg, #5578cf 0%, #6f97ff 68%, #89a5df 100%);
+  box-shadow: none;
+  animation: idle-detail-roadmap-fill .42s cubic-bezier(.22, .72, .2, 1) both;
+}
+
+.detail-roadmap-node {
+  position: absolute;
+  z-index: 2;
+  top: 50%;
+  left: var(--roadmap-node-x);
+  display: grid;
+  place-items: center;
+  width: 16px;
+  height: 16px;
+  border: 2px solid #1a2638;
+  border-radius: 50%;
+  color: transparent;
+  background: #0c1624;
+  transform: translate(-50%, -50%);
+  box-shadow: 0 0 0 3px rgba(5, 11, 23, .84);
+}
+
+.detail-roadmap-node b {
+  display: none;
+}
+
+.detail-roadmap-node[data-roadmap-state="completed"] {
+  border-color: #5f7fc9;
+  background: #3e5d9f;
+}
+
+.detail-roadmap-node[data-roadmap-state="current"] {
+  width: 18px;
+  height: 18px;
+  border-color: #b7c9ef;
+  background: #718fd1;
+  box-shadow:
+    0 0 0 4px rgba(111, 151, 255, .10),
+    0 0 0 3px rgba(5, 11, 23, .90);
+}
+
+.detail-roadmap-node[data-roadmap-state="future"] {
+  border-color: rgba(137, 165, 223, .48);
+  background: #101b2b;
+}
+
+.detail-roadmap-node[data-roadmap-state="locked"] {
+  border-color: rgba(127, 141, 170, .20);
+  background: #0b1421;
+}
+
+.detail-roadmap-meta span,
+.detail-roadmap-meta strong {
+  min-width: 0;
+  font-size: 9px;
+  line-height: 1.3;
+}
+
+.detail-roadmap-meta span {
+  overflow: hidden;
+  color: var(--idle-text-secondary);
+  font-weight: 560;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.detail-roadmap-meta strong {
+  color: #9eb5e7;
+  font-weight: 680;
+  text-align: right;
+}
+
+/* Part 9 — lighter stage cards + dynamic vault roadmap */
+.business-level-tree-legend,
+.business-vault-tree-legend {
+  gap: 5px;
+  margin: 8px 0 10px;
+}
+
+.business-level-tree-legend span,
+.business-vault-tree-legend span {
+  min-height: 21px;
+  padding-inline: 7px;
+  color: var(--idle-text-muted);
+  border-color: rgba(111, 151, 255, .075);
+  background: rgba(7, 16, 29, .42);
+  font-family: var(--idle-font-ui);
+  font-size: 7px;
+  font-weight: 660;
+  letter-spacing: .035em;
+}
+
+.business-level-node,
+.vault-level-node {
+  grid-template-columns: 28px minmax(0, 1fr);
+  gap: 8px;
+}
+
+.business-level-node-dot,
+.vault-level-node-dot {
+  width: 22px;
+  height: 22px;
+  margin-top: 14px;
+  color: var(--idle-text-muted);
+  border-color: rgba(127, 141, 170, .18);
+  background: #0b1523;
+  box-shadow: 0 0 0 4px #07101d;
+  font-family: var(--idle-font-ui);
+  font-size: 7px;
+  font-weight: 700;
+}
+
+.business-level-node-rail::after,
+.vault-level-node-rail::after {
+  top: 30px;
+  bottom: -9px;
+  background: rgba(111, 151, 255, .075);
+}
+
+.business-level-node-card,
+.vault-level-node-card {
+  margin-bottom: 8px;
+  padding: 12px 13px;
+  border-color: rgba(111, 151, 255, .085);
+  border-radius: 12px;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, .008), transparent),
+    rgba(7, 17, 31, .48);
+  box-shadow: none;
+}
+
+.business-level-node-header strong,
+.vault-level-node-header > div > strong {
+  margin-top: 5px;
+  color: #e9effb;
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.business-level-node-kicker,
+.vault-level-node-header > div > span {
+  color: var(--idle-text-muted);
+  font-family: var(--idle-font-ui);
+  font-size: 7px;
+  font-weight: 650;
+  letter-spacing: .05em;
+}
+
+.business-level-node-state b,
+.business-level-node-state span,
+.vault-level-node-state {
+  min-height: 21px;
+  padding-inline: 7px;
+  color: var(--idle-text-muted);
+  border-color: rgba(111, 151, 255, .08);
+  background: rgba(111, 151, 255, .025);
+  font-family: var(--idle-font-ui);
+  font-size: 7px;
+  font-weight: 660;
+}
+
+.business-level-node-income,
+.vault-level-node-capacity {
+  margin-top: 10px;
+  padding: 10px 0 9px;
+  border-color: rgba(111, 151, 255, .07);
+}
+
+.business-level-node-income > strong,
+.vault-level-node-capacity > strong {
+  margin-top: 5px;
+  color: #e8effd;
+  font-size: 18px;
+  font-weight: 720;
+}
+
+.business-level-node-income > small,
+.vault-level-node-capacity > small {
+  margin-top: 5px;
+  color: var(--idle-text-secondary);
+  font-size: 9px;
+}
+
+.business-level-node-meta,
+.vault-level-node-meta {
+  gap: 10px;
+  padding-top: 9px;
+}
+
+.business-level-node-meta dt,
+.vault-level-node-meta dt {
+  color: var(--idle-text-muted);
+  font-size: 7px;
+  font-weight: 650;
+}
+
+.business-level-node-meta dd,
+.vault-level-node-meta dd {
+  margin-top: 4px;
+  color: #dfe8f7;
+  font-size: 11px;
+  font-weight: 660;
+}
+
+.business-level-node[data-level-state="completed"] .business-level-node-dot,
+.vault-level-node[data-vault-state="completed"] .vault-level-node-dot {
+  color: #d7e2f7;
+  border-color: rgba(95, 127, 201, .48);
+  background: #314a7f;
+}
+
+.business-level-node[data-level-state="current"] .business-level-node-dot,
+.vault-level-node[data-vault-state="current"] .vault-level-node-dot {
+  color: #f0f5ff;
+  border-color: #a9bde8;
+  background: #6684c5;
+  box-shadow:
+    0 0 0 4px rgba(111, 151, 255, .08),
+    0 0 0 3px #07101d;
+}
+
+.business-level-node[data-level-state="future"] .business-level-node-dot,
+.vault-level-node[data-vault-state="future"] .vault-level-node-dot {
+  color: #aabde5;
+  border-color: rgba(137, 165, 223, .40);
+  background: #101b2b;
+}
+
+.business-level-node[data-level-state="current"] .business-level-node-card,
+.vault-level-node[data-vault-state="current"] .vault-level-node-card {
+  border-color: rgba(111, 151, 255, .18);
+  background:
+    linear-gradient(135deg, rgba(111, 151, 255, .045), transparent 48%),
+    rgba(8, 19, 34, .62);
+}
+
+.business-level-node[data-level-state="future"] .business-level-node-card,
+.vault-level-node[data-vault-state="future"] .vault-level-node-card {
+  border-color: rgba(111, 151, 255, .15);
+  background:
+    linear-gradient(135deg, rgba(111, 151, 255, .035), transparent 52%),
+    rgba(7, 17, 31, .56);
+}
+
+.business-level-node[data-level-state="locked"] .business-level-node-card,
+.vault-level-node[data-vault-state="locked"] .vault-level-node-card {
+  opacity: .42;
+  filter: saturate(.65);
+}
+
+/* Part 10 — responsive Details + motion safety */
+@media (max-width: 760px) {
+  .business-detail-drawer {
+    width: 100vw;
+    max-width: none;
+    padding:
+      max(13px, env(safe-area-inset-top))
+      max(14px, env(safe-area-inset-right))
+      max(14px, env(safe-area-inset-bottom))
+      max(14px, env(safe-area-inset-left));
+  }
+
+  .business-detail-header {
+    padding-bottom: 10px;
+  }
+
+  .business-detail-heading h2 {
+    font-size: clamp(27px, 8vw, 34px);
+  }
+
+  .business-detail-summary {
+    gap: 6px;
+  }
+
+  .business-detail-summary > div {
+    padding: 10px;
+  }
+
+  .detail-roadmap-card {
+    padding: 12px 11px 11px;
+  }
+
+  .detail-roadmap-track {
+    margin: 19px 7px 16px;
+  }
+
+  .detail-roadmap-node {
+    width: 14px;
+    height: 14px;
+  }
+
+  .detail-roadmap-node[data-roadmap-state="current"] {
+    width: 16px;
+    height: 16px;
+  }
+
+  .detail-roadmap-meta {
+    align-items: flex-start;
+  }
+
+  .detail-roadmap-meta span,
+  .detail-roadmap-meta strong {
+    font-size: 8px;
+  }
+
+  .business-level-tree-legend,
+  .business-vault-tree-legend {
+    display: flex;
+    flex-wrap: nowrap;
+    gap: 5px;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+
+  .business-level-tree-legend::-webkit-scrollbar,
+  .business-vault-tree-legend::-webkit-scrollbar {
+    display: none;
+  }
+
+  .business-level-tree-legend span,
+  .business-vault-tree-legend span {
+    flex: 0 0 auto;
+  }
+
+  .business-level-node,
+  .vault-level-node {
+    grid-template-columns: 24px minmax(0, 1fr);
+    gap: 6px;
+  }
+
+  .business-level-node-card,
+  .vault-level-node-card {
+    padding: 11px;
+  }
+}
+
+@media (max-width: 430px) {
+  .detail-roadmap-meta {
+    display: grid;
+    gap: 4px;
+  }
+
+  .detail-roadmap-meta strong {
+    text-align: left;
+  }
+
+  .business-level-node-state {
+    gap: 3px;
+  }
+
+  .business-level-node-state b {
+    display: none;
+  }
+
+  .business-level-node-header,
+  .vault-level-node-header {
+    gap: 7px;
+  }
+}
+
+@keyframes idle-detail-roadmap-fill {
+  from { width: 0; }
+  to { width: var(--detail-progress); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .detail-roadmap-fill {
+    animation: none;
+    transition: none;
+  }
+
+  .business-level-node-card,
+  .vault-level-node-card {
+    transition: none;
+  }
+}
