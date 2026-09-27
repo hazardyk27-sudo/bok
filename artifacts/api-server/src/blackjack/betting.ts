@@ -252,26 +252,27 @@ export function undoLastBlackjackBetChip(
   assertNonEmptyId("expectedReservationId", input.expectedReservationId);
   assertNonEmptyId("releaseTransactionId", input.releaseTransactionId);
 
+  const releasedChip = position.chips.find(
+    (chip) =>
+      chip.reservationId === input.expectedReservationId &&
+      chip.status === "RELEASED",
+  );
+  const expectedReservation = book.reservations.find(
+    (candidate) =>
+      candidate.reservationId === input.expectedReservationId,
+  );
+  if (
+    releasedChip &&
+    expectedReservation?.status === "RELEASED" &&
+    expectedReservation.terminalTransactionId === input.releaseTransactionId
+  ) {
+    return Object.freeze({ wallet, book, position });
+  }
+
   const activeChips = position.chips.filter((chip) => chip.status === "ACTIVE");
   const last = activeChips.at(-1);
 
   if (!last) {
-    const releasedChip = position.chips.find(
-      (chip) =>
-        chip.reservationId === input.expectedReservationId &&
-        chip.status === "RELEASED",
-    );
-    const reservation = book.reservations.find(
-      (candidate) =>
-        candidate.reservationId === input.expectedReservationId,
-    );
-    if (
-      releasedChip &&
-      reservation?.status === "RELEASED" &&
-      reservation.terminalTransactionId === input.releaseTransactionId
-    ) {
-      return Object.freeze({ wallet, book, position });
-    }
     throw new Error("Blackjack bet has no active chip to undo");
   }
 
@@ -388,6 +389,9 @@ export function bindBlackjackBetPositionToHand(
   handId: string,
 ): BlackjackReservationBook {
   assertNonEmptyId("handId", handId);
+  if (book.userId !== position.userId) {
+    throw new Error("Blackjack betting reservation book owner mismatch");
+  }
   if (position.status !== "READY" && position.status !== "LOCKED") {
     throw new Error("Blackjack bet must be READY before hand binding");
   }
