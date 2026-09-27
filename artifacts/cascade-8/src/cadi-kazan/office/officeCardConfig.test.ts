@@ -40,4 +40,15 @@ describe("The Office match-3 card config", () => {
   it("keeps the working RTP target at 96 percent without defining outcome weights yet", () => {
     expect(OFFICE_MATCH_TARGET_RTP_BPS).toBe(9_600);
   });
+
+  it("maps every approved symbol to a shipped artwork asset", () => {
+    expect(OFFICE_MATCH_SYMBOLS.map(({ id, artworkUrl }) => ({ id, artworkUrl }))).toEqual([
+      { id: "KEVIN", artworkUrl: "/cadi-kazan/office/office-kevin-2x.webp" },
+      { id: "JIM", artworkUrl: "/cadi-kazan/office/office-jim-5x.webp" },
+      { id: "DWIGHT", artworkUrl: "/cadi-kazan/office/office-dwight-10x.webp" },
+      { id: "STANLEY", artworkUrl: "/cadi-kazan/office/office-stanley-20x.webp" },
+      { id: "MICHAEL", artworkUrl: "/cadi-kazan/office/office-michael-100x.webp" },
+    ]);
+  });
+
 });
