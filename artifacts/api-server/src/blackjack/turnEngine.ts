@@ -228,6 +228,36 @@ export function applyBlackjackTurnTimeout(
   );
 }
 
+
+export function refreshBlackjackCurrentTurnTimer(
+  round: BlackjackRound,
+  nowMs: number,
+): BlackjackRound {
+  assertNowMs(nowMs);
+
+  if (round.phase !== "PLAYER_TURNS" || round.currentTurn === null) {
+    throw new Error("Blackjack has no active player turn to refresh");
+  }
+
+  const handIndex = findHandIndex(round.hands, round.currentTurn.handId);
+  const hand = round.hands[handIndex];
+  if (hand.status !== "ACTIVE") {
+    throw new Error("Blackjack turn timer refresh requires an ACTIVE hand");
+  }
+  if (hand.seatNumber !== round.currentTurn.seatNumber) {
+    throw new Error("Blackjack current turn seat does not match hand owner");
+  }
+
+  return Object.freeze({
+    ...round,
+    currentTurn: Object.freeze({
+      ...round.currentTurn,
+      startedAtMs: nowMs,
+      endsAtMs: safeTurnEnd(nowMs),
+    }),
+  });
+}
+
 export function getBlackjackTurnRemainingMs(
   round: BlackjackRound,
   nowMs: number,
