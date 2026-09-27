@@ -16,7 +16,7 @@ const INNER_ANCHOR = 2.47;
 const SOURCE_OUTER = 2.56;
 const TARGET_OUTER = 2.65;
 const TARGET_Y_MIN = -0.35;
-const TARGET_Y_MAX = 0.08;
+const TARGET_Y_MAX = -0.075;
 const MAX_SOURCE_RADIUS = 2.60;
 
 const bytes = Buffer.from(readFileSync(inputPath));
