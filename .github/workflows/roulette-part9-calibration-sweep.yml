@@ -138,7 +138,7 @@ jobs:
           console.log('PART9_SWEEP_RANKED ' + JSON.stringify(viable));
           fs.writeFileSync('part9-sweep-ranked.json', JSON.stringify(viable, null, 2));
           if (viable.length === 0) throw new Error('No safe calibration candidate');
-        NODE
+          NODE
 
       - name: Upload evidence
         if: always()
