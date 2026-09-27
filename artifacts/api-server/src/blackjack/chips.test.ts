@@ -117,7 +117,7 @@ describe("blackjack chip denomination engine", () => {
   });
 
   it("has no arbitrary game cap but refuses unsafe integer overflow", () => {
-    let chip = BLACKJACK_HIGH_ROLLER_START_CENTS;
+    let chip: number = BLACKJACK_HIGH_ROLLER_START_CENTS;
     for (let index = 0; index < 20; index += 1) {
       chip = doubleBlackjackHighRollerChipCents(chip);
     }
