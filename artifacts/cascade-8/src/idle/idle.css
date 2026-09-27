@@ -8333,3 +8333,210 @@ body.businesses-route {
     font-size: 14px;
   }
 }
+/* 2026-09-27 — Part 12: clearer Details level separation */
+.business-detail-roadmap {
+  margin-bottom: 14px;
+}
+
+.detail-roadmap-card {
+  border-color: rgba(111, 151, 255, .13);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, .012), rgba(255, 255, 255, .002)),
+    rgba(8, 19, 34, .72);
+}
+
+.detail-roadmap-track {
+  height: 9px;
+  margin-top: 21px;
+  margin-bottom: 18px;
+  border: 1px solid rgba(111, 151, 255, .08);
+  background: rgba(155, 172, 205, .11);
+}
+
+.detail-roadmap-fill {
+  background: linear-gradient(90deg, #5578cf 0%, #6f97ff 58%, #9ab4ee 100%);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, .12),
+    0 0 14px rgba(111, 151, 255, .10);
+}
+
+.detail-roadmap-node {
+  width: 18px;
+  height: 18px;
+  border-width: 2px;
+  box-shadow:
+    0 0 0 4px rgba(5, 11, 23, .92),
+    0 2px 8px rgba(0, 0, 0, .24);
+}
+
+.detail-roadmap-node[data-roadmap-state="current"] {
+  width: 21px;
+  height: 21px;
+  border-color: #d6e1f7;
+  background: #7796d9;
+  box-shadow:
+    0 0 0 5px rgba(111, 151, 255, .12),
+    0 0 0 4px rgba(5, 11, 23, .94),
+    0 4px 14px rgba(36, 62, 118, .26);
+}
+
+.business-level-tree,
+.vault-level-tree {
+  gap: 2px;
+  padding-top: 2px;
+}
+
+.business-level-node,
+.vault-level-node {
+  grid-template-columns: 34px minmax(0, 1fr);
+  gap: 10px;
+}
+
+.business-level-node-rail::after,
+.vault-level-node-rail::after {
+  top: 32px;
+  bottom: -11px;
+  width: 2px;
+  border-radius: 999px;
+  background: rgba(111, 151, 255, .15);
+}
+
+.business-level-node[data-level-state="completed"] .business-level-node-rail::after,
+.vault-level-node[data-vault-state="completed"] .vault-level-node-rail::after {
+  background: linear-gradient(180deg, rgba(111, 151, 255, .48), rgba(111, 151, 255, .16));
+}
+
+.business-level-node-dot,
+.vault-level-node-dot {
+  width: 26px;
+  height: 26px;
+  margin-top: 15px;
+  border-width: 2px;
+  font-size: 8px;
+  box-shadow: 0 0 0 4px #07101d;
+}
+
+.business-level-node-card,
+.vault-level-node-card {
+  position: relative;
+  margin-bottom: 10px;
+  overflow: hidden;
+  border-color: rgba(111, 151, 255, .12);
+  border-radius: 14px;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, .012), rgba(255, 255, 255, .002)),
+    #0a1524;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, .018),
+    0 8px 22px rgba(0, 0, 0, .16);
+}
+
+.business-level-node-card::before,
+.vault-level-node-card::before {
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 3px;
+  content: "";
+  background: rgba(127, 141, 170, .18);
+}
+
+.business-level-node[data-level-state="completed"] .business-level-node-card::before,
+.vault-level-node[data-vault-state="completed"] .vault-level-node-card::before {
+  background: #5578cf;
+}
+
+.business-level-node[data-level-state="current"] .business-level-node-card,
+.vault-level-node[data-vault-state="current"] .vault-level-node-card {
+  border-color: rgba(137, 169, 255, .30);
+  background:
+    linear-gradient(135deg, rgba(111, 151, 255, .075), transparent 52%),
+    #0b1829;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, .025),
+    0 10px 26px rgba(0, 0, 0, .19);
+}
+
+.business-level-node[data-level-state="current"] .business-level-node-card::before,
+.vault-level-node[data-vault-state="current"] .vault-level-node-card::before {
+  width: 4px;
+  background: #86a6eb;
+}
+
+.business-level-node[data-level-state="future"] .business-level-node-card,
+.vault-level-node[data-vault-state="future"] .vault-level-node-card {
+  border-style: solid;
+  border-color: rgba(111, 151, 255, .20);
+  background:
+    linear-gradient(135deg, rgba(111, 151, 255, .045), transparent 56%),
+    #091624;
+}
+
+.business-level-node[data-level-state="future"] .business-level-node-card::before,
+.vault-level-node[data-vault-state="future"] .vault-level-node-card::before {
+  background: rgba(137, 169, 255, .55);
+}
+
+.business-level-node[data-level-state="locked"] .business-level-node-card,
+.vault-level-node[data-vault-state="locked"] .vault-level-node-card {
+  opacity: .50;
+  filter: saturate(.55);
+  background: #08111d;
+}
+
+.business-level-node[data-level-state="completed"] .business-level-node-card,
+.vault-level-node[data-vault-state="completed"] .vault-level-node-card {
+  background:
+    linear-gradient(90deg, rgba(85, 120, 207, .045), transparent 42%),
+    #091522;
+}
+
+.business-level-node-state span,
+.vault-level-node-state {
+  border-color: rgba(111, 151, 255, .12);
+}
+
+.business-level-node[data-level-state="current"] .business-level-node-state span,
+.vault-level-node[data-vault-state="current"] .vault-level-node-state {
+  color: #d7e3fb;
+  border-color: rgba(137, 169, 255, .28);
+  background: rgba(111, 151, 255, .10);
+}
+
+.business-level-node[data-level-state="completed"] .business-level-node-state span,
+.vault-level-node[data-vault-state="completed"] .vault-level-node-state {
+  color: #b7c8ec;
+  background: rgba(85, 120, 207, .07);
+}
+
+@media (max-width: 760px) {
+  .business-level-node,
+  .vault-level-node {
+    grid-template-columns: 30px minmax(0, 1fr);
+    gap: 8px;
+  }
+
+  .business-level-node-dot,
+  .vault-level-node-dot {
+    width: 24px;
+    height: 24px;
+  }
+
+  .business-level-node-card,
+  .vault-level-node-card {
+    border-radius: 13px;
+  }
+
+  .detail-roadmap-track {
+    height: 8px;
+  }
+
+  .detail-roadmap-node {
+    width: 16px;
+    height: 16px;
+  }
+
+  .detail-roadmap-node[data-roadmap-state="current"] {
+    width: 19px;
+    height: 19px;
+  }
+}

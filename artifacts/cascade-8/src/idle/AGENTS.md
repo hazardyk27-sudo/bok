@@ -28,5 +28,5 @@ An Idle commit never publishes itself to Replit; only the central one-game promo
 - If a note conflicts with code/tests/ownership rules, the validated repository state wins.
 
 ## Current milestones
-- 2026-09-27 — Slate Blue Parts 1–11 complete — desktop no longer letterboxes into a synthetic 16:9 box; KPI cards align 1:1 with the three business columns, the shared balance is visible beside the shortened club-progress bar, and mobile balance uses the same muted premium surface. Next: promote to `integration/replit-preview` and visually QA.
+- 2026-09-27 — Slate Blue Parts 1–12 complete — Details level roadmaps and vertical level rails are clearer; completed/current/future/locked cards have distinct restrained treatments and state accent strips while keeping the premium low-glow hierarchy. Next: promote to `integration/replit-preview` and visually QA.
 - 2026-09-26 — Isolation v2 active — Idle / İşletmeler development stays on `feature/idle`; preview release is ownership-scoped into `integration/replit-preview`, not a whole-branch merge.

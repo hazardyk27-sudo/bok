@@ -1521,3 +1521,19 @@ describe("Businesses Part 11 desktop alignment hotfix", () => {
     expect(idleCssSource).toContain("aspect-ratio: auto");
   });
 });
+describe("Businesses Part 12 clearer level separation", () => {
+  it("makes the Details roadmap and level rail more legible", () => {
+    expect(idleCssSource).toContain("/* 2026-09-27 — Part 12: clearer Details level separation */");
+    expect(idleCssSource).toContain(".detail-roadmap-track {");
+    expect(idleCssSource).toContain("height: 9px");
+    expect(idleCssSource).toContain("width: 2px");
+  });
+
+  it("visually separates completed current future and locked stage cards", () => {
+    expect(idleCssSource).toContain(".business-level-node-card::before,");
+    expect(idleCssSource).toContain(".vault-level-node-card::before {");
+    expect(idleCssSource).toContain("background: #86a6eb");
+    expect(idleCssSource).toContain("background: rgba(137, 169, 255, .55)");
+    expect(idleCssSource).toContain("opacity: .50");
+  });
+});
