@@ -3477,20 +3477,34 @@
   display: block !important;
   width: 100% !important;
   height: 100% !important;
+  min-width: 100% !important;
+  min-height: 100% !important;
+  max-width: none !important;
+  max-height: none !important;
   border: 0 !important;
-  background: transparent !important;
+  background-color: transparent !important;
+  background-position: 0 0 !important;
+  background-repeat: no-repeat !important;
+  background-size: 100% 100% !important;
   pointer-events: none !important;
 }
 
 .is-office-theme .witch-office-card-master {
   position: absolute !important;
-  inset: 0 !important;
+  z-index: 1 !important;
+  top: 0 !important;
+  right: 0 !important;
+  bottom: 0 !important;
+  left: 0 !important;
   display: block !important;
   width: 100% !important;
   height: 100% !important;
+  min-width: 100% !important;
+  min-height: 100% !important;
   max-width: none !important;
   max-height: none !important;
   object-fit: fill !important;
+  object-position: 0 0 !important;
   user-select: none !important;
   pointer-events: none !important;
 }
@@ -3601,4 +3615,23 @@
     right: 4.6989% !important;
     bottom: 8.9109% !important;
   }
+}
+
+
+/* PASS 20 — THE OFFICE full-PNG hard lock.
+   The master PNG is painted by the full-ticket background layer as well as the
+   image element, so legacy image/intrinsic sizing can never expose the table
+   underneath the lower half. Scratch-cell geometry is intentionally unchanged. */
+.is-office-theme .witch-ticket::before,
+.is-office-theme .witch-ticket::after {
+  display: none !important;
+  content: none !important;
+}
+
+.is-office-theme .witch-office-card-art {
+  top: 0 !important;
+  right: 0 !important;
+  bottom: 0 !important;
+  left: 0 !important;
+  box-sizing: border-box !important;
 }
