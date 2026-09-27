@@ -215,7 +215,7 @@ export const CADI_KAZAN_MARKUP = `
           </div>
 
           <div class="witch-office-card-art" aria-hidden="true">
-            <img class="witch-office-card-master" src="${OFFICE_CARD_ART_URL}" alt="" draggable="false">
+            <img class="witch-office-card-master" src="${OFFICE_CARD_ART_URL}" alt="" width="1511" height="707" loading="eager" decoding="async" fetchpriority="auto" draggable="false">
           </div>
 
           <header class="witch-ticket-header">

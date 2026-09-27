@@ -189,6 +189,9 @@ describe("cadi kazan route smoke contract", () => {
   it("uses the master PNG as the Office card and pins all six live scratch zones to measured coordinates", () => {
     expect(witchClientSource).toContain("OFFICE_CARD_ART_URL");
     expect(witchClientSource).toContain("witch-office-card-master");
+    expect(witchClientSource).toContain('width="1511" height="707"');
+    expect(witchClientSource).toContain('loading="eager"');
+    expect(witchClientSource).toContain('decoding="async"');
     expect(visualLockSource).toContain("PASS 19 — THE OFFICE master-PNG shell");
     expect(visualLockSource).toContain("aspect-ratio: 1511 / 707");
     expect(visualLockSource).toContain("left: 37.2601% !important");
