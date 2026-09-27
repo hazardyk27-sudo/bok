@@ -31,3 +31,4 @@ export * from "./actionQueue";
 export * from "./actionProtocol";
 export * from "./eventStream";
 export * from "./syncProtocol";
+export * from "./reconnect";
