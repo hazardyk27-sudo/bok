@@ -26,5 +26,6 @@ The scratch system, styles, route mount, client, and Cadı-specific audio runtim
 - If a note conflicts with code/tests/ownership rules, the validated repository state wins.
 
 ## Current milestones
+- 2026-09-27 — The Office 6-cell match card scaffold — 3×2 board, 3-of-a-kind rule, 96% RTP target, and symbol ladder Kevin 2x / Jim 5x / Dwight 10x / Stanley 20x / Michael Scott 100x are locked in config. Outcome weights and live card wiring remain for the next parts.
 - 2026-09-26 — Isolation v2 active — Cadı Kazan development stays on `feature/cadi-kazan`; preview release is ownership-scoped into `integration/replit-preview`, not a whole-branch merge.
 
