@@ -1,3 +1,4 @@
+import { randomUUID } from "node:crypto";
 import type { IncomingMessage, Server } from "node:http";
 import type { Socket } from "node:net";
 import {
@@ -5,6 +6,12 @@ import {
   WebSocketServer,
 } from "ws";
 import type { BlackjackPublicSnapshot } from "./publicSnapshot";
+import {
+  claimBlackjackConnection,
+  createBlackjackConnectionRegistry,
+  releaseBlackjackConnection,
+  type BlackjackConnectionRegistry,
+} from "./connectionPolicy";
 import {
   buildBlackjackInitialSyncResponse,
   evaluateBlackjackSyncRequest,
@@ -22,9 +29,27 @@ export type BlackjackRealtimeSource = Readonly<{
   ) => () => void;
 }>;
 
+export type BlackjackRealtimeIdentity = Readonly<{
+  userId: string;
+  playerId: string;
+  sessionId: string;
+}>;
+
+export type BlackjackRealtimeOptions = Readonly<{
+  resolveIdentity?: (
+    request: IncomingMessage,
+  ) =>
+    | BlackjackRealtimeIdentity
+    | null
+    | Promise<BlackjackRealtimeIdentity | null>;
+  createConnectionId?: () => string;
+  nowMs?: () => number;
+}>;
+
 export type BlackjackRealtimeRuntime = Readonly<{
   webSocketServer: WebSocketServer;
   connectionCount: () => number;
+  authenticatedConnectionCount: () => number;
   close: () => void;
 }>;
 
@@ -46,9 +71,16 @@ function parseMessage(message: string): unknown {
 export function attachBlackjackWebSocket(
   server: Server,
   source: BlackjackRealtimeSource,
+  options: BlackjackRealtimeOptions = {},
 ): BlackjackRealtimeRuntime {
   const webSocketServer = new WebSocketServer({ noServer: true });
   const connections = new Set<WebSocket>();
+  const connectionIdBySocket = new Map<WebSocket, string>();
+  const socketByConnectionId = new Map<string, WebSocket>();
+  let connectionRegistry: BlackjackConnectionRegistry =
+    createBlackjackConnectionRegistry();
+  const createConnectionId = options.createConnectionId ?? randomUUID;
+  const nowMs = options.nowMs ?? Date.now;
   let closed = false;
 
   const broadcastSnapshot = (snapshot: BlackjackPublicSnapshot) => {
@@ -130,51 +162,117 @@ export function attachBlackjackWebSocket(
 
   server.on("upgrade", onUpgrade);
 
-  webSocketServer.on(
-    "connection",
-    (socket: WebSocket) => {
-      if (closed) {
-        socket.close(1012, "BLACKJACK_REALTIME_CLOSED");
+  const initializeConnection = async (
+    socket: WebSocket,
+    request: IncomingMessage,
+  ) => {
+    if (closed) {
+      socket.close(1012, "BLACKJACK_REALTIME_CLOSED");
+      return;
+    }
+
+    const connectionId = createConnectionId();
+    if (!connectionId.trim()) {
+      send(socket, {
+        type: "error",
+        error: "BLACKJACK_CONNECTION_ID_UNAVAILABLE",
+      });
+      socket.close(1011, "BLACKJACK_CONNECTION_ID_UNAVAILABLE");
+      return;
+    }
+
+    connections.add(socket);
+    connectionIdBySocket.set(socket, connectionId);
+    socketByConnectionId.set(connectionId, socket);
+
+    const cleanup = () => {
+      connections.delete(socket);
+      connectionIdBySocket.delete(socket);
+      socketByConnectionId.delete(connectionId);
+      connectionRegistry = releaseBlackjackConnection(
+        connectionRegistry,
+        connectionId,
+      );
+    };
+    socket.once("close", cleanup);
+    socket.once("error", cleanup);
+
+    if (options.resolveIdentity) {
+      try {
+        const identity = await options.resolveIdentity(request);
+        if (identity !== null) {
+          const claim = claimBlackjackConnection(connectionRegistry, {
+            connectionId,
+            userId: identity.userId,
+            playerId: identity.playerId,
+            sessionId: identity.sessionId,
+            connectedAtMs: nowMs(),
+          });
+          connectionRegistry = claim.registry;
+
+          for (const replacedConnectionId of claim.replacedConnectionIds) {
+            const replacedSocket = socketByConnectionId.get(
+              replacedConnectionId,
+            );
+            if (
+              replacedSocket &&
+              replacedSocket !== socket &&
+              replacedSocket.readyState === WebSocket.OPEN
+            ) {
+              send(replacedSocket, {
+                type: "SESSION_REPLACED",
+                replacementConnectionId: connectionId,
+              });
+              replacedSocket.close(4001, "SESSION_REPLACED");
+            }
+          }
+        }
+      } catch {
+        send(socket, {
+          type: "error",
+          error: "BLACKJACK_IDENTITY_UNAVAILABLE",
+        });
+        socket.close(1008, "BLACKJACK_IDENTITY_UNAVAILABLE");
+        return;
+      }
+    }
+
+    socket.on("message", (raw) => {
+      const message = parseMessage(raw.toString());
+
+      if (
+        message === "sync" ||
+        (
+          typeof message === "object" &&
+          message !== null &&
+          "type" in message &&
+          (message as { type?: unknown }).type === "sync"
+        )
+      ) {
+        void handleSync(socket, message);
         return;
       }
 
-      connections.add(socket);
-
-      socket.on("message", (raw) => {
-        const message = parseMessage(raw.toString());
-
-        if (
-          message === "sync" ||
-          (
-            typeof message === "object" &&
-            message !== null &&
-            "type" in message &&
-            (message as { type?: unknown }).type === "sync"
-          )
-        ) {
-          void handleSync(socket, message);
-          return;
-        }
-
-        send(socket, {
-          type: "error",
-          error: "BLACKJACK_ACTION_PROTOCOL_NOT_READY",
-        });
+      send(socket, {
+        type: "error",
+        error: "BLACKJACK_ACTION_PROTOCOL_NOT_READY",
       });
+    });
 
-      const cleanup = () => {
-        connections.delete(socket);
-      };
-      socket.once("close", cleanup);
-      socket.once("error", cleanup);
+    await sendInitialSnapshot(socket);
+  };
 
-      void sendInitialSnapshot(socket);
+  webSocketServer.on(
+    "connection",
+    (socket: WebSocket, request: IncomingMessage) => {
+      void initializeConnection(socket, request);
     },
   );
 
   const runtime: BlackjackRealtimeRuntime = Object.freeze({
     webSocketServer,
     connectionCount: () => connections.size,
+    authenticatedConnectionCount: () => connectionRegistry.active.length,
     close: () => {
       if (closed) return;
       closed = true;
@@ -182,6 +280,9 @@ export function attachBlackjackWebSocket(
       server.off("upgrade", onUpgrade);
       for (const socket of connections) socket.terminate();
       connections.clear();
+      connectionIdBySocket.clear();
+      socketByConnectionId.clear();
+      connectionRegistry = createBlackjackConnectionRegistry();
       webSocketServer.close();
     },
   });
