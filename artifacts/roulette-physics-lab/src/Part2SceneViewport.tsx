@@ -2350,6 +2350,7 @@ export function Part2SceneViewport({
     let rotorBody: RAPIER.RigidBody | null = null;
     let physicsBallCollider: RAPIER.Collider | null = null;
     let part3TrackCollider: RAPIER.Collider | null = null;
+    let part9StationaryWallCollider: RAPIER.Collider | null = null;
     let part3BowlBridgeColliders: RAPIER.Collider[] = [];
     let part3BowlBridgeProfile: Array<[number, number]> = [];
     let part3BowlBridgeOuterRadius: number = BOWL_BRIDGE_OUTER_RADIUS;
@@ -2388,6 +2389,41 @@ export function Part2SceneViewport({
             0.3,
           )
         : 0.01;
+    const part9WallSplitEnabled =
+      part9WorldCalibrationEnabled &&
+      part9WorldParams.get('part9WallSplit') === '1';
+    const requestedPart9WallFriction = Number(
+      part9WorldParams.get('part9WallFriction') ?? 0,
+    );
+    const activePart9WallFriction =
+      part9WallSplitEnabled &&
+      Number.isFinite(requestedPart9WallFriction)
+        ? THREE.MathUtils.clamp(requestedPart9WallFriction, 0, 0.03)
+        : 0;
+    const requestedPart9WallRadiusMin = Number(
+      part9WorldParams.get('part9WallRadiusMin') ?? 2.48,
+    );
+    const activePart9WallRadiusMin =
+      part9WallSplitEnabled &&
+      Number.isFinite(requestedPart9WallRadiusMin)
+        ? THREE.MathUtils.clamp(
+            requestedPart9WallRadiusMin,
+            2.4,
+            2.56,
+          )
+        : 2.48;
+    const requestedPart9WallNormalYMax = Number(
+      part9WorldParams.get('part9WallNormalYMax') ?? 0.45,
+    );
+    const activePart9WallNormalYMax =
+      part9WallSplitEnabled &&
+      Number.isFinite(requestedPart9WallNormalYMax)
+        ? THREE.MathUtils.clamp(
+            requestedPart9WallNormalYMax,
+            0.05,
+            0.95,
+          )
+        : 0.45;
     const activePart3TrackFriction =
       outerLaneSpinOnly &&
       part9WorldCalibrationEnabled &&
@@ -8607,26 +8643,145 @@ export function Part2SceneViewport({
                   RAPIER.TriMeshFlags.DELETE_DEGENERATE_TRIANGLES |
                   RAPIER.TriMeshFlags.DELETE_DUPLICATE_TRIANGLES;
               }
-              part3TrackCollider = world.createCollider(
-                RAPIER.ColliderDesc.trimesh(
-                  actualStationaryMesh.vertices,
-                  actualStationaryMesh.indices,
-                  stationaryTrimeshFlags,
-                )
-                  .setFriction(activePart3TrackFriction)
-                  .setRestitution(activePart9StationaryRestitution)
-                  .setCollisionGroups(
-                    STATIONARY_COLLISION_GROUP |
-                      (BALL_COLLISION_GROUP << 16),
-                  ),
-                stationaryBody,
-              );
+              if (part9WallSplitEnabled) {
+                const baseIndices: number[] = [];
+                const wallIndices: number[] = [];
+                const vertices = actualStationaryMesh.vertices;
+                const indices = actualStationaryMesh.indices;
+
+                for (let index = 0; index < indices.length; index += 3) {
+                  const ia = indices[index] * 3;
+                  const ib = indices[index + 1] * 3;
+                  const ic = indices[index + 2] * 3;
+                  const ax = vertices[ia];
+                  const ay = vertices[ia + 1];
+                  const az = vertices[ia + 2];
+                  const bx = vertices[ib];
+                  const by = vertices[ib + 1];
+                  const bz = vertices[ib + 2];
+                  const cx = vertices[ic];
+                  const cy = vertices[ic + 1];
+                  const cz = vertices[ic + 2];
+                  const abx = bx - ax;
+                  const aby = by - ay;
+                  const abz = bz - az;
+                  const acx = cx - ax;
+                  const acy = cy - ay;
+                  const acz = cz - az;
+                  const nx = aby * acz - abz * acy;
+                  const ny = abz * acx - abx * acz;
+                  const nz = abx * acy - aby * acx;
+                  const normalLength = Math.hypot(nx, ny, nz);
+                  const normalY =
+                    normalLength > 1e-10
+                      ? Math.abs(ny / normalLength)
+                      : 1;
+                  const centroidX = (ax + bx + cx) / 3;
+                  const centroidZ = (az + bz + cz) / 3;
+                  const centroidRadius = Math.hypot(
+                    centroidX,
+                    centroidZ,
+                  );
+                  const isOuterWall =
+                    centroidRadius >= activePart9WallRadiusMin &&
+                    normalY <= activePart9WallNormalYMax;
+                  const target = isOuterWall
+                    ? wallIndices
+                    : baseIndices;
+                  target.push(
+                    indices[index],
+                    indices[index + 1],
+                    indices[index + 2],
+                  );
+                }
+
+                if (
+                  wallIndices.length === 0 ||
+                  baseIndices.length === 0 ||
+                  wallIndices.length + baseIndices.length !== indices.length
+                ) {
+                  throw new Error(
+                    'PART9_EXACT_GLB_WALL_PARTITION_INVALID',
+                  );
+                }
+
+                part3TrackCollider = world.createCollider(
+                  RAPIER.ColliderDesc.trimesh(
+                    actualStationaryMesh.vertices,
+                    Uint32Array.from(baseIndices),
+                    stationaryTrimeshFlags,
+                  )
+                    .setFriction(activePart3TrackFriction)
+                    .setRestitution(activePart9StationaryRestitution)
+                    .setCollisionGroups(
+                      STATIONARY_COLLISION_GROUP |
+                        (BALL_COLLISION_GROUP << 16),
+                    ),
+                  stationaryBody,
+                );
+                part9StationaryWallCollider = world.createCollider(
+                  RAPIER.ColliderDesc.trimesh(
+                    actualStationaryMesh.vertices,
+                    Uint32Array.from(wallIndices),
+                    stationaryTrimeshFlags,
+                  )
+                    .setFriction(activePart9WallFriction)
+                    .setFrictionCombineRule(
+                      RAPIER.CoefficientCombineRule.Min,
+                    )
+                    .setRestitution(activePart9StationaryRestitution)
+                    .setCollisionGroups(
+                      STATIONARY_COLLISION_GROUP |
+                        (BALL_COLLISION_GROUP << 16),
+                    ),
+                  stationaryBody,
+                );
+                part3ColliderRoles.set(
+                  part3TrackCollider.handle,
+                  'exact-glb-stationary-trimesh',
+                );
+                part3ColliderRoles.set(
+                  part9StationaryWallCollider.handle,
+                  'exact-glb-stationary-wall-trimesh',
+                );
+                console.info(
+                  'PART9_EXACT_GLB_WALL_PARTITION',
+                  JSON.stringify({
+                    totalTriangles: indices.length / 3,
+                    baseTriangles: baseIndices.length / 3,
+                    wallTriangles: wallIndices.length / 3,
+                    unionTriangles:
+                      (baseIndices.length + wallIndices.length) / 3,
+                    radiusMin: activePart9WallRadiusMin,
+                    normalYMax: activePart9WallNormalYMax,
+                    wallFriction: activePart9WallFriction,
+                    exactUnionPreserved:
+                      baseIndices.length + wallIndices.length ===
+                      indices.length,
+                  }),
+                );
+              } else {
+                part3TrackCollider = world.createCollider(
+                  RAPIER.ColliderDesc.trimesh(
+                    actualStationaryMesh.vertices,
+                    actualStationaryMesh.indices,
+                    stationaryTrimeshFlags,
+                  )
+                    .setFriction(activePart3TrackFriction)
+                    .setRestitution(activePart9StationaryRestitution)
+                    .setCollisionGroups(
+                      STATIONARY_COLLISION_GROUP |
+                        (BALL_COLLISION_GROUP << 16),
+                    ),
+                  stationaryBody,
+                );
+                part3ColliderRoles.set(
+                  part3TrackCollider.handle,
+                  'exact-glb-stationary-trimesh',
+                );
+              }
               part3TrackVerticalOffset = 0;
               part2RaceVerticalOffset = 0;
-              part3ColliderRoles.set(
-                part3TrackCollider.handle,
-                'exact-glb-stationary-trimesh',
-              );
               console.info(
                 'GLB_EXACT_STATIONARY_COLLIDER',
                 JSON.stringify({
@@ -8635,6 +8790,8 @@ export function Part2SceneViewport({
                   part9StationaryMode: activePart9StationaryMode,
                   part9StationaryRestitution:
                     activePart9StationaryRestitution,
+                  part9WallSplitEnabled,
+                  part9WallFriction: activePart9WallFriction,
                   trimeshFlags: stationaryTrimeshFlags,
                 }),
               );
@@ -8979,10 +9136,18 @@ export function Part2SceneViewport({
 
           if (part6FullSpinRouteActive) {
             const activeEnvironmentRoles = [...part3ColliderRoles.values()].sort();
-            const expectedEnvironmentRoles = [
-              'exact-glb-rotor-trimesh',
-              'exact-glb-stationary-trimesh',
-            ].sort();
+            const expectedEnvironmentRoles = (
+              part9WallSplitEnabled
+                ? [
+                    'exact-glb-rotor-trimesh',
+                    'exact-glb-stationary-trimesh',
+                    'exact-glb-stationary-wall-trimesh',
+                  ]
+                : [
+                    'exact-glb-rotor-trimesh',
+                    'exact-glb-stationary-trimesh',
+                  ]
+            ).sort();
             const exactRotorRole =
               part3PocketColliders.length === 1
                 ? part3ColliderRoles.get(part3PocketColliders[0].handle) ?? null
@@ -9004,6 +9169,14 @@ export function Part2SceneViewport({
               part3TrackCollider !== null &&
               part3ColliderRoles.get(part3TrackCollider.handle) ===
                 'exact-glb-stationary-trimesh' &&
+              (
+                part9WallSplitEnabled
+                  ? part9StationaryWallCollider !== null &&
+                    part3ColliderRoles.get(
+                      part9StationaryWallCollider.handle,
+                    ) === 'exact-glb-stationary-wall-trimesh'
+                  : part9StationaryWallCollider === null
+              ) &&
               exactRotorRole === 'exact-glb-rotor-trimesh';
 
             console.info(
