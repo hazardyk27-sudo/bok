@@ -1,4 +1,5 @@
-import { Router, type IRouter, type Response } from "express";
+import { Router, type IRouter, type Request, type Response } from "express";
+import { sendVerificationEmail } from "./mailer";
 import { authRepository } from "./repository";
 import {
   AUTH_SESSION_TTL_MS,
@@ -40,10 +41,54 @@ function sendAuthError(res: Response, error: unknown) {
   const status =
     message === "EMAIL_ALREADY_REGISTERED"
       ? 409
-      : message === "INVALID_EMAIL_OR_PASSWORD"
+      : message === "INVALID_EMAIL_OR_PASSWORD" || message === "AUTH_REQUIRED"
         ? 401
-        : 400;
+        : message === "EMAIL_VERIFICATION_RATE_LIMIT"
+          ? 429
+          : message === "EMAIL_DELIVERY_FAILED" || message === "EMAIL_DELIVERY_NOT_CONFIGURED"
+            ? 503
+            : 400;
   res.status(status).json({ error: message });
+}
+
+function getPublicBaseUrl(req: Request) {
+  const configured = process.env.AUTH_PUBLIC_BASE_URL?.trim().replace(/\/+$/, "");
+  if (configured) return configured;
+  if (process.env.NODE_ENV === "production") {
+    throw new Error("AUTH_PUBLIC_BASE_URL_REQUIRED");
+  }
+  const host = req.get("host");
+  if (!host) throw new Error("AUTH_PUBLIC_BASE_URL_REQUIRED");
+  return `${req.protocol}://${host}`;
+}
+
+async function dispatchVerificationEmail(
+  userId: string,
+  req: Request,
+  suppressDeliveryFailure = false,
+) {
+  const verification = await authRepository.issueEmailVerification(userId);
+  if (verification.alreadyVerified) {
+    return { sent: false, alreadyVerified: true };
+  }
+
+  const verificationUrl =
+    `${getPublicBaseUrl(req)}/api/auth/verify-email?token=${encodeURIComponent(verification.token)}`;
+
+  try {
+    await sendVerificationEmail({
+      to: verification.user.email,
+      verificationUrl,
+      verificationId: verification.verificationId,
+    });
+    return { sent: true, alreadyVerified: false };
+  } catch (error) {
+    await authRepository.discardEmailVerification(verification.verificationId);
+    if (suppressDeliveryFailure) {
+      return { sent: false, alreadyVerified: false };
+    }
+    throw error;
+  }
 }
 
 function readRawCredentials(body: unknown) {
@@ -77,7 +122,11 @@ router.post("/auth/register", async (req, res) => {
     const { email, password } = readRegisterCredentials(req.body);
     const result = await authRepository.register(email, password);
     setAuthCookie(res, result.token);
-    res.status(201).json({ user: result.user });
+    const verification = await dispatchVerificationEmail(result.user.id, req, true);
+    res.status(201).json({
+      user: result.user,
+      verificationEmailSent: verification.sent,
+    });
   } catch (error) {
     sendAuthError(res, error);
   }
@@ -91,6 +140,42 @@ router.post("/auth/login", async (req, res) => {
     res.json({ user: result.user });
   } catch (error) {
     sendAuthError(res, error);
+  }
+});
+
+router.post("/auth/resend-verification", async (req, res) => {
+  const token = req.cookies?.[AUTH_COOKIE] as string | undefined;
+  if (!token) {
+    sendAuthError(res, new Error("AUTH_REQUIRED"));
+    return;
+  }
+
+  try {
+    const user = await authRepository.getUserBySessionToken(token);
+    if (!user) {
+      clearAuthCookie(res);
+      sendAuthError(res, new Error("AUTH_REQUIRED"));
+      return;
+    }
+
+    const verification = await dispatchVerificationEmail(user.id, req);
+    res.status(202).json({
+      user,
+      verificationEmailSent: verification.sent,
+      alreadyVerified: verification.alreadyVerified,
+    });
+  } catch (error) {
+    sendAuthError(res, error);
+  }
+});
+
+router.get("/auth/verify-email", async (req, res) => {
+  const token = typeof req.query.token === "string" ? req.query.token : "";
+  try {
+    await authRepository.verifyEmail(token);
+    res.redirect(303, "/account?verification=success");
+  } catch {
+    res.redirect(303, "/account?verification=invalid");
   }
 });
 
