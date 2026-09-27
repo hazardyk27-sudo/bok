@@ -8,6 +8,7 @@ on:
       - feature/cadi-kazan
       - feature/idle
       - feature/hub
+      - feature/account
   pull_request:
 
 jobs:
@@ -33,6 +34,7 @@ jobs:
             feature/cadi-kazan) game=cadi-kazan ;;
             feature/idle) game=idle ;;
             feature/hub) game=hub ;;
+            feature/account) game=account ;;
             *) echo "skip=true" >> "$GITHUB_OUTPUT"; exit 0 ;;
           esac
           echo "game=$game" >> "$GITHUB_OUTPUT"
