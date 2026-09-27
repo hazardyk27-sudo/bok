@@ -1002,10 +1002,31 @@ function buildStartConditions(seed: string): PhysicsLabStartConditions {
     exactLaunchSurface.point[2] +
       launchPlacementNormal[2] * launchClearance,
   ];
-  const tangent: [number, number, number] = [
+  const horizontalTangent: [number, number, number] = [
     Math.cos(launchAzimuthRadians),
     0,
     -Math.sin(launchAzimuthRadians),
+  ];
+  const tangentNormalDot =
+    horizontalTangent[0] * launchPlacementNormal[0] +
+    horizontalTangent[1] * launchPlacementNormal[1] +
+    horizontalTangent[2] * launchPlacementNormal[2];
+  let tangent: [number, number, number] = [
+    horizontalTangent[0] -
+      launchPlacementNormal[0] * tangentNormalDot,
+    horizontalTangent[1] -
+      launchPlacementNormal[1] * tangentNormalDot,
+    horizontalTangent[2] -
+      launchPlacementNormal[2] * tangentNormalDot,
+  ];
+  const tangentLength = Math.hypot(...tangent);
+  if (tangentLength <= 1e-10) {
+    throw new Error("EXACT_GLB_LAUNCH_TANGENT_MISSING");
+  }
+  tangent = tangent.map((value) => value / tangentLength) as [
+    number,
+    number,
+    number,
   ];
   const velocity: [number, number, number] = [
     tangent[0] * launchSpeed,
