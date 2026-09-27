@@ -97,6 +97,17 @@
       "developmentRoots": [
         "artifacts/cascade-8/e2e/account.spec.ts"
       ]
+    },
+    "blackjack": {
+      "branch": "feature/blackjack",
+      "roots": [
+        "artifacts/cascade-8/src/blackjack",
+        "artifacts/api-server/src/blackjack",
+        "lib/db/src/schema/blackjack.ts"
+      ],
+      "developmentRoots": [
+        "artifacts/cascade-8/e2e/blackjack.spec.ts"
+      ]
     }
   }
 }
