@@ -116,7 +116,8 @@ export function resolveOfficeMatchReveal(
   if (cells.length !== OFFICE_MATCH_CELL_COUNT) throw new Error("INVALID_OFFICE_BOARD");
 
   const counts = new Map<OfficeMatchSymbolId, number>();
-  for (const index of revealedIndices) {
+  const uniqueRevealedIndices = [...new Set(revealedIndices)];
+  for (const index of uniqueRevealedIndices) {
     if (!Number.isInteger(index) || index < 0 || index >= cells.length) throw new Error("INVALID_OFFICE_REVEAL_INDEX");
     const symbolId = cells[index];
     getOfficeMatchSymbol(symbolId);
@@ -134,7 +135,7 @@ export function resolveOfficeMatchReveal(
     }
   }
 
-  const completed = new Set(revealedIndices).size >= OFFICE_MATCH_CELL_COUNT;
+  const completed = uniqueRevealedIndices.length >= OFFICE_MATCH_CELL_COUNT;
   return {
     completed,
     win: false,
