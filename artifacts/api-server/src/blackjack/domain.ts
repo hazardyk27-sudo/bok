@@ -217,6 +217,7 @@ export const BLACKJACK_WALLET_TRANSACTION_TYPES = [
   "BLACKJACK_PAYOUT",
   "PUSH_RETURN",
   "BET_RELEASE",
+  "LOSS_SETTLE",
 ] as const;
 
 export type BlackjackWalletTransactionType =
