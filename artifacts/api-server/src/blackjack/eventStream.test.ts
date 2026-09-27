@@ -114,6 +114,16 @@ describe("blackjack event sequence stream", () => {
       }),
     ).toThrow(/actionId/);
 
+    expect(
+      checkBlackjackIncomingEventSequence(
+        Number.MAX_SAFE_INTEGER,
+        Number.MAX_SAFE_INTEGER,
+      ),
+    ).toEqual({
+      status: "DUPLICATE_OR_OLD",
+      eventSequence: Number.MAX_SAFE_INTEGER,
+    });
+
     expect(() =>
       checkBlackjackIncomingEventSequence(-1, 0),
     ).toThrow(/lastAppliedEventSequence/);
