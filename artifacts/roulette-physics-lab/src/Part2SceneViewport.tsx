@@ -5297,6 +5297,24 @@ export function Part2SceneViewport({
       const part6Params = new URLSearchParams(window.location.search);
       const part10aTrace61006 =
         part6Params.get('part10aTrace61006') === '1';
+      const part11Calibration =
+        part6Params.get('part11Calibration') === '1';
+      const requestedPart11LaunchRadius = Number(
+        part6Params.get('part11LaunchRadius') ?? ROULETTE_DARK_RACE_LAUNCH_RADIUS,
+      );
+      const activePart11LaunchRadius =
+        part11Calibration && Number.isFinite(requestedPart11LaunchRadius)
+          ? THREE.MathUtils.clamp(requestedPart11LaunchRadius, 2.39, 2.50)
+          : ROULETTE_DARK_RACE_LAUNCH_RADIUS;
+      const requestedPart11LaunchSpeedMps = Number(
+        part6Params.get('part11LaunchSpeedMps') ??
+          PART6_LAUNCH_SPEED_METERS_PER_SECOND_BASE,
+      );
+      const activePart11LaunchSpeed =
+        part11Calibration && Number.isFinite(requestedPart11LaunchSpeedMps)
+          ? THREE.MathUtils.clamp(requestedPart11LaunchSpeedMps, 4.85, 6.20) *
+            ROULETTE_WORLD_UNITS_PER_METER
+          : null;
       const requestedSeedCount = Number(
         part6Params.get('part6SeedCount') ?? PART6_FULL_SPIN_RUNS.length,
       );
@@ -5637,6 +5655,12 @@ export function Part2SceneViewport({
         seedCount: activePart6Runs.length,
         maxSteps,
         maxDurationSeconds: activePart6MaxDurationSeconds,
+        part11Calibration,
+        part11LaunchRadius: part11Calibration ? activePart11LaunchRadius : null,
+        part11LaunchSpeedMps:
+          part11Calibration && activePart11LaunchSpeed !== null
+            ? activePart11LaunchSpeed / ROULETTE_WORLD_UNITS_PER_METER
+            : null,
       });
       part6TelemetryBatchRunning = true;
       publishPart6TelemetryReport(
@@ -5661,12 +5685,17 @@ export function Part2SceneViewport({
           logPart6DiagnosticStage('seed-start', { seed: run.seed });
           logPart6DiagnosticStage('launch-surface-before', { seed: run.seed });
 
+          const activeLaunchRadius = part11Calibration
+            ? activePart11LaunchRadius
+            : PART2_ACTUAL_DARK_TRACK_LAUNCH_RADIUS;
+          const activeLaunchSpeed =
+            part11Calibration && activePart11LaunchSpeed !== null
+              ? activePart11LaunchSpeed
+              : run.speed;
           const launchSurfaceX =
-            Math.sin(run.launchAzimuth) *
-            PART2_ACTUAL_DARK_TRACK_LAUNCH_RADIUS;
+            Math.sin(run.launchAzimuth) * activeLaunchRadius;
           const launchSurfaceZ =
-            Math.cos(run.launchAzimuth) *
-            PART2_ACTUAL_DARK_TRACK_LAUNCH_RADIUS;
+            Math.cos(run.launchAzimuth) * activeLaunchRadius;
           const launchSurface = part6ExactStationaryMesh
             ? sampleExactStationaryLaunchSurfaceAt(
                 part6ExactStationaryMesh.vertices,
@@ -5693,7 +5722,7 @@ export function Part2SceneViewport({
           const canonicalLaunchState = buildRouletteCanonicalLaunchState({
             surfacePoint: launchSurface.point,
             surfaceNormal: launchSurface.normal,
-            launchSpeed: run.speed,
+            launchSpeed: activeLaunchSpeed,
             launchAzimuthRadians: run.launchAzimuth,
             ballRadius: BALL_RADIUS,
             launchClearance: 0.01,
@@ -7344,9 +7373,9 @@ export function Part2SceneViewport({
             launchAzimuth: Number(
               run.launchAzimuth.toFixed(6),
             ),
-            launchSpeed: Number(run.speed.toFixed(4)),
+            launchSpeed: Number(activeLaunchSpeed.toFixed(4)),
             launchSpeedMetersPerSecond: Number(
-              (run.speed / ROULETTE_WORLD_UNITS_PER_METER).toFixed(4),
+              (activeLaunchSpeed / ROULETTE_WORLD_UNITS_PER_METER).toFixed(4),
             ),
             launchRadius: Number(
               Math.hypot(
