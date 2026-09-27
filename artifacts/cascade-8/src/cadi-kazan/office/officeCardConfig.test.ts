@@ -3,7 +3,7 @@ import {
   OFFICE_MATCH_CARD_CONFIG,
   OFFICE_MATCH_SYMBOLS,
   OFFICE_MATCH_TARGET_RTP_BPS,
-} from "./officeCardConfig";
+, OFFICE_CARD_ART_URL } from "./officeCardConfig";
 
 describe("The Office match-3 card config", () => {
   it("uses a 3x2 board with exactly six scratch cells", () => {
@@ -52,6 +52,10 @@ describe("The Office match-3 card config", () => {
       { id: "STANLEY", asset: "office-stanley-20x.webp" },
       { id: "MICHAEL", asset: "office-michael-100x.webp" },
     ]);
+  });
+
+  it("uses the bundled master PNG for the Office card shell", () => {
+    expect(OFFICE_CARD_ART_URL).toContain("office-card-master.png");
   });
 
 });
