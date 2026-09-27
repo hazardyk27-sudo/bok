@@ -5607,8 +5607,19 @@ export function Part2SceneViewport({
             canonicalLaunchState.angularVelocity.z,
           );
 
-          // Flush the previous seed's dynamic state and contact manifold before
-          // applying this seed's launch. No impulse/force is used.
+          // The server creates a fresh ball/contact pair for every round. The
+          // browser telemetry batch reuses one Rapier world, so explicitly
+          // remove the previous seed's contact pair for one pre-launch step
+          // before running the same zero-velocity launch prewarm as the server.
+          // This changes no physics coefficient and happens before launch.
+          activeBallCollider.setEnabled(false);
+          activeBallBody.setLinvel({ x: 0, y: 0, z: 0 }, true);
+          activeBallBody.setAngvel({ x: 0, y: 0, z: 0 }, true);
+          activeWorld.step();
+          activeBallCollider.setEnabled(true);
+
+          // Apply this seed's server-equivalent prewarm state. No impulse/force
+          // is used; the actual launch velocity is applied only after the step.
           activeBallBody.setLinvel({ x: 0, y: 0, z: 0 }, true);
           activeBallBody.setAngvel({ x: 0, y: 0, z: 0 }, true);
           activeBallBody.setTranslation(
