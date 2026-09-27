@@ -2364,9 +2364,21 @@ export function Part2SceneViewport({
     let lastTime = performance.now();
     let fixedStepCount = 0;
     let part6TelemetryBatchRunning = false;
-    const activePart3TrackFriction = outerLaneSpinOnly
-      ? PART3_OUTER_SPIN_TRACK_FRICTION
-      : PART3_TRACK_FRICTION;
+    const part9WorldParams = new URLSearchParams(window.location.search);
+    const part9WorldCalibrationEnabled =
+      part9WorldParams.get('part9Calibration') === '1';
+    const requestedPart9TrackFriction = Number(
+      part9WorldParams.get('part9TrackFriction') ??
+        PART3_OUTER_SPIN_TRACK_FRICTION,
+    );
+    const activePart3TrackFriction =
+      outerLaneSpinOnly &&
+      part9WorldCalibrationEnabled &&
+      Number.isFinite(requestedPart9TrackFriction)
+        ? THREE.MathUtils.clamp(requestedPart9TrackFriction, 0.0005, 0.08)
+        : outerLaneSpinOnly
+          ? PART3_OUTER_SPIN_TRACK_FRICTION
+          : PART3_TRACK_FRICTION;
     const activePart3LinearDamping = outerLaneSpinOnly
       ? PART3_OUTER_SPIN_LINEAR_DAMPING
       : PART3_TRACK_DAMPING;
