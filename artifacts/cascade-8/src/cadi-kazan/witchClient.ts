@@ -44,6 +44,15 @@ type CadiKazanMutation = {
 const API_BASE = "/api/cadi-kazan";
 const SCRATCH_BRUSH_RADIUS_PX = 14;
 const OFFICE_SYMBOL_BY_ID = new Map(OFFICE_MATCH_SYMBOLS.map((symbol) => [symbol.id, symbol] as const));
+const OFFICE_SCRATCH_COVER_URL = "data:image/svg+xml;charset=utf-8," + encodeURIComponent(`
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 360 250">
+  <rect width="360" height="250" rx="12" fill="#ececec"/>
+  <g transform="translate(180 125) rotate(-1)">
+    <text x="-72" y="-58" text-anchor="middle" font-family="Georgia,serif" font-size="32" font-weight="700" fill="#111" stroke="#fff" stroke-width="9" paint-order="stroke fill">that's</text>
+    <text x="0" y="20" text-anchor="middle" font-family="Georgia,serif" font-size="92" font-weight="900" letter-spacing="-5" fill="#070707" stroke="#fff" stroke-width="12" paint-order="stroke fill">what</text>
+    <text x="38" y="73" text-anchor="middle" font-family="Georgia,serif" font-size="43" font-weight="800" fill="#111" stroke="#fff" stroke-width="10" paint-order="stroke fill">she said</text>
+  </g>
+</svg>`);
 
 const officeSymbolPresentation = (symbolId: OfficeMatchSymbolId | undefined, revealed: boolean) => {
   if (!revealed || !symbolId) {
@@ -993,7 +1002,11 @@ export class WitchClient {
           brushRadiusPx: SCRATCH_BRUSH_RADIUS_PX,
           debrisCanvas: debrisCanvas ?? undefined,
           layerCanvases,
-          coverImageUrl: round.mode === "STANDARD" ? "/cadi-kazan/bcs-cactus.webp" : undefined,
+          coverImageUrl: round.mode === "STANDARD"
+            ? "/cadi-kazan/bcs-cactus.webp"
+            : round.mode === "OFFICE_MATCH_6"
+              ? OFFICE_SCRATCH_COVER_URL
+              : undefined,
           resultReady: isActuallyRevealed,
           onCommit: async () => {
             if (this.state?.round?.revealedCells.includes(index)) return;
