@@ -252,12 +252,9 @@ function addExactGlbStationaryCollider(
   body: RAPIER.RigidBody,
 ) {
   const geometry = getRouletteExactGlbColliderGeometry().stationary;
-  const canonicalVertices = canonicalizeRouletteTrimeshVertices(
-    geometry.vertices,
-  );
   return world.createCollider(
     RAPIER.ColliderDesc.trimesh(
-      canonicalVertices,
+      geometry.vertices,
       geometry.indices,
       RAPIER.TriMeshFlags.FIX_INTERNAL_EDGES,
     )
@@ -275,12 +272,9 @@ function addExactGlbRotorCollider(
   body: RAPIER.RigidBody,
 ) {
   const geometry = getRouletteExactGlbColliderGeometry().rotor;
-  const canonicalVertices = canonicalizeRouletteTrimeshVertices(
-    geometry.vertices,
-  );
   return world.createCollider(
     RAPIER.ColliderDesc.trimesh(
-      canonicalVertices,
+      geometry.vertices,
       geometry.indices,
       // Pocket floors, frets and retaining faces are intentionally sharp
       // visible GLB edges. Keep their authored triangle normals instead of
