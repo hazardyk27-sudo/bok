@@ -24,6 +24,7 @@ export type BlackjackMutationActionType =
 
 export type BlackjackActionEnvelope = Readonly<{
   actionId: BlackjackActionId;
+  actorPlayerId: string;
   type: BlackjackMutationActionType;
   tableId: string;
   expectedStateVersion: number;
@@ -35,6 +36,7 @@ export type BlackjackActionEnvelope = Readonly<{
 
 export type BlackjackActionReceipt = Readonly<{
   actionId: BlackjackActionId;
+  actorPlayerId: string;
   type: BlackjackMutationActionType;
   tableId: string;
   expectedStateVersion: number;
@@ -120,6 +122,7 @@ function sameEnvelope(
 ): boolean {
   return (
     receipt.actionId === envelope.actionId &&
+    receipt.actorPlayerId === envelope.actorPlayerId &&
     receipt.type === envelope.type &&
     receipt.tableId === envelope.tableId &&
     receipt.expectedStateVersion === envelope.expectedStateVersion &&
@@ -140,6 +143,7 @@ function assertBlackjackActionEnvelopeShape(
   envelope: BlackjackActionEnvelope,
 ): void {
   assertNonEmptyId("actionId", envelope.actionId);
+  assertNonEmptyId("actorPlayerId", envelope.actorPlayerId);
   assertNonEmptyId("tableId", envelope.tableId);
   assertStateVersion(envelope.expectedStateVersion);
   assertNonEmptyId("payloadFingerprint", envelope.payloadFingerprint);
@@ -160,6 +164,20 @@ export function assertBlackjackActionEnvelope(
   if (table.tableId !== envelope.tableId) {
     throw new Error("Blackjack action targets another table");
   }
+
+  const actor = table.players.find(
+    (player) => player.playerId === envelope.actorPlayerId,
+  );
+  if (!actor) {
+    throw new Error("Blackjack action actor is not seated at this table");
+  }
+  if (
+    envelope.seatNumber !== null &&
+    actor.seatNumber !== envelope.seatNumber
+  ) {
+    throw new Error("Blackjack action actor does not own the target seat");
+  }
+
 
   if (envelope.roundId !== null) {
     assertNonEmptyId("roundId", envelope.roundId);
@@ -184,6 +202,9 @@ export function assertBlackjackActionEnvelope(
       hand.seatNumber !== envelope.seatNumber
     ) {
       throw new Error("Blackjack action seat does not own the target hand");
+    }
+    if (hand.playerId !== envelope.actorPlayerId) {
+      throw new Error("Blackjack action actor does not own the target hand");
     }
   }
 }
