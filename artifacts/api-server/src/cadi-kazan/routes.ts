@@ -23,7 +23,7 @@ function sendError(res: Response, error: unknown) {
   const message = error instanceof Error ? error.message : "CADI_KAZAN_REQUEST_FAILED";
   const status = message === "INSUFFICIENT_CADI_KAZAN_CREDITS" ? 402
     : message === "CADI_KAZAN_ROUND_NOT_FOUND" ? 404
-      : message === "ACTIVE_CADI_KAZAN_ROUND_EXISTS" || message === "CASH_OUT_REQUIRES_SAFE_REVEAL" || message === "IDEMPOTENCY_KEY_REUSED" ? 409
+      : message === "ACTIVE_CADI_KAZAN_ROUND_EXISTS" || message === "CASH_OUT_REQUIRES_SAFE_REVEAL" || message === "OFFICE_MATCH_NO_CASH_OUT" || message === "IDEMPOTENCY_KEY_REUSED" ? 409
         : 400;
   res.status(status).json({ error: message });
 }
