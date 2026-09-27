@@ -100,4 +100,11 @@ describe("cadi kazan route smoke contract", () => {
     expect(visualLockSource).toContain("prefers-reduced-motion: no-preference");
   });
 
+
+  it("keeps the Office reference card bounded inside the horizontal mobile stage", () => {
+    expect(visualLockSource).toContain("height: min(100%, calc(var(--witch-vh) * 55))");
+    expect(visualLockSource).toContain("max-width: 100%");
+    expect(visualLockSource).toContain("aspect-ratio: 2.08 / 1");
+  });
+
 });
