@@ -21,7 +21,10 @@ import {
   ROULETTE_WORLD_UNITS_PER_METER,
 } from "../../../../lib/roulette-physics-config";
 import { rouletteNumberForPhysicsPocketIndex } from "../../../../lib/roulette-pocket-mapping";
-import { rouletteTrimeshByteFingerprint } from "../../../../lib/roulette-trimesh-fingerprint";
+import {
+  canonicalizeRouletteTrimeshVertices,
+  rouletteTrimeshByteFingerprint,
+} from "../../../../lib/roulette-trimesh-fingerprint";
 import {
   getRouletteExactGlbColliderGeometry,
   ROULETTE_EXACT_GLB_COLLIDER_METADATA,
@@ -249,9 +252,12 @@ function addExactGlbStationaryCollider(
   body: RAPIER.RigidBody,
 ) {
   const geometry = getRouletteExactGlbColliderGeometry().stationary;
+  const canonicalVertices = canonicalizeRouletteTrimeshVertices(
+    geometry.vertices,
+  );
   return world.createCollider(
     RAPIER.ColliderDesc.trimesh(
-      geometry.vertices,
+      canonicalVertices,
       geometry.indices,
       RAPIER.TriMeshFlags.FIX_INTERNAL_EDGES,
     )
@@ -269,9 +275,12 @@ function addExactGlbRotorCollider(
   body: RAPIER.RigidBody,
 ) {
   const geometry = getRouletteExactGlbColliderGeometry().rotor;
+  const canonicalVertices = canonicalizeRouletteTrimeshVertices(
+    geometry.vertices,
+  );
   return world.createCollider(
     RAPIER.ColliderDesc.trimesh(
-      geometry.vertices,
+      canonicalVertices,
       geometry.indices,
       // Pocket floors, frets and retaining faces are intentionally sharp
       // visible GLB edges. Keep their authored triangle normals instead of
@@ -1192,8 +1201,13 @@ export async function simulatePhysicsLabRound(
         ROULETTE_EXACT_GLB_COLLIDER_METADATA.weldEpsilonWorld,
       vertices: ROULETTE_EXACT_GLB_COLLIDER_METADATA.stationaryVertices,
       triangles: ROULETTE_EXACT_GLB_COLLIDER_METADATA.stationaryTriangles,
-      vertexFingerprint: rouletteTrimeshByteFingerprint(
+      rawVertexFingerprint: rouletteTrimeshByteFingerprint(
         getRouletteExactGlbColliderGeometry().stationary.vertices,
+      ),
+      vertexFingerprint: rouletteTrimeshByteFingerprint(
+        canonicalizeRouletteTrimeshVertices(
+          getRouletteExactGlbColliderGeometry().stationary.vertices,
+        ),
       ),
       indexFingerprint: rouletteTrimeshByteFingerprint(
         getRouletteExactGlbColliderGeometry().stationary.indices,
@@ -1217,8 +1231,13 @@ export async function simulatePhysicsLabRound(
         ROULETTE_EXACT_GLB_COLLIDER_METADATA.weldEpsilonWorld,
       vertices: ROULETTE_EXACT_GLB_COLLIDER_METADATA.rotorVertices,
       triangles: ROULETTE_EXACT_GLB_COLLIDER_METADATA.rotorTriangles,
-      vertexFingerprint: rouletteTrimeshByteFingerprint(
+      rawVertexFingerprint: rouletteTrimeshByteFingerprint(
         getRouletteExactGlbColliderGeometry().rotor.vertices,
+      ),
+      vertexFingerprint: rouletteTrimeshByteFingerprint(
+        canonicalizeRouletteTrimeshVertices(
+          getRouletteExactGlbColliderGeometry().rotor.vertices,
+        ),
       ),
       indexFingerprint: rouletteTrimeshByteFingerprint(
         getRouletteExactGlbColliderGeometry().rotor.indices,
