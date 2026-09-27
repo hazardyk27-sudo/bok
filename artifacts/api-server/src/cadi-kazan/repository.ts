@@ -9,10 +9,8 @@ import {
 } from "./officeMatch";
 import {
   ADVANCED_ALARM_OPTIONS,
-  CADI_KAZAN_ADVANCED_CELL_COUNT,
   CADI_KAZAN_MIN_STAKE_CENTS,
   CADI_KAZAN_MODES,
-  CADI_KAZAN_STANDARD_CELL_COUNT,
   type CadiKazanMode,
   type CadiKazanRoundSnapshot,
   type CadiKazanState,
