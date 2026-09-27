@@ -302,6 +302,7 @@ type Part3ProbeResult = {
   initialVelocity: VectorReadout;
   initialAngularSpin: VectorReadout;
   lapCount: number;
+  continuousOuterLapCount: number;
   trackDuration: number;
   averageTrackSpeed: number;
   trackStartSpeed: number;
@@ -5824,6 +5825,9 @@ export function Part2SceneViewport({
           let trackAngle: number | null = null;
           let trackAngleStart: number | null = null;
           let trackAngleEnd: number | null = null;
+          let continuousOuterAngle: number | null = null;
+          let continuousOuterAngleStart: number | null = null;
+          let continuousOuterAngleEnd: number | null = null;
           let completedLaps = 0;
           const lapSpeeds: number[] = [];
           let trackFrames = 0;
@@ -6446,6 +6450,23 @@ export function Part2SceneViewport({
             const angle = normalizedAngle(
               Math.atan2(position.x, position.z),
             );
+            if (inwardTransitionTime === null) {
+              if (continuousOuterAngle === null) {
+                continuousOuterAngle = angle;
+                continuousOuterAngleStart = angle;
+                continuousOuterAngleEnd = angle;
+              } else {
+                const continuousDelta =
+                  THREE.MathUtils.euclideanModulo(
+                    angle -
+                      normalizedAngle(continuousOuterAngle) +
+                      Math.PI,
+                    TWO_PI,
+                  ) - Math.PI;
+                continuousOuterAngle += continuousDelta;
+                continuousOuterAngleEnd = continuousOuterAngle;
+              }
+            }
             if (
               inTrackCenterBand &&
               trackPairContact &&
@@ -7091,6 +7112,27 @@ export function Part2SceneViewport({
               ? 0
               : Math.abs(trackAngleEnd - trackAngleStart) /
                 TWO_PI;
+          const continuousOuterLapCount =
+            continuousOuterAngleStart === null ||
+            continuousOuterAngleEnd === null
+              ? 0
+              : Math.abs(
+                  continuousOuterAngleEnd -
+                    continuousOuterAngleStart,
+                ) / TWO_PI;
+          console.info(
+            'PART9_CONTINUOUS_LAP_DIAGNOSTIC',
+            JSON.stringify({
+              seed: run.seed,
+              gatedLapCount: Number(lapCount.toFixed(6)),
+              continuousOuterLapCount: Number(
+                continuousOuterLapCount.toFixed(6),
+              ),
+              deltaLaps: Number(
+                (continuousOuterLapCount - lapCount).toFixed(6),
+              ),
+            }),
+          );
           const trackDuration =
             inwardTransitionTime ?? elapsed;
           const trackContactRatio =
@@ -7316,6 +7358,9 @@ export function Part2SceneViewport({
             resetRotorAngleError: Number(resetRotorAngleError.toFixed(8)),
             elapsed: Number(elapsed.toFixed(4)),
             lapCount: Number(lapCount.toFixed(3)),
+            continuousOuterLapCount: Number(
+              continuousOuterLapCount.toFixed(3),
+            ),
             trackDuration: Number(
               trackDuration.toFixed(4),
             ),
