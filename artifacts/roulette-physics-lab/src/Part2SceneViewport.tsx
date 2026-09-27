@@ -5189,6 +5189,34 @@ export function Part2SceneViewport({
       const activeRotorPivot = rotorPivot;
 
       const part6Params = new URLSearchParams(window.location.search);
+      const part9CalibrationEnabled =
+        part6Params.get('part9Calibration') === '1';
+      const requestedPart9LaunchRadius = Number(
+        part6Params.get('part9LaunchRadius') ??
+          PART2_ACTUAL_DARK_TRACK_LAUNCH_RADIUS,
+      );
+      const activePart9LaunchRadius =
+        part9CalibrationEnabled &&
+        Number.isFinite(requestedPart9LaunchRadius)
+          ? THREE.MathUtils.clamp(
+              requestedPart9LaunchRadius,
+              PART2_ACTUAL_DARK_TRACK_RADIUS_BAND[0] + 0.01,
+              PART2_ACTUAL_DARK_TRACK_RADIUS_BAND[1] - 0.01,
+            )
+          : PART2_ACTUAL_DARK_TRACK_LAUNCH_RADIUS;
+      const requestedPart9LaunchSpeedMetersPerSecond = Number(
+        part6Params.get('part9LaunchSpeedMps') ??
+          PART6_LAUNCH_SPEED_METERS_PER_SECOND_BASE,
+      );
+      const activePart9LaunchSpeedMetersPerSecond =
+        part9CalibrationEnabled &&
+        Number.isFinite(requestedPart9LaunchSpeedMetersPerSecond)
+          ? THREE.MathUtils.clamp(
+              requestedPart9LaunchSpeedMetersPerSecond,
+              3,
+              12,
+            )
+          : PART6_LAUNCH_SPEED_METERS_PER_SECOND_BASE;
       const requestedSeedCount = Number(
         part6Params.get('part6SeedCount') ?? PART6_FULL_SPIN_RUNS.length,
       );
@@ -5218,6 +5246,17 @@ export function Part2SceneViewport({
       const activePart6Runs = PART6_FULL_SPIN_RUNS.slice(
         activePart6SeedStartIndex,
         activePart6SeedStartIndex + activePart6SeedCount,
+      ).map((run) =>
+        part9CalibrationEnabled
+          ? {
+              ...run,
+              speed:
+                activePart9LaunchSpeedMetersPerSecond *
+                  ROULETTE_WORLD_UNITS_PER_METER +
+                (part6DeterministicUnit(run.seed, 1) * 2 - 1) *
+                  PART6_LAUNCH_SPEED_VARIATION,
+            }
+          : run,
       );
       const requestedMaxDurationSeconds = Number(
         part6Params.get('part6MaxDurationSeconds') ??
@@ -5555,15 +5594,18 @@ export function Part2SceneViewport({
 
           const launchSurface = measureVisibleSurfaceAt(
             Math.sin(run.launchAzimuth) *
-              PART2_ACTUAL_DARK_TRACK_LAUNCH_RADIUS,
+              activePart9LaunchRadius,
             Math.cos(run.launchAzimuth) *
-              PART2_ACTUAL_DARK_TRACK_LAUNCH_RADIUS,
+              activePart9LaunchRadius,
             true,
             PART2_ACTUAL_DARK_TRACK_RADIUS_BAND,
           );
           logPart6DiagnosticStage('launch-surface-after', {
             seed: run.seed,
             found: Boolean(launchSurface),
+            part9CalibrationEnabled,
+            activePart9LaunchRadius,
+            activePart9LaunchSpeedMetersPerSecond,
           });
           if (!launchSurface) {
             failInfrastructure(
