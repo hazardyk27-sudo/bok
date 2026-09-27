@@ -59,6 +59,15 @@ const PART11_TEST_BALL_SCALE = (() => {
     ? Math.max(0.7, Math.min(1.3, requested))
     : 1;
 })();
+const PART11_TEST_TRACK_FRICTION = (() => {
+  if (typeof window === 'undefined') return null;
+  const params = new URLSearchParams(window.location.search);
+  if (params.get('part11Calibration') !== '1') return null;
+  const requested = Number(params.get('part11TrackFriction') ?? Number.NaN);
+  return Number.isFinite(requested)
+    ? Math.max(0, Math.min(0.08, requested))
+    : null;
+})();
 const BALL_RADIUS = ROULETTE_BALL_RADIUS * PART11_TEST_BALL_SCALE;
 const BALL_MASS = 0.0027;
 const TWO_PI = Math.PI * 2;
@@ -2480,7 +2489,7 @@ export function Part2SceneViewport({
     let fixedStepCount = 0;
     let part6TelemetryBatchRunning = false;
     const activePart3TrackFriction = outerLaneSpinOnly
-      ? PART3_OUTER_SPIN_TRACK_FRICTION
+      ? (PART11_TEST_TRACK_FRICTION ?? PART3_OUTER_SPIN_TRACK_FRICTION)
       : PART3_TRACK_FRICTION;
     const activePart3LinearDamping = outerLaneSpinOnly
       ? PART3_OUTER_SPIN_LINEAR_DAMPING
