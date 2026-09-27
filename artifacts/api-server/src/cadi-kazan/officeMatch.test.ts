@@ -8,6 +8,7 @@ import {
   OFFICE_MATCH_WIN_RATE_BPS,
   createOfficeMatchBoard,
   getOfficeMatchTheoreticalRtpBps,
+  resolveOfficeMatchReveal,
   selectOfficeMatchOutcome,
 } from "./officeMatch";
 
@@ -98,4 +99,40 @@ describe("The Office 6-cell outcome engine", () => {
     expect(() => selectOfficeMatchOutcome(10_000)).toThrow("INVALID_OFFICE_OUTCOME_ROLL");
     expect(() => selectOfficeMatchOutcome(2.5)).toThrow("INVALID_OFFICE_OUTCOME_ROLL");
   });
+
+  it("settles immediately on the third matching revealed symbol", () => {
+    const board = ["DWIGHT", "KEVIN", "DWIGHT", "JIM", "STANLEY", "DWIGHT"] as const;
+
+    expect(resolveOfficeMatchReveal(board, [0, 1, 2, 3])).toEqual({
+      completed: false,
+      win: false,
+      matchedSymbolId: null,
+      multiplierBps: 0,
+    });
+
+    expect(resolveOfficeMatchReveal(board, [0, 1, 2, 3, 5])).toEqual({
+      completed: true,
+      win: true,
+      matchedSymbolId: "DWIGHT",
+      multiplierBps: 1_000,
+    });
+  });
+
+  it("settles a loss only after all six cells are revealed", () => {
+    const board = ["KEVIN", "JIM", "DWIGHT", "STANLEY", "KEVIN", "JIM"] as const;
+
+    expect(resolveOfficeMatchReveal(board, [0, 1, 2, 3, 4])).toMatchObject({
+      completed: false,
+      win: false,
+      multiplierBps: 0,
+    });
+
+    expect(resolveOfficeMatchReveal(board, [0, 1, 2, 3, 4, 5])).toEqual({
+      completed: true,
+      win: false,
+      matchedSymbolId: null,
+      multiplierBps: 0,
+    });
+  });
+
 });
