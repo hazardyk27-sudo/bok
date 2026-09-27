@@ -43,6 +43,7 @@ type CadiKazanMutation = {
 
 const API_BASE = "/api/cadi-kazan";
 const SCRATCH_BRUSH_RADIUS_PX = 14;
+const OFFICE_SCRATCH_BRUSH_RADIUS_PX = SCRATCH_BRUSH_RADIUS_PX * 1.3;
 const OFFICE_SYMBOL_BY_ID = new Map(OFFICE_MATCH_SYMBOLS.map((symbol) => [symbol.id, symbol] as const));
 const OFFICE_SCRATCH_COVER_URL = "data:image/svg+xml;charset=utf-8," + encodeURIComponent(`
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 360 250">
@@ -1017,7 +1018,7 @@ export class WitchClient {
       if (round.status === "ACTIVE" && !surface) {
         this.scratchSurfaces.set(index, new ScratchSurface(interactionCanvas, {
           audio: this.audio,
-          brushRadiusPx: SCRATCH_BRUSH_RADIUS_PX,
+          brushRadiusPx: round.mode === "OFFICE_MATCH_6" ? OFFICE_SCRATCH_BRUSH_RADIUS_PX : SCRATCH_BRUSH_RADIUS_PX,
           debrisCanvas: debrisCanvas ?? undefined,
           layerCanvases,
           coverImageUrl: round.mode === "STANDARD"
