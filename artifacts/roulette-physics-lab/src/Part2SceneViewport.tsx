@@ -5578,15 +5578,17 @@ export function Part2SceneViewport({
             launchSurface.point.y,
             launchSurface.point.z,
           ).addScaledVector(launchNormal, launchClearance);
-          // Start from the horizontal roulette circumference, then
-          // remove only the component normal to the exact GLB facet. This is
-          // the closest true surface tangent to a horizontal circular launch.
-          const tangent = new THREE.Vector3(
-            Math.cos(run.launchAzimuth),
+          const launchRadial = new THREE.Vector3(
+            Math.sin(run.launchAzimuth),
             0,
-            -Math.sin(run.launchAzimuth),
-          )
-            .projectOnPlane(launchNormal)
+            Math.cos(run.launchAzimuth),
+          ).normalize();
+          // Exact-GLB launch baseline: use the authored surface normal and a
+          // radial reference so the initial velocity lies in the real contact
+          // plane with zero radial component.
+          const tangent = launchNormal
+            .clone()
+            .cross(launchRadial)
             .normalize();
           const launchVelocity = tangent.clone().multiplyScalar(run.speed);
           const launchAngularVelocity = launchNormal
