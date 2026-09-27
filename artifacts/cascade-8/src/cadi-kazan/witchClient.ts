@@ -987,13 +987,17 @@ export class WitchClient {
         if (round.mode === "OFFICE_MATCH_6" && officePresentation?.symbol) {
           const symbolId = visibleOfficeSymbols.get(index);
           const symbol = symbolId ? OFFICE_SYMBOL_BY_ID.get(symbolId) : undefined;
+          const symbolPrizeCents = symbol
+            ? Math.floor((round.stakeCents * symbol.multiplierBps) / 100)
+            : 0;
+          const symbolPrize = formatMoney(symbolPrizeCents, { compactInteger: true });
           content.innerHTML = `
             <span class="witch-office-result-symbol" data-office-symbol="${symbolId ?? ""}">
-              <img class="witch-office-result-art" src="${officePresentation.artworkUrl ?? ""}" alt="" draggable="false">
-              <strong class="witch-office-result-name">${officePresentation.symbol}</strong>
-              <b>${symbol ? symbol.multiplierBps / 100 : 0}X</b>
+              <img class="witch-office-result-art" src="${officePresentation.artworkUrl ?? ""}" alt="${officePresentation.symbol}" draggable="false">
+              <b class="witch-office-result-prize">${symbolPrize}</b>
             </span>
           `;
+          button.setAttribute("aria-label", `${officePresentation.symbol} · ${symbolPrize}`);
         } else if ("artworkUrl" in presentation && presentation.artworkUrl) {
           content.innerHTML = `<img class="witch-cell-artwork" src="${presentation.artworkUrl}" alt="" draggable="false">`;
         } else {
