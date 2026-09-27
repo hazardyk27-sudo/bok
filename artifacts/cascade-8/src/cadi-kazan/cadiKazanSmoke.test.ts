@@ -185,4 +185,20 @@ describe("cadi kazan route smoke contract", () => {
     expect(visualLockSource).toContain("background: transparent !important");
   });
 
+
+  it("uses the master PNG as the Office card and pins all six live scratch zones to measured coordinates", () => {
+    expect(witchClientSource).toContain("OFFICE_CARD_ART_URL");
+    expect(witchClientSource).toContain("witch-office-card-master");
+    expect(visualLockSource).toContain("PASS 19 — THE OFFICE master-PNG shell");
+    expect(visualLockSource).toContain("aspect-ratio: 1511 / 707");
+    expect(visualLockSource).toContain("left: 37.2601% !important");
+    expect(visualLockSource).toContain("top: 13.2956% !important");
+    expect(visualLockSource).toContain("right: 4.6989% !important");
+    expect(visualLockSource).toContain("bottom: 8.9109% !important");
+    expect(visualLockSource).toContain(".witch-board > .witch-cell:nth-child(1)");
+    expect(visualLockSource).toContain(".witch-board > .witch-cell:nth-child(6)");
+    expect(visualLockSource).toContain("overflow: hidden !important");
+    expect(visualLockSource).toContain(".witch-ticket.is-preview .witch-office-preview-coating");
+  });
+
 });
