@@ -31,5 +31,6 @@ A Roulette commit never publishes itself to Replit. Only the central one-game pr
 - If a note conflicts with code/tests/ownership rules, the validated repository state wins.
 
 ## Current milestones
+- 2026-09-27 — Exact GLB Part 4A launch/settle gate closed — Exact GLB surface placement plus `normal × radial` launch tangent at the validated 5.0 m/s ±0.15 band now passes the 7-seed settle gate 7/7 (61001, 61004, 61005, 61006, 61007, 61008, 61022), with browser/server launch math mirrored and no hidden geometry. Next: Part 4B runs the broader 20-seed/full regression and closes the milestone if clean.
 - 2026-09-26 — Isolation v2 active — Roulette development stays on `feature/roulette`; preview release is ownership-scoped into `integration/replit-preview`, not a whole-branch merge.
 
