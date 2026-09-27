@@ -33,3 +33,22 @@ export const authSessions = pgTable(
     expiryIdx: index("auth_sessions_expiry_idx").on(table.expiresAt),
   }),
 );
+
+
+export const emailVerificationTokens = pgTable(
+  "email_verification_tokens",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    tokenHash: text("token_hash").notNull().unique(),
+    expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
+    consumedAt: timestamp("consumed_at", { withTimezone: true }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => ({
+    userIdx: index("email_verification_tokens_user_idx").on(table.userId),
+    expiryIdx: index("email_verification_tokens_expiry_idx").on(table.expiresAt),
+  }),
+);
