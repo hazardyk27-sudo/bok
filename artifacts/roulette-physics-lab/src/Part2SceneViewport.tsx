@@ -5313,7 +5313,7 @@ export function Part2SceneViewport({
       );
       const activePart11LaunchRadius =
         part11Calibration && Number.isFinite(requestedPart11LaunchRadius)
-          ? THREE.MathUtils.clamp(requestedPart11LaunchRadius, 2.39, 2.50)
+          ? THREE.MathUtils.clamp(requestedPart11LaunchRadius, 2.34, 2.50)
           : ROULETTE_DARK_RACE_LAUNCH_RADIUS;
       const requestedPart11LaunchSpeedMps = Number(
         part6Params.get('part11LaunchSpeedMps') ??
