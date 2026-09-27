@@ -97,6 +97,52 @@ export function createOfficeMatchBoard(
   return shuffle(lossPool, randomIndex).slice(0, OFFICE_MATCH_CELL_COUNT);
 }
 
+
+export function getOfficeMatchSymbol(symbolId: OfficeMatchSymbolId) {
+  const symbol = OFFICE_MATCH_SYMBOLS.find((candidate) => candidate.id === symbolId);
+  if (!symbol) throw new Error("INVALID_OFFICE_SYMBOL");
+  return symbol;
+}
+
+export function resolveOfficeMatchReveal(
+  cells: readonly OfficeMatchSymbolId[],
+  revealedIndices: readonly number[],
+): {
+  completed: boolean;
+  win: boolean;
+  matchedSymbolId: OfficeMatchSymbolId | null;
+  multiplierBps: number;
+} {
+  if (cells.length !== OFFICE_MATCH_CELL_COUNT) throw new Error("INVALID_OFFICE_BOARD");
+
+  const counts = new Map<OfficeMatchSymbolId, number>();
+  for (const index of revealedIndices) {
+    if (!Number.isInteger(index) || index < 0 || index >= cells.length) throw new Error("INVALID_OFFICE_REVEAL_INDEX");
+    const symbolId = cells[index];
+    getOfficeMatchSymbol(symbolId);
+    counts.set(symbolId, (counts.get(symbolId) ?? 0) + 1);
+  }
+
+  for (const symbol of OFFICE_MATCH_SYMBOLS) {
+    if ((counts.get(symbol.id) ?? 0) >= OFFICE_MATCH_REQUIRED_MATCHES) {
+      return {
+        completed: true,
+        win: true,
+        matchedSymbolId: symbol.id,
+        multiplierBps: symbol.multiplierBps,
+      };
+    }
+  }
+
+  const completed = new Set(revealedIndices).size >= OFFICE_MATCH_CELL_COUNT;
+  return {
+    completed,
+    win: false,
+    matchedSymbolId: null,
+    multiplierBps: 0,
+  };
+}
+
 export function createRandomOfficeMatchTicket(): {
   outcome: OfficeMatchOutcome;
   cells: OfficeMatchSymbolId[];
