@@ -3282,3 +3282,78 @@
     aspect-ratio: 2.08 / 1 !important;
   }
 }
+
+
+/* PASS 15 — THE OFFICE result artwork owns the full scratch cell.
+   The generic safe-result sculpture (small gold card, aura and pseudo-labels)
+   must never leak into Office result cells. */
+.is-office-theme .witch-cell.is-office-cell .witch-cell-aura,
+.is-office-theme .witch-cell.is-office-cell .witch-cell-result-label {
+  display: none !important;
+}
+
+.is-office-theme .witch-cell.is-office-cell .witch-cell-content {
+  position: absolute !important;
+  inset: 0 !important;
+  z-index: 2 !important;
+  display: block !important;
+  width: 100% !important;
+  height: 100% !important;
+  min-width: 0 !important;
+  min-height: 0 !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  background: #050505 !important;
+  box-shadow: none !important;
+  transform: none !important;
+  filter: none !important;
+  color: inherit !important;
+  font-size: inherit !important;
+  overflow: hidden !important;
+}
+
+.is-office-theme .witch-cell.is-office-cell .witch-cell-content::before,
+.is-office-theme .witch-cell.is-office-cell .witch-cell-content::after {
+  display: none !important;
+  content: none !important;
+}
+
+.is-office-theme .witch-cell.is-office-cell .witch-office-result-symbol {
+  position: absolute !important;
+  inset: 0 !important;
+  display: block !important;
+  width: 100% !important;
+  height: 100% !important;
+  min-width: 0 !important;
+  min-height: 0 !important;
+  overflow: hidden !important;
+  background: #050505 !important;
+  transform: none !important;
+}
+
+.is-office-theme .witch-cell.is-office-cell .witch-office-result-art {
+  position: absolute !important;
+  inset: 3% !important;
+  width: 94% !important;
+  height: 94% !important;
+  max-width: none !important;
+  max-height: none !important;
+  object-fit: contain !important;
+  object-position: center center !important;
+  background: #050505 !important;
+  transform: none !important;
+  filter: none !important;
+}
+
+.is-office-theme .witch-cell.is-office-cell .witch-office-result-name {
+  left: 5% !important;
+  bottom: 5% !important;
+  z-index: 14 !important;
+  max-width: 58% !important;
+}
+
+.is-office-theme .witch-cell.is-office-cell .witch-office-result-symbol > b {
+  right: 5% !important;
+  bottom: 5% !important;
+  z-index: 15 !important;
+}
