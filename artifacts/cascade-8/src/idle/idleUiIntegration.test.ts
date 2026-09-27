@@ -1496,3 +1496,28 @@ describe("Businesses premium Parts 7–10", () => {
     expect(idleCssSource).toContain(".detail-roadmap-fill");
   });
 });
+describe("Businesses Part 11 desktop alignment hotfix", () => {
+  it("shows the shared balance inside the desktop progression row", () => {
+    expect(idleIndexSource).toContain("businesses-progression-wallet");
+    expect(idleIndexSource).toContain("data-idle-balance-compact");
+    expect(idleIndexSource).toContain("compactBalanceNode.textContent = formatCredits(walletBalanceCents)");
+  });
+
+  it("keeps the mobile wallet on the approved premium surface", () => {
+    expect(idleCssSource).toContain("/* 2026-09-27 — Part 11: desktop balance, grid alignment and viewport fill */");
+    expect(idleCssSource).toContain(".route-shell.is-businesses-page .businesses-wallet {");
+    expect(idleCssSource).toContain("linear-gradient(180deg, #0b1524 0%, #091421 100%)");
+  });
+
+  it("aligns the KPI row with the three business card columns", () => {
+    expect(idleCssSource).toContain(".route-shell.is-businesses-page .business-command-bar,");
+    expect(idleCssSource).toContain(".route-shell.is-businesses-page .business-list {");
+    expect(idleCssSource).toContain("grid-template-columns: repeat(3, minmax(0, 1fr))");
+  });
+
+  it("removes desktop 16 by 9 letterboxing while keeping a bounded wide layout", () => {
+    expect(idleCssSource).toContain("height: calc(100dvh - 28px)");
+    expect(idleCssSource).toContain("max-width: 1800px");
+    expect(idleCssSource).toContain("aspect-ratio: auto");
+  });
+});

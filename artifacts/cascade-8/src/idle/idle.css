@@ -8207,3 +8207,129 @@ body.businesses-route {
     transition: none;
   }
 }
+/* 2026-09-27 — Part 11: desktop balance, grid alignment and viewport fill */
+/* Keep the mobile/general wallet on the same muted premium surface family. */
+.route-shell.is-businesses-page .businesses-wallet {
+  border-color: rgba(111, 151, 255, .10);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, .012), rgba(255, 255, 255, .002)),
+    linear-gradient(180deg, #0b1524 0%, #091421 100%);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, .022),
+    0 10px 28px rgba(0, 0, 0, .16);
+}
+
+.route-shell.is-businesses-page .businesses-wallet::after {
+  display: none;
+}
+
+.businesses-progression-wallet {
+  display: none;
+}
+
+@media (min-width: 1101px) {
+  /* Stop letterboxing the whole desktop workspace into a synthetic 16:9 box. */
+  .route-shell.is-businesses-page {
+    place-items: stretch;
+    padding: 14px;
+  }
+
+  .route-shell.is-businesses-page .businesses-workspace {
+    width: 100%;
+    max-width: 1800px;
+    height: calc(100dvh - 28px);
+    max-height: none;
+    margin: 0 auto;
+    aspect-ratio: auto;
+    grid-template-columns: 196px minmax(0, 1fr);
+    gap: 20px;
+  }
+
+  .route-shell.is-businesses-page .businesses-sidebar {
+    width: 196px;
+  }
+
+  /* KPI row shares exactly the same three equal columns as the business cards. */
+  .route-shell.is-businesses-page .business-command-bar,
+  .route-shell.is-businesses-page .business-list {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 14px;
+  }
+
+  .route-shell.is-businesses-page .business-command-stat,
+  .route-shell.is-businesses-page .business-summary-collect-all {
+    width: 100%;
+    min-width: 0;
+  }
+
+  /* Reserve a compact right-hand slot for the shared balance, shortening the bar naturally. */
+  .route-shell.is-businesses-page .businesses-progression {
+    grid-template-columns:
+      minmax(122px, auto)
+      minmax(240px, 1fr)
+      auto
+      minmax(148px, 182px);
+    gap: 14px;
+  }
+
+  .businesses-progression-wallet {
+    display: grid;
+    align-content: center;
+    justify-items: end;
+    min-width: 0;
+    min-height: 38px;
+    padding-left: 14px;
+    border-left: 1px solid rgba(111, 151, 255, .09);
+  }
+
+  .businesses-progression-wallet span {
+    color: var(--idle-text-muted);
+    font-family: var(--idle-font-ui);
+    font-size: 7px;
+    font-weight: 680;
+    letter-spacing: .06em;
+  }
+
+  .businesses-progression-wallet strong {
+    margin-top: 5px;
+    overflow: hidden;
+    max-width: 100%;
+    color: #e8effc;
+    font-family: var(--idle-font-ui);
+    font-size: 15px;
+    font-variant-numeric: tabular-nums;
+    font-weight: 740;
+    letter-spacing: -.025em;
+    line-height: 1;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .route-shell.is-businesses-page .businesses-page {
+    gap: 14px;
+    padding: 0;
+  }
+
+  .route-shell.is-businesses-page .business-list {
+    margin-top: 0;
+  }
+}
+
+@media (min-width: 1101px) and (max-width: 1260px) {
+  .route-shell.is-businesses-page .businesses-progression {
+    grid-template-columns:
+      minmax(110px, auto)
+      minmax(180px, 1fr)
+      auto
+      minmax(132px, 160px);
+    gap: 10px;
+  }
+
+  .businesses-progression-wallet {
+    padding-left: 10px;
+  }
+
+  .businesses-progression-wallet strong {
+    font-size: 14px;
+  }
+}

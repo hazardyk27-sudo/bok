@@ -535,6 +535,10 @@ export const BUSINESSES_MARKUP = `
           <span data-idle-progression-percent>0%</span>
           <span data-idle-active-businesses>— / 3 AKTİF</span>
         </div>
+        <div class="businesses-progression-wallet" aria-label="Ortak genel bakiye">
+          <span>ORTAK BAKİYE</span>
+          <strong data-idle-balance-compact>—</strong>
+        </div>
       </section>
     </header>
 
@@ -768,6 +772,7 @@ export class BusinessesClient {
     const live = projectIdleStateLive(this.envelope);
     const walletBalanceCents = live.wallet.balanceCents;
     const balanceNode = this.root.querySelector<HTMLElement>("[data-idle-balance]");
+    const compactBalanceNode = this.root.querySelector<HTMLElement>("[data-idle-balance-compact]");
     const hourlyNode = this.root.querySelector<HTMLElement>("[data-idle-total-hourly]");
     const collectableNode = this.root.querySelector<HTMLElement>("[data-idle-total-collectable]");
     const activeNode = this.root.querySelector<HTMLElement>("[data-idle-active-businesses]");
@@ -781,6 +786,7 @@ export class BusinessesClient {
 
     if (
       !balanceNode
+      || !compactBalanceNode
       || !hourlyNode
       || !collectableNode
       || !activeNode
@@ -796,6 +802,7 @@ export class BusinessesClient {
     }
 
     balanceNode.textContent = formatCredits(walletBalanceCents);
+    compactBalanceNode.textContent = formatCredits(walletBalanceCents);
 
     const totalHourlyCents = getIdleTotalPassiveIncomeCentsPerHour(
       live.businesses,
