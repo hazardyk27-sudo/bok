@@ -5310,7 +5310,7 @@ export function Part2SceneViewport({
         part6Params.get('part11LaunchSpeedMps') ??
           PART6_LAUNCH_SPEED_METERS_PER_SECOND_BASE,
       );
-      const activePart11LaunchSpeed =
+      const activePart11LaunchSpeedBase =
         part11Calibration && Number.isFinite(requestedPart11LaunchSpeedMps)
           ? THREE.MathUtils.clamp(requestedPart11LaunchSpeedMps, 4.85, 6.20) *
             ROULETTE_WORLD_UNITS_PER_METER
@@ -5658,8 +5658,8 @@ export function Part2SceneViewport({
         part11Calibration,
         part11LaunchRadius: part11Calibration ? activePart11LaunchRadius : null,
         part11LaunchSpeedMps:
-          part11Calibration && activePart11LaunchSpeed !== null
-            ? activePart11LaunchSpeed / ROULETTE_WORLD_UNITS_PER_METER
+          part11Calibration && activePart11LaunchSpeedBase !== null
+            ? activePart11LaunchSpeedBase / ROULETTE_WORLD_UNITS_PER_METER
             : null,
       });
       part6TelemetryBatchRunning = true;
@@ -5689,8 +5689,9 @@ export function Part2SceneViewport({
             ? activePart11LaunchRadius
             : PART2_ACTUAL_DARK_TRACK_LAUNCH_RADIUS;
           const activeLaunchSpeed =
-            part11Calibration && activePart11LaunchSpeed !== null
-              ? activePart11LaunchSpeed
+            part11Calibration && activePart11LaunchSpeedBase !== null
+              ? activePart11LaunchSpeedBase +
+                (run.speed - PART6_LAUNCH_SPEED_BASE)
               : run.speed;
           const launchSurfaceX =
             Math.sin(run.launchAzimuth) * activeLaunchRadius;
