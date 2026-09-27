@@ -8978,17 +8978,12 @@ export function Part2SceneViewport({
             !part1ProbeOnly
           ) {
             // Rapier scene queries reuse a broad-phase BVH that is refreshed
-            // by stepping the world. Prime that query state without allowing
-            // the full-spin ball to create a contact manifold/warm-start cache:
-            // the server begins its seed launch from a fresh ball/contact pair.
-            // The ball collider is re-enabled before any launch state is applied.
-            if (part6FullSpinRouteActive) {
-              physicsBallCollider?.setEnabled(false);
-            }
+            // by stepping the world. The exact GLB colliders were just
+            // inserted, so perform one zero-launch synchronization step before
+            // the parity raycasts, then restore the ball to its exact start.
+            // This step exists only to make the query pipeline see the freshly
+            // inserted mesh colliders; it must not alter the test launch.
             world.step();
-            if (part6FullSpinRouteActive) {
-              physicsBallCollider?.setEnabled(true);
-            }
             ballBody.setTranslation(
               { x: initialPosition[0], y: initialPosition[1], z: initialPosition[2] },
               true,
