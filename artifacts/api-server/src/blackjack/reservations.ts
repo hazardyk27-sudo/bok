@@ -23,6 +23,7 @@ export type BlackjackFundsReservation = Readonly<{
   reserveTransactionId: BlackjackTransactionId;
   userId: BlackjackUserId;
   roundId: BlackjackRoundId;
+  reserveHandId: BlackjackHandId | null;
   handId: BlackjackHandId | null;
   kind: BlackjackBetKind;
   amountCents: number;
@@ -102,7 +103,7 @@ function sameReservationSemantics(
     reservation.reserveTransactionId === input.reserveTransactionId &&
     reservation.userId === input.userId &&
     reservation.roundId === input.roundId &&
-    reservation.handId === input.handId &&
+    reservation.reserveHandId === input.handId &&
     reservation.kind === input.kind &&
     reservation.amountCents === input.amountCents
   );
@@ -193,7 +194,7 @@ export function reserveBlackjackWager(
       transactionId: input.reserveTransactionId,
       userId: input.userId,
       roundId: input.roundId,
-      handId: input.handId,
+      handId: existingById.reserveHandId,
       type: reserveTypeForKind(input.kind),
       amountCents: input.amountCents,
       createdAtMs: input.createdAtMs,
@@ -231,6 +232,7 @@ export function reserveBlackjackWager(
     reserveTransactionId: input.reserveTransactionId,
     userId: input.userId,
     roundId: input.roundId,
+    reserveHandId: input.handId,
     handId: input.handId,
     kind: input.kind,
     amountCents: input.amountCents,
