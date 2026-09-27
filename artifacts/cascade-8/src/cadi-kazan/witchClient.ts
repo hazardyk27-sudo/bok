@@ -123,6 +123,21 @@ const newIdempotencyKey = (prefix: string) => `${prefix}-${crypto.randomUUID()}-
 
 export const CADI_KAZAN_MARKUP = `
   <main class="witch-page" aria-labelledby="witch-title">
+    <svg class="witch-office-filter-defs" width="0" height="0" aria-hidden="true" focusable="false">
+      <defs>
+        <filter id="witch-office-remove-black" color-interpolation-filters="sRGB">
+          <feColorMatrix
+            type="matrix"
+            values="
+              1 0 0 0 0
+              0 1 0 0 0
+              0 0 1 0 0
+              8 8 8 0 -0.12
+            "
+          />
+        </filter>
+      </defs>
+    </svg>
     <header class="witch-appbar">
       <a class="witch-back" href="/" aria-label="Ana menüye dön">←</a>
 
