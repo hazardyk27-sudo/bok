@@ -8629,6 +8629,54 @@ export function Part2SceneViewport({
              }
           }
 
+          if (part6FullSpinRouteActive) {
+            const activeEnvironmentRoles = [...part3ColliderRoles.values()].sort();
+            const expectedEnvironmentRoles = [
+              'exact-glb-rotor-trimesh',
+              'exact-glb-stationary-trimesh',
+            ].sort();
+            const exactRotorRole =
+              part3PocketColliders.length === 1
+                ? part3ColliderRoles.get(part3PocketColliders[0].handle) ?? null
+                : null;
+            const legacyColliderCount =
+              part3DeflectorColliders.length +
+              part3BowlBridgeColliders.length +
+              rotorColliders.length +
+              (part3InnerFloorCollider ? 1 : 0) +
+              Math.max(0, part3PocketColliders.length - 1);
+            const rolesMatch =
+              activeEnvironmentRoles.length === expectedEnvironmentRoles.length &&
+              activeEnvironmentRoles.every(
+                (role, index) => role === expectedEnvironmentRoles[index],
+              );
+            const exactGlbColliderContractPassed =
+              rolesMatch &&
+              legacyColliderCount === 0 &&
+              part3TrackCollider !== null &&
+              part3ColliderRoles.get(part3TrackCollider.handle) ===
+                'exact-glb-stationary-trimesh' &&
+              exactRotorRole === 'exact-glb-rotor-trimesh';
+
+            console.info(
+              'PART5_EXACT_GLB_COLLIDER_CONTRACT',
+              JSON.stringify({
+                passed: exactGlbColliderContractPassed,
+                activeEnvironmentRoles,
+                legacyColliderCount,
+                stationaryRole:
+                  part3TrackCollider === null
+                    ? null
+                    : part3ColliderRoles.get(part3TrackCollider.handle) ?? null,
+                rotorRole: exactRotorRole,
+              }),
+            );
+
+            if (!exactGlbColliderContractPassed) {
+              throw new Error('PART5_EXACT_GLB_COLLIDER_CONTRACT_VIOLATION');
+            }
+          }
+
           const initialPosition =
             validationMode === 'part3'
                ? part3SpawnPosition(PART3_PROBES[0], part3TrackVerticalOffset)

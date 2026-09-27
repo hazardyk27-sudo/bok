@@ -599,6 +599,36 @@ describe("authoritative roulette physics config", () => {
     );
   });
 
+  it("locks Part 5 full-spin physics to exact GLB colliders only", () => {
+    expect(part3ViewportSource).toContain(
+      "'PART5_EXACT_GLB_COLLIDER_CONTRACT'",
+    );
+    expect(part3ViewportSource).toContain(
+      "'PART5_EXACT_GLB_COLLIDER_CONTRACT_VIOLATION'",
+    );
+    expect(part3ViewportSource).toContain(
+      "'exact-glb-stationary-trimesh'",
+    );
+    expect(part3ViewportSource).toContain(
+      "'exact-glb-rotor-trimesh'",
+    );
+    expect(part3ViewportSource).toContain(
+      "legacyColliderCount === 0",
+    );
+    expect(physicsLabSimulationSource).toContain(
+      '"ROULETTE_PART5_EXACT_GLB_COLLIDER_CONTRACT"',
+    );
+    expect(physicsLabSimulationSource).toContain(
+      '"ROULETTE_PART5_EXACT_GLB_COLLIDER_CONTRACT_VIOLATION"',
+    );
+    expect(physicsLabSimulationSource).toContain(
+      "const exactGlbStationaryCollider = addExactGlbStationaryCollider(",
+    );
+    expect(physicsLabSimulationSource).toContain(
+      "const exactGlbRotorCollider = addExactGlbRotorCollider(",
+    );
+  });
+
   it("locks roulette runtime validation to the canonical feature branch", () => {
     expect(rouletteRuntimeWorkflowSource).toContain(
       "- feature/roulette",

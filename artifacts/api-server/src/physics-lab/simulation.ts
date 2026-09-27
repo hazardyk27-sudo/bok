@@ -1137,6 +1137,28 @@ export async function simulatePhysicsLabRound(
       triangles: ROULETTE_EXACT_GLB_COLLIDER_METADATA.rotorTriangles,
     }),
   );
+
+  const activeEnvironmentRoles = [...colliderRoles.values()].sort();
+  const expectedEnvironmentRoles = [
+    "exact-glb-rotor-trimesh",
+    "exact-glb-stationary-trimesh",
+  ].sort();
+  const exactGlbColliderContractPassed =
+    activeEnvironmentRoles.length === expectedEnvironmentRoles.length &&
+    activeEnvironmentRoles.every(
+      (role, index) => role === expectedEnvironmentRoles[index],
+    );
+  console.info(
+    "ROULETTE_PART5_EXACT_GLB_COLLIDER_CONTRACT",
+    JSON.stringify({
+      passed: exactGlbColliderContractPassed,
+      activeEnvironmentRoles,
+    }),
+  );
+  if (!exactGlbColliderContractPassed) {
+    throw new Error("ROULETTE_PART5_EXACT_GLB_COLLIDER_CONTRACT_VIOLATION");
+  }
+
   const ballBody = world.createRigidBody(
     RAPIER.RigidBodyDesc.dynamic()
       .setTranslation(...startConditions.ballPosition)
