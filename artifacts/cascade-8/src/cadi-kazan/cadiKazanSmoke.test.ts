@@ -118,4 +118,13 @@ describe("cadi kazan route smoke contract", () => {
     expect(visualLockSource).toContain("touch-action: none !important");
   });
 
+
+  it("prevents the generic safe sculpture from covering Office character art", () => {
+    expect(visualLockSource).toContain("PASS 15 — THE OFFICE result artwork owns the full scratch cell");
+    expect(visualLockSource).toContain(".witch-cell.is-office-cell .witch-cell-content::before");
+    expect(visualLockSource).toContain("content: none !important");
+    expect(visualLockSource).toContain(".witch-cell.is-office-cell .witch-cell-aura");
+    expect(visualLockSource).toContain("object-fit: contain !important");
+  });
+
 });
