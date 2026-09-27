@@ -62,6 +62,48 @@ jobs:
             ROULETTE_PART6_EXPECTED_SEEDS='1' \
             node scripts/roulette-part6-runtime.mjs > "${LOG}" 2>&1 || true
 
+            node - "${LOG}" "${SEED}" <<'NODE'
+          const fs = require('fs');
+          const [path, seed] = process.argv.slice(2);
+          const frames = [];
+          for (const line of fs.readFileSync(path, 'utf8').split(/\n+/)) {
+            const marker = 'BROWSER_CONSOLE ';
+            const at = line.indexOf(marker);
+            if (at < 0) continue;
+            try {
+              const outer = JSON.parse(line.slice(at + marker.length));
+              const text = String(outer.text ?? '');
+              const prefix = 'ROULETTE_PARITY_STEP ';
+              if (!text.startsWith(prefix)) continue;
+              frames.push(JSON.parse(text.slice(prefix.length)));
+            } catch {}
+          }
+          const firstOuter = frames.find(f => Number(f.radius) >= 2.47) ?? null;
+          let reversal = null;
+          for (let i = 1; i < frames.length; i++) {
+            const prev = frames[i - 1];
+            const cur = frames[i];
+            if (
+              Number(prev.radius) >= 2.45 &&
+              Number(prev.radialVelocity) > 0 &&
+              Number(cur.radialVelocity) <= 0
+            ) {
+              reversal = { before: prev, after: cur };
+              break;
+            }
+          }
+          const maxFrame = frames.length
+            ? frames.reduce((best, f) => Number(f.radius) > Number(best.radius) ? f : best)
+            : null;
+          console.log('PART11_OUTER_WALL_TRACE ' + JSON.stringify({
+            seed:Number(seed),
+            frameCount:frames.length,
+            firstOuter,
+            maxFrame,
+            reversal
+          }));
+          NODE
+
             node - "${SEED}" "${OUT}" "${SPEED}" <<'NODE' | tee -a "part11-low-${SPEED}.ndjson"
           const fs = require('fs');
           const [seed, path, speed] = process.argv.slice(2);
