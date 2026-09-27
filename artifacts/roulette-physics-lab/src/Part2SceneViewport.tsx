@@ -505,7 +505,6 @@ type Part6FullSpinTelemetryResult = {
   resetRotorAngleError: number;
   elapsed: number;
   lapCount: number;
-  continuousOuterLapCount: number;
   trackDuration: number;
   trackContactRatio: number;
   trackStartSpeed: number;
@@ -2350,7 +2349,6 @@ export function Part2SceneViewport({
     let rotorBody: RAPIER.RigidBody | null = null;
     let physicsBallCollider: RAPIER.Collider | null = null;
     let part3TrackCollider: RAPIER.Collider | null = null;
-    let part9StationaryWallCollider: RAPIER.Collider | null = null;
     let part3BowlBridgeColliders: RAPIER.Collider[] = [];
     let part3BowlBridgeProfile: Array<[number, number]> = [];
     let part3BowlBridgeOuterRadius: number = BOWL_BRIDGE_OUTER_RADIUS;
@@ -2366,72 +2364,9 @@ export function Part2SceneViewport({
     let lastTime = performance.now();
     let fixedStepCount = 0;
     let part6TelemetryBatchRunning = false;
-    const part9WorldParams = new URLSearchParams(window.location.search);
-    const part9WorldCalibrationEnabled =
-      part9WorldParams.get('part9Calibration') === '1';
-    const requestedPart9TrackFriction = Number(
-      part9WorldParams.get('part9TrackFriction') ??
-        PART3_OUTER_SPIN_TRACK_FRICTION,
-    );
-    const activePart9StationaryMode =
-      part9WorldCalibrationEnabled
-        ? part9WorldParams.get('part9StationaryMode') ?? 'baseline'
-        : 'baseline';
-    const requestedPart9StationaryRestitution = Number(
-      part9WorldParams.get('part9StationaryRestitution') ?? 0.01,
-    );
-    const activePart9StationaryRestitution =
-      part9WorldCalibrationEnabled &&
-      Number.isFinite(requestedPart9StationaryRestitution)
-        ? THREE.MathUtils.clamp(
-            requestedPart9StationaryRestitution,
-            0,
-            0.3,
-          )
-        : 0.01;
-    const part9WallSplitEnabled =
-      part9WorldCalibrationEnabled &&
-      part9WorldParams.get('part9WallSplit') === '1';
-    const requestedPart9WallFriction = Number(
-      part9WorldParams.get('part9WallFriction') ?? 0,
-    );
-    const activePart9WallFriction =
-      part9WallSplitEnabled &&
-      Number.isFinite(requestedPart9WallFriction)
-        ? THREE.MathUtils.clamp(requestedPart9WallFriction, 0, 0.03)
-        : 0;
-    const requestedPart9WallRadiusMin = Number(
-      part9WorldParams.get('part9WallRadiusMin') ?? 2.48,
-    );
-    const activePart9WallRadiusMin =
-      part9WallSplitEnabled &&
-      Number.isFinite(requestedPart9WallRadiusMin)
-        ? THREE.MathUtils.clamp(
-            requestedPart9WallRadiusMin,
-            2.4,
-            2.56,
-          )
-        : 2.48;
-    const requestedPart9WallNormalYMax = Number(
-      part9WorldParams.get('part9WallNormalYMax') ?? 0.45,
-    );
-    const activePart9WallNormalYMax =
-      part9WallSplitEnabled &&
-      Number.isFinite(requestedPart9WallNormalYMax)
-        ? THREE.MathUtils.clamp(
-            requestedPart9WallNormalYMax,
-            0.05,
-            0.95,
-          )
-        : 0.45;
-    const activePart3TrackFriction =
-      outerLaneSpinOnly &&
-      part9WorldCalibrationEnabled &&
-      Number.isFinite(requestedPart9TrackFriction)
-        ? THREE.MathUtils.clamp(requestedPart9TrackFriction, 0.0005, 0.08)
-        : outerLaneSpinOnly
-          ? PART3_OUTER_SPIN_TRACK_FRICTION
-          : PART3_TRACK_FRICTION;
+    const activePart3TrackFriction = outerLaneSpinOnly
+      ? PART3_OUTER_SPIN_TRACK_FRICTION
+      : PART3_TRACK_FRICTION;
     const activePart3LinearDamping = outerLaneSpinOnly
       ? PART3_OUTER_SPIN_LINEAR_DAMPING
       : PART3_TRACK_DAMPING;
@@ -5254,50 +5189,6 @@ export function Part2SceneViewport({
       const activeRotorPivot = rotorPivot;
 
       const part6Params = new URLSearchParams(window.location.search);
-      const part9CalibrationEnabled =
-        part6Params.get('part9Calibration') === '1';
-      const requestedPart9LaunchRadius = Number(
-        part6Params.get('part9LaunchRadius') ??
-          PART2_ACTUAL_DARK_TRACK_LAUNCH_RADIUS,
-      );
-      const activePart9LaunchRadius =
-        part9CalibrationEnabled &&
-        Number.isFinite(requestedPart9LaunchRadius)
-          ? THREE.MathUtils.clamp(
-              requestedPart9LaunchRadius,
-              PART2_ACTUAL_DARK_TRACK_RADIUS_BAND[0] + 0.01,
-              PART2_ACTUAL_DARK_TRACK_RADIUS_BAND[1] - 0.01,
-            )
-          : PART2_ACTUAL_DARK_TRACK_LAUNCH_RADIUS;
-      const requestedPart9LaunchSpeedMetersPerSecond = Number(
-        part6Params.get('part9LaunchSpeedMps') ??
-          PART6_LAUNCH_SPEED_METERS_PER_SECOND_BASE,
-      );
-      const activePart9LaunchSpeedMetersPerSecond =
-        part9CalibrationEnabled &&
-        Number.isFinite(requestedPart9LaunchSpeedMetersPerSecond)
-          ? THREE.MathUtils.clamp(
-              requestedPart9LaunchSpeedMetersPerSecond,
-              3,
-              12,
-            )
-          : PART6_LAUNCH_SPEED_METERS_PER_SECOND_BASE;
-      const requestedPart9LaunchGap = Number(
-        part6Params.get('part9LaunchGap') ?? 0.01,
-      );
-      const activePart9LaunchGap =
-        part9CalibrationEnabled &&
-        Number.isFinite(requestedPart9LaunchGap)
-          ? THREE.MathUtils.clamp(requestedPart9LaunchGap, 0.0001, 0.02)
-          : 0.01;
-      const requestedPart9SpinFactor = Number(
-        part6Params.get('part9SpinFactor') ?? PART6_BALL_SPIN_FACTOR,
-      );
-      const activePart9SpinFactor =
-        part9CalibrationEnabled &&
-        Number.isFinite(requestedPart9SpinFactor)
-          ? THREE.MathUtils.clamp(requestedPart9SpinFactor, 0, 2.5)
-          : PART6_BALL_SPIN_FACTOR;
       const requestedSeedCount = Number(
         part6Params.get('part6SeedCount') ?? PART6_FULL_SPIN_RUNS.length,
       );
@@ -5327,17 +5218,6 @@ export function Part2SceneViewport({
       const activePart6Runs = PART6_FULL_SPIN_RUNS.slice(
         activePart6SeedStartIndex,
         activePart6SeedStartIndex + activePart6SeedCount,
-      ).map((run) =>
-        part9CalibrationEnabled
-          ? {
-              ...run,
-              speed:
-                activePart9LaunchSpeedMetersPerSecond *
-                  ROULETTE_WORLD_UNITS_PER_METER +
-                (part6DeterministicUnit(run.seed, 1) * 2 - 1) *
-                  PART6_LAUNCH_SPEED_VARIATION,
-            }
-          : run,
       );
       const requestedMaxDurationSeconds = Number(
         part6Params.get('part6MaxDurationSeconds') ??
@@ -5675,20 +5555,15 @@ export function Part2SceneViewport({
 
           const launchSurface = measureVisibleSurfaceAt(
             Math.sin(run.launchAzimuth) *
-              activePart9LaunchRadius,
+              PART2_ACTUAL_DARK_TRACK_LAUNCH_RADIUS,
             Math.cos(run.launchAzimuth) *
-              activePart9LaunchRadius,
+              PART2_ACTUAL_DARK_TRACK_LAUNCH_RADIUS,
             true,
             PART2_ACTUAL_DARK_TRACK_RADIUS_BAND,
           );
           logPart6DiagnosticStage('launch-surface-after', {
             seed: run.seed,
             found: Boolean(launchSurface),
-            part9CalibrationEnabled,
-            activePart9LaunchRadius,
-            activePart9LaunchSpeedMetersPerSecond,
-            activePart9LaunchGap,
-            activePart9SpinFactor,
           });
           if (!launchSurface) {
             failInfrastructure(
@@ -5701,7 +5576,7 @@ export function Part2SceneViewport({
             return;
           }
 
-          const launchClearance = BALL_RADIUS + activePart9LaunchGap;
+          const launchClearance = BALL_RADIUS + 0.01;
           const launchNormal = new THREE.Vector3(
             launchSurface.normal.x,
             launchSurface.normal.y,
@@ -5728,7 +5603,7 @@ export function Part2SceneViewport({
           const launchAngularVelocity = launchNormal
             .clone()
             .cross(launchVelocity)
-            .multiplyScalar(activePart9SpinFactor / BALL_RADIUS);
+            .multiplyScalar(PART6_BALL_SPIN_FACTOR / BALL_RADIUS);
 
           // Flush the previous seed's dynamic state and contact manifold before
           // applying this seed's launch. No impulse/force is used.
@@ -5861,9 +5736,6 @@ export function Part2SceneViewport({
           let trackAngle: number | null = null;
           let trackAngleStart: number | null = null;
           let trackAngleEnd: number | null = null;
-          let continuousOuterAngle: number | null = null;
-          let continuousOuterAngleStart: number | null = null;
-          let continuousOuterAngleEnd: number | null = null;
           let completedLaps = 0;
           const lapSpeeds: number[] = [];
           let trackFrames = 0;
@@ -6486,23 +6358,6 @@ export function Part2SceneViewport({
             const angle = normalizedAngle(
               Math.atan2(position.x, position.z),
             );
-            if (inwardTransitionTime === null) {
-              if (continuousOuterAngle === null) {
-                continuousOuterAngle = angle;
-                continuousOuterAngleStart = angle;
-                continuousOuterAngleEnd = angle;
-              } else {
-                const continuousDelta =
-                  THREE.MathUtils.euclideanModulo(
-                    angle -
-                      normalizedAngle(continuousOuterAngle) +
-                      Math.PI,
-                    TWO_PI,
-                  ) - Math.PI;
-                continuousOuterAngle += continuousDelta;
-                continuousOuterAngleEnd = continuousOuterAngle;
-              }
-            }
             if (
               inTrackCenterBand &&
               trackPairContact &&
@@ -7148,27 +7003,6 @@ export function Part2SceneViewport({
               ? 0
               : Math.abs(trackAngleEnd - trackAngleStart) /
                 TWO_PI;
-          const continuousOuterLapCount =
-            continuousOuterAngleStart === null ||
-            continuousOuterAngleEnd === null
-              ? 0
-              : Math.abs(
-                  continuousOuterAngleEnd -
-                    continuousOuterAngleStart,
-                ) / TWO_PI;
-          console.info(
-            'PART9_CONTINUOUS_LAP_DIAGNOSTIC',
-            JSON.stringify({
-              seed: run.seed,
-              gatedLapCount: Number(lapCount.toFixed(6)),
-              continuousOuterLapCount: Number(
-                continuousOuterLapCount.toFixed(6),
-              ),
-              deltaLaps: Number(
-                (continuousOuterLapCount - lapCount).toFixed(6),
-              ),
-            }),
-          );
           const trackDuration =
             inwardTransitionTime ?? elapsed;
           const trackContactRatio =
@@ -7394,9 +7228,6 @@ export function Part2SceneViewport({
             resetRotorAngleError: Number(resetRotorAngleError.toFixed(8)),
             elapsed: Number(elapsed.toFixed(4)),
             lapCount: Number(lapCount.toFixed(3)),
-            continuousOuterLapCount: Number(
-              continuousOuterLapCount.toFixed(3),
-            ),
             trackDuration: Number(
               trackDuration.toFixed(4),
             ),
@@ -8626,173 +8457,31 @@ export function Part2SceneViewport({
                 stationaryGroup,
                 wheelRoot,
               );
-              let stationaryTrimeshFlags =
-                RAPIER.TriMeshFlags.FIX_INTERNAL_EDGES;
-              if (
-                activePart9StationaryMode === 'oriented' ||
-                activePart9StationaryMode === 'oriented-clean'
-              ) {
-                stationaryTrimeshFlags |= RAPIER.TriMeshFlags.ORIENTED;
-              }
-              if (
-                activePart9StationaryMode === 'clean' ||
-                activePart9StationaryMode === 'oriented-clean'
-              ) {
-                stationaryTrimeshFlags |=
-                  RAPIER.TriMeshFlags.MERGE_DUPLICATE_VERTICES |
-                  RAPIER.TriMeshFlags.DELETE_DEGENERATE_TRIANGLES |
-                  RAPIER.TriMeshFlags.DELETE_DUPLICATE_TRIANGLES;
-              }
-              if (part9WallSplitEnabled) {
-                const baseIndices: number[] = [];
-                const wallIndices: number[] = [];
-                const vertices = actualStationaryMesh.vertices;
-                const indices = actualStationaryMesh.indices;
-
-                for (let index = 0; index < indices.length; index += 3) {
-                  const ia = indices[index] * 3;
-                  const ib = indices[index + 1] * 3;
-                  const ic = indices[index + 2] * 3;
-                  const ax = vertices[ia];
-                  const ay = vertices[ia + 1];
-                  const az = vertices[ia + 2];
-                  const bx = vertices[ib];
-                  const by = vertices[ib + 1];
-                  const bz = vertices[ib + 2];
-                  const cx = vertices[ic];
-                  const cy = vertices[ic + 1];
-                  const cz = vertices[ic + 2];
-                  const abx = bx - ax;
-                  const aby = by - ay;
-                  const abz = bz - az;
-                  const acx = cx - ax;
-                  const acy = cy - ay;
-                  const acz = cz - az;
-                  const nx = aby * acz - abz * acy;
-                  const ny = abz * acx - abx * acz;
-                  const nz = abx * acy - aby * acx;
-                  const normalLength = Math.hypot(nx, ny, nz);
-                  const normalY =
-                    normalLength > 1e-10
-                      ? Math.abs(ny / normalLength)
-                      : 1;
-                  const centroidX = (ax + bx + cx) / 3;
-                  const centroidZ = (az + bz + cz) / 3;
-                  const centroidRadius = Math.hypot(
-                    centroidX,
-                    centroidZ,
-                  );
-                  const isOuterWall =
-                    centroidRadius >= activePart9WallRadiusMin &&
-                    normalY <= activePart9WallNormalYMax;
-                  const target = isOuterWall
-                    ? wallIndices
-                    : baseIndices;
-                  target.push(
-                    indices[index],
-                    indices[index + 1],
-                    indices[index + 2],
-                  );
-                }
-
-                if (
-                  wallIndices.length === 0 ||
-                  baseIndices.length === 0 ||
-                  wallIndices.length + baseIndices.length !== indices.length
-                ) {
-                  throw new Error(
-                    'PART9_EXACT_GLB_WALL_PARTITION_INVALID',
-                  );
-                }
-
-                part3TrackCollider = world.createCollider(
-                  RAPIER.ColliderDesc.trimesh(
-                    actualStationaryMesh.vertices,
-                    Uint32Array.from(baseIndices),
-                    stationaryTrimeshFlags,
-                  )
-                    .setFriction(activePart3TrackFriction)
-                    .setRestitution(activePart9StationaryRestitution)
-                    .setCollisionGroups(
-                      STATIONARY_COLLISION_GROUP |
-                        (BALL_COLLISION_GROUP << 16),
-                    ),
-                  stationaryBody,
-                );
-                part9StationaryWallCollider = world.createCollider(
-                  RAPIER.ColliderDesc.trimesh(
-                    actualStationaryMesh.vertices,
-                    Uint32Array.from(wallIndices),
-                    stationaryTrimeshFlags,
-                  )
-                    .setFriction(activePart9WallFriction)
-                    .setFrictionCombineRule(
-                      RAPIER.CoefficientCombineRule.Min,
-                    )
-                    .setRestitution(activePart9StationaryRestitution)
-                    .setCollisionGroups(
-                      STATIONARY_COLLISION_GROUP |
-                        (BALL_COLLISION_GROUP << 16),
-                    ),
-                  stationaryBody,
-                );
-                part3ColliderRoles.set(
-                  part3TrackCollider.handle,
-                  'exact-glb-stationary-trimesh',
-                );
-                part3ColliderRoles.set(
-                  part9StationaryWallCollider.handle,
-                  'exact-glb-stationary-wall-trimesh',
-                );
-                console.info(
-                  'PART9_EXACT_GLB_WALL_PARTITION',
-                  JSON.stringify({
-                    totalTriangles: indices.length / 3,
-                    baseTriangles: baseIndices.length / 3,
-                    wallTriangles: wallIndices.length / 3,
-                    unionTriangles:
-                      (baseIndices.length + wallIndices.length) / 3,
-                    radiusMin: activePart9WallRadiusMin,
-                    normalYMax: activePart9WallNormalYMax,
-                    wallFriction: activePart9WallFriction,
-                    exactUnionPreserved:
-                      baseIndices.length + wallIndices.length ===
-                      indices.length,
-                  }),
-                );
-              } else {
-                part3TrackCollider = world.createCollider(
-                  RAPIER.ColliderDesc.trimesh(
-                    actualStationaryMesh.vertices,
-                    actualStationaryMesh.indices,
-                    stationaryTrimeshFlags,
-                  )
-                    .setFriction(activePart3TrackFriction)
-                    .setRestitution(activePart9StationaryRestitution)
-                    .setCollisionGroups(
-                      STATIONARY_COLLISION_GROUP |
-                        (BALL_COLLISION_GROUP << 16),
-                    ),
-                  stationaryBody,
-                );
-                part3ColliderRoles.set(
-                  part3TrackCollider.handle,
-                  'exact-glb-stationary-trimesh',
-                );
-              }
+              part3TrackCollider = world.createCollider(
+                RAPIER.ColliderDesc.trimesh(
+                  actualStationaryMesh.vertices,
+                  actualStationaryMesh.indices,
+                  RAPIER.TriMeshFlags.FIX_INTERNAL_EDGES,
+                )
+                  .setFriction(activePart3TrackFriction)
+                  .setRestitution(0.01)
+                  .setCollisionGroups(
+                    STATIONARY_COLLISION_GROUP |
+                      (BALL_COLLISION_GROUP << 16),
+                  ),
+                stationaryBody,
+              );
               part3TrackVerticalOffset = 0;
               part2RaceVerticalOffset = 0;
+              part3ColliderRoles.set(
+                part3TrackCollider.handle,
+                'exact-glb-stationary-trimesh',
+              );
               console.info(
                 'GLB_EXACT_STATIONARY_COLLIDER',
                 JSON.stringify({
                   vertices: actualStationaryMesh.vertices.length / 3,
                   triangles: actualStationaryMesh.indices.length / 3,
-                  part9StationaryMode: activePart9StationaryMode,
-                  part9StationaryRestitution:
-                    activePart9StationaryRestitution,
-                  part9WallSplitEnabled,
-                  part9WallFriction: activePart9WallFriction,
-                  trimeshFlags: stationaryTrimeshFlags,
                 }),
               );
             } else if (
@@ -9136,18 +8825,10 @@ export function Part2SceneViewport({
 
           if (part6FullSpinRouteActive) {
             const activeEnvironmentRoles = [...part3ColliderRoles.values()].sort();
-            const expectedEnvironmentRoles = (
-              part9WallSplitEnabled
-                ? [
-                    'exact-glb-rotor-trimesh',
-                    'exact-glb-stationary-trimesh',
-                    'exact-glb-stationary-wall-trimesh',
-                  ]
-                : [
-                    'exact-glb-rotor-trimesh',
-                    'exact-glb-stationary-trimesh',
-                  ]
-            ).sort();
+            const expectedEnvironmentRoles = [
+              'exact-glb-rotor-trimesh',
+              'exact-glb-stationary-trimesh',
+            ].sort();
             const exactRotorRole =
               part3PocketColliders.length === 1
                 ? part3ColliderRoles.get(part3PocketColliders[0].handle) ?? null
@@ -9169,14 +8850,6 @@ export function Part2SceneViewport({
               part3TrackCollider !== null &&
               part3ColliderRoles.get(part3TrackCollider.handle) ===
                 'exact-glb-stationary-trimesh' &&
-              (
-                part9WallSplitEnabled
-                  ? part9StationaryWallCollider !== null &&
-                    part3ColliderRoles.get(
-                      part9StationaryWallCollider.handle,
-                    ) === 'exact-glb-stationary-wall-trimesh'
-                  : part9StationaryWallCollider === null
-              ) &&
               exactRotorRole === 'exact-glb-rotor-trimesh';
 
             console.info(
