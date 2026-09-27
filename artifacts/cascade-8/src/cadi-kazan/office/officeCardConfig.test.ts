@@ -1,9 +1,10 @@
 import { describe, expect, it } from "vitest";
 import {
+  OFFICE_CARD_ART_URL,
   OFFICE_MATCH_CARD_CONFIG,
   OFFICE_MATCH_SYMBOLS,
   OFFICE_MATCH_TARGET_RTP_BPS,
-, OFFICE_CARD_ART_URL } from "./officeCardConfig";
+} from "./officeCardConfig";
 
 describe("The Office match-3 card config", () => {
   it("uses a 3x2 board with exactly six scratch cells", () => {
