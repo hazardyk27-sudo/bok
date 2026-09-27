@@ -1,3 +1,5 @@
+export const OFFICE_CARD_ART_URL = new URL("./assets/office-card-master.png", import.meta.url).href;
+
 const OFFICE_ARTWORK_URLS = {
   KEVIN: new URL("./assets/office-kevin-2x.webp", import.meta.url).href,
   JIM: new URL("./assets/office-jim-5x.webp", import.meta.url).href,
