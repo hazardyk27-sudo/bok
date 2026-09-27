@@ -1,4 +1,4 @@
-name: Roulette Part 11 Mid Speed Probe
+name: Roulette Part 11 Outer Wall Trace
 
 on:
   push:
@@ -18,7 +18,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        speed: ['2.40', '3.20', '4.00']
+        speed: ['5.00']
 
     steps:
       - uses: actions/checkout@v4
