@@ -13,7 +13,7 @@ import { measureRouletteVisualSurfaceAt } from "../../../../lib/roulette-glb-sur
 type Vec3 = { x: number; y: number; z: number };
 type Quaternion = { x: number; y: number; z: number; w: number };
 
-const ROULETTE_VISUAL_BALL_SCALE = 1.5;
+const ROULETTE_VISUAL_BALL_SCALE = 1;
 const ROULETTE_VISUAL_BALL_RADIUS = ROULETTE_BALL_RADIUS * ROULETTE_VISUAL_BALL_SCALE;
 const ROULETTE_GLTF_PARITY_EPSILON_WORLD = 0.0006;
 const ROULETTE_MM_PER_WORLD_UNIT = 1000 / ROULETTE_WORLD_UNITS_PER_METER;
@@ -343,7 +343,9 @@ export class RoulettePhysicsReplay {
       visualSurface === null ? null : renderedBallBottomY - visualSurface.y;
     const visualParityPassed =
       physicsVisualSurfaceGapWorld !== null &&
-      Math.abs(physicsVisualSurfaceGapWorld) <= ROULETTE_GLTF_PARITY_EPSILON_WORLD;
+      renderedVisualSurfaceGapWorld !== null &&
+      Math.abs(physicsVisualSurfaceGapWorld) <= ROULETTE_GLTF_PARITY_EPSILON_WORLD &&
+      Math.abs(renderedVisualSurfaceGapWorld) <= ROULETTE_GLTF_PARITY_EPSILON_WORLD;
 
     this.canvas.dataset.visualSurfaceParity =
       visualParityPassed ? "passed" : "failed";
