@@ -257,6 +257,104 @@ export class ScratchSurface {
     this.paintLayers();
   }
 
+  scratchExternalPointer(
+    pointerId: number,
+    clientX: number,
+    clientY: number,
+    pressure = 0.62,
+    now = performance.now(),
+  ) {
+    const rect = this.interactionCanvas.getBoundingClientRect();
+    const inside =
+      clientX >= rect.left &&
+      clientX <= rect.right &&
+      clientY >= rect.top &&
+      clientY <= rect.bottom;
+
+    if (!inside) {
+      if (this.pointerId.value === pointerId && this.lastPoint) {
+        this.lastPoint = null;
+        this.lastMoveAt = now;
+        this.audio?.scratchStop();
+        this.interactionCanvas.classList.remove("is-scratching");
+      }
+      return false;
+    }
+
+    const point = this.pointFromClient(clientX, clientY);
+    const localWidth = Math.max(1, this.interactionCanvas.clientWidth);
+    const localHeight = Math.max(1, this.interactionCanvas.clientHeight);
+    const normalizedBrushRadius =
+      this.getBrushRadiusPx(localWidth, localHeight) / Math.max(1, Math.min(localWidth, localHeight));
+
+    if (this.pointerId.value !== pointerId) {
+      this.pointerId.value = pointerId;
+      this.gestureStartedAt = now;
+      this.scratchDistancePx = 0;
+      this.lastMoveAt = now;
+      this.lastPoint = point;
+    }
+
+    if (!this.lastPoint) {
+      this.lastPoint = point;
+      this.lastMoveAt = now;
+    }
+
+    const previousPoint = this.lastPoint;
+    const deltaX = point.x - previousPoint.x;
+    const deltaY = point.y - previousPoint.y;
+    const distance = Math.hypot(deltaX, deltaY);
+
+    if (distance < 0.0005) {
+      const initialDepthGain = this.abrasionConfig.depthPerSample * 1.15;
+      this.progress.sampleCircle(point.x, point.y, normalizedBrushRadius, initialDepthGain);
+      this.rememberTrail(point, 0, 0.08);
+      this.applyThreeLayerAbrasion(point, 0, 0.08, this.resultReady);
+      this.eraseLayer("lacquer", point, 0, 0.08, 0.82);
+      this.audio?.scratchStart(0, this.progress.depthAt(point.x, point.y));
+      this.interactionCanvas.classList.add("is-scratching");
+      return true;
+    }
+
+    const distancePx = distance * localWidth;
+    const elapsed = Math.max(8, now - this.lastMoveAt);
+    const speed = clamp(distancePx / elapsed / 1.05);
+    const normalizedPressure = pressure > 0 ? clamp(pressure, .35, 1) : .62;
+    const angle = Math.atan2(deltaY, deltaX);
+    this.scratchDistancePx += distancePx;
+
+    for (const sample of interpolateScratchPoints(previousPoint, point, 0.012)) {
+      const depthGain =
+        this.abrasionConfig.depthPerSample *
+        (0.78 + speed * 0.24) *
+        (0.86 + normalizedPressure * 0.32);
+      this.progress.sampleCircle(sample.x, sample.y, normalizedBrushRadius, depthGain);
+      this.rememberTrail(sample, angle, speed);
+      this.applyThreeLayerAbrasion(sample, angle, speed, this.resultReady);
+    }
+
+    this.eraseLayer("lacquer", point, angle, speed, 0.78);
+    this.maybeCommitResult(now);
+    this.emitDebris(point, angle, speed);
+    this.audio?.scratchUpdate(speed, this.progress.depthAt(point.x, point.y));
+    this.interactionCanvas.classList.add("is-scratching");
+    this.lastPoint = point;
+    this.lastMoveAt = now;
+    return true;
+  }
+
+  finishExternalPointer(pointerId: number, now = performance.now()) {
+    if (this.pointerId.value !== pointerId) return;
+    this.maybeCommitResult(now);
+    this.pointerId.value = null;
+    this.lastPoint = null;
+    this.gestureStartedAt = 0;
+    this.scratchDistancePx = 0;
+    this.lastMoveAt = 0;
+    this.audio?.scratchStop();
+    this.interactionCanvas.classList.remove("is-scratching");
+  }
+
   private rememberTrail(point: ScratchPoint, angle: number, speed: number) {
     this.trail.push({ point, angle, speed });
     if (this.trail.length > MAX_TRAIL_SAMPLES) {
@@ -509,7 +607,7 @@ export class ScratchSurface {
     context.restore();
   }
 
-  private pointFromEvent(event: PointerEvent): ScratchPoint {
+  private pointFromClient(clientX: number, clientY: number): ScratchPoint {
     const rect = this.interactionCanvas.getBoundingClientRect();
     const portraitLandscapeScene =
       window.matchMedia?.("(max-width: 600px) and (orientation: portrait)").matches ?? false;
@@ -521,15 +619,19 @@ export class ScratchSurface {
     // browsers when an ancestor is transformed.
     if (portraitLandscapeScene) {
       return {
-        x: clamp((event.clientY - rect.top) / Math.max(1, rect.height)),
-        y: clamp((rect.right - event.clientX) / Math.max(1, rect.width)),
+        x: clamp((clientY - rect.top) / Math.max(1, rect.height)),
+        y: clamp((rect.right - clientX) / Math.max(1, rect.width)),
       };
     }
 
     return {
-      x: clamp((event.clientX - rect.left) / Math.max(1, rect.width)),
-      y: clamp((event.clientY - rect.top) / Math.max(1, rect.height)),
+      x: clamp((clientX - rect.left) / Math.max(1, rect.width)),
+      y: clamp((clientY - rect.top) / Math.max(1, rect.height)),
     };
+  }
+
+  private pointFromEvent(event: PointerEvent): ScratchPoint {
+    return this.pointFromClient(event.clientX, event.clientY);
   }
 
   private getBrushRadiusPx(width: number, height: number) {
