@@ -5,7 +5,11 @@ export type AccountUser = {
   createdAt: string;
 };
 
-type AuthResponse = { user: AccountUser | null };
+type AuthResponse = {
+  user: AccountUser | null;
+  verificationEmailSent?: boolean;
+  alreadyVerified?: boolean;
+};
 
 export class AuthApiError extends Error {
   constructor(
@@ -58,6 +62,13 @@ export const accountApi = {
     return request<AuthResponse>("/auth/login", {
       method: "POST",
       body: JSON.stringify({ email, password }),
+    });
+  },
+
+  async resendVerification() {
+    return request<AuthResponse>("/auth/resend-verification", {
+      method: "POST",
+      body: "{}",
     });
   },
 
