@@ -1,7 +1,10 @@
 import { pool, type PoolClient } from "@workspace/db";
 import {
   AUTH_SESSION_TTL_MS,
+  EMAIL_VERIFICATION_TTL_MS,
+  createOpaqueToken,
   createSessionToken,
+  hashOpaqueToken,
   hashPassword,
   hashSessionToken,
   normalizeEmail,
@@ -136,6 +139,119 @@ export const authRepository = {
       .catch(() => undefined);
 
     return toAuthUser(row);
+  },
+
+  async issueEmailVerification(userId: string) {
+    return withTransaction(async (client) => {
+      const userResult = await client.query<UserRow>(
+        `SELECT id, email, password_hash, email_verified_at, created_at
+         FROM users
+         WHERE id = $1
+         FOR UPDATE`,
+        [userId],
+      );
+      const user = userResult.rows[0];
+      if (!user) throw new Error("AUTH_USER_NOT_FOUND");
+      if (user.email_verified_at) {
+        return { alreadyVerified: true as const, user: toAuthUser(user) };
+      }
+
+      const recent = await client.query<{ created_at: Date }>(
+        `SELECT created_at
+         FROM email_verification_tokens
+         WHERE user_id = $1
+           AND consumed_at IS NULL
+         ORDER BY created_at DESC
+         LIMIT 1`,
+        [userId],
+      );
+      const latest = recent.rows[0]?.created_at;
+      if (latest && Date.now() - latest.getTime() < 60_000) {
+        throw new Error("EMAIL_VERIFICATION_RATE_LIMIT");
+      }
+
+      const hourly = await client.query<{ count: string }>(
+        `SELECT COUNT(*)::text AS count
+         FROM email_verification_tokens
+         WHERE user_id = $1
+           AND created_at > NOW() - INTERVAL '1 hour'`,
+        [userId],
+      );
+      if (Number(hourly.rows[0]?.count ?? 0) >= 5) {
+        throw new Error("EMAIL_VERIFICATION_RATE_LIMIT");
+      }
+
+      const { token, tokenHash } = createOpaqueToken();
+      const expiresAt = new Date(Date.now() + EMAIL_VERIFICATION_TTL_MS);
+      const inserted = await client.query<{ id: string }>(
+        `INSERT INTO email_verification_tokens (user_id, token_hash, expires_at)
+         VALUES ($1, $2, $3)
+         RETURNING id`,
+        [userId, tokenHash, expiresAt],
+      );
+      const verificationId = inserted.rows[0]?.id;
+      if (!verificationId) throw new Error("EMAIL_VERIFICATION_CREATE_FAILED");
+
+      return {
+        alreadyVerified: false as const,
+        user: toAuthUser(user),
+        token,
+        verificationId,
+        expiresAt,
+      };
+    });
+  },
+
+  async discardEmailVerification(verificationId: string) {
+    await pool.query(
+      `UPDATE email_verification_tokens
+       SET consumed_at = COALESCE(consumed_at, NOW())
+       WHERE id = $1`,
+      [verificationId],
+    );
+  },
+
+  async verifyEmail(token: string) {
+    if (token.length < 40 || token.length > 128) {
+      throw new Error("INVALID_OR_EXPIRED_VERIFICATION_TOKEN");
+    }
+
+    return withTransaction(async (client) => {
+      const tokenHash = hashOpaqueToken(token);
+      const tokenResult = await client.query<{ user_id: string }>(
+        `SELECT user_id
+         FROM email_verification_tokens
+         WHERE token_hash = $1
+           AND consumed_at IS NULL
+           AND expires_at > NOW()
+         LIMIT 1
+         FOR UPDATE`,
+        [tokenHash],
+      );
+      const userId = tokenResult.rows[0]?.user_id;
+      if (!userId) throw new Error("INVALID_OR_EXPIRED_VERIFICATION_TOKEN");
+
+      const updated = await client.query<UserRow>(
+        `UPDATE users
+         SET email_verified_at = COALESCE(email_verified_at, NOW()),
+             updated_at = NOW()
+         WHERE id = $1
+         RETURNING id, email, password_hash, email_verified_at, created_at`,
+        [userId],
+      );
+      const user = updated.rows[0];
+      if (!user) throw new Error("AUTH_USER_NOT_FOUND");
+
+      await client.query(
+        `UPDATE email_verification_tokens
+         SET consumed_at = COALESCE(consumed_at, NOW())
+         WHERE user_id = $1
+           AND consumed_at IS NULL`,
+        [userId],
+      );
+
+      return toAuthUser(user);
+    });
   },
 
   async revokeSession(token: string) {
