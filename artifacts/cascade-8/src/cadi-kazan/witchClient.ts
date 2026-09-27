@@ -948,6 +948,16 @@ export class WitchClient {
 
     const revealedBombs = new Set(round.revealedBombCells);
     const visibleOfficeSymbols = new Map(round.revealedOfficeCells.map((cell) => [cell.index, cell.symbolId] as const));
+    const officeSymbolCounts = new Map<OfficeMatchSymbolId, number>();
+    if (round.mode === "OFFICE_MATCH_6") {
+      for (const symbolId of visibleOfficeSymbols.values()) {
+        officeSymbolCounts.set(symbolId, (officeSymbolCounts.get(symbolId) ?? 0) + 1);
+      }
+    }
+    const winningOfficeSymbolId = round.mode === "OFFICE_MATCH_6" && round.status === "COMPLETED" && round.payoutCents > 0
+      ? OFFICE_MATCH_SYMBOLS.find((symbol) => (officeSymbolCounts.get(symbol.id) ?? 0) >= 3)?.id ?? null
+      : null;
+
     this.root.querySelectorAll<HTMLButtonElement>("[data-witch-cell]").forEach((button) => {
       const index = Number(button.dataset.witchCell);
       const isActuallyRevealed = round.revealedCells.includes(index);
@@ -965,6 +975,10 @@ export class WitchClient {
       button.classList.toggle("is-bomb", presentation.resultClass === "bomb");
       button.classList.toggle("is-office-cell", round.mode === "OFFICE_MATCH_6");
       button.classList.toggle("is-office-special", Boolean(officePresentation?.special));
+      button.classList.toggle(
+        "is-office-winning-match",
+        round.mode === "OFFICE_MATCH_6" && Boolean(winningOfficeSymbolId) && visibleOfficeSymbols.get(index) === winningOfficeSymbolId,
+      );
       button.classList.toggle("is-pending", this.pendingRevealCell === index);
       button.classList.toggle("is-terminal-reveal", this.terminalRevealAnimating && isTerminallyRevealed && !isActuallyRevealed);
       button.setAttribute("aria-label", presentation.resultClass ? presentation.label : "Kazınabilir kapalı alan");
@@ -1072,6 +1086,8 @@ export class WitchClient {
     if (ticketElement) {
       ticketElement.classList.toggle("is-advanced", round.mode === "ADVANCED");
       ticketElement.classList.toggle("is-office", round.mode === "OFFICE_MATCH_6");
+      ticketElement.classList.toggle("is-office-win", Boolean(winningOfficeSymbolId));
+      ticketElement.classList.toggle("is-office-100x-win", winningOfficeSymbolId === "MICHAEL");
       ticketElement.classList.toggle("is-entering", this.entranceRoundId === round.id);
       if (this.entranceRoundId === round.id && this.entranceTimer === null) {
         this.entranceTimer = window.setTimeout(() => {
