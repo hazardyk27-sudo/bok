@@ -5315,6 +5315,15 @@ export function Part2SceneViewport({
           ? THREE.MathUtils.clamp(requestedPart11LaunchSpeedMps, 4.85, 6.20) *
             ROULETTE_WORLD_UNITS_PER_METER
           : null;
+      const requestedPart11LaunchAzimuthDegrees = Number(
+        part6Params.get('part11LaunchAzimuthDeg') ?? Number.NaN,
+      );
+      const activePart11LaunchAzimuth =
+        part11Calibration && Number.isFinite(requestedPart11LaunchAzimuthDegrees)
+          ? normalizedAngle(
+              THREE.MathUtils.degToRad(requestedPart11LaunchAzimuthDegrees),
+            )
+          : null;
       const requestedSeedCount = Number(
         part6Params.get('part6SeedCount') ?? PART6_FULL_SPIN_RUNS.length,
       );
@@ -5693,10 +5702,14 @@ export function Part2SceneViewport({
               ? activePart11LaunchSpeedBase +
                 (run.speed - PART6_LAUNCH_SPEED_BASE)
               : run.speed;
+          const activeLaunchAzimuth =
+            part11Calibration && activePart11LaunchAzimuth !== null
+              ? activePart11LaunchAzimuth
+              : run.launchAzimuth;
           const launchSurfaceX =
-            Math.sin(run.launchAzimuth) * activeLaunchRadius;
+            Math.sin(activeLaunchAzimuth) * activeLaunchRadius;
           const launchSurfaceZ =
-            Math.cos(run.launchAzimuth) * activeLaunchRadius;
+            Math.cos(activeLaunchAzimuth) * activeLaunchRadius;
           const launchSurface = part6ExactStationaryMesh
             ? sampleExactStationaryLaunchSurfaceAt(
                 part6ExactStationaryMesh.vertices,
@@ -5724,7 +5737,7 @@ export function Part2SceneViewport({
             surfacePoint: launchSurface.point,
             surfaceNormal: launchSurface.normal,
             launchSpeed: activeLaunchSpeed,
-            launchAzimuthRadians: run.launchAzimuth,
+            launchAzimuthRadians: activeLaunchAzimuth,
             ballRadius: BALL_RADIUS,
             launchClearance: 0.01,
             spinFactor: PART6_BALL_SPIN_FACTOR,
@@ -5822,7 +5835,7 @@ export function Part2SceneViewport({
               'PART10A_BROWSER_START',
               JSON.stringify({
                 seed: run.seed,
-                launchAzimuth: run.launchAzimuth,
+                launchAzimuth: activeLaunchAzimuth,
                 launchSpeed: run.speed,
                 rotorStartAngle: rotorAngle,
                 ballPosition: {
@@ -7372,7 +7385,7 @@ export function Part2SceneViewport({
             seed: run.seed,
             label: run.label,
             launchAzimuth: Number(
-              run.launchAzimuth.toFixed(6),
+              activeLaunchAzimuth.toFixed(6),
             ),
             launchSpeed: Number(activeLaunchSpeed.toFixed(4)),
             launchSpeedMetersPerSecond: Number(
