@@ -537,17 +537,8 @@ const STATIONARY_INDICES_BASE64 = ${escapedString(base64TypedArray(stationary.in
 const ROTOR_VERTICES_BASE64 = ${escapedString(base64TypedArray(rotor.vertices))};
 const ROTOR_INDICES_BASE64 = ${escapedString(base64TypedArray(rotor.indices))};
 
-function decodeBase64Bytes(encoded: string) {
-  const binary = atob(encoded);
-  const bytes = new Uint8Array(binary.length);
-  for (let index = 0; index < binary.length; index += 1) {
-    bytes[index] = binary.charCodeAt(index);
-  }
-  return bytes;
-}
-
 function decodeFloat32Base64(encoded: string) {
-  const bytes = decodeBase64Bytes(encoded);
+  const bytes = Uint8Array.from(Buffer.from(encoded, 'base64'));
   if (bytes.byteLength % Float32Array.BYTES_PER_ELEMENT !== 0) {
     throw new Error('Invalid generated Float32 collider payload');
   }
@@ -555,7 +546,7 @@ function decodeFloat32Base64(encoded: string) {
 }
 
 function decodeUint32Base64(encoded: string) {
-  const bytes = decodeBase64Bytes(encoded);
+  const bytes = Uint8Array.from(Buffer.from(encoded, 'base64'));
   if (bytes.byteLength % Uint32Array.BYTES_PER_ELEMENT !== 0) {
     throw new Error('Invalid generated Uint32 collider payload');
   }
