@@ -28,5 +28,5 @@ An Idle commit never publishes itself to Replit; only the central one-game promo
 - If a note conflicts with code/tests/ownership rules, the validated repository state wins.
 
 ## Current milestones
-- 2026-09-27 — Slate Blue Parts 1–17 complete — Business identity (Stadium / Club Store / Fan Club plus level line) now sits inside the card immediately below the image instead of overlaying it; club progression, shared balance, hourly income, vault capacity, vault-fill labels and ETA are enlarged, with a thicker progression/vault meter and denser premium card hierarchy. Next: promote to `integration/replit-preview` and visually QA.
+- 2026-09-27 — Slate Blue Parts 1–19 complete — Desktop business-card typography now uses the exact requested scale: accrued 45px, hourly/vault values 30px, vault label 20px, fill percent 25px, vault helper/ETA 20px, action labels 20px; vault meter is 20px and club progression is 15px. Next: visually QA and promote to `integration/replit-preview` when approved.
 - 2026-09-26 — Isolation v2 active — Idle / İşletmeler development stays on `feature/idle`; preview release is ownership-scoped into `integration/replit-preview`, not a whole-branch merge.

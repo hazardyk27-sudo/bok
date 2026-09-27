@@ -1598,3 +1598,19 @@ describe("Businesses Part 18 accrued alignment", () => {
     expect(idleCssSource).toContain("margin-left: 14px");
   });
 });
+
+
+describe("Businesses Part 19 exact metric typography", () => {
+  it("uses the requested desktop business metric sizes", () => {
+    expect(idleCssSource).toContain("/* 2026-09-27 — Part 19: exact requested business metric typography */");
+    expect(idleCssSource).toContain("font-size: 45px");
+    expect(idleCssSource).toContain("font-size: 30px");
+    expect(idleCssSource).toContain("font-size: 25px");
+    expect(idleCssSource).toContain("font-size: 20px");
+  });
+
+  it("uses the requested thicker vault and club progression bars", () => {
+    expect(idleCssSource).toContain("height: 20px");
+    expect(idleCssSource).toContain("height: 15px");
+  });
+});

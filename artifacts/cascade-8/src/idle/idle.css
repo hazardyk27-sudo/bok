@@ -8833,3 +8833,41 @@ body.businesses-route {
     margin-left: 14px;
   }
 }
+
+
+/* 2026-09-27 — Part 19: exact requested business metric typography */
+@media (min-width: 1101px) {
+  .route-shell.is-businesses-page .business-card-balance > strong {
+    font-size: 45px;
+  }
+
+  .route-shell.is-businesses-page .business-card-stat strong {
+    font-size: 30px;
+  }
+
+  .route-shell.is-businesses-page .business-card-vault-heading > span {
+    font-size: 20px;
+  }
+
+  .route-shell.is-businesses-page .business-card-vault-heading > strong {
+    font-size: 25px;
+  }
+
+  .route-shell.is-businesses-page .business-card-vault-helper small,
+  .route-shell.is-businesses-page .business-card-vault-helper .business-vault-eta {
+    font-size: 20px;
+  }
+
+  .route-shell.is-businesses-page .business-card-primary,
+  .route-shell.is-businesses-page .business-card-details {
+    font-size: 20px;
+  }
+
+  .route-shell.is-businesses-page .business-vault-progress {
+    height: 20px;
+  }
+
+  .route-shell.is-businesses-page .businesses-progression-track {
+    height: 15px;
+  }
+}
