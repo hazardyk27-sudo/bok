@@ -1002,22 +1002,18 @@ function buildStartConditions(seed: string): PhysicsLabStartConditions {
     exactLaunchSurface.point[2] +
       launchPlacementNormal[2] * launchClearance,
   ];
-  const horizontalTangent: [number, number, number] = [
-    Math.cos(launchAzimuthRadians),
+  const radial: [number, number, number] = [
+    Math.sin(launchAzimuthRadians),
     0,
-    -Math.sin(launchAzimuthRadians),
+    Math.cos(launchAzimuthRadians),
   ];
-  const tangentNormalDot =
-    horizontalTangent[0] * launchPlacementNormal[0] +
-    horizontalTangent[1] * launchPlacementNormal[1] +
-    horizontalTangent[2] * launchPlacementNormal[2];
   let tangent: [number, number, number] = [
-    horizontalTangent[0] -
-      launchPlacementNormal[0] * tangentNormalDot,
-    horizontalTangent[1] -
-      launchPlacementNormal[1] * tangentNormalDot,
-    horizontalTangent[2] -
-      launchPlacementNormal[2] * tangentNormalDot,
+    launchPlacementNormal[1] * radial[2] -
+      launchPlacementNormal[2] * radial[1],
+    launchPlacementNormal[2] * radial[0] -
+      launchPlacementNormal[0] * radial[2],
+    launchPlacementNormal[0] * radial[1] -
+      launchPlacementNormal[1] * radial[0],
   ];
   const tangentLength = Math.hypot(...tangent);
   if (tangentLength <= 1e-10) {
