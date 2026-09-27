@@ -119,8 +119,11 @@ describe("blackjack WebSocket room foundation", () => {
     const message = await nextMessage(client);
 
     expect(message).toEqual({
-      type: "snapshot",
+      type: "FULL_TABLE_SNAPSHOT",
+      reason: "INITIAL_CONNECT",
       snapshot: snapshot(1),
+      resetEventSequenceTo: 1,
+      resetStateVersionTo: 1,
     });
     expect(runtime.connectionCount()).toBe(1);
   });
@@ -165,8 +168,11 @@ describe("blackjack WebSocket room foundation", () => {
     const synced = nextMessage(client);
     client.send(JSON.stringify({ type: "sync" }));
     await expect(synced).resolves.toEqual({
-      type: "snapshot",
+      type: "FULL_TABLE_SNAPSHOT",
+      reason: "EXPLICIT_SYNC",
       snapshot: snapshot(3),
+      resetEventSequenceTo: 3,
+      resetStateVersionTo: 3,
     });
 
     const rejected = nextMessage(client);
@@ -174,6 +180,98 @@ describe("blackjack WebSocket room foundation", () => {
     await expect(rejected).resolves.toEqual({
       type: "error",
       error: "BLACKJACK_ACTION_PROTOCOL_NOT_READY",
+    });
+  });
+
+  it("returns SYNC_OK when client cursors exactly match the authoritative snapshot", async () => {
+    const source = new TestSource(snapshot(4));
+    server = createServer();
+    runtime = attachBlackjackWebSocket(server, source);
+    const port = await listen(server);
+
+    client = new WebSocket(`ws://127.0.0.1:${port}${BLACKJACK_WS_PATH}`);
+    await nextMessage(client);
+
+    const synced = nextMessage(client);
+    client.send(
+      JSON.stringify({
+        type: "sync",
+        lastEventSequence: 4,
+        lastStateVersion: 4,
+      }),
+    );
+
+    await expect(synced).resolves.toEqual({
+      type: "SYNC_OK",
+      eventSequence: 4,
+      stateVersion: 4,
+    });
+  });
+
+  it("returns a full snapshot when client cursors reveal an event gap or state mismatch", async () => {
+    const source = new TestSource(snapshot(8));
+    server = createServer();
+    runtime = attachBlackjackWebSocket(server, source);
+    const port = await listen(server);
+
+    client = new WebSocket(`ws://127.0.0.1:${port}${BLACKJACK_WS_PATH}`);
+    await nextMessage(client);
+
+    const gap = nextMessage(client);
+    client.send(
+      JSON.stringify({
+        type: "sync",
+        lastEventSequence: 5,
+        lastStateVersion: 8,
+      }),
+    );
+
+    await expect(gap).resolves.toEqual({
+      type: "FULL_TABLE_SNAPSHOT",
+      reason: "EVENT_GAP",
+      snapshot: snapshot(8),
+      resetEventSequenceTo: 8,
+      resetStateVersionTo: 8,
+    });
+
+    const mismatch = nextMessage(client);
+    client.send(
+      JSON.stringify({
+        type: "sync",
+        lastEventSequence: 8,
+        lastStateVersion: 7,
+      }),
+    );
+
+    await expect(mismatch).resolves.toEqual({
+      type: "FULL_TABLE_SNAPSHOT",
+      reason: "STATE_MISMATCH",
+      snapshot: snapshot(8),
+      resetEventSequenceTo: 8,
+      resetStateVersionTo: 8,
+    });
+  });
+
+  it("rejects invalid sync cursors without treating them as game actions", async () => {
+    const source = new TestSource(snapshot(2));
+    server = createServer();
+    runtime = attachBlackjackWebSocket(server, source);
+    const port = await listen(server);
+
+    client = new WebSocket(`ws://127.0.0.1:${port}${BLACKJACK_WS_PATH}`);
+    await nextMessage(client);
+
+    const rejected = nextMessage(client);
+    client.send(
+      JSON.stringify({
+        type: "sync",
+        lastEventSequence: -1,
+      }),
+    );
+
+    await expect(rejected).resolves.toEqual({
+      type: "error",
+      error: "BLACKJACK_INVALID_SYNC_REQUEST",
     });
   });
 
