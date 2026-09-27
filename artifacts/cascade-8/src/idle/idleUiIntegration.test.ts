@@ -1515,10 +1515,10 @@ describe("Businesses Part 11 desktop alignment hotfix", () => {
     expect(idleCssSource).toContain("grid-template-columns: repeat(3, minmax(0, 1fr))");
   });
 
-  it("removes desktop 16 by 9 letterboxing while keeping a bounded wide layout", () => {
-    expect(idleCssSource).toContain("height: calc(100dvh - 28px)");
+  it("keeps the widened desktop workspace and shared-balance alignment", () => {
     expect(idleCssSource).toContain("max-width: 1800px");
     expect(idleCssSource).toContain("aspect-ratio: auto");
+    expect(idleCssSource).toContain("businesses-progression-wallet");
   });
 });
 describe("Businesses Part 12 clearer level separation", () => {
@@ -1549,5 +1549,21 @@ describe("Businesses Part 15 business image framing", () => {
   it("adds only the requested light-blue 25 percent image wash", () => {
     expect(idleCssSource).toContain("rgba(151, 203, 255, .25)");
     expect(idleCssSource).toContain("rgba(111, 169, 255, .25)");
+  });
+});
+
+
+describe("Businesses Part 16 compact desktop card flow", () => {
+  it("stops the business list and cards from stretching to fill the viewport", () => {
+    expect(idleCssSource).toContain("/* 2026-09-27 — Part 16: restore compact desktop card flow */");
+    expect(idleCssSource).toContain("grid-template-rows: auto auto auto");
+    expect(idleCssSource).toContain("height: auto");
+    expect(idleCssSource).toContain("grid-template-rows: auto auto");
+  });
+
+  it("keeps card sections content-sized and actions directly after the vault section", () => {
+    expect(idleCssSource).toContain("grid-template-rows: auto auto auto auto");
+    expect(idleCssSource).toContain("align-content: start");
+    expect(idleCssSource).toContain("margin-top: 0");
   });
 });

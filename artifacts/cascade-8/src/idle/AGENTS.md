@@ -28,5 +28,5 @@ An Idle commit never publishes itself to Replit; only the central one-game promo
 - If a note conflicts with code/tests/ownership rules, the validated repository state wins.
 
 ## Current milestones
-- 2026-09-27 — Slate Blue Parts 1–15 complete — Stadium, club store, and fan-club images keep their original colors, use a person-centered upper focal point on desktop/mobile to prevent head cropping, and carry a 25% light-blue theme wash across the image. Next: promote to `integration/replit-preview` and visually QA.
+- 2026-09-27 — Slate Blue Parts 1–16 complete — Desktop business cards no longer stretch their content to fill the viewport: card sections and actions return to compact content flow while the approved images, person-centered framing, 25% light-blue wash, three-column alignment, and shared balance remain intact. Next: promote to `integration/replit-preview` and visually QA.
 - 2026-09-26 — Isolation v2 active — Idle / İşletmeler development stays on `feature/idle`; preview release is ownership-scoped into `integration/replit-preview`, not a whole-branch merge.
