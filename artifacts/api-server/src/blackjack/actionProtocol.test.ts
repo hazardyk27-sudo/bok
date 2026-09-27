@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import type { BlackjackTable } from "./domain";
+import type { BlackjackRound, BlackjackTable } from "./domain";
 import {
   BlackjackStaleActionError,
   applyBlackjackVersionedAction,
@@ -105,6 +105,85 @@ describe("blackjack action stateVersion protocol", () => {
     expect(replay.replayed).toBe(true);
     expect(replay.table).toBe(first.table);
     expect(replay.protocol).toBe(first.protocol);
+    expect(replay.receipt.resultingStateVersion).toBe(1);
+  });
+
+  it("replays a scoped action even after the table has advanced beyond that round", () => {
+    const foundation = table();
+    const round: BlackjackRound = {
+      roundId: "round-1",
+      roundNumber: 1,
+      phase: "PLAYER_TURNS",
+      activeSeatOrder: [1],
+      hands: [
+        {
+          handId: "hand-1",
+          playerId: "player-1",
+          seatNumber: 1,
+          cards: [foundation.shoe.cards[0], foundation.shoe.cards[1]],
+          betCents: 1_000,
+          status: "ACTIVE",
+          origin: "INITIAL",
+          splitDepth: 0,
+          isSplitAce: false,
+          isDoubled: false,
+          result: null,
+          payoutCents: 0,
+        },
+      ],
+      dealer: {
+        cards: [foundation.shoe.cards[2], foundation.shoe.cards[3]],
+        holeCardRevealed: false,
+      },
+      currentTurn: {
+        seatNumber: 1,
+        handId: "hand-1",
+        startedAtMs: 0,
+        endsAtMs: 15_000,
+      },
+      startedAtMs: 0,
+      bettingClosesAtMs: 0,
+      finishedAtMs: null,
+    };
+    const source: BlackjackTable = {
+      ...foundation,
+      phase: "PLAYER_TURNS",
+      round,
+    };
+    const scopedEnvelope = envelope({
+      actionId: "action-scoped",
+      type: "HIT",
+      roundId: "round-1",
+      handId: "hand-1",
+      seatNumber: 1,
+      payloadFingerprint: "hit:hand-1",
+    });
+
+    const first = applyBlackjackVersionedAction(
+      source,
+      createBlackjackActionProtocolState(),
+      scopedEnvelope,
+      (current) => current,
+    );
+
+    const laterTable: BlackjackTable = {
+      ...first.table,
+      phase: "ROUND_END",
+      round: null,
+      stateVersion: 9,
+    };
+
+    const replay = applyBlackjackVersionedAction(
+      laterTable,
+      first.protocol,
+      scopedEnvelope,
+      () => {
+        throw new Error("replayed mutation must not execute");
+      },
+    );
+
+    expect(replay.replayed).toBe(true);
+    expect(replay.table).toBe(laterTable);
     expect(replay.receipt.resultingStateVersion).toBe(1);
   });
 
