@@ -19,36 +19,42 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - id: r242-s54
+          - id: r242-s62
             radius: '2.42'
-            speed: '5.4'
-          - id: r242-s58
+            speed: '6.2'
+          - id: r242-s66
             radius: '2.42'
-            speed: '5.8'
-          - id: r244-s54
+            speed: '6.6'
+          - id: r242-s70
+            radius: '2.42'
+            speed: '7.0'
+          - id: r244-s62
             radius: '2.44'
-            speed: '5.4'
-          - id: r244-s58
+            speed: '6.2'
+          - id: r244-s66
             radius: '2.44'
-            speed: '5.8'
-          - id: r244-s60
+            speed: '6.6'
+          - id: r244-s70
             radius: '2.44'
-            speed: '6.0'
-          - id: r246-s54
+            speed: '7.0'
+          - id: r246-s62
             radius: '2.46'
-            speed: '5.4'
-          - id: r246-s58
+            speed: '6.2'
+          - id: r246-s66
             radius: '2.46'
-            speed: '5.8'
-          - id: r246-s60
+            speed: '6.6'
+          - id: r246-s70
             radius: '2.46'
-            speed: '6.0'
-          - id: r248-s54
+            speed: '7.0'
+          - id: r248-s62
             radius: '2.48'
-            speed: '5.4'
-          - id: r248-s58
+            speed: '6.2'
+          - id: r248-s66
             radius: '2.48'
-            speed: '5.8'
+            speed: '6.6'
+          - id: r248-s70
+            radius: '2.48'
+            speed: '7.0'
 
     steps:
       - uses: actions/checkout@v4
