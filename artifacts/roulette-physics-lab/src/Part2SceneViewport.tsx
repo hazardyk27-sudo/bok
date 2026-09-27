@@ -5587,11 +5587,6 @@ export function Part2SceneViewport({
             launchClearance: 0.01,
             spinFactor: PART6_BALL_SPIN_FACTOR,
           });
-          const launchNormal = new THREE.Vector3(
-            canonicalLaunchState.surfaceNormal.x,
-            canonicalLaunchState.surfaceNormal.y,
-            canonicalLaunchState.surfaceNormal.z,
-          );
           const launchPosition = new THREE.Vector3(
             canonicalLaunchState.position.x,
             canonicalLaunchState.position.y,
