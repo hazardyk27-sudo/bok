@@ -5818,7 +5818,11 @@ export function Part2SceneViewport({
           const previousTracePosition = launchPosition.clone();
           const previousTraceVelocity = launchVelocity.clone();
           let firstSpikeTraceLogged = false;
-          let previousPlanarDirection = tangent.clone();
+          let previousPlanarDirection = new THREE.Vector3(
+            launchVelocity.x,
+            0,
+            launchVelocity.z,
+          ).normalize();
           let finalSpeed = run.speed;
           let finalRotorRelativeSpeed = run.speed;
           let finalPocketIndex: number | null = null;
