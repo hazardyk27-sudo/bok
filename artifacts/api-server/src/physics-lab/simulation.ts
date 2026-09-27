@@ -18,6 +18,7 @@ import {
   ROULETTE_POCKET_OUTER_LIP_RADIUS,
   ROULETTE_POCKET_OUTER_LIP_Y,
   ROULETTE_ROTOR_ANGULAR_SPEED,
+  ROULETTE_ROTOR_FRICTION,
   ROULETTE_WORLD_UNITS_PER_METER,
 } from "../../../../lib/roulette-physics-config";
 import {
@@ -287,7 +288,7 @@ function addExactGlbRotorCollider(
         RAPIER.TriMeshFlags.DELETE_DEGENERATE_TRIANGLES |
         RAPIER.TriMeshFlags.DELETE_DUPLICATE_TRIANGLES,
     )
-      .setFriction(0.42)
+      .setFriction(ROULETTE_ROTOR_FRICTION)
       .setRestitution(0.02)
       .setCollisionGroups(
         ROTOR_COLLISION_GROUP | (BALL_COLLISION_GROUP << 16),
