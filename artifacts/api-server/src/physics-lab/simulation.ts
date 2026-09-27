@@ -972,7 +972,7 @@ function buildStartConditions(seed: string): PhysicsLabStartConditions {
     deterministicUnit(seed, 2) * Math.PI * 2;
   const launchAngleDegrees = 0;
   const launchSpeedMetersPerSecond =
-    4.85 + (deterministicUnit(seed, 1) * 2 - 1) * 0.15;
+    5.0 + (deterministicUnit(seed, 1) * 2 - 1) * 0.15;
   const launchSpeed =
     launchSpeedMetersPerSecond * ROULETTE_WORLD_UNITS_PER_METER;
   const ballSpin = launchSpeed / PHYSICS_LAB_BALL_RADIUS;
@@ -1002,27 +1002,10 @@ function buildStartConditions(seed: string): PhysicsLabStartConditions {
     exactLaunchSurface.point[2] +
       launchPlacementNormal[2] * launchClearance,
   ];
-  const radial: [number, number, number] = [
-    Math.sin(launchAzimuthRadians),
-    0,
+  const tangent: [number, number, number] = [
     Math.cos(launchAzimuthRadians),
-  ];
-  let tangent: [number, number, number] = [
-    launchPlacementNormal[1] * radial[2] -
-      launchPlacementNormal[2] * radial[1],
-    launchPlacementNormal[2] * radial[0] -
-      launchPlacementNormal[0] * radial[2],
-    launchPlacementNormal[0] * radial[1] -
-      launchPlacementNormal[1] * radial[0],
-  ];
-  const tangentLength = Math.hypot(...tangent);
-  if (tangentLength <= 1e-10) {
-    throw new Error("EXACT_GLB_LAUNCH_TANGENT_MISSING");
-  }
-  tangent = tangent.map((value) => value / tangentLength) as [
-    number,
-    number,
-    number,
+    0,
+    -Math.sin(launchAzimuthRadians),
   ];
   const velocity: [number, number, number] = [
     tangent[0] * launchSpeed,
