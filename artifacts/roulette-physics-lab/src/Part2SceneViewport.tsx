@@ -68,6 +68,30 @@ const PART11_TEST_TRACK_FRICTION = (() => {
     ? Math.max(0, Math.min(0.08, requested))
     : null;
 })();
+const PART11_OUTER_MAGNET_ENABLED = (() => {
+  if (typeof window === 'undefined') return false;
+  const params = new URLSearchParams(window.location.search);
+  return (
+    params.get('part11Calibration') === '1' &&
+    params.get('part11OuterMagnet') === '1'
+  );
+})();
+const PART11_OUTER_MAGNET_ACCELERATION = (() => {
+  if (typeof window === 'undefined') return 0;
+  const params = new URLSearchParams(window.location.search);
+  if (
+    params.get('part11Calibration') !== '1' ||
+    params.get('part11OuterMagnet') !== '1'
+  ) {
+    return 0;
+  }
+  const requested = Number(
+    params.get('part11MagnetAcceleration') ?? Number.NaN,
+  );
+  return Number.isFinite(requested)
+    ? Math.max(0, Math.min(1000, requested))
+    : 450;
+})();
 const BALL_RADIUS = ROULETTE_BALL_RADIUS * PART11_TEST_BALL_SCALE;
 const BALL_MASS = 0.0027;
 const TWO_PI = Math.PI * 2;
@@ -5984,6 +6008,7 @@ export function Part2SceneViewport({
           let trackAngleStart: number | null = null;
           let trackAngleEnd: number | null = null;
           let completedLaps = 0;
+          let part11MagnetOffLogged = false;
           const lapSpeeds: number[] = [];
           let trackFrames = 0;
           let trackContactFrames = 0;
@@ -6233,6 +6258,18 @@ export function Part2SceneViewport({
             },
             run.speed,
           );
+          if (PART11_OUTER_MAGNET_ENABLED) {
+            console.info(
+              'PART11_OUTER_MAGNET_ON',
+              JSON.stringify({
+                seed: run.seed,
+                acceleration:
+                  PART11_OUTER_MAGNET_ACCELERATION,
+                targetRadius: 2.51636415,
+                cutoffLaps: 10,
+              }),
+            );
+          }
 
           for (let step = 0; step < maxSteps; step += 1) {
             if (disposed) return;
@@ -6253,6 +6290,49 @@ export function Part2SceneViewport({
               w: Math.cos(rotorAngle / 2),
             });
             activeRotorPivot?.rotation.set(0, rotorAngle, 0);
+
+            if (
+              PART11_OUTER_MAGNET_ENABLED &&
+              completedLaps < 10
+            ) {
+              const magnetPosition = activeBallBody.translation();
+              const magnetRadius = Math.hypot(
+                magnetPosition.x,
+                magnetPosition.z,
+              );
+              const magnetTargetRadius = 2.51636415;
+              const magnetInnerRange = 0.30;
+              const magnetOuterTolerance = 0.02;
+              const radialGap = magnetTargetRadius - magnetRadius;
+              if (
+                magnetRadius > 0 &&
+                radialGap <= magnetInnerRange &&
+                radialGap >= -magnetOuterTolerance
+              ) {
+                const proximity = THREE.MathUtils.clamp(
+                  1 - Math.max(0, radialGap) / magnetInnerRange,
+                  0,
+                  1,
+                );
+                const magnetForce =
+                  BALL_MASS *
+                  PART11_OUTER_MAGNET_ACCELERATION *
+                  proximity;
+                activeBallBody.addForce(
+                  {
+                    x:
+                      (magnetPosition.x / magnetRadius) *
+                      magnetForce,
+                    y: 0,
+                    z:
+                      (magnetPosition.z / magnetRadius) *
+                      magnetForce,
+                  },
+                  true,
+                );
+              }
+            }
+
             activeWorld.step();
             if (step === 0) {
               logPart6DiagnosticStage('simulation-step-0-after', {
@@ -6736,6 +6816,23 @@ export function Part2SceneViewport({
                 if (lapCountNow > completedLaps) {
                   completedLaps = lapCountNow;
                   lapSpeeds.push(speed);
+                  if (
+                    PART11_OUTER_MAGNET_ENABLED &&
+                    completedLaps >= 10 &&
+                    !part11MagnetOffLogged
+                  ) {
+                    part11MagnetOffLogged = true;
+                    console.info(
+                      'PART11_OUTER_MAGNET_OFF',
+                      JSON.stringify({
+                        seed: run.seed,
+                        completedLaps,
+                        elapsed: Number(elapsed.toFixed(6)),
+                        radius: Number(radius.toFixed(6)),
+                        speed: Number(speed.toFixed(6)),
+                      }),
+                    );
+                  }
                   if (lapCountNow <= 4) {
                     logPreInwardCheckpoint(
                       `LAP_${lapCountNow}`,
