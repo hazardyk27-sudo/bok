@@ -3129,3 +3129,95 @@
     font-size: clamp(5px, calc(var(--witch-vh) * 1.8), 9px) !important;
   }
 }
+
+
+/* PASS 13 — THE OFFICE matched-triple win emphasis. */
+.is-office-theme .witch-cell.is-office-winning-match {
+  z-index: 6 !important;
+  border-color: rgba(255,255,255,.88) !important;
+  box-shadow:
+    0 0 0 2px rgba(255,255,255,.30),
+    0 0 20px rgba(255,255,255,.22),
+    0 8px 18px rgba(0,0,0,.32) !important;
+}
+
+.is-office-theme .witch-ticket.is-office-win {
+  box-shadow:
+    0 20px 44px rgba(0,0,0,.45),
+    0 0 0 1px rgba(255,255,255,.16),
+    0 0 28px rgba(255,255,255,.10),
+    inset 0 0 0 1px rgba(255,255,255,.04) !important;
+}
+
+.is-office-theme .witch-ticket.is-office-100x-win {
+  border-color: rgba(255,211,82,.82) !important;
+  box-shadow:
+    0 20px 44px rgba(0,0,0,.46),
+    0 0 0 2px rgba(255,213,72,.30),
+    0 0 42px rgba(255,183,26,.28),
+    inset 0 0 0 1px rgba(255,240,170,.12) !important;
+}
+
+.is-office-theme .witch-ticket.is-office-100x-win::before,
+.is-office-theme .witch-ticket.is-office-100x-win::after {
+  content: "" !important;
+  position: absolute !important;
+  z-index: 7 !important;
+  inset: -28% !important;
+  pointer-events: none !important;
+}
+
+.is-office-theme .witch-ticket.is-office-100x-win::before {
+  background:
+    conic-gradient(
+      from 0deg,
+      transparent 0 7%,
+      rgba(255,221,102,.18) 8% 9%,
+      transparent 10% 19%,
+      rgba(255,242,174,.22) 20% 21%,
+      transparent 22% 35%,
+      rgba(255,199,49,.18) 36% 37%,
+      transparent 38% 52%,
+      rgba(255,236,150,.20) 53% 54%,
+      transparent 55% 72%,
+      rgba(255,199,49,.17) 73% 74%,
+      transparent 75% 100%
+    ) !important;
+  opacity: .82 !important;
+}
+
+.is-office-theme .witch-ticket.is-office-100x-win::after {
+  inset: 0 !important;
+  background:
+    radial-gradient(circle at 78% 24%, rgba(255,243,177,.24), transparent 22%),
+    radial-gradient(circle at 66% 67%, rgba(255,190,39,.16), transparent 28%) !important;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .is-office-theme .witch-cell.is-office-winning-match {
+    animation: witch-office-match-pop 720ms cubic-bezier(.2,.75,.2,1) both !important;
+  }
+
+  .is-office-theme .witch-ticket.is-office-100x-win::before {
+    animation: witch-office-100x-rays 3.8s linear infinite !important;
+  }
+
+  .is-office-theme .witch-ticket.is-office-100x-win {
+    animation: witch-office-100x-pulse 1.25s ease-in-out 2 !important;
+  }
+}
+
+@keyframes witch-office-match-pop {
+  0% { transform: scale(.96); filter: brightness(.92); }
+  52% { transform: scale(1.035); filter: brightness(1.16); }
+  100% { transform: scale(1); filter: brightness(1); }
+}
+
+@keyframes witch-office-100x-rays {
+  to { transform: rotate(360deg); }
+}
+
+@keyframes witch-office-100x-pulse {
+  0%, 100% { filter: brightness(1); }
+  50% { filter: brightness(1.09); }
+}
