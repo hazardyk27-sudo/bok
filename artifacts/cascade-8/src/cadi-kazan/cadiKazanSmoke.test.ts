@@ -30,6 +30,7 @@ describe("cadi kazan route smoke contract", () => {
       "data-witch-ticket",
       'data-witch-mode="STANDARD"',
       'data-witch-mode="ADVANCED"',
+      'data-witch-mode="OFFICE_MATCH_6"',
       'data-witch-action="start"',
       'data-witch-action="cashout"',
       "data-witch-feedback",
@@ -56,4 +57,14 @@ describe("cadi kazan route smoke contract", () => {
     expect(witchClientSource).toContain('from "./AudioManager"');
     expect(witchClientSource).not.toContain('from "./game/AudioManager"');
   });
+
+  it("keeps The Office six-cell card wired into the selector and scratch scaffold", () => {
+    expect(witchClientSource).toContain('data-witch-mode="OFFICE_MATCH_6"');
+    expect(witchClientSource).toContain("The Office");
+    expect(witchClientSource).toContain("3 AYNI");
+    expect(witchClientSource).toContain("Array.from({ length: 6 }");
+    expect(witchClientSource).toContain("revealedOfficeCells");
+    expect(witchClientSource).toContain("officeSymbolPresentation");
+  });
+
 });
