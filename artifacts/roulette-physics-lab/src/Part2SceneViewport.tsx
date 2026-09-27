@@ -5324,6 +5324,13 @@ export function Part2SceneViewport({
           ? THREE.MathUtils.clamp(requestedPart11LaunchSpeedMps, 1.00, 7.20) *
             ROULETTE_WORLD_UNITS_PER_METER
           : null;
+      const requestedPart11SpinFactor = Number(
+        part6Params.get('part11SpinFactor') ?? PART6_BALL_SPIN_FACTOR,
+      );
+      const activePart11SpinFactor =
+        part11Calibration && Number.isFinite(requestedPart11SpinFactor)
+          ? THREE.MathUtils.clamp(requestedPart11SpinFactor, 0, 4)
+          : PART6_BALL_SPIN_FACTOR;
       const requestedPart11LaunchAzimuthDegrees = Number(
         part6Params.get('part11LaunchAzimuthDeg') ?? Number.NaN,
       );
@@ -5749,7 +5756,9 @@ export function Part2SceneViewport({
             launchAzimuthRadians: activeLaunchAzimuth,
             ballRadius: BALL_RADIUS,
             launchClearance: 0.01,
-            spinFactor: PART6_BALL_SPIN_FACTOR,
+            spinFactor: part11Calibration
+              ? activePart11SpinFactor
+              : PART6_BALL_SPIN_FACTOR,
           });
           const launchPosition = new THREE.Vector3(
             canonicalLaunchState.position.x,
