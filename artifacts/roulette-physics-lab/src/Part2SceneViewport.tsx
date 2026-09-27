@@ -5237,6 +5237,14 @@ export function Part2SceneViewport({
         Number.isFinite(requestedPart9LaunchGap)
           ? THREE.MathUtils.clamp(requestedPart9LaunchGap, 0.0001, 0.02)
           : 0.01;
+      const requestedPart9SpinFactor = Number(
+        part6Params.get('part9SpinFactor') ?? PART6_BALL_SPIN_FACTOR,
+      );
+      const activePart9SpinFactor =
+        part9CalibrationEnabled &&
+        Number.isFinite(requestedPart9SpinFactor)
+          ? THREE.MathUtils.clamp(requestedPart9SpinFactor, 0, 2.5)
+          : PART6_BALL_SPIN_FACTOR;
       const requestedSeedCount = Number(
         part6Params.get('part6SeedCount') ?? PART6_FULL_SPIN_RUNS.length,
       );
@@ -5627,6 +5635,7 @@ export function Part2SceneViewport({
             activePart9LaunchRadius,
             activePart9LaunchSpeedMetersPerSecond,
             activePart9LaunchGap,
+            activePart9SpinFactor,
           });
           if (!launchSurface) {
             failInfrastructure(
@@ -5666,7 +5675,7 @@ export function Part2SceneViewport({
           const launchAngularVelocity = launchNormal
             .clone()
             .cross(launchVelocity)
-            .multiplyScalar(PART6_BALL_SPIN_FACTOR / BALL_RADIUS);
+            .multiplyScalar(activePart9SpinFactor / BALL_RADIUS);
 
           // Flush the previous seed's dynamic state and contact manifold before
           // applying this seed's launch. No impulse/force is used.
