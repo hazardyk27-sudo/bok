@@ -1258,6 +1258,103 @@ function makeWorldTrimeshFromObject(object: THREE.Object3D) {
   return makeTrimeshFromObjectRelativeTo(object, null);
 }
 
+function sampleExactStationaryLaunchSurfaceAt(
+  vertices: Float32Array,
+  indices: Uint32Array,
+  worldX: number,
+  worldZ: number,
+) {
+  const rayOriginY = 1.5;
+  const rayLength = 4;
+  let best:
+    | {
+        point: VectorReadout;
+        normal: VectorReadout;
+      }
+    | null = null;
+  let bestY = Number.NEGATIVE_INFINITY;
+
+  for (let index = 0; index < indices.length; index += 3) {
+    const a = indices[index] * 3;
+    const b = indices[index + 1] * 3;
+    const d = indices[index + 2] * 3;
+    const ax = vertices[a];
+    const ay = vertices[a + 1];
+    const az = vertices[a + 2];
+    const bx = vertices[b];
+    const by = vertices[b + 1];
+    const bz = vertices[b + 2];
+    const dx = vertices[d];
+    const dy = vertices[d + 1];
+    const dz = vertices[d + 2];
+
+    const edge1x = bx - ax;
+    const edge1y = by - ay;
+    const edge1z = bz - az;
+    const edge2x = dx - ax;
+    const edge2y = dy - ay;
+    const edge2z = dz - az;
+    const triangleNx = edge1y * edge2z - edge1z * edge2y;
+    const triangleNy = edge1z * edge2x - edge1x * edge2z;
+    const triangleNz = edge1x * edge2y - edge1y * edge2x;
+
+    let ddn = -triangleNy;
+    if (ddn >= 0) continue;
+    const sign = -1;
+    ddn = -ddn;
+
+    const diffX = worldX - ax;
+    const diffY = rayOriginY - ay;
+    const diffZ = worldZ - az;
+    const diffCrossEdge2Y = diffZ * edge2x - diffX * edge2z;
+    const ddQxE2 = sign * -diffCrossEdge2Y;
+    if (ddQxE2 < 0) continue;
+
+    const edge1CrossDiffY = edge1z * diffX - edge1x * diffZ;
+    const ddE1xQ = sign * -edge1CrossDiffY;
+    if (ddE1xQ < 0 || ddQxE2 + ddE1xQ > ddn) continue;
+
+    const qdN =
+      -sign *
+      (diffX * triangleNx + diffY * triangleNy + diffZ * triangleNz);
+    if (qdN < 0) continue;
+    const distance = qdN / ddn;
+    if (distance > rayLength) continue;
+
+    const y = rayOriginY - distance;
+    if (y < -1.5 || y > 1 || y <= bestY) continue;
+
+    const cbx = dx - bx;
+    const cby = dy - by;
+    const cbz = dz - bz;
+    const abx = ax - bx;
+    const aby = ay - by;
+    const abz = az - bz;
+    let nx = cby * abz - cbz * aby;
+    let ny = cbz * abx - cbx * abz;
+    let nz = cbx * aby - cby * abx;
+    const normalLengthSq = nx * nx + ny * ny + nz * nz;
+    if (normalLengthSq <= 0) continue;
+    const inverseNormalLength = 1 / Math.sqrt(normalLengthSq);
+    nx *= inverseNormalLength;
+    ny *= inverseNormalLength;
+    nz *= inverseNormalLength;
+    if (ny < 0) {
+      nx = -nx;
+      ny = -ny;
+      nz = -nz;
+    }
+
+    bestY = y;
+    best = {
+      point: { x: worldX, y, z: worldZ },
+      normal: { x: nx, y: ny, z: nz },
+    };
+  }
+
+  return best;
+}
+
 function part4SpawnPosition(probe: (typeof PART4_PROBES)[number]) {
   return radialPosition(
     probe.radius,
@@ -2354,6 +2451,10 @@ export function Part2SceneViewport({
     let rotorBody: RAPIER.RigidBody | null = null;
     let physicsBallCollider: RAPIER.Collider | null = null;
     let part3TrackCollider: RAPIER.Collider | null = null;
+    let part6ExactStationaryMesh: {
+      vertices: Float32Array;
+      indices: Uint32Array;
+    } | null = null;
     let part3BowlBridgeColliders: RAPIER.Collider[] = [];
     let part3BowlBridgeProfile: Array<[number, number]> = [];
     let part3BowlBridgeOuterRadius: number = BOWL_BRIDGE_OUTER_RADIUS;
@@ -5560,14 +5661,20 @@ export function Part2SceneViewport({
           logPart6DiagnosticStage('seed-start', { seed: run.seed });
           logPart6DiagnosticStage('launch-surface-before', { seed: run.seed });
 
-          const launchSurface = measureVisibleSurfaceAt(
+          const launchSurfaceX =
             Math.sin(run.launchAzimuth) *
-              PART2_ACTUAL_DARK_TRACK_LAUNCH_RADIUS,
+            PART2_ACTUAL_DARK_TRACK_LAUNCH_RADIUS;
+          const launchSurfaceZ =
             Math.cos(run.launchAzimuth) *
-              PART2_ACTUAL_DARK_TRACK_LAUNCH_RADIUS,
-            true,
-            PART2_ACTUAL_DARK_TRACK_RADIUS_BAND,
-          );
+            PART2_ACTUAL_DARK_TRACK_LAUNCH_RADIUS;
+          const launchSurface = part6ExactStationaryMesh
+            ? sampleExactStationaryLaunchSurfaceAt(
+                part6ExactStationaryMesh.vertices,
+                part6ExactStationaryMesh.indices,
+                launchSurfaceX,
+                launchSurfaceZ,
+              )
+            : null;
           logPart6DiagnosticStage('launch-surface-after', {
             seed: run.seed,
             found: Boolean(launchSurface),
@@ -8492,6 +8599,7 @@ export function Part2SceneViewport({
                 stationaryGroup,
                 wheelRoot,
               );
+              part6ExactStationaryMesh = actualStationaryMesh;
               const canonicalStationaryVertices =
                 canonicalizeRouletteTrimeshVertices(
                   actualStationaryMesh.vertices,
