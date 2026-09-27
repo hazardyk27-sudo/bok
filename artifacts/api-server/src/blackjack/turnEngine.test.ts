@@ -200,7 +200,12 @@ describe("blackjack turn engine", () => {
 
     const missingSeat = round([hand("h5", 5)], [1]);
     expect(() => getBlackjackOrderedHandIds(missingSeat)).toThrow(
-      /outside activeSeatOrder/,
+      /active seat 1 has no hand/,
+    );
+
+    const activeBeforeStart = round([hand("active", 1, "ACTIVE")], [1]);
+    expect(() => startBlackjackPlayerTurns(activeBeforeStart, 100)).toThrow(
+      /cannot contain an ACTIVE hand/,
     );
 
     const started = startBlackjackPlayerTurns(
