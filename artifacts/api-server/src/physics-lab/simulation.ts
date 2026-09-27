@@ -404,6 +404,111 @@ function exactStationarySurfaceAt(
   return best;
 }
 
+function exactStationaryVisualRaySurfaceAt(
+  worldX: number,
+  worldZ: number,
+) {
+  const geometry = getRouletteExactGlbColliderGeometry().stationary;
+  const vertices = geometry.vertices;
+  const indices = geometry.indices;
+  const rayOriginY = 1.5;
+  const rayLength = 4;
+  let best:
+    | {
+        point: [number, number, number];
+        normal: [number, number, number];
+      }
+    | null = null;
+  let bestY = Number.NEGATIVE_INFINITY;
+
+  for (let index = 0; index < indices.length; index += 3) {
+    const a = indices[index] * 3;
+    const b = indices[index + 1] * 3;
+    const d = indices[index + 2] * 3;
+    const ax = vertices[a];
+    const ay = vertices[a + 1];
+    const az = vertices[a + 2];
+    const bx = vertices[b];
+    const by = vertices[b + 1];
+    const bz = vertices[b + 2];
+    const dx = vertices[d];
+    const dy = vertices[d + 1];
+    const dz = vertices[d + 2];
+
+    // Mirror THREE.Ray.intersectTriangle for a world-space ray
+    // origin=(worldX, 1.5, worldZ), direction=(0, -1, 0), with
+    // FrontSide triangle culling. Operation order intentionally follows Three.
+    const edge1x = bx - ax;
+    const edge1y = by - ay;
+    const edge1z = bz - az;
+    const edge2x = dx - ax;
+    const edge2y = dy - ay;
+    const edge2z = dz - az;
+    const triangleNx = edge1y * edge2z - edge1z * edge2y;
+    const triangleNy = edge1z * edge2x - edge1x * edge2z;
+    const triangleNz = edge1x * edge2y - edge1y * edge2x;
+
+    let ddn = -triangleNy;
+    if (ddn >= 0) continue;
+    const sign = -1;
+    ddn = -ddn;
+
+    const diffX = worldX - ax;
+    const diffY = rayOriginY - ay;
+    const diffZ = worldZ - az;
+    const diffCrossEdge2Y = diffZ * edge2x - diffX * edge2z;
+    const ddQxE2 = sign * -diffCrossEdge2Y;
+    if (ddQxE2 < 0) continue;
+
+    const edge1CrossDiffY = edge1z * diffX - edge1x * diffZ;
+    const ddE1xQ = sign * -edge1CrossDiffY;
+    if (ddE1xQ < 0) continue;
+    if (ddQxE2 + ddE1xQ > ddn) continue;
+
+    const qdN =
+      -sign *
+      (diffX * triangleNx + diffY * triangleNy + diffZ * triangleNz);
+    if (qdN < 0) continue;
+    const distance = qdN / ddn;
+    if (distance > rayLength) continue;
+
+    const y = rayOriginY - distance;
+    if (y < -1.5 || y > 1 || y <= bestY) continue;
+
+    // Mirror THREE.Triangle.getNormal(a, b, c): (c - b) × (a - b).
+    const cbx = dx - bx;
+    const cby = dy - by;
+    const cbz = dz - bz;
+    const abx = ax - bx;
+    const aby = ay - by;
+    const abz = az - bz;
+    let nx = cby * abz - cbz * aby;
+    let ny = cbz * abx - cbx * abz;
+    let nz = cbx * aby - cby * abx;
+    const normalLengthSq = nx * nx + ny * ny + nz * nz;
+    if (normalLengthSq <= 0) continue;
+    const inverseNormalLength = 1 / Math.sqrt(normalLengthSq);
+    nx *= inverseNormalLength;
+    ny *= inverseNormalLength;
+    nz *= inverseNormalLength;
+
+    // measureRouletteVisualSurfaceAt orients the face normal toward ray origin.
+    if (ny < 0) {
+      nx = -nx;
+      ny = -ny;
+      nz = -nz;
+    }
+
+    bestY = y;
+    best = {
+      point: [worldX, y, worldZ],
+      normal: [nx, ny, nz],
+    };
+  }
+
+  return best;
+}
+
 function exactRotorSurfaceAt(
   worldX: number,
   worldZ: number,
@@ -1078,10 +1183,9 @@ function buildStartConditions(seed: string): PhysicsLabStartConditions {
     Math.sin(launchAzimuthRadians) * operationalLaunchCenterRadius;
   const launchSurfaceZ =
     Math.cos(launchAzimuthRadians) * operationalLaunchCenterRadius;
-  const exactLaunchSurface = exactStationarySurfaceAt(
+  const exactLaunchSurface = exactStationaryVisualRaySurfaceAt(
     launchSurfaceX,
     launchSurfaceZ,
-    darkRaceSurfaceYAt(operationalLaunchCenterRadius),
   );
   if (!exactLaunchSurface) {
     throw new Error("EXACT_GLB_LAUNCH_SURFACE_MISSING");
