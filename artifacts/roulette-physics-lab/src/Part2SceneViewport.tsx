@@ -5587,6 +5587,7 @@ export function Part2SceneViewport({
             surfacePoint: launchSurface.point,
             surfaceNormal: launchSurface.normal,
             launchSpeed: run.speed,
+            launchAzimuthRadians: run.launchAzimuth,
             ballRadius: BALL_RADIUS,
             launchClearance: 0.01,
             spinFactor: PART6_BALL_SPIN_FACTOR,
