@@ -24,7 +24,7 @@ const BUSINESS_META: Record<
   stadium: {
     eyebrow: "STADIUM",
     icon: "◉",
-    imagePath: "/businesses/stadium.png",
+    imagePath: "/businesses/stadium.webp",
     placeholderLabel: "STADYUM GÖRSELİ",
     visualLabel: "Stadyum görsel alanı",
     definition: STADIUM_BUSINESS,
@@ -32,7 +32,7 @@ const BUSINESS_META: Record<
   "club-store": {
     eyebrow: "CLUB STORE",
     icon: "▦",
-    imagePath: "/businesses/club-store.png",
+    imagePath: "/businesses/club-store.webp",
     placeholderLabel: "KULÜP MAĞAZASI GÖRSELİ",
     visualLabel: "Kulüp mağazası görsel alanı",
     definition: CLUB_STORE_BUSINESS,
@@ -40,7 +40,7 @@ const BUSINESS_META: Record<
   "fan-club": {
     eyebrow: "FAN CLUB",
     icon: "✦",
-    imagePath: "/businesses/fan-club.png",
+    imagePath: "/businesses/fan-club.webp",
     placeholderLabel: "TARAFTAR KULÜBÜ GÖRSELİ",
     visualLabel: "Taraftar kulübü görsel alanı",
     definition: FAN_CLUB_BUSINESS,
