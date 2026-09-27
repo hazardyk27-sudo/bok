@@ -53,7 +53,7 @@ jobs:
         run: |
           set -euo pipefail
           pnpm --filter @workspace/api-server exec tsx -e \
-            "import { simulatePhysicsLabRound } from './src/physics-lab/simulation.ts'; await simulatePhysicsLabRound('part5-contract','61004');" \
+            "(async () => { const { simulatePhysicsLabRound } = await import('./src/physics-lab/simulation.ts'); await simulatePhysicsLabRound('part5-contract','61004'); })().catch((error) => { console.error(error); process.exit(1); });" \
             > part5-server-contract.log 2>&1
           cat part5-server-contract.log
           grep 'ROULETTE_PART5_EXACT_GLB_COLLIDER_CONTRACT' part5-server-contract.log
