@@ -1590,3 +1590,58 @@ describe("Businesses Part 17 hierarchy readability", () => {
     expect(idleCssSource).toContain("border-bottom: 1px solid rgba(111, 151, 255, .09)");
   });
 });
+
+
+describe("Businesses Part 18 accrued alignment", () => {
+  it("aligns the accrued amount with the hourly-income value column on desktop", () => {
+    expect(idleCssSource).toContain("/* 2026-09-27 — Part 18: align accrued value with stat values */");
+    expect(idleCssSource).toContain("margin-left: 14px");
+  });
+});
+
+
+describe("Businesses Part 19 exact metric typography", () => {
+  it("uses the requested desktop business metric sizes", () => {
+    expect(idleCssSource).toContain("/* 2026-09-27 — Part 19: exact requested business metric typography */");
+    expect(idleCssSource).toContain("font-size: 45px");
+    expect(idleCssSource).toContain("font-size: 30px");
+    expect(idleCssSource).toContain("font-size: 25px");
+    expect(idleCssSource).toContain("font-size: 20px");
+  });
+
+  it("uses the requested thicker vault and club progression bars", () => {
+    expect(idleCssSource).toContain("height: 20px");
+    expect(idleCssSource).toContain("height: 15px");
+  });
+});
+
+
+describe("Businesses Part 20 accrued heading cleanup", () => {
+  it("removes the accrued readiness status text from the card markup", () => {
+    expect(componentsSource).not.toContain("data-business-accrued-status");
+    expect(componentsSource).not.toContain("TOPLAMAYA HAZIR");
+  });
+
+  it("aligns both accrued label and value to the hourly-income content column", () => {
+    expect(idleCssSource).toContain("/* 2026-09-27 — Part 20: accrued label/value alignment + status cleanup */");
+    expect(idleCssSource).toContain(".business-card-balance-heading > span,");
+    expect(idleCssSource).toContain("margin-left: 14px");
+  });
+});
+
+
+describe("Businesses Part 21 collect-all parity", () => {
+  it("uses the same primary action surface and typography as card collect buttons", () => {
+    expect(idleCssSource).toContain("/* 2026-09-27 — Part 21: collect-all matches card collect button */");
+    expect(idleCssSource).toContain("var(--idle-action-primary-start)");
+    expect(idleCssSource).toContain("var(--idle-action-primary-end)");
+    expect(idleCssSource).toContain("font-size: 20px");
+    expect(idleCssSource).toContain("font-weight: 760");
+  });
+
+  it("removes the extra eyebrow and arrow so the control reads like the card collect action", () => {
+    expect(idleCssSource).toContain(".business-collect-all-copy small,");
+    expect(idleCssSource).toContain(".business-collect-all-arrow");
+    expect(idleCssSource).toContain("display: none");
+  });
+});
