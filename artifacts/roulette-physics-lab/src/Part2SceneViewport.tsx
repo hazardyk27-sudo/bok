@@ -11,6 +11,7 @@ import {
   measureRouletteVisualSurfaceAt,
   sampleRouletteVisualTextureColorAt,
 } from '../../../lib/roulette-glb-surface';
+import { buildRouletteCanonicalLaunchState } from '../../../lib/roulette-physics-config';
 // PART 5-6 diagnostics derive pocket relief and visible-number mapping from the normalized GLB itself.
 import {
   ROULETTE_ASSET_PATH,
@@ -5578,34 +5579,34 @@ export function Part2SceneViewport({
             return;
           }
 
-          const launchClearance = BALL_RADIUS + 0.01;
+          const canonicalLaunchState = buildRouletteCanonicalLaunchState({
+            surfacePoint: launchSurface.point,
+            surfaceNormal: launchSurface.normal,
+            launchSpeed: run.speed,
+            ballRadius: BALL_RADIUS,
+            launchClearance: 0.01,
+            spinFactor: PART6_BALL_SPIN_FACTOR,
+          });
           const launchNormal = new THREE.Vector3(
-            launchSurface.normal.x,
-            launchSurface.normal.y,
-            launchSurface.normal.z,
-          ).normalize();
+            canonicalLaunchState.surfaceNormal.x,
+            canonicalLaunchState.surfaceNormal.y,
+            canonicalLaunchState.surfaceNormal.z,
+          );
           const launchPosition = new THREE.Vector3(
-            launchSurface.point.x,
-            launchSurface.point.y,
-            launchSurface.point.z,
-          ).addScaledVector(launchNormal, launchClearance);
-          const launchRadial = new THREE.Vector3(
-            Math.sin(run.launchAzimuth),
-            0,
-            Math.cos(run.launchAzimuth),
-          ).normalize();
-          // Exact-GLB launch baseline: use the authored surface normal and a
-          // radial reference so the initial velocity lies in the real contact
-          // plane with zero radial component.
-          const tangent = launchNormal
-            .clone()
-            .cross(launchRadial)
-            .normalize();
-          const launchVelocity = tangent.clone().multiplyScalar(run.speed);
-          const launchAngularVelocity = launchNormal
-            .clone()
-            .cross(launchVelocity)
-            .multiplyScalar(PART6_BALL_SPIN_FACTOR / BALL_RADIUS);
+            canonicalLaunchState.position.x,
+            canonicalLaunchState.position.y,
+            canonicalLaunchState.position.z,
+          );
+          const launchVelocity = new THREE.Vector3(
+            canonicalLaunchState.velocity.x,
+            canonicalLaunchState.velocity.y,
+            canonicalLaunchState.velocity.z,
+          );
+          const launchAngularVelocity = new THREE.Vector3(
+            canonicalLaunchState.angularVelocity.x,
+            canonicalLaunchState.angularVelocity.y,
+            canonicalLaunchState.angularVelocity.z,
+          );
 
           // Flush the previous seed's dynamic state and contact manifold before
           // applying this seed's launch. No impulse/force is used.
