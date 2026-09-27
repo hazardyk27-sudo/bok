@@ -1166,7 +1166,7 @@ export async function simulatePhysicsLabRound(
 ): Promise<PhysicsLabSimulationResult> {
   await initRapier();
   const startedAt = performance.now();
-  const startConditions = buildStartConditions(seed);
+  let startConditions = buildStartConditions(seed);
   const events: PhysicsLabEvent[] = [];
   const trajectory: PhysicsLabTrajectorySample[] = [];
   const world = new RAPIER.World({ x: 0, y: ROULETTE_GRAVITY_Y, z: 0 });
@@ -1247,6 +1247,90 @@ export async function simulatePhysicsLabRound(
   if (!exactGlbColliderContractPassed) {
     throw new Error("ROULETTE_PART5_EXACT_GLB_COLLIDER_CONTRACT_VIOLATION");
   }
+
+  const launchSurfaceX =
+    Math.sin(startConditions.launchAzimuthRadians) *
+    ROULETTE_DARK_RACE_LAUNCH_RADIUS;
+  const launchSurfaceZ =
+    Math.cos(startConditions.launchAzimuthRadians) *
+    ROULETTE_DARK_RACE_LAUNCH_RADIUS;
+  const exactColliderLaunchSurface = exactColliderSurfaceAt(
+    world,
+    exactGlbStationaryCollider,
+    launchSurfaceX,
+    launchSurfaceZ,
+  );
+  if (!exactColliderLaunchSurface) {
+    throw new Error("EXACT_GLB_COLLIDER_LAUNCH_SURFACE_MISSING");
+  }
+  const launchNormalLength = Math.hypot(
+    ...exactColliderLaunchSurface.normal,
+  );
+  if (launchNormalLength <= 1e-10) {
+    throw new Error("EXACT_GLB_COLLIDER_LAUNCH_NORMAL_MISSING");
+  }
+  const launchNormal = exactColliderLaunchSurface.normal.map(
+    (value) => value / launchNormalLength,
+  ) as [number, number, number];
+  const launchClearance = PHYSICS_LAB_BALL_RADIUS + 0.01;
+  const launchPosition: [number, number, number] = [
+    exactColliderLaunchSurface.point[0] + launchNormal[0] * launchClearance,
+    exactColliderLaunchSurface.point[1] + launchNormal[1] * launchClearance,
+    exactColliderLaunchSurface.point[2] + launchNormal[2] * launchClearance,
+  ];
+  const launchRadial: [number, number, number] = [
+    Math.sin(startConditions.launchAzimuthRadians),
+    0,
+    Math.cos(startConditions.launchAzimuthRadians),
+  ];
+  let launchTangent: [number, number, number] = [
+    launchNormal[1] * launchRadial[2] -
+      launchNormal[2] * launchRadial[1],
+    launchNormal[2] * launchRadial[0] -
+      launchNormal[0] * launchRadial[2],
+    launchNormal[0] * launchRadial[1] -
+      launchNormal[1] * launchRadial[0],
+  ];
+  const launchTangentLength = Math.hypot(...launchTangent);
+  if (launchTangentLength <= 1e-10) {
+    throw new Error("EXACT_GLB_COLLIDER_LAUNCH_TANGENT_MISSING");
+  }
+  launchTangent = launchTangent.map(
+    (value) => value / launchTangentLength,
+  ) as [number, number, number];
+  const launchVelocity: [number, number, number] = [
+    launchTangent[0] * startConditions.launchSpeed,
+    launchTangent[1] * startConditions.launchSpeed,
+    launchTangent[2] * startConditions.launchSpeed,
+  ];
+  const launchAngularVelocity: [number, number, number] = [
+    (launchNormal[1] * launchVelocity[2] -
+      launchNormal[2] * launchVelocity[1]) /
+      PHYSICS_LAB_BALL_RADIUS,
+    (launchNormal[2] * launchVelocity[0] -
+      launchNormal[0] * launchVelocity[2]) /
+      PHYSICS_LAB_BALL_RADIUS,
+    (launchNormal[0] * launchVelocity[1] -
+      launchNormal[1] * launchVelocity[0]) /
+      PHYSICS_LAB_BALL_RADIUS,
+  ];
+  startConditions = {
+    ...startConditions,
+    ballPosition: launchPosition,
+    ballVelocity: launchVelocity,
+    ballSpinAxis: launchAngularVelocity.map(
+      (value) => value / startConditions.ballSpin,
+    ) as [number, number, number],
+  };
+  console.info(
+    "ROULETTE_EXACT_COLLIDER_LAUNCH",
+    JSON.stringify({
+      seed,
+      geometrySha256: ROULETTE_EXACT_GLB_COLLIDER_METADATA.geometrySha256,
+      position: startConditions.ballPosition,
+      velocity: startConditions.ballVelocity,
+    }),
+  );
 
   const ballBody = world.createRigidBody(
     RAPIER.RigidBodyDesc.dynamic()

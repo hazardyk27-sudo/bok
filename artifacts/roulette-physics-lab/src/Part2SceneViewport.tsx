@@ -11,6 +11,10 @@ import {
   measureRouletteVisualSurfaceAt,
   sampleRouletteVisualTextureColorAt,
 } from '../../../lib/roulette-glb-surface';
+import {
+  getRouletteExactGlbColliderGeometry,
+  ROULETTE_EXACT_GLB_COLLIDER_METADATA,
+} from '../../api-server/src/physics-lab/glbColliderData';
 // PART 5-6 diagnostics derive pocket relief and visible-number mapping from the normalized GLB itself.
 import {
   ROULETTE_ASSET_PATH,
@@ -5553,23 +5557,25 @@ export function Part2SceneViewport({
           logPart6DiagnosticStage('seed-start', { seed: run.seed });
           logPart6DiagnosticStage('launch-surface-before', { seed: run.seed });
 
-          const launchSurface = measureVisibleSurfaceAt(
+          const launchSurface = measureColliderSurfaceAt(
             Math.sin(run.launchAzimuth) *
               PART2_ACTUAL_DARK_TRACK_LAUNCH_RADIUS,
             Math.cos(run.launchAzimuth) *
               PART2_ACTUAL_DARK_TRACK_LAUNCH_RADIUS,
-            true,
-            PART2_ACTUAL_DARK_TRACK_RADIUS_BAND,
           );
+          const exactLaunchSurface =
+            launchSurface?.role === 'exact-glb-stationary-trimesh'
+              ? launchSurface
+              : null;
           logPart6DiagnosticStage('launch-surface-after', {
             seed: run.seed,
-            found: Boolean(launchSurface),
+            found: Boolean(exactLaunchSurface),
           });
-          if (!launchSurface) {
+          if (!exactLaunchSurface) {
             failInfrastructure(
-              'PART 6 geometry audit stopped the batch because seed ' +
+              'PART 8 exact-GLB launch audit stopped the batch because seed ' +
                 String(run.seed) +
-                ' has no measurable visible dark-race launch surface.',
+                ' has no exact stationary collider launch surface.',
               'geometry-audit',
               results,
             );
@@ -5578,14 +5584,14 @@ export function Part2SceneViewport({
 
           const launchClearance = BALL_RADIUS + 0.01;
           const launchNormal = new THREE.Vector3(
-            launchSurface.normal.x,
-            launchSurface.normal.y,
-            launchSurface.normal.z,
+            exactLaunchSurface.normal.x,
+            exactLaunchSurface.normal.y,
+            exactLaunchSurface.normal.z,
           ).normalize();
           const launchPosition = new THREE.Vector3(
-            launchSurface.point.x,
-            launchSurface.point.y,
-            launchSurface.point.z,
+            exactLaunchSurface.point.x,
+            exactLaunchSurface.point.y,
+            exactLaunchSurface.point.z,
           ).addScaledVector(launchNormal, launchClearance);
           const launchRadial = new THREE.Vector3(
             Math.sin(run.launchAzimuth),
@@ -8453,10 +8459,8 @@ export function Part2SceneViewport({
               // stationary geometry that Three.js renders. No analytic race,
               // measured cuboids, bowl bridge or hidden support geometry is
               // allowed in this path.
-              const actualStationaryMesh = makeTrimeshFromObjectRelativeTo(
-                stationaryGroup,
-                wheelRoot,
-              );
+              const actualStationaryMesh =
+                getRouletteExactGlbColliderGeometry().stationary;
               part3TrackCollider = world.createCollider(
                 RAPIER.ColliderDesc.trimesh(
                   actualStationaryMesh.vertices,
@@ -8482,6 +8486,8 @@ export function Part2SceneViewport({
                 JSON.stringify({
                   vertices: actualStationaryMesh.vertices.length / 3,
                   triangles: actualStationaryMesh.indices.length / 3,
+                  geometrySha256:
+                    ROULETTE_EXACT_GLB_COLLIDER_METADATA.geometrySha256,
                 }),
               );
             } else if (
@@ -8737,10 +8743,8 @@ export function Part2SceneViewport({
                  // Extract the rendered rotor in rotorPivot-local coordinates.
                  // The Rapier body receives the same Y rotation as rotorPivot,
                  // so this avoids both double-rotation and any basis mismatch.
-                 const actualRotorMesh = makeTrimeshFromObjectRelativeTo(
-                   rotorGroup,
-                   rotorPivot,
-                 );
+                 const actualRotorMesh =
+                   getRouletteExactGlbColliderGeometry().rotor;
                  const exactRotorCollider = world.createCollider(
                    RAPIER.ColliderDesc.trimesh(
                      actualRotorMesh.vertices,
@@ -8768,6 +8772,8 @@ export function Part2SceneViewport({
                    JSON.stringify({
                      vertices: actualRotorMesh.vertices.length / 3,
                      triangles: actualRotorMesh.indices.length / 3,
+                     geometrySha256:
+                       ROULETTE_EXACT_GLB_COLLIDER_METADATA.geometrySha256,
                    }),
                  );
                } else {

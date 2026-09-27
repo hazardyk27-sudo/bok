@@ -662,6 +662,24 @@ describe("authoritative roulette physics config", () => {
     );
   });
 
+  it("locks Part 8 browser/server physics to one exact generated GLB payload", () => {
+    expect(part3ViewportSource).toContain(
+      "getRouletteExactGlbColliderGeometry",
+    );
+    expect(part3ViewportSource).toContain(
+      "ROULETTE_EXACT_GLB_COLLIDER_METADATA.geometrySha256",
+    );
+    expect(part3ViewportSource).toContain(
+      "launchSurface?.role === 'exact-glb-stationary-trimesh'",
+    );
+    expect(physicsLabSimulationSource).toContain(
+      '"ROULETTE_EXACT_COLLIDER_LAUNCH"',
+    );
+    expect(physicsLabSimulationSource).toContain(
+      "exactColliderLaunchSurface = exactColliderSurfaceAt(",
+    );
+  });
+
   it("locks roulette runtime validation to the canonical feature branch", () => {
     expect(rouletteRuntimeWorkflowSource).toContain(
       "- feature/roulette",
