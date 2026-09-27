@@ -1,0 +1,138 @@
+name: Roulette Part 5 Exact GLB Collider Contract
+
+on:
+  push:
+    branches:
+      - feature/roulette
+    paths:
+      - '.github/workflows/roulette-part5-exact-glb-collider-contract.yml'
+      - 'artifacts/roulette-physics-lab/src/Part2SceneViewport.tsx'
+      - 'artifacts/api-server/src/physics-lab/simulation.ts'
+      - 'artifacts/cascade-8/src/roulettePhysicsConfig.test.ts'
+  workflow_dispatch:
+
+jobs:
+  contract:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10.15.0
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install workspace
+        run: pnpm install --frozen-lockfile
+
+      - name: Install Chromium
+        run: pnpm exec playwright install --with-deps chromium
+
+      - name: Build TypeScript project references
+        run: pnpm run typecheck:libs
+
+      - name: Typecheck physics runtimes
+        run: |
+          pnpm --filter @workspace/roulette-physics-lab run typecheck
+          pnpm --filter @workspace/api-server run typecheck
+
+      - name: Run Part 5 source contract test
+        run: pnpm --filter @workspace/cascade-8 exec vitest run src/roulettePhysicsConfig.test.ts
+
+      - name: Verify server exact GLB collider contract
+        shell: bash
+        run: |
+          set -euo pipefail
+          pnpm --filter @workspace/api-server exec tsx -e \
+            "import { simulatePhysicsLabRound } from './src/physics-lab/simulation.ts'; await simulatePhysicsLabRound('part5-contract','61004');" \
+            > part5-server-contract.log 2>&1
+          cat part5-server-contract.log
+          grep 'ROULETTE_PART5_EXACT_GLB_COLLIDER_CONTRACT' part5-server-contract.log
+          grep '"passed":true' part5-server-contract.log
+          if grep -q 'ROULETTE_PART5_EXACT_GLB_COLLIDER_CONTRACT_VIOLATION' part5-server-contract.log; then
+            echo 'Server exact GLB collider contract violated'
+            exit 1
+          fi
+
+      - name: Start roulette physics lab
+        shell: bash
+        run: |
+          PORT=4173 BASE_PATH=/ pnpm --filter @workspace/roulette-physics-lab run dev > /tmp/roulette-part5-vite.log 2>&1 &
+          for attempt in {1..60}; do
+            if curl --fail --silent http://127.0.0.1:4173/ > /dev/null; then
+              exit 0
+            fi
+            sleep 1
+          done
+          cat /tmp/roulette-part5-vite.log
+          exit 1
+
+      - name: Verify browser exact GLB collider contract on five seeds
+        shell: bash
+        run: |
+          set -euo pipefail
+          ROULETTE_LAB_URL="http://127.0.0.1:4173/?part6Headless=1&part6SeedStartIndex=0&part6SeedCount=5&part6MaxDurationSeconds=30" \
+          ROULETTE_PART6_OUTPUT="artifacts/roulette-physics-lab/part5-contract.json" \
+          ROULETTE_PART6_TIMEOUT_MS='240000' \
+          ROULETTE_PART6_EXPECTED_SEEDS='5' \
+          node scripts/roulette-part6-runtime.mjs > part5-browser-contract.log 2>&1
+
+          cat part5-browser-contract.log
+          grep 'PART5_EXACT_GLB_COLLIDER_CONTRACT' part5-browser-contract.log
+          grep '"passed":true' part5-browser-contract.log
+          grep '"legacyColliderCount":0' part5-browser-contract.log
+          if grep -q 'PART5_EXACT_GLB_COLLIDER_CONTRACT_VIOLATION' part5-browser-contract.log; then
+            echo 'Browser exact GLB collider contract violated'
+            exit 1
+          fi
+
+          node <<'NODE'
+          const fs = require('fs');
+          const data = JSON.parse(
+            fs.readFileSync('artifacts/roulette-physics-lab/part5-contract.json', 'utf8'),
+          );
+          const rows = data.telemetry?.results ?? data.seedTelemetry ?? [];
+          if (rows.length !== 5) throw new Error('Expected five Part 5 seed results');
+          for (const row of rows) {
+            if (!row.settled || row.timedOut) throw new Error(row.seed + ' did not settle');
+            if (row.finalPocketIndex == null || row.finalPocketNumber == null) {
+              throw new Error(row.seed + ' missing pocket result');
+            }
+            if (
+              row.escaped ||
+              row.clipping ||
+              row.tunneling ||
+              row.velocitySpike ||
+              row.artificialAcceleration ||
+              !row.safetyPassed
+            ) {
+              throw new Error(row.seed + ' failed Part 5 safety regression');
+            }
+          }
+          console.log('PART5_FIVE_SEED_PASS ' + JSON.stringify({
+            seeds: rows.map(row => row.seed),
+            allSettled: true,
+            allSafety: true,
+          }));
+          NODE
+
+      - name: Upload evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: roulette-part5-exact-glb-collider-contract
+          path: |
+            artifacts/roulette-physics-lab/part5-contract.json
+            part5-browser-contract.log
+            part5-server-contract.log
+            /tmp/roulette-part5-vite.log
+          if-no-files-found: warn
