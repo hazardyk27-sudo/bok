@@ -302,7 +302,6 @@ type Part3ProbeResult = {
   initialVelocity: VectorReadout;
   initialAngularSpin: VectorReadout;
   lapCount: number;
-  continuousOuterLapCount: number;
   trackDuration: number;
   averageTrackSpeed: number;
   trackStartSpeed: number;
@@ -506,6 +505,7 @@ type Part6FullSpinTelemetryResult = {
   resetRotorAngleError: number;
   elapsed: number;
   lapCount: number;
+  continuousOuterLapCount: number;
   trackDuration: number;
   trackContactRatio: number;
   trackStartSpeed: number;
