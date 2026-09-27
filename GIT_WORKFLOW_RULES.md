@@ -12,6 +12,7 @@ Each product area has one development branch:
 - Cadı Kazan: `feature/cadi-kazan`
 - Idle / İşletmeler: `feature/idle`
 - Hub / site: `feature/hub`
+- Account/Auth: `feature/account`
 - Blackjack: `feature/blackjack`
 
 The shared preview branch is:
@@ -146,6 +147,7 @@ worktree-roulette/    -> feature/roulette
 worktree-cadi/        -> feature/cadi-kazan
 worktree-idle/        -> feature/idle
 worktree-hub/         -> feature/hub
+worktree-account/     -> feature/account
 worktree-blackjack/   -> feature/blackjack
 ```
 
