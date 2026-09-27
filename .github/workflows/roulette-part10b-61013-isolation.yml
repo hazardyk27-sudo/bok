@@ -1,0 +1,124 @@
+name: Roulette Part 10B Seed 61013 Isolation
+
+on:
+  push:
+    branches:
+      - feature/roulette
+    paths:
+      - '.github/workflows/roulette-part10b-61013-isolation.yml'
+      - 'artifacts/roulette-physics-lab/src/Part2SceneViewport.tsx'
+      - 'artifacts/api-server/src/physics-lab/simulation.ts'
+      - 'artifacts/api-server/src/physics-lab/glbColliderData.ts'
+      - 'lib/roulette-physics-config.ts'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  isolate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10.15.0
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install workspace
+        run: pnpm install --frozen-lockfile
+
+      - name: Install Chromium
+        run: pnpm exec playwright install --with-deps chromium
+
+      - name: Build TypeScript project references
+        run: pnpm run typecheck:libs
+
+      - name: Typecheck physics runtimes
+        run: |
+          pnpm --filter @workspace/roulette-physics-lab run typecheck
+          pnpm --filter @workspace/api-server run typecheck
+
+      - name: Start roulette physics lab
+        run: |
+          PORT=4173 BASE_PATH=/ pnpm --filter @workspace/roulette-physics-lab run dev > /tmp/roulette-part10b-vite.log 2>&1 &
+          for attempt in {1..60}; do
+            if curl --fail --silent http://127.0.0.1:4173/ > /dev/null; then
+              exit 0
+            fi
+            sleep 1
+          done
+          cat /tmp/roulette-part10b-vite.log
+          exit 1
+
+      - name: Run isolated browser seed 61013
+        run: |
+          ROULETTE_LAB_URL="http://127.0.0.1:4173/?part6Headless=1&part6SeedStartIndex=12&part6SeedCount=1&part6MaxDurationSeconds=30" \
+          ROULETTE_PART6_OUTPUT="artifacts/roulette-physics-lab/part10b-browser-61013.json" \
+          ROULETTE_PART6_TIMEOUT_MS='180000' \
+          ROULETTE_PART6_EXPECTED_SEEDS='1' \
+          node scripts/roulette-part6-runtime.mjs > part10b-browser-61013.log 2>&1
+
+      - name: Run fresh server seed 61013
+        run: |
+          pnpm --filter @workspace/api-server exec tsx -e "(async()=>{const fs=await import('node:fs');const {simulatePhysicsLabRound}=await import('./src/physics-lab/simulation.ts');const row=await simulatePhysicsLabRound('part10b-isolated-61013','61013');fs.writeFileSync('../../artifacts/roulette-physics-lab/part10b-server-61013.json',JSON.stringify(row,null,2));console.log('PART10B_SERVER_61013 '+JSON.stringify({status:row.status,errorCode:row.errorCode,finalPocketNumber:row.finalPocketNumber,stableSettleStep:row.stableSettleStep}));})().catch(error=>{console.error(error);process.exit(1)})"
+
+      - name: Compare isolated outcomes
+        run: |
+          node <<'NODE'
+          const fs = require('fs');
+          const browser = JSON.parse(fs.readFileSync(
+            'artifacts/roulette-physics-lab/part10b-browser-61013.json',
+            'utf8',
+          ));
+          const server = JSON.parse(fs.readFileSync(
+            'artifacts/roulette-physics-lab/part10b-server-61013.json',
+            'utf8',
+          ));
+          const row =
+            (browser.telemetry?.results ?? browser.seedTelemetry ?? [])[0] ?? null;
+          const summary = {
+            seed: 61013,
+            browser: row && {
+              settled: row.settled,
+              escaped: row.escaped,
+              pocketEntered: row.pocketEntered,
+              finalPocketNumber: row.finalPocketNumber,
+              elapsed: row.elapsed,
+              maxRadius: row.maxRadius,
+              phases: row.phases,
+            },
+            server: {
+              status: server.status,
+              errorCode: server.errorCode,
+              finalPocketNumber: server.finalPocketNumber,
+              stableSettleStep: server.stableSettleStep,
+            },
+          };
+          console.log('PART10B_61013_ISOLATION ' + JSON.stringify(summary));
+          fs.writeFileSync(
+            'artifacts/roulette-physics-lab/part10b-61013-isolation-summary.json',
+            JSON.stringify(summary, null, 2),
+          );
+          NODE
+
+      - name: Upload isolation evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: roulette-part10b-61013-isolation
+          path: |
+            artifacts/roulette-physics-lab/part10b-browser-61013.json
+            artifacts/roulette-physics-lab/part10b-server-61013.json
+            artifacts/roulette-physics-lab/part10b-61013-isolation-summary.json
+            part10b-browser-61013.log
+            /tmp/roulette-part10b-vite.log
