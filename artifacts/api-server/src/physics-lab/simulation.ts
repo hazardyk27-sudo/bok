@@ -21,6 +21,7 @@ import {
   ROULETTE_WORLD_UNITS_PER_METER,
 } from "../../../../lib/roulette-physics-config";
 import { rouletteNumberForPhysicsPocketIndex } from "../../../../lib/roulette-pocket-mapping";
+import { rouletteTrimeshByteFingerprint } from "../../../../lib/roulette-trimesh-fingerprint";
 import {
   getRouletteExactGlbColliderGeometry,
   ROULETTE_EXACT_GLB_COLLIDER_METADATA,
@@ -1191,6 +1192,12 @@ export async function simulatePhysicsLabRound(
         ROULETTE_EXACT_GLB_COLLIDER_METADATA.weldEpsilonWorld,
       vertices: ROULETTE_EXACT_GLB_COLLIDER_METADATA.stationaryVertices,
       triangles: ROULETTE_EXACT_GLB_COLLIDER_METADATA.stationaryTriangles,
+      vertexFingerprint: rouletteTrimeshByteFingerprint(
+        getRouletteExactGlbColliderGeometry().stationary.vertices,
+      ),
+      indexFingerprint: rouletteTrimeshByteFingerprint(
+        getRouletteExactGlbColliderGeometry().stationary.indices,
+      ),
     }),
   );
   const exactGlbRotorCollider = addExactGlbRotorCollider(
@@ -1210,6 +1217,12 @@ export async function simulatePhysicsLabRound(
         ROULETTE_EXACT_GLB_COLLIDER_METADATA.weldEpsilonWorld,
       vertices: ROULETTE_EXACT_GLB_COLLIDER_METADATA.rotorVertices,
       triangles: ROULETTE_EXACT_GLB_COLLIDER_METADATA.rotorTriangles,
+      vertexFingerprint: rouletteTrimeshByteFingerprint(
+        getRouletteExactGlbColliderGeometry().rotor.vertices,
+      ),
+      indexFingerprint: rouletteTrimeshByteFingerprint(
+        getRouletteExactGlbColliderGeometry().rotor.indices,
+      ),
     }),
   );
 
