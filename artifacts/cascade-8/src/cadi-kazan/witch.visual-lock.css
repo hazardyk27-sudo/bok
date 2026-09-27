@@ -3437,3 +3437,21 @@
 .is-office-theme .witch-cell.is-office-special .witch-office-result-art {
   background: #fff !important;
 }
+
+
+/* PASS 18 — THE OFFICE supplied character cutouts on white.
+   The source JPEGs contain a near-black matte around the cutout. Convert only
+   that near-black matte to transparency at render time; the character remains
+   untouched and sits directly on the white result cell. */
+.witch-office-filter-defs {
+  position: absolute !important;
+  width: 0 !important;
+  height: 0 !important;
+  overflow: hidden !important;
+  pointer-events: none !important;
+}
+
+.is-office-theme .witch-cell.is-office-cell .witch-office-result-art {
+  background: transparent !important;
+  filter: url(#witch-office-remove-black) !important;
+}
