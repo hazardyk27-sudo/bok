@@ -5679,6 +5679,33 @@ export function Part2SceneViewport({
           );
           activeBallBody.wakeUp();
 
+          if (part10aTrace61006 && run.seed === 61006) {
+            console.info(
+              'PART10A_BROWSER_START',
+              JSON.stringify({
+                seed: run.seed,
+                launchAzimuth: run.launchAzimuth,
+                launchSpeed: run.speed,
+                rotorStartAngle: rotorAngle,
+                ballPosition: {
+                  x: launchPosition.x,
+                  y: launchPosition.y,
+                  z: launchPosition.z,
+                },
+                ballVelocity: {
+                  x: launchVelocity.x,
+                  y: launchVelocity.y,
+                  z: launchVelocity.z,
+                },
+                ballAngularVelocity: {
+                  x: launchAngularVelocity.x,
+                  y: launchAngularVelocity.y,
+                  z: launchAngularVelocity.z,
+                },
+              }),
+            );
+          }
+
           const resetPosition = activeBallBody.translation();
           const resetVelocity = activeBallBody.linvel();
           const resetAngularVelocity = activeBallBody.angvel();

@@ -38,6 +38,21 @@ for (const line of serverLines) {
   } catch {}
 }
 
+let browserStart = null;
+for (const line of browserLines) {
+  const marker = 'BROWSER_CONSOLE ';
+  const index = line.indexOf(marker);
+  if (index < 0) continue;
+  try {
+    const outer = JSON.parse(line.slice(index + marker.length));
+    const prefix = 'PART10A_BROWSER_START ';
+    if (outer.text?.startsWith(prefix)) {
+      browserStart = JSON.parse(outer.text.slice(prefix.length));
+      break;
+    }
+  } catch {}
+}
+
 const browserOutput = JSON.parse(fs.readFileSync(browserJsonPath, 'utf8'));
 const browserRow =
   (browserOutput.telemetry?.results ?? browserOutput.seedTelemetry ?? [])[0] ??
@@ -117,16 +132,12 @@ for (const step of commonSteps) {
     }
   }
 
-  const browserContacts = JSON.stringify(
-    [...(browserState.contactRoles ?? [])].sort(),
-  );
-  const serverContacts = JSON.stringify(
-    [...(serverState.contactRoles ?? [])].sort(),
-  );
-  if (
-    firstContactMismatch === null &&
-    browserContacts !== serverContacts
-  ) {
+  const contactMismatch =
+    Boolean(browserState.darkRaceContact) !==
+      Boolean(serverState.darkRaceContact) ||
+    Boolean(browserState.outerWallContact) !==
+      Boolean(serverState.outerWallContact);
+  if (firstContactMismatch === null && contactMismatch) {
     firstContactMismatch = step;
   }
 
@@ -143,6 +154,10 @@ for (const step of commonSteps) {
     serverVerticalVelocity: serverState.verticalVelocity,
     browserContacts: browserState.contactRoles,
     serverContacts: serverState.contactRoles,
+    browserDarkRaceContact: Boolean(browserState.darkRaceContact),
+    serverDarkRaceContact: Boolean(serverState.darkRaceContact),
+    browserOuterWallContact: Boolean(browserState.outerWallContact),
+    serverOuterWallContact: Boolean(serverState.outerWallContact),
   });
 }
 
@@ -163,8 +178,64 @@ const window =
         (row) => Math.abs(row.step - firstMeaningfulDivergence) <= 5,
       );
 
+const serverStart = serverResult.startConditions ?? null;
+const serverAngularVelocity =
+  serverStart && Array.isArray(serverStart.ballSpinAxis)
+    ? {
+        x: serverStart.ballSpinAxis[0] * serverStart.ballSpin,
+        y: serverStart.ballSpinAxis[1] * serverStart.ballSpin,
+        z: serverStart.ballSpinAxis[2] * serverStart.ballSpin,
+      }
+    : null;
+const browserStartPosition = browserStart?.ballPosition ?? null;
+const browserStartVelocity = browserStart?.ballVelocity ?? null;
+const browserStartAngularVelocity = browserStart?.ballAngularVelocity ?? null;
+const serverStartPosition =
+  serverStart && Array.isArray(serverStart.ballPosition)
+    ? {
+        x: serverStart.ballPosition[0],
+        y: serverStart.ballPosition[1],
+        z: serverStart.ballPosition[2],
+      }
+    : null;
+const serverStartVelocity =
+  serverStart && Array.isArray(serverStart.ballVelocity)
+    ? {
+        x: serverStart.ballVelocity[0],
+        y: serverStart.ballVelocity[1],
+        z: serverStart.ballVelocity[2],
+      }
+    : null;
+const startVectorDelta = (left, right) =>
+  left && right
+    ? Math.hypot(left.x - right.x, left.y - right.y, left.z - right.z)
+    : null;
+
 const summary = {
   seed: 61006,
+  initialState: {
+    browserStart,
+    serverStartConditions: serverStart,
+    positionDelta: startVectorDelta(
+      browserStartPosition,
+      serverStartPosition,
+    ),
+    velocityDelta: startVectorDelta(
+      browserStartVelocity,
+      serverStartVelocity,
+    ),
+    angularVelocityDelta: startVectorDelta(
+      browserStartAngularVelocity,
+      serverAngularVelocity,
+    ),
+    rotorAngleDelta:
+      browserStart && serverStart
+        ? Math.abs(
+            browserStart.rotorStartAngle -
+              serverStart.rotorInitialAngleRadians,
+          )
+        : null,
+  },
   browserParityRows: browser.length,
   serverParityRows: server.length,
   commonRows: commonSteps.length,
