@@ -1590,3 +1590,11 @@ describe("Businesses Part 17 hierarchy readability", () => {
     expect(idleCssSource).toContain("border-bottom: 1px solid rgba(111, 151, 255, .09)");
   });
 });
+
+
+describe("Businesses Part 18 accrued alignment", () => {
+  it("aligns the accrued amount with the hourly-income value column on desktop", () => {
+    expect(idleCssSource).toContain("/* 2026-09-27 — Part 18: align accrued value with stat values */");
+    expect(idleCssSource).toContain("margin-left: 14px");
+  });
+});

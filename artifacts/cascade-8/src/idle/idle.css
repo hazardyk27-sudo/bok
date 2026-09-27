@@ -8824,3 +8824,12 @@ body.businesses-route {
     font-size: 18px;
   }
 }
+
+
+/* 2026-09-27 — Part 18: align accrued value with stat values */
+@media (min-width: 1101px) {
+  .route-shell.is-businesses-page .business-card-balance > strong {
+    display: block;
+    margin-left: 14px;
+  }
+}
