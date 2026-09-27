@@ -1,0 +1,80 @@
+name: Roulette Part 12 Widened GLB Debug V2
+
+on:
+  push:
+    branches:
+      - feature/roulette
+    paths:
+      - '.github/workflows/roulette-part12-widened-glb-debug-v2.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  debug:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.15.0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm exec playwright install --with-deps chromium
+
+      - name: Widen GLB
+        run: |
+          node artifacts/roulette-physics-lab/scripts/widen-outer-race-glb.mjs \
+            artifacts/roulette-physics-lab/public/rou-lp-test-04.glb \
+            artifacts/roulette-physics-lab/public/rou-lp-test-04.glb
+          python <<'PY'
+          from pathlib import Path
+          p=Path('lib/roulette-physics-config.ts')
+          s=p.read_text()
+          s=s.replace(
+            'export const ROULETTE_DARK_RACE_RADIUS_BAND = [2.27, 2.54] as const;',
+            'export const ROULETTE_DARK_RACE_RADIUS_BAND = [2.27, 2.65] as const;',
+            1,
+          )
+          p.write_text(s)
+          scene=Path('artifacts/roulette-physics-lab/src/Part2SceneViewport.tsx')
+          t=scene.read_text()
+          old='hitRadius <= 2.58'
+          if old not in t:
+              raise SystemExit('outer-wall audit upper bound not found')
+          scene.write_text(t.replace(old,'hitRadius <= 2.69',1))
+          PY
+
+      - name: Start lab
+        run: |
+          PORT=4173 BASE_PATH=/ pnpm --filter @workspace/roulette-physics-lab run dev > /tmp/part12-lab.log 2>&1 &
+          for attempt in {1..60}; do
+            if curl --fail --silent http://127.0.0.1:4173/ > /dev/null; then exit 0; fi
+            sleep 1
+          done
+          cat /tmp/part12-lab.log
+          exit 1
+
+      - name: Run one widened seed and print runtime log
+        shell: bash
+        run: |
+          set +e
+          ROULETTE_LAB_URL="http://127.0.0.1:4173/?part6Headless=1&part6SeedStartIndex=6&part6SeedCount=1&part6MaxDurationSeconds=20&part11Calibration=1&part11LaunchRadius=2.39&part11LaunchSpeedMps=5.00&part11BallScale=1.00&part11SpinFactor=1.0&part11TrackFriction=0.028" \
+          ROULETTE_PART6_OUTPUT="part12-debug.json" \
+          ROULETTE_PART6_TIMEOUT_MS='60000' \
+          ROULETTE_PART6_EXPECTED_SEEDS='1' \
+          node scripts/roulette-part6-runtime.mjs > part12-debug.log 2>&1
+          STATUS=$?
+          echo "RUNTIME_STATUS=$STATUS"
+          echo "===== RUNTIME LOG ====="
+          tail -n 300 part12-debug.log
+          echo "===== LAB LOG ====="
+          tail -n 200 /tmp/part12-lab.log
+          echo "===== OUTPUT ====="
+          if [ -f part12-debug.json ]; then cat part12-debug.json; else echo "NO_OUTPUT_FILE"; fi
+          exit 0
