@@ -20,7 +20,10 @@ import {
   ROULETTE_ROTOR_ANGULAR_SPEED,
   ROULETTE_WORLD_UNITS_PER_METER,
 } from "../../../../lib/roulette-physics-config";
-import { rouletteNumberForPhysicsPocketIndex } from "../../../../lib/roulette-pocket-mapping";
+import {
+  rouletteBallFitsWithinPocketAngularly,
+  rouletteNumberForPhysicsPocketIndex,
+} from "../../../../lib/roulette-pocket-mapping";
 import {
   canonicalizeRouletteTrimeshVertices,
   rouletteTrimeshByteFingerprint,
@@ -2294,11 +2297,26 @@ export async function simulatePhysicsLabRound(
       const settleRadiusMax =
         radius <=
         ROULETTE_POCKET_OUTER_LIP_RADIUS - PHYSICS_LAB_BALL_RADIUS;
+      const settleWorldAngle = Math.atan2(translation.x, translation.z);
+      const settleRotorAngle = 2 * Math.atan2(
+        rotorRotation.y,
+        rotorRotation.w,
+      );
+      const settleRelativeAngle = normalizedAngle(
+        settleWorldAngle - settleRotorAngle,
+      );
+      const settlePocketAngularFit =
+        rouletteBallFitsWithinPocketAngularly({
+          physicsAngle: settleRelativeAngle,
+          radius,
+          ballRadius: PHYSICS_LAB_BALL_RADIUS,
+        });
       const exactRotorFloorY =
         settlePocketInteraction &&
         settleRelativeSpeed &&
         settleRadiusMin &&
-        settleRadiusMax
+        settleRadiusMax &&
+        settlePocketAngularFit
           ? exactRotorSurfaceYAt(
               translation.x,
               translation.z,
@@ -2315,6 +2333,7 @@ export async function simulatePhysicsLabRound(
         settleRelativeSpeed &&
         settleRadiusMin &&
         settleRadiusMax &&
+        settlePocketAngularFit &&
         settleFloor &&
         settlePocketIndex;
       if (
