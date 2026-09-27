@@ -53,6 +53,41 @@ describe("blackjack exact wager reservations", () => {
     expect(boundBook.reservations[0].handId).toBe("hand-1");
   });
 
+  it("replays the original INITIAL reserve after the reservation is hand-bound", () => {
+    const initial = setup();
+    const reserveInput = {
+      reservationId: "bet-bind-replay",
+      reserveTransactionId: "tx-bind-replay",
+      userId: "user-1",
+      roundId: "round-1",
+      handId: null,
+      kind: "INITIAL" as const,
+      amountCents: 4_000,
+      createdAtMs: 2,
+    };
+
+    const reserved = reserveBlackjackWager(
+      initial.wallet,
+      initial.book,
+      reserveInput,
+    );
+    const boundBook = bindBlackjackReservationToHand(reserved.book, {
+      reservationId: "bet-bind-replay",
+      handId: "hand-bound",
+    });
+
+    const replay = reserveBlackjackWager(reserved.wallet, boundBook, {
+      ...reserveInput,
+      createdAtMs: 999,
+    });
+
+    expect(replay.wallet).toBe(reserved.wallet);
+    expect(replay.book).toBe(boundBook);
+    expect(replay.reservation.reserveHandId).toBeNull();
+    expect(replay.reservation.handId).toBe("hand-bound");
+    expect(replay.wallet.reservedBalanceCents).toBe(4_000);
+  });
+
   it("rejects reservationId or reserveTransactionId reuse for another wager", () => {
     const initial = setup();
     const first = reserveBlackjackWager(initial.wallet, initial.book, {
