@@ -1190,9 +1190,10 @@ function buildStartConditions(seed: string): PhysicsLabStartConditions {
   if (!exactLaunchSurface) {
     throw new Error("EXACT_GLB_LAUNCH_SURFACE_MISSING");
   }
-  // Part 10B parity: browser and server both canonicalize the exact-GLB
-  // surface sample, then derive the tangent from the same deterministic
-  // launch azimuth before creating the Rapier ball state.
+  // Part 10B parity: the browser uses the rendered GLB Three.js raycast,
+  // while the server mirrors that ray-triangle math over the exact GLB payload.
+  // Both feed the raw surface hit and deterministic launch azimuth to one
+  // shared launch-state builder before creating the Rapier ball state.
   const canonicalLaunchState = buildRouletteCanonicalLaunchState({
     surfacePoint: {
       x: exactLaunchSurface.point[0],
