@@ -95,6 +95,14 @@ function closeServer(server: ReturnType<typeof createServer>): Promise<void> {
   return new Promise((resolve) => server.close(() => resolve()));
 }
 
+function nextClose(socket: WebSocket): Promise<{ code: number; reason: string }> {
+  return new Promise((resolve) => {
+    socket.once("close", (code, reason) => {
+      resolve({ code, reason: reason.toString() });
+    });
+  });
+}
+
 describe("blackjack WebSocket room foundation", () => {
   let runtime: BlackjackRealtimeRuntime | undefined;
   let server: ReturnType<typeof createServer> | undefined;
@@ -273,6 +281,57 @@ describe("blackjack WebSocket room foundation", () => {
       type: "error",
       error: "BLACKJACK_INVALID_SYNC_REQUEST",
     });
+  });
+
+  it("replaces an older authenticated device connection for the same account", async () => {
+    const source = new TestSource(snapshot(5));
+    server = createServer();
+
+    const ids = ["conn-desktop", "conn-mobile"];
+    let idIndex = 0;
+
+    runtime = attachBlackjackWebSocket(server, source, {
+      createConnectionId: () => ids[idIndex++] ?? `conn-extra-${idIndex}`,
+      nowMs: () => 1_000 + idIndex,
+      resolveIdentity: (request) => {
+        const url = new URL(request.url ?? "/", "http://localhost");
+        const sessionId = url.searchParams.get("session") ?? "unknown";
+        return {
+          userId: "user-1",
+          playerId: "player-1",
+          sessionId,
+        };
+      },
+    });
+    const port = await listen(server);
+
+    const desktop = new WebSocket(
+      `ws://127.0.0.1:${port}${BLACKJACK_WS_PATH}?session=desktop`,
+    );
+    client = desktop;
+    await nextMessage(desktop);
+    expect(runtime.authenticatedConnectionCount()).toBe(1);
+
+    const replacedMessage = nextMessage(desktop);
+    const desktopClosed = nextClose(desktop);
+
+    const mobile = new WebSocket(
+      `ws://127.0.0.1:${port}${BLACKJACK_WS_PATH}?session=mobile`,
+    );
+    await nextMessage(mobile);
+
+    await expect(replacedMessage).resolves.toEqual({
+      type: "SESSION_REPLACED",
+      replacementConnectionId: "conn-mobile",
+    });
+    await expect(desktopClosed).resolves.toEqual({
+      code: 4001,
+      reason: "SESSION_REPLACED",
+    });
+
+    expect(runtime.authenticatedConnectionCount()).toBe(1);
+
+    mobile.terminate();
   });
 
   it("returns a stable error if snapshot generation fails", async () => {
