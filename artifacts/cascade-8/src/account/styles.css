@@ -522,3 +522,43 @@ button, input { font: inherit; }
     margin-top: 25px;
   }
 }
+
+
+.account-profile-status b[data-verified="true"] {
+  color: #7be0ba;
+}
+
+.account-profile-status b[data-verified="false"] {
+  color: #f0c477;
+}
+
+.account-verification-note {
+  width: 100%;
+  margin: 13px 0 0;
+  color: #91a2c3;
+  font-size: 11px;
+  line-height: 1.55;
+}
+
+.account-resend-verification {
+  width: 100%;
+  min-height: 44px;
+  margin-top: 12px;
+  border: 1px solid rgba(112, 213, 255, .3);
+  border-radius: 10px;
+  color: #b9ddff;
+  background: rgba(24, 73, 128, .24);
+  font: 700 8px "DM Mono", monospace;
+  letter-spacing: .1em;
+  cursor: pointer;
+}
+
+.account-resend-verification:hover:not(:disabled) {
+  border-color: rgba(112, 213, 255, .62);
+  color: #eef9ff;
+}
+
+.account-resend-verification:disabled {
+  opacity: .55;
+  cursor: wait;
+}
