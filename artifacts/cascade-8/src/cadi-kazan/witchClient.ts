@@ -43,7 +43,7 @@ type CadiKazanMutation = {
 
 const API_BASE = "/api/cadi-kazan";
 const SCRATCH_BRUSH_RADIUS_PX = 14;
-const OFFICE_SCRATCH_BRUSH_RADIUS_PX = SCRATCH_BRUSH_RADIUS_PX * 1.3;
+const OFFICE_SCRATCH_BRUSH_RADIUS_PX = SCRATCH_BRUSH_RADIUS_PX * 1.43;
 const OFFICE_SYMBOL_BY_ID = new Map(OFFICE_MATCH_SYMBOLS.map((symbol) => [symbol.id, symbol] as const));
 const OFFICE_SCRATCH_COVER_URL = "data:image/svg+xml;charset=utf-8," + encodeURIComponent(`
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 360 250">
@@ -382,6 +382,8 @@ export class WitchClient {
   private readonly terminalRevealTimers = new Set<number>();
   private terminalRevealAnimating = false;
   private readonly scratchSurfaces = new Map<number, ScratchSurface>();
+  private officeScratchPointerId: number | null = null;
+  private officeScratchOriginIndex: number | null = null;
   private readonly audio = new AudioManager("cadi-kazan");
   private readonly telemetry = new ScratchTelemetry();
   private lastRevealInput: "pointer" | "keyboard" = "pointer";
@@ -457,6 +459,44 @@ export class WitchClient {
       closeCardsMenu();
       menuToggle?.focus();
     });
+
+    // The Office supports one continuous drag across multiple scratch cells.
+    // The origin cell keeps its native pointer-captured ScratchSurface; every
+    // other Office surface receives the same screen-space pointer path when the
+    // cursor/finger crosses its bounds. Standard and Advanced are untouched.
+    this.root.addEventListener("pointerdown", (event) => {
+      const round = this.state?.round;
+      if (!round || round.mode !== "OFFICE_MATCH_6" || round.status !== "ACTIVE") return;
+      if (event.pointerType === "mouse" && event.button !== 0) return;
+      const target = event.target instanceof Element ? event.target : null;
+      if (!target?.closest("[data-witch-board]")) return;
+      this.officeScratchPointerId = event.pointerId;
+      const cell = target.closest<HTMLButtonElement>("[data-witch-cell]");
+      this.officeScratchOriginIndex = cell ? Number(cell.dataset.witchCell) : null;
+    });
+
+    this.root.addEventListener("pointermove", (event) => {
+      if (this.officeScratchPointerId !== event.pointerId) return;
+      const round = this.state?.round;
+      if (!round || round.mode !== "OFFICE_MATCH_6" || round.status !== "ACTIVE") return;
+      const pressure = event.pressure > 0 ? event.pressure : 0.62;
+      for (const [index, surface] of Array.from(this.scratchSurfaces.entries())) {
+        if (index === this.officeScratchOriginIndex) continue;
+        surface.scratchExternalPointer(event.pointerId, event.clientX, event.clientY, pressure);
+      }
+    });
+
+    const finishOfficeMultiScratch = (event: PointerEvent) => {
+      if (this.officeScratchPointerId !== event.pointerId) return;
+      for (const [index, surface] of Array.from(this.scratchSurfaces.entries())) {
+        if (index === this.officeScratchOriginIndex) continue;
+        surface.finishExternalPointer(event.pointerId);
+      }
+      this.officeScratchPointerId = null;
+      this.officeScratchOriginIndex = null;
+    };
+    this.root.addEventListener("pointerup", finishOfficeMultiScratch);
+    this.root.addEventListener("pointercancel", finishOfficeMultiScratch);
 
     this.root.querySelectorAll<HTMLButtonElement>("[data-witch-mode]").forEach((button) => {
       button.addEventListener("click", () => {
@@ -619,7 +659,10 @@ export class WitchClient {
       } else if (data.outcome === "SAFE" || data.outcome === "COMPLETED") {
         triggerScratchHaptic("GOLD");
       }
-      if (data.outcome === "COMPLETED") this.audio.cashRegister();
+      if (data.outcome === "COMPLETED") {
+        if (resultRound?.mode === "OFFICE_MATCH_6" && resultRound.payoutCents === 0) this.audio.officeLoss();
+        else this.audio.cashRegister();
+      }
       if (data.outcome === "BUST" || data.outcome === "COMPLETED") {
         if (resultRound) this.telemetry.recordSettlement(data.outcome, resultRound.revealedSafeCount, resultRound.currentMultiplierBps, resultRound.payoutCents);
       }
