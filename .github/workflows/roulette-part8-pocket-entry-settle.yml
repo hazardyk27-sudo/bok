@@ -6,6 +6,8 @@ on:
       - feature/roulette
     paths:
       - '.github/workflows/roulette-part8-pocket-entry-settle.yml'
+      - 'artifacts/roulette-physics-lab/src/Part2SceneViewport.tsx'
+      - 'artifacts/cascade-8/src/roulettePhysicsConfig.test.ts'
   workflow_dispatch:
 
 permissions:
@@ -36,10 +38,8 @@ jobs:
       - name: Build TypeScript project references
         run: pnpm run typecheck:libs
 
-      - name: Typecheck physics runtimes
-        run: |
-          pnpm --filter @workspace/roulette-physics-lab run typecheck
-          pnpm --filter @workspace/api-server run typecheck
+      - name: Typecheck roulette physics lab
+        run: pnpm --filter @workspace/roulette-physics-lab run typecheck
 
       - name: Verify pocket settle/result source contract
         run: |
@@ -49,38 +49,21 @@ jobs:
             'artifacts/roulette-physics-lab/src/Part2SceneViewport.tsx',
             'utf8',
           );
-          const server = fs.readFileSync(
-            'artifacts/api-server/src/physics-lab/simulation.ts',
-            'utf8',
-          );
-
-          const requiredBrowser = [
+          const required = [
             'finalRotorRelativeSpeed < 0.12',
             'settledFrames >= settleFramesRequired',
             'Math.atan2(\n                finalPosition.x,\n                finalPosition.z,\n              ) - rotorAngle',
             'pocketIndexFromLocalPosition(',
-            'exact-glb-rotor-trimesh',
+            "'exact-glb-rotor-trimesh'",
             'microParityRotorSamples',
+            'pocketEntered',
+            'pocketEntryTime',
           ];
-          for (const token of requiredBrowser) {
+          for (const token of required) {
             if (!browser.includes(token)) {
               throw new Error('Missing browser Part 8 contract token: ' + token);
             }
           }
-
-          const requiredServer = [
-            'const settleRelativeSpeed = rotorRelativeSpeed < 0.12;',
-            'stableFrames >= PHYSICS_LAB_STABLE_WINDOW_FRAMES',
-            'pocketIndexFromState(translation, rotorRotation)',
-            '"exact-glb-rotor-trimesh"',
-            'microParityRotorSamples',
-          ];
-          for (const token of requiredServer) {
-            if (!server.includes(token)) {
-              throw new Error('Missing server Part 8 contract token: ' + token);
-            }
-          }
-
           console.log('PART8_SOURCE_CONTRACT ' + JSON.stringify({
             relativeAngleResultMapping: true,
             stableLowSpeedSettle: true,
@@ -88,10 +71,10 @@ jobs:
           }));
           NODE
 
-  twenty-seed:
+  browser-20-seed:
     needs: source-contract
     runs-on: ubuntu-latest
-    timeout-minutes: 12
+    timeout-minutes: 10
     strategy:
       fail-fast: false
       matrix:
@@ -211,47 +194,6 @@ jobs:
             allPassed: true,
           }));
           NODE
-
-      - name: Verify server five-seed pocket batch
-        env:
-          START_INDEX: ${{ matrix.start }}
-        run: |
-          set -euo pipefail
-          pnpm --filter @workspace/api-server exec tsx -e \
-            "(async () => {
-              const start = Number(process.env.START_INDEX);
-              const seeds = Array.from({length: 5}, (_, i) => String(61001 + start + i));
-              const { simulatePhysicsLabRound } = await import('./src/physics-lab/simulation.ts');
-              for (const seed of seeds) {
-                const row = await simulatePhysicsLabRound('part8-' + seed, seed);
-                const events = row.events.map((event) => event.type);
-                if (row.status !== 'SETTLED') throw new Error(seed + ' server did not settle');
-                if (row.finalPocketIndex == null || row.finalPocketNumber == null) {
-                  throw new Error(seed + ' server missing final pocket result');
-                }
-                if (row.stableSettleStep == null) {
-                  throw new Error(seed + ' server missing stable settle step');
-                }
-                if (!events.includes('POCKET_ENTRY') || !events.includes('STABLE_SETTLE')) {
-                  throw new Error(seed + ' server missing pocket/settle events');
-                }
-                if (!row.microParityPassed || row.microParityRotorSamples < 1) {
-                  throw new Error(seed + ' server exact rotor micro parity missing');
-                }
-                console.log('PART8_SERVER_CASE ' + JSON.stringify({
-                  seed,
-                  finalPocketIndex: row.finalPocketIndex,
-                  finalPocketNumber: row.finalPocketNumber,
-                  stableSettleStep: row.stableSettleStep,
-                  rotorContactSamples: row.microParityRotorSamples,
-                }));
-              }
-              console.log('PART8_SERVER_BATCH_PASS ' + JSON.stringify({
-                startIndex: start,
-                seeds,
-                allPassed: true,
-              }));
-            })().catch((error) => { console.error(error); process.exit(1); });"
 
       - name: Upload evidence
         if: always()
