@@ -41,13 +41,16 @@ describe("The Office match-3 card config", () => {
     expect(OFFICE_MATCH_TARGET_RTP_BPS).toBe(9_600);
   });
 
-  it("maps every approved symbol to a shipped artwork asset", () => {
-    expect(OFFICE_MATCH_SYMBOLS.map(({ id, artworkUrl }) => ({ id, artworkUrl }))).toEqual([
-      { id: "KEVIN", artworkUrl: "/cadi-kazan/office/office-kevin-2x.webp" },
-      { id: "JIM", artworkUrl: "/cadi-kazan/office/office-jim-5x.webp" },
-      { id: "DWIGHT", artworkUrl: "/cadi-kazan/office/office-dwight-10x.webp" },
-      { id: "STANLEY", artworkUrl: "/cadi-kazan/office/office-stanley-20x.webp" },
-      { id: "MICHAEL", artworkUrl: "/cadi-kazan/office/office-michael-100x.webp" },
+  it("maps every approved symbol to its Cadı Kazan-owned artwork asset", () => {
+    expect(OFFICE_MATCH_SYMBOLS.map(({ id, artworkUrl }) => ({
+      id,
+      asset: artworkUrl.split("/").at(-1),
+    }))).toEqual([
+      { id: "KEVIN", asset: "office-kevin-2x.webp" },
+      { id: "JIM", asset: "office-jim-5x.webp" },
+      { id: "DWIGHT", asset: "office-dwight-10x.webp" },
+      { id: "STANLEY", asset: "office-stanley-20x.webp" },
+      { id: "MICHAEL", asset: "office-michael-100x.webp" },
     ]);
   });
 
