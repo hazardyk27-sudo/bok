@@ -21,3 +21,4 @@ export * from "./betting";
 export * from "./turnEngine";
 export * from "./hit";
 export * from "./stand";
+export * from "./double";
