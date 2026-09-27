@@ -30,6 +30,7 @@ function envelope(
     roundId: null,
     handId: null,
     seatNumber: 1,
+    payloadFingerprint: "leave-seat:v1",
     ...overrides,
   };
 }
@@ -119,10 +120,87 @@ describe("blackjack action stateVersion protocol", () => {
       applyBlackjackVersionedAction(
         first.table,
         first.protocol,
-        envelope({ seatNumber: 2 }),
+        envelope({ seatNumber: 2, payloadFingerprint: "leave-seat:v2" }),
         (current) => current,
       ),
     ).toThrow(/actionId conflict/);
+  });
+
+  it("treats payload fingerprint as part of actionId idempotency semantics", () => {
+    const first = applyBlackjackVersionedAction(
+      table(),
+      createBlackjackActionProtocolState(),
+      envelope({ payloadFingerprint: "bet:1000" }),
+      (current) => current,
+    );
+
+    expect(() =>
+      applyBlackjackVersionedAction(
+        first.table,
+        first.protocol,
+        envelope({ payloadFingerprint: "bet:2000" }),
+        (current) => current,
+      ),
+    ).toThrow(/actionId conflict/);
+  });
+
+  it("enforces runtime seat and action-specific round/hand/seat shapes", () => {
+    const source = table();
+    const protocol = createBlackjackActionProtocolState();
+
+    expect(() =>
+      applyBlackjackVersionedAction(
+        source,
+        protocol,
+        envelope({ seatNumber: 9 as never }),
+        (current) => current,
+      ),
+    ).toThrow(/seatNumber must be between 1 and 5/);
+
+    expect(() =>
+      applyBlackjackVersionedAction(
+        source,
+        protocol,
+        envelope({
+          type: "HIT",
+          roundId: null,
+          handId: null,
+          seatNumber: 1,
+          payloadFingerprint: "hit:h1",
+        }),
+        (current) => current,
+      ),
+    ).toThrow(/HIT requires roundId/);
+
+    expect(() =>
+      applyBlackjackVersionedAction(
+        source,
+        protocol,
+        envelope({
+          type: "PLACE_BET",
+          roundId: null,
+          handId: null,
+          seatNumber: 1,
+          payloadFingerprint: "bet:1000",
+        }),
+        (current) => current,
+      ),
+    ).toThrow(/PLACE_BET requires roundId/);
+
+    expect(() =>
+      applyBlackjackVersionedAction(
+        source,
+        protocol,
+        envelope({
+          type: "LEAVE_SEAT",
+          roundId: null,
+          handId: null,
+          seatNumber: null,
+          payloadFingerprint: "leave",
+        }),
+        (current) => current,
+      ),
+    ).toThrow(/LEAVE_SEAT requires seatNumber/);
   });
 
   it("rejects foreign tables, rounds, hands and seat ownership before mutation", () => {
