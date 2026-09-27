@@ -19,6 +19,7 @@ Routine game changes reach `integration/replit-preview` only through the seriali
 - The workflow copies only the selected category's promotion roots.
 - It runs validation before push.
 - Routine game agents must not manually merge/push into `integration/replit-preview`.
+- Do not run `scripts/promote-game.mjs` from Replit. Promotion runs in GitHub Actions, where the GitHub remote is `origin`; Replit's normal sync remote is `github`. Do not mix these two environments/remotes.
 - If the preview branch moves during promotion, the promotion must abort and be re-run from the newest preview HEAD. Do not auto-merge unrelated preview commits.
 
 ### Replit lane
