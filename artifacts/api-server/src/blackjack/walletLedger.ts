@@ -79,7 +79,7 @@ function freezeEntry(
   return Object.freeze({ ...entry });
 }
 
-function sameEntry(
+function sameEntrySemantics(
   left: BlackjackWalletLedgerEntry,
   right: BlackjackWalletLedgerEntry,
 ): boolean {
@@ -91,27 +91,34 @@ function sameEntry(
     left.type === right.type &&
     left.amountCents === right.amountCents &&
     left.availableDeltaCents === right.availableDeltaCents &&
-    left.reservedDeltaCents === right.reservedDeltaCents &&
-    left.createdAtMs === right.createdAtMs
+    left.reservedDeltaCents === right.reservedDeltaCents
   );
+}
+
+function replayExistingTransaction(
+  state: BlackjackWalletLedgerState,
+  entry: BlackjackWalletLedgerEntry,
+): BlackjackWalletLedgerState | null {
+  const existing = state.entries.find(
+    (candidate) => candidate.transactionId === entry.transactionId,
+  );
+  if (!existing) return null;
+
+  if (!sameEntrySemantics(existing, entry)) {
+    throw new Error(
+      `Blackjack transactionId conflict: ${entry.transactionId}`,
+    );
+  }
+
+  return state;
 }
 
 function applyEntry(
   state: BlackjackWalletLedgerState,
   entry: BlackjackWalletLedgerEntry,
 ): BlackjackWalletLedgerState {
-  const existing = state.entries.find(
-    (candidate) => candidate.transactionId === entry.transactionId,
-  );
-
-  if (existing) {
-    if (!sameEntry(existing, entry)) {
-      throw new Error(
-        `Blackjack transactionId conflict: ${entry.transactionId}`,
-      );
-    }
-    return state;
-  }
+  const replay = replayExistingTransaction(state, entry);
+  if (replay) return replay;
 
   const availableBalanceCents = safeAdd(
     "available balance",
@@ -198,18 +205,19 @@ export function reserveBlackjackFunds(
   assertWalletOwner(state, input.userId);
   assertPositiveMoneyCents("reserve amountCents", input.amountCents);
 
+  const entry = freezeEntry({
+    ...input,
+    availableDeltaCents: -input.amountCents,
+    reservedDeltaCents: input.amountCents,
+  });
+  const replay = replayExistingTransaction(state, entry);
+  if (replay) return replay;
+
   if (state.availableBalanceCents < input.amountCents) {
     throw new Error("Blackjack wallet has insufficient available balance");
   }
 
-  return applyEntry(
-    state,
-    freezeEntry({
-      ...input,
-      availableDeltaCents: -input.amountCents,
-      reservedDeltaCents: input.amountCents,
-    }),
-  );
+  return applyEntry(state, entry);
 }
 
 export function releaseBlackjackReservedFunds(
@@ -227,19 +235,20 @@ export function releaseBlackjackReservedFunds(
   assertWalletOwner(state, input.userId);
   assertPositiveMoneyCents("release amountCents", input.amountCents);
 
+  const entry = freezeEntry({
+    ...input,
+    type: "BET_RELEASE" as const,
+    availableDeltaCents: input.amountCents,
+    reservedDeltaCents: -input.amountCents,
+  });
+  const replay = replayExistingTransaction(state, entry);
+  if (replay) return replay;
+
   if (state.reservedBalanceCents < input.amountCents) {
     throw new Error("Blackjack wallet cannot release more than reserved balance");
   }
 
-  return applyEntry(
-    state,
-    freezeEntry({
-      ...input,
-      type: "BET_RELEASE",
-      availableDeltaCents: input.amountCents,
-      reservedDeltaCents: -input.amountCents,
-    }),
-  );
+  return applyEntry(state, entry);
 }
 
 export function settleBlackjackReservedFunds(
@@ -260,6 +269,20 @@ export function settleBlackjackReservedFunds(
   assertPositiveMoneyCents("reservedStakeCents", input.reservedStakeCents);
   assertMoneyCents("returnCents", input.returnCents);
 
+  const entry = freezeEntry({
+    transactionId: input.transactionId,
+    userId: input.userId,
+    roundId: input.roundId,
+    handId: input.handId,
+    type: input.type,
+    amountCents: input.returnCents,
+    availableDeltaCents: input.returnCents,
+    reservedDeltaCents: -input.reservedStakeCents,
+    createdAtMs: input.createdAtMs,
+  });
+  const replay = replayExistingTransaction(state, entry);
+  if (replay) return replay;
+
   if (state.reservedBalanceCents < input.reservedStakeCents) {
     throw new Error("Blackjack settlement exceeds reserved balance");
   }
@@ -277,18 +300,5 @@ export function settleBlackjackReservedFunds(
     throw new Error("Blackjack winning settlement must return more than the reserved stake");
   }
 
-  return applyEntry(
-    state,
-    freezeEntry({
-      transactionId: input.transactionId,
-      userId: input.userId,
-      roundId: input.roundId,
-      handId: input.handId,
-      type: input.type,
-      amountCents: input.returnCents,
-      availableDeltaCents: input.returnCents,
-      reservedDeltaCents: -input.reservedStakeCents,
-      createdAtMs: input.createdAtMs,
-    }),
-  );
+  return applyEntry(state, entry);
 }
