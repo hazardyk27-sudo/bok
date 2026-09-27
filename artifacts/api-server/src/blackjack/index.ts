@@ -24,3 +24,4 @@ export * from "./stand";
 export * from "./double";
 export * from "./split";
 export * from "./dealer";
+export * from "./settlement";
