@@ -13,3 +13,4 @@ export * from "./lifecycle";
 export * from "./stateMachine";
 export * from "./seats";
 export * from "./participation";
+export * from "./initialDeal";
