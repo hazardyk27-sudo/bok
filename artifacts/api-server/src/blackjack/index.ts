@@ -20,3 +20,4 @@ export * from "./chips";
 export * from "./betting";
 export * from "./turnEngine";
 export * from "./hit";
+export * from "./stand";
