@@ -127,4 +127,25 @@ describe("cadi kazan route smoke contract", () => {
     expect(visualLockSource).toContain("object-fit: contain !important");
   });
 
+
+  it("shows stake-derived Office prize money instead of multiplier labels", () => {
+    expect(witchClientSource).toContain("symbolPrizeCents");
+    expect(witchClientSource).toContain("round.stakeCents * symbol.multiplierBps");
+    expect(witchClientSource).toContain('formatMoney(symbolPrizeCents, { compactInteger: true })');
+    expect(witchClientSource).toContain("witch-office-result-prize");
+    expect(witchClientSource).not.toContain('<strong class="witch-office-result-name">');
+    expect(visualLockSource).toContain("PASS 16 — THE OFFICE smaller character art + direct prize amount");
+    expect(visualLockSource).toContain("width: 84.6% !important");
+    expect(visualLockSource).toContain("height: 84.6% !important");
+    expect(visualLockSource).toContain(".witch-office-result-name");
+    expect(visualLockSource).toContain("display: none !important");
+  });
+
+
+  it("uses a 30 percent larger scratch brush only for The Office", () => {
+    expect(witchClientSource).toContain("const SCRATCH_BRUSH_RADIUS_PX = 14;");
+    expect(witchClientSource).toContain("const OFFICE_SCRATCH_BRUSH_RADIUS_PX = SCRATCH_BRUSH_RADIUS_PX * 1.3;");
+    expect(witchClientSource).toContain('brushRadiusPx: round.mode === "OFFICE_MATCH_6" ? OFFICE_SCRATCH_BRUSH_RADIUS_PX : SCRATCH_BRUSH_RADIUS_PX');
+  });
+
 });
