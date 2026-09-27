@@ -48,6 +48,12 @@ jobs:
           if old not in s:
               raise SystemExit('expected dark-race radius band not found')
           p.write_text(s.replace(old,new,1))
+          scene=Path('artifacts/roulette-physics-lab/src/Part2SceneViewport.tsx')
+          t=scene.read_text()
+          old_wall='hitRadius <= 2.58'
+          if old_wall not in t:
+              raise SystemExit('outer-wall audit upper bound not found')
+          scene.write_text(t.replace(old_wall,'hitRadius <= 2.69',1))
           PY
           sha256sum artifacts/roulette-physics-lab/public/rou-lp-test-04.glb
 
