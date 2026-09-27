@@ -5,6 +5,7 @@ import { router as physicsLabRouter } from "../physics-lab";
 import { router as cadiKazanRouter } from "../cadi-kazan";
 import { router as slotRouter } from "../slot";
 import { router as idleRouter } from "../idle";
+import { router as blackjackRouter } from "../blackjack";
 
 const router: IRouter = Router();
 
@@ -14,5 +15,6 @@ router.use(physicsLabRouter);
 router.use(cadiKazanRouter);
 router.use(slotRouter);
 router.use(idleRouter);
+router.use(blackjackRouter);
 
 export default router;
