@@ -46,8 +46,8 @@ Isolation layout v2 is active. Game agents only develop and commit inside their 
 ## Preview / Replit protocol
 - A preview request follows this order: finish and commit the game change on its feature branch; promote only that game's owned roots to `integration/replit-preview` through the one-game promotion flow; then refresh Replit's existing integration branch.
 - Do not connect to Replit first and do not ask Replit Agent routine status/debugging questions.
-- For the normal Replit refresh, give the user a short shell snippet that uses remote `github`, verifies the current branch is already `integration/replit-preview`, performs only a fast-forward merge from `github/integration/replit-preview`, then prints branch/sync/status checks.
-- State the exact success criteria with the snippet: branch must print `integration/replit-preview`; ahead/behind must print `0 0`; working-tree status must print nothing.
+- For the normal Replit refresh, give the user a short shell command using `scripts/replit-sync-preview.sh`. When promotion produced a preview SHA, pass that exact SHA so the helper can prove the promoted commit is contained in Replit HEAD.
+- State the exact success criteria with the snippet: branch must print `integration/replit-preview`; ahead/behind must print `0 0`; working-tree status must print nothing; and when an expected preview SHA was supplied, `EXPECTED_PRESENT` must print `yes`.
 - Never use reset --hard, rebase, force-push, or feature-branch switching in Replit.
 - Query Replit only when the user's shell output shows an error, wrong branch, non-clean tree, non-fast-forward/ahead-behind problem, or when the user explicitly asks for Replit-side diagnosis.
 
