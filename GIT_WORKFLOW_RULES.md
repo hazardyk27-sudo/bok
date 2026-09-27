@@ -97,7 +97,7 @@ Do not hide a shared dependency with duplicate code, a workaround, or a cross-ga
 After the approved promotion has updated GitHub `integration/replit-preview`, refresh Replit with:
 
 ```bash
-bash scripts/replit-sync-preview.sh
+bash scripts/replit-sync-preview.sh github <EXPECTED_PREVIEW_SHA>
 ```
 
 The helper must abort instead of overwriting work when:
