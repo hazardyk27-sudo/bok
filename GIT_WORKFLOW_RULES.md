@@ -12,6 +12,7 @@ Each product area has one development branch:
 - Cadı Kazan: `feature/cadi-kazan`
 - Idle / İşletmeler: `feature/idle`
 - Hub / site: `feature/hub`
+- Blackjack: `feature/blackjack`
 
 The shared preview branch is:
 
@@ -145,6 +146,7 @@ worktree-roulette/    -> feature/roulette
 worktree-cadi/        -> feature/cadi-kazan
 worktree-idle/        -> feature/idle
 worktree-hub/         -> feature/hub
+worktree-blackjack/   -> feature/blackjack
 ```
 
 Never change the shared Replit branch to make one feature appear in Preview.

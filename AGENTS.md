@@ -8,6 +8,8 @@ This repository contains multiple games that must be developed and released inde
 - Cadı Kazan work: `feature/cadi-kazan`
 - Idle / İşletmeler work: `feature/idle`
 - Hub/site work: `feature/hub`
+- Account/auth work: `feature/account`
+- Blackjack work: `feature/blackjack`
 - Shared Replit preview: `integration/replit-preview`
 - Replit must stay on `integration/replit-preview`.
 
@@ -24,7 +26,7 @@ This repository contains multiple games that must be developed and released inde
 10. If ownership is unclear, stop instead of touching a shared or foreign file.
 
 ## Goal
-Routine Slot updates must have zero file changes in Roulette, Cadı Kazan, Idle and Hub. The same rule applies symmetrically to every game.
+Routine Slot updates must have zero file changes in Roulette, Cadı Kazan, Idle, Hub and Account/Auth. The same isolation rule applies symmetrically to every game/category.
 
 
 ## Release workflow
@@ -60,5 +62,7 @@ Isolation layout v2 is active. Game agents only develop and commit inside their 
 - Code, tests, ownership manifest, and validated runtime behavior remain the source of truth if a milestone note becomes stale.
 
 ## Shared/platform current milestones
+- 2026-09-27 — Blackjack category established — `feature/blackjack` owns isolated frontend, API and Blackjack schema roots; shared route/schema wiring remains a central integration responsibility. Next: build the isolated Blackjack skeleton and validate ownership CI.
+- 2026-09-27 — Account/Auth category established — auth development is isolated on `feature/account` with owned frontend, API and DB-schema roots; shared route/schema wiring remains a central integration responsibility. Next: build and validate email/password auth foundation on the account branch.
 - 2026-09-26 — Isolation v2 active — game work is branch- and ownership-scoped; preview promotion copies only the selected game's owned roots into `integration/replit-preview`.
 - 2026-09-26 — Replit workflow normalized — Replit stays on `integration/replit-preview`; legacy `main` preview instructions are obsolete; normal refresh is fast-forward only.

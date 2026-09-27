@@ -34,7 +34,11 @@ const isBaselineMerge = Boolean(
   parents.includes(base) &&
   parents.includes(preview),
 );
-const compareBase = isBaselineMerge ? preview : base;
+// For pull requests the target branch can advance after a feature branch was cut.
+// Comparing target HEAD directly to an older feature HEAD makes target-only files
+// look like feature deletions. Use the common ancestor for normal changes; on a
+// push this still resolves to the previous feature commit.
+const compareBase = isBaselineMerge ? preview : git("merge-base", base, head);
 
 const out = git("diff", "--name-only", compareBase, head);
 const files = out ? out.split("\n").filter(Boolean) : [];

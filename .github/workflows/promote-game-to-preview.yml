@@ -13,6 +13,8 @@ on:
           - cadi-kazan
           - idle
           - hub
+          - account
+          - blackjack
       source_ref:
         description: Isolated feature branch, tag, or commit to promote
         required: true
@@ -68,6 +70,9 @@ jobs:
         run: pnpm run typecheck
       - name: Build preview
         run: pnpm --filter @workspace/cascade-8 run build
+
+      - name: Blackjack backend regression
+        run: pnpm --filter @workspace/api-server exec vitest run src/blackjack/domain.test.ts src/blackjack/rules.test.ts src/blackjack/shoe.test.ts src/blackjack/shuffle.test.ts src/blackjack/draw.test.ts src/blackjack/lifecycle.test.ts src/blackjack/shoeGate.test.ts src/blackjack/stateMachine.test.ts src/blackjack/seats.test.ts src/blackjack/participation.test.ts src/blackjack/initialDeal.test.ts src/blackjack/walletLedger.test.ts
       - name: Frontend integration regression
         run: >
           PORT=4173 BASE_PATH=/
@@ -79,6 +84,7 @@ jobs:
           src/rouletteGeometry.test.ts
           src/roulettePhysicsConfig.test.ts
           src/idle/idleUiIntegration.test.ts
+          src/blackjack/blackjackSmoke.test.ts
       - name: Backend isolation regression
         run: pnpm --filter @workspace/api-server exec vitest run src/backendIsolation.test.ts
       - name: Commit promotion

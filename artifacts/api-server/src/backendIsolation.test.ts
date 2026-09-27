@@ -57,10 +57,12 @@ describe("backend game isolation", () => {
     expect(routesIndex).toContain('from "../cadi-kazan"');
     expect(routesIndex).toContain('from "../slot"');
     expect(routesIndex).toContain('from "../idle"');
+    expect(routesIndex).toContain('from "../blackjack"');
     expect(routesIndex).not.toContain('../roulette/routes');
     expect(routesIndex).not.toContain('../cadi-kazan/routes');
     expect(routesIndex).not.toContain('../slot/routes');
     expect(routesIndex).not.toContain('../idle/routes');
+    expect(routesIndex).not.toContain('../blackjack/routes');
   });
 
   it("keeps shared server bootstrap behind the Roulette runtime boundary", () => {
