@@ -16,7 +16,9 @@ const INNER_ANCHOR = 2.47;
 const SOURCE_OUTER = 2.56;
 const TARGET_OUTER = 2.65;
 const TARGET_Y_MIN = -0.35;
-const TARGET_Y_MAX = -0.075;
+const TARGET_Y_MAX = 0.05;
+const UPPER_ASSEMBLY_Y = -0.12;
+const UPPER_ASSEMBLY_INNER_RADIUS = 2.46;
 const MAX_SOURCE_RADIUS = 2.60;
 
 const bytes = Buffer.from(readFileSync(inputPath));
@@ -189,13 +191,24 @@ function fromAuthoritative(p) {
   );
 }
 
-function remapRadius(r) {
+function remapRadius(r, y) {
+  const outerShift = TARGET_OUTER - SOURCE_OUTER;
+
+  // Move the upper retaining-wall / wood-lip assembly as one rigid radial
+  // band. This preserves its local widths instead of stretching the underside
+  // across the widened race and creating a self-intersecting ceiling.
+  if (y > UPPER_ASSEMBLY_Y && r >= UPPER_ASSEMBLY_INNER_RADIUS) {
+    return r + outerShift;
+  }
+
+  // Stretch only the lower race/wall transition so it bridges continuously
+  // from the unchanged inner anchor to the translated outer assembly.
   if (r <= INNER_ANCHOR) return r;
   if (r <= SOURCE_OUTER) {
     const alpha = (r - INNER_ANCHOR) / (SOURCE_OUTER - INNER_ANCHOR);
     return INNER_ANCHOR + alpha * (TARGET_OUTER - INNER_ANCHOR);
   }
-  return r + (TARGET_OUTER - SOURCE_OUTER);
+  return r + outerShift;
 }
 
 let changed = 0;
@@ -217,7 +230,7 @@ for (const {nodeIndex, posIndex, info} of primitivePositions) {
       r < INNER_ANCHOR ||
       r > MAX_SOURCE_RADIUS
     ) continue;
-    const nextR = remapRadius(r);
+    const nextR = remapRadius(r, p.y);
     if (!(nextR > r + 1e-9)) continue;
     const scale = nextR / r;
     p.x *= scale;
@@ -277,6 +290,8 @@ console.log(JSON.stringify({
     sourceRadius:[INNER_ANCHOR,MAX_SOURCE_RADIUS],
     sourceOuter:SOURCE_OUTER,
     targetOuter:TARGET_OUTER,
+    upperAssemblyY:UPPER_ASSEMBLY_Y,
+    upperAssemblyInnerRadius:UPPER_ASSEMBLY_INNER_RADIUS,
   },
   changedRadiusBefore:[minBefore,maxBefore],
   changedRadiusAfter:[minAfter,maxAfter],
