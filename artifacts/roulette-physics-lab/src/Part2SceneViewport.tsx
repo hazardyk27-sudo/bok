@@ -5341,6 +5341,19 @@ export function Part2SceneViewport({
         part6Params.get('part10aTrace61006') === '1';
       const part11Calibration =
         part6Params.get('part11Calibration') === '1';
+      const requestedPart11MagnetTrackFriction = Number(
+        part6Params.get('part11MagnetTrackFriction') ?? Number.NaN,
+      );
+      const activePart11MagnetTrackFriction =
+        part11Calibration &&
+        PART11_OUTER_MAGNET_ENABLED &&
+        Number.isFinite(requestedPart11MagnetTrackFriction)
+          ? THREE.MathUtils.clamp(
+              requestedPart11MagnetTrackFriction,
+              0,
+              activePart3TrackFriction,
+            )
+          : null;
       const requestedPart11LaunchRadius = Number(
         part6Params.get('part11LaunchRadius') ?? ROULETTE_DARK_RACE_LAUNCH_RADIUS,
       );
@@ -6259,6 +6272,14 @@ export function Part2SceneViewport({
             run.speed,
           );
           if (PART11_OUTER_MAGNET_ENABLED) {
+            if (activePart11MagnetTrackFriction !== null) {
+              activeBallCollider.setFriction(
+                activePart11MagnetTrackFriction,
+              );
+              activeTrackCollider.setFriction(
+                activePart11MagnetTrackFriction,
+              );
+            }
             console.info(
               'PART11_OUTER_MAGNET_ON',
               JSON.stringify({
@@ -6267,6 +6288,8 @@ export function Part2SceneViewport({
                   PART11_OUTER_MAGNET_ACCELERATION,
                 targetRadius: 2.51636415,
                 cutoffLaps: 10,
+                magnetTrackFriction:
+                  activePart11MagnetTrackFriction,
               }),
             );
           }
@@ -6822,6 +6845,14 @@ export function Part2SceneViewport({
                     !part11MagnetOffLogged
                   ) {
                     part11MagnetOffLogged = true;
+                    if (activePart11MagnetTrackFriction !== null) {
+                      activeBallCollider.setFriction(
+                        activePart3TrackFriction,
+                      );
+                      activeTrackCollider.setFriction(
+                        activePart3TrackFriction,
+                      );
+                    }
                     console.info(
                       'PART11_OUTER_MAGNET_OFF',
                       JSON.stringify({
@@ -6830,6 +6861,8 @@ export function Part2SceneViewport({
                         elapsed: Number(elapsed.toFixed(6)),
                         radius: Number(radius.toFixed(6)),
                         speed: Number(speed.toFixed(6)),
+                        restoredTrackFriction:
+                          activePart3TrackFriction,
                       }),
                     );
                   }
@@ -7433,6 +7466,14 @@ export function Part2SceneViewport({
             }
 
             if (settled || escaped || tunneling) break;
+          }
+
+          if (
+            PART11_OUTER_MAGNET_ENABLED &&
+            activePart11MagnetTrackFriction !== null
+          ) {
+            activeBallCollider.setFriction(activePart3TrackFriction);
+            activeTrackCollider.setFriction(activePart3TrackFriction);
           }
 
           hover ||=
