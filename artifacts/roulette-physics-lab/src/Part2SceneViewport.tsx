@@ -2375,6 +2375,18 @@ export function Part2SceneViewport({
       part9WorldCalibrationEnabled
         ? part9WorldParams.get('part9StationaryMode') ?? 'baseline'
         : 'baseline';
+    const requestedPart9StationaryRestitution = Number(
+      part9WorldParams.get('part9StationaryRestitution') ?? 0.01,
+    );
+    const activePart9StationaryRestitution =
+      part9WorldCalibrationEnabled &&
+      Number.isFinite(requestedPart9StationaryRestitution)
+        ? THREE.MathUtils.clamp(
+            requestedPart9StationaryRestitution,
+            0,
+            0.3,
+          )
+        : 0.01;
     const activePart3TrackFriction =
       outerLaneSpinOnly &&
       part9WorldCalibrationEnabled &&
@@ -8557,7 +8569,7 @@ export function Part2SceneViewport({
                   stationaryTrimeshFlags,
                 )
                   .setFriction(activePart3TrackFriction)
-                  .setRestitution(0.01)
+                  .setRestitution(activePart9StationaryRestitution)
                   .setCollisionGroups(
                     STATIONARY_COLLISION_GROUP |
                       (BALL_COLLISION_GROUP << 16),
@@ -8576,6 +8588,8 @@ export function Part2SceneViewport({
                   vertices: actualStationaryMesh.vertices.length / 3,
                   triangles: actualStationaryMesh.indices.length / 3,
                   part9StationaryMode: activePart9StationaryMode,
+                  part9StationaryRestitution:
+                    activePart9StationaryRestitution,
                   trimeshFlags: stationaryTrimeshFlags,
                 }),
               );
