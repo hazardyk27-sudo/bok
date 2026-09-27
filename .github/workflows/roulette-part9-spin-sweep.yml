@@ -1,0 +1,107 @@
+name: Roulette Part 9 Spin Sweep
+
+on:
+  push:
+    branches:
+      - feature/roulette
+    paths:
+      - '.github/workflows/roulette-part9-spin-sweep.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  sweep:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10.15.0
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - name: Install workspace
+        run: pnpm install --frozen-lockfile
+      - name: Install Chromium
+        run: pnpm exec playwright install --with-deps chromium
+      - name: Build TypeScript project references
+        run: pnpm run typecheck:libs
+      - name: Typecheck roulette physics lab
+        run: pnpm --filter @workspace/roulette-physics-lab run typecheck
+      - name: Start roulette physics lab
+        run: |
+          PORT=4173 BASE_PATH=/ pnpm --filter @workspace/roulette-physics-lab run dev > /tmp/roulette-part9-spin-vite.log 2>&1 &
+          for attempt in {1..60}; do
+            if curl --fail --silent http://127.0.0.1:4173/ > /dev/null; then exit 0; fi
+            sleep 1
+          done
+          cat /tmp/roulette-part9-spin-vite.log
+          exit 1
+      - name: Sweep spin factor
+        shell: bash
+        run: |
+          set -euo pipefail
+          : > part9-spin-results.ndjson
+          mkdir -p artifacts/roulette-physics-lab/part9-spin
+          for spin in 0.75 1.00 1.25 1.50 2.00; do
+            tag="spin${spin}"
+            ROULETTE_LAB_URL="http://127.0.0.1:4173/?part6Headless=1&part6SeedStartIndex=6&part6SeedCount=1&part6MaxDurationSeconds=20&part9Calibration=1&part9LaunchRadius=2.45&part9LaunchSpeedMps=6.0&part9TrackFriction=0.028&part9LaunchGap=0.01&part9SpinFactor=$spin" \
+            ROULETTE_PART6_OUTPUT="artifacts/roulette-physics-lab/part9-spin/$tag.json" \
+            ROULETTE_PART6_TIMEOUT_MS='120000' \
+            ROULETTE_PART6_EXPECTED_SEEDS='1' \
+            node scripts/roulette-part6-runtime.mjs > "part9-spin-$tag.log" 2>&1 || true
+
+            node -e '
+              const fs=require("fs");
+              const spin=Number(process.argv[1]);
+              const tag=process.argv[2];
+              const path="artifacts/roulette-physics-lab/part9-spin/"+tag+".json";
+              let out={spin,telemetry:false};
+              if(fs.existsSync(path)){
+                const data=JSON.parse(fs.readFileSync(path,"utf8"));
+                const row=(data.telemetry?.results ?? data.seedTelemetry ?? [])[0];
+                if(row) out={
+                  spin,telemetry:true,seed:row.seed,
+                  lapCount:row.lapCount,trackDuration:row.trackDuration,
+                  trackStartSpeed:row.trackStartSpeed,trackEndSpeed:row.trackEndSpeed,
+                  settled:row.settled,safetyPassed:row.safetyPassed,
+                  escaped:row.escaped,clipping:row.clipping,tunneling:row.tunneling,
+                  velocitySpike:row.velocitySpike,artificialAcceleration:row.artificialAcceleration,
+                  settleTime:row.settleTime,finalPocketNumber:row.finalPocketNumber
+                };
+              }
+              fs.appendFileSync("part9-spin-results.ndjson",JSON.stringify(out)+"\\n");
+              console.log("PART9_SPIN_CASE "+JSON.stringify(out));
+            ' "$spin" "$tag"
+          done
+      - name: Rank spin factor
+        run: |
+          node -e '
+            const fs=require("fs");
+            const rows=fs.readFileSync("part9-spin-results.ndjson","utf8").trim().split(/\n+/).filter(Boolean).map(JSON.parse);
+            const safe=rows.filter(r=>r.telemetry&&r.settled&&r.safetyPassed&&!r.escaped&&!r.clipping&&!r.tunneling&&!r.velocitySpike&&!r.artificialAcceleration)
+              .map(r=>({...r,targetDistance:Math.abs(r.lapCount-4.5),inTargetBand:r.lapCount>=4&&r.lapCount<=5}))
+              .sort((a,b)=>Number(b.inTargetBand)-Number(a.inTargetBand)||a.targetDistance-b.targetDistance);
+            console.log("PART9_SPIN_RANKED "+JSON.stringify(safe));
+            fs.writeFileSync("part9-spin-ranked.json",JSON.stringify(safe,null,2));
+            if(!safe.length) process.exit(1);
+          '
+      - name: Upload evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: roulette-part9-spin-sweep
+          path: |
+            artifacts/roulette-physics-lab/part9-spin/
+            part9-spin-results.ndjson
+            part9-spin-ranked.json
+            part9-spin-*.log
+            /tmp/roulette-part9-spin-vite.log
+          if-no-files-found: warn
