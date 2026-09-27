@@ -7191,3 +7191,135 @@ body.businesses-route {
     inset 0 1px 0 rgba(255, 255, 255, .018),
     0 10px 28px rgba(0, 0, 0, .16);
 }
+/* 2026-09-27 — Part 3: approved premium action hierarchy */
+.route-shell.is-businesses-page {
+  --idle-action-primary-start: #6f97ff;
+  --idle-action-primary-end: #577fdc;
+  --idle-action-primary-hover-start: #7aa0ff;
+  --idle-action-primary-hover-end: #6189e7;
+  --idle-action-primary-text: #f2f6ff;
+  --idle-action-ghost: rgba(7, 16, 29, .76);
+  --idle-action-ghost-hover: rgba(12, 24, 40, .90);
+  --idle-action-disabled: rgba(111, 151, 255, .075);
+  --idle-action-border: rgba(144, 176, 255, .22);
+}
+
+.route-shell.is-businesses-page .business-card-primary,
+.business-level-node-upgrade,
+.vault-level-node-upgrade {
+  color: var(--idle-action-primary-text);
+  border-color: var(--idle-action-border);
+  background: linear-gradient(
+    180deg,
+    var(--idle-action-primary-start) 0%,
+    var(--idle-action-primary-end) 100%
+  );
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, .09),
+    0 8px 20px rgba(63, 98, 199, .16);
+}
+
+.route-shell.is-businesses-page .business-card-primary:not(:disabled):hover,
+.business-level-node-upgrade:not(:disabled):hover,
+.vault-level-node-upgrade:not(:disabled):hover {
+  transform: translateY(-1px);
+  border-color: rgba(151, 181, 255, .28);
+  background: linear-gradient(
+    180deg,
+    var(--idle-action-primary-hover-start) 0%,
+    var(--idle-action-primary-hover-end) 100%
+  );
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, .11),
+    0 10px 24px rgba(63, 98, 199, .20);
+}
+
+.route-shell.is-businesses-page .business-card-primary:not(:disabled):active,
+.business-level-node-upgrade:not(:disabled):active,
+.vault-level-node-upgrade:not(:disabled):active {
+  transform: translateY(0);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, .08),
+    0 5px 14px rgba(63, 98, 199, .14);
+}
+
+.route-shell.is-businesses-page .business-card-primary:disabled,
+.business-level-node-upgrade:disabled,
+.vault-level-node-upgrade:disabled {
+  color: rgba(238, 244, 255, .46);
+  border-color: rgba(111, 151, 255, .09);
+  background: var(--idle-action-disabled);
+  box-shadow: none;
+  opacity: 1;
+}
+
+.route-shell.is-businesses-page .business-card-details {
+  color: var(--idle-text-secondary);
+  border-color: rgba(111, 151, 255, .105);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, .010), transparent),
+    var(--idle-action-ghost);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .014);
+}
+
+.route-shell.is-businesses-page .business-card-details:hover {
+  color: var(--idle-text);
+  transform: translateY(-1px);
+  border-color: rgba(111, 151, 255, .20);
+  background: var(--idle-action-ghost-hover);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .022);
+}
+
+.route-shell.is-businesses-page .business-card-details:active {
+  transform: translateY(0);
+}
+
+.route-shell.is-businesses-page .business-summary-collect-all,
+.route-shell.is-businesses-page .business-summary-collect-all:not(:disabled) {
+  color: var(--idle-text);
+  border-color: rgba(121, 160, 255, .20);
+  background:
+    linear-gradient(180deg, rgba(111, 151, 255, .085), rgba(111, 151, 255, .035)),
+    linear-gradient(180deg, #17263e 0%, #111d31 100%);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, .035),
+    0 10px 26px rgba(0, 0, 0, .17);
+}
+
+.route-shell.is-businesses-page .business-summary-collect-all:not(:disabled):hover {
+  transform: translateY(-1px);
+  border-color: rgba(135, 169, 255, .29);
+  background:
+    linear-gradient(180deg, rgba(135, 169, 255, .10), rgba(111, 151, 255, .045)),
+    linear-gradient(180deg, #1a2c48 0%, #13223a 100%);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, .045),
+    0 12px 28px rgba(0, 0, 0, .19);
+}
+
+.route-shell.is-businesses-page .business-summary-collect-all:disabled {
+  color: rgba(238, 244, 255, .48);
+  border-color: rgba(111, 151, 255, .08);
+  background: rgba(111, 151, 255, .055);
+  box-shadow: none;
+}
+
+.route-shell.is-businesses-page .business-collect-all-arrow {
+  color: #cfe0ff;
+  border-color: rgba(135, 169, 255, .18);
+  background: rgba(111, 151, 255, .085);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .025);
+}
+
+.business-detail-tabs button {
+  color: var(--idle-text-secondary);
+  border-color: rgba(111, 151, 255, .10);
+  background: rgba(7, 16, 29, .58);
+}
+
+.business-detail-tabs button[aria-selected="true"] {
+  color: var(--idle-text);
+  border-color: rgba(111, 151, 255, .18);
+  background: rgba(111, 151, 255, .105);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .025);
+}

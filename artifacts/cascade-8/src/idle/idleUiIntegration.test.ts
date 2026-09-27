@@ -1398,3 +1398,31 @@ describe("Businesses Part 2 restrained surface hierarchy", () => {
     expect(idleCssSource).toContain("background: transparent");
   });
 });
+describe("Businesses Part 3 approved action hierarchy", () => {
+  it("locks the restrained blue primary action palette", () => {
+    expect(idleCssSource).toContain("/* 2026-09-27 — Part 3: approved premium action hierarchy */");
+    expect(idleCssSource).toContain("--idle-action-primary-start: #6f97ff");
+    expect(idleCssSource).toContain("--idle-action-primary-end: #577fdc");
+    expect(idleCssSource).toContain("--idle-action-ghost: rgba(7, 16, 29, .76)");
+    expect(idleCssSource).toContain("--idle-action-disabled: rgba(111, 151, 255, .075)");
+  });
+
+  it("keeps Collect and Details on separate primary and ghost treatments", () => {
+    expect(idleCssSource).toContain(".route-shell.is-businesses-page .business-card-primary,");
+    expect(idleCssSource).toContain(".route-shell.is-businesses-page .business-card-details {");
+    expect(idleCssSource).toContain("var(--idle-action-primary-start)");
+    expect(idleCssSource).toContain("var(--idle-action-ghost)");
+  });
+
+  it("keeps Collect All quieter than the card-level primary CTA", () => {
+    expect(idleCssSource).toContain(".route-shell.is-businesses-page .business-summary-collect-all:not(:disabled)");
+    expect(idleCssSource).toContain("linear-gradient(180deg, #17263e 0%, #111d31 100%)");
+    expect(idleCssSource).toContain(".route-shell.is-businesses-page .business-summary-collect-all:disabled");
+  });
+
+  it("extends the same action hierarchy into Details upgrade controls", () => {
+    expect(idleCssSource).toContain(".business-level-node-upgrade,");
+    expect(idleCssSource).toContain(".vault-level-node-upgrade {");
+    expect(idleCssSource).toContain(".business-detail-tabs button[aria-selected=\"true\"]");
+  });
+});
