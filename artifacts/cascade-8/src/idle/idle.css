@@ -7323,3 +7323,313 @@ body.businesses-route {
   background: rgba(111, 151, 255, .105);
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, .025);
 }
+/* 2026-09-27 — Parts 4–6: typography, command bar and card hierarchy */
+.route-shell.is-businesses-page {
+  --idle-type-eyebrow-premium: 8px;
+  --idle-type-label-premium: 9px;
+  --idle-type-meta-premium: 10px;
+  --idle-type-body-premium: 11px;
+  --idle-type-card-title-premium: 20px;
+  --idle-type-money-premium: 26px;
+  --idle-type-kpi-premium: 25px;
+}
+
+/* Part 4 — typography hierarchy */
+.route-shell.is-businesses-page .business-command-label,
+.route-shell.is-businesses-page .business-card-balance-heading > span,
+.route-shell.is-businesses-page .business-card-stat span,
+.route-shell.is-businesses-page .business-card-vault-heading span {
+  color: var(--idle-text-muted);
+  font-size: var(--idle-type-label-premium);
+  font-weight: 650;
+  letter-spacing: .055em;
+  line-height: 1.15;
+}
+
+.route-shell.is-businesses-page .business-command-stat strong {
+  margin-top: 8px;
+  color: var(--idle-text);
+  font-size: var(--idle-type-kpi-premium);
+  font-weight: 760;
+  letter-spacing: -.035em;
+  line-height: 1;
+}
+
+.route-shell.is-businesses-page .business-command-ready strong {
+  color: #c9d9ff;
+}
+
+.route-shell.is-businesses-page .business-collect-all-copy small {
+  color: #91adf2;
+  font-size: var(--idle-type-eyebrow-premium);
+  font-weight: 700;
+  letter-spacing: .065em;
+}
+
+.route-shell.is-businesses-page .business-collect-all-copy strong {
+  color: var(--idle-text);
+  font-size: 13px;
+  font-weight: 720;
+  letter-spacing: -.005em;
+}
+
+.route-shell.is-businesses-page .business-collect-all-value {
+  color: #d9e5ff;
+  font-size: 19px;
+  font-variant-numeric: tabular-nums;
+  font-weight: 760;
+  letter-spacing: -.025em;
+}
+
+.route-shell.is-businesses-page .business-card-identity-overlay .business-card-title small {
+  margin-bottom: 4px;
+  color: #9bb5ee;
+  font-size: var(--idle-type-eyebrow-premium);
+  font-weight: 700;
+  letter-spacing: .07em;
+}
+
+.route-shell.is-businesses-page .business-card-identity-overlay .business-card-title strong {
+  color: #f0f4fb;
+  font-size: var(--idle-type-card-title-premium);
+  font-weight: 720;
+  letter-spacing: -.025em;
+  line-height: 1.08;
+}
+
+.route-shell.is-businesses-page .business-card-identity-overlay .business-card-title span {
+  margin-top: 4px;
+  color: rgba(210, 220, 239, .72);
+  font-size: var(--idle-type-meta-premium);
+  font-weight: 520;
+  line-height: 1.25;
+}
+
+.route-shell.is-businesses-page .business-card-balance-heading > small {
+  color: #91adf2;
+  font-size: 8px;
+  font-weight: 700;
+  letter-spacing: .055em;
+}
+
+.route-shell.is-businesses-page .business-card-balance > strong {
+  margin-top: 7px;
+  color: var(--idle-text);
+  font-size: var(--idle-type-money-premium);
+  font-variant-numeric: tabular-nums;
+  font-weight: 760;
+  letter-spacing: -.045em;
+  line-height: 1;
+}
+
+.route-shell.is-businesses-page .business-card-stat strong {
+  margin-top: 6px;
+  color: #e7eefc;
+  font-size: 14px;
+  font-variant-numeric: tabular-nums;
+  font-weight: 680;
+  letter-spacing: -.015em;
+}
+
+.route-shell.is-businesses-page .business-card-vault-helper small,
+.route-shell.is-businesses-page .business-card-vault-meta small {
+  color: var(--idle-text-secondary);
+  font-size: var(--idle-type-meta-premium);
+  font-weight: 520;
+  line-height: 1.35;
+}
+
+/* Part 5 — header / KPI command polish */
+.route-shell.is-businesses-page .businesses-progression {
+  min-height: 62px;
+  padding: 12px 15px;
+  border-color: rgba(111, 151, 255, .10);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, .012), rgba(255, 255, 255, .002)),
+    linear-gradient(180deg, #0b1524 0%, #091421 100%);
+}
+
+.route-shell.is-businesses-page .businesses-progression-copy > span,
+.route-shell.is-businesses-page .businesses-progression-meta {
+  color: var(--idle-text-muted);
+  font-size: 8px;
+  font-weight: 650;
+  letter-spacing: .055em;
+}
+
+.route-shell.is-businesses-page .businesses-progression-copy strong {
+  color: var(--idle-text);
+  font-size: 16px;
+  font-weight: 740;
+  letter-spacing: -.02em;
+}
+
+.route-shell.is-businesses-page .businesses-progression-track {
+  height: 8px;
+  border: 1px solid rgba(111, 151, 255, .06);
+  background: rgba(155, 172, 205, .085);
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, .22);
+}
+
+.route-shell.is-businesses-page .businesses-progression-track > i {
+  background: linear-gradient(90deg, #5578cf 0%, #6f97ff 58%, #8aa8eb 100%);
+  box-shadow: none;
+}
+
+.route-shell.is-businesses-page .businesses-progression-meta span:first-child {
+  color: #a9bff1;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.route-shell.is-businesses-page .business-command-bar {
+  gap: 12px;
+  overflow: visible;
+  border: 0;
+  background: transparent;
+}
+
+.route-shell.is-businesses-page .business-command-stat {
+  min-height: 80px;
+  padding: 15px 17px;
+  border: 1px solid rgba(111, 151, 255, .10);
+  border-radius: 14px;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, .012), rgba(255, 255, 255, .002)),
+    linear-gradient(180deg, #0b1524 0%, #091421 100%);
+}
+
+.route-shell.is-businesses-page .business-summary-collect-all {
+  min-height: 80px;
+  border-radius: 14px;
+}
+
+.route-shell.is-businesses-page .business-collect-all-arrow {
+  width: 30px;
+  height: 30px;
+  border-radius: 10px;
+}
+
+/* Part 6 — card information hierarchy */
+.route-shell.is-businesses-page .business-card {
+  border-radius: 16px;
+  transition:
+    transform .18s ease,
+    border-color .18s ease,
+    box-shadow .18s ease;
+}
+
+.route-shell.is-businesses-page .business-card-content {
+  align-content: start;
+  gap: 11px;
+  padding: 14px 15px 15px;
+}
+
+.route-shell.is-businesses-page .business-card-balance {
+  padding: 0 1px 1px;
+}
+
+.route-shell.is-businesses-page .business-card-stats {
+  border-color: rgba(111, 151, 255, .085);
+  border-radius: 11px;
+  background: rgba(7, 17, 31, .46);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .010);
+}
+
+.route-shell.is-businesses-page .business-card-stat {
+  padding: 10px 11px;
+}
+
+.route-shell.is-businesses-page .business-card-stat + .business-card-stat {
+  border-left-color: rgba(111, 151, 255, .075);
+}
+
+.route-shell.is-businesses-page .business-card-vault {
+  padding-top: 1px;
+}
+
+.route-shell.is-businesses-page .business-card-vault-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.route-shell.is-businesses-page .business-card-vault-heading strong {
+  color: #cddbf8;
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+  font-weight: 700;
+}
+
+.route-shell.is-businesses-page .business-vault-progress {
+  height: 8px;
+  margin-top: 8px;
+  border: 1px solid rgba(111, 151, 255, .055);
+  background: rgba(155, 172, 205, .08);
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, .20);
+}
+
+.route-shell.is-businesses-page .business-vault-progress > i {
+  background: linear-gradient(90deg, #5578cf 0%, #6f97ff 62%, #89a7e8 100%);
+  box-shadow: none;
+}
+
+.route-shell.is-businesses-page .business-card-vault-helper {
+  margin-top: 7px;
+}
+
+.route-shell.is-businesses-page .business-card-actions {
+  gap: 8px;
+  padding-top: 1px;
+}
+
+.route-shell.is-businesses-page .business-card-identity-icon {
+  color: #bfd0f3;
+  border-color: rgba(126, 157, 224, .18);
+  background: rgba(75, 104, 166, .17);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, .03),
+    0 8px 18px rgba(0, 0, 0, .18);
+}
+
+.route-shell.is-businesses-page .business-card-state {
+  color: rgba(222, 231, 246, .80);
+  border-color: rgba(180, 198, 231, .12);
+  background: rgba(6, 13, 24, .70);
+}
+
+.route-shell.is-businesses-page .business-card-hero .business-card-level-mark {
+  color: #abc2f1;
+  border-color: rgba(126, 157, 224, .17);
+  background: rgba(7, 16, 29, .72);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .route-shell.is-businesses-page .business-card:hover {
+    transform: translateY(-2px);
+    border-color: rgba(111, 151, 255, .16);
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, .022),
+      0 18px 42px rgba(0, 0, 0, .25);
+  }
+}
+
+@media (max-width: 760px) {
+  .route-shell.is-businesses-page .business-command-stat strong {
+    font-size: 22px;
+  }
+
+  .route-shell.is-businesses-page .business-card-identity-overlay .business-card-title strong {
+    font-size: 19px;
+  }
+
+  .route-shell.is-businesses-page .business-card-balance > strong {
+    font-size: 24px;
+  }
+
+  .route-shell.is-businesses-page .business-card-content {
+    gap: 12px;
+    padding: 14px;
+  }
+}

@@ -1426,3 +1426,33 @@ describe("Businesses Part 3 approved action hierarchy", () => {
     expect(idleCssSource).toContain(".business-detail-tabs button[aria-selected=\"true\"]");
   });
 });
+describe("Businesses premium Parts 4–6", () => {
+  it("uses the restrained reference typography hierarchy", () => {
+    expect(idleCssSource).toContain("/* 2026-09-27 — Parts 4–6: typography, command bar and card hierarchy */");
+    expect(idleCssSource).toContain("--idle-type-card-title-premium: 20px");
+    expect(idleCssSource).toContain("--idle-type-money-premium: 26px");
+    expect(idleCssSource).toContain("--idle-type-kpi-premium: 25px");
+    expect(idleCssSource).toContain("font-weight: 720");
+  });
+
+  it("keeps progression and KPI cards quiet instead of neon", () => {
+    expect(idleCssSource).toContain(".route-shell.is-businesses-page .businesses-progression-track > i");
+    expect(idleCssSource).toContain("background: linear-gradient(90deg, #5578cf 0%, #6f97ff 58%, #8aa8eb 100%)");
+    expect(idleCssSource).toContain("box-shadow: none");
+    expect(idleCssSource).toContain(".route-shell.is-businesses-page .business-command-stat {");
+  });
+
+  it("creates a clear balance stats vault and actions hierarchy inside cards", () => {
+    expect(idleCssSource).toContain(".route-shell.is-businesses-page .business-card-balance {");
+    expect(idleCssSource).toContain(".route-shell.is-businesses-page .business-card-stats {");
+    expect(idleCssSource).toContain(".route-shell.is-businesses-page .business-card-vault {");
+    expect(idleCssSource).toContain(".route-shell.is-businesses-page .business-card-actions {");
+    expect(idleCssSource).toContain("background: rgba(7, 17, 31, .46)");
+  });
+
+  it("tones down hero identity chrome and preserves subtle interaction", () => {
+    expect(idleCssSource).toContain(".route-shell.is-businesses-page .business-card-identity-icon {");
+    expect(idleCssSource).toContain("background: rgba(75, 104, 166, .17)");
+    expect(idleCssSource).toContain("transform: translateY(-2px)");
+  });
+});
