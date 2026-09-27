@@ -86,6 +86,17 @@
       "roots": [
         "artifacts/cascade-8/src/hub"
       ]
+    },
+    "account": {
+      "branch": "feature/account",
+      "roots": [
+        "artifacts/cascade-8/src/account",
+        "artifacts/api-server/src/auth",
+        "lib/db/src/schema/auth.ts"
+      ],
+      "developmentRoots": [
+        "artifacts/cascade-8/e2e/account.spec.ts"
+      ]
     }
   }
 }
