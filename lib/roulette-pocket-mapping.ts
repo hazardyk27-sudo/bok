@@ -86,6 +86,31 @@ export function roulettePhysicsPocketIndexFromAngle(physicsAngle: number) {
   );
 }
 
+export function roulettePocketCenterAngularDelta(physicsAngle: number) {
+  const pocketIndex = roulettePhysicsPocketIndexFromAngle(physicsAngle);
+  const pocketCenter = roulettePhysicsAngleForPocketIndex(pocketIndex);
+  let delta = normalizeRouletteAngle(physicsAngle - pocketCenter);
+  if (delta > Math.PI) delta -= TWO_PI;
+  return Math.abs(delta);
+}
+
+export function rouletteBallFitsWithinPocketAngularly({
+  physicsAngle,
+  radius,
+  ballRadius,
+}: {
+  physicsAngle: number;
+  radius: number;
+  ballRadius: number;
+}) {
+  if (!(radius > ballRadius) || !(ballRadius > 0)) return false;
+  const centerDelta = roulettePocketCenterAngularDelta(physicsAngle);
+  const angularRoom =
+    ROULETTE_POCKET_STEP_RADIANS / 2 - centerDelta;
+  if (angularRoom <= 0) return false;
+  return radius * Math.sin(angularRoom) >= ballRadius;
+}
+
 /**
  * Once the rotor basis transform is applied, sequence index i in the GLB is
  * authoritative physics pocket index i. Keep this explicit so production,
