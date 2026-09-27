@@ -1496,3 +1496,44 @@ describe("Businesses premium Parts 7–10", () => {
     expect(idleCssSource).toContain(".detail-roadmap-fill");
   });
 });
+describe("Businesses Part 11 desktop alignment hotfix", () => {
+  it("shows the shared balance inside the desktop progression row", () => {
+    expect(idleIndexSource).toContain("businesses-progression-wallet");
+    expect(idleIndexSource).toContain("data-idle-balance-compact");
+    expect(idleIndexSource).toContain("compactBalanceNode.textContent = formatCredits(walletBalanceCents)");
+  });
+
+  it("keeps the mobile wallet on the approved premium surface", () => {
+    expect(idleCssSource).toContain("/* 2026-09-27 — Part 11: desktop balance, grid alignment and viewport fill */");
+    expect(idleCssSource).toContain(".route-shell.is-businesses-page .businesses-wallet {");
+    expect(idleCssSource).toContain("linear-gradient(180deg, #0b1524 0%, #091421 100%)");
+  });
+
+  it("aligns the KPI row with the three business card columns", () => {
+    expect(idleCssSource).toContain(".route-shell.is-businesses-page .business-command-bar,");
+    expect(idleCssSource).toContain(".route-shell.is-businesses-page .business-list {");
+    expect(idleCssSource).toContain("grid-template-columns: repeat(3, minmax(0, 1fr))");
+  });
+
+  it("removes desktop 16 by 9 letterboxing while keeping a bounded wide layout", () => {
+    expect(idleCssSource).toContain("height: calc(100dvh - 28px)");
+    expect(idleCssSource).toContain("max-width: 1800px");
+    expect(idleCssSource).toContain("aspect-ratio: auto");
+  });
+});
+describe("Businesses Part 12 clearer level separation", () => {
+  it("makes the Details roadmap and level rail more legible", () => {
+    expect(idleCssSource).toContain("/* 2026-09-27 — Part 12: clearer Details level separation */");
+    expect(idleCssSource).toContain(".detail-roadmap-track {");
+    expect(idleCssSource).toContain("height: 9px");
+    expect(idleCssSource).toContain("width: 2px");
+  });
+
+  it("visually separates completed current future and locked stage cards", () => {
+    expect(idleCssSource).toContain(".business-level-node-card::before,");
+    expect(idleCssSource).toContain(".vault-level-node-card::before {");
+    expect(idleCssSource).toContain("background: #86a6eb");
+    expect(idleCssSource).toContain("background: rgba(137, 169, 255, .55)");
+    expect(idleCssSource).toContain("opacity: .50");
+  });
+});
