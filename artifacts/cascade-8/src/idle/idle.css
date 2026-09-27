@@ -8571,3 +8571,47 @@ body.businesses-route {
     object-position: 50% 16% !important;
   }
 }
+
+
+/* 2026-09-27 — Part 16: restore compact desktop card flow */
+@media (min-width: 1101px) {
+  .route-shell.is-businesses-page .businesses-page {
+    grid-template-rows: auto auto auto;
+    align-content: start;
+  }
+
+  .route-shell.is-businesses-page .business-list {
+    height: auto;
+    align-items: start;
+  }
+
+  .route-shell.is-businesses-page .business-card {
+    height: auto;
+    min-height: 0;
+    grid-template-rows: auto auto;
+    align-self: start;
+  }
+
+  .route-shell.is-businesses-page .business-card-hero {
+    aspect-ratio: 16 / 9;
+    min-height: 210px;
+    max-height: 228px;
+  }
+
+  .route-shell.is-businesses-page .business-card-content {
+    grid-template-rows: auto auto auto auto;
+    align-content: start;
+    min-height: 0;
+    gap: 12px;
+    padding: 14px 15px 15px;
+  }
+
+  .route-shell.is-businesses-page .business-card-vault {
+    align-self: start;
+  }
+
+  .route-shell.is-businesses-page .business-card-actions {
+    align-self: start;
+    margin-top: 0;
+  }
+}
