@@ -1,0 +1,149 @@
+name: Roulette Part 11 Magnet Low Friction Probe
+
+on:
+  push:
+    branches:
+      - feature/roulette
+    paths:
+      - '.github/workflows/roulette-part11-magnet-low-friction-probe.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    strategy:
+      fail-fast: false
+      matrix:
+        friction: ['0', '0.0025', '0.005']
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.15.0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm exec playwright install --with-deps chromium
+      - run: pnpm run typecheck:libs
+      - run: pnpm --filter @workspace/roulette-physics-lab run typecheck
+
+      - name: Start physics lab
+        run: |
+          PORT=4173 BASE_PATH=/ pnpm --filter @workspace/roulette-physics-lab run dev > /tmp/roulette-part11-magnet-friction-${{ matrix.friction }}.log 2>&1 &
+          for attempt in {1..60}; do
+            if curl --fail --silent http://127.0.0.1:4173/ > /dev/null; then exit 0; fi
+            sleep 1
+          done
+          cat /tmp/roulette-part11-magnet-friction-${{ matrix.friction }}.log
+          exit 1
+
+      - name: Run two difficult seeds
+        env:
+          FRICTION: ${{ matrix.friction }}
+        shell: bash
+        run: |
+          set -u
+          : > "part11-magnet-friction-${FRICTION}.ndjson"
+          for spec in 61007:6 61014:13; do
+            SEED="${spec%%:*}"
+            START="${spec##*:}"
+            OUT="part11-magnet-friction-${FRICTION}-${SEED}.json"
+            LOG="part11-magnet-friction-${FRICTION}-${SEED}.log"
+
+            ROULETTE_LAB_URL="http://127.0.0.1:4173/?part6Headless=1&part6SeedStartIndex=${START}&part6SeedCount=1&part6MaxDurationSeconds=40&part11Calibration=1&part11DirectWallHug=1&part11OuterMagnet=1&part11MagnetAcceleration=5&part11MagnetTrackFriction=${FRICTION}&part11LaunchRadius=2.39&part11LaunchSpeedMps=5.50&part11BallScale=0.70&part11SpinFactor=1.0&part11TrackFriction=0.028" \
+            ROULETTE_PART6_OUTPUT="${OUT}" \
+            ROULETTE_PART6_TIMEOUT_MS='180000' \
+            ROULETTE_PART6_EXPECTED_SEEDS='1' \
+            node scripts/roulette-part6-runtime.mjs > "${LOG}" 2>&1 || true
+
+            node - "${LOG}" "${SEED}" "${OUT}" "${FRICTION}" <<'NODE' | tee -a "part11-magnet-friction-${FRICTION}.ndjson"
+          const fs=require('fs');
+          const [logPath,seed,outPath,friction]=process.argv.slice(2);
+          let magnetOn=null,magnetOff=null,start=null;
+          if(fs.existsSync(logPath)){
+            for(const line of fs.readFileSync(logPath,'utf8').split(/\n+/)){
+              const marker='BROWSER_CONSOLE ';
+              const at=line.indexOf(marker);
+              if(at<0) continue;
+              try{
+                const outer=JSON.parse(line.slice(at+marker.length));
+                const text=String(outer.text??'');
+                if(text.startsWith('PART11_OUTER_MAGNET_ON ')) magnetOn=JSON.parse(text.slice('PART11_OUTER_MAGNET_ON '.length));
+                if(text.startsWith('PART11_OUTER_MAGNET_OFF ')) magnetOff=JSON.parse(text.slice('PART11_OUTER_MAGNET_OFF '.length));
+                if(text.startsWith('PART11_DIRECT_WALL_HUG_START ')) start=JSON.parse(text.slice('PART11_DIRECT_WALL_HUG_START '.length));
+              }catch{}
+            }
+          }
+          let row=null;
+          if(fs.existsSync(outPath)){
+            const data=JSON.parse(fs.readFileSync(outPath,'utf8'));
+            row=(data.telemetry?.results ?? data.seedTelemetry ?? [])[0] ?? null;
+          }
+          console.log(JSON.stringify({
+            magnetAcceleration:5,
+            magnetTrackFriction:Number(friction),
+            seed:Number(seed),
+            telemetry:Boolean(row),
+            start,
+            magnetOn,
+            magnetOff,
+            reachedTen:Boolean(magnetOff && Number(magnetOff.completedLaps)>=10),
+            lapCount:row?.lapCount ?? null,
+            trackDuration:row?.trackDuration ?? null,
+            inwardTransitionTime:row?.inwardTransitionTime ?? null,
+            maxRadius:row?.maxRadius ?? null,
+            settled:row?.settled ?? null,
+            timedOut:row?.timedOut ?? null,
+            safetyPassed:row?.safetyPassed ?? null,
+            escaped:row?.escaped ?? null,
+            clipping:row?.clipping ?? null,
+            tunneling:row?.tunneling ?? null,
+            velocitySpike:row?.velocitySpike ?? null,
+            artificialAcceleration:row?.artificialAcceleration ?? null,
+            finalPocketNumber:row?.finalPocketNumber ?? null
+          }));
+          NODE
+          done
+
+      - name: Summarize
+        env:
+          FRICTION: ${{ matrix.friction }}
+        run: |
+          node <<'NODE'
+          const fs=require('fs');
+          const friction=process.env.FRICTION;
+          const rows=fs.readFileSync('part11-magnet-friction-'+friction+'.ndjson','utf8')
+            .trim().split(/\n+/).filter(Boolean).map(JSON.parse);
+          if(rows.length!==2 || rows.some(r=>!r.telemetry || !r.magnetOn || !r.start)) {
+            throw new Error(friction+': expected complete telemetry/magnet rows');
+          }
+          console.log('PART11_MAGNET_LOW_FRICTION_SUMMARY '+JSON.stringify({
+            magnetTrackFriction:Number(friction),
+            minLap:Math.min(...rows.map(r=>Number(r.lapCount))),
+            maxLap:Math.max(...rows.map(r=>Number(r.lapCount))),
+            bothReachedTen:rows.every(r=>r.reachedTen),
+            bothSettledAfterCutoff:rows.every(r=>r.reachedTen && r.settled && !r.timedOut),
+            noCatastrophicFailure:rows.every(r=>
+              !r.escaped && !r.clipping && !r.tunneling &&
+              !r.velocitySpike
+            ),
+            rows
+          }));
+          NODE
+
+      - name: Upload evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: roulette-part11-magnet-friction-${{ matrix.friction }}
+          path: |
+            part11-magnet-friction-${{ matrix.friction }}*
+            /tmp/roulette-part11-magnet-friction-${{ matrix.friction }}.log
+          if-no-files-found: warn
