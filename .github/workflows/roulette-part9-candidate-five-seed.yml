@@ -1,0 +1,93 @@
+name: Roulette Part 9 Candidate Five Seed
+
+on:
+  push:
+    branches:
+      - feature/roulette
+    paths:
+      - '.github/workflows/roulette-part9-candidate-five-seed.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  candidate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - seed: 61007
+            start: 6
+          - seed: 61014
+            start: 13
+          - seed: 61011
+            start: 10
+          - seed: 61009
+            start: 8
+          - seed: 61012
+            start: 11
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.15.0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm exec playwright install --with-deps chromium
+      - run: pnpm run typecheck:libs
+      - run: pnpm --filter @workspace/roulette-physics-lab run typecheck
+      - name: Start lab
+        run: |
+          PORT=4173 BASE_PATH=/ pnpm --filter @workspace/roulette-physics-lab run dev > /tmp/roulette-part9-candidate.log 2>&1 &
+          for attempt in {1..60}; do
+            if curl --fail --silent http://127.0.0.1:4173/ > /dev/null; then exit 0; fi
+            sleep 1
+          done
+          cat /tmp/roulette-part9-candidate.log
+          exit 1
+      - name: Run candidate
+        env:
+          SEED: ${{ matrix.seed }}
+          START_INDEX: ${{ matrix.start }}
+        run: |
+          ROULETTE_LAB_URL="http://127.0.0.1:4173/?part6Headless=1&part6SeedStartIndex=$START_INDEX&part6SeedCount=1&part6MaxDurationSeconds=20&part9Calibration=1&part9LaunchRadius=2.46&part9LaunchSpeedMps=6.45&part9TrackFriction=0.028&part9LaunchGap=0.01&part9SpinFactor=1.0&part9StationaryMode=baseline&part9StationaryRestitution=0.01&part9WallSplit=1&part9WallFriction=0&part9WallRadiusMin=2.48&part9WallNormalYMax=0.70"           ROULETTE_PART6_OUTPUT="artifacts/roulette-physics-lab/part9-candidate-$SEED.json"           ROULETTE_PART6_TIMEOUT_MS='120000'           ROULETTE_PART6_EXPECTED_SEEDS='1'           node scripts/roulette-part6-runtime.mjs > "part9-candidate-$SEED.log" 2>&1
+
+          node -e '
+            const fs=require("fs");
+            const seed=Number(process.env.SEED);
+            const data=JSON.parse(fs.readFileSync("artifacts/roulette-physics-lab/part9-candidate-"+seed+".json","utf8"));
+            const row=(data.telemetry?.results ?? data.seedTelemetry ?? [])[0];
+            if(!row) throw new Error("missing telemetry");
+            const out={
+              seed,
+              lap:row.continuousOuterLapCount,
+              gatedLap:row.lapCount,
+              settled:row.settled,
+              timedOut:row.timedOut,
+              safetyPassed:row.safetyPassed,
+              escaped:row.escaped,
+              clipping:row.clipping,
+              tunneling:row.tunneling,
+              settleTime:row.settleTime,
+              finalPocketNumber:row.finalPocketNumber,
+              inTargetBand:row.continuousOuterLapCount>=4&&row.continuousOuterLapCount<=5
+            };
+            console.log("PART9_CANDIDATE_CASE "+JSON.stringify(out));
+          '
+      - name: Upload evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: roulette-part9-candidate-${{ matrix.seed }}
+          path: |
+            artifacts/roulette-physics-lab/part9-candidate-*.json
+            part9-candidate-*.log
+            /tmp/roulette-part9-candidate.log
+          if-no-files-found: warn
