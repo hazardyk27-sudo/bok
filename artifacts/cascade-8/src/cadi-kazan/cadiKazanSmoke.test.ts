@@ -127,4 +127,18 @@ describe("cadi kazan route smoke contract", () => {
     expect(visualLockSource).toContain("object-fit: contain !important");
   });
 
+
+  it("shows stake-derived Office prize money instead of multiplier labels", () => {
+    expect(witchClientSource).toContain("symbolPrizeCents");
+    expect(witchClientSource).toContain("round.stakeCents * symbol.multiplierBps");
+    expect(witchClientSource).toContain('formatMoney(symbolPrizeCents, { compactInteger: true })');
+    expect(witchClientSource).toContain("witch-office-result-prize");
+    expect(witchClientSource).not.toContain('<strong class="witch-office-result-name">');
+    expect(visualLockSource).toContain("PASS 16 — THE OFFICE smaller character art + direct prize amount");
+    expect(visualLockSource).toContain("width: 84.6% !important");
+    expect(visualLockSource).toContain("height: 84.6% !important");
+    expect(visualLockSource).toContain(".witch-office-result-name");
+    expect(visualLockSource).toContain("display: none !important");
+  });
+
 });
