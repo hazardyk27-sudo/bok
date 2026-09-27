@@ -1,4 +1,9 @@
 import { createHash } from 'node:crypto';
+import * as THREE from 'three';
+import {
+  applyAuthoritativeRouletteRotorBasis,
+  prepareAuthoritativeRouletteGlb,
+} from '../../../lib/roulette-gltf-transform.ts';
 import { readFileSync, writeFileSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { mkdirSync } from 'node:fs';
@@ -492,16 +497,158 @@ const stationary = weldMeshVertices(
 );
 const rotor = weldMeshVertices(buildMesh(insideSet, true));
 
+function buildBrowserRuntimeExactColliderMeshes() {
+  const runtimeNodes = (json.nodes ?? []).map((node, nodeIndex) => {
+    const object = new THREE.Object3D();
+    object.name = node?.name ?? '';
+
+    if (Array.isArray(node?.matrix) && node.matrix.length === 16) {
+      const matrix = new THREE.Matrix4().fromArray(node.matrix.map(Number));
+      matrix.decompose(object.position, object.quaternion, object.scale);
+    } else {
+      object.position.fromArray((node?.translation ?? [0, 0, 0]).map(Number));
+      object.quaternion.fromArray((node?.rotation ?? [0, 0, 0, 1]).map(Number));
+      object.scale.fromArray((node?.scale ?? [1, 1, 1]).map(Number));
+    }
+
+    for (const primitive of primitiveTrianglesForNode(nodeIndex)) {
+      const geometry = new THREE.BufferGeometry();
+      geometry.setAttribute(
+        'position',
+        new THREE.Float32BufferAttribute(primitive.positions, 3),
+      );
+      geometry.setIndex(
+        new THREE.BufferAttribute(new Uint32Array(primitive.indices), 1),
+      );
+      const mesh = new THREE.Mesh(geometry);
+      mesh.name =
+        (node?.name ?? 'node-' + nodeIndex) +
+        '__primitive-' +
+        primitive.primitiveIndex;
+      object.add(mesh);
+    }
+    return object;
+  });
+
+  for (let nodeIndex = 0; nodeIndex < runtimeNodes.length; nodeIndex += 1) {
+    for (const childIndex of json.nodes?.[nodeIndex]?.children ?? []) {
+      runtimeNodes[nodeIndex].add(runtimeNodes[childIndex]);
+    }
+  }
+
+  const runtimeScene = new THREE.Group();
+  runtimeScene.name = 'Roulette__GeneratorRuntimeScene';
+  for (const rootNodeIndex of scene.nodes ?? []) {
+    runtimeScene.add(runtimeNodes[rootNodeIndex]);
+  }
+
+  const wheelRoot = new THREE.Group();
+  wheelRoot.name = 'Part2__AuthoritativeWheelRoot';
+  const {
+    runtimeOffset,
+    outside,
+    inside,
+    turret,
+  } = prepareAuthoritativeRouletteGlb(runtimeScene, wheelRoot);
+
+  const stationaryGroup = new THREE.Group();
+  stationaryGroup.name = 'Part2__StationaryOutsideAndTurret';
+  const rotorPivot = new THREE.Group();
+  rotorPivot.name = 'Part2__RotorPivot__Y';
+  rotorPivot.position.set(0, 0, 0);
+  rotorPivot.rotation.set(0, 0, 0);
+  const rotorGroup = new THREE.Group();
+  rotorGroup.name = 'Part2__InsideRotorVisual';
+  rotorPivot.add(rotorGroup);
+  wheelRoot.add(stationaryGroup, rotorPivot);
+  stationaryGroup.attach(outside);
+  rotorGroup.attach(inside);
+  applyAuthoritativeRouletteRotorBasis(rotorGroup);
+  stationaryGroup.attach(turret);
+  wheelRoot.remove(runtimeOffset);
+  wheelRoot.updateMatrixWorld(true);
+
+  function extractRelative(object, reference) {
+    const vertices = [];
+    const indices = [];
+    object.updateWorldMatrix(true, true);
+    reference?.updateWorldMatrix(true, false);
+    const worldToReference = reference
+      ? new THREE.Matrix4().copy(reference.matrixWorld).invert()
+      : new THREE.Matrix4().identity();
+    const localFromMesh = new THREE.Matrix4();
+    const localPosition = new THREE.Vector3();
+
+    object.traverse((child) => {
+      if (!(child instanceof THREE.Mesh)) return;
+      const geometry = child.geometry;
+      const position = geometry.getAttribute('position');
+      if (!position) return;
+
+      localFromMesh.multiplyMatrices(worldToReference, child.matrixWorld);
+      const base = vertices.length / 3;
+      for (let index = 0; index < position.count; index += 1) {
+        localPosition
+          .fromBufferAttribute(position, index)
+          .applyMatrix4(localFromMesh);
+        vertices.push(localPosition.x, localPosition.y, localPosition.z);
+      }
+      const reversesWinding = localFromMesh.determinant() < 0;
+      if (geometry.index) {
+        for (let index = 0; index < geometry.index.count; index += 3) {
+          const a = geometry.index.getX(index);
+          const b = geometry.index.getX(index + 1);
+          const c = geometry.index.getX(index + 2);
+          indices.push(
+            base + a,
+            base + (reversesWinding ? c : b),
+            base + (reversesWinding ? b : c),
+          );
+        }
+      } else {
+        for (let index = 0; index < position.count; index += 3) {
+          indices.push(
+            base + index,
+            base + index + (reversesWinding ? 2 : 1),
+            base + index + (reversesWinding ? 1 : 2),
+          );
+        }
+      }
+    });
+
+    if (vertices.length === 0 || indices.length === 0) {
+      throw new Error(
+        'Browser-runtime exact collider extraction produced no triangles',
+      );
+    }
+
+    return weldMeshVertices({
+      vertices: new Float32Array(vertices),
+      indices: new Uint32Array(indices),
+      triangleCount: indices.length / 3,
+    });
+  }
+
+  return {
+    stationary: extractRelative(stationaryGroup, wheelRoot),
+    rotor: extractRelative(rotorGroup, rotorPivot),
+  };
+}
+
+const browserRuntimeGeometry = buildBrowserRuntimeExactColliderMeshes();
+const browserStationary = browserRuntimeGeometry.stationary;
+const browserRotor = browserRuntimeGeometry.rotor;
+
 function base64TypedArray(typed) {
   return Buffer.from(typed.buffer, typed.byteOffset, typed.byteLength).toString('base64');
 }
 
 const sourceSha256 = createHash('sha256').update(glbBytes).digest('hex');
 const geometryHash = createHash('sha256')
-  .update(Buffer.from(stationary.vertices.buffer))
-  .update(Buffer.from(stationary.indices.buffer))
-  .update(Buffer.from(rotor.vertices.buffer))
-  .update(Buffer.from(rotor.indices.buffer))
+  .update(Buffer.from(browserStationary.vertices.buffer))
+  .update(Buffer.from(browserStationary.indices.buffer))
+  .update(Buffer.from(browserRotor.vertices.buffer))
+  .update(Buffer.from(browserRotor.indices.buffer))
   .digest('hex');
 
 function escapedString(value) {
@@ -521,21 +668,21 @@ export const ROULETTE_EXACT_GLB_COLLIDER_METADATA = ${JSON.stringify({
   yOrigin: Y_ORIGIN,
   visibleZeroDegrees: VISIBLE_ZERO_DEGREES,
   weldEpsilonWorld: GLB_COLLIDER_WELD_EPSILON_WORLD,
-  stationarySourceVertices: stationary.sourceVertexCount,
-  stationaryVertices: stationary.vertices.length / 3,
+  stationarySourceVertices: browserStationary.sourceVertexCount,
+  stationaryVertices: browserStationary.vertices.length / 3,
   stationaryMergedVertices:
-    stationary.sourceVertexCount - stationary.weldedVertexCount,
-  stationaryTriangles: stationary.indices.length / 3,
-  rotorSourceVertices: rotor.sourceVertexCount,
-  rotorVertices: rotor.vertices.length / 3,
-  rotorMergedVertices: rotor.sourceVertexCount - rotor.weldedVertexCount,
-  rotorTriangles: rotor.indices.length / 3,
+    browserStationary.sourceVertexCount - browserStationary.weldedVertexCount,
+  stationaryTriangles: browserStationary.indices.length / 3,
+  rotorSourceVertices: browserRotor.sourceVertexCount,
+  rotorVertices: browserRotor.vertices.length / 3,
+  rotorMergedVertices: browserRotor.sourceVertexCount - browserRotor.weldedVertexCount,
+  rotorTriangles: browserRotor.indices.length / 3,
 }, null, 2)} as const;
 
-const STATIONARY_VERTICES_BASE64 = ${escapedString(base64TypedArray(stationary.vertices))};
-const STATIONARY_INDICES_BASE64 = ${escapedString(base64TypedArray(stationary.indices))};
-const ROTOR_VERTICES_BASE64 = ${escapedString(base64TypedArray(rotor.vertices))};
-const ROTOR_INDICES_BASE64 = ${escapedString(base64TypedArray(rotor.indices))};
+const STATIONARY_VERTICES_BASE64 = ${escapedString(base64TypedArray(browserStationary.vertices))};
+const STATIONARY_INDICES_BASE64 = ${escapedString(base64TypedArray(browserStationary.indices))};
+const ROTOR_VERTICES_BASE64 = ${escapedString(base64TypedArray(browserRotor.vertices))};
+const ROTOR_INDICES_BASE64 = ${escapedString(base64TypedArray(browserRotor.indices))};
 
 function decodeFloat32Base64(encoded: string) {
   const bytes = Uint8Array.from(Buffer.from(encoded, 'base64'));
@@ -581,14 +728,14 @@ console.log(JSON.stringify({
   sourceSha256,
   geometryHash,
   weldEpsilonWorld: GLB_COLLIDER_WELD_EPSILON_WORLD,
-  stationarySourceVertices: stationary.sourceVertexCount,
-  stationaryVertices: stationary.vertices.length / 3,
+  stationarySourceVertices: browserStationary.sourceVertexCount,
+  stationaryVertices: browserStationary.vertices.length / 3,
   stationaryMergedVertices:
-    stationary.sourceVertexCount - stationary.weldedVertexCount,
-  stationaryTriangles: stationary.indices.length / 3,
-  rotorSourceVertices: rotor.sourceVertexCount,
-  rotorVertices: rotor.vertices.length / 3,
-  rotorMergedVertices: rotor.sourceVertexCount - rotor.weldedVertexCount,
-  rotorTriangles: rotor.indices.length / 3,
+    browserStationary.sourceVertexCount - browserStationary.weldedVertexCount,
+  stationaryTriangles: browserStationary.indices.length / 3,
+  rotorSourceVertices: browserRotor.sourceVertexCount,
+  rotorVertices: browserRotor.vertices.length / 3,
+  rotorMergedVertices: browserRotor.sourceVertexCount - browserRotor.weldedVertexCount,
+  rotorTriangles: browserRotor.indices.length / 3,
   output: OUTPUT_PATH,
 }, null, 2));
