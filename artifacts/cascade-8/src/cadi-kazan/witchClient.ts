@@ -26,7 +26,7 @@ type CadiKazanRound = {
   status: CadiKazanStatus;
   payoutCents: number;
   revealedBombCells: number[];
-  revealedOfficeCells: CadiKazanOfficeVisibleCell[];
+  revealedOfficeCells?: CadiKazanOfficeVisibleCell[];
   createdAt: string;
   updatedAt: string;
 };
@@ -947,7 +947,7 @@ export class WitchClient {
     }
 
     const revealedBombs = new Set(round.revealedBombCells);
-    const visibleOfficeSymbols = new Map(round.revealedOfficeCells.map((cell) => [cell.index, cell.symbolId] as const));
+    const visibleOfficeSymbols = new Map((round.revealedOfficeCells ?? []).map((cell) => [cell.index, cell.symbolId] as const));
     const officeSymbolCounts = new Map<OfficeMatchSymbolId, number>();
     if (round.mode === "OFFICE_MATCH_6") {
       for (const symbolId of visibleOfficeSymbols.values()) {
