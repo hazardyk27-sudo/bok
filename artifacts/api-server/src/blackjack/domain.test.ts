@@ -4,8 +4,10 @@ import {
   BLACKJACK_DECK_COUNT,
   BLACKJACK_MAX_SEATS,
   BLACKJACK_RANKS,
+  BLACKJACK_ROUND_PHASES,
   BLACKJACK_SHOE_SIZE,
   BLACKJACK_SUITS,
+  BLACKJACK_TABLE_PHASES,
   createEmptyBlackjackSeats,
   isValidBlackjackMoneyCents,
   type BlackjackCard,
@@ -21,6 +23,15 @@ describe("blackjack authoritative domain", () => {
     expect(BLACKJACK_SHOE_SIZE).toBe(312);
     expect(BLACKJACK_SUITS).toHaveLength(4);
     expect(BLACKJACK_RANKS).toHaveLength(13);
+  });
+
+  it("separates round phases from table operational phases", () => {
+    expect(BLACKJACK_ROUND_PHASES).not.toContain("TABLE_IDLE");
+    expect(BLACKJACK_ROUND_PHASES).not.toContain("SHUFFLING");
+    expect(BLACKJACK_ROUND_PHASES).not.toContain("RECOVERING");
+    expect(BLACKJACK_TABLE_PHASES).toContain("TABLE_IDLE");
+    expect(BLACKJACK_TABLE_PHASES).toContain("SHUFFLING");
+    expect(BLACKJACK_TABLE_PHASES).toContain("RECOVERING");
   });
 
   it("creates exactly five stable empty seats", () => {
@@ -85,6 +96,7 @@ describe("blackjack authoritative domain", () => {
   it("allows a table snapshot to bind shoe, round and monotonic versions", () => {
     const table: BlackjackTable = {
       tableId: "main-blackjack",
+      phase: "TABLE_IDLE",
       maxSeats: 5,
       seats: createEmptyBlackjackSeats(),
       players: [],
@@ -101,6 +113,7 @@ describe("blackjack authoritative domain", () => {
       eventSequence: 0,
     };
 
+    expect(table.phase).toBe("TABLE_IDLE");
     expect(table.maxSeats).toBe(5);
     expect(table.stateVersion).toBe(0);
     expect(table.eventSequence).toBe(0);
