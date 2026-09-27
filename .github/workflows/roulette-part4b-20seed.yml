@@ -1,0 +1,137 @@
+name: Roulette Part 4B 20 Seed Gate
+
+on:
+  push:
+    branches:
+      - feature/roulette
+    paths:
+      - '.github/workflows/roulette-part4b-20seed.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  part4b:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    strategy:
+      fail-fast: false
+      matrix:
+        start: [0, 5, 10, 15]
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10.15.0
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install workspace
+        run: pnpm install --frozen-lockfile
+
+      - name: Install Chromium
+        run: pnpm exec playwright install --with-deps chromium
+
+      - name: Build TypeScript project references
+        run: pnpm run typecheck:libs
+
+      - name: Typecheck roulette physics lab
+        run: pnpm --filter @workspace/roulette-physics-lab run typecheck
+
+      - name: Start roulette physics lab
+        shell: bash
+        run: |
+          PORT=4173 BASE_PATH=/ pnpm --filter @workspace/roulette-physics-lab run dev > /tmp/roulette-part4b-${{ matrix.start }}.log 2>&1 &
+          for attempt in {1..60}; do
+            if curl --fail --silent http://127.0.0.1:4173/ > /dev/null; then
+              exit 0
+            fi
+            sleep 1
+          done
+          cat /tmp/roulette-part4b-${{ matrix.start }}.log
+          exit 1
+
+      - name: Run five-seed Part 4B batch
+        env:
+          START_INDEX: ${{ matrix.start }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          ROULETTE_LAB_URL="http://127.0.0.1:4173/?part6Headless=1&part6SeedStartIndex=$START_INDEX&part6SeedCount=5&part6MaxDurationSeconds=30" \
+          ROULETTE_PART6_OUTPUT="artifacts/roulette-physics-lab/part4b20-$START_INDEX.json" \
+          ROULETTE_PART6_TIMEOUT_MS='240000' \
+          ROULETTE_PART6_EXPECTED_SEEDS='5' \
+          node scripts/roulette-part6-runtime.mjs > "part4b20-$START_INDEX.log" 2>&1
+
+          node - "$START_INDEX" <<'NODE'
+          const fs = require('fs');
+          const start = process.argv[2];
+          const path = 'artifacts/roulette-physics-lab/part4b20-' + start + '.json';
+          const data = JSON.parse(fs.readFileSync(path, 'utf8'));
+          const rows = data.telemetry?.results ?? data.seedTelemetry ?? [];
+          if (rows.length !== 5) throw new Error('Expected five results for batch ' + start);
+
+          let failed = false;
+          for (const row of rows) {
+            const out = {
+              seed: row.seed,
+              settled: row.settled,
+              timedOut: row.timedOut,
+              finalPocketNumber: row.finalPocketNumber,
+              finalPocketIndex: row.finalPocketIndex,
+              settleTime: row.settleTime,
+              lapCount: row.lapCount,
+              finalSpeed: row.finalSpeed,
+              finalRotorRelativeSpeed: row.finalRotorRelativeSpeed,
+              peakSpeed: row.peakSpeed,
+              velocitySpike: row.velocitySpike,
+              artificialAcceleration: row.artificialAcceleration,
+              escaped: row.escaped,
+              clipping: row.clipping,
+              tunneling: row.tunneling,
+              safetyPassed: row.safetyPassed,
+            };
+            console.log('PART4B20_CASE ' + JSON.stringify(out));
+
+            const ok =
+              row.settled &&
+              !row.timedOut &&
+              row.finalPocketIndex != null &&
+              row.finalPocketNumber != null &&
+              !row.velocitySpike &&
+              !row.artificialAcceleration &&
+              !row.escaped &&
+              !row.clipping &&
+              !row.tunneling &&
+              row.safetyPassed;
+            if (!ok) failed = true;
+          }
+
+          console.log('PART4B20_BATCH ' + JSON.stringify({
+            startIndex: Number(start),
+            seeds: rows.map(row => row.seed),
+            passed: !failed,
+          }));
+
+          if (failed) throw new Error('Part 4B batch failed at start index ' + start);
+          NODE
+
+      - name: Upload evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: roulette-part4b-20seed-${{ matrix.start }}
+          path: |
+            artifacts/roulette-physics-lab/part4b20-${{ matrix.start }}.json
+            part4b20-${{ matrix.start }}.log
+            /tmp/roulette-part4b-${{ matrix.start }}.log
+          if-no-files-found: warn
