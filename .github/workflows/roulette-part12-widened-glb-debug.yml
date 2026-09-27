@@ -42,6 +42,12 @@ jobs:
             1,
           )
           p.write_text(s)
+          scene=Path('artifacts/roulette-physics-lab/src/Part2SceneViewport.tsx')
+          t=scene.read_text()
+          old='hitRadius <= 2.58'
+          if old not in t:
+              raise SystemExit('outer-wall audit upper bound not found')
+          scene.write_text(t.replace(old,'hitRadius <= 2.69',1))
           PY
 
       - name: Start lab
@@ -60,7 +66,7 @@ jobs:
           set +e
           ROULETTE_LAB_URL="http://127.0.0.1:4173/?part6Headless=1&part6SeedStartIndex=6&part6SeedCount=1&part6MaxDurationSeconds=20&part11Calibration=1&part11LaunchRadius=2.39&part11LaunchSpeedMps=5.00&part11BallScale=1.00&part11SpinFactor=1.0&part11TrackFriction=0.028" \
           ROULETTE_PART6_OUTPUT="part12-debug.json" \
-          ROULETTE_PART6_TIMEOUT_MS='90000' \
+          ROULETTE_PART6_TIMEOUT_MS='60000' \
           ROULETTE_PART6_EXPECTED_SEEDS='1' \
           node scripts/roulette-part6-runtime.mjs > part12-debug.log 2>&1
           STATUS=$?
