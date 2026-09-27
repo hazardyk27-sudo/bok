@@ -65,6 +65,8 @@ describe("cadi kazan route smoke contract", () => {
     expect(witchClientSource).toContain("Array.from({ length: 6 }");
     expect(witchClientSource).toContain("revealedOfficeCells");
     expect(witchClientSource).toContain("officeSymbolPresentation");
+    expect(witchClientSource).toContain("witch-office-result-art");
+    expect(witchClientSource).toContain("officePresentation.artworkUrl");
   });
 
 });
