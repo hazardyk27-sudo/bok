@@ -10,4 +10,4 @@ This directory is the backend-owned root for the shared account system.
 - Authentication changes must not silently alter game economy, wallet balances, or game rules.
 
 ## Current milestones
-- 2026-09-27 — Email/password auth foundation started — users + server-side session schema, scrypt password hashing, and register/login/logout/me API module are the initial baseline. Next: validate, wire centrally, then add account UI and email-verification/reset flows.
+- 2026-09-27 — Email/password auth foundation validated — isolated users/session schema, scrypt password hashing, opaque hashed server sessions, register/login/logout/me API, no-store auth responses and account UI all pass repository typecheck + production build; Account ownership guard is green. Preview promotion is currently blocked only by an unrelated pre-existing Idle UI regression. Next: central route/schema wiring after that blocker, then email verification/reset and account-to-wallet identity migration.
