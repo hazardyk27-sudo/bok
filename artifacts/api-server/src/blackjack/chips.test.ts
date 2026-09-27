@@ -27,7 +27,7 @@ describe("blackjack chip denomination engine", () => {
   });
 
   it("continues from 1K with an exact unbounded-by-game x2 chain", () => {
-    let chip = BLACKJACK_HIGH_ROLLER_START_CENTS;
+    let chip: number = BLACKJACK_HIGH_ROLLER_START_CENTS;
     const credits: number[] = [getBlackjackChipCredits(chip)];
 
     for (let index = 0; index < 8; index += 1) {
@@ -124,7 +124,7 @@ describe("blackjack chip denomination engine", () => {
 
     expect(getBlackjackChipCredits(chip)).toBe(1_048_576_000);
 
-    let nearLimit = BLACKJACK_HIGH_ROLLER_START_CENTS;
+    let nearLimit: number = BLACKJACK_HIGH_ROLLER_START_CENTS;
     while (nearLimit <= Math.floor(Number.MAX_SAFE_INTEGER / 2)) {
       nearLimit = doubleBlackjackHighRollerChipCents(nearLimit);
     }
