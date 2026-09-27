@@ -58,6 +58,37 @@ describe("blackjack wallet ledger foundation", () => {
     expect(twice.reservedBalanceCents).toBe(5_000);
   });
 
+  it("replays a full-balance reserve even after available balance reaches zero", () => {
+    const fullWallet = createBlackjackWalletLedgerState({
+      userId: "user-1",
+      totalBalanceCents: 5_000,
+    });
+    const first = reserveBlackjackFunds(fullWallet, {
+      transactionId: "tx-full-reserve",
+      userId: "user-1",
+      roundId: "round-1",
+      handId: null,
+      type: "BET_RESERVE",
+      amountCents: 5_000,
+      createdAtMs: 21,
+    });
+
+    const replay = reserveBlackjackFunds(first, {
+      transactionId: "tx-full-reserve",
+      userId: "user-1",
+      roundId: "round-1",
+      handId: null,
+      type: "BET_RESERVE",
+      amountCents: 5_000,
+      createdAtMs: 999,
+    });
+
+    expect(replay).toBe(first);
+    expect(replay.availableBalanceCents).toBe(0);
+    expect(replay.reservedBalanceCents).toBe(5_000);
+    expect(replay.entries).toHaveLength(1);
+  });
+
   it("rejects transactionId reuse with a different payload", () => {
     const first = reserveBlackjackFunds(wallet(), {
       transactionId: "tx-conflict",
@@ -126,6 +157,39 @@ describe("blackjack wallet ledger foundation", () => {
     expect(getBlackjackWalletTotalBalanceCents(released)).toBe(20_000);
   });
 
+  it("replays a release after reserved balance has already returned to zero", () => {
+    const reserved = reserveBlackjackFunds(wallet(), {
+      transactionId: "tx-release-replay-reserve",
+      userId: "user-1",
+      roundId: "round-1",
+      handId: null,
+      type: "BET_RESERVE",
+      amountCents: 4_000,
+      createdAtMs: 55,
+    });
+    const released = releaseBlackjackReservedFunds(reserved, {
+      transactionId: "tx-release-replay",
+      userId: "user-1",
+      roundId: "round-1",
+      handId: null,
+      amountCents: 4_000,
+      createdAtMs: 56,
+    });
+    const replay = releaseBlackjackReservedFunds(released, {
+      transactionId: "tx-release-replay",
+      userId: "user-1",
+      roundId: "round-1",
+      handId: null,
+      amountCents: 4_000,
+      createdAtMs: 1_000,
+    });
+
+    expect(replay).toBe(released);
+    expect(replay.availableBalanceCents).toBe(20_000);
+    expect(replay.reservedBalanceCents).toBe(0);
+    expect(replay.entries).toHaveLength(2);
+  });
+
   it("consumes reserved stake on a loss", () => {
     const reserved = reserveBlackjackFunds(wallet(), {
       transactionId: "tx-loss-reserve",
@@ -151,6 +215,43 @@ describe("blackjack wallet ledger foundation", () => {
     expect(settled.availableBalanceCents).toBe(16_000);
     expect(settled.reservedBalanceCents).toBe(0);
     expect(getBlackjackWalletTotalBalanceCents(settled)).toBe(16_000);
+  });
+
+  it("replays a settlement after reserved balance has already been consumed", () => {
+    const reserved = reserveBlackjackFunds(wallet(), {
+      transactionId: "tx-settle-replay-reserve",
+      userId: "user-1",
+      roundId: "round-1",
+      handId: "hand-1",
+      type: "BET_RESERVE",
+      amountCents: 4_000,
+      createdAtMs: 65,
+    });
+    const settled = settleBlackjackReservedFunds(reserved, {
+      transactionId: "tx-settle-replay",
+      userId: "user-1",
+      roundId: "round-1",
+      handId: "hand-1",
+      type: "LOSS_SETTLE",
+      reservedStakeCents: 4_000,
+      returnCents: 0,
+      createdAtMs: 66,
+    });
+    const replay = settleBlackjackReservedFunds(settled, {
+      transactionId: "tx-settle-replay",
+      userId: "user-1",
+      roundId: "round-1",
+      handId: "hand-1",
+      type: "LOSS_SETTLE",
+      reservedStakeCents: 4_000,
+      returnCents: 0,
+      createdAtMs: 1_001,
+    });
+
+    expect(replay).toBe(settled);
+    expect(replay.availableBalanceCents).toBe(16_000);
+    expect(replay.reservedBalanceCents).toBe(0);
+    expect(replay.entries).toHaveLength(2);
   });
 
   it("returns stake plus profit on a normal win", () => {
