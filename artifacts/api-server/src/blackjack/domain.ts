@@ -138,7 +138,6 @@ export type BlackjackDealer = Readonly<{
 }>;
 
 export const BLACKJACK_ROUND_PHASES = [
-  "TABLE_IDLE",
   "BETTING",
   "BETTING_LOCKED",
   "INITIAL_DEAL",
@@ -150,6 +149,16 @@ export const BLACKJACK_ROUND_PHASES = [
 
 export type BlackjackRoundPhase =
   (typeof BLACKJACK_ROUND_PHASES)[number];
+
+export const BLACKJACK_TABLE_PHASES = [
+  "TABLE_IDLE",
+  "SHUFFLING",
+  ...BLACKJACK_ROUND_PHASES,
+  "RECOVERING",
+] as const;
+
+export type BlackjackTablePhase =
+  (typeof BLACKJACK_TABLE_PHASES)[number];
 
 export type BlackjackTurn = Readonly<{
   seatNumber: BlackjackSeatNumber;
@@ -225,6 +234,7 @@ export type BlackjackWalletTransaction = Readonly<{
 
 export type BlackjackTable = Readonly<{
   tableId: BlackjackTableId;
+  phase: BlackjackTablePhase;
   maxSeats: typeof BLACKJACK_MAX_SEATS;
   seats: readonly BlackjackSeat[];
   players: readonly BlackjackPlayer[];
