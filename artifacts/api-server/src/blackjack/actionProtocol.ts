@@ -136,8 +136,7 @@ export function createBlackjackActionProtocolState(): BlackjackActionProtocolSta
   });
 }
 
-export function assertBlackjackActionEnvelope(
-  table: BlackjackTable,
+function assertBlackjackActionEnvelopeShape(
   envelope: BlackjackActionEnvelope,
 ): void {
   assertNonEmptyId("actionId", envelope.actionId);
@@ -150,6 +149,13 @@ export function assertBlackjackActionEnvelope(
   }
 
   assertActionShape(envelope);
+}
+
+export function assertBlackjackActionEnvelope(
+  table: BlackjackTable,
+  envelope: BlackjackActionEnvelope,
+): void {
+  assertBlackjackActionEnvelopeShape(envelope);
 
   if (table.tableId !== envelope.tableId) {
     throw new Error("Blackjack action targets another table");
@@ -195,7 +201,7 @@ export function applyBlackjackVersionedAction(
   envelope: BlackjackActionEnvelope,
   mutate: (table: BlackjackTable) => BlackjackTable,
 ): BlackjackVersionedActionResult {
-  assertBlackjackActionEnvelope(table, envelope);
+  assertBlackjackActionEnvelopeShape(envelope);
 
   const existing = protocol.receipts.find(
     (receipt) => receipt.actionId === envelope.actionId,
@@ -215,6 +221,8 @@ export function applyBlackjackVersionedAction(
       replayed: true,
     });
   }
+
+  assertBlackjackActionEnvelope(table, envelope);
 
   if (envelope.expectedStateVersion !== table.stateVersion) {
     throw new BlackjackStaleActionError(
