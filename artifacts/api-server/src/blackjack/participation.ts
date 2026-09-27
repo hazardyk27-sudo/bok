@@ -161,7 +161,10 @@ export function leaveBlackjackSeat(
     throw new Error("Blackjack player is not seated at this table");
   }
 
-  if (player.status === "SEATED_WAITING" && player.handIds.length === 0) {
+  if (
+    (player.status === "SEATED_WAITING" || player.status === "BETTING") &&
+    player.handIds.length === 0
+  ) {
     return removePlayerFromTable(table, player);
   }
 
