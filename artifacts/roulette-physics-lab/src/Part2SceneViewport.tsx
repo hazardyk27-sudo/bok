@@ -12,6 +12,7 @@ import {
   sampleRouletteVisualTextureColorAt,
 } from '../../../lib/roulette-glb-surface';
 import { buildRouletteCanonicalLaunchState } from '../../../lib/roulette-physics-config';
+import { rouletteBallFitsWithinPocketAngularly } from '../../../lib/roulette-pocket-mapping';
 import {
   canonicalizeRouletteTrimeshVertices,
   rouletteTrimeshByteFingerprint,
@@ -6822,6 +6823,15 @@ export function Part2SceneViewport({
             const pocketFloorSettled =
               pocketSurfaceGap !== null &&
               Math.abs(pocketSurfaceGap) <= pocketFloorSettleTolerance;
+            const settleLocalPocketAngle = normalizedAngle(
+              Math.atan2(position.x, position.z) - rotorAngle,
+            );
+            const pocketAngularFit =
+              rouletteBallFitsWithinPocketAngularly({
+                physicsAngle: settleLocalPocketAngle,
+                radius,
+                ballRadius: BALL_RADIUS,
+              });
             if (
               [61004, 61005, 61006].includes(run.seed) &&
               pocketEntryTime !== null &&
@@ -6893,6 +6903,7 @@ export function Part2SceneViewport({
                     radius:
                       radius >= pocketResultCenterRadiusMin &&
                       radius <= pocketResultCenterRadiusMax,
+                    angularFit: pocketAngularFit,
                     floor: pocketFloorSettled,
                     floorGap: pocketSurfaceGap,
                   },
@@ -6905,6 +6916,7 @@ export function Part2SceneViewport({
               finalRotorRelativeSpeed < 0.12 &&
               radius >= pocketResultCenterRadiusMin &&
               radius <= pocketResultCenterRadiusMax &&
+              pocketAngularFit &&
               pocketFloorSettled
             ) {
               settledFrames += 1;
