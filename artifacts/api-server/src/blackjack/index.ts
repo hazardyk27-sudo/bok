@@ -30,3 +30,4 @@ export * from "./realtime";
 export * from "./actionQueue";
 export * from "./actionProtocol";
 export * from "./eventStream";
+export * from "./syncProtocol";
