@@ -59,7 +59,7 @@ const PART3_TRACK_DURATION_SECONDS = 30;
 const PART3_OUTER_SPIN_TRACK_FRICTION = 0.028;
 const PART3_OUTER_SPIN_LINEAR_DAMPING = 0.01;
 const PART3_OUTER_SPIN_ANGULAR_DAMPING = 0.01;
-const PART6_LAUNCH_SPEED_METERS_PER_SECOND_BASE = 4.85;
+const PART6_LAUNCH_SPEED_METERS_PER_SECOND_BASE = 5.0;
 const PART6_LAUNCH_SPEED_METERS_PER_SECOND_VARIATION = 0.15;
 const PART6_LAUNCH_SPEED_BASE =
   PART6_LAUNCH_SPEED_METERS_PER_SECOND_BASE *
@@ -5578,19 +5578,15 @@ export function Part2SceneViewport({
             launchSurface.point.y,
             launchSurface.point.z,
           ).addScaledVector(launchNormal, launchClearance);
-          const launchRadial = new THREE.Vector3(
-            Math.sin(run.launchAzimuth),
-            0,
+          // Keep the center on the exact GLB surface, but launch around
+          // the horizontal roulette circumference. Individual mesh facets can
+          // carry tiny tangential normal components that would otherwise tilt
+          // the launch upward and let the ball climb the visible outer rim.
+          const tangent = new THREE.Vector3(
             Math.cos(run.launchAzimuth),
+            0,
+            -Math.sin(run.launchAzimuth),
           ).normalize();
-          // The exact GLB surface owns both placement and launch orientation.
-          // normal x radial yields the authored-surface tangent while keeping
-          // the initial radial velocity exactly zero, avoiding a solver-created
-          // outward impulse from an analytically mismatched start state.
-          const tangent = launchNormal
-            .clone()
-            .cross(launchRadial)
-            .normalize();
           const launchVelocity = tangent.clone().multiplyScalar(run.speed);
           const launchAngularVelocity = launchNormal
             .clone()
