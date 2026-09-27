@@ -27,8 +27,22 @@ jobs:
           ref: feature/roulette
           fetch-depth: 0
 
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10.15.0
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install workspace
+        run: pnpm install --frozen-lockfile
+
       - name: Generate exact GLB collider payload
-        run: node artifacts/roulette-physics-lab/scripts/generate-exact-collider-data.mjs
+        run: pnpm exec tsx artifacts/roulette-physics-lab/scripts/generate-exact-collider-data.mjs
 
       - name: Verify generated payload exists
         run: |
