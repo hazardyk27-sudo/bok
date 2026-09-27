@@ -1537,3 +1537,17 @@ describe("Businesses Part 12 clearer level separation", () => {
     expect(idleCssSource).toContain("opacity: .50");
   });
 });
+
+
+describe("Businesses Part 15 business image framing", () => {
+  it("keeps the person-centered focal point visible on desktop and mobile", () => {
+    expect(idleCssSource).toContain("/* 2026-09-27 — Part 15: centered business focal point + light-blue image wash */");
+    expect(idleCssSource).toContain("object-position: 50% 18% !important");
+    expect(idleCssSource).toContain("object-position: 50% 16% !important");
+  });
+
+  it("adds only the requested light-blue 25 percent image wash", () => {
+    expect(idleCssSource).toContain("rgba(151, 203, 255, .25)");
+    expect(idleCssSource).toContain("rgba(111, 169, 255, .25)");
+  });
+});

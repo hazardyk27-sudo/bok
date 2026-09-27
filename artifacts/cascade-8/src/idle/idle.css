@@ -8550,3 +8550,24 @@ body.businesses-route {
 .route-shell.is-businesses-page .business-card-visual-shade {
   background: transparent !important;
 }
+
+
+/* 2026-09-27 — Part 15: centered business focal point + light-blue image wash */
+.route-shell.is-businesses-page .business-card-media {
+  object-position: 50% 18% !important;
+}
+
+.route-shell.is-businesses-page .business-card-visual-shade {
+  background:
+    linear-gradient(
+      135deg,
+      rgba(151, 203, 255, .25) 0%,
+      rgba(111, 169, 255, .25) 100%
+    ) !important;
+}
+
+@media (max-width: 760px) {
+  .route-shell.is-businesses-page .business-card-media {
+    object-position: 50% 16% !important;
+  }
+}
