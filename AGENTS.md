@@ -73,6 +73,7 @@ Race handling is fail-safe: if a feature branch or preview branch moves while an
 - Code, tests, ownership manifest, and validated runtime behavior remain the source of truth if a milestone note becomes stale.
 
 ## Shared/platform current milestones
+- 2026-09-27 — Race-safe delivery protocol active — canonical feature branches use single-writer discipline, promotions use immutable commit SHAs and abort if preview HEAD moves, and Replit is read-only with verified fast-forward sync. Next: use `GAME_DELIVERY_PROTOCOL.md` for every commit → promotion → Replit handoff.
 - 2026-09-27 — Blackjack category established — `feature/blackjack` owns isolated frontend, API and Blackjack schema roots; shared route/schema wiring remains a central integration responsibility. Next: build the isolated Blackjack skeleton and validate ownership CI.
 - 2026-09-27 — Account/Auth category established — auth development is isolated on `feature/account` with owned frontend, API and DB-schema roots; shared route/schema wiring remains a central integration responsibility. Next: build and validate email/password auth foundation on the account branch.
 - 2026-09-26 — Isolation v2 active — game work is branch- and ownership-scoped; preview promotion copies only the selected game's owned roots into `integration/replit-preview`.
