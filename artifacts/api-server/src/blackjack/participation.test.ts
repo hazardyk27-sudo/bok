@@ -130,6 +130,24 @@ describe("blackjack join / seat / leave", () => {
     ).toThrow(/RECOVERING/);
   });
 
+  it("lets an uncommitted BETTING player leave and free the seat immediately", () => {
+    const seated = seatBlackjackPlayer(table("BETTING"), {
+      playerId: "betting-player",
+      userId: "betting-user",
+      sessionId: "betting-session",
+      seatNumber: 3,
+    });
+
+    const left = leaveBlackjackSeat(seated, {
+      playerId: "betting-player",
+      nowMs: 90,
+    });
+
+    expect(left.players).toHaveLength(0);
+    expect(left.seats[2].playerId).toBeNull();
+    expect(left.stateVersion).toBe(seated.stateVersion + 1);
+  });
+
   it("lets a next-round waiting player leave immediately even during a live round", () => {
     const seated = seatBlackjackPlayer(table("PLAYER_TURNS"), {
       playerId: "waiting-player",
