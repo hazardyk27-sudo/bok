@@ -629,6 +629,39 @@ describe("authoritative roulette physics config", () => {
     );
   });
 
+  it("locks Part 6 actual-contact micro-parity telemetry", () => {
+    expect(part3ViewportSource).toContain(
+      "'PART6_MICRO_PARITY_RESULT'",
+    );
+    expect(part3ViewportSource).toContain(
+      "microParityStationarySamples",
+    );
+    expect(part3ViewportSource).toContain(
+      "microParityRotorSamples",
+    );
+    expect(part3ViewportSource).toContain(
+      "microParityMaxPointDeltaWorld",
+    );
+    expect(part3ViewportSource).toContain(
+      "microParityMaxNormalAngleDegrees",
+    );
+    expect(part3ViewportSource).toContain(
+      "microParityMaxClearanceDeltaWorld",
+    );
+    expect(physicsLabSimulationSource).toContain(
+      '"SERVER_PART6_MICRO_PARITY_RESULT"',
+    );
+    expect(physicsLabSimulationSource).toContain(
+      "function exactRotorSurfaceAt(",
+    );
+    expect(physicsLabSimulationSource).toContain(
+      "function exactColliderSurfaceAt(",
+    );
+    expect(physicsLabSimulationSource).toContain(
+      "microParityPassed",
+    );
+  });
+
   it("locks roulette runtime validation to the canonical feature branch", () => {
     expect(rouletteRuntimeWorkflowSource).toContain(
       "- feature/roulette",

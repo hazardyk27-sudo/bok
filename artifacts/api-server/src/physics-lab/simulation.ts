@@ -44,6 +44,11 @@ const MAX_TRAJECTORY_SAMPLES = Math.ceil(
   (PHYSICS_LAB_DURATION_LIMIT_SECONDS / PHYSICS_LAB_FIXED_TIMESTEP) /
     TRAJECTORY_SAMPLE_EVERY_STEPS,
 ) + 1;
+const PART6_MICRO_PARITY_SAMPLE_STRIDE = 4;
+const PART6_MICRO_PARITY_MAX_SAMPLES_PER_ROLE = 24;
+const PART6_MICRO_PARITY_SURFACE_PROXIMITY_WORLD = 0.03;
+const PART6_MICRO_PARITY_POINT_EPSILON_WORLD = 0.0006;
+const PART6_MICRO_PARITY_NORMAL_EPSILON_DEGREES = 0.1;
 
 const POCKET_FRET_RESTITUTION = 0.06;
 const DEFLECTOR_FRICTION = 0.12;
@@ -116,6 +121,12 @@ export type PhysicsLabSimulationResult = {
   finalPocketIndex: number | null;
   finalPocketNumber: number | null;
   stableSettleStep: number | null;
+  microParityStationarySamples: number;
+  microParityRotorSamples: number;
+  microParityMaxPointDeltaWorld: number;
+  microParityMaxNormalAngleDegrees: number;
+  microParityMaxClearanceDeltaWorld: number;
+  microParityPassed: boolean;
   simulationDurationMs: number;
   computedAt: string;
   startConditions: PhysicsLabStartConditions;
@@ -388,7 +399,7 @@ function exactStationarySurfaceAt(
   return best;
 }
 
-function exactRotorSurfaceYAt(
+function exactRotorSurfaceAt(
   worldX: number,
   worldZ: number,
   rotation: { y: number; w: number },
@@ -403,7 +414,12 @@ function exactRotorSurfaceYAt(
   const vertices = geometry.vertices;
   const indices = geometry.indices;
   const barycentricEpsilon = 1e-6;
-  let bestY: number | null = null;
+  let best:
+    | {
+        point: [number, number, number];
+        normal: [number, number, number];
+      }
+    | null = null;
   let bestDistance = Number.POSITIVE_INFINITY;
 
   for (let index = 0; index < indices.length; index += 3) {
@@ -411,10 +427,13 @@ function exactRotorSurfaceYAt(
     const b = indices[index + 1] * 3;
     const d = indices[index + 2] * 3;
     const ax = vertices[a];
+    const ay = vertices[a + 1];
     const az = vertices[a + 2];
     const bx = vertices[b];
+    const by = vertices[b + 1];
     const bz = vertices[b + 2];
     const dx = vertices[d];
+    const dy = vertices[d + 1];
     const dz = vertices[d + 2];
 
     if (
@@ -428,7 +447,6 @@ function exactRotorSurfaceYAt(
 
     const determinant =
       (bz - dz) * (ax - dx) + (dx - bx) * (az - dz);
-    // Vertical walls do not define a floor Y at a unique (x,z).
     if (Math.abs(determinant) <= 1e-10) continue;
 
     const alpha =
@@ -447,17 +465,88 @@ function exactRotorSurfaceYAt(
     }
 
     const y =
-      alpha * vertices[a + 1] +
-      beta * vertices[b + 1] +
-      gamma * vertices[d + 1];
+      alpha * ay +
+      beta * by +
+      gamma * dy;
     const distance = Math.abs(y - targetY);
-    if (distance < bestDistance) {
-      bestDistance = distance;
-      bestY = y;
+    if (distance >= bestDistance) continue;
+
+    const abx = bx - ax;
+    const aby = by - ay;
+    const abz = bz - az;
+    const adx = dx - ax;
+    const ady = dy - ay;
+    const adz = dz - az;
+    let nx = aby * adz - abz * ady;
+    let ny = abz * adx - abx * adz;
+    let nz = abx * ady - aby * adx;
+    const normalLength = Math.hypot(nx, ny, nz);
+    if (normalLength <= 1e-10) continue;
+    nx /= normalLength;
+    ny /= normalLength;
+    nz /= normalLength;
+    if (ny < 0) {
+      nx = -nx;
+      ny = -ny;
+      nz = -nz;
     }
+
+    const worldNx = cosine * nx + sine * nz;
+    const worldNz = -sine * nx + cosine * nz;
+    bestDistance = distance;
+    best = {
+      point: [worldX, y, worldZ],
+      normal: [worldNx, ny, worldNz],
+    };
   }
 
-  return bestY;
+  return best;
+}
+
+function exactRotorSurfaceYAt(
+  worldX: number,
+  worldZ: number,
+  rotation: { y: number; w: number },
+  targetY: number,
+) {
+  return exactRotorSurfaceAt(
+    worldX,
+    worldZ,
+    rotation,
+    targetY,
+  )?.point[1] ?? null;
+}
+
+function exactColliderSurfaceAt(
+  world: RAPIER.World,
+  collider: RAPIER.Collider,
+  worldX: number,
+  worldZ: number,
+) {
+  const ray = new RAPIER.Ray(
+    { x: worldX, y: 1.5, z: worldZ },
+    { x: 0, y: -1, z: 0 },
+  );
+  const hit = world.castRayAndGetNormal(
+    ray,
+    4,
+    true,
+    undefined,
+    undefined,
+    undefined,
+    undefined,
+    (candidate) => candidate.handle === collider.handle,
+  );
+  if (!hit) return null;
+  const point = ray.pointAt(hit.timeOfImpact);
+  return {
+    point: [point.x, point.y, point.z] as [number, number, number],
+    normal: [hit.normal.x, hit.normal.y, hit.normal.z] as [
+      number,
+      number,
+      number,
+    ],
+  };
 }
 
 function addDarkRaceChannelCollider(
@@ -1243,6 +1332,11 @@ export async function simulatePhysicsLabRound(
   let stableSettleStep: number | null = null;
   let errorCode: string | null = null;
   let maxBallSpeed = 0;
+  let microParityStationarySamples = 0;
+  let microParityRotorSamples = 0;
+  let microParityMaxPointDeltaWorld = 0;
+  let microParityMaxNormalAngleDegrees = 0;
+  let microParityMaxClearanceDeltaWorld = 0;
 
   const preFretTraceSeed =
     seed === "61004" || seed === "61005" || seed === "61006";
@@ -1594,6 +1688,113 @@ export async function simulatePhysicsLabRound(
           if (contactRole) stepContactRoles.add(contactRole);
         });
       });
+
+      if (step % PART6_MICRO_PARITY_SAMPLE_STRIDE === 0) {
+        const stationaryEligible =
+          exactStationaryContact &&
+          microParityStationarySamples <
+            PART6_MICRO_PARITY_MAX_SAMPLES_PER_ROLE;
+        const rotorEligible =
+          exactRotorContact &&
+          microParityRotorSamples <
+            PART6_MICRO_PARITY_MAX_SAMPLES_PER_ROLE;
+        const role = stationaryEligible
+          ? "exact-glb-stationary-trimesh"
+          : rotorEligible
+            ? "exact-glb-rotor-trimesh"
+            : null;
+
+        if (role) {
+          const targetCollider =
+            role === "exact-glb-stationary-trimesh"
+              ? exactGlbStationaryCollider
+              : exactGlbRotorCollider;
+          const targetY = translation.y - PHYSICS_LAB_BALL_RADIUS;
+          const sourceSurface =
+            role === "exact-glb-stationary-trimesh"
+              ? exactStationarySurfaceAt(
+                  translation.x,
+                  translation.z,
+                  targetY,
+                )
+              : exactRotorSurfaceAt(
+                  translation.x,
+                  translation.z,
+                  rotorRotation,
+                  targetY,
+                );
+          const colliderSurface = exactColliderSurfaceAt(
+            world,
+            targetCollider,
+            translation.x,
+            translation.z,
+          );
+
+          if (sourceSurface && colliderSurface) {
+            const sourceNormalLength = Math.hypot(...sourceSurface.normal);
+            const colliderNormalLength = Math.hypot(...colliderSurface.normal);
+            const sourceNormal = sourceSurface.normal.map(
+              (value) => value / sourceNormalLength,
+            ) as [number, number, number];
+            const colliderNormal = colliderSurface.normal.map(
+              (value) => value / colliderNormalLength,
+            ) as [number, number, number];
+            const sourceGap =
+              (translation.x - sourceSurface.point[0]) * sourceNormal[0] +
+              (translation.y - sourceSurface.point[1]) * sourceNormal[1] +
+              (translation.z - sourceSurface.point[2]) * sourceNormal[2] -
+              PHYSICS_LAB_BALL_RADIUS;
+            const colliderGap =
+              (translation.x - colliderSurface.point[0]) * colliderNormal[0] +
+              (translation.y - colliderSurface.point[1]) * colliderNormal[1] +
+              (translation.z - colliderSurface.point[2]) * colliderNormal[2] -
+              PHYSICS_LAB_BALL_RADIUS;
+
+            if (
+              Math.abs(sourceGap) <=
+                PART6_MICRO_PARITY_SURFACE_PROXIMITY_WORLD &&
+              Math.abs(colliderGap) <=
+                PART6_MICRO_PARITY_SURFACE_PROXIMITY_WORLD
+            ) {
+              const pointDelta = Math.hypot(
+                sourceSurface.point[0] - colliderSurface.point[0],
+                sourceSurface.point[1] - colliderSurface.point[1],
+                sourceSurface.point[2] - colliderSurface.point[2],
+              );
+              const normalDot = Math.max(
+                -1,
+                Math.min(
+                  1,
+                  sourceNormal[0] * colliderNormal[0] +
+                    sourceNormal[1] * colliderNormal[1] +
+                    sourceNormal[2] * colliderNormal[2],
+                ),
+              );
+              const normalAngleDegrees =
+                (Math.acos(normalDot) * 180) / Math.PI;
+              const clearanceDelta = Math.abs(sourceGap - colliderGap);
+
+              microParityMaxPointDeltaWorld = Math.max(
+                microParityMaxPointDeltaWorld,
+                pointDelta,
+              );
+              microParityMaxNormalAngleDegrees = Math.max(
+                microParityMaxNormalAngleDegrees,
+                normalAngleDegrees,
+              );
+              microParityMaxClearanceDeltaWorld = Math.max(
+                microParityMaxClearanceDeltaWorld,
+                clearanceDelta,
+              );
+              if (role === "exact-glb-stationary-trimesh") {
+                microParityStationarySamples += 1;
+              } else {
+                microParityRotorSamples += 1;
+              }
+            }
+          }
+        }
+      }
 
       // Diagnostic aliases only. They do not create collision geometry.
       // Physics contact always comes from exact-glb-stationary-trimesh.
@@ -2098,6 +2299,34 @@ export async function simulatePhysicsLabRound(
               : "STABLE_SETTLE_TIMEOUT";
     events.push(event("INVALID", trajectory.at(-1)?.step ?? 0, { detail: errorCode }));
   }
+  const microParityPassed =
+    microParityStationarySamples > 0 &&
+    microParityRotorSamples > 0 &&
+    microParityMaxPointDeltaWorld <=
+      PART6_MICRO_PARITY_POINT_EPSILON_WORLD &&
+    microParityMaxNormalAngleDegrees <=
+      PART6_MICRO_PARITY_NORMAL_EPSILON_DEGREES &&
+    microParityMaxClearanceDeltaWorld <=
+      PART6_MICRO_PARITY_POINT_EPSILON_WORLD;
+  console.info(
+    "SERVER_PART6_MICRO_PARITY_RESULT",
+    JSON.stringify({
+      seed,
+      stationarySamples: microParityStationarySamples,
+      rotorSamples: microParityRotorSamples,
+      maxPointDeltaWorld: Number(
+        microParityMaxPointDeltaWorld.toFixed(9),
+      ),
+      maxNormalAngleDegrees: Number(
+        microParityMaxNormalAngleDegrees.toFixed(6),
+      ),
+      maxClearanceDeltaWorld: Number(
+        microParityMaxClearanceDeltaWorld.toFixed(9),
+      ),
+      passed: microParityPassed,
+    }),
+  );
+
   const simulationDurationMs = Math.round(performance.now() - startedAt);
   const trajectoryHash = createHash("sha256")
     .update(JSON.stringify({ roundId, startConditions, trajectory, events }))
@@ -2111,6 +2340,18 @@ export async function simulatePhysicsLabRound(
         ? rouletteNumberForPhysicsPocketIndex(finalPocketIndex)
         : null,
     stableSettleStep,
+    microParityStationarySamples,
+    microParityRotorSamples,
+    microParityMaxPointDeltaWorld: Number(
+      microParityMaxPointDeltaWorld.toFixed(9),
+    ),
+    microParityMaxNormalAngleDegrees: Number(
+      microParityMaxNormalAngleDegrees.toFixed(6),
+    ),
+    microParityMaxClearanceDeltaWorld: Number(
+      microParityMaxClearanceDeltaWorld.toFixed(9),
+    ),
+    microParityPassed,
     simulationDurationMs,
     computedAt: new Date().toISOString(),
     startConditions,

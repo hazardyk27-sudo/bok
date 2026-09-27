@@ -77,6 +77,9 @@ const PART3_OUTER_SPIN_RUNS = [
 const PART6_TELEMETRY_SCHEMA_VERSION = 'roulette-part6-full-spin-telemetry-v1';
 const GLB_COLLIDER_PARITY_EPSILON_WORLD = 0.0006;
 const GLB_COLLIDER_PARITY_NORMAL_EPSILON_DEGREES = 0.1;
+const PART6_MICRO_PARITY_SAMPLE_STRIDE = 4;
+const PART6_MICRO_PARITY_MAX_SAMPLES_PER_ROLE = 24;
+const PART6_MICRO_PARITY_SURFACE_PROXIMITY_WORLD = 0.03;
 const MM_PER_WORLD_UNIT = 1000 / ROULETTE_WORLD_UNITS_PER_METER;
 const GLB_COLLIDER_PARITY_SCAN_INNER_RADIUS = 1.48;
 const GLB_COLLIDER_PARITY_SCAN_OUTER_RADIUS = 2.44;
@@ -546,6 +549,12 @@ type Part6FullSpinTelemetryResult = {
   visualHover: boolean;
   visualClipping: boolean;
   visualSurfaceParityPassed: boolean;
+  microParityStationarySamples: number;
+  microParityRotorSamples: number;
+  microParityMaxPointDeltaWorld: number;
+  microParityMaxNormalAngleDegrees: number;
+  microParityMaxClearanceDeltaWorld: number;
+  microParityPassed: boolean;
   hover: boolean;
   clipping: boolean;
   tunneling: boolean;
@@ -5738,6 +5747,11 @@ export function Part2SceneViewport({
           let maxTrackSeparation = 0;
           let maxPocketFloorPenetration = 0;
           let maxPocketFloorSeparation = 0;
+          let microParityStationarySamples = 0;
+          let microParityRotorSamples = 0;
+          let microParityMaxPointDeltaWorld = 0;
+          let microParityMaxNormalAngleDegrees = 0;
+          let microParityMaxClearanceDeltaWorld = 0;
           let inwardTransitionTime: number | null = null;
           let inwardTransitionRadius: number | null = null;
           const phases: Part6PhaseEvent[] = [];
@@ -6073,6 +6087,147 @@ export function Part2SceneViewport({
                 }
               },
             );
+
+            if (step % PART6_MICRO_PARITY_SAMPLE_STRIDE === 0) {
+              const stationaryEligible =
+                stepContactRoles.has('exact-glb-stationary-trimesh') &&
+                microParityStationarySamples <
+                  PART6_MICRO_PARITY_MAX_SAMPLES_PER_ROLE;
+              const rotorEligible =
+                stepContactRoles.has('exact-glb-rotor-trimesh') &&
+                microParityRotorSamples <
+                  PART6_MICRO_PARITY_MAX_SAMPLES_PER_ROLE;
+              const microParityRole = stationaryEligible
+                ? 'exact-glb-stationary-trimesh'
+                : rotorEligible
+                  ? 'exact-glb-rotor-trimesh'
+                  : null;
+
+              if (microParityRole) {
+                const targetCollider =
+                  microParityRole === 'exact-glb-stationary-trimesh'
+                    ? activeTrackCollider
+                    : part3PocketColliders.find(
+                        (collider) =>
+                          part3ColliderRoles.get(collider.handle) ===
+                          'exact-glb-rotor-trimesh',
+                      ) ?? null;
+                const visualRoots: THREE.Object3D[] =
+                  microParityRole === 'exact-glb-stationary-trimesh'
+                    ? stationaryGroup
+                      ? [stationaryGroup]
+                      : []
+                    : activeRotorPivot
+                      ? [activeRotorPivot]
+                      : [];
+
+                if (targetCollider && visualRoots.length > 0) {
+                  const visualSurface = measureRouletteVisualSurfaceAt(
+                    visualRoots,
+                    position.x,
+                    position.z,
+                  );
+                  const microParityRay = new RAPIER.Ray(
+                    { x: position.x, y: 1.5, z: position.z },
+                    { x: 0, y: -1, z: 0 },
+                  );
+                  const colliderHit = activeWorld.castRayAndGetNormal(
+                    microParityRay,
+                    4,
+                    true,
+                    undefined,
+                    undefined,
+                    undefined,
+                    undefined,
+                    (collider) => collider.handle === targetCollider.handle,
+                  );
+
+                  if (visualSurface && colliderHit) {
+                    const colliderPoint = microParityRay.pointAt(
+                      colliderHit.timeOfImpact,
+                    );
+                    const visualNormal = new THREE.Vector3(
+                      visualSurface.normal.x,
+                      visualSurface.normal.y,
+                      visualSurface.normal.z,
+                    ).normalize();
+                    const colliderNormal = new THREE.Vector3(
+                      colliderHit.normal.x,
+                      colliderHit.normal.y,
+                      colliderHit.normal.z,
+                    ).normalize();
+                    const center = new THREE.Vector3(
+                      position.x,
+                      position.y,
+                      position.z,
+                    );
+                    const visualPoint = new THREE.Vector3(
+                      visualSurface.point.x,
+                      visualSurface.point.y,
+                      visualSurface.point.z,
+                    );
+                    const colliderPointVector = new THREE.Vector3(
+                      colliderPoint.x,
+                      colliderPoint.y,
+                      colliderPoint.z,
+                    );
+                    const visualGap =
+                      center
+                        .clone()
+                        .sub(visualPoint)
+                        .dot(visualNormal) - BALL_RADIUS;
+                    const colliderGap =
+                      center
+                        .clone()
+                        .sub(colliderPointVector)
+                        .dot(colliderNormal) - BALL_RADIUS;
+
+                    if (
+                      Math.abs(visualGap) <=
+                        PART6_MICRO_PARITY_SURFACE_PROXIMITY_WORLD &&
+                      Math.abs(colliderGap) <=
+                        PART6_MICRO_PARITY_SURFACE_PROXIMITY_WORLD
+                    ) {
+                      const pointDelta = visualPoint.distanceTo(
+                        colliderPointVector,
+                      );
+                      const normalAngleDegrees = THREE.MathUtils.radToDeg(
+                        Math.acos(
+                          THREE.MathUtils.clamp(
+                            visualNormal.dot(colliderNormal),
+                            -1,
+                            1,
+                          ),
+                        ),
+                      );
+                      const clearanceDelta = Math.abs(
+                        visualGap - colliderGap,
+                      );
+                      microParityMaxPointDeltaWorld = Math.max(
+                        microParityMaxPointDeltaWorld,
+                        pointDelta,
+                      );
+                      microParityMaxNormalAngleDegrees = Math.max(
+                        microParityMaxNormalAngleDegrees,
+                        normalAngleDegrees,
+                      );
+                      microParityMaxClearanceDeltaWorld = Math.max(
+                        microParityMaxClearanceDeltaWorld,
+                        clearanceDelta,
+                      );
+                      if (
+                        microParityRole ===
+                        'exact-glb-stationary-trimesh'
+                      ) {
+                        microParityStationarySamples += 1;
+                      } else {
+                        microParityRotorSamples += 1;
+                      }
+                    }
+                  }
+                }
+              }
+            }
 
             if (
               (run.seed === 61004 && step <= 90) ||
@@ -6993,6 +7148,33 @@ export function Part2SceneViewport({
             !settled ||
             (finalPocketIndex !== null &&
               finalPocketNumber !== null);
+          const microParityPassed =
+            microParityStationarySamples > 0 &&
+            microParityRotorSamples > 0 &&
+            microParityMaxPointDeltaWorld <=
+              GLB_COLLIDER_PARITY_EPSILON_WORLD &&
+            microParityMaxNormalAngleDegrees <=
+              GLB_COLLIDER_PARITY_NORMAL_EPSILON_DEGREES &&
+            microParityMaxClearanceDeltaWorld <=
+              GLB_COLLIDER_PARITY_EPSILON_WORLD;
+          console.info(
+            'PART6_MICRO_PARITY_RESULT',
+            JSON.stringify({
+              seed: run.seed,
+              stationarySamples: microParityStationarySamples,
+              rotorSamples: microParityRotorSamples,
+              maxPointDeltaWorld: Number(
+                microParityMaxPointDeltaWorld.toFixed(9),
+              ),
+              maxNormalAngleDegrees: Number(
+                microParityMaxNormalAngleDegrees.toFixed(6),
+              ),
+              maxClearanceDeltaWorld: Number(
+                microParityMaxClearanceDeltaWorld.toFixed(9),
+              ),
+              passed: microParityPassed,
+            }),
+          );
           const safetyPassed =
             stateResetVerified &&
             phaseSequenceValid &&
@@ -7173,6 +7355,18 @@ export function Part2SceneViewport({
             visualHover,
             visualClipping,
             visualSurfaceParityPassed,
+            microParityStationarySamples,
+            microParityRotorSamples,
+            microParityMaxPointDeltaWorld: Number(
+              microParityMaxPointDeltaWorld.toFixed(9),
+            ),
+            microParityMaxNormalAngleDegrees: Number(
+              microParityMaxNormalAngleDegrees.toFixed(6),
+            ),
+            microParityMaxClearanceDeltaWorld: Number(
+              microParityMaxClearanceDeltaWorld.toFixed(9),
+            ),
+            microParityPassed,
             hover,
             clipping,
             tunneling,
