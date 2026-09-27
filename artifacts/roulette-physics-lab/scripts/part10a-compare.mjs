@@ -92,6 +92,11 @@ const firstAngularVelocity = Object.fromEntries(
   thresholds.map((threshold) => [String(threshold), null]),
 );
 
+const physicalExactContactRoles = (row) =>
+  [...new Set((row.contactRoles ?? []).filter((role) =>
+    role.startsWith('exact-glb-'),
+  ))].sort();
+
 let firstContactMismatch = null;
 let maxVelocityDelta = 0;
 let maxPositionDelta = 0;
@@ -132,11 +137,11 @@ for (const step of commonSteps) {
     }
   }
 
+  const browserPhysicalContacts = physicalExactContactRoles(browserState);
+  const serverPhysicalContacts = physicalExactContactRoles(serverState);
   const contactMismatch =
-    Boolean(browserState.darkRaceContact) !==
-      Boolean(serverState.darkRaceContact) ||
-    Boolean(browserState.outerWallContact) !==
-      Boolean(serverState.outerWallContact);
+    JSON.stringify(browserPhysicalContacts) !==
+    JSON.stringify(serverPhysicalContacts);
   if (firstContactMismatch === null && contactMismatch) {
     firstContactMismatch = step;
   }
@@ -154,6 +159,8 @@ for (const step of commonSteps) {
     serverVerticalVelocity: serverState.verticalVelocity,
     browserContacts: browserState.contactRoles,
     serverContacts: serverState.contactRoles,
+    browserPhysicalContacts,
+    serverPhysicalContacts,
     browserDarkRaceContact: Boolean(browserState.darkRaceContact),
     serverDarkRaceContact: Boolean(serverState.darkRaceContact),
     browserOuterWallContact: Boolean(browserState.outerWallContact),
