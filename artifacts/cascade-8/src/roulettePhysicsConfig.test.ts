@@ -4,7 +4,6 @@ import { describe, expect, it } from "vitest";
 import {
   buildRouletteCanonicalLaunchState,
   ROULETTE_AUTHORITATIVE_SCALE,
-  ROULETTE_CANONICAL_LAUNCH_SURFACE_QUANTUM,
   ROULETTE_BALL_RADIUS,
   ROULETTE_DARK_RACE_CHANNEL_PROFILE,
   ROULETTE_DARK_RACE_INWARD_EDGE_RADIUS,
@@ -111,9 +110,7 @@ describe("authoritative roulette physics config", () => {
     expect(ROULETTE_MAX_CCD_SUBSTEPS).toBe(8);
   });
 
-  it("builds a canonical exact-GLB launch from deterministic azimuth", () => {
-    expect(ROULETTE_CANONICAL_LAUNCH_SURFACE_QUANTUM).toBe(1e-6);
-
+  it("builds launch state from the raw exact-GLB surface and deterministic azimuth", () => {
     const launchSpeed = 30.089121878379956;
     const launchAzimuthRadians = 0.07247188932794299;
     const surfacePoint = {
@@ -136,11 +133,7 @@ describe("authoritative roulette physics config", () => {
       spinFactor: 1,
     });
 
-    expect(state.surfacePoint).toEqual({
-      x: 0.173056,
-      y: -0.323949,
-      z: 2.383726,
-    });
+    expect(state.surfacePoint).toEqual(surfacePoint);
     expect(Math.hypot(
       state.velocity.x,
       state.velocity.y,
