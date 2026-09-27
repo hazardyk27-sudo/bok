@@ -1373,3 +1373,28 @@ describe("Businesses approved Slate Blue Parts 1–3", () => {
     expect(idleCssSource).toContain(".business-detail-tabs button[aria-selected=\"true\"]");
   });
 });
+describe("Businesses Part 2 restrained surface hierarchy", () => {
+  it("keeps the approved dark SaaS surface ladder explicit", () => {
+    expect(idleCssSource).toContain("/* 2026-09-27 — Part 2: restrained premium surface hierarchy */");
+    expect(idleCssSource).toContain("--idle-surface-page: #050b17");
+    expect(idleCssSource).toContain("--idle-surface-sidebar: #07111f");
+    expect(idleCssSource).toContain("--idle-surface-kpi: #0b1524");
+    expect(idleCssSource).toContain("--idle-surface-card: #091421");
+    expect(idleCssSource).toContain("--idle-surface-detail: #091421");
+  });
+
+  it("separates sidebar KPI cards business cards and Details without neon glow", () => {
+    expect(idleCssSource).toContain(".route-shell.is-businesses-page .businesses-sidebar");
+    expect(idleCssSource).toContain(".route-shell.is-businesses-page .businesses-progression,");
+    expect(idleCssSource).toContain(".route-shell.is-businesses-page .business-card {");
+    expect(idleCssSource).toContain(".business-detail-summary > div,");
+    expect(idleCssSource).toContain("0 14px 36px rgba(0, 0, 0, .22)");
+  });
+
+  it("keeps inset card metrics quieter than their parent card", () => {
+    expect(idleCssSource).toContain(".route-shell.is-businesses-page .business-card-stats,");
+    expect(idleCssSource).toContain("background: rgba(7, 17, 31, .50)");
+    expect(idleCssSource).toContain(".route-shell.is-businesses-page .business-card-content");
+    expect(idleCssSource).toContain("background: transparent");
+  });
+});

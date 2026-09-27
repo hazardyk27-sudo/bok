@@ -7107,3 +7107,87 @@ body.businesses-route {
     margin-top: auto;
   }
 }
+/* 2026-09-27 — Part 2: restrained premium surface hierarchy */
+.route-shell.is-businesses-page {
+  --idle-surface-page: #050b17;
+  --idle-surface-sidebar: #07111f;
+  --idle-surface-kpi: #0b1524;
+  --idle-surface-kpi-deep: #091421;
+  --idle-surface-card: #091421;
+  --idle-surface-card-deep: #08121f;
+  --idle-surface-inset: #07111f;
+  --idle-surface-detail: #091421;
+  --idle-surface-detail-deep: #07101d;
+  --idle-surface-highlight: rgba(255, 255, 255, .018);
+}
+
+body.businesses-route {
+  background:
+    radial-gradient(circle at 58% 0%, rgba(92, 125, 255, .11), transparent 27%),
+    radial-gradient(circle at 100% 18%, rgba(69, 103, 177, .055), transparent 24%),
+    linear-gradient(180deg, var(--idle-surface-page) 0%, #07101d 100%);
+}
+
+.route-shell.is-businesses-page .businesses-sidebar {
+  border-color: rgba(111, 151, 255, .10);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, .012), transparent 20%),
+    linear-gradient(180deg, var(--idle-surface-sidebar) 0%, #060d18 100%);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, .018),
+    0 14px 34px rgba(0, 0, 0, .22);
+}
+
+.route-shell.is-businesses-page .businesses-progression,
+.route-shell.is-businesses-page .business-command-stat {
+  border-color: rgba(111, 151, 255, .11);
+  background:
+    linear-gradient(180deg, var(--idle-surface-highlight), rgba(255, 255, 255, .003)),
+    linear-gradient(180deg, var(--idle-surface-kpi) 0%, var(--idle-surface-kpi-deep) 100%);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, .022),
+    0 10px 28px rgba(0, 0, 0, .16);
+}
+
+.route-shell.is-businesses-page .business-card {
+  border-color: rgba(111, 151, 255, .105);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, .010), rgba(255, 255, 255, .002)),
+    linear-gradient(180deg, var(--idle-surface-card) 0%, var(--idle-surface-card-deep) 100%);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, .018),
+    0 14px 36px rgba(0, 0, 0, .22);
+}
+
+.route-shell.is-businesses-page .business-card-content {
+  background: transparent;
+}
+
+.route-shell.is-businesses-page .business-card-stats,
+.route-shell.is-businesses-page .business-card-stat {
+  background: rgba(7, 17, 31, .50);
+}
+
+.route-shell.is-businesses-page .business-card-stats {
+  border-color: rgba(111, 151, 255, .095);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .012);
+}
+
+.business-detail-drawer {
+  border-left-color: rgba(111, 151, 255, .12);
+  background:
+    radial-gradient(circle at 80% 2%, rgba(92, 125, 255, .065), transparent 28%),
+    linear-gradient(180deg, var(--idle-surface-detail) 0%, var(--idle-surface-detail-deep) 54%, #050b17 100%);
+}
+
+.business-detail-summary > div,
+.business-level-node-card,
+.vault-level-node-card {
+  border-color: rgba(111, 151, 255, .10);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, .012), rgba(255, 255, 255, .002)),
+    linear-gradient(180deg, #0b1625 0%, #091321 100%);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, .018),
+    0 10px 28px rgba(0, 0, 0, .16);
+}
