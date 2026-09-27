@@ -5312,7 +5312,7 @@ export function Part2SceneViewport({
       );
       const activePart11LaunchSpeedBase =
         part11Calibration && Number.isFinite(requestedPart11LaunchSpeedMps)
-          ? THREE.MathUtils.clamp(requestedPart11LaunchSpeedMps, 4.85, 7.20) *
+          ? THREE.MathUtils.clamp(requestedPart11LaunchSpeedMps, 1.00, 7.20) *
             ROULETTE_WORLD_UNITS_PER_METER
           : null;
       const requestedPart11LaunchAzimuthDegrees = Number(
