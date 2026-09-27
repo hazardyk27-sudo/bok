@@ -137,6 +137,9 @@ ${renderBusinessMedia(businessId)}
         <span class="business-card-state" data-business-card-state>YÜKLENİYOR</span>
         <span class="business-card-level-mark" data-business-level-mark aria-hidden="true">FY</span>
 
+      </div>
+
+      <div class="business-card-content">
         <div class="business-card-identity-overlay">
           <span class="business-card-identity-icon" aria-hidden="true">${meta.icon}</span>
           <div class="business-card-title">
@@ -145,9 +148,7 @@ ${renderBusinessMedia(businessId)}
             <span data-business-level>Yükleniyor…</span>
           </div>
         </div>
-      </div>
 
-      <div class="business-card-content">
         <section class="business-card-balance" aria-label="Biriken gelir">
           <div class="business-card-balance-heading">
             <span>BİRİKMİŞ GELİR</span>
