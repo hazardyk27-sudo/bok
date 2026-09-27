@@ -38,27 +38,12 @@ jobs:
           from pathlib import Path
           path = Path("artifacts/roulette-physics-lab/src/Part2SceneViewport.tsx")
           text = path.read_text()
-          old = """          const launchAngularVelocity = new THREE.Vector3(
-            canonicalLaunchState.angularVelocity.x,
-            canonicalLaunchState.angularVelocity.y,
-            canonicalLaunchState.angularVelocity.z,
-          );
-
-          // Flush the previous seed's dynamic state and contact manifold before"""
-          new = """          const launchAngularVelocity = new THREE.Vector3(
-            canonicalLaunchState.angularVelocity.x,
-            canonicalLaunchState.angularVelocity.y,
-            canonicalLaunchState.angularVelocity.z,
-          );
-
-          if (
+          anchor = "          // Flush the previous seed's dynamic state and contact manifold before"
+          insert = """          if (
             part11Calibration &&
             part6Params.get('part11DirectWallHug') === '1'
           ) {
-            // BALL_RADIUS is 0.0392 wu for the 0.70 Part 11 probe.
-            // This center is the intersection of the BALL_RADIUS-offset
-            // outer-race floor (slope 0.31) and steep outer-wall segment,
-            // so the sphere begins tangent to both surfaces without overlap.
+            // Test-only: tangent to the outer-race floor and steep wall.
             const wallHugCenterRadius = 2.51636415;
             const wallHugCenterY = -0.24343675;
             launchPosition.set(
@@ -92,10 +77,10 @@ jobs:
             );
           }
 
-          // Flush the previous seed's dynamic state and contact manifold before"""
-          if old not in text:
-              raise SystemExit("launch-state insertion point not found")
-          path.write_text(text.replace(old, new, 1))
+"""
+          if anchor not in text:
+              raise SystemExit("launch-state insertion anchor not found")
+          path.write_text(text.replace(anchor, insert + anchor, 1))
           PY
 
       - run: pnpm run typecheck:libs
