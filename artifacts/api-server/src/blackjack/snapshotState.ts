@@ -330,3 +330,29 @@ export function verifyBlackjackDurableSnapshot(
   assertBlackjackDurableRuntimeState(snapshot.payload);
   return cloneRuntime(snapshot.payload);
 }
+
+export function parseBlackjackDurableSnapshot(
+  value: unknown,
+): BlackjackDurableSnapshot {
+  if (typeof value !== "object" || value === null) {
+    throw new Error("Blackjack snapshot payload is not an object");
+  }
+
+  const candidate = value as Partial<BlackjackDurableSnapshot>;
+  if (
+    candidate.schemaVersion !== BLACKJACK_DURABLE_SNAPSHOT_SCHEMA_VERSION ||
+    typeof candidate.tableId !== "string" ||
+    typeof candidate.stateVersion !== "number" ||
+    typeof candidate.eventSequence !== "number" ||
+    typeof candidate.savedAtMs !== "number" ||
+    typeof candidate.checksum !== "string" ||
+    typeof candidate.payload !== "object" ||
+    candidate.payload === null
+  ) {
+    throw new Error("Blackjack snapshot payload shape is invalid");
+  }
+
+  const snapshot = candidate as BlackjackDurableSnapshot;
+  verifyBlackjackDurableSnapshot(snapshot);
+  return snapshot;
+}
