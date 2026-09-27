@@ -6,6 +6,7 @@ on:
       - feature/roulette
     paths:
       - '.github/workflows/roulette-part9-continuous-lap-diagnostic.yml'
+      - 'artifacts/roulette-physics-lab/src/Part2SceneViewport.tsx'
   workflow_dispatch:
 
 permissions:
