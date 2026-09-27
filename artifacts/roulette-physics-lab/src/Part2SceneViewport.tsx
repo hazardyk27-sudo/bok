@@ -5229,6 +5229,14 @@ export function Part2SceneViewport({
               12,
             )
           : PART6_LAUNCH_SPEED_METERS_PER_SECOND_BASE;
+      const requestedPart9LaunchGap = Number(
+        part6Params.get('part9LaunchGap') ?? 0.01,
+      );
+      const activePart9LaunchGap =
+        part9CalibrationEnabled &&
+        Number.isFinite(requestedPart9LaunchGap)
+          ? THREE.MathUtils.clamp(requestedPart9LaunchGap, 0.0001, 0.02)
+          : 0.01;
       const requestedSeedCount = Number(
         part6Params.get('part6SeedCount') ?? PART6_FULL_SPIN_RUNS.length,
       );
@@ -5618,6 +5626,7 @@ export function Part2SceneViewport({
             part9CalibrationEnabled,
             activePart9LaunchRadius,
             activePart9LaunchSpeedMetersPerSecond,
+            activePart9LaunchGap,
           });
           if (!launchSurface) {
             failInfrastructure(
@@ -5630,7 +5639,7 @@ export function Part2SceneViewport({
             return;
           }
 
-          const launchClearance = BALL_RADIUS + 0.01;
+          const launchClearance = BALL_RADIUS + activePart9LaunchGap;
           const launchNormal = new THREE.Vector3(
             launchSurface.normal.x,
             launchSurface.normal.y,
