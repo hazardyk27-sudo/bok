@@ -1,6 +1,6 @@
 export type ScratchTelemetryRound = {
   roundId: string;
-  mode: "STANDARD" | "ADVANCED";
+  mode: "STANDARD" | "ADVANCED" | "OFFICE_MATCH_6";
   bombCount: number;
   cellCount: number;
   stakeCents: number;
