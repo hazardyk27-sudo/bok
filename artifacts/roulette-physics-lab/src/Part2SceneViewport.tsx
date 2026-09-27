@@ -6227,6 +6227,8 @@ export function Part2SceneViewport({
             }
 
             let trackPairContact = false;
+            let trackSurfaceNormal: VectorReadout | null = null;
+            let trackContactImpulse = 0;
             let deflectorPairContact = false;
             let fretPairContact = false;
             let pocketFloorContact = false;
@@ -6238,9 +6240,32 @@ export function Part2SceneViewport({
                 activeWorld.contactPair(
                   activeBallCollider,
                   otherCollider,
-                  (manifold) => {
-                    if (manifold.numContacts() > 0) {
+                  (manifold, flipped) => {
+                    const contactCount = manifold.numContacts();
+                    if (contactCount > 0) {
                       geometricContact = true;
+                    }
+                    if (
+                      otherCollider.handle === activeTrackCollider.handle &&
+                      contactCount > 0
+                    ) {
+                      const stationaryNormal = flipped
+                        ? manifold.localNormal1()
+                        : manifold.localNormal2();
+                      trackSurfaceNormal ??= {
+                        x: stationaryNormal.x,
+                        y: stationaryNormal.y,
+                        z: stationaryNormal.z,
+                      };
+                      for (
+                        let contactIndex = 0;
+                        contactIndex < contactCount;
+                        contactIndex += 1
+                      ) {
+                        trackContactImpulse += Math.abs(
+                          manifold.contactImpulse(contactIndex),
+                        );
+                      }
                     }
                   },
                 );
@@ -6426,6 +6451,53 @@ export function Part2SceneViewport({
                 radius > 0
                   ? (position.x * velocity.x + position.z * velocity.z) / radius
                   : 0;
+              const traceSurfaceNormal = trackSurfaceNormal
+                ? new THREE.Vector3(
+                    trackSurfaceNormal.x,
+                    trackSurfaceNormal.y,
+                    trackSurfaceNormal.z,
+                  ).normalize()
+                : null;
+              const traceAngularVelocity = new THREE.Vector3(
+                parityAngularVelocity.x,
+                parityAngularVelocity.y,
+                parityAngularVelocity.z,
+              );
+              const traceContactVelocity = traceSurfaceNormal
+                ? new THREE.Vector3(
+                    velocity.x,
+                    velocity.y,
+                    velocity.z,
+                  ).add(
+                    traceAngularVelocity
+                      .clone()
+                      .cross(
+                        traceSurfaceNormal
+                          .clone()
+                          .multiplyScalar(-BALL_RADIUS),
+                      ),
+                  )
+                : null;
+              const traceContactNormalSpeed =
+                traceSurfaceNormal && traceContactVelocity
+                  ? traceContactVelocity.dot(traceSurfaceNormal)
+                  : null;
+              const traceContactSlipSpeed =
+                traceSurfaceNormal && traceContactVelocity
+                  ? traceContactVelocity
+                      .clone()
+                      .addScaledVector(
+                        traceSurfaceNormal,
+                        -traceContactVelocity.dot(traceSurfaceNormal),
+                      )
+                      .length()
+                  : null;
+              const traceSurfaceNormalRadial =
+                traceSurfaceNormal && radius > 0
+                  ? (traceSurfaceNormal.x * position.x +
+                      traceSurfaceNormal.z * position.z) /
+                    radius
+                  : null;
               console.info(
                 'ROULETTE_PARITY_STEP',
                 JSON.stringify({
@@ -6463,6 +6535,26 @@ export function Part2SceneViewport({
                   outerWallContact: stepContactRoles.has(
                     'measured-visible-outer-wall-cuboid',
                   ),
+                  trackSurfaceNormal: traceSurfaceNormal
+                    ? {
+                        x: Number(traceSurfaceNormal.x.toFixed(9)),
+                        y: Number(traceSurfaceNormal.y.toFixed(9)),
+                        z: Number(traceSurfaceNormal.z.toFixed(9)),
+                      }
+                    : null,
+                  trackSurfaceNormalRadial:
+                    traceSurfaceNormalRadial === null
+                      ? null
+                      : Number(traceSurfaceNormalRadial.toFixed(9)),
+                  trackContactImpulse: Number(trackContactImpulse.toFixed(9)),
+                  trackContactNormalSpeed:
+                    traceContactNormalSpeed === null
+                      ? null
+                      : Number(traceContactNormalSpeed.toFixed(9)),
+                  trackContactSlipSpeed:
+                    traceContactSlipSpeed === null
+                      ? null
+                      : Number(traceContactSlipSpeed.toFixed(9)),
                 }),
               );
             }
