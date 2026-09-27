@@ -155,7 +155,7 @@ jobs:
             minLap:laps[0],
             medianLap:laps[2],
             maxLap:laps[4],
-            targetMinTwoLaps:safe && laps[0] >= 2,
+            targetMinFiveLaps:safe && laps[0] >= 5,
             rows:valid
           };
           console.log('PART11_CANDIDATE_SUMMARY ' + JSON.stringify(summary));
