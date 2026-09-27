@@ -1,6 +1,7 @@
 import { createHash, randomBytes } from "node:crypto";
 import RAPIER from "@dimforge/rapier3d-compat";
 import {
+  buildRouletteCanonicalLaunchState,
   ROULETTE_BALL_RADIUS,
   ROULETTE_DARK_RACE_CHANNEL_PROFILE,
   ROULETTE_DARK_RACE_INWARD_EDGE_RADIUS,
@@ -1068,7 +1069,6 @@ function buildStartConditions(seed: string): PhysicsLabStartConditions {
   const rotorInitialAngleRadians =
     deterministicUnit(seed, 3) * Math.PI * 2;
   const rotorInitialAngularVelocity = ROULETTE_ROTOR_ANGULAR_SPEED;
-  const launchClearance = PHYSICS_LAB_BALL_RADIUS + 0.01;
   const operationalLaunchCenterRadius = ROULETTE_DARK_RACE_LAUNCH_RADIUS;
   const launchSurfaceX =
     Math.sin(launchAzimuthRadians) * operationalLaunchCenterRadius;
@@ -1082,52 +1082,36 @@ function buildStartConditions(seed: string): PhysicsLabStartConditions {
   if (!exactLaunchSurface) {
     throw new Error("EXACT_GLB_LAUNCH_SURFACE_MISSING");
   }
-  const launchPlacementNormal = exactLaunchSurface.normal;
+  const canonicalLaunchState = buildRouletteCanonicalLaunchState({
+    surfacePoint: {
+      x: exactLaunchSurface.point[0],
+      y: exactLaunchSurface.point[1],
+      z: exactLaunchSurface.point[2],
+    },
+    surfaceNormal: {
+      x: exactLaunchSurface.normal[0],
+      y: exactLaunchSurface.normal[1],
+      z: exactLaunchSurface.normal[2],
+    },
+    launchSpeed,
+    ballRadius: PHYSICS_LAB_BALL_RADIUS,
+    launchClearance: 0.01,
+    spinFactor: 1,
+  });
   const position: [number, number, number] = [
-    exactLaunchSurface.point[0] +
-      launchPlacementNormal[0] * launchClearance,
-    exactLaunchSurface.point[1] +
-      launchPlacementNormal[1] * launchClearance,
-    exactLaunchSurface.point[2] +
-      launchPlacementNormal[2] * launchClearance,
-  ];
-  const radial: [number, number, number] = [
-    Math.sin(launchAzimuthRadians),
-    0,
-    Math.cos(launchAzimuthRadians),
-  ];
-  let tangent: [number, number, number] = [
-    launchPlacementNormal[1] * radial[2] -
-      launchPlacementNormal[2] * radial[1],
-    launchPlacementNormal[2] * radial[0] -
-      launchPlacementNormal[0] * radial[2],
-    launchPlacementNormal[0] * radial[1] -
-      launchPlacementNormal[1] * radial[0],
-  ];
-  const tangentLength = Math.hypot(...tangent);
-  if (tangentLength <= 1e-10) {
-    throw new Error("EXACT_GLB_LAUNCH_TANGENT_MISSING");
-  }
-  tangent = tangent.map((value) => value / tangentLength) as [
-    number,
-    number,
-    number,
+    canonicalLaunchState.position.x,
+    canonicalLaunchState.position.y,
+    canonicalLaunchState.position.z,
   ];
   const velocity: [number, number, number] = [
-    tangent[0] * launchSpeed,
-    tangent[1] * launchSpeed,
-    tangent[2] * launchSpeed,
+    canonicalLaunchState.velocity.x,
+    canonicalLaunchState.velocity.y,
+    canonicalLaunchState.velocity.z,
   ];
   const angularVelocity: [number, number, number] = [
-    (launchPlacementNormal[1] * velocity[2] -
-      launchPlacementNormal[2] * velocity[1]) /
-      PHYSICS_LAB_BALL_RADIUS,
-    (launchPlacementNormal[2] * velocity[0] -
-      launchPlacementNormal[0] * velocity[2]) /
-      PHYSICS_LAB_BALL_RADIUS,
-    (launchPlacementNormal[0] * velocity[1] -
-      launchPlacementNormal[1] * velocity[0]) /
-      PHYSICS_LAB_BALL_RADIUS,
+    canonicalLaunchState.angularVelocity.x,
+    canonicalLaunchState.angularVelocity.y,
+    canonicalLaunchState.angularVelocity.z,
   ];
   return {
     seed,
