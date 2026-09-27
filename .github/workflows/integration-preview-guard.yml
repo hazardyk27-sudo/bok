@@ -56,9 +56,9 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          git fetch origin             feature/slot:refs/remotes/origin/feature/slot             feature/roulette:refs/remotes/origin/feature/roulette             feature/cadi-kazan:refs/remotes/origin/feature/cadi-kazan             feature/idle:refs/remotes/origin/feature/idle             feature/hub:refs/remotes/origin/feature/hub
+          git fetch origin             feature/slot:refs/remotes/origin/feature/slot             feature/roulette:refs/remotes/origin/feature/roulette             feature/cadi-kazan:refs/remotes/origin/feature/cadi-kazan             feature/idle:refs/remotes/origin/feature/idle             feature/hub:refs/remotes/origin/feature/hub             feature/account:refs/remotes/origin/feature/account
 
-          for game in slot roulette cadi-kazan idle hub; do
+          for game in slot roulette cadi-kazan idle hub account; do
             tmp="$(mktemp -d)"
             rmdir "$tmp"
             git worktree add --detach "$tmp" HEAD >/dev/null
