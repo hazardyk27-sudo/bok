@@ -523,6 +523,13 @@ export class AudioManager {
     });
   }
 
+  officeLoss() {
+    // The Office no-prize completion uses the existing negative-result clip.
+    // Keep this semantic entry point separate from bombBust so Office can own
+    // the loss cue without changing Standard/Advanced behavior.
+    this.bombBust();
+  }
+
   cashRegister() {
     if (this.muted) return;
     this.ensure();
