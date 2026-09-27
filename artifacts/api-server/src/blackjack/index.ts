@@ -35,3 +35,5 @@ export * from "./reconnect";
 export * from "./connectionPolicy";
 export * from "./snapshotState";
 export * from "./snapshotRepository";
+export * from "./journal";
+export * from "./journalRepository";
