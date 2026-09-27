@@ -1,0 +1,98 @@
+name: Roulette Part 9 Continuous Lap Diagnostic
+
+on:
+  push:
+    branches:
+      - feature/roulette
+    paths:
+      - '.github/workflows/roulette-part9-continuous-lap-diagnostic.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  diagnostic:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - mode: baseline
+            query: ""
+          - mode: best-candidate
+            query: "&part9Calibration=1&part9LaunchRadius=2.46&part9LaunchSpeedMps=5.5&part9TrackFriction=0.028&part9LaunchGap=0.01&part9SpinFactor=1.0&part9StationaryMode=baseline&part9StationaryRestitution=0.01"
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10.15.0
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - name: Install workspace
+        run: pnpm install --frozen-lockfile
+      - name: Install Chromium
+        run: pnpm exec playwright install --with-deps chromium
+      - name: Build TypeScript project references
+        run: pnpm run typecheck:libs
+      - name: Typecheck roulette physics lab
+        run: pnpm --filter @workspace/roulette-physics-lab run typecheck
+      - name: Start roulette physics lab
+        run: |
+          PORT=4173 BASE_PATH=/ pnpm --filter @workspace/roulette-physics-lab run dev > /tmp/roulette-part9-continuous.log 2>&1 &
+          for attempt in {1..60}; do
+            if curl --fail --silent http://127.0.0.1:4173/ > /dev/null; then exit 0; fi
+            sleep 1
+          done
+          cat /tmp/roulette-part9-continuous.log
+          exit 1
+      - name: Run continuous lap diagnostic
+        env:
+          MODE: ${{ matrix.mode }}
+          EXTRA_QUERY: ${{ matrix.query }}
+        run: |
+          tag="$MODE"
+          ROULETTE_LAB_URL="http://127.0.0.1:4173/?part6Headless=1&part6SeedStartIndex=6&part6SeedCount=1&part6MaxDurationSeconds=20$EXTRA_QUERY" \
+          ROULETTE_PART6_OUTPUT="artifacts/roulette-physics-lab/part9-continuous-$tag.json" \
+          ROULETTE_PART6_TIMEOUT_MS='120000' \
+          ROULETTE_PART6_EXPECTED_SEEDS='1' \
+          node scripts/roulette-part6-runtime.mjs > "part9-continuous-$tag.log" 2>&1
+
+          node -e '
+            const fs=require("fs");
+            const mode=process.env.MODE;
+            const data=JSON.parse(fs.readFileSync("artifacts/roulette-physics-lab/part9-continuous-"+mode+".json","utf8"));
+            const row=(data.telemetry?.results ?? data.seedTelemetry ?? [])[0];
+            if(!row) throw new Error("missing telemetry");
+            console.log("PART9_CONTINUOUS_CASE "+JSON.stringify({
+              mode,
+              seed:row.seed,
+              gatedLapCount:row.lapCount,
+              continuousOuterLapCount:row.continuousOuterLapCount,
+              deltaLaps:Number((row.continuousOuterLapCount-row.lapCount).toFixed(3)),
+              trackDuration:row.trackDuration,
+              settled:row.settled,
+              safetyPassed:row.safetyPassed,
+              escaped:row.escaped,
+              clipping:row.clipping,
+              tunneling:row.tunneling
+            }));
+          '
+
+      - name: Upload evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: roulette-part9-continuous-${{ matrix.mode }}
+          path: |
+            artifacts/roulette-physics-lab/part9-continuous-*.json
+            part9-continuous-*.log
+            /tmp/roulette-part9-continuous.log
+          if-no-files-found: warn
