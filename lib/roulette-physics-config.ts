@@ -54,6 +54,128 @@ export const ROULETTE_EUROPEAN_SEQUENCE = [
 export const ROULETTE_POCKET_COUNT = ROULETTE_EUROPEAN_SEQUENCE.length;
 export const ROULETTE_SEGMENT_DEGREES = 360 / ROULETTE_POCKET_COUNT;
 
+export const ROULETTE_CANONICAL_LAUNCH_SURFACE_QUANTUM = 1e-6;
+
+export type RouletteLaunchVector = {
+  x: number;
+  y: number;
+  z: number;
+};
+
+export type RouletteCanonicalLaunchState = {
+  surfacePoint: RouletteLaunchVector;
+  surfaceNormal: RouletteLaunchVector;
+  position: RouletteLaunchVector;
+  velocity: RouletteLaunchVector;
+  angularVelocity: RouletteLaunchVector;
+};
+
+function canonicalLaunchScalar(value: number) {
+  return (
+    Math.round(value / ROULETTE_CANONICAL_LAUNCH_SURFACE_QUANTUM) *
+    ROULETTE_CANONICAL_LAUNCH_SURFACE_QUANTUM
+  );
+}
+
+export function buildRouletteCanonicalLaunchState({
+  surfacePoint,
+  surfaceNormal,
+  launchSpeed,
+  ballRadius = ROULETTE_BALL_RADIUS,
+  launchClearance = 0.01,
+  spinFactor = 1,
+}: {
+  surfacePoint: RouletteLaunchVector;
+  surfaceNormal: RouletteLaunchVector;
+  launchSpeed: number;
+  ballRadius?: number;
+  launchClearance?: number;
+  spinFactor?: number;
+}): RouletteCanonicalLaunchState {
+  const point = {
+    x: canonicalLaunchScalar(surfacePoint.x),
+    y: canonicalLaunchScalar(surfacePoint.y),
+    z: canonicalLaunchScalar(surfacePoint.z),
+  };
+  const quantizedNormal = {
+    x: canonicalLaunchScalar(surfaceNormal.x),
+    y: canonicalLaunchScalar(surfaceNormal.y),
+    z: canonicalLaunchScalar(surfaceNormal.z),
+  };
+  const normalLength = Math.hypot(
+    quantizedNormal.x,
+    quantizedNormal.y,
+    quantizedNormal.z,
+  );
+  if (normalLength <= 1e-12) {
+    throw new Error("ROULETTE_CANONICAL_LAUNCH_NORMAL_MISSING");
+  }
+  const normal = {
+    x: quantizedNormal.x / normalLength,
+    y: quantizedNormal.y / normalLength,
+    z: quantizedNormal.z / normalLength,
+  };
+
+  const radialLength = Math.hypot(point.x, point.z);
+  if (radialLength <= 1e-12) {
+    throw new Error("ROULETTE_CANONICAL_LAUNCH_RADIAL_MISSING");
+  }
+  const radial = {
+    x: point.x / radialLength,
+    y: 0,
+    z: point.z / radialLength,
+  };
+  const tangentRaw = {
+    x: normal.y * radial.z - normal.z * radial.y,
+    y: normal.z * radial.x - normal.x * radial.z,
+    z: normal.x * radial.y - normal.y * radial.x,
+  };
+  const tangentLength = Math.hypot(
+    tangentRaw.x,
+    tangentRaw.y,
+    tangentRaw.z,
+  );
+  if (tangentLength <= 1e-12) {
+    throw new Error("ROULETTE_CANONICAL_LAUNCH_TANGENT_MISSING");
+  }
+  const tangent = {
+    x: tangentRaw.x / tangentLength,
+    y: tangentRaw.y / tangentLength,
+    z: tangentRaw.z / tangentLength,
+  };
+
+  const clearance = ballRadius + launchClearance;
+  const position = {
+    x: point.x + normal.x * clearance,
+    y: point.y + normal.y * clearance,
+    z: point.z + normal.z * clearance,
+  };
+  const velocity = {
+    x: tangent.x * launchSpeed,
+    y: tangent.y * launchSpeed,
+    z: tangent.z * launchSpeed,
+  };
+  const angularVelocity = {
+    x:
+      (normal.y * velocity.z - normal.z * velocity.y) *
+      (spinFactor / ballRadius),
+    y:
+      (normal.z * velocity.x - normal.x * velocity.z) *
+      (spinFactor / ballRadius),
+    z:
+      (normal.x * velocity.y - normal.y * velocity.x) *
+      (spinFactor / ballRadius),
+  };
+
+  return {
+    surfacePoint: point,
+    surfaceNormal: normal,
+    position,
+    velocity,
+    angularVelocity,
+  };
+}
+
 export const ROULETTE_PHYSICS_CONFIG = {
   schemaVersion: ROULETTE_PHYSICS_SCHEMA_VERSION,
   modelPath: ROULETTE_MODEL_PATH,
