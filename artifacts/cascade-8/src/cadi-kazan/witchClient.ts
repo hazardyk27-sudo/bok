@@ -613,10 +613,19 @@ export class WitchClient {
         if (resultRound) this.telemetry.recordSettlement(data.outcome, resultRound.revealedSafeCount, resultRound.currentMultiplierBps, resultRound.payoutCents);
       }
       this.setFeedback(
-        data.outcome === "BUST" ? "BOMBA! Round BUST oldu." :
-          data.outcome === "COMPLETED" ? "Tüm güvenli alanlar açıldı. Ödül tamamlandı." :
-            data.outcome === "SAFE" ? "Güvenli alan. Cash Out kullanabilir veya devam edebilirsin." :
-              "Bu alan daha önce açıldı.",
+        resultRound?.mode === "OFFICE_MATCH_6"
+          ? data.outcome === "COMPLETED"
+            ? (resultRound.payoutCents > 0 ? "3 aynı karakter bulundu. Ödül wallet’a aktarıldı." : "6 alan tamamlandı. Eşleşme çıkmadı.")
+            : data.outcome === "SAFE"
+              ? "Karakter açıldı. 3 aynı karakteri tamamla."
+              : "Bu alan daha önce açıldı."
+          : data.outcome === "BUST"
+            ? "BOMBA! Round BUST oldu."
+            : data.outcome === "COMPLETED"
+              ? "Tüm güvenli alanlar açıldı. Ödül tamamlandı."
+              : data.outcome === "SAFE"
+                ? "Güvenli alan. Cash Out kullanabilir veya devam edebilirsin."
+                : "Bu alan daha önce açıldı.",
       );
     } catch (error) {
       this.scratchSurfaces.get(cellIndex)?.reset();
