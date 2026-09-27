@@ -93,6 +93,7 @@ function buildAccountMap(
   accounts: readonly BlackjackSettlementAccount[],
 ): Map<BlackjackPlayerId, BlackjackSettlementAccount> {
   const map = new Map<BlackjackPlayerId, BlackjackSettlementAccount>();
+  const seenUserIds = new Set<BlackjackUserId>();
 
   for (const account of accounts) {
     assertNonEmptyId("playerId", account.playerId);
@@ -100,6 +101,9 @@ function buildAccountMap(
 
     if (map.has(account.playerId)) {
       throw new Error("Blackjack settlement contains duplicate player account");
+    }
+    if (seenUserIds.has(account.userId)) {
+      throw new Error("Blackjack settlement contains duplicate user account");
     }
     if (
       account.wallet.userId !== account.userId ||
@@ -109,6 +113,7 @@ function buildAccountMap(
     }
 
     assertBlackjackReservationWalletConsistency(account.wallet, account.book);
+    seenUserIds.add(account.userId);
     map.set(account.playerId, freezeAccount(account));
   }
 
@@ -245,6 +250,14 @@ export function settleBlackjackRound(
   }
   if (round.hands.length === 0) {
     throw new Error("Blackjack settlement requires at least one player hand");
+  }
+  if (round.dealer.cards.length < 2) {
+    throw new Error("Blackjack settlement requires at least two dealer cards");
+  }
+
+  const handIds = new Set(round.hands.map((hand) => hand.handId));
+  if (handIds.size !== round.hands.length) {
+    throw new Error("Blackjack settlement round contains duplicate handId values");
   }
 
   const accountMap = buildAccountMap(accounts);
