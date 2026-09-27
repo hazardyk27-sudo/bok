@@ -13,6 +13,7 @@ on:
           - cadi-kazan
           - idle
           - hub
+          - account
       source_ref:
         description: Isolated feature branch, tag, or commit to promote
         required: true
