@@ -12,7 +12,10 @@ import {
   sampleRouletteVisualTextureColorAt,
 } from '../../../lib/roulette-glb-surface';
 import { buildRouletteCanonicalLaunchState } from '../../../lib/roulette-physics-config';
-import { rouletteTrimeshByteFingerprint } from '../../../lib/roulette-trimesh-fingerprint';
+import {
+  canonicalizeRouletteTrimeshVertices,
+  rouletteTrimeshByteFingerprint,
+} from '../../../lib/roulette-trimesh-fingerprint';
 // PART 5-6 diagnostics derive pocket relief and visible-number mapping from the normalized GLB itself.
 import {
   ROULETTE_ASSET_PATH,
@@ -8488,9 +8491,13 @@ export function Part2SceneViewport({
                 stationaryGroup,
                 wheelRoot,
               );
+              const canonicalStationaryVertices =
+                canonicalizeRouletteTrimeshVertices(
+                  actualStationaryMesh.vertices,
+                );
               part3TrackCollider = world.createCollider(
                 RAPIER.ColliderDesc.trimesh(
-                  actualStationaryMesh.vertices,
+                  canonicalStationaryVertices,
                   actualStationaryMesh.indices,
                   RAPIER.TriMeshFlags.FIX_INTERNAL_EDGES,
                 )
@@ -8513,8 +8520,11 @@ export function Part2SceneViewport({
                 JSON.stringify({
                   vertices: actualStationaryMesh.vertices.length / 3,
                   triangles: actualStationaryMesh.indices.length / 3,
-                  vertexFingerprint: rouletteTrimeshByteFingerprint(
+                  rawVertexFingerprint: rouletteTrimeshByteFingerprint(
                     actualStationaryMesh.vertices,
+                  ),
+                  vertexFingerprint: rouletteTrimeshByteFingerprint(
+                    canonicalStationaryVertices,
                   ),
                   indexFingerprint: rouletteTrimeshByteFingerprint(
                     actualStationaryMesh.indices,
@@ -8778,9 +8788,13 @@ export function Part2SceneViewport({
                    rotorGroup,
                    rotorPivot,
                  );
+                 const canonicalRotorVertices =
+                   canonicalizeRouletteTrimeshVertices(
+                     actualRotorMesh.vertices,
+                   );
                  const exactRotorCollider = world.createCollider(
                    RAPIER.ColliderDesc.trimesh(
-                     actualRotorMesh.vertices,
+                     canonicalRotorVertices,
                      actualRotorMesh.indices,
                      RAPIER.TriMeshFlags.ORIENTED |
         RAPIER.TriMeshFlags.MERGE_DUPLICATE_VERTICES |
@@ -8805,8 +8819,11 @@ export function Part2SceneViewport({
                    JSON.stringify({
                      vertices: actualRotorMesh.vertices.length / 3,
                      triangles: actualRotorMesh.indices.length / 3,
-                     vertexFingerprint: rouletteTrimeshByteFingerprint(
+                     rawVertexFingerprint: rouletteTrimeshByteFingerprint(
                        actualRotorMesh.vertices,
+                     ),
+                     vertexFingerprint: rouletteTrimeshByteFingerprint(
+                       canonicalRotorVertices,
                      ),
                      indexFingerprint: rouletteTrimeshByteFingerprint(
                        actualRotorMesh.indices,
