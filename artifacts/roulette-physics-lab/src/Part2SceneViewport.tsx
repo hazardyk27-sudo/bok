@@ -5578,15 +5578,16 @@ export function Part2SceneViewport({
             launchSurface.point.y,
             launchSurface.point.z,
           ).addScaledVector(launchNormal, launchClearance);
-          // Keep the center on the exact GLB surface, but launch around
-          // the horizontal roulette circumference. Individual mesh facets can
-          // carry tiny tangential normal components that would otherwise tilt
-          // the launch upward and let the ball climb the visible outer rim.
+          // Start from the horizontal roulette circumference, then
+          // remove only the component normal to the exact GLB facet. This is
+          // the closest true surface tangent to a horizontal circular launch.
           const tangent = new THREE.Vector3(
             Math.cos(run.launchAzimuth),
             0,
             -Math.sin(run.launchAzimuth),
-          ).normalize();
+          )
+            .projectOnPlane(launchNormal)
+            .normalize();
           const launchVelocity = tangent.clone().multiplyScalar(run.speed);
           const launchAngularVelocity = launchNormal
             .clone()
