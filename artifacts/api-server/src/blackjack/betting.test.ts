@@ -214,6 +214,57 @@ describe("blackjack betting engine", () => {
     ).toBe("RELEASED");
   });
 
+  it("makes UNDO retry idempotent even when an earlier chip is still active", () => {
+    const initial = setup();
+    const first = placeBlackjackBetChip(
+      initial.wallet,
+      initial.book,
+      initial.position,
+      {
+        reservationId: "chip-a",
+        reserveTransactionId: "tx-a",
+        chipValueCents: 100_000,
+        nowMs: 100,
+      },
+    );
+    const second = placeBlackjackBetChip(
+      first.wallet,
+      first.book,
+      first.position,
+      {
+        reservationId: "chip-b",
+        reserveTransactionId: "tx-b",
+        chipValueCents: 200_000,
+        nowMs: 101,
+      },
+    );
+    const undone = undoLastBlackjackBetChip(
+      second.wallet,
+      second.book,
+      second.position,
+      {
+        expectedReservationId: "chip-b",
+        releaseTransactionId: "tx-undo-b",
+        nowMs: 102,
+      },
+    );
+    const replay = undoLastBlackjackBetChip(
+      undone.wallet,
+      undone.book,
+      undone.position,
+      {
+        expectedReservationId: "chip-b",
+        releaseTransactionId: "tx-undo-b",
+        nowMs: 999,
+      },
+    );
+
+    expect(replay.wallet).toBe(undone.wallet);
+    expect(replay.book).toBe(undone.book);
+    expect(replay.position).toBe(undone.position);
+    expect(getBlackjackBetTotalCents(replay.position)).toBe(100_000);
+  });
+
   it("CLEAR releases every active chip while keeping immutable history", () => {
     const initial = setup();
     const first = placeBlackjackBetChip(
@@ -309,6 +360,27 @@ describe("blackjack betting engine", () => {
     expect(() => markBlackjackBetReady(initial.position, 10_000)).toThrow(
       /window is closed/,
     );
+  });
+
+  it("rejects hand binding through another user's reservation book", () => {
+    const initial = setup();
+    const placed = placeBlackjackBetChip(
+      initial.wallet,
+      initial.book,
+      initial.position,
+      {
+        reservationId: "chip-owner",
+        reserveTransactionId: "tx-owner",
+        chipValueCents: 100_000,
+        nowMs: 100,
+      },
+    );
+    const ready = markBlackjackBetReady(placed.position, 101);
+    const foreignBook = createBlackjackReservationBook("user-2");
+
+    expect(() =>
+      bindBlackjackBetPositionToHand(foreignBook, ready, "hand-1"),
+    ).toThrow(/owner mismatch/);
   });
 
   it("converts only READY/LOCKED positions into initial-deal participants", () => {
