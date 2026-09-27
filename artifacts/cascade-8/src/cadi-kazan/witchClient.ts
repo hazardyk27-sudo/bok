@@ -3,7 +3,7 @@ import { getScratchCellLayerMarkup, getScratchCellPresentation } from "./scratch
 import { triggerScratchHaptic } from "./scratch/ScratchFeedback";
 import { ScratchTelemetry } from "./scratch/ScratchTelemetry";
 import { AudioManager } from "./AudioManager";
-import { OFFICE_MATCH_SYMBOLS, type OfficeMatchSymbolId } from "./office/officeCardConfig";
+import { OFFICE_CARD_ART_URL, OFFICE_MATCH_SYMBOLS, type OfficeMatchSymbolId } from "./office/officeCardConfig";
 
 type CadiKazanMode = "STANDARD" | "ADVANCED" | "OFFICE_MATCH_6";
 type CadiKazanStatus = "ACTIVE" | "CASHED_OUT" | "BUST" | "COMPLETED";
@@ -215,18 +215,7 @@ export const CADI_KAZAN_MARKUP = `
           </div>
 
           <div class="witch-office-card-art" aria-hidden="true">
-            <section class="witch-office-left">
-              <strong class="witch-office-title"><span>The</span><span>Office</span></strong>
-              <div class="witch-office-parkour">
-                <span class="witch-office-parkour-bubble">Parkour!</span>
-                <div class="witch-office-parkour-line">⌁</div>
-              </div>
-              <small>3 AYNI KARAKTERİ BUL</small>
-            </section>
-            <section class="witch-office-rule">
-              <strong>3 AYNI = ÖDÜL</strong>
-              <span>2X · 5X · 10X · 20X · <b>100X</b></span>
-            </section>
+            <img class="witch-office-card-master" src="${OFFICE_CARD_ART_URL}" alt="" draggable="false">
           </div>
 
           <header class="witch-ticket-header">
