@@ -5785,6 +5785,46 @@ export function Part2SceneViewport({
             canonicalLaunchState.angularVelocity.z,
           );
 
+          if (
+            part11Calibration &&
+            part6Params.get('part11DirectWallHug') === '1'
+          ) {
+            // PART 11 test-only launch: the 0.70-scale ball begins tangent to
+            // both the outer-race floor and the steep outer wall, with no
+            // radial launch component. Production never enables this flag.
+            const wallHugCenterRadius = 2.51636415;
+            const wallHugCenterY = -0.24343675;
+            launchPosition.set(
+              Math.sin(activeLaunchAzimuth) * wallHugCenterRadius,
+              wallHugCenterY,
+              Math.cos(activeLaunchAzimuth) * wallHugCenterRadius,
+            );
+            launchVelocity.set(
+              Math.cos(activeLaunchAzimuth) * activeLaunchSpeed,
+              0,
+              -Math.sin(activeLaunchAzimuth) * activeLaunchSpeed,
+            );
+            const supportNormal = part2ChannelNormalAt(
+              2.54,
+              activeLaunchAzimuth,
+            );
+            launchAngularVelocity
+              .copy(supportNormal)
+              .cross(launchVelocity)
+              .multiplyScalar(activePart11SpinFactor / BALL_RADIUS);
+            console.info(
+              'PART11_DIRECT_WALL_HUG_START',
+              JSON.stringify({
+                seed: run.seed,
+                centerRadius: wallHugCenterRadius,
+                centerY: wallHugCenterY,
+                ballRadius: BALL_RADIUS,
+                radialVelocity: 0,
+                launchSpeed: activeLaunchSpeed,
+              }),
+            );
+          }
+
           // Flush the previous seed's dynamic state and contact manifold before
           // applying this seed's launch. No impulse/force is used.
           activeBallBody.setLinvel({ x: 0, y: 0, z: 0 }, true);
