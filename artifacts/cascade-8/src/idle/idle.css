@@ -9113,3 +9113,16 @@ body.businesses-route {
     height: 15px;
   }
 }
+
+
+/* 2026-09-27 — Part 23: mobile accrued alignment */
+@media (max-width: 760px) {
+  .route-shell.is-businesses-page .business-card-balance-heading {
+    justify-content: flex-start;
+  }
+
+  .route-shell.is-businesses-page .business-card-balance-heading > span,
+  .route-shell.is-businesses-page .business-card-balance > strong {
+    margin-left: 10px;
+  }
+}

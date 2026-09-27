@@ -1666,3 +1666,12 @@ describe("Businesses Part 22 desktop card geometry", () => {
     expect(idleCssSource).toContain("white-space: nowrap");
   });
 });
+
+
+describe("Businesses Part 23 mobile accrued alignment", () => {
+  it("aligns mobile accrued label and value with the hourly-income stat content", () => {
+    expect(idleCssSource).toContain("/* 2026-09-27 — Part 23: mobile accrued alignment */");
+    expect(idleCssSource).toContain("@media (max-width: 760px)");
+    expect(idleCssSource).toContain("margin-left: 10px");
+  });
+});
