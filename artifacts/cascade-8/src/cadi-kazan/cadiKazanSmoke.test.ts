@@ -10,6 +10,10 @@ const witchClientSource = readFileSync(
   fileURLToPath(new URL("./witchClient.ts", import.meta.url)),
   "utf8",
 );
+const visualLockSource = readFileSync(
+  fileURLToPath(new URL("./witch.visual-lock.css", import.meta.url)),
+  "utf8",
+);
 
 describe("cadi kazan route smoke contract", () => {
   it("keeps Cadı Kazan fully mounted inside its owned route module", () => {
@@ -67,6 +71,23 @@ describe("cadi kazan route smoke contract", () => {
     expect(witchClientSource).toContain("officeSymbolPresentation");
     expect(witchClientSource).toContain("witch-office-result-art");
     expect(witchClientSource).toContain("officePresentation.artworkUrl");
+  });
+
+
+  it("uses the supplied Office sticker language for preview and live scratch coating", () => {
+    expect(witchClientSource).toContain("OFFICE_SCRATCH_COVER_URL");
+    expect(witchClientSource).toContain("that's");
+    expect(witchClientSource).toContain("what");
+    expect(witchClientSource).toContain("she said");
+    expect(witchClientSource).toContain("round.mode === \"OFFICE_MATCH_6\"");
+    expect(witchClientSource).toContain("? OFFICE_SCRATCH_COVER_URL");
+  });
+
+  it("locks The Office ticket to the supplied black 3x2 reference composition", () => {
+    expect(visualLockSource).toContain("PASS 12 — THE OFFICE reference-fit ticket");
+    expect(visualLockSource).toContain("aspect-ratio: 2.08 / 1");
+    expect(visualLockSource).toContain("grid-template-columns: repeat(3");
+    expect(visualLockSource).toContain("grid-template-rows: repeat(2");
   });
 
 });
