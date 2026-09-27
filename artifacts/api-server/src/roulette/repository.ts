@@ -119,6 +119,7 @@ export class RouletteRepository {
   private leaseClient?: LeaderClient;
   private isLeader = false;
   private started = false;
+  private tickInFlight = false;
 
   async start() {
     if (this.started) return;
@@ -129,8 +130,16 @@ export class RouletteRepository {
     }
     await this.tryAcquireLeadership();
     await this.loadOrCreateRound();
-    this.scheduler = setInterval(() => void this.tick(), 250);
-    this.leaseTimer = setInterval(() => void this.tryAcquireLeadership(), 5_000);
+    this.scheduler = setInterval(() => {
+      void this.tick().catch((error) => {
+        console.error("[roulette] scheduled tick failed", error);
+      });
+    }, 250);
+    this.leaseTimer = setInterval(() => {
+      void this.tryAcquireLeadership().catch((error) => {
+        console.error("[roulette] leadership check failed", error);
+      });
+    }, 5_000);
   }
 
   async stop() {
@@ -437,34 +446,40 @@ export class RouletteRepository {
   }
 
   private async tick() {
-    if (isRouletteRoundGenerationPaused()) return;
-    if (!this.isLeader) return;
-    const round = this.currentRound ?? await this.loadOrCreateRound();
-    const now = new Date();
-    if (now.getTime() >= round.intermissionUntil.getTime()) {
-      await this.createRound(round.sequence + 1);
-      return;
-    }
-    const nextPhase = this.phaseAt(round, now);
-    if (nextPhase !== round.phase) {
-      const previous = round.phase;
-      round.phase = nextPhase;
-      round.version += 1;
-      round.updatedAt = now;
-      await pool.query("UPDATE roulette_rounds SET phase = $1, version = $2, updated_at = $3 WHERE id = $4 AND version = $5", [nextPhase, round.version, now, round.id, round.version - 1]);
-      await this.recordEvent(round, "PHASE_CHANGED", { from: previous, to: nextPhase });
-      if (nextPhase === "SETTLING") await this.settleRound(round);
-      this.publish(nextPhase === "SETTLING" ? "settled" : "phase", round);
-      return;
-    }
-    const previousRevealCount = this.revealedCount(round, new Date(now.getTime() - 260));
-    const currentRevealCount = this.revealedCount(round, now);
-    if (currentRevealCount > previousRevealCount && round.phase === "MULTIPLIER_REVEAL") {
-      round.version += 1;
-      round.updatedAt = now;
-      await pool.query("UPDATE roulette_rounds SET version = $1, updated_at = $2 WHERE id = $3", [round.version, now, round.id]);
-      await this.recordEvent(round, "MULTIPLIER_REVEALED", { revealIndex: currentRevealCount - 1 });
-      this.publish("reveal", round);
+    if (this.tickInFlight) return;
+    this.tickInFlight = true;
+    try {
+      if (isRouletteRoundGenerationPaused()) return;
+      if (!this.isLeader) return;
+      const round = this.currentRound ?? await this.loadOrCreateRound();
+      const now = new Date();
+      if (now.getTime() >= round.intermissionUntil.getTime()) {
+        await this.createRound(round.sequence + 1);
+        return;
+      }
+      const nextPhase = this.phaseAt(round, now);
+      if (nextPhase !== round.phase) {
+        const previous = round.phase;
+        round.phase = nextPhase;
+        round.version += 1;
+        round.updatedAt = now;
+        await pool.query("UPDATE roulette_rounds SET phase = $1, version = $2, updated_at = $3 WHERE id = $4 AND version = $5", [nextPhase, round.version, now, round.id, round.version - 1]);
+        await this.recordEvent(round, "PHASE_CHANGED", { from: previous, to: nextPhase });
+        if (nextPhase === "SETTLING") await this.settleRound(round);
+        this.publish(nextPhase === "SETTLING" ? "settled" : "phase", round);
+        return;
+      }
+      const previousRevealCount = this.revealedCount(round, new Date(now.getTime() - 260));
+      const currentRevealCount = this.revealedCount(round, now);
+      if (currentRevealCount > previousRevealCount && round.phase === "MULTIPLIER_REVEAL") {
+        round.version += 1;
+        round.updatedAt = now;
+        await pool.query("UPDATE roulette_rounds SET version = $1, updated_at = $2 WHERE id = $3", [round.version, now, round.id]);
+        await this.recordEvent(round, "MULTIPLIER_REVEALED", { revealIndex: currentRevealCount - 1 });
+        this.publish("reveal", round);
+      }
+    } finally {
+      this.tickInFlight = false;
     }
   }
 

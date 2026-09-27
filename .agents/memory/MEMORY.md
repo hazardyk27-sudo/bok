@@ -12,6 +12,7 @@
 - [Transient result slots](transient-result-slots.md) — optional result panels need reserved layout height so surrounding controls do not shift between states.
 - [Bonus flow state ownership](bonus-flow-state-ownership.md) — base Auto consumption owns the Auto counter; bonus retriggers never do, and manual stop clears pending resume.
 - [Roulette snapshot refresh](roulette-snapshot-refresh.md) — session-specific REST refreshes after websocket phases must be edge-triggered, not run on every snapshot.
+- [Roulette scheduler single-flight](roulette-scheduler-single-flight.md) — serialize async round ticks and catch scheduler errors so a duplicate insert cannot take wallet APIs offline.
 - [Roulette animation synchronization](roulette-animation-sync.md) — wheel/ball animation progress follows the server phase clock; the server result always controls the landing pocket.
 - [Mobile browser matrix](mobile-browser-matrix.md) — Android Chromium can run with the workspace binary; WebKit needs native host libraries and should remain an optional gated profile.
 - [Roulette safe-area coverage](roulette-safe-area.md) — expose env fallbacks through custom properties so tests can emulate insets and keep result overlays above the home indicator.
