@@ -107,4 +107,15 @@ describe("cadi kazan route smoke contract", () => {
     expect(visualLockSource).toContain("aspect-ratio: 2.08 / 1");
   });
 
+
+  it("clears legacy Office ticket offsets and keeps the purchased lacquer interactive", () => {
+    expect(visualLockSource).toContain("PASS 14 — THE OFFICE table registration");
+    expect(visualLockSource).toContain("top: auto !important");
+    expect(visualLockSource).toContain("left: auto !important");
+    expect(visualLockSource).toContain("transform: none !important");
+    expect(visualLockSource).toContain(".witch-ticket:not(.is-preview) .witch-scratch-layer-lacquer");
+    expect(visualLockSource).toContain("pointer-events: auto !important");
+    expect(visualLockSource).toContain("touch-action: none !important");
+  });
+
 });
