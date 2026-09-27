@@ -1,4 +1,6 @@
-export const CADI_KAZAN_MODES = ["STANDARD", "ADVANCED"] as const;
+import { OFFICE_MATCH_CELL_COUNT, OFFICE_MATCH_SYMBOLS, type OfficeMatchSymbolId } from "./officeMatch";
+
+export const CADI_KAZAN_MODES = ["STANDARD", "ADVANCED", "OFFICE_MATCH_6"] as const;
 export type CadiKazanMode = (typeof CADI_KAZAN_MODES)[number];
 
 export const ADVANCED_ALARM_OPTIONS = [1, 3, 5, 7, 10] as const;
@@ -59,7 +61,9 @@ export const ADVANCED_PAYOUT_TABLES: Readonly<Record<AdvancedAlarmCount, Advance
 };
 
 export function getCellCount(mode: CadiKazanMode) {
-  return mode === "STANDARD" ? CADI_KAZAN_STANDARD_CELL_COUNT : CADI_KAZAN_ADVANCED_CELL_COUNT;
+  if (mode === "STANDARD") return CADI_KAZAN_STANDARD_CELL_COUNT;
+  if (mode === "ADVANCED") return CADI_KAZAN_ADVANCED_CELL_COUNT;
+  return OFFICE_MATCH_CELL_COUNT;
 }
 
 export function getSafeCellCount(mode: CadiKazanMode, alarmCount: number) {
@@ -67,7 +71,7 @@ export function getSafeCellCount(mode: CadiKazanMode, alarmCount: number) {
 }
 
 export function getCashoutMultiplierBps(mode: CadiKazanMode, alarmCount: number, revealedSafeCount: number) {
-  if (revealedSafeCount <= 0) return 0;
+  if (revealedSafeCount <= 0 || mode === "OFFICE_MATCH_6") return 0;
   if (mode === "STANDARD") return STANDARD_CASHOUT_MULTIPLIERS_BPS[revealedSafeCount - 1] ?? 0;
   if (!ADVANCED_ALARM_OPTIONS.includes(alarmCount as AdvancedAlarmCount)) return 0;
   return ADVANCED_PAYOUT_TABLES[alarmCount as AdvancedAlarmCount].multipliersBps[revealedSafeCount - 1] ?? 0;
@@ -76,9 +80,11 @@ export function getCashoutMultiplierBps(mode: CadiKazanMode, alarmCount: number,
 export function getMaxSafeStakeCents(mode: CadiKazanMode, alarmCount: number) {
   const maxMultiplierBps = mode === "STANDARD"
     ? Math.max(...STANDARD_CASHOUT_MULTIPLIERS_BPS)
-    : ADVANCED_ALARM_OPTIONS.includes(alarmCount as AdvancedAlarmCount)
-      ? Math.max(...ADVANCED_PAYOUT_TABLES[alarmCount as AdvancedAlarmCount].multipliersBps)
-      : ADVANCED_MAX_MULTIPLIER_BPS;
+    : mode === "OFFICE_MATCH_6"
+      ? Math.max(...OFFICE_MATCH_SYMBOLS.map((symbol) => symbol.multiplierBps))
+      : ADVANCED_ALARM_OPTIONS.includes(alarmCount as AdvancedAlarmCount)
+        ? Math.max(...ADVANCED_PAYOUT_TABLES[alarmCount as AdvancedAlarmCount].multipliersBps)
+        : ADVANCED_MAX_MULTIPLIER_BPS;
   const maxMultiplier = Math.max(1, maxMultiplierBps / 100);
   return Math.floor(CADI_KAZAN_MAX_SAFE_MONEY_CENTS / maxMultiplier);
 }
@@ -89,6 +95,25 @@ export function getCashoutPayoutCents(stakeCents: number, multiplierBps: number)
 
 export function getVisibleBombCells(status: CadiKazanStatus, bombIndices: number[]) {
   return status === "ACTIVE" ? [] : [...bombIndices];
+}
+
+export type CadiKazanOfficeVisibleCell = {
+  index: number;
+  symbolId: OfficeMatchSymbolId;
+};
+
+export function getVisibleOfficeCells(
+  status: CadiKazanStatus,
+  revealedCells: number[],
+  officeCells: OfficeMatchSymbolId[],
+): CadiKazanOfficeVisibleCell[] {
+  if (officeCells.length === 0) return [];
+  const visible = status === "ACTIVE"
+    ? new Set(revealedCells)
+    : new Set(officeCells.map((_, index) => index));
+  return officeCells.flatMap((symbolId, index) => (
+    visible.has(index) ? [{ index, symbolId }] : []
+  ));
 }
 
 export type CadiKazanRoundSnapshot = {
@@ -104,6 +129,7 @@ export type CadiKazanRoundSnapshot = {
   status: CadiKazanStatus;
   payoutCents: number;
   revealedBombCells: number[];
+  revealedOfficeCells: CadiKazanOfficeVisibleCell[];
   createdAt: string;
   updatedAt: string;
 };

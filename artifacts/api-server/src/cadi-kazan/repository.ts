@@ -2,20 +2,26 @@ import { randomInt, randomUUID } from "node:crypto";
 import { pool, type PoolClient } from "@workspace/db";
 import { INITIAL_SHARED_BALANCE_CENTS } from "../platform/wallet";
 import {
+  OFFICE_MATCH_SYMBOLS,
+  createRandomOfficeMatchTicket,
+  resolveOfficeMatchReveal,
+  type OfficeMatchSymbolId,
+} from "./officeMatch";
+import {
   ADVANCED_ALARM_OPTIONS,
-  CADI_KAZAN_ADVANCED_CELL_COUNT,
   CADI_KAZAN_MIN_STAKE_CENTS,
   CADI_KAZAN_MODES,
-  CADI_KAZAN_STANDARD_CELL_COUNT,
   type CadiKazanMode,
   type CadiKazanRoundSnapshot,
   type CadiKazanState,
   type CadiKazanStatus,
   getCashoutMultiplierBps,
   getCashoutPayoutCents,
+  getCellCount,
   getMaxSafeStakeCents,
   getSafeCellCount,
   getVisibleBombCells,
+  getVisibleOfficeCells,
 } from "./types";
 
 type CadiRoundRow = {
@@ -26,6 +32,7 @@ type CadiRoundRow = {
   cell_count: number;
   stake_cents: number;
   bomb_indices: unknown;
+  office_cells: unknown;
   revealed_cells: unknown;
   revealed_safe_count: number;
   current_multiplier_bps: number;
@@ -42,6 +49,12 @@ type WalletRow = { balance_cents: number };
 type CadiActionRow = { session_id: string; round_id: string; kind: string };
 
 const safeNumberArray = (value: unknown) => (Array.isArray(value) ? value.map(Number).filter(Number.isInteger) : []);
+const officeSymbolIds = new Set<OfficeMatchSymbolId>(OFFICE_MATCH_SYMBOLS.map((symbol) => symbol.id));
+const safeOfficeSymbolArray = (value: unknown): OfficeMatchSymbolId[] => (
+  Array.isArray(value)
+    ? value.filter((item): item is OfficeMatchSymbolId => typeof item === "string" && officeSymbolIds.has(item as OfficeMatchSymbolId))
+    : []
+);
 const asIso = (value: Date) => value.toISOString();
 
 let bigMoneyStorageReady: Promise<void> | null = null;
@@ -49,6 +62,7 @@ let bigMoneyStorageReady: Promise<void> | null = null;
 async function ensureBigMoneyStorage() {
   if (bigMoneyStorageReady) return bigMoneyStorageReady;
   bigMoneyStorageReady = (async () => {
+    await pool.query("ALTER TABLE cadi_kazan_rounds ADD COLUMN IF NOT EXISTS office_cells JSONB");
     const expected = new Map([
       ["roulette_wallets.balance_cents", "BIGINT"],
       ["cadi_kazan_rounds.stake_cents", "BIGINT"],
@@ -109,6 +123,7 @@ function validateRoundInput(input: {
   if (input.mode === "ADVANCED" && !ADVANCED_ALARM_OPTIONS.includes(input.alarmCount as (typeof ADVANCED_ALARM_OPTIONS)[number])) {
     throw new Error("INVALID_ADVANCED_ALARM_COUNT");
   }
+  if (input.mode === "OFFICE_MATCH_6" && input.alarmCount !== 0) throw new Error("OFFICE_MATCH_REQUIRES_ZERO_BOMBS");
 }
 
 function chooseBombIndices(cellCount: number, alarmCount: number) {
@@ -119,6 +134,7 @@ function chooseBombIndices(cellCount: number, alarmCount: number) {
 
 function toSnapshot(row: CadiRoundRow): CadiKazanRoundSnapshot {
   const bombIndices = safeNumberArray(row.bomb_indices);
+  const officeCells = safeOfficeSymbolArray(row.office_cells);
   const revealedCells = safeNumberArray(row.revealed_cells);
   return {
     id: row.id,
@@ -133,6 +149,7 @@ function toSnapshot(row: CadiRoundRow): CadiKazanRoundSnapshot {
     status: row.status,
     payoutCents: Number(row.payout_cents),
     revealedBombCells: getVisibleBombCells(row.status, bombIndices),
+    revealedOfficeCells: getVisibleOfficeCells(row.status, revealedCells, officeCells),
     createdAt: asIso(row.created_at),
     updatedAt: asIso(row.updated_at),
   };
@@ -191,7 +208,7 @@ export class CadiKazanRepository {
     await ensureBigMoneyStorage();
     validateRoundInput(input);
     if (!/^[a-zA-Z0-9_-]{12,100}$/.test(input.idempotencyKey)) throw new Error("INVALID_IDEMPOTENCY_KEY");
-    const cellCount = input.mode === "STANDARD" ? CADI_KAZAN_STANDARD_CELL_COUNT : CADI_KAZAN_ADVANCED_CELL_COUNT;
+    const cellCount = getCellCount(input.mode);
     const client = await pool.connect();
     try {
       await client.query("BEGIN");
@@ -213,17 +230,29 @@ export class CadiKazanRepository {
       if (balanceCents < input.stakeCents) throw new Error("INSUFFICIENT_CADI_KAZAN_CREDITS");
 
       const roundId = randomUUID();
-      const bombIndices = chooseBombIndices(cellCount, input.alarmCount);
+      const officeTicket = input.mode === "OFFICE_MATCH_6" ? createRandomOfficeMatchTicket() : null;
+      const bombIndices = input.mode === "OFFICE_MATCH_6" ? [] : chooseBombIndices(cellCount, input.alarmCount);
+      const officeCells = officeTicket?.cells ?? null;
       await client.query(
         "UPDATE roulette_wallets SET balance_cents = balance_cents - $1, updated_at = now() WHERE session_id = $2",
         [input.stakeCents, sessionId],
       );
       const result = await client.query<CadiRoundRow>(
         `INSERT INTO cadi_kazan_rounds
-          (id, session_id, mode, alarm_count, cell_count, stake_cents, bomb_indices, revealed_cells, revealed_safe_count, current_multiplier_bps, status, payout_cents, start_idempotency_key)
-         VALUES ($1, $2, $3, $4, $5, $6, $7::jsonb, '[]'::jsonb, 0, 0, 'ACTIVE', 0, $8)
+          (id, session_id, mode, alarm_count, cell_count, stake_cents, bomb_indices, office_cells, revealed_cells, revealed_safe_count, current_multiplier_bps, status, payout_cents, start_idempotency_key)
+         VALUES ($1, $2, $3, $4, $5, $6, $7::jsonb, $8::jsonb, '[]'::jsonb, 0, 0, 'ACTIVE', 0, $9)
          RETURNING *`,
-        [roundId, sessionId, input.mode, input.alarmCount, cellCount, input.stakeCents, JSON.stringify(bombIndices), input.idempotencyKey],
+        [
+          roundId,
+          sessionId,
+          input.mode,
+          input.alarmCount,
+          cellCount,
+          input.stakeCents,
+          JSON.stringify(bombIndices),
+          officeCells ? JSON.stringify(officeCells) : null,
+          input.idempotencyKey,
+        ],
       );
       await client.query(
         "INSERT INTO cadi_kazan_ledger (id, session_id, round_id, kind, amount_cents, idempotency_key) VALUES ($1, $2, $3, 'STAKE_DEBIT', $4, $5)",
@@ -275,6 +304,63 @@ export class CadiKazanRepository {
 
       const bombIndices = safeNumberArray(row.bomb_indices);
       const nextRevealedCells = [...revealedCells, cellIndex].sort((a, b) => a - b);
+
+      if (row.mode === "OFFICE_MATCH_6") {
+        const officeCells = safeOfficeSymbolArray(row.office_cells);
+        if (officeCells.length !== row.cell_count) throw new Error("INVALID_OFFICE_BOARD_STORAGE");
+
+        const resolution = resolveOfficeMatchReveal(officeCells, nextRevealedCells);
+        const revealedSafeCount = nextRevealedCells.length;
+        const payoutCents = resolution.win
+          ? getCashoutPayoutCents(Number(row.stake_cents), resolution.multiplierBps)
+          : 0;
+        const nextStatus: CadiKazanStatus = resolution.completed ? "COMPLETED" : "ACTIVE";
+        const updated = await client.query<CadiRoundRow>(
+          `UPDATE cadi_kazan_rounds
+           SET revealed_cells = $1::jsonb,
+               revealed_safe_count = $2,
+               current_multiplier_bps = $3,
+               status = $4,
+               payout_cents = $5,
+               updated_at = now(),
+               completed_at = CASE WHEN $6 THEN now() ELSE completed_at END
+           WHERE id = $7
+           RETURNING *`,
+          [
+            JSON.stringify(nextRevealedCells),
+            revealedSafeCount,
+            resolution.multiplierBps,
+            nextStatus,
+            payoutCents,
+            resolution.completed,
+            roundId,
+          ],
+        );
+        await client.query(
+          "INSERT INTO cadi_kazan_ledger (id, session_id, round_id, kind, amount_cents, idempotency_key) VALUES ($1, $2, $3, $4, 0, $5)",
+          [randomUUID(), sessionId, roundId, `REVEAL:${cellIndex}`, idempotencyKey],
+        );
+
+        let balanceCents = await ensureWalletForUpdate(client, sessionId);
+        if (resolution.win && payoutCents > 0) {
+          await client.query(
+            "UPDATE roulette_wallets SET balance_cents = balance_cents + $1, updated_at = now() WHERE session_id = $2",
+            [payoutCents, sessionId],
+          );
+          await client.query(
+            "INSERT INTO cadi_kazan_ledger (id, session_id, round_id, kind, amount_cents, idempotency_key) VALUES ($1, $2, $3, 'PAYOUT_CREDIT', $4, $5)",
+            [randomUUID(), sessionId, roundId, payoutCents, `payout:${roundId}`],
+          );
+          balanceCents += payoutCents;
+        }
+
+        await client.query("COMMIT");
+        return {
+          outcome: resolution.completed ? "COMPLETED" as const : "SAFE" as const,
+          state: stateFrom(sessionId, balanceCents, updated.rows[0]),
+        };
+      }
+
       if (bombIndices.includes(cellIndex)) {
         const busted = await client.query<CadiRoundRow>(
           "UPDATE cadi_kazan_rounds SET revealed_cells = $1::jsonb, current_multiplier_bps = 0, payout_cents = 0, status = 'BUST', updated_at = now(), completed_at = now() WHERE id = $2 RETURNING *",
@@ -366,6 +452,7 @@ export class CadiKazanRepository {
         await client.query("COMMIT");
         return { outcome: "NOOP" as const, state: stateFrom(sessionId, balanceCents, row) };
       }
+      if (row.mode === "OFFICE_MATCH_6") throw new Error("OFFICE_MATCH_NO_CASH_OUT");
       if (Number(row.revealed_safe_count) < 1 || Number(row.current_multiplier_bps) <= 0) throw new Error("CASH_OUT_REQUIRES_SAFE_REVEAL");
        const payoutCents = getCashoutPayoutCents(Number(row.stake_cents), Number(row.current_multiplier_bps));
       const updated = await client.query<CadiRoundRow>(

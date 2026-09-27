@@ -10,6 +10,7 @@ export const cadiKazanRounds = pgTable(
     cellCount: integer("cell_count").notNull(),
     stakeCents: bigint("stake_cents", { mode: "number" }).notNull(),
     bombIndices: jsonb("bomb_indices").notNull(),
+    officeCells: jsonb("office_cells"),
     revealedCells: jsonb("revealed_cells").notNull().default([]),
     revealedSafeCount: integer("revealed_safe_count").notNull().default(0),
     currentMultiplierBps: integer("current_multiplier_bps").notNull().default(0),
