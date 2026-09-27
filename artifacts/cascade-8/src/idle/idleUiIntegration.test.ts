@@ -1567,3 +1567,26 @@ describe("Businesses Part 16 compact desktop card flow", () => {
     expect(idleCssSource).toContain("margin-top: 0");
   });
 });
+
+
+describe("Businesses Part 17 hierarchy readability", () => {
+  it("renders the business identity inside the card content below the hero image", () => {
+    const contentIndex = componentsSource.indexOf('<div class="business-card-content">');
+    const identityIndex = componentsSource.indexOf('<div class="business-card-identity-overlay">');
+    expect(contentIndex).toBeGreaterThanOrEqual(0);
+    expect(identityIndex).toBeGreaterThan(contentIndex);
+  });
+
+  it("uses stronger progression and card metric sizing", () => {
+    expect(idleCssSource).toContain("/* 2026-09-27 — Part 17: stronger card hierarchy and readable business metrics */");
+    expect(idleCssSource).toContain("height: 11px");
+    expect(idleCssSource).toContain("font-size: 20px");
+    expect(idleCssSource).toContain("font-size: 12px");
+  });
+
+  it("keeps the moved identity row in normal card flow instead of overlaying the image", () => {
+    expect(idleCssSource).toContain(".route-shell.is-businesses-page .business-card-identity-overlay {");
+    expect(idleCssSource).toContain("position: static");
+    expect(idleCssSource).toContain("border-bottom: 1px solid rgba(111, 151, 255, .09)");
+  });
+});
