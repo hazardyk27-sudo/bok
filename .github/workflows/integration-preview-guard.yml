@@ -37,7 +37,7 @@ jobs:
       - name: Build Cascade 8 hub
         run: pnpm --filter @workspace/cascade-8 run build
 
-      - name: Four-world integration regression
+      - name: Multi-game integration regression
         run: >
           PORT=4173 BASE_PATH=/
           pnpm --filter @workspace/cascade-8 exec vitest run
@@ -48,6 +48,7 @@ jobs:
           src/rouletteGeometry.test.ts
           src/roulettePhysicsConfig.test.ts
           src/idle/idleUiIntegration.test.ts
+          src/blackjack/blackjackSmoke.test.ts
 
       - name: Backend isolation regression
         run: pnpm --filter @workspace/api-server exec vitest run src/backendIsolation.test.ts
@@ -56,9 +57,9 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          git fetch origin             feature/slot:refs/remotes/origin/feature/slot             feature/roulette:refs/remotes/origin/feature/roulette             feature/cadi-kazan:refs/remotes/origin/feature/cadi-kazan             feature/idle:refs/remotes/origin/feature/idle             feature/hub:refs/remotes/origin/feature/hub             feature/account:refs/remotes/origin/feature/account
+          git fetch origin             feature/slot:refs/remotes/origin/feature/slot             feature/roulette:refs/remotes/origin/feature/roulette             feature/cadi-kazan:refs/remotes/origin/feature/cadi-kazan             feature/idle:refs/remotes/origin/feature/idle             feature/hub:refs/remotes/origin/feature/hub             feature/account:refs/remotes/origin/feature/account             feature/blackjack:refs/remotes/origin/feature/blackjack
 
-          for game in slot roulette cadi-kazan idle hub account; do
+          for game in slot roulette cadi-kazan idle hub account blackjack; do
             tmp="$(mktemp -d)"
             rmdir "$tmp"
             git worktree add --detach "$tmp" HEAD >/dev/null
