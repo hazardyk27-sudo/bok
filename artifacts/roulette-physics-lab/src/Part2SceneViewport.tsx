@@ -41,6 +41,7 @@ import {
   ROULETTE_RAW_SOURCE_CENTER,
   ROULETTE_ROTATION_AXIS,
   ROULETTE_ROTOR_ANGULAR_SPEED,
+  ROULETTE_ROTOR_FRICTION,
   ROULETTE_WORLD_UNITS_PER_METER,
   ROULETTE_Y_ORIGIN,
 } from './roulette-scene-config';
@@ -8922,7 +8923,7 @@ export function Part2SceneViewport({
         RAPIER.TriMeshFlags.DELETE_DEGENERATE_TRIANGLES |
         RAPIER.TriMeshFlags.DELETE_DUPLICATE_TRIANGLES,
                    )
-                     .setFriction(0.42)
+                     .setFriction(ROULETTE_ROTOR_FRICTION)
                      .setRestitution(0.02)
                      .setCollisionGroups(
                        ROTOR_COLLISION_GROUP |
