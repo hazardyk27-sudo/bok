@@ -37,6 +37,9 @@ jobs:
       - name: Build Cascade 8 hub
         run: pnpm --filter @workspace/cascade-8 run build
 
+      - name: Blackjack backend regression
+        run: pnpm --filter @workspace/api-server exec vitest run src/blackjack/domain.test.ts src/blackjack/rules.test.ts
+
       - name: Multi-game integration regression
         run: >
           PORT=4173 BASE_PATH=/
