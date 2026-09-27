@@ -1,6 +1,6 @@
 import { createServer } from "node:http";
 import { afterEach, describe, expect, it } from "vitest";
-import { WebSocket } from "ws";
+import { WebSocket, type RawData } from "ws";
 import type { BlackjackPublicSnapshot } from "./publicSnapshot";
 import {
   BLACKJACK_WS_PATH,
@@ -56,7 +56,7 @@ function snapshot(version: number): BlackjackPublicSnapshot {
 
 function nextMessage(socket: WebSocket): Promise<unknown> {
   return new Promise((resolve, reject) => {
-    const onMessage = (raw: WebSocket.RawData) => {
+    const onMessage = (raw: RawData) => {
       cleanup();
       try {
         resolve(JSON.parse(raw.toString()));
