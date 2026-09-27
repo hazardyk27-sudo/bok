@@ -21,4 +21,5 @@ This directory is the frontend ownership root for the Blackjack game.
 - High-value chip denominations continue by doubling after 1K: 2K, 4K, 8K, 16K, and so on.
 
 ## Current milestones
+- 2026-09-27 — Part 2 domain model complete — authoritative card/shoe/seat/player/hand/round/table/bet/ledger types are isolated under the Blackjack backend root; physical duplicate cards have unique IDs and split hands have independent IDs/bets. Ownership guard PASS at `f1abb68f4d0ba1d82311763b0800221c3b9a2cfd`. Next: Part 3 pure Rule Engine.
 - 2026-09-27 — Part 1 isolated foundation validated — `feature/blackjack` now contains the owned 5-seat frontend shell, smoke contract and `/api/blackjack` namespace; ownership guard passes at `76f72a8176d2c83aa47d142658f3b34e9b0662d4`. Shared `/blackjack` router wiring still requires the central preview promotion/wiring step. Next: complete that central wiring, then close Part 1 and move to Part 2 domain model.
