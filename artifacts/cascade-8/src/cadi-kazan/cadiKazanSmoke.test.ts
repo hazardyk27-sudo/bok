@@ -141,4 +141,11 @@ describe("cadi kazan route smoke contract", () => {
     expect(visualLockSource).toContain("display: none !important");
   });
 
+
+  it("uses a 30 percent larger scratch brush only for The Office", () => {
+    expect(witchClientSource).toContain("const SCRATCH_BRUSH_RADIUS_PX = 14;");
+    expect(witchClientSource).toContain("const OFFICE_SCRATCH_BRUSH_RADIUS_PX = SCRATCH_BRUSH_RADIUS_PX * 1.3;");
+    expect(witchClientSource).toContain('brushRadiusPx: round.mode === "OFFICE_MATCH_6" ? OFFICE_SCRATCH_BRUSH_RADIUS_PX : SCRATCH_BRUSH_RADIUS_PX');
+  });
+
 });
