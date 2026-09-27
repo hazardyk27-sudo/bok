@@ -11,6 +11,11 @@ export const AUTH_COOKIE = "fy_auth";
 
 const router: IRouter = Router();
 
+router.use((_req, res, next) => {
+  res.setHeader("Cache-Control", "no-store");
+  next();
+});
+
 function setAuthCookie(res: Response, token: string) {
   res.cookie(AUTH_COOKIE, token, {
     httpOnly: true,
@@ -41,22 +46,35 @@ function sendAuthError(res: Response, error: unknown) {
   res.status(status).json({ error: message });
 }
 
-function readCredentials(body: unknown) {
+function readRawCredentials(body: unknown) {
   const source =
     body && typeof body === "object"
       ? (body as { email?: unknown; password?: unknown })
       : {};
-  const email = typeof source.email === "string" ? normalizeEmail(source.email) : "";
-  const password = typeof source.password === "string" ? source.password : "";
+  return {
+    email: typeof source.email === "string" ? normalizeEmail(source.email) : "",
+    password: typeof source.password === "string" ? source.password : "",
+  };
+}
 
-  if (!isValidEmail(email)) throw new Error("INVALID_EMAIL");
-  if (!isValidPassword(password)) throw new Error("INVALID_PASSWORD");
-  return { email, password };
+function readRegisterCredentials(body: unknown) {
+  const credentials = readRawCredentials(body);
+  if (!isValidEmail(credentials.email)) throw new Error("INVALID_EMAIL");
+  if (!isValidPassword(credentials.password)) throw new Error("INVALID_PASSWORD");
+  return credentials;
+}
+
+function readLoginCredentials(body: unknown) {
+  const credentials = readRawCredentials(body);
+  if (!isValidEmail(credentials.email) || !isValidPassword(credentials.password)) {
+    throw new Error("INVALID_EMAIL_OR_PASSWORD");
+  }
+  return credentials;
 }
 
 router.post("/auth/register", async (req, res) => {
   try {
-    const { email, password } = readCredentials(req.body);
+    const { email, password } = readRegisterCredentials(req.body);
     const result = await authRepository.register(email, password);
     setAuthCookie(res, result.token);
     res.status(201).json({ user: result.user });
@@ -67,7 +85,7 @@ router.post("/auth/register", async (req, res) => {
 
 router.post("/auth/login", async (req, res) => {
   try {
-    const { email, password } = readCredentials(req.body);
+    const { email, password } = readLoginCredentials(req.body);
     const result = await authRepository.login(email, password);
     setAuthCookie(res, result.token);
     res.json({ user: result.user });
