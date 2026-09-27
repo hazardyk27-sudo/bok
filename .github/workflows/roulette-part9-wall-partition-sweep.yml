@@ -1,0 +1,99 @@
+name: Roulette Part 9 Wall Partition Sweep
+
+on:
+  push:
+    branches:
+      - feature/roulette
+    paths:
+      - '.github/workflows/roulette-part9-wall-partition-sweep.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  sweep:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - radiusMin: 2.44
+            normalYMax: 0.45
+          - radiusMin: 2.44
+            normalYMax: 0.70
+          - radiusMin: 2.46
+            normalYMax: 0.45
+          - radiusMin: 2.46
+            normalYMax: 0.70
+          - radiusMin: 2.48
+            normalYMax: 0.45
+          - radiusMin: 2.48
+            normalYMax: 0.70
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.15.0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm exec playwright install --with-deps chromium
+      - run: pnpm run typecheck:libs
+      - run: pnpm --filter @workspace/roulette-physics-lab run typecheck
+      - name: Start lab
+        run: |
+          PORT=4173 BASE_PATH=/ pnpm --filter @workspace/roulette-physics-lab run dev > /tmp/roulette-part9-partition.log 2>&1 &
+          for attempt in {1..60}; do
+            if curl --fail --silent http://127.0.0.1:4173/ > /dev/null; then exit 0; fi
+            sleep 1
+          done
+          cat /tmp/roulette-part9-partition.log
+          exit 1
+      - name: Run partition candidate
+        env:
+          RADIUS_MIN: ${{ matrix.radiusMin }}
+          NORMAL_Y_MAX: ${{ matrix.normalYMax }}
+        run: |
+          tag="r$RADIUS_MIN-n$NORMAL_Y_MAX"
+          ROULETTE_LAB_URL="http://127.0.0.1:4173/?part6Headless=1&part6SeedStartIndex=6&part6SeedCount=1&part6MaxDurationSeconds=20&part9Calibration=1&part9LaunchRadius=2.46&part9LaunchSpeedMps=6.3&part9TrackFriction=0.028&part9LaunchGap=0.01&part9SpinFactor=1.0&part9StationaryMode=baseline&part9StationaryRestitution=0.01&part9WallSplit=1&part9WallFriction=0&part9WallRadiusMin=$RADIUS_MIN&part9WallNormalYMax=$NORMAL_Y_MAX"           ROULETTE_PART6_OUTPUT="artifacts/roulette-physics-lab/part9-partition-$tag.json"           ROULETTE_PART6_TIMEOUT_MS='120000'           ROULETTE_PART6_EXPECTED_SEEDS='1'           node scripts/roulette-part6-runtime.mjs > "part9-partition-$tag.log" 2>&1
+
+          node -e '
+            const fs=require("fs");
+            const radiusMin=Number(process.env.RADIUS_MIN);
+            const normalYMax=Number(process.env.NORMAL_Y_MAX);
+            const tag="r"+process.env.RADIUS_MIN+"-n"+process.env.NORMAL_Y_MAX;
+            const data=JSON.parse(fs.readFileSync("artifacts/roulette-physics-lab/part9-partition-"+tag+".json","utf8"));
+            const row=(data.telemetry?.results ?? data.seedTelemetry ?? [])[0];
+            if(!row) throw new Error("missing telemetry");
+            const out={
+              radiusMin,normalYMax,
+              gatedLapCount:row.lapCount,
+              continuousOuterLapCount:row.continuousOuterLapCount,
+              trackDuration:row.trackDuration,
+              settled:row.settled,
+              timedOut:row.timedOut,
+              safetyPassed:row.safetyPassed,
+              escaped:row.escaped,
+              clipping:row.clipping,
+              tunneling:row.tunneling,
+              settleTime:row.settleTime,
+              finalPocketNumber:row.finalPocketNumber,
+              inTargetBand:row.continuousOuterLapCount>=4&&row.continuousOuterLapCount<=5
+            };
+            console.log("PART9_PARTITION_CASE "+JSON.stringify(out));
+          '
+      - name: Upload evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: roulette-part9-partition-${{ matrix.radiusMin }}-${{ matrix.normalYMax }}
+          path: |
+            artifacts/roulette-physics-lab/part9-partition-*.json
+            part9-partition-*.log
+            /tmp/roulette-part9-partition.log
+          if-no-files-found: warn
