@@ -3417,3 +3417,23 @@
     font-size: clamp(7px, calc(var(--witch-vh) * 2.1), 11px) !important;
   }
 }
+
+
+/* PASS 17 — THE OFFICE white reveal stage.
+   Only The Office result cells use a clean white reveal background so the
+   supplied Kevin/Jim/Dwight/Stanley/Michael cutouts read like sticker art.
+   Gold Michael framing and the direct prize badge remain intact. */
+.is-office-theme .witch-cell.is-office-cell,
+.is-office-theme .witch-cell.is-office-cell .witch-cell-result-layer,
+.is-office-theme .witch-cell.is-office-cell .witch-cell-content,
+.is-office-theme .witch-cell.is-office-cell .witch-office-result-symbol,
+.is-office-theme .witch-cell.is-office-cell .witch-office-result-art {
+  background: #fff !important;
+}
+
+.is-office-theme .witch-cell.is-office-special .witch-cell-result-layer,
+.is-office-theme .witch-cell.is-office-special .witch-cell-content,
+.is-office-theme .witch-cell.is-office-special .witch-office-result-symbol,
+.is-office-theme .witch-cell.is-office-special .witch-office-result-art {
+  background: #fff !important;
+}
