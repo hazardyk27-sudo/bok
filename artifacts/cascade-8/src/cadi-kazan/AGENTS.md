@@ -26,6 +26,7 @@ The scratch system, styles, route mount, client, and Cadı-specific audio runtim
 - If a note conflicts with code/tests/ownership rules, the validated repository state wins.
 
 ## Current milestones
+- 2026-09-27 — The Office scratch UX pass — Office-only result backgrounds are white, no-prize completion now plays a negative cue, Office brush radius is increased another 10% from the prior 1.30× setting to 1.43× baseline, and one continuous pointer drag can scratch across multiple Office cells while Standard/Advanced keep single-cell routing.
 - 2026-09-27 — The Office scratch brush +30% — only `OFFICE_MATCH_6` now uses a brush radius 1.3× the shared 14px baseline (18.2px effective). Standard/Advanced remain unchanged.
 - 2026-09-27 — The Office prize-badge cleanup — character art is reduced by 10% from the previous 94% cell fit to 84.6%, the black character-name rectangle is removed, and each revealed symbol now displays its direct stake-derived prize amount (`stake × multiplier`) instead of 2x/5x/10x/20x/100x text. Example: $10 stake + Dwight 10x shows $100.
 - 2026-09-27 — The Office character reveal render fix — Office result cells now explicitly suppress the generic Cadı Kazan safe-result sculpture/aura/pseudo-elements and give the supplied character artwork the entire scratch cell; character images remain `contain`-fit on black so none of the user-provided source composition is cropped. Next: promote to preview and visually verify all five character reveals.
