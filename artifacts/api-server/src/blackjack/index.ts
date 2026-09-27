@@ -17,3 +17,4 @@ export * from "./initialDeal";
 export * from "./walletLedger";
 export * from "./reservations";
 export * from "./chips";
+export * from "./betting";
