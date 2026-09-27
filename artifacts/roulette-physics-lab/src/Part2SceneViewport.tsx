@@ -2371,6 +2371,10 @@ export function Part2SceneViewport({
       part9WorldParams.get('part9TrackFriction') ??
         PART3_OUTER_SPIN_TRACK_FRICTION,
     );
+    const activePart9StationaryMode =
+      part9WorldCalibrationEnabled
+        ? part9WorldParams.get('part9StationaryMode') ?? 'baseline'
+        : 'baseline';
     const activePart3TrackFriction =
       outerLaneSpinOnly &&
       part9WorldCalibrationEnabled &&
@@ -8529,11 +8533,28 @@ export function Part2SceneViewport({
                 stationaryGroup,
                 wheelRoot,
               );
+              let stationaryTrimeshFlags =
+                RAPIER.TriMeshFlags.FIX_INTERNAL_EDGES;
+              if (
+                activePart9StationaryMode === 'oriented' ||
+                activePart9StationaryMode === 'oriented-clean'
+              ) {
+                stationaryTrimeshFlags |= RAPIER.TriMeshFlags.ORIENTED;
+              }
+              if (
+                activePart9StationaryMode === 'clean' ||
+                activePart9StationaryMode === 'oriented-clean'
+              ) {
+                stationaryTrimeshFlags |=
+                  RAPIER.TriMeshFlags.MERGE_DUPLICATE_VERTICES |
+                  RAPIER.TriMeshFlags.DELETE_DEGENERATE_TRIANGLES |
+                  RAPIER.TriMeshFlags.DELETE_DUPLICATE_TRIANGLES;
+              }
               part3TrackCollider = world.createCollider(
                 RAPIER.ColliderDesc.trimesh(
                   actualStationaryMesh.vertices,
                   actualStationaryMesh.indices,
-                  RAPIER.TriMeshFlags.FIX_INTERNAL_EDGES,
+                  stationaryTrimeshFlags,
                 )
                   .setFriction(activePart3TrackFriction)
                   .setRestitution(0.01)
@@ -8554,6 +8575,8 @@ export function Part2SceneViewport({
                 JSON.stringify({
                   vertices: actualStationaryMesh.vertices.length / 3,
                   triangles: actualStationaryMesh.indices.length / 3,
+                  part9StationaryMode: activePart9StationaryMode,
+                  trimeshFlags: stationaryTrimeshFlags,
                 }),
               );
             } else if (
