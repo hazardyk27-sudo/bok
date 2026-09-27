@@ -28,6 +28,7 @@ An Idle commit never publishes itself to Replit; only the central one-game promo
 - If a note conflicts with code/tests/ownership rules, the validated repository state wins.
 
 ## Current milestones
+- 2026-09-27 — Slate Blue Parts 1–24 complete — Desktop and tablet Businesses pages scroll vertically again: route/root viewport clipping is overridden from 761px upward, and workspace/page heights are content-driven instead of capped to the viewport. Mobile scrolling behavior remains unchanged. Next: visually QA in Replit preview.
 - 2026-09-27 — Slate Blue Parts 1–23 complete — On mobile, `BİRİKMİŞ GELİR` and its amount now share the same left content line as the `SAATLİK GELİR` stat values, matching the desktop alignment. Next: visually QA in Replit preview.
 - 2026-09-27 — Slate Blue Parts 1–22 complete — Desktop business cards now use an exact 16:9 hero, equal-height natural rows (without viewport-fill stretching), and responsive no-wrap typography so vault/helper/value text stays on one line across the three cards. Next: visually QA in Replit preview.
 - 2026-09-27 — Slate Blue Parts 1–21 complete — `TÜMÜNÜ TOPLA` now uses the same primary-action color, typography, radius, height, disabled state and hover treatment as each card's `TOPLA` button; its extra eyebrow and arrow are hidden so the two controls read as one system. Next: visually QA and promote to `integration/replit-preview` when approved.
