@@ -8540,3 +8540,13 @@ body.businesses-route {
     height: 19px;
   }
 }
+
+
+/* 2026-09-27 — Part 14: show business visuals without color treatment */
+.route-shell.is-businesses-page .business-card-media {
+  filter: none !important;
+}
+
+.route-shell.is-businesses-page .business-card-visual-shade {
+  background: transparent !important;
+}
