@@ -79,9 +79,11 @@ const shell = () => `
           <h2>Hoş geldin</h2>
           <strong id="account-profile-email"></strong>
           <div class="account-profile-status">
-            <span>HESAP</span>
-            <b>AKTİF</b>
+            <span>E-POSTA</span>
+            <b id="account-verification-status">KONTROL EDİLİYOR</b>
           </div>
+          <p id="account-verification-note" class="account-verification-note" hidden></p>
+          <button id="account-resend-verification" class="account-resend-verification" type="button" hidden>DOĞRULAMA MAILİNİ TEKRAR GÖNDER</button>
           <a class="account-play" href="/">OYUNLARA DEVAM ET <b>→</b></a>
           <button id="account-logout" class="account-logout" type="button">ÇIKIŞ YAP</button>
         </div>
@@ -97,6 +99,9 @@ function errorMessage(error: unknown) {
     INVALID_PASSWORD: "Parola 8–128 karakter arasında olmalı.",
     EMAIL_ALREADY_REGISTERED: "Bu e-posta adresiyle zaten bir hesap var.",
     INVALID_EMAIL_OR_PASSWORD: "E-posta veya parola hatalı.",
+    EMAIL_VERIFICATION_RATE_LIMIT: "Yeni doğrulama maili için biraz bekle.",
+    EMAIL_DELIVERY_FAILED: "Doğrulama maili gönderilemedi. Tekrar deneyebilirsin.",
+    EMAIL_DELIVERY_NOT_CONFIGURED: "Doğrulama mail servisi henüz yapılandırılmamış.",
     AUTH_REQUEST_FAILED: "İşlem tamamlanamadı. Tekrar dene.",
   };
   return messages[code] ?? "İşlem tamamlanamadı. Tekrar dene.";
@@ -120,6 +125,9 @@ export function mountAccount(app: HTMLElement) {
   const eyebrow = app.querySelector<HTMLElement>("#account-eyebrow")!;
   const subtitle = app.querySelector<HTMLElement>("#account-subtitle")!;
   const profileEmail = app.querySelector<HTMLElement>("#account-profile-email")!;
+  const verificationStatus = app.querySelector<HTMLElement>("#account-verification-status")!;
+  const verificationNote = app.querySelector<HTMLElement>("#account-verification-note")!;
+  const resendVerification = app.querySelector<HTMLButtonElement>("#account-resend-verification")!;
   const logout = app.querySelector<HTMLButtonElement>("#account-logout")!;
   const tabs = [...app.querySelectorAll<HTMLButtonElement>("[data-mode]")];
 
@@ -142,11 +150,23 @@ export function mountAccount(app: HTMLElement) {
     errorBox.hidden = !message;
   }
 
-  function showProfile(user: AccountUser) {
+  function showProfile(user: AccountUser, verificationEmailSent?: boolean) {
     loading.hidden = true;
     auth.hidden = true;
     profile.hidden = false;
     profileEmail.textContent = user.email;
+
+    verificationStatus.textContent = user.emailVerified ? "DOĞRULANDI" : "DOĞRULAMA BEKLİYOR";
+    verificationStatus.dataset.verified = String(user.emailVerified);
+    resendVerification.hidden = user.emailVerified;
+    verificationNote.hidden = user.emailVerified;
+
+    if (!user.emailVerified) {
+      verificationNote.textContent =
+        verificationEmailSent === false
+          ? "Doğrulama maili gönderilemedi. Aşağıdaki butondan tekrar deneyebilirsin."
+          : "Kayıt sırasında doğrulama maili otomatik gönderildi. Gelen kutunu kontrol et.";
+    }
   }
 
   function showAuth() {
@@ -207,11 +227,34 @@ export function mountAccount(app: HTMLElement) {
           : await accountApi.login(emailValue, passwordValue);
       if (!result.user) throw new Error("AUTH_REQUEST_FAILED");
       form.reset();
-      showProfile(result.user);
+      showProfile(result.user, result.verificationEmailSent);
     } catch (error) {
       showError(errorMessage(error));
     } finally {
       setBusy(false);
+    }
+  });
+
+  resendVerification.addEventListener("click", async () => {
+    resendVerification.disabled = true;
+    const original = resendVerification.textContent;
+    resendVerification.textContent = "GÖNDERİLİYOR...";
+    try {
+      const result = await accountApi.resendVerification();
+      if (result.user?.emailVerified) {
+        showProfile(result.user);
+      } else {
+        verificationNote.hidden = false;
+        verificationNote.textContent = result.verificationEmailSent
+          ? "Yeni doğrulama maili gönderildi. Gelen kutunu kontrol et."
+          : "Doğrulama maili gönderilemedi. Biraz sonra tekrar dene.";
+      }
+    } catch (error) {
+      verificationNote.hidden = false;
+      verificationNote.textContent = errorMessage(error);
+    } finally {
+      resendVerification.disabled = false;
+      resendVerification.textContent = original;
     }
   });
 
@@ -228,11 +271,21 @@ export function mountAccount(app: HTMLElement) {
     }
   });
 
+  const verificationResult = new URLSearchParams(window.location.search).get("verification");
+
   void accountApi
     .me()
     .then(({ user }) => {
-      if (user) showProfile(user);
-      else showAuth();
+      if (user) {
+        showProfile(user);
+        if (verificationResult === "success") {
+          verificationNote.hidden = false;
+          verificationNote.textContent = "E-posta adresin başarıyla doğrulandı.";
+        } else if (verificationResult === "invalid") {
+          verificationNote.hidden = false;
+          verificationNote.textContent = "Doğrulama bağlantısı geçersiz veya süresi dolmuş. Yeni mail isteyebilirsin.";
+        }
+      } else showAuth();
     })
     .catch(() => showAuth());
 }
