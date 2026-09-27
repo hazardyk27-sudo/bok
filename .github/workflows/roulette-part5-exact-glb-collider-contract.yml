@@ -46,7 +46,7 @@ jobs:
           pnpm --filter @workspace/api-server run typecheck
 
       - name: Run Part 5 source contract test
-        run: pnpm --filter @workspace/cascade-8 exec vitest run src/roulettePhysicsConfig.test.ts
+        run: PORT=4173 BASE_PATH=/ pnpm --filter @workspace/cascade-8 exec vitest run src/roulettePhysicsConfig.test.ts
 
       - name: Verify server exact GLB collider contract
         shell: bash
