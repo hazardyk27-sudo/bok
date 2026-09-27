@@ -49,9 +49,15 @@ function orderedHandIds(round: BlackjackRound): readonly BlackjackHandId[] {
 
   const ids: BlackjackHandId[] = [];
   for (const seatNumber of round.activeSeatOrder) {
-    for (const hand of round.hands) {
-      if (hand.seatNumber === seatNumber) ids.push(hand.handId);
+    const seatHands = round.hands.filter(
+      (hand) => hand.seatNumber === seatNumber,
+    );
+    if (seatHands.length === 0) {
+      throw new Error(
+        `Blackjack active seat ${seatNumber} has no hand in the round`,
+      );
     }
+    for (const hand of seatHands) ids.push(hand.handId);
   }
 
   if (ids.length !== round.hands.length) {
@@ -143,6 +149,9 @@ export function startBlackjackPlayerTurns(
   }
   if (round.currentTurn !== null) {
     throw new Error("Blackjack INITIAL_DEAL cannot already have a current turn");
+  }
+  if (round.hands.some((hand) => hand.status === "ACTIVE")) {
+    throw new Error("Blackjack INITIAL_DEAL cannot contain an ACTIVE hand");
   }
 
   return advanceToNextHandOrDealer(round, null, nowMs);
