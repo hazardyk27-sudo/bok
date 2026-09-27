@@ -5,6 +5,7 @@ import type {
   BlackjackSeatNumber,
   BlackjackTable,
 } from "./domain";
+import { isBlackjackSeatNumber } from "./seats";
 
 export const BLACKJACK_MUTATION_ACTION_TYPES = [
   "PLACE_BET",
@@ -29,6 +30,7 @@ export type BlackjackActionEnvelope = Readonly<{
   roundId: BlackjackRoundId | null;
   handId: BlackjackHandId | null;
   seatNumber: BlackjackSeatNumber | null;
+  payloadFingerprint: string;
 }>;
 
 export type BlackjackActionReceipt = Readonly<{
@@ -39,6 +41,7 @@ export type BlackjackActionReceipt = Readonly<{
   roundId: BlackjackRoundId | null;
   handId: BlackjackHandId | null;
   seatNumber: BlackjackSeatNumber | null;
+  payloadFingerprint: string;
   resultingStateVersion: number;
 }>;
 
@@ -75,6 +78,42 @@ function isMutationActionType(value: string): value is BlackjackMutationActionTy
   return (BLACKJACK_MUTATION_ACTION_TYPES as readonly string[]).includes(value);
 }
 
+function assertActionShape(envelope: BlackjackActionEnvelope): void {
+  if (envelope.seatNumber !== null && !isBlackjackSeatNumber(envelope.seatNumber)) {
+    throw new RangeError("Blackjack action seatNumber must be between 1 and 5");
+  }
+
+  const roundScoped = envelope.type !== "LEAVE_SEAT";
+  if (roundScoped && envelope.roundId === null) {
+    throw new Error(`Blackjack ${envelope.type} requires roundId`);
+  }
+
+  const handScoped =
+    envelope.type === "HIT" ||
+    envelope.type === "STAND" ||
+    envelope.type === "DOUBLE" ||
+    envelope.type === "SPLIT";
+
+  if (handScoped && envelope.handId === null) {
+    throw new Error(`Blackjack ${envelope.type} requires handId`);
+  }
+  if (handScoped && envelope.seatNumber === null) {
+    throw new Error(`Blackjack ${envelope.type} requires seatNumber`);
+  }
+
+  const seatScoped =
+    envelope.type === "PLACE_BET" ||
+    envelope.type === "UNDO_BET" ||
+    envelope.type === "CLEAR_BET" ||
+    envelope.type === "READY" ||
+    envelope.type === "LEAVE_SEAT";
+
+  if (seatScoped && envelope.seatNumber === null) {
+    throw new Error(`Blackjack ${envelope.type} requires seatNumber`);
+  }
+}
+
+
 function sameEnvelope(
   receipt: BlackjackActionReceipt,
   envelope: BlackjackActionEnvelope,
@@ -86,7 +125,8 @@ function sameEnvelope(
     receipt.expectedStateVersion === envelope.expectedStateVersion &&
     receipt.roundId === envelope.roundId &&
     receipt.handId === envelope.handId &&
-    receipt.seatNumber === envelope.seatNumber
+    receipt.seatNumber === envelope.seatNumber &&
+    receipt.payloadFingerprint === envelope.payloadFingerprint
   );
 }
 
@@ -103,10 +143,13 @@ export function assertBlackjackActionEnvelope(
   assertNonEmptyId("actionId", envelope.actionId);
   assertNonEmptyId("tableId", envelope.tableId);
   assertStateVersion(envelope.expectedStateVersion);
+  assertNonEmptyId("payloadFingerprint", envelope.payloadFingerprint);
 
   if (!isMutationActionType(envelope.type)) {
     throw new Error("Blackjack action type is not supported");
   }
+
+  assertActionShape(envelope);
 
   if (table.tableId !== envelope.tableId) {
     throw new Error("Blackjack action targets another table");
