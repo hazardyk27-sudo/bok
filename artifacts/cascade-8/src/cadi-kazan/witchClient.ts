@@ -47,17 +47,18 @@ const OFFICE_SYMBOL_BY_ID = new Map(OFFICE_MATCH_SYMBOLS.map((symbol) => [symbol
 
 const officeSymbolPresentation = (symbolId: OfficeMatchSymbolId | undefined, revealed: boolean) => {
   if (!revealed || !symbolId) {
-    return { symbol: "", label: "", resultClass: null as "safe" | null, special: false };
+    return { symbol: "", label: "", resultClass: null as "safe" | null, special: false, artworkUrl: null };
   }
   const symbol = OFFICE_SYMBOL_BY_ID.get(symbolId);
   if (!symbol) {
-    return { symbol: "", label: "", resultClass: null as "safe" | null, special: false };
+    return { symbol: "", label: "", resultClass: null as "safe" | null, special: false, artworkUrl: null };
   }
   return {
     symbol: symbol.label.toUpperCase(),
     label: `${symbol.label.toUpperCase()} · ${symbol.multiplierBps / 100}X`,
     resultClass: "safe" as const,
     special: symbol.special,
+    artworkUrl: symbol.artworkUrl,
   };
 };
 
@@ -962,10 +963,12 @@ export class WitchClient {
       if (content) {
         if (round.mode === "OFFICE_MATCH_6" && officePresentation?.symbol) {
           const symbolId = visibleOfficeSymbols.get(index);
+          const symbol = symbolId ? OFFICE_SYMBOL_BY_ID.get(symbolId) : undefined;
           content.innerHTML = `
             <span class="witch-office-result-symbol" data-office-symbol="${symbolId ?? ""}">
-              <strong>${officePresentation.symbol}</strong>
-              <b>${OFFICE_SYMBOL_BY_ID.get(symbolId!)?.multiplierBps ? OFFICE_SYMBOL_BY_ID.get(symbolId!)!.multiplierBps / 100 : 0}X</b>
+              <img class="witch-office-result-art" src="${officePresentation.artworkUrl ?? ""}" alt="" draggable="false">
+              <strong class="witch-office-result-name">${officePresentation.symbol}</strong>
+              <b>${symbol ? symbol.multiplierBps / 100 : 0}X</b>
             </span>
           `;
         } else if ("artworkUrl" in presentation && presentation.artworkUrl) {
