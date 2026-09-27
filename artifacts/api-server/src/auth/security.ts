@@ -12,6 +12,7 @@ const SCRYPT_KEYLEN = 64;
 const SCRYPT_MAXMEM = 64 * 1024 * 1024;
 
 export const AUTH_SESSION_TTL_MS = 1000 * 60 * 60 * 24 * 30;
+export const EMAIL_VERIFICATION_TTL_MS = 1000 * 60 * 60 * 24;
 
 function scryptAsync(password: string, salt: Buffer): Promise<Buffer> {
   return new Promise((resolve, reject) => {
@@ -82,11 +83,19 @@ export async function verifyPassword(password: string, encoded: string) {
   return actual.length === expected.length && timingSafeEqual(actual, expected);
 }
 
-export function createSessionToken() {
+export function createOpaqueToken() {
   const token = randomBytes(32).toString("base64url");
-  return { token, tokenHash: hashSessionToken(token) };
+  return { token, tokenHash: hashOpaqueToken(token) };
+}
+
+export function hashOpaqueToken(token: string) {
+  return createHash("sha256").update(token).digest("hex");
+}
+
+export function createSessionToken() {
+  return createOpaqueToken();
 }
 
 export function hashSessionToken(token: string) {
-  return createHash("sha256").update(token).digest("hex");
+  return hashOpaqueToken(token);
 }
