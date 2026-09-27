@@ -72,42 +72,42 @@ jobs:
               ROULETTE_PART6_EXPECTED_SEEDS='1' \
               node scripts/roulette-part6-runtime.mjs > "part9-sweep-$tag.log" 2>&1 || true
 
-              node - "$radius" "$speed" "$tag" <<'NODE'
-              const fs = require('fs');
-              const radius = Number(process.argv[2]);
-              const speed = Number(process.argv[3]);
-              const tag = process.argv[4];
-              const path = 'artifacts/roulette-physics-lab/part9-sweep/' + tag + '.json';
-              let out = { radius, speed, telemetry: false };
-              if (fs.existsSync(path)) {
-                const data = JSON.parse(fs.readFileSync(path, 'utf8'));
-                const row = (data.telemetry?.results ?? data.seedTelemetry ?? [])[0];
-                if (row) {
-                  out = {
-                    radius,
-                    speed,
-                    telemetry: true,
-                    seed: row.seed,
-                    lapCount: row.lapCount,
-                    trackDuration: row.trackDuration,
-                    trackStartSpeed: row.trackStartSpeed,
-                    trackEndSpeed: row.trackEndSpeed,
-                    settleTime: row.settleTime,
-                    settled: row.settled,
-                    timedOut: row.timedOut,
-                    safetyPassed: row.safetyPassed,
-                    escaped: row.escaped,
-                    clipping: row.clipping,
-                    tunneling: row.tunneling,
-                    velocitySpike: row.velocitySpike,
-                    artificialAcceleration: row.artificialAcceleration,
-                    finalPocketNumber: row.finalPocketNumber,
-                  };
+              node -e '
+                const fs = require("fs");
+                const radius = Number(process.argv[1]);
+                const speed = Number(process.argv[2]);
+                const tag = process.argv[3];
+                const path = "artifacts/roulette-physics-lab/part9-sweep/" + tag + ".json";
+                let out = { radius, speed, telemetry: false };
+                if (fs.existsSync(path)) {
+                  const data = JSON.parse(fs.readFileSync(path, "utf8"));
+                  const row = (data.telemetry?.results ?? data.seedTelemetry ?? [])[0];
+                  if (row) {
+                    out = {
+                      radius,
+                      speed,
+                      telemetry: true,
+                      seed: row.seed,
+                      lapCount: row.lapCount,
+                      trackDuration: row.trackDuration,
+                      trackStartSpeed: row.trackStartSpeed,
+                      trackEndSpeed: row.trackEndSpeed,
+                      settleTime: row.settleTime,
+                      settled: row.settled,
+                      timedOut: row.timedOut,
+                      safetyPassed: row.safetyPassed,
+                      escaped: row.escaped,
+                      clipping: row.clipping,
+                      tunneling: row.tunneling,
+                      velocitySpike: row.velocitySpike,
+                      artificialAcceleration: row.artificialAcceleration,
+                      finalPocketNumber: row.finalPocketNumber,
+                    };
+                  }
                 }
-              }
-              fs.appendFileSync('part9-sweep-results.ndjson', JSON.stringify(out) + '\n');
-              console.log('PART9_SWEEP_CASE ' + JSON.stringify(out));
-              NODE
+                fs.appendFileSync("part9-sweep-results.ndjson", JSON.stringify(out) + "\\n");
+                console.log("PART9_SWEEP_CASE " + JSON.stringify(out));
+              ' "$radius" "$speed" "$tag"
             done
           done
 
