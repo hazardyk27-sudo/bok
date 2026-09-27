@@ -295,6 +295,99 @@ function distanceToNearestPocketFret(localAngle: number) {
   ) * SECTOR_STEP_RADIANS;
 }
 
+function exactStationarySurfaceAt(
+  worldX: number,
+  worldZ: number,
+  targetY: number,
+) {
+  const geometry = getRouletteExactGlbColliderGeometry().stationary;
+  const vertices = geometry.vertices;
+  const indices = geometry.indices;
+  const barycentricEpsilon = 1e-6;
+  let best:
+    | {
+        point: [number, number, number];
+        normal: [number, number, number];
+      }
+    | null = null;
+  let bestDistance = Number.POSITIVE_INFINITY;
+
+  for (let index = 0; index < indices.length; index += 3) {
+    const a = indices[index] * 3;
+    const b = indices[index + 1] * 3;
+    const d = indices[index + 2] * 3;
+    const ax = vertices[a];
+    const ay = vertices[a + 1];
+    const az = vertices[a + 2];
+    const bx = vertices[b];
+    const by = vertices[b + 1];
+    const bz = vertices[b + 2];
+    const dx = vertices[d];
+    const dy = vertices[d + 1];
+    const dz = vertices[d + 2];
+
+    if (
+      worldX < Math.min(ax, bx, dx) - barycentricEpsilon ||
+      worldX > Math.max(ax, bx, dx) + barycentricEpsilon ||
+      worldZ < Math.min(az, bz, dz) - barycentricEpsilon ||
+      worldZ > Math.max(az, bz, dz) + barycentricEpsilon
+    ) {
+      continue;
+    }
+
+    const determinant =
+      (bz - dz) * (ax - dx) + (dx - bx) * (az - dz);
+    if (Math.abs(determinant) <= 1e-10) continue;
+
+    const alpha =
+      ((bz - dz) * (worldX - dx) + (dx - bx) * (worldZ - dz)) /
+      determinant;
+    const beta =
+      ((dz - az) * (worldX - dx) + (ax - dx) * (worldZ - dz)) /
+      determinant;
+    const gamma = 1 - alpha - beta;
+    if (
+      alpha < -barycentricEpsilon ||
+      beta < -barycentricEpsilon ||
+      gamma < -barycentricEpsilon
+    ) {
+      continue;
+    }
+
+    const y = alpha * ay + beta * by + gamma * dy;
+    const distance = Math.abs(y - targetY);
+    if (distance >= bestDistance) continue;
+
+    const abx = bx - ax;
+    const aby = by - ay;
+    const abz = bz - az;
+    const adx = dx - ax;
+    const ady = dy - ay;
+    const adz = dz - az;
+    let nx = aby * adz - abz * ady;
+    let ny = abz * adx - abx * adz;
+    let nz = abx * ady - aby * adx;
+    const normalLength = Math.hypot(nx, ny, nz);
+    if (normalLength <= 1e-10) continue;
+    nx /= normalLength;
+    ny /= normalLength;
+    nz /= normalLength;
+    if (ny < 0) {
+      nx = -nx;
+      ny = -ny;
+      nz = -nz;
+    }
+
+    bestDistance = distance;
+    best = {
+      point: [worldX, y, worldZ],
+      normal: [nx, ny, nz],
+    };
+  }
+
+  return best;
+}
+
 function exactRotorSurfaceYAt(
   worldX: number,
   worldZ: number,
@@ -888,48 +981,53 @@ function buildStartConditions(seed: string): PhysicsLabStartConditions {
   const rotorInitialAngularVelocity = ROULETTE_ROTOR_ANGULAR_SPEED;
   const launchClearance = PHYSICS_LAB_BALL_RADIUS + 0.01;
   const operationalLaunchCenterRadius = ROULETTE_DARK_RACE_LAUNCH_RADIUS;
-  let launchContactRadius = operationalLaunchCenterRadius;
-  let launchPlacementSlope = darkRaceSurfaceSlopeAt(launchContactRadius);
-  let launchPlacementNormalLength = Math.hypot(launchPlacementSlope, 1);
-  let launchPlacementNormal: [number, number, number] = [
-    (-launchPlacementSlope * Math.sin(launchAzimuthRadians)) /
-      launchPlacementNormalLength,
-    1 / launchPlacementNormalLength,
-    (-launchPlacementSlope * Math.cos(launchAzimuthRadians)) /
-      launchPlacementNormalLength,
-  ];
-  for (let iteration = 0; iteration < 3; iteration += 1) {
-    const radialNormal =
-      launchPlacementNormal[0] * Math.sin(launchAzimuthRadians) +
-      launchPlacementNormal[2] * Math.cos(launchAzimuthRadians);
-    launchContactRadius =
-      operationalLaunchCenterRadius - radialNormal * launchClearance;
-    launchPlacementSlope = darkRaceSurfaceSlopeAt(launchContactRadius);
-    launchPlacementNormalLength = Math.hypot(launchPlacementSlope, 1);
-    launchPlacementNormal = [
-      (-launchPlacementSlope * Math.sin(launchAzimuthRadians)) /
-        launchPlacementNormalLength,
-      1 / launchPlacementNormalLength,
-      (-launchPlacementSlope * Math.cos(launchAzimuthRadians)) /
-        launchPlacementNormalLength,
-    ];
+  const launchSurfaceX =
+    Math.sin(launchAzimuthRadians) * operationalLaunchCenterRadius;
+  const launchSurfaceZ =
+    Math.cos(launchAzimuthRadians) * operationalLaunchCenterRadius;
+  const exactLaunchSurface = exactStationarySurfaceAt(
+    launchSurfaceX,
+    launchSurfaceZ,
+    darkRaceSurfaceYAt(operationalLaunchCenterRadius),
+  );
+  if (!exactLaunchSurface) {
+    throw new Error("EXACT_GLB_LAUNCH_SURFACE_MISSING");
   }
-  const launchSurfaceY = darkRaceSurfaceYAt(launchContactRadius);
+  const launchPlacementNormal = exactLaunchSurface.normal;
   const position: [number, number, number] = [
-    Math.sin(launchAzimuthRadians) * launchContactRadius +
+    exactLaunchSurface.point[0] +
       launchPlacementNormal[0] * launchClearance,
-    launchSurfaceY + launchPlacementNormal[1] * launchClearance,
-    Math.cos(launchAzimuthRadians) * launchContactRadius +
+    exactLaunchSurface.point[1] +
+      launchPlacementNormal[1] * launchClearance,
+    exactLaunchSurface.point[2] +
       launchPlacementNormal[2] * launchClearance,
   ];
-  const tangent: [number, number] = [
+  const radial: [number, number, number] = [
+    Math.sin(launchAzimuthRadians),
+    0,
     Math.cos(launchAzimuthRadians),
-    -Math.sin(launchAzimuthRadians),
+  ];
+  let tangent: [number, number, number] = [
+    launchPlacementNormal[1] * radial[2] -
+      launchPlacementNormal[2] * radial[1],
+    launchPlacementNormal[2] * radial[0] -
+      launchPlacementNormal[0] * radial[2],
+    launchPlacementNormal[0] * radial[1] -
+      launchPlacementNormal[1] * radial[0],
+  ];
+  const tangentLength = Math.hypot(...tangent);
+  if (tangentLength <= 1e-10) {
+    throw new Error("EXACT_GLB_LAUNCH_TANGENT_MISSING");
+  }
+  tangent = tangent.map((value) => value / tangentLength) as [
+    number,
+    number,
+    number,
   ];
   const velocity: [number, number, number] = [
     tangent[0] * launchSpeed,
-    0,
     tangent[1] * launchSpeed,
+    tangent[2] * launchSpeed,
   ];
   const angularVelocity: [number, number, number] = [
     (launchPlacementNormal[1] * velocity[2] -
