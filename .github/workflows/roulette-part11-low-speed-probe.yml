@@ -1,0 +1,132 @@
+name: Roulette Part 11 Low Speed Probe
+
+on:
+  push:
+    branches:
+      - feature/roulette
+    paths:
+      - '.github/workflows/roulette-part11-low-speed-probe.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    strategy:
+      fail-fast: false
+      matrix:
+        speed: ['1.20', '1.50', '1.80']
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.15.0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm exec playwright install --with-deps chromium
+      - run: pnpm run typecheck:libs
+      - run: pnpm --filter @workspace/roulette-physics-lab run typecheck
+
+      - name: Start physics lab
+        run: |
+          PORT=4173 BASE_PATH=/ pnpm --filter @workspace/roulette-physics-lab run dev > /tmp/roulette-part11-low-${{ matrix.speed }}.log 2>&1 &
+          for attempt in {1..60}; do
+            if curl --fail --silent http://127.0.0.1:4173/ > /dev/null; then exit 0; fi
+            sleep 1
+          done
+          cat /tmp/roulette-part11-low-${{ matrix.speed }}.log
+          exit 1
+
+      - name: Run two difficult seeds
+        env:
+          SPEED: ${{ matrix.speed }}
+        shell: bash
+        run: |
+          set -u
+          : > "part11-low-${SPEED}.ndjson"
+          for spec in 61007:6 61014:13; do
+            SEED="${spec%%:*}"
+            START="${spec##*:}"
+            OUT="part11-low-${SPEED}-${SEED}.json"
+            LOG="part11-low-${SPEED}-${SEED}.log"
+            ROULETTE_LAB_URL="http://127.0.0.1:4173/?part6Headless=1&part6SeedStartIndex=${START}&part6SeedCount=1&part6MaxDurationSeconds=30&part11Calibration=1&part11LaunchRadius=2.39&part11LaunchSpeedMps=${SPEED}" \
+            ROULETTE_PART6_OUTPUT="${OUT}" \
+            ROULETTE_PART6_TIMEOUT_MS='150000' \
+            ROULETTE_PART6_EXPECTED_SEEDS='1' \
+            node scripts/roulette-part6-runtime.mjs > "${LOG}" 2>&1 || true
+
+            node - "${SEED}" "${OUT}" "${SPEED}" <<'NODE' | tee -a "part11-low-${SPEED}.ndjson"
+          const fs = require('fs');
+          const [seed, path, speed] = process.argv.slice(2);
+          let out = { speed:Number(speed), seed:Number(seed), telemetry:false };
+          if (fs.existsSync(path)) {
+            const data = JSON.parse(fs.readFileSync(path, 'utf8'));
+            const row = (data.telemetry?.results ?? data.seedTelemetry ?? [])[0];
+            if (row) out = {
+              speed:Number(speed),
+              seed:Number(seed),
+              telemetry:true,
+              launchSpeedMetersPerSecond:row.launchSpeedMetersPerSecond,
+              lapCount:row.lapCount,
+              trackDuration:row.trackDuration,
+              inwardTransitionTime:row.inwardTransitionTime,
+              maxRadius:row.maxRadius,
+              settled:row.settled,
+              timedOut:row.timedOut,
+              safetyPassed:row.safetyPassed,
+              escaped:row.escaped,
+              clipping:row.clipping,
+              tunneling:row.tunneling,
+              velocitySpike:row.velocitySpike,
+              artificialAcceleration:row.artificialAcceleration,
+              finalPocketNumber:row.finalPocketNumber,
+              settleTime:row.settleTime
+            };
+          }
+          console.log(JSON.stringify(out));
+          NODE
+          done
+
+      - name: Summarize speed
+        env:
+          SPEED: ${{ matrix.speed }}
+        run: |
+          node <<'NODE'
+          const fs = require('fs');
+          const speed = process.env.SPEED;
+          const rows = fs.readFileSync('part11-low-' + speed + '.ndjson','utf8')
+            .trim().split(/\n+/).filter(Boolean).map(JSON.parse);
+          if (rows.length !== 2 || rows.some(r => !r.telemetry)) {
+            throw new Error(speed + ': expected 2 telemetry rows');
+          }
+          const summary = {
+            speedBaseMps:Number(speed),
+            minLap:Math.min(...rows.map(r=>Number(r.lapCount))),
+            maxLap:Math.max(...rows.map(r=>Number(r.lapCount))),
+            allSafe:rows.every(r =>
+              r.settled && !r.timedOut && r.safetyPassed &&
+              !r.escaped && !r.clipping && !r.tunneling &&
+              !r.velocitySpike && !r.artificialAcceleration &&
+              r.finalPocketNumber != null
+            ),
+            rows
+          };
+          console.log('PART11_LOW_SPEED_SUMMARY ' + JSON.stringify(summary));
+          NODE
+
+      - name: Upload evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: roulette-part11-low-${{ matrix.speed }}
+          path: |
+            part11-low-${{ matrix.speed }}*
+            /tmp/roulette-part11-low-${{ matrix.speed }}.log
+          if-no-files-found: warn
