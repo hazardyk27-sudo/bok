@@ -5,12 +5,38 @@ import { CancelableCompletionRegistry } from "./CancelableCompletionRegistry";
 import type { MotionTiming } from "./RoundTiming";
 import { calculateWinLabelPositions, type WinLabelEvent } from "./WinLabel";
 
+type CoreAmbientVisual = {
+  kind: "core";
+  aura: Phaser.GameObjects.Arc;
+  startedAt: number;
+  auraAlpha: number;
+  pulseScale: number;
+  collected?: {
+    ring: Phaser.GameObjects.Arc;
+    lock: Phaser.GameObjects.Arc;
+    startedAt: number;
+    ringAlpha: number;
+    lockScale: number;
+    lockAlpha: number;
+  };
+};
+
+type ScatterAmbientVisual = {
+  kind: "scatter";
+  aura: Phaser.GameObjects.Arc;
+  warmBloom: Phaser.GameObjects.Arc;
+  art: Phaser.GameObjects.Image;
+  glint: Phaser.GameObjects.Text;
+  startedAt: number;
+};
+
 type BoardNode = {
   container: Phaser.GameObjects.Container;
   symbol: BoardCell;
   row: number;
   col: number;
   coreCollected?: boolean;
+  ambient?: CoreAmbientVisual | ScatterAmbientVisual;
 };
 
 const SCATTER_SYMBOL_SIZE = 100;
@@ -36,6 +62,23 @@ const MULTIPLIER_100X_IMAGE_KEY = "multiplier-core-100x";
 const MULTIPLIER_250X_IMAGE_KEY = "multiplier-core-250x";
 const MULTIPLIER_500X_IMAGE_KEY = "multiplier-core-500x";
 const MULTIPLIER_1000X_IMAGE_KEY = "multiplier-core-1000x";
+
+function pingPongProgress(elapsedMs: number, durationMs: number) {
+  const phase = (Math.max(0, elapsedMs) % (durationMs * 2)) / durationMs;
+  return phase <= 1 ? phase : 2 - phase;
+}
+
+function delayedPingPongProgress(elapsedMs: number, durationMs: number, repeatDelayMs: number) {
+  const cycle = durationMs * 2 + repeatDelayMs;
+  const phase = Math.max(0, elapsedMs) % cycle;
+  if (phase <= durationMs) return phase / durationMs;
+  if (phase <= durationMs * 2) return 1 - (phase - durationMs) / durationMs;
+  return 0;
+}
+
+function sineInOut(value: number) {
+  return Phaser.Math.Easing.Sine.InOut(Phaser.Math.Clamp(value, 0, 1));
+}
 
 function boardCellsMatch(left: BoardCell, right: BoardCell) {
   if (left === right) return true;
@@ -137,6 +180,55 @@ export class GameScene extends Phaser.Scene {
 
   create() {
     this.drawBoardFrame();
+  }
+
+  update(time: number) {
+    this.nodes.forEach((node) => {
+      const ambient = node.ambient;
+      if (!ambient) return;
+      const elapsed = time - ambient.startedAt;
+
+      if (ambient.kind === "core") {
+        const auraProgress = sineInOut(pingPongProgress(elapsed, 820));
+        ambient.aura
+          .setScale(Phaser.Math.Linear(1, ambient.pulseScale, auraProgress))
+          .setAlpha(Phaser.Math.Linear(ambient.auraAlpha, ambient.auraAlpha * 0.72, auraProgress));
+
+        const collected = ambient.collected;
+        if (!collected) return;
+        const collectedElapsed = time - collected.startedAt;
+        const ringProgress = (Math.max(0, collectedElapsed) % 2200) / 2200;
+        collected.ring
+          .setAngle(360 * ringProgress)
+          .setAlpha(Phaser.Math.Linear(1, collected.ringAlpha, ringProgress));
+        const lockProgress = sineInOut(pingPongProgress(collectedElapsed, 760));
+        collected.lock
+          .setScale(Phaser.Math.Linear(1, collected.lockScale, lockProgress))
+          .setAlpha(Phaser.Math.Linear(1, collected.lockAlpha, lockProgress));
+        return;
+      }
+
+      const auraProgress = sineInOut(pingPongProgress(elapsed, 1700));
+      ambient.aura
+        .setScale(Phaser.Math.Linear(1, 1.12, auraProgress))
+        .setAlpha(Phaser.Math.Linear(0.08, 0.14, auraProgress));
+
+      const bloomProgress = sineInOut(pingPongProgress(elapsed, 1200));
+      ambient.warmBloom
+        .setScale(Phaser.Math.Linear(1, 1.16, bloomProgress))
+        .setAlpha(Phaser.Math.Linear(0.08, 0.16, bloomProgress));
+
+      const artProgress = sineInOut(delayedPingPongProgress(elapsed, 90, 1800));
+      ambient.art.setPosition(
+        Phaser.Math.Linear(0, 2, artProgress),
+        Phaser.Math.Linear(0, -1, artProgress),
+      );
+
+      const glintProgress = sineInOut(delayedPingPongProgress(elapsed, 260, 2600));
+      ambient.glint
+        .setAlpha(Phaser.Math.Linear(1, 0.18, glintProgress))
+        .setScale(Phaser.Math.Linear(1, 0.6, glintProgress));
+    });
   }
 
   private drawBoardFrame() {
@@ -284,6 +376,7 @@ export class GameScene extends Phaser.Scene {
       pooledBurstEffects: this.burstRingPool.length + this.burstParticlePool.length,
       burstFxCreated: this.burstFxCreated,
       burstFxReused: this.burstFxReused,
+      ambientSpecialAnimations: this.nodes.filter((node) => Boolean(node.ambient)).length,
       activeWinLabels: this.activeWinLabels.size,
       displayObjects: this.children.list.length,
       fps: Math.round(this.game.loop.actualFps || 0),
@@ -363,16 +456,19 @@ export class GameScene extends Phaser.Scene {
         container.add([aura, tile, label]);
       }
       container.setScale(coreScale);
-      this.tweens.add({
-        targets: aura,
-        scale: visual.pulseScale,
-        alpha: visual.auraAlpha * 0.72,
-        duration: 820,
-        yoyo: true,
-        repeat: -1,
-        ease: "Sine.easeInOut",
-      });
-      const node = { container, symbol, row, col };
+      const node: BoardNode = {
+        container,
+        symbol,
+        row,
+        col,
+        ambient: {
+          kind: "core",
+          aura,
+          startedAt: this.time.now,
+          auraAlpha: visual.auraAlpha,
+          pulseScale: visual.pulseScale,
+        },
+      };
       this.nodes.push(node);
       return node;
     }
@@ -383,20 +479,20 @@ export class GameScene extends Phaser.Scene {
         .setScale(SCATTER_SYMBOL_SIZE / SCATTER_SOURCE_SIZE);
       const glint = this.add.text(18, -31, "✦", { color: "#fff4bf", fontSize: "11px" }).setOrigin(0.5);
       container.add([aura, warmBloom, scatterArt, glint]);
-      this.tweens.add({ targets: aura, scale: 1.12, alpha: 0.14, duration: 1700, yoyo: true, repeat: -1, ease: "Sine.easeInOut" });
-      this.tweens.add({ targets: warmBloom, scale: 1.16, alpha: 0.16, duration: 1200, yoyo: true, repeat: -1, ease: "Sine.easeInOut" });
-      this.tweens.add({
-        targets: scatterArt,
-        x: 2,
-        y: -1,
-        duration: 90,
-        yoyo: true,
-        repeat: -1,
-        repeatDelay: 1800,
-        ease: "Sine.easeInOut",
-      });
-      this.tweens.add({ targets: glint, alpha: 0.18, scale: 0.6, duration: 260, yoyo: true, repeat: -1, repeatDelay: 2600 });
-      const node = { container, symbol, row, col };
+      const node: BoardNode = {
+        container,
+        symbol,
+        row,
+        col,
+        ambient: {
+          kind: "scatter",
+          aura,
+          warmBloom,
+          art: scatterArt,
+          glint,
+          startedAt: this.time.now,
+        },
+      };
       this.nodes.push(node);
       return node;
     }
@@ -707,23 +803,16 @@ export class GameScene extends Phaser.Scene {
     const lock = this.add.circle(0, 0, 35, 0xffd56b, node.symbol.value >= 500 ? 0.12 : 0.07)
       .setBlendMode(Phaser.BlendModes.ADD);
     node.container.add([lock, ring]);
-    this.tweens.add({
-      targets: ring,
-      angle: 360,
-      alpha: node.symbol.value >= 500 ? 0.78 : 0.5,
-      duration: 2200,
-      repeat: -1,
-      ease: "Linear",
-    });
-    this.tweens.add({
-      targets: lock,
-      scale: node.symbol.value >= 500 ? 1.12 : 1.06,
-      alpha: node.symbol.value >= 500 ? 0.2 : 0.11,
-      duration: 760,
-      yoyo: true,
-      repeat: -1,
-      ease: "Sine.easeInOut",
-    });
+    if (node.ambient?.kind === "core") {
+      node.ambient.collected = {
+        ring,
+        lock,
+        startedAt: this.time.now,
+        ringAlpha: node.symbol.value >= 500 ? 0.78 : 0.5,
+        lockScale: node.symbol.value >= 500 ? 1.12 : 1.06,
+        lockAlpha: node.symbol.value >= 500 ? 0.2 : 0.11,
+      };
+    }
   }
 
   private canvasPointForElement(element: HTMLElement) {
