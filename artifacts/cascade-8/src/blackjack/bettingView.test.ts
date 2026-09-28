@@ -36,7 +36,7 @@ describe("blackjack premium chip and betting UI foundation", () => {
     expect(formatBlackjackChipCredits(1_000)).toBe("1K");
     expect(formatBlackjackChipCredits(64_000)).toBe("64K");
     expect(formatBlackjackChipCredits(1_000_000)).toBe("1M");
-    expect(formatBlackjackChipCredits(4_000_000)).toBe("4M");
+    expect(formatBlackjackChipCredits(4_096_000)).toBe("4.096M");
   });
 
   it("rejects invalid or unsafe denomination arithmetic", () => {
@@ -92,13 +92,14 @@ describe("blackjack premium chip and betting UI foundation", () => {
 
   it("classifies very large selected chips into premium tiers", () => {
     const markup = renderBlackjackBettingPanel({
-      selectedChipCredits: 4_000_000,
-      totalBetLabel: "4M",
+      selectedChipCredits: 4_096_000,
+      totalBetLabel: "4.096M",
       readyLabel: "READY",
       bettingClosesLabel: "05",
     });
 
     expect(markup).toContain('data-blackjack-selected-chip="4000000"');
-    expect(markup).toContain("4M");
+    expect(markup).toContain("4.096M");
+    expect(markup).toContain('data-chip-tier="ultra"');
   });
 });
