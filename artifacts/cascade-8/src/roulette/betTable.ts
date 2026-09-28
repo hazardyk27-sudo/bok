@@ -236,6 +236,10 @@ export function renderRouletteBetTable() {
         </div>
 
         <div class="roulette-bet-summary">
+          <div class="roulette-bet-metric roulette-balance-metric">
+            <span>BALANCE</span>
+            <strong data-wallet-balance aria-live="polite">…</strong>
+          </div>
           <div class="roulette-bet-metric">
             <span>TOTAL BET</span>
             <strong data-total-bet>0</strong>

@@ -717,7 +717,7 @@ button {
 
 
 .roulette-bet-summary {
-  grid-template-columns: repeat(3, auto);
+  grid-template-columns: repeat(4, auto);
   align-items: end;
   gap: 10px;
 }
@@ -1033,5 +1033,21 @@ button {
   .roulette-placed-chip,
   .roulette-bet-actions button {
     transition: none;
+  }
+}
+
+
+/* Part 27 server-authoritative shared wallet */
+.roulette-balance-metric strong {
+  color: #dfe5e9;
+}
+
+.roulette-page[data-phase="spinning"] .roulette-balance-metric strong {
+  opacity: 0.78;
+}
+
+@media (max-width: 640px) {
+  .roulette-bet-summary {
+    grid-template-columns: repeat(2, auto);
   }
 }
