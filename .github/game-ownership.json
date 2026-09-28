@@ -75,6 +75,12 @@
       "developmentRoots": [
         "artifacts/cascade-8/e2e/blackjack.spec.ts"
       ]
+    },
+    "roulette": {
+      "branch": "feature/roulette-2d",
+      "roots": [
+        "artifacts/cascade-8/src/roulette"
+      ]
     }
   }
 }
