@@ -23,8 +23,8 @@ type CoreAmbientVisual = {
 
 type ScatterAmbientVisual = {
   kind: "scatter";
-  aura: Phaser.GameObjects.Arc;
-  warmBloom: Phaser.GameObjects.Arc;
+  aura: Phaser.GameObjects.Ellipse;
+  warmBloom: Phaser.GameObjects.Ellipse;
   art: Phaser.GameObjects.Image;
   glint: Phaser.GameObjects.Text;
   startedAt: number;
