@@ -10,6 +10,7 @@ import {
 } from "./actionQueue";
 import { doubleBlackjackCurrentHand } from "./double";
 import { hitBlackjackCurrentHand } from "./hit";
+import { commitBlackjackServerEvent } from "./eventStream";
 import type { BlackjackTable } from "./domain";
 import type { BlackjackReservationBook } from "./reservations";
 import { splitBlackjackCurrentHand } from "./split";
@@ -252,7 +253,15 @@ export class BlackjackPlayerActionCoordinator {
         },
       );
 
-      this.tableState = committed.table;
+      const tableAfterEvent = committed.replayed
+        ? committed.table
+        : commitBlackjackServerEvent(committed.table, {
+            type: "TABLE_STATE_COMMITTED",
+            actionId: action.envelope.actionId,
+            createdAtMs: action.nowMs,
+          }).table;
+
+      this.tableState = tableAfterEvent;
       this.protocolState = committed.protocol;
 
       const pendingAccount = pending.account;
