@@ -5,7 +5,7 @@ This is the general delivery protocol for every game/category in OYUN. It covers
 ## 1. Three-lane model
 
 ### Development lane
-Normal work happens on the category's feature branch, for example `feature/roulette` or `feature/cadi-kazan`.
+Normal work happens on the category's feature branch, for example `feature/slot` or `feature/cadi-kazan`.
 
 - Work only inside that category's allowed ownership/development roots.
 - Commit and push only to that feature branch.
