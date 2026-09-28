@@ -45,8 +45,10 @@ import {
 } from "./resultPresentation";
 import {
   readSettledWinningResult,
-  simulateSeededRouletteSpin,
 } from "./spinResult";
+import {
+  createVerifiedRouletteReplay,
+} from "./authoritativeReplay";
 import {
   RouletteWalletClient,
   type RouletteServerSpinResponse,
@@ -577,17 +579,10 @@ export function mountRoulette(app: HTMLDivElement) {
         idempotencyKey,
       );
 
-      const replay = simulateSeededRouletteSpin(
-        pendingServerSpin.seed,
-      );
-
-      if (
-        !replay.result ||
-        replay.result.number !== pendingServerSpin.result.number ||
-        replay.result.pocketIndex !== pendingServerSpin.result.pocketIndex
-      ) {
-        throw new Error("ROULETTE_SERVER_RESULT_MISMATCH");
-      }
+      const replay =
+        createVerifiedRouletteReplay(
+          pendingServerSpin,
+        );
 
       betState = snapshotRouletteRound(betState);
       renderBetState();

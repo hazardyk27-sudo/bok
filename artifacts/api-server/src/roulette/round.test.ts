@@ -3,6 +3,9 @@ import {
   createRouletteAuthoritativeRound,
   parseRouletteServerBets,
 } from "./round";
+import {
+  ROULETTE_REGRESSION_SEEDS,
+} from "../../../cascade-8/src/roulette/spinResult";
 
 describe("roulette authoritative round", () => {
   it("validates the exposed chip denominations and bet ids", () => {
@@ -43,6 +46,40 @@ describe("roulette authoritative round", () => {
     expect(first.result).toEqual(second.result);
     expect(first.settlement).toEqual(second.settlement);
     expect(first.stakeCents).toBe(1500);
+  });
+
+  it("keeps all canonical regression seeds server-settleable", () => {
+    for (const seed of ROULETTE_REGRESSION_SEEDS) {
+      const round =
+        createRouletteAuthoritativeRound(
+          String(seed),
+          [
+            {
+              betId: "red",
+              amount: 10,
+            },
+          ],
+        );
+
+      expect(
+        round.result.number,
+      ).toBeGreaterThanOrEqual(0);
+      expect(
+        round.result.number,
+      ).toBeLessThanOrEqual(36);
+      expect(
+        round.result.pocketIndex,
+      ).toBeGreaterThanOrEqual(0);
+      expect(
+        round.result.pocketIndex,
+      ).toBeLessThan(37);
+      expect(
+        round.stakeCents,
+      ).toBe(1000);
+      expect(
+        round.payoutCents,
+      ).toBeGreaterThanOrEqual(0);
+    }
   });
 
   it("supports a zero-bet physical spin without fabricating payout", () => {
