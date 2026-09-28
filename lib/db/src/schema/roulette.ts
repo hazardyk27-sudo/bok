@@ -19,6 +19,8 @@ export const rouletteRounds = pgTable(
     winningNumber: integer("winning_number").notNull(),
     pocketIndex: integer("pocket_index").notNull(),
     bets: jsonb("bets").notNull(),
+    result: jsonb("result").notNull(),
+    settlement: jsonb("settlement").notNull(),
     idempotencyKey: text("idempotency_key").notNull(),
     createdAt: timestamp("created_at", { withTimezone: true })
       .notNull()
