@@ -2,12 +2,13 @@
 
 ## Ownership
 - Canonical development branch: `feature/roulette-2d`.
-- Owned root: `artifacts/cascade-8/src/roulette`.
+- Owned roots: `artifacts/cascade-8/src/roulette`, `artifacts/api-server/src/roulette`, and `lib/db/src/schema/roulette.ts`.
 - Do not reuse files, physics, assets, geometry, constants, or implementation details from the retired 3D Roulette.
-- Shared routing, ownership, wallet/session wiring, package files, and preview infrastructure remain platform-owned.
+- Shared route mounting, ownership declarations, platform session/wallet primitives, package files, and preview infrastructure remain platform-owned. Roulette-specific API/repository/schema code is game-owned.
 - Replit remains on `integration/replit-preview`; normal Roulette work happens only on the feature branch.
 
 ## Product direction
+- Mobile layout reference locked 2026-09-28: wheel above a tall portrait table, 0 directly under the wheel, 1–36 arranged as 3 columns × 12 rows, and the outside/dozen controls vertically grouped beside the number grid where practical. Betting makes the table dominant; spinning makes the wheel dominant.
 - Build a realistic top-down 2D / 2.5D European single-zero roulette.
 - Primary visual reference: clean top-down wooden roulette wheel supplied by the user on 2026-09-28; geometry and proportions are reconstructed from that reference rather than legacy 3D assets.
 - The wheel uses a wooden outer annulus with gold trim/markers, a fixed outer ball track, four small fixed deflectors, an inward/radially oriented numbered ring, a broad green pocket ring, a wooden center disc, and a four-arm gold center mechanism.
@@ -15,6 +16,7 @@
 - Winning outcomes come only from final settled simulation geometry, never target-number steering, snapping, magnets, or post-selection.
 
 ## Current milestones
+- 2026-09-28 — Part 27 server-authoritative shared-wallet settlement completed — the server now creates the random seed, runs the deterministic roulette physics, derives the winner only from settled geometry, validates the exposed chip/bet ids, settles the locked wager snapshot, and atomically debits/credits the shared session wallet with idempotent round/ledger records. The client submits only bets, replays the returned server seed for animation, verifies final number/pocket, and presents the server settlement. No client-supplied result, payout, target number or target pocket is accepted.
 - 2026-09-28 — Part 26 betting-table final interaction polish completed — mobile straight-up rows now meet a 46–48 px touch target, placed chips use compact K/M labels and explicit in-cell positioning so large stacks cannot overflow or hide unpredictably, cells expose their live stake through aria labels, and the mobile chip/control console stays sticky during betting for easy placement on the tall portrait table. Safe-area padding, narrow-screen two-row action controls and improved settled-result visibility are included. Spin physics and the approved roulette audio are unchanged.
 - 2026-09-28 — Part 25 wheel-result → betting-result integration completed — the final physics-derived wheel number now settles the exact committed wager snapshot through the Part 24 engine. The physical winning straight-up number is always highlighted, placed winning bet areas/chips receive a distinct win glow, and the betting console shows gross RETURN plus signed NET for the round. Result presentation stays through the 1600 ms settle hold and into reopened betting, then clears only when the next spin begins. No wallet debit/credit is performed yet; these are display-only settlement figures derived from the already-locked wagers and the physics result.
 - 2026-09-28 — Part 24 European betting-rules engine completed — a pure wager engine now validates and resolves every currently exposed table bet: straight-up 0–36 at 35:1, the three columns and three dozens at 2:1, and low/high, odd/even, red/black at 1:1 with zero correctly losing every non-straight outside bet. Round settlement returns total stake, winning stake, gross return, net profit, per-placement results and unique winning bet ids for the next UI/result integration. Unknown bet ids and invalid result numbers are rejected instead of silently settling. No wallet debit/credit is performed yet.

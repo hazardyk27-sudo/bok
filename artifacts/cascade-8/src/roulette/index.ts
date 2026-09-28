@@ -1,7 +1,6 @@
 import "./roulette.css";
 import { renderRouletteBetTable } from "./betTable";
 import {
-  settleRouletteBets,
   type RouletteRoundSettlement,
 } from "./betRules";
 import {
@@ -25,7 +24,6 @@ import {
   type BallOrbit,
 } from "./ballMotion";
 import {
-  createRotorSpin,
   sampleRotorSpin,
   type RotorSpin,
 } from "./spinMotion";
@@ -45,7 +43,14 @@ import {
 import {
   createRouletteResultPresentation,
 } from "./resultPresentation";
-import { readSettledWinningResult } from "./spinResult";
+import {
+  readSettledWinningResult,
+  simulateSeededRouletteSpin,
+} from "./spinResult";
+import {
+  RouletteWalletClient,
+  type RouletteServerSpinResponse,
+} from "./rouletteWalletClient";
 import { formatRouletteAmount } from "./uiFormat";
 import { renderRouletteWheel } from "./wheelRenderer";
 
@@ -109,6 +114,7 @@ export function mountRoulette(app: HTMLDivElement) {
   const page = app.querySelector<HTMLElement>("[data-roulette-page]");
   const betStatus = app.querySelector<HTMLElement>("[data-bet-status]");
   const betPanel = app.querySelector<HTMLElement>("[data-roulette-bet-panel]");
+  const walletBalance = app.querySelector<HTMLElement>("[data-wallet-balance]");
   const totalBet = app.querySelector<HTMLElement>("[data-total-bet]");
   const roundReturn = app.querySelector<HTMLElement>("[data-round-return]");
   const roundProfit = app.querySelector<HTMLElement>("[data-round-profit]");
@@ -133,6 +139,8 @@ export function mountRoulette(app: HTMLDivElement) {
 
   let betState: RouletteBetState =
     createRouletteBetState();
+  let walletBalanceCents: number | null = null;
+  let pendingServerSpin: RouletteServerSpinResponse | null = null;
   let activeRotorSpin: RotorSpin | null = null;
   let activeBallOrbit: BallOrbit | null = null;
   let motionStartedAt = 0;
@@ -142,8 +150,31 @@ export function mountRoulette(app: HTMLDivElement) {
   let resultHoldTimer = 0;
   const rouletteAudio =
     new RouletteAudioEngine();
+  const rouletteWallet =
+    new RouletteWalletClient();
 
   const redraw = () => renderCanvas(canvas, viewState);
+
+  const renderWalletBalance = () => {
+    if (!walletBalance) return;
+    walletBalance.textContent =
+      walletBalanceCents === null
+        ? "…"
+        : formatRouletteAmount(walletBalanceCents / 100);
+  };
+
+  const canAffordCurrentBet = () =>
+    walletBalanceCents !== null &&
+    getRouletteTotalStake(betState.placements) * 100 <= walletBalanceCents;
+
+  const updateSpinAvailability = () => {
+    if (!spinButton) return;
+    spinButton.disabled =
+      !canStartRouletteSpin(
+        page.dataset.phase as RouletteScenePhase,
+      ) ||
+      !canAffordCurrentBet();
+  };
 
   const clearRoundResult = () => {
     app
@@ -253,10 +284,7 @@ export function mountRoulette(app: HTMLDivElement) {
       ),
     );
 
-    if (spinButton) {
-      spinButton.disabled =
-        !canStartRouletteSpin(phase);
-    }
+    updateSpinAvailability();
   };
 
   const reopenBettingAfterResult = () => {
@@ -408,6 +436,8 @@ export function mountRoulette(app: HTMLDivElement) {
         betState.previousRoundPlacements
           .length === 0;
     }
+
+    updateSpinAvailability();
   };
 
   const animate = (timestamp: number) => {
@@ -458,15 +488,15 @@ export function mountRoulette(app: HTMLDivElement) {
         const completedOrbit = activeBallOrbit;
         const result = readSettledWinningResult(completedOrbit);
 
-        if (result) {
-          const settlement =
-            settleRouletteBets(
-              betState.previousRoundPlacements,
-              result.number,
-            );
-          renderRoundResult(
-            settlement,
-          );
+        if (
+          result &&
+          pendingServerSpin &&
+          pendingServerSpin.result.number === result.number &&
+          pendingServerSpin.result.pocketIndex === result.pocketIndex
+        ) {
+          renderRoundResult(pendingServerSpin.settlement);
+          walletBalanceCents = pendingServerSpin.wallet.balanceCents;
+          renderWalletBalance();
 
           canvas.dataset.rouletteState = "settled";
           setScenePhase(
@@ -481,6 +511,7 @@ export function mountRoulette(app: HTMLDivElement) {
             `European roulette wheel. Result ${result.number}.`,
           );
           reopenBettingAfterResult();
+          pendingServerSpin = null;
         } else {
           canvas.dataset.rouletteState = "unsettled";
           setScenePhase("betting");
@@ -510,9 +541,9 @@ export function mountRoulette(app: HTMLDivElement) {
       activeRotorSpin ||
       activeBallOrbit ||
       !canStartRouletteSpin(
-        page.dataset.phase as
-          RouletteScenePhase,
-      )
+        page.dataset.phase as RouletteScenePhase,
+      ) ||
+      !canAffordCurrentBet()
     ) {
       return;
     }
@@ -525,27 +556,61 @@ export function mountRoulette(app: HTMLDivElement) {
 
     if (activeRotorSpin || activeBallOrbit) return;
 
-    betState =
-      snapshotRouletteRound(
-        betState,
-      );
-    renderBetState();
     clearRoundResult();
 
-    canvas.dataset.rouletteState = "spinning";
+    canvas.dataset.rouletteState = "authorizing";
     setScenePhase("spinning");
     delete canvas.dataset.roulettePocketIndex;
     delete canvas.dataset.rouletteWinningNumber;
     delete canvas.dataset.rouletteWinningColor;
     canvas.setAttribute(
       "aria-label",
-      "European roulette wheel. Spin in progress.",
+      "European roulette wheel. Spin authorization in progress.",
     );
 
-    activeRotorSpin = createRotorSpin(viewState.rotorAngle, 1);
-    activeBallOrbit = createBallOrbit(
-      viewState.ballAngle,
-      activeRotorSpin,
+    try {
+      const idempotencyKey =
+        `roulette_${crypto.randomUUID().replaceAll("-", "")}`;
+
+      pendingServerSpin = await rouletteWallet.spin(
+        betState.placements,
+        idempotencyKey,
+      );
+
+      const replay = simulateSeededRouletteSpin(
+        pendingServerSpin.seed,
+      );
+
+      if (
+        !replay.result ||
+        replay.result.number !== pendingServerSpin.result.number ||
+        replay.result.pocketIndex !== pendingServerSpin.result.pocketIndex
+      ) {
+        throw new Error("ROULETTE_SERVER_RESULT_MISMATCH");
+      }
+
+      betState = snapshotRouletteRound(betState);
+      renderBetState();
+      activeRotorSpin = replay.rotorSpin;
+      activeBallOrbit = replay.ballOrbit;
+    } catch (error) {
+      pendingServerSpin = null;
+      canvas.dataset.rouletteState = "ready";
+      setScenePhase("betting");
+      if (betStatus) {
+        betStatus.textContent =
+          error instanceof Error &&
+          error.message === "INSUFFICIENT_ROULETTE_CREDITS"
+            ? "INSUFFICIENT BALANCE"
+            : "SPIN FAILED";
+      }
+      return;
+    }
+
+    canvas.dataset.rouletteState = "spinning";
+    canvas.setAttribute(
+      "aria-label",
+      "European roulette wheel. Spin in progress.",
     );
 
     simulationEvents =
@@ -570,7 +635,21 @@ export function mountRoulette(app: HTMLDivElement) {
   const observer = new ResizeObserver(redraw);
   observer.observe(canvas);
   redraw();
+  renderWalletBalance();
   renderBetState();
+
+  void rouletteWallet
+    .bootstrap()
+    .then((wallet) => {
+      walletBalanceCents = wallet.balanceCents;
+      renderWalletBalance();
+      renderBetState();
+    })
+    .catch(() => {
+      walletBalanceCents = null;
+      if (walletBalance) walletBalance.textContent = "ERR";
+      updateSpinAvailability();
+    });
 
   betPanel.addEventListener(
     "click",
