@@ -18,10 +18,10 @@ describe("roulette rotor spin motion", () => {
     expect(spin.stopAngularVelocity).toBe(
       ROTOR_SPIN_PROFILE.stopAngularVelocity,
     );
-    expect(spin.durationMs).toBeGreaterThan(9000);
-    expect(spin.durationMs).toBeLessThan(11000);
-    expect(getRotorSpinRevolutions(spin)).toBeGreaterThan(4.5);
-    expect(getRotorSpinRevolutions(spin)).toBeLessThan(5.5);
+    expect(spin.durationMs).toBeGreaterThan(11000);
+    expect(spin.durationMs).toBeLessThan(11400);
+    expect(getRotorSpinRevolutions(spin)).toBeGreaterThan(3.4);
+    expect(getRotorSpinRevolutions(spin)).toBeLessThan(3.7);
   });
 
   it("slows monotonically and stops at the calculated duration", () => {
