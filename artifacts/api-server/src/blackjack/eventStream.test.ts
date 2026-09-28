@@ -9,6 +9,7 @@ import { createUnshuffledBlackjackShoe } from "./shoe";
 
 const BLACKJACK_TARGETED_PROMOTION_GATE =
   process.env.GITHUB_WORKFLOW === "Promote One Game To Replit Preview" ||
+  process.env.GITHUB_WORKFLOW === "Integration Preview Guard" ||
   process.argv.some((argument) =>
     argument.replaceAll("\\", "/").endsWith(
       "src/blackjack/eventStream.test.ts",
