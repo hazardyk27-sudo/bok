@@ -1,5 +1,6 @@
 import {
   expireBlackjackOpenBet,
+  bindBlackjackBetPositionToHand,
   getInitialDealParticipantFromBet,
   lockBlackjackReadyBet,
   type BlackjackBettingPosition,
@@ -9,8 +10,13 @@ import type {
   BlackjackTable,
 } from "./domain";
 import { commitBlackjackServerEvent } from "./eventStream";
-import type { BlackjackInitialDealParticipant } from "./initialDeal";
+import {
+  dealInitialBlackjackCards,
+  type BlackjackInitialDealEvent,
+  type BlackjackInitialDealParticipant,
+} from "./initialDeal";
 import type { BlackjackReservationBook } from "./reservations";
+import { startBlackjackPlayerTurns } from "./turnEngine";
 import type { BlackjackWalletLedgerState } from "./walletLedger";
 
 export type BlackjackRoundFlowAccount = Readonly<{
@@ -25,6 +31,14 @@ export type BlackjackBettingWindowCloseResult = Readonly<{
   accounts: readonly BlackjackRoundFlowAccount[];
   positions: readonly BlackjackBettingPosition[];
   participants: readonly BlackjackInitialDealParticipant[];
+  replayed: boolean;
+}>;
+
+export type BlackjackInitialDealFlowResult = Readonly<{
+  table: BlackjackTable;
+  accounts: readonly BlackjackRoundFlowAccount[];
+  participants: readonly BlackjackInitialDealParticipant[];
+  dealEvents: readonly BlackjackInitialDealEvent[];
   replayed: boolean;
 }>;
 
@@ -218,6 +232,190 @@ export function closeBlackjackBettingWindow(input: {
     ),
     positions:frozenPositions,
     participants,
+    replayed:false,
+  });
+}
+
+
+function hasInitialHandForParticipant(
+  table: BlackjackTable,
+  participant: BlackjackInitialDealParticipant,
+): boolean {
+  const expectedHandId =
+    table.round?.roundId +
+    ":seat-" +
+    participant.seatNumber +
+    ":initial";
+  return (
+    table.round?.hands.some(
+      (hand) =>
+        hand.handId === expectedHandId &&
+        hand.playerId === participant.playerId &&
+        hand.seatNumber === participant.seatNumber,
+    ) ?? false
+  );
+}
+
+export function startBlackjackInitialDeal(input: {
+  table: BlackjackTable;
+  accounts: readonly BlackjackRoundFlowAccount[];
+  positions: readonly BlackjackBettingPosition[];
+  nowMs: number;
+}): BlackjackInitialDealFlowResult {
+  assertNowMs(input.nowMs);
+
+  const round=input.table.round;
+  if(round===null){
+    throw new Error("Blackjack initial deal requires an active round");
+  }
+
+  const participants=currentLockedParticipants(
+    round.roundId,
+    input.positions,
+  );
+
+  if(
+    (input.table.phase==="PLAYER_TURNS" ||
+      input.table.phase==="DEALER_TURN") &&
+    input.table.phase===round.phase &&
+    participants.length>0 &&
+    participants.every((participant)=>
+      hasInitialHandForParticipant(input.table,participant),
+    )
+  ){
+    return Object.freeze({
+      table:input.table,
+      accounts:Object.freeze([...input.accounts]),
+      participants,
+      dealEvents:Object.freeze([]),
+      replayed:true,
+    });
+  }
+
+  if(
+    input.table.phase!=="BETTING_LOCKED" ||
+    round.phase!=="BETTING_LOCKED"
+  ){
+    throw new Error(
+      "Blackjack initial deal requires BETTING_LOCKED phase",
+    );
+  }
+  if(participants.length===0){
+    throw new Error(
+      "Blackjack initial deal requires at least one locked betting participant",
+    );
+  }
+
+  const deal=dealInitialBlackjackCards({
+    roundId:round.roundId,
+    shoe:input.table.shoe,
+    participants,
+  });
+
+  const accountsByPlayer=new Map(
+    input.accounts.map((account)=>[account.playerId,account] as const),
+  );
+  for(const hand of deal.hands){
+    const position=input.positions.find(
+      (candidate)=>
+        candidate.roundId===round.roundId &&
+        candidate.playerId===hand.playerId &&
+        candidate.seatNumber===hand.seatNumber &&
+        candidate.status==="LOCKED",
+    );
+    const account=accountsByPlayer.get(hand.playerId);
+    if(!position || !account){
+      throw new Error(
+        "Blackjack initial deal cannot bind a locked bet to its hand",
+      );
+    }
+
+    const boundBook=bindBlackjackBetPositionToHand(
+      account.book,
+      position,
+      hand.handId,
+    );
+    accountsByPlayer.set(
+      hand.playerId,
+      freezeAccount({
+        ...account,
+        book:boundBook,
+      }),
+    );
+  }
+
+  const handIdsByPlayer=new Map<string,string[]>();
+  for(const hand of deal.hands){
+    const ids=handIdsByPlayer.get(hand.playerId) ?? [];
+    ids.push(hand.handId);
+    handIdsByPlayer.set(hand.playerId,ids);
+  }
+
+  const players=Object.freeze(
+    input.table.players.map((player): BlackjackPlayer => {
+      const handIds=handIdsByPlayer.get(player.playerId);
+      if(!handIds) {
+        if(
+          player.status==="BETTING" ||
+          player.status==="READY"
+        ){
+          return Object.freeze({
+            ...player,
+            status:"SEATED_WAITING" as const,
+            handIds:Object.freeze([]),
+          });
+        }
+        return player;
+      }
+
+      return Object.freeze({
+        ...player,
+        status:
+          player.status==="DISCONNECTED"
+            ? "DISCONNECTED" as const
+            : "PLAYING" as const,
+        handIds:Object.freeze([...handIds]),
+      });
+    }),
+  );
+
+  const initialRound=Object.freeze({
+    ...round,
+    phase:"INITIAL_DEAL" as const,
+    activeSeatOrder:deal.activeSeatOrder,
+    hands:deal.hands,
+    dealer:deal.dealer,
+    currentTurn:null,
+    finishedAtMs:null,
+  });
+  const startedRound=startBlackjackPlayerTurns(
+    initialRound,
+    input.nowMs,
+  );
+
+  const versionedTable: BlackjackTable=Object.freeze({
+    ...input.table,
+    phase:startedRound.phase,
+    players,
+    shoe:deal.shoe,
+    round:startedRound,
+    stateVersion:nextStateVersion(input.table.stateVersion),
+  });
+  const committed=commitBlackjackServerEvent(versionedTable,{
+    type:"ROUND_PHASE_CHANGED",
+    actionId:null,
+    createdAtMs:input.nowMs,
+  });
+
+  return Object.freeze({
+    table:committed.table,
+    accounts:Object.freeze(
+      input.accounts.map((account)=>
+        accountsByPlayer.get(account.playerId) ?? account,
+      ),
+    ),
+    participants,
+    dealEvents:deal.events,
     replayed:false,
   });
 }

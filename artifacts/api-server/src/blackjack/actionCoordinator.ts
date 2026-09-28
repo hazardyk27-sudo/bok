@@ -25,6 +25,7 @@ import type { BlackjackReservationBook } from "./reservations";
 import { splitBlackjackCurrentHand } from "./split";
 import {
   closeBlackjackBettingWindow,
+  startBlackjackInitialDeal,
   type BlackjackRoundFlowAccount,
 } from "./roundFlow";
 import { standBlackjackCurrentHand } from "./stand";
@@ -89,6 +90,25 @@ export type BlackjackBettingWindowCloseCoordinatorResult = Readonly<{
     playerId: string;
     seatNumber: 1 | 2 | 3 | 4 | 5;
     betCents: number;
+  }>[];
+  queueSequence: number;
+  replayed: boolean;
+}>;
+
+export type BlackjackInitialDealCoordinatorResult = Readonly<{
+  table: BlackjackTable;
+  participants: readonly Readonly<{
+    playerId: string;
+    seatNumber: 1 | 2 | 3 | 4 | 5;
+    betCents: number;
+  }>[];
+  dealEvents: readonly Readonly<{
+    sequence: number;
+    recipient: "PLAYER" | "DEALER";
+    pass: 1 | 2;
+    cardId: string;
+    faceUp: boolean;
+    seatNumber?: 1 | 2 | 3 | 4 | 5;
   }>[];
   queueSequence: number;
   replayed: boolean;
@@ -251,6 +271,36 @@ export class BlackjackPlayerActionCoordinator {
       return Object.freeze({
         table:this.tableState,
         participants:result.participants,
+        queueSequence,
+        replayed:result.replayed,
+      });
+    });
+  }
+
+  startInitialDeal(
+    nowMs: number,
+  ): Promise<BlackjackInitialDealCoordinatorResult> {
+    assertNowMs(nowMs);
+
+    return this.queue.enqueue(({ queueSequence }) => {
+      const result=startBlackjackInitialDeal({
+        table:this.tableState,
+        accounts:Object.freeze(
+          Array.from(this.accounts.values()) as BlackjackRoundFlowAccount[],
+        ),
+        positions:Object.freeze(Array.from(this.bettingPositions.values())),
+        nowMs,
+      });
+
+      this.tableState=result.table;
+      for(const account of result.accounts){
+        this.accounts.set(account.playerId,freezeAccount(account));
+      }
+
+      return Object.freeze({
+        table:this.tableState,
+        participants:result.participants,
+        dealEvents:result.dealEvents,
         queueSequence,
         replayed:result.replayed,
       });
