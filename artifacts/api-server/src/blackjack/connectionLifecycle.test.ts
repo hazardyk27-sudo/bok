@@ -14,7 +14,10 @@ import {
   createBlackjackCoordinatorRealtimeSource,
 } from "./roundRealtime";
 import { runBlackjackRoundRuntimeTick } from "./roundRuntime";
-import { createBlackjackReservationBook } from "./reservations";
+import {
+  createBlackjackReservationBook,
+  reserveBlackjackWager,
+} from "./reservations";
 import { createBlackjackTableFoundation } from "./seats";
 import { createUnshuffledBlackjackShoe } from "./shoe";
 import { createBlackjackWalletLedgerState } from "./walletLedger";
@@ -84,16 +87,31 @@ function activeTable(turnEndsAtMs=60_000): BlackjackTable {
 }
 
 function game(){
+  const reserved=reserveBlackjackWager(
+    createBlackjackWalletLedgerState({
+      userId:"user-1",
+      totalBalanceCents:100_000,
+    }),
+    createBlackjackReservationBook("user-1"),
+    {
+      reservationId:"connection-initial-reservation",
+      reserveTransactionId:"connection-initial-reserve-tx",
+      userId:"user-1",
+      roundId:"connection-round",
+      handId:"connection-hand",
+      kind:"INITIAL",
+      amountCents:1_000,
+      createdAtMs:0,
+    },
+  );
+
   return new BlackjackPlayerActionCoordinator({
     table:activeTable(),
     accounts:[{
       playerId:"player-1",
       userId:"user-1",
-      wallet:createBlackjackWalletLedgerState({
-        userId:"user-1",
-        totalBalanceCents:100_000,
-      }),
-      book:createBlackjackReservationBook("user-1"),
+      wallet:reserved.wallet,
+      book:reserved.book,
     }],
   });
 }

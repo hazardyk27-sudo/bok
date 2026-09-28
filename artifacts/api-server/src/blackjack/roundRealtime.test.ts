@@ -257,7 +257,8 @@ describe("blackjack round runtime realtime publication",()=>{
 
     clock=10_100;
     const replay=await driver.tick();
-    expect(replay.status).toBe("NOOP");
+    expect(replay.status).toBe("WAITING_FOR_PLAYER_TURN");
+    expect(replay.transitions).toEqual([]);
     expect(published).toEqual([3,4]);
 
     unsubscribe();
