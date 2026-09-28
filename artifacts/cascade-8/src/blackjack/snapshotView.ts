@@ -95,6 +95,9 @@ export type BlackjackPublicSnapshotViewSource = Readonly<{
   eventSequence: number;
 }>;
 
+type BlackjackSnapshotHand =
+  NonNullable<BlackjackPublicSnapshotViewSource["round"]>["hands"][number];
+
 export type BlackjackSnapshotViewContext = Readonly<{
   localPlayerId?: string | null;
   availableBalanceCents?: number | null;
@@ -231,7 +234,7 @@ function displayHandStatus(
 }
 
 function sumSeatBetsCents(
-  hands: readonly NonNullable<BlackjackPublicSnapshotViewSource["round"]>["hands"][number][],
+  hands: readonly BlackjackSnapshotHand[],
 ): number {
   let total = 0;
   for (const hand of hands) {

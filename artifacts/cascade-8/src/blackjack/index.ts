@@ -47,3 +47,14 @@ export type {
   BlackjackPublicSnapshotViewSource,
   BlackjackSnapshotViewContext,
 } from "./snapshotView";
+
+export {
+  bindBlackjackRealtimeElement,
+  bindBlackjackRealtimeView,
+} from "./realtimeClient";
+export type {
+  BlackjackRealtimeCursor,
+  BlackjackRealtimeSocketLike,
+  BlackjackRealtimeViewBindingOptions,
+  BlackjackRealtimeViewController,
+} from "./realtimeClient";

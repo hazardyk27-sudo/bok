@@ -4,8 +4,10 @@ import {
   BLACKJACK_ROUTE,
   BLACKJACK_SHELL_MARKUP,
   BLACKJACK_TABLE_SEAT_NUMBERS,
+  bindBlackjackRealtimeView,
   buildBlackjackTableViewModelFromSnapshot,
   renderBlackjackTableShell,
+  type BlackjackRealtimeSocketLike,
   type BlackjackPublicSnapshotViewSource,
 } from "./index";
 
@@ -327,6 +329,230 @@ describe("blackjack responsive table foundation", () => {
     expect(() =>
       buildBlackjackTableViewModelFromSnapshot(malformed),
     ).toThrow(/exactly five seats/);
+  });
+
+
+  it("renders only after an authoritative FULL_TABLE_SNAPSHOT baseline", () => {
+    const listeners = new Set<(event: MessageEvent<unknown>) => void>();
+    const sent: string[] = [];
+    const socket: BlackjackRealtimeSocketLike = {
+      send: (data) => sent.push(data),
+      addEventListener: (_type, listener) => listeners.add(listener),
+      removeEventListener: (_type, listener) => listeners.delete(listener),
+    };
+    const rendered: string[] = [];
+
+    const idleSnapshot: BlackjackPublicSnapshotViewSource = {
+      serverTimeMs: 100,
+      tableId: "rt-table",
+      phase: "TABLE_IDLE",
+      maxSeats: 5,
+      seats: [
+        { seatNumber: 1, playerId: null },
+        { seatNumber: 2, playerId: null },
+        { seatNumber: 3, playerId: null },
+        { seatNumber: 4, playerId: null },
+        { seatNumber: 5, playerId: null },
+      ],
+      players: [],
+      round: null,
+      stateVersion: 2,
+      eventSequence: 4,
+    };
+
+    const controller = bindBlackjackRealtimeView({
+      socket,
+      renderModel: (model) => rendered.push(model.phaseLabel),
+    });
+
+    controller.receive({
+      type: "snapshot",
+      snapshot: idleSnapshot,
+    });
+    expect(rendered).toEqual([]);
+    expect(controller.isAwaitingResync()).toBe(true);
+    expect(JSON.parse(sent[0])).toEqual({ type: "sync" });
+
+    controller.receive({
+      type: "FULL_TABLE_SNAPSHOT",
+      reason: "EXPLICIT_SYNC",
+      snapshot: idleSnapshot,
+      resetEventSequenceTo: 4,
+      resetStateVersionTo: 2,
+    });
+
+    expect(rendered).toEqual(["TABLE IDLE"]);
+    expect(controller.getCursor()).toEqual({
+      eventSequence: 4,
+      stateVersion: 2,
+    });
+    expect(controller.isAwaitingResync()).toBe(false);
+    controller.detach();
+    expect(listeners.size).toBe(0);
+  });
+
+  it("applies the exact next live snapshot but resyncs on packet gaps", () => {
+    const sent: string[] = [];
+    const socket: BlackjackRealtimeSocketLike = {
+      send: (data) => sent.push(data),
+      addEventListener: () => {},
+      removeEventListener: () => {},
+    };
+    const rendered: number[] = [];
+
+    const makeSnapshot = (
+      eventSequence: number,
+      stateVersion: number,
+    ): BlackjackPublicSnapshotViewSource => ({
+      serverTimeMs: eventSequence * 1_000,
+      tableId: "rt-table",
+      phase: "TABLE_IDLE",
+      maxSeats: 5,
+      seats: [
+        { seatNumber: 1, playerId: null },
+        { seatNumber: 2, playerId: null },
+        { seatNumber: 3, playerId: null },
+        { seatNumber: 4, playerId: null },
+        { seatNumber: 5, playerId: null },
+      ],
+      players: [],
+      round: null,
+      stateVersion,
+      eventSequence,
+    });
+
+    const controller = bindBlackjackRealtimeView({
+      socket,
+      renderModel: () => {
+        const cursor = controller.getCursor();
+        rendered.push(cursor?.eventSequence ?? 0);
+      },
+    });
+
+    controller.receive({
+      type: "FULL_TABLE_SNAPSHOT",
+      reason: "INITIAL_CONNECT",
+      snapshot: makeSnapshot(10, 5),
+      resetEventSequenceTo: 10,
+      resetStateVersionTo: 5,
+    });
+
+    controller.receive({
+      type: "snapshot",
+      snapshot: makeSnapshot(11, 6),
+    });
+    expect(controller.getCursor()).toEqual({
+      eventSequence: 11,
+      stateVersion: 6,
+    });
+
+    controller.receive({
+      type: "snapshot",
+      snapshot: makeSnapshot(11, 6),
+    });
+    expect(sent).toEqual([]);
+
+    controller.receive({
+      type: "snapshot",
+      snapshot: makeSnapshot(13, 7),
+    });
+    expect(controller.getCursor()).toEqual({
+      eventSequence: 11,
+      stateVersion: 6,
+    });
+    expect(controller.isAwaitingResync()).toBe(true);
+    expect(JSON.parse(sent[0])).toEqual({
+      type: "sync",
+      lastEventSequence: 11,
+      lastStateVersion: 6,
+    });
+
+    controller.receive({
+      type: "snapshot",
+      snapshot: makeSnapshot(12, 7),
+    });
+    expect(controller.getCursor()?.eventSequence).toBe(11);
+
+    controller.receive({
+      type: "FULL_TABLE_SNAPSHOT",
+      reason: "EVENT_GAP",
+      snapshot: makeSnapshot(13, 7),
+      resetEventSequenceTo: 13,
+      resetStateVersionTo: 7,
+    });
+    expect(controller.getCursor()).toEqual({
+      eventSequence: 13,
+      stateVersion: 7,
+    });
+    expect(controller.isAwaitingResync()).toBe(false);
+    expect(rendered).toHaveLength(3);
+  });
+
+  it("accepts nested stale-action resync and rejects backwards live state", () => {
+    const sent: string[] = [];
+    const socket: BlackjackRealtimeSocketLike = {
+      send: (data) => sent.push(data),
+      addEventListener: () => {},
+      removeEventListener: () => {},
+    };
+
+    const makeSnapshot = (
+      eventSequence: number,
+      stateVersion: number,
+    ): BlackjackPublicSnapshotViewSource => ({
+      serverTimeMs: 1_000,
+      tableId: "rt-table",
+      phase: "TABLE_IDLE",
+      maxSeats: 5,
+      seats: [
+        { seatNumber: 1, playerId: null },
+        { seatNumber: 2, playerId: null },
+        { seatNumber: 3, playerId: null },
+        { seatNumber: 4, playerId: null },
+        { seatNumber: 5, playerId: null },
+      ],
+      players: [],
+      round: null,
+      stateVersion,
+      eventSequence,
+    });
+
+    const controller = bindBlackjackRealtimeView({
+      socket,
+      renderModel: () => {},
+    });
+
+    controller.receive({
+      type: "ACTION_REJECTED",
+      actionId: "stale-1",
+      error: "STALE_ACTION",
+      resync: {
+        type: "FULL_TABLE_SNAPSHOT",
+        reason: "STATE_MISMATCH",
+        snapshot: makeSnapshot(20, 10),
+        resetEventSequenceTo: 20,
+        resetStateVersionTo: 10,
+      },
+    });
+    expect(controller.getCursor()).toEqual({
+      eventSequence: 20,
+      stateVersion: 10,
+    });
+
+    controller.receive({
+      type: "snapshot",
+      snapshot: makeSnapshot(21, 9),
+    });
+    expect(controller.getCursor()).toEqual({
+      eventSequence: 20,
+      stateVersion: 10,
+    });
+    expect(controller.isAwaitingResync()).toBe(true);
+    expect(JSON.parse(sent[0])).toEqual({
+      type: "sync",
+      lastEventSequence: 20,
+      lastStateVersion: 10,
+    });
   });
 
 });
