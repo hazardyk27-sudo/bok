@@ -11,7 +11,12 @@ import { createGameScene, GameScene } from "../game/GameScene";
 
 import "./slot.css";
 
+let activeSlotCleanup: (() => void) | null = null;
+
 export function mountSlot(app: HTMLDivElement, currentPath: string) {
+  activeSlotCleanup?.();
+  const lifecycleAbort = new AbortController();
+  const lifecycleSignal = lifecycleAbort.signal;
   const isLab = currentPath === "/lab";
   const isSlotRoute = true;
 const isWinLabelPreview = isLab && new URLSearchParams(window.location.search).get("preview") === "win-labels";
@@ -40,10 +45,10 @@ const syncSlotVisualViewport = () => {
 
 if (isSlotRoute) {
   syncSlotVisualViewport();
-  window.visualViewport?.addEventListener("resize", syncSlotVisualViewport, { passive: true });
-  window.visualViewport?.addEventListener("scroll", syncSlotVisualViewport, { passive: true });
-  window.addEventListener("resize", syncSlotVisualViewport, { passive: true });
-  window.addEventListener("orientationchange", syncSlotVisualViewport, { passive: true });
+  window.visualViewport?.addEventListener("resize", syncSlotVisualViewport, { passive: true, signal: lifecycleSignal });
+  window.visualViewport?.addEventListener("scroll", syncSlotVisualViewport, { passive: true, signal: lifecycleSignal });
+  window.addEventListener("resize", syncSlotVisualViewport, { passive: true, signal: lifecycleSignal });
+  window.addEventListener("orientationchange", syncSlotVisualViewport, { passive: true, signal: lifecycleSignal });
 }
 
 const describeStreamCell = (cell: BoardCell) => {
@@ -190,15 +195,15 @@ function showModal(name: string | null) {
         <div class="modal-footnote">Base Core chance is 1% per eligible Base refill position; Free Spin Scatter chance is 3.5% on initial and refill positions. Free Spin Core chance is 5% on the initial board and 3% per eligible refill position. This is a virtual-credit demo and is not a regulated gaming product.</div>
     </section></div>`;
   }
-  modalRoot.querySelectorAll("[data-close]").forEach((button) => button.addEventListener("click", () => showModal(null)));
-  modalRoot.querySelector(".modal-backdrop")?.addEventListener("click", (event) => { if (event.target === event.currentTarget) showModal(null); });
+  modalRoot.querySelectorAll("[data-close]").forEach((button) => button.addEventListener("click", () => showModal(null), { signal: lifecycleSignal }));
+  modalRoot.querySelector(".modal-backdrop")?.addEventListener("click", (event) => { if (event.target === event.currentTarget) showModal(null); }, { signal: lifecycleSignal });
 }
 
-document.querySelectorAll<HTMLElement>("[data-modal]").forEach((button) => button.addEventListener("click", () => showModal(button.dataset.modal ?? null)));
+document.querySelectorAll<HTMLElement>("[data-modal]").forEach((button) => button.addEventListener("click", () => showModal(button.dataset.modal ?? null), { signal: lifecycleSignal }));
 
-let controller: GameController;
+let controller: GameController | null = null;
 const game = createGameScene(byId("phaser-board"));
-window.setTimeout(() => {
+const controllerTimer = window.setTimeout(() => {
   const scene = game.scene.getScene("Cascade8GameScene") as GameScene;
   controller = new GameController(scene, {
     balance: byId("balance"), bet: byId("bet"), win: byId("win"), bonusWin: byId("bonus-win"), freeSpins: byId("free-spins"), gameStatusBadge: byId("game-status-badge"), gameStatusLabel: byId("game-status-label"),
@@ -225,6 +230,17 @@ window.setTimeout(() => {
       controller.previewBonusLargeWin(Math.round(previewAmount * 100));
     }
 }, 80);
+
+activeSlotCleanup = () => {
+  lifecycleAbort.abort();
+  window.clearTimeout(controllerTimer);
+  controller?.destroy();
+  controller = null;
+  game.destroy(true);
+  document.documentElement.style.removeProperty("--slot-visual-height");
+  delete document.documentElement.dataset.slotDisplayMode;
+  activeSlotCleanup = null;
+};
 
 function renderLab(scene: GameScene) {
   const lab = document.createElement("section");
