@@ -38,11 +38,14 @@ describe("backend game isolation", () => {
   });
 
   it("uses shared platform wallet and session contracts", () => {
-    for (const source of [slotRepo, cadiRepo, idleRepo, blackjackPlatform]) {
+    for (const source of [slotRepo, cadiRepo, idleRepo]) {
       expect(source).toContain('from "../platform/wallet"');
       expect(source).toContain("INITIAL_SHARED_BALANCE_CENTS");
       expect(source).toContain("shared_wallets");
     }
+    expect(blackjackPlatform).toContain('from "./wallet"');
+    expect(blackjackPlatform).toContain("INITIAL_SHARED_BALANCE_CENTS");
+    expect(blackjackPlatform).toContain("shared_wallets");
     for (const source of [slotRoutes, cadiRoutes, idleRoutes]) {
       expect(source).toContain('from "../platform/session"');
     }
