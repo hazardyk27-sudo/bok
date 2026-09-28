@@ -17,6 +17,8 @@ export type BlackjackTableSeatViewModel = Readonly<{
   cards?: readonly BlackjackCardViewModel[];
 }>;
 
+export type BlackjackTableAction = "HIT" | "STAND" | "DOUBLE" | "SPLIT";
+
 export type BlackjackTableViewModel = Readonly<{
   phaseLabel: string;
   balanceLabel: string;
@@ -24,6 +26,7 @@ export type BlackjackTableViewModel = Readonly<{
   turnLabel: string;
   dealerTotalLabel: string;
   dealerCards?: readonly (BlackjackCardViewModel | null)[];
+  enabledActions?: readonly BlackjackTableAction[];
   seats: readonly BlackjackTableSeatViewModel[];
 }>;
 
@@ -136,6 +139,9 @@ function renderSeat(seat: BlackjackTableSeatViewModel): string {
 export function renderBlackjackTableShell(
   model: BlackjackTableViewModel = BLACKJACK_DEFAULT_TABLE_VIEW,
 ): string {
+  const enabledActions = new Set(model.enabledActions ?? []);
+  const actionDisabled = (action: BlackjackTableAction) =>
+    enabledActions.has(action) ? "" : " disabled";
   const orderedSeats = [...model.seats].sort(
     (left, right) => left.seatNumber - right.seatNumber,
   );
@@ -208,10 +214,10 @@ export function renderBlackjackTableShell(
         })}
 
         <div class="blackjack-actions" aria-label="Player actions">
-          <button type="button" data-blackjack-action="HIT" disabled>HIT</button>
-          <button type="button" data-blackjack-action="STAND" disabled>STAND</button>
-          <button type="button" data-blackjack-action="DOUBLE" disabled>DOUBLE</button>
-          <button type="button" data-blackjack-action="SPLIT" disabled>SPLIT</button>
+          <button type="button" data-blackjack-action="HIT"${actionDisabled("HIT")}>HIT</button>
+          <button type="button" data-blackjack-action="STAND"${actionDisabled("STAND")}>STAND</button>
+          <button type="button" data-blackjack-action="DOUBLE"${actionDisabled("DOUBLE")}>DOUBLE</button>
+          <button type="button" data-blackjack-action="SPLIT"${actionDisabled("SPLIT")}>SPLIT</button>
         </div>
       </section>
 

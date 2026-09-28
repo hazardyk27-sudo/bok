@@ -5,7 +5,9 @@ import {
   BLACKJACK_SHELL_MARKUP,
   BLACKJACK_TABLE_SEAT_NUMBERS,
   bindBlackjackRealtimeView,
+  buildBlackjackPlayerActionMessage,
   buildBlackjackTableViewModelFromSnapshot,
+  createBlackjackPlayerActionClient,
   buildBlackjackWebSocketUrl,
   connectBlackjackRealtimeElement,
   renderBlackjackTableShell,
@@ -587,7 +589,11 @@ describe("blackjack responsive table foundation", () => {
     const createdUrls: string[] = [];
 
     const connection = connectBlackjackRealtimeElement(
-      { innerHTML: "" } as HTMLElement,
+      {
+        innerHTML: "",
+        addEventListener: () => {},
+        removeEventListener: () => {},
+      } as unknown as HTMLElement,
       {
         location: {
           protocol: "https:",
@@ -682,6 +688,186 @@ describe("blackjack responsive table foundation", () => {
     expect(markup).toContain('data-card-rank="9"');
     expect(markup).toContain('data-card-hidden="true"');
     expect(markup).not.toContain('data-card-rank="null"');
+  });
+
+
+  it("enables the authoritative local turn controls and builds the exact server action envelope", () => {
+    const snapshot: BlackjackPublicSnapshotViewSource = {
+      serverTimeMs: 5_000,
+      tableId: "action-table",
+      phase: "PLAYER_TURNS",
+      maxSeats: 5,
+      seats: [
+        { seatNumber: 1, playerId: null },
+        { seatNumber: 2, playerId: null },
+        { seatNumber: 3, playerId: "local-player" },
+        { seatNumber: 4, playerId: null },
+        { seatNumber: 5, playerId: null },
+      ],
+      players: [
+        {
+          playerId: "local-player",
+          seatNumber: 3,
+          status: "PLAYING",
+          connected: true,
+        },
+      ],
+      round: {
+        roundId: "round-actions",
+        phase: "PLAYER_TURNS",
+        hands: [
+          {
+            handId: "hand-actions",
+            playerId: "local-player",
+            seatNumber: 3,
+            cards: [
+              { suit: "HEARTS", rank: "8" },
+              { suit: "SPADES", rank: "8" },
+            ],
+            betCents: 100_000,
+            status: "ACTIVE",
+          },
+        ],
+        dealer: {
+          cards: [{ suit: "CLUBS", rank: "10" }, null],
+          holeCardRevealed: false,
+        },
+        currentTurn: {
+          seatNumber: 3,
+          handId: "hand-actions",
+          startedAtMs: 1_000,
+          endsAtMs: 16_000,
+        },
+        bettingClosesAtMs: null,
+      },
+      stateVersion: 9,
+      eventSequence: 12,
+    };
+
+    const context = {
+      localPlayerId: "local-player",
+      availableBalanceCents: 200_000,
+    };
+    const model = buildBlackjackTableViewModelFromSnapshot(snapshot, context);
+
+    expect(model.enabledActions).toEqual([
+      "HIT",
+      "STAND",
+      "DOUBLE",
+      "SPLIT",
+    ]);
+
+    expect(
+      buildBlackjackPlayerActionMessage(
+        snapshot,
+        context,
+        "DOUBLE",
+        "action-double-1",
+      ),
+    ).toEqual({
+      type: "DOUBLE",
+      actionId: "action-double-1",
+      expectedStateVersion: 9,
+      roundId: "round-actions",
+      handId: "hand-actions",
+      seatNumber: 3,
+    });
+  });
+
+  it("sends player actions only from the latest authoritative local turn", () => {
+    const sent: string[] = [];
+    const socket: BlackjackRealtimeSocketLike = {
+      send: (data) => sent.push(data),
+      addEventListener: () => {},
+      removeEventListener: () => {},
+    };
+
+    const snapshot: BlackjackPublicSnapshotViewSource = {
+      serverTimeMs: 1_000,
+      tableId: "send-table",
+      phase: "PLAYER_TURNS",
+      maxSeats: 5,
+      seats: [
+        { seatNumber: 1, playerId: "local-player" },
+        { seatNumber: 2, playerId: null },
+        { seatNumber: 3, playerId: null },
+        { seatNumber: 4, playerId: null },
+        { seatNumber: 5, playerId: null },
+      ],
+      players: [
+        {
+          playerId: "local-player",
+          seatNumber: 1,
+          status: "PLAYING",
+          connected: true,
+        },
+      ],
+      round: {
+        roundId: "round-send",
+        phase: "PLAYER_TURNS",
+        hands: [
+          {
+            handId: "hand-send",
+            playerId: "local-player",
+            seatNumber: 1,
+            cards: [
+              { suit: "HEARTS", rank: "10" },
+              { suit: "SPADES", rank: "7" },
+            ],
+            betCents: 25_000,
+            status: "ACTIVE",
+          },
+        ],
+        dealer: {
+          cards: [{ suit: "CLUBS", rank: "9" }, null],
+          holeCardRevealed: false,
+        },
+        currentTurn: {
+          seatNumber: 1,
+          handId: "hand-send",
+          startedAtMs: 0,
+          endsAtMs: 15_000,
+        },
+        bettingClosesAtMs: null,
+      },
+      stateVersion: 4,
+      eventSequence: 6,
+    };
+
+    let actionCounter=0;
+    const client=createBlackjackPlayerActionClient({
+      socket,
+      getSnapshot:()=>snapshot,
+      getViewContext:()=>({
+        localPlayerId:"local-player",
+        availableBalanceCents:100_000,
+      }),
+      createActionId:()=>`action-${++actionCounter}`,
+    });
+
+    const hit=client.submit("HIT");
+    const stand=client.submit("STAND");
+
+    expect(hit).toEqual({
+      type:"HIT",
+      actionId:"action-1",
+      expectedStateVersion:4,
+      roundId:"round-send",
+      handId:"hand-send",
+      seatNumber:1,
+    });
+    expect(JSON.parse(sent[0])).toEqual(hit);
+    expect(JSON.parse(sent[1])).toEqual(stand);
+    expect(sent).toHaveLength(2);
+
+    expect(() =>
+      buildBlackjackPlayerActionMessage(
+        snapshot,
+        { localPlayerId: "another-player", availableBalanceCents: 100_000 },
+        "HIT",
+        "forged",
+      ),
+    ).toThrow(/not currently available/);
   });
 
 });

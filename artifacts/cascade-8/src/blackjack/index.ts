@@ -71,3 +71,15 @@ export type {
   BlackjackBrowserSocket,
   BlackjackBrowserSocketFactory,
 } from "./browserRealtime";
+
+export {
+  BLACKJACK_PLAYER_ACTION_TYPES,
+  buildBlackjackPlayerActionMessage,
+  createBlackjackPlayerActionClient,
+  getBlackjackAvailablePlayerActions,
+} from "./playerActionsClient";
+export type {
+  BlackjackPlayerActionClient,
+  BlackjackPlayerActionMessage,
+  BlackjackPlayerActionType,
+} from "./playerActionsClient";

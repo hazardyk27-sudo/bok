@@ -1,3 +1,4 @@
+import { getBlackjackAvailablePlayerActions } from "./playerActionsClient";
 import { formatBlackjackChipCredits } from "./bettingView";
 import type {
   BlackjackTableSeatViewModel,
@@ -54,6 +55,7 @@ export type BlackjackPublicSnapshotViewSource = Readonly<{
     connected: boolean;
   }>[];
   round: Readonly<{
+    roundId?: string;
     phase:
       | "BETTING"
       | "BETTING_LOCKED"
@@ -342,6 +344,7 @@ export function buildBlackjackTableViewModelFromSnapshot(
           : Object.freeze({ rank: card.rank, suit: card.suit }),
       ),
     ),
+    enabledActions: getBlackjackAvailablePlayerActions(snapshot, context),
     seats: Object.freeze(seats),
   });
 }

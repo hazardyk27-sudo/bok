@@ -25,6 +25,7 @@ export type BlackjackRealtimeSocketLike = Readonly<{
 export type BlackjackRealtimeViewController = Readonly<{
   receive: (rawMessage: unknown) => void;
   getCursor: () => BlackjackRealtimeCursor | null;
+  getSnapshot: () => BlackjackPublicSnapshotViewSource | null;
   isAwaitingResync: () => boolean;
   detach: () => void;
 }>;
@@ -108,6 +109,7 @@ export function bindBlackjackRealtimeView(
   options: BlackjackRealtimeViewBindingOptions,
 ): BlackjackRealtimeViewController {
   let cursor: BlackjackRealtimeCursor | null = null;
+  let latestSnapshot: BlackjackPublicSnapshotViewSource | null = null;
   let awaitingResync=false;
   let detached=false;
 
@@ -138,6 +140,7 @@ export function bindBlackjackRealtimeView(
         eventSequence:snapshot.eventSequence,
         stateVersion:snapshot.stateVersion,
       });
+      latestSnapshot=snapshot;
       awaitingResync=false;
       return true;
     } catch {
@@ -219,6 +222,7 @@ export function bindBlackjackRealtimeView(
   return Object.freeze({
     receive,
     getCursor:()=>cursor,
+    getSnapshot:()=>latestSnapshot,
     isAwaitingResync:()=>awaitingResync,
     detach:()=>{
       if(detached) return;
