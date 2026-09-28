@@ -163,7 +163,11 @@ export function mountRoulette(app: HTMLDivElement) {
     frameId = window.requestAnimationFrame(animate);
   };
 
-  const startSpin = () => {
+  const startSpin = async () => {
+    if (activeRotorSpin || activeBallOrbit) return;
+
+    await rouletteAudio.ensureStarted();
+
     if (activeRotorSpin || activeBallOrbit) return;
 
     canvas.dataset.rouletteState = "spinning";
@@ -203,25 +207,14 @@ export function mountRoulette(app: HTMLDivElement) {
   observer.observe(canvas);
   redraw();
 
-  canvas.addEventListener(
-    "pointerdown",
-    () => {
-      void rouletteAudio.ensureStarted();
-    },
-    { passive: true },
-  );
-
-  canvas.addEventListener("click", startSpin);
+  canvas.addEventListener("click", () => {
+    void startSpin();
+  });
   canvas.addEventListener("keydown", (event) => {
-    void rouletteAudio.ensureStarted();
     if (event.key !== "Enter" && event.key !== " ") return;
     event.preventDefault();
-    startSpin();
+    void startSpin();
   });
 
   window.addEventListener("resize", redraw, { passive: true });
-
-  if (!window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
-    window.setTimeout(startSpin, 280);
-  }
 }
