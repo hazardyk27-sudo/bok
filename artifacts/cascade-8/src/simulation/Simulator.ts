@@ -485,9 +485,13 @@ export function simulate(spins: number, seed: string, betCents = 100, onProgress
     distinctNormalSymbolCountDistribution[String(distinct)] =
       (distinctNormalSymbolCountDistribution[String(distinct)] ?? 0) + 1;
     if (distinct > MAX_VISIBLE_NORMAL_SYMBOLS) {
-      visibleBoardsOverSymbolLimit += 1;
-      if (source === "initial") initialBoardsOverSymbolLimit += 1;
-      else refillBoardsOverSymbolLimit += 1;
+      if (source === "initial") {
+        visibleBoardsOverSymbolLimit += 1;
+        initialBoardsOverSymbolLimit += 1;
+      } else {
+        // Refill is allowed to introduce the ninth normal symbol.
+        refillBoardsOverSymbolLimit += 1;
+      }
     }
   };
   for (let index = 0; index < spins; index += 1) {
@@ -872,11 +876,11 @@ export function formatSimulationSummary(report: SimulationReport) {
 
 | Metric | Value |
 | --- | ---: |
-| Configured maximum distinct normal symbols | ${report.configSnapshot.maxVisibleNormalSymbols} |
+| Initial-board maximum distinct normal symbols | ${report.configSnapshot.maxVisibleNormalSymbols} |
 | Visible boards observed | ${report.visibleBoardsObserved} |
-| Boards over symbol limit | ${report.visibleBoardsOverSymbolLimit} |
-| Initial boards over symbol limit | ${report.initialBoardsOverSymbolLimit} |
-| Refill boards over symbol limit | ${report.refillBoardsOverSymbolLimit} |
+| Initial-board limit violations | ${report.visibleBoardsOverSymbolLimit} |
+| Initial boards over limit | ${report.initialBoardsOverSymbolLimit} |
+| Refill boards with ninth distinct symbol (allowed) | ${report.refillBoardsOverSymbolLimit} |
 | Maximum distinct normal symbols observed | ${report.maxDistinctNormalSymbolsVisible} |
 | Maximum on initial boards | ${report.maxDistinctNormalSymbolsInitial} |
 | Maximum after refills | ${report.maxDistinctNormalSymbolsRefill} |
