@@ -344,57 +344,6 @@ export function clearBlackjackBet(
   });
 }
 
-export function expireBlackjackOpenBet(
-  wallet: BlackjackWalletLedgerState,
-  book: BlackjackReservationBook,
-  position: BlackjackBettingPosition,
-  input: {
-    expireTransactionId: string;
-    nowMs: number;
-  },
-): BlackjackBettingMutation {
-  assertOwners(wallet, book, position);
-  assertSafeNonNegativeInteger("nowMs", input.nowMs);
-  assertNonEmptyId("expireTransactionId", input.expireTransactionId);
-
-  if (position.status !== "OPEN") {
-    throw new Error("Blackjack only OPEN bets can expire");
-  }
-  if (input.nowMs < position.bettingClosesAtMs) {
-    throw new Error("Blackjack bet cannot expire before betting closes");
-  }
-
-  const activeChips = position.chips.filter((chip) => chip.status === "ACTIVE");
-  if (activeChips.length === 0) {
-    return Object.freeze({ wallet, book, position });
-  }
-
-  let nextWallet = wallet;
-  let nextBook = book;
-  for (const chip of activeChips) {
-    const released = releaseBlackjackWagerReservation(nextWallet, nextBook, {
-      reservationId: chip.reservationId,
-      transactionId: `${input.expireTransactionId}:${chip.reservationId}`,
-      createdAtMs: input.nowMs,
-    });
-    nextWallet = released.wallet;
-    nextBook = released.book;
-  }
-
-  const activeIds = new Set(activeChips.map((chip) => chip.reservationId));
-  const chips = position.chips.map((chip) =>
-    activeIds.has(chip.reservationId)
-      ? { ...chip, status: "RELEASED" as const }
-      : chip,
-  );
-
-  return Object.freeze({
-    wallet: nextWallet,
-    book: nextBook,
-    position: freezePosition(position, chips),
-  });
-}
-
 export function markBlackjackBetReady(
   position: BlackjackBettingPosition,
   nowMs: number,

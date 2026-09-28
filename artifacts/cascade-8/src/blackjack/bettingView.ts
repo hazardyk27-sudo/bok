@@ -18,11 +18,6 @@ export type BlackjackBettingPanelViewModel = Readonly<{
   totalBetLabel: string;
   readyLabel: string;
   bettingClosesLabel: string;
-  enabled: boolean;
-  pending: boolean;
-  canClear: boolean;
-  canReady: boolean;
-  availableBalanceCents: number | null;
 }>;
 
 export const BLACKJACK_DEFAULT_BETTING_PANEL: BlackjackBettingPanelViewModel =
@@ -31,11 +26,6 @@ export const BLACKJACK_DEFAULT_BETTING_PANEL: BlackjackBettingPanelViewModel =
     totalBetLabel: "0",
     readyLabel: "READY",
     bettingClosesLabel: "WAITING",
-    enabled: false,
-    pending: false,
-    canClear: false,
-    canReady: false,
-    availableBalanceCents: null,
   });
 
 function escapeHtml(value: string): string {
@@ -142,14 +132,9 @@ function chipTier(credits: number): string {
 function renderChipButton(
   credits: number,
   selectedChipCredits: number,
-  model: BlackjackBettingPanelViewModel,
 ): string {
   const selected = credits === selectedChipCredits;
   const label = formatBlackjackChipCredits(credits);
-  const affordable =
-    model.availableBalanceCents === null ||
-    credits * 100 <= model.availableBalanceCents;
-  const disabled = !model.enabled || model.pending || !affordable;
 
   return `
     <button
@@ -157,7 +142,8 @@ function renderChipButton(
       class="blackjack-chip${selected ? " is-selected" : ""}"
       data-blackjack-chip="${credits}"
       data-chip-tier="${chipTier(credits)}"
-      aria-pressed="${selected ? "true" : "false"}"${disabled ? " disabled" : ""}
+      aria-pressed="${selected ? "true" : "false"}"
+      disabled
     >
       <span class="blackjack-chip-edge" aria-hidden="true"></span>
       <span class="blackjack-chip-face">
@@ -190,22 +176,20 @@ export function renderBlackjackBettingPanel(
     <section class="blackjack-betting-panel" aria-label="Blackjack betting controls">
       <div class="blackjack-chip-tray" aria-label="Chip denominations">
         ${BLACKJACK_BASE_CHIP_DENOMINATIONS.map((credits) =>
-          renderChipButton(credits, model.selectedChipCredits, model),
+          renderChipButton(credits, model.selectedChipCredits),
         ).join("")}
       </div>
 
       <div class="blackjack-high-chip-control" data-chip-tier="${chipTier(highChip)}">
-        <span>HIGH CHIP</span>
-        <button
-          type="button"
-          class="blackjack-high-chip-value"
-          data-blackjack-chip="${highChip}"
-          data-blackjack-selected-chip="${highChip}"${!model.enabled || model.pending || (model.availableBalanceCents !== null && highChip * 100 > model.availableBalanceCents) ? " disabled" : ""}
-        >${formatBlackjackChipCredits(highChip)}</button>
+        <span>SELECTED CHIP</span>
+        <strong data-blackjack-selected-chip="${highChip}">
+          ${formatBlackjackChipCredits(highChip)}
+        </strong>
         <button
           type="button"
           data-blackjack-chip-scale="DOUBLE"
-          aria-label="Double selected high-value chip"${!model.enabled || model.pending ? " disabled" : ""}
+          aria-label="Double selected high-value chip"
+          disabled
         >×2</button>
       </div>
 
@@ -215,10 +199,10 @@ export function renderBlackjackBettingPanel(
       </div>
 
       <div class="blackjack-betting-actions">
-        <button type="button" data-blackjack-bet-action="CLEAR"${model.canClear && !model.pending ? "" : " disabled"}>
+        <button type="button" data-blackjack-bet-action="CLEAR" disabled>
           CLEAR
         </button>
-        <button type="button" data-blackjack-bet-action="READY"${model.canReady && !model.pending ? "" : " disabled"}>
+        <button type="button" data-blackjack-bet-action="READY" disabled>
           ${escapeHtml(model.readyLabel)}
         </button>
       </div>
