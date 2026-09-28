@@ -39,6 +39,21 @@ export const POCKET_RING_STYLE = {
   centerSheenRadius: 0.487,
 } as const;
 
+export const CENTER_MECHANISM_STYLE = {
+  baseOuterRadius: 0.142,
+  baseMiddleRadius: 0.112,
+  baseInnerRadius: 0.083,
+  hubRadius: 0.057,
+  hubHighlightRadius: 0.027,
+  armCount: 4,
+  armStartAngle: -1.7453292519943295,
+  armLength: 0.245,
+  armStartRadius: 0.046,
+  armWidth: 0.026,
+  knobRadius: 0.036,
+  knobHighlightOffset: 0.010,
+} as const;
+
 export const WHEEL_COLORS = {
   woodDark: "#57210f",
   woodMid: "#873a17",

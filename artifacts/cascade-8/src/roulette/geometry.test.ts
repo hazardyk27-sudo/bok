@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  CENTER_MECHANISM_STYLE,
   EUROPEAN_WHEEL_SEQUENCE,
   NUMBER_RING_STYLE,
   POCKET_RING_STYLE,
@@ -56,5 +57,17 @@ describe("roulette 2d wheel geometry", () => {
     expect(POCKET_RING_STYLE.centerSheenRadius).toBeLessThan(WHEEL_GEOMETRY.pocketOuterRadius);
     expect(POCKET_RING_STYLE.outerShadowInset).toBeGreaterThan(0);
     expect(POCKET_RING_STYLE.innerHighlightInset).toBeGreaterThan(0);
+  });
+
+  it("keeps the four-arm gold center mechanism inside the wooden center disc", () => {
+    expect(CENTER_MECHANISM_STYLE.armCount).toBe(4);
+    expect(CENTER_MECHANISM_STYLE.baseOuterRadius).toBeLessThan(WHEEL_GEOMETRY.centerDiscRadius);
+    expect(CENTER_MECHANISM_STYLE.baseMiddleRadius).toBeLessThan(CENTER_MECHANISM_STYLE.baseOuterRadius);
+    expect(CENTER_MECHANISM_STYLE.baseInnerRadius).toBeLessThan(CENTER_MECHANISM_STYLE.baseMiddleRadius);
+    expect(CENTER_MECHANISM_STYLE.hubRadius).toBeLessThan(CENTER_MECHANISM_STYLE.baseInnerRadius);
+
+    const knobOuterEdge =
+      CENTER_MECHANISM_STYLE.armLength + CENTER_MECHANISM_STYLE.knobRadius;
+    expect(knobOuterEdge).toBeLessThan(WHEEL_GEOMETRY.centerDiscRadius);
   });
 });

@@ -1,4 +1,5 @@
 import {
+  CENTER_MECHANISM_STYLE,
   EUROPEAN_WHEEL_SEQUENCE,
   NUMBER_RING_STYLE,
   POCKET_RING_STYLE,
@@ -491,6 +492,229 @@ function drawCenterDisc(ctx: CanvasRenderingContext2D, radius: number) {
   );
 }
 
+function createGoldRadialGradient(
+  ctx: CanvasRenderingContext2D,
+  radius: number,
+  highlightX: number,
+  highlightY: number,
+) {
+  const gradient = ctx.createRadialGradient(
+    highlightX,
+    highlightY,
+    radius * 0.06,
+    0,
+    0,
+    radius,
+  );
+  gradient.addColorStop(0, WHEEL_COLORS.goldSpecular);
+  gradient.addColorStop(0.22, WHEEL_COLORS.goldLight);
+  gradient.addColorStop(0.58, WHEEL_COLORS.gold);
+  gradient.addColorStop(0.84, WHEEL_COLORS.goldDark);
+  gradient.addColorStop(1, WHEEL_COLORS.goldShadow);
+  return gradient;
+}
+
+function drawCenterBase(ctx: CanvasRenderingContext2D, radius: number) {
+  const outer = radius * CENTER_MECHANISM_STYLE.baseOuterRadius;
+  const middle = radius * CENTER_MECHANISM_STYLE.baseMiddleRadius;
+  const inner = radius * CENTER_MECHANISM_STYLE.baseInnerRadius;
+
+  ctx.save();
+  ctx.shadowColor = "rgba(30, 13, 2, 0.44)";
+  ctx.shadowBlur = radius * 0.018;
+  ctx.shadowOffsetY = radius * 0.010;
+
+  ctx.beginPath();
+  ctx.arc(0, 0, outer, 0, TAU);
+  ctx.fillStyle = createGoldRadialGradient(
+    ctx,
+    outer,
+    -outer * 0.28,
+    -outer * 0.34,
+  );
+  ctx.fill();
+  ctx.restore();
+
+  drawCircleStroke(ctx, outer, WHEEL_COLORS.goldShadow, radius * 0.009);
+  drawCircleStroke(ctx, outer * 0.94, WHEEL_COLORS.goldSpecular, radius * 0.003);
+
+  ctx.beginPath();
+  ctx.arc(0, 0, middle, 0, TAU);
+  ctx.fillStyle = createGoldRadialGradient(
+    ctx,
+    middle,
+    -middle * 0.32,
+    -middle * 0.38,
+  );
+  ctx.fill();
+  drawCircleStroke(ctx, middle, WHEEL_COLORS.goldDark, radius * 0.006);
+  drawCircleStroke(ctx, middle * 0.86, "rgba(255, 235, 148, 0.72)", radius * 0.0025);
+
+  ctx.beginPath();
+  ctx.arc(0, 0, inner, 0, TAU);
+  ctx.fillStyle = createGoldRadialGradient(
+    ctx,
+    inner,
+    -inner * 0.36,
+    -inner * 0.40,
+  );
+  ctx.fill();
+  drawCircleStroke(ctx, inner, WHEEL_COLORS.goldDark, radius * 0.0045);
+}
+
+function drawCenterArm(
+  ctx: CanvasRenderingContext2D,
+  radius: number,
+  angle: number,
+) {
+  const startRadius = radius * CENTER_MECHANISM_STYLE.armStartRadius;
+  const endRadius = radius * CENTER_MECHANISM_STYLE.armLength;
+  const start = polar(startRadius, angle);
+  const end = polar(endRadius, angle);
+  const armWidth = radius * CENTER_MECHANISM_STYLE.armWidth;
+
+  ctx.save();
+  ctx.lineCap = "round";
+
+  ctx.shadowColor = "rgba(32, 13, 1, 0.48)";
+  ctx.shadowBlur = radius * 0.010;
+  ctx.shadowOffsetY = radius * 0.007;
+
+  ctx.strokeStyle = WHEEL_COLORS.goldShadow;
+  ctx.lineWidth = armWidth * 1.48;
+  ctx.beginPath();
+  ctx.moveTo(start.x, start.y);
+  ctx.lineTo(end.x, end.y);
+  ctx.stroke();
+
+  const shaftGradient = ctx.createLinearGradient(
+    start.x,
+    start.y,
+    end.x,
+    end.y,
+  );
+  shaftGradient.addColorStop(0, WHEEL_COLORS.goldDark);
+  shaftGradient.addColorStop(0.38, WHEEL_COLORS.gold);
+  shaftGradient.addColorStop(0.72, WHEEL_COLORS.goldLight);
+  shaftGradient.addColorStop(1, WHEEL_COLORS.goldDark);
+
+  ctx.strokeStyle = shaftGradient;
+  ctx.lineWidth = armWidth;
+  ctx.beginPath();
+  ctx.moveTo(start.x, start.y);
+  ctx.lineTo(end.x, end.y);
+  ctx.stroke();
+
+  ctx.shadowColor = "transparent";
+  ctx.strokeStyle = "rgba(255, 245, 184, 0.66)";
+  ctx.lineWidth = Math.max(0.8, armWidth * 0.18);
+  ctx.beginPath();
+  ctx.moveTo(start.x, start.y);
+  ctx.lineTo(end.x, end.y);
+  ctx.stroke();
+
+  ctx.restore();
+}
+
+function drawCenterKnob(
+  ctx: CanvasRenderingContext2D,
+  radius: number,
+  angle: number,
+) {
+  const knobRadius = radius * CENTER_MECHANISM_STYLE.knobRadius;
+  const end = polar(radius * CENTER_MECHANISM_STYLE.armLength, angle);
+  const highlightOffset = radius * CENTER_MECHANISM_STYLE.knobHighlightOffset;
+
+  ctx.save();
+  ctx.shadowColor = "rgba(28, 12, 1, 0.5)";
+  ctx.shadowBlur = radius * 0.011;
+  ctx.shadowOffsetY = radius * 0.007;
+
+  const gradient = ctx.createRadialGradient(
+    end.x - highlightOffset,
+    end.y - highlightOffset,
+    knobRadius * 0.08,
+    end.x,
+    end.y,
+    knobRadius,
+  );
+  gradient.addColorStop(0, "#fff6bf");
+  gradient.addColorStop(0.18, WHEEL_COLORS.goldSpecular);
+  gradient.addColorStop(0.48, WHEEL_COLORS.goldLight);
+  gradient.addColorStop(0.74, WHEEL_COLORS.gold);
+  gradient.addColorStop(1, WHEEL_COLORS.goldDark);
+
+  ctx.beginPath();
+  ctx.arc(end.x, end.y, knobRadius, 0, TAU);
+  ctx.fillStyle = gradient;
+  ctx.fill();
+  ctx.strokeStyle = WHEEL_COLORS.goldShadow;
+  ctx.lineWidth = Math.max(1, radius * 0.004);
+  ctx.stroke();
+  ctx.restore();
+}
+
+function drawCenterHub(ctx: CanvasRenderingContext2D, radius: number) {
+  const hubRadius = radius * CENTER_MECHANISM_STYLE.hubRadius;
+  const highlightRadius = radius * CENTER_MECHANISM_STYLE.hubHighlightRadius;
+
+  ctx.save();
+  ctx.shadowColor = "rgba(26, 11, 1, 0.55)";
+  ctx.shadowBlur = radius * 0.016;
+  ctx.shadowOffsetY = radius * 0.008;
+
+  ctx.beginPath();
+  ctx.arc(0, 0, hubRadius, 0, TAU);
+  ctx.fillStyle = createGoldRadialGradient(
+    ctx,
+    hubRadius,
+    -hubRadius * 0.34,
+    -hubRadius * 0.40,
+  );
+  ctx.fill();
+  ctx.strokeStyle = WHEEL_COLORS.goldShadow;
+  ctx.lineWidth = Math.max(1, radius * 0.006);
+  ctx.stroke();
+
+  ctx.shadowColor = "transparent";
+  ctx.beginPath();
+  ctx.arc(-hubRadius * 0.23, -hubRadius * 0.29, highlightRadius, 0, TAU);
+  const highlight = ctx.createRadialGradient(
+    -hubRadius * 0.28,
+    -hubRadius * 0.34,
+    0,
+    -hubRadius * 0.23,
+    -hubRadius * 0.29,
+    highlightRadius,
+  );
+  highlight.addColorStop(0, "rgba(255, 255, 224, 0.82)");
+  highlight.addColorStop(1, "rgba(255, 239, 160, 0)");
+  ctx.fillStyle = highlight;
+  ctx.fill();
+
+  ctx.restore();
+}
+
+function drawCenterMechanism(ctx: CanvasRenderingContext2D, radius: number) {
+  drawCenterBase(ctx, radius);
+
+  for (let index = 0; index < CENTER_MECHANISM_STYLE.armCount; index += 1) {
+    const angle =
+      CENTER_MECHANISM_STYLE.armStartAngle +
+      index * (TAU / CENTER_MECHANISM_STYLE.armCount);
+    drawCenterArm(ctx, radius, angle);
+  }
+
+  for (let index = 0; index < CENTER_MECHANISM_STYLE.armCount; index += 1) {
+    const angle =
+      CENTER_MECHANISM_STYLE.armStartAngle +
+      index * (TAU / CENTER_MECHANISM_STYLE.armCount);
+    drawCenterKnob(ctx, radius, angle);
+  }
+
+  drawCenterHub(ctx, radius);
+}
+
 export function renderRouletteWheel(
   ctx: CanvasRenderingContext2D,
   width: number,
@@ -508,6 +732,7 @@ export function renderRouletteWheel(
   drawNumberRing(ctx, radius);
   drawPocketRing(ctx, radius);
   drawCenterDisc(ctx, radius);
+  drawCenterMechanism(ctx, radius);
 
   ctx.restore();
 }
