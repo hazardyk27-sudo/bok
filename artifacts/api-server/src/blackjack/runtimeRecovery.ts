@@ -8,10 +8,13 @@ import {
   resumeBlackjackRecoveredRuntime,
   type BlackjackRecoveryResult,
 } from "./recovery";
-import {
-  createBlackjackRoundRealtimeDriver,
-  type BlackjackRoundRealtimeDriver,
+import type {
+  BlackjackRoundRealtimeDriver,
 } from "./roundRealtime";
+import {
+  createBlackjackRuntimeAuthority,
+  type BlackjackRuntimeAuthority,
+} from "./runtimeAuthority";
 import {
   startBlackjackRoundScheduler,
   type BlackjackRoundScheduler,
@@ -28,6 +31,7 @@ import {
 export type BlackjackRecoveredScheduledRuntime = Readonly<{
   recovery: BlackjackRecoveryResult;
   coordinator: BlackjackPlayerActionCoordinator;
+  authority: BlackjackRuntimeAuthority;
   driver: BlackjackRoundRealtimeDriver;
   scheduler: BlackjackRoundScheduler;
   reconnectRegistry: BlackjackReconnectRegistry;
@@ -132,20 +136,24 @@ export async function recoverAndStartBlackjackRoundRuntime(input: {
   // become visible to realtime clients.
   await persist(input.recoveredAtMs);
 
-  const driver=createBlackjackRoundRealtimeDriver(
+  let scheduler: BlackjackRoundScheduler | null=null;
+  const callerOnError=input.scheduler?.onError;
+
+  const authority=createBlackjackRuntimeAuthority(
     coordinator,
     {
       nowMs:input.nowMs,
       createFreshShoe:input.createFreshShoe,
       bettingWindowMs:input.bettingWindowMs,
-      beforePublish:async(_result,serverTimeMs)=>{
-        await persist(serverTimeMs);
+      persist,
+      onFatalError:(error)=>{
+        scheduler?.stop();
+        callerOnError?.(error);
       },
     },
   );
+  const driver=authority.driver;
 
-  let scheduler: BlackjackRoundScheduler | null=null;
-  const callerOnError=input.scheduler?.onError;
   scheduler=startBlackjackRoundScheduler(
     driver,
     {
@@ -172,6 +180,7 @@ export async function recoverAndStartBlackjackRoundRuntime(input: {
   return Object.freeze({
     recovery,
     coordinator,
+    authority,
     driver,
     scheduler:activeScheduler,
     get reconnectRegistry(){

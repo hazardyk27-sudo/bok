@@ -46,6 +46,16 @@ export type BlackjackRealtimePlayerActionHandler = (
   | BlackjackRealtimePlayerActionHandlerResult
   | Promise<BlackjackRealtimePlayerActionHandlerResult>;
 
+export type BlackjackRealtimePlayerActionAcknowledge = (
+  result: BlackjackRealtimePlayerActionHandlerResult,
+) => void;
+
+export type BlackjackRealtimePlayerActionTransactionHandler = (
+  action: BlackjackCoordinatedAction,
+  acknowledge: BlackjackRealtimePlayerActionAcknowledge,
+) => void | Promise<void>;
+
+
 function assertNonEmptyId(label: string, value: unknown): string {
   if (typeof value !== "string" || !value.trim()) {
     throw new RangeError(

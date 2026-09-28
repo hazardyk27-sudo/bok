@@ -21,6 +21,7 @@ import {
 import {
   parseBlackjackRealtimePlayerAction,
   type BlackjackRealtimePlayerActionHandler,
+  type BlackjackRealtimePlayerActionTransactionHandler,
 } from "./realtimeActions";
 
 export const BLACKJACK_WS_PATH = "/api/blackjack/ws" as const;
@@ -48,6 +49,7 @@ export type BlackjackRealtimeOptions = Readonly<{
     | null
     | Promise<BlackjackRealtimeIdentity | null>;
   handlePlayerAction?: BlackjackRealtimePlayerActionHandler;
+  handlePlayerActionTransaction?: BlackjackRealtimePlayerActionTransactionHandler;
   createConnectionId?: () => string;
   nowMs?: () => number;
   onIdentityConnected?: (
@@ -163,7 +165,10 @@ export function attachBlackjackWebSocket(
   ) => {
     if (closed || socket.readyState !== WebSocket.OPEN) return;
 
-    if (!options.handlePlayerAction) {
+    if (
+      !options.handlePlayerAction &&
+      !options.handlePlayerActionTransaction
+    ) {
       send(socket, {
         type: "error",
         error: "BLACKJACK_ACTION_PROTOCOL_NOT_READY",
@@ -196,19 +201,30 @@ export function attachBlackjackWebSocket(
         nowMs: nowMs(),
       });
 
-      const result = await options.handlePlayerAction(action);
+      const acknowledge = (
+        result: Awaited<
+          ReturnType<NonNullable<BlackjackRealtimeOptions["handlePlayerAction"]>>
+        >,
+      ) => {
+        send(socket, {
+          type: "ACTION_ACCEPTED",
+          actionId: result.actionId,
+          replayed: result.replayed,
+          stateVersion: result.snapshot.stateVersion,
+          eventSequence: result.snapshot.eventSequence,
+          ...(result.betting === null ? {} : { betting: result.betting }),
+        });
+      };
 
-      send(socket, {
-        type: "ACTION_ACCEPTED",
-        actionId: result.actionId,
-        replayed: result.replayed,
-        stateVersion: result.snapshot.stateVersion,
-        eventSequence: result.snapshot.eventSequence,
-        ...(result.betting === null ? {} : { betting: result.betting }),
-      });
+      if (options.handlePlayerActionTransaction) {
+        await options.handlePlayerActionTransaction(action, acknowledge);
+      } else {
+        const result = await options.handlePlayerAction!(action);
+        acknowledge(result);
 
-      if (!result.replayed) {
-        broadcastSnapshot(result.snapshot);
+        if (!result.replayed) {
+          broadcastSnapshot(result.snapshot);
+        }
       }
     } catch (error) {
       if (
@@ -284,7 +300,6 @@ export function attachBlackjackWebSocket(
       return;
     }
 
-    connections.add(socket);
     connectionIdBySocket.set(socket, connectionId);
     socketByConnectionId.set(connectionId, socket);
 
@@ -359,6 +374,8 @@ export function attachBlackjackWebSocket(
         return;
       }
     }
+
+    connections.add(socket);
 
     socket.on("message", (raw) => {
       const message = parseMessage(raw.toString());
