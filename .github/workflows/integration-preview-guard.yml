@@ -37,6 +37,9 @@ jobs:
       - name: Build Cascade 8 hub
         run: pnpm --filter @workspace/cascade-8 run build
 
+      - name: Blackjack frontend regression
+        run: pnpm --filter @workspace/cascade-8 exec vitest run src/blackjack/blackjackSmoke.test.ts
+
       - name: Blackjack backend regression
         run: pnpm --filter @workspace/api-server exec vitest run src/blackjack/domain.test.ts src/blackjack/rules.test.ts src/blackjack/shoe.test.ts src/blackjack/shuffle.test.ts src/blackjack/draw.test.ts src/blackjack/lifecycle.test.ts src/blackjack/shoeGate.test.ts src/blackjack/stateMachine.test.ts src/blackjack/seats.test.ts src/blackjack/participation.test.ts src/blackjack/initialDeal.test.ts src/blackjack/walletLedger.test.ts src/blackjack/reservations.test.ts src/blackjack/chips.test.ts src/blackjack/betting.test.ts src/blackjack/turnEngine.test.ts src/blackjack/hit.test.ts src/blackjack/stand.test.ts src/blackjack/double.test.ts src/blackjack/split.test.ts src/blackjack/dealer.test.ts src/blackjack/settlement.test.ts src/blackjack/publicSnapshot.test.ts src/blackjack/realtime.test.ts src/blackjack/actionQueue.test.ts src/blackjack/actionProtocol.test.ts src/blackjack/eventStream.test.ts src/blackjack/syncProtocol.test.ts src/blackjack/reconnect.test.ts src/blackjack/connectionPolicy.test.ts src/blackjack/snapshotState.test.ts src/blackjack/snapshotRepository.test.ts src/blackjack/journal.test.ts src/blackjack/journalRepository.test.ts src/blackjack/recovery.test.ts src/blackjack/botSimulation.test.ts src/blackjack/emptyTableLifecycle.test.ts src/blackjack/actionCoordinator.test.ts src/blackjack/clientSync.test.ts src/blackjack/multiclientSync.test.ts src/blackjack/realtimeActions.test.ts src/blackjack/websocketActions.test.ts src/blackjack/multiplayerGate.test.ts
 
