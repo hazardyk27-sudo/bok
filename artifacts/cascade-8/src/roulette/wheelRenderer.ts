@@ -1,5 +1,6 @@
 import {
   EUROPEAN_WHEEL_SEQUENCE,
+  NUMBER_RING_STYLE,
   SEGMENT_ANGLE,
   TOP_SEGMENT_CENTER,
   WHEEL_COLORS,
@@ -8,6 +9,7 @@ import {
 } from "./config";
 
 const TAU = Math.PI * 2;
+type CanvasFill = string | CanvasGradient | CanvasPattern;
 
 function polar(radius: number, angle: number) {
   return {
@@ -22,9 +24,9 @@ function drawAnnularSegment(
   outerRadius: number,
   startAngle: number,
   endAngle: number,
-  fill: string,
-  stroke: string,
-  lineWidth: number,
+  fill: CanvasFill,
+  stroke: string | null = null,
+  lineWidth = 0,
 ) {
   ctx.beginPath();
   ctx.arc(0, 0, outerRadius, startAngle, endAngle);
@@ -32,9 +34,12 @@ function drawAnnularSegment(
   ctx.closePath();
   ctx.fillStyle = fill;
   ctx.fill();
-  ctx.strokeStyle = stroke;
-  ctx.lineWidth = lineWidth;
-  ctx.stroke();
+
+  if (stroke && lineWidth > 0) {
+    ctx.strokeStyle = stroke;
+    ctx.lineWidth = lineWidth;
+    ctx.stroke();
+  }
 }
 
 function drawCircleStroke(
@@ -140,10 +145,127 @@ function drawOuterWood(ctx: CanvasRenderingContext2D, radius: number) {
   );
 }
 
+function createNumberSegmentGradient(
+  ctx: CanvasRenderingContext2D,
+  inner: number,
+  outer: number,
+  number: number,
+) {
+  const gradient = ctx.createRadialGradient(0, 0, inner, 0, 0, outer);
+
+  if (number === 0) {
+    gradient.addColorStop(0, WHEEL_COLORS.greenDark);
+    gradient.addColorStop(0.48, WHEEL_COLORS.green);
+    gradient.addColorStop(1, WHEEL_COLORS.greenLight);
+    return gradient;
+  }
+
+  if (getNumberColor(number) === WHEEL_COLORS.red) {
+    gradient.addColorStop(0, WHEEL_COLORS.redDark);
+    gradient.addColorStop(0.48, WHEEL_COLORS.red);
+    gradient.addColorStop(1, WHEEL_COLORS.redLight);
+    return gradient;
+  }
+
+  gradient.addColorStop(0, WHEEL_COLORS.blackDark);
+  gradient.addColorStop(0.52, WHEEL_COLORS.black);
+  gradient.addColorStop(1, WHEEL_COLORS.blackLight);
+  return gradient;
+}
+
+function drawNumberSeparator(
+  ctx: CanvasRenderingContext2D,
+  inner: number,
+  outer: number,
+  angle: number,
+  radius: number,
+) {
+  const a = polar(inner, angle);
+  const b = polar(outer, angle);
+
+  ctx.save();
+  ctx.lineCap = "round";
+
+  ctx.strokeStyle = "rgba(62, 33, 3, 0.85)";
+  ctx.lineWidth = radius * (NUMBER_RING_STYLE.separatorWidth + 0.004);
+  ctx.beginPath();
+  ctx.moveTo(a.x, a.y);
+  ctx.lineTo(b.x, b.y);
+  ctx.stroke();
+
+  ctx.strokeStyle = WHEEL_COLORS.gold;
+  ctx.lineWidth = radius * NUMBER_RING_STYLE.separatorWidth;
+  ctx.beginPath();
+  ctx.moveTo(a.x, a.y);
+  ctx.lineTo(b.x, b.y);
+  ctx.stroke();
+
+  ctx.strokeStyle = WHEEL_COLORS.goldSpecular;
+  ctx.lineWidth = Math.max(0.7, radius * 0.0014);
+  ctx.beginPath();
+  ctx.moveTo(a.x, a.y);
+  ctx.lineTo(b.x, b.y);
+  ctx.stroke();
+
+  ctx.restore();
+}
+
+function drawNumberRingRails(
+  ctx: CanvasRenderingContext2D,
+  inner: number,
+  outer: number,
+  radius: number,
+) {
+  const railWidth = radius * NUMBER_RING_STYLE.railWidth;
+
+  drawCircleStroke(ctx, outer, WHEEL_COLORS.goldShadow, railWidth * 1.55);
+  drawCircleStroke(ctx, outer, WHEEL_COLORS.gold, railWidth);
+  drawCircleStroke(ctx, outer - radius * 0.004, WHEEL_COLORS.goldSpecular, railWidth * 0.24);
+
+  drawCircleStroke(ctx, inner, WHEEL_COLORS.goldShadow, railWidth * 1.45);
+  drawCircleStroke(ctx, inner, WHEEL_COLORS.gold, railWidth * 0.92);
+  drawCircleStroke(
+    ctx,
+    inner + radius * NUMBER_RING_STYLE.innerHighlightOffset,
+    "rgba(255, 239, 158, 0.44)",
+    Math.max(0.8, radius * 0.0015),
+  );
+}
+
+function drawNumberLabel(
+  ctx: CanvasRenderingContext2D,
+  number: number,
+  center: number,
+  radius: number,
+) {
+  const textRadius = radius * NUMBER_RING_STYLE.textRadius;
+  const point = polar(textRadius, center);
+  const fontSize = Math.max(12, radius * NUMBER_RING_STYLE.fontSize);
+
+  ctx.save();
+  ctx.translate(point.x, point.y);
+  ctx.rotate(center + Math.PI / 2);
+  ctx.scale(NUMBER_RING_STYLE.textScaleX, 1);
+
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
+  ctx.lineJoin = "round";
+  ctx.font = `700 ${fontSize}px Georgia, "Times New Roman", serif`;
+  ctx.shadowColor = "rgba(22, 10, 3, 0.62)";
+  ctx.shadowBlur = radius * 0.003;
+  ctx.shadowOffsetY = radius * 0.0024;
+  ctx.strokeStyle = "rgba(83, 47, 5, 0.66)";
+  ctx.lineWidth = Math.max(0.85, radius * 0.0023);
+  ctx.strokeText(String(number), 0, 0);
+  ctx.fillStyle = WHEEL_COLORS.ivoryLight;
+  ctx.fillText(String(number), 0, 0);
+
+  ctx.restore();
+}
+
 function drawNumberRing(ctx: CanvasRenderingContext2D, radius: number) {
   const outer = radius * WHEEL_GEOMETRY.numberOuterRadius;
   const inner = radius * WHEEL_GEOMETRY.numberInnerRadius;
-  const strokeWidth = Math.max(1.2, radius * 0.0034);
 
   EUROPEAN_WHEEL_SEQUENCE.forEach((number, index) => {
     const center = TOP_SEGMENT_CENTER + index * SEGMENT_ANGLE;
@@ -156,27 +278,27 @@ function drawNumberRing(ctx: CanvasRenderingContext2D, radius: number) {
       outer,
       start,
       end,
-      getNumberColor(number),
-      WHEEL_COLORS.gold,
-      strokeWidth,
+      createNumberSegmentGradient(ctx, inner, outer, number),
     );
-
-    const textRadius = (inner + outer) / 2;
-    const textPoint = polar(textRadius, center);
-
-    ctx.save();
-    ctx.translate(textPoint.x, textPoint.y);
-    ctx.rotate(center + Math.PI / 2);
-    ctx.fillStyle = WHEEL_COLORS.ivory;
-    ctx.textAlign = "center";
-    ctx.textBaseline = "middle";
-    ctx.font = `700 ${Math.max(12, radius * 0.060)}px Georgia, "Times New Roman", serif`;
-    ctx.fillText(String(number), 0, 0);
-    ctx.restore();
   });
 
-  drawCircleStroke(ctx, outer, WHEEL_COLORS.goldLight, radius * 0.009);
-  drawCircleStroke(ctx, inner, WHEEL_COLORS.goldLight, radius * 0.008);
+  for (let index = 0; index < EUROPEAN_WHEEL_SEQUENCE.length; index += 1) {
+    const center = TOP_SEGMENT_CENTER + index * SEGMENT_ANGLE;
+    drawNumberSeparator(
+      ctx,
+      inner,
+      outer,
+      center - SEGMENT_ANGLE / 2,
+      radius,
+    );
+  }
+
+  drawNumberRingRails(ctx, inner, outer, radius);
+
+  EUROPEAN_WHEEL_SEQUENCE.forEach((number, index) => {
+    const center = TOP_SEGMENT_CENTER + index * SEGMENT_ANGLE;
+    drawNumberLabel(ctx, number, center, radius);
+  });
 }
 
 function drawPocketRing(ctx: CanvasRenderingContext2D, radius: number) {

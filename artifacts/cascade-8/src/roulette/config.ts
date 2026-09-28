@@ -11,9 +11,9 @@ export const RED_NUMBERS = new Set([
 export const WHEEL_GEOMETRY = {
   outerRadius: 1,
   outerWoodInnerRadius: 0.755,
-  numberOuterRadius: 0.735,
-  numberInnerRadius: 0.575,
-  pocketOuterRadius: 0.575,
+  numberOuterRadius: 0.742,
+  numberInnerRadius: 0.592,
+  pocketOuterRadius: 0.592,
   pocketInnerRadius: 0.37,
   centerDiscRadius: 0.352,
   centerGuideRadius: 0.132,
@@ -21,19 +21,37 @@ export const WHEEL_GEOMETRY = {
   markerCount: 8,
 } as const;
 
+export const NUMBER_RING_STYLE = {
+  textRadius: 0.667,
+  fontSize: 0.059,
+  textScaleX: 0.84,
+  separatorWidth: 0.0058,
+  railWidth: 0.0105,
+  innerHighlightOffset: 0.010,
+} as const;
+
 export const WHEEL_COLORS = {
   woodDark: "#57210f",
   woodMid: "#873a17",
   woodLight: "#a95820",
   woodLine: "rgba(67, 23, 9, 0.45)",
+  goldShadow: "#6d3f05",
   goldDark: "#8d5708",
   gold: "#e1a628",
   goldLight: "#ffd86a",
+  goldSpecular: "#fff0a3",
+  redDark: "#8d160d",
   red: "#c72816",
+  redLight: "#e14428",
+  blackDark: "#070909",
   black: "#151919",
+  blackLight: "#2b302f",
+  greenDark: "#0b4d22",
   green: "#167934",
+  greenLight: "#29914a",
   greenAlt: "#1b843a",
-  ivory: "#f5e5bd",
+  ivory: "#f6df9f",
+  ivoryLight: "#fff5c8",
 } as const;
 
 export const SEGMENT_COUNT = EUROPEAN_WHEEL_SEQUENCE.length;
