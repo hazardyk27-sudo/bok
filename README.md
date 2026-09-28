@@ -13,7 +13,7 @@ Open the Replit preview. The development harness is available at `/lab`.
 
 ## Repository and preview model
 
-OYUN uses Isolation v2. Normal development happens on `feature/slot`, `feature/roulette`, `feature/cadi-kazan`, `feature/idle`, or `feature/hub`. Replit stays on `integration/replit-preview`. A feature commit is not a release: the approved game is promoted by copying only its owned roots into the integration preview branch, then Replit is refreshed by fast-forward only. See `AGENTS.md`, `GIT_WORKFLOW_RULES.md`, and `.github/game-ownership.json`.
+OYUN uses Isolation v2. Normal development happens on `feature/slot`, `feature/cadi-kazan`, `feature/idle`, or `feature/hub`. Replit stays on `integration/replit-preview`. A feature commit is not a release: the approved game is promoted by copying only its owned roots into the integration preview branch, then Replit is refreshed by fast-forward only. See `AGENTS.md`, `GIT_WORKFLOW_RULES.md`, and `.github/game-ownership.json`.
 
 ## Build and test
 

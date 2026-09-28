@@ -9,7 +9,6 @@ on:
         type: choice
         options:
           - slot
-          - roulette
           - cadi-kazan
           - idle
           - hub
@@ -82,9 +81,6 @@ jobs:
           src/hub/mainMenuRegression.test.ts
           src/slot/slotSmoke.test.ts
           src/cadi-kazan/cadiKazanSmoke.test.ts
-          src/rouletteSmoke.test.ts
-          src/rouletteGeometry.test.ts
-          src/roulettePhysicsConfig.test.ts
           src/idle/idleUiIntegration.test.ts
           src/blackjack/blackjackSmoke.test.ts
       - name: Backend isolation regression

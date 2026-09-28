@@ -4,7 +4,6 @@ on:
   push:
     branches:
       - feature/slot
-      - feature/roulette
       - feature/cadi-kazan
       - feature/idle
       - feature/hub
@@ -29,7 +28,6 @@ jobs:
           ref="${{ github.head_ref || github.ref_name }}"
           case "$ref" in
             feature/slot) game=slot ;;
-            feature/roulette) game=roulette ;;
             feature/cadi-kazan) game=cadi-kazan ;;
             feature/idle) game=idle ;;
             feature/hub) game=hub ;;

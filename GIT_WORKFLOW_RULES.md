@@ -8,7 +8,6 @@ It is aligned with root `AGENTS.md` and `.github/game-ownership.json`.
 Each product area has one development branch:
 
 - Slot: `feature/slot`
-- Roulette: `feature/roulette`
 - Cadı Kazan: `feature/cadi-kazan`
 - Idle / İşletmeler: `feature/idle`
 - Hub / site: `feature/hub`
@@ -143,7 +142,6 @@ Conceptually:
 ```text
 shared-replit/        -> integration/replit-preview
 worktree-slot/        -> feature/slot
-worktree-roulette/    -> feature/roulette
 worktree-cadi/        -> feature/cadi-kazan
 worktree-idle/        -> feature/idle
 worktree-hub/         -> feature/hub
