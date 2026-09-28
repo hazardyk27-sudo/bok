@@ -9,6 +9,7 @@ import {
   sampleRotorSpin,
   type RotorSpin,
 } from "./spinMotion";
+import { readSettledWinningResult } from "./spinResult";
 import { renderRouletteWheel } from "./wheelRenderer";
 
 type RouletteViewState = {
@@ -85,7 +86,27 @@ export function mountRoulette(app: HTMLDivElement) {
       const ballSample = sampleBallOrbit(activeBallOrbit, elapsedMs);
       viewState.ballAngle = ballSample.angle;
       viewState.ballRadiusRatio = ballSample.radiusRatio;
-      if (ballSample.done) activeBallOrbit = null;
+
+      if (ballSample.done) {
+        const completedOrbit = activeBallOrbit;
+        const result = readSettledWinningResult(completedOrbit);
+
+        if (result) {
+          canvas.dataset.roulettePocketIndex = String(result.pocketIndex);
+          canvas.dataset.rouletteWinningNumber = String(result.number);
+          canvas.dataset.rouletteWinningColor = result.color;
+          canvas.setAttribute(
+            "aria-label",
+            `European roulette wheel. Result ${result.number}. Press to spin again.`,
+          );
+        } else {
+          delete canvas.dataset.roulettePocketIndex;
+          delete canvas.dataset.rouletteWinningNumber;
+          delete canvas.dataset.rouletteWinningColor;
+        }
+
+        activeBallOrbit = null;
+      }
     }
 
     redraw();
