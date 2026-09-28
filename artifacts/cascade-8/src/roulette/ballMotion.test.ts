@@ -33,10 +33,10 @@ describe("roulette pocket capture and settle", () => {
     expect(orbit.trackRadius).toBe(
       BALL_TRACK_STYLE.pathRadius,
     );
-    expect(orbit.descentStartMs).toBeGreaterThan(3000);
-    expect(orbit.descentStartMs).toBeLessThan(3300);
-    expect(orbit.pocketEntryStartMs).toBeGreaterThan(5200);
-    expect(orbit.pocketEntryStartMs).toBeLessThan(5500);
+    expect(orbit.descentStartMs).toBeGreaterThan(4400);
+    expect(orbit.descentStartMs).toBeLessThan(4450);
+    expect(orbit.pocketEntryStartMs).toBeGreaterThan(6700);
+    expect(orbit.pocketEntryStartMs).toBeLessThan(6750);
     expect(orbit.pocketEntryStartMs).toBeGreaterThan(
       orbit.descentStartMs,
     );
@@ -113,8 +113,11 @@ describe("roulette pocket capture and settle", () => {
     expect(capture!.timeMs).toBeGreaterThan(
       orbit.pocketEntryStartMs,
     );
-    expect(capture!.timeMs).toBeLessThan(
-      orbit.freeMotionDurationMs,
+    expect(capture!.timeMs).toBeLessThanOrEqual(
+      Math.max(
+        orbit.freeMotionDurationMs,
+        orbit.rotorSpin.durationMs,
+      ),
     );
 
     const fretCountAtCapture =
@@ -244,18 +247,39 @@ describe("roulette pocket capture and settle", () => {
     );
   });
 
-  it("settles fully inside the green pocket annulus", () => {
+  it("settles on the visible pocket trough center and never freezes on a separator", () => {
     const orbit = createBallOrbit();
-
-    expect(
-      orbit.pocketSettleRadius,
-    ).toBeGreaterThan(
-      WHEEL_GEOMETRY.pocketInnerRadius,
+    const end = sampleBallOrbit(
+      orbit,
+      orbit.durationMs,
     );
-    expect(
-      orbit.pocketSettleRadius,
-    ).toBeLessThan(
-      WHEEL_GEOMETRY.pocketOuterRadius,
+    const expectedRadius =
+      WHEEL_GEOMETRY.pocketInnerRadius +
+      (WHEEL_GEOMETRY.pocketOuterRadius -
+        WHEEL_GEOMETRY.pocketInnerRadius) *
+        0.48;
+
+    expect(orbit.pocketSettleRadius).toBeCloseTo(
+      expectedRadius,
+      8,
+    );
+    expect(end.phase).toBe("settled");
+    expect(end.pocketCaptureIndex).not.toBeNull();
+    expect(end.settled).toBe(true);
+  });
+
+  it("does not mark the ball settled before the rotor has stopped", () => {
+    const orbit = createBallOrbit(
+      -0.72,
+      createRotorSpin(0.37, 1),
+    );
+    const capture = orbit.pocketCapture!;
+
+    expect(capture.settleTimeMs).toBeGreaterThanOrEqual(
+      orbit.rotorSpin.durationMs,
+    );
+    expect(orbit.durationMs).toBeGreaterThanOrEqual(
+      capture.settleTimeMs,
     );
   });
 
