@@ -7,11 +7,13 @@ import {
 import { createBlackjackTableFoundation } from "./seats";
 import { createUnshuffledBlackjackShoe } from "./shoe";
 
-const BLACKJACK_TARGETED_PROMOTION_GATE = process.argv.some((argument) =>
-  argument.replaceAll("\\", "/").endsWith(
-    "src/blackjack/eventStream.test.ts",
-  ),
-);
+const BLACKJACK_TARGETED_PROMOTION_GATE =
+  process.env.GITHUB_WORKFLOW === "Promote One Game To Replit Preview" ||
+  process.argv.some((argument) =>
+    argument.replaceAll("\\", "/").endsWith(
+      "src/blackjack/eventStream.test.ts",
+    ),
+  );
 
 if (BLACKJACK_TARGETED_PROMOTION_GATE) {
   await import("./actionCoordinator.test");

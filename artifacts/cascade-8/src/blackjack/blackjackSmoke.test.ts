@@ -17,11 +17,13 @@ import {
   type BlackjackPublicSnapshotViewSource,
 } from "./index";
 
-const BLACKJACK_TARGETED_FRONTEND_GATE = process.argv.some((argument) =>
-  argument.replaceAll("\\", "/").endsWith(
-    "src/blackjack/blackjackSmoke.test.ts",
-  ),
-);
+const BLACKJACK_TARGETED_FRONTEND_GATE =
+  process.env.GITHUB_WORKFLOW === "Promote One Game To Replit Preview" ||
+  process.argv.some((argument) =>
+    argument.replaceAll("\\", "/").endsWith(
+      "src/blackjack/blackjackSmoke.test.ts",
+    ),
+  );
 
 if (BLACKJACK_TARGETED_FRONTEND_GATE) {
   await import("./bettingView.test");
