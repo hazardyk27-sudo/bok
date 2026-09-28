@@ -67,6 +67,7 @@ export function getDeflectorAngle(index: number) {
 
 export const BALL_STYLE = {
   radius: 0.0234,
+  renderScale: 1.1,
   shadowRadius: 0.0312,
   shadowOffsetX: 0.0091,
   shadowOffsetY: 0.013,

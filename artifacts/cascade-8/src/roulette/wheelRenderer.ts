@@ -1048,15 +1048,19 @@ function drawBall(
       : BALL_TRACK_STYLE.pathRadius;
   const orbitRadius = radius * safeRadiusRatio;
   const point = polar(orbitRadius, normalizeRotorAngle(ballAngle));
-  const ballRadius = radius * BALL_STYLE.radius;
+  const visualScale = BALL_STYLE.renderScale;
+  const ballRadius =
+    radius *
+    BALL_STYLE.radius *
+    visualScale;
 
   ctx.save();
 
   ctx.beginPath();
   ctx.arc(
-    point.x + radius * BALL_STYLE.shadowOffsetX,
-    point.y + radius * BALL_STYLE.shadowOffsetY,
-    radius * BALL_STYLE.shadowRadius,
+    point.x + radius * BALL_STYLE.shadowOffsetX * visualScale,
+    point.y + radius * BALL_STYLE.shadowOffsetY * visualScale,
+    radius * BALL_STYLE.shadowRadius * visualScale,
     0,
     TAU,
   );
@@ -1064,8 +1068,8 @@ function drawBall(
   ctx.fill();
 
   const gradient = ctx.createRadialGradient(
-    point.x + radius * BALL_STYLE.highlightOffsetX,
-    point.y + radius * BALL_STYLE.highlightOffsetY,
+    point.x + radius * BALL_STYLE.highlightOffsetX * visualScale,
+    point.y + radius * BALL_STYLE.highlightOffsetY * visualScale,
     radius * 0.001,
     point.x,
     point.y,
@@ -1081,24 +1085,24 @@ function drawBall(
   ctx.fillStyle = gradient;
   ctx.fill();
   ctx.strokeStyle = "rgba(92, 83, 68, 0.72)";
-  ctx.lineWidth = Math.max(0.8, radius * BALL_STYLE.rimWidth);
+  ctx.lineWidth = Math.max(0.8, radius * BALL_STYLE.rimWidth * visualScale);
   ctx.stroke();
 
   ctx.beginPath();
   ctx.arc(
-    point.x + radius * BALL_STYLE.highlightOffsetX,
-    point.y + radius * BALL_STYLE.highlightOffsetY,
-    radius * BALL_STYLE.highlightRadius,
+    point.x + radius * BALL_STYLE.highlightOffsetX * visualScale,
+    point.y + radius * BALL_STYLE.highlightOffsetY * visualScale,
+    radius * BALL_STYLE.highlightRadius * visualScale,
     0,
     TAU,
   );
   const highlight = ctx.createRadialGradient(
-    point.x + radius * BALL_STYLE.highlightOffsetX,
-    point.y + radius * BALL_STYLE.highlightOffsetY,
+    point.x + radius * BALL_STYLE.highlightOffsetX * visualScale,
+    point.y + radius * BALL_STYLE.highlightOffsetY * visualScale,
     0,
-    point.x + radius * BALL_STYLE.highlightOffsetX,
-    point.y + radius * BALL_STYLE.highlightOffsetY,
-    radius * BALL_STYLE.highlightRadius,
+    point.x + radius * BALL_STYLE.highlightOffsetX * visualScale,
+    point.y + radius * BALL_STYLE.highlightOffsetY * visualScale,
+    radius * BALL_STYLE.highlightRadius * visualScale,
   );
   highlight.addColorStop(0, "rgba(255, 255, 255, 0.96)");
   highlight.addColorStop(1, "rgba(255, 255, 255, 0)");
