@@ -189,13 +189,14 @@ describe("blackjack recovered scheduled runtime",()=>{
     expect(scheduled).toBe(false);
   });
 
-  it("does not publish recovered timer state if durable persistence fails",async()=>{
+  it("fails closed if recovered catch-up state cannot be persisted",async()=>{
     const initial=createBlackjackDurableSnapshot(
       durableBettingRuntime(),
       4_000,
     );
     let saves=0;
     let scheduled=false;
+    let cancelled=false;
 
     await expect(
       recoverAndStartBlackjackRoundRuntime({
@@ -216,15 +217,16 @@ describe("blackjack recovered scheduled runtime",()=>{
             scheduled=true;
             return "failure-scheduler";
           },
-          cancelSchedule:()=>undefined,
+          cancelSchedule:(handle)=>{
+            expect(handle).toBe("failure-scheduler");
+            cancelled=true;
+          },
         },
       }),
-    ).resolves.toMatchObject({
-      scheduler:expect.any(Object),
-    });
+    ).rejects.toThrow(/durable write failed/);
 
     expect(scheduled).toBe(true);
-    // The catch-up tick is contained by the scheduler. Its state may mutate
-    // in memory, but realtime publication is blocked by beforePublish.
+    expect(cancelled).toBe(true);
+    expect(saves).toBe(2);
   });
 });

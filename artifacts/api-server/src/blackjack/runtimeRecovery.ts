@@ -144,14 +144,29 @@ export async function recoverAndStartBlackjackRoundRuntime(input: {
     },
   );
 
-  const scheduler=startBlackjackRoundScheduler(
+  let scheduler: BlackjackRoundScheduler | null=null;
+  const callerOnError=input.scheduler?.onError;
+  scheduler=startBlackjackRoundScheduler(
     driver,
-    input.scheduler,
+    {
+      ...input.scheduler,
+      onError:(error)=>{
+        scheduler?.stop();
+        callerOnError?.(error);
+      },
+    },
   );
 
   // Catch up an already-expired betting/turn deadline immediately after
-  // restart instead of waiting for the first interval.
+  // restart instead of waiting for the first interval. Persistence errors
+  // are fail-closed: do not return a live recovered runtime that is ahead
+  // of durable storage.
   await scheduler.tickNow();
+  const catchUpError=scheduler.lastError();
+  if(catchUpError!==null){
+    scheduler.stop();
+    throw catchUpError;
+  }
 
   return Object.freeze({
     recovery,
