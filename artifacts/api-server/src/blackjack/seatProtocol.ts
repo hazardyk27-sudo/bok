@@ -39,3 +39,33 @@ export function parseBlackjackSeatClaimRequest(
     seatNumber:value.seatNumber,
   });
 }
+
+
+export type BlackjackSeatLeaveRequest = Readonly<{
+  type:"LEAVE_SEAT";
+  requestId:string;
+}>;
+
+export type BlackjackSeatLeaveAccepted = Readonly<{
+  type:"SEAT_LEAVE_ACCEPTED";
+  requestId:string;
+  replayed:boolean;
+  stateVersion:number;
+  eventSequence:number;
+}>;
+
+export function parseBlackjackSeatLeaveRequest(
+  value: unknown,
+): BlackjackSeatLeaveRequest | null {
+  if(!isRecord(value) || value.type!=="LEAVE_SEAT") return null;
+  if(
+    typeof value.requestId!=="string" ||
+    !value.requestId.trim()
+  ){
+    throw new RangeError("Blackjack seat leave payload is invalid");
+  }
+  return Object.freeze({
+    type:"LEAVE_SEAT",
+    requestId:value.requestId,
+  });
+}

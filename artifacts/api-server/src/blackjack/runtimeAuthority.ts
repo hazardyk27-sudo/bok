@@ -19,6 +19,8 @@ import type { BlackjackRealtimeIdentity } from "./realtime";
 import type {
   BlackjackSeatClaimAccepted,
   BlackjackSeatClaimRequest,
+  BlackjackSeatLeaveAccepted,
+  BlackjackSeatLeaveRequest,
 } from "./seatProtocol";
 import type {
   BlackjackRealtimePlayerActionHandlerResult,
@@ -51,6 +53,11 @@ export type BlackjackRuntimeAuthority = Readonly<{
     identity: BlackjackRealtimeIdentity,
     request: BlackjackSeatClaimRequest,
     acknowledge: (result: BlackjackSeatClaimAccepted)=>void,
+  ) => Promise<void>;
+  handleSeatLeaveTransaction: (
+    identity: BlackjackRealtimeIdentity,
+    request: BlackjackSeatLeaveRequest,
+    acknowledge: (result: BlackjackSeatLeaveAccepted)=>void,
   ) => Promise<void>;
   getPrivatePlayerState: (
     identity: BlackjackRealtimeIdentity,
@@ -264,6 +271,36 @@ export function createBlackjackRuntimeAuthority(
       type:"SEAT_CLAIM_ACCEPTED",
       requestId:request.requestId,
       seatNumber:request.seatNumber,
+      replayed:result.replayed,
+      stateVersion:result.table.stateVersion,
+      eventSequence:result.table.eventSequence,
+    }));
+
+    if(!result.replayed){
+      rawSource.publishTable(result.table,nowMs);
+    }
+  });
+
+  const handleSeatLeaveTransaction=(
+    identity: BlackjackRealtimeIdentity,
+    request: BlackjackSeatLeaveRequest,
+    acknowledge: (result: BlackjackSeatLeaveAccepted)=>void,
+  ): Promise<void>=>queue.enqueue(async()=>{
+    assertHealthy();
+    const nowMs=input.nowMs();
+    assertNowMs(nowMs);
+
+    const result=await coordinator.leaveSeat({
+      playerId:identity.playerId,
+      nowMs,
+    });
+    if(!result.replayed){
+      await persist(nowMs);
+    }
+
+    acknowledge(Object.freeze({
+      type:"SEAT_LEAVE_ACCEPTED",
+      requestId:request.requestId,
       replayed:result.replayed,
       stateVersion:result.table.stateVersion,
       eventSequence:result.table.eventSequence,

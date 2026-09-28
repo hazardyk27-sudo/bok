@@ -27,7 +27,7 @@ import type {
   BlackjackShoe,
   BlackjackTable,
 } from "./domain";
-import { seatBlackjackPlayer } from "./participation";
+import { leaveBlackjackSeat, seatBlackjackPlayer } from "./participation";
 import { BLACKJACK_BETTING_WINDOW_MS } from "./roundFlow";
 import type { BlackjackReservationBook } from "./reservations";
 import {
@@ -174,6 +174,12 @@ export type BlackjackDisconnectedPolicyCoordinatorResult = Readonly<{
   queueSequence: number;
   replayed: boolean;
   reason: "NONE" | "TURN_TIMEOUT" | "RECONNECT_GRACE_EXPIRED";
+}>;
+
+export type BlackjackSeatLeaveCoordinatorResult = Readonly<{
+  table: BlackjackTable;
+  queueSequence: number;
+  replayed: boolean;
 }>;
 
 export type BlackjackSeatClaimCoordinatorResult = Readonly<{
@@ -331,6 +337,88 @@ export class BlackjackPlayerActionCoordinator {
 
   getReconnectRegistry(): BlackjackReconnectRegistry {
     return this.reconnectRegistry;
+  }
+
+  leaveSeat(
+    input: {
+      playerId: string;
+      nowMs: number;
+    },
+  ): Promise<BlackjackSeatLeaveCoordinatorResult> {
+    assertNowMs(input.nowMs);
+
+    return this.queue.enqueue(({ queueSequence }) => {
+      const player=this.tableState.players.find(
+        (candidate)=>candidate.playerId===input.playerId,
+      );
+      if(!player){
+        return Object.freeze({
+          table:this.tableState,
+          queueSequence,
+          replayed:true,
+        });
+      }
+
+      if(
+        this.tableState.phase!=="TABLE_IDLE" &&
+        this.tableState.phase!=="BETTING" &&
+        this.tableState.phase!=="ROUND_END"
+      ){
+        throw new Error(
+          "Blackjack seat leave is allowed only at a safe table boundary",
+        );
+      }
+      if(player.handIds.length>0){
+        throw new Error("Blackjack player cannot leave with active hands");
+      }
+
+      const position=this.bettingPositions.get(player.playerId);
+      if(
+        position &&
+        (
+          position.status!=="OPEN" ||
+          getBlackjackBetTotalCents(position)>0
+        )
+      ){
+        throw new Error(
+          "Blackjack player cannot leave with an active wager",
+        );
+      }
+
+      let table=leaveBlackjackSeat(this.tableState,{
+        playerId:player.playerId,
+        nowMs:input.nowMs,
+      });
+      this.bettingPositions.delete(player.playerId);
+
+      if(
+        table.players.length===0 &&
+        (
+          table.phase==="TABLE_IDLE" ||
+          table.phase==="BETTING" ||
+          table.phase==="ROUND_END"
+        )
+      ){
+        table=Object.freeze({
+          ...table,
+          phase:"TABLE_IDLE" as const,
+          round:null,
+        });
+      }
+
+      const committed=commitBlackjackServerEvent(table,{
+        type:"TABLE_STATE_COMMITTED",
+        actionId:null,
+        createdAtMs:input.nowMs,
+      }).table;
+      this.tableState=committed;
+
+      return Object.freeze({
+        table:committed,
+        queueSequence,
+        replayed:false,
+      });
+    });
   }
 
   claimSeat(
