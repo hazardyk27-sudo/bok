@@ -47,6 +47,30 @@ describe("blackjack premium chip and betting UI foundation", () => {
     ).toThrow(/safe integer range/);
   });
 
+  it("rejects selected values outside the base tray or 1K ×2 chain", () => {
+    expect(() =>
+      renderBlackjackBettingPanel({
+        selectedChipCredits: 3_000,
+        totalBetLabel: "0",
+        readyLabel: "READY",
+        bettingClosesLabel: "WAITING",
+      }),
+    ).toThrow(/approved denomination/);
+  });
+
+  it("escapes dynamic betting labels", () => {
+    const markup = renderBlackjackBettingPanel({
+      selectedChipCredits: 100,
+      totalBetLabel: "<8K>",
+      readyLabel: 'READY "NOW"',
+      bettingClosesLabel: "08 & GO",
+    });
+
+    expect(markup).toContain("&lt;8K&gt;");
+    expect(markup).toContain("READY &quot;NOW&quot;");
+    expect(markup).toContain("08 &amp; GO");
+  });
+
   it("renders every base chip and the high-value ×2 control", () => {
     const markup = renderBlackjackBettingPanel({
       selectedChipCredits: 1_000,
