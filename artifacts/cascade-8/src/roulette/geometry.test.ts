@@ -89,6 +89,7 @@ describe("roulette 2d wheel geometry", () => {
     expect(BALL_STYLE.shadowRadius).toBeGreaterThan(BALL_STYLE.radius);
     expect(BALL_STYLE.highlightRadius).toBeLessThan(BALL_STYLE.radius);
     expect(BALL_STYLE.radius).toBeCloseTo(0.018 * 1.3, 6);
+    expect(BALL_STYLE.renderScale).toBeCloseTo(1.1, 6);
   });
 
   it("keeps inward number labels centered inside the number ring", () => {
