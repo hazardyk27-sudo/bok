@@ -4,6 +4,7 @@ import { router as cadiKazanRouter } from "../cadi-kazan";
 import { router as slotRouter } from "../slot";
 import { router as idleRouter } from "../idle";
 import { router as blackjackRouter } from "../blackjack";
+import { router as rouletteRouter } from "../roulette";
 import { blackjackPlatformRouter } from "../platform/blackjack";
 
 const router: IRouter = Router();
@@ -14,5 +15,6 @@ router.use(slotRouter);
 router.use(idleRouter);
 router.use(blackjackPlatformRouter);
 router.use(blackjackRouter);
+router.use(rouletteRouter);
 
 export default router;

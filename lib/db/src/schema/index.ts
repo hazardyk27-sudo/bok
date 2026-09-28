@@ -4,3 +4,4 @@ export * from "./slot";
 export * from "./idle";
 
 export * from "./blackjack";
+export * from "./roulette";
