@@ -893,10 +893,41 @@ function drawCenterMechanism(ctx: CanvasRenderingContext2D, radius: number) {
   drawCenterHub(ctx, radius);
 }
 
+export type RouletteWheelRenderState = {
+  rotorAngle?: number;
+};
+
+export function normalizeRotorAngle(angle: number) {
+  if (!Number.isFinite(angle)) return 0;
+  const normalized = angle % TAU;
+  return normalized < 0 ? normalized + TAU : normalized;
+}
+
+function drawStator(ctx: CanvasRenderingContext2D, radius: number) {
+  drawOuterWood(ctx, radius);
+}
+
+function drawRotor(
+  ctx: CanvasRenderingContext2D,
+  radius: number,
+  rotorAngle: number,
+) {
+  ctx.save();
+  ctx.rotate(normalizeRotorAngle(rotorAngle));
+
+  drawNumberRing(ctx, radius);
+  drawPocketRing(ctx, radius);
+  drawCenterDisc(ctx, radius);
+  drawCenterMechanism(ctx, radius);
+
+  ctx.restore();
+}
+
 export function renderRouletteWheel(
   ctx: CanvasRenderingContext2D,
   width: number,
   height: number,
+  state: RouletteWheelRenderState = {},
 ) {
   ctx.clearRect(0, 0, width, height);
 
@@ -906,11 +937,8 @@ export function renderRouletteWheel(
   ctx.save();
   ctx.translate(width / 2, height / 2);
 
-  drawOuterWood(ctx, radius);
-  drawNumberRing(ctx, radius);
-  drawPocketRing(ctx, radius);
-  drawCenterDisc(ctx, radius);
-  drawCenterMechanism(ctx, radius);
+  drawStator(ctx, radius);
+  drawRotor(ctx, radius, state.rotorAngle ?? 0);
 
   ctx.restore();
 }

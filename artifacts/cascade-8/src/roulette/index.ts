@@ -1,6 +1,14 @@
 import "./roulette.css";
 import { renderRouletteWheel } from "./wheelRenderer";
 
+type RouletteViewState = {
+  rotorAngle: number;
+};
+
+const viewState: RouletteViewState = {
+  rotorAngle: 0,
+};
+
 function sizeCanvas(canvas: HTMLCanvasElement) {
   const rect = canvas.getBoundingClientRect();
   const dpr = Math.min(window.devicePixelRatio || 1, 2);
@@ -15,7 +23,7 @@ function sizeCanvas(canvas: HTMLCanvasElement) {
   const ctx = canvas.getContext("2d");
   if (!ctx) throw new Error("Roulette canvas 2D context is unavailable.");
 
-  renderRouletteWheel(ctx, width, height);
+  renderRouletteWheel(ctx, width, height, viewState);
 }
 
 export function mountRoulette(app: HTMLDivElement) {
