@@ -18,7 +18,7 @@ export const HUB_MARKUP = `
     <div class="menu-intro">
       <span class="menu-kicker">FAHRİNİN YOLU // PLAY LOUNGE</span>
       <h1 id="game-menu-title">OYUNUNU <em>SEÇ</em></h1>
-       <p>Gece açıldı. Dört ayrı dünya seni bekliyor. Hangi dünyaya gireceğine karar ver.</p>
+       <p>Gece açıldı. Üç ayrı dünya seni bekliyor. Hangi dünyaya gireceğine karar ver.</p>
     </div>
     <div class="game-choice-grid">
       <a class="game-choice game-choice-slot" href="/slot">
@@ -31,16 +31,7 @@ export const HUB_MARKUP = `
         </span>
         <span class="choice-footer"><span>30 SYMBOL FIELD</span><span class="choice-arrow" aria-hidden="true">→</span></span>
       </a>
-       <a class="game-choice game-choice-roulette" href="/roulette" aria-label="Roulette oyununu aç">
-         <span class="choice-status is-live">AVAILABLE NOW</span>
-        <span class="choice-art choice-art-roulette" aria-hidden="true"><span>R</span><i></i><b></b></span>
-        <span class="choice-copy">
-          <span class="choice-overline">THE NIGHT TABLE</span>
-          <strong>ROULETTE</strong>
-          <span class="choice-type">TABLE EXPERIENCE</span>
-        </span>
-         <span class="choice-footer"><span>LIVE TABLE</span><span class="choice-arrow" aria-hidden="true">→</span></span>
-       </a>
+       
        <a class="game-choice game-choice-witch" href="/cadi-kazan" aria-label="Cadı Kazan oyununu aç">
          <span class="choice-status is-live">AVAILABLE NOW</span>
          <span class="choice-art choice-art-witch" aria-hidden="true"><span>✧</span></span>
@@ -64,7 +55,7 @@ export const HUB_MARKUP = `
     </div>
     <div class="menu-footer">
       <span class="menu-footer-line"></span>
-       <span>ONE LOUNGE · FOUR WORLDS</span>
+       <span>ONE LOUNGE · THREE WORLDS</span>
       <span class="menu-footer-line"></span>
     </div>
   </main>
