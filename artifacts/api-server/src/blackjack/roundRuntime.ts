@@ -83,6 +83,14 @@ async function startDealFromLockedBetting(
     );
   }
 
+  if(dealt.table.phase==="DEALER_TURN"){
+    return finishDealerAndSettlement(
+      coordinator,
+      nowMs,
+      transitions,
+    );
+  }
+
   return finish("ROUND_STARTED", dealt.table, transitions);
 }
 
@@ -171,6 +179,13 @@ export async function runBlackjackRoundRuntimeTick(
     if (!dealt.replayed) {
       transitions.push(
         freezeTransition("INITIAL_DEAL_COMMITTED", dealt.table),
+      );
+    }
+    if(dealt.table.phase==="DEALER_TURN"){
+      return finishDealerAndSettlement(
+        coordinator,
+        input.nowMs,
+        transitions,
       );
     }
     return finish("ROUND_STARTED", dealt.table, transitions);
