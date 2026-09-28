@@ -56,7 +56,7 @@ function raceTable(): BlackjackTable {
     roundId: "race-round",
     roundNumber: 1,
     phase: "PLAYER_TURNS",
-    activeSeatOrder: [1, 2, 3, 4, 5],
+    activeSeatOrder: [1],
     hands: [
       {
         handId: "race-hand",
