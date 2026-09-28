@@ -113,6 +113,7 @@ export type BlackjackSnapshotViewContext = Readonly<{
   bettingPending?: boolean;
   selectedChipCredits?: number;
   transportConnected?: boolean;
+  seatCommandPending?: boolean;
 }>;
 
 function assertSafeNonNegativeInteger(label: string, value: number): void {
@@ -359,6 +360,10 @@ export function buildBlackjackTableViewModelFromSnapshot(
       ? null
       : playersById.get(context.localPlayerId) ?? null;
   const localSeatNumber = localPlayer?.seatNumber ?? null;
+  const localHasCommittedBet =
+    (context.bettingBetCents ?? 0) > 0 ||
+    context.bettingStatus === "READY" ||
+    context.bettingStatus === "LOCKED";
   const roundHands = snapshot.round?.hands ?? [];
 
   const seats = snapshot.seats
@@ -403,6 +408,27 @@ export function buildBlackjackTableViewModelFromSnapshot(
         betLabel:
           totalBetCents === 0 ? null : formatCreditsFromCents(totalBetCents),
         isLocal,
+        canClaim:
+          context.transportConnected !== false &&
+          context.seatCommandPending !== true &&
+          localPlayer===null &&
+          seat.playerId===null &&
+          (
+            snapshot.phase==="TABLE_IDLE" ||
+            snapshot.phase==="BETTING" ||
+            snapshot.phase==="ROUND_END"
+          ),
+        canLeave:
+          context.transportConnected !== false &&
+          context.seatCommandPending !== true &&
+          isLocal &&
+          primaryHand===null &&
+          !localHasCommittedBet &&
+          (
+            snapshot.phase==="TABLE_IDLE" ||
+            snapshot.phase==="BETTING" ||
+            snapshot.phase==="ROUND_END"
+          ),
         cards: Object.freeze(
           (primaryHand?.cards ?? []).map((card) =>
             Object.freeze({ rank: card.rank, suit: card.suit }),

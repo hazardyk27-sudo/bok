@@ -18,6 +18,8 @@ export type BlackjackTableSeatViewModel = Readonly<{
   total: number | null;
   betLabel: string | null;
   isLocal: boolean;
+  canClaim?: boolean;
+  canLeave?: boolean;
   cards?: readonly BlackjackCardViewModel[];
 }>;
 
@@ -127,6 +129,12 @@ function renderSeat(seat: BlackjackTableSeatViewModel): string {
     seat.betLabel === null
       ? ""
       : `<span class="blackjack-seat-bet">BET ${escapeHtml(seat.betLabel)}</span>`;
+  const seatAction =
+    seat.canClaim
+      ? `<button type="button" class="blackjack-seat-action" data-blackjack-seat-action="CLAIM" data-seat="${seat.seatNumber}">TAKE SEAT</button>`
+      : seat.canLeave
+        ? `<button type="button" class="blackjack-seat-action is-leave" data-blackjack-seat-action="LEAVE" data-seat="${seat.seatNumber}">LEAVE</button>`
+        : "";
 
   return `
     <article
@@ -143,6 +151,7 @@ function renderSeat(seat: BlackjackTableSeatViewModel): string {
         <span class="blackjack-seat-label">${escapeHtml(seat.label)}</span>
         ${total}
         ${bet}
+        ${seatAction}
       </div>
     </article>
   `;

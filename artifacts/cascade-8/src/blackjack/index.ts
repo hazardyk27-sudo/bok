@@ -104,3 +104,9 @@ export type {
   BlackjackPrivatePlayerStateClient,
   BlackjackPrivatePlayerStateView,
 } from "./privateStateClient";
+
+export { createBlackjackSeatCommandClient } from "./seatClient";
+export type {
+  BlackjackSeatCommandClient,
+  BlackjackSeatCommandPending,
+} from "./seatClient";

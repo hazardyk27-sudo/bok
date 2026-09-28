@@ -935,3 +935,23 @@ body {
     text-align: center;
   }
 }
+
+
+.blackjack-seat-action {
+  margin-top: 4px;
+  min-height: 24px;
+  padding: 4px 7px;
+  border: 1px solid rgba(200,169,106,.46);
+  border-radius: 7px;
+  background: rgba(200,169,106,.10);
+  color: var(--blackjack-gold);
+  font: 800 7px/1 Inter, ui-sans-serif, system-ui, sans-serif;
+  letter-spacing: .08em;
+  cursor: pointer;
+}
+
+.blackjack-seat-action.is-leave {
+  border-color: rgba(244,241,232,.16);
+  background: rgba(244,241,232,.04);
+  color: var(--blackjack-muted);
+}

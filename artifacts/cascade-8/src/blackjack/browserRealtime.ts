@@ -6,6 +6,10 @@ import {
   type BlackjackPrivatePlayerStateClient,
 } from "./privateStateClient";
 import {
+  createBlackjackSeatCommandClient,
+  type BlackjackSeatCommandClient,
+} from "./seatClient";
+import {
   bindBlackjackRealtimeElement,
   type BlackjackRealtimeSocketLike,
   type BlackjackRealtimeViewController,
@@ -56,6 +60,7 @@ export type BlackjackBrowserRealtimeConnection = Readonly<{
   actions: BlackjackPlayerActionClient;
   betting: BlackjackBettingClient;
   privateState: BlackjackPrivatePlayerStateClient;
+  seats: BlackjackSeatCommandClient;
   close: () => void;
 }>;
 
@@ -321,6 +326,7 @@ export function connectBlackjackRealtimeElement(
   let actionClient: BlackjackPlayerActionClient | null=null;
   let bettingClient: BlackjackBettingClient | null=null;
   let privateStateClient: BlackjackPrivatePlayerStateClient | null=null;
+  let seatClient: BlackjackSeatCommandClient | null=null;
   let controller: BlackjackRealtimeViewController | null=null;
   let selectedChipCredits=100;
   let transportConnected=false;
@@ -366,6 +372,7 @@ export function connectBlackjackRealtimeElement(
     const bettingState=bettingClient?.getState() ?? null;
     const privateState=privateStateClient?.getState() ?? null;
     const privateBetting=privateState?.betting ?? null;
+    const seatPending=seatClient?.getPending() ?? null;
 
     let actionStatusLabel: string | null=null;
     let actionStatusTone: "neutral" | "success" | "error"="neutral";
@@ -375,6 +382,11 @@ export function connectBlackjackRealtimeElement(
       actionStatusTone="error";
     } else if(!transportConnected){
       actionStatusLabel="RECONNECTING…";
+    } else if(seatPending!==null){
+      actionStatusLabel=
+        seatPending.type==="CLAIM_SEAT"
+          ? "TAKING SEAT…"
+          : "LEAVING TABLE…";
     } else if(playerPending!==null){
       actionStatusLabel=playerPending.phase === "ACKNOWLEDGED"
         ? playerPending.message.type + " · SYNCING"
@@ -410,6 +422,7 @@ export function connectBlackjackRealtimeElement(
     return {
       ...base,
       transportConnected,
+      seatCommandPending:seatPending!==null,
       availableBalanceCents:
         privateState?.availableBalanceCents ??
         bettingState?.availableBalanceCents ??
@@ -459,6 +472,12 @@ export function connectBlackjackRealtimeElement(
     onStateChange:()=>{ activeController.rerenderLatest(); },
   });
   privateStateClient=privateState;
+  const seats=createBlackjackSeatCommandClient({
+    socket,
+    createRequestId:options.createActionId ?? defaultBlackjackActionId,
+    onPendingChange:()=>{ activeController.rerenderLatest(); },
+  });
+  seatClient=seats;
 
   const renderTickMs=options.renderTickMs ?? 250;
   if(!Number.isSafeInteger(renderTickMs) || renderTickMs<50){
@@ -479,6 +498,31 @@ export function connectBlackjackRealtimeElement(
   },renderTickMs);
 
   const onClick=(event: Event) => {
+    if(event.target instanceof Element){
+      const seatAction=event.target.closest<HTMLButtonElement>(
+        "[data-blackjack-seat-action]",
+      );
+      if(seatAction && !seatAction.disabled){
+        try {
+          if(seatAction.dataset.blackjackSeatAction==="LEAVE"){
+            seats.leave();
+          } else if(seatAction.dataset.blackjackSeatAction==="CLAIM"){
+            const seatNumber=Number(seatAction.dataset.seat);
+            if(
+              seatNumber===1 || seatNumber===2 ||
+              seatNumber===3 || seatNumber===4 ||
+              seatNumber===5
+            ){
+              seats.claim(seatNumber);
+            }
+          }
+        } catch {
+          return;
+        }
+        return;
+      }
+    }
+
     if(wantsHighChipDouble(event.target)){
       try {
         selectedChipCredits=doubleBlackjackChipCredits(
@@ -524,11 +568,13 @@ export function connectBlackjackRealtimeElement(
     actions,
     betting,
     privateState,
+    seats,
     close:()=>{
       if(closed) return;
       closed=true;
       app.removeEventListener("click",onClick);
       cancelRender(renderHandle);
+      seats.detach();
       privateState.detach();
       betting.detach();
       actions.detach();
