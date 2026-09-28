@@ -132,7 +132,6 @@ export function mountRoulette(app: HTMLDivElement) {
 
   let betState: RouletteBetState =
     createRouletteBetState();
-  let lastSettlement: RouletteRoundSettlement | null = null;
   let activeRotorSpin: RotorSpin | null = null;
   let activeBallOrbit: BallOrbit | null = null;
   let motionStartedAt = 0;
@@ -146,8 +145,6 @@ export function mountRoulette(app: HTMLDivElement) {
   const redraw = () => renderCanvas(canvas, viewState);
 
   const clearRoundResult = () => {
-    lastSettlement = null;
-
     app
       .querySelectorAll<HTMLElement>(
         ".is-result-number, .is-winning-bet",
@@ -176,8 +173,6 @@ export function mountRoulette(app: HTMLDivElement) {
   const renderRoundResult = (
     settlement: RouletteRoundSettlement,
   ) => {
-    lastSettlement = settlement;
-
     const presentation =
       createRouletteResultPresentation(
         settlement,
