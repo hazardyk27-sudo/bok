@@ -10,14 +10,15 @@ const hubSource = readFileSync(
 const menuSource = hubSource;
 
 describe("main menu regression", () => {
-  it("keeps the four active game destinations", () => {
+  it("keeps the five active game destinations", () => {
     expect(menuSource).toContain('class="game-choice game-choice-slot" href="/slot"');
     expect(menuSource).toContain('class="game-choice game-choice-witch" href="/cadi-kazan"');
     expect(menuSource).toContain('class="game-choice game-choice-businesses" href="/businesses"');
     expect(menuSource).toContain('class="game-choice game-choice-blackjack" href="/blackjack"');
+    expect(menuSource).toContain('class="game-choice game-choice-roulette" href="/roulette"');
 
-    expect(menuSource.match(/class="game-choice game-choice-/g)).toHaveLength(4);
-    expect(menuSource).toContain("ONE LOUNGE · FOUR WORLDS");
+    expect(menuSource.match(/class="game-choice game-choice-/g)).toHaveLength(5);
+    expect(menuSource).toContain("ONE LOUNGE · FIVE WORLDS");
   });
 
   it("preserves the existing selector identity for Slot and Cadı Kazan", () => {

@@ -60,13 +60,14 @@ export class GameController {
   private pendingSettledBalanceCents: number | null = null;
   private activeRoundTiming: RoundTimingTrace | null = null;
   private readonly wallet = new SlotWalletClient();
+  private readonly eventAbort = new AbortController();
   readonly audio = new AudioManager();
   private readonly scene: GameScene;
   private readonly ui: {
     balance: HTMLElement; bet: HTMLElement; win: HTMLElement; bonusWin: HTMLElement; freeSpins: HTMLElement; gameStatusBadge: HTMLElement; gameStatusLabel: HTMLElement;
      tumble: HTMLElement; status: HTMLElement; spin: HTMLButtonElement; spinLabel: HTMLElement; betMinus: HTMLButtonElement; betPlus: HTMLButtonElement;
-      autoToggle: HTMLButtonElement; autoActionDesktop: HTMLElement; autoActionMobile: HTMLElement; autoSelectionDesktop: HTMLElement; autoSelectionValue: HTMLElement; autoSelectionLabel: HTMLElement; autoMenu: HTMLElement; autoCount: HTMLSelectElement;
-      turbo: HTMLButtonElement; sound: HTMLButtonElement; bonusOverlay: HTMLElement; bonusStart: HTMLButtonElement; bonusSpinCount: HTMLElement; bonusScatterRow: HTMLElement; bonusTriggerLabel: HTMLElement; bonusTitle: HTMLElement; bonusSupport: HTMLElement; bonusInstruction: HTMLElement; freeSpinCalculation: HTMLElement; freeSpinRawWin: HTMLElement; freeSpinMultiplier: HTMLElement; freeSpinFinalWin: HTMLElement; freeSpinMultiplyOperator: HTMLElement; freeSpinEqualsOperator: HTMLElement; tumbleLabel: HTMLElement; tumbleSymbolWin: HTMLElement; tumbleIncrement: HTMLElement; tumbleMeta: HTMLElement; tumbleSettlement: HTMLElement; tumblePanel: HTMLElement; bigWinOverlay: HTMLElement; bonusSummaryOverlay: HTMLElement; boardWrap: HTMLElement; controlDeck: HTMLElement;
+      autoToggle: HTMLButtonElement; autoActionDesktop: HTMLElement; autoActionMobile: HTMLElement; autoSelectionDesktop: HTMLElement; autoSelectionValue: HTMLElement; autoSelectionLabel: HTMLElement; autoMenu: HTMLElement; autoCount: HTMLSelectElement; autoOptions: HTMLButtonElement[];
+      turbo: HTMLButtonElement; sound: HTMLButtonElement; soundLabel: HTMLElement | null; betDisplays: HTMLElement[]; spinSubLabel: HTMLElement; bonusOverlay: HTMLElement; bonusStart: HTMLButtonElement; bonusSpinCount: HTMLElement; bonusScatterRow: HTMLElement; bonusTriggerLabel: HTMLElement; bonusTitle: HTMLElement; bonusSupport: HTMLElement; bonusInstruction: HTMLElement; freeSpinCalculation: HTMLElement; freeSpinRawWin: HTMLElement; freeSpinMultiplier: HTMLElement; freeSpinFinalWin: HTMLElement; freeSpinMultiplyOperator: HTMLElement; freeSpinEqualsOperator: HTMLElement; tumbleLabel: HTMLElement; tumbleSymbolWin: HTMLElement; tumbleIncrement: HTMLElement; tumbleMeta: HTMLElement; tumbleSettlement: HTMLElement; tumblePanel: HTMLElement; bigWinOverlay: HTMLElement; bonusSummaryOverlay: HTMLElement; boardWrap: HTMLElement; controlDeck: HTMLElement;
     setModal: (name: string | null) => void;
   };
 
@@ -93,17 +94,18 @@ export class GameController {
   }
 
   private bind() {
-    this.ui.spin.addEventListener("click", () => void this.spin());
-    this.ui.betMinus.addEventListener("click", () => this.changeBet(-1));
-    this.ui.betPlus.addEventListener("click", () => this.changeBet(1));
-    this.ui.autoCount.addEventListener("change", () => this.updateAutoStatus());
+    const signal = this.eventAbort.signal;
+    this.ui.spin.addEventListener("click", () => void this.spin(), { signal });
+    this.ui.betMinus.addEventListener("click", () => this.changeBet(-1), { signal });
+    this.ui.betPlus.addEventListener("click", () => this.changeBet(1), { signal });
+    this.ui.autoCount.addEventListener("change", () => this.updateAutoStatus(), { signal });
     this.ui.autoToggle.addEventListener("click", () => {
       if (this.autoRunning) {
         void this.toggleAuto();
       } else {
         this.setAutoMenuOpen(this.ui.autoMenu.hidden);
       }
-    });
+    }, { signal });
     this.ui.autoMenu.addEventListener("click", (event) => {
       const target = event.target instanceof HTMLElement
         ? event.target.closest<HTMLButtonElement>("[data-auto-option]")
@@ -114,17 +116,17 @@ export class GameController {
       this.ui.autoCount.dispatchEvent(new Event("change"));
       this.setAutoMenuOpen(false);
       void this.toggleAuto();
-    });
+    }, { signal });
     document.addEventListener("pointerdown", (event) => {
       const root = this.ui.autoMenu.parentElement;
       if (root && event.target instanceof Node && !root.contains(event.target)) this.setAutoMenuOpen(false);
-    });
+    }, { signal });
     this.ui.turbo.addEventListener("click", () => {
       this.turbo = !this.turbo; localStorage.setItem("cascade8-turbo", String(this.turbo)); this.updateHud();
-    });
+    }, { signal });
     this.ui.sound.addEventListener("click", () => {
       this.audio.setMuted(!this.audio.muted); this.updateHud();
-    });
+    }, { signal });
     this.ui.bonusStart.addEventListener("click", () => {
       if (this.pendingRetriggerContinue) {
         const continueRetrigger = this.pendingRetriggerContinue;
@@ -134,7 +136,7 @@ export class GameController {
         return;
       }
       void this.spin();
-    });
+    }, { signal });
     window.addEventListener("keydown", (event) => {
       if (event.key === "Escape") {
         this.setAutoMenuOpen(false);
@@ -143,7 +145,14 @@ export class GameController {
       if (event.code === "Space" && !event.repeat && document.activeElement?.tagName !== "INPUT") {
         event.preventDefault(); void this.spin();
       }
-    });
+    }, { signal });
+  }
+
+  destroy() {
+    this.autoRunning = false;
+    this.autoStopping = false;
+    this.pendingAutoResume = false;
+    this.eventAbort.abort();
   }
 
   get betCents() { return BETS_CENTS[this.betIndex]; }
@@ -168,7 +177,7 @@ export class GameController {
     this.ui.balance.textContent = formatCredits(this.balanceCents);
     const formattedBet = `${formatCredits(this.betCents)}${this.isCurrentBetFree ? " FREE" : ""}`;
     this.ui.bet.textContent = formattedBet;
-    document.querySelectorAll<HTMLElement>("[data-bet-display]").forEach((element) => {
+    this.ui.betDisplays.forEach((element) => {
       element.textContent = formattedBet;
     });
     this.ui.win.textContent = formatCredits(this.currentWinCents);
@@ -176,8 +185,7 @@ export class GameController {
     this.ui.freeSpins.textContent = String(this.freeSpinsLeft);
     this.updateStatusBadge();
     this.ui.turbo.classList.toggle("is-active", this.turbo);
-    const soundLabel = this.ui.sound.querySelector<HTMLElement>(".sound-label-full");
-    if (soundLabel) soundLabel.textContent = this.audio.muted ? "SOUND OFF" : "SOUND ON";
+    if (this.ui.soundLabel) this.ui.soundLabel.textContent = this.audio.muted ? "SOUND OFF" : "SOUND ON";
     this.ui.sound.setAttribute("aria-label", this.audio.muted ? "Turn sound on" : "Turn sound off");
     this.ui.sound.classList.toggle("is-active", !this.audio.muted);
     this.ui.spin.disabled = !this.walletReady || this.busy || this.autoRunning || (!this.pendingBonusResult && !canAffordBet(this.balanceCents, this.betCents));
@@ -189,7 +197,7 @@ export class GameController {
     this.ui.autoToggle.classList.toggle("is-running", this.autoRunning);
     this.ui.autoToggle.classList.toggle("is-stopping", this.autoStopping);
     this.ui.autoToggle.setAttribute("aria-label", this.autoRunning ? "Stop automatic spins" : "Choose automatic spin count");
-    this.ui.autoMenu.querySelectorAll<HTMLButtonElement>("[data-auto-option]").forEach((option) => {
+    this.ui.autoOptions.forEach((option) => {
       const isSelected = option.dataset.autoOption === this.ui.autoCount.value;
       option.disabled = this.busy || this.autoRunning || Boolean(this.pendingBonusResult);
       option.setAttribute("aria-checked", String(isSelected));
@@ -562,7 +570,7 @@ export class GameController {
     for (let index = 0; index < result.tumbles.length; index += 1) {
       const tumble = result.tumbles[index];
       this.setState("EVALUATING");
-      const tumbleRenderTiming = this.scene.renderBoard(tumble.boardBefore, tumble.winningCells);
+      const tumbleRenderTiming = this.scene.renderBoard(tumble.boardBefore, tumble.winningCells, true);
       this.markTiming(`TUMBLE_${index + 1}_BOARD_RENDERED`, tumbleRenderTiming);
       const winEvents = this.buildWinLabelEvents(tumble);
       const winningMessage = `${tumble.winningSymbols.map((symbol) => getSymbolDefinition(symbol).name).join(" + ")} RESONATE`;
@@ -618,7 +626,7 @@ export class GameController {
     this.ui.boardWrap.classList.toggle("free-spin-ready", active);
      this.ui.spin.classList.remove("is-bonus");
      this.ui.spinLabel.textContent = "SPIN";
-     this.ui.spin.querySelector("small")!.textContent = "ENTER THE CASCADE";
+     this.ui.spinSubLabel.textContent = "ENTER THE CASCADE";
   }
   private resetTumbleWin() {
     this.ui.tumblePanel.className = "tumble-win-panel";

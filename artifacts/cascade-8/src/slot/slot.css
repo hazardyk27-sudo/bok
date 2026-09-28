@@ -248,7 +248,7 @@ button:focus-visible, input:focus-visible { outline: 2px solid var(--cyan); outl
 .bonus-ceremony-panel button:active,
 .bonus-summary-card button:active { transform: translateY(1px) scale(.98); }
 .bonus-ceremony-panel button:disabled { opacity: .55; cursor: wait; }
-.big-win-overlay, .bonus-summary-overlay { position: fixed; inset: 0; z-index: 30; display: grid; place-items: center; padding: 24px; background: radial-gradient(circle at center, rgba(52, 40, 99, .92), rgba(4, 7, 23, .97) 72%); opacity: 0; pointer-events: none; transition: opacity .24s ease; }
+.big-win-overlay, .bonus-summary-overlay { position: fixed; inset: 0; z-index: 30; display: grid; place-items: center; padding: 24px; background: radial-gradient(circle at center, rgba(52, 40, 99, .92), rgba(4, 7, 23, .97) 72%); visibility: hidden; opacity: 0; pointer-events: none; transition: opacity .24s ease, visibility 0s linear .24s; }
 .big-win-overlay {
   z-index: 45;
   overflow: hidden;
@@ -284,7 +284,13 @@ button:focus-visible, input:focus-visible { outline: 2px solid var(--cyan); outl
   mask-image: radial-gradient(ellipse at center, #000 0 30%, transparent 72%);
   animation: big-win-particles 8s linear infinite;
 }
-.big-win-overlay.is-visible, .bonus-summary-overlay.is-visible { opacity: 1; pointer-events: auto; }
+.big-win-overlay.is-visible, .bonus-summary-overlay.is-visible { visibility: visible; opacity: 1; pointer-events: auto; transition: opacity .24s ease, visibility 0s linear 0s; will-change: opacity; }
+.big-win-overlay:not(.is-visible)::before,
+.big-win-overlay:not(.is-visible)::after { animation-play-state: paused; }
+.big-win-overlay.is-visible::before,
+.big-win-overlay.is-visible::after { animation-play-state: running; }
+.big-win-overlay.is-visible .big-win-card,
+.bonus-summary-overlay.is-visible .bonus-summary-card { will-change: transform, opacity; backface-visibility: hidden; }
 .bonus-summary-overlay {
   z-index: 40;
   padding: clamp(16px, 5vw, 40px);

@@ -17,6 +17,8 @@ const idleRepo = read("./idle/repository.ts");
 const slotRoutes = read("./slot/routes.ts");
 const cadiRoutes = read("./cadi-kazan/routes.ts");
 const idleRoutes = read("./idle/routes.ts");
+const blackjackPlatform = read("./platform/blackjack.ts");
+const serverIndex = read("./index.ts");
 
 describe("backend game isolation", () => {
   it("keeps the DB schema index aggregation-only", () => {
@@ -41,9 +43,14 @@ describe("backend game isolation", () => {
       expect(source).toContain("INITIAL_SHARED_BALANCE_CENTS");
       expect(source).toContain("shared_wallets");
     }
+    expect(blackjackPlatform).toContain('from "./wallet"');
+    expect(blackjackPlatform).toContain("INITIAL_SHARED_BALANCE_CENTS");
+    expect(blackjackPlatform).toContain("shared_wallets");
     for (const source of [slotRoutes, cadiRoutes, idleRoutes]) {
       expect(source).toContain('from "../platform/session"');
     }
+    expect(blackjackPlatform).toContain('from "./session"');
+    expect(blackjackPlatform).toContain("shared_wallets");
   });
 
   it("routes through stable live-game backend entrypoints", () => {
@@ -52,4 +59,27 @@ describe("backend game isolation", () => {
     expect(routesIndex).toContain('from "../idle"');
     expect(routesIndex).toContain('from "../blackjack"');
   });
+
+  it("wires Blackjack runtime through shared platform entrypoints", () => {
+    expect(routesIndex).toContain(
+      'blackjackPlatformRouter } from "../platform/blackjack"',
+    );
+    expect(routesIndex).toContain("router.use(blackjackPlatformRouter)");
+    expect(serverIndex).toContain(
+      'attachBlackjackPlatformRuntime } from "./platform/blackjack"',
+    );
+    expect(serverIndex).toContain(
+      "await attachBlackjackPlatformRuntime(server)",
+    );
+    expect(blackjackPlatform).toContain(
+      "initializeAndAttachBlackjackServerRuntime",
+    );
+    expect(blackjackPlatform).toContain(
+      "createShuffledBlackjackShoe",
+    );
+    expect(blackjackPlatform).toContain(
+      "BLACKJACK_SHARED_WALLET_CHANGED",
+    );
+  });
+
 });

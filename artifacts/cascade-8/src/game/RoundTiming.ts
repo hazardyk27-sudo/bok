@@ -7,6 +7,7 @@ export type MotionTiming = {
   specialUnits: number;
   maxFrameGapMs: number;
   frameSamples: number;
+  motionDrivers?: number;
 };
 
 export type RoundTimingEvent = {
@@ -113,6 +114,7 @@ export function motionTimingDetail(timing: MotionTiming) {
     specialUnits: timing.specialUnits,
     maxFrameGapMs: Math.round(timing.maxFrameGapMs * 10) / 10,
     frameSamples: timing.frameSamples,
+    motionDrivers: timing.motionDrivers ?? timing.movingUnits,
   };
 }
 

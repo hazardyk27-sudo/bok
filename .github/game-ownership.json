@@ -27,6 +27,7 @@
         "artifacts/cascade-8/src/engine",
         "artifacts/cascade-8/src/game",
         "artifacts/cascade-8/src/simulation",
+        "artifacts/cascade-8/public/special-symbols",
         "artifacts/api-server/src/slot",
         "lib/db/src/schema/slot.ts"
       ]
@@ -79,7 +80,9 @@
     "roulette": {
       "branch": "feature/roulette-2d",
       "roots": [
-        "artifacts/cascade-8/src/roulette"
+        "artifacts/cascade-8/src/roulette",
+        "artifacts/api-server/src/roulette",
+        "lib/db/src/schema/roulette.ts"
       ]
     }
   }

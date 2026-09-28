@@ -20,6 +20,7 @@ export type BlackjackRecoveryResult = Readonly<{
   runtime: BlackjackDurableRuntimeState;
   resumePhase: BlackjackTablePhase;
   snapshotEventSequence: number;
+  snapshotStateVersion: number;
   journalEventsApplied: number;
 }>;
 
@@ -184,6 +185,7 @@ export async function recoverBlackjackRuntime(
     runtime: makeRestartDisconnectedState(current, recoveredAtMs),
     resumePhase,
     snapshotEventSequence: snapshot.eventSequence,
+    snapshotStateVersion: snapshot.stateVersion,
     journalEventsApplied: records.length,
   });
 }

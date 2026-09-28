@@ -5,12 +5,38 @@ import { CancelableCompletionRegistry } from "./CancelableCompletionRegistry";
 import type { MotionTiming } from "./RoundTiming";
 import { calculateWinLabelPositions, type WinLabelEvent } from "./WinLabel";
 
+type CoreAmbientVisual = {
+  kind: "core";
+  aura: Phaser.GameObjects.Arc;
+  startedAt: number;
+  auraAlpha: number;
+  pulseScale: number;
+  collected?: {
+    ring: Phaser.GameObjects.Arc;
+    lock: Phaser.GameObjects.Arc;
+    startedAt: number;
+    ringAlpha: number;
+    lockScale: number;
+    lockAlpha: number;
+  };
+};
+
+type ScatterAmbientVisual = {
+  kind: "scatter";
+  aura: Phaser.GameObjects.Ellipse;
+  warmBloom: Phaser.GameObjects.Ellipse;
+  art: Phaser.GameObjects.Image;
+  glint: Phaser.GameObjects.Text;
+  startedAt: number;
+};
+
 type BoardNode = {
   container: Phaser.GameObjects.Container;
   symbol: BoardCell;
   row: number;
   col: number;
   coreCollected?: boolean;
+  ambient?: CoreAmbientVisual | ScatterAmbientVisual;
 };
 
 const SCATTER_SYMBOL_SIZE = 100;
@@ -36,6 +62,44 @@ const MULTIPLIER_100X_IMAGE_KEY = "multiplier-core-100x";
 const MULTIPLIER_250X_IMAGE_KEY = "multiplier-core-250x";
 const MULTIPLIER_500X_IMAGE_KEY = "multiplier-core-500x";
 const MULTIPLIER_1000X_IMAGE_KEY = "multiplier-core-1000x";
+
+function pingPongProgress(elapsedMs: number, durationMs: number) {
+  const phase = (Math.max(0, elapsedMs) % (durationMs * 2)) / durationMs;
+  return phase <= 1 ? phase : 2 - phase;
+}
+
+function delayedPingPongProgress(elapsedMs: number, durationMs: number, repeatDelayMs: number) {
+  const cycle = durationMs * 2 + repeatDelayMs;
+  const phase = Math.max(0, elapsedMs) % cycle;
+  if (phase <= durationMs) return phase / durationMs;
+  if (phase <= durationMs * 2) return 1 - (phase - durationMs) / durationMs;
+  return 0;
+}
+
+function sineInOut(value: number) {
+  return Phaser.Math.Easing.Sine.InOut(Phaser.Math.Clamp(value, 0, 1));
+}
+
+function boardCellsMatch(left: BoardCell, right: BoardCell) {
+  if (left === right) return true;
+  if (isMultiplierCore(left) || isMultiplierCore(right)) {
+    return isMultiplierCore(left)
+      && isMultiplierCore(right)
+      && left.value === right.value
+      && left.id === right.id
+      && left.arrivalSequence === right.arrivalSequence;
+  }
+  const leftSymbol = getNormalSymbol(left);
+  const rightSymbol = getNormalSymbol(right);
+  if (leftSymbol !== rightSymbol) return false;
+  if (!leftSymbol) return false;
+  const leftStack = getStackMetadata(left);
+  const rightStack = getStackMetadata(right);
+  if (!leftStack || !rightStack) return leftStack === rightStack;
+  return leftStack.stackId === rightStack.stackId
+    && leftStack.stackIndex === rightStack.stackIndex
+    && leftStack.stackSize === rightStack.stackSize;
+}
 
 const MULTIPLIER_VISUALS = {
   low: {
@@ -69,6 +133,18 @@ export class GameScene extends Phaser.Scene {
 
   private transientEffects: Phaser.GameObjects.GameObject[] = [];
 
+  private readonly burstRingPool: Phaser.GameObjects.Arc[] = [];
+
+  private readonly burstParticlePool: Phaser.GameObjects.Arc[] = [];
+
+  private readonly activeBurstRings = new Set<Phaser.GameObjects.Arc>();
+
+  private readonly activeBurstParticles = new Set<Phaser.GameObjects.Arc>();
+
+  private burstFxCreated = 0;
+
+  private burstFxReused = 0;
+
   private readonly activeWinLabels = new CancelableCompletionRegistry();
 
   private cellFrames: Phaser.GameObjects.Rectangle[] = [];
@@ -87,23 +163,72 @@ export class GameScene extends Phaser.Scene {
     NORMAL_SYMBOLS.forEach((symbol) => {
       if (symbol.logoPath) this.load.image(`club-logo-${symbol.id}`, `${import.meta.env.BASE_URL}${symbol.logoPath}`);
     });
-    this.load.image("scatter-symbol", `${import.meta.env.BASE_URL}special-symbols/scatter.png`);
-    this.load.image(MULTIPLIER_2X_IMAGE_KEY, `${import.meta.env.BASE_URL}special-symbols/2x.png`);
-    this.load.image(MULTIPLIER_3X_IMAGE_KEY, `${import.meta.env.BASE_URL}special-symbols/3x.png`);
-    this.load.image(MULTIPLIER_5X_IMAGE_KEY, `${import.meta.env.BASE_URL}special-symbols/5x.png`);
-    this.load.image(MULTIPLIER_10X_IMAGE_KEY, `${import.meta.env.BASE_URL}special-symbols/10x.png`);
-    this.load.image(MULTIPLIER_15X_IMAGE_KEY, `${import.meta.env.BASE_URL}special-symbols/15x.png`);
-    this.load.image(MULTIPLIER_20X_IMAGE_KEY, `${import.meta.env.BASE_URL}special-symbols/20x.png`);
-    this.load.image(MULTIPLIER_25X_IMAGE_KEY, `${import.meta.env.BASE_URL}special-symbols/25x.png`);
-    this.load.image(MULTIPLIER_50X_IMAGE_KEY, `${import.meta.env.BASE_URL}special-symbols/50x.png`);
-    this.load.image(MULTIPLIER_100X_IMAGE_KEY, `${import.meta.env.BASE_URL}special-symbols/100x.png`);
-    this.load.image(MULTIPLIER_250X_IMAGE_KEY, `${import.meta.env.BASE_URL}special-symbols/250x.png`);
-    this.load.image(MULTIPLIER_500X_IMAGE_KEY, `${import.meta.env.BASE_URL}special-symbols/500x.png`);
-    this.load.image(MULTIPLIER_1000X_IMAGE_KEY, `${import.meta.env.BASE_URL}special-symbols/1000x.png`);
+    this.load.image("scatter-symbol", `${import.meta.env.BASE_URL}special-symbols/scatter.webp`);
+    this.load.image(MULTIPLIER_2X_IMAGE_KEY, `${import.meta.env.BASE_URL}special-symbols/2x.webp`);
+    this.load.image(MULTIPLIER_3X_IMAGE_KEY, `${import.meta.env.BASE_URL}special-symbols/3x.webp`);
+    this.load.image(MULTIPLIER_5X_IMAGE_KEY, `${import.meta.env.BASE_URL}special-symbols/5x.webp`);
+    this.load.image(MULTIPLIER_10X_IMAGE_KEY, `${import.meta.env.BASE_URL}special-symbols/10x.webp`);
+    this.load.image(MULTIPLIER_15X_IMAGE_KEY, `${import.meta.env.BASE_URL}special-symbols/15x.webp`);
+    this.load.image(MULTIPLIER_20X_IMAGE_KEY, `${import.meta.env.BASE_URL}special-symbols/20x.webp`);
+    this.load.image(MULTIPLIER_25X_IMAGE_KEY, `${import.meta.env.BASE_URL}special-symbols/25x.webp`);
+    this.load.image(MULTIPLIER_50X_IMAGE_KEY, `${import.meta.env.BASE_URL}special-symbols/50x.webp`);
+    this.load.image(MULTIPLIER_100X_IMAGE_KEY, `${import.meta.env.BASE_URL}special-symbols/100x.webp`);
+    this.load.image(MULTIPLIER_250X_IMAGE_KEY, `${import.meta.env.BASE_URL}special-symbols/250x.webp`);
+    this.load.image(MULTIPLIER_500X_IMAGE_KEY, `${import.meta.env.BASE_URL}special-symbols/500x.webp`);
+    this.load.image(MULTIPLIER_1000X_IMAGE_KEY, `${import.meta.env.BASE_URL}special-symbols/1000x.webp`);
   }
 
   create() {
     this.drawBoardFrame();
+  }
+
+  update(time: number) {
+    this.nodes.forEach((node) => {
+      const ambient = node.ambient;
+      if (!ambient) return;
+      const elapsed = time - ambient.startedAt;
+
+      if (ambient.kind === "core") {
+        const auraProgress = sineInOut(pingPongProgress(elapsed, 820));
+        ambient.aura
+          .setScale(Phaser.Math.Linear(1, ambient.pulseScale, auraProgress))
+          .setAlpha(Phaser.Math.Linear(ambient.auraAlpha, ambient.auraAlpha * 0.72, auraProgress));
+
+        const collected = ambient.collected;
+        if (!collected) return;
+        const collectedElapsed = time - collected.startedAt;
+        const ringProgress = (Math.max(0, collectedElapsed) % 2200) / 2200;
+        collected.ring
+          .setAngle(360 * ringProgress)
+          .setAlpha(Phaser.Math.Linear(1, collected.ringAlpha, ringProgress));
+        const lockProgress = sineInOut(pingPongProgress(collectedElapsed, 760));
+        collected.lock
+          .setScale(Phaser.Math.Linear(1, collected.lockScale, lockProgress))
+          .setAlpha(Phaser.Math.Linear(1, collected.lockAlpha, lockProgress));
+        return;
+      }
+
+      const auraProgress = sineInOut(pingPongProgress(elapsed, 1700));
+      ambient.aura
+        .setScale(Phaser.Math.Linear(1, 1.12, auraProgress))
+        .setAlpha(Phaser.Math.Linear(0.08, 0.14, auraProgress));
+
+      const bloomProgress = sineInOut(pingPongProgress(elapsed, 1200));
+      ambient.warmBloom
+        .setScale(Phaser.Math.Linear(1, 1.16, bloomProgress))
+        .setAlpha(Phaser.Math.Linear(0.08, 0.16, bloomProgress));
+
+      const artProgress = sineInOut(delayedPingPongProgress(elapsed, 90, 1800));
+      ambient.art.setPosition(
+        Phaser.Math.Linear(0, 2, artProgress),
+        Phaser.Math.Linear(0, -1, artProgress),
+      );
+
+      const glintProgress = delayedPingPongProgress(elapsed, 260, 2600);
+      ambient.glint
+        .setAlpha(Phaser.Math.Linear(1, 0.18, glintProgress))
+        .setScale(Phaser.Math.Linear(1, 0.6, glintProgress));
+    });
   }
 
   private drawBoardFrame() {
@@ -135,6 +260,7 @@ export class GameScene extends Phaser.Scene {
   clearSymbols() {
     this.activeWinLabels.completeAll();
     this.clearTransientEffects();
+    this.clearPooledBurstEffects();
     this.nodes.forEach((node) => this.destroyNode(node));
     this.nodes = [];
   }
@@ -164,10 +290,81 @@ export class GameScene extends Phaser.Scene {
     this.transientEffects = [];
   }
 
+  private acquireBurstRing(x: number, y: number, color: number) {
+    const pooledRing = this.burstRingPool.pop();
+    const ring = pooledRing ?? this.add.circle(0, 0, 25, undefined, 0).setDepth(3);
+    if (pooledRing) this.burstFxReused += 1;
+    else this.burstFxCreated += 1;
+    this.tweens.killTweensOf(ring);
+    ring
+      .setActive(true)
+      .setVisible(true)
+      .setPosition(x, y)
+      .setScale(1)
+      .setAlpha(1)
+      .setDepth(3)
+      .setFillStyle(0xffffff, 0)
+      .setStrokeStyle(2, color, 0.9);
+    this.activeBurstRings.add(ring);
+    return ring;
+  }
+
+  private acquireBurstParticle(x: number, y: number, radius: number, color: number) {
+    const pooledParticle = this.burstParticlePool.pop();
+    const particle = pooledParticle ?? this.add.circle(0, 0, radius, color, 0.92).setDepth(3);
+    if (pooledParticle) this.burstFxReused += 1;
+    else this.burstFxCreated += 1;
+    this.tweens.killTweensOf(particle);
+    particle
+      .setActive(true)
+      .setVisible(true)
+      .setPosition(x, y)
+      .setRadius(radius)
+      .setScale(1)
+      .setAlpha(0.92)
+      .setDepth(3)
+      .setFillStyle(color, 0.92)
+      .setStrokeStyle(0, 0xffffff, 0);
+    this.activeBurstParticles.add(particle);
+    return particle;
+  }
+
+  private releaseBurstRing(ring: Phaser.GameObjects.Arc) {
+    this.tweens.killTweensOf(ring);
+    if (!this.activeBurstRings.delete(ring)) return;
+    ring.setActive(false).setVisible(false).setAlpha(0).setScale(1).setPosition(-1000, -1000);
+    this.burstRingPool.push(ring);
+  }
+
+  private releaseBurstParticle(particle: Phaser.GameObjects.Arc) {
+    this.tweens.killTweensOf(particle);
+    if (!this.activeBurstParticles.delete(particle)) return;
+    particle.setActive(false).setVisible(false).setAlpha(0).setScale(1).setPosition(-1000, -1000);
+    this.burstParticlePool.push(particle);
+  }
+
+  private clearPooledBurstEffects() {
+    Array.from(this.activeBurstRings).forEach((ring) => this.releaseBurstRing(ring));
+    Array.from(this.activeBurstParticles).forEach((particle) => this.releaseBurstParticle(particle));
+  }
+
   private destroyNode(node: BoardNode) {
     const targets = [node.container, ...node.container.list];
     this.tweens.killTweensOf(targets);
     node.container.destroy();
+  }
+
+  private boardMatches(board: Board) {
+    if (this.nodes.length !== BOARD_COLUMNS * BOARD_ROWS) return false;
+    const nodesByPosition = new Map(this.nodes.map((node) => [`${node.row}:${node.col}`, node]));
+    if (nodesByPosition.size !== BOARD_COLUMNS * BOARD_ROWS) return false;
+    for (let row = 0; row < BOARD_ROWS; row += 1) {
+      for (let col = 0; col < BOARD_COLUMNS; col += 1) {
+        const node = nodesByPosition.get(`${row}:${col}`);
+        if (!node || !boardCellsMatch(node.symbol, board[row][col])) return false;
+      }
+    }
+    return true;
   }
 
   getDebugMetrics() {
@@ -175,7 +372,11 @@ export class GameScene extends Phaser.Scene {
       activeNodes: this.nodes.length,
       boardCells: BOARD_COLUMNS * BOARD_ROWS,
       activeTweens: this.tweens.getTweens().length,
-      transientEffects: this.transientEffects.length,
+      transientEffects: this.transientEffects.length + this.activeBurstRings.size + this.activeBurstParticles.size,
+      pooledBurstEffects: this.burstRingPool.length + this.burstParticlePool.length,
+      burstFxCreated: this.burstFxCreated,
+      burstFxReused: this.burstFxReused,
+      ambientSpecialAnimations: this.nodes.filter((node) => Boolean(node.ambient)).length,
       activeWinLabels: this.activeWinLabels.size,
       displayObjects: this.children.list.length,
       fps: Math.round(this.game.loop.actualFps || 0),
@@ -255,16 +456,19 @@ export class GameScene extends Phaser.Scene {
         container.add([aura, tile, label]);
       }
       container.setScale(coreScale);
-      this.tweens.add({
-        targets: aura,
-        scale: visual.pulseScale,
-        alpha: visual.auraAlpha * 0.72,
-        duration: 820,
-        yoyo: true,
-        repeat: -1,
-        ease: "Sine.easeInOut",
-      });
-      const node = { container, symbol, row, col };
+      const node: BoardNode = {
+        container,
+        symbol,
+        row,
+        col,
+        ambient: {
+          kind: "core",
+          aura,
+          startedAt: this.time.now,
+          auraAlpha: visual.auraAlpha,
+          pulseScale: visual.pulseScale,
+        },
+      };
       this.nodes.push(node);
       return node;
     }
@@ -275,20 +479,20 @@ export class GameScene extends Phaser.Scene {
         .setScale(SCATTER_SYMBOL_SIZE / SCATTER_SOURCE_SIZE);
       const glint = this.add.text(18, -31, "✦", { color: "#fff4bf", fontSize: "11px" }).setOrigin(0.5);
       container.add([aura, warmBloom, scatterArt, glint]);
-      this.tweens.add({ targets: aura, scale: 1.12, alpha: 0.14, duration: 1700, yoyo: true, repeat: -1, ease: "Sine.easeInOut" });
-      this.tweens.add({ targets: warmBloom, scale: 1.16, alpha: 0.16, duration: 1200, yoyo: true, repeat: -1, ease: "Sine.easeInOut" });
-      this.tweens.add({
-        targets: scatterArt,
-        x: 2,
-        y: -1,
-        duration: 90,
-        yoyo: true,
-        repeat: -1,
-        repeatDelay: 1800,
-        ease: "Sine.easeInOut",
-      });
-      this.tweens.add({ targets: glint, alpha: 0.18, scale: 0.6, duration: 260, yoyo: true, repeat: -1, repeatDelay: 2600 });
-      const node = { container, symbol, row, col };
+      const node: BoardNode = {
+        container,
+        symbol,
+        row,
+        col,
+        ambient: {
+          kind: "scatter",
+          aura,
+          warmBloom,
+          art: scatterArt,
+          glint,
+          startedAt: this.time.now,
+        },
+      };
       this.nodes.push(node);
       return node;
     }
@@ -370,8 +574,25 @@ export class GameScene extends Phaser.Scene {
        });
   }
 
-  renderBoard(board: Board, winningCells: Cell[] = []) {
+  renderBoard(board: Board, winningCells: Cell[] = [], reuseIfMatching = false) {
     const startedAt = performance.now();
+    if (reuseIfMatching && this.boardMatches(board)) {
+      this.activeWinLabels.completeAll();
+      this.clearTransientEffects();
+      const completedAt = performance.now();
+      return {
+        totalMs: Math.round((completedAt - startedAt) * 10) / 10,
+        clearMs: 0,
+        createMs: 0,
+        nodes: this.nodes.length,
+        activeTweens: this.tweens.getTweens().length,
+        displayObjects: this.children.list.length,
+        fps: Math.round(this.game.loop.actualFps || 0),
+        reused: true,
+        reusedNodes: this.nodes.length,
+        createdNodes: 0,
+      };
+    }
     this.clearSymbols();
     const clearedAt = performance.now();
     const winning = new Set(winningCells.map((cell) => `${cell.row}:${cell.col}`));
@@ -394,11 +615,19 @@ export class GameScene extends Phaser.Scene {
       activeTweens: this.tweens.getTweens().length,
       displayObjects: this.children.list.length,
       fps: Math.round(this.game.loop.actualFps || 0),
+      reused: false,
+      reusedNodes: 0,
+      createdNodes: this.nodes.length,
     };
   }
 
   async animateDrop(duration: number, awaitScatterLanding = true): Promise<MotionTiming> {
     const startedAt = performance.now();
+    const columnGroups = Array.from({ length: BOARD_COLUMNS }, (_, col) =>
+      this.nodes
+        .filter((node) => node.col === col)
+        .sort((left, right) => left.row - right.row),
+    ).filter((group) => group.length > 0);
     const movingUnits = this.nodes.length;
     const specialUnits = this.nodes.filter((node) => node.symbol === "SCATTER").length;
     let visualSettledUnits = 0;
@@ -413,19 +642,27 @@ export class GameScene extends Phaser.Scene {
       frameSamples += 1;
     };
 
-    await Promise.all(this.nodes.map((node, index) => new Promise<void>((resolve) => {
-      const finalY = node.container.y;
-      const tweenDuration = duration + (index % BOARD_COLUMNS) * 24;
-      const tweenDelay = (index % BOARD_COLUMNS) * 20;
-      node.container.y = finalY - 260 - (index % BOARD_COLUMNS) * 18;
-      node.container.alpha = 0.2;
+    await Promise.all(columnGroups.map((group) => new Promise<void>((resolve) => {
+      const col = group[0].col;
+      const tweenDuration = duration + col * 24;
+      const tweenDelay = col * 20;
+      const finalYs = group.map((node) => node.container.y);
+      const startYs = finalYs.map((finalY) => finalY - 260 - col * 18);
+      const scatterNodes = group.filter((node) => node.symbol === "SCATTER");
+      const motion = { progress: 0 };
+      group.forEach((node, index) => {
+        node.container.y = startYs[index];
+        node.container.alpha = 0.2;
+      });
+
       let visuallySettled = false;
       let completed = false;
+      let landingStarted = false;
       let watchdog: number | null = null;
       const markVisualSettled = () => {
         if (visuallySettled) return;
         visuallySettled = true;
-        visualSettledUnits += 1;
+        visualSettledUnits += group.length;
         if (visualSettledUnits === movingUnits) visualSettledAt = performance.now();
       };
       const complete = () => {
@@ -434,36 +671,50 @@ export class GameScene extends Phaser.Scene {
         if (watchdog !== null) window.clearTimeout(watchdog);
         resolve();
       };
-      const finishScatterLanding = () => {
-        const landing = this.animateScatterLanding(node);
-        if (awaitScatterLanding) void landing.then(complete);
+      const finishScatterLandings = () => {
+        if (landingStarted) return;
+        landingStarted = true;
+        if (!scatterNodes.length) {
+          complete();
+          return;
+        }
+        const landings = scatterNodes.map((node) => this.animateScatterLanding(node));
+        if (awaitScatterLanding) void Promise.all(landings).then(complete);
         else {
-          void landing;
+          void Promise.all(landings);
           complete();
         }
       };
       const tween = this.tweens.add({
-        targets: node.container,
-        y: finalY,
-        alpha: 1,
+        targets: motion,
+        progress: 1,
         duration: tweenDuration,
         delay: tweenDelay,
         ease: "Back.easeOut",
         onUpdate: (activeTween) => {
           sampleFrameGap();
+          group.forEach((node, index) => {
+            node.container.y = startYs[index] + (finalYs[index] - startYs[index]) * motion.progress;
+            node.container.alpha = 0.2 + motion.progress * 0.8;
+          });
           if (
             activeTween.progress >= 0.92
-            && Math.abs(node.container.y - finalY) <= 1.5
-            && node.container.alpha >= 0.995
+            && group.every((node, index) =>
+              Math.abs(node.container.y - finalYs[index]) <= 1.5
+              && node.container.alpha >= 0.995)
           ) {
             markVisualSettled();
-            if (node.symbol !== "SCATTER") complete();
+            if (!scatterNodes.length) complete();
           }
         },
         onComplete: () => {
           sampleFrameGap();
+          group.forEach((node, index) => {
+            node.container.y = finalYs[index];
+            node.container.alpha = 1;
+          });
           markVisualSettled();
-          if (node.symbol === "SCATTER") finishScatterLanding();
+          if (scatterNodes.length) finishScatterLandings();
           else complete();
         },
       });
@@ -471,11 +722,14 @@ export class GameScene extends Phaser.Scene {
       watchdog = window.setTimeout(() => {
         if (completed) return;
         tween.stop();
-        node.container.y = finalY;
-        node.container.alpha = 1;
+        motion.progress = 1;
+        group.forEach((node, index) => {
+          node.container.y = finalYs[index];
+          node.container.alpha = 1;
+        });
         sampleFrameGap();
         markVisualSettled();
-        if (node.symbol === "SCATTER") finishScatterLanding();
+        if (scatterNodes.length) finishScatterLandings();
         else complete();
       }, tweenDelay + tweenDuration + 120);
     })));
@@ -491,6 +745,7 @@ export class GameScene extends Phaser.Scene {
       specialUnits,
       maxFrameGapMs,
       frameSamples,
+      motionDrivers: columnGroups.length,
     };
   }
 
@@ -548,23 +803,16 @@ export class GameScene extends Phaser.Scene {
     const lock = this.add.circle(0, 0, 35, 0xffd56b, node.symbol.value >= 500 ? 0.12 : 0.07)
       .setBlendMode(Phaser.BlendModes.ADD);
     node.container.add([lock, ring]);
-    this.tweens.add({
-      targets: ring,
-      angle: 360,
-      alpha: node.symbol.value >= 500 ? 0.78 : 0.5,
-      duration: 2200,
-      repeat: -1,
-      ease: "Linear",
-    });
-    this.tweens.add({
-      targets: lock,
-      scale: node.symbol.value >= 500 ? 1.12 : 1.06,
-      alpha: node.symbol.value >= 500 ? 0.2 : 0.11,
-      duration: 760,
-      yoyo: true,
-      repeat: -1,
-      ease: "Sine.easeInOut",
-    });
+    if (node.ambient?.kind === "core") {
+      node.ambient.collected = {
+        ring,
+        lock,
+        startedAt: this.time.now,
+        ringAlpha: node.symbol.value >= 500 ? 0.78 : 0.5,
+        lockScale: node.symbol.value >= 500 ? 1.12 : 1.06,
+        lockAlpha: node.symbol.value >= 500 ? 0.2 : 0.11,
+      };
+    }
   }
 
   private canvasPointForElement(element: HTMLElement) {
@@ -681,20 +929,18 @@ export class GameScene extends Phaser.Scene {
       const color = isMultiplierCore(node.symbol) ? 0xffc34d : getSymbolDefinition(normalSymbol!).color;
       const centerX = node.container.x;
       const centerY = node.container.y;
-      const ring = this.trackEffect(this.add.circle(centerX, centerY, 25, undefined, 0)
-        .setStrokeStyle(2, color, 0.9)
-        .setDepth(3));
+      const ring = this.acquireBurstRing(centerX, centerY, color);
       this.tweens.add({
         targets: ring,
         scale: 2.15,
         alpha: 0,
         duration: duration + 80,
         ease: "Cubic.easeOut",
-        onComplete: () => this.destroyEffect(ring),
+        onComplete: () => this.releaseBurstRing(ring),
       });
       const particleCount = Math.min(8, Math.max(3, Math.floor(96 / Math.max(active.length, 1))));
       Array.from({ length: particleCount }, (_, index) => {
-        const particle = this.trackEffect(this.add.circle(centerX, centerY, index % 3 === 0 ? 4 : 2.5, color, 0.92).setDepth(3));
+        const particle = this.acquireBurstParticle(centerX, centerY, index % 3 === 0 ? 4 : 2.5, color);
         const angle = (index / particleCount) * Math.PI * 2;
         const distance = 38 + (index % 4) * 15;
         this.tweens.add({
@@ -705,7 +951,7 @@ export class GameScene extends Phaser.Scene {
           scale: 0.15,
           duration: duration + 120,
           ease: "Cubic.easeOut",
-          onComplete: () => this.destroyEffect(particle),
+          onComplete: () => this.releaseBurstParticle(particle),
         });
         return particle;
       });

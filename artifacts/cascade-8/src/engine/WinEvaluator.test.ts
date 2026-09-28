@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { BASE_REEL_CONFIG, getPaytableMultiplier, NORMAL_SYMBOLS } from "../config/GameConfig";
+import { BASE_REEL_CONFIG, getPaytableMultiplier, MAX_VISIBLE_NORMAL_SYMBOLS, NORMAL_SYMBOLS } from "../config/GameConfig";
 import { ColumnStream } from "./BoardGenerator";
 import { evaluateBoard, removeAndRefill } from "./WinEvaluator";
 import { SeededRNG } from "./RNG";
@@ -33,19 +33,19 @@ describe("win evaluation and cascades", () => {
   });
   it("uses the 12+ payout tier", () => {
     const result = evaluateBoard(boardWith([...Array(12).fill("S1"), ...Array(18).fill("S3")]));
-    expect(result.payouts.S1).toBe(1.0);
+    expect(result.payouts.S1).toBe(0.8);
   });
   it("uses exact payout values for every normal symbol count", () => {
     const expected = [
-      [0.3, 0.35, 0.4, 0.45, 1.0],
-      [0.35, 0.4, 0.45, 0.55, 1.25],
-      [0.5, 0.55, 0.65, 1.0, 1.5],
-      [0.6, 0.65, 0.75, 1.1, 1.75],
-      [0.75, 0.85, 1.0, 1.25, 1.9],
-      [1.0, 1.1, 1.3, 1.75, 2.4],
-      [1.75, 2.1, 2.6, 3.5, 5.0],
-      [3.0, 4.5, 5.5, 7.5, 10.5],
-      [6.0, 6.5, 8.0, 11.0, 15.0],
+      [0.25, 0.3, 0.35, 0.45, 0.8],
+      [0.3, 0.35, 0.45, 0.55, 1.0],
+      [0.4, 0.5, 0.6, 0.85, 1.3],
+      [0.5, 0.6, 0.75, 1.0, 1.6],
+      [0.65, 0.8, 1.0, 1.3, 2.0],
+      [0.9, 1.1, 1.35, 1.8, 2.6],
+      [1.5, 1.9, 2.5, 3.5, 5.0],
+      [2.75, 3.75, 5.0, 7.0, 10.0],
+      [5.0, 6.5, 8.5, 11.5, 15.0],
     ];
     NORMAL_SYMBOLS.forEach((symbol, index) => {
       [8, 9, 10, 11, 12].forEach((count, tierIndex) => {
@@ -67,6 +67,36 @@ describe("win evaluation and cascades", () => {
     expect(result.newSymbols).toHaveLength(evaluation.winningCells.length);
     expect(result.boardAfterGravity.flat()).toHaveLength(30);
   });
+  it("allows a ninth distinct normal symbol during Base and Free Spin refills", () => {
+    const board: Board = [
+      ["S1", "S2", "S3", "S4", "S5", "S6"],
+      ["S1", "S7", "S8", "S1", "S1", "S1"],
+      ["S1", "S1", "S1", "S1", "S1", "S1"],
+      ["S1", "S1", "S1", "S1", "S1", "S1"],
+      ["S1", "S1", "S1", "S1", "S1", "S1"],
+    ];
+
+    for (const mode of ["base", "bonus"] as const) {
+      const rolls = [0.99, 0.9];
+      const source: RandomSource = { nextFloat: () => rolls.shift() ?? 0.5 };
+      const result = removeAndRefill(
+        board,
+        [{ row: 0, col: 0 }],
+        source,
+        mode === "bonus",
+        mode,
+      );
+      const distinct = new Set(
+        result.boardAfterGravity.flat()
+          .map(getNormalSymbol)
+          .filter((symbol): symbol is NonNullable<typeof symbol> => symbol !== null),
+      );
+
+      expect(distinct.size).toBe(MAX_VISIBLE_NORMAL_SYMBOLS + 1);
+      expect(getNormalSymbol(result.newSymbols[0])).toBe("S9");
+    }
+  });
+
   it("keeps every column compact after gravity", () => {
     const board = boardWith(Array(8).fill("S1"));
     const result = removeAndRefill(board, evaluateBoard(board).winningCells, new SeededRNG(3));
