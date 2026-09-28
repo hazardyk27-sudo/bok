@@ -37,6 +37,27 @@ const MULTIPLIER_250X_IMAGE_KEY = "multiplier-core-250x";
 const MULTIPLIER_500X_IMAGE_KEY = "multiplier-core-500x";
 const MULTIPLIER_1000X_IMAGE_KEY = "multiplier-core-1000x";
 
+function boardCellsMatch(left: BoardCell, right: BoardCell) {
+  if (left === right) return true;
+  if (isMultiplierCore(left) || isMultiplierCore(right)) {
+    return isMultiplierCore(left)
+      && isMultiplierCore(right)
+      && left.value === right.value
+      && left.id === right.id
+      && left.arrivalSequence === right.arrivalSequence;
+  }
+  const leftSymbol = getNormalSymbol(left);
+  const rightSymbol = getNormalSymbol(right);
+  if (leftSymbol !== rightSymbol) return false;
+  if (!leftSymbol) return false;
+  const leftStack = getStackMetadata(left);
+  const rightStack = getStackMetadata(right);
+  if (!leftStack || !rightStack) return leftStack === rightStack;
+  return leftStack.stackId === rightStack.stackId
+    && leftStack.stackIndex === rightStack.stackIndex
+    && leftStack.stackSize === rightStack.stackSize;
+}
+
 const MULTIPLIER_VISUALS = {
   low: {
     tile: 0x102a4b,
@@ -168,6 +189,19 @@ export class GameScene extends Phaser.Scene {
     const targets = [node.container, ...node.container.list];
     this.tweens.killTweensOf(targets);
     node.container.destroy();
+  }
+
+  private boardMatches(board: Board) {
+    if (this.nodes.length !== BOARD_COLUMNS * BOARD_ROWS) return false;
+    const nodesByPosition = new Map(this.nodes.map((node) => [`${node.row}:${node.col}`, node]));
+    if (nodesByPosition.size !== BOARD_COLUMNS * BOARD_ROWS) return false;
+    for (let row = 0; row < BOARD_ROWS; row += 1) {
+      for (let col = 0; col < BOARD_COLUMNS; col += 1) {
+        const node = nodesByPosition.get(`${row}:${col}`);
+        if (!node || !boardCellsMatch(node.symbol, board[row][col])) return false;
+      }
+    }
+    return true;
   }
 
   getDebugMetrics() {
@@ -370,8 +404,25 @@ export class GameScene extends Phaser.Scene {
        });
   }
 
-  renderBoard(board: Board, winningCells: Cell[] = []) {
+  renderBoard(board: Board, winningCells: Cell[] = [], reuseIfMatching = false) {
     const startedAt = performance.now();
+    if (reuseIfMatching && this.boardMatches(board)) {
+      this.activeWinLabels.completeAll();
+      this.clearTransientEffects();
+      const completedAt = performance.now();
+      return {
+        totalMs: Math.round((completedAt - startedAt) * 10) / 10,
+        clearMs: 0,
+        createMs: 0,
+        nodes: this.nodes.length,
+        activeTweens: this.tweens.getTweens().length,
+        displayObjects: this.children.list.length,
+        fps: Math.round(this.game.loop.actualFps || 0),
+        reused: true,
+        reusedNodes: this.nodes.length,
+        createdNodes: 0,
+      };
+    }
     this.clearSymbols();
     const clearedAt = performance.now();
     const winning = new Set(winningCells.map((cell) => `${cell.row}:${cell.col}`));
@@ -394,6 +445,9 @@ export class GameScene extends Phaser.Scene {
       activeTweens: this.tweens.getTweens().length,
       displayObjects: this.children.list.length,
       fps: Math.round(this.game.loop.actualFps || 0),
+      reused: false,
+      reusedNodes: 0,
+      createdNodes: this.nodes.length,
     };
   }
 
