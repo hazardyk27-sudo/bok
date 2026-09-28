@@ -3798,10 +3798,6 @@ away from the tumble result region. */
   color: var(--cyan);
 }
 .menu-exit-button:hover{ background: rgba(44, 105, 155, .25); }
-@keyframes route-wheel-pulse {
-  0%, 100% { transform: rotate(-3deg); filter: brightness(.94); }
-  50% { transform: rotate(3deg); filter: brightness(1.1); }
-}
 @media (max-width: 680px) {
   .route-shell{ padding-top: max(20px, var(--safe-area-inset-top)); }
   .route-context{ display: none; }

@@ -17,7 +17,7 @@ export default defineConfig({
   },
   webServer: {
     command: "PORT=4173 BASE_PATH=/ pnpm run dev",
-    url: "http://127.0.0.1:4173/roulette",
+    url: "http://127.0.0.1:4173/",
     reuseExistingServer: !process.env.CI,
     timeout: 30_000,
   },
@@ -89,7 +89,7 @@ export default defineConfig({
         ...(hasWorkspaceChromium ? { launchOptions: { executablePath: chromiumPath } } : {}),
       },
     },
-    ...(process.env.ROULETTE_IOS === "1"
+    ...(process.env.ENABLE_IOS === "1"
       ? [{
           name: "ios-safari",
           use: { ...devices["iPhone 13"] },
