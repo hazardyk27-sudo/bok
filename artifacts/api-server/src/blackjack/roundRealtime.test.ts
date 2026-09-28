@@ -262,4 +262,57 @@ describe("blackjack round runtime realtime publication",()=>{
 
     unsubscribe();
   });
+
+  it("publishes timeout, dealer and settlement snapshots without cursor gaps",async()=>{
+    const game=coordinator();
+    await game.submit(action("PLACE_BET","bet-timeout-live",0));
+    await game.submit(action("READY","ready-timeout-live",1));
+
+    let clock=10_000;
+    const driver=createBlackjackRoundRealtimeDriver(
+      game,
+      { nowMs:()=>clock },
+    );
+    await driver.tick();
+
+    const turn=game.getTable().round?.currentTurn;
+    expect(turn).not.toBeNull();
+    const published: Array<{
+      phase:string;
+      stateVersion:number;
+      eventSequence:number;
+    }>=[];
+    const unsubscribe=driver.source.subscribe((snapshot)=>{
+      published.push({
+        phase:snapshot.phase,
+        stateVersion:snapshot.stateVersion,
+        eventSequence:snapshot.eventSequence,
+      });
+    });
+
+    clock=turn!.endsAtMs;
+    const tick=await driver.tick();
+
+    expect(tick.status).toBe("ROUND_ENDED");
+    expect(published).toEqual([
+      {
+        phase:"DEALER_TURN",
+        stateVersion:5,
+        eventSequence:5,
+      },
+      {
+        phase:"SETTLEMENT",
+        stateVersion:6,
+        eventSequence:6,
+      },
+      {
+        phase:"ROUND_END",
+        stateVersion:7,
+        eventSequence:7,
+      },
+    ]);
+
+    unsubscribe();
+  });
+
 });

@@ -7,7 +7,9 @@ import type { BlackjackShoe, BlackjackTable } from "./domain";
 export type BlackjackRoundRuntimeTransitionType =
   | "BETTING_LOCKED"
   | "INITIAL_DEAL_COMMITTED"
-  | "PLAYER_TURN_TIMEOUT_COMMITTED";
+  | "PLAYER_TURN_TIMEOUT_COMMITTED"
+  | "DEALER_TURN_COMMITTED"
+  | "ROUND_SETTLED";
 
 export type BlackjackRoundRuntimeTransition = Readonly<{
   type: BlackjackRoundRuntimeTransitionType;
@@ -21,7 +23,8 @@ export type BlackjackRoundRuntimeTickStatus =
   | "ROUND_STARTED"
   | "WAITING_FOR_PLAYER_TURN"
   | "PLAYER_TURN_ADVANCED"
-  | "DEALER_TURN_READY";
+  | "DEALER_TURN_READY"
+  | "ROUND_ENDED";
 
 export type BlackjackRoundRuntimeTickResult = Readonly<{
   status: BlackjackRoundRuntimeTickStatus;
@@ -81,6 +84,40 @@ async function startDealFromLockedBetting(
   }
 
   return finish("ROUND_STARTED", dealt.table, transitions);
+}
+
+async function finishDealerAndSettlement(
+  coordinator: BlackjackPlayerActionCoordinator,
+  nowMs: number,
+  transitions: BlackjackRoundRuntimeTransition[],
+): Promise<BlackjackRoundRuntimeTickResult> {
+  let table=coordinator.getTable();
+
+  if(table.phase==="DEALER_TURN"){
+    const dealer=await coordinator.runDealerTurn(nowMs);
+    table=dealer.table;
+    if(!dealer.replayed){
+      transitions.push(
+        freezeTransition("DEALER_TURN_COMMITTED",dealer.table),
+      );
+    }
+  }
+
+  if(table.phase!=="SETTLEMENT"){
+    throw new Error(
+      "Blackjack round runtime dealer resolution did not reach SETTLEMENT",
+    );
+  }
+
+  const settled=await coordinator.settleCurrentRound(nowMs);
+  table=settled.table;
+  if(!settled.replayed){
+    transitions.push(
+      freezeTransition("ROUND_SETTLED",settled.table),
+    );
+  }
+
+  return finish("ROUND_ENDED",table,transitions);
 }
 
 export async function runBlackjackRoundRuntimeTick(
@@ -170,11 +207,25 @@ export async function runBlackjackRoundRuntimeTick(
       );
     }
 
+    if(table.phase==="DEALER_TURN"){
+      return finishDealerAndSettlement(
+        coordinator,
+        input.nowMs,
+        transitions,
+      );
+    }
+
     return finish(
-      table.phase==="DEALER_TURN"
-        ? "DEALER_TURN_READY"
-        : "PLAYER_TURN_ADVANCED",
+      "PLAYER_TURN_ADVANCED",
       table,
+      transitions,
+    );
+  }
+
+  if(table.phase==="DEALER_TURN" || table.phase==="SETTLEMENT"){
+    return finishDealerAndSettlement(
+      coordinator,
+      input.nowMs,
       transitions,
     );
   }

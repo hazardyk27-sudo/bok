@@ -17,11 +17,17 @@ import {
   type BlackjackBettingPosition,
 } from "./betting";
 import { BLACKJACK_BASE_CHIP_VALUES_CENTS } from "./chips";
+import { playBlackjackDealerTurn } from "./dealer";
 import { doubleBlackjackCurrentHand } from "./double";
 import { hitBlackjackCurrentHand } from "./hit";
+import { markBlackjackReshuffleAfterRound } from "./lifecycle";
 import { commitBlackjackServerEvent } from "./eventStream";
 import type { BlackjackShoe, BlackjackTable } from "./domain";
 import type { BlackjackReservationBook } from "./reservations";
+import {
+  settleBlackjackRound,
+  type BlackjackSettlementHandSummary,
+} from "./settlement";
 import { splitBlackjackCurrentHand } from "./split";
 import {
   closeBlackjackBettingWindow,
@@ -117,6 +123,20 @@ export type BlackjackInitialDealCoordinatorResult = Readonly<{
 
 export type BlackjackTurnTimeoutCoordinatorResult = Readonly<{
   table: BlackjackTable;
+  queueSequence: number;
+  replayed: boolean;
+}>;
+
+export type BlackjackDealerTurnCoordinatorResult = Readonly<{
+  table: BlackjackTable;
+  drawnCardIds: readonly string[];
+  queueSequence: number;
+  replayed: boolean;
+}>;
+
+export type BlackjackSettlementCoordinatorResult = Readonly<{
+  table: BlackjackTable;
+  hands: readonly BlackjackSettlementHandSummary[];
   queueSequence: number;
   replayed: boolean;
 }>;
@@ -323,6 +343,151 @@ export class BlackjackPlayerActionCoordinator {
         dealEvents:result.dealEvents,
         queueSequence,
         replayed:result.replayed,
+      });
+    });
+  }
+
+  runDealerTurn(
+    nowMs: number,
+  ): Promise<BlackjackDealerTurnCoordinatorResult> {
+    assertNowMs(nowMs);
+
+    return this.queue.enqueue(({ queueSequence }) => {
+      const table=this.tableState;
+      const round=table.round;
+
+      if(
+        (table.phase==="SETTLEMENT" || table.phase==="ROUND_END") &&
+        round!==null &&
+        table.phase===round.phase
+      ){
+        return Object.freeze({
+          table,
+          drawnCardIds:Object.freeze([]),
+          queueSequence,
+          replayed:true,
+        });
+      }
+
+      if(
+        table.phase!=="DEALER_TURN" ||
+        round===null ||
+        round.phase!=="DEALER_TURN"
+      ){
+        throw new Error(
+          "Blackjack dealer runtime requires DEALER_TURN phase",
+        );
+      }
+
+      const dealer=playBlackjackDealerTurn(round,table.shoe);
+      const versioned: BlackjackTable=Object.freeze({
+        ...table,
+        phase:dealer.round.phase,
+        round:dealer.round,
+        shoe:dealer.shoe,
+        stateVersion:nextStateVersion(table.stateVersion),
+      });
+      const committed=commitBlackjackServerEvent(versioned,{
+        type:"ROUND_PHASE_CHANGED",
+        actionId:null,
+        createdAtMs:nowMs,
+      }).table;
+
+      this.tableState=committed;
+      return Object.freeze({
+        table:committed,
+        drawnCardIds:Object.freeze(
+          dealer.drawnCards.map((card)=>card.cardId),
+        ),
+        queueSequence,
+        replayed:false,
+      });
+    });
+  }
+
+  settleCurrentRound(
+    nowMs: number,
+  ): Promise<BlackjackSettlementCoordinatorResult> {
+    assertNowMs(nowMs);
+
+    return this.queue.enqueue(({ queueSequence }) => {
+      const table=this.tableState;
+      const round=table.round;
+
+      if(
+        table.phase==="ROUND_END" &&
+        round!==null &&
+        round.phase==="ROUND_END" &&
+        round.hands.every((hand)=>hand.status==="COMPLETE")
+      ){
+        return Object.freeze({
+          table,
+          hands:Object.freeze([]),
+          queueSequence,
+          replayed:true,
+        });
+      }
+
+      if(
+        table.phase!=="SETTLEMENT" ||
+        round===null ||
+        round.phase!=="SETTLEMENT"
+      ){
+        throw new Error(
+          "Blackjack settlement runtime requires SETTLEMENT phase",
+        );
+      }
+
+      const settled=settleBlackjackRound(
+        round,
+        Object.freeze(Array.from(this.accounts.values())),
+        {
+          transactionIdPrefix:
+            "blackjack:" + table.tableId + ":settlement",
+          nowMs,
+        },
+      );
+
+      const players=Object.freeze(
+        table.players.map((player)=>
+          Object.freeze({
+            ...player,
+            status:
+              player.status==="DISCONNECTED"
+                ? "DISCONNECTED" as const
+                : "SEATED_WAITING" as const,
+            handIds:Object.freeze([]),
+          }),
+        ),
+      );
+      const shoe=markBlackjackReshuffleAfterRound(table.shoe);
+      const versioned: BlackjackTable=Object.freeze({
+        ...table,
+        phase:"ROUND_END" as const,
+        round:settled.round,
+        players,
+        shoe,
+        stateVersion:nextStateVersion(table.stateVersion),
+      });
+      const committed=commitBlackjackServerEvent(versioned,{
+        type:"ROUND_PHASE_CHANGED",
+        actionId:null,
+        createdAtMs:nowMs,
+      }).table;
+
+      this.tableState=committed;
+      for(const account of settled.accounts){
+        this.accounts.set(
+          account.playerId,
+          freezeAccount(account),
+        );
+      }
+
+      return Object.freeze({
+        table:committed,
+        hands:settled.hands,
+        queueSequence,
+        replayed:false,
       });
     });
   }

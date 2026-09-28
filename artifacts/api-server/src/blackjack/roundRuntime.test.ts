@@ -192,21 +192,63 @@ describe("blackjack authoritative round runtime tick",()=>{
       nowMs:timeoutAt,
     });
 
-    expect(tick.status).toBe("DEALER_TURN_READY");
+    expect(tick.status).toBe("ROUND_ENDED");
     expect(tick.transitions.map((transition)=>transition.type)).toEqual([
       "PLAYER_TURN_TIMEOUT_COMMITTED",
+      "DEALER_TURN_COMMITTED",
+      "ROUND_SETTLED",
     ]);
-    expect(game.getTable().phase).toBe("DEALER_TURN");
+    expect(game.getTable().phase).toBe("ROUND_END");
     expect(game.getTable().round?.currentTurn).toBeNull();
-    expect(game.getTable().round?.hands[0].status).toBe("STOOD");
-    expect(game.getTable().stateVersion).toBe(beforeVersion+1);
-    expect(game.getTable().eventSequence).toBe(beforeSequence+1);
+    expect(game.getTable().round?.hands[0].status).toBe("COMPLETE");
+    expect(game.getTable().round?.dealer.holeCardRevealed).toBe(true);
+    expect(game.getTable().stateVersion).toBe(beforeVersion+3);
+    expect(game.getTable().eventSequence).toBe(beforeSequence+3);
+    expect(game.getAccount("player-2").wallet.reservedBalanceCents).toBe(0);
 
     const replay=await runBlackjackRoundRuntimeTick(game,{
       nowMs:timeoutAt+1,
     });
     expect(replay.status).toBe("NOOP");
     expect(replay.transitions).toEqual([]);
+  });
+
+
+  it("resumes from DEALER_TURN and settles the round without replaying player state",async()=>{
+    const game=coordinator();
+    await game.submit(action("PLACE_BET","bet-dealer",0));
+    await game.submit(action("READY","ready-dealer",1));
+    await runBlackjackRoundRuntimeTick(game,{nowMs:10_000});
+
+    const turn=game.getTable().round?.currentTurn;
+    expect(turn).not.toBeNull();
+
+    await game.timeoutCurrentTurn(turn!.endsAtMs);
+    expect(game.getTable().phase).toBe("DEALER_TURN");
+    const beforeVersion=game.getTable().stateVersion;
+    const beforeSequence=game.getTable().eventSequence;
+
+    const tick=await runBlackjackRoundRuntimeTick(game,{
+      nowMs:turn!.endsAtMs+1,
+    });
+
+    expect(tick.status).toBe("ROUND_ENDED");
+    expect(tick.transitions.map((transition)=>transition.type)).toEqual([
+      "DEALER_TURN_COMMITTED",
+      "ROUND_SETTLED",
+    ]);
+    expect(game.getTable().phase).toBe("ROUND_END");
+    expect(game.getTable().stateVersion).toBe(beforeVersion+2);
+    expect(game.getTable().eventSequence).toBe(beforeSequence+2);
+    expect(game.getTable().round?.hands.every(
+      (hand)=>hand.status==="COMPLETE",
+    )).toBe(true);
+    expect(game.getAccount("player-2").wallet.reservedBalanceCents).toBe(0);
+    expect(
+      game.getAccount("player-2").book.reservations.every(
+        (reservation)=>reservation.status==="SETTLED",
+      ),
+    ).toBe(true);
   });
 
 });
