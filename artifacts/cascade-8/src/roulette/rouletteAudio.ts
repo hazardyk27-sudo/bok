@@ -5,24 +5,80 @@ import {
   type RouletteSimulationEvent,
 } from "./simulationEvents";
 
+const LOOP_BANK_URL = new URL(
+  "./audio/roulette_reference_loops.mp3",
+  import.meta.url,
+).href;
+
+const HIT_BANK_URL = new URL(
+  "./audio/roulette_reference_hits.mp3",
+  import.meta.url,
+).href;
+
+const LOOP_SLICES = {
+  wheel: {
+    offset: 0,
+    duration: 0.77,
+  },
+  track: {
+    offset: 0.85,
+    duration: 0.77,
+  },
+} as const;
+
+const HIT_SLICES = {
+  deflector: {
+    offset: 0,
+    duration: 0.09,
+  },
+  fret1: {
+    offset: 0.134989,
+    duration: 0.07,
+  },
+  fret2: {
+    offset: 0.249977,
+    duration: 0.074989,
+  },
+  pocket1: {
+    offset: 0.369955,
+    duration: 0.12,
+  },
+  pocket2: {
+    offset: 0.534943,
+    duration: 0.08,
+  },
+  pocket3: {
+    offset: 0.659932,
+    duration: 0.094989,
+  },
+  pocket4: {
+    offset: 0.799909,
+    duration: 0.115011,
+  },
+  settle: {
+    offset: 0.959909,
+    duration: 0.145011,
+  },
+} as const;
+
 export type RouletteAudioMotion = {
   rotorAngularVelocity: number;
   ballAngularVelocity: number;
   ballPhase: BallMotionPhase;
 };
 
-export type RouletteContinuousAudioProfile = {
-  rotorGain: number;
-  rotorFrequency: number;
+export type RouletteReferenceMix = {
+  wheelGain: number;
+  wheelPlaybackRate: number;
   trackGain: number;
-  trackFrequency: number;
+  trackPlaybackRate: number;
 };
 
-export type RouletteImpactAudioProfile = {
-  frequency: number;
+export type RouletteReferenceHit = {
+  offset: number;
+  duration: number;
   gain: number;
-  durationSeconds: number;
-  noiseGain: number;
+  playbackRate: number;
 };
 
 function clamp01(value: number) {
@@ -35,184 +91,171 @@ function clamp01(value: number) {
   );
 }
 
-export function getContinuousAudioProfile(
+export function getReferenceMix(
   motion: RouletteAudioMotion,
-): RouletteContinuousAudioProfile {
-  const rotorSpeed = Math.max(
-    0,
-    motion.rotorAngularVelocity,
+): RouletteReferenceMix {
+  const wheelAmount = clamp01(
+    motion.rotorAngularVelocity / 7,
   );
-  const ballSpeed = Math.max(
-    0,
-    motion.ballAngularVelocity,
+  const ballAmount = clamp01(
+    motion.ballAngularVelocity / 18,
   );
-  const trackActive =
-    motion.ballPhase === "track";
 
-  const rotorAmount =
-    clamp01(rotorSpeed / 7);
-  const trackAmount =
-    trackActive
-      ? clamp01(ballSpeed / 18)
-      : 0;
+  const trackPhaseGain =
+    motion.ballPhase === "track"
+      ? 1
+      : motion.ballPhase === "descent" ||
+          motion.ballPhase === "deflector"
+        ? 0.52
+        : 0;
 
   return {
-    rotorGain:
-      0.018 +
-      rotorAmount * 0.065,
-    rotorFrequency:
-      46 +
-      rotorAmount * 44,
+    wheelGain:
+      wheelAmount > 0.01
+        ? 0.055 + wheelAmount * 0.12
+        : 0,
+    wheelPlaybackRate:
+      0.82 + wheelAmount * 0.22,
     trackGain:
-      trackAmount * 0.11,
-    trackFrequency:
-      1450 +
-      trackAmount * 2450,
+      ballAmount *
+      trackPhaseGain *
+      0.24,
+    trackPlaybackRate:
+      0.82 + ballAmount * 0.30,
   };
 }
 
-function getVariant(
+function eventVariant(
   event: RouletteSimulationEvent,
 ) {
-  const seed =
+  const index =
     event.collisionIndex ??
     event.pocketIndex ??
     0;
+
   return (
-    ((seed * 17 + 11) % 7) -
+    ((index * 13 + 5) % 7) -
     3
-  ) * 0.025;
+  ) * 0.012;
 }
 
-export function getImpactAudioProfile(
+export function getReferenceHit(
   event: RouletteSimulationEvent,
-): RouletteImpactAudioProfile | null {
-  const intensity =
-    clamp01(event.intensity);
-  const variation = getVariant(event);
+): RouletteReferenceHit | null {
+  const intensity = clamp01(
+    event.intensity,
+  );
+  const rateVariation =
+    eventVariant(event);
 
-  switch (event.kind) {
-    case "deflector-hit":
-      return {
-        frequency:
-          1820 *
-          (1 + variation),
-        gain:
-          0.11 +
-          intensity * 0.16,
-        durationSeconds: 0.055,
-        noiseGain:
-          0.055 +
-          intensity * 0.045,
-      };
-
-    case "fret-hit":
-      return {
-        frequency:
-          1180 *
-          (1 + variation),
-        gain:
-          0.085 +
-          intensity * 0.14,
-        durationSeconds: 0.043,
-        noiseGain:
-          0.05 +
-          intensity * 0.04,
-      };
-
-    case "pocket-bounce":
-      return {
-        frequency:
-          760 *
-          (1 + variation),
-        gain:
-          0.06 +
-          intensity * 0.10,
-        durationSeconds: 0.052,
-        noiseGain:
-          0.04 +
-          intensity * 0.035,
-      };
-
-    case "pocket-capture":
-      return {
-        frequency:
-          520 *
-          (1 + variation * 0.5),
-        gain:
-          0.07 +
-          intensity * 0.07,
-        durationSeconds: 0.075,
-        noiseGain: 0.035,
-      };
-
-    case "settled":
-      return {
-        frequency:
-          330 *
-          (1 + variation * 0.3),
-        gain: 0.20,
-        durationSeconds: 0.12,
-        noiseGain: 0.09,
-      };
-
-    default:
-      return null;
+  if (event.kind === "deflector-hit") {
+    return {
+      ...HIT_SLICES.deflector,
+      gain:
+        0.22 +
+        intensity * 0.28,
+      playbackRate:
+        1 + rateVariation,
+    };
   }
+
+  if (event.kind === "fret-hit") {
+    const source =
+      (event.collisionIndex ?? 0) %
+        2 ===
+      0
+        ? HIT_SLICES.fret1
+        : HIT_SLICES.fret2;
+
+    return {
+      ...source,
+      gain:
+        0.17 +
+        intensity * 0.24,
+      playbackRate:
+        1 + rateVariation,
+    };
+  }
+
+  if (event.kind === "pocket-bounce") {
+    const sources = [
+      HIT_SLICES.pocket1,
+      HIT_SLICES.pocket2,
+      HIT_SLICES.pocket3,
+      HIT_SLICES.pocket4,
+    ];
+    const source =
+      sources[
+        (event.collisionIndex ?? 0) %
+          sources.length
+      ];
+
+    return {
+      ...source,
+      gain:
+        0.13 +
+        intensity * 0.20,
+      playbackRate:
+        0.985 +
+        rateVariation,
+    };
+  }
+
+  if (event.kind === "pocket-capture") {
+    return {
+      ...HIT_SLICES.pocket4,
+      gain:
+        0.12 +
+        intensity * 0.10,
+      playbackRate:
+        0.94 +
+        rateVariation * 0.5,
+    };
+  }
+
+  if (event.kind === "settled") {
+    return {
+      ...HIT_SLICES.settle,
+      gain: 0.42,
+      playbackRate:
+        0.98 +
+        rateVariation * 0.35,
+    };
+  }
+
+  return null;
 }
 
-function createNoiseBuffer(
+async function decodeBank(
   ctx: AudioContext,
+  url: string,
 ) {
-  const length = ctx.sampleRate;
-  const buffer = ctx.createBuffer(
-    1,
-    length,
-    ctx.sampleRate,
-  );
-  const channel =
-    buffer.getChannelData(0);
-  let seed = 0x51f15e;
+  const response = await fetch(url);
 
-  for (
-    let index = 0;
-    index < channel.length;
-    index += 1
-  ) {
-    seed =
-      (
-        Math.imul(
-          seed ^ (seed >>> 15),
-          2246822519,
-        ) +
-        3266489917
-      ) >>> 0;
-
-    channel[index] =
-      (
-        seed /
-        0xffffffff
-      ) *
-        2 -
-      1;
+  if (!response.ok) {
+    throw new Error(
+      `Roulette audio bank failed: ${response.status}`,
+    );
   }
 
-  return buffer;
+  return ctx.decodeAudioData(
+    await response.arrayBuffer(),
+  );
 }
 
 export class RouletteAudioEngine {
   private ctx: AudioContext | null = null;
   private master: GainNode | null = null;
-  private compressor: DynamicsCompressorNode | null = null;
 
-  private rotorOscillator: OscillatorNode | null = null;
-  private rotorGain: GainNode | null = null;
+  private loopBuffer: AudioBuffer | null = null;
+  private hitBuffer: AudioBuffer | null = null;
+  private loadPromise: Promise<void> | null = null;
+
+  private wheelSource: AudioBufferSourceNode | null = null;
+  private wheelGain: GainNode | null = null;
 
   private trackSource: AudioBufferSourceNode | null = null;
-  private trackFilter: BiquadFilterNode | null = null;
   private trackGain: GainNode | null = null;
-
-  private noiseBuffer: AudioBuffer | null = null;
 
   private ensureGraph() {
     if (this.ctx) return;
@@ -222,72 +265,63 @@ export class RouletteAudioEngine {
     const compressor =
       ctx.createDynamicsCompressor();
 
-    master.gain.value = 0.78;
-    compressor.threshold.value = -15;
-    compressor.knee.value = 18;
-    compressor.ratio.value = 6;
-    compressor.attack.value = 0.003;
-    compressor.release.value = 0.18;
+    master.gain.value = 0.9;
+    compressor.threshold.value = -12;
+    compressor.knee.value = 14;
+    compressor.ratio.value = 5;
+    compressor.attack.value = 0.0025;
+    compressor.release.value = 0.17;
 
     master.connect(compressor);
     compressor.connect(
       ctx.destination,
     );
 
-    const rotorOscillator =
-      ctx.createOscillator();
-    const rotorFilter =
-      ctx.createBiquadFilter();
-    const rotorGain =
-      ctx.createGain();
-
-    rotorOscillator.type = "triangle";
-    rotorOscillator.frequency.value = 46;
-    rotorFilter.type = "lowpass";
-    rotorFilter.frequency.value = 260;
-    rotorFilter.Q.value = 0.8;
-    rotorGain.gain.value = 0;
-
-    rotorOscillator.connect(
-      rotorFilter,
-    );
-    rotorFilter.connect(rotorGain);
-    rotorGain.connect(master);
-    rotorOscillator.start();
-
-    const noiseBuffer =
-      createNoiseBuffer(ctx);
-    const trackSource =
-      ctx.createBufferSource();
-    const trackFilter =
-      ctx.createBiquadFilter();
-    const trackGain =
-      ctx.createGain();
-
-    trackSource.buffer = noiseBuffer;
-    trackSource.loop = true;
-    trackFilter.type = "bandpass";
-    trackFilter.frequency.value = 2000;
-    trackFilter.Q.value = 7.5;
-    trackGain.gain.value = 0;
-
-    trackSource.connect(
-      trackFilter,
-    );
-    trackFilter.connect(trackGain);
-    trackGain.connect(master);
-    trackSource.start();
-
     this.ctx = ctx;
     this.master = master;
-    this.compressor = compressor;
-    this.rotorOscillator =
-      rotorOscillator;
-    this.rotorGain = rotorGain;
-    this.trackSource = trackSource;
-    this.trackFilter = trackFilter;
-    this.trackGain = trackGain;
-    this.noiseBuffer = noiseBuffer;
+  }
+
+  private async ensureBanks() {
+    this.ensureGraph();
+
+    if (
+      this.loopBuffer &&
+      this.hitBuffer
+    ) {
+      return;
+    }
+
+    if (!this.ctx) return;
+
+    if (!this.loadPromise) {
+      this.loadPromise = Promise.all([
+        decodeBank(
+          this.ctx,
+          LOOP_BANK_URL,
+        ),
+        decodeBank(
+          this.ctx,
+          HIT_BANK_URL,
+        ),
+      ])
+        .then(
+          ([loopBuffer, hitBuffer]) => {
+            this.loopBuffer =
+              loopBuffer;
+            this.hitBuffer =
+              hitBuffer;
+          },
+        )
+        .catch((error) => {
+          this.loadPromise = null;
+          console.warn(
+            "Roulette reference audio could not be loaded.",
+            error,
+          );
+        });
+    }
+
+    await this.loadPromise;
   }
 
   async ensureStarted() {
@@ -295,9 +329,83 @@ export class RouletteAudioEngine {
 
     if (
       this.ctx &&
-      this.ctx.state === "suspended"
+      this.ctx.state ===
+        "suspended"
     ) {
       await this.ctx.resume();
+    }
+
+    await this.ensureBanks();
+    this.ensureLoopSources();
+  }
+
+  private ensureLoopSources() {
+    const ctx = this.ctx;
+    const master = this.master;
+    const buffer = this.loopBuffer;
+
+    if (
+      !ctx ||
+      !master ||
+      !buffer
+    ) {
+      return;
+    }
+
+    if (!this.wheelSource) {
+      const source =
+        ctx.createBufferSource();
+      const gain =
+        ctx.createGain();
+
+      source.buffer = buffer;
+      source.loop = true;
+      source.loopStart =
+        LOOP_SLICES.wheel.offset;
+      source.loopEnd =
+        LOOP_SLICES.wheel.offset +
+        LOOP_SLICES.wheel.duration;
+      source.playbackRate.value =
+        0.9;
+      gain.gain.value = 0;
+
+      source.connect(gain);
+      gain.connect(master);
+      source.start(
+        0,
+        LOOP_SLICES.wheel.offset,
+      );
+
+      this.wheelSource = source;
+      this.wheelGain = gain;
+    }
+
+    if (!this.trackSource) {
+      const source =
+        ctx.createBufferSource();
+      const gain =
+        ctx.createGain();
+
+      source.buffer = buffer;
+      source.loop = true;
+      source.loopStart =
+        LOOP_SLICES.track.offset;
+      source.loopEnd =
+        LOOP_SLICES.track.offset +
+        LOOP_SLICES.track.duration;
+      source.playbackRate.value =
+        1;
+      gain.gain.value = 0;
+
+      source.connect(gain);
+      gain.connect(master);
+      source.start(
+        0,
+        LOOP_SLICES.track.offset,
+      );
+
+      this.trackSource = source;
+      this.trackGain = gain;
     }
   }
 
@@ -308,73 +416,71 @@ export class RouletteAudioEngine {
 
     if (
       !ctx ||
-      ctx.state !== "running" ||
-      !this.rotorOscillator ||
-      !this.rotorGain ||
-      !this.trackFilter ||
+      ctx.state !== "running"
+    ) {
+      return;
+    }
+
+    this.ensureLoopSources();
+
+    if (
+      !this.wheelSource ||
+      !this.wheelGain ||
+      !this.trackSource ||
       !this.trackGain
     ) {
       return;
     }
 
-    const profile =
-      getContinuousAudioProfile(
-        motion,
-      );
+    const mix =
+      getReferenceMix(motion);
     const now = ctx.currentTime;
 
-    this.rotorOscillator.frequency
+    this.wheelSource.playbackRate
       .setTargetAtTime(
-        profile.rotorFrequency,
+        mix.wheelPlaybackRate,
+        now,
+        0.07,
+      );
+    this.wheelGain.gain
+      .setTargetAtTime(
+        mix.wheelGain,
         now,
         0.06,
       );
-    this.rotorGain.gain
-      .setTargetAtTime(
-        motion.rotorAngularVelocity >
-          0.01
-          ? profile.rotorGain
-          : 0,
-        now,
-        0.08,
-      );
 
-    this.trackFilter.frequency
+    this.trackSource.playbackRate
       .setTargetAtTime(
-        profile.trackFrequency,
+        mix.trackPlaybackRate,
         now,
-        0.035,
+        0.045,
       );
     this.trackGain.gain
       .setTargetAtTime(
-        profile.trackGain,
+        mix.trackGain,
         now,
-        0.045,
+        0.035,
       );
   }
 
   handleEvent(
     event: RouletteSimulationEvent,
   ) {
-    const profile =
-      getImpactAudioProfile(
-        event,
-      );
+    const hit =
+      getReferenceHit(event);
 
-    if (!profile) return;
-    this.playImpact(
-      event,
-      profile,
-    );
+    if (!hit) return;
+    this.playHit(hit);
   }
 
   stopMotion() {
-    if (!this.ctx) return;
+    const ctx = this.ctx;
 
-    const now =
-      this.ctx.currentTime;
+    if (!ctx) return;
 
-    this.rotorGain?.gain
+    const now = ctx.currentTime;
+
+    this.wheelGain?.gain
       .setTargetAtTime(
         0,
         now,
@@ -388,143 +494,39 @@ export class RouletteAudioEngine {
       );
   }
 
-  private playImpact(
-    event: RouletteSimulationEvent,
-    profile: RouletteImpactAudioProfile,
+  private playHit(
+    hit: RouletteReferenceHit,
   ) {
     const ctx = this.ctx;
     const master = this.master;
-    const noiseBuffer =
-      this.noiseBuffer;
+    const buffer = this.hitBuffer;
 
     if (
       !ctx ||
       ctx.state !== "running" ||
       !master ||
-      !noiseBuffer
+      !buffer
     ) {
       return;
     }
 
-    const now = ctx.currentTime;
-    const oscillator =
-      ctx.createOscillator();
-    const toneFilter =
-      ctx.createBiquadFilter();
-    const toneGain =
-      ctx.createGain();
-
-    oscillator.type =
-      event.kind ===
-      "deflector-hit"
-        ? "sine"
-        : "triangle";
-    oscillator.frequency
-      .setValueAtTime(
-        profile.frequency,
-        now,
-      );
-    oscillator.frequency
-      .exponentialRampToValueAtTime(
-        Math.max(
-          80,
-          profile.frequency *
-            0.72,
-        ),
-        now +
-          profile.durationSeconds,
-      );
-
-    toneFilter.type = "bandpass";
-    toneFilter.frequency.value =
-      profile.frequency;
-    toneFilter.Q.value =
-      event.kind ===
-      "settled"
-        ? 1.7
-        : 4.5;
-
-    toneGain.gain
-      .setValueAtTime(
-        Math.max(
-          0.0001,
-          profile.gain,
-        ),
-        now,
-      );
-    toneGain.gain
-      .exponentialRampToValueAtTime(
-        0.0001,
-        now +
-          profile.durationSeconds,
-      );
-
-    oscillator.connect(
-      toneFilter,
-    );
-    toneFilter.connect(toneGain);
-    toneGain.connect(master);
-    oscillator.start(now);
-    oscillator.stop(
-      now +
-        profile.durationSeconds +
-        0.015,
-    );
-
-    const noise =
+    const source =
       ctx.createBufferSource();
-    const noiseFilter =
-      ctx.createBiquadFilter();
-    const noiseGain =
+    const gain =
       ctx.createGain();
 
-    noise.buffer = noiseBuffer;
-    noiseFilter.type = "bandpass";
-    noiseFilter.frequency.value =
-      event.kind ===
-      "deflector-hit"
-        ? 3100
-        : event.kind ===
-            "settled"
-          ? 720
-          : 1800;
-    noiseFilter.Q.value = 2.2;
+    source.buffer = buffer;
+    source.playbackRate.value =
+      hit.playbackRate;
+    gain.gain.value = hit.gain;
 
-    noiseGain.gain
-      .setValueAtTime(
-        Math.max(
-          0.0001,
-          profile.noiseGain,
-        ),
-        now,
-      );
-    noiseGain.gain
-      .exponentialRampToValueAtTime(
-        0.0001,
-        now +
-          Math.min(
-            0.07,
-            profile.durationSeconds,
-          ),
-      );
+    source.connect(gain);
+    gain.connect(master);
 
-    noise.connect(noiseFilter);
-    noiseFilter.connect(noiseGain);
-    noiseGain.connect(master);
-
-    const variant =
-      (
-        event.collisionIndex ??
-        event.pocketIndex ??
-        0
-      ) % 8;
-    noise.start(
-      now,
-      variant * 0.071,
-      Math.min(
-        0.08,
-        profile.durationSeconds,
-      ),
+    source.start(
+      ctx.currentTime,
+      hit.offset,
+      hit.duration,
     );
   }
 }
