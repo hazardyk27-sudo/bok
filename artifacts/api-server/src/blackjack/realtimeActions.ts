@@ -1,9 +1,10 @@
 import {
-  type BlackjackCoordinatedPlayerAction,
+  type BlackjackCoordinatedAction,
   type BlackjackPlayerActionCoordinator,
 } from "./actionCoordinator";
 import type { BlackjackPublicSnapshot } from "./publicSnapshot";
 import { buildBlackjackPublicSnapshot } from "./publicSnapshot";
+import { isBlackjackChipDenominationCents } from "./chips";
 import { isBlackjackSeatNumber } from "./seats";
 
 export const BLACKJACK_REALTIME_PLAYER_ACTION_TYPES = [
@@ -13,17 +14,34 @@ export const BLACKJACK_REALTIME_PLAYER_ACTION_TYPES = [
   "SPLIT",
 ] as const;
 
-export type BlackjackRealtimePlayerActionType =
-  (typeof BLACKJACK_REALTIME_PLAYER_ACTION_TYPES)[number];
+export const BLACKJACK_REALTIME_BETTING_ACTION_TYPES = [
+  "PLACE_BET",
+  "CLEAR_BET",
+  "READY",
+] as const;
+
+export const BLACKJACK_REALTIME_ACTION_TYPES = [
+  ...BLACKJACK_REALTIME_PLAYER_ACTION_TYPES,
+  ...BLACKJACK_REALTIME_BETTING_ACTION_TYPES,
+] as const;
+
+export type BlackjackRealtimeActionType =
+  (typeof BLACKJACK_REALTIME_ACTION_TYPES)[number];
 
 export type BlackjackRealtimePlayerActionHandlerResult = Readonly<{
   actionId: string;
   replayed: boolean;
   snapshot: BlackjackPublicSnapshot;
+  betting: Readonly<{
+    roundId: string;
+    status: "OPEN" | "READY" | "LOCKED";
+    betCents: number;
+    availableBalanceCents: number;
+  }> | null;
 }>;
 
 export type BlackjackRealtimePlayerActionHandler = (
-  action: BlackjackCoordinatedPlayerAction,
+  action: BlackjackCoordinatedAction,
 ) =>
   | BlackjackRealtimePlayerActionHandlerResult
   | Promise<BlackjackRealtimePlayerActionHandlerResult>;
@@ -50,16 +68,16 @@ function assertExpectedStateVersion(value: unknown): number {
   return value;
 }
 
-function assertActionType(value: unknown): BlackjackRealtimePlayerActionType {
+function assertActionType(value: unknown): BlackjackRealtimeActionType {
   if (
     typeof value !== "string" ||
-    !(BLACKJACK_REALTIME_PLAYER_ACTION_TYPES as readonly string[]).includes(
+    !(BLACKJACK_REALTIME_ACTION_TYPES as readonly string[]).includes(
       value,
     )
   ) {
     throw new Error("Blackjack realtime player action type is unsupported");
   }
-  return value as BlackjackRealtimePlayerActionType;
+  return value as BlackjackRealtimeActionType;
 }
 
 export function parseBlackjackRealtimePlayerAction(
@@ -69,7 +87,7 @@ export function parseBlackjackRealtimePlayerAction(
     tableId: string;
     nowMs: number;
   },
-): BlackjackCoordinatedPlayerAction {
+): BlackjackCoordinatedAction {
   if (typeof value !== "object" || value === null) {
     throw new Error("Blackjack realtime player action must be an object");
   }
@@ -78,7 +96,12 @@ export function parseBlackjackRealtimePlayerAction(
   const type = assertActionType(raw.type);
   const actionId = assertNonEmptyId("actionId", raw.actionId);
   const roundId = assertNonEmptyId("roundId", raw.roundId);
-  const handId = assertNonEmptyId("handId", raw.handId);
+  const handScoped =
+    type === "HIT" ||
+    type === "STAND" ||
+    type === "DOUBLE" ||
+    type === "SPLIT";
+  const handId = handScoped ? assertNonEmptyId("handId", raw.handId) : null;
   const playerId = assertNonEmptyId("playerId", input.playerId);
   const tableId = assertNonEmptyId("tableId", input.tableId);
   const expectedStateVersion = assertExpectedStateVersion(
@@ -104,8 +127,9 @@ export function parseBlackjackRealtimePlayerAction(
     type,
     tableId,
     roundId,
-    handId,
+    handId ?? "-",
     raw.seatNumber,
+    type === "PLACE_BET" ? raw.chipValueCents : "-",
   ].join("|");
 
   return Object.freeze({
@@ -129,6 +153,31 @@ export function parseBlackjackRealtimePlayerAction(
             "blackjack:" + tableId + ":" + actionId + ":reserve-tx",
         }
       : {}),
+    ...(type === "PLACE_BET"
+      ? (() => {
+          if (
+            typeof raw.chipValueCents !== "number" ||
+            !isBlackjackChipDenominationCents(raw.chipValueCents)
+          ) {
+            throw new RangeError(
+              "Blackjack realtime chipValueCents is not a valid denomination",
+            );
+          }
+          return {
+            chipValueCents: raw.chipValueCents,
+            reservationId:
+              "blackjack:" + tableId + ":" + actionId + ":bet-reservation",
+            reserveTransactionId:
+              "blackjack:" + tableId + ":" + actionId + ":bet-reserve-tx",
+          };
+        })()
+      : {}),
+    ...(type === "CLEAR_BET"
+      ? {
+          clearTransactionId:
+            "blackjack:" + tableId + ":" + actionId + ":clear-bet-tx",
+        }
+      : {}),
   });
 }
 
@@ -144,6 +193,7 @@ export function createBlackjackCoordinatorRealtimeActionHandler(
         result.table,
         action.nowMs,
       ),
+      betting: result.betting,
     });
   };
 }

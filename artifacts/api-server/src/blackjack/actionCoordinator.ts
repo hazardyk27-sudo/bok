@@ -8,6 +8,15 @@ import {
   createBlackjackActionQueue,
   type BlackjackActionQueue,
 } from "./actionQueue";
+import {
+  clearBlackjackBet,
+  createBlackjackBettingPosition,
+  getBlackjackBetTotalCents,
+  markBlackjackBetReady,
+  placeBlackjackBetChip,
+  type BlackjackBettingPosition,
+} from "./betting";
+import { BLACKJACK_BASE_CHIP_VALUES_CENTS } from "./chips";
 import { doubleBlackjackCurrentHand } from "./double";
 import { hitBlackjackCurrentHand } from "./hit";
 import { commitBlackjackServerEvent } from "./eventStream";
@@ -31,11 +40,43 @@ type PlayerActionEnvelope = BlackjackActionEnvelope & Readonly<{
   seatNumber: 1 | 2 | 3 | 4 | 5;
 }>;
 
+type BettingActionEnvelope = BlackjackActionEnvelope & Readonly<{
+  type: "PLACE_BET" | "CLEAR_BET" | "READY";
+  roundId: string;
+  handId: null;
+  seatNumber: 1 | 2 | 3 | 4 | 5;
+}>;
+
 export type BlackjackCoordinatedPlayerAction = Readonly<{
   envelope: PlayerActionEnvelope;
   nowMs: number;
   reservationId?: string;
   reserveTransactionId?: string;
+}>;
+
+export type BlackjackCoordinatedBettingAction = Readonly<{
+  envelope: BettingActionEnvelope;
+  nowMs: number;
+  chipValueCents?: number;
+  reservationId?: string;
+  reserveTransactionId?: string;
+  clearTransactionId?: string;
+}>;
+
+export type BlackjackCoordinatedAction = Readonly<{
+  envelope: PlayerActionEnvelope | BettingActionEnvelope;
+  nowMs: number;
+  chipValueCents?: number;
+  reservationId?: string;
+  reserveTransactionId?: string;
+  clearTransactionId?: string;
+}>;
+
+export type BlackjackCoordinatorBettingState = Readonly<{
+  roundId: string;
+  status: BlackjackBettingPosition["status"];
+  betCents: number;
+  availableBalanceCents: number;
 }>;
 
 export type BlackjackCoordinatorResult = Readonly<{
@@ -44,6 +85,7 @@ export type BlackjackCoordinatorResult = Readonly<{
   account: BlackjackCoordinatorAccount;
   queueSequence: number;
   replayed: boolean;
+  betting: BlackjackCoordinatorBettingState | null;
 }>;
 
 function assertNowMs(nowMs: number): void {
@@ -73,18 +115,40 @@ export class BlackjackPlayerActionCoordinator {
   private tableState: BlackjackTable;
   private protocolState: BlackjackActionProtocolState;
   private readonly accounts = new Map<string, BlackjackCoordinatorAccount>();
+  private readonly bettingPositions = new Map<string, BlackjackBettingPosition>();
   private readonly queue: BlackjackActionQueue;
+  private readonly minBetCents: number;
+  private readonly maxBetCents: number | null;
 
   constructor(input: {
     table: BlackjackTable;
     accounts: readonly BlackjackCoordinatorAccount[];
     protocol?: BlackjackActionProtocolState;
     queue?: BlackjackActionQueue;
+    bettingPositions?: readonly BlackjackBettingPosition[];
+    bettingLimits?: Readonly<{
+      minBetCents: number;
+      maxBetCents: number | null;
+    }>;
   }) {
     this.tableState = input.table;
     this.protocolState =
       input.protocol ?? createBlackjackActionProtocolState();
     this.queue = input.queue ?? createBlackjackActionQueue();
+    this.minBetCents =
+      input.bettingLimits?.minBetCents ?? BLACKJACK_BASE_CHIP_VALUES_CENTS[0];
+    this.maxBetCents = input.bettingLimits?.maxBetCents ?? null;
+
+    if (!Number.isSafeInteger(this.minBetCents) || this.minBetCents <= 0) {
+      throw new RangeError("Blackjack coordinator minBetCents must be positive");
+    }
+    if (
+      this.maxBetCents !== null &&
+      (!Number.isSafeInteger(this.maxBetCents) ||
+        this.maxBetCents < this.minBetCents)
+    ) {
+      throw new RangeError("Blackjack coordinator maxBetCents is invalid");
+    }
 
     for (const account of input.accounts) {
       if (!account.playerId.trim() || !account.userId.trim()) {
@@ -109,6 +173,13 @@ export class BlackjackPlayerActionCoordinator {
       }
       this.accounts.set(account.playerId, freezeAccount(account));
     }
+
+    for (const position of input.bettingPositions ?? []) {
+      if (this.bettingPositions.has(position.playerId)) {
+        throw new Error("Blackjack coordinator contains duplicate betting position");
+      }
+      this.bettingPositions.set(position.playerId, position);
+    }
   }
 
   getTable(): BlackjackTable {
@@ -117,6 +188,10 @@ export class BlackjackPlayerActionCoordinator {
 
   getProtocol(): BlackjackActionProtocolState {
     return this.protocolState;
+  }
+
+  getBettingPosition(playerId: string): BlackjackBettingPosition | null {
+    return this.bettingPositions.get(playerId) ?? null;
   }
 
   getAccount(playerId: string): BlackjackCoordinatorAccount {
@@ -136,13 +211,14 @@ export class BlackjackPlayerActionCoordinator {
   }
 
   submit(
-    action: BlackjackCoordinatedPlayerAction,
+    action: BlackjackCoordinatedAction,
   ): Promise<BlackjackCoordinatorResult> {
     assertNowMs(action.nowMs);
 
     return this.queue.enqueue(({ queueSequence }) => {
       const pending = {
         account: null as BlackjackCoordinatorAccount | null,
+        bettingPosition: null as BlackjackBettingPosition | null,
       };
 
       const committed = applyBlackjackVersionedAction(
@@ -159,6 +235,39 @@ export class BlackjackPlayerActionCoordinator {
           const account = this.getAccount(action.envelope.actorPlayerId);
           let round = table.round;
           let shoe = table.shoe;
+          let players = table.players;
+
+          const requireBettingPosition = (): BlackjackBettingPosition => {
+            if (table.phase !== "BETTING" || round.phase !== "BETTING") {
+              throw new Error("Blackjack betting action requires BETTING phase");
+            }
+            if (round.bettingClosesAtMs === null) {
+              throw new Error("Blackjack betting action requires betting deadline");
+            }
+
+            const existing = this.bettingPositions.get(
+              action.envelope.actorPlayerId,
+            );
+            if (existing) {
+              if (
+                existing.roundId !== round.roundId ||
+                existing.seatNumber !== action.envelope.seatNumber
+              ) {
+                throw new Error("Blackjack betting position targets stale round");
+              }
+              return existing;
+            }
+
+            return createBlackjackBettingPosition({
+              roundId: round.roundId,
+              playerId: action.envelope.actorPlayerId,
+              userId: account.userId,
+              seatNumber: action.envelope.seatNumber,
+              bettingClosesAtMs: round.bettingClosesAtMs,
+              minBetCents: this.minBetCents,
+              maxBetCents: this.maxBetCents,
+            });
+          };
 
           switch (action.envelope.type) {
             case "HIT": {
@@ -242,6 +351,80 @@ export class BlackjackPlayerActionCoordinator {
               });
               break;
             }
+
+            case "PLACE_BET": {
+              if (
+                action.chipValueCents === undefined ||
+                !Number.isSafeInteger(action.chipValueCents) ||
+                action.chipValueCents <= 0
+              ) {
+                throw new RangeError(
+                  "Blackjack coordinator chipValueCents must be positive",
+                );
+              }
+              const result = placeBlackjackBetChip(
+                account.wallet,
+                account.book,
+                requireBettingPosition(),
+                {
+                  reservationId: assertNonEmptyId(
+                    "reservationId",
+                    action.reservationId,
+                  ),
+                  reserveTransactionId: assertNonEmptyId(
+                    "reserveTransactionId",
+                    action.reserveTransactionId,
+                  ),
+                  chipValueCents: action.chipValueCents,
+                  nowMs: action.nowMs,
+                },
+              );
+              pending.account = freezeAccount({
+                ...account,
+                wallet: result.wallet,
+                book: result.book,
+              });
+              pending.bettingPosition = result.position;
+              break;
+            }
+
+            case "CLEAR_BET": {
+              const result = clearBlackjackBet(
+                account.wallet,
+                account.book,
+                requireBettingPosition(),
+                {
+                  clearTransactionId: assertNonEmptyId(
+                    "clearTransactionId",
+                    action.clearTransactionId,
+                  ),
+                  nowMs: action.nowMs,
+                },
+              );
+              pending.account = freezeAccount({
+                ...account,
+                wallet: result.wallet,
+                book: result.book,
+              });
+              pending.bettingPosition = result.position;
+              break;
+            }
+
+            case "READY": {
+              const position = markBlackjackBetReady(
+                requireBettingPosition(),
+                action.nowMs,
+              );
+              pending.bettingPosition = position;
+              players = Object.freeze(
+                table.players.map((player) =>
+                  player.playerId === action.envelope.actorPlayerId
+                    ? Object.freeze({ ...player, status: "READY" as const })
+                    : player,
+                ),
+              );
+              break;
+            }
           }
 
           return Object.freeze({
@@ -249,6 +432,7 @@ export class BlackjackPlayerActionCoordinator {
             phase: round.phase,
             round,
             shoe,
+            players,
           });
         },
       );
@@ -271,13 +455,34 @@ export class BlackjackPlayerActionCoordinator {
           pendingAccount,
         );
       }
+      if (!committed.replayed && pending.bettingPosition !== null) {
+        this.bettingPositions.set(
+          pending.bettingPosition.playerId,
+          pending.bettingPosition,
+        );
+      }
+
+      const finalAccount=this.getAccount(action.envelope.actorPlayerId);
+      const finalPosition=this.bettingPositions.get(
+        action.envelope.actorPlayerId,
+      );
+      const betting =
+        finalPosition && finalPosition.roundId === this.tableState.round?.roundId
+          ? Object.freeze({
+              roundId: finalPosition.roundId,
+              status: finalPosition.status,
+              betCents: getBlackjackBetTotalCents(finalPosition),
+              availableBalanceCents: finalAccount.wallet.availableBalanceCents,
+            })
+          : null;
 
       return Object.freeze({
         table: this.tableState,
         protocol: this.protocolState,
-        account: this.getAccount(action.envelope.actorPlayerId),
+        account: finalAccount,
         queueSequence,
         replayed: committed.replayed,
+        betting,
       });
     });
   }

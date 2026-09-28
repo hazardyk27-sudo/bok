@@ -196,6 +196,7 @@ export function attachBlackjackWebSocket(
         replayed: result.replayed,
         stateVersion: result.snapshot.stateVersion,
         eventSequence: result.snapshot.eventSequence,
+        ...(result.betting === null ? {} : { betting: result.betting }),
       });
 
       if (!result.replayed) {
