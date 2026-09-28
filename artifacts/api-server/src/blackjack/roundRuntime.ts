@@ -6,7 +6,8 @@ import type { BlackjackShoe, BlackjackTable } from "./domain";
 
 export type BlackjackRoundRuntimeTransitionType =
   | "BETTING_LOCKED"
-  | "INITIAL_DEAL_COMMITTED";
+  | "INITIAL_DEAL_COMMITTED"
+  | "PLAYER_TURN_TIMEOUT_COMMITTED";
 
 export type BlackjackRoundRuntimeTransition = Readonly<{
   type: BlackjackRoundRuntimeTransitionType;
@@ -17,7 +18,10 @@ export type BlackjackRoundRuntimeTickStatus =
   | "NOOP"
   | "WAITING_FOR_BETTING_DEADLINE"
   | "BETTING_CLOSED_EMPTY"
-  | "ROUND_STARTED";
+  | "ROUND_STARTED"
+  | "WAITING_FOR_PLAYER_TURN"
+  | "PLAYER_TURN_ADVANCED"
+  | "DEALER_TURN_READY";
 
 export type BlackjackRoundRuntimeTickResult = Readonly<{
   status: BlackjackRoundRuntimeTickStatus;
@@ -133,6 +137,46 @@ export async function runBlackjackRoundRuntimeTick(
       );
     }
     return finish("ROUND_STARTED", dealt.table, transitions);
+  }
+
+  if (table.phase === "PLAYER_TURNS") {
+    const round=table.round;
+    if(
+      round===null ||
+      round.phase!=="PLAYER_TURNS" ||
+      round.currentTurn===null
+    ){
+      throw new Error(
+        "Blackjack round runtime found inconsistent PLAYER_TURNS state",
+      );
+    }
+
+    if(input.nowMs < round.currentTurn.endsAtMs){
+      return finish(
+        "WAITING_FOR_PLAYER_TURN",
+        table,
+        transitions,
+      );
+    }
+
+    const timedOut=await coordinator.timeoutCurrentTurn(input.nowMs);
+    table=timedOut.table;
+    if(!timedOut.replayed){
+      transitions.push(
+        freezeTransition(
+          "PLAYER_TURN_TIMEOUT_COMMITTED",
+          timedOut.table,
+        ),
+      );
+    }
+
+    return finish(
+      table.phase==="DEALER_TURN"
+        ? "DEALER_TURN_READY"
+        : "PLAYER_TURN_ADVANCED",
+      table,
+      transitions,
+    );
   }
 
   if (table.phase === "BETTING_LOCKED") {

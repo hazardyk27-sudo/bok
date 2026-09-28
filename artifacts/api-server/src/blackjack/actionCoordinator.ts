@@ -29,6 +29,7 @@ import {
   type BlackjackRoundFlowAccount,
 } from "./roundFlow";
 import { standBlackjackCurrentHand } from "./stand";
+import { applyBlackjackTurnTimeout } from "./turnEngine";
 import type { BlackjackWalletLedgerState } from "./walletLedger";
 
 export type BlackjackCoordinatorAccount = Readonly<{
@@ -114,6 +115,12 @@ export type BlackjackInitialDealCoordinatorResult = Readonly<{
   replayed: boolean;
 }>;
 
+export type BlackjackTurnTimeoutCoordinatorResult = Readonly<{
+  table: BlackjackTable;
+  queueSequence: number;
+  replayed: boolean;
+}>;
+
 export type BlackjackCoordinatorResult = Readonly<{
   table: BlackjackTable;
   protocol: BlackjackActionProtocolState;
@@ -129,6 +136,17 @@ function assertNowMs(nowMs: number): void {
       "Blackjack coordinator nowMs must be a non-negative safe integer",
     );
   }
+}
+
+function nextStateVersion(value: number): number {
+  if (
+    !Number.isSafeInteger(value) ||
+    value < 0 ||
+    value >= Number.MAX_SAFE_INTEGER
+  ) {
+    throw new RangeError("Blackjack coordinator stateVersion cannot advance");
+  }
+  return value + 1;
 }
 
 function assertNonEmptyId(label: string, value: string | undefined): string {
@@ -305,6 +323,55 @@ export class BlackjackPlayerActionCoordinator {
         dealEvents:result.dealEvents,
         queueSequence,
         replayed:result.replayed,
+      });
+    });
+  }
+
+  timeoutCurrentTurn(
+    nowMs: number,
+  ): Promise<BlackjackTurnTimeoutCoordinatorResult> {
+    assertNowMs(nowMs);
+
+    return this.queue.enqueue(({ queueSequence }) => {
+      const table=this.tableState;
+      const round=table.round;
+      if(
+        table.phase!=="PLAYER_TURNS" ||
+        round===null ||
+        round.phase!=="PLAYER_TURNS" ||
+        round.currentTurn===null
+      ){
+        throw new Error(
+          "Blackjack turn timeout requires an active PLAYER_TURNS state",
+        );
+      }
+
+      if(nowMs < round.currentTurn.endsAtMs){
+        return Object.freeze({
+          table,
+          queueSequence,
+          replayed:true,
+        });
+      }
+
+      const timedOutRound=applyBlackjackTurnTimeout(round,nowMs);
+      const versioned: BlackjackTable=Object.freeze({
+        ...table,
+        phase:timedOutRound.phase,
+        round:timedOutRound,
+        stateVersion:nextStateVersion(table.stateVersion),
+      });
+      const committed=commitBlackjackServerEvent(versioned,{
+        type:"TABLE_STATE_COMMITTED",
+        actionId:null,
+        createdAtMs:nowMs,
+      }).table;
+
+      this.tableState=committed;
+      return Object.freeze({
+        table:committed,
+        queueSequence,
+        replayed:false,
       });
     });
   }

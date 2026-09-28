@@ -154,4 +154,59 @@ describe("blackjack authoritative round runtime tick",()=>{
     expect(game.getTable().stateVersion).toBe(1);
     expect(game.getTable().eventSequence).toBe(1);
   });
+
+  it("waits before an active player turn deadline without mutation",async()=>{
+    const game=coordinator();
+    await game.submit(action("PLACE_BET","bet-timeout",0));
+    await game.submit(action("READY","ready-timeout",1));
+    await runBlackjackRoundRuntimeTick(game,{nowMs:10_000});
+
+    const turn=game.getTable().round?.currentTurn;
+    expect(turn).not.toBeNull();
+    const beforeVersion=game.getTable().stateVersion;
+    const beforeSequence=game.getTable().eventSequence;
+
+    const tick=await runBlackjackRoundRuntimeTick(game,{
+      nowMs:(turn?.endsAtMs ?? 0)-1,
+    });
+
+    expect(tick.status).toBe("WAITING_FOR_PLAYER_TURN");
+    expect(tick.transitions).toEqual([]);
+    expect(game.getTable().stateVersion).toBe(beforeVersion);
+    expect(game.getTable().eventSequence).toBe(beforeSequence);
+  });
+
+  it("auto-stands exactly at timeout and commits the dealer handoff once",async()=>{
+    const game=coordinator();
+    await game.submit(action("PLACE_BET","bet-auto-stand",0));
+    await game.submit(action("READY","ready-auto-stand",1));
+    await runBlackjackRoundRuntimeTick(game,{nowMs:10_000});
+
+    const turn=game.getTable().round?.currentTurn;
+    expect(turn).not.toBeNull();
+    const timeoutAt=turn!.endsAtMs;
+    const beforeVersion=game.getTable().stateVersion;
+    const beforeSequence=game.getTable().eventSequence;
+
+    const tick=await runBlackjackRoundRuntimeTick(game,{
+      nowMs:timeoutAt,
+    });
+
+    expect(tick.status).toBe("DEALER_TURN_READY");
+    expect(tick.transitions.map((transition)=>transition.type)).toEqual([
+      "PLAYER_TURN_TIMEOUT_COMMITTED",
+    ]);
+    expect(game.getTable().phase).toBe("DEALER_TURN");
+    expect(game.getTable().round?.currentTurn).toBeNull();
+    expect(game.getTable().round?.hands[0].status).toBe("STOOD");
+    expect(game.getTable().stateVersion).toBe(beforeVersion+1);
+    expect(game.getTable().eventSequence).toBe(beforeSequence+1);
+
+    const replay=await runBlackjackRoundRuntimeTick(game,{
+      nowMs:timeoutAt+1,
+    });
+    expect(replay.status).toBe("NOOP");
+    expect(replay.transitions).toEqual([]);
+  });
+
 });
