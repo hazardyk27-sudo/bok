@@ -8,6 +8,7 @@ export const BLACKJACK_ROUND_END_HOLD_MS = 3_000 as const;
 
 export type BlackjackRoundRuntimeTransitionType =
   | "BETTING_LOCKED"
+  | "EMPTY_BETTING_WINDOW_RECYCLED"
   | "INITIAL_DEAL_COMMITTED"
   | "PLAYER_TURN_TIMEOUT_COMMITTED"
   | "DISCONNECTED_AUTO_STAND_COMMITTED"
@@ -66,17 +67,52 @@ function finish(
   });
 }
 
+async function recycleEmptyBettingWindow(
+  coordinator: BlackjackPlayerActionCoordinator,
+  nowMs: number,
+  bettingWindowMs: number | undefined,
+  createFreshShoe: (() => BlackjackShoe) | undefined,
+  transitions: BlackjackRoundRuntimeTransition[],
+): Promise<BlackjackRoundRuntimeTickResult> {
+  const next=await coordinator.startNextBettingRound(
+    nowMs,
+    {
+      bettingWindowMs,
+      createFreshShoe,
+    },
+  );
+  if(!next.replayed){
+    transitions.push(
+      freezeTransition(
+        "EMPTY_BETTING_WINDOW_RECYCLED",
+        next.table,
+      ),
+    );
+  }
+
+  return finish(
+    next.table.phase==="TABLE_IDLE"
+      ? "BETTING_CLOSED_EMPTY"
+      : "NEXT_BETTING_ROUND_STARTED",
+    next.table,
+    transitions,
+  );
+}
+
 async function startDealFromLockedBetting(
   coordinator: BlackjackPlayerActionCoordinator,
   nowMs: number,
+  bettingWindowMs: number | undefined,
   createFreshShoe: (() => BlackjackShoe) | undefined,
   transitions: BlackjackRoundRuntimeTransition[],
 ): Promise<BlackjackRoundRuntimeTickResult> {
   const locked = await coordinator.closeBettingWindow(nowMs);
   if (locked.participants.length === 0) {
-    return finish(
-      "BETTING_CLOSED_EMPTY",
-      coordinator.getTable(),
+    return recycleEmptyBettingWindow(
+      coordinator,
+      nowMs,
+      bettingWindowMs,
+      createFreshShoe,
       transitions,
     );
   }
@@ -177,7 +213,13 @@ export async function runBlackjackRoundRuntimeTick(
     }
 
     if (closed.participants.length === 0) {
-      return finish("BETTING_CLOSED_EMPTY", table, transitions);
+      return recycleEmptyBettingWindow(
+        coordinator,
+        input.nowMs,
+        input.bettingWindowMs,
+        input.createFreshShoe,
+        transitions,
+      );
     }
 
     const dealt = await coordinator.startInitialDeal(
@@ -350,6 +392,7 @@ export async function runBlackjackRoundRuntimeTick(
     return startDealFromLockedBetting(
       coordinator,
       input.nowMs,
+      input.bettingWindowMs,
       input.createFreshShoe,
       transitions,
     );

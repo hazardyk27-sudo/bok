@@ -485,31 +485,69 @@ export function startBlackjackNextBettingRound(input: {
     });
   }
 
-  if(input.table.phase!=="ROUND_END"){
-    throw new Error("Blackjack next betting round requires ROUND_END phase");
-  }
   const previousRound=input.table.round;
-  if(
-    previousRound===null ||
-    previousRound.phase!=="ROUND_END" ||
-    previousRound.currentTurn!==null ||
-    previousRound.hands.some((hand)=>hand.status!=="COMPLETE")
-  ){
-    throw new Error("Blackjack next betting round requires a settled round");
+  if(previousRound===null){
+    throw new Error("Blackjack next betting round requires an active prior round");
+  }
+
+  const fromRoundEnd=
+    input.table.phase==="ROUND_END" &&
+    previousRound.phase==="ROUND_END" &&
+    previousRound.currentTurn===null &&
+    previousRound.hands.every((hand)=>hand.status==="COMPLETE");
+  const fromEmptyBettingLock=
+    input.table.phase==="BETTING_LOCKED" &&
+    previousRound.phase==="BETTING_LOCKED" &&
+    previousRound.currentTurn===null &&
+    previousRound.hands.length===0 &&
+    previousRound.activeSeatOrder.length===0 &&
+    currentLockedParticipants(
+      previousRound.roundId,
+      input.bettingPositions,
+    ).length===0;
+
+  if(!fromRoundEnd && !fromEmptyBettingLock){
+    throw new Error(
+      "Blackjack next betting round requires ROUND_END or an empty BETTING_LOCKED round",
+    );
   }
 
   const activePlayers=input.table.players.filter(
     (player)=>player.connected && player.status!=="DISCONNECTED",
   );
   if(activePlayers.length===0){
+    if(fromRoundEnd){
+      return Object.freeze({
+        table:input.table,
+        bettingPositions:Object.freeze(
+          input.bettingPositions.filter(
+            (position)=>position.roundId!==previousRound.roundId,
+          ),
+        ),
+        replayed:true,
+      });
+    }
+
+    const versionedIdle: BlackjackTable=Object.freeze({
+      ...input.table,
+      phase:"TABLE_IDLE" as const,
+      round:null,
+      stateVersion:nextStateVersion(input.table.stateVersion),
+    });
+    const committedIdle=commitBlackjackServerEvent(versionedIdle,{
+      type:"ROUND_PHASE_CHANGED",
+      actionId:null,
+      createdAtMs:input.nowMs,
+    }).table;
+
     return Object.freeze({
-      table:input.table,
+      table:committedIdle,
       bettingPositions:Object.freeze(
         input.bettingPositions.filter(
           (position)=>position.roundId!==previousRound.roundId,
         ),
       ),
-      replayed:true,
+      replayed:false,
     });
   }
 

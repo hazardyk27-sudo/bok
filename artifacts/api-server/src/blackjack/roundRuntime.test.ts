@@ -169,23 +169,102 @@ describe("blackjack authoritative round runtime tick",()=>{
     expect(game.getTable().round?.currentTurn?.seatNumber).toBe(2);
   });
 
-  it("closes an empty betting window once and does not attempt an initial deal",async()=>{
+  it("recycles an empty betting window instead of remaining BETTING_LOCKED",async()=>{
     const game=coordinator();
+
+    const tick=await runBlackjackRoundRuntimeTick(game,{
+      nowMs:10_000,
+      bettingWindowMs:12_000,
+    });
+
+    expect(tick.status).toBe("NEXT_BETTING_ROUND_STARTED");
+    expect(tick.transitions.map((transition)=>transition.type)).toEqual([
+      "BETTING_LOCKED",
+      "EMPTY_BETTING_WINDOW_RECYCLED",
+    ]);
+    expect(game.getTable()).toMatchObject({
+      phase:"BETTING",
+      stateVersion:2,
+      eventSequence:2,
+      round:{
+        roundId:"round-runtime-table:round-2",
+        roundNumber:2,
+        phase:"BETTING",
+        startedAtMs:10_000,
+        bettingClosesAtMs:22_000,
+      },
+    });
+    expect(game.getTable().shoe.nextIndex).toBe(0);
+
+    const replay=await runBlackjackRoundRuntimeTick(game,{nowMs:10_001});
+    expect(replay.status).toBe("WAITING_FOR_BETTING_DEADLINE");
+    expect(replay.transitions).toEqual([]);
+    expect(game.getTable().stateVersion).toBe(2);
+    expect(game.getTable().eventSequence).toBe(2);
+  });
+
+  it("recovers an already-empty BETTING_LOCKED round into a fresh betting window",async()=>{
+    const game=coordinator();
+    const closed=await game.closeBettingWindow(10_000);
+    expect(closed.participants).toEqual([]);
+    expect(game.getTable().phase).toBe("BETTING_LOCKED");
+
+    const tick=await runBlackjackRoundRuntimeTick(game,{
+      nowMs:10_001,
+      bettingWindowMs:8_000,
+    });
+
+    expect(tick.status).toBe("NEXT_BETTING_ROUND_STARTED");
+    expect(tick.transitions.map((transition)=>transition.type)).toEqual([
+      "EMPTY_BETTING_WINDOW_RECYCLED",
+    ]);
+    expect(game.getTable()).toMatchObject({
+      phase:"BETTING",
+      round:{
+        roundId:"round-runtime-table:round-2",
+        roundNumber:2,
+        phase:"BETTING",
+        startedAtMs:10_001,
+        bettingClosesAtMs:18_001,
+      },
+    });
+  });
+
+  it("returns an empty locked table to TABLE_IDLE when nobody is connected",async()=>{
+    const source=bettingTable();
+    const disconnected: BlackjackTable={
+      ...source,
+      players:source.players.map((player)=>({
+        ...player,
+        status:"DISCONNECTED" as const,
+        connected:false,
+        disconnectedAtMs:9_000,
+      })),
+    };
+    const game=new BlackjackPlayerActionCoordinator({
+      table:disconnected,
+      accounts:[{
+        playerId:"player-2",
+        userId:"user-2",
+        wallet:createBlackjackWalletLedgerState({
+          userId:"user-2",
+          totalBalanceCents:100_000,
+        }),
+        book:createBlackjackReservationBook("user-2"),
+      }],
+      bettingLimits:{minBetCents:1_000,maxBetCents:null},
+    });
 
     const tick=await runBlackjackRoundRuntimeTick(game,{nowMs:10_000});
 
     expect(tick.status).toBe("BETTING_CLOSED_EMPTY");
     expect(tick.transitions.map((transition)=>transition.type)).toEqual([
       "BETTING_LOCKED",
+      "EMPTY_BETTING_WINDOW_RECYCLED",
     ]);
-    expect(game.getTable().phase).toBe("BETTING_LOCKED");
+    expect(game.getTable().phase).toBe("TABLE_IDLE");
+    expect(game.getTable().round).toBeNull();
     expect(game.getTable().shoe.nextIndex).toBe(0);
-
-    const replay=await runBlackjackRoundRuntimeTick(game,{nowMs:10_001});
-    expect(replay.status).toBe("BETTING_CLOSED_EMPTY");
-    expect(replay.transitions).toEqual([]);
-    expect(game.getTable().stateVersion).toBe(1);
-    expect(game.getTable().eventSequence).toBe(1);
   });
 
   it("waits before an active player turn deadline without mutation",async()=>{
