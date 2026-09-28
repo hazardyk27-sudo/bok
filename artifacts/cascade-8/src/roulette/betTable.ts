@@ -236,8 +236,18 @@ export function renderRouletteBetTable() {
         </div>
 
         <div class="roulette-bet-summary">
-          <span>TOTAL BET</span>
-          <strong data-total-bet>0</strong>
+          <div class="roulette-bet-metric">
+            <span>TOTAL BET</span>
+            <strong data-total-bet>0</strong>
+          </div>
+          <div class="roulette-bet-metric roulette-return-metric">
+            <span>RETURN</span>
+            <strong data-round-return>—</strong>
+          </div>
+          <div class="roulette-bet-metric roulette-profit-metric" data-round-outcome="idle">
+            <span>NET</span>
+            <strong data-round-profit>—</strong>
+          </div>
         </div>
 
         <div class="roulette-bet-actions">
