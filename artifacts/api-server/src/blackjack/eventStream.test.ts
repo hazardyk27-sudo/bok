@@ -17,6 +17,7 @@ const BLACKJACK_TARGETED_PROMOTION_GATE =
   );
 
 if (BLACKJACK_TARGETED_PROMOTION_GATE) {
+  await import("../backendIsolation.test");
   await import("./actionCoordinator.test");
   await import("./bettingClose.test");
   await import("./bettingCoordinator.test");
