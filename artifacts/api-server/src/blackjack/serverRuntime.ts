@@ -24,9 +24,29 @@ import {
 } from "./snapshotState";
 import type { BlackjackRoundSchedulerOptions } from "./roundScheduler";
 
+export type BlackjackServerRuntimeReadiness = Readonly<{
+  ready: boolean;
+  status:
+    | "READY"
+    | "RUNTIME_CLOSED"
+    | "SCHEDULER_STOPPED"
+    | "AUTHORITY_FAILED";
+  tableId: string;
+  phase: BlackjackRecoveredScheduledRuntime["coordinator"]["getTable"] extends () => infer T
+    ? T extends { phase: infer P }
+      ? P
+      : never
+    : never;
+  stateVersion: number;
+  eventSequence: number;
+  schedulerRunning: boolean;
+  authorityHealthy: boolean;
+}>;
+
 export type BlackjackAttachedServerRuntime = Readonly<{
   scheduled: BlackjackRecoveredScheduledRuntime;
   realtime: BlackjackRealtimeRuntime;
+  getReadiness: () => BlackjackServerRuntimeReadiness;
   close: () => void;
 }>;
 
@@ -59,9 +79,35 @@ export function attachBlackjackScheduledServerRuntime(
     },
   );
 
+  const getReadiness=(): BlackjackServerRuntimeReadiness => {
+    const table=scheduled.coordinator.getTable();
+    const schedulerRunning=scheduled.scheduler.isRunning();
+    const authorityHealthy=scheduled.authority.fatalError()===null;
+    const status=
+      closed
+        ? "RUNTIME_CLOSED" as const
+        : !authorityHealthy
+          ? "AUTHORITY_FAILED" as const
+          : !schedulerRunning
+            ? "SCHEDULER_STOPPED" as const
+            : "READY" as const;
+
+    return Object.freeze({
+      ready:status==="READY",
+      status,
+      tableId:table.tableId,
+      phase:table.phase,
+      stateVersion:table.stateVersion,
+      eventSequence:table.eventSequence,
+      schedulerRunning,
+      authorityHealthy,
+    });
+  };
+
   return Object.freeze({
     scheduled,
     realtime,
+    getReadiness,
     close:()=>{
       if(closed) return;
       closed=true;

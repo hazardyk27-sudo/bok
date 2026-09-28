@@ -53,6 +53,19 @@ export type BlackjackBrowserRealtimeOptions = Readonly<{
   cancelReconnect?: (handle: unknown) => void;
 }>;
 
+export type BlackjackBrowserConnectionState =
+  | "CONNECTING"
+  | "READY"
+  | "RECONNECTING"
+  | "SESSION_REPLACED"
+  | "CLOSED";
+
+export type BlackjackBrowserConnectionStatus = Readonly<{
+  state: BlackjackBrowserConnectionState;
+  transportConnected: boolean;
+  cursor: ReturnType<BlackjackRealtimeViewController["getCursor"]>;
+}>;
+
 export type BlackjackBrowserRealtimeConnection = Readonly<{
   url: string;
   socket: BlackjackBrowserSocket;
@@ -61,6 +74,7 @@ export type BlackjackBrowserRealtimeConnection = Readonly<{
   betting: BlackjackBettingClient;
   privateState: BlackjackPrivatePlayerStateClient;
   seats: BlackjackSeatCommandClient;
+  getStatus: () => BlackjackBrowserConnectionStatus;
   close: () => void;
 }>;
 
@@ -330,6 +344,7 @@ export function connectBlackjackRealtimeElement(
   let controller: BlackjackRealtimeViewController | null=null;
   let selectedChipCredits=100;
   let transportConnected=false;
+  let everReady=false;
   let sessionReplaced=false;
   const reconnectDelayMs=options.reconnectDelayMs ?? 750;
   if(!Number.isSafeInteger(reconnectDelayMs) || reconnectDelayMs<100){
@@ -355,6 +370,7 @@ export function connectBlackjackRealtimeElement(
       cancelReconnect,
       onTransportReadyChange:(ready)=>{
         transportConnected=ready;
+        if(ready) everReady=true;
         controller?.rerenderLatest();
       },
       onSessionReplaced:()=>{
@@ -561,6 +577,24 @@ export function connectBlackjackRealtimeElement(
   app.addEventListener("click",onClick);
   let closed=false;
 
+  const getStatus=(): BlackjackBrowserConnectionStatus => {
+    const state=
+      closed
+        ? "CLOSED" as const
+        : sessionReplaced
+          ? "SESSION_REPLACED" as const
+          : transportConnected && activeController.getCursor()!==null
+            ? "READY" as const
+            : everReady
+              ? "RECONNECTING" as const
+              : "CONNECTING" as const;
+    return Object.freeze({
+      state,
+      transportConnected,
+      cursor:activeController.getCursor(),
+    });
+  };
+
   return Object.freeze({
     url,
     socket,
@@ -569,6 +603,7 @@ export function connectBlackjackRealtimeElement(
     betting,
     privateState,
     seats,
+    getStatus,
     close:()=>{
       if(closed) return;
       closed=true;

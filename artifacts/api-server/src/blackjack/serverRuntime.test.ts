@@ -171,6 +171,14 @@ describe("blackjack owned server runtime wiring",()=>{
 
     expect(attached).not.toBeNull();
     expect(attached?.scheduled.scheduler.isRunning()).toBe(true);
+    expect(attached?.getReadiness()).toMatchObject({
+      ready:true,
+      status:"READY",
+      tableId:"server-runtime-table",
+      phase:"BETTING",
+      schedulerRunning:true,
+      authorityHealthy:true,
+    });
     expect(scheduledCallback).not.toBeNull();
     expect(attached?.scheduled.coordinator.getTable().players[0])
       .toMatchObject({
@@ -208,6 +216,11 @@ describe("blackjack owned server runtime wiring",()=>{
 
     attached?.close();
     expect(attached?.scheduled.scheduler.isRunning()).toBe(false);
+    expect(attached?.getReadiness()).toMatchObject({
+      ready:false,
+      status:"RUNTIME_CLOSED",
+      schedulerRunning:false,
+    });
     expect(schedulerCancelled).toBe(true);
     expect(
       attached?.scheduled.coordinator.getTable().players[0].connected,

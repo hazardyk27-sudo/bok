@@ -98,6 +98,11 @@ describe("blackjack resilient browser realtime transport",()=>{
     });
 
     expect(physicals).toHaveLength(1);
+    expect(connection.getStatus()).toMatchObject({
+      state:"CONNECTING",
+      transportConnected:false,
+      cursor:null,
+    });
     physicals[0].emit(
       "message",
       new MessageEvent("message",{
@@ -108,6 +113,11 @@ describe("blackjack resilient browser realtime transport",()=>{
       eventSequence:1,
       stateVersion:1,
     });
+    expect(connection.getStatus()).toMatchObject({
+      state:"READY",
+      transportConnected:true,
+      cursor:{eventSequence:1,stateVersion:1},
+    });
     expect(app.innerHTML).toContain("BETTING");
 
     physicals[0].emit(
@@ -115,6 +125,7 @@ describe("blackjack resilient browser realtime transport",()=>{
       Object.assign(new Event("close"),{code:1006}),
     );
     expect(reconnectCallbacks).toHaveLength(1);
+    expect(connection.getStatus().state).toBe("RECONNECTING");
     reconnectCallbacks[0]();
     expect(physicals).toHaveLength(2);
 
@@ -130,6 +141,7 @@ describe("blackjack resilient browser realtime transport",()=>{
     });
 
     connection.close();
+    expect(connection.getStatus().state).toBe("CLOSED");
   });
 
   it("does not reconnect a session-replaced socket",()=>{
@@ -162,6 +174,8 @@ describe("blackjack resilient browser realtime transport",()=>{
       Object.assign(new Event("close"),{code:4001}),
     );
     expect(reconnectCallbacks).toEqual([]);
+    expect(connection.getStatus().state).toBe("SESSION_REPLACED");
     connection.close();
+    expect(connection.getStatus().state).toBe("CLOSED");
   });
 });
