@@ -1,10 +1,5 @@
 import { describe, expect, it } from "vitest";
 import {
-  BALL_TRACK_STYLE,
-  SEGMENT_COUNT,
-  WHEEL_GEOMETRY,
-} from "./config";
-import {
   BALL_ORBIT_PROFILE,
   createBallOrbit,
   getBallOrbitDurationMs,
@@ -12,10 +7,27 @@ import {
   getBallSpeedThresholdMs,
   sampleBallOrbit,
 } from "./ballMotion";
-import { createRotorSpin } from "./spinMotion";
+import {
+  BALL_TRACK_STYLE,
+  SEGMENT_ANGLE,
+  SEGMENT_COUNT,
+  TOP_SEGMENT_CENTER,
+  WHEEL_GEOMETRY,
+} from "./config";
+import {
+  createRotorSpin,
+  sampleRotorSpin,
+} from "./spinMotion";
 
-describe("roulette repeated rotor-relative fret bounces", () => {
-  it("uses speed thresholds for descent and pocket entry", () => {
+function shortestAngleDelta(a: number, b: number) {
+  return Math.atan2(
+    Math.sin(a - b),
+    Math.cos(a - b),
+  );
+}
+
+describe("roulette pocket capture and settle", () => {
+  it("preserves the track, descent and pocket-entry speed thresholds", () => {
     const orbit = createBallOrbit();
 
     expect(orbit.trackRadius).toBe(
@@ -28,134 +40,222 @@ describe("roulette repeated rotor-relative fret bounces", () => {
     expect(orbit.pocketEntryStartMs).toBeGreaterThan(
       orbit.descentStartMs,
     );
-    expect(orbit.durationMs).toBeGreaterThan(8500);
-    expect(orbit.durationMs).toBeLessThan(10000);
-    expect(getBallOrbitRevolutions(orbit)).toBeGreaterThan(8);
+    expect(orbit.freeMotionDurationMs).toBeGreaterThan(8500);
+    expect(orbit.freeMotionDurationMs).toBeLessThan(10000);
+    expect(orbit.durationMs).toBeGreaterThanOrEqual(
+      orbit.freeMotionDurationMs,
+    );
+    expect(getBallOrbitRevolutions(orbit)).toBeGreaterThan(4);
   });
 
-  it("builds multiple fret contacts from live rotor-relative geometry", () => {
-    const rotorSpin = createRotorSpin(0.37, 1);
-    const orbit = createBallOrbit(-0.72, rotorSpin);
-
-    expect(orbit.fretCollisions.length).toBeGreaterThanOrEqual(3);
-    expect(orbit.fretCollisions.length).toBeLessThanOrEqual(
-      BALL_ORBIT_PROFILE.maxFretCollisions,
-    );
-
-    for (
-      let index = 0;
-      index < orbit.fretCollisions.length;
-      index += 1
-    ) {
-      const collision =
-        orbit.fretCollisions[index];
-
-      expect(collision.separatorIndex).toBeGreaterThanOrEqual(0);
-      expect(collision.separatorIndex).toBeLessThan(
-        SEGMENT_COUNT,
-      );
-      expect(
-        Math.abs(
-          collision.relativeAngularVelocityAfter,
-        ),
-      ).toBeLessThan(
-        Math.abs(
-          collision.relativeAngularVelocityBefore,
-        ),
-      );
-
-      if (index > 0) {
-        expect(collision.timeMs).toBeGreaterThan(
-          orbit.fretCollisions[index - 1].timeMs,
-        );
-        expect(
-          collision.effectiveRestitution,
-        ).toBeLessThan(
-          orbit.fretCollisions[index - 1]
-            .effectiveRestitution,
-        );
-        expect(collision.radialKick).toBeLessThan(
-          orbit.fretCollisions[index - 1].radialKick,
-        );
-      }
-    }
-  });
-
-  it("reports cumulative contacts as the ball rattles across the pocket separators", () => {
-    const rotorSpin = createRotorSpin(0.37, 1);
-    const orbit = createBallOrbit(-0.72, rotorSpin);
-    const first = orbit.fretCollisions[0];
-    const third = orbit.fretCollisions[2];
-
-    const before = sampleBallOrbit(
-      orbit,
-      first.timeMs - 8,
-    );
-    const afterFirst = sampleBallOrbit(
-      orbit,
-      first.timeMs + 48,
-    );
-    const afterThird = sampleBallOrbit(
-      orbit,
-      third.timeMs + 48,
-    );
-
-    expect(before.fretCollisionCount).toBe(0);
-    expect(afterFirst.fretCollisionCount).toBeGreaterThanOrEqual(1);
-    expect(afterFirst.phase).toBe("fret");
-    expect(afterThird.fretCollisionCount).toBeGreaterThanOrEqual(3);
-    expect(afterThird.phase).toBe("fret");
-    expect(afterThird.radiusRatio).toBeGreaterThanOrEqual(
-      orbit.pocketEntryTargetRadius,
-    );
-  });
-
-  it("keeps every bounce dissipative while allowing separator-to-separator travel", () => {
+  it("keeps the repeated fret chain dissipative before capture", () => {
     const orbit = createBallOrbit(
       -0.72,
       createRotorSpin(0.37, 1),
     );
 
-    const separatorSet = new Set(
-      orbit.fretCollisions.map(
-        (collision) =>
-          collision.separatorIndex,
-      ),
+    expect(
+      orbit.fretCollisions.length,
+    ).toBeGreaterThanOrEqual(4);
+    expect(
+      orbit.fretCollisions.length,
+    ).toBeLessThanOrEqual(
+      BALL_ORBIT_PROFILE.maxFretCollisions,
     );
 
-    expect(separatorSet.size).toBeGreaterThan(1);
-
-    for (const collision of orbit.fretCollisions) {
+    for (
+      let index = 1;
+      index <
+      orbit.fretCollisions.length;
+      index += 1
+    ) {
       expect(
-        collision.effectiveRestitution,
-      ).toBeGreaterThan(0);
+        orbit.fretCollisions[
+          index
+        ].effectiveRestitution,
+      ).toBeLessThan(
+        orbit.fretCollisions[
+          index - 1
+        ].effectiveRestitution,
+      );
       expect(
-        collision.effectiveRestitution,
-      ).toBeLessThan(1);
-      expect(collision.radialKick).toBeGreaterThan(0);
+        orbit.fretCollisions[
+          index
+        ].radialKick,
+      ).toBeLessThan(
+        orbit.fretCollisions[
+          index - 1
+        ].radialKick,
+      );
     }
   });
 
-  it("hands off inside the pocket ring without selecting a winning pocket", () => {
-    const orbit = createBallOrbit();
-    const end = sampleBallOrbit(
-      orbit,
-      orbit.durationMs,
+  it("captures only from the ball's low-energy rotor-relative geometry", () => {
+    const rotorSpin =
+      createRotorSpin(0.37, 1);
+    const orbit =
+      createBallOrbit(
+        -0.72,
+        rotorSpin,
+      );
+    const capture =
+      orbit.pocketCapture;
+
+    expect(capture).not.toBeNull();
+    expect(
+      capture!.pocketIndex,
+    ).toBeGreaterThanOrEqual(0);
+    expect(
+      capture!.pocketIndex,
+    ).toBeLessThan(
+      SEGMENT_COUNT,
+    );
+    expect(capture!.timeMs).toBeGreaterThan(
+      orbit.pocketEntryStartMs,
+    );
+    expect(capture!.timeMs).toBeLessThan(
+      orbit.freeMotionDurationMs,
     );
 
-    expect(end.phase).toBe("handoff");
-    expect(end.radiusRatio).toBeCloseTo(
-      orbit.pocketEntryTargetRadius,
+    const fretCountAtCapture =
+      orbit.fretCollisions.filter(
+        (collision) =>
+          collision.timeMs <=
+          capture!.timeMs,
+      ).length;
+    expect(
+      fretCountAtCapture,
+    ).toBeGreaterThanOrEqual(
+      orbit.captureMinFretCollisions,
     );
-    expect(end.radialVelocityRatioPerSecond).toBe(0);
-    expect(end.angularVelocity).toBe(0);
+    expect(
+      Math.abs(
+        capture!
+          .initialRelativeAngularVelocity,
+      ),
+    ).toBeLessThanOrEqual(
+      orbit.captureRelativeAngularVelocity,
+    );
+    expect(
+      Math.abs(
+        capture!
+          .initialRadialVelocity,
+      ),
+    ).toBeLessThanOrEqual(
+      orbit.captureRadialVelocity,
+    );
+  });
+
+  it("critically damps into the captured rotating pocket instead of snapping", () => {
+    const orbit =
+      createBallOrbit(
+        -0.72,
+        createRotorSpin(0.37, 1),
+      );
+    const capture =
+      orbit.pocketCapture!;
+
+    const before =
+      sampleBallOrbit(
+        orbit,
+        capture.timeMs - 4,
+      );
+    const during =
+      sampleBallOrbit(
+        orbit,
+        capture.timeMs + 120,
+      );
+    const settled =
+      sampleBallOrbit(
+        orbit,
+        capture.settleTimeMs + 8,
+      );
+
+    expect(
+      before.pocketCaptureIndex,
+    ).toBeNull();
+    expect(during.phase).toBe("capture");
+    expect(
+      during.pocketCaptureIndex,
+    ).toBe(
+      capture.pocketIndex,
+    );
+    expect(
+      Math.abs(
+        during.radiusRatio -
+        orbit.pocketSettleRadius,
+      ),
+    ).toBeGreaterThan(0);
+
+    expect(settled.phase).toBe("settled");
+    expect(settled.settled).toBe(true);
+    expect(
+      settled.radiusRatio,
+    ).toBeCloseTo(
+      orbit.pocketSettleRadius,
+      6,
+    );
+  });
+
+  it("remains locked to that pocket as the rotor finishes", () => {
+    const orbit =
+      createBallOrbit(
+        -0.72,
+        createRotorSpin(0.37, 1),
+      );
+    const capture =
+      orbit.pocketCapture!;
+    const end =
+      sampleBallOrbit(
+        orbit,
+        orbit.durationMs,
+      );
+    const rotorEnd =
+      sampleRotorSpin(
+        orbit.rotorSpin,
+        orbit.durationMs,
+      );
+
+    const expectedCenter =
+      rotorEnd.angle +
+      TOP_SEGMENT_CENTER +
+      capture.pocketIndex *
+        SEGMENT_ANGLE;
+
+    expect(end.phase).toBe("settled");
     expect(end.done).toBe(true);
-
-    expect(orbit.pocketEntryTargetRadius).toBeLessThan(
-      WHEEL_GEOMETRY.pocketOuterRadius,
+    expect(end.settled).toBe(true);
+    expect(
+      end.pocketCaptureIndex,
+    ).toBe(
+      capture.pocketIndex,
     );
-    expect(orbit.pocketEntryTargetRadius).toBeGreaterThan(
+    expect(
+      shortestAngleDelta(
+        end.angle,
+        expectedCenter,
+      ),
+    ).toBeCloseTo(0, 6);
+    expect(
+      end.radiusRatio,
+    ).toBeCloseTo(
+      orbit.pocketSettleRadius,
+      6,
+    );
+  });
+
+  it("settles fully inside the green pocket annulus", () => {
+    const orbit = createBallOrbit();
+
+    expect(
+      orbit.pocketSettleRadius,
+    ).toBeGreaterThan(
       WHEEL_GEOMETRY.pocketInnerRadius,
+    );
+    expect(
+      orbit.pocketSettleRadius,
+    ).toBeLessThan(
+      WHEEL_GEOMETRY.pocketOuterRadius,
     );
   });
 
@@ -181,12 +281,14 @@ describe("roulette repeated rotor-relative fret bounces", () => {
     ).toBe(0);
   });
 
-  it("does not expose any target-number input in the motion profile", () => {
+  it("does not expose target-number or target-pocket steering inputs", () => {
     expect(
-      "targetNumber" in BALL_ORBIT_PROFILE,
+      "targetNumber" in
+        BALL_ORBIT_PROFILE,
     ).toBe(false);
     expect(
-      "targetPocket" in BALL_ORBIT_PROFILE,
+      "targetPocket" in
+        BALL_ORBIT_PROFILE,
     ).toBe(false);
   });
 });

@@ -15,11 +15,12 @@
 - Winning outcomes will later come from simulation state, not target-number steering, snapping, magnets, or post-selection.
 
 ## Current milestones
-- 2026-09-28 — Part 13 repeated fret bounce chain implemented — pocket-entry now discovers a chronological chain of rotor-relative separator contacts instead of stopping at the first hit. Each overlap is derived from the simulated ball position versus all live rotating separators, with contact gating/cooldown to prevent duplicate manifold hits. Every successive bounce uses lower effective restitution and a smaller outward radial impulse, so relative collision energy dissipates cumulatively while the ball travels across multiple neighboring frets. The sample state now reports cumulative fret-contact count and latest separator contact; there is still no target pocket or selected result. Next: Part 14 adds pocket capture/settle criteria so the low-energy ball can remain inside one rotating pocket rather than ending at a generic handoff radius.
+- 2026-09-28 — Part 14 pocket capture + settle implemented — after the repeated fret chain, capture is now allowed only when the ball is fully inside the green annulus, has accumulated enough separator contacts, is physically clear of both pocket frets, and has low rotor-relative angular/radial speed. The captured pocket index is derived from the ball's current world angle versus the live rotor angle; it is never supplied as an input. From the exact capture offset and velocities, critically damped angular/radial motion converges continuously to the pocket center and floor radius while following the still-rotating rotor, then reports a settled state. No number lookup or result selection is performed yet. Next: Part 15 reads the winning number from the final settled geometry and adds deterministic seed/result validation without altering the trajectory.
+- 2026-09-28 — Part 13 repeated fret bounce chain implemented — pocket-entry discovers a chronological chain of rotor-relative separator contacts with progressively lower restitution and radial kick.
 - 2026-09-28 — Part 12 rotor-relative fret entry implemented — the ball crosses into the green pocket annulus and its first real rotating separator overlap reflects rotor-relative tangential velocity.
-- 2026-09-28 — Part 11 fixed deflectors + collision response implemented — four small fixed gold deflectors use real polar overlap during descent.
-- 2026-09-28 — Part 10 inward descent implemented — ball motion is speed-driven from fixed outer track into the transition band.
-- 2026-09-28 — Part 9 visual ball layer implemented — the shaded ivory ball renders and orbits independently.
+- 2026-09-28 — Part 11 fixed deflectors + collision response implemented.
+- 2026-09-28 — Part 10 inward descent implemented.
+- 2026-09-28 — Part 9 visual ball layer implemented.
 - 2026-09-28 — Part 8 fixed outer ball track implemented.
 - 2026-09-28 — Part 7 rotor spin motion implemented.
 - 2026-09-28 — Part 6 stator/rotor separation implemented.
