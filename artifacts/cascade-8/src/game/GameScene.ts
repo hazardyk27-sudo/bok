@@ -98,6 +98,10 @@ export class GameScene extends Phaser.Scene {
 
   private readonly activeBurstParticles = new Set<Phaser.GameObjects.Arc>();
 
+  private burstFxCreated = 0;
+
+  private burstFxReused = 0;
+
   private readonly activeWinLabels = new CancelableCompletionRegistry();
 
   private cellFrames: Phaser.GameObjects.Rectangle[] = [];
@@ -195,7 +199,10 @@ export class GameScene extends Phaser.Scene {
   }
 
   private acquireBurstRing(x: number, y: number, color: number) {
-    const ring = this.burstRingPool.pop() ?? this.add.circle(0, 0, 25, undefined, 0).setDepth(3);
+    const pooledRing = this.burstRingPool.pop();
+    const ring = pooledRing ?? this.add.circle(0, 0, 25, undefined, 0).setDepth(3);
+    if (pooledRing) this.burstFxReused += 1;
+    else this.burstFxCreated += 1;
     this.tweens.killTweensOf(ring);
     ring
       .setActive(true)
@@ -211,7 +218,10 @@ export class GameScene extends Phaser.Scene {
   }
 
   private acquireBurstParticle(x: number, y: number, radius: number, color: number) {
-    const particle = this.burstParticlePool.pop() ?? this.add.circle(0, 0, radius, color, 0.92).setDepth(3);
+    const pooledParticle = this.burstParticlePool.pop();
+    const particle = pooledParticle ?? this.add.circle(0, 0, radius, color, 0.92).setDepth(3);
+    if (pooledParticle) this.burstFxReused += 1;
+    else this.burstFxCreated += 1;
     this.tweens.killTweensOf(particle);
     particle
       .setActive(true)
@@ -222,7 +232,7 @@ export class GameScene extends Phaser.Scene {
       .setAlpha(0.92)
       .setDepth(3)
       .setFillStyle(color, 0.92)
-      .setStrokeStyle();
+      .setStrokeStyle(0, 0xffffff, 0);
     this.activeBurstParticles.add(particle);
     return particle;
   }
@@ -272,6 +282,8 @@ export class GameScene extends Phaser.Scene {
       activeTweens: this.tweens.getTweens().length,
       transientEffects: this.transientEffects.length + this.activeBurstRings.size + this.activeBurstParticles.size,
       pooledBurstEffects: this.burstRingPool.length + this.burstParticlePool.length,
+      burstFxCreated: this.burstFxCreated,
+      burstFxReused: this.burstFxReused,
       activeWinLabels: this.activeWinLabels.size,
       displayObjects: this.children.list.length,
       fps: Math.round(this.game.loop.actualFps || 0),
