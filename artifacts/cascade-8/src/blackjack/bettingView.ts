@@ -28,6 +28,15 @@ export const BLACKJACK_DEFAULT_BETTING_PANEL: BlackjackBettingPanelViewModel =
     bettingClosesLabel: "WAITING",
   });
 
+function escapeHtml(value: string): string {
+  return value
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#039;");
+}
+
 function assertPositiveSafeInteger(label: string, value: number): void {
   if (!Number.isSafeInteger(value) || value <= 0) {
     throw new RangeError(
@@ -56,6 +65,24 @@ export function getBlackjackHighChipCredits(
   }
 
   return value;
+}
+
+export function isBlackjackChipDenomination(value: number): boolean {
+  if (!Number.isSafeInteger(value) || value <= 0) return false;
+
+  if (
+    (BLACKJACK_BASE_CHIP_DENOMINATIONS as readonly number[]).includes(value)
+  ) {
+    return true;
+  }
+
+  if (value < BLACKJACK_HIGH_CHIP_BASE_CREDITS) return false;
+
+  let candidate = BLACKJACK_HIGH_CHIP_BASE_CREDITS;
+  while (candidate < value && candidate <= Number.MAX_SAFE_INTEGER / 2) {
+    candidate *= 2;
+  }
+  return candidate === value;
 }
 
 export function doubleBlackjackChipCredits(
@@ -129,6 +156,11 @@ export function renderBlackjackBettingPanel(
     "selected chip credits",
     model.selectedChipCredits,
   );
+  if (!isBlackjackChipDenomination(model.selectedChipCredits)) {
+    throw new RangeError(
+      "Blackjack selected chip is not an approved denomination",
+    );
+  }
 
   const highChip =
     model.selectedChipCredits >= BLACKJACK_HIGH_CHIP_BASE_CREDITS
@@ -158,7 +190,7 @@ export function renderBlackjackBettingPanel(
 
       <div class="blackjack-bet-circle" aria-label="Current Blackjack bet">
         <span>BET</span>
-        <strong>${model.totalBetLabel}</strong>
+        <strong>${escapeHtml(model.totalBetLabel)}</strong>
       </div>
 
       <div class="blackjack-betting-actions">
@@ -166,13 +198,13 @@ export function renderBlackjackBettingPanel(
           CLEAR
         </button>
         <button type="button" data-blackjack-bet-action="READY" disabled>
-          ${model.readyLabel}
+          ${escapeHtml(model.readyLabel)}
         </button>
       </div>
 
       <div class="blackjack-betting-deadline">
         <span>BETTING CLOSES</span>
-        <strong>${model.bettingClosesLabel}</strong>
+        <strong>${escapeHtml(model.bettingClosesLabel)}</strong>
       </div>
     </section>
   `;
