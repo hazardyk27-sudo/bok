@@ -1051,3 +1051,226 @@ button {
     grid-template-columns: repeat(2, auto);
   }
 }
+
+
+/* Part 28 — reference-led portrait mobile table layout */
+@media (max-width: 640px) {
+  .roulette-page {
+    --wheel-size: min(80vw, 340px);
+  }
+
+  .roulette-game-shell {
+    gap: 0;
+    justify-items: center;
+  }
+
+  .roulette-wheel-panel {
+    width: 100%;
+    margin-bottom: -6px;
+  }
+
+  .roulette-page[data-phase="betting"] .roulette-wheel-panel {
+    transform: translateY(0) scale(0.92);
+    opacity: 0.78;
+  }
+
+  .roulette-page[data-phase="spinning"] {
+    --wheel-size: min(96vw, 440px);
+  }
+
+  .roulette-page[data-phase="settled"] {
+    --wheel-size: min(90vw, 410px);
+  }
+
+  .roulette-bet-panel {
+    width: min(100%, 390px);
+    padding: 4px 8px 8px;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+    box-shadow: none;
+  }
+
+  .roulette-bet-panel__header {
+    width: min(100%, 308px);
+    margin: 0 auto;
+    padding: 0 2px 7px;
+  }
+
+  .roulette-bet-table {
+    width: min(100%, 308px);
+    margin: 0 auto;
+    display: grid;
+    grid-template-columns: 46px 46px minmax(0, 1fr);
+    grid-template-rows: 46px auto 42px;
+    overflow: visible;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+  }
+
+  .roulette-zero-cell {
+    grid-column: 3;
+    grid-row: 1;
+    min-height: 46px;
+    border: 1px solid var(--bet-border);
+    border-bottom: 0;
+    clip-path:
+      polygon(
+        50% 0,
+        100% 28%,
+        100% 100%,
+        0 100%,
+        0 28%
+      );
+    font-size: 22px;
+  }
+
+  .roulette-number-grid {
+    grid-column: 3;
+    grid-row: 2;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    grid-template-rows: repeat(12, 38px);
+    border-left: 1px solid var(--bet-border);
+    border-top: 1px solid var(--bet-border);
+  }
+
+  .roulette-number-cell {
+    min-height: 38px;
+    border-right: 1px solid var(--bet-border);
+    border-bottom: 1px solid var(--bet-border);
+    font-size: 16px;
+  }
+
+  .roulette-column-bets {
+    grid-column: 3;
+    grid-row: 3;
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    grid-template-rows: 42px;
+    border-left: 1px solid var(--bet-border);
+  }
+
+  .roulette-column-cell {
+    min-height: 42px;
+    border-right: 1px solid var(--bet-border);
+    border-bottom: 1px solid var(--bet-border);
+  }
+
+  .roulette-column-bets [data-bet-id="column-1"] {
+    grid-column: 1;
+  }
+
+  .roulette-column-bets [data-bet-id="column-2"] {
+    grid-column: 2;
+  }
+
+  .roulette-column-bets [data-bet-id="column-3"] {
+    grid-column: 3;
+  }
+
+  .roulette-dozen-bets {
+    grid-column: 2;
+    grid-row: 2;
+    display: grid;
+    grid-template-columns: 46px;
+    grid-template-rows: repeat(3, 1fr);
+    border-top: 1px solid var(--bet-border);
+    border-left: 1px solid var(--bet-border);
+  }
+
+  .roulette-dozen-cell {
+    min-height: 0;
+    border-right: 1px solid var(--bet-border);
+    border-bottom: 1px solid var(--bet-border);
+    font-size: 10px;
+    letter-spacing: 0.03em;
+  }
+
+  .roulette-dozen-cell > span {
+    writing-mode: vertical-rl;
+    transform: rotate(180deg);
+  }
+
+  .roulette-outside-bets {
+    grid-column: 1;
+    grid-row: 2;
+    display: grid;
+    grid-template-columns: 46px;
+    grid-template-rows: repeat(6, 1fr);
+    border-top: 1px solid var(--bet-border);
+    border-left: 1px solid var(--bet-border);
+  }
+
+  .roulette-outside-cell {
+    min-height: 0;
+    border-right: 1px solid var(--bet-border);
+    border-bottom: 1px solid var(--bet-border);
+    font-size: 10px;
+  }
+
+  .roulette-outside-cell > span:not(.roulette-diamond) {
+    writing-mode: vertical-rl;
+    transform: rotate(180deg);
+  }
+
+  .roulette-outside-cell .roulette-diamond {
+    width: 19px;
+    height: 19px;
+  }
+
+  .roulette-bet-console {
+    width: 100%;
+    max-width: 374px;
+    margin: 8px auto 0;
+  }
+
+  .roulette-page[data-phase="betting"] .roulette-bet-panel {
+    transform: translateY(0) scale(1);
+  }
+
+  .roulette-page[data-phase="spinning"] .roulette-bet-panel {
+    transform:
+      perspective(700px)
+      translateY(-10px)
+      rotateX(5deg)
+      scale(0.66);
+    opacity: 0.24;
+  }
+
+  .roulette-page[data-phase="settled"] .roulette-bet-panel {
+    transform:
+      translateY(-5px)
+      scale(0.74);
+    opacity: 0.58;
+  }
+}
+
+@media (max-width: 380px) {
+  .roulette-page {
+    --wheel-size: min(78vw, 300px);
+  }
+
+  .roulette-bet-table,
+  .roulette-bet-panel__header {
+    width: min(100%, 288px);
+  }
+
+  .roulette-bet-table {
+    grid-template-columns: 42px 42px minmax(0, 1fr);
+  }
+
+  .roulette-dozen-bets,
+  .roulette-outside-bets {
+    grid-template-columns: 42px;
+  }
+
+  .roulette-number-grid {
+    grid-template-rows: repeat(12, 36px);
+  }
+
+  .roulette-number-cell {
+    min-height: 36px;
+    font-size: 15px;
+  }
+}
