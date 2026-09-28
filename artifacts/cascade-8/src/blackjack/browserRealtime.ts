@@ -336,7 +336,8 @@ export function connectBlackjackRealtimeElement(
   }
 
   const url=buildBlackjackWebSocketUrl(location);
-  const baseViewContext=options.getViewContext ?? (() => ({}));
+  const baseViewContext: () => BlackjackSnapshotViewContext =
+    options.getViewContext ?? (() => ({}));
   let actionClient: BlackjackPlayerActionClient | null=null;
   let bettingClient: BlackjackBettingClient | null=null;
   let privateStateClient: BlackjackPrivatePlayerStateClient | null=null;
