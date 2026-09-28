@@ -9,6 +9,11 @@ import {
   sampleRotorSpin,
   type RotorSpin,
 } from "./spinMotion";
+import {
+  collectRouletteSimulationEvents,
+  createRouletteSimulationEvents,
+  type RouletteSimulationEvent,
+} from "./simulationEvents";
 import { readSettledWinningResult } from "./spinResult";
 import { renderRouletteWheel } from "./wheelRenderer";
 
@@ -69,6 +74,8 @@ export function mountRoulette(app: HTMLDivElement) {
   let activeRotorSpin: RotorSpin | null = null;
   let activeBallOrbit: BallOrbit | null = null;
   let motionStartedAt = 0;
+  let lastEventElapsedMs = -1;
+  let simulationEvents: RouletteSimulationEvent[] = [];
   let frameId = 0;
 
   const redraw = () => renderCanvas(canvas, viewState);
@@ -83,6 +90,26 @@ export function mountRoulette(app: HTMLDivElement) {
     }
 
     if (activeBallOrbit) {
+      const dueEvents =
+        collectRouletteSimulationEvents(
+          simulationEvents,
+          lastEventElapsedMs,
+          elapsedMs,
+        );
+
+      dueEvents.forEach((event) => {
+        canvas.dispatchEvent(
+          new CustomEvent<RouletteSimulationEvent>(
+            "roulette-simulation-event",
+            {
+              detail: event,
+              bubbles: true,
+            },
+          ),
+        );
+      });
+      lastEventElapsedMs = elapsedMs;
+
       const ballSample = sampleBallOrbit(activeBallOrbit, elapsedMs);
       viewState.ballAngle = ballSample.angle;
       viewState.ballRadiusRatio = ballSample.radiusRatio;
@@ -138,6 +165,12 @@ export function mountRoulette(app: HTMLDivElement) {
       viewState.ballAngle,
       activeRotorSpin,
     );
+
+    simulationEvents =
+      createRouletteSimulationEvents(
+        activeBallOrbit,
+      );
+    lastEventElapsedMs = -1;
 
     const initialBallSample = sampleBallOrbit(activeBallOrbit, 0);
     viewState.ballAngle = initialBallSample.angle;
