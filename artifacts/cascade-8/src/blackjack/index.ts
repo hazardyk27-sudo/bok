@@ -85,3 +85,16 @@ export type {
   BlackjackPlayerActionMessage,
   BlackjackPlayerActionType,
 } from "./playerActionsClient";
+
+export {
+  buildBlackjackBettingActionMessage,
+  createBlackjackBettingClient,
+} from "./bettingClient";
+export type {
+  BlackjackBettingActionMessage,
+  BlackjackBettingActionType,
+  BlackjackBettingClient,
+  BlackjackBettingFeedback,
+  BlackjackBettingState,
+  BlackjackPendingBettingAction,
+} from "./bettingClient";

@@ -5,8 +5,10 @@ import {
   BLACKJACK_SHELL_MARKUP,
   BLACKJACK_TABLE_SEAT_NUMBERS,
   bindBlackjackRealtimeView,
+  buildBlackjackBettingActionMessage,
   buildBlackjackPlayerActionMessage,
   buildBlackjackTableViewModelFromSnapshot,
+  createBlackjackBettingClient,
   createBlackjackPlayerActionClient,
   buildBlackjackWebSocketUrl,
   connectBlackjackRealtimeElement,
@@ -615,7 +617,7 @@ describe("blackjack responsive table foundation", () => {
       "wss://blackjack.example/api/blackjack/ws",
     );
     expect(createdUrls).toEqual([connection.url]);
-    expect(listeners.size).toBe(2);
+    expect(listeners.size).toBe(3);
 
     connection.close();
     connection.close();
@@ -1018,6 +1020,184 @@ describe("blackjack responsive table foundation", () => {
     });
     expect(rejected).toContain("TABLE UPDATED · TRY AGAIN");
     expect(rejected).toContain('data-action-tone="error"');
+  });
+
+
+  it("submits realtime betting actions and applies private authoritative bet/balance after snapshot advance", () => {
+    const listeners = new Set<(event: MessageEvent<unknown>) => void>();
+    const sent: string[] = [];
+    const socket: BlackjackRealtimeSocketLike = {
+      send:(data)=>sent.push(data),
+      addEventListener:(_type,listener)=>listeners.add(listener),
+      removeEventListener:(_type,listener)=>listeners.delete(listener),
+    };
+
+    const snapshot: BlackjackPublicSnapshotViewSource = {
+      serverTimeMs:1_000,
+      tableId:"bet-ui-table",
+      phase:"BETTING",
+      maxSeats:5,
+      seats:[
+        { seatNumber:1, playerId:null },
+        { seatNumber:2, playerId:null },
+        { seatNumber:3, playerId:"local-player" },
+        { seatNumber:4, playerId:null },
+        { seatNumber:5, playerId:null },
+      ],
+      players:[{
+        playerId:"local-player",
+        seatNumber:3,
+        status:"BETTING",
+        connected:true,
+      }],
+      round:{
+        roundId:"round-bet-ui",
+        phase:"BETTING",
+        hands:[],
+        dealer:{ cards:[], holeCardRevealed:false },
+        currentTurn:null,
+        bettingClosesAtMs:10_000,
+      },
+      stateVersion:2,
+      eventSequence:3,
+    };
+
+    const context={
+      localPlayerId:"local-player",
+      availableBalanceCents:500_000,
+    };
+    const client=createBlackjackBettingClient({
+      socket,
+      getSnapshot:()=>snapshot,
+      getViewContext:()=>context,
+      createActionId:()=>"bet-ui-1",
+    });
+
+    const message=client.submit("PLACE_BET",100_000);
+    expect(message).toEqual({
+      type:"PLACE_BET",
+      actionId:"bet-ui-1",
+      expectedStateVersion:2,
+      roundId:"round-bet-ui",
+      seatNumber:3,
+      chipValueCents:100_000,
+    });
+    expect(JSON.parse(sent[0])).toEqual(message);
+    expect(client.isPending()).toBe(true);
+
+    client.receive({
+      type:"ACTION_ACCEPTED",
+      actionId:"bet-ui-1",
+      replayed:false,
+      stateVersion:3,
+      eventSequence:4,
+      betting:{
+        roundId:"round-bet-ui",
+        status:"OPEN",
+        betCents:100_000,
+        availableBalanceCents:400_000,
+      },
+    });
+    expect(client.isPending()).toBe(true);
+
+    client.receive({
+      type:"snapshot",
+      snapshot:{ ...snapshot, stateVersion:3, eventSequence:4 },
+    });
+
+    expect(client.isPending()).toBe(false);
+    expect(client.getState()).toEqual({
+      roundId:"round-bet-ui",
+      status:"OPEN",
+      betCents:100_000,
+      availableBalanceCents:400_000,
+    });
+
+    const state=client.getState();
+    const model=buildBlackjackTableViewModelFromSnapshot(
+      { ...snapshot, stateVersion:3, eventSequence:4 },
+      {
+        ...context,
+        availableBalanceCents:state?.availableBalanceCents,
+        bettingBetCents:state?.betCents,
+        bettingStatus:state?.status,
+        selectedChipCredits:1_000,
+      },
+    );
+    expect(model.balanceLabel).toBe("4K");
+    expect(model.betLabel).toBe("1K");
+    expect(model.bettingPanel).toMatchObject({
+      selectedChipCredits:1_000,
+      totalBetLabel:"1K",
+      enabled:true,
+      canClear:true,
+      canReady:true,
+    });
+
+    client.detach();
+    expect(listeners.size).toBe(0);
+  });
+
+  it("builds CLEAR_BET and READY without trusting client financial identifiers", () => {
+    const snapshot: BlackjackPublicSnapshotViewSource = {
+      serverTimeMs:1_000,
+      tableId:"bet-message-table",
+      phase:"BETTING",
+      maxSeats:5,
+      seats:[
+        { seatNumber:1, playerId:"local-player" },
+        { seatNumber:2, playerId:null },
+        { seatNumber:3, playerId:null },
+        { seatNumber:4, playerId:null },
+        { seatNumber:5, playerId:null },
+      ],
+      players:[{
+        playerId:"local-player",
+        seatNumber:1,
+        status:"BETTING",
+        connected:true,
+      }],
+      round:{
+        roundId:"round-message",
+        phase:"BETTING",
+        hands:[],
+        dealer:{ cards:[], holeCardRevealed:false },
+        currentTurn:null,
+        bettingClosesAtMs:8_000,
+      },
+      stateVersion:5,
+      eventSequence:9,
+    };
+
+    const context={ localPlayerId:"local-player" };
+    expect(
+      buildBlackjackBettingActionMessage(
+        snapshot,
+        context,
+        "CLEAR_BET",
+        "clear-ui",
+      ),
+    ).toEqual({
+      type:"CLEAR_BET",
+      actionId:"clear-ui",
+      expectedStateVersion:5,
+      roundId:"round-message",
+      seatNumber:1,
+    });
+    expect(
+      buildBlackjackBettingActionMessage(
+        snapshot,
+        context,
+        "READY",
+        "ready-ui",
+      ),
+    ).toEqual({
+      type:"READY",
+      actionId:"ready-ui",
+      expectedStateVersion:5,
+      roundId:"round-message",
+      seatNumber:1,
+    });
   });
 
 });

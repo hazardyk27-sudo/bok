@@ -1,4 +1,8 @@
-import { BLACKJACK_DEFAULT_BETTING_PANEL, renderBlackjackBettingPanel } from "./bettingView";
+import {
+  BLACKJACK_DEFAULT_BETTING_PANEL,
+  renderBlackjackBettingPanel,
+  type BlackjackBettingPanelViewModel,
+} from "./bettingView";
 
 export const BLACKJACK_TABLE_SEAT_NUMBERS = [1, 2, 3, 4, 5] as const;
 
@@ -29,6 +33,7 @@ export type BlackjackTableViewModel = Readonly<{
   enabledActions?: readonly BlackjackTableAction[];
   actionStatusLabel?: string | null;
   actionStatusTone?: "neutral" | "success" | "error";
+  bettingPanel?: BlackjackBettingPanelViewModel;
   seats: readonly BlackjackTableSeatViewModel[];
 }>;
 
@@ -210,10 +215,12 @@ export function renderBlackjackTableShell(
           </div>
         </div>
 
-        ${renderBlackjackBettingPanel({
-          ...BLACKJACK_DEFAULT_BETTING_PANEL,
-          totalBetLabel: model.betLabel,
-        })}
+        ${renderBlackjackBettingPanel(
+          model.bettingPanel ?? {
+            ...BLACKJACK_DEFAULT_BETTING_PANEL,
+            totalBetLabel: model.betLabel,
+          },
+        )}
 
         <div class="blackjack-actions" aria-label="Player actions">
           <button type="button" data-blackjack-action="HIT"${actionDisabled("HIT")}>HIT</button>

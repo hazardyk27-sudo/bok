@@ -106,6 +106,10 @@ export type BlackjackSnapshotViewContext = Readonly<{
   actionPending?: boolean;
   actionStatusLabel?: string | null;
   actionStatusTone?: "neutral" | "success" | "error";
+  bettingBetCents?: number | null;
+  bettingStatus?: "OPEN" | "READY" | "LOCKED" | null;
+  bettingPending?: boolean;
+  selectedChipCredits?: number;
 }>;
 
 function assertSafeNonNegativeInteger(label: string, value: number): void {
@@ -327,6 +331,12 @@ export function buildBlackjackTableViewModelFromSnapshot(
       ? []
       : roundHands.filter((hand) => hand.seatNumber === localSeatNumber);
   const localBetCents = sumSeatBetsCents(localHands);
+  const localBettingCents =
+    snapshot.phase === "BETTING" &&
+    context.bettingBetCents !== null &&
+    context.bettingBetCents !== undefined
+      ? context.bettingBetCents
+      : localBetCents;
 
   const balanceLabel =
     context.availableBalanceCents === null ||
@@ -334,10 +344,28 @@ export function buildBlackjackTableViewModelFromSnapshot(
       ? "—"
       : formatCreditsFromCents(context.availableBalanceCents);
 
+  const localBettingStatus =
+    context.bettingStatus ??
+    (localPlayer?.status === "READY" ? "READY" : "OPEN");
+  const bettingOpen =
+    snapshot.phase === "BETTING" &&
+    localPlayer !== null &&
+    localBettingStatus === "OPEN";
+  const bettingPending=context.bettingPending === true;
+  const bettingClosesLabel =
+    snapshot.phase === "BETTING" &&
+    snapshot.round?.bettingClosesAtMs !== null &&
+    snapshot.round?.bettingClosesAtMs !== undefined
+      ? remainingSeconds(
+          snapshot.serverTimeMs,
+          snapshot.round.bettingClosesAtMs,
+        ) + "s"
+      : "WAITING";
+
   return Object.freeze({
     phaseLabel: formatPhaseLabel(snapshot.phase),
     balanceLabel,
-    betLabel: formatCreditsFromCents(localBetCents),
+    betLabel: formatCreditsFromCents(localBettingCents),
     turnLabel: resolveTurnLabel(snapshot, localSeatNumber),
     dealerTotalLabel: resolveDealerLabel(snapshot),
     dealerCards: Object.freeze(
@@ -350,6 +378,17 @@ export function buildBlackjackTableViewModelFromSnapshot(
     enabledActions: getBlackjackAvailablePlayerActions(snapshot, context),
     actionStatusLabel: context.actionStatusLabel ?? null,
     actionStatusTone: context.actionStatusTone ?? "neutral",
+    bettingPanel: Object.freeze({
+      selectedChipCredits: context.selectedChipCredits ?? 100,
+      totalBetLabel: formatCreditsFromCents(localBettingCents),
+      readyLabel: localBettingStatus === "READY" ? "READY ✓" : "READY",
+      bettingClosesLabel,
+      enabled: bettingOpen && !bettingPending,
+      pending: bettingPending,
+      canClear: bettingOpen && localBettingCents > 0 && !bettingPending,
+      canReady: bettingOpen && localBettingCents > 0 && !bettingPending,
+      availableBalanceCents: context.availableBalanceCents ?? null,
+    }),
     seats: Object.freeze(seats),
   });
 }
