@@ -3,6 +3,7 @@ import {
   CENTER_MECHANISM_STYLE,
   EUROPEAN_WHEEL_SEQUENCE,
   NUMBER_RING_STYLE,
+  OUTER_RIM_STYLE,
   POCKET_RING_STYLE,
   RED_NUMBERS,
   SEGMENT_COUNT,
@@ -38,6 +39,15 @@ describe("roulette 2d wheel geometry", () => {
     expect(WHEEL_GEOMETRY.numberInnerRadius).toBe(WHEEL_GEOMETRY.pocketOuterRadius);
     expect(WHEEL_GEOMETRY.pocketOuterRadius).toBeGreaterThan(WHEEL_GEOMETRY.pocketInnerRadius);
     expect(WHEEL_GEOMETRY.pocketInnerRadius).toBeGreaterThan(WHEEL_GEOMETRY.centerDiscRadius);
+  });
+
+  it("keeps outer wood material guides inside the stator annulus", () => {
+    expect(OUTER_RIM_STYLE.panelCount).toBe(WHEEL_GEOMETRY.markerCount);
+    expect(OUTER_RIM_STYLE.grainInnerRadius).toBeGreaterThan(WHEEL_GEOMETRY.outerWoodInnerRadius);
+    expect(OUTER_RIM_STYLE.grainOuterRadius).toBeLessThan(WHEEL_GEOMETRY.outerRadius);
+    expect(OUTER_RIM_STYLE.innerBevelRadius).toBeGreaterThan(WHEEL_GEOMETRY.numberOuterRadius);
+    expect(OUTER_RIM_STYLE.outerBevelRadius).toBeLessThanOrEqual(WHEEL_GEOMETRY.outerRadius);
+    expect(OUTER_RIM_STYLE.varnishRadius).toBeGreaterThan(OUTER_RIM_STYLE.grainInnerRadius);
   });
 
   it("keeps inward number labels centered inside the number ring", () => {

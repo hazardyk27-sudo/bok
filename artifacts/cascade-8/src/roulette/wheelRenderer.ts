@@ -2,6 +2,7 @@ import {
   CENTER_MECHANISM_STYLE,
   EUROPEAN_WHEEL_SEQUENCE,
   NUMBER_RING_STYLE,
+  OUTER_RIM_STYLE,
   POCKET_RING_STYLE,
   SEGMENT_ANGLE,
   TOP_SEGMENT_CENTER,
@@ -57,6 +58,17 @@ function drawCircleStroke(
   ctx.stroke();
 }
 
+function clipAnnulus(
+  ctx: CanvasRenderingContext2D,
+  innerRadius: number,
+  outerRadius: number,
+) {
+  ctx.beginPath();
+  ctx.arc(0, 0, outerRadius, 0, TAU);
+  ctx.arc(0, 0, innerRadius, 0, TAU, true);
+  ctx.clip("evenodd");
+}
+
 function drawGoldLeaf(
   ctx: CanvasRenderingContext2D,
   radius: number,
@@ -68,60 +80,192 @@ function drawGoldLeaf(
   ctx.translate(point.x, point.y);
   ctx.rotate(angle + Math.PI / 2);
 
-  const width = scale * 0.044;
-  const height = scale * 0.021;
+  const width = scale * OUTER_RIM_STYLE.markerWidth;
+  const height = scale * OUTER_RIM_STYLE.markerHeight;
 
-  const gradient = ctx.createLinearGradient(-width, 0, width, 0);
-  gradient.addColorStop(0, WHEEL_COLORS.goldDark);
-  gradient.addColorStop(0.45, WHEEL_COLORS.goldLight);
-  gradient.addColorStop(1, WHEEL_COLORS.gold);
+  ctx.shadowColor = "rgba(47, 22, 2, 0.46)";
+  ctx.shadowBlur = scale * 0.010;
+  ctx.shadowOffsetY = scale * 0.006;
+
+  const gradient = ctx.createLinearGradient(-width, -height, width, height);
+  gradient.addColorStop(0, WHEEL_COLORS.goldShadow);
+  gradient.addColorStop(0.22, WHEEL_COLORS.gold);
+  gradient.addColorStop(0.52, WHEEL_COLORS.goldSpecular);
+  gradient.addColorStop(0.76, WHEEL_COLORS.goldLight);
+  gradient.addColorStop(1, WHEEL_COLORS.goldDark);
 
   ctx.beginPath();
   ctx.moveTo(-width, 0);
-  ctx.quadraticCurveTo(0, -height, width, 0);
-  ctx.quadraticCurveTo(0, height, -width, 0);
+  ctx.quadraticCurveTo(-width * 0.18, -height, width, 0);
+  ctx.quadraticCurveTo(-width * 0.18, height, -width, 0);
   ctx.closePath();
   ctx.fillStyle = gradient;
   ctx.fill();
+
+  ctx.shadowColor = "transparent";
   ctx.strokeStyle = WHEEL_COLORS.goldDark;
-  ctx.lineWidth = Math.max(1, scale * 0.0022);
+  ctx.lineWidth = Math.max(1, scale * 0.002);
   ctx.stroke();
+
+  ctx.beginPath();
+  ctx.moveTo(-width * 0.56, -height * 0.14);
+  ctx.quadraticCurveTo(0, -height * 0.52, width * 0.58, -height * 0.06);
+  ctx.strokeStyle = "rgba(255, 244, 181, 0.78)";
+  ctx.lineWidth = Math.max(0.7, scale * 0.0014);
+  ctx.stroke();
+
   ctx.restore();
+}
+
+function drawOuterWoodGrain(ctx: CanvasRenderingContext2D, radius: number) {
+  const inner = radius * OUTER_RIM_STYLE.grainInnerRadius;
+  const outer = radius * OUTER_RIM_STYLE.grainOuterRadius;
+
+  ctx.save();
+  clipAnnulus(ctx, inner, outer);
+  ctx.lineCap = "round";
+
+  for (let index = 0; index < OUTER_RIM_STYLE.grainCount; index += 1) {
+    const t = index / Math.max(1, OUTER_RIM_STYLE.grainCount - 1);
+    const grainRadius = inner + (outer - inner) * t;
+    const phase = index * 1.61803398875;
+    const start = -Math.PI * 0.88 + Math.sin(phase) * 0.38;
+    const span = Math.PI * (1.12 + 0.34 * Math.cos(phase * 0.77));
+
+    ctx.beginPath();
+    ctx.arc(0, 0, grainRadius, start, start + span);
+    ctx.strokeStyle =
+      index % 3 === 0
+        ? `rgba(46, 14, 6, ${OUTER_RIM_STYLE.grainOpacity})`
+        : `rgba(215, 123, 54, ${OUTER_RIM_STYLE.grainOpacity * 0.52})`;
+    ctx.lineWidth = Math.max(0.65, radius * (0.0013 + (index % 4) * 0.00025));
+    ctx.stroke();
+  }
+
+  ctx.restore();
+}
+
+function drawOuterWoodVarnish(ctx: CanvasRenderingContext2D, radius: number) {
+  const inner = radius * WHEEL_GEOMETRY.outerWoodInnerRadius;
+  const outer = radius;
+
+  ctx.save();
+  clipAnnulus(ctx, inner, outer);
+
+  const sheen = ctx.createRadialGradient(
+    -radius * 0.26,
+    -radius * 0.34,
+    radius * 0.12,
+    -radius * 0.04,
+    -radius * 0.05,
+    radius * 0.95,
+  );
+  sheen.addColorStop(0, "rgba(255, 211, 143, 0.26)");
+  sheen.addColorStop(0.30, "rgba(255, 173, 92, 0.10)");
+  sheen.addColorStop(0.62, "rgba(82, 20, 5, 0.04)");
+  sheen.addColorStop(1, "rgba(24, 7, 3, 0.30)");
+
+  ctx.beginPath();
+  ctx.arc(0, 0, outer, 0, TAU);
+  ctx.fillStyle = sheen;
+  ctx.fill();
+
+  drawCircleStroke(
+    ctx,
+    radius * OUTER_RIM_STYLE.varnishRadius,
+    "rgba(255, 230, 183, 0.08)",
+    radius * OUTER_RIM_STYLE.varnishWidth,
+  );
+
+  ctx.restore();
+}
+
+function drawOuterWoodBevels(ctx: CanvasRenderingContext2D, radius: number) {
+  drawCircleStroke(
+    ctx,
+    radius * OUTER_RIM_STYLE.outerBevelRadius,
+    WHEEL_COLORS.goldShadow,
+    radius * 0.015,
+  );
+  drawCircleStroke(
+    ctx,
+    radius * OUTER_RIM_STYLE.outerHighlightRadius,
+    WHEEL_COLORS.goldLight,
+    radius * 0.0065,
+  );
+  drawCircleStroke(
+    ctx,
+    radius * (OUTER_RIM_STYLE.outerHighlightRadius - 0.010),
+    "rgba(255, 246, 197, 0.56)",
+    radius * 0.0022,
+  );
+
+  drawCircleStroke(
+    ctx,
+    radius * OUTER_RIM_STYLE.innerShadowRadius,
+    "rgba(45, 18, 3, 0.82)",
+    radius * 0.018,
+  );
+  drawCircleStroke(
+    ctx,
+    radius * OUTER_RIM_STYLE.innerBevelRadius,
+    WHEEL_COLORS.goldDark,
+    radius * 0.012,
+  );
+  drawCircleStroke(
+    ctx,
+    radius * (OUTER_RIM_STYLE.innerBevelRadius - 0.005),
+    WHEEL_COLORS.goldLight,
+    radius * 0.0052,
+  );
 }
 
 function drawOuterWood(ctx: CanvasRenderingContext2D, radius: number) {
   const wood = ctx.createRadialGradient(
-    -radius * 0.25,
-    -radius * 0.3,
-    radius * 0.16,
+    -radius * 0.26,
+    -radius * 0.31,
+    radius * 0.10,
     0,
     0,
     radius,
   );
-  wood.addColorStop(0, WHEEL_COLORS.woodLight);
-  wood.addColorStop(0.48, WHEEL_COLORS.woodMid);
-  wood.addColorStop(1, WHEEL_COLORS.woodDark);
+  wood.addColorStop(0, WHEEL_COLORS.woodGlow);
+  wood.addColorStop(0.20, WHEEL_COLORS.woodLight);
+  wood.addColorStop(0.52, WHEEL_COLORS.woodMid);
+  wood.addColorStop(0.82, WHEEL_COLORS.woodDark);
+  wood.addColorStop(1, WHEEL_COLORS.woodDeep);
 
   ctx.save();
-  ctx.shadowColor = "rgba(23, 10, 5, 0.32)";
-  ctx.shadowBlur = radius * 0.045;
-  ctx.shadowOffsetY = radius * 0.018;
+  ctx.shadowColor = "rgba(23, 10, 5, 0.34)";
+  ctx.shadowBlur = radius * 0.050;
+  ctx.shadowOffsetY = radius * 0.020;
   ctx.beginPath();
   ctx.arc(0, 0, radius, 0, TAU);
   ctx.fillStyle = wood;
   ctx.fill();
   ctx.restore();
 
-  const inner = radius * WHEEL_GEOMETRY.outerWoodInnerRadius;
-  const panelInner = inner * 1.012;
-  const panelOuter = radius * 0.972;
-  ctx.strokeStyle = WHEEL_COLORS.woodLine;
-  ctx.lineWidth = Math.max(1, radius * 0.0032);
+  drawOuterWoodGrain(ctx, radius);
+  drawOuterWoodVarnish(ctx, radius);
 
-  for (let index = 0; index < 8; index += 1) {
-    const angle = -Math.PI / 2 + index * (TAU / 8);
+  const inner = radius * WHEEL_GEOMETRY.outerWoodInnerRadius;
+  const panelInner = inner * 1.018;
+  const panelOuter = radius * 0.964;
+
+  for (let index = 0; index < OUTER_RIM_STYLE.panelCount; index += 1) {
+    const angle = -Math.PI / 2 + index * (TAU / OUTER_RIM_STYLE.panelCount);
     const a = polar(panelInner, angle);
     const b = polar(panelOuter, angle);
+
+    ctx.strokeStyle = "rgba(35, 10, 4, 0.52)";
+    ctx.lineWidth = Math.max(1, radius * 0.0042);
+    ctx.beginPath();
+    ctx.moveTo(a.x, a.y);
+    ctx.lineTo(b.x, b.y);
+    ctx.stroke();
+
+    ctx.strokeStyle = "rgba(214, 116, 50, 0.20)";
+    ctx.lineWidth = Math.max(0.7, radius * 0.0015);
     ctx.beginPath();
     ctx.moveTo(a.x, a.y);
     ctx.lineTo(b.x, b.y);
@@ -137,14 +281,7 @@ function drawOuterWood(ctx: CanvasRenderingContext2D, radius: number) {
     );
   }
 
-  drawCircleStroke(ctx, radius * 0.992, WHEEL_COLORS.goldLight, radius * 0.007);
-  drawCircleStroke(ctx, radius * 0.979, WHEEL_COLORS.goldDark, radius * 0.003);
-  drawCircleStroke(
-    ctx,
-    radius * WHEEL_GEOMETRY.outerWoodInnerRadius,
-    WHEEL_COLORS.goldLight,
-    radius * 0.009,
-  );
+  drawOuterWoodBevels(ctx, radius);
 }
 
 function createNumberSegmentGradient(
@@ -451,6 +588,37 @@ function drawPocketRing(ctx: CanvasRenderingContext2D, radius: number) {
   drawPocketRingRails(ctx, inner, outer, radius);
 }
 
+function drawCenterWoodGrain(
+  ctx: CanvasRenderingContext2D,
+  discRadius: number,
+  radius: number,
+) {
+  ctx.save();
+  ctx.beginPath();
+  ctx.arc(0, 0, discRadius * 0.97, 0, TAU);
+  ctx.clip();
+
+  for (let index = 0; index < 12; index += 1) {
+    const ringRadius = discRadius * (0.22 + index * 0.063);
+    ctx.beginPath();
+    ctx.arc(
+      discRadius * 0.12,
+      -discRadius * 0.08,
+      ringRadius,
+      -Math.PI * 0.72,
+      Math.PI * 0.55,
+    );
+    ctx.strokeStyle =
+      index % 2 === 0
+        ? "rgba(39, 10, 4, 0.22)"
+        : "rgba(207, 104, 44, 0.16)";
+    ctx.lineWidth = Math.max(0.6, radius * 0.0014);
+    ctx.stroke();
+  }
+
+  ctx.restore();
+}
+
 function drawCenterDisc(ctx: CanvasRenderingContext2D, radius: number) {
   const discRadius = radius * WHEEL_GEOMETRY.centerDiscRadius;
   const wood = ctx.createRadialGradient(
@@ -461,17 +629,25 @@ function drawCenterDisc(ctx: CanvasRenderingContext2D, radius: number) {
     0,
     discRadius,
   );
-  wood.addColorStop(0, "#9c4d21");
-  wood.addColorStop(0.55, "#6f2c13");
-  wood.addColorStop(1, "#4b1b0d");
+  wood.addColorStop(0, WHEEL_COLORS.woodGlow);
+  wood.addColorStop(0.34, "#9c4d21");
+  wood.addColorStop(0.68, "#6f2c13");
+  wood.addColorStop(1, WHEEL_COLORS.woodDeep);
 
+  ctx.save();
+  ctx.shadowColor = "rgba(30, 10, 3, 0.28)";
+  ctx.shadowBlur = radius * 0.012;
+  ctx.shadowOffsetY = radius * 0.007;
   ctx.beginPath();
   ctx.arc(0, 0, discRadius, 0, TAU);
   ctx.fillStyle = wood;
   ctx.fill();
+  ctx.restore();
+
+  drawCenterWoodGrain(ctx, discRadius, radius);
 
   ctx.save();
-  ctx.strokeStyle = "rgba(39, 11, 6, 0.5)";
+  ctx.strokeStyle = "rgba(39, 11, 6, 0.46)";
   ctx.lineWidth = Math.max(1, radius * 0.0025);
   for (let index = 0; index < 8; index += 1) {
     const angle = index * (TAU / 8);
@@ -483,7 +659,9 @@ function drawCenterDisc(ctx: CanvasRenderingContext2D, radius: number) {
   }
   ctx.restore();
 
-  drawCircleStroke(ctx, discRadius, WHEEL_COLORS.goldLight, radius * 0.009);
+  drawCircleStroke(ctx, discRadius, WHEEL_COLORS.goldShadow, radius * 0.013);
+  drawCircleStroke(ctx, discRadius * 0.987, WHEEL_COLORS.goldLight, radius * 0.006);
+  drawCircleStroke(ctx, discRadius * 0.970, "rgba(255, 241, 179, 0.42)", radius * 0.002);
   drawCircleStroke(
     ctx,
     radius * WHEEL_GEOMETRY.centerGuideRadius,

@@ -21,6 +21,22 @@ export const WHEEL_GEOMETRY = {
   markerCount: 8,
 } as const;
 
+export const OUTER_RIM_STYLE = {
+  panelCount: 8,
+  grainCount: 26,
+  grainInnerRadius: 0.778,
+  grainOuterRadius: 0.968,
+  grainOpacity: 0.24,
+  outerBevelRadius: 0.988,
+  outerHighlightRadius: 0.975,
+  innerBevelRadius: 0.760,
+  innerShadowRadius: 0.773,
+  varnishRadius: 0.900,
+  varnishWidth: 0.130,
+  markerWidth: 0.045,
+  markerHeight: 0.021,
+} as const;
+
 export const NUMBER_RING_STYLE = {
   textRadius: 0.667,
   fontSize: 0.059,
@@ -55,9 +71,11 @@ export const CENTER_MECHANISM_STYLE = {
 } as const;
 
 export const WHEEL_COLORS = {
+  woodDeep: "#351006",
   woodDark: "#57210f",
   woodMid: "#873a17",
   woodLight: "#a95820",
+  woodGlow: "#c67432",
   woodLine: "rgba(67, 23, 9, 0.45)",
   goldShadow: "#6d3f05",
   goldDark: "#8d5708",
