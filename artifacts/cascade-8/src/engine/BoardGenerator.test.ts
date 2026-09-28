@@ -7,6 +7,7 @@ import {
   BASE_INITIAL_CORE_CHANCE,
   BASE_INITIAL_SCATTER_CHANCE,
   BASE_REEL_CONFIG,
+  MAX_VISIBLE_NORMAL_SYMBOLS,
   NORMAL_PAIR_COPY_CHANCE,
   NORMAL_THIRD_REPEAT_WEIGHT_FACTOR,
 } from "../config/GameConfig";
@@ -15,6 +16,17 @@ const alwaysLast: RandomSource = { nextFloat: () => 0.999999 };
 const alwaysFirst: RandomSource = { nextFloat: () => 0 };
 
 describe("board generation", () => {
+  it("caps both Base and Free Spin initial boards at seven distinct normal symbols", () => {
+    for (const mode of ["base", "bonus"] as const) {
+      for (let seed = 0; seed < 500; seed += 1) {
+        const board = generateInitialBoard(new SeededRNG(`seven-symbol-${mode}-${seed}`), mode);
+        const distinct = new Set(
+          board.flat().map(getNormalSymbol).filter((symbol): symbol is NonNullable<typeof symbol> => symbol !== null),
+        );
+        expect(distinct.size).toBeLessThanOrEqual(MAX_VISIBLE_NORMAL_SYMBOLS);
+      }
+    }
+  });
   it("generates exactly 30 initial cells", () => {
     expect(generateInitialBoard(alwaysFirst).flat()).toHaveLength(30);
   });
