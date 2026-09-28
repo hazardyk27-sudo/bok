@@ -1054,7 +1054,7 @@ button {
 
 
 /* Part 28 — reference-led portrait mobile table layout */
-@media (max-width: 640px) {
+@media (max-width: 900px) {
   .roulette-page {
     --wheel-size: min(80vw, 340px);
   }
