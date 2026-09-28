@@ -3,14 +3,12 @@ import {
   type BlackjackActionQueue,
 } from "./actionQueue";
 import type {
-  BlackjackCoordinatedAction,
   BlackjackPlayerActionCoordinator,
 } from "./actionCoordinator";
 import type { BlackjackShoe } from "./domain";
 import { buildBlackjackPublicSnapshot } from "./publicSnapshot";
 import type { BlackjackRealtimeIdentity } from "./realtime";
 import type {
-  BlackjackRealtimePlayerActionAcknowledge,
   BlackjackRealtimePlayerActionHandlerResult,
   BlackjackRealtimePlayerActionTransactionHandler,
 } from "./realtimeActions";

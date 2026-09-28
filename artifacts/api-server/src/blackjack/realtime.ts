@@ -21,6 +21,7 @@ import {
 import {
   parseBlackjackRealtimePlayerAction,
   type BlackjackRealtimePlayerActionHandler,
+  type BlackjackRealtimePlayerActionHandlerResult,
   type BlackjackRealtimePlayerActionTransactionHandler,
 } from "./realtimeActions";
 
@@ -202,9 +203,7 @@ export function attachBlackjackWebSocket(
       });
 
       const acknowledge = (
-        result: Awaited<
-          ReturnType<NonNullable<BlackjackRealtimeOptions["handlePlayerAction"]>>
-        >,
+        result: BlackjackRealtimePlayerActionHandlerResult,
       ) => {
         send(socket, {
           type: "ACTION_ACCEPTED",

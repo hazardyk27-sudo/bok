@@ -3,7 +3,6 @@ import {
   BlackjackPlayerActionCoordinator,
   type BlackjackCoordinatedAction,
 } from "./actionCoordinator";
-import { createBlackjackActionProtocolState } from "./actionProtocol";
 import type {
   BlackjackCard,
   BlackjackRound,

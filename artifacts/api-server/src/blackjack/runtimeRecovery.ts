@@ -3,6 +3,7 @@ import {
   type BlackjackCoordinatorAccount,
 } from "./actionCoordinator";
 import type { BlackjackReconnectRegistry } from "./reconnect";
+import type { BlackjackRealtimeOptions } from "./realtime";
 import {
   recoverBlackjackRuntime,
   resumeBlackjackRecoveredRuntime,
@@ -35,6 +36,12 @@ export type BlackjackRecoveredScheduledRuntime = Readonly<{
   driver: BlackjackRoundRealtimeDriver;
   scheduler: BlackjackRoundScheduler;
   reconnectRegistry: BlackjackReconnectRegistry;
+  realtimeOptions: Pick<
+    BlackjackRealtimeOptions,
+    | "handlePlayerActionTransaction"
+    | "onIdentityConnected"
+    | "onIdentityDisconnected"
+  >;
   getDurableRuntime: () => BlackjackDurableRuntimeState;
   stop: () => void;
 }>;
@@ -186,6 +193,12 @@ export async function recoverAndStartBlackjackRoundRuntime(input: {
     get reconnectRegistry(){
       return coordinator.getReconnectRegistry();
     },
+    realtimeOptions:Object.freeze({
+      handlePlayerActionTransaction:
+        authority.handlePlayerActionTransaction,
+      onIdentityConnected:authority.onIdentityConnected,
+      onIdentityDisconnected:authority.onIdentityDisconnected,
+    }),
     getDurableRuntime,
     stop:()=>activeScheduler.stop(),
   });
