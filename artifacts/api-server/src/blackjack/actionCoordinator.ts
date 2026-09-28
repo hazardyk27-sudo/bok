@@ -232,6 +232,37 @@ function freezeAccount(
   return Object.freeze({ ...account });
 }
 
+function nextBlackjackFreshRoundNumber(
+  table: BlackjackTable,
+  protocol: BlackjackActionProtocolState,
+): number {
+  let highest=table.round?.roundNumber ?? 0;
+  const prefix=table.tableId+":round-";
+
+  for(const receipt of protocol.receipts){
+    const roundId=receipt.roundId;
+    if(roundId===null || !roundId.startsWith(prefix)) continue;
+    const suffix=roundId.slice(prefix.length);
+    if(!/^\d+$/.test(suffix)) continue;
+    const parsed=Number(suffix);
+    if(
+      Number.isSafeInteger(parsed) &&
+      parsed>highest
+    ){
+      highest=parsed;
+    }
+  }
+
+  const next=highest+1;
+  if(!Number.isSafeInteger(next) || next<1){
+    throw new RangeError(
+      "Blackjack fresh roundNumber cannot advance safely",
+    );
+  }
+  return next;
+}
+
+
 export class BlackjackPlayerActionCoordinator {
   private tableState: BlackjackTable;
   private protocolState: BlackjackActionProtocolState;
@@ -504,9 +535,13 @@ export class BlackjackPlayerActionCoordinator {
             "Blackjack initial betting deadline exceeds safe integer range",
           );
         }
+        const roundNumber=nextBlackjackFreshRoundNumber(
+          table,
+          this.protocolState,
+        );
         const round=Object.freeze({
-          roundId:table.tableId+":round-1",
-          roundNumber:1,
+          roundId:table.tableId+":round-"+roundNumber,
+          roundNumber,
           phase:"BETTING" as const,
           activeSeatOrder:Object.freeze([]),
           hands:Object.freeze([]),

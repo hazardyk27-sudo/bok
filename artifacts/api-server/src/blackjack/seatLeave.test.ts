@@ -181,6 +181,20 @@ describe("blackjack seat leave and rejoin",()=>{
     })).resolves.toMatchObject({replayed:false});
     expect(game.getTable().phase).toBe("TABLE_IDLE");
     expect(game.getTable().players).toEqual([]);
+
+    await game.claimSeat({
+      account:account("p1","u1"),
+      sessionId:"s2",
+      seatNumber:2,
+      nowMs:21_000,
+    });
+    expect(game.getTable()).toMatchObject({
+      phase:"BETTING",
+      round:{
+        roundId:"leave-settled-table:round-2",
+        roundNumber:2,
+      },
+    });
   });
 
 });
