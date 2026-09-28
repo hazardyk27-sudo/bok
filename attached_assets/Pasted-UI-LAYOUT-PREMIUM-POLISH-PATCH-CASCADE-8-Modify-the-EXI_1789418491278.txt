@@ -1,0 +1,373 @@
+UI / LAYOUT / PREMIUM POLISH PATCH — CASCADE 8
+
+Modify the EXISTING Cascade 8 project.
+
+Do NOT change:
+- RNG
+- payout math
+- symbol probabilities
+- tumble logic
+- bonus logic
+
+This task is ONLY about UI / layout / presentation polish.
+
+The current game is functional, but several areas still feel prototype-level instead of premium.
+
+==================================================
+1. TUMBLE WIN PANEL REFINEMENT
+==================================================
+
+The current tumble result panel needs cleanup.
+
+Current issue:
+- when there is no multiplier effect beyond x1,
+  we still show a useless equation like:
+  9,150.00 × 1 = 9,150.00
+
+This is unnecessary visual clutter.
+
+Required behavior:
+
+A) IF multiplier is exactly 1x:
+- show only the main win amount
+- do NOT show the multiplication line
+- do NOT show unnecessary calculation text
+
+Example:
+TUMBLE WIN
+9,150.00
+
+That is enough.
+
+B) IF multiplier is greater than 1x:
+- show the main final amount
+- show one clean premium equation line below it
+
+Example:
+TUMBLE WIN
+9,150.00
+3,050.00 × 3 = 9,150.00
+
+==================================================
+2. NORMAL SPIN VS BONUS SPIN VISUAL DIFFERENTIATION
+==================================================
+
+The tumble result panel should visually match the current mode.
+
+A) NORMAL SPIN MODE:
+- use the normal base-game theme
+- cooler / cleaner / more restrained color treatment
+- elegant ivory text with subtle blue-gold glow
+- do NOT use strong golden bonus-mode styling unless it is actually bonus mode
+
+B) FREE SPIN / BONUS MODE:
+- keep the richer golden / elevated bonus styling
+- it should feel more celebratory than normal spin mode
+
+The player should be able to FEEL whether they are in base game or bonus mode through the result panel styling.
+
+==================================================
+3. TUMBLE WIN PANEL DESIGN DIRECTION
+==================================================
+
+Redesign the tumble result panel to feel:
+- premium
+- compact
+- modern
+- elegant
+- highly readable
+
+Requirements:
+- cleaner proportions
+- less empty space
+- refined border
+- subtle dark-glass / premium navy treatment
+- soft gold / ivory typography
+- large hero amount
+- minimal secondary text
+
+Do NOT make it look like a generic dashboard widget.
+
+==================================================
+4. REMOVE USELESS EXTRA CALCULATION LABELS
+==================================================
+
+No extra helper text like:
+- sequence calculation
+- raw tumble win × total multiplier
+- technical/explanatory labels
+
+Keep the panel extremely clean.
+
+Allowed structure:
+
+If x1:
+[TUMBLE WIN]
+[large amount]
+
+If x>1:
+[TUMBLE WIN]
+[large amount]
+[clean equation]
+
+Nothing more.
+
+==================================================
+5. BOTTOM CONTROL BAR COMPLETE REDESIGN
+==================================================
+
+The controls for:
+- Bet
+- Auto
+- Spin
+- Turbo
+- Sound
+
+must be redesigned to feel much more compact, premium, and well-composed.
+
+Current issue:
+- they feel too spread out
+- not unified enough
+- not premium enough
+- not optimized enough for mobile tapping
+- positioning can be improved
+
+Create a more compact premium control dock.
+
+==================================================
+6. CONTROL DOCK DESIGN GOAL
+==================================================
+
+The whole bottom interaction area should feel like one coherent premium control system.
+
+Requirements:
+- unified visual language
+- compact layout
+- better spacing
+- clearer hierarchy
+- visually balanced
+- more premium materials / borders / glow
+- stronger usability on mobile
+
+Do NOT let the controls feel like disconnected pieces.
+
+==================================================
+7. SPIN BUTTON
+==================================================
+
+Make the Spin button the clear hero action.
+
+Requirements:
+- premium shape
+- tactile
+- elegant purple/blue premium accent is okay
+- not too oversized
+- not too childish
+- easy to tap on mobile
+- centered as the hero action
+
+It should feel like the main action button of a polished premium slot.
+
+==================================================
+8. BET CONTROL
+==================================================
+
+The Bet control should be more compact and premium.
+
+Preferred behavior:
+- one cohesive unit
+- minus button
+- current bet display
+- plus button
+
+Example structure:
+[-] 500.00 [+]
+
+Requirements:
+- good tap targets
+- clean alignment
+- premium styling
+- compact width
+
+==================================================
+9. AUTO CONTROL
+==================================================
+
+Auto spin control must be more compact and cleaner.
+
+Instead of awkward separate elements,
+make it feel like one proper control group.
+
+Preferred behavior:
+- dropdown / selector for amount
+- start auto button
+- both aligned compactly and elegantly
+
+Or if needed:
+combine into a cleaner component.
+
+The current experience should feel much more refined.
+
+==================================================
+10. TURBO + SOUND BUTTONS
+==================================================
+
+Turbo and Sound should become compact utility buttons.
+
+Requirements:
+- same visual family
+- consistent height
+- compact width
+- clear icons + readable label if needed
+- premium small-button styling
+- easy to tap on mobile
+
+Sound toggle especially should look cleaner and less clunky.
+
+==================================================
+11. MOBILE-FIRST USABILITY
+==================================================
+
+This is very important.
+
+All bottom controls must become:
+- easier to tap
+- better spaced
+- more compact vertically
+- more readable
+- more usable with one thumb
+
+Test especially on mobile sizes such as:
+- 390x844
+- 430x932
+
+Do not only make it look good on desktop.
+
+==================================================
+12. CONTROL BAR LAYOUT
+==================================================
+
+Re-think overall positioning so the bottom area feels intentional and polished.
+
+Possible good hierarchy:
+- Bet left
+- Auto left-center
+- Spin center
+- Turbo / Sound right
+
+But refine it properly.
+
+The final result should feel visually balanced and practical.
+
+==================================================
+13. REMOVE “CASCADE FIELD” LABEL
+==================================================
+
+Remove the “CASCADE FIELD” text above the board.
+
+It is unnecessary.
+
+It adds clutter and does not improve the experience.
+
+==================================================
+14. REMOVE THE EXTRA OUTER BOARD FRAME
+==================================================
+
+The current extra outer frame around the grid area is unnecessary.
+
+Remove the redundant outer framing / extra decorative container feeling.
+
+The board should breathe more cleanly and use that space more efficiently.
+
+==================================================
+15. EXPAND THE PLAY AREA AFTER REMOVING THE FRAME
+==================================================
+
+Once the extra board frame and the “CASCADE FIELD” label are removed:
+
+- enlarge the actual playable board area
+- let the main grid visually occupy more of that available space
+- keep proportions elegant
+- preserve clean margins
+
+The goal:
+the board becomes more dominant and premium,
+without feeling boxed-in.
+
+==================================================
+16. BOARD PRESENTATION GOAL
+==================================================
+
+The grid should feel more direct, elegant, and confident.
+
+Not:
+board inside a board inside a frame
+
+Instead:
+a cleaner premium stage with the symbols as the hero.
+
+==================================================
+17. VISUAL CONSISTENCY
+==================================================
+
+All updated areas must share one coherent design language:
+- premium navy / dark-glass base
+- ivory / soft gold typography
+- restrained glow
+- elegant borders
+- clean spacing
+- modern corporate-premium feel
+
+==================================================
+18. DO NOT OVERDECORATE
+==================================================
+
+Avoid:
+- too many lines
+- too many nested boxes
+- too many labels
+- too much ornamental chrome
+
+The direction is:
+less clutter, more confidence.
+
+==================================================
+19. REQUIRED VISUAL QA
+==================================================
+
+Before marking complete, visually verify:
+
+A) NORMAL SPIN tumble win panel:
+- if x1, only amount is shown
+- no useless multiplication line
+- normal spin theme is used
+
+B) BONUS tumble win panel:
+- bonus styling is visibly different
+- equation only appears when x > 1
+
+C) Bottom controls:
+- feel more compact
+- feel more premium
+- work better on mobile
+- are easy to tap
+
+D) Board area:
+- “CASCADE FIELD” text removed
+- extra outer frame removed
+- play area enlarged appropriately
+
+==================================================
+20. FINAL REPORT
+==================================================
+
+When finished, report:
+- what changed in tumble win panel
+- x1 behavior confirmation
+- normal vs bonus visual difference
+- bottom control redesign summary
+- mobile usability result
+- board/frame cleanup summary
+- build/test result
+
+Do not mark complete until the interface visibly feels more premium, more modern, more compact, and more mobile-friendly.

@@ -1,0 +1,305 @@
+İstediğimiz görünüm
+küçük ama rahat okunur
+çerçevesi ince
+arka planı hafif koyu / smoke
+yazı sıcak ivory / altın beyazı
+ince altın çizgi veya çok hafif glow
+dikdörtgen ama zarif
+board’u kirletmeyecek kadar minimal
+ama yine de patlayan sembolün kazancını net gösterecek kadar görünür
+
+Yani böyle büyük sert kutu değil; daha çok:
+
+küçük premium tag
+hafif glow
+0.5–0.8 saniye görünür
+biraz yukarı süzülür
+sonra fade out olur
+
+Bunu Replit’e aynen gönder:
+
+CRITICAL ON-BOARD WIN LABEL REDESIGN
+
+The current on-board explosion payout label is NOT acceptable.
+
+Right now it looks like a crude debug box:
+- too boxy
+- too heavy
+- not premium
+- not elegant
+- too visually harsh
+- not satisfying
+
+We want a MINIMAL, CLEAN, PREMIUM on-board payout label.
+
+Do NOT change payout math.
+Do NOT change RNG.
+Do NOT change win logic.
+
+Only redesign the visual presentation of the on-board raw explosion payout label.
+
+==================================================
+1. DESIGN GOAL
+==================================================
+
+When a symbol cluster explodes,
+show the raw payout near the explosion point in a way that feels:
+
+- minimal
+- premium
+- elegant
+- readable
+- subtle but noticeable
+- modern
+- high-end
+
+It should NOT look like:
+- a debug badge
+- a cheap outlined rectangle
+- a thick heavy box
+- a clunky UI chip
+
+==================================================
+2. CONTENT
+==================================================
+
+The label should display ONLY the amount.
+
+Examples:
+1.50
+20.00
+75.00
+
+No plus sign required unless it genuinely looks better.
+Prefer just the clean amount:
+1.50
+
+No extra words.
+No “WIN”.
+No symbol name.
+No explanatory text.
+
+==================================================
+3. VISUAL STYLE
+==================================================
+
+Redesign the label into a premium micro-card / premium floating tag.
+
+Requirements:
+
+- compact size
+- soft rectangular or pill-rectangle shape
+- refined corner radius
+- thin elegant border
+- dark smoky / transparent navy-black background
+- subtle warm gold edge or faint champagne border
+- elegant ivory / soft gold text
+- very subtle glow
+- crisp shadow for readability
+
+Do NOT use:
+- thick hard border
+- large heavy solid box
+- loud bright yellow slab
+- arcade/casino cheap styling
+
+==================================================
+4. TYPOGRAPHY
+==================================================
+
+Use a premium readable number style.
+
+Requirements:
+- bold enough to read quickly
+- not oversized
+- not too tiny
+- high contrast
+- clean tabular numerals if possible
+
+Suggested feel:
+- slightly condensed or tight premium sans-serif
+- semibold / bold
+- soft ivory-gold tone
+
+The number must be immediately legible over the board.
+
+==================================================
+5. SIZE
+==================================================
+
+The label must be smaller and more elegant than the current version.
+
+It should feel like a compact floating reward tag.
+
+Enough padding to breathe,
+but not so much that it looks like a chunky card.
+
+Target feel:
+- just large enough to notice
+- not large enough to dominate the board
+
+==================================================
+6. POSITION
+==================================================
+
+Place it near the center of the exploded winning cluster,
+slightly biased upward if needed.
+
+It should feel spatially attached to the win.
+
+Do not stick it awkwardly to one grid cell if the cluster is larger.
+
+Calculate the cluster center and place the label there.
+
+==================================================
+7. ANIMATION
+==================================================
+
+The animation should be elegant and satisfying.
+
+Required flow:
+1. quick soft pop-in
+2. short readable hold
+3. slight upward float
+4. fade out cleanly
+
+No aggressive bounce.
+No exaggerated cartoon pop.
+
+Suggested timing:
+- pop-in: 100–140ms
+- hold: 220–320ms
+- float/fade: 220–320ms
+
+Total:
+~500–700ms
+
+==================================================
+8. ENTRY / EXIT FEEL
+==================================================
+
+On appear:
+- opacity 0 -> 1
+- scale 0.92 -> 1.0
+- tiny glow bloom
+
+On exit:
+- move upward slightly
+- opacity fades out
+- glow softens
+
+It should feel expensive and controlled.
+
+==================================================
+9. BOARD INTEGRATION
+==================================================
+
+The label must visually belong to the game world.
+
+It should not look like a foreign HTML box slapped over the board.
+
+Use:
+- same visual language as the premium HUD
+- same gold/ivory accent family
+- same dark-glass luxury tone
+
+==================================================
+10. RAW WIN TRANSFER LINK
+==================================================
+
+After briefly appearing,
+the label’s value should still visually transfer into the raw explosion total / calculation system as already designed.
+
+But the on-board label itself must remain clean and premium.
+
+If using a value trail:
+keep it subtle and elegant.
+
+==================================================
+11. MOBILE READABILITY
+==================================================
+
+At mobile sizes,
+the label must still be readable.
+
+It must not become:
+- too tiny
+- too blurry
+- too padded
+- too dominant
+
+Test at:
+390x844
+430x932
+
+==================================================
+12. DESKTOP READABILITY
+==================================================
+
+At desktop sizes,
+keep the label elegant and restrained.
+
+Do not scale it into a giant board badge.
+
+==================================================
+13. TURBO MODE
+==================================================
+
+In Turbo mode:
+- keep the same design
+- shorten lifetime slightly
+- preserve readability
+
+Do not remove the feature.
+
+==================================================
+14. MULTIPLE LABELS
+==================================================
+
+If multiple distinct win events occur across a tumble sequence,
+each event may show its own label,
+but keep timing and spacing clean.
+
+Avoid visual clutter.
+
+If necessary:
+slightly stagger them.
+
+==================================================
+15. DO NOT MAKE IT LOOK LIKE THE CURRENT VERSION
+==================================================
+
+The current version is specifically rejected because:
+- too boxy
+- too plain
+- too thick
+- too harsh
+- too unrefined
+
+This task is not a small tweak.
+It needs a genuine redesign.
+
+==================================================
+16. ACCEPTANCE TARGET
+==================================================
+
+Final label should feel like:
+“minimal luxury payout tag”
+
+not:
+“outlined debug box”
+
+==================================================
+17. FINAL REPORT
+==================================================
+
+When finished, report:
+- final typography size
+- final padding
+- final border/background style
+- animation timing
+- mobile test result
+- desktop test result
+- screenshot verification
+
+Do not mark complete until the new label visibly looks more minimal, premium, and readable than the current version.

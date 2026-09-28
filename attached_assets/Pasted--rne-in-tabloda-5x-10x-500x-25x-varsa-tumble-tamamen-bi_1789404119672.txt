@@ -1,0 +1,588 @@
+Örneğin tabloda 5x, 10x, 500x, 25x varsa tumble tamamen bittikten sonra:
+
+5x → animasyonla çarpan alanına → toplam 5x
+sonra 10x → 15x
+sonra 500x → 515x
+sonra 25x → 540x
+
+Ancak board’daki 5x / 10x / 500x / 25x sembolleri silinmeyecek.
+
+Hepsi işlendikten sonra:
+
+PATLAMA TOPLAMI × 540x = SPIN KAZANCI
+
+hesabı oynayacak.
+
+Replit'e bunu gönder:
+
+CRITICAL MULTIPLIER COLLECTION SEQUENCE PATCH
+
+Modify the EXISTING Cascade 8 project.
+
+DO NOT change multiplier math.
+DO NOT change multiplier probabilities.
+DO NOT change RNG.
+DO NOT change tumble rules.
+
+The current multiplier settlement presentation is wrong.
+
+Currently, when the tumble sequence finishes:
+- multiplier values are collected too quickly / together
+- multiplier symbols disappear from the board
+
+I want a different presentation.
+
+==================================================
+1. MULTIPLIERS MUST BE COLLECTED ONE BY ONE
+==================================================
+
+After ALL normal-symbol tumbles/explosions are completely finished:
+
+pause the board briefly.
+
+Then process every active multiplier symbol ONE AT A TIME.
+
+Example board contains:
+
+5x
+10x
+500x
+25x
+
+Required sequence:
+
+5x activates
+-> animated value travels into multiplier field
+-> multiplier field becomes 5x
+
+then:
+
+10x activates
+-> travels into field
+-> field becomes 15x
+
+then:
+
+500x activates
+-> travels into field
+-> field becomes 515x
+
+then:
+
+25x activates
+-> travels into field
+-> field becomes 540x
+
+Only after ALL multiplier values have individually arrived:
+
+perform the final equation.
+
+==================================================
+2. DO NOT COLLECT THEM SIMULTANEOUSLY
+==================================================
+
+Forbidden:
+
+all multipliers flash together
+-> field instantly becomes 540x
+
+That is too fast and unclear.
+
+Each X must have its own:
+- highlight
+- travel animation
+- impact
+- sound
+- numerical addition
+
+==================================================
+3. MULTIPLIER SYMBOL MUST NOT DISAPPEAR FROM BOARD
+==================================================
+
+THIS IS IMPORTANT.
+
+When 5x is collected:
+
+DO NOT remove the 5x character/symbol from its grid cell.
+
+When 10x is collected:
+
+DO NOT remove the 10x symbol.
+
+Same for every multiplier.
+
+The actual multiplier character art stays visible on the board throughout the complete settlement sequence.
+
+Only its VALUE / ENERGY COPY travels to the calculation bar.
+
+==================================================
+4. USE A VISUAL GHOST / ENERGY COPY
+==================================================
+
+When collecting a multiplier:
+
+original symbol:
+STAYS ON BOARD
+
+create a temporary visual duplicate / energy-value representation.
+
+Example:
+
+board still contains Guardiola 10x.
+
+A glowing:
+
+10x
+
+or energy copy emerges from Guardiola
+and travels toward the multiplier field.
+
+The original Guardiola 10x remains visible.
+
+==================================================
+5. COLLECTED VISUAL STATE
+==================================================
+
+After a multiplier has contributed its value:
+
+keep the symbol visible,
+but give it a subtle COLLECTED state so the player understands it has already been counted.
+
+Examples:
+
+- gold outline
+- small check-like glow
+- dim the aura slightly
+- small locked-in ring
+
+Do NOT make it grey or dead.
+
+It should still look valuable.
+
+==================================================
+6. ENGINE MUST TRACK COLLECTED STATUS
+==================================================
+
+Each active multiplier should have authoritative state similar to:
+
+{
+    id,
+    value,
+    boardPosition,
+    collected: false
+}
+
+When its animation finishes:
+
+collected = true
+
+This prevents:
+- duplicate counting
+- duplicate animation
+- double payout
+
+==================================================
+7. ORIGINAL SYMBOL REMAINS UNTIL SPIN TRANSITION
+==================================================
+
+The multiplier symbols remain visible on the board until:
+
+- final multiplier calculation completes
+- Spin Win is resolved
+- any Big/Mega/etc presentation completes
+- Spin Win transfers into Total Bonus Win
+- game prepares the NEXT Free Spin
+
+Only during the normal transition/reset into the next Free Spin
+may those old multiplier symbols disappear with the old board.
+
+Do NOT remove them during collection.
+
+==================================================
+8. COLLECTION ORDER
+==================================================
+
+Use a deterministic collection order.
+
+Preferred:
+
+CHRONOLOGICAL LANDING ORDER
+
+Meaning:
+the multiplier that entered the board first is collected first.
+
+Example arrival history:
+
+5x landed first
+10x landed second
+500x landed third
+25x landed fourth
+
+Collection order:
+
+5x
+10x
+500x
+25x
+
+This lets the settlement replay the multiplier journey naturally.
+
+If current engine does not retain landing order,
+add:
+
+landedAtIndex
+or
+arrivalSequence
+
+to multiplier state.
+
+==================================================
+9. DO NOT USE RANDOM COLLECTION ORDER
+==================================================
+
+Do not shuffle multiplier order during settlement.
+
+The same mathematical result should always produce the same visual collection order.
+
+==================================================
+10. MULTIPLIER FIELD ADDITION ANIMATION
+==================================================
+
+Example:
+
+current multiplier field:
+5x
+
+10x arrives.
+
+Do not instantly replace:
+
+5x -> 15x
+
+Instead:
+
+show small:
++10x
+
+then animate:
+
+5x
+→
+15x
+
+Next:
+
++500x
+
+15x
+→
+515x
+
+Next:
+
++25x
+
+515x
+→
+540x
+
+This should be clearly readable.
+
+==================================================
+11. MULTIPLIER FIELD START VALUE
+==================================================
+
+Before multiplier collection begins:
+
+if there are multiplier symbols:
+start the multiplier field from:
+
+0x
+
+Then additions are visually obvious.
+
+Example:
+
+0x
++5x
+=5x
+
++10x
+=15x
+
+etc.
+
+For the actual payout engine,
+preserve existing mathematically correct behavior.
+
+==================================================
+12. SOUND PER MULTIPLIER
+==================================================
+
+Each X collection gets its own short original sound.
+
+Make successive multiplier collections feel increasingly satisfying.
+
+Example:
+
+first X:
+short crystalline collect
+
+second:
+slightly higher tone
+
+third:
+richer tone
+
+large 100x / 250x / 500x:
+stronger low impact + bright sparkle
+
+Do NOT copy Sweet Bonanza audio files.
+
+Create original audio with similar clarity and reward pacing.
+
+==================================================
+13. LARGE MULTIPLIER SPECIAL TREATMENT
+==================================================
+
+When collecting:
+
+100x
+250x
+500x
+
+give slightly stronger emphasis.
+
+500x example:
+
+- symbol glows strongly
+- short board light response
+- 500x energy copy travels to calculation field
+- stronger impact sound
+- multiplier total performs a stronger pulse
+
+But keep timing readable and not excessively slow.
+
+==================================================
+14. COLLECTION TIMING
+==================================================
+
+Normal mode suggested timing:
+
+highlight current X:
+150-220ms
+
+value launch / travel:
+300-450ms
+
+field impact:
+120-180ms
+
+multiplier total count/add:
+180-300ms
+
+short gap before next X:
+100-160ms
+
+Then process next multiplier.
+
+For many X values,
+keep it satisfying but not painfully slow.
+
+Turbo:
+approximately 50-60% of normal timing.
+
+==================================================
+15. FINAL EQUATION ONLY AFTER LAST X
+==================================================
+
+Do NOT start calculation until:
+
+every active multiplier has:
+
+collected == true
+
+Example:
+
+RAW EXPLOSION TOTAL:
+50.00
+
+X sequence:
+5x
+10x
+500x
+25x
+
+Final multiplier:
+540x
+
+Only then:
+
+50.00 × 540x = ?
+
+Then resolve:
+
+SPIN WIN
+27,000.00
+
+==================================================
+16. ZERO RAW WIN RULE REMAINS
+==================================================
+
+If raw explosion total == 0:
+
+do NOT perform X collection ceremony.
+
+Do not waste time animating multipliers into the calculation bar.
+
+The board may contain X symbols,
+but no payout exists.
+
+Proceed cleanly to the next Free Spin.
+
+==================================================
+17. DO NOT REMOVE BOARD SYMBOLS DURING FINAL EQUATION
+==================================================
+
+While displaying:
+
+50.00 × 540x = 27,000.00
+
+all collected multiplier characters should still be visible in their original board cells.
+
+This is important visually.
+
+The player should be able to look at the board and see:
+
+“those X symbols produced this multiplier.”
+
+==================================================
+18. MAJOR WIN ORDER
+==================================================
+
+If the resulting Spin Win qualifies for:
+
+BIG WIN
+MEGA WIN
+EPIC WIN
+etc.
+
+Correct order:
+
+all X values collected one-by-one
+↓
+final multiplier total shown
+↓
+equation calculated
+↓
+Spin Win determined
+↓
+Major Win screen if qualified
+↓
+player dismisses it
+↓
+Spin Win transfers to Total Bonus Win
+↓
+next Free Spin
+
+Do not remove X symbols before this chain completes.
+
+==================================================
+19. REQUIRED EXAMPLE /LAB SCENARIO
+==================================================
+
+Create deterministic scenario:
+
+RAW EXPLOSION TOTAL:
+50.00
+
+Board multipliers in arrival order:
+
+5x
+10x
+500x
+25x
+
+Expected animation:
+
+0x
+
+5x travels
+-> 5x
+
+10x travels
+-> 15x
+
+500x travels
+-> 515x
+
+25x travels
+-> 540x
+
+All four original multiplier symbols remain visible on board.
+
+Then:
+
+50.00 × 540x
+
+=
+
+27,000.00
+
+Then transfer final result to Total Bonus Win.
+
+==================================================
+20. REQUIRED TESTS
+==================================================
+
+Verify:
+
+- multipliers are collected sequentially
+- landing order determines collection order
+- every multiplier is counted exactly once
+- original board symbol remains visible after collection
+- collected state is tracked
+- no multiplier disappears before next-spin transition
+- final equation does not begin until all X values are collected
+- 5 + 10 + 500 + 25 = 540
+- raw 50 × 540 = 27,000
+- zero raw win skips collection ceremony
+
+==================================================
+21. VISUAL ACCEPTANCE
+==================================================
+
+Do not mark complete until visually confirmed:
+
+- first X travels into multiplier field
+- board X remains visible
+- second X travels
+- both original symbols remain visible
+- multiplier total visibly increases
+- every X is processed one by one
+- all X symbols stay on board through final equation
+- calculation occurs only after final X is collected
+- next Free Spin transition then clears the old board normally
+
+==================================================
+22. FINAL REPORT
+==================================================
+
+Report:
+
+- multiplier collection order
+- how landing order is stored
+- how collected state is stored
+- confirmation symbols remain visible
+- final animation timing
+- large-X special treatment
+- zero-win behavior
+- /lab scenario result
+- test result
+- build result
+
+Yani görsel akış tam olarak:
+
+Tumble bitti → 5x parlar → 5x'in kopyası yukarıdaki hesaba gider ama karakter tabloda kalır → 10x gider → 500x gider → 25x gider → orta alan 540x olur → sonra patlama toplamı × 540x = kazanç.
+
+Asıl kritik değişiklik: X'in kendisini artık taşımıyoruz. X board'da sabit. Hesap alanına yalnızca değerinin/enerjisinin bir kopyası gidiyor. Bu hem çok daha anlaşılır hem de görsel olarak daha tatmin edici olur.

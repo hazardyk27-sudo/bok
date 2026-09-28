@@ -1,0 +1,2158 @@
+CRITICAL CONSOLIDATED GAMEPLAY / UX / STREAM / BONUS FIX
+
+You are modifying the EXISTING CASCADE 8 project.
+
+DO NOT create a new project.
+DO NOT rebuild working systems blindly.
+
+First inspect the current repository and understand:
+
+- state machine
+- symbol/reel generator
+- six-column stream implementation
+- tumble engine
+- Free Spin flow
+- Tumble Win accounting
+- Multiplier Core accounting
+- Scatter logic
+- Big Win overlays
+- animation timing
+- mobile UI
+- simulator
+- automated tests
+- /lab development tools
+
+Then implement ALL requirements below as ONE coherent system.
+
+These requirements supersede any conflicting older implementation.
+
+The project remains a VIRTUAL-CREDIT DEMO.
+
+Do not add:
+- deposits
+- withdrawals
+- cash-out
+- cryptocurrency payments
+- payment processors
+- real-money wallets
+
+==================================================
+1. DO NOT AUTO-START FREE SPINS
+==================================================
+
+The current game still incorrectly begins Free Spins immediately after the Scatter trigger.
+
+This must stop.
+
+Correct mandatory sequence:
+
+BASE GAME
+↓
+qualifying Scatter lands
+↓
+Scatter celebration
+↓
+BONUS_AWARD_PRESENTATION
+↓
+BONUS_WAITING_FOR_START
+↓
+player presses START FREE SPINS
+↓
+BONUS_TRANSITION
+↓
+first Free Spin begins
+
+The direct transition:
+
+BONUS_TRIGGERED
+→
+FREE_SPIN
+
+IS FORBIDDEN.
+
+==================================================
+2. FREE SPINS WON SCREEN
+==================================================
+
+When the bonus triggers:
+
+finish the Scatter celebration.
+
+Then display a real full-screen bonus-award state:
+
+FREE SPINS WON
+
+large number:
+
+10
+
+FREE SPINS
+
+large button:
+
+START FREE SPINS
+
+There must be NO automatic timeout.
+
+The game waits indefinitely.
+
+While waiting:
+
+- do not generate the first Free Spin board
+- do not reduce the Free Spin counter
+- do not continue Autoplay
+- do not deduct anything
+- do not move the board
+
+Only the user's START FREE SPINS press continues.
+
+==================================================
+3. FREE SPIN START INPUT SAFETY
+==================================================
+
+START FREE SPINS can fire exactly once.
+
+Prevent:
+
+double click
+double touch
+rapid repeated input
+duplicate first Free Spin generation
+
+Use real state guards.
+
+Not only disabled CSS.
+
+==================================================
+4. FREE SPIN COUNTER
+==================================================
+
+Example:
+
+Award = 10 Free Spins.
+
+Before START:
+
+10
+
+After pressing START and while first Free Spin is playing:
+
+still show:
+
+10
+
+After Free Spin #1 completely settles:
+
+9
+
+After Free Spin #2 settles:
+
+8
+
+The counter represents remaining completed-spin opportunities correctly.
+
+==================================================
+5. CORRECT FREE SPIN TUMBLE DEFINITION
+==================================================
+
+One Free Spin contains:
+
+INITIAL BOARD
++
+all winning tumbles
++
+all refills
++
+final board with no further normal-symbol win
+
+That entire chain is ONE:
+
+TUMBLE SEQUENCE
+
+Example:
+
+Initial win = 1.20x
+
+next tumble = 2.80x
+
+next tumble = 4.00x
+
+then no more win.
+
+Raw Tumble Sequence Win:
+
+1.20
++
+2.80
++
+4.00
+
+=
+
+8.00x
+
+==================================================
+6. TUMBLE WIN MUST BE AN ACCUMULATING POOL
+==================================================
+
+Create authoritative per-Free-Spin values:
+
+freeSpinSequenceRawWin
+activeMultiplierCores
+freeSpinSequenceCombinedMultiplier
+freeSpinSequenceFinalWin
+
+At start of every new Free Spin:
+
+freeSpinSequenceRawWin = 0
+activeMultiplierCores = []
+combinedMultiplier = 0
+
+Every raw normal-symbol payout adds to:
+
+freeSpinSequenceRawWin
+
+Example:
+
+First win:
++1.20x
+
+TUMBLE WIN:
+1.20x
+
+Second win:
++2.80x
+
+TUMBLE WIN:
+4.00x
+
+Third win:
++4.00x
+
+TUMBLE WIN:
+8.00x
+
+The main displayed TUMBLE WIN is cumulative for the complete current Free Spin sequence.
+
+==================================================
+7. DO NOT DISPLAY ONLY THE LAST TUMBLE
+==================================================
+
+Wrong:
+
+Tumble 1 = 1.20
+display 1.20
+
+Tumble 2 = 2.80
+replace display with 2.80
+
+Correct:
+
+Tumble 1:
+TUMBLE WIN = 1.20
+
+Tumble 2:
+show temporary:
+
++2.80
+
+then animate:
+
+1.20
+→
+4.00
+
+Tumble 3:
+show:
+
++4.00
+
+then:
+
+4.00
+→
+8.00
+
+==================================================
+8. MULTIPLIER CORE DOES NOT PAY IMMEDIATELY
+==================================================
+
+When a Multiplier Core lands:
+
+DO NOT multiply the current tumble.
+
+DO NOT multiply only the next win.
+
+DO NOT immediately credit anything.
+
+The Core becomes part of:
+
+activeMultiplierCores
+
+and stays physically on the board for the complete current tumble sequence.
+
+==================================================
+9. MULTIPLIERS PERSIST THROUGH THE ENTIRE SEQUENCE
+==================================================
+
+Example:
+
+Raw win so far:
+1.20x
+
+Tumble/refill occurs.
+
+10x Core lands.
+
+Another win:
++2.80x
+
+Raw pool:
+4.00x
+
+10x still remains.
+
+Another refill.
+
+25x Core lands.
+
+Another win:
++4.00x
+
+Raw pool:
+8.00x
+
+Both:
+
+10x
+25x
+
+remain visible.
+
+Then no more win.
+
+Only now settle.
+
+==================================================
+10. MULTIPLIERS ADD
+==================================================
+
+Multiplier values are ADDED.
+
+Example:
+
+10x + 25x = 35x
+
+NOT:
+
+10 × 25
+
+Then:
+
+Raw Tumble Sequence Win:
+
+8.00x
+
+Combined Multiplier:
+
+35x
+
+Final:
+
+8.00 × 35
+
+=
+
+280.00x
+
+==================================================
+11. LATE MULTIPLIER MUST APPLY TO EARLIER WINS
+==================================================
+
+This is mandatory.
+
+Example:
+
+Tumble 1:
+2x win
+
+Tumble 2:
+3x win
+
+Raw pool:
+5x
+
+Then during next refill:
+
+25x Core lands.
+
+The new board produces no further symbol win.
+
+Sequence ends.
+
+Final:
+
+5 × 25
+
+=
+
+125x
+
+The Core arrived late, but it multiplies the complete accumulated raw pool.
+
+==================================================
+12. MULTIPLIER SETTLEMENT HAPPENS ONCE
+==================================================
+
+Multiplier math occurs only in:
+
+FREE_SPIN_SEQUENCE_SETTLEMENT
+
+Conceptually:
+
+if noMoreNormalSymbolWins:
+
+    raw = freeSpinSequenceRawWin
+
+    multiplierTotal =
+        sum(activeMultiplierCores)
+
+    if multiplierTotal > 0:
+        final = raw * multiplierTotal
+    else:
+        final = raw
+
+    bonusTotalWin += final
+
+Then:
+
+animate settlement
+
+remove Core visuals
+
+clear Core state
+
+move to next Free Spin.
+
+==================================================
+13. NO DOUBLE PAYMENT
+==================================================
+
+Do NOT add raw tumble wins permanently to Bonus Win before settlement.
+
+Wrong:
+
+Raw 8x added to Bonus Win.
+
+Then:
+
+8 × 35 = 280x
+
+added again.
+
+This would produce:
+
+288x
+
+WRONG.
+
+Correct:
+
+Raw pool stays provisional.
+
+Then settlement produces:
+
+280x
+
+Bonus Win increases exactly:
+
+280x
+
+once.
+
+==================================================
+14. REQUIRED MULTIPLIER SETTLEMENT UI
+==================================================
+
+At end of sequence:
+
+keep visible:
+
+TUMBLE WIN
+8.00x
+
+Then activate Cores individually:
+
+10x
+
+then:
+
+25x
+
+Then:
+
+TOTAL MULTIPLIER
+35x
+
+Then:
+
+8.00 × 35
+
+Then large:
+
+280.00x
+
+Then Bonus Win increases.
+
+Only after this sequence may the next Free Spin begin.
+
+==================================================
+15. MULTIPLIER CORES ARE REAL GRID OBJECTS
+==================================================
+
+Cores:
+
+- occupy actual cells
+- do not count toward 8+ normal-symbol wins
+- do not explode with normal symbols
+- persist during the sequence
+- remain visible while normal symbols tumble
+- do not overlap other objects
+- disappear only after settlement
+
+==================================================
+16. GOLD SCATTER TROPHY REDESIGN
+==================================================
+
+The current Scatter visual is too weak.
+
+Completely redesign it.
+
+Scatter must be:
+
+FRAMELESS GOLD TROPHY
+
+No:
+
+blue circular frame
+cyan medallion
+normal-symbol border
+ordinary disc backing.
+
+Create a large metallic gold trophy that visually floats inside the cell.
+
+It should fill approximately:
+
+85-92%
+
+of the cell height.
+
+Use:
+
+rich metallic gold
+dark-gold shadows
+champagne highlights
+bright rim lighting
+large handles
+gold aura
+small sparkles
+
+Optional small:
+
+SCATTER
+
+label integrated near trophy base.
+
+It must be identifiable in under one second.
+
+==================================================
+17. MULTIPLIER CORE MUST ALSO BE FRAMELESS
+==================================================
+
+Multiplier must not resemble normal football-symbol medallions.
+
+Remove:
+
+normal circular border
+football-token style frame
+large opaque backing disc.
+
+The visual hero is the multiplier number itself.
+
+Examples:
+
+2x
+10x
+25x
+100x
+500x
+
+Use:
+
+large high-contrast 3D typography
+energy aura
+small sparks
+subtle rotating light
+value-specific effects
+
+==================================================
+18. MULTIPLIER VISUAL TIERS
+==================================================
+
+2x / 3x:
+electric cyan
+
+5x / 10x:
+blue-violet
+
+15x / 20x / 25x:
+gold
+
+50x:
+orange-gold
+
+100x:
+red-gold
+
+250x:
+high-energy bright rarity state
+
+500x:
+white-gold premium legendary state
+
+500x needs:
+
+unique landing sound
+strong halo
+white-hot center
+gold ring
+small electric effect
+
+but the number:
+
+500x
+
+must remain extremely readable.
+
+==================================================
+19. MOBILE-FIRST COMPACT LAYOUT
+==================================================
+
+The current screen feels fragmented.
+
+Rebuild presentation around ONE compact game shell.
+
+Mobile is primary.
+
+Target first:
+
+390x844
+393x852
+430x932
+
+The primary game experience should fit without normal document scrolling.
+
+Use:
+
+100dvh
+
+and safe-area support.
+
+==================================================
+20. REMOVE DASHBOARD FEEL
+==================================================
+
+Remove permanent gameplay panels such as:
+
+LIVE CONFIGURATION
+SYMBOL FREQUENCY
+WAYS TO WIN
+ORIGINATING CAP
+technical configuration cards
+
+from normal gameplay.
+
+Move these to:
+
+INFO
+HOW TO PLAY
+/lab
+
+The normal game should not look like an admin dashboard.
+
+==================================================
+21. MOBILE STRUCTURE
+==================================================
+
+Use a compact structure:
+
+compact header
+
+BALANCE | BET | TOTAL WIN
+
+Free Spin row when active
+
+MAIN 6x5 GRID
+
+TUMBLE WIN
+
+CONTROL DOCK
+
+Everything should visually belong to one coherent game object.
+
+==================================================
+22. GRID SIZE
+==================================================
+
+At approximately 390px screen width:
+
+board should be roughly:
+
+365-375px
+
+depending on safe padding.
+
+Use around:
+
+94-96% available width.
+
+Do not bury the board in a giant empty container.
+
+Reduce unnecessary outer padding.
+
+==================================================
+23. TUMBLE WIN POSITION
+==================================================
+
+TUMBLE WIN must be immediately above or below the grid.
+
+It should be one of the clearest temporary values.
+
+Example:
+
+TUMBLE WIN
+8.00x
+
+Use large numeric text.
+
+Approximately:
+
+28-40px visual numeric size
+
+on common phone screens.
+
+==================================================
+24. CONTROLS MUST BE CLOSE TO THE BOARD
+==================================================
+
+No huge gap between grid and controls.
+
+Directly after:
+
+TUMBLE WIN
+
+place compact game controls.
+
+Large Spin button.
+
+Readable Auto count.
+
+Turbo.
+
+Bet controls.
+
+Sound/settings.
+
+==================================================
+25. AUTOPLAY COUNT
+==================================================
+
+Auto remaining count must be clearly readable.
+
+Example:
+
+AUTO
+23
+
+Integrate it inside or directly beside the Auto button.
+
+Do not use tiny text.
+
+==================================================
+26. PERSISTENT SIX-COLUMN HIDDEN STREAM SYSTEM
+==================================================
+
+Use six independent persistent hidden incoming streams:
+
+columnStreams[0]
+columnStreams[1]
+columnStreams[2]
+columnStreams[3]
+columnStreams[4]
+columnStreams[5]
+
+Do NOT create a fixed second hidden 6x5 board.
+
+Each column has a longer queue of future incoming items.
+
+==================================================
+27. QUEUES SURVIVE THROUGH TUMBLES
+==================================================
+
+If a column stream is:
+
+CHELSEA
+CHELSEA
+ROMA
+PSG
+...
+
+and one position is required:
+
+consume only:
+
+CHELSEA
+
+Remaining:
+
+CHELSEA
+ROMA
+PSG
+...
+
+If another vacancy happens later:
+
+second CHELSEA comes next.
+
+Do NOT recreate the queue after each tumble.
+
+==================================================
+28. INCOMING SYMBOLS MUST FALL FROM ABOVE
+==================================================
+
+No teleporting replacements.
+
+Every refill item:
+
+normal symbol
+Scatter when allowed
+Multiplier Core when allowed
+
+must physically fall from above the grid.
+
+If 3 symbols are needed:
+
+spawn them visually at:
+
+-1 cell
+-2 cells
+-3 cells
+
+above the visible column.
+
+Then animate downward.
+
+==================================================
+29. FOUR GENERATION CONTEXTS
+==================================================
+
+Use explicit contexts:
+
+BASE_INITIAL
+BASE_REFILL
+BONUS_INITIAL
+BONUS_REFILL
+
+Rules:
+
+BASE_INITIAL:
+normal symbols + Scatter
+no Multiplier Core
+
+BASE_REFILL:
+normal symbols only
+
+BONUS_INITIAL:
+normal symbols + Scatter
+no Multiplier Core
+
+BONUS_REFILL:
+normal symbols + Multiplier Core
+no Scatter
+
+==================================================
+30. SCATTER IS INITIAL-BOARD ONLY
+==================================================
+
+Under the current game rules:
+
+Scatter is allowed only in:
+
+BASE_INITIAL
+BONUS_INITIAL
+
+No Scatter during tumble refill.
+
+Do not silently change this.
+
+==================================================
+31. MULTIPLIER CORE IS BONUS-REFILL ONLY
+==================================================
+
+Multiplier Cores are allowed only during:
+
+BONUS_REFILL
+
+No Core in:
+
+BASE_INITIAL
+BASE_REFILL
+BONUS_INITIAL
+
+unless a future explicit rule changes this.
+
+==================================================
+32. NORMAL SYMBOL RUNS — MAXIMUM LENGTH 2
+==================================================
+
+The previous 3-symbol / 4-symbol run system caused abnormal win frequency.
+
+Remove it entirely.
+
+Normal generated runs may contain ONLY:
+
+1 symbol
+
+or:
+
+2 identical symbols.
+
+Hard rule:
+
+MAX_RUN_LENGTH = 2
+
+No generated 3-symbol run.
+
+No generated 4-symbol run.
+
+==================================================
+33. RUN DISTRIBUTION
+==================================================
+
+Starting configuration:
+
+1-symbol run:
+70%
+
+2-symbol run:
+30%
+
+0% triples
+0% quadruples
+
+Keep this in configuration.
+
+If simulation still shows excessive hit rate:
+
+reduce pair probability.
+
+Allowed tuning direction:
+
+75 / 25
+
+80 / 20
+
+85 / 15
+
+DO NOT restore triples.
+
+==================================================
+34. PAIRS MUST REMAIN REAL
+==================================================
+
+Do not visually fake pairs.
+
+If a two-symbol run is generated:
+
+both symbols truly exist in the incoming queue.
+
+A pair may be split across separate tumbles.
+
+Example:
+
+queue:
+
+CHELSEA
+CHELSEA
+ROMA
+
+one vacancy:
+
+first Chelsea arrives.
+
+next tumble:
+
+second Chelsea arrives.
+
+This is desired.
+
+==================================================
+35. PREVENT LONG SAME-SYMBOL STREAKS
+==================================================
+
+Current behavior still looks artificial because consecutive runs may choose the same symbol.
+
+Fix this.
+
+Inside one column stream:
+
+the same normal football symbol may NEVER appear more than:
+
+2 times consecutively.
+
+Hard invariant:
+
+MAX_CONTIGUOUS_IDENTICAL_NORMAL_SYMBOLS = 2
+
+==================================================
+36. NEXT NORMAL RUN CANNOT USE PREVIOUS RUN SYMBOL
+==================================================
+
+After generating a normal run:
+
+store:
+
+lastRunSymbol
+
+The next NORMAL run must exclude:
+
+lastRunSymbol
+
+from the weighted candidate list.
+
+Then renormalize the remaining symbol weights.
+
+Example:
+
+Run 1:
+
+CHELSEA
+CHELSEA
+
+Next normal run cannot be Chelsea.
+
+It may be:
+
+Roma
+PSG
+Barcelona
+Real Madrid
+etc.
+
+==================================================
+37. GOOD VS BAD STREAMS
+==================================================
+
+GOOD:
+
+CHELSEA
+CHELSEA
+ROMA
+PSG
+PSG
+CHELSEA
+CHELSEA
+BARCELONA
+
+BAD:
+
+CHELSEA
+CHELSEA
+CHELSEA
+CHELSEA
+CHELSEA
+
+The BAD form must be impossible through normal run generation.
+
+==================================================
+38. SPECIAL SYMBOL BREAKS A NORMAL STREAK
+==================================================
+
+Example:
+
+CHELSEA
+CHELSEA
+25x
+CHELSEA
+CHELSEA
+
+is allowed.
+
+Multiplier Core separates the normal-symbol sequence.
+
+Likewise:
+
+CHELSEA
+CHELSEA
+SCATTER
+CHELSEA
+
+is allowed in an initial context.
+
+==================================================
+39. SOFT COLUMN DIVERSITY
+==================================================
+
+Use a small recent-normal-symbol history per column.
+
+Suggested history:
+
+last 4 emitted normal symbols.
+
+Apply SOFT static weighting:
+
+candidate appeared 0 times in last 4:
+weight × 1.00
+
+1 time:
+weight × 0.80
+
+2 times:
+weight × 0.55
+
+3+ times:
+weight × 0.30
+
+Then renormalize.
+
+Do not mutate the base config itself.
+
+This is part of the static reel generator.
+
+The simulator must use the exact same logic.
+
+==================================================
+40. DO NOT OVER-CORRECT RANDOMNESS
+==================================================
+
+Do NOT create rigid alternation.
+
+Do NOT force:
+
+A-B-C-D patterns.
+
+Do NOT enforce:
+
+one of every team.
+
+Do NOT globally coordinate all six columns.
+
+Each column remains independently random.
+
+We only prevent obviously artificial long vertical streaks.
+
+==================================================
+41. INITIAL VISIBLE COLUMN DIVERSITY
+==================================================
+
+For a 5-cell initial visible column:
+
+no single NORMAL football symbol should occupy more than:
+
+3 of the 5 visible positions.
+
+Do this inside deterministic constrained generation.
+
+Do not visually swap symbols afterward.
+
+Do not manipulate already-rendered boards.
+
+Special symbols are separate.
+
+==================================================
+42. KEEP LONG-RUN SYMBOL WEIGHTS
+==================================================
+
+Preserve the configured normal symbol weights as closely as possible.
+
+When excluding the immediately previous run symbol:
+
+renormalize the remaining weighted candidates.
+
+Simulator must report measured symbol marginal probabilities.
+
+==================================================
+43. ANIMATION SPEED IS CURRENTLY TOO FAST
+==================================================
+
+Slow down the normal gameplay presentation.
+
+We want:
+
+READABLE
+FOLLOWABLE
+PREMIUM
+SATISFYING
+
+not sluggish.
+
+Players must be able to understand:
+
+which symbols arrived
+which symbols won
+which symbols exploded
+how Tumble Win increased
+which replacements arrived
+whether a Multiplier Core arrived
+when the next tumble begins
+
+==================================================
+44. NORMAL SPEED TIMING TARGETS
+==================================================
+
+Use approximately:
+
+Initial symbol fall:
+700-900 ms
+
+Column stagger:
+40-80 ms
+
+Board settle:
+140-180 ms
+
+Win detection pause:
+120-180 ms
+
+Win highlight:
+300-400 ms
+
+Pre-explosion pulse:
+120-180 ms
+
+Explosion:
+280-380 ms
+
+Post-explosion pause:
+80-140 ms
+
+Gravity:
+300-450 ms
+
+Refill fall:
+450-650 ms
+
+Post-refill settle:
+120-180 ms
+
+Next evaluation delay:
+100-150 ms
+
+These values must live in central configuration.
+
+==================================================
+45. WIN MUST BE VISIBLE BEFORE EXPLOSION
+==================================================
+
+Correct order:
+
+board settles
+
+winning symbols illuminate
+
+TUMBLE WIN increases
+
+brief readable hold
+
+winning symbols pulse
+
+explosion
+
+short post-explosion pause
+
+gravity
+
+refill
+
+settle
+
+next evaluation
+
+Do not immediately explode winning symbols as soon as they are detected.
+
+==================================================
+46. EXPLOSIONS NEED WEIGHT
+==================================================
+
+Explosion target:
+
+approximately 300-380 ms.
+
+Sequence:
+
+slight compression
+
+expansion
+
+flash
+
+unique symbol particles
+
+fade/remove
+
+Do not instantly set opacity to zero.
+
+==================================================
+47. REFILL MUST BE TRACKABLE
+==================================================
+
+Refill symbols should take approximately:
+
+450-650 ms
+
+depending on distance.
+
+Real pairs should enter as coordinated pairs.
+
+Second item follows approximately:
+
+40-70 ms
+
+after first.
+
+==================================================
+48. MULTIPLIER ARRIVAL MUST BE NOTICEABLE
+==================================================
+
+When a Core lands:
+
+fall normally
+
+landing pulse:
+150-220 ms
+
+then remain stable/readable.
+
+100x / 250x / 500x:
+
+slightly longer premium impact.
+
+Do not immediately rush to the next event.
+
+==================================================
+49. SCATTER ARRIVAL MUST BE NOTICEABLE
+==================================================
+
+Scatter Trophy:
+
+fall
+
+gold impact
+
+landing sound
+
+gold ring
+
+brief glow
+
+Total perceived landing moment:
+
+approximately 450-650 ms.
+
+Qualifying Scatter can receive:
+
+an additional 200-350 ms
+
+before bonus celebration.
+
+==================================================
+50. NORMAL VS TURBO
+==================================================
+
+NORMAL uses readable timings.
+
+TURBO may use approximately:
+
+45%-60%
+
+of normal duration.
+
+Turbo changes visuals only.
+
+Never change:
+
+RNG
+streams
+symbol order
+Scatter result
+Multiplier result
+RTP
+payout.
+
+==================================================
+51. CENTRAL ANIMATION CONFIG
+==================================================
+
+Create central configuration similar to:
+
+AnimationTimings {
+    initialFall
+    columnStagger
+    boardSettle
+    winDetectionPause
+    winHighlight
+    preBurst
+    explosion
+    postExplosionPause
+    gravity
+    refillFall
+    refillSettle
+    scatterLanding
+    multiplierLanding
+    multiplierActivation
+}
+
+Use:
+
+NORMAL_TIMINGS
+TURBO_TIMINGS
+
+Do not scatter magic numbers through the code.
+
+==================================================
+52. BIG WIN SCREENS MUST NEVER AUTO-CLOSE
+==================================================
+
+Current major-win screens disappear too quickly.
+
+This is wrong.
+
+Applies to:
+
+BIG WIN
+MEGA WIN
+EPIC WIN
+LEGENDARY WIN
+SUPER WIN
+MONSTER WIN
+COLOSSAL WIN
+MAX WIN
+
+NO automatic timeout may dismiss them.
+
+==================================================
+53. BIG WIN INPUT FLOW
+==================================================
+
+Win overlay appears.
+
+Amount counts upward.
+
+If player does nothing:
+
+counter reaches final value.
+
+Then screen stays visible indefinitely.
+
+Show:
+
+TAP TO CONTINUE
+
+or:
+
+CLICK TO CONTINUE
+
+Game waits for player.
+
+==================================================
+54. FIRST TAP DURING COUNTING
+==================================================
+
+If player taps while the big-win counter is still counting:
+
+FIRST TAP:
+
+finish/accelerate the counter immediately to exact final value.
+
+DO NOT dismiss the overlay.
+
+Then show:
+
+TAP TO CONTINUE
+
+SECOND TAP:
+
+dismisses the overlay.
+
+==================================================
+55. TAP AFTER COUNT IS FINISHED
+==================================================
+
+If final value is already displayed:
+
+one fresh tap/click:
+
+dismisses overlay.
+
+==================================================
+56. MAX WIN MUST WAIT
+==================================================
+
+MAX WIN:
+
+5000x
+
+must stay visible until the player explicitly continues.
+
+No timeout.
+
+No Autoplay continuation.
+
+No Free Spin continuation behind it.
+
+==================================================
+57. PREVENT ACCIDENTAL AUTO-DISMISS
+==================================================
+
+The same input event that caused the previous action must not dismiss the newly opened win screen.
+
+Require a fresh pointer/touch event.
+
+Use proper state/input guards.
+
+==================================================
+58. AUTOPLAY + BIG WIN
+==================================================
+
+When major win overlay appears:
+
+pause AutoPlay.
+
+Do not begin another spin.
+
+When player dismisses:
+
+resume remaining AutoPlay count.
+
+==================================================
+59. FREE SPINS + BIG WIN
+==================================================
+
+If major win occurs during Free Spins:
+
+pause bonus progression.
+
+Do not start next Free Spin until the player dismisses the celebration.
+
+==================================================
+60. BIG WIN STATE MACHINE
+==================================================
+
+Use explicit states:
+
+BIG_WIN_COUNTING
+BIG_WIN_WAITING_FOR_CONTINUE
+
+MAX_WIN_COUNTING
+MAX_WIN_WAITING_FOR_CONTINUE
+
+No timer-based transition may leave:
+
+*_WAITING_FOR_CONTINUE
+
+Only explicit player input.
+
+==================================================
+61. REMOVE OLD CONFLICTING LOGIC
+==================================================
+
+Search repository and remove/refactor:
+
+old per-tumble multiplier payout
+old external small multiplier text
+old automatic Free Spin start
+old Big Win auto-close timers
+old 3/4-symbol run generator
+old queue-reset-after-tumble behavior
+duplicate old UI systems
+
+There must be ONE authoritative implementation of every system.
+
+==================================================
+62. REQUIRED TEST — FREE SPIN START
+==================================================
+
+Trigger:
+
+4 qualifying Scatters.
+
+Expected:
+
+BONUS_WAITING_FOR_START
+
+Wait arbitrary simulated time.
+
+Expected:
+
+still waiting.
+
+Generated Free Spin boards:
+
+0
+
+Dispatch:
+
+START_FREE_SPINS
+
+Then first Free Spin may begin.
+
+==================================================
+63. REQUIRED TEST — CUMULATIVE TUMBLE POOL
+==================================================
+
+Raw wins:
+
+1.20
+2.80
+4.00
+
+Expected:
+
+8.00
+
+not:
+
+4.00.
+
+==================================================
+64. REQUIRED TEST — LATE CORE
+==================================================
+
+Raw wins:
+
+2
+3
+
+Then:
+
+25x Core arrives
+
+no further normal-symbol win.
+
+Expected:
+
+Raw:
+5
+
+Multiplier:
+25
+
+Final:
+125.
+
+==================================================
+65. REQUIRED TEST — MULTIPLE CORES
+==================================================
+
+Raw:
+
+1.5
+2.5
+3.0
+
+Raw total:
+
+7
+
+Cores:
+
+2
+10
+25
+
+Combined:
+
+37
+
+Final:
+
+259.
+
+==================================================
+66. REQUIRED TEST — NO DOUBLE CREDIT
+==================================================
+
+Raw:
+
+8
+
+Multiplier:
+
+35
+
+Bonus Win increment must equal:
+
+280
+
+not:
+
+288.
+
+==================================================
+67. REQUIRED TEST — MAX CONTIGUOUS SAME SYMBOL
+==================================================
+
+Generate at least:
+
+1,000,000 normal stream items
+
+with deterministic seed.
+
+Assert:
+
+maximum contiguous identical NORMAL symbols <= 2.
+
+If a run of 3 appears:
+
+test fails.
+
+==================================================
+68. REQUIRED TEST — RUN DISTRIBUTION
+==================================================
+
+Verify generated normal runs approach:
+
+70% singles
+30% pairs
+
+within statistical tolerance.
+
+No run length > 2.
+
+==================================================
+69. REQUIRED TEST — RUN BOUNDARY
+==================================================
+
+Force:
+
+CHELSEA,CHELSEA
+
+as previous run.
+
+Verify next NORMAL run:
+
+cannot select Chelsea.
+
+==================================================
+70. REQUIRED TEST — QUEUE PERSISTENCE
+==================================================
+
+Queue:
+
+CHELSEA
+CHELSEA
+ROMA
+
+First refill requires:
+
+1 item.
+
+Consume:
+
+CHELSEA.
+
+Remaining:
+
+CHELSEA
+ROMA.
+
+Next refill:
+
+must consume the second Chelsea.
+
+==================================================
+71. REQUIRED TEST — INPUT WAIT BIG WIN
+==================================================
+
+Verify:
+
+Big Win overlay remains after arbitrary elapsed time.
+
+Max Win remains after arbitrary elapsed time.
+
+First tap during counter:
+finishes count only.
+
+Second tap:
+closes.
+
+==================================================
+72. /LAB REQUIRED SCENARIOS
+==================================================
+
+Add:
+
+FREE SPINS WAIT FOR START
+
+CUMULATIVE TUMBLE POOL
+
+LATE MULTIPLIER
+
+MULTI-CORE SETTLEMENT
+
+PERSISTENT STREAM
+
+PAIR SPLIT ACROSS TUMBLES
+
+ANTI-STREAK COLUMN
+
+NORMAL SPEED 3-TUMBLE CHAIN
+
+BIG WIN WAIT FOR CLICK
+
+MAX WIN WAIT FOR CLICK
+
+==================================================
+73. INTEGRATION SCENARIO
+==================================================
+
+Create deterministic full scenario:
+
+Base Game:
+
+4 Scatter land.
+
+Scatter celebration.
+
+Then:
+
+FREE SPINS WON
+
+10 FREE SPINS
+
+START FREE SPINS
+
+Game waits.
+
+Press Start.
+
+Free Spin:
+
+raw win 1:
+1.20x
+
+TUMBLE WIN:
+1.20
+
+raw win 2:
+2.80
+
+TUMBLE WIN:
+4.00
+
+10x Core arrives.
+
+raw win 3:
+4.00
+
+TUMBLE WIN:
+8.00
+
+25x Core arrives.
+
+No next normal win.
+
+Settlement:
+
+10 + 25
+=
+35x
+
+8.00 × 35
+
+=
+
+280.00x
+
+Bonus Win increases exactly:
+
+280.00x.
+
+If a Big Win threshold is reached:
+
+show major-win screen.
+
+It waits until user presses continue.
+
+Only then next Free Spin may begin.
+
+This complete deterministic integration test MUST pass.
+
+==================================================
+74. SIMULATOR MUST USE EXACT SAME ENGINE
+==================================================
+
+Simulator must use the same:
+
+six-column streams
+pair generator
+anti-streak logic
+symbol weighting
+Scatter logic
+Bonus refill logic
+Multiplier Core logic
+persistent sequence pool
+settlement rules.
+
+Do not use a simplified separate mathematical model.
+
+==================================================
+75. RE-SIMULATE AFTER ALL CHANGES
+==================================================
+
+The stream correlations changed.
+
+Do NOT use previous RTP results.
+
+Run:
+
+npm test
+
+npm run build
+
+npm run simulate -- --spins=1000000 --seed=20260913
+
+If practical also:
+
+npm run simulate -- --spins=10000000 --seed=20260913
+
+==================================================
+76. REPORT THESE NEW METRICS
+==================================================
+
+Report:
+
+Overall RTP
+Base RTP
+Bonus RTP
+Hit Rate
+Bonus Frequency
+Average Bonus
+Initial 8+ frequency
+Average tumble-chain length
+2+ tumble frequency
+3+ tumble frequency
+4+ tumble frequency
+
+Run statistics:
+
+configured single probability
+configured pair probability
+observed singles
+observed pairs
+maximum contiguous identical normal symbols
+average unique normal symbols per 5-cell column
+visible vertical pair frequency
+
+Column repetition:
+
+3 same normal symbols in visible column frequency
+4 same frequency
+5 same frequency
+
+Multiplier:
+
+percentage sequences with Core
+average active Cores at settlement
+average combined multiplier
+100x frequency
+250x frequency
+500x frequency
+multiplier RTP contribution.
+
+==================================================
+77. HIT RATE CALIBRATION
+==================================================
+
+Because 8+ anywhere wins are sensitive to clustering:
+
+target Base Game Hit Rate approximately:
+
+27%-33%.
+
+If hit frequency is still too high:
+
+DO NOT restore triples.
+
+Reduce pair probability:
+
+70/30
+→
+75/25
+→
+80/20
+→
+85/15
+
+until the game feels and simulates correctly.
+
+First solve clustering/hit rate.
+
+Then calibrate RTP.
+
+Do not hide excessive hit frequency only by reducing payouts.
+
+==================================================
+78. RANDOMNESS TARGET
+==================================================
+
+The board should feel like:
+
+RANDOM SYMBOL DISTRIBUTION
+
+with:
+
+OCCASIONAL NATURAL PAIRS
+
+not:
+
+OBVIOUS ALGORITHMIC COLUMNS.
+
+Good example:
+
+CHELSEA
+CHELSEA
+ROMA
+PSG
+BAYERN
+
+Good:
+
+REAL
+BARCELONA
+BARCELONA
+LIVERPOOL
+MILAN
+
+Bad:
+
+CHELSEA
+CHELSEA
+CHELSEA
+CHELSEA
+CHELSEA
+
+The bad pattern must not be produced by the normal run generator.
+
+==================================================
+79. VISUAL ACCEPTANCE
+==================================================
+
+At normal speed the player must be able to say:
+
+"These symbols arrived."
+
+"These symbols won."
+
+"The Tumble Win increased."
+
+"They exploded."
+
+"New symbols came from above."
+
+"A multiplier arrived."
+
+"The multiplier stayed."
+
+"Another tumble happened."
+
+"The raw pool accumulated."
+
+"The multiplier multiplied the whole pool."
+
+"I got a Big Win."
+
+"The Big Win stayed until I pressed."
+
+If the player cannot visually follow that sequence:
+
+animation is still too fast.
+
+==================================================
+80. FINAL ACCEPTANCE
+==================================================
+
+Do not declare completion until ALL are true:
+
+- Free Spins never auto-start.
+- START FREE SPINS waits indefinitely for player input.
+- Tumble Win accumulates across the complete Free Spin sequence.
+- Multiplier Core applies to the complete accumulated raw pool.
+- Late Core multiplies earlier wins.
+- Multiple Cores add together.
+- No double credit exists.
+- Six persistent incoming column streams work.
+- Streams survive tumbles.
+- Symbols physically fall from above.
+- Normal generated runs are max length 2.
+- No generated triples exist.
+- Consecutive normal runs cannot use the same symbol.
+- Columns no longer visually spam one football symbol.
+- Animations are slower and readable.
+- Scatter and Core are easy to notice.
+- Big Win screens remain until input.
+- Max Win remains until input.
+- Mobile UI is compact and readable.
+- npm test passes.
+- npm run build passes.
+- new simulation completes.
+
+==================================================
+81. FINAL REPORT
+==================================================
+
+When finished report:
+
+FREE SPIN START:
+Does it wait indefinitely?
+
+TUMBLE POOL:
+Does it accumulate every raw tumble win?
+
+MULTIPLIER:
+Does it multiply the complete sequence pool once?
+
+LATE CORE:
+Does a late Core multiply earlier wins?
+
+STREAMS:
+Do six persistent streams survive across tumbles?
+
+RUNS:
+What is the final single/pair distribution?
+
+STREAKS:
+What is maximum observed contiguous same normal symbol?
+
+ANIMATION:
+What are final Normal and Turbo timing values?
+
+BIG WIN:
+Do all major-win screens wait for explicit input?
+
+MOBILE:
+Does primary gameplay fit at 390x844?
+
+MATH:
+What are new RTP / Hit Rate / Bonus Frequency?
+
+TESTS:
+Did all required tests pass?
+
+BUILD:
+Did npm run build pass?
+
+SIMULATION:
+What seed and spin count were used?
+
+Do not answer "complete" without explicitly verifying every item above.

@@ -1,0 +1,846 @@
+CRITICAL FREE-SPIN UX / MOBILE UI / ANIMATION REBUILD
+REFERENCE FEEL: Use the uploaded Sweet Bonanza reference video only as a FEEL / PACING / SATISFACTION reference.
+Do NOT copy assets, copyrighted sounds, or exact branded visuals.
+Create ORIGINAL but similarly satisfying animation rhythm, reward timing, and audio feel.
+
+Modify the EXISTING Cascade 8 project.
+
+DO NOT create a new project.
+DO NOT change RNG.
+DO NOT change RTP.
+DO NOT change symbol generation rules.
+DO NOT change existing correct payout math.
+DO NOT change scatter trigger conditions unless explicitly stated here.
+DO NOT change cumulative bonus accounting rules.
+
+This is a PRODUCTION UI / ANIMATION / STATE-FLOW task.
+
+==================================================
+0. CORE GOAL
+==================================================
+
+The current game still feels like a prototype.
+
+Main issues now:
+- mobile layout still looks bad
+- buttons / controls are ugly and fragmented
+- free-spin calculation strip contains too much text
+- multiplier collection animation is weak and unsatisfying
+- calculation sequence is hard to understand
+- zero-win free spins waste time
+- retrigger (+5 spins) has no real ceremony
+- major win overlays are active in the wrong mode
+- overall motion/audio is not satisfying enough
+
+We want the finished experience to feel:
+- premium
+- compact
+- modern
+- mobile-first
+- very readable
+- satisfying
+- fluid
+- polished
+- similar in reward clarity / animation rhythm to the reference video,
+  but using ORIGINAL assets and sounds
+
+==================================================
+1. FREE-SPIN CALCULATION STRIP: REMOVE ALL EXTRA TEXT
+==================================================
+
+The current strip contains too much text and looks like debug UI.
+
+REMOVE all production helper/debug text such as:
+- CURRENT FREE SPIN 30
+- SPIN COMPLETE
+- SYMBOL WIN / SYMBOL WIN = SPIN WIN explanatory sentences
+- collecting messages
+- any extra descriptive copy
+- any tiny technical helper text
+
+Final production strip must show ONLY:
+
+[ RAW EXPLOSION TOTAL ]   ×   [ MULTIPLIER ]   =   [ SPIN WIN ]
+
+Example:
+40.00   ×   15x   =   600.00
+
+That is all.
+
+No second line of explanation.
+No extra metadata.
+No clutter.
+
+==================================================
+2. CALCULATION STRIP POSITION + SIZE
+==================================================
+
+Keep the strip ABOVE the board.
+
+Requirements:
+- aligned to board width
+- compact height
+- much thinner than current
+- not a fat dashboard slab
+- not visually heavier than the board
+- elegant smoked-glass / premium dark strip
+- subtle gold outline
+- soft inner glow
+- clean spacing
+
+On mobile:
+- approximately one row
+- no stacked text clutter
+- values remain the heroes
+
+==================================================
+3. CALCULATION STRIP DEFAULT BEHAVIOR
+==================================================
+
+During an active Free Spin:
+
+LEFT  = accumulated raw explosion total for THIS spin
+MIDDLE = accumulated multiplier total for THIS spin
+RIGHT = final THIS-SPIN result
+
+Before final resolution:
+show right side as blank/quiet placeholder or 0.00,
+but do NOT prematurely animate the final result.
+
+Examples:
+20.00 × 1x = —
+50.00 × 5x = —
+
+Use a clean placeholder if needed, but keep it minimal.
+
+==================================================
+4. RAW EXPLOSION WIN COLLECTION
+==================================================
+
+Every winning symbol explosion during Free Spins must visibly contribute to the LEFT value.
+
+Do NOT instantly update text with no visual meaning.
+
+Required sequence:
+A) winning symbols highlight
+B) explosion occurs
+C) raw payout is produced
+D) a small ORIGINAL premium gold collect effect / light-value trail travels
+   from the winning symbol cluster to the LEFT value in the strip
+E) LEFT value counts upward on impact
+
+Example:
+first raw win: +20.00
+left value: 0.00 -> 20.00
+
+second raw win: +30.00
+left value: 20.00 -> 50.00
+
+The player must clearly feel:
+“the explosion money went into the left bucket.”
+
+==================================================
+5. MULTIPLIERS MUST WAIT UNTIL ALL TUMBLES ARE FINISHED
+==================================================
+
+This is critical.
+
+If multiplier character symbols (2x, 3x, 5x, etc.) land during the Free Spin,
+they must remain visible on the board throughout the tumble sequence.
+
+Do NOT immediately fly them into the strip.
+
+Multiplier collection begins ONLY AFTER:
+- all normal symbol wins have ended
+- no further tumbles remain
+- the raw explosion total for this spin is final
+
+Until then:
+multipliers stay on the board.
+
+==================================================
+6. ZERO-WIN FREE SPINS: SKIP CEREMONY
+==================================================
+
+If raw explosion total for the current Free Spin is 0.00:
+
+- DO NOT run multiplier collection animation
+- DO NOT run equation ceremony
+- DO NOT animate “0.00 × 5x”
+- DO NOT waste time
+- DO NOT trigger major win checks
+
+Even if multiplier symbols were present:
+0 × anything = 0
+
+Just end the spin cleanly after a short settle delay and go to the next Free Spin.
+
+This is mandatory.
+
+==================================================
+7. MULTIPLIER COLLECTION CEREMONY
+==================================================
+
+If raw explosion total > 0.00 and tumbles are finished:
+
+start multiplier collection ceremony.
+
+For each multiplier symbol on the board:
+
+1. highlight the actual symbol
+2. create an ORIGINAL premium energy/value echo
+3. animate that value from the symbol’s board position to the MIDDLE field
+4. on arrival:
+   - small impact flash
+   - short collect sound
+   - multiplier total updates
+
+Example:
+2x Maguire, 3x Abdülkerim, 10x Guardiola on board
+
+MIDDLE field progression:
+1x -> 2x
+2x -> 5x
+5x -> 15x
+
+(Or if your neutral display begins at 0x, then:
+0x -> 2x -> 5x -> 15x.
+Use whichever is mathematically and visually cleanest.)
+
+Do NOT multiply multipliers together.
+They add.
+
+==================================================
+8. MULTIPLIER SYMBOL REMOVAL TIMING
+==================================================
+
+Each multiplier symbol remains visible on the board until its own collection animation is complete.
+
+After its value has reached the middle field:
+- dissolve/fade/energy-collapse the symbol
+- then remove it from the current sequence
+
+This makes the mechanic understandable.
+
+==================================================
+9. BETTER MULTIPLIER TRAVEL FX
+==================================================
+
+The current multiplier-to-strip animation is rejected.
+
+Replace it with something more premium and readable.
+
+Desired feel:
+- short
+- crisp
+- high-FPS
+- polished
+- satisfying
+- clearly visible
+- not cluttered
+
+Possible visual language:
+- concentrated gold/blue energy orb
+- small curved travel path
+- subtle particle tail
+- multiplier value ghost visible during travel
+- landing flash in middle field
+- middle field pulses on update
+
+Do NOT use:
+- flat CSS text fly
+- clumsy linear drift
+- giant slow particles
+- overdone sparkles
+
+==================================================
+10. FINAL EQUATION CEREMONY
+==================================================
+
+After all multiplier symbols are collected:
+
+show a clean readable calculation ceremony.
+
+Example:
+RAW = 50.00
+MULTIPLIER = 15x
+
+Then:
+50.00 × 15x = ?
+
+Brief premium emphasis:
+- RAW glows
+- MULTIPLIER glows
+- × illuminates
+- = illuminates
+- subtle gold sweep across the strip
+
+Then RIGHT value counts up:
+0.00 -> 750.00
+
+Duration target:
+- operator emphasis: 150–220ms
+- buildup: 250–350ms
+- result count: 500–900ms depending on amount
+- settle: 250–400ms
+
+Do NOT make it instant.
+Do NOT make it too slow.
+
+==================================================
+11. TOTAL BONUS WIN BELOW THE BOARD
+==================================================
+
+Keep the main cumulative bonus total below the board,
+but simplify and premiumize it.
+
+It should only show:
+
+TOTAL BONUS WIN
+[ big amount ]
+
+Remove extra lines such as:
+- THIS SPIN
+- BONUS TOTAL // RUNNING WIN
+- other debug/helper captions
+
+The large amount below must represent:
+the cumulative total won in the entire current bonus feature so far.
+
+==================================================
+12. TRANSFER CURRENT SPIN RESULT INTO TOTAL BONUS WIN
+==================================================
+
+Only AFTER the equation ceremony completes:
+
+transfer the current spin result into TOTAL BONUS WIN.
+
+Example:
+previous total: 48.40
+current spin result: 600.00
+
+Animate:
+- a premium gold transfer effect from RIGHT result to TOTAL BONUS WIN below
+- total counts: 48.40 -> 648.40
+
+Then reset current-spin strip for the next Free Spin.
+
+==================================================
+13. RETRIGGER CEREMONY: 3+ SCATTERS DURING FREE SPINS
+==================================================
+
+Current behavior:
+3 or more Scatter/Fahri retriggers +5 Free Spins mathematically,
+but almost no presentation happens.
+
+This is rejected.
+
+When 3 OR MORE Scatter/Fahri are visible and retrigger occurs:
+- pause normal progression
+- enter BONUS_RETRIGGER_CEREMONY
+- do not auto-continue
+
+==================================================
+14. RETRIGGER SCATTER GATHERING
+==================================================
+
+If retrigger count is:
+3 -> show exactly 3
+4 -> show exactly 4
+5 -> show exactly 5
+6 -> show exactly 6
+
+Required sequence:
+1. visible retrigger scatters highlight on the board
+2. other symbols dim slightly
+3. scatters scale up subtly
+4. each scatter animates from its actual board position toward center
+5. they align neatly in one horizontal row
+
+Examples:
+[FAHRI] [FAHRI] [FAHRI]
+or
+[FAHRI] [FAHRI] [FAHRI] [FAHRI] [FAHRI]
+
+==================================================
+15. RETRIGGER REWARD PANEL
+==================================================
+
+Once the retrigger scatters align:
+
+show prominently:
++5 FREE SPINS
+
+Below:
+TAP TO CONTINUE
+
+(or CLICK TO CONTINUE on desktop if you prefer adaptive wording)
+
+The game MUST wait for explicit user input.
+
+Do NOT automatically continue.
+
+==================================================
+16. RETRIGGER AUDIO
+==================================================
+
+Use ORIGINAL premium audio with a similar level of satisfaction
+to successful tumble slots, but DO NOT copy Sweet Bonanza sounds.
+
+Suggested flow:
+- rising shimmer while scatters gather
+- gold impact when row locks
+- short triumphant sting when +5 FREE SPINS appears
+- quiet waiting state until user taps
+
+==================================================
+17. MAJOR WIN OVERLAYS: BONUS ONLY
+==================================================
+
+Current mode logic is wrong.
+
+We want the exact opposite behavior from what is happening now.
+
+Major win overlays must appear ONLY during FREE SPINS / BONUS MODE.
+
+Allowed in bonus mode:
+- BIG WIN
+- MEGA WIN
+- EPIC WIN
+- LEGENDARY WIN
+- SUPER WIN
+- MONSTER WIN
+- COLOSSAL WIN
+- MAX WIN
+
+==================================================
+18. DISABLE MAJOR WIN OVERLAYS IN BASE GAME
+==================================================
+
+During normal paid base spins:
+- NO Big Win overlay
+- NO Mega Win overlay
+- NO Max Win overlay
+- NO full-screen major-win celebration at all
+
+Base game still pays correctly.
+Base game can still animate normal win/tumble information.
+But NO major-win ceremony overlay.
+
+==================================================
+19. BONUS MODE MAJOR WIN ORDER
+==================================================
+
+During a Free Spin:
+
+1. tumbles complete
+2. raw explosion total finalized
+3. multipliers collected into strip
+4. final equation resolves
+5. right-side current spin result finalized
+6. if this final THIS-SPIN result qualifies,
+   show the appropriate major-win overlay
+7. wait for user dismissal
+8. then transfer result into TOTAL BONUS WIN
+9. then continue to next Free Spin
+
+Major win classification must use:
+FINAL THIS-SPIN RESULT relative to original bet
+
+Do NOT classify based on:
+- individual explosion value
+- raw value before multipliers
+- intermediate partial tumble values
+
+==================================================
+20. MAJOR WIN INPUT BEHAVIOR
+==================================================
+
+Keep current input logic pattern:
+- if counter is still counting, first tap completes counter
+- second tap dismisses
+- if already complete, next tap dismisses
+- no auto timeout
+
+==================================================
+21. MOBILE UI REDESIGN: CONTROLS
+==================================================
+
+The mobile controls are still ugly and fragmented.
+
+Current problems:
+- SPIN button is awkward
+- Sound button is too large and clumsy
+- Turbo feels detached
+- Auto UI is broken and scattered
+- Bet stepper is weak
+- too much vertical waste
+- controls do not feel like one system
+
+Rebuild the mobile control dock.
+
+==================================================
+22. NEW MOBILE CONTROL DOCK
+==================================================
+
+Use one compact, premium dock.
+
+Suggested structure:
+ROW 1:
+[ BET STEPPER ]   [ MAIN SPIN ]   [ AUTO CONTROL ]
+
+ROW 2:
+[ TURBO ]   [ SOUND ]   [ MENU/INFO ]
+
+Or a similarly compact premium arrangement.
+
+Requirements:
+- everything feels like one system
+- same design language
+- same height family
+- clean spacing
+- compact
+- tappable
+- premium
+
+==================================================
+23. SPIN BUTTON REDESIGN
+==================================================
+
+Redesign the mobile SPIN button.
+
+Current giant soft rectangle is not good.
+
+Use a more premium control:
+- circular or softly rounded-square
+- approximately 64–72px high/wide
+- stronger depth
+- clearer label or icon
+- subtle violet/blue/gold premium accent
+- clean disabled state
+- tactile press feedback
+
+It must be the hero of the dock.
+
+==================================================
+24. SOUND BUTTON REDESIGN
+==================================================
+
+Do NOT keep the huge “Sound on” block.
+
+Use a compact utility button:
+- speaker icon
+- optional tiny ON indicator or active-state styling
+- same height family as Turbo
+- visually coherent with the rest of the dock
+
+==================================================
+25. TURBO BUTTON REDESIGN
+==================================================
+
+Use a compact utility button:
+- fast-forward / double-chevron icon
+- optional tiny TURBO label
+- same visual family as Sound / Menu
+- no oversized block
+
+==================================================
+26. AUTO CONTROL REDESIGN
+==================================================
+
+Auto should be one coherent compact control.
+
+Avoid:
+- dropdown on one line
+- START AUTO on another
+- loose disconnected text
+
+Preferred compact behavior:
+AUTO 25
+or
+AUTO [25]
+
+When active:
+STOP 23
+or similar remaining-count indicator.
+
+One clean component.
+
+==================================================
+27. BET STEPPER REDESIGN
+==================================================
+
+Refine bet controls into one compact segmented control:
+
+[-] 50.00 [+]
+
+Requirements:
+- premium compact styling
+- clear value
+- good tap targets
+- same visual family as dock
+
+==================================================
+28. TOP HUD MOBILE CLEANUP
+==================================================
+
+Mobile top HUD should be simpler and tighter.
+
+Prioritize:
+- BALANCE
+- BET
+- FREE SPINS
+
+Optionally include only what is truly necessary.
+Avoid redundant fields if they are already represented elsewhere.
+
+Make the top HUD feel:
+- corporate
+- modern
+- compact
+- premium
+- easy to scan
+
+==================================================
+29. REMOVE PRODUCTION-LOOKING DEBUG / DEMO TEXT
+==================================================
+
+Remove or hide from the main viewport any unnecessary text such as:
+- BET 50.00 / 100 READY
+- RNG DEMO PROTOTYPE
+- VIRTUAL CREDITS ONLY
+- similar prototype-looking debug copy
+
+If a legal/disclaimer/demo note is required,
+place it discreetly in an info modal or a very subtle footer area,
+not in the main action viewport.
+
+==================================================
+30. BOARD SIZE PRIORITY
+==================================================
+
+Do not shrink the board too much to solve layout issues.
+
+On mobile:
+the 6x5 board remains the hero.
+Use most of the available width.
+
+Controls and strip must adapt around it.
+
+==================================================
+31. FREE-SPIN STRIP MOBILE HEIGHT
+==================================================
+
+On mobile the equation strip must remain compact:
+approximately 56–72px effective height.
+
+It must visually feel like:
+40.00 × 15x = 600.00
+
+No multi-line clutter.
+
+==================================================
+32. ANIMATION PACING
+==================================================
+
+Make normal-speed Free Spin resolution more readable and satisfying.
+
+Suggested target pacing:
+
+win highlight:
+300–400ms
+
+raw win transfer:
+300–450ms
+
+explosion:
+300–380ms
+
+post-explosion settle:
+100–150ms
+
+gravity/refill:
+450–650ms
+
+final multiplier collection:
+350–500ms each
+
+equation resolve:
+500–800ms
+
+result -> total bonus transfer:
+350–550ms
+
+Turbo can be shortened,
+but standard mode should not feel rushed.
+
+==================================================
+33. ORIGINAL AUDIO SYSTEM
+==================================================
+
+Use ORIGINAL or properly licensed sounds only.
+
+Reference the uploaded video for FEEL / PACING only.
+Do NOT copy Sweet Bonanza assets.
+
+Need distinct audio hooks for:
+- raw symbol-win collection
+- explosion
+- multiplier landing
+- multiplier collection into strip
+- final equation resolve
+- total bonus transfer
+- retrigger scatter gathering
+- +5 free spins reward
+- major win tiers during bonus
+- max win during bonus
+
+Use audio ducking so important events stand out.
+
+==================================================
+34. PRESENTATION STATE MACHINE
+==================================================
+
+Ensure the production UI/animation states are clearly ordered.
+
+Conceptual states:
+
+FREE_SPIN_ACTIVE
+FREE_SPIN_TUMBLING
+FREE_SPIN_RAW_WIN_COLLECTION
+FREE_SPIN_SEQUENCE_END
+FREE_SPIN_MULTIPLIER_COLLECTION
+FREE_SPIN_CALCULATION
+FREE_SPIN_MAJOR_WIN
+FREE_SPIN_TRANSFER_TO_BONUS_TOTAL
+BONUS_RETRIGGER_CEREMONY
+BONUS_RETRIGGER_WAITING
+FREE_SPIN_READY_NEXT
+
+Do not let animations overlap incorrectly or race each other.
+
+==================================================
+35. REQUIRED DETERMINISTIC /LAB SCENARIOS
+==================================================
+
+Add deterministic scenarios for:
+
+A) FREE SPIN WIN CALCULATION
+- raw win +20
+- raw win +30
+- 5x on board
+- 10x on board
+Expected:
+50.00 × 15x = 750.00
+then transfer to total bonus
+
+B) ZERO-WIN FREE SPIN
+- raw win 0
+- multiplier present
+Expected:
+no multiplier collection ceremony
+no equation ceremony
+fast proceed
+
+C) RETRIGGER 3 SCATTERS
+- exactly 3 gather
+- +5 FREE SPINS
+- tap to continue
+
+D) RETRIGGER 4/5/6 SCATTERS
+- matching count shown
+
+E) BASE GAME LARGE WIN
+Expected:
+NO major win overlay
+
+F) BONUS MODE LARGE WIN
+Expected:
+major win overlay DOES appear
+
+==================================================
+36. VISUAL ACCEPTANCE REQUIREMENTS
+==================================================
+
+Do not mark complete until all are visually verified:
+
+- calculation strip shows ONLY equation values
+- no helper/debug text remains in the strip
+- raw wins visibly travel into LEFT value
+- multipliers stay on board until tumbles are fully finished
+- if raw win > 0, multipliers then travel into middle value
+- final equation visibly resolves
+- if raw win = 0, no equation ceremony is played
+- total bonus win updates only after final spin result resolves
+- 3+ scatter retrigger ceremony exists
+- retrigger waits for user input
+- major win overlays are disabled in base game
+- major win overlays are enabled in free spins
+- mobile controls are compact and premium
+- sound/turbo/auto/bet feel like one coherent dock
+- board remains large on mobile
+
+==================================================
+37. FINAL REPORT
+==================================================
+
+When finished, do NOT reply with a vague “done”.
+
+Report explicitly:
+
+CALCULATION STRIP
+- final height
+- exact visible contents
+- confirmation that no extra text remains
+
+RAW WIN ANIMATION
+- how winnings travel to the left field
+
+MULTIPLIER COLLECTION
+- when it starts
+- how values travel to the middle field
+- how multiple multipliers add
+
+ZERO-WIN RULE
+- confirmation that calculation ceremony is skipped
+
+TOTAL BONUS WIN
+- how/when it updates
+
+RETRIGGER
+- 3/4/5/6 scatter support
+- +5 FREE SPINS panel
+- manual continue behavior
+
+MAJOR WINS
+- confirmation disabled in base game
+- confirmation enabled in bonus mode
+
+MOBILE CONTROLS
+- what changed in bet/spin/auto/turbo/sound
+
+AUDIO
+- list of new original sound hooks
+
+TESTS
+- pass/fail
+
+BUILD
+- pass/fail
+
+Do not mark this task complete until a REAL Free Spin sequence on MOBILE has been visually inspected.
+Kısa özet
+
+Bu promptta özellikle şunları kilitliyoruz:
+
+Üst stripte sadece denklem var:
+50.00 × 15x = 750.00
+X’ler hemen hesaba gitmiyor.
+Önce tüm patlamalar/tumble’lar bitiyor.
+Sonra kazanç varsa X’ler birer birer hesaba akıyor.
+Kazanç 0 ise hesap seremonisi tamamen skip.
+3+ scatter retrigger artık ciddi bir olay:
+scatterlar ortaya geliyor → +5 FREE SPINS → TAP TO CONTINUE
+Big / Mega / Max Win yalnızca bonus içinde var.
+Base game’de tamamen kapalı.
+Mobil alt dock baştan toparlanıyor.

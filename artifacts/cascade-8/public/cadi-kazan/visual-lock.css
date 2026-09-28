@@ -1,0 +1,6 @@
+/*
+ * Cadı Kazan Visual Lock override layer.
+ * Keep this file small and scoped to .witch-page / .is-standard-theme.
+ * It is loaded after the legacy witch.css rules via @import.
+ * Future visual convergence work belongs here instead of appending new Stage blocks.
+ */

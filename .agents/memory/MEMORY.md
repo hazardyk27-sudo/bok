@@ -1,0 +1,22 @@
+- [Workspace build boundary](workspace-build-boundary.md) — the root Cascade 8 app builds independently; sibling artifact packages keep their own injected preview environment.
+- [Preview artifact routing](preview-artifact-routing.md) — root-only Vite servers can work on localhost yet return external preview 404s until registered as a web artifact with managed routing.
+- [Base Core RTP calibration](base-core-rtp-calibration.md) — refill-only Core chances are correlated with winning tumbles, so calibrate RTP from full simulations rather than chance alone.
+- [Special symbol RTP calibration](special-symbol-rtp-calibration.md) — high per-cell Core odds plus multiplicative settlement can overwhelm RTP; calibrate before release.
+- [Phaser effect cleanup](phaser-effect-cleanup.md) — destroy board child tweens explicitly before rebuilding cascade nodes to prevent performance drift.
+- [Packet stack RTP calibration](packet-stack-rtp-calibration.md) — correlated 1x2 packets can amplify tumble payouts; tune only packet-size probability after full-spin simulation.
+- [Multiplier asset masking](multiplier-asset-masking.md) — supplied portraits need bottom-caption cropping before transparent circular masking.
+- [Pair stream continuity](pair-stream-continuity.md) — a five-cell board can leave a pending second member that must refill before any new group or special.
+- [Phaser preview texture readiness](phaser-preview-texture-readiness.md) — deterministic previews that render immediately after scene setup can show unloaded image textures; defer them until assets are ready.
+- [Mobile ceremony layering](mobile-ceremony-layering.md) — bonus ceremonies nested in the board can lose their action area to the compact mobile dock; use an app-level overlay and reserve result space.
+- [Responsive media scoping](responsive-media-scoping.md) — compact landscape rules must be mobile-scoped or explicitly neutralized on desktop.
+- [Transient result slots](transient-result-slots.md) — optional result panels need reserved layout height so surrounding controls do not shift between states.
+- [Bonus flow state ownership](bonus-flow-state-ownership.md) — base Auto consumption owns the Auto counter; bonus retriggers never do, and manual stop clears pending resume.
+- [Mobile browser matrix](mobile-browser-matrix.md) — Android Chromium can run with the workspace binary; WebKit needs native host libraries and should remain an optional gated profile.
+- [Third-position repeat semantics](third-position-repeat-semantics.md) — third-cell direct copy is disabled; attenuate only natural weighted repeats, while pair-internal copy remains 75%.
+- [Slot wallet authority](slot-wallet-authority.md) — slot RNG and settlement stay server-side; legacy localStorage is a one-time untrusted migration marker.
+- [Cadı Kazan final economy](cadi-kazan-final-economy.md) — fixed cashout points target 96% RTP; a 1000x cap intentionally lowers random/aggressive high-risk returns.
+- [Layered scratch reveal](layered-scratch-reveal.md) — shallow abrasion stays opaque; only locally deep cells can reveal results, while global coverage commits the server reveal.
+- [Slot row coordinate mapping](slot-row-coordinate-mapping.md) — Slot pair logic labels rows bottom-up even though the rendered board array is stored top-down.
+- [Slot round-end timing](slot-round-end-timing.md) — keep one short post-settlement hold; remove dead-time without changing drop/refill motion or speed.
+- [Cadı Kazan payout targets](cadi-kazan-payout-targets.md) — keep mobile payout value selectors separate from the sticky action container so render updates cannot replace the action UI.
+- [Game route viewport fit](game-route-viewport-fit.md) — fixed play surfaces must fit the viewport; move secondary history/tools into drawers or phase-specific surfaces instead of page scrolling.

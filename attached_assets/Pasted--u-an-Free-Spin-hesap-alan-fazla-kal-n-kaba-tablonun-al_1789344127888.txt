@@ -1,0 +1,609 @@
+Şu an Free Spin hesap alanı:
+
+fazla kalın / kaba
+tablonun altında
+animasyonsuz
+oyuncuya ne olduğunu anlatmıyor
+patlama kazancı ve çarpan “akmıyor”
+hesap sonucu sahne gibi oynanmıyor
+çok hızlı olup bitiyor
+Sweet Bonanza’daki gibi okunur, hissedilir, sesli ve katmanlı değil
+
+Bunu düzeltmek için Replit’e artık sadece “UI’ı güzelleştir” değil, çok net motion + layout + state behavior vermek lazım.
+
+Bunu aynen gönder:
+
+CRITICAL FREE SPIN CALCULATION BAR REDESIGN + ANIMATION PATCH
+
+Modify the EXISTING CASCADE 8 project.
+
+DO NOT create a new project.
+DO NOT change RNG.
+DO NOT change RTP.
+DO NOT change symbol generation.
+DO NOT change payout math.
+DO NOT change Free Spin count logic.
+DO NOT change multiplier settlement rules.
+
+This patch is ONLY about the FREE SPIN CALCULATION PRESENTATION and its ANIMATION / SOUND / TIMING behavior.
+
+The current Free Spin calculation bar is not acceptable.
+
+Problems:
+- visually weak
+- too heavy and boxy
+- placed below the board instead of above it
+- too static
+- no readable motion
+- no clear flow of “symbol win -> multiplier -> spin win”
+- no satisfying accumulation feeling
+- no strong audio feedback
+- everything resolves too quickly and unclearly
+
+We want a much more premium, readable, animated system inspired by the clarity and satisfaction of high-quality tumble slots.
+
+==================================================
+1. MOVE THE FREE SPIN CALCULATION BAR ABOVE THE BOARD
+==================================================
+
+The Free Spin calculation UI must be moved ABOVE the board, not below it.
+
+It should sit closely above the 6x5 grid and below the top HUD.
+
+The current position below the board is wrong.
+
+Correct visual order during Free Spins:
+
+TOP HUD
+FREE SPIN CALCULATION BAR
+MAIN BOARD
+TOTAL BONUS WIN
+BOTTOM CONTROLS
+
+This makes the live current-spin calculation easier to notice while watching the board.
+
+==================================================
+2. CALCULATION BAR MUST BE COMPACT AND PROPORTIONAL
+==================================================
+
+The bar must not be too tall or too bulky.
+
+It should be compact, elegant, and clearly readable.
+
+Requirements:
+- width visually proportional to the board
+- aligned with the board width
+- moderate height
+- not a giant thick dashboard slab
+- not visually heavier than the board itself
+
+Target concept:
+a slim premium information strip / card above the board.
+
+==================================================
+3. LAYOUT OF THE CALCULATION BAR
+==================================================
+
+The bar should clearly show:
+
+SYMBOL WIN   ×   MULTIPLIER   =   SPIN WIN
+
+This must remain visually obvious at all times during Free Spins.
+
+Structure example:
+
+[ SYMBOL WIN ]
+      ×
+[ MULTIPLIER ]
+      =
+[ SPIN WIN ]
+
+Or a clean horizontal row version:
+
+SYMBOL WIN      MULTIPLIER      SPIN WIN
+  20.00     ×      15x      =      300.00
+
+Choose the version that is most readable and compact,
+but the logic must be instantly understandable.
+
+==================================================
+4. USE PREMIUM TYPOGRAPHY HIERARCHY
+==================================================
+
+Inside the calculation bar:
+
+small labels:
+SYMBOL WIN
+MULTIPLIER
+SPIN WIN
+
+These should be:
+- small
+- uppercase
+- premium
+- tracked
+- clean
+- high-contrast
+
+Values should be:
+- clearly larger than labels
+- highly readable
+- visually important
+- bright / premium
+- not too tiny
+
+The current numbers feel weak and underdesigned.
+
+==================================================
+5. CURRENT FREE SPIN INDEX CAN REMAIN, BUT SUBTLE
+==================================================
+
+If showing:
+
+CURRENT FREE SPIN 16
+
+keep it subtle and elegant.
+
+Do not let it dominate.
+
+Place it in a small top line above the equation within the calculation area if desired.
+
+The main hero must be:
+SYMBOL WIN
+MULTIPLIER
+SPIN WIN
+
+==================================================
+6. RAW SYMBOL WIN MUST ANIMATE INTO SYMBOL WIN
+==================================================
+
+When symbols explode and create payout during Free Spins:
+
+that payout must NOT simply appear instantly in the bar.
+
+Instead:
+
+- payout particles / value chip / light trail should travel from the winning symbol area
+  toward the SYMBOL WIN field
+- when it reaches the field, the SYMBOL WIN value counts up
+
+Example:
+
+first tumble raw win:
++20.00
+
+animation:
+small gold number or chip trails from board -> SYMBOL WIN bucket
+
+SYMBOL WIN:
+0.00 -> 20.00
+
+second raw win:
++15.00
+
+animation again:
+board -> SYMBOL WIN bucket
+
+SYMBOL WIN:
+20.00 -> 35.00
+
+The player must feel:
+"the explosion win is being collected there"
+
+==================================================
+7. MULTIPLIER MUST ANIMATE INTO MULTIPLIER FIELD
+==================================================
+
+When an X symbol lands during Free Spins:
+
+it must NOT just sit there and later appear in the bar.
+
+Required behavior:
+
+- when the Core is collected / locked into the sequence,
+  a clear visual echo / copy / energy trail animates from the board position
+  toward the MULTIPLIER field
+- the MULTIPLIER value then updates with a short premium pulse
+
+Example:
+
+5x lands:
+MULTIPLIER field:
+0x -> 5x
+
+later 10x lands:
+animated trail from 10x icon -> MULTIPLIER field
+MULTIPLIER:
+5x -> 15x
+
+This must feel satisfying and clearly readable.
+
+==================================================
+8. SPIN WIN MUST NOT FILL INSTANTLY
+==================================================
+
+SPIN WIN must not simply appear as a final number with no calculation ceremony.
+
+At the end of the Free Spin sequence:
+
+1. hold final SYMBOL WIN value
+2. hold final MULTIPLIER value
+3. emphasize the × and = operators
+4. animate the final calculation
+5. then reveal / count up SPIN WIN
+
+Example:
+
+SYMBOL WIN: 40.00
+MULTIPLIER: 15x
+
+short hold
+
+then:
+40.00 × 15x = ?
+
+SPIN WIN counts:
+0.00 -> 600.00
+
+This must feel like a readable mini-ceremony.
+
+==================================================
+9. ADD A CLEAR CALCULATION ANIMATION
+==================================================
+
+At the moment the sequence ends, visually perform the equation.
+
+Suggested sequence:
+
+- SYMBOL WIN glows
+- MULTIPLIER glows
+- × symbol lights up
+- = symbol lights up
+- brief gold sweep across the row
+- SPIN WIN field counts up to final value
+
+This should be obvious enough that the player understands:
+“These winnings were multiplied.”
+
+==================================================
+10. IF NO MULTIPLIER OCCURS
+==================================================
+
+If the spin has no multiplier:
+
+do not show a confusing dead equation.
+
+Still keep the same bar, but resolve cleanly.
+
+Possible behavior:
+
+SYMBOL WIN = SPIN WIN
+
+or
+
+MULTIPLIER shows:
+1x
+
+Choose the cleaner premium solution,
+but make it obvious that the spin win is just the raw symbol win.
+
+==================================================
+11. TOTAL BONUS WIN STAYS BELOW THE BOARD
+==================================================
+
+The large amount below the board should remain the TOTAL BONUS WIN across the whole feature.
+
+That part is conceptually correct.
+
+But it should update only AFTER the current spin calculation has visibly completed.
+
+So flow must be:
+
+raw symbol wins animate into SYMBOL WIN
+multiplier animates into MULTIPLIER
+spin ends
+equation plays
+SPIN WIN resolves
+then TOTAL BONUS WIN below updates
+
+This sequencing is critical.
+
+==================================================
+12. TOTAL BONUS WIN UPDATE MUST ALSO BE ANIMATED
+==================================================
+
+When SPIN WIN is finalized:
+
+animate that win into TOTAL BONUS WIN below.
+
+Example:
+
+current Total Bonus Win:
+56,360.00
+
+current Spin Win:
+600.00
+
+animation:
+SPIN WIN emits a soft gold trail downward into TOTAL BONUS WIN
+
+TOTAL BONUS WIN:
+56,360.00 -> 56,960.00
+
+Again, the player must visually understand:
+“this spin’s result was added to the total bonus winnings.”
+
+==================================================
+13. SOUND DESIGN REQUIREMENTS
+==================================================
+
+This system needs better sound.
+
+Add distinct but tasteful sound layers:
+
+A) raw symbol win collected into SYMBOL WIN
+- short gold tick / chime
+- small satisfying collect sound
+
+B) multiplier added into MULTIPLIER
+- more energetic crystalline or electric gold sound
+- clearly different from raw win collection
+
+C) final equation / resolve
+- short build-up whoosh
+- rewarding resolve sound when SPIN WIN finalizes
+
+D) adding SPIN WIN into TOTAL BONUS WIN
+- softer premium collect-up sound
+
+Do NOT use loud cheap arcade sounds.
+Do NOT use messy sound spam.
+Layer sounds cleanly and with restraint.
+
+==================================================
+14. TIMING MUST BE SLOWER AND MORE READABLE
+==================================================
+
+The current flow is too fast.
+
+We need more readable pacing.
+
+Suggested timing targets:
+
+raw symbol win collect to SYMBOL WIN:
+300-450ms each event
+
+multiplier collect to MULTIPLIER:
+350-500ms each event
+
+end-of-spin calculation emphasis:
+450-700ms
+
+SPIN WIN count-up:
+500-900ms depending on amount
+
+SPIN WIN -> TOTAL BONUS WIN transfer:
+350-550ms
+
+Then a short settle pause before the next Free Spin begins.
+
+The player must have time to understand the sequence.
+
+==================================================
+15. DO NOT MAKE THE BAR TOO TALL
+==================================================
+
+Although we are adding more animation,
+the calculation bar itself must remain visually compact.
+
+Keep it sleek.
+
+It should not become a huge scoreboard block.
+
+Preferred look:
+- slim premium strip
+- elegant border
+- dark navy / smoked glass base
+- subtle gold highlights
+- soft inner glow
+- slightly rounded corners
+
+==================================================
+16. KEEP THE BOARD VISIBLE AND UNOBSTRUCTED
+==================================================
+
+Because the bar is moving above the board,
+it must not obstruct the top row or feel cramped.
+
+Ensure the board and bar fit harmoniously.
+
+The bar should sit above the board with a clear gap, not overlap it.
+
+==================================================
+17. MOBILE-FIRST REQUIREMENT
+==================================================
+
+At 390x844 and 430x932:
+
+- the bar must remain readable
+- labels must remain readable
+- values must remain readable
+- it must not consume too much vertical space
+- the board must still remain large enough
+- the whole flow must remain understandable
+
+If needed:
+slightly reduce decorative padding on mobile,
+but do NOT destroy readability.
+
+==================================================
+18. DESKTOP REQUIREMENT
+==================================================
+
+At desktop widths:
+- calculation bar should align elegantly with the board
+- not stretch too far wider than the board
+- not look like a huge admin panel
+- remain premium and game-like
+
+==================================================
+19. STATE VARIABLES / DISPLAY MODEL
+==================================================
+
+Expose / use clear display state for animation:
+
+currentFreeSpinRawSymbolWin
+currentFreeSpinCombinedMultiplier
+currentFreeSpinFinalWin
+bonusCumulativeWinSoFar
+
+Also allow transitional animation states such as:
+
+pendingRawWinIncrement
+pendingMultiplierIncrement
+isResolvingCurrentFreeSpin
+isTransferringSpinWinToBonusTotal
+
+These can be UI/controller state only if preferred.
+
+==================================================
+20. REQUIRED VISUAL FLOW EXAMPLE
+==================================================
+
+Example desired sequence:
+
+Current bonus total below:
+56,360.00
+
+Current Free Spin starts.
+
+First raw symbol win:
++20.00
+small gold trail from board -> SYMBOL WIN
+SYMBOL WIN:
+0.00 -> 20.00
+
+Second raw symbol win:
++30.00
+trail again
+SYMBOL WIN:
+20.00 -> 50.00
+
+A 5x lands:
+visual trail from 5x core -> MULTIPLIER field
+MULTIPLIER:
+0x -> 5x
+
+A 10x lands:
+trail again
+MULTIPLIER:
+5x -> 15x
+
+Sequence ends.
+
+Equation emphasis:
+50.00 × 15x = ?
+
+SPIN WIN:
+0.00 -> 750.00
+
+Then transfer:
+SPIN WIN -> TOTAL BONUS WIN
+
+TOTAL BONUS WIN:
+56,360.00 -> 57,110.00
+
+Only then start the next Free Spin.
+
+==================================================
+21. /LAB SCENARIO REQUIRED
+==================================================
+
+Add /lab or deterministic preview scenario for this exact flow.
+
+Need one demo that shows:
+
+- 2 raw symbol win increments
+- 2 multiplier additions
+- final spin calculation
+- transfer into total bonus win
+
+This must be manually reviewable.
+
+==================================================
+22. TEST REQUIREMENTS
+==================================================
+
+Add tests that verify:
+
+- raw symbol win increments accumulate in currentFreeSpinRawSymbolWin
+- multipliers accumulate in currentFreeSpinCombinedMultiplier
+- currentFreeSpinFinalWin resolves only after sequence ends
+- bonusCumulativeWinSoFar updates only after current spin resolves
+- animation state order is correct
+- next Free Spin does not begin before current spin final presentation completes
+
+==================================================
+23. REMOVE CURRENT WEAK PRESENTATION
+==================================================
+
+The current simple static calculation strip is not sufficient.
+
+Do not merely recolor it.
+
+It needs:
+- better placement
+- better proportions
+- better motion
+- better sound
+- better sequencing
+- better clarity
+
+==================================================
+24. VISUAL ACCEPTANCE TEST
+==================================================
+
+Do not declare complete until visually confirmed:
+
+- calculation bar is above the board
+- compact and proportional
+- raw wins visibly animate into SYMBOL WIN
+- X values visibly animate into MULTIPLIER
+- final equation visibly resolves
+- SPIN WIN is clearly readable
+- TOTAL BONUS WIN below updates afterward
+- pacing is slower and understandable
+- overall result feels premium and satisfying
+
+==================================================
+25. FINAL REPORT
+==================================================
+
+When finished report:
+
+- final position of the calculation bar
+- final dimensions/responsive behavior
+- how raw symbol wins animate into the bar
+- how multipliers animate into the bar
+- how the final equation is animated
+- how SPIN WIN transfers to TOTAL BONUS WIN
+- what new sound hooks were added
+- mobile viewport result
+- desktop viewport result
+- test status
+- build status
+
+Do not mark complete without visual verification from a real Free Spin sequence.
+Kısa özet
+
+Senin istediğin sistemin özü şu:
+
+üstte küçük ama net bir canlı hesap alanı
+patlama parası oraya akar
+x çarpan oraya akar
+sonra hesap yapılır
+o spinin sonucu çıkar
+sonra aşağıdaki toplam bonus kazancına eklenir
+
+Ve evet, bence de bu kısmın Sweet Bonanza’daki gibi daha “hissettiren” bir alan olması lazım.
+Şu an sadece veri gösteriyor; bizim istediğimiz şey oyuncuya kazandığını yaşatması.

@@ -1,0 +1,273 @@
+Sorunlar
+AUTO’nun dış çerçevesi gereksiz; kendi içinde bir kutu daha var, bu da iç içe panel hissi veriyor.
+BET, AUTO, TURBO, SOUND birbirinden kopuk duruyor.
+SPIN doğru şekilde ana aksiyon ama diğerlerinin oranları ve paddingleri ona göre dengeli değil.
+TURBO ve SOUND fazla dar ama iç boşlukları tam verimli kullanılmıyor.
+Yazı, ikon, badge ve container hiyerarşisi aynı aileden gelmiyor.
+Hedef görünüm
+
+Alt kontrol barı tek bir premium unified dock gibi görünmeli.
+
+Hiyerarşi
+SPIN = en baskın
+BET = ikinci önemli
+AUTO = yardımcı ana kontrol
+TURBO / SOUND = utility controls
+Tasarım prensibi
+Hepsi aynı tasarım dilinde olmalı
+Ama aynı boyda değil, hiyerarşiye göre orantılı olmalı
+Dış çerçeveler sadeleşmeli
+İç boşluklar temizlenmeli
+Kontroller arası spacing daha kontrollü olmalı
+İdeal düzen
+1) Tek birleşik dock hissi
+
+Alt alan tek bir ortak dış container içinde kalmalı.
+
+Ama içerdeki her modül:
+
+gereksiz çift çerçeve kullanmamalı
+daha sade, temiz “segment” gibi hissettirmeli
+
+Yani:
+
+BET segment
+AUTO segment
+SPIN segment
+TURBO segment
+SOUND segment
+
+aynı satırda, aynı aile içinde olmalı.
+
+2) AUTO yeniden düzenlenmeli
+
+Şu an AUTO’nun hem dış paneli hem iç butonu var. Bu gereksiz.
+
+Yeni yapı:
+
+AUTO tek katmanlı olsun.
+
+Örnek:
+
+solda AUTO
+sağda daha net sayı badge’i: 100
+
+Yani:
+AUTO [100]
+
+ve altında hiçbir yazı olmayacak.
+
+Görsel:
+BET ile aynı ailede
+ama BET kadar karmaşık değil
+SPIN’den daha küçük
+TURBO / SOUND’dan biraz daha önemli görünmeli
+3) BET alanı daha verimli kullanılmalı
+
+Şu an BET alanında boşluk dağılımı çok iyi değil.
+
+Yeni yapı:
+[-] 1.00 [+]
+
+Ama:
+
+butonlar sabit boy
+orta sayı alanı daha esnek
+tüm modül biraz daha geniş
+mobilde rahat dokunulabilir
+4) SPIN butonu merkez kahraman olarak kalmalı
+
+SPIN doğru şekilde en güçlü aksiyon.
+
+Ama:
+
+biraz daha çevresiyle dengelenmeli
+çok “yükseltilmiş kart” gibi değil, dock’un doğal kahramanı gibi görünmeli
+kenar ışığı ve glow varsa daha rafine olmalı
+5) TURBO ve SOUND sadeleştirilmeli
+
+Bu ikisi utility butonlar olduğu için:
+
+aynı yükseklikte
+daha sade
+daha okunaklı
+ikona biraz daha net alan verecek şekilde
+
+Özellikle SOUND’da:
+
+“SOUND ON” iki satır olabilir ama hizalama daha iyi yapılmalı
+ya da daha kompakt bir düzen seçilmeli
+6) Orantı önerisi
+
+Ben genişlik hiyerarşisini yaklaşık şöyle kurardım:
+
+BET → orta-geniş
+AUTO → orta
+SPIN → en geniş / en baskın
+TURBO → dar
+SOUND → dar ama TURBO’dan hafif geniş olabilir
+
+Örnek mantık:
+BET 1.25x
+AUTO 1.0x
+SPIN 1.45x
+TURBO 0.8x
+SOUND 0.9x
+
+Bu tam teknik değer olmak zorunda değil, sadece görsel oran mantığı.
+
+Replit’e atılacak net prompt
+CONTROL DOCK LAYOUT / HIERARCHY / PROPORTION PATCH — CASCADE 8
+
+Modify the existing bottom control dock UI.
+
+Do NOT change:
+- RNG
+- math
+- payout logic
+- tumble logic
+- bonus logic
+
+This patch is ONLY about control dock visual hierarchy, spacing, sizing, proportions, and premium layout polish.
+
+==================================================
+1. UNIFY THE CONTROL DOCK
+==================================================
+
+The bottom controls currently feel too separated and fragmented.
+
+Create a more unified premium dock feeling.
+
+Keep the controls distinct, but they should feel like part of the same design system and same dock, not isolated unrelated boxes.
+
+Remove unnecessary nested framing where possible.
+
+==================================================
+2. REMOVE UNNECESSARY AUTO FRAMING
+==================================================
+
+The AUTO control currently has unnecessary framing / box-in-box treatment.
+
+Simplify AUTO so it becomes a cleaner single-layer control.
+
+Required result:
+- remove the unnecessary outer framing feel
+- AUTO should visually match the same family as the other controls
+- no extra secondary line like "READY"
+- use a clean main AUTO label with a more readable count badge
+
+Preferred structure:
+AUTO   [100]
+
+The number badge should be clearer and easier to read.
+
+==================================================
+3. IMPROVE CONTROL HIERARCHY
+==================================================
+
+All controls should relate to the main SPIN button better.
+
+Required hierarchy:
+- SPIN = dominant hero action
+- BET = important secondary control
+- AUTO = secondary action, clearly visible
+- TURBO and SOUND = utility controls
+
+All controls should feel visually related, but not equal in importance.
+
+==================================================
+4. IMPROVE PROPORTIONS
+==================================================
+
+Current sizing and positioning feel inconsistent.
+
+Adjust widths, heights, padding, and spacing so the controls feel more proportional.
+
+Preferred proportion logic:
+- BET = medium-wide
+- AUTO = medium
+- SPIN = largest / dominant
+- TURBO = smaller utility
+- SOUND = smaller utility, slightly wider if needed for readability
+
+The controls should feel balanced, premium, and intentionally sized.
+
+==================================================
+5. BET CONTROL POLISH
+==================================================
+
+Refine the BET control layout.
+
+Keep:
+[-] amount [+]
+
+But improve:
+- spacing
+- amount centering
+- internal padding
+- touch comfort
+- proportion with the other controls
+
+The BET area should look cleaner and more premium.
+
+==================================================
+6. SPIN BUTTON POLISH
+==================================================
+
+SPIN should remain the visual center and hero action.
+
+Keep it dominant, but make sure it feels integrated with the rest of the dock.
+
+It should not feel disconnected or oversized in a clumsy way.
+
+Refine:
+- glow
+- border treatment
+- spacing around it
+- overall integration with the dock
+
+==================================================
+7. TURBO AND SOUND
+==================================================
+
+TURBO and SOUND should be cleaner utility buttons.
+
+Make them:
+- visually consistent
+- better spaced
+- easier to read
+- in the same design family as BET and AUTO
+
+Avoid awkward internal spacing.
+
+==================================================
+8. OVERALL VISUAL DIRECTION
+==================================================
+
+Target look:
+- modern
+- premium
+- polished
+- unified
+- clean
+- elegant
+- mobile-friendly
+- not cluttered
+
+Important:
+all controls should feel like they belong together,
+with similar visual language,
+but different hierarchy and proportional sizing.
+
+==================================================
+9. GOAL
+==================================================
+
+Final result should feel like:
+- one premium control dock
+- better size hierarchy
+- cleaner AUTO control
+- improved spacing
+- improved positioning
+- better color and proportion balance
+- stronger relationship between BET / AUTO / SPIN / TURBO / SOUND

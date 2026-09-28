@@ -1,0 +1,1273 @@
+CRITICAL VISUAL / MOBILE UX REDESIGN PATCH
+
+DO NOT create a new project.
+DO NOT change the game mathematics.
+DO NOT change RTP.
+DO NOT change Scatter probabilities.
+DO NOT change Multiplier probabilities.
+DO NOT change payout calculation.
+DO NOT change tumble logic.
+
+This task is primarily a COMPLETE PRESENTATION / RESPONSIVE UI REBUILD of the existing game.
+
+The current game works, but the visual composition is fragmented and does not feel like one compact premium game.
+
+I am providing the current screenshot as reference.
+
+CURRENT PROBLEMS THAT MUST BE FIXED:
+
+- the grid feels isolated inside a huge empty container
+- top statistics feel detached from the game
+- desktop right sidebar looks like a developer dashboard rather than a finished slot game
+- controls are far away from the board
+- there is too much unused empty space
+- the Scatter Trophy looks like an ordinary symbol because it is trapped inside the same circular frame
+- the Multiplier Core presentation is not visually special enough
+- mobile layout does not fit naturally into one screen
+- game information is spread across disconnected areas
+- visual hierarchy is weak
+- special symbols are not dominant enough
+- the experience feels like a dashboard containing a slot instead of a slot game
+
+The new design must feel:
+
+COMPACT
+PREMIUM
+COHESIVE
+MOBILE-FIRST
+HIGH-CONTRAST
+EXCITING
+VERY READABLE
+
+==================================================
+1. MOBILE IS NOW THE MASTER LAYOUT
+==================================================
+
+Design the game FIRST for:
+
+390x844
+393x852
+430x932
+
+Then adapt upward to tablet and desktop.
+
+Do not design desktop first and shrink it.
+
+At 390x844 the player should be able to see, without normal scrolling:
+
+- compact game header
+- Balance
+- Bet
+- Total Win / Bonus Win
+- Free Spins Left when relevant
+- complete 6x5 board
+- Tumble Win
+- main controls
+- Spin button
+- Auto status
+- Turbo
+- Sound
+
+The complete primary game experience should fit naturally inside the available phone viewport.
+
+Use:
+
+100dvh
+
+not only:
+
+100vh
+
+where appropriate.
+
+Support mobile browser dynamic viewport changes.
+
+==================================================
+2. REMOVE THE FRAGMENTED DASHBOARD FEEL
+==================================================
+
+The board, status information and controls should belong to ONE unified central game shell.
+
+Create one cohesive structure:
+
+GAME SHELL
+ ├ compact top HUD
+ ├ special-mode/status strip
+ ├ grid
+ ├ tumble/win strip
+ └ control dock
+
+Do not visually separate these pieces with huge gaps.
+
+The user should perceive the entire interface as one game machine.
+
+==================================================
+3. REMOVE CURRENT GIANT DESKTOP SPACING
+==================================================
+
+The screenshot currently has too much:
+
+horizontal dead space
+vertical dead space
+large empty board container space
+detached right column
+detached bottom controls.
+
+Compress everything.
+
+The grid itself should become the hero element.
+
+Desktop board target:
+
+approximately 520-620px wide depending on viewport.
+
+Mobile:
+
+approximately 96vw maximum.
+
+Do not bury a 6x5 grid inside a giant empty rectangle.
+
+==================================================
+4. REMOVE "THE CELESTIAL FIELD" DECORATIVE WASTE
+==================================================
+
+The current large container and decorative label:
+
+THE CELESTIAL FIELD
+
+are consuming space without adding useful gameplay information.
+
+Either remove this title completely or reduce it to an extremely subtle 10-12px decorative label that consumes virtually no vertical room.
+
+The board should move upward and become significantly larger.
+
+==================================================
+5. TOP HUD COMPLETE REDESIGN
+==================================================
+
+Replace the current large separated top information bar.
+
+Create a compact HUD.
+
+Mobile example:
+
+┌─────────────────────────────────┐
+│ BALANCE      BET       WIN      │
+│ 9,840.00     10.00     24.50    │
+└─────────────────────────────────┘
+
+During Free Spins:
+
+┌─────────────────────────────────┐
+│ FREE SPINS     BONUS WIN        │
+│    7 / 10         84.20         │
+└─────────────────────────────────┘
+
+Keep labels small.
+
+Make VALUES large and clear.
+
+Do not display:
+
+MODE
+BASE REALM
+
+as a major persistent HUD item.
+
+Mode can be communicated visually through atmosphere.
+
+If text is needed, keep it tiny and secondary.
+
+==================================================
+6. REMOVE DEVELOPMENT INFORMATION FROM MAIN GAME
+==================================================
+
+The following should NOT occupy permanent gameplay space:
+
+LIVE CONFIGURATION
+WAYS TO WIN
+ORIGINATING CAP
+SYMBOL FREQUENCY
+
+These currently make the game look like an admin/debug application.
+
+Move:
+
+Ways to Win
+Paytable
+Max Win
+Symbol information
+
+into the:
+
+HOW TO PLAY / INFO
+
+modal.
+
+Desktop should also not have the large permanent developer sidebar.
+
+The entire right-hand configuration panel visible in the current screenshot should disappear from the normal game view.
+
+Keep such information only in:
+
+/lab
+development mode
+Info modal.
+
+==================================================
+7. MOBILE GAME SHELL
+==================================================
+
+On phone, the visual structure should approximately be:
+
+TOP SAFE AREA
+
+compact logo / title
+
+BALANCE | BET | TOTAL WIN
+
+FREE SPINS / BONUS WIN only if bonus active
+
+GRID
+
+TUMBLE WIN
+
+CONTROL DOCK
+
+BOTTOM SAFE AREA
+
+No giant vertical gaps.
+
+Use approximately:
+
+8-12px spacing
+
+between major gameplay components.
+
+==================================================
+8. GRID SIZE IS PRIORITY
+==================================================
+
+The board should use nearly all available phone width.
+
+Target:
+
+width: min(96vw, appropriate desktop max)
+
+For 390px viewport:
+
+board should approximately be 365-375px wide.
+
+Use a consistent grid aspect ratio.
+
+6 columns
+5 rows
+
+No cell should become tiny.
+
+Reduce outer board padding.
+
+Current board has too many nested visual frames.
+
+Simplify.
+
+Use:
+
+ONE subtle outer game-board frame.
+
+Not:
+
+frame inside frame inside frame.
+
+==================================================
+9. BOARD FRAME
+==================================================
+
+Create a premium board frame:
+
+dark navy translucent glass
+subtle blue edge illumination
+small depth shadow
+very slight internal glow.
+
+Outer padding:
+
+mobile around 6-8px.
+
+Desktop around 10-14px.
+
+Avoid huge empty margins inside the board container.
+
+==================================================
+10. CELL DESIGN
+==================================================
+
+Each normal grid cell should remain distinguishable but subtle.
+
+Use:
+
+slightly lighter navy cell
+small corner radius
+thin low-opacity border
+
+Do not let cells compete visually with symbols.
+
+Special symbols must visually escape the normal cell treatment.
+
+==================================================
+11. NORMAL FOOTBALL SYMBOLS
+==================================================
+
+Keep the football-club identity.
+
+Normal symbols can retain their premium circular medallion treatment.
+
+Improve:
+
+thicker outer ring
+clearer color contrast
+larger club crest
+less empty padding inside medallion
+cleaner shadow
+stronger border separation
+
+Each normal symbol should occupy roughly:
+
+82-88%
+
+of its cell.
+
+The crest itself should be clearly readable.
+
+==================================================
+12. SCATTER TROPHY MUST BE COMPLETELY REDESIGNED
+==================================================
+
+THIS IS VERY IMPORTANT.
+
+The current trophy looks like another normal circular token.
+
+REMOVE ITS CIRCULAR FRAME COMPLETELY.
+
+The Scatter must NOT have:
+
+blue circular border
+cyan ring
+normal medallion
+standard symbol frame.
+
+Instead create a FRAMELESS golden trophy.
+
+It should visually float in the cell.
+
+Large cup silhouette.
+
+Use approximately:
+
+85-92% of available cell height.
+
+Design:
+
+bright metallic gold trophy
+dark gold shadow
+strong highlight edges
+large handles
+wide cup bowl
+short premium base
+small central gem or star
+warm golden aura behind the trophy
+tiny floating gold particles
+
+No visible circular frame.
+
+No blue ring.
+
+No cyan border.
+
+No disc background.
+
+It should immediately communicate:
+
+THIS IS SPECIAL.
+
+==================================================
+13. SCATTER LABEL
+==================================================
+
+Do not put a large ugly label beneath it.
+
+Option A preferred:
+
+small curved or compact:
+
+SCATTER
+
+integrated into trophy base.
+
+Option B:
+
+tiny gold SCATTER label immediately below trophy.
+
+It must remain readable but secondary to the trophy itself.
+
+==================================================
+14. TROPHY COLOR
+==================================================
+
+Use a much richer gold palette.
+
+Visual direction:
+
+deep shadow:
+#8A5400 style
+
+main gold:
+rich warm gold
+
+highlight:
+pale champagne gold
+
+hot highlight:
+near-white gold.
+
+Do not make the trophy yellow-flat.
+
+It needs metallic depth.
+
+==================================================
+15. SCATTER IDLE ANIMATION
+==================================================
+
+Scatter should always feel alive.
+
+Very subtle:
+
+slow gold breathing glow
+tiny star sparkle
+occasional rim light pass
+
+Do not constantly bounce.
+
+When it lands:
+
+short squash
+gold ring expansion
+metallic Scatter sound.
+
+==================================================
+16. MULTIPLIER CORE VISUAL — REMOVE FRAME
+==================================================
+
+The Multiplier must also STOP looking like a normal symbol.
+
+REMOVE:
+
+normal circular frame
+club-medallion style border
+ordinary symbol backing.
+
+Multiplier should be essentially:
+
+LARGE MULTIPLIER NUMBER
++
+ENERGY EFFECT.
+
+For example:
+
+25x
+
+floating inside the cell.
+
+No visible normal frame.
+
+==================================================
+17. MULTIPLIER CORE NEW VISUAL IDENTITY
+==================================================
+
+Use an original special-symbol style.
+
+Concept:
+
+large 3D multiplier typography
+
+25x
+
+surrounded by:
+
+energy flame
+small sparks
+soft aura
+subtle rotating light streak
+
+but NO hard external medallion.
+
+The multiplier value itself should be the hero.
+
+It should fill approximately:
+
+70-82% of cell width.
+
+==================================================
+18. MULTIPLIER TYPOGRAPHY
+==================================================
+
+Multiplier numbers must be EXTREMELY readable.
+
+Examples:
+
+2x
+10x
+25x
+100x
+500x
+
+Use:
+
+very bold display type
+slight bevel/depth
+high contrast
+strong outline
+small inner highlight
+
+Never tiny text.
+
+Never display:
+
+x25
+
+Use:
+
+25x.
+
+==================================================
+19. MULTIPLIER VALUE COLORS
+==================================================
+
+Create clear rarity tiers.
+
+2x / 3x:
+electric cyan
+
+5x / 10x:
+blue-violet
+
+15x / 20x / 25x:
+rich gold
+
+50x:
+orange-gold
+
+100x:
+red/gold energy
+
+250x:
+hot magenta-gold / white core
+
+500x:
+white-gold legendary presentation.
+
+Each still needs high contrast against the dark board.
+
+==================================================
+20. 500X MUST LOOK EXTRAORDINARY
+==================================================
+
+500x should immediately stop the player's eye.
+
+Use:
+
+white-hot center
+gold outer glow
+subtle lens flare
+small electric arcs
+unique landing ring.
+
+But keep it readable.
+
+Do not bury "500x" under particles.
+
+==================================================
+21. MULTIPLIERS AND TROPHY MUST NOT LOOK RELATED TO NORMAL SYMBOL FRAMES
+==================================================
+
+Normal symbols:
+premium circular football medallions.
+
+Scatter:
+FRAMELESS GOLD TROPHY.
+
+Multiplier:
+FRAMELESS ENERGY NUMBER.
+
+These three categories must be identifiable in under one second.
+
+==================================================
+22. SPECIAL SYMBOL DEPTH
+==================================================
+
+Allow Scatter and Multiplier visual effects to extend slightly outside their own cell.
+
+Use controlled overflow.
+
+Example:
+
+gold trophy aura extends 6-10px beyond cell.
+
+Multiplier energy extends 4-8px.
+
+Do not clip every effect strictly to cell boundaries.
+
+Prevent actual overlap with neighboring readable values.
+
+==================================================
+23. TUMBLE WIN STRIP
+==================================================
+
+The current status line such as:
+
+NO WIN // NEXT GATE AWAITS
+
+should NOT occupy the most important space below the grid.
+
+Replace this region with functional win feedback.
+
+Normal idle:
+
+READY
+
+very small/subtle.
+
+During tumble:
+
+TUMBLE WIN
+
+large:
+
+24.60
+
+During Free Spin:
+
+TUMBLE WIN
+8.40x
+
+If multiplier active:
+
+MULTIPLIER
+35x
+
+This area must become a gameplay-feedback strip.
+
+==================================================
+24. TUMBLE WIN VISUAL STYLE
+==================================================
+
+Make TUMBLE WIN impossible to miss.
+
+Example:
+
+          TUMBLE WIN
+             24.60
+
+Use:
+
+small uppercase label
+large bright numeric value.
+
+For winning state:
+
+white/gold value.
+
+When incrementing:
+
++4.20
+
+briefly appears and merges into total.
+
+==================================================
+25. COMPACT WIN STRIP
+==================================================
+
+Do not make a giant panel.
+
+Target height:
+
+mobile approximately 44-60px.
+
+It sits directly below grid.
+
+It belongs visually to the board.
+
+==================================================
+26. CONTROLS MUST MOVE UP
+==================================================
+
+Current screenshot has controls very far below the game.
+
+Fix.
+
+The control dock should sit immediately under the Tumble Win strip.
+
+No giant divider / empty gap.
+
+Mobile spacing:
+
+approximately 8px.
+
+==================================================
+27. MOBILE CONTROL DOCK
+==================================================
+
+Design a dedicated compact bottom deck.
+
+Suggested:
+
+top small row:
+
+BET -     BET 10.00     BET +
+
+bottom main row:
+
+AUTO      SPIN      TURBO
+
+Sound/settings can use small top-right icons or compact secondary buttons.
+
+SPIN is dominant.
+
+==================================================
+28. SPIN BUTTON
+==================================================
+
+Make Spin button large but not excessively tall.
+
+Mobile:
+
+approximately 64-76px diameter/height.
+
+Clearly center it.
+
+Use:
+
+premium indigo/violet gradient
+strong readable white SPIN text
+subtle outer glow
+
+Pressed:
+small scale-down response.
+
+Disabled:
+clearly disabled.
+
+==================================================
+29. AUTOPLAY
+==================================================
+
+When active:
+
+AUTO
+23
+
+must be clearly visible.
+
+Integrate number directly into Auto button.
+
+Example:
+
+┌─────────┐
+│ AUTO    │
+│   23    │
+└─────────┘
+
+Do not place tiny remaining-spin text somewhere else.
+
+==================================================
+30. FREE SPIN MOBILE PRESENTATION
+==================================================
+
+During Free Spins:
+
+replace unnecessary base information with bonus-relevant information.
+
+Example top row:
+
+FREE SPINS
+7 / 10
+
+BONUS WIN
+84.20
+
+Do not show:
+
+MODE BASE REALM
+
+or other useless status.
+
+==================================================
+31. BONUS VISUAL COMPACTNESS
+==================================================
+
+Bonus UI must not shrink board.
+
+Free Spin information should consume no more than approximately:
+
+50-65px
+
+above grid on mobile.
+
+==================================================
+32. PORTRAIT HEIGHT BUDGET
+==================================================
+
+At 390x844 aim approximately for:
+
+safe/header:
+35-45px
+
+main stats:
+45-55px
+
+bonus row if active:
+40-50px
+
+grid:
+300-320px
+
+tumble strip:
+48-58px
+
+controls:
+130-160px
+
+small gaps/padding:
+remaining space.
+
+The exact measurements may adapt dynamically, but everything should fit comfortably.
+
+==================================================
+33. USE RESPONSIVE CLAMP()
+==================================================
+
+Avoid dozens of brittle media-query magic numbers.
+
+Use:
+
+clamp()
+
+for:
+
+font sizes
+grid gap
+padding
+control sizing
+HUD values.
+
+Example concept:
+
+font-size: clamp(12px, 3vw, 16px)
+
+Do not blindly copy that exact value everywhere.
+
+==================================================
+34. USE CSS GRID/FLEX PROPERLY
+==================================================
+
+Do not position primary game UI using arbitrary absolute pixel coordinates.
+
+Use:
+
+CSS Grid
+Flexbox
+aspect-ratio
+min()
+max()
+clamp()
+
+for responsive composition.
+
+Absolute positioning is allowed only for:
+
+effects
+particles
+decorative overlays.
+
+==================================================
+35. NO MOBILE SCROLL FOR PRIMARY GAME
+==================================================
+
+For target portrait devices:
+
+390x844
+393x852
+430x932
+
+primary game controls and board should fit without vertical document scrolling.
+
+Info/paytable/settings modals may scroll internally.
+
+Gameplay itself should not require page scrolling.
+
+==================================================
+36. DESKTOP LAYOUT
+==================================================
+
+Desktop should NOT restore the old giant right sidebar.
+
+Use a centered compact game machine.
+
+Possible desktop composition:
+
+left small optional game branding
+center main game shell
+small utility buttons nearby
+
+but primary board stays central.
+
+Max content width approximately:
+
+900-1100px
+
+depending on implementation.
+
+Do not spread UI to all 1920 pixels.
+
+==================================================
+37. DESKTOP INFO ACCESS
+==================================================
+
+Ways to Win
+Max Win
+Paytable
+Symbol Frequency if still needed
+
+should open from:
+
+INFO
+
+modal.
+
+No permanent dashboard cards.
+
+==================================================
+38. MAKE THE WHOLE GAME FEEL LIKE ONE OBJECT
+==================================================
+
+Use consistent:
+
+border radius
+border opacity
+glass material
+font hierarchy
+spacing rhythm
+lighting
+shadow language.
+
+Current interface looks like several unrelated cards.
+
+New interface should feel intentionally assembled.
+
+==================================================
+39. TYPOGRAPHY
+==================================================
+
+The current monospaced/debug-like typography is overused.
+
+Keep monospaced type only for tiny technical accent labels if desired.
+
+Use a cleaner premium display/UI font for:
+
+WIN
+BALANCE
+BET
+FREE SPINS
+BONUS WIN
+TUMBLE WIN
+buttons.
+
+Do not make the game look like a developer terminal.
+
+==================================================
+40. VISUAL HIERARCHY
+==================================================
+
+Priority order must be:
+
+1. GRID
+2. CURRENT IMPORTANT WIN
+3. SPIN / CURRENT ACTION
+4. FREE SPINS LEFT when applicable
+5. BALANCE / BET / BONUS WIN
+6. utility controls
+7. decorative information
+
+The current design gives too much visual priority to configuration information.
+
+Reverse that.
+
+==================================================
+41. BACKGROUND
+==================================================
+
+Keep dark celestial/navy identity.
+
+But reduce unnecessary decorative points around critical UI.
+
+Create subtle atmospheric background:
+
+dark navy gradient
+very faint stars
+subtle violet glow
+
+The board should remain the brightest structured element.
+
+==================================================
+42. ANIMATION QUALITY
+==================================================
+
+Responsive layout changes must not hurt animation.
+
+Do not animate:
+
+width
+height
+top
+left
+
+continuously during game events.
+
+Prefer:
+
+transform
+opacity.
+
+Maintain 60 FPS target.
+
+==================================================
+43. MOBILE PERFORMANCE
+==================================================
+
+Special symbol effects should remain lightweight.
+
+Scatter:
+
+small permanent aura
+very few idle particles.
+
+Multiplier:
+
+small energy glow
+no huge constant particle emitter.
+
+Only increase particles briefly on:
+
+landing
+activation
+bonus trigger
+Big Win.
+
+==================================================
+44. ACCESSIBILITY
+==================================================
+
+Important numbers require strong contrast.
+
+Avoid dark-blue text on navy.
+
+Ensure:
+
+Balance
+Win
+Free Spins
+Tumble Win
+Multiplier value
+
+remain readable.
+
+==================================================
+45. /LAB VISUAL QA
+==================================================
+
+Update /lab with a SPECIAL SYMBOL DESIGN section.
+
+Provide previews for:
+
+Normal football symbol
+Golden Scatter Trophy
+2x
+10x
+25x
+50x
+100x
+250x
+500x
+
+Show:
+
+idle
+landing
+active
+settlement
+
+states.
+
+Also preview the entire UI at:
+
+390x844
+430x932
+1366x768.
+
+==================================================
+46. TROPHY QA CHECKLIST
+==================================================
+
+Scatter is NOT complete unless:
+
+- no circular frame exists
+- no blue/cyan medallion exists
+- silhouette clearly reads as trophy
+- metallic gold is obvious
+- trophy is larger than normal central crest artwork
+- gold aura is visible
+- Scatter can be recognized within one second
+- it remains readable at 390px viewport.
+
+==================================================
+47. MULTIPLIER QA CHECKLIST
+==================================================
+
+Multiplier is NOT complete unless:
+
+- no normal-symbol frame exists
+- value is the largest visual element
+- 2x can be instantly read
+- 25x can be instantly read
+- 100x can be instantly read
+- 500x looks meaningfully rarer
+- multiplier cannot be confused with football logo
+- multiplier cannot be confused with Scatter
+- it remains readable during moving tumble animation.
+
+==================================================
+48. MOBILE QA CHECKLIST
+==================================================
+
+At 390x844 verify:
+
+- whole 6x5 grid visible
+- grid is large
+- Balance readable
+- Bet readable
+- Current Win readable
+- Free Spins readable when active
+- Bonus Win readable
+- Tumble Win clearly visible
+- Spin accessible
+- Auto accessible
+- Auto remaining clearly visible
+- Turbo accessible
+- no primary vertical page scroll
+- no clipped bottom controls
+- no giant empty space
+- no developer sidebar.
+
+==================================================
+49. SCREENSHOT QA
+==================================================
+
+After implementation capture or inspect screenshots for:
+
+390x844 base game
+390x844 free spins
+390x844 multiplier present
+390x844 4 Scatter trigger
+430x932 base
+1366x768 desktop.
+
+Compare them specifically against the current screenshot.
+
+The new version must be significantly more compact.
+
+==================================================
+50. IMPORTANT: DO NOT TOUCH WORKING MATH
+==================================================
+
+This task is VISUAL / LAYOUT focused.
+
+Do not alter:
+
+RTP
+8+ rule
+reels
+payout table
+Free Spin payout accounting
+persistent multiplier settlement
+Max Win
+symbol probabilities.
+
+If refactoring UI requires reading engine state, expose state cleanly but leave math untouched.
+
+==================================================
+51. REMOVE OLD OBSOLETE UI
+==================================================
+
+After replacement remove:
+
+old top dashboard
+old permanent right sidebar
+old "Live Configuration" gameplay cards
+old detached status line
+duplicate win values
+obsolete special-symbol visual assets.
+
+Do not leave both versions in DOM hidden behind CSS.
+
+Clean the implementation.
+
+==================================================
+52. FINAL ACCEPTANCE
+==================================================
+
+The result should look like a real compact game on a phone.
+
+When I open the game on mobile I should immediately see:
+
+BALANCE | BET | WIN
+
+large 6x5 GRID
+
+obvious gold frameless SCATTER TROPHY when present
+
+obvious frameless MULTIPLIER VALUE when present
+
+TUMBLE WIN
+
+large SPIN control
+
+AUTO remaining
+
+without scrolling.
+
+On desktop it should look like the same compact game enlarged appropriately, not an analytics dashboard.
+
+==================================================
+53. FINAL REPORT
+==================================================
+
+When finished tell me:
+
+- what was removed from the old layout
+- new mobile layout dimensions
+- board width at 390px viewport
+- whether primary gameplay fits in 390x844 without scrolling
+- how Scatter Trophy was redesigned
+- confirmation that Scatter has NO circular frame
+- how Multiplier was redesigned
+- confirmation that Multiplier has NO normal frame
+- how 500x differs visually
+- where Tumble Win now appears
+- where Auto remaining now appears
+- what happened to the old right sidebar
+- desktop max game-shell width
+- whether math files were left unchanged
+- build status
+- test status
+
+Do not declare completion until the 390x844 layout has actually been inspected.

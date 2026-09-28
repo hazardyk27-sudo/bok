@@ -1,0 +1,694 @@
+CRITICAL BONUS MULTIPLIER FREQUENCY FIX
+
+The current Free Spin multiplier behavior is far too sparse.
+
+A real 10-Free-Spin bonus just completed with ZERO Multiplier Cores.
+
+The main architectural reason is that Multiplier Cores are currently restricted to:
+
+BONUS_REFILL
+
+This means a Core can only appear AFTER a normal-symbol win creates empty cells.
+
+If a Free Spin does not win, it has zero multiplier opportunities.
+
+If several Free Spins have no tumble, an entire 10-spin feature can easily contain no multipliers.
+
+This does NOT create the intended bonus experience.
+
+FIX THE SPAWN ARCHITECTURE.
+
+Do NOT change the already-correct sequence-level multiplier settlement logic.
+
+==================================================
+1. MULTIPLIERS ARE NOW ALLOWED ON BONUS INITIAL BOARD
+==================================================
+
+Change generation contexts to:
+
+BASE_INITIAL:
+normal symbols
+Scatter
+NO Multiplier Core
+
+BASE_REFILL:
+normal symbols
+very rare Base Multiplier Core
+NO Scatter
+
+BONUS_INITIAL:
+normal symbols
+Scatter
+Multiplier Cores
+
+BONUS_REFILL:
+normal symbols
+Multiplier Cores
+NO Scatter
+
+This is the critical change.
+
+A Free Spin must be able to start with:
+
+normal symbols
++
+one or more Multiplier Cores
+
+even before the first tumble.
+
+==================================================
+2. MULTIPLIERS STILL DO NOT PAY BY THEMSELVES
+==================================================
+
+A Core on the initial Free Spin board does NOT create a win.
+
+Example:
+
+initial board contains:
+
+25x Core
+
+but there is no 8+ normal-symbol win.
+
+Result:
+
+0 payout.
+
+The 25x disappears when that Free Spin/tumble sequence ends.
+
+Do not pay:
+
+0 × 25.
+
+==================================================
+3. INITIAL CORE PERSISTS THROUGH TUMBLES
+==================================================
+
+Example:
+
+initial Free Spin board contains:
+
+10x Core
+
+and normal symbols create:
+
+1.50x win.
+
+The 10x stays.
+
+Next tumble:
+
++2.50x raw win.
+
+10x remains.
+
+Refill:
+
+25x Core arrives.
+
+Next tumble:
+
++3.00x.
+
+Raw sequence pool:
+
+7.00x
+
+Cores:
+
+10x + 25x
+
+combined:
+
+35x
+
+Final:
+
+7 × 35
+=
+245x.
+
+This is the required behavior.
+
+==================================================
+4. WE WANT MULTIPLE CORES TO BE POSSIBLE
+==================================================
+
+The bonus experience must naturally allow:
+
+0 Cores
+1 Core
+2 Cores
+3 Cores
+
+inside the same tumble sequence.
+
+Occasionally even more may occur during a long tumble sequence.
+
+Do NOT hard-cap each sequence at one multiplier.
+
+Examples such as:
+
+2x + 5x
+
+10x + 25x
+
+3x + 10x + 50x
+
+must be naturally possible.
+
+==================================================
+5. STARTING BONUS INITIAL CORE PROBABILITY
+==================================================
+
+Start calibration with:
+
+BONUS_INITIAL_CORE_CHANCE = 1.75%
+
+PER ELIGIBLE INITIAL CELL.
+
+This means:
+
+0.0175 probability.
+
+NOT:
+
+17.5%.
+
+Each initial Free Spin board has up to 30 cell opportunities.
+
+However Scatter and Core selection must be resolved safely so one cell cannot contain both.
+
+Use an explicit special-symbol selection system.
+
+==================================================
+6. STARTING BONUS REFILL CORE PROBABILITY
+==================================================
+
+Use:
+
+BONUS_REFILL_CORE_CHANCE = 6.0%
+
+per replacement position.
+
+This is intentionally higher than the initial-board probability.
+
+Why:
+
+tumbles are the exciting multiplier-building part of the feature.
+
+Longer tumble sequences should naturally create more chances for additional Cores.
+
+==================================================
+7. DO NOT CONFUSE INITIAL AND REFILL RATES
+==================================================
+
+Keep separate configuration:
+
+BONUS_INITIAL_CORE_CHANCE
+
+BONUS_REFILL_CORE_CHANCE
+
+BASE_REFILL_CORE_CHANCE
+
+Do not use one global:
+
+MULTIPLIER_CHANCE.
+
+We need independent mathematical calibration.
+
+==================================================
+8. INITIAL BOARD SPECIAL SELECTION
+==================================================
+
+BONUS_INITIAL cells may contain:
+
+Scatter
+Multiplier Core
+normal football symbol.
+
+Do not run three unrelated RNG checks that can collide.
+
+Use one explicit selection process.
+
+Conceptually:
+
+roll special outcome
+
+if Scatter:
+    SCATTER
+
+else if Core:
+    MULTIPLIER
+
+else:
+    NORMAL
+
+Then normal-symbol run logic applies only to NORMAL output.
+
+==================================================
+9. SCATTER FREQUENCY MUST REMAIN CORRECT
+==================================================
+
+IMPORTANT:
+
+Adding Bonus Initial Cores must NOT accidentally reduce the intended Scatter marginal probability.
+
+Scatter probability must remain separately controlled.
+
+Do not steal Scatter probability merely because Core was added.
+
+Measure both marginals in simulation.
+
+==================================================
+10. MULTIPLIER VALUE TABLE
+==================================================
+
+Keep the currently configured bonus values:
+
+2x
+3x
+5x
+10x
+15x
+20x
+25x
+50x
+100x
+250x
+500x
+
+Use the existing Bonus value distribution unless calibration later proves it is too strong.
+
+Do NOT solve multiplier scarcity by making huge values common.
+
+We want:
+
+more multiplier EVENTS
+
+not constant 100x/250x/500x.
+
+==================================================
+11. FREQUENCY TARGET IS EXPERIENCE-BASED
+==================================================
+
+Exact commercial Sweet Bonanza multiplier probabilities are not public.
+
+Therefore do NOT claim:
+
+"same exact probability as Sweet Bonanza."
+
+Instead calibrate toward this gameplay target:
+
+Over a normal 10-Free-Spin feature:
+
+ZERO total Multiplier Cores should be UNCOMMON.
+
+1+ multiplier events should occur in the large majority of bonus features.
+
+Several bonuses should contain multiple total Cores.
+
+Some individual tumble sequences should contain:
+
+2 or 3 Cores.
+
+But every spin must NOT be flooded with multipliers.
+
+==================================================
+12. INITIAL CALIBRATION TARGETS
+==================================================
+
+After simulation, aim roughly for:
+
+Bonus features containing ZERO Core:
+less than approximately 10-15%
+
+Bonus features containing at least one Core:
+greater than approximately 85%
+
+These are gameplay calibration targets, not claims about another game's hidden math.
+
+Also report:
+
+features with:
+0 Cores
+1 Core
+2 Cores
+3 Cores
+4-5 Cores
+6+ Cores
+
+==================================================
+13. SAME-SEQUENCE MULTIPLIER TARGET
+==================================================
+
+Report for winning Free Spin tumble sequences:
+
+0 active Cores at settlement
+1 active Core
+2 active Cores
+3 active Cores
+4+ active Cores
+
+We specifically want:
+
+2-Core sequences to occur regularly enough to be seen.
+
+3-Core sequences:
+uncommon but clearly possible.
+
+We do NOT want:
+
+2-3 Cores to feel impossible.
+
+==================================================
+14. DO NOT FORCE A MULTIPLIER
+==================================================
+
+Never implement:
+
+if bonus has no X after 7 spins:
+    force X
+
+or:
+
+guarantee at least one X
+
+or:
+
+if player lost:
+    add X
+
+No dynamic rescue system.
+
+All probabilities remain static.
+
+ZERO-X bonuses remain mathematically possible.
+
+They simply should not be excessively common.
+
+==================================================
+15. MULTIPLIER ARRIVAL VISUAL
+==================================================
+
+When more than one Core lands in the same drop:
+
+do not overlap their effects.
+
+Example:
+
+10x lands
+
+short impact
+
+then 25x lands slightly after
+
+short impact.
+
+Both remain visible.
+
+The player must clearly understand:
+
+10x + 25x
+
+are currently waiting.
+
+==================================================
+16. INITIAL CORE MUST BE EASY TO NOTICE
+==================================================
+
+If an X lands with the initial Free Spin board:
+
+give it the same premium landing event as a refill Core.
+
+Do NOT let the initial-board drop make the Core visually disappear among football symbols.
+
+Large frameless:
+
+25x
+
+energy object.
+
+==================================================
+17. MULTI-CORE ARRIVAL PACING
+==================================================
+
+If 2 or 3 Cores arrive in one drop:
+
+use approximately:
+
+70-120 ms
+
+visual emphasis separation.
+
+Do not slow the game excessively.
+
+Example:
+
+10x impact
+90ms
+25x impact
+90ms
+5x impact.
+
+==================================================
+18. KEEP SEQUENCE-LEVEL SETTLEMENT
+==================================================
+
+Do NOT regress the payout engine.
+
+At tumble-sequence end:
+
+rawSequenceWin =
+sum(all raw normal-symbol wins)
+
+combinedMultiplier =
+sum(all active Core values)
+
+if combinedMultiplier > 0:
+
+final =
+rawSequenceWin × combinedMultiplier
+
+else:
+
+final =
+rawSequenceWin.
+
+Exactly once.
+
+==================================================
+19. UPDATE PERSISTENT STREAM GENERATOR
+==================================================
+
+BONUS_INITIAL stream must now support:
+
+NORMAL
+SCATTER
+MULTIPLIER_CORE.
+
+BONUS_REFILL stream supports:
+
+NORMAL
+MULTIPLIER_CORE.
+
+Core is a special item.
+
+Do NOT duplicate a Core through the normal 1/2 run-length generator.
+
+A 2-symbol normal run must never become:
+
+25x
+25x
+
+because runLength=2.
+
+Each Core occurrence requires its own special RNG selection.
+
+==================================================
+20. TEST INITIAL MULTIPLIERS
+==================================================
+
+Required test:
+
+Generate large BONUS_INITIAL sample.
+
+Confirm:
+
+Multiplier Core count > 0.
+
+The previous implementation where initial boards can never contain X must fail this new specification.
+
+==================================================
+21. TEST MULTIPLE CORES
+==================================================
+
+Generate enough deterministic bonus sequences to confirm examples exist with:
+
+2 Cores at settlement
+
+3 Cores at settlement.
+
+This is a statistical test / simulation assertion, not a forced production outcome.
+
+==================================================
+22. TEST INITIAL + REFILL CORE TOGETHER
+==================================================
+
+Deterministic integration test:
+
+Initial Free Spin:
+
+10x Core
+
+raw win:
+2x
+
+refill:
+
+25x Core
+
+new raw win:
+3x
+
+sequence ends.
+
+Expected:
+
+raw pool:
+5x
+
+Core total:
+35x
+
+final:
+175x.
+
+==================================================
+23. UPDATE SIMULATOR METRICS
+==================================================
+
+Report:
+
+BONUS_INITIAL Core marginal probability
+
+BONUS_REFILL Core marginal probability
+
+Average total Cores per 10-Free-Spin feature
+
+Median total Cores per feature
+
+Percentage bonus features with:
+0 Cores
+1 Core
+2 Cores
+3 Cores
+4-5 Cores
+6+ Cores
+
+Percentage Free Spins with at least one Core
+
+Percentage winning tumble sequences with:
+0 Core
+1 Core
+2 Core
+3 Core
+4+ Core
+
+Average combined multiplier
+
+Median combined multiplier
+
+Maximum observed combined multiplier
+
+2x count
+3x count
+5x count
+10x count
+15x count
+20x count
+25x count
+50x count
+100x count
+250x count
+500x count.
+
+==================================================
+24. RTP RECALIBRATION IS REQUIRED
+==================================================
+
+This change can significantly increase Bonus RTP.
+
+DO NOT keep old RTP values.
+
+Correct order:
+
+1. Fix Scatter frequency bug first.
+2. Enable Bonus Initial Cores.
+3. Enable intended Bonus Refill Core probability.
+4. Run simulator.
+5. Measure multiplier frequency.
+6. Measure Bonus RTP.
+7. Calibrate static probabilities/value weights.
+8. Restore Overall RTP to:
+   95.5%-96.5%.
+
+Do NOT reduce bonus trigger frequency to compensate.
+
+==================================================
+25. FINAL SIMULATION
+==================================================
+
+Run at least:
+
+npm run simulate -- --spins=1000000 --seed=20260913
+
+Prefer 10,000,000 if practical.
+
+Report:
+
+Bonus Frequency
+
+Average Bonus Win
+
+Bonus RTP
+
+Average Cores per Bonus
+
+ZERO-Core Bonus %
+
+1-Core Bonus %
+
+2-Core Bonus %
+
+3-Core Bonus %
+
+4+ Core Bonus %
+
+2-Core same-sequence %
+
+3-Core same-sequence %
+
+Overall RTP.
+
+==================================================
+26. FINAL ACCEPTANCE
+==================================================
+
+A manually tested 10-Free-Spin feature should no longer systematically feel empty.
+
+It must be possible to see:
+
+X on initial Free Spin board
+
+X on refill
+
+two X values in the same sequence
+
+three X values in the same sequence
+
+while still retaining occasional zero-X sequences/features.
+
+Do not declare complete merely because one X was successfully rendered.
+
+Validate the DISTRIBUTION.

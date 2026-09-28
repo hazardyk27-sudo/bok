@@ -1,0 +1,376 @@
+Senin istediğin şey:
+
+Mesela 8 Real Madrid patladı
+Patladığı yerin hemen üstünde / merkezinde
+küçük ama net, okunur, dikkat çekici bir kazanç etiketi çıkacak
+örnek: 20.00
+bu etiket kısa süre görünecek
+sonra hafif yukarı çıkıp kaybolacak
+aynı anda o kazanç animasyonla üstteki patlama toplamı alanına eklenecek
+
+Yani Sweet Bonanza’daki gibi:
+“hangi patlama ne kazandırdı?” sorusunun cevabı board’un üstünde anlık görünecek.
+
+Bunu Replit’e aynen gönder:
+
+CRITICAL ON-BOARD WIN LABEL PATCH — SHOW EACH EXPLOSION'S VALUE AT THE EXPLOSION POINT
+
+Modify the EXISTING Cascade 8 project.
+
+DO NOT create a new project.
+DO NOT change RNG.
+DO NOT change RTP.
+DO NOT change payout math.
+DO NOT change symbol generation.
+DO NOT change Free Spin logic.
+
+Use the uploaded Sweet Bonanza reference video only as FEEL / UX reference.
+Do NOT copy copyrighted assets or branded visuals.
+Create ORIGINAL but similarly clear and satisfying on-board payout labels.
+
+==================================================
+1. GOAL
+==================================================
+
+When a winning symbol cluster explodes,
+the player must immediately see how much THAT specific explosion paid,
+directly on the board near the exploded symbols.
+
+Example:
+
+8 Real Madrid symbols win.
+
+At the point where those Real Madrid symbols explode,
+show a small but clearly readable payout label such as:
+
+20.00
+
+This makes each tumble step understandable and satisfying.
+
+==================================================
+2. WHAT MUST APPEAR
+==================================================
+
+For each individual normal-symbol win event:
+
+show a floating on-board win label.
+
+Examples:
+8-symbol win -> 20.00
+10-symbol win -> 35.00
+12-symbol win -> 75.00
+
+This label represents:
+the raw payout from THAT explosion event only
+
+NOT the total tumble total
+NOT the full spin total
+NOT the final multiplied result
+
+==================================================
+3. LABEL POSITION
+==================================================
+
+The win label should appear at the visual center of the winning cluster.
+
+Implementation guidance:
+- calculate the bounding box of all winning symbols in that cluster
+- place the label near the center/top-center of that cluster
+- if necessary, bias slightly upward for readability
+
+The label should feel like it came from the exploded symbols.
+
+==================================================
+4. LABEL STYLE
+==================================================
+
+The on-board win label must be:
+
+- compact
+- premium
+- very readable
+- small enough not to dominate the board
+- large enough to be easily noticed
+- high contrast
+- elegant
+
+Use a style such as:
+- bright ivory / white-gold numerals
+- subtle gold outline or shadow
+- soft glow
+- crisp premium font
+- slight depth
+
+Do NOT make it:
+- huge
+- cartoonish
+- blurry
+- too thin
+- hard to read
+
+==================================================
+5. LABEL CONTENT
+==================================================
+
+Show ONLY the amount.
+
+Examples:
+20.00
+35.00
+120.00
+
+Do NOT add:
++20.00 RAW
+REAL MADRID WIN
+8 OF A KIND
+or similar extra text.
+
+Only the monetary amount.
+
+==================================================
+6. LABEL ANIMATION
+==================================================
+
+When the win occurs:
+
+1. label appears with a small pop/fade-in
+2. label holds briefly
+3. label rises slightly upward
+4. label fades out
+5. simultaneously or just after, its value transfers into the Free Spin / tumble raw-win accumulator
+
+Desired feeling:
+clear
+satisfying
+premium
+fast but readable
+
+Suggested timing:
+- pop-in: 120–180ms
+- readable hold: 250–400ms
+- rise/fade: 250–400ms
+
+Total:
+~500–850ms depending on game speed
+
+==================================================
+7. MULTIPLE WIN EVENTS IN ONE TUMBLE SEQUENCE
+==================================================
+
+If one tumble sequence has multiple separate explosion events across successive tumbles:
+
+each event gets its own on-board label.
+
+Example:
+
+First explosion:
+20.00 appears over its cluster
+
+Later second explosion:
+35.00 appears over the new cluster
+
+Later third explosion:
+15.00 appears over that cluster
+
+Do NOT merge them into one board label.
+
+Each explosion should feel individually rewarding.
+
+==================================================
+8. IF THERE ARE MULTIPLE CLUSTERS IN SAME BOARD STATE
+==================================================
+
+If the current game rules allow multiple winning symbol types/clusters in the same settled board state,
+show separate labels for each cluster.
+
+Each label should appear near its own cluster center.
+
+If overlap is possible:
+- offset slightly
+- stagger timing very slightly
+- ensure readability
+
+But do not collapse multiple cluster wins into one unclear number.
+
+==================================================
+9. LINK TO RAW-WIN ACCUMULATOR
+==================================================
+
+After or during the label animation,
+that label's value must visually contribute to the RAW EXPLOSION TOTAL
+in the equation strip above the board.
+
+Desired flow:
+
+- cluster win happens
+- on-board amount appears: 20.00
+- small energy/value trail goes from the label or cluster toward the LEFT raw-win field
+- raw-win field increases:
+0.00 -> 20.00
+
+This must visually explain:
+“that board win was added to the raw total.”
+
+==================================================
+10. AUDIO
+==================================================
+
+Each on-board win label should have a small original collect sound.
+
+Not too loud.
+Not a giant win sound.
+
+Suggested feel:
+- short gold tick / sweet chime
+- satisfying
+- distinct from explosion sound
+- pairs nicely with the value appearing
+
+Use ORIGINAL audio only.
+Do NOT copy Sweet Bonanza assets.
+
+==================================================
+11. DIFFERENT FROM FINAL SPIN RESULT
+==================================================
+
+Important distinction:
+
+On-board floating label:
+payout of THIS explosion only
+
+Equation strip left value:
+cumulative raw explosion total for the current Free Spin / tumble sequence
+
+Equation strip right value:
+final current-spin result after multipliers
+
+Do not confuse these three things.
+
+==================================================
+12. ZERO-WIN CASE
+==================================================
+
+If no winning cluster exists:
+show no on-board label.
+
+If a Free Spin ends with raw total 0:
+show nothing on board and skip useless win-value presentation.
+
+==================================================
+13. MOBILE READABILITY
+==================================================
+
+At 390x844 and 430x932:
+
+- the label must still be easy to read
+- it must not be too tiny
+- it must not cover the entire cluster excessively
+- it must not go off-screen awkwardly
+- it must not clash with the top equation strip
+
+This is especially important on mobile.
+
+==================================================
+14. DESKTOP READABILITY
+==================================================
+
+At desktop sizes:
+- keep labels elegant and compact
+- do not make them oversized
+- ensure they still feel anchored to the cluster
+
+==================================================
+15. SPEED / GAME FEEL
+==================================================
+
+The current game often resolves too fast.
+
+Use the on-board win label to slow the experience slightly in a good way,
+making each explosion readable and satisfying.
+
+Do not make it sluggish,
+but do make it visible enough to register.
+
+==================================================
+16. TURBO MODE
+==================================================
+
+In Turbo mode:
+- keep the same feature
+- shorten the label lifetime and travel timing
+- still make it readable
+
+Do not remove the label entirely in Turbo unless absolutely necessary.
+
+==================================================
+17. LAB / DETERMINISTIC DEMO
+==================================================
+
+Add a deterministic lab/demo scenario:
+
+Example:
+- 8 Real Madrid win -> label 20.00
+- label appears over cluster
+- then transfers to raw total
+- then second tumble: 10 Bayern win -> label 35.00
+- second label appears over new cluster
+- raw total becomes 55.00
+
+This should be visually reviewable.
+
+==================================================
+18. REQUIRED TESTS
+==================================================
+
+Add tests or assertions that verify:
+
+- each winning cluster produces an on-board label
+- label value equals that cluster's raw payout
+- label position is based on cluster bounds
+- label contributes to raw-win accumulator
+- no label appears when there is no win
+- multiple clusters can produce separate labels
+- Turbo mode still supports shortened labels
+
+==================================================
+19. VISUAL ACCEPTANCE
+==================================================
+
+Do not mark complete until visually confirmed:
+
+- when a symbol group explodes, its win value appears on the board
+- the amount is readable
+- the label appears near the explosion point
+- the label rises/fades elegantly
+- the value then contributes to the raw-win total
+- the effect feels satisfying and premium
+- the board is not cluttered
+
+==================================================
+20. FINAL REPORT
+==================================================
+
+When finished report:
+
+- where the label is positioned
+- how cluster center is calculated
+- final typography size/style
+- animation timing
+- how the value transfers to the raw-win total
+- mobile test result
+- desktop test result
+- lab/demo scenario status
+- build/test status
+
+Do not mark complete without visual verification in real gameplay.
+
+Kısacası burada istediğimiz yeni akış şu:
+
+8 Real Madrid patladı
+→ board üstünde 20.00 çıkar
+→ hafif yukarı kayar
+→ aynı anda üstteki ham kazanç alanına eklenir
+
+Yani oyuncu net şekilde şunu görecek:
+
+“bu patlama bana 20.00 kazandırdı.”

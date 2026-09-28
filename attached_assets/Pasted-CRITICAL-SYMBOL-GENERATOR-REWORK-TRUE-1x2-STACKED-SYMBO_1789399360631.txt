@@ -1,0 +1,752 @@
+CRITICAL SYMBOL GENERATOR REWORK — TRUE 1x2 STACKED SYMBOL PACKETS
+
+The current “pair probability” implementation still does NOT create the visual behavior I want.
+
+I provided a Sweet Bonanza reference video.
+
+The important visible behavior is:
+
+When replacement symbols fall from above, matching symbols very often appear as a VERTICAL 2-SYMBOL STACK.
+
+Example:
+
+WATERMELON
+WATERMELON
+
+They do not feel like two independent cells that randomly happened to match.
+
+They feel like ONE 1x2 SYMBOL PACKET coming from above.
+
+This is the behavior we need.
+
+DO NOT attempt another simple “increase identical-symbol probability” patch.
+
+Rebuild normal incoming-symbol generation around STACK PACKETS.
+
+==================================================
+1. STOP THINKING IN INDIVIDUAL CELLS
+==================================================
+
+Normal incoming generation must no longer be conceptually:
+
+generate cell
+generate cell
+generate cell
+generate cell
+
+Instead generate PACKETS.
+
+A normal packet can be:
+
+SINGLE PACKET:
+[A]
+
+or:
+
+DOUBLE STACK PACKET:
+[A]
+[A]
+
+The double stack is one generated object with:
+
+symbolType
+height = 2
+stackId
+
+Example:
+
+{
+    symbol: CHELSEA,
+    height: 2,
+    stackId: 84721
+}
+
+The two Chelsea items belong to the SAME generated stack.
+
+==================================================
+2. NO TRIPLE STACKS
+==================================================
+
+Allowed:
+
+height = 1
+height = 2
+
+Forbidden:
+
+height = 3
+height = 4
+height = 5
+
+Maximum generated normal stack height:
+
+2
+
+==================================================
+3. STARTING STACK DISTRIBUTION
+==================================================
+
+Start with:
+
+SINGLE_PACKET = 60%
+DOUBLE_STACK_PACKET = 40%
+
+This is intentionally more stack-heavy than the previous 70/30 cell-run model.
+
+The reference experience frequently shows two vertically matching symbols.
+
+Keep this configurable:
+
+SINGLE_STACK_WEIGHT
+DOUBLE_STACK_WEIGHT
+
+If simulation later shows too much clustering,
+reduce DOUBLE_STACK to:
+
+35%
+30%
+25%
+
+But DO NOT return to independent-cell generation.
+
+==================================================
+4. SYMBOL IDENTITY IS SELECTED ONCE PER PACKET
+==================================================
+
+Correct:
+
+choose packet height
+
+then choose symbol ONCE
+
+Example:
+
+height = 2
+symbol = PSG
+
+packet:
+
+PSG
+PSG
+
+Wrong:
+
+choose height = 2
+then independently roll the two cells
+
+The two members of a double stack MUST always match.
+
+==================================================
+5. DOUBLE STACK MUST HAVE A SHARED ID
+==================================================
+
+Represent the two cells with metadata such as:
+
+stackId
+stackIndex
+stackSize
+
+Example:
+
+first:
+{
+ symbol: PSG,
+ stackId: 1004,
+ stackIndex: 0,
+ stackSize: 2
+}
+
+second:
+{
+ symbol: PSG,
+ stackId: 1004,
+ stackIndex: 1,
+ stackSize: 2
+}
+
+The renderer must know they are one stack.
+
+==================================================
+6. NO OTHER SYMBOL MAY APPEAR BETWEEN STACK MEMBERS
+==================================================
+
+If a packet is:
+
+CHELSEA
+CHELSEA
+
+the stream must preserve exactly:
+
+CHELSEA
+CHELSEA
+
+No Scatter
+No X
+No Roma
+No other symbol
+
+may be inserted between those two members.
+
+The packet is atomic.
+
+==================================================
+7. SPECIAL SYMBOLS ARE SEPARATE PACKETS
+==================================================
+
+Scatter and multiplier characters remain single special packets.
+
+Do NOT create:
+
+FAHRI
+FAHRI
+
+just because a double stack was rolled.
+
+Do NOT create:
+
+5x
+5x
+
+through stack logic.
+
+Normal 1x2 stacking applies ONLY to normal football symbols.
+
+==================================================
+8. COLUMN STREAM IS NOW A PACKET STREAM
+==================================================
+
+Each of the six columns owns a persistent queue such as:
+
+columnPacketStreams[column]
+
+Example:
+
+Packet 1:
+[CHELSEA, CHELSEA]
+
+Packet 2:
+[ROMA]
+
+Packet 3:
+[PSG, PSG]
+
+Packet 4:
+[FAHRI]
+
+Packet 5:
+[BAYERN]
+
+Packet 6:
+[10x]
+
+etc.
+
+The stream consumes packets in order.
+
+==================================================
+9. EXPAND PACKETS INTO CELL ITEMS ONLY WHEN NEEDED
+==================================================
+
+Internally, a packet may be expanded into cell items for board placement.
+
+But preserve packet metadata.
+
+Example stream:
+
+DOUBLE(CHELSEA)
+SINGLE(ROMA)
+DOUBLE(PSG)
+
+expanded logical stream:
+
+CHELSEA(stack 1/2)
+CHELSEA(stack 2/2)
+ROMA
+PSG(stack 1/2)
+PSG(stack 2/2)
+
+The renderer still knows which items belong together.
+
+==================================================
+10. MOST IMPORTANT REFILL BEHAVIOR
+==================================================
+
+Suppose one column has 3 empty spaces.
+
+Next packet stream:
+
+DOUBLE(CHELSEA)
+SINGLE(ROMA)
+
+Correct incoming result:
+
+CHELSEA
+CHELSEA
+ROMA
+
+The Chelsea pair must visibly enter as one two-symbol train.
+
+==================================================
+11. DOUBLE STACK FALL ANIMATION
+==================================================
+
+This is critical.
+
+When a double stack enters:
+
+the two symbols must NOT animate like unrelated objects.
+
+They should:
+
+- share the same vertical path
+- share the same velocity profile
+- maintain exactly one-cell vertical spacing
+- fall as a visual train
+- have approximately 40–70ms perceived follow delay
+- settle sequentially but cohesively
+
+Visually:
+
+Chelsea 1 falls
+
+immediately behind:
+Chelsea 2
+
+The player should perceive:
+
+“a Chelsea pair came down”
+
+not:
+
+“Chelsea appeared, then another random Chelsea appeared.”
+
+==================================================
+12. DO NOT CREATE TWO RANDOM TWEENS
+==================================================
+
+Do not independently calculate two unrelated tween durations.
+
+For a double stack:
+
+use one group motion model.
+
+Conceptually:
+
+stackOffset = cellHeight
+
+lowerMemberPosition = groupY
+
+upperMemberPosition = groupY - cellHeight
+
+animate:
+
+groupY
+
+rather than separately inventing two trajectories.
+
+They may still be separate sprites,
+but their movement remains linked.
+
+==================================================
+13. ONE VACANCY EDGE CASE
+==================================================
+
+Important.
+
+Suppose only ONE empty cell exists,
+but the next incoming packet is:
+
+DOUBLE(PSG)
+
+Do NOT discard the second PSG.
+
+Do NOT generate another symbol.
+
+Consume only the lower member into the visible board.
+
+Keep:
+
+the second PSG
+
+as:
+
+pendingStackContinuation
+
+at the HEAD of that column stream.
+
+Therefore:
+
+current refill:
+PSG enters
+
+remaining hidden stream begins with:
+PSG (continuation of same stack)
+
+If another vacancy appears later in the SAME tumble sequence,
+that PSG MUST be the next item to enter.
+
+This preserves the feeling of a real continuous reel above the board.
+
+==================================================
+14. STACK CONTINUATION MUST PRESERVE stackId
+==================================================
+
+If a 2-stack is split because only one vacancy existed:
+
+the remaining member keeps the SAME stackId.
+
+Example:
+
+stackId = 501
+
+first member enters now.
+
+second member remains hidden.
+
+Later:
+
+second member enters with:
+stackId = 501
+
+Do not treat it as a newly generated independent symbol.
+
+==================================================
+15. IF TWO VACANCIES ARE AVAILABLE, KEEP PAIR TOGETHER
+==================================================
+
+If a double packet is next and the column has at least two empty positions:
+
+ALWAYS consume both members together.
+
+Do not intentionally split the stack.
+
+This is the main behavior we want.
+
+==================================================
+16. PACKETS SHOULD EXIST BEFORE THEY ARE NEEDED
+==================================================
+
+Keep the persistent hidden-stream architecture.
+
+Do not wait until an explosion happens and then decide:
+
+“maybe generate a pair.”
+
+Packets already conceptually exist above the board.
+
+The tumble simply reveals the next packet(s).
+
+==================================================
+17. INITIAL BOARD MAY ALSO USE PACKETS
+==================================================
+
+Initial 5 visible normal positions should also come from the same packet-based stream architecture.
+
+Example:
+
+DOUBLE(REAL)
+SINGLE(CHELSEA)
+DOUBLE(BAYERN)
+
+visible column:
+
+REAL
+REAL
+CHELSEA
+BAYERN
+BAYERN
+
+This produces the stacked-symbol appearance naturally.
+
+==================================================
+18. DO NOT ASSIGN ONE SYMBOL TO AN ENTIRE COLUMN
+==================================================
+
+We previously had a bug where a full column became:
+
+REAL
+REAL
+REAL
+REAL
+REAL
+
+Never allow that architecture again.
+
+Packets are max height 2.
+
+After one packet ends,
+a new packet is generated.
+
+The next normal packet should not automatically reuse the same symbol.
+
+==================================================
+19. PREVENT TWO IDENTICAL PACKETS MERGING INTO 4
+==================================================
+
+If previous normal packet was:
+
+DOUBLE(CHELSEA)
+
+the immediately following NORMAL packet cannot also select:
+
+CHELSEA.
+
+Otherwise:
+
+CHELSEA
+CHELSEA
+CHELSEA
+CHELSEA
+
+would visually become one fake 4-stack.
+
+Rule:
+
+nextNormalPacketSymbol != previousNormalPacketSymbol
+
+Special packets break this boundary.
+
+Example allowed:
+
+CHELSEA
+CHELSEA
+5x
+CHELSEA
+CHELSEA
+
+==================================================
+20. THIS SHOULD STILL FEEL RANDOM
+==================================================
+
+Do NOT force alternating patterns.
+
+Do NOT create:
+
+A,A
+B,B
+C,C
+D,D
+
+systematically.
+
+Packet size remains random.
+
+Symbol identity remains weighted random.
+
+Only prevent immediate normal-packet symbol duplication.
+
+==================================================
+21. VISUAL TARGET
+==================================================
+
+A realistic incoming stream should look like:
+
+Chelsea
+Chelsea
+Roma
+PSG
+PSG
+Liverpool
+Barcelona
+Barcelona
+
+or:
+
+Bayern
+Real
+Real
+Chelsea
+Roma
+Roma
+PSG
+
+This is desired.
+
+We want frequent visual pairs,
+not giant same-symbol columns.
+
+==================================================
+22. REFERENCE VIDEO FEEL
+==================================================
+
+Use the uploaded Sweet Bonanza video only as a motion/reference observation.
+
+The key behavior to reproduce is:
+
+- identical vertical symbols frequently arrive together
+- the second matching symbol follows directly behind the first
+- they visually feel like a stacked reel segment
+- replacement symbols feel like they are coming from a continuous hidden vertical reel above the visible board
+
+Do NOT claim we know Sweet Bonanza’s proprietary generator.
+
+Implement our own original packet/stack system that reproduces this visible behavior.
+
+==================================================
+23. DEBUG VISUALIZATION
+==================================================
+
+Add development-only /lab mode:
+
+STACK PACKET TEST
+
+Display one column and its packet stream:
+
+DOUBLE(CHELSEA)
+SINGLE(ROMA)
+DOUBLE(PSG)
+SINGLE(BAYERN)
+
+Button:
+
+REMOVE 2 CELLS
+
+Expected:
+Chelsea + Chelsea fall together
+
+Button:
+
+REMOVE 1 CELL
+
+If next packet is DOUBLE(PSG):
+first PSG enters
+second PSG remains marked as PENDING STACK CONTINUATION
+
+Next REMOVE 1 CELL:
+second PSG enters.
+
+==================================================
+24. REQUIRED TESTS
+==================================================
+
+Test A:
+Double packet always contains same symbol.
+
+Test B:
+Maximum normal packet height = 2.
+
+Test C:
+If vacancies >= 2,
+double packet is consumed together.
+
+Test D:
+If vacancies = 1,
+second member remains at stream head.
+
+Test E:
+pending stack continuation keeps same stackId.
+
+Test F:
+no other item can appear between two stack members.
+
+Test G:
+immediately consecutive normal packets cannot use same symbol.
+
+Test H:
+special symbols are never duplicated by normal stack logic.
+
+Test I:
+persistent packet stream survives across tumbles.
+
+Test J:
+same RNG seed produces identical packet stream.
+
+==================================================
+25. SIMULATION METRICS
+==================================================
+
+This changes symbol correlation,
+so rerun simulation.
+
+Report:
+
+configured single-packet %
+configured double-packet %
+
+observed single-packet %
+observed double-packet %
+
+percentage refill events containing at least one double stack
+
+percentage initial columns containing a double stack
+
+maximum contiguous same normal symbol count
+
+average identical vertical adjacent-pair count per board
+
+hit rate
+
+average tumble length
+
+RTP
+
+==================================================
+26. IMPORTANT RTP WARNING
+==================================================
+
+Do NOT assume RTP stays unchanged.
+
+Frequent 1x2 stacks increase correlation
+and may increase 8+ hit frequency.
+
+After implementation:
+
+run:
+
+npm test
+
+npm run build
+
+npm run simulate -- --spins=1000000 --seed=20260913
+
+If Hit Rate / RTP becomes too high:
+
+FIRST reduce:
+
+DOUBLE_STACK_PACKET probability
+
+Example:
+40%
+-> 35%
+-> 30%
+-> 25%
+
+Do NOT reintroduce triples.
+
+==================================================
+27. MANUAL VISUAL ACCEPTANCE
+==================================================
+
+Manually inspect at least 100 tumbles.
+
+We should frequently see behavior like:
+
+one Chelsea drops
+
+directly behind it another Chelsea drops
+
+both maintain perfect vertical spacing
+
+and visibly feel like one stacked segment.
+
+If matching symbols still look like two unrelated RNG events,
+the implementation is NOT correct.
+
+==================================================
+28. FINAL REPORT
+==================================================
+
+Report:
+
+- whether generation is now PACKET-based rather than CELL-based
+- final single/double packet probabilities
+- how shared stackId works
+- how a 2-stack animates
+- what happens when only one vacancy exists
+- whether stack continuation survives the next tumble
+- measured hit rate
+- measured RTP
+- test status
+- build status
+
+Do not mark complete until the paired-drop behavior has been visually inspected in actual gameplay.

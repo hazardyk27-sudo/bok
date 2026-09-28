@@ -1,0 +1,559 @@
+Bir sütunun yukarıdan gelen akışını ikişerli mantıksal bloklara ayırıyoruz:
+
+[ hücre 1 ]
+[ hücre 2 ]   ← BİR GRUP
+
+[ hücre 3 ]
+[ hücre 4 ]   ← YENİ GRUP
+
+[ hücre 5 ]
+[ hücre 6 ]   ← YENİ GRUP
+
+Her grubun ilk hücresi tamamen random seçiliyor.
+
+Sonra ikinci hücre:
+
+%90 → ilk hücrenin aynısı
+%10 → yeniden random
+
+Ama grup bittiği anda geçmiş tamamen unutuluyor.
+
+Dolayısıyla üçüncü hücre:
+
+önceki iki hücreden bağımsız, sıfırdan random.
+
+Mesela:
+
+1: Chelsea  ← random
+2: Chelsea  ← %90 copy
+
+3: Roma     ← YENİ random
+4: Roma     ← %90 copy
+
+5: PSG      ← YENİ random
+6: Bayern   ← %10 farklı çıktı
+
+7: Liverpool ← YENİ random
+8: Liverpool ← %90 copy
+
+Bu tam olarak senin “30 bağımsız hücre yokmuş da yaklaşık 15 sembol kararı varmış gibi” dediğin his.
+
+Ve kritik fark:
+
+Chelsea
+Chelsea
+Chelsea
+
+oluşabilir mi?
+
+Evet, ama sadece tesadüfen.
+
+Örneğin:
+
+PAIR 1:
+Chelsea
+Chelsea
+
+PAIR 2 ilk hücre:
+Chelsea   ← yeni bağımsız random seçim
+
+Bu üçüncü Chelsea önceki çiftin devamı değildir. Dolayısıyla motor yapay şekilde üçlü üretmiyor; yeni grubun ilk random seçimi tesadüfen aynı çıktı.
+
+Bence istediğin sistem tam olarak bu.
+
+Replit'e önceki stack talimatının yerine bunu gönder:
+
+CRITICAL GENERATOR CORRECTION — FIXED 2-CELL LOGICAL GROUPS
+
+The previous packet interpretation is NOT what I want.
+
+I do NOT want:
+
+90% chance of generating a 2-symbol packet
+10% chance of generating a 1-symbol packet.
+
+Instead, NORMAL football symbols must be generated through FIXED 2-CELL LOGICAL GROUPS.
+
+Think of the vertical incoming reel as pairs of positions:
+
+POSITION A
+POSITION B
+
+then:
+
+POSITION C
+POSITION D
+
+then:
+
+POSITION E
+POSITION F
+
+etc.
+
+Each two-position group works like this:
+
+FIRST POSITION:
+choose a normal football symbol randomly using the configured symbol weights.
+
+SECOND POSITION:
+90% chance = copy the FIRST position's symbol.
+10% chance = perform a fresh weighted random normal-symbol selection.
+
+Then the group is FINISHED.
+
+The THIRD position begins a completely NEW independent group.
+
+==================================================
+1. CORE MODEL
+==================================================
+
+For NORMAL football symbols only:
+
+GROUP 1:
+cell A = weighted random symbol
+cell B = 90% same as A / 10% fresh random
+
+GROUP 2:
+cell C = new weighted random symbol
+cell D = 90% same as C / 10% fresh random
+
+GROUP 3:
+cell E = new weighted random symbol
+cell F = 90% same as E / 10% fresh random
+
+etc.
+
+This is the required model.
+
+==================================================
+2. IMPORTANT DIFFERENCE FROM OLD PACKET MODEL
+==================================================
+
+DO NOT generate:
+
+SINGLE PACKET 10%
+DOUBLE PACKET 90%
+
+That is NOT the intended logic.
+
+Every logical normal-symbol group has TWO positions.
+
+The second position usually mirrors the first.
+
+The next logical group always begins with a fresh random selection.
+
+==================================================
+3. EXAMPLE
+==================================================
+
+A valid stream might be:
+
+CHELSEA
+CHELSEA
+
+ROMA
+ROMA
+
+PSG
+BAYERN
+
+LIVERPOOL
+LIVERPOOL
+
+REAL MADRID
+REAL MADRID
+
+Why?
+
+Group 1:
+Chelsea selected
+second copied Chelsea
+
+Group 2:
+Roma selected
+second copied Roma
+
+Group 3:
+PSG selected
+10% non-copy branch selected Bayern
+
+Group 4:
+Liverpool selected
+second copied Liverpool
+
+==================================================
+4. THIRD POSITION IS ALWAYS A NEW RANDOM DECISION
+==================================================
+
+This is the most important rule.
+
+After:
+
+CHELSEA
+CHELSEA
+
+the next position is NOT constrained by the Chelsea pair.
+
+It is a new weighted random draw.
+
+Therefore this is technically possible:
+
+CHELSEA
+CHELSEA
+CHELSEA
+CHELSEA
+
+but ONLY because:
+
+Group 1 randomly chose Chelsea
+and
+Group 2 independently also randomly chose Chelsea.
+
+Do NOT artificially ban this.
+
+The third position is random.
+
+It is NOT a continuation probability.
+
+==================================================
+5. NO ARTIFICIAL ANTI-STREAK RULE
+==================================================
+
+Remove any rule saying:
+
+next group cannot select previous group's symbol.
+
+That rule is NOT wanted anymore.
+
+Because the third position must truly be random.
+
+If two independent groups both select Chelsea,
+that is legitimate RNG.
+
+==================================================
+6. APPLIES ONLY TO THE 8 NORMAL TEAM SYMBOLS
+==================================================
+
+This paired-group logic applies ONLY to:
+
+the 8 normal football/team symbols.
+
+It does NOT apply to:
+
+Scatter / Fahri
+Multiplier characters / X symbols
+
+Those special symbols use their own independent probabilities.
+
+Never copy a Scatter because it occupied the first position.
+
+Never copy a multiplier because it occupied the first position.
+
+==================================================
+7. SPECIAL SYMBOL INSERTION
+==================================================
+
+Special-symbol generation remains independent.
+
+If a stream position becomes:
+
+SCATTER
+
+or:
+
+MULTIPLIER
+
+it is a single special object.
+
+Do not make:
+
+FAHRI + FAHRI
+
+or:
+
+5x + 5x
+
+through this 90% pairing system.
+
+==================================================
+8. NORMAL PAIR GROUP STATE
+==================================================
+
+Each column stream should maintain a small state such as:
+
+normalPairPhase:
+FIRST
+SECOND
+
+pairedBaseSymbol
+
+When generating a normal position:
+
+if phase == FIRST:
+    pairedBaseSymbol = weightedRandomNormalSymbol()
+    emit pairedBaseSymbol
+    phase = SECOND
+
+if phase == SECOND:
+    90%:
+        emit pairedBaseSymbol
+    10%:
+        emit weightedRandomNormalSymbol()
+    phase = FIRST
+    clear pairedBaseSymbol
+
+Exact architecture may differ,
+but the behavior must match this model.
+
+==================================================
+9. PERSISTENT STREAM
+==================================================
+
+The pair-phase state must survive tumbles.
+
+Example hidden normal stream logic:
+
+Group starts:
+Chelsea
+
+Only one vacancy exists.
+
+Chelsea enters.
+
+The stream remembers:
+
+we are now waiting for SECOND position of this group.
+
+On the next required normal position:
+
+90% chance:
+Chelsea
+
+10% chance:
+fresh random.
+
+Do NOT reset the logical group merely because the tumble ended.
+
+==================================================
+10. VISUAL FALL BEHAVIOR
+==================================================
+
+When both members of one logical group are consumed in the same refill
+and the second copied the first:
+
+they should visually fall as a coordinated vertical pair.
+
+Example:
+
+Chelsea
+Chelsea
+
+Use:
+same path
+same velocity curve
+one-cell spacing
+tight follow behavior
+
+They should look like one continuous vertical reel segment.
+
+If the second position used the 10% different-symbol branch,
+animate them normally as two consecutive but different symbols.
+
+==================================================
+11. DO NOT FAKE THE VISUAL
+==================================================
+
+Do not independently generate the board
+and then visually duplicate symbols.
+
+The 90% pair relationship must exist in the mathematical stream itself.
+
+Simulator and playable game must use the same generator.
+
+==================================================
+12. WHY THIS SHOULD FEEL LIKE ~15 LOGICAL SYMBOL DECISIONS
+==================================================
+
+Although the visible board contains 30 physical cells,
+normal symbol generation should often feel like roughly half as many independent visual choices
+because each pair's second position usually mirrors the first.
+
+That is intentional.
+
+We want the board/refills to visually feel strongly paired,
+similar to the behavior shown in the reference video.
+
+==================================================
+13. DO NOT APPLY THIS TO SPECIALS
+==================================================
+
+To repeat:
+
+8 normal football symbols:
+YES, use fixed 2-position pairing logic.
+
+FAHRI Scatter:
+NO.
+
+Multiplier player symbols:
+NO.
+
+Specials remain independently generated single positions.
+
+==================================================
+14. STATISTICAL TEST
+==================================================
+
+Generate at least 1,000,000 completed NORMAL logical pairs.
+
+Measure:
+
+P(second == first)
+
+Expected:
+approximately 90%
+plus any incidental same-symbol result from the 10% fresh-random branch.
+
+IMPORTANT:
+
+If the 10% branch performs a fresh random selection,
+it may randomly select the same symbol again.
+
+Therefore measured second==first may be slightly ABOVE 90%.
+
+Report both:
+
+copy-branch rate
+actual second-equals-first rate.
+
+==================================================
+15. THIRD-POSITION TEST
+==================================================
+
+Measure:
+
+P(third symbol == second symbol)
+
+where third is the FIRST position of a new logical pair.
+
+This must follow the normal configured symbol-weight probability.
+
+There must be NO forced continuity from the previous pair.
+
+==================================================
+16. REQUIRED TEST CASE
+==================================================
+
+Force:
+
+Group 1 first:
+CHELSEA
+
+Copy branch:
+CHELSEA
+
+Then Group 2 first must call weighted RNG again.
+
+It may produce:
+ROMA
+PSG
+CHELSEA
+etc.
+
+Verify it is NOT automatically forced away from Chelsea
+and NOT automatically forced to Chelsea.
+
+It is genuinely fresh random.
+
+==================================================
+17. INITIAL BOARD + REFILLS
+==================================================
+
+Use the same pair-phase system for:
+
+initial visible generation
+and
+tumble refill streams.
+
+Do not use one generator for initial board
+and a different independent-cell generator for refill.
+
+==================================================
+18. FINAL VISUAL TARGET
+==================================================
+
+The game should commonly look like:
+
+Chelsea
+Chelsea
+
+Roma
+Roma
+
+PSG
+PSG
+
+Barcelona
+Real Madrid
+
+Bayern
+Bayern
+
+This is the desired visual language.
+
+The player should feel:
+
+“symbols usually arrive in vertical twos.”
+
+But the beginning of each next two-cell group remains genuinely random.
+
+==================================================
+19. DO NOT CHANGE THE 90% RULE TO FIX RTP
+==================================================
+
+The 90% second-cell matching behavior is now a DESIGN REQUIREMENT.
+
+Do not silently lower it because RTP changes.
+
+Implement this correctly first.
+
+Then report mathematical impact separately.
+
+If RTP requires calibration later,
+we will adjust other static game parameters deliberately.
+
+==================================================
+20. FINAL REPORT
+==================================================
+
+Report:
+
+- confirmation generator uses FIXED 2-position logical groups
+- configured second-cell copy probability
+- observed copy-branch rate
+- observed actual second==first rate
+- confirmation third position is a new weighted random draw
+- confirmation no anti-repeat rule exists between groups
+- confirmation Scatter is excluded
+- confirmation Multiplier is excluded
+- how pair-state survives across tumbles
+- updated RTP
+- updated Hit Rate
+
+Do not mark complete until this exact behavior is verified.
+Aradaki kritik fark
+
+Önceki söylediğimiz:
+
+%90 DOUBLE packet, %10 SINGLE packet
+
+değil.
+
+Şimdi:
+
+Her normal sembol grubu 2 hücrelik.
+İlkini random seç.
+İkincisini %90 ilkine kopyala.
+Sonra reset.
+Üçüncü hücre yeniden tamamen random.
