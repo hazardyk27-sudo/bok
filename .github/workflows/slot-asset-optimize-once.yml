@@ -1,0 +1,104 @@
+name: One-time Slot asset optimization
+
+on:
+  push:
+    branches:
+      - platform/slot-asset-optimize-2026-09-28
+    paths:
+      - .github/workflows/slot-asset-optimize-once.yml
+
+permissions:
+  contents: write
+
+jobs:
+  optimize:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Slot branch
+        uses: actions/checkout@v4
+        with:
+          ref: feature/slot
+          fetch-depth: 0
+
+      - name: Verify immutable Slot source SHA
+        run: |
+          set -euo pipefail
+          EXPECTED="9ce8b2b3bfdbbef1817ea6e7800f13f0e8a9e2ce"
+          ACTUAL="$(git rev-parse HEAD)"
+          echo "expected=$EXPECTED"
+          echo "actual=$ACTUAL"
+          test "$ACTUAL" = "$EXPECTED"
+
+      - name: Install image tooling
+        run: |
+          set -euo pipefail
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq imagemagick webp
+          convert -version
+          convert -list format | grep -i WEBP
+
+      - name: Resize and convert Slot special symbols losslessly
+        run: |
+          set -euo pipefail
+          cd artifacts/cascade-8/public/special-symbols
+
+          before_bytes="$(find . -maxdepth 1 -type f -name '*.png' -printf '%s\n' | awk '{s+=$1} END {print s+0}')"
+          echo "BEFORE_BYTES=$before_bytes"
+
+          optimize() {
+            name="$1"
+            size="$2"
+            src="$name.png"
+            tmp="$name.reference.png"
+            out="$name.webp"
+
+            echo "--- $name target=${size}px ---"
+            identify "$src"
+
+            convert "$src" -filter Lanczos -resize "${size}x${size}>" "$tmp"
+            convert "$tmp" -define webp:lossless=true -quality 100 "$out"
+
+            ae="$(compare -metric AE "$tmp" "$out" null: 2>&1 || true)"
+            echo "absolute_error_pixels=$ae"
+            test "$ae" = "0"
+
+            identify "$out"
+            rm "$tmp"
+          }
+
+          optimize 2x 256
+          optimize 3x 256
+          optimize 5x 256
+          optimize 10x 256
+          optimize 15x 256
+          optimize 20x 256
+          optimize 25x 256
+          optimize 50x 320
+          optimize 100x 320
+          optimize 250x 320
+          optimize 500x 384
+          optimize 1000x 384
+          optimize scatter 256
+
+          after_bytes="$(find . -maxdepth 1 -type f -name '*.webp' -printf '%s\n' | awk '{s+=$1} END {print s+0}')"
+          echo "AFTER_BYTES=$after_bytes"
+          python3 - <<'PY'
+          import os
+          before = sum(os.path.getsize(f) for f in os.listdir('.') if f.endswith('.png'))
+          after = sum(os.path.getsize(f) for f in os.listdir('.') if f.endswith('.webp'))
+          print(f"before_mb={before/1024/1024:.3f}")
+          print(f"after_mb={after/1024/1024:.3f}")
+          print(f"reduction_pct={(1-after/before)*100:.2f}")
+          PY
+
+          rm -f 2x.png 3x.png 5x.png 10x.png 15x.png 20x.png 25x.png 50x.png 100x.png 250x.png 500x.png 1000x.png scatter.png
+
+      - name: Commit optimized binary assets
+        run: |
+          set -euo pipefail
+          git config user.name "OYUN Asset Optimizer"
+          git config user.email "actions@users.noreply.github.com"
+          git add artifacts/cascade-8/public/special-symbols
+          git diff --cached --stat
+          git commit -m "Optimize Slot special symbol assets"
+          git push origin HEAD:feature/slot
