@@ -8,7 +8,7 @@ import {
   recoverAndStartBlackjackRoundRuntime,
   type BlackjackRecoveredScheduledRuntime,
 } from "./runtimeRecovery";
-import type { BlackjackShoe } from "./domain";
+import type { BlackjackShoe, BlackjackTable } from "./domain";
 import type { BlackjackCoordinatorAccount } from "./actionCoordinator";
 import type { BlackjackJournalRepository } from "./journalRepository";
 import {
@@ -32,11 +32,7 @@ export type BlackjackServerRuntimeReadiness = Readonly<{
     | "SCHEDULER_STOPPED"
     | "AUTHORITY_FAILED";
   tableId: string;
-  phase: BlackjackRecoveredScheduledRuntime["coordinator"]["getTable"] extends () => infer T
-    ? T extends { phase: infer P }
-      ? P
-      : never
-    : never;
+  phase: BlackjackTable["phase"];
   stateVersion: number;
   eventSequence: number;
   schedulerRunning: boolean;
