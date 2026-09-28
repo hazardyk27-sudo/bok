@@ -253,7 +253,7 @@ function renderLab(scene: GameScene) {
    const updateMetrics = () => {
      const current = scene.getDebugMetrics();
       const audio = controller.audio.getDebugMetrics();
-      metrics.textContent = `PERF // ${current.fps} FPS // ${current.renderer} // ${current.activeNodes}/${current.boardCells} NODES // ${current.activeTweens} TWEENS // ${current.transientEffects} FX // BURST POOL ${current.pooledBurstEffects} READY / ${current.burstFxCreated} CREATED / ${current.burstFxReused} REUSED // ${current.activeWinLabels} LABELS // ${current.displayObjects} OBJECTS // ${audio.activeTones} TONES // ${audio.pendingSfxTimers} SFX TIMERS`;
+      metrics.textContent = `PERF // ${current.fps} FPS // ${current.renderer} // ${current.activeNodes}/${current.boardCells} NODES // ${current.activeTweens} TWEENS // ${current.ambientSpecialAnimations} AMBIENT SPECIALS // ${current.transientEffects} FX // BURST POOL ${current.pooledBurstEffects} READY / ${current.burstFxCreated} CREATED / ${current.burstFxReused} REUSED // ${current.activeWinLabels} LABELS // ${current.displayObjects} OBJECTS // ${audio.activeTones} TONES // ${audio.pendingSfxTimers} SFX TIMERS`;
      window.requestAnimationFrame(updateMetrics);
    };
    updateMetrics();
