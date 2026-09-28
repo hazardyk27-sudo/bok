@@ -90,6 +90,14 @@ export class GameScene extends Phaser.Scene {
 
   private transientEffects: Phaser.GameObjects.GameObject[] = [];
 
+  private readonly burstRingPool: Phaser.GameObjects.Arc[] = [];
+
+  private readonly burstParticlePool: Phaser.GameObjects.Arc[] = [];
+
+  private readonly activeBurstRings = new Set<Phaser.GameObjects.Arc>();
+
+  private readonly activeBurstParticles = new Set<Phaser.GameObjects.Arc>();
+
   private readonly activeWinLabels = new CancelableCompletionRegistry();
 
   private cellFrames: Phaser.GameObjects.Rectangle[] = [];
@@ -156,6 +164,7 @@ export class GameScene extends Phaser.Scene {
   clearSymbols() {
     this.activeWinLabels.completeAll();
     this.clearTransientEffects();
+    this.clearPooledBurstEffects();
     this.nodes.forEach((node) => this.destroyNode(node));
     this.nodes = [];
   }
@@ -185,6 +194,58 @@ export class GameScene extends Phaser.Scene {
     this.transientEffects = [];
   }
 
+  private acquireBurstRing(x: number, y: number, color: number) {
+    const ring = this.burstRingPool.pop() ?? this.add.circle(0, 0, 25, undefined, 0).setDepth(3);
+    this.tweens.killTweensOf(ring);
+    ring
+      .setActive(true)
+      .setVisible(true)
+      .setPosition(x, y)
+      .setScale(1)
+      .setAlpha(1)
+      .setDepth(3)
+      .setFillStyle(0xffffff, 0)
+      .setStrokeStyle(2, color, 0.9);
+    this.activeBurstRings.add(ring);
+    return ring;
+  }
+
+  private acquireBurstParticle(x: number, y: number, radius: number, color: number) {
+    const particle = this.burstParticlePool.pop() ?? this.add.circle(0, 0, radius, color, 0.92).setDepth(3);
+    this.tweens.killTweensOf(particle);
+    particle
+      .setActive(true)
+      .setVisible(true)
+      .setPosition(x, y)
+      .setRadius(radius)
+      .setScale(1)
+      .setAlpha(0.92)
+      .setDepth(3)
+      .setFillStyle(color, 0.92)
+      .setStrokeStyle();
+    this.activeBurstParticles.add(particle);
+    return particle;
+  }
+
+  private releaseBurstRing(ring: Phaser.GameObjects.Arc) {
+    this.tweens.killTweensOf(ring);
+    if (!this.activeBurstRings.delete(ring)) return;
+    ring.setActive(false).setVisible(false).setAlpha(0).setScale(1).setPosition(-1000, -1000);
+    this.burstRingPool.push(ring);
+  }
+
+  private releaseBurstParticle(particle: Phaser.GameObjects.Arc) {
+    this.tweens.killTweensOf(particle);
+    if (!this.activeBurstParticles.delete(particle)) return;
+    particle.setActive(false).setVisible(false).setAlpha(0).setScale(1).setPosition(-1000, -1000);
+    this.burstParticlePool.push(particle);
+  }
+
+  private clearPooledBurstEffects() {
+    Array.from(this.activeBurstRings).forEach((ring) => this.releaseBurstRing(ring));
+    Array.from(this.activeBurstParticles).forEach((particle) => this.releaseBurstParticle(particle));
+  }
+
   private destroyNode(node: BoardNode) {
     const targets = [node.container, ...node.container.list];
     this.tweens.killTweensOf(targets);
@@ -209,7 +270,8 @@ export class GameScene extends Phaser.Scene {
       activeNodes: this.nodes.length,
       boardCells: BOARD_COLUMNS * BOARD_ROWS,
       activeTweens: this.tweens.getTweens().length,
-      transientEffects: this.transientEffects.length,
+      transientEffects: this.transientEffects.length + this.activeBurstRings.size + this.activeBurstParticles.size,
+      pooledBurstEffects: this.burstRingPool.length + this.burstParticlePool.length,
       activeWinLabels: this.activeWinLabels.size,
       displayObjects: this.children.list.length,
       fps: Math.round(this.game.loop.actualFps || 0),
@@ -735,20 +797,18 @@ export class GameScene extends Phaser.Scene {
       const color = isMultiplierCore(node.symbol) ? 0xffc34d : getSymbolDefinition(normalSymbol!).color;
       const centerX = node.container.x;
       const centerY = node.container.y;
-      const ring = this.trackEffect(this.add.circle(centerX, centerY, 25, undefined, 0)
-        .setStrokeStyle(2, color, 0.9)
-        .setDepth(3));
+      const ring = this.acquireBurstRing(centerX, centerY, color);
       this.tweens.add({
         targets: ring,
         scale: 2.15,
         alpha: 0,
         duration: duration + 80,
         ease: "Cubic.easeOut",
-        onComplete: () => this.destroyEffect(ring),
+        onComplete: () => this.releaseBurstRing(ring),
       });
       const particleCount = Math.min(8, Math.max(3, Math.floor(96 / Math.max(active.length, 1))));
       Array.from({ length: particleCount }, (_, index) => {
-        const particle = this.trackEffect(this.add.circle(centerX, centerY, index % 3 === 0 ? 4 : 2.5, color, 0.92).setDepth(3));
+        const particle = this.acquireBurstParticle(centerX, centerY, index % 3 === 0 ? 4 : 2.5, color);
         const angle = (index / particleCount) * Math.PI * 2;
         const distance = 38 + (index % 4) * 15;
         this.tweens.add({
@@ -759,7 +819,7 @@ export class GameScene extends Phaser.Scene {
           scale: 0.15,
           duration: duration + 120,
           ease: "Cubic.easeOut",
-          onComplete: () => this.destroyEffect(particle),
+          onComplete: () => this.releaseBurstParticle(particle),
         });
         return particle;
       });
