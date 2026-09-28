@@ -40,3 +40,4 @@ export * from "./journalRepository";
 export * from "./recovery";
 export * from "./botSimulation";
 export * from "./emptyTableLifecycle";
+export * from "./actionCoordinator";
