@@ -8,5 +8,8 @@ This directory belongs to the shared player-account experience.
 - Never place auth tokens or passwords in localStorage/sessionStorage.
 - Authentication state comes from the server via `/api/auth/me`.
 
+## Conversation startup
+- At the start of a new conversation, read this file and `Current milestones` once. Keep them in context and do not re-read them for each later command unless the rules/milestones actually changed or the conversation switches category/repository.
+
 ## Current milestones
 - 2026-09-27 — Account page baseline — login/register/profile/logout UI exists as a self-contained route module using server-side cookie auth. Next: central route/API/schema wiring, validation, then email verification/password reset.
