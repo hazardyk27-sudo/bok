@@ -11,7 +11,12 @@ import { createGameScene, GameScene } from "../game/GameScene";
 
 import "./slot.css";
 
+let activeSlotCleanup: (() => void) | null = null;
+
 export function mountSlot(app: HTMLDivElement, currentPath: string) {
+  activeSlotCleanup?.();
+  const lifecycleAbort = new AbortController();
+  const lifecycleSignal = lifecycleAbort.signal;
   const isLab = currentPath === "/lab";
   const isSlotRoute = true;
 const isWinLabelPreview = isLab && new URLSearchParams(window.location.search).get("preview") === "win-labels";
@@ -40,10 +45,10 @@ const syncSlotVisualViewport = () => {
 
 if (isSlotRoute) {
   syncSlotVisualViewport();
-  window.visualViewport?.addEventListener("resize", syncSlotVisualViewport, { passive: true });
-  window.visualViewport?.addEventListener("scroll", syncSlotVisualViewport, { passive: true });
-  window.addEventListener("resize", syncSlotVisualViewport, { passive: true });
-  window.addEventListener("orientationchange", syncSlotVisualViewport, { passive: true });
+  window.visualViewport?.addEventListener("resize", syncSlotVisualViewport, { passive: true, signal: lifecycleSignal });
+  window.visualViewport?.addEventListener("scroll", syncSlotVisualViewport, { passive: true, signal: lifecycleSignal });
+  window.addEventListener("resize", syncSlotVisualViewport, { passive: true, signal: lifecycleSignal });
+  window.addEventListener("orientationchange", syncSlotVisualViewport, { passive: true, signal: lifecycleSignal });
 }
 
 const describeStreamCell = (cell: BoardCell) => {
@@ -190,24 +195,26 @@ function showModal(name: string | null) {
         <div class="modal-footnote">Base Core chance is 1% per eligible Base refill position; Free Spin Scatter chance is 3.5% on initial and refill positions. Free Spin Core chance is 5% on the initial board and 3% per eligible refill position. This is a virtual-credit demo and is not a regulated gaming product.</div>
     </section></div>`;
   }
-  modalRoot.querySelectorAll("[data-close]").forEach((button) => button.addEventListener("click", () => showModal(null)));
-  modalRoot.querySelector(".modal-backdrop")?.addEventListener("click", (event) => { if (event.target === event.currentTarget) showModal(null); });
+  modalRoot.querySelectorAll("[data-close]").forEach((button) => button.addEventListener("click", () => showModal(null), { signal: lifecycleSignal }));
+  modalRoot.querySelector(".modal-backdrop")?.addEventListener("click", (event) => { if (event.target === event.currentTarget) showModal(null); }, { signal: lifecycleSignal });
 }
 
-document.querySelectorAll<HTMLElement>("[data-modal]").forEach((button) => button.addEventListener("click", () => showModal(button.dataset.modal ?? null)));
+document.querySelectorAll<HTMLElement>("[data-modal]").forEach((button) => button.addEventListener("click", () => showModal(button.dataset.modal ?? null), { signal: lifecycleSignal }));
 
-let controller: GameController;
+let controller!: GameController;
+let controllerReady = false;
 const game = createGameScene(byId("phaser-board"));
-window.setTimeout(() => {
+const controllerTimer = window.setTimeout(() => {
   const scene = game.scene.getScene("Cascade8GameScene") as GameScene;
   controller = new GameController(scene, {
     balance: byId("balance"), bet: byId("bet"), win: byId("win"), bonusWin: byId("bonus-win"), freeSpins: byId("free-spins"), gameStatusBadge: byId("game-status-badge"), gameStatusLabel: byId("game-status-label"),
     tumble: byId("tumble"), status: byId("status"), spin: byId("spin"), spinLabel: byId("spin").querySelector(".spin-label") as HTMLElement,
-     betMinus: byId("bet-minus"), betPlus: byId("bet-plus"), autoToggle: byId("auto-toggle"), autoActionDesktop: byId("auto-action-desktop"), autoActionMobile: byId("auto-action-mobile"), autoSelectionDesktop: byId("auto-selection-desktop"), autoSelectionValue: byId("auto-selection-value"), autoSelectionLabel: byId("auto-selection-label"), autoMenu: byId("auto-menu"), autoCount: byId("auto-count"),
-     turbo: byId("turbo"), sound: byId("sound"),
+     betMinus: byId("bet-minus"), betPlus: byId("bet-plus"), autoToggle: byId("auto-toggle"), autoActionDesktop: byId("auto-action-desktop"), autoActionMobile: byId("auto-action-mobile"), autoSelectionDesktop: byId("auto-selection-desktop"), autoSelectionValue: byId("auto-selection-value"), autoSelectionLabel: byId("auto-selection-label"), autoMenu: byId("auto-menu"), autoCount: byId("auto-count"), autoOptions: Array.from(byId("auto-menu").querySelectorAll<HTMLButtonElement>("[data-auto-option]")),
+     turbo: byId("turbo"), sound: byId("sound"), soundLabel: byId("sound").querySelector<HTMLElement>(".sound-label-full"), betDisplays: Array.from(document.querySelectorAll<HTMLElement>("[data-bet-display]")), spinSubLabel: byId("spin").querySelector("small") as HTMLElement,
          bonusOverlay: byId("bonus-overlay"), bonusStart: byId("bonus-overlay").querySelector("[data-bonus-start]") as HTMLButtonElement, bonusSpinCount: byId("bonus-spin-count"), bonusScatterRow: byId("bonus-scatter-row"), bonusTriggerLabel: byId("bonus-trigger-label"), bonusTitle: byId("bonus-title"), bonusSupport: byId("bonus-support"), bonusInstruction: byId("bonus-instruction"), freeSpinCalculation: byId("free-spin-calculation"), freeSpinRawWin: byId("free-spin-symbol-win"), freeSpinMultiplier: byId("free-spin-multiplier"), freeSpinFinalWin: byId("free-spin-spin-win"), freeSpinMultiplyOperator: byId("free-spin-multiply-operator"), freeSpinEqualsOperator: byId("free-spin-equals-operator"), tumbleLabel: document.querySelector(".tumble-win-label") as HTMLElement, tumbleSymbolWin: byId("tumble-symbol-win"), tumbleIncrement: byId("tumble-increment"), tumbleMeta: byId("tumble-meta"), tumbleSettlement: byId("tumble-settlement"), tumblePanel: byId("tumble-win-panel"), bigWinOverlay: byId("big-win-overlay"), bonusSummaryOverlay: byId("bonus-summary-overlay"), boardWrap: byId("phaser-board").parentElement!, controlDeck: document.querySelector(".control-deck") as HTMLElement,
     setModal: showModal,
   });
+  controllerReady = true;
    if (isLab) renderLab(scene);
    if (isLab && new URLSearchParams(window.location.search).has("preview-free-spin")) {
      void controller.previewFreeSpinAccounting();
@@ -226,10 +233,21 @@ window.setTimeout(() => {
     }
 }, 80);
 
+activeSlotCleanup = () => {
+  lifecycleAbort.abort();
+  window.clearTimeout(controllerTimer);
+  if (controllerReady) controller.destroy();
+  controllerReady = false;
+  game.destroy(true);
+  document.documentElement.style.removeProperty("--slot-visual-height");
+  delete document.documentElement.dataset.slotDisplayMode;
+  activeSlotCleanup = null;
+};
+
 function renderLab(scene: GameScene) {
   const lab = document.createElement("section");
   lab.className = "lab-panel";
-   lab.innerHTML = `<div class="panel-kicker">DEVELOPMENT ROUTE // /lab</div><h1>Animation & Math Lab</h1><p>Deterministic board checks stay separate from live RNG. Use these cards to inspect the frameless Scatter, persistent Cores, paired normal groups and the full win presentation.</p><div class="lab-actions"><button data-lab="seven">7 × S1</button><button data-lab="eight">8 × S1</button><button data-lab="simultaneous">8 × S1 + 8 × S6</button><button data-lab="win-labels">WIN LABELS</button><button data-lab="core">CORE BOARD</button><button data-lab="multiplier-collection">MULTIPLIER SEQUENCE</button><button data-lab="scatter-idle">SCATTER IDLE</button><button data-lab="scatter-fall">SCATTER FALL</button><button data-lab="scatter-land">SCATTER LAND</button><button data-lab="scatter-1">SCATTER #1</button><button data-lab="scatter-2">SCATTER #2</button><button data-lab="scatter-3">SCATTER #3</button><button data-lab="scatter-bonus">BONUS SCATTER</button><button data-lab="tumble">TUMBLE 1.20 → 4.00 → 8.00</button><button data-lab="settlement">8x + 35x</button><button data-lab="free-spin-accounting">FREE SPIN ACCOUNTING</button><button data-lab="free-spin-zero">ZERO-WIN FREE SPIN</button><button data-lab="bonus-4">BONUS CEREMONY // 4</button><button data-lab="bonus-5">BONUS CEREMONY // 5</button><button data-lab="bonus-6">BONUS CEREMONY // 6</button><button data-lab="retrigger-3">RETRIGGER // 3</button><button data-lab="retrigger-4">RETRIGGER // 4</button><button data-lab="retrigger-5">RETRIGGER // 5</button><button data-lab="retrigger-6">RETRIGGER // 6</button><button data-lab="waiting">BONUS WAITING</button><button data-lab="streams">PERSISTENT STREAM</button><button data-lab="pair-stream">PAIR STREAM</button><button data-lab="pairs">PAIR CONTINUATION</button><button data-lab="anti">GROUP INDEPENDENCE</button><button data-lab="timing">TIMINGS</button><button data-lab="base-big">BASE LARGE WIN</button><button data-lab="bonus-big">BONUS LARGE WIN</button></div><div class="lab-result" id="lab-result">Choose a predefined board.</div><pre class="lab-metrics" id="lab-metrics"></pre><div class="special-design"><div class="panel-kicker">SPECIAL SYMBOL DESIGN // MINIMAL MULTIPLIER TILES</div><div class="special-grid"><div class="special-preview normal-preview"><span class="special-state">ORDINARY</span><div class="preview-crest">GS</div><b>GALATASARAY</b></div><div class="special-preview scatter-preview"><span class="special-state">TRANSPARENT CIRCLE</span><img class="scatter-preview-image" src="${import.meta.env.BASE_URL}special-symbols/scatter.png" alt="Golden Scatter symbol"><b>GOLDEN SCATTER</b></div>${[2, 3, 5, 10, 15, 20, 25, 50, 100, 250, 500, 1000].map((value) => `<div class="special-preview core-preview core-${value}"><span class="special-state">${value >= 100 ? "HIGH AURA" : value >= 10 ? "MID AURA" : "LOW AURA"}</span><strong class="core-preview-fallback">${value}x</strong><b>CORE</b></div>`).join("")}</div></div>`;
+   lab.innerHTML = `<div class="panel-kicker">DEVELOPMENT ROUTE // /lab</div><h1>Animation & Math Lab</h1><p>Deterministic board checks stay separate from live RNG. Use these cards to inspect the frameless Scatter, persistent Cores, paired normal groups and the full win presentation.</p><div class="lab-actions"><button data-lab="seven">7 × S1</button><button data-lab="eight">8 × S1</button><button data-lab="simultaneous">8 × S1 + 8 × S6</button><button data-lab="win-labels">WIN LABELS</button><button data-lab="core">CORE BOARD</button><button data-lab="multiplier-collection">MULTIPLIER SEQUENCE</button><button data-lab="scatter-idle">SCATTER IDLE</button><button data-lab="scatter-fall">SCATTER FALL</button><button data-lab="scatter-land">SCATTER LAND</button><button data-lab="scatter-1">SCATTER #1</button><button data-lab="scatter-2">SCATTER #2</button><button data-lab="scatter-3">SCATTER #3</button><button data-lab="scatter-bonus">BONUS SCATTER</button><button data-lab="tumble">TUMBLE 1.20 → 4.00 → 8.00</button><button data-lab="settlement">8x + 35x</button><button data-lab="free-spin-accounting">FREE SPIN ACCOUNTING</button><button data-lab="free-spin-zero">ZERO-WIN FREE SPIN</button><button data-lab="bonus-4">BONUS CEREMONY // 4</button><button data-lab="bonus-5">BONUS CEREMONY // 5</button><button data-lab="bonus-6">BONUS CEREMONY // 6</button><button data-lab="retrigger-3">RETRIGGER // 3</button><button data-lab="retrigger-4">RETRIGGER // 4</button><button data-lab="retrigger-5">RETRIGGER // 5</button><button data-lab="retrigger-6">RETRIGGER // 6</button><button data-lab="waiting">BONUS WAITING</button><button data-lab="streams">PERSISTENT STREAM</button><button data-lab="pair-stream">PAIR STREAM</button><button data-lab="pairs">PAIR CONTINUATION</button><button data-lab="anti">GROUP INDEPENDENCE</button><button data-lab="timing">TIMINGS</button><button data-lab="base-big">BASE LARGE WIN</button><button data-lab="bonus-big">BONUS LARGE WIN</button></div><div class="lab-result" id="lab-result">Choose a predefined board.</div><pre class="lab-metrics" id="lab-metrics"></pre><div class="special-design"><div class="panel-kicker">SPECIAL SYMBOL DESIGN // MINIMAL MULTIPLIER TILES</div><div class="special-grid"><div class="special-preview normal-preview"><span class="special-state">ORDINARY</span><div class="preview-crest">GS</div><b>GALATASARAY</b></div><div class="special-preview scatter-preview"><span class="special-state">TRANSPARENT CIRCLE</span><img class="scatter-preview-image" src="${import.meta.env.BASE_URL}special-symbols/scatter.webp" alt="Golden Scatter symbol"><b>GOLDEN SCATTER</b></div>${[2, 3, 5, 10, 15, 20, 25, 50, 100, 250, 500, 1000].map((value) => `<div class="special-preview core-preview core-${value}"><span class="special-state">${value >= 100 ? "HIGH AURA" : value >= 10 ? "MID AURA" : "LOW AURA"}</span><strong class="core-preview-fallback">${value}x</strong><b>CORE</b></div>`).join("")}</div></div>`;
   document.querySelector(".game-stage")?.append(lab);
    const metrics = lab.querySelector<HTMLElement>("#lab-metrics")!;
    const updateMetrics = () => {
