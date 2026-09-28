@@ -9,8 +9,8 @@ export const BLACKJACK_RUNTIME_TICK_INTERVAL_MS = 250 as const;
 
 export type BlackjackRoundSchedulerOptions = Readonly<{
   intervalMs?: number;
-  schedule?: ScheduleFn;
-  cancelSchedule?: CancelScheduleFn;
+  schedule?: BlackjackScheduleFn;
+  cancelSchedule?: BlackjackCancelScheduleFn;
   onError?: (error: unknown) => void;
 }>;
 
@@ -25,12 +25,12 @@ export type BlackjackRoundScheduler = Readonly<{
   tickNow: () => Promise<BlackjackRoundRuntimeTickResult | null>;
 }>;
 
-type ScheduleFn = (
+export type BlackjackScheduleFn = (
   callback: () => void,
   intervalMs: number,
 ) => unknown;
 
-type CancelScheduleFn = (handle: unknown) => void;
+export type BlackjackCancelScheduleFn = (handle: unknown) => void;
 
 function assertIntervalMs(intervalMs: number): void {
   if (!Number.isSafeInteger(intervalMs) || intervalMs < 1) {
@@ -40,10 +40,10 @@ function assertIntervalMs(intervalMs: number): void {
   }
 }
 
-const defaultSchedule: ScheduleFn = (callback, intervalMs) =>
+const defaultSchedule: BlackjackScheduleFn = (callback, intervalMs) =>
   setInterval(callback, intervalMs);
 
-const defaultCancel: CancelScheduleFn = (handle) =>
+const defaultCancel: BlackjackCancelScheduleFn = (handle) =>
   clearInterval(handle as ReturnType<typeof setInterval>);
 
 export function startBlackjackRoundScheduler(

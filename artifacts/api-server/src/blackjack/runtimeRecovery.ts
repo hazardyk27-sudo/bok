@@ -168,13 +168,14 @@ export async function recoverAndStartBlackjackRoundRuntime(input: {
     throw catchUpError;
   }
 
+  const activeScheduler=scheduler;
   return Object.freeze({
     recovery,
     coordinator,
     driver,
-    scheduler,
+    scheduler:activeScheduler,
     reconnectRegistry,
     getDurableRuntime,
-    stop:()=>scheduler.stop(),
+    stop:()=>activeScheduler.stop(),
   });
 }
