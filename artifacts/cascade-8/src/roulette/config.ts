@@ -37,6 +37,18 @@ export const OUTER_RIM_STYLE = {
   markerHeight: 0.021,
 } as const;
 
+export const BALL_TRACK_STYLE = {
+  innerRadius: 0.754,
+  outerRadius: 0.832,
+  pathRadius: 0.793,
+  troughWidth: 0.050,
+  innerLipWidth: 0.009,
+  outerLipWidth: 0.011,
+  shadowInset: 0.012,
+  sheenRadius: 0.807,
+  sheenWidth: 0.010,
+} as const;
+
 export const NUMBER_RING_STYLE = {
   textRadius: 0.667,
   fontSize: 0.059,
@@ -77,6 +89,10 @@ export const WHEEL_COLORS = {
   woodLight: "#a95820",
   woodGlow: "#c67432",
   woodLine: "rgba(67, 23, 9, 0.45)",
+  trackDeep: "#24160f",
+  trackDark: "#3a2619",
+  trackMid: "#5b3a24",
+  trackLight: "#8b5d37",
   goldShadow: "#6d3f05",
   goldDark: "#8d5708",
   gold: "#e1a628",

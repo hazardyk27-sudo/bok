@@ -1,4 +1,5 @@
 import {
+  BALL_TRACK_STYLE,
   CENTER_MECHANISM_STYLE,
   EUROPEAN_WHEEL_SEQUENCE,
   NUMBER_RING_STYLE,
@@ -282,6 +283,127 @@ function drawOuterWood(ctx: CanvasRenderingContext2D, radius: number) {
   }
 
   drawOuterWoodBevels(ctx, radius);
+}
+
+function drawBallTrack(ctx: CanvasRenderingContext2D, radius: number) {
+  const inner = radius * BALL_TRACK_STYLE.innerRadius;
+  const outer = radius * BALL_TRACK_STYLE.outerRadius;
+  const pathRadius = radius * BALL_TRACK_STYLE.pathRadius;
+
+  const track = ctx.createRadialGradient(0, 0, inner, 0, 0, outer);
+  track.addColorStop(0, WHEEL_COLORS.trackDeep);
+  track.addColorStop(0.22, WHEEL_COLORS.trackDark);
+  track.addColorStop(0.52, WHEEL_COLORS.trackMid);
+  track.addColorStop(0.78, WHEEL_COLORS.trackLight);
+  track.addColorStop(1, WHEEL_COLORS.trackDark);
+
+  drawAnnularSegment(
+    ctx,
+    inner,
+    outer,
+    0,
+    TAU,
+    track,
+  );
+
+  ctx.save();
+  clipAnnulus(ctx, inner, outer);
+
+  const bowlShadow = ctx.createRadialGradient(
+    0,
+    0,
+    pathRadius - radius * 0.035,
+    0,
+    0,
+    pathRadius + radius * 0.035,
+  );
+  bowlShadow.addColorStop(0, "rgba(16, 7, 3, 0.66)");
+  bowlShadow.addColorStop(0.34, "rgba(24, 11, 5, 0.34)");
+  bowlShadow.addColorStop(0.50, "rgba(255, 226, 172, 0.05)");
+  bowlShadow.addColorStop(0.72, "rgba(255, 199, 115, 0.12)");
+  bowlShadow.addColorStop(1, "rgba(17, 7, 3, 0.52)");
+
+  ctx.beginPath();
+  ctx.arc(0, 0, outer, 0, TAU);
+  ctx.fillStyle = bowlShadow;
+  ctx.fill();
+
+  const directionalSheen = ctx.createLinearGradient(
+    -radius * 0.78,
+    -radius * 0.72,
+    radius * 0.72,
+    radius * 0.78,
+  );
+  directionalSheen.addColorStop(0, "rgba(255, 238, 197, 0.19)");
+  directionalSheen.addColorStop(0.36, "rgba(255, 208, 143, 0.07)");
+  directionalSheen.addColorStop(0.62, "rgba(42, 19, 7, 0.03)");
+  directionalSheen.addColorStop(1, "rgba(20, 7, 3, 0.24)");
+
+  ctx.beginPath();
+  ctx.arc(0, 0, outer, 0, TAU);
+  ctx.fillStyle = directionalSheen;
+  ctx.fill();
+
+  ctx.restore();
+
+  drawCircleStroke(
+    ctx,
+    pathRadius,
+    "rgba(21, 9, 4, 0.48)",
+    radius * BALL_TRACK_STYLE.troughWidth,
+  );
+
+  drawCircleStroke(
+    ctx,
+    outer - radius * BALL_TRACK_STYLE.shadowInset,
+    "rgba(24, 10, 4, 0.55)",
+    radius * 0.014,
+  );
+
+  drawCircleStroke(
+    ctx,
+    radius * BALL_TRACK_STYLE.sheenRadius,
+    "rgba(255, 226, 172, 0.18)",
+    radius * BALL_TRACK_STYLE.sheenWidth,
+  );
+
+  drawCircleStroke(
+    ctx,
+    inner,
+    WHEEL_COLORS.goldShadow,
+    radius * BALL_TRACK_STYLE.innerLipWidth * 1.7,
+  );
+  drawCircleStroke(
+    ctx,
+    inner,
+    WHEEL_COLORS.goldLight,
+    radius * BALL_TRACK_STYLE.innerLipWidth,
+  );
+  drawCircleStroke(
+    ctx,
+    inner + radius * 0.006,
+    "rgba(255, 246, 205, 0.42)",
+    Math.max(0.8, radius * 0.0018),
+  );
+
+  drawCircleStroke(
+    ctx,
+    outer,
+    WHEEL_COLORS.goldShadow,
+    radius * BALL_TRACK_STYLE.outerLipWidth * 1.65,
+  );
+  drawCircleStroke(
+    ctx,
+    outer,
+    WHEEL_COLORS.goldDark,
+    radius * BALL_TRACK_STYLE.outerLipWidth * 1.15,
+  );
+  drawCircleStroke(
+    ctx,
+    outer - radius * 0.004,
+    WHEEL_COLORS.goldLight,
+    radius * BALL_TRACK_STYLE.outerLipWidth * 0.58,
+  );
 }
 
 function createNumberSegmentGradient(
@@ -905,6 +1027,7 @@ export function normalizeRotorAngle(angle: number) {
 
 function drawStator(ctx: CanvasRenderingContext2D, radius: number) {
   drawOuterWood(ctx, radius);
+  drawBallTrack(ctx, radius);
 }
 
 function drawRotor(

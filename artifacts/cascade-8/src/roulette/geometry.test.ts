@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  BALL_TRACK_STYLE,
   CENTER_MECHANISM_STYLE,
   EUROPEAN_WHEEL_SEQUENCE,
   NUMBER_RING_STYLE,
@@ -48,6 +49,20 @@ describe("roulette 2d wheel geometry", () => {
     expect(OUTER_RIM_STYLE.innerBevelRadius).toBeGreaterThan(WHEEL_GEOMETRY.numberOuterRadius);
     expect(OUTER_RIM_STYLE.outerBevelRadius).toBeLessThanOrEqual(WHEEL_GEOMETRY.outerRadius);
     expect(OUTER_RIM_STYLE.varnishRadius).toBeGreaterThan(OUTER_RIM_STYLE.grainInnerRadius);
+  });
+
+  it("keeps the fixed ball track between the rotor and outer markers", () => {
+    expect(BALL_TRACK_STYLE.innerRadius).toBeGreaterThan(WHEEL_GEOMETRY.numberOuterRadius);
+    expect(BALL_TRACK_STYLE.outerRadius).toBeGreaterThan(BALL_TRACK_STYLE.innerRadius);
+    expect(BALL_TRACK_STYLE.pathRadius).toBeGreaterThan(BALL_TRACK_STYLE.innerRadius);
+    expect(BALL_TRACK_STYLE.pathRadius).toBeLessThan(BALL_TRACK_STYLE.outerRadius);
+
+    const markerInnerEdge =
+      WHEEL_GEOMETRY.markerRadius - OUTER_RIM_STYLE.markerHeight;
+    expect(BALL_TRACK_STYLE.outerRadius).toBeLessThan(markerInnerEdge);
+    expect(BALL_TRACK_STYLE.troughWidth).toBeLessThan(
+      BALL_TRACK_STYLE.outerRadius - BALL_TRACK_STYLE.innerRadius,
+    );
   });
 
   it("keeps inward number labels centered inside the number ring", () => {
