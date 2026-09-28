@@ -26,6 +26,6 @@ The Slot route markup, controller bootstrap and Slot stylesheet are owned here. 
 - If a note conflicts with code/tests/ownership rules, the validated repository state wins.
 
 ## Current milestones
-- 2026-09-28 — Eight-symbol visible-board cap validation — Initial boards obey the 7-normal-symbol cap, but a 5M same-seed run found 76,605 refill boards over the cap (76,351 with 8 distinct, 254 with 9; max refill 9). Likely leak is a pending pair SECOND emission reusing a stale base symbol without rechecking the visible-symbol set. Do not treat the cap or 261.7626% RTP run as final until this refill path is fixed and revalidated.
+- 2026-09-28 — Eight-symbol visible-board cap refill guard validated — Current `ColumnStream` rechecks a pending pair SECOND against the live visible-symbol set before reusing its base symbol, and `BoardGenerator.test.ts` contains the ninth-symbol regression case. A direct local harness mirroring current branch RNG/stream/refill logic passed the exact regression plus 1,000,000 Base spins (792,568 refills) and 250,000 Bonus spins (187,340 refills) with 0 boards above 8 distinct normal symbols; maximum observed was 8. The earlier 5M report that showed 9-symbol refills predates this guard and must not be used as current math. Next: rerun the full current simulator before using RTP/hit-rate output for tuning.
 - 2026-09-26 — Isolation v2 active — Slot development stays on `feature/slot`; preview release is ownership-scoped into `integration/replit-preview`, not a whole-branch merge.
 
