@@ -132,18 +132,20 @@ export function parseBlackjackRealtimePlayerAction(
     type === "PLACE_BET" ? raw.chipValueCents : "-",
   ].join("|");
 
+  const envelope = Object.freeze({
+    actionId,
+    actorPlayerId: playerId,
+    type,
+    tableId,
+    expectedStateVersion,
+    roundId,
+    handId,
+    seatNumber: raw.seatNumber,
+    payloadFingerprint,
+  }) as BlackjackCoordinatedAction["envelope"];
+
   return Object.freeze({
-    envelope: Object.freeze({
-      actionId,
-      actorPlayerId: playerId,
-      type,
-      tableId,
-      expectedStateVersion,
-      roundId,
-      handId,
-      seatNumber: raw.seatNumber,
-      payloadFingerprint,
-    }),
+    envelope,
     nowMs: input.nowMs,
     ...(type === "DOUBLE" || type === "SPLIT"
       ? {
