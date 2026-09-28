@@ -107,8 +107,13 @@ export function doubleBlackjackChipCredits(
 export function formatBlackjackChipCredits(credits: number): string {
   assertPositiveSafeInteger("chip credits", credits);
 
-  if (credits >= 1_000_000 && credits % 1_000_000 === 0) {
-    return String(credits / 1_000_000) + "M";
+  if (credits >= 1_000_000) {
+    const millions = credits / 1_000_000;
+    return millions.toLocaleString("en-US", {
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 3,
+      useGrouping: false,
+    }) + "M";
   }
   if (credits >= 1_000 && credits % 1_000 === 0) {
     return String(credits / 1_000) + "K";
@@ -175,7 +180,7 @@ export function renderBlackjackBettingPanel(
         ).join("")}
       </div>
 
-      <div class="blackjack-high-chip-control">
+      <div class="blackjack-high-chip-control" data-chip-tier="${chipTier(highChip)}">
         <span>SELECTED CHIP</span>
         <strong data-blackjack-selected-chip="${highChip}">
           ${formatBlackjackChipCredits(highChip)}
