@@ -55,10 +55,6 @@ const HIT_SLICES = {
     offset: 0.799909,
     duration: 0.115011,
   },
-  settle: {
-    offset: 0.959909,
-    duration: 0.145011,
-  },
 } as const;
 
 export type RouletteAudioMotion = {
@@ -215,11 +211,12 @@ export function getReferenceHit(
 
   if (event.kind === "settled") {
     return {
-      ...HIT_SLICES.settle,
-      gain: 0.42,
+      ...HIT_SLICES.pocket2,
+      duration: 0.055,
+      gain: 0.13,
       playbackRate:
-        0.98 +
-        rateVariation * 0.35,
+        0.965 +
+        rateVariation * 0.18,
     };
   }
 
