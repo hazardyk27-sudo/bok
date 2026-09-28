@@ -144,6 +144,96 @@ describe("blackjack resilient browser realtime transport",()=>{
     expect(connection.getStatus().state).toBe("CLOSED");
   });
 
+  it("renders the claimed seat as local with the ACK balance before private state catches up",()=>{
+    const physicals:Array<ReturnType<typeof physicalSocket>>=[];
+    const app={
+      innerHTML:"",
+      addEventListener:()=>undefined,
+      removeEventListener:()=>undefined,
+    } as unknown as HTMLElement;
+
+    const connection=connectBlackjackRealtimeElement(app,{
+      location:{protocol:"https:",host:"blackjack.example"},
+      createSocket:()=>{
+        const next=physicalSocket();
+        physicals.push(next);
+        return next.socket;
+      },
+      scheduleRender:()=> "render-handle",
+      cancelRender:()=>undefined,
+      scheduleReconnect:()=> "reconnect-handle",
+      cancelReconnect:()=>undefined,
+      createActionId:()=> "seat-claim-browser",
+    });
+
+    const initial={
+      ...fullSnapshot(1,"round-1"),
+      snapshot:{
+        ...fullSnapshot(1,"round-1").snapshot,
+        seats:[
+          {seatNumber:1,playerId:null},
+          {seatNumber:2,playerId:null},
+          {seatNumber:3,playerId:null},
+          {seatNumber:4,playerId:null},
+          {seatNumber:5,playerId:null},
+        ],
+        players:[],
+      },
+    };
+    physicals[0].emit(
+      "message",
+      new MessageEvent("message",{data:JSON.stringify(initial)}),
+    );
+    expect(connection.getStatus().state).toBe("READY");
+
+    connection.seats.claim(3);
+    connection.seats.receive({
+      type:"SEAT_CLAIM_ACCEPTED",
+      requestId:"seat-claim-browser",
+      seatNumber:3,
+      playerId:"local-player",
+      availableBalanceCents:100_000,
+      reservedBalanceCents:0,
+      replayed:false,
+      stateVersion:2,
+      eventSequence:2,
+    });
+
+    const claimed={
+      ...fullSnapshot(2,"round-1"),
+      snapshot:{
+        ...fullSnapshot(2,"round-1").snapshot,
+        seats:[
+          {seatNumber:1,playerId:null},
+          {seatNumber:2,playerId:null},
+          {seatNumber:3,playerId:"local-player"},
+          {seatNumber:4,playerId:null},
+          {seatNumber:5,playerId:null},
+        ],
+        players:[{
+          playerId:"local-player",
+          seatNumber:3,
+          status:"BETTING",
+          connected:true,
+        }],
+      },
+    };
+    physicals[0].emit(
+      "message",
+      new MessageEvent("message",{data:JSON.stringify(claimed)}),
+    );
+
+    expect(connection.seats.getConfirmed()).toMatchObject({
+      playerId:"local-player",
+      seatNumber:3,
+      availableBalanceCents:100_000,
+    });
+    expect(app.innerHTML).toContain("YOUR SEAT");
+    expect(app.innerHTML).toContain("1,000");
+
+    connection.close();
+  });
+
   it("does not reconnect a session-replaced socket",()=>{
     const physicals:Array<ReturnType<typeof physicalSocket>>=[];
     const reconnectCallbacks:Array<()=>void>=[];
