@@ -1,6 +1,6 @@
 import { Router, type IRouter, type Request, type Response } from "express";
 import { randomUUID } from "node:crypto";
-import { SESSION_COOKIE } from "../roulette/routes";
+import { SESSION_COOKIE } from "../platform/session";
 import { cadiKazanRepository } from "./repository";
 import { CADI_KAZAN_MODES, type CadiKazanMode } from "./types";
 
