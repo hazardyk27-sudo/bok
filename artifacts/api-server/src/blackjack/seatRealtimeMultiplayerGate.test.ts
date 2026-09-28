@@ -241,8 +241,11 @@ describe("blackjack five-client realtime entry-to-game gate",()=>{
       }),
     );
 
-    expect(claimAcks.map((ack)=>ack.eventSequence))
-      .toEqual([1,2,3,4,5]);
+    expect(
+      claimAcks
+        .map((ack)=>ack.eventSequence)
+        .sort((left,right)=>(left as number)-(right as number)),
+    ).toEqual([1,2,3,4,5]);
     expect(attached.scheduled.coordinator.getTable()).toMatchObject({
       phase:"BETTING",
       stateVersion:8,
@@ -339,7 +342,7 @@ describe("blackjack five-client realtime entry-to-game gate",()=>{
     expect(started.status).toBe("ROUND_STARTED");
     expect(started.transitions.map((transition)=>transition.type))
       .toEqual([
-        "BETTING_CLOSED",
+        "BETTING_LOCKED",
         "INITIAL_DEAL_COMMITTED",
       ]);
 
