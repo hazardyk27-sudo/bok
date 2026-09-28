@@ -60,6 +60,7 @@ export class GameController {
   private pendingSettledBalanceCents: number | null = null;
   private activeRoundTiming: RoundTimingTrace | null = null;
   private readonly wallet = new SlotWalletClient();
+  private readonly eventAbort = new AbortController();
   readonly audio = new AudioManager();
   private readonly scene: GameScene;
   private readonly ui: {
@@ -93,17 +94,18 @@ export class GameController {
   }
 
   private bind() {
-    this.ui.spin.addEventListener("click", () => void this.spin());
-    this.ui.betMinus.addEventListener("click", () => this.changeBet(-1));
-    this.ui.betPlus.addEventListener("click", () => this.changeBet(1));
-    this.ui.autoCount.addEventListener("change", () => this.updateAutoStatus());
+    const signal = this.eventAbort.signal;
+    this.ui.spin.addEventListener("click", () => void this.spin(), { signal });
+    this.ui.betMinus.addEventListener("click", () => this.changeBet(-1), { signal });
+    this.ui.betPlus.addEventListener("click", () => this.changeBet(1), { signal });
+    this.ui.autoCount.addEventListener("change", () => this.updateAutoStatus(), { signal });
     this.ui.autoToggle.addEventListener("click", () => {
       if (this.autoRunning) {
         void this.toggleAuto();
       } else {
         this.setAutoMenuOpen(this.ui.autoMenu.hidden);
       }
-    });
+    }, { signal });
     this.ui.autoMenu.addEventListener("click", (event) => {
       const target = event.target instanceof HTMLElement
         ? event.target.closest<HTMLButtonElement>("[data-auto-option]")
@@ -114,17 +116,17 @@ export class GameController {
       this.ui.autoCount.dispatchEvent(new Event("change"));
       this.setAutoMenuOpen(false);
       void this.toggleAuto();
-    });
+    }, { signal });
     document.addEventListener("pointerdown", (event) => {
       const root = this.ui.autoMenu.parentElement;
       if (root && event.target instanceof Node && !root.contains(event.target)) this.setAutoMenuOpen(false);
-    });
+    }, { signal });
     this.ui.turbo.addEventListener("click", () => {
       this.turbo = !this.turbo; localStorage.setItem("cascade8-turbo", String(this.turbo)); this.updateHud();
-    });
+    }, { signal });
     this.ui.sound.addEventListener("click", () => {
       this.audio.setMuted(!this.audio.muted); this.updateHud();
-    });
+    }, { signal });
     this.ui.bonusStart.addEventListener("click", () => {
       if (this.pendingRetriggerContinue) {
         const continueRetrigger = this.pendingRetriggerContinue;
@@ -134,7 +136,7 @@ export class GameController {
         return;
       }
       void this.spin();
-    });
+    }, { signal });
     window.addEventListener("keydown", (event) => {
       if (event.key === "Escape") {
         this.setAutoMenuOpen(false);
@@ -143,7 +145,14 @@ export class GameController {
       if (event.code === "Space" && !event.repeat && document.activeElement?.tagName !== "INPUT") {
         event.preventDefault(); void this.spin();
       }
-    });
+    }, { signal });
+  }
+
+  destroy() {
+    this.autoRunning = false;
+    this.autoStopping = false;
+    this.pendingAutoResume = false;
+    this.eventAbort.abort();
   }
 
   get betCents() { return BETS_CENTS[this.betIndex]; }
@@ -562,7 +571,7 @@ export class GameController {
     for (let index = 0; index < result.tumbles.length; index += 1) {
       const tumble = result.tumbles[index];
       this.setState("EVALUATING");
-      const tumbleRenderTiming = this.scene.renderBoard(tumble.boardBefore, tumble.winningCells);
+      const tumbleRenderTiming = this.scene.renderBoard(tumble.boardBefore, tumble.winningCells, true);
       this.markTiming(`TUMBLE_${index + 1}_BOARD_RENDERED`, tumbleRenderTiming);
       const winEvents = this.buildWinLabelEvents(tumble);
       const winningMessage = `${tumble.winningSymbols.map((symbol) => getSymbolDefinition(symbol).name).join(" + ")} RESONATE`;
