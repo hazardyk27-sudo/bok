@@ -1,5 +1,10 @@
 import "./roulette.css";
 import {
+  createBallOrbit,
+  sampleBallOrbit,
+  type BallOrbit,
+} from "./ballMotion";
+import {
   createRotorSpin,
   sampleRotorSpin,
   type RotorSpin,
@@ -8,6 +13,8 @@ import { renderRouletteWheel } from "./wheelRenderer";
 
 type RouletteViewState = {
   rotorAngle: number;
+  ballAngle: number;
+  ballVisible: boolean;
 };
 
 function renderCanvas(
@@ -39,7 +46,7 @@ export function mountRoulette(app: HTMLDivElement) {
           data-roulette-wheel
           role="button"
           tabindex="0"
-          aria-label="European roulette wheel. Press to spin the wheel."
+          aria-label="European roulette wheel. Press to spin the wheel and ball."
         ></canvas>
       </section>
     </main>
@@ -50,23 +57,35 @@ export function mountRoulette(app: HTMLDivElement) {
 
   const viewState: RouletteViewState = {
     rotorAngle: 0,
+    ballAngle: -0.72,
+    ballVisible: true,
   };
 
-  let activeSpin: RotorSpin | null = null;
-  let spinStartedAt = 0;
+  let activeRotorSpin: RotorSpin | null = null;
+  let activeBallOrbit: BallOrbit | null = null;
+  let motionStartedAt = 0;
   let frameId = 0;
 
   const redraw = () => renderCanvas(canvas, viewState);
 
   const animate = (timestamp: number) => {
-    if (!activeSpin) return;
+    const elapsedMs = timestamp - motionStartedAt;
 
-    const sample = sampleRotorSpin(activeSpin, timestamp - spinStartedAt);
-    viewState.rotorAngle = sample.angle;
+    if (activeRotorSpin) {
+      const rotorSample = sampleRotorSpin(activeRotorSpin, elapsedMs);
+      viewState.rotorAngle = rotorSample.angle;
+      if (rotorSample.done) activeRotorSpin = null;
+    }
+
+    if (activeBallOrbit) {
+      const ballSample = sampleBallOrbit(activeBallOrbit, elapsedMs);
+      viewState.ballAngle = ballSample.angle;
+      if (ballSample.done) activeBallOrbit = null;
+    }
+
     redraw();
 
-    if (sample.done) {
-      activeSpin = null;
+    if (!activeRotorSpin && !activeBallOrbit) {
       frameId = 0;
       return;
     }
@@ -75,10 +94,11 @@ export function mountRoulette(app: HTMLDivElement) {
   };
 
   const startSpin = () => {
-    if (activeSpin) return;
+    if (activeRotorSpin || activeBallOrbit) return;
 
-    activeSpin = createRotorSpin(viewState.rotorAngle, 1);
-    spinStartedAt = performance.now();
+    activeRotorSpin = createRotorSpin(viewState.rotorAngle, 1);
+    activeBallOrbit = createBallOrbit(viewState.ballAngle);
+    motionStartedAt = performance.now();
 
     if (frameId) window.cancelAnimationFrame(frameId);
     frameId = window.requestAnimationFrame(animate);

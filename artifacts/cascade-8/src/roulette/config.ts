@@ -49,6 +49,17 @@ export const BALL_TRACK_STYLE = {
   sheenWidth: 0.010,
 } as const;
 
+export const BALL_STYLE = {
+  radius: 0.018,
+  shadowRadius: 0.024,
+  shadowOffsetX: 0.007,
+  shadowOffsetY: 0.010,
+  highlightRadius: 0.0065,
+  highlightOffsetX: -0.0055,
+  highlightOffsetY: -0.0065,
+  rimWidth: 0.0028,
+} as const;
+
 export const NUMBER_RING_STYLE = {
   textRadius: 0.667,
   fontSize: 0.059,
@@ -112,6 +123,10 @@ export const WHEEL_COLORS = {
   greenSheen: "#3aa55b",
   ivory: "#f6df9f",
   ivoryLight: "#fff5c8",
+  ballShadow: "rgba(16, 7, 3, 0.48)",
+  ballEdge: "#b9b3a4",
+  ballMid: "#e7e3d8",
+  ballLight: "#ffffff",
 } as const;
 
 export const SEGMENT_COUNT = EUROPEAN_WHEEL_SEQUENCE.length;

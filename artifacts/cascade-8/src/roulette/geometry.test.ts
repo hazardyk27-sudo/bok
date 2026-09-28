@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  BALL_STYLE,
   BALL_TRACK_STYLE,
   CENTER_MECHANISM_STYLE,
   EUROPEAN_WHEEL_SEQUENCE,
@@ -63,6 +64,18 @@ describe("roulette 2d wheel geometry", () => {
     expect(BALL_TRACK_STYLE.troughWidth).toBeLessThan(
       BALL_TRACK_STYLE.outerRadius - BALL_TRACK_STYLE.innerRadius,
     );
+  });
+
+  it("keeps the visual ball fully inside the fixed track", () => {
+    const innerClearance =
+      BALL_TRACK_STYLE.pathRadius - BALL_STYLE.radius - BALL_TRACK_STYLE.innerRadius;
+    const outerClearance =
+      BALL_TRACK_STYLE.outerRadius - BALL_TRACK_STYLE.pathRadius - BALL_STYLE.radius;
+
+    expect(innerClearance).toBeGreaterThan(0);
+    expect(outerClearance).toBeGreaterThan(0);
+    expect(BALL_STYLE.shadowRadius).toBeGreaterThan(BALL_STYLE.radius);
+    expect(BALL_STYLE.highlightRadius).toBeLessThan(BALL_STYLE.radius);
   });
 
   it("keeps inward number labels centered inside the number ring", () => {

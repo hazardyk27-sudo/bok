@@ -1,4 +1,5 @@
 import {
+  BALL_STYLE,
   BALL_TRACK_STYLE,
   CENTER_MECHANISM_STYLE,
   EUROPEAN_WHEEL_SEQUENCE,
@@ -1017,6 +1018,8 @@ function drawCenterMechanism(ctx: CanvasRenderingContext2D, radius: number) {
 
 export type RouletteWheelRenderState = {
   rotorAngle?: number;
+  ballAngle?: number;
+  ballVisible?: boolean;
 };
 
 export function normalizeRotorAngle(angle: number) {
@@ -1028,6 +1031,73 @@ export function normalizeRotorAngle(angle: number) {
 function drawStator(ctx: CanvasRenderingContext2D, radius: number) {
   drawOuterWood(ctx, radius);
   drawBallTrack(ctx, radius);
+}
+
+function drawBall(
+  ctx: CanvasRenderingContext2D,
+  radius: number,
+  ballAngle: number,
+) {
+  const pathRadius = radius * BALL_TRACK_STYLE.pathRadius;
+  const point = polar(pathRadius, normalizeRotorAngle(ballAngle));
+  const ballRadius = radius * BALL_STYLE.radius;
+
+  ctx.save();
+
+  ctx.beginPath();
+  ctx.arc(
+    point.x + radius * BALL_STYLE.shadowOffsetX,
+    point.y + radius * BALL_STYLE.shadowOffsetY,
+    radius * BALL_STYLE.shadowRadius,
+    0,
+    TAU,
+  );
+  ctx.fillStyle = WHEEL_COLORS.ballShadow;
+  ctx.fill();
+
+  const gradient = ctx.createRadialGradient(
+    point.x + radius * BALL_STYLE.highlightOffsetX,
+    point.y + radius * BALL_STYLE.highlightOffsetY,
+    radius * 0.001,
+    point.x,
+    point.y,
+    ballRadius,
+  );
+  gradient.addColorStop(0, WHEEL_COLORS.ballLight);
+  gradient.addColorStop(0.28, "#faf9f4");
+  gradient.addColorStop(0.64, WHEEL_COLORS.ballMid);
+  gradient.addColorStop(1, WHEEL_COLORS.ballEdge);
+
+  ctx.beginPath();
+  ctx.arc(point.x, point.y, ballRadius, 0, TAU);
+  ctx.fillStyle = gradient;
+  ctx.fill();
+  ctx.strokeStyle = "rgba(92, 83, 68, 0.72)";
+  ctx.lineWidth = Math.max(0.8, radius * BALL_STYLE.rimWidth);
+  ctx.stroke();
+
+  ctx.beginPath();
+  ctx.arc(
+    point.x + radius * BALL_STYLE.highlightOffsetX,
+    point.y + radius * BALL_STYLE.highlightOffsetY,
+    radius * BALL_STYLE.highlightRadius,
+    0,
+    TAU,
+  );
+  const highlight = ctx.createRadialGradient(
+    point.x + radius * BALL_STYLE.highlightOffsetX,
+    point.y + radius * BALL_STYLE.highlightOffsetY,
+    0,
+    point.x + radius * BALL_STYLE.highlightOffsetX,
+    point.y + radius * BALL_STYLE.highlightOffsetY,
+    radius * BALL_STYLE.highlightRadius,
+  );
+  highlight.addColorStop(0, "rgba(255, 255, 255, 0.96)");
+  highlight.addColorStop(1, "rgba(255, 255, 255, 0)");
+  ctx.fillStyle = highlight;
+  ctx.fill();
+
+  ctx.restore();
 }
 
 function drawRotor(
@@ -1062,6 +1132,10 @@ export function renderRouletteWheel(
 
   drawStator(ctx, radius);
   drawRotor(ctx, radius, state.rotorAngle ?? 0);
+
+  if (state.ballVisible ?? true) {
+    drawBall(ctx, radius, state.ballAngle ?? -0.72);
+  }
 
   ctx.restore();
 }
