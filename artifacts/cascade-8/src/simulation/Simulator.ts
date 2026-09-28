@@ -14,6 +14,7 @@ import {
   BONUS_INITIAL_SCATTER_CHANCE,
   BONUS_REFILL_CORE_CHANCE,
   BONUS_REFILL_SCATTER_CHANCE,
+  MAX_VISIBLE_NORMAL_SYMBOLS,
   MAX_WIN_MULTIPLIER,
   NORMAL_PAIR_COPY_CHANCE,
   NORMAL_THIRD_REPEAT_WEIGHT_FACTOR,
@@ -84,6 +85,13 @@ const recordCells = (cells: BoardCell[], counts: Record<ObservedSymbolKey, numbe
 const recordBoardCells = (board: Board, counts: Record<ObservedSymbolKey, number>) => {
   recordCells(board.flat(), counts);
 };
+
+const countDistinctNormalSymbols = (board: Board) =>
+  new Set(
+    board.flat()
+      .map(getNormalSymbol)
+      .filter((symbol): symbol is NormalSymbolId => symbol !== null),
+  ).size;
 
 const gsExplosionBucket = (count: number): GsExplosionBucket =>
   count >= 12 ? "12+" : String(count) as GsExplosionBucket;
@@ -246,6 +254,7 @@ export type SimulationReport = {
     boardColumns: number;
     boardRows: number;
     maxWinMultiplier: number;
+    maxVisibleNormalSymbols: number;
     normalPairCopyChance: number;
     normalThirdCopyChance: number;
     symbols: { id: string; weight: number }[];
@@ -344,6 +353,14 @@ export type SimulationReport = {
   observedPairProbability: number;
   maximumContiguousNormal: number;
   averageUniqueNormalSymbolsPerColumn: number;
+  visibleBoardsObserved: number;
+  visibleBoardsOverSymbolLimit: number;
+  initialBoardsOverSymbolLimit: number;
+  refillBoardsOverSymbolLimit: number;
+  maxDistinctNormalSymbolsVisible: number;
+  maxDistinctNormalSymbolsInitial: number;
+  maxDistinctNormalSymbolsRefill: number;
+  distinctNormalSymbolCountDistribution: Record<string, number>;
   visiblePairFrequency: number;
   columnThreeSameFrequency: number;
   columnFourSameFrequency: number;
@@ -451,6 +468,28 @@ export function simulate(spins: number, seed: string, betCents = 100, onProgress
   ) as Record<GsExplosionBucket, number>;
   let maxObservedWinMultiplier = 0;
   let maxTumbles = 0;
+  let visibleBoardsObserved = 0;
+  let visibleBoardsOverSymbolLimit = 0;
+  let initialBoardsOverSymbolLimit = 0;
+  let refillBoardsOverSymbolLimit = 0;
+  let maxDistinctNormalSymbolsVisible = 0;
+  let maxDistinctNormalSymbolsInitial = 0;
+  let maxDistinctNormalSymbolsRefill = 0;
+  const distinctNormalSymbolCountDistribution: Record<string, number> = {};
+  const recordVisibleSymbolDiversity = (board: Board, source: "initial" | "refill") => {
+    const distinct = countDistinctNormalSymbols(board);
+    visibleBoardsObserved += 1;
+    maxDistinctNormalSymbolsVisible = Math.max(maxDistinctNormalSymbolsVisible, distinct);
+    if (source === "initial") maxDistinctNormalSymbolsInitial = Math.max(maxDistinctNormalSymbolsInitial, distinct);
+    else maxDistinctNormalSymbolsRefill = Math.max(maxDistinctNormalSymbolsRefill, distinct);
+    distinctNormalSymbolCountDistribution[String(distinct)] =
+      (distinctNormalSymbolCountDistribution[String(distinct)] ?? 0) + 1;
+    if (distinct > MAX_VISIBLE_NORMAL_SYMBOLS) {
+      visibleBoardsOverSymbolLimit += 1;
+      if (source === "initial") initialBoardsOverSymbolLimit += 1;
+      else refillBoardsOverSymbolLimit += 1;
+    }
+  };
   for (let index = 0; index < spins; index += 1) {
     const result = playSpin(betCents, source);
     const seenPairs = new Set<string>();
@@ -458,6 +497,7 @@ export function simulate(spins: number, seed: string, betCents = 100, onProgress
     recordRuns(result.initialBoard, runLengthDistribution, runMetrics);
     recordBoardCells(result.initialBoard, symbolAppearanceCounts.initialBoard);
     recordBoardCells(result.initialBoard, symbolAppearanceCounts.visible);
+    recordVisibleSymbolDiversity(result.initialBoard, "initial");
     initialBoardCells += result.initialBoard.flat().length;
     visibleCells += result.initialBoard.flat().length;
     if (evaluateBoard(result.initialBoard).winningCells.length) initialEightPlusCount += 1;
@@ -466,6 +506,7 @@ export function simulate(spins: number, seed: string, betCents = 100, onProgress
       recordRuns(freeSpin.initialBoard, runLengthDistribution, runMetrics);
       recordBoardCells(freeSpin.initialBoard, symbolAppearanceCounts.initialBoard);
       recordBoardCells(freeSpin.initialBoard, symbolAppearanceCounts.visible);
+      recordVisibleSymbolDiversity(freeSpin.initialBoard, "initial");
       initialBoardCells += freeSpin.initialBoard.flat().length;
       visibleCells += freeSpin.initialBoard.flat().length;
       const initialCoreValues = freeSpin.initialBoard
@@ -522,6 +563,7 @@ export function simulate(spins: number, seed: string, betCents = 100, onProgress
       refillCells += tumble.newSymbols.length;
       recordCells(tumble.newSymbols, symbolAppearanceCounts.refill);
       recordBoardCells(tumble.boardAfterRefill, symbolAppearanceCounts.visible);
+      recordVisibleSymbolDiversity(tumble.boardAfterRefill, "refill");
       visibleCells += tumble.boardAfterRefill.flat().length;
       const context = isFree ? `bonus:${index}` : `base:${index}`;
       recordPairGroups(tumble.newSymbols, "refill", context, seenPairs, pairMetrics);
@@ -603,6 +645,7 @@ export function simulate(spins: number, seed: string, betCents = 100, onProgress
       boardColumns: BOARD_COLUMNS,
       boardRows: BOARD_ROWS,
       maxWinMultiplier: MAX_WIN_MULTIPLIER,
+      maxVisibleNormalSymbols: MAX_VISIBLE_NORMAL_SYMBOLS,
       normalPairCopyChance: NORMAL_PAIR_COPY_CHANCE,
       normalThirdCopyChance: 0,
       symbols: SYMBOLS.map(({ id, weight }) => ({ id, weight })),
@@ -707,6 +750,14 @@ export function simulate(spins: number, seed: string, betCents = 100, onProgress
     })(),
     maximumContiguousNormal: runMetrics.maximumContiguousNormal,
     averageUniqueNormalSymbolsPerColumn: Number((runMetrics.uniqueNormalTotal / Math.max(1, runMetrics.visibleColumns)).toFixed(4)),
+    visibleBoardsObserved,
+    visibleBoardsOverSymbolLimit,
+    initialBoardsOverSymbolLimit,
+    refillBoardsOverSymbolLimit,
+    maxDistinctNormalSymbolsVisible,
+    maxDistinctNormalSymbolsInitial,
+    maxDistinctNormalSymbolsRefill,
+    distinctNormalSymbolCountDistribution,
     visiblePairFrequency: Number(((runMetrics.visiblePairColumns / Math.max(1, runMetrics.visibleColumns)) * 100).toFixed(4)),
     columnThreeSameFrequency: Number(((runMetrics.columnsWithThree / Math.max(1, runMetrics.visibleColumns)) * 100).toFixed(4)),
     columnFourSameFrequency: Number(((runMetrics.columnsWithFour / Math.max(1, runMetrics.visibleColumns)) * 100).toFixed(4)),
@@ -816,6 +867,20 @@ export function formatSimulationSummary(report: SimulationReport) {
 | Free Spin refill average Core count | ${report.averageCoreCellsPerFreeRefill} |
 | Average combined Core multiplier | ${report.averageCombinedCoreMultiplier}x |
 | Highest observed total Core value | ${report.highestCoreTotalObserved}x |
+
+## Visible normal-symbol diversity
+
+| Metric | Value |
+| --- | ---: |
+| Configured maximum distinct normal symbols | ${report.configSnapshot.maxVisibleNormalSymbols} |
+| Visible boards observed | ${report.visibleBoardsObserved} |
+| Boards over symbol limit | ${report.visibleBoardsOverSymbolLimit} |
+| Initial boards over symbol limit | ${report.initialBoardsOverSymbolLimit} |
+| Refill boards over symbol limit | ${report.refillBoardsOverSymbolLimit} |
+| Maximum distinct normal symbols observed | ${report.maxDistinctNormalSymbolsVisible} |
+| Maximum on initial boards | ${report.maxDistinctNormalSymbolsInitial} |
+| Maximum after refills | ${report.maxDistinctNormalSymbolsRefill} |
+| Distinct-count distribution | ${JSON.stringify(report.distinctNormalSymbolCountDistribution)} |
 
 ## Tumbles and pairs
 
