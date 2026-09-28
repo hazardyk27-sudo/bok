@@ -306,9 +306,11 @@ describe("blackjack owned server runtime wiring",()=>{
       eventSequence:0,
     });
     expect(attached.scheduled.coordinator.getTable().players).toEqual([]);
-    expect(stored).not.toBeNull();
-    expect(stored?.payload.table.phase).toBe("TABLE_IDLE");
-    expect(stored?.payload.table.players).toEqual([]);
+    if(stored===null){
+      throw new Error("Blackjack fresh runtime was not persisted");
+    }
+    expect(stored.payload.table.phase).toBe("TABLE_IDLE");
+    expect(stored.payload.table.players).toEqual([]);
   });
 
 });
