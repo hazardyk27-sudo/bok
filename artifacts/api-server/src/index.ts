@@ -1,6 +1,7 @@
 import { createServer } from "node:http";
 import app from "./app";
 import { logger } from "./lib/logger";
+import { attachBlackjackPlatformRuntime } from "./platform/blackjack";
 
 const rawPort = process.env["PORT"];
 
@@ -17,9 +18,21 @@ if (Number.isNaN(port) || port <= 0) {
 }
 
 const server = createServer(app);
+const blackjackRuntime = await attachBlackjackPlatformRuntime(server);
 
-server.listen(port, () => logger.info({ port }, "Server listening"));
+server.listen(port, () => {
+  logger.info(
+    {
+      port,
+      blackjack: blackjackRuntime.getReadiness(),
+    },
+    "Server listening",
+  );
+});
 
-const shutdown = () => server.close();
+const shutdown = () => {
+  blackjackRuntime.close();
+  server.close();
+};
 process.once("SIGTERM", shutdown);
 process.once("SIGINT", shutdown);

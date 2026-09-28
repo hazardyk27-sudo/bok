@@ -24,8 +24,15 @@ if (isWitchRoute) {
   const slotModule = await import("./slot");
   slotModule.mountSlot(app, currentPath);
 } else if (isBlackjackRoute) {
+  const sessionResponse = await fetch("/api/blackjack/session", {
+    credentials: "same-origin",
+  });
+  if (!sessionResponse.ok) {
+    throw new Error("BLACKJACK_SESSION_BOOTSTRAP_FAILED");
+  }
+
   const blackjackModule = await import("./blackjack");
-  blackjackModule.mountBlackjack(app);
+  blackjackModule.mountConnectedBlackjack(app);
 } else if (isRouletteRoute) {
   const rouletteModule = await import("./roulette");
   rouletteModule.mountRoulette(app);
