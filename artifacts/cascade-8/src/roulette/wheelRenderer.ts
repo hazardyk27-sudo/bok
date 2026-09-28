@@ -87,7 +87,7 @@ function drawGoldLeaf(
   const width = scale * OUTER_RIM_STYLE.markerWidth;
   const height = scale * OUTER_RIM_STYLE.markerHeight;
 
-  ctx.shadowColor = "rgba(47, 22, 2, 0.46)";
+  ctx.shadowColor = "rgba(0, 0, 0, 0.50)";
   ctx.shadowBlur = scale * 0.010;
   ctx.shadowOffsetY = scale * 0.006;
 
@@ -114,7 +114,7 @@ function drawGoldLeaf(
   ctx.beginPath();
   ctx.moveTo(-width * 0.56, -height * 0.14);
   ctx.quadraticCurveTo(0, -height * 0.52, width * 0.58, -height * 0.06);
-  ctx.strokeStyle = "rgba(255, 244, 181, 0.78)";
+  ctx.strokeStyle = "rgba(246, 249, 251, 0.82)";
   ctx.lineWidth = Math.max(0.7, scale * 0.0014);
   ctx.stroke();
 
@@ -140,8 +140,8 @@ function drawOuterWoodGrain(ctx: CanvasRenderingContext2D, radius: number) {
     ctx.arc(0, 0, grainRadius, start, start + span);
     ctx.strokeStyle =
       index % 3 === 0
-        ? `rgba(46, 14, 6, ${OUTER_RIM_STYLE.grainOpacity})`
-        : `rgba(215, 123, 54, ${OUTER_RIM_STYLE.grainOpacity * 0.52})`;
+        ? `rgba(0, 0, 0, ${OUTER_RIM_STYLE.grainOpacity})`
+        : `rgba(126, 138, 147, ${OUTER_RIM_STYLE.grainOpacity * 0.52})`;
     ctx.lineWidth = Math.max(0.65, radius * (0.0013 + (index % 4) * 0.00025));
     ctx.stroke();
   }
@@ -164,10 +164,10 @@ function drawOuterWoodVarnish(ctx: CanvasRenderingContext2D, radius: number) {
     -radius * 0.05,
     radius * 0.95,
   );
-  sheen.addColorStop(0, "rgba(255, 211, 143, 0.26)");
-  sheen.addColorStop(0.30, "rgba(255, 173, 92, 0.10)");
-  sheen.addColorStop(0.62, "rgba(82, 20, 5, 0.04)");
-  sheen.addColorStop(1, "rgba(24, 7, 3, 0.30)");
+  sheen.addColorStop(0, "rgba(210, 220, 228, 0.22)");
+  sheen.addColorStop(0.30, "rgba(168, 180, 188, 0.09)");
+  sheen.addColorStop(0.62, "rgba(25, 29, 32, 0.08)");
+  sheen.addColorStop(1, "rgba(4, 5, 6, 0.34)");
 
   ctx.beginPath();
   ctx.arc(0, 0, outer, 0, TAU);
@@ -177,7 +177,7 @@ function drawOuterWoodVarnish(ctx: CanvasRenderingContext2D, radius: number) {
   drawCircleStroke(
     ctx,
     radius * OUTER_RIM_STYLE.varnishRadius,
-    "rgba(255, 230, 183, 0.08)",
+    "rgba(225, 232, 237, 0.08)",
     radius * OUTER_RIM_STYLE.varnishWidth,
   );
 
@@ -200,14 +200,14 @@ function drawOuterWoodBevels(ctx: CanvasRenderingContext2D, radius: number) {
   drawCircleStroke(
     ctx,
     radius * (OUTER_RIM_STYLE.outerHighlightRadius - 0.010),
-    "rgba(255, 246, 197, 0.56)",
+    "rgba(245, 248, 250, 0.58)",
     radius * 0.0022,
   );
 
   drawCircleStroke(
     ctx,
     radius * OUTER_RIM_STYLE.innerShadowRadius,
-    "rgba(45, 18, 3, 0.82)",
+    "rgba(8, 10, 12, 0.88)",
     radius * 0.018,
   );
   drawCircleStroke(
@@ -240,7 +240,7 @@ function drawOuterWood(ctx: CanvasRenderingContext2D, radius: number) {
   wood.addColorStop(1, WHEEL_COLORS.woodDeep);
 
   ctx.save();
-  ctx.shadowColor = "rgba(23, 10, 5, 0.34)";
+  ctx.shadowColor = "rgba(0, 0, 0, 0.42)";
   ctx.shadowBlur = radius * 0.050;
   ctx.shadowOffsetY = radius * 0.020;
   ctx.beginPath();
@@ -261,14 +261,14 @@ function drawOuterWood(ctx: CanvasRenderingContext2D, radius: number) {
     const a = polar(panelInner, angle);
     const b = polar(panelOuter, angle);
 
-    ctx.strokeStyle = "rgba(35, 10, 4, 0.52)";
+    ctx.strokeStyle = "rgba(4, 5, 6, 0.62)";
     ctx.lineWidth = Math.max(1, radius * 0.0042);
     ctx.beginPath();
     ctx.moveTo(a.x, a.y);
     ctx.lineTo(b.x, b.y);
     ctx.stroke();
 
-    ctx.strokeStyle = "rgba(214, 116, 50, 0.20)";
+    ctx.strokeStyle = "rgba(118, 130, 139, 0.22)";
     ctx.lineWidth = Math.max(0.7, radius * 0.0015);
     ctx.beginPath();
     ctx.moveTo(a.x, a.y);
@@ -320,11 +320,11 @@ function drawBallTrack(ctx: CanvasRenderingContext2D, radius: number) {
     0,
     pathRadius + radius * 0.035,
   );
-  bowlShadow.addColorStop(0, "rgba(16, 7, 3, 0.66)");
-  bowlShadow.addColorStop(0.34, "rgba(24, 11, 5, 0.34)");
-  bowlShadow.addColorStop(0.50, "rgba(255, 226, 172, 0.05)");
-  bowlShadow.addColorStop(0.72, "rgba(255, 199, 115, 0.12)");
-  bowlShadow.addColorStop(1, "rgba(17, 7, 3, 0.52)");
+  bowlShadow.addColorStop(0, "rgba(4, 6, 8, 0.70)");
+  bowlShadow.addColorStop(0.34, "rgba(10, 12, 14, 0.38)");
+  bowlShadow.addColorStop(0.50, "rgba(222, 230, 235, 0.06)");
+  bowlShadow.addColorStop(0.72, "rgba(176, 187, 195, 0.14)");
+  bowlShadow.addColorStop(1, "rgba(5, 7, 9, 0.58)");
 
   ctx.beginPath();
   ctx.arc(0, 0, outer, 0, TAU);
@@ -337,10 +337,10 @@ function drawBallTrack(ctx: CanvasRenderingContext2D, radius: number) {
     radius * 0.72,
     radius * 0.78,
   );
-  directionalSheen.addColorStop(0, "rgba(255, 238, 197, 0.19)");
-  directionalSheen.addColorStop(0.36, "rgba(255, 208, 143, 0.07)");
-  directionalSheen.addColorStop(0.62, "rgba(42, 19, 7, 0.03)");
-  directionalSheen.addColorStop(1, "rgba(20, 7, 3, 0.24)");
+  directionalSheen.addColorStop(0, "rgba(232, 237, 241, 0.20)");
+  directionalSheen.addColorStop(0.36, "rgba(194, 205, 213, 0.08)");
+  directionalSheen.addColorStop(0.62, "rgba(32, 36, 40, 0.05)");
+  directionalSheen.addColorStop(1, "rgba(6, 8, 10, 0.30)");
 
   ctx.beginPath();
   ctx.arc(0, 0, outer, 0, TAU);
@@ -352,21 +352,21 @@ function drawBallTrack(ctx: CanvasRenderingContext2D, radius: number) {
   drawCircleStroke(
     ctx,
     pathRadius,
-    "rgba(21, 9, 4, 0.48)",
+    "rgba(7, 9, 11, 0.55)",
     radius * BALL_TRACK_STYLE.troughWidth,
   );
 
   drawCircleStroke(
     ctx,
     outer - radius * BALL_TRACK_STYLE.shadowInset,
-    "rgba(24, 10, 4, 0.55)",
+    "rgba(8, 10, 12, 0.62)",
     radius * 0.014,
   );
 
   drawCircleStroke(
     ctx,
     radius * BALL_TRACK_STYLE.sheenRadius,
-    "rgba(255, 226, 172, 0.18)",
+    "rgba(222, 230, 235, 0.20)",
     radius * BALL_TRACK_STYLE.sheenWidth,
   );
 
@@ -385,7 +385,7 @@ function drawBallTrack(ctx: CanvasRenderingContext2D, radius: number) {
   drawCircleStroke(
     ctx,
     inner + radius * 0.006,
-    "rgba(255, 246, 205, 0.42)",
+    "rgba(246, 249, 251, 0.46)",
     Math.max(0.8, radius * 0.0018),
   );
 
@@ -450,7 +450,7 @@ function drawNumberSeparator(
   ctx.save();
   ctx.lineCap = "round";
 
-  ctx.strokeStyle = "rgba(62, 33, 3, 0.85)";
+  ctx.strokeStyle = "rgba(45, 50, 55, 0.88)";
   ctx.lineWidth = radius * (NUMBER_RING_STYLE.separatorWidth + 0.004);
   ctx.beginPath();
   ctx.moveTo(a.x, a.y);
@@ -491,7 +491,7 @@ function drawNumberRingRails(
   drawCircleStroke(
     ctx,
     inner + radius * NUMBER_RING_STYLE.innerHighlightOffset,
-    "rgba(255, 239, 158, 0.44)",
+    "rgba(235, 240, 244, 0.46)",
     Math.max(0.8, radius * 0.0015),
   );
 }
@@ -515,10 +515,10 @@ function drawNumberLabel(
   ctx.textBaseline = "middle";
   ctx.lineJoin = "round";
   ctx.font = `700 ${fontSize}px Georgia, "Times New Roman", serif`;
-  ctx.shadowColor = "rgba(22, 10, 3, 0.62)";
+  ctx.shadowColor = "rgba(7, 9, 11, 0.68)";
   ctx.shadowBlur = radius * 0.003;
   ctx.shadowOffsetY = radius * 0.0024;
-  ctx.strokeStyle = "rgba(83, 47, 5, 0.66)";
+  ctx.strokeStyle = "rgba(58, 64, 70, 0.70)";
   ctx.lineWidth = Math.max(0.85, radius * 0.0023);
   ctx.strokeText(String(number), 0, 0);
   ctx.fillStyle = WHEEL_COLORS.ivoryLight;
@@ -595,7 +595,7 @@ function drawPocketSeparator(
   ctx.save();
   ctx.lineCap = "round";
 
-  ctx.strokeStyle = "rgba(49, 28, 3, 0.82)";
+  ctx.strokeStyle = "rgba(42, 47, 52, 0.86)";
   ctx.lineWidth = radius * (POCKET_RING_STYLE.separatorWidth + 0.0048);
   ctx.beginPath();
   ctx.moveTo(innerPoint.x, innerPoint.y);
@@ -634,7 +634,7 @@ function drawPocketRingRails(
 ) {
   const railWidth = radius * POCKET_RING_STYLE.railWidth;
 
-  drawCircleStroke(ctx, outer, "rgba(60, 31, 2, 0.88)", railWidth * 1.62);
+  drawCircleStroke(ctx, outer, "rgba(50, 56, 62, 0.90)", railWidth * 1.62);
   drawCircleStroke(ctx, outer, WHEEL_COLORS.goldDark, railWidth * 1.18);
   drawCircleStroke(ctx, outer, WHEEL_COLORS.goldLight, railWidth * 0.72);
   drawCircleStroke(
@@ -644,7 +644,7 @@ function drawPocketRingRails(
     radius * 0.008,
   );
 
-  drawCircleStroke(ctx, inner, "rgba(54, 28, 2, 0.9)", railWidth * 1.55);
+  drawCircleStroke(ctx, inner, "rgba(48, 54, 60, 0.92)", railWidth * 1.55);
   drawCircleStroke(ctx, inner, WHEEL_COLORS.goldDark, railWidth * 1.12);
   drawCircleStroke(ctx, inner, WHEEL_COLORS.goldLight, railWidth * 0.7);
   drawCircleStroke(
@@ -735,8 +735,8 @@ function drawCenterWoodGrain(
     );
     ctx.strokeStyle =
       index % 2 === 0
-        ? "rgba(39, 10, 4, 0.22)"
-        : "rgba(207, 104, 44, 0.16)";
+        ? "rgba(3, 4, 5, 0.28)"
+        : "rgba(112, 124, 133, 0.18)";
     ctx.lineWidth = Math.max(0.6, radius * 0.0014);
     ctx.stroke();
   }
@@ -755,12 +755,12 @@ function drawCenterDisc(ctx: CanvasRenderingContext2D, radius: number) {
     discRadius,
   );
   wood.addColorStop(0, WHEEL_COLORS.woodGlow);
-  wood.addColorStop(0.34, "#9c4d21");
-  wood.addColorStop(0.68, "#6f2c13");
+  wood.addColorStop(0.34, "#3a4248");
+  wood.addColorStop(0.68, "#151a1e");
   wood.addColorStop(1, WHEEL_COLORS.woodDeep);
 
   ctx.save();
-  ctx.shadowColor = "rgba(30, 10, 3, 0.28)";
+  ctx.shadowColor = "rgba(2, 3, 4, 0.34)";
   ctx.shadowBlur = radius * 0.012;
   ctx.shadowOffsetY = radius * 0.007;
   ctx.beginPath();
@@ -772,7 +772,7 @@ function drawCenterDisc(ctx: CanvasRenderingContext2D, radius: number) {
   drawCenterWoodGrain(ctx, discRadius, radius);
 
   ctx.save();
-  ctx.strokeStyle = "rgba(39, 11, 6, 0.46)";
+  ctx.strokeStyle = "rgba(8, 10, 12, 0.52)";
   ctx.lineWidth = Math.max(1, radius * 0.0025);
   for (let index = 0; index < 8; index += 1) {
     const angle = index * (TAU / 8);
@@ -786,7 +786,7 @@ function drawCenterDisc(ctx: CanvasRenderingContext2D, radius: number) {
 
   drawCircleStroke(ctx, discRadius, WHEEL_COLORS.goldShadow, radius * 0.013);
   drawCircleStroke(ctx, discRadius * 0.987, WHEEL_COLORS.goldLight, radius * 0.006);
-  drawCircleStroke(ctx, discRadius * 0.970, "rgba(255, 241, 179, 0.42)", radius * 0.002);
+  drawCircleStroke(ctx, discRadius * 0.970, "rgba(239, 243, 246, 0.44)", radius * 0.002);
   drawCircleStroke(
     ctx,
     radius * WHEEL_GEOMETRY.centerGuideRadius,
@@ -823,7 +823,7 @@ function drawCenterBase(ctx: CanvasRenderingContext2D, radius: number) {
   const inner = radius * CENTER_MECHANISM_STYLE.baseInnerRadius;
 
   ctx.save();
-  ctx.shadowColor = "rgba(30, 13, 2, 0.44)";
+  ctx.shadowColor = "rgba(5, 7, 9, 0.52)";
   ctx.shadowBlur = radius * 0.018;
   ctx.shadowOffsetY = radius * 0.010;
 
@@ -851,7 +851,7 @@ function drawCenterBase(ctx: CanvasRenderingContext2D, radius: number) {
   );
   ctx.fill();
   drawCircleStroke(ctx, middle, WHEEL_COLORS.goldDark, radius * 0.006);
-  drawCircleStroke(ctx, middle * 0.86, "rgba(255, 235, 148, 0.72)", radius * 0.0025);
+  drawCircleStroke(ctx, middle * 0.86, "rgba(238, 243, 246, 0.74)", radius * 0.0025);
 
   ctx.beginPath();
   ctx.arc(0, 0, inner, 0, TAU);
@@ -879,7 +879,7 @@ function drawCenterArm(
   ctx.save();
   ctx.lineCap = "round";
 
-  ctx.shadowColor = "rgba(32, 13, 1, 0.48)";
+  ctx.shadowColor = "rgba(4, 6, 8, 0.56)";
   ctx.shadowBlur = radius * 0.010;
   ctx.shadowOffsetY = radius * 0.007;
 
@@ -909,7 +909,7 @@ function drawCenterArm(
   ctx.stroke();
 
   ctx.shadowColor = "transparent";
-  ctx.strokeStyle = "rgba(255, 245, 184, 0.66)";
+  ctx.strokeStyle = "rgba(245, 248, 250, 0.70)";
   ctx.lineWidth = Math.max(0.8, armWidth * 0.18);
   ctx.beginPath();
   ctx.moveTo(start.x, start.y);
@@ -929,7 +929,7 @@ function drawCenterKnob(
   const highlightOffset = radius * CENTER_MECHANISM_STYLE.knobHighlightOffset;
 
   ctx.save();
-  ctx.shadowColor = "rgba(28, 12, 1, 0.5)";
+  ctx.shadowColor = "rgba(4, 6, 8, 0.58)";
   ctx.shadowBlur = radius * 0.011;
   ctx.shadowOffsetY = radius * 0.007;
 
@@ -941,7 +941,7 @@ function drawCenterKnob(
     end.y,
     knobRadius,
   );
-  gradient.addColorStop(0, "#fff6bf");
+  gradient.addColorStop(0, "#ffffff");
   gradient.addColorStop(0.18, WHEEL_COLORS.goldSpecular);
   gradient.addColorStop(0.48, WHEEL_COLORS.goldLight);
   gradient.addColorStop(0.74, WHEEL_COLORS.gold);
@@ -962,7 +962,7 @@ function drawCenterHub(ctx: CanvasRenderingContext2D, radius: number) {
   const highlightRadius = radius * CENTER_MECHANISM_STYLE.hubHighlightRadius;
 
   ctx.save();
-  ctx.shadowColor = "rgba(26, 11, 1, 0.55)";
+  ctx.shadowColor = "rgba(3, 5, 7, 0.62)";
   ctx.shadowBlur = radius * 0.016;
   ctx.shadowOffsetY = radius * 0.008;
 
@@ -990,8 +990,8 @@ function drawCenterHub(ctx: CanvasRenderingContext2D, radius: number) {
     -hubRadius * 0.29,
     highlightRadius,
   );
-  highlight.addColorStop(0, "rgba(255, 255, 224, 0.82)");
-  highlight.addColorStop(1, "rgba(255, 239, 160, 0)");
+  highlight.addColorStop(0, "rgba(255, 255, 255, 0.88)");
+  highlight.addColorStop(1, "rgba(232, 238, 242, 0)");
   ctx.fillStyle = highlight;
   ctx.fill();
 
@@ -1121,7 +1121,7 @@ function drawDeflector(
   ctx.translate(center.x, center.y);
   ctx.rotate(angle);
 
-  ctx.shadowColor = "rgba(34, 14, 2, 0.50)";
+  ctx.shadowColor = "rgba(5, 7, 9, 0.58)";
   ctx.shadowBlur = radius * 0.009;
   ctx.shadowOffsetY = radius * 0.005;
 
@@ -1153,7 +1153,7 @@ function drawDeflector(
   ctx.beginPath();
   ctx.moveTo(-radialLength * 0.24, -tangentialWidth * 0.16);
   ctx.lineTo(radialLength * 0.24, -tangentialWidth * 0.06);
-  ctx.strokeStyle = "rgba(255, 248, 198, 0.80)";
+  ctx.strokeStyle = "rgba(248, 250, 252, 0.84)";
   ctx.lineWidth = Math.max(0.65, radius * 0.0012);
   ctx.stroke();
 
