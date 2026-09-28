@@ -67,10 +67,10 @@ describe("win evaluation and cascades", () => {
     expect(result.newSymbols).toHaveLength(evaluation.winningCells.length);
     expect(result.boardAfterGravity.flat()).toHaveLength(30);
   });
-  it("does not introduce an eighth distinct normal symbol during Base or Free Spin refills", () => {
+  it("does not introduce a ninth distinct normal symbol during Base or Free Spin refills", () => {
     const board: Board = [
       ["S1", "S2", "S3", "S4", "S5", "S6"],
-      ["S1", "S7", "S1", "S1", "S1", "S1"],
+      ["S1", "S7", "S8", "S1", "S1", "S1"],
       ["S1", "S1", "S1", "S1", "S1", "S1"],
       ["S1", "S1", "S1", "S1", "S1", "S1"],
       ["S1", "S1", "S1", "S1", "S1", "S1"],
@@ -91,7 +91,6 @@ describe("win evaluation and cascades", () => {
       );
 
       expect(distinct.size).toBeLessThanOrEqual(MAX_VISIBLE_NORMAL_SYMBOLS);
-      expect(getNormalSymbol(result.newSymbols[0])).not.toBe("S8");
       expect(getNormalSymbol(result.newSymbols[0])).not.toBe("S9");
     }
   });
