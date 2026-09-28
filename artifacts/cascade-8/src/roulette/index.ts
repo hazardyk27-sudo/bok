@@ -14,6 +14,7 @@ import { renderRouletteWheel } from "./wheelRenderer";
 type RouletteViewState = {
   rotorAngle: number;
   ballAngle: number;
+  ballRadiusRatio: number;
   ballVisible: boolean;
 };
 
@@ -55,9 +56,12 @@ export function mountRoulette(app: HTMLDivElement) {
   const canvas = app.querySelector<HTMLCanvasElement>("[data-roulette-wheel]");
   if (!canvas) throw new Error("Roulette canvas was not mounted.");
 
+  const initialBallOrbit = createBallOrbit();
+
   const viewState: RouletteViewState = {
     rotorAngle: 0,
-    ballAngle: -0.72,
+    ballAngle: initialBallOrbit.startAngle,
+    ballRadiusRatio: initialBallOrbit.trackRadius,
     ballVisible: true,
   };
 
@@ -80,6 +84,7 @@ export function mountRoulette(app: HTMLDivElement) {
     if (activeBallOrbit) {
       const ballSample = sampleBallOrbit(activeBallOrbit, elapsedMs);
       viewState.ballAngle = ballSample.angle;
+      viewState.ballRadiusRatio = ballSample.radiusRatio;
       if (ballSample.done) activeBallOrbit = null;
     }
 
@@ -98,6 +103,11 @@ export function mountRoulette(app: HTMLDivElement) {
 
     activeRotorSpin = createRotorSpin(viewState.rotorAngle, 1);
     activeBallOrbit = createBallOrbit(viewState.ballAngle);
+
+    const initialBallSample = sampleBallOrbit(activeBallOrbit, 0);
+    viewState.ballAngle = initialBallSample.angle;
+    viewState.ballRadiusRatio = initialBallSample.radiusRatio;
+
     motionStartedAt = performance.now();
 
     if (frameId) window.cancelAnimationFrame(frameId);

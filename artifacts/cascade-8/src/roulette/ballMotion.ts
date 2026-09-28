@@ -1,3 +1,8 @@
+import {
+  BALL_TRACK_STYLE,
+  WHEEL_GEOMETRY,
+} from "./config";
+
 const TAU = Math.PI * 2;
 
 export const BALL_ORBIT_PROFILE = {
@@ -6,7 +11,12 @@ export const BALL_ORBIT_PROFILE = {
   dragPerSecond: 0.22,
   stopAngularVelocity: 2.4,
   direction: -1 as const,
+  descentStartAngularVelocity: 9,
+  descentTargetRadius: WHEEL_GEOMETRY.numberOuterRadius - 0.037,
+  radialPullPerSecond: 0.82,
 } as const;
+
+export type BallMotionPhase = "track" | "descent" | "handoff";
 
 export type BallOrbit = {
   startAngle: number;
@@ -14,13 +24,21 @@ export type BallOrbit = {
   initialAngularVelocity: number;
   dragPerSecond: number;
   stopAngularVelocity: number;
+  trackRadius: number;
+  descentStartAngularVelocity: number;
+  descentTargetRadius: number;
+  radialPullPerSecond: number;
+  descentStartMs: number;
   durationMs: number;
 };
 
 export type BallOrbitSample = {
   angle: number;
+  radiusRatio: number;
   angularVelocity: number;
+  radialVelocityRatioPerSecond: number;
   progress: number;
+  phase: BallMotionPhase;
   done: boolean;
 };
 
@@ -45,6 +63,27 @@ export function getBallOrbitDurationMs(
   );
 }
 
+export function getBallDescentStartMs(
+  initialAngularVelocity: number,
+  dragPerSecond: number,
+  descentStartAngularVelocity: number,
+) {
+  if (
+    initialAngularVelocity <= 0 ||
+    dragPerSecond <= 0 ||
+    descentStartAngularVelocity <= 0 ||
+    descentStartAngularVelocity >= initialAngularVelocity
+  ) {
+    return 0;
+  }
+
+  return (
+    Math.log(initialAngularVelocity / descentStartAngularVelocity) /
+    dragPerSecond *
+    1000
+  );
+}
+
 export function createBallOrbit(
   startAngle = BALL_ORBIT_PROFILE.initialAngle,
 ): BallOrbit {
@@ -53,6 +92,9 @@ export function createBallOrbit(
     initialAngularVelocity,
     dragPerSecond,
     stopAngularVelocity,
+    descentStartAngularVelocity,
+    descentTargetRadius,
+    radialPullPerSecond,
   } = BALL_ORBIT_PROFILE;
 
   return {
@@ -61,6 +103,15 @@ export function createBallOrbit(
     initialAngularVelocity,
     dragPerSecond,
     stopAngularVelocity,
+    trackRadius: BALL_TRACK_STYLE.pathRadius,
+    descentStartAngularVelocity,
+    descentTargetRadius,
+    radialPullPerSecond,
+    descentStartMs: getBallDescentStartMs(
+      initialAngularVelocity,
+      dragPerSecond,
+      descentStartAngularVelocity,
+    ),
     durationMs: getBallOrbitDurationMs(
       initialAngularVelocity,
       dragPerSecond,
@@ -91,6 +142,37 @@ export function sampleBallOrbit(
     orbit.direction * angularTravel;
 
   const done = clampedElapsedMs >= orbit.durationMs;
+  const descentElapsedSeconds = Math.max(
+    0,
+    (clampedElapsedMs - orbit.descentStartMs) / 1000,
+  );
+
+  let radiusRatio = orbit.trackRadius;
+  let radialVelocityRatioPerSecond = 0;
+  let phase: BallMotionPhase = "track";
+
+  if (descentElapsedSeconds > 0) {
+    const radialDecay = Math.exp(
+      -orbit.radialPullPerSecond * descentElapsedSeconds,
+    );
+    const radialRange = orbit.trackRadius - orbit.descentTargetRadius;
+
+    radiusRatio =
+      orbit.descentTargetRadius +
+      radialRange * radialDecay;
+    radialVelocityRatioPerSecond =
+      -radialRange *
+      orbit.radialPullPerSecond *
+      radialDecay;
+    phase = "descent";
+  }
+
+  if (done) {
+    radiusRatio = orbit.descentTargetRadius;
+    radialVelocityRatioPerSecond = 0;
+    phase = "handoff";
+  }
+
   const progress =
     orbit.durationMs > 0
       ? Math.min(1, clampedElapsedMs / orbit.durationMs)
@@ -98,8 +180,11 @@ export function sampleBallOrbit(
 
   return {
     angle,
+    radiusRatio,
     angularVelocity: done ? 0 : angularVelocity,
+    radialVelocityRatioPerSecond,
     progress,
+    phase,
     done,
   };
 }

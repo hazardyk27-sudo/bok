@@ -1019,6 +1019,7 @@ function drawCenterMechanism(ctx: CanvasRenderingContext2D, radius: number) {
 export type RouletteWheelRenderState = {
   rotorAngle?: number;
   ballAngle?: number;
+  ballRadiusRatio?: number;
   ballVisible?: boolean;
 };
 
@@ -1037,9 +1038,14 @@ function drawBall(
   ctx: CanvasRenderingContext2D,
   radius: number,
   ballAngle: number,
+  ballRadiusRatio: number,
 ) {
-  const pathRadius = radius * BALL_TRACK_STYLE.pathRadius;
-  const point = polar(pathRadius, normalizeRotorAngle(ballAngle));
+  const safeRadiusRatio =
+    Number.isFinite(ballRadiusRatio) && ballRadiusRatio > 0
+      ? ballRadiusRatio
+      : BALL_TRACK_STYLE.pathRadius;
+  const orbitRadius = radius * safeRadiusRatio;
+  const point = polar(orbitRadius, normalizeRotorAngle(ballAngle));
   const ballRadius = radius * BALL_STYLE.radius;
 
   ctx.save();
@@ -1134,7 +1140,12 @@ export function renderRouletteWheel(
   drawRotor(ctx, radius, state.rotorAngle ?? 0);
 
   if (state.ballVisible ?? true) {
-    drawBall(ctx, radius, state.ballAngle ?? -0.72);
+    drawBall(
+      ctx,
+      radius,
+      state.ballAngle ?? -0.72,
+      state.ballRadiusRatio ?? BALL_TRACK_STYLE.pathRadius,
+    );
   }
 
   ctx.restore();
