@@ -356,9 +356,11 @@ export type SimulationReport = {
   visibleBoardsObserved: number;
   visibleBoardsOverSymbolLimit: number;
   initialBoardsOverSymbolLimit: number;
+  baseInitialBoardsWithNinthSymbol: number;
   refillBoardsOverSymbolLimit: number;
   maxDistinctNormalSymbolsVisible: number;
   maxDistinctNormalSymbolsInitial: number;
+  maxDistinctNormalSymbolsBonusInitial: number;
   maxDistinctNormalSymbolsRefill: number;
   distinctNormalSymbolCountDistribution: Record<string, number>;
   visiblePairFrequency: number;
@@ -471,25 +473,35 @@ export function simulate(spins: number, seed: string, betCents = 100, onProgress
   let visibleBoardsObserved = 0;
   let visibleBoardsOverSymbolLimit = 0;
   let initialBoardsOverSymbolLimit = 0;
+  let baseInitialBoardsWithNinthSymbol = 0;
   let refillBoardsOverSymbolLimit = 0;
   let maxDistinctNormalSymbolsVisible = 0;
   let maxDistinctNormalSymbolsInitial = 0;
+  let maxDistinctNormalSymbolsBonusInitial = 0;
   let maxDistinctNormalSymbolsRefill = 0;
   const distinctNormalSymbolCountDistribution: Record<string, number> = {};
-  const recordVisibleSymbolDiversity = (board: Board, source: "initial" | "refill") => {
+  const recordVisibleSymbolDiversity = (board: Board, source: "base-initial" | "bonus-initial" | "refill") => {
     const distinct = countDistinctNormalSymbols(board);
     visibleBoardsObserved += 1;
     maxDistinctNormalSymbolsVisible = Math.max(maxDistinctNormalSymbolsVisible, distinct);
-    if (source === "initial") maxDistinctNormalSymbolsInitial = Math.max(maxDistinctNormalSymbolsInitial, distinct);
-    else maxDistinctNormalSymbolsRefill = Math.max(maxDistinctNormalSymbolsRefill, distinct);
+    if (source === "refill") {
+      maxDistinctNormalSymbolsRefill = Math.max(maxDistinctNormalSymbolsRefill, distinct);
+    } else {
+      maxDistinctNormalSymbolsInitial = Math.max(maxDistinctNormalSymbolsInitial, distinct);
+      if (source === "bonus-initial") {
+        maxDistinctNormalSymbolsBonusInitial = Math.max(maxDistinctNormalSymbolsBonusInitial, distinct);
+      }
+    }
     distinctNormalSymbolCountDistribution[String(distinct)] =
       (distinctNormalSymbolCountDistribution[String(distinct)] ?? 0) + 1;
     if (distinct > MAX_VISIBLE_NORMAL_SYMBOLS) {
-      if (source === "initial") {
+      if (source === "bonus-initial") {
         visibleBoardsOverSymbolLimit += 1;
         initialBoardsOverSymbolLimit += 1;
+      } else if (source === "base-initial") {
+        baseInitialBoardsWithNinthSymbol += 1;
       } else {
-        // Refill is allowed to introduce the ninth normal symbol.
+        // Base initial and refill may introduce the ninth normal symbol.
         refillBoardsOverSymbolLimit += 1;
       }
     }
@@ -501,7 +513,7 @@ export function simulate(spins: number, seed: string, betCents = 100, onProgress
     recordRuns(result.initialBoard, runLengthDistribution, runMetrics);
     recordBoardCells(result.initialBoard, symbolAppearanceCounts.initialBoard);
     recordBoardCells(result.initialBoard, symbolAppearanceCounts.visible);
-    recordVisibleSymbolDiversity(result.initialBoard, "initial");
+    recordVisibleSymbolDiversity(result.initialBoard, "base-initial");
     initialBoardCells += result.initialBoard.flat().length;
     visibleCells += result.initialBoard.flat().length;
     if (evaluateBoard(result.initialBoard).winningCells.length) initialEightPlusCount += 1;
@@ -510,7 +522,7 @@ export function simulate(spins: number, seed: string, betCents = 100, onProgress
       recordRuns(freeSpin.initialBoard, runLengthDistribution, runMetrics);
       recordBoardCells(freeSpin.initialBoard, symbolAppearanceCounts.initialBoard);
       recordBoardCells(freeSpin.initialBoard, symbolAppearanceCounts.visible);
-      recordVisibleSymbolDiversity(freeSpin.initialBoard, "initial");
+      recordVisibleSymbolDiversity(freeSpin.initialBoard, "bonus-initial");
       initialBoardCells += freeSpin.initialBoard.flat().length;
       visibleCells += freeSpin.initialBoard.flat().length;
       const initialCoreValues = freeSpin.initialBoard
@@ -757,9 +769,11 @@ export function simulate(spins: number, seed: string, betCents = 100, onProgress
     visibleBoardsObserved,
     visibleBoardsOverSymbolLimit,
     initialBoardsOverSymbolLimit,
+    baseInitialBoardsWithNinthSymbol,
     refillBoardsOverSymbolLimit,
     maxDistinctNormalSymbolsVisible,
     maxDistinctNormalSymbolsInitial,
+    maxDistinctNormalSymbolsBonusInitial,
     maxDistinctNormalSymbolsRefill,
     distinctNormalSymbolCountDistribution,
     visiblePairFrequency: Number(((runMetrics.visiblePairColumns / Math.max(1, runMetrics.visibleColumns)) * 100).toFixed(4)),
@@ -876,13 +890,15 @@ export function formatSimulationSummary(report: SimulationReport) {
 
 | Metric | Value |
 | --- | ---: |
-| Initial-board maximum distinct normal symbols | ${report.configSnapshot.maxVisibleNormalSymbols} |
+| Free Spin initial maximum distinct normal symbols | ${report.configSnapshot.maxVisibleNormalSymbols} |
 | Visible boards observed | ${report.visibleBoardsObserved} |
-| Initial-board limit violations | ${report.visibleBoardsOverSymbolLimit} |
-| Initial boards over limit | ${report.initialBoardsOverSymbolLimit} |
+| Free Spin initial limit violations | ${report.visibleBoardsOverSymbolLimit} |
+| Free Spin initial boards over limit | ${report.initialBoardsOverSymbolLimit} |
+| Base initial boards with ninth symbol (allowed) | ${report.baseInitialBoardsWithNinthSymbol} |
 | Refill boards with ninth distinct symbol (allowed) | ${report.refillBoardsOverSymbolLimit} |
 | Maximum distinct normal symbols observed | ${report.maxDistinctNormalSymbolsVisible} |
-| Maximum on initial boards | ${report.maxDistinctNormalSymbolsInitial} |
+| Maximum on any initial board | ${report.maxDistinctNormalSymbolsInitial} |
+| Maximum on Free Spin initial boards | ${report.maxDistinctNormalSymbolsBonusInitial} |
 | Maximum after refills | ${report.maxDistinctNormalSymbolsRefill} |
 | Distinct-count distribution | ${JSON.stringify(report.distinctNormalSymbolCountDistribution)} |
 
