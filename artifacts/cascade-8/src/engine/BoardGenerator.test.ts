@@ -7,14 +7,25 @@ import {
   BASE_INITIAL_CORE_CHANCE,
   BASE_INITIAL_SCATTER_CHANCE,
   BASE_REEL_CONFIG,
+  MAX_VISIBLE_NORMAL_SYMBOLS,
   NORMAL_PAIR_COPY_CHANCE,
   NORMAL_THIRD_REPEAT_WEIGHT_FACTOR,
+  type NormalSymbolId,
 } from "../config/GameConfig";
 
 const alwaysLast: RandomSource = { nextFloat: () => 0.999999 };
 const alwaysFirst: RandomSource = { nextFloat: () => 0 };
 
 describe("board generation", () => {
+  it("caps Free Spin initial boards at eight distinct normal symbols", () => {
+    for (let seed = 0; seed < 500; seed += 1) {
+      const board = generateInitialBoard(new SeededRNG(`eight-symbol-bonus-${seed}`), "bonus");
+      const distinct = new Set(
+        board.flat().map(getNormalSymbol).filter((symbol): symbol is NonNullable<typeof symbol> => symbol !== null),
+      );
+      expect(distinct.size).toBeLessThanOrEqual(MAX_VISIBLE_NORMAL_SYMBOLS);
+    }
+  });
   it("generates exactly 30 initial cells", () => {
     expect(generateInitialBoard(alwaysFirst).flat()).toHaveLength(30);
   });
@@ -54,6 +65,42 @@ describe("board generation", () => {
       expect(row4).toMatchObject({ stackIndex: 0, stackSize: 2 });
     }
   });
+  it("allows a ninth distinct normal symbol during Base initial generation", () => {
+    const rolls = [0.99, 0.9];
+    const source: RandomSource = { nextFloat: () => rolls.shift() ?? 0.5 };
+    const stream = new ColumnStream(source, BASE_REEL_CONFIG, 0);
+    const visible = new Set<NormalSymbolId>(["S1", "S2", "S3", "S4", "S5", "S6", "S7", "S8"]);
+
+    const initial = stream.nextVisibleAware("BASE_INITIAL", false, null, undefined, visible);
+
+    expect(getNormalSymbol(initial.cell)).toBe("S9");
+    expect(visible.size).toBe(MAX_VISIBLE_NORMAL_SYMBOLS + 1);
+  });
+
+  it("blocks a ninth distinct normal symbol during Free Spin initial generation", () => {
+    const rolls = [0.99, 0.9];
+    const source: RandomSource = { nextFloat: () => rolls.shift() ?? 0.5 };
+    const stream = new ColumnStream(source, BASE_REEL_CONFIG, 0);
+    const visible = new Set<NormalSymbolId>(["S1", "S2", "S3", "S4", "S5", "S6", "S7", "S8"]);
+
+    const initial = stream.nextVisibleAware("BONUS_INITIAL", false, null, undefined, visible);
+
+    expect(getNormalSymbol(initial.cell)).not.toBe("S9");
+    expect(visible.size).toBe(MAX_VISIBLE_NORMAL_SYMBOLS);
+  });
+
+  it("allows a ninth distinct normal symbol to enter on refill", () => {
+    const rolls = [0.99, 0.9];
+    const source: RandomSource = { nextFloat: () => rolls.shift() ?? 0.5 };
+    const stream = new ColumnStream(source, BASE_REEL_CONFIG, 0);
+    const visible = new Set<NormalSymbolId>(["S1", "S2", "S3", "S4", "S5", "S6", "S7", "S8"]);
+
+    const refill = stream.nextVisibleAware("BASE_REFILL", false, null, undefined, visible);
+
+    expect(getNormalSymbol(refill.cell)).toBe("S9");
+    expect(visible.size).toBe(MAX_VISIBLE_NORMAL_SYMBOLS + 1);
+  });
+
   it("uses an 85% copy branch for the symbol above a pending pair member", () => {
     const samples = 1_000;
     let copied = 0;

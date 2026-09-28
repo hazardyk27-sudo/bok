@@ -74,7 +74,7 @@ export function removeAndRefill(
   const winning = new Set(winningCells.map((cell) => `${cell.row}:${cell.col}`));
   const next: Board = Array.from({ length: BOARD_ROWS }, () => Array.from({ length: BOARD_COLUMNS }, () => "SCATTER" as BoardCell));
   const newSymbols: BoardCell[] = [];
-  for (let col = 0; col < BOARD_COLUMNS; col += 1) {
+  const survivorsByColumn = Array.from({ length: BOARD_COLUMNS }, (_, col) => {
     const survivors: Board[number] = [];
     for (let row = 0; row < BOARD_ROWS; row += 1) {
       const cell = board[row][col];
@@ -82,6 +82,18 @@ export function removeAndRefill(
       // sequence and are never discharged by a normal symbol win.
       if (isMultiplierCore(cell) || !winning.has(`${row}:${col}`)) survivors.push(cell);
     }
+    return survivors;
+  });
+  const visibleNormalSymbols = new Set<NormalSymbolId>();
+  for (const survivors of survivorsByColumn) {
+    for (const cell of survivors) {
+      const symbol = getNormalSymbol(cell);
+      if (symbol) visibleNormalSymbols.add(symbol);
+    }
+  }
+
+  for (let col = 0; col < BOARD_COLUMNS; col += 1) {
+    const survivors = survivorsByColumn[col];
     const generated: BoardCell[] = [];
     const refillContext = allowCores && mode === "bonus" ? "BONUS_REFILL" : "BASE_REFILL";
     while (generated.length < BOARD_ROWS - survivors.length) {
@@ -97,6 +109,7 @@ export function removeAndRefill(
           allowCores,
           topSymbol,
           coreBudget,
+          visibleNormalSymbols,
         )
         : generateVisibleAwareRefillCell(
           source,
@@ -105,6 +118,7 @@ export function removeAndRefill(
           col,
           topSymbol,
           coreBudget,
+          visibleNormalSymbols,
         );
       const incoming = emission.cell;
       const incomingSymbol = getNormalSymbol(incoming);
