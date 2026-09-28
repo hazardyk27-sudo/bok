@@ -617,7 +617,7 @@ describe("blackjack responsive table foundation", () => {
       "wss://blackjack.example/api/blackjack/ws",
     );
     expect(createdUrls).toEqual([connection.url]);
-    expect(listeners.size).toBe(3);
+    expect(listeners.size).toBe(4);
 
     connection.close();
     connection.close();

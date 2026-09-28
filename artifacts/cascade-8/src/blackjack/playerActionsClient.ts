@@ -112,7 +112,12 @@ export function getBlackjackAvailablePlayerActions(
   snapshot: BlackjackPublicSnapshotViewSource,
   context: BlackjackSnapshotViewContext,
 ): readonly BlackjackPlayerActionType[] {
-  if (context.actionPending === true) return Object.freeze([]);
+  if (
+    context.actionPending === true ||
+    context.transportConnected === false
+  ) {
+    return Object.freeze([]);
+  }
 
   try {
     const { hand }=getLocalCurrentHand(snapshot,context);

@@ -110,6 +110,7 @@ export type BlackjackSnapshotViewContext = Readonly<{
   bettingStatus?: "OPEN" | "READY" | "LOCKED" | null;
   bettingPending?: boolean;
   selectedChipCredits?: number;
+  transportConnected?: boolean;
 }>;
 
 function assertSafeNonNegativeInteger(label: string, value: number): void {
@@ -348,8 +349,10 @@ export function buildBlackjackTableViewModelFromSnapshot(
     context.bettingStatus ??
     (localPlayer?.status === "READY" ? "READY" : "OPEN");
   const bettingOpen =
+    context.transportConnected !== false &&
     snapshot.phase === "BETTING" &&
     localPlayer !== null &&
+    localPlayer.connected &&
     localBettingStatus === "OPEN";
   const bettingPending=context.bettingPending === true;
   const bettingClosesLabel =

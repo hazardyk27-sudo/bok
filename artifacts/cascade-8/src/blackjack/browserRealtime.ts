@@ -36,6 +36,13 @@ export type BlackjackBrowserRealtimeOptions = Readonly<{
     intervalMs: number,
   ) => unknown;
   cancelRender?: (handle: unknown) => void;
+  autoReconnect?: boolean;
+  reconnectDelayMs?: number;
+  scheduleReconnect?: (
+    callback: () => void,
+    delayMs: number,
+  ) => unknown;
+  cancelReconnect?: (handle: unknown) => void;
 }>;
 
 export type BlackjackBrowserRealtimeConnection = Readonly<{
@@ -71,6 +78,157 @@ export function buildBlackjackWebSocketUrl(
 
 function defaultBlackjackSocketFactory(url: string): BlackjackBrowserSocket {
   return new WebSocket(url) as unknown as BlackjackBrowserSocket;
+}
+
+type BlackjackPhysicalSocket = BlackjackBrowserSocket & Readonly<{
+  addEventListener: (
+    type: "message" | "open" | "close" | "error",
+    listener: (event: Event | MessageEvent<unknown>) => void,
+  ) => void;
+  removeEventListener: (
+    type: "message" | "open" | "close" | "error",
+    listener: (event: Event | MessageEvent<unknown>) => void,
+  ) => void;
+}>;
+
+function parseMessageType(raw: unknown): string | null {
+  const value=
+    typeof raw==="string"
+      ? (()=>{ try { return JSON.parse(raw); } catch { return null; } })()
+      : raw;
+  return (
+    typeof value==="object" &&
+    value!==null &&
+    "type" in value &&
+    typeof (value as {type?:unknown}).type==="string"
+  )
+    ? (value as {type:string}).type
+    : null;
+}
+
+function createBlackjackResilientBrowserSocket(
+  url: string,
+  factory: BlackjackBrowserSocketFactory,
+  input: {
+    autoReconnect: boolean;
+    reconnectDelayMs: number;
+    scheduleReconnect: (callback:()=>void,delayMs:number)=>unknown;
+    cancelReconnect: (handle:unknown)=>void;
+    onTransportReadyChange: (ready:boolean)=>void;
+  },
+): BlackjackBrowserSocket {
+  const messageListeners=new Set<
+    (event: MessageEvent<unknown>)=>void
+  >();
+  let physical: BlackjackPhysicalSocket | null=null;
+  let reconnectHandle: unknown | null=null;
+  let explicitlyClosed=false;
+  let transportReady=false;
+  let generation=0;
+
+  const setReady=(ready:boolean)=>{
+    if(transportReady===ready) return;
+    transportReady=ready;
+    input.onTransportReadyChange(ready);
+  };
+
+  const detachPhysical=(
+    socket: BlackjackPhysicalSocket,
+    handlers: {
+      message:(event: Event | MessageEvent<unknown>)=>void;
+      open:(event: Event | MessageEvent<unknown>)=>void;
+      close:(event: Event | MessageEvent<unknown>)=>void;
+      error:(event: Event | MessageEvent<unknown>)=>void;
+    },
+  )=>{
+    socket.removeEventListener("message",handlers.message);
+    socket.removeEventListener("open",handlers.open);
+    socket.removeEventListener("close",handlers.close);
+    socket.removeEventListener("error",handlers.error);
+  };
+
+  const connect=()=>{
+    if(explicitlyClosed) return;
+    const socket=factory(url) as BlackjackPhysicalSocket;
+    physical=socket;
+    const ownGeneration=++generation;
+    setReady(false);
+
+    const handlers={
+      message:(event: Event | MessageEvent<unknown>)=>{
+        if(ownGeneration!==generation) return;
+        const message=event as MessageEvent<unknown>;
+        if(parseMessageType(message.data)==="FULL_TABLE_SNAPSHOT"){
+          setReady(true);
+        }
+        for(const listener of messageListeners){
+          listener(message);
+        }
+      },
+      open:()=>undefined,
+      close:(event: Event | MessageEvent<unknown>)=>{
+        if(ownGeneration!==generation) return;
+        detachPhysical(socket,handlers);
+        if(physical===socket) physical=null;
+        setReady(false);
+        const code=
+          "code" in event && typeof event.code==="number"
+            ? event.code
+            : 0;
+        if(
+          explicitlyClosed ||
+          !input.autoReconnect ||
+          code===4001
+        ){
+          return;
+        }
+        if(reconnectHandle!==null){
+          input.cancelReconnect(reconnectHandle);
+        }
+        reconnectHandle=input.scheduleReconnect(()=>{
+          reconnectHandle=null;
+          connect();
+        },input.reconnectDelayMs);
+      },
+      error:()=>undefined,
+    };
+
+    socket.addEventListener("message",handlers.message);
+    socket.addEventListener("open",handlers.open);
+    socket.addEventListener("close",handlers.close);
+    socket.addEventListener("error",handlers.error);
+  };
+
+  connect();
+
+  return Object.freeze({
+    send:(data:string)=>{
+      if(!transportReady || physical===null){
+        throw new Error("Blackjack realtime transport is reconnecting");
+      }
+      physical.send(data);
+    },
+    addEventListener:(_type:"message",listener)=>{
+      messageListeners.add(listener);
+    },
+    removeEventListener:(_type:"message",listener)=>{
+      messageListeners.delete(listener);
+    },
+    close:(code?:number,reason?:string)=>{
+      if(explicitlyClosed) return;
+      explicitlyClosed=true;
+      setReady(false);
+      if(reconnectHandle!==null){
+        input.cancelReconnect(reconnectHandle);
+        reconnectHandle=null;
+      }
+      generation+=1;
+      const socket=physical;
+      physical=null;
+      socket?.close(code,reason);
+      messageListeners.clear();
+    },
+  });
 }
 
 function defaultBlackjackActionId(): string {
@@ -141,11 +299,40 @@ export function connectBlackjackRealtimeElement(
   }
 
   const url=buildBlackjackWebSocketUrl(location);
-  const socket=(options.createSocket ?? defaultBlackjackSocketFactory)(url);
   const baseViewContext=options.getViewContext ?? (() => ({}));
   let actionClient: BlackjackPlayerActionClient | null=null;
   let bettingClient: BlackjackBettingClient | null=null;
+  let controller: BlackjackRealtimeViewController | null=null;
   let selectedChipCredits=100;
+  let transportConnected=false;
+  const reconnectDelayMs=options.reconnectDelayMs ?? 750;
+  if(!Number.isSafeInteger(reconnectDelayMs) || reconnectDelayMs<100){
+    throw new RangeError(
+      "Blackjack reconnectDelayMs must be a safe integer >= 100",
+    );
+  }
+  const scheduleReconnect=
+    options.scheduleReconnect ??
+    ((callback:()=>void,delayMs:number)=>setTimeout(callback,delayMs));
+  const cancelReconnect=
+    options.cancelReconnect ??
+    ((handle:unknown)=>clearTimeout(
+      handle as ReturnType<typeof setTimeout>,
+    ));
+  const socket=createBlackjackResilientBrowserSocket(
+    url,
+    options.createSocket ?? defaultBlackjackSocketFactory,
+    {
+      autoReconnect:options.autoReconnect !== false,
+      reconnectDelayMs,
+      scheduleReconnect,
+      cancelReconnect,
+      onTransportReadyChange:(ready)=>{
+        transportConnected=ready;
+        controller?.rerenderLatest();
+      },
+    },
+  );
   const getViewContext=(): BlackjackSnapshotViewContext => {
     const base=baseViewContext();
     const playerPending=actionClient?.getPending() ?? null;
@@ -191,6 +378,7 @@ export function connectBlackjackRealtimeElement(
 
     return {
       ...base,
+      transportConnected,
       availableBalanceCents:
         bettingState?.availableBalanceCents ?? base.availableBalanceCents,
       actionPending:playerPending!==null,
@@ -202,27 +390,28 @@ export function connectBlackjackRealtimeElement(
       selectedChipCredits,
     };
   };
-  const controller=bindBlackjackRealtimeElement(
+  controller=bindBlackjackRealtimeElement(
     app,
     socket,
     getViewContext,
     options.nowMs,
   );
+  const activeController=controller;
   const actions=createBlackjackPlayerActionClient({
     socket,
-    getSnapshot:controller.getSnapshot,
+    getSnapshot:activeController.getSnapshot,
     getViewContext,
     createActionId:options.createActionId ?? defaultBlackjackActionId,
-    onPendingChange:()=>{ controller.rerenderLatest(); },
-    onFeedbackChange:()=>{ controller.rerenderLatest(); },
+    onPendingChange:()=>{ activeController.rerenderLatest(); },
+    onFeedbackChange:()=>{ activeController.rerenderLatest(); },
   });
   actionClient=actions;
   const betting=createBlackjackBettingClient({
     socket,
-    getSnapshot:controller.getSnapshot,
+    getSnapshot:activeController.getSnapshot,
     getViewContext,
     createActionId:options.createActionId ?? defaultBlackjackActionId,
-    onStateChange:()=>{ controller.rerenderLatest(); },
+    onStateChange:()=>{ activeController.rerenderLatest(); },
   });
   bettingClient=betting;
 
@@ -241,7 +430,7 @@ export function connectBlackjackRealtimeElement(
       handle as ReturnType<typeof setInterval>,
     ));
   const renderHandle=scheduleRender(()=>{
-    controller.rerenderLatest();
+    activeController.rerenderLatest();
   },renderTickMs);
 
   const onClick=(event: Event) => {
@@ -250,7 +439,7 @@ export function connectBlackjackRealtimeElement(
         selectedChipCredits=doubleBlackjackChipCredits(
           Math.max(selectedChipCredits,1_000),
         );
-        controller.rerenderLatest();
+        activeController.rerenderLatest();
       } catch {
         return;
       }
@@ -286,7 +475,7 @@ export function connectBlackjackRealtimeElement(
   return Object.freeze({
     url,
     socket,
-    controller,
+    controller:activeController,
     actions,
     betting,
     close:()=>{
@@ -296,7 +485,7 @@ export function connectBlackjackRealtimeElement(
       cancelRender(renderHandle);
       betting.detach();
       actions.detach();
-      controller.detach();
+      activeController.detach();
       socket.close(1000,"BLACKJACK_CLIENT_CLOSED");
     },
   });

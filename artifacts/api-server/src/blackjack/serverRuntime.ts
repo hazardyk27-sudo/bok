@@ -1,4 +1,4 @@
-import type { Server } from "node:http";
+import type { IncomingMessage, Server } from "node:http";
 import {
   attachBlackjackWebSocket,
   type BlackjackRealtimeIdentity,
@@ -20,11 +20,7 @@ export type BlackjackAttachedServerRuntime = Readonly<{
 }>;
 
 export type BlackjackIdentityResolver = (
-  request: Parameters<
-    NonNullable<
-      Parameters<typeof attachBlackjackWebSocket>[2]["resolveIdentity"]
-    >
-  >[0],
+  request: IncomingMessage,
 ) =>
   | BlackjackRealtimeIdentity
   | null
