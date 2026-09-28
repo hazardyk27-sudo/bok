@@ -51,3 +51,5 @@ export * from "./roundRuntime";
 export * from "./roundRealtime";
 
 export * from "./roundScheduler";
+
+export * from "./runtimeRecovery";

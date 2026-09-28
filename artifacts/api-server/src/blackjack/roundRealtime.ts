@@ -80,6 +80,10 @@ export function createBlackjackRoundRealtimeDriver(
     createFreshShoe?: () => BlackjackShoe;
     bettingWindowMs?: number;
     source?: BlackjackCoordinatorRealtimeSource;
+    beforePublish?: (
+      result: BlackjackRoundRuntimeTickResult,
+      serverTimeMs: number,
+    ) => void | Promise<void>;
   },
 ): BlackjackRoundRealtimeDriver {
   const source =
@@ -103,6 +107,10 @@ export function createBlackjackRoundRealtimeDriver(
           bettingWindowMs:input.bettingWindowMs,
         },
       );
+
+      if(result.transitions.length>0){
+        await input.beforePublish?.(result,nowMs);
+      }
 
       for(const transition of result.transitions){
         source.publishTable(transition.table,nowMs);

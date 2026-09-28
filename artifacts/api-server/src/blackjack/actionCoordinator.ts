@@ -282,6 +282,14 @@ export class BlackjackPlayerActionCoordinator {
     return account;
   }
 
+  getAccounts(): readonly BlackjackCoordinatorAccount[] {
+    return Object.freeze(Array.from(this.accounts.values()));
+  }
+
+  getBettingPositions(): readonly BlackjackBettingPosition[] {
+    return Object.freeze(Array.from(this.bettingPositions.values()));
+  }
+
   pendingCount(): number {
     return this.queue.pendingCount();
   }

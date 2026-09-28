@@ -7,6 +7,13 @@ import type {
 
 export const BLACKJACK_RUNTIME_TICK_INTERVAL_MS = 250 as const;
 
+export type BlackjackRoundSchedulerOptions = Readonly<{
+  intervalMs?: number;
+  schedule?: ScheduleFn;
+  cancelSchedule?: CancelScheduleFn;
+  onError?: (error: unknown) => void;
+}>;
+
 export type BlackjackRoundScheduler = Readonly<{
   stop: () => void;
   isRunning: () => boolean;
@@ -41,12 +48,7 @@ const defaultCancel: CancelScheduleFn = (handle) =>
 
 export function startBlackjackRoundScheduler(
   driver: BlackjackRoundRealtimeDriver,
-  input: {
-    intervalMs?: number;
-    schedule?: ScheduleFn;
-    cancelSchedule?: CancelScheduleFn;
-    onError?: (error: unknown) => void;
-  } = {},
+  input: BlackjackRoundSchedulerOptions = {},
 ): BlackjackRoundScheduler {
   const intervalMs =
     input.intervalMs ?? BLACKJACK_RUNTIME_TICK_INTERVAL_MS;
