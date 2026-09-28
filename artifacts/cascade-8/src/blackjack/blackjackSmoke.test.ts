@@ -35,6 +35,24 @@ describe("blackjack responsive table foundation", () => {
     }
   });
 
+  it("mounts the approved premium chip tray and betting controls", () => {
+    for (const credits of [10, 25, 50, 100, 250, 500, 1_000]) {
+      expect(BLACKJACK_SHELL_MARKUP).toContain(
+        `data-blackjack-chip="${credits}"`,
+      );
+    }
+
+    expect(BLACKJACK_SHELL_MARKUP).toContain(
+      'data-blackjack-chip-scale="DOUBLE"',
+    );
+    expect(BLACKJACK_SHELL_MARKUP).toContain(
+      'data-blackjack-bet-action="CLEAR"',
+    );
+    expect(BLACKJACK_SHELL_MARKUP).toContain(
+      'data-blackjack-bet-action="READY"',
+    );
+  });
+
   it("keeps the shell explicitly marked as Blackjack-owned table UI", () => {
     expect(BLACKJACK_SHELL_MARKUP).toContain('data-game="blackjack"');
     expect(BLACKJACK_SHELL_MARKUP).toContain('data-phase="table-shell"');
