@@ -10,6 +10,7 @@ import {
   MAX_VISIBLE_NORMAL_SYMBOLS,
   NORMAL_PAIR_COPY_CHANCE,
   NORMAL_THIRD_REPEAT_WEIGHT_FACTOR,
+  type NormalSymbolId,
 } from "../config/GameConfig";
 
 const alwaysLast: RandomSource = { nextFloat: () => 0.999999 };
@@ -74,7 +75,7 @@ describe("board generation", () => {
     const first = stream.nextVisibleAware("BASE_INITIAL", false, null);
     expect(getNormalSymbol(first.cell)).toBe("S9");
 
-    const visible = new Set(["S1", "S2", "S3", "S4", "S5", "S6", "S7", "S8"] as const);
+    const visible = new Set<NormalSymbolId>(["S1", "S2", "S3", "S4", "S5", "S6", "S7", "S8"]);
     const second = stream.nextVisibleAware("BASE_REFILL", false, null, undefined, visible);
 
     expect(getNormalSymbol(second.cell)).not.toBe("S9");
