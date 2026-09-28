@@ -320,6 +320,9 @@ body {
   margin: 0 auto 10px;
   display: grid;
   grid-template-columns: minmax(260px, .9fr) minmax(420px, 1.5fr);
+  grid-template-areas:
+    "status actions"
+    "betting betting";
   gap: 12px;
 }
 
@@ -330,6 +333,7 @@ body {
 }
 
 .blackjack-status-strip {
+  grid-area: status;
   grid-template-columns: repeat(3, 1fr);
   padding: 8px;
   border: 1px solid rgba(255,255,255,.075);
@@ -360,6 +364,7 @@ body {
 }
 
 .blackjack-actions {
+  grid-area: actions;
   grid-template-columns: repeat(4, 1fr);
 }
 
@@ -377,6 +382,231 @@ body {
   cursor: pointer;
   color: var(--blackjack-ivory);
   border-color: rgba(200,169,106,.72);
+}
+
+
+.blackjack-betting-panel {
+  grid-area: betting;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto auto;
+  align-items: center;
+  gap: 10px;
+  padding: 10px;
+  border: 1px solid rgba(255,255,255,.075);
+  border-radius: 16px;
+  background:
+    linear-gradient(180deg, rgba(18,22,20,.96), rgba(10,13,11,.96));
+  box-shadow: 0 12px 28px rgba(0,0,0,.22);
+}
+
+.blackjack-chip-tray {
+  grid-column: 1 / -1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: clamp(7px, 1.2vw, 14px);
+  overflow-x: auto;
+  padding: 5px 4px 8px;
+  scrollbar-width: thin;
+}
+
+.blackjack-chip {
+  --chip-main: #e7e4dc;
+  --chip-edge: #8b8984;
+  --chip-ink: #131513;
+  position: relative;
+  flex: 0 0 auto;
+  width: 54px;
+  height: 54px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background:
+    repeating-conic-gradient(
+      from 0deg,
+      var(--chip-edge) 0 8deg,
+      var(--chip-main) 8deg 37deg,
+      var(--chip-edge) 37deg 45deg
+    );
+  box-shadow:
+    0 7px 0 color-mix(in srgb, var(--chip-main) 62%, #000),
+    0 10px 15px rgba(0,0,0,.34),
+    inset 0 0 0 2px rgba(255,255,255,.2);
+  opacity: 1;
+  transform: translateY(-2px);
+}
+
+.blackjack-chip::before,
+.blackjack-chip::after {
+  content: "";
+  position: absolute;
+  border-radius: 50%;
+  pointer-events: none;
+}
+
+.blackjack-chip::before {
+  inset: 7px;
+  border: 2px dashed color-mix(in srgb, var(--chip-edge) 80%, #fff);
+  background:
+    radial-gradient(circle at 35% 26%, rgba(255,255,255,.24), transparent 30%),
+    var(--chip-main);
+}
+
+.blackjack-chip::after {
+  inset: 15px;
+  border: 1px solid rgba(255,255,255,.22);
+  box-shadow: inset 0 0 0 1px rgba(0,0,0,.18);
+}
+
+.blackjack-chip-face {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  display: grid;
+  place-items: center;
+}
+
+.blackjack-chip-value {
+  color: var(--chip-ink);
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: -.02em;
+  text-shadow: 0 1px rgba(255,255,255,.28);
+}
+
+.blackjack-chip.is-selected {
+  outline: 2px solid var(--blackjack-gold);
+  outline-offset: 4px;
+  transform: translateY(-5px) scale(1.04);
+  box-shadow:
+    0 9px 0 color-mix(in srgb, var(--chip-main) 62%, #000),
+    0 14px 24px rgba(0,0,0,.42),
+    0 0 20px rgba(200,169,106,.18);
+}
+
+.blackjack-chip[data-blackjack-chip="10"] {
+  --chip-main: #e8e5dc;
+  --chip-edge: #9f9b90;
+  --chip-ink: #161816;
+}
+
+.blackjack-chip[data-blackjack-chip="25"] {
+  --chip-main: #a82831;
+  --chip-edge: #f0ded6;
+  --chip-ink: #fff6ee;
+}
+
+.blackjack-chip[data-blackjack-chip="50"] {
+  --chip-main: #315c96;
+  --chip-edge: #e9e5dc;
+  --chip-ink: #f6f2ea;
+}
+
+.blackjack-chip[data-blackjack-chip="100"] {
+  --chip-main: #2d765a;
+  --chip-edge: #ede9df;
+  --chip-ink: #f7f3eb;
+}
+
+.blackjack-chip[data-blackjack-chip="250"] {
+  --chip-main: #171b19;
+  --chip-edge: #d9d5ca;
+  --chip-ink: #f5f1e9;
+}
+
+.blackjack-chip[data-blackjack-chip="500"] {
+  --chip-main: #65457d;
+  --chip-edge: #e9e1d3;
+  --chip-ink: #f8f3eb;
+}
+
+.blackjack-chip[data-blackjack-chip="1000"] {
+  --chip-main: #b8924e;
+  --chip-edge: #191b19;
+  --chip-ink: #101210;
+}
+
+.blackjack-high-chip-control,
+.blackjack-bet-circle,
+.blackjack-betting-deadline {
+  min-height: 46px;
+  display: grid;
+  align-content: center;
+  gap: 2px;
+  padding: 7px 10px;
+  border: 1px solid rgba(255,255,255,.07);
+  border-radius: 12px;
+  background: rgba(4,8,6,.45);
+}
+
+.blackjack-high-chip-control {
+  grid-template-columns: auto auto;
+  column-gap: 8px;
+}
+
+.blackjack-high-chip-control span,
+.blackjack-bet-circle span,
+.blackjack-betting-deadline span {
+  color: var(--blackjack-muted);
+  font-size: 7px;
+  font-weight: 800;
+  letter-spacing: .12em;
+}
+
+.blackjack-high-chip-control strong,
+.blackjack-bet-circle strong,
+.blackjack-betting-deadline strong {
+  color: var(--blackjack-ivory);
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 15px;
+}
+
+.blackjack-high-chip-control button {
+  grid-row: 1 / span 2;
+  grid-column: 2;
+  min-width: 40px;
+  border: 1px solid rgba(200,169,106,.38);
+  border-radius: 9px;
+  background: linear-gradient(180deg, #262118, #14130f);
+  color: rgba(244,241,232,.58);
+  font-size: 16px;
+  font-weight: 800;
+}
+
+.blackjack-bet-circle {
+  min-width: 94px;
+  text-align: center;
+  border-color: rgba(200,169,106,.34);
+  border-radius: 999px;
+}
+
+.blackjack-betting-actions {
+  display: grid;
+  grid-template-columns: 1fr 1.25fr;
+  gap: 7px;
+}
+
+.blackjack-betting-actions button {
+  min-height: 46px;
+  min-width: 72px;
+  border: 1px solid rgba(255,255,255,.1);
+  border-radius: 11px;
+  background: linear-gradient(180deg, #1b201d, #101310);
+  color: rgba(244,241,232,.44);
+  font: 800 9px/1 Inter, ui-sans-serif, system-ui, sans-serif;
+  letter-spacing: .08em;
+}
+
+.blackjack-betting-actions [data-blackjack-bet-action="READY"] {
+  border-color: rgba(200,169,106,.35);
+  background: linear-gradient(180deg, #302719, #17140f);
+}
+
+.blackjack-betting-deadline {
+  min-width: 98px;
+  text-align: center;
 }
 
 .blackjack-footnote {
@@ -480,8 +710,39 @@ body {
   .blackjack-hud {
     width: calc(100% - 16px);
     grid-template-columns: 1fr;
+    grid-template-areas:
+      "status"
+      "betting"
+      "actions";
     gap: 8px;
     margin-bottom: 6px;
+  }
+
+  .blackjack-betting-panel {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 7px;
+    padding: 8px;
+  }
+
+  .blackjack-chip-tray {
+    justify-content: flex-start;
+  }
+
+  .blackjack-chip {
+    width: 48px;
+    height: 48px;
+  }
+
+  .blackjack-high-chip-control,
+  .blackjack-bet-circle,
+  .blackjack-betting-deadline {
+    min-width: 0;
+    padding-inline: 7px;
+  }
+
+  .blackjack-betting-actions button {
+    min-width: 0;
+    padding-inline: 7px;
   }
 
   .blackjack-actions {
@@ -529,6 +790,24 @@ body {
     flex-direction: column;
     align-items: center;
     gap: 4px;
+  }
+
+  .blackjack-betting-panel {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .blackjack-chip-tray {
+    grid-column: 1 / -1;
+  }
+
+  .blackjack-high-chip-control,
+  .blackjack-betting-deadline {
+    grid-column: span 1;
+  }
+
+  .blackjack-bet-circle,
+  .blackjack-betting-actions {
+    grid-column: span 1;
   }
 
   .blackjack-footnote {
