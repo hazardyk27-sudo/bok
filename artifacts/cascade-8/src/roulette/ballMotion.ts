@@ -24,11 +24,11 @@ export const BALL_ORBIT_PROFILE = {
   stopAngularVelocity: 2.4,
   direction: -1 as const,
 
-  descentStartAngularVelocity: 9,
+  descentStartAngularVelocity: 6.8,
   transitionRadius: WHEEL_GEOMETRY.numberOuterRadius - 0.037,
   radialPullPerSecond: 0.82,
 
-  pocketEntryAngularVelocity: 5.5,
+  pocketEntryAngularVelocity: 4.1,
   pocketEntryTargetRadius: WHEEL_GEOMETRY.pocketOuterRadius - 0.047,
   pocketPullPerSecond: 1.1,
 
@@ -49,14 +49,16 @@ export const BALL_ORBIT_PROFILE = {
   maxFretCollisions: 8,
 
   captureMinFretCollisions: 4,
-  captureRelativeAngularVelocity: 0.75,
+  captureRelativeAngularVelocity: 0.55,
   captureRadialVelocity: 0.035,
   captureAngularMargin: 0.002,
+  captureRotorAngularVelocity: 0.32,
+  captureMaxSettleMs: 4200,
   pocketSettleRadius:
     WHEEL_GEOMETRY.pocketInnerRadius +
     (WHEEL_GEOMETRY.pocketOuterRadius -
       WHEEL_GEOMETRY.pocketInnerRadius) *
-      0.54,
+      0.48,
   captureAngularSpring: 5.2,
   captureRadialSpring: 4.2,
   settleAngularOffset: 0.004,
@@ -144,6 +146,8 @@ export type BallOrbit = {
   captureRelativeAngularVelocity: number;
   captureRadialVelocity: number;
   captureAngularMargin: number;
+  captureRotorAngularVelocity: number;
+  captureMaxSettleMs: number;
   pocketSettleRadius: number;
   captureAngularSpring: number;
   captureRadialSpring: number;
@@ -1097,8 +1101,8 @@ function findCaptureSettleTimeMs(
   capture: PocketCapture,
 ) {
   const maxSearchMs = Math.max(
-    capture.timeMs,
-    orbit.durationMs,
+    capture.timeMs + orbit.captureMaxSettleMs,
+    orbit.rotorSpin.durationMs,
   );
 
   for (
@@ -1134,7 +1138,10 @@ function findCaptureSettleTimeMs(
       ) <=
         orbit.settleRadialVelocity
     ) {
-      return elapsedMs;
+      return Math.max(
+        elapsedMs,
+        orbit.rotorSpin.durationMs,
+      );
     }
   }
 
@@ -1190,6 +1197,19 @@ function findPocketCapture(
           .radialVelocityRatioPerSecond,
       ) >
         orbit.captureRadialVelocity
+    ) {
+      continue;
+    }
+
+    const rotorAtCandidate =
+      sampleRotorSpin(
+        orbit.rotorSpin,
+        elapsedMs,
+      );
+
+    if (
+      rotorAtCandidate.angularVelocity >
+      orbit.captureRotorAngularVelocity
     ) {
       continue;
     }
@@ -1252,7 +1272,53 @@ function findPocketCapture(
     return capture;
   }
 
-  return null;
+  // If low-energy free motion ends without satisfying the stricter capture
+  // window, derive the nearest pocket from the final geometry instead of
+  // freezing on a separator. This is a geometry fallback, not a target input.
+  const fallbackTimeMs = Math.max(
+    orbit.freeMotionDurationMs,
+    orbit.rotorSpin.durationMs,
+  );
+  const fallbackBall =
+    samplePreCaptureOrbit(
+      orbit,
+      fallbackTimeMs,
+    );
+  const fallbackPocket =
+    getNearestPocket(
+      orbit,
+      fallbackBall,
+      fallbackTimeMs,
+    );
+
+  const fallbackCapture: PocketCapture = {
+    timeMs: fallbackTimeMs,
+    pocketIndex:
+      fallbackPocket.pocketIndex,
+    pocketCenterRelativeAngle:
+      fallbackPocket
+        .pocketCenterRelativeAngle,
+    initialAngularOffset:
+      fallbackPocket.angularOffset,
+    initialRelativeAngularVelocity:
+      fallbackPocket
+        .relativeAngularVelocity,
+    initialRadiusOffset:
+      fallbackBall.radiusRatio -
+      orbit.pocketSettleRadius,
+    initialRadialVelocity:
+      fallbackBall
+        .radialVelocityRatioPerSecond,
+    settleTimeMs: 0,
+  };
+
+  fallbackCapture.settleTimeMs =
+    findCaptureSettleTimeMs(
+      orbit,
+      fallbackCapture,
+    );
+
+  return fallbackCapture;
 }
 
 function sampleCapturedBall(
@@ -1379,6 +1445,8 @@ export function createBallOrbit(
     captureRelativeAngularVelocity,
     captureRadialVelocity,
     captureAngularMargin,
+    captureRotorAngularVelocity,
+    captureMaxSettleMs,
     pocketSettleRadius,
     captureAngularSpring,
     captureRadialSpring,
@@ -1432,6 +1500,8 @@ export function createBallOrbit(
     captureRelativeAngularVelocity,
     captureRadialVelocity,
     captureAngularMargin,
+    captureRotorAngularVelocity,
+    captureMaxSettleMs,
     pocketSettleRadius,
     captureAngularSpring,
     captureRadialSpring,
@@ -1472,6 +1542,13 @@ export function createBallOrbit(
     findFretCollisions(orbit);
   orbit.pocketCapture =
     findPocketCapture(orbit);
+
+  if (orbit.pocketCapture) {
+    orbit.durationMs = Math.max(
+      orbit.durationMs,
+      orbit.pocketCapture.settleTimeMs,
+    );
+  }
 
   return orbit;
 }

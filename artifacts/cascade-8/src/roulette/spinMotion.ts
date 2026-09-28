@@ -1,9 +1,9 @@
 const TAU = Math.PI * 2;
 
 export const ROTOR_SPIN_PROFILE = {
-  initialAngularVelocity: 8,
-  dragPerSecond: 0.35,
-  stopAngularVelocity: 0.16,
+  initialAngularVelocity: 7,
+  dragPerSecond: 0.5,
+  stopAngularVelocity: 0.12,
 } as const;
 
 export type RotorSpin = {

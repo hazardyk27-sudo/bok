@@ -65,7 +65,7 @@ describe("roulette 2d wheel geometry", () => {
     expect(BALL_TRACK_STYLE.troughWidth).toBeLessThan(
       BALL_TRACK_STYLE.outerRadius - BALL_TRACK_STYLE.innerRadius,
     );
-    expect(BALL_TRACK_STYLE.pathRadius).toBeGreaterThan(0.82);
+    expect(BALL_TRACK_STYLE.pathRadius).toBeGreaterThan(0.84);
     expect(WHEEL_GEOMETRY.markerRadius).toBeGreaterThan(BALL_TRACK_STYLE.outerRadius);
   });
 

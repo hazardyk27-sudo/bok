@@ -17,7 +17,7 @@ export const WHEEL_GEOMETRY = {
   pocketInnerRadius: 0.37,
   centerDiscRadius: 0.352,
   centerGuideRadius: 0.132,
-  markerRadius: 0.915,
+  markerRadius: 0.94,
   markerCount: 8,
 } as const;
 
@@ -38,21 +38,21 @@ export const OUTER_RIM_STYLE = {
 } as const;
 
 export const BALL_TRACK_STYLE = {
-  innerRadius: 0.775,
-  outerRadius: 0.875,
-  pathRadius: 0.835,
-  troughWidth: 0.058,
+  innerRadius: 0.79,
+  outerRadius: 0.90,
+  pathRadius: 0.852,
+  troughWidth: 0.062,
   innerLipWidth: 0.009,
   outerLipWidth: 0.011,
   shadowInset: 0.012,
-  sheenRadius: 0.849,
+  sheenRadius: 0.867,
   sheenWidth: 0.010,
 } as const;
 
 export const DEFLECTOR_STYLE = {
   count: 4,
   startAngle: -2.6,
-  radius: 0.758,
+  radius: 0.77,
   radialLength: 0.029,
   tangentialWidth: 0.015,
   collisionRadius: 0.036,
