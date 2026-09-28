@@ -26,3 +26,15 @@ export {
   renderBlackjackTableShell,
 };
 export type { BlackjackTableViewModel };
+
+export {
+  BLACKJACK_BASE_CHIP_DENOMINATIONS,
+  BLACKJACK_DEFAULT_BETTING_PANEL,
+  BLACKJACK_HIGH_CHIP_BASE_CREDITS,
+  doubleBlackjackChipCredits,
+  formatBlackjackChipCredits,
+  getBlackjackHighChipCredits,
+  isBlackjackChipDenomination,
+  renderBlackjackBettingPanel,
+} from "./bettingView";
+export type { BlackjackBettingPanelViewModel } from "./bettingView";
