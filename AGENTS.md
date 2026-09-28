@@ -2,6 +2,14 @@
 
 This repository contains multiple games that must be developed and released independently.
 
+
+## Conversation/session initialization
+- On the first OYUN/repository task in a new conversation, read and understand the root `AGENTS.md`, the relevant game/category `AGENTS.md` including `Current milestones`, and that category's ownership entry once.
+- Keep those rules in the conversation context. Do **not** re-open or re-read the same instruction files for every later user command in the same conversation.
+- Read `GAME_DELIVERY_PROTOCOL.md` and `GIT_WORKFLOW_RULES.md` only when the conversation first reaches commit/push/promotion/Replit work; after that, keep them in context and do not re-read them for each delivery step.
+- Re-read instructions only when there is a concrete reason: the user says rules/milestones changed, the conversation switches to another game/category/repository, the active branch/context changes, or a tool reports stale/conflicting state that requires refreshing the source.
+- After session initialization, simple questions, explanations, design discussions, and small follow-up instructions should be answered directly without repo reads unless current repository state is genuinely needed.
+
 ## Permanent branch model
 - Slot work: `feature/slot`
 - Cadı Kazan work: `feature/cadi-kazan`
@@ -63,7 +71,7 @@ Race handling is fail-safe: if a feature branch or preview branch moves while an
 
 
 ## Milestone continuity
-- At the start of a game/category task, read the closest owned `AGENTS.md` and its `Current milestones` section before changing code.
+- At the start of a new conversation, read the closest owned `AGENTS.md` and its `Current milestones` once before substantial work; do not re-read them on each later task in the same conversation.
 - Record a milestone only when it materially changes what the next agent needs to know: a durable architecture/behavior decision, a completed phase, a validated baseline, a significant blocker/root cause, or the next agreed checkpoint.
 - Game agents update milestones only in their own game/category `AGENTS.md`. Shared/platform/integration milestones are maintained only by the central integration flow in this root `AGENTS.md`.
 - Keep milestones curated, not chronological noise: newest first, normally 5–10 bullets maximum, replace/remove superseded items, and never paste raw logs, long failed experiments, or full chat history.
