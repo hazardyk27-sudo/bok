@@ -35,6 +35,16 @@ body {
   width: 100%;
   height: 100%;
   aspect-ratio: 1;
+  cursor: pointer;
+  touch-action: manipulation;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.roulette-wheel-canvas:focus-visible {
+  outline: 2px solid rgba(126, 82, 18, 0.72);
+  outline-offset: 4px;
+  border-radius: 50%;
 }
 
 @media (max-width: 640px) {

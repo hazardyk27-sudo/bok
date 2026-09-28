@@ -92,6 +92,7 @@ export function mountRoulette(app: HTMLDivElement) {
         const result = readSettledWinningResult(completedOrbit);
 
         if (result) {
+          canvas.dataset.rouletteState = "settled";
           canvas.dataset.roulettePocketIndex = String(result.pocketIndex);
           canvas.dataset.rouletteWinningNumber = String(result.number);
           canvas.dataset.rouletteWinningColor = result.color;
@@ -100,6 +101,7 @@ export function mountRoulette(app: HTMLDivElement) {
             `European roulette wheel. Result ${result.number}. Press to spin again.`,
           );
         } else {
+          canvas.dataset.rouletteState = "unsettled";
           delete canvas.dataset.roulettePocketIndex;
           delete canvas.dataset.rouletteWinningNumber;
           delete canvas.dataset.rouletteWinningColor;
@@ -122,6 +124,15 @@ export function mountRoulette(app: HTMLDivElement) {
   const startSpin = () => {
     if (activeRotorSpin || activeBallOrbit) return;
 
+    canvas.dataset.rouletteState = "spinning";
+    delete canvas.dataset.roulettePocketIndex;
+    delete canvas.dataset.rouletteWinningNumber;
+    delete canvas.dataset.rouletteWinningColor;
+    canvas.setAttribute(
+      "aria-label",
+      "European roulette wheel. Spin in progress.",
+    );
+
     activeRotorSpin = createRotorSpin(viewState.rotorAngle, 1);
     activeBallOrbit = createBallOrbit(
       viewState.ballAngle,
@@ -137,6 +148,8 @@ export function mountRoulette(app: HTMLDivElement) {
     if (frameId) window.cancelAnimationFrame(frameId);
     frameId = window.requestAnimationFrame(animate);
   };
+
+  canvas.dataset.rouletteState = "ready";
 
   const observer = new ResizeObserver(redraw);
   observer.observe(canvas);

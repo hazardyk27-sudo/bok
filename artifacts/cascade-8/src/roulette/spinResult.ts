@@ -21,6 +21,18 @@ import {
 
 const TAU = Math.PI * 2;
 
+export const ROULETTE_SEED_ENVELOPE = {
+  rotorCenterAngle: 0.37,
+  rotorAngleSpan: 0.12,
+  ballCenterAngle: BALL_ORBIT_PROFILE.initialAngle,
+  ballAngleSpan: 0.16,
+} as const;
+
+export const ROULETTE_REGRESSION_SEEDS = Array.from(
+  { length: 20 },
+  (_, index) => 61001 + index,
+);
+
 export type RouletteWinningColor =
   | "green"
   | "red"
@@ -46,6 +58,15 @@ export type SeededRouletteSimulation = {
   rotorSpin: RotorSpin;
   ballOrbit: BallOrbit;
   result: RouletteWinningResult | null;
+};
+
+export type RouletteSeedRegressionSummary = {
+  totalSeeds: number;
+  settledSeeds: number;
+  validResultSeeds: number;
+  uniquePocketCount: number;
+  maxSettleTimeMs: number;
+  failedSeeds: string[];
 };
 
 function shortestAngleDelta(a: number, b: number) {
@@ -225,29 +246,31 @@ export function deriveSeededInitialConditions(
       normalizedSeed,
     );
 
-  // Keep Part 15's deterministic validation envelope close to the
-  // already-established physical baseline. Part 16 will broaden and
-  // calibrate this launch envelope across a larger seed set.
   const rotorJitter =
     (
       seededUnit(seedHash, 0) -
       0.5
     ) *
-    0.04;
+    ROULETTE_SEED_ENVELOPE
+      .rotorAngleSpan;
   const ballJitter =
     (
       seededUnit(seedHash, 1) -
       0.5
     ) *
-    0.04;
+    ROULETTE_SEED_ENVELOPE
+      .ballAngleSpan;
 
   return {
     seed: normalizedSeed,
     seedHash,
     rotorStartAngle:
-      0.37 + rotorJitter,
+      ROULETTE_SEED_ENVELOPE
+        .rotorCenterAngle +
+      rotorJitter,
     ballStartAngle:
-      BALL_ORBIT_PROFILE.initialAngle +
+      ROULETTE_SEED_ENVELOPE
+        .ballCenterAngle +
       ballJitter,
   };
 }
@@ -280,6 +303,53 @@ export function simulateSeededRouletteSpin(
       readSettledWinningResult(
         ballOrbit,
       ),
+  };
+}
+
+export function runRouletteSeedRegression(
+  seeds: readonly (string | number)[] =
+    ROULETTE_REGRESSION_SEEDS,
+): RouletteSeedRegressionSummary {
+  const failedSeeds: string[] = [];
+  const pocketSet = new Set<number>();
+  let settledSeeds = 0;
+  let validResultSeeds = 0;
+  let maxSettleTimeMs = 0;
+
+  for (const seed of seeds) {
+    const simulation =
+      simulateSeededRouletteSpin(seed);
+    const capture =
+      simulation.ballOrbit
+        .pocketCapture;
+
+    if (capture) {
+      settledSeeds += 1;
+      maxSettleTimeMs = Math.max(
+        maxSettleTimeMs,
+        capture.settleTimeMs,
+      );
+    }
+
+    if (simulation.result) {
+      validResultSeeds += 1;
+      pocketSet.add(
+        simulation.result.pocketIndex,
+      );
+      continue;
+    }
+
+    failedSeeds.push(String(seed));
+  }
+
+  return {
+    totalSeeds: seeds.length,
+    settledSeeds,
+    validResultSeeds,
+    uniquePocketCount:
+      pocketSet.size,
+    maxSettleTimeMs,
+    failedSeeds,
   };
 }
 

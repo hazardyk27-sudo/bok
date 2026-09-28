@@ -10,11 +10,14 @@ import {
 } from "./ballMotion";
 import { createRotorSpin } from "./spinMotion";
 import {
+  ROULETTE_REGRESSION_SEEDS,
+  ROULETTE_SEED_ENVELOPE,
   deriveSeededInitialConditions,
   getPocketIndexFromRelativeAngle,
   getWinningColor,
   hashRouletteSeed,
   readSettledWinningResult,
+  runRouletteSeedRegression,
   simulateSeededRouletteSpin,
 } from "./spinResult";
 
@@ -75,29 +78,51 @@ describe("roulette settled result derivation", () => {
     );
   });
 
-  it("derives repeatable launch conditions from the same seed", () => {
+  it("derives repeatable launch conditions across the broadened angle envelope", () => {
     const a =
       deriveSeededInitialConditions(
-        "roulette-part15-a",
+        "roulette-part16-a",
       );
     const b =
       deriveSeededInitialConditions(
-        "roulette-part15-a",
+        "roulette-part16-a",
       );
     const c =
       deriveSeededInitialConditions(
-        "roulette-part15-b",
+        "roulette-part16-b",
       );
 
     expect(a).toEqual(b);
     expect(a.seedHash).toBe(
       hashRouletteSeed(
-        "roulette-part15-a",
+        "roulette-part16-a",
       ),
     );
     expect(c.seedHash).not.toBe(
       a.seedHash,
     );
+
+    expect(
+      Math.abs(
+        a.rotorStartAngle -
+          ROULETTE_SEED_ENVELOPE
+            .rotorCenterAngle,
+      ),
+    ).toBeLessThanOrEqual(
+      ROULETTE_SEED_ENVELOPE
+        .rotorAngleSpan / 2,
+    );
+    expect(
+      Math.abs(
+        a.ballStartAngle -
+          ROULETTE_SEED_ENVELOPE
+            .ballCenterAngle,
+      ),
+    ).toBeLessThanOrEqual(
+      ROULETTE_SEED_ENVELOPE
+        .ballAngleSpan / 2,
+    );
+
     expect(
       c.rotorStartAngle ===
         a.rotorStartAngle &&
@@ -109,11 +134,11 @@ describe("roulette settled result derivation", () => {
   it("replays a seed into the exact same physics result without supplying a target", () => {
     const first =
       simulateSeededRouletteSpin(
-        "roulette-part15-replay",
+        "roulette-part16-replay",
       );
     const second =
       simulateSeededRouletteSpin(
-        "roulette-part15-replay",
+        "roulette-part16-replay",
       );
 
     expect(
@@ -134,6 +159,33 @@ describe("roulette settled result derivation", () => {
     expect(first.result).toEqual(
       second.result,
     );
+  });
+
+  it("defines the final 20-seed regression batch", () => {
+    expect(
+      ROULETTE_REGRESSION_SEEDS,
+    ).toEqual([
+      61001, 61002, 61003, 61004, 61005,
+      61006, 61007, 61008, 61009, 61010,
+      61011, 61012, 61013, 61014, 61015,
+      61016, 61017, 61018, 61019, 61020,
+    ]);
+  });
+
+  it("requires every regression seed to settle and produce a geometry-verified result", () => {
+    const summary =
+      runRouletteSeedRegression();
+
+    expect(summary.totalSeeds).toBe(20);
+    expect(summary.settledSeeds).toBe(20);
+    expect(summary.validResultSeeds).toBe(20);
+    expect(summary.failedSeeds).toEqual([]);
+    expect(
+      summary.uniquePocketCount,
+    ).toBeGreaterThan(1);
+    expect(
+      summary.maxSettleTimeMs,
+    ).toBeGreaterThan(0);
   });
 
   it("keeps the seed path free of target-number or target-pocket inputs", () => {
