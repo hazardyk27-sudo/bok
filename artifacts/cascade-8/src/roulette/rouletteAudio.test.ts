@@ -4,76 +4,94 @@ import {
   it,
 } from "vitest";
 import {
-  getContinuousAudioProfile,
-  getImpactAudioProfile,
+  getReferenceHit,
+  getReferenceMix,
 } from "./rouletteAudio";
 
-describe("roulette audio profile", () => {
-  it("raises rotor mechanical sound with wheel speed", () => {
+describe("roulette reference-video audio mapping", () => {
+  it("drives the real wheel loop from rotor speed", () => {
     const slow =
-      getContinuousAudioProfile({
+      getReferenceMix({
         rotorAngularVelocity: 1,
         ballAngularVelocity: 0,
         ballPhase: "settled",
       });
     const fast =
-      getContinuousAudioProfile({
+      getReferenceMix({
         rotorAngularVelocity: 7,
         ballAngularVelocity: 0,
         ballPhase: "settled",
       });
 
     expect(
-      fast.rotorGain,
+      fast.wheelGain,
     ).toBeGreaterThan(
-      slow.rotorGain,
+      slow.wheelGain,
     );
     expect(
-      fast.rotorFrequency,
+      fast.wheelPlaybackRate,
     ).toBeGreaterThan(
-      slow.rotorFrequency,
+      slow.wheelPlaybackRate,
     );
   });
 
-  it("only keeps continuous ball rolling on the outer track", () => {
+  it("keeps the real ball rolling loop on the outer track and fades it during descent", () => {
     const track =
-      getContinuousAudioProfile({
+      getReferenceMix({
         rotorAngularVelocity: 2,
-        ballAngularVelocity: 14,
+        ballAngularVelocity: 18,
         ballPhase: "track",
       });
-    const pocket =
-      getContinuousAudioProfile({
+    const descent =
+      getReferenceMix({
         rotorAngularVelocity: 2,
-        ballAngularVelocity: 14,
+        ballAngularVelocity: 18,
+        ballPhase: "descent",
+      });
+    const pocket =
+      getReferenceMix({
+        rotorAngularVelocity: 2,
+        ballAngularVelocity: 18,
         ballPhase: "pocket-entry",
       });
 
     expect(
       track.trackGain,
+    ).toBeGreaterThan(
+      descent.trackGain,
+    );
+    expect(
+      descent.trackGain,
     ).toBeGreaterThan(0);
     expect(
       pocket.trackGain,
     ).toBe(0);
   });
 
-  it("maps real collision categories to distinct transient profiles", () => {
+  it("uses reference-video slices for physical contacts", () => {
     const deflector =
-      getImpactAudioProfile({
+      getReferenceHit({
         kind: "deflector-hit",
         timeMs: 1000,
         intensity: 0.8,
-        collisionIndex: 1,
+        collisionIndex: 0,
       });
     const fret =
-      getImpactAudioProfile({
+      getReferenceHit({
         kind: "fret-hit",
         timeMs: 1200,
         intensity: 0.5,
+        collisionIndex: 1,
+      });
+    const pocket =
+      getReferenceHit({
+        kind: "pocket-bounce",
+        timeMs: 1400,
+        intensity: 0.4,
         collisionIndex: 2,
       });
     const settle =
-      getImpactAudioProfile({
+      getReferenceHit({
         kind: "settled",
         timeMs: 5000,
         intensity: 1,
@@ -82,22 +100,26 @@ describe("roulette audio profile", () => {
 
     expect(deflector).not.toBeNull();
     expect(fret).not.toBeNull();
+    expect(pocket).not.toBeNull();
     expect(settle).not.toBeNull();
+
     expect(
-      deflector!.frequency,
-    ).toBeGreaterThan(
-      fret!.frequency,
-    );
+      deflector!.offset,
+    ).toBe(0);
     expect(
-      settle!.durationSeconds,
-    ).toBeGreaterThan(
-      fret!.durationSeconds,
-    );
+      fret!.offset,
+    ).toBeGreaterThan(0.1);
+    expect(
+      pocket!.offset,
+    ).toBeGreaterThan(0.3);
+    expect(
+      settle!.offset,
+    ).toBeGreaterThan(0.9);
   });
 
-  it("does not generate transient sounds for loop control events", () => {
+  it("does not play one-shots for loop control events", () => {
     expect(
-      getImpactAudioProfile({
+      getReferenceHit({
         kind: "track-roll-start",
         timeMs: 0,
         intensity: 1,
@@ -105,7 +127,7 @@ describe("roulette audio profile", () => {
     ).toBeNull();
 
     expect(
-      getImpactAudioProfile({
+      getReferenceHit({
         kind: "rotor-roll-stop",
         timeMs: 8000,
         intensity: 0,
