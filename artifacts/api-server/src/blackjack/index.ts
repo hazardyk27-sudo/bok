@@ -38,3 +38,4 @@ export * from "./snapshotRepository";
 export * from "./journal";
 export * from "./journalRepository";
 export * from "./recovery";
+export * from "./botSimulation";
