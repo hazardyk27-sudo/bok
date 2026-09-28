@@ -297,6 +297,12 @@ describe("blackjack full lifecycle + recovery multiplayer gate",()=>{
     )).toBe(true);
     expect(recovered.coordinator.getReconnectRegistry().records)
       .toHaveLength(5);
+    expect(recovered.realtimeOptions.handlePlayerActionTransaction)
+      .toBe(recovered.authority.handlePlayerActionTransaction);
+    expect(recovered.realtimeOptions.onIdentityConnected)
+      .toBe(recovered.authority.onIdentityConnected);
+    expect(recovered.realtimeOptions.onIdentityDisconnected)
+      .toBe(recovered.authority.onIdentityDisconnected);
 
     for(let seat=1;seat<=5;seat+=1){
       clock+=1;

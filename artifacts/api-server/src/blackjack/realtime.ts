@@ -314,15 +314,23 @@ export function attachBlackjackWebSocket(
       );
 
       if(
+        !closed &&
         identity &&
         !connectionRegistry.active.some(
           (candidate)=>candidate.playerId===identity.playerId,
         )
       ){
-        void options.onIdentityDisconnected?.(
-          identity,
-          nowMs(),
-        );
+        try {
+          const pending=options.onIdentityDisconnected?.(
+            identity,
+            nowMs(),
+          );
+          if(pending){
+            void Promise.resolve(pending).catch(()=>undefined);
+          }
+        } catch {
+          // Socket cleanup must never surface an unhandled lifecycle error.
+        }
       }
     };
     socket.once("close", cleanup);
