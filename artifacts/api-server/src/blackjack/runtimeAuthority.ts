@@ -240,6 +240,51 @@ export function createBlackjackRuntimeAuthority(
     const nowMs=input.nowMs();
     assertNowMs(nowMs);
 
+    const table=coordinator.getTable();
+    const existing=table.players.find(
+      (player)=>
+        player.playerId===identity.playerId ||
+        player.userId===identity.userId,
+    );
+    if(existing){
+      if(
+        existing.playerId!==identity.playerId ||
+        existing.userId!==identity.userId ||
+        existing.seatNumber!==request.seatNumber
+      ){
+        throw new Error("Blackjack identity is already seated");
+      }
+
+      const account=coordinator.getAccount(identity.playerId);
+      const result=await coordinator.claimSeat({
+        account,
+        sessionId:identity.sessionId,
+        seatNumber:request.seatNumber,
+        nowMs,
+        bettingWindowMs:input.bettingWindowMs,
+      });
+
+      acknowledge(Object.freeze({
+        type:"SEAT_CLAIM_ACCEPTED",
+        requestId:request.requestId,
+        seatNumber:request.seatNumber,
+        replayed:true,
+        stateVersion:result.table.stateVersion,
+        eventSequence:result.table.eventSequence,
+      }));
+      return;
+    }
+
+    const targetSeat=table.seats.find(
+      (seat)=>seat.seatNumber===request.seatNumber,
+    );
+    if(!targetSeat || targetSeat.playerId!==null){
+      throw new Error("Blackjack requested seat is already occupied");
+    }
+    if(table.players.length>=table.maxSeats){
+      throw new Error("Blackjack table is full");
+    }
+
     if(!input.loadSeatAccount){
       throw new Error(
         "Blackjack seat account provider is not configured",

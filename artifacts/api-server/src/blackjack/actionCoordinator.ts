@@ -395,6 +395,7 @@ export class BlackjackPlayerActionCoordinator {
         nowMs:input.nowMs,
       });
       this.bettingPositions.delete(player.playerId);
+      this.accounts.delete(player.playerId);
 
       if(
         table.players.length===0 &&

@@ -48,6 +48,7 @@ describe("blackjack seat leave and rejoin",()=>{
     });
     expect(game.getTable().players).toEqual([]);
     expect(game.getTable().seats[1].playerId).toBeNull();
+    expect(game.getAccounts()).toEqual([]);
 
     await game.claimSeat({
       account:account("p1","u1"),
