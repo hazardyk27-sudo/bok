@@ -1,9 +1,18 @@
 import {
+  BALL_STYLE,
   BALL_TRACK_STYLE,
   DEFLECTOR_STYLE,
+  POCKET_RING_STYLE,
+  SEGMENT_ANGLE,
+  TOP_SEGMENT_CENTER,
   WHEEL_GEOMETRY,
   getDeflectorAngle,
 } from "./config";
+import {
+  createRotorSpin,
+  sampleRotorSpin,
+  type RotorSpin,
+} from "./spinMotion";
 
 const TAU = Math.PI * 2;
 
@@ -13,20 +22,34 @@ export const BALL_ORBIT_PROFILE = {
   dragPerSecond: 0.22,
   stopAngularVelocity: 2.4,
   direction: -1 as const,
+
   descentStartAngularVelocity: 9,
-  descentTargetRadius: WHEEL_GEOMETRY.numberOuterRadius - 0.037,
+  transitionRadius: WHEEL_GEOMETRY.numberOuterRadius - 0.037,
   radialPullPerSecond: 0.82,
-  collisionEnergyRetention: 0.86,
-  collisionAngularKick: 1.05,
-  collisionRadialKick: 0.052,
-  collisionDampingPerSecond: 3.1,
-  collisionVisualSeconds: 0.72,
+
+  pocketEntryAngularVelocity: 5.5,
+  pocketEntryTargetRadius: WHEEL_GEOMETRY.pocketOuterRadius - 0.047,
+  pocketPullPerSecond: 1.1,
+
+  deflectorEnergyRetention: 0.86,
+  deflectorAngularKick: 1.05,
+  deflectorRadialKick: 0.052,
+  deflectorDampingPerSecond: 3.1,
+  deflectorVisualSeconds: 0.72,
+
+  fretRestitution: 0.42,
+  fretTangentialPadding: 0.004,
+  fretRadialKick: 0.045,
+  fretDampingPerSecond: 4.2,
+  fretVisualSeconds: 0.68,
 } as const;
 
 export type BallMotionPhase =
   | "track"
   | "descent"
   | "deflector"
+  | "pocket-entry"
+  | "fret"
   | "handoff";
 
 export type DeflectorCollision = {
@@ -37,38 +60,71 @@ export type DeflectorCollision = {
   side: 1 | -1;
 };
 
+export type FretCollision = {
+  timeMs: number;
+  separatorIndex: number;
+  angle: number;
+  radiusRatio: number;
+  rotorAngle: number;
+  side: 1 | -1;
+  relativeAngularVelocityBefore: number;
+  signedAngularVelocityAfter: number;
+};
+
 export type BallOrbit = {
   startAngle: number;
   direction: 1 | -1;
   initialAngularVelocity: number;
   dragPerSecond: number;
   stopAngularVelocity: number;
+
   trackRadius: number;
   descentStartAngularVelocity: number;
-  descentTargetRadius: number;
+  transitionRadius: number;
   radialPullPerSecond: number;
-  collisionEnergyRetention: number;
-  collisionAngularKick: number;
-  collisionRadialKick: number;
-  collisionDampingPerSecond: number;
-  collisionVisualSeconds: number;
+
+  pocketEntryAngularVelocity: number;
+  pocketEntryTargetRadius: number;
+  pocketPullPerSecond: number;
+
+  deflectorEnergyRetention: number;
+  deflectorAngularKick: number;
+  deflectorRadialKick: number;
+  deflectorDampingPerSecond: number;
+  deflectorVisualSeconds: number;
+
+  fretRestitution: number;
+  fretTangentialPadding: number;
+  fretRadialKick: number;
+  fretDampingPerSecond: number;
+  fretVisualSeconds: number;
+
   descentStartMs: number;
+  pocketEntryStartMs: number;
   durationMs: number;
-  collision: DeflectorCollision | null;
+
+  rotorSpin: RotorSpin;
+  deflectorCollision: DeflectorCollision | null;
+  fretCollision: FretCollision | null;
 };
 
 export type BallOrbitSample = {
   angle: number;
   radiusRatio: number;
   angularVelocity: number;
+  signedAngularVelocity: number;
   radialVelocityRatioPerSecond: number;
   progress: number;
   phase: BallMotionPhase;
-  collisionIndex: number | null;
+  deflectorCollisionIndex: number | null;
+  fretCollisionIndex: number | null;
   done: boolean;
 };
 
-type BaseBallSample = Omit<BallOrbitSample, "collisionIndex">;
+type InternalBallSample = Omit<
+  BallOrbitSample,
+  "deflectorCollisionIndex" | "fretCollisionIndex"
+>;
 
 function shortestAngleDelta(a: number, b: number) {
   return Math.atan2(Math.sin(a - b), Math.cos(a - b));
@@ -109,31 +165,33 @@ export function getBallOrbitDurationMs(
   );
 }
 
-export function getBallDescentStartMs(
+export function getBallSpeedThresholdMs(
   initialAngularVelocity: number,
   dragPerSecond: number,
-  descentStartAngularVelocity: number,
+  thresholdAngularVelocity: number,
 ) {
   if (
     initialAngularVelocity <= 0 ||
     dragPerSecond <= 0 ||
-    descentStartAngularVelocity <= 0 ||
-    descentStartAngularVelocity >= initialAngularVelocity
+    thresholdAngularVelocity <= 0 ||
+    thresholdAngularVelocity >= initialAngularVelocity
   ) {
     return 0;
   }
 
   return (
-    Math.log(initialAngularVelocity / descentStartAngularVelocity) /
+    Math.log(initialAngularVelocity / thresholdAngularVelocity) /
     dragPerSecond *
     1000
   );
 }
 
+export const getBallDescentStartMs = getBallSpeedThresholdMs;
+
 function sampleBaseBallOrbit(
   orbit: BallOrbit,
   elapsedMs: number,
-): BaseBallSample {
+): InternalBallSample {
   const clampedElapsedMs = Math.min(
     Math.max(0, Number.isFinite(elapsedMs) ? elapsedMs : 0),
     orbit.durationMs,
@@ -141,10 +199,14 @@ function sampleBaseBallOrbit(
   const elapsedSeconds = clampedElapsedMs / 1000;
   const decay = Math.exp(-orbit.dragPerSecond * elapsedSeconds);
   const angularVelocity = orbit.initialAngularVelocity * decay;
+  const signedAngularVelocity =
+    orbit.direction * angularVelocity;
 
   const angularTravel =
     orbit.dragPerSecond > 0
-      ? orbit.initialAngularVelocity / orbit.dragPerSecond * (1 - decay)
+      ? orbit.initialAngularVelocity /
+        orbit.dragPerSecond *
+        (1 - decay)
       : 0;
 
   const angle =
@@ -152,23 +214,25 @@ function sampleBaseBallOrbit(
     orbit.direction * angularTravel;
 
   const done = clampedElapsedMs >= orbit.durationMs;
-  const descentElapsedSeconds = Math.max(
-    0,
-    (clampedElapsedMs - orbit.descentStartMs) / 1000,
-  );
 
   let radiusRatio = orbit.trackRadius;
   let radialVelocityRatioPerSecond = 0;
   let phase: BallMotionPhase = "track";
 
+  const descentElapsedSeconds = Math.max(
+    0,
+    (clampedElapsedMs - orbit.descentStartMs) / 1000,
+  );
+
   if (descentElapsedSeconds > 0) {
     const radialDecay = Math.exp(
       -orbit.radialPullPerSecond * descentElapsedSeconds,
     );
-    const radialRange = orbit.trackRadius - orbit.descentTargetRadius;
+    const radialRange =
+      orbit.trackRadius - orbit.transitionRadius;
 
     radiusRatio =
-      orbit.descentTargetRadius +
+      orbit.transitionRadius +
       radialRange * radialDecay;
     radialVelocityRatioPerSecond =
       -radialRange *
@@ -177,8 +241,42 @@ function sampleBaseBallOrbit(
     phase = "descent";
   }
 
+  if (clampedElapsedMs > orbit.pocketEntryStartMs) {
+    const firstStageSeconds =
+      Math.max(
+        0,
+        (orbit.pocketEntryStartMs - orbit.descentStartMs) /
+          1000,
+      );
+    const firstStageDecay = Math.exp(
+      -orbit.radialPullPerSecond * firstStageSeconds,
+    );
+    const pocketEntryStartRadius =
+      orbit.transitionRadius +
+      (orbit.trackRadius - orbit.transitionRadius) *
+        firstStageDecay;
+
+    const pocketElapsedSeconds =
+      (clampedElapsedMs - orbit.pocketEntryStartMs) / 1000;
+    const pocketDecay = Math.exp(
+      -orbit.pocketPullPerSecond * pocketElapsedSeconds,
+    );
+    const pocketRange =
+      pocketEntryStartRadius -
+      orbit.pocketEntryTargetRadius;
+
+    radiusRatio =
+      orbit.pocketEntryTargetRadius +
+      pocketRange * pocketDecay;
+    radialVelocityRatioPerSecond =
+      -pocketRange *
+      orbit.pocketPullPerSecond *
+      pocketDecay;
+    phase = "pocket-entry";
+  }
+
   if (done) {
-    radiusRatio = orbit.descentTargetRadius;
+    radiusRatio = orbit.pocketEntryTargetRadius;
     radialVelocityRatioPerSecond = 0;
     phase = "handoff";
   }
@@ -192,6 +290,9 @@ function sampleBaseBallOrbit(
     angle,
     radiusRatio,
     angularVelocity: done ? 0 : angularVelocity,
+    signedAngularVelocity: done
+      ? 0
+      : signedAngularVelocity,
     radialVelocityRatioPerSecond,
     progress,
     phase,
@@ -203,13 +304,24 @@ function findFirstDeflectorCollision(
   orbit: BallOrbit,
 ): DeflectorCollision | null {
   const stepMs = 8;
-  const startMs = Math.max(0, Math.floor(orbit.descentStartMs));
+  const startMs = Math.max(
+    0,
+    Math.floor(orbit.descentStartMs),
+  );
 
-  for (let elapsedMs = startMs; elapsedMs <= orbit.durationMs; elapsedMs += stepMs) {
+  for (
+    let elapsedMs = startMs;
+    elapsedMs <= orbit.pocketEntryStartMs;
+    elapsedMs += stepMs
+  ) {
     const sample = sampleBaseBallOrbit(orbit, elapsedMs);
     if (sample.phase !== "descent") continue;
 
-    for (let index = 0; index < DEFLECTOR_STYLE.count; index += 1) {
+    for (
+      let index = 0;
+      index < DEFLECTOR_STYLE.count;
+      index += 1
+    ) {
       const deflectorAngle = getDeflectorAngle(index);
       const distance = polarDistance(
         sample.radiusRatio,
@@ -218,9 +330,17 @@ function findFirstDeflectorCollision(
         deflectorAngle,
       );
 
-      if (distance > DEFLECTOR_STYLE.collisionRadius) continue;
+      if (
+        distance >
+        DEFLECTOR_STYLE.collisionRadius
+      ) {
+        continue;
+      }
 
-      const delta = shortestAngleDelta(sample.angle, deflectorAngle);
+      const delta = shortestAngleDelta(
+        sample.angle,
+        deflectorAngle,
+      );
       const side: 1 | -1 =
         Math.abs(delta) < 1e-6
           ? index % 2 === 0
@@ -243,8 +363,325 @@ function findFirstDeflectorCollision(
   return null;
 }
 
+function applyDeflectorResponse(
+  orbit: BallOrbit,
+  base: InternalBallSample,
+  elapsedMs: number,
+): InternalBallSample {
+  const collision = orbit.deflectorCollision;
+
+  if (
+    !collision ||
+    elapsedMs < collision.timeMs
+  ) {
+    return base;
+  }
+
+  const clampedElapsedMs = Math.min(
+    Math.max(
+      collision.timeMs,
+      Number.isFinite(elapsedMs)
+        ? elapsedMs
+        : collision.timeMs,
+    ),
+    orbit.durationMs,
+  );
+
+  const collisionSeconds =
+    (clampedElapsedMs - collision.timeMs) / 1000;
+  const collisionDecay = Math.exp(
+    -orbit.deflectorDampingPerSecond *
+      collisionSeconds,
+  );
+  const signedKick =
+    collision.side *
+    orbit.deflectorAngularKick;
+
+  const baseAtImpact = sampleBaseBallOrbit(
+    orbit,
+    collision.timeMs,
+  );
+  const signedVelocityAtImpact =
+    baseAtImpact.signedAngularVelocity;
+  const signedVelocityAfterImpact =
+    signedVelocityAtImpact *
+      orbit.deflectorEnergyRetention +
+    signedKick;
+
+  const deltaVelocity =
+    signedVelocityAfterImpact -
+    signedVelocityAtImpact;
+
+  let angle =
+    base.angle +
+    deltaVelocity /
+      orbit.deflectorDampingPerSecond *
+      (1 - collisionDecay);
+
+  let signedAngularVelocity =
+    base.signedAngularVelocity +
+    deltaVelocity * collisionDecay;
+
+  const radialBump =
+    orbit.deflectorRadialKick *
+    collisionSeconds *
+    collisionDecay;
+
+  let radiusRatio = Math.min(
+    orbit.trackRadius,
+    Math.max(
+      orbit.pocketEntryTargetRadius,
+      base.radiusRatio + radialBump,
+    ),
+  );
+
+  let radialVelocityRatioPerSecond =
+    base.radialVelocityRatioPerSecond +
+    orbit.deflectorRadialKick *
+      collisionDecay *
+      (1 -
+        orbit.deflectorDampingPerSecond *
+          collisionSeconds);
+
+  let phase: BallMotionPhase =
+    collisionSeconds <=
+    orbit.deflectorVisualSeconds
+      ? "deflector"
+      : base.phase;
+
+  if (base.done) {
+    radiusRatio = orbit.pocketEntryTargetRadius;
+    radialVelocityRatioPerSecond = 0;
+    signedAngularVelocity = 0;
+    phase = "handoff";
+  }
+
+  if (!Number.isFinite(angle)) angle = base.angle;
+
+  return {
+    ...base,
+    angle,
+    radiusRatio,
+    angularVelocity: Math.abs(
+      signedAngularVelocity,
+    ),
+    signedAngularVelocity,
+    radialVelocityRatioPerSecond,
+    phase,
+  };
+}
+
+function findFirstFretCollision(
+  orbit: BallOrbit,
+): FretCollision | null {
+  const stepMs = 4;
+  const outerContactRadius =
+    WHEEL_GEOMETRY.pocketOuterRadius +
+    BALL_STYLE.radius;
+  const innerContactRadius =
+    Math.max(
+      WHEEL_GEOMETRY.pocketInnerRadius,
+      orbit.pocketEntryTargetRadius -
+        BALL_STYLE.radius,
+    );
+  const tangentialTolerance =
+    BALL_STYLE.radius +
+    POCKET_RING_STYLE.separatorWidth / 2 +
+    orbit.fretTangentialPadding;
+
+  for (
+    let elapsedMs = Math.floor(
+      orbit.pocketEntryStartMs,
+    );
+    elapsedMs <= orbit.durationMs;
+    elapsedMs += stepMs
+  ) {
+    const base = sampleBaseBallOrbit(
+      orbit,
+      elapsedMs,
+    );
+    const ball = applyDeflectorResponse(
+      orbit,
+      base,
+      elapsedMs,
+    );
+
+    if (
+      ball.radiusRatio > outerContactRadius ||
+      ball.radiusRatio < innerContactRadius
+    ) {
+      continue;
+    }
+
+    const rotor = sampleRotorSpin(
+      orbit.rotorSpin,
+      elapsedMs,
+    );
+
+    for (
+      let separatorIndex = 0;
+      separatorIndex <
+      37;
+      separatorIndex += 1
+    ) {
+      const separatorRelativeAngle =
+        TOP_SEGMENT_CENTER -
+        SEGMENT_ANGLE / 2 +
+        separatorIndex * SEGMENT_ANGLE;
+      const separatorWorldAngle =
+        rotor.angle +
+        separatorRelativeAngle;
+
+      const delta = shortestAngleDelta(
+        ball.angle,
+        separatorWorldAngle,
+      );
+      const tangentialDistance =
+        Math.abs(delta) *
+        ball.radiusRatio;
+
+      if (
+        tangentialDistance >
+        tangentialTolerance
+      ) {
+        continue;
+      }
+
+      const relativeAngularVelocityBefore =
+        ball.signedAngularVelocity -
+        rotor.angularVelocity;
+      const relativeAngularVelocityAfter =
+        -relativeAngularVelocityBefore *
+        orbit.fretRestitution;
+      const signedAngularVelocityAfter =
+        rotor.angularVelocity +
+        relativeAngularVelocityAfter;
+
+      const side: 1 | -1 =
+        delta >= 0 ? 1 : -1;
+
+      return {
+        timeMs: elapsedMs,
+        separatorIndex,
+        angle: ball.angle,
+        radiusRatio: ball.radiusRatio,
+        rotorAngle: rotor.angle,
+        side,
+        relativeAngularVelocityBefore,
+        signedAngularVelocityAfter,
+      };
+    }
+  }
+
+  return null;
+}
+
+function applyFretResponse(
+  orbit: BallOrbit,
+  base: InternalBallSample,
+  elapsedMs: number,
+): InternalBallSample {
+  const collision = orbit.fretCollision;
+
+  if (
+    !collision ||
+    elapsedMs < collision.timeMs
+  ) {
+    return base;
+  }
+
+  const clampedElapsedMs = Math.min(
+    Math.max(
+      collision.timeMs,
+      Number.isFinite(elapsedMs)
+        ? elapsedMs
+        : collision.timeMs,
+    ),
+    orbit.durationMs,
+  );
+  const collisionSeconds =
+    (clampedElapsedMs - collision.timeMs) / 1000;
+  const collisionDecay = Math.exp(
+    -orbit.fretDampingPerSecond *
+      collisionSeconds,
+  );
+
+  const baseAtImpact = applyDeflectorResponse(
+    orbit,
+    sampleBaseBallOrbit(
+      orbit,
+      collision.timeMs,
+    ),
+    collision.timeMs,
+  );
+
+  const deltaVelocity =
+    collision.signedAngularVelocityAfter -
+    baseAtImpact.signedAngularVelocity;
+
+  let angle =
+    base.angle +
+    deltaVelocity /
+      orbit.fretDampingPerSecond *
+      (1 - collisionDecay);
+
+  let signedAngularVelocity =
+    base.signedAngularVelocity +
+    deltaVelocity * collisionDecay;
+
+  const radialBump =
+    orbit.fretRadialKick *
+    collisionSeconds *
+    collisionDecay;
+
+  let radiusRatio = Math.min(
+    WHEEL_GEOMETRY.pocketOuterRadius +
+      BALL_STYLE.radius,
+    Math.max(
+      orbit.pocketEntryTargetRadius,
+      base.radiusRatio + radialBump,
+    ),
+  );
+
+  let radialVelocityRatioPerSecond =
+    base.radialVelocityRatioPerSecond +
+    orbit.fretRadialKick *
+      collisionDecay *
+      (1 -
+        orbit.fretDampingPerSecond *
+          collisionSeconds);
+
+  let phase: BallMotionPhase =
+    collisionSeconds <=
+    orbit.fretVisualSeconds
+      ? "fret"
+      : base.phase;
+
+  if (base.done) {
+    radiusRatio = orbit.pocketEntryTargetRadius;
+    radialVelocityRatioPerSecond = 0;
+    signedAngularVelocity = 0;
+    phase = "handoff";
+  }
+
+  if (!Number.isFinite(angle)) angle = base.angle;
+
+  return {
+    ...base,
+    angle,
+    radiusRatio,
+    angularVelocity: Math.abs(
+      signedAngularVelocity,
+    ),
+    signedAngularVelocity,
+    radialVelocityRatioPerSecond,
+    phase,
+  };
+}
+
 export function createBallOrbit(
   startAngle = BALL_ORBIT_PROFILE.initialAngle,
+  rotorSpin: RotorSpin = createRotorSpin(0, 1),
 ): BallOrbit {
   const {
     direction,
@@ -252,13 +689,21 @@ export function createBallOrbit(
     dragPerSecond,
     stopAngularVelocity,
     descentStartAngularVelocity,
-    descentTargetRadius,
+    transitionRadius,
     radialPullPerSecond,
-    collisionEnergyRetention,
-    collisionAngularKick,
-    collisionRadialKick,
-    collisionDampingPerSecond,
-    collisionVisualSeconds,
+    pocketEntryAngularVelocity,
+    pocketEntryTargetRadius,
+    pocketPullPerSecond,
+    deflectorEnergyRetention,
+    deflectorAngularKick,
+    deflectorRadialKick,
+    deflectorDampingPerSecond,
+    deflectorVisualSeconds,
+    fretRestitution,
+    fretTangentialPadding,
+    fretRadialKick,
+    fretDampingPerSecond,
+    fretVisualSeconds,
   } = BALL_ORBIT_PROFILE;
 
   const orbit: BallOrbit = {
@@ -267,29 +712,54 @@ export function createBallOrbit(
     initialAngularVelocity,
     dragPerSecond,
     stopAngularVelocity,
+
     trackRadius: BALL_TRACK_STYLE.pathRadius,
     descentStartAngularVelocity,
-    descentTargetRadius,
+    transitionRadius,
     radialPullPerSecond,
-    collisionEnergyRetention,
-    collisionAngularKick,
-    collisionRadialKick,
-    collisionDampingPerSecond,
-    collisionVisualSeconds,
-    descentStartMs: getBallDescentStartMs(
+
+    pocketEntryAngularVelocity,
+    pocketEntryTargetRadius,
+    pocketPullPerSecond,
+
+    deflectorEnergyRetention,
+    deflectorAngularKick,
+    deflectorRadialKick,
+    deflectorDampingPerSecond,
+    deflectorVisualSeconds,
+
+    fretRestitution,
+    fretTangentialPadding,
+    fretRadialKick,
+    fretDampingPerSecond,
+    fretVisualSeconds,
+
+    descentStartMs: getBallSpeedThresholdMs(
       initialAngularVelocity,
       dragPerSecond,
       descentStartAngularVelocity,
+    ),
+    pocketEntryStartMs: getBallSpeedThresholdMs(
+      initialAngularVelocity,
+      dragPerSecond,
+      pocketEntryAngularVelocity,
     ),
     durationMs: getBallOrbitDurationMs(
       initialAngularVelocity,
       dragPerSecond,
       stopAngularVelocity,
     ),
-    collision: null,
+
+    rotorSpin,
+    deflectorCollision: null,
+    fretCollision: null,
   };
 
-  orbit.collision = findFirstDeflectorCollision(orbit);
+  orbit.deflectorCollision =
+    findFirstDeflectorCollision(orbit);
+  orbit.fretCollision =
+    findFirstFretCollision(orbit);
+
   return orbit;
 }
 
@@ -297,93 +767,51 @@ export function sampleBallOrbit(
   orbit: BallOrbit,
   elapsedMs: number,
 ): BallOrbitSample {
-  const base = sampleBaseBallOrbit(orbit, elapsedMs);
-  const collision = orbit.collision;
-
-  if (!collision || elapsedMs < collision.timeMs) {
-    return {
-      ...base,
-      collisionIndex: null,
-    };
-  }
-
-  const clampedElapsedMs = Math.min(
-    Math.max(collision.timeMs, Number.isFinite(elapsedMs) ? elapsedMs : collision.timeMs),
-    orbit.durationMs,
+  const base = sampleBaseBallOrbit(
+    orbit,
+    elapsedMs,
   );
-  const collisionSeconds =
-    (clampedElapsedMs - collision.timeMs) / 1000;
-  const collisionDecay = Math.exp(
-    -orbit.collisionDampingPerSecond * collisionSeconds,
-  );
-  const signedKick =
-    collision.side * orbit.collisionAngularKick;
-  const baseTravelAfterCollision = base.angle - collision.angle;
-
-  let angle =
-    collision.angle +
-    baseTravelAfterCollision * orbit.collisionEnergyRetention +
-    signedKick /
-      orbit.collisionDampingPerSecond *
-      (1 - collisionDecay);
-
-  const signedBaseAngularVelocity =
-    orbit.direction *
-    base.angularVelocity *
-    orbit.collisionEnergyRetention;
-  const signedCollisionVelocity =
-    signedKick * collisionDecay;
-  let angularVelocity = Math.abs(
-    signedBaseAngularVelocity + signedCollisionVelocity,
-  );
-
-  const radialBump =
-    orbit.collisionRadialKick *
-    collisionSeconds *
-    collisionDecay;
-  let radiusRatio = Math.min(
-    orbit.trackRadius,
-    Math.max(
-      orbit.descentTargetRadius,
-      base.radiusRatio + radialBump,
-    ),
-  );
-
-  let radialVelocityRatioPerSecond =
-    base.radialVelocityRatioPerSecond +
-    orbit.collisionRadialKick *
-      collisionDecay *
-      (1 -
-        orbit.collisionDampingPerSecond *
-          collisionSeconds);
-
-  let phase: BallMotionPhase =
-    collisionSeconds <= orbit.collisionVisualSeconds
-      ? "deflector"
-      : base.phase;
-
-  if (base.done) {
-    radiusRatio = orbit.descentTargetRadius;
-    radialVelocityRatioPerSecond = 0;
-    angularVelocity = 0;
-    phase = "handoff";
-  }
-
-  if (!Number.isFinite(angle)) angle = base.angle;
+  const afterDeflector =
+    applyDeflectorResponse(
+      orbit,
+      base,
+      elapsedMs,
+    );
+  const afterFret =
+    applyFretResponse(
+      orbit,
+      afterDeflector,
+      elapsedMs,
+    );
 
   return {
-    angle,
-    radiusRatio,
-    angularVelocity,
-    radialVelocityRatioPerSecond,
-    progress: base.progress,
-    phase,
-    collisionIndex: collision.deflectorIndex,
-    done: base.done,
+    ...afterFret,
+    deflectorCollisionIndex:
+      orbit.deflectorCollision &&
+      elapsedMs >=
+        orbit.deflectorCollision.timeMs
+        ? orbit.deflectorCollision
+            .deflectorIndex
+        : null,
+    fretCollisionIndex:
+      orbit.fretCollision &&
+      elapsedMs >=
+        orbit.fretCollision.timeMs
+        ? orbit.fretCollision.separatorIndex
+        : null,
   };
 }
 
-export function getBallOrbitRevolutions(orbit: BallOrbit) {
-  const end = sampleBallOrbit(orbit, orbit.durationMs);
-  return Math.abs(end.angle - orbit.startAngle) / TAU;
+export function getBallOrbitRevolutions(
+  orbit: BallOrbit,
+) {
+  const end = sampleBallOrbit(
+    orbit,
+    orbit.durationMs,
+  );
+  return (
+    Math.abs(
+      end.angle - orbit.startAngle,
+    ) / TAU
+  );
 }

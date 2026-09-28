@@ -102,7 +102,10 @@ export function mountRoulette(app: HTMLDivElement) {
     if (activeRotorSpin || activeBallOrbit) return;
 
     activeRotorSpin = createRotorSpin(viewState.rotorAngle, 1);
-    activeBallOrbit = createBallOrbit(viewState.ballAngle);
+    activeBallOrbit = createBallOrbit(
+      viewState.ballAngle,
+      activeRotorSpin,
+    );
 
     const initialBallSample = sampleBallOrbit(activeBallOrbit, 0);
     viewState.ballAngle = initialBallSample.angle;

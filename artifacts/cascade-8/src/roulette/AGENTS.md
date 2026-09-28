@@ -15,15 +15,16 @@
 - Winning outcomes will later come from simulation state, not target-number steering, snapping, magnets, or post-selection.
 
 ## Current milestones
-- 2026-09-28 — Part 11 fixed deflectors + collision response implemented — four small gold lozenge deflectors now sit in the fixed transition band between the ball track and rotating number ring. During descent, the ball trajectory is scanned against their real polar geometry; the first actual overlap produces deterministic energy loss plus damped tangential and outward impulses before inward descent resumes. Collision timing/index come only from ball radius/angle versus fixed deflector geometry; no target pocket or result lookup is involved. Next: Part 12 moves from the transition band into the rotating pocket/fret zone and introduces rotor-relative separator contact.
-- 2026-09-28 — Part 10 inward descent implemented — ball motion is two-stage and speed-driven: it stays locked to the canonical outer track while angular velocity is above 9 rad/s, then an exponential inward radial pull begins automatically as angular speed falls.
-- 2026-09-28 — Part 9 visual ball layer implemented — a shaded ivory ball with contact shadow/specular highlight renders as an independent layer on the fixed outer track and orbits counter to the rotor.
-- 2026-09-28 — Part 8 fixed outer ball track implemented — a dedicated stator-side annular channel sits between the rotating number ring and outer gold markers.
-- 2026-09-28 — Part 7 rotor spin motion implemented — the rotor uses a deterministic impulse + exponential-drag model.
-- 2026-09-28 — Part 6 stator/rotor separation implemented — the fixed outer rim and rotating inner assembly render independently.
-- 2026-09-28 — Part 5 material polish implemented — wood/gold material depth and deterministic grain were added.
-- 2026-09-28 — Part 4 center mechanism implemented — the reference-style four-arm gold center assembly was added.
-- 2026-09-28 — Part 3 green pocket ring implemented — the broad green 37-sector pocket annulus and gold separators were added.
-- 2026-09-28 — Part 2 number ring refinement implemented — canonical number band typography/colors/rails were refined.
-- 2026-09-28 — Part 1 wheel geometry implemented — responsive procedural Canvas geometry and canonical European order were established.
+- 2026-09-28 — Part 12 rotor-relative fret entry implemented — ball motion now has a third speed-driven pocket-entry stage after the fixed-deflector descent. The ball crosses into the green pocket annulus, compares its world angle against all 37 separator angles after applying the live rotor transform, and records the first real separator overlap. Contact reflects rotor-relative tangential velocity with restitution plus a small damped outward radial impulse; no pocket number is selected or looked up. The active rotor spin is now passed into ball simulation so separator geometry is evaluated at the correct rotating angle. Next: Part 13 supports repeated pocket/fret bounces with cumulative energy loss instead of only the first fret contact.
+- 2026-09-28 — Part 11 fixed deflectors + collision response implemented — four small fixed gold deflectors use real polar overlap during descent; the first contact creates deterministic damped tangential/outward response.
+- 2026-09-28 — Part 10 inward descent implemented — ball motion is speed-driven from fixed outer track into the transition band.
+- 2026-09-28 — Part 9 visual ball layer implemented — the shaded ivory ball renders and orbits independently.
+- 2026-09-28 — Part 8 fixed outer ball track implemented.
+- 2026-09-28 — Part 7 rotor spin motion implemented.
+- 2026-09-28 — Part 6 stator/rotor separation implemented.
+- 2026-09-28 — Part 5 material polish implemented.
+- 2026-09-28 — Part 4 center mechanism implemented.
+- 2026-09-28 — Part 3 green pocket ring implemented.
+- 2026-09-28 — Part 2 number ring refinement implemented.
+- 2026-09-28 — Part 1 wheel geometry implemented.
 - 2026-09-28 — Clean Roulette 2D category initialized. Reference-led wheel reconstruction is the active direction.

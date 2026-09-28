@@ -1,102 +1,176 @@
 import { describe, expect, it } from "vitest";
 import {
   BALL_TRACK_STYLE,
-  DEFLECTOR_STYLE,
   WHEEL_GEOMETRY,
 } from "./config";
 import {
   BALL_ORBIT_PROFILE,
   createBallOrbit,
-  getBallDescentStartMs,
   getBallOrbitDurationMs,
   getBallOrbitRevolutions,
+  getBallSpeedThresholdMs,
   sampleBallOrbit,
 } from "./ballMotion";
+import { createRotorSpin } from "./spinMotion";
 
-describe("roulette ball descent and deflector collision", () => {
-  it("runs counter to the rotor before beginning inward descent", () => {
+describe("roulette ball rotor-relative fret entry", () => {
+  it("uses speed thresholds for descent and pocket entry", () => {
     const orbit = createBallOrbit();
 
-    expect(orbit.direction).toBe(-1);
-    expect(orbit.initialAngularVelocity).toBe(
-      BALL_ORBIT_PROFILE.initialAngularVelocity,
+    expect(orbit.trackRadius).toBe(
+      BALL_TRACK_STYLE.pathRadius,
     );
-    expect(orbit.trackRadius).toBe(BALL_TRACK_STYLE.pathRadius);
     expect(orbit.descentStartMs).toBeGreaterThan(3000);
     expect(orbit.descentStartMs).toBeLessThan(3300);
+    expect(orbit.pocketEntryStartMs).toBeGreaterThan(5200);
+    expect(orbit.pocketEntryStartMs).toBeLessThan(5500);
+    expect(orbit.pocketEntryStartMs).toBeGreaterThan(
+      orbit.descentStartMs,
+    );
     expect(orbit.durationMs).toBeGreaterThan(8500);
     expect(orbit.durationMs).toBeLessThan(10000);
-    expect(getBallOrbitRevolutions(orbit)).toBeGreaterThan(9);
+    expect(getBallOrbitRevolutions(orbit)).toBeGreaterThan(8);
   });
 
-  it("holds the track radius while angular speed is above the descent threshold", () => {
+  it("moves from the track through the transition band into the pocket zone", () => {
     const orbit = createBallOrbit(0.8);
-    const beforeDescent = sampleBallOrbit(
+
+    const track = sampleBallOrbit(
       orbit,
       orbit.descentStartMs - 1,
     );
-    const atDescent = sampleBallOrbit(
+    const descent = sampleBallOrbit(
       orbit,
-      orbit.descentStartMs,
+      orbit.descentStartMs + 1200,
+    );
+    const pocketEntry = sampleBallOrbit(
+      orbit,
+      orbit.pocketEntryStartMs + 1800,
     );
 
-    expect(beforeDescent.phase).toBe("track");
-    expect(beforeDescent.radiusRatio).toBeCloseTo(orbit.trackRadius);
-    expect(beforeDescent.radialVelocityRatioPerSecond).toBe(0);
-    expect(atDescent.radiusRatio).toBeCloseTo(orbit.trackRadius);
+    expect(track.phase).toBe("track");
+    expect(track.radiusRatio).toBeCloseTo(
+      orbit.trackRadius,
+    );
+
+    expect(descent.radiusRatio).toBeLessThan(
+      orbit.trackRadius,
+    );
+
+    expect(pocketEntry.radiusRatio).toBeLessThan(
+      WHEEL_GEOMETRY.numberOuterRadius,
+    );
+    expect(pocketEntry.radiusRatio).toBeGreaterThanOrEqual(
+      orbit.pocketEntryTargetRadius,
+    );
   });
 
-  it("finds the first collision from fixed deflector geometry rather than a target pocket", () => {
-    const orbit = createBallOrbit();
+  it("finds first fret contact from ball angle versus the rotating separator geometry", () => {
+    const rotorSpin = createRotorSpin(0.37, 1);
+    const orbit = createBallOrbit(-0.72, rotorSpin);
 
-    expect(DEFLECTOR_STYLE.count).toBe(4);
-    expect(orbit.collision).not.toBeNull();
-    expect(orbit.collision!.timeMs).toBeGreaterThan(orbit.descentStartMs);
-    expect(orbit.collision!.timeMs).toBeLessThan(orbit.durationMs);
-    expect(orbit.collision!.deflectorIndex).toBeGreaterThanOrEqual(0);
-    expect(orbit.collision!.deflectorIndex).toBeLessThan(DEFLECTOR_STYLE.count);
+    expect(orbit.fretCollision).not.toBeNull();
+    expect(orbit.fretCollision!.timeMs).toBeGreaterThan(
+      orbit.pocketEntryStartMs,
+    );
+    expect(orbit.fretCollision!.timeMs).toBeLessThan(
+      orbit.durationMs,
+    );
+    expect(
+      orbit.fretCollision!.separatorIndex,
+    ).toBeGreaterThanOrEqual(0);
+    expect(
+      orbit.fretCollision!.separatorIndex,
+    ).toBeLessThan(37);
+    expect(
+      Math.abs(
+        orbit.fretCollision!
+          .relativeAngularVelocityBefore,
+      ),
+    ).toBeGreaterThan(0);
   });
 
-  it("applies a brief outward/tangential response after geometric contact", () => {
-    const orbit = createBallOrbit();
-    const collision = orbit.collision!;
-    const before = sampleBallOrbit(orbit, collision.timeMs - 16);
-    const impact = sampleBallOrbit(orbit, collision.timeMs + 80);
-    const later = sampleBallOrbit(orbit, collision.timeMs + 900);
+  it("reflects rotor-relative tangential speed at first fret contact", () => {
+    const rotorSpin = createRotorSpin(0.37, 1);
+    const orbit = createBallOrbit(-0.72, rotorSpin);
+    const collision = orbit.fretCollision!;
 
-    expect(before.collisionIndex).toBeNull();
-    expect(impact.collisionIndex).toBe(collision.deflectorIndex);
-    expect(impact.phase).toBe("deflector");
-    expect(impact.radiusRatio).toBeGreaterThanOrEqual(before.radiusRatio - 0.02);
+    const before = sampleBallOrbit(
+      orbit,
+      collision.timeMs - 8,
+    );
+    const impact = sampleBallOrbit(
+      orbit,
+      collision.timeMs + 48,
+    );
+    const later = sampleBallOrbit(
+      orbit,
+      collision.timeMs + 900,
+    );
+
+    expect(before.fretCollisionIndex).toBeNull();
+    expect(impact.fretCollisionIndex).toBe(
+      collision.separatorIndex,
+    );
+    expect(impact.phase).toBe("fret");
     expect(impact.angularVelocity).toBeGreaterThan(0);
-    expect(later.phase).toBe("descent");
+    expect(impact.radiusRatio).toBeGreaterThanOrEqual(
+      orbit.pocketEntryTargetRadius,
+    );
+    expect(later.phase).not.toBe("fret");
   });
 
-  it("continues inward after the collision and hands off above the pocket ring", () => {
+  it("hands off inside the pocket ring without selecting a winning pocket", () => {
     const orbit = createBallOrbit();
-    const end = sampleBallOrbit(orbit, orbit.durationMs);
+    const end = sampleBallOrbit(
+      orbit,
+      orbit.durationMs,
+    );
 
     expect(end.phase).toBe("handoff");
-    expect(end.radiusRatio).toBeCloseTo(orbit.descentTargetRadius);
+    expect(end.radiusRatio).toBeCloseTo(
+      orbit.pocketEntryTargetRadius,
+    );
     expect(end.radialVelocityRatioPerSecond).toBe(0);
     expect(end.angularVelocity).toBe(0);
     expect(end.done).toBe(true);
 
-    expect(orbit.descentTargetRadius).toBeLessThan(
-      WHEEL_GEOMETRY.numberOuterRadius,
-    );
-    expect(orbit.descentTargetRadius).toBeGreaterThan(
+    expect(orbit.pocketEntryTargetRadius).toBeLessThan(
       WHEEL_GEOMETRY.pocketOuterRadius,
+    );
+    expect(orbit.pocketEntryTargetRadius).toBeGreaterThan(
+      WHEEL_GEOMETRY.pocketInnerRadius,
     );
   });
 
-  it("rejects invalid motion duration parameters", () => {
-    expect(getBallOrbitDurationMs(0, 0.2, 1)).toBe(0);
-    expect(getBallOrbitDurationMs(10, 0, 1)).toBe(0);
-    expect(getBallOrbitDurationMs(10, 0.2, 10)).toBe(0);
+  it("rejects invalid speed threshold inputs", () => {
+    expect(
+      getBallOrbitDurationMs(0, 0.2, 1),
+    ).toBe(0);
+    expect(
+      getBallOrbitDurationMs(10, 0, 1),
+    ).toBe(0);
+    expect(
+      getBallOrbitDurationMs(10, 0.2, 10),
+    ).toBe(0);
 
-    expect(getBallDescentStartMs(0, 0.2, 5)).toBe(0);
-    expect(getBallDescentStartMs(10, 0, 5)).toBe(0);
-    expect(getBallDescentStartMs(10, 0.2, 10)).toBe(0);
+    expect(
+      getBallSpeedThresholdMs(0, 0.2, 5),
+    ).toBe(0);
+    expect(
+      getBallSpeedThresholdMs(10, 0, 5),
+    ).toBe(0);
+    expect(
+      getBallSpeedThresholdMs(10, 0.2, 10),
+    ).toBe(0);
+  });
+
+  it("does not expose any target-number input in the motion profile", () => {
+    expect(
+      "targetNumber" in BALL_ORBIT_PROFILE,
+    ).toBe(false);
+    expect(
+      "targetPocket" in BALL_ORBIT_PROFILE,
+    ).toBe(false);
   });
 });
