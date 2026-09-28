@@ -38,3 +38,12 @@ export {
   renderBlackjackBettingPanel,
 } from "./bettingView";
 export type { BlackjackBettingPanelViewModel } from "./bettingView";
+
+export {
+  buildBlackjackTableViewModelFromSnapshot,
+  getBlackjackVisibleCardTotal,
+} from "./snapshotView";
+export type {
+  BlackjackPublicSnapshotViewSource,
+  BlackjackSnapshotViewContext,
+} from "./snapshotView";

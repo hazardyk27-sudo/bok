@@ -4,7 +4,9 @@ import {
   BLACKJACK_ROUTE,
   BLACKJACK_SHELL_MARKUP,
   BLACKJACK_TABLE_SEAT_NUMBERS,
+  buildBlackjackTableViewModelFromSnapshot,
   renderBlackjackTableShell,
+  type BlackjackPublicSnapshotViewSource,
 } from "./index";
 
 describe("blackjack responsive table foundation", () => {
@@ -130,4 +132,201 @@ describe("blackjack responsive table foundation", () => {
       }),
     ).toThrow(/exactly five seats/);
   });
+
+  it("binds authoritative public snapshots into the five-seat table view", () => {
+    const snapshot: BlackjackPublicSnapshotViewSource = {
+      serverTimeMs: 10_000,
+      tableId: "table-view",
+      phase: "PLAYER_TURNS",
+      maxSeats: 5,
+      seats: [
+        { seatNumber: 1, playerId: "player-1" },
+        { seatNumber: 2, playerId: null },
+        { seatNumber: 3, playerId: "player-local" },
+        { seatNumber: 4, playerId: null },
+        { seatNumber: 5, playerId: null },
+      ],
+      players: [
+        {
+          playerId: "player-1",
+          seatNumber: 1,
+          status: "PLAYING",
+          connected: false,
+        },
+        {
+          playerId: "player-local",
+          seatNumber: 3,
+          status: "PLAYING",
+          connected: true,
+        },
+      ],
+      round: {
+        phase: "PLAYER_TURNS",
+        hands: [
+          {
+            handId: "hand-1",
+            playerId: "player-1",
+            seatNumber: 1,
+            cards: [
+              { suit: "SPADES", rank: "10" },
+              { suit: "HEARTS", rank: "7" },
+            ],
+            betCents: 25_000,
+            status: "STOOD",
+          },
+          {
+            handId: "hand-local",
+            playerId: "player-local",
+            seatNumber: 3,
+            cards: [
+              { suit: "CLUBS", rank: "A" },
+              { suit: "DIAMONDS", rank: "K" },
+            ],
+            betCents: 100_000,
+            status: "ACTIVE",
+          },
+        ],
+        dealer: {
+          cards: [{ suit: "HEARTS", rank: "10" }, null],
+          holeCardRevealed: false,
+        },
+        currentTurn: {
+          seatNumber: 3,
+          handId: "hand-local",
+          startedAtMs: 5_000,
+          endsAtMs: 16_000,
+        },
+        bettingClosesAtMs: 4_000,
+      },
+      stateVersion: 12,
+      eventSequence: 18,
+    };
+
+    const model = buildBlackjackTableViewModelFromSnapshot(snapshot, {
+      localPlayerId: "player-local",
+      availableBalanceCents: 500_000,
+    });
+
+    expect(model.phaseLabel).toBe("PLAYER TURNS");
+    expect(model.turnLabel).toBe("YOUR TURN · 6s");
+    expect(model.dealerTotalLabel).toBe("10 + ?");
+    expect(model.balanceLabel).toBe("5K");
+    expect(model.betLabel).toBe("1K");
+
+    const localSeat = model.seats.find((seat) => seat.seatNumber === 3);
+    expect(localSeat).toMatchObject({
+      label: "YOUR SEAT",
+      status: "ACTIVE",
+      total: 21,
+      betLabel: "1K",
+      isLocal: true,
+    });
+
+    const offlineSeat = model.seats.find((seat) => seat.seatNumber === 1);
+    expect(offlineSeat?.label).toBe("PLAYER 1 · OFFLINE");
+    expect(model.seats.find((seat) => seat.seatNumber === 2)?.status).toBe(
+      "EMPTY",
+    );
+  });
+
+  it("uses the current split hand for the seat total while summing all split stakes", () => {
+    const snapshot: BlackjackPublicSnapshotViewSource = {
+      serverTimeMs: 20_000,
+      tableId: "split-view",
+      phase: "PLAYER_TURNS",
+      maxSeats: 5,
+      seats: [
+        { seatNumber: 1, playerId: null },
+        { seatNumber: 2, playerId: null },
+        { seatNumber: 3, playerId: "player-local" },
+        { seatNumber: 4, playerId: null },
+        { seatNumber: 5, playerId: null },
+      ],
+      players: [
+        {
+          playerId: "player-local",
+          seatNumber: 3,
+          status: "PLAYING",
+          connected: true,
+        },
+      ],
+      round: {
+        phase: "PLAYER_TURNS",
+        hands: [
+          {
+            handId: "left",
+            playerId: "player-local",
+            seatNumber: 3,
+            cards: [
+              { suit: "CLUBS", rank: "10" },
+              { suit: "DIAMONDS", rank: "10" },
+            ],
+            betCents: 100_000,
+            status: "STOOD",
+          },
+          {
+            handId: "right",
+            playerId: "player-local",
+            seatNumber: 3,
+            cards: [
+              { suit: "HEARTS", rank: "9" },
+              { suit: "SPADES", rank: "7" },
+            ],
+            betCents: 100_000,
+            status: "ACTIVE",
+          },
+        ],
+        dealer: {
+          cards: [
+            { suit: "HEARTS", rank: "A" },
+            { suit: "SPADES", rank: "6" },
+          ],
+          holeCardRevealed: true,
+        },
+        currentTurn: {
+          seatNumber: 3,
+          handId: "right",
+          startedAtMs: 18_000,
+          endsAtMs: 30_000,
+        },
+        bettingClosesAtMs: null,
+      },
+      stateVersion: 20,
+      eventSequence: 30,
+    };
+
+    const model = buildBlackjackTableViewModelFromSnapshot(snapshot, {
+      localPlayerId: "player-local",
+    });
+    const localSeat = model.seats.find((seat) => seat.seatNumber === 3);
+
+    expect(localSeat?.total).toBe(16);
+    expect(localSeat?.betLabel).toBe("2K");
+    expect(model.betLabel).toBe("2K");
+    expect(model.dealerTotalLabel).toBe("17");
+  });
+
+  it("rejects malformed public snapshots before rendering", () => {
+    const malformed = {
+      serverTimeMs: 0,
+      tableId: "bad-table",
+      phase: "TABLE_IDLE",
+      maxSeats: 5,
+      seats: [
+        { seatNumber: 1, playerId: null },
+        { seatNumber: 2, playerId: null },
+        { seatNumber: 3, playerId: null },
+        { seatNumber: 4, playerId: null },
+      ],
+      players: [],
+      round: null,
+      stateVersion: 0,
+      eventSequence: 0,
+    } as unknown as BlackjackPublicSnapshotViewSource;
+
+    expect(() =>
+      buildBlackjackTableViewModelFromSnapshot(malformed),
+    ).toThrow(/exactly five seats/);
+  });
+
 });
