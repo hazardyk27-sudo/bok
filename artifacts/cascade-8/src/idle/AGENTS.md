@@ -18,7 +18,7 @@ An Idle commit never publishes itself to Replit; only the central one-game promo
 - If a task appears to require Hub, another game, wallet/platform, shared router/build/schema files, stop and hand it to the central integration conversation.
 
 ## Milestone continuity
-- Read `Current milestones` before starting substantial work in this category.
+- At the start of a new conversation, read this file and `Current milestones` once. Keep them in context and do not re-read them for each later command unless the rules/milestones actually changed or the conversation switches category/repository.
 - Add a milestone only for durable state that the next agent would otherwise have to rediscover: an important decision, completed phase, validated baseline, major root cause/blocker, or next agreed checkpoint.
 - Do not log routine micro-edits, every commit, raw test output, failed experiments, or temporary observations.
 - Keep the list curated and short (normally 5–10 bullets), newest first. Replace or remove superseded items instead of appending forever.
