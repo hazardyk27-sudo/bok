@@ -32,6 +32,7 @@ import { splitBlackjackCurrentHand } from "./split";
 import {
   closeBlackjackBettingWindow,
   startBlackjackInitialDeal,
+  startBlackjackNextBettingRound,
   type BlackjackRoundFlowAccount,
 } from "./roundFlow";
 import { standBlackjackCurrentHand } from "./stand";
@@ -137,6 +138,12 @@ export type BlackjackDealerTurnCoordinatorResult = Readonly<{
 export type BlackjackSettlementCoordinatorResult = Readonly<{
   table: BlackjackTable;
   hands: readonly BlackjackSettlementHandSummary[];
+  queueSequence: number;
+  replayed: boolean;
+}>;
+
+export type BlackjackNextBettingRoundCoordinatorResult = Readonly<{
+  table: BlackjackTable;
   queueSequence: number;
   replayed: boolean;
 }>;
@@ -537,6 +544,42 @@ export class BlackjackPlayerActionCoordinator {
         table:committed,
         queueSequence,
         replayed:false,
+      });
+    });
+  }
+
+  startNextBettingRound(
+    nowMs: number,
+    input: {
+      bettingWindowMs?: number;
+      createFreshShoe?: () => BlackjackShoe;
+    } = {},
+  ): Promise<BlackjackNextBettingRoundCoordinatorResult> {
+    assertNowMs(nowMs);
+
+    return this.queue.enqueue(({ queueSequence }) => {
+      const result=startBlackjackNextBettingRound({
+        table:this.tableState,
+        bettingPositions:Object.freeze(
+          Array.from(this.bettingPositions.values()),
+        ),
+        nowMs,
+        bettingWindowMs:input.bettingWindowMs,
+        createFreshShoe:input.createFreshShoe,
+      });
+
+      this.tableState=result.table;
+      if(!result.replayed){
+        this.bettingPositions.clear();
+        for(const position of result.bettingPositions){
+          this.bettingPositions.set(position.playerId,position);
+        }
+      }
+
+      return Object.freeze({
+        table:this.tableState,
+        queueSequence,
+        replayed:result.replayed,
       });
     });
   }

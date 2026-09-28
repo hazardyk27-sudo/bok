@@ -21,6 +21,9 @@ import {
   prepareBlackjackShoeBeforeRound,
   shouldReshuffleBlackjackBeforeRound,
 } from "./lifecycle";
+
+export const BLACKJACK_BETTING_WINDOW_MS = 10_000 as const;
+const BLACKJACK_MAX_INITIAL_DEAL_CARDS = 12 as const;
 import { startBlackjackPlayerTurns } from "./turnEngine";
 import type { BlackjackWalletLedgerState } from "./walletLedger";
 
@@ -44,6 +47,12 @@ export type BlackjackInitialDealFlowResult = Readonly<{
   accounts: readonly BlackjackRoundFlowAccount[];
   participants: readonly BlackjackInitialDealParticipant[];
   dealEvents: readonly BlackjackInitialDealEvent[];
+  replayed: boolean;
+}>;
+
+export type BlackjackNextBettingRoundResult = Readonly<{
+  table: BlackjackTable;
+  bettingPositions: readonly BlackjackBettingPosition[];
   replayed: boolean;
 }>;
 
@@ -442,6 +451,150 @@ export function startBlackjackInitialDeal(input: {
     ),
     participants,
     dealEvents:deal.events,
+    replayed:false,
+  });
+}
+
+
+function safeAddMs(startMs: number, durationMs: number): number {
+  const value=startMs+durationMs;
+  if(!Number.isSafeInteger(value)){
+    throw new RangeError("Blackjack betting deadline exceeds safe integer range");
+  }
+  return value;
+}
+
+export function startBlackjackNextBettingRound(input: {
+  table: BlackjackTable;
+  bettingPositions: readonly BlackjackBettingPosition[];
+  nowMs: number;
+  bettingWindowMs?: number;
+  createFreshShoe?: () => BlackjackShoe;
+}): BlackjackNextBettingRoundResult {
+  assertNowMs(input.nowMs);
+
+  if(input.table.phase==="BETTING"){
+    const round=input.table.round;
+    if(round===null || round.phase!=="BETTING"){
+      throw new Error("Blackjack next-round flow found inconsistent BETTING state");
+    }
+    return Object.freeze({
+      table:input.table,
+      bettingPositions:Object.freeze([...input.bettingPositions]),
+      replayed:true,
+    });
+  }
+
+  if(input.table.phase!=="ROUND_END"){
+    throw new Error("Blackjack next betting round requires ROUND_END phase");
+  }
+  const previousRound=input.table.round;
+  if(
+    previousRound===null ||
+    previousRound.phase!=="ROUND_END" ||
+    previousRound.currentTurn!==null ||
+    previousRound.hands.some((hand)=>hand.status!=="COMPLETE")
+  ){
+    throw new Error("Blackjack next betting round requires a settled round");
+  }
+
+  const activePlayers=input.table.players.filter(
+    (player)=>player.connected && player.status!=="DISCONNECTED",
+  );
+  if(activePlayers.length===0){
+    return Object.freeze({
+      table:input.table,
+      bettingPositions:Object.freeze(
+        input.bettingPositions.filter(
+          (position)=>position.roundId!==previousRound.roundId,
+        ),
+      ),
+      replayed:true,
+    });
+  }
+
+  const bettingWindowMs=input.bettingWindowMs ?? BLACKJACK_BETTING_WINDOW_MS;
+  if(!Number.isSafeInteger(bettingWindowMs) || bettingWindowMs<=0){
+    throw new RangeError(
+      "Blackjack bettingWindowMs must be a positive safe integer",
+    );
+  }
+
+  let shoe=input.table.shoe;
+  if(
+    shouldReshuffleBlackjackBeforeRound(
+      shoe,
+      BLACKJACK_MAX_INITIAL_DEAL_CARDS,
+    )
+  ){
+    if(!input.createFreshShoe){
+      throw new Error(
+        "Blackjack next betting round requires a fresh shoe",
+      );
+    }
+    shoe=prepareBlackjackShoeBeforeRound({
+      currentShoe:shoe,
+      minimumCardsRequired:BLACKJACK_MAX_INITIAL_DEAL_CARDS,
+      createFreshShoe:input.createFreshShoe,
+    });
+  }
+
+  const roundNumber=previousRound.roundNumber+1;
+  if(!Number.isSafeInteger(roundNumber) || roundNumber<1){
+    throw new RangeError("Blackjack roundNumber cannot advance safely");
+  }
+  const roundId=input.table.tableId+":round-"+roundNumber;
+  const bettingClosesAtMs=safeAddMs(input.nowMs,bettingWindowMs);
+
+  const round=Object.freeze({
+    roundId,
+    roundNumber,
+    phase:"BETTING" as const,
+    activeSeatOrder:Object.freeze([]),
+    hands:Object.freeze([]),
+    dealer:Object.freeze({
+      cards:Object.freeze([]),
+      holeCardRevealed:false,
+    }),
+    currentTurn:null,
+    startedAtMs:input.nowMs,
+    bettingClosesAtMs,
+    finishedAtMs:null,
+  });
+
+  const players=Object.freeze(
+    input.table.players.map((player): BlackjackPlayer =>
+      player.connected && player.status!=="DISCONNECTED"
+        ? Object.freeze({
+            ...player,
+            status:"BETTING" as const,
+            handIds:Object.freeze([]),
+          })
+        : player,
+    ),
+  );
+
+  const versioned: BlackjackTable=Object.freeze({
+    ...input.table,
+    phase:"BETTING" as const,
+    players,
+    shoe,
+    round,
+    stateVersion:nextStateVersion(input.table.stateVersion),
+  });
+  const committed=commitBlackjackServerEvent(versioned,{
+    type:"ROUND_PHASE_CHANGED",
+    actionId:null,
+    createdAtMs:input.nowMs,
+  }).table;
+
+  return Object.freeze({
+    table:committed,
+    bettingPositions:Object.freeze(
+      input.bettingPositions.filter(
+        (position)=>position.roundId!==previousRound.roundId,
+      ),
+    ),
     replayed:false,
   });
 }
