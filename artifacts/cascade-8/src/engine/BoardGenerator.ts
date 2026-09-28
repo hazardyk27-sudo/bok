@@ -15,6 +15,7 @@ import {
   BOARD_ROWS,
   BONUS_REEL_CONFIG,
   BONUS_CONFIG,
+  MAX_VISIBLE_NORMAL_SYMBOLS,
   NORMAL_PAIR_COPY_CHANCE,
   NORMAL_THIRD_REPEAT_WEIGHT_FACTOR,
   type NormalSymbolId,
@@ -84,6 +85,15 @@ const weightedChoiceFromRoll = <T>(
   return choices[choices.length - 1].value;
 };
 
+const choicesWithinVisibleSymbolLimit = (
+  choices: readonly { value: NormalSymbolId; weight: number }[],
+  visibleNormalSymbols?: Set<NormalSymbolId>,
+) => {
+  if (!visibleNormalSymbols || visibleNormalSymbols.size < MAX_VISIBLE_NORMAL_SYMBOLS) return choices;
+  const limited = choices.filter((choice) => visibleNormalSymbols.has(choice.value));
+  return limited.length ? limited : choices;
+};
+
 const weightedChoicesWithAttenuatedValue = <T>(
   choices: readonly { value: T; weight: number }[],
   attenuatedValue: T,
@@ -136,8 +146,9 @@ export class ColumnStream {
     context: GenerationContext,
     allowCores = true,
     coreBudget?: CoreBudget,
+    visibleNormalSymbols?: Set<NormalSymbolId>,
   ): BoardCell[] {
-    while (this.queue.length < count) this.appendPosition(context, allowCores, null, coreBudget);
+    while (this.queue.length < count) this.appendPosition(context, allowCores, null, coreBudget, visibleNormalSymbols);
     return this.queue.splice(0, count);
   }
 
@@ -146,9 +157,10 @@ export class ColumnStream {
     allowCores: boolean,
     visibleTopSymbol: NormalSymbolId | null,
     coreBudget?: CoreBudget,
+    visibleNormalSymbols?: Set<NormalSymbolId>,
   ): VisibleAwareEmission {
     const emission = this.queue.length === 0
-      ? this.appendPosition(context, allowCores, visibleTopSymbol, coreBudget)
+      ? this.appendPosition(context, allowCores, visibleTopSymbol, coreBudget, visibleNormalSymbols)
       : undefined;
     const cell = this.queue.splice(0, 1)[0];
     return {
@@ -163,6 +175,7 @@ export class ColumnStream {
     allowCores: boolean,
     visibleTopSymbol: NormalSymbolId | null = null,
     coreBudget?: CoreBudget,
+    visibleNormalSymbols?: Set<NormalSymbolId>,
   ): VisibleAwareEmission {
     const scatterChance = context === "BASE_INITIAL"
       ? BASE_INITIAL_SCATTER_CHANCE
@@ -223,6 +236,7 @@ export class ColumnStream {
     let stackIndex: 0 | 1;
     let copyRoll: number | undefined;
     let copiedFromVisibleTop: boolean | undefined;
+    const symbolWeights = choicesWithinVisibleSymbolLimit(this.config.symbolWeights, visibleNormalSymbols);
 
     if (isFirst) {
       const symbolRoll = this.source.nextFloat();
@@ -231,13 +245,13 @@ export class ColumnStream {
         symbol = weightedChoiceFromRoll(
           symbolRoll,
           weightedChoicesWithAttenuatedValue(
-            this.config.symbolWeights,
+            symbolWeights,
             visibleTopSymbol,
             thirdRepeatWeightFactor,
           ),
         );
       } else {
-        symbol = weightedChoiceFromRoll(symbolRoll, this.config.symbolWeights);
+        symbol = weightedChoiceFromRoll(symbolRoll, symbolWeights);
       }
       this.pairBaseSymbol = symbol;
       this.activePairId = stackId;
@@ -253,10 +267,10 @@ export class ColumnStream {
           ? visibleTopSymbol
           : weightedChoiceFromRoll(
             (pairRoll - pairCopyChance) / (1 - pairCopyChance),
-            this.config.symbolWeights,
+            symbolWeights,
           );
       } else {
-        symbol = copied ? baseSymbol! : weightedChoice(this.source, this.config.symbolWeights);
+        symbol = copied ? baseSymbol! : weightedChoice(this.source, symbolWeights);
       }
       this.stats.pairCount += 1;
       if (copied) this.stats.copyBranchCount += 1;
@@ -268,6 +282,7 @@ export class ColumnStream {
       stackIndex = 1;
     }
 
+    visibleNormalSymbols?.add(symbol);
     this.queue.push(createNormalSymbolCell(symbol, stackId, stackIndex, 2));
     this.stats.emittedNormal += 1;
     return {
@@ -290,11 +305,18 @@ export function boardFromStreams(
   context: "BASE_INITIAL" | "BONUS_INITIAL",
   coreBudget?: CoreBudget,
 ): Board {
+  const visibleNormalSymbols = new Set<NormalSymbolId>();
   const columns = streams.map((stream) => {
     const column: BoardCell[] = [];
     for (let row = 0; row < BOARD_ROWS; row += 1) {
       const previousRowSymbol = row > 0 ? normalSymbolOf(column[row - 1]) : null;
-      const emission = stream.nextVisibleAware(context, true, previousRowSymbol, coreBudget);
+      const emission = stream.nextVisibleAware(
+        context,
+        true,
+        previousRowSymbol,
+        coreBudget,
+        visibleNormalSymbols,
+      );
       column.push(emission.cell);
     }
     return column;
@@ -351,6 +373,7 @@ export function generateVisibleAwareRefillCell(
   columnIndex = 0,
   visibleTopSymbol: NormalSymbolId | null = null,
   coreBudget = createCoreBudget(mode),
+  visibleNormalSymbols?: Set<NormalSymbolId>,
 ): VisibleAwareEmission {
   const stream = new ColumnStream(
     source,
@@ -362,6 +385,7 @@ export function generateVisibleAwareRefillCell(
     allowCores,
     visibleTopSymbol,
     coreBudget,
+    visibleNormalSymbols,
   );
 }
 
