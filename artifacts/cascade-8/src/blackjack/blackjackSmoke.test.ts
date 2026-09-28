@@ -618,4 +618,70 @@ describe("blackjack responsive table foundation", () => {
     expect(closeCalls).toEqual([[1000, "BLACKJACK_CLIENT_CLOSED"]]);
   });
 
+
+  it("renders authoritative player and dealer card faces while preserving the hidden hole card", () => {
+    const snapshot: BlackjackPublicSnapshotViewSource = {
+      serverTimeMs: 10_000,
+      tableId: "card-table",
+      phase: "PLAYER_TURNS",
+      maxSeats: 5,
+      seats: [
+        { seatNumber: 1, playerId: null },
+        { seatNumber: 2, playerId: null },
+        { seatNumber: 3, playerId: "player-local" },
+        { seatNumber: 4, playerId: null },
+        { seatNumber: 5, playerId: null },
+      ],
+      players: [
+        {
+          playerId: "player-local",
+          seatNumber: 3,
+          status: "PLAYING",
+          connected: true,
+        },
+      ],
+      round: {
+        phase: "PLAYER_TURNS",
+        hands: [
+          {
+            handId: "card-hand",
+            playerId: "player-local",
+            seatNumber: 3,
+            cards: [
+              { suit: "HEARTS", rank: "A" },
+              { suit: "SPADES", rank: "K" },
+            ],
+            betCents: 100_000,
+            status: "ACTIVE",
+          },
+        ],
+        dealer: {
+          cards: [{ suit: "DIAMONDS", rank: "9" }, null],
+          holeCardRevealed: false,
+        },
+        currentTurn: {
+          seatNumber: 3,
+          handId: "card-hand",
+          startedAtMs: 5_000,
+          endsAtMs: 15_000,
+        },
+        bettingClosesAtMs: null,
+      },
+      stateVersion: 3,
+      eventSequence: 4,
+    };
+
+    const model = buildBlackjackTableViewModelFromSnapshot(snapshot, {
+      localPlayerId: "player-local",
+    });
+    const markup = renderBlackjackTableShell(model);
+
+    expect(markup).toContain('data-card-rank="A"');
+    expect(markup).toContain('data-card-suit="HEARTS"');
+    expect(markup).toContain('data-card-rank="K"');
+    expect(markup).toContain('data-card-rank="9"');
+    expect(markup).toContain('data-card-hidden="true"');
+    expect(markup).not.toContain('data-card-rank="null"');
+  });
+
 });

@@ -2,6 +2,11 @@ import { BLACKJACK_DEFAULT_BETTING_PANEL, renderBlackjackBettingPanel } from "./
 
 export const BLACKJACK_TABLE_SEAT_NUMBERS = [1, 2, 3, 4, 5] as const;
 
+export type BlackjackCardViewModel = Readonly<{
+  rank: "A" | "2" | "3" | "4" | "5" | "6" | "7" | "8" | "9" | "10" | "J" | "Q" | "K";
+  suit: "CLUBS" | "DIAMONDS" | "HEARTS" | "SPADES";
+}>;
+
 export type BlackjackTableSeatViewModel = Readonly<{
   seatNumber: 1 | 2 | 3 | 4 | 5;
   label: string;
@@ -9,6 +14,7 @@ export type BlackjackTableSeatViewModel = Readonly<{
   total: number | null;
   betLabel: string | null;
   isLocal: boolean;
+  cards?: readonly BlackjackCardViewModel[];
 }>;
 
 export type BlackjackTableViewModel = Readonly<{
@@ -17,6 +23,7 @@ export type BlackjackTableViewModel = Readonly<{
   betLabel: string;
   turnLabel: string;
   dealerTotalLabel: string;
+  dealerCards?: readonly (BlackjackCardViewModel | null)[];
   seats: readonly BlackjackTableSeatViewModel[];
 }>;
 
@@ -50,6 +57,52 @@ function escapeHtml(value: string): string {
     .replaceAll("'", "&#039;");
 }
 
+function cardSuitSymbol(suit: BlackjackCardViewModel["suit"]): string {
+  switch (suit) {
+    case "CLUBS": return "♣";
+    case "DIAMONDS": return "♦";
+    case "HEARTS": return "♥";
+    case "SPADES": return "♠";
+  }
+}
+
+function renderCard(
+  card: BlackjackCardViewModel | null,
+  className = "",
+): string {
+  if (card === null) {
+    return `<span class="blackjack-card-placeholder blackjack-card-face is-hole ${className}" data-card-hidden="true" aria-label="Hidden card"></span>`;
+  }
+
+  const red = card.suit === "HEARTS" || card.suit === "DIAMONDS";
+  const symbol = cardSuitSymbol(card.suit);
+  return `
+    <span
+      class="blackjack-card-placeholder blackjack-card-face${red ? " is-red" : ""} ${className}"
+      data-card-rank="${card.rank}"
+      data-card-suit="${card.suit}"
+      aria-label="${card.rank} of ${card.suit.toLowerCase()}"
+    >
+      <strong>${card.rank}</strong>
+      <span aria-hidden="true">${symbol}</span>
+    </span>
+  `;
+}
+
+function renderCardStack(
+  cards: readonly (BlackjackCardViewModel | null)[] | undefined,
+  fallbackCount: number,
+  className = "",
+): string {
+  if (cards && cards.length > 0) {
+    return cards.map((card) => renderCard(card, className)).join("");
+  }
+
+  return Array.from({ length: fallbackCount }, () =>
+    `<span class="blackjack-card-placeholder ${className}"></span>`,
+  ).join("");
+}
+
 function renderSeat(seat: BlackjackTableSeatViewModel): string {
   const total =
     seat.total === null
@@ -68,9 +121,8 @@ function renderSeat(seat: BlackjackTableSeatViewModel): string {
       data-local="${seat.isLocal ? "true" : "false"}"
       aria-label="Blackjack seat ${seat.seatNumber}"
     >
-      <div class="blackjack-seat-cards" aria-hidden="true">
-        <span class="blackjack-card-placeholder"></span>
-        <span class="blackjack-card-placeholder"></span>
+      <div class="blackjack-seat-cards" aria-label="Seat ${seat.seatNumber} cards">
+        ${renderCardStack(seat.cards, 2)}
       </div>
       <div class="blackjack-seat-copy">
         <span class="blackjack-seat-label">${escapeHtml(seat.label)}</span>
@@ -116,9 +168,8 @@ export function renderBlackjackTableShell(
               <div class="blackjack-shoe" aria-label="Card shoe">
                 <i></i><i></i><i></i>
               </div>
-              <div class="blackjack-dealer-cards" aria-hidden="true">
-                <span class="blackjack-card-placeholder is-dealer"></span>
-                <span class="blackjack-card-placeholder is-hole"></span>
+              <div class="blackjack-dealer-cards" aria-label="Dealer cards">
+                ${renderCardStack(model.dealerCards, 2, "is-dealer")}
               </div>
               <strong class="blackjack-dealer-total">${escapeHtml(model.dealerTotalLabel)}</strong>
             </section>

@@ -308,6 +308,11 @@ export function buildBlackjackTableViewModelFromSnapshot(
         betLabel:
           totalBetCents === 0 ? null : formatCreditsFromCents(totalBetCents),
         isLocal,
+        cards: Object.freeze(
+          (primaryHand?.cards ?? []).map((card) =>
+            Object.freeze({ rank: card.rank, suit: card.suit }),
+          ),
+        ),
       });
     })
     .sort((left, right) => left.seatNumber - right.seatNumber);
@@ -330,6 +335,13 @@ export function buildBlackjackTableViewModelFromSnapshot(
     betLabel: formatCreditsFromCents(localBetCents),
     turnLabel: resolveTurnLabel(snapshot, localSeatNumber),
     dealerTotalLabel: resolveDealerLabel(snapshot),
+    dealerCards: Object.freeze(
+      (snapshot.round?.dealer.cards ?? []).map((card) =>
+        card === null
+          ? null
+          : Object.freeze({ rank: card.rank, suit: card.suit }),
+      ),
+    ),
     seats: Object.freeze(seats),
   });
 }

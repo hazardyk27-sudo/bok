@@ -218,6 +218,48 @@ body {
   transform: translateY(5px) rotate(4deg);
 }
 
+.blackjack-card-face {
+  position: relative;
+  display: grid;
+  place-items: center;
+  align-content: center;
+  gap: 1px;
+  overflow: hidden;
+  color: #151816;
+  background: #f5f1e7;
+  font-family: Georgia, "Times New Roman", serif;
+}
+
+.blackjack-card-face strong {
+  font-size: 14px;
+  line-height: 1;
+}
+
+.blackjack-card-face > span {
+  font-size: 15px;
+  line-height: 1;
+}
+
+.blackjack-card-face.is-red {
+  color: #a91f2a;
+}
+
+.blackjack-card-face.is-hole,
+.blackjack-card-face.is-dealer.is-hole {
+  color: transparent;
+  background:
+    repeating-linear-gradient(45deg, #111613 0 4px, #2a342d 4px 8px);
+}
+
+.blackjack-seat .blackjack-card-face strong {
+  font-size: 11px;
+}
+
+.blackjack-seat .blackjack-card-face > span {
+  font-size: 12px;
+}
+
+
 .blackjack-card-placeholder.is-dealer {
   background: #f1eee4;
 }
