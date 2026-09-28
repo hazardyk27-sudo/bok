@@ -1,6 +1,9 @@
 import {
   RED_NUMBERS,
 } from "./config";
+import {
+  ROULETTE_CHIP_VALUES,
+} from "./betState";
 
 export type RouletteBetCell = {
   id: string;
@@ -118,6 +121,22 @@ function renderSimpleBet(
 }
 
 export function renderRouletteBetTable() {
+  const chips = ROULETTE_CHIP_VALUES
+    .map(
+      (value) => `
+        <button
+          class="roulette-chip-option chip-${value}"
+          type="button"
+          data-chip-value="${value}"
+          aria-label="Select ${value} chip"
+          aria-pressed="${value === 10 ? "true" : "false"}"
+        >
+          <span>${value}</span>
+        </button>
+      `,
+    )
+    .join("");
+
   const numberCells = Array.from(
     { length: 36 },
     (_, index) =>
@@ -208,6 +227,26 @@ export function renderRouletteBetTable() {
 
         <div class="roulette-outside-bets" aria-label="Outside bets">
           ${outside}
+        </div>
+      </div>
+
+      <div class="roulette-bet-console" aria-label="Roulette wager controls">
+        <div class="roulette-chip-tray" aria-label="Chip values">
+          ${chips}
+        </div>
+
+        <div class="roulette-bet-summary">
+          <span>TOTAL BET</span>
+          <strong data-total-bet>0</strong>
+        </div>
+
+        <div class="roulette-bet-actions">
+          <button type="button" data-undo-bet disabled>UNDO</button>
+          <button type="button" data-clear-bets disabled>CLEAR</button>
+          <button type="button" data-rebet disabled>REBET</button>
+          <button class="roulette-spin-button" type="button" data-spin-button>
+            SPIN
+          </button>
         </div>
       </div>
     </section>
