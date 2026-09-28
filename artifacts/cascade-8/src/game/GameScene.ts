@@ -87,19 +87,19 @@ export class GameScene extends Phaser.Scene {
     NORMAL_SYMBOLS.forEach((symbol) => {
       if (symbol.logoPath) this.load.image(`club-logo-${symbol.id}`, `${import.meta.env.BASE_URL}${symbol.logoPath}`);
     });
-    this.load.image("scatter-symbol", `${import.meta.env.BASE_URL}special-symbols/scatter.png`);
-    this.load.image(MULTIPLIER_2X_IMAGE_KEY, `${import.meta.env.BASE_URL}special-symbols/2x.png`);
-    this.load.image(MULTIPLIER_3X_IMAGE_KEY, `${import.meta.env.BASE_URL}special-symbols/3x.png`);
-    this.load.image(MULTIPLIER_5X_IMAGE_KEY, `${import.meta.env.BASE_URL}special-symbols/5x.png`);
-    this.load.image(MULTIPLIER_10X_IMAGE_KEY, `${import.meta.env.BASE_URL}special-symbols/10x.png`);
-    this.load.image(MULTIPLIER_15X_IMAGE_KEY, `${import.meta.env.BASE_URL}special-symbols/15x.png`);
-    this.load.image(MULTIPLIER_20X_IMAGE_KEY, `${import.meta.env.BASE_URL}special-symbols/20x.png`);
-    this.load.image(MULTIPLIER_25X_IMAGE_KEY, `${import.meta.env.BASE_URL}special-symbols/25x.png`);
-    this.load.image(MULTIPLIER_50X_IMAGE_KEY, `${import.meta.env.BASE_URL}special-symbols/50x.png`);
-    this.load.image(MULTIPLIER_100X_IMAGE_KEY, `${import.meta.env.BASE_URL}special-symbols/100x.png`);
-    this.load.image(MULTIPLIER_250X_IMAGE_KEY, `${import.meta.env.BASE_URL}special-symbols/250x.png`);
-    this.load.image(MULTIPLIER_500X_IMAGE_KEY, `${import.meta.env.BASE_URL}special-symbols/500x.png`);
-    this.load.image(MULTIPLIER_1000X_IMAGE_KEY, `${import.meta.env.BASE_URL}special-symbols/1000x.png`);
+    this.load.image("scatter-symbol", `${import.meta.env.BASE_URL}special-symbols/scatter.webp`);
+    this.load.image(MULTIPLIER_2X_IMAGE_KEY, `${import.meta.env.BASE_URL}special-symbols/2x.webp`);
+    this.load.image(MULTIPLIER_3X_IMAGE_KEY, `${import.meta.env.BASE_URL}special-symbols/3x.webp`);
+    this.load.image(MULTIPLIER_5X_IMAGE_KEY, `${import.meta.env.BASE_URL}special-symbols/5x.webp`);
+    this.load.image(MULTIPLIER_10X_IMAGE_KEY, `${import.meta.env.BASE_URL}special-symbols/10x.webp`);
+    this.load.image(MULTIPLIER_15X_IMAGE_KEY, `${import.meta.env.BASE_URL}special-symbols/15x.webp`);
+    this.load.image(MULTIPLIER_20X_IMAGE_KEY, `${import.meta.env.BASE_URL}special-symbols/20x.webp`);
+    this.load.image(MULTIPLIER_25X_IMAGE_KEY, `${import.meta.env.BASE_URL}special-symbols/25x.webp`);
+    this.load.image(MULTIPLIER_50X_IMAGE_KEY, `${import.meta.env.BASE_URL}special-symbols/50x.webp`);
+    this.load.image(MULTIPLIER_100X_IMAGE_KEY, `${import.meta.env.BASE_URL}special-symbols/100x.webp`);
+    this.load.image(MULTIPLIER_250X_IMAGE_KEY, `${import.meta.env.BASE_URL}special-symbols/250x.webp`);
+    this.load.image(MULTIPLIER_500X_IMAGE_KEY, `${import.meta.env.BASE_URL}special-symbols/500x.webp`);
+    this.load.image(MULTIPLIER_1000X_IMAGE_KEY, `${import.meta.env.BASE_URL}special-symbols/1000x.webp`);
   }
 
   create() {
