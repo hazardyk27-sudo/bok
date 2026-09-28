@@ -10,7 +10,6 @@
     "simulate": "tsx src/simulation/cli.ts",
     "test": "PORT=4173 BASE_PATH=/ vitest run src",
     "test:mobile": "playwright test --project=android-chrome",
-    "test:mobile:ios": "ROULETTE_IOS=1 playwright test --project=ios-safari",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "test:visual:install": "playwright install chromium",
     "test:visual:cadi": "playwright test -c playwright.visual.config.ts",
