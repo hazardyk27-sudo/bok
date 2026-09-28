@@ -23,6 +23,6 @@ jobs:
       - name: Typecheck
         run: pnpm --filter @workspace/cascade-8 run typecheck
       - name: Initial cap test
-        run: pnpm --filter @workspace/cascade-8 exec vitest run src/engine/BoardGenerator.test.ts -t "caps both Base and Free Spin initial boards"
+        run: PORT=4173 BASE_PATH=/ pnpm --filter @workspace/cascade-8 exec vitest run src/engine/BoardGenerator.test.ts -t "caps both Base and Free Spin initial boards"
       - name: Refill cap test
-        run: pnpm --filter @workspace/cascade-8 exec vitest run src/engine/WinEvaluator.test.ts -t "does not introduce an eighth distinct normal symbol"
+        run: PORT=4173 BASE_PATH=/ pnpm --filter @workspace/cascade-8 exec vitest run src/engine/WinEvaluator.test.ts -t "does not introduce an eighth distinct normal symbol"
