@@ -7,6 +7,52 @@ import {
 import { createBlackjackTableFoundation } from "./seats";
 import { createUnshuffledBlackjackShoe } from "./shoe";
 
+const BLACKJACK_TARGETED_PROMOTION_GATE =
+  process.env.GITHUB_WORKFLOW === "Promote One Game To Replit Preview" ||
+  process.env.GITHUB_WORKFLOW === "Integration Preview Guard" ||
+  process.argv.some((argument) =>
+    argument.replaceAll("\\", "/").endsWith(
+      "src/blackjack/eventStream.test.ts",
+    ),
+  );
+
+if (BLACKJACK_TARGETED_PROMOTION_GATE) {
+  await import("../backendIsolation.test");
+  await import("./actionCoordinator.test");
+  await import("./bettingClose.test");
+  await import("./bettingCoordinator.test");
+  await import("./botSimulation.test");
+  await import("./clientSync.test");
+  await import("./connectionLifecycle.test");
+  await import("./connectionPolicy.test");
+  await import("./emptyTableLifecycle.test");
+  await import("./initialDealFlow.test");
+  await import("./journal.test");
+  await import("./journalRepository.test");
+  await import("./multiclientSync.test");
+  await import("./multiplayerGate.test");
+  await import("./nextRound.test");
+  await import("./privatePlayerState.test");
+  await import("./realtimeActions.test");
+  await import("./reconnect.test");
+  await import("./recovery.test");
+  await import("./roundRealtime.test");
+  await import("./roundRuntime.test");
+  await import("./roundScheduler.test");
+  await import("./routesContract.test");
+  await import("./runtimeAuthorityGate.test");
+  await import("./runtimeRecovery.test");
+  await import("./seatClaim.test");
+  await import("./seatLeave.test");
+  await import("./seatRaceGate.test");
+  await import("./seatRealtimeMultiplayerGate.test");
+  await import("./serverRuntime.test");
+  await import("./snapshotRepository.test");
+  await import("./snapshotState.test");
+  await import("./syncProtocol.test");
+  await import("./websocketActions.test");
+}
+
 function table(): BlackjackTable {
   return createBlackjackTableFoundation({
     tableId: "main-blackjack",

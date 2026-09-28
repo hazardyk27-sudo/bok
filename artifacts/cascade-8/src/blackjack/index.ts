@@ -1,5 +1,10 @@
 import "./blackjack.css";
 import {
+  connectBlackjackRealtimeElement as connectBlackjackRealtimeElementLocal,
+  type BlackjackBrowserRealtimeConnection,
+  type BlackjackBrowserRealtimeOptions,
+} from "./browserRealtime";
+import {
   BLACKJACK_DEFAULT_TABLE_VIEW,
   BLACKJACK_TABLE_SEAT_NUMBERS,
   renderBlackjackTableShell,
@@ -20,6 +25,14 @@ export function mountBlackjack(
   app.innerHTML = renderBlackjackTableShell(model);
 }
 
+export function mountConnectedBlackjack(
+  app: HTMLElement,
+  options: BlackjackBrowserRealtimeOptions = {},
+): BlackjackBrowserRealtimeConnection {
+  mountBlackjack(app);
+  return connectBlackjackRealtimeElementLocal(app,options);
+}
+
 export {
   BLACKJACK_DEFAULT_TABLE_VIEW,
   BLACKJACK_TABLE_SEAT_NUMBERS,
@@ -38,3 +51,75 @@ export {
   renderBlackjackBettingPanel,
 } from "./bettingView";
 export type { BlackjackBettingPanelViewModel } from "./bettingView";
+
+export {
+  buildBlackjackTableViewModelFromSnapshot,
+  getBlackjackVisibleCardTotal,
+} from "./snapshotView";
+export type {
+  BlackjackPublicSnapshotViewSource,
+  BlackjackSnapshotViewContext,
+} from "./snapshotView";
+
+export {
+  bindBlackjackRealtimeElement,
+  bindBlackjackRealtimeView,
+} from "./realtimeClient";
+export type {
+  BlackjackRealtimeCursor,
+  BlackjackRealtimeSocketLike,
+  BlackjackRealtimeViewBindingOptions,
+  BlackjackRealtimeViewController,
+} from "./realtimeClient";
+
+export {
+  BLACKJACK_WEBSOCKET_PATH,
+  buildBlackjackWebSocketUrl,
+  connectBlackjackRealtimeElement,
+} from "./browserRealtime";
+export type {
+  BlackjackBrowserLocation,
+  BlackjackBrowserRealtimeConnection,
+  BlackjackBrowserRealtimeOptions,
+  BlackjackBrowserSocket,
+  BlackjackBrowserSocketFactory,
+} from "./browserRealtime";
+
+export {
+  BLACKJACK_PLAYER_ACTION_TYPES,
+  buildBlackjackPlayerActionMessage,
+  createBlackjackPlayerActionClient,
+  getBlackjackAvailablePlayerActions,
+} from "./playerActionsClient";
+export type {
+  BlackjackPendingPlayerAction,
+  BlackjackPlayerActionClient,
+  BlackjackPlayerActionFeedback,
+  BlackjackPlayerActionMessage,
+  BlackjackPlayerActionType,
+} from "./playerActionsClient";
+
+export {
+  buildBlackjackBettingActionMessage,
+  createBlackjackBettingClient,
+} from "./bettingClient";
+export type {
+  BlackjackBettingActionMessage,
+  BlackjackBettingActionType,
+  BlackjackBettingClient,
+  BlackjackBettingFeedback,
+  BlackjackBettingState,
+  BlackjackPendingBettingAction,
+} from "./bettingClient";
+
+export { createBlackjackPrivatePlayerStateClient } from "./privateStateClient";
+export type {
+  BlackjackPrivatePlayerStateClient,
+  BlackjackPrivatePlayerStateView,
+} from "./privateStateClient";
+
+export { createBlackjackSeatCommandClient } from "./seatClient";
+export type {
+  BlackjackSeatCommandClient,
+  BlackjackSeatCommandPending,
+} from "./seatClient";

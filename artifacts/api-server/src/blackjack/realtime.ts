@@ -6,6 +6,15 @@ import {
   WebSocketServer,
 } from "ws";
 import type { BlackjackPublicSnapshot } from "./publicSnapshot";
+import type { BlackjackPrivatePlayerState } from "./privatePlayerState";
+import {
+  parseBlackjackSeatClaimRequest,
+  parseBlackjackSeatLeaveRequest,
+  type BlackjackSeatClaimAccepted,
+  type BlackjackSeatClaimRequest,
+  type BlackjackSeatLeaveAccepted,
+  type BlackjackSeatLeaveRequest,
+} from "./seatProtocol";
 import {
   claimBlackjackConnection,
   createBlackjackConnectionRegistry,
@@ -21,6 +30,8 @@ import {
 import {
   parseBlackjackRealtimePlayerAction,
   type BlackjackRealtimePlayerActionHandler,
+  type BlackjackRealtimePlayerActionHandlerResult,
+  type BlackjackRealtimePlayerActionTransactionHandler,
 } from "./realtimeActions";
 
 export const BLACKJACK_WS_PATH = "/api/blackjack/ws" as const;
@@ -48,8 +59,31 @@ export type BlackjackRealtimeOptions = Readonly<{
     | null
     | Promise<BlackjackRealtimeIdentity | null>;
   handlePlayerAction?: BlackjackRealtimePlayerActionHandler;
+  handlePlayerActionTransaction?: BlackjackRealtimePlayerActionTransactionHandler;
   createConnectionId?: () => string;
   nowMs?: () => number;
+  onIdentityConnected?: (
+    identity: BlackjackRealtimeIdentity,
+    connectedAtMs: number,
+  ) => void | Promise<void>;
+  onIdentityDisconnected?: (
+    identity: BlackjackRealtimeIdentity,
+    disconnectedAtMs: number,
+  ) => void | Promise<void>;
+  getPrivatePlayerState?: (
+    identity: BlackjackRealtimeIdentity,
+    snapshot: BlackjackPublicSnapshot,
+  ) => BlackjackPrivatePlayerState | null;
+  handleSeatClaimTransaction?: (
+    identity: BlackjackRealtimeIdentity,
+    request: BlackjackSeatClaimRequest,
+    acknowledge: (result: BlackjackSeatClaimAccepted)=>void,
+  ) => void | Promise<void>;
+  handleSeatLeaveTransaction?: (
+    identity: BlackjackRealtimeIdentity,
+    request: BlackjackSeatLeaveRequest,
+    acknowledge: (result: BlackjackSeatLeaveAccepted)=>void,
+  ) => void | Promise<void>;
 }>;
 
 export type BlackjackRealtimeRuntime = Readonly<{
@@ -90,10 +124,32 @@ export function attachBlackjackWebSocket(
   const nowMs = options.nowMs ?? Date.now;
   let closed = false;
 
+  const sendPrivatePlayerState=(
+    socket: WebSocket,
+    snapshot: BlackjackPublicSnapshot,
+  )=>{
+    const identity=identityBySocket.get(socket);
+    if(!identity || !options.getPrivatePlayerState) return;
+    try {
+      const privateState=options.getPrivatePlayerState(
+        identity,
+        snapshot,
+      );
+      if(privateState!==null){
+        send(socket,privateState);
+      }
+    } catch {
+      // Private state is optional enrichment. Never break public realtime.
+    }
+  };
+
   const broadcastSnapshot = (snapshot: BlackjackPublicSnapshot) => {
     if (closed) return;
     const payload = { type: "snapshot", snapshot };
-    for (const socket of connections) send(socket, payload);
+    for (const socket of connections){
+      send(socket, payload);
+      sendPrivatePlayerState(socket,snapshot);
+    }
   };
 
   const unsubscribe = source.subscribe(broadcastSnapshot);
@@ -104,6 +160,7 @@ export function attachBlackjackWebSocket(
       const snapshot = await source.getSnapshot();
       if (!closed) {
         send(socket, buildBlackjackInitialSyncResponse(snapshot));
+        sendPrivatePlayerState(socket,snapshot);
       }
     } catch {
       send(socket, {
@@ -132,6 +189,7 @@ export function attachBlackjackWebSocket(
       const snapshot = await source.getSnapshot();
       if (!closed) {
         send(socket, evaluateBlackjackSyncRequest(snapshot, request));
+        sendPrivatePlayerState(socket,snapshot);
       }
     } catch (error) {
       if (error instanceof RangeError) {
@@ -149,13 +207,96 @@ export function attachBlackjackWebSocket(
     }
   };
 
+  const handleSeatClaimMessage=async(
+    socket: WebSocket,
+    rawMessage: unknown,
+  )=>{
+    if(closed || socket.readyState!==WebSocket.OPEN) return;
+    const identity=identityBySocket.get(socket);
+    if(!identity){
+      send(socket,{type:"SEAT_CLAIM_REJECTED",error:"AUTH_REQUIRED"});
+      return;
+    }
+    if(!options.handleSeatClaimTransaction){
+      send(socket,{type:"SEAT_CLAIM_REJECTED",error:"SEATING_NOT_READY"});
+      return;
+    }
+
+    let request: BlackjackSeatClaimRequest;
+    try {
+      const parsed=parseBlackjackSeatClaimRequest(rawMessage);
+      if(parsed===null) return;
+      request=parsed;
+    } catch {
+      send(socket,{type:"SEAT_CLAIM_REJECTED",error:"INVALID_SEAT_CLAIM"});
+      return;
+    }
+
+    try {
+      await options.handleSeatClaimTransaction(
+        identity,
+        request,
+        (result)=>send(socket,result),
+      );
+    } catch {
+      send(socket,{
+        type:"SEAT_CLAIM_REJECTED",
+        requestId:request.requestId,
+        error:"SEAT_UNAVAILABLE",
+      });
+    }
+  };
+
+  const handleSeatLeaveMessage=async(
+    socket: WebSocket,
+    rawMessage: unknown,
+  )=>{
+    if(closed || socket.readyState!==WebSocket.OPEN) return;
+    const identity=identityBySocket.get(socket);
+    if(!identity){
+      send(socket,{type:"SEAT_LEAVE_REJECTED",error:"AUTH_REQUIRED"});
+      return;
+    }
+    if(!options.handleSeatLeaveTransaction){
+      send(socket,{type:"SEAT_LEAVE_REJECTED",error:"SEATING_NOT_READY"});
+      return;
+    }
+
+    let request: BlackjackSeatLeaveRequest;
+    try {
+      const parsed=parseBlackjackSeatLeaveRequest(rawMessage);
+      if(parsed===null) return;
+      request=parsed;
+    } catch {
+      send(socket,{type:"SEAT_LEAVE_REJECTED",error:"INVALID_SEAT_LEAVE"});
+      return;
+    }
+
+    try {
+      await options.handleSeatLeaveTransaction(
+        identity,
+        request,
+        (result)=>send(socket,result),
+      );
+    } catch {
+      send(socket,{
+        type:"SEAT_LEAVE_REJECTED",
+        requestId:request.requestId,
+        error:"SEAT_LEAVE_NOT_AVAILABLE",
+      });
+    }
+  };
+
   const handlePlayerActionMessage = async (
     socket: WebSocket,
     rawMessage: unknown,
   ) => {
     if (closed || socket.readyState !== WebSocket.OPEN) return;
 
-    if (!options.handlePlayerAction) {
+    if (
+      !options.handlePlayerAction &&
+      !options.handlePlayerActionTransaction
+    ) {
       send(socket, {
         type: "error",
         error: "BLACKJACK_ACTION_PROTOCOL_NOT_READY",
@@ -188,18 +329,28 @@ export function attachBlackjackWebSocket(
         nowMs: nowMs(),
       });
 
-      const result = await options.handlePlayerAction(action);
+      const acknowledge = (
+        result: BlackjackRealtimePlayerActionHandlerResult,
+      ) => {
+        send(socket, {
+          type: "ACTION_ACCEPTED",
+          actionId: result.actionId,
+          replayed: result.replayed,
+          stateVersion: result.snapshot.stateVersion,
+          eventSequence: result.snapshot.eventSequence,
+          ...(result.betting === null ? {} : { betting: result.betting }),
+        });
+      };
 
-      send(socket, {
-        type: "ACTION_ACCEPTED",
-        actionId: result.actionId,
-        replayed: result.replayed,
-        stateVersion: result.snapshot.stateVersion,
-        eventSequence: result.snapshot.eventSequence,
-      });
+      if (options.handlePlayerActionTransaction) {
+        await options.handlePlayerActionTransaction(action, acknowledge);
+      } else {
+        const result = await options.handlePlayerAction!(action);
+        acknowledge(result);
 
-      if (!result.replayed) {
-        broadcastSnapshot(result.snapshot);
+        if (!result.replayed) {
+          broadcastSnapshot(result.snapshot);
+        }
       }
     } catch (error) {
       if (
@@ -275,11 +426,11 @@ export function attachBlackjackWebSocket(
       return;
     }
 
-    connections.add(socket);
     connectionIdBySocket.set(socket, connectionId);
     socketByConnectionId.set(connectionId, socket);
 
     const cleanup = () => {
+      const identity=identityBySocket.get(socket);
       connections.delete(socket);
       connectionIdBySocket.delete(socket);
       socketByConnectionId.delete(connectionId);
@@ -288,6 +439,26 @@ export function attachBlackjackWebSocket(
         connectionRegistry,
         connectionId,
       );
+
+      if(
+        !closed &&
+        identity &&
+        !connectionRegistry.active.some(
+          (candidate)=>candidate.playerId===identity.playerId,
+        )
+      ){
+        try {
+          const pending=options.onIdentityDisconnected?.(
+            identity,
+            nowMs(),
+          );
+          if(pending){
+            void Promise.resolve(pending).catch(()=>undefined);
+          }
+        } catch {
+          // Socket cleanup must never surface an unhandled lifecycle error.
+        }
+      }
     };
     socket.once("close", cleanup);
     socket.once("error", cleanup);
@@ -305,6 +476,11 @@ export function attachBlackjackWebSocket(
           });
           connectionRegistry = claim.registry;
           identityBySocket.set(socket, identity);
+
+          await options.onIdentityConnected?.(
+            identity,
+            claim.active.connectedAtMs,
+          );
 
           for (const replacedConnectionId of claim.replacedConnectionIds) {
             const replacedSocket = socketByConnectionId.get(
@@ -333,6 +509,8 @@ export function attachBlackjackWebSocket(
       }
     }
 
+    connections.add(socket);
+
     socket.on("message", (raw) => {
       const message = parseMessage(raw.toString());
 
@@ -346,6 +524,25 @@ export function attachBlackjackWebSocket(
         )
       ) {
         void handleSync(socket, message);
+        return;
+      }
+
+      if(
+        typeof message==="object" &&
+        message!==null &&
+        "type" in message &&
+        (message as {type?:unknown}).type==="CLAIM_SEAT"
+      ){
+        void handleSeatClaimMessage(socket,message);
+        return;
+      }
+      if(
+        typeof message==="object" &&
+        message!==null &&
+        "type" in message &&
+        (message as {type?:unknown}).type==="LEAVE_SEAT"
+      ){
+        void handleSeatLeaveMessage(socket,message);
         return;
       }
 
