@@ -1,0 +1,28 @@
+name: Temp Slot Seven Symbol Cap Verify
+
+on:
+  push:
+    branches:
+      - tmp/slot-seven-symbol-cap-verify
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.15.0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - name: Install
+        run: pnpm install --frozen-lockfile
+      - name: Typecheck
+        run: pnpm --filter @workspace/cascade-8 run typecheck
+      - name: Initial cap test
+        run: pnpm --filter @workspace/cascade-8 exec vitest run src/engine/BoardGenerator.test.ts -t "caps both Base and Free Spin initial boards"
+      - name: Refill cap test
+        run: pnpm --filter @workspace/cascade-8 exec vitest run src/engine/WinEvaluator.test.ts -t "does not introduce an eighth distinct normal symbol"
