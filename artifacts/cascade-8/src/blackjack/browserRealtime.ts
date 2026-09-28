@@ -208,11 +208,14 @@ function createBlackjackResilientBrowserSocket(
           "code" in event && typeof event.code==="number"
             ? event.code
             : 0;
+        if(code===4001 && !terminalSessionReplaced){
+          terminalSessionReplaced=true;
+          input.onSessionReplaced();
+        }
         if(
           explicitlyClosed ||
           terminalSessionReplaced ||
-          !input.autoReconnect ||
-          code===4001
+          !input.autoReconnect
         ){
           return;
         }
