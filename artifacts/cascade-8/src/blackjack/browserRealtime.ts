@@ -2,6 +2,10 @@ import { createBlackjackBettingClient, type BlackjackBettingClient, type Blackja
 import { doubleBlackjackChipCredits } from "./bettingView";
 import { createBlackjackPlayerActionClient, type BlackjackPlayerActionClient, type BlackjackPlayerActionType } from "./playerActionsClient";
 import {
+  createBlackjackPrivatePlayerStateClient,
+  type BlackjackPrivatePlayerStateClient,
+} from "./privateStateClient";
+import {
   bindBlackjackRealtimeElement,
   type BlackjackRealtimeSocketLike,
   type BlackjackRealtimeViewController,
@@ -51,6 +55,7 @@ export type BlackjackBrowserRealtimeConnection = Readonly<{
   controller: BlackjackRealtimeViewController;
   actions: BlackjackPlayerActionClient;
   betting: BlackjackBettingClient;
+  privateState: BlackjackPrivatePlayerStateClient;
   close: () => void;
 }>;
 
@@ -315,6 +320,7 @@ export function connectBlackjackRealtimeElement(
   const baseViewContext=options.getViewContext ?? (() => ({}));
   let actionClient: BlackjackPlayerActionClient | null=null;
   let bettingClient: BlackjackBettingClient | null=null;
+  let privateStateClient: BlackjackPrivatePlayerStateClient | null=null;
   let controller: BlackjackRealtimeViewController | null=null;
   let selectedChipCredits=100;
   let transportConnected=false;
@@ -358,6 +364,8 @@ export function connectBlackjackRealtimeElement(
     const bettingPending=bettingClient?.getPending() ?? null;
     const bettingFeedback=bettingClient?.getFeedback() ?? null;
     const bettingState=bettingClient?.getState() ?? null;
+    const privateState=privateStateClient?.getState() ?? null;
+    const privateBetting=privateState?.betting ?? null;
 
     let actionStatusLabel: string | null=null;
     let actionStatusTone: "neutral" | "success" | "error"="neutral";
@@ -403,12 +411,20 @@ export function connectBlackjackRealtimeElement(
       ...base,
       transportConnected,
       availableBalanceCents:
-        bettingState?.availableBalanceCents ?? base.availableBalanceCents,
+        privateState?.availableBalanceCents ??
+        bettingState?.availableBalanceCents ??
+        base.availableBalanceCents,
       actionPending:playerPending!==null,
       actionStatusLabel,
       actionStatusTone,
-      bettingBetCents:bettingState?.betCents ?? null,
-      bettingStatus:bettingState?.status ?? null,
+      bettingBetCents:
+        privateBetting?.betCents ??
+        bettingState?.betCents ??
+        null,
+      bettingStatus:
+        privateBetting?.status ??
+        bettingState?.status ??
+        null,
       bettingPending:bettingPending!==null,
       selectedChipCredits,
     };
@@ -437,6 +453,12 @@ export function connectBlackjackRealtimeElement(
     onStateChange:()=>{ activeController.rerenderLatest(); },
   });
   bettingClient=betting;
+  const privateState=createBlackjackPrivatePlayerStateClient({
+    socket,
+    getSnapshot:activeController.getSnapshot,
+    onStateChange:()=>{ activeController.rerenderLatest(); },
+  });
+  privateStateClient=privateState;
 
   const renderTickMs=options.renderTickMs ?? 250;
   if(!Number.isSafeInteger(renderTickMs) || renderTickMs<50){
@@ -501,11 +523,13 @@ export function connectBlackjackRealtimeElement(
     controller:activeController,
     actions,
     betting,
+    privateState,
     close:()=>{
       if(closed) return;
       closed=true;
       app.removeEventListener("click",onClick);
       cancelRender(renderHandle);
+      privateState.detach();
       betting.detach();
       actions.detach();
       activeController.detach();

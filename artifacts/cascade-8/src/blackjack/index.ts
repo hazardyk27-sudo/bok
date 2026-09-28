@@ -98,3 +98,9 @@ export type {
   BlackjackBettingState,
   BlackjackPendingBettingAction,
 } from "./bettingClient";
+
+export { createBlackjackPrivatePlayerStateClient } from "./privateStateClient";
+export type {
+  BlackjackPrivatePlayerStateClient,
+  BlackjackPrivatePlayerStateView,
+} from "./privateStateClient";
