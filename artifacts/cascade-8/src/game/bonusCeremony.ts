@@ -36,7 +36,7 @@ export function renderBonusCeremony(
   elements.scatterRow.className = `bonus-scatter-row count-${scatterCount}`;
   elements.scatterRow.innerHTML = active
     ? Array.from({ length: scatterCount }, (_, index) =>
-      `<span class="bonus-scatter-token" style="--scatter-index:${index}"><img src="${assetBaseUrl}special-symbols/scatter.png" alt="Triggering scatter ${index + 1}"></span>`,
+      `<span class="bonus-scatter-token" style="--scatter-index:${index}"><img src="${assetBaseUrl}special-symbols/scatter.webp" alt="Triggering scatter ${index + 1}"></span>`,
     ).join("")
     : "";
 }
