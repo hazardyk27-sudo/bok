@@ -12,6 +12,9 @@ export type BlackjackSeatClaimAccepted = Readonly<{
   type:"SEAT_CLAIM_ACCEPTED";
   requestId:string;
   seatNumber:1|2|3|4|5;
+  playerId:string;
+  availableBalanceCents:number;
+  reservedBalanceCents:number;
   replayed:boolean;
   stateVersion:number;
   eventSequence:number;

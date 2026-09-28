@@ -391,8 +391,10 @@ export function connectBlackjackRealtimeElement(
     const bettingFeedback=bettingClient?.getFeedback() ?? null;
     const bettingState=bettingClient?.getState() ?? null;
     const privateState=privateStateClient?.getState() ?? null;
+    const privatePlayerId=privateStateClient?.getPlayerId() ?? null;
     const privateBetting=privateState?.betting ?? null;
     const seatPending=seatClient?.getPending() ?? null;
+    const confirmedSeat=seatClient?.getConfirmed() ?? null;
 
     let actionStatusLabel: string | null=null;
     let actionStatusTone: "neutral" | "success" | "error"="neutral";
@@ -452,11 +454,16 @@ export function connectBlackjackRealtimeElement(
       ...base,
       transportConnected,
       connectionState,
-      localPlayerId:privateState?.playerId ?? base.localPlayerId ?? null,
+      localPlayerId:
+        privatePlayerId ??
+        confirmedSeat?.playerId ??
+        base.localPlayerId ??
+        null,
       seatCommandPending:seatPending!==null,
       availableBalanceCents:
         privateState?.availableBalanceCents ??
         bettingState?.availableBalanceCents ??
+        confirmedSeat?.availableBalanceCents ??
         base.availableBalanceCents,
       actionPending:playerPending!==null,
       actionStatusLabel,

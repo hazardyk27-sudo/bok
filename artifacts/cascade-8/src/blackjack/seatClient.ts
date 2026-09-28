@@ -10,11 +10,19 @@ export type BlackjackSeatCommandPending = Readonly<{
   acceptedEventSequence:number|null;
 }>;
 
+export type BlackjackConfirmedSeat = Readonly<{
+  playerId:string;
+  seatNumber:1|2|3|4|5;
+  availableBalanceCents:number;
+  reservedBalanceCents:number;
+}>;
+
 export type BlackjackSeatCommandClient = Readonly<{
   claim:(seatNumber:1|2|3|4|5)=>void;
   leave:()=>void;
   receive:(rawMessage:unknown)=>void;
   getPending:()=>BlackjackSeatCommandPending|null;
+  getConfirmed:()=>BlackjackConfirmedSeat|null;
   detach:()=>void;
 }>;
 
@@ -38,13 +46,44 @@ function snapshotCursor(message:unknown):
   if(
     typeof candidate.stateVersion!=="number" ||
     !Number.isSafeInteger(candidate.stateVersion) ||
+    candidate.stateVersion<0 ||
     typeof candidate.eventSequence!=="number" ||
-    !Number.isSafeInteger(candidate.eventSequence)
+    !Number.isSafeInteger(candidate.eventSequence) ||
+    candidate.eventSequence<0
   ) return null;
   return {
     stateVersion:candidate.stateVersion,
     eventSequence:candidate.eventSequence,
   };
+}
+
+function parseConfirmedSeat(
+  message:Record<string,unknown>,
+):BlackjackConfirmedSeat|null{
+  if(
+    message.type!=="SEAT_CLAIM_ACCEPTED" ||
+    typeof message.playerId!=="string" ||
+    !message.playerId.trim() ||
+    typeof message.seatNumber!=="number" ||
+    !Number.isInteger(message.seatNumber) ||
+    message.seatNumber<1 ||
+    message.seatNumber>5 ||
+    typeof message.availableBalanceCents!=="number" ||
+    !Number.isSafeInteger(message.availableBalanceCents) ||
+    message.availableBalanceCents<0 ||
+    typeof message.reservedBalanceCents!=="number" ||
+    !Number.isSafeInteger(message.reservedBalanceCents) ||
+    message.reservedBalanceCents<0
+  ){
+    return null;
+  }
+
+  return Object.freeze({
+    playerId:message.playerId,
+    seatNumber:message.seatNumber as 1|2|3|4|5,
+    availableBalanceCents:message.availableBalanceCents,
+    reservedBalanceCents:message.reservedBalanceCents,
+  });
 }
 
 export function createBlackjackSeatCommandClient(input:{
@@ -53,6 +92,7 @@ export function createBlackjackSeatCommandClient(input:{
   onPendingChange?:()=>void;
 }):BlackjackSeatCommandClient{
   let pending:BlackjackSeatCommandPending|null=null;
+  let confirmed:BlackjackConfirmedSeat|null=null;
   let detached=false;
   const changed=()=>input.onPendingChange?.();
 
@@ -78,11 +118,12 @@ export function createBlackjackSeatCommandClient(input:{
   };
 
   const receive=(rawMessage:unknown)=>{
-    if(detached || pending===null) return;
+    if(detached) return;
     const message=parse(rawMessage);
     if(!isRecord(message)) return;
 
     if(
+      pending!==null &&
       (
         message.type==="SEAT_CLAIM_REJECTED" ||
         message.type==="SEAT_LEAVE_REJECTED"
@@ -98,15 +139,38 @@ export function createBlackjackSeatCommandClient(input:{
     }
 
     if(
-      (
-        message.type==="SEAT_CLAIM_ACCEPTED" ||
-        message.type==="SEAT_LEAVE_ACCEPTED"
-      ) &&
+      pending!==null &&
+      message.type==="SEAT_CLAIM_ACCEPTED" &&
       message.requestId===pending.requestId &&
       typeof message.stateVersion==="number" &&
       Number.isSafeInteger(message.stateVersion) &&
+      message.stateVersion>=0 &&
       typeof message.eventSequence==="number" &&
-      Number.isSafeInteger(message.eventSequence)
+      Number.isSafeInteger(message.eventSequence) &&
+      message.eventSequence>=0
+    ){
+      const nextConfirmed=parseConfirmedSeat(message);
+      if(nextConfirmed===null) return;
+      confirmed=nextConfirmed;
+      pending=Object.freeze({
+        ...pending,
+        acceptedStateVersion:message.stateVersion,
+        acceptedEventSequence:message.eventSequence,
+      });
+      changed();
+      return;
+    }
+
+    if(
+      pending!==null &&
+      message.type==="SEAT_LEAVE_ACCEPTED" &&
+      message.requestId===pending.requestId &&
+      typeof message.stateVersion==="number" &&
+      Number.isSafeInteger(message.stateVersion) &&
+      message.stateVersion>=0 &&
+      typeof message.eventSequence==="number" &&
+      Number.isSafeInteger(message.eventSequence) &&
+      message.eventSequence>=0
     ){
       pending=Object.freeze({
         ...pending,
@@ -121,11 +185,14 @@ export function createBlackjackSeatCommandClient(input:{
       message.type==="SESSION_REPLACED" ||
       message.type==="error"
     ){
-      pending=null;
-      changed();
+      if(pending!==null){
+        pending=null;
+        changed();
+      }
       return;
     }
 
+    if(pending===null) return;
     const cursor=snapshotCursor(message);
     if(
       cursor &&
@@ -134,6 +201,9 @@ export function createBlackjackSeatCommandClient(input:{
       cursor.stateVersion>=pending.acceptedStateVersion &&
       cursor.eventSequence>=pending.acceptedEventSequence
     ){
+      if(pending.type==="LEAVE_SEAT"){
+        confirmed=null;
+      }
       pending=null;
       changed();
     }
@@ -152,11 +222,13 @@ export function createBlackjackSeatCommandClient(input:{
     leave:()=>start("LEAVE_SEAT",null),
     receive,
     getPending:()=>pending,
+    getConfirmed:()=>confirmed,
     detach:()=>{
       if(detached) return;
       detached=true;
       input.socket.removeEventListener("message",onMessage);
       pending=null;
+      confirmed=null;
     },
   });
 }
