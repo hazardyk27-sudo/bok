@@ -1,6 +1,21 @@
 import "./roulette.css";
 import { renderRouletteBetTable } from "./betTable";
 import {
+  clearRouletteBets,
+  createRouletteBetState,
+  getRouletteBetTotals,
+  getRouletteLastChipByBet,
+  getRouletteTotalStake,
+  isRouletteChipValue,
+  placeRouletteBet,
+  rebetRouletteRound,
+  selectRouletteChip,
+  snapshotRouletteRound,
+  undoRouletteBet,
+  type RouletteBetState,
+  type RouletteChipValue,
+} from "./betState";
+import {
   createBallOrbit,
   sampleBallOrbit,
   type BallOrbit,
@@ -78,9 +93,16 @@ export function mountRoulette(app: HTMLDivElement) {
   const canvas = app.querySelector<HTMLCanvasElement>("[data-roulette-wheel]");
   const page = app.querySelector<HTMLElement>("[data-roulette-page]");
   const betStatus = app.querySelector<HTMLElement>("[data-bet-status]");
+  const betPanel = app.querySelector<HTMLElement>("[data-roulette-bet-panel]");
+  const totalBet = app.querySelector<HTMLElement>("[data-total-bet]");
+  const undoButton = app.querySelector<HTMLButtonElement>("[data-undo-bet]");
+  const clearButton = app.querySelector<HTMLButtonElement>("[data-clear-bets]");
+  const rebetButton = app.querySelector<HTMLButtonElement>("[data-rebet]");
+  const spinButton = app.querySelector<HTMLButtonElement>("[data-spin-button]");
 
   if (!canvas) throw new Error("Roulette canvas was not mounted.");
   if (!page) throw new Error("Roulette page was not mounted.");
+  if (!betPanel) throw new Error("Roulette betting panel was not mounted.");
 
   const initialBallOrbit = createBallOrbit();
 
@@ -91,6 +113,8 @@ export function mountRoulette(app: HTMLDivElement) {
     ballVisible: true,
   };
 
+  let betState: RouletteBetState =
+    createRouletteBetState();
   let activeRotorSpin: RotorSpin | null = null;
   let activeBallOrbit: BallOrbit | null = null;
   let motionStartedAt = 0;
@@ -101,6 +125,94 @@ export function mountRoulette(app: HTMLDivElement) {
     new RouletteAudioEngine();
 
   const redraw = () => renderCanvas(canvas, viewState);
+
+  const renderBetState = () => {
+    const totals =
+      getRouletteBetTotals(
+        betState.placements,
+      );
+    const lastChipByBet =
+      getRouletteLastChipByBet(
+        betState.placements,
+      );
+
+    app
+      .querySelectorAll<HTMLElement>(
+        "[data-bet-id]",
+      )
+      .forEach((cell) => {
+        cell
+          .querySelector(
+            ".roulette-placed-chip",
+          )
+          ?.remove();
+
+        const betId =
+          cell.dataset.betId;
+        if (!betId) return;
+
+        const amount =
+          totals[betId] ?? 0;
+        if (amount <= 0) return;
+
+        const lastChip =
+          lastChipByBet[betId] ?? 10;
+        const chip =
+          document.createElement("span");
+        chip.className =
+          `roulette-placed-chip chip-${lastChip}`;
+        chip.dataset.betAmount =
+          String(amount);
+        chip.textContent =
+          String(amount);
+        cell.append(chip);
+      });
+
+    app
+      .querySelectorAll<HTMLButtonElement>(
+        "[data-chip-value]",
+      )
+      .forEach((button) => {
+        const value = Number(
+          button.dataset.chipValue,
+        );
+        const selected =
+          value ===
+          betState.selectedChip;
+
+        button.classList.toggle(
+          "is-selected",
+          selected,
+        );
+        button.setAttribute(
+          "aria-pressed",
+          String(selected),
+        );
+      });
+
+    const stake =
+      getRouletteTotalStake(
+        betState.placements,
+      );
+    if (totalBet) {
+      totalBet.textContent =
+        String(stake);
+    }
+
+    if (undoButton) {
+      undoButton.disabled =
+        betState.placements.length === 0;
+    }
+    if (clearButton) {
+      clearButton.disabled =
+        betState.placements.length === 0;
+    }
+    if (rebetButton) {
+      rebetButton.disabled =
+        betState.previousRoundPlacements
+          .length === 0;
+    }
+  };
 
   const animate = (timestamp: number) => {
     const elapsedMs = timestamp - motionStartedAt;
@@ -193,6 +305,12 @@ export function mountRoulette(app: HTMLDivElement) {
 
     if (activeRotorSpin || activeBallOrbit) return;
 
+    betState =
+      snapshotRouletteRound(
+        betState,
+      );
+    renderBetState();
+
     canvas.dataset.rouletteState = "spinning";
     page.dataset.phase = "spinning";
     if (betStatus) betStatus.textContent = "NO MORE BETS";
@@ -233,6 +351,106 @@ export function mountRoulette(app: HTMLDivElement) {
   const observer = new ResizeObserver(redraw);
   observer.observe(canvas);
   redraw();
+  renderBetState();
+
+  betPanel.addEventListener(
+    "click",
+    (event) => {
+      if (
+        page.dataset.phase ===
+        "spinning"
+      ) {
+        return;
+      }
+
+      const target =
+        event.target as HTMLElement;
+
+      const chipButton =
+        target.closest<HTMLButtonElement>(
+          "[data-chip-value]",
+        );
+      if (chipButton) {
+        const value = Number(
+          chipButton.dataset.chipValue,
+        );
+        if (
+          isRouletteChipValue(value)
+        ) {
+          betState =
+            selectRouletteChip(
+              betState,
+              value as RouletteChipValue,
+            );
+          renderBetState();
+        }
+        return;
+      }
+
+      const betCell =
+        target.closest<HTMLElement>(
+          "[data-bet-id]",
+        );
+      if (betCell) {
+        const betId =
+          betCell.dataset.betId;
+        if (betId) {
+          betState =
+            placeRouletteBet(
+              betState,
+              betId,
+            );
+          renderBetState();
+        }
+        return;
+      }
+
+      if (
+        target.closest(
+          "[data-undo-bet]",
+        )
+      ) {
+        betState =
+          undoRouletteBet(
+            betState,
+          );
+        renderBetState();
+        return;
+      }
+
+      if (
+        target.closest(
+          "[data-clear-bets]",
+        )
+      ) {
+        betState =
+          clearRouletteBets(
+            betState,
+          );
+        renderBetState();
+        return;
+      }
+
+      if (
+        target.closest(
+          "[data-rebet]",
+        )
+      ) {
+        betState =
+          rebetRouletteRound(
+            betState,
+          );
+        renderBetState();
+      }
+    },
+  );
+
+  spinButton?.addEventListener(
+    "click",
+    () => {
+      void startSpin();
+    },
+  );
 
   canvas.addEventListener("click", () => {
     void startSpin();

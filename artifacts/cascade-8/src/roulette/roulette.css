@@ -292,8 +292,7 @@ button {
 
 .roulette-page[data-phase="settled"] .roulette-bet-panel {
   transform: scale(0.94);
-  opacity: 0.82;
-  pointer-events: none;
+  opacity: 0.88;
 }
 
 @media (max-width: 980px) {
@@ -432,5 +431,221 @@ button {
   .roulette-stage,
   .roulette-bet-cell {
     transition: none;
+  }
+}
+
+
+.roulette-bet-console {
+  margin-top: 12px;
+  display: grid;
+  grid-template-columns: minmax(300px, 1fr) auto;
+  grid-template-areas:
+    "chips summary"
+    "actions actions";
+  gap: 10px 14px;
+  align-items: center;
+}
+
+.roulette-chip-tray {
+  grid-area: chips;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  overflow-x: auto;
+  padding: 3px 2px 6px;
+  scrollbar-width: none;
+}
+
+.roulette-chip-tray::-webkit-scrollbar {
+  display: none;
+}
+
+.roulette-chip-option,
+.roulette-placed-chip {
+  --chip-fill: #dfe4e8;
+  --chip-ink: #111519;
+  --chip-edge: #ffffff;
+  position: relative;
+  border-radius: 50%;
+  border: 3px dashed var(--chip-edge);
+  color: var(--chip-ink);
+  background:
+    radial-gradient(circle at 35% 30%, rgba(255, 255, 255, 0.72), transparent 28%),
+    var(--chip-fill);
+  box-shadow:
+    0 4px 10px rgba(0, 0, 0, 0.32),
+    inset 0 0 0 2px rgba(0, 0, 0, 0.2);
+  font-family: Arial, Helvetica, sans-serif;
+  font-weight: 900;
+}
+
+.roulette-chip-option {
+  flex: 0 0 46px;
+  width: 46px;
+  height: 46px;
+  padding: 0;
+  cursor: pointer;
+  transition:
+    transform 120ms ease,
+    filter 120ms ease,
+    box-shadow 120ms ease;
+}
+
+.roulette-chip-option:hover {
+  filter: brightness(1.08);
+}
+
+.roulette-chip-option.is-selected {
+  transform: translateY(-4px) scale(1.08);
+  box-shadow:
+    0 8px 18px rgba(0, 0, 0, 0.42),
+    0 0 0 3px rgba(255, 255, 255, 0.76),
+    inset 0 0 0 2px rgba(0, 0, 0, 0.22);
+}
+
+.chip-1 {
+  --chip-fill: #e4e7e9;
+  --chip-ink: #15191c;
+  --chip-edge: #858f96;
+}
+
+.chip-5 {
+  --chip-fill: #d53c35;
+  --chip-ink: #ffffff;
+  --chip-edge: #f5b8b3;
+}
+
+.chip-10 {
+  --chip-fill: #2876c8;
+  --chip-ink: #ffffff;
+  --chip-edge: #bad8f4;
+}
+
+.chip-25 {
+  --chip-fill: #2c9a61;
+  --chip-ink: #ffffff;
+  --chip-edge: #bce5ce;
+}
+
+.chip-100 {
+  --chip-fill: #171b1f;
+  --chip-ink: #ffffff;
+  --chip-edge: #aab3ba;
+}
+
+.chip-500 {
+  --chip-fill: #6f4ba8;
+  --chip-ink: #ffffff;
+  --chip-edge: #d7c5ef;
+}
+
+.roulette-placed-chip {
+  position: absolute;
+  z-index: 6;
+  width: 34px;
+  height: 34px;
+  display: grid;
+  place-items: center;
+  border-width: 2px;
+  pointer-events: none;
+  font-size: 10px;
+  line-height: 1;
+  letter-spacing: -0.02em;
+}
+
+.roulette-bet-summary {
+  grid-area: summary;
+  min-width: 94px;
+  display: grid;
+  justify-items: end;
+  gap: 2px;
+  font-family: Arial, Helvetica, sans-serif;
+}
+
+.roulette-bet-summary span {
+  color: #8f9aa2;
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+}
+
+.roulette-bet-summary strong {
+  color: #ffffff;
+  font-size: 23px;
+  line-height: 1;
+}
+
+.roulette-bet-actions {
+  grid-area: actions;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(72px, 0.7fr)) minmax(120px, 1.25fr);
+  gap: 8px;
+}
+
+.roulette-bet-actions button {
+  min-height: 42px;
+  border: 1px solid rgba(219, 225, 229, 0.24);
+  border-radius: 11px;
+  color: #dce2e6;
+  background: #171c20;
+  font: 800 11px/1 Arial, Helvetica, sans-serif;
+  letter-spacing: 0.06em;
+  cursor: pointer;
+}
+
+.roulette-bet-actions button:disabled {
+  opacity: 0.34;
+  cursor: default;
+}
+
+.roulette-bet-actions .roulette-spin-button {
+  border-color: rgba(232, 238, 242, 0.7);
+  color: #0b0e10;
+  background:
+    linear-gradient(180deg, #f8fafb 0%, #cbd2d7 100%);
+  font-size: 13px;
+  letter-spacing: 0.1em;
+}
+
+.roulette-page[data-phase="spinning"] .roulette-bet-console {
+  pointer-events: none;
+}
+
+@media (max-width: 640px) {
+  .roulette-bet-console {
+    grid-template-columns: 1fr auto;
+    grid-template-areas:
+      "chips summary"
+      "actions actions";
+    gap: 8px;
+  }
+
+  .roulette-chip-option {
+    flex-basis: 42px;
+    width: 42px;
+    height: 42px;
+    font-size: 11px;
+  }
+
+  .roulette-placed-chip {
+    width: 30px;
+    height: 30px;
+    font-size: 9px;
+  }
+
+  .roulette-bet-actions {
+    grid-template-columns: repeat(4, 1fr);
+    gap: 6px;
+  }
+
+  .roulette-bet-actions button {
+    min-width: 0;
+    min-height: 40px;
+    padding: 0 5px;
+    font-size: 9px;
+  }
+
+  .roulette-bet-actions .roulette-spin-button {
+    font-size: 11px;
   }
 }
