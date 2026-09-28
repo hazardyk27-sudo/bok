@@ -23,8 +23,19 @@ export type BlackjackPlayerActionMessage = Readonly<{
   seatNumber: 1 | 2 | 3 | 4 | 5;
 }>;
 
+export type BlackjackPendingPlayerAction = Readonly<{
+  message: BlackjackPlayerActionMessage;
+  phase: "SENT" | "ACKNOWLEDGED";
+  acceptedStateVersion: number | null;
+  acceptedEventSequence: number | null;
+}>;
+
 export type BlackjackPlayerActionClient = Readonly<{
   submit: (type: BlackjackPlayerActionType) => BlackjackPlayerActionMessage;
+  receive: (rawMessage: unknown) => void;
+  getPending: () => BlackjackPendingPlayerAction | null;
+  isPending: () => boolean;
+  detach: () => void;
 }>;
 
 function assertNonEmptyId(label: string, value: string): string {
@@ -87,6 +98,8 @@ export function getBlackjackAvailablePlayerActions(
   snapshot: BlackjackPublicSnapshotViewSource,
   context: BlackjackSnapshotViewContext,
 ): readonly BlackjackPlayerActionType[] {
+  if (context.actionPending === true) return Object.freeze([]);
+
   try {
     const { hand }=getLocalCurrentHand(snapshot,context);
     const actions: BlackjackPlayerActionType[]=["HIT","STAND"];
@@ -131,14 +144,150 @@ export function buildBlackjackPlayerActionMessage(
   });
 }
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null;
+}
+
+function parseTransportMessage(rawMessage: unknown): unknown {
+  if (typeof rawMessage !== "string") return rawMessage;
+  try {
+    return JSON.parse(rawMessage);
+  } catch {
+    return null;
+  }
+}
+
+function snapshotCursorFromMessage(
+  message: unknown,
+): Readonly<{ stateVersion: number; eventSequence: number }> | null {
+  if (!isRecord(message)) return null;
+
+  const candidate =
+    message.type === "snapshot"
+      ? message.snapshot
+      : message.type === "FULL_TABLE_SNAPSHOT"
+        ? message.snapshot
+        : null;
+
+  if (!isRecord(candidate)) return null;
+  if (
+    typeof candidate.stateVersion !== "number" ||
+    !Number.isSafeInteger(candidate.stateVersion) ||
+    candidate.stateVersion < 0 ||
+    typeof candidate.eventSequence !== "number" ||
+    !Number.isSafeInteger(candidate.eventSequence) ||
+    candidate.eventSequence < 0
+  ) {
+    return null;
+  }
+
+  return {
+    stateVersion: candidate.stateVersion,
+    eventSequence: candidate.eventSequence,
+  };
+}
+
 export function createBlackjackPlayerActionClient(input: {
   socket: BlackjackRealtimeSocketLike;
   getSnapshot: () => BlackjackPublicSnapshotViewSource | null;
   getViewContext: () => BlackjackSnapshotViewContext;
   createActionId: () => string;
+  onPendingChange?: (pending: BlackjackPendingPlayerAction | null) => void;
 }): BlackjackPlayerActionClient {
+  let pending: BlackjackPendingPlayerAction | null = null;
+  let detached=false;
+
+  const setPending=(next: BlackjackPendingPlayerAction | null) => {
+    pending=next;
+    input.onPendingChange?.(pending);
+  };
+
+  const resolveFromSnapshot=(cursor: {
+    stateVersion: number;
+    eventSequence: number;
+  }) => {
+    if (pending === null) return;
+
+    if (
+      pending.phase === "ACKNOWLEDGED" &&
+      pending.acceptedStateVersion !== null &&
+      pending.acceptedEventSequence !== null &&
+      cursor.stateVersion >= pending.acceptedStateVersion &&
+      cursor.eventSequence >= pending.acceptedEventSequence
+    ) {
+      setPending(null);
+      return;
+    }
+
+    if (
+      pending.phase === "SENT" &&
+      cursor.stateVersion > pending.message.expectedStateVersion
+    ) {
+      setPending(null);
+    }
+  };
+
+  const receive=(rawMessage: unknown) => {
+    if(detached || pending===null) return;
+
+    const message=parseTransportMessage(rawMessage);
+    if (!isRecord(message)) return;
+
+    if (
+      message.type === "ACTION_ACCEPTED" &&
+      message.actionId === pending.message.actionId &&
+      typeof message.stateVersion === "number" &&
+      Number.isSafeInteger(message.stateVersion) &&
+      message.stateVersion >= 0 &&
+      typeof message.eventSequence === "number" &&
+      Number.isSafeInteger(message.eventSequence) &&
+      message.eventSequence >= 0
+    ) {
+      const latest=input.getSnapshot();
+      const acknowledged=Object.freeze({
+        ...pending,
+        phase:"ACKNOWLEDGED" as const,
+        acceptedStateVersion:message.stateVersion,
+        acceptedEventSequence:message.eventSequence,
+      });
+      setPending(acknowledged);
+
+      if (
+        latest !== null &&
+        latest.stateVersion >= message.stateVersion &&
+        latest.eventSequence >= message.eventSequence
+      ) {
+        setPending(null);
+      }
+      return;
+    }
+
+    if (
+      message.type === "ACTION_REJECTED" &&
+      message.actionId === pending.message.actionId
+    ) {
+      setPending(null);
+      return;
+    }
+
+    const cursor=snapshotCursorFromMessage(message);
+    if(cursor!==null) resolveFromSnapshot(cursor);
+  };
+
+  const onMessage=(event: MessageEvent<unknown>) => {
+    receive(event.data);
+  };
+  input.socket.addEventListener("message",onMessage);
+
   return Object.freeze({
     submit:(type)=>{
+      if(detached){
+        throw new Error("Blackjack player action client is detached");
+      }
+      if(pending!==null){
+        throw new Error("Blackjack player action is already pending");
+      }
+
       const snapshot=input.getSnapshot();
       if(snapshot===null){
         throw new Error("Blackjack player action requires authoritative snapshot");
@@ -149,8 +298,29 @@ export function createBlackjackPlayerActionClient(input: {
         type,
         input.createActionId(),
       );
-      input.socket.send(JSON.stringify(message));
+      setPending(Object.freeze({
+        message,
+        phase:"SENT",
+        acceptedStateVersion:null,
+        acceptedEventSequence:null,
+      }));
+
+      try {
+        input.socket.send(JSON.stringify(message));
+      } catch (error) {
+        setPending(null);
+        throw error;
+      }
       return message;
+    },
+    receive,
+    getPending:()=>pending,
+    isPending:()=>pending!==null,
+    detach:()=>{
+      if(detached) return;
+      detached=true;
+      input.socket.removeEventListener("message",onMessage);
+      if(pending!==null) setPending(null);
     },
   });
 }

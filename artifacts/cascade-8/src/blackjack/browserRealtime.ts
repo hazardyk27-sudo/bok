@@ -102,7 +102,12 @@ export function connectBlackjackRealtimeElement(
 
   const url=buildBlackjackWebSocketUrl(location);
   const socket=(options.createSocket ?? defaultBlackjackSocketFactory)(url);
-  const getViewContext=options.getViewContext ?? (() => ({}));
+  const baseViewContext=options.getViewContext ?? (() => ({}));
+  let actionClient: BlackjackPlayerActionClient | null=null;
+  const getViewContext=(): BlackjackSnapshotViewContext => ({
+    ...baseViewContext(),
+    actionPending:actionClient?.isPending() ?? false,
+  });
   const controller=bindBlackjackRealtimeElement(
     app,
     socket,
@@ -113,7 +118,9 @@ export function connectBlackjackRealtimeElement(
     getSnapshot:controller.getSnapshot,
     getViewContext,
     createActionId:options.createActionId ?? defaultBlackjackActionId,
+    onPendingChange:()=>{ controller.rerenderLatest(); },
   });
+  actionClient=actions;
   const onClick=(event: Event) => {
     const action=readPlayerAction(event.target);
     if(action===null) return;
@@ -135,6 +142,7 @@ export function connectBlackjackRealtimeElement(
       if(closed) return;
       closed=true;
       app.removeEventListener("click",onClick);
+      actions.detach();
       controller.detach();
       socket.close(1000,"BLACKJACK_CLIENT_CLOSED");
     },

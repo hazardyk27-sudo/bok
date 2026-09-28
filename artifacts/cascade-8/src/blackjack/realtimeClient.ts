@@ -26,6 +26,7 @@ export type BlackjackRealtimeViewController = Readonly<{
   receive: (rawMessage: unknown) => void;
   getCursor: () => BlackjackRealtimeCursor | null;
   getSnapshot: () => BlackjackPublicSnapshotViewSource | null;
+  rerenderLatest: () => boolean;
   isAwaitingResync: () => boolean;
   detach: () => void;
 }>;
@@ -149,6 +150,21 @@ export function bindBlackjackRealtimeView(
     }
   };
 
+  const rerenderLatest=(): boolean => {
+    if(detached || latestSnapshot===null) return false;
+    try {
+      options.renderModel(
+        buildBlackjackTableViewModelFromSnapshot(
+          latestSnapshot,
+          options.getViewContext?.() ?? {},
+        ),
+      );
+      return true;
+    } catch {
+      return false;
+    }
+  };
+
   const applyFullSnapshot=(envelope: BlackjackFullSnapshotEnvelope): void => {
     if (
       envelope.resetEventSequenceTo !== envelope.snapshot.eventSequence ||
@@ -223,6 +239,7 @@ export function bindBlackjackRealtimeView(
     receive,
     getCursor:()=>cursor,
     getSnapshot:()=>latestSnapshot,
+    rerenderLatest,
     isAwaitingResync:()=>awaitingResync,
     detach:()=>{
       if(detached) return;

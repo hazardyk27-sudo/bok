@@ -103,6 +103,7 @@ type BlackjackSnapshotHand =
 export type BlackjackSnapshotViewContext = Readonly<{
   localPlayerId?: string | null;
   availableBalanceCents?: number | null;
+  actionPending?: boolean;
 }>;
 
 function assertSafeNonNegativeInteger(label: string, value: number): void {

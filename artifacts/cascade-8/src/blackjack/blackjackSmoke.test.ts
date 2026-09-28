@@ -846,7 +846,6 @@ describe("blackjack responsive table foundation", () => {
     });
 
     const hit=client.submit("HIT");
-    const stand=client.submit("STAND");
 
     expect(hit).toEqual({
       type:"HIT",
@@ -857,8 +856,29 @@ describe("blackjack responsive table foundation", () => {
       seatNumber:1,
     });
     expect(JSON.parse(sent[0])).toEqual(hit);
+    expect(client.isPending()).toBe(true);
+    expect(() => client.submit("STAND")).toThrow(/already pending/);
+
+    client.receive({
+      type:"ACTION_ACCEPTED",
+      actionId:"action-1",
+      replayed:false,
+      stateVersion:5,
+      eventSequence:7,
+    });
+    expect(client.getPending()?.phase).toBe("ACKNOWLEDGED");
+    expect(() => client.submit("STAND")).toThrow(/already pending/);
+
+    client.receive({
+      type:"snapshot",
+      snapshot:{ ...snapshot, stateVersion:5, eventSequence:7 },
+    });
+    expect(client.isPending()).toBe(false);
+
+    const stand=client.submit("STAND");
     expect(JSON.parse(sent[1])).toEqual(stand);
     expect(sent).toHaveLength(2);
+    client.detach();
 
     expect(() =>
       buildBlackjackPlayerActionMessage(
