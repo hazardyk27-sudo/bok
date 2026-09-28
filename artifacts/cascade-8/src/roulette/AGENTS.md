@@ -15,6 +15,7 @@
 - Winning outcomes will later come from simulation state, not target-number steering, snapping, magnets, or post-selection.
 
 ## Current milestones
-- 2026-09-28 — Part 2 number ring refinement implemented — reference-matched narrower number band, canonical colors, radial inward number orientation, condensed serif treatment, gold divider shadows/highlights and beveled inner/outer rails are now encoded procedurally. Next: Part 3 reconstructs the broad green pocket ring with stronger depth, pocket separators and reference-matched radial structure.
+- 2026-09-28 — Part 3 green pocket ring implemented — the broad reference-led green annulus now has 37 procedural sectors, layered radial green depth, stronger gold pocket separators, inner/outer beveled rails, a recessed trough shadow and subtle center sheen. Next: Part 4 builds the reference-matched central gold rotor/spindle mechanism over the wooden center disc.
+- 2026-09-28 — Part 2 number ring refinement implemented — reference-matched narrower number band, canonical colors, radial inward number orientation, condensed serif treatment, gold divider shadows/highlights and beveled inner/outer rails are now encoded procedurally.
 - 2026-09-28 — Part 1 wheel geometry implemented — responsive high-DPI Canvas renderer, canonical 37-number European sequence, reference-led concentric ring ratios, inward/radial number orientation, eight outer rim markers, green pocket segmentation and wooden center guide are in place.
 - 2026-09-28 — Clean Roulette 2D category initialized. Reference-led wheel reconstruction is the active direction.

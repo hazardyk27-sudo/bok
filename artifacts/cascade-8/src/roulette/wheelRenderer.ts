@@ -1,6 +1,7 @@
 import {
   EUROPEAN_WHEEL_SEQUENCE,
   NUMBER_RING_STYLE,
+  POCKET_RING_STYLE,
   SEGMENT_ANGLE,
   TOP_SEGMENT_CENTER,
   WHEEL_COLORS,
@@ -301,29 +302,152 @@ function drawNumberRing(ctx: CanvasRenderingContext2D, radius: number) {
   });
 }
 
+function createPocketGradient(
+  ctx: CanvasRenderingContext2D,
+  inner: number,
+  outer: number,
+  index: number,
+) {
+  const gradient = ctx.createRadialGradient(0, 0, inner, 0, 0, outer);
+  const middle = index % 2 === 0 ? WHEEL_COLORS.green : WHEEL_COLORS.greenAlt;
+
+  gradient.addColorStop(0, WHEEL_COLORS.greenDeep);
+  gradient.addColorStop(0.13, WHEEL_COLORS.greenDark);
+  gradient.addColorStop(0.50, middle);
+  gradient.addColorStop(0.78, WHEEL_COLORS.greenLight);
+  gradient.addColorStop(1, WHEEL_COLORS.greenDark);
+  return gradient;
+}
+
+function drawPocketSeparator(
+  ctx: CanvasRenderingContext2D,
+  inner: number,
+  outer: number,
+  angle: number,
+  radius: number,
+) {
+  const innerPoint = polar(inner + radius * 0.002, angle);
+  const outerPoint = polar(outer - radius * 0.002, angle);
+
+  ctx.save();
+  ctx.lineCap = "round";
+
+  ctx.strokeStyle = "rgba(49, 28, 3, 0.82)";
+  ctx.lineWidth = radius * (POCKET_RING_STYLE.separatorWidth + 0.0048);
+  ctx.beginPath();
+  ctx.moveTo(innerPoint.x, innerPoint.y);
+  ctx.lineTo(outerPoint.x, outerPoint.y);
+  ctx.stroke();
+
+  ctx.strokeStyle = WHEEL_COLORS.goldDark;
+  ctx.lineWidth = radius * (POCKET_RING_STYLE.separatorWidth + 0.0015);
+  ctx.beginPath();
+  ctx.moveTo(innerPoint.x, innerPoint.y);
+  ctx.lineTo(outerPoint.x, outerPoint.y);
+  ctx.stroke();
+
+  ctx.strokeStyle = WHEEL_COLORS.goldLight;
+  ctx.lineWidth = radius * POCKET_RING_STYLE.separatorWidth;
+  ctx.beginPath();
+  ctx.moveTo(innerPoint.x, innerPoint.y);
+  ctx.lineTo(outerPoint.x, outerPoint.y);
+  ctx.stroke();
+
+  ctx.strokeStyle = WHEEL_COLORS.goldSpecular;
+  ctx.lineWidth = Math.max(0.65, radius * 0.00125);
+  ctx.beginPath();
+  ctx.moveTo(innerPoint.x, innerPoint.y);
+  ctx.lineTo(outerPoint.x, outerPoint.y);
+  ctx.stroke();
+
+  ctx.restore();
+}
+
+function drawPocketRingRails(
+  ctx: CanvasRenderingContext2D,
+  inner: number,
+  outer: number,
+  radius: number,
+) {
+  const railWidth = radius * POCKET_RING_STYLE.railWidth;
+
+  drawCircleStroke(ctx, outer, "rgba(60, 31, 2, 0.88)", railWidth * 1.62);
+  drawCircleStroke(ctx, outer, WHEEL_COLORS.goldDark, railWidth * 1.18);
+  drawCircleStroke(ctx, outer, WHEEL_COLORS.goldLight, railWidth * 0.72);
+  drawCircleStroke(
+    ctx,
+    outer - radius * POCKET_RING_STYLE.outerShadowInset,
+    "rgba(5, 48, 20, 0.58)",
+    radius * 0.008,
+  );
+
+  drawCircleStroke(ctx, inner, "rgba(54, 28, 2, 0.9)", railWidth * 1.55);
+  drawCircleStroke(ctx, inner, WHEEL_COLORS.goldDark, railWidth * 1.12);
+  drawCircleStroke(ctx, inner, WHEEL_COLORS.goldLight, railWidth * 0.7);
+  drawCircleStroke(
+    ctx,
+    inner + radius * POCKET_RING_STYLE.innerHighlightInset,
+    "rgba(86, 187, 104, 0.28)",
+    Math.max(0.8, radius * 0.0023),
+  );
+}
+
+function drawPocketTrough(
+  ctx: CanvasRenderingContext2D,
+  inner: number,
+  outer: number,
+  radius: number,
+) {
+  const troughRadius = inner + (outer - inner) * 0.48;
+  const troughWidth = radius * POCKET_RING_STYLE.troughInset;
+
+  drawCircleStroke(
+    ctx,
+    troughRadius,
+    "rgba(3, 45, 18, 0.34)",
+    troughWidth,
+  );
+  drawCircleStroke(
+    ctx,
+    radius * POCKET_RING_STYLE.centerSheenRadius,
+    "rgba(87, 186, 105, 0.20)",
+    Math.max(1, radius * 0.004),
+  );
+}
+
 function drawPocketRing(ctx: CanvasRenderingContext2D, radius: number) {
   const outer = radius * WHEEL_GEOMETRY.pocketOuterRadius;
   const inner = radius * WHEEL_GEOMETRY.pocketInnerRadius;
-  const strokeWidth = Math.max(1.1, radius * 0.003);
 
   EUROPEAN_WHEEL_SEQUENCE.forEach((_, index) => {
     const center = TOP_SEGMENT_CENTER + index * SEGMENT_ANGLE;
     const start = center - SEGMENT_ANGLE / 2;
     const end = center + SEGMENT_ANGLE / 2;
+
     drawAnnularSegment(
       ctx,
       inner,
       outer,
       start,
       end,
-      index % 2 === 0 ? WHEEL_COLORS.green : WHEEL_COLORS.greenAlt,
-      WHEEL_COLORS.gold,
-      strokeWidth,
+      createPocketGradient(ctx, inner, outer, index),
     );
   });
 
-  drawCircleStroke(ctx, outer, WHEEL_COLORS.goldLight, radius * 0.008);
-  drawCircleStroke(ctx, inner, WHEEL_COLORS.goldLight, radius * 0.008);
+  drawPocketTrough(ctx, inner, outer, radius);
+
+  for (let index = 0; index < EUROPEAN_WHEEL_SEQUENCE.length; index += 1) {
+    const center = TOP_SEGMENT_CENTER + index * SEGMENT_ANGLE;
+    drawPocketSeparator(
+      ctx,
+      inner,
+      outer,
+      center - SEGMENT_ANGLE / 2,
+      radius,
+    );
+  }
+
+  drawPocketRingRails(ctx, inner, outer, radius);
 }
 
 function drawCenterDisc(ctx: CanvasRenderingContext2D, radius: number) {

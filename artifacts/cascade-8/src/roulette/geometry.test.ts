@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   EUROPEAN_WHEEL_SEQUENCE,
   NUMBER_RING_STYLE,
+  POCKET_RING_STYLE,
   RED_NUMBERS,
   SEGMENT_COUNT,
   WHEEL_GEOMETRY,
@@ -45,5 +46,15 @@ describe("roulette 2d wheel geometry", () => {
     const numberRingWidth = WHEEL_GEOMETRY.numberOuterRadius - WHEEL_GEOMETRY.numberInnerRadius;
     const pocketRingWidth = WHEEL_GEOMETRY.pocketOuterRadius - WHEEL_GEOMETRY.pocketInnerRadius;
     expect(numberRingWidth).toBeLessThan(pocketRingWidth);
+  });
+
+  it("keeps the green pocket ring broad and its depth guides inside the ring", () => {
+    const pocketWidth = WHEEL_GEOMETRY.pocketOuterRadius - WHEEL_GEOMETRY.pocketInnerRadius;
+    expect(pocketWidth).toBeGreaterThan(0.2);
+    expect(POCKET_RING_STYLE.separatorWidth).toBeGreaterThan(NUMBER_RING_STYLE.separatorWidth);
+    expect(POCKET_RING_STYLE.centerSheenRadius).toBeGreaterThan(WHEEL_GEOMETRY.pocketInnerRadius);
+    expect(POCKET_RING_STYLE.centerSheenRadius).toBeLessThan(WHEEL_GEOMETRY.pocketOuterRadius);
+    expect(POCKET_RING_STYLE.outerShadowInset).toBeGreaterThan(0);
+    expect(POCKET_RING_STYLE.innerHighlightInset).toBeGreaterThan(0);
   });
 });

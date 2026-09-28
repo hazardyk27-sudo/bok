@@ -30,6 +30,15 @@ export const NUMBER_RING_STYLE = {
   innerHighlightOffset: 0.010,
 } as const;
 
+export const POCKET_RING_STYLE = {
+  separatorWidth: 0.0064,
+  railWidth: 0.010,
+  outerShadowInset: 0.012,
+  innerHighlightInset: 0.013,
+  troughInset: 0.028,
+  centerSheenRadius: 0.487,
+} as const;
+
 export const WHEEL_COLORS = {
   woodDark: "#57210f",
   woodMid: "#873a17",
@@ -46,10 +55,12 @@ export const WHEEL_COLORS = {
   blackDark: "#070909",
   black: "#151919",
   blackLight: "#2b302f",
+  greenDeep: "#06441d",
   greenDark: "#0b4d22",
   green: "#167934",
   greenLight: "#29914a",
   greenAlt: "#1b843a",
+  greenSheen: "#3aa55b",
   ivory: "#f6df9f",
   ivoryLight: "#fff5c8",
 } as const;
