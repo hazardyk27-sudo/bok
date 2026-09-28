@@ -233,7 +233,7 @@ describe("blackjack full lifecycle + recovery multiplayer gate",()=>{
       (account)=>account.wallet.reservedBalanceCents===0,
     )).toBe(true);
 
-    clock+=1;
+    clock+=3_000;
     const nextRound=await authority.driver.tick();
     expect(nextRound.status).toBe("NEXT_BETTING_ROUND_STARTED");
     expect(game.getTable()).toMatchObject({

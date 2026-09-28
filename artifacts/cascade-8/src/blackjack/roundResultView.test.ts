@@ -77,13 +77,13 @@ describe("blackjack authoritative round result presentation",()=>{
 
     expect(model.roundResult).toEqual({
       title:"BLACKJACK!",
-      detail:"RETURN 2.5K · NET +1.5K",
+      detail:"RETURN 2,500 · NET +1,500",
       tone:"win",
     });
 
     const markup=renderBlackjackTableShell(model);
     expect(markup).toContain("BLACKJACK!");
-    expect(markup).toContain("RETURN 2.5K · NET +1.5K");
+    expect(markup).toContain("RETURN 2,500 · NET +1,500");
     expect(markup).toContain('data-result-tone="win"');
   });
 

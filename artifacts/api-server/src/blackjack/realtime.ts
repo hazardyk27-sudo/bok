@@ -112,12 +112,16 @@ export function attachBlackjackWebSocket(
   )=>{
     const identity=identityBySocket.get(socket);
     if(!identity || !options.getPrivatePlayerState) return;
-    const privateState=options.getPrivatePlayerState(
-      identity,
-      snapshot,
-    );
-    if(privateState!==null){
-      send(socket,privateState);
+    try {
+      const privateState=options.getPrivatePlayerState(
+        identity,
+        snapshot,
+      );
+      if(privateState!==null){
+        send(socket,privateState);
+      }
+    } catch {
+      // Private state is optional enrichment. Never break public realtime.
     }
   };
 

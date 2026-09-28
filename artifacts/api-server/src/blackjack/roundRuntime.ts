@@ -4,6 +4,8 @@ import type {
 } from "./actionCoordinator";
 import type { BlackjackShoe, BlackjackTable } from "./domain";
 
+export const BLACKJACK_ROUND_END_HOLD_MS = 3_000 as const;
+
 export type BlackjackRoundRuntimeTransitionType =
   | "BETTING_LOCKED"
   | "INITIAL_DEAL_COMMITTED"
@@ -28,6 +30,7 @@ export type BlackjackRoundRuntimeTickStatus =
   | "DEALER_TURN_READY"
   | "ROUND_ENDED"
   | "NEXT_BETTING_ROUND_STARTED"
+  | "WAITING_FOR_NEXT_ROUND"
   | "ROUND_END_IDLE";
 
 export type BlackjackRoundRuntimeTickResult = Readonly<{
@@ -284,6 +287,29 @@ export async function runBlackjackRoundRuntimeTick(
     if(connectedPlayers.length===0){
       return finish(
         "ROUND_END_IDLE",
+        table,
+        transitions,
+      );
+    }
+
+    const finishedAtMs=table.round?.finishedAtMs;
+    if(
+      finishedAtMs===null ||
+      finishedAtMs===undefined
+    ){
+      throw new Error(
+        "Blackjack ROUND_END requires finishedAtMs",
+      );
+    }
+    const nextRoundAtMs=finishedAtMs+BLACKJACK_ROUND_END_HOLD_MS;
+    if(!Number.isSafeInteger(nextRoundAtMs)){
+      throw new RangeError(
+        "Blackjack next-round hold deadline exceeds safe integer range",
+      );
+    }
+    if(input.nowMs<nextRoundAtMs){
+      return finish(
+        "WAITING_FOR_NEXT_ROUND",
         table,
         transitions,
       );

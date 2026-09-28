@@ -351,6 +351,11 @@ describe("blackjack round runtime realtime publication",()=>{
       });
     });
 
+    clock+=2_999;
+    const holding=await driver.tick();
+    expect(holding.status).toBe("WAITING_FOR_NEXT_ROUND");
+    expect(published).toEqual([]);
+
     clock+=1;
     const next=await driver.tick();
 

@@ -242,7 +242,7 @@ describe("blackjack authoritative round runtime tick",()=>{
     const replay=await runBlackjackRoundRuntimeTick(game,{
       nowMs:timeoutAt+1,
     });
-    expect(replay.status).toBe("NOOP");
+    expect(replay.status).toBe("WAITING_FOR_NEXT_ROUND");
     expect(replay.transitions).toEqual([]);
   });
 
@@ -330,8 +330,16 @@ describe("blackjack authoritative round runtime tick",()=>{
     const roundOneEndVersion=game.getTable().stateVersion;
     const roundOneEndSequence=game.getTable().eventSequence;
 
+    const holding=await runBlackjackRoundRuntimeTick(game,{
+      nowMs:turn!.endsAtMs+2_999,
+      bettingWindowMs:12_000,
+    });
+    expect(holding.status).toBe("WAITING_FOR_NEXT_ROUND");
+    expect(holding.transitions).toEqual([]);
+    expect(game.getTable().phase).toBe("ROUND_END");
+
     const next=await runBlackjackRoundRuntimeTick(game,{
-      nowMs:turn!.endsAtMs+1,
+      nowMs:turn!.endsAtMs+3_000,
       bettingWindowMs:12_000,
     });
 
@@ -347,8 +355,8 @@ describe("blackjack authoritative round runtime tick",()=>{
         roundId:"round-runtime-table:round-2",
         roundNumber:2,
         phase:"BETTING",
-        startedAtMs:turn!.endsAtMs+1,
-        bettingClosesAtMs:turn!.endsAtMs+12_001,
+        startedAtMs:turn!.endsAtMs+3_000,
+        bettingClosesAtMs:turn!.endsAtMs+15_000,
       },
     });
     expect(game.getBettingPosition("player-2")).toBeNull();
@@ -365,7 +373,7 @@ describe("blackjack authoritative round runtime tick",()=>{
         seatNumber:2,
         payloadFingerprint:"PLACE_BET|cycle-bet-2",
       },
-      nowMs:turn!.endsAtMs+2,
+      nowMs:turn!.endsAtMs+3_001,
       chipValueCents:1_000,
       reservationId:"reservation-cycle-bet-2",
       reserveTransactionId:"reserve-cycle-bet-2",
