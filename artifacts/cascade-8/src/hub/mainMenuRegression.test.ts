@@ -10,25 +10,21 @@ const hubSource = readFileSync(
 const menuSource = hubSource;
 
 describe("main menu regression", () => {
-  it("keeps the existing destinations and adds Blackjack as the fifth card", () => {
+  it("keeps the four active game destinations", () => {
     expect(menuSource).toContain('class="game-choice game-choice-slot" href="/slot"');
-    expect(menuSource).toContain('class="game-choice game-choice-roulette" href="/roulette"');
     expect(menuSource).toContain('class="game-choice game-choice-witch" href="/cadi-kazan"');
     expect(menuSource).toContain('class="game-choice game-choice-businesses" href="/businesses"');
     expect(menuSource).toContain('class="game-choice game-choice-blackjack" href="/blackjack"');
 
-    expect(menuSource.match(/class="game-choice game-choice-/g)).toHaveLength(5);
-    expect(menuSource).toContain("ONE LOUNGE · FIVE WORLDS");
+    expect(menuSource.match(/class="game-choice game-choice-/g)).toHaveLength(4);
+    expect(menuSource).toContain("ONE LOUNGE · FOUR WORLDS");
   });
 
-  it("preserves the existing selector identity for Slot, Roulette and Cadı Kazan", () => {
+  it("preserves the existing selector identity for Slot and Cadı Kazan", () => {
     expect(menuSource).toContain("<span class=\"choice-overline\">CASCADE 8</span>");
     expect(menuSource).toContain("<strong>FAHRİNİN YOLU</strong>");
     expect(menuSource).toContain("<span class=\"choice-type\">SLOT EXPERIENCE</span>");
 
-    expect(menuSource).toContain("<span class=\"choice-overline\">THE NIGHT TABLE</span>");
-    expect(menuSource).toContain("<strong>ROULETTE</strong>");
-    expect(menuSource).toContain("<span class=\"choice-type\">TABLE EXPERIENCE</span>");
 
     expect(menuSource).toContain("<span class=\"choice-overline\">LUCKY SCRATCH</span>");
     expect(menuSource).toContain("<strong>CADI KAZAN</strong>");

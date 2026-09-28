@@ -7,70 +7,49 @@ const read = (relative: string) =>
 
 const schemaIndex = read("../../../lib/db/src/schema/index.ts");
 const walletSchema = read("../../../lib/db/src/schema/wallet.ts");
-const rouletteSchema = read("../../../lib/db/src/schema/roulette.ts");
-const physicsSchema = read("../../../lib/db/src/schema/physics-lab.ts");
 const cadiSchema = read("../../../lib/db/src/schema/cadi-kazan.ts");
 const slotSchema = read("../../../lib/db/src/schema/slot.ts");
 const idleSchema = read("../../../lib/db/src/schema/idle.ts");
-
-const serverIndex = read("./index.ts");
 const routesIndex = read("./routes/index.ts");
-const rouletteRepo = read("./roulette/repository.ts");
 const slotRepo = read("./slot/repository.ts");
 const cadiRepo = read("./cadi-kazan/repository.ts");
 const idleRepo = read("./idle/repository.ts");
+const slotRoutes = read("./slot/routes.ts");
+const cadiRoutes = read("./cadi-kazan/routes.ts");
+const idleRoutes = read("./idle/routes.ts");
 
 describe("backend game isolation", () => {
   it("keeps the DB schema index aggregation-only", () => {
     expect(schemaIndex).not.toContain("pgTable(");
     expect(schemaIndex).toContain('export * from "./wallet";');
-    expect(schemaIndex).toContain('export * from "./roulette";');
-    expect(schemaIndex).toContain('export * from "./physics-lab";');
     expect(schemaIndex).toContain('export * from "./cadi-kazan";');
     expect(schemaIndex).toContain('export * from "./slot";');
     expect(schemaIndex).toContain('export * from "./idle";');
+    expect(schemaIndex).toContain('export * from "./blackjack";');
   });
 
-  it("keeps every game's tables in its own schema file", () => {
-    expect(walletSchema).toContain('"roulette_wallets"');
-    expect(rouletteSchema).toContain('"roulette_rounds"');
-    expect(rouletteSchema).toContain('"roulette_bets"');
-    expect(physicsSchema).toContain('"physics_lab_rounds"');
+  it("keeps shared wallet and game tables in their own schema files", () => {
+    expect(walletSchema).toContain('"shared_wallets"');
     expect(cadiSchema).toContain('"cadi_kazan_rounds"');
     expect(slotSchema).toContain('"slot_rounds"');
     expect(idleSchema).toContain('"idle_business_states"');
   });
 
-  it("uses the platform wallet contract instead of cross-importing Roulette", () => {
+  it("uses shared platform wallet and session contracts", () => {
     for (const source of [slotRepo, cadiRepo, idleRepo]) {
       expect(source).toContain('from "../platform/wallet"');
-      expect(source).not.toContain('from "../roulette/types"');
       expect(source).toContain("INITIAL_SHARED_BALANCE_CENTS");
+      expect(source).toContain("shared_wallets");
     }
-    expect(rouletteRepo).toContain('from "../platform/wallet"');
-    expect(rouletteRepo).toContain("INITIAL_SHARED_BALANCE_CENTS");
+    for (const source of [slotRoutes, cadiRoutes, idleRoutes]) {
+      expect(source).toContain('from "../platform/session"');
+    }
   });
 
-  it("routes through stable game backend entrypoints", () => {
-    expect(routesIndex).toContain('from "../roulette"');
-    expect(routesIndex).toContain('from "../physics-lab"');
+  it("routes through stable live-game backend entrypoints", () => {
     expect(routesIndex).toContain('from "../cadi-kazan"');
     expect(routesIndex).toContain('from "../slot"');
     expect(routesIndex).toContain('from "../idle"');
     expect(routesIndex).toContain('from "../blackjack"');
-    expect(routesIndex).not.toContain('../roulette/routes');
-    expect(routesIndex).not.toContain('../cadi-kazan/routes');
-    expect(routesIndex).not.toContain('../slot/routes');
-    expect(routesIndex).not.toContain('../idle/routes');
-    expect(routesIndex).not.toContain('../blackjack/routes');
-  });
-
-  it("keeps shared server bootstrap behind the Roulette runtime boundary", () => {
-    expect(serverIndex).toContain('from "./roulette"');
-    expect(serverIndex).not.toContain('from "./roulette/repository"');
-    expect(serverIndex).not.toContain('from "./roulette/realtime"');
-    expect(serverIndex).toContain("attachRouletteRuntime(server)");
-    expect(serverIndex).toContain("startRouletteRuntime()");
-    expect(serverIndex).toContain("stopRouletteRuntime()");
   });
 });

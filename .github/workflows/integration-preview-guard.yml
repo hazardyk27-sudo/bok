@@ -51,9 +51,6 @@ jobs:
           src/hub/mainMenuRegression.test.ts
           src/slot/slotSmoke.test.ts
           src/cadi-kazan/cadiKazanSmoke.test.ts
-          src/rouletteSmoke.test.ts
-          src/rouletteGeometry.test.ts
-          src/roulettePhysicsConfig.test.ts
           src/idle/idleUiIntegration.test.ts
           src/blackjack/blackjackSmoke.test.ts
 
@@ -64,9 +61,9 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          git fetch origin             feature/slot:refs/remotes/origin/feature/slot             feature/roulette:refs/remotes/origin/feature/roulette             feature/cadi-kazan:refs/remotes/origin/feature/cadi-kazan             feature/idle:refs/remotes/origin/feature/idle             feature/hub:refs/remotes/origin/feature/hub             feature/account:refs/remotes/origin/feature/account             feature/blackjack:refs/remotes/origin/feature/blackjack
+          git fetch origin             feature/slot:refs/remotes/origin/feature/slot             feature/cadi-kazan:refs/remotes/origin/feature/cadi-kazan             feature/idle:refs/remotes/origin/feature/idle             feature/hub:refs/remotes/origin/feature/hub             feature/account:refs/remotes/origin/feature/account             feature/blackjack:refs/remotes/origin/feature/blackjack
 
-          for game in slot roulette cadi-kazan idle hub account blackjack; do
+          for game in slot cadi-kazan idle hub account blackjack; do
             tmp="$(mktemp -d)"
             rmdir "$tmp"
             git worktree add --detach "$tmp" HEAD >/dev/null

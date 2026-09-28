@@ -4,20 +4,16 @@ const app = document.querySelector<HTMLDivElement>("#app")!;
 const currentPath = window.location.pathname.replace(/\/+$/, "") || "/";
 const isLab = currentPath === "/lab";
 const isSlotRoute = currentPath === "/slot" || isLab;
-const isRouletteRoute = currentPath === "/roulette";
 const isWitchRoute = currentPath === "/cadi-kazan";
 const isBusinessesRoute = currentPath === "/businesses";
 const isBlackjackRoute = currentPath === "/blackjack";
-const isHubRoute = !isSlotRoute && !isRouletteRoute && !isWitchRoute && !isBusinessesRoute && !isBlackjackRoute;
+const isHubRoute = !isSlotRoute && !isWitchRoute && !isBusinessesRoute && !isBlackjackRoute;
 
-if (isRouletteRoute || isWitchRoute || isHubRoute) {
+if (isWitchRoute || isHubRoute) {
   await import("./styles.css");
 }
 
-if (isRouletteRoute) {
-  const rouletteModule = await import("./roulette");
-  rouletteModule.mountRoulette(app);
-} else if (isWitchRoute) {
+if (isWitchRoute) {
   const cadiKazanModule = await import("./cadi-kazan");
   cadiKazanModule.mountCadiKazan(app);
 } else if (isBusinessesRoute) {

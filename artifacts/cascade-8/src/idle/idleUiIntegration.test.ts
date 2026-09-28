@@ -253,7 +253,7 @@ describe("Businesses route module isolation", () => {
     expect(mainSource).toContain("businessesModule.mountBusinesses(app);");
     expect(idleIndexSource).toContain("export function mountBusinesses(app: HTMLDivElement)");
     expect(mainSource).toContain(
-      'if (isRouletteRoute || isWitchRoute || isHubRoute) {\n  await import("./styles.css");\n}',
+      'if (isWitchRoute || isHubRoute) {\n  await import("./styles.css");\n}',
     );
     expect(mainSource).not.toContain('import "./styles.css";');
     expect(mainSource).not.toContain('import { BUSINESSES_MARKUP, BusinessesClient } from "./idle";');

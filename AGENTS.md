@@ -12,7 +12,6 @@ This repository contains multiple games that must be developed and released inde
 
 ## Permanent branch model
 - Slot work: `feature/slot`
-- Roulette work: `feature/roulette`
 - Cadı Kazan work: `feature/cadi-kazan`
 - Idle / İşletmeler work: `feature/idle`
 - Hub/site work: `feature/hub`
@@ -34,7 +33,7 @@ This repository contains multiple games that must be developed and released inde
 10. If ownership is unclear, stop instead of touching a shared or foreign file.
 
 ## Goal
-Routine Slot updates must have zero file changes in Roulette, Cadı Kazan, Idle, Hub, Account/Auth and Blackjack. The same isolation rule applies symmetrically to every game/category.
+Routine Slot updates must have zero file changes in Cadı Kazan, Idle, Hub, Account/Auth and Blackjack. The same isolation rule applies symmetrically to every game/category.
 
 
 ## Release workflow

@@ -8,7 +8,6 @@
 
 ---
 
-
 ### Tool access rule — Figma + GitHub
 - This project has direct GitHub and Figma tool access available to the assistant.
 - Do not claim that GitHub/Figma access is unavailable when the tools are present.
@@ -18,15 +17,12 @@
 ### Git workflow isolation rule — 2026-09-23
 - GitHub feature branches are permanently split by game:
   - `feature/cadi-kazan`
-  - `feature/roulette`
   - `feature/slot`
-- All coding from the Cadı Kazan chat goes to `feature/cadi-kazan`; Roulette goes to `feature/roulette`; Slot goes to `feature/slot`.
 - The shared Replit root workspace is **integration/preview only** and must stay on local `main`.
 - **Never switch the shared Replit root workspace to a feature branch.** Do not use `git switch feature/...`, checkout, reset, rebase, or local feature commits in the shared root.
 - If a chat needs to run Shell commands against its own feature branch, it must use a **separate Git worktree / separate physical directory** for that game. Recommended conceptual layout:
   - root workspace → `main`
   - sibling worktree → `feature/cadi-kazan`
-  - sibling worktree → `feature/roulette`
   - sibling worktree → `feature/slot`
 - A Shell command run inside one feature worktree may affect only that worktree. It must never change the branch or files of the shared root workspace.
 - Approved feature work is merged on GitHub into `main`; only after that is the shared Replit root updated from `github/main`.
@@ -34,7 +30,6 @@
 - Safe sync helper exists at `scripts/replit-sync-main.sh`. Normal user command after an approved merge is:
   `bash scripts/replit-sync-main.sh`
 - The helper aborts if Replit is not on `main`, if the working tree is dirty, or if local `main` contains commits that are not on GitHub `main`. It does not reset or overwrite local work.
-- If the user is working in multiple ChatGPT conversations at once, every conversation must respect the branch/worktree ownership above. A Roulette task must not modify Cadı Kazan or Slot feature branches, and vice versa.
 - Shared files such as `OYUN_PROJECT_MEMORY.md`, shared wallet/session code, root config, package/lock files, and global app shell files require extra integration care. Prefer updating coordination files on `main` after feature integration. If two features must touch the same shared file, resolve that deliberately on GitHub before updating Replit.
 - Canonical detailed workflow is also documented in root file `GIT_WORKFLOW_RULES.md`.
 
@@ -83,7 +78,6 @@ This workflow is an explicit user preference and should be preserved across chat
 Use GitHub/code/runtime evidence directly. Do **not** delegate the audit to Replit Agent.
 
 Examples:
-- inspect Roulette
 - find physics problems
 - check payout logic
 - compare mobile layout
@@ -155,7 +149,6 @@ The real Replit project was pushed to GitHub through a temporary branch named `r
 OYUN is one browser game suite. The currently important playable areas are:
 
 1. **Cascade 8 Slot**
-2. **Roulette**
 3. **Cadı Kazan** (scratch card)
 
 They are not separate wallet products. They are part of the same game economy.
@@ -168,10 +161,6 @@ They are not separate wallet products. They are part of the same game economy.
 Important files:
 - `src/main.ts`
 - `src/styles.css`
-- `src/rouletteClient.ts`
-- `src/roulette.css`
-- `src/rouletteGeometry.ts`
-- `src/roulettePhysicsReplay.ts`
 - `src/witchClient.ts`
 - `src/witch.css`
 - `src/scratch/`
@@ -184,8 +173,6 @@ Important files:
 `artifacts/api-server/`
 
 Important areas:
-- `src/roulette/`
-- `src/physics-lab/`
 - `src/slot/`
 - `src/cadi-kazan/`
 
@@ -193,10 +180,6 @@ Important areas:
 PostgreSQL through the workspace DB package.
 
 ## Shared wallet
-
-Slot, Roulette and Cadı Kazan use the same server-side wallet/session economy.
-
-The common wallet table is based on `roulette_wallets`.
 
 Important principle:
 
@@ -426,206 +409,6 @@ Because code continued changing after older simulations, do not assume that repo
 
 ---
 
-# 4) ROULETTE — CURRENT MODEL
-
-## Product goal
-
-The Roulette experience should feel like a premium physical roulette wheel, not a flat CSS spinner.
-
-Unlike Cadı Kazan, Roulette **does use real 3D / physics work**.
-
-The project contains:
-- European wheel geometry
-- Three.js rendering
-- GLB roulette asset
-- Physics Lab
-- server-side roulette round coordinator
-- WebSocket snapshot/event flow
-- wallet/bet persistence
-
-The user has repeatedly emphasized:
-- no ugly physics
-- no visibly fake ball behavior
-- no sloppy wheel geometry
-- no shortcuts that break visual/physical credibility
-
-## European wheel order
-
-Current canonical order:
-
-`0, 32, 15, 19, 4, 21, 2, 25, 17, 34, 6, 27, 13, 36, 11, 30, 8, 23, 10, 5, 24, 16, 33, 1, 20, 14, 31, 9, 22, 18, 29, 7, 28, 12, 35, 3, 26`
-
-37 pockets, single zero.
-
-## Current server phases
-
-- OPEN — 15s
-- LAST_CALL — 5s
-- LOCKED — 1s
-- MULTIPLIER_REVEAL — 9s
-- SPINNING — 12s
-- RESULT — 3.5s
-- SETTLING — 3s
-- INTERMISSION — 3s
-
-Multiplier reveal step:
-**1.5s**
-
-## Current bet types
-
-- Straight
-- Split
-- Street
-- Corner
-- Six Line
-- Dozen
-- Column
-- Red
-- Black
-- Odd
-- Even
-- Low
-- High
-
-## Current Roulette RNG
-
-Winning number:
-- server-side crypto `randomInt(0, 37)`
-- uniform 0–36
-
-Lucky numbers:
-- random unique set
-- 1 to 5 lucky numbers per round
-
-Lucky multiplier values:
-- 50x
-- 100x
-- 150x
-- 200x
-- 250x
-- 300x
-- 400x
-- 500x
-
-Current weights:
-- 50: 52
-- 100: 24
-- 150: 10
-- 200: 6
-- 250: 3
-- 300: 2
-- 400: 1.5
-- 500: 1
-
-## Current commitment
-
-A SHA-256 commitment is created from:
-- roundId
-- winningNumber
-- luckyNumbers
-- multipliers
-
-This is persisted with the round.
-
-## Current physics / visual architecture
-
-Client class:
-`RoulettePhysicsReplay`
-
-It currently loads:
-- GLB visual source
-- `/api/physics-lab/rounds/current`
-
-The replay trajectory is then rotated/yawed to align with the Roulette server target number.
-
-### CRITICAL architectural note
-
-At the moment the ordinary Roulette server chooses the winning number independently through Roulette RNG.
-
-The Physics Lab produces a settled physical replay, but the client reorients that replay toward the already-selected Roulette result.
-
-Therefore the current integration should be treated as:
-
-> **server RNG result + physics replay visualization**
-
-not yet as:
-
-> **the live physical simulation itself determines the Roulette result**
-
-Do not describe the present implementation as a fully physics-determined production roulette until this architecture is intentionally changed and verified.
-
-## Physics Lab
-
-Server files:
-`artifacts/api-server/src/physics-lab/`
-
-It can:
-- generate a seed
-- simulate a round
-- persist trajectory
-- persist final pocket
-- persist event data
-- persist trajectory hash
-- return current / historical replay
-
-The physics lab is useful for validation and replay, but its relationship to the live Roulette outcome must be consciously defined.
-
-## Current round generation pause behavior
-
-`ROULETTE_ROUND_GENERATION_PAUSED`
-
-Code behavior:
-- env values `0 / false / off / no` mean unpaused
-- when the env is missing, the code defaults to **paused**
-
-Do not claim the live environment is paused or active solely from code default; runtime env/snapshot must be checked.
-
-## CRITICAL payout issue discovered in code — MUST AUDIT BEFORE RELEASE
-
-Current payout units are:
-
-- Straight 35
-- Split 17
-- Street 11
-- Corner 8
-- Six Line 5
-- Dozen 2
-- Column 2
-- Even-money bets 1
-
-But the stake is debited when the bet is placed, and settlement currently credits:
-
-`stake × payoutUnits`
-
-This means, for example:
-- a $1 even-money win returns $1 after $1 was already debited → net $0
-- a $1 straight win returns $35 after $1 debit → net $34
-
-If the product intends standard European roulette returns, the stake-return semantics are likely off by 1x. This is a **potential critical economy bug** and should be explicitly verified/fixed, not silently ignored.
-
-Lucky-number multiplier semantics should be checked at the same time so the meaning of “50x / 100x …” is consistent.
-
-## Roulette current audit checklist
-
-When the user asks to “inspect Roulette”, ChatGPT itself should verify:
-
-1. Effective runtime value of `ROULETTE_ROUND_GENERATION_PAUSED`
-2. Whether `/api/roulette/snapshot` can create/advance fresh rounds
-3. Whether the Three.js replay canvas becomes ready in real Preview/WebGL
-4. Whether it falls back on browsers/proxy preview
-5. Roulette tests
-6. Physics Lab tests
-7. payout/settlement smoke
-8. duplicate/idempotency behavior
-9. reconnect/WebSocket snapshot correctness
-10. mobile viewport and safe-area
-11. result/animation timing synchronization
-12. whether live roulette is intended to remain RNG-driven or become physics-outcome-driven
-
-**Do not send this audit to Replit Agent.**
-
----
-
 # 5) CADI KAZAN — SCRATCH CARD
 
 ## Product goal
@@ -714,8 +497,6 @@ At terminal state:
 - user should be able to see “what was underneath”
 
 ## Shared wallet
-
-Cadı Kazan uses the same server wallet/session as Roulette and Slot.
 
 Scratch round and scratch ledger records remain isolated from the other games’ round records.
 
@@ -826,14 +607,12 @@ Optionally:
 
 Important milestones already implemented/validated in prior work:
 
-- Slot, Roulette and Cadı Kazan use the shared server wallet.
 - Slot was moved away from browser-authoritative money/RNG flow.
 - Slot round/ledger persistence exists.
 - Duplicate/idempotency protections were added.
 - Legacy local balance migration was constrained so browser data cannot arbitrarily mint server credits.
 - Cross-game wallet consistency was QA’d in earlier iterations.
 - Terminal scratch reveal behavior was added as a requirement.
-- Roulette received server round phases, persistence, realtime snapshots and Physics Lab infrastructure.
 
 Do not casually revert these architecture decisions during visual fixes.
 
@@ -857,8 +636,6 @@ These rules apply across the project:
 ---
 
 # 8) OTHER OYUN ROADMAP CONTEXT
-
-These systems exist in planning/history but are secondary to the current Slot/Roulette/Cadı Kazan work.
 
 ## Football player pack opening
 
@@ -897,15 +674,12 @@ Use this to understand how we reached the current state.
 - mobile UI iterations
 - RTP simulations and packet/pair experiments
 
-### Stage 2 — Roulette foundation
-- Roulette UI added
 - European wheel mapping
 - server round coordinator
 - betting + shared wallet
 - lucky multipliers
 - WebSocket phase flow
 - 3D/GLB exploration
-- Physics Lab built in parts
 - physical track/pocket/ball diagnostics performed
 
 ### Stage 3 — Cadı Kazan
@@ -959,7 +733,6 @@ One audit-only instruction was mistakenly sent to Replit before this rule was cl
 - `AudioManager` now preloads the same-origin `/cadi-kazan/sfx-danger-negative.ogg` file on audio unlock, decodes it with `AudioContext.decodeAudioData`, and plays it through the existing SFX gain chain using `AudioBufferSourceNode`.
 - Global mute/volume continue to apply; repeated busts stop/restart cleanly.
 - Synth fallback is retained only if fetch/decode fails.
-- PR #38 changed only `artifacts/cascade-8/src/game/AudioManager.ts`; Slot/Roulette files were untouched.
 - PR #38 merged into `main` as `484f654`.
 
 ### Stage 30 — Video-derived I AM THE DANGER negative SFX
@@ -968,14 +741,12 @@ One audit-only instruction was mistakenly sent to Replit before this rule was cl
 - `AudioManager.bombBust()` now plays this uploaded-video clip for BOMBA / I AM THE DANGER instead of the old procedural blast/failure cue.
 - Global mute and volume settings still apply; a tiny synthesized fallback is used only if a strict browser policy rejects media playback.
 - Before merging, `feature/cadi-kazan` was deliberately realigned to current `main` after backing up its prior WIP as `backup/cadi-kazan-danger-sfx-wip-2026-09-24`; PR #37 was ahead by 2 / behind by 0 and clean.
-- PR #37 merged into `main` as `f75db61`. Slot/Roulette event logic was not changed.
 
 ### Stage 29 — Standard 5 card made asset-independent
 - Preview proved that the prior Better Call Saul Standard 5 background asset still did not render even though main contained the expected commit and the cactus/Saul/Danger cell art rendered correctly.
 - Verified GitHub main before the fix: `b525e74`; the broken card asset existed at `artifacts/cascade-8/public/cadi-kazan/bcs-standard5-card.webp`.
 - To remove the failure mode entirely, Standard 5 no longer depends on that raster background. The ticket face is now built directly in HTML/CSS: red `IN LEGAL TROUBLE?` header, yellow body, Better Call Saul / SAUL GOODMAN / ATTORNEY AT LAW / phone / CALL SAUL NOW copy, red `NOT TOLL FREE • SE HABLA ESPAÑOL` footer, and the dynamic stake badge.
 - Existing five scratch cells remain registered over the right side; cactus closed art and Saul / I AM THE DANGER result art remain unchanged.
-- Advanced 25, Slot, and Roulette source files were untouched.
 - E2E visual guard now checks that the structural Standard 5 card face is actually visible instead of checking for the old background-image URL.
 - Merged via PR #34, merge commit `f98908d`.
 
@@ -983,7 +754,6 @@ One audit-only instruction was mistakenly sent to Replit before this rule was cl
 - The Standard 5 Better Call Saul card background was not rendering in Preview even though the five interactive cells and dynamic price badge were visible.
 - Root cause: the previously committed `bcs-standard5-card.webp` asset was invalid/corrupted for browser rendering.
 - Re-encoded the supplied closed-card reference crop as a valid WebP while preserving the original 2001×671 composition.
-- Replaced only `artifacts/cascade-8/public/cadi-kazan/bcs-standard5-card.webp`; cell registration, cactus scratch cover, Saul/Danger result art, theme CSS, Slot and Roulette source files were untouched.
 - Merged via PR #33, merge commit `506bfb0`.
 
 ### Stage 27 — Standard 5 Better Call Saul visual rebuild
@@ -994,7 +764,6 @@ One audit-only instruction was mistakenly sent to Replit before this rule was cl
 - Standard-mode page chrome now matches the card: warm dark table, red/yellow header/control styling, yellow/orange Buy button, and matching payout HUD accents.
 - Advanced 25 remains a separate design and was not replaced by the Better Call Saul ticket.
 - E2E coverage was updated to guard the Standard card background/aspect, five-cell placement, dynamic price badge, Saul safe artwork, and I AM THE DANGER terminal artwork. Runtime/visual Preview verification is still required before calling the match final.
-- PR #32 changed only Cadı Kazan files/assets; Slot/Roulette source files were not modified.
 - Merged into GitHub `main` via PR #32, merge commit `696a0cd`.
 
 ### Stage 26 — Scratch audio rebuilt from reference-video behavior
@@ -1013,7 +782,6 @@ One audit-only instruction was mistakenly sent to Replit before this rule was cl
 - BUST/BOMBA now has a dedicated negative sound: low blast/thump body, short high-frequency impact texture, and a descending failure tone.
 - Successful ticket purchase now has its own cue: short paper/foil feed, mechanical stamp/cutter hit, and restrained confirmation bell.
 - AudioContext is explicitly unlocked synchronously on Buy and Cash Out user gestures to improve sound reliability on mobile browsers before async server responses finish.
-- Changes were limited to Cadı Kazan event wiring and shared AudioManager additions; Roulette/Slot event logic was not modified.
 - Merged into GitHub `main` via PR #26, merge commit `24a61e4`.
 
 ### Stage 24 — Root scratch registration fix + desktop Advanced 25 rebuild
@@ -1022,14 +790,12 @@ One audit-only instruction was mistakenly sent to Replit before this rule was cl
 - E2E now guards both backing-store/CSS-size registration and that first contact at the visual canvas center actually reduces lacquer alpha at that same center.
 - Desktop Advanced 25 was rebuilt again with a final override placed after legacy/Figma precision rules; this prevents older CSS from silently overriding the intended design.
 - New desktop card target: centered horizontal ticket, compact ~28% left info rail, dominant ~72% 5×5 board, no giant empty parchment area, payout HUD kept separate.
-- Changes were limited to Cadı Kazan CSS, ScratchSurface, and Cadı Kazan E2E; Roulette and Slot source files were not modified.
 - Merged into GitHub `main` via PR #13, merge commit `ec469e7`.
 
 ### Stage 23 — Advanced 25 desktop matches approved mobile card
 - Desktop Advanced 25 now uses the same approved horizontal card language as mobile: compact ~30% information rail on the left and dominant ~70% 5×5 scratch field on the right.
 - Desktop ticket uses the same parchment/gold hierarchy and keeps the payout HUD separate on the right.
 - Desktop QA now guards: wide ticket ratio, board occupying at least ~60% of ticket width, visible gap before payout HUD, and usable minimum cell size.
-- Changes were limited to Cadı Kazan CSS and its E2E test; Roulette and Slot source files were not modified.
 - Merged into GitHub `main` via PR #12, merge commit `aafbea1`.
 
 ### Stage 22 — Approved 30/70 Advanced 25 mobile composition
@@ -1085,7 +851,6 @@ One audit-only instruction was mistakenly sent to Replit before this rule was cl
 - Standard and Advanced use the same standardized scratch brush target: 14 CSS px local radius (28 px diameter), with a safety cap only if a cell is smaller than expected.
 - Scratch pointer mapping now prefers PointerEvent local `offsetX/offsetY`, which tracks the transformed canvas coordinate system directly; orientation-specific client-coordinate math remains only as fallback.
 - Cash-register-style payout audio now plays on successful `CASHED_OUT` and on automatic maximum-card `COMPLETED` settlement.
-- Changes were limited to Cadı Kazan source + its E2E test; Roulette and Slot source files were not modified.
 - Merged into GitHub `main` via PR #6, merge commit `6267365`.
 
 ### Stage 17 — Cadı Kazan always-landscape mobile viewport lock
@@ -1109,7 +874,6 @@ One audit-only instruction was mistakenly sent to Replit before this rule was cl
 - Very narrow phones (down to 320px QA viewport) trim decorative copy before gameplay elements.
 - Mobile page allows vertical document flow when necessary but forbids horizontal overflow.
 - Mobile QA now covers 915×412 landscape, 412×915 portrait, 360×640 small portrait, and 320×568 narrow portrait.
-- Merged to GitHub `main` in commit `1c1ab3b` without modifying Roulette or Slot source files.
 
 ### Stage 15 — True responsive portrait mobile
 - removed the failed portrait rotate/transform approach
@@ -1198,7 +962,6 @@ Priority checks:
 5. Left setup and right payout panels must be readable and premium without crowding the ticket.
 6. Portrait mobile must prioritize the ticket and use the sticky payout bar correctly.
 7. Landscape mobile must render the intended left / ticket / right horizontal layout.
-8. Fix any compile/runtime/layout regression found in Preview before moving back to Roulette audit.
 
 # 11) MEMORY MAINTENANCE RULE
 
