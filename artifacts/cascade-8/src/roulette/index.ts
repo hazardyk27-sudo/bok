@@ -31,6 +31,13 @@ import {
   type RouletteSimulationEvent,
 } from "./simulationEvents";
 import { RouletteAudioEngine } from "./rouletteAudio";
+import {
+  ROULETTE_RESULT_HOLD_MS,
+  canEditRouletteBets,
+  canStartRouletteSpin,
+  getRoulettePhaseStatus,
+  type RouletteScenePhase,
+} from "./scenePhase";
 import { readSettledWinningResult } from "./spinResult";
 import { renderRouletteWheel } from "./wheelRenderer";
 
@@ -121,10 +128,68 @@ export function mountRoulette(app: HTMLDivElement) {
   let lastEventElapsedMs = -1;
   let simulationEvents: RouletteSimulationEvent[] = [];
   let frameId = 0;
+  let resultHoldTimer = 0;
   const rouletteAudio =
     new RouletteAudioEngine();
 
   const redraw = () => renderCanvas(canvas, viewState);
+
+  const setScenePhase = (
+    phase: RouletteScenePhase,
+    resultNumber?: number,
+  ) => {
+    page.dataset.phase = phase;
+    page.dataset.bettingLocked =
+      String(
+        !canEditRouletteBets(phase),
+      );
+
+    if (betStatus) {
+      betStatus.textContent =
+        getRoulettePhaseStatus(
+          phase,
+          resultNumber,
+        );
+    }
+
+    betPanel.setAttribute(
+      "aria-disabled",
+      String(
+        !canEditRouletteBets(phase),
+      ),
+    );
+
+    if (spinButton) {
+      spinButton.disabled =
+        !canStartRouletteSpin(phase);
+    }
+  };
+
+  const reopenBettingAfterResult = () => {
+    window.clearTimeout(
+      resultHoldTimer,
+    );
+
+    resultHoldTimer =
+      window.setTimeout(() => {
+        if (
+          activeRotorSpin ||
+          activeBallOrbit ||
+          page.dataset.phase !==
+            "settled"
+        ) {
+          return;
+        }
+
+        canvas.dataset.rouletteState =
+          "ready";
+        setScenePhase("betting");
+        canvas.setAttribute(
+          "aria-label",
+          "European roulette wheel. Betting open. Press to spin again.",
+        );
+      }, ROULETTE_RESULT_HOLD_MS);
+  };
 
   const renderBetState = () => {
     const totals =
@@ -264,19 +329,21 @@ export function mountRoulette(app: HTMLDivElement) {
 
         if (result) {
           canvas.dataset.rouletteState = "settled";
-          page.dataset.phase = "settled";
-          if (betStatus) betStatus.textContent = `RESULT ${result.number}`;
+          setScenePhase(
+            "settled",
+            result.number,
+          );
           canvas.dataset.roulettePocketIndex = String(result.pocketIndex);
           canvas.dataset.rouletteWinningNumber = String(result.number);
           canvas.dataset.rouletteWinningColor = result.color;
           canvas.setAttribute(
             "aria-label",
-            `European roulette wheel. Result ${result.number}. Press to spin again.`,
+            `European roulette wheel. Result ${result.number}.`,
           );
+          reopenBettingAfterResult();
         } else {
           canvas.dataset.rouletteState = "unsettled";
-          page.dataset.phase = "betting";
-          if (betStatus) betStatus.textContent = "BETTING OPEN";
+          setScenePhase("betting");
           delete canvas.dataset.roulettePocketIndex;
           delete canvas.dataset.rouletteWinningNumber;
           delete canvas.dataset.rouletteWinningColor;
@@ -299,7 +366,20 @@ export function mountRoulette(app: HTMLDivElement) {
   };
 
   const startSpin = async () => {
-    if (activeRotorSpin || activeBallOrbit) return;
+    if (
+      activeRotorSpin ||
+      activeBallOrbit ||
+      !canStartRouletteSpin(
+        page.dataset.phase as
+          RouletteScenePhase,
+      )
+    ) {
+      return;
+    }
+
+    window.clearTimeout(
+      resultHoldTimer,
+    );
 
     await rouletteAudio.ensureStarted();
 
@@ -312,8 +392,7 @@ export function mountRoulette(app: HTMLDivElement) {
     renderBetState();
 
     canvas.dataset.rouletteState = "spinning";
-    page.dataset.phase = "spinning";
-    if (betStatus) betStatus.textContent = "NO MORE BETS";
+    setScenePhase("spinning");
     delete canvas.dataset.roulettePocketIndex;
     delete canvas.dataset.rouletteWinningNumber;
     delete canvas.dataset.rouletteWinningColor;
@@ -345,8 +424,7 @@ export function mountRoulette(app: HTMLDivElement) {
   };
 
   canvas.dataset.rouletteState = "ready";
-  page.dataset.phase = "betting";
-  if (betStatus) betStatus.textContent = "BETTING OPEN";
+  setScenePhase("betting");
 
   const observer = new ResizeObserver(redraw);
   observer.observe(canvas);
@@ -357,8 +435,10 @@ export function mountRoulette(app: HTMLDivElement) {
     "click",
     (event) => {
       if (
-        page.dataset.phase ===
-        "spinning"
+        !canEditRouletteBets(
+          page.dataset.phase as
+            RouletteScenePhase,
+        )
       ) {
         return;
       }

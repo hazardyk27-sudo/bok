@@ -43,10 +43,12 @@ button {
 .roulette-bet-panel {
   min-width: 0;
   transition:
-    transform 420ms cubic-bezier(0.2, 0.78, 0.2, 1),
-    opacity 320ms ease,
-    filter 320ms ease;
+    transform 520ms cubic-bezier(0.16, 0.86, 0.22, 1),
+    opacity 380ms ease,
+    filter 380ms ease,
+    box-shadow 380ms ease;
   transform-origin: center;
+  will-change: transform, opacity, filter;
 }
 
 .roulette-wheel-panel {
@@ -262,37 +264,64 @@ button {
 }
 
 .roulette-page[data-phase="betting"] .roulette-wheel-panel {
-  transform: scale(0.88);
-  opacity: 0.82;
-  filter: saturate(0.92);
+  transform: translateY(-4px) scale(0.80);
+  opacity: 0.76;
+  filter: saturate(0.88) brightness(0.92);
 }
 
 .roulette-page[data-phase="betting"] .roulette-bet-panel {
-  transform: scale(1);
+  transform: translateY(0) scale(1.035);
   opacity: 1;
+  filter: none;
+  box-shadow:
+    0 30px 88px rgba(0, 0, 0, 0.52),
+    0 0 0 1px rgba(225, 232, 237, 0.08),
+    inset 0 1px 0 rgba(255, 255, 255, 0.10);
 }
 
 .roulette-page[data-phase="spinning"] {
   --wheel-size: min(47vw, 660px);
 }
 
-.roulette-page[data-phase="spinning"] .roulette-wheel-panel,
-.roulette-page[data-phase="settled"] .roulette-wheel-panel {
-  transform: scale(1);
+.roulette-page[data-phase="spinning"] .roulette-wheel-panel {
+  transform: translateY(0) scale(1.08);
   opacity: 1;
+  filter: none;
+  z-index: 3;
+}
+
+.roulette-page[data-phase="settled"] .roulette-wheel-panel {
+  transform: translateY(0) scale(1.04);
+  opacity: 1;
+  filter: none;
   z-index: 3;
 }
 
 .roulette-page[data-phase="spinning"] .roulette-bet-panel {
-  transform: scale(0.88);
-  opacity: 0.58;
-  filter: saturate(0.72) brightness(0.72);
+  transform:
+    perspective(900px)
+    translateY(18px)
+    rotateX(6deg)
+    scale(0.78);
+  opacity: 0.34;
+  filter:
+    saturate(0.62)
+    brightness(0.62)
+    blur(0.35px);
   pointer-events: none;
 }
 
 .roulette-page[data-phase="settled"] .roulette-bet-panel {
-  transform: scale(0.94);
-  opacity: 0.88;
+  transform:
+    perspective(900px)
+    translateY(10px)
+    rotateX(3deg)
+    scale(0.86);
+  opacity: 0.54;
+  filter:
+    saturate(0.78)
+    brightness(0.76);
+  pointer-events: none;
 }
 
 @media (max-width: 980px) {
@@ -312,7 +341,7 @@ button {
   }
 
   .roulette-page[data-phase="betting"] .roulette-wheel-panel {
-    transform: scale(0.94);
+    transform: translateY(-4px) scale(0.86);
   }
 
   .roulette-page[data-phase="spinning"] {
@@ -320,7 +349,11 @@ button {
   }
 
   .roulette-page[data-phase="spinning"] .roulette-bet-panel {
-    transform: scale(0.9);
+    transform:
+      perspective(800px)
+      translateY(10px)
+      rotateX(5deg)
+      scale(0.78);
   }
 }
 
@@ -415,13 +448,32 @@ button {
     --wheel-size: min(92vw, 430px);
   }
 
+  .roulette-page[data-phase="betting"] .roulette-bet-panel {
+    transform: scale(1.01);
+  }
+
+  .roulette-page[data-phase="spinning"] .roulette-wheel-panel {
+    transform: scale(1.04);
+  }
+
   .roulette-page[data-phase="spinning"] .roulette-bet-panel {
-    transform: scale(0.84);
-    opacity: 0.46;
+    transform:
+      perspective(700px)
+      translateY(-6px)
+      rotateX(4deg)
+      scale(0.72);
+    opacity: 0.28;
   }
 
   .roulette-page[data-phase="settled"] {
     --wheel-size: min(82vw, 390px);
+  }
+
+  .roulette-page[data-phase="settled"] .roulette-bet-panel {
+    transform:
+      translateY(-3px)
+      scale(0.80);
+    opacity: 0.42;
   }
 }
 
@@ -648,4 +700,17 @@ button {
   .roulette-bet-actions .roulette-spin-button {
     font-size: 11px;
   }
+}
+
+
+.roulette-page[data-betting-locked="true"] .roulette-chip-option,
+.roulette-page[data-betting-locked="true"] .roulette-bet-actions button,
+.roulette-page[data-betting-locked="true"] .roulette-bet-cell {
+  cursor: default;
+}
+
+.roulette-page[data-phase="settled"] .roulette-bet-status {
+  color: #ffffff;
+  text-shadow:
+    0 0 18px rgba(255, 255, 255, 0.24);
 }
