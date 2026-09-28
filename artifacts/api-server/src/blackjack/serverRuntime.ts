@@ -10,7 +10,17 @@ import {
 } from "./runtimeRecovery";
 import type { BlackjackShoe } from "./domain";
 import type { BlackjackJournalRepository } from "./journalRepository";
-import type { BlackjackSnapshotRepository } from "./snapshotRepository";
+import {
+  BlackjackSnapshotConflictError,
+  type BlackjackSnapshotRepository,
+} from "./snapshotRepository";
+import { createBlackjackActionProtocolState } from "./actionProtocol";
+import { createBlackjackReconnectRegistry } from "./reconnect";
+import { createBlackjackTableFoundation } from "./seats";
+import {
+  createBlackjackDurableSnapshot,
+  type BlackjackDurableRuntimeState,
+} from "./snapshotState";
 import type { BlackjackRoundSchedulerOptions } from "./roundScheduler";
 
 export type BlackjackAttachedServerRuntime = Readonly<{
@@ -99,4 +109,83 @@ export async function recoverAndAttachBlackjackServerRuntime(input: {
       createConnectionId:input.createConnectionId,
     },
   );
+}
+
+
+export function createBlackjackInitialServerRuntimeState(input: {
+  tableId: string;
+  shoe: BlackjackShoe;
+}): BlackjackDurableRuntimeState {
+  return Object.freeze({
+    table:createBlackjackTableFoundation({
+      tableId:input.tableId,
+      shoe:input.shoe,
+    }),
+    actionProtocol:createBlackjackActionProtocolState(),
+    reconnectRegistry:createBlackjackReconnectRegistry(),
+    wallets:Object.freeze([]),
+    reservationBooks:Object.freeze([]),
+    bettingPositions:Object.freeze([]),
+  });
+}
+
+export async function initializeAndAttachBlackjackServerRuntime(input: {
+  server: Server;
+  tableId: string;
+  snapshotRepository: Pick<
+    BlackjackSnapshotRepository,
+    "load" | "save"
+  >;
+  journalRepository: Pick<BlackjackJournalRepository,"loadAfter">;
+  recoveredAtMs: number;
+  nowMs: () => number;
+  resolveIdentity: BlackjackIdentityResolver;
+  createInitialShoe: () => BlackjackShoe;
+  createFreshShoe?: () => BlackjackShoe;
+  bettingWindowMs?: number;
+  scheduler?: BlackjackRoundSchedulerOptions;
+  createConnectionId?: () => string;
+}): Promise<BlackjackAttachedServerRuntime> {
+  const existing=await input.snapshotRepository.load(input.tableId);
+
+  if(existing===null){
+    const initial=createBlackjackDurableSnapshot(
+      createBlackjackInitialServerRuntimeState({
+        tableId:input.tableId,
+        shoe:input.createInitialShoe(),
+      }),
+      input.recoveredAtMs,
+    );
+
+    try {
+      await input.snapshotRepository.save(initial,null);
+    } catch(error) {
+      if(!(error instanceof BlackjackSnapshotConflictError)){
+        throw error;
+      }
+      // Another server won first-start initialization. Recovery below
+      // reloads the CAS winner instead of creating a second authority.
+    }
+  }
+
+  const attached=await recoverAndAttachBlackjackServerRuntime({
+    server:input.server,
+    tableId:input.tableId,
+    snapshotRepository:input.snapshotRepository,
+    journalRepository:input.journalRepository,
+    recoveredAtMs:input.recoveredAtMs,
+    nowMs:input.nowMs,
+    resolveIdentity:input.resolveIdentity,
+    createFreshShoe:input.createFreshShoe,
+    bettingWindowMs:input.bettingWindowMs,
+    scheduler:input.scheduler,
+    createConnectionId:input.createConnectionId,
+  });
+
+  if(attached===null){
+    throw new Error(
+      "Blackjack server runtime initialization did not produce durable state",
+    );
+  }
+  return attached;
 }

@@ -344,7 +344,9 @@ export function connectBlackjackRealtimeElement(
     let actionStatusLabel: string | null=null;
     let actionStatusTone: "neutral" | "success" | "error"="neutral";
 
-    if(playerPending!==null){
+    if(!transportConnected){
+      actionStatusLabel="RECONNECTING…";
+    } else if(playerPending!==null){
       actionStatusLabel=playerPending.phase === "ACKNOWLEDGED"
         ? playerPending.message.type + " · SYNCING"
         : playerPending.message.type + " · PROCESSING";

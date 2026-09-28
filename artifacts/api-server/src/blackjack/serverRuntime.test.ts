@@ -9,6 +9,7 @@ import {
   BLACKJACK_WS_PATH,
 } from "./realtime";
 import {
+  initializeAndAttachBlackjackServerRuntime,
   recoverAndAttachBlackjackServerRuntime,
   type BlackjackAttachedServerRuntime,
 } from "./serverRuntime";
@@ -246,4 +247,55 @@ describe("blackjack owned server runtime wiring",()=>{
     expect(attached).toBeNull();
     expect(scheduled).toBe(false);
   });
+
+  it("creates an empty durable TABLE_IDLE runtime on first deploy before attaching",async()=>{
+    let stored: BlackjackDurableSnapshot | null=null;
+    let createInitialShoeCalls=0;
+
+    server=createServer();
+    attached=await initializeAndAttachBlackjackServerRuntime({
+      server,
+      tableId:"fresh-server-runtime-table",
+      snapshotRepository:{
+        load:async()=>stored,
+        save:async(snapshot,expectedVersion)=>{
+          if(expectedVersion===null){
+            expect(stored).toBeNull();
+          } else {
+            expect(stored?.stateVersion).toBe(expectedVersion);
+          }
+          stored=snapshot;
+          return snapshot;
+        },
+      },
+      journalRepository:{loadAfter:async()=>[]},
+      recoveredAtMs:10_000,
+      nowMs:()=>10_000,
+      resolveIdentity:()=>null,
+      createInitialShoe:()=>{
+        createInitialShoeCalls+=1;
+        return createUnshuffledBlackjackShoe({
+          shoeId:"fresh-server-runtime-shoe",
+          createdAtMs:10_000,
+        });
+      },
+      scheduler:{
+        schedule:()=> "fresh-server-runtime-scheduler",
+        cancelSchedule:()=>undefined,
+      },
+    });
+
+    expect(createInitialShoeCalls).toBe(1);
+    expect(attached.scheduled.coordinator.getTable()).toMatchObject({
+      tableId:"fresh-server-runtime-table",
+      phase:"TABLE_IDLE",
+      stateVersion:2,
+      eventSequence:0,
+    });
+    expect(attached.scheduled.coordinator.getTable().players).toEqual([]);
+    expect(stored).not.toBeNull();
+    expect(stored?.payload.table.phase).toBe("TABLE_IDLE");
+    expect(stored?.payload.table.players).toEqual([]);
+  });
+
 });
