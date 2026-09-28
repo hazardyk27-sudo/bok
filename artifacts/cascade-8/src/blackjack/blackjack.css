@@ -856,3 +856,21 @@ body {
     font-size: 6px;
   }
 }
+
+.blackjack-action-feedback {
+  grid-column: 1 / -1;
+  min-height: 14px;
+  text-align: center;
+  color: var(--blackjack-muted);
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: .08em;
+}
+
+.blackjack-action-feedback[data-action-tone="success"] {
+  color: #7fd8a9;
+}
+
+.blackjack-action-feedback[data-action-tone="error"] {
+  color: #e38c8c;
+}

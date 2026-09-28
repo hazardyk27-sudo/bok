@@ -30,11 +30,20 @@ export type BlackjackPendingPlayerAction = Readonly<{
   acceptedEventSequence: number | null;
 }>;
 
+export type BlackjackPlayerActionFeedback = Readonly<{
+  status: "ACCEPTED" | "REJECTED";
+  actionId: string;
+  actionType: BlackjackPlayerActionType;
+  error: string | null;
+}>;
+
 export type BlackjackPlayerActionClient = Readonly<{
   submit: (type: BlackjackPlayerActionType) => BlackjackPlayerActionMessage;
   receive: (rawMessage: unknown) => void;
   getPending: () => BlackjackPendingPlayerAction | null;
+  getFeedback: () => BlackjackPlayerActionFeedback | null;
   isPending: () => boolean;
+  clearFeedback: () => void;
   detach: () => void;
 }>;
 
@@ -193,13 +202,20 @@ export function createBlackjackPlayerActionClient(input: {
   getViewContext: () => BlackjackSnapshotViewContext;
   createActionId: () => string;
   onPendingChange?: (pending: BlackjackPendingPlayerAction | null) => void;
+  onFeedbackChange?: (feedback: BlackjackPlayerActionFeedback | null) => void;
 }): BlackjackPlayerActionClient {
   let pending: BlackjackPendingPlayerAction | null = null;
+  let feedback: BlackjackPlayerActionFeedback | null = null;
   let detached=false;
 
   const setPending=(next: BlackjackPendingPlayerAction | null) => {
     pending=next;
     input.onPendingChange?.(pending);
+  };
+
+  const setFeedback=(next: BlackjackPlayerActionFeedback | null) => {
+    feedback=next;
+    input.onFeedbackChange?.(feedback);
   };
 
   const resolveFromSnapshot=(cursor: {
@@ -215,7 +231,14 @@ export function createBlackjackPlayerActionClient(input: {
       cursor.stateVersion >= pending.acceptedStateVersion &&
       cursor.eventSequence >= pending.acceptedEventSequence
     ) {
+      const resolved=pending;
       setPending(null);
+      setFeedback(Object.freeze({
+        status:"ACCEPTED",
+        actionId:resolved.message.actionId,
+        actionType:resolved.message.type,
+        error:null,
+      }));
       return;
     }
 
@@ -266,7 +289,38 @@ export function createBlackjackPlayerActionClient(input: {
       message.type === "ACTION_REJECTED" &&
       message.actionId === pending.message.actionId
     ) {
+      const rejected=pending;
       setPending(null);
+      setFeedback(Object.freeze({
+        status:"REJECTED",
+        actionId:rejected.message.actionId,
+        actionType:rejected.message.type,
+        error:typeof message.error === "string" ? message.error : "INVALID_ACTION",
+      }));
+      return;
+    }
+
+    if (message.type === "error") {
+      const rejected=pending;
+      setPending(null);
+      setFeedback(Object.freeze({
+        status:"REJECTED",
+        actionId:rejected.message.actionId,
+        actionType:rejected.message.type,
+        error:typeof message.error === "string" ? message.error : "BLACKJACK_ACTION_ERROR",
+      }));
+      return;
+    }
+
+    if (message.type === "SESSION_REPLACED") {
+      const rejected=pending;
+      setPending(null);
+      setFeedback(Object.freeze({
+        status:"REJECTED",
+        actionId:rejected.message.actionId,
+        actionType:rejected.message.type,
+        error:"SESSION_REPLACED",
+      }));
       return;
     }
 
@@ -287,6 +341,8 @@ export function createBlackjackPlayerActionClient(input: {
       if(pending!==null){
         throw new Error("Blackjack player action is already pending");
       }
+
+      setFeedback(null);
 
       const snapshot=input.getSnapshot();
       if(snapshot===null){
@@ -315,7 +371,9 @@ export function createBlackjackPlayerActionClient(input: {
     },
     receive,
     getPending:()=>pending,
+    getFeedback:()=>feedback,
     isPending:()=>pending!==null,
+    clearFeedback:()=>setFeedback(null),
     detach:()=>{
       if(detached) return;
       detached=true;

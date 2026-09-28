@@ -615,7 +615,7 @@ describe("blackjack responsive table foundation", () => {
       "wss://blackjack.example/api/blackjack/ws",
     );
     expect(createdUrls).toEqual([connection.url]);
-    expect(listeners.size).toBe(1);
+    expect(listeners.size).toBe(2);
 
     connection.close();
     connection.close();
@@ -874,6 +874,12 @@ describe("blackjack responsive table foundation", () => {
       snapshot:{ ...snapshot, stateVersion:5, eventSequence:7 },
     });
     expect(client.isPending()).toBe(false);
+    expect(client.getFeedback()).toEqual({
+      status:"ACCEPTED",
+      actionId:"action-1",
+      actionType:"HIT",
+      error:null,
+    });
 
     const stand=client.submit("STAND");
     expect(JSON.parse(sent[1])).toEqual(stand);
@@ -888,6 +894,130 @@ describe("blackjack responsive table foundation", () => {
         "forged",
       ),
     ).toThrow(/not currently available/);
+  });
+
+
+  it("releases a pending action on rejection/protocol error and surfaces safe feedback", () => {
+    const listeners = new Set<(event: MessageEvent<unknown>) => void>();
+    const sent: string[] = [];
+    const socket: BlackjackRealtimeSocketLike = {
+      send:(data)=>sent.push(data),
+      addEventListener:(_type,listener)=>listeners.add(listener),
+      removeEventListener:(_type,listener)=>listeners.delete(listener),
+    };
+
+    const snapshot: BlackjackPublicSnapshotViewSource = {
+      serverTimeMs: 1_000,
+      tableId: "reject-table",
+      phase: "PLAYER_TURNS",
+      maxSeats: 5,
+      seats: [
+        { seatNumber: 1, playerId: "local-player" },
+        { seatNumber: 2, playerId: null },
+        { seatNumber: 3, playerId: null },
+        { seatNumber: 4, playerId: null },
+        { seatNumber: 5, playerId: null },
+      ],
+      players: [{
+        playerId:"local-player",
+        seatNumber:1,
+        status:"PLAYING",
+        connected:true,
+      }],
+      round: {
+        roundId:"round-reject",
+        phase:"PLAYER_TURNS",
+        hands:[{
+          handId:"hand-reject",
+          playerId:"local-player",
+          seatNumber:1,
+          cards:[
+            { suit:"HEARTS", rank:"10" },
+            { suit:"SPADES", rank:"6" },
+          ],
+          betCents:10_000,
+          status:"ACTIVE",
+        }],
+        dealer:{
+          cards:[{ suit:"CLUBS", rank:"9" },null],
+          holeCardRevealed:false,
+        },
+        currentTurn:{
+          seatNumber:1,
+          handId:"hand-reject",
+          startedAtMs:0,
+          endsAtMs:15_000,
+        },
+        bettingClosesAtMs:null,
+      },
+      stateVersion:2,
+      eventSequence:3,
+    };
+
+    const client=createBlackjackPlayerActionClient({
+      socket,
+      getSnapshot:()=>snapshot,
+      getViewContext:()=>({
+        localPlayerId:"local-player",
+        availableBalanceCents:100_000,
+      }),
+      createActionId:()=>"reject-1",
+    });
+
+    client.submit("HIT");
+    expect(client.isPending()).toBe(true);
+    client.receive({
+      type:"ACTION_REJECTED",
+      actionId:"reject-1",
+      error:"STALE_ACTION",
+    });
+    expect(client.isPending()).toBe(false);
+    expect(client.getFeedback()).toEqual({
+      status:"REJECTED",
+      actionId:"reject-1",
+      actionType:"HIT",
+      error:"STALE_ACTION",
+    });
+
+    client.clearFeedback();
+    expect(client.getFeedback()).toBeNull();
+    client.detach();
+    expect(listeners.size).toBe(0);
+  });
+
+  it("renders pending and rejected action feedback without exposing protocol internals", () => {
+    const base = {
+      phaseLabel:"PLAYER TURNS",
+      balanceLabel:"1K",
+      betLabel:"100",
+      turnLabel:"YOUR TURN · 10s",
+      dealerTotalLabel:"10 + ?",
+      seats:[
+        { seatNumber:1 as const,label:"YOUR SEAT",status:"ACTIVE" as const,total:16,betLabel:"100",isLocal:true },
+        { seatNumber:2 as const,label:"OPEN SEAT",status:"EMPTY" as const,total:null,betLabel:null,isLocal:false },
+        { seatNumber:3 as const,label:"OPEN SEAT",status:"EMPTY" as const,total:null,betLabel:null,isLocal:false },
+        { seatNumber:4 as const,label:"OPEN SEAT",status:"EMPTY" as const,total:null,betLabel:null,isLocal:false },
+        { seatNumber:5 as const,label:"OPEN SEAT",status:"EMPTY" as const,total:null,betLabel:null,isLocal:false },
+      ],
+    };
+
+    const processing=renderBlackjackTableShell({
+      ...base,
+      actionStatusLabel:"HIT · PROCESSING",
+      actionStatusTone:"neutral",
+      enabledActions:[],
+    });
+    expect(processing).toContain("HIT · PROCESSING");
+    expect(processing).toContain('data-action-tone="neutral"');
+
+    const rejected=renderBlackjackTableShell({
+      ...base,
+      actionStatusLabel:"TABLE UPDATED · TRY AGAIN",
+      actionStatusTone:"error",
+      enabledActions:["HIT","STAND"],
+    });
+    expect(rejected).toContain("TABLE UPDATED · TRY AGAIN");
+    expect(rejected).toContain('data-action-tone="error"');
   });
 
 });

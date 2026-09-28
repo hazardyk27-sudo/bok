@@ -79,7 +79,9 @@ export {
   getBlackjackAvailablePlayerActions,
 } from "./playerActionsClient";
 export type {
+  BlackjackPendingPlayerAction,
   BlackjackPlayerActionClient,
+  BlackjackPlayerActionFeedback,
   BlackjackPlayerActionMessage,
   BlackjackPlayerActionType,
 } from "./playerActionsClient";

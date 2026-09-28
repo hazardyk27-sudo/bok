@@ -104,6 +104,8 @@ export type BlackjackSnapshotViewContext = Readonly<{
   localPlayerId?: string | null;
   availableBalanceCents?: number | null;
   actionPending?: boolean;
+  actionStatusLabel?: string | null;
+  actionStatusTone?: "neutral" | "success" | "error";
 }>;
 
 function assertSafeNonNegativeInteger(label: string, value: number): void {
@@ -346,6 +348,8 @@ export function buildBlackjackTableViewModelFromSnapshot(
       ),
     ),
     enabledActions: getBlackjackAvailablePlayerActions(snapshot, context),
+    actionStatusLabel: context.actionStatusLabel ?? null,
+    actionStatusTone: context.actionStatusTone ?? "neutral",
     seats: Object.freeze(seats),
   });
 }

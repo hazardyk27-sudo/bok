@@ -104,10 +104,46 @@ export function connectBlackjackRealtimeElement(
   const socket=(options.createSocket ?? defaultBlackjackSocketFactory)(url);
   const baseViewContext=options.getViewContext ?? (() => ({}));
   let actionClient: BlackjackPlayerActionClient | null=null;
-  const getViewContext=(): BlackjackSnapshotViewContext => ({
-    ...baseViewContext(),
-    actionPending:actionClient?.isPending() ?? false,
-  });
+  const getViewContext=(): BlackjackSnapshotViewContext => {
+    const base=baseViewContext();
+    const pending=actionClient?.getPending() ?? null;
+    const feedback=actionClient?.getFeedback() ?? null;
+
+    if(pending!==null){
+      return {
+        ...base,
+        actionPending:true,
+        actionStatusLabel:pending.phase === "ACKNOWLEDGED"
+          ? pending.message.type + " · SYNCING"
+          : pending.message.type + " · PROCESSING",
+        actionStatusTone:"neutral",
+      };
+    }
+
+    if(feedback!==null){
+      const label =
+        feedback.status === "ACCEPTED"
+          ? feedback.actionType + " · CONFIRMED"
+          : feedback.error === "STALE_ACTION"
+            ? "TABLE UPDATED · TRY AGAIN"
+            : feedback.error === "SESSION_REPLACED"
+              ? "SESSION REPLACED"
+              : feedback.actionType + " · NOT AVAILABLE";
+      return {
+        ...base,
+        actionPending:false,
+        actionStatusLabel:label,
+        actionStatusTone:feedback.status === "ACCEPTED" ? "success" : "error",
+      };
+    }
+
+    return {
+      ...base,
+      actionPending:false,
+      actionStatusLabel:null,
+      actionStatusTone:"neutral",
+    };
+  };
   const controller=bindBlackjackRealtimeElement(
     app,
     socket,
@@ -119,6 +155,7 @@ export function connectBlackjackRealtimeElement(
     getViewContext,
     createActionId:options.createActionId ?? defaultBlackjackActionId,
     onPendingChange:()=>{ controller.rerenderLatest(); },
+    onFeedbackChange:()=>{ controller.rerenderLatest(); },
   });
   actionClient=actions;
   const onClick=(event: Event) => {

@@ -27,6 +27,8 @@ export type BlackjackTableViewModel = Readonly<{
   dealerTotalLabel: string;
   dealerCards?: readonly (BlackjackCardViewModel | null)[];
   enabledActions?: readonly BlackjackTableAction[];
+  actionStatusLabel?: string | null;
+  actionStatusTone?: "neutral" | "success" | "error";
   seats: readonly BlackjackTableSeatViewModel[];
 }>;
 
@@ -218,6 +220,11 @@ export function renderBlackjackTableShell(
           <button type="button" data-blackjack-action="STAND"${actionDisabled("STAND")}>STAND</button>
           <button type="button" data-blackjack-action="DOUBLE"${actionDisabled("DOUBLE")}>DOUBLE</button>
           <button type="button" data-blackjack-action="SPLIT"${actionDisabled("SPLIT")}>SPLIT</button>
+          <span
+            class="blackjack-action-feedback"
+            data-action-tone="${model.actionStatusTone ?? "neutral"}"
+            aria-live="polite"
+          >${model.actionStatusLabel ? escapeHtml(model.actionStatusLabel) : ""}</span>
         </div>
       </section>
 
