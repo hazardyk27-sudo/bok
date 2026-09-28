@@ -33,6 +33,11 @@ export type BlackjackTableViewModel = Readonly<{
   enabledActions?: readonly BlackjackTableAction[];
   actionStatusLabel?: string | null;
   actionStatusTone?: "neutral" | "success" | "error";
+  roundResult?: Readonly<{
+    title: string;
+    detail: string;
+    tone: "win" | "push" | "loss";
+  }> | null;
   bettingPanel?: BlackjackBettingPanelViewModel;
   seats: readonly BlackjackTableSeatViewModel[];
 }>;
@@ -233,6 +238,19 @@ export function renderBlackjackTableShell(
             aria-live="polite"
           >${model.actionStatusLabel ? escapeHtml(model.actionStatusLabel) : ""}</span>
         </div>
+
+        ${model.roundResult
+          ? `
+            <div
+              class="blackjack-round-result"
+              data-result-tone="${model.roundResult.tone}"
+              aria-live="polite"
+            >
+              <strong>${escapeHtml(model.roundResult.title)}</strong>
+              <span>${escapeHtml(model.roundResult.detail)}</span>
+            </div>
+          `
+          : ""}
       </section>
 
       <footer class="blackjack-footnote">

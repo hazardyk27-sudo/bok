@@ -74,6 +74,8 @@ export type BlackjackPublicSnapshotViewSource = Readonly<{
       }>[];
       betCents: number;
       status: BlackjackViewHandStatus;
+      result?: "WIN" | "LOSS" | "PUSH" | "BLACKJACK_WIN" | null;
+      payoutCents?: number;
     }>[];
     dealer: Readonly<{
       cards: readonly (
@@ -243,6 +245,89 @@ function displayHandStatus(
   return status === "COMPLETE" ? "STOOD" : status;
 }
 
+function buildLocalRoundResult(
+  snapshot: BlackjackPublicSnapshotViewSource,
+  localPlayerId: string | null,
+): BlackjackTableViewModel["roundResult"] {
+  if(
+    snapshot.phase!=="ROUND_END" ||
+    localPlayerId===null ||
+    snapshot.round===null
+  ){
+    return null;
+  }
+
+  const hands=snapshot.round.hands.filter(
+    (hand)=>hand.playerId===localPlayerId,
+  );
+  if(
+    hands.length===0 ||
+    hands.some(
+      (hand)=>
+        hand.status!=="COMPLETE" ||
+        hand.result===null ||
+        hand.result===undefined ||
+        hand.payoutCents===undefined,
+    )
+  ){
+    return null;
+  }
+
+  let totalBetCents=0;
+  let payoutCents=0;
+  for(const hand of hands){
+    assertSafeNonNegativeInteger("hand result betCents",hand.betCents);
+    assertSafeNonNegativeInteger(
+      "hand result payoutCents",
+      hand.payoutCents ?? 0,
+    );
+    totalBetCents+=hand.betCents;
+    payoutCents+=hand.payoutCents ?? 0;
+    if(
+      !Number.isSafeInteger(totalBetCents) ||
+      !Number.isSafeInteger(payoutCents)
+    ){
+      throw new RangeError(
+        "Blackjack round result money exceeds safe integer range",
+      );
+    }
+  }
+
+  const netCents=payoutCents-totalBetCents;
+  const blackjackWin=
+    hands.length===1 && hands[0]?.result==="BLACKJACK_WIN";
+  const title=
+    blackjackWin
+      ? "BLACKJACK!"
+      : netCents>0
+        ? "YOU WIN"
+        : netCents===0
+          ? "PUSH"
+          : "DEALER WINS";
+  const tone=
+    netCents>0
+      ? "win" as const
+      : netCents===0
+        ? "push" as const
+        : "loss" as const;
+  const netLabel=
+    netCents===0
+      ? "NET 0"
+      : "NET " +
+        (netCents>0 ? "+" : "−") +
+        formatCreditsFromCents(Math.abs(netCents));
+
+  return Object.freeze({
+    title,
+    detail:
+      "RETURN " +
+      formatCreditsFromCents(payoutCents) +
+      " · " +
+      netLabel,
+    tone,
+  });
+}
+
 function sumSeatBetsCents(
   hands: readonly BlackjackSnapshotHand[],
 ): number {
@@ -381,6 +466,10 @@ export function buildBlackjackTableViewModelFromSnapshot(
     enabledActions: getBlackjackAvailablePlayerActions(snapshot, context),
     actionStatusLabel: context.actionStatusLabel ?? null,
     actionStatusTone: context.actionStatusTone ?? "neutral",
+    roundResult:buildLocalRoundResult(
+      snapshot,
+      localPlayer?.playerId ?? null,
+    ),
     bettingPanel: Object.freeze({
       selectedChipCredits: context.selectedChipCredits ?? 100,
       totalBetLabel: formatCreditsFromCents(localBettingCents),
