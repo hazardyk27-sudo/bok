@@ -1,6 +1,10 @@
 import "./roulette.css";
 import { renderRouletteBetTable } from "./betTable";
 import {
+  settleRouletteBets,
+  type RouletteRoundSettlement,
+} from "./betRules";
+import {
   clearRouletteBets,
   createRouletteBetState,
   getRouletteBetTotals,
@@ -38,6 +42,9 @@ import {
   getRoulettePhaseStatus,
   type RouletteScenePhase,
 } from "./scenePhase";
+import {
+  createRouletteResultPresentation,
+} from "./resultPresentation";
 import { readSettledWinningResult } from "./spinResult";
 import { renderRouletteWheel } from "./wheelRenderer";
 
@@ -102,6 +109,9 @@ export function mountRoulette(app: HTMLDivElement) {
   const betStatus = app.querySelector<HTMLElement>("[data-bet-status]");
   const betPanel = app.querySelector<HTMLElement>("[data-roulette-bet-panel]");
   const totalBet = app.querySelector<HTMLElement>("[data-total-bet]");
+  const roundReturn = app.querySelector<HTMLElement>("[data-round-return]");
+  const roundProfit = app.querySelector<HTMLElement>("[data-round-profit]");
+  const roundOutcome = app.querySelector<HTMLElement>("[data-round-outcome]");
   const undoButton = app.querySelector<HTMLButtonElement>("[data-undo-bet]");
   const clearButton = app.querySelector<HTMLButtonElement>("[data-clear-bets]");
   const rebetButton = app.querySelector<HTMLButtonElement>("[data-rebet]");
@@ -133,6 +143,89 @@ export function mountRoulette(app: HTMLDivElement) {
     new RouletteAudioEngine();
 
   const redraw = () => renderCanvas(canvas, viewState);
+
+  const clearRoundResult = () => {
+    app
+      .querySelectorAll<HTMLElement>(
+        ".is-result-number, .is-winning-bet",
+      )
+      .forEach((cell) => {
+        cell.classList.remove(
+          "is-result-number",
+          "is-winning-bet",
+        );
+      });
+
+    if (roundReturn) {
+      roundReturn.textContent = "—";
+    }
+    if (roundProfit) {
+      roundProfit.textContent = "—";
+    }
+    if (roundOutcome) {
+      roundOutcome.dataset.roundOutcome =
+        "idle";
+    }
+
+    delete page.dataset.resultNumber;
+  };
+
+  const renderRoundResult = (
+    settlement: RouletteRoundSettlement,
+  ) => {
+    const presentation =
+      createRouletteResultPresentation(
+        settlement,
+      );
+
+    app
+      .querySelectorAll<HTMLElement>(
+        ".is-result-number, .is-winning-bet",
+      )
+      .forEach((cell) => {
+        cell.classList.remove(
+          "is-result-number",
+          "is-winning-bet",
+        );
+      });
+
+    const winningNumberCell =
+      app.querySelector<HTMLElement>(
+        `[data-bet-id="${presentation.winningNumberBetId}"]`,
+      );
+    winningNumberCell?.classList.add(
+      "is-result-number",
+    );
+
+    presentation.winningBetIds
+      .forEach((betId) => {
+        app
+          .querySelector<HTMLElement>(
+            `[data-bet-id="${betId}"]`,
+          )
+          ?.classList.add(
+            "is-winning-bet",
+          );
+      });
+
+    if (roundReturn) {
+      roundReturn.textContent =
+        presentation.grossReturnText;
+    }
+    if (roundProfit) {
+      roundProfit.textContent =
+        presentation.netProfitText;
+    }
+    if (roundOutcome) {
+      roundOutcome.dataset.roundOutcome =
+        presentation.outcome;
+    }
+
+    page.dataset.resultNumber =
+      String(
+        presentation.winningNumber,
+      );
+  };
 
   const setScenePhase = (
     phase: RouletteScenePhase,
@@ -328,6 +421,15 @@ export function mountRoulette(app: HTMLDivElement) {
         const result = readSettledWinningResult(completedOrbit);
 
         if (result) {
+          const settlement =
+            settleRouletteBets(
+              betState.previousRoundPlacements,
+              result.number,
+            );
+          renderRoundResult(
+            settlement,
+          );
+
           canvas.dataset.rouletteState = "settled";
           setScenePhase(
             "settled",
@@ -390,6 +492,7 @@ export function mountRoulette(app: HTMLDivElement) {
         betState,
       );
     renderBetState();
+    clearRoundResult();
 
     canvas.dataset.rouletteState = "spinning";
     setScenePhase("spinning");

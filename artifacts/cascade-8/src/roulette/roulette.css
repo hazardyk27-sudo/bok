@@ -714,3 +714,93 @@ button {
   text-shadow:
     0 0 18px rgba(255, 255, 255, 0.24);
 }
+
+
+.roulette-bet-summary {
+  grid-template-columns: repeat(3, auto);
+  align-items: end;
+  gap: 10px;
+}
+
+.roulette-bet-metric {
+  min-width: 62px;
+  display: grid;
+  justify-items: end;
+  gap: 2px;
+}
+
+.roulette-bet-metric strong {
+  transition:
+    color 180ms ease,
+    text-shadow 180ms ease,
+    transform 180ms ease;
+}
+
+.roulette-profit-metric[data-round-outcome="win"] strong {
+  color: #73e5a1;
+  text-shadow:
+    0 0 16px rgba(70, 220, 125, 0.35);
+}
+
+.roulette-profit-metric[data-round-outcome="loss"] strong {
+  color: #ff7f78;
+}
+
+.roulette-profit-metric[data-round-outcome="push"] strong {
+  color: #dbe1e5;
+}
+
+.roulette-bet-cell.is-result-number {
+  z-index: 7;
+  box-shadow:
+    inset 0 0 0 3px #ffffff,
+    0 0 0 2px rgba(213, 221, 227, 0.68),
+    0 0 24px rgba(255, 255, 255, 0.58);
+  filter: brightness(1.22);
+}
+
+.roulette-bet-cell.is-winning-bet {
+  z-index: 7;
+  box-shadow:
+    inset 0 0 0 2px #79e7a5,
+    0 0 18px rgba(68, 216, 124, 0.52);
+}
+
+.roulette-bet-cell.is-result-number.is-winning-bet {
+  box-shadow:
+    inset 0 0 0 3px #ffffff,
+    0 0 0 3px #79e7a5,
+    0 0 28px rgba(84, 230, 141, 0.66);
+}
+
+.roulette-bet-cell.is-winning-bet .roulette-placed-chip {
+  transform: scale(1.08);
+  box-shadow:
+    0 5px 13px rgba(0, 0, 0, 0.40),
+    0 0 0 3px rgba(111, 232, 158, 0.72),
+    0 0 18px rgba(92, 225, 145, 0.60),
+    inset 0 0 0 2px rgba(0, 0, 0, 0.20);
+}
+
+.roulette-page[data-phase="settled"] .roulette-bet-panel {
+  opacity: 0.70;
+}
+
+.roulette-page[data-phase="settled"] .roulette-bet-cell.is-result-number,
+.roulette-page[data-phase="settled"] .roulette-bet-cell.is-winning-bet {
+  filter: brightness(1.34) saturate(1.08);
+}
+
+@media (max-width: 640px) {
+  .roulette-bet-summary {
+    gap: 6px;
+  }
+
+  .roulette-bet-metric {
+    min-width: 48px;
+  }
+
+  .roulette-bet-metric strong {
+    font-size: 17px;
+  }
+}
