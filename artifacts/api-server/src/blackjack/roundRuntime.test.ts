@@ -312,4 +312,107 @@ describe("blackjack authoritative round runtime tick",()=>{
       .toBe(101_500);
   });
 
+
+  it("opens the next betting round on the tick after ROUND_END and accepts a fresh bet",async()=>{
+    const game=coordinator();
+    await game.submit(action("PLACE_BET","cycle-bet-1",0));
+    await game.submit(action("READY","cycle-ready-1",1));
+
+    await runBlackjackRoundRuntimeTick(game,{nowMs:10_000});
+    const turn=game.getTable().round?.currentTurn;
+    expect(turn).not.toBeNull();
+
+    const settled=await runBlackjackRoundRuntimeTick(game,{
+      nowMs:turn!.endsAtMs,
+    });
+    expect(settled.status).toBe("ROUND_ENDED");
+    expect(game.getTable().phase).toBe("ROUND_END");
+    const roundOneEndVersion=game.getTable().stateVersion;
+    const roundOneEndSequence=game.getTable().eventSequence;
+
+    const next=await runBlackjackRoundRuntimeTick(game,{
+      nowMs:turn!.endsAtMs+1,
+      bettingWindowMs:12_000,
+    });
+
+    expect(next.status).toBe("NEXT_BETTING_ROUND_STARTED");
+    expect(next.transitions.map((transition)=>transition.type)).toEqual([
+      "NEXT_BETTING_ROUND_COMMITTED",
+    ]);
+    expect(game.getTable()).toMatchObject({
+      phase:"BETTING",
+      stateVersion:roundOneEndVersion+1,
+      eventSequence:roundOneEndSequence+1,
+      round:{
+        roundId:"round-runtime-table:round-2",
+        roundNumber:2,
+        phase:"BETTING",
+        startedAtMs:turn!.endsAtMs+1,
+        bettingClosesAtMs:turn!.endsAtMs+12_001,
+      },
+    });
+    expect(game.getBettingPosition("player-2")).toBeNull();
+
+    const freshBet=await game.submit({
+      envelope:{
+        actionId:"cycle-bet-2",
+        actorPlayerId:"player-2",
+        type:"PLACE_BET",
+        tableId:"round-runtime-table",
+        expectedStateVersion:game.getTable().stateVersion,
+        roundId:"round-runtime-table:round-2",
+        handId:null,
+        seatNumber:2,
+        payloadFingerprint:"PLACE_BET|cycle-bet-2",
+      },
+      nowMs:turn!.endsAtMs+2,
+      chipValueCents:1_000,
+      reservationId:"reservation-cycle-bet-2",
+      reserveTransactionId:"reserve-cycle-bet-2",
+    });
+
+    expect(freshBet.betting).toMatchObject({
+      roundId:"round-runtime-table:round-2",
+      status:"OPEN",
+      betCents:1_000,
+    });
+  });
+
+  it("keeps ROUND_END stable when no connected player remains",async()=>{
+    const game=coordinator();
+    await game.submit(action("PLACE_BET","idle-bet",0));
+    await game.submit(action("READY","idle-ready",1));
+    await runBlackjackRoundRuntimeTick(game,{nowMs:10_000});
+    const turn=game.getTable().round?.currentTurn;
+    expect(turn).not.toBeNull();
+
+    await runBlackjackRoundRuntimeTick(game,{nowMs:turn!.endsAtMs});
+    const ended=game.getTable();
+    const disconnected={
+      ...ended,
+      players:ended.players.map((player)=>({
+        ...player,
+        connected:false,
+        status:"DISCONNECTED" as const,
+        disconnectedAtMs:turn!.endsAtMs,
+      })),
+    };
+
+    const replacement=new BlackjackPlayerActionCoordinator({
+      table:disconnected,
+      accounts:[game.getAccount("player-2")],
+      bettingPositions:[
+        game.getBettingPosition("player-2"),
+      ].filter((value): value is NonNullable<typeof value>=>value!==null),
+      protocol:game.getProtocol(),
+    });
+
+    const tick=await runBlackjackRoundRuntimeTick(replacement,{
+      nowMs:turn!.endsAtMs+1,
+    });
+    expect(tick.status).toBe("ROUND_END_IDLE");
+    expect(tick.transitions).toEqual([]);
+    expect(replacement.getTable().phase).toBe("ROUND_END");
+  });
+
 });

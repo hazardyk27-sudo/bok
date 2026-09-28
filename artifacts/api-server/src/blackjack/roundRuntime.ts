@@ -9,7 +9,8 @@ export type BlackjackRoundRuntimeTransitionType =
   | "INITIAL_DEAL_COMMITTED"
   | "PLAYER_TURN_TIMEOUT_COMMITTED"
   | "DEALER_TURN_COMMITTED"
-  | "ROUND_SETTLED";
+  | "ROUND_SETTLED"
+  | "NEXT_BETTING_ROUND_COMMITTED";
 
 export type BlackjackRoundRuntimeTransition = Readonly<{
   type: BlackjackRoundRuntimeTransitionType;
@@ -24,7 +25,9 @@ export type BlackjackRoundRuntimeTickStatus =
   | "WAITING_FOR_PLAYER_TURN"
   | "PLAYER_TURN_ADVANCED"
   | "DEALER_TURN_READY"
-  | "ROUND_ENDED";
+  | "ROUND_ENDED"
+  | "NEXT_BETTING_ROUND_STARTED"
+  | "ROUND_END_IDLE";
 
 export type BlackjackRoundRuntimeTickResult = Readonly<{
   status: BlackjackRoundRuntimeTickStatus;
@@ -133,6 +136,7 @@ export async function runBlackjackRoundRuntimeTick(
   input: {
     nowMs: number;
     createFreshShoe?: () => BlackjackShoe;
+    bettingWindowMs?: number;
   },
 ): Promise<BlackjackRoundRuntimeTickResult> {
   assertNowMs(input.nowMs);
@@ -241,6 +245,42 @@ export async function runBlackjackRoundRuntimeTick(
     return finishDealerAndSettlement(
       coordinator,
       input.nowMs,
+      transitions,
+    );
+  }
+
+  if(table.phase==="ROUND_END"){
+    const connectedPlayers=table.players.filter(
+      (player)=>player.connected && player.status!=="DISCONNECTED",
+    );
+    if(connectedPlayers.length===0){
+      return finish(
+        "ROUND_END_IDLE",
+        table,
+        transitions,
+      );
+    }
+
+    const next=await coordinator.startNextBettingRound(
+      input.nowMs,
+      {
+        bettingWindowMs:input.bettingWindowMs,
+        createFreshShoe:input.createFreshShoe,
+      },
+    );
+    table=next.table;
+    if(!next.replayed){
+      transitions.push(
+        freezeTransition(
+          "NEXT_BETTING_ROUND_COMMITTED",
+          next.table,
+        ),
+      );
+    }
+
+    return finish(
+      "NEXT_BETTING_ROUND_STARTED",
+      table,
       transitions,
     );
   }

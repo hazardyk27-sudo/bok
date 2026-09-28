@@ -315,4 +315,53 @@ describe("blackjack round runtime realtime publication",()=>{
     unsubscribe();
   });
 
+
+  it("publishes the next betting round as the next contiguous realtime cursor",async()=>{
+    const game=coordinator();
+    await game.submit(action("PLACE_BET","cycle-live-bet",0));
+    await game.submit(action("READY","cycle-live-ready",1));
+
+    let clock=10_000;
+    const driver=createBlackjackRoundRealtimeDriver(
+      game,
+      { nowMs:()=>clock },
+    );
+    await driver.tick();
+
+    const turn=game.getTable().round?.currentTurn;
+    expect(turn).not.toBeNull();
+
+    clock=turn!.endsAtMs;
+    await driver.tick();
+    expect(game.getTable().phase).toBe("ROUND_END");
+    const endedSequence=game.getTable().eventSequence;
+
+    const published: Array<{
+      phase:string;
+      stateVersion:number;
+      eventSequence:number;
+      roundNumber:number|null;
+    }>=[];
+    const unsubscribe=driver.source.subscribe((snapshot)=>{
+      published.push({
+        phase:snapshot.phase,
+        stateVersion:snapshot.stateVersion,
+        eventSequence:snapshot.eventSequence,
+        roundNumber:snapshot.round?.roundNumber ?? null,
+      });
+    });
+
+    clock+=1;
+    const next=await driver.tick();
+
+    expect(next.status).toBe("NEXT_BETTING_ROUND_STARTED");
+    expect(published).toEqual([{
+      phase:"BETTING",
+      stateVersion:game.getTable().stateVersion,
+      eventSequence:endedSequence+1,
+      roundNumber:2,
+    }]);
+    unsubscribe();
+  });
+
 });
