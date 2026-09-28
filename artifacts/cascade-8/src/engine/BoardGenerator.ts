@@ -236,7 +236,7 @@ export class ColumnStream {
     let stackIndex: 0 | 1;
     let copyRoll: number | undefined;
     let copiedFromVisibleTop: boolean | undefined;
-    const enforceVisibleSymbolLimit = context === "BASE_INITIAL" || context === "BONUS_INITIAL";
+    const enforceVisibleSymbolLimit = context === "BONUS_INITIAL";
     const symbolWeights = enforceVisibleSymbolLimit
       ? choicesWithinVisibleSymbolLimit(this.config.symbolWeights, visibleNormalSymbols)
       : this.config.symbolWeights;
