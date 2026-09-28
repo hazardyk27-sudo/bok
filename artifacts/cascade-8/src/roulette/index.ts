@@ -46,6 +46,7 @@ import {
   createRouletteResultPresentation,
 } from "./resultPresentation";
 import { readSettledWinningResult } from "./spinResult";
+import { formatRouletteAmount } from "./uiFormat";
 import { renderRouletteWheel } from "./wheelRenderer";
 
 type RouletteViewState = {
@@ -304,14 +305,43 @@ export function mountRoulette(app: HTMLDivElement) {
             ".roulette-placed-chip",
           )
           ?.remove();
+        cell.classList.remove(
+          "has-bet",
+        );
 
         const betId =
           cell.dataset.betId;
         if (!betId) return;
 
+        if (
+          !cell.dataset.baseAriaLabel
+        ) {
+          cell.dataset.baseAriaLabel =
+            cell.getAttribute(
+              "aria-label",
+            ) ?? betId;
+        }
+
         const amount =
           totals[betId] ?? 0;
-        if (amount <= 0) return;
+        const baseAriaLabel =
+          cell.dataset.baseAriaLabel;
+
+        if (amount <= 0) {
+          cell.setAttribute(
+            "aria-label",
+            baseAriaLabel,
+          );
+          return;
+        }
+
+        cell.classList.add(
+          "has-bet",
+        );
+        cell.setAttribute(
+          "aria-label",
+          `${baseAriaLabel}, bet ${amount}`,
+        );
 
         const lastChip =
           lastChipByBet[betId] ?? 10;
@@ -322,7 +352,13 @@ export function mountRoulette(app: HTMLDivElement) {
         chip.dataset.betAmount =
           String(amount);
         chip.textContent =
-          String(amount);
+          formatRouletteAmount(
+            amount,
+          );
+        chip.setAttribute(
+          "aria-hidden",
+          "true",
+        );
         cell.append(chip);
       });
 
@@ -354,7 +390,9 @@ export function mountRoulette(app: HTMLDivElement) {
       );
     if (totalBet) {
       totalBet.textContent =
-        String(stake);
+        formatRouletteAmount(
+          stake,
+        );
     }
 
     if (undoButton) {
