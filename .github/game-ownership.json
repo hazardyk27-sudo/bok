@@ -31,39 +31,6 @@
         "lib/db/src/schema/slot.ts"
       ]
     },
-    "roulette": {
-      "branch": "feature/roulette",
-      "roots": [
-        "artifacts/cascade-8/src/roulette",
-        "artifacts/cascade-8/src/rouletteGeometry.test.ts",
-        "artifacts/cascade-8/src/roulettePhysicsConfig.test.ts",
-        "artifacts/cascade-8/src/rouletteSmoke.test.ts",
-        "artifacts/cascade-8/roulette-production-replay-probe.html",
-        "artifacts/roulette-physics-lab",
-        "artifacts/api-server/src/roulette",
-        "artifacts/api-server/src/physics-lab",
-        "lib/roulette-glb-surface.ts",
-        "lib/roulette-gltf-transform.ts",
-        "lib/roulette-physics-config.ts",
-        "scripts/roulette-authoritative-replay-runtime.mjs",
-        "scripts/roulette-part6-report.mjs",
-        "scripts/roulette-part6-runtime.mjs",
-        "scripts/roulette-production-lifecycle-browser.mjs",
-        "lib/db/src/schema/roulette.ts",
-        "lib/db/src/schema/physics-lab.ts",
-        "lib/roulette-pocket-mapping.ts"
-      ],
-      "developmentRoots": [
-        "artifacts/cascade-8/e2e/roulette-mobile.spec.ts"
-      ],
-      "developmentPrefixes": [
-        ".github/workflows/roulette-",
-        ".agents/memory/roulette-",
-        ".agents/memory/physics-lab-",
-        "screenshots/roulette-",
-        "screenshots/physics-lab-"
-      ]
-    },
     "cadi-kazan": {
       "branch": "feature/cadi-kazan",
       "roots": [
