@@ -28,10 +28,10 @@ function validateInput(stakeCents: number, idempotencyKey: string) {
 
 async function ensureWalletForUpdate(client: PoolClient, sessionId: string) {
   const result = await client.query<WalletRow>(
-    `INSERT INTO roulette_wallets (session_id, balance_cents)
+    `INSERT INTO shared_wallets (session_id, balance_cents)
      VALUES ($1, $2)
      ON CONFLICT (session_id) DO UPDATE
-       SET balance_cents = roulette_wallets.balance_cents
+       SET balance_cents = shared_wallets.balance_cents
      RETURNING balance_cents`,
     [sessionId, INITIAL_SHARED_BALANCE_CENTS],
   );
@@ -40,12 +40,12 @@ async function ensureWalletForUpdate(client: PoolClient, sessionId: string) {
 
 async function walletBalance(sessionId: string) {
   const result = await pool.query<WalletRow>(
-    "SELECT balance_cents FROM roulette_wallets WHERE session_id = $1",
+    "SELECT balance_cents FROM shared_wallets WHERE session_id = $1",
     [sessionId],
   );
   if (result.rows[0]) return Number(result.rows[0].balance_cents);
   await pool.query(
-    "INSERT INTO roulette_wallets (session_id, balance_cents) VALUES ($1, $2) ON CONFLICT (session_id) DO NOTHING",
+    "INSERT INTO shared_wallets (session_id, balance_cents) VALUES ($1, $2) ON CONFLICT (session_id) DO NOTHING",
     [sessionId, INITIAL_SHARED_BALANCE_CENTS],
   );
   return INITIAL_SHARED_BALANCE_CENTS;
@@ -117,15 +117,15 @@ export class SlotRepository {
           LIMIT 1
        ),
        settled_wallet AS (
-         INSERT INTO roulette_wallets (session_id, balance_cents, updated_at)
+         INSERT INTO shared_wallets (session_id, balance_cents, updated_at)
          SELECT $2::text, $13::integer + $1::integer, now()
           WHERE NOT EXISTS (SELECT 1 FROM duplicate)
             AND ($10::integer = 0 OR $13::integer >= $10::integer)
          ON CONFLICT (session_id) DO UPDATE
-           SET balance_cents = roulette_wallets.balance_cents + $1::integer,
+           SET balance_cents = shared_wallets.balance_cents + $1::integer,
                updated_at = now()
          WHERE NOT EXISTS (SELECT 1 FROM duplicate)
-           AND ($10::integer = 0 OR roulette_wallets.balance_cents >= $10::integer)
+           AND ($10::integer = 0 OR shared_wallets.balance_cents >= $10::integer)
          RETURNING balance_cents
        ),
        inserted_round AS (
@@ -160,7 +160,7 @@ export class SlotRepository {
          SELECT 'DUPLICATE'::text AS outcome,
                 duplicate.*,
                 COALESCE(
-                  (SELECT balance_cents FROM roulette_wallets WHERE session_id = $2),
+                  (SELECT balance_cents FROM shared_wallets WHERE session_id = $2),
                   $13::integer
                 ) AS balance_cents,
                 duplicate.session_id AS existing_session_id,
@@ -177,7 +177,7 @@ export class SlotRepository {
                 $7::text AS idempotency_key,
                 now() AS created_at,
                 COALESCE(
-                  (SELECT balance_cents FROM roulette_wallets WHERE session_id = $2),
+                  (SELECT balance_cents FROM shared_wallets WHERE session_id = $2),
                   $13::integer
                 ) AS balance_cents,
                 $2::text AS existing_session_id,
