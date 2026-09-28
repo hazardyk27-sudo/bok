@@ -13,6 +13,7 @@ Each product area has one development branch:
 - Hub / site: `feature/hub`
 - Account/Auth: `feature/account`
 - Blackjack: `feature/blackjack`
+- Roulette 2D: `feature/roulette-2d`
 
 The shared preview branch is:
 
@@ -147,6 +148,7 @@ worktree-idle/        -> feature/idle
 worktree-hub/         -> feature/hub
 worktree-account/     -> feature/account
 worktree-blackjack/   -> feature/blackjack
+worktree-roulette/    -> feature/roulette-2d
 ```
 
 Never change the shared Replit branch to make one feature appear in Preview.
