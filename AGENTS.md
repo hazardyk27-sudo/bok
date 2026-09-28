@@ -48,6 +48,9 @@ Isolation layout v2 is active. Game agents only develop and commit inside their 
 5. If the correct fix requires a shared/platform or foreign-game file, stop and hand that dependency to the central integration flow. Do not hide the dependency with a workaround, duplicate hack, or cross-game import.
 6. Before each game commit, run the relevant targeted test/check and inspect the diff/file list. A normal game commit must contain only that game's allowed paths.
 7. Refactors, test work, isolation work, performance work, and backend work must not silently redesign UI, game rules, payouts, physics, or user-visible behavior.
+8. GitHub Actions is a verification/release gate, not the default execution environment. Routine code edits, file writes, local/owned simulations, targeted tests, and ordinary feature-branch commits/pushes do **not** require a GitHub Actions run unless a workflow-only environment is genuinely required.
+9. Do not dispatch GitHub Actions merely to prove that code was written or to run a test/simulation that can be executed directly in the working environment. Use Actions for preview promotion/release, explicitly requested CI verification, or checks that cannot be performed locally/directly.
+10. Do not busy-poll GitHub Actions in fixed short loops (for example every 30 seconds). If a workflow is actually required, make only the minimum status checks needed to determine its result or unblock the next gated step; avoid repeated waiting/checking cycles that keep the user blocked.
 
 
 ## Preview / Replit protocol
