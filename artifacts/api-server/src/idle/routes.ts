@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { Router, type IRouter, type Request, type Response } from "express";
-import { SESSION_COOKIE } from "../roulette/routes";
+import { SESSION_COOKIE } from "../platform/session";
 import { idleRepository } from "./repository";
 import { IDLE_BUSINESS_IDS, type IdleBusinessId } from "./storage";
 
