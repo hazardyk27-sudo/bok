@@ -179,6 +179,7 @@ describe("blackjack concurrent player-action coordinator", () => {
 
     const table = coordinator.getTable();
     expect(table.stateVersion).toBe(1);
+    expect(table.eventSequence).toBe(1);
     expect(table.shoe.nextIndex).toBe(beforeShoeIndex + 2);
     expect(table.round?.hands).toHaveLength(2);
     expect(table.round?.hands[0].origin).toBe("SPLIT");
@@ -208,6 +209,7 @@ describe("blackjack concurrent player-action coordinator", () => {
     expect(outcomes[0].replayed).toBe(false);
     expect(outcomes.slice(1).every((result) => result.replayed)).toBe(true);
     expect(coordinator.getTable().stateVersion).toBe(1);
+    expect(coordinator.getTable().eventSequence).toBe(1);
     expect(coordinator.getTable().shoe.nextIndex).toBe(beforeShoeIndex + 1);
     expect(coordinator.getProtocol().receipts).toHaveLength(1);
     expect(coordinator.pendingCount()).toBe(0);
@@ -239,6 +241,7 @@ describe("blackjack concurrent player-action coordinator", () => {
         1,
       );
       expect(coordinator.getTable().stateVersion).toBe(1);
+      expect(coordinator.getTable().eventSequence).toBe(1);
       expect(coordinator.getProtocol().receipts).toHaveLength(1);
 
       const expectedDraws =
