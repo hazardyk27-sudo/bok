@@ -17,6 +17,21 @@ import {
   type BlackjackPublicSnapshotViewSource,
 } from "./index";
 
+const BLACKJACK_TARGETED_FRONTEND_GATE = process.argv.some((argument) =>
+  argument.replaceAll("\\", "/").endsWith(
+    "src/blackjack/blackjackSmoke.test.ts",
+  ),
+);
+
+if (BLACKJACK_TARGETED_FRONTEND_GATE) {
+  await import("./bettingView.test");
+  await import("./lifecycleView.test");
+  await import("./privateStateClient.test");
+  await import("./reconnectView.test");
+  await import("./roundResultView.test");
+  await import("./seatClient.test");
+}
+
 describe("blackjack responsive table foundation", () => {
   it("owns the canonical Blackjack route identifier", () => {
     expect(BLACKJACK_ROUTE).toBe("/blackjack");
