@@ -1,4 +1,5 @@
 import "./roulette.css";
+import { renderRouletteBetTable } from "./betTable";
 import {
   createBallOrbit,
   sampleBallOrbit,
@@ -47,21 +48,39 @@ function renderCanvas(
 
 export function mountRoulette(app: HTMLDivElement) {
   app.innerHTML = `
-    <main class="roulette-page" aria-label="Roulette 2D">
-      <section class="roulette-stage" aria-label="European roulette wheel">
-        <canvas
-          class="roulette-wheel-canvas"
-          data-roulette-wheel
-          role="button"
-          tabindex="0"
-          aria-label="European roulette wheel. Press to spin the wheel and ball."
-        ></canvas>
-      </section>
+    <main
+      class="roulette-page"
+      data-roulette-page
+      data-phase="betting"
+      aria-label="Roulette 2D"
+    >
+      <div class="roulette-game-shell">
+        <section
+          class="roulette-wheel-panel"
+          aria-label="European roulette wheel"
+        >
+          <div class="roulette-stage">
+            <canvas
+              class="roulette-wheel-canvas"
+              data-roulette-wheel
+              role="button"
+              tabindex="0"
+              aria-label="European roulette wheel. Press to spin the wheel and ball."
+            ></canvas>
+          </div>
+        </section>
+
+        ${renderRouletteBetTable()}
+      </div>
     </main>
   `;
 
   const canvas = app.querySelector<HTMLCanvasElement>("[data-roulette-wheel]");
+  const page = app.querySelector<HTMLElement>("[data-roulette-page]");
+  const betStatus = app.querySelector<HTMLElement>("[data-bet-status]");
+
   if (!canvas) throw new Error("Roulette canvas was not mounted.");
+  if (!page) throw new Error("Roulette page was not mounted.");
 
   const initialBallOrbit = createBallOrbit();
 
@@ -133,6 +152,8 @@ export function mountRoulette(app: HTMLDivElement) {
 
         if (result) {
           canvas.dataset.rouletteState = "settled";
+          page.dataset.phase = "settled";
+          if (betStatus) betStatus.textContent = `RESULT ${result.number}`;
           canvas.dataset.roulettePocketIndex = String(result.pocketIndex);
           canvas.dataset.rouletteWinningNumber = String(result.number);
           canvas.dataset.rouletteWinningColor = result.color;
@@ -142,6 +163,8 @@ export function mountRoulette(app: HTMLDivElement) {
           );
         } else {
           canvas.dataset.rouletteState = "unsettled";
+          page.dataset.phase = "betting";
+          if (betStatus) betStatus.textContent = "BETTING OPEN";
           delete canvas.dataset.roulettePocketIndex;
           delete canvas.dataset.rouletteWinningNumber;
           delete canvas.dataset.rouletteWinningColor;
@@ -171,6 +194,8 @@ export function mountRoulette(app: HTMLDivElement) {
     if (activeRotorSpin || activeBallOrbit) return;
 
     canvas.dataset.rouletteState = "spinning";
+    page.dataset.phase = "spinning";
+    if (betStatus) betStatus.textContent = "NO MORE BETS";
     delete canvas.dataset.roulettePocketIndex;
     delete canvas.dataset.rouletteWinningNumber;
     delete canvas.dataset.rouletteWinningColor;
@@ -202,6 +227,8 @@ export function mountRoulette(app: HTMLDivElement) {
   };
 
   canvas.dataset.rouletteState = "ready";
+  page.dataset.phase = "betting";
+  if (betStatus) betStatus.textContent = "BETTING OPEN";
 
   const observer = new ResizeObserver(redraw);
   observer.observe(canvas);
