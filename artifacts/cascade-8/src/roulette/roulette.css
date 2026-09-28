@@ -1,0 +1,19 @@
+.roulette-page {
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  background: #f5f2ec;
+  color: #20140d;
+}
+
+.roulette-stage {
+  width: min(94vw, 960px);
+  aspect-ratio: 1;
+  display: grid;
+  place-items: center;
+}
+
+.roulette-bootstrap {
+  font: 700 14px/1 system-ui, sans-serif;
+  letter-spacing: 0.22em;
+}
