@@ -224,7 +224,7 @@ export class GameScene extends Phaser.Scene {
         Phaser.Math.Linear(0, -1, artProgress),
       );
 
-      const glintProgress = sineInOut(delayedPingPongProgress(elapsed, 260, 2600));
+      const glintProgress = delayedPingPongProgress(elapsed, 260, 2600);
       ambient.glint
         .setAlpha(Phaser.Math.Linear(1, 0.18, glintProgress))
         .setScale(Phaser.Math.Linear(1, 0.6, glintProgress));
