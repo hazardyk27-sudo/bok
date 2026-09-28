@@ -80,7 +80,9 @@
     "roulette": {
       "branch": "feature/roulette-2d",
       "roots": [
-        "artifacts/cascade-8/src/roulette"
+        "artifacts/cascade-8/src/roulette",
+        "artifacts/api-server/src/roulette",
+        "lib/db/src/schema/roulette.ts"
       ]
     }
   }
