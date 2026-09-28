@@ -37,6 +37,7 @@ if (BLACKJACK_TARGETED_PROMOTION_GATE) {
   await import("./roundRealtime.test");
   await import("./roundRuntime.test");
   await import("./roundScheduler.test");
+  await import("./routesContract.test");
   await import("./runtimeAuthorityGate.test");
   await import("./runtimeRecovery.test");
   await import("./seatClaim.test");

@@ -12,6 +12,7 @@ import {
   createBlackjackPlayerActionClient,
   buildBlackjackWebSocketUrl,
   connectBlackjackRealtimeElement,
+  mountConnectedBlackjack,
   renderBlackjackTableShell,
   type BlackjackRealtimeSocketLike,
   type BlackjackPublicSnapshotViewSource,
@@ -1257,6 +1258,49 @@ describe("blackjack responsive table foundation", () => {
     );
     expect(live).toContain(">LIVE<");
     expect(live).toContain('data-connection-tone="live"');
+  });
+
+
+  it("mounts the connected table through one integration entry point",()=>{
+    const listeners=new Map<string,Set<(event:Event|MessageEvent<unknown>)=>void>>();
+    const socket={
+      send:()=>undefined,
+      addEventListener:(type:string,listener:(event:Event|MessageEvent<unknown>)=>void)=>{
+        const set=listeners.get(type) ?? new Set();
+        set.add(listener);
+        listeners.set(type,set);
+      },
+      removeEventListener:(type:string,listener:(event:Event|MessageEvent<unknown>)=>void)=>{
+        listeners.get(type)?.delete(listener);
+      },
+      close:()=>undefined,
+    };
+    const app={
+      innerHTML:"",
+      addEventListener:()=>undefined,
+      removeEventListener:()=>undefined,
+    } as unknown as HTMLElement;
+
+    const connection=mountConnectedBlackjack(app,{
+      location:{protocol:"https:",host:"casino.example"},
+      createSocket:()=>socket,
+      autoReconnect:false,
+      scheduleRender:()=> "render-handle",
+      cancelRender:()=>undefined,
+    });
+
+    expect(app.innerHTML).toContain('data-game="blackjack"');
+    expect(app.innerHTML).toContain("CONNECTING");
+    expect(connection.url)
+      .toBe("wss://casino.example/api/blackjack/ws");
+    expect(connection.getStatus()).toMatchObject({
+      state:"CONNECTING",
+      transportConnected:false,
+      cursor:null,
+    });
+
+    connection.close();
+    expect(connection.getStatus().state).toBe("CLOSED");
   });
 
 });

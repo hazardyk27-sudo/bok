@@ -1,5 +1,10 @@
 import "./blackjack.css";
 import {
+  connectBlackjackRealtimeElement as connectBlackjackRealtimeElementLocal,
+  type BlackjackBrowserRealtimeConnection,
+  type BlackjackBrowserRealtimeOptions,
+} from "./browserRealtime";
+import {
   BLACKJACK_DEFAULT_TABLE_VIEW,
   BLACKJACK_TABLE_SEAT_NUMBERS,
   renderBlackjackTableShell,
@@ -18,6 +23,14 @@ export function mountBlackjack(
   model: BlackjackTableViewModel = BLACKJACK_DEFAULT_TABLE_VIEW,
 ) {
   app.innerHTML = renderBlackjackTableShell(model);
+}
+
+export function mountConnectedBlackjack(
+  app: HTMLElement,
+  options: BlackjackBrowserRealtimeOptions = {},
+): BlackjackBrowserRealtimeConnection {
+  mountBlackjack(app);
+  return connectBlackjackRealtimeElementLocal(app,options);
 }
 
 export {

@@ -1,5 +1,7 @@
 export {
   BLACKJACK_API_BASE,
+  BLACKJACK_ROUTER_BASE,
+  BLACKJACK_HEALTH_PATH,
   BLACKJACK_MAX_SEATS,
   default as router,
 } from "./routes";
