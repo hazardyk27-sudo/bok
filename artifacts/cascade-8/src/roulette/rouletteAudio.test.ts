@@ -114,7 +114,13 @@ describe("roulette reference-video audio mapping", () => {
     ).toBeGreaterThan(0.3);
     expect(
       settle!.offset,
-    ).toBeGreaterThan(0.9);
+    ).toBeCloseTo(0.534943, 6);
+    expect(
+      settle!.duration,
+    ).toBeCloseTo(0.055, 6);
+    expect(
+      settle!.gain,
+    ).toBeLessThan(0.2);
   });
 
   it("does not play one-shots for loop control events", () => {
