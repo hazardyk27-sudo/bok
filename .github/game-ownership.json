@@ -27,6 +27,7 @@
         "artifacts/cascade-8/src/engine",
         "artifacts/cascade-8/src/game",
         "artifacts/cascade-8/src/simulation",
+        "artifacts/cascade-8/public/special-symbols",
         "artifacts/api-server/src/slot",
         "lib/db/src/schema/slot.ts"
       ]
