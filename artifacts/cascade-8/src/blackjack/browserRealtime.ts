@@ -452,6 +452,7 @@ export function connectBlackjackRealtimeElement(
       ...base,
       transportConnected,
       connectionState,
+      localPlayerId:privateState?.playerId ?? base.localPlayerId ?? null,
       seatCommandPending:seatPending!==null,
       availableBalanceCents:
         privateState?.availableBalanceCents ??
