@@ -527,6 +527,11 @@ export class GameScene extends Phaser.Scene {
 
   async animateDrop(duration: number, awaitScatterLanding = true): Promise<MotionTiming> {
     const startedAt = performance.now();
+    const columnGroups = Array.from({ length: BOARD_COLUMNS }, (_, col) =>
+      this.nodes
+        .filter((node) => node.col === col)
+        .sort((left, right) => left.row - right.row),
+    ).filter((group) => group.length > 0);
     const movingUnits = this.nodes.length;
     const specialUnits = this.nodes.filter((node) => node.symbol === "SCATTER").length;
     let visualSettledUnits = 0;
@@ -541,19 +546,27 @@ export class GameScene extends Phaser.Scene {
       frameSamples += 1;
     };
 
-    await Promise.all(this.nodes.map((node, index) => new Promise<void>((resolve) => {
-      const finalY = node.container.y;
-      const tweenDuration = duration + (index % BOARD_COLUMNS) * 24;
-      const tweenDelay = (index % BOARD_COLUMNS) * 20;
-      node.container.y = finalY - 260 - (index % BOARD_COLUMNS) * 18;
-      node.container.alpha = 0.2;
+    await Promise.all(columnGroups.map((group) => new Promise<void>((resolve) => {
+      const col = group[0].col;
+      const tweenDuration = duration + col * 24;
+      const tweenDelay = col * 20;
+      const finalYs = group.map((node) => node.container.y);
+      const startYs = finalYs.map((finalY) => finalY - 260 - col * 18);
+      const scatterNodes = group.filter((node) => node.symbol === "SCATTER");
+      const motion = { progress: 0 };
+      group.forEach((node, index) => {
+        node.container.y = startYs[index];
+        node.container.alpha = 0.2;
+      });
+
       let visuallySettled = false;
       let completed = false;
+      let landingStarted = false;
       let watchdog: number | null = null;
       const markVisualSettled = () => {
         if (visuallySettled) return;
         visuallySettled = true;
-        visualSettledUnits += 1;
+        visualSettledUnits += group.length;
         if (visualSettledUnits === movingUnits) visualSettledAt = performance.now();
       };
       const complete = () => {
@@ -562,36 +575,50 @@ export class GameScene extends Phaser.Scene {
         if (watchdog !== null) window.clearTimeout(watchdog);
         resolve();
       };
-      const finishScatterLanding = () => {
-        const landing = this.animateScatterLanding(node);
-        if (awaitScatterLanding) void landing.then(complete);
+      const finishScatterLandings = () => {
+        if (landingStarted) return;
+        landingStarted = true;
+        if (!scatterNodes.length) {
+          complete();
+          return;
+        }
+        const landings = scatterNodes.map((node) => this.animateScatterLanding(node));
+        if (awaitScatterLanding) void Promise.all(landings).then(complete);
         else {
-          void landing;
+          void Promise.all(landings);
           complete();
         }
       };
       const tween = this.tweens.add({
-        targets: node.container,
-        y: finalY,
-        alpha: 1,
+        targets: motion,
+        progress: 1,
         duration: tweenDuration,
         delay: tweenDelay,
         ease: "Back.easeOut",
         onUpdate: (activeTween) => {
           sampleFrameGap();
+          group.forEach((node, index) => {
+            node.container.y = startYs[index] + (finalYs[index] - startYs[index]) * motion.progress;
+            node.container.alpha = 0.2 + motion.progress * 0.8;
+          });
           if (
             activeTween.progress >= 0.92
-            && Math.abs(node.container.y - finalY) <= 1.5
-            && node.container.alpha >= 0.995
+            && group.every((node, index) =>
+              Math.abs(node.container.y - finalYs[index]) <= 1.5
+              && node.container.alpha >= 0.995)
           ) {
             markVisualSettled();
-            if (node.symbol !== "SCATTER") complete();
+            if (!scatterNodes.length) complete();
           }
         },
         onComplete: () => {
           sampleFrameGap();
+          group.forEach((node, index) => {
+            node.container.y = finalYs[index];
+            node.container.alpha = 1;
+          });
           markVisualSettled();
-          if (node.symbol === "SCATTER") finishScatterLanding();
+          if (scatterNodes.length) finishScatterLandings();
           else complete();
         },
       });
@@ -599,11 +626,14 @@ export class GameScene extends Phaser.Scene {
       watchdog = window.setTimeout(() => {
         if (completed) return;
         tween.stop();
-        node.container.y = finalY;
-        node.container.alpha = 1;
+        motion.progress = 1;
+        group.forEach((node, index) => {
+          node.container.y = finalYs[index];
+          node.container.alpha = 1;
+        });
         sampleFrameGap();
         markVisualSettled();
-        if (node.symbol === "SCATTER") finishScatterLanding();
+        if (scatterNodes.length) finishScatterLandings();
         else complete();
       }, tweenDelay + tweenDuration + 120);
     })));
@@ -619,6 +649,7 @@ export class GameScene extends Phaser.Scene {
       specialUnits,
       maxFrameGapMs,
       frameSamples,
+      motionDrivers: columnGroups.length,
     };
   }
 
