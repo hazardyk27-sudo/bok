@@ -7,6 +7,7 @@ import {
 } from "./betting";
 import type {
   BlackjackPlayer,
+  BlackjackShoe,
   BlackjackTable,
 } from "./domain";
 import { commitBlackjackServerEvent } from "./eventStream";
@@ -16,6 +17,10 @@ import {
   type BlackjackInitialDealParticipant,
 } from "./initialDeal";
 import type { BlackjackReservationBook } from "./reservations";
+import {
+  prepareBlackjackShoeBeforeRound,
+  shouldReshuffleBlackjackBeforeRound,
+} from "./lifecycle";
 import { startBlackjackPlayerTurns } from "./turnEngine";
 import type { BlackjackWalletLedgerState } from "./walletLedger";
 
@@ -261,6 +266,7 @@ export function startBlackjackInitialDeal(input: {
   accounts: readonly BlackjackRoundFlowAccount[];
   positions: readonly BlackjackBettingPosition[];
   nowMs: number;
+  createFreshShoe?: () => BlackjackShoe;
 }): BlackjackInitialDealFlowResult {
   assertNowMs(input.nowMs);
 
@@ -306,9 +312,29 @@ export function startBlackjackInitialDeal(input: {
     );
   }
 
+  const minimumCardsRequired=participants.length*2+2;
+  let shoe=input.table.shoe;
+  if(
+    shouldReshuffleBlackjackBeforeRound(
+      shoe,
+      minimumCardsRequired,
+    )
+  ){
+    if(!input.createFreshShoe){
+      throw new Error(
+        "Blackjack initial deal requires a fresh shoe before this round",
+      );
+    }
+    shoe=prepareBlackjackShoeBeforeRound({
+      currentShoe:shoe,
+      minimumCardsRequired,
+      createFreshShoe:input.createFreshShoe,
+    });
+  }
+
   const deal=dealInitialBlackjackCards({
     roundId:round.roundId,
-    shoe:input.table.shoe,
+    shoe,
     participants,
   });
 

@@ -20,7 +20,7 @@ import { BLACKJACK_BASE_CHIP_VALUES_CENTS } from "./chips";
 import { doubleBlackjackCurrentHand } from "./double";
 import { hitBlackjackCurrentHand } from "./hit";
 import { commitBlackjackServerEvent } from "./eventStream";
-import type { BlackjackTable } from "./domain";
+import type { BlackjackShoe, BlackjackTable } from "./domain";
 import type { BlackjackReservationBook } from "./reservations";
 import { splitBlackjackCurrentHand } from "./split";
 import {
@@ -258,6 +258,7 @@ export class BlackjackPlayerActionCoordinator {
         ),
         positions:Object.freeze(Array.from(this.bettingPositions.values())),
         nowMs,
+        createFreshShoe,
       });
 
       this.tableState=result.table;
@@ -279,6 +280,7 @@ export class BlackjackPlayerActionCoordinator {
 
   startInitialDeal(
     nowMs: number,
+    createFreshShoe?: () => BlackjackShoe,
   ): Promise<BlackjackInitialDealCoordinatorResult> {
     assertNowMs(nowMs);
 

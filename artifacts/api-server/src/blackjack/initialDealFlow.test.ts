@@ -260,4 +260,53 @@ describe("blackjack locked-bet initial-deal flow",()=>{
     expect(game.getTable().phase).toBe("BETTING_LOCKED");
     expect(game.getTable().shoe.nextIndex).toBe(0);
   });
+
+  it("requires a fresh six-deck shoe before dealing when reshuffle is pending",async()=>{
+    const source=table();
+    const game=new BlackjackPlayerActionCoordinator({
+      table:{
+        ...source,
+        shoe:{...source.shoe,reshufflePending:true},
+      },
+      accounts:[
+        {
+          playerId:"p1",userId:"u1",
+          wallet:createBlackjackWalletLedgerState({
+            userId:"u1",totalBalanceCents:500_000,
+          }),
+          book:createBlackjackReservationBook("u1"),
+        },
+        {
+          playerId:"p3",userId:"u3",
+          wallet:createBlackjackWalletLedgerState({
+            userId:"u3",totalBalanceCents:500_000,
+          }),
+          book:createBlackjackReservationBook("u3"),
+        },
+      ],
+      bettingLimits:{minBetCents:1_000,maxBetCents:null},
+    });
+
+    await readyTwoPlayers(game);
+    await game.closeBettingWindow(10_000);
+
+    await expect(game.startInitialDeal(10_001)).rejects.toThrow(
+      /requires a fresh shoe/,
+    );
+
+    const fresh=createUnshuffledBlackjackShoe({
+      shoeId:"fresh-initial-flow-shoe",
+      createdAtMs:10_001,
+    });
+    const dealt=await game.startInitialDeal(
+      10_001,
+      ()=>fresh,
+    );
+
+    expect(dealt.replayed).toBe(false);
+    expect(game.getTable().shoe.shoeId).toBe("fresh-initial-flow-shoe");
+    expect(game.getTable().shoe.nextIndex).toBe(6);
+    expect(game.getTable().shoe.reshufflePending).toBe(false);
+  });
+
 });
