@@ -17,6 +17,7 @@ This repository contains multiple games that must be developed and released inde
 - Hub/site work: `feature/hub`
 - Account/auth work: `feature/account`
 - Blackjack work: `feature/blackjack`
+- Roulette 2D work: `feature/roulette-2d`
 - Shared Replit preview: `integration/replit-preview`
 - Replit must stay on `integration/replit-preview`.
 
@@ -33,7 +34,7 @@ This repository contains multiple games that must be developed and released inde
 10. If ownership is unclear, stop instead of touching a shared or foreign file.
 
 ## Goal
-Routine Slot updates must have zero file changes in Cadı Kazan, Idle, Hub, Account/Auth and Blackjack. The same isolation rule applies symmetrically to every game/category.
+Routine Slot updates must have zero file changes in Cadı Kazan, Idle, Hub, Account/Auth, Blackjack and Roulette. The same isolation rule applies symmetrically to every game/category.
 
 
 ## Release workflow
@@ -84,6 +85,7 @@ Race handling is fail-safe: if a feature branch or preview branch moves while an
 - Code, tests, ownership manifest, and validated runtime behavior remain the source of truth if a milestone note becomes stale.
 
 ## Shared/platform current milestones
+- 2026-09-28 — Roulette 2D category re-established from a clean baseline — `feature/roulette-2d` owns only `artifacts/cascade-8/src/roulette`; the old 3D implementation is not reused. `/roulette` is wired centrally for isolated preview work. Next: build the reference-matched procedural wheel in owned files.
 - 2026-09-27 — Race-safe delivery protocol active — canonical feature branches use single-writer discipline, promotions use immutable commit SHAs and abort if preview HEAD moves, and Replit is read-only with verified fast-forward sync. Next: use `GAME_DELIVERY_PROTOCOL.md` for every commit → promotion → Replit handoff.
 - 2026-09-27 — Blackjack category established — `feature/blackjack` owns isolated frontend, API and Blackjack schema roots; shared route/schema wiring remains a central integration responsibility. Next: build the isolated Blackjack skeleton and validate ownership CI.
 - 2026-09-27 — Account/Auth category established — auth development is isolated on `feature/account` with owned frontend, API and DB-schema roots; shared route/schema wiring remains a central integration responsibility. Next: build and validate email/password auth foundation on the account branch.
