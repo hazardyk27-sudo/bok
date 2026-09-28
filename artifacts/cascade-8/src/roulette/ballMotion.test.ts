@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   BALL_TRACK_STYLE,
+  SEGMENT_COUNT,
   WHEEL_GEOMETRY,
 } from "./config";
 import {
@@ -13,7 +14,7 @@ import {
 } from "./ballMotion";
 import { createRotorSpin } from "./spinMotion";
 
-describe("roulette ball rotor-relative fret entry", () => {
+describe("roulette repeated rotor-relative fret bounces", () => {
   it("uses speed thresholds for descent and pocket entry", () => {
     const orbit = createBallOrbit();
 
@@ -32,92 +33,107 @@ describe("roulette ball rotor-relative fret entry", () => {
     expect(getBallOrbitRevolutions(orbit)).toBeGreaterThan(8);
   });
 
-  it("moves from the track through the transition band into the pocket zone", () => {
-    const orbit = createBallOrbit(0.8);
-
-    const track = sampleBallOrbit(
-      orbit,
-      orbit.descentStartMs - 1,
-    );
-    const descent = sampleBallOrbit(
-      orbit,
-      orbit.descentStartMs + 1200,
-    );
-    const pocketEntry = sampleBallOrbit(
-      orbit,
-      orbit.pocketEntryStartMs + 1800,
-    );
-
-    expect(track.phase).toBe("track");
-    expect(track.radiusRatio).toBeCloseTo(
-      orbit.trackRadius,
-    );
-
-    expect(descent.radiusRatio).toBeLessThan(
-      orbit.trackRadius,
-    );
-
-    expect(pocketEntry.radiusRatio).toBeLessThan(
-      WHEEL_GEOMETRY.numberOuterRadius,
-    );
-    expect(pocketEntry.radiusRatio).toBeGreaterThanOrEqual(
-      orbit.pocketEntryTargetRadius,
-    );
-  });
-
-  it("finds first fret contact from ball angle versus the rotating separator geometry", () => {
+  it("builds multiple fret contacts from live rotor-relative geometry", () => {
     const rotorSpin = createRotorSpin(0.37, 1);
     const orbit = createBallOrbit(-0.72, rotorSpin);
 
-    expect(orbit.fretCollision).not.toBeNull();
-    expect(orbit.fretCollision!.timeMs).toBeGreaterThan(
-      orbit.pocketEntryStartMs,
+    expect(orbit.fretCollisions.length).toBeGreaterThanOrEqual(3);
+    expect(orbit.fretCollisions.length).toBeLessThanOrEqual(
+      BALL_ORBIT_PROFILE.maxFretCollisions,
     );
-    expect(orbit.fretCollision!.timeMs).toBeLessThan(
-      orbit.durationMs,
-    );
-    expect(
-      orbit.fretCollision!.separatorIndex,
-    ).toBeGreaterThanOrEqual(0);
-    expect(
-      orbit.fretCollision!.separatorIndex,
-    ).toBeLessThan(37);
-    expect(
-      Math.abs(
-        orbit.fretCollision!
-          .relativeAngularVelocityBefore,
-      ),
-    ).toBeGreaterThan(0);
+
+    for (
+      let index = 0;
+      index < orbit.fretCollisions.length;
+      index += 1
+    ) {
+      const collision =
+        orbit.fretCollisions[index];
+
+      expect(collision.separatorIndex).toBeGreaterThanOrEqual(0);
+      expect(collision.separatorIndex).toBeLessThan(
+        SEGMENT_COUNT,
+      );
+      expect(
+        Math.abs(
+          collision.relativeAngularVelocityAfter,
+        ),
+      ).toBeLessThan(
+        Math.abs(
+          collision.relativeAngularVelocityBefore,
+        ),
+      );
+
+      if (index > 0) {
+        expect(collision.timeMs).toBeGreaterThan(
+          orbit.fretCollisions[index - 1].timeMs,
+        );
+        expect(
+          collision.effectiveRestitution,
+        ).toBeLessThan(
+          orbit.fretCollisions[index - 1]
+            .effectiveRestitution,
+        );
+        expect(collision.radialKick).toBeLessThan(
+          orbit.fretCollisions[index - 1].radialKick,
+        );
+      }
+    }
   });
 
-  it("reflects rotor-relative tangential speed at first fret contact", () => {
+  it("reports cumulative contacts as the ball rattles across the pocket separators", () => {
     const rotorSpin = createRotorSpin(0.37, 1);
     const orbit = createBallOrbit(-0.72, rotorSpin);
-    const collision = orbit.fretCollision!;
+    const first = orbit.fretCollisions[0];
+    const third = orbit.fretCollisions[2];
 
     const before = sampleBallOrbit(
       orbit,
-      collision.timeMs - 8,
+      first.timeMs - 8,
     );
-    const impact = sampleBallOrbit(
+    const afterFirst = sampleBallOrbit(
       orbit,
-      collision.timeMs + 48,
+      first.timeMs + 48,
     );
-    const later = sampleBallOrbit(
+    const afterThird = sampleBallOrbit(
       orbit,
-      collision.timeMs + 900,
+      third.timeMs + 48,
     );
 
-    expect(before.fretCollisionIndex).toBeNull();
-    expect(impact.fretCollisionIndex).toBe(
-      collision.separatorIndex,
-    );
-    expect(impact.phase).toBe("fret");
-    expect(impact.angularVelocity).toBeGreaterThan(0);
-    expect(impact.radiusRatio).toBeGreaterThanOrEqual(
+    expect(before.fretCollisionCount).toBe(0);
+    expect(afterFirst.fretCollisionCount).toBeGreaterThanOrEqual(1);
+    expect(afterFirst.phase).toBe("fret");
+    expect(afterThird.fretCollisionCount).toBeGreaterThanOrEqual(3);
+    expect(afterThird.phase).toBe("fret");
+    expect(afterThird.radiusRatio).toBeGreaterThanOrEqual(
       orbit.pocketEntryTargetRadius,
     );
-    expect(later.phase).not.toBe("fret");
+  });
+
+  it("keeps every bounce dissipative while allowing separator-to-separator travel", () => {
+    const orbit = createBallOrbit(
+      -0.72,
+      createRotorSpin(0.37, 1),
+    );
+
+    const separatorSet = new Set(
+      orbit.fretCollisions.map(
+        (collision) =>
+          collision.separatorIndex,
+      ),
+    );
+
+    expect(separatorSet.size).toBeGreaterThan(1);
+
+    for (const collision of orbit.fretCollisions) {
+      expect(
+        collision.effectiveRestitution,
+      ).toBeGreaterThan(0);
+      expect(
+        collision.effectiveRestitution,
+      ).toBeLessThan(1);
+      expect(collision.radialKick).toBeGreaterThan(0);
+    }
   });
 
   it("hands off inside the pocket ring without selecting a winning pocket", () => {

@@ -4,6 +4,7 @@ import {
   DEFLECTOR_STYLE,
   POCKET_RING_STYLE,
   SEGMENT_ANGLE,
+  SEGMENT_COUNT,
   TOP_SEGMENT_CENTER,
   WHEEL_GEOMETRY,
   getDeflectorAngle,
@@ -38,10 +39,14 @@ export const BALL_ORBIT_PROFILE = {
   deflectorVisualSeconds: 0.72,
 
   fretRestitution: 0.42,
+  fretRestitutionDecay: 0.82,
   fretTangentialPadding: 0.004,
   fretRadialKick: 0.045,
+  fretRadialKickDecay: 0.8,
   fretDampingPerSecond: 4.2,
   fretVisualSeconds: 0.68,
+  fretCollisionCooldownMs: 90,
+  maxFretCollisions: 8,
 } as const;
 
 export type BallMotionPhase =
@@ -68,7 +73,10 @@ export type FretCollision = {
   rotorAngle: number;
   side: 1 | -1;
   relativeAngularVelocityBefore: number;
+  relativeAngularVelocityAfter: number;
   signedAngularVelocityAfter: number;
+  effectiveRestitution: number;
+  radialKick: number;
 };
 
 export type BallOrbit = {
@@ -94,10 +102,14 @@ export type BallOrbit = {
   deflectorVisualSeconds: number;
 
   fretRestitution: number;
+  fretRestitutionDecay: number;
   fretTangentialPadding: number;
   fretRadialKick: number;
+  fretRadialKickDecay: number;
   fretDampingPerSecond: number;
   fretVisualSeconds: number;
+  fretCollisionCooldownMs: number;
+  maxFretCollisions: number;
 
   descentStartMs: number;
   pocketEntryStartMs: number;
@@ -105,7 +117,7 @@ export type BallOrbit = {
 
   rotorSpin: RotorSpin;
   deflectorCollision: DeflectorCollision | null;
-  fretCollision: FretCollision | null;
+  fretCollisions: FretCollision[];
 };
 
 export type BallOrbitSample = {
@@ -118,12 +130,13 @@ export type BallOrbitSample = {
   phase: BallMotionPhase;
   deflectorCollisionIndex: number | null;
   fretCollisionIndex: number | null;
+  fretCollisionCount: number;
   done: boolean;
 };
 
 type InternalBallSample = Omit<
   BallOrbitSample,
-  "deflectorCollisionIndex" | "fretCollisionIndex"
+  "deflectorCollisionIndex" | "fretCollisionIndex" | "fretCollisionCount"
 >;
 
 function shortestAngleDelta(a: number, b: number) {
@@ -199,8 +212,7 @@ function sampleBaseBallOrbit(
   const elapsedSeconds = clampedElapsedMs / 1000;
   const decay = Math.exp(-orbit.dragPerSecond * elapsedSeconds);
   const angularVelocity = orbit.initialAngularVelocity * decay;
-  const signedAngularVelocity =
-    orbit.direction * angularVelocity;
+  const signedAngularVelocity = orbit.direction * angularVelocity;
 
   const angularTravel =
     orbit.dragPerSecond > 0
@@ -290,9 +302,7 @@ function sampleBaseBallOrbit(
     angle,
     radiusRatio,
     angularVelocity: done ? 0 : angularVelocity,
-    signedAngularVelocity: done
-      ? 0
-      : signedAngularVelocity,
+    signedAngularVelocity: done ? 0 : signedAngularVelocity,
     radialVelocityRatioPerSecond,
     progress,
     phase,
@@ -330,10 +340,7 @@ function findFirstDeflectorCollision(
         deflectorAngle,
       );
 
-      if (
-        distance >
-        DEFLECTOR_STYLE.collisionRadius
-      ) {
+      if (distance > DEFLECTOR_STYLE.collisionRadius) {
         continue;
       }
 
@@ -370,10 +377,7 @@ function applyDeflectorResponse(
 ): InternalBallSample {
   const collision = orbit.deflectorCollision;
 
-  if (
-    !collision ||
-    elapsedMs < collision.timeMs
-  ) {
+  if (!collision || elapsedMs < collision.timeMs) {
     return base;
   }
 
@@ -444,8 +448,7 @@ function applyDeflectorResponse(
           collisionSeconds);
 
   let phase: BallMotionPhase =
-    collisionSeconds <=
-    orbit.deflectorVisualSeconds
+    collisionSeconds <= orbit.deflectorVisualSeconds
       ? "deflector"
       : base.phase;
 
@@ -462,200 +465,90 @@ function applyDeflectorResponse(
     ...base,
     angle,
     radiusRatio,
-    angularVelocity: Math.abs(
-      signedAngularVelocity,
-    ),
+    angularVelocity: Math.abs(signedAngularVelocity),
     signedAngularVelocity,
     radialVelocityRatioPerSecond,
     phase,
   };
 }
 
-function findFirstFretCollision(
-  orbit: BallOrbit,
-): FretCollision | null {
-  const stepMs = 4;
-  const outerContactRadius =
-    WHEEL_GEOMETRY.pocketOuterRadius +
-    BALL_STYLE.radius;
-  const innerContactRadius =
-    Math.max(
-      WHEEL_GEOMETRY.pocketInnerRadius,
-      orbit.pocketEntryTargetRadius -
-        BALL_STYLE.radius,
-    );
-  const tangentialTolerance =
-    BALL_STYLE.radius +
-    POCKET_RING_STYLE.separatorWidth / 2 +
-    orbit.fretTangentialPadding;
-
-  for (
-    let elapsedMs = Math.floor(
-      orbit.pocketEntryStartMs,
-    );
-    elapsedMs <= orbit.durationMs;
-    elapsedMs += stepMs
-  ) {
-    const base = sampleBaseBallOrbit(
-      orbit,
-      elapsedMs,
-    );
-    const ball = applyDeflectorResponse(
-      orbit,
-      base,
-      elapsedMs,
-    );
-
-    if (
-      ball.radiusRatio > outerContactRadius ||
-      ball.radiusRatio < innerContactRadius
-    ) {
-      continue;
-    }
-
-    const rotor = sampleRotorSpin(
-      orbit.rotorSpin,
-      elapsedMs,
-    );
-
-    for (
-      let separatorIndex = 0;
-      separatorIndex <
-      37;
-      separatorIndex += 1
-    ) {
-      const separatorRelativeAngle =
-        TOP_SEGMENT_CENTER -
-        SEGMENT_ANGLE / 2 +
-        separatorIndex * SEGMENT_ANGLE;
-      const separatorWorldAngle =
-        rotor.angle +
-        separatorRelativeAngle;
-
-      const delta = shortestAngleDelta(
-        ball.angle,
-        separatorWorldAngle,
-      );
-      const tangentialDistance =
-        Math.abs(delta) *
-        ball.radiusRatio;
-
-      if (
-        tangentialDistance >
-        tangentialTolerance
-      ) {
-        continue;
-      }
-
-      const relativeAngularVelocityBefore =
-        ball.signedAngularVelocity -
-        rotor.angularVelocity;
-      const relativeAngularVelocityAfter =
-        -relativeAngularVelocityBefore *
-        orbit.fretRestitution;
-      const signedAngularVelocityAfter =
-        rotor.angularVelocity +
-        relativeAngularVelocityAfter;
-
-      const side: 1 | -1 =
-        delta >= 0 ? 1 : -1;
-
-      return {
-        timeMs: elapsedMs,
-        separatorIndex,
-        angle: ball.angle,
-        radiusRatio: ball.radiusRatio,
-        rotorAngle: rotor.angle,
-        side,
-        relativeAngularVelocityBefore,
-        signedAngularVelocityAfter,
-      };
-    }
-  }
-
-  return null;
-}
-
-function applyFretResponse(
+function applyFretResponses(
   orbit: BallOrbit,
   base: InternalBallSample,
   elapsedMs: number,
+  collisions: FretCollision[],
 ): InternalBallSample {
-  const collision = orbit.fretCollision;
+  let angle = base.angle;
+  let radiusRatio = base.radiusRatio;
+  let signedAngularVelocity = base.signedAngularVelocity;
+  let radialVelocityRatioPerSecond =
+    base.radialVelocityRatioPerSecond;
+  let phase = base.phase;
 
-  if (
-    !collision ||
-    elapsedMs < collision.timeMs
-  ) {
-    return base;
-  }
+  for (const collision of collisions) {
+    if (elapsedMs < collision.timeMs) continue;
 
-  const clampedElapsedMs = Math.min(
-    Math.max(
-      collision.timeMs,
-      Number.isFinite(elapsedMs)
-        ? elapsedMs
-        : collision.timeMs,
-    ),
-    orbit.durationMs,
-  );
-  const collisionSeconds =
-    (clampedElapsedMs - collision.timeMs) / 1000;
-  const collisionDecay = Math.exp(
-    -orbit.fretDampingPerSecond *
-      collisionSeconds,
-  );
+    const clampedElapsedMs = Math.min(
+      Math.max(
+        collision.timeMs,
+        Number.isFinite(elapsedMs)
+          ? elapsedMs
+          : collision.timeMs,
+      ),
+      orbit.durationMs,
+    );
+    const collisionSeconds =
+      (clampedElapsedMs - collision.timeMs) / 1000;
+    const collisionDecay = Math.exp(
+      -orbit.fretDampingPerSecond *
+        collisionSeconds,
+    );
+    const deltaVelocity =
+      collision.signedAngularVelocityAfter -
+      (
+        collision.relativeAngularVelocityBefore +
+        orbit.rotorSpin.direction *
+          sampleRotorSpin(
+            orbit.rotorSpin,
+            collision.timeMs,
+          ).angularVelocity
+      );
 
-  const baseAtImpact = applyDeflectorResponse(
-    orbit,
-    sampleBaseBallOrbit(
-      orbit,
-      collision.timeMs,
-    ),
-    collision.timeMs,
-  );
-
-  const deltaVelocity =
-    collision.signedAngularVelocityAfter -
-    baseAtImpact.signedAngularVelocity;
-
-  let angle =
-    base.angle +
-    deltaVelocity /
+    angle +=
+      deltaVelocity /
       orbit.fretDampingPerSecond *
       (1 - collisionDecay);
+    signedAngularVelocity +=
+      deltaVelocity * collisionDecay;
 
-  let signedAngularVelocity =
-    base.signedAngularVelocity +
-    deltaVelocity * collisionDecay;
+    const radialBump =
+      collision.radialKick *
+      collisionSeconds *
+      collisionDecay;
 
-  const radialBump =
-    orbit.fretRadialKick *
-    collisionSeconds *
-    collisionDecay;
+    radiusRatio = Math.min(
+      WHEEL_GEOMETRY.pocketOuterRadius +
+        BALL_STYLE.radius,
+      Math.max(
+        orbit.pocketEntryTargetRadius,
+        radiusRatio + radialBump,
+      ),
+    );
 
-  let radiusRatio = Math.min(
-    WHEEL_GEOMETRY.pocketOuterRadius +
-      BALL_STYLE.radius,
-    Math.max(
-      orbit.pocketEntryTargetRadius,
-      base.radiusRatio + radialBump,
-    ),
-  );
-
-  let radialVelocityRatioPerSecond =
-    base.radialVelocityRatioPerSecond +
-    orbit.fretRadialKick *
+    radialVelocityRatioPerSecond +=
+      collision.radialKick *
       collisionDecay *
       (1 -
         orbit.fretDampingPerSecond *
           collisionSeconds);
 
-  let phase: BallMotionPhase =
-    collisionSeconds <=
-    orbit.fretVisualSeconds
-      ? "fret"
-      : base.phase;
+    if (
+      collisionSeconds <=
+      orbit.fretVisualSeconds
+    ) {
+      phase = "fret";
+    }
+  }
 
   if (base.done) {
     radiusRatio = orbit.pocketEntryTargetRadius;
@@ -670,13 +563,194 @@ function applyFretResponse(
     ...base,
     angle,
     radiusRatio,
-    angularVelocity: Math.abs(
-      signedAngularVelocity,
-    ),
+    angularVelocity: Math.abs(signedAngularVelocity),
     signedAngularVelocity,
     radialVelocityRatioPerSecond,
     phase,
   };
+}
+
+function findOverlappingSeparator(
+  orbit: BallOrbit,
+  ball: InternalBallSample,
+  elapsedMs: number,
+) {
+  const outerContactRadius =
+    WHEEL_GEOMETRY.pocketOuterRadius +
+    BALL_STYLE.radius;
+  const innerContactRadius =
+    Math.max(
+      WHEEL_GEOMETRY.pocketInnerRadius,
+      orbit.pocketEntryTargetRadius -
+        BALL_STYLE.radius,
+    );
+
+  if (
+    ball.radiusRatio > outerContactRadius ||
+    ball.radiusRatio < innerContactRadius
+  ) {
+    return null;
+  }
+
+  const rotor = sampleRotorSpin(
+    orbit.rotorSpin,
+    elapsedMs,
+  );
+  const tangentialTolerance =
+    BALL_STYLE.radius +
+    POCKET_RING_STYLE.separatorWidth / 2 +
+    orbit.fretTangentialPadding;
+
+  for (
+    let separatorIndex = 0;
+    separatorIndex < SEGMENT_COUNT;
+    separatorIndex += 1
+  ) {
+    const separatorRelativeAngle =
+      TOP_SEGMENT_CENTER -
+      SEGMENT_ANGLE / 2 +
+      separatorIndex * SEGMENT_ANGLE;
+    const separatorWorldAngle =
+      rotor.angle +
+      separatorRelativeAngle;
+
+    const delta = shortestAngleDelta(
+      ball.angle,
+      separatorWorldAngle,
+    );
+    const tangentialDistance =
+      Math.abs(delta) *
+      ball.radiusRatio;
+
+    if (tangentialDistance <= tangentialTolerance) {
+      return {
+        separatorIndex,
+        delta,
+        rotorAngle: rotor.angle,
+        rotorSignedAngularVelocity:
+          orbit.rotorSpin.direction *
+          rotor.angularVelocity,
+      };
+    }
+  }
+
+  return null;
+}
+
+function findFretCollisions(
+  orbit: BallOrbit,
+): FretCollision[] {
+  const collisions: FretCollision[] = [];
+  const stepMs = 4;
+  let previousOverlapIndex: number | null = null;
+  let lastCollisionMs = Number.NEGATIVE_INFINITY;
+
+  for (
+    let elapsedMs = Math.floor(orbit.pocketEntryStartMs);
+    elapsedMs <= orbit.durationMs;
+    elapsedMs += stepMs
+  ) {
+    const base = sampleBaseBallOrbit(
+      orbit,
+      elapsedMs,
+    );
+    const afterDeflector =
+      applyDeflectorResponse(
+        orbit,
+        base,
+        elapsedMs,
+      );
+    const ball = applyFretResponses(
+      orbit,
+      afterDeflector,
+      elapsedMs,
+      collisions,
+    );
+    const overlap = findOverlappingSeparator(
+      orbit,
+      ball,
+      elapsedMs,
+    );
+
+    if (!overlap) {
+      previousOverlapIndex = null;
+      continue;
+    }
+
+    const enteredNewContact =
+      previousOverlapIndex !==
+      overlap.separatorIndex;
+    const cooldownComplete =
+      elapsedMs - lastCollisionMs >=
+      orbit.fretCollisionCooldownMs;
+
+    previousOverlapIndex =
+      overlap.separatorIndex;
+
+    if (
+      !enteredNewContact ||
+      !cooldownComplete
+    ) {
+      continue;
+    }
+
+    const relativeAngularVelocityBefore =
+      ball.signedAngularVelocity -
+      overlap.rotorSignedAngularVelocity;
+
+    if (
+      Math.abs(relativeAngularVelocityBefore) <
+      0.05
+    ) {
+      continue;
+    }
+
+    const hitIndex = collisions.length;
+    const effectiveRestitution =
+      orbit.fretRestitution *
+      Math.pow(
+        orbit.fretRestitutionDecay,
+        hitIndex,
+      );
+    const relativeAngularVelocityAfter =
+      -relativeAngularVelocityBefore *
+      effectiveRestitution;
+    const signedAngularVelocityAfter =
+      overlap.rotorSignedAngularVelocity +
+      relativeAngularVelocityAfter;
+    const radialKick =
+      orbit.fretRadialKick *
+      Math.pow(
+        orbit.fretRadialKickDecay,
+        hitIndex,
+      );
+
+    collisions.push({
+      timeMs: elapsedMs,
+      separatorIndex:
+        overlap.separatorIndex,
+      angle: ball.angle,
+      radiusRatio: ball.radiusRatio,
+      rotorAngle: overlap.rotorAngle,
+      side: overlap.delta >= 0 ? 1 : -1,
+      relativeAngularVelocityBefore,
+      relativeAngularVelocityAfter,
+      signedAngularVelocityAfter,
+      effectiveRestitution,
+      radialKick,
+    });
+
+    lastCollisionMs = elapsedMs;
+
+    if (
+      collisions.length >=
+      orbit.maxFretCollisions
+    ) {
+      break;
+    }
+  }
+
+  return collisions;
 }
 
 export function createBallOrbit(
@@ -700,10 +774,14 @@ export function createBallOrbit(
     deflectorDampingPerSecond,
     deflectorVisualSeconds,
     fretRestitution,
+    fretRestitutionDecay,
     fretTangentialPadding,
     fretRadialKick,
+    fretRadialKickDecay,
     fretDampingPerSecond,
     fretVisualSeconds,
+    fretCollisionCooldownMs,
+    maxFretCollisions,
   } = BALL_ORBIT_PROFILE;
 
   const orbit: BallOrbit = {
@@ -729,10 +807,14 @@ export function createBallOrbit(
     deflectorVisualSeconds,
 
     fretRestitution,
+    fretRestitutionDecay,
     fretTangentialPadding,
     fretRadialKick,
+    fretRadialKickDecay,
     fretDampingPerSecond,
     fretVisualSeconds,
+    fretCollisionCooldownMs,
+    maxFretCollisions,
 
     descentStartMs: getBallSpeedThresholdMs(
       initialAngularVelocity,
@@ -752,13 +834,13 @@ export function createBallOrbit(
 
     rotorSpin,
     deflectorCollision: null,
-    fretCollision: null,
+    fretCollisions: [],
   };
 
   orbit.deflectorCollision =
     findFirstDeflectorCollision(orbit);
-  orbit.fretCollision =
-    findFirstFretCollision(orbit);
+  orbit.fretCollisions =
+    findFretCollisions(orbit);
 
   return orbit;
 }
@@ -777,15 +859,28 @@ export function sampleBallOrbit(
       base,
       elapsedMs,
     );
-  const afterFret =
-    applyFretResponse(
+  const afterFrets =
+    applyFretResponses(
       orbit,
       afterDeflector,
       elapsedMs,
+      orbit.fretCollisions,
     );
 
+  const elapsedCollisions =
+    orbit.fretCollisions.filter(
+      (collision) =>
+        elapsedMs >= collision.timeMs,
+    );
+  const latestFret =
+    elapsedCollisions.length > 0
+      ? elapsedCollisions[
+          elapsedCollisions.length - 1
+        ]
+      : null;
+
   return {
-    ...afterFret,
+    ...afterFrets,
     deflectorCollisionIndex:
       orbit.deflectorCollision &&
       elapsedMs >=
@@ -794,11 +889,9 @@ export function sampleBallOrbit(
             .deflectorIndex
         : null,
     fretCollisionIndex:
-      orbit.fretCollision &&
-      elapsedMs >=
-        orbit.fretCollision.timeMs
-        ? orbit.fretCollision.separatorIndex
-        : null,
+      latestFret?.separatorIndex ?? null,
+    fretCollisionCount:
+      elapsedCollisions.length,
   };
 }
 
