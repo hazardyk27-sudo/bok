@@ -270,7 +270,15 @@ export class ColumnStream {
             symbolWeights,
           );
       } else {
-        symbol = copied ? baseSymbol! : weightedChoice(this.source, symbolWeights);
+        const baseCopyAllowed = Boolean(
+          baseSymbol &&
+          (!visibleNormalSymbols ||
+            visibleNormalSymbols.size < MAX_VISIBLE_NORMAL_SYMBOLS ||
+            visibleNormalSymbols.has(baseSymbol)),
+        );
+        symbol = copied && baseCopyAllowed
+          ? baseSymbol!
+          : weightedChoice(this.source, symbolWeights);
       }
       this.stats.pairCount += 1;
       if (copied) this.stats.copyBranchCount += 1;
