@@ -1345,7 +1345,7 @@ function sampleCapturedBall(
 }
 
 export function createBallOrbit(
-  startAngle =
+  startAngle: number =
     BALL_ORBIT_PROFILE.initialAngle,
   rotorSpin: RotorSpin =
     createRotorSpin(0, 1),
