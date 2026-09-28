@@ -16,10 +16,10 @@ const alwaysLast: RandomSource = { nextFloat: () => 0.999999 };
 const alwaysFirst: RandomSource = { nextFloat: () => 0 };
 
 describe("board generation", () => {
-  it("caps both Base and Free Spin initial boards at seven distinct normal symbols", () => {
+  it("caps both Base and Free Spin initial boards at eight distinct normal symbols", () => {
     for (const mode of ["base", "bonus"] as const) {
       for (let seed = 0; seed < 500; seed += 1) {
-        const board = generateInitialBoard(new SeededRNG(`seven-symbol-${mode}-${seed}`), mode);
+        const board = generateInitialBoard(new SeededRNG(`eight-symbol-${mode}-${seed}`), mode);
         const distinct = new Set(
           board.flat().map(getNormalSymbol).filter((symbol): symbol is NonNullable<typeof symbol> => symbol !== null),
         );
@@ -66,6 +66,21 @@ describe("board generation", () => {
       expect(row4).toMatchObject({ stackIndex: 0, stackSize: 2 });
     }
   });
+  it("blocks a pending ninth symbol from re-entering when eight are visible", () => {
+    const rolls = [0.99, 0.9, 0.1, 0.5];
+    const source: RandomSource = { nextFloat: () => rolls.shift() ?? 0.5 };
+    const stream = new ColumnStream(source, BASE_REEL_CONFIG, 0);
+
+    const first = stream.nextVisibleAware("BASE_INITIAL", false, null);
+    expect(getNormalSymbol(first.cell)).toBe("S9");
+
+    const visible = new Set(["S1", "S2", "S3", "S4", "S5", "S6", "S7", "S8"] as const);
+    const second = stream.nextVisibleAware("BASE_REFILL", false, null, undefined, visible);
+
+    expect(getNormalSymbol(second.cell)).not.toBe("S9");
+    expect(visible.size).toBe(MAX_VISIBLE_NORMAL_SYMBOLS);
+  });
+
   it("uses an 85% copy branch for the symbol above a pending pair member", () => {
     const samples = 1_000;
     let copied = 0;
