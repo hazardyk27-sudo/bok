@@ -3,6 +3,7 @@ import {
   BALL_STYLE,
   BALL_TRACK_STYLE,
   CENTER_MECHANISM_STYLE,
+  DEFLECTOR_STYLE,
   EUROPEAN_WHEEL_SEQUENCE,
   NUMBER_RING_STYLE,
   OUTER_RIM_STYLE,
@@ -64,6 +65,15 @@ describe("roulette 2d wheel geometry", () => {
     expect(BALL_TRACK_STYLE.troughWidth).toBeLessThan(
       BALL_TRACK_STYLE.outerRadius - BALL_TRACK_STYLE.innerRadius,
     );
+  });
+
+  it("uses four small fixed deflectors in the stator/rotor transition band", () => {
+    expect(DEFLECTOR_STYLE.count).toBe(4);
+    expect(DEFLECTOR_STYLE.radius).toBeGreaterThan(WHEEL_GEOMETRY.numberOuterRadius);
+    expect(DEFLECTOR_STYLE.radius).toBeLessThan(BALL_TRACK_STYLE.innerRadius);
+    expect(DEFLECTOR_STYLE.radialLength).toBeLessThan(0.04);
+    expect(DEFLECTOR_STYLE.tangentialWidth).toBeLessThan(0.02);
+    expect(DEFLECTOR_STYLE.collisionRadius).toBeGreaterThan(BALL_STYLE.radius);
   });
 
   it("keeps the visual ball fully inside the fixed track", () => {

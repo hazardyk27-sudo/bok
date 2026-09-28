@@ -49,6 +49,22 @@ export const BALL_TRACK_STYLE = {
   sheenWidth: 0.010,
 } as const;
 
+export const DEFLECTOR_STYLE = {
+  count: 4,
+  startAngle: -2.6,
+  radius: 0.746,
+  radialLength: 0.027,
+  tangentialWidth: 0.014,
+  collisionRadius: 0.031,
+} as const;
+
+export function getDeflectorAngle(index: number) {
+  return (
+    DEFLECTOR_STYLE.startAngle +
+    index * ((Math.PI * 2) / DEFLECTOR_STYLE.count)
+  );
+}
+
 export const BALL_STYLE = {
   radius: 0.018,
   shadowRadius: 0.024,

@@ -2,6 +2,7 @@ import {
   BALL_STYLE,
   BALL_TRACK_STYLE,
   CENTER_MECHANISM_STYLE,
+  DEFLECTOR_STYLE,
   EUROPEAN_WHEEL_SEQUENCE,
   NUMBER_RING_STYLE,
   OUTER_RIM_STYLE,
@@ -10,6 +11,7 @@ import {
   TOP_SEGMENT_CENTER,
   WHEEL_COLORS,
   WHEEL_GEOMETRY,
+  getDeflectorAngle,
   getNumberColor,
 } from "./config";
 
@@ -1106,6 +1108,64 @@ function drawBall(
   ctx.restore();
 }
 
+function drawDeflector(
+  ctx: CanvasRenderingContext2D,
+  radius: number,
+  angle: number,
+) {
+  const center = polar(radius * DEFLECTOR_STYLE.radius, angle);
+  const radialLength = radius * DEFLECTOR_STYLE.radialLength;
+  const tangentialWidth = radius * DEFLECTOR_STYLE.tangentialWidth;
+
+  ctx.save();
+  ctx.translate(center.x, center.y);
+  ctx.rotate(angle);
+
+  ctx.shadowColor = "rgba(34, 14, 2, 0.50)";
+  ctx.shadowBlur = radius * 0.009;
+  ctx.shadowOffsetY = radius * 0.005;
+
+  const gradient = ctx.createLinearGradient(
+    -radialLength * 0.5,
+    -tangentialWidth * 0.5,
+    radialLength * 0.5,
+    tangentialWidth * 0.5,
+  );
+  gradient.addColorStop(0, WHEEL_COLORS.goldShadow);
+  gradient.addColorStop(0.30, WHEEL_COLORS.gold);
+  gradient.addColorStop(0.58, WHEEL_COLORS.goldSpecular);
+  gradient.addColorStop(1, WHEEL_COLORS.goldDark);
+
+  ctx.beginPath();
+  ctx.moveTo(-radialLength * 0.52, 0);
+  ctx.lineTo(0, -tangentialWidth * 0.54);
+  ctx.lineTo(radialLength * 0.52, 0);
+  ctx.lineTo(0, tangentialWidth * 0.54);
+  ctx.closePath();
+  ctx.fillStyle = gradient;
+  ctx.fill();
+
+  ctx.shadowColor = "transparent";
+  ctx.strokeStyle = WHEEL_COLORS.goldDark;
+  ctx.lineWidth = Math.max(0.8, radius * 0.0023);
+  ctx.stroke();
+
+  ctx.beginPath();
+  ctx.moveTo(-radialLength * 0.24, -tangentialWidth * 0.16);
+  ctx.lineTo(radialLength * 0.24, -tangentialWidth * 0.06);
+  ctx.strokeStyle = "rgba(255, 248, 198, 0.80)";
+  ctx.lineWidth = Math.max(0.65, radius * 0.0012);
+  ctx.stroke();
+
+  ctx.restore();
+}
+
+function drawDeflectors(ctx: CanvasRenderingContext2D, radius: number) {
+  for (let index = 0; index < DEFLECTOR_STYLE.count; index += 1) {
+    drawDeflector(ctx, radius, getDeflectorAngle(index));
+  }
+}
+
 function drawRotor(
   ctx: CanvasRenderingContext2D,
   radius: number,
@@ -1138,6 +1198,7 @@ export function renderRouletteWheel(
 
   drawStator(ctx, radius);
   drawRotor(ctx, radius, state.rotorAngle ?? 0);
+  drawDeflectors(ctx, radius);
 
   if (state.ballVisible ?? true) {
     drawBall(
