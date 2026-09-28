@@ -90,12 +90,20 @@ describe("blackjack periodic round scheduler",()=>{
     expect(scheduler.isTickInFlight()).toBe(true);
     expect(calls).toBe(1);
 
-    scheduled?.();
-    scheduled?.();
+    const fireScheduled=scheduled as (()=>void) | null;
+    if(fireScheduled===null){
+      throw new Error("Blackjack scheduler callback was not registered");
+    }
+    fireScheduled();
+    fireScheduled();
     expect(calls).toBe(1);
     expect(scheduler.skippedOverlapCount()).toBe(2);
 
-    release?.();
+    const releaseFirst=release as (()=>void) | null;
+    if(releaseFirst===null){
+      throw new Error("Blackjack first pending tick did not expose release");
+    }
+    releaseFirst();
     await first;
 
     expect(scheduler.isTickInFlight()).toBe(false);
@@ -103,7 +111,11 @@ describe("blackjack periodic round scheduler",()=>{
 
     const second=scheduler.tickNow();
     expect(calls).toBe(2);
-    release?.();
+    const releaseSecond=release as (()=>void) | null;
+    if(releaseSecond===null){
+      throw new Error("Blackjack second pending tick did not expose release");
+    }
+    releaseSecond();
     await second;
     expect(scheduler.completedTickCount()).toBe(2);
 
