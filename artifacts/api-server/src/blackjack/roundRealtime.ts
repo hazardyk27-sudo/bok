@@ -78,6 +78,7 @@ export function createBlackjackRoundRealtimeDriver(
   input: {
     nowMs: () => number;
     createFreshShoe?: () => BlackjackShoe;
+    bettingWindowMs?: number;
     source?: BlackjackCoordinatorRealtimeSource;
   },
 ): BlackjackRoundRealtimeDriver {
@@ -99,6 +100,7 @@ export function createBlackjackRoundRealtimeDriver(
         {
           nowMs,
           createFreshShoe:input.createFreshShoe,
+          bettingWindowMs:input.bettingWindowMs,
         },
       );
 
