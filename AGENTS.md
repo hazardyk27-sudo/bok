@@ -51,6 +51,7 @@ Isolation layout v2 is active. Game agents only develop and commit inside their 
 8. GitHub Actions is a verification/release gate, not the default execution environment. Routine code edits, file writes, local/owned simulations, targeted tests, and ordinary feature-branch commits/pushes do **not** require a GitHub Actions run unless a workflow-only environment is genuinely required.
 9. Do not dispatch GitHub Actions merely to prove that code was written or to run a test/simulation that can be executed directly in the working environment. Use Actions for preview promotion/release, explicitly requested CI verification, or checks that cannot be performed locally/directly.
 10. Do not busy-poll GitHub Actions in fixed short loops (for example every 30 seconds). If a workflow is actually required, make only the minimum status checks needed to determine its result or unblock the next gated step; avoid repeated waiting/checking cycles that keep the user blocked.
+11. Treat GitHub CI (GitHub Actions runners) as independent verification, not as the place to do ordinary development work. Prefer direct/local execution for simulations, unit tests, typechecks, builds, and other checks whenever the current working environment can run them reliably. Use CI mainly for final/independent verification, release/promotion gates, or checks that genuinely require the GitHub runner environment.
 
 
 ## Preview / Replit protocol
