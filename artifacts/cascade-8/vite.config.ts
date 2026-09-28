@@ -20,8 +20,12 @@ if (Number.isNaN(port) || port <= 0) {
 }
 
 const basePath = process.env.BASE_PATH;
+const defaultApiProxyTarget =
+  process.env.REPL_ID !== undefined
+    ? "http://127.0.0.1:8080"
+    : "http://127.0.0.1:20004";
 const apiProxyTarget =
-  process.env.API_PROXY_TARGET ?? "http://127.0.0.1:20004";
+  process.env.API_PROXY_TARGET ?? defaultApiProxyTarget;
 
 if (!basePath) {
   throw new Error(
