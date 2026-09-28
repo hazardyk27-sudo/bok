@@ -58,3 +58,16 @@ export type {
   BlackjackRealtimeViewBindingOptions,
   BlackjackRealtimeViewController,
 } from "./realtimeClient";
+
+export {
+  BLACKJACK_WEBSOCKET_PATH,
+  buildBlackjackWebSocketUrl,
+  connectBlackjackRealtimeElement,
+} from "./browserRealtime";
+export type {
+  BlackjackBrowserLocation,
+  BlackjackBrowserRealtimeConnection,
+  BlackjackBrowserRealtimeOptions,
+  BlackjackBrowserSocket,
+  BlackjackBrowserSocketFactory,
+} from "./browserRealtime";

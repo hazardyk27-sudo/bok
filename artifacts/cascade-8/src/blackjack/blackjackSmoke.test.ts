@@ -6,6 +6,8 @@ import {
   BLACKJACK_TABLE_SEAT_NUMBERS,
   bindBlackjackRealtimeView,
   buildBlackjackTableViewModelFromSnapshot,
+  buildBlackjackWebSocketUrl,
+  connectBlackjackRealtimeElement,
   renderBlackjackTableShell,
   type BlackjackRealtimeSocketLike,
   type BlackjackPublicSnapshotViewSource,
@@ -553,6 +555,67 @@ describe("blackjack responsive table foundation", () => {
       lastEventSequence: 20,
       lastStateVersion: 10,
     });
+  });
+
+
+  it("builds a same-origin Blackjack WebSocket URL for http and https", () => {
+    expect(
+      buildBlackjackWebSocketUrl({
+        protocol: "https:",
+        host: "casino.example",
+      }),
+    ).toBe("wss://casino.example/api/blackjack/ws");
+
+    expect(
+      buildBlackjackWebSocketUrl({
+        protocol: "http:",
+        host: "localhost:4173",
+      }),
+    ).toBe("ws://localhost:4173/api/blackjack/ws");
+
+    expect(() =>
+      buildBlackjackWebSocketUrl({
+        protocol: "file:",
+        host: "",
+      }),
+    ).toThrow(/http: or https:/);
+  });
+
+  it("bootstraps and cleanly closes the owned browser realtime adapter", () => {
+    const listeners = new Set<(event: MessageEvent<unknown>) => void>();
+    const closeCalls: Array<[number | undefined, string | undefined]> = [];
+    const createdUrls: string[] = [];
+
+    const connection = connectBlackjackRealtimeElement(
+      { innerHTML: "" } as HTMLElement,
+      {
+        location: {
+          protocol: "https:",
+          host: "blackjack.example",
+        },
+        createSocket: (url) => {
+          createdUrls.push(url);
+          return {
+            send: () => {},
+            addEventListener: (_type, listener) => listeners.add(listener),
+            removeEventListener: (_type, listener) => listeners.delete(listener),
+            close: (code, reason) => closeCalls.push([code, reason]),
+          };
+        },
+      },
+    );
+
+    expect(connection.url).toBe(
+      "wss://blackjack.example/api/blackjack/ws",
+    );
+    expect(createdUrls).toEqual([connection.url]);
+    expect(listeners.size).toBe(1);
+
+    connection.close();
+    connection.close();
+
+    expect(listeners.size).toBe(0);
+    expect(closeCalls).toEqual([[1000, "BLACKJACK_CLIENT_CLOSED"]]);
   });
 
 });
