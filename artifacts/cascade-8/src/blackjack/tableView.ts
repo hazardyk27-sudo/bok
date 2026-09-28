@@ -1,3 +1,5 @@
+import { BLACKJACK_DEFAULT_BETTING_PANEL, renderBlackjackBettingPanel } from "./bettingView";
+
 export const BLACKJACK_TABLE_SEAT_NUMBERS = [1, 2, 3, 4, 5] as const;
 
 export type BlackjackTableSeatViewModel = Readonly<{
@@ -148,6 +150,11 @@ export function renderBlackjackTableShell(
             <strong>${escapeHtml(model.betLabel)}</strong>
           </div>
         </div>
+
+        ${renderBlackjackBettingPanel({
+          ...BLACKJACK_DEFAULT_BETTING_PANEL,
+          totalBetLabel: model.betLabel,
+        })}
 
         <div class="blackjack-actions" aria-label="Player actions">
           <button type="button" data-blackjack-action="HIT" disabled>HIT</button>
