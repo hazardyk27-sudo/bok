@@ -115,6 +115,7 @@ function createBlackjackResilientBrowserSocket(
     scheduleReconnect: (callback:()=>void,delayMs:number)=>unknown;
     cancelReconnect: (handle:unknown)=>void;
     onTransportReadyChange: (ready:boolean)=>void;
+    onSessionReplaced: () => void;
   },
 ): BlackjackBrowserSocket {
   const messageListeners=new Set<
@@ -124,7 +125,9 @@ function createBlackjackResilientBrowserSocket(
   let reconnectHandle: unknown | null=null;
   let explicitlyClosed=false;
   let transportReady=false;
+  let terminalSessionReplaced=false;
   let generation=0;
+  let detachCurrent: (()=>void) | null=null;
 
   const setReady=(ready:boolean)=>{
     if(transportReady===ready) return;
@@ -158,8 +161,13 @@ function createBlackjackResilientBrowserSocket(
       message:(event: Event | MessageEvent<unknown>)=>{
         if(ownGeneration!==generation) return;
         const message=event as MessageEvent<unknown>;
-        if(parseMessageType(message.data)==="FULL_TABLE_SNAPSHOT"){
+        const type=parseMessageType(message.data);
+        if(type==="FULL_TABLE_SNAPSHOT"){
           setReady(true);
+        } else if(type==="SESSION_REPLACED"){
+          terminalSessionReplaced=true;
+          setReady(false);
+          input.onSessionReplaced();
         }
         for(const listener of messageListeners){
           listener(message);
@@ -169,6 +177,7 @@ function createBlackjackResilientBrowserSocket(
       close:(event: Event | MessageEvent<unknown>)=>{
         if(ownGeneration!==generation) return;
         detachPhysical(socket,handlers);
+        if(detachCurrent!==null) detachCurrent=null;
         if(physical===socket) physical=null;
         setReady(false);
         const code=
@@ -177,6 +186,7 @@ function createBlackjackResilientBrowserSocket(
             : 0;
         if(
           explicitlyClosed ||
+          terminalSessionReplaced ||
           !input.autoReconnect ||
           code===4001
         ){
@@ -197,6 +207,7 @@ function createBlackjackResilientBrowserSocket(
     socket.addEventListener("open",handlers.open);
     socket.addEventListener("close",handlers.close);
     socket.addEventListener("error",handlers.error);
+    detachCurrent=()=>detachPhysical(socket,handlers);
   };
 
   connect();
@@ -225,6 +236,8 @@ function createBlackjackResilientBrowserSocket(
       generation+=1;
       const socket=physical;
       physical=null;
+      detachCurrent?.();
+      detachCurrent=null;
       socket?.close(code,reason);
       messageListeners.clear();
     },
@@ -305,6 +318,7 @@ export function connectBlackjackRealtimeElement(
   let controller: BlackjackRealtimeViewController | null=null;
   let selectedChipCredits=100;
   let transportConnected=false;
+  let sessionReplaced=false;
   const reconnectDelayMs=options.reconnectDelayMs ?? 750;
   if(!Number.isSafeInteger(reconnectDelayMs) || reconnectDelayMs<100){
     throw new RangeError(
@@ -331,6 +345,10 @@ export function connectBlackjackRealtimeElement(
         transportConnected=ready;
         controller?.rerenderLatest();
       },
+      onSessionReplaced:()=>{
+        sessionReplaced=true;
+        controller?.rerenderLatest();
+      },
     },
   );
   const getViewContext=(): BlackjackSnapshotViewContext => {
@@ -344,7 +362,10 @@ export function connectBlackjackRealtimeElement(
     let actionStatusLabel: string | null=null;
     let actionStatusTone: "neutral" | "success" | "error"="neutral";
 
-    if(!transportConnected){
+    if(sessionReplaced){
+      actionStatusLabel="SESSION REPLACED";
+      actionStatusTone="error";
+    } else if(!transportConnected){
       actionStatusLabel="RECONNECTING…";
     } else if(playerPending!==null){
       actionStatusLabel=playerPending.phase === "ACKNOWLEDGED"
