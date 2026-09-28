@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { BASE_REEL_CONFIG, getPaytableMultiplier, NORMAL_SYMBOLS } from "../config/GameConfig";
+import { BASE_REEL_CONFIG, getPaytableMultiplier, MAX_VISIBLE_NORMAL_SYMBOLS, NORMAL_SYMBOLS } from "../config/GameConfig";
 import { ColumnStream } from "./BoardGenerator";
 import { evaluateBoard, removeAndRefill } from "./WinEvaluator";
 import { SeededRNG } from "./RNG";
@@ -67,6 +67,35 @@ describe("win evaluation and cascades", () => {
     expect(result.newSymbols).toHaveLength(evaluation.winningCells.length);
     expect(result.boardAfterGravity.flat()).toHaveLength(30);
   });
+  it("does not introduce an eighth distinct normal symbol during Base or Free Spin refills", () => {
+    const board: Board = [
+      ["S1", "S2", "S3", "S4", "S5", "S6"],
+      ["S1", "S7", "S1", "S1", "S1", "S1"],
+      ["S1", "S1", "S1", "S1", "S1", "S1"],
+      ["S1", "S1", "S1", "S1", "S1", "S1"],
+      ["S1", "S1", "S1", "S1", "S1", "S1"],
+    ];
+
+    for (const mode of ["base", "bonus"] as const) {
+      const result = removeAndRefill(
+        board,
+        [{ row: 0, col: 0 }],
+        { nextFloat: () => 0.999999 },
+        mode === "bonus",
+        mode,
+      );
+      const distinct = new Set(
+        result.boardAfterGravity.flat()
+          .map(getNormalSymbol)
+          .filter((symbol): symbol is NonNullable<typeof symbol> => symbol !== null),
+      );
+
+      expect(distinct.size).toBeLessThanOrEqual(MAX_VISIBLE_NORMAL_SYMBOLS);
+      expect(getNormalSymbol(result.newSymbols[0])).not.toBe("S8");
+      expect(getNormalSymbol(result.newSymbols[0])).not.toBe("S9");
+    }
+  });
+
   it("keeps every column compact after gravity", () => {
     const board = boardWith(Array(8).fill("S1"));
     const result = removeAndRefill(board, evaluateBoard(board).winningCells, new SeededRNG(3));
