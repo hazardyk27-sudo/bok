@@ -65,6 +65,8 @@ describe("roulette 2d wheel geometry", () => {
     expect(BALL_TRACK_STYLE.troughWidth).toBeLessThan(
       BALL_TRACK_STYLE.outerRadius - BALL_TRACK_STYLE.innerRadius,
     );
+    expect(BALL_TRACK_STYLE.pathRadius).toBeGreaterThan(0.82);
+    expect(WHEEL_GEOMETRY.markerRadius).toBeGreaterThan(BALL_TRACK_STYLE.outerRadius);
   });
 
   it("uses four small fixed deflectors in the stator/rotor transition band", () => {
@@ -86,6 +88,7 @@ describe("roulette 2d wheel geometry", () => {
     expect(outerClearance).toBeGreaterThan(0);
     expect(BALL_STYLE.shadowRadius).toBeGreaterThan(BALL_STYLE.radius);
     expect(BALL_STYLE.highlightRadius).toBeLessThan(BALL_STYLE.radius);
+    expect(BALL_STYLE.radius).toBeCloseTo(0.018 * 1.3, 6);
   });
 
   it("keeps inward number labels centered inside the number ring", () => {

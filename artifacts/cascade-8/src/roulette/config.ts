@@ -17,7 +17,7 @@ export const WHEEL_GEOMETRY = {
   pocketInnerRadius: 0.37,
   centerDiscRadius: 0.352,
   centerGuideRadius: 0.132,
-  markerRadius: 0.866,
+  markerRadius: 0.915,
   markerCount: 8,
 } as const;
 
@@ -38,24 +38,24 @@ export const OUTER_RIM_STYLE = {
 } as const;
 
 export const BALL_TRACK_STYLE = {
-  innerRadius: 0.754,
-  outerRadius: 0.832,
-  pathRadius: 0.793,
-  troughWidth: 0.050,
+  innerRadius: 0.775,
+  outerRadius: 0.875,
+  pathRadius: 0.835,
+  troughWidth: 0.058,
   innerLipWidth: 0.009,
   outerLipWidth: 0.011,
   shadowInset: 0.012,
-  sheenRadius: 0.807,
+  sheenRadius: 0.849,
   sheenWidth: 0.010,
 } as const;
 
 export const DEFLECTOR_STYLE = {
   count: 4,
   startAngle: -2.6,
-  radius: 0.746,
-  radialLength: 0.027,
-  tangentialWidth: 0.014,
-  collisionRadius: 0.031,
+  radius: 0.758,
+  radialLength: 0.029,
+  tangentialWidth: 0.015,
+  collisionRadius: 0.036,
 } as const;
 
 export function getDeflectorAngle(index: number) {
@@ -66,14 +66,14 @@ export function getDeflectorAngle(index: number) {
 }
 
 export const BALL_STYLE = {
-  radius: 0.018,
-  shadowRadius: 0.024,
-  shadowOffsetX: 0.007,
-  shadowOffsetY: 0.010,
-  highlightRadius: 0.0065,
-  highlightOffsetX: -0.0055,
-  highlightOffsetY: -0.0065,
-  rimWidth: 0.0028,
+  radius: 0.0234,
+  shadowRadius: 0.0312,
+  shadowOffsetX: 0.0091,
+  shadowOffsetY: 0.013,
+  highlightRadius: 0.00845,
+  highlightOffsetX: -0.00715,
+  highlightOffsetY: -0.00845,
+  rimWidth: 0.00364,
 } as const;
 
 export const NUMBER_RING_STYLE = {
