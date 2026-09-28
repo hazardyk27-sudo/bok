@@ -98,7 +98,7 @@ describe("blackjack premium chip and betting UI foundation", () => {
       bettingClosesLabel: "05",
     });
 
-    expect(markup).toContain('data-blackjack-selected-chip="4000000"');
+    expect(markup).toContain('data-blackjack-selected-chip="4096000"');
     expect(markup).toContain("4.096M");
     expect(markup).toContain('data-chip-tier="ultra"');
   });
