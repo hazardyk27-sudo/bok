@@ -13,10 +13,15 @@ import {
   type BlackjackConnectionRegistry,
 } from "./connectionPolicy";
 import {
+  buildBlackjackFullSnapshotMessage,
   buildBlackjackInitialSyncResponse,
   evaluateBlackjackSyncRequest,
   parseBlackjackSyncRequest,
 } from "./syncProtocol";
+import {
+  parseBlackjackRealtimePlayerAction,
+  type BlackjackRealtimePlayerActionHandler,
+} from "./realtimeActions";
 
 export const BLACKJACK_WS_PATH = "/api/blackjack/ws" as const;
 
@@ -42,6 +47,7 @@ export type BlackjackRealtimeOptions = Readonly<{
     | BlackjackRealtimeIdentity
     | null
     | Promise<BlackjackRealtimeIdentity | null>;
+  handlePlayerAction?: BlackjackRealtimePlayerActionHandler;
   createConnectionId?: () => string;
   nowMs?: () => number;
 }>;
@@ -77,6 +83,7 @@ export function attachBlackjackWebSocket(
   const connections = new Set<WebSocket>();
   const connectionIdBySocket = new Map<WebSocket, string>();
   const socketByConnectionId = new Map<string, WebSocket>();
+  const identityBySocket = new Map<WebSocket, BlackjackRealtimeIdentity>();
   let connectionRegistry: BlackjackConnectionRegistry =
     createBlackjackConnectionRegistry();
   const createConnectionId = options.createConnectionId ?? randomUUID;
@@ -142,6 +149,93 @@ export function attachBlackjackWebSocket(
     }
   };
 
+  const handlePlayerActionMessage = async (
+    socket: WebSocket,
+    rawMessage: unknown,
+  ) => {
+    if (closed || socket.readyState !== WebSocket.OPEN) return;
+
+    if (!options.handlePlayerAction) {
+      send(socket, {
+        type: "error",
+        error: "BLACKJACK_ACTION_PROTOCOL_NOT_READY",
+      });
+      return;
+    }
+
+    const identity = identityBySocket.get(socket);
+    if (!identity) {
+      send(socket, {
+        type: "error",
+        error: "BLACKJACK_AUTH_REQUIRED",
+      });
+      return;
+    }
+
+    const actionId =
+      typeof rawMessage === "object" &&
+      rawMessage !== null &&
+      "actionId" in rawMessage &&
+      typeof (rawMessage as { actionId?: unknown }).actionId === "string"
+        ? (rawMessage as { actionId: string }).actionId
+        : null;
+
+    try {
+      const current = await source.getSnapshot();
+      const action = parseBlackjackRealtimePlayerAction(rawMessage, {
+        playerId: identity.playerId,
+        tableId: current.tableId,
+        nowMs: nowMs(),
+      });
+
+      const result = await options.handlePlayerAction(action);
+
+      send(socket, {
+        type: "ACTION_ACCEPTED",
+        actionId: result.actionId,
+        replayed: result.replayed,
+        stateVersion: result.snapshot.stateVersion,
+        eventSequence: result.snapshot.eventSequence,
+      });
+
+      if (!result.replayed) {
+        broadcastSnapshot(result.snapshot);
+      }
+    } catch (error) {
+      if (
+        typeof error === "object" &&
+        error !== null &&
+        "code" in error &&
+        (error as { code?: unknown }).code === "STALE_ACTION"
+      ) {
+        try {
+          const snapshot = await source.getSnapshot();
+          send(socket, {
+            type: "ACTION_REJECTED",
+            actionId,
+            error: "STALE_ACTION",
+            resync: buildBlackjackFullSnapshotMessage(
+              snapshot,
+              "STATE_MISMATCH",
+            ),
+          });
+        } catch {
+          send(socket, {
+            type: "error",
+            error: "BLACKJACK_SNAPSHOT_UNAVAILABLE",
+          });
+        }
+        return;
+      }
+
+      send(socket, {
+        type: "ACTION_REJECTED",
+        actionId,
+        error: "INVALID_ACTION",
+      });
+    }
+  };
+
   const onUpgrade = (
     request: IncomingMessage,
     socket: Socket,
@@ -189,6 +283,7 @@ export function attachBlackjackWebSocket(
       connections.delete(socket);
       connectionIdBySocket.delete(socket);
       socketByConnectionId.delete(connectionId);
+      identityBySocket.delete(socket);
       connectionRegistry = releaseBlackjackConnection(
         connectionRegistry,
         connectionId,
@@ -209,6 +304,7 @@ export function attachBlackjackWebSocket(
             connectedAtMs: nowMs(),
           });
           connectionRegistry = claim.registry;
+          identityBySocket.set(socket, identity);
 
           for (const replacedConnectionId of claim.replacedConnectionIds) {
             const replacedSocket = socketByConnectionId.get(
@@ -253,10 +349,7 @@ export function attachBlackjackWebSocket(
         return;
       }
 
-      send(socket, {
-        type: "error",
-        error: "BLACKJACK_ACTION_PROTOCOL_NOT_READY",
-      });
+      void handlePlayerActionMessage(socket, message);
     });
 
     await sendInitialSnapshot(socket);
@@ -282,6 +375,7 @@ export function attachBlackjackWebSocket(
       connections.clear();
       connectionIdBySocket.clear();
       socketByConnectionId.clear();
+      identityBySocket.clear();
       connectionRegistry = createBlackjackConnectionRegistry();
       webSocketServer.close();
     },
