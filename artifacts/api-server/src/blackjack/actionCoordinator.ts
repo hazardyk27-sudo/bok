@@ -140,7 +140,9 @@ export class BlackjackPlayerActionCoordinator {
     assertNowMs(action.nowMs);
 
     return this.queue.enqueue(({ queueSequence }) => {
-      let pendingAccount: BlackjackCoordinatorAccount | null = null;
+      const pending = {
+        account: null as BlackjackCoordinatorAccount | null,
+      };
 
       const committed = applyBlackjackVersionedAction(
         this.tableState,
@@ -201,7 +203,7 @@ export class BlackjackPlayerActionCoordinator {
               );
               round = result.round;
               shoe = result.shoe;
-              pendingAccount = freezeAccount({
+              pending.account = freezeAccount({
                 ...account,
                 wallet: result.wallet,
                 book: result.book,
@@ -232,7 +234,7 @@ export class BlackjackPlayerActionCoordinator {
               );
               round = result.round;
               shoe = result.shoe;
-              pendingAccount = freezeAccount({
+              pending.account = freezeAccount({
                 ...account,
                 wallet: result.wallet,
                 book: result.book,
@@ -253,6 +255,7 @@ export class BlackjackPlayerActionCoordinator {
       this.tableState = committed.table;
       this.protocolState = committed.protocol;
 
+      const pendingAccount = pending.account;
       if (!committed.replayed && pendingAccount !== null) {
         this.accounts.set(
           pendingAccount.playerId,
