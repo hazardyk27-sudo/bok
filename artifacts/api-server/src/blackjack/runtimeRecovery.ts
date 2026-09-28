@@ -41,6 +41,7 @@ export type BlackjackRecoveredScheduledRuntime = Readonly<{
     | "handlePlayerActionTransaction"
     | "onIdentityConnected"
     | "onIdentityDisconnected"
+    | "getPrivatePlayerState"
   >;
   getDurableRuntime: () => BlackjackDurableRuntimeState;
   stop: () => void;
@@ -198,6 +199,7 @@ export async function recoverAndStartBlackjackRoundRuntime(input: {
         authority.handlePlayerActionTransaction,
       onIdentityConnected:authority.onIdentityConnected,
       onIdentityDisconnected:authority.onIdentityDisconnected,
+      getPrivatePlayerState:authority.getPrivatePlayerState,
     }),
     getDurableRuntime,
     stop:()=>activeScheduler.stop(),

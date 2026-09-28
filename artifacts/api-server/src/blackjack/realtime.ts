@@ -6,6 +6,7 @@ import {
   WebSocketServer,
 } from "ws";
 import type { BlackjackPublicSnapshot } from "./publicSnapshot";
+import type { BlackjackPrivatePlayerState } from "./privatePlayerState";
 import {
   claimBlackjackConnection,
   createBlackjackConnectionRegistry,
@@ -61,6 +62,10 @@ export type BlackjackRealtimeOptions = Readonly<{
     identity: BlackjackRealtimeIdentity,
     disconnectedAtMs: number,
   ) => void | Promise<void>;
+  getPrivatePlayerState?: (
+    identity: BlackjackRealtimeIdentity,
+    snapshot: BlackjackPublicSnapshot,
+  ) => BlackjackPrivatePlayerState | null;
 }>;
 
 export type BlackjackRealtimeRuntime = Readonly<{
@@ -101,10 +106,28 @@ export function attachBlackjackWebSocket(
   const nowMs = options.nowMs ?? Date.now;
   let closed = false;
 
+  const sendPrivatePlayerState=(
+    socket: WebSocket,
+    snapshot: BlackjackPublicSnapshot,
+  )=>{
+    const identity=identityBySocket.get(socket);
+    if(!identity || !options.getPrivatePlayerState) return;
+    const privateState=options.getPrivatePlayerState(
+      identity,
+      snapshot,
+    );
+    if(privateState!==null){
+      send(socket,privateState);
+    }
+  };
+
   const broadcastSnapshot = (snapshot: BlackjackPublicSnapshot) => {
     if (closed) return;
     const payload = { type: "snapshot", snapshot };
-    for (const socket of connections) send(socket, payload);
+    for (const socket of connections){
+      send(socket, payload);
+      sendPrivatePlayerState(socket,snapshot);
+    }
   };
 
   const unsubscribe = source.subscribe(broadcastSnapshot);
@@ -115,6 +138,7 @@ export function attachBlackjackWebSocket(
       const snapshot = await source.getSnapshot();
       if (!closed) {
         send(socket, buildBlackjackInitialSyncResponse(snapshot));
+        sendPrivatePlayerState(socket,snapshot);
       }
     } catch {
       send(socket, {
@@ -143,6 +167,7 @@ export function attachBlackjackWebSocket(
       const snapshot = await source.getSnapshot();
       if (!closed) {
         send(socket, evaluateBlackjackSyncRequest(snapshot, request));
+        sendPrivatePlayerState(socket,snapshot);
       }
     } catch (error) {
       if (error instanceof RangeError) {

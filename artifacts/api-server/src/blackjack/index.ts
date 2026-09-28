@@ -59,3 +59,5 @@ export * from "./connectionLifecycle";
 export * from "./runtimeAuthority";
 
 export * from "./serverRuntime";
+
+export * from "./privatePlayerState";

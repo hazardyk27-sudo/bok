@@ -6,7 +6,14 @@ import type {
   BlackjackPlayerActionCoordinator,
 } from "./actionCoordinator";
 import type { BlackjackShoe } from "./domain";
-import { buildBlackjackPublicSnapshot } from "./publicSnapshot";
+import {
+  buildBlackjackPublicSnapshot,
+  type BlackjackPublicSnapshot,
+} from "./publicSnapshot";
+import {
+  buildBlackjackPrivatePlayerState,
+  type BlackjackPrivatePlayerState,
+} from "./privatePlayerState";
 import type { BlackjackRealtimeIdentity } from "./realtime";
 import type {
   BlackjackRealtimePlayerActionHandlerResult,
@@ -35,6 +42,10 @@ export type BlackjackRuntimeAuthority = Readonly<{
     identity: BlackjackRealtimeIdentity,
     disconnectedAtMs: number,
   ) => Promise<void>;
+  getPrivatePlayerState: (
+    identity: BlackjackRealtimeIdentity,
+    snapshot: BlackjackPublicSnapshot,
+  ) => BlackjackPrivatePlayerState | null;
   pendingCount: () => number;
   activeCount: () => number;
   fatalError: () => unknown | null;
@@ -209,6 +220,12 @@ export function createBlackjackRuntimeAuthority(
     handlePlayerActionTransaction,
     onIdentityConnected,
     onIdentityDisconnected,
+    getPrivatePlayerState:(identity,snapshot)=>
+      buildBlackjackPrivatePlayerState(
+        coordinator,
+        identity,
+        snapshot,
+      ),
     pendingCount:queue.pendingCount,
     activeCount:queue.activeCount,
     fatalError:()=>fatal,
