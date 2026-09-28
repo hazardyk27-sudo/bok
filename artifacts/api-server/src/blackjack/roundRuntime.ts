@@ -8,6 +8,7 @@ export type BlackjackRoundRuntimeTransitionType =
   | "BETTING_LOCKED"
   | "INITIAL_DEAL_COMMITTED"
   | "PLAYER_TURN_TIMEOUT_COMMITTED"
+  | "DISCONNECTED_AUTO_STAND_COMMITTED"
   | "DEALER_TURN_COMMITTED"
   | "ROUND_SETTLED"
   | "NEXT_BETTING_ROUND_COMMITTED";
@@ -204,6 +205,33 @@ export async function runBlackjackRoundRuntimeTick(
     ){
       throw new Error(
         "Blackjack round runtime found inconsistent PLAYER_TURNS state",
+      );
+    }
+
+    const disconnected=await coordinator.applyDisconnectedTurnPolicy(
+      input.nowMs,
+    );
+    if(!disconnected.replayed){
+      table=disconnected.table;
+      transitions.push(
+        freezeTransition(
+          "DISCONNECTED_AUTO_STAND_COMMITTED",
+          disconnected.table,
+        ),
+      );
+
+      if(table.phase==="DEALER_TURN"){
+        return finishDealerAndSettlement(
+          coordinator,
+          input.nowMs,
+          transitions,
+        );
+      }
+
+      return finish(
+        "PLAYER_TURN_ADVANCED",
+        table,
+        transitions,
       );
     }
 

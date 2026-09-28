@@ -50,6 +50,14 @@ export type BlackjackRealtimeOptions = Readonly<{
   handlePlayerAction?: BlackjackRealtimePlayerActionHandler;
   createConnectionId?: () => string;
   nowMs?: () => number;
+  onIdentityConnected?: (
+    identity: BlackjackRealtimeIdentity,
+    connectedAtMs: number,
+  ) => void | Promise<void>;
+  onIdentityDisconnected?: (
+    identity: BlackjackRealtimeIdentity,
+    disconnectedAtMs: number,
+  ) => void | Promise<void>;
 }>;
 
 export type BlackjackRealtimeRuntime = Readonly<{
@@ -281,6 +289,7 @@ export function attachBlackjackWebSocket(
     socketByConnectionId.set(connectionId, socket);
 
     const cleanup = () => {
+      const identity=identityBySocket.get(socket);
       connections.delete(socket);
       connectionIdBySocket.delete(socket);
       socketByConnectionId.delete(connectionId);
@@ -289,6 +298,18 @@ export function attachBlackjackWebSocket(
         connectionRegistry,
         connectionId,
       );
+
+      if(
+        identity &&
+        !connectionRegistry.active.some(
+          (candidate)=>candidate.playerId===identity.playerId,
+        )
+      ){
+        void options.onIdentityDisconnected?.(
+          identity,
+          nowMs(),
+        );
+      }
     };
     socket.once("close", cleanup);
     socket.once("error", cleanup);
@@ -306,6 +327,11 @@ export function attachBlackjackWebSocket(
           });
           connectionRegistry = claim.registry;
           identityBySocket.set(socket, identity);
+
+          await options.onIdentityConnected?.(
+            identity,
+            claim.active.connectedAtMs,
+          );
 
           for (const replacedConnectionId of claim.replacedConnectionIds) {
             const replacedSocket = socketByConnectionId.get(

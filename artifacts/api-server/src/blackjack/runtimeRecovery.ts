@@ -106,12 +106,12 @@ export async function recoverAndStartBlackjackRoundRuntime(input: {
     accounts:buildCoordinatorAccounts(resumed),
     protocol:resumed.actionProtocol,
     bettingPositions:resumed.bettingPositions,
+    reconnectRegistry:resumed.reconnectRegistry,
   });
-  const reconnectRegistry=resumed.reconnectRegistry;
 
   const getDurableRuntime=()=>durableRuntimeFromCoordinator(
     coordinator,
-    reconnectRegistry,
+    coordinator.getReconnectRegistry(),
   );
 
   let persistedStateVersion=recovery.snapshotStateVersion;
@@ -174,7 +174,9 @@ export async function recoverAndStartBlackjackRoundRuntime(input: {
     coordinator,
     driver,
     scheduler:activeScheduler,
-    reconnectRegistry,
+    get reconnectRegistry(){
+      return coordinator.getReconnectRegistry();
+    },
     getDurableRuntime,
     stop:()=>activeScheduler.stop(),
   });

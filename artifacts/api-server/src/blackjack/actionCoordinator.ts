@@ -25,6 +25,13 @@ import { commitBlackjackServerEvent } from "./eventStream";
 import type { BlackjackShoe, BlackjackTable } from "./domain";
 import type { BlackjackReservationBook } from "./reservations";
 import {
+  applyBlackjackDisconnectedTurnPolicy,
+  createBlackjackReconnectRegistry,
+  disconnectBlackjackPlayerForReconnect,
+  reconnectBlackjackPlayer,
+  type BlackjackReconnectRegistry,
+} from "./reconnect";
+import {
   settleBlackjackRound,
   type BlackjackSettlementHandSummary,
 } from "./settlement";
@@ -148,6 +155,21 @@ export type BlackjackNextBettingRoundCoordinatorResult = Readonly<{
   replayed: boolean;
 }>;
 
+export type BlackjackReconnectCoordinatorResult = Readonly<{
+  table: BlackjackTable;
+  reconnectRegistry: BlackjackReconnectRegistry;
+  queueSequence: number;
+  replayed: boolean;
+}>;
+
+export type BlackjackDisconnectedPolicyCoordinatorResult = Readonly<{
+  table: BlackjackTable;
+  reconnectRegistry: BlackjackReconnectRegistry;
+  queueSequence: number;
+  replayed: boolean;
+  reason: "NONE" | "TURN_TIMEOUT" | "RECONNECT_GRACE_EXPIRED";
+}>;
+
 export type BlackjackCoordinatorResult = Readonly<{
   table: BlackjackTable;
   protocol: BlackjackActionProtocolState;
@@ -196,6 +218,7 @@ export class BlackjackPlayerActionCoordinator {
   private protocolState: BlackjackActionProtocolState;
   private readonly accounts = new Map<string, BlackjackCoordinatorAccount>();
   private readonly bettingPositions = new Map<string, BlackjackBettingPosition>();
+  private reconnectRegistry: BlackjackReconnectRegistry;
   private readonly queue: BlackjackActionQueue;
   private readonly minBetCents: number;
   private readonly maxBetCents: number | null;
@@ -206,6 +229,7 @@ export class BlackjackPlayerActionCoordinator {
     protocol?: BlackjackActionProtocolState;
     queue?: BlackjackActionQueue;
     bettingPositions?: readonly BlackjackBettingPosition[];
+    reconnectRegistry?: BlackjackReconnectRegistry;
     bettingLimits?: Readonly<{
       minBetCents: number;
       maxBetCents: number | null;
@@ -215,6 +239,8 @@ export class BlackjackPlayerActionCoordinator {
     this.protocolState =
       input.protocol ?? createBlackjackActionProtocolState();
     this.queue = input.queue ?? createBlackjackActionQueue();
+    this.reconnectRegistry =
+      input.reconnectRegistry ?? createBlackjackReconnectRegistry();
     this.minBetCents =
       input.bettingLimits?.minBetCents ?? BLACKJACK_BASE_CHIP_VALUES_CENTS[0];
     this.maxBetCents = input.bettingLimits?.maxBetCents ?? null;
@@ -290,12 +316,148 @@ export class BlackjackPlayerActionCoordinator {
     return Object.freeze(Array.from(this.bettingPositions.values()));
   }
 
+  getReconnectRegistry(): BlackjackReconnectRegistry {
+    return this.reconnectRegistry;
+  }
+
   pendingCount(): number {
     return this.queue.pendingCount();
   }
 
   activeCount(): number {
     return this.queue.activeCount();
+  }
+
+  disconnectPlayerForReconnect(
+    playerId: string,
+    nowMs: number,
+  ): Promise<BlackjackReconnectCoordinatorResult> {
+    assertNowMs(nowMs);
+
+    return this.queue.enqueue(({ queueSequence }) => {
+      const player=this.tableState.players.find(
+        (candidate)=>candidate.playerId===playerId,
+      );
+      if(!player){
+        throw new Error("Blackjack disconnect player is not seated");
+      }
+      if(!player.connected && player.status==="DISCONNECTED"){
+        return Object.freeze({
+          table:this.tableState,
+          reconnectRegistry:this.reconnectRegistry,
+          queueSequence,
+          replayed:true,
+        });
+      }
+
+      const result=disconnectBlackjackPlayerForReconnect(
+        this.tableState,
+        this.reconnectRegistry,
+        { playerId, nowMs },
+      );
+      const committed=commitBlackjackServerEvent(result.table,{
+        type:"TABLE_STATE_COMMITTED",
+        actionId:null,
+        createdAtMs:nowMs,
+      }).table;
+
+      this.tableState=committed;
+      this.reconnectRegistry=result.registry;
+      return Object.freeze({
+        table:committed,
+        reconnectRegistry:this.reconnectRegistry,
+        queueSequence,
+        replayed:false,
+      });
+    });
+  }
+
+  reconnectPlayerSession(
+    input: {
+      playerId: string;
+      userId: string;
+      sessionId: string;
+      nowMs: number;
+    },
+  ): Promise<BlackjackReconnectCoordinatorResult> {
+    assertNowMs(input.nowMs);
+
+    return this.queue.enqueue(({ queueSequence }) => {
+      const player=this.tableState.players.find(
+        (candidate)=>candidate.playerId===input.playerId,
+      );
+      if(!player){
+        throw new Error("Blackjack reconnect player is not seated");
+      }
+      if(player.connected && player.status!=="DISCONNECTED"){
+        return Object.freeze({
+          table:this.tableState,
+          reconnectRegistry:this.reconnectRegistry,
+          queueSequence,
+          replayed:true,
+        });
+      }
+
+      const result=reconnectBlackjackPlayer(
+        this.tableState,
+        this.reconnectRegistry,
+        input,
+      );
+      const committed=commitBlackjackServerEvent(result.table,{
+        type:"TABLE_STATE_COMMITTED",
+        actionId:null,
+        createdAtMs:input.nowMs,
+      }).table;
+
+      this.tableState=committed;
+      this.reconnectRegistry=result.registry;
+      return Object.freeze({
+        table:committed,
+        reconnectRegistry:this.reconnectRegistry,
+        queueSequence,
+        replayed:false,
+      });
+    });
+  }
+
+  applyDisconnectedTurnPolicy(
+    nowMs: number,
+  ): Promise<BlackjackDisconnectedPolicyCoordinatorResult> {
+    assertNowMs(nowMs);
+
+    return this.queue.enqueue(({ queueSequence }) => {
+      const result=applyBlackjackDisconnectedTurnPolicy(
+        this.tableState,
+        this.reconnectRegistry,
+        nowMs,
+      );
+
+      if(!result.autoStood){
+        return Object.freeze({
+          table:this.tableState,
+          reconnectRegistry:this.reconnectRegistry,
+          queueSequence,
+          replayed:true,
+          reason:result.reason,
+        });
+      }
+
+      const committed=commitBlackjackServerEvent(result.table,{
+        type:"TABLE_STATE_COMMITTED",
+        actionId:null,
+        createdAtMs:nowMs,
+      }).table;
+      this.tableState=committed;
+      this.reconnectRegistry=result.registry;
+
+      return Object.freeze({
+        table:committed,
+        reconnectRegistry:this.reconnectRegistry,
+        queueSequence,
+        replayed:false,
+        reason:result.reason,
+      });
+    });
   }
 
   closeBettingWindow(

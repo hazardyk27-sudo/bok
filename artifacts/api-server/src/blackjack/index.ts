@@ -53,3 +53,5 @@ export * from "./roundRealtime";
 export * from "./roundScheduler";
 
 export * from "./runtimeRecovery";
+
+export * from "./connectionLifecycle";
