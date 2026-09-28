@@ -65,6 +65,7 @@ describe("blackjack private player state client",()=>{
       stateVersion:6,
       eventSequence:6,
       roundId:"round-1",
+      playerId:"local-player",
       availableBalanceCents:50_000,
       reservedBalanceCents:0,
       betting:null,
@@ -76,11 +77,13 @@ describe("blackjack private player state client",()=>{
       stateVersion:7,
       eventSequence:7,
       roundId:"round-1",
+      playerId:"local-player",
       availableBalanceCents:125_000,
       reservedBalanceCents:0,
       betting:null,
     });
     expect(client.getState()).toMatchObject({
+      playerId:"local-player",
       availableBalanceCents:125_000,
       reservedBalanceCents:0,
     });
@@ -92,6 +95,7 @@ describe("blackjack private player state client",()=>{
       stateVersion:8,
       eventSequence:8,
       roundId:"round-2",
+      playerId:"local-player",
       availableBalanceCents:125_000,
       reservedBalanceCents:0,
       betting:{
@@ -102,6 +106,7 @@ describe("blackjack private player state client",()=>{
     });
     expect(client.getState()).toMatchObject({
       roundId:"round-2",
+      playerId:"local-player",
       availableBalanceCents:125_000,
       betting:{roundId:"round-2",status:"OPEN",betCents:0},
     });

@@ -16,6 +16,7 @@ export type BlackjackPrivatePlayerState = Readonly<{
   stateVersion: number;
   eventSequence: number;
   roundId: string | null;
+  playerId: string;
   availableBalanceCents: number;
   reservedBalanceCents: number;
   betting: Readonly<{
@@ -72,6 +73,7 @@ export function buildBlackjackPrivatePlayerState(
     stateVersion:snapshot.stateVersion,
     eventSequence:snapshot.eventSequence,
     roundId,
+    playerId:identity.playerId,
     availableBalanceCents:account.wallet.availableBalanceCents,
     reservedBalanceCents:account.wallet.reservedBalanceCents,
     betting,
