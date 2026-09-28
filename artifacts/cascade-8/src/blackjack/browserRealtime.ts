@@ -435,9 +435,19 @@ export function connectBlackjackRealtimeElement(
       actionStatusTone=bettingFeedback.status === "ACCEPTED" ? "success" : "error";
     }
 
+    const connectionState=
+      sessionReplaced
+        ? "SESSION_REPLACED" as const
+        : transportConnected
+          ? "READY" as const
+          : everReady
+            ? "RECONNECTING" as const
+            : "CONNECTING" as const;
+
     return {
       ...base,
       transportConnected,
+      connectionState,
       seatCommandPending:seatPending!==null,
       availableBalanceCents:
         privateState?.availableBalanceCents ??

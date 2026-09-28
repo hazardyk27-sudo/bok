@@ -35,6 +35,10 @@ export type BlackjackTableViewModel = Readonly<{
   enabledActions?: readonly BlackjackTableAction[];
   actionStatusLabel?: string | null;
   actionStatusTone?: "neutral" | "success" | "error";
+  connectionStatus?: Readonly<{
+    label: string;
+    tone: "connecting" | "live" | "reconnecting" | "error";
+  }>;
   roundResult?: Readonly<{
     title: string;
     detail: string;
@@ -51,15 +55,19 @@ export const BLACKJACK_DEFAULT_TABLE_VIEW: BlackjackTableViewModel =
     betLabel: "0",
     turnLabel: "MULTIPLAYER TABLE",
     dealerTotalLabel: "DEALER",
+    connectionStatus:Object.freeze({
+      label:"CONNECTING",
+      tone:"connecting" as const,
+    }),
     seats: Object.freeze(
       BLACKJACK_TABLE_SEAT_NUMBERS.map((seatNumber) =>
         Object.freeze({
           seatNumber,
-          label: seatNumber === 3 ? "YOUR SEAT" : "OPEN SEAT",
+          label: "OPEN SEAT",
           status: "EMPTY" as const,
           total: null,
           betLabel: null,
-          isLocal: seatNumber === 3,
+          isLocal: false,
         }),
       ),
     ),
@@ -179,9 +187,13 @@ export function renderBlackjackTableShell(
           <span class="blackjack-brand-kicker">THE NIGHT TABLE</span>
           <strong>BLACKJACK</strong>
         </div>
-        <div class="blackjack-topbar-status">
+        <div
+          class="blackjack-topbar-status"
+          data-connection-tone="${model.connectionStatus?.tone ?? "connecting"}"
+        >
           <span class="blackjack-live-dot" aria-hidden="true"></span>
-          <span>${escapeHtml(model.turnLabel)}</span>
+          <span class="blackjack-connection-label">${escapeHtml(model.connectionStatus?.label ?? "CONNECTING")}</span>
+          <span class="blackjack-turn-label">${escapeHtml(model.turnLabel)}</span>
         </div>
       </header>
 

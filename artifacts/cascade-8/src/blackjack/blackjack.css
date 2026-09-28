@@ -103,12 +103,38 @@ body {
   letter-spacing: 0.08em;
 }
 
+.blackjack-connection-label {
+  color: var(--blackjack-muted);
+  font-size: 9px;
+  font-weight: 900;
+}
+
+.blackjack-turn-label {
+  padding-left: 8px;
+  border-left: 1px solid rgba(255,255,255,.09);
+}
+
 .blackjack-live-dot {
   width: 7px;
   height: 7px;
   border-radius: 50%;
+  background: #9aa29d;
+  box-shadow: none;
+}
+
+.blackjack-topbar-status[data-connection-tone="live"] .blackjack-live-dot {
   background: #32d583;
   box-shadow: 0 0 12px rgba(50, 213, 131, 0.55);
+}
+
+.blackjack-topbar-status[data-connection-tone="reconnecting"] .blackjack-live-dot {
+  background: #d7b46a;
+  box-shadow: 0 0 10px rgba(215,180,106,.36);
+}
+
+.blackjack-topbar-status[data-connection-tone="error"] .blackjack-live-dot {
+  background: #e38c8c;
+  box-shadow: 0 0 10px rgba(227,140,140,.32);
 }
 
 .blackjack-stage {
@@ -954,4 +980,23 @@ body {
   border-color: rgba(244,241,232,.16);
   background: rgba(244,241,232,.04);
   color: var(--blackjack-muted);
+}
+
+
+@media (max-width: 640px) {
+  .blackjack-topbar-status {
+    gap: 6px;
+    font-size: 9px;
+  }
+
+  .blackjack-turn-label {
+    max-width: 132px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .blackjack-connection-label {
+    font-size: 8px;
+  }
 }

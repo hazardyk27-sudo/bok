@@ -48,7 +48,8 @@ describe("blackjack responsive table foundation", () => {
     }
 
     expect(BLACKJACK_SHELL_MARKUP).toContain('data-seat="3"');
-    expect(BLACKJACK_SHELL_MARKUP).toContain('data-local="true"');
+    expect(BLACKJACK_SHELL_MARKUP).not.toContain('data-local="true"');
+    expect(BLACKJACK_SHELL_MARKUP).toContain("CONNECTING");
   });
 
   it("contains dealer, shared shoe and four core player-action controls", () => {
@@ -1215,6 +1216,47 @@ describe("blackjack responsive table foundation", () => {
       roundId:"round-message",
       seatNumber:1,
     });
+  });
+
+
+  it("renders transport state explicitly instead of showing a false live indicator",()=>{
+    const base: BlackjackPublicSnapshotViewSource={
+      serverTimeMs:1_000,
+      tableId:"connection-state-table",
+      phase:"TABLE_IDLE",
+      maxSeats:5,
+      seats:[
+        {seatNumber:1,playerId:null},
+        {seatNumber:2,playerId:null},
+        {seatNumber:3,playerId:null},
+        {seatNumber:4,playerId:null},
+        {seatNumber:5,playerId:null},
+      ],
+      players:[],
+      round:null,
+      stateVersion:1,
+      eventSequence:1,
+    };
+
+    const reconnecting=renderBlackjackTableShell(
+      buildBlackjackTableViewModelFromSnapshot(base,{
+        connectionState:"RECONNECTING",
+        transportConnected:false,
+      }),
+    );
+    expect(reconnecting).toContain("RECONNECTING");
+    expect(reconnecting).toContain(
+      'data-connection-tone="reconnecting"',
+    );
+
+    const live=renderBlackjackTableShell(
+      buildBlackjackTableViewModelFromSnapshot(base,{
+        connectionState:"READY",
+        transportConnected:true,
+      }),
+    );
+    expect(live).toContain(">LIVE<");
+    expect(live).toContain('data-connection-tone="live"');
   });
 
 });

@@ -114,6 +114,11 @@ export type BlackjackSnapshotViewContext = Readonly<{
   selectedChipCredits?: number;
   transportConnected?: boolean;
   seatCommandPending?: boolean;
+  connectionState?:
+    | "CONNECTING"
+    | "READY"
+    | "RECONNECTING"
+    | "SESSION_REPLACED";
 }>;
 
 function assertSafeNonNegativeInteger(label: string, value: number): void {
@@ -492,6 +497,15 @@ export function buildBlackjackTableViewModelFromSnapshot(
     enabledActions: getBlackjackAvailablePlayerActions(snapshot, context),
     actionStatusLabel: context.actionStatusLabel ?? null,
     actionStatusTone: context.actionStatusTone ?? "neutral",
+    connectionStatus:Object.freeze(
+      context.connectionState==="READY"
+        ? {label:"LIVE",tone:"live" as const}
+        : context.connectionState==="RECONNECTING"
+          ? {label:"RECONNECTING",tone:"reconnecting" as const}
+          : context.connectionState==="SESSION_REPLACED"
+            ? {label:"SESSION REPLACED",tone:"error" as const}
+            : {label:"CONNECTING",tone:"connecting" as const},
+    ),
     roundResult:buildLocalRoundResult(
       snapshot,
       localPlayer?.playerId ?? null,
