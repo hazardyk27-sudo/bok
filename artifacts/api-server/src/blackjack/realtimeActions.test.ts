@@ -87,15 +87,93 @@ describe("blackjack realtime player action parsing", () => {
     );
   });
 
+  it("binds PLACE_BET to the authenticated actor and derives financial IDs server-side", () => {
+    const parsed = parseBlackjackRealtimePlayerAction(
+      {
+        type: "PLACE_BET",
+        actionId: "bet-1",
+        expectedStateVersion: 3,
+        roundId: "round-bet",
+        handId: "forged-hand",
+        seatNumber: 2,
+        chipValueCents: 100_000,
+        reservationId: "forged",
+        reserveTransactionId: "forged",
+      },
+      {
+        playerId: "player-2",
+        tableId: "main-blackjack",
+        nowMs: 500,
+      },
+    );
+
+    expect(parsed.envelope).toMatchObject({
+      actionId: "bet-1",
+      actorPlayerId: "player-2",
+      type: "PLACE_BET",
+      tableId: "main-blackjack",
+      expectedStateVersion: 3,
+      roundId: "round-bet",
+      handId: null,
+      seatNumber: 2,
+    });
+    expect(parsed.chipValueCents).toBe(100_000);
+    expect(parsed.reservationId).toBe(
+      "blackjack:main-blackjack:bet-1:bet-reservation",
+    );
+    expect(parsed.reserveTransactionId).toBe(
+      "blackjack:main-blackjack:bet-1:bet-reserve-tx",
+    );
+  });
+
+  it("derives CLEAR_BET transaction IDs and accepts READY without hand scope", () => {
+    const clear = parseBlackjackRealtimePlayerAction(
+      {
+        type: "CLEAR_BET",
+        actionId: "clear-1",
+        expectedStateVersion: 4,
+        roundId: "round-bet",
+        seatNumber: 3,
+      },
+      {
+        playerId: "player-3",
+        tableId: "main-blackjack",
+        nowMs: 600,
+      },
+    );
+    expect(clear.envelope.handId).toBeNull();
+    expect(clear.clearTransactionId).toBe(
+      "blackjack:main-blackjack:clear-1:clear-bet-tx",
+    );
+
+    const ready = parseBlackjackRealtimePlayerAction(
+      {
+        type: "READY",
+        actionId: "ready-1",
+        expectedStateVersion: 5,
+        roundId: "round-bet",
+        seatNumber: 3,
+      },
+      {
+        playerId: "player-3",
+        tableId: "main-blackjack",
+        nowMs: 700,
+      },
+    );
+    expect(ready.envelope.handId).toBeNull();
+    expect(ready.envelope.type).toBe("READY");
+  });
+
+
   it("rejects unsupported, malformed and invalid-seat actions", () => {
     expect(() =>
       parseBlackjackRealtimePlayerAction(
         {
-          type: "READY",
+          type: "LEAVE_SEAT",
           actionId: "a",
           expectedStateVersion: 0,
           roundId: "r",
-          handId: "h",
+          handId: null,
           seatNumber: 1,
         },
         {
