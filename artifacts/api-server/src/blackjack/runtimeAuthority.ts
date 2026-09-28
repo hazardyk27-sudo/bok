@@ -4,7 +4,7 @@ import {
 } from "./actionQueue";
 import type {
   BlackjackPlayerActionCoordinator,
-  type BlackjackCoordinatorAccount,
+  BlackjackCoordinatorAccount,
 } from "./actionCoordinator";
 import type { BlackjackShoe } from "./domain";
 import {
@@ -322,6 +322,8 @@ export function createBlackjackRuntimeAuthority(
     handlePlayerActionTransaction,
     onIdentityConnected,
     onIdentityDisconnected,
+    handleSeatClaimTransaction,
+    handleSeatLeaveTransaction,
     getPrivatePlayerState:(identity,snapshot)=>
       buildBlackjackPrivatePlayerState(
         coordinator,
