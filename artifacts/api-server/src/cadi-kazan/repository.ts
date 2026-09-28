@@ -64,7 +64,7 @@ async function ensureBigMoneyStorage() {
   bigMoneyStorageReady = (async () => {
     await pool.query("ALTER TABLE cadi_kazan_rounds ADD COLUMN IF NOT EXISTS office_cells JSONB");
     const expected = new Map([
-      ["roulette_wallets.balance_cents", "BIGINT"],
+      ["shared_wallets.balance_cents", "BIGINT"],
       ["cadi_kazan_rounds.stake_cents", "BIGINT"],
       ["cadi_kazan_rounds.payout_cents", "BIGINT"],
       ["cadi_kazan_ledger.amount_cents", "BIGINT"],
@@ -74,14 +74,14 @@ async function ensureBigMoneyStorage() {
          FROM information_schema.columns
         WHERE table_schema = current_schema()
           AND (
-            (table_name = 'roulette_wallets' AND column_name = 'balance_cents')
+            (table_name = 'shared_wallets' AND column_name = 'balance_cents')
             OR (table_name = 'cadi_kazan_rounds' AND column_name IN ('stake_cents', 'payout_cents'))
             OR (table_name = 'cadi_kazan_ledger' AND column_name = 'amount_cents')
           )`,
     );
     const current = new Map(result.rows.map((row) => [`${row.table_name}.${row.column_name}`, row.data_type.toUpperCase()]));
     const statements = [
-      ["roulette_wallets.balance_cents", "ALTER TABLE roulette_wallets ALTER COLUMN balance_cents TYPE BIGINT USING balance_cents::BIGINT"],
+      ["shared_wallets.balance_cents", "ALTER TABLE shared_wallets ALTER COLUMN balance_cents TYPE BIGINT USING balance_cents::BIGINT"],
       ["cadi_kazan_rounds.stake_cents", "ALTER TABLE cadi_kazan_rounds ALTER COLUMN stake_cents TYPE BIGINT USING stake_cents::BIGINT"],
       ["cadi_kazan_rounds.payout_cents", "ALTER TABLE cadi_kazan_rounds ALTER COLUMN payout_cents TYPE BIGINT USING payout_cents::BIGINT"],
       ["cadi_kazan_ledger.amount_cents", "ALTER TABLE cadi_kazan_ledger ALTER COLUMN amount_cents TYPE BIGINT USING amount_cents::BIGINT"],
@@ -157,21 +157,21 @@ function toSnapshot(row: CadiRoundRow): CadiKazanRoundSnapshot {
 
 async function ensureWalletForUpdate(client: PoolClient, sessionId: string) {
   await client.query(
-    "INSERT INTO roulette_wallets (session_id, balance_cents) VALUES ($1, $2) ON CONFLICT (session_id) DO NOTHING",
+    "INSERT INTO shared_wallets (session_id, balance_cents) VALUES ($1, $2) ON CONFLICT (session_id) DO NOTHING",
     [sessionId, INITIAL_SHARED_BALANCE_CENTS],
   );
   const result = await client.query<WalletRow>(
-    "SELECT balance_cents FROM roulette_wallets WHERE session_id = $1 FOR UPDATE",
+    "SELECT balance_cents FROM shared_wallets WHERE session_id = $1 FOR UPDATE",
     [sessionId],
   );
   return Number(result.rows[0]?.balance_cents ?? 0);
 }
 
 async function walletBalance(sessionId: string) {
-  const result = await pool.query<WalletRow>("SELECT balance_cents FROM roulette_wallets WHERE session_id = $1", [sessionId]);
+  const result = await pool.query<WalletRow>("SELECT balance_cents FROM shared_wallets WHERE session_id = $1", [sessionId]);
   if (!result.rows[0]) {
     await pool.query(
-      "INSERT INTO roulette_wallets (session_id, balance_cents) VALUES ($1, $2) ON CONFLICT (session_id) DO NOTHING",
+      "INSERT INTO shared_wallets (session_id, balance_cents) VALUES ($1, $2) ON CONFLICT (session_id) DO NOTHING",
       [sessionId, INITIAL_SHARED_BALANCE_CENTS],
     );
     return INITIAL_SHARED_BALANCE_CENTS;
@@ -234,7 +234,7 @@ export class CadiKazanRepository {
       const bombIndices = input.mode === "OFFICE_MATCH_6" ? [] : chooseBombIndices(cellCount, input.alarmCount);
       const officeCells = officeTicket?.cells ?? null;
       await client.query(
-        "UPDATE roulette_wallets SET balance_cents = balance_cents - $1, updated_at = now() WHERE session_id = $2",
+        "UPDATE shared_wallets SET balance_cents = balance_cents - $1, updated_at = now() WHERE session_id = $2",
         [input.stakeCents, sessionId],
       );
       const result = await client.query<CadiRoundRow>(
@@ -344,7 +344,7 @@ export class CadiKazanRepository {
         let balanceCents = await ensureWalletForUpdate(client, sessionId);
         if (resolution.win && payoutCents > 0) {
           await client.query(
-            "UPDATE roulette_wallets SET balance_cents = balance_cents + $1, updated_at = now() WHERE session_id = $2",
+            "UPDATE shared_wallets SET balance_cents = balance_cents + $1, updated_at = now() WHERE session_id = $2",
             [payoutCents, sessionId],
           );
           await client.query(
@@ -395,7 +395,7 @@ export class CadiKazanRepository {
       let balanceCents = await ensureWalletForUpdate(client, sessionId);
       if (completed) {
         await client.query(
-          "UPDATE roulette_wallets SET balance_cents = balance_cents + $1, updated_at = now() WHERE session_id = $2",
+          "UPDATE shared_wallets SET balance_cents = balance_cents + $1, updated_at = now() WHERE session_id = $2",
           [payoutCents, sessionId],
         );
         await client.query(
@@ -460,7 +460,7 @@ export class CadiKazanRepository {
         [payoutCents, idempotencyKey, roundId],
       );
       await client.query(
-        "UPDATE roulette_wallets SET balance_cents = balance_cents + $1, updated_at = now() WHERE session_id = $2",
+        "UPDATE shared_wallets SET balance_cents = balance_cents + $1, updated_at = now() WHERE session_id = $2",
         [payoutCents, sessionId],
       );
       await client.query(
