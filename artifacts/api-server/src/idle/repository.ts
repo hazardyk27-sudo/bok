@@ -121,13 +121,13 @@ function requireCompleteState(states: readonly IdleBusinessStorageState[]) {
 
 async function ensureWalletForUpdate(client: PoolClient, sessionId: string) {
   await client.query(
-    `INSERT INTO roulette_wallets (session_id, balance_cents)
+    `INSERT INTO shared_wallets (session_id, balance_cents)
      VALUES ($1, $2)
      ON CONFLICT (session_id) DO NOTHING`,
     [sessionId, INITIAL_SHARED_BALANCE_CENTS],
   );
   const result = await client.query<{ balance_cents: number }>(
-    "SELECT balance_cents FROM roulette_wallets WHERE session_id = $1 FOR UPDATE",
+    "SELECT balance_cents FROM shared_wallets WHERE session_id = $1 FOR UPDATE",
     [sessionId],
   );
   return Number(result.rows[0]?.balance_cents ?? INITIAL_SHARED_BALANCE_CENTS);
@@ -135,20 +135,20 @@ async function ensureWalletForUpdate(client: PoolClient, sessionId: string) {
 
 async function sharedWalletBalance(sessionId: string) {
   const existing = await pool.query<{ balance_cents: number }>(
-    "SELECT balance_cents FROM roulette_wallets WHERE session_id = $1",
+    "SELECT balance_cents FROM shared_wallets WHERE session_id = $1",
     [sessionId],
   );
   if (existing.rows[0]) return Number(existing.rows[0].balance_cents);
 
   await pool.query(
-    `INSERT INTO roulette_wallets (session_id, balance_cents)
+    `INSERT INTO shared_wallets (session_id, balance_cents)
      VALUES ($1, $2)
      ON CONFLICT (session_id) DO NOTHING`,
     [sessionId, INITIAL_SHARED_BALANCE_CENTS],
   );
 
   const created = await pool.query<{ balance_cents: number }>(
-    "SELECT balance_cents FROM roulette_wallets WHERE session_id = $1",
+    "SELECT balance_cents FROM shared_wallets WHERE session_id = $1",
     [sessionId],
   );
   return Number(created.rows[0]?.balance_cents ?? INITIAL_SHARED_BALANCE_CENTS);
@@ -354,10 +354,10 @@ export class IdleRepository {
       const initialBalanceWithCreditCents =
         INITIAL_SHARED_BALANCE_CENTS + settlement.walletCreditCents;
       const walletResult = await client.query<{ balance_cents: number }>(
-        `INSERT INTO roulette_wallets (session_id, balance_cents, updated_at)
+        `INSERT INTO shared_wallets (session_id, balance_cents, updated_at)
          VALUES ($1, $2, now())
          ON CONFLICT (session_id) DO UPDATE
-           SET balance_cents = roulette_wallets.balance_cents + $3,
+           SET balance_cents = shared_wallets.balance_cents + $3,
                updated_at = now()
          RETURNING balance_cents`,
         [
@@ -529,7 +529,7 @@ export class IdleRepository {
       const balanceCents = upgrade.balanceAfterCents;
 
       await client.query(
-        `UPDATE roulette_wallets
+        `UPDATE shared_wallets
             SET balance_cents = $2,
                 updated_at = now()
           WHERE session_id = $1`,
@@ -746,7 +746,7 @@ export class IdleRepository {
       const balanceCents = upgrade.balanceAfterCents;
 
       await client.query(
-        `UPDATE roulette_wallets
+        `UPDATE shared_wallets
             SET balance_cents = $2,
                 updated_at = now()
           WHERE session_id = $1`,
