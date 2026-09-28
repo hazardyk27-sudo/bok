@@ -26,6 +26,6 @@ The Slot route markup, controller bootstrap and Slot stylesheet are owned here. 
 - If a note conflicts with code/tests/ownership rules, the validated repository state wins.
 
 ## Current milestones
-- 2026-09-28 — Seven-symbol visible-board cap — Base and Free Spin initial boards/refills allow at most 7 distinct normal team symbols at once; once 7 are visible, new normal draws are restricted to those visible symbols. Scatter/Core do not count toward the cap.
+- 2026-09-28 — Seven-symbol visible-board cap validation — Initial boards obey the 7-normal-symbol cap, but a 5M same-seed run found 76,605 refill boards over the cap (76,351 with 8 distinct, 254 with 9; max refill 9). Likely leak is a pending pair SECOND emission reusing a stale base symbol without rechecking the visible-symbol set. Do not treat the cap or 261.7626% RTP run as final until this refill path is fixed and revalidated.
 - 2026-09-26 — Isolation v2 active — Slot development stays on `feature/slot`; preview release is ownership-scoped into `integration/replit-preview`, not a whole-branch merge.
 
