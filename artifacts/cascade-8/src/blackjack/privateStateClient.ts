@@ -9,6 +9,7 @@ export type BlackjackPrivatePlayerStateView = Readonly<{
   stateVersion: number;
   eventSequence: number;
   roundId: string | null;
+  playerId: string;
   availableBalanceCents: number;
   reservedBalanceCents: number;
   betting: Readonly<{
@@ -80,6 +81,8 @@ function parsePrivateState(
       message.roundId!==null &&
       typeof message.roundId!=="string"
     ) ||
+    typeof message.playerId!=="string" ||
+    !message.playerId.trim() ||
     typeof message.availableBalanceCents!=="number" ||
     !Number.isSafeInteger(message.availableBalanceCents) ||
     message.availableBalanceCents<0 ||
@@ -97,6 +100,7 @@ function parsePrivateState(
     stateVersion:message.stateVersion,
     eventSequence:message.eventSequence,
     roundId:message.roundId as string|null,
+    playerId:message.playerId,
     availableBalanceCents:message.availableBalanceCents,
     reservedBalanceCents:message.reservedBalanceCents,
     betting,
