@@ -192,8 +192,13 @@ describe("cadi kazan route smoke contract", () => {
     expect(witchClientSource).toContain('width="1511" height="707"');
     expect(witchClientSource).toContain('loading="eager"');
     expect(witchClientSource).toContain('decoding="async"');
-    expect(witchClientSource).toContain("background-image:url('${OFFICE_CARD_ART_URL}')");
+    expect(witchClientSource).toContain('<div class="witch-office-card-art" aria-hidden="true">');
+    expect(witchClientSource).not.toContain("background-image:url('${OFFICE_CARD_ART_URL}')");
     expect(visualLockSource).toContain("PASS 20 — THE OFFICE full-PNG hard lock");
+    expect(visualLockSource).toContain("PASS 21 — THE OFFICE literal single-PNG shell");
+    expect(visualLockSource).toContain("padding: 0 !important");
+    expect(visualLockSource).toContain("object-fit: contain !important");
+    expect(visualLockSource).toContain("background: none !important");
     expect(visualLockSource).toContain("background-size: 100% 100% !important");
     expect(visualLockSource).toContain(".is-office-theme .witch-ticket::after");
     expect(visualLockSource).toContain("PASS 19 — THE OFFICE master-PNG shell");
