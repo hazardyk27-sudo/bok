@@ -69,6 +69,39 @@ function coordinator(){
   });
 }
 
+function naturalCoordinator(){
+  const source=bettingTable();
+  const cards=[...source.shoe.cards];
+  const openingRanks=["A","9","K","7"] as const;
+
+  for(let target=0;target<openingRanks.length;target+=1){
+    const index=cards.findIndex(
+      (card,candidateIndex)=>
+        candidateIndex>=target &&
+        card.rank===openingRanks[target],
+    );
+    if(index<0) throw new Error("natural opening rank missing");
+    [cards[target],cards[index]]=[cards[index],cards[target]];
+  }
+
+  return new BlackjackPlayerActionCoordinator({
+    table:{
+      ...source,
+      shoe:{...source.shoe,cards},
+    },
+    accounts:[{
+      playerId:"player-2",
+      userId:"user-2",
+      wallet:createBlackjackWalletLedgerState({
+        userId:"user-2",
+        totalBalanceCents:100_000,
+      }),
+      book:createBlackjackReservationBook("user-2"),
+    }],
+    bettingLimits:{minBetCents:1_000,maxBetCents:null},
+  });
+}
+
 function action(
   type:"PLACE_BET"|"READY",
   actionId:string,
@@ -249,6 +282,34 @@ describe("blackjack authoritative round runtime tick",()=>{
         (reservation)=>reservation.status==="SETTLED",
       ),
     ).toBe(true);
+  });
+
+
+  it("finishes a terminal natural opening through dealer and settlement in the same deadline tick",async()=>{
+    const game=naturalCoordinator();
+    await game.submit(action("PLACE_BET","bet-natural",0));
+    await game.submit(action("READY","ready-natural",1));
+
+    const tick=await runBlackjackRoundRuntimeTick(game,{nowMs:10_000});
+
+    expect(tick.status).toBe("ROUND_ENDED");
+    expect(tick.transitions.map((transition)=>transition.type)).toEqual([
+      "BETTING_LOCKED",
+      "INITIAL_DEAL_COMMITTED",
+      "DEALER_TURN_COMMITTED",
+      "ROUND_SETTLED",
+    ]);
+    expect(tick.transitions.map((transition)=>transition.table.eventSequence))
+      .toEqual([3,4,5,6]);
+    expect(game.getTable().phase).toBe("ROUND_END");
+    expect(game.getTable().round?.hands[0]).toMatchObject({
+      status:"COMPLETE",
+      result:"BLACKJACK_WIN",
+      payoutCents:2_500,
+    });
+    expect(game.getAccount("player-2").wallet.reservedBalanceCents).toBe(0);
+    expect(game.getAccount("player-2").wallet.availableBalanceCents)
+      .toBe(101_500);
   });
 
 });
