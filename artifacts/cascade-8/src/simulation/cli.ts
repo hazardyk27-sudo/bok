@@ -69,7 +69,7 @@ async function main() {
      "Maximum Normal Streak": report.maximumContiguousNormal,
      "Unique Normals / Column": report.averageUniqueNormalSymbolsPerColumn,
      "Visible Boards Observed": report.visibleBoardsObserved,
-     "Boards Over 7-Symbol Limit": report.visibleBoardsOverSymbolLimit,
+     "Boards Over 8-Symbol Limit": report.visibleBoardsOverSymbolLimit,
      "Initial Boards Over Limit": report.initialBoardsOverSymbolLimit,
      "Refill Boards Over Limit": report.refillBoardsOverSymbolLimit,
      "Max Distinct Normals Visible": report.maxDistinctNormalSymbolsVisible,
