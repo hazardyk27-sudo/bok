@@ -158,18 +158,12 @@ importers:
 
   .:
     dependencies:
-      '@dimforge/rapier3d-compat':
-        specifier: ^0.20.0
-        version: 0.20.0
       '@replit/connectors-sdk':
         specifier: ^0.4.3
         version: 0.4.3
       '@types/node':
         specifier: 'catalog:'
         version: 25.9.6
-      '@types/three':
-        specifier: ^0.180.0
-        version: 0.180.0
       '@types/ws':
         specifier: ^8.18.1
         version: 8.18.1
@@ -179,9 +173,6 @@ importers:
       phaser:
         specifier: ^3.90.0
         version: 3.90.0
-      three:
-        specifier: ^0.180.0
-        version: 0.180.0
       tsx:
         specifier: 'catalog:'
         version: 4.23.13
@@ -207,9 +198,6 @@ importers:
 
   artifacts/api-server:
     dependencies:
-      '@dimforge/rapier3d-compat':
-        specifier: ^0.20.0
-        version: 0.20.0
       '@workspace/api-zod':
         specifier: workspace:*
         version: link:../../lib/api-zod
