@@ -74,7 +74,12 @@ function getLocalCurrentHand(
   const player=snapshot.players.find(
     (candidate) => candidate.playerId === localPlayerId,
   );
-  if (!player || player.seatNumber !== turn.seatNumber) {
+  if (
+    !player ||
+    !player.connected ||
+    player.status === "DISCONNECTED" ||
+    player.seatNumber !== turn.seatNumber
+  ) {
     throw new Error("Blackjack player action is not the local player's turn");
   }
 
@@ -196,6 +201,22 @@ function snapshotCursorFromMessage(
   };
 }
 
+function snapshotRoundIdFromMessage(
+  message: unknown,
+): string | null | undefined {
+  if(!isRecord(message)) return undefined;
+  const candidate=
+    message.type==="snapshot" || message.type==="FULL_TABLE_SNAPSHOT"
+      ? message.snapshot
+      : null;
+  if(!isRecord(candidate)) return undefined;
+  if(candidate.round===null) return null;
+  if(!isRecord(candidate.round)) return undefined;
+  return typeof candidate.round.roundId==="string"
+    ? candidate.round.roundId
+    : null;
+}
+
 export function createBlackjackPlayerActionClient(input: {
   socket: BlackjackRealtimeSocketLike;
   getSnapshot: () => BlackjackPublicSnapshotViewSource | null;
@@ -207,6 +228,8 @@ export function createBlackjackPlayerActionClient(input: {
   let pending: BlackjackPendingPlayerAction | null = null;
   let feedback: BlackjackPlayerActionFeedback | null = null;
   let detached=false;
+  let observedRoundId=
+    input.getSnapshot()?.round?.roundId ?? null;
 
   const setPending=(next: BlackjackPendingPlayerAction | null) => {
     pending=next;
@@ -251,10 +274,19 @@ export function createBlackjackPlayerActionClient(input: {
   };
 
   const receive=(rawMessage: unknown) => {
-    if(detached || pending===null) return;
+    if(detached) return;
 
     const message=parseTransportMessage(rawMessage);
     if (!isRecord(message)) return;
+
+    const roundId=snapshotRoundIdFromMessage(message);
+    if(roundId!==undefined && roundId!==observedRoundId){
+      observedRoundId=roundId;
+      if(pending!==null) setPending(null);
+      if(feedback!==null) setFeedback(null);
+    }
+
+    if(pending===null) return;
 
     if (
       message.type === "ACTION_ACCEPTED" &&

@@ -199,15 +199,23 @@ export function createBlackjackBettingClient(input: {
   let pending: BlackjackPendingBettingAction | null=null;
   let feedback: BlackjackBettingFeedback | null=null;
   let detached=false;
+  let observedRoundId=
+    input.getSnapshot()?.round?.roundId ?? null;
 
   const changed=()=>input.onStateChange?.();
 
   const clearForDifferentRound=(roundId: string | null) => {
-    if(state!==null && state.roundId!==roundId){
-      state=null;
-      feedback=null;
-      changed();
-    }
+    if(observedRoundId===roundId) return;
+    observedRoundId=roundId;
+
+    const hadState=
+      state!==null ||
+      pending!==null ||
+      feedback!==null;
+    state=null;
+    pending=null;
+    feedback=null;
+    if(hadState) changed();
   };
 
   const resolveAccepted=(cursor:{

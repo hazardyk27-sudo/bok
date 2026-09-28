@@ -29,6 +29,13 @@ export type BlackjackBrowserRealtimeOptions = Readonly<{
   createSocket?: BlackjackBrowserSocketFactory;
   getViewContext?: () => BlackjackSnapshotViewContext;
   createActionId?: () => string;
+  nowMs?: () => number;
+  renderTickMs?: number;
+  scheduleRender?: (
+    callback: () => void,
+    intervalMs: number,
+  ) => unknown;
+  cancelRender?: (handle: unknown) => void;
 }>;
 
 export type BlackjackBrowserRealtimeConnection = Readonly<{
@@ -199,6 +206,7 @@ export function connectBlackjackRealtimeElement(
     app,
     socket,
     getViewContext,
+    options.nowMs,
   );
   const actions=createBlackjackPlayerActionClient({
     socket,
@@ -217,6 +225,24 @@ export function connectBlackjackRealtimeElement(
     onStateChange:()=>{ controller.rerenderLatest(); },
   });
   bettingClient=betting;
+
+  const renderTickMs=options.renderTickMs ?? 250;
+  if(!Number.isSafeInteger(renderTickMs) || renderTickMs<50){
+    throw new RangeError(
+      "Blackjack visual renderTickMs must be a safe integer >= 50",
+    );
+  }
+  const scheduleRender=
+    options.scheduleRender ??
+    ((callback:()=>void,intervalMs:number)=>setInterval(callback,intervalMs));
+  const cancelRender=
+    options.cancelRender ??
+    ((handle:unknown)=>clearInterval(
+      handle as ReturnType<typeof setInterval>,
+    ));
+  const renderHandle=scheduleRender(()=>{
+    controller.rerenderLatest();
+  },renderTickMs);
 
   const onClick=(event: Event) => {
     if(wantsHighChipDouble(event.target)){
@@ -267,6 +293,7 @@ export function connectBlackjackRealtimeElement(
       if(closed) return;
       closed=true;
       app.removeEventListener("click",onClick);
+      cancelRender(renderHandle);
       betting.detach();
       actions.detach();
       controller.detach();

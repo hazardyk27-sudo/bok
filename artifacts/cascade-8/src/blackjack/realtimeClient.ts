@@ -35,6 +35,7 @@ export type BlackjackRealtimeViewBindingOptions = Readonly<{
   socket: BlackjackRealtimeSocketLike;
   renderModel: (model: BlackjackTableViewModel) => void;
   getViewContext?: () => BlackjackSnapshotViewContext;
+  nowMs?: () => number;
 }>;
 
 type BlackjackFullSnapshotEnvelope = Readonly<{
@@ -113,6 +114,36 @@ export function bindBlackjackRealtimeView(
   let latestSnapshot: BlackjackPublicSnapshotViewSource | null = null;
   let awaitingResync=false;
   let detached=false;
+  let latestSnapshotReceivedAtClientMs: number | null=null;
+  const nowMs=options.nowMs ?? Date.now;
+
+  const readClientNowMs=(): number => {
+    const value=nowMs();
+    if(!Number.isSafeInteger(value) || value<0){
+      throw new RangeError(
+        "Blackjack client clock must be a non-negative safe integer",
+      );
+    }
+    return value;
+  };
+
+  const projectedSnapshot=(
+    snapshot: BlackjackPublicSnapshotViewSource,
+  ): BlackjackPublicSnapshotViewSource => {
+    if(latestSnapshotReceivedAtClientMs===null) return snapshot;
+    const elapsed=Math.max(
+      0,
+      readClientNowMs()-latestSnapshotReceivedAtClientMs,
+    );
+    const projectedServerTimeMs=snapshot.serverTimeMs+elapsed;
+    if(!Number.isSafeInteger(projectedServerTimeMs)){
+      return snapshot;
+    }
+    return Object.freeze({
+      ...snapshot,
+      serverTimeMs:projectedServerTimeMs,
+    });
+  };
 
   const requestResync=() => {
     if(detached || awaitingResync) return;
@@ -132,6 +163,7 @@ export function bindBlackjackRealtimeView(
 
   const renderSnapshot=(snapshot: BlackjackPublicSnapshotViewSource): boolean => {
     try {
+      const receivedAt=readClientNowMs();
       const model=buildBlackjackTableViewModelFromSnapshot(
         snapshot,
         options.getViewContext?.() ?? {},
@@ -142,6 +174,7 @@ export function bindBlackjackRealtimeView(
         stateVersion:snapshot.stateVersion,
       });
       latestSnapshot=snapshot;
+      latestSnapshotReceivedAtClientMs=receivedAt;
       awaitingResync=false;
       return true;
     } catch {
@@ -155,7 +188,7 @@ export function bindBlackjackRealtimeView(
     try {
       options.renderModel(
         buildBlackjackTableViewModelFromSnapshot(
-          latestSnapshot,
+          projectedSnapshot(latestSnapshot),
           options.getViewContext?.() ?? {},
         ),
       );
@@ -253,10 +286,12 @@ export function bindBlackjackRealtimeElement(
   app: HTMLElement,
   socket: BlackjackRealtimeSocketLike,
   getViewContext?: () => BlackjackSnapshotViewContext,
+  nowMs?: () => number,
 ): BlackjackRealtimeViewController {
   return bindBlackjackRealtimeView({
     socket,
     getViewContext,
+    nowMs,
     renderModel:(model)=>{
       app.innerHTML=renderBlackjackTableShell(model);
     },
