@@ -4,6 +4,7 @@ import {
 } from "./actionQueue";
 import type {
   BlackjackPlayerActionCoordinator,
+  type BlackjackCoordinatorAccount,
 } from "./actionCoordinator";
 import type { BlackjackShoe } from "./domain";
 import {
@@ -15,6 +16,10 @@ import {
   type BlackjackPrivatePlayerState,
 } from "./privatePlayerState";
 import type { BlackjackRealtimeIdentity } from "./realtime";
+import type {
+  BlackjackSeatClaimAccepted,
+  BlackjackSeatClaimRequest,
+} from "./seatProtocol";
 import type {
   BlackjackRealtimePlayerActionHandlerResult,
   BlackjackRealtimePlayerActionTransactionHandler,
@@ -42,6 +47,11 @@ export type BlackjackRuntimeAuthority = Readonly<{
     identity: BlackjackRealtimeIdentity,
     disconnectedAtMs: number,
   ) => Promise<void>;
+  handleSeatClaimTransaction: (
+    identity: BlackjackRealtimeIdentity,
+    request: BlackjackSeatClaimRequest,
+    acknowledge: (result: BlackjackSeatClaimAccepted)=>void,
+  ) => Promise<void>;
   getPrivatePlayerState: (
     identity: BlackjackRealtimeIdentity,
     snapshot: BlackjackPublicSnapshot,
@@ -68,6 +78,11 @@ export function createBlackjackRuntimeAuthority(
     persist?: (serverTimeMs: number) => void | Promise<void>;
     onFatalError?: (error: unknown) => void;
     queue?: BlackjackActionQueue;
+    loadSeatAccount?: (
+      identity: BlackjackRealtimeIdentity,
+    ) =>
+      | BlackjackCoordinatorAccount
+      | Promise<BlackjackCoordinatorAccount>;
   },
 ): BlackjackRuntimeAuthority {
   const queue=input.queue ?? createBlackjackActionQueue();
@@ -207,6 +222,56 @@ export function createBlackjackRuntimeAuthority(
 
     await persist(disconnectedAtMs);
     rawSource.publishTable(result.table,disconnectedAtMs);
+  });
+
+  const handleSeatClaimTransaction=(
+    identity: BlackjackRealtimeIdentity,
+    request: BlackjackSeatClaimRequest,
+    acknowledge: (result: BlackjackSeatClaimAccepted)=>void,
+  ): Promise<void>=>queue.enqueue(async()=>{
+    assertHealthy();
+    const nowMs=input.nowMs();
+    assertNowMs(nowMs);
+
+    if(!input.loadSeatAccount){
+      throw new Error(
+        "Blackjack seat account provider is not configured",
+      );
+    }
+    const account=await input.loadSeatAccount(identity);
+    if(
+      account.playerId!==identity.playerId ||
+      account.userId!==identity.userId
+    ){
+      throw new Error(
+        "Blackjack seat account does not match authenticated identity",
+      );
+    }
+
+    const result=await coordinator.claimSeat({
+      account,
+      sessionId:identity.sessionId,
+      seatNumber:request.seatNumber,
+      nowMs,
+      bettingWindowMs:input.bettingWindowMs,
+    });
+
+    if(!result.replayed){
+      await persist(nowMs);
+    }
+
+    acknowledge(Object.freeze({
+      type:"SEAT_CLAIM_ACCEPTED",
+      requestId:request.requestId,
+      seatNumber:request.seatNumber,
+      replayed:result.replayed,
+      stateVersion:result.table.stateVersion,
+      eventSequence:result.table.eventSequence,
+    }));
+
+    if(!result.replayed){
+      rawSource.publishTable(result.table,nowMs);
+    }
   });
 
   const driver: BlackjackRoundRealtimeDriver=Object.freeze({

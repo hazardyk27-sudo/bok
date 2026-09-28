@@ -9,6 +9,7 @@ import {
   type BlackjackRecoveredScheduledRuntime,
 } from "./runtimeRecovery";
 import type { BlackjackShoe } from "./domain";
+import type { BlackjackCoordinatorAccount } from "./actionCoordinator";
 import type { BlackjackJournalRepository } from "./journalRepository";
 import {
   BlackjackSnapshotConflictError,
@@ -87,6 +88,11 @@ export async function recoverAndAttachBlackjackServerRuntime(input: {
   bettingWindowMs?: number;
   scheduler?: BlackjackRoundSchedulerOptions;
   createConnectionId?: () => string;
+  loadSeatAccount?: (
+    identity: BlackjackRealtimeIdentity,
+  ) =>
+    | BlackjackCoordinatorAccount
+    | Promise<BlackjackCoordinatorAccount>;
 }): Promise<BlackjackAttachedServerRuntime | null> {
   const scheduled=await recoverAndStartBlackjackRoundRuntime({
     tableId:input.tableId,
@@ -97,6 +103,7 @@ export async function recoverAndAttachBlackjackServerRuntime(input: {
     createFreshShoe:input.createFreshShoe,
     bettingWindowMs:input.bettingWindowMs,
     scheduler:input.scheduler,
+    loadSeatAccount:input.loadSeatAccount,
   });
   if(scheduled===null) return null;
 
@@ -145,6 +152,11 @@ export async function initializeAndAttachBlackjackServerRuntime(input: {
   bettingWindowMs?: number;
   scheduler?: BlackjackRoundSchedulerOptions;
   createConnectionId?: () => string;
+  loadSeatAccount?: (
+    identity: BlackjackRealtimeIdentity,
+  ) =>
+    | BlackjackCoordinatorAccount
+    | Promise<BlackjackCoordinatorAccount>;
 }): Promise<BlackjackAttachedServerRuntime> {
   const existing=await input.snapshotRepository.load(input.tableId);
 
@@ -180,6 +192,7 @@ export async function initializeAndAttachBlackjackServerRuntime(input: {
     bettingWindowMs:input.bettingWindowMs,
     scheduler:input.scheduler,
     createConnectionId:input.createConnectionId,
+    loadSeatAccount:input.loadSeatAccount,
   });
 
   if(attached===null){

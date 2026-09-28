@@ -22,7 +22,13 @@ import { doubleBlackjackCurrentHand } from "./double";
 import { hitBlackjackCurrentHand } from "./hit";
 import { markBlackjackReshuffleAfterRound } from "./lifecycle";
 import { commitBlackjackServerEvent } from "./eventStream";
-import type { BlackjackShoe, BlackjackTable } from "./domain";
+import type {
+  BlackjackPlayer,
+  BlackjackShoe,
+  BlackjackTable,
+} from "./domain";
+import { seatBlackjackPlayer } from "./participation";
+import { BLACKJACK_BETTING_WINDOW_MS } from "./roundFlow";
 import type { BlackjackReservationBook } from "./reservations";
 import {
   applyBlackjackDisconnectedTurnPolicy,
@@ -168,6 +174,13 @@ export type BlackjackDisconnectedPolicyCoordinatorResult = Readonly<{
   queueSequence: number;
   replayed: boolean;
   reason: "NONE" | "TURN_TIMEOUT" | "RECONNECT_GRACE_EXPIRED";
+}>;
+
+export type BlackjackSeatClaimCoordinatorResult = Readonly<{
+  table: BlackjackTable;
+  account: BlackjackCoordinatorAccount;
+  queueSequence: number;
+  replayed: boolean;
 }>;
 
 export type BlackjackCoordinatorResult = Readonly<{
@@ -318,6 +331,135 @@ export class BlackjackPlayerActionCoordinator {
 
   getReconnectRegistry(): BlackjackReconnectRegistry {
     return this.reconnectRegistry;
+  }
+
+  claimSeat(
+    input: {
+      account: BlackjackCoordinatorAccount;
+      sessionId: string;
+      seatNumber: 1 | 2 | 3 | 4 | 5;
+      nowMs: number;
+      bettingWindowMs?: number;
+    },
+  ): Promise<BlackjackSeatClaimCoordinatorResult> {
+    assertNowMs(input.nowMs);
+
+    return this.queue.enqueue(({ queueSequence }) => {
+      const existing=this.tableState.players.find(
+        (player)=>
+          player.playerId===input.account.playerId ||
+          player.userId===input.account.userId,
+      );
+      if(existing){
+        if(
+          existing.playerId===input.account.playerId &&
+          existing.userId===input.account.userId &&
+          existing.seatNumber===input.seatNumber
+        ){
+          const account=this.accounts.get(existing.playerId);
+          if(!account){
+            throw new Error("Blackjack seated player account is missing");
+          }
+          return Object.freeze({
+            table:this.tableState,
+            account,
+            queueSequence,
+            replayed:true,
+          });
+        }
+        throw new Error("Blackjack identity is already seated");
+      }
+
+      if(
+        this.tableState.phase!=="TABLE_IDLE" &&
+        this.tableState.phase!=="BETTING" &&
+        this.tableState.phase!=="ROUND_END"
+      ){
+        throw new Error(
+          "Blackjack seat claim is allowed only at a safe table boundary",
+        );
+      }
+      if(input.account.wallet.userId!==input.account.userId){
+        throw new Error("Blackjack seat account wallet owner mismatch");
+      }
+      if(input.account.book.userId!==input.account.userId){
+        throw new Error("Blackjack seat account reservation owner mismatch");
+      }
+
+      let table=seatBlackjackPlayer(this.tableState,{
+        playerId:input.account.playerId,
+        userId:input.account.userId,
+        sessionId:input.sessionId,
+        seatNumber:input.seatNumber,
+      });
+
+      if(table.phase==="TABLE_IDLE"){
+        const bettingWindowMs=
+          input.bettingWindowMs ?? BLACKJACK_BETTING_WINDOW_MS;
+        if(
+          !Number.isSafeInteger(bettingWindowMs) ||
+          bettingWindowMs<=0
+        ){
+          throw new RangeError(
+            "Blackjack bettingWindowMs must be a positive safe integer",
+          );
+        }
+        const bettingClosesAtMs=input.nowMs+bettingWindowMs;
+        if(!Number.isSafeInteger(bettingClosesAtMs)){
+          throw new RangeError(
+            "Blackjack initial betting deadline exceeds safe integer range",
+          );
+        }
+        const round=Object.freeze({
+          roundId:table.tableId+":round-1",
+          roundNumber:1,
+          phase:"BETTING" as const,
+          activeSeatOrder:Object.freeze([]),
+          hands:Object.freeze([]),
+          dealer:Object.freeze({
+            cards:Object.freeze([]),
+            holeCardRevealed:false,
+          }),
+          currentTurn:null,
+          startedAtMs:input.nowMs,
+          bettingClosesAtMs,
+          finishedAtMs:null,
+        });
+        const players=Object.freeze(
+          table.players.map((player): BlackjackPlayer =>
+            player.connected
+              ? Object.freeze({
+                  ...player,
+                  status:"BETTING" as const,
+                })
+              : player,
+          ),
+        );
+        table=Object.freeze({
+          ...table,
+          phase:"BETTING" as const,
+          round,
+          players,
+          stateVersion:nextStateVersion(table.stateVersion),
+        });
+      }
+
+      const committed=commitBlackjackServerEvent(table,{
+        type:"TABLE_STATE_COMMITTED",
+        actionId:null,
+        createdAtMs:input.nowMs,
+      }).table;
+      const account=freezeAccount(input.account);
+      this.accounts.set(account.playerId,account);
+      this.tableState=committed;
+
+      return Object.freeze({
+        table:committed,
+        account,
+        queueSequence,
+        replayed:false,
+      });
+    });
   }
 
   pendingCount(): number {

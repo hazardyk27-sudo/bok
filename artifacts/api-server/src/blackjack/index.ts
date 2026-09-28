@@ -61,3 +61,5 @@ export * from "./runtimeAuthority";
 export * from "./serverRuntime";
 
 export * from "./privatePlayerState";
+
+export * from "./seatProtocol";

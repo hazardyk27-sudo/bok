@@ -42,6 +42,7 @@ export type BlackjackRecoveredScheduledRuntime = Readonly<{
     | "onIdentityConnected"
     | "onIdentityDisconnected"
     | "getPrivatePlayerState"
+    | "handleSeatClaimTransaction"
   >;
   getDurableRuntime: () => BlackjackDurableRuntimeState;
   stop: () => void;
@@ -103,6 +104,11 @@ export async function recoverAndStartBlackjackRoundRuntime(input: {
   createFreshShoe?: () => BlackjackShoe;
   bettingWindowMs?: number;
   scheduler?: BlackjackRoundSchedulerOptions;
+  loadSeatAccount?: (
+    identity: import("./realtime").BlackjackRealtimeIdentity,
+  ) =>
+    | BlackjackCoordinatorAccount
+    | Promise<BlackjackCoordinatorAccount>;
 }): Promise<BlackjackRecoveredScheduledRuntime | null> {
   const recovery=await recoverBlackjackRuntime(
     input.tableId,
@@ -154,6 +160,7 @@ export async function recoverAndStartBlackjackRoundRuntime(input: {
       createFreshShoe:input.createFreshShoe,
       bettingWindowMs:input.bettingWindowMs,
       persist,
+      loadSeatAccount:input.loadSeatAccount,
       onFatalError:(error)=>{
         scheduler?.stop();
         callerOnError?.(error);
@@ -200,6 +207,8 @@ export async function recoverAndStartBlackjackRoundRuntime(input: {
       onIdentityConnected:authority.onIdentityConnected,
       onIdentityDisconnected:authority.onIdentityDisconnected,
       getPrivatePlayerState:authority.getPrivatePlayerState,
+      handleSeatClaimTransaction:
+        authority.handleSeatClaimTransaction,
     }),
     getDurableRuntime,
     stop:()=>activeScheduler.stop(),

@@ -8,6 +8,11 @@ import {
 import type { BlackjackPublicSnapshot } from "./publicSnapshot";
 import type { BlackjackPrivatePlayerState } from "./privatePlayerState";
 import {
+  parseBlackjackSeatClaimRequest,
+  type BlackjackSeatClaimAccepted,
+  type BlackjackSeatClaimRequest,
+} from "./seatProtocol";
+import {
   claimBlackjackConnection,
   createBlackjackConnectionRegistry,
   releaseBlackjackConnection,
@@ -66,6 +71,11 @@ export type BlackjackRealtimeOptions = Readonly<{
     identity: BlackjackRealtimeIdentity,
     snapshot: BlackjackPublicSnapshot,
   ) => BlackjackPrivatePlayerState | null;
+  handleSeatClaimTransaction?: (
+    identity: BlackjackRealtimeIdentity,
+    request: BlackjackSeatClaimRequest,
+    acknowledge: (result: BlackjackSeatClaimAccepted)=>void,
+  ) => void | Promise<void>;
 }>;
 
 export type BlackjackRealtimeRuntime = Readonly<{
@@ -185,6 +195,46 @@ export function attachBlackjackWebSocket(
       send(socket, {
         type: "error",
         error: "BLACKJACK_SNAPSHOT_UNAVAILABLE",
+      });
+    }
+  };
+
+  const handleSeatClaimMessage=async(
+    socket: WebSocket,
+    rawMessage: unknown,
+  )=>{
+    if(closed || socket.readyState!==WebSocket.OPEN) return;
+    const identity=identityBySocket.get(socket);
+    if(!identity){
+      send(socket,{type:"SEAT_CLAIM_REJECTED",error:"AUTH_REQUIRED"});
+      return;
+    }
+    if(!options.handleSeatClaimTransaction){
+      send(socket,{type:"SEAT_CLAIM_REJECTED",error:"SEATING_NOT_READY"});
+      return;
+    }
+
+    let request: BlackjackSeatClaimRequest;
+    try {
+      const parsed=parseBlackjackSeatClaimRequest(rawMessage);
+      if(parsed===null) return;
+      request=parsed;
+    } catch {
+      send(socket,{type:"SEAT_CLAIM_REJECTED",error:"INVALID_SEAT_CLAIM"});
+      return;
+    }
+
+    try {
+      await options.handleSeatClaimTransaction(
+        identity,
+        request,
+        (result)=>send(socket,result),
+      );
+    } catch {
+      send(socket,{
+        type:"SEAT_CLAIM_REJECTED",
+        requestId:request.requestId,
+        error:"SEAT_UNAVAILABLE",
       });
     }
   };
@@ -426,6 +476,16 @@ export function attachBlackjackWebSocket(
         )
       ) {
         void handleSync(socket, message);
+        return;
+      }
+
+      if(
+        typeof message==="object" &&
+        message!==null &&
+        "type" in message &&
+        (message as {type?:unknown}).type==="CLAIM_SEAT"
+      ){
+        void handleSeatClaimMessage(socket,message);
         return;
       }
 
