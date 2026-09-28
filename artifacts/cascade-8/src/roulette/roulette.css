@@ -1,19 +1,55 @@
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#app {
+  min-height: 100%;
+  margin: 0;
+}
+
+body {
+  min-width: 320px;
+}
+
 .roulette-page {
   min-height: 100vh;
   display: grid;
   place-items: center;
-  background: #f5f2ec;
-  color: #20140d;
+  overflow: hidden;
+  background:
+    radial-gradient(circle at 50% 42%, #ffffff 0%, #f7f4ef 58%, #ece7df 100%);
 }
 
 .roulette-stage {
-  width: min(94vw, 960px);
+  width: min(96vw, 94vh, 920px);
   aspect-ratio: 1;
   display: grid;
   place-items: center;
+  padding: clamp(8px, 1.6vw, 18px);
 }
 
-.roulette-bootstrap {
-  font: 700 14px/1 system-ui, sans-serif;
-  letter-spacing: 0.22em;
+.roulette-wheel-canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+  aspect-ratio: 1;
+  cursor: pointer;
+  touch-action: manipulation;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.roulette-wheel-canvas:focus-visible {
+  outline: 2px solid rgba(126, 82, 18, 0.72);
+  outline-offset: 4px;
+  border-radius: 50%;
+}
+
+@media (max-width: 640px) {
+  .roulette-stage {
+    width: min(100vw, 94vh);
+    padding: 4px;
+  }
 }
