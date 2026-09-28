@@ -201,7 +201,8 @@ function showModal(name: string | null) {
 
 document.querySelectorAll<HTMLElement>("[data-modal]").forEach((button) => button.addEventListener("click", () => showModal(button.dataset.modal ?? null), { signal: lifecycleSignal }));
 
-let controller: GameController | null = null;
+let controller!: GameController;
+let controllerReady = false;
 const game = createGameScene(byId("phaser-board"));
 const controllerTimer = window.setTimeout(() => {
   const scene = game.scene.getScene("Cascade8GameScene") as GameScene;
@@ -213,6 +214,7 @@ const controllerTimer = window.setTimeout(() => {
          bonusOverlay: byId("bonus-overlay"), bonusStart: byId("bonus-overlay").querySelector("[data-bonus-start]") as HTMLButtonElement, bonusSpinCount: byId("bonus-spin-count"), bonusScatterRow: byId("bonus-scatter-row"), bonusTriggerLabel: byId("bonus-trigger-label"), bonusTitle: byId("bonus-title"), bonusSupport: byId("bonus-support"), bonusInstruction: byId("bonus-instruction"), freeSpinCalculation: byId("free-spin-calculation"), freeSpinRawWin: byId("free-spin-symbol-win"), freeSpinMultiplier: byId("free-spin-multiplier"), freeSpinFinalWin: byId("free-spin-spin-win"), freeSpinMultiplyOperator: byId("free-spin-multiply-operator"), freeSpinEqualsOperator: byId("free-spin-equals-operator"), tumbleLabel: document.querySelector(".tumble-win-label") as HTMLElement, tumbleSymbolWin: byId("tumble-symbol-win"), tumbleIncrement: byId("tumble-increment"), tumbleMeta: byId("tumble-meta"), tumbleSettlement: byId("tumble-settlement"), tumblePanel: byId("tumble-win-panel"), bigWinOverlay: byId("big-win-overlay"), bonusSummaryOverlay: byId("bonus-summary-overlay"), boardWrap: byId("phaser-board").parentElement!, controlDeck: document.querySelector(".control-deck") as HTMLElement,
     setModal: showModal,
   });
+  controllerReady = true;
    if (isLab) renderLab(scene);
    if (isLab && new URLSearchParams(window.location.search).has("preview-free-spin")) {
      void controller.previewFreeSpinAccounting();
@@ -234,8 +236,8 @@ const controllerTimer = window.setTimeout(() => {
 activeSlotCleanup = () => {
   lifecycleAbort.abort();
   window.clearTimeout(controllerTimer);
-  controller?.destroy();
-  controller = null;
+  if (controllerReady) controller.destroy();
+  controllerReady = false;
   game.destroy(true);
   document.documentElement.style.removeProperty("--slot-visual-height");
   delete document.documentElement.dataset.slotDisplayMode;
