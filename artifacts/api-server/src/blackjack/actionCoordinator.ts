@@ -258,7 +258,6 @@ export class BlackjackPlayerActionCoordinator {
         ),
         positions:Object.freeze(Array.from(this.bettingPositions.values())),
         nowMs,
-        createFreshShoe,
       });
 
       this.tableState=result.table;
@@ -292,6 +291,7 @@ export class BlackjackPlayerActionCoordinator {
         ),
         positions:Object.freeze(Array.from(this.bettingPositions.values())),
         nowMs,
+        createFreshShoe,
       });
 
       this.tableState=result.table;
