@@ -306,11 +306,13 @@ describe("blackjack owned server runtime wiring",()=>{
       eventSequence:0,
     });
     expect(attached.scheduled.coordinator.getTable().players).toEqual([]);
-    if(stored===null){
+    const persistedSnapshot=
+      stored as BlackjackDurableSnapshot | null;
+    if(persistedSnapshot===null){
       throw new Error("Blackjack fresh runtime was not persisted");
     }
-    expect(stored.payload.table.phase).toBe("TABLE_IDLE");
-    expect(stored.payload.table.players).toEqual([]);
+    expect(persistedSnapshot.payload.table.phase).toBe("TABLE_IDLE");
+    expect(persistedSnapshot.payload.table.players).toEqual([]);
   });
 
 });

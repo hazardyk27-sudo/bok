@@ -375,10 +375,12 @@ describe("blackjack five-client realtime entry-to-game gate",()=>{
       expect(dealerCards[1]).toBeNull();
     }
 
-    if(stored===null){
+    const persistedSnapshot=
+      stored as BlackjackDurableSnapshot | null;
+    if(persistedSnapshot===null){
       throw new Error("Blackjack five-client gate did not persist snapshot");
     }
-    expect(stored.stateVersion).toBe(20);
-    expect(stored.eventSequence).toBe(17);
+    expect(persistedSnapshot.stateVersion).toBe(20);
+    expect(persistedSnapshot.eventSequence).toBe(17);
   });
 });

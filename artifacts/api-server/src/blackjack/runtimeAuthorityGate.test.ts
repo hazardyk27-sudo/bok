@@ -258,13 +258,15 @@ describe("blackjack full lifecycle + recovery multiplayer gate",()=>{
       expect(publishIndex).toBeGreaterThan(ackIndex);
     }
 
-    if(stored===null){
+    const persistedSnapshot=
+      stored as BlackjackDurableSnapshot | null;
+    if(persistedSnapshot===null){
       throw new Error("Blackjack full runtime gate did not persist snapshot");
     }
-    expect(stored.stateVersion).toBe(20);
-    expect(stored.eventSequence).toBe(20);
+    expect(persistedSnapshot.stateVersion).toBe(20);
+    expect(persistedSnapshot.eventSequence).toBe(20);
 
-    let durableStore: BlackjackDurableSnapshot=stored;
+    let durableStore: BlackjackDurableSnapshot=persistedSnapshot;
     const snapshotRepository={
       load:async()=>durableStore,
       save:async(
