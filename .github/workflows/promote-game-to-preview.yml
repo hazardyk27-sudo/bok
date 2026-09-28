@@ -76,6 +76,7 @@ jobs:
       - name: Slot math regression
         if: inputs.game == 'slot'
         run: >
+          PORT=4173 BASE_PATH=/
           pnpm --filter @workspace/cascade-8 exec vitest run
           src/engine/BoardGenerator.test.ts
           src/engine/WinEvaluator.test.ts
