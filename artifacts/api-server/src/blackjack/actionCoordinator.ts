@@ -23,6 +23,10 @@ import { commitBlackjackServerEvent } from "./eventStream";
 import type { BlackjackTable } from "./domain";
 import type { BlackjackReservationBook } from "./reservations";
 import { splitBlackjackCurrentHand } from "./split";
+import {
+  closeBlackjackBettingWindow,
+  type BlackjackRoundFlowAccount,
+} from "./roundFlow";
 import { standBlackjackCurrentHand } from "./stand";
 import type { BlackjackWalletLedgerState } from "./walletLedger";
 
@@ -77,6 +81,17 @@ export type BlackjackCoordinatorBettingState = Readonly<{
   status: BlackjackBettingPosition["status"];
   betCents: number;
   availableBalanceCents: number;
+}>;
+
+export type BlackjackBettingWindowCloseCoordinatorResult = Readonly<{
+  table: BlackjackTable;
+  participants: readonly Readonly<{
+    playerId: string;
+    seatNumber: 1 | 2 | 3 | 4 | 5;
+    betCents: number;
+  }>[];
+  queueSequence: number;
+  replayed: boolean;
 }>;
 
 export type BlackjackCoordinatorResult = Readonly<{
@@ -208,6 +223,38 @@ export class BlackjackPlayerActionCoordinator {
 
   activeCount(): number {
     return this.queue.activeCount();
+  }
+
+  closeBettingWindow(
+    nowMs: number,
+  ): Promise<BlackjackBettingWindowCloseCoordinatorResult> {
+    assertNowMs(nowMs);
+
+    return this.queue.enqueue(({ queueSequence }) => {
+      const result=closeBlackjackBettingWindow({
+        table:this.tableState,
+        accounts:Object.freeze(
+          Array.from(this.accounts.values()) as BlackjackRoundFlowAccount[],
+        ),
+        positions:Object.freeze(Array.from(this.bettingPositions.values())),
+        nowMs,
+      });
+
+      this.tableState=result.table;
+      for(const account of result.accounts){
+        this.accounts.set(account.playerId,freezeAccount(account));
+      }
+      for(const position of result.positions){
+        this.bettingPositions.set(position.playerId,position);
+      }
+
+      return Object.freeze({
+        table:this.tableState,
+        participants:result.participants,
+        queueSequence,
+        replayed:result.replayed,
+      });
+    });
   }
 
   submit(
