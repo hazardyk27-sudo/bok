@@ -14,6 +14,7 @@ import {
   createRouletteSimulationEvents,
   type RouletteSimulationEvent,
 } from "./simulationEvents";
+import { RouletteAudioEngine } from "./rouletteAudio";
 import { readSettledWinningResult } from "./spinResult";
 import { renderRouletteWheel } from "./wheelRenderer";
 
@@ -77,15 +78,19 @@ export function mountRoulette(app: HTMLDivElement) {
   let lastEventElapsedMs = -1;
   let simulationEvents: RouletteSimulationEvent[] = [];
   let frameId = 0;
+  const rouletteAudio =
+    new RouletteAudioEngine();
 
   const redraw = () => renderCanvas(canvas, viewState);
 
   const animate = (timestamp: number) => {
     const elapsedMs = timestamp - motionStartedAt;
+    let rotorAngularVelocity = 0;
 
     if (activeRotorSpin) {
       const rotorSample = sampleRotorSpin(activeRotorSpin, elapsedMs);
       viewState.rotorAngle = rotorSample.angle;
+      rotorAngularVelocity = rotorSample.angularVelocity;
       if (rotorSample.done) activeRotorSpin = null;
     }
 
@@ -98,6 +103,7 @@ export function mountRoulette(app: HTMLDivElement) {
         );
 
       dueEvents.forEach((event) => {
+        rouletteAudio.handleEvent(event);
         canvas.dispatchEvent(
           new CustomEvent<RouletteSimulationEvent>(
             "roulette-simulation-event",
@@ -113,6 +119,13 @@ export function mountRoulette(app: HTMLDivElement) {
       const ballSample = sampleBallOrbit(activeBallOrbit, elapsedMs);
       viewState.ballAngle = ballSample.angle;
       viewState.ballRadiusRatio = ballSample.radiusRatio;
+
+      rouletteAudio.updateMotion({
+        rotorAngularVelocity,
+        ballAngularVelocity:
+          ballSample.angularVelocity,
+        ballPhase: ballSample.phase,
+      });
 
       if (ballSample.done) {
         const completedOrbit = activeBallOrbit;
@@ -135,12 +148,14 @@ export function mountRoulette(app: HTMLDivElement) {
         }
 
         activeBallOrbit = null;
+        rouletteAudio.stopMotion();
       }
     }
 
     redraw();
 
     if (!activeRotorSpin && !activeBallOrbit) {
+      rouletteAudio.stopMotion();
       frameId = 0;
       return;
     }
@@ -188,8 +203,17 @@ export function mountRoulette(app: HTMLDivElement) {
   observer.observe(canvas);
   redraw();
 
+  canvas.addEventListener(
+    "pointerdown",
+    () => {
+      void rouletteAudio.ensureStarted();
+    },
+    { passive: true },
+  );
+
   canvas.addEventListener("click", startSpin);
   canvas.addEventListener("keydown", (event) => {
+    void rouletteAudio.ensureStarted();
     if (event.key !== "Enter" && event.key !== " ") return;
     event.preventDefault();
     startSpin();
