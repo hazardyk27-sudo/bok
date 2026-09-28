@@ -109,4 +109,77 @@ describe("blackjack seat leave and rejoin",()=>{
     })).rejects.toThrow(/active wager/);
     expect(game.getTable().players).toHaveLength(1);
   });
+
+  it("allows leave during ROUND_END after the wager has already settled",async()=>{
+    const game=new BlackjackPlayerActionCoordinator({
+      table:createBlackjackTableFoundation({
+        tableId:"leave-settled-table",
+        shoe:createUnshuffledBlackjackShoe({
+          shoeId:"leave-settled-shoe",
+          createdAtMs:1,
+        }),
+      }),
+      accounts:[],
+    });
+    await game.claimSeat({
+      account:account("p1","u1"),
+      sessionId:"s1",
+      seatNumber:1,
+      nowMs:1_000,
+    });
+
+    const table=game.getTable();
+    await game.submit({
+      envelope:{
+        actionId:"settled-bet",
+        actorPlayerId:"p1",
+        type:"PLACE_BET",
+        tableId:table.tableId,
+        expectedStateVersion:table.stateVersion,
+        roundId:table.round!.roundId,
+        handId:null,
+        seatNumber:1,
+        payloadFingerprint:"PLACE_BET|settled-bet",
+      },
+      nowMs:1_100,
+      chipValueCents:1_000,
+      reservationId:"settled-reservation",
+      reserveTransactionId:"settled-reserve-tx",
+    });
+    await game.submit({
+      envelope:{
+        actionId:"settled-ready",
+        actorPlayerId:"p1",
+        type:"READY",
+        tableId:table.tableId,
+        expectedStateVersion:game.getTable().stateVersion,
+        roundId:table.round!.roundId,
+        handId:null,
+        seatNumber:1,
+        payloadFingerprint:"READY|settled-ready",
+      },
+      nowMs:1_200,
+    });
+    await game.closeBettingWindow(table.round!.bettingClosesAtMs!);
+    await game.startInitialDeal(table.round!.bettingClosesAtMs!);
+    const turn=game.getTable().round?.currentTurn;
+    if(turn){
+      await game.timeoutCurrentTurn(turn.endsAtMs);
+    }
+    if(game.getTable().phase==="DEALER_TURN"){
+      await game.runDealerTurn(20_000);
+    }
+    if(game.getTable().phase==="SETTLEMENT"){
+      await game.settleCurrentRound(20_000);
+    }
+    expect(game.getTable().phase).toBe("ROUND_END");
+
+    await expect(game.leaveSeat({
+      playerId:"p1",
+      nowMs:20_001,
+    })).resolves.toMatchObject({replayed:false});
+    expect(game.getTable().phase).toBe("TABLE_IDLE");
+    expect(game.getTable().players).toEqual([]);
+  });
+
 });

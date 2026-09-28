@@ -373,8 +373,13 @@ export class BlackjackPlayerActionCoordinator {
       }
 
       const position=this.bettingPositions.get(player.playerId);
+      const settledRoundPosition=
+        this.tableState.phase==="ROUND_END" &&
+        this.tableState.round!==null &&
+        position?.roundId===this.tableState.round.roundId;
       if(
         position &&
+        !settledRoundPosition &&
         (
           position.status!=="OPEN" ||
           getBlackjackBetTotalCents(position)>0

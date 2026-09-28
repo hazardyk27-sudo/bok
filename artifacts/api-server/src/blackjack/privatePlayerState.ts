@@ -57,7 +57,9 @@ export function buildBlackjackPrivatePlayerState(
   const position=coordinator.getBettingPosition(identity.playerId);
   const roundId=snapshot.round?.roundId ?? null;
   const betting=
-    position!==null && position.roundId===roundId
+    snapshot.phase==="BETTING" &&
+    position!==null &&
+    position.roundId===roundId
       ? Object.freeze({
           roundId:position.roundId,
           status:position.status,
