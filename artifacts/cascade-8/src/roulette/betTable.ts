@@ -197,7 +197,7 @@ export function renderRouletteBetTable() {
       data-roulette-bet-panel
     >
       <div class="roulette-bet-panel__header">
-        <span class="roulette-bet-status" data-bet-status>BETTING OPEN</span>
+        <span class="roulette-bet-status" data-bet-status aria-live="polite">BETTING OPEN</span>
         <span class="roulette-bet-hint">SELECT A BET</span>
       </div>
 
@@ -242,11 +242,11 @@ export function renderRouletteBetTable() {
           </div>
           <div class="roulette-bet-metric roulette-return-metric">
             <span>RETURN</span>
-            <strong data-round-return>—</strong>
+            <strong data-round-return aria-live="polite">—</strong>
           </div>
           <div class="roulette-bet-metric roulette-profit-metric" data-round-outcome="idle">
             <span>NET</span>
-            <strong data-round-profit>—</strong>
+            <strong data-round-profit aria-live="polite">—</strong>
           </div>
         </div>
 
