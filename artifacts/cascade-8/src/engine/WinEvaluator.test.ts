@@ -77,10 +77,12 @@ describe("win evaluation and cascades", () => {
     ];
 
     for (const mode of ["base", "bonus"] as const) {
+      const rolls = [0.99, 0.9];
+      const source: RandomSource = { nextFloat: () => rolls.shift() ?? 0.5 };
       const result = removeAndRefill(
         board,
         [{ row: 0, col: 0 }],
-        { nextFloat: () => 0.999999 },
+        source,
         mode === "bonus",
         mode,
       );
