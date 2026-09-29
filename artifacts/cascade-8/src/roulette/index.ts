@@ -66,6 +66,46 @@ import {
 import { formatRouletteAmount } from "./uiFormat";
 import { renderRouletteWheel } from "./wheelRenderer";
 
+const ROULETTE_PLACED_CHIP_PALETTE: Record<
+  RouletteChipValue,
+  {
+    fill: string;
+    ink: string;
+    edge: string;
+  }
+> = {
+  1: {
+    fill: "#e7ebee",
+    ink: "#111315",
+    edge: "#ffffff",
+  },
+  5: {
+    fill: "#e05249",
+    ink: "#ffffff",
+    edge: "#ffaaa3",
+  },
+  10: {
+    fill: "#3b8ce0",
+    ink: "#ffffff",
+    edge: "#9acbff",
+  },
+  25: {
+    fill: "#34a96d",
+    ink: "#ffffff",
+    edge: "#a0e6bd",
+  },
+  100: {
+    fill: "#4a5157",
+    ink: "#ffffff",
+    edge: "#b6bdc2",
+  },
+  500: {
+    fill: "#8b65c4",
+    ink: "#ffffff",
+    edge: "#d2baf0",
+  },
+};
+
 type RouletteViewState = {
   rotorAngle: number;
   ballAngle: number;
@@ -632,6 +672,67 @@ export function mountRoulette(app: HTMLDivElement) {
           document.createElement("span");
         chip.className =
           `roulette-placed-chip chip-${lastChip}`;
+        const chipPalette =
+          ROULETTE_PLACED_CHIP_PALETTE[
+            lastChip
+          ];
+        chip.style.setProperty(
+          "--chip-fill",
+          chipPalette.fill,
+        );
+        chip.style.setProperty(
+          "--chip-ink",
+          chipPalette.ink,
+        );
+        chip.style.setProperty(
+          "--chip-edge",
+          chipPalette.edge,
+        );
+        chip.style.setProperty(
+          "background",
+          chipPalette.fill,
+          "important",
+        );
+        chip.style.setProperty(
+          "background-color",
+          chipPalette.fill,
+          "important",
+        );
+        chip.style.setProperty(
+          "background-image",
+          "none",
+          "important",
+        );
+        chip.style.setProperty(
+          "opacity",
+          "1",
+          "important",
+        );
+        chip.style.setProperty(
+          "filter",
+          "none",
+          "important",
+        );
+        chip.style.setProperty(
+          "mix-blend-mode",
+          "normal",
+          "important",
+        );
+        chip.style.setProperty(
+          "color",
+          chipPalette.ink,
+          "important",
+        );
+        chip.style.setProperty(
+          "border",
+          `2px solid ${chipPalette.edge}`,
+          "important",
+        );
+        chip.style.setProperty(
+          "box-shadow",
+          "none",
+          "important",
+        );
         chip.dataset.betAmount =
           String(amount);
         chip.textContent =
