@@ -17,6 +17,16 @@ const persistenceSource = readFileSync(
   "utf8",
 );
 
+const stadiumRepositorySource = readFileSync(
+  fileURLToPath(new URL("./stadiumRepository.ts", import.meta.url)),
+  "utf8",
+);
+
+const stadiumPolicySource = readFileSync(
+  fileURLToPath(new URL("./stadiumPolicy.ts", import.meta.url)),
+  "utf8",
+);
+
 const schemaSource = readFileSync(
   fileURLToPath(
     new URL("../../../../lib/db/src/schema/idle.ts", import.meta.url),
@@ -148,6 +158,22 @@ describe("ticket sale transaction contract", () => {
     );
     expect(saleSource).toContain(
       "balanceCents < walletCreditCents",
+    );
+  });
+
+
+  it("enforces the sub-cent remainder invariant on both persisted reads and mutation writes", () => {
+    expect(stadiumRepositorySource).toContain(
+      "saleRemainderMicrodollars >=",
+    );
+    expect(stadiumRepositorySource).toContain(
+      "MARKET_MICRODOLLARS_PER_CENT",
+    );
+    expect(stadiumPolicySource).toContain(
+      "saleRemainderMicrodollars >=",
+    );
+    expect(stadiumPolicySource).toContain(
+      'throw new Error("INVALID_IDLE_SALE_REMAINDER")',
     );
   });
 
