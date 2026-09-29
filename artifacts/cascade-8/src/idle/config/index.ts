@@ -2,9 +2,8 @@
  * Canonical Stadium redesign configuration.
  *
  * These tables implement STADIUM_ECONOMY_SPEC.md and are the source of truth
- * for the new ticket economy. The legacy direct-cash exports below remain
- * temporarily only so the existing UI/backend can compile while later parts
- * migrate consumers onto this model.
+ * for the ticket economy. Part 25 removed the retired passive-cash business
+ * and Vault configuration; persisted legacy SQL rows remain untouched.
  */
 export const TICKET_MICRO_UNITS = 1_000_000;
 export const MARKET_MICRODOLLARS_PER_DOLLAR = 1_000_000;
