@@ -2,10 +2,8 @@ import { describe, expect, it } from "vitest";
 import {
   applyStadiumEconomyMutationPatch,
 } from "./stadiumPolicy";
-import {
-  projectPersistedStadiumState,
-  type StadiumStorageState,
-} from "./stadiumRepository";
+import { projectStadiumTicketProduction } from "./production";
+import type { StadiumStorageState } from "./stadiumRepository";
 
 function makeState(
   overrides: Partial<StadiumStorageState> = {},
@@ -32,10 +30,13 @@ describe("Stadium mutation policy", () => {
     const oldState = makeState();
     const upgradeAt = new Date("2026-09-29T10:00:00.000Z");
 
-    const oldProjection = projectPersistedStadiumState(
-      oldState,
-      upgradeAt,
-    );
+    const oldProjection = projectStadiumTicketProduction({
+      ownedSeats: oldState.ownedSeats,
+      speedLevel: oldState.speedLevel,
+      storageLevel: oldState.storageLevel,
+      storedMicroTickets: oldState.storedMicroTickets,
+      elapsedMs: upgradeAt.getTime() - oldState.productionCheckpointAt.getTime(),
+    });
 
     // 1,000 seats × Speed Lv1 = 2 tickets/hour × 10h = 20 tickets.
     expect(oldProjection.liveStoredMicroTickets).toBe(20_000_000);
@@ -55,10 +56,13 @@ describe("Stadium mutation policy", () => {
     expect(upgraded.speedLevel).toBe(2);
     expect(upgraded.storedMicroTickets).toBe(20_000_000);
 
-    const oneHourLater = projectPersistedStadiumState(
-      upgraded,
-      new Date("2026-09-29T11:00:00.000Z"),
-    );
+    const oneHourLater = projectStadiumTicketProduction({
+      ownedSeats: upgraded.ownedSeats,
+      speedLevel: upgraded.speedLevel,
+      storageLevel: upgraded.storageLevel,
+      storedMicroTickets: upgraded.storedMicroTickets,
+      elapsedMs: 60 * 60 * 1_000,
+    });
 
     // Only the NEW hour receives Speed Lv2 (2.5 tickets/hour).
     expect(oneHourLater.liveStoredMicroTickets).toBe(22_500_000);
