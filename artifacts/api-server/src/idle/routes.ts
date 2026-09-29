@@ -9,7 +9,7 @@ import { sellStadiumTickets } from "./ticketSale";
 import { upgradeStadiumSpeed } from "./speedUpgrade";
 import { upgradeStadiumStorage } from "./storageUpgrade";
 import { upgradeStadiumLevel } from "./stadiumUpgrade";
-import { IDLE_BUSINESS_IDS, type IdleBusinessId } from "./storage";
+import { isActiveIdleBusinessId } from "./storage";
 
 const router: IRouter = Router();
 const IDEMPOTENCY_PATTERN = /^[a-zA-Z0-9_-]{12,100}$/;
@@ -191,7 +191,10 @@ router.get("/idle/state", async (req, res) => {
       sessionId,
       serverTime: state.serverNow.toISOString(),
       wallet: state.wallet,
-      businesses: state.businesses.map(serializeBusiness),
+      businesses: state.businesses
+        .filter((business) =>
+          isActiveIdleBusinessId(business.businessId))
+        .map(serializeBusiness),
     });
   } catch (error) {
     sendError(res, error);
@@ -394,7 +397,10 @@ router.post("/idle/collect-all", async (req, res) => {
         collectedCents: collection.collectedCents,
         replayed: collection.replayed,
       })),
-      businesses: result.businesses.map(serializeBusiness),
+      businesses: result.businesses
+        .filter((business) =>
+          isActiveIdleBusinessId(business.businessId))
+        .map(serializeBusiness),
     });
   } catch (error) {
     sendError(res, error);
@@ -404,8 +410,8 @@ router.post("/idle/collect-all", async (req, res) => {
 
 router.post("/idle/businesses/:businessId/collect", async (req, res) => {
   try {
-    const businessId = req.params.businessId as IdleBusinessId;
-    if (!IDLE_BUSINESS_IDS.includes(businessId)) {
+    const businessId = req.params.businessId;
+    if (!isActiveIdleBusinessId(businessId)) {
       res.status(404).json({ error: "IDLE_BUSINESS_NOT_FOUND" });
       return;
     }
@@ -439,8 +445,8 @@ router.post("/idle/businesses/:businessId/collect", async (req, res) => {
 
 router.post("/idle/businesses/:businessId/upgrade", async (req, res) => {
   try {
-    const businessId = req.params.businessId as IdleBusinessId;
-    if (!IDLE_BUSINESS_IDS.includes(businessId)) {
+    const businessId = req.params.businessId;
+    if (!isActiveIdleBusinessId(businessId)) {
       res.status(404).json({ error: "IDLE_BUSINESS_NOT_FOUND" });
       return;
     }
@@ -474,8 +480,8 @@ router.post("/idle/businesses/:businessId/upgrade", async (req, res) => {
 
 router.post("/idle/businesses/:businessId/vault/upgrade", async (req, res) => {
   try {
-    const businessId = req.params.businessId as IdleBusinessId;
-    if (!IDLE_BUSINESS_IDS.includes(businessId)) {
+    const businessId = req.params.businessId;
+    if (!isActiveIdleBusinessId(businessId)) {
       res.status(404).json({ error: "IDLE_BUSINESS_NOT_FOUND" });
       return;
     }
