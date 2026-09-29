@@ -1,6 +1,6 @@
 import { type PoolClient } from "@workspace/db";
 import { INITIAL_SHARED_BALANCE_CENTS } from "../platform/wallet";
-import { STADIUM_LEVELS } from "../../../cascade-8/src/idle/config";
+import { MAX_STADIUM_SEATS, STADIUM_LEVELS } from "../../../cascade-8/src/idle/config";
 import type { IdleSeatPurchaseResponse } from "../../../cascade-8/src/idle/types";
 import { quoteSeatPurchase } from "./seatPricing";
 import {
@@ -72,11 +72,42 @@ function assertSeatPurchaseReplay(
     throw new Error("IDEMPOTENCY_KEY_REUSED");
   }
 
+  const purchasedSeats = Number(receipt.purchased_seats);
+  const costCents = Number(receipt.cost_cents);
+  const resultingOwnedSeats = Number(
+    receipt.resulting_owned_seats,
+  );
+  const balanceCents = Number(receipt.balance_cents);
+
   if (
-    !Number.isSafeInteger(Number(receipt.purchased_seats))
-    || Number(receipt.purchased_seats) <= 0
-    || receipt.resulting_owned_seats === null
+    receipt.resulting_owned_seats === null
+    || !Number.isSafeInteger(purchasedSeats)
+    || purchasedSeats !== requestedQuantity
+    || !Number.isSafeInteger(costCents)
+    || costCents <= 0
+    || !Number.isSafeInteger(resultingOwnedSeats)
+    || resultingOwnedSeats < purchasedSeats
+    || resultingOwnedSeats > MAX_STADIUM_SEATS
+    || !Number.isSafeInteger(balanceCents)
+    || balanceCents < 0
   ) {
+    throw new Error("IDLE_STADIUM_RECEIPT_INCOMPLETE");
+  }
+
+  const startingOwnedSeats =
+    resultingOwnedSeats - purchasedSeats;
+
+  let expectedCostCents: number;
+  try {
+    expectedCostCents = quoteSeatPurchase(
+      startingOwnedSeats,
+      purchasedSeats,
+    ).totalCostCents;
+  } catch {
+    throw new Error("IDLE_STADIUM_RECEIPT_INCOMPLETE");
+  }
+
+  if (expectedCostCents !== costCents) {
     throw new Error("IDLE_STADIUM_RECEIPT_INCOMPLETE");
   }
 }
