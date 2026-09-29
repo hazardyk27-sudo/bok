@@ -1983,34 +1983,78 @@ button {
   .roulette-placed-chip {
     width:
       clamp(
-        22px,
-        calc(var(--table-width) * 0.106),
-        34px
+        25px,
+        calc(var(--table-width) * 0.118),
+        38px
       );
     height:
       clamp(
-        22px,
-        calc(var(--table-width) * 0.106),
-        34px
+        25px,
+        calc(var(--table-width) * 0.118),
+        38px
       );
-    padding: 0 2px;
-    border: 1px solid rgba(255, 255, 255, 0.18);
+    padding: 0 2.5px;
+    border: 1.5px solid var(--chip-edge);
+    color: var(--chip-ink) !important;
     font-size:
       clamp(
-        8px,
-        calc(var(--table-width) * 0.034),
-        11px
+        10.5px,
+        calc(var(--table-width) * 0.045),
+        14px
       );
     font-weight: 950;
     line-height: 1;
-    letter-spacing: -0.05em;
+    letter-spacing: -0.055em;
+    font-variant-numeric: tabular-nums;
+    font-feature-settings: "tnum" 1;
+    text-rendering: geometricPrecision;
     opacity: 1 !important;
     filter: none !important;
     mix-blend-mode: normal !important;
     background: var(--chip-fill) !important;
     background-image: none !important;
     box-shadow:
-      0 2px 6px rgba(0, 0, 0, 0.30);
+      0 2px 5px rgba(0, 0, 0, 0.42),
+      inset 0 0 0 1px rgba(255, 255, 255, 0.08);
+  }
+
+  .roulette-placed-chip[data-amount-scale="short"] {
+    font-size:
+      clamp(
+        12px,
+        calc(var(--table-width) * 0.050),
+        15px
+      );
+    letter-spacing: -0.04em;
+  }
+
+  .roulette-placed-chip[data-amount-scale="medium"] {
+    font-size:
+      clamp(
+        10.5px,
+        calc(var(--table-width) * 0.043),
+        13.5px
+      );
+    letter-spacing: -0.06em;
+  }
+
+  .roulette-placed-chip[data-amount-scale="long"] {
+    font-size:
+      clamp(
+        9.5px,
+        calc(var(--table-width) * 0.039),
+        12px
+      );
+    letter-spacing: -0.075em;
+  }
+
+  .roulette-placed-chip:not(.chip-1) {
+    text-shadow:
+      0 1px 1px rgba(0, 0, 0, 0.48);
+  }
+
+  .roulette-placed-chip.chip-1 {
+    text-shadow: none;
   }
 
   .roulette-placed-chip::after {
