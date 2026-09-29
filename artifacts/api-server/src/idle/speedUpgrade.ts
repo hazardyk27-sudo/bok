@@ -1,4 +1,3 @@
-import { randomUUID } from "node:crypto";
 import { type PoolClient } from "@workspace/db";
 import { INITIAL_SHARED_BALANCE_CENTS } from "../platform/wallet";
 import type {
@@ -10,6 +9,7 @@ import {
   stadiumProjectionToServerState,
 } from "./stadiumRepository";
 import { runCheckpointedStadiumMutation } from "./stadiumMutation";
+import { reserveStadiumActionReceipt } from "./stadiumActionReceipt";
 import { resolveNextSpeedUpgrade } from "./stadiumPolicy";
 
 const SPEED_UPGRADE_ACTION = "SPEED_UPGRADE" as const;
@@ -92,21 +92,16 @@ export async function upgradeStadiumSpeed(
     sessionId,
     serverNow,
     async ({ client, settledState }) => {
-      const reserved = await client.query<{ id: string }>(
-        `INSERT INTO idle_stadium_action_receipts
-           (id, session_id, action_type, idempotency_key)
-         VALUES ($1, $2, $3, $4)
-         ON CONFLICT (idempotency_key) DO NOTHING
-         RETURNING id`,
-        [
-          randomUUID(),
+      const reservation = await reserveStadiumActionReceipt(
+        client,
+        {
           sessionId,
-          SPEED_UPGRADE_ACTION,
+          actionType: "SPEED_UPGRADE",
           idempotencyKey,
-        ],
+        },
       );
 
-      if (!reserved.rows[0]) {
+      if (!reservation.created) {
         const replayResult = await client.query<SpeedUpgradeReceiptRow>(
           `SELECT session_id, action_type, target_level,
                   cost_cents, balance_cents
