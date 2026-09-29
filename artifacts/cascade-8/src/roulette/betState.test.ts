@@ -147,6 +147,30 @@ describe("roulette local wager state", () => {
     ]);
   });
 
+  it("opens the next betting round clean and keeps the settled snapshot for rebet", () => {
+    let state = createRouletteBetState();
+
+    state = selectRouletteChip(state, 25);
+    state = placeRouletteBet(state, "straight-17");
+    state = selectRouletteChip(state, 100);
+    state = placeRouletteBet(state, "red");
+
+    const committedPlacements = state.placements.map((placement) => ({
+      ...placement,
+    }));
+
+    state = snapshotRouletteRound(state);
+    state = clearRouletteBets(state);
+
+    expect(state.placements).toEqual([]);
+    expect(state.previousRoundPlacements).toEqual(committedPlacements);
+
+    state = rebetRouletteRound(state);
+
+    expect(state.placements).toEqual(committedPlacements);
+    expect(state.previousRoundPlacements).toEqual(committedPlacements);
+  });
+
   it("doubles every current placement without an artificial placement cap", () => {
     let state = createRouletteBetState();
 
