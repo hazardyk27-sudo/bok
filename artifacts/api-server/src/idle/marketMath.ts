@@ -1,6 +1,11 @@
 import {
   MARKET_CONFIG,
 } from "../../../cascade-8/src/idle/config";
+import {
+  bigintToSafeNumber,
+  requireSafePositiveInteger,
+  roundPositiveRationalHalfUp,
+} from "./fixedPoint";
 
 export type TicketMarketClamp = "NONE" | "MIN" | "MAX";
 
@@ -12,43 +17,11 @@ export type TicketMarketMove = {
   clamp: TicketMarketClamp;
 };
 
-function requireSafePositiveInteger(
-  value: number,
-  errorCode: string,
-) {
-  if (!Number.isSafeInteger(value) || value <= 0) {
-    throw new Error(errorCode);
-  }
-  return value;
-}
-
 function requireSafeTicketPrice(value: number) {
   if (!Number.isSafeInteger(value) || value <= 0) {
     throw new Error("INVALID_IDLE_TICKET_PRICE");
   }
   return value;
-}
-
-function bigintToSafeNumber(value: bigint, errorCode: string) {
-  if (value < 0n || value > BigInt(Number.MAX_SAFE_INTEGER)) {
-    throw new Error(errorCode);
-  }
-  return Number(value);
-}
-
-function roundPositiveRationalHalfUp(
-  numerator: bigint,
-  denominator: bigint,
-) {
-  if (numerator < 0n || denominator <= 0n) {
-    throw new Error("INVALID_IDLE_MARKET_RATIONAL");
-  }
-
-  const quotient = numerator / denominator;
-  const remainder = numerator % denominator;
-  return remainder * 2n >= denominator
-    ? quotient + 1n
-    : quotient;
 }
 
 /**
