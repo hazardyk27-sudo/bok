@@ -1604,6 +1604,30 @@ button {
     text-shadow: 0 2px 10px rgba(208, 166, 76, 0.22);
   }
 
+  .roulette-win-message::before,
+  .roulette-win-message::after {
+    content: "";
+    position: absolute;
+    top: 50%;
+    width: clamp(16px, 5vw, 24px);
+    height: 1px;
+    background:
+      linear-gradient(
+        90deg,
+        transparent,
+        rgba(231, 202, 130, 0.62)
+      );
+  }
+
+  .roulette-win-message::before {
+    right: calc(100% + 7px);
+  }
+
+  .roulette-win-message::after {
+    left: calc(100% + 7px);
+    transform: scaleX(-1);
+  }
+
   .roulette-page[data-result-visible="true"][data-result-has-payout="true"]
     .roulette-win-message {
     opacity: 1;
@@ -2808,18 +2832,19 @@ button {
 /* Small/short phones keep the same composition instead of switching layout model. */
 @media (max-width: 900px) and (orientation: portrait) and (max-height: 700px) {
   .roulette-result-banner {
-    top: clamp(36px, 11%, 46px);
-    min-width: 132px;
+    top: clamp(34px, 10.5%, 44px);
+    width: clamp(154px, 47vw, 186px);
   }
 
   .roulette-win-message {
-    top: 46%;
-    padding: 7px 10px 8px;
+    top: 47%;
+    min-width: clamp(132px, 39vw, 166px);
+    padding: 9px 13px 10px;
   }
 
   .roulette-page {
     --footer-reserve: 44px;
-    --table-top: clamp(102px, 16.8dvh, 118px);
+    --table-top: clamp(112px, 17.8dvh, 124px);
     --wheel-size: min(74vw, 266px);
   }
 
@@ -2870,9 +2895,14 @@ button {
   }
 
   .roulette-betting-timer {
-    top: calc(var(--history-height) + 4px);
+    top: calc(
+      max(2px, env(safe-area-inset-top)) +
+      var(--top-hud-height) +
+      var(--history-height) +
+      10px
+    );
     left: 5px;
-    height: 36px;
+    height: 34px;
     min-width: 50px;
     padding: 4px 7px;
   }
@@ -2918,30 +2948,32 @@ button {
 
 @media (max-width: 900px) and (orientation: portrait) and (max-height: 590px) {
   .roulette-result-banner {
-    top: 32px;
-    min-width: 122px;
-    gap: 2px;
+    top: 29px;
+    width: 144px;
+    gap: 3px;
   }
 
   .roulette-result-banner__neighbor {
-    height: 29px;
+    height: 31px;
     font-size: 14px;
   }
 
   .roulette-result-banner__number {
-    height: 43px;
-    font-size: 25px;
+    height: 48px;
+    font-size: 27px;
   }
 
   .roulette-win-message {
-    top: 45%;
-    min-width: 108px;
-    padding: 6px 9px 7px;
+    top: 46%;
+    min-width: 122px;
+    padding: 7px 10px 8px;
   }
 
   .roulette-page {
+    --top-hud-height: 30px;
+    --history-height: 18px;
     --footer-reserve: 41px;
-    --table-top: 96px;
+    --table-top: 104px;
     --wheel-size: min(70vw, 236px);
   }
 
