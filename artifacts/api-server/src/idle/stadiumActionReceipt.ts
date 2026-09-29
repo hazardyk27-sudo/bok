@@ -74,11 +74,14 @@ export async function reserveStadiumActionReceipt(
     throw new Error("IDLE_STADIUM_RECEIPT_MISSING");
   }
 
+  const quantityMatches = requestedQuantity === null
+    ? receipt.requested_quantity === null
+    : Number(receipt.requested_quantity) === requestedQuantity;
+
   if (
     receipt.session_id !== input.sessionId
     || receipt.action_type !== input.actionType
-    || Number(receipt.requested_quantity)
-      !== Number(requestedQuantity)
+    || !quantityMatches
   ) {
     throw new Error("IDEMPOTENCY_KEY_REUSED");
   }
