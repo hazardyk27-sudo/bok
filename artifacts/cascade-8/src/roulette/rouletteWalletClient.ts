@@ -1,5 +1,8 @@
 import type { RouletteRoundSettlement } from "./betRules";
-import type { RouletteBetPlacement } from "./betState";
+import {
+  expandRouletteBetPlacementsToChipValues,
+  type RouletteBetPlacement,
+} from "./betState";
 import type { RouletteWinningResult } from "./spinResult";
 
 export type RouletteWallet = {
@@ -64,6 +67,48 @@ async function fetchWithTimeout(
   }
 }
 
+async function requestSpinWithTimeoutRetry(
+  bets: readonly RouletteBetPlacement[],
+  idempotencyKey: string,
+) {
+  const request = () =>
+    fetchWithTimeout(
+      `${API_BASE}/spins`,
+      {
+        method: "POST",
+        credentials: "same-origin",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          bets,
+          idempotencyKey,
+        }),
+      },
+      ROULETTE_SPIN_REQUEST_TIMEOUT_MS,
+    );
+
+  try {
+    return await request();
+  } catch (error) {
+    if (!isAbortError(error)) {
+      throw error;
+    }
+
+    // Retry once with the exact same idempotency key. If the first request
+    // committed after the browser timed out, the server returns that same
+    // round instead of charging the wallet twice.
+    try {
+      return await request();
+    } catch (retryError) {
+      if (isAbortError(retryError)) {
+        throw new Error(
+          "ROULETTE_SPIN_TIMEOUT",
+        );
+      }
+      throw retryError;
+    }
+  }
+}
+
 export class RouletteWalletClient {
   async bootstrap() {
     const response = await fetch(`${API_BASE}/state`, {
@@ -79,42 +124,44 @@ export class RouletteWalletClient {
     bets: readonly RouletteBetPlacement[],
     idempotencyKey: string,
   ) {
-    const request = () =>
-      fetchWithTimeout(
-        `${API_BASE}/spins`,
-        {
-          method: "POST",
-          credentials: "same-origin",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ bets, idempotencyKey }),
-        },
-        ROULETTE_SPIN_REQUEST_TIMEOUT_MS,
+    const aggregateResponse =
+      await requestSpinWithTimeoutRetry(
+        bets,
+        idempotencyKey,
       );
 
-    let response: Response;
-
     try {
-      response = await request();
+      return await readResponse<RouletteServerSpinResponse>(
+        aggregateResponse,
+      );
     } catch (error) {
-      if (!isAbortError(error)) {
+      const legacyAggregateRejected =
+        error instanceof Error &&
+        (
+          error.message ===
+            "INVALID_ROULETTE_CHIP" ||
+          error.message ===
+            "INVALID_ROULETTE_BET_AMOUNT"
+        );
+
+      if (!legacyAggregateRejected) {
         throw error;
       }
 
-      // Retry once with the exact same idempotency key. If the first request
-      // committed after the browser timed out, the server returns that same
-      // round instead of charging the wallet twice.
-      try {
-        response = await request();
-      } catch (retryError) {
-        if (isAbortError(retryError)) {
-          throw new Error(
-            "ROULETTE_SPIN_TIMEOUT",
-          );
-        }
-        throw retryError;
-      }
-    }
+      const denominationSafeBets =
+        expandRouletteBetPlacementsToChipValues(
+          bets,
+        );
 
-    return readResponse<RouletteServerSpinResponse>(response);
+      const legacyResponse =
+        await requestSpinWithTimeoutRetry(
+          denominationSafeBets,
+          idempotencyKey,
+        );
+
+      return readResponse<RouletteServerSpinResponse>(
+        legacyResponse,
+      );
+    }
   }
 }
