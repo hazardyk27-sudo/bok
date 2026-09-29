@@ -358,7 +358,7 @@ export function renderRouletteBetTable() {
           </div>
           <div class="roulette-bet-metric">
             <span>TOTAL BET</span>
-            <strong data-total-bet>0</strong>
+            <strong data-total-bet>$0</strong>
           </div>
           <div class="roulette-bet-metric roulette-return-metric">
             <span>RETURN</span>
