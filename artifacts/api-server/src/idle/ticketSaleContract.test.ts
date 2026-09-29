@@ -88,7 +88,21 @@ describe("ticket sale transaction contract", () => {
     );
   });
 
-  it("stores enough receipt data to replay the original execution result", () => {
+  it("stores sale replay fields on the canonical Stadium receipt table", () => {
+    const canonicalReceiptSchema = schemaSource.slice(
+      schemaSource.indexOf(
+        "export const idleStadiumActionReceipts = pgTable(",
+      ),
+    );
+    const legacyReceiptSchema = schemaSource.slice(
+      schemaSource.indexOf(
+        "export const idleActionReceipts = pgTable(",
+      ),
+      schemaSource.indexOf(
+        "export const idleLedger = pgTable(",
+      ),
+    );
+
     for (const field of [
       "sold_tickets",
       "execution_price_microdollars",
@@ -99,7 +113,8 @@ describe("ticket sale transaction contract", () => {
       "market_feed_status",
       "market_tick_at",
     ]) {
-      expect(schemaSource).toContain(field);
+      expect(canonicalReceiptSchema).toContain(field);
+      expect(legacyReceiptSchema).not.toContain(field);
       expect(saleSource).toContain(field);
     }
 
