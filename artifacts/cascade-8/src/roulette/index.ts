@@ -905,6 +905,25 @@ export function mountRoulette(app: HTMLDivElement) {
       return;
     }
 
+    if (!canAffordCurrentBet()) {
+      bettingDeadlineMs =
+        performance.now() + ROULETTE_BETTING_WINDOW_MS;
+      bettingWindowClosed = false;
+      page.dataset.bettingLocked = "false";
+      betPanel.setAttribute(
+        "aria-disabled",
+        "false",
+      );
+      if (betStatus) {
+        betStatus.textContent =
+          walletBalanceCents === null
+            ? "WAITING FOR WALLET"
+            : "INSUFFICIENT BALANCE";
+      }
+      renderPhaseTimer();
+      return;
+    }
+
     bettingWindowClosed = true;
     page.dataset.bettingLocked = "true";
     betPanel.setAttribute(
