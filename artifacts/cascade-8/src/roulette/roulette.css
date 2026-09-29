@@ -1589,3 +1589,253 @@ button {
     width: min(100%, 306px);
   }
 }
+
+
+/* Mobile cockpit v2 — Part 2: right-side controls and chip picker */
+.roulette-table-layout {
+  display: contents;
+}
+
+.roulette-mobile-control-rail {
+  display: none;
+}
+
+@media (max-width: 900px) and (orientation: portrait) {
+  .roulette-table-layout {
+    width: min(100%, 344px);
+    display: grid;
+    grid-template-columns: minmax(0, var(--mobile-table-width)) 38px;
+    justify-content: center;
+    align-items: stretch;
+    gap: 5px;
+  }
+
+  .roulette-table-layout > .roulette-bet-table {
+    grid-column: 1;
+  }
+
+  .roulette-mobile-control-rail {
+    grid-column: 2;
+    display: grid;
+    grid-template-rows: 38px minmax(38px, auto) 38px;
+    align-content: end;
+    justify-items: center;
+    gap: 7px;
+    padding-bottom: 3px;
+    z-index: 8;
+  }
+
+  .roulette-mobile-rail-button {
+    width: 36px;
+    height: 36px;
+    min-width: 36px;
+    min-height: 36px;
+    padding: 0;
+    border: 1px solid rgba(224, 231, 236, 0.46);
+    border-radius: 50%;
+    display: grid;
+    place-items: center;
+    color: #f2f5f7;
+    background:
+      linear-gradient(
+        180deg,
+        rgba(38, 45, 50, 0.96),
+        rgba(13, 16, 19, 0.98)
+      );
+    box-shadow:
+      0 5px 14px rgba(0, 0, 0, 0.42),
+      inset 0 1px 0 rgba(255, 255, 255, 0.08);
+    font: 900 13px/1 Arial, Helvetica, sans-serif;
+    cursor: pointer;
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  .roulette-mobile-rail-button:disabled {
+    opacity: 0.3;
+    cursor: default;
+  }
+
+  .roulette-mobile-rail-button:not(:disabled):active {
+    transform: scale(0.92);
+  }
+
+  .roulette-mobile-undo {
+    font-size: 21px;
+  }
+
+  .roulette-mobile-double {
+    font-size: 12px;
+    letter-spacing: -0.02em;
+  }
+
+  .roulette-mobile-chip-picker {
+    position: relative;
+    display: grid;
+    place-items: center;
+  }
+
+  .roulette-mobile-chip-toggle {
+    --chip-fill: #2876c8;
+    --chip-ink: #ffffff;
+    --chip-edge: #bad8f4;
+    border: 3px dashed var(--chip-edge);
+    color: var(--chip-ink);
+    background:
+      radial-gradient(
+        circle at 35% 30%,
+        rgba(255, 255, 255, 0.72),
+        transparent 28%
+      ),
+      var(--chip-fill);
+    box-shadow:
+      0 5px 14px rgba(0, 0, 0, 0.45),
+      inset 0 0 0 2px rgba(0, 0, 0, 0.2);
+    font-size: 9px;
+  }
+
+  .roulette-mobile-chip-toggle[data-selected-chip="1"] {
+    --chip-fill: #e4e7e9;
+    --chip-ink: #15191c;
+    --chip-edge: #858f96;
+  }
+
+  .roulette-mobile-chip-toggle[data-selected-chip="5"] {
+    --chip-fill: #d53c35;
+    --chip-ink: #ffffff;
+    --chip-edge: #f5b8b3;
+  }
+
+  .roulette-mobile-chip-toggle[data-selected-chip="10"] {
+    --chip-fill: #2876c8;
+    --chip-ink: #ffffff;
+    --chip-edge: #bad8f4;
+  }
+
+  .roulette-mobile-chip-toggle[data-selected-chip="25"] {
+    --chip-fill: #2c9a61;
+    --chip-ink: #ffffff;
+    --chip-edge: #bce5ce;
+  }
+
+  .roulette-mobile-chip-toggle[data-selected-chip="100"] {
+    --chip-fill: #171b1f;
+    --chip-ink: #ffffff;
+    --chip-edge: #aab3ba;
+  }
+
+  .roulette-mobile-chip-toggle[data-selected-chip="500"] {
+    --chip-fill: #6f4ba8;
+    --chip-ink: #ffffff;
+    --chip-edge: #d7c5ef;
+  }
+
+  .roulette-mobile-chip-menu {
+    position: absolute;
+    right: 43px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 46px;
+    max-height: min(252px, 38dvh);
+    padding: 5px;
+    display: grid;
+    justify-items: center;
+    gap: 5px;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    border: 1px solid rgba(224, 231, 236, 0.28);
+    border-radius: 24px;
+    background:
+      linear-gradient(
+        180deg,
+        rgba(28, 33, 37, 0.98),
+        rgba(7, 9, 11, 0.99)
+      );
+    box-shadow:
+      0 12px 30px rgba(0, 0, 0, 0.56);
+    backdrop-filter: blur(12px);
+    z-index: 20;
+    scrollbar-width: none;
+  }
+
+  .roulette-mobile-chip-menu[hidden] {
+    display: none;
+  }
+
+  .roulette-mobile-chip-menu::-webkit-scrollbar {
+    display: none;
+  }
+
+  .roulette-mobile-chip-menu .roulette-chip-option {
+    flex: none;
+    width: 34px;
+    height: 34px;
+    font-size: 8px;
+  }
+
+  .roulette-mobile-chip-menu .roulette-chip-option.is-selected {
+    transform: scale(1.08);
+  }
+
+  .roulette-bet-console > .roulette-chip-tray {
+    display: none;
+  }
+
+  .roulette-bet-console {
+    width: var(--mobile-table-width);
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-areas:
+      "summary"
+      "actions";
+  }
+
+  .roulette-bet-actions {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .roulette-bet-actions [data-undo-bet] {
+    display: none;
+  }
+
+  .roulette-bet-actions .roulette-spin-button {
+    grid-column: span 1;
+  }
+
+  .roulette-bet-summary {
+    justify-content: space-between;
+    justify-items: stretch;
+  }
+
+  .roulette-bet-metric {
+    justify-items: center;
+  }
+
+  .roulette-page[data-phase="spinning"] .roulette-mobile-control-rail,
+  .roulette-page[data-phase="settled"] .roulette-mobile-control-rail {
+    opacity: 0.38;
+    pointer-events: none;
+  }
+}
+
+@media (max-width: 380px) and (orientation: portrait) {
+  .roulette-table-layout {
+    grid-template-columns: minmax(0, var(--mobile-table-width)) 34px;
+    gap: 4px;
+  }
+
+  .roulette-mobile-control-rail {
+    grid-template-rows: 34px minmax(34px, auto) 34px;
+    gap: 6px;
+  }
+
+  .roulette-mobile-rail-button {
+    width: 32px;
+    height: 32px;
+    min-width: 32px;
+    min-height: 32px;
+  }
+
+  .roulette-mobile-chip-menu {
+    right: 38px;
+  }
+}
