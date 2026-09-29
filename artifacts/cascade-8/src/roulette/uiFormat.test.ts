@@ -5,6 +5,8 @@ import {
 } from "vitest";
 import {
   formatRouletteAmount,
+  formatRouletteMoney,
+  formatRouletteSignedMoney,
 } from "./uiFormat";
 
 describe("roulette compact amount formatting", () => {
@@ -36,5 +38,29 @@ describe("roulette compact amount formatting", () => {
     expect(
       formatRouletteAmount(-2500),
     ).toBe("-2.5K");
+  });
+
+  it("adds dollar notation to compact money fields", () => {
+    expect(
+      formatRouletteMoney(0),
+    ).toBe("$0");
+    expect(
+      formatRouletteMoney(2620000),
+    ).toBe("$2.62M");
+    expect(
+      formatRouletteMoney(-2500),
+    ).toBe("-$2.5K");
+  });
+
+  it("keeps signed net-result money readable", () => {
+    expect(
+      formatRouletteSignedMoney(1250),
+    ).toBe("+$1.25K");
+    expect(
+      formatRouletteSignedMoney(-1250),
+    ).toBe("-$1.25K");
+    expect(
+      formatRouletteSignedMoney(0),
+    ).toBe("$0");
   });
 });
