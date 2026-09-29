@@ -822,11 +822,6 @@ export function mountRoulette(app: HTMLDivElement) {
       resultHoldTimer,
     );
     closeMobileHudMenus();
-
-    await rouletteAudio.ensureStarted();
-
-    if (activeRotorSpin || activeBallOrbit) return;
-
     clearRoundResult();
 
     canvas.dataset.rouletteState = "authorizing";
@@ -838,6 +833,12 @@ export function mountRoulette(app: HTMLDivElement) {
       "aria-label",
       "European roulette wheel. Spin authorization in progress.",
     );
+
+    void rouletteAudio
+      .ensureStarted()
+      .catch(() => {
+        // A browser may block autoplay; the authoritative spin continues silently.
+      });
 
     try {
       const idempotencyKey =
