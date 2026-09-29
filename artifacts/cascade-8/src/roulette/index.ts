@@ -597,7 +597,37 @@ export function mountRoulette(app: HTMLDivElement) {
     }
 
     activeResultPresentation = null;
+    viewState.resultMarkerAngle = null;
     page.dataset.resultVisible = "false";
+
+    if (resultBanner) {
+      resultBanner.setAttribute(
+        "aria-hidden",
+        "true",
+      );
+    }
+    if (resultWinningNumber) {
+      resultWinningNumber.textContent =
+        "—";
+    }
+    if (resultLeftNeighbor) {
+      resultLeftNeighbor.textContent =
+        "—";
+    }
+    if (resultRightNeighbor) {
+      resultRightNeighbor.textContent =
+        "—";
+    }
+    if (winMessage) {
+      winMessage.setAttribute(
+        "aria-hidden",
+        "true",
+      );
+    }
+    if (winAmount) {
+      winAmount.textContent = "—";
+    }
+
     delete page.dataset.resultNumber;
     delete page.dataset.resultColor;
     delete page.dataset.resultLeftNeighbor;
@@ -710,6 +740,54 @@ export function mountRoulette(app: HTMLDivElement) {
       );
     canvas.dataset.rouletteResultMarkerAngle =
       String(markerAngle);
+    viewState.resultMarkerAngle =
+      markerAngle;
+
+    if (resultLeftNeighbor) {
+      resultLeftNeighbor.textContent =
+        String(
+          presentation.leftNeighborNumber,
+        );
+    }
+    if (resultWinningNumber) {
+      resultWinningNumber.textContent =
+        String(
+          presentation.winningNumber,
+        );
+    }
+    if (resultRightNeighbor) {
+      resultRightNeighbor.textContent =
+        String(
+          presentation.rightNeighborNumber,
+        );
+    }
+    if (resultBanner) {
+      resultBanner.setAttribute(
+        "aria-hidden",
+        "false",
+      );
+      resultBanner.setAttribute(
+        "aria-label",
+        `Winning number ${presentation.winningNumber}. Neighbors ${presentation.leftNeighborNumber} and ${presentation.rightNeighborNumber}.`,
+      );
+    }
+
+    const showWinMessage =
+      presentation.hasPayout;
+    if (winMessage) {
+      winMessage.setAttribute(
+        "aria-hidden",
+        String(!showWinMessage),
+      );
+    }
+    if (winAmount) {
+      winAmount.textContent =
+        showWinMessage
+          ? formatRouletteAmount(
+              presentation.grossReturn,
+            )
+          : "—";
+    }
 
     return presentation;
   };
@@ -756,7 +834,16 @@ export function mountRoulette(app: HTMLDivElement) {
 
     if (phase !== "settled") {
       activeResultPresentation = null;
+      viewState.resultMarkerAngle = null;
       page.dataset.resultVisible = "false";
+      resultBanner?.setAttribute(
+        "aria-hidden",
+        "true",
+      );
+      winMessage?.setAttribute(
+        "aria-hidden",
+        "true",
+      );
       delete page.dataset.resultColor;
       delete page.dataset.resultLeftNeighbor;
       delete page.dataset.resultRightNeighbor;
@@ -1098,7 +1185,16 @@ export function mountRoulette(app: HTMLDivElement) {
           delete canvas.dataset.rouletteWinningNumber;
           delete canvas.dataset.rouletteWinningColor;
           activeResultPresentation = null;
+          viewState.resultMarkerAngle = null;
           page.dataset.resultVisible = "false";
+          resultBanner?.setAttribute(
+            "aria-hidden",
+            "true",
+          );
+          winMessage?.setAttribute(
+            "aria-hidden",
+            "true",
+          );
           delete page.dataset.resultNumber;
           delete page.dataset.resultColor;
           delete page.dataset.resultLeftNeighbor;
