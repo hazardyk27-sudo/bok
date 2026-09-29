@@ -1523,7 +1523,7 @@ export function mountRoulette(app: HTMLDivElement) {
             return;
           }
 
-        automaticSpinBlocked = false;
+          automaticSpinBlocked = false;
           betState =
             placeRouletteBet(
               betState,
@@ -1556,7 +1556,7 @@ export function mountRoulette(app: HTMLDivElement) {
         )
       ) {
         if (canDoubleCurrentBet()) {
-        automaticSpinBlocked = false;
+          automaticSpinBlocked = false;
           betState =
             doubleRouletteBets(
               betState,
