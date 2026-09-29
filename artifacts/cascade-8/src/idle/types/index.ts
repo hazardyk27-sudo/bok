@@ -167,8 +167,17 @@ export type IdleTicketSaleResponse = {
 // UI and API compiling while Parts 4+ migrate consumers to the canonical
 // Stadium model above. Do not add new features to these legacy contracts.
 
-export const BUSINESS_IDS = ["stadium", "club-store", "fan-club"] as const;
+/**
+ * Active business scope for the Stadium ticket-economy migration.
+ *
+ * Club Store / Fan Club identifiers remain in BUSINESS_IDS strictly for
+ * migration-safe legacy row/type compatibility. New UI/API behavior must use
+ * ACTIVE_BUSINESS_IDS instead.
+ */
+export const ACTIVE_BUSINESS_IDS = ["stadium"] as const;
+export type ActiveBusinessId = (typeof ACTIVE_BUSINESS_IDS)[number];
 
+export const BUSINESS_IDS = ["stadium", "club-store", "fan-club"] as const;
 export type BusinessId = (typeof BUSINESS_IDS)[number];
 
 export type BusinessLevel = 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8;
