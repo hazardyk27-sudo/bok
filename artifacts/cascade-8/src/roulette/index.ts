@@ -1002,20 +1002,28 @@ export function mountRoulette(app: HTMLDivElement) {
         );
         chip.style.setProperty(
           "border",
-          `2px solid ${chipPalette.edge}`,
+          `1.5px solid ${chipPalette.edge}`,
           "important",
         );
         chip.style.setProperty(
           "box-shadow",
-          "none",
+          "0 2px 5px rgba(0, 0, 0, 0.42), inset 0 0 0 1px rgba(255, 255, 255, 0.08)",
           "important",
         );
-        chip.dataset.betAmount =
-          String(amount);
-        chip.textContent =
+        const displayAmount =
           formatRouletteAmount(
             amount,
           );
+        chip.dataset.betAmount =
+          String(amount);
+        chip.dataset.amountScale =
+          displayAmount.length <= 3
+            ? "short"
+            : displayAmount.length <= 5
+              ? "medium"
+              : "long";
+        chip.textContent =
+          displayAmount;
         chip.setAttribute(
           "aria-hidden",
           "true",
