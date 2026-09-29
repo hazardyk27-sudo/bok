@@ -28,6 +28,7 @@ An Idle commit never publishes itself to Replit; only the central one-game promo
 - If a note conflicts with code/tests/ownership rules, the validated repository state wins.
 
 ## Current milestones
+- 2026-09-29 — İşletmeler economy redesign approved — Businesses will produce inventory/products instead of direct cash; products are sold manually at the current server-authoritative dynamic market price. Prices fluctuate algorithmically over time, storage capacity creates a timing tradeoff, and sale value is product quantity × current market price. First example: Stadium produces tickets. Next: redesign granular upgrade/progression economics around production capacity.
 - 2026-09-27 — Slate Blue Parts 1–24 complete — Desktop and tablet Businesses pages scroll vertically again: route/root viewport clipping is overridden from 761px upward, and workspace/page heights are content-driven instead of capped to the viewport. Mobile scrolling behavior remains unchanged. Next: visually QA in Replit preview.
 - 2026-09-27 — Slate Blue Parts 1–23 complete — On mobile, `BİRİKMİŞ GELİR` and its amount now share the same left content line as the `SAATLİK GELİR` stat values, matching the desktop alignment. Next: visually QA in Replit preview.
 - 2026-09-27 — Slate Blue Parts 1–22 complete — Desktop business cards now use an exact 16:9 hero, equal-height natural rows (without viewport-fill stretching), and responsive no-wrap typography so vault/helper/value text stays on one line across the three cards. Next: visually QA in Replit preview.
