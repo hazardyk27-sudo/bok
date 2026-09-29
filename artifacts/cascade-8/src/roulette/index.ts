@@ -69,6 +69,7 @@ import {
   formatRouletteAmount,
   formatRouletteMoney,
   formatRouletteSignedMoney,
+  getRouletteAmountScale,
 } from "./uiFormat";
 import { renderRouletteWheel } from "./wheelRenderer";
 
@@ -1004,51 +1005,6 @@ export function mountRoulette(app: HTMLDivElement) {
           "--chip-edge",
           chipPalette.edge,
         );
-        chip.style.setProperty(
-          "background",
-          chipPalette.fill,
-          "important",
-        );
-        chip.style.setProperty(
-          "background-color",
-          chipPalette.fill,
-          "important",
-        );
-        chip.style.setProperty(
-          "background-image",
-          "none",
-          "important",
-        );
-        chip.style.setProperty(
-          "opacity",
-          "1",
-          "important",
-        );
-        chip.style.setProperty(
-          "filter",
-          "none",
-          "important",
-        );
-        chip.style.setProperty(
-          "mix-blend-mode",
-          "normal",
-          "important",
-        );
-        chip.style.setProperty(
-          "color",
-          chipPalette.ink,
-          "important",
-        );
-        chip.style.setProperty(
-          "border",
-          `1.5px solid ${chipPalette.edge}`,
-          "important",
-        );
-        chip.style.setProperty(
-          "box-shadow",
-          "0 2px 5px rgba(0, 0, 0, 0.42), inset 0 0 0 1px rgba(255, 255, 255, 0.08)",
-          "important",
-        );
         const displayAmount =
           formatRouletteAmount(
             amount,
@@ -1056,11 +1012,9 @@ export function mountRoulette(app: HTMLDivElement) {
         chip.dataset.betAmount =
           String(amount);
         chip.dataset.amountScale =
-          displayAmount.length <= 3
-            ? "short"
-            : displayAmount.length <= 5
-              ? "medium"
-              : "long";
+          getRouletteAmountScale(
+            amount,
+          );
         chip.textContent =
           displayAmount;
         chip.setAttribute(
