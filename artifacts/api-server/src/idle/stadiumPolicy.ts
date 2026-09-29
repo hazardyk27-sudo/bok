@@ -10,6 +10,7 @@ import type {
   StorageLevel,
 } from "../../../cascade-8/src/idle/types";
 import { getStorageCapacityMicroTickets } from "./production";
+import { MARKET_MICRODOLLARS_PER_CENT } from "./fixedPoint";
 import type { StadiumStorageState } from "./stadiumRepository";
 
 export type StadiumEconomyMutationPatch = Partial<Pick<
@@ -83,6 +84,13 @@ export function applyStadiumEconomyMutationPatch(
       ?? settledState.saleRemainderMicrodollars,
     "INVALID_IDLE_SALE_REMAINDER",
   );
+
+  if (
+    saleRemainderMicrodollars >=
+    MARKET_MICRODOLLARS_PER_CENT
+  ) {
+    throw new Error("INVALID_IDLE_SALE_REMAINDER");
+  }
 
   if (stadiumLevel < settledState.stadiumLevel) {
     throw new Error("IDLE_STADIUM_LEVEL_DOWNGRADE_NOT_ALLOWED");
