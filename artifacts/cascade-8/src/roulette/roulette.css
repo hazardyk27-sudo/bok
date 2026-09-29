@@ -676,7 +676,7 @@ button {
     flex-basis: 42px;
     width: 42px;
     height: 42px;
-    font-size: 11px;
+    font-size: clamp(8px, calc(var(--mobile-control-size) * 0.30), 12px);
   }
 
   .roulette-placed-chip {
@@ -1099,6 +1099,16 @@ button {
     --mobile-zero-row: calc(var(--mobile-table-width) * 0.091);
     --mobile-number-row: calc(var(--mobile-table-width) * 0.127);
     --mobile-column-row: calc(var(--mobile-table-width) * 0.116);
+    --mobile-control-size: clamp(
+      27px,
+      calc(var(--mobile-table-width) * 0.15),
+      42px
+    );
+    --mobile-control-gap: clamp(
+      8px,
+      calc(var(--mobile-table-width) * 0.038),
+      13px
+    );
 
     width: 100%;
     height: 100dvh;
@@ -1170,7 +1180,12 @@ button {
     border: 1px solid rgba(175, 177, 168, 0.28);
     border-radius: 2px;
     background: rgba(3, 4, 5, 0.94);
-    font-family: Georgia, "Times New Roman", serif;
+    font-family:
+      system-ui,
+      -apple-system,
+      BlinkMacSystemFont,
+      "Segoe UI",
+      sans-serif;
     font-variant-numeric: tabular-nums;
     z-index: 12;
   }
@@ -1302,10 +1317,12 @@ button {
     max-width: 96vw;
     margin: 0 auto;
     display: grid;
-    grid-template-columns: var(--mobile-table-width) 38px;
+    grid-template-columns:
+      var(--mobile-table-width)
+      var(--mobile-control-size);
     justify-content: center;
     align-items: center;
-    gap: 6px;
+    gap: var(--mobile-control-gap);
     overflow: visible;
   }
 
@@ -1365,8 +1382,14 @@ button {
       );
     color: #628b64;
     background: #050606 !important;
-    font: 600 clamp(11px, calc(var(--mobile-table-width) * 0.04), 17px)/1
-      Georgia, "Times New Roman", serif;
+    font:
+      700
+      clamp(13px, calc(var(--mobile-table-width) * 0.048), 19px)/1
+      system-ui,
+      -apple-system,
+      BlinkMacSystemFont,
+      "Segoe UI",
+      sans-serif;
   }
 
   .roulette-number-grid {
@@ -1387,8 +1410,15 @@ button {
     min-height: var(--mobile-number-row);
     border-right: 1px solid var(--bet-border);
     border-bottom: 1px solid var(--bet-border);
-    font: 600 clamp(9px, calc(var(--mobile-table-width) * 0.032), 15px)/1
-      Georgia, "Times New Roman", serif;
+    font:
+      700
+      clamp(12px, calc(var(--mobile-table-width) * 0.043), 18px)/1
+      system-ui,
+      -apple-system,
+      BlinkMacSystemFont,
+      "Segoe UI",
+      sans-serif;
+    letter-spacing: -0.01em;
   }
 
   .roulette-number-cell.is-red {
@@ -1412,14 +1442,21 @@ button {
   }
 
   .roulette-column-cell {
+    grid-row: 1;
     min-height: var(--mobile-column-row);
     border-right: 1px solid var(--bet-border);
     border-bottom: 1px solid var(--bet-border);
     color: #c9c7bd;
     background: #050606;
-    font: 600 clamp(6px, calc(var(--mobile-table-width) * 0.019), 9px)/1
-      Arial, Helvetica, sans-serif;
-    letter-spacing: 0;
+    font:
+      700
+      clamp(7px, calc(var(--mobile-table-width) * 0.024), 10px)/1
+      system-ui,
+      -apple-system,
+      BlinkMacSystemFont,
+      "Segoe UI",
+      sans-serif;
+    letter-spacing: 0.01em;
   }
 
   .roulette-column-bets [data-bet-id="column-1"] {
@@ -1451,8 +1488,15 @@ button {
     border-bottom: 1px solid var(--bet-border);
     color: #c8c6bc;
     background: #050606;
-    font: 600 clamp(6px, calc(var(--mobile-table-width) * 0.018), 9px)/1
-      Arial, Helvetica, sans-serif;
+    font:
+      700
+      clamp(7px, calc(var(--mobile-table-width) * 0.022), 10px)/1
+      system-ui,
+      -apple-system,
+      BlinkMacSystemFont,
+      "Segoe UI",
+      sans-serif;
+    letter-spacing: 0.01em;
   }
 
   .roulette-dozen-cell > span {
@@ -1484,6 +1528,11 @@ button {
   .roulette-outside-cell > span:not(.roulette-diamond) {
     writing-mode: vertical-rl;
     transform: rotate(180deg);
+    text-orientation: mixed;
+  }
+
+  .roulette-dozen-cell > span {
+    text-orientation: mixed;
   }
 
   .roulette-outside-cell .roulette-diamond {
@@ -1533,20 +1582,23 @@ button {
     top: auto;
     transform: none;
     display: grid;
-    grid-template-rows: 36px 36px 36px;
+    grid-template-rows:
+      var(--mobile-control-size)
+      var(--mobile-control-size)
+      var(--mobile-control-size);
     align-items: center;
     justify-items: center;
     align-content: center;
-    gap: 12px;
+    gap: var(--mobile-control-gap);
     padding: 0;
     z-index: 14;
   }
 
   .roulette-mobile-rail-button {
-    width: 36px;
-    height: 36px;
-    min-width: 36px;
-    min-height: 36px;
+    width: var(--mobile-control-size);
+    height: var(--mobile-control-size);
+    min-width: var(--mobile-control-size);
+    min-height: var(--mobile-control-size);
     padding: 0;
     border: 1px solid rgba(176, 179, 173, 0.48);
     border-radius: 50%;
@@ -1557,7 +1609,14 @@ button {
     box-shadow:
       0 6px 16px rgba(0, 0, 0, 0.40),
       inset 0 1px 0 rgba(255, 255, 255, 0.05);
-    font: 700 12px/1 Arial, Helvetica, sans-serif;
+    font:
+      750
+      clamp(9px, calc(var(--mobile-control-size) * 0.31), 13px)/1
+      system-ui,
+      -apple-system,
+      BlinkMacSystemFont,
+      "Segoe UI",
+      sans-serif;
     cursor: pointer;
     touch-action: manipulation;
     -webkit-tap-highlight-color: transparent;
@@ -1569,7 +1628,7 @@ button {
   }
 
   .roulette-mobile-undo {
-    font-size: 20px;
+    font-size: clamp(15px, calc(var(--mobile-control-size) * 0.54), 22px);
   }
 
   .roulette-mobile-double {
@@ -1731,8 +1790,8 @@ button {
     max-width: 100%;
     overflow: hidden;
     color: rgba(190, 191, 184, 0.70);
-    font-size: 5px;
-    font-weight: 700;
+    font-size: clamp(6px, 1.65vw, 8px);
+    font-weight: 650;
     line-height: 1;
     letter-spacing: 0.02em;
     white-space: nowrap;
@@ -1742,8 +1801,8 @@ button {
     max-width: 100%;
     overflow: hidden;
     color: #e6e3d8;
-    font-size: clamp(8px, 2.6vw, 11px);
-    font-weight: 700;
+    font-size: clamp(10px, 2.9vw, 13px);
+    font-weight: 750;
     line-height: 1.05;
     text-overflow: ellipsis;
     white-space: nowrap;
@@ -1772,7 +1831,14 @@ button {
     border-radius: 5px;
     color: #c8c7c0;
     background: #0c0e0f;
-    font: 700 7px/1 Arial, Helvetica, sans-serif;
+    font:
+      700
+      clamp(7px, 2vw, 9px)/1
+      system-ui,
+      -apple-system,
+      BlinkMacSystemFont,
+      "Segoe UI",
+      sans-serif;
     letter-spacing: 0.02em;
   }
 
