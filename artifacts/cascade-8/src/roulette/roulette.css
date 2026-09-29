@@ -1193,7 +1193,7 @@ button {
     padding: 5px 8px 4px;
     display: grid;
     align-content: center;
-    justify-items: start;
+    justify-items: center;
     gap: 2px;
     border: 1px solid rgba(194, 197, 191, 0.26);
     border-radius: 9px;
@@ -1220,8 +1220,8 @@ button {
 
   .roulette-betting-timer__label {
     color: rgba(214, 216, 210, 0.62);
-    font-size: 7px;
-    font-weight: 750;
+    font-size: 7.5px;
+    font-weight: 780;
     line-height: 1;
     letter-spacing: 0.08em;
   }
@@ -1758,9 +1758,10 @@ button {
 
   .roulette-mobile-control-rail {
     position: absolute;
-    left: calc(100% + 2px);
+    left: calc(100% - 5px);
     top: 50%;
-    transform: translate(-3px, -50%);
+    transform: translate(-2px, -50%);
+    box-sizing: border-box;
     display: grid;
     grid-template-rows: repeat(5, var(--control-size));
     align-items: center;
@@ -1852,6 +1853,7 @@ button {
   }
 
   .roulette-mobile-rail-button {
+    box-sizing: border-box;
     width: var(--control-size);
     height: var(--control-size);
     min-width: var(--control-size);
@@ -2066,11 +2068,12 @@ button {
     left: 50%;
     bottom: max(5px, env(safe-area-inset-bottom));
     transform: translateX(-50%);
-    width: min(92vw, 420px);
-    max-width: 92vw;
+    box-sizing: border-box;
+    width: min(94vw, 430px);
+    max-width: 94vw;
     margin: 0;
-    padding: 6px 7px 7px;
-    border: 1px solid rgba(185, 188, 182, 0.14);
+    padding: 7px 8px 8px;
+    border: 1px solid rgba(185, 188, 182, 0.16);
     border-radius: 10px;
     background:
       linear-gradient(
@@ -2087,7 +2090,7 @@ button {
     grid-template-areas:
       "summary"
       "actions";
-    gap: 4px;
+    gap: 5px;
     pointer-events: auto;
     z-index: 10;
   }
@@ -2132,8 +2135,8 @@ button {
     max-width: 100%;
     overflow: hidden;
     color: rgba(207, 209, 203, 0.60);
-    font-size: clamp(7px, 1.75vw, 9px);
-    font-weight: 700;
+    font-size: clamp(7.5px, 1.95vw, 9.5px);
+    font-weight: 730;
     line-height: 1;
     letter-spacing: 0.02em;
     white-space: nowrap;
@@ -2143,11 +2146,23 @@ button {
     max-width: 100%;
     overflow: hidden;
     color: #f1f0ea;
-    font-size: clamp(11px, 3vw, 14px);
-    font-weight: 780;
+    font-size: clamp(12px, 3.25vw, 15px);
+    font-weight: 810;
     line-height: 1.05;
     text-overflow: ellipsis;
     white-space: nowrap;
+  }
+
+  .roulette-balance-metric strong {
+    color: #ffffff;
+    font-size: clamp(13px, 3.45vw, 16px);
+    font-weight: 860;
+    opacity: 1;
+  }
+
+  .roulette-page[data-phase="spinning"] .roulette-balance-metric strong,
+  .roulette-page[data-phase="settled"] .roulette-balance-metric strong {
+    opacity: 1;
   }
 
   .roulette-bet-actions {
@@ -2167,8 +2182,8 @@ button {
 
   .roulette-bet-actions button {
     min-width: 0;
-    min-height: 25px;
-    padding: 0 4px;
+    min-height: 28px;
+    padding: 0 5px;
     border: 1px solid rgba(176, 179, 172, 0.18);
     border-radius: 7px;
     color: #d1d2cd;
@@ -2201,8 +2216,8 @@ button {
     box-shadow:
       inset 0 1px 0 rgba(255, 255, 255, 0.68),
       0 4px 12px rgba(0, 0, 0, 0.22);
-    font-size: clamp(9px, 2.3vw, 11px);
-    font-weight: 820;
+    font-size: clamp(10px, 2.5vw, 12px);
+    font-weight: 850;
     letter-spacing: 0.08em;
   }
 
@@ -2328,14 +2343,27 @@ button {
     z-index: 9;
   }
 
+  .roulette-page[data-phase="spinning"] .roulette-bet-summary {
+    min-height: 32px;
+    align-items: center;
+  }
+
+  .roulette-page[data-phase="spinning"] .roulette-bet-summary span {
+    color: rgba(220, 222, 216, 0.72);
+  }
+
+  .roulette-page[data-phase="spinning"] .roulette-bet-summary strong {
+    color: #f7f6f0;
+  }
+
   .roulette-page[data-phase="spinning"] .roulette-bet-actions {
     display: none;
   }
 
   .roulette-page[data-phase="spinning"] .roulette-bet-console {
-    width: min(90vw, 390px);
-    padding: 6px 7px 7px;
-    border-color: rgba(185, 188, 182, 0.18);
+    width: min(92vw, 400px);
+    padding: 7px 8px 8px;
+    border-color: rgba(185, 188, 182, 0.20);
     background:
       linear-gradient(
         180deg,
@@ -2408,7 +2436,7 @@ button {
   }
 
   .roulette-betting-timer__value {
-    font-size: 13px;
+    font-size: 16px;
   }
 
   .roulette-bet-actions button {
@@ -2424,6 +2452,17 @@ button {
   .roulette-page[data-phase="spinning"],
   .roulette-page[data-phase="settled"] {
     --control-size: clamp(23px, calc(var(--table-width) * 0.16), 29px);
+  }
+
+  .roulette-mobile-control-rail {
+    left: calc(100% - 8px);
+  }
+
+  .roulette-bet-console {
+    width: min(95vw, 430px);
+    max-width: 95vw;
+    padding-left: 7px;
+    padding-right: 7px;
   }
 }
 
@@ -2480,9 +2519,21 @@ button {
     );
   }
 
+  .roulette-bet-summary span {
+    font-size: 7px;
+  }
+
+  .roulette-bet-summary strong {
+    font-size: 11px;
+  }
+
+  .roulette-balance-metric strong {
+    font-size: 12px;
+  }
+
   .roulette-bet-actions button {
-    min-height: 22px;
-    font-size: 6px;
+    min-height: 23px;
+    font-size: 7px;
   }
 }
 
