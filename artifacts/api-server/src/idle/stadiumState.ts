@@ -29,6 +29,7 @@ export async function getIdleStadiumState(
   serverNow = new Date(),
 ): Promise<IdleStadiumStateResponse> {
   const client = await pool.connect();
+  let released = false;
 
   let stadium:
     IdleStadiumStateResponse["stadium"];
@@ -89,10 +90,28 @@ export async function getIdleStadiumState(
 
     await client.query("COMMIT");
   } catch (error) {
-    await client.query("ROLLBACK");
+    try {
+      await client.query("ROLLBACK");
+    } catch (rollbackError) {
+      released = true;
+      try {
+        client.release(
+          rollbackError instanceof Error
+            ? rollbackError
+            : new Error(
+              "IDLE_STADIUM_STATE_ROLLBACK_FAILED",
+            ),
+        );
+      } catch {
+        // Preserve the original snapshot failure.
+      }
+    }
+
     throw error;
   } finally {
-    client.release();
+    if (!released) {
+      client.release();
+    }
   }
 
   const marketState =
