@@ -1015,8 +1015,32 @@ export function mountRoulette(app: HTMLDivElement) {
           getRouletteAmountScale(
             amount,
           );
-        chip.textContent =
-          displayAmount;
+        const compactSuffix =
+          /[KM]$/.test(displayAmount)
+            ? displayAmount.slice(-1)
+            : "";
+        const compactNumber =
+          compactSuffix
+            ? displayAmount.slice(0, -1)
+            : displayAmount;
+        const amountValue =
+          document.createElement("span");
+        amountValue.className =
+          "roulette-placed-chip__value";
+        amountValue.textContent =
+          compactNumber;
+        chip.append(amountValue);
+
+        if (compactSuffix) {
+          const amountSuffix =
+            document.createElement("span");
+          amountSuffix.className =
+            "roulette-placed-chip__suffix";
+          amountSuffix.textContent =
+            compactSuffix;
+          chip.append(amountSuffix);
+        }
+
         chip.setAttribute(
           "aria-hidden",
           "true",
