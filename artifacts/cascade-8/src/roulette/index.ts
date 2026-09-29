@@ -6,6 +6,7 @@ import {
 import {
   clearRouletteBets,
   createRouletteBetState,
+  doubleRouletteBets,
   getRouletteBetTotals,
   getRouletteLastChipByBet,
   getRouletteTotalStake,
@@ -53,6 +54,13 @@ import {
   RouletteWalletClient,
   type RouletteServerSpinResponse,
 } from "./rouletteWalletClient";
+import {
+  ROULETTE_RECENT_RESULT_LIMIT,
+  ROULETTE_RECENT_RESULTS_STORAGE_KEY,
+  appendRouletteRecentResult,
+  getRouletteResultTone,
+  normalizeRouletteRecentResults,
+} from "./recentResults";
 import { formatRouletteAmount } from "./uiFormat";
 import { renderRouletteWheel } from "./wheelRenderer";
 
@@ -96,6 +104,13 @@ export function mountRoulette(app: HTMLDivElement) {
           class="roulette-wheel-panel"
           aria-label="European roulette wheel"
         >
+          <div
+            class="roulette-recent-strip"
+            data-roulette-recent-results
+            aria-label="No recent results yet"
+            aria-live="polite"
+          ></div>
+
           <div class="roulette-stage">
             <canvas
               class="roulette-wheel-canvas"
@@ -121,10 +136,23 @@ export function mountRoulette(app: HTMLDivElement) {
   const roundReturn = app.querySelector<HTMLElement>("[data-round-return]");
   const roundProfit = app.querySelector<HTMLElement>("[data-round-profit]");
   const roundOutcome = app.querySelector<HTMLElement>("[data-round-outcome]");
-  const undoButton = app.querySelector<HTMLButtonElement>("[data-undo-bet]");
+  const undoButtons = Array.from(
+    app.querySelectorAll<HTMLButtonElement>("[data-undo-bet]"),
+  );
+  const doubleButtons = Array.from(
+    app.querySelectorAll<HTMLButtonElement>("[data-double-bet]"),
+  );
   const clearButton = app.querySelector<HTMLButtonElement>("[data-clear-bets]");
   const rebetButton = app.querySelector<HTMLButtonElement>("[data-rebet]");
   const spinButton = app.querySelector<HTMLButtonElement>("[data-spin-button]");
+  const mobileChipToggle =
+    app.querySelector<HTMLButtonElement>("[data-mobile-chip-toggle]");
+  const mobileChipMenu =
+    app.querySelector<HTMLElement>("[data-mobile-chip-menu]");
+  const mobileSelectedChip =
+    app.querySelector<HTMLElement>("[data-mobile-selected-chip]");
+  const recentResultsStrip =
+    app.querySelector<HTMLElement>("[data-roulette-recent-results]");
 
   if (!canvas) throw new Error("Roulette canvas was not mounted.");
   if (!page) throw new Error("Roulette page was not mounted.");
@@ -150,12 +178,107 @@ export function mountRoulette(app: HTMLDivElement) {
   let simulationEvents: RouletteSimulationEvent[] = [];
   let frameId = 0;
   let resultHoldTimer = 0;
+  let recentResults: number[] = [];
+
+  try {
+    recentResults =
+      normalizeRouletteRecentResults(
+        JSON.parse(
+          window.localStorage.getItem(
+            ROULETTE_RECENT_RESULTS_STORAGE_KEY,
+          ) ?? "[]",
+        ),
+      );
+  } catch {
+    recentResults = [];
+  }
+
   const rouletteAudio =
     new RouletteAudioEngine();
   const rouletteWallet =
     new RouletteWalletClient();
 
   const redraw = () => renderCanvas(canvas, viewState);
+
+  const renderRecentResults = () => {
+    if (!recentResultsStrip) return;
+
+    const newestFirst =
+      [...recentResults].reverse();
+
+    recentResultsStrip.replaceChildren(
+      ...Array.from(
+        {
+          length:
+            ROULETTE_RECENT_RESULT_LIMIT,
+        },
+        (_, index) => {
+          const cell =
+            document.createElement("span");
+          const value =
+            newestFirst[index];
+
+          cell.className =
+            "roulette-recent-result";
+
+          if (value === undefined) {
+            cell.classList.add(
+              "is-empty",
+            );
+            cell.textContent = "—";
+            cell.setAttribute(
+              "aria-hidden",
+              "true",
+            );
+            return cell;
+          }
+
+          const tone =
+            getRouletteResultTone(
+              value,
+            );
+          cell.classList.add(
+            `is-${tone}`,
+          );
+          cell.dataset.resultNumber =
+            String(value);
+          cell.textContent =
+            String(value);
+          return cell;
+        },
+      ),
+    );
+
+    recentResultsStrip.setAttribute(
+      "aria-label",
+      newestFirst.length > 0
+        ? `Recent results: ${newestFirst.join(", ")}`
+        : "No recent results yet",
+    );
+  };
+
+  const recordRecentResult = (
+    number: number,
+  ) => {
+    recentResults =
+      appendRouletteRecentResult(
+        recentResults,
+        number,
+      );
+
+    try {
+      window.localStorage.setItem(
+        ROULETTE_RECENT_RESULTS_STORAGE_KEY,
+        JSON.stringify(
+          recentResults,
+        ),
+      );
+    } catch {
+      // The history remains available for this mounted session.
+    }
+
+    renderRecentResults();
+  };
 
   const renderWalletBalance = () => {
     if (!walletBalance) return;
@@ -168,6 +291,22 @@ export function mountRoulette(app: HTMLDivElement) {
   const canAffordCurrentBet = () =>
     walletBalanceCents !== null &&
     getRouletteTotalStake(betState.placements) * 100 <= walletBalanceCents;
+
+  const canDoubleCurrentBet = () =>
+    walletBalanceCents !== null &&
+    betState.placements.length > 0 &&
+    betState.placements.length <= 250 &&
+    getRouletteTotalStake(betState.placements) * 200 <= walletBalanceCents;
+
+  const setMobileChipMenuOpen = (open: boolean) => {
+    if (mobileChipMenu) {
+      mobileChipMenu.hidden = !open;
+    }
+    if (mobileChipToggle) {
+      mobileChipToggle.setAttribute("aria-expanded", String(open));
+    }
+    betPanel.dataset.mobileChipMenuOpen = String(open);
+  };
 
   const updateSpinAvailability = () => {
     if (!spinButton) return;
@@ -414,6 +553,15 @@ export function mountRoulette(app: HTMLDivElement) {
         );
       });
 
+    if (mobileSelectedChip) {
+      mobileSelectedChip.textContent =
+        formatRouletteAmount(betState.selectedChip);
+    }
+    if (mobileChipToggle) {
+      mobileChipToggle.dataset.selectedChip =
+        String(betState.selectedChip);
+    }
+
     const stake =
       getRouletteTotalStake(
         betState.placements,
@@ -425,10 +573,13 @@ export function mountRoulette(app: HTMLDivElement) {
         );
     }
 
-    if (undoButton) {
-      undoButton.disabled =
+    undoButtons.forEach((button) => {
+      button.disabled =
         betState.placements.length === 0;
-    }
+    });
+    doubleButtons.forEach((button) => {
+      button.disabled = !canDoubleCurrentBet();
+    });
     if (clearButton) {
       clearButton.disabled =
         betState.placements.length === 0;
@@ -497,6 +648,9 @@ export function mountRoulette(app: HTMLDivElement) {
           pendingServerSpin.result.pocketIndex === result.pocketIndex
         ) {
           renderRoundResult(pendingServerSpin.settlement);
+          recordRecentResult(
+            result.number,
+          );
           walletBalanceCents = pendingServerSpin.wallet.balanceCents;
           renderWalletBalance();
 
@@ -553,6 +707,7 @@ export function mountRoulette(app: HTMLDivElement) {
     window.clearTimeout(
       resultHoldTimer,
     );
+    setMobileChipMenuOpen(false);
 
     await rouletteAudio.ensureStarted();
 
@@ -630,6 +785,7 @@ export function mountRoulette(app: HTMLDivElement) {
   const observer = new ResizeObserver(redraw);
   observer.observe(canvas);
   redraw();
+  renderRecentResults();
   renderWalletBalance();
   renderBetState();
 
@@ -661,6 +817,17 @@ export function mountRoulette(app: HTMLDivElement) {
       const target =
         event.target as HTMLElement;
 
+      if (
+        target.closest(
+          "[data-mobile-chip-toggle]",
+        )
+      ) {
+        const isOpen =
+          mobileChipToggle?.getAttribute("aria-expanded") === "true";
+        setMobileChipMenuOpen(!isOpen);
+        return;
+      }
+
       const chipButton =
         target.closest<HTMLButtonElement>(
           "[data-chip-value]",
@@ -678,6 +845,7 @@ export function mountRoulette(app: HTMLDivElement) {
               value as RouletteChipValue,
             );
           renderBetState();
+          setMobileChipMenuOpen(false);
         }
         return;
       }
@@ -696,6 +864,7 @@ export function mountRoulette(app: HTMLDivElement) {
               betId,
             );
           renderBetState();
+          setMobileChipMenuOpen(false);
         }
         return;
       }
@@ -710,6 +879,23 @@ export function mountRoulette(app: HTMLDivElement) {
             betState,
           );
         renderBetState();
+        setMobileChipMenuOpen(false);
+        return;
+      }
+
+      if (
+        target.closest(
+          "[data-double-bet]",
+        )
+      ) {
+        if (canDoubleCurrentBet()) {
+          betState =
+            doubleRouletteBets(
+              betState,
+            );
+          renderBetState();
+        }
+        setMobileChipMenuOpen(false);
         return;
       }
 
