@@ -66,7 +66,10 @@ describe("Storage upgrade transaction contract", () => {
       'const STORAGE_UPGRADE_ACTION = "STORAGE_UPGRADE"',
     );
     expect(storageSource).toContain(
-      "INSERT INTO idle_stadium_action_receipts",
+      "reserveStadiumActionReceipt(",
+    );
+    expect(storageSource).toContain(
+      'actionType: "STORAGE_UPGRADE"',
     );
     expect(storageSource).toContain("target_level");
     expect(storageSource).toContain("replayed: true");
