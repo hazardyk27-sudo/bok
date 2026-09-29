@@ -54,6 +54,13 @@ import {
   RouletteWalletClient,
   type RouletteServerSpinResponse,
 } from "./rouletteWalletClient";
+import {
+  ROULETTE_RECENT_RESULT_LIMIT,
+  ROULETTE_RECENT_RESULTS_STORAGE_KEY,
+  appendRouletteRecentResult,
+  getRouletteResultTone,
+  normalizeRouletteRecentResults,
+} from "./recentResults";
 import { formatRouletteAmount } from "./uiFormat";
 import { renderRouletteWheel } from "./wheelRenderer";
 
@@ -97,6 +104,13 @@ export function mountRoulette(app: HTMLDivElement) {
           class="roulette-wheel-panel"
           aria-label="European roulette wheel"
         >
+          <div
+            class="roulette-recent-strip"
+            data-roulette-recent-results
+            aria-label="No recent results yet"
+            aria-live="polite"
+          ></div>
+
           <div class="roulette-stage">
             <canvas
               class="roulette-wheel-canvas"
@@ -137,6 +151,8 @@ export function mountRoulette(app: HTMLDivElement) {
     app.querySelector<HTMLElement>("[data-mobile-chip-menu]");
   const mobileSelectedChip =
     app.querySelector<HTMLElement>("[data-mobile-selected-chip]");
+  const recentResultsStrip =
+    app.querySelector<HTMLElement>("[data-roulette-recent-results]");
 
   if (!canvas) throw new Error("Roulette canvas was not mounted.");
   if (!page) throw new Error("Roulette page was not mounted.");
@@ -162,12 +178,107 @@ export function mountRoulette(app: HTMLDivElement) {
   let simulationEvents: RouletteSimulationEvent[] = [];
   let frameId = 0;
   let resultHoldTimer = 0;
+  let recentResults: number[] = [];
+
+  try {
+    recentResults =
+      normalizeRouletteRecentResults(
+        JSON.parse(
+          window.localStorage.getItem(
+            ROULETTE_RECENT_RESULTS_STORAGE_KEY,
+          ) ?? "[]",
+        ),
+      );
+  } catch {
+    recentResults = [];
+  }
+
   const rouletteAudio =
     new RouletteAudioEngine();
   const rouletteWallet =
     new RouletteWalletClient();
 
   const redraw = () => renderCanvas(canvas, viewState);
+
+  const renderRecentResults = () => {
+    if (!recentResultsStrip) return;
+
+    const newestFirst =
+      [...recentResults].reverse();
+
+    recentResultsStrip.replaceChildren(
+      ...Array.from(
+        {
+          length:
+            ROULETTE_RECENT_RESULT_LIMIT,
+        },
+        (_, index) => {
+          const cell =
+            document.createElement("span");
+          const value =
+            newestFirst[index];
+
+          cell.className =
+            "roulette-recent-result";
+
+          if (value === undefined) {
+            cell.classList.add(
+              "is-empty",
+            );
+            cell.textContent = "—";
+            cell.setAttribute(
+              "aria-hidden",
+              "true",
+            );
+            return cell;
+          }
+
+          const tone =
+            getRouletteResultTone(
+              value,
+            );
+          cell.classList.add(
+            `is-${tone}`,
+          );
+          cell.dataset.resultNumber =
+            String(value);
+          cell.textContent =
+            String(value);
+          return cell;
+        },
+      ),
+    );
+
+    recentResultsStrip.setAttribute(
+      "aria-label",
+      newestFirst.length > 0
+        ? `Recent results: ${newestFirst.join(", ")}`
+        : "No recent results yet",
+    );
+  };
+
+  const recordRecentResult = (
+    number: number,
+  ) => {
+    recentResults =
+      appendRouletteRecentResult(
+        recentResults,
+        number,
+      );
+
+    try {
+      window.localStorage.setItem(
+        ROULETTE_RECENT_RESULTS_STORAGE_KEY,
+        JSON.stringify(
+          recentResults,
+        ),
+      );
+    } catch {
+      // The history remains available for this mounted session.
+    }
+
+    renderRecentResults();
+  };
 
   const renderWalletBalance = () => {
     if (!walletBalance) return;
@@ -537,6 +648,9 @@ export function mountRoulette(app: HTMLDivElement) {
           pendingServerSpin.result.pocketIndex === result.pocketIndex
         ) {
           renderRoundResult(pendingServerSpin.settlement);
+          recordRecentResult(
+            result.number,
+          );
           walletBalanceCents = pendingServerSpin.wallet.balanceCents;
           renderWalletBalance();
 
@@ -670,6 +784,7 @@ export function mountRoulette(app: HTMLDivElement) {
   const observer = new ResizeObserver(redraw);
   observer.observe(canvas);
   redraw();
+  renderRecentResults();
   renderWalletBalance();
   renderBetState();
 
