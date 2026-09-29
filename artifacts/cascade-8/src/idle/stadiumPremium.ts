@@ -325,15 +325,17 @@ export function createStadiumPremiumUi(options: Options): StadiumPremiumUi {
   };
 
   const mutate = async (success: string, action: () => Promise<unknown>) => {
-    if (busy) return;
+    if (busy) return false;
     busy = true;
     render();
     try {
       await action();
       await refreshState();
       showStatus(success);
+      return true;
     } catch (error) {
       showStatus(readableError(error), true);
+      return false;
     } finally {
       busy = false;
       render();
@@ -369,7 +371,10 @@ export function createStadiumPremiumUi(options: Options): StadiumPremiumUi {
       return;
     }
     void mutate(quantity.toLocaleString("en-US") + " bilet satıldı.", () => sellIdleStadiumTickets(quantity))
-      .then(() => { if (input) input.value = ""; renderMarket(); });
+      .then((succeeded) => {
+        if (succeeded && input) input.value = "";
+        renderMarket();
+      });
   });
   button(root, "[data-idle-upgrade-stadium]").addEventListener("click", () => void mutate("Stadyum geliştirildi.", () => upgradeIdleStadiumLevel()));
   button(root, "[data-idle-upgrade-speed]").addEventListener("click", () => void mutate("Üretim hızı geliştirildi.", () => upgradeIdleStadiumSpeed()));
@@ -382,7 +387,9 @@ export function createStadiumPremiumUi(options: Options): StadiumPremiumUi {
       return;
     }
     void mutate(quantity.toLocaleString("en-US") + " koltuk satın alındı.", () => buyIdleStadiumSeats(quantity))
-      .then(() => { if (input) input.value = ""; });
+      .then((succeeded) => {
+        if (succeeded && input) input.value = "";
+      });
   });
   document.addEventListener("keydown", (event) => {
     if (event.key === "Escape") {
