@@ -187,7 +187,7 @@ export function getRouletteLastChipByBet(
   placements: readonly RouletteBetPlacement[],
 ) {
   return placements.reduce<
-    Record<string, RouletteChipValue>
+    Record<string, number>
   >((lastByBet, placement) => {
     lastByBet[placement.betId] =
       placement.amount;
