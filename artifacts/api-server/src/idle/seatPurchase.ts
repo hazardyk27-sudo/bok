@@ -209,21 +209,30 @@ export async function buyStadiumSeats(
         [sessionId, balanceCents],
       );
 
-      await client.query(
+      const receiptUpdate = await client.query<{ id: string }>(
         `UPDATE idle_stadium_action_receipts
             SET purchased_seats = $2,
                 cost_cents = $3,
                 resulting_owned_seats = $4,
                 balance_cents = $5
-          WHERE idempotency_key = $1`,
+          WHERE idempotency_key = $1
+            AND session_id = $6
+            AND action_type = $7
+        RETURNING id`,
         [
           idempotencyKey,
           quantity,
           quote.totalCostCents,
           quote.resultingOwnedSeats,
           balanceCents,
+          sessionId,
+          SEAT_PURCHASE_ACTION,
         ],
       );
+
+      if (!receiptUpdate.rows[0]) {
+        throw new Error("IDLE_STADIUM_RECEIPT_UPDATE_CONFLICT");
+      }
 
       return {
         patch: {
