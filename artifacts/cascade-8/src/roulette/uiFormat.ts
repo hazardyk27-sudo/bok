@@ -52,3 +52,31 @@ export function formatRouletteAmount(
 
   return `${sign}${compact}${unit.suffix}`;
 }
+
+
+export function formatRouletteMoney(
+  value: number,
+) {
+  if (!Number.isFinite(value)) {
+    return "$0";
+  }
+
+  const absolute =
+    formatRouletteAmount(
+      Math.abs(value),
+    );
+
+  return value < 0
+    ? `-$${absolute}`
+    : `$${absolute}`;
+}
+
+export function formatRouletteSignedMoney(
+  value: number,
+) {
+  if (value > 0) {
+    return `+${formatRouletteMoney(value)}`;
+  }
+
+  return formatRouletteMoney(value);
+}
