@@ -8,6 +8,35 @@ import {
 } from "../../../cascade-8/src/roulette/spinResult";
 
 describe("roulette authoritative round", () => {
+  it("keeps high-stake straight payouts inside the bigint persistence range", () => {
+    const round =
+      createRouletteAuthoritativeRound(
+        "roulette-high-stake-regression",
+        [
+          {
+            betId: "straight-17",
+            amount: 1_000_000,
+          },
+        ],
+      );
+
+    expect(
+      Number.isSafeInteger(
+        round.stakeCents,
+      ),
+    ).toBe(true);
+    expect(
+      Number.isSafeInteger(
+        round.payoutCents,
+      ),
+    ).toBe(true);
+    expect(
+      round.payoutCents,
+    ).toBeLessThanOrEqual(
+      Number.MAX_SAFE_INTEGER,
+    );
+  });
+
   it("accepts aggregate positive bet amounts and validates bet ids", () => {
     expect(
       parseRouletteServerBets([
