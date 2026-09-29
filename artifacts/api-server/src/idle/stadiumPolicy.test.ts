@@ -135,6 +135,23 @@ describe("Stadium mutation policy", () => {
     expect(expanded.storedMicroTickets).toBe(25_000_001);
   });
 
+
+  it("keeps sale remainder strictly below one wallet cent", () => {
+    const state = makeState({
+      storedMicroTickets: 5_000_000,
+    });
+
+    expect(applyStadiumEconomyMutationPatch(
+      state,
+      { saleRemainderMicrodollars: 9_999 },
+    ).saleRemainderMicrodollars).toBe(9_999);
+
+    expect(() => applyStadiumEconomyMutationPatch(
+      state,
+      { saleRemainderMicrodollars: 10_000 },
+    )).toThrow("INVALID_IDLE_SALE_REMAINDER");
+  });
+
   it("allows ticket inventory to decrease for future sale settlement", () => {
     const state = makeState({
       storedMicroTickets: 20_000_000,
