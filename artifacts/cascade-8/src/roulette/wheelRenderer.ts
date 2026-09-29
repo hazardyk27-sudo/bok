@@ -1023,6 +1023,7 @@ export type RouletteWheelRenderState = {
   ballAngle?: number;
   ballRadiusRatio?: number;
   ballVisible?: boolean;
+  resultMarkerAngle?: number | null;
 };
 
 export function normalizeRotorAngle(angle: number) {
@@ -1170,6 +1171,107 @@ function drawDeflectors(ctx: CanvasRenderingContext2D, radius: number) {
   }
 }
 
+
+function drawWinningPocketMarker(
+  ctx: CanvasRenderingContext2D,
+  radius: number,
+  angle: number,
+) {
+  if (!Number.isFinite(angle)) return;
+
+  const normalizedAngle =
+    normalizeRotorAngle(angle);
+  const markerRadius =
+    radius * 0.755;
+  const point =
+    polar(
+      markerRadius,
+      normalizedAngle,
+    );
+  const markerWidth =
+    Math.max(8, radius * 0.048);
+  const markerHeight =
+    Math.max(10, radius * 0.064);
+
+  ctx.save();
+  ctx.translate(point.x, point.y);
+  ctx.rotate(
+    normalizedAngle + Math.PI / 2,
+  );
+
+  ctx.shadowColor =
+    "rgba(247, 222, 151, 0.48)";
+  ctx.shadowBlur =
+    radius * 0.028;
+
+  const fill =
+    ctx.createLinearGradient(
+      0,
+      -markerHeight * 0.55,
+      0,
+      markerHeight * 0.55,
+    );
+  fill.addColorStop(
+    0,
+    "#ffffff",
+  );
+  fill.addColorStop(
+    0.58,
+    "#f6edd7",
+  );
+  fill.addColorStop(
+    1,
+    "#d9b96c",
+  );
+
+  ctx.beginPath();
+  ctx.moveTo(
+    0,
+    markerHeight * 0.58,
+  );
+  ctx.lineTo(
+    -markerWidth * 0.46,
+    -markerHeight * 0.28,
+  );
+  ctx.quadraticCurveTo(
+    0,
+    -markerHeight * 0.54,
+    markerWidth * 0.46,
+    -markerHeight * 0.28,
+  );
+  ctx.closePath();
+  ctx.fillStyle = fill;
+  ctx.fill();
+
+  ctx.shadowColor =
+    "transparent";
+  ctx.strokeStyle =
+    "rgba(86, 65, 24, 0.88)";
+  ctx.lineWidth =
+    Math.max(
+      1,
+      radius * 0.005,
+    );
+  ctx.stroke();
+
+  ctx.beginPath();
+  ctx.arc(
+    0,
+    -markerHeight * 0.16,
+    Math.max(
+      1.8,
+      radius * 0.010,
+    ),
+    0,
+    TAU,
+  );
+  ctx.fillStyle =
+    "rgba(255, 255, 255, 0.94)";
+  ctx.fill();
+
+  ctx.restore();
+}
+
 function drawRotor(
   ctx: CanvasRenderingContext2D,
   radius: number,
@@ -1203,6 +1305,17 @@ export function renderRouletteWheel(
   drawStator(ctx, radius);
   drawRotor(ctx, radius, state.rotorAngle ?? 0);
   drawDeflectors(ctx, radius);
+
+  if (
+    state.resultMarkerAngle !== null &&
+    state.resultMarkerAngle !== undefined
+  ) {
+    drawWinningPocketMarker(
+      ctx,
+      radius,
+      state.resultMarkerAngle,
+    );
+  }
 
   if (state.ballVisible ?? true) {
     drawBall(
