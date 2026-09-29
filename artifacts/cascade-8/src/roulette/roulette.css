@@ -1839,3 +1839,145 @@ button {
     right: 38px;
   }
 }
+
+
+/* Mobile cockpit v2 — Part 3: recent eleven result strip */
+.roulette-recent-strip {
+  display: none;
+}
+
+@media (max-width: 900px) and (orientation: portrait) {
+  .roulette-wheel-panel {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: 24px minmax(0, 1fr);
+    align-items: center;
+    justify-items: center;
+  }
+
+  .roulette-recent-strip {
+    grid-column: 1;
+    grid-row: 1;
+    align-self: start;
+    width: min(
+      96vw,
+      390px
+    );
+    max-width: calc(
+      100vw -
+      max(6px, env(safe-area-inset-left)) -
+      max(6px, env(safe-area-inset-right))
+    );
+    height: 22px;
+    display: grid;
+    grid-template-columns:
+      repeat(11, minmax(0, 1fr));
+    gap: 1px;
+    overflow: hidden;
+    border: 1px solid rgba(218, 225, 230, 0.16);
+    border-radius: 4px;
+    background: rgba(4, 6, 7, 0.72);
+    box-shadow:
+      0 5px 16px rgba(0, 0, 0, 0.28),
+      inset 0 1px 0 rgba(255, 255, 255, 0.04);
+    font-family: Arial, Helvetica, sans-serif;
+    font-variant-numeric: tabular-nums;
+    z-index: 9;
+  }
+
+  .roulette-recent-result {
+    min-width: 0;
+    height: 20px;
+    display: grid;
+    place-items: center;
+    border-right: 1px solid rgba(224, 231, 236, 0.10);
+    color: #f4f6f8;
+    background: rgba(18, 22, 25, 0.96);
+    font-size: clamp(9px, 2.6vw, 12px);
+    font-weight: 800;
+    line-height: 1;
+  }
+
+  .roulette-recent-result:last-child {
+    border-right: 0;
+  }
+
+  .roulette-recent-result.is-red {
+    color: #ff5b52;
+  }
+
+  .roulette-recent-result.is-black {
+    color: #f1f3f5;
+  }
+
+  .roulette-recent-result.is-green {
+    color: #48c779;
+  }
+
+  .roulette-recent-result.is-empty {
+    color: rgba(219, 225, 229, 0.24);
+  }
+
+  .roulette-recent-result:first-child:not(.is-empty) {
+    background:
+      linear-gradient(
+        180deg,
+        rgba(67, 76, 83, 0.54),
+        rgba(18, 22, 25, 0.98)
+      );
+    box-shadow:
+      inset 0 -2px 0 rgba(255, 255, 255, 0.10);
+  }
+
+  .roulette-stage {
+    grid-column: 1;
+    grid-row: 2;
+    transition:
+      width 420ms cubic-bezier(0.2, 0.78, 0.2, 1),
+      transform 520ms cubic-bezier(0.16, 0.86, 0.22, 1),
+      opacity 380ms ease,
+      filter 380ms ease;
+  }
+
+  /*
+   * Keep the history readable while phase emphasis moves only the wheel.
+   * The table remains the foreground target during betting; the wheel stage
+   * takes foreground during spin without fading the result strip.
+   */
+  .roulette-page[data-phase="betting"] .roulette-wheel-panel,
+  .roulette-page[data-phase="spinning"] .roulette-wheel-panel,
+  .roulette-page[data-phase="settled"] .roulette-wheel-panel {
+    transform: none;
+    opacity: 1;
+    filter: none;
+  }
+
+  .roulette-page[data-phase="betting"] .roulette-stage {
+    transform: translateY(2px) scale(0.86);
+    opacity: 0.52;
+    filter: saturate(0.78) brightness(0.76);
+  }
+
+  .roulette-page[data-phase="spinning"] .roulette-stage {
+    transform: translateY(5px) scale(1.06);
+    opacity: 1;
+    filter: none;
+  }
+
+  .roulette-page[data-phase="settled"] .roulette-stage {
+    transform: translateY(3px) scale(1.02);
+    opacity: 1;
+    filter: none;
+  }
+}
+
+@media (max-width: 380px) and (orientation: portrait) {
+  .roulette-recent-strip {
+    width: min(96vw, 360px);
+    height: 20px;
+  }
+
+  .roulette-recent-result {
+    height: 18px;
+    font-size: 9px;
+  }
+}
