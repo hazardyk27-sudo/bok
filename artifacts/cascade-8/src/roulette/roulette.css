@@ -1521,7 +1521,7 @@ button {
     border-bottom: 1px solid var(--bet-border);
     font:
       780
-      clamp(13px, calc(var(--table-width) * 0.051), 19px)/1
+      clamp(14px, calc(var(--table-width) * 0.056), 20px)/1
       system-ui,
       -apple-system,
       BlinkMacSystemFont,
@@ -1565,7 +1565,7 @@ button {
     background: #070808;
     font:
       760
-      clamp(8.5px, calc(var(--table-width) * 0.031), 12px)/1
+      clamp(10px, calc(var(--table-width) * 0.041), 13.5px)/1
       system-ui,
       -apple-system,
       BlinkMacSystemFont,
@@ -1605,7 +1605,7 @@ button {
     background: #070808;
     font:
       750
-      clamp(8.5px, calc(var(--table-width) * 0.032), 12.5px)/1
+      clamp(10px, calc(var(--table-width) * 0.043), 13px)/1
       system-ui,
       -apple-system,
       BlinkMacSystemFont,
@@ -1620,6 +1620,22 @@ button {
     transform: rotate(180deg);
     text-orientation: mixed;
     line-height: 1;
+    max-height: calc(100% - 6px);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    white-space: nowrap;
+  }
+
+  .roulette-dozen-cell {
+    font-size: clamp(11px, calc(var(--table-width) * 0.050), 15px);
+    font-weight: 820;
+    letter-spacing: 0;
+  }
+
+  .roulette-outside-cell {
+    font-weight: 810;
+    letter-spacing: 0;
   }
 
   .roulette-dozen-cell,
@@ -1639,9 +1655,9 @@ button {
   }
 
   .roulette-outside-cell .roulette-diamond {
-    width: clamp(10px, calc(var(--table-width) * 0.043), 15px);
-    height: clamp(10px, calc(var(--table-width) * 0.043), 15px);
-    border: 1px solid rgba(241, 234, 218, 0.78);
+    width: clamp(15px, calc(var(--table-width) * 0.062), 20px);
+    height: clamp(15px, calc(var(--table-width) * 0.062), 20px);
+    border: 1.25px solid rgba(241, 234, 218, 0.88);
   }
 
   .roulette-outside-cell.is-red-symbol .roulette-diamond {
