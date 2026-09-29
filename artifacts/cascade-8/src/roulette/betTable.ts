@@ -50,12 +50,12 @@ export const ROULETTE_DOZEN_BETS: RouletteBetCell[] = [
 ];
 
 export const ROULETTE_OUTSIDE_BETS: RouletteBetCell[] = [
-  { id: "low", label: "1 TO 18", kind: "outside" },
+  { id: "low", label: "1-18", kind: "outside" },
   { id: "even", label: "EVEN", kind: "outside" },
   { id: "red", label: "RED", kind: "outside" },
   { id: "black", label: "BLACK", kind: "outside" },
   { id: "odd", label: "ODD", kind: "outside" },
-  { id: "high", label: "19 TO 36", kind: "outside" },
+  { id: "high", label: "19-36", kind: "outside" },
 ];
 
 export function getStraightBetColorClass(
