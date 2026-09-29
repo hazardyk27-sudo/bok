@@ -113,6 +113,7 @@ type RouletteViewState = {
   ballAngle: number;
   ballRadiusRatio: number;
   ballVisible: boolean;
+  resultMarkerAngle: number | null;
 };
 
 function renderCanvas(
@@ -191,6 +192,36 @@ export function mountRoulette(app: HTMLDivElement) {
               tabindex="0"
               aria-label="European roulette wheel. Press to spin the wheel and ball."
             ></canvas>
+
+            <div
+              class="roulette-result-banner"
+              data-result-banner
+              aria-live="polite"
+              aria-hidden="true"
+            >
+              <span
+                class="roulette-result-banner__neighbor"
+                data-result-left-neighbor
+              >—</span>
+              <strong
+                class="roulette-result-banner__number"
+                data-result-winning-number
+              >—</strong>
+              <span
+                class="roulette-result-banner__neighbor"
+                data-result-right-neighbor
+              >—</span>
+            </div>
+
+            <div
+              class="roulette-win-message"
+              data-win-message
+              aria-live="polite"
+              aria-hidden="true"
+            >
+              <span>KAZANDINIZ</span>
+              <strong data-win-amount>—</strong>
+            </div>
           </div>
         </section>
 
@@ -234,6 +265,18 @@ export function mountRoulette(app: HTMLDivElement) {
     app.querySelector<HTMLElement>("[data-mobile-selected-chip]");
   const recentResultsStrip =
     app.querySelector<HTMLElement>("[data-roulette-recent-results]");
+  const resultBanner =
+    app.querySelector<HTMLElement>("[data-result-banner]");
+  const resultWinningNumber =
+    app.querySelector<HTMLElement>("[data-result-winning-number]");
+  const resultLeftNeighbor =
+    app.querySelector<HTMLElement>("[data-result-left-neighbor]");
+  const resultRightNeighbor =
+    app.querySelector<HTMLElement>("[data-result-right-neighbor]");
+  const winMessage =
+    app.querySelector<HTMLElement>("[data-win-message]");
+  const winAmount =
+    app.querySelector<HTMLElement>("[data-win-amount]");
   const bettingTimerLabel =
     app.querySelector<HTMLElement>("[data-betting-timer-label]");
   const bettingTimerValue =
@@ -260,6 +303,7 @@ export function mountRoulette(app: HTMLDivElement) {
     ballAngle: initialBallOrbit.startAngle,
     ballRadiusRatio: initialBallOrbit.trackRadius,
     ballVisible: true,
+    resultMarkerAngle: null,
   };
 
   let betState: RouletteBetState =
@@ -553,7 +597,37 @@ export function mountRoulette(app: HTMLDivElement) {
     }
 
     activeResultPresentation = null;
+    viewState.resultMarkerAngle = null;
     page.dataset.resultVisible = "false";
+
+    if (resultBanner) {
+      resultBanner.setAttribute(
+        "aria-hidden",
+        "true",
+      );
+    }
+    if (resultWinningNumber) {
+      resultWinningNumber.textContent =
+        "—";
+    }
+    if (resultLeftNeighbor) {
+      resultLeftNeighbor.textContent =
+        "—";
+    }
+    if (resultRightNeighbor) {
+      resultRightNeighbor.textContent =
+        "—";
+    }
+    if (winMessage) {
+      winMessage.setAttribute(
+        "aria-hidden",
+        "true",
+      );
+    }
+    if (winAmount) {
+      winAmount.textContent = "—";
+    }
+
     delete page.dataset.resultNumber;
     delete page.dataset.resultColor;
     delete page.dataset.resultLeftNeighbor;
@@ -563,6 +637,7 @@ export function mountRoulette(app: HTMLDivElement) {
     delete page.dataset.resultHasPayout;
     delete page.dataset.resultGrossReturn;
     delete canvas.dataset.rouletteResultMarkerAngle;
+    redraw();
   };
 
   const renderRoundResult = (
@@ -666,6 +741,54 @@ export function mountRoulette(app: HTMLDivElement) {
       );
     canvas.dataset.rouletteResultMarkerAngle =
       String(markerAngle);
+    viewState.resultMarkerAngle =
+      markerAngle;
+
+    if (resultLeftNeighbor) {
+      resultLeftNeighbor.textContent =
+        String(
+          presentation.leftNeighborNumber,
+        );
+    }
+    if (resultWinningNumber) {
+      resultWinningNumber.textContent =
+        String(
+          presentation.winningNumber,
+        );
+    }
+    if (resultRightNeighbor) {
+      resultRightNeighbor.textContent =
+        String(
+          presentation.rightNeighborNumber,
+        );
+    }
+    if (resultBanner) {
+      resultBanner.setAttribute(
+        "aria-hidden",
+        "false",
+      );
+      resultBanner.setAttribute(
+        "aria-label",
+        `Winning number ${presentation.winningNumber}. Neighbors ${presentation.leftNeighborNumber} and ${presentation.rightNeighborNumber}.`,
+      );
+    }
+
+    const showWinMessage =
+      presentation.hasPayout;
+    if (winMessage) {
+      winMessage.setAttribute(
+        "aria-hidden",
+        String(!showWinMessage),
+      );
+    }
+    if (winAmount) {
+      winAmount.textContent =
+        showWinMessage
+          ? formatRouletteAmount(
+              presentation.grossReturn,
+            )
+          : "—";
+    }
 
     return presentation;
   };
@@ -712,7 +835,16 @@ export function mountRoulette(app: HTMLDivElement) {
 
     if (phase !== "settled") {
       activeResultPresentation = null;
+      viewState.resultMarkerAngle = null;
       page.dataset.resultVisible = "false";
+      resultBanner?.setAttribute(
+        "aria-hidden",
+        "true",
+      );
+      winMessage?.setAttribute(
+        "aria-hidden",
+        "true",
+      );
       delete page.dataset.resultColor;
       delete page.dataset.resultLeftNeighbor;
       delete page.dataset.resultRightNeighbor;
@@ -746,6 +878,7 @@ export function mountRoulette(app: HTMLDivElement) {
         canvas.dataset.rouletteState =
           "ready";
         setScenePhase("betting");
+        redraw();
         canvas.setAttribute(
           "aria-label",
           "European roulette wheel. Betting open. Press to spin again.",
@@ -1054,7 +1187,16 @@ export function mountRoulette(app: HTMLDivElement) {
           delete canvas.dataset.rouletteWinningNumber;
           delete canvas.dataset.rouletteWinningColor;
           activeResultPresentation = null;
+          viewState.resultMarkerAngle = null;
           page.dataset.resultVisible = "false";
+          resultBanner?.setAttribute(
+            "aria-hidden",
+            "true",
+          );
+          winMessage?.setAttribute(
+            "aria-hidden",
+            "true",
+          );
           delete page.dataset.resultNumber;
           delete page.dataset.resultColor;
           delete page.dataset.resultLeftNeighbor;
