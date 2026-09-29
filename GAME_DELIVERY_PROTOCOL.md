@@ -83,11 +83,18 @@ The promotion workflow must:
 - record the preview HEAD used as its base;
 - copy only the target category's promotion roots;
 - reject shared/foreign changes;
-- run typecheck/build/regressions;
+- build the deployable API + web artifacts;
+- run shared critical platform contracts (wallet/session/router/schema/isolation);
+- run the selected game's owned regression gate;
+- not make unchanged foreign-game regressions a blocker for that one-game promotion;
 - re-check remote `integration/replit-preview` immediately before push;
 - abort with a clear "preview moved" result if remote preview changed;
 - never auto-merge unrelated preview changes;
 - print the final promoted preview SHA on success.
+
+After a successful preview push, the integration workflow runs every game's regression surface again as advisory checks. Those failures remain visible but do not retroactively fail an unrelated one-game promotion.
+
+Shared/platform or multi-game changes are different: they must run the broad blocking gate (full workspace typecheck + cross-game shared/platform smoke) in addition to the always-blocking critical artifact/platform gate.
 
 If the workflow aborts because preview moved, simply re-run the same immutable source SHA against the newest preview HEAD.
 

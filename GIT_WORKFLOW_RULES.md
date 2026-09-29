@@ -74,7 +74,11 @@ Promotion must:
 - copy only the selected game's promotion roots
 - preserve every non-target game's tree
 - reject foreign/shared changes
-- pass typecheck, build, frontend integration regression and backend isolation regression before preview push
+- pass deployable API/web builds and shared critical platform contracts
+- pass the selected game's owned regression gate
+- not block on an unchanged foreign game's regression failure
+
+After preview push, every game runs in a separate advisory regression layer. Shared/platform or multi-game changes use a broader blocking gate (full workspace typecheck + cross-game shared/platform smoke), because those changes can affect multiple ownership areas.
 
 Development-only roots/prefixes may be used by a game's feature branch when declared in the ownership manifest, but they are not automatically promoted unless they are also promotion roots.
 
