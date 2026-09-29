@@ -46,6 +46,7 @@ import {
 } from "./scenePhase";
 import {
   createRouletteResultPresentation,
+  type RouletteResultPresentation,
 } from "./resultPresentation";
 import {
   readSettledWinningResult,
@@ -140,6 +141,7 @@ export function mountRoulette(app: HTMLDivElement) {
       class="roulette-page"
       data-roulette-page
       data-phase="betting"
+      data-result-visible="false"
       aria-label="Roulette 2D"
     >
       <div class="roulette-game-shell">
@@ -275,6 +277,9 @@ export function mountRoulette(app: HTMLDivElement) {
   let bettingDeadlineMs =
     performance.now() + ROULETTE_BETTING_WINDOW_MS;
   let bettingWindowClosed = false;
+  let activeResultPresentation:
+    RouletteResultPresentation | null =
+      null;
 
   try {
     recentResults =
@@ -547,16 +552,29 @@ export function mountRoulette(app: HTMLDivElement) {
         "idle";
     }
 
+    activeResultPresentation = null;
+    page.dataset.resultVisible = "false";
     delete page.dataset.resultNumber;
+    delete page.dataset.resultColor;
+    delete page.dataset.resultLeftNeighbor;
+    delete page.dataset.resultRightNeighbor;
+    delete page.dataset.resultPocketIndex;
+    delete page.dataset.resultMarkerAngle;
+    delete page.dataset.resultHasPayout;
+    delete page.dataset.resultGrossReturn;
+    delete canvas.dataset.rouletteResultMarkerAngle;
   };
 
   const renderRoundResult = (
     settlement: RouletteRoundSettlement,
+    finalRotorAngle: number,
   ) => {
     const presentation =
       createRouletteResultPresentation(
         settlement,
       );
+    activeResultPresentation =
+      presentation;
 
     app
       .querySelectorAll<HTMLElement>(
@@ -603,10 +621,53 @@ export function mountRoulette(app: HTMLDivElement) {
 
     renderLastWin(settlement);
 
+    const markerAngle =
+      Math.atan2(
+        Math.sin(
+          finalRotorAngle +
+            presentation
+              .markerRelativeAngle,
+        ),
+        Math.cos(
+          finalRotorAngle +
+            presentation
+              .markerRelativeAngle,
+        ),
+      );
+
+    page.dataset.resultVisible = "true";
     page.dataset.resultNumber =
       String(
         presentation.winningNumber,
       );
+    page.dataset.resultColor =
+      presentation.winningColor;
+    page.dataset.resultLeftNeighbor =
+      String(
+        presentation.leftNeighborNumber,
+      );
+    page.dataset.resultRightNeighbor =
+      String(
+        presentation.rightNeighborNumber,
+      );
+    page.dataset.resultPocketIndex =
+      String(
+        presentation.winningPocketIndex,
+      );
+    page.dataset.resultMarkerAngle =
+      String(markerAngle);
+    page.dataset.resultHasPayout =
+      String(
+        presentation.hasPayout,
+      );
+    page.dataset.resultGrossReturn =
+      String(
+        presentation.grossReturn,
+      );
+    canvas.dataset.rouletteResultMarkerAngle =
+      String(markerAngle);
+
+    return presentation;
   };
 
   const setScenePhase = (
@@ -647,6 +708,13 @@ export function mountRoulette(app: HTMLDivElement) {
 
     if (phase !== "betting") {
       closeMobileHudMenus();
+    }
+
+    if (
+      phase !== "settled" &&
+      activeResultPresentation
+    ) {
+      activeResultPresentation = null;
     }
 
     renderPhaseTimer();
@@ -931,7 +999,28 @@ export function mountRoulette(app: HTMLDivElement) {
           pendingServerSpin.result.number === result.number &&
           pendingServerSpin.result.pocketIndex === result.pocketIndex
         ) {
-          renderRoundResult(pendingServerSpin.settlement);
+          const finalRotor =
+            sampleRotorSpin(
+              completedOrbit.rotorSpin,
+              completedOrbit.durationMs,
+            );
+          const presentation =
+            renderRoundResult(
+              pendingServerSpin.settlement,
+              finalRotor.angle,
+            );
+
+          if (
+            presentation.winningPocketIndex !==
+              result.pocketIndex ||
+            presentation.winningColor !==
+              result.color
+          ) {
+            throw new Error(
+              "ROULETTE_RESULT_PRESENTATION_MISMATCH",
+            );
+          }
+
           recordRecentResult(
             result.number,
           );
@@ -958,6 +1047,17 @@ export function mountRoulette(app: HTMLDivElement) {
           delete canvas.dataset.roulettePocketIndex;
           delete canvas.dataset.rouletteWinningNumber;
           delete canvas.dataset.rouletteWinningColor;
+          activeResultPresentation = null;
+          page.dataset.resultVisible = "false";
+          delete page.dataset.resultNumber;
+          delete page.dataset.resultColor;
+          delete page.dataset.resultLeftNeighbor;
+          delete page.dataset.resultRightNeighbor;
+          delete page.dataset.resultPocketIndex;
+          delete page.dataset.resultMarkerAngle;
+          delete page.dataset.resultHasPayout;
+          delete page.dataset.resultGrossReturn;
+          delete canvas.dataset.rouletteResultMarkerAngle;
         }
 
         activeBallOrbit = null;
