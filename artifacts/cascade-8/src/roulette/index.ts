@@ -6,6 +6,7 @@ import {
 import {
   clearRouletteBets,
   createRouletteBetState,
+  doubleRouletteBets,
   getRouletteBetTotals,
   getRouletteLastChipByBet,
   getRouletteTotalStake,
@@ -121,10 +122,21 @@ export function mountRoulette(app: HTMLDivElement) {
   const roundReturn = app.querySelector<HTMLElement>("[data-round-return]");
   const roundProfit = app.querySelector<HTMLElement>("[data-round-profit]");
   const roundOutcome = app.querySelector<HTMLElement>("[data-round-outcome]");
-  const undoButton = app.querySelector<HTMLButtonElement>("[data-undo-bet]");
+  const undoButtons = Array.from(
+    app.querySelectorAll<HTMLButtonElement>("[data-undo-bet]"),
+  );
+  const doubleButtons = Array.from(
+    app.querySelectorAll<HTMLButtonElement>("[data-double-bet]"),
+  );
   const clearButton = app.querySelector<HTMLButtonElement>("[data-clear-bets]");
   const rebetButton = app.querySelector<HTMLButtonElement>("[data-rebet]");
   const spinButton = app.querySelector<HTMLButtonElement>("[data-spin-button]");
+  const mobileChipToggle =
+    app.querySelector<HTMLButtonElement>("[data-mobile-chip-toggle]");
+  const mobileChipMenu =
+    app.querySelector<HTMLElement>("[data-mobile-chip-menu]");
+  const mobileSelectedChip =
+    app.querySelector<HTMLElement>("[data-mobile-selected-chip]");
 
   if (!canvas) throw new Error("Roulette canvas was not mounted.");
   if (!page) throw new Error("Roulette page was not mounted.");
@@ -168,6 +180,22 @@ export function mountRoulette(app: HTMLDivElement) {
   const canAffordCurrentBet = () =>
     walletBalanceCents !== null &&
     getRouletteTotalStake(betState.placements) * 100 <= walletBalanceCents;
+
+  const canDoubleCurrentBet = () =>
+    walletBalanceCents !== null &&
+    betState.placements.length > 0 &&
+    betState.placements.length <= 250 &&
+    getRouletteTotalStake(betState.placements) * 200 <= walletBalanceCents;
+
+  const setMobileChipMenuOpen = (open: boolean) => {
+    if (mobileChipMenu) {
+      mobileChipMenu.hidden = !open;
+    }
+    if (mobileChipToggle) {
+      mobileChipToggle.setAttribute("aria-expanded", String(open));
+    }
+    betPanel.dataset.mobileChipMenuOpen = String(open);
+  };
 
   const updateSpinAvailability = () => {
     if (!spinButton) return;
@@ -414,6 +442,15 @@ export function mountRoulette(app: HTMLDivElement) {
         );
       });
 
+    if (mobileSelectedChip) {
+      mobileSelectedChip.textContent =
+        formatRouletteAmount(betState.selectedChip);
+    }
+    if (mobileChipToggle) {
+      mobileChipToggle.dataset.selectedChip =
+        String(betState.selectedChip);
+    }
+
     const stake =
       getRouletteTotalStake(
         betState.placements,
@@ -425,10 +462,13 @@ export function mountRoulette(app: HTMLDivElement) {
         );
     }
 
-    if (undoButton) {
-      undoButton.disabled =
+    undoButtons.forEach((button) => {
+      button.disabled =
         betState.placements.length === 0;
-    }
+    });
+    doubleButtons.forEach((button) => {
+      button.disabled = !canDoubleCurrentBet();
+    });
     if (clearButton) {
       clearButton.disabled =
         betState.placements.length === 0;
@@ -661,6 +701,17 @@ export function mountRoulette(app: HTMLDivElement) {
       const target =
         event.target as HTMLElement;
 
+      if (
+        target.closest(
+          "[data-mobile-chip-toggle]",
+        )
+      ) {
+        const isOpen =
+          mobileChipToggle?.getAttribute("aria-expanded") === "true";
+        setMobileChipMenuOpen(!isOpen);
+        return;
+      }
+
       const chipButton =
         target.closest<HTMLButtonElement>(
           "[data-chip-value]",
@@ -678,6 +729,7 @@ export function mountRoulette(app: HTMLDivElement) {
               value as RouletteChipValue,
             );
           renderBetState();
+          setMobileChipMenuOpen(false);
         }
         return;
       }
@@ -696,6 +748,7 @@ export function mountRoulette(app: HTMLDivElement) {
               betId,
             );
           renderBetState();
+          setMobileChipMenuOpen(false);
         }
         return;
       }
@@ -710,6 +763,23 @@ export function mountRoulette(app: HTMLDivElement) {
             betState,
           );
         renderBetState();
+        setMobileChipMenuOpen(false);
+        return;
+      }
+
+      if (
+        target.closest(
+          "[data-double-bet]",
+        )
+      ) {
+        if (canDoubleCurrentBet()) {
+          betState =
+            doubleRouletteBets(
+              betState,
+            );
+          renderBetState();
+        }
+        setMobileChipMenuOpen(false);
         return;
       }
 
