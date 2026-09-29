@@ -99,12 +99,15 @@ export function deriveMarketFeedHealth(
     nowMs - quote.receivedAtMs,
   );
 
+  const quoteBelongsToCurrentConnection =
+    quote.connectionEpoch === snapshot.connectionEpoch;
   const transportCanBeLive =
     snapshot.status === "LIVE"
     || snapshot.status === "REBASELINING";
 
   if (
     transportCanBeLive
+    && quoteBelongsToCurrentConnection
     && quoteAgeMs <= staleAfterMs
   ) {
     return {
