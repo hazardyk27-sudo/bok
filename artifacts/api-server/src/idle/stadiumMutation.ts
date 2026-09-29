@@ -9,6 +9,21 @@ import {
   type StadiumEconomyMutationPatch,
 } from "./stadiumPolicy";
 
+export type CheckpointedStadiumMutationContext = {
+  client: PoolClient;
+  sessionId: string;
+  serverNow: Date;
+  /** State after all elapsed production under the OLD economy parameters. */
+  settledState: StadiumStorageState;
+  /** Projection used to settle the old state before the mutation callback. */
+  settlement: StadiumProductionProjection;
+};
+
+export type CheckpointedStadiumMutationDecision<T> = {
+  patch: StadiumEconomyMutationPatch;
+  result: T;
+};
+
 /**
  * Persists the already-validated post-mutation Stadium state.
  *
