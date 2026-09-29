@@ -205,7 +205,7 @@ export class GlobalMarketWriterLeadership {
    * rather than creating a race at every tick.
    */
   async runIfLeader<T>(
-    write: () => Promise<T>,
+    write: (client: MarketLeadershipClient) => Promise<T>,
   ): Promise<
     | { executed: false; value: null }
     | { executed: true; value: T }
@@ -218,9 +218,14 @@ export class GlobalMarketWriterLeadership {
       };
     }
 
+    const client = this.leaderClient;
+    if (!client) {
+      throw new Error("IDLE_MARKET_LEADER_SESSION_MISSING");
+    }
+
     return {
       executed: true,
-      value: await write(),
+      value: await write(client),
     };
   }
 }
