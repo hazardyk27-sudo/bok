@@ -45,7 +45,10 @@ describe("Part 25 backend cutover", () => {
       "getIdleStadiumState(sessionId)",
     );
     expect(stateSource).toContain(
-      "stadiumRepository.getSessionState(",
+      "await ensureStadiumState(",
+    );
+    expect(stateSource).toContain(
+      "projectPersistedStadiumState(",
     );
     expect(stateSource).toContain(
       "roulette_wallets",
