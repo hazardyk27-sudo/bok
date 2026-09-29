@@ -707,6 +707,7 @@ export function mountRoulette(app: HTMLDivElement) {
     window.clearTimeout(
       resultHoldTimer,
     );
+    setMobileChipMenuOpen(false);
 
     await rouletteAudio.ensureStarted();
 
