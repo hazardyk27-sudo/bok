@@ -5,9 +5,11 @@ import {
 } from "vitest";
 import {
   clearRouletteBets,
+  compactRouletteBetPlacements,
   createRouletteBetState,
   doubleRouletteBets,
   getRouletteBetTotals,
+  getRouletteDisplayChipValue,
   getRouletteTotalStake,
   placeRouletteBet,
   rebetRouletteRound,
@@ -144,25 +146,52 @@ describe("roulette local wager state", () => {
     ]);
   });
 
-  it("doubles every current placement without changing chip values", () => {
+  it("doubles every current placement without an artificial placement cap", () => {
     let state = createRouletteBetState();
 
-    state = selectRouletteChip(state, 25);
+    state = selectRouletteChip(state, 10);
     state = placeRouletteBet(state, "straight-17");
-    state = selectRouletteChip(state, 5);
-    state = placeRouletteBet(state, "red");
-    state = doubleRouletteBets(state);
 
-    expect(getRouletteTotalStake(state.placements)).toBe(60);
-    expect(getRouletteBetTotals(state.placements)).toEqual({
-      "straight-17": 50,
-      red: 10,
-    });
-    expect(state.placements).toEqual([
-      { betId: "straight-17", amount: 25 },
-      { betId: "red", amount: 5 },
-      { betId: "straight-17", amount: 25 },
-      { betId: "red", amount: 5 },
+    for (let index = 0; index < 9; index += 1) {
+      state = doubleRouletteBets(state);
+    }
+
+    expect(getRouletteTotalStake(state.placements)).toBe(5120);
+    expect(state.placements).toHaveLength(512);
+  });
+
+  it("compacts repeated placements before an authoritative spin", () => {
+    let state = createRouletteBetState();
+
+    state = selectRouletteChip(state, 10);
+    state = placeRouletteBet(state, "straight-17");
+
+    for (let index = 0; index < 6; index += 1) {
+      state = doubleRouletteBets(state);
+    }
+
+    expect(
+      compactRouletteBetPlacements(state.placements),
+    ).toEqual([
+      {
+        betId: "straight-17",
+        amount: 640,
+      },
     ]);
+  });
+
+  it("promotes the displayed chip by the total wager amount", () => {
+    expect(getRouletteDisplayChipValue(1)).toBe(1);
+    expect(getRouletteDisplayChipValue(4)).toBe(1);
+    expect(getRouletteDisplayChipValue(5)).toBe(5);
+    expect(getRouletteDisplayChipValue(9)).toBe(5);
+    expect(getRouletteDisplayChipValue(10)).toBe(10);
+    expect(getRouletteDisplayChipValue(24)).toBe(10);
+    expect(getRouletteDisplayChipValue(25)).toBe(25);
+    expect(getRouletteDisplayChipValue(99)).toBe(25);
+    expect(getRouletteDisplayChipValue(100)).toBe(100);
+    expect(getRouletteDisplayChipValue(499)).toBe(100);
+    expect(getRouletteDisplayChipValue(500)).toBe(500);
+    expect(getRouletteDisplayChipValue(640)).toBe(500);
   });
 });

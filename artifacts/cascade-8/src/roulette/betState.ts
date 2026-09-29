@@ -12,7 +12,7 @@ export type RouletteChipValue =
 
 export type RouletteBetPlacement = {
   betId: string;
-  amount: RouletteChipValue;
+  amount: number;
 };
 
 export type RouletteBetState = {
@@ -86,10 +86,7 @@ export function clearRouletteBets(
 export function doubleRouletteBets(
   state: RouletteBetState,
 ): RouletteBetState {
-  if (
-    state.placements.length === 0 ||
-    state.placements.length > 250
-  ) {
+  if (state.placements.length === 0) {
     return state;
   }
 
@@ -150,11 +147,47 @@ export function getRouletteBetTotals(
   );
 }
 
+export function compactRouletteBetPlacements(
+  placements: readonly RouletteBetPlacement[],
+): RouletteBetPlacement[] {
+  const totals =
+    getRouletteBetTotals(placements);
+  const seen = new Set<string>();
+
+  return placements.flatMap((placement) => {
+    if (seen.has(placement.betId)) {
+      return [];
+    }
+
+    seen.add(placement.betId);
+    const amount =
+      totals[placement.betId] ?? 0;
+
+    return amount > 0
+      ? [{
+          betId: placement.betId,
+          amount,
+        }]
+      : [];
+  });
+}
+
+export function getRouletteDisplayChipValue(
+  amount: number,
+): RouletteChipValue {
+  if (amount >= 500) return 500;
+  if (amount >= 100) return 100;
+  if (amount >= 25) return 25;
+  if (amount >= 10) return 10;
+  if (amount >= 5) return 5;
+  return 1;
+}
+
 export function getRouletteLastChipByBet(
   placements: readonly RouletteBetPlacement[],
 ) {
   return placements.reduce<
-    Record<string, RouletteChipValue>
+    Record<string, number>
   >((lastByBet, placement) => {
     lastByBet[placement.betId] =
       placement.amount;

@@ -8,20 +8,28 @@ import {
 } from "../../../cascade-8/src/roulette/spinResult";
 
 describe("roulette authoritative round", () => {
-  it("validates the exposed chip denominations and bet ids", () => {
+  it("accepts aggregate positive bet amounts and validates bet ids", () => {
     expect(
       parseRouletteServerBets([
-        { betId: "straight-17", amount: 10 },
+        { betId: "straight-17", amount: 640 },
         { betId: "red", amount: 25 },
       ]),
     ).toEqual([
-      { betId: "straight-17", amount: 10 },
+      { betId: "straight-17", amount: 640 },
       { betId: "red", amount: 25 },
     ]);
 
     expect(() =>
-      parseRouletteServerBets([{ betId: "straight-17", amount: 3 }]),
-    ).toThrow("INVALID_ROULETTE_CHIP");
+      parseRouletteServerBets([{ betId: "straight-17", amount: 0 }]),
+    ).toThrow("INVALID_ROULETTE_BET_AMOUNT");
+
+    expect(() =>
+      parseRouletteServerBets([{ betId: "straight-17", amount: -5 }]),
+    ).toThrow("INVALID_ROULETTE_BET_AMOUNT");
+
+    expect(() =>
+      parseRouletteServerBets([{ betId: "straight-17", amount: 2.5 }]),
+    ).toThrow("INVALID_ROULETTE_BET_AMOUNT");
 
     expect(() =>
       parseRouletteServerBets([{ betId: "split-1-2", amount: 10 }]),
