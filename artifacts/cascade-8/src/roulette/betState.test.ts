@@ -8,6 +8,7 @@ import {
   compactRouletteBetPlacements,
   createRouletteBetState,
   doubleRouletteBets,
+  expandRouletteBetPlacementsToChipValues,
   getRouletteBetTotals,
   getRouletteDisplayChipValue,
   getRouletteTotalStake,
@@ -187,6 +188,50 @@ describe("roulette local wager state", () => {
       {
         betId: "straight-17",
         amount: 640,
+      },
+    ]);
+  });
+
+  it("expands aggregate wagers back into canonical chip denominations", () => {
+    expect(
+      expandRouletteBetPlacementsToChipValues([
+        {
+          betId: "straight-17",
+          amount: 20,
+        },
+        {
+          betId: "red",
+          amount: 640,
+        },
+      ]),
+    ).toEqual([
+      {
+        betId: "straight-17",
+        amount: 10,
+      },
+      {
+        betId: "straight-17",
+        amount: 10,
+      },
+      {
+        betId: "red",
+        amount: 500,
+      },
+      {
+        betId: "red",
+        amount: 100,
+      },
+      {
+        betId: "red",
+        amount: 25,
+      },
+      {
+        betId: "red",
+        amount: 10,
+      },
+      {
+        betId: "red",
+        amount: 5,
       },
     ]);
   });
