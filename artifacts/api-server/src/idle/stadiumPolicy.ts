@@ -161,3 +161,40 @@ export function resolveNextStadiumUpgrade(
       balanceCents - targetConfig.unlockCostCents,
   };
 }
+
+
+/**
+ * Resolves exactly one independent Speed upgrade.
+ *
+ * Stadium level, owned seats, and Storage level are deliberately not inputs:
+ * Speed progression is its own 20-level track.
+ */
+export function resolveNextSpeedUpgrade(
+  currentLevel: SpeedLevel,
+  balanceCents: number,
+) {
+  requireSafeNonNegativeInteger(
+    balanceCents,
+    "INVALID_IDLE_WALLET_BALANCE",
+  );
+
+  const targetConfig = SPEED_LEVELS.find(
+    (entry) => entry.level === currentLevel + 1,
+  );
+  if (!targetConfig) {
+    throw new Error("IDLE_SPEED_MAX_LEVEL");
+  }
+
+  if (balanceCents < targetConfig.upgradeCostCents) {
+    throw new Error("INSUFFICIENT_IDLE_CREDITS");
+  }
+
+  return {
+    targetSpeedLevel: targetConfig.level,
+    microTicketsPerSeatPerHour:
+      targetConfig.microTicketsPerSeatPerHour,
+    costCents: targetConfig.upgradeCostCents,
+    balanceAfterCents:
+      balanceCents - targetConfig.upgradeCostCents,
+  };
+}
