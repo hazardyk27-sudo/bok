@@ -129,6 +129,28 @@ describe("ticket sale transaction contract", () => {
     );
   });
 
+
+  it("hard-bounds execution price and validates replay arithmetic/remainder integrity", () => {
+    expect(saleSource).toContain(
+      "MARKET_CONFIG.minTicketPriceMicrodollars",
+    );
+    expect(saleSource).toContain(
+      "MARKET_CONFIG.maxTicketPriceMicrodollars",
+    );
+    expect(saleSource).toContain(
+      "saleRemainderMicrodollars\n      >= MARKET_MICRODOLLARS_PER_CENT",
+    );
+    expect(saleSource).toContain(
+      "const expectedGross =",
+    );
+    expect(saleSource).toContain(
+      "const impliedPriorRemainder =",
+    );
+    expect(saleSource).toContain(
+      "balanceCents < walletCreditCents",
+    );
+  });
+
   it("returns a temporary-unavailable error when no authoritative market state exists", () => {
     expect(saleSource).toContain(
       'throw new Error("IDLE_MARKET_STATE_MISSING")',
