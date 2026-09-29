@@ -92,12 +92,14 @@ export function doubleRouletteBets(
 
   return {
     ...state,
-    placements: [
-      ...state.placements,
-      ...state.placements.map((placement) => ({
-        ...placement,
-      })),
-    ],
+    placements:
+      state.placements.map(
+        (placement) => ({
+          ...placement,
+          amount:
+            placement.amount * 2,
+        }),
+      ),
   };
 }
 
