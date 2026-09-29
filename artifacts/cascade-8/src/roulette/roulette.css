@@ -3900,3 +3900,94 @@ button {
     margin-left: 0.2px;
   }
 }
+
+
+/* Part 9 — phase-stable placed chips */
+@media (max-width: 900px) and (orientation: portrait) {
+  .roulette-page .roulette-bet-cell > .roulette-placed-chip,
+  .roulette-page[data-phase="betting"] .roulette-bet-cell > .roulette-placed-chip,
+  .roulette-page[data-phase="spinning"] .roulette-bet-cell > .roulette-placed-chip,
+  .roulette-page[data-phase="settled"] .roulette-bet-cell > .roulette-placed-chip {
+    --placed-chip-size:
+      clamp(
+        18px,
+        calc(var(--table-width) * 0.072),
+        22px
+      );
+    box-sizing: border-box;
+    width: var(--placed-chip-size) !important;
+    height: var(--placed-chip-size) !important;
+    min-width: var(--placed-chip-size) !important;
+    min-height: var(--placed-chip-size) !important;
+    max-width: none !important;
+    max-height: none !important;
+    aspect-ratio: 1 / 1;
+    left: 50% !important;
+    top: 50% !important;
+    right: auto !important;
+    bottom: auto !important;
+    transform: translate(-50%, -50%) !important;
+    border-radius: 50% !important;
+    flex: 0 0 var(--placed-chip-size);
+    padding: 0 1.5px;
+    overflow: hidden;
+    line-height: 1;
+  }
+
+  .roulette-page[data-phase="spinning"]
+    .roulette-bet-cell > .roulette-placed-chip,
+  .roulette-page[data-phase="settled"]
+    .roulette-bet-cell > .roulette-placed-chip {
+    opacity: 1 !important;
+    filter: none !important;
+    scale: 1 !important;
+  }
+
+  .roulette-page .roulette-placed-chip::before,
+  .roulette-page[data-phase="spinning"] .roulette-placed-chip::before,
+  .roulette-page[data-phase="settled"] .roulette-placed-chip::before {
+    inset: 2.5px;
+    border-radius: 50%;
+  }
+
+  .roulette-page .roulette-placed-chip__value,
+  .roulette-page .roulette-placed-chip__suffix {
+    writing-mode: horizontal-tb !important;
+    text-orientation: mixed !important;
+    transform: none;
+  }
+
+  .roulette-page .roulette-placed-chip[data-amount-scale="short"] {
+    font-size:
+      clamp(
+        8.2px,
+        calc(var(--table-width) * 0.030),
+        9.8px
+      );
+  }
+
+  .roulette-page .roulette-placed-chip[data-amount-scale="medium"] {
+    font-size:
+      clamp(
+        7.2px,
+        calc(var(--table-width) * 0.027),
+        8.6px
+      );
+  }
+
+  .roulette-page .roulette-placed-chip[data-amount-scale="long"] {
+    font-size:
+      clamp(
+        6.2px,
+        calc(var(--table-width) * 0.0235),
+        7.4px
+      );
+  }
+
+  .roulette-page
+    .roulette-placed-chip[data-amount-scale="long"]
+    .roulette-placed-chip__suffix {
+    font-size: 0.54em;
+    margin-left: 0.15px;
+  }
+}
