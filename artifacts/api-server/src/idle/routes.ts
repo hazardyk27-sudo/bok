@@ -1,7 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { Router, type IRouter, type Request, type Response } from "express";
 import { SESSION_COOKIE } from "../roulette/routes";
-import { idleRepository } from "./repository";
 import { ticketMarketPersistence } from "./marketPersistence";
 import { ticketMarketRuntime } from "./marketRuntimeDb";
 import { buyStadiumSeats } from "./seatPurchase";
@@ -9,7 +8,7 @@ import { sellStadiumTickets } from "./ticketSale";
 import { upgradeStadiumSpeed } from "./speedUpgrade";
 import { upgradeStadiumStorage } from "./storageUpgrade";
 import { upgradeStadiumLevel } from "./stadiumUpgrade";
-import { isActiveIdleBusinessId } from "./storage";
+import { getIdleStadiumState } from "./stadiumState";
 
 const router: IRouter = Router();
 const IDEMPOTENCY_PATTERN = /^[a-zA-Z0-9_-]{12,100}$/;
@@ -26,20 +25,6 @@ function getSessionId(req: Request, res: Response) {
     maxAge: 1000 * 60 * 60 * 24 * 365,
   });
   return sessionId;
-}
-
-
-function serializeBusiness(business: Awaited<ReturnType<typeof idleRepository.getSessionState>>["businesses"][number]) {
-  return {
-    businessId: business.businessId,
-    businessLevel: business.businessLevel,
-    vaultLevel: business.vaultLevel,
-    accruedMicrocents: business.projectedAccruedMicrocents,
-    vaultCapacityMicrocents: business.vaultCapacityMicrocents,
-    remainingCapacityMicrocents: business.remainingCapacityMicrocents,
-    isVaultFull: business.isVaultFull,
-    checkpointAt: business.checkpointAt.toISOString(),
-  };
 }
 
 
@@ -60,8 +45,6 @@ function serializeMarketState(state: {
 function sendError(res: Response, error: unknown) {
   const message = error instanceof Error ? error.message : "IDLE_REQUEST_FAILED";
   const status = message === "IDEMPOTENCY_KEY_REUSED"
-    || message === "IDLE_BUSINESS_MAX_LEVEL"
-    || message === "IDLE_VAULT_MAX_LEVEL"
     || message === "IDLE_STADIUM_CAPACITY_EXCEEDED"
     || message === "IDLE_STADIUM_MAX_SEATS_REACHED"
     || message === "IDLE_STADIUM_MAX_SEATS_EXCEEDED"
@@ -71,9 +54,8 @@ function sendError(res: Response, error: unknown) {
     || message === "INSUFFICIENT_IDLE_TICKETS"
     ? 409
     : message === "INSUFFICIENT_IDLE_CREDITS" ? 402
-      : message === "IDLE_BUSINESS_NOT_FOUND" ? 404
-        : message === "IDLE_MARKET_STATE_MISSING" ? 503
-          : 400;
+      : message === "IDLE_MARKET_STATE_MISSING" ? 503
+        : 400;
   res.status(status).json({ error: message });
 }
 
@@ -186,25 +168,12 @@ router.get("/idle/market/live", async (req, res) => {
 router.get("/idle/state", async (req, res) => {
   try {
     const sessionId = getSessionId(req, res);
-    const state = await idleRepository.getSessionState(sessionId);
-    res.json({
-      sessionId,
-      serverTime: state.serverNow.toISOString(),
-      wallet: state.wallet,
-      businesses: state.businesses
-        .filter((business) =>
-          isActiveIdleBusinessId(business.businessId))
-        .map(serializeBusiness),
-    });
+    const state = await getIdleStadiumState(sessionId);
+    res.json(state);
   } catch (error) {
     sendError(res, error);
   }
 });
-
-
-
-
-
 
 
 router.post("/idle/stadium/tickets/sell", async (req, res) => {
@@ -369,144 +338,6 @@ router.post("/idle/stadium/seats/buy", async (req, res) => {
     );
 
     res.json(result);
-  } catch (error) {
-    sendError(res, error);
-  }
-});
-
-router.post("/idle/collect-all", async (req, res) => {
-  try {
-    const { idempotencyKey } = req.body as { idempotencyKey?: unknown };
-    if (typeof idempotencyKey !== "string" || !IDEMPOTENCY_PATTERN.test(idempotencyKey)) {
-      res.status(400).json({ error: "VALID_IDEMPOTENCY_KEY_REQUIRED" });
-      return;
-    }
-
-    const result = await idleRepository.collectAllBusinesses(
-      getSessionId(req, res),
-      idempotencyKey,
-    );
-
-    res.json({
-      serverTime: result.serverNow.toISOString(),
-      collectedCents: result.collectedCents,
-      balanceCents: result.balanceCents,
-      replayed: result.replayed,
-      collections: result.collections.map((collection) => ({
-        businessId: collection.businessId,
-        collectedCents: collection.collectedCents,
-        replayed: collection.replayed,
-      })),
-      businesses: result.businesses
-        .filter((business) =>
-          isActiveIdleBusinessId(business.businessId))
-        .map(serializeBusiness),
-    });
-  } catch (error) {
-    sendError(res, error);
-  }
-});
-
-
-router.post("/idle/businesses/:businessId/collect", async (req, res) => {
-  try {
-    const businessId = req.params.businessId;
-    if (!isActiveIdleBusinessId(businessId)) {
-      res.status(404).json({ error: "IDLE_BUSINESS_NOT_FOUND" });
-      return;
-    }
-
-    const { idempotencyKey } = req.body as { idempotencyKey?: unknown };
-    if (typeof idempotencyKey !== "string" || !IDEMPOTENCY_PATTERN.test(idempotencyKey)) {
-      res.status(400).json({ error: "VALID_IDEMPOTENCY_KEY_REQUIRED" });
-      return;
-    }
-
-    const result = await idleRepository.collectBusiness(
-      getSessionId(req, res),
-      businessId,
-      idempotencyKey,
-    );
-
-    res.json({
-      serverTime: result.serverNow.toISOString(),
-      businessId: result.businessId,
-      collectedCents: result.collectedCents,
-      remainderMicrocents: result.remainderMicrocents,
-      balanceCents: result.balanceCents,
-      replayed: result.replayed,
-      business: serializeBusiness(result.business),
-    });
-  } catch (error) {
-    sendError(res, error);
-  }
-});
-
-
-router.post("/idle/businesses/:businessId/upgrade", async (req, res) => {
-  try {
-    const businessId = req.params.businessId;
-    if (!isActiveIdleBusinessId(businessId)) {
-      res.status(404).json({ error: "IDLE_BUSINESS_NOT_FOUND" });
-      return;
-    }
-
-    const { idempotencyKey } = req.body as { idempotencyKey?: unknown };
-    if (typeof idempotencyKey !== "string" || !IDEMPOTENCY_PATTERN.test(idempotencyKey)) {
-      res.status(400).json({ error: "VALID_IDEMPOTENCY_KEY_REQUIRED" });
-      return;
-    }
-
-    const result = await idleRepository.upgradeBusiness(
-      getSessionId(req, res),
-      businessId,
-      idempotencyKey,
-    );
-
-    res.json({
-      serverTime: result.serverNow.toISOString(),
-      businessId: result.businessId,
-      targetBusinessLevel: result.targetBusinessLevel,
-      costCents: result.costCents,
-      balanceCents: result.balanceCents,
-      replayed: result.replayed,
-      business: serializeBusiness(result.business),
-    });
-  } catch (error) {
-    sendError(res, error);
-  }
-});
-
-
-router.post("/idle/businesses/:businessId/vault/upgrade", async (req, res) => {
-  try {
-    const businessId = req.params.businessId;
-    if (!isActiveIdleBusinessId(businessId)) {
-      res.status(404).json({ error: "IDLE_BUSINESS_NOT_FOUND" });
-      return;
-    }
-
-    const { idempotencyKey } = req.body as { idempotencyKey?: unknown };
-    if (typeof idempotencyKey !== "string" || !IDEMPOTENCY_PATTERN.test(idempotencyKey)) {
-      res.status(400).json({ error: "VALID_IDEMPOTENCY_KEY_REQUIRED" });
-      return;
-    }
-
-    const result = await idleRepository.upgradeVault(
-      getSessionId(req, res),
-      businessId,
-      idempotencyKey,
-    );
-
-    res.json({
-      serverTime: result.serverNow.toISOString(),
-      businessId: result.businessId,
-      targetVaultLevel: result.targetVaultLevel,
-      costCents: result.costCents,
-      balanceCents: result.balanceCents,
-      replayed: result.replayed,
-      business: serializeBusiness(result.business),
-    });
   } catch (error) {
     sendError(res, error);
   }
