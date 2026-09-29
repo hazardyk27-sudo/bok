@@ -240,7 +240,14 @@ export function renderRouletteBetTable() {
               aria-label="Show recent statistics"
               aria-expanded="false"
             >
-              ▥
+              <svg
+                class="roulette-rail-icon"
+                viewBox="0 0 20 20"
+                aria-hidden="true"
+                focusable="false"
+              >
+                <path d="M4 15V10M10 15V5M16 15V8" />
+              </svg>
             </button>
             <div
               class="roulette-mobile-stats-panel"
@@ -268,7 +275,15 @@ export function renderRouletteBetTable() {
             aria-label="Undo last bet"
             disabled
           >
-            ↶
+            <svg
+              class="roulette-rail-icon roulette-rail-icon--undo"
+              viewBox="0 0 20 20"
+              aria-hidden="true"
+              focusable="false"
+            >
+              <path d="M7.3 6.2H4.2V3.1" />
+              <path d="M4.5 6.1A6.2 6.2 0 1 1 3.9 13" />
+            </svg>
           </button>
 
           <div class="roulette-mobile-chip-picker" data-mobile-chip-picker>
@@ -308,7 +323,15 @@ export function renderRouletteBetTable() {
             aria-label="Repeat previous bet"
             disabled
           >
-            ↻
+            <svg
+              class="roulette-rail-icon roulette-rail-icon--rebet"
+              viewBox="0 0 20 20"
+              aria-hidden="true"
+              focusable="false"
+            >
+              <path d="M12.7 4.6h3.1V1.5" />
+              <path d="M15.5 4.7A6.2 6.2 0 1 0 16.1 13" />
+            </svg>
           </button>
         </div>
       </div>
