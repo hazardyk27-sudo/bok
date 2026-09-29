@@ -60,7 +60,10 @@ describe("Speed upgrade transaction contract", () => {
       'const SPEED_UPGRADE_ACTION = "SPEED_UPGRADE"',
     );
     expect(speedSource).toContain(
-      "INSERT INTO idle_stadium_action_receipts",
+      "reserveStadiumActionReceipt(",
+    );
+    expect(speedSource).toContain(
+      'actionType: "SPEED_UPGRADE"',
     );
     expect(speedSource).toContain("target_level");
     expect(speedSource).toContain("replayed: true");
