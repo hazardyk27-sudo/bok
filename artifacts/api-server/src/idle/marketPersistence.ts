@@ -200,6 +200,23 @@ export class TicketMarketPersistence {
     }
   }
 
+
+  async getCurrentStateForShareOnClient(
+    client: MarketPersistenceClient,
+  ) {
+    const result = await client.query<MarketStateRow>(
+      `SELECT price_microdollars, source, feed_status, tick_at
+         FROM idle_ticket_market_state
+        WHERE id = $1
+        FOR SHARE`,
+      [GLOBAL_TICKET_MARKET_STATE_ID],
+    );
+
+    return result.rows[0]
+      ? stateRowToState(result.rows[0])
+      : null;
+  }
+
   async getCurrentStateOnClient(
     client: MarketPersistenceClient,
   ) {
