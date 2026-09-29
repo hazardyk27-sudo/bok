@@ -4,6 +4,7 @@ import {
   TicketMarketRuntime,
   getDelayUntilNextMarketTick,
   type RuntimeMarketFeed,
+  type RuntimeMarketLeadershipClient,
   type RuntimeMarketPersistence,
   type RuntimeMarketPersistenceClient,
   type RuntimePersistedMarketState,
@@ -103,7 +104,7 @@ class FakeLeadership {
 
   async runIfLeader<T>(
     write: (
-      client: RuntimeMarketPersistenceClient,
+      client: RuntimeMarketLeadershipClient,
     ) => Promise<T>,
   ) {
     if (!this.leader) {
@@ -117,7 +118,8 @@ class FakeLeadership {
       executed: true as const,
       value: await write({
         query: async () => ({ rows: [] }),
-      }),
+        release: () => undefined,
+      } as unknown as RuntimeMarketLeadershipClient),
     };
   }
 
