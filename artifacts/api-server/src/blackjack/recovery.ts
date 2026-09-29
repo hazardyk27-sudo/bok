@@ -7,6 +7,7 @@ import { verifyBlackjackJournalRecord } from "./journal";
 import type { BlackjackJournalRepository } from "./journalRepository";
 import {
   BLACKJACK_RECONNECT_GRACE_MS,
+  inferBlackjackReconnectStatus,
   type BlackjackReconnectRecord,
   type BlackjackReconnectRegistry,
 } from "./reconnect";
@@ -104,10 +105,29 @@ function makeRestartDisconnectedState(
   const players: BlackjackPlayer[] = runtime.table.players.map((player) => {
     if (player.status === "DISCONNECTED") {
       const record = existingRecords.get(player.playerId);
-      if (!record) {
-        throw new Error(
-          "Blackjack recovery found disconnected player without reconnect record",
-        );
+      if(!record){
+        if(player.disconnectedAtMs===null){
+          throw new Error(
+            "Blackjack recovery found disconnected player without disconnectedAtMs",
+          );
+        }
+        const healed: BlackjackReconnectRecord=Object.freeze({
+          playerId:player.playerId,
+          userId:player.userId,
+          sessionId:player.sessionId,
+          previousStatus:inferBlackjackReconnectStatus(
+            runtime.table,
+            player.playerId,
+          ),
+          disconnectedAtMs:player.disconnectedAtMs,
+          expiresAtMs:safeAddMs(
+            player.disconnectedAtMs,
+            BLACKJACK_RECONNECT_GRACE_MS,
+          ),
+          roundId:runtime.table.round?.roundId ?? null,
+        });
+        records.push(healed);
+        existingRecords.set(player.playerId,healed);
       }
       return player;
     }
@@ -128,6 +148,7 @@ function makeRestartDisconnectedState(
         recoveredAtMs,
         BLACKJACK_RECONNECT_GRACE_MS,
       ),
+      roundId:runtime.table.round?.roundId ?? null,
     });
     records.push(record);
 

@@ -145,7 +145,7 @@ describe("blackjack reconnect grace", () => {
     expect(reconnected.registry.records).toHaveLength(0);
   });
 
-  it("rejects wrong identity and reconnects after grace expiry", () => {
+  it("rejects wrong identity but allows the same identity after grace expiry", () => {
     const disconnected = disconnectBlackjackPlayerForReconnect(
       seatedTable(),
       createBlackjackReconnectRegistry(),
@@ -170,14 +170,22 @@ describe("blackjack reconnect grace", () => {
       }),
     ).toThrow(/sessionId/);
 
-    expect(() =>
-      reconnectBlackjackPlayer(disconnected.table, disconnected.registry, {
+    const late=reconnectBlackjackPlayer(
+      disconnected.table,
+      disconnected.registry,
+      {
         playerId: "player-1",
         userId: "user-1",
         sessionId: "session-1",
         nowMs: 31_001,
-      }),
-    ).toThrow(/grace has expired/);
+      },
+    );
+    expect(late.table.players[0]).toMatchObject({
+      connected:true,
+      status:"SEATED_WAITING",
+      disconnectedAtMs:null,
+    });
+    expect(late.registry.records).toEqual([]);
   });
 
   it("does not extend the action timer just because the socket disconnected", () => {
@@ -230,7 +238,51 @@ describe("blackjack reconnect grace", () => {
     expect(expired.autoStood).toBe(true);
     expect(expired.reason).toBe("RECONNECT_GRACE_EXPIRED");
     expect(expired.table.round?.hands[0].status).toBe("STOOD");
-    expect(expired.registry.records).toHaveLength(0);
+    expect(expired.registry.records).toHaveLength(1);
+
+    const late=reconnectBlackjackPlayer(
+      expired.table,
+      expired.registry,
+      {
+        playerId:"player-1",
+        userId:"user-1",
+        sessionId:"session-1",
+        nowMs:31_001,
+      },
+    );
+    expect(late.table.players[0]).toMatchObject({
+      connected:true,
+      status:"SEATED_WAITING",
+      disconnectedAtMs:null,
+    });
+    expect(late.table.round?.hands[0].status).toBe("STOOD");
+    expect(late.registry.records).toEqual([]);
+  });
+
+  it("heals a legacy disconnected seat whose reconnect record is missing",()=>{
+    const disconnected=disconnectBlackjackPlayerForReconnect(
+      seatedTable("READY"),
+      createBlackjackReconnectRegistry(),
+      {playerId:"player-1",nowMs:1_000},
+    );
+
+    const healed=reconnectBlackjackPlayer(
+      disconnected.table,
+      createBlackjackReconnectRegistry(),
+      {
+        playerId:"player-1",
+        userId:"user-1",
+        sessionId:"session-1",
+        nowMs:50_000,
+      },
+    );
+
+    expect(healed.table.players[0]).toMatchObject({
+      connected:true,
+      status:"BETTING",
+      disconnectedAtMs:null,
+    });
+    expect(healed.registry.records).toEqual([]);
   });
 
   it("does nothing when the current player is connected", () => {

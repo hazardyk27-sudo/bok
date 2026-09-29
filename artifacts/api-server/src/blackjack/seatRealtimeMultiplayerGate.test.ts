@@ -80,8 +80,12 @@ function gateShoe(): BlackjackShoe {
   });
   const cards=[...source.cards];
   const ranks: readonly BlackjackCard["rank"][]=[
-    "10","9","8","7","6","10",
-    "7","8","9","10","5","6",
+    // Initial deal (seat 1..5, dealer, seat 1..5, dealer)
+    "5","5","10","10","9","10",
+    "5","6","7","8","7","6",
+    // SPLIT left/right, DOUBLE seat 1, HIT split-right,
+    // DOUBLE seat 2, HIT seat 5, dealer draw.
+    "6","8","5","2","10","3","5",
   ];
 
   for(let target=0;target<ranks.length;target+=1){
@@ -375,12 +379,131 @@ describe("blackjack five-client realtime entry-to-game gate",()=>{
       expect(dealerCards[1]).toBeNull();
     }
 
+    const roundId="five-client-gate-table:round-1";
+    const seatOneInitial=roundId+":seat-1:initial";
+    const seatOneRight=seatOneInitial+":split-1:2";
+
+    const actions=[
+      {seat:1,type:"SPLIT",handId:seatOneInitial},
+      {seat:1,type:"DOUBLE",handId:seatOneInitial},
+      {seat:1,type:"HIT",handId:seatOneRight},
+      {seat:1,type:"STAND",handId:seatOneRight},
+      {seat:2,type:"DOUBLE",handId:roundId+":seat-2:initial"},
+      {seat:3,type:"STAND",handId:roundId+":seat-3:initial"},
+      {seat:4,type:"STAND",handId:roundId+":seat-4:initial"},
+      {seat:5,type:"HIT",handId:roundId+":seat-5:initial"},
+      {seat:5,type:"STAND",handId:roundId+":seat-5:initial"},
+    ] as const;
+
+    for(let index=0;index<actions.length;index+=1){
+      const action=actions[index];
+      const inbox=inboxes[action.seat-1]!;
+      const before=inbox.latestSnapshot();
+      const cursor=snapshotCursor(before);
+      clock+=1;
+      const actionId=
+        "full-round-"+action.type.toLowerCase()+"-"+(index+1);
+
+      inbox.socket.send(JSON.stringify({
+        type:action.type,
+        actionId,
+        expectedStateVersion:cursor.stateVersion,
+        roundId,
+        handId:action.handId,
+        seatNumber:action.seat,
+      }));
+
+      const ack=await inbox.waitFor(
+        (message)=>
+          message.type==="ACTION_ACCEPTED" &&
+          message.actionId===actionId,
+      );
+      const acknowledgedSequence=ack.eventSequence;
+      expect(typeof acknowledgedSequence).toBe("number");
+
+      await Promise.all(
+        inboxes.map((candidate)=>candidate.waitFor(
+          (message)=>
+            message.type==="snapshot" &&
+            (message.snapshot as JsonMessage).eventSequence===
+              acknowledgedSequence,
+        )),
+      );
+    }
+
+    expect(attached.scheduled.coordinator.getTable()).toMatchObject({
+      phase:"DEALER_TURN",
+      stateVersion:29,
+      eventSequence:26,
+    });
+    expect(attached.scheduled.coordinator.getTable().round?.hands)
+      .toHaveLength(6);
+    expect(attached.scheduled.coordinator.getTable().round?.hands[0])
+      .toMatchObject({
+        origin:"SPLIT",
+        isDoubled:true,
+        status:"STOOD",
+        betCents:2_000,
+      });
+    expect(attached.scheduled.coordinator.getTable().round?.hands[1])
+      .toMatchObject({
+        origin:"SPLIT",
+        status:"STOOD",
+      });
+    expect(attached.scheduled.coordinator.getTable().round?.hands[2])
+      .toMatchObject({
+        playerId:"gate-player-2",
+        isDoubled:true,
+        status:"STOOD",
+        betCents:2_000,
+      });
+
+    clock+=1;
+    const settled=await attached.scheduled.authority.driver.tick();
+    expect(settled.status).toBe("ROUND_ENDED");
+    expect(settled.transitions.map((transition)=>transition.type))
+      .toEqual([
+        "DEALER_TURN_COMMITTED",
+        "ROUND_SETTLED",
+      ]);
+
+    const finalTable=attached.scheduled.coordinator.getTable();
+    expect(finalTable).toMatchObject({
+      phase:"ROUND_END",
+      stateVersion:31,
+      eventSequence:28,
+    });
+    expect(finalTable.round?.hands.every(
+      (hand)=>hand.status==="COMPLETE",
+    )).toBe(true);
+    expect(finalTable.round?.dealer.holeCardRevealed).toBe(true);
+    expect(attached.scheduled.coordinator.getAccounts().every(
+      (account)=>account.wallet.reservedBalanceCents===0,
+    )).toBe(true);
+
+    await Promise.all(
+      inboxes.map((candidate)=>candidate.waitFor(
+        (message)=>
+          message.type==="snapshot" &&
+          (message.snapshot as JsonMessage).eventSequence===28,
+      )),
+    );
+    for(const inbox of inboxes){
+      expect(inbox.latestSnapshot().phase).toBe("ROUND_END");
+      expect(inbox.latestPrivateState()).toMatchObject({
+        type:"PRIVATE_PLAYER_STATE",
+        stateVersion:31,
+        eventSequence:28,
+        reservedBalanceCents:0,
+      });
+    }
+
     const persistedSnapshot=
       stored as BlackjackDurableSnapshot | null;
     if(persistedSnapshot===null){
       throw new Error("Blackjack five-client gate did not persist snapshot");
     }
-    expect(persistedSnapshot.stateVersion).toBe(20);
-    expect(persistedSnapshot.eventSequence).toBe(17);
+    expect(persistedSnapshot.stateVersion).toBe(31);
+    expect(persistedSnapshot.eventSequence).toBe(28);
   });
 });

@@ -128,13 +128,13 @@ describe("blackjack recovered scheduled runtime",()=>{
     expect(runtime).not.toBeNull();
     expect(savedPhases).toEqual([
       "BETTING",
-      "BETTING_LOCKED",
+      "TABLE_IDLE",
     ]);
-    expect(savedVersions).toEqual([5,6]);
-    expect(stored.eventSequence).toBe(4);
-    expect(stored.payload.table.phase).toBe("BETTING_LOCKED");
+    expect(savedVersions).toEqual([5,7]);
+    expect(stored.eventSequence).toBe(5);
+    expect(stored.payload.table.phase).toBe("TABLE_IDLE");
     expect(runtime?.coordinator.getTable().phase)
-      .toBe("BETTING_LOCKED");
+      .toBe("TABLE_IDLE");
     expect(runtime?.scheduler.completedTickCount()).toBe(1);
     expect(runtime?.scheduler.lastResult()?.status)
       .toBe("BETTING_CLOSED_EMPTY");
@@ -156,6 +156,52 @@ describe("blackjack recovered scheduled runtime",()=>{
     expect(scheduled).not.toBeNull();
     runtime?.stop();
     expect(cancelled).toBe(true);
+  });
+
+  it("keeps the scheduler running after a non-fatal tick error and recovers on the next tick",async()=>{
+    const initial=createBlackjackDurableSnapshot(
+      durableBettingRuntime(),
+      3_000,
+    );
+    let stored: BlackjackDurableSnapshot=initial;
+    let clock=4_000;
+    const errors: unknown[]=[];
+
+    const runtime=await recoverAndStartBlackjackRoundRuntime({
+      tableId:"recovered-runtime-table",
+      snapshotRepository:{
+        load:async()=>stored,
+        save:async(snapshot)=>{
+          stored=snapshot;
+          return snapshot;
+        },
+      },
+      journalRepository:{loadAfter:async()=>[]},
+      recoveredAtMs:4_000,
+      nowMs:()=>clock,
+      scheduler:{
+        schedule:()=> "transient-scheduler",
+        cancelSchedule:()=>undefined,
+        onError:(error)=>errors.push(error),
+      },
+    });
+    if(!runtime) throw new Error("Blackjack transient runtime missing");
+
+    expect(runtime.scheduler.isRunning()).toBe(true);
+    expect(runtime.scheduler.lastError()).toBeNull();
+
+    clock=-1;
+    await runtime.scheduler.tickNow();
+    expect(errors).toHaveLength(1);
+    expect(runtime.scheduler.lastError()).toBeInstanceOf(RangeError);
+    expect(runtime.scheduler.isRunning()).toBe(true);
+
+    clock=4_001;
+    await runtime.scheduler.tickNow();
+    expect(runtime.scheduler.lastError()).toBeNull();
+    expect(runtime.scheduler.isRunning()).toBe(true);
+
+    runtime.stop();
   });
 
   it("returns null and never schedules when no durable snapshot exists",async()=>{

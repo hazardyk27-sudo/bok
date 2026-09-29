@@ -25,6 +25,11 @@ export type BlackjackReconnectRecord = Readonly<{
   previousStatus: BlackjackConnectedPlayerStatus;
   disconnectedAtMs: number;
   expiresAtMs: number;
+  /**
+   * Older durable snapshots predate this field, so it is optional for
+   * backwards-compatible recovery. New disconnects always record it.
+   */
+  roundId?: string | null;
 }>;
 
 export type BlackjackReconnectRegistry = Readonly<{
@@ -79,6 +84,65 @@ export function createBlackjackReconnectRegistry(): BlackjackReconnectRegistry {
   return freezeRegistry([]);
 }
 
+
+export function inferBlackjackReconnectStatus(
+  table: BlackjackTable,
+  playerId: BlackjackPlayerId,
+  record?: BlackjackReconnectRecord,
+): BlackjackConnectedPlayerStatus {
+  const currentRoundId=table.round?.roundId ?? null;
+  const sameRecordedRound=
+    record?.roundId !== undefined &&
+    record.roundId === currentRoundId;
+
+  if(table.phase==="BETTING"){
+    if(
+      sameRecordedRound &&
+      record?.previousStatus==="READY"
+    ){
+      return "READY";
+    }
+    return "BETTING";
+  }
+
+  if(table.phase==="PLAYER_TURNS" && table.round!==null){
+    const hasUnresolvedHand=table.round.hands.some(
+      (hand)=>
+        hand.playerId===playerId &&
+        (hand.status==="ACTIVE" || hand.status==="WAITING"),
+    );
+    return hasUnresolvedHand ? "PLAYING" : "SEATED_WAITING";
+  }
+
+  return "SEATED_WAITING";
+}
+
+function healedReconnectRecord(
+  table: BlackjackTable,
+  player: BlackjackTable["players"][number],
+): BlackjackReconnectRecord {
+  if(player.disconnectedAtMs===null){
+    throw new Error(
+      "Blackjack disconnected player is missing disconnectedAtMs",
+    );
+  }
+  return Object.freeze({
+    playerId:player.playerId,
+    userId:player.userId,
+    sessionId:player.sessionId,
+    previousStatus:inferBlackjackReconnectStatus(
+      table,
+      player.playerId,
+    ),
+    disconnectedAtMs:player.disconnectedAtMs,
+    expiresAtMs:safeAddMs(
+      player.disconnectedAtMs,
+      BLACKJACK_RECONNECT_GRACE_MS,
+    ),
+    roundId:table.round?.roundId ?? null,
+  });
+}
+
 export function disconnectBlackjackPlayerForReconnect(
   table: BlackjackTable,
   registry: BlackjackReconnectRegistry,
@@ -114,6 +178,7 @@ export function disconnectBlackjackPlayerForReconnect(
     previousStatus: player.status,
     disconnectedAtMs: input.nowMs,
     expiresAtMs: safeAddMs(input.nowMs, BLACKJACK_RECONNECT_GRACE_MS),
+    roundId: table.round?.roundId ?? null,
   });
 
   const players = Object.freeze(
@@ -154,22 +219,6 @@ export function reconnectBlackjackPlayer(
   assertNonEmptyId("userId", input.userId);
   assertNonEmptyId("sessionId", input.sessionId);
 
-  const record = registry.records.find(
-    (candidate) => candidate.playerId === input.playerId,
-  );
-  if (!record) {
-    throw new Error("Blackjack reconnect record does not exist");
-  }
-  if (record.userId !== input.userId) {
-    throw new Error("Blackjack reconnect userId does not match");
-  }
-  if (record.sessionId !== input.sessionId) {
-    throw new Error("Blackjack reconnect sessionId does not match");
-  }
-  if (input.nowMs > record.expiresAtMs) {
-    throw new Error("Blackjack reconnect grace has expired");
-  }
-
   const player = table.players.find(
     (candidate) => candidate.playerId === input.playerId,
   );
@@ -177,27 +226,55 @@ export function reconnectBlackjackPlayer(
     throw new Error("Blackjack reconnect player is no longer seated");
   }
   if (
-    player.connected ||
-    player.status !== "DISCONNECTED" ||
-    player.disconnectedAtMs !== record.disconnectedAtMs
+    player.userId !== input.userId ||
+    player.sessionId !== input.sessionId
   ) {
-    throw new Error("Blackjack reconnect table state does not match registry");
+    throw new Error("Blackjack reconnect identity does not match seated player");
   }
   if (
-    player.userId !== record.userId ||
-    player.sessionId !== record.sessionId ||
+    player.connected ||
+    player.status !== "DISCONNECTED" ||
+    player.disconnectedAtMs === null
+  ) {
+    throw new Error("Blackjack reconnect table state is not disconnected");
+  }
+  if (
     player.seatNumber !==
       table.seats.find((seat) => seat.playerId === player.playerId)?.seatNumber
   ) {
     throw new Error("Blackjack reconnect seat identity is inconsistent");
   }
 
+  const record = registry.records.find(
+    (candidate) => candidate.playerId === input.playerId,
+  );
+  if(record){
+    if (record.userId !== input.userId) {
+      throw new Error("Blackjack reconnect userId does not match");
+    }
+    if (record.sessionId !== input.sessionId) {
+      throw new Error("Blackjack reconnect sessionId does not match");
+    }
+    if(record.disconnectedAtMs!==player.disconnectedAtMs){
+      throw new Error("Blackjack reconnect disconnect cursor does not match");
+    }
+  }
+
+  // Grace expiry controls gameplay policy (for example auto-stand), not
+  // transport authentication. A late return from the same exact identity
+  // is safe while the durable seat still belongs to that identity.
+  const restoredStatus=inferBlackjackReconnectStatus(
+    table,
+    player.playerId,
+    record,
+  );
+
   const players = Object.freeze(
     table.players.map((candidate) =>
       candidate.playerId === player.playerId
         ? Object.freeze({
             ...candidate,
-            status: record.previousStatus,
+            status: restoredStatus,
             connected: true,
             disconnectedAtMs: null,
           })
@@ -307,12 +384,10 @@ export function applyBlackjackDisconnectedTurnPolicy(
     });
   }
 
-  const record = registry.records.find(
+  const existingRecord = registry.records.find(
     (candidate) => candidate.playerId === player.playerId,
   );
-  if (!record) {
-    throw new Error("Blackjack disconnected player has no reconnect record");
-  }
+  const record=existingRecord ?? healedReconnectRecord(table,player);
 
   const turnTimedOut = nowMs >= round.currentTurn.endsAtMs;
   const graceExpired = nowMs >= record.expiresAtMs;
@@ -337,13 +412,10 @@ export function applyBlackjackDisconnectedTurnPolicy(
       round: nextRound,
       stateVersion: nextStateVersion(table),
     }),
-    registry: graceExpired
-      ? freezeRegistry(
-          registry.records.filter(
-            (candidate) => candidate.playerId !== player.playerId,
-          ),
-        )
-      : registry,
+    registry:
+      existingRecord === undefined
+        ? freezeRegistry([...registry.records, record])
+        : registry,
     autoStood: true,
     reason: turnTimedOut
       ? ("TURN_TIMEOUT" as const)

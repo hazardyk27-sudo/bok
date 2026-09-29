@@ -174,8 +174,10 @@ export async function recoverAndStartBlackjackRoundRuntime(input: {
     driver,
     {
       ...input.scheduler,
+      // Ordinary tick exceptions are contained by the scheduler and may be
+      // transient. Fatal persistence/authority failures already stop the
+      // scheduler through onFatalError above.
       onError:(error)=>{
-        scheduler?.stop();
         callerOnError?.(error);
       },
     },
