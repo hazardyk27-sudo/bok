@@ -19,6 +19,10 @@ export async function persistAuthoritativeMarketTickIfLeader(
   tick: AuthoritativeMarketTickInput,
 ) {
   return globalMarketWriterLeadership.runIfLeader(
-    () => ticketMarketPersistence.persistAuthoritativeTick(tick),
+    (client) =>
+      ticketMarketPersistence.persistAuthoritativeTickOnClient(
+        client,
+        tick,
+      ),
   );
 }
