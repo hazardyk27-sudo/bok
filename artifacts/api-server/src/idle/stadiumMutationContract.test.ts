@@ -10,7 +10,9 @@ const source = readFileSync(
 describe("checkpoint-before-mutation transaction contract", () => {
   it("settles old production before action-specific work and persistence", () => {
     const beginIndex = source.indexOf('client.query("BEGIN")');
-    const checkpointIndex = source.indexOf("checkpointStadiumProduction(");
+    const checkpointIndex = source.indexOf(
+      "const checkpoint = await checkpointStadiumProduction(",
+    );
     const decideIndex = source.indexOf("const decision = await decide(");
     const persistIndex = source.indexOf("persistStadiumEconomyMutation(");
     const commitIndex = source.indexOf('client.query("COMMIT")');
@@ -41,5 +43,17 @@ describe("checkpoint-before-mutation transaction contract", () => {
   it("rolls back the whole action when decision or persistence fails", () => {
     expect(source).toContain('client.query("ROLLBACK")');
     expect(source).toContain("client.release()");
+  });
+
+  it("poisons the DB client when rollback itself fails", () => {
+    expect(source).toContain("IDLE_STADIUM_ROLLBACK_FAILED");
+    expect(source).toContain("if (!released)");
+  });
+
+  it("requires exactly one Stadium row to be updated", () => {
+    expect(source).toContain(
+      'throw new Error("IDLE_STADIUM_STATE_UPDATE_CONFLICT")',
+    );
+    expect(source).toContain("(updateResult.rowCount ?? 0) !== 1");
   });
 });
