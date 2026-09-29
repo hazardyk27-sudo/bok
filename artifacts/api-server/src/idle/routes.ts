@@ -3,6 +3,7 @@ import { Router, type IRouter, type Request, type Response } from "express";
 import { SESSION_COOKIE } from "../roulette/routes";
 import { idleRepository } from "./repository";
 import { buyStadiumSeats } from "./seatPurchase";
+import { upgradeStadiumSpeed } from "./speedUpgrade";
 import { upgradeStadiumLevel } from "./stadiumUpgrade";
 import { IDLE_BUSINESS_IDS, type IdleBusinessId } from "./storage";
 
@@ -46,6 +47,7 @@ function sendError(res: Response, error: unknown) {
     || message === "IDLE_STADIUM_MAX_SEATS_REACHED"
     || message === "IDLE_STADIUM_MAX_SEATS_EXCEEDED"
     || message === "IDLE_STADIUM_MAX_LEVEL"
+    || message === "IDLE_SPEED_MAX_LEVEL"
     ? 409
     : message === "INSUFFICIENT_IDLE_CREDITS" ? 402
       : message === "IDLE_BUSINESS_NOT_FOUND" ? 404
@@ -70,6 +72,34 @@ router.get("/idle/state", async (req, res) => {
 
 
 
+
+
+router.post("/idle/stadium/speed/upgrade", async (req, res) => {
+  try {
+    const { idempotencyKey } = req.body as {
+      idempotencyKey?: unknown;
+    };
+
+    if (
+      typeof idempotencyKey !== "string"
+      || !IDEMPOTENCY_PATTERN.test(idempotencyKey)
+    ) {
+      res.status(400).json({
+        error: "VALID_IDEMPOTENCY_KEY_REQUIRED",
+      });
+      return;
+    }
+
+    const result = await upgradeStadiumSpeed(
+      getSessionId(req, res),
+      idempotencyKey,
+    );
+
+    res.json(result);
+  } catch (error) {
+    sendError(res, error);
+  }
+});
 
 router.post("/idle/stadium/upgrade", async (req, res) => {
   try {
