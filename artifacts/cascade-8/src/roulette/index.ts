@@ -35,9 +35,11 @@ import {
 } from "./simulationEvents";
 import { RouletteAudioEngine } from "./rouletteAudio";
 import {
+  ROULETTE_BETTING_WINDOW_MS,
   ROULETTE_RESULT_HOLD_MS,
   canEditRouletteBets,
   canStartRouletteSpin,
+  getRouletteBettingSecondsRemaining,
   getRoulettePhaseStatus,
   type RouletteScenePhase,
 } from "./scenePhase";
@@ -110,7 +112,7 @@ export function mountRoulette(app: HTMLDivElement) {
             aria-label="Betting phase timer"
           >
             <span class="roulette-betting-timer__label" data-betting-timer-label>BET TIME</span>
-            <strong class="roulette-betting-timer__value" data-betting-timer-value>00:00</strong>
+            <strong class="roulette-betting-timer__value" data-betting-timer-value>10</strong>
           </div>
 
           <div
@@ -168,10 +170,6 @@ export function mountRoulette(app: HTMLDivElement) {
     app.querySelector<HTMLElement>("[data-betting-timer-label]");
   const bettingTimerValue =
     app.querySelector<HTMLElement>("[data-betting-timer-value]");
-  const mobileQuickToggle =
-    app.querySelector<HTMLButtonElement>("[data-mobile-quick-toggle]");
-  const mobileQuickMenu =
-    app.querySelector<HTMLElement>("[data-mobile-quick-menu]");
   const mobileStatsToggle =
     app.querySelector<HTMLButtonElement>("[data-mobile-stats-toggle]");
   const mobileStatsPanel =
@@ -208,8 +206,9 @@ export function mountRoulette(app: HTMLDivElement) {
   let frameId = 0;
   let resultHoldTimer = 0;
   let recentResults: number[] = [];
-  let phaseStartedAt = performance.now();
-  let lastRenderedPhase: RouletteScenePhase = "betting";
+  let bettingDeadlineMs =
+    performance.now() + ROULETTE_BETTING_WINDOW_MS;
+  let bettingWindowClosed = false;
 
   try {
     recentResults =
@@ -343,15 +342,6 @@ export function mountRoulette(app: HTMLDivElement) {
     betState.placements.length <= 250 &&
     getRouletteTotalStake(betState.placements) * 200 <= walletBalanceCents;
 
-  const setMobileQuickMenuOpen = (open: boolean) => {
-    if (mobileQuickMenu) {
-      mobileQuickMenu.hidden = !open;
-    }
-    if (mobileQuickToggle) {
-      mobileQuickToggle.setAttribute("aria-expanded", String(open));
-    }
-  };
-
   const setMobileStatsOpen = (open: boolean) => {
     if (mobileStatsPanel) {
       mobileStatsPanel.hidden = !open;
@@ -363,7 +353,6 @@ export function mountRoulette(app: HTMLDivElement) {
 
   const setMobileChipMenuOpen = (open: boolean) => {
     if (open) {
-      setMobileQuickMenuOpen(false);
       setMobileStatsOpen(false);
     }
     if (mobileChipMenu) {
@@ -377,7 +366,6 @@ export function mountRoulette(app: HTMLDivElement) {
 
   const closeMobileHudMenus = () => {
     setMobileChipMenuOpen(false);
-    setMobileQuickMenuOpen(false);
     setMobileStatsOpen(false);
   };
 
@@ -385,32 +373,21 @@ export function mountRoulette(app: HTMLDivElement) {
     const phase =
       page.dataset.phase as RouletteScenePhase;
 
-    if (phase !== lastRenderedPhase) {
-      lastRenderedPhase = phase;
-      phaseStartedAt = performance.now();
-    }
-
     if (phase === "betting") {
-      const elapsedSeconds =
-        Math.max(
-          0,
-          Math.floor(
-            (performance.now() - phaseStartedAt) / 1000,
-          ),
+      const remaining =
+        getRouletteBettingSecondsRemaining(
+          bettingDeadlineMs,
+          performance.now(),
         );
-      const minutes =
-        Math.floor(elapsedSeconds / 60);
-      const seconds =
-        elapsedSeconds % 60;
 
       if (bettingTimerLabel) {
         bettingTimerLabel.textContent = "BET TIME";
       }
       if (bettingTimerValue) {
         bettingTimerValue.textContent =
-          `${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")}`;
+          String(remaining);
       }
-      return;
+      return remaining;
     }
 
     if (bettingTimerLabel) {
@@ -425,16 +402,9 @@ export function mountRoulette(app: HTMLDivElement) {
           ? "••"
           : String(page.dataset.resultNumber ?? "—");
     }
-  };
 
-  const phaseTimerInterval =
-    window.setInterval(() => {
-      if (!app.isConnected) {
-        window.clearInterval(phaseTimerInterval);
-        return;
-      }
-      renderPhaseTimer();
-    }, 500);
+    return null;
+  };
 
   const updateSpinAvailability = () => {
     if (!spinButton) return;
@@ -533,8 +503,18 @@ export function mountRoulette(app: HTMLDivElement) {
     resultNumber?: number,
   ) => {
     page.dataset.phase = phase;
+
+    if (phase === "betting") {
+      bettingDeadlineMs =
+        performance.now() + ROULETTE_BETTING_WINDOW_MS;
+      bettingWindowClosed = false;
+    } else {
+      bettingWindowClosed = true;
+    }
+
     page.dataset.bettingLocked =
       String(
+        bettingWindowClosed ||
         !canEditRouletteBets(phase),
       );
 
@@ -549,6 +529,7 @@ export function mountRoulette(app: HTMLDivElement) {
     betPanel.setAttribute(
       "aria-disabled",
       String(
+        bettingWindowClosed ||
         !canEditRouletteBets(phase),
       ),
     );
@@ -912,6 +893,41 @@ export function mountRoulette(app: HTMLDivElement) {
     frameId = window.requestAnimationFrame(animate);
   };
 
+  const tickPhaseTimer = () => {
+    const remaining = renderPhaseTimer();
+
+    if (
+      page.dataset.phase !== "betting" ||
+      remaining === null ||
+      remaining > 0 ||
+      bettingWindowClosed
+    ) {
+      return;
+    }
+
+    bettingWindowClosed = true;
+    page.dataset.bettingLocked = "true";
+    betPanel.setAttribute(
+      "aria-disabled",
+      "true",
+    );
+    if (betStatus) {
+      betStatus.textContent = "NO MORE BETS";
+    }
+
+    closeMobileHudMenus();
+    void startSpin();
+  };
+
+  const phaseTimerInterval =
+    window.setInterval(() => {
+      if (!app.isConnected) {
+        window.clearInterval(phaseTimerInterval);
+        return;
+      }
+      tickPhaseTimer();
+    }, 100);
+
   canvas.dataset.rouletteState = "ready";
   setScenePhase("betting");
 
@@ -950,30 +966,17 @@ export function mountRoulette(app: HTMLDivElement) {
         const isOpen =
           mobileStatsToggle?.getAttribute("aria-expanded") === "true";
         setMobileChipMenuOpen(false);
-        setMobileQuickMenuOpen(false);
         setMobileStatsOpen(!isOpen);
         return;
       }
 
       if (
+        bettingWindowClosed ||
         !canEditRouletteBets(
           page.dataset.phase as
             RouletteScenePhase,
         )
       ) {
-        return;
-      }
-
-      if (
-        target.closest(
-          "[data-mobile-quick-toggle]",
-        )
-      ) {
-        const isOpen =
-          mobileQuickToggle?.getAttribute("aria-expanded") === "true";
-        setMobileChipMenuOpen(false);
-        setMobileStatsOpen(false);
-        setMobileQuickMenuOpen(!isOpen);
         return;
       }
 
@@ -985,25 +988,6 @@ export function mountRoulette(app: HTMLDivElement) {
         const isOpen =
           mobileChipToggle?.getAttribute("aria-expanded") === "true";
         setMobileChipMenuOpen(!isOpen);
-        return;
-      }
-
-      const quickBetButton =
-        target.closest<HTMLButtonElement>(
-          "[data-quick-bet-id]",
-        );
-      if (quickBetButton) {
-        const betId =
-          quickBetButton.dataset.quickBetId;
-        if (betId) {
-          betState =
-            placeRouletteBet(
-              betState,
-              betId,
-            );
-          renderBetState();
-          setMobileQuickMenuOpen(false);
-        }
         return;
       }
 
