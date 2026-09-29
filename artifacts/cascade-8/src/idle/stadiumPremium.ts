@@ -1,9 +1,17 @@
 import {
+  MARKET_CONFIG,
+  MAX_STADIUM_SEATS,
   SPEED_LEVELS,
   STADIUM_LEVELS,
   STORAGE_LEVELS,
 } from "./config";
 import {
+  getNextSeatPriceBoundary,
+  getSeatUnitPriceCentsAtSeatIndex,
+  quoteSeatPurchase,
+} from "./seatPricing";
+import {
+  IdleRequestError,
   buyIdleStadiumSeats,
   fetchIdleMarketHistory,
   projectIdleStadiumLive,
@@ -23,11 +31,20 @@ export type StadiumPremiumUi = {
   renderMarket: () => void;
 };
 
+export type StadiumMutationResponse =
+  | Awaited<ReturnType<typeof buyIdleStadiumSeats>>
+  | Awaited<ReturnType<typeof sellIdleStadiumTickets>>
+  | Awaited<ReturnType<typeof upgradeIdleStadiumLevel>>
+  | Awaited<ReturnType<typeof upgradeIdleStadiumSpeed>>
+  | Awaited<ReturnType<typeof upgradeIdleStadiumStorage>>;
+
 type Options = {
   root: HTMLElement;
   getEnvelope: () => IdleStadiumStateEnvelope | null;
   getMarket: () => TicketMarketSnapshot | null;
-  refreshState: () => Promise<void>;
+  applyMutationResponse: (
+    response: StadiumMutationResponse,
+  ) => void;
 };
 
 function money(cents: number) {
@@ -56,6 +73,45 @@ function tickets(microTickets: number) {
   return value.toLocaleString("en-US", {
     maximumFractionDigits: Number.isInteger(value) ? 0 : 3,
   });
+}
+
+function perSeatRate(microTicketsPerSeatPerHour: number) {
+  return (microTicketsPerSeatPerHour / 1_000_000)
+    .toLocaleString("en-US", {
+      minimumFractionDigits: 4,
+      maximumFractionDigits: 5,
+    });
+}
+
+function positiveWholeNumber(raw: string) {
+  const normalized = raw.trim();
+  if (!/^\d+$/.test(normalized)) return null;
+  const value = Number(normalized);
+  return Number.isSafeInteger(value) && value > 0
+    ? value
+    : null;
+}
+
+function getNextSeatPriceChange(ownedSeats: number) {
+  if (ownedSeats >= MAX_STADIUM_SEATS) return null;
+
+  const currentPrice =
+    getSeatUnitPriceCentsAtSeatIndex(ownedSeats);
+  let boundary = getNextSeatPriceBoundary(ownedSeats);
+
+  while (boundary < MAX_STADIUM_SEATS) {
+    const nextPrice =
+      getSeatUnitPriceCentsAtSeatIndex(boundary);
+    if (nextPrice !== currentPrice) {
+      return {
+        seatCount: boundary,
+        unitPriceCents: nextPrice,
+      };
+    }
+    boundary = getNextSeatPriceBoundary(boundary);
+  }
+
+  return null;
 }
 
 function text(root: HTMLElement, selector: string, value: string) {
@@ -92,7 +148,7 @@ const MAIN_MARKUP = `
         <small>İşlem anındaki canlı fiyat uygulanır.</small>
       </div>
       <div class="stadium-sell-input-row">
-        <label><span>ADET</span><input type="number" min="1" step="1" inputmode="numeric" placeholder="0" data-idle-sell-input></label>
+        <label><span>ADET</span><input type="text" inputmode="numeric" pattern="[0-9]*" placeholder="0" data-idle-sell-input></label>
         <button type="button" data-idle-sell-button>ŞİMDİ SAT</button>
       </div>
       <div class="stadium-sell-shortcuts">
@@ -139,8 +195,18 @@ const DRAWER_MARKUP = `
         </article>
       </div>
       <section class="stadium-seat-purchase">
-        <div><span>KOLTUK EKLE</span><strong>ÜRETİM KAPASİTESİNİ BÜYÜT</strong><small data-idle-seat-room>—</small></div>
-        <label><span>ADET</span><input type="number" min="1" step="1" inputmode="numeric" placeholder="100" data-idle-seat-input></label>
+        <div class="stadium-seat-purchase-copy">
+          <span>KOLTUK EKLE</span>
+          <strong>ÜRETİM KAPASİTESİNİ BÜYÜT</strong>
+          <small data-idle-seat-room>—</small>
+          <small data-idle-seat-unit-price>—</small>
+          <small data-idle-seat-next-band>—</small>
+        </div>
+        <label><span>ADET</span><input type="text" inputmode="numeric" pattern="[0-9]*" placeholder="100" data-idle-seat-input></label>
+        <div class="stadium-seat-estimate">
+          <span>TAHMİNİ MALİYET</span>
+          <strong data-idle-seat-estimate>—</strong>
+        </div>
         <button type="button" data-idle-buy-seats>KOLTUK SATIN AL</button>
       </section>
     </div>
@@ -166,7 +232,13 @@ const DRAWER_MARKUP = `
         </svg>
         <div class="stadium-market-chart-empty" data-idle-market-chart-empty>Grafik yükleniyor…</div>
       </div>
-      <div class="stadium-market-foot"><span data-idle-market-detail-source>—</span><small>Satışta sunucunun işlem anındaki global fiyatı kullanılır.</small></div>
+      <div class="stadium-market-foot">
+        <div>
+          <span data-idle-market-detail-source>—</span>
+          <small data-idle-market-detail-tick>SON TICK —</small>
+        </div>
+        <small>Satışta sunucunun işlem anındaki global fiyatı kullanılır.</small>
+      </div>
     </div>
   </section>
 `;
@@ -184,7 +256,12 @@ function chartPath(points: TicketMarketHistoryPoint[]) {
 }
 
 export function createStadiumPremiumUi(options: Options): StadiumPremiumUi {
-  const { root, getEnvelope, getMarket, refreshState } = options;
+  const {
+    root,
+    getEnvelope,
+    getMarket,
+    applyMutationResponse,
+  } = options;
   const body = root.querySelector<HTMLElement>(".stadium-canonical-body");
   const marketBox = root.querySelector<HTMLElement>(".stadium-canonical-market");
   const card = root.querySelector<HTMLElement>("[data-idle-stadium-card]");
@@ -200,6 +277,20 @@ export function createStadiumPremiumUi(options: Options): StadiumPremiumUi {
 
   let busy = false;
   let history: TicketMarketHistoryPoint[] = [];
+  let historyLoaded = false;
+  let historyLoading = false;
+
+  type MutationKind =
+    | "sale"
+    | "seats"
+    | "stadium"
+    | "speed"
+    | "storage";
+
+  const pendingMutationKeys = new Map<
+    MutationKind,
+    { signature: string; key: string }
+  >();
 
   const showStatus = (message: string, isError = false) => {
     const node = root.querySelector<HTMLElement>("[data-idle-action-status]");
@@ -248,23 +339,97 @@ export function createStadiumPremiumUi(options: Options): StadiumPremiumUi {
     empty.textContent = "";
   };
 
+  const mergeLiveHistory = (
+    market: TicketMarketSnapshot,
+  ) => {
+    if (!historyLoaded) return;
+
+    const tickMs = new Date(market.tickAt).getTime();
+    if (!Number.isFinite(tickMs)) return;
+
+    const last = history.at(-1);
+    if (last?.tickAt === market.tickAt) return;
+
+    const cutoff =
+      tickMs - MARKET_CONFIG.historyRetentionMs;
+    history = history
+      .filter((point) => {
+        const pointMs =
+          new Date(point.tickAt).getTime();
+        return Number.isFinite(pointMs)
+          && pointMs > cutoff
+          && point.tickAt !== market.tickAt;
+      })
+      .concat({
+        tickAt: market.tickAt,
+        priceMicrodollars:
+          market.priceMicrodollars,
+      })
+      .sort(
+        (a, b) =>
+          new Date(a.tickAt).getTime()
+          - new Date(b.tickAt).getTime(),
+      );
+
+    if (history.length > 17_280) {
+      history = history.slice(-17_280);
+    }
+
+    renderHistory();
+  };
+
   const loadHistory = async () => {
-    const chart = root.querySelector<HTMLElement>(".stadium-market-chart");
-    if (chart) chart.dataset.idleMarketChartState = "loading";
+    if (historyLoading) return;
+    historyLoading = true;
+
+    const chart =
+      root.querySelector<HTMLElement>(
+        ".stadium-market-chart",
+      );
+    if (chart) {
+      chart.dataset.idleMarketChartState =
+        "loading";
+    }
+
     try {
-      history = (await fetchIdleMarketHistory()).points;
-      renderHistory();
+      history =
+        (await fetchIdleMarketHistory()).points;
+      historyLoaded = true;
+
+      const market = getMarket();
+      if (market) {
+        mergeLiveHistory(market);
+      } else {
+        renderHistory();
+      }
     } catch (error) {
-      if (chart) chart.dataset.idleMarketChartState = "error";
-      const empty = root.querySelector<HTMLElement>("[data-idle-market-chart-empty]");
-      if (empty) empty.textContent = readableError(error);
+      historyLoaded = false;
+      if (chart) {
+        chart.dataset.idleMarketChartState =
+          "error";
+      }
+      const empty =
+        root.querySelector<HTMLElement>(
+          "[data-idle-market-chart-empty]",
+        );
+      if (empty) {
+        empty.textContent =
+          readableError(error);
+      }
+    } finally {
+      historyLoading = false;
     }
   };
 
   const renderMarket = () => {
     const market = getMarket();
     if (!market) return;
-    text(root, "[data-idle-market-detail-price]", price(market.priceMicrodollars));
+
+    text(
+      root,
+      "[data-idle-market-detail-price]",
+      price(market.priceMicrodollars),
+    );
     text(
       root,
       "[data-idle-market-detail-source]",
@@ -276,121 +441,634 @@ export function createStadiumPremiumUi(options: Options): StadiumPremiumUi {
             : "FEED BEKLEMEDE"
       ),
     );
-    const input = root.querySelector<HTMLInputElement>("[data-idle-sell-input]");
-    const quantity = Number.parseInt(input?.value ?? "", 10);
+
+    const tick = new Date(market.tickAt);
+    text(
+      root,
+      "[data-idle-market-detail-tick]",
+      Number.isFinite(tick.getTime())
+        ? "SON TICK · "
+          + tick.toLocaleTimeString(
+            "tr-TR",
+            {
+              hour: "2-digit",
+              minute: "2-digit",
+              second: "2-digit",
+            },
+          )
+        : "SON TICK —",
+    );
+
+    const input =
+      root.querySelector<HTMLInputElement>(
+        "[data-idle-sell-input]",
+      );
+    const quantity =
+      positiveWholeNumber(
+        input?.value ?? "",
+      );
+
     text(
       root,
       "[data-idle-sale-preview]",
-      Number.isSafeInteger(quantity) && quantity > 0
-        ? "$" + (quantity * market.priceMicrodollars / 1_000_000).toLocaleString("en-US", {
+      quantity
+        ? "$" + (
+          quantity
+          * market.priceMicrodollars
+          / 1_000_000
+        ).toLocaleString("en-US", {
           minimumFractionDigits: 2,
           maximumFractionDigits: 2,
         })
         : "—",
     );
-    if (history.length) renderHistory();
+
+    mergeLiveHistory(market);
   };
 
   const render = () => {
     const envelope = getEnvelope();
     if (!envelope) return;
-    const stadium = projectIdleStadiumLive(envelope);
-    const nextStadium = STADIUM_LEVELS.find((item) => item.level === stadium.stadiumLevel + 1);
-    const nextSpeed = SPEED_LEVELS.find((item) => item.level === stadium.speedLevel + 1);
-    const nextStorage = STORAGE_LEVELS.find((item) => item.level === stadium.storageLevel + 1);
 
-    text(root, "[data-idle-detail-stadium-level]", "Lv" + stadium.stadiumLevel);
-    text(root, "[data-idle-detail-stadium-copy]", stadium.ownedSeats.toLocaleString("en-US") + " / " + stadium.maxSeatCapacity.toLocaleString("en-US") + " koltuk açık.");
-    text(root, "[data-idle-detail-stadium-cost]", nextStadium ? money(nextStadium.unlockCostCents) : "MAX");
-    text(root, "[data-idle-detail-speed-level]", "Lv" + stadium.speedLevel);
-    text(root, "[data-idle-detail-speed-copy]", tickets(stadium.productionRateMicroTicketsPerHour) + " bilet/saat toplam üretim.");
-    text(root, "[data-idle-detail-speed-cost]", nextSpeed ? money(nextSpeed.upgradeCostCents) : "MAX");
-    text(root, "[data-idle-detail-storage-level]", "Lv" + stadium.storageLevel);
-    text(root, "[data-idle-detail-storage-copy]", stadium.storageCapacityTickets.toLocaleString("en-US") + " bilet maksimum depo.");
-    text(root, "[data-idle-detail-storage-cost]", nextStorage ? money(nextStorage.upgradeCostCents) : "MAX");
-    text(root, "[data-idle-seat-room]", Math.max(0, stadium.maxSeatCapacity - stadium.ownedSeats).toLocaleString("en-US") + " koltuk alanı mevcut");
+    const stadium =
+      projectIdleStadiumLive(envelope);
+    const currentSpeed =
+      SPEED_LEVELS.find(
+        (item) =>
+          item.level === stadium.speedLevel,
+      );
+    const nextStadium =
+      STADIUM_LEVELS.find(
+        (item) =>
+          item.level
+          === stadium.stadiumLevel + 1,
+      );
+    const nextSpeed =
+      SPEED_LEVELS.find(
+        (item) =>
+          item.level === stadium.speedLevel + 1,
+      );
+    const nextStorage =
+      STORAGE_LEVELS.find(
+        (item) =>
+          item.level
+          === stadium.storageLevel + 1,
+      );
 
-    const stadiumButton = button(root, "[data-idle-upgrade-stadium]");
-    const speedButton = button(root, "[data-idle-upgrade-speed]");
-    const storageButton = button(root, "[data-idle-upgrade-storage]");
-    stadiumButton.disabled = busy || !nextStadium;
-    speedButton.disabled = busy || !nextSpeed;
-    storageButton.disabled = busy || !nextStorage;
-    stadiumButton.textContent = nextStadium ? "STADYUMU GELİŞTİR" : "MAKSİMUM SEVİYE";
-    speedButton.textContent = nextSpeed ? "HIZI GELİŞTİR" : "MAKSİMUM SEVİYE";
-    storageButton.textContent = nextStorage ? "DEPOYU GELİŞTİR" : "MAKSİMUM SEVİYE";
-    button(root, "[data-idle-buy-seats]").disabled = busy || stadium.ownedSeats >= stadium.maxSeatCapacity;
-    button(root, "[data-idle-sell-button]").disabled = busy;
+    text(
+      root,
+      "[data-idle-detail-stadium-level]",
+      "Lv" + stadium.stadiumLevel,
+    );
+    text(
+      root,
+      "[data-idle-detail-stadium-copy]",
+      nextStadium
+        ? stadium.ownedSeats
+            .toLocaleString("en-US")
+          + " / "
+          + stadium.maxSeatCapacity
+            .toLocaleString("en-US")
+          + " koltuk · sonraki kapasite "
+          + nextStadium.maxSeats
+            .toLocaleString("en-US")
+        : stadium.ownedSeats
+            .toLocaleString("en-US")
+          + " / "
+          + MAX_STADIUM_SEATS
+            .toLocaleString("en-US")
+          + " koltuk · 500K HARD MAX",
+    );
+    text(
+      root,
+      "[data-idle-detail-stadium-cost]",
+      nextStadium
+        ? money(nextStadium.unlockCostCents)
+        : "MAX",
+    );
+
+    text(
+      root,
+      "[data-idle-detail-speed-level]",
+      "Lv" + stadium.speedLevel,
+    );
+    text(
+      root,
+      "[data-idle-detail-speed-copy]",
+      currentSpeed
+        ? perSeatRate(
+          currentSpeed
+            .microTicketsPerSeatPerHour,
+        )
+          + " bilet/koltuk/saat · toplam "
+          + tickets(
+            stadium
+              .productionRateMicroTicketsPerHour,
+          )
+          + " bilet/saat"
+          + (
+            nextSpeed
+              ? " · sonraki "
+                + perSeatRate(
+                  nextSpeed
+                    .microTicketsPerSeatPerHour,
+                )
+              : " · maksimum hız"
+          )
+        : "—",
+    );
+    text(
+      root,
+      "[data-idle-detail-speed-cost]",
+      nextSpeed
+        ? money(nextSpeed.upgradeCostCents)
+        : "MAX",
+    );
+
+    text(
+      root,
+      "[data-idle-detail-storage-level]",
+      "Lv" + stadium.storageLevel,
+    );
+    text(
+      root,
+      "[data-idle-detail-storage-copy]",
+      tickets(
+        stadium.liveStoredMicroTickets,
+      )
+        + " / "
+        + stadium.storageCapacityTickets
+          .toLocaleString("en-US")
+        + " bilet"
+        + (
+          nextStorage
+            ? " · sonraki kapasite "
+              + nextStorage.capacityTickets
+                .toLocaleString("en-US")
+            : " · maksimum depo"
+        ),
+    );
+    text(
+      root,
+      "[data-idle-detail-storage-cost]",
+      nextStorage
+        ? money(nextStorage.upgradeCostCents)
+        : "MAX",
+    );
+
+    const seatRoom = Math.max(
+      0,
+      stadium.maxSeatCapacity
+        - stadium.ownedSeats,
+    );
+    text(
+      root,
+      "[data-idle-seat-room]",
+      seatRoom.toLocaleString("en-US")
+        + " koltuk alanı mevcut",
+    );
+
+    if (
+      stadium.ownedSeats >= MAX_STADIUM_SEATS
+    ) {
+      text(
+        root,
+        "[data-idle-seat-unit-price]",
+        "500K maksimum koltuk sınırına ulaşıldı.",
+      );
+      text(
+        root,
+        "[data-idle-seat-next-band]",
+        "Yeni fiyat kademesi yok.",
+      );
+    } else {
+      const currentSeatPrice =
+        getSeatUnitPriceCentsAtSeatIndex(
+          stadium.ownedSeats,
+        );
+      const nextPriceChange =
+        getNextSeatPriceChange(
+          stadium.ownedSeats,
+        );
+
+      text(
+        root,
+        "[data-idle-seat-unit-price]",
+        "Mevcut koltuk fiyatı "
+          + money(currentSeatPrice)
+          + " / adet",
+      );
+      text(
+        root,
+        "[data-idle-seat-next-band]",
+        nextPriceChange
+          ? "Sonraki fiyat "
+            + nextPriceChange.seatCount
+              .toLocaleString("en-US")
+            + " koltukta "
+            + money(
+              nextPriceChange.unitPriceCents,
+            )
+          : "Son fiyat kademesi · 500K hard max",
+      );
+    }
+
+    const seatInput =
+      root.querySelector<HTMLInputElement>(
+        "[data-idle-seat-input]",
+      );
+    const seatQuantity =
+      positiveWholeNumber(
+        seatInput?.value ?? "",
+      );
+
+    let seatEstimate = "—";
+    if (seatQuantity) {
+      if (seatQuantity > seatRoom) {
+        seatEstimate = "KAPASİTEYİ AŞIYOR";
+      } else {
+        try {
+          seatEstimate = money(
+            quoteSeatPurchase(
+              stadium.ownedSeats,
+              seatQuantity,
+            ).totalCostCents,
+          );
+        } catch {
+          seatEstimate = "—";
+        }
+      }
+    }
+    text(
+      root,
+      "[data-idle-seat-estimate]",
+      seatEstimate,
+    );
+
+    const stadiumButton =
+      button(
+        root,
+        "[data-idle-upgrade-stadium]",
+      );
+    const speedButton =
+      button(
+        root,
+        "[data-idle-upgrade-speed]",
+      );
+    const storageButton =
+      button(
+        root,
+        "[data-idle-upgrade-storage]",
+      );
+
+    stadiumButton.disabled =
+      busy || !nextStadium;
+    speedButton.disabled =
+      busy || !nextSpeed;
+    storageButton.disabled =
+      busy || !nextStorage;
+
+    stadiumButton.textContent = nextStadium
+      ? "STADYUMU GELİŞTİR"
+      : "MAKSİMUM SEVİYE";
+    speedButton.textContent = nextSpeed
+      ? "HIZI GELİŞTİR"
+      : "MAKSİMUM SEVİYE";
+    storageButton.textContent = nextStorage
+      ? "DEPOYU GELİŞTİR"
+      : "MAKSİMUM SEVİYE";
+
+    button(
+      root,
+      "[data-idle-buy-seats]",
+    ).disabled =
+      busy || seatRoom <= 0;
+
+    const availableWholeTickets =
+      Math.floor(
+        stadium.liveStoredMicroTickets
+          / 1_000_000,
+      );
+
+    root
+      .querySelectorAll<HTMLButtonElement>(
+        "[data-idle-sell-ratio]",
+      )
+      .forEach((node) => {
+        const ratio = Number(
+          node.dataset.idleSellRatio ?? 0,
+        );
+        const shortcutQuantity =
+          ratio >= 1
+            ? availableWholeTickets
+            : Math.floor(
+              availableWholeTickets * ratio,
+            );
+        node.disabled =
+          busy || shortcutQuantity < 1;
+      });
+
+    button(
+      root,
+      "[data-idle-sell-button]",
+    ).disabled =
+      busy || availableWholeTickets < 1;
+
     renderMarket();
   };
 
-  const mutate = async (success: string, action: () => Promise<unknown>) => {
-    if (busy) return false;
+  const mutationKeyFor = (
+    kind: MutationKind,
+    signature: string,
+  ) => {
+    const existing =
+      pendingMutationKeys.get(kind);
+    if (existing?.signature === signature) {
+      return existing.key;
+    }
+
+    const key = crypto.randomUUID();
+    pendingMutationKeys.set(
+      kind,
+      { signature, key },
+    );
+    return key;
+  };
+
+  const mutate = async (
+    kind: MutationKind,
+    signature: string,
+    success: string,
+    action: (
+      idempotencyKey: string,
+    ) => Promise<StadiumMutationResponse>,
+  ) => {
+    if (busy) return null;
+
+    const idempotencyKey =
+      mutationKeyFor(kind, signature);
     busy = true;
     render();
+
     try {
-      await action();
-      await refreshState();
+      const response =
+        await action(idempotencyKey);
+
+      pendingMutationKeys.delete(kind);
+      applyMutationResponse(response);
       showStatus(success);
-      return true;
+      return response;
     } catch (error) {
-      showStatus(readableError(error), true);
-      return false;
+      const outcomeUnknown =
+        error instanceof IdleRequestError
+        && error.outcomeUnknown;
+
+      if (!outcomeUnknown) {
+        pendingMutationKeys.delete(kind);
+      }
+
+      showStatus(
+        outcomeUnknown
+          ? "Bağlantı sonucu belirsiz. Aynı işlemi tekrar dene; aynı işlem anahtarı korunuyor ve çift işlem yapılmayacak."
+          : readableError(error),
+        true,
+      );
+      return null;
     } finally {
       busy = false;
       render();
     }
   };
 
-  button(root, "[data-idle-open-details]").addEventListener("click", () => setDrawer("details", true));
-  button(root, "[data-idle-open-market]").addEventListener("click", () => {
-    setDrawer("market", true);
-    void loadHistory();
-  });
-  root.querySelectorAll<HTMLElement>("[data-idle-close-details]").forEach((node) => node.addEventListener("click", () => setDrawer("details", false)));
-  root.querySelectorAll<HTMLElement>("[data-idle-close-market]").forEach((node) => node.addEventListener("click", () => setDrawer("market", false)));
+  button(
+    root,
+    "[data-idle-open-details]",
+  ).addEventListener(
+    "click",
+    () => setDrawer("details", true),
+  );
 
-  root.querySelectorAll<HTMLButtonElement>("[data-idle-sell-ratio]").forEach((node) => {
-    node.addEventListener("click", () => {
-      const envelope = getEnvelope();
-      if (!envelope) return;
-      const ratio = Number(node.dataset.idleSellRatio ?? 0);
-      const available = Math.floor(projectIdleStadiumLive(envelope).liveStoredMicroTickets / 1_000_000);
-      const input = root.querySelector<HTMLInputElement>("[data-idle-sell-input]");
-      if (input) input.value = String(ratio >= 1 ? available : Math.floor(available * ratio));
+  button(
+    root,
+    "[data-idle-open-market]",
+  ).addEventListener(
+    "click",
+    () => {
+      setDrawer("market", true);
+      if (!historyLoaded) {
+        void loadHistory();
+      }
+    },
+  );
+
+  root
+    .querySelectorAll<HTMLElement>(
+      "[data-idle-close-details]",
+    )
+    .forEach((node) =>
+      node.addEventListener(
+        "click",
+        () => setDrawer("details", false),
+      ),
+    );
+
+  root
+    .querySelectorAll<HTMLElement>(
+      "[data-idle-close-market]",
+    )
+    .forEach((node) =>
+      node.addEventListener(
+        "click",
+        () => setDrawer("market", false),
+      ),
+    );
+
+  root
+    .querySelectorAll<HTMLButtonElement>(
+      "[data-idle-sell-ratio]",
+    )
+    .forEach((node) => {
+      node.addEventListener("click", () => {
+        if (node.disabled) return;
+
+        const envelope = getEnvelope();
+        if (!envelope) return;
+
+        const ratio = Number(
+          node.dataset.idleSellRatio ?? 0,
+        );
+        const available = Math.floor(
+          projectIdleStadiumLive(envelope)
+            .liveStoredMicroTickets
+            / 1_000_000,
+        );
+        const quantity =
+          ratio >= 1
+            ? available
+            : Math.floor(available * ratio);
+
+        if (quantity < 1) return;
+
+        const input =
+          root.querySelector<HTMLInputElement>(
+            "[data-idle-sell-input]",
+          );
+        if (input) {
+          input.value = String(quantity);
+        }
+        renderMarket();
+      });
+    });
+
+  root
+    .querySelector<HTMLInputElement>(
+      "[data-idle-sell-input]",
+    )
+    ?.addEventListener(
+      "input",
+      renderMarket,
+    );
+
+  root
+    .querySelector<HTMLInputElement>(
+      "[data-idle-seat-input]",
+    )
+    ?.addEventListener(
+      "input",
+      render,
+    );
+
+  button(
+    root,
+    "[data-idle-sell-button]",
+  ).addEventListener("click", () => {
+    const input =
+      root.querySelector<HTMLInputElement>(
+        "[data-idle-sell-input]",
+      );
+    const quantity =
+      positiveWholeNumber(
+        input?.value ?? "",
+      );
+
+    if (!quantity) {
+      showStatus(
+        "Satış için pozitif tam sayı gir.",
+        true,
+      );
+      return;
+    }
+
+    void mutate(
+      "sale",
+      "sale:" + quantity,
+      quantity.toLocaleString("en-US")
+        + " bilet satıldı.",
+      (idempotencyKey) =>
+        sellIdleStadiumTickets(
+          quantity,
+          idempotencyKey,
+        ),
+    ).then((response) => {
+      if (response && input) {
+        input.value = "";
+      }
       renderMarket();
     });
   });
-  root.querySelector<HTMLInputElement>("[data-idle-sell-input]")?.addEventListener("input", renderMarket);
 
-  button(root, "[data-idle-sell-button]").addEventListener("click", () => {
-    const input = root.querySelector<HTMLInputElement>("[data-idle-sell-input]");
-    const quantity = Number.parseInt(input?.value ?? "", 10);
-    if (!Number.isSafeInteger(quantity) || quantity <= 0) {
-      showStatus("Satış için pozitif tam sayı gir.", true);
+  button(
+    root,
+    "[data-idle-upgrade-stadium]",
+  ).addEventListener("click", () => {
+    const level =
+      getEnvelope()?.snapshot.stadium
+        .stadiumLevel;
+    void mutate(
+      "stadium",
+      "stadium:" + String(level ?? "unknown"),
+      "Stadyum geliştirildi.",
+      (idempotencyKey) =>
+        upgradeIdleStadiumLevel(
+          idempotencyKey,
+        ),
+    );
+  });
+
+  button(
+    root,
+    "[data-idle-upgrade-speed]",
+  ).addEventListener("click", () => {
+    const level =
+      getEnvelope()?.snapshot.stadium
+        .speedLevel;
+    void mutate(
+      "speed",
+      "speed:" + String(level ?? "unknown"),
+      "Üretim hızı geliştirildi.",
+      (idempotencyKey) =>
+        upgradeIdleStadiumSpeed(
+          idempotencyKey,
+        ),
+    );
+  });
+
+  button(
+    root,
+    "[data-idle-upgrade-storage]",
+  ).addEventListener("click", () => {
+    const level =
+      getEnvelope()?.snapshot.stadium
+        .storageLevel;
+    void mutate(
+      "storage",
+      "storage:" + String(level ?? "unknown"),
+      "Bilet deposu geliştirildi.",
+      (idempotencyKey) =>
+        upgradeIdleStadiumStorage(
+          idempotencyKey,
+        ),
+    );
+  });
+
+  button(
+    root,
+    "[data-idle-buy-seats]",
+  ).addEventListener("click", () => {
+    const input =
+      root.querySelector<HTMLInputElement>(
+        "[data-idle-seat-input]",
+      );
+    const quantity =
+      positiveWholeNumber(
+        input?.value ?? "",
+      );
+
+    if (!quantity) {
+      showStatus(
+        "Koltuk alımı için pozitif tam sayı gir.",
+        true,
+      );
       return;
     }
-    void mutate(quantity.toLocaleString("en-US") + " bilet satıldı.", () => sellIdleStadiumTickets(quantity))
-      .then((succeeded) => {
-        if (succeeded && input) input.value = "";
-        renderMarket();
-      });
+
+    void mutate(
+      "seats",
+      "seats:" + quantity,
+      quantity.toLocaleString("en-US")
+        + " koltuk satın alındı.",
+      (idempotencyKey) =>
+        buyIdleStadiumSeats(
+          quantity,
+          idempotencyKey,
+        ),
+    ).then((response) => {
+      if (response && input) {
+        input.value = "";
+      }
+    });
   });
-  button(root, "[data-idle-upgrade-stadium]").addEventListener("click", () => void mutate("Stadyum geliştirildi.", () => upgradeIdleStadiumLevel()));
-  button(root, "[data-idle-upgrade-speed]").addEventListener("click", () => void mutate("Üretim hızı geliştirildi.", () => upgradeIdleStadiumSpeed()));
-  button(root, "[data-idle-upgrade-storage]").addEventListener("click", () => void mutate("Bilet deposu geliştirildi.", () => upgradeIdleStadiumStorage()));
-  button(root, "[data-idle-buy-seats]").addEventListener("click", () => {
-    const input = root.querySelector<HTMLInputElement>("[data-idle-seat-input]");
-    const quantity = Number.parseInt(input?.value ?? "", 10);
-    if (!Number.isSafeInteger(quantity) || quantity <= 0) {
-      showStatus("Koltuk alımı için pozitif tam sayı gir.", true);
-      return;
-    }
-    void mutate(quantity.toLocaleString("en-US") + " koltuk satın alındı.", () => buyIdleStadiumSeats(quantity))
-      .then((succeeded) => {
-        if (succeeded && input) input.value = "";
-      });
-  });
+
   document.addEventListener("keydown", (event) => {
     if (event.key === "Escape") {
       setDrawer("details", false);
