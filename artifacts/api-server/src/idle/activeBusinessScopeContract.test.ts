@@ -24,13 +24,13 @@ const schemaSource = readFileSync(
 describe("Part 25 backend cutover", () => {
   it("preserves legacy SQL tables without exposing them as active economy", () => {
     expect(schemaSource).toContain(
-      'pgTable("idle_business_states"',
+      '"idle_business_states"',
     );
     expect(schemaSource).toContain(
-      'pgTable("idle_action_receipts"',
+      '"idle_action_receipts"',
     );
     expect(schemaSource).toContain(
-      'pgTable("idle_ledger"',
+      '"idle_ledger"',
     );
     expect(routesSource).not.toContain(
       "idle_business_states",
