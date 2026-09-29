@@ -72,6 +72,21 @@ describe("Stadium unlock transaction contract", () => {
     );
   });
 
+  it("revalidates replay cost/balance against canonical config", () => {
+    expect(upgradeSource).toContain("const targetConfig =");
+    expect(upgradeSource).toContain("costCents !== targetConfig.unlockCostCents");
+    expect(upgradeSource).toContain("balanceCents < 0");
+  });
+
+  it("guards receipt completion by key, session, and action", () => {
+    expect(upgradeSource).toContain("AND session_id = $5");
+    expect(upgradeSource).toContain("AND action_type = $6");
+    expect(upgradeSource).toContain("RETURNING id");
+    expect(upgradeSource).toContain(
+      'throw new Error("IDLE_STADIUM_RECEIPT_UPDATE_CONFLICT")',
+    );
+  });
+
   it("maps max-level conflicts explicitly", () => {
     expect(routeSource).toContain(
       '"IDLE_STADIUM_MAX_LEVEL"',
