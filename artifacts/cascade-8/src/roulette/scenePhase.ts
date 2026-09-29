@@ -3,7 +3,7 @@ export type RouletteScenePhase =
   | "spinning"
   | "settled";
 
-export const ROULETTE_RESULT_HOLD_MS = 1600;
+export const ROULETTE_RESULT_HOLD_MS = 2200;
 export const ROULETTE_BETTING_WINDOW_MS = 10_000;
 
 export function getRouletteBettingSecondsRemaining(
