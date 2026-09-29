@@ -2,6 +2,7 @@ import { randomUUID } from "node:crypto";
 import { Router, type IRouter, type Request, type Response } from "express";
 import { SESSION_COOKIE } from "../roulette/routes";
 import { idleRepository } from "./repository";
+import { buyStadiumSeats } from "./seatPurchase";
 import { IDLE_BUSINESS_IDS, type IdleBusinessId } from "./storage";
 
 const router: IRouter = Router();
@@ -37,7 +38,13 @@ function serializeBusiness(business: Awaited<ReturnType<typeof idleRepository.ge
 
 function sendError(res: Response, error: unknown) {
   const message = error instanceof Error ? error.message : "IDLE_REQUEST_FAILED";
-  const status = message === "IDEMPOTENCY_KEY_REUSED" || message === "IDLE_BUSINESS_MAX_LEVEL" || message === "IDLE_VAULT_MAX_LEVEL" ? 409
+  const status = message === "IDEMPOTENCY_KEY_REUSED"
+    || message === "IDLE_BUSINESS_MAX_LEVEL"
+    || message === "IDLE_VAULT_MAX_LEVEL"
+    || message === "IDLE_STADIUM_CAPACITY_EXCEEDED"
+    || message === "IDLE_STADIUM_MAX_SEATS_REACHED"
+    || message === "IDLE_STADIUM_MAX_SEATS_EXCEEDED"
+    ? 409
     : message === "INSUFFICIENT_IDLE_CREDITS" ? 402
       : message === "IDLE_BUSINESS_NOT_FOUND" ? 404
         : 400;
@@ -59,6 +66,50 @@ router.get("/idle/state", async (req, res) => {
   }
 });
 
+
+
+router.post("/idle/stadium/seats/buy", async (req, res) => {
+  try {
+    const {
+      quantity,
+      idempotencyKey,
+    } = req.body as {
+      quantity?: unknown;
+      idempotencyKey?: unknown;
+    };
+
+    if (
+      typeof quantity !== "number"
+      || !Number.isSafeInteger(quantity)
+      || quantity <= 0
+    ) {
+      res.status(400).json({
+        error: "INVALID_IDLE_SEAT_PURCHASE_QUANTITY",
+      });
+      return;
+    }
+
+    if (
+      typeof idempotencyKey !== "string"
+      || !IDEMPOTENCY_PATTERN.test(idempotencyKey)
+    ) {
+      res.status(400).json({
+        error: "VALID_IDEMPOTENCY_KEY_REQUIRED",
+      });
+      return;
+    }
+
+    const result = await buyStadiumSeats(
+      getSessionId(req, res),
+      quantity,
+      idempotencyKey,
+    );
+
+    res.json(result);
+  } catch (error) {
+    sendError(res, error);
+  }
+});
 
 router.post("/idle/collect-all", async (req, res) => {
   try {
