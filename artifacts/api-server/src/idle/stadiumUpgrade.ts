@@ -1,5 +1,6 @@
 import { type PoolClient } from "@workspace/db";
 import { INITIAL_SHARED_BALANCE_CENTS } from "../platform/wallet";
+import { STADIUM_LEVELS } from "../../../cascade-8/src/idle/config";
 import type {
   IdleStadiumLevelUpgradeResponse,
   StadiumLevel,
@@ -64,11 +65,22 @@ function assertUpgradeReplay(
   }
 
   const targetLevel = Number(receipt.target_level);
+  const costCents = Number(receipt.cost_cents);
+  const balanceCents = Number(receipt.balance_cents);
+  const targetConfig = STADIUM_LEVELS.find(
+    (entry) => entry.level === targetLevel,
+  );
+
   if (
     receipt.target_level === null
     || !Number.isInteger(targetLevel)
     || targetLevel < 2
     || targetLevel > 10
+    || !targetConfig
+    || !Number.isSafeInteger(costCents)
+    || costCents !== targetConfig.unlockCostCents
+    || !Number.isSafeInteger(balanceCents)
+    || balanceCents < 0
   ) {
     throw new Error("IDLE_STADIUM_RECEIPT_INCOMPLETE");
   }
