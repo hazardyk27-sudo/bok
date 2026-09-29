@@ -4008,3 +4008,185 @@ button {
     z-index: 12 !important;
   }
 }
+
+
+/* Part 11 — premium readable placed chips */
+@media (max-width: 900px) and (orientation: portrait) {
+  .roulette-page .roulette-bet-cell > .roulette-placed-chip,
+  .roulette-page[data-phase="betting"] .roulette-bet-cell > .roulette-placed-chip,
+  .roulette-page[data-phase="spinning"] .roulette-bet-cell > .roulette-placed-chip,
+  .roulette-page[data-phase="settled"] .roulette-bet-cell > .roulette-placed-chip {
+    --placed-chip-size:
+      clamp(
+        24px,
+        calc(var(--table-width) * 0.096),
+        30px
+      );
+
+    position: absolute !important;
+    left: 50% !important;
+    top: 50% !important;
+    right: auto !important;
+    bottom: auto !important;
+    transform: translate(-50%, -50%) !important;
+
+    box-sizing: border-box;
+    width: var(--placed-chip-size) !important;
+    height: var(--placed-chip-size) !important;
+    min-width: var(--placed-chip-size) !important;
+    min-height: var(--placed-chip-size) !important;
+    max-width: none !important;
+    max-height: none !important;
+    aspect-ratio: 1 / 1;
+    border-radius: 50% !important;
+
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0;
+    padding: 0 2px;
+    overflow: hidden;
+    line-height: 1;
+
+    border:
+      1px solid
+      color-mix(
+        in srgb,
+        var(--chip-edge) 80%,
+        #fff7dd 20%
+      );
+
+    background:
+      repeating-conic-gradient(
+        from -8deg,
+        rgba(255, 247, 226, 0.95) 0deg 7deg,
+        color-mix(in srgb, var(--chip-fill) 70%, black 30%) 7deg 14deg,
+        var(--chip-fill) 14deg 45deg
+      ) !important;
+
+    box-shadow:
+      0 2px 5px rgba(0, 0, 0, 0.42),
+      inset 0 1px 0 rgba(255, 255, 255, 0.30),
+      inset 0 -1px 0 rgba(0, 0, 0, 0.24);
+
+    color: var(--chip-ink) !important;
+
+    font-family:
+      "Avenir Next Condensed",
+      "Arial Narrow",
+      "Roboto Condensed",
+      "Segoe UI",
+      sans-serif;
+    font-weight: 900;
+    font-variant-numeric:
+      tabular-nums
+      lining-nums;
+    text-rendering: geometricPrecision;
+    letter-spacing: -0.02em;
+
+    z-index: 12 !important;
+  }
+
+  .roulette-page .roulette-zero-cell > .roulette-placed-chip,
+  .roulette-page[data-phase="betting"] .roulette-zero-cell > .roulette-placed-chip,
+  .roulette-page[data-phase="spinning"] .roulette-zero-cell > .roulette-placed-chip,
+  .roulette-page[data-phase="settled"] .roulette-zero-cell > .roulette-placed-chip {
+    top: 58% !important;
+  }
+
+  .roulette-page .roulette-placed-chip::before {
+    content: "";
+    position: absolute;
+    inset: 3px;
+    border-radius: 50%;
+    border: 1px solid rgba(255, 247, 226, 0.72);
+    background:
+      radial-gradient(
+        circle at 34% 26%,
+        rgba(255, 255, 255, 0.24),
+        transparent 34%
+      ),
+      linear-gradient(
+        145deg,
+        color-mix(in srgb, var(--chip-fill) 78%, white 22%),
+        var(--chip-fill) 58%,
+        color-mix(in srgb, var(--chip-fill) 72%, black 28%)
+      );
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.18),
+      inset 0 -1px 0 rgba(0, 0, 0, 0.18);
+    z-index: 0;
+    pointer-events: none;
+  }
+
+  .roulette-page .roulette-placed-chip::after {
+    display: none !important;
+  }
+
+  .roulette-page .roulette-placed-chip__value,
+  .roulette-page .roulette-placed-chip__suffix {
+    position: relative;
+    z-index: 2;
+    display: inline-block;
+    line-height: 1;
+    writing-mode: horizontal-tb !important;
+    text-orientation: mixed !important;
+  }
+
+  .roulette-page .roulette-placed-chip__value {
+    transform: translateY(-0.1px);
+  }
+
+  .roulette-page .roulette-placed-chip__suffix {
+    margin-left: 0.35px;
+    font-size: 0.56em;
+    font-weight: 900;
+    letter-spacing: -0.015em;
+    opacity: 0.96;
+    transform: translateY(0.1px);
+  }
+
+  .roulette-page .roulette-placed-chip[data-amount-scale="short"] {
+    font-size:
+      clamp(
+        10.2px,
+        calc(var(--table-width) * 0.039),
+        12.4px
+      );
+    letter-spacing: -0.02em;
+  }
+
+  .roulette-page .roulette-placed-chip[data-amount-scale="medium"] {
+    font-size:
+      clamp(
+        8.8px,
+        calc(var(--table-width) * 0.034),
+        10.6px
+      );
+    letter-spacing: -0.03em;
+  }
+
+  .roulette-page .roulette-placed-chip[data-amount-scale="long"] {
+    font-size:
+      clamp(
+        7.2px,
+        calc(var(--table-width) * 0.029),
+        8.8px
+      );
+    letter-spacing: -0.04em;
+  }
+
+  .roulette-page .roulette-placed-chip[data-amount-scale="long"]
+    .roulette-placed-chip__suffix {
+    font-size: 0.52em;
+    margin-left: 0.1px;
+  }
+
+  .roulette-page .roulette-placed-chip:not(.chip-1) {
+    text-shadow: 0 1px 1px rgba(0, 0, 0, 0.42);
+  }
+
+  .roulette-page .roulette-placed-chip.chip-1 {
+    text-shadow: none;
+  }
+}
