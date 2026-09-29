@@ -67,12 +67,7 @@ export function getStorageCapacityMicroTickets(storageLevel: StorageLevel) {
   );
 }
 
-/**
- * Calculates raw ticket production for an elapsed interval without applying
- * Storage capacity. Integer division floors only the sub-microticket fraction,
- * so frequent checkpoints do not create floating-point drift.
- */
-export function calculateProducedMicroTickets(
+function calculateProducedMicroTicketsBigInt(
   ownedSeats: number,
   speedLevel: SpeedLevel,
   elapsedMs: number,
@@ -83,10 +78,29 @@ export function calculateProducedMicroTickets(
     ownedSeats,
     speedLevel,
   );
-  if (rate === 0 || elapsedMs === 0) return 0;
+  if (rate === 0 || elapsedMs === 0) return 0n;
 
+  return BigInt(rate)
+    * BigInt(elapsedMs)
+    / BigInt(MILLISECONDS_PER_HOUR);
+}
+
+/**
+ * Calculates raw ticket production for an elapsed interval without applying
+ * Storage capacity. Integer division floors only the sub-microticket fraction,
+ * so frequent checkpoints do not create floating-point drift.
+ *
+ * The production projection below keeps this value as bigint until after the
+ * Storage cap is applied, allowing arbitrarily long offline intervals without
+ * inventing an offline-time cap.
+ */
+export function calculateProducedMicroTickets(
+  ownedSeats: number,
+  speedLevel: SpeedLevel,
+  elapsedMs: number,
+) {
   return bigintToSafeNumber(
-    BigInt(rate) * BigInt(elapsedMs) / BigInt(MILLISECONDS_PER_HOUR),
+    calculateProducedMicroTicketsBigInt(ownedSeats, speedLevel, elapsedMs),
     "IDLE_PRODUCTION_AMOUNT_OVERFLOW",
   );
 }
@@ -94,7 +108,6 @@ export function calculateProducedMicroTickets(
 export type StadiumTicketProductionProjection = {
   productionRateMicroTicketsPerHour: number;
   storageCapacityMicroTickets: number;
-  rawProducedMicroTickets: number;
   creditedMicroTickets: number;
   liveStoredMicroTickets: number;
   remainingStorageMicroTickets: number;
@@ -137,14 +150,16 @@ export function projectStadiumTicketProduction(input: {
 
   const remainingBeforeProduction =
     storageCapacityMicroTickets - input.storedMicroTickets;
-  const rawProducedMicroTickets = calculateProducedMicroTickets(
+  const rawProducedMicroTickets = calculateProducedMicroTicketsBigInt(
     input.ownedSeats,
     input.speedLevel,
     input.elapsedMs,
   );
-  const creditedMicroTickets = Math.min(
-    remainingBeforeProduction,
-    rawProducedMicroTickets,
+  const creditedMicroTickets = bigintToSafeNumber(
+    rawProducedMicroTickets < BigInt(remainingBeforeProduction)
+      ? rawProducedMicroTickets
+      : BigInt(remainingBeforeProduction),
+    "IDLE_CREDITED_PRODUCTION_OVERFLOW",
   );
   const liveStoredMicroTickets =
     input.storedMicroTickets + creditedMicroTickets;
@@ -161,7 +176,6 @@ export function projectStadiumTicketProduction(input: {
   return {
     productionRateMicroTicketsPerHour,
     storageCapacityMicroTickets,
-    rawProducedMicroTickets,
     creditedMicroTickets,
     liveStoredMicroTickets,
     remainingStorageMicroTickets,
