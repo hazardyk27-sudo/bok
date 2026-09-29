@@ -205,6 +205,7 @@ export class TicketMarketRuntime {
   private readonly onError?: (error: unknown) => void;
 
   private running = false;
+  private stopRequested = false;
   private startInFlight: Promise<void> | null = null;
   private timer: ReturnType<typeof setTimeout> | null = null;
   private previousBtcQuoteMicrodollars: number | null = null;
@@ -258,6 +259,7 @@ export class TicketMarketRuntime {
     if (this.running) return;
     if (this.startInFlight) return this.startInFlight;
 
+    this.stopRequested = false;
     const startPromise = this.startInternal();
     this.startInFlight = startPromise;
 
@@ -280,6 +282,8 @@ export class TicketMarketRuntime {
         bootstrapAt,
       );
 
+    if (this.stopRequested) return;
+
     this.running = true;
     this.previousBtcQuoteMicrodollars = null;
     this.coordinator.reset();
@@ -293,11 +297,20 @@ export class TicketMarketRuntime {
   async stop() {
     if (!this.running && !this.startInFlight) return;
 
+    this.stopRequested = true;
     this.running = false;
 
     if (this.timer !== null) {
       this.clearTimeoutFn(this.timer);
       this.timer = null;
+    }
+
+    if (this.startInFlight) {
+      try {
+        await this.startInFlight;
+      } catch {
+        // Startup failure is reported by the caller/startup logger.
+      }
     }
 
     this.binance.stop();
