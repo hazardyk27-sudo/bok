@@ -2,23 +2,50 @@ import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 
-const repositorySource = readFileSync(
-  fileURLToPath(new URL("./repository.ts", import.meta.url)),
+const stateSource = readFileSync(
+  fileURLToPath(
+    new URL("./stadiumState.ts", import.meta.url),
+  ),
   "utf8",
 );
 
-describe("Idle repository SQL regression", () => {
-  it("does not ask PostgreSQL to add two untyped collect parameters", () => {
-    expect(repositorySource).not.toContain("VALUES ($1, $2 + $3, now())");
-    expect(repositorySource).toContain(
-      "INITIAL_SHARED_BALANCE_CENTS + settlement.walletCreditCents",
+describe("canonical Idle state SQL regression", () => {
+  it("reads only canonical Stadium + shared wallet state", () => {
+    expect(stateSource).toContain(
+      "ensureStadiumState(",
     );
-    expect(repositorySource).toContain("VALUES ($1, $2, now())");
+    expect(stateSource).toContain(
+      "roulette_wallets",
+    );
+    expect(stateSource).not.toContain(
+      "idle_business_states",
+    );
+    expect(stateSource).not.toContain(
+      "idle_action_receipts",
+    );
+    expect(stateSource).not.toContain(
+      "idle_ledger",
+    );
   });
 
-  it("keeps existing-wallet collect credit typed by the balance column", () => {
-    expect(repositorySource).toContain(
-      "SET balance_cents = roulette_wallets.balance_cents + $3",
+  it("uses one transaction and the canonical Stadium-then-wallet lock order", () => {
+    const beginIndex = stateSource.indexOf(
+      'await client.query("BEGIN")',
     );
+    const stadiumIndex = stateSource.indexOf(
+      "await ensureStadiumState(",
+    );
+    const walletIndex = stateSource.indexOf(
+      "FROM roulette_wallets",
+    );
+    const commitIndex = stateSource.indexOf(
+      'await client.query("COMMIT")',
+    );
+
+    expect(beginIndex).toBeGreaterThan(-1);
+    expect(stadiumIndex).toBeGreaterThan(beginIndex);
+    expect(walletIndex).toBeGreaterThan(stadiumIndex);
+    expect(commitIndex).toBeGreaterThan(walletIndex);
+    expect(stateSource).toContain("FOR UPDATE");
   });
 });
