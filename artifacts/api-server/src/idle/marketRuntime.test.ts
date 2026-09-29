@@ -47,23 +47,23 @@ class FakePersistence implements RuntimeMarketPersistence {
   constructor(public state: RuntimePersistedMarketState) {}
 
   async ensureCurrentState() {
-    return { ...this.state, tickAt: new Date(this.state.tickAt) };
+    return { ...this.state, tickAt: new Date(this.state.tickAt.getTime()) };
   }
 
   async getCurrentState() {
-    return { ...this.state, tickAt: new Date(this.state.tickAt) };
+    return { ...this.state, tickAt: new Date(this.state.tickAt.getTime()) };
   }
 
   async getCurrentStateOnClient(
     _client: RuntimeMarketPersistenceClient,
   ) {
-    return { ...this.state, tickAt: new Date(this.state.tickAt) };
+    return { ...this.state, tickAt: new Date(this.state.tickAt.getTime()) };
   }
 
   async getHistory() {
     return this.history.map((point) => ({
       ...point,
-      tickAt: new Date(point.tickAt),
+      tickAt: new Date(point.tickAt.getTime()),
     }));
   }
 
@@ -79,18 +79,18 @@ class FakePersistence implements RuntimeMarketPersistence {
     this.persistCalls += 1;
     this.state = {
       ...tick,
-      tickAt: new Date(tick.tickAt),
+      tickAt: new Date(tick.tickAt.getTime()),
     };
     this.history.push({
       priceMicrodollars: tick.priceMicrodollars,
       source: tick.source,
-      tickAt: new Date(tick.tickAt),
+      tickAt: new Date(tick.tickAt.getTime()),
     });
 
     return {
       state: {
         ...this.state,
-        tickAt: new Date(this.state.tickAt),
+        tickAt: new Date(this.state.tickAt.getTime()),
       },
     };
   }
