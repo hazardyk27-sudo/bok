@@ -4,6 +4,10 @@ import type {
   TicketMarketSource,
 } from "../../../cascade-8/src/idle/types";
 import { parseBtcUsdQuoteToMicrodollars } from "./fixedPoint";
+import {
+  MARKET_RECONNECT_MAX_DELAY_MS,
+  calculateReconnectBackoffMs,
+} from "./marketFeedHealth";
 
 export const COINBASE_ADVANCED_MARKET_DATA_URL =
   "wss://advanced-trade-ws.coinbase.com";
@@ -289,6 +293,7 @@ export class CoinbaseBtcUsdFeed {
 
   private running = false;
   private connectionEpoch = 0;
+  private reconnectAttempt = 0;
   private awaitingRebaseline = true;
   private status: TicketMarketFeedStatus = "FROZEN";
   private latestQuote: CoinbaseBtcQuoteUpdate | null = null;
@@ -439,6 +444,7 @@ export class CoinbaseBtcUsdFeed {
       };
 
       this.awaitingRebaseline = false;
+      this.reconnectAttempt = 0;
       this.latestQuote = quote;
       this.setStatus("LIVE");
       this.onQuote?.({ ...quote });
@@ -454,7 +460,7 @@ export class CoinbaseBtcUsdFeed {
 
       try {
         socket.close();
-      } catch {
+      } finally {
         this.scheduleReconnect(epoch);
       }
     });
@@ -487,6 +493,16 @@ export class CoinbaseBtcUsdFeed {
 
     this.setStatus("CONNECTING");
 
+    const reconnectDelayMs = calculateReconnectBackoffMs(
+      this.reconnectAttempt,
+      this.reconnectDelayMs,
+      Math.max(
+        this.reconnectDelayMs,
+        MARKET_RECONNECT_MAX_DELAY_MS,
+      ),
+    );
+    this.reconnectAttempt += 1;
+
     this.reconnectTimer = this.setTimeoutFn?.(() => {
       this.reconnectTimer = null;
 
@@ -498,6 +514,6 @@ export class CoinbaseBtcUsdFeed {
       }
 
       this.openConnection();
-    }, this.reconnectDelayMs) ?? null;
+    }, reconnectDelayMs) ?? null;
   }
 }
