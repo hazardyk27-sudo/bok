@@ -1,4 +1,3 @@
-import { randomUUID } from "node:crypto";
 import { type PoolClient } from "@workspace/db";
 import { INITIAL_SHARED_BALANCE_CENTS } from "../platform/wallet";
 import { STADIUM_LEVELS } from "../../../cascade-8/src/idle/config";
@@ -9,6 +8,7 @@ import {
   stadiumProjectionToServerState,
 } from "./stadiumRepository";
 import { runCheckpointedStadiumMutation } from "./stadiumMutation";
+import { reserveStadiumActionReceipt } from "./stadiumActionReceipt";
 
 const SEAT_PURCHASE_ACTION = "SEAT_PURCHASE" as const;
 
@@ -100,22 +100,17 @@ export async function buyStadiumSeats(
     sessionId,
     serverNow,
     async ({ client, settledState }) => {
-      const reserved = await client.query<{ id: string }>(
-        `INSERT INTO idle_stadium_action_receipts
-           (id, session_id, action_type, idempotency_key, requested_quantity)
-         VALUES ($1, $2, $3, $4, $5)
-         ON CONFLICT (idempotency_key) DO NOTHING
-         RETURNING id`,
-        [
-          randomUUID(),
+      const reservation = await reserveStadiumActionReceipt(
+        client,
+        {
           sessionId,
-          SEAT_PURCHASE_ACTION,
+          actionType: "SEAT_PURCHASE",
           idempotencyKey,
-          quantity,
-        ],
+          requestedQuantity: quantity,
+        },
       );
 
-      if (!reserved.rows[0]) {
+      if (!reservation.created) {
         const replayResult = await client.query<SeatPurchaseReceiptRow>(
           `SELECT session_id, action_type, requested_quantity,
                   purchased_seats, cost_cents, resulting_owned_seats,
