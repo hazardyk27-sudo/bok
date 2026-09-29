@@ -164,7 +164,7 @@ export function mountRoulette(app: HTMLDivElement) {
             </div>
             <div class="roulette-top-hud__metric">
               <span>LAST WIN</span>
-              <strong data-last-win aria-live="polite">—</strong>
+              <strong data-last-win aria-live="polite">-</strong>
             </div>
           </div>
 
@@ -458,7 +458,7 @@ export function mountRoulette(app: HTMLDivElement) {
         ? formatRouletteAmount(
             settlement.grossReturn,
           )
-        : "—";
+        : "-";
 
     lastWinDisplays.forEach((display) => {
       display.textContent =
@@ -845,6 +845,7 @@ export function mountRoulette(app: HTMLDivElement) {
         "aria-hidden",
         "true",
       );
+      delete page.dataset.resultNumber;
       delete page.dataset.resultColor;
       delete page.dataset.resultLeftNeighbor;
       delete page.dataset.resultRightNeighbor;
