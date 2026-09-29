@@ -1,4 +1,9 @@
 import "./idle.css";
+import "./stadium-premium.css";
+import {
+  createStadiumPremiumUi,
+  type StadiumPremiumUi,
+} from "./stadiumPremium";
 import {
   fetchIdleStadiumState,
   projectIdleStadiumLive,
@@ -330,9 +335,21 @@ class BusinessesClient {
   private stopMarket:
     (() => void) | null = null;
 
+  private readonly premiumUi: StadiumPremiumUi;
+
   constructor(
     private readonly root: HTMLElement,
   ) {
+    this.premiumUi = createStadiumPremiumUi({
+      root: this.root,
+      getEnvelope: () => this.envelope,
+      getMarket: () => this.market,
+      refreshState: async () => {
+        this.envelope = await fetchIdleStadiumState();
+        this.market = this.envelope.snapshot.market;
+        this.render();
+      },
+    });
     void this.start();
   }
 
@@ -520,6 +537,7 @@ class BusinessesClient {
     }
 
     this.renderMarket();
+    this.premiumUi.render();
   }
 
   private renderMarket() {
@@ -570,6 +588,8 @@ class BusinessesClient {
           ? "live"
           : "limited";
     }
+
+    this.premiumUi.renderMarket();
   }
 
   private showError(error: unknown) {
