@@ -65,7 +65,11 @@ import {
   getRouletteResultTone,
   normalizeRouletteRecentResults,
 } from "./recentResults";
-import { formatRouletteAmount } from "./uiFormat";
+import {
+  formatRouletteAmount,
+  formatRouletteMoney,
+  formatRouletteSignedMoney,
+} from "./uiFormat";
 import { renderRouletteWheel } from "./wheelRenderer";
 
 const ROULETTE_PLACED_CHIP_PALETTE: Record<
@@ -160,7 +164,7 @@ export function mountRoulette(app: HTMLDivElement) {
             </div>
             <div class="roulette-top-hud__metric">
               <span>TOTAL BET</span>
-              <strong data-total-bet>0</strong>
+              <strong data-total-bet>$0</strong>
             </div>
             <div class="roulette-top-hud__metric">
               <span>LAST WIN</span>
@@ -444,7 +448,7 @@ export function mountRoulette(app: HTMLDivElement) {
     const balanceText =
       walletBalanceCents === null
         ? "…"
-        : formatRouletteAmount(walletBalanceCents / 100);
+        : formatRouletteMoney(walletBalanceCents / 100);
 
     walletBalanceDisplays.forEach((display) => {
       display.textContent = balanceText;
@@ -456,7 +460,7 @@ export function mountRoulette(app: HTMLDivElement) {
   ) => {
     const lastWinText =
       settlement.grossReturn > 0
-        ? formatRouletteAmount(
+        ? formatRouletteMoney(
             settlement.grossReturn,
           )
         : "-";
@@ -684,11 +688,15 @@ export function mountRoulette(app: HTMLDivElement) {
 
     if (roundReturn) {
       roundReturn.textContent =
-        presentation.grossReturnText;
+        formatRouletteMoney(
+          settlement.grossReturn,
+        );
     }
     if (roundProfit) {
       roundProfit.textContent =
-        presentation.netProfitText;
+        formatRouletteSignedMoney(
+          settlement.netProfit,
+        );
     }
     if (roundOutcome) {
       roundOutcome.dataset.roundOutcome =
@@ -785,7 +793,7 @@ export function mountRoulette(app: HTMLDivElement) {
     if (winAmount) {
       winAmount.textContent =
         showWinMessage
-          ? formatRouletteAmount(
+          ? formatRouletteMoney(
               presentation.grossReturn,
             )
           : "—";
@@ -1067,7 +1075,7 @@ export function mountRoulette(app: HTMLDivElement) {
         betState.placements,
       );
     const totalBetText =
-      formatRouletteAmount(
+      formatRouletteMoney(
         stake,
       );
     totalBetDisplays.forEach((display) => {
