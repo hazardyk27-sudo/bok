@@ -9,13 +9,16 @@ const { Pool } = pg;
 // the app still stays well inside JavaScript's safe-integer range.
 pg.types.setTypeParser(20, (value) => Number(value));
 
-if (!process.env.DATABASE_URL) {
+const databaseUrl =
+  process.env.SUPABASE_DATABASE_URL ?? process.env.DATABASE_URL;
+
+if (!databaseUrl) {
   throw new Error(
-    "DATABASE_URL must be set. Did you forget to provision a database?",
+    "SUPABASE_DATABASE_URL or DATABASE_URL must be set. Did you forget to provision a database?",
   );
 }
 
-export const pool = new Pool({ connectionString: process.env.DATABASE_URL });
+export const pool = new Pool({ connectionString: databaseUrl });
 export const db = drizzle(pool, { schema });
 
 export * from "./schema";
