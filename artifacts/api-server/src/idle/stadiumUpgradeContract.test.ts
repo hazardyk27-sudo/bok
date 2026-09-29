@@ -60,7 +60,10 @@ describe("Stadium unlock transaction contract", () => {
       'const STADIUM_UPGRADE_ACTION = "STADIUM_UPGRADE"',
     );
     expect(upgradeSource).toContain(
-      "INSERT INTO idle_stadium_action_receipts",
+      "reserveStadiumActionReceipt(",
+    );
+    expect(upgradeSource).toContain(
+      'actionType: "STADIUM_UPGRADE"',
     );
     expect(upgradeSource).toContain("target_level");
     expect(upgradeSource).toContain("replayed: true");
