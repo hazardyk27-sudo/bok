@@ -450,7 +450,7 @@ export async function sellStadiumTickets(
         [sessionId, balanceCents],
       );
 
-      await client.query(
+      const receiptUpdate = await client.query<{ id: string }>(
         `UPDATE idle_stadium_action_receipts
             SET sold_tickets = $2,
                 execution_price_microdollars = $3,
@@ -461,7 +461,10 @@ export async function sellStadiumTickets(
                 market_source = $8,
                 market_feed_status = $9,
                 market_tick_at = $10
-          WHERE idempotency_key = $1`,
+          WHERE idempotency_key = $1
+            AND session_id = $11
+            AND action_type = $12
+        RETURNING id`,
         [
           idempotencyKey,
           quote.soldTickets,
@@ -473,8 +476,14 @@ export async function sellStadiumTickets(
           market.source,
           market.feedStatus,
           market.tickAt,
+          sessionId,
+          TICKET_SALE_ACTION,
         ],
       );
+
+      if (!receiptUpdate.rows[0]) {
+        throw new Error("IDLE_STADIUM_RECEIPT_UPDATE_CONFLICT");
+      }
 
       return {
         patch: {
