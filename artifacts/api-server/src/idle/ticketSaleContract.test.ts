@@ -91,7 +91,10 @@ describe("ticket sale transaction contract", () => {
       "settleMarketMicrodollarsToWalletCents({",
     );
     expect(saleSource).toContain(
-      "priorRemainderMicrodollars:",
+      "const priorRemainderMicrodollars =",
+    );
+    expect(saleSource).toContain(
+      "priorRemainderMicrodollars,",
     );
     expect(saleSource).toContain(
       "saleRemainderMicrodollars:",
