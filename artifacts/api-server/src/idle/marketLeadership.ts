@@ -56,7 +56,7 @@ export class GlobalMarketWriterLeadership {
   private acquireInFlight:
     Promise<boolean> | null = null;
 
-  constructor(options: MarketLeadershipOptions = {}) {
+  constructor(options: MarketLeadershipOptions) {
     this.connect = options.connect;
     this.now = options.now ?? (() => new Date());
   }
