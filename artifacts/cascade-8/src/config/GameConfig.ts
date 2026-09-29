@@ -127,12 +127,12 @@ export const PAYTABLE: Record<NormalSymbolId, readonly { min: number; max: numbe
 // Context-specific special-symbol probabilities. Values are decimals, not percentages.
 export const BASE_INITIAL_SCATTER_CHANCE = 0.03;
 export const BASE_REFILL_SCATTER_CHANCE = 0.035;
-export const BASE_INITIAL_CORE_CHANCE = 0.002;
-export const BASE_REFILL_CORE_CHANCE = 0.007;
+export const BASE_INITIAL_CORE_CHANCE = 0.001;
+export const BASE_REFILL_CORE_CHANCE = 0.003;
 export const BONUS_INITIAL_SCATTER_CHANCE = 0.015;
 export const BONUS_REFILL_SCATTER_CHANCE = 0.03;
-export const BONUS_INITIAL_CORE_CHANCE = 0.033;
-export const BONUS_REFILL_CORE_CHANCE = 0.055;
+export const BONUS_INITIAL_CORE_CHANCE = 0.03;
+export const BONUS_REFILL_CORE_CHANCE = 0.05;
 
 export const BASE_MULTIPLIER_CORE_CHANCE = BASE_REFILL_CORE_CHANCE;
 export const BASE_MULTIPLIER_CORE_WEIGHTS = [
