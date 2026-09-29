@@ -218,8 +218,9 @@ export async function fetchIdleMarketCurrent() {
     );
   }
 
-  return response.json()
-    as Promise<IdleTicketMarketCurrentResponse>;
+  return response.json() as Promise<
+    IdleTicketMarketCurrentResponse
+  >;
 }
 
 export async function fetchIdleMarketHistory() {
@@ -241,8 +242,9 @@ export async function fetchIdleMarketHistory() {
     );
   }
 
-  return response.json()
-    as Promise<IdleTicketMarketHistoryResponse>;
+  return response.json() as Promise<
+    IdleTicketMarketHistoryResponse
+  >;
 }
 
 export function subscribeIdleMarket(
@@ -256,9 +258,9 @@ export function subscribeIdleMarket(
 
   const handleMarket = (event: MessageEvent<string>) => {
     try {
-      const market =
-        JSON.parse(event.data)
-        as IdleTicketMarketLiveEvent;
+      const market = JSON.parse(
+        event.data,
+      ) as IdleTicketMarketLiveEvent;
       onMarket(market);
     } catch {
       onError?.();
