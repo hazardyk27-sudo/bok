@@ -52,6 +52,136 @@ describe("whole-ticket sale quote", () => {
     expect(quote.resultingStoredMicroTickets).toBe(750_000);
   });
 
+
+  it("accepts the canonical market floor and ceiling and rejects prices outside them", () => {
+    expect(quoteWholeTicketSale({
+      state: {
+        storedMicroTickets: 1_000_000,
+        saleRemainderMicrodollars: 0,
+      },
+      quantityTickets: 1,
+      executionPriceMicrodollars: 200_000,
+    }).grossSaleMicrodollars).toBe(200_000);
+
+    expect(quoteWholeTicketSale({
+      state: {
+        storedMicroTickets: 1_000_000,
+        saleRemainderMicrodollars: 0,
+      },
+      quantityTickets: 1,
+      executionPriceMicrodollars: 10_000_000,
+    }).grossSaleMicrodollars).toBe(10_000_000);
+
+    expect(() => quoteWholeTicketSale({
+      state: {
+        storedMicroTickets: 1_000_000,
+        saleRemainderMicrodollars: 0,
+      },
+      quantityTickets: 1,
+      executionPriceMicrodollars: 199_999,
+    })).toThrow("INVALID_IDLE_TICKET_PRICE");
+
+    expect(() => quoteWholeTicketSale({
+      state: {
+        storedMicroTickets: 1_000_000,
+        saleRemainderMicrodollars: 0,
+      },
+      quantityTickets: 1,
+      executionPriceMicrodollars: 10_000_001,
+    })).toThrow("INVALID_IDLE_TICKET_PRICE");
+  });
+
+  it("handles the maximum canonical 500k-ticket storage sale at the $10 ceiling exactly", () => {
+    const quote = quoteWholeTicketSale({
+      state: {
+        storedMicroTickets: 500_000_000_000,
+        saleRemainderMicrodollars: 0,
+      },
+      quantityTickets: 500_000,
+      executionPriceMicrodollars: 10_000_000,
+    });
+
+    expect(quote).toMatchObject({
+      soldTickets: 500_000,
+      soldMicroTickets: 500_000_000_000,
+      resultingStoredMicroTickets: 0,
+      grossSaleMicrodollars: 5_000_000_000_000,
+      walletCreditCents: 500_000_000,
+      saleRemainderMicrodollars: 0,
+    });
+  });
+
+  it("makes repeated whole-ticket sales equal one combined sale when execution price is unchanged", () => {
+    const price = 200_001;
+
+    const first = quoteWholeTicketSale({
+      state: {
+        storedMicroTickets: 3_000_000,
+        saleRemainderMicrodollars: 0,
+      },
+      quantityTickets: 1,
+      executionPriceMicrodollars: price,
+    });
+
+    const second = quoteWholeTicketSale({
+      state: {
+        storedMicroTickets: 2_000_000,
+        saleRemainderMicrodollars:
+          first.saleRemainderMicrodollars,
+      },
+      quantityTickets: 1,
+      executionPriceMicrodollars: price,
+    });
+
+    const third = quoteWholeTicketSale({
+      state: {
+        storedMicroTickets: 1_000_000,
+        saleRemainderMicrodollars:
+          second.saleRemainderMicrodollars,
+      },
+      quantityTickets: 1,
+      executionPriceMicrodollars: price,
+    });
+
+    const combined = quoteWholeTicketSale({
+      state: {
+        storedMicroTickets: 3_000_000,
+        saleRemainderMicrodollars: 0,
+      },
+      quantityTickets: 3,
+      executionPriceMicrodollars: price,
+    });
+
+    expect(
+      first.walletCreditCents
+      + second.walletCreditCents
+      + third.walletCreditCents,
+    ).toBe(combined.walletCreditCents);
+    expect(third.saleRemainderMicrodollars)
+      .toBe(combined.saleRemainderMicrodollars);
+    expect(third.saleRemainderMicrodollars).toBe(3);
+  });
+
+  it("rejects malformed stored inventory and sub-cent remainder state", () => {
+    expect(() => quoteWholeTicketSale({
+      state: {
+        storedMicroTickets: -1,
+        saleRemainderMicrodollars: 0,
+      },
+      quantityTickets: 1,
+      executionPriceMicrodollars: 4_000_000,
+    })).toThrow("INVALID_IDLE_STORED_MICROTICKETS");
+
+    expect(() => quoteWholeTicketSale({
+      state: {
+        storedMicroTickets: 1_000_000,
+        saleRemainderMicrodollars: 10_000,
+      },
+      quantityTickets: 1,
+      executionPriceMicrodollars: 4_000_000,
+    })).toThrow("INVALID_IDLE_SALE_REMAINDER");
+  });
+
   it("rejects a sale that would make inventory negative", () => {
     expect(() => quoteWholeTicketSale({
       state: {
