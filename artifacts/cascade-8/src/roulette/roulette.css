@@ -1741,7 +1741,10 @@ button {
   .roulette-zero-cell.is-winning-bet .roulette-placed-chip {
     transform:
       translate(-50%, -50%)
-      scale(1.08);
+      scale(1.06);
+    box-shadow:
+      0 2px 6px rgba(0, 0, 0, 0.40),
+      0 0 0 1px rgba(119, 231, 176, 0.34);
   }
 
   .roulette-number-cell.is-result-number .roulette-placed-chip,
@@ -1958,6 +1961,19 @@ button {
   .roulette-mobile-chip-toggle > span {
     position: relative;
     z-index: 1;
+  }
+
+  .roulette-mobile-chip-toggle[aria-expanded="true"] {
+    border-color: var(--chip-edge);
+    background:
+      linear-gradient(
+        180deg,
+        color-mix(in srgb, var(--chip-fill) 92%, white 8%),
+        var(--chip-fill)
+      );
+    box-shadow:
+      0 3px 8px rgba(0, 0, 0, 0.36),
+      0 0 0 2px rgba(255, 255, 255, 0.10);
   }
 
   .roulette-mobile-chip-toggle[data-selected-chip="1"] {
