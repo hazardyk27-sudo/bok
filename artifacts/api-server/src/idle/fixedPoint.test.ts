@@ -75,6 +75,17 @@ describe("Idle market fixed-point precision", () => {
     });
   });
 
+
+  it("carries exactly at the 10,000-microdollar cent boundary", () => {
+    expect(settleMarketMicrodollarsToWalletCents({
+      grossSaleMicrodollars: 1,
+      priorRemainderMicrodollars: 9_999,
+    })).toEqual({
+      walletCreditCents: 1,
+      saleRemainderMicrodollars: 0,
+    });
+  });
+
   it("makes split settlements equal one combined settlement", () => {
     const first = settleMarketMicrodollarsToWalletCents({
       grossSaleMicrodollars: 3_333,
