@@ -1,11 +1,6 @@
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
-import {
-  ACTIVE_IDLE_BUSINESS_IDS,
-  IDLE_BUSINESS_IDS,
-} from "./storage";
-
 const routesSource = readFileSync(
   fileURLToPath(new URL("./routes.ts", import.meta.url)),
   "utf8",
@@ -16,24 +11,29 @@ const stateSource = readFileSync(
   ),
   "utf8",
 );
-const repositorySource = readFileSync(
+const schemaSource = readFileSync(
   fileURLToPath(
-    new URL("./repository.ts", import.meta.url),
+    new URL(
+      "../../../../lib/db/src/schema/idle.ts",
+      import.meta.url,
+    ),
   ),
   "utf8",
 );
 
 describe("Part 25 backend cutover", () => {
-  it("keeps old identifiers available without exposing them as active economy", () => {
-    expect(ACTIVE_IDLE_BUSINESS_IDS)
-      .toEqual(["stadium"]);
-    expect(IDLE_BUSINESS_IDS).toEqual([
-      "stadium",
-      "club-store",
-      "fan-club",
-    ]);
-    expect(repositorySource).not.toContain(
-      "DELETE FROM idle_business_states",
+  it("preserves legacy SQL tables without exposing them as active economy", () => {
+    expect(schemaSource).toContain(
+      'pgTable("idle_business_states"',
+    );
+    expect(schemaSource).toContain(
+      'pgTable("idle_action_receipts"',
+    );
+    expect(schemaSource).toContain(
+      'pgTable("idle_ledger"',
+    );
+    expect(routesSource).not.toContain(
+      "idle_business_states",
     );
   });
 
