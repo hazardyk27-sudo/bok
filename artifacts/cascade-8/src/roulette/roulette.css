@@ -1415,6 +1415,11 @@ button {
     text-shadow: 0 1px 1px rgba(0, 0, 0, 0.62);
   }
 
+  .roulette-number-cell > span,
+  .roulette-zero-cell > span {
+    transition: opacity 120ms ease;
+  }
+
   .roulette-number-cell.is-red {
     color: #c43b35;
     background: #070808;
@@ -1556,16 +1561,49 @@ button {
   }
 
   .roulette-placed-chip {
-    width: clamp(13px, calc(var(--table-width) * 0.068), 22px);
-    height: clamp(13px, calc(var(--table-width) * 0.068), 22px);
+    width: clamp(16px, calc(var(--table-width) * 0.082), 27px);
+    height: clamp(16px, calc(var(--table-width) * 0.082), 27px);
     border-width: 1px;
-    font-size: clamp(5px, calc(var(--table-width) * 0.018), 7px);
+    font-size: clamp(5px, calc(var(--table-width) * 0.020), 8px);
+    line-height: 1;
+    box-shadow:
+      0 3px 8px rgba(0, 0, 0, 0.48),
+      inset 0 0 0 1px rgba(0, 0, 0, 0.24);
   }
 
+  /*
+   * Straight-up chips sit directly on the number, matching the reference.
+   * Non-straight bets keep their generic center placement from the base rules.
+   */
   .roulette-number-cell .roulette-placed-chip,
   .roulette-zero-cell .roulette-placed-chip {
-    right: 1px;
-    bottom: 1px;
+    left: 50%;
+    top: 50%;
+    right: auto;
+    bottom: auto;
+    transform: translate(-50%, -50%);
+    z-index: 9;
+  }
+
+  .roulette-number-cell.has-bet > span,
+  .roulette-zero-cell.has-bet > span {
+    opacity: 0.42;
+  }
+
+  .roulette-number-cell.is-winning-bet .roulette-placed-chip,
+  .roulette-zero-cell.is-winning-bet .roulette-placed-chip {
+    transform:
+      translate(-50%, -50%)
+      scale(1.08);
+  }
+
+  .roulette-number-cell.is-result-number .roulette-placed-chip,
+  .roulette-zero-cell.is-result-number .roulette-placed-chip {
+    box-shadow:
+      0 3px 9px rgba(0, 0, 0, 0.52),
+      0 0 0 1.5px rgba(119, 231, 176, 0.82),
+      0 0 10px rgba(83, 214, 155, 0.30),
+      inset 0 0 0 1px rgba(0, 0, 0, 0.22);
   }
 
   /* ----- right rail ----- */
