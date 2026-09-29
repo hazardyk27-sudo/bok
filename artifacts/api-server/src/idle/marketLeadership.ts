@@ -178,9 +178,22 @@ export class GlobalMarketWriterLeadership {
         ],
       );
 
-      return result.rows[0]?.released === true;
-    } finally {
       client.release();
+      return result.rows[0]?.released === true;
+    } catch (error) {
+      // Never return a session with an uncertain session-level advisory lock to
+      // the pool. Destroying the client guarantees PostgreSQL drops the session
+      // and therefore releases any lock it may still hold.
+      try {
+        client.release(
+          error instanceof Error
+            ? error
+            : new Error("IDLE_MARKET_LEADER_RELEASE_FAILED"),
+        );
+      } catch {
+        // Preserve the original unlock error.
+      }
+      throw error;
     }
   }
 
