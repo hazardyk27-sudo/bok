@@ -1103,11 +1103,11 @@ button {
   }
 
   .roulette-page {
-    --top-hud-height: 24px;
-    --history-height: 20px;
+    --top-hud-height: 34px;
+    --history-height: 22px;
     --footer-reserve: 46px;
     --table-ratio: 1.731;
-    --table-top: clamp(108px, 17.5dvh, 132px);
+    --table-top: clamp(122px, 19dvh, 144px);
     --wheel-size: min(76vw, 286px);
     --table-width: min(
       86vw,
@@ -1183,7 +1183,7 @@ button {
 
   .roulette-top-hud {
     position: absolute;
-    top: 1px;
+    top: max(2px, env(safe-area-inset-top));
     left: 50%;
     transform: translateX(-50%);
     width: min(96vw, 430px);
@@ -1191,13 +1191,18 @@ button {
     box-sizing: border-box;
     display: grid;
     grid-template-columns: repeat(3, minmax(0, 1fr));
-    align-items: center;
-    border: 1px solid rgba(241, 234, 218, 0.10);
-    border-radius: 5px;
-    background: rgba(4, 5, 6, 0.94);
+    align-items: stretch;
+    border: 1px solid rgba(240, 225, 190, 0.18);
+    border-radius: 8px;
+    background:
+      linear-gradient(
+        180deg,
+        rgba(17, 19, 20, 0.98),
+        rgba(6, 7, 8, 0.98)
+      );
     box-shadow:
-      0 4px 12px rgba(0, 0, 0, 0.20),
-      inset 0 1px 0 rgba(255, 255, 255, 0.018);
+      0 7px 18px rgba(0, 0, 0, 0.30),
+      inset 0 1px 0 rgba(255, 255, 255, 0.045);
     font-family:
       system-ui,
       -apple-system,
@@ -1213,12 +1218,12 @@ button {
     position: relative;
     min-width: 0;
     height: 100%;
-    padding: 3px 5px 2px;
+    padding: 5px 6px 4px;
     box-sizing: border-box;
     display: grid;
     align-content: center;
     justify-items: center;
-    gap: 1px;
+    gap: 2px;
     overflow: hidden;
   }
 
@@ -1226,20 +1231,26 @@ button {
     content: "";
     position: absolute;
     left: 0;
-    top: 20%;
-    bottom: 20%;
+    top: 17%;
+    bottom: 17%;
     width: 1px;
-    background: rgba(241, 234, 218, 0.10);
+    background:
+      linear-gradient(
+        180deg,
+        transparent,
+        rgba(228, 202, 141, 0.30),
+        transparent
+      );
   }
 
   .roulette-top-hud__metric > span {
     max-width: 100%;
     overflow: hidden;
-    color: rgba(226, 219, 204, 0.58);
-    font-size: clamp(6.5px, 1.75vw, 8px);
-    font-weight: 760;
+    color: rgba(225, 218, 202, 0.68);
+    font-size: clamp(7px, 1.85vw, 8.5px);
+    font-weight: 780;
     line-height: 1;
-    letter-spacing: 0.055em;
+    letter-spacing: 0.07em;
     text-overflow: ellipsis;
     white-space: nowrap;
   }
@@ -1247,38 +1258,49 @@ button {
   .roulette-top-hud__metric > strong {
     max-width: 100%;
     overflow: hidden;
-    color: #f5f3ec;
-    font-size: clamp(10px, 2.75vw, 12.5px);
-    font-weight: 850;
+    color: #fbf8ef;
+    font-size: clamp(12.5px, 3.45vw, 16px);
+    font-weight: 900;
     line-height: 1;
-    letter-spacing: -0.02em;
+    letter-spacing: -0.035em;
     text-overflow: ellipsis;
     white-space: nowrap;
+    text-shadow: 0 1px 3px rgba(0, 0, 0, 0.48);
+  }
+
+  .roulette-top-hud__metric:nth-child(2) > strong {
+    color: #f4e7c8;
   }
 
   .roulette-top-hud__metric [data-last-win] {
-    color: #ead39a;
+    color: #e7c879;
   }
 
   .roulette-betting-timer {
     position: absolute;
     top: calc(
+      max(2px, env(safe-area-inset-top)) +
       var(--top-hud-height) +
       var(--history-height) +
-      8px
+      14px
     );
     left: 7px;
-    min-width: 50px;
-    height: 37px;
-    padding: 4px 7px;
+    min-width: 54px;
+    height: 36px;
+    padding: 4px 8px;
     display: grid;
     align-content: center;
     justify-items: center;
     gap: 2px;
-    border: 1px solid rgba(241, 234, 218, 0.24);
-    border-radius: 7px;
-    color: #f5f1e6;
-    background: rgba(5, 6, 7, 0.90);
+    border: 1px solid rgba(241, 226, 193, 0.28);
+    border-radius: 8px;
+    color: #f7f2e7;
+    background:
+      linear-gradient(
+        180deg,
+        rgba(15, 17, 18, 0.96),
+        rgba(5, 6, 7, 0.96)
+      );
     box-shadow:
       0 6px 16px rgba(0, 0, 0, 0.24),
       inset 0 1px 0 rgba(255, 255, 255, 0.025);
@@ -1318,7 +1340,11 @@ button {
 
   .roulette-recent-strip {
     position: absolute;
-    top: calc(var(--top-hud-height) + 4px);
+    top: calc(
+      max(2px, env(safe-area-inset-top)) +
+      var(--top-hud-height) +
+      5px
+    );
     left: 50%;
     transform: translateX(-50%);
     width: min(96vw, 430px);
@@ -1327,9 +1353,9 @@ button {
     grid-template-columns: repeat(11, minmax(0, 1fr));
     gap: 0;
     overflow: hidden;
-    border: 1px solid rgba(179, 183, 178, 0.25);
-    border-radius: 5px;
-    background: rgba(4, 5, 6, 0.96);
+    border: 1px solid rgba(216, 204, 176, 0.18);
+    border-radius: 6px;
+    background: rgba(4, 5, 6, 0.97);
     box-shadow:
       0 5px 14px rgba(0, 0, 0, 0.24),
       inset 0 1px 0 rgba(255, 255, 255, 0.025);
@@ -1417,18 +1443,18 @@ button {
   .roulette-result-banner {
     position: absolute;
     left: 50%;
-    top: clamp(42px, 12.5%, 58px);
+    top: clamp(38px, 11.5%, 54px);
     transform:
-      translate(-50%, -5px)
+      translate(-50%, -6px)
       scale(0.96);
-    min-width: 142px;
+    width: clamp(166px, 49vw, 206px);
     display: grid;
     grid-template-columns:
-      minmax(34px, 0.72fr)
-      minmax(58px, 1fr)
-      minmax(34px, 0.72fr);
-    align-items: end;
-    gap: 3px;
+      minmax(42px, 0.74fr)
+      minmax(70px, 1fr)
+      minmax(42px, 0.74fr);
+    align-items: center;
+    gap: 5px;
     opacity: 0;
     visibility: hidden;
     pointer-events: none;
@@ -1452,55 +1478,67 @@ button {
       sans-serif;
     font-variant-numeric: tabular-nums;
     line-height: 1;
-    background: rgba(5, 6, 7, 0.96);
+    background:
+      linear-gradient(
+        180deg,
+        rgba(14, 16, 17, 0.97),
+        rgba(4, 5, 6, 0.98)
+      );
   }
 
   .roulette-result-banner__neighbor {
-    height: clamp(32px, 8.5vw, 39px);
-    border: 1px solid rgba(241, 234, 218, 0.24);
-    border-radius: 4px;
-    color: rgba(239, 236, 226, 0.58);
-    font-size: clamp(15px, 4.6vw, 20px);
-    font-weight: 760;
-    box-shadow: 0 6px 14px rgba(0, 0, 0, 0.24);
+    height: clamp(36px, 9.6vw, 44px);
+    border: 1px solid rgba(228, 217, 192, 0.16);
+    border-radius: 6px;
+    color: rgba(239, 235, 224, 0.54);
+    font-size: clamp(17px, 5vw, 22px);
+    font-weight: 790;
+    box-shadow:
+      0 6px 14px rgba(0, 0, 0, 0.26),
+      inset 0 1px 0 rgba(255, 255, 255, 0.025);
   }
 
   .roulette-result-banner__number {
-    height: clamp(48px, 13vw, 59px);
-    border: 1px solid rgba(247, 222, 151, 0.84);
-    border-radius: 5px;
-    color: #fffdf7;
-    font-size: clamp(27px, 8.4vw, 38px);
-    font-weight: 920;
-    letter-spacing: -0.04em;
-    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.54);
+    height: clamp(58px, 15.5vw, 70px);
+    border: 1.5px solid rgba(235, 205, 133, 0.92);
+    border-radius: 7px;
+    color: #fffdf6;
+    font-size: clamp(32px, 9.4vw, 42px);
+    font-weight: 950;
+    letter-spacing: -0.045em;
+    text-shadow:
+      0 2px 5px rgba(0, 0, 0, 0.64);
     box-shadow:
-      0 8px 20px rgba(0, 0, 0, 0.34),
-      inset 0 0 0 1px rgba(255, 255, 255, 0.035);
+      0 10px 24px rgba(0, 0, 0, 0.38),
+      0 0 0 1px rgba(136, 104, 43, 0.26),
+      inset 0 1px 0 rgba(255, 255, 255, 0.055);
   }
 
   .roulette-page[data-result-color="red"]
     .roulette-result-banner__number {
     box-shadow:
-      0 8px 20px rgba(0, 0, 0, 0.34),
-      inset 0 -3px 0 rgba(196, 59, 53, 0.96),
-      inset 0 0 0 1px rgba(255, 255, 255, 0.035);
+      0 10px 24px rgba(0, 0, 0, 0.38),
+      0 0 0 1px rgba(136, 104, 43, 0.26),
+      inset 0 -3px 0 rgba(196, 59, 53, 0.94),
+      inset 0 1px 0 rgba(255, 255, 255, 0.055);
   }
 
   .roulette-page[data-result-color="black"]
     .roulette-result-banner__number {
     box-shadow:
-      0 8px 20px rgba(0, 0, 0, 0.34),
-      inset 0 -3px 0 rgba(205, 201, 190, 0.76),
-      inset 0 0 0 1px rgba(255, 255, 255, 0.035);
+      0 10px 24px rgba(0, 0, 0, 0.38),
+      0 0 0 1px rgba(136, 104, 43, 0.26),
+      inset 0 -3px 0 rgba(205, 201, 190, 0.72),
+      inset 0 1px 0 rgba(255, 255, 255, 0.055);
   }
 
   .roulette-page[data-result-color="green"]
     .roulette-result-banner__number {
     box-shadow:
-      0 8px 20px rgba(0, 0, 0, 0.34),
-      inset 0 -3px 0 rgba(82, 159, 98, 0.96),
-      inset 0 0 0 1px rgba(255, 255, 255, 0.035);
+      0 10px 24px rgba(0, 0, 0, 0.38),
+      0 0 0 1px rgba(136, 104, 43, 0.26),
+      inset 0 -3px 0 rgba(82, 159, 98, 0.94),
+      inset 0 1px 0 rgba(255, 255, 255, 0.055);
   }
 
   .roulette-page[data-result-visible="true"]
@@ -1516,23 +1554,28 @@ button {
   .roulette-win-message {
     position: absolute;
     left: 50%;
-    top: 47%;
+    top: 48%;
     transform:
       translate(-50%, -50%)
       scale(0.96);
-    min-width: clamp(118px, 34vw, 154px);
-    padding: 8px 12px 9px;
+    min-width: clamp(142px, 41vw, 184px);
+    padding: 10px 16px 11px;
     box-sizing: border-box;
     display: grid;
     justify-items: center;
-    gap: 3px;
-    border: 1px solid rgba(247, 222, 151, 0.36);
-    border-radius: 999px;
-    background: rgba(4, 5, 6, 0.78);
+    gap: 4px;
+    border: 1px solid rgba(232, 203, 132, 0.48);
+    border-radius: 8px;
+    background:
+      linear-gradient(
+        180deg,
+        rgba(13, 15, 16, 0.92),
+        rgba(4, 5, 6, 0.90)
+      );
     box-shadow:
-      0 8px 22px rgba(0, 0, 0, 0.34),
-      inset 0 1px 0 rgba(255, 255, 255, 0.03);
-    backdrop-filter: blur(4px);
+      0 10px 26px rgba(0, 0, 0, 0.38),
+      inset 0 1px 0 rgba(255, 255, 255, 0.04);
+    backdrop-filter: blur(5px);
     opacity: 0;
     visibility: hidden;
     pointer-events: none;
@@ -1544,21 +1587,45 @@ button {
   }
 
   .roulette-win-message > span {
-    color: rgba(239, 235, 224, 0.74);
-    font-size: clamp(7px, 2vw, 9px);
-    font-weight: 800;
+    color: rgba(234, 217, 175, 0.78);
+    font-size: clamp(8px, 2.2vw, 10px);
+    font-weight: 820;
     line-height: 1;
-    letter-spacing: 0.13em;
+    letter-spacing: 0.15em;
   }
 
   .roulette-win-message > strong {
-    color: #f0d18a;
-    font-size: clamp(21px, 6.5vw, 29px);
-    font-weight: 920;
+    color: #f3d27f;
+    font-size: clamp(25px, 7.5vw, 34px);
+    font-weight: 950;
     line-height: 1;
-    letter-spacing: -0.035em;
+    letter-spacing: -0.045em;
     font-variant-numeric: tabular-nums;
     text-shadow: 0 2px 10px rgba(208, 166, 76, 0.22);
+  }
+
+  .roulette-win-message::before,
+  .roulette-win-message::after {
+    content: "";
+    position: absolute;
+    top: 50%;
+    width: clamp(16px, 5vw, 24px);
+    height: 1px;
+    background:
+      linear-gradient(
+        90deg,
+        transparent,
+        rgba(231, 202, 130, 0.62)
+      );
+  }
+
+  .roulette-win-message::before {
+    right: calc(100% + 7px);
+  }
+
+  .roulette-win-message::after {
+    left: calc(100% + 7px);
+    transform: scaleX(-1);
   }
 
   .roulette-page[data-result-visible="true"][data-result-has-payout="true"]
@@ -2765,18 +2832,19 @@ button {
 /* Small/short phones keep the same composition instead of switching layout model. */
 @media (max-width: 900px) and (orientation: portrait) and (max-height: 700px) {
   .roulette-result-banner {
-    top: clamp(36px, 11%, 46px);
-    min-width: 132px;
+    top: clamp(34px, 10.5%, 44px);
+    width: clamp(154px, 47vw, 186px);
   }
 
   .roulette-win-message {
-    top: 46%;
-    padding: 7px 10px 8px;
+    top: 47%;
+    min-width: clamp(132px, 39vw, 166px);
+    padding: 9px 13px 10px;
   }
 
   .roulette-page {
     --footer-reserve: 44px;
-    --table-top: clamp(102px, 16.8dvh, 118px);
+    --table-top: clamp(112px, 17.8dvh, 124px);
     --wheel-size: min(74vw, 266px);
   }
 
@@ -2827,9 +2895,14 @@ button {
   }
 
   .roulette-betting-timer {
-    top: calc(var(--history-height) + 4px);
+    top: calc(
+      max(2px, env(safe-area-inset-top)) +
+      var(--top-hud-height) +
+      var(--history-height) +
+      10px
+    );
     left: 5px;
-    height: 36px;
+    height: 34px;
     min-width: 50px;
     padding: 4px 7px;
   }
@@ -2875,30 +2948,32 @@ button {
 
 @media (max-width: 900px) and (orientation: portrait) and (max-height: 590px) {
   .roulette-result-banner {
-    top: 32px;
-    min-width: 122px;
-    gap: 2px;
+    top: 29px;
+    width: 144px;
+    gap: 3px;
   }
 
   .roulette-result-banner__neighbor {
-    height: 29px;
+    height: 31px;
     font-size: 14px;
   }
 
   .roulette-result-banner__number {
-    height: 43px;
-    font-size: 25px;
+    height: 48px;
+    font-size: 27px;
   }
 
   .roulette-win-message {
-    top: 45%;
-    min-width: 108px;
-    padding: 6px 9px 7px;
+    top: 46%;
+    min-width: 122px;
+    padding: 7px 10px 8px;
   }
 
   .roulette-page {
+    --top-hud-height: 30px;
+    --history-height: 18px;
     --footer-reserve: 41px;
-    --table-top: 96px;
+    --table-top: 104px;
     --wheel-size: min(70vw, 236px);
   }
 
