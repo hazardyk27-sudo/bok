@@ -60,6 +60,14 @@ const BUSINESS_CONFIGS = {
   "fan-club": FAN_CLUB_BUSINESS,
 } as const;
 
+function requireActiveLegacyBusinessId(
+  businessId: IdleBusinessId,
+) {
+  if (!isActiveIdleBusinessId(businessId)) {
+    throw new Error("IDLE_BUSINESS_NOT_FOUND");
+  }
+}
+
 function toStorageState(row: IdleBusinessRow): IdleBusinessStorageState {
   return {
     id: row.id,
@@ -285,6 +293,7 @@ export class IdleRepository {
     idempotencyKey: string,
     serverNow = new Date(),
   ) {
+    requireActiveLegacyBusinessId(businessId);
     const client = await pool.connect();
     try {
       await client.query("BEGIN");
@@ -448,6 +457,7 @@ export class IdleRepository {
     idempotencyKey: string,
     serverNow = new Date(),
   ) {
+    requireActiveLegacyBusinessId(businessId);
     const client = await pool.connect();
     try {
       await client.query("BEGIN");
@@ -664,6 +674,7 @@ export class IdleRepository {
     idempotencyKey: string,
     serverNow = new Date(),
   ) {
+    requireActiveLegacyBusinessId(businessId);
     const client = await pool.connect();
     try {
       await client.query("BEGIN");
