@@ -38,8 +38,10 @@ describe("canonical Stadium type contracts", () => {
     expect(source).toContain("saleRemainderMicrodollars: number;");
   });
 
-  it("marks old direct-cash contracts as temporary compatibility only", () => {
-    expect(source).toContain("LEGACY COMPATIBILITY TYPES");
-    expect(source).toContain("Do not add new features to these legacy contracts.");
+  it("contains no retired direct-cash business/vault client contracts", () => {
+    expect(source).not.toContain("LEGACY COMPATIBILITY TYPES");
+    expect(source).not.toContain("IdleBusinessServerState");
+    expect(source).not.toContain("IdleCollectResponse");
+    expect(source).not.toContain("IdleVaultUpgradeResponse");
   });
 });
