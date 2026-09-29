@@ -198,3 +198,39 @@ export function resolveNextSpeedUpgrade(
       balanceCents - targetConfig.upgradeCostCents,
   };
 }
+
+
+/**
+ * Resolves exactly one independent Storage upgrade.
+ *
+ * Stadium level, owned seats, and Speed level are deliberately not inputs:
+ * Storage progression is its own 20-level track.
+ */
+export function resolveNextStorageUpgrade(
+  currentLevel: StorageLevel,
+  balanceCents: number,
+) {
+  requireSafeNonNegativeInteger(
+    balanceCents,
+    "INVALID_IDLE_WALLET_BALANCE",
+  );
+
+  const targetConfig = STORAGE_LEVELS.find(
+    (entry) => entry.level === currentLevel + 1,
+  );
+  if (!targetConfig) {
+    throw new Error("IDLE_STORAGE_MAX_LEVEL");
+  }
+
+  if (balanceCents < targetConfig.upgradeCostCents) {
+    throw new Error("INSUFFICIENT_IDLE_CREDITS");
+  }
+
+  return {
+    targetStorageLevel: targetConfig.level,
+    capacityTickets: targetConfig.capacityTickets,
+    costCents: targetConfig.upgradeCostCents,
+    balanceAfterCents:
+      balanceCents - targetConfig.upgradeCostCents,
+  };
+}
