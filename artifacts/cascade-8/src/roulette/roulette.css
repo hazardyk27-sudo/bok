@@ -1521,8 +1521,15 @@ button {
     border-bottom: 1px solid var(--bet-border);
     color: #cac8be;
     background: #050606;
-    font: 600 clamp(6px, calc(var(--mobile-table-width) * 0.018), 9px)/1
-      Arial, Helvetica, sans-serif;
+    font:
+      700
+      clamp(7px, calc(var(--mobile-table-width) * 0.022), 10px)/1
+      system-ui,
+      -apple-system,
+      BlinkMacSystemFont,
+      "Segoe UI",
+      sans-serif;
+    letter-spacing: 0.01em;
   }
 
   .roulette-outside-cell > span:not(.roulette-diamond) {
@@ -1632,7 +1639,11 @@ button {
   }
 
   .roulette-mobile-double {
-    font-size: 11px;
+    font-size: clamp(
+      8px,
+      calc(var(--mobile-control-size) * 0.30),
+      12px
+    );
   }
 
   .roulette-mobile-chip-picker {
@@ -1657,7 +1668,11 @@ button {
     box-shadow:
       0 5px 13px rgba(0, 0, 0, 0.44),
       inset 0 0 0 2px rgba(0, 0, 0, 0.18);
-    font-size: 8px;
+    font-size: clamp(
+      7px,
+      calc(var(--mobile-control-size) * 0.24),
+      10px
+    );
   }
 
   .roulette-mobile-chip-toggle[data-selected-chip="1"] {
