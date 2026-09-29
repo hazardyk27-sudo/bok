@@ -1,484 +1,143 @@
 import "./idle.css";
-import { renderBusinessRowShell, updateBusinessRow } from "./components";
 import {
-  CLUB_STORE_BUSINESS,
-  FAN_CLUB_BUSINESS,
-  STADIUM_BUSINESS,
-  VAULT_LEVELS,
-  VAULT_UPGRADE_STEPS,
-} from "./config";
-import {
-  collectAllIdleBusinesses,
-  collectIdleBusiness,
-  fetchIdleState,
-  getIdleTotalCollectableCents,
-  getIdleTotalPassiveIncomeCentsPerHour,
-  getIdleVaultUpgradePreview,
-  projectIdleStateLive,
-  upgradeIdleBusiness,
-  upgradeIdleVault,
+  fetchIdleStadiumState,
+  projectIdleStadiumLive,
+  subscribeIdleMarket,
 } from "./services";
-import {
-  ACTIVE_BUSINESS_IDS,
-  type BusinessId,
-  type IdleStateEnvelope,
+import type {
+  IdleStadiumStateEnvelope,
+  TicketMarketSnapshot,
 } from "./types";
 
-function formatCredits(cents: number) {
-  return `${(cents / 100).toLocaleString("en-US", {
+function formatMoneyFromCents(cents: number) {
+  return `$${(cents / 100).toLocaleString("en-US", {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
   })}`;
 }
 
-const IDLE_MICRO_CENTS_PER_CENT = 1_000_000;
-
-function formatCreditsFromMicrocents(microcents: number) {
-  return formatCredits(microcents / IDLE_MICRO_CENTS_PER_CENT);
-}
-
-const BUSINESS_LEVELS_PER_BUSINESS = 9;
-const TOTAL_BUSINESS_PROGRESSION_LEVELS =
-  ACTIVE_BUSINESS_IDS.length * BUSINESS_LEVELS_PER_BUSINESS;
-
-const BUSINESS_DETAIL_DEFINITIONS = {
-  stadium: STADIUM_BUSINESS,
-  "club-store": CLUB_STORE_BUSINESS,
-  "fan-club": FAN_CLUB_BUSINESS,
-} as const;
-
-const BUSINESS_DETAIL_EYEBROWS: Record<BusinessId, string> = {
-  stadium: "STADIUM OPERATIONS",
-  "club-store": "RETAIL OPERATIONS",
-  "fan-club": "SUPPORTER OPERATIONS",
-};
-
-type BusinessDetailTab = "business" | "vault";
-type UpgradeFeedbackKind = "business" | "vault";
-
-function getBusinessLevelState(stageLevel: number, currentLevel: number | null) {
-  if (currentLevel === null) return stageLevel === 0 ? "future" : "locked";
-  if (stageLevel < currentLevel) return "completed";
-  if (stageLevel === currentLevel) return "current";
-  if (stageLevel === currentLevel + 1) return "future";
-  return "locked";
-}
-
-function getBusinessLevelMilestone(stageLevel: number) {
-  if (stageLevel <= 2) return "LOCAL";
-  if (stageLevel <= 5) return "PRO";
-  if (stageLevel <= 7) return "ELITE";
-  return "ICON";
-}
-
-
-function getRoadmapNodePosition(index: number, total: number) {
-  if (total <= 1) return 0;
-  return index / (total - 1) * 100;
-}
-
-function renderBusinessLevelRoadmap(
-  businessId: BusinessId,
-  currentLevel: number | null,
+function formatTicketPrice(
+  priceMicrodollars: number,
 ) {
-  const definition = BUSINESS_DETAIL_DEFINITIONS[businessId];
-  const currentIndex = currentLevel === null
-    ? -1
-    : definition.levels.findIndex((stage) => stage.level === currentLevel);
-  const progressPercent = currentIndex < 0
-    ? 0
-    : Math.round((currentIndex + 1) / definition.levels.length * 100);
-  const currentStage = currentIndex < 0 ? null : definition.levels[currentIndex];
-  const nextStage = currentIndex < 0
-    ? definition.levels[0]
-    : definition.levels[currentIndex + 1] ?? null;
-
-  return `
-    <div class="detail-roadmap-card" style="--detail-progress: ${progressPercent}%">
-      <div class="detail-roadmap-head">
-        <span>SEVİYE İLERLEMESİ</span>
-        <strong>${currentStage ? `LV${currentStage.level}` : "KİLİTLİ"} · %${progressPercent}</strong>
-      </div>
-      <div
-        class="detail-roadmap-track"
-        role="progressbar"
-        aria-label="${definition.label} seviye ilerlemesi"
-        aria-valuemin="0"
-        aria-valuemax="100"
-        aria-valuenow="${progressPercent}"
-      >
-        <i class="detail-roadmap-fill" aria-hidden="true"></i>
-        ${definition.levels.map((stage, index) => {
-          const state = getBusinessLevelState(stage.level, currentLevel);
-          const position = getRoadmapNodePosition(index, definition.levels.length);
-          return `
-            <span
-              class="detail-roadmap-node"
-              data-roadmap-state="${state}"
-              style="--roadmap-node-x: ${position}%"
-              title="Lv${stage.level} · ${stage.name}"
-              aria-hidden="true"
-            ><b>${stage.level}</b></span>
-          `;
-        }).join("")}
-      </div>
-      <div class="detail-roadmap-meta">
-        <span>${currentStage ? currentStage.name : "İşletme henüz açılmadı"}</span>
-        <strong>${nextStage ? `SONRAKİ · LV${nextStage.level} ${nextStage.name}` : "TÜM SEVİYELER TAMAMLANDI"}</strong>
-      </div>
-    </div>
-  `;
+  return `$${(
+    priceMicrodollars / 1_000_000
+  ).toLocaleString("en-US", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 6,
+  })}`;
 }
 
-function renderBusinessLevelTree(
-  businessId: BusinessId,
-  currentLevel: number | null,
-  walletBalanceCents: number,
-  busy: boolean,
+function formatTicketQuantity(
+  microTickets: number,
 ) {
-  const definition = BUSINESS_DETAIL_DEFINITIONS[businessId];
-
-  return definition.levels.map((stage) => {
-    const state = getBusinessLevelState(stage.level, currentLevel);
-    const isImmediateFuture = state === "future";
-    const stateLabel = state === "completed"
-      ? "TAMAMLANDI"
-      : state === "current"
-        ? "MEVCUT"
-        : isImmediateFuture
-          ? "SONRAKİ"
-          : "KİLİTLİ";
-    const starLabel = stage.level >= 6 ? `★${stage.level - 5}` : "";
-    const incomeLabel = `${formatCredits(stage.hourlyIncomeDisplayCents)} /sa`;
-    const dailyLabel = `${formatCredits(stage.dailyIncomeCents)} /gün`;
-    const costLabel = formatCredits(stage.costCents);
-    const shortfallCents = Math.max(0, stage.costCents - walletBalanceCents);
-    const canAfford = walletBalanceCents >= stage.costCents;
-    const isPurchase = currentLevel === null && stage.level === 0;
-
-    const actionMarkup = isImmediateFuture
-      ? `
-        <div class="business-level-node-action">
-          <button
-            type="button"
-            class="business-level-node-upgrade"
-            data-idle-detail-upgrade
-            data-action-state="${busy ? "busy" : canAfford ? isPurchase ? "purchase" : "ready" : "insufficient"}"
-            ${busy || !canAfford ? "disabled" : ""}
-          >
-            ${busy
-              ? "İŞLEM SÜRÜYOR"
-              : isPurchase
-                ? `SATIN AL · ${costLabel}`
-                : `YÜKSELT · ${costLabel}`}
-          </button>
-          <small>
-            ${busy
-              ? "İşlem tamamlanıyor…"
-              : canAfford
-                ? isPurchase
-                  ? "İşletmeyi aç ve pasif gelir üretmeye başla"
-                  : "Yükseltme sonrası Kasa Lv1'e döner · birikmiş gelir korunur"
-                : `Bakiye yetersiz · ${formatCredits(shortfallCents)} eksik`}
-          </small>
-        </div>
-      `
-      : "";
-
-    return `
-      <article
-        class="business-level-node"
-        data-level="${stage.level}"
-        data-level-state="${state}"
-        data-level-next="${isImmediateFuture ? "true" : "false"}"
-        aria-label="Lv${stage.level} ${stage.name}, ${stateLabel.toLocaleLowerCase("tr-TR")}"
-      >
-        <div class="business-level-node-rail" aria-hidden="true">
-          <span class="business-level-node-dot">
-            ${state === "completed" ? "✓" : stage.level}
-          </span>
-        </div>
-
-        <div class="business-level-node-card">
-          <header class="business-level-node-header">
-            <div>
-              <span class="business-level-node-kicker">
-                LV${stage.level} · ${getBusinessLevelMilestone(stage.level)}
-              </span>
-              <strong>${stage.name}</strong>
-            </div>
-            <div class="business-level-node-state">
-              ${starLabel ? `<b>${starLabel}</b>` : ""}
-              <span>${stateLabel}</span>
-            </div>
-          </header>
-
-          <div class="business-level-node-income">
-            <span>SAATLİK GELİR</span>
-            <strong>${incomeLabel}</strong>
-            <small>GÜNLÜK GELİR · ${dailyLabel}</small>
-          </div>
-
-          <dl class="business-level-node-meta">
-            <div>
-              <dt>YATIRIM</dt>
-              <dd>${costLabel}</dd>
-            </div>
-            <div>
-              <dt>GERİ DÖNÜŞ</dt>
-              <dd>${stage.targetRoiDays} gün</dd>
-            </div>
-          </dl>
-
-          ${actionMarkup}
-        </div>
-      </article>
-    `;
-  }).join("");
+  const tickets = microTickets / 1_000_000;
+  return tickets.toLocaleString("en-US", {
+    minimumFractionDigits: 0,
+    maximumFractionDigits:
+      Number.isInteger(tickets) ? 0 : 3,
+  });
 }
 
-
-function getVaultLevelState(
-  targetLevel: number,
-  currentLevel: number,
-  isOwned: boolean,
+function formatProductionRate(
+  microTicketsPerHour: number,
 ) {
-  if (!isOwned) return "locked";
-  if (targetLevel < currentLevel) return "completed";
-  if (targetLevel === currentLevel) return "current";
-  if (targetLevel === currentLevel + 1) return "future";
-  return "locked";
+  return `${formatTicketQuantity(
+    microTicketsPerHour,
+  )} /sa`;
 }
 
-
-function renderVaultLevelRoadmap(
-  businessLevel: number | null,
-  currentVaultLevel: number,
+function setText(
+  root: HTMLElement,
+  selector: string,
+  value: string,
 ) {
-  const isOwned = businessLevel !== null;
-  const currentIndex = isOwned
-    ? VAULT_LEVELS.findIndex((vault) => vault.level === currentVaultLevel)
-    : -1;
-  const progressPercent = currentIndex < 0
-    ? 0
-    : Math.round((currentIndex + 1) / VAULT_LEVELS.length * 100);
-  const currentVault = currentIndex < 0 ? null : VAULT_LEVELS[currentIndex];
-  const nextVault = currentIndex < 0
-    ? VAULT_LEVELS[0]
-    : VAULT_LEVELS[currentIndex + 1] ?? null;
-
-  return `
-    <div class="detail-roadmap-card detail-roadmap-card--vault" style="--detail-progress: ${progressPercent}%">
-      <div class="detail-roadmap-head">
-        <span>KASA İLERLEMESİ</span>
-        <strong>${currentVault ? `LV${currentVault.level}` : "KİLİTLİ"} · %${progressPercent}</strong>
-      </div>
-      <div
-        class="detail-roadmap-track"
-        role="progressbar"
-        aria-label="Kasa seviye ilerlemesi"
-        aria-valuemin="0"
-        aria-valuemax="100"
-        aria-valuenow="${progressPercent}"
-      >
-        <i class="detail-roadmap-fill" aria-hidden="true"></i>
-        ${VAULT_LEVELS.map((vault, index) => {
-          const state = getVaultLevelState(vault.level, currentVaultLevel, isOwned);
-          const position = getRoadmapNodePosition(index, VAULT_LEVELS.length);
-          return `
-            <span
-              class="detail-roadmap-node"
-              data-roadmap-state="${state}"
-              style="--roadmap-node-x: ${position}%"
-              title="Kasa Lv${vault.level} · ${vault.capacityHours} saat"
-              aria-hidden="true"
-            ><b>${vault.capacityHours}</b></span>
-          `;
-        }).join("")}
-      </div>
-      <div class="detail-roadmap-meta">
-        <span>${currentVault ? `${currentVault.capacityHours} saat kapasite` : "İşletme satın alındığında açılır"}</span>
-        <strong>${nextVault ? `SONRAKİ · ${nextVault.capacityHours} SAAT` : "MAKSİMUM KASA KAPASİTESİ"}</strong>
-      </div>
-    </div>
-  `;
-}
-
-function getVaultUpgradeCostCents(
-  businessId: BusinessId,
-  businessLevel: number | null,
-  targetVaultLevel: number,
-) {
-  if (targetVaultLevel === 1 || businessLevel === null) return null;
-
-  const definition = BUSINESS_DETAIL_DEFINITIONS[businessId];
-  const stage = definition.levels.find((entry) => entry.level === businessLevel);
-  const step = VAULT_UPGRADE_STEPS.find((entry) => entry.toLevel === targetVaultLevel);
-  if (!stage || !step) return null;
-
-  return stage.costCents * step.costPercent / 100;
-}
-
-function renderVaultLevelTree(
-  businessId: BusinessId,
-  businessLevel: number | null,
-  currentVaultLevel: number,
-  walletBalanceCents: number,
-  busy: boolean,
-) {
-  const isOwned = businessLevel !== null;
-
-  return VAULT_LEVELS.map((vault) => {
-    const state = getVaultLevelState(vault.level, currentVaultLevel, isOwned);
-    const stateLabel = state === "completed"
-      ? "TAMAMLANDI"
-      : state === "current"
-        ? "MEVCUT"
-        : state === "future"
-          ? "SONRAKİ"
-          : "KİLİTLİ";
-    const step = VAULT_UPGRADE_STEPS.find((entry) => entry.toLevel === vault.level);
-    const costCents = getVaultUpgradeCostCents(
-      businessId,
-      businessLevel,
-      vault.level,
+  const node = root.querySelector<HTMLElement>(
+    selector,
+  );
+  if (!node) {
+    throw new Error(
+      `IDLE_STADIUM_SHELL_MISSING:${selector}`,
     );
-    const costLabel = vault.level === 1
-      ? "BAŞLANGIÇ"
-      : !isOwned
-        ? "İŞLETME GEREKLİ"
-        : costCents === null
-          ? "—"
-          : formatCredits(costCents);
-    const costMeta = vault.level === 1
-      ? "İşletmeyle birlikte açılır"
-      : step
-        ? `İşletme bedelinin %${step.costPercent}'i`
-        : "";
-
-    const canAfford = costCents !== null && walletBalanceCents >= costCents;
-    const shortfallCents = costCents === null
-      ? 0
-      : Math.max(0, costCents - walletBalanceCents);
-
-    const actionMarkup = state === "future" && costCents !== null
-      ? `
-        <div class="vault-level-node-action">
-          <button
-            type="button"
-            class="vault-level-node-upgrade"
-            data-idle-detail-vault-upgrade
-            data-action-state="${busy ? "busy" : canAfford ? "ready" : "insufficient"}"
-            ${busy || !canAfford ? "disabled" : ""}
-          >
-            ${busy ? "İŞLEM SÜRÜYOR" : `KASA GELİŞTİR · ${formatCredits(costCents)}`}
-          </button>
-          <small>
-            ${busy
-              ? "İşlem tamamlanıyor…"
-              : canAfford
-                ? `Kapasite ${VAULT_LEVELS.find((entry) => entry.level === currentVaultLevel)?.capacityHours ?? 1}sa → ${vault.capacityHours}sa`
-                : `Bakiye yetersiz · ${formatCredits(shortfallCents)} eksik`}
-          </small>
-        </div>
-      `
-      : "";
-
-    return `
-      <article
-        class="vault-level-node"
-        data-vault-level="${vault.level}"
-        data-vault-state="${state}"
-        aria-label="Kasa Lv${vault.level}, ${vault.capacityHours} saat, ${stateLabel.toLocaleLowerCase("tr-TR")}"
-      >
-        <div class="vault-level-node-rail" aria-hidden="true">
-          <span class="vault-level-node-dot">
-            ${state === "completed" ? "✓" : vault.level}
-          </span>
-        </div>
-
-        <div class="vault-level-node-card">
-          <header class="vault-level-node-header">
-            <div>
-              <span>KASA LV${vault.level}</span>
-              <strong>${vault.capacityHours} saat kapasite</strong>
-            </div>
-            <span class="vault-level-node-state">${stateLabel}</span>
-          </header>
-
-          <div class="vault-level-node-capacity">
-            <span>KAPASİTE</span>
-            <strong>${vault.capacityHours} saat</strong>
-            <small>Pasif gelir depolama süresi</small>
-          </div>
-
-          <dl class="vault-level-node-meta">
-            <div>
-              <dt>${vault.level === 1 ? "BAŞLANGIÇ" : "YÜKSELTME BEDELİ"}</dt>
-              <dd>${costLabel}</dd>
-            </div>
-            <div>
-              <dt>MALİYET KURALI</dt>
-              <dd>${costMeta || "—"}</dd>
-            </div>
-          </dl>
-
-          ${actionMarkup}
-        </div>
-      </article>
-    `;
-  }).join("");
+  }
+  node.textContent = value;
 }
 
 export const BUSINESSES_MARKUP = `
   <div class="businesses-workspace">
-    <aside class="businesses-sidebar" aria-label="Fahrinin Yolu navigasyon">
-      <a class="businesses-sidebar-brand" href="/" aria-label="Fahrinin Yolu ana menü">
-        <span class="businesses-sidebar-crest" aria-hidden="true">FY</span>
+    <aside
+      class="businesses-sidebar"
+      aria-label="Fahrinin Yolu navigasyon"
+    >
+      <a
+        class="businesses-sidebar-brand"
+        href="/"
+        aria-label="Fahrinin Yolu ana menü"
+      >
+        <span
+          class="businesses-sidebar-crest"
+          aria-hidden="true"
+        >FY</span>
         <span>
           <strong>FAHRİNİN YOLU</strong>
           <small>CLUB EMPIRE</small>
         </span>
       </a>
 
-      <nav class="businesses-sidebar-nav" aria-label="Oyunlar ve kulüp bölümleri">
-        <span class="businesses-sidebar-section">OYUNLAR</span>
-
-        <a class="businesses-sidebar-item" href="/slot">
-          <span class="businesses-sidebar-item-icon" aria-hidden="true">▦</span>
+      <nav
+        class="businesses-sidebar-nav"
+        aria-label="Oyunlar ve kulüp bölümleri"
+      >
+        <span class="businesses-sidebar-section">
+          OYUNLAR
+        </span>
+        <a
+          class="businesses-sidebar-item"
+          href="/slot"
+        >
+          <span
+            class="businesses-sidebar-item-icon"
+            aria-hidden="true"
+          >▦</span>
           <span>SLOT</span>
         </a>
-        <a class="businesses-sidebar-item" href="/roulette">
-          <span class="businesses-sidebar-item-icon" aria-hidden="true">◎</span>
+        <a
+          class="businesses-sidebar-item"
+          href="/roulette"
+        >
+          <span
+            class="businesses-sidebar-item-icon"
+            aria-hidden="true"
+          >◎</span>
           <span>RULET</span>
         </a>
-        <a class="businesses-sidebar-item" href="/cadi-kazan">
-          <span class="businesses-sidebar-item-icon" aria-hidden="true">✦</span>
+        <a
+          class="businesses-sidebar-item"
+          href="/cadi-kazan"
+        >
+          <span
+            class="businesses-sidebar-item-icon"
+            aria-hidden="true"
+          >✦</span>
           <span>CADI KAZAN</span>
         </a>
 
-        <span class="businesses-sidebar-section businesses-sidebar-section--club">KULÜP</span>
-
+        <span
+          class="businesses-sidebar-section
+                 businesses-sidebar-section--club"
+        >
+          KULÜP
+        </span>
         <a
           class="businesses-sidebar-item is-active"
           href="/businesses"
           aria-current="page"
         >
-          <span class="businesses-sidebar-item-icon" aria-hidden="true">▣</span>
+          <span
+            class="businesses-sidebar-item-icon"
+            aria-hidden="true"
+          >▣</span>
           <span>İŞLETMELER</span>
         </a>
-        <span class="businesses-sidebar-item is-disabled" aria-disabled="true">
-          <span class="businesses-sidebar-item-icon" aria-hidden="true">$</span>
-          <span>FİNANS</span>
-        </span>
-        <span class="businesses-sidebar-item is-disabled" aria-disabled="true">
-          <span class="businesses-sidebar-item-icon" aria-hidden="true">◆</span>
-          <span>KULÜP</span>
-        </span>
-        <span class="businesses-sidebar-item is-disabled" aria-disabled="true">
-          <span class="businesses-sidebar-item-icon" aria-hidden="true">⚙</span>
-          <span>AYARLAR</span>
-        </span>
       </nav>
 
       <div class="businesses-sidebar-footer">
@@ -487,869 +146,472 @@ export const BUSINESSES_MARKUP = `
       </div>
     </aside>
 
-    <main class="businesses-page" aria-labelledby="businesses-title">
-    <header class="businesses-header">
-      <div class="businesses-header-nav">
-        <a class="businesses-mobile-brand" href="/" aria-label="Fahrinin Yolu ana menü">
-          <span class="businesses-mobile-brand-crest" aria-hidden="true">FY</span>
-          <span>FAHRİNİN YOLU</span>
-        </a>
-        <span class="businesses-header-status"><i aria-hidden="true"></i>KULÜP OPERASYON MERKEZİ</span>
-        <a class="back-link" href="/" aria-label="Ana menüye dön">
-          <span class="back-link-icon" aria-hidden="true">←</span>
-          <span>ANA MENÜ</span>
-        </a>
-      </div>
-
-      <div class="businesses-header-main">
-        <div class="businesses-heading">
-          <span class="businesses-kicker">FAHRİNİN YOLU // CLUB EMPIRE</span>
-          <h1 id="businesses-title">İŞLETMELER</h1>
-          <p>Kulübünün gelir kaynaklarını büyüt, kapasiteni geliştir ve biriken kazancı tek merkezden yönet.</p>
+    <main
+      class="businesses-page"
+      aria-labelledby="businesses-title"
+    >
+      <header class="businesses-header">
+        <div class="businesses-header-nav">
+          <a
+            class="businesses-mobile-brand"
+            href="/"
+            aria-label="Fahrinin Yolu ana menü"
+          >
+            <span
+              class="businesses-mobile-brand-crest"
+              aria-hidden="true"
+            >FY</span>
+            <span>FAHRİNİN YOLU</span>
+          </a>
+          <span class="businesses-header-status">
+            <i aria-hidden="true"></i>
+            STADIUM OPERATIONS
+          </span>
+          <a
+            class="back-link"
+            href="/"
+            aria-label="Ana menüye dön"
+          >
+            <span
+              class="back-link-icon"
+              aria-hidden="true"
+            >←</span>
+            <span>ANA MENÜ</span>
+          </a>
         </div>
 
-        <div class="businesses-wallet" aria-label="Ortak oyun bakiyesi">
-          <span>ORTAK BAKİYE</span>
-          <strong data-idle-balance>—</strong>
-          <small>TÜM OYUNLARDA KULLANILIR</small>
-        </div>
-      </div>
+        <div class="businesses-header-main">
+          <div class="businesses-heading">
+            <span class="businesses-kicker">
+              FAHRİNİN YOLU // STADIUM
+            </span>
+            <h1 id="businesses-title">
+              İŞLETMELER
+            </h1>
+            <p>
+              Stadyum bilet üretimini, depolamayı ve
+              global piyasa fiyatını tek merkezden takip et.
+            </p>
+          </div>
 
-      <section class="businesses-progression" aria-label="Kulüp gelişimi">
-        <div class="businesses-progression-copy">
-          <span>KULÜP GELİŞİMİ</span>
-          <strong data-idle-progression-levels>— / ${TOTAL_BUSINESS_PROGRESSION_LEVELS}</strong>
+          <div
+            class="businesses-wallet"
+            aria-label="Ortak oyun bakiyesi"
+          >
+            <span>ORTAK BAKİYE</span>
+            <strong data-idle-balance>—</strong>
+            <small>TÜM OYUNLARDA KULLANILIR</small>
+          </div>
         </div>
-        <div
-          class="businesses-progression-track"
-          role="progressbar"
-          aria-label="Toplam işletme gelişimi"
-          aria-valuemin="0"
-          aria-valuemax="${TOTAL_BUSINESS_PROGRESSION_LEVELS}"
-          aria-valuenow="0"
-          data-idle-progression-track
-        >
-          <i data-idle-progression-bar></i>
+      </header>
+
+      <p
+        class="businesses-error"
+        data-idle-error
+        role="status"
+        hidden
+      ></p>
+
+      <section
+        class="stadium-canonical-card"
+        aria-label="Stadyum bilet ekonomisi"
+        data-idle-stadium-card
+        data-state="loading"
+      >
+        <div class="stadium-canonical-hero">
+          <img
+            src="/businesses/stadium.webp"
+            alt=""
+            decoding="async"
+          />
+          <div
+            class="stadium-canonical-hero-shade"
+            aria-hidden="true"
+          ></div>
+          <div class="stadium-canonical-identity">
+            <span>ACTIVE BUSINESS</span>
+            <strong>STADYUM</strong>
+            <small data-idle-stadium-level>
+              Lv—
+            </small>
+          </div>
+          <div class="stadium-canonical-market">
+            <span>CANLI BİLET FİYATI</span>
+            <strong data-idle-market-price>—</strong>
+            <small data-idle-market-status>
+              BAĞLANIYOR
+            </small>
+          </div>
         </div>
-        <div class="businesses-progression-meta">
-          <span data-idle-progression-percent>0%</span>
-          <span data-idle-active-businesses>— / ${ACTIVE_BUSINESS_IDS.length} AKTİF</span>
-        </div>
-        <div class="businesses-progression-wallet" aria-label="Ortak genel bakiye">
-          <span>ORTAK BAKİYE</span>
-          <strong data-idle-balance-compact>—</strong>
+
+        <div class="stadium-canonical-body">
+          <div class="stadium-canonical-primary">
+            <article>
+              <span>BİLET STOĞU</span>
+              <strong data-idle-ticket-inventory>—</strong>
+              <small>Bilet</small>
+            </article>
+            <article>
+              <span>ÜRETİM HIZI</span>
+              <strong data-idle-production-rate>—</strong>
+              <small data-idle-production-status>
+                —
+              </small>
+            </article>
+            <article>
+              <span>KOLTUK</span>
+              <strong data-idle-seats>—</strong>
+              <small data-idle-seat-capacity>—</small>
+            </article>
+          </div>
+
+          <div class="stadium-canonical-storage">
+            <div class="stadium-canonical-storage-head">
+              <div>
+                <span>DEPO</span>
+                <strong data-idle-storage-level>
+                  Lv—
+                </strong>
+              </div>
+              <div>
+                <span>DOLULUK</span>
+                <strong data-idle-storage-percent>
+                  —%
+                </strong>
+              </div>
+            </div>
+            <div
+              class="stadium-canonical-storage-track"
+              role="progressbar"
+              aria-label="Bilet depo doluluğu"
+              aria-valuemin="0"
+              aria-valuemax="100"
+              aria-valuenow="0"
+              data-idle-storage-track
+            >
+              <i data-idle-storage-fill></i>
+            </div>
+            <div class="stadium-canonical-storage-meta">
+              <span data-idle-storage-current>—</span>
+              <span data-idle-storage-capacity>—</span>
+            </div>
+          </div>
+
+          <div class="stadium-canonical-secondary">
+            <div>
+              <span>HIZ SEVİYESİ</span>
+              <strong data-idle-speed-level>Lv—</strong>
+            </div>
+            <div>
+              <span>PİYASA KAYNAĞI</span>
+              <strong data-idle-market-source>—</strong>
+            </div>
+            <div>
+              <span>SON FİYAT TICK</span>
+              <strong data-idle-market-tick>—</strong>
+            </div>
+          </div>
         </div>
       </section>
-    </header>
-
-    <section class="business-command-bar" aria-label="İşletme özeti" data-idle-command-bar>
-      <div class="business-command-stat business-command-income">
-        <span class="business-command-label">SAATLİK GELİR</span>
-        <strong data-idle-total-hourly>—</strong>
-      </div>
-      <div class="business-command-stat business-command-ready">
-        <span class="business-command-label">TOPLANABİLİR</span>
-        <strong data-idle-total-collectable>—</strong>
-      </div>
-      <button
-        type="button"
-        class="business-summary-collect-all"
-        data-idle-collect-all
-        aria-label="Tüm işletmelerdeki biriken parayı topla"
-        disabled
-      >
-        <span class="business-collect-all-copy">
-          <small>TÜM KASALAR</small>
-          <strong>TÜMÜNÜ TOPLA</strong>
-        </span>
-        <span class="business-collect-all-value" data-idle-collect-all-value>$0.00</span>
-        <span class="business-collect-all-arrow" aria-hidden="true">→</span>
-      </button>
-    </section>
-
-    <p class="businesses-error" data-idle-error role="status" hidden></p>
-
-    <section class="business-list" aria-label="İşletmeler">
-      ${ACTIVE_BUSINESS_IDS.map(renderBusinessRowShell).join("")}
-    </section>
-
-    <div class="business-detail-layer" data-idle-detail-layer data-open="false" hidden>
-      <button
-        type="button"
-        class="business-detail-backdrop"
-        data-idle-detail-backdrop
-        aria-label="İşletme detaylarını kapat"
-        tabindex="-1"
-      ></button>
-
-      <aside
-        class="business-detail-drawer"
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="business-detail-title"
-        data-idle-detail-drawer
-      >
-        <header class="business-detail-header">
-          <div class="business-detail-heading">
-            <span data-idle-detail-eyebrow>KULÜP OPERASYONLARI</span>
-            <h2 id="business-detail-title" data-idle-detail-title>İŞLETME</h2>
-            <p data-idle-detail-level>Seviye bilgisi yükleniyor…</p>
-          </div>
-          <button
-            type="button"
-            class="business-detail-close"
-            data-idle-detail-close
-            aria-label="Detayları kapat"
-          >×</button>
-        </header>
-
-        <div class="business-detail-status-row">
-          <span class="business-detail-level-badge" data-idle-detail-level-badge>—</span>
-          <span class="business-detail-state" data-idle-detail-state>YÜKLENİYOR</span>
-        </div>
-
-        <nav class="business-detail-tabs" role="tablist" aria-label="İşletme detayları">
-          <button
-            type="button"
-            role="tab"
-            aria-selected="true"
-            data-idle-detail-tab="business"
-          >İŞLETME GELİŞİMİ</button>
-          <button
-            type="button"
-            role="tab"
-            aria-selected="false"
-            data-idle-detail-tab="vault"
-          >KASA</button>
-        </nav>
-
-        <section class="business-detail-summary" aria-label="Mevcut işletme özeti">
-          <div>
-            <span>BİRİKMİŞ GELİR</span>
-            <strong data-idle-detail-accrued>—</strong>
-          </div>
-          <div>
-            <span>SAATLİK GELİR</span>
-            <strong data-idle-detail-hourly>—</strong>
-          </div>
-          <div>
-            <span>KASA KAPASİTESİ</span>
-            <strong data-idle-detail-vault>—</strong>
-          </div>
-        </section>
-
-        <div class="business-detail-scroll">
-          <section class="business-detail-panel" data-idle-detail-panel="business">
-            <div class="business-detail-section-heading">
-              <span>GELİŞİM ROTASI</span>
-              <strong>LV0 → LV8</strong>
-            </div>
-            <div
-              class="business-detail-roadmap"
-              data-idle-business-level-roadmap
-              aria-label="İşletme seviye ilerlemesi"
-            ></div>
-            <div class="business-level-tree-legend" aria-label="Seviye durumları">
-              <span data-legend-state="completed">TAMAMLANDI</span>
-              <span data-legend-state="current">MEVCUT</span>
-              <span data-legend-state="future">SONRAKİ</span>
-              <span data-legend-state="locked">KİLİTLİ</span>
-            </div>
-            <div
-              class="business-level-tree"
-              data-idle-business-level-tree
-              aria-label="İşletme seviye ağacı"
-            ></div>
-          </section>
-
-          <section class="business-detail-panel" data-idle-detail-panel="vault" hidden>
-            <div class="business-detail-section-heading">
-              <span>KASA GELİŞİMİ</span>
-              <strong>1SA → 24SA</strong>
-            </div>
-            <div
-              class="business-detail-roadmap"
-              data-idle-vault-level-roadmap
-              aria-label="Kasa seviye ilerlemesi"
-            ></div>
-            <div class="business-vault-tree-legend" aria-label="Kasa seviye durumları">
-              <span data-legend-state="completed">TAMAMLANDI</span>
-              <span data-legend-state="current">MEVCUT</span>
-              <span data-legend-state="future">SONRAKİ</span>
-              <span data-legend-state="locked">KİLİTLİ</span>
-            </div>
-            <div
-              class="vault-level-tree"
-              data-idle-vault-level-tree
-              aria-label="Kasa seviye ağacı"
-            ></div>
-          </section>
-        </div>
-      </aside>
-    </div>
     </main>
   </div>
 `;
 
-function hydrateBusinessMedia(root: HTMLElement) {
-  const images = root.querySelectorAll<HTMLImageElement>("[data-business-image]");
+class BusinessesClient {
+  private envelope:
+    IdleStadiumStateEnvelope | null = null;
 
-  for (const image of images) {
-    const slot = image.closest<HTMLElement>("[data-business-image-slot]");
-    if (!slot) continue;
+  private market:
+    TicketMarketSnapshot | null = null;
 
-    const markReady = () => {
-      slot.dataset.imageState = "ready";
-    };
-    const markPlaceholder = () => {
-      slot.dataset.imageState = "placeholder";
-    };
+  private renderTimer:
+    number | null = null;
 
-    if (image.complete) {
-      if (image.naturalWidth > 0) markReady();
-      else markPlaceholder();
-      continue;
-    }
+  private stopMarket:
+    (() => void) | null = null;
 
-    image.addEventListener("load", markReady, { once: true });
-    image.addEventListener("error", markPlaceholder, { once: true });
-  }
-}
-
-export class BusinessesClient {
-  private envelope: IdleStateEnvelope | null = null;
-  private timer: number | null = null;
-  private readonly busyBusinesses = new Set<BusinessId>();
-  private collectingAll = false;
-  private detailBusinessId: BusinessId | null = null;
-  private detailTab: BusinessDetailTab = "business";
-  private lastDetailTrigger: HTMLElement | null = null;
-
-  constructor(private readonly root: HTMLElement) {
-    this.root.addEventListener("click", this.handleClick);
-    this.root.addEventListener("keydown", this.handleKeyDown);
-    hydrateBusinessMedia(this.root);
-    void this.refresh();
-    this.timer = window.setInterval(() => this.render(), 1_000);
+  constructor(
+    private readonly root: HTMLElement,
+  ) {
+    void this.start();
   }
 
-  destroy() {
-    this.root.removeEventListener("click", this.handleClick);
-    this.root.removeEventListener("keydown", this.handleKeyDown);
-    document.body.classList.remove("business-detail-open");
-    if (this.timer !== null) window.clearInterval(this.timer);
-    this.timer = null;
-  }
-
-  private async refresh() {
+  private async start() {
     try {
-      this.envelope = await fetchIdleState();
-      this.setError(null);
+      this.envelope =
+        await fetchIdleStadiumState();
+      this.market = this.envelope.snapshot.market;
       this.render();
+      this.startLiveProjection();
+      this.startMarketStream();
     } catch (error) {
-      this.setError(this.getErrorMessage(error));
+      this.showError(error);
     }
   }
 
-  private getErrorMessage(error: unknown) {
-    const message = error instanceof Error ? error.message : "";
-    if (message === "INSUFFICIENT_IDLE_CREDITS") return "Bakiye yetersiz.";
-    if (message === "IDLE_BUSINESS_MAX_LEVEL") return "İşletme maksimum seviyede.";
-    if (message === "IDLE_VAULT_MAX_LEVEL") return "Kasa maksimum seviyede.";
-    return "İşletmeler sunucusuna bağlanılamadı. Lütfen tekrar dene.";
+  private startLiveProjection() {
+    if (this.renderTimer !== null) {
+      window.clearInterval(this.renderTimer);
+    }
+
+    this.renderTimer = window.setInterval(
+      () => this.render(),
+      500,
+    );
+
+    window.addEventListener(
+      "pagehide",
+      () => {
+        if (this.renderTimer !== null) {
+          window.clearInterval(this.renderTimer);
+          this.renderTimer = null;
+        }
+      },
+      { once: true },
+    );
   }
 
-  private setError(message: string | null) {
-    const node = this.root.querySelector<HTMLElement>("[data-idle-error]");
-    if (!node) return;
-    node.hidden = message === null;
-    node.textContent = message ?? "";
+  private startMarketStream() {
+    this.stopMarket?.();
+
+    this.stopMarket = subscribeIdleMarket(
+      (market) => {
+        this.market = market;
+        this.renderMarket();
+      },
+      () => {
+        const card =
+          this.root.querySelector<HTMLElement>(
+            "[data-idle-stadium-card]",
+          );
+        if (card) {
+          card.dataset.marketConnection =
+            "reconnecting";
+        }
+      },
+    );
+
+    window.addEventListener(
+      "pagehide",
+      () => {
+        this.stopMarket?.();
+        this.stopMarket = null;
+      },
+      { once: true },
+    );
   }
 
   private render() {
     if (!this.envelope) return;
 
-    const live = projectIdleStateLive(this.envelope);
-    const walletBalanceCents = live.wallet.balanceCents;
-    const balanceNode = this.root.querySelector<HTMLElement>("[data-idle-balance]");
-    const compactBalanceNode = this.root.querySelector<HTMLElement>("[data-idle-balance-compact]");
-    const hourlyNode = this.root.querySelector<HTMLElement>("[data-idle-total-hourly]");
-    const collectableNode = this.root.querySelector<HTMLElement>("[data-idle-total-collectable]");
-    const activeNode = this.root.querySelector<HTMLElement>("[data-idle-active-businesses]");
-    const collectAllButton = this.root.querySelector<HTMLButtonElement>("[data-idle-collect-all]");
-    const collectAllValueNode = this.root.querySelector<HTMLElement>("[data-idle-collect-all-value]");
-    const commandBarNode = this.root.querySelector<HTMLElement>("[data-idle-command-bar]");
-    const progressionLevelsNode = this.root.querySelector<HTMLElement>("[data-idle-progression-levels]");
-    const progressionTrackNode = this.root.querySelector<HTMLElement>("[data-idle-progression-track]");
-    const progressionBarNode = this.root.querySelector<HTMLElement>("[data-idle-progression-bar]");
-    const progressionPercentNode = this.root.querySelector<HTMLElement>("[data-idle-progression-percent]");
+    const live = projectIdleStadiumLive(
+      this.envelope,
+    );
 
-    if (
-      !balanceNode
-      || !compactBalanceNode
-      || !hourlyNode
-      || !collectableNode
-      || !activeNode
-      || !collectAllButton
-      || !collectAllValueNode
-      || !commandBarNode
-      || !progressionLevelsNode
-      || !progressionTrackNode
-      || !progressionBarNode
-      || !progressionPercentNode
-    ) {
-      throw new Error("IDLE_PAGE_SHELL_INCOMPLETE");
+    setText(
+      this.root,
+      "[data-idle-balance]",
+      formatMoneyFromCents(
+        this.envelope.snapshot.wallet.balanceCents,
+      ),
+    );
+    setText(
+      this.root,
+      "[data-idle-stadium-level]",
+      `Lv${live.stadiumLevel}`,
+    );
+    setText(
+      this.root,
+      "[data-idle-ticket-inventory]",
+      formatTicketQuantity(
+        live.liveStoredMicroTickets,
+      ),
+    );
+    setText(
+      this.root,
+      "[data-idle-production-rate]",
+      formatProductionRate(
+        live.productionRateMicroTicketsPerHour,
+      ),
+    );
+    setText(
+      this.root,
+      "[data-idle-production-status]",
+      live.liveProductionStatus === "NO_SEATS"
+        ? "KOLTUK BEKLİYOR"
+        : live.liveProductionStatus
+            === "STORAGE_FULL"
+          ? "DEPO DOLU"
+          : "ÜRETİM AKTİF",
+    );
+    setText(
+      this.root,
+      "[data-idle-seats]",
+      live.ownedSeats.toLocaleString("en-US"),
+    );
+    setText(
+      this.root,
+      "[data-idle-seat-capacity]",
+      `KAPASİTE ${live.maxSeatCapacity
+        .toLocaleString("en-US")}`,
+    );
+    setText(
+      this.root,
+      "[data-idle-storage-level]",
+      `Lv${live.storageLevel}`,
+    );
+
+    const storagePercent = Math.round(
+      live.storageFillRatio * 100,
+    );
+
+    setText(
+      this.root,
+      "[data-idle-storage-percent]",
+      `%${storagePercent}`,
+    );
+    setText(
+      this.root,
+      "[data-idle-storage-current]",
+      `${formatTicketQuantity(
+        live.liveStoredMicroTickets,
+      )} bilet`,
+    );
+    setText(
+      this.root,
+      "[data-idle-storage-capacity]",
+      `${live.storageCapacityTickets
+        .toLocaleString("en-US")} kapasite`,
+    );
+    setText(
+      this.root,
+      "[data-idle-speed-level]",
+      `Lv${live.speedLevel}`,
+    );
+
+    const track =
+      this.root.querySelector<HTMLElement>(
+        "[data-idle-storage-track]",
+      );
+    const fill =
+      this.root.querySelector<HTMLElement>(
+        "[data-idle-storage-fill]",
+      );
+
+    if (!track || !fill) {
+      throw new Error(
+        "IDLE_STADIUM_STORAGE_SHELL_MISSING",
+      );
     }
 
-    balanceNode.textContent = formatCredits(walletBalanceCents);
-    compactBalanceNode.textContent = formatCredits(walletBalanceCents);
-
-    const totalHourlyCents = getIdleTotalPassiveIncomeCentsPerHour(
-      live.businesses,
-    );
-    const totalCollectableCents = getIdleTotalCollectableCents(
-      live.businesses,
-    );
-
-    for (const business of live.businesses) {
-      const row = this.root.querySelector<HTMLElement>(
-        `[data-business-id="${business.businessId}"]`,
-      );
-      if (!row) throw new Error("IDLE_BUSINESS_ROW_MISSING");
-
-      updateBusinessRow(
-        row,
-        business,
-        walletBalanceCents,
-        this.busyBusinesses.has(business.businessId),
-      );
-    }
-
-    if (this.detailBusinessId) {
-      const detailBusiness = live.businesses.find(
-        (business) => business.businessId === this.detailBusinessId,
-      );
-      if (detailBusiness) this.renderBusinessDetails(detailBusiness, walletBalanceCents);
-    }
-
-    const activeBusinesses = live.businesses.filter(
-      (business) => business.businessLevel !== null,
-    ).length;
-    const completedBusinessLevels = live.businesses.reduce(
-      (total, business) =>
-        total + (business.businessLevel === null ? 0 : business.businessLevel + 1),
-      0,
-    );
-    const progressionPercent = Math.round(
-      completedBusinessLevels / TOTAL_BUSINESS_PROGRESSION_LEVELS * 100,
-    );
-
-    progressionLevelsNode.textContent =
-      `${completedBusinessLevels} / ${TOTAL_BUSINESS_PROGRESSION_LEVELS}`;
-    progressionPercentNode.textContent = `%${progressionPercent}`;
-    progressionBarNode.style.width = `${progressionPercent}%`;
-    progressionTrackNode.setAttribute(
+    track.setAttribute(
       "aria-valuenow",
-      String(completedBusinessLevels),
+      String(storagePercent),
     );
+    fill.style.width = `${storagePercent}%`;
 
-    hourlyNode.textContent = `${formatCredits(totalHourlyCents)} /sa`;
-    collectableNode.textContent = formatCredits(totalCollectableCents);
-    activeNode.textContent = `${activeBusinesses} / ${ACTIVE_BUSINESS_IDS.length} AKTİF`;
-    collectAllValueNode.textContent = formatCredits(totalCollectableCents);
-    collectAllButton.disabled = this.collectingAll || totalCollectableCents <= 0;
-    collectAllButton.setAttribute(
-      "aria-label",
-      totalCollectableCents > 0
-        ? `Tüm işletmelerden ${formatCredits(totalCollectableCents)} topla`
-        : "Toplanabilir işletme geliri yok",
-    );
-    commandBarNode.dataset.collectable =
-      totalCollectableCents > 0 ? "ready" : "empty";
-    commandBarNode.dataset.collecting = this.collectingAll ? "true" : "false";
-  }
-
-  private handleClick = (event: Event) => {
-    const target = event.target as HTMLElement | null;
-    const button = target?.closest<HTMLButtonElement>("button");
-    if (!button) return;
-
-    if (button.matches("[data-idle-detail-close], [data-idle-detail-backdrop]")) {
-      this.closeBusinessDetails();
-      return;
-    }
-
-    if (button.matches("[data-idle-detail-tab]")) {
-      const tab = button.dataset.idleDetailTab as BusinessDetailTab | undefined;
-      if (tab === "business" || tab === "vault") this.setDetailTab(tab);
-      return;
-    }
-
-    if (button.matches("[data-idle-detail-upgrade]")) {
-      const businessId = this.detailBusinessId;
-      if (!businessId || this.busyBusinesses.has(businessId)) return;
-      void this.runBusinessAction(
-        businessId,
-        () => upgradeIdleBusiness(businessId),
-        "business",
+    const card =
+      this.root.querySelector<HTMLElement>(
+        "[data-idle-stadium-card]",
       );
-      return;
+    if (card) {
+      card.dataset.state =
+        live.liveProductionStatus.toLowerCase();
     }
 
-    if (button.matches("[data-idle-detail-vault-upgrade]")) {
-      const businessId = this.detailBusinessId;
-      if (!businessId || this.busyBusinesses.has(businessId)) return;
-      void this.runBusinessAction(
-        businessId,
-        () => upgradeIdleVault(businessId),
-        "vault",
+    this.renderMarket();
+  }
+
+  private renderMarket() {
+    if (!this.market) return;
+
+    setText(
+      this.root,
+      "[data-idle-market-price]",
+      formatTicketPrice(
+        this.market.priceMicrodollars,
+      ),
+    );
+    setText(
+      this.root,
+      "[data-idle-market-status]",
+      this.market.feedStatus,
+    );
+    setText(
+      this.root,
+      "[data-idle-market-source]",
+      this.market.source === "binance-btcusdt"
+        ? "BINANCE"
+        : this.market.source === "coinbase-btc-usd"
+          ? "COINBASE"
+          : "BEKLEMEDE",
+    );
+
+    const tick = new Date(this.market.tickAt);
+    setText(
+      this.root,
+      "[data-idle-market-tick]",
+      Number.isFinite(tick.getTime())
+        ? tick.toLocaleTimeString("tr-TR", {
+          hour: "2-digit",
+          minute: "2-digit",
+          second: "2-digit",
+        })
+        : "—",
+    );
+
+    const card =
+      this.root.querySelector<HTMLElement>(
+        "[data-idle-stadium-card]",
       );
-      return;
-    }
-
-    if (button.matches("[data-idle-collect-all]")) {
-      if (!this.collectingAll) void this.runCollectAll();
-      return;
-    }
-
-    const row = target?.closest<HTMLElement>("[data-business-id]");
-    if (!row) return;
-
-    const businessId = row.dataset.businessId as BusinessId | undefined;
-    if (
-      !businessId
-      || !(ACTIVE_BUSINESS_IDS as readonly string[]).includes(
-        businessId,
-      )
-    ) return;
-
-    if (button.matches("[data-business-details]")) {
-      this.openBusinessDetails(businessId, button);
-      return;
-    }
-
-    if (this.busyBusinesses.has(businessId)) return;
-
-    if (button.matches("[data-business-collect]")) {
-      void this.runCollectBusiness(businessId);
-    }
-  };
-
-  private handleKeyDown = (event: KeyboardEvent) => {
-    if (event.key === "Escape" && this.detailBusinessId) {
-      event.preventDefault();
-      this.closeBusinessDetails();
-    }
-  };
-
-  private openBusinessDetails(businessId: BusinessId, trigger: HTMLElement) {
-    const layer = this.root.querySelector<HTMLElement>("[data-idle-detail-layer]");
-    if (!layer) throw new Error("IDLE_DETAIL_LAYER_MISSING");
-
-    this.detailBusinessId = businessId;
-    this.detailTab = "business";
-    this.lastDetailTrigger = trigger;
-    layer.hidden = false;
-    document.body.classList.add("business-detail-open");
-    this.setDetailTab("business");
-
-    if (this.envelope) this.render();
-
-    window.requestAnimationFrame(() => {
-      layer.dataset.open = "true";
-      this.root.querySelector<HTMLButtonElement>("[data-idle-detail-close]")?.focus();
-    });
-  }
-
-  private closeBusinessDetails() {
-    const layer = this.root.querySelector<HTMLElement>("[data-idle-detail-layer]");
-    if (!layer) return;
-
-    const focusTarget = this.lastDetailTrigger;
-    this.detailBusinessId = null;
-    this.lastDetailTrigger = null;
-    layer.dataset.open = "false";
-    document.body.classList.remove("business-detail-open");
-
-    window.setTimeout(() => {
-      if (this.detailBusinessId === null) layer.hidden = true;
-    }, 220);
-
-    focusTarget?.focus();
-  }
-
-  private setDetailTab(tab: BusinessDetailTab) {
-    this.detailTab = tab;
-
-    for (const tabButton of this.root.querySelectorAll<HTMLButtonElement>("[data-idle-detail-tab]")) {
-      const selected = tabButton.dataset.idleDetailTab === tab;
-      tabButton.setAttribute("aria-selected", selected ? "true" : "false");
-      tabButton.dataset.active = selected ? "true" : "false";
-    }
-
-    for (const panel of this.root.querySelectorAll<HTMLElement>("[data-idle-detail-panel]")) {
-      panel.hidden = panel.dataset.idleDetailPanel !== tab;
+    if (card) {
+      card.dataset.marketConnection =
+        this.market.feedStatus === "LIVE"
+          ? "live"
+          : "limited";
     }
   }
 
-  private renderBusinessDetails(
-    business: ReturnType<typeof projectIdleStateLive>["businesses"][number],
-    walletBalanceCents: number,
-  ) {
-    const definition = BUSINESS_DETAIL_DEFINITIONS[business.businessId];
-    const currentStage = business.businessLevel === null
-      ? null
-      : definition.levels.find((stage) => stage.level === business.businessLevel) ?? null;
-    const nextStage = business.businessLevel === null
-      ? definition.levels[0]
-      : definition.levels.find((stage) => stage.level === business.businessLevel! + 1) ?? null;
-    const vault = VAULT_LEVELS.find((entry) => entry.level === business.vaultLevel);
-
-    const eyebrowNode = this.root.querySelector<HTMLElement>("[data-idle-detail-eyebrow]");
-    const titleNode = this.root.querySelector<HTMLElement>("[data-idle-detail-title]");
-    const levelNode = this.root.querySelector<HTMLElement>("[data-idle-detail-level]");
-    const levelBadgeNode = this.root.querySelector<HTMLElement>("[data-idle-detail-level-badge]");
-    const stateNode = this.root.querySelector<HTMLElement>("[data-idle-detail-state]");
-    const accruedNode = this.root.querySelector<HTMLElement>("[data-idle-detail-accrued]");
-    const hourlyNode = this.root.querySelector<HTMLElement>("[data-idle-detail-hourly]");
-    const vaultNode = this.root.querySelector<HTMLElement>("[data-idle-detail-vault]");
-    const businessRoadmapNode = this.root.querySelector<HTMLElement>("[data-idle-business-level-roadmap]");
-    const vaultRoadmapNode = this.root.querySelector<HTMLElement>("[data-idle-vault-level-roadmap]");
-    const businessLevelTreeNode = this.root.querySelector<HTMLElement>("[data-idle-business-level-tree]");
-    const vaultLevelTreeNode = this.root.querySelector<HTMLElement>("[data-idle-vault-level-tree]");
-
-    if (
-      !eyebrowNode
-      || !titleNode
-      || !levelNode
-      || !levelBadgeNode
-      || !stateNode
-      || !accruedNode
-      || !hourlyNode
-      || !vaultNode
-      || !businessRoadmapNode
-      || !vaultRoadmapNode
-      || !businessLevelTreeNode
-      || !vaultLevelTreeNode
-      || !vault
-    ) {
-      throw new Error("IDLE_DETAIL_SHELL_INCOMPLETE");
-    }
-
-    eyebrowNode.textContent = BUSINESS_DETAIL_EYEBROWS[business.businessId];
-    titleNode.textContent = definition.label;
-    levelNode.textContent = currentStage
-      ? `Lv${currentStage.level} · ${currentStage.name}`
-      : "Henüz satın alınmadı";
-    levelBadgeNode.textContent = currentStage ? `LV${currentStage.level}` : "LOCKED";
-    stateNode.textContent = business.businessLevel === null
-      ? "SATIN ALINMADI"
-      : business.liveIsVaultFull
-        ? "KASA DOLU"
-        : nextStage
-          ? "AKTİF"
-          : "MAX SEVİYE";
-
-    accruedNode.textContent = formatCreditsFromMicrocents(
-      business.liveAccruedMicrocents,
-    );
-    hourlyNode.textContent = currentStage
-      ? `${formatCredits(currentStage.hourlyIncomeDisplayCents)} /sa`
-      : "$0.00 /sa";
-    const vaultCapacityMicrocents = business.businessLevel === null
-      ? 0
-      : business.liveAccruedMicrocents + business.liveRemainingCapacityMicrocents;
-    vaultNode.textContent = business.businessLevel === null
-      ? "$0.00"
-      : formatCreditsFromMicrocents(vaultCapacityMicrocents);
-
-    const detailBusy = this.busyBusinesses.has(business.businessId);
-
-    const businessRoadmapSignature =
-      `${business.businessId}:${business.businessLevel ?? "locked"}`;
-    if (businessRoadmapNode.dataset.roadmapSignature !== businessRoadmapSignature) {
-      businessRoadmapNode.innerHTML = renderBusinessLevelRoadmap(
-        business.businessId,
-        business.businessLevel,
+  private showError(error: unknown) {
+    const node =
+      this.root.querySelector<HTMLElement>(
+        "[data-idle-error]",
       );
-      businessRoadmapNode.dataset.roadmapSignature = businessRoadmapSignature;
-    }
+    if (!node) return;
 
-    const vaultRoadmapSignature =
-      `${business.businessLevel === null ? "locked" : "owned"}:${business.vaultLevel}`;
-    if (vaultRoadmapNode.dataset.roadmapSignature !== vaultRoadmapSignature) {
-      vaultRoadmapNode.innerHTML = renderVaultLevelRoadmap(
-        business.businessLevel,
-        business.vaultLevel,
-      );
-      vaultRoadmapNode.dataset.roadmapSignature = vaultRoadmapSignature;
-    }
-
-    businessLevelTreeNode.innerHTML = renderBusinessLevelTree(
-      business.businessId,
-      business.businessLevel,
-      walletBalanceCents,
-      detailBusy,
-    );
-    vaultLevelTreeNode.innerHTML = renderVaultLevelTree(
-      business.businessId,
-      business.businessLevel,
-      business.vaultLevel,
-      walletBalanceCents,
-      detailBusy,
-    );
-  }
-
-  private getBusinessSnapshot(businessId: BusinessId) {
-    return this.envelope?.snapshot.businesses.find(
-      (business) => business.businessId === businessId,
-    ) ?? null;
-  }
-
-  private mountFeedbackToast(toast: HTMLElement) {
-    const existingToasts = this.root.querySelectorAll<HTMLElement>(
-      ".business-upgrade-toast, .business-collect-toast, .business-collect-all-toast",
-    );
-    for (const existingToast of existingToasts) existingToast.remove();
-    this.root.append(toast);
-  }
-
-  private playUpgradeFeedback(
-    businessId: BusinessId,
-    kind: UpgradeFeedbackKind,
-    before: ReturnType<BusinessesClient["getBusinessSnapshot"]>,
-    after: ReturnType<BusinessesClient["getBusinessSnapshot"]>,
-  ) {
-    if (!before || !after) return;
-
-    const changed = kind === "business"
-      ? before.businessLevel !== after.businessLevel
-      : before.vaultLevel !== after.vaultLevel;
-    if (!changed) return;
-
-    const row = this.root.querySelector<HTMLElement>(
-      `[data-business-id="${businessId}"]`,
-    );
-    const drawer = this.root.querySelector<HTMLElement>("[data-idle-detail-drawer]");
-    const detailIsOpen = this.detailBusinessId === businessId
-      && this.root.querySelector<HTMLElement>("[data-idle-detail-layer]")?.dataset.open === "true";
-    const target = detailIsOpen ? drawer : row;
-    if (!target) return;
-
-    target.dataset.upgradeFeedback = kind;
-
-    const toast = document.createElement("div");
-    toast.className = "business-feedback-toast business-upgrade-toast";
-    toast.setAttribute("role", "status");
-    toast.setAttribute("aria-live", "polite");
-    toast.dataset.upgradeKind = kind;
-
-    const label = document.createElement("span");
-    const value = document.createElement("strong");
-    const meta = document.createElement("small");
-
-    toast.append(label, value, meta);
-    this.mountFeedbackToast(toast);
-
-    const reducedMotion = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches ?? false;
-    const duration = reducedMotion ? 0 : 860;
-
-    if (kind === "business") {
-      const definition = BUSINESS_DETAIL_DEFINITIONS[businessId];
-      const beforeStage = before.businessLevel === null
-        ? null
-        : definition.levels.find((stage) => stage.level === before.businessLevel) ?? null;
-      const afterStage = after.businessLevel === null
-        ? null
-        : definition.levels.find((stage) => stage.level === after.businessLevel) ?? null;
-      if (!afterStage) return;
-
-      const fromHourly = beforeStage?.hourlyIncomeDisplayCents ?? 0;
-      const toHourly = afterStage.hourlyIncomeDisplayCents;
-      const deltaHourly = Math.max(0, toHourly - fromHourly);
-
-      label.textContent = beforeStage ? "SEVİYE YÜKSELDİ" : "İŞLETME AÇILDI";
-      meta.textContent = `Lv${afterStage.level} · ${afterStage.name}`;
-
-      const start = performance.now();
-      const update = (now: number) => {
-        const progress = duration === 0
-          ? 1
-          : Math.min(1, Math.max(0, (now - start) / duration));
-        const eased = 1 - Math.pow(1 - progress, 3);
-        const current = deltaHourly * eased;
-        value.textContent = `+${formatCredits(current)} /sa`;
-        if (progress < 1) window.requestAnimationFrame(update);
-      };
-      window.requestAnimationFrame(update);
-    } else {
-      const beforeVault = VAULT_LEVELS.find((entry) => entry.level === before.vaultLevel);
-      const afterVault = VAULT_LEVELS.find((entry) => entry.level === after.vaultLevel);
-      if (!beforeVault || !afterVault) return;
-
-      label.textContent = "KASA GELİŞTİ";
-      meta.textContent = `Kasa Lv${after.vaultLevel}`;
-
-      const start = performance.now();
-      const update = (now: number) => {
-        const progress = duration === 0
-          ? 1
-          : Math.min(1, Math.max(0, (now - start) / duration));
-        const eased = 1 - Math.pow(1 - progress, 3);
-        const hours = beforeVault.capacityHours
-          + (afterVault.capacityHours - beforeVault.capacityHours) * eased;
-        value.textContent = `${Math.round(hours)} SAAT`;
-        if (progress < 1) window.requestAnimationFrame(update);
-      };
-      window.requestAnimationFrame(update);
-    }
-
-    window.setTimeout(() => {
-      toast.dataset.leaving = "true";
-      window.setTimeout(() => toast.remove(), reducedMotion ? 0 : 180);
-      if (target.dataset.upgradeFeedback === kind) {
-        delete target.dataset.upgradeFeedback;
-      }
-    }, reducedMotion ? 600 : 1040);
-  }
-
-  private playCollectFeedback(
-    businessId: BusinessId,
-    collectedCents: number,
-  ) {
-    if (collectedCents <= 0) return;
-
-    const row = this.root.querySelector<HTMLElement>(
-      `[data-business-id="${businessId}"]`,
-    );
-    if (!row) return;
-
-    row.dataset.collectFeedback = "true";
-
-    const toast = document.createElement("div");
-    toast.className = "business-feedback-toast business-collect-toast";
-    toast.setAttribute("role", "status");
-    toast.setAttribute("aria-live", "polite");
-
-    const label = document.createElement("span");
-    const value = document.createElement("strong");
-    const meta = document.createElement("small");
-
-    label.textContent = "GELİR TOPLANDI";
-    value.textContent = `+${formatCredits(collectedCents)}`;
-    meta.textContent = "Ortak bakiyeye aktarıldı";
-
-    toast.append(label, value, meta);
-    this.mountFeedbackToast(toast);
-
-    const reducedMotion = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches ?? false;
-    window.setTimeout(() => {
-      toast.dataset.leaving = "true";
-      window.setTimeout(() => toast.remove(), reducedMotion ? 0 : 180);
-      delete row.dataset.collectFeedback;
-    }, reducedMotion ? 650 : 1100);
-  }
-
-  private playCollectAllFeedback(collectedCents: number) {
-    if (collectedCents <= 0) return;
-
-    const commandBar = this.root.querySelector<HTMLElement>("[data-idle-command-bar]");
-    if (!commandBar) return;
-
-    commandBar.dataset.collectFeedback = "true";
-
-    const toast = document.createElement("div");
-    toast.className = "business-feedback-toast business-collect-all-toast";
-    toast.setAttribute("role", "status");
-    toast.setAttribute("aria-live", "polite");
-    toast.innerHTML = `
-      <span>TÜM KASALAR TOPLANDI</span>
-      <strong>+${formatCredits(collectedCents)}</strong>
-      <small>Ortak bakiye güncellendi</small>
-    `;
-    this.mountFeedbackToast(toast);
-
-    const reducedMotion = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches ?? false;
-    window.setTimeout(() => {
-      toast.dataset.leaving = "true";
-      window.setTimeout(() => toast.remove(), reducedMotion ? 0 : 180);
-      delete commandBar.dataset.collectFeedback;
-    }, reducedMotion ? 650 : 1100);
-  }
-
-  private async runCollectBusiness(businessId: BusinessId) {
-    this.busyBusinesses.add(businessId);
-    this.render();
-
-    try {
-      const result = await collectIdleBusiness(businessId);
-      await this.refresh();
-      this.playCollectFeedback(businessId, result.collectedCents);
-    } catch (error) {
-      this.setError(this.getErrorMessage(error));
-    } finally {
-      this.busyBusinesses.delete(businessId);
-      this.render();
-    }
-  }
-
-  private async runBusinessAction(
-    businessId: BusinessId,
-    action: () => Promise<unknown>,
-    upgradeFeedback?: UpgradeFeedbackKind,
-  ) {
-    const before = upgradeFeedback
-      ? this.getBusinessSnapshot(businessId)
-      : null;
-
-    this.busyBusinesses.add(businessId);
-    this.render();
-    try {
-      await action();
-      await this.refresh();
-      if (upgradeFeedback) {
-        const after = this.getBusinessSnapshot(businessId);
-        this.playUpgradeFeedback(businessId, upgradeFeedback, before, after);
-      }
-    } catch (error) {
-      this.setError(this.getErrorMessage(error));
-    } finally {
-      this.busyBusinesses.delete(businessId);
-      this.render();
-    }
-  }
-
-  private async runCollectAll() {
-    this.collectingAll = true;
-    for (const businessId of ACTIVE_BUSINESS_IDS) this.busyBusinesses.add(businessId);
-    this.render();
-
-    try {
-      const result = await collectAllIdleBusinesses();
-      await this.refresh();
-      this.playCollectAllFeedback(result.collectedCents);
-    } catch (error) {
-      this.setError(this.getErrorMessage(error));
-      await this.refresh();
-    } finally {
-      this.collectingAll = false;
-      this.busyBusinesses.clear();
-      this.render();
-    }
+    node.hidden = false;
+    node.textContent =
+      error instanceof Error
+        ? error.message
+        : "IDLE_STADIUM_STATE_REQUEST_FAILED";
   }
 }
 
-
-export function mountBusinesses(app: HTMLDivElement) {
-  document.documentElement.classList.add("businesses-route");
-  document.body.classList.add("businesses-route");
+export function mountBusinesses(
+  app: HTMLDivElement,
+) {
+  document.documentElement.classList.add(
+    "businesses-route",
+  );
+  document.body.classList.add(
+    "businesses-route",
+  );
 
   app.innerHTML = `
-    <div class="app-shell route-shell is-route-page is-businesses-page">
+    <div
+      class="app-shell route-shell
+             is-route-page is-businesses-page"
+    >
       ${BUSINESSES_MARKUP}
     </div>
   `;
 
-  const businessesRoot = app.querySelector<HTMLElement>(".businesses-page");
-  if (businessesRoot) new BusinessesClient(businessesRoot);
+  const businessesRoot =
+    app.querySelector<HTMLElement>(
+      ".businesses-page",
+    );
+
+  if (businessesRoot) {
+    new BusinessesClient(businessesRoot);
+  }
 }
