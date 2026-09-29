@@ -4,6 +4,26 @@ export type RouletteScenePhase =
   | "settled";
 
 export const ROULETTE_RESULT_HOLD_MS = 1600;
+export const ROULETTE_BETTING_WINDOW_MS = 10_000;
+
+export function getRouletteBettingSecondsRemaining(
+  deadlineMs: number,
+  nowMs: number,
+) {
+  if (
+    !Number.isFinite(deadlineMs) ||
+    !Number.isFinite(nowMs)
+  ) {
+    return 0;
+  }
+
+  return Math.max(
+    0,
+    Math.ceil(
+      (deadlineMs - nowMs) / 1000,
+    ),
+  );
+}
 
 export function canEditRouletteBets(
   phase: RouletteScenePhase,

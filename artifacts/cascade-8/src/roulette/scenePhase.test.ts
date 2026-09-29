@@ -4,9 +4,11 @@ import {
   it,
 } from "vitest";
 import {
+  ROULETTE_BETTING_WINDOW_MS,
   ROULETTE_RESULT_HOLD_MS,
   canEditRouletteBets,
   canStartRouletteSpin,
+  getRouletteBettingSecondsRemaining,
   getRoulettePhaseStatus,
 } from "./scenePhase";
 
@@ -33,6 +35,38 @@ describe("roulette scene focus phases", () => {
     expect(
       canStartRouletteSpin("settled"),
     ).toBe(false);
+  });
+
+  it("counts a ten second betting window down to zero", () => {
+    const deadline = 20_000;
+
+    expect(
+      ROULETTE_BETTING_WINDOW_MS,
+    ).toBe(10_000);
+    expect(
+      getRouletteBettingSecondsRemaining(
+        deadline,
+        10_000,
+      ),
+    ).toBe(10);
+    expect(
+      getRouletteBettingSecondsRemaining(
+        deadline,
+        11_000,
+      ),
+    ).toBe(9);
+    expect(
+      getRouletteBettingSecondsRemaining(
+        deadline,
+        19_999,
+      ),
+    ).toBe(1);
+    expect(
+      getRouletteBettingSecondsRemaining(
+        deadline,
+        20_000,
+      ),
+    ).toBe(0);
   });
 
   it("holds the result long enough to read before reopening betting", () => {

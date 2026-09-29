@@ -261,31 +261,6 @@ export function renderRouletteBetTable() {
             </div>
           </div>
 
-          <div class="roulette-mobile-utility" data-mobile-quick-bets>
-            <button
-              class="roulette-mobile-rail-button roulette-mobile-quick-toggle"
-              type="button"
-              data-mobile-quick-toggle
-              aria-label="Open outside bet shortcuts"
-              aria-expanded="false"
-            >
-              ⌗
-            </button>
-            <div
-              class="roulette-mobile-quick-menu"
-              data-mobile-quick-menu
-              aria-label="Outside bet shortcuts"
-              hidden
-            >
-              <button type="button" data-quick-bet-id="low">1–18</button>
-              <button type="button" data-quick-bet-id="even">EVEN</button>
-              <button type="button" data-quick-bet-id="red">RED</button>
-              <button type="button" data-quick-bet-id="black">BLACK</button>
-              <button type="button" data-quick-bet-id="odd">ODD</button>
-              <button type="button" data-quick-bet-id="high">19–36</button>
-            </div>
-          </div>
-
           <button
             class="roulette-mobile-rail-button roulette-mobile-undo"
             type="button"
