@@ -72,7 +72,7 @@ describe("roulette scene focus phases", () => {
   it("holds the result long enough to read before reopening betting", () => {
     expect(
       ROULETTE_RESULT_HOLD_MS,
-    ).toBeGreaterThanOrEqual(1200);
+    ).toBe(2200);
     expect(
       getRoulettePhaseStatus(
         "settled",
