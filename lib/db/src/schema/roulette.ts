@@ -1,4 +1,5 @@
 import {
+  bigint,
   index,
   integer,
   jsonb,
@@ -14,8 +15,8 @@ export const rouletteRounds = pgTable(
     id: text("id").primaryKey(),
     sessionId: text("session_id").notNull(),
     seed: text("seed").notNull(),
-    stakeCents: integer("stake_cents").notNull(),
-    payoutCents: integer("payout_cents").notNull(),
+    stakeCents: bigint("stake_cents", { mode: "number" }).notNull(),
+    payoutCents: bigint("payout_cents", { mode: "number" }).notNull(),
     winningNumber: integer("winning_number").notNull(),
     pocketIndex: integer("pocket_index").notNull(),
     bets: jsonb("bets").notNull(),
@@ -41,7 +42,7 @@ export const rouletteLedger = pgTable(
     sessionId: text("session_id").notNull(),
     roundId: text("round_id").notNull(),
     kind: text("kind").notNull(),
-    amountCents: integer("amount_cents").notNull(),
+    amountCents: bigint("amount_cents", { mode: "number" }).notNull(),
     idempotencyKey: text("idempotency_key").notNull(),
     createdAt: timestamp("created_at", { withTimezone: true })
       .notNull()
