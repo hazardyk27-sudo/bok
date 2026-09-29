@@ -1343,7 +1343,7 @@ button {
     grid-column: 1;
     grid-row: 2;
     align-self: stretch;
-    width: min(100%, 330px);
+    width: min(100%, 350px);
     max-width: calc(
       100vw -
       max(6px, env(safe-area-inset-left)) -
@@ -1618,7 +1618,7 @@ button {
     grid-column: 2;
     display: grid;
     grid-template-rows: 38px minmax(38px, auto) 38px;
-    align-content: end;
+    align-content: center;
     justify-items: center;
     gap: 7px;
     padding-bottom: 3px;
@@ -1735,16 +1735,19 @@ button {
     right: 43px;
     top: 50%;
     transform: translateY(-50%);
-    width: 46px;
-    max-height: min(252px, 38dvh);
-    padding: 5px;
+    width: max-content;
+    max-width: min(258px, calc(100vw - 58px));
+    padding: 5px 6px;
     display: grid;
-    justify-items: center;
+    grid-auto-flow: column;
+    grid-auto-columns: 34px;
+    align-items: center;
     gap: 5px;
-    overflow-y: auto;
-    overscroll-behavior: contain;
+    overflow-x: auto;
+    overflow-y: hidden;
+    overscroll-behavior-x: contain;
     border: 1px solid rgba(224, 231, 236, 0.28);
-    border-radius: 24px;
+    border-radius: 22px;
     background:
       linear-gradient(
         180deg,
@@ -1979,5 +1982,160 @@ button {
   .roulette-recent-result {
     height: 18px;
     font-size: 9px;
+  }
+}
+
+
+/* Mobile cockpit v2 — Part 4: final viewport and interaction polish */
+@media (max-width: 900px) and (orientation: portrait) {
+  .roulette-game-shell,
+  .roulette-wheel-panel,
+  .roulette-bet-panel,
+  .roulette-table-layout,
+  .roulette-bet-table,
+  .roulette-bet-console {
+    min-width: 0;
+    max-width: 100%;
+  }
+
+  .roulette-bet-panel {
+    overflow: visible;
+  }
+
+  .roulette-table-layout {
+    max-width: calc(
+      100vw -
+      max(6px, env(safe-area-inset-left)) -
+      max(6px, env(safe-area-inset-right))
+    );
+  }
+
+  .roulette-mobile-control-rail {
+    align-self: stretch;
+  }
+
+  .roulette-mobile-chip-menu {
+    touch-action: pan-x;
+  }
+
+  .roulette-bet-cell,
+  .roulette-mobile-rail-button,
+  .roulette-chip-option,
+  .roulette-spin-button {
+    -webkit-user-select: none;
+    user-select: none;
+  }
+
+  .roulette-page[data-phase="betting"] .roulette-bet-table {
+    filter: none;
+  }
+
+  .roulette-page[data-phase="spinning"] .roulette-bet-table,
+  .roulette-page[data-phase="settled"] .roulette-bet-table {
+    filter: saturate(0.72) brightness(0.72);
+  }
+
+  .roulette-page[data-phase="spinning"] .roulette-recent-strip,
+  .roulette-page[data-phase="settled"] .roulette-recent-strip {
+    opacity: 0.96;
+  }
+}
+
+@media (max-width: 900px) and (orientation: portrait) and (max-height: 720px) {
+  .roulette-page {
+    --mobile-number-row: clamp(19px, 2.75dvh, 22px);
+  }
+
+  .roulette-game-shell {
+    grid-template-rows: minmax(132px, 28dvh) minmax(0, 1fr);
+  }
+
+  .roulette-recent-strip {
+    height: 20px;
+  }
+
+  .roulette-recent-result {
+    height: 18px;
+    font-size: 9px;
+  }
+
+  .roulette-wheel-panel {
+    grid-template-rows: 21px minmax(0, 1fr);
+  }
+
+  .roulette-bet-panel__header {
+    min-height: 15px;
+    padding-bottom: 2px;
+    font-size: 7px;
+  }
+
+  .roulette-bet-table {
+    grid-template-rows: 29px auto 25px;
+  }
+
+  .roulette-zero-cell {
+    min-height: 29px;
+    font-size: 15px;
+  }
+
+  .roulette-column-bets {
+    grid-template-rows: 25px;
+  }
+
+  .roulette-column-cell {
+    min-height: 25px;
+  }
+
+  .roulette-bet-console {
+    margin-top: 3px;
+    gap: 3px;
+  }
+
+  .roulette-bet-actions button {
+    min-height: 25px;
+  }
+}
+
+@media (max-width: 900px) and (orientation: portrait) and (max-height: 620px) {
+  .roulette-page {
+    --mobile-number-row: 18px;
+    --wheel-size: min(68vw, 25dvh, 220px);
+  }
+
+  .roulette-game-shell {
+    grid-template-rows: minmax(112px, 25dvh) minmax(0, 1fr);
+  }
+
+  .roulette-bet-panel__header {
+    display: none;
+  }
+
+  .roulette-bet-summary {
+    gap: 3px;
+  }
+
+  .roulette-bet-summary span {
+    font-size: 4px;
+  }
+
+  .roulette-bet-summary strong {
+    font-size: 10px;
+  }
+
+  .roulette-bet-actions button {
+    min-height: 23px;
+    font-size: 6px;
+  }
+
+  .roulette-mobile-rail-button {
+    width: 30px;
+    height: 30px;
+    min-width: 30px;
+    min-height: 30px;
+  }
+
+  .roulette-table-layout {
+    grid-template-columns: minmax(0, var(--mobile-table-width)) 32px;
+    gap: 3px;
   }
 }
