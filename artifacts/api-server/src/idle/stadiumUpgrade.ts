@@ -1,7 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { type PoolClient } from "@workspace/db";
 import { INITIAL_SHARED_BALANCE_CENTS } from "../platform/wallet";
-import { STADIUM_LEVELS } from "../../../cascade-8/src/idle/config";
 import type {
   IdleStadiumLevelUpgradeResponse,
   StadiumLevel,
@@ -11,6 +10,7 @@ import {
   stadiumProjectionToServerState,
 } from "./stadiumRepository";
 import { runCheckpointedStadiumMutation } from "./stadiumMutation";
+import { resolveNextStadiumUpgrade } from "./stadiumPolicy";
 
 const STADIUM_UPGRADE_ACTION = "STADIUM_UPGRADE" as const;
 
@@ -140,26 +140,16 @@ export async function upgradeStadiumLevel(
         };
       }
 
-      const targetLevelNumber = settledState.stadiumLevel + 1;
-      const targetConfig = STADIUM_LEVELS.find(
-        (entry) => entry.level === targetLevelNumber,
-      );
-
-      if (!targetConfig) {
-        throw new Error("IDLE_STADIUM_MAX_LEVEL");
-      }
-
       const balanceBeforeCents = await ensureSharedWalletForUpdate(
         client,
         sessionId,
       );
 
-      if (balanceBeforeCents < targetConfig.unlockCostCents) {
-        throw new Error("INSUFFICIENT_IDLE_CREDITS");
-      }
-
-      const balanceCents =
-        balanceBeforeCents - targetConfig.unlockCostCents;
+      const upgrade = resolveNextStadiumUpgrade(
+        settledState.stadiumLevel,
+        balanceBeforeCents,
+      );
+      const balanceCents = upgrade.balanceAfterCents;
 
       await client.query(
         `UPDATE roulette_wallets
@@ -177,19 +167,19 @@ export async function upgradeStadiumLevel(
           WHERE idempotency_key = $1`,
         [
           idempotencyKey,
-          targetConfig.level,
-          targetConfig.unlockCostCents,
+          upgrade.targetStadiumLevel,
+          upgrade.costCents,
           balanceCents,
         ],
       );
 
       return {
         patch: {
-          stadiumLevel: targetConfig.level,
+          stadiumLevel: upgrade.targetStadiumLevel,
         },
         result: {
-          targetStadiumLevel: targetConfig.level,
-          costCents: targetConfig.unlockCostCents,
+          targetStadiumLevel: upgrade.targetStadiumLevel,
+          costCents: upgrade.costCents,
           balanceCents,
           replayed: false,
         },
