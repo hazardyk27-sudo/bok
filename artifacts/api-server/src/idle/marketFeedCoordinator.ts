@@ -83,10 +83,13 @@ export class MarketFeedCoordinator {
     const epochChanged =
       acceptedEpoch !== quote.connectionEpoch;
 
+    // sourceChanged handles provider failover/recovery; epochChanged consumes
+    // each feed connection's first-quote rebaseline exactly once. Do not key
+    // directly off quote.rebaseline here because the feed snapshot can expose
+    // that first quote across multiple 5-second coordinator samples.
     const shouldRebaselineBtc =
       sourceChanged
-      || epochChanged
-      || quote.rebaseline;
+      || epochChanged;
 
     this.activeSource = selectedHealth.source;
     this.acceptedEpochBySource[selectedHealth.source] =
