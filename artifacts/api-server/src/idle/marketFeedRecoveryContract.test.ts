@@ -1,1 +1,62 @@
-import { readFileSync } from "node:fs";\nimport { fileURLToPath } from "node:url";\nimport { describe, expect, it } from "vitest";\n\nconst binanceSource = readFileSync(\n  fileURLToPath(new URL("./binanceBtcFeed.ts", import.meta.url)),\n  "utf8",\n);\nconst coinbaseSource = readFileSync(\n  fileURLToPath(new URL("./coinbaseBtcFeed.ts", import.meta.url)),\n  "utf8",\n);\nconst coordinatorSource = readFileSync(\n  fileURLToPath(new URL("./marketFeedCoordinator.ts", import.meta.url)),\n  "utf8",\n);\n\ndescribe("market feed recovery wiring contract", () => {\n  it("uses capped reconnect backoff in both exchange transports", () => {\n    for (const source of [binanceSource, coinbaseSource]) {\n      expect(source).toContain("calculateReconnectBackoffMs(");\n      expect(source).toContain("MARKET_RECONNECT_MAX_DELAY_MS");\n      expect(source).toContain("private reconnectAttempt = 0;");\n      expect(source).toContain("this.reconnectAttempt += 1;");\n      expect(source).toContain("this.reconnectAttempt = 0;");\n    }\n  });\n\n  it("schedules reconnect on error even if close-event delivery is delayed", () => {\n    for (const source of [binanceSource, coinbaseSource]) {\n      expect(source).toContain("} finally {\n        this.scheduleReconnect(epoch);\n      }");\n    }\n  });\n\n  it("prioritizes Binance, then Coinbase, then frozen no-source state", () => {\n    expect(coordinatorSource).toContain("const selectedHealth = primary.healthy");\n    expect(coordinatorSource).toContain("? primary");\n    expect(coordinatorSource).toContain(": backup.healthy");\n    expect(coordinatorSource).toContain('this.activeSource = "none";');\n    expect(coordinatorSource).toContain('feedStatus: "FROZEN"');\n  });\n\n  it("re-baselines on provider switches and connection-epoch changes", () => {\n    expect(coordinatorSource).toContain("const sourceChanged =");\n    expect(coordinatorSource).toContain("const epochChanged =");\n    expect(coordinatorSource).toContain("sourceChanged\n      || epochChanged");\n  });\n});\n
+import { readFileSync } from "node:fs";
+import { fileURLToPath } from "node:url";
+import { describe, expect, it } from "vitest";
+
+const binanceSource = readFileSync(
+  fileURLToPath(new URL("./binanceBtcFeed.ts", import.meta.url)),
+  "utf8",
+);
+const coinbaseSource = readFileSync(
+  fileURLToPath(new URL("./coinbaseBtcFeed.ts", import.meta.url)),
+  "utf8",
+);
+const coordinatorSource = readFileSync(
+  fileURLToPath(new URL("./marketFeedCoordinator.ts", import.meta.url)),
+  "utf8",
+);
+
+describe("market feed recovery wiring contract", () => {
+  it("uses capped reconnect backoff in both exchange transports", () => {
+    for (const source of [binanceSource, coinbaseSource]) {
+      expect(source).toContain("calculateReconnectBackoffMs(");
+      expect(source).toContain("MARKET_RECONNECT_MAX_DELAY_MS");
+      expect(source).toContain("private reconnectAttempt = 0;");
+      expect(source).toContain("this.reconnectAttempt += 1;");
+      expect(source).toContain("this.reconnectAttempt = 0;");
+    }
+  });
+
+  it("schedules reconnect on error even if close-event delivery is delayed", () => {
+    for (const source of [binanceSource, coinbaseSource]) {
+      expect(source).toContain(
+        "} finally {\n        this.scheduleReconnect(epoch);\n      }",
+      );
+    }
+  });
+
+  it("prioritizes Binance, then Coinbase, then frozen no-source state", () => {
+    expect(coordinatorSource).toContain(
+      "const selectedHealth = primary.healthy",
+    );
+    expect(coordinatorSource).toContain("? primary");
+    expect(coordinatorSource).toContain(": backup.healthy");
+    expect(coordinatorSource).toContain(
+      'this.activeSource = "none";',
+    );
+    expect(coordinatorSource).toContain(
+      'feedStatus: "FROZEN"',
+    );
+  });
+
+  it("re-baselines on provider switches and connection-epoch changes", () => {
+    expect(coordinatorSource).toContain(
+      "const sourceChanged =",
+    );
+    expect(coordinatorSource).toContain(
+      "const epochChanged =",
+    );
+    expect(coordinatorSource).toContain(
+      "sourceChanged\n      || epochChanged",
+    );
+  });
+});
