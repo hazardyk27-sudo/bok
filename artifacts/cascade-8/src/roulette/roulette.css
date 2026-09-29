@@ -1181,25 +1181,20 @@ button {
     position: absolute;
     top: calc(var(--history-height) + 5px);
     left: 7px;
-    min-width: 54px;
-    height: 40px;
-    padding: 5px 8px 4px;
+    min-width: 50px;
+    height: 37px;
+    padding: 4px 7px;
     display: grid;
     align-content: center;
     justify-items: center;
     gap: 2px;
-    border: 1px solid rgba(194, 197, 191, 0.26);
-    border-radius: 9px;
-    color: #f3f2ec;
-    background:
-      linear-gradient(
-        180deg,
-        rgba(13, 15, 16, 0.92),
-        rgba(5, 6, 7, 0.96)
-      );
+    border: 1px solid rgba(241, 234, 218, 0.24);
+    border-radius: 7px;
+    color: #f5f1e6;
+    background: rgba(5, 6, 7, 0.90);
     box-shadow:
-      0 7px 20px rgba(0, 0, 0, 0.34),
-      inset 0 1px 0 rgba(255, 255, 255, 0.04);
+      0 6px 16px rgba(0, 0, 0, 0.24),
+      inset 0 1px 0 rgba(255, 255, 255, 0.025);
     font-family:
       system-ui,
       -apple-system,
@@ -1212,19 +1207,19 @@ button {
   }
 
   .roulette-betting-timer__label {
-    color: rgba(214, 216, 210, 0.62);
-    font-size: 7.5px;
-    font-weight: 780;
+    color: rgba(230, 222, 204, 0.62);
+    font-size: 7px;
+    font-weight: 760;
     line-height: 1;
     letter-spacing: 0.08em;
   }
 
   .roulette-betting-timer__value {
-    color: #f7f6f0;
+    color: #fff8e8;
     min-width: 24px;
     text-align: center;
-    font-size: 18px;
-    font-weight: 850;
+    font-size: 19px;
+    font-weight: 880;
     line-height: 1;
     letter-spacing: -0.03em;
   }
@@ -1331,11 +1326,11 @@ button {
 
   .roulette-page[data-phase="betting"] .roulette-stage {
     transform: translateY(2px) scale(1);
-    opacity: 0.18;
+    opacity: 0.28;
     filter:
-      saturate(0.58)
-      brightness(0.52)
-      contrast(0.94);
+      saturate(0.70)
+      brightness(0.62)
+      contrast(0.96);
   }
 
   /* ----- table + controls layer ----- */
@@ -1371,7 +1366,7 @@ button {
     left: 50%;
     width: var(--table-width);
     max-width: 89vw;
-    transform: translateX(-54%);
+    transform: translateX(-56.5%);
     display: block;
     overflow: visible;
     pointer-events: auto;
@@ -1669,9 +1664,9 @@ button {
   .roulette-zero-cell.is-result-number,
   .roulette-zero-cell.is-winning-bet {
     box-shadow:
-      inset 0 0 0 2px rgba(118, 228, 174, 0.92),
-      0 0 11px rgba(84, 213, 153, 0.30);
-    filter: brightness(1.12);
+      inset 0 0 0 2px rgba(247, 222, 151, 0.92),
+      0 0 10px rgba(219, 177, 76, 0.28);
+    filter: brightness(1.10);
     z-index: 7;
   }
 
@@ -1763,28 +1758,23 @@ button {
 
   .roulette-mobile-control-rail {
     position: absolute;
-    left: calc(100% - 5px);
+    left: calc(100% + 3px);
     top: 50%;
-    transform: translate(-2px, -50%);
+    transform: translate(-1px, -50%);
     box-sizing: border-box;
     display: grid;
     grid-template-rows: repeat(5, var(--control-size));
     align-items: center;
     justify-items: center;
     align-content: center;
-    gap: calc(var(--control-gap) * 0.72);
-    padding: 5px 3px;
-    border: 1px solid rgba(189, 192, 186, 0.10);
+    gap: calc(var(--control-gap) * 0.68);
+    padding: 4px 2px;
+    border: 1px solid rgba(241, 234, 218, 0.08);
     border-radius: 999px;
-    background:
-      linear-gradient(
-        180deg,
-        rgba(7, 9, 10, 0.34),
-        rgba(4, 5, 6, 0.58)
-      );
+    background: rgba(4, 5, 6, 0.38);
     box-shadow:
-      0 12px 28px rgba(0, 0, 0, 0.18);
-    backdrop-filter: blur(3px);
+      0 8px 22px rgba(0, 0, 0, 0.16);
+    backdrop-filter: blur(2px);
     transition:
       opacity 280ms ease,
       filter 280ms ease;
@@ -1864,21 +1854,15 @@ button {
     min-width: var(--control-size);
     min-height: var(--control-size);
     padding: 0;
-    border: 1px solid rgba(196, 199, 192, 0.40);
+    border: 1px solid rgba(241, 234, 218, 0.34);
     border-radius: 50%;
     display: grid;
     place-items: center;
-    color: #f1f0ea;
-    background:
-      radial-gradient(
-        circle at 36% 27%,
-        rgba(255, 255, 255, 0.07),
-        transparent 34%
-      ),
-      rgba(7, 9, 10, 0.98);
+    color: #f2ede0;
+    background: #08090a;
     box-shadow:
-      0 6px 15px rgba(0, 0, 0, 0.34),
-      inset 0 1px 0 rgba(255, 255, 255, 0.07);
+      0 4px 10px rgba(0, 0, 0, 0.28),
+      inset 0 1px 0 rgba(255, 255, 255, 0.035);
     font:
       750
       clamp(8px, calc(var(--control-size) * 0.30), 12px)/1
@@ -1899,30 +1883,36 @@ button {
   }
 
   .roulette-mobile-rail-button[aria-expanded="true"] {
-    border-color: rgba(235, 237, 231, 0.68);
-    background:
-      radial-gradient(
-        circle at 36% 27%,
-        rgba(255, 255, 255, 0.12),
-        transparent 34%
-      ),
-      rgba(17, 20, 21, 0.98);
+    border-color: rgba(247, 238, 215, 0.62);
+    background: #111314;
     box-shadow:
-      0 6px 17px rgba(0, 0, 0, 0.40),
-      0 0 0 1px rgba(225, 227, 221, 0.10);
+      0 5px 12px rgba(0, 0, 0, 0.34),
+      0 0 0 1px rgba(247, 238, 215, 0.08);
   }
 
-  .roulette-mobile-stats-toggle,
-  .roulette-mobile-rebet {
-    font-size: clamp(11px, calc(var(--control-size) * 0.37), 15px);
+  .roulette-rail-icon {
+    width: 48%;
+    height: 48%;
+    display: block;
+    overflow: visible;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 1.65;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    pointer-events: none;
   }
 
-  .roulette-mobile-undo {
-    font-size: clamp(15px, calc(var(--control-size) * 0.53), 21px);
+  .roulette-rail-icon--undo,
+  .roulette-rail-icon--rebet {
+    width: 52%;
+    height: 52%;
   }
 
   .roulette-mobile-double {
-    font-size: clamp(8px, calc(var(--control-size) * 0.29), 11px);
+    font-size: clamp(9px, calc(var(--control-size) * 0.31), 12px);
+    font-weight: 800;
+    letter-spacing: -0.02em;
   }
 
   .roulette-mobile-chip-picker {
@@ -2444,7 +2434,7 @@ button {
   }
 
   .roulette-mobile-control-rail {
-    left: calc(100% - 8px);
+    left: calc(100% + 1px);
   }
 
   .roulette-bet-console {
