@@ -1,5 +1,11 @@
 modules = ["nodejs-24", "python-base-3.13", "postgresql-16"]
 
+[[artifacts]]
+id = "artifacts/cascade-8"
+
+[[artifacts]]
+id = "artifacts/api-server"
+
 [deployment]
 router = "application"
 deploymentTarget = "autoscale"
