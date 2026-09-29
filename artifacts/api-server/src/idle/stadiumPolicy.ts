@@ -125,3 +125,39 @@ export function applyStadiumEconomyMutationPatch(
     saleRemainderMicrodollars,
   };
 }
+
+
+/**
+ * Resolves exactly one canonical Stadium capacity unlock.
+ *
+ * Seat ownership is deliberately not an input: filling the current capacity
+ * is never a prerequisite for unlocking the next Stadium level.
+ */
+export function resolveNextStadiumUpgrade(
+  currentLevel: StadiumLevel,
+  balanceCents: number,
+) {
+  requireSafeNonNegativeInteger(
+    balanceCents,
+    "INVALID_IDLE_WALLET_BALANCE",
+  );
+
+  const targetConfig = STADIUM_LEVELS.find(
+    (entry) => entry.level === currentLevel + 1,
+  );
+  if (!targetConfig) {
+    throw new Error("IDLE_STADIUM_MAX_LEVEL");
+  }
+
+  if (balanceCents < targetConfig.unlockCostCents) {
+    throw new Error("INSUFFICIENT_IDLE_CREDITS");
+  }
+
+  return {
+    targetStadiumLevel: targetConfig.level,
+    maxSeats: targetConfig.maxSeats,
+    costCents: targetConfig.unlockCostCents,
+    balanceAfterCents:
+      balanceCents - targetConfig.unlockCostCents,
+  };
+}
