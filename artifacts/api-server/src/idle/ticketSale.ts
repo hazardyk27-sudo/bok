@@ -1,6 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { type PoolClient } from "@workspace/db";
 import {
+  MARKET_CONFIG,
   TICKET_MICRO_UNITS,
 } from "../../../cascade-8/src/idle/config";
 import type {
@@ -10,7 +11,9 @@ import type {
 } from "../../../cascade-8/src/idle/types";
 import { INITIAL_SHARED_BALANCE_CENTS } from "../platform/wallet";
 import {
+  MARKET_MICRODOLLARS_PER_CENT,
   bigintToSafeNumber,
+  requireSafeNonNegativeInteger,
   settleMarketMicrodollarsToWalletCents,
 } from "./fixedPoint";
 import {
@@ -69,7 +72,10 @@ function requireValidExecutionPrice(
 ) {
   if (
     !Number.isSafeInteger(priceMicrodollars)
-    || priceMicrodollars <= 0
+    || priceMicrodollars
+      < MARKET_CONFIG.minTicketPriceMicrodollars
+    || priceMicrodollars
+      > MARKET_CONFIG.maxTicketPriceMicrodollars
   ) {
     throw new Error("INVALID_IDLE_TICKET_PRICE");
   }
@@ -174,10 +180,28 @@ export function quoteWholeTicketSale(input: {
       input.executionPriceMicrodollars,
     );
 
+  const storedMicroTickets =
+    requireSafeNonNegativeInteger(
+      input.state.storedMicroTickets,
+      "INVALID_IDLE_STORED_MICROTICKETS",
+    );
+  const priorRemainderMicrodollars =
+    requireSafeNonNegativeInteger(
+      input.state.saleRemainderMicrodollars,
+      "INVALID_IDLE_SALE_REMAINDER",
+    );
+
+  if (
+    priorRemainderMicrodollars >=
+    MARKET_MICRODOLLARS_PER_CENT
+  ) {
+    throw new Error("INVALID_IDLE_SALE_REMAINDER");
+  }
+
   const soldMicroTicketsBig =
     BigInt(quantityTickets) * BigInt(TICKET_MICRO_UNITS);
   const storedMicroTicketsBig =
-    BigInt(input.state.storedMicroTickets);
+    BigInt(storedMicroTickets);
 
   if (soldMicroTicketsBig > storedMicroTicketsBig) {
     throw new Error("INSUFFICIENT_IDLE_TICKETS");
@@ -199,15 +223,14 @@ export function quoteWholeTicketSale(input: {
   const settlement =
     settleMarketMicrodollarsToWalletCents({
       grossSaleMicrodollars,
-      priorRemainderMicrodollars:
-        input.state.saleRemainderMicrodollars,
+      priorRemainderMicrodollars,
     });
 
   return {
     soldTickets: quantityTickets,
     soldMicroTickets,
     resultingStoredMicroTickets:
-      input.state.storedMicroTickets - soldMicroTickets,
+      storedMicroTickets - soldMicroTickets,
     executionPriceMicrodollars,
     grossSaleMicrodollars,
     walletCreditCents:
@@ -231,29 +254,62 @@ function assertTicketSaleReplay(
     throw new Error("IDEMPOTENCY_KEY_REUSED");
   }
 
+  const soldTickets = Number(receipt.sold_tickets);
+  const executionPriceMicrodollars = Number(
+    receipt.execution_price_microdollars,
+  );
+  const grossSaleMicrodollars = Number(
+    receipt.gross_sale_microdollars,
+  );
+  const walletCreditCents = Number(
+    receipt.wallet_credit_cents,
+  );
+  const saleRemainderMicrodollars = Number(
+    receipt.sale_remainder_microdollars,
+  );
+  const balanceCents = Number(receipt.balance_cents);
+
   if (
-    !Number.isSafeInteger(Number(receipt.sold_tickets))
-    || Number(receipt.sold_tickets) <= 0
-    || !Number.isSafeInteger(
-      Number(receipt.execution_price_microdollars),
-    )
-    || Number(receipt.execution_price_microdollars) <= 0
-    || !Number.isSafeInteger(
-      Number(receipt.gross_sale_microdollars),
-    )
-    || Number(receipt.gross_sale_microdollars) < 0
-    || !Number.isSafeInteger(
-      Number(receipt.wallet_credit_cents),
-    )
-    || Number(receipt.wallet_credit_cents) < 0
-    || !Number.isSafeInteger(
-      Number(receipt.sale_remainder_microdollars),
-    )
-    || Number(receipt.sale_remainder_microdollars) < 0
-    || !Number.isSafeInteger(
-      Number(receipt.balance_cents),
-    )
-    || Number(receipt.balance_cents) < 0
+    !Number.isSafeInteger(soldTickets)
+    || soldTickets !== requestedQuantity
+    || !Number.isSafeInteger(grossSaleMicrodollars)
+    || grossSaleMicrodollars < 0
+    || !Number.isSafeInteger(walletCreditCents)
+    || walletCreditCents < 0
+    || !Number.isSafeInteger(saleRemainderMicrodollars)
+    || saleRemainderMicrodollars < 0
+    || saleRemainderMicrodollars
+      >= MARKET_MICRODOLLARS_PER_CENT
+    || !Number.isSafeInteger(balanceCents)
+    || balanceCents < 0
+  ) {
+    throw new Error("IDLE_STADIUM_RECEIPT_INCOMPLETE");
+  }
+
+  requireValidExecutionPrice(
+    executionPriceMicrodollars,
+  );
+
+  const expectedGross =
+    BigInt(soldTickets)
+    * BigInt(executionPriceMicrodollars);
+
+  if (
+    expectedGross !== BigInt(grossSaleMicrodollars)
+  ) {
+    throw new Error("IDLE_STADIUM_RECEIPT_INCOMPLETE");
+  }
+
+  const impliedPriorRemainder =
+    BigInt(walletCreditCents)
+    * BigInt(MARKET_MICRODOLLARS_PER_CENT)
+    + BigInt(saleRemainderMicrodollars)
+    - BigInt(grossSaleMicrodollars);
+
+  if (
+    impliedPriorRemainder < 0n
+    || impliedPriorRemainder
+      >= BigInt(MARKET_MICRODOLLARS_PER_CENT)
   ) {
     throw new Error("IDLE_STADIUM_RECEIPT_INCOMPLETE");
   }
