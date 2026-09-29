@@ -196,9 +196,12 @@ export function stadiumProjectionToServerState(
     isStorageFull: projection.isStorageFull,
     productionStatus: projection.productionStatus,
     // The returned inventory has already been projected through serverNow.
-    // Use serverNow as the response baseline so a client does not count the
-    // same elapsed interval a second time.
-    productionCheckpointAt: projection.serverNow.toISOString(),
+    // Never expose a baseline earlier than the persisted checkpoint, otherwise
+    // a client with a backwards/test clock could count time twice.
+    productionCheckpointAt: new Date(Math.max(
+      projection.serverNow.getTime(),
+      projection.state.productionCheckpointAt.getTime(),
+    )).toISOString(),
   };
 }
 
