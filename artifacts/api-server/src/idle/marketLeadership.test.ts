@@ -13,6 +13,7 @@ type SharedLock = {
 class FakeLeadershipClient {
   released = false;
   poisoned = false;
+  failUnlock = false;
   private errorListener: ((error: Error) => void) | null = null;
 
   constructor(
@@ -33,6 +34,10 @@ class FakeLeadershipClient {
     }
 
     if (sql.includes("pg_advisory_unlock")) {
+      if (this.failUnlock) {
+        throw new Error("unlock query failed");
+      }
+
       const released = this.sharedLock.ownerId === this.id;
       if (released) this.sharedLock.ownerId = null;
       return { rows: [{ released }] };
@@ -191,6 +196,26 @@ describe("global market writer advisory leadership", () => {
     expect(first).toBe(true);
     expect(second).toBe(true);
     expect(connectCalls).toBe(1);
+  });
+
+
+  it("destroys the DB client if advisory unlock becomes uncertain", async () => {
+    const lock: SharedLock = { ownerId: null };
+    const client = new FakeLeadershipClient("a", lock);
+
+    const leadership = new GlobalMarketWriterLeadership({
+      connect: async () => asLeadershipClient(client),
+    });
+
+    await leadership.tryAcquire();
+    client.failUnlock = true;
+
+    await expect(leadership.release())
+      .rejects.toThrow("unlock query failed");
+
+    expect(leadership.isLeader()).toBe(false);
+    expect(client.released).toBe(true);
+    expect(client.poisoned).toBe(true);
   });
 
   it("drops local leadership when the PostgreSQL session fails", async () => {
