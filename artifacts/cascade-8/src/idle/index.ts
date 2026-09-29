@@ -19,7 +19,7 @@ import {
   upgradeIdleVault,
 } from "./services";
 import {
-  BUSINESS_IDS,
+  ACTIVE_BUSINESS_IDS,
   type BusinessId,
   type IdleStateEnvelope,
 } from "./types";
@@ -39,7 +39,7 @@ function formatCreditsFromMicrocents(microcents: number) {
 
 const BUSINESS_LEVELS_PER_BUSINESS = 9;
 const TOTAL_BUSINESS_PROGRESSION_LEVELS =
-  BUSINESS_IDS.length * BUSINESS_LEVELS_PER_BUSINESS;
+  ACTIVE_BUSINESS_IDS.length * BUSINESS_LEVELS_PER_BUSINESS;
 
 const BUSINESS_DETAIL_DEFINITIONS = {
   stadium: STADIUM_BUSINESS,
@@ -533,7 +533,7 @@ export const BUSINESSES_MARKUP = `
         </div>
         <div class="businesses-progression-meta">
           <span data-idle-progression-percent>0%</span>
-          <span data-idle-active-businesses>— / 3 AKTİF</span>
+          <span data-idle-active-businesses>— / ${ACTIVE_BUSINESS_IDS.length} AKTİF</span>
         </div>
         <div class="businesses-progression-wallet" aria-label="Ortak genel bakiye">
           <span>ORTAK BAKİYE</span>
@@ -570,7 +570,7 @@ export const BUSINESSES_MARKUP = `
     <p class="businesses-error" data-idle-error role="status" hidden></p>
 
     <section class="business-list" aria-label="İşletmeler">
-      ${BUSINESS_IDS.map(renderBusinessRowShell).join("")}
+      ${ACTIVE_BUSINESS_IDS.map(renderBusinessRowShell).join("")}
     </section>
 
     <div class="business-detail-layer" data-idle-detail-layer data-open="false" hidden>
@@ -855,7 +855,7 @@ export class BusinessesClient {
 
     hourlyNode.textContent = `${formatCredits(totalHourlyCents)} /sa`;
     collectableNode.textContent = formatCredits(totalCollectableCents);
-    activeNode.textContent = `${activeBusinesses} / ${BUSINESS_IDS.length} AKTİF`;
+    activeNode.textContent = `${activeBusinesses} / ${ACTIVE_BUSINESS_IDS.length} AKTİF`;
     collectAllValueNode.textContent = formatCredits(totalCollectableCents);
     collectAllButton.disabled = this.collectingAll || totalCollectableCents <= 0;
     collectAllButton.setAttribute(
@@ -916,7 +916,7 @@ export class BusinessesClient {
     if (!row) return;
 
     const businessId = row.dataset.businessId as BusinessId | undefined;
-    if (!businessId || !BUSINESS_IDS.includes(businessId)) return;
+    if (!businessId || !ACTIVE_BUSINESS_IDS.includes(businessId)) return;
 
     if (button.matches("[data-business-details]")) {
       this.openBusinessDetails(businessId, button);
@@ -1316,7 +1316,7 @@ export class BusinessesClient {
 
   private async runCollectAll() {
     this.collectingAll = true;
-    for (const businessId of BUSINESS_IDS) this.busyBusinesses.add(businessId);
+    for (const businessId of ACTIVE_BUSINESS_IDS) this.busyBusinesses.add(businessId);
     this.render();
 
     try {
