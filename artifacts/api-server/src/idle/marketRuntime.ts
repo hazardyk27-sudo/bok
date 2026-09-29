@@ -16,6 +16,9 @@ import type {
 import type {
   AuthoritativeMarketTickInput,
 } from "./marketPersistencePolicy";
+import type {
+  MarketLeadershipClient,
+} from "./marketLeadership";
 
 export type RuntimePersistedMarketState = {
   priceMicrodollars: number;
@@ -50,9 +53,13 @@ export type RuntimeMarketFeedCoordinator = {
   reset(): void;
 };
 
-export type RuntimeMarketPersistenceClient = {
-  query: (...args: any[]) => Promise<any>;
-};
+export type RuntimeMarketLeadershipClient =
+  MarketLeadershipClient;
+
+export type RuntimeMarketPersistenceClient = Pick<
+  RuntimeMarketLeadershipClient,
+  "query"
+>;
 
 export type RuntimeMarketPersistence = {
   ensureCurrentState(
@@ -76,7 +83,7 @@ export type RuntimeMarketPersistence = {
 export type RuntimeMarketLeadership = {
   runIfLeader<T>(
     write: (
-      client: RuntimeMarketPersistenceClient,
+      client: RuntimeMarketLeadershipClient,
     ) => Promise<T>,
   ): Promise<
     | { executed: false; value: null }
