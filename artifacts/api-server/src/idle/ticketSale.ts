@@ -1,4 +1,3 @@
-import { randomUUID } from "node:crypto";
 import { type PoolClient } from "@workspace/db";
 import {
   MARKET_CONFIG,
@@ -27,6 +26,7 @@ import {
 import {
   runCheckpointedStadiumMutation,
 } from "./stadiumMutation";
+import { reserveStadiumActionReceipt } from "./stadiumActionReceipt";
 
 const TICKET_SALE_ACTION = "TICKET_SALE" as const;
 
@@ -342,23 +342,17 @@ export async function sellStadiumTickets(
     sessionId,
     serverNow,
     async ({ client, settledState }) => {
-      const reserved = await client.query<{ id: string }>(
-        `INSERT INTO idle_stadium_action_receipts
-           (id, session_id, action_type, idempotency_key,
-            requested_quantity)
-         VALUES ($1, $2, $3, $4, $5)
-         ON CONFLICT (idempotency_key) DO NOTHING
-         RETURNING id`,
-        [
-          randomUUID(),
+      const reservation = await reserveStadiumActionReceipt(
+        client,
+        {
           sessionId,
-          TICKET_SALE_ACTION,
+          actionType: "TICKET_SALE",
           idempotencyKey,
-          quantityTickets,
-        ],
+          requestedQuantity: quantityTickets,
+        },
       );
 
-      if (!reserved.rows[0]) {
+      if (!reservation.created) {
         const replayResult =
           await client.query<TicketSaleReceiptRow>(
             `SELECT session_id, action_type, requested_quantity,
