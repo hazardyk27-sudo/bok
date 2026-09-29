@@ -1116,7 +1116,7 @@ button {
         ) / var(--table-ratio)
       )
     );
-    --zero-row: calc(var(--table-width) * 0.098);
+    --zero-row: calc(var(--table-width) * 0.112);
     --number-row: calc(var(--table-width) * 0.128);
     --column-row: calc(var(--table-width) * 0.112);
     --control-size: clamp(26px, calc(var(--table-width) * 0.145), 40px);
@@ -1387,36 +1387,30 @@ button {
   .roulette-table-layout::before {
     content: "";
     position: absolute;
-    inset: -8px -7px -9px -7px;
+    inset: -3px -3px -4px;
     pointer-events: none;
-    border-radius: 10px;
-    background:
-      linear-gradient(
-        180deg,
-        rgba(4, 5, 6, 0.18),
-        rgba(2, 3, 3, 0.58)
-      );
-    box-shadow:
-      0 18px 38px rgba(0, 0, 0, 0.20);
-    opacity: 0.78;
+    border-radius: 2px;
+    background: rgba(2, 3, 3, 0.22);
+    box-shadow: 0 10px 24px rgba(0, 0, 0, 0.18);
     z-index: -1;
   }
 
   .roulette-bet-table {
-    --bet-border: rgba(218, 219, 212, 0.62);
+    --bet-border: rgba(241, 234, 218, 0.74);
+    --bet-border-soft: rgba(241, 234, 218, 0.22);
     position: relative;
     grid-column: 1;
     width: var(--table-width);
     margin: 0;
     display: grid;
-    grid-template-columns: 15.8% 16.0% 68.2%;
+    grid-template-columns: 17.2% 16.2% 66.6%;
     grid-template-rows: var(--zero-row) auto var(--column-row);
     overflow: visible;
     border: 0;
     border-radius: 0;
     background: transparent;
     filter:
-      drop-shadow(0 10px 22px rgba(0, 0, 0, 0.32));
+      drop-shadow(0 9px 18px rgba(0, 0, 0, 0.24));
     transition:
       width 460ms cubic-bezier(0.2, 0.78, 0.2, 1),
       opacity 340ms ease,
@@ -1424,19 +1418,7 @@ button {
   }
 
   .roulette-bet-table::after {
-    content: "";
-    position: absolute;
-    inset:
-      var(--zero-row)
-      0
-      0
-      0;
-    pointer-events: none;
-    border:
-      1px solid
-      rgba(223, 224, 217, 0.24);
-    box-shadow:
-      inset 0 0 0 1px rgba(0, 0, 0, 0.30);
+    display: none;
   }
 
   .roulette-bet-cell {
@@ -1444,12 +1426,7 @@ button {
     min-height: 0;
     border: 0;
     color: #f0efe9;
-    background:
-      linear-gradient(
-        180deg,
-        rgba(10, 12, 13, 0.99),
-        rgba(5, 6, 7, 0.99)
-      );
+    background: #070808;
     box-shadow: none;
     cursor: pointer;
     touch-action: manipulation;
@@ -1475,32 +1452,58 @@ button {
   .roulette-zero-cell {
     grid-column: 3;
     grid-row: 1;
+    position: relative;
+    isolation: isolate;
     min-height: var(--zero-row);
-    border: 1px solid var(--bet-border);
-    border-bottom: 0;
-    clip-path:
-      polygon(
-        50% 0,
-        100% 28%,
-        100% 100%,
-        0 100%,
-        0 28%
-      );
-    color: #91c895;
-    background:
-      linear-gradient(
-        180deg,
-        rgba(8, 22, 14, 0.99),
-        rgba(4, 9, 6, 0.99)
-      ) !important;
+    border: 0;
+    clip-path: none;
+    overflow: visible;
+    color: #9acb9b;
+    background: transparent !important;
     font:
-      750
-      clamp(14px, calc(var(--table-width) * 0.052), 20px)/1
+      780
+      clamp(15px, calc(var(--table-width) * 0.055), 21px)/1
       system-ui,
       -apple-system,
       BlinkMacSystemFont,
       "Segoe UI",
       sans-serif;
+  }
+
+  .roulette-zero-cell::before,
+  .roulette-zero-cell::after {
+    content: "";
+    position: absolute;
+    pointer-events: none;
+    clip-path:
+      polygon(
+        50% 0,
+        100% 38%,
+        100% 100%,
+        0 100%,
+        0 38%
+      );
+  }
+
+  .roulette-zero-cell::before {
+    inset: 0;
+    background: var(--bet-border);
+    z-index: 0;
+  }
+
+  .roulette-zero-cell::after {
+    inset: 1px;
+    background: #07100b;
+    z-index: 1;
+  }
+
+  .roulette-zero-cell > span {
+    position: relative;
+    z-index: 2;
+  }
+
+  .roulette-zero-cell > .roulette-placed-chip {
+    z-index: 9;
   }
 
   .roulette-number-grid {
@@ -1512,7 +1515,7 @@ button {
     grid-template-rows: repeat(12, var(--number-row));
     border-top: 1px solid var(--bet-border);
     border-left: 1px solid var(--bet-border);
-    background: #060707;
+    background: #070808;
   }
 
   .roulette-number-cell {
@@ -1522,8 +1525,8 @@ button {
     border-right: 1px solid var(--bet-border);
     border-bottom: 1px solid var(--bet-border);
     font:
-      760
-      clamp(13px, calc(var(--table-width) * 0.050), 19px)/1
+      780
+      clamp(13px, calc(var(--table-width) * 0.051), 19px)/1
       system-ui,
       -apple-system,
       BlinkMacSystemFont,
@@ -1555,7 +1558,7 @@ button {
     grid-template-columns: repeat(3, minmax(0, 1fr));
     grid-template-rows: var(--column-row);
     border-left: 1px solid var(--bet-border);
-    background: #060707;
+    background: #070808;
   }
 
   .roulette-column-cell {
@@ -1564,10 +1567,10 @@ button {
     border-right: 1px solid var(--bet-border);
     border-bottom: 1px solid var(--bet-border);
     color: #d7d6cf;
-    background: #060707;
+    background: #070808;
     font:
-      700
-      clamp(8px, calc(var(--table-width) * 0.028), 11px)/1
+      760
+      clamp(8.5px, calc(var(--table-width) * 0.031), 12px)/1
       system-ui,
       -apple-system,
       BlinkMacSystemFont,
@@ -1595,7 +1598,7 @@ button {
     grid-template-rows: repeat(3, 1fr);
     border-top: 1px solid var(--bet-border);
     border-left: 1px solid var(--bet-border);
-    background: #060707;
+    background: #070808;
   }
 
   .roulette-dozen-cell,
@@ -1604,10 +1607,10 @@ button {
     border-right: 1px solid var(--bet-border);
     border-bottom: 1px solid var(--bet-border);
     color: #d6d5ce;
-    background: #060707;
+    background: #070808;
     font:
-      700
-      clamp(8px, calc(var(--table-width) * 0.030), 12px)/1
+      750
+      clamp(8.5px, calc(var(--table-width) * 0.032), 12.5px)/1
       system-ui,
       -apple-system,
       BlinkMacSystemFont,
@@ -1624,22 +1627,9 @@ button {
     line-height: 1;
   }
 
-  .roulette-dozen-cell {
-    background:
-      linear-gradient(
-        180deg,
-        rgba(8, 10, 11, 0.99),
-        rgba(5, 6, 7, 0.99)
-      );
-  }
-
+  .roulette-dozen-cell,
   .roulette-outside-cell {
-    background:
-      linear-gradient(
-        180deg,
-        rgba(9, 11, 12, 0.99),
-        rgba(5, 6, 7, 0.99)
-      );
+    background: #070808;
   }
 
   .roulette-outside-bets {
@@ -1650,13 +1640,13 @@ button {
     grid-template-rows: repeat(6, 1fr);
     border-top: 1px solid var(--bet-border);
     border-left: 1px solid var(--bet-border);
-    background: #060707;
+    background: #070808;
   }
 
   .roulette-outside-cell .roulette-diamond {
-    width: clamp(10px, calc(var(--table-width) * 0.046), 16px);
-    height: clamp(10px, calc(var(--table-width) * 0.046), 16px);
-    border: 1px solid rgba(216, 214, 206, 0.74);
+    width: clamp(10px, calc(var(--table-width) * 0.043), 15px);
+    height: clamp(10px, calc(var(--table-width) * 0.043), 15px);
+    border: 1px solid rgba(241, 234, 218, 0.78);
   }
 
   .roulette-outside-cell.is-red-symbol .roulette-diamond {
@@ -1665,6 +1655,13 @@ button {
 
   .roulette-outside-cell.is-black-symbol .roulette-diamond {
     background: #050606;
+  }
+
+  .roulette-number-grid,
+  .roulette-column-bets,
+  .roulette-dozen-bets,
+  .roulette-outside-bets {
+    box-shadow: none;
   }
 
   .roulette-number-cell.is-result-number,
@@ -1735,8 +1732,8 @@ button {
     z-index: 9;
   }
 
-  .roulette-number-cell.has-bet > span,
-  .roulette-zero-cell.has-bet > span {
+  .roulette-number-cell.has-bet > span:not(.roulette-placed-chip),
+  .roulette-zero-cell.has-bet > span:not(.roulette-placed-chip) {
     opacity: 0 !important;
   }
 
