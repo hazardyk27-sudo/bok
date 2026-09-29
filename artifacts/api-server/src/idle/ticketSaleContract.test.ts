@@ -177,6 +177,15 @@ describe("ticket sale transaction contract", () => {
     );
   });
 
+  it("guards sale receipt completion by key, session, and action", () => {
+    expect(saleSource).toContain("AND session_id = $11");
+    expect(saleSource).toContain("AND action_type = $12");
+    expect(saleSource).toContain("RETURNING id");
+    expect(saleSource).toContain(
+      'throw new Error("IDLE_STADIUM_RECEIPT_UPDATE_CONFLICT")',
+    );
+  });
+
   it("returns a temporary-unavailable error when no authoritative market state exists", () => {
     expect(saleSource).toContain(
       'throw new Error("IDLE_MARKET_STATE_MISSING")',
