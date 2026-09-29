@@ -6,6 +6,7 @@ import {
 import {
   clearRouletteBets,
   createRouletteBetState,
+  doubleRouletteBets,
   getRouletteBetTotals,
   getRouletteTotalStake,
   placeRouletteBet,
@@ -140,6 +141,28 @@ describe("roulette local wager state", () => {
         betId: "straight-0",
         amount: 5,
       },
+    ]);
+  });
+
+  it("doubles every current placement without changing chip values", () => {
+    let state = createRouletteBetState();
+
+    state = selectRouletteChip(state, 25);
+    state = placeRouletteBet(state, "straight-17");
+    state = selectRouletteChip(state, 5);
+    state = placeRouletteBet(state, "red");
+    state = doubleRouletteBets(state);
+
+    expect(getRouletteTotalStake(state.placements)).toBe(60);
+    expect(getRouletteBetTotals(state.placements)).toEqual({
+      "straight-17": 50,
+      red: 10,
+    });
+    expect(state.placements).toEqual([
+      { betId: "straight-17", amount: 25 },
+      { betId: "red", amount: 5 },
+      { betId: "straight-17", amount: 25 },
+      { betId: "red", amount: 5 },
     ]);
   });
 });
