@@ -1,0 +1,72 @@
+name: Temp Slot 5M Scatter Core Simulation
+
+on:
+  push:
+    branches:
+      - tmp/slot-scatter-core-5m-20260930
+
+permissions:
+  contents: read
+
+jobs:
+  simulate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - name: Checkout exact temp branch
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10.15.0
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install
+        run: pnpm install --frozen-lockfile
+
+      - name: Verify tuning
+        shell: bash
+        run: |
+          node - <<'NODE'
+          const fs = require('fs');
+          const s = fs.readFileSync('artifacts/cascade-8/src/config/GameConfig.ts', 'utf8');
+          const required = [
+            ['BASE_INITIAL_SCATTER_CHANCE', '0.03'],
+            ['BASE_REFILL_SCATTER_CHANCE', '0.035'],
+            ['BONUS_INITIAL_SCATTER_CHANCE', '0.015'],
+            ['BONUS_REFILL_SCATTER_CHANCE', '0.03'],
+            ['BASE_INITIAL_CORE_CHANCE', '0.001'],
+            ['BASE_REFILL_CORE_CHANCE', '0.003'],
+            ['BONUS_INITIAL_CORE_CHANCE', '0.03'],
+            ['BONUS_REFILL_CORE_CHANCE', '0.05'],
+          ];
+          for (const [name, value] of required) {
+            if (!s.includes('export const ' + name + ' = ' + value + ';')) {
+              throw new Error('Config mismatch: ' + name + ' expected ' + value);
+            }
+          }
+          const weights = [
+            ['Real Madrid',20],['Liverpool',17],['Bayern',14],['PSG',11],['Roma',10],
+            ['Barcelona',9],['Chelsea',8],['Beşiktaş',6],['Galatasaray',5],
+          ];
+          let total = 0;
+          for (const [name, weight] of weights) {
+            const re = new RegExp('name: "' + name + '".*?weight: ' + weight + '(?:\\s|})');
+            if (!re.test(s)) throw new Error('Weight mismatch: ' + name);
+            total += weight;
+          }
+          if (total !== 100) throw new Error('Weight total != 100');
+          console.log('CONFIG_OK weights=20/17/14/11/10/9/8/6/5 scatter=3/3.5/1.5/3 core=0.1/0.3/3/5');
+          NODE
+
+      - name: Run 5M simulation
+        env:
+          NODE_OPTIONS: --max-old-space-size=6144
+        run: |
+          pnpm --filter @workspace/cascade-8 run simulate -- --spins=5000000 --seed=slot-hit-5m-20260930
