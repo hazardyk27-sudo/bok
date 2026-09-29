@@ -48,4 +48,16 @@ describe("canonical Idle state SQL regression", () => {
     expect(commitIndex).toBeGreaterThan(walletIndex);
     expect(stateSource).toContain("FOR UPDATE");
   });
+
+  it("poisons the connection if snapshot rollback fails", () => {
+    expect(stateSource).toContain(
+      "IDLE_STADIUM_STATE_ROLLBACK_FAILED",
+    );
+    expect(stateSource).toContain(
+      "client.release(",
+    );
+    expect(stateSource).toContain(
+      "if (!released)",
+    );
+  });
 });
