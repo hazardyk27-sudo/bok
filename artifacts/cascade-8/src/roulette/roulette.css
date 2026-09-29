@@ -477,6 +477,108 @@ button {
   }
 }
 
+
+/* Final result-state treatment: marker instead of glowing winner cells. */
+.roulette-bet-cell.is-result-number,
+.roulette-bet-cell.is-winning-bet,
+.roulette-bet-cell.is-result-number.is-winning-bet,
+.roulette-page[data-phase="settled"] .roulette-bet-cell.is-result-number,
+.roulette-page[data-phase="settled"] .roulette-bet-cell.is-winning-bet {
+  box-shadow: none !important;
+  filter: none !important;
+}
+
+.roulette-bet-cell.is-winning-bet .roulette-placed-chip,
+.roulette-number-cell.is-winning-bet .roulette-placed-chip,
+.roulette-zero-cell.is-winning-bet .roulette-placed-chip,
+.roulette-number-cell.is-result-number .roulette-placed-chip,
+.roulette-zero-cell.is-result-number .roulette-placed-chip {
+  box-shadow:
+    0 2px 5px rgba(0, 0, 0, 0.38) !important;
+}
+
+.roulette-winner-mark {
+  position: absolute !important;
+  left: 50%;
+  top: -7px;
+  width: 14px;
+  height: 10px;
+  transform: translateX(-50%);
+  clip-path:
+    polygon(
+      0 0,
+      100% 0,
+      50% 100%
+    );
+  border: 0 !important;
+  background:
+    linear-gradient(
+      180deg,
+      #fff5ce 0%,
+      #efd17a 58%,
+      #b58b38 100%
+    ) !important;
+  box-shadow: none !important;
+  filter:
+    drop-shadow(
+      0 2px 2px
+      rgba(0, 0, 0, 0.48)
+    ) !important;
+  pointer-events: none;
+  z-index: 14 !important;
+}
+
+.roulette-winner-mark::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: 1px;
+  width: 4px;
+  height: 3px;
+  transform: translateX(-50%);
+  clip-path:
+    polygon(
+      0 0,
+      100% 0,
+      50% 100%
+    );
+  background: rgba(54, 42, 21, 0.72);
+}
+
+.roulette-zero-cell > .roulette-winner-mark {
+  z-index: 14 !important;
+}
+
+@media (max-width: 900px) and (orientation: portrait) {
+  .roulette-winner-mark {
+    top:
+      clamp(
+        -7px,
+        calc(var(--table-width) * -0.020),
+        -4px
+      );
+    width:
+      clamp(
+        11px,
+        calc(var(--table-width) * 0.047),
+        15px
+      );
+    height:
+      clamp(
+        8px,
+        calc(var(--table-width) * 0.034),
+        11px
+      );
+  }
+
+  .roulette-page[data-phase="settled"]
+    .roulette-number-cell.is-result-number,
+  .roulette-page[data-phase="settled"]
+    .roulette-zero-cell.is-result-number {
+    z-index: 9;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .roulette-wheel-panel,
   .roulette-bet-panel,
