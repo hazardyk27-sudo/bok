@@ -2,6 +2,8 @@ import { randomUUID } from "node:crypto";
 import { Router, type IRouter, type Request, type Response } from "express";
 import { SESSION_COOKIE } from "../roulette/routes";
 import { idleRepository } from "./repository";
+import { ticketMarketPersistence } from "./marketPersistence";
+import { ticketMarketRuntime } from "./marketRuntimeDb";
 import { buyStadiumSeats } from "./seatPurchase";
 import { upgradeStadiumSpeed } from "./speedUpgrade";
 import { upgradeStadiumStorage } from "./storageUpgrade";
@@ -39,6 +41,21 @@ function serializeBusiness(business: Awaited<ReturnType<typeof idleRepository.ge
   };
 }
 
+
+function serializeMarketState(state: {
+  priceMicrodollars: number;
+  source: "binance-btcusdt" | "coinbase-btc-usd" | "none";
+  feedStatus: "CONNECTING" | "REBASELINING" | "LIVE" | "STALE" | "FROZEN";
+  tickAt: Date;
+}) {
+  return {
+    priceMicrodollars: state.priceMicrodollars,
+    source: state.source,
+    feedStatus: state.feedStatus,
+    tickAt: state.tickAt.toISOString(),
+  };
+}
+
 function sendError(res: Response, error: unknown) {
   const message = error instanceof Error ? error.message : "IDLE_REQUEST_FAILED";
   const status = message === "IDEMPOTENCY_KEY_REUSED"
@@ -56,6 +73,112 @@ function sendError(res: Response, error: unknown) {
         : 400;
   res.status(status).json({ error: message });
 }
+
+
+router.get("/idle/market", async (_req, res) => {
+  try {
+    const serverNow = new Date();
+    const state =
+      await ticketMarketPersistence.getCurrentState()
+      ?? await ticketMarketPersistence.ensureCurrentState(
+        serverNow,
+      );
+
+    res.json({
+      serverTime: serverNow.toISOString(),
+      market: serializeMarketState(state),
+    });
+  } catch (error) {
+    sendError(res, error);
+  }
+});
+
+router.get("/idle/market/history", async (_req, res) => {
+  try {
+    const serverNow = new Date();
+    const points = await ticketMarketPersistence.getHistory(
+      serverNow,
+    );
+
+    res.json({
+      serverTime: serverNow.toISOString(),
+      windowHours: 24,
+      points: points.map((point) => ({
+        tickAt: point.tickAt.toISOString(),
+        priceMicrodollars: point.priceMicrodollars,
+      })),
+    });
+  } catch (error) {
+    sendError(res, error);
+  }
+});
+
+router.get("/idle/market/live", async (req, res) => {
+  res.status(200);
+  res.set({
+    "Content-Type": "text/event-stream",
+    "Cache-Control": "no-cache, no-transform",
+    Connection: "keep-alive",
+    "X-Accel-Buffering": "no",
+  });
+  res.flushHeaders();
+
+  let closed = false;
+
+  const writeMarket = (market: {
+    priceMicrodollars: number;
+    tickAt: string;
+    source: "binance-btcusdt" | "coinbase-btc-usd" | "none";
+    feedStatus: "CONNECTING" | "REBASELINING" | "LIVE" | "STALE" | "FROZEN";
+  }) => {
+    if (closed) return;
+    res.write(
+      `event: market\ndata: ${JSON.stringify(market)}\n\n`,
+    );
+  };
+
+  const unsubscribe = ticketMarketRuntime.subscribe(
+    writeMarket,
+    false,
+  );
+
+  const heartbeat = setInterval(() => {
+    if (!closed) res.write(": keepalive\n\n");
+  }, 15_000);
+
+  const cleanup = () => {
+    if (closed) return;
+    closed = true;
+    clearInterval(heartbeat);
+    unsubscribe();
+  };
+
+  req.once("close", cleanup);
+  res.once("close", cleanup);
+
+  try {
+    const state =
+      await ticketMarketPersistence.getCurrentState()
+      ?? await ticketMarketPersistence.ensureCurrentState(
+        new Date(),
+      );
+
+    writeMarket(serializeMarketState(state));
+  } catch (error) {
+    cleanup();
+
+    if (!res.writableEnded) {
+      res.write(
+        `event: error\ndata: ${JSON.stringify({
+          error: error instanceof Error
+            ? error.message
+            : "IDLE_MARKET_STREAM_FAILED",
+        })}\n\n`,
+      );
+      res.end();
+    }
+  }
+});
 
 router.get("/idle/state", async (req, res) => {
   try {
