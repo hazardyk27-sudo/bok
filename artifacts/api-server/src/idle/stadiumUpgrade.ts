@@ -166,19 +166,28 @@ export async function upgradeStadiumLevel(
         [sessionId, balanceCents],
       );
 
-      await client.query(
+      const receiptUpdate = await client.query<{ id: string }>(
         `UPDATE idle_stadium_action_receipts
             SET target_level = $2,
                 cost_cents = $3,
                 balance_cents = $4
-          WHERE idempotency_key = $1`,
+          WHERE idempotency_key = $1
+            AND session_id = $5
+            AND action_type = $6
+        RETURNING id`,
         [
           idempotencyKey,
           upgrade.targetStadiumLevel,
           upgrade.costCents,
           balanceCents,
+          sessionId,
+          STADIUM_UPGRADE_ACTION,
         ],
       );
+
+      if (!receiptUpdate.rows[0]) {
+        throw new Error("IDLE_STADIUM_RECEIPT_UPDATE_CONFLICT");
+      }
 
       return {
         patch: {
