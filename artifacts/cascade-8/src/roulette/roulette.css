@@ -516,19 +516,44 @@ button {
 .roulette-placed-chip {
   --chip-fill: #dfe4e8;
   --chip-ink: #111519;
-  --chip-edge: #ffffff;
+  --chip-edge: #9da7ad;
   position: relative;
   border-radius: 50%;
-  border: 3px dashed var(--chip-edge);
+  border: 1px solid var(--chip-edge);
   color: var(--chip-ink);
   background:
-    radial-gradient(circle at 35% 30%, rgba(255, 255, 255, 0.72), transparent 28%),
-    var(--chip-fill);
+    linear-gradient(
+      180deg,
+      color-mix(in srgb, var(--chip-fill) 92%, white 8%),
+      var(--chip-fill)
+    );
   box-shadow:
-    0 4px 10px rgba(0, 0, 0, 0.32),
-    inset 0 0 0 2px rgba(0, 0, 0, 0.2);
-  font-family: Arial, Helvetica, sans-serif;
-  font-weight: 900;
+    0 2px 6px rgba(0, 0, 0, 0.34);
+  font-family:
+    system-ui,
+    -apple-system,
+    BlinkMacSystemFont,
+    "Segoe UI",
+    sans-serif;
+  font-weight: 850;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.035em;
+  text-shadow: none;
+}
+
+.roulette-chip-option::after,
+.roulette-placed-chip::after {
+  content: "";
+  position: absolute;
+  inset: 3px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 50%;
+  pointer-events: none;
+}
+
+.roulette-chip-option > span {
+  position: relative;
+  z-index: 1;
 }
 
 .roulette-chip-option {
@@ -548,61 +573,64 @@ button {
 }
 
 .roulette-chip-option.is-selected {
-  transform: translateY(-4px) scale(1.08);
+  transform: translateY(-2px) scale(1.04);
+  border-color:
+    color-mix(in srgb, var(--chip-edge) 68%, white 32%);
   box-shadow:
-    0 8px 18px rgba(0, 0, 0, 0.42),
-    0 0 0 3px rgba(255, 255, 255, 0.76),
-    inset 0 0 0 2px rgba(0, 0, 0, 0.22);
+    0 5px 12px rgba(0, 0, 0, 0.34),
+    0 0 0 2px rgba(255, 255, 255, 0.16);
 }
 
 .chip-1 {
   --chip-fill: #e4e7e9;
   --chip-ink: #15191c;
-  --chip-edge: #858f96;
+  --chip-edge: #9ba3a8;
 }
 
 .chip-5 {
   --chip-fill: #d53c35;
   --chip-ink: #ffffff;
-  --chip-edge: #f5b8b3;
+  --chip-edge: #df8c87;
 }
 
 .chip-10 {
   --chip-fill: #2876c8;
   --chip-ink: #ffffff;
-  --chip-edge: #bad8f4;
+  --chip-edge: #85b7e7;
 }
 
 .chip-25 {
   --chip-fill: #2c9a61;
   --chip-ink: #ffffff;
-  --chip-edge: #bce5ce;
+  --chip-edge: #8bc7a7;
 }
 
 .chip-100 {
   --chip-fill: #171b1f;
   --chip-ink: #ffffff;
-  --chip-edge: #aab3ba;
+  --chip-edge: #727c83;
 }
 
 .chip-500 {
   --chip-fill: #6f4ba8;
   --chip-ink: #ffffff;
-  --chip-edge: #d7c5ef;
+  --chip-edge: #aa90d1;
 }
 
 .roulette-placed-chip {
   position: absolute;
   z-index: 6;
-  width: 34px;
-  height: 34px;
+  width: 36px;
+  height: 36px;
   display: grid;
   place-items: center;
-  border-width: 2px;
+  padding: 0 2px;
   pointer-events: none;
-  font-size: 10px;
+  font-size: 11px;
+  font-weight: 900;
   line-height: 1;
-  letter-spacing: -0.02em;
+  letter-spacing: -0.045em;
+  white-space: nowrap;
 }
 
 .roulette-bet-summary {
@@ -680,9 +708,9 @@ button {
   }
 
   .roulette-placed-chip {
-    width: 30px;
-    height: 30px;
-    font-size: 9px;
+    width: 32px;
+    height: 32px;
+    font-size: 10px;
   }
 
   .roulette-bet-actions {
@@ -1651,21 +1679,43 @@ button {
   .roulette-zero-cell.is-result-number,
   .roulette-zero-cell.is-winning-bet {
     box-shadow:
-      inset 0 0 0 1.5px rgba(118, 228, 174, 0.90),
-      0 0 7px rgba(84, 213, 153, 0.22);
-    filter: brightness(1.10);
+      inset 0 0 0 2px rgba(118, 228, 174, 0.92),
+      0 0 11px rgba(84, 213, 153, 0.30);
+    filter: brightness(1.12);
     z-index: 7;
   }
 
   .roulette-placed-chip {
-    width: clamp(16px, calc(var(--table-width) * 0.082), 27px);
-    height: clamp(16px, calc(var(--table-width) * 0.082), 27px);
+    width:
+      clamp(
+        20px,
+        calc(var(--table-width) * 0.098),
+        31px
+      );
+    height:
+      clamp(
+        20px,
+        calc(var(--table-width) * 0.098),
+        31px
+      );
+    padding: 0 2px;
     border-width: 1px;
-    font-size: clamp(5px, calc(var(--table-width) * 0.020), 8px);
+    font-size:
+      clamp(
+        7px,
+        calc(var(--table-width) * 0.029),
+        10px
+      );
+    font-weight: 900;
     line-height: 1;
+    letter-spacing: -0.045em;
     box-shadow:
-      0 3px 8px rgba(0, 0, 0, 0.48),
-      inset 0 0 0 1px rgba(0, 0, 0, 0.24);
+      0 2px 6px rgba(0, 0, 0, 0.38);
+  }
+
+  .roulette-placed-chip::after {
+    inset: 2px;
+    border-color: rgba(255, 255, 255, 0.12);
   }
 
   /*
@@ -1684,23 +1734,24 @@ button {
 
   .roulette-number-cell.has-bet > span,
   .roulette-zero-cell.has-bet > span {
-    opacity: 0.42;
+    opacity: 0.24;
   }
 
   .roulette-number-cell.is-winning-bet .roulette-placed-chip,
   .roulette-zero-cell.is-winning-bet .roulette-placed-chip {
     transform:
       translate(-50%, -50%)
-      scale(1.08);
+      scale(1.06);
+    box-shadow:
+      0 2px 6px rgba(0, 0, 0, 0.40),
+      0 0 0 1px rgba(119, 231, 176, 0.34);
   }
 
   .roulette-number-cell.is-result-number .roulette-placed-chip,
   .roulette-zero-cell.is-result-number .roulette-placed-chip {
     box-shadow:
-      0 3px 9px rgba(0, 0, 0, 0.52),
-      0 0 0 1.5px rgba(119, 231, 176, 0.82),
-      0 0 10px rgba(83, 214, 155, 0.30),
-      inset 0 0 0 1px rgba(0, 0, 0, 0.22);
+      0 2px 6px rgba(0, 0, 0, 0.40),
+      0 0 0 1px rgba(119, 231, 176, 0.42);
   }
 
   /* ----- right rail ----- */
@@ -1876,53 +1927,89 @@ button {
   .roulette-mobile-chip-toggle {
     --chip-fill: #2876c8;
     --chip-ink: #ffffff;
-    --chip-edge: #bad8f4;
-    border: 2px dashed var(--chip-edge);
+    --chip-edge: #85b7e7;
+    border: 1px solid var(--chip-edge);
     color: var(--chip-ink);
     background:
-      radial-gradient(
-        circle at 35% 30%,
-        rgba(255, 255, 255, 0.68),
-        transparent 29%
-      ),
-      var(--chip-fill);
-    font-size: clamp(7px, calc(var(--control-size) * 0.23), 9px);
+      linear-gradient(
+        180deg,
+        color-mix(in srgb, var(--chip-fill) 92%, white 8%),
+        var(--chip-fill)
+      );
+    box-shadow:
+      0 3px 8px rgba(0, 0, 0, 0.34);
+    font-size:
+      clamp(
+        8px,
+        calc(var(--control-size) * 0.29),
+        11px
+      );
+    font-weight: 900;
+    letter-spacing: -0.04em;
+    text-shadow: none;
+  }
+
+  .roulette-mobile-chip-toggle::after {
+    content: "";
+    position: absolute;
+    inset: 3px;
+    border: 1px solid rgba(255, 255, 255, 0.13);
+    border-radius: 50%;
+    pointer-events: none;
+  }
+
+  .roulette-mobile-chip-toggle > span {
+    position: relative;
+    z-index: 1;
+  }
+
+  .roulette-mobile-chip-toggle[aria-expanded="true"] {
+    border-color: var(--chip-edge);
+    background:
+      linear-gradient(
+        180deg,
+        color-mix(in srgb, var(--chip-fill) 92%, white 8%),
+        var(--chip-fill)
+      );
+    box-shadow:
+      0 3px 8px rgba(0, 0, 0, 0.36),
+      0 0 0 2px rgba(255, 255, 255, 0.10);
   }
 
   .roulette-mobile-chip-toggle[data-selected-chip="1"] {
     --chip-fill: #e4e7e9;
     --chip-ink: #15191c;
-    --chip-edge: #858f96;
+    --chip-edge: #9ba3a8;
   }
 
   .roulette-mobile-chip-toggle[data-selected-chip="5"] {
     --chip-fill: #d53c35;
     --chip-ink: #ffffff;
-    --chip-edge: #f5b8b3;
+    --chip-edge: #df8c87;
   }
 
   .roulette-mobile-chip-toggle[data-selected-chip="10"] {
     --chip-fill: #2876c8;
     --chip-ink: #ffffff;
-    --chip-edge: #bad8f4;
+    --chip-edge: #85b7e7;
   }
 
   .roulette-mobile-chip-toggle[data-selected-chip="25"] {
     --chip-fill: #2c9a61;
     --chip-ink: #ffffff;
-    --chip-edge: #bce5ce;
+    --chip-edge: #8bc7a7;
   }
 
   .roulette-mobile-chip-toggle[data-selected-chip="100"] {
     --chip-fill: #171b1f;
     --chip-ink: #ffffff;
-    --chip-edge: #aab3ba;
+    --chip-edge: #727c83;
   }
 
   .roulette-mobile-chip-toggle[data-selected-chip="500"] {
     --chip-fill: #6f4ba8;
     --chip-ink: #ffffff;
-    --chip-edge: #d7c5ef;
+    --chip-edge: #aa90d1;
   }
 
   .roulette-mobile-chip-menu {
@@ -1931,11 +2018,11 @@ button {
     top: 50%;
     transform: translateY(-50%);
     width: max-content;
-    max-width: min(260px, calc(100vw - 58px));
+    max-width: min(286px, calc(100vw - 58px));
     padding: 5px 6px;
     display: grid;
     grid-auto-flow: column;
-    grid-auto-columns: 32px;
+    grid-auto-columns: 36px;
     align-items: center;
     gap: 5px;
     overflow-x: auto;
@@ -1960,10 +2047,16 @@ button {
 
   .roulette-mobile-chip-menu .roulette-chip-option {
     flex: none;
-    width: 32px;
-    height: 32px;
-    border-width: 2px;
-    font-size: 7px;
+    width: 36px;
+    height: 36px;
+    border-width: 1px;
+    font-size: 9px;
+    font-weight: 900;
+    letter-spacing: -0.04em;
+  }
+
+  .roulette-mobile-chip-menu .roulette-chip-option::after {
+    inset: 3px;
   }
 
   /* ----- independent bottom footer ----- */
