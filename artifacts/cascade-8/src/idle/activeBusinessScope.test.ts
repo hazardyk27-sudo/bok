@@ -10,9 +10,15 @@ const idleIndexSource = readFileSync(
   fileURLToPath(new URL("./index.ts", import.meta.url)),
   "utf8",
 );
+const servicesSource = readFileSync(
+  fileURLToPath(
+    new URL("./services/index.ts", import.meta.url),
+  ),
+  "utf8",
+);
 
-describe("active Idle business scope", () => {
-  it("keeps Stadium as the only active business while retaining legacy identifiers", () => {
+describe("Part 25 active Idle frontend scope", () => {
+  it("retains legacy identifiers only as migration compatibility", () => {
     expect(ACTIVE_BUSINESS_IDS).toEqual(["stadium"]);
     expect(BUSINESS_IDS).toEqual([
       "stadium",
@@ -21,27 +27,50 @@ describe("active Idle business scope", () => {
     ]);
   });
 
-  it("renders and counts only the active Stadium card", () => {
+  it("mounts the Businesses route from canonical Stadium state only", () => {
     expect(idleIndexSource).toContain(
-      "ACTIVE_BUSINESS_IDS.map(renderBusinessRowShell)",
+      "fetchIdleStadiumState",
     );
     expect(idleIndexSource).toContain(
-      "ACTIVE_BUSINESS_IDS.length * BUSINESS_LEVELS_PER_BUSINESS",
+      "projectIdleStadiumLive",
     );
     expect(idleIndexSource).toContain(
-      "${ACTIVE_BUSINESS_IDS.length} AKTİF",
+      "subscribeIdleMarket",
     );
     expect(idleIndexSource).not.toContain(
-      "BUSINESS_IDS.map(renderBusinessRowShell)",
+      "renderBusinessRowShell",
+    );
+    expect(idleIndexSource).not.toContain(
+      "ACTIVE_BUSINESS_IDS.map",
     );
   });
 
-  it("rejects inactive legacy business ids at the UI interaction boundary", () => {
-    expect(idleIndexSource).toContain(
-      "(ACTIVE_BUSINESS_IDS as readonly string[]).includes(",
-    );
-    expect(idleIndexSource).toContain(
-      "businessId of ACTIVE_BUSINESS_IDS",
-    );
+  it("contains no direct-cash collection or legacy business mutation client path", () => {
+    for (const retired of [
+      "collectAllIdleBusinesses",
+      "collectIdleBusiness",
+      "upgradeIdleBusiness",
+      "upgradeIdleVault",
+      "/api/idle/collect-all",
+      "/api/idle/businesses/",
+      "TÜMÜNÜ TOPLA",
+      "BİRİKMİŞ GELİR",
+      "KASA KAPASİTESİ",
+    ]) {
+      expect(idleIndexSource).not.toContain(retired);
+      expect(servicesSource).not.toContain(retired);
+    }
+  });
+
+  it("uses canonical Stadium mutation endpoints only", () => {
+    for (const endpoint of [
+      "/api/idle/stadium/seats/buy",
+      "/api/idle/stadium/upgrade",
+      "/api/idle/stadium/speed/upgrade",
+      "/api/idle/stadium/storage/upgrade",
+      "/api/idle/stadium/tickets/sell",
+    ]) {
+      expect(servicesSource).toContain(endpoint);
+    }
   });
 });
