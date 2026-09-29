@@ -916,7 +916,12 @@ export class BusinessesClient {
     if (!row) return;
 
     const businessId = row.dataset.businessId as BusinessId | undefined;
-    if (!businessId || !ACTIVE_BUSINESS_IDS.includes(businessId)) return;
+    if (
+      !businessId
+      || !(ACTIVE_BUSINESS_IDS as readonly string[]).includes(
+        businessId,
+      )
+    ) return;
 
     if (button.matches("[data-business-details]")) {
       this.openBusinessDetails(businessId, button);
