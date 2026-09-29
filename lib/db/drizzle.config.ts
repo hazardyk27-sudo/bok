@@ -1,12 +1,20 @@
 import { defineConfig } from "drizzle-kit";
 import path from "path";
 
-const databaseUrl =
-  process.env.SUPABASE_DATABASE_URL ?? process.env.DATABASE_URL;
+const useSupabaseDatabase = process.env.USE_SUPABASE_DATABASE === "true";
+const databaseUrl = useSupabaseDatabase
+  ? process.env.SUPABASE_DATABASE_URL
+  : process.env.DATABASE_URL ?? process.env.SUPABASE_DATABASE_URL;
 
 if (!databaseUrl) {
   throw new Error(
-    "SUPABASE_DATABASE_URL or DATABASE_URL must be set, ensure the database is provisioned",
+    "DATABASE_URL or SUPABASE_DATABASE_URL must be set, ensure the database is provisioned",
+  );
+}
+
+if (useSupabaseDatabase && !process.env.SUPABASE_DATABASE_URL) {
+  throw new Error(
+    "USE_SUPABASE_DATABASE=true requires SUPABASE_DATABASE_URL to be set.",
   );
 }
 
