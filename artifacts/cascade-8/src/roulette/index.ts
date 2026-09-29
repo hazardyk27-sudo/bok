@@ -637,6 +637,7 @@ export function mountRoulette(app: HTMLDivElement) {
     delete page.dataset.resultHasPayout;
     delete page.dataset.resultGrossReturn;
     delete canvas.dataset.rouletteResultMarkerAngle;
+    redraw();
   };
 
   const renderRoundResult = (
@@ -877,6 +878,7 @@ export function mountRoulette(app: HTMLDivElement) {
         canvas.dataset.rouletteState =
           "ready";
         setScenePhase("betting");
+        redraw();
         canvas.setAttribute(
           "aria-label",
           "European roulette wheel. Betting open. Press to spin again.",
