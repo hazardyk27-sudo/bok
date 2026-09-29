@@ -2232,17 +2232,21 @@ button {
   }
 
   .roulette-page[data-phase="spinning"] {
-    --wheel-size: min(96vw, 430px);
-    --footer-reserve: 44px;
-    --spin-table-overlap: clamp(8px, 3vw, 14px);
+    --wheel-size: min(94vw, 418px);
+    --footer-reserve: 42px;
+    --table-ratio: 1.576;
+    --zero-row: calc(var(--table-width) * 0.103);
+    --number-row: calc(var(--table-width) * 0.114);
+    --column-row: calc(var(--table-width) * 0.105);
+    --spin-table-overlap: clamp(20px, 5.5vw, 28px);
     --table-top: calc(
       var(--history-height) +
       var(--wheel-size) -
       var(--spin-table-overlap)
     );
     --table-width: min(
-      60vw,
-      250px,
+      64vw,
+      260px,
       calc(
         (
           100dvh -
@@ -2256,17 +2260,21 @@ button {
   }
 
   .roulette-page[data-phase="settled"] {
-    --wheel-size: min(95vw, 422px);
-    --footer-reserve: 48px;
-    --spin-table-overlap: clamp(10px, 3.5vw, 16px);
+    --wheel-size: min(93vw, 410px);
+    --footer-reserve: 44px;
+    --table-ratio: 1.576;
+    --zero-row: calc(var(--table-width) * 0.103);
+    --number-row: calc(var(--table-width) * 0.114);
+    --column-row: calc(var(--table-width) * 0.105);
+    --spin-table-overlap: clamp(22px, 6vw, 30px);
     --table-top: calc(
       var(--history-height) +
       var(--wheel-size) -
       var(--spin-table-overlap)
     );
     --table-width: min(
-      58.5vw,
-      242px,
+      63vw,
+      256px,
       calc(
         (
           100dvh -
@@ -2279,9 +2287,14 @@ button {
     --control-size: clamp(25px, calc(var(--table-width) * 0.16), 33px);
   }
 
+  /*
+   * During spin/result the table intentionally overlaps only the very bottom
+   * of the wheel. Keep the table above that overlap so the zero roof and the
+   * first number rows are never hidden behind the wheel canvas.
+   */
   .roulette-page[data-phase="spinning"] .roulette-wheel-panel,
   .roulette-page[data-phase="settled"] .roulette-wheel-panel {
-    z-index: 8;
+    z-index: 6;
   }
 
   .roulette-page[data-phase="spinning"] .roulette-stage,
@@ -2296,7 +2309,7 @@ button {
     opacity: 1;
     filter: none;
     pointer-events: none;
-    z-index: 4;
+    z-index: 7;
   }
 
   .roulette-page[data-phase="spinning"] .roulette-table-layout,
@@ -2365,7 +2378,13 @@ button {
     color: #f7f6f0;
   }
 
-  .roulette-page[data-phase="spinning"] .roulette-bet-actions {
+  .roulette-page[data-phase="spinning"] .roulette-bet-actions,
+  .roulette-page[data-phase="settled"] .roulette-bet-actions {
+    display: none;
+  }
+
+  .roulette-page[data-phase="spinning"] .roulette-betting-timer,
+  .roulette-page[data-phase="settled"] .roulette-betting-timer {
     display: none;
   }
 
@@ -2393,17 +2412,17 @@ button {
   }
 
   .roulette-page[data-phase="spinning"] {
-    --wheel-size: min(90vw, 356px);
-    --footer-reserve: 42px;
-    --spin-table-overlap: clamp(76px, 23vw, 92px);
+    --wheel-size: min(84vw, 324px);
+    --footer-reserve: 38px;
+    --spin-table-overlap: clamp(30px, 9vw, 38px);
     --table-top: calc(
       var(--history-height) +
       var(--wheel-size) -
       var(--spin-table-overlap)
     );
     --table-width: min(
-      52vw,
-      194px,
+      54vw,
+      204px,
       calc(
         (
           100dvh -
@@ -2416,17 +2435,17 @@ button {
   }
 
   .roulette-page[data-phase="settled"] {
-    --wheel-size: min(89vw, 352px);
-    --footer-reserve: 46px;
-    --spin-table-overlap: clamp(70px, 21vw, 86px);
+    --wheel-size: min(83vw, 318px);
+    --footer-reserve: 40px;
+    --spin-table-overlap: clamp(32px, 9.5vw, 40px);
     --table-top: calc(
       var(--history-height) +
       var(--wheel-size) -
       var(--spin-table-overlap)
     );
     --table-width: min(
-      51vw,
-      190px,
+      53vw,
+      200px,
       calc(
         (
           100dvh -
@@ -2485,17 +2504,17 @@ button {
   }
 
   .roulette-page[data-phase="spinning"] {
-    --wheel-size: min(88vw, 322px);
-    --footer-reserve: 38px;
-    --spin-table-overlap: clamp(82px, 25vw, 98px);
+    --wheel-size: min(80vw, 292px);
+    --footer-reserve: 34px;
+    --spin-table-overlap: clamp(28px, 9vw, 36px);
     --table-top: calc(
       var(--history-height) +
       var(--wheel-size) -
       var(--spin-table-overlap)
     );
     --table-width: min(
-      48vw,
-      174px,
+      50vw,
+      182px,
       calc(
         (
           100dvh -
@@ -2508,17 +2527,17 @@ button {
   }
 
   .roulette-page[data-phase="settled"] {
-    --wheel-size: min(87vw, 318px);
-    --footer-reserve: 40px;
-    --spin-table-overlap: clamp(76px, 23vw, 92px);
+    --wheel-size: min(79vw, 286px);
+    --footer-reserve: 36px;
+    --spin-table-overlap: clamp(30px, 9.5vw, 38px);
     --table-top: calc(
       var(--history-height) +
       var(--wheel-size) -
       var(--spin-table-overlap)
     );
     --table-width: min(
-      48vw,
-      172px,
+      50vw,
+      180px,
       calc(
         (
           100dvh -
