@@ -1830,11 +1830,12 @@ button {
   }
 
   .roulette-page[data-phase="spinning"] {
-    --wheel-size: min(96vw, 430px);
+    --wheel-size: min(94vw, 420px);
+    --footer-reserve: 26px;
     --table-top: calc(
       var(--history-height) +
       var(--wheel-size) +
-      8px
+      6px
     );
     --table-width: min(
       41vw,
@@ -1899,6 +1900,16 @@ button {
     filter: none;
     z-index: 9;
   }
+
+  .roulette-page[data-phase="spinning"] .roulette-bet-actions {
+    display: none;
+  }
+
+  .roulette-page[data-phase="spinning"] .roulette-bet-console {
+    width: min(86vw, 360px);
+    padding-top: 4px;
+    border-top-color: rgba(182, 185, 178, 0.12);
+  }
 }
 
 /* Small/short phones keep the same composition instead of switching layout model. */
@@ -1910,8 +1921,12 @@ button {
   }
 
   .roulette-page[data-phase="spinning"] {
-    --wheel-size: min(96vw, 380px);
-    --table-top: calc(var(--history-height) + min(79vw, 286px));
+    --wheel-size: min(94vw, 372px);
+    --table-top: calc(
+      var(--history-height) +
+      var(--wheel-size) +
+      5px
+    );
   }
 
   .roulette-page[data-phase="settled"] {
@@ -1943,8 +1958,12 @@ button {
   }
 
   .roulette-page[data-phase="spinning"] {
-    --wheel-size: min(94vw, 345px);
-    --table-top: calc(var(--history-height) + min(76vw, 272px));
+    --wheel-size: min(92vw, 338px);
+    --table-top: calc(
+      var(--history-height) +
+      var(--wheel-size) +
+      4px
+    );
   }
 
   .roulette-page[data-phase="settled"] {
