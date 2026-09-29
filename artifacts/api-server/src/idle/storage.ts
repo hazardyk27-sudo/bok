@@ -4,8 +4,22 @@
 
 export const IDLE_BUSINESS_STATE_TABLE = "idle_business_states";
 
+export const ACTIVE_IDLE_BUSINESS_IDS = ["stadium"] as const;
+export type ActiveIdleBusinessId =
+  (typeof ACTIVE_IDLE_BUSINESS_IDS)[number];
+
 export const IDLE_BUSINESS_IDS = ["stadium", "club-store", "fan-club"] as const;
 export type IdleBusinessId = (typeof IDLE_BUSINESS_IDS)[number];
+
+/**
+ * Club Store / Fan Club remain valid legacy storage identifiers only. They are
+ * not active economy/API targets during the Stadium ticket-economy migration.
+ */
+export function isActiveIdleBusinessId(
+  value: string,
+): value is ActiveIdleBusinessId {
+  return (ACTIVE_IDLE_BUSINESS_IDS as readonly string[]).includes(value);
+}
 
 /**
  * Fractional earnings are persisted as microcents so frequent checkpoints do
