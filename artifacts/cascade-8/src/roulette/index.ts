@@ -590,6 +590,14 @@ export function mountRoulette(app: HTMLDivElement) {
         );
       });
 
+    app
+      .querySelectorAll<HTMLElement>(
+        ".roulette-winner-mark",
+      )
+      .forEach((marker) => {
+        marker.remove();
+      });
+
     if (roundReturn) {
       roundReturn.textContent = "—";
     }
@@ -667,6 +675,14 @@ export function mountRoulette(app: HTMLDivElement) {
         );
       });
 
+    app
+      .querySelectorAll<HTMLElement>(
+        ".roulette-winner-mark",
+      )
+      .forEach((marker) => {
+        marker.remove();
+      });
+
     const winningNumberCell =
       app.querySelector<HTMLElement>(
         `[data-bet-id="${presentation.winningNumberBetId}"]`,
@@ -674,6 +690,20 @@ export function mountRoulette(app: HTMLDivElement) {
     winningNumberCell?.classList.add(
       "is-result-number",
     );
+
+    if (winningNumberCell) {
+      const winnerMark =
+        document.createElement("span");
+      winnerMark.className =
+        "roulette-winner-mark";
+      winnerMark.setAttribute(
+        "aria-hidden",
+        "true",
+      );
+      winningNumberCell.append(
+        winnerMark,
+      );
+    }
 
     presentation.winningBetIds
       .forEach((betId) => {
@@ -887,6 +917,7 @@ export function mountRoulette(app: HTMLDivElement) {
 
         canvas.dataset.rouletteState =
           "ready";
+        clearRoundResult();
         setScenePhase("betting");
         redraw();
         canvas.setAttribute(
@@ -1183,6 +1214,15 @@ export function mountRoulette(app: HTMLDivElement) {
           );
           walletBalanceCents = pendingServerSpin.wallet.balanceCents;
           renderWalletBalance();
+
+          // The wager has now been authoritatively settled. Keep the
+          // snapshotted previous round for REBET, but clear the editable
+          // table so the next betting window always starts clean.
+          betState =
+            clearRouletteBets(
+              betState,
+            );
+          renderBetState();
 
           canvas.dataset.rouletteState = "settled";
           setScenePhase(
