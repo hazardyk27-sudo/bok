@@ -31,16 +31,16 @@ describe("bet configuration", () => {
 
 describe("special-symbol configuration", () => {
   it("uses the requested initial-board special-symbol chances", () => {
-    expect(BASE_INITIAL_SCATTER_CHANCE).toBe(0.0325);
-    expect(BASE_INITIAL_CORE_CHANCE).toBe(0.002);
-    expect(BONUS_INITIAL_SCATTER_CHANCE).toBe(0.025);
-    expect(BONUS_INITIAL_CORE_CHANCE).toBe(0.035);
+    expect(BASE_INITIAL_SCATTER_CHANCE).toBe(0.03);
+    expect(BASE_INITIAL_CORE_CHANCE).toBe(0.001);
+    expect(BONUS_INITIAL_SCATTER_CHANCE).toBe(0.015);
+    expect(BONUS_INITIAL_CORE_CHANCE).toBe(0.03);
   });
 
   it("keeps the requested refill special-symbol chances", () => {
-    expect(BASE_REFILL_SCATTER_CHANCE).toBe(0.04);
-    expect(BASE_REFILL_CORE_CHANCE).toBe(0.007);
-    expect(BONUS_REFILL_SCATTER_CHANCE).toBe(0.035);
-    expect(BONUS_REFILL_CORE_CHANCE).toBe(0.055);
+    expect(BASE_REFILL_SCATTER_CHANCE).toBe(0.035);
+    expect(BASE_REFILL_CORE_CHANCE).toBe(0.003);
+    expect(BONUS_REFILL_SCATTER_CHANCE).toBe(0.03);
+    expect(BONUS_REFILL_CORE_CHANCE).toBe(0.05);
   });
 });

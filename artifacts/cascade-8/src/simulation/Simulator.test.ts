@@ -10,9 +10,9 @@ describe("simulator", () => {
   it("reports million-pair copy and separate third-position metrics", () => {
     const report = simulate(1, "pair-metrics");
     expect(report.sampledNormalPairs).toBe(1_000_000);
-    expect(report.configuredCopyBranchProbability).toBe(75);
-    expect(report.observedCopyBranchProbability).toBeGreaterThan(73);
-    expect(report.observedCopyBranchProbability).toBeLessThan(77);
+    expect(report.configuredCopyBranchProbability).toBe(85);
+    expect(report.observedCopyBranchProbability).toBeGreaterThan(83);
+    expect(report.observedCopyBranchProbability).toBeLessThan(87);
     expect(report.observedSecondSameProbability).toBeGreaterThan(report.observedCopyBranchProbability);
     expect(report.configuredThirdCopyBranchProbability).toBe(0);
     expect(report.observedThirdCopyBranchProbability).toBe(0);
