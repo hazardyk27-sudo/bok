@@ -14,7 +14,9 @@ describe("checkpoint-before-mutation transaction contract", () => {
       "const checkpoint = await checkpointStadiumProduction(",
     );
     const decideIndex = source.indexOf("const decision = await decide(");
-    const persistIndex = source.indexOf("persistStadiumEconomyMutation(");
+    const persistIndex = source.indexOf(
+      "const state = await persistStadiumEconomyMutation(",
+    );
     const commitIndex = source.indexOf('client.query("COMMIT")');
 
     expect(beginIndex).toBeGreaterThanOrEqual(0);
