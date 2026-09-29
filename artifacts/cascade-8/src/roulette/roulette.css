@@ -518,10 +518,13 @@ button {
   --chip-ink: #111519;
   --chip-edge: #9da7ad;
   position: relative;
+  isolation: isolate;
+  opacity: 1;
   border-radius: 50%;
   border: 1px solid var(--chip-edge);
   color: var(--chip-ink);
-  background:
+  background-color: var(--chip-fill);
+  background-image:
     linear-gradient(
       180deg,
       color-mix(in srgb, var(--chip-fill) 92%, white 8%),
@@ -1718,6 +1721,12 @@ button {
     border-color: rgba(255, 255, 255, 0.12);
   }
 
+  .roulette-placed-chip,
+  .roulette-mobile-chip-toggle,
+  .roulette-mobile-chip-menu .roulette-chip-option {
+    opacity: 1;
+  }
+
   /*
    * Straight-up chips sit directly on the number, matching the reference.
    * Non-straight bets keep their generic center placement from the base rules.
@@ -1930,9 +1939,12 @@ button {
     --chip-fill: #2876c8;
     --chip-ink: #ffffff;
     --chip-edge: #85b7e7;
+    isolation: isolate;
+    opacity: 1;
     border: 1px solid var(--chip-edge);
     color: var(--chip-ink);
-    background:
+    background-color: var(--chip-fill);
+    background-image:
       linear-gradient(
         180deg,
         color-mix(in srgb, var(--chip-fill) 92%, white 8%),
@@ -1967,7 +1979,9 @@ button {
 
   .roulette-mobile-chip-toggle[aria-expanded="true"] {
     border-color: var(--chip-edge);
-    background:
+    opacity: 1;
+    background-color: var(--chip-fill);
+    background-image:
       linear-gradient(
         180deg,
         color-mix(in srgb, var(--chip-fill) 92%, white 8%),
@@ -2308,26 +2322,22 @@ button {
   }
 
   .roulette-page[data-phase="spinning"] .roulette-table-layout {
-    opacity: 0.70;
+    opacity: 1;
     filter:
       saturate(0.72)
       brightness(0.78);
   }
 
   .roulette-page[data-phase="settled"] .roulette-table-layout {
-    opacity: 0.80;
+    opacity: 1;
     filter:
       saturate(0.82)
       brightness(0.86);
   }
 
-  .roulette-page[data-phase="spinning"] .roulette-mobile-control-rail {
-    opacity: 0.92;
-    filter: none;
-  }
-
+  .roulette-page[data-phase="spinning"] .roulette-mobile-control-rail,
   .roulette-page[data-phase="settled"] .roulette-mobile-control-rail {
-    opacity: 0.96;
+    opacity: 1;
     filter: none;
   }
 
