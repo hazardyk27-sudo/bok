@@ -112,8 +112,13 @@ function tickRowToPoint(
   };
 }
 
+export type MarketPersistenceClient = Pick<
+  PoolClient,
+  "query"
+>;
+
 async function loadStateForUpdate(
-  client: PoolClient,
+  client: MarketPersistenceClient,
 ) {
   const result = await client.query<MarketStateRow>(
     `SELECT price_microdollars, source, feed_status, tick_at
@@ -129,7 +134,7 @@ async function loadStateForUpdate(
 }
 
 async function loadHistoryTickAt(
-  client: PoolClient,
+  client: MarketPersistenceClient,
   tickAt: Date,
 ) {
   const result = await client.query<MarketTickRow>(
@@ -217,13 +222,13 @@ export class TicketMarketPersistence {
    * 5) delete points at or before the strict 24-hour cutoff,
    * 6) commit.
    */
-  async persistAuthoritativeTick(
+  async persistAuthoritativeTickOnClient(
+    client: MarketPersistenceClient,
     rawInput: AuthoritativeMarketTickInput,
   ): Promise<PersistAuthoritativeMarketTickResult> {
     const input = validateAuthoritativeMarketTick(rawInput);
     const retentionCutoff =
       getMarketHistoryRetentionCutoff(input.tickAt);
-    const client = await pool.connect();
 
     try {
       await client.query("BEGIN");
@@ -315,8 +320,6 @@ export class TicketMarketPersistence {
     } catch (error) {
       await client.query("ROLLBACK");
       throw error;
-    } finally {
-      client.release();
     }
   }
 
