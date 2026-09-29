@@ -94,6 +94,34 @@ describe("Stadium seat purchase transaction contract", () => {
     expect(purchaseSource).toContain("replayed: true");
   });
 
+  it("revalidates replayed seat economics instead of trusting receipt totals", () => {
+    expect(purchaseSource).toContain(
+      "const startingOwnedSeats =",
+    );
+    expect(purchaseSource).toContain(
+      "expectedCostCents = quoteSeatPurchase(",
+    );
+    expect(purchaseSource).toContain(
+      "expectedCostCents !== costCents",
+    );
+    expect(purchaseSource).toContain(
+      "purchasedSeats !== requestedQuantity",
+    );
+  });
+
+  it("guards receipt completion by key, session, and action", () => {
+    expect(purchaseSource).toContain(
+      "AND session_id = $6",
+    );
+    expect(purchaseSource).toContain(
+      "AND action_type = $7",
+    );
+    expect(purchaseSource).toContain("RETURNING id");
+    expect(purchaseSource).toContain(
+      'throw new Error("IDLE_STADIUM_RECEIPT_UPDATE_CONFLICT")',
+    );
+  });
+
   it("maps capacity conflicts and insufficient wallet funds to explicit API errors", () => {
     expect(routeSource).toContain(
       '"IDLE_STADIUM_CAPACITY_EXCEEDED"',
