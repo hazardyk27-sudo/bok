@@ -163,9 +163,9 @@ export type IdleTicketSaleResponse = {
 // ---------------------------------------------------------------------------
 // LEGACY COMPATIBILITY TYPES
 // ---------------------------------------------------------------------------
-// These exist only to keep the currently mounted three-business/direct-cash
-// UI and API compiling while Parts 4+ migrate consumers to the canonical
-// Stadium model above. Do not add new features to these legacy contracts.
+// These remain only for migration-safe compatibility with persisted legacy
+// direct-cash rows and temporary Part 24/25 bridge code. Active UI/API scope is
+// Stadium-only; do not add new features to these legacy contracts.
 
 /**
  * Active business scope for the Stadium ticket-economy migration.
