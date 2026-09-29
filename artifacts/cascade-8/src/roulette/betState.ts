@@ -83,6 +83,27 @@ export function clearRouletteBets(
   };
 }
 
+export function doubleRouletteBets(
+  state: RouletteBetState,
+): RouletteBetState {
+  if (
+    state.placements.length === 0 ||
+    state.placements.length > 250
+  ) {
+    return state;
+  }
+
+  return {
+    ...state,
+    placements: [
+      ...state.placements,
+      ...state.placements.map((placement) => ({
+        ...placement,
+      })),
+    ],
+  };
+}
+
 export function snapshotRouletteRound(
   state: RouletteBetState,
 ): RouletteBetState {
