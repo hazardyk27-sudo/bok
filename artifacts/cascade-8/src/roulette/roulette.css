@@ -1079,10 +1079,10 @@ button {
 
   .roulette-page {
     --history-height: 20px;
-    --footer-reserve: 49px;
+    --footer-reserve: 46px;
     --table-ratio: 1.731;
-    --table-top: clamp(126px, 22dvh, 178px);
-    --wheel-size: min(58vw, 238px);
+    --table-top: clamp(108px, 17.5dvh, 132px);
+    --wheel-size: min(76vw, 286px);
     --table-width: min(
       84vw,
       calc(
@@ -1090,7 +1090,7 @@ button {
           100dvh -
           var(--table-top) -
           var(--footer-reserve) -
-          10px
+          8px
         ) / var(--table-ratio)
       )
     );
@@ -1239,9 +1239,9 @@ button {
   }
 
   .roulette-page[data-phase="betting"] .roulette-stage {
-    transform: translateY(3px) scale(0.96);
-    opacity: 0.34;
-    filter: saturate(0.70) brightness(0.66);
+    transform: translateY(2px) scale(1);
+    opacity: 0.22;
+    filter: saturate(0.62) brightness(0.56);
   }
 
   /* ----- table + controls layer ----- */
@@ -1276,10 +1276,10 @@ button {
     top: var(--table-top);
     left: 50%;
     width: min(
-      94vw,
+      97vw,
       calc(var(--table-width) + var(--control-size) + var(--control-gap))
     );
-    max-width: 94vw;
+    max-width: 97vw;
     transform: translateX(-50%);
     display: grid;
     grid-template-columns: var(--table-width) var(--control-size);
@@ -1307,6 +1307,10 @@ button {
     border-radius: 0;
     background: transparent;
     filter: drop-shadow(0 8px 18px rgba(0, 0, 0, 0.25));
+    transition:
+      width 460ms cubic-bezier(0.2, 0.78, 0.2, 1),
+      opacity 340ms ease,
+      filter 340ms ease;
   }
 
   .roulette-bet-cell {
@@ -1830,16 +1834,16 @@ button {
   }
 
   .roulette-page[data-phase="spinning"] {
-    --wheel-size: min(94vw, 420px);
+    --wheel-size: min(96vw, 430px);
     --footer-reserve: 26px;
     --table-top: calc(
       var(--history-height) +
-      var(--wheel-size) +
-      6px
+      var(--wheel-size) -
+      4px
     );
     --table-width: min(
-      41vw,
-      176px,
+      44vw,
+      182px,
       calc(
         (
           100dvh -
@@ -1853,15 +1857,15 @@ button {
   }
 
   .roulette-page[data-phase="settled"] {
-    --wheel-size: min(94vw, 418px);
+    --wheel-size: min(95vw, 422px);
     --table-top: calc(
       var(--history-height) +
-      var(--wheel-size) +
-      6px
+      var(--wheel-size) -
+      2px
     );
     --table-width: min(
-      43vw,
-      184px,
+      46vw,
+      190px,
       calc(
         (
           100dvh -
@@ -1886,10 +1890,16 @@ button {
     filter: none;
   }
 
-  .roulette-page[data-phase="spinning"] .roulette-bet-panel,
+  .roulette-page[data-phase="spinning"] .roulette-bet-panel {
+    opacity: 0.68;
+    filter: saturate(0.76) brightness(0.78);
+    pointer-events: none;
+    z-index: 4;
+  }
+
   .roulette-page[data-phase="settled"] .roulette-bet-panel {
-    opacity: 0.73;
-    filter: saturate(0.80) brightness(0.82);
+    opacity: 0.76;
+    filter: saturate(0.82) brightness(0.84);
     pointer-events: none;
     z-index: 4;
   }
@@ -1915,23 +1925,27 @@ button {
 /* Small/short phones keep the same composition instead of switching layout model. */
 @media (max-width: 900px) and (orientation: portrait) and (max-height: 700px) {
   .roulette-page {
-    --footer-reserve: 46px;
-    --table-top: clamp(118px, 21dvh, 146px);
-    --wheel-size: min(56vw, 214px);
+    --footer-reserve: 44px;
+    --table-top: clamp(102px, 16.8dvh, 118px);
+    --wheel-size: min(74vw, 266px);
   }
 
   .roulette-page[data-phase="spinning"] {
-    --wheel-size: min(94vw, 372px);
+    --wheel-size: min(96vw, 378px);
     --table-top: calc(
       var(--history-height) +
-      var(--wheel-size) +
-      5px
+      var(--wheel-size) -
+      4px
     );
   }
 
   .roulette-page[data-phase="settled"] {
-    --wheel-size: min(94vw, 370px);
-    --table-top: calc(var(--history-height) + min(77vw, 278px));
+    --wheel-size: min(95vw, 374px);
+    --table-top: calc(
+      var(--history-height) +
+      var(--wheel-size) -
+      2px
+    );
   }
 
   .roulette-bet-actions button {
@@ -1952,23 +1966,27 @@ button {
 
 @media (max-width: 900px) and (orientation: portrait) and (max-height: 590px) {
   .roulette-page {
-    --footer-reserve: 43px;
-    --table-top: 112px;
-    --wheel-size: min(52vw, 188px);
+    --footer-reserve: 41px;
+    --table-top: 96px;
+    --wheel-size: min(70vw, 236px);
   }
 
   .roulette-page[data-phase="spinning"] {
-    --wheel-size: min(92vw, 338px);
+    --wheel-size: min(94vw, 344px);
     --table-top: calc(
       var(--history-height) +
-      var(--wheel-size) +
+      var(--wheel-size) -
       4px
     );
   }
 
   .roulette-page[data-phase="settled"] {
-    --wheel-size: min(92vw, 336px);
-    --table-top: calc(var(--history-height) + min(74vw, 264px));
+    --wheel-size: min(93vw, 340px);
+    --table-top: calc(
+      var(--history-height) +
+      var(--wheel-size) -
+      2px
+    );
   }
 
   .roulette-bet-actions button {
