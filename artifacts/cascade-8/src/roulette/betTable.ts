@@ -201,32 +201,76 @@ export function renderRouletteBetTable() {
         <span class="roulette-bet-hint">SELECT A BET</span>
       </div>
 
-      <div class="roulette-bet-table">
-        <button
-          class="roulette-bet-cell roulette-zero-cell is-green"
-          type="button"
-          data-bet-id="straight-0"
-          data-bet-kind="straight"
-          data-bet-number="0"
-          aria-label="0 straight up"
-        >
-          <span>0</span>
-        </button>
+      <div class="roulette-table-layout">
+        <div class="roulette-bet-table">
+          <button
+            class="roulette-bet-cell roulette-zero-cell is-green"
+            type="button"
+            data-bet-id="straight-0"
+            data-bet-kind="straight"
+            data-bet-number="0"
+            aria-label="0 straight up"
+          >
+            <span>0</span>
+          </button>
 
-        <div class="roulette-number-grid" aria-label="Straight up numbers 1 to 36">
-          ${numberCells}
+          <div class="roulette-number-grid" aria-label="Straight up numbers 1 to 36">
+            ${numberCells}
+          </div>
+
+          <div class="roulette-column-bets" aria-label="Column bets">
+            ${columns}
+          </div>
+
+          <div class="roulette-dozen-bets" aria-label="Dozen bets">
+            ${dozens}
+          </div>
+
+          <div class="roulette-outside-bets" aria-label="Outside bets">
+            ${outside}
+          </div>
         </div>
 
-        <div class="roulette-column-bets" aria-label="Column bets">
-          ${columns}
-        </div>
+        <div class="roulette-mobile-control-rail" aria-label="Mobile wager controls">
+          <button
+            class="roulette-mobile-rail-button roulette-mobile-undo"
+            type="button"
+            data-undo-bet
+            aria-label="Undo last bet"
+            disabled
+          >
+            ↶
+          </button>
 
-        <div class="roulette-dozen-bets" aria-label="Dozen bets">
-          ${dozens}
-        </div>
+          <div class="roulette-mobile-chip-picker" data-mobile-chip-picker>
+            <button
+              class="roulette-mobile-rail-button roulette-mobile-chip-toggle chip-10"
+              type="button"
+              data-mobile-chip-toggle
+              aria-label="Choose chip"
+              aria-expanded="false"
+            >
+              <span data-mobile-selected-chip>10</span>
+            </button>
+            <div
+              class="roulette-mobile-chip-menu"
+              data-mobile-chip-menu
+              aria-label="Chip values"
+              hidden
+            >
+              ${chips}
+            </div>
+          </div>
 
-        <div class="roulette-outside-bets" aria-label="Outside bets">
-          ${outside}
+          <button
+            class="roulette-mobile-rail-button roulette-mobile-double"
+            type="button"
+            data-double-bet
+            aria-label="Double current bet"
+            disabled
+          >
+            ×2
+          </button>
         </div>
       </div>
 
