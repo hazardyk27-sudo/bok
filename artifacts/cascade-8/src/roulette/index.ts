@@ -710,11 +710,17 @@ export function mountRoulette(app: HTMLDivElement) {
       closeMobileHudMenus();
     }
 
-    if (
-      phase !== "settled" &&
-      activeResultPresentation
-    ) {
+    if (phase !== "settled") {
       activeResultPresentation = null;
+      page.dataset.resultVisible = "false";
+      delete page.dataset.resultColor;
+      delete page.dataset.resultLeftNeighbor;
+      delete page.dataset.resultRightNeighbor;
+      delete page.dataset.resultPocketIndex;
+      delete page.dataset.resultMarkerAngle;
+      delete page.dataset.resultHasPayout;
+      delete page.dataset.resultGrossReturn;
+      delete canvas.dataset.rouletteResultMarkerAngle;
     }
 
     renderPhaseTimer();
