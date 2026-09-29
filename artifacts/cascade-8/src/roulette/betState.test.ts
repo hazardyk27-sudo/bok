@@ -157,7 +157,12 @@ describe("roulette local wager state", () => {
     }
 
     expect(getRouletteTotalStake(state.placements)).toBe(5120);
-    expect(state.placements).toHaveLength(512);
+    expect(state.placements).toEqual([
+      {
+        betId: "straight-17",
+        amount: 5120,
+      },
+    ]);
   });
 
   it("compacts repeated placements before an authoritative spin", () => {
@@ -170,6 +175,12 @@ describe("roulette local wager state", () => {
       state = doubleRouletteBets(state);
     }
 
+    expect(state.placements).toEqual([
+      {
+        betId: "straight-17",
+        amount: 640,
+      },
+    ]);
     expect(
       compactRouletteBetPlacements(state.placements),
     ).toEqual([
@@ -193,5 +204,6 @@ describe("roulette local wager state", () => {
     expect(getRouletteDisplayChipValue(499)).toBe(100);
     expect(getRouletteDisplayChipValue(500)).toBe(500);
     expect(getRouletteDisplayChipValue(640)).toBe(500);
+    expect(getRouletteDisplayChipValue(5_120)).toBe(500);
   });
 });
