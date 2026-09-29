@@ -148,6 +148,24 @@ export function mountRoulette(app: HTMLDivElement) {
           aria-label="European roulette wheel"
         >
           <div
+            class="roulette-top-hud"
+            aria-label="Roulette account summary"
+          >
+            <div class="roulette-top-hud__metric">
+              <span>BALANCE</span>
+              <strong data-wallet-balance aria-live="polite">…</strong>
+            </div>
+            <div class="roulette-top-hud__metric">
+              <span>TOTAL BET</span>
+              <strong data-total-bet>0</strong>
+            </div>
+            <div class="roulette-top-hud__metric">
+              <span>LAST WIN</span>
+              <strong data-last-win aria-live="polite">—</strong>
+            </div>
+          </div>
+
+          <div
             class="roulette-betting-timer"
             data-betting-timer
             aria-label="Betting phase timer"
@@ -183,8 +201,15 @@ export function mountRoulette(app: HTMLDivElement) {
   const page = app.querySelector<HTMLElement>("[data-roulette-page]");
   const betStatus = app.querySelector<HTMLElement>("[data-bet-status]");
   const betPanel = app.querySelector<HTMLElement>("[data-roulette-bet-panel]");
-  const walletBalance = app.querySelector<HTMLElement>("[data-wallet-balance]");
-  const totalBet = app.querySelector<HTMLElement>("[data-total-bet]");
+  const walletBalanceDisplays = Array.from(
+    app.querySelectorAll<HTMLElement>("[data-wallet-balance]"),
+  );
+  const totalBetDisplays = Array.from(
+    app.querySelectorAll<HTMLElement>("[data-total-bet]"),
+  );
+  const lastWinDisplays = Array.from(
+    app.querySelectorAll<HTMLElement>("[data-last-win]"),
+  );
   const roundReturn = app.querySelector<HTMLElement>("[data-round-return]");
   const roundProfit = app.querySelector<HTMLElement>("[data-round-profit]");
   const roundOutcome = app.querySelector<HTMLElement>("[data-round-outcome]");
@@ -366,11 +391,30 @@ export function mountRoulette(app: HTMLDivElement) {
   };
 
   const renderWalletBalance = () => {
-    if (!walletBalance) return;
-    walletBalance.textContent =
+    const balanceText =
       walletBalanceCents === null
         ? "…"
         : formatRouletteAmount(walletBalanceCents / 100);
+
+    walletBalanceDisplays.forEach((display) => {
+      display.textContent = balanceText;
+    });
+  };
+
+  const renderLastWin = (
+    settlement: RouletteRoundSettlement,
+  ) => {
+    const lastWinText =
+      settlement.grossReturn > 0
+        ? formatRouletteAmount(
+            settlement.grossReturn,
+          )
+        : "—";
+
+    lastWinDisplays.forEach((display) => {
+      display.textContent =
+        lastWinText;
+    });
   };
 
   const canAffordStake = (stake: number) =>
@@ -556,6 +600,8 @@ export function mountRoulette(app: HTMLDivElement) {
       roundOutcome.dataset.roundOutcome =
         presentation.outcome;
     }
+
+    renderLastWin(settlement);
 
     page.dataset.resultNumber =
       String(
@@ -803,12 +849,14 @@ export function mountRoulette(app: HTMLDivElement) {
       getRouletteTotalStake(
         betState.placements,
       );
-    if (totalBet) {
-      totalBet.textContent =
-        formatRouletteAmount(
-          stake,
-        );
-    }
+    const totalBetText =
+      formatRouletteAmount(
+        stake,
+      );
+    totalBetDisplays.forEach((display) => {
+      display.textContent =
+        totalBetText;
+    });
 
     undoButtons.forEach((button) => {
       button.disabled =
@@ -1092,7 +1140,9 @@ export function mountRoulette(app: HTMLDivElement) {
     })
     .catch(() => {
       walletBalanceCents = null;
-      if (walletBalance) walletBalance.textContent = "ERR";
+      walletBalanceDisplays.forEach((display) => {
+        display.textContent = "ERR";
+      });
       updateSpinAvailability();
     });
 
