@@ -862,10 +862,6 @@ export function mountRoulette(app: HTMLDivElement) {
   };
 
   const reopenBettingAfterResult = () => {
-    if (source === "manual") {
-      automaticSpinBlocked = false;
-    }
-
     window.clearTimeout(
       resultHoldTimer,
     );
@@ -1242,6 +1238,10 @@ export function mountRoulette(app: HTMLDivElement) {
       !canAffordCurrentBet()
     ) {
       return;
+    }
+
+    if (source === "manual") {
+      automaticSpinBlocked = false;
     }
 
     window.clearTimeout(
