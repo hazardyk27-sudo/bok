@@ -1281,15 +1281,43 @@ export function mountRoulette(app: HTMLDivElement) {
       activeBallOrbit = replay.ballOrbit;
     } catch (error) {
       pendingServerSpin = null;
+      activeRotorSpin = null;
+      activeBallOrbit = null;
       canvas.dataset.rouletteState = "ready";
+
+      // A failed/aborted request may still have reached the server. Disable
+      // betting until the authoritative wallet is re-read so a manual retry
+      // cannot accidentally use a stale balance.
+      walletBalanceCents = null;
+      renderWalletBalance();
       setScenePhase("betting");
+      updateSpinAvailability();
+
       if (betStatus) {
         betStatus.textContent =
           error instanceof Error &&
           error.message === "INSUFFICIENT_ROULETTE_CREDITS"
             ? "INSUFFICIENT BALANCE"
-            : "SPIN FAILED";
+            : error instanceof Error &&
+                error.message === "ROULETTE_SPIN_TIMEOUT"
+              ? "SPIN TIMEOUT"
+              : "SPIN FAILED";
       }
+
+      void rouletteWallet
+        .bootstrap()
+        .then((wallet) => {
+          walletBalanceCents =
+            wallet.balanceCents;
+          renderWalletBalance();
+          renderBetState();
+        })
+        .catch(() => {
+          walletBalanceCents = null;
+          renderWalletBalance();
+          updateSpinAvailability();
+        });
+
       return;
     }
 
