@@ -272,6 +272,11 @@ function assertTicketSaleReplay(
   if (
     !Number.isSafeInteger(soldTickets)
     || soldTickets !== requestedQuantity
+    || !Number.isSafeInteger(executionPriceMicrodollars)
+    || executionPriceMicrodollars
+      < MARKET_CONFIG.minTicketPriceMicrodollars
+    || executionPriceMicrodollars
+      > MARKET_CONFIG.maxTicketPriceMicrodollars
     || !Number.isSafeInteger(grossSaleMicrodollars)
     || grossSaleMicrodollars < 0
     || !Number.isSafeInteger(walletCreditCents)
@@ -281,14 +286,10 @@ function assertTicketSaleReplay(
     || saleRemainderMicrodollars
       >= MARKET_MICRODOLLARS_PER_CENT
     || !Number.isSafeInteger(balanceCents)
-    || balanceCents < 0
+    || balanceCents < walletCreditCents
   ) {
     throw new Error("IDLE_STADIUM_RECEIPT_INCOMPLETE");
   }
-
-  requireValidExecutionPrice(
-    executionPriceMicrodollars,
-  );
 
   const expectedGross =
     BigInt(soldTickets)
