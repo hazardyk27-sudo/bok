@@ -1,0 +1,64 @@
+name: Temp Slot 5M Weight Hit Simulation
+
+on:
+  push:
+    branches:
+      - tmp/slot-weight-hit-5m-20260930
+
+permissions:
+  contents: read
+
+jobs:
+  simulate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - name: Checkout exact temp branch
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10.15.0
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install
+        run: pnpm install --frozen-lockfile
+
+      - name: Verify symbol weights
+        shell: bash
+        run: |
+          node - <<'NODE'
+          const fs = require('fs');
+          const s = fs.readFileSync('artifacts/cascade-8/src/config/GameConfig.ts', 'utf8');
+          const pairs = [
+            ['Real Madrid', 20],
+            ['Liverpool', 17],
+            ['Bayern', 14],
+            ['PSG', 11],
+            ['Roma', 10],
+            ['Barcelona', 9],
+            ['Chelsea', 8],
+            ['Beşiktaş', 6],
+            ['Galatasaray', 5],
+          ];
+          let total = 0;
+          for (const [name, weight] of pairs) {
+            const re = new RegExp('name: "' + name + '".*?weight: ' + weight + '(?:\\s|})');
+            if (!re.test(s)) throw new Error('Weight mismatch: ' + name + ' expected ' + weight);
+            total += weight;
+          }
+          if (total !== 100) throw new Error('Normal symbol weight total != 100: ' + total);
+          console.log('WEIGHTS_OK total=' + total + ' weights=' + pairs.map(x => x[1]).join('/'));
+          NODE
+
+      - name: Run 5M fast simulation
+        env:
+          NODE_OPTIONS: --max-old-space-size=6144
+        run: |
+          pnpm --filter @workspace/cascade-8 run simulate -- --spins=5000000 --seed=slot-hit-5m-20260930
