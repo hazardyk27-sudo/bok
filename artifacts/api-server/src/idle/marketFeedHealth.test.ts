@@ -63,6 +63,25 @@ describe("market feed health and reconnect policy", () => {
     }
   });
 
+
+  it("does not reuse the previous connection quote while a new epoch is rebaselining", () => {
+    const health = deriveMarketFeedHealth({
+      source: "binance-btcusdt",
+      status: "REBASELINING",
+      connectionEpoch: 2,
+      latestQuote: {
+        source: "binance-btcusdt",
+        priceMicrodollars: 100_000_000_000,
+        receivedAtMs: 100_000,
+        connectionEpoch: 1,
+        rebaseline: false,
+      },
+    }, 100_001);
+
+    expect(health.healthy).toBe(false);
+    expect(health.derivedStatus).toBe("STALE");
+  });
+
   it("uses capped exponential reconnect backoff", () => {
     expect(calculateReconnectBackoffMs(0)).toBe(1_500);
     expect(calculateReconnectBackoffMs(1)).toBe(3_000);
