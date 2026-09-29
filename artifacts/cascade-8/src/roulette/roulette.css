@@ -523,13 +523,8 @@ button {
   border-radius: 50%;
   border: 1px solid var(--chip-edge);
   color: var(--chip-ink);
-  background-color: var(--chip-fill);
-  background-image:
-    linear-gradient(
-      180deg,
-      color-mix(in srgb, var(--chip-fill) 92%, white 8%),
-      var(--chip-fill)
-    );
+  background: var(--chip-fill) !important;
+  background-image: none !important;
   box-shadow:
     0 2px 6px rgba(0, 0, 0, 0.34);
   font-family:
@@ -546,12 +541,7 @@ button {
 
 .roulette-chip-option::after,
 .roulette-placed-chip::after {
-  content: "";
-  position: absolute;
-  inset: 3px;
-  border: 1px solid rgba(255, 255, 255, 0.14);
-  border-radius: 50%;
-  pointer-events: none;
+  display: none !important;
 }
 
 .roulette-chip-option > span {
@@ -585,37 +575,37 @@ button {
 }
 
 .chip-1 {
-  --chip-fill: #e4e7e9;
+  --chip-fill: #d8dde2;
   --chip-ink: #15191c;
   --chip-edge: #9ba3a8;
 }
 
 .chip-5 {
-  --chip-fill: #d53c35;
+  --chip-fill: #cf4b43;
   --chip-ink: #ffffff;
   --chip-edge: #df8c87;
 }
 
 .chip-10 {
-  --chip-fill: #2876c8;
+  --chip-fill: #2f78c8;
   --chip-ink: #ffffff;
   --chip-edge: #85b7e7;
 }
 
 .chip-25 {
-  --chip-fill: #2c9a61;
+  --chip-fill: #2d9b61;
   --chip-ink: #ffffff;
   --chip-edge: #8bc7a7;
 }
 
 .chip-100 {
-  --chip-fill: #171b1f;
+  --chip-fill: #2f3539;
   --chip-ink: #ffffff;
   --chip-edge: #727c83;
 }
 
 .chip-500 {
-  --chip-fill: #6f4ba8;
+  --chip-fill: #7a56b8;
   --chip-ink: #ffffff;
   --chip-edge: #aa90d1;
 }
@@ -1691,34 +1681,38 @@ button {
   .roulette-placed-chip {
     width:
       clamp(
-        20px,
-        calc(var(--table-width) * 0.098),
-        31px
+        22px,
+        calc(var(--table-width) * 0.106),
+        34px
       );
     height:
       clamp(
-        20px,
-        calc(var(--table-width) * 0.098),
-        31px
+        22px,
+        calc(var(--table-width) * 0.106),
+        34px
       );
     padding: 0 2px;
-    border-width: 1px;
+    border: 1px solid rgba(255, 255, 255, 0.18);
     font-size:
       clamp(
-        7px,
-        calc(var(--table-width) * 0.029),
-        10px
+        8px,
+        calc(var(--table-width) * 0.034),
+        11px
       );
-    font-weight: 900;
+    font-weight: 950;
     line-height: 1;
-    letter-spacing: -0.045em;
+    letter-spacing: -0.05em;
+    opacity: 1 !important;
+    filter: none !important;
+    mix-blend-mode: normal !important;
+    background: var(--chip-fill) !important;
+    background-image: none !important;
     box-shadow:
-      0 2px 6px rgba(0, 0, 0, 0.38);
+      0 2px 6px rgba(0, 0, 0, 0.30);
   }
 
   .roulette-placed-chip::after {
-    inset: 2px;
-    border-color: rgba(255, 255, 255, 0.12);
+    display: none !important;
   }
 
   .roulette-placed-chip,
@@ -1743,24 +1737,29 @@ button {
 
   .roulette-number-cell.has-bet > span,
   .roulette-zero-cell.has-bet > span {
-    opacity: 0.24;
+    opacity: 0 !important;
   }
 
   .roulette-number-cell.is-winning-bet .roulette-placed-chip,
-  .roulette-zero-cell.is-winning-bet .roulette-placed-chip {
-    transform:
-      translate(-50%, -50%)
-      scale(1.06);
-    box-shadow:
-      0 2px 6px rgba(0, 0, 0, 0.40),
-      0 0 0 1px rgba(119, 231, 176, 0.34);
-  }
-
+  .roulette-zero-cell.is-winning-bet .roulette-placed-chip,
   .roulette-number-cell.is-result-number .roulette-placed-chip,
   .roulette-zero-cell.is-result-number .roulette-placed-chip {
+    transform:
+      translate(-50%, -50%)
+      scale(1.03);
     box-shadow:
-      0 2px 6px rgba(0, 0, 0, 0.40),
-      0 0 0 1px rgba(119, 231, 176, 0.42);
+      0 2px 6px rgba(0, 0, 0, 0.30),
+      0 0 0 1px rgba(255, 244, 188, 0.18);
+  }
+
+  .roulette-page .roulette-placed-chip,
+  .roulette-page .roulette-mobile-chip-toggle,
+  .roulette-page .roulette-mobile-chip-menu .roulette-chip-option {
+    opacity: 1 !important;
+    filter: none !important;
+    mix-blend-mode: normal !important;
+    background-color: var(--chip-fill) !important;
+    background-image: none !important;
   }
 
   /* ----- right rail ----- */
@@ -1936,40 +1935,31 @@ button {
   }
 
   .roulette-mobile-chip-toggle {
-    --chip-fill: #2876c8;
+    --chip-fill: #2f78c8;
     --chip-ink: #ffffff;
-    --chip-edge: #85b7e7;
+    --chip-edge: rgba(255, 255, 255, 0.18);
     isolation: isolate;
-    opacity: 1;
+    opacity: 1 !important;
+    mix-blend-mode: normal !important;
     border: 1px solid var(--chip-edge);
     color: var(--chip-ink);
-    background-color: var(--chip-fill);
-    background-image:
-      linear-gradient(
-        180deg,
-        color-mix(in srgb, var(--chip-fill) 92%, white 8%),
-        var(--chip-fill)
-      );
+    background: var(--chip-fill) !important;
+    background-image: none !important;
     box-shadow:
-      0 3px 8px rgba(0, 0, 0, 0.34);
+      0 2px 6px rgba(0, 0, 0, 0.28);
     font-size:
       clamp(
-        8px,
-        calc(var(--control-size) * 0.29),
-        11px
+        9px,
+        calc(var(--control-size) * 0.32),
+        12px
       );
-    font-weight: 900;
-    letter-spacing: -0.04em;
-    text-shadow: none;
+    font-weight: 950;
+    letter-spacing: -0.045em;
+    text-shadow: none !important;
   }
 
   .roulette-mobile-chip-toggle::after {
-    content: "";
-    position: absolute;
-    inset: 3px;
-    border: 1px solid rgba(255, 255, 255, 0.13);
-    border-radius: 50%;
-    pointer-events: none;
+    display: none !important;
   }
 
   .roulette-mobile-chip-toggle > span {
@@ -1978,52 +1968,47 @@ button {
   }
 
   .roulette-mobile-chip-toggle[aria-expanded="true"] {
-    border-color: var(--chip-edge);
-    opacity: 1;
-    background-color: var(--chip-fill);
-    background-image:
-      linear-gradient(
-        180deg,
-        color-mix(in srgb, var(--chip-fill) 92%, white 8%),
-        var(--chip-fill)
-      );
+    border-color: rgba(255, 255, 255, 0.24);
+    opacity: 1 !important;
+    background: var(--chip-fill) !important;
+    background-image: none !important;
     box-shadow:
-      0 3px 8px rgba(0, 0, 0, 0.36),
-      0 0 0 2px rgba(255, 255, 255, 0.10);
+      0 2px 6px rgba(0, 0, 0, 0.30),
+      0 0 0 1px rgba(255, 255, 255, 0.10);
   }
 
   .roulette-mobile-chip-toggle[data-selected-chip="1"] {
-    --chip-fill: #e4e7e9;
+    --chip-fill: #d8dde2;
     --chip-ink: #15191c;
     --chip-edge: #9ba3a8;
   }
 
   .roulette-mobile-chip-toggle[data-selected-chip="5"] {
-    --chip-fill: #d53c35;
+    --chip-fill: #cf4b43;
     --chip-ink: #ffffff;
     --chip-edge: #df8c87;
   }
 
   .roulette-mobile-chip-toggle[data-selected-chip="10"] {
-    --chip-fill: #2876c8;
+    --chip-fill: #2f78c8;
     --chip-ink: #ffffff;
     --chip-edge: #85b7e7;
   }
 
   .roulette-mobile-chip-toggle[data-selected-chip="25"] {
-    --chip-fill: #2c9a61;
+    --chip-fill: #2d9b61;
     --chip-ink: #ffffff;
     --chip-edge: #8bc7a7;
   }
 
   .roulette-mobile-chip-toggle[data-selected-chip="100"] {
-    --chip-fill: #171b1f;
+    --chip-fill: #2f3539;
     --chip-ink: #ffffff;
     --chip-edge: #727c83;
   }
 
   .roulette-mobile-chip-toggle[data-selected-chip="500"] {
-    --chip-fill: #6f4ba8;
+    --chip-fill: #7a56b8;
     --chip-ink: #ffffff;
     --chip-edge: #aa90d1;
   }
@@ -2063,16 +2048,21 @@ button {
 
   .roulette-mobile-chip-menu .roulette-chip-option {
     flex: none;
-    width: 36px;
-    height: 36px;
-    border-width: 1px;
-    font-size: 9px;
-    font-weight: 900;
-    letter-spacing: -0.04em;
+    width: 38px;
+    height: 38px;
+    border: 1px solid rgba(255, 255, 255, 0.18);
+    font-size: 10px;
+    font-weight: 950;
+    letter-spacing: -0.045em;
+    opacity: 1 !important;
+    filter: none !important;
+    mix-blend-mode: normal !important;
+    background: var(--chip-fill) !important;
+    background-image: none !important;
   }
 
   .roulette-mobile-chip-menu .roulette-chip-option::after {
-    inset: 3px;
+    display: none !important;
   }
 
   /* ----- independent bottom footer ----- */
@@ -2321,18 +2311,10 @@ button {
     z-index: 4;
   }
 
-  .roulette-page[data-phase="spinning"] .roulette-table-layout {
-    opacity: 1;
-    filter:
-      saturate(0.72)
-      brightness(0.78);
-  }
-
+  .roulette-page[data-phase="spinning"] .roulette-table-layout,
   .roulette-page[data-phase="settled"] .roulette-table-layout {
     opacity: 1;
-    filter:
-      saturate(0.82)
-      brightness(0.86);
+    filter: none;
   }
 
   .roulette-page[data-phase="spinning"] .roulette-mobile-control-rail,
