@@ -2111,27 +2111,41 @@ button {
   /* ----- right rail ----- */
 
   .roulette-mobile-control-rail {
+    --rail-button-size:
+      clamp(
+        30px,
+        calc(var(--control-size) + 2px),
+        42px
+      );
     position: absolute;
-    left: calc(100% + 3px);
+    left: calc(100% + 4px);
     top: 50%;
     transform: translate(-1px, -50%);
     box-sizing: border-box;
+    min-width: calc(var(--rail-button-size) + 8px);
     display: grid;
-    grid-template-rows: repeat(5, var(--control-size));
+    grid-template-rows: repeat(6, var(--rail-button-size));
     align-items: center;
     justify-items: center;
     align-content: center;
-    gap: calc(var(--control-gap) * 0.68);
-    padding: 4px 2px;
-    border: 1px solid rgba(241, 234, 218, 0.08);
-    border-radius: 999px;
-    background: rgba(4, 5, 6, 0.38);
+    gap: clamp(4px, calc(var(--control-gap) * 0.58), 7px);
+    padding: 6px 4px;
+    border: 1px solid rgba(241, 234, 218, 0.14);
+    border-radius: 22px;
+    background:
+      linear-gradient(
+        180deg,
+        rgba(13, 15, 16, 0.96),
+        rgba(5, 6, 7, 0.94)
+      );
     box-shadow:
-      0 8px 22px rgba(0, 0, 0, 0.16);
-    backdrop-filter: blur(2px);
+      0 10px 28px rgba(0, 0, 0, 0.34),
+      inset 0 1px 0 rgba(255, 255, 255, 0.035);
+    backdrop-filter: blur(7px);
     transition:
       opacity 280ms ease,
-      filter 280ms ease;
+      filter 280ms ease,
+      transform 220ms ease;
     z-index: 14;
   }
 
@@ -2143,7 +2157,7 @@ button {
 
   .roulette-mobile-stats-panel {
     position: absolute;
-    right: calc(var(--control-size) + 7px);
+    right: calc(var(--rail-button-size) + 10px);
     top: 50%;
     transform: translateY(-50%);
     border: 1px solid rgba(188, 191, 185, 0.30);
@@ -2203,50 +2217,59 @@ button {
 
   .roulette-mobile-rail-button {
     box-sizing: border-box;
-    width: var(--control-size);
-    height: var(--control-size);
-    min-width: var(--control-size);
-    min-height: var(--control-size);
+    width: var(--rail-button-size);
+    height: var(--rail-button-size);
+    min-width: var(--rail-button-size);
+    min-height: var(--rail-button-size);
     padding: 0;
-    border: 1px solid rgba(241, 234, 218, 0.34);
+    border: 1px solid rgba(241, 234, 218, 0.28);
     border-radius: 50%;
     display: grid;
     place-items: center;
-    color: #f2ede0;
-    background: #08090a;
+    color: #f4efe3;
+    background: #0b0d0e;
     box-shadow:
-      0 4px 10px rgba(0, 0, 0, 0.28),
-      inset 0 1px 0 rgba(255, 255, 255, 0.035);
+      0 3px 9px rgba(0, 0, 0, 0.34),
+      inset 0 1px 0 rgba(255, 255, 255, 0.055),
+      inset 0 -1px 0 rgba(0, 0, 0, 0.30);
     font:
-      750
-      clamp(8px, calc(var(--control-size) * 0.30), 12px)/1
+      790
+      clamp(9px, calc(var(--rail-button-size) * 0.30), 13px)/1
       system-ui,
       -apple-system,
       BlinkMacSystemFont,
       "Segoe UI",
       sans-serif;
+    transition:
+      transform 110ms ease,
+      filter 110ms ease,
+      border-color 140ms ease,
+      background 140ms ease,
+      box-shadow 140ms ease;
   }
 
   .roulette-mobile-rail-button:disabled {
-    opacity: 0.24;
+    opacity: 0.30;
+    filter: saturate(0.45);
   }
 
   .roulette-mobile-rail-button:not(:disabled):active {
-    transform: scale(0.92);
-    filter: brightness(1.13);
+    transform: scale(0.94);
+    filter: brightness(1.18);
   }
 
   .roulette-mobile-rail-button[aria-expanded="true"] {
-    border-color: rgba(247, 238, 215, 0.62);
-    background: #111314;
+    border-color: rgba(247, 238, 215, 0.72);
+    background: #151718;
     box-shadow:
-      0 5px 12px rgba(0, 0, 0, 0.34),
-      0 0 0 1px rgba(247, 238, 215, 0.08);
+      0 5px 12px rgba(0, 0, 0, 0.38),
+      0 0 0 1px rgba(247, 238, 215, 0.12),
+      inset 0 1px 0 rgba(255, 255, 255, 0.06);
   }
 
   .roulette-rail-icon {
-    width: 48%;
-    height: 48%;
+    width: 52%;
+    height: 52%;
     display: block;
     overflow: visible;
     fill: none;
@@ -2259,14 +2282,28 @@ button {
 
   .roulette-rail-icon--undo,
   .roulette-rail-icon--rebet {
-    width: 52%;
-    height: 52%;
+    width: 56%;
+    height: 56%;
   }
 
   .roulette-mobile-double {
-    font-size: clamp(9px, calc(var(--control-size) * 0.31), 12px);
-    font-weight: 800;
-    letter-spacing: -0.02em;
+    border-color: rgba(241, 234, 218, 0.42);
+    font-size: clamp(10px, calc(var(--rail-button-size) * 0.31), 13px);
+    font-weight: 850;
+    letter-spacing: -0.025em;
+  }
+
+  .roulette-mobile-clear {
+    border-color: rgba(210, 126, 116, 0.38);
+    color: #efc4bd;
+    background: #100d0d;
+    font-size: clamp(10px, calc(var(--rail-button-size) * 0.32), 13px);
+    font-weight: 900;
+    letter-spacing: 0;
+  }
+
+  .roulette-mobile-clear:not(:disabled):active {
+    background: #181010;
   }
 
   .roulette-mobile-chip-picker {
@@ -2282,16 +2319,17 @@ button {
     isolation: isolate;
     opacity: 1 !important;
     mix-blend-mode: normal !important;
-    border: 1px solid var(--chip-edge);
+    border: 1.5px solid var(--chip-edge);
     color: var(--chip-ink);
     background: var(--chip-fill) !important;
     background-image: none !important;
     box-shadow:
-      0 2px 6px rgba(0, 0, 0, 0.28);
+      0 3px 8px rgba(0, 0, 0, 0.34),
+      inset 0 0 0 1px rgba(255, 255, 255, 0.07);
     font-size:
       clamp(
         9px,
-        calc(var(--control-size) * 0.32),
+        calc(var(--rail-button-size) * 0.32),
         12px
       );
     font-weight: 950;
@@ -2356,7 +2394,7 @@ button {
 
   .roulette-mobile-chip-menu {
     position: absolute;
-    right: calc(var(--control-size) + 7px);
+    right: calc(var(--rail-button-size) + 10px);
     top: 50%;
     transform: translateY(-50%);
     width: max-content;
@@ -2501,10 +2539,9 @@ button {
     width: 100%;
     display: grid;
     grid-template-columns:
-      minmax(0, 0.72fr)
-      minmax(0, 0.72fr)
-      minmax(0, 1.55fr);
-    gap: 4px;
+      minmax(0, 0.82fr)
+      minmax(0, 1.68fr);
+    gap: 5px;
   }
 
   .roulette-bet-actions [data-undo-bet] {
@@ -2817,7 +2854,15 @@ button {
   }
 
   .roulette-mobile-control-rail {
-    left: calc(100% + 1px);
+    left: calc(100% + 2px);
+    --rail-button-size:
+      clamp(
+        28px,
+        calc(var(--control-size) + 1px),
+        38px
+      );
+    gap: 4px;
+    padding: 5px 3px;
   }
 
   .roulette-bet-console {

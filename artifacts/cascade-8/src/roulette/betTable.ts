@@ -333,6 +333,16 @@ export function renderRouletteBetTable() {
               <path d="M15.5 4.7A6.2 6.2 0 1 0 16.1 13" />
             </svg>
           </button>
+
+          <button
+            class="roulette-mobile-rail-button roulette-mobile-clear"
+            type="button"
+            data-clear-bets
+            aria-label="Clear all bets"
+            disabled
+          >
+            C
+          </button>
         </div>
       </div>
 
@@ -362,7 +372,6 @@ export function renderRouletteBetTable() {
 
         <div class="roulette-bet-actions">
           <button type="button" data-undo-bet disabled>UNDO</button>
-          <button type="button" data-clear-bets disabled>CLEAR</button>
           <button type="button" data-rebet disabled>REBET</button>
           <button class="roulette-spin-button" type="button" data-spin-button>
             SPIN
