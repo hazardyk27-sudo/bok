@@ -9,8 +9,8 @@ import { removeAndRefill } from "./WinEvaluator";
 import { isMultiplierCore, type BoardCell, type RandomSource } from "./types";
 
 const first: RandomSource = { nextFloat: () => 0 };
-const baseCoreRoll: RandomSource = { nextFloat: () => 0.045 };
-const bonusInitialCoreRoll: RandomSource = { nextFloat: () => 0.06 };
+const baseCoreRoll: RandomSource = { nextFloat: () => 0.036 };
+const bonusInitialCoreRoll: RandomSource = { nextFloat: () => 0.02 };
 const bonusRefillCoreRoll: RandomSource = { nextFloat: () => 0.06 };
 const last: RandomSource = { nextFloat: () => 0.999999 };
 
@@ -18,7 +18,7 @@ describe("physical Multiplier Cores", () => {
   it("never spawns in the Base initial board", () => {
     expect(generateInitialBoard(first, "base").flat().every((cell) => !isMultiplierCore(cell))).toBe(true);
   });
-  it("can spawn in Base refills using the independent 1% config", () => {
+  it("can spawn in Base refills using the configured Core chance", () => {
     const cells = generateRefillCells(baseCoreRoll, 3, true, "base");
     expect(cells.every((cell) => isMultiplierCore(cell))).toBe(true);
     expect((cells[0] as Exclude<BoardCell, string>).value).toBe(2);
