@@ -78,6 +78,21 @@ describe("Storage upgrade transaction contract", () => {
     );
   });
 
+  it("revalidates replay cost/balance against canonical config", () => {
+    expect(storageSource).toContain("const targetConfig =");
+    expect(storageSource).toContain("costCents !== targetConfig.upgradeCostCents");
+    expect(storageSource).toContain("balanceCents < 0");
+  });
+
+  it("guards receipt completion by key, session, and action", () => {
+    expect(storageSource).toContain("AND session_id = $5");
+    expect(storageSource).toContain("AND action_type = $6");
+    expect(storageSource).toContain("RETURNING id");
+    expect(storageSource).toContain(
+      'throw new Error("IDLE_STADIUM_RECEIPT_UPDATE_CONFLICT")',
+    );
+  });
+
   it("maps Storage Lv20 max-level conflicts explicitly", () => {
     expect(routeSource).toContain('"IDLE_STORAGE_MAX_LEVEL"');
   });
