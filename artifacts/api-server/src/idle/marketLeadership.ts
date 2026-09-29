@@ -11,7 +11,7 @@ import type { PoolClient } from "@workspace/db";
 export const IDLE_MARKET_ADVISORY_LOCK_NAMESPACE = 1_229_212_741;
 export const IDLE_MARKET_ADVISORY_LOCK_KEY = 1_296_782_385;
 
-type MarketLeadershipClient = Pick<
+export type MarketLeadershipClient = Pick<
   PoolClient,
   "query" | "release"
 > & {
