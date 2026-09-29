@@ -2000,8 +2000,8 @@ button {
     letter-spacing: 0.01em;
   }
 
-  .roulette-dozen-cell > span,
-  .roulette-outside-cell > span:not(.roulette-diamond) {
+  .roulette-dozen-cell > span:not(.roulette-placed-chip),
+  .roulette-outside-cell > span:not(.roulette-diamond):not(.roulette-placed-chip) {
     writing-mode: vertical-rl;
     transform: rotate(180deg);
     text-orientation: mixed;
@@ -2810,9 +2810,9 @@ button {
 
   .roulette-page[data-phase="spinning"] .roulette-number-cell:not(.has-bet) > span,
   .roulette-page[data-phase="spinning"] .roulette-zero-cell:not(.has-bet) > span,
-  .roulette-page[data-phase="spinning"] .roulette-column-cell > span,
-  .roulette-page[data-phase="spinning"] .roulette-dozen-cell > span,
-  .roulette-page[data-phase="spinning"] .roulette-outside-cell > span:not(.roulette-diamond) {
+  .roulette-page[data-phase="spinning"] .roulette-column-cell > span:not(.roulette-placed-chip),
+  .roulette-page[data-phase="spinning"] .roulette-dozen-cell > span:not(.roulette-placed-chip),
+  .roulette-page[data-phase="spinning"] .roulette-outside-cell > span:not(.roulette-diamond):not(.roulette-placed-chip) {
     opacity: 0.72;
   }
 
@@ -3751,5 +3751,152 @@ button {
       0 2px 6px rgba(0, 0, 0, 0.42),
       inset 0 1px 0 rgba(255, 255, 255, 0.30),
       inset 0 -1px 0 rgba(0, 0, 0, 0.25);
+  }
+}
+
+
+/* Part 8 — readable centered placed chips */
+.roulette-bet-cell > .roulette-placed-chip {
+  left: 50% !important;
+  top: 50% !important;
+  right: auto !important;
+  bottom: auto !important;
+  transform: translate(-50%, -50%) !important;
+  writing-mode: horizontal-tb !important;
+  text-orientation: mixed !important;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0;
+  overflow: hidden;
+}
+
+.roulette-bet-cell.is-winning-bet > .roulette-placed-chip,
+.roulette-bet-cell.is-result-number > .roulette-placed-chip {
+  transform: translate(-50%, -50%) !important;
+}
+
+.roulette-placed-chip {
+  background:
+    repeating-conic-gradient(
+      from -7deg,
+      rgba(250, 245, 232, 0.92) 0deg 6deg,
+      var(--chip-dark) 6deg 12deg,
+      var(--chip-fill) 12deg 42deg
+    ) !important;
+}
+
+.roulette-placed-chip::before {
+  inset: 3px;
+  border:
+    1px solid
+    color-mix(
+      in srgb,
+      var(--chip-edge) 68%,
+      #fff7df 32%
+    );
+  background:
+    radial-gradient(
+      circle at 36% 28%,
+      rgba(255, 255, 255, 0.24),
+      transparent 34%
+    ),
+    linear-gradient(
+      145deg,
+      var(--chip-light),
+      var(--chip-fill) 58%,
+      var(--chip-dark)
+    );
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.20),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.16);
+  z-index: 0;
+}
+
+.roulette-placed-chip::after {
+  display: none !important;
+}
+
+.roulette-placed-chip__value,
+.roulette-placed-chip__suffix {
+  position: relative;
+  z-index: 2;
+  display: inline-block;
+  line-height: 1;
+}
+
+.roulette-placed-chip__value {
+  transform: translateY(-0.1px);
+}
+
+.roulette-placed-chip__suffix {
+  margin-left: 0.5px;
+  font-size: 0.62em;
+  font-weight: 900;
+  letter-spacing: -0.02em;
+  opacity: 0.94;
+  transform: translateY(0.2px);
+}
+
+@media (max-width: 900px) and (orientation: portrait) {
+  .roulette-placed-chip {
+    width:
+      clamp(
+        20px,
+        calc(var(--table-width) * 0.082),
+        26px
+      );
+    height:
+      clamp(
+        20px,
+        calc(var(--table-width) * 0.082),
+        26px
+      );
+    min-width: 0;
+    min-height: 0;
+    max-width: calc(100% - 12px);
+    max-height: calc(100% - 10px);
+    padding: 0 2px;
+    border-width: 1px;
+  }
+
+  .roulette-placed-chip::before {
+    inset: 3px;
+  }
+
+  .roulette-placed-chip[data-amount-scale="short"] {
+    font-size:
+      clamp(
+        8.8px,
+        calc(var(--table-width) * 0.033),
+        10.5px
+      );
+    letter-spacing: -0.025em;
+  }
+
+  .roulette-placed-chip[data-amount-scale="medium"] {
+    font-size:
+      clamp(
+        7.7px,
+        calc(var(--table-width) * 0.029),
+        9px
+      );
+    letter-spacing: -0.035em;
+  }
+
+  .roulette-placed-chip[data-amount-scale="long"] {
+    font-size:
+      clamp(
+        6.8px,
+        calc(var(--table-width) * 0.0255),
+        8px
+      );
+    letter-spacing: -0.04em;
+  }
+
+  .roulette-placed-chip[data-amount-scale="long"]
+    .roulette-placed-chip__suffix {
+    font-size: 0.58em;
+    margin-left: 0.2px;
   }
 }
