@@ -5,10 +5,11 @@ import {
 } from "./betRules";
 import {
   clearRouletteBets,
+  compactRouletteBetPlacements,
   createRouletteBetState,
   doubleRouletteBets,
   getRouletteBetTotals,
-  getRouletteLastChipByBet,
+  getRouletteDisplayChipValue,
   getRouletteTotalStake,
   isRouletteChipValue,
   placeRouletteBet,
@@ -372,15 +373,39 @@ export function mountRoulette(app: HTMLDivElement) {
         : formatRouletteAmount(walletBalanceCents / 100);
   };
 
-  const canAffordCurrentBet = () =>
+  const canAffordStake = (stake: number) =>
     walletBalanceCents !== null &&
-    getRouletteTotalStake(betState.placements) * 100 <= walletBalanceCents;
+    stake * 100 <= walletBalanceCents;
+
+  const canAffordCurrentBet = () =>
+    canAffordStake(
+      getRouletteTotalStake(
+        betState.placements,
+      ),
+    );
+
+  const canPlaceSelectedChip = () =>
+    canAffordStake(
+      getRouletteTotalStake(
+        betState.placements,
+      ) + betState.selectedChip,
+    );
 
   const canDoubleCurrentBet = () =>
-    walletBalanceCents !== null &&
     betState.placements.length > 0 &&
-    betState.placements.length <= 250 &&
-    getRouletteTotalStake(betState.placements) * 200 <= walletBalanceCents;
+    canAffordStake(
+      getRouletteTotalStake(
+        betState.placements,
+      ) * 2,
+    );
+
+  const canRebetPreviousRound = () =>
+    betState.previousRoundPlacements.length > 0 &&
+    canAffordStake(
+      getRouletteTotalStake(
+        betState.previousRoundPlacements,
+      ),
+    );
 
   const setMobileStatsOpen = (open: boolean) => {
     if (mobileStatsPanel) {
@@ -613,11 +638,6 @@ export function mountRoulette(app: HTMLDivElement) {
       getRouletteBetTotals(
         betState.placements,
       );
-    const lastChipByBet =
-      getRouletteLastChipByBet(
-        betState.placements,
-      );
-
     app
       .querySelectorAll<HTMLElement>(
         "[data-bet-id]",
@@ -666,15 +686,17 @@ export function mountRoulette(app: HTMLDivElement) {
           `${baseAriaLabel}, bet ${amount}`,
         );
 
-        const lastChip =
-          lastChipByBet[betId] ?? 10;
+        const displayChip =
+          getRouletteDisplayChipValue(
+            amount,
+          );
         const chip =
           document.createElement("span");
         chip.className =
-          `roulette-placed-chip chip-${lastChip}`;
+          `roulette-placed-chip chip-${displayChip}`;
         const chipPalette =
           ROULETTE_PLACED_CHIP_PALETTE[
-            lastChip
+            displayChip
           ];
         chip.style.setProperty(
           "--chip-fill",
@@ -801,8 +823,7 @@ export function mountRoulette(app: HTMLDivElement) {
     }
     rebetButtons.forEach((button) => {
       button.disabled =
-        betState.previousRoundPlacements
-          .length === 0;
+        !canRebetPreviousRound();
     });
 
     updateSpinAvailability();
@@ -946,7 +967,9 @@ export function mountRoulette(app: HTMLDivElement) {
         `roulette_${crypto.randomUUID().replaceAll("-", "")}`;
 
       pendingServerSpin = await rouletteWallet.spin(
-        betState.placements,
+        compactRouletteBetPlacements(
+          betState.placements,
+        ),
         idempotencyKey,
       );
 
@@ -1142,6 +1165,16 @@ export function mountRoulette(app: HTMLDivElement) {
         const betId =
           betCell.dataset.betId;
         if (betId) {
+          if (!canPlaceSelectedChip()) {
+            if (betStatus) {
+              betStatus.textContent =
+                walletBalanceCents === null
+                  ? "WAITING FOR WALLET"
+                  : "INSUFFICIENT BALANCE";
+            }
+            return;
+          }
+
           betState =
             placeRouletteBet(
               betState,
@@ -1201,6 +1234,16 @@ export function mountRoulette(app: HTMLDivElement) {
           "[data-rebet]",
         )
       ) {
+        if (!canRebetPreviousRound()) {
+          if (betStatus) {
+            betStatus.textContent =
+              walletBalanceCents === null
+                ? "WAITING FOR WALLET"
+                : "INSUFFICIENT BALANCE";
+          }
+          return;
+        }
+
         betState =
           rebetRouletteRound(
             betState,
