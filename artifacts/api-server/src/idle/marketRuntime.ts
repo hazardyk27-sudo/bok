@@ -116,7 +116,7 @@ export type TicketMarketSnapshotListener = (
 
 export function alignMarketTickTime(
   value: Date,
-  tickMs = MARKET_CONFIG.tickMs,
+  tickMs: number = MARKET_CONFIG.tickMs,
 ) {
   const time = value.getTime();
 
@@ -135,7 +135,7 @@ export function alignMarketTickTime(
 
 export function getDelayUntilNextMarketTick(
   value: Date,
-  tickMs = MARKET_CONFIG.tickMs,
+  tickMs: number = MARKET_CONFIG.tickMs,
 ) {
   const time = value.getTime();
 
