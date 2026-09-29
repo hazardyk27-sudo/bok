@@ -79,4 +79,33 @@ describe("Part 25 canonical Businesses shell", () => {
     );
     expect(idleCssSource).toContain("#00072d");
   });
+
+  it("connects the Part 26 premium sale, progression and 24h market controls", () => {
+    for (const marker of [
+      "sellIdleStadiumTickets",
+      "buyIdleStadiumSeats",
+      "upgradeIdleStadiumLevel",
+      "upgradeIdleStadiumSpeed",
+      "upgradeIdleStadiumStorage",
+      'data-idle-sell-ratio="0.25"',
+      'data-idle-sell-ratio="0.5"',
+      'data-idle-sell-ratio="0.75"',
+      'data-idle-sell-ratio="1"',
+      "data-idle-details-drawer",
+      "data-idle-market-drawer",
+      "fetchIdleMarketHistory",
+    ]) {
+      expect(stadiumPremiumSource).toContain(marker);
+    }
+
+    expect(stadiumPremiumCss).toContain(
+      ".stadium-premium-actions",
+    );
+    expect(stadiumPremiumCss).toContain(
+      ".stadium-drawer-sheet",
+    );
+    expect(stadiumPremiumCss).toContain(
+      "@media (max-width:760px)",
+    );
+  });
 });
