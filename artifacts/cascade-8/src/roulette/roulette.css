@@ -1084,7 +1084,7 @@ button {
     --table-top: clamp(126px, 22dvh, 178px);
     --wheel-size: min(58vw, 238px);
     --table-width: min(
-      74vw,
+      84vw,
       calc(
         (
           100dvh -
@@ -1831,7 +1831,11 @@ button {
 
   .roulette-page[data-phase="spinning"] {
     --wheel-size: min(96vw, 430px);
-    --table-top: calc(var(--history-height) + min(80vw, 290px));
+    --table-top: calc(
+      var(--history-height) +
+      var(--wheel-size) +
+      8px
+    );
     --table-width: min(
       41vw,
       176px,
@@ -1849,7 +1853,11 @@ button {
 
   .roulette-page[data-phase="settled"] {
     --wheel-size: min(94vw, 418px);
-    --table-top: calc(var(--history-height) + min(78vw, 282px));
+    --table-top: calc(
+      var(--history-height) +
+      var(--wheel-size) +
+      6px
+    );
     --table-width: min(
       43vw,
       184px,
