@@ -12,6 +12,7 @@ import { MILLISECONDS_PER_DAY } from "../../../cascade-8/src/idle/utils";
 import {
   IDLE_BUSINESS_IDS,
   IDLE_MICROCENTS_PER_CENT,
+  isActiveIdleBusinessId,
   type IdleBusinessId,
   type IdleBusinessStorageState,
 } from "./storage";
@@ -620,7 +621,11 @@ export class IdleRepository {
   ) {
     const snapshot = await this.getSessionState(sessionId, serverNow);
     const ownedBusinessIds = snapshot.businesses
-      .filter((business) => business.businessLevel !== null)
+      .filter(
+        (business) =>
+          isActiveIdleBusinessId(business.businessId)
+          && business.businessLevel !== null,
+      )
       .map((business) => business.businessId);
 
     const collections = [];
