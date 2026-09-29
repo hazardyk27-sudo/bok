@@ -34,7 +34,7 @@ async function readResponse<T>(response: Response): Promise<T> {
 
 function isAbortError(error: unknown) {
   return (
-    error instanceof DOMException &&
+    error instanceof Error &&
     error.name === "AbortError"
   );
 }
@@ -47,7 +47,7 @@ async function fetchWithTimeout(
   const controller =
     new AbortController();
   const timeoutId =
-    window.setTimeout(
+    globalThis.setTimeout(
       () => controller.abort(),
       timeoutMs,
     );
@@ -58,7 +58,7 @@ async function fetchWithTimeout(
       signal: controller.signal,
     });
   } finally {
-    window.clearTimeout(
+    globalThis.clearTimeout(
       timeoutId,
     );
   }
