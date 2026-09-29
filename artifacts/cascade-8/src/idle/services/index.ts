@@ -29,28 +29,68 @@ async function readApiError(
   return body?.error ?? fallback;
 }
 
+export class IdleRequestError extends Error {
+  readonly outcomeUnknown: boolean;
+
+  constructor(
+    code: string,
+    options: {
+      outcomeUnknown?: boolean;
+      cause?: unknown;
+    } = {},
+  ) {
+    super(
+      code,
+      options.cause === undefined
+        ? undefined
+        : { cause: options.cause },
+    );
+    this.name = "IdleRequestError";
+    this.outcomeUnknown =
+      options.outcomeUnknown ?? false;
+  }
+}
+
 async function postIdleJson<T>(
   endpoint: string,
   body: Record<string, unknown>,
   fallbackError: string,
 ): Promise<T> {
-  const response = await fetch(endpoint, {
-    method: "POST",
-    credentials: "same-origin",
-    headers: {
-      Accept: "application/json",
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify(body),
-  });
+  let response: Response;
 
-  if (!response.ok) {
-    throw new Error(
-      await readApiError(response, fallbackError),
+  try {
+    response = await fetch(endpoint, {
+      method: "POST",
+      credentials: "same-origin",
+      headers: {
+        Accept: "application/json",
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(body),
+    });
+  } catch (cause) {
+    throw new IdleRequestError(
+      fallbackError,
+      { outcomeUnknown: true, cause },
     );
   }
 
-  return response.json() as Promise<T>;
+  if (!response.ok) {
+    const code =
+      await readApiError(response, fallbackError);
+    throw new IdleRequestError(code, {
+      outcomeUnknown: response.status >= 500,
+    });
+  }
+
+  try {
+    return await response.json() as T;
+  } catch (cause) {
+    throw new IdleRequestError(
+      fallbackError,
+      { outcomeUnknown: true, cause },
+    );
+  }
 }
 
 export async function fetchIdleStadiumState():
@@ -152,7 +192,7 @@ export function projectIdleStadiumLive(
 
 export async function buyIdleStadiumSeats(
   quantity: number,
-  idempotencyKey = crypto.randomUUID(),
+  idempotencyKey: string,
 ) {
   return postIdleJson<IdleSeatPurchaseResponse>(
     "/api/idle/stadium/seats/buy",
@@ -162,7 +202,7 @@ export async function buyIdleStadiumSeats(
 }
 
 export async function upgradeIdleStadiumLevel(
-  idempotencyKey = crypto.randomUUID(),
+  idempotencyKey: string,
 ) {
   return postIdleJson<IdleStadiumLevelUpgradeResponse>(
     "/api/idle/stadium/upgrade",
@@ -172,7 +212,7 @@ export async function upgradeIdleStadiumLevel(
 }
 
 export async function upgradeIdleStadiumSpeed(
-  idempotencyKey = crypto.randomUUID(),
+  idempotencyKey: string,
 ) {
   return postIdleJson<IdleSpeedUpgradeResponse>(
     "/api/idle/stadium/speed/upgrade",
@@ -182,7 +222,7 @@ export async function upgradeIdleStadiumSpeed(
 }
 
 export async function upgradeIdleStadiumStorage(
-  idempotencyKey = crypto.randomUUID(),
+  idempotencyKey: string,
 ) {
   return postIdleJson<IdleStorageUpgradeResponse>(
     "/api/idle/stadium/storage/upgrade",
@@ -193,7 +233,7 @@ export async function upgradeIdleStadiumStorage(
 
 export async function sellIdleStadiumTickets(
   quantityTickets: number,
-  idempotencyKey = crypto.randomUUID(),
+  idempotencyKey: string,
 ) {
   return postIdleJson<IdleTicketSaleResponse>(
     "/api/idle/stadium/tickets/sell",
