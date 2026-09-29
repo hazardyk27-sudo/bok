@@ -257,7 +257,7 @@ export async function checkpointStadiumProduction(
       ? serverNow
       : state.productionCheckpointAt;
 
-  await client.query(
+  const checkpointUpdate = await client.query(
     `UPDATE idle_stadium_states
         SET stored_microtickets = $2,
             production_checkpoint_at = $3,
@@ -269,6 +269,10 @@ export async function checkpointStadiumProduction(
       checkpointAt,
     ],
   );
+
+  if ((checkpointUpdate.rowCount ?? 0) !== 1) {
+    throw new Error("IDLE_STADIUM_CHECKPOINT_UPDATE_CONFLICT");
+  }
 
   const checkpointedState: StadiumStorageState = {
     ...state,
