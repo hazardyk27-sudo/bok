@@ -1565,7 +1565,7 @@ button {
     background: #070808;
     font:
       760
-      clamp(10px, calc(var(--table-width) * 0.041), 13.5px)/1
+      clamp(11.5px, calc(var(--table-width) * 0.046), 14.5px)/1
       system-ui,
       -apple-system,
       BlinkMacSystemFont,
@@ -1628,7 +1628,7 @@ button {
   }
 
   .roulette-dozen-cell {
-    font-size: clamp(11px, calc(var(--table-width) * 0.050), 15px);
+    font-size: clamp(14px, calc(var(--table-width) * 0.060), 18px);
     font-weight: 820;
     letter-spacing: 0;
   }
