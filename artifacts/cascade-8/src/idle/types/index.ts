@@ -92,10 +92,20 @@ export type IdleLiveStadiumState = IdleStadiumServerState & {
   storageFillRatio: number;
 };
 
+export type IdleTicketMarketCurrentResponse = {
+  serverTime: string;
+  market: TicketMarketSnapshot;
+};
+
 export type IdleTicketMarketHistoryResponse = {
   serverTime: string;
   windowHours: 24;
   points: TicketMarketHistoryPoint[];
+};
+
+export type IdleTicketMarketLiveEvent = {
+  event: "market";
+  market: TicketMarketSnapshot;
 };
 
 export type IdleSeatPurchaseResponse = {
