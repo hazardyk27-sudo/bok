@@ -1100,7 +1100,7 @@ button {
     --mobile-number-row: calc(var(--mobile-table-width) * 0.127);
     --mobile-column-row: calc(var(--mobile-table-width) * 0.116);
     --mobile-control-size: clamp(
-      27px,
+      24px,
       calc(var(--mobile-table-width) * 0.15),
       42px
     );
@@ -1262,13 +1262,13 @@ button {
   .roulette-page[data-phase="spinning"] {
     --wheel-size: min(96vw, 430px);
     --mobile-wheel-row: calc(var(--wheel-size) + 22px);
-    --mobile-table-width: min(42vw, 182px);
+    --mobile-table-width: min(46vw, 198px);
   }
 
   .roulette-page[data-phase="settled"] {
     --wheel-size: min(94vw, 418px);
     --mobile-wheel-row: calc(var(--wheel-size) + 22px);
-    --mobile-table-width: min(44vw, 190px);
+    --mobile-table-width: min(48vw, 204px);
   }
 
   .roulette-page[data-phase="spinning"] .roulette-stage,
@@ -1713,7 +1713,7 @@ button {
 
   .roulette-mobile-chip-menu {
     position: absolute;
-    right: 43px;
+    right: calc(var(--mobile-control-size) + 7px);
     top: 50%;
     transform: translateY(-50%);
     width: max-content;
@@ -1911,13 +1911,13 @@ button {
   .roulette-page[data-phase="spinning"] {
     --wheel-size: min(96vw, 380px);
     --mobile-wheel-row: calc(var(--wheel-size) + 20px);
-    --mobile-table-width: min(41vw, 158px);
+    --mobile-table-width: min(45vw, 174px);
   }
 
   .roulette-page[data-phase="settled"] {
     --wheel-size: min(94vw, 368px);
     --mobile-wheel-row: calc(var(--wheel-size) + 20px);
-    --mobile-table-width: min(43vw, 166px);
+    --mobile-table-width: min(47vw, 181px);
   }
 
   .roulette-recent-strip {
@@ -1945,24 +1945,29 @@ button {
 
 @media (max-width: 380px) and (orientation: portrait) {
   .roulette-table-layout {
-    grid-template-columns: var(--mobile-table-width) 34px;
-    gap: 4px;
+    grid-template-columns:
+      var(--mobile-table-width)
+      var(--mobile-control-size);
+    gap: var(--mobile-control-gap);
   }
 
   .roulette-mobile-control-rail {
-    grid-template-rows: 32px 32px 32px;
-    gap: 10px;
+    grid-template-rows:
+      var(--mobile-control-size)
+      var(--mobile-control-size)
+      var(--mobile-control-size);
+    gap: var(--mobile-control-gap);
   }
 
   .roulette-mobile-rail-button {
-    width: 32px;
-    height: 32px;
-    min-width: 32px;
-    min-height: 32px;
+    width: var(--mobile-control-size);
+    height: var(--mobile-control-size);
+    min-width: var(--mobile-control-size);
+    min-height: var(--mobile-control-size);
   }
 
   .roulette-mobile-chip-menu {
-    right: 38px;
+    right: calc(var(--mobile-control-size) + 6px);
   }
 }
 
@@ -1976,13 +1981,13 @@ button {
   .roulette-page[data-phase="spinning"] {
     --wheel-size: min(94vw, 345px);
     --mobile-wheel-row: calc(var(--wheel-size) + 18px);
-    --mobile-table-width: min(38vw, 142px);
+    --mobile-table-width: min(43vw, 160px);
   }
 
   .roulette-page[data-phase="settled"] {
     --wheel-size: min(92vw, 336px);
     --mobile-wheel-row: calc(var(--wheel-size) + 18px);
-    --mobile-table-width: min(40vw, 150px);
+    --mobile-table-width: min(45vw, 168px);
   }
 
   .roulette-bet-summary strong {
