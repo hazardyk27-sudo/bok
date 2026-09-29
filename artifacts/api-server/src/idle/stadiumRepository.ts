@@ -11,6 +11,7 @@ import type {
   StorageLevel,
 } from "../../../cascade-8/src/idle/types";
 import { projectStadiumTicketProduction } from "./production";
+import { MARKET_MICRODOLLARS_PER_CENT } from "./fixedPoint";
 
 type StadiumStateRow = {
   id: string;
@@ -82,6 +83,19 @@ function requireSafeNonNegativeInteger(value: number, errorCode: string) {
 }
 
 function toStorageState(row: StadiumStateRow): StadiumStorageState {
+  const saleRemainderMicrodollars =
+    requireSafeNonNegativeInteger(
+      Number(row.sale_remainder_microdollars),
+      "INVALID_IDLE_SALE_REMAINDER",
+    );
+
+  if (
+    saleRemainderMicrodollars >=
+    MARKET_MICRODOLLARS_PER_CENT
+  ) {
+    throw new Error("INVALID_IDLE_SALE_REMAINDER");
+  }
+
   return {
     id: row.id,
     sessionId: row.session_id,
@@ -96,10 +110,7 @@ function toStorageState(row: StadiumStateRow): StadiumStorageState {
       Number(row.stored_microtickets),
       "INVALID_IDLE_STORED_MICROTICKETS",
     ),
-    saleRemainderMicrodollars: requireSafeNonNegativeInteger(
-      Number(row.sale_remainder_microdollars),
-      "INVALID_IDLE_SALE_REMAINDER",
-    ),
+    saleRemainderMicrodollars,
     productionCheckpointAt: row.production_checkpoint_at,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
