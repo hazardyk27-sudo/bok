@@ -1,10 +1,6 @@
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
-import {
-  ACTIVE_BUSINESS_IDS,
-  BUSINESS_IDS,
-} from "./types";
 
 const idleIndexSource = readFileSync(
   fileURLToPath(new URL("./index.ts", import.meta.url)),
@@ -16,15 +12,50 @@ const servicesSource = readFileSync(
   ),
   "utf8",
 );
+const typesSource = readFileSync(
+  fileURLToPath(
+    new URL("./types/index.ts", import.meta.url),
+  ),
+  "utf8",
+);
+const configSource = readFileSync(
+  fileURLToPath(
+    new URL("./config/index.ts", import.meta.url),
+  ),
+  "utf8",
+);
 
 describe("Part 25 active Idle frontend scope", () => {
-  it("retains legacy identifiers only as migration compatibility", () => {
-    expect(ACTIVE_BUSINESS_IDS).toEqual(["stadium"]);
-    expect(BUSINESS_IDS).toEqual([
-      "stadium",
-      "club-store",
-      "fan-club",
-    ]);
+  it("contains only canonical Stadium/ticket-market client contracts", () => {
+    expect(typesSource).toContain(
+      "export type IdleStadiumServerState",
+    );
+    expect(typesSource).toContain(
+      "export type IdleTicketSaleResponse",
+    );
+
+    for (const retired of [
+      "BusinessId",
+      "IdleBusinessServerState",
+      "IdleCollectResponse",
+      "IdleVaultUpgradeResponse",
+      "LEGACY COMPATIBILITY TYPES",
+    ]) {
+      expect(typesSource).not.toContain(retired);
+    }
+  });
+
+  it("removes old direct-cash business/vault config from active source", () => {
+    for (const retired of [
+      "STADIUM_BUSINESS",
+      "CLUB_STORE_BUSINESS",
+      "FAN_CLUB_BUSINESS",
+      "VAULT_LEVELS",
+      "dailyIncomeCents",
+      "hourlyIncomeDisplayCents",
+    ]) {
+      expect(configSource).not.toContain(retired);
+    }
   });
 
   it("mounts the Businesses route from canonical Stadium state only", () => {
@@ -39,9 +70,6 @@ describe("Part 25 active Idle frontend scope", () => {
     );
     expect(idleIndexSource).not.toContain(
       "renderBusinessRowShell",
-    );
-    expect(idleIndexSource).not.toContain(
-      "ACTIVE_BUSINESS_IDS.map",
     );
   });
 
