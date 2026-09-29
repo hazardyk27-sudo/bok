@@ -11,6 +11,19 @@ const idleCssSource = readFileSync(
   "utf8",
 );
 
+const stadiumPremiumSource = readFileSync(
+  fileURLToPath(
+    new URL("./stadiumPremium.ts", import.meta.url),
+  ),
+  "utf8",
+);
+const stadiumPremiumCss = readFileSync(
+  fileURLToPath(
+    new URL("./stadium-premium.css", import.meta.url),
+  ),
+  "utf8",
+);
+
 describe("Part 25 canonical Businesses shell", () => {
   it("keeps the isolated Businesses route shell and Stadium identity", () => {
     expect(idleIndexSource).toContain(
