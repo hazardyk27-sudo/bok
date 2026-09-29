@@ -1,7 +1,5 @@
 import {
-  ROULETTE_CHIP_VALUES,
   type RouletteBetPlacement,
-  type RouletteChipValue,
 } from "../../../cascade-8/src/roulette/betState";
 import {
   getRouletteBetRule,
@@ -23,15 +21,9 @@ export type RouletteAuthoritativeRound = {
   payoutCents: number;
 };
 
-const MAX_PLACEMENTS = 500;
-
-function isRouletteChipValue(value: number): value is RouletteChipValue {
-  return (ROULETTE_CHIP_VALUES as readonly number[]).includes(value);
-}
 
 export function parseRouletteServerBets(value: unknown): RouletteServerBet[] {
   if (!Array.isArray(value)) throw new Error("INVALID_ROULETTE_BETS");
-  if (value.length > MAX_PLACEMENTS) throw new Error("ROULETTE_TOO_MANY_BETS");
 
   return value.map((candidate) => {
     if (typeof candidate !== "object" || candidate === null) {
@@ -48,8 +40,8 @@ export function parseRouletteServerBets(value: unknown): RouletteServerBet[] {
         : Number.NaN;
 
     if (!getRouletteBetRule(betId)) throw new Error("INVALID_ROULETTE_BET_ID");
-    if (!Number.isSafeInteger(amount) || !isRouletteChipValue(amount)) {
-      throw new Error("INVALID_ROULETTE_CHIP");
+    if (!Number.isSafeInteger(amount) || amount <= 0) {
+      throw new Error("INVALID_ROULETTE_BET_AMOUNT");
     }
 
     return { betId, amount };
