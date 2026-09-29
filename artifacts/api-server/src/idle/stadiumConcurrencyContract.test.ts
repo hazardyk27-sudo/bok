@@ -1,1 +1,116 @@
-import { readFileSync } from "node:fs";\nimport { fileURLToPath } from "node:url";\nimport { describe, expect, it } from "vitest";\n\nconst mutationSource = readFileSync(\n  fileURLToPath(new URL("./stadiumMutation.ts", import.meta.url)),\n  "utf8",\n);\nconst repositorySource = readFileSync(\n  fileURLToPath(new URL("./stadiumRepository.ts", import.meta.url)),\n  "utf8",\n);\nconst receiptSource = readFileSync(\n  fileURLToPath(new URL("./stadiumActionReceipt.ts", import.meta.url)),\n  "utf8",\n);\n\nconst actionSources = [\n  readFileSync(\n    fileURLToPath(new URL("./seatPurchase.ts", import.meta.url)),\n    "utf8",\n  ),\n  readFileSync(\n    fileURLToPath(new URL("./stadiumUpgrade.ts", import.meta.url)),\n    "utf8",\n  ),\n  readFileSync(\n    fileURLToPath(new URL("./speedUpgrade.ts", import.meta.url)),\n    "utf8",\n  ),\n  readFileSync(\n    fileURLToPath(new URL("./storageUpgrade.ts", import.meta.url)),\n    "utf8",\n  ),\n  readFileSync(\n    fileURLToPath(new URL("./ticketSale.ts", import.meta.url)),\n    "utf8",\n  ),\n];\n\ndescribe("Stadium concurrency/idempotency contract", () => {\n  it("serializes all same-session economy mutations on the Stadium row", () => {\n    expect(repositorySource).toContain(\n      '${forUpdate ? "FOR UPDATE" : ""}',\n    );\n    expect(repositorySource).toContain(\n      "checkpointStadiumProduction(",\n    );\n\n    const beginIndex = mutationSource.indexOf(\n      'await client.query("BEGIN")',\n    );\n    const checkpointIndex = mutationSource.indexOf(\n      "const checkpoint = await checkpointStadiumProduction(",\n    );\n    const decideIndex = mutationSource.indexOf(\n      "const decision = await decide(",\n    );\n\n    expect(beginIndex).toBeGreaterThan(-1);\n    expect(checkpointIndex).toBeGreaterThan(beginIndex);\n    expect(decideIndex).toBeGreaterThan(checkpointIndex);\n  });\n\n  it("routes every active Stadium mutation through one serialized receipt reservation", () => {\n    for (const source of actionSources) {\n      expect(source).toContain(\n        "reserveStadiumActionReceipt(",\n      );\n      expect(source).toContain(\n        "runCheckpointedStadiumMutation(",\n      );\n    }\n\n    expect(receiptSource).toContain(\n      "ON CONFLICT (idempotency_key) DO NOTHING",\n    );\n    expect(receiptSource).toContain("FOR UPDATE");\n    expect(receiptSource).toContain(\n      'throw new Error("IDEMPOTENCY_KEY_REUSED")',\n    );\n  });\n\n  it("locks the shared wallet before every debit or credit", () => {\n    for (const source of actionSources) {\n      expect(source).toContain("FROM roulette_wallets");\n      expect(source).toContain("FOR UPDATE");\n      expect(source).toContain("UPDATE roulette_wallets");\n    }\n  });\n\n  it("guards every receipt completion by key + session + action and requires RETURNING id", () => {\n    for (const source of actionSources) {\n      expect(source).toContain("AND session_id =");\n      expect(source).toContain("AND action_type =");\n      expect(source).toContain("RETURNING id");\n      expect(source).toContain(\n        'throw new Error("IDLE_STADIUM_RECEIPT_UPDATE_CONFLICT")',\n      );\n    }\n  });\n\n  it("fails closed if either checkpoint or final Stadium update affects anything other than one row", () => {\n    expect(repositorySource).toContain(\n      'throw new Error("IDLE_STADIUM_CHECKPOINT_UPDATE_CONFLICT")',\n    );\n    expect(mutationSource).toContain(\n      'throw new Error("IDLE_STADIUM_STATE_UPDATE_CONFLICT")',\n    );\n  });\n\n  it("poisons a connection when rollback fails instead of returning uncertain transaction state to the pool", () => {\n    expect(mutationSource).toContain(\n      "IDLE_STADIUM_ROLLBACK_FAILED",\n    );\n    expect(mutationSource).toContain("client.release(");\n    expect(mutationSource).toContain("if (!released)");\n  });\n});\n
+import { readFileSync } from "node:fs";
+import { fileURLToPath } from "node:url";
+import { describe, expect, it } from "vitest";
+
+const mutationSource = readFileSync(
+  fileURLToPath(new URL("./stadiumMutation.ts", import.meta.url)),
+  "utf8",
+);
+const repositorySource = readFileSync(
+  fileURLToPath(new URL("./stadiumRepository.ts", import.meta.url)),
+  "utf8",
+);
+const receiptSource = readFileSync(
+  fileURLToPath(new URL("./stadiumActionReceipt.ts", import.meta.url)),
+  "utf8",
+);
+
+const actionSources = [
+  readFileSync(
+    fileURLToPath(new URL("./seatPurchase.ts", import.meta.url)),
+    "utf8",
+  ),
+  readFileSync(
+    fileURLToPath(new URL("./stadiumUpgrade.ts", import.meta.url)),
+    "utf8",
+  ),
+  readFileSync(
+    fileURLToPath(new URL("./speedUpgrade.ts", import.meta.url)),
+    "utf8",
+  ),
+  readFileSync(
+    fileURLToPath(new URL("./storageUpgrade.ts", import.meta.url)),
+    "utf8",
+  ),
+  readFileSync(
+    fileURLToPath(new URL("./ticketSale.ts", import.meta.url)),
+    "utf8",
+  ),
+];
+
+describe("Stadium concurrency/idempotency contract", () => {
+  it("serializes all same-session economy mutations on the Stadium row", () => {
+    expect(repositorySource).toContain(
+      '${forUpdate ? "FOR UPDATE" : ""}',
+    );
+
+    const beginIndex = mutationSource.indexOf(
+      'await client.query("BEGIN")',
+    );
+    const checkpointIndex = mutationSource.indexOf(
+      "const checkpoint = await checkpointStadiumProduction(",
+    );
+    const decideIndex = mutationSource.indexOf(
+      "const decision = await decide(",
+    );
+
+    expect(beginIndex).toBeGreaterThan(-1);
+    expect(checkpointIndex).toBeGreaterThan(beginIndex);
+    expect(decideIndex).toBeGreaterThan(checkpointIndex);
+  });
+
+  it("routes every active Stadium mutation through one serialized receipt reservation", () => {
+    for (const source of actionSources) {
+      expect(source).toContain(
+        "reserveStadiumActionReceipt(",
+      );
+      expect(source).toContain(
+        "runCheckpointedStadiumMutation(",
+      );
+    }
+
+    expect(receiptSource).toContain(
+      "ON CONFLICT (idempotency_key) DO NOTHING",
+    );
+    expect(receiptSource).toContain("FOR UPDATE");
+    expect(receiptSource).toContain(
+      'throw new Error("IDEMPOTENCY_KEY_REUSED")',
+    );
+  });
+
+  it("locks the shared wallet before every debit or credit", () => {
+    for (const source of actionSources) {
+      expect(source).toContain("FROM roulette_wallets");
+      expect(source).toContain("FOR UPDATE");
+      expect(source).toContain("UPDATE roulette_wallets");
+    }
+  });
+
+  it("guards every receipt completion by key + session + action and requires RETURNING id", () => {
+    for (const source of actionSources) {
+      expect(source).toContain("AND session_id =");
+      expect(source).toContain("AND action_type =");
+      expect(source).toContain("RETURNING id");
+      expect(source).toContain(
+        'throw new Error("IDLE_STADIUM_RECEIPT_UPDATE_CONFLICT")',
+      );
+    }
+  });
+
+  it("fails closed if either checkpoint or final Stadium update affects anything other than one row", () => {
+    expect(repositorySource).toContain(
+      'throw new Error("IDLE_STADIUM_CHECKPOINT_UPDATE_CONFLICT")',
+    );
+    expect(mutationSource).toContain(
+      'throw new Error("IDLE_STADIUM_STATE_UPDATE_CONFLICT")',
+    );
+  });
+
+  it("poisons a connection when rollback fails instead of returning uncertain transaction state to the pool", () => {
+    expect(mutationSource).toContain(
+      "IDLE_STADIUM_ROLLBACK_FAILED",
+    );
+    expect(mutationSource).toContain("client.release(");
+    expect(mutationSource).toContain("if (!released)");
+  });
+});
