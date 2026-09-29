@@ -40,6 +40,13 @@ Routine Slot updates must have zero file changes in Cadı Kazan, Idle, Hub, Acco
 ## Release workflow
 Isolation layout v2 is active. Game agents only develop and commit inside their declared ownership. The central integration/release flow selects a game and source commit and promotes only that game's owned roots to `integration/replit-preview`. Do not manually merge a full feature branch into preview.
 
+### Dependency-scoped release gates
+- A normal one-game promotion is blocked by: ownership/isolation checks, production artifact builds, shared platform contracts, and the selected game's owned regression surface.
+- Unchanged foreign-game regressions are not promotion blockers. After a successful preview push, all games run again as advisory integration regressions so failures stay visible without forcing an unrelated promotion retry.
+- Shared/platform or multi-game preview changes use the broader blocking gate: full workspace typecheck plus cross-game shared/platform smoke in addition to the critical artifact/platform gate.
+- Shared wallet, session identity, API routing/startup, schema aggregation and deployable artifact builds are always critical contracts. A break in these blocks every promotion because it can corrupt or disable multiple games.
+- Keep feature branches isolated. Compatibility with the latest preview is proven by overlaying the immutable feature SHA onto the current preview during promotion; do not routinely merge preview back into feature branches just to reduce drift.
+
 
 ## Agent operating discipline
 1. Before coding, verify the active branch matches the task and inspect working-tree status. If unrelated uncommitted changes exist, do not overwrite or absorb them.
@@ -85,6 +92,7 @@ Race handling is fail-safe: if a feature branch or preview branch moves while an
 - Code, tests, ownership manifest, and validated runtime behavior remain the source of truth if a milestone note becomes stale.
 
 ## Shared/platform current milestones
+- 2026-09-29 — Dependency-scoped promotion gates defined — routine one-game promotion now blocks only on deployable artifact/platform contracts plus the selected game's owned tests; post-preview foreign-game regressions are advisory, while shared/multi-game changes still require broad blocking typecheck + cross-game smoke. Next: validate the new workflow on the integration branch before promoting it to preview.
 - 2026-09-28 — Blackjack central integration wiring prepared and current-preview preflighted — shared runtime wiring is staged on `integration/blackjack-runtime-wiring-v2` from preview base `697e50b5540a0535c6908606762fcf04244e6eb8`: `/blackjack` browser bootstrap establishes `game_session`, server startup attaches the owned Blackjack scheduled WebSocket runtime, `shared_wallets` is loaded server-side for seat accounts, and Blackjack snapshot persistence CAS-updates the shared wallet in the same DB transaction so concurrent foreign wallet changes fail closed instead of being overwritten. Current-base preflight PR #102 (closed unmerged) with immutable Blackjack feature SHA `8634e6f4cab49e97187424b482a4b808af552c71` passed workspace typecheck, Cascade build, expanded frontend 51/51, expanded backend plus shared isolation 420/420; only the known four Idle integration tests remained red. Next: dispatch `Promote One Game To Replit Preview` with game=`blackjack` and source_ref=`8634e6f4cab49e97187424b482a4b808af552c71`, then replay the staged shared wiring onto the resulting newest preview HEAD and refresh Replit.
 - 2026-09-28 — Roulette 2D category re-established from a clean baseline — `feature/roulette-2d` owns only `artifacts/cascade-8/src/roulette`; the old 3D implementation is not reused. `/roulette` is wired centrally for isolated preview work. Next: build the reference-matched procedural wheel in owned files.
 - 2026-09-27 — Race-safe delivery protocol active — canonical feature branches use single-writer discipline, promotions use immutable commit SHAs and abort if preview HEAD moves, and Replit is read-only with verified fast-forward sync. Next: use `GAME_DELIVERY_PROTOCOL.md` for every commit → promotion → Replit handoff.
