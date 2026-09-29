@@ -72,6 +72,21 @@ describe("Speed upgrade transaction contract", () => {
     );
   });
 
+  it("revalidates replay cost/balance against canonical config", () => {
+    expect(speedSource).toContain("const targetConfig =");
+    expect(speedSource).toContain("costCents !== targetConfig.upgradeCostCents");
+    expect(speedSource).toContain("balanceCents < 0");
+  });
+
+  it("guards receipt completion by key, session, and action", () => {
+    expect(speedSource).toContain("AND session_id = $5");
+    expect(speedSource).toContain("AND action_type = $6");
+    expect(speedSource).toContain("RETURNING id");
+    expect(speedSource).toContain(
+      'throw new Error("IDLE_STADIUM_RECEIPT_UPDATE_CONFLICT")',
+    );
+  });
+
   it("maps Speed Lv20 max-level conflicts explicitly", () => {
     expect(routeSource).toContain('"IDLE_SPEED_MAX_LEVEL"');
   });
