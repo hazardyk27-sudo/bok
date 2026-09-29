@@ -321,6 +321,7 @@ export function mountRoulette(app: HTMLDivElement) {
   let bettingDeadlineMs =
     performance.now() + ROULETTE_BETTING_WINDOW_MS;
   let bettingWindowClosed = false;
+  let automaticSpinBlocked = false;
   let activeResultPresentation:
     RouletteResultPresentation | null =
       null;
@@ -861,6 +862,10 @@ export function mountRoulette(app: HTMLDivElement) {
   };
 
   const reopenBettingAfterResult = () => {
+    if (source === "manual") {
+      automaticSpinBlocked = false;
+    }
+
     window.clearTimeout(
       resultHoldTimer,
     );
@@ -1225,7 +1230,9 @@ export function mountRoulette(app: HTMLDivElement) {
     frameId = window.requestAnimationFrame(animate);
   };
 
-  const startSpin = async () => {
+  const startSpin = async (
+    source: "manual" | "timer" = "manual",
+  ) => {
     if (
       activeRotorSpin ||
       activeBallOrbit ||
@@ -1275,12 +1282,14 @@ export function mountRoulette(app: HTMLDivElement) {
           pendingServerSpin,
         );
 
+      automaticSpinBlocked = false;
       betState = snapshotRouletteRound(betState);
       renderBetState();
       activeRotorSpin = replay.rotorSpin;
       activeBallOrbit = replay.ballOrbit;
     } catch (error) {
       pendingServerSpin = null;
+      automaticSpinBlocked = true;
       activeRotorSpin = null;
       activeBallOrbit = null;
       canvas.dataset.rouletteState = "ready";
@@ -1355,6 +1364,18 @@ export function mountRoulette(app: HTMLDivElement) {
       return;
     }
 
+    if (automaticSpinBlocked) {
+      if (bettingTimerLabel) {
+        bettingTimerLabel.textContent =
+          "PRESS SPIN";
+      }
+      if (bettingTimerValue) {
+        bettingTimerValue.textContent =
+          "—";
+      }
+      return;
+    }
+
     if (!canAffordCurrentBet()) {
       bettingDeadlineMs =
         performance.now() + ROULETTE_BETTING_WINDOW_MS;
@@ -1385,7 +1406,7 @@ export function mountRoulette(app: HTMLDivElement) {
     }
 
     closeMobileHudMenus();
-    void startSpin();
+    void startSpin("timer");
   };
 
   const phaseTimerInterval =
@@ -1502,6 +1523,7 @@ export function mountRoulette(app: HTMLDivElement) {
             return;
           }
 
+          automaticSpinBlocked = false;
           betState =
             placeRouletteBet(
               betState,
@@ -1518,6 +1540,7 @@ export function mountRoulette(app: HTMLDivElement) {
           "[data-undo-bet]",
         )
       ) {
+        automaticSpinBlocked = false;
         betState =
           undoRouletteBet(
             betState,
@@ -1533,6 +1556,7 @@ export function mountRoulette(app: HTMLDivElement) {
         )
       ) {
         if (canDoubleCurrentBet()) {
+          automaticSpinBlocked = false;
           betState =
             doubleRouletteBets(
               betState,
@@ -1548,6 +1572,7 @@ export function mountRoulette(app: HTMLDivElement) {
           "[data-clear-bets]",
         )
       ) {
+        automaticSpinBlocked = false;
         betState =
           clearRouletteBets(
             betState,
@@ -1571,6 +1596,7 @@ export function mountRoulette(app: HTMLDivElement) {
           return;
         }
 
+        automaticSpinBlocked = false;
         betState =
           rebetRouletteRound(
             betState,
@@ -1583,17 +1609,17 @@ export function mountRoulette(app: HTMLDivElement) {
   spinButton?.addEventListener(
     "click",
     () => {
-      void startSpin();
+      void startSpin("manual");
     },
   );
 
   canvas.addEventListener("click", () => {
-    void startSpin();
+    void startSpin("manual");
   });
   canvas.addEventListener("keydown", (event) => {
     if (event.key !== "Enter" && event.key !== " ") return;
     event.preventDefault();
-    void startSpin();
+    void startSpin("manual");
   });
 
   window.addEventListener("resize", redraw, { passive: true });

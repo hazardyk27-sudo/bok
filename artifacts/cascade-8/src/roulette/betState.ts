@@ -149,6 +149,62 @@ export function getRouletteBetTotals(
   );
 }
 
+export function expandRouletteBetPlacementsToChipValues(
+  placements: readonly RouletteBetPlacement[],
+): RouletteBetPlacement[] {
+  const denominations = [
+    ...ROULETTE_CHIP_VALUES,
+  ].sort((a, b) => b - a);
+
+  return placements.flatMap((placement) => {
+    if (
+      !Number.isSafeInteger(
+        placement.amount,
+      ) ||
+      placement.amount <= 0
+    ) {
+      throw new Error(
+        "INVALID_ROULETTE_BET_AMOUNT",
+      );
+    }
+
+    let remaining =
+      placement.amount;
+    const expanded:
+      RouletteBetPlacement[] = [];
+
+    for (const chip of denominations) {
+      const count =
+        Math.floor(
+          remaining / chip,
+        );
+
+      for (
+        let index = 0;
+        index < count;
+        index += 1
+      ) {
+        expanded.push({
+          betId:
+            placement.betId,
+          amount: chip,
+        });
+      }
+
+      remaining -=
+        count * chip;
+    }
+
+    if (remaining !== 0) {
+      throw new Error(
+        "INVALID_ROULETTE_BET_AMOUNT",
+      );
+    }
+
+    return expanded;
+  });
+}
+
 export function compactRouletteBetPlacements(
   placements: readonly RouletteBetPlacement[],
 ): RouletteBetPlacement[] {
