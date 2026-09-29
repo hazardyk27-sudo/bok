@@ -4,62 +4,87 @@ import { describe, expect, it } from "vitest";
 import {
   ACTIVE_IDLE_BUSINESS_IDS,
   IDLE_BUSINESS_IDS,
-  isActiveIdleBusinessId,
 } from "./storage";
 
 const routesSource = readFileSync(
   fileURLToPath(new URL("./routes.ts", import.meta.url)),
   "utf8",
 );
+const stateSource = readFileSync(
+  fileURLToPath(
+    new URL("./stadiumState.ts", import.meta.url),
+  ),
+  "utf8",
+);
 const repositorySource = readFileSync(
-  fileURLToPath(new URL("./repository.ts", import.meta.url)),
+  fileURLToPath(
+    new URL("./repository.ts", import.meta.url),
+  ),
   "utf8",
 );
 
-describe("active Idle backend business scope", () => {
-  it("exposes Stadium as the only active legacy business target", () => {
-    expect(ACTIVE_IDLE_BUSINESS_IDS).toEqual(["stadium"]);
-    expect(isActiveIdleBusinessId("stadium")).toBe(true);
-    expect(isActiveIdleBusinessId("club-store")).toBe(false);
-    expect(isActiveIdleBusinessId("fan-club")).toBe(false);
-  });
-
-  it("retains old identifiers for migration-safe persisted rows", () => {
+describe("Part 25 backend cutover", () => {
+  it("keeps old identifiers available without exposing them as active economy", () => {
+    expect(ACTIVE_IDLE_BUSINESS_IDS)
+      .toEqual(["stadium"]);
     expect(IDLE_BUSINESS_IDS).toEqual([
       "stadium",
       "club-store",
       "fan-club",
     ]);
-    expect(repositorySource).toContain(
-      "const ids = IDLE_BUSINESS_IDS.map(() => randomUUID());",
-    );
     expect(repositorySource).not.toContain(
       "DELETE FROM idle_business_states",
     );
   });
 
-  it("filters legacy state responses and all legacy mutation routes through the active scope", () => {
+  it("serves /idle/state from canonical Stadium + wallet + market state", () => {
     expect(routesSource).toContain(
-      ".filter((business) =>\n          isActiveIdleBusinessId(business.businessId))",
+      'router.get("/idle/state"',
     );
-
-    const activeGuardCount =
-      routesSource.split(
-        "if (!isActiveIdleBusinessId(businessId))",
-      ).length - 1;
-
-    expect(activeGuardCount).toBe(3);
+    expect(routesSource).toContain(
+      "getIdleStadiumState(sessionId)",
+    );
+    expect(stateSource).toContain(
+      "stadiumRepository.getSessionState(",
+    );
+    expect(stateSource).toContain(
+      "roulette_wallets",
+    );
+    expect(stateSource).toContain(
+      "ticketMarketPersistence.getCurrentState()",
+    );
+    expect(stateSource).not.toContain(
+      "idle_business_states",
+    );
   });
 
-  it("prevents repository-level Club Store/Fan Club collection or progression", () => {
-    const guardCallCount =
-      repositorySource.split(
-        "requireActiveLegacyBusinessId(businessId);",
-      ).length - 1;
+  it("removes every direct-cash HTTP mutation path", () => {
+    for (const retired of [
+      '/idle/collect-all',
+      '/idle/businesses/:businessId/collect',
+      '/idle/businesses/:businessId/upgrade',
+      '/idle/businesses/:businessId/vault/upgrade',
+    ]) {
+      expect(routesSource).not.toContain(retired);
+    }
 
-    expect(guardCallCount).toBe(3);
-    expect(repositorySource).toContain(
-      "isActiveIdleBusinessId(business.businessId)",
+    expect(routesSource).not.toContain(
+      "idleRepository",
     );
+    expect(routesSource).not.toContain(
+      "serializeBusiness",
+    );
+  });
+
+  it("keeps canonical Stadium economy mutations mounted", () => {
+    for (const endpoint of [
+      '/idle/stadium/seats/buy',
+      '/idle/stadium/upgrade',
+      '/idle/stadium/speed/upgrade',
+      '/idle/stadium/storage/upgrade',
+      '/idle/stadium/tickets/sell',
+    ]) {
+      expect(routesSource).toContain(endpoint);
+    }
   });
 });
