@@ -137,3 +137,34 @@ export const idleTicketMarketTicks = pgTable(
     index("idle_ticket_market_ticks_retention_idx").on(table.tickAt),
   ],
 );
+
+
+/**
+ * Canonical idempotency receipts for Stadium economy actions.
+ *
+ * Part 9 initially uses this for SEAT_PURCHASE. Later Stadium/Speed/Storage
+ * upgrades and ticket sales may reuse the same table with their own actionType.
+ * The request parameters required to distinguish an idempotent replay are
+ * persisted alongside the result.
+ */
+export const idleStadiumActionReceipts = pgTable(
+  "idle_stadium_action_receipts",
+  {
+    id: text("id").primaryKey(),
+    sessionId: text("session_id").notNull(),
+    actionType: text("action_type").notNull(),
+    idempotencyKey: text("idempotency_key").notNull(),
+    requestedQuantity: integer("requested_quantity"),
+    targetLevel: integer("target_level"),
+    purchasedSeats: integer("purchased_seats").notNull().default(0),
+    costCents: bigint("cost_cents", { mode: "number" }).notNull().default(0),
+    resultingOwnedSeats: integer("resulting_owned_seats"),
+    balanceCents: bigint("balance_cents", { mode: "number" }).notNull().default(0),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    uniqueIndex("idle_stadium_action_receipts_idempotency_unique").on(table.idempotencyKey),
+    index("idle_stadium_action_receipts_session_idx").on(table.sessionId),
+    index("idle_stadium_action_receipts_action_idx").on(table.actionType),
+  ],
+);
