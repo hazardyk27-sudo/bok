@@ -119,9 +119,18 @@ describe("global market runtime/API source contract", () => {
     );
   });
 
-  it("starts the market runtime when the owned Idle API module is loaded", () => {
+  it("starts and gracefully stops the market runtime with the owned Idle API module", () => {
     expect(idleIndexSource).toContain(
       "ticketMarketRuntime.start()",
+    );
+    expect(idleIndexSource).toContain(
+      "ticketMarketRuntime.stop()",
+    );
+    expect(idleIndexSource).toContain(
+      'process.once("SIGTERM", stopIdleMarketRuntime)',
+    );
+    expect(idleIndexSource).toContain(
+      'process.once("SIGINT", stopIdleMarketRuntime)',
     );
     expect(idleIndexSource).toContain(
       "Unable to start Idle ticket market runtime",
