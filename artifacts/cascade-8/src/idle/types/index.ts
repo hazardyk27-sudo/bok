@@ -103,10 +103,12 @@ export type IdleTicketMarketHistoryResponse = {
   points: TicketMarketHistoryPoint[];
 };
 
-export type IdleTicketMarketLiveEvent = {
-  event: "market";
-  market: TicketMarketSnapshot;
-};
+/**
+ * JSON payload carried by the SSE `event: market` frame.
+ * The SSE event name itself is transport metadata, so the data payload is the
+ * canonical market snapshot directly.
+ */
+export type IdleTicketMarketLiveEvent = TicketMarketSnapshot;
 
 export type IdleSeatPurchaseResponse = {
   serverTime: string;
