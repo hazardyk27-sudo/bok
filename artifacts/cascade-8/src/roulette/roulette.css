@@ -1871,7 +1871,7 @@ button {
     z-index: 1;
   }
 
-  .roulette-zero-cell > span {
+  .roulette-zero-cell > span:not(.roulette-placed-chip) {
     position: relative;
     z-index: 2;
   }
@@ -3989,5 +3989,22 @@ button {
     .roulette-placed-chip__suffix {
     font-size: 0.54em;
     margin-left: 0.15px;
+  }
+}
+
+
+/* Part 10 — zero-cell placed-chip positioning fix */
+@media (max-width: 900px) and (orientation: portrait) {
+  .roulette-page .roulette-zero-cell > .roulette-placed-chip,
+  .roulette-page[data-phase="betting"] .roulette-zero-cell > .roulette-placed-chip,
+  .roulette-page[data-phase="spinning"] .roulette-zero-cell > .roulette-placed-chip,
+  .roulette-page[data-phase="settled"] .roulette-zero-cell > .roulette-placed-chip {
+    position: absolute !important;
+    left: 50% !important;
+    top: 62% !important;
+    right: auto !important;
+    bottom: auto !important;
+    transform: translate(-50%, -50%) !important;
+    z-index: 12 !important;
   }
 }
