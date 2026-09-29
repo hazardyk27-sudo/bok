@@ -5,6 +5,7 @@ import { idleRepository } from "./repository";
 import { ticketMarketPersistence } from "./marketPersistence";
 import { ticketMarketRuntime } from "./marketRuntimeDb";
 import { buyStadiumSeats } from "./seatPurchase";
+import { sellStadiumTickets } from "./ticketSale";
 import { upgradeStadiumSpeed } from "./speedUpgrade";
 import { upgradeStadiumStorage } from "./storageUpgrade";
 import { upgradeStadiumLevel } from "./stadiumUpgrade";
@@ -67,10 +68,12 @@ function sendError(res: Response, error: unknown) {
     || message === "IDLE_STADIUM_MAX_LEVEL"
     || message === "IDLE_SPEED_MAX_LEVEL"
     || message === "IDLE_STORAGE_MAX_LEVEL"
+    || message === "INSUFFICIENT_IDLE_TICKETS"
     ? 409
     : message === "INSUFFICIENT_IDLE_CREDITS" ? 402
       : message === "IDLE_BUSINESS_NOT_FOUND" ? 404
-        : 400;
+        : message === "IDLE_MARKET_STATE_MISSING" ? 503
+          : 400;
   res.status(status).json({ error: message });
 }
 
@@ -199,6 +202,50 @@ router.get("/idle/state", async (req, res) => {
 
 
 
+
+
+router.post("/idle/stadium/tickets/sell", async (req, res) => {
+  try {
+    const {
+      quantityTickets,
+      idempotencyKey,
+    } = req.body as {
+      quantityTickets?: unknown;
+      idempotencyKey?: unknown;
+    };
+
+    if (
+      typeof quantityTickets !== "number"
+      || !Number.isSafeInteger(quantityTickets)
+      || quantityTickets <= 0
+    ) {
+      res.status(400).json({
+        error: "INVALID_IDLE_TICKET_SALE_QUANTITY",
+      });
+      return;
+    }
+
+    if (
+      typeof idempotencyKey !== "string"
+      || !IDEMPOTENCY_PATTERN.test(idempotencyKey)
+    ) {
+      res.status(400).json({
+        error: "VALID_IDEMPOTENCY_KEY_REQUIRED",
+      });
+      return;
+    }
+
+    const result = await sellStadiumTickets(
+      getSessionId(req, res),
+      quantityTickets,
+      idempotencyKey,
+    );
+
+    res.json(result);
+  } catch (error) {
+    sendError(res, error);
+  }
+});
 
 router.post("/idle/stadium/storage/upgrade", async (req, res) => {
   try {
