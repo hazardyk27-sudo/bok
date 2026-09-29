@@ -48,7 +48,7 @@ export async function persistStadiumEconomyMutation(
     settledState.productionCheckpointAt.getTime(),
   ));
 
-  await client.query(
+  const updateResult = await client.query(
     `UPDATE idle_stadium_states
         SET stadium_level = $2,
             owned_seats = $3,
@@ -69,6 +69,10 @@ export async function persistStadiumEconomyMutation(
       effectiveUpdatedAt,
     ],
   );
+
+  if ((updateResult.rowCount ?? 0) !== 1) {
+    throw new Error("IDLE_STADIUM_STATE_UPDATE_CONFLICT");
+  }
 
   return {
     ...nextState,
@@ -98,6 +102,7 @@ export async function runCheckpointedStadiumMutation<T>(
   ) => Promise<CheckpointedStadiumMutationDecision<T>>,
 ) {
   const client = await pool.connect();
+  let released = false;
 
   try {
     await client.query("BEGIN");
@@ -131,9 +136,25 @@ export async function runCheckpointedStadiumMutation<T>(
       settlement: checkpoint.projection,
     };
   } catch (error) {
-    await client.query("ROLLBACK");
+    try {
+      await client.query("ROLLBACK");
+    } catch (rollbackError) {
+      released = true;
+      try {
+        client.release(
+          rollbackError instanceof Error
+            ? rollbackError
+            : new Error("IDLE_STADIUM_ROLLBACK_FAILED"),
+        );
+      } catch {
+        // Preserve the original mutation failure.
+      }
+    }
+
     throw error;
   } finally {
-    client.release();
+    if (!released) {
+      client.release();
+    }
   }
 }
