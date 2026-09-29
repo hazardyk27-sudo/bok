@@ -7,6 +7,7 @@ import {
   formatRouletteAmount,
   formatRouletteMoney,
   formatRouletteSignedMoney,
+  getRouletteAmountScale,
 } from "./uiFormat";
 
 describe("roulette compact amount formatting", () => {
@@ -38,6 +39,24 @@ describe("roulette compact amount formatting", () => {
     expect(
       formatRouletteAmount(-2500),
     ).toBe("-2.5K");
+  });
+
+  it("uses a tighter scale for long K/M chip labels", () => {
+    expect(
+      getRouletteAmountScale(100),
+    ).toBe("short");
+    expect(
+      getRouletteAmountScale(1000),
+    ).toBe("short");
+    expect(
+      getRouletteAmountScale(125000),
+    ).toBe("medium");
+    expect(
+      getRouletteAmountScale(12500),
+    ).toBe("long");
+    expect(
+      getRouletteAmountScale(1310000),
+    ).toBe("long");
   });
 
   it("adds dollar notation to compact money fields", () => {

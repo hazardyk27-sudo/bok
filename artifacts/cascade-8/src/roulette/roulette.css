@@ -3101,3 +3101,468 @@ button {
   }
 }
 
+
+
+/* Part 6 — final mobile premium polish */
+.roulette-chip-option,
+.roulette-placed-chip,
+.roulette-mobile-chip-toggle {
+  border-width: 1.5px;
+  border-color:
+    color-mix(
+      in srgb,
+      var(--chip-edge) 74%,
+      white 26%
+    );
+  color: var(--chip-ink);
+  background:
+    radial-gradient(
+      circle at 34% 26%,
+      rgba(255, 255, 255, 0.22) 0 9%,
+      rgba(255, 255, 255, 0.07) 19%,
+      transparent 37%
+    ),
+    linear-gradient(
+      145deg,
+      color-mix(
+        in srgb,
+        var(--chip-fill) 86%,
+        white 14%
+      ) 0%,
+      var(--chip-fill) 52%,
+      color-mix(
+        in srgb,
+        var(--chip-fill) 80%,
+        black 20%
+      ) 100%
+    ) !important;
+  box-shadow:
+    0 3px 8px rgba(0, 0, 0, 0.38),
+    inset 0 1px 0 rgba(255, 255, 255, 0.24),
+    inset 0 -2px 0 rgba(0, 0, 0, 0.18);
+  font-family:
+    "Avenir Next Condensed",
+    "Arial Narrow",
+    "Roboto Condensed",
+    "Segoe UI",
+    sans-serif;
+  font-stretch: condensed;
+  font-weight: 900;
+  font-variant-numeric:
+    tabular-nums
+    lining-nums;
+  text-rendering: geometricPrecision;
+}
+
+.roulette-chip-option::before,
+.roulette-placed-chip::before,
+.roulette-mobile-chip-toggle::before {
+  content: "";
+  position: absolute;
+  inset: 3px;
+  border: 1px solid
+    color-mix(
+      in srgb,
+      var(--chip-edge) 56%,
+      white 44%
+    );
+  border-radius: 50%;
+  box-shadow:
+    inset 0 0 0 1px rgba(0, 0, 0, 0.13);
+  pointer-events: none;
+  z-index: 0;
+}
+
+.roulette-chip-option > span,
+.roulette-mobile-chip-toggle > span {
+  position: relative;
+  z-index: 2;
+}
+
+.roulette-chip-option.is-selected {
+  border-color:
+    color-mix(
+      in srgb,
+      var(--chip-edge) 56%,
+      white 44%
+    );
+  box-shadow:
+    0 6px 14px rgba(0, 0, 0, 0.40),
+    0 0 0 2px rgba(255, 255, 255, 0.20),
+    inset 0 1px 0 rgba(255, 255, 255, 0.28),
+    inset 0 -2px 0 rgba(0, 0, 0, 0.18);
+}
+
+/* Winner marker is a crisp framed locator, not a glow. */
+.roulette-winner-mark {
+  left: 3px !important;
+  right: 3px !important;
+  top: 3px !important;
+  bottom: 3px !important;
+  width: auto !important;
+  height: auto !important;
+  transform: none !important;
+  clip-path: none !important;
+  border: 2px solid #f2d27d !important;
+  border-radius: 3px;
+  background: transparent !important;
+  box-shadow:
+    inset 0 0 0 1px rgba(24, 18, 7, 0.46),
+    0 1px 3px rgba(0, 0, 0, 0.54) !important;
+  filter: none !important;
+  pointer-events: none;
+  z-index: 14 !important;
+}
+
+.roulette-winner-mark::before {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: -7px;
+  width: 8px;
+  height: 8px;
+  transform:
+    translateX(-50%)
+    rotate(45deg);
+  border: 1px solid #fff2bd;
+  border-radius: 2px;
+  background:
+    linear-gradient(
+      145deg,
+      #fff2bd,
+      #d2a84d
+    );
+  box-shadow:
+    0 2px 3px rgba(0, 0, 0, 0.58);
+}
+
+.roulette-winner-mark::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: -2px;
+  width: 2px;
+  height: 4px;
+  transform: translateX(-50%);
+  clip-path: none;
+  background: #f4d98f;
+}
+
+@media (max-width: 900px) and (orientation: portrait) {
+  .roulette-page {
+    --footer-reserve:
+      max(8px, env(safe-area-inset-bottom));
+  }
+
+  /* The old mobile footer duplicated rail controls and wasted vertical space. */
+  .roulette-bet-console {
+    display: none !important;
+  }
+
+  .roulette-result-banner {
+    top: clamp(54px, 16.5%, 72px);
+  }
+
+  .roulette-page[data-phase="spinning"] {
+    --footer-reserve:
+      max(7px, env(safe-area-inset-bottom));
+    --spin-table-gap:
+      clamp(10px, 2.8vw, 14px);
+    --table-top:
+      calc(
+        var(--history-height) +
+        var(--wheel-size) +
+        var(--spin-table-gap)
+      );
+    --table-width:
+      min(
+        66vw,
+        268px,
+        calc(
+          (
+            100dvh -
+            var(--table-top) -
+            var(--footer-reserve) -
+            6px
+          ) / var(--table-ratio)
+        )
+      );
+  }
+
+  .roulette-page[data-phase="settled"] {
+    --footer-reserve:
+      max(7px, env(safe-area-inset-bottom));
+    --spin-table-gap:
+      clamp(10px, 2.8vw, 14px);
+    --table-top:
+      calc(
+        var(--history-height) +
+        var(--wheel-size) +
+        var(--spin-table-gap)
+      );
+    --table-width:
+      min(
+        65vw,
+        264px,
+        calc(
+          (
+            100dvh -
+            var(--table-top) -
+            var(--footer-reserve) -
+            6px
+          ) / var(--table-ratio)
+        )
+      );
+  }
+
+  .roulette-page .roulette-placed-chip,
+  .roulette-page .roulette-mobile-chip-toggle,
+  .roulette-page
+    .roulette-mobile-chip-menu
+    .roulette-chip-option {
+    opacity: 1 !important;
+    filter: none !important;
+    mix-blend-mode: normal !important;
+    background:
+      radial-gradient(
+        circle at 34% 26%,
+        rgba(255, 255, 255, 0.24) 0 9%,
+        rgba(255, 255, 255, 0.08) 19%,
+        transparent 37%
+      ),
+      linear-gradient(
+        145deg,
+        color-mix(
+          in srgb,
+          var(--chip-fill) 86%,
+          white 14%
+        ) 0%,
+        var(--chip-fill) 52%,
+        color-mix(
+          in srgb,
+          var(--chip-fill) 80%,
+          black 20%
+        ) 100%
+      ) !important;
+  }
+
+  .roulette-placed-chip {
+    width:
+      clamp(
+        27px,
+        calc(var(--table-width) * 0.124),
+        40px
+      );
+    height:
+      clamp(
+        27px,
+        calc(var(--table-width) * 0.124),
+        40px
+      );
+    max-width: calc(100% - 6px);
+    padding: 0 3px;
+    display: grid;
+    place-items: center;
+    overflow: hidden;
+    color: var(--chip-ink) !important;
+    font-family:
+      "Avenir Next Condensed",
+      "Arial Narrow",
+      "Roboto Condensed",
+      "Segoe UI",
+      sans-serif;
+    font-stretch: condensed;
+    font-weight: 950;
+    line-height: 1;
+    text-align: center;
+    white-space: nowrap;
+  }
+
+  .roulette-placed-chip[data-amount-scale="short"] {
+    font-size:
+      clamp(
+        11.5px,
+        calc(var(--table-width) * 0.048),
+        14.5px
+      );
+    letter-spacing: -0.025em;
+  }
+
+  .roulette-placed-chip[data-amount-scale="medium"] {
+    font-size:
+      clamp(
+        9.4px,
+        calc(var(--table-width) * 0.0385),
+        11.5px
+      );
+    letter-spacing: -0.040em;
+  }
+
+  .roulette-placed-chip[data-amount-scale="long"] {
+    font-size:
+      clamp(
+        7.5px,
+        calc(var(--table-width) * 0.032),
+        9.6px
+      );
+    letter-spacing: -0.050em;
+  }
+
+  .roulette-mobile-chip-menu .roulette-chip-option {
+    border-width: 1.5px;
+    font-family:
+      "Avenir Next Condensed",
+      "Arial Narrow",
+      "Roboto Condensed",
+      "Segoe UI",
+      sans-serif;
+    font-weight: 900;
+    letter-spacing: -0.025em;
+  }
+
+  .roulette-mobile-chip-toggle {
+    font-family:
+      "Avenir Next Condensed",
+      "Arial Narrow",
+      "Roboto Condensed",
+      "Segoe UI",
+      sans-serif;
+    font-weight: 950;
+    letter-spacing: -0.025em;
+  }
+
+  .roulette-winner-mark {
+    left: 2px !important;
+    right: 2px !important;
+    top: 2px !important;
+    bottom: 2px !important;
+    width: auto !important;
+    height: auto !important;
+  }
+}
+
+@media (max-width: 900px) and (orientation: portrait) and (max-height: 700px) {
+  .roulette-result-banner {
+    top: clamp(46px, 14.5%, 56px);
+  }
+
+  .roulette-page {
+    --footer-reserve:
+      max(6px, env(safe-area-inset-bottom));
+  }
+
+  .roulette-page[data-phase="spinning"] {
+    --wheel-size: min(84vw, 324px);
+    --footer-reserve:
+      max(6px, env(safe-area-inset-bottom));
+    --spin-table-gap: 10px;
+    --table-top:
+      calc(
+        var(--history-height) +
+        var(--wheel-size) +
+        var(--spin-table-gap)
+      );
+    --table-width:
+      min(
+        54vw,
+        204px,
+        calc(
+          (
+            100dvh -
+            var(--table-top) -
+            var(--footer-reserve) -
+            4px
+          ) / var(--table-ratio)
+        )
+      );
+  }
+
+  .roulette-page[data-phase="settled"] {
+    --wheel-size: min(83vw, 318px);
+    --footer-reserve:
+      max(6px, env(safe-area-inset-bottom));
+    --spin-table-gap: 10px;
+    --table-top:
+      calc(
+        var(--history-height) +
+        var(--wheel-size) +
+        var(--spin-table-gap)
+      );
+    --table-width:
+      min(
+        53vw,
+        200px,
+        calc(
+          (
+            100dvh -
+            var(--table-top) -
+            var(--footer-reserve) -
+            4px
+          ) / var(--table-ratio)
+        )
+      );
+  }
+}
+
+@media (max-width: 900px) and (orientation: portrait) and (max-height: 590px) {
+  .roulette-result-banner {
+    top: 43px;
+  }
+
+  .roulette-page {
+    --footer-reserve:
+      max(5px, env(safe-area-inset-bottom));
+  }
+
+  .roulette-page[data-phase="spinning"] {
+    --wheel-size: min(80vw, 292px);
+    --footer-reserve:
+      max(5px, env(safe-area-inset-bottom));
+    --spin-table-gap: 8px;
+    --table-top:
+      calc(
+        var(--history-height) +
+        var(--wheel-size) +
+        var(--spin-table-gap)
+      );
+    --table-width:
+      min(
+        50vw,
+        182px,
+        calc(
+          (
+            100dvh -
+            var(--table-top) -
+            var(--footer-reserve) -
+            3px
+          ) / var(--table-ratio)
+        )
+      );
+  }
+
+  .roulette-page[data-phase="settled"] {
+    --wheel-size: min(79vw, 286px);
+    --footer-reserve:
+      max(5px, env(safe-area-inset-bottom));
+    --spin-table-gap: 8px;
+    --table-top:
+      calc(
+        var(--history-height) +
+        var(--wheel-size) +
+        var(--spin-table-gap)
+      );
+    --table-width:
+      min(
+        50vw,
+        180px,
+        calc(
+          (
+            100dvh -
+            var(--table-top) -
+            var(--footer-reserve) -
+            3px
+          ) / var(--table-ratio)
+        )
+      );
+  }
+}

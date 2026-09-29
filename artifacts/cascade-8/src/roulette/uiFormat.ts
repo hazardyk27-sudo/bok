@@ -54,6 +54,29 @@ export function formatRouletteAmount(
 }
 
 
+export type RouletteAmountScale =
+  | "short"
+  | "medium"
+  | "long";
+
+export function getRouletteAmountScale(
+  value: number,
+): RouletteAmountScale {
+  const label =
+    formatRouletteAmount(value);
+
+  if (label.length <= 3) {
+    return "short";
+  }
+
+  if (label.length === 4) {
+    return "medium";
+  }
+
+  return "long";
+}
+
+
 export function formatRouletteMoney(
   value: number,
 ) {
