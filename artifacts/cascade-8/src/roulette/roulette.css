@@ -3566,3 +3566,190 @@ button {
       );
   }
 }
+
+
+/* Part 7 — compact premium casino chips */
+.roulette-chip-option,
+.roulette-placed-chip,
+.roulette-mobile-chip-toggle {
+  --chip-light:
+    color-mix(
+      in srgb,
+      var(--chip-fill) 72%,
+      white 28%
+    );
+  --chip-dark:
+    color-mix(
+      in srgb,
+      var(--chip-fill) 72%,
+      black 28%
+    );
+  border:
+    1px solid
+    color-mix(
+      in srgb,
+      var(--chip-edge) 78%,
+      #fff8e8 22%
+    );
+  background:
+    radial-gradient(
+      circle at 50% 50%,
+      var(--chip-light) 0 49%,
+      transparent 50% 100%
+    ),
+    repeating-conic-gradient(
+      from -10deg,
+      rgba(247, 241, 224, 0.96) 0deg 7deg,
+      var(--chip-dark) 7deg 13deg,
+      var(--chip-fill) 13deg 43deg
+    ) !important;
+  box-shadow:
+    0 2px 5px rgba(0, 0, 0, 0.42),
+    inset 0 1px 0 rgba(255, 255, 255, 0.34),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.28);
+  font-family:
+    "Arial Narrow",
+    "Roboto Condensed",
+    "Avenir Next Condensed",
+    "Segoe UI",
+    sans-serif;
+  font-weight: 900;
+  font-variant-numeric:
+    tabular-nums
+    lining-nums;
+  letter-spacing: -0.035em;
+  text-rendering: geometricPrecision;
+}
+
+.roulette-chip-option::before,
+.roulette-placed-chip::before,
+.roulette-mobile-chip-toggle::before {
+  inset: 4px;
+  border:
+    1px solid
+    rgba(255, 248, 228, 0.72);
+  background:
+    radial-gradient(
+      circle at 34% 25%,
+      rgba(255, 255, 255, 0.24),
+      transparent 33%
+    );
+  box-shadow:
+    inset 0 0 0 1px rgba(0, 0, 0, 0.17);
+}
+
+.roulette-chip-option::after,
+.roulette-placed-chip::after,
+.roulette-mobile-chip-toggle::after {
+  content: "";
+  position: absolute;
+  inset: 6px;
+  display: block !important;
+  border-radius: 50%;
+  border:
+    1px solid
+    color-mix(
+      in srgb,
+      var(--chip-edge) 60%,
+      rgba(255, 248, 228, 0.9) 40%
+    );
+  opacity: 0.66;
+  pointer-events: none;
+  z-index: 0;
+}
+
+.roulette-chip-option.is-selected {
+  transform: translateY(-1px) scale(1.025);
+  box-shadow:
+    0 4px 10px rgba(0, 0, 0, 0.40),
+    0 0 0 2px rgba(255, 248, 228, 0.18),
+    inset 0 1px 0 rgba(255, 255, 255, 0.34),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.28);
+}
+
+@media (max-width: 900px) and (orientation: portrait) {
+  .roulette-placed-chip {
+    width:
+      clamp(
+        22px,
+        calc(var(--table-width) * 0.094),
+        30px
+      );
+    height:
+      clamp(
+        22px,
+        calc(var(--table-width) * 0.094),
+        30px
+      );
+    max-width:
+      calc(100% - 10px);
+    max-height:
+      calc(100% - 8px);
+    padding: 0 2px;
+    border-width: 1px;
+    box-shadow:
+      0 2px 4px rgba(0, 0, 0, 0.42),
+      inset 0 1px 0 rgba(255, 255, 255, 0.30),
+      inset 0 -1px 0 rgba(0, 0, 0, 0.26);
+  }
+
+  .roulette-placed-chip::before {
+    inset: 3px;
+    border-width: 1px;
+  }
+
+  .roulette-placed-chip::after {
+    inset: 4.5px;
+  }
+
+  .roulette-placed-chip[data-amount-scale="short"] {
+    font-size:
+      clamp(
+        9.6px,
+        calc(var(--table-width) * 0.037),
+        11.8px
+      );
+    letter-spacing: -0.02em;
+  }
+
+  .roulette-placed-chip[data-amount-scale="medium"] {
+    font-size:
+      clamp(
+        8.1px,
+        calc(var(--table-width) * 0.031),
+        9.6px
+      );
+    letter-spacing: -0.035em;
+  }
+
+  .roulette-placed-chip[data-amount-scale="long"] {
+    font-size:
+      clamp(
+        6.8px,
+        calc(var(--table-width) * 0.026),
+        8.1px
+      );
+    letter-spacing: -0.045em;
+  }
+
+  .roulette-mobile-chip-menu .roulette-chip-option {
+    width: 36px;
+    height: 36px;
+    font-size: 9.5px;
+  }
+
+  .roulette-mobile-chip-menu .roulette-chip-option::before {
+    inset: 4px;
+  }
+
+  .roulette-mobile-chip-menu .roulette-chip-option::after {
+    inset: 6px;
+  }
+
+  .roulette-mobile-chip-toggle {
+    box-shadow:
+      0 2px 6px rgba(0, 0, 0, 0.42),
+      inset 0 1px 0 rgba(255, 255, 255, 0.30),
+      inset 0 -1px 0 rgba(0, 0, 0, 0.25);
+  }
+}
