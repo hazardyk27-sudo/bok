@@ -1,7 +1,4 @@
-import {
-  pool,
-  type PoolClient,
-} from "@workspace/db";
+import type { PoolClient } from "@workspace/db";
 
 /**
  * Stable two-int PostgreSQL advisory-lock key for the single global Idle
@@ -30,7 +27,7 @@ export type MarketLeadershipSnapshot = {
 };
 
 export type MarketLeadershipOptions = {
-  connect?: () => Promise<MarketLeadershipClient>;
+  connect: () => Promise<MarketLeadershipClient>;
   now?: () => Date;
 };
 
@@ -60,8 +57,7 @@ export class GlobalMarketWriterLeadership {
     Promise<boolean> | null = null;
 
   constructor(options: MarketLeadershipOptions = {}) {
-    this.connect = options.connect
-      ?? (() => pool.connect());
+    this.connect = options.connect;
     this.now = options.now ?? (() => new Date());
   }
 
@@ -215,6 +211,3 @@ export class GlobalMarketWriterLeadership {
     };
   }
 }
-
-export const globalMarketWriterLeadership =
-  new GlobalMarketWriterLeadership();
