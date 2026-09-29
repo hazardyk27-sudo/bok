@@ -1852,7 +1852,7 @@ button {
     background: #070808;
     font:
       750
-      clamp(10px, calc(var(--table-width) * 0.043), 13px)/1
+      clamp(12.5px, calc(var(--table-width) * 0.052), 16px)/1
       system-ui,
       -apple-system,
       BlinkMacSystemFont,
@@ -1867,7 +1867,7 @@ button {
     transform: rotate(180deg);
     text-orientation: mixed;
     line-height: 1;
-    max-height: calc(100% - 6px);
+    max-height: calc(100% - 4px);
     display: inline-flex;
     align-items: center;
     justify-content: center;
@@ -1875,7 +1875,7 @@ button {
   }
 
   .roulette-dozen-cell {
-    font-size: clamp(14px, calc(var(--table-width) * 0.060), 18px);
+    font-size: clamp(15.5px, calc(var(--table-width) * 0.068), 20px);
     font-weight: 820;
     letter-spacing: 0;
   }
@@ -1902,9 +1902,9 @@ button {
   }
 
   .roulette-outside-cell .roulette-diamond {
-    width: clamp(15px, calc(var(--table-width) * 0.062), 20px);
-    height: clamp(15px, calc(var(--table-width) * 0.062), 20px);
-    border: 1.25px solid rgba(241, 234, 218, 0.88);
+    width: clamp(19px, calc(var(--table-width) * 0.078), 25px);
+    height: clamp(19px, calc(var(--table-width) * 0.078), 25px);
+    border: 1.4px solid rgba(241, 234, 218, 0.92);
   }
 
   .roulette-outside-cell.is-red-symbol .roulette-diamond {
