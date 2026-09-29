@@ -2226,47 +2226,50 @@ button {
 
   .roulette-page[data-phase="spinning"] {
     --wheel-size: min(96vw, 430px);
-    --footer-reserve: 26px;
+    --footer-reserve: 34px;
+    --spin-table-overlap: clamp(42px, 13vw, 60px);
     --table-top: calc(
       var(--history-height) +
       var(--wheel-size) -
-      4px
+      var(--spin-table-overlap)
     );
     --table-width: min(
-      44vw,
-      182px,
+      54vw,
+      220px,
       calc(
         (
           100dvh -
           var(--table-top) -
           var(--footer-reserve) -
-          8px
+          6px
         ) / var(--table-ratio)
       )
     );
-    --control-size: clamp(24px, calc(var(--table-width) * 0.16), 31px);
+    --control-size: clamp(25px, calc(var(--table-width) * 0.16), 34px);
   }
 
   .roulette-page[data-phase="settled"] {
     --wheel-size: min(95vw, 422px);
+    --footer-reserve: 38px;
+    --spin-table-overlap: clamp(34px, 10vw, 50px);
     --table-top: calc(
       var(--history-height) +
       var(--wheel-size) -
-      2px
+      var(--spin-table-overlap)
     );
     --table-width: min(
-      46vw,
-      190px,
+      51vw,
+      208px,
       calc(
         (
           100dvh -
           var(--table-top) -
           var(--footer-reserve) -
-          8px
+          6px
         ) / var(--table-ratio)
       )
     );
-    --control-size: clamp(24px, calc(var(--table-width) * 0.16), 32px);
+    --control-size: clamp(25px, calc(var(--table-width) * 0.16), 33px);
   }
 
   .roulette-page[data-phase="spinning"] .roulette-wheel-panel,
@@ -2281,37 +2284,46 @@ button {
     filter: none;
   }
 
+  .roulette-page[data-phase="spinning"] .roulette-bet-panel,
+  .roulette-page[data-phase="settled"] .roulette-bet-panel {
+    opacity: 1;
+    filter: none;
+    pointer-events: none;
+    z-index: 4;
+  }
+
+  .roulette-page[data-phase="spinning"] .roulette-table-layout {
+    opacity: 0.70;
+    filter:
+      saturate(0.72)
+      brightness(0.78);
+  }
+
+  .roulette-page[data-phase="settled"] .roulette-table-layout {
+    opacity: 0.80;
+    filter:
+      saturate(0.82)
+      brightness(0.86);
+  }
+
   .roulette-page[data-phase="spinning"] .roulette-mobile-control-rail {
-    opacity: 0.38;
-    filter: saturate(0.62) brightness(0.72);
+    opacity: 0.92;
+    filter: none;
   }
 
   .roulette-page[data-phase="settled"] .roulette-mobile-control-rail {
-    opacity: 0.58;
-    filter: saturate(0.78) brightness(0.82);
+    opacity: 0.96;
+    filter: none;
   }
 
-  .roulette-page[data-phase="spinning"] .roulette-bet-panel {
-    opacity: 0.58;
-    filter:
-      saturate(0.68)
-      brightness(0.72);
-    pointer-events: none;
-    z-index: 4;
+  .roulette-page[data-phase="spinning"] .roulette-bet-console {
+    opacity: 0.96;
+    filter: none;
+    z-index: 9;
   }
 
-  .roulette-page[data-phase="settled"] .roulette-bet-panel {
-    opacity: 0.72;
-    filter:
-      saturate(0.80)
-      brightness(0.82);
-    pointer-events: none;
-    z-index: 4;
-  }
-
-  .roulette-page[data-phase="spinning"] .roulette-bet-console,
   .roulette-page[data-phase="settled"] .roulette-bet-console {
-    opacity: 0.84;
+    opacity: 1;
     filter: none;
     z-index: 9;
   }
@@ -2321,9 +2333,15 @@ button {
   }
 
   .roulette-page[data-phase="spinning"] .roulette-bet-console {
-    width: min(86vw, 360px);
-    padding-top: 4px;
-    border-top-color: rgba(182, 185, 178, 0.12);
+    width: min(90vw, 390px);
+    padding: 6px 7px 7px;
+    border-color: rgba(185, 188, 182, 0.18);
+    background:
+      linear-gradient(
+        180deg,
+        rgba(10, 12, 13, 0.82),
+        rgba(3, 4, 5, 0.96)
+      );
   }
 }
 
@@ -2337,19 +2355,47 @@ button {
 
   .roulette-page[data-phase="spinning"] {
     --wheel-size: min(96vw, 378px);
+    --footer-reserve: 30px;
+    --spin-table-overlap: clamp(48px, 15vw, 62px);
     --table-top: calc(
       var(--history-height) +
       var(--wheel-size) -
-      4px
+      var(--spin-table-overlap)
+    );
+    --table-width: min(
+      52vw,
+      198px,
+      calc(
+        (
+          100dvh -
+          var(--table-top) -
+          var(--footer-reserve) -
+          5px
+        ) / var(--table-ratio)
+      )
     );
   }
 
   .roulette-page[data-phase="settled"] {
     --wheel-size: min(95vw, 374px);
+    --footer-reserve: 34px;
+    --spin-table-overlap: clamp(42px, 13vw, 56px);
     --table-top: calc(
       var(--history-height) +
       var(--wheel-size) -
-      2px
+      var(--spin-table-overlap)
+    );
+    --table-width: min(
+      49vw,
+      190px,
+      calc(
+        (
+          100dvh -
+          var(--table-top) -
+          var(--footer-reserve) -
+          5px
+        ) / var(--table-ratio)
+      )
     );
   }
 
@@ -2389,20 +2435,48 @@ button {
   }
 
   .roulette-page[data-phase="spinning"] {
-    --wheel-size: min(94vw, 344px);
+    --wheel-size: min(92vw, 336px);
+    --footer-reserve: 28px;
+    --spin-table-overlap: clamp(52px, 17vw, 66px);
     --table-top: calc(
       var(--history-height) +
       var(--wheel-size) -
-      4px
+      var(--spin-table-overlap)
+    );
+    --table-width: min(
+      50vw,
+      180px,
+      calc(
+        (
+          100dvh -
+          var(--table-top) -
+          var(--footer-reserve) -
+          4px
+        ) / var(--table-ratio)
+      )
     );
   }
 
   .roulette-page[data-phase="settled"] {
-    --wheel-size: min(93vw, 340px);
+    --wheel-size: min(91vw, 332px);
+    --footer-reserve: 30px;
+    --spin-table-overlap: clamp(46px, 15vw, 60px);
     --table-top: calc(
       var(--history-height) +
       var(--wheel-size) -
-      2px
+      var(--spin-table-overlap)
+    );
+    --table-width: min(
+      48vw,
+      174px,
+      calc(
+        (
+          100dvh -
+          var(--table-top) -
+          var(--footer-reserve) -
+          4px
+        ) / var(--table-ratio)
+      )
     );
   }
 
