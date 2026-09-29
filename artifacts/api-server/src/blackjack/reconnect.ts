@@ -225,11 +225,11 @@ export function reconnectBlackjackPlayer(
   if (!player) {
     throw new Error("Blackjack reconnect player is no longer seated");
   }
-  if (
-    player.userId !== input.userId ||
-    player.sessionId !== input.sessionId
-  ) {
-    throw new Error("Blackjack reconnect identity does not match seated player");
+  if (player.userId !== input.userId) {
+    throw new Error("Blackjack reconnect userId does not match seated player");
+  }
+  if (player.sessionId !== input.sessionId) {
+    throw new Error("Blackjack reconnect sessionId does not match seated player");
   }
   if (
     player.connected ||

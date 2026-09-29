@@ -177,9 +177,9 @@ describe("blackjack server restart recovery", () => {
     ).rejects.toThrow(/stateVersion moved backwards/);
   });
 
-  it("rejects disconnected players that lack durable reconnect metadata", async () => {
+  it("heals a legacy disconnected player that lacks durable reconnect metadata", async () => {
     const source = runtime(1, 1, true);
-    const corrupt: BlackjackDurableRuntimeState = {
+    const legacy: BlackjackDurableRuntimeState = {
       ...source,
       table: {
         ...source.table,
@@ -192,15 +192,29 @@ describe("blackjack server restart recovery", () => {
       },
     };
 
-    const snapshot = createBlackjackDurableSnapshot(corrupt, 1_000);
+    const snapshot = createBlackjackDurableSnapshot(legacy, 1_000);
 
-    await expect(
-      recoverBlackjackRuntime(
-        "main-blackjack",
-        { load: async () => snapshot },
-        { loadAfter: async () => [] },
-        10_000,
-      ),
-    ).rejects.toThrow(/without reconnect record/);
+    const recovered=await recoverBlackjackRuntime(
+      "main-blackjack",
+      { load: async () => snapshot },
+      { loadAfter: async () => [] },
+      10_000,
+    );
+
+    expect(recovered).not.toBeNull();
+    expect(recovered?.runtime.table.players[0]).toMatchObject({
+      playerId:"player-1",
+      status:"DISCONNECTED",
+      connected:false,
+      disconnectedAtMs:1_000,
+    });
+    expect(recovered?.runtime.reconnectRegistry.records[0]).toMatchObject({
+      playerId:"player-1",
+      userId:"user-1",
+      sessionId:"session-1",
+      previousStatus:"SEATED_WAITING",
+      disconnectedAtMs:1_000,
+      expiresAtMs:31_000,
+    });
   });
 });
