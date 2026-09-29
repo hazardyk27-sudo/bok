@@ -117,12 +117,13 @@ describe("BTC-linked ticket market math", () => {
   it("rounds only at final microdollar precision using deterministic half-up math", () => {
     const move = calculateNextTicketPriceFromBtcMove({
       previousTicketPriceMicrodollars: 4_000_001,
-      previousBtcQuoteUnits: 3,
-      currentBtcQuoteUnits: 4,
+      previousBtcQuoteUnits: 30,
+      currentBtcQuoteUnits: 31,
     });
 
-    expect(Number.isInteger(move.ticketPriceMicrodollars)).toBe(true);
-    expect(move.ticketPriceMicrodollars).toBeGreaterThan(0);
+    // +1/30 BTC ×15 = +50%; 4,000,001 × 1.5 = 6,000,001.5.
+    expect(move.ticketPriceMicrodollars).toBe(6_000_002);
+    expect(move.clamp).toBe("NONE");
   });
 
   it("rejects invalid BTC quotes and ticket prices", () => {
