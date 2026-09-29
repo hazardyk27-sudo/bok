@@ -1084,7 +1084,7 @@ button {
     --table-top: clamp(108px, 17.5dvh, 132px);
     --wheel-size: min(76vw, 286px);
     --table-width: min(
-      84vw,
+      86vw,
       calc(
         (
           100dvh -
@@ -1094,9 +1094,9 @@ button {
         ) / var(--table-ratio)
       )
     );
-    --zero-row: calc(var(--table-width) * 0.091);
-    --number-row: calc(var(--table-width) * 0.127);
-    --column-row: calc(var(--table-width) * 0.116);
+    --zero-row: calc(var(--table-width) * 0.098);
+    --number-row: calc(var(--table-width) * 0.128);
+    --column-row: calc(var(--table-width) * 0.112);
     --control-size: clamp(26px, calc(var(--table-width) * 0.145), 40px);
     --control-gap: clamp(8px, calc(var(--table-width) * 0.036), 12px);
 
@@ -1275,42 +1275,54 @@ button {
     position: absolute;
     top: var(--table-top);
     left: 50%;
-    width: min(
-      97vw,
-      calc(var(--table-width) + var(--control-size) + var(--control-gap))
-    );
-    max-width: 97vw;
-    transform: translateX(-50%);
-    display: grid;
-    grid-template-columns: var(--table-width) var(--control-size);
-    justify-content: center;
-    align-items: center;
-    gap: var(--control-gap);
+    width: var(--table-width);
+    max-width: 89vw;
+    transform: translateX(-54%);
+    display: block;
     overflow: visible;
     pointer-events: auto;
     z-index: 6;
     transition:
       top 460ms cubic-bezier(0.2, 0.78, 0.2, 1),
-      width 460ms cubic-bezier(0.2, 0.78, 0.2, 1);
+      width 460ms cubic-bezier(0.2, 0.78, 0.2, 1),
+      transform 460ms cubic-bezier(0.2, 0.78, 0.2, 1);
   }
 
   .roulette-bet-table {
-    --bet-border: rgba(180, 183, 177, 0.50);
+    --bet-border: rgba(218, 219, 212, 0.62);
+    position: relative;
     grid-column: 1;
     width: var(--table-width);
     margin: 0;
     display: grid;
-    grid-template-columns: 15.7% 15.9% 68.4%;
+    grid-template-columns: 15.8% 16.0% 68.2%;
     grid-template-rows: var(--zero-row) auto var(--column-row);
     overflow: visible;
     border: 0;
     border-radius: 0;
     background: transparent;
-    filter: drop-shadow(0 8px 18px rgba(0, 0, 0, 0.25));
+    filter:
+      drop-shadow(0 10px 22px rgba(0, 0, 0, 0.32));
     transition:
       width 460ms cubic-bezier(0.2, 0.78, 0.2, 1),
       opacity 340ms ease,
       filter 340ms ease;
+  }
+
+  .roulette-bet-table::after {
+    content: "";
+    position: absolute;
+    inset:
+      var(--zero-row)
+      0
+      0
+      0;
+    pointer-events: none;
+    border:
+      1px solid
+      rgba(223, 224, 217, 0.24);
+    box-shadow:
+      inset 0 0 0 1px rgba(0, 0, 0, 0.30);
   }
 
   .roulette-bet-cell {
@@ -1356,7 +1368,7 @@ button {
         0 100%,
         0 28%
       );
-    color: #7db281;
+    color: #91c895;
     background:
       linear-gradient(
         180deg,
@@ -1365,7 +1377,7 @@ button {
       ) !important;
     font:
       750
-      clamp(13px, calc(var(--table-width) * 0.048), 19px)/1
+      clamp(14px, calc(var(--table-width) * 0.052), 20px)/1
       system-ui,
       -apple-system,
       BlinkMacSystemFont,
@@ -1393,13 +1405,14 @@ button {
     border-bottom: 1px solid var(--bet-border);
     font:
       760
-      clamp(12px, calc(var(--table-width) * 0.045), 18px)/1
+      clamp(13px, calc(var(--table-width) * 0.050), 19px)/1
       system-ui,
       -apple-system,
       BlinkMacSystemFont,
       "Segoe UI",
       sans-serif;
-    letter-spacing: -0.01em;
+    letter-spacing: -0.015em;
+    text-shadow: 0 1px 1px rgba(0, 0, 0, 0.62);
   }
 
   .roulette-number-cell.is-red {
@@ -1431,7 +1444,7 @@ button {
     background: #060707;
     font:
       700
-      clamp(7px, calc(var(--table-width) * 0.024), 10px)/1
+      clamp(8px, calc(var(--table-width) * 0.028), 11px)/1
       system-ui,
       -apple-system,
       BlinkMacSystemFont,
@@ -1471,7 +1484,7 @@ button {
     background: #060707;
     font:
       700
-      clamp(7px, calc(var(--table-width) * 0.022), 10px)/1
+      clamp(8px, calc(var(--table-width) * 0.030), 12px)/1
       system-ui,
       -apple-system,
       BlinkMacSystemFont,
@@ -1485,6 +1498,25 @@ button {
     writing-mode: vertical-rl;
     transform: rotate(180deg);
     text-orientation: mixed;
+    line-height: 1;
+  }
+
+  .roulette-dozen-cell {
+    background:
+      linear-gradient(
+        180deg,
+        rgba(8, 10, 11, 0.99),
+        rgba(5, 6, 7, 0.99)
+      );
+  }
+
+  .roulette-outside-cell {
+    background:
+      linear-gradient(
+        180deg,
+        rgba(9, 11, 12, 0.99),
+        rgba(5, 6, 7, 0.99)
+      );
   }
 
   .roulette-outside-bets {
@@ -1539,7 +1571,10 @@ button {
   /* ----- right rail ----- */
 
   .roulette-mobile-control-rail {
-    grid-column: 2;
+    position: absolute;
+    left: calc(100% + var(--control-gap));
+    top: 50%;
+    transform: translateY(-50%);
     display: grid;
     grid-template-rows: repeat(3, var(--control-size));
     align-items: center;
