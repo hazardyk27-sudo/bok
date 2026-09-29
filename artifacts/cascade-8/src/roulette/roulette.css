@@ -873,45 +873,8 @@ button {
   color: #dbe1e5;
 }
 
-.roulette-bet-cell.is-result-number {
-  z-index: 7;
-  box-shadow:
-    inset 0 0 0 3px #ffffff,
-    0 0 0 2px rgba(213, 221, 227, 0.68),
-    0 0 24px rgba(255, 255, 255, 0.58);
-  filter: brightness(1.22);
-}
-
-.roulette-bet-cell.is-winning-bet {
-  z-index: 7;
-  box-shadow:
-    inset 0 0 0 2px #79e7a5,
-    0 0 18px rgba(68, 216, 124, 0.52);
-}
-
-.roulette-bet-cell.is-result-number.is-winning-bet {
-  box-shadow:
-    inset 0 0 0 3px #ffffff,
-    0 0 0 3px #79e7a5,
-    0 0 28px rgba(84, 230, 141, 0.66);
-}
-
-.roulette-bet-cell.is-winning-bet .roulette-placed-chip {
-  transform: scale(1.08);
-  box-shadow:
-    0 5px 13px rgba(0, 0, 0, 0.40),
-    0 0 0 3px rgba(111, 232, 158, 0.72),
-    0 0 18px rgba(92, 225, 145, 0.60),
-    inset 0 0 0 2px rgba(0, 0, 0, 0.20);
-}
-
 .roulette-page[data-phase="settled"] .roulette-bet-panel {
   opacity: 0.70;
-}
-
-.roulette-page[data-phase="settled"] .roulette-bet-cell.is-result-number,
-.roulette-page[data-phase="settled"] .roulette-bet-cell.is-winning-bet {
-  filter: brightness(1.34) saturate(1.08);
 }
 
 @media (max-width: 640px) {
@@ -2142,10 +2105,6 @@ button {
   .roulette-number-cell.is-winning-bet,
   .roulette-zero-cell.is-result-number,
   .roulette-zero-cell.is-winning-bet {
-    box-shadow:
-      inset 0 0 0 2px rgba(247, 222, 151, 0.92),
-      0 0 10px rgba(219, 177, 76, 0.28);
-    filter: brightness(1.10);
     z-index: 7;
   }
 
@@ -2253,18 +2212,6 @@ button {
   .roulette-number-cell.has-bet > span:not(.roulette-placed-chip),
   .roulette-zero-cell.has-bet > span:not(.roulette-placed-chip) {
     opacity: 0 !important;
-  }
-
-  .roulette-number-cell.is-winning-bet .roulette-placed-chip,
-  .roulette-zero-cell.is-winning-bet .roulette-placed-chip,
-  .roulette-number-cell.is-result-number .roulette-placed-chip,
-  .roulette-zero-cell.is-result-number .roulette-placed-chip {
-    transform:
-      translate(-50%, -50%)
-      scale(1.03);
-    box-shadow:
-      0 2px 6px rgba(0, 0, 0, 0.30),
-      0 0 0 1px rgba(255, 244, 188, 0.18);
   }
 
   .roulette-page .roulette-placed-chip,
