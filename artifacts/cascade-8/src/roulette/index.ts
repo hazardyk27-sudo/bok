@@ -113,6 +113,7 @@ type RouletteViewState = {
   ballAngle: number;
   ballRadiusRatio: number;
   ballVisible: boolean;
+  resultMarkerAngle: number | null;
 };
 
 function renderCanvas(
@@ -191,6 +192,36 @@ export function mountRoulette(app: HTMLDivElement) {
               tabindex="0"
               aria-label="European roulette wheel. Press to spin the wheel and ball."
             ></canvas>
+
+            <div
+              class="roulette-result-banner"
+              data-result-banner
+              aria-live="polite"
+              aria-hidden="true"
+            >
+              <span
+                class="roulette-result-banner__neighbor"
+                data-result-left-neighbor
+              >—</span>
+              <strong
+                class="roulette-result-banner__number"
+                data-result-winning-number
+              >—</strong>
+              <span
+                class="roulette-result-banner__neighbor"
+                data-result-right-neighbor
+              >—</span>
+            </div>
+
+            <div
+              class="roulette-win-message"
+              data-win-message
+              aria-live="polite"
+              aria-hidden="true"
+            >
+              <span>KAZANDINIZ</span>
+              <strong data-win-amount>—</strong>
+            </div>
           </div>
         </section>
 
@@ -234,6 +265,18 @@ export function mountRoulette(app: HTMLDivElement) {
     app.querySelector<HTMLElement>("[data-mobile-selected-chip]");
   const recentResultsStrip =
     app.querySelector<HTMLElement>("[data-roulette-recent-results]");
+  const resultBanner =
+    app.querySelector<HTMLElement>("[data-result-banner]");
+  const resultWinningNumber =
+    app.querySelector<HTMLElement>("[data-result-winning-number]");
+  const resultLeftNeighbor =
+    app.querySelector<HTMLElement>("[data-result-left-neighbor]");
+  const resultRightNeighbor =
+    app.querySelector<HTMLElement>("[data-result-right-neighbor]");
+  const winMessage =
+    app.querySelector<HTMLElement>("[data-win-message]");
+  const winAmount =
+    app.querySelector<HTMLElement>("[data-win-amount]");
   const bettingTimerLabel =
     app.querySelector<HTMLElement>("[data-betting-timer-label]");
   const bettingTimerValue =
@@ -260,6 +303,7 @@ export function mountRoulette(app: HTMLDivElement) {
     ballAngle: initialBallOrbit.startAngle,
     ballRadiusRatio: initialBallOrbit.trackRadius,
     ballVisible: true,
+    resultMarkerAngle: null,
   };
 
   let betState: RouletteBetState =
