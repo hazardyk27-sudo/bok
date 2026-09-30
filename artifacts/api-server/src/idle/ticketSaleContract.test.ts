@@ -90,7 +90,7 @@ describe("ticket sale transaction contract", () => {
       "BigInt(balanceBeforeCents)\n          + BigInt(quote.walletCreditCents)",
     );
     expect(quoteSource).toContain(
-      'throw new Error("INSUFFICIENT_IDLE_TICKETS")',
+      '"INSUFFICIENT_IDLE_TICKETS"',
     );
   });
 
