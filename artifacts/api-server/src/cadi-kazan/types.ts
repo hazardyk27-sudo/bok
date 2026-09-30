@@ -97,6 +97,18 @@ export function getVisibleBombCells(status: CadiKazanStatus, bombIndices: number
   return status === "ACTIVE" ? [] : [...bombIndices];
 }
 
+export function getVisibleRevealedCells(
+  mode: CadiKazanMode,
+  status: CadiKazanStatus,
+  cellCount: number,
+  revealedCells: number[],
+) {
+  if (mode === "ADVANCED" && status === "BUST") {
+    return Array.from({ length: cellCount }, (_, index) => index);
+  }
+  return [...revealedCells];
+}
+
 export type CadiKazanOfficeVisibleCell = {
   index: number;
   symbolId: OfficeMatchSymbolId;

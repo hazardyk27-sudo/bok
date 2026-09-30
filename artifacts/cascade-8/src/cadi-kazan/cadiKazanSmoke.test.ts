@@ -477,17 +477,14 @@ describe("cadi kazan route smoke contract", () => {
   });
 
 
-  it("finishes Advanced 25 Part 1 with full BUST reveal, centered placement and a stake value badge", () => {
+  it("finishes Advanced 25 Part 1 with full BUST reveal and centered placement", () => {
     expect(witchClientSource).toContain('round.mode === "ADVANCED" && round.status === "BUST"');
     expect(witchClientSource).toContain("allCells.forEach((index) => this.terminalRevealVisibleCells.add(index))");
-    expect(witchClientSource).toContain('data-witch-advanced-card-value');
-    expect(witchClientSource).toContain("advancedCardValue.textContent = formatTicketPrice(previewStakeCents)");
-    expect(witchClientSource).toContain("advancedCardValue.textContent = formatTicketPrice(round.stakeCents)");
-    expect(visualLockSource).toContain("PASS 37 — ADVANCED 25 Part 1: terminal reveal + centered table placement + card value");
-    expect(visualLockSource).toContain(".is-advanced-theme .witch-advanced-card-value");
+    expect(witchClientSource).not.toContain('data-witch-advanced-card-value');
+    expect(visualLockSource).toContain("PASS 37 — ADVANCED 25 Part 1: terminal reveal + centered table placement");
+    expect(visualLockSource).not.toContain(".is-advanced-theme .witch-advanced-card-value");
     expect(visualLockSource).toContain("justify-self: center !important");
     expect(visualLockSource).toContain("align-self: center !important");
-    expect(visualLockSource).toContain("font-variant-numeric: tabular-nums !important");
   });
 
 
@@ -514,6 +511,12 @@ describe("cadi kazan route smoke contract", () => {
     expect(visualLockSource).toContain(".is-advanced-theme .witch-back");
     expect(visualLockSource).toContain(".is-office-theme .witch-back");
     expect(visualLockSource).toContain(".witch-back:focus-visible");
+  });
+
+
+  it("keeps the Advanced card art original by removing the temporary stake badge", () => {
+    expect(witchClientSource).not.toContain("witch-advanced-card-value");
+    expect(visualLockSource).not.toContain(".witch-advanced-card-value");
   });
 
 });
