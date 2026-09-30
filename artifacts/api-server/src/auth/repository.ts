@@ -36,7 +36,7 @@ type SessionUser = {
   walletSessionId: string;
 };
 
-function formatUserCode(value: number) {
+export function formatAuthUserCode(value: number) {
   if (!Number.isSafeInteger(value) || value <= 0) {
     throw new Error("AUTH_USERCODE_INVALID");
   }
@@ -51,7 +51,7 @@ function toSessionUser(row: UserRow): SessionUser {
       id: row.id,
       email: row.email,
       username: row.username,
-      userCode: formatUserCode(userNumber),
+      userCode: formatAuthUserCode(userNumber),
       balanceCents: Number(row.balance_cents),
       createdAt: row.created_at.toISOString(),
     },
