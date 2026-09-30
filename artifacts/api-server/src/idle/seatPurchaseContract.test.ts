@@ -55,13 +55,13 @@ describe("Stadium seat purchase transaction contract", () => {
   });
 
   it("locks and debits the shared wallet inside the same transaction", () => {
-    expect(purchaseSource).toContain("FROM roulette_wallets");
+    expect(purchaseSource).toContain("${SHARED_WALLET_TABLE}");
     expect(purchaseSource).toContain("FOR UPDATE");
     expect(purchaseSource).toContain(
       "balanceBeforeCents - quote.totalCostCents",
     );
     expect(purchaseSource).toContain(
-      "UPDATE roulette_wallets",
+      "${SHARED_WALLET_TABLE}",
     );
     expect(purchaseSource).toContain(
       'throw new Error("INSUFFICIENT_IDLE_CREDITS")',
