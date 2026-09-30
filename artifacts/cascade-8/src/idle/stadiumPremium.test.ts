@@ -123,4 +123,17 @@ describe("Part 26 premium Stadium control surface", () => {
     expect(css).toContain("background-color: #050b17 !important");
     expect(css).toContain("min-height: 100dvh");
   });
+
+  it("keeps the Stadium subject fully framed on wide 16:9 desktop views", () => {
+    expect(css).toContain("desktop 16:9 hero framing");
+    expect(css).toContain(
+      "@media (min-width: 1101px) and (min-aspect-ratio: 16 / 10)",
+    );
+    expect(css).toContain(
+      "min-height: clamp(360px, 35dvh, 420px) !important",
+    );
+    expect(css).toContain(
+      "object-position: center 24% !important",
+    );
+  });
 });
