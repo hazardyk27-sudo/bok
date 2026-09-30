@@ -128,13 +128,38 @@ describe("Part 26 premium Stadium control surface", () => {
     expect(css).toContain("min-height: 100dvh");
   });
 
-  it("keeps tablet and desktop pages vertically scrollable", () => {
-    expect(css).toContain("tablet + desktop scroll safety");
-    expect(css).toContain("@media (min-width: 761px)");
-    expect(css).toContain("overflow-y: auto !important");
-    expect(css).toContain("height: auto !important");
-    expect(css).toContain("max-height: none !important");
-    expect(css).toContain("touch-action: pan-y !important");
+  it("owns vertical scrolling inside the Businesses route on every viewport", () => {
+    const marker = css.lastIndexOf("route-owned scroll root");
+    expect(marker).toBeGreaterThan(-1);
+
+    const finalScrollContract = css.slice(marker);
+    expect(finalScrollContract).toContain(
+      "html.businesses-route #app",
+    );
+    expect(finalScrollContract).toContain(
+      "overflow: hidden !important",
+    );
+    expect(finalScrollContract).toContain(
+      "height: 100dvh !important",
+    );
+    expect(finalScrollContract).toContain(
+      "max-height: 100dvh !important",
+    );
+    expect(finalScrollContract).toContain(
+      "overflow-y: auto !important",
+    );
+    expect(finalScrollContract).toContain(
+      "-webkit-overflow-scrolling: touch",
+    );
+    expect(finalScrollContract).toContain(
+      "touch-action: pan-y !important",
+    );
+    expect(finalScrollContract).toContain(
+      "height: auto !important",
+    );
+    expect(marker).toBeGreaterThan(
+      css.lastIndexOf("desktop scale with stable Stadium source"),
+    );
   });
 
 
