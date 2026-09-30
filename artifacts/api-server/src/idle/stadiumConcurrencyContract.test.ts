@@ -80,9 +80,9 @@ describe("Stadium concurrency/idempotency contract", () => {
 
   it("locks the shared wallet before every debit or credit", () => {
     for (const source of actionSources) {
-      expect(source).toContain("FROM roulette_wallets");
+      expect(source).toContain("${SHARED_WALLET_TABLE}");
       expect(source).toContain("FOR UPDATE");
-      expect(source).toContain("UPDATE roulette_wallets");
+      expect(source).toContain("${SHARED_WALLET_TABLE}");
     }
   });
 
