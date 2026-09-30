@@ -78,6 +78,16 @@ describe("Part 26 premium Stadium control surface", () => {
     expect(css).toContain(".stadium-premium-actions");
     expect(css).toContain(".stadium-drawer-sheet");
     expect(css).toContain("@media (max-width:760px)");
-    expect(css).toContain("#19d7a1");
+  });
+
+  it("inherits the approved Businesses visual system instead of a standalone Stadium palette", () => {
+    expect(css).toContain("restore the approved Businesses visual system");
+    expect(css).toContain("var(--idle-rich-black)");
+    expect(css).toContain("var(--idle-surface)");
+    expect(css).toContain("var(--idle-shadow-card)");
+    expect(css).toContain("var(--idle-accent-bright)");
+    expect(css).toContain("var(--idle-accent-secondary) 58%");
+    expect(css).toContain("var(--idle-accent)");
+    expect(css).toContain("linear-gradient(180deg, #0b1728 0%, #07111f 48%, #050b15 100%)");
   });
 });

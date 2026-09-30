@@ -133,7 +133,7 @@ describe("global market runtime/API source contract", () => {
       'process.once("SIGINT", stopIdleRuntime)',
     );
     expect(idleIndexSource).toContain(
-      "Unable to start Idle ticket market runtime",
+      "Unable to initialize Idle Stadium runtime",
     );
   });
 });
