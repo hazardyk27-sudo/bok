@@ -542,3 +542,255 @@
     grid-column: 1;
   }
 }
+
+/* 2026-09-30 — restore the approved Businesses visual system.
+   Stadium keeps the new economy/geometry but must inherit the existing
+   Businesses palette, card depth, buttons and drawer language. */
+.route-shell.is-businesses-page .stadium-canonical-card {
+  border-color: var(--idle-line);
+  border-radius: var(--idle-radius-lg);
+  background:
+    linear-gradient(180deg, rgba(255,255,255,.018), transparent 18%),
+    var(--idle-rich-black);
+  box-shadow: var(--idle-shadow-card);
+}
+
+.route-shell.is-businesses-page .stadium-canonical-hero {
+  background: var(--idle-rich-black);
+}
+
+.route-shell.is-businesses-page .stadium-canonical-hero-shade {
+  background:
+    linear-gradient(90deg, rgba(5,11,21,.92), rgba(5,11,21,.24) 56%, rgba(5,11,21,.82)),
+    linear-gradient(180deg, rgba(0,0,0,.08), rgba(5,11,21,.76));
+}
+
+.route-shell.is-businesses-page .stadium-canonical-body {
+  background:
+    radial-gradient(circle at 88% 4%, rgba(54,93,76,.055), transparent 27%),
+    var(--idle-rich-black);
+}
+
+.route-shell.is-businesses-page .stadium-canonical-primary article,
+.route-shell.is-businesses-page .stadium-canonical-secondary > div,
+.stadium-sell-panel,
+.stadium-details-open,
+.stadium-upgrade-grid article,
+.stadium-seat-purchase,
+.stadium-market-summary article {
+  border-color: var(--idle-line);
+  background:
+    linear-gradient(145deg, rgba(18,52,153,.045), transparent 58%),
+    var(--idle-surface);
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.025);
+}
+
+.route-shell.is-businesses-page .stadium-canonical-storage,
+.stadium-market-chart {
+  border-color: var(--idle-line-soft);
+  background:
+    linear-gradient(135deg, rgba(18,52,153,.035), transparent 64%),
+    rgba(7,17,31,.86);
+}
+
+.route-shell.is-businesses-page .stadium-canonical-identity span,
+.route-shell.is-businesses-page .stadium-canonical-market span,
+.route-shell.is-businesses-page .stadium-canonical-primary span,
+.route-shell.is-businesses-page .stadium-canonical-secondary span,
+.route-shell.is-businesses-page .stadium-canonical-storage span,
+.stadium-panel-heading span,
+.stadium-sell-preview span,
+.stadium-drawer-head span,
+.stadium-upgrade-grid article > span,
+.stadium-upgrade-grid article > div span,
+.stadium-seat-purchase span,
+.stadium-market-summary span,
+.stadium-market-chart-head span {
+  color: var(--idle-text-muted);
+  font-family: var(--idle-font-ui);
+}
+
+.route-shell.is-businesses-page .stadium-canonical-identity strong,
+.route-shell.is-businesses-page .stadium-canonical-market strong,
+.route-shell.is-businesses-page .stadium-canonical-primary strong,
+.route-shell.is-businesses-page .stadium-canonical-secondary strong,
+.route-shell.is-businesses-page .stadium-canonical-storage-head strong,
+.stadium-panel-heading strong,
+.stadium-sell-preview strong,
+.stadium-details-open strong,
+.stadium-upgrade-grid article > strong,
+.stadium-upgrade-grid article > div strong,
+.stadium-seat-purchase > div strong,
+.stadium-seat-estimate strong,
+.stadium-market-summary article strong {
+  color: var(--idle-text);
+  font-family: var(--idle-font-ui);
+}
+
+.route-shell.is-businesses-page .stadium-canonical-identity small,
+.route-shell.is-businesses-page .stadium-canonical-market small,
+.route-shell.is-businesses-page .stadium-canonical-primary small,
+.stadium-panel-heading small,
+.stadium-seat-purchase > div small,
+.stadium-seat-purchase-copy small,
+.stadium-market-foot small {
+  color: var(--idle-text-secondary);
+}
+
+.route-shell.is-businesses-page
+.stadium-canonical-card[data-market-connection="live"]
+.stadium-canonical-market small,
+.stadium-market-foot span {
+  color: var(--idle-accent-bright);
+}
+
+.route-shell.is-businesses-page .stadium-canonical-storage-track {
+  background: rgba(221,226,246,.10);
+}
+
+.route-shell.is-businesses-page .stadium-canonical-storage-track > i {
+  background:
+    linear-gradient(
+      90deg,
+      var(--idle-accent-deep),
+      var(--idle-accent-bright) 62%,
+      var(--idle-accent)
+    );
+  box-shadow: 0 0 18px rgba(18,52,153,.16);
+}
+
+.stadium-sell-input-row label,
+.stadium-seat-purchase label {
+  border-color: var(--idle-line);
+  background: rgba(7,17,31,.72);
+}
+
+.stadium-sell-input-row label span,
+.stadium-seat-purchase label span {
+  color: var(--idle-text-muted);
+}
+
+.stadium-sell-input-row input,
+.stadium-seat-purchase input {
+  color: var(--idle-text);
+}
+
+/* Exact primary-action language from the approved old Businesses cards. */
+.stadium-sell-input-row button,
+.stadium-seat-purchase > button,
+.stadium-upgrade-grid article button:not(:disabled) {
+  border: 1px solid rgba(13,52,233,.34);
+  border-radius: 11px;
+  color: #07111f;
+  background:
+    linear-gradient(
+      135deg,
+      var(--idle-accent-bright),
+      var(--idle-accent-secondary) 58%,
+      var(--idle-accent)
+    );
+  box-shadow: var(--idle-shadow-accent);
+}
+
+.stadium-sell-input-row button:not(:disabled):hover,
+.stadium-seat-purchase > button:not(:disabled):hover,
+.stadium-upgrade-grid article button:not(:disabled):hover {
+  transform: translateY(-1px);
+  border-color: rgba(13,52,233,.58);
+  filter: brightness(1.04);
+}
+
+.stadium-sell-input-row button:disabled,
+.stadium-seat-purchase > button:disabled,
+.stadium-upgrade-grid article button:disabled {
+  color: var(--idle-text-muted);
+  border-color: rgba(157,174,196,.12);
+  background: rgba(157,174,196,.06);
+  box-shadow: none;
+}
+
+.stadium-market-open,
+.stadium-sell-shortcuts button,
+.stadium-drawer-head button {
+  border-color: rgba(13,52,233,.16);
+  color: var(--idle-text-secondary);
+  background: rgba(12,25,48,.72);
+}
+
+.stadium-market-open:hover,
+.stadium-sell-shortcuts button:not(:disabled):hover,
+.stadium-drawer-head button:hover {
+  color: var(--idle-accent-bright);
+  border-color: rgba(13,52,233,.34);
+  background: rgba(18,52,153,.065);
+}
+
+.stadium-details-open {
+  color: var(--idle-text);
+}
+
+.stadium-details-open small {
+  color: var(--idle-text-muted);
+}
+
+.stadium-details-open b {
+  color: var(--idle-accent-bright);
+}
+
+.stadium-upgrade-grid article > i {
+  border-color: rgba(13,52,233,.22);
+  color: var(--idle-accent-bright);
+  background: rgba(18,52,153,.065);
+}
+
+.stadium-upgrade-grid article > p {
+  color: var(--idle-text-secondary);
+}
+
+.stadium-upgrade-grid article > div:last-of-type,
+.stadium-sell-preview {
+  border-color: var(--idle-line-soft);
+}
+
+.stadium-drawer-backdrop {
+  background:
+    radial-gradient(circle at 78% 28%, rgba(18,52,153,.055), transparent 30%),
+    rgba(2,6,14,.70);
+  backdrop-filter: blur(6px);
+}
+
+.stadium-drawer-sheet {
+  border-color: rgba(13,52,233,.16);
+  color: var(--idle-text);
+  background:
+    radial-gradient(circle at 86% 2%, rgba(18,52,153,.09), transparent 28%),
+    radial-gradient(circle at 24% 14%, rgba(54,93,76,.055), transparent 30%),
+    linear-gradient(180deg, #0b1728 0%, #07111f 48%, #050b15 100%);
+  box-shadow: -28px 0 80px rgba(0,0,0,.34);
+}
+
+.stadium-market-chart-grid {
+  stroke: var(--idle-line-soft);
+}
+
+.stadium-market-chart-line {
+  stroke: var(--idle-accent-bright);
+  filter: drop-shadow(0 0 8px rgba(13,52,233,.24));
+}
+
+.stadium-action-status {
+  border-color: rgba(13,52,233,.34);
+  background:
+    linear-gradient(135deg, rgba(18,52,153,.12), rgba(28,75,50,.08)),
+    rgba(6,17,30,.96);
+  color: var(--idle-text);
+  box-shadow: var(--idle-shadow-raised);
+}
+
+@media (max-width:760px) {
+  .stadium-drawer-head {
+    background: rgba(7,17,31,.97);
+  }
+}
+
