@@ -36,15 +36,9 @@ export class IdleRequestError extends Error {
     code: string,
     options: {
       outcomeUnknown?: boolean;
-      cause?: unknown;
     } = {},
   ) {
-    super(
-      code,
-      options.cause === undefined
-        ? undefined
-        : { cause: options.cause },
-    );
+    super(code);
     this.name = "IdleRequestError";
     this.outcomeUnknown =
       options.outcomeUnknown ?? false;
@@ -68,10 +62,10 @@ async function postIdleJson<T>(
       },
       body: JSON.stringify(body),
     });
-  } catch (cause) {
+  } catch {
     throw new IdleRequestError(
       fallbackError,
-      { outcomeUnknown: true, cause },
+      { outcomeUnknown: true },
     );
   }
 
@@ -85,10 +79,10 @@ async function postIdleJson<T>(
 
   try {
     return await response.json() as T;
-  } catch (cause) {
+  } catch {
     throw new IdleRequestError(
       fallbackError,
-      { outcomeUnknown: true, cause },
+      { outcomeUnknown: true },
     );
   }
 }
