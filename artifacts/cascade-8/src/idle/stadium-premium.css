@@ -793,3 +793,65 @@
     background: rgba(7,17,31,.97);
   }
 }
+
+/* 2026-09-30 — drawer compositing fix.
+   Keep the dim layer visually behind the control surface. Some preview
+   compositors were applying backdrop blur across the drawer contents because
+   both grid children shared the same compositing plane. */
+.stadium-drawer {
+  isolation: isolate;
+}
+
+.stadium-drawer-backdrop {
+  position: relative;
+  z-index: 0;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+  background: rgba(2, 7, 14, .82);
+}
+
+.stadium-drawer-sheet {
+  position: relative;
+  z-index: 2;
+  opacity: 1;
+  filter: none !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+  background:
+    radial-gradient(circle at 86% 2%, rgba(18, 52, 153, .09), transparent 28%),
+    radial-gradient(circle at 24% 14%, rgba(54, 93, 76, .055), transparent 30%),
+    linear-gradient(180deg, #0b1728 0%, #07111f 48%, #050b15 100%) !important;
+  box-shadow: -32px 0 90px rgba(0, 0, 0, .48);
+  transform: translateZ(0);
+}
+
+.stadium-drawer-sheet,
+.stadium-drawer-sheet * {
+  text-shadow: none;
+}
+
+.stadium-upgrade-grid article,
+.stadium-seat-purchase,
+.stadium-market-summary article,
+.stadium-market-chart {
+  opacity: 1;
+  filter: none !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+
+@media (max-width: 760px) {
+  .stadium-drawer-backdrop {
+    display: none;
+  }
+
+  .stadium-drawer-sheet {
+    position: fixed;
+    z-index: 2;
+    inset: 0;
+    width: 100vw;
+    height: 100dvh;
+    border-radius: 0;
+    box-shadow: none;
+  }
+}
