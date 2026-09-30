@@ -10,6 +10,10 @@ const css = readFileSync(
   fileURLToPath(new URL("./stadium-premium.css", import.meta.url)),
   "utf8",
 );
+const idleIndexSource = readFileSync(
+  fileURLToPath(new URL("./index.ts", import.meta.url)),
+  "utf8",
+);
 
 describe("Part 26 premium Stadium control surface", () => {
   it("binds canonical sell, seat and progression actions", () => {
