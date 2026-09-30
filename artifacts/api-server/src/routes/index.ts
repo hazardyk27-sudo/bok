@@ -5,6 +5,7 @@ import { router as slotRouter } from "../slot";
 import { router as idleRouter } from "../idle";
 import { router as blackjackRouter } from "../blackjack";
 import { router as rouletteRouter } from "../roulette";
+import { authRouter } from "../auth";
 import { blackjackPlatformRouter } from "../platform/blackjack";
 import { sessionConvergenceRouter } from "../platform/sessionConvergence";
 
@@ -12,6 +13,7 @@ const router: IRouter = Router();
 
 router.use(healthRouter);
 router.use(sessionConvergenceRouter);
+router.use(authRouter);
 router.use(cadiKazanRouter);
 router.use(slotRouter);
 router.use(idleRouter);
