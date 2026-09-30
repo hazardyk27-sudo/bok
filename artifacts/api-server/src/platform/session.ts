@@ -15,6 +15,12 @@ export function isValidSessionId(value: unknown): value is string {
   return typeof value === "string" && SESSION_ID_PATTERN.test(value);
 }
 
+export function getLegacyScopedSessionPathForRequest(requestPath: string) {
+  return LEGACY_SCOPED_SESSION_PATHS.find(
+    (path) => requestPath === path || requestPath.startsWith(`${path}/`),
+  ) ?? null;
+}
+
 export function getCanonicalSessionId(
   cookies: Record<string, unknown> | undefined,
 ) {
@@ -69,7 +75,6 @@ export function chooseSessionIdForWalletMigration(input: {
     legacySessionId,
     canonicalBalanceCents,
     legacyBalanceCents,
-    initialBalanceCents,
   } = input;
 
   if (!canonicalSessionId) return legacySessionId;
@@ -77,17 +82,37 @@ export function chooseSessionIdForWalletMigration(input: {
     return canonicalSessionId;
   }
 
-  if (canonicalBalanceCents === null && legacyBalanceCents !== null) {
-    return legacySessionId;
-  }
-
   if (
-    canonicalBalanceCents === initialBalanceCents
-    && legacyBalanceCents !== null
-    && legacyBalanceCents !== initialBalanceCents
+    legacyBalanceCents !== null
+    && (
+      canonicalBalanceCents === null
+      || legacyBalanceCents > canonicalBalanceCents
+    )
   ) {
     return legacySessionId;
   }
 
   return canonicalSessionId;
+}
+
+export function chooseHighestBalanceSessionCandidate(
+  candidates: readonly { sessionId: string; balanceCents: number }[],
+) {
+  let winner: { sessionId: string; balanceCents: number; order: number } | null = null;
+
+  for (let order = 0; order < candidates.length; order += 1) {
+    const candidate = candidates[order]!;
+    if (
+      winner === null
+      || candidate.balanceCents > winner.balanceCents
+      || (
+        candidate.balanceCents === winner.balanceCents
+        && order > winner.order
+      )
+    ) {
+      winner = { ...candidate, order };
+    }
+  }
+
+  return winner ? winner.sessionId : null;
 }

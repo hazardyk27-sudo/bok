@@ -8,7 +8,7 @@ import {
   LEGACY_SESSION_COOKIE,
   SESSION_COOKIE,
   SESSION_COOKIE_MAX_AGE_MS,
-  LEGACY_SCOPED_SESSION_PATHS,
+  getLegacyScopedSessionPathForRequest,
   getLegacySessionId,
   getSessionCookieCandidates,
 } from "./platform/session";
@@ -65,10 +65,11 @@ app.use(async (req, res, next) => {
       });
     }
 
-    for (const path of LEGACY_SCOPED_SESSION_PATHS) {
+    const observedLegacyScope = getLegacyScopedSessionPathForRequest(req.path);
+    if (observedLegacyScope) {
       res.clearCookie(SESSION_COOKIE, {
         ...cookieOptions,
-        path,
+        path: observedLegacyScope,
       });
     }
 
@@ -77,6 +78,12 @@ app.use(async (req, res, next) => {
         ...cookieOptions,
         path: "/",
       });
+      if (observedLegacyScope) {
+        res.clearCookie(LEGACY_SESSION_COOKIE, {
+          ...cookieOptions,
+          path: observedLegacyScope,
+        });
+      }
     }
 
     next();
