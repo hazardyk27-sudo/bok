@@ -90,4 +90,13 @@ describe("Part 26 premium Stadium control surface", () => {
     expect(css).toContain("var(--idle-accent)");
     expect(css).toContain("linear-gradient(180deg, #0b1728 0%, #07111f 48%, #050b15 100%)");
   });
+
+  it("keeps drawer content on a crisp compositing layer above the dim backdrop", () => {
+    expect(css).toContain("drawer compositing fix");
+    expect(css).toContain("isolation: isolate");
+    expect(css).toContain("backdrop-filter: none !important");
+    expect(css).toContain("-webkit-backdrop-filter: none !important");
+    expect(css).toContain("z-index: 2");
+    expect(css).toContain("transform: translateZ(0)");
+  });
 });
