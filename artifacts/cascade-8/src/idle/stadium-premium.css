@@ -1311,11 +1311,16 @@ html.businesses-route #app {
 }
 
 .route-shell.is-businesses-page {
+  position: fixed !important;
+  inset: 0 !important;
+  display: block !important;
+  place-items: initial !important;
+  width: 100vw !important;
   height: 100dvh !important;
   min-height: 100dvh !important;
   max-height: 100dvh !important;
   overflow-x: hidden !important;
-  overflow-y: auto !important;
+  overflow-y: scroll !important;
   overscroll-behavior-x: none !important;
   overscroll-behavior-y: contain !important;
   -webkit-overflow-scrolling: touch;
