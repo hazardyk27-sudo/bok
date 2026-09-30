@@ -90,18 +90,17 @@ describe("Part 26 premium Stadium control surface", () => {
     expect(css).toContain("var(--idle-accent)");
     expect(css).toContain("linear-gradient(180deg, #0b1728 0%, #07111f 48%, #050b15 100%)");
   });
-  it("re-locks the exact approved pre-Stadium Rich Black palette", () => {
+  it("re-locks the approved Slate Blue premium palette from the target references", () => {
     expect(css).toContain(
-      "restore exact approved pre-Stadium Businesses palette",
+      "restore the approved Slate Blue premium Idle palette",
     );
-    expect(css).toContain("--idle-rich-black: #00072d");
-    expect(css).toContain("--idle-dark-green: #051650");
-    expect(css).toContain("--idle-bangladesh-green: #0a2472");
-    expect(css).toContain("--idle-caribbean-green: #123499");
-    expect(css).toContain("--idle-palette-white: #dde2f6");
-    expect(css).toContain(
-      "background: var(--idle-caribbean-green) !important",
-    );
+    expect(css).toContain("--idle-surface-page: #050b17");
+    expect(css).toContain("--idle-surface-kpi: #0b1524");
+    expect(css).toContain("--idle-surface-detail: #091421");
+    expect(css).toContain("--idle-text: #eef4ff");
+    expect(css).toContain("--idle-text-muted: #7f8daa");
+    expect(css).toContain("--idle-action-primary-start: #6f97ff");
+    expect(css).toContain("--idle-action-primary-end: #577fdc");
     expect(css).toContain(
       ".stadium-canonical-balance",
     );

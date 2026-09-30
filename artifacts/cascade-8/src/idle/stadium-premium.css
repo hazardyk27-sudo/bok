@@ -856,114 +856,136 @@
   }
 }
 
-/* 2026-09-30 — restore exact approved pre-Stadium Businesses palette.
-   Source of truth: commit 6a03a5ee5a506d8e471251121d5ec6f61d37779a.
-   Keep the current Stadium information architecture/placement, but return the
-   visible surfaces and primary actions to the approved Rich Black system. */
+/* 2026-09-30 — restore the approved Slate Blue premium Idle palette.
+   Visual reference: the approved mobile Businesses screens from the pre-Stadium
+   redesign (2026-09-27) and the final premium action hierarchy in dbb5fa6....
+   Keep Stadium layout/information architecture unchanged; only restore the
+   correct canvas, surfaces, borders, typography and action treatment. */
 .route-shell.is-businesses-page {
-  --idle-rich-black: #00072d;
-  --idle-dark-green: #051650;
-  --idle-bangladesh-green: #0a2472;
-  --idle-caribbean-green: #123499;
-  --idle-palette-white: #dde2f6;
-  --idle-secondary-blue-1: #1a43bf;
-  --idle-secondary-blue-2: #0d34e9;
-  --idle-secondary-blue-3: #0a0ba4;
-  --idle-secondary-ink: #01011d;
+  --idle-surface-page: #050b17;
+  --idle-surface-sidebar: #07111f;
+  --idle-surface-kpi: #0b1524;
+  --idle-surface-kpi-deep: #091421;
+  --idle-surface-card: #091421;
+  --idle-surface-card-deep: #08121f;
+  --idle-surface-inset: #07111f;
+  --idle-surface-detail: #091421;
+  --idle-surface-detail-deep: #07101d;
 
-  --idle-canvas: #00072d;
-  --idle-sidebar: #01011d;
-  --idle-surface: #00072d;
-  --idle-surface-2: #00072d;
-  --idle-surface-raised: #00072d;
-  --idle-surface-interactive: #00072d;
+  --idle-text: #eef4ff;
+  --idle-text-secondary: #b7c5e3;
+  --idle-text-muted: #7f8daa;
 
-  --idle-text: #dde2f6;
-  --idle-text-secondary: rgba(221, 226, 246, .76);
-  --idle-text-muted: rgba(221, 226, 246, .48);
+  --idle-accent: #6f97ff;
+  --idle-accent-secondary: #87a9ff;
+  --idle-accent-bright: #9ab8ff;
+  --idle-accent-deep: #4d73d9;
+  --idle-accent-soft: rgba(111, 151, 255, .14);
+  --idle-accent-medium: rgba(111, 151, 255, .24);
 
-  --idle-accent: #123499;
-  --idle-accent-secondary: #1a43bf;
-  --idle-accent-bright: #0d34e9;
-  --idle-accent-deep: #0a0ba4;
-  --idle-accent-soft: rgba(18, 52, 153, .16);
-  --idle-accent-medium: rgba(26, 67, 191, .32);
+  --idle-line-soft: rgba(111, 151, 255, .11);
+  --idle-line: rgba(111, 151, 255, .17);
+  --idle-line-strong: rgba(121, 160, 255, .30);
 
-  --idle-line-soft: rgba(221, 226, 246, .10);
-  --idle-line: rgba(221, 226, 246, .16);
-  --idle-line-strong: rgba(13, 52, 233, .48);
+  --idle-action-primary-start: #6f97ff;
+  --idle-action-primary-end: #577fdc;
+  --idle-action-primary-hover-start: #7aa0ff;
+  --idle-action-primary-hover-end: #6189e7;
+  --idle-action-primary-text: #f2f6ff;
+  --idle-action-ghost: rgba(7, 16, 29, .76);
+  --idle-action-ghost-hover: rgba(12, 24, 40, .90);
+  --idle-action-disabled: rgba(111, 151, 255, .075);
+  --idle-action-border: rgba(144, 176, 255, .22);
 }
 
 html.businesses-route,
 body.businesses-route {
-  background: var(--idle-rich-black);
+  background:
+    radial-gradient(circle at 58% 0%, rgba(92, 125, 255, .11), transparent 27%),
+    radial-gradient(circle at 100% 18%, rgba(69, 103, 177, .055), transparent 24%),
+    linear-gradient(180deg, var(--idle-surface-page) 0%, #07101d 100%) !important;
 }
 
-.route-shell.is-businesses-page,
-.route-shell.is-businesses-page .businesses-page,
-.route-shell.is-businesses-page .stadium-canonical-card,
-.route-shell.is-businesses-page .stadium-canonical-body,
-.route-shell.is-businesses-page .stadium-canonical-primary article,
-.route-shell.is-businesses-page .stadium-canonical-storage,
-.route-shell.is-businesses-page .stadium-canonical-secondary > div,
-.stadium-sell-panel,
-.stadium-details-open,
-.stadium-upgrade-grid article,
-.stadium-seat-purchase,
-.stadium-market-summary article,
-.stadium-market-chart,
-.stadium-drawer-sheet {
-  background: var(--idle-rich-black) !important;
+.route-shell.is-businesses-page {
+  background: transparent !important;
 }
 
 .route-shell.is-businesses-page .businesses-sidebar {
-  background: var(--idle-secondary-ink) !important;
-  border-color: var(--idle-line-soft);
+  border-color: var(--idle-line-soft) !important;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, .015), transparent 22%),
+    linear-gradient(180deg, #08121f 0%, #060e19 100%) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.02),
+    0 16px 44px rgba(0,0,0,.24);
 }
 
-.route-shell.is-businesses-page .stadium-canonical-card,
-.route-shell.is-businesses-page .stadium-canonical-primary article,
-.route-shell.is-businesses-page .stadium-canonical-storage,
-.stadium-sell-panel,
-.stadium-details-open,
-.stadium-upgrade-grid article,
-.stadium-seat-purchase,
-.stadium-market-summary article,
-.stadium-market-chart,
-.stadium-drawer-sheet {
-  border-color: var(--idle-line) !important;
-  box-shadow: none;
+.route-shell.is-businesses-page .stadium-canonical-card {
+  border-color: var(--idle-line-soft) !important;
+  background:
+    linear-gradient(180deg, rgba(255,255,255,.018), rgba(255,255,255,.004)),
+    linear-gradient(180deg, #091421 0%, #07101d 100%) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.025),
+    0 18px 48px rgba(0,0,0,.24) !important;
 }
 
 .route-shell.is-businesses-page .stadium-canonical-hero {
-  background: var(--idle-rich-black);
+  background: #07101d !important;
 }
 
 .route-shell.is-businesses-page .stadium-canonical-hero-shade {
   background:
     linear-gradient(
       90deg,
-      rgba(0, 7, 45, .92) 0%,
-      rgba(0, 7, 45, .24) 54%,
-      rgba(0, 7, 45, .82) 100%
+      rgba(5, 11, 23, .84) 0%,
+      rgba(5, 11, 23, .18) 56%,
+      rgba(5, 11, 23, .68) 100%
     ),
     linear-gradient(
       180deg,
-      rgba(0, 7, 45, .08) 0%,
-      rgba(0, 7, 45, .72) 100%
+      rgba(5, 11, 23, .04) 0%,
+      rgba(5, 11, 23, .72) 100%
     ) !important;
+}
+
+.route-shell.is-businesses-page .stadium-canonical-body {
+  background:
+    linear-gradient(180deg, #08121f 0%, #07101d 100%) !important;
+}
+
+.route-shell.is-businesses-page .stadium-canonical-primary article,
+.route-shell.is-businesses-page .stadium-canonical-storage,
+.stadium-sell-panel,
+.stadium-details-open,
+.stadium-upgrade-grid article,
+.stadium-seat-purchase,
+.stadium-market-summary article,
+.stadium-market-chart {
+  border-color: rgba(111,151,255,.10) !important;
+  background:
+    linear-gradient(180deg, rgba(255,255,255,.012), rgba(255,255,255,.002)),
+    linear-gradient(180deg, var(--idle-surface-kpi) 0%, var(--idle-surface-kpi-deep) 100%) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.018),
+    0 10px 28px rgba(0,0,0,.16) !important;
 }
 
 .route-shell.is-businesses-page .stadium-canonical-balance {
   position: absolute;
   z-index: 3;
-  top: 22px;
-  right: 28px;
+  top: 18px;
+  right: 22px;
   min-width: 176px;
-  padding: 12px 14px;
-  border: 1px solid var(--idle-line);
+  padding: 11px 13px;
+  border: 1px solid rgba(111,151,255,.12);
   border-radius: 12px;
-  background: rgba(0, 7, 45, .88);
+  background:
+    linear-gradient(180deg, rgba(255,255,255,.012), rgba(255,255,255,.002)),
+    rgba(7, 16, 29, .86);
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.02),
+    0 10px 24px rgba(0,0,0,.18);
   text-align: right;
 }
 
@@ -972,27 +994,25 @@ body.businesses-route {
   display: block;
   color: var(--idle-text-muted);
   font-family: var(--idle-font-ui);
-  font-size: 9px;
+  font-size: 8px;
   font-weight: 700;
-  letter-spacing: .10em;
+  letter-spacing: .075em;
 }
 
 .route-shell.is-businesses-page .stadium-canonical-balance strong {
   display: block;
   margin-top: 5px;
-  color: var(--idle-palette-white);
+  color: var(--idle-text);
   font-family: var(--idle-font-ui);
-  font-size: clamp(19px, 2vw, 28px);
-  font-weight: 800;
+  font-size: clamp(19px, 2vw, 27px);
+  font-weight: 760;
   line-height: 1;
-  letter-spacing: -.025em;
+  letter-spacing: -.03em;
 }
 
 .route-shell.is-businesses-page .stadium-canonical-balance small {
-  margin-top: 6px;
+  margin-top: 5px;
   color: var(--idle-text-secondary);
-  font-size: 8px;
-  letter-spacing: .06em;
 }
 
 .route-shell.is-businesses-page .stadium-canonical-identity span,
@@ -1021,7 +1041,7 @@ body.businesses-route {
 .stadium-upgrade-grid article > div strong,
 .stadium-seat-purchase strong,
 .stadium-market-summary article strong {
-  color: var(--idle-palette-white) !important;
+  color: var(--idle-text) !important;
 }
 
 .route-shell.is-businesses-page .stadium-canonical-primary small,
@@ -1034,81 +1054,125 @@ body.businesses-route {
   color: var(--idle-text-secondary) !important;
 }
 
-/* Approved old Idle action language: solid action color, no gradients/shadows. */
-.stadium-sell-input-row button,
-.stadium-seat-purchase > button,
-.stadium-upgrade-grid article button:not(:disabled) {
-  color: var(--idle-palette-white) !important;
-  border-color: var(--idle-caribbean-green) !important;
-  background: var(--idle-caribbean-green) !important;
-  box-shadow: none !important;
-}
-
-.stadium-sell-input-row button:not(:disabled):hover,
-.stadium-seat-purchase > button:not(:disabled):hover,
-.stadium-upgrade-grid article button:not(:disabled):hover {
-  border-color: var(--idle-secondary-blue-1) !important;
-  background: var(--idle-secondary-blue-1) !important;
-  filter: none;
-}
-
-.stadium-sell-shortcuts button,
-.stadium-market-open,
-.stadium-drawer-head button {
-  color: var(--idle-text-secondary);
-  border-color: var(--idle-line);
-  background: var(--idle-dark-green);
-  box-shadow: none;
-}
-
-.stadium-sell-shortcuts button:not(:disabled):hover,
-.stadium-market-open:hover,
-.stadium-drawer-head button:hover {
-  color: var(--idle-palette-white);
-  border-color: var(--idle-caribbean-green);
-  background: var(--idle-caribbean-green);
-}
-
-.stadium-sell-input-row label,
-.stadium-seat-purchase label {
-  border-color: var(--idle-line);
-  background: var(--idle-secondary-ink);
-}
-
-.stadium-sell-input-row input,
-.stadium-seat-purchase input {
-  color: var(--idle-palette-white);
-}
-
-.route-shell.is-businesses-page .stadium-canonical-storage-track {
-  background: rgba(221, 226, 246, .10);
-}
-
-.route-shell.is-businesses-page .stadium-canonical-storage-track > i {
-  background: var(--idle-caribbean-green) !important;
-  box-shadow: none;
-}
-
 .route-shell.is-businesses-page
 .stadium-canonical-card[data-market-connection="live"]
 .stadium-canonical-market small,
 .stadium-market-foot span,
 .stadium-details-open b,
 .stadium-upgrade-grid article > i {
-  color: var(--idle-accent-bright) !important;
+  color: #82a8ff !important;
+}
+
+.route-shell.is-businesses-page .stadium-canonical-storage-track {
+  background: rgba(111,151,255,.10) !important;
+}
+
+.route-shell.is-businesses-page .stadium-canonical-storage-track > i {
+  background: linear-gradient(
+    90deg,
+    var(--idle-action-primary-start) 0%,
+    var(--idle-action-primary-end) 100%
+  ) !important;
+  box-shadow: 0 0 14px rgba(111,151,255,.18) !important;
+}
+
+/* Primary actions exactly match the approved old collect buttons. */
+.stadium-sell-input-row button,
+.stadium-seat-purchase > button,
+.stadium-upgrade-grid article button:not(:disabled) {
+  color: var(--idle-action-primary-text) !important;
+  border-color: var(--idle-action-border) !important;
+  background: linear-gradient(
+    180deg,
+    var(--idle-action-primary-start) 0%,
+    var(--idle-action-primary-end) 100%
+  ) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.09),
+    0 8px 20px rgba(63,98,199,.16) !important;
+}
+
+.stadium-sell-input-row button:not(:disabled):hover,
+.stadium-seat-purchase > button:not(:disabled):hover,
+.stadium-upgrade-grid article button:not(:disabled):hover {
+  transform: translateY(-1px);
+  border-color: rgba(151,181,255,.28) !important;
+  background: linear-gradient(
+    180deg,
+    var(--idle-action-primary-hover-start) 0%,
+    var(--idle-action-primary-hover-end) 100%
+  ) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.11),
+    0 10px 24px rgba(63,98,199,.20) !important;
+}
+
+.stadium-sell-input-row button:disabled,
+.stadium-seat-purchase > button:disabled,
+.stadium-upgrade-grid article button:disabled {
+  color: rgba(238,244,255,.46) !important;
+  border-color: rgba(111,151,255,.09) !important;
+  background: var(--idle-action-disabled) !important;
+  box-shadow: none !important;
+}
+
+.stadium-sell-shortcuts button,
+.stadium-market-open,
+.stadium-drawer-head button {
+  color: var(--idle-text-secondary) !important;
+  border-color: rgba(111,151,255,.105) !important;
+  background:
+    linear-gradient(180deg, rgba(255,255,255,.01), transparent),
+    var(--idle-action-ghost) !important;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.014) !important;
+}
+
+.stadium-sell-shortcuts button:not(:disabled):hover,
+.stadium-market-open:hover,
+.stadium-drawer-head button:hover {
+  color: var(--idle-text) !important;
+  border-color: rgba(111,151,255,.20) !important;
+  background: var(--idle-action-ghost-hover) !important;
+}
+
+.stadium-sell-input-row label,
+.stadium-seat-purchase label {
+  border-color: rgba(111,151,255,.10) !important;
+  background: rgba(7,17,31,.58) !important;
+}
+
+.stadium-sell-input-row input,
+.stadium-seat-purchase input {
+  color: var(--idle-text) !important;
 }
 
 .stadium-upgrade-grid article > i {
-  border-color: var(--idle-line-strong);
-  background: var(--idle-dark-green);
+  color: #cfe0ff !important;
+  border-color: rgba(111,151,255,.18) !important;
+  background: rgba(111,151,255,.085) !important;
 }
 
+/* Details and Market drawers use the exact old premium Details surface family. */
 .stadium-drawer-backdrop {
-  background: rgba(1, 1, 29, .82) !important;
+  background: rgba(2,7,14,.72) !important;
 }
 
 .stadium-drawer-sheet {
-  color: var(--idle-palette-white);
+  color: var(--idle-text) !important;
+  border-left-color: rgba(111,151,255,.11) !important;
+  background:
+    radial-gradient(circle at 82% 2%, rgba(92,125,255,.055), transparent 26%),
+    linear-gradient(180deg, var(--idle-surface-detail) 0%, var(--idle-surface-detail-deep) 56%, var(--idle-surface-page) 100%) !important;
+  box-shadow: -24px 0 68px rgba(0,0,0,.34) !important;
+}
+
+.stadium-market-chart-grid {
+  stroke: rgba(111,151,255,.10) !important;
+}
+
+.stadium-market-chart-line {
+  stroke: var(--idle-accent) !important;
+  filter: drop-shadow(0 0 7px rgba(111,151,255,.18)) !important;
 }
 
 @media (max-width: 760px) {
@@ -1121,5 +1185,11 @@ body.businesses-route {
 
   .route-shell.is-businesses-page .stadium-canonical-balance strong {
     font-size: 20px;
+  }
+
+  .stadium-drawer-sheet {
+    background:
+      radial-gradient(circle at 82% 2%, rgba(92,125,255,.055), transparent 26%),
+      linear-gradient(180deg, #091421 0%, #07101d 56%, #050b17 100%) !important;
   }
 }
