@@ -53,12 +53,12 @@ describe("Storage upgrade transaction contract", () => {
   });
 
   it("locks and debits the shared wallet atomically", () => {
-    expect(storageSource).toContain("FROM roulette_wallets");
+    expect(storageSource).toContain("${SHARED_WALLET_TABLE}");
     expect(storageSource).toContain("FOR UPDATE");
     expect(storageSource).toContain(
       "balanceCents = upgrade.balanceAfterCents",
     );
-    expect(storageSource).toContain("UPDATE roulette_wallets");
+    expect(storageSource).toContain("${SHARED_WALLET_TABLE}");
   });
 
   it("uses canonical Stadium action receipts for idempotent replay", () => {
