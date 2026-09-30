@@ -882,6 +882,13 @@ export class WitchClient {
       ticket.classList.toggle("is-advanced", visualMode === "ADVANCED");
     }
 
+    const usesMasterCardArtwork = visualMode === "ADVANCED" || visualMode === "OFFICE_MATCH_6";
+    this.root.querySelectorAll<HTMLElement>(
+      ".witch-ticket-frame, .witch-bcs-card-art, .witch-ticket-header, .witch-ticket-meta-row, .witch-ticket-footer",
+    ).forEach((element) => {
+      element.hidden = usesMasterCardArtwork;
+    });
+
     const riskNote = this.root.querySelector<HTMLElement>("[data-witch-risk-note]");
     const riskLabel = this.root.querySelector<HTMLElement>(".witch-alarm-field > span");
     if (riskLabel) riskLabel.textContent = this.mode === "OFFICE_MATCH_6" ? "KURAL" : "RİSK";
@@ -1088,7 +1095,7 @@ export class WitchClient {
           `;
           button.setAttribute("aria-label", `${officePresentation.symbol} · ${symbolPrize}`);
         } else if ("artworkUrl" in presentation && presentation.artworkUrl) {
-          content.innerHTML = `<img class="witch-cell-artwork" src="${presentation.artworkUrl}" alt="${presentation.artworkAlt ?? ""}" decoding="async" draggable="false">`;
+          content.innerHTML = `<img class="witch-cell-artwork" src="${presentation.artworkUrl}" alt="${"artworkAlt" in presentation ? presentation.artworkAlt ?? "" : ""}" decoding="async" draggable="false">`;
         } else {
           content.textContent = presentation.symbol;
         }
