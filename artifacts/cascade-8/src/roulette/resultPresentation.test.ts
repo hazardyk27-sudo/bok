@@ -120,21 +120,20 @@ describe("roulette result presentation", () => {
       presentation.winningBetIds,
     ).toEqual([
       "straight-17",
-      "red",
       "odd",
     ]);
     expect(
       presentation.grossReturn,
-    ).toBe(380);
+    ).toBe(370);
     expect(
       presentation.grossReturnText,
-    ).toBe("380");
+    ).toBe("370");
     expect(
       presentation.hasPayout,
     ).toBe(true);
     expect(
       presentation.netProfitText,
-    ).toBe("+360");
+    ).toBe("+350");
     expect(
       presentation.outcome,
     ).toBe("win");
