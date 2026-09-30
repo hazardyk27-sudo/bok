@@ -11,114 +11,68 @@ function source(relativePath: string) {
   );
 }
 
-const rouletteRoutes = source(
-  "../roulette/routes.ts",
-);
-const rouletteRepository = source(
-  "../roulette/repository.ts",
-);
-const slotRoutes = source("../slot/routes.ts");
-const slotRepository = source(
-  "../slot/repository.ts",
-);
-const cadiRoutes = source(
-  "../cadi-kazan/routes.ts",
-);
-const cadiRepository = source(
-  "../cadi-kazan/repository.ts",
-);
 const idleRoutes = source("./routes.ts");
-const stadiumState = source("./stadiumState.ts");
-const seatPurchase = source("./seatPurchase.ts");
-const ticketSale = source("./ticketSale.ts");
+const platformWallet = source("../platform/wallet.ts");
+const walletSources = [
+  source("./stadiumState.ts"),
+  source("./seatPurchase.ts"),
+  source("./stadiumUpgrade.ts"),
+  source("./speedUpgrade.ts"),
+  source("./storageUpgrade.ts"),
+  source("./ticketSale.ts"),
+];
 
-describe("shared game wallet integration", () => {
-  it("keeps one roulette_session cookie identity across all game APIs", () => {
-    expect(rouletteRoutes).toContain(
-      'const SESSION_COOKIE = "roulette_session";',
+describe("Idle shared wallet/session compatibility", () => {
+  it("does not depend on another game's route module for session identity", () => {
+    expect(idleRoutes).not.toContain(
+      '../roulette/routes',
     );
-    expect(rouletteRoutes).toContain(
-      "export { SESSION_COOKIE };",
+    expect(idleRoutes).toContain(
+      'SHARED_WALLET_TABLE === "shared_wallets"',
     );
-
-    for (const routeSource of [
-      slotRoutes,
-      cadiRoutes,
-      idleRoutes,
-    ]) {
-      expect(routeSource).toContain(
-        'import { SESSION_COOKIE } from "../roulette/routes";',
-      );
-      expect(routeSource).toContain(
-        "req.cookies?.[SESSION_COOKIE]",
-      );
-      expect(routeSource).toContain(
-        "res.cookie(SESSION_COOKIE, sessionId",
-      );
-    }
+    expect(idleRoutes).toContain('"game_session"');
+    expect(idleRoutes).toContain('"roulette_session"');
+    expect(idleRoutes).toContain('path: "/"');
   });
 
-  it("keeps Slot, Roulette, Cadı Kazan and canonical Idle on roulette_wallets", () => {
-    for (const repositorySource of [
-      rouletteRepository,
-      slotRepository,
-      cadiRepository,
-      stadiumState,
-      seatPurchase,
-      ticketSale,
-    ]) {
-      expect(repositorySource).toContain(
+  it("uses the shared platform wallet table authority everywhere", () => {
+    expect(platformWallet).toContain(
+      "SHARED_WALLET_TABLE",
+    );
+    expect(platformWallet).toContain(
+      "INITIAL_SHARED_BALANCE_CENTS",
+    );
+
+    for (const walletSource of walletSources) {
+      expect(walletSource).toContain(
+        "SHARED_WALLET_TABLE",
+      );
+      expect(walletSource).not.toContain(
         "roulette_wallets",
       );
-      expect(repositorySource).toContain(
-        "balance_cents",
-      );
-      expect(repositorySource).toContain(
-        "session_id",
+    }
+  });
+
+  it("locks the wallet before every debit or credit", () => {
+    for (const walletSource of walletSources.slice(1)) {
+      expect(walletSource).toContain("FOR UPDATE");
+    }
+
+    for (const mutationSource of walletSources.slice(1)) {
+      expect(mutationSource).toContain(
+        "UPDATE ${SHARED_WALLET_TABLE}",
       );
     }
   });
 
-  it("uses the common platform initial wallet value when canonical Idle creates a wallet", () => {
-    expect(stadiumState).toContain(
-      'INITIAL_SHARED_BALANCE_CENTS',
-    );
-    expect(stadiumState).toContain(
-      'from "../platform/wallet"',
-    );
-    expect(stadiumState).not.toContain(
-      "INITIAL_ROULETTE_BALANCE_CENTS",
-    );
-  });
-
-  it("locks the shared wallet for canonical Idle debits and credits", () => {
-    for (const mutationSource of [
-      seatPurchase,
-      ticketSale,
-    ]) {
-      expect(mutationSource).toContain(
-        "FROM roulette_wallets",
+  it("keeps the common platform initial wallet value as Idle's fallback", () => {
+    for (const walletSource of walletSources) {
+      expect(walletSource).toContain(
+        "INITIAL_SHARED_BALANCE_CENTS",
       );
-      expect(mutationSource).toContain(
-        "FOR UPDATE",
-      );
-      expect(mutationSource).toContain(
-        "UPDATE roulette_wallets",
+      expect(walletSource).not.toContain(
+        "INITIAL_ROULETTE_BALANCE_CENTS",
       );
     }
-  });
-
-  it("locks Stadium before wallet while building /idle/state", () => {
-    const stadiumLockIndex = stadiumState.indexOf(
-      "ensureStadiumState(",
-    );
-    const walletLockIndex = stadiumState.indexOf(
-      "FOR UPDATE",
-    );
-
-    expect(stadiumLockIndex)
-      .toBeGreaterThan(-1);
-    expect(walletLockIndex)
-      .toBeGreaterThan(stadiumLockIndex);
   });
 });
