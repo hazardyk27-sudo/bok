@@ -104,4 +104,3 @@ export const MAX_STADIUM_LEVEL = STADIUM_LEVELS.at(-1)!.level;
 export const MAX_SPEED_LEVEL = SPEED_LEVELS.at(-1)!.level;
 export const MAX_STORAGE_LEVEL = STORAGE_LEVELS.at(-1)!.level;
 export const MAX_STADIUM_SEATS = POST_200K_SEAT_PRICING.hardMaxSeats;
-
