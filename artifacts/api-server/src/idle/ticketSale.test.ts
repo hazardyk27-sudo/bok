@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { TICKET_MICRO_UNITS } from "../../../cascade-8/src/idle/config";
-import { quoteWholeTicketSale } from "./ticketSale";
+import { quoteWholeTicketSale } from "./ticketSaleQuote";
 
 describe("whole-ticket sale quote", () => {
   it("decrements exact whole-ticket inventory at the authoritative microdollar price", () => {
