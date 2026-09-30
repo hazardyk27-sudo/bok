@@ -39,6 +39,19 @@ describe("Part 26 premium Stadium control surface", () => {
     expect(source).toContain("data-idle-market-detail-tick");
   });
 
+  it("keeps economy mutations disabled until authoritative state renders", () => {
+    for (const marker of [
+      "data-idle-sell-button disabled",
+      'data-idle-sell-ratio="0.25" disabled',
+      "data-idle-upgrade-stadium disabled",
+      "data-idle-upgrade-speed disabled",
+      "data-idle-upgrade-storage disabled",
+      "data-idle-buy-seats disabled",
+    ]) {
+      expect(source).toContain(marker);
+    }
+  });
+
   it("hardens whole-number inputs and retry idempotency", () => {
     expect(source).toContain("positiveWholeNumber");
     expect(source).toContain("pendingMutationKeys");
