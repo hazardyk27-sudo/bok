@@ -7,6 +7,14 @@ const saleSource = readFileSync(
   "utf8",
 );
 
+const quoteSource = readFileSync(
+  fileURLToPath(new URL("./ticketSaleQuote.ts", import.meta.url)),
+  "utf8",
+);
+
+const saleAndQuoteSource =
+  `${saleSource}\n${quoteSource}`;
+
 const routesSource = readFileSync(
   fileURLToPath(new URL("./routes.ts", import.meta.url)),
   "utf8",
@@ -81,22 +89,22 @@ describe("ticket sale transaction contract", () => {
     expect(saleSource).toContain(
       "BigInt(balanceBeforeCents)\n          + BigInt(quote.walletCreditCents)",
     );
-    expect(saleSource).toContain(
+    expect(quoteSource).toContain(
       'throw new Error("INSUFFICIENT_IDLE_TICKETS")',
     );
   });
 
   it("uses carried sub-cent settlement state rather than dropping value", () => {
-    expect(saleSource).toContain(
+    expect(quoteSource).toContain(
       "settleMarketMicrodollarsToWalletCents({",
     );
-    expect(saleSource).toContain(
+    expect(quoteSource).toContain(
       "const priorRemainderMicrodollars =",
     );
-    expect(saleSource).toContain(
+    expect(quoteSource).toContain(
       "priorRemainderMicrodollars,",
     );
-    expect(saleSource).toContain(
+    expect(saleAndQuoteSource).toContain(
       "saleRemainderMicrodollars:",
     );
   });
@@ -147,10 +155,10 @@ describe("ticket sale transaction contract", () => {
 
 
   it("hard-bounds execution price and validates replay arithmetic/remainder integrity", () => {
-    expect(saleSource).toContain(
+    expect(saleAndQuoteSource).toContain(
       "MARKET_CONFIG.minTicketPriceMicrodollars",
     );
-    expect(saleSource).toContain(
+    expect(saleAndQuoteSource).toContain(
       "MARKET_CONFIG.maxTicketPriceMicrodollars",
     );
     expect(saleSource).toContain(
