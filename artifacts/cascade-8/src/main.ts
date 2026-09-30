@@ -1,5 +1,8 @@
 export {};
 
+const { convergeLegacyGameSessions } = await import("./platform/sessionConvergence");
+await convergeLegacyGameSessions();
+
 const app = document.querySelector<HTMLDivElement>("#app")!;
 const currentPath = window.location.pathname.replace(/\/+$/, "") || "/";
 const isLab = currentPath === "/lab";
