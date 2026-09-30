@@ -15,7 +15,7 @@ describe("canonical Idle state SQL regression", () => {
       "ensureStadiumState(",
     );
     expect(stateSource).toContain(
-      "roulette_wallets",
+      "${SHARED_WALLET_TABLE}",
     );
     expect(stateSource).not.toContain(
       "idle_business_states",
@@ -36,7 +36,7 @@ describe("canonical Idle state SQL regression", () => {
       "await ensureStadiumState(",
     );
     const walletIndex = stateSource.indexOf(
-      "FROM roulette_wallets",
+      "${SHARED_WALLET_TABLE}",
     );
     const commitIndex = stateSource.indexOf(
       'await client.query("COMMIT")',
