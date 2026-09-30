@@ -8,8 +8,10 @@ import {
   LEGACY_SESSION_COOKIE,
   SESSION_COOKIE,
   SESSION_COOKIE_MAX_AGE_MS,
+  getCanonicalSessionId,
   getLegacySessionId,
 } from "./platform/session";
+import { resolveCanonicalWalletSessionId } from "./platform/wallet";
 
 const app: Express = express();
 
@@ -35,14 +37,17 @@ app.use(
 app.use(cors());
 app.use(cookieParser());
 
-// Isolation v2 renamed the historical shared session cookie from
-// roulette_session to game_session. Prefer the legacy ID once when it is
-// still present so existing wallet/business state stays attached to the same
-// server-side session, then migrate the browser forward to game_session.
-app.use((req, res, next) => {
-  const legacySessionId = getLegacySessionId(req.cookies);
-  if (legacySessionId) {
-    req.cookies[SESSION_COOKIE] = legacySessionId;
+// game_session is the only live game identity. roulette_session is migration-only.
+// When both cookies exist, preserve an established canonical wallet unless it is
+// only the untouched default while the legacy identity has a real balance.
+app.use(async (req, res, next) => {
+  try {
+    const canonicalSessionId = getCanonicalSessionId(req.cookies);
+    const legacySessionId = getLegacySessionId(req.cookies);
+    const selectedSessionId = await resolveCanonicalWalletSessionId(
+      canonicalSessionId,
+      legacySessionId,
+    );
 
     const cookieOptions = {
       httpOnly: true,
@@ -51,14 +56,24 @@ app.use((req, res, next) => {
       path: "/",
     };
 
-    res.cookie(SESSION_COOKIE, legacySessionId, {
-      ...cookieOptions,
-      maxAge: SESSION_COOKIE_MAX_AGE_MS,
-    });
-    res.clearCookie(LEGACY_SESSION_COOKIE, cookieOptions);
-  }
+    if (selectedSessionId) {
+      req.cookies[SESSION_COOKIE] = selectedSessionId;
+      if (canonicalSessionId !== selectedSessionId) {
+        res.cookie(SESSION_COOKIE, selectedSessionId, {
+          ...cookieOptions,
+          maxAge: SESSION_COOKIE_MAX_AGE_MS,
+        });
+      }
+    }
 
-  next();
+    if (legacySessionId) {
+      res.clearCookie(LEGACY_SESSION_COOKIE, cookieOptions);
+    }
+
+    next();
+  } catch (error) {
+    next(error);
+  }
 });
 
 app.use(express.json());
