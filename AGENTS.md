@@ -101,9 +101,9 @@ Frontend artifact:
 API artifact:
 - workspace: `artifacts/api-server`
 - Replit API service path: `/api`
-- current tracked artifact local/runtime port: `8080`
+- tracked local/runtime port: `20004`
 
-The web dev server proxies `/api`; its fallback proxy target is currently `127.0.0.1:20004`. This does not match the tracked API artifact port `8080`, so do not silently assume an old port from memory. Treat the artifact TOMLs, environment, and live runtime as source of truth and handle any routing/port correction as central platform work.
+The web dev server proxies `/api` to `127.0.0.1:20004`. The web artifact also pins `API_PROXY_TARGET=http://127.0.0.1:20004`, and the API artifact, Vite fallback and `scripts/run-local-stack.sh` must remain aligned on this same port. Any future port change is central platform work and must update all three surfaces together.
 
 Main frontend route dispatch lives in `artifacts/cascade-8/src/main.ts`.
 Main API mounting lives in `artifacts/api-server/src/app.ts` and `artifacts/api-server/src/routes`.
@@ -274,6 +274,8 @@ Each game/category keeps durable state in its own `AGENTS.md` under `Current mil
 Shared/platform milestones live only in this master file and are updated only by central integration.
 
 ## 13. Current shared/platform state
+
+- 2026-09-30 — Replit web/API runtime ports are re-standardized: web `20003`, API `20004`; the web artifact explicitly pins `API_PROXY_TARGET=http://127.0.0.1:20004`, matching Vite and `scripts/run-local-stack.sh`. This closes the tracked 8080/20004 routing drift that could leave `/api/*` requests disconnected in preview.
 
 - 2026-09-30 — Replit read-only preview guard is merged and verified live: branch `integration/replit-preview`, `core.hooksPath=.githooks`, `oyun.replitReadonly=true`, fetch enabled and pushes blocked. This closes the recurring Replit-local commit divergence problem.
 - 2026-09-30 — Cross-path session convergence is active: historical scoped game-session cookies are probed and converged into root `game_session`; fragmented wallet identities preserve the highest existing balance without summing credits.
