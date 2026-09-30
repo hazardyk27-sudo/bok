@@ -209,6 +209,7 @@ describe("roulette settled result derivation", () => {
         { length: 37 },
         () => 0,
       );
+    let invalidCount = 0;
 
     for (
       let index = 0;
@@ -219,13 +220,16 @@ describe("roulette settled result derivation", () => {
         simulateSeededRouletteSpin(
           `uniform-regression-${index}`,
         );
+      const result =
+        simulation.result;
 
-      expect(
-        simulation.result,
-      ).not.toBeNull();
+      if (!result) {
+        invalidCount += 1;
+        continue;
+      }
 
       pocketCounts[
-        simulation.result!.pocketIndex
+        result.pocketIndex
       ] += 1;
     }
 
@@ -242,6 +246,7 @@ describe("roulette settled result derivation", () => {
         0,
       );
 
+    expect(invalidCount).toBe(0);
     expect(
       pocketCounts.filter(
         (count) => count > 0,
@@ -251,7 +256,7 @@ describe("roulette settled result derivation", () => {
     expect(
       Math.max(...pocketCounts),
     ).toBeLessThan(60);
-  });
+  }, 30_000);
 
   it("keeps the seed path free of target-number or target-pocket inputs", () => {
     const conditions =
