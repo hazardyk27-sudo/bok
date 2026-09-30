@@ -510,7 +510,7 @@ export function connectBlackjackRealtimeElement(
   });
   seatClient=seats;
 
-  const renderTickMs=options.renderTickMs ?? 250;
+  const renderTickMs=options.renderTickMs ?? 500;
   if(!Number.isSafeInteger(renderTickMs) || renderTickMs<50){
     throw new RangeError(
       "Blackjack visual renderTickMs must be a safe integer >= 50",
