@@ -82,6 +82,17 @@ describe("canonical shared wallet contract", () => {
     ]) {
       expect(routeSource).toContain('path: "/"');
     }
+
+    const idleUsesCanonicalSessionImport =
+      idleRoutes.includes('from "../platform/session"');
+    const idleUsesPlatformGenerationCompatibility =
+      idleRoutes.includes('from "../platform/wallet"')
+      && idleRoutes.includes('"game_session"');
+
+    expect(
+      idleUsesCanonicalSessionImport
+      || idleUsesPlatformGenerationCompatibility,
+    ).toBe(true);
   });
 
   it("discovers every historical game cookie scope before mounting the selected game", () => {
