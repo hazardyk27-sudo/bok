@@ -92,7 +92,9 @@ async function readResponse<T>(
   const body =
     await response
       .json()
-      .catch(() => ({}));
+      .catch(() => ({})) as {
+        error?: unknown;
+      };
 
   if (!response.ok) {
     throw new Error(
@@ -116,7 +118,7 @@ function isAbortError(
 }
 
 async function fetchWithTimeout(
-  input: RequestInfo | URL,
+  input: Parameters<typeof fetch>[0],
   init: RequestInit,
   timeoutMs: number,
 ) {
