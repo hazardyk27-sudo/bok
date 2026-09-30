@@ -1,14 +1,14 @@
 export type AccountUser = {
   id: string;
   email: string;
-  emailVerified: boolean;
+  username: string;
+  userCode: string;
+  balanceCents: number;
   createdAt: string;
 };
 
 type AuthResponse = {
   user: AccountUser | null;
-  verificationEmailSent?: boolean;
-  alreadyVerified?: boolean;
 };
 
 export class AuthApiError extends Error {
@@ -51,24 +51,24 @@ export const accountApi = {
     return request<AuthResponse>("/auth/me");
   },
 
-  async register(email: string, password: string) {
+  async register(email: string, username: string, password: string) {
     return request<AuthResponse>("/auth/register", {
       method: "POST",
-      body: JSON.stringify({ email, password }),
+      body: JSON.stringify({ email, username, password }),
     });
   },
 
-  async login(email: string, password: string) {
+  async login(identifier: string, password: string) {
     return request<AuthResponse>("/auth/login", {
       method: "POST",
-      body: JSON.stringify({ email, password }),
+      body: JSON.stringify({ identifier, password }),
     });
   },
 
-  async resendVerification() {
-    return request<AuthResponse>("/auth/resend-verification", {
+  async changePassword(currentPassword: string, newPassword: string) {
+    return request<AuthResponse>("/auth/password", {
       method: "POST",
-      body: "{}",
+      body: JSON.stringify({ currentPassword, newPassword }),
     });
   },
 
