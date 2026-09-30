@@ -100,14 +100,18 @@ function throwRegistrationConflict(error: unknown): never {
   throw new Error("EMAIL_ALREADY_REGISTERED");
 }
 
-async function ensureWallet(client: PoolClient, sessionId: string) {
+async function ensureWallet(
+  client: PoolClient,
+  sessionId: string,
+  initialBalanceCents = INITIAL_SHARED_BALANCE_CENTS,
+) {
   const result = await client.query<{ balance_cents: number | string }>(
     `INSERT INTO shared_wallets (session_id, balance_cents, updated_at)
      VALUES ($1, $2, NOW())
      ON CONFLICT (session_id) DO UPDATE
        SET balance_cents = shared_wallets.balance_cents
      RETURNING balance_cents`,
-    [sessionId, INITIAL_SHARED_BALANCE_CENTS],
+    [sessionId, initialBalanceCents],
   );
   return Number(result.rows[0]?.balance_cents ?? INITIAL_SHARED_BALANCE_CENTS);
 }
@@ -140,7 +144,9 @@ export const authRepository = {
 
     try {
       return await withTransaction(async (client) => {
-        const balanceCents = await ensureWallet(client, walletSessionId);
+        // A registered account must start clean and must never inherit the
+        // browser's previous anonymous/guest wallet.
+        const balanceCents = await ensureWallet(client, walletSessionId, 0);
         const inserted = await client.query<{
           id: string;
           user_number: number | string;
