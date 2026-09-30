@@ -23,9 +23,9 @@ const TAU = Math.PI * 2;
 
 export const ROULETTE_SEED_ENVELOPE = {
   rotorCenterAngle: 0.37,
-  rotorAngleSpan: 0.12,
+  rotorAngleSpan: TAU,
   ballCenterAngle: BALL_ORBIT_PROFILE.initialAngle,
-  ballAngleSpan: 0.16,
+  ballAngleSpan: TAU,
 } as const;
 
 export const ROULETTE_REGRESSION_SEEDS = Array.from(
