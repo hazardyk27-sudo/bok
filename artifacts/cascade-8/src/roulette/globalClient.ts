@@ -3,6 +3,19 @@ import type {
   RouletteGlobalTableSnapshot,
 } from "./rouletteWalletClient";
 
+export const ROULETTE_STATE_SYNC_INTERVAL_MS =
+  2_000;
+export const ROULETTE_STATE_RETRY_INTERVAL_MS =
+  1_000;
+
+export function getRouletteStateSyncDelay(
+  apiReady: boolean,
+) {
+  return apiReady
+    ? ROULETTE_STATE_SYNC_INTERVAL_MS
+    : ROULETTE_STATE_RETRY_INTERVAL_MS;
+}
+
 export function estimateRouletteServerClockOffset(
   serverTimeMs: number,
   clientRequestStartedAtMs: number,
