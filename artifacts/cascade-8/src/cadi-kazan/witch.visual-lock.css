@@ -2986,7 +2986,7 @@
 
 .is-office-theme .witch-board-wrap {
   top: 13.5% !important;
-  right: 4.7% !important;
+  right: 4.6989% !important;
   bottom: 9% !important;
   left: 36.3% !important;
 }
@@ -3729,12 +3729,12 @@
 
 
 /* PASS 22 — THE OFFICE approved reference master + monochrome deck theme.
-   The user-approved full card is a single 1000×468 PNG. Scratch geometry below
-   is measured from that exact asset: union x=372..953, y=62..426. The lower
+   The user-approved full card is a original 1511×707 PNG. Scratch geometry below
+   is measured from that exact asset: union x=563..1440, y=94..644. The lower
    control deck switches to a black / white / cool-gray palette only while
    OFFICE_MATCH_6 is selected, so the rest of Cadı Kazan keeps its own theme. */
 .is-office-theme .witch-ticket {
-  aspect-ratio: 1000 / 468 !important;
+  aspect-ratio: 1511 / 707 !important;
   padding: 0 !important;
   overflow: hidden !important;
   border: 0 !important;
@@ -3766,48 +3766,48 @@
 }
 
 .is-office-theme .witch-board-wrap {
-  left: 37.2% !important;
-  top: 13.2479% !important;
-  right: 4.7% !important;
-  bottom: 8.9744% !important;
+  left: 37.2601% !important;
+  top: 13.2956% !important;
+  right: 4.6989% !important;
+  bottom: 8.9109% !important;
   overflow: visible !important;
 }
 
 .is-office-theme .witch-board > .witch-cell:nth-child(1) {
   left: 0 !important;
   top: 0 !important;
-  width: 29.0878% !important;
-  height: 45.6044% !important;
+  width: 28.9624% !important;
+  height: 45.4545% !important;
 }
 .is-office-theme .witch-board > .witch-cell:nth-child(2) {
-  left: 35.8003% !important;
+  left: 35.6899% !important;
   top: 0 !important;
-  width: 28.9157% !important;
-  height: 45.6044% !important;
+  width: 28.9624% !important;
+  height: 45.4545% !important;
 }
 .is-office-theme .witch-board > .witch-cell:nth-child(3) {
-  left: 71.2565% !important;
+  left: 71.2657% !important;
   top: 0 !important;
-  width: 28.7435% !important;
-  height: 45.6044% !important;
+  width: 28.7343% !important;
+  height: 45.4545% !important;
 }
 .is-office-theme .witch-board > .witch-cell:nth-child(4) {
   left: 0 !important;
-  top: 56.3187% !important;
-  width: 29.0878% !important;
-  height: 43.6813% !important;
+  top: 56.1818% !important;
+  width: 28.9624% !important;
+  height: 43.8182% !important;
 }
 .is-office-theme .witch-board > .witch-cell:nth-child(5) {
-  left: 35.8003% !important;
-  top: 56.3187% !important;
-  width: 28.9157% !important;
-  height: 43.6813% !important;
+  left: 35.6899% !important;
+  top: 56.1818% !important;
+  width: 28.9624% !important;
+  height: 43.8182% !important;
 }
 .is-office-theme .witch-board > .witch-cell:nth-child(6) {
-  left: 71.2565% !important;
-  top: 56.3187% !important;
-  width: 28.7435% !important;
-  height: 43.6813% !important;
+  left: 71.2657% !important;
+  top: 56.1818% !important;
+  width: 28.7343% !important;
+  height: 43.8182% !important;
 }
 
 .is-office-theme .witch-control-dock {
@@ -3934,13 +3934,13 @@
 @media (orientation: landscape) and (max-width: 1200px) and (max-height: 600px),
        (orientation: portrait) and (max-width: 600px) and (max-height: 1200px) {
   .is-office-theme .witch-ticket {
-    aspect-ratio: 1000 / 468 !important;
+    aspect-ratio: 1511 / 707 !important;
   }
 
   .is-office-theme .witch-board-wrap {
-    left: 37.2% !important;
-    top: 13.2479% !important;
-    right: 4.7% !important;
-    bottom: 8.9744% !important;
+    left: 37.2601% !important;
+    top: 13.2956% !important;
+    right: 4.6989% !important;
+    bottom: 8.9109% !important;
   }
 }
