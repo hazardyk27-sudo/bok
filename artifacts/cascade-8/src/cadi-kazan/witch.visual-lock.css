@@ -5318,3 +5318,230 @@
     max-height: 93% !important;
   }
 }
+
+
+/* PASS 29 — ADVANCED 25 final black/gold UI palette + responsive fit lock.
+   The Advanced cat card keeps the shared Better Call Saul component geometry.
+   Only palette changes: deep black/graphite surfaces, warm metallic gold
+   borders/actions, ivory value text. The 1200×546 master remains fully visible
+   on desktop and rotated/mobile layouts without changing the 25-zone geometry. */
+.is-advanced-theme {
+  --witch-payout-panel-bg:
+    radial-gradient(circle at 50% 8%, rgba(232,177,62,.10), transparent 38%),
+    linear-gradient(145deg, #171511 0%, #090a09 48%, #030404 100%);
+  --witch-payout-border: rgba(232, 181, 72, .78);
+  --witch-payout-outer-ring: rgba(0, 0, 0, .76);
+  --witch-payout-title: #f7eccd;
+  --witch-payout-title-shadow-1: rgba(102, 67, 15, .95);
+  --witch-payout-title-shadow-2: rgba(41, 27, 7, .82);
+  --witch-payout-amount: #ffd66b;
+  --witch-payout-amount-shadow-1: #b47b17;
+  --witch-payout-amount-shadow-2: #7d500d;
+  --witch-payout-amount-shadow-3: #482c05;
+  --witch-payout-multiplier: #e8ba4e;
+  --witch-payout-multiplier-shadow-1: #80540f;
+  --witch-payout-multiplier-shadow-2: #432a05;
+  --witch-payout-label: #bdb097;
+  --witch-payout-muted: #91856e;
+  --witch-payout-value: #fff4dc;
+  --witch-payout-rule: rgba(226, 174, 66, .22);
+
+  --witch-deck-bg:
+    radial-gradient(circle at 50% 0%, rgba(226,171,60,.08), transparent 34%),
+    linear-gradient(180deg, #171613 0%, #090a09 58%, #030404 100%);
+  --witch-deck-border: rgba(225, 173, 64, .62);
+  --witch-deck-label: #d9bc73;
+  --witch-control-bg: linear-gradient(180deg, #20201d 0%, #0b0c0b 100%);
+  --witch-control-border: rgba(221, 171, 66, .46);
+  --witch-control-text: #f6edd9;
+  --witch-control-muted: #a69a82;
+  --witch-control-accent: #f2cf72;
+  --witch-control-accent-strong: #e6b84f;
+  --witch-control-hover-bg: linear-gradient(180deg, #302c22 0%, #14130f 100%);
+  --witch-menu-bg: linear-gradient(155deg, #1a1915 0%, #090a09 62%, #030404 100%);
+  --witch-option-bg: rgba(12, 12, 10, .94);
+  --witch-option-selected-bg: linear-gradient(180deg, #dfb454 0%, #a56f1f 100%);
+  --witch-primary-bg: linear-gradient(180deg, #f0cc68 0%, #c68b2a 54%, #9d651a 100%);
+  --witch-primary-text: #151008;
+  --witch-primary-disabled-bg: linear-gradient(180deg, #302e29 0%, #171714 100%);
+  --witch-primary-disabled-text: rgba(236, 225, 199, .36);
+
+  --witch-layer-bg:
+    radial-gradient(circle at 50% 0%, rgba(229,177,70,.10), transparent 36%),
+    linear-gradient(155deg, #1b1a17 0%, #0b0c0b 62%, #040505 100%);
+  --witch-layer-border: rgba(225, 174, 67, .52);
+  --witch-layer-text: #f6ecd5;
+  --witch-layer-muted: #9d927d;
+  --witch-layer-control-bg: rgba(12, 13, 12, .94);
+  --witch-layer-control-border: rgba(215, 166, 62, .34);
+}
+
+.is-advanced-theme .witch-payout-panel {
+  box-shadow:
+    0 0 0 4px rgba(0,0,0,.70),
+    0 18px 38px rgba(0,0,0,.42),
+    inset 0 1px 0 rgba(255,226,155,.08),
+    inset 0 0 32px rgba(205,145,32,.035) !important;
+}
+
+.is-advanced-theme .witch-control-dock {
+  border-top-color: var(--witch-deck-border) !important;
+  background: var(--witch-deck-bg) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255,225,150,.055),
+    0 -12px 32px rgba(0,0,0,.30) !important;
+}
+
+.is-advanced-theme .witch-cards-button,
+.is-advanced-theme .witch-stake-stepper,
+.is-advanced-theme .witch-alarm-field select,
+.is-advanced-theme .witch-stake-presets button {
+  box-shadow:
+    inset 0 1px 0 rgba(255,226,151,.04),
+    0 3px 10px rgba(0,0,0,.24) !important;
+}
+
+.is-advanced-theme .witch-stake-presets button.is-selected,
+.is-advanced-theme .witch-stake-presets .witch-stake-scale.is-selected {
+  border-color: #f0ca65 !important;
+  color: #151008 !important;
+  background: linear-gradient(180deg, #f1d277 0%, #c78b2a 100%) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.30),
+    0 4px 10px rgba(0,0,0,.28) !important;
+}
+
+/* Advanced card picker and game-menu layers use the same black/gold family. */
+.is-advanced-theme .witch-card-menu,
+.is-advanced-theme .witch-game-menu {
+  border-color: var(--witch-layer-border) !important;
+  color: var(--witch-layer-text) !important;
+  background: var(--witch-layer-bg) !important;
+  box-shadow:
+    0 18px 36px rgba(0,0,0,.46),
+    inset 0 1px 0 rgba(255,226,153,.06) !important;
+}
+
+.is-advanced-theme .witch-card-option {
+  border-color: var(--witch-layer-control-border) !important;
+  color: var(--witch-layer-text) !important;
+  background: var(--witch-layer-control-bg) !important;
+}
+
+.is-advanced-theme .witch-card-option small,
+.is-advanced-theme .witch-game-menu small {
+  color: var(--witch-layer-muted) !important;
+}
+
+.is-advanced-theme .witch-card-option > b {
+  border-color: rgba(225,174,67,.32) !important;
+  color: #e5b950 !important;
+  background: rgba(220,167,57,.06) !important;
+}
+
+.is-advanced-theme .witch-card-option.is-selected {
+  border-color: #f0c963 !important;
+  color: #151008 !important;
+  background: var(--witch-option-selected-bg) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.24),
+    0 4px 12px rgba(0,0,0,.30) !important;
+}
+
+.is-advanced-theme .witch-card-option.is-selected strong,
+.is-advanced-theme .witch-card-option.is-selected small,
+.is-advanced-theme .witch-card-option.is-selected > b {
+  color: #151008 !important;
+}
+
+.is-advanced-theme .witch-card-option.is-selected > b {
+  border-color: rgba(50,30,6,.34) !important;
+  background: rgba(255,248,221,.20) !important;
+}
+
+.is-advanced-theme .witch-game-menu > strong,
+.is-advanced-theme .witch-game-menu label,
+.is-advanced-theme .witch-game-menu a,
+.is-advanced-theme .witch-game-menu button {
+  color: var(--witch-layer-text) !important;
+}
+
+.is-advanced-theme .witch-game-menu button,
+.is-advanced-theme .witch-game-menu a {
+  border-color: var(--witch-layer-control-border) !important;
+  background: var(--witch-layer-control-bg) !important;
+}
+
+.is-advanced-theme .witch-primary-button:not(:disabled),
+.is-advanced-theme .witch-cashout-button:not(:disabled) {
+  border-color: #f0cb69 !important;
+  color: #151008 !important;
+  background: linear-gradient(180deg, #f3d478 0%, #ca902d 52%, #a36b1c 100%) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.28),
+    0 7px 18px rgba(0,0,0,.32) !important;
+  text-shadow: none !important;
+}
+
+.is-advanced-theme .witch-primary-button:disabled,
+.is-advanced-theme .witch-cashout-button:disabled {
+  border-color: rgba(221,172,68,.20) !important;
+  color: rgba(236,225,199,.36) !important;
+  background: linear-gradient(180deg, #302e29 0%, #171714 100%) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255,225,155,.04),
+    0 3px 8px rgba(0,0,0,.18) !important;
+  text-shadow: none !important;
+}
+
+/* Fit lock: preserve full master-card visibility while payout remains beside it. */
+@media (min-width: 821px) {
+  .is-advanced-theme .witch-table-surface {
+    position: absolute !important;
+    inset: 18px 252px 16px 18px !important;
+    overflow: visible !important;
+  }
+
+  .is-advanced-theme .witch-ticket {
+    width: min(100%, 1180px) !important;
+    max-width: 1180px !important;
+    max-height: calc(100% - 8px) !important;
+    margin: 0 auto !important;
+  }
+}
+
+@media (min-width: 821px) and (max-width: 1499px) {
+  .is-advanced-theme .witch-table-surface {
+    inset: 16px 236px 14px 14px !important;
+  }
+
+  .is-advanced-theme .witch-ticket {
+    width: min(100%, 1040px) !important;
+    max-width: 1040px !important;
+  }
+}
+
+@media (orientation: landscape) and (max-width: 1200px) and (max-height: 600px),
+       (orientation: portrait) and (max-width: 600px) and (max-height: 1200px) {
+  .is-advanced-theme .witch-table-surface {
+    overflow: visible !important;
+  }
+
+  .is-advanced-theme .witch-ticket {
+    width: min(98%, calc(var(--witch-vh) * 196)) !important;
+    max-width: 1180px !important;
+    max-height: calc(var(--witch-vh) * 82) !important;
+    margin: 0 auto !important;
+    aspect-ratio: var(--advanced-card-ratio) !important;
+  }
+
+  .is-advanced-theme .witch-control-dock {
+    background: var(--witch-deck-bg) !important;
+  }
+
+  .is-advanced-theme .witch-card-menu {
+    max-height: min(68vh, 420px) !important;
+    overflow-y: auto !important;
+    overscroll-behavior: contain !important;
+  }
+}

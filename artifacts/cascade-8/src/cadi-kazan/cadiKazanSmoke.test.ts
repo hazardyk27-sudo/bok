@@ -315,4 +315,18 @@ describe("cadi kazan route smoke contract", () => {
     expect(visualLockSource).toContain(".is-advanced-theme .witch-cell-result-label");
   });
 
+
+  it("locks Advanced 25 to one black/gold UI palette and full-card responsive fit", () => {
+    expect(visualLockSource).toContain("PASS 29 — ADVANCED 25 final black/gold UI palette + responsive fit lock");
+    expect(visualLockSource).toContain("--witch-layer-bg:");
+    expect(visualLockSource).toContain("--witch-layer-border: rgba(225, 174, 67, .52)");
+    expect(visualLockSource).toContain(".is-advanced-theme .witch-card-menu");
+    expect(visualLockSource).toContain(".is-advanced-theme .witch-game-menu");
+    expect(visualLockSource).toContain(".is-advanced-theme .witch-primary-button:not(:disabled)");
+    expect(visualLockSource).toContain(".is-advanced-theme .witch-cashout-button:not(:disabled)");
+    expect(visualLockSource).toContain(".is-advanced-theme .witch-table-surface");
+    expect(visualLockSource).toContain("max-height: calc(var(--witch-vh) * 82) !important");
+    expect(visualLockSource).toContain("aspect-ratio: var(--advanced-card-ratio) !important");
+  });
+
 });
