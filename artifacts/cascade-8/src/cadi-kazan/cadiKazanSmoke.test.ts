@@ -259,4 +259,19 @@ describe("cadi kazan route smoke contract", () => {
     expect(visualLockSource).toContain("touch-action: none !important");
   });
 
+
+  it("keeps The Office palette light with black/gray content while preserving shared geometry", () => {
+    expect(visualLockSource).toContain("PASS 25 — THE OFFICE final light monochrome UI palette");
+    expect(visualLockSource).toContain("--witch-deck-bg:");
+    expect(visualLockSource).toContain("linear-gradient(180deg, #f7f7f6 0%, #eceeed 50%, #d7dadd 100%)");
+    expect(visualLockSource).toContain("--witch-control-text: #17191b");
+    expect(visualLockSource).toContain("--witch-layer-bg:");
+    expect(visualLockSource).toContain(".is-office-theme .witch-card-menu");
+    expect(visualLockSource).toContain(".is-office-theme .witch-game-menu");
+    expect(visualLockSource).toContain(".is-office-theme .witch-card-option.is-selected");
+    expect(visualLockSource).toContain(".is-office-theme .witch-primary-button:not(:disabled)");
+    expect(visualLockSource).toContain(".is-office-theme .witch-cashout-button:not(:disabled)");
+    expect(visualLockSource).toContain("color: #ffffff !important");
+  });
+
 });

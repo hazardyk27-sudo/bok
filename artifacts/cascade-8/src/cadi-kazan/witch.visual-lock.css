@@ -4574,3 +4574,220 @@
     bottom: var(--office-scratch-bottom) !important;
   }
 }
+
+
+/* PASS 25 — THE OFFICE final light monochrome UI palette.
+   Geometry remains the shared Better Call Saul system. OFFICE_MATCH_6 changes
+   only color tokens: light/white surfaces use black or graphite text, while
+   selected/primary states invert to dark graphite with white text. */
+.is-office-theme {
+  --witch-payout-panel-bg:
+    linear-gradient(145deg, #ffffff 0%, #f4f4f3 42%, #dedfe1 100%);
+  --witch-payout-border: rgba(30, 33, 36, .78);
+  --witch-payout-outer-ring: rgba(0, 0, 0, .28);
+  --witch-payout-title: #17191b;
+  --witch-payout-title-shadow-1: rgba(255,255,255,.92);
+  --witch-payout-title-shadow-2: rgba(139,144,149,.30);
+  --witch-payout-amount: #0d0f10;
+  --witch-payout-amount-shadow-1: #d9dcdf;
+  --witch-payout-amount-shadow-2: #b9bdc1;
+  --witch-payout-amount-shadow-3: #989da2;
+  --witch-payout-multiplier: #4d5257;
+  --witch-payout-multiplier-shadow-1: #f2f3f4;
+  --witch-payout-multiplier-shadow-2: #c6c9cd;
+  --witch-payout-label: #555b61;
+  --witch-payout-muted: #71777d;
+  --witch-payout-value: #151719;
+  --witch-payout-rule: rgba(27, 30, 33, .18);
+
+  --witch-deck-bg:
+    linear-gradient(180deg, #f7f7f6 0%, #eceeed 50%, #d7dadd 100%);
+  --witch-deck-border: rgba(30, 33, 36, .44);
+  --witch-deck-label: #353a3f;
+  --witch-control-bg: linear-gradient(180deg, #ffffff 0%, #e8eaec 100%);
+  --witch-control-border: rgba(50, 54, 58, .36);
+  --witch-control-text: #17191b;
+  --witch-control-muted: #646a70;
+  --witch-control-accent: #141617;
+  --witch-control-accent-strong: #303438;
+  --witch-control-hover-bg: linear-gradient(180deg, #f5f6f7, #dfe2e4);
+  --witch-menu-bg: linear-gradient(155deg, #ffffff 0%, #f3f4f4 58%, #e1e3e5 100%);
+  --witch-option-bg: rgba(255,255,255,.88);
+  --witch-option-selected-bg: linear-gradient(180deg, #3b3f43 0%, #181a1c 100%);
+  --witch-primary-bg: linear-gradient(180deg, #34383c 0%, #111315 100%);
+  --witch-primary-text: #ffffff;
+  --witch-primary-disabled-bg: linear-gradient(180deg, #d9dcdf 0%, #c6c9cc 100%);
+  --witch-primary-disabled-text: rgba(31,34,37,.44);
+
+  --witch-layer-bg: linear-gradient(155deg, #ffffff 0%, #f2f3f4 62%, #dde0e2 100%);
+  --witch-layer-border: rgba(46, 50, 54, .42);
+  --witch-layer-text: #17191b;
+  --witch-layer-muted: #666c72;
+  --witch-layer-control-bg: #ffffff;
+  --witch-layer-control-border: rgba(52,56,60,.32);
+}
+
+/* Office payout is the BCS layout with light monochrome colors only. */
+.is-office-theme .witch-payout-panel {
+  color: var(--witch-payout-text, #17191b) !important;
+  box-shadow:
+    0 0 0 4px var(--witch-payout-outer-ring),
+    0 18px 36px rgba(0,0,0,.18),
+    inset 0 1px 0 rgba(255,255,255,.92) !important;
+}
+
+.is-office-theme .witch-payout-head span,
+.is-office-theme .witch-payout-net,
+.is-office-theme .witch-payout-lines,
+.is-office-theme .witch-payout-net b,
+.is-office-theme .witch-payout-lines b {
+  text-shadow: none !important;
+}
+
+.is-office-theme .witch-payout-amount {
+  text-shadow:
+    0 1px 0 #ffffff,
+    0 2px 0 #d8dbde,
+    0 4px 8px rgba(0,0,0,.14) !important;
+}
+
+.is-office-theme .witch-multiplier {
+  text-shadow:
+    0 1px 0 #ffffff,
+    0 2px 3px rgba(0,0,0,.10) !important;
+}
+
+/* Light Office deck: black/gray content on white/gray surfaces. */
+.is-office-theme .witch-control-dock {
+  border-top-color: var(--witch-deck-border) !important;
+  background: var(--witch-deck-bg) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.94),
+    0 -10px 30px rgba(0,0,0,.12) !important;
+}
+
+.is-office-theme .witch-cards-button,
+.is-office-theme .witch-stake-stepper,
+.is-office-theme .witch-alarm-field select,
+.is-office-theme .witch-stake-presets button {
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.92),
+    0 3px 10px rgba(0,0,0,.08) !important;
+}
+
+.is-office-theme .witch-stake-stepper > button {
+  color: #1c1f22 !important;
+  background: linear-gradient(180deg, #f8f9f9, #dfe2e4) !important;
+}
+
+.is-office-theme .witch-stake-stepper > button:hover:not(:disabled),
+.is-office-theme .witch-stake-presets button:hover:not(:disabled) {
+  color: #0f1112 !important;
+  background: var(--witch-control-hover-bg) !important;
+}
+
+.is-office-theme .witch-stake-presets .witch-stake-scale,
+.is-office-theme .witch-stake-presets button.is-selected {
+  border-color: #292d31 !important;
+  color: #ffffff !important;
+  background: linear-gradient(180deg, #3b3f43, #16181a) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.12),
+    0 3px 8px rgba(0,0,0,.14) !important;
+}
+
+/* Card picker/dropdown layer follows the same Office palette. */
+.is-office-theme .witch-card-menu {
+  border-color: var(--witch-layer-border) !important;
+  background: var(--witch-layer-bg) !important;
+  box-shadow:
+    0 18px 34px rgba(0,0,0,.20),
+    inset 0 1px 0 rgba(255,255,255,.96) !important;
+}
+
+.is-office-theme .witch-card-option {
+  border-color: var(--witch-layer-control-border) !important;
+  color: var(--witch-layer-text) !important;
+  background: var(--witch-layer-control-bg) !important;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.92) !important;
+}
+
+.is-office-theme .witch-card-option small {
+  color: var(--witch-layer-muted) !important;
+}
+
+.is-office-theme .witch-card-option > b {
+  border-color: rgba(48,52,56,.30) !important;
+  color: #303438 !important;
+  background: #eceeef !important;
+}
+
+.is-office-theme .witch-card-option.is-selected {
+  border-color: #202326 !important;
+  color: #ffffff !important;
+  background: var(--witch-option-selected-bg) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.11),
+    0 4px 12px rgba(0,0,0,.14) !important;
+}
+
+.is-office-theme .witch-card-option.is-selected strong,
+.is-office-theme .witch-card-option.is-selected small,
+.is-office-theme .witch-card-option.is-selected > b {
+  color: #ffffff !important;
+}
+
+.is-office-theme .witch-card-option.is-selected > b {
+  border-color: rgba(255,255,255,.26) !important;
+  background: rgba(255,255,255,.08) !important;
+}
+
+/* Game menu layer also follows the selected card palette. */
+.is-office-theme .witch-game-menu {
+  border-color: var(--witch-layer-border) !important;
+  color: var(--witch-layer-text) !important;
+  background: var(--witch-layer-bg) !important;
+  box-shadow:
+    0 18px 34px rgba(0,0,0,.20),
+    inset 0 1px 0 rgba(255,255,255,.94) !important;
+}
+
+.is-office-theme .witch-game-menu > strong,
+.is-office-theme .witch-game-menu label,
+.is-office-theme .witch-game-menu a,
+.is-office-theme .witch-game-menu button {
+  color: var(--witch-layer-text) !important;
+}
+
+.is-office-theme .witch-game-menu small {
+  color: var(--witch-layer-muted) !important;
+}
+
+.is-office-theme .witch-game-menu button,
+.is-office-theme .witch-game-menu a {
+  border-color: var(--witch-layer-control-border) !important;
+  background: var(--witch-layer-control-bg) !important;
+}
+
+/* Office primary/cash-out states: dark graphite on light UI, white text. */
+.is-office-theme .witch-primary-button:not(:disabled),
+.is-office-theme .witch-cashout-button:not(:disabled) {
+  border-color: #151719 !important;
+  color: #ffffff !important;
+  background: linear-gradient(180deg, #34383c 0%, #111315 100%) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.13),
+    0 7px 16px rgba(0,0,0,.18) !important;
+  text-shadow: none !important;
+}
+
+.is-office-theme .witch-primary-button:disabled,
+.is-office-theme .witch-cashout-button:disabled {
+  border-color: rgba(55,59,63,.22) !important;
+  color: rgba(31,34,37,.42) !important;
+  background: linear-gradient(180deg, #d9dcdf 0%, #c6c9cc 100%) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.72),
+    0 3px 8px rgba(0,0,0,.06) !important;
+  text-shadow: none !important;
+}
