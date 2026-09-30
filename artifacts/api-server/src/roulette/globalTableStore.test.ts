@@ -10,8 +10,12 @@ const {
   query,
 } = vi.hoisted(() => ({
   query: vi.fn(async () => ({
-    rows: [],
-    rowCount: 0,
+    rows: [
+      {
+        schema_ready: true,
+      },
+    ],
+    rowCount: 1,
   })),
 }));
 
@@ -43,19 +47,31 @@ describe("roulette global storage bootstrap", () => {
       second,
     ]);
 
-    const bootstrapQueryCount =
-      query.mock.calls.length;
+    expect(
+      query,
+    ).toHaveBeenCalledTimes(1);
+
+    const sql =
+      String(
+        query.mock.calls[0]?.[0] ??
+          "",
+      );
 
     expect(
-      bootstrapQueryCount,
-    ).toBeGreaterThan(1);
+      sql,
+    ).toContain(
+      "information_schema.columns",
+    );
+    expect(
+      sql,
+    ).not.toMatch(
+      /CREATE|ALTER|DROP|TRUNCATE/i,
+    );
 
     await ensureRouletteGlobalTableStorage();
 
     expect(
       query,
-    ).toHaveBeenCalledTimes(
-      bootstrapQueryCount,
-    );
+    ).toHaveBeenCalledTimes(1);
   });
 });
