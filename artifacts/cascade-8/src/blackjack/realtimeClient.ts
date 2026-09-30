@@ -288,12 +288,22 @@ export function bindBlackjackRealtimeElement(
   getViewContext?: () => BlackjackSnapshotViewContext,
   nowMs?: () => number,
 ): BlackjackRealtimeViewController {
+  let lastMarkup: string | null = null;
+
   return bindBlackjackRealtimeView({
     socket,
     getViewContext,
     nowMs,
     renderModel:(model)=>{
-      app.innerHTML=renderBlackjackTableShell(model);
+      const markup =
+        renderBlackjackTableShell(model);
+
+      if (markup === lastMarkup) {
+        return;
+      }
+
+      lastMarkup = markup;
+      app.innerHTML = markup;
     },
   });
 }
