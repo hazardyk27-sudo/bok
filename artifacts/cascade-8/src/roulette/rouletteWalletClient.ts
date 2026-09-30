@@ -40,6 +40,7 @@ export type RouletteGlobalBetSnapshot = {
   bets: RouletteBetPlacement[];
   stakeCents: number;
   payoutCents: number;
+  revision: number;
   settlement:
     | RouletteRoundSettlement
     | null;
@@ -222,6 +223,7 @@ export class RouletteWalletClient {
     bets:
       readonly RouletteBetPlacement[],
     idempotencyKey: string,
+    expectedRevision: number,
   ): Promise<RouletteGlobalBetUpdateResponse> {
     const response =
       await fetchWithTimeout(
@@ -239,6 +241,7 @@ export class RouletteWalletClient {
               roundId,
               bets,
               idempotencyKey,
+              expectedRevision,
             }),
         },
         ROULETTE_REQUEST_TIMEOUT_MS,

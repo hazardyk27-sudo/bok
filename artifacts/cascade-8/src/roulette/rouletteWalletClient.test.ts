@@ -28,6 +28,7 @@ describe("roulette wallet client", () => {
             ],
             stakeCents: 1_000,
             payoutCents: 0,
+            revision: 1,
             settlement: null,
             settledAtMs: null,
             updatedAtMs: 123_456,
@@ -50,6 +51,7 @@ describe("roulette wallet client", () => {
           },
         ],
         "roulette_global_bet_123",
+        0,
       );
 
     expect(
@@ -80,6 +82,7 @@ describe("roulette wallet client", () => {
       ],
       idempotencyKey:
         "roulette_global_bet_123",
+      expectedRevision: 0,
     });
   });
 

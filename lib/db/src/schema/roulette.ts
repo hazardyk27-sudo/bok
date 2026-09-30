@@ -106,6 +106,9 @@ export const rouletteGlobalBets = pgTable(
     payoutCents: bigint("payout_cents", { mode: "number" })
       .notNull()
       .default(0),
+    revision: integer("revision")
+      .notNull()
+      .default(0),
     settlement: jsonb("settlement"),
     settledAt: timestamp("settled_at", { withTimezone: true }),
     updatedAt: timestamp("updated_at", { withTimezone: true })
@@ -134,6 +137,12 @@ export const rouletteGlobalBetRequests = pgTable(
     roundId: text("round_id").notNull(),
     sessionId: text("session_id").notNull(),
     bets: jsonb("bets").notNull(),
+    expectedRevision: integer("expected_revision")
+      .notNull()
+      .default(0),
+    appliedRevision: integer("applied_revision")
+      .notNull()
+      .default(0),
     createdAt: timestamp("created_at", { withTimezone: true })
       .notNull()
       .defaultNow(),

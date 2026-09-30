@@ -130,6 +130,8 @@ export class RouletteRepository {
         RouletteServerBet[];
       idempotencyKey:
         string;
+      expectedRevision:
+        number;
     },
   ) {
     return upsertRouletteGlobalBet({

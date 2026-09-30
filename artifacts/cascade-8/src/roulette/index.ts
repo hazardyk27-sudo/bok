@@ -447,7 +447,8 @@ export function mountRoulette(app: HTMLDivElement) {
     | null = null;
   let globalBetMutationVersion = 0;
   let serverReservedStakeCents = 0;
-  let lastHydratedGlobalBetUpdatedAtMs = 0;
+  let serverGlobalBetRevision = 0;
+  let lastHydratedGlobalBetRevision = 0;
   let activeResultPresentation:
     RouletteResultPresentation | null =
       null;
@@ -1803,7 +1804,8 @@ export function mountRoulette(app: HTMLDivElement) {
       roundSnapshotCapturedId =
         null;
       serverReservedStakeCents = 0;
-      lastHydratedGlobalBetUpdatedAtMs =
+      serverGlobalBetRevision = 0;
+      lastHydratedGlobalBetRevision =
         0;
       pendingGlobalBetSync = null;
 
@@ -1824,10 +1826,10 @@ export function mountRoulette(app: HTMLDivElement) {
           !globalBetSyncInFlight &&
           !pendingGlobalBetSync &&
           (
-            serverBet?.updatedAtMs ??
+            serverBet?.revision ??
             0
           ) >=
-            lastHydratedGlobalBetUpdatedAtMs
+            lastHydratedGlobalBetRevision
         )
       );
 
@@ -1848,8 +1850,10 @@ export function mountRoulette(app: HTMLDivElement) {
       };
       serverReservedStakeCents =
         serverBet.stakeCents;
-      lastHydratedGlobalBetUpdatedAtMs =
-        serverBet.updatedAtMs;
+      serverGlobalBetRevision =
+        serverBet.revision;
+      lastHydratedGlobalBetRevision =
+        serverBet.revision;
     } else if (
       canHydrateBet &&
       roundChanged &&
@@ -1861,6 +1865,9 @@ export function mountRoulette(app: HTMLDivElement) {
           betState,
         );
       serverReservedStakeCents = 0;
+      serverGlobalBetRevision = 0;
+      lastHydratedGlobalBetRevision =
+        0;
     }
 
     if (globalPhase === "betting") {
@@ -1987,6 +1994,7 @@ export function mountRoulette(app: HTMLDivElement) {
                 job.roundId,
                 job.bets,
                 `roulette_gbet_${job.version}_${crypto.randomUUID().replaceAll("-", "")}`,
+                serverGlobalBetRevision,
               );
 
           if (
@@ -2000,10 +2008,14 @@ export function mountRoulette(app: HTMLDivElement) {
               response.globalBet
                 ?.stakeCents ??
               0;
-            lastHydratedGlobalBetUpdatedAtMs =
+            serverGlobalBetRevision =
               response.globalBet
-                ?.updatedAtMs ??
-              lastHydratedGlobalBetUpdatedAtMs;
+                ?.revision ??
+              serverGlobalBetRevision;
+            lastHydratedGlobalBetRevision =
+              response.globalBet
+                ?.revision ??
+              lastHydratedGlobalBetRevision;
             renderWalletBalance();
             renderBetState();
           }
@@ -2013,6 +2025,19 @@ export function mountRoulette(app: HTMLDivElement) {
               ? error.message
               : "ROULETTE_GLOBAL_BET_FAILED";
 
+          const discardPending =
+            message ===
+              "ROULETTE_GLOBAL_BET_STALE" ||
+            message ===
+              "ROULETTE_GLOBAL_BETTING_CLOSED" ||
+            message ===
+              "ROULETTE_GLOBAL_BET_ALREADY_SETTLED";
+
+          if (discardPending) {
+            pendingGlobalBetSync =
+              null;
+          }
+
           if (betStatus) {
             betStatus.textContent =
               message ===
@@ -2021,7 +2046,10 @@ export function mountRoulette(app: HTMLDivElement) {
                 : message ===
                       "ROULETTE_GLOBAL_BETTING_CLOSED"
                   ? "NO MORE BETS"
-                  : "BET SYNC FAILED";
+                  : message ===
+                        "ROULETTE_GLOBAL_BET_STALE"
+                    ? "BET UPDATED ELSEWHERE"
+                    : "BET SYNC FAILED";
           }
 
           console.error(
