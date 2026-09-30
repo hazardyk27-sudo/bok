@@ -5138,3 +5138,208 @@ button {
       ) !important;
   }
 }
+
+
+/* Part 17 — spin table is a scaled clone of betting table */
+@media (max-width: 900px) and (orientation: portrait) {
+  .roulette-page {
+    /*
+     * Canonical betting-table design width. Spin/result reuse this exact
+     * internal geometry and only scale the wrapper as a whole.
+     */
+    --roulette-table-design-width:
+      min(
+        86vw,
+        calc(
+          (
+            100dvh -
+            var(--mobile-safe-bottom) -
+            clamp(54px, 8.5dvh, 76px)
+          ) / 1.731
+        )
+      );
+    --spin-table-scale: 0.62;
+    --settled-table-scale: 0.60;
+  }
+
+  .roulette-page[data-phase="spinning"],
+  .roulette-page[data-phase="settled"] {
+    --table-ratio: 1.731;
+    --table-width:
+      var(--roulette-table-design-width);
+    --zero-row:
+      calc(var(--table-width) * 0.112);
+    --number-row:
+      calc(var(--table-width) * 0.128);
+    --column-row:
+      calc(var(--table-width) * 0.112);
+    --control-size:
+      clamp(
+        27px,
+        calc(var(--table-width) * 0.145),
+        40px
+      );
+    --control-gap:
+      clamp(
+        5px,
+        calc(var(--table-width) * 0.030),
+        11px
+      );
+  }
+
+  .roulette-page[data-phase="spinning"]
+    .roulette-table-layout {
+    width:
+      var(--roulette-table-design-width) !important;
+    max-width: none !important;
+    transform:
+      translateX(-56.5%)
+      scale(var(--spin-table-scale)) !important;
+    transform-origin:
+      50% 0 !important;
+  }
+
+  .roulette-page[data-phase="settled"]
+    .roulette-table-layout {
+    width:
+      var(--roulette-table-design-width) !important;
+    max-width: none !important;
+    transform:
+      translateX(-56.5%)
+      scale(var(--settled-table-scale)) !important;
+    transform-origin:
+      50% 0 !important;
+  }
+
+  .roulette-page[data-phase="spinning"]
+    .roulette-bet-table,
+  .roulette-page[data-phase="settled"]
+    .roulette-bet-table {
+    --bet-border:
+      rgba(241, 234, 218, 0.74);
+    width:
+      var(--roulette-table-design-width) !important;
+  }
+
+  /*
+   * Undo the old spin-only redesign. Typography is identical to betting;
+   * wrapper scaling makes it smaller without changing any proportions.
+   */
+  .roulette-page[data-phase="spinning"]
+    .roulette-column-cell,
+  .roulette-page[data-phase="settled"]
+    .roulette-column-cell {
+    font-size:
+      clamp(
+        9.5px,
+        calc(var(--table-width) * 0.043),
+        15px
+      ) !important;
+    letter-spacing:
+      -0.035em !important;
+  }
+
+  .roulette-page[data-phase="spinning"]
+    .roulette-dozen-cell,
+  .roulette-page[data-phase="settled"]
+    .roulette-dozen-cell {
+    font-size:
+      clamp(
+        11.5px,
+        calc(var(--table-width) * 0.068),
+        20px
+      ) !important;
+    font-weight: 820 !important;
+    letter-spacing: 0 !important;
+  }
+
+  .roulette-page[data-phase="spinning"]
+    .roulette-outside-cell,
+  .roulette-page[data-phase="settled"]
+    .roulette-outside-cell {
+    font-size:
+      clamp(
+        11px,
+        calc(var(--table-width) * 0.058),
+        17px
+      ) !important;
+    font-weight: 820 !important;
+    letter-spacing:
+      -0.01em !important;
+  }
+
+  .roulette-page[data-phase="spinning"]
+    .roulette-number-cell:not(.has-bet) > span,
+  .roulette-page[data-phase="spinning"]
+    .roulette-zero-cell:not(.has-bet) > span,
+  .roulette-page[data-phase="spinning"]
+    .roulette-column-cell > span:not(.roulette-placed-chip),
+  .roulette-page[data-phase="spinning"]
+    .roulette-dozen-cell > span:not(.roulette-placed-chip),
+  .roulette-page[data-phase="spinning"]
+    .roulette-outside-cell
+    > span:not(.roulette-diamond):not(.roulette-placed-chip),
+  .roulette-page[data-phase="settled"]
+    .roulette-number-cell:not(.has-bet) > span,
+  .roulette-page[data-phase="settled"]
+    .roulette-zero-cell:not(.has-bet) > span,
+  .roulette-page[data-phase="settled"]
+    .roulette-column-cell > span:not(.roulette-placed-chip),
+  .roulette-page[data-phase="settled"]
+    .roulette-dozen-cell > span:not(.roulette-placed-chip),
+  .roulette-page[data-phase="settled"]
+    .roulette-outside-cell
+    > span:not(.roulette-diamond):not(.roulette-placed-chip) {
+    opacity: 1 !important;
+  }
+
+  .roulette-page[data-phase="spinning"]
+    .roulette-outside-cell
+    .roulette-diamond,
+  .roulette-page[data-phase="settled"]
+    .roulette-outside-cell
+    .roulette-diamond {
+    width:
+      clamp(
+        22px,
+        calc(var(--table-width) * 0.095),
+        30px
+      ) !important;
+    height:
+      clamp(
+        22px,
+        calc(var(--table-width) * 0.095),
+        30px
+      ) !important;
+    max-width: none !important;
+    max-height: none !important;
+    margin: 0 auto !important;
+  }
+
+  .roulette-page[data-phase="spinning"]
+    .roulette-table-layout::before,
+  .roulette-page[data-phase="settled"]
+    .roulette-table-layout::before {
+    inset:
+      -3px -3px -4px !important;
+    background:
+      rgba(2, 3, 3, 0.22) !important;
+    box-shadow:
+      0 10px 24px
+      rgba(0, 0, 0, 0.18) !important;
+  }
+}
+
+@media (max-width: 900px) and (orientation: portrait) and (max-height: 700px) {
+  .roulette-page {
+    --spin-table-scale: 0.54;
+    --settled-table-scale: 0.52;
+  }
+}
+
+@media (max-width: 900px) and (orientation: portrait) and (max-height: 590px) {
+  .roulette-page {
+    --spin-table-scale: 0.44;
+    --settled-table-scale: 0.43;
+  }
+}
