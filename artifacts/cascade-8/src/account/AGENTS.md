@@ -3,7 +3,7 @@
 > **Mandatory startup:** First read the canonical project handbook at `integration/replit-preview:AGENTS.md`. Then read this file. These are the only two mandatory instruction files for a normal Account/Auth conversation. The canonical root handbook owns all shared GitHub/Replit/Supabase/wallet/promotion/Shell rules.
 
 ## Purpose
-Account/Auth is the shared player identity experience for all games. It provides registration, login, profile/session state, email verification status, resend-verification and logout. It must not create a separate per-game identity model.
+Account/Auth is the shared player identity experience for all games. It provides email + username + password registration, login, profile/session state, password change and logout. It must not create a separate per-game identity or wallet model.
 
 ## Branch and ownership
 - Canonical branch: `feature/account`
@@ -26,11 +26,12 @@ Shared route/bootstrap integration remains central-platform work.
 - Secrets/API keys belong in secret storage, never source control.
 
 ## Email verification
-The frontend supports verification state and resend-verification. Resend is the intended outbound email provider, but production email delivery remains a deployment/domain concern. Do not hardcode provider secrets or fake successful delivery.
+Email verification is intentionally disabled for the current milestone. Registration must succeed without outbound email delivery. Keep provider secrets out of source control; verification may be reintroduced later as a separate product milestone.
 
 ## Validation
 Before commit, run the Account/Auth owned tests/e2e relevant to the change and verify all changed paths stay inside Account-owned/development roots. Shared routing, shared session/wallet linkage, or platform schema aggregation must be handed to central integration.
 
 ## Current milestones
+- 2026-09-30 — Email/username account + profile foundation — registration now uses unique email + unique normalized username + password, login accepts email or username, each user receives a DB-sequenced immutable usercode formatted like `0000-0000-01`, the account is linked to the shared `game_session` wallet, profile exposes shared balance/email/username/usercode, and authenticated password change revokes other auth sessions. Email verification is disabled for this milestone.
 - 2026-09-30 — Account instruction scope standardized — canonical project delivery/Replit/Supabase rules moved to the master handbook; this file now owns Account/Auth-specific security, API, ownership and milestone context.
 - 2026-09-27 — Account page baseline — login/register/profile/logout UI exists as a self-contained module using server-side cookie auth, with email-verification state and resend UI. Next platform work: complete central route/API/schema wiring and enable production email delivery when the deployment domain is ready.
