@@ -15,6 +15,12 @@ export function isValidSessionId(value: unknown): value is string {
   return typeof value === "string" && SESSION_ID_PATTERN.test(value);
 }
 
+export function getLegacyScopedSessionPathForRequest(requestPath: string) {
+  return LEGACY_SCOPED_SESSION_PATHS.find(
+    (path) => requestPath === path || requestPath.startsWith(`${path}/`),
+  ) ?? null;
+}
+
 export function getCanonicalSessionId(
   cookies: Record<string, unknown> | undefined,
 ) {
@@ -97,7 +103,8 @@ export function chooseHighestBalanceSessionCandidate(
 ) {
   let winner: { sessionId: string; balanceCents: number; order: number } | null = null;
 
-  candidates.forEach((candidate, order) => {
+  for (let order = 0; order < candidates.length; order += 1) {
+    const candidate = candidates[order]!;
     if (
       winner === null
       || candidate.balanceCents > winner.balanceCents
@@ -108,7 +115,7 @@ export function chooseHighestBalanceSessionCandidate(
     ) {
       winner = { ...candidate, order };
     }
-  });
+  }
 
-  return winner?.sessionId ?? null;
+  return winner ? winner.sessionId : null;
 }
