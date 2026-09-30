@@ -7,6 +7,7 @@ import {
   normalizeEmail,
   normalizeUsername,
   verifyPassword,
+  formatAuthUserCode,
 } from "./security";
 
 const INITIAL_SHARED_BALANCE_CENTS = 100_000;
@@ -35,14 +36,6 @@ type SessionUser = {
   user: AuthUser;
   walletSessionId: string;
 };
-
-export function formatAuthUserCode(value: number) {
-  if (!Number.isSafeInteger(value) || value <= 0) {
-    throw new Error("AUTH_USERCODE_INVALID");
-  }
-  const digits = String(value).padStart(10, "0");
-  return `${digits.slice(0, 4)}-${digits.slice(4, 8)}-${digits.slice(8, 10)}`;
-}
 
 function toSessionUser(row: UserRow): SessionUser {
   const userNumber = Number(row.user_number);
