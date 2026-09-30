@@ -1293,3 +1293,48 @@ html.businesses-route #app {
     object-position: center 34% !important;
   }
 }
+
+
+/* 2026-10-01 — tablet + desktop scroll safety.
+   Landscape tablets can exceed the 1100px desktop breakpoint. Never trap the
+   Businesses route inside a fixed viewport: preserve the large desktop width
+   while allowing the document to grow and scroll whenever Stadium content,
+   drawers or browser chrome reduce the usable height. */
+@media (min-width: 761px) {
+  html.businesses-route,
+  body.businesses-route {
+    height: auto !important;
+    min-height: 100dvh !important;
+    overflow-x: hidden !important;
+    overflow-y: auto !important;
+    overscroll-behavior-y: auto !important;
+  }
+
+  html.businesses-route #app {
+    height: auto !important;
+    min-height: 100dvh !important;
+    overflow: visible !important;
+  }
+
+  .route-shell.is-businesses-page {
+    height: auto !important;
+    min-height: 100dvh !important;
+    overflow-x: clip !important;
+    overflow-y: visible !important;
+    touch-action: pan-y !important;
+  }
+
+  .route-shell.is-businesses-page .businesses-workspace {
+    height: auto !important;
+    min-height: calc(100dvh - 16px) !important;
+    max-height: none !important;
+    overflow: visible !important;
+  }
+
+  .route-shell.is-businesses-page .businesses-page {
+    height: auto !important;
+    min-height: 0 !important;
+    overflow: visible !important;
+    padding-bottom: max(32px, env(safe-area-inset-bottom)) !important;
+  }
+}
