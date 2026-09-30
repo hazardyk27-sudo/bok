@@ -2,10 +2,7 @@ import { createServer } from "node:http";
 import { pool } from "@workspace/db";
 import app from "./app";
 import { logger } from "./lib/logger";
-import {
-  attachBlackjackPlatformRuntime,
-  type BlackjackAttachedServerRuntime,
-} from "./platform/blackjack";
+import { attachBlackjackPlatformRuntime } from "./platform/blackjack";
 import { initializeSharedWalletPlatform } from "./platform/wallet";
 
 const rawPort = process.env["PORT"];
@@ -36,7 +33,9 @@ if (migratedWalletCount > 0 || walletInitialization.legacyPreservedCount > 0) {
 }
 
 const server = createServer(app);
-let blackjackRuntime: Awaited<\n  ReturnType<typeof attachBlackjackPlatformRuntime>\n> | null = null;
+let blackjackRuntime: Awaited<
+  ReturnType<typeof attachBlackjackPlatformRuntime>
+> | null = null;
 let shuttingDown = false;
 
 server.listen(port, () => {
