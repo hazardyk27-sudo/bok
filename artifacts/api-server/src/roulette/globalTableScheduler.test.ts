@@ -8,7 +8,7 @@ import {
 } from "./globalTable";
 import {
   buildRouletteGlobalRoundChain,
-} from "./globalTableScheduler";
+} from "./globalTableSchedule";
 
 function factory() {
   let index = 0;
