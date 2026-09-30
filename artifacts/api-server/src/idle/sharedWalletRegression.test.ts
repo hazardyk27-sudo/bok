@@ -35,6 +35,17 @@ describe("Idle shared wallet/session compatibility", () => {
     expect(idleRoutes).toContain('path: "/"');
   });
 
+  it("resolves registered accounts and duplicate game-session cookies canonically", () => {
+    expect(idleRoutes).toContain('const AUTH_COOKIE = "fy_auth"');
+    expect(idleRoutes).toContain("resolveAuthenticatedWalletSessionId");
+    expect(idleRoutes).toContain("readRawCookieValues");
+    expect(idleRoutes).toContain("auth_sessions");
+    expect(idleRoutes).toContain("wallet_session_id");
+    expect(idleRoutes).toContain("createHash(\"sha256\")");
+    expect(idleRoutes).toContain("balance_cents");
+    expect(idleRoutes).toContain("await getSessionId(req, res)");
+  });
+
   it("uses the shared platform wallet table authority everywhere", () => {
     expect(platformWallet).toContain(
       "SHARED_WALLET_TABLE",

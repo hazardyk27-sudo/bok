@@ -1,5 +1,6 @@
-import { randomUUID } from "node:crypto";
+import { createHash, randomUUID } from "node:crypto";
 import { Router, type IRouter, type Request, type Response } from "express";
+import { pool } from "@workspace/db";
 import { SHARED_WALLET_TABLE } from "../platform/wallet";
 import { ticketMarketPersistence } from "./marketPersistence";
 import { ticketMarketRuntime } from "./marketRuntimeDb";
@@ -24,12 +25,167 @@ const SESSION_COOKIE =
   String(SHARED_WALLET_TABLE) === "shared_wallets"
     ? "game_session"
     : "roulette_session";
+const LEGACY_SESSION_COOKIE = "roulette_session";
+const AUTH_COOKIE = "fy_auth";
+const SESSION_ID_PATTERN = /^[a-f0-9-]{20,80}$/;
 
-function getSessionId(req: Request, res: Response) {
-  const existing = req.cookies?.[SESSION_COOKIE] as string | undefined;
-  if (existing && /^[a-f0-9-]{20,80}$/.test(existing)) return existing;
+function readRawCookieValues(req: Request, name: string) {
+  const header = req.headers.cookie;
+  if (!header) return [] as string[];
 
-  const sessionId = randomUUID();
+  const values: string[] = [];
+  const seen = new Set<string>();
+
+  for (const segment of header.split(";")) {
+    const trimmed = segment.trim();
+    const equalsAt = trimmed.indexOf("=");
+    if (equalsAt <= 0) continue;
+    if (trimmed.slice(0, equalsAt) !== name) continue;
+
+    const raw = trimmed.slice(equalsAt + 1);
+    let value = raw;
+    try {
+      value = decodeURIComponent(raw);
+    } catch {
+      // Keep raw value and validate below.
+    }
+
+    if (!SESSION_ID_PATTERN.test(value) || seen.has(value)) continue;
+    seen.add(value);
+    values.push(value);
+  }
+
+  return values;
+}
+
+function readRawCookie(req: Request, name: string) {
+  const direct = req.cookies?.[name];
+  if (typeof direct === "string" && direct.length > 0) {
+    return direct;
+  }
+
+  const header = req.headers.cookie;
+  if (!header) return null;
+
+  for (const segment of header.split(";")) {
+    const trimmed = segment.trim();
+    const equalsAt = trimmed.indexOf("=");
+    if (equalsAt <= 0 || trimmed.slice(0, equalsAt) !== name) continue;
+
+    const raw = trimmed.slice(equalsAt + 1);
+    try {
+      return decodeURIComponent(raw);
+    } catch {
+      return raw;
+    }
+  }
+
+  return null;
+}
+
+async function resolveAuthenticatedWalletSessionId(req: Request) {
+  if (String(SHARED_WALLET_TABLE) !== "shared_wallets") {
+    return null;
+  }
+
+  const token = readRawCookie(req, AUTH_COOKIE);
+  if (!token) return null;
+
+  try {
+    const tokenHash = createHash("sha256")
+      .update(token)
+      .digest("hex");
+
+    const result = await pool.query<{
+      wallet_session_id: string;
+    }>(
+      `SELECT u.wallet_session_id
+         FROM auth_sessions s
+         JOIN users u
+           ON u.id = s.user_id
+        WHERE s.token_hash = $1
+          AND s.revoked_at IS NULL
+          AND s.expires_at > NOW()
+        LIMIT 1`,
+      [tokenHash],
+    );
+
+    const sessionId = result.rows[0]?.wallet_session_id;
+    return sessionId && SESSION_ID_PATTERN.test(sessionId)
+      ? sessionId
+      : null;
+  } catch {
+    // feature/idle intentionally supports older shared snapshots where auth
+    // tables may not exist yet. Fall back to cookie candidates there.
+    return null;
+  }
+}
+
+async function resolveCookieSessionId(req: Request) {
+  const candidates = [
+    ...readRawCookieValues(req, SESSION_COOKIE),
+  ];
+
+  if (SESSION_COOKIE !== LEGACY_SESSION_COOKIE) {
+    for (const sessionId of readRawCookieValues(
+      req,
+      LEGACY_SESSION_COOKIE,
+    )) {
+      if (!candidates.includes(sessionId)) {
+        candidates.push(sessionId);
+      }
+    }
+  }
+
+  const parsedCookie = req.cookies?.[SESSION_COOKIE];
+  if (
+    typeof parsedCookie === "string"
+    && SESSION_ID_PATTERN.test(parsedCookie)
+    && !candidates.includes(parsedCookie)
+  ) {
+    candidates.push(parsedCookie);
+  }
+
+  if (candidates.length === 0) return null;
+  if (candidates.length === 1) return candidates[0]!;
+
+  try {
+    const result = await pool.query<{
+      session_id: string;
+      balance_cents: number | string;
+    }>(
+      `SELECT session_id, balance_cents
+         FROM ${SHARED_WALLET_TABLE}
+        WHERE session_id = ANY($1::text[])`,
+      [candidates],
+    );
+
+    const balances = new Map(
+      result.rows.map((row) => [
+        row.session_id,
+        Number(row.balance_cents),
+      ]),
+    );
+
+    let winner: string | null = null;
+    let winnerBalance = Number.NEGATIVE_INFINITY;
+
+    candidates.forEach((sessionId) => {
+      const balance = balances.get(sessionId);
+      if (balance === undefined) return;
+      if (balance >= winnerBalance) {
+        winner = sessionId;
+        winnerBalance = balance;
+      }
+    });
+
+    return winner ?? candidates.at(-1) ?? null;
+  } catch {
+    return candidates.at(-1) ?? null;
+  }
+}
+
+function persistSessionCookie(res: Response, sessionId: string) {
   res.cookie(SESSION_COOKIE, sessionId, {
     httpOnly: true,
     sameSite: "lax",
@@ -37,6 +193,15 @@ function getSessionId(req: Request, res: Response) {
     path: "/",
     maxAge: 1000 * 60 * 60 * 24 * 365,
   });
+}
+
+async function getSessionId(req: Request, res: Response) {
+  const sessionId =
+    await resolveAuthenticatedWalletSessionId(req)
+    ?? await resolveCookieSessionId(req)
+    ?? randomUUID();
+
+  persistSessionCookie(res, sessionId);
   return sessionId;
 }
 
@@ -190,7 +355,7 @@ router.get("/idle/market/live", async (req, res) => {
 
 router.get("/idle/state", async (req, res) => {
   try {
-    const sessionId = getSessionId(req, res);
+    const sessionId = await getSessionId(req, res);
     const state = await getIdleStadiumState(sessionId);
     res.json(state);
   } catch (error) {
@@ -231,7 +396,7 @@ router.post("/idle/stadium/tickets/sell", async (req, res) => {
     }
 
     const result = await sellStadiumTickets(
-      getSessionId(req, res),
+      await getSessionId(req, res),
       quantityTickets,
       idempotencyKey,
     );
@@ -259,7 +424,7 @@ router.post("/idle/stadium/storage/upgrade", async (req, res) => {
     }
 
     const result = await upgradeStadiumStorage(
-      getSessionId(req, res),
+      await getSessionId(req, res),
       idempotencyKey,
     );
 
@@ -286,7 +451,7 @@ router.post("/idle/stadium/speed/upgrade", async (req, res) => {
     }
 
     const result = await upgradeStadiumSpeed(
-      getSessionId(req, res),
+      await getSessionId(req, res),
       idempotencyKey,
     );
 
@@ -313,7 +478,7 @@ router.post("/idle/stadium/upgrade", async (req, res) => {
     }
 
     const result = await upgradeStadiumLevel(
-      getSessionId(req, res),
+      await getSessionId(req, res),
       idempotencyKey,
     );
 
@@ -355,7 +520,7 @@ router.post("/idle/stadium/seats/buy", async (req, res) => {
     }
 
     const result = await buyStadiumSeats(
-      getSessionId(req, res),
+      await getSessionId(req, res),
       quantity,
       idempotencyKey,
     );

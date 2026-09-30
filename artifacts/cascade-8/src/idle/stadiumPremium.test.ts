@@ -128,6 +128,41 @@ describe("Part 26 premium Stadium control surface", () => {
     expect(css).toContain("min-height: 100dvh");
   });
 
+  it("owns vertical scrolling inside the Businesses route on every viewport", () => {
+    const marker = css.lastIndexOf("route-owned scroll root");
+    expect(marker).toBeGreaterThan(-1);
+
+    const finalScrollContract = css.slice(marker);
+    expect(finalScrollContract).toContain(
+      "html.businesses-route #app",
+    );
+    expect(finalScrollContract).toContain(
+      "overflow: hidden !important",
+    );
+    expect(finalScrollContract).toContain(
+      "height: 100dvh !important",
+    );
+    expect(finalScrollContract).toContain(
+      "max-height: 100dvh !important",
+    );
+    expect(finalScrollContract).toContain(
+      "overflow-y: auto !important",
+    );
+    expect(finalScrollContract).toContain(
+      "-webkit-overflow-scrolling: touch",
+    );
+    expect(finalScrollContract).toContain(
+      "touch-action: pan-y !important",
+    );
+    expect(finalScrollContract).toContain(
+      "height: auto !important",
+    );
+    expect(marker).toBeGreaterThan(
+      css.lastIndexOf("desktop scale with stable Stadium source"),
+    );
+  });
+
+
   it("keeps the Stadium subject fully framed on wide 16:9 desktop views", () => {
     expect(css).toContain("desktop 16:9 hero framing");
     expect(css).toContain(
@@ -135,15 +170,18 @@ describe("Part 26 premium Stadium control surface", () => {
     );
   });
 
-  it("uses a dedicated desktop hero asset and materially larger 16:9 layout", () => {
+  it("uses the stable Stadium hero while keeping the larger 16:9 layout", () => {
     expect(idleIndexSource).toContain(
-      'srcset="/businesses/stadium-desktop.webp"',
+      'src="/businesses/stadium.webp"',
     );
-    expect(idleIndexSource).toContain(
+    expect(idleIndexSource).not.toContain(
+      "stadium-desktop.webp",
+    );
+    expect(idleIndexSource).not.toContain(
       'class="stadium-canonical-hero-media"',
     );
     expect(css).toContain(
-      "desktop scale + dedicated high-quality hero asset",
+      "desktop scale with stable Stadium source",
     );
     expect(css).toContain(
       "width: min(calc(100vw - 16px), 1880px) !important",

@@ -227,17 +227,11 @@ export const BUSINESSES_MARKUP = `
         data-state="loading"
       >
         <div class="stadium-canonical-hero">
-          <picture class="stadium-canonical-hero-media">
-            <source
-              media="(min-width: 1101px)"
-              srcset="/businesses/stadium-desktop.webp"
-            />
-            <img
-              src="/businesses/stadium.webp"
-              alt=""
-              decoding="async"
-            />
-          </picture>
+          <img
+            src="/businesses/stadium.webp"
+            alt=""
+            decoding="async"
+          />
           <div
             class="stadium-canonical-hero-shade"
             aria-hidden="true"

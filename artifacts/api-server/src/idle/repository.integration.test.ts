@@ -102,6 +102,32 @@ describe.skipIf(!enabled)(
       );
     });
 
+    it("serves two fresh browser sessions independently", async () => {
+      const first = await fetch(
+        `${baseUrl}/api/idle/state`,
+      );
+      const second = await fetch(
+        `${baseUrl}/api/idle/state`,
+      );
+
+      expect(first.status).toBe(200);
+      expect(second.status).toBe(200);
+
+      const firstBody = await first.json() as {
+        sessionId: string;
+      };
+      const secondBody = await second.json() as {
+        sessionId: string;
+      };
+
+      expect(firstBody.sessionId)
+        .toMatch(/^[a-f0-9-]{20,80}$/);
+      expect(secondBody.sessionId)
+        .toMatch(/^[a-f0-9-]{20,80}$/);
+      expect(firstBody.sessionId)
+        .not.toBe(secondBody.sessionId);
+    });
+
     it("buys seats idempotently through the canonical Stadium endpoint", async () => {
       const stateResponse = await fetch(
         `${baseUrl}/api/idle/state`,

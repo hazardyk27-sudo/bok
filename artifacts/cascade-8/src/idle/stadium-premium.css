@@ -1246,23 +1246,11 @@ html.businesses-route #app {
 }
 
 
-/* 2026-09-30 — desktop scale + dedicated high-quality hero asset.
-   Wide desktop no longer stretches the tiny mobile card WebP across the hero.
-   A dedicated 1280px desktop source is selected with <picture>, and the 16:9
-   workspace/card are allowed to use materially more of the viewport. */
-.route-shell.is-businesses-page .stadium-canonical-hero-media {
-  position: absolute;
-  inset: 0;
+/* 2026-09-30 — desktop scale with stable Stadium source.
+   Keep the larger 16:9 workspace/card, but use the known-good Stadium asset
+   directly so a bad optional desktop source can never blank the hero. */
+.route-shell.is-businesses-page .stadium-canonical-hero > img {
   display: block;
-  overflow: hidden;
-}
-
-.route-shell.is-businesses-page .stadium-canonical-hero-media > img {
-  display: block;
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  object-position: center 48%;
   image-rendering: auto;
   backface-visibility: hidden;
   transform: translateZ(0);
@@ -1301,8 +1289,51 @@ html.businesses-route #app {
     min-height: clamp(340px, 42dvh, 470px) !important;
   }
 
-  .route-shell.is-businesses-page
-  .stadium-canonical-hero-media > img {
+  .route-shell.is-businesses-page .stadium-canonical-hero > img {
     object-position: center 34% !important;
   }
+}
+
+
+/* 2026-10-01 — route-owned scroll root.
+   Replit/embedded preview shells can clamp document scrolling even when
+   html/body advertise overflow-y:auto. Businesses therefore owns exactly one
+   vertical scroll container at the route-shell level on every viewport.
+   This also removes the desktop 16:9 fixed-workspace conflict and keeps
+   tablet touch scrolling independent from the host document. */
+html.businesses-route,
+body.businesses-route,
+html.businesses-route #app {
+  height: 100% !important;
+  min-height: 100% !important;
+  max-height: 100% !important;
+  overflow: hidden !important;
+}
+
+.route-shell.is-businesses-page {
+  height: 100dvh !important;
+  min-height: 100dvh !important;
+  max-height: 100dvh !important;
+  overflow-x: hidden !important;
+  overflow-y: auto !important;
+  overscroll-behavior-x: none !important;
+  overscroll-behavior-y: contain !important;
+  -webkit-overflow-scrolling: touch;
+  touch-action: pan-y !important;
+  scrollbar-gutter: stable;
+}
+
+.route-shell.is-businesses-page .businesses-workspace {
+  height: auto !important;
+  min-height: 100% !important;
+  max-height: none !important;
+  overflow: visible !important;
+}
+
+.route-shell.is-businesses-page .businesses-page {
+  height: auto !important;
+  min-height: 0 !important;
+  max-height: none !important;
+  overflow: visible !important;
+  padding-bottom: max(48px, env(safe-area-inset-bottom)) !important;
 }
