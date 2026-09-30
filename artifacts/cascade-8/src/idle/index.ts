@@ -446,6 +446,15 @@ class BusinessesClient {
           "[data-idle-market-status]",
           "YENİDEN BAĞLANIYOR",
         );
+
+        const detailStatus =
+          this.root.querySelector<HTMLElement>(
+            "[data-idle-market-detail-source]",
+          );
+        if (detailStatus) {
+          detailStatus.textContent =
+            "YENİDEN BAĞLANIYOR · SON FİYAT KORUNUYOR";
+        }
       },
     );
 
