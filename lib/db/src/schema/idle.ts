@@ -174,5 +174,6 @@ export const idleStadiumActionReceipts = pgTable(
     uniqueIndex("idle_stadium_action_receipts_idempotency_unique").on(table.idempotencyKey),
     index("idle_stadium_action_receipts_session_idx").on(table.sessionId),
     index("idle_stadium_action_receipts_action_idx").on(table.actionType),
+    index("idle_stadium_action_receipts_retention_idx").on(table.createdAt),
   ],
 );
