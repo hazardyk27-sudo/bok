@@ -127,10 +127,10 @@ describe("global market runtime/API source contract", () => {
       "ticketMarketRuntime.stop()",
     );
     expect(idleIndexSource).toContain(
-      'process.once("SIGTERM", stopIdleMarketRuntime)',
+      'process.once("SIGTERM", stopIdleRuntime)',
     );
     expect(idleIndexSource).toContain(
-      'process.once("SIGINT", stopIdleMarketRuntime)',
+      'process.once("SIGINT", stopIdleRuntime)',
     );
     expect(idleIndexSource).toContain(
       "Unable to start Idle ticket market runtime",
