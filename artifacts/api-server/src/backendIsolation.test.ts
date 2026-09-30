@@ -8,6 +8,7 @@ const read = (relative: string) =>
 const schemaIndex = read("../../../lib/db/src/schema/index.ts");
 const walletSchema = read("../../../lib/db/src/schema/wallet.ts");
 const dbRuntime = read("../../../lib/db/src/index.ts");
+const drizzleConfig = read("../../../lib/db/drizzle.config.ts");
 const migrationScript = read("../../../scripts/migrate-replit-postgres-to-supabase.sh");
 const cadiSchema = read("../../../lib/db/src/schema/cadi-kazan.ts");
 const slotSchema = read("../../../lib/db/src/schema/slot.ts");
@@ -193,6 +194,11 @@ describe("backend game isolation", () => {
     expect(dbRuntime).toContain(": env.DATABASE_URL;");
     expect(dbRuntime).not.toContain(
       "env.DATABASE_URL ?? env.SUPABASE_DATABASE_URL",
+    );
+    expect(drizzleConfig).toContain('USE_SUPABASE_DATABASE === "true"');
+    expect(drizzleConfig).toContain(": process.env.DATABASE_URL;");
+    expect(drizzleConfig).not.toContain(
+      "process.env.DATABASE_URL ?? process.env.SUPABASE_DATABASE_URL",
     );
     expect(dbRuntime).toContain("assertDatabaseCutoverReady");
     expect(dbRuntime).toContain("SUPABASE_CUTOVER_BLOCKED");
