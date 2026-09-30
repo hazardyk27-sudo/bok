@@ -77,6 +77,39 @@ export async function ensureRouletteGlobalTableStorage() {
     `CREATE INDEX IF NOT EXISTS roulette_global_rounds_result_at_idx
        ON roulette_global_rounds (result_at)`,
   );
+
+  await pool.query(
+    `CREATE TABLE IF NOT EXISTS roulette_global_bets (
+      id text PRIMARY KEY,
+      round_id text NOT NULL,
+      session_id text NOT NULL,
+      bets jsonb NOT NULL,
+      stake_cents bigint NOT NULL,
+      payout_cents bigint NOT NULL DEFAULT 0,
+      settlement jsonb,
+      settled_at timestamptz,
+      updated_at timestamptz NOT NULL DEFAULT now(),
+      created_at timestamptz NOT NULL DEFAULT now()
+    )`,
+  );
+  await pool.query(
+    `CREATE UNIQUE INDEX IF NOT EXISTS roulette_global_bets_round_session_unique
+       ON roulette_global_bets (round_id, session_id)`,
+  );
+  await pool.query(
+    `CREATE INDEX IF NOT EXISTS roulette_global_bets_unsettled_idx
+       ON roulette_global_bets (settled_at, round_id)`,
+  );
+
+  await pool.query(
+    `CREATE TABLE IF NOT EXISTS roulette_global_bet_requests (
+      idempotency_key text PRIMARY KEY,
+      round_id text NOT NULL,
+      session_id text NOT NULL,
+      bets jsonb NOT NULL,
+      created_at timestamptz NOT NULL DEFAULT now()
+    )`,
+  );
 }
 
 export async function withRouletteGlobalSchedulerLock<T>(

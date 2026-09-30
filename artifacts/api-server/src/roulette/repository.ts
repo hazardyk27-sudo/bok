@@ -5,6 +5,10 @@ import {
   ROULETTE_SIMULATION_VERSION,
 } from "../../../cascade-8/src/roulette/spinResult";
 import {
+  getRouletteGlobalBetForRound,
+  upsertRouletteGlobalBet,
+} from "./globalBetStore";
+import {
   getCurrentRouletteGlobalTableSnapshot,
 } from "./globalTableStore";
 import {
@@ -127,16 +131,44 @@ export class RouletteRepository {
       ),
     ]);
 
+    const globalBet =
+      globalTable
+        ? await getRouletteGlobalBetForRound(
+            sessionId,
+            globalTable.roundId,
+          )
+        : null;
+
     return {
       simulationVersion:
         ROULETTE_SIMULATION_VERSION,
       serverTimeMs,
       globalTable,
+      globalBet:
+        globalBet?.globalBet ??
+        null,
       wallet: {
         sessionId,
-        balanceCents,
+        balanceCents:
+          globalBet
+            ?.balanceCents ??
+          balanceCents,
       },
     };
+  }
+
+  async updateGlobalBet(
+    sessionId: string,
+    input: {
+      roundId: string;
+      bets: RouletteServerBet[];
+      idempotencyKey: string;
+    },
+  ) {
+    return upsertRouletteGlobalBet({
+      sessionId,
+      ...input,
+    });
   }
 
   async spin(
