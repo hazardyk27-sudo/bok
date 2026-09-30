@@ -243,6 +243,11 @@ async function decodeBank(
 export class RouletteAudioEngine {
   private ctx: AudioContext | null = null;
   private master: GainNode | null = null;
+  private ambientBus: GainNode | null = null;
+  private dealerBus: GainNode | null = null;
+
+  private ambientVolume = 1;
+  private dealerVolume = 1;
 
   private loopBuffer: AudioBuffer | null = null;
   private hitBuffer: AudioBuffer | null = null;
@@ -259,16 +264,24 @@ export class RouletteAudioEngine {
 
     const ctx = new AudioContext();
     const master = ctx.createGain();
+    const ambientBus = ctx.createGain();
+    const dealerBus = ctx.createGain();
     const compressor =
       ctx.createDynamicsCompressor();
 
     master.gain.value = 0.9;
+    ambientBus.gain.value =
+      this.ambientVolume;
+    dealerBus.gain.value =
+      this.dealerVolume;
     compressor.threshold.value = -12;
     compressor.knee.value = 14;
     compressor.ratio.value = 5;
     compressor.attack.value = 0.0025;
     compressor.release.value = 0.17;
 
+    ambientBus.connect(master);
+    dealerBus.connect(master);
     master.connect(compressor);
     compressor.connect(
       ctx.destination,
@@ -276,6 +289,8 @@ export class RouletteAudioEngine {
 
     this.ctx = ctx;
     this.master = master;
+    this.ambientBus = ambientBus;
+    this.dealerBus = dealerBus;
   }
 
   private async ensureBanks() {
@@ -338,12 +353,12 @@ export class RouletteAudioEngine {
 
   private ensureLoopSources() {
     const ctx = this.ctx;
-    const master = this.master;
+    const ambientBus = this.ambientBus;
     const buffer = this.loopBuffer;
 
     if (
       !ctx ||
-      !master ||
+      !ambientBus ||
       !buffer
     ) {
       return;
@@ -367,7 +382,7 @@ export class RouletteAudioEngine {
       gain.gain.value = 0;
 
       source.connect(gain);
-      gain.connect(master);
+      gain.connect(ambientBus);
       source.start(
         0,
         LOOP_SLICES.wheel.offset,
@@ -395,7 +410,7 @@ export class RouletteAudioEngine {
       gain.gain.value = 0;
 
       source.connect(gain);
-      gain.connect(master);
+      gain.connect(ambientBus);
       source.start(
         0,
         LOOP_SLICES.track.offset,
@@ -470,6 +485,44 @@ export class RouletteAudioEngine {
     this.playHit(hit);
   }
 
+  setAmbientVolume(
+    value: number,
+  ) {
+    this.ambientVolume =
+      clamp01(value);
+
+    if (
+      this.ctx &&
+      this.ambientBus
+    ) {
+      this.ambientBus.gain
+        .setTargetAtTime(
+          this.ambientVolume,
+          this.ctx.currentTime,
+          0.035,
+        );
+    }
+  }
+
+  setDealerVolume(
+    value: number,
+  ) {
+    this.dealerVolume =
+      clamp01(value);
+
+    if (
+      this.ctx &&
+      this.dealerBus
+    ) {
+      this.dealerBus.gain
+        .setTargetAtTime(
+          this.dealerVolume,
+          this.ctx.currentTime,
+          0.035,
+        );
+    }
+  }
+
   stopMotion() {
     const ctx = this.ctx;
 
@@ -495,13 +548,13 @@ export class RouletteAudioEngine {
     hit: RouletteReferenceHit,
   ) {
     const ctx = this.ctx;
-    const master = this.master;
+    const dealerBus = this.dealerBus;
     const buffer = this.hitBuffer;
 
     if (
       !ctx ||
       ctx.state !== "running" ||
-      !master ||
+      !dealerBus ||
       !buffer
     ) {
       return;
@@ -518,7 +571,7 @@ export class RouletteAudioEngine {
     gain.gain.value = hit.gain;
 
     source.connect(gain);
-    gain.connect(master);
+    gain.connect(dealerBus);
 
     source.start(
       ctx.currentTime,
