@@ -212,9 +212,10 @@ describe("cadi kazan route smoke contract", () => {
     expect(visualLockSource).toContain("PASS 19 — THE OFFICE master-PNG shell");
     expect(visualLockSource).toContain("aspect-ratio: 1000 / 468");
     expect(visualLockSource).toContain("left: 37.2% !important");
-    expect(visualLockSource).toContain("top: 13.2956% !important");
-    expect(visualLockSource).toContain("right: 4.6989% !important");
-    expect(visualLockSource).toContain("bottom: 8.9109% !important");
+    expect(visualLockSource).toContain("left: 35.8003% !important");
+    expect(visualLockSource).toContain("left: 71.2565% !important");
+    expect(visualLockSource).toContain("top: 56.3187% !important");
+    expect(visualLockSource).toContain("width: 28.9157% !important");
     expect(visualLockSource).toContain(".witch-board > .witch-cell:nth-child(1)");
     expect(visualLockSource).toContain(".witch-board > .witch-cell:nth-child(6)");
     expect(visualLockSource).toContain("overflow: hidden !important");
