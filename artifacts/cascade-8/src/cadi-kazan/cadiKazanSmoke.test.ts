@@ -367,4 +367,25 @@ describe("cadi kazan route smoke contract", () => {
     expect(visualLockSource).toContain("color: #111315 !important");
   });
 
+
+  it("uses the bundled 1423x557 Office scene only as The Office stage background", () => {
+    expect(visualLockSource).toContain("PASS 32 — THE OFFICE stage background");
+    expect(visualLockSource).toContain('.is-office-theme .witch-stage-shell');
+    expect(visualLockSource).toContain('url("./office/assets/office-stage-background.webp") !important');
+    expect(visualLockSource).toContain('.is-office-theme .witch-table-surface');
+    expect(visualLockSource).toContain('.is-office-theme .witch-payout-panel');
+  });
+
+
+  it("prevents Office multi-scratch cells from getting stranded behind a busy reveal", () => {
+    expect(witchClientSource).toContain("private officeRevealQueue: Promise<void> = Promise.resolve()");
+    expect(witchClientSource).toContain("private queueOfficeReveal(cellIndex: number)");
+    expect(witchClientSource).toContain("await this.queueOfficeReveal(index)");
+    expect(witchClientSource).toContain('persistentCoverageCommit: round.mode === "OFFICE_MATCH_6"');
+    expect(scratchSurfaceSource).toContain("private accumulatedScratchDistancePx = 0");
+    expect(scratchSurfaceSource).toContain("const persistentCoverageReady =");
+    expect(scratchSurfaceSource).toContain("this.progress.coverage >= 0.34");
+    expect(scratchSurfaceSource).toContain("this.accumulatedScratchDistancePx >= Math.max(90, width * 0.75)");
+  });
+
 });
