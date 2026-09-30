@@ -23,6 +23,8 @@ const rouletteRoutes = read("./roulette/routes.ts");
 const blackjackPlatform = read("./platform/blackjack.ts");
 const sessionPlatform = read("./platform/session.ts");
 const appSource = read("./app.ts");
+const apiPackage = read("../package.json");
+const apiDevRunner = read("../dev-runner.mjs");
 const serverIndex = read("./index.ts");
 
 describe("backend game isolation", () => {
@@ -77,6 +79,16 @@ describe("backend game isolation", () => {
     expect(appSource).toContain("res.cookie(SESSION_COOKIE, selectedSessionId");
     expect(appSource).toContain("res.clearCookie(LEGACY_SESSION_COOKIE");
     expect(appSource).not.toContain("res.cookie(SESSION_COOKIE, legacySessionId");
+  });
+
+  it("keeps the Replit API runtime hot-reloadable after preview sync", () => {
+    expect(apiPackage).toContain("node --watch");
+    expect(apiPackage).toContain("--watch-path=src");
+    expect(apiPackage).toContain("--watch-path=../cascade-8/src");
+    expect(apiPackage).toContain("--watch-path=../../lib/db/src");
+    expect(apiPackage).toContain("./dev-runner.mjs");
+    expect(apiDevRunner).toContain('spawnSync("pnpm", ["run", "build"]');
+    expect(apiDevRunner).toContain("dist/index.mjs");
   });
 
   it("wires Blackjack runtime through shared platform entrypoints", () => {
