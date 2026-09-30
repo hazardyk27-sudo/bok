@@ -93,7 +93,10 @@ export async function getRouletteDatabaseNowMsFromClient(
   return serverNow.getTime();
 }
 
-export async function ensureRouletteGlobalTableStorage() {
+let rouletteGlobalStorageReady:
+  Promise<void> | null = null;
+
+async function initializeRouletteGlobalTableStorage() {
   await pool.query(
     `CREATE TABLE IF NOT EXISTS roulette_global_rounds (
       id text PRIMARY KEY,
@@ -171,6 +174,30 @@ export async function ensureRouletteGlobalTableStorage() {
     `ALTER TABLE roulette_global_bet_requests
        ADD COLUMN IF NOT EXISTS applied_revision integer NOT NULL DEFAULT 0`,
   );
+}
+
+export function ensureRouletteGlobalTableStorage(): Promise<void> {
+  if (rouletteGlobalStorageReady) {
+    return rouletteGlobalStorageReady;
+  }
+
+  const initialization =
+    initializeRouletteGlobalTableStorage();
+
+  rouletteGlobalStorageReady =
+    initialization;
+
+  void initialization.catch(() => {
+    if (
+      rouletteGlobalStorageReady ===
+      initialization
+    ) {
+      rouletteGlobalStorageReady =
+        null;
+    }
+  });
+
+  return initialization;
 }
 
 export async function withRouletteGlobalSchedulerLock<T>(
