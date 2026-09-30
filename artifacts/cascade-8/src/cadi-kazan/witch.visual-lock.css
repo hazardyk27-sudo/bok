@@ -4871,3 +4871,335 @@
     font-size: clamp(7px, calc(var(--witch-vh) * 2.1), 11px) !important;
   }
 }
+
+
+/* PASS 27 — ADVANCED 25 single-PNG card + exact 5×5 scratch registration.
+   The supplied 1859×846 source was performance-optimized to a 1200×546 indexed
+   PNG. The master image owns every visible card pixel; only the 25 measured
+   silver rectangles receive scratch interaction. Source scratch union:
+   x=606..1791, y=96..774. */
+.is-advanced-theme .witch-ticket {
+  --advanced-card-ratio: 1200 / 546;
+  --advanced-scratch-left: 32.5982%;
+  --advanced-scratch-top: 11.3475%;
+  --advanced-scratch-right: 3.6579%;
+  --advanced-scratch-bottom: 8.5106%;
+
+  position: relative !important;
+  box-sizing: border-box !important;
+  width: min(98%, 1180px) !important;
+  max-width: 1180px !important;
+  height: auto !important;
+  max-height: calc(100% - 12px) !important;
+  aspect-ratio: var(--advanced-card-ratio) !important;
+  min-width: 0 !important;
+  min-height: 0 !important;
+  padding: 0 !important;
+  overflow: hidden !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  box-shadow: 0 20px 44px rgba(0,0,0,.42) !important;
+  isolation: isolate !important;
+}
+
+.is-advanced-theme .witch-ticket-frame,
+.is-advanced-theme .witch-standard-price-badge,
+.is-advanced-theme .witch-bcs-card-art,
+.is-advanced-theme .witch-office-card-art,
+.is-advanced-theme .witch-ticket-header,
+.is-advanced-theme .witch-ticket-meta-row,
+.is-advanced-theme .witch-ticket-footer {
+  display: none !important;
+}
+
+.witch-advanced-card-art {
+  display: none;
+}
+
+.is-advanced-theme .witch-advanced-card-art,
+.is-advanced-theme .witch-advanced-card-master {
+  position: absolute !important;
+  inset: 0 !important;
+  box-sizing: border-box !important;
+  width: 100% !important;
+  height: 100% !important;
+  min-width: 0 !important;
+  min-height: 0 !important;
+  max-width: none !important;
+  max-height: none !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  border: 0 !important;
+  background: transparent !important;
+  pointer-events: none !important;
+  user-select: none !important;
+}
+
+.is-advanced-theme .witch-advanced-card-art {
+  z-index: 1 !important;
+  display: block !important;
+  overflow: hidden !important;
+}
+
+.is-advanced-theme .witch-advanced-card-master {
+  z-index: 1 !important;
+  display: block !important;
+  object-fit: fill !important;
+  object-position: 0 0 !important;
+  image-rendering: auto !important;
+}
+
+.is-advanced-theme .witch-board-wrap {
+  position: absolute !important;
+  z-index: 5 !important;
+  left: var(--advanced-scratch-left) !important;
+  top: var(--advanced-scratch-top) !important;
+  right: var(--advanced-scratch-right) !important;
+  bottom: var(--advanced-scratch-bottom) !important;
+  width: auto !important;
+  height: auto !important;
+  min-width: 0 !important;
+  min-height: 0 !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  overflow: hidden !important;
+  border: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+}
+
+.is-advanced-theme .witch-board {
+  position: relative !important;
+  display: block !important;
+  width: 100% !important;
+  height: 100% !important;
+  min-width: 0 !important;
+  min-height: 0 !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  overflow: hidden !important;
+  border: 0 !important;
+  background: transparent !important;
+}
+
+.is-advanced-theme .witch-board > .witch-cell {
+  --advanced-cell-left: 0%;
+  --advanced-cell-top: 0%;
+  --advanced-cell-width: 0%;
+  --advanced-cell-height: 0%;
+
+  position: absolute !important;
+  left: var(--advanced-cell-left) !important;
+  top: var(--advanced-cell-top) !important;
+  width: var(--advanced-cell-width) !important;
+  height: var(--advanced-cell-height) !important;
+  min-width: 0 !important;
+  min-height: 0 !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  overflow: hidden !important;
+  box-sizing: border-box !important;
+  border: 0 !important;
+  border-radius: 6% / 10% !important;
+  box-shadow: none !important;
+  transform: none !important;
+  touch-action: none !important;
+}
+
+.is-advanced-theme .witch-board > .witch-cell:nth-child(1) {
+  --advanced-cell-left: 0%;
+  --advanced-cell-top: 0%;
+  --advanced-cell-width: 19.0717%;
+  --advanced-cell-height: 18.8791%;
+}
+.is-advanced-theme .witch-board > .witch-cell:nth-child(2) {
+  --advanced-cell-left: 20.3376%;
+  --advanced-cell-top: 0%;
+  --advanced-cell-width: 18.9873%;
+  --advanced-cell-height: 18.8791%;
+}
+.is-advanced-theme .witch-board > .witch-cell:nth-child(3) {
+  --advanced-cell-left: 40.5907%;
+  --advanced-cell-top: 0%;
+  --advanced-cell-width: 18.9873%;
+  --advanced-cell-height: 18.8791%;
+}
+.is-advanced-theme .witch-board > .witch-cell:nth-child(4) {
+  --advanced-cell-left: 60.7595%;
+  --advanced-cell-top: 0%;
+  --advanced-cell-width: 18.9873%;
+  --advanced-cell-height: 18.8791%;
+}
+.is-advanced-theme .witch-board > .witch-cell:nth-child(5) {
+  --advanced-cell-left: 81.0127%;
+  --advanced-cell-top: 0%;
+  --advanced-cell-width: 18.9873%;
+  --advanced-cell-height: 18.8791%;
+}
+.is-advanced-theme .witch-board > .witch-cell:nth-child(6) {
+  --advanced-cell-left: 0%;
+  --advanced-cell-top: 20.7965%;
+  --advanced-cell-width: 19.0717%;
+  --advanced-cell-height: 18.5841%;
+}
+.is-advanced-theme .witch-board > .witch-cell:nth-child(7) {
+  --advanced-cell-left: 20.3376%;
+  --advanced-cell-top: 20.7965%;
+  --advanced-cell-width: 18.9873%;
+  --advanced-cell-height: 18.5841%;
+}
+.is-advanced-theme .witch-board > .witch-cell:nth-child(8) {
+  --advanced-cell-left: 40.5907%;
+  --advanced-cell-top: 20.7965%;
+  --advanced-cell-width: 18.9873%;
+  --advanced-cell-height: 18.5841%;
+}
+.is-advanced-theme .witch-board > .witch-cell:nth-child(9) {
+  --advanced-cell-left: 60.7595%;
+  --advanced-cell-top: 20.7965%;
+  --advanced-cell-width: 18.9873%;
+  --advanced-cell-height: 18.5841%;
+}
+.is-advanced-theme .witch-board > .witch-cell:nth-child(10) {
+  --advanced-cell-left: 81.0127%;
+  --advanced-cell-top: 20.7965%;
+  --advanced-cell-width: 18.9873%;
+  --advanced-cell-height: 18.5841%;
+}
+.is-advanced-theme .witch-board > .witch-cell:nth-child(11) {
+  --advanced-cell-left: 0%;
+  --advanced-cell-top: 41.4454%;
+  --advanced-cell-width: 19.0717%;
+  --advanced-cell-height: 18.2891%;
+}
+.is-advanced-theme .witch-board > .witch-cell:nth-child(12) {
+  --advanced-cell-left: 20.3376%;
+  --advanced-cell-top: 41.4454%;
+  --advanced-cell-width: 18.9873%;
+  --advanced-cell-height: 18.2891%;
+}
+.is-advanced-theme .witch-board > .witch-cell:nth-child(13) {
+  --advanced-cell-left: 40.5907%;
+  --advanced-cell-top: 41.4454%;
+  --advanced-cell-width: 18.9873%;
+  --advanced-cell-height: 18.2891%;
+}
+.is-advanced-theme .witch-board > .witch-cell:nth-child(14) {
+  --advanced-cell-left: 60.7595%;
+  --advanced-cell-top: 41.4454%;
+  --advanced-cell-width: 18.9873%;
+  --advanced-cell-height: 18.2891%;
+}
+.is-advanced-theme .witch-board > .witch-cell:nth-child(15) {
+  --advanced-cell-left: 81.0127%;
+  --advanced-cell-top: 41.4454%;
+  --advanced-cell-width: 18.9873%;
+  --advanced-cell-height: 18.2891%;
+}
+.is-advanced-theme .witch-board > .witch-cell:nth-child(16) {
+  --advanced-cell-left: 0%;
+  --advanced-cell-top: 61.6519%;
+  --advanced-cell-width: 19.0717%;
+  --advanced-cell-height: 18.1416%;
+}
+.is-advanced-theme .witch-board > .witch-cell:nth-child(17) {
+  --advanced-cell-left: 20.3376%;
+  --advanced-cell-top: 61.6519%;
+  --advanced-cell-width: 18.9873%;
+  --advanced-cell-height: 18.1416%;
+}
+.is-advanced-theme .witch-board > .witch-cell:nth-child(18) {
+  --advanced-cell-left: 40.5907%;
+  --advanced-cell-top: 61.6519%;
+  --advanced-cell-width: 18.9873%;
+  --advanced-cell-height: 18.1416%;
+}
+.is-advanced-theme .witch-board > .witch-cell:nth-child(19) {
+  --advanced-cell-left: 60.7595%;
+  --advanced-cell-top: 61.6519%;
+  --advanced-cell-width: 18.9873%;
+  --advanced-cell-height: 18.1416%;
+}
+.is-advanced-theme .witch-board > .witch-cell:nth-child(20) {
+  --advanced-cell-left: 81.0127%;
+  --advanced-cell-top: 61.6519%;
+  --advanced-cell-width: 18.9873%;
+  --advanced-cell-height: 18.1416%;
+}
+.is-advanced-theme .witch-board > .witch-cell:nth-child(21) {
+  --advanced-cell-left: 0%;
+  --advanced-cell-top: 81.7109%;
+  --advanced-cell-width: 19.0717%;
+  --advanced-cell-height: 18.2891%;
+}
+.is-advanced-theme .witch-board > .witch-cell:nth-child(22) {
+  --advanced-cell-left: 20.3376%;
+  --advanced-cell-top: 81.7109%;
+  --advanced-cell-width: 18.9873%;
+  --advanced-cell-height: 18.2891%;
+}
+.is-advanced-theme .witch-board > .witch-cell:nth-child(23) {
+  --advanced-cell-left: 40.5907%;
+  --advanced-cell-top: 81.7109%;
+  --advanced-cell-width: 18.9873%;
+  --advanced-cell-height: 18.2891%;
+}
+.is-advanced-theme .witch-board > .witch-cell:nth-child(24) {
+  --advanced-cell-left: 60.7595%;
+  --advanced-cell-top: 81.7109%;
+  --advanced-cell-width: 18.9873%;
+  --advanced-cell-height: 18.2891%;
+}
+.is-advanced-theme .witch-board > .witch-cell:nth-child(25) {
+  --advanced-cell-left: 81.0127%;
+  --advanced-cell-top: 81.5634%;
+  --advanced-cell-width: 18.9873%;
+  --advanced-cell-height: 18.4366%;
+}
+
+.is-advanced-theme .witch-ticket.is-preview .witch-board,
+.is-advanced-theme .witch-ticket.is-preview .witch-board > .witch-cell {
+  pointer-events: none !important;
+  background: transparent !important;
+}
+
+.is-advanced-theme .witch-ticket:not(.is-preview) .witch-board {
+  pointer-events: none !important;
+}
+
+.is-advanced-theme .witch-ticket:not(.is-preview) .witch-board > .witch-cell {
+  pointer-events: auto !important;
+}
+
+.is-advanced-theme .witch-ticket:not(.is-preview) .witch-board > .witch-cell > *,
+.is-advanced-theme .witch-ticket:not(.is-preview) .witch-scratch-layer,
+.is-advanced-theme .witch-ticket:not(.is-preview) .witch-debris-canvas,
+.is-advanced-theme .witch-ticket:not(.is-preview) .witch-cell-result-layer,
+.is-advanced-theme .witch-ticket:not(.is-preview) .witch-cell-content {
+  max-width: 100% !important;
+  max-height: 100% !important;
+  overflow: hidden !important;
+  box-sizing: border-box !important;
+}
+
+.is-advanced-theme .witch-advanced-preview-cell {
+  opacity: 0 !important;
+  background: transparent !important;
+}
+
+@media (orientation: landscape) and (max-width: 1200px) and (max-height: 600px),
+       (orientation: portrait) and (max-width: 600px) and (max-height: 1200px) {
+  .is-advanced-theme .witch-ticket {
+    width: min(98%, calc(var(--witch-vh) * 196)) !important;
+    max-width: 1180px !important;
+    aspect-ratio: var(--advanced-card-ratio) !important;
+  }
+
+  .is-advanced-theme .witch-board-wrap {
+    left: var(--advanced-scratch-left) !important;
+    top: var(--advanced-scratch-top) !important;
+    right: var(--advanced-scratch-right) !important;
+    bottom: var(--advanced-scratch-bottom) !important;
+  }
+}

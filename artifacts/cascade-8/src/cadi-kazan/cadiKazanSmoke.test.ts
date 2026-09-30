@@ -286,4 +286,22 @@ describe("cadi kazan route smoke contract", () => {
     expect(visualLockSource).toContain("contain: paint !important");
   });
 
+
+  it("renders Advanced 25 as one master PNG with 25 registered scratch-only zones", () => {
+    expect(witchClientSource).toContain('const ADVANCED_25_CARD_ART_URL = new URL("./advanced/assets/advanced25-card-master.png", import.meta.url).href');
+    expect(witchClientSource).toContain('class="witch-advanced-card-master"');
+    expect(witchClientSource).toContain('width="1200" height="546"');
+    expect(witchClientSource).toContain("const showAdvancedPreview = !hasRound && visualMode === \"ADVANCED\"");
+    expect(witchClientSource).toContain('board.dataset.preview = "advanced"');
+    expect(witchClientSource).toContain("Array.from({ length: 25 }");
+    expect(visualLockSource).toContain("PASS 27 — ADVANCED 25 single-PNG card + exact 5×5 scratch registration");
+    expect(visualLockSource).toContain("--advanced-scratch-left: 32.5982%");
+    expect(visualLockSource).toContain("--advanced-scratch-top: 11.3475%");
+    expect(visualLockSource).toContain("--advanced-scratch-right: 3.6579%");
+    expect(visualLockSource).toContain("--advanced-scratch-bottom: 8.5106%");
+    expect(visualLockSource).toContain(".is-advanced-theme .witch-board > .witch-cell:nth-child(25)");
+    expect(visualLockSource).toContain("--advanced-cell-left: 81.0127%");
+    expect(visualLockSource).toContain("pointer-events: auto !important");
+  });
+
 });
