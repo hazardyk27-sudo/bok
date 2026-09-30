@@ -1223,3 +1223,24 @@ html.businesses-route #app {
 .route-shell.is-businesses-page .businesses-workspace {
   background: transparent !important;
 }
+
+
+/* 2026-09-30 — desktop 16:9 hero framing.
+   The stadium source is much taller than the very wide desktop banner. A
+   300px cover crop centered near 50% removes the subject's head. Use more of
+   the available 16:9 viewport height and bias the crop upward while keeping
+   the current Stadium information architecture unchanged. */
+@media (min-width: 1101px) and (min-aspect-ratio: 16 / 10) {
+  .route-shell.is-businesses-page .stadium-canonical-card {
+    margin-top: 12px;
+    margin-bottom: 24px;
+  }
+
+  .route-shell.is-businesses-page .stadium-canonical-hero {
+    min-height: clamp(360px, 35dvh, 420px) !important;
+  }
+
+  .route-shell.is-businesses-page .stadium-canonical-hero > img {
+    object-position: center 24% !important;
+  }
+}
