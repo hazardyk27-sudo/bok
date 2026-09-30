@@ -8,7 +8,10 @@ import type {
   TicketMarketFeedStatus,
   TicketMarketSource,
 } from "../../../cascade-8/src/idle/types";
-import { INITIAL_SHARED_BALANCE_CENTS } from "../platform/wallet";
+import {
+  INITIAL_SHARED_BALANCE_CENTS,
+  SHARED_WALLET_TABLE,
+} from "../platform/wallet";
 import {
   MARKET_MICRODOLLARS_PER_CENT,
   bigintToSafeNumber,
@@ -127,7 +130,7 @@ async function ensureSharedWalletForUpdate(
   sessionId: string,
 ) {
   await client.query(
-    `INSERT INTO roulette_wallets (session_id, balance_cents)
+    `INSERT INTO ${SHARED_WALLET_TABLE} (session_id, balance_cents)
      VALUES ($1, $2)
      ON CONFLICT (session_id) DO NOTHING`,
     [sessionId, INITIAL_SHARED_BALANCE_CENTS],
@@ -135,7 +138,7 @@ async function ensureSharedWalletForUpdate(
 
   const result = await client.query<{ balance_cents: number }>(
     `SELECT balance_cents
-       FROM roulette_wallets
+       FROM ${SHARED_WALLET_TABLE}
       WHERE session_id = $1
       FOR UPDATE`,
     [sessionId],
@@ -449,7 +452,7 @@ export async function sellStadiumTickets(
       );
 
       await client.query(
-        `UPDATE roulette_wallets
+        `UPDATE ${SHARED_WALLET_TABLE}
             SET balance_cents = $2,
                 updated_at = now()
           WHERE session_id = $1`,
