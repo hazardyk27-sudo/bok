@@ -112,6 +112,11 @@ describe("roulette wallet client", () => {
             seed: null,
             result: null,
           },
+          recentResults: [
+            7,
+            26,
+            0,
+          ],
           globalBet: null,
           wallet: {
             sessionId: "session-1",
@@ -138,6 +143,11 @@ describe("roulette wallet client", () => {
           bettingCloseAtMs:
             140_000,
         }),
+      recentResults: [
+        7,
+        26,
+        0,
+      ],
       globalBet: null,
       wallet: {
         sessionId: "session-1",

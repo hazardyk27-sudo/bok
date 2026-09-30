@@ -672,3 +672,160 @@ export async function settleDueRouletteGlobalBets(
       GLOBAL_SETTLEMENT_LIMIT,
   };
 }
+
+
+export async function settleRouletteGlobalBetForRoundSession(
+  sessionId: string,
+  roundId: string,
+  nowMs: number = Date.now(),
+) {
+  const client =
+    await pool.connect();
+
+  try {
+    await client.query(
+      "BEGIN",
+    );
+    await client.query(
+      `SELECT pg_advisory_xact_lock(
+        hashtextextended($1::text, 0)
+      )`,
+      [
+        `roulette-global-settle:${roundId}:${sessionId}`,
+      ],
+    );
+
+    const due =
+      await client.query<DueGlobalBetRow>(
+        `SELECT
+           b.id,
+           b.round_id,
+           b.session_id,
+           b.bets,
+           r.winning_number
+         FROM roulette_global_bets b
+         JOIN roulette_global_rounds r
+           ON r.id = b.round_id
+         WHERE b.round_id = $1
+           AND b.session_id = $2
+           AND b.settled_at IS NULL
+           AND r.result_at <= $3
+         LIMIT 1
+         FOR UPDATE OF b`,
+        [
+          roundId,
+          sessionId,
+          new Date(nowMs),
+        ],
+      );
+
+    const row =
+      due.rows[0];
+
+    if (!row) {
+      await client.query(
+        "COMMIT",
+      );
+      return false;
+    }
+
+    const {
+      settlement,
+      payoutCents,
+    } =
+      settleRouletteGlobalBet(
+        row.bets,
+        row.winning_number,
+      );
+
+    if (
+      payoutCents > 0
+    ) {
+      const ledger =
+        await client.query<{ id: string }>(
+          `INSERT INTO roulette_ledger (
+             id,
+             session_id,
+             round_id,
+             kind,
+             amount_cents,
+             idempotency_key
+           )
+           VALUES (
+             $1, $2, $3,
+             'GLOBAL_PAYOUT_CREDIT',
+             $4, $5
+           )
+           ON CONFLICT
+             (idempotency_key)
+           DO NOTHING
+           RETURNING id`,
+          [
+            randomUUID(),
+            sessionId,
+            roundId,
+            payoutCents,
+            `global-payout:${roundId}:${sessionId}`,
+          ],
+        );
+
+      if (
+        ledger.rowCount === 1
+      ) {
+        const wallet =
+          await client.query(
+            `UPDATE shared_wallets
+             SET balance_cents =
+                   balance_cents + $2,
+                 updated_at =
+                   clock_timestamp()
+             WHERE session_id = $1
+             RETURNING balance_cents`,
+            [
+              sessionId,
+              payoutCents,
+            ],
+          );
+
+        if (
+          wallet.rowCount !== 1
+        ) {
+          throw new Error(
+            "ROULETTE_GLOBAL_WALLET_MISSING",
+          );
+        }
+      }
+    }
+
+    await client.query(
+      `UPDATE roulette_global_bets
+       SET payout_cents = $2,
+           settlement = $3::jsonb,
+           settled_at =
+             clock_timestamp(),
+           updated_at =
+             clock_timestamp()
+       WHERE id = $1
+         AND settled_at IS NULL`,
+      [
+        row.id,
+        payoutCents,
+        JSON.stringify(
+          settlement,
+        ),
+      ],
+    );
+
+    await client.query(
+      "COMMIT",
+    );
+    return true;
+  } catch (error) {
+    await client.query(
+      "ROLLBACK",
+    );
+    throw error;
+  } finally {
+    client.release();
+  }
+}

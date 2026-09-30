@@ -53,6 +53,7 @@ export type RouletteBootstrapResponse = {
   globalTable:
     | RouletteGlobalTableSnapshot
     | null;
+  recentResults: number[];
   globalBet:
     | RouletteGlobalBetSnapshot
     | null;
@@ -162,6 +163,7 @@ export class RouletteWalletClient {
         globalTable?:
           | RouletteGlobalTableSnapshot
           | null;
+        recentResults?: unknown;
         globalBet?:
           | RouletteGlobalBetSnapshot
           | null;
@@ -192,6 +194,21 @@ export class RouletteWalletClient {
       globalTable:
         body.globalTable ??
         null,
+      recentResults:
+        Array.isArray(
+          body.recentResults,
+        )
+          ? body.recentResults.filter(
+              (value): value is number =>
+                typeof value ===
+                  "number" &&
+                Number.isInteger(
+                  value,
+                ) &&
+                value >= 0 &&
+                value <= 36,
+            )
+          : [],
       globalBet:
         body.globalBet ??
         null,
