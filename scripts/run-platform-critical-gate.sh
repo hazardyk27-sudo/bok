@@ -14,3 +14,4 @@ bash -n .githooks/pre-merge-commit
 bash -n .githooks/pre-rebase
 bash -n .githooks/reference-transaction
 bash scripts/test-replit-readonly-guard.sh
+bash -n scripts/migrate-replit-postgres-to-supabase.sh
