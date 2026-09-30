@@ -202,7 +202,7 @@ describe("backend game isolation", () => {
       .toBeLessThan(serverIndex.indexOf("server.listen(port"));
     expect(migrationScript).toContain("oyun_migration_receipts");
     expect(migrationScript).toContain("VERIFIED_MIGRATION_RECEIPT: yes");
-    expect(migrationScript.indexOf("CRITICAL_RELATIONS_OK"))
+    expect(migrationScript.indexOf('if [[ "$relation_issues" -ne 0 ]]'))
       .toBeLessThan(migrationScript.indexOf("VERIFIED_MIGRATION_RECEIPT: yes"));
   });
 
