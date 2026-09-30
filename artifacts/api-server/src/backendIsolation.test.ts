@@ -41,7 +41,10 @@ const frontendMain = read("../../cascade-8/src/main.ts");
 const appSource = read("./app.ts");
 const apiPackage = read("../package.json");
 const apiDevRunner = read("../dev-runner.mjs");
-const serverIndex = read("./index.ts");\nconst viteConfig = read("../../cascade-8/vite.config.ts");\nconst localStackScript = read("../../../scripts/run-local-stack.sh");\nconst replitSyncScript = read("../../../scripts/replit-sync-preview.sh");
+const serverIndex = read("./index.ts");
+const viteConfig = read("../../cascade-8/vite.config.ts");
+const localStackScript = read("../../../scripts/run-local-stack.sh");
+const replitSyncScript = read("../../../scripts/replit-sync-preview.sh");
 
 describe("backend game isolation", () => {
   it("keeps the DB schema index aggregation-only", () => {
