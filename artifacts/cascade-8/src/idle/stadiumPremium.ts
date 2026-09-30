@@ -159,13 +159,13 @@ const MAIN_MARKUP = `
       </div>
       <div class="stadium-sell-input-row">
         <label><span>ADET</span><input type="text" inputmode="numeric" pattern="[0-9]*" placeholder="0" data-idle-sell-input></label>
-        <button type="button" data-idle-sell-button>ŞİMDİ SAT</button>
+        <button type="button" data-idle-sell-button disabled>ŞİMDİ SAT</button>
       </div>
       <div class="stadium-sell-shortcuts">
-        <button type="button" data-idle-sell-ratio="0.25">%25</button>
-        <button type="button" data-idle-sell-ratio="0.5">%50</button>
-        <button type="button" data-idle-sell-ratio="0.75">%75</button>
-        <button type="button" data-idle-sell-ratio="1">MAX</button>
+        <button type="button" data-idle-sell-ratio="0.25" disabled>%25</button>
+        <button type="button" data-idle-sell-ratio="0.5" disabled>%50</button>
+        <button type="button" data-idle-sell-ratio="0.75" disabled>%75</button>
+        <button type="button" data-idle-sell-ratio="1" disabled>MAX</button>
       </div>
       <div class="stadium-sell-preview"><span>TAHMİNİ BRÜT</span><strong data-idle-sale-preview>—</strong></div>
     </section>
@@ -189,19 +189,19 @@ const DRAWER_MARKUP = `
           <i>S</i><span>STADYUM</span><strong data-idle-detail-stadium-level>Lv—</strong>
           <p data-idle-detail-stadium-copy>—</p>
           <div><span>SONRAKİ</span><strong data-idle-detail-stadium-cost>—</strong></div>
-          <button type="button" data-idle-upgrade-stadium>STADYUMU GELİŞTİR</button>
+          <button type="button" data-idle-upgrade-stadium disabled>STADYUMU GELİŞTİR</button>
         </article>
         <article>
           <i>⚡</i><span>ÜRETİM HIZI</span><strong data-idle-detail-speed-level>Lv—</strong>
           <p data-idle-detail-speed-copy>—</p>
           <div><span>SONRAKİ</span><strong data-idle-detail-speed-cost>—</strong></div>
-          <button type="button" data-idle-upgrade-speed>HIZI GELİŞTİR</button>
+          <button type="button" data-idle-upgrade-speed disabled>HIZI GELİŞTİR</button>
         </article>
         <article>
           <i>▤</i><span>BİLET DEPOSU</span><strong data-idle-detail-storage-level>Lv—</strong>
           <p data-idle-detail-storage-copy>—</p>
           <div><span>SONRAKİ</span><strong data-idle-detail-storage-cost>—</strong></div>
-          <button type="button" data-idle-upgrade-storage>DEPOYU GELİŞTİR</button>
+          <button type="button" data-idle-upgrade-storage disabled>DEPOYU GELİŞTİR</button>
         </article>
       </div>
       <section class="stadium-seat-purchase">
@@ -217,7 +217,7 @@ const DRAWER_MARKUP = `
           <span>TAHMİNİ MALİYET</span>
           <strong data-idle-seat-estimate>—</strong>
         </div>
-        <button type="button" data-idle-buy-seats>KOLTUK SATIN AL</button>
+        <button type="button" data-idle-buy-seats disabled>KOLTUK SATIN AL</button>
       </section>
     </div>
   </section>
