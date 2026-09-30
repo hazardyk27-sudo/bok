@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { Router, type IRouter, type Request, type Response } from "express";
-import { SESSION_COOKIE } from "../roulette/routes";
+import { SHARED_WALLET_TABLE } from "../platform/wallet";
 import { ticketMarketPersistence } from "./marketPersistence";
 import { ticketMarketRuntime } from "./marketRuntimeDb";
 import { buyStadiumSeats } from "./seatPurchase";
@@ -12,6 +12,17 @@ import { getIdleStadiumState } from "./stadiumState";
 
 const router: IRouter = Router();
 const IDEMPOTENCY_PATTERN = /^[a-zA-Z0-9_-]{12,100}$/;
+
+/**
+ * feature/idle intentionally carries an older shared-platform snapshot than
+ * integration/replit-preview. Follow the wallet platform generation so the
+ * owned Idle route remains compatible in both places without importing
+ * another game's route module.
+ */
+const SESSION_COOKIE =
+  SHARED_WALLET_TABLE === "shared_wallets"
+    ? "game_session"
+    : "roulette_session";
 
 function getSessionId(req: Request, res: Response) {
   const existing = req.cookies?.[SESSION_COOKIE] as string | undefined;
