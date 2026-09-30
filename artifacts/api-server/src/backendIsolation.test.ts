@@ -71,9 +71,12 @@ describe("backend game isolation", () => {
   it("keeps one shared game_session identity with legacy migration", () => {
     expect(sessionPlatform).toContain('SESSION_COOKIE = "game_session"');
     expect(sessionPlatform).toContain('LEGACY_SESSION_COOKIE = "roulette_session"');
+    expect(appSource).toContain("getCanonicalSessionId(req.cookies)");
     expect(appSource).toContain("getLegacySessionId(req.cookies)");
-    expect(appSource).toContain("res.cookie(SESSION_COOKIE, legacySessionId");
+    expect(appSource).toContain("resolveCanonicalWalletSessionId");
+    expect(appSource).toContain("res.cookie(SESSION_COOKIE, selectedSessionId");
     expect(appSource).toContain("res.clearCookie(LEGACY_SESSION_COOKIE");
+    expect(appSource).not.toContain("res.cookie(SESSION_COOKIE, legacySessionId");
   });
 
   it("wires Blackjack runtime through shared platform entrypoints", () => {
