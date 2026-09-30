@@ -562,3 +562,124 @@ button, input { font: inherit; }
   opacity: .55;
   cursor: wait;
 }
+
+
+.account-field-note {
+  margin-top: -2px;
+  color: #596886;
+  font: 8px "DM Mono", monospace;
+  letter-spacing: .06em;
+}
+
+.account-profile {
+  align-content: start;
+  justify-items: stretch;
+  text-align: left;
+}
+
+.account-profile-head {
+  display: grid;
+  justify-items: center;
+  text-align: center;
+}
+
+.account-profile-head > strong {
+  color: #70d5ff;
+  font: 500 11px "DM Mono", monospace;
+  letter-spacing: .16em;
+}
+
+.account-profile-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 9px;
+  width: 100%;
+  margin-top: 24px;
+}
+
+.account-profile-grid > div {
+  min-width: 0;
+  padding: 13px 14px;
+  border: 1px solid rgba(111, 151, 207, .16);
+  border-radius: 11px;
+  background: rgba(3, 11, 29, .5);
+}
+
+.account-profile-grid span {
+  display: block;
+  margin-bottom: 7px;
+  color: #657394;
+  font: 8px "DM Mono", monospace;
+  letter-spacing: .1em;
+}
+
+.account-profile-grid b {
+  display: block;
+  overflow: hidden;
+  color: #edf7ff;
+  font-size: 12px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+#account-profile-balance {
+  color: #7be0ba;
+  font-size: 17px;
+}
+
+.account-password-form {
+  display: grid;
+  gap: 10px;
+  width: 100%;
+  margin-top: 18px;
+  padding-top: 17px;
+  border-top: 1px solid rgba(111, 151, 207, .14);
+}
+
+.account-password-heading {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  margin-bottom: 2px;
+}
+
+.account-password-heading span {
+  color: #70d5ff;
+  font: 8px "DM Mono", monospace;
+  letter-spacing: .13em;
+}
+
+.account-password-heading strong {
+  color: #dbe8ff;
+  font-size: 13px;
+}
+
+.account-password-form input {
+  min-height: 44px;
+}
+
+.account-password-note {
+  margin: 0;
+  padding: 10px 11px;
+  border-radius: 9px;
+  font-size: 10px;
+  line-height: 1.45;
+}
+
+.account-password-note[data-state="success"] {
+  color: #9af0cf;
+  background: rgba(30, 116, 86, .18);
+  border: 1px solid rgba(111, 218, 179, .24);
+}
+
+.account-password-note[data-state="error"] {
+  color: #ffbec4;
+  background: rgba(91, 25, 34, .22);
+  border: 1px solid rgba(236, 115, 123, .24);
+}
+
+@media (max-width: 520px) {
+  .account-profile-grid {
+    grid-template-columns: 1fr;
+  }
+}
