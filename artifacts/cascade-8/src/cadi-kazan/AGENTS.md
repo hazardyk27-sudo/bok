@@ -1,5 +1,8 @@
 # Cadı Kazan ownership
 
+> **Mandatory startup:** First read the canonical project handbook at `integration/replit-preview:AGENTS.md`. Then read this file. These are the only two mandatory instruction files for a normal category conversation. The canonical root handbook owns all shared GitHub/Replit/Supabase/wallet/promotion/Shell rules; do not use stale feature-branch copies of root rules or the retired delivery/workflow documents as authority.
+
+
 This directory is the Cadı Kazan frontend ownership root.
 
 Cadı Kazan work may modify this directory and the Cadı Kazan API root declared in `.github/game-ownership.json`.
@@ -26,7 +29,7 @@ The scratch system, styles, route mount, client, and Cadı-specific audio runtim
 - If a note conflicts with code/tests/ownership rules, the validated repository state wins.
 
 ## Current milestones
-- 2026-09-30 — The Office approved reference master + monochrome deck theme — the original full Parkour/The Office master is restored as the 1511×707 PNG after the replacement asset rendered corrupted; all six live scratch zones use the original measured coordinates, and OFFICE_MATCH_6 switches the lower deck/buttons to black, white and cool gray. Next: promote and visually verify desktop + mobile scratch registration.
+- 2026-09-30 — The Office validated PNG + monochrome deck theme — the canonical Office master is now the visually verified 1000×468 PNG (Git blob c2219486b89b959abfafca4729c256ff229923bf), with the six scratch rectangles measured directly from that exact file: union x=372..953 / y=62..426. OFFICE_MATCH_6 keeps the black/white/cool-gray deck theme. Next: promote this exact source SHA and verify the preview asset SHA before Replit sync.
 - 2026-09-27 — The Office master-PNG card shell — the visible Office ticket is now one bundled 1511×707 PNG; legacy CSS-drawn Office/Parkour artwork is hidden, and only six live scratch cells overlay the PNG. Scratch union and all six cells use measured percentage coordinates from the PNG and each cell clips its canvases/debris so scratching cannot spill outside the printed white zones.
 - 2026-09-27 — The Office cutout matte fix — near-black matte pixels around the supplied character JPEGs are converted to transparency at render time, so the characters sit directly on the white scratch-result cells without black rectangles; source artwork sizing and prize badges stay unchanged.
 - 2026-09-27 — The Office scratch UX pass — Office-only result backgrounds are white, no-prize completion now plays a negative cue, Office brush radius is increased another 10% from the prior 1.30× setting to 1.43× baseline, and one continuous pointer drag can scratch across multiple Office cells while Standard/Advanced keep single-cell routing.

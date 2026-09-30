@@ -189,7 +189,7 @@ describe("cadi kazan route smoke contract", () => {
   it("uses the master PNG as the Office card and pins all six live scratch zones to measured coordinates", () => {
     expect(witchClientSource).toContain("OFFICE_CARD_ART_URL");
     expect(witchClientSource).toContain("witch-office-card-master");
-    expect(witchClientSource).toContain('width="1511" height="707"');
+    expect(witchClientSource).toContain('width="1000" height="468"');
     expect(witchClientSource).toContain('loading="eager"');
     expect(witchClientSource).toContain('decoding="async"');
     expect(witchClientSource).toContain('<div class="witch-office-card-art" aria-hidden="true">');
@@ -197,10 +197,10 @@ describe("cadi kazan route smoke contract", () => {
     expect(visualLockSource).toContain("PASS 20 — THE OFFICE full-PNG hard lock");
     expect(visualLockSource).toContain("PASS 21 — THE OFFICE literal single-PNG shell");
     expect(visualLockSource).toContain("PASS 22 — THE OFFICE approved reference master + monochrome deck theme");
-    expect(visualLockSource).toContain("top: 13.2956% !important");
-    expect(visualLockSource).toContain("right: 4.6989% !important");
-    expect(visualLockSource).toContain("bottom: 8.9109% !important");
-    expect(visualLockSource).toContain("width: 28.9624% !important");
+    expect(visualLockSource).toContain("top: 13.2479% !important");
+    expect(visualLockSource).toContain("right: 4.7% !important");
+    expect(visualLockSource).toContain("bottom: 8.9744% !important");
+    expect(visualLockSource).toContain("width: 29.0878% !important");
     expect(visualLockSource).toContain(".is-office-theme .witch-control-dock");
     expect(visualLockSource).toContain(".is-office-theme .witch-primary-button");
     expect(visualLockSource).toContain("background: linear-gradient(180deg, #ffffff 0%, #e2e4e6 54%, #bfc3c7 100%) !important");
@@ -210,11 +210,12 @@ describe("cadi kazan route smoke contract", () => {
     expect(visualLockSource).toContain("background-size: 100% 100% !important");
     expect(visualLockSource).toContain(".is-office-theme .witch-ticket::after");
     expect(visualLockSource).toContain("PASS 19 — THE OFFICE master-PNG shell");
-    expect(visualLockSource).toContain("aspect-ratio: 1511 / 707");
-    expect(visualLockSource).toContain("left: 37.2601% !important");
-    expect(visualLockSource).toContain("top: 13.2956% !important");
-    expect(visualLockSource).toContain("right: 4.6989% !important");
-    expect(visualLockSource).toContain("bottom: 8.9109% !important");
+    expect(visualLockSource).toContain("aspect-ratio: 1000 / 468");
+    expect(visualLockSource).toContain("left: 37.2% !important");
+    expect(visualLockSource).toContain("left: 35.6282% !important");
+    expect(visualLockSource).toContain("left: 71.2565% !important");
+    expect(visualLockSource).toContain("top: 56.3187% !important");
+    expect(visualLockSource).toContain("width: 29.0878% !important");
     expect(visualLockSource).toContain(".witch-board > .witch-cell:nth-child(1)");
     expect(visualLockSource).toContain(".witch-board > .witch-cell:nth-child(6)");
     expect(visualLockSource).toContain("overflow: hidden !important");
