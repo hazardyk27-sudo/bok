@@ -67,6 +67,7 @@ describe("Stadium unlock transaction contract", () => {
     );
     expect(upgradeSource).toContain("target_level");
     expect(upgradeSource).toContain("replayed: true");
+    expect(upgradeSource).toContain("currentBalanceCents");
     expect(upgradeSource).toContain(
       'throw new Error("IDEMPOTENCY_KEY_REUSED")',
     );
