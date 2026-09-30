@@ -395,12 +395,11 @@ export function createStadiumPremiumUi(options: Options): StadiumPremiumUi {
       history =
         (await fetchIdleMarketHistory()).points;
       historyLoaded = true;
+      renderHistory();
 
       const market = getMarket();
       if (market) {
         mergeLiveHistory(market);
-      } else {
-        renderHistory();
       }
     } catch (error) {
       historyLoaded = false;
