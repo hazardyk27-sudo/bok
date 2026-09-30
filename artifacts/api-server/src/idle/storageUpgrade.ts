@@ -134,12 +134,18 @@ export async function upgradeStadiumStorage(
           sessionId,
         );
 
+        const currentBalanceCents =
+          await ensureSharedWalletForUpdate(
+            client,
+            sessionId,
+          );
+
         return {
           patch: {},
           result: {
             targetStorageLevel,
             costCents: Number(receipt.cost_cents),
-            balanceCents: Number(receipt.balance_cents),
+            balanceCents: currentBalanceCents,
             replayed: true,
           },
         };
