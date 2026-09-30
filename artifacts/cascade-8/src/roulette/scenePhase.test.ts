@@ -37,34 +37,34 @@ describe("roulette scene focus phases", () => {
     ).toBe(false);
   });
 
-  it("counts a ten second betting window down to zero", () => {
-    const deadline = 20_000;
+  it("counts a twenty second betting window down to zero", () => {
+    const deadline = 30_000;
 
     expect(
       ROULETTE_BETTING_WINDOW_MS,
-    ).toBe(10_000);
+    ).toBe(20_000);
     expect(
       getRouletteBettingSecondsRemaining(
         deadline,
         10_000,
       ),
-    ).toBe(10);
+    ).toBe(20);
     expect(
       getRouletteBettingSecondsRemaining(
         deadline,
         11_000,
       ),
-    ).toBe(9);
+    ).toBe(19);
     expect(
       getRouletteBettingSecondsRemaining(
         deadline,
-        19_999,
+        29_999,
       ),
     ).toBe(1);
     expect(
       getRouletteBettingSecondsRemaining(
         deadline,
-        20_000,
+        30_000,
       ),
     ).toBe(0);
   });
