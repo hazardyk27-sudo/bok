@@ -200,7 +200,7 @@ describe("backend game isolation", () => {
       'attachBlackjackPlatformRuntime } from "./platform/blackjack"',
     );
     expect(serverIndex).toContain(
-      "await attachBlackjackPlatformRuntime(server)",
+      "void attachBlackjackPlatformRuntime(server)",
     );
     expect(blackjackPlatform).toContain(
       "initializeAndAttachBlackjackServerRuntime",
