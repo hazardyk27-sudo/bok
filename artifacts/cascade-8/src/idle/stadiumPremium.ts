@@ -61,6 +61,16 @@ function money(cents: number) {
   });
 }
 
+function exactMoney(cents: number) {
+  return "$" + (cents / 100).toLocaleString(
+    "en-US",
+    {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    },
+  );
+}
+
 function price(value: number) {
   return "$" + (value / 1_000_000).toLocaleString("en-US", {
     minimumFractionDigits: 2,
@@ -245,13 +255,41 @@ const DRAWER_MARKUP = `
 
 function chartPath(points: TicketMarketHistoryPoint[]) {
   if (points.length < 2) return "";
-  const values = points.map((item) => item.priceMicrodollars);
+
+  const maxVisualPoints = 720;
+  const step = Math.max(
+    1,
+    Math.ceil(points.length / maxVisualPoints),
+  );
+  const sampled = points.filter(
+    (_item, index) =>
+      index === 0
+      || index === points.length - 1
+      || index % step === 0,
+  );
+
+  const values =
+    points.map((item) => item.priceMicrodollars);
   const min = Math.min(...values);
-  const range = Math.max(1, Math.max(...values) - min);
-  return points.map((item, index) => {
-    const x = index / (points.length - 1) * 1000;
-    const y = 280 - (item.priceMicrodollars - min) / range * 280;
-    return (index === 0 ? "M" : "L") + x.toFixed(2) + "," + y.toFixed(2);
+  const range = Math.max(
+    1,
+    Math.max(...values) - min,
+  );
+
+  return sampled.map((item, index) => {
+    const sourceIndex =
+      points.indexOf(item);
+    const x =
+      sourceIndex / (points.length - 1) * 1000;
+    const y =
+      280
+      - (item.priceMicrodollars - min)
+      / range * 280;
+
+    return (index === 0 ? "M" : "L")
+      + x.toFixed(2)
+      + ","
+      + y.toFixed(2);
   }).join(" ");
 }
 
@@ -287,10 +325,25 @@ export function createStadiumPremiumUi(options: Options): StadiumPremiumUi {
     | "speed"
     | "storage";
 
-  const pendingMutationKeys = new Map<
-    MutationKind,
-    { signature: string; key: string }
-  >();
+  const pendingMutationKeys =
+    new Map<string, string>();
+  let unresolvedMutation:
+    string | null = null;
+
+  const mutationIdentity = (
+    kind: MutationKind,
+    signature: string,
+  ) => kind + "|" + signature;
+
+  const isMutationAllowed = (
+    kind: MutationKind,
+    signature: string,
+  ) => {
+    const identity =
+      mutationIdentity(kind, signature);
+    return unresolvedMutation === null
+      || unresolvedMutation === identity;
+  };
 
   const showStatus = (message: string, isError = false) => {
     const node = root.querySelector<HTMLElement>("[data-idle-action-status]");
@@ -654,7 +707,7 @@ export function createStadiumPremiumUi(options: Options): StadiumPremiumUi {
         root,
         "[data-idle-seat-unit-price]",
         "Mevcut koltuk fiyatı "
-          + money(currentSeatPrice)
+          + exactMoney(currentSeatPrice)
           + " / adet",
       );
       text(
@@ -665,7 +718,7 @@ export function createStadiumPremiumUi(options: Options): StadiumPremiumUi {
             + nextPriceChange.seatCount
               .toLocaleString("en-US")
             + " koltukta "
-            + money(
+            + exactMoney(
               nextPriceChange.unitPriceCents,
             )
           : "Son fiyat kademesi · 500K hard max",
@@ -687,7 +740,7 @@ export function createStadiumPremiumUi(options: Options): StadiumPremiumUi {
         seatEstimate = "KAPASİTEYİ AŞIYOR";
       } else {
         try {
-          seatEstimate = money(
+          seatEstimate = exactMoney(
             quoteSeatPurchase(
               stadium.ownedSeats,
               seatQuantity,
@@ -721,11 +774,29 @@ export function createStadiumPremiumUi(options: Options): StadiumPremiumUi {
       );
 
     stadiumButton.disabled =
-      busy || !nextStadium;
+      busy
+      || !nextStadium
+      || !isMutationAllowed(
+        "stadium",
+        "stadium:"
+          + String(stadium.stadiumLevel),
+      );
     speedButton.disabled =
-      busy || !nextSpeed;
+      busy
+      || !nextSpeed
+      || !isMutationAllowed(
+        "speed",
+        "speed:"
+          + String(stadium.speedLevel),
+      );
     storageButton.disabled =
-      busy || !nextStorage;
+      busy
+      || !nextStorage
+      || !isMutationAllowed(
+        "storage",
+        "storage:"
+          + String(stadium.storageLevel),
+      );
 
     stadiumButton.textContent = nextStadium
       ? "STADYUMU GELİŞTİR"
@@ -741,7 +812,14 @@ export function createStadiumPremiumUi(options: Options): StadiumPremiumUi {
       root,
       "[data-idle-buy-seats]",
     ).disabled =
-      busy || seatRoom <= 0;
+      busy
+      || seatRoom <= 0
+      || !seatQuantity
+      || seatQuantity > seatRoom
+      || !isMutationAllowed(
+        "seats",
+        "seats:" + String(seatQuantity),
+      );
 
     const availableWholeTickets =
       Math.floor(
@@ -764,14 +842,32 @@ export function createStadiumPremiumUi(options: Options): StadiumPremiumUi {
               availableWholeTickets * ratio,
             );
         node.disabled =
-          busy || shortcutQuantity < 1;
+          busy
+          || shortcutQuantity < 1
+          || unresolvedMutation !== null;
       });
+
+    const sellInput =
+      root.querySelector<HTMLInputElement>(
+        "[data-idle-sell-input]",
+      );
+    const sellQuantity =
+      positiveWholeNumber(
+        sellInput?.value ?? "",
+      );
 
     button(
       root,
       "[data-idle-sell-button]",
     ).disabled =
-      busy || availableWholeTickets < 1;
+      busy
+      || availableWholeTickets < 1
+      || !sellQuantity
+      || sellQuantity > availableWholeTickets
+      || !isMutationAllowed(
+        "sale",
+        "sale:" + String(sellQuantity),
+      );
 
     renderMarket();
   };
@@ -780,16 +876,17 @@ export function createStadiumPremiumUi(options: Options): StadiumPremiumUi {
     kind: MutationKind,
     signature: string,
   ) => {
+    const identity =
+      mutationIdentity(kind, signature);
     const existing =
-      pendingMutationKeys.get(kind);
-    if (existing?.signature === signature) {
-      return existing.key;
-    }
+      pendingMutationKeys.get(identity);
+
+    if (existing) return existing;
 
     const key = crypto.randomUUID();
     pendingMutationKeys.set(
-      kind,
-      { signature, key },
+      identity,
+      key,
     );
     return key;
   };
@@ -804,6 +901,20 @@ export function createStadiumPremiumUi(options: Options): StadiumPremiumUi {
   ) => {
     if (busy) return null;
 
+    const identity =
+      mutationIdentity(kind, signature);
+
+    if (
+      unresolvedMutation !== null
+      && unresolvedMutation !== identity
+    ) {
+      showStatus(
+        "Önce sonucu belirsiz kalan işlemi aynı değerlerle tekrar dene. Yeni işlem, önceki işlem kesinleşmeden başlatılmayacak.",
+        true,
+      );
+      return null;
+    }
+
     const idempotencyKey =
       mutationKeyFor(kind, signature);
     busy = true;
@@ -813,7 +924,10 @@ export function createStadiumPremiumUi(options: Options): StadiumPremiumUi {
       const response =
         await action(idempotencyKey);
 
-      pendingMutationKeys.delete(kind);
+      pendingMutationKeys.delete(identity);
+      if (unresolvedMutation === identity) {
+        unresolvedMutation = null;
+      }
       applyMutationResponse(response);
       showStatus(success);
       return response;
@@ -822,8 +936,13 @@ export function createStadiumPremiumUi(options: Options): StadiumPremiumUi {
         error instanceof IdleRequestError
         && error.outcomeUnknown;
 
-      if (!outcomeUnknown) {
-        pendingMutationKeys.delete(kind);
+      if (outcomeUnknown) {
+        unresolvedMutation = identity;
+      } else {
+        pendingMutationKeys.delete(identity);
+        if (unresolvedMutation === identity) {
+          unresolvedMutation = null;
+        }
       }
 
       showStatus(
@@ -925,7 +1044,7 @@ export function createStadiumPremiumUi(options: Options): StadiumPremiumUi {
     )
     ?.addEventListener(
       "input",
-      renderMarket,
+      render,
     );
 
   root
