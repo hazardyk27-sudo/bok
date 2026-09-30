@@ -136,12 +136,18 @@ export async function upgradeStadiumLevel(
           sessionId,
         );
 
+        const currentBalanceCents =
+          await ensureSharedWalletForUpdate(
+            client,
+            sessionId,
+          );
+
         return {
           patch: {},
           result: {
             targetStadiumLevel,
             costCents: Number(receipt.cost_cents),
-            balanceCents: Number(receipt.balance_cents),
+            balanceCents: currentBalanceCents,
             replayed: true,
           },
         };
