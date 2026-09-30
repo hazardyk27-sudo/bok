@@ -132,12 +132,18 @@ export async function upgradeStadiumSpeed(
           sessionId,
         );
 
+        const currentBalanceCents =
+          await ensureSharedWalletForUpdate(
+            client,
+            sessionId,
+          );
+
         return {
           patch: {},
           result: {
             targetSpeedLevel,
             costCents: Number(receipt.cost_cents),
-            balanceCents: Number(receipt.balance_cents),
+            balanceCents: currentBalanceCents,
             replayed: true,
           },
         };
