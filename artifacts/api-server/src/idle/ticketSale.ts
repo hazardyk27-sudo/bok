@@ -1,7 +1,6 @@
 import { type PoolClient } from "@workspace/db";
 import {
   MARKET_CONFIG,
-  TICKET_MICRO_UNITS,
 } from "../../../cascade-8/src/idle/config";
 import type {
   IdleTicketSaleResponse,
@@ -15,13 +14,19 @@ import {
 import {
   MARKET_MICRODOLLARS_PER_CENT,
   bigintToSafeNumber,
-  requireSafeNonNegativeInteger,
-  settleMarketMicrodollarsToWalletCents,
 } from "./fixedPoint";
-import type {
-  StadiumStorageState,
-} from "./stadiumRepository";
 import { reserveStadiumActionReceipt } from "./stadiumActionReceipt";
+import {
+  quoteWholeTicketSale,
+  requirePositiveTicketQuantity,
+} from "./ticketSaleQuote";
+
+export {
+  quoteWholeTicketSale,
+} from "./ticketSaleQuote";
+export type {
+  WholeTicketSaleQuote,
+} from "./ticketSaleQuote";
 
 const TICKET_SALE_ACTION = "TICKET_SALE" as const;
 
@@ -39,43 +44,6 @@ type TicketSaleReceiptRow = {
   market_feed_status: string | null;
   market_tick_at: Date | null;
 };
-
-export type WholeTicketSaleQuote = {
-  soldTickets: number;
-  soldMicroTickets: number;
-  resultingStoredMicroTickets: number;
-  executionPriceMicrodollars: number;
-  grossSaleMicrodollars: number;
-  walletCreditCents: number;
-  saleRemainderMicrodollars: number;
-};
-
-function requirePositiveTicketQuantity(
-  quantityTickets: number,
-) {
-  if (
-    !Number.isSafeInteger(quantityTickets)
-    || quantityTickets <= 0
-  ) {
-    throw new Error("INVALID_IDLE_TICKET_SALE_QUANTITY");
-  }
-  return quantityTickets;
-}
-
-function requireValidExecutionPrice(
-  priceMicrodollars: number,
-) {
-  if (
-    !Number.isSafeInteger(priceMicrodollars)
-    || priceMicrodollars
-      < MARKET_CONFIG.minTicketPriceMicrodollars
-    || priceMicrodollars
-      > MARKET_CONFIG.maxTicketPriceMicrodollars
-  ) {
-    throw new Error("INVALID_IDLE_TICKET_PRICE");
-  }
-  return priceMicrodollars;
-}
 
 function parseMarketSource(
   source: string | null,
