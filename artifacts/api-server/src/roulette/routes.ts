@@ -6,10 +6,25 @@ import {
   type Response,
 } from "express";
 import { SESSION_COOKIE } from "../platform/session";
+import {
+  ROULETTE_SIMULATION_VERSION,
+} from "../../../cascade-8/src/roulette/spinResult";
 import { rouletteRepository } from "./repository";
 import { parseRouletteServerBets } from "./round";
 
 const router: IRouter = Router();
+
+router.use((_req, res, next) => {
+  res.setHeader(
+    "X-Roulette-Simulation-Version",
+    ROULETTE_SIMULATION_VERSION,
+  );
+  res.setHeader(
+    "Cache-Control",
+    "no-store",
+  );
+  next();
+});
 
 function getSessionId(req: Request, res: Response) {
   const existing = req.cookies?.[SESSION_COOKIE] as string | undefined;

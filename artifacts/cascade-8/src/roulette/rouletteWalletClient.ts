@@ -10,6 +10,11 @@ export type RouletteWallet = {
   balanceCents: number;
 };
 
+export type RouletteBootstrapResponse = {
+  simulationVersion: string;
+  wallet: RouletteWallet;
+};
+
 export type RouletteServerSpinResponse = {
   roundId: string;
   seed: string;
@@ -111,14 +116,29 @@ async function requestSpinWithTimeoutRetry(
 }
 
 export class RouletteWalletClient {
-  async bootstrap() {
+  async bootstrap(): Promise<RouletteBootstrapResponse> {
     const response = await fetch(`${API_BASE}/state`, {
       credentials: "same-origin",
+      cache: "no-store",
     });
+    const body =
+      await readResponse<{
+        simulationVersion?: unknown;
+        wallet: RouletteWallet;
+      }>(response);
+    const headerVersion =
+      response.headers?.get?.(
+        "X-Roulette-Simulation-Version",
+      );
 
-    return (
-      await readResponse<{ wallet: RouletteWallet }>(response)
-    ).wallet;
+    return {
+      simulationVersion:
+        typeof body.simulationVersion ===
+        "string"
+          ? body.simulationVersion
+          : headerVersion ?? "",
+      wallet: body.wallet,
+    };
   }
 
   async spin(
