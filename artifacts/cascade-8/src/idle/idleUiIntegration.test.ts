@@ -81,6 +81,9 @@ describe("Part 25 canonical Businesses shell", () => {
     expect(idleIndexSource).toContain(
       "market.feedStatus",
     );
+    expect(idleIndexSource).toContain(
+      "YENİDEN BAĞLANIYOR",
+    );
   });
 
   it("includes a responsive canonical Stadium presentation without replacing the approved navy shell", () => {
