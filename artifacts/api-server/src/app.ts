@@ -78,6 +78,12 @@ app.use(async (req, res, next) => {
         ...cookieOptions,
         path: "/",
       });
+      if (observedLegacyScope) {
+        res.clearCookie(LEGACY_SESSION_COOKIE, {
+          ...cookieOptions,
+          path: observedLegacyScope,
+        });
+      }
     }
 
     next();
