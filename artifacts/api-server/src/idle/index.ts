@@ -1,6 +1,9 @@
 import { logger } from "../lib/logger";
 import router from "./routes";
 import { ticketMarketRuntime } from "./marketRuntimeDb";
+import {
+  stadiumActionReceiptCleanupRuntime,
+} from "./stadiumActionReceiptRetention";
 
 void ticketMarketRuntime.start().catch((error) => {
   logger.error(
@@ -9,7 +12,11 @@ void ticketMarketRuntime.start().catch((error) => {
   );
 });
 
-const stopIdleMarketRuntime = () => {
+stadiumActionReceiptCleanupRuntime.start();
+
+const stopIdleRuntime = () => {
+  stadiumActionReceiptCleanupRuntime.stop();
+
   void ticketMarketRuntime.stop().catch((error) => {
     logger.error(
       { err: error },
@@ -18,7 +25,7 @@ const stopIdleMarketRuntime = () => {
   });
 };
 
-process.once("SIGTERM", stopIdleMarketRuntime);
-process.once("SIGINT", stopIdleMarketRuntime);
+process.once("SIGTERM", stopIdleRuntime);
+process.once("SIGINT", stopIdleRuntime);
 
 export { router };
