@@ -254,6 +254,13 @@ export async function resolveCanonicalWalletSessionCandidates(
 
   if (lookupIds.length === 0) return null;
 
+  if (
+    candidates.length === 1 &&
+    legacySessionId === null
+  ) {
+    return candidates[0] ?? null;
+  }
+
   const result = await pool.query<WalletBalanceRow>(
     `SELECT session_id, balance_cents
        FROM shared_wallets

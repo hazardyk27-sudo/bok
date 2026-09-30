@@ -1349,14 +1349,19 @@ describe("blackjack responsive table foundation", () => {
       removeEventListener:()=>undefined,
     } as unknown as HTMLElement;
 
+    let scheduledRenderMs=0;
     const connection=mountConnectedBlackjack(app,{
       location:{protocol:"https:",host:"casino.example"},
       createSocket:()=>socket,
       autoReconnect:false,
-      scheduleRender:()=> "render-handle",
+      scheduleRender:(_callback,intervalMs)=>{
+        scheduledRenderMs=intervalMs;
+        return "render-handle";
+      },
       cancelRender:()=>undefined,
     });
 
+    expect(scheduledRenderMs).toBe(1_000);
     expect(app.innerHTML).toContain('data-game="blackjack"');
     expect(app.innerHTML).toContain("CONNECTING");
     expect(connection.url)

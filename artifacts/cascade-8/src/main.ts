@@ -1,7 +1,38 @@
 export {};
 
-const { convergeLegacyGameSessions } = await import("./platform/sessionConvergence");
-await convergeLegacyGameSessions();
+const SESSION_CONVERGENCE_BROWSER_MARKER =
+  "oyun-session-convergence-browser-v1";
+
+let needsLegacySessionConvergence = true;
+try {
+  needsLegacySessionConvergence =
+    window.localStorage.getItem(
+      SESSION_CONVERGENCE_BROWSER_MARKER,
+    ) !== "done";
+} catch {
+  // Storage can be unavailable in hardened/private browser contexts.
+}
+
+if (needsLegacySessionConvergence) {
+  const { convergeLegacyGameSessions } =
+    await import(
+      "./platform/sessionConvergence"
+    );
+  const converged =
+    await convergeLegacyGameSessions();
+
+  if (converged) {
+    try {
+      window.localStorage.setItem(
+        SESSION_CONVERGENCE_BROWSER_MARKER,
+        "done",
+      );
+    } catch {
+      // The session-scoped marker inside the convergence helper still prevents
+      // duplicate work for this tab when persistent storage is unavailable.
+    }
+  }
+}
 
 const app = document.querySelector<HTMLDivElement>("#app")!;
 const currentPath = window.location.pathname.replace(/\/+$/, "") || "/";

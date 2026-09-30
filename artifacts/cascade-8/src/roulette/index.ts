@@ -126,20 +126,29 @@ type RouletteViewState = {
   resultMarkerAngle: number | null;
 };
 
-function renderCanvas(
+function resizeCanvasToDisplaySize(
   canvas: HTMLCanvasElement,
-  viewState: RouletteViewState,
 ) {
   const rect = canvas.getBoundingClientRect();
   const dpr = Math.min(window.devicePixelRatio || 1, 2);
   const width = Math.max(1, Math.round(rect.width * dpr));
   const height = Math.max(1, Math.round(rect.height * dpr));
 
-  if (canvas.width !== width || canvas.height !== height) {
-    canvas.width = width;
-    canvas.height = height;
+  if (canvas.width === width && canvas.height === height) {
+    return false;
   }
 
+  canvas.width = width;
+  canvas.height = height;
+  return true;
+}
+
+function renderCanvas(
+  canvas: HTMLCanvasElement,
+  viewState: RouletteViewState,
+) {
+  const width = Math.max(1, canvas.width);
+  const height = Math.max(1, canvas.height);
   const ctx = canvas.getContext("2d");
   if (!ctx) throw new Error("Roulette canvas 2D context is unavailable.");
 
@@ -426,6 +435,8 @@ export function mountRoulette(app: HTMLDivElement) {
   let bettingWindowClosed = true;
   let apiSimulationReady = false;
   let apiReadinessRetryTimer = 0;
+  let lastTimerLabelText = "";
+  let lastTimerValueText = "";
   let globalTableSnapshot:
     RouletteGlobalTableSnapshot | null =
       null;
@@ -559,6 +570,10 @@ export function mountRoulette(app: HTMLDivElement) {
   syncAudioSettingsUi();
 
   const redraw = () => renderCanvas(canvas, viewState);
+  const syncCanvasSizeAndRedraw = () => {
+    resizeCanvasToDisplaySize(canvas);
+    redraw();
+  };
 
   const renderRecentResults = () => {
     if (!recentResultsStrip) return;
@@ -784,68 +799,83 @@ export function mountRoulette(app: HTMLDivElement) {
   };
 
   const renderPhaseTimer = () => {
+    let labelText = "UPDATING GAME";
+    let valueText = "—";
+
     if (
-      !apiSimulationReady ||
-      !globalTableSnapshot
+      apiSimulationReady &&
+      globalTableSnapshot
     ) {
-      if (bettingTimerLabel) {
-        bettingTimerLabel.textContent =
-          "UPDATING GAME";
-      }
-      if (bettingTimerValue) {
-        bettingTimerValue.textContent =
-          "—";
-      }
-      return null;
-    }
-
-    const serverNowMs =
-      getGlobalServerNow();
-    const globalPhase =
-      getRouletteGlobalClientPhase(
-        globalTableSnapshot,
-        serverNowMs,
-      );
-
-    if (globalPhase === "betting") {
-      const remaining =
-        getRouletteGlobalBettingSecondsRemaining(
+      const serverNowMs =
+        getGlobalServerNow();
+      const globalPhase =
+        getRouletteGlobalClientPhase(
           globalTableSnapshot,
           serverNowMs,
         );
 
-      if (bettingTimerLabel) {
-        bettingTimerLabel.textContent =
-          "BET TIME";
-      }
-      if (bettingTimerValue) {
-        bettingTimerValue.textContent =
-          String(remaining);
-      }
-      return remaining;
-    }
+      if (globalPhase === "betting") {
+        const remaining =
+          getRouletteGlobalBettingSecondsRemaining(
+            globalTableSnapshot,
+            serverNowMs,
+          );
+        labelText = "BET TIME";
+        valueText = String(remaining);
 
-    if (bettingTimerLabel) {
-      bettingTimerLabel.textContent =
+        if (
+          bettingTimerLabel &&
+          lastTimerLabelText !== labelText
+        ) {
+          bettingTimerLabel.textContent =
+            labelText;
+          lastTimerLabelText = labelText;
+        }
+        if (
+          bettingTimerValue &&
+          lastTimerValueText !== valueText
+        ) {
+          bettingTimerValue.textContent =
+            valueText;
+          lastTimerValueText = valueText;
+        }
+        return remaining;
+      }
+
+      labelText =
         globalPhase === "spinning"
           ? "SPIN"
           : globalPhase === "result"
             ? "RESULT"
             : "NEXT ROUND";
-    }
-    if (bettingTimerValue) {
-      bettingTimerValue.textContent =
+      valueText =
         globalPhase === "result"
           ? String(
               globalTableSnapshot
                 .result?.number ??
-                page.dataset
-                  .resultNumber ??
-                "—",
+              page.dataset.resultNumber ??
+              "—",
             )
           : globalPhase === "spinning"
             ? "••"
             : "—";
+    }
+
+    if (
+      bettingTimerLabel &&
+      lastTimerLabelText !== labelText
+    ) {
+      bettingTimerLabel.textContent =
+        labelText;
+      lastTimerLabelText = labelText;
+    }
+    if (
+      bettingTimerValue &&
+      lastTimerValueText !== valueText
+    ) {
+      bettingTimerValue.textContent =
+        valueText;
+      lastTimerValueText = valueText;
     }
 
     return null;
@@ -1919,6 +1949,16 @@ export function mountRoulette(app: HTMLDivElement) {
 
     apiReadinessRetryTimer =
       window.setTimeout(() => {
+        if (
+          document.visibilityState ===
+          "hidden"
+        ) {
+          scheduleApiReadinessRetry(
+            Math.max(delayMs, 15_000),
+          );
+          return;
+        }
+
         void bootstrapRouletteApi();
       }, delayMs);
   };
@@ -2183,15 +2223,40 @@ export function mountRoulette(app: HTMLDivElement) {
         return;
       }
 
+      if (
+        document.visibilityState ===
+        "hidden"
+      ) {
+        return;
+      }
+
       tickPhaseTimer();
-    }, 100);
+    }, 250);
+
+  document.addEventListener(
+    "visibilitychange",
+    () => {
+      if (
+        document.visibilityState ===
+          "visible" &&
+        app.isConnected
+      ) {
+        tickPhaseTimer();
+        syncCanvasSizeAndRedraw();
+        void bootstrapRouletteApi(true);
+      }
+    },
+  );
 
   canvas.dataset.rouletteState = "ready";
   setScenePhase("betting");
 
-  const observer = new ResizeObserver(redraw);
+  const observer =
+    new ResizeObserver(
+      syncCanvasSizeAndRedraw,
+    );
   observer.observe(canvas);
-  redraw();
+  syncCanvasSizeAndRedraw();
   renderRecentResults();
   renderWalletBalance();
   renderBetState();

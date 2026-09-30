@@ -19,6 +19,30 @@ const app: Express = express();
 app.use(
   pinoHttp({
     logger,
+    customLogLevel(req, res, err) {
+      if (err || res.statusCode >= 500) {
+        return "error";
+      }
+      if (res.statusCode >= 400) {
+        return "warn";
+      }
+
+      const url =
+        req.url?.split("?")[0] ??
+        "";
+
+      if (
+        url === "/api/readyz" ||
+        url === "/api/healthz" ||
+        url === "/api/roulette/state" ||
+        url === "/api/blackjack/health" ||
+        url === "/api/idle/market/live"
+      ) {
+        return "silent";
+      }
+
+      return "info";
+    },
     serializers: {
       req(req) {
         return {

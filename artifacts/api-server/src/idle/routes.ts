@@ -197,8 +197,8 @@ function persistSessionCookie(res: Response, sessionId: string) {
 
 async function getSessionId(req: Request, res: Response) {
   const sessionId =
-    await resolveAuthenticatedWalletSessionId(req)
-    ?? await resolveCookieSessionId(req)
+    await resolveCookieSessionId(req)
+    ?? await resolveAuthenticatedWalletSessionId(req)
     ?? randomUUID();
 
   persistSessionCookie(res, sessionId);
