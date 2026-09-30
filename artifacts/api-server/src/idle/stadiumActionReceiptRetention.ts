@@ -1,5 +1,3 @@
-import { pool } from "@workspace/db";
-
 export const STADIUM_ACTION_RECEIPT_RETENTION_MS =
   72 * 60 * 60 * 1_000;
 export const STADIUM_ACTION_RECEIPT_CLEANUP_INTERVAL_MS =
@@ -39,6 +37,8 @@ export async function deleteExpiredStadiumActionReceiptBatch(
       "INVALID_IDLE_STADIUM_RECEIPT_CLEANUP_INPUT",
     );
   }
+
+  const { pool } = await import("@workspace/db");
 
   const result = await pool.query<{ id: string }>(
     `WITH candidates AS (
