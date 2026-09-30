@@ -1288,6 +1288,130 @@ function drawRotor(
   ctx.restore();
 }
 
+type RouletteWheelRenderCache = {
+  width: number;
+  height: number;
+  background: HTMLCanvasElement;
+  rotor: HTMLCanvasElement;
+};
+
+const rouletteWheelRenderCache =
+  new WeakMap<
+    HTMLCanvasElement,
+    RouletteWheelRenderCache
+  >();
+
+function buildRouletteWheelRenderCache(
+  target: HTMLCanvasElement,
+  width: number,
+  height: number,
+): RouletteWheelRenderCache | null {
+  const ownerDocument =
+    target.ownerDocument;
+
+  if (!ownerDocument) {
+    return null;
+  }
+
+  const background =
+    ownerDocument.createElement(
+      "canvas",
+    );
+  const rotor =
+    ownerDocument.createElement(
+      "canvas",
+    );
+
+  background.width = width;
+  background.height = height;
+  rotor.width = width;
+  rotor.height = height;
+
+  const backgroundContext =
+    background.getContext("2d");
+  const rotorContext =
+    rotor.getContext("2d");
+
+  if (
+    !backgroundContext ||
+    !rotorContext
+  ) {
+    return null;
+  }
+
+  const scale =
+    Math.min(width, height);
+  const radius =
+    scale * 0.47;
+
+  backgroundContext.save();
+  backgroundContext.translate(
+    width / 2,
+    height / 2,
+  );
+  drawStator(
+    backgroundContext,
+    radius,
+  );
+  backgroundContext.restore();
+
+  rotorContext.save();
+  rotorContext.translate(
+    width / 2,
+    height / 2,
+  );
+  drawRotor(
+    rotorContext,
+    radius,
+    0,
+  );
+  rotorContext.restore();
+
+  return {
+    width,
+    height,
+    background,
+    rotor,
+  };
+}
+
+function getRouletteWheelRenderCache(
+  ctx: CanvasRenderingContext2D,
+  width: number,
+  height: number,
+) {
+  const target =
+    ctx.canvas;
+  const cached =
+    rouletteWheelRenderCache.get(
+      target,
+    );
+
+  if (
+    cached &&
+    cached.width === width &&
+    cached.height === height
+  ) {
+    return cached;
+  }
+
+  const next =
+    buildRouletteWheelRenderCache(
+      target,
+      width,
+      height,
+    );
+
+  if (next) {
+    rouletteWheelRenderCache.set(
+      target,
+      next,
+    );
+  }
+
+  return next;
+}
+
 export function renderRouletteWheel(
   ctx: CanvasRenderingContext2D,
   width: number,
@@ -1298,12 +1422,53 @@ export function renderRouletteWheel(
 
   const scale = Math.min(width, height);
   const radius = scale * 0.47;
+  const cached =
+    getRouletteWheelRenderCache(
+      ctx,
+      width,
+      height,
+    );
 
   ctx.save();
-  ctx.translate(width / 2, height / 2);
 
-  drawStator(ctx, radius);
-  drawRotor(ctx, radius, state.rotorAngle ?? 0);
+  if (cached) {
+    ctx.drawImage(
+      cached.background,
+      0,
+      0,
+    );
+    ctx.translate(
+      width / 2,
+      height / 2,
+    );
+    ctx.rotate(
+      normalizeRotorAngle(
+        state.rotorAngle ?? 0,
+      ),
+    );
+    ctx.drawImage(
+      cached.rotor,
+      -width / 2,
+      -height / 2,
+    );
+    ctx.rotate(
+      -normalizeRotorAngle(
+        state.rotorAngle ?? 0,
+      ),
+    );
+  } else {
+    ctx.translate(
+      width / 2,
+      height / 2,
+    );
+    drawStator(ctx, radius);
+    drawRotor(
+      ctx,
+      radius,
+      state.rotorAngle ?? 0,
+    );
+  }
+
   drawDeflectors(ctx, radius);
 
   if (

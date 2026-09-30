@@ -61,6 +61,7 @@ import {
   getRouletteGlobalSpinElapsedMs,
   getRouletteQueuedBetExpectedRevision,
   getRouletteServerNowMs,
+  getRouletteStateSyncDelay,
 } from "./globalClient";
 import {
   ROULETTE_RECENT_RESULT_LIMIT,
@@ -1965,9 +1966,9 @@ export function mountRoulette(app: HTMLDivElement) {
 
       if (app.isConnected) {
         scheduleApiReadinessRetry(
-          apiSimulationReady
-            ? 500
-            : 750,
+          getRouletteStateSyncDelay(
+            apiSimulationReady,
+          ),
         );
       }
     }
@@ -2158,6 +2159,15 @@ export function mountRoulette(app: HTMLDivElement) {
       uiPhase !== "settled"
     ) {
       void bootstrapRouletteApi();
+      return;
+    }
+
+    if (
+      globalPhase === "complete"
+    ) {
+      void bootstrapRouletteApi(
+        true,
+      );
     }
   };
 
