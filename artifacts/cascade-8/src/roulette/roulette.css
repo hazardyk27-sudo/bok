@@ -4191,7 +4191,6 @@ button {
   }
 }
 
-
 /* Part 12 — canonical all-phone portrait composition */
 @media (max-width: 900px) and (orientation: portrait) {
   .roulette-page {
@@ -4203,43 +4202,46 @@ button {
       max(2px, env(safe-area-inset-top));
     --mobile-safe-bottom:
       max(5px, env(safe-area-inset-bottom));
-    --mobile-wheel-panel-top:
+    --mobile-chrome-gap:
+      clamp(3px, 0.9vw, 5px);
+    --mobile-chrome-bottom:
       calc(
         var(--mobile-safe-top) +
         var(--top-hud-height) +
-        5px
-      );
-    --mobile-wheel-stage-top:
-      calc(
-        var(--mobile-wheel-panel-top) +
-        var(--history-height)
+        var(--mobile-chrome-gap) +
+        var(--history-height) +
+        var(--mobile-chrome-gap)
       );
 
     /*
-     * Betting keeps the table dominant. Width is governed by the phone width;
-     * vertical placement then consumes the available screen instead of leaving
-     * device-specific dead space at the bottom.
+     * Betting remains table-first. The wheel recedes behind the upper table
+     * region, but every dimension still grows/shrinks from viewport units.
      */
-    --table-ratio: 1.73;
+    --table-ratio: 1.731;
     --wheel-size:
       min(
-        82vw,
-        calc(27dvh + 84px),
-        320px
+        76vw,
+        34dvh
       );
     --table-width:
       min(
-        82vw,
-        336px
+        86vw,
+        calc(
+          (
+            100dvh -
+            var(--mobile-safe-bottom) -
+            clamp(54px, 8.5dvh, 76px)
+          ) / var(--table-ratio)
+        )
       );
     --table-top:
       max(
-        clamp(124px, 19dvh, 154px),
+        var(--mobile-chrome-bottom),
         calc(
           100dvh -
           (var(--table-width) * var(--table-ratio)) -
           var(--mobile-safe-bottom) -
-          3px
+          clamp(4px, 1dvh, 8px)
         )
       );
 
@@ -4251,26 +4253,48 @@ button {
       calc(var(--table-width) * 0.112);
     --control-size:
       clamp(
-        28px,
+        27px,
         calc(var(--table-width) * 0.145),
         40px
       );
     --control-gap:
       clamp(
-        6px,
+        5px,
         calc(var(--table-width) * 0.030),
         11px
       );
   }
 
+  /*
+   * Keep the panel itself pinned to the viewport. HUD/history are absolutely
+   * positioned inside it, while the first grid row reserves exactly their
+   * measured height. This removes the erroneous blank band above BALANCE.
+   */
   .roulette-wheel-panel {
-    top: var(--mobile-wheel-panel-top) !important;
+    top: 0 !important;
     bottom: auto !important;
+    grid-template-rows:
+      var(--mobile-chrome-bottom)
+      auto !important;
+  }
+
+  .roulette-top-hud {
+    top: var(--mobile-safe-top) !important;
+  }
+
+  .roulette-recent-strip {
+    top:
+      calc(
+        var(--mobile-safe-top) +
+        var(--top-hud-height) +
+        var(--mobile-chrome-gap)
+      ) !important;
   }
 
   .roulette-stage {
     width: var(--wheel-size) !important;
     height: var(--wheel-size) !important;
+    transform: none !important;
   }
 
   .roulette-table-layout {
@@ -4292,41 +4316,43 @@ button {
   }
 
   /*
-   * Spin/result share one geometry model: wheel stays directly below the
-   * history strip, the table starts after a real gap, and table width is
-   * capped by the remaining viewport height. This removes overlap and
-   * bottom-space drift across short/tall phones.
+   * Spin/result are a strict vertical chain:
+   * chrome -> wheel -> gap -> table -> safe bottom.
+   *
+   * Width is first allowed to grow with the phone (73vw), then capped by the
+   * exact remaining viewport height. Taller phones therefore grow the wheel
+   * and table instead of creating dead bands, while short phones shrink both
+   * without overlap.
    */
   .roulette-page[data-phase="spinning"],
   .roulette-page[data-phase="settled"] {
     --table-ratio: 1.576;
     --wheel-size:
       min(
-        82vw,
-        calc(29dvh + 80px),
-        330px
+        80vw,
+        39dvh
       );
     --spin-table-gap:
-      clamp(9px, 2.6vw, 14px);
+      clamp(8px, 2.4vw, 12px);
     --table-top:
       calc(
-        var(--mobile-wheel-stage-top) +
+        var(--mobile-chrome-bottom) +
         var(--wheel-size) +
         var(--spin-table-gap)
       );
     --table-width:
       min(
-        70vw,
-        300px,
+        73vw,
         calc(
           (
             100dvh -
             var(--table-top) -
             var(--mobile-safe-bottom) -
-            3px
+            2px
           ) / var(--table-ratio)
         )
       );
+
     --zero-row:
       calc(var(--table-width) * 0.103);
     --number-row:
@@ -4335,20 +4361,22 @@ button {
       calc(var(--table-width) * 0.105);
     --control-size:
       clamp(
-        25px,
+        24px,
         calc(var(--table-width) * 0.16),
-        36px
+        38px
       );
     --control-gap:
       clamp(
         4px,
-        calc(var(--table-width) * 0.030),
+        calc(var(--table-width) * 0.028),
         8px
       );
   }
 
   .roulette-page[data-phase="spinning"] .roulette-stage,
   .roulette-page[data-phase="settled"] .roulette-stage {
+    width: var(--wheel-size) !important;
+    height: var(--wheel-size) !important;
     transform: none !important;
   }
 
@@ -4376,21 +4404,21 @@ button {
 }
 
 /*
- * Very narrow phones keep the same composition. Only the horizontal ceiling
- * tightens so the right rail always remains inside the viewport.
+ * Narrow phones keep the exact same geometry. Only the horizontal ceilings
+ * tighten enough to keep the table + rail fully inside the viewport.
  */
 @media (max-width: 360px) and (orientation: portrait) {
   .roulette-page {
     --table-width:
       min(
-        80vw,
-        286px
-      );
-    --control-size:
-      clamp(
-        27px,
-        calc(var(--table-width) * 0.145),
-        36px
+        83vw,
+        calc(
+          (
+            100dvh -
+            var(--mobile-safe-bottom) -
+            clamp(50px, 8dvh, 66px)
+          ) / var(--table-ratio)
+        )
       );
   }
 
@@ -4398,20 +4426,18 @@ button {
   .roulette-page[data-phase="settled"] {
     --wheel-size:
       min(
-        80vw,
-        calc(29dvh + 76px),
-        292px
+        79vw,
+        39dvh
       );
     --table-width:
       min(
-        68vw,
-        226px,
+        72vw,
         calc(
           (
             100dvh -
             var(--table-top) -
             var(--mobile-safe-bottom) -
-            3px
+            2px
           ) / var(--table-ratio)
         )
       );
@@ -4422,20 +4448,18 @@ button {
   }
 }
 
-/*
- * Extremely short phones do not switch to a different layout. The same
- * equations remain active; only the chrome consumes slightly less height.
- */
+/* Short phones stay on the same equations; only chrome/gap compress slightly. */
 @media (max-width: 900px) and (orientation: portrait) and (max-height: 590px) {
   .roulette-page {
     --top-hud-height: 30px;
     --history-height: 18px;
+    --mobile-chrome-gap: 3px;
     --mobile-safe-bottom:
       max(4px, env(safe-area-inset-bottom));
   }
 
   .roulette-page[data-phase="spinning"],
   .roulette-page[data-phase="settled"] {
-    --spin-table-gap: 8px;
+    --spin-table-gap: 7px;
   }
 }
