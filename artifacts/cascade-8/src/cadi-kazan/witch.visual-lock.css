@@ -3944,3 +3944,431 @@
     bottom: 8.9744% !important;
   }
 }
+
+
+/* PASS 23 — canonical payout/deck theme system.
+   Better Call Saul owns the geometry/typography. STANDARD, ADVANCED and OFFICE
+   share one component structure; only the palette variables change by card. */
+
+.is-standard-theme {
+  --witch-payout-panel-bg: linear-gradient(145deg, rgba(49, 24, 16, .985), rgba(19, 12, 9, .985));
+  --witch-payout-border: rgba(210, 150, 43, .68);
+  --witch-payout-outer-ring: rgba(8, 5, 4, .66);
+  --witch-payout-title: #fff1d7;
+  --witch-payout-title-shadow-1: rgba(97, 52, 21, .95);
+  --witch-payout-title-shadow-2: rgba(54, 27, 11, .72);
+  --witch-payout-amount: #ffd967;
+  --witch-payout-amount-shadow-1: #a96a16;
+  --witch-payout-amount-shadow-2: #8a4f0f;
+  --witch-payout-amount-shadow-3: #633307;
+  --witch-payout-multiplier: #efbd40;
+  --witch-payout-multiplier-shadow-1: #8b5310;
+  --witch-payout-multiplier-shadow-2: #5c3207;
+  --witch-payout-label: #baa78d;
+  --witch-payout-muted: #887966;
+  --witch-payout-value: #fff3de;
+  --witch-payout-rule: rgba(215, 158, 58, .18);
+  --witch-cashout-active-border: #ffd052;
+  --witch-cashout-active-text: #281405;
+  --witch-cashout-active-bg: linear-gradient(180deg, #ffd75d 0%, #efb635 52%, #cf8d1f 100%);
+  --witch-cashout-disabled-border: rgba(255,255,255,.14);
+  --witch-cashout-disabled-text: rgba(255,245,232,.42);
+  --witch-cashout-disabled-bg: linear-gradient(180deg, #4a4037, #312923);
+
+  --witch-deck-bg: linear-gradient(180deg, rgba(55, 27, 15, .985), rgba(18, 10, 8, .995));
+  --witch-deck-border: rgba(201,131,31,.52);
+  --witch-deck-label: #d9b86f;
+  --witch-control-bg: linear-gradient(180deg, rgba(52,29,18,.94), rgba(24,14,10,.96));
+  --witch-control-border: rgba(207,143,41,.42);
+  --witch-control-text: #f5e9d2;
+  --witch-control-muted: #ad967b;
+  --witch-control-accent: #ffe08a;
+  --witch-control-accent-strong: #f4bd35;
+  --witch-control-hover-bg: linear-gradient(180deg, rgba(73,40,23,.98), rgba(31,18,12,.98));
+  --witch-menu-bg: linear-gradient(155deg, rgba(52,26,16,.985), rgba(16,10,8,.995));
+  --witch-option-bg: rgba(13,9,7,.74);
+  --witch-option-selected-bg: linear-gradient(180deg, rgba(73,40,22,.98), rgba(31,18,12,.98));
+  --witch-primary-bg: linear-gradient(180deg, #d4a23a, #9d6e20);
+  --witch-primary-text: #241405;
+  --witch-primary-disabled-bg: linear-gradient(180deg, #4b4036, #332a23);
+  --witch-primary-disabled-text: rgba(255,245,232,.42);
+}
+
+.is-advanced-theme {
+  --witch-payout-panel-bg: linear-gradient(145deg, #171512, #050606);
+  --witch-payout-border: rgba(220, 166, 56, .72);
+  --witch-payout-outer-ring: rgba(0, 0, 0, .70);
+  --witch-payout-title: #f5e8c7;
+  --witch-payout-title-shadow-1: rgba(87, 58, 14, .9);
+  --witch-payout-title-shadow-2: rgba(34, 25, 8, .75);
+  --witch-payout-amount: #f8ca55;
+  --witch-payout-amount-shadow-1: #a16b12;
+  --witch-payout-amount-shadow-2: #6f450a;
+  --witch-payout-amount-shadow-3: #3b2607;
+  --witch-payout-multiplier: #dcae3f;
+  --witch-payout-multiplier-shadow-1: #78500d;
+  --witch-payout-multiplier-shadow-2: #3d2a08;
+  --witch-payout-label: #b8aa8b;
+  --witch-payout-muted: #877d68;
+  --witch-payout-value: #f8f1df;
+  --witch-payout-rule: rgba(220, 166, 56, .20);
+  --witch-cashout-active-border: #e6bd59;
+  --witch-cashout-active-text: #100f0c;
+  --witch-cashout-active-bg: linear-gradient(180deg, #f3cf6d, #b98227);
+  --witch-cashout-disabled-border: rgba(220, 190, 120, .20);
+  --witch-cashout-disabled-text: rgba(235, 226, 204, .38);
+  --witch-cashout-disabled-bg: linear-gradient(180deg, #2d2b27, #181816);
+
+  --witch-deck-bg: linear-gradient(180deg, #151515, #050606);
+  --witch-deck-border: rgba(216, 164, 55, .56);
+  --witch-deck-label: #d9b85f;
+  --witch-control-bg: linear-gradient(180deg, #1c1c1b, #0b0c0c);
+  --witch-control-border: rgba(210, 162, 57, .46);
+  --witch-control-text: #f5edd9;
+  --witch-control-muted: #a79b82;
+  --witch-control-accent: #efc85f;
+  --witch-control-accent-strong: #e5b849;
+  --witch-control-hover-bg: linear-gradient(180deg, #2a2925, #121311);
+  --witch-menu-bg: linear-gradient(155deg, #1b1b19, #070808);
+  --witch-option-bg: rgba(11,12,12,.92);
+  --witch-option-selected-bg: linear-gradient(180deg, #302b20, #151512);
+  --witch-primary-bg: linear-gradient(180deg, #e3bd58, #a57222);
+  --witch-primary-text: #12100b;
+  --witch-primary-disabled-bg: linear-gradient(180deg, #32312d, #1b1b19);
+  --witch-primary-disabled-text: rgba(235, 226, 204, .38);
+}
+
+.is-office-theme {
+  --witch-payout-panel-bg: linear-gradient(145deg, #ffffff, #e5e6e8);
+  --witch-payout-border: rgba(38, 41, 44, .78);
+  --witch-payout-outer-ring: rgba(0, 0, 0, .34);
+  --witch-payout-title: #141516;
+  --witch-payout-title-shadow-1: rgba(255,255,255,.82);
+  --witch-payout-title-shadow-2: rgba(120,124,128,.24);
+  --witch-payout-amount: #101112;
+  --witch-payout-amount-shadow-1: #d7d9dc;
+  --witch-payout-amount-shadow-2: #b7bbc0;
+  --witch-payout-amount-shadow-3: #969ba1;
+  --witch-payout-multiplier: #51555a;
+  --witch-payout-multiplier-shadow-1: #eceef0;
+  --witch-payout-multiplier-shadow-2: #c7cacf;
+  --witch-payout-label: #565b61;
+  --witch-payout-muted: #73787e;
+  --witch-payout-value: #151719;
+  --witch-payout-rule: rgba(43, 46, 49, .18);
+  --witch-cashout-active-border: #151719;
+  --witch-cashout-active-text: #ffffff;
+  --witch-cashout-active-bg: linear-gradient(180deg, #2b2e31, #0d0f10);
+  --witch-cashout-disabled-border: rgba(60, 64, 68, .20);
+  --witch-cashout-disabled-text: rgba(30, 33, 36, .42);
+  --witch-cashout-disabled-bg: linear-gradient(180deg, #dadcdf, #c5c8cc);
+
+  --witch-deck-bg: linear-gradient(180deg, #f7f7f7 0%, #dedfe1 100%);
+  --witch-deck-border: rgba(32, 35, 38, .44);
+  --witch-deck-label: #35383c;
+  --witch-control-bg: linear-gradient(180deg, #ffffff, #e6e8ea);
+  --witch-control-border: rgba(55, 59, 63, .38);
+  --witch-control-text: #17191b;
+  --witch-control-muted: #666b70;
+  --witch-control-accent: #151719;
+  --witch-control-accent-strong: #2d3135;
+  --witch-control-hover-bg: linear-gradient(180deg, #f0f1f2, #d7dadd);
+  --witch-menu-bg: linear-gradient(155deg, #ffffff, #e8eaec);
+  --witch-option-bg: rgba(255,255,255,.76);
+  --witch-option-selected-bg: linear-gradient(180deg, #383b3f, #17191b);
+  --witch-primary-bg: linear-gradient(180deg, #2c2f32, #0d0f10);
+  --witch-primary-text: #ffffff;
+  --witch-primary-disabled-bg: linear-gradient(180deg, #d8dadd, #c2c5c8);
+  --witch-primary-disabled-text: rgba(31,34,37,.42);
+}
+
+/* One payout component: Better Call Saul geometry and typography for every card. */
+:is(.is-standard-theme, .is-advanced-theme, .is-office-theme) .witch-payout-panel {
+  border-color: var(--witch-payout-border) !important;
+  background: var(--witch-payout-panel-bg) !important;
+  box-shadow:
+    0 0 0 4px var(--witch-payout-outer-ring),
+    0 18px 36px rgba(0,0,0,.32),
+    inset 0 1px 0 rgba(255,255,255,.10) !important;
+}
+
+:is(.is-standard-theme, .is-advanced-theme, .is-office-theme) .witch-payout-head {
+  border-bottom-color: var(--witch-payout-rule) !important;
+}
+
+:is(.is-standard-theme, .is-advanced-theme, .is-office-theme) .witch-payout-head span {
+  color: var(--witch-payout-title) !important;
+  text-shadow:
+    0 1px 0 var(--witch-payout-title-shadow-1),
+    0 2px 0 var(--witch-payout-title-shadow-2),
+    0 4px 8px rgba(0,0,0,.22) !important;
+}
+
+:is(.is-standard-theme, .is-advanced-theme, .is-office-theme) .witch-payout-amount {
+  color: var(--witch-payout-amount) !important;
+  text-shadow:
+    0 1px 0 var(--witch-payout-amount-shadow-1),
+    0 2px 0 var(--witch-payout-amount-shadow-2),
+    0 3px 0 var(--witch-payout-amount-shadow-3),
+    0 6px 10px rgba(0,0,0,.22) !important;
+}
+
+:is(.is-standard-theme, .is-advanced-theme, .is-office-theme) .witch-multiplier {
+  color: var(--witch-payout-multiplier) !important;
+  text-shadow:
+    0 1px 0 var(--witch-payout-multiplier-shadow-1),
+    0 2px 0 var(--witch-payout-multiplier-shadow-2),
+    0 4px 7px rgba(0,0,0,.18) !important;
+}
+
+:is(.is-standard-theme, .is-advanced-theme, .is-office-theme) .witch-payout-net {
+  border-top-color: var(--witch-payout-rule) !important;
+  color: var(--witch-payout-label) !important;
+}
+
+:is(.is-standard-theme, .is-advanced-theme, .is-office-theme) .witch-payout-lines {
+  color: var(--witch-payout-muted) !important;
+}
+
+:is(.is-standard-theme, .is-advanced-theme, .is-office-theme) .witch-payout-net b,
+:is(.is-standard-theme, .is-advanced-theme, .is-office-theme) .witch-payout-lines b {
+  color: var(--witch-payout-value) !important;
+}
+
+:is(.is-standard-theme, .is-advanced-theme, .is-office-theme) .witch-cashout-button:not(:disabled) {
+  border-color: var(--witch-cashout-active-border) !important;
+  color: var(--witch-cashout-active-text) !important;
+  background: var(--witch-cashout-active-bg) !important;
+  text-shadow: none !important;
+}
+
+:is(.is-standard-theme, .is-advanced-theme, .is-office-theme) .witch-cashout-button:disabled {
+  opacity: 1 !important;
+  border-color: var(--witch-cashout-disabled-border) !important;
+  color: var(--witch-cashout-disabled-text) !important;
+  background: var(--witch-cashout-disabled-bg) !important;
+}
+
+@media (min-width: 821px) {
+  :is(.is-standard-theme, .is-advanced-theme, .is-office-theme) .witch-payout-panel {
+    display: grid !important;
+    grid-template-rows: auto auto auto auto !important;
+    align-self: center !important;
+    width: 100% !important;
+    height: min(100%, clamp(340px, 46vh, 430px)) !important;
+    min-height: 340px !important;
+    max-height: 430px !important;
+    margin: 0 !important;
+    padding: clamp(18px, 2vh, 26px) 20px !important;
+    overflow: hidden !important;
+    border-width: 1px !important;
+    border-style: solid !important;
+    border-radius: 18px !important;
+    transform: translateY(-2px) !important;
+  }
+
+  :is(.is-standard-theme, .is-advanced-theme, .is-office-theme) .witch-payout-head {
+    padding: 0 0 18px !important;
+    text-align: center !important;
+  }
+
+  :is(.is-standard-theme, .is-advanced-theme, .is-office-theme) .witch-payout-head span {
+    display: block !important;
+    font-size: clamp(13px, 1vw, 18px) !important;
+    font-weight: 900 !important;
+    letter-spacing: .06em !important;
+  }
+
+  :is(.is-standard-theme, .is-advanced-theme, .is-office-theme) .witch-payout-head small,
+  :is(.is-standard-theme, .is-advanced-theme, .is-office-theme) .witch-payout-note {
+    display: none !important;
+  }
+
+  :is(.is-standard-theme, .is-advanced-theme, .is-office-theme) .witch-payout-hero {
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important;
+    padding: clamp(20px, 2.2vh, 28px) 0 16px !important;
+  }
+
+  :is(.is-standard-theme, .is-advanced-theme, .is-office-theme) .witch-payout-amount {
+    order: 1 !important;
+    margin: 0 !important;
+    overflow: visible !important;
+    font-family: Impact, "Arial Black", "DM Sans", sans-serif !important;
+    font-size: clamp(48px, 3.4vw, 72px) !important;
+    font-weight: 900 !important;
+    line-height: .95 !important;
+    letter-spacing: .015em !important;
+    white-space: nowrap !important;
+  }
+
+  :is(.is-standard-theme, .is-advanced-theme, .is-office-theme) .witch-multiplier {
+    order: 2 !important;
+    margin: 14px 0 0 !important;
+    font-size: clamp(24px, 1.7vw, 34px) !important;
+    font-weight: 900 !important;
+  }
+
+  :is(.is-standard-theme, .is-advanced-theme, .is-office-theme) .witch-payout-net {
+    order: 3 !important;
+    width: 100% !important;
+    margin-top: 18px !important;
+    padding-top: 14px !important;
+    font-size: 12px !important;
+    letter-spacing: .08em !important;
+  }
+
+  :is(.is-standard-theme, .is-advanced-theme, .is-office-theme) .witch-payout-net b {
+    float: right !important;
+    font-size: 15px !important;
+  }
+
+  :is(.is-standard-theme, .is-advanced-theme, .is-office-theme) .witch-payout-lines {
+    display: block !important;
+    margin: 0 0 14px !important;
+    padding: 12px 0 0 !important;
+    font-size: 11px !important;
+    letter-spacing: .08em !important;
+  }
+
+  :is(.is-standard-theme, .is-advanced-theme, .is-office-theme) .witch-payout-lines span {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+  }
+
+  :is(.is-standard-theme, .is-advanced-theme, .is-office-theme) .witch-payout-lines b {
+    font-size: 14px !important;
+  }
+
+  :is(.is-standard-theme, .is-advanced-theme, .is-office-theme) .witch-cashout-button {
+    min-height: 58px !important;
+    height: auto !important;
+    margin: 0 !important;
+    border-width: 1px !important;
+    border-style: solid !important;
+    border-radius: 11px !important;
+    font-size: 16px !important;
+    font-weight: 900 !important;
+    letter-spacing: .06em !important;
+  }
+}
+
+@media (min-width: 821px) and (max-width: 1499px) {
+  :is(.is-standard-theme, .is-advanced-theme, .is-office-theme) .witch-payout-panel {
+    height: min(100%, clamp(332px, 46vh, 378px)) !important;
+    min-height: 332px !important;
+    max-height: 378px !important;
+  }
+}
+
+/* One deck/control/menu component: geometry stays shared, palette comes from the card. */
+:is(.is-standard-theme, .is-advanced-theme, .is-office-theme) .witch-control-dock {
+  border-top-color: var(--witch-deck-border) !important;
+  background: var(--witch-deck-bg) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.055),
+    0 -10px 30px rgba(0,0,0,.22) !important;
+}
+
+:is(.is-standard-theme, .is-advanced-theme, .is-office-theme) .witch-card-picker > label,
+:is(.is-standard-theme, .is-advanced-theme, .is-office-theme) .witch-stake-group > label,
+:is(.is-standard-theme, .is-advanced-theme, .is-office-theme) .witch-alarm-field > span,
+:is(.is-standard-theme, .is-advanced-theme, .is-office-theme) .witch-buy-group > label {
+  color: var(--witch-deck-label) !important;
+}
+
+:is(.is-standard-theme, .is-advanced-theme, .is-office-theme) .witch-cards-button,
+:is(.is-standard-theme, .is-advanced-theme, .is-office-theme) .witch-stake-stepper,
+:is(.is-standard-theme, .is-advanced-theme, .is-office-theme) .witch-alarm-field select {
+  border-color: var(--witch-control-border) !important;
+  color: var(--witch-control-text) !important;
+  background: var(--witch-control-bg) !important;
+}
+
+:is(.is-standard-theme, .is-advanced-theme, .is-office-theme) .witch-cards-button strong {
+  color: var(--witch-control-accent) !important;
+}
+:is(.is-standard-theme, .is-advanced-theme, .is-office-theme) .witch-cards-button small {
+  color: var(--witch-control-muted) !important;
+}
+:is(.is-standard-theme, .is-advanced-theme, .is-office-theme) .witch-cards-button > b {
+  color: var(--witch-control-accent-strong) !important;
+}
+
+:is(.is-standard-theme, .is-advanced-theme, .is-office-theme) .witch-stake-stepper > button,
+:is(.is-standard-theme, .is-advanced-theme, .is-office-theme) .witch-stake-presets button {
+  border-color: var(--witch-control-border) !important;
+  color: var(--witch-control-text) !important;
+  background: var(--witch-control-bg) !important;
+}
+
+:is(.is-standard-theme, .is-advanced-theme, .is-office-theme) .witch-stake-stepper > button:hover:not(:disabled),
+:is(.is-standard-theme, .is-advanced-theme, .is-office-theme) .witch-stake-presets button:hover:not(:disabled) {
+  border-color: var(--witch-control-accent-strong) !important;
+  background: var(--witch-control-hover-bg) !important;
+}
+
+:is(.is-standard-theme, .is-advanced-theme, .is-office-theme) .witch-input-wrap input {
+  color: var(--witch-control-text) !important;
+  background: transparent !important;
+}
+
+:is(.is-standard-theme, .is-advanced-theme, .is-office-theme) .witch-stake-presets button.is-selected {
+  border-color: var(--witch-control-accent-strong) !important;
+  color: var(--witch-primary-text) !important;
+  background: var(--witch-primary-bg) !important;
+}
+
+:is(.is-standard-theme, .is-advanced-theme, .is-office-theme) .witch-card-menu {
+  border-color: var(--witch-control-border) !important;
+  background: var(--witch-menu-bg) !important;
+}
+
+:is(.is-standard-theme, .is-advanced-theme, .is-office-theme) .witch-card-option {
+  border-color: var(--witch-control-border) !important;
+  color: var(--witch-control-text) !important;
+  background: var(--witch-option-bg) !important;
+}
+
+:is(.is-standard-theme, .is-advanced-theme, .is-office-theme) .witch-card-option small {
+  color: var(--witch-control-muted) !important;
+}
+
+:is(.is-standard-theme, .is-advanced-theme, .is-office-theme) .witch-card-option > b {
+  border-color: var(--witch-control-border) !important;
+  color: var(--witch-control-accent-strong) !important;
+}
+
+:is(.is-standard-theme, .is-advanced-theme, .is-office-theme) .witch-card-option.is-selected {
+  border-color: var(--witch-control-accent-strong) !important;
+  background: var(--witch-option-selected-bg) !important;
+}
+
+:is(.is-standard-theme, .is-advanced-theme) .witch-card-option.is-selected,
+.is-office-theme .witch-card-option.is-selected {
+  color: var(--witch-control-text) !important;
+}
+
+.is-office-theme .witch-card-option.is-selected {
+  color: #ffffff !important;
+}
+
+:is(.is-standard-theme, .is-advanced-theme, .is-office-theme) .witch-primary-button {
+  border-color: var(--witch-control-accent-strong) !important;
+  color: var(--witch-primary-text) !important;
+  background: var(--witch-primary-bg) !important;
+  text-shadow: none !important;
+}
+
+:is(.is-standard-theme, .is-advanced-theme, .is-office-theme) .witch-primary-button:hover:not(:disabled) {
+  filter: brightness(1.06) !important;
+}
+
+:is(.is-standard-theme, .is-advanced-theme, .is-office-theme) .witch-primary-button:disabled {
+  border-color: var(--witch-control-border) !important;
+  color: var(--witch-primary-disabled-text) !important;
+  background: var(--witch-primary-disabled-bg) !important;
+  filter: none !important;
+}

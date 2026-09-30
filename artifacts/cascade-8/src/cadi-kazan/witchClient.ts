@@ -820,6 +820,7 @@ export class WitchClient {
     this.root.classList.toggle("is-office-round", Boolean(round && round.mode === "OFFICE_MATCH_6"));
     const visualMode = round?.mode ?? this.mode;
     this.root.classList.toggle("is-standard-theme", visualMode === "STANDARD");
+    this.root.classList.toggle("is-advanced-theme", visualMode === "ADVANCED");
     this.root.classList.toggle("is-office-theme", visualMode === "OFFICE_MATCH_6");
     this.root.querySelectorAll<HTMLButtonElement>("[data-witch-mode]").forEach((button) => {
       button.classList.toggle("is-selected", button.dataset.witchMode === this.mode);

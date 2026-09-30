@@ -222,4 +222,21 @@ describe("cadi kazan route smoke contract", () => {
     expect(visualLockSource).toContain(".witch-ticket.is-preview .witch-office-preview-coating");
   });
 
+
+  it("uses one canonical Better Call Saul payout/deck structure with card-only palette changes", () => {
+    expect(witchClientSource).toContain('classList.toggle("is-advanced-theme", visualMode === "ADVANCED")');
+    expect(visualLockSource).toContain("PASS 23 — canonical payout/deck theme system");
+    expect(visualLockSource).toContain(".is-standard-theme {");
+    expect(visualLockSource).toContain(".is-advanced-theme {");
+    expect(visualLockSource).toContain(".is-office-theme {");
+    expect(visualLockSource).toContain("--witch-payout-panel-bg");
+    expect(visualLockSource).toContain("--witch-deck-bg");
+    expect(visualLockSource).toContain(":is(.is-standard-theme, .is-advanced-theme, .is-office-theme) .witch-payout-panel");
+    expect(visualLockSource).toContain("background: var(--witch-payout-panel-bg) !important");
+    expect(visualLockSource).toContain('font-family: Impact, "Arial Black", "DM Sans", sans-serif !important');
+    expect(visualLockSource).toContain(":is(.is-standard-theme, .is-advanced-theme, .is-office-theme) .witch-control-dock");
+    expect(visualLockSource).toContain("background: var(--witch-deck-bg) !important");
+    expect(visualLockSource).toContain("--witch-deck-bg: linear-gradient(180deg, #f7f7f7 0%, #dedfe1 100%)");
+  });
+
 });
