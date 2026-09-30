@@ -1,11 +1,11 @@
 import "./roulette.css";
 import { renderRouletteBetTable } from "./betTable";
 import {
+  settleRouletteBets,
   type RouletteRoundSettlement,
 } from "./betRules";
 import {
   clearRouletteBets,
-  compactRouletteBetPlacements,
   createRouletteBetState,
   doubleRouletteBets,
   getRouletteBetTotals,
@@ -36,11 +36,7 @@ import {
 } from "./simulationEvents";
 import { RouletteAudioEngine } from "./rouletteAudio";
 import {
-  ROULETTE_BETTING_WINDOW_MS,
-  ROULETTE_RESULT_HOLD_MS,
   canEditRouletteBets,
-  canStartRouletteSpin,
-  getRouletteBettingSecondsRemaining,
   getRoulettePhaseStatus,
   type RouletteScenePhase,
 } from "./scenePhase";
@@ -51,14 +47,20 @@ import {
 import {
   ROULETTE_SIMULATION_VERSION,
   readSettledWinningResult,
+  simulateSeededRouletteSpin,
 } from "./spinResult";
 import {
-  createVerifiedRouletteReplay,
-} from "./authoritativeReplay";
-import {
   RouletteWalletClient,
-  type RouletteServerSpinResponse,
+  type RouletteBootstrapResponse,
+  type RouletteGlobalTableSnapshot,
 } from "./rouletteWalletClient";
+import {
+  estimateRouletteServerClockOffset,
+  getRouletteGlobalBettingSecondsRemaining,
+  getRouletteGlobalClientPhase,
+  getRouletteGlobalSpinElapsedMs,
+  getRouletteServerNowMs,
+} from "./globalClient";
 import {
   ROULETTE_RECENT_RESULT_LIMIT,
   ROULETTE_RECENT_RESULTS_STORAGE_KEY,
@@ -278,9 +280,8 @@ export function mountRoulette(app: HTMLDivElement) {
             <canvas
               class="roulette-wheel-canvas"
               data-roulette-wheel
-              role="button"
-              tabindex="0"
-              aria-label="European roulette wheel. Press to spin the wheel and ball."
+              role="img"
+              aria-label="Live European roulette wheel."
             ></canvas>
 
             <div
@@ -415,21 +416,42 @@ export function mountRoulette(app: HTMLDivElement) {
   let betState: RouletteBetState =
     createRouletteBetState();
   let walletBalanceCents: number | null = null;
-  let pendingServerSpin: RouletteServerSpinResponse | null = null;
   let activeRotorSpin: RotorSpin | null = null;
   let activeBallOrbit: BallOrbit | null = null;
   let motionStartedAt = 0;
   let lastEventElapsedMs = -1;
   let simulationEvents: RouletteSimulationEvent[] = [];
   let frameId = 0;
-  let resultHoldTimer = 0;
   let recentResults: number[] = [];
-  let bettingDeadlineMs =
-    performance.now() + ROULETTE_BETTING_WINDOW_MS;
-  let bettingWindowClosed = false;
-  let automaticSpinBlocked = false;
+  let bettingWindowClosed = true;
   let apiSimulationReady = false;
   let apiReadinessRetryTimer = 0;
+  let globalTableSnapshot:
+    RouletteGlobalTableSnapshot | null =
+      null;
+  let activeGlobalRoundId:
+    string | null = null;
+  let spinningGlobalRoundId:
+    string | null = null;
+  let renderedGlobalResultRoundId:
+    string | null = null;
+  let recordedGlobalResultRoundId:
+    string | null = null;
+  let roundSnapshotCapturedId:
+    string | null = null;
+  let serverClockOffsetMs = 0;
+  let stateRequestInFlight = false;
+  let globalBetSyncInFlight = false;
+  let pendingGlobalBetSync:
+    | {
+        roundId: string;
+        bets: RouletteBetState["placements"];
+        version: number;
+      }
+    | null = null;
+  let globalBetMutationVersion = 0;
+  let serverReservedStakeCents = 0;
+  let lastHydratedGlobalBetUpdatedAtMs = 0;
   let activeResultPresentation:
     RouletteResultPresentation | null =
       null;
@@ -684,38 +706,66 @@ export function mountRoulette(app: HTMLDivElement) {
     });
   };
 
-  const canAffordStake = (stake: number) =>
-    walletBalanceCents !== null &&
-    stake * 100 <= walletBalanceCents;
-
-  const canAffordCurrentBet = () =>
-    canAffordStake(
+  const getPendingLocalReserveCents = () =>
+    Math.max(
+      0,
       getRouletteTotalStake(
         betState.placements,
-      ),
+      ) *
+        100 -
+        serverReservedStakeCents,
     );
 
+  const canAffordAdditionalStake = (
+    additionalStake: number,
+  ) =>
+    walletBalanceCents !== null &&
+    additionalStake * 100 <=
+      walletBalanceCents -
+        getPendingLocalReserveCents();
+
   const canPlaceSelectedChip = () =>
-    canAffordStake(
-      getRouletteTotalStake(
-        betState.placements,
-      ) + betState.selectedChip,
+    canAffordAdditionalStake(
+      betState.selectedChip,
     );
 
   const canDoubleCurrentBet = () =>
     betState.placements.length > 0 &&
-    canAffordStake(
+    canAffordAdditionalStake(
       getRouletteTotalStake(
         betState.placements,
-      ) * 2,
+      ),
     );
 
-  const canRebetPreviousRound = () =>
-    betState.previousRoundPlacements.length > 0 &&
-    canAffordStake(
+  const canRebetPreviousRound = () => {
+    if (
+      betState.previousRoundPlacements
+        .length === 0
+    ) {
+      return false;
+    }
+
+    const desiredStake =
       getRouletteTotalStake(
         betState.previousRoundPlacements,
+      );
+    const currentStake =
+      getRouletteTotalStake(
+        betState.placements,
+      );
+
+    return canAffordAdditionalStake(
+      Math.max(
+        0,
+        desiredStake -
+          currentStake,
       ),
+    );
+  };
+
+  const getGlobalServerNow = () =>
+    getRouletteServerNowMs(
+      serverClockOffsetMs,
     );
 
   const setMobileStatsOpen = (open: boolean) => {
@@ -770,30 +820,39 @@ export function mountRoulette(app: HTMLDivElement) {
   };
 
   const renderPhaseTimer = () => {
-    const phase =
-      page.dataset.phase as RouletteScenePhase;
-
-    if (phase === "betting") {
-      if (!apiSimulationReady) {
-        if (bettingTimerLabel) {
-          bettingTimerLabel.textContent =
-            "UPDATING GAME";
-        }
-        if (bettingTimerValue) {
-          bettingTimerValue.textContent =
-            "—";
-        }
-        return null;
+    if (
+      !apiSimulationReady ||
+      !globalTableSnapshot
+    ) {
+      if (bettingTimerLabel) {
+        bettingTimerLabel.textContent =
+          "UPDATING GAME";
       }
+      if (bettingTimerValue) {
+        bettingTimerValue.textContent =
+          "—";
+      }
+      return null;
+    }
 
+    const serverNowMs =
+      getGlobalServerNow();
+    const globalPhase =
+      getRouletteGlobalClientPhase(
+        globalTableSnapshot,
+        serverNowMs,
+      );
+
+    if (globalPhase === "betting") {
       const remaining =
-        getRouletteBettingSecondsRemaining(
-          bettingDeadlineMs,
-          performance.now(),
+        getRouletteGlobalBettingSecondsRemaining(
+          globalTableSnapshot,
+          serverNowMs,
         );
 
       if (bettingTimerLabel) {
-        bettingTimerLabel.textContent = "BET TIME";
+        bettingTimerLabel.textContent =
+          "BET TIME";
       }
       if (bettingTimerValue) {
         bettingTimerValue.textContent =
@@ -804,15 +863,25 @@ export function mountRoulette(app: HTMLDivElement) {
 
     if (bettingTimerLabel) {
       bettingTimerLabel.textContent =
-        phase === "spinning"
+        globalPhase === "spinning"
           ? "SPIN"
-          : "RESULT";
+          : globalPhase === "result"
+            ? "RESULT"
+            : "NEXT ROUND";
     }
     if (bettingTimerValue) {
       bettingTimerValue.textContent =
-        phase === "spinning"
-          ? "••"
-          : String(page.dataset.resultNumber ?? "—");
+        globalPhase === "result"
+          ? String(
+              globalTableSnapshot
+                .result?.number ??
+                page.dataset
+                  .resultNumber ??
+                "—",
+            )
+          : globalPhase === "spinning"
+            ? "••"
+            : "—";
     }
 
     return null;
@@ -820,12 +889,13 @@ export function mountRoulette(app: HTMLDivElement) {
 
   const updateSpinAvailability = () => {
     if (!spinButton) return;
-    spinButton.disabled =
-      !apiSimulationReady ||
-      !canStartRouletteSpin(
-        page.dataset.phase as RouletteScenePhase,
-      ) ||
-      !canAffordCurrentBet();
+
+    spinButton.disabled = true;
+    spinButton.textContent = "LIVE";
+    spinButton.setAttribute(
+      "aria-label",
+      "Global roulette runs automatically",
+    );
   };
 
   const clearRoundResult = () => {
@@ -1089,9 +1159,13 @@ export function mountRoulette(app: HTMLDivElement) {
     page.dataset.phase = phase;
 
     if (phase === "betting") {
-      bettingDeadlineMs =
-        performance.now() + ROULETTE_BETTING_WINDOW_MS;
-      bettingWindowClosed = false;
+      bettingWindowClosed =
+        !apiSimulationReady ||
+        !globalTableSnapshot ||
+        getRouletteGlobalClientPhase(
+          globalTableSnapshot,
+          getGlobalServerNow(),
+        ) !== "betting";
     } else {
       bettingWindowClosed = true;
     }
@@ -1149,33 +1223,6 @@ export function mountRoulette(app: HTMLDivElement) {
     updateSpinAvailability();
   };
 
-  const reopenBettingAfterResult = () => {
-    window.clearTimeout(
-      resultHoldTimer,
-    );
-
-    resultHoldTimer =
-      window.setTimeout(() => {
-        if (
-          activeRotorSpin ||
-          activeBallOrbit ||
-          page.dataset.phase !==
-            "settled"
-        ) {
-          return;
-        }
-
-        canvas.dataset.rouletteState =
-          "ready";
-        clearRoundResult();
-        setScenePhase("betting");
-        redraw();
-        canvas.setAttribute(
-          "aria-label",
-          "European roulette wheel. Betting open. Press to spin again.",
-        );
-      }, ROULETTE_RESULT_HOLD_MS);
-  };
 
   const renderBetState = () => {
     const totals =
@@ -1360,90 +1407,31 @@ export function mountRoulette(app: HTMLDivElement) {
     updateSpinAvailability();
   };
 
-  const scheduleApiReadinessRetry = () => {
-    window.clearTimeout(
-      apiReadinessRetryTimer,
-    );
-    apiReadinessRetryTimer =
-      window.setTimeout(() => {
-        void bootstrapRouletteApi();
-      }, 750);
-  };
-
-  const bootstrapRouletteApi = async () => {
-    try {
-      const bootstrap =
-        await rouletteWallet.bootstrap();
-
-      walletBalanceCents =
-        bootstrap.wallet.balanceCents;
-      apiSimulationReady =
-        bootstrap.simulationVersion ===
-        ROULETTE_SIMULATION_VERSION;
-
-      renderWalletBalance();
-
-      if (!apiSimulationReady) {
-        automaticSpinBlocked = false;
-        if (betStatus) {
-          betStatus.textContent =
-            "UPDATING GAME";
-        }
-        renderPhaseTimer();
-        updateSpinAvailability();
-        scheduleApiReadinessRetry();
-        return;
-      }
-
-      automaticSpinBlocked = false;
-
-      if (
-        page.dataset.phase ===
-        "betting"
-      ) {
-        bettingWindowClosed = false;
-        bettingDeadlineMs =
-          performance.now() +
-          ROULETTE_BETTING_WINDOW_MS;
-        page.dataset.bettingLocked =
-          "false";
-        betPanel.setAttribute(
-          "aria-disabled",
-          "false",
-        );
-        if (betStatus) {
-          betStatus.textContent =
-            getRoulettePhaseStatus(
-              "betting",
-            );
-        }
-      }
-
-      renderBetState();
-      renderPhaseTimer();
-      updateSpinAvailability();
-    } catch {
-      apiSimulationReady = false;
-      automaticSpinBlocked = false;
-      if (betStatus) {
-        betStatus.textContent =
-          "CONNECTING";
-      }
-      renderPhaseTimer();
-      updateSpinAvailability();
-      scheduleApiReadinessRetry();
-    }
-  };
-
-  const animate = (timestamp: number) => {
-    const elapsedMs = timestamp - motionStartedAt;
+  const animate = (
+    timestamp: number,
+  ) => {
+    const elapsedMs =
+      Math.max(
+        0,
+        timestamp -
+          motionStartedAt,
+      );
     let rotorAngularVelocity = 0;
 
     if (activeRotorSpin) {
-      const rotorSample = sampleRotorSpin(activeRotorSpin, elapsedMs);
-      viewState.rotorAngle = rotorSample.angle;
-      rotorAngularVelocity = rotorSample.angularVelocity;
-      if (rotorSample.done) activeRotorSpin = null;
+      const rotorSample =
+        sampleRotorSpin(
+          activeRotorSpin,
+          elapsedMs,
+        );
+      viewState.rotorAngle =
+        rotorSample.angle;
+      rotorAngularVelocity =
+        rotorSample.angularVelocity;
+
+      if (rotorSample.done) {
+        activeRotorSpin = null;
+      }
     }
 
     if (activeBallOrbit) {
@@ -1455,7 +1443,9 @@ export function mountRoulette(app: HTMLDivElement) {
         );
 
       dueEvents.forEach((event) => {
-        rouletteAudio.handleEvent(event);
+        rouletteAudio.handleEvent(
+          event,
+        );
         canvas.dispatchEvent(
           new CustomEvent<RouletteSimulationEvent>(
             "roulette-simulation-event",
@@ -1466,321 +1456,744 @@ export function mountRoulette(app: HTMLDivElement) {
           ),
         );
       });
-      lastEventElapsedMs = elapsedMs;
+      lastEventElapsedMs =
+        elapsedMs;
 
-      const ballSample = sampleBallOrbit(activeBallOrbit, elapsedMs);
-      viewState.ballAngle = ballSample.angle;
-      viewState.ballRadiusRatio = ballSample.radiusRatio;
+      const ballSample =
+        sampleBallOrbit(
+          activeBallOrbit,
+          elapsedMs,
+        );
+      viewState.ballAngle =
+        ballSample.angle;
+      viewState.ballRadiusRatio =
+        ballSample.radiusRatio;
 
       rouletteAudio.updateMotion({
         rotorAngularVelocity,
         ballAngularVelocity:
           ballSample.angularVelocity,
-        ballPhase: ballSample.phase,
+        ballPhase:
+          ballSample.phase,
       });
 
       if (ballSample.done) {
-        const completedOrbit = activeBallOrbit;
-        const result = readSettledWinningResult(completedOrbit);
-
-        if (
-          result &&
-          pendingServerSpin &&
-          pendingServerSpin.result.number === result.number &&
-          pendingServerSpin.result.pocketIndex === result.pocketIndex
-        ) {
-          const finalRotor =
-            sampleRotorSpin(
-              completedOrbit.rotorSpin,
-              completedOrbit.durationMs,
-            );
-          const presentation =
-            renderRoundResult(
-              pendingServerSpin.settlement,
-              finalRotor.angle,
-            );
-
-          if (
-            presentation.winningPocketIndex !==
-              result.pocketIndex ||
-            presentation.winningColor !==
-              result.color
-          ) {
-            throw new Error(
-              "ROULETTE_RESULT_PRESENTATION_MISMATCH",
-            );
-          }
-
-          recordRecentResult(
-            result.number,
-          );
-          walletBalanceCents = pendingServerSpin.wallet.balanceCents;
-          renderWalletBalance();
-
-          // The wager has now been authoritatively settled. Keep the
-          // snapshotted previous round for REBET, but clear the editable
-          // table so the next betting window always starts clean.
-          betState =
-            clearRouletteBets(
-              betState,
-            );
-          renderBetState();
-
-          canvas.dataset.rouletteState = "settled";
-          setScenePhase(
-            "settled",
-            result.number,
-          );
-          canvas.dataset.roulettePocketIndex = String(result.pocketIndex);
-          canvas.dataset.rouletteWinningNumber = String(result.number);
-          canvas.dataset.rouletteWinningColor = result.color;
-          canvas.setAttribute(
-            "aria-label",
-            `European roulette wheel. Result ${result.number}.`,
-          );
-          reopenBettingAfterResult();
-          pendingServerSpin = null;
-        } else {
-          canvas.dataset.rouletteState = "unsettled";
-          setScenePhase("betting");
-          delete canvas.dataset.roulettePocketIndex;
-          delete canvas.dataset.rouletteWinningNumber;
-          delete canvas.dataset.rouletteWinningColor;
-          activeResultPresentation = null;
-          viewState.resultMarkerAngle = null;
-          page.dataset.resultVisible = "false";
-          resultBanner?.setAttribute(
-            "aria-hidden",
-            "true",
-          );
-          winMessage?.setAttribute(
-            "aria-hidden",
-            "true",
-          );
-          delete page.dataset.resultNumber;
-          delete page.dataset.resultColor;
-          delete page.dataset.resultLeftNeighbor;
-          delete page.dataset.resultRightNeighbor;
-          delete page.dataset.resultPocketIndex;
-          delete page.dataset.resultMarkerAngle;
-          delete page.dataset.resultHasPayout;
-          delete page.dataset.resultGrossReturn;
-          delete canvas.dataset.rouletteResultMarkerAngle;
-        }
-
         activeBallOrbit = null;
+        activeRotorSpin = null;
         rouletteAudio.stopMotion();
       }
     }
 
     redraw();
 
-    if (!activeRotorSpin && !activeBallOrbit) {
+    if (
+      !activeRotorSpin &&
+      !activeBallOrbit
+    ) {
       rouletteAudio.stopMotion();
       frameId = 0;
       return;
     }
 
-    frameId = window.requestAnimationFrame(animate);
+    frameId =
+      window.requestAnimationFrame(
+        animate,
+      );
   };
 
-  const startSpin = async (
-    source: "manual" | "timer" = "manual",
+  const startGlobalSpin = (
+    table: RouletteGlobalTableSnapshot,
   ) => {
     if (
-      !apiSimulationReady ||
-      activeRotorSpin ||
-      activeBallOrbit ||
-      !canStartRouletteSpin(
-        page.dataset.phase as RouletteScenePhase,
-      ) ||
-      !canAffordCurrentBet()
+      table.roundId ===
+        spinningGlobalRoundId &&
+      (
+        activeRotorSpin ||
+        activeBallOrbit
+      )
     ) {
       return;
     }
 
-    if (source === "manual") {
-      automaticSpinBlocked = false;
+    if (
+      !table.seed ||
+      table.simulationVersion !==
+        ROULETTE_SIMULATION_VERSION
+    ) {
+      return;
     }
 
-    window.clearTimeout(
-      resultHoldTimer,
-    );
+    const replay =
+      simulateSeededRouletteSpin(
+        table.seed,
+      );
+
+    if (!replay.result) {
+      throw new Error(
+        "ROULETTE_GLOBAL_REPLAY_UNSETTLED",
+      );
+    }
+
+    if (
+      roundSnapshotCapturedId !==
+      table.roundId
+    ) {
+      betState =
+        snapshotRouletteRound(
+          betState,
+        );
+      roundSnapshotCapturedId =
+        table.roundId;
+    }
+
+    spinningGlobalRoundId =
+      table.roundId;
+    renderedGlobalResultRoundId =
+      null;
+    bettingWindowClosed = true;
     closeMobileHudMenus();
     clearRoundResult();
-
-    canvas.dataset.rouletteState = "authorizing";
     setScenePhase("spinning");
-    delete canvas.dataset.roulettePocketIndex;
-    delete canvas.dataset.rouletteWinningNumber;
-    delete canvas.dataset.rouletteWinningColor;
+
+    canvas.dataset.rouletteState =
+      "spinning";
+    delete canvas.dataset
+      .roulettePocketIndex;
+    delete canvas.dataset
+      .rouletteWinningNumber;
+    delete canvas.dataset
+      .rouletteWinningColor;
     canvas.setAttribute(
       "aria-label",
-      "European roulette wheel. Spin authorization in progress.",
+      "Live European roulette wheel. Global spin in progress.",
     );
+
+    activeRotorSpin =
+      replay.rotorSpin;
+    activeBallOrbit =
+      replay.ballOrbit;
+    simulationEvents =
+      createRouletteSimulationEvents(
+        replay.ballOrbit,
+      );
+
+    const elapsedMs =
+      getRouletteGlobalSpinElapsedMs(
+        table,
+        getGlobalServerNow(),
+      );
+
+    lastEventElapsedMs =
+      elapsedMs;
+
+    const rotorSample =
+      sampleRotorSpin(
+        replay.rotorSpin,
+        elapsedMs,
+      );
+    const ballSample =
+      sampleBallOrbit(
+        replay.ballOrbit,
+        elapsedMs,
+      );
+
+    viewState.rotorAngle =
+      rotorSample.angle;
+    viewState.ballAngle =
+      ballSample.angle;
+    viewState.ballRadiusRatio =
+      ballSample.radiusRatio;
+    viewState.ballVisible = true;
+
+    motionStartedAt =
+      performance.now() -
+      elapsedMs;
 
     void rouletteAudio
       .ensureStarted()
       .catch(() => {
-        // A browser may block autoplay; the authoritative spin continues silently.
+        // The global table continues even when autoplay is blocked.
       });
 
-    try {
-      const idempotencyKey =
-        `roulette_${crypto.randomUUID().replaceAll("-", "")}`;
-
-      pendingServerSpin = await rouletteWallet.spin(
-        compactRouletteBetPlacements(
-          betState.placements,
-        ),
-        idempotencyKey,
+    if (frameId) {
+      window.cancelAnimationFrame(
+        frameId,
       );
-
-      const replay =
-        createVerifiedRouletteReplay(
-          pendingServerSpin,
-        );
-
-      automaticSpinBlocked = false;
-      betState = snapshotRouletteRound(betState);
-      renderBetState();
-      activeRotorSpin = replay.rotorSpin;
-      activeBallOrbit = replay.ballOrbit;
-    } catch (error) {
-      pendingServerSpin = null;
-      automaticSpinBlocked = true;
-      activeRotorSpin = null;
-      activeBallOrbit = null;
-      canvas.dataset.rouletteState = "ready";
-
-      // A failed/aborted request may still have reached the server. Disable
-      // betting until the authoritative wallet is re-read so a manual retry
-      // cannot accidentally use a stale balance.
-      walletBalanceCents = null;
-      renderWalletBalance();
-      setScenePhase("betting");
-      updateSpinAvailability();
-
-      if (betStatus) {
-        betStatus.textContent =
-          error instanceof Error &&
-          error.message === "INSUFFICIENT_ROULETTE_CREDITS"
-            ? "INSUFFICIENT BALANCE"
-            : error instanceof Error &&
-                error.message === "ROULETTE_SPIN_TIMEOUT"
-              ? "SPIN TIMEOUT"
-              : "SPIN FAILED";
-      }
-
-      const replayMismatch =
-        error instanceof Error &&
-        (
-          error.message ===
-            "ROULETTE_SIMULATION_VERSION_MISMATCH" ||
-          error.message ===
-            "ROULETTE_SERVER_RESULT_MISMATCH"
-        );
-
-      if (replayMismatch) {
-        apiSimulationReady = false;
-        automaticSpinBlocked = false;
-      }
-
-      console.error(
-        "[roulette] spin failed",
-        error,
-      );
-
-      void bootstrapRouletteApi();
-
-      return;
     }
-
-    canvas.dataset.rouletteState = "spinning";
-    canvas.setAttribute(
-      "aria-label",
-      "European roulette wheel. Spin in progress.",
-    );
-
-    simulationEvents =
-      createRouletteSimulationEvents(
-        activeBallOrbit,
+    frameId =
+      window.requestAnimationFrame(
+        animate,
       );
-    lastEventElapsedMs = -1;
-
-    const initialBallSample = sampleBallOrbit(activeBallOrbit, 0);
-    viewState.ballAngle = initialBallSample.angle;
-    viewState.ballRadiusRatio = initialBallSample.radiusRatio;
-
-    motionStartedAt = performance.now();
-
-    if (frameId) window.cancelAnimationFrame(frameId);
-    frameId = window.requestAnimationFrame(animate);
   };
 
-  const tickPhaseTimer = () => {
-    const remaining = renderPhaseTimer();
+  const renderGlobalResult = (
+    bootstrap:
+      RouletteBootstrapResponse,
+  ) => {
+    const table =
+      bootstrap.globalTable;
 
     if (
-      page.dataset.phase !== "betting" ||
-      remaining === null ||
-      remaining > 0 ||
-      bettingWindowClosed
+      !table ||
+      !table.seed ||
+      !table.result ||
+      renderedGlobalResultRoundId ===
+        table.roundId
     ) {
       return;
     }
 
-    if (automaticSpinBlocked) {
-      if (bettingTimerLabel) {
-        bettingTimerLabel.textContent =
-          "PRESS SPIN";
+    const replay =
+      simulateSeededRouletteSpin(
+        table.seed,
+      );
+    const replayResult =
+      replay.result;
+
+    if (
+      !replayResult ||
+      replayResult.number !==
+        table.result.number ||
+      replayResult.pocketIndex !==
+        table.result.pocketIndex ||
+      replayResult.color !==
+        table.result.color
+    ) {
+      apiSimulationReady = false;
+      throw new Error(
+        "ROULETTE_GLOBAL_RESULT_MISMATCH",
+      );
+    }
+
+    if (frameId) {
+      window.cancelAnimationFrame(
+        frameId,
+      );
+      frameId = 0;
+    }
+    activeRotorSpin = null;
+    activeBallOrbit = null;
+    rouletteAudio.stopMotion();
+
+    const finalRotor =
+      sampleRotorSpin(
+        replay.rotorSpin,
+        replay.ballOrbit.durationMs,
+      );
+    const finalBall =
+      sampleBallOrbit(
+        replay.ballOrbit,
+        replay.ballOrbit.durationMs,
+      );
+
+    viewState.rotorAngle =
+      finalRotor.angle;
+    viewState.ballAngle =
+      finalBall.angle;
+    viewState.ballRadiusRatio =
+      finalBall.radiusRatio;
+
+    const settlement =
+      bootstrap.globalBet
+        ?.settlement ??
+      settleRouletteBets(
+        bootstrap.globalBet?.bets ??
+          betState.placements,
+        table.result.number,
+      );
+    const presentation =
+      renderRoundResult(
+        settlement,
+        finalRotor.angle,
+      );
+
+    if (
+      presentation.winningPocketIndex !==
+        table.result.pocketIndex ||
+      presentation.winningColor !==
+        table.result.color
+    ) {
+      throw new Error(
+        "ROULETTE_RESULT_PRESENTATION_MISMATCH",
+      );
+    }
+
+    if (
+      recordedGlobalResultRoundId !==
+      table.roundId
+    ) {
+      recordRecentResult(
+        table.result.number,
+      );
+      recordedGlobalResultRoundId =
+        table.roundId;
+    }
+
+    if (
+      roundSnapshotCapturedId !==
+      table.roundId
+    ) {
+      betState =
+        snapshotRouletteRound(
+          betState,
+        );
+      roundSnapshotCapturedId =
+        table.roundId;
+    }
+
+    betState =
+      clearRouletteBets(
+        betState,
+      );
+    serverReservedStakeCents = 0;
+    renderBetState();
+
+    renderedGlobalResultRoundId =
+      table.roundId;
+    canvas.dataset.rouletteState =
+      "settled";
+    setScenePhase(
+      "settled",
+      table.result.number,
+    );
+    canvas.dataset
+      .roulettePocketIndex =
+      String(
+        table.result.pocketIndex,
+      );
+    canvas.dataset
+      .rouletteWinningNumber =
+      String(
+        table.result.number,
+      );
+    canvas.dataset
+      .rouletteWinningColor =
+      table.result.color;
+    canvas.setAttribute(
+      "aria-label",
+      `Live European roulette wheel. Result ${table.result.number}.`,
+    );
+    redraw();
+  };
+
+  const applyGlobalBootstrap = (
+    bootstrap:
+      RouletteBootstrapResponse,
+    requestStartedAtMs: number,
+    responseReceivedAtMs: number,
+    forceBetHydrate = false,
+  ) => {
+    serverClockOffsetMs =
+      estimateRouletteServerClockOffset(
+        bootstrap.serverTimeMs,
+        requestStartedAtMs,
+        responseReceivedAtMs,
+      );
+    walletBalanceCents =
+      bootstrap.wallet.balanceCents;
+    globalTableSnapshot =
+      bootstrap.globalTable;
+    apiSimulationReady =
+      bootstrap.simulationVersion ===
+        ROULETTE_SIMULATION_VERSION &&
+      bootstrap.globalTable !== null &&
+      bootstrap.globalTable
+        .simulationVersion ===
+        ROULETTE_SIMULATION_VERSION;
+
+    renderWalletBalance();
+
+    if (
+      !apiSimulationReady ||
+      !globalTableSnapshot
+    ) {
+      bettingWindowClosed = true;
+      if (betStatus) {
+        betStatus.textContent =
+          "UPDATING GAME";
       }
-      if (bettingTimerValue) {
-        bettingTimerValue.textContent =
-          "—";
-      }
+      renderPhaseTimer();
+      updateSpinAvailability();
       return;
     }
 
-    if (!canAffordCurrentBet()) {
-      bettingDeadlineMs =
-        performance.now() + ROULETTE_BETTING_WINDOW_MS;
+    const serverNowMs =
+      getGlobalServerNow();
+    const globalPhase =
+      getRouletteGlobalClientPhase(
+        globalTableSnapshot,
+        serverNowMs,
+      );
+    const roundChanged =
+      activeGlobalRoundId !==
+      globalTableSnapshot.roundId;
+
+    if (roundChanged) {
+      if (
+        activeGlobalRoundId &&
+        roundSnapshotCapturedId !==
+          activeGlobalRoundId &&
+        betState.placements.length > 0
+      ) {
+        betState =
+          snapshotRouletteRound(
+            betState,
+          );
+      }
+
+      activeGlobalRoundId =
+        globalTableSnapshot.roundId;
+      spinningGlobalRoundId = null;
+      renderedGlobalResultRoundId =
+        null;
+      roundSnapshotCapturedId =
+        null;
+      serverReservedStakeCents = 0;
+      lastHydratedGlobalBetUpdatedAtMs =
+        0;
+      pendingGlobalBetSync = null;
+
+      if (
+        globalPhase === "betting"
+      ) {
+        clearRoundResult();
+      }
+    }
+
+    const serverBet =
+      bootstrap.globalBet;
+    const canHydrateBet =
+      (
+        roundChanged ||
+        forceBetHydrate ||
+        (
+          !globalBetSyncInFlight &&
+          !pendingGlobalBetSync &&
+          (
+            serverBet?.updatedAtMs ??
+            0
+          ) >=
+            lastHydratedGlobalBetUpdatedAtMs
+        )
+      );
+
+    if (
+      canHydrateBet &&
+      serverBet?.roundId ===
+        globalTableSnapshot.roundId &&
+      globalPhase === "betting"
+    ) {
+      betState = {
+        ...betState,
+        placements:
+          serverBet.bets.map(
+            (bet) => ({
+              ...bet,
+            }),
+          ),
+      };
+      serverReservedStakeCents =
+        serverBet.stakeCents;
+      lastHydratedGlobalBetUpdatedAtMs =
+        serverBet.updatedAtMs;
+    } else if (
+      canHydrateBet &&
+      roundChanged &&
+      !serverBet &&
+      globalPhase === "betting"
+    ) {
+      betState =
+        clearRouletteBets(
+          betState,
+        );
+      serverReservedStakeCents = 0;
+    }
+
+    if (globalPhase === "betting") {
       bettingWindowClosed = false;
-      page.dataset.bettingLocked = "false";
+      canvas.dataset.rouletteState =
+        "ready";
+      setScenePhase("betting");
+      canvas.setAttribute(
+        "aria-label",
+        "Live European roulette wheel. Betting open.",
+      );
+    } else if (
+      globalPhase === "spinning"
+    ) {
+      bettingWindowClosed = true;
+      startGlobalSpin(
+        globalTableSnapshot,
+      );
+    } else if (
+      globalPhase === "result"
+    ) {
+      bettingWindowClosed = true;
+      renderGlobalResult(
+        bootstrap,
+      );
+    } else {
+      bettingWindowClosed = true;
+      setScenePhase("betting");
       betPanel.setAttribute(
         "aria-disabled",
-        "false",
+        "true",
       );
+    }
+
+    renderBetState();
+    renderPhaseTimer();
+    updateSpinAvailability();
+  };
+
+  const scheduleApiReadinessRetry = (
+    delayMs = 500,
+  ) => {
+    window.clearTimeout(
+      apiReadinessRetryTimer,
+    );
+
+    apiReadinessRetryTimer =
+      window.setTimeout(() => {
+        void bootstrapRouletteApi();
+      }, delayMs);
+  };
+
+  const bootstrapRouletteApi = async (
+    forceBetHydrate = false,
+  ) => {
+    if (stateRequestInFlight) {
+      return;
+    }
+
+    stateRequestInFlight = true;
+    const requestStartedAtMs =
+      Date.now();
+
+    try {
+      const bootstrap =
+        await rouletteWallet.bootstrap();
+      const responseReceivedAtMs =
+        Date.now();
+
+      applyGlobalBootstrap(
+        bootstrap,
+        requestStartedAtMs,
+        responseReceivedAtMs,
+        forceBetHydrate,
+      );
+    } catch (error) {
+      apiSimulationReady = false;
+      bettingWindowClosed = true;
+
       if (betStatus) {
         betStatus.textContent =
-          walletBalanceCents === null
-            ? "WAITING FOR WALLET"
-            : "INSUFFICIENT BALANCE";
+          "CONNECTING";
       }
+
+      console.error(
+        "[roulette] global state sync failed",
+        error,
+      );
       renderPhaseTimer();
+      updateSpinAvailability();
+    } finally {
+      stateRequestInFlight = false;
+
+      if (app.isConnected) {
+        scheduleApiReadinessRetry(
+          apiSimulationReady
+            ? 500
+            : 750,
+        );
+      }
+    }
+  };
+
+  const drainGlobalBetSync = async () => {
+    if (globalBetSyncInFlight) {
+      return;
+    }
+
+    globalBetSyncInFlight = true;
+
+    try {
+      while (
+        pendingGlobalBetSync
+      ) {
+        const job =
+          pendingGlobalBetSync;
+        pendingGlobalBetSync =
+          null;
+
+        try {
+          const response =
+            await rouletteWallet
+              .updateGlobalBet(
+                job.roundId,
+                job.bets,
+                `roulette_gbet_${job.version}_${crypto.randomUUID().replaceAll("-", "")}`,
+              );
+
+          if (
+            globalTableSnapshot
+              ?.roundId ===
+              job.roundId
+          ) {
+            walletBalanceCents =
+              response.balanceCents;
+            serverReservedStakeCents =
+              response.globalBet
+                ?.stakeCents ??
+              0;
+            lastHydratedGlobalBetUpdatedAtMs =
+              response.globalBet
+                ?.updatedAtMs ??
+              lastHydratedGlobalBetUpdatedAtMs;
+            renderWalletBalance();
+            renderBetState();
+          }
+        } catch (error) {
+          const message =
+            error instanceof Error
+              ? error.message
+              : "ROULETTE_GLOBAL_BET_FAILED";
+
+          if (betStatus) {
+            betStatus.textContent =
+              message ===
+                "INSUFFICIENT_ROULETTE_CREDITS"
+                ? "INSUFFICIENT BALANCE"
+                : message ===
+                      "ROULETTE_GLOBAL_BETTING_CLOSED"
+                  ? "NO MORE BETS"
+                  : "BET SYNC FAILED";
+          }
+
+          console.error(
+            "[roulette] global bet sync failed",
+            error,
+          );
+
+          await bootstrapRouletteApi(
+            true,
+          );
+          break;
+        }
+      }
+    } finally {
+      globalBetSyncInFlight =
+        false;
+
+      if (
+        pendingGlobalBetSync
+      ) {
+        void drainGlobalBetSync();
+      }
+    }
+  };
+
+  const queueGlobalBetSync = () => {
+    if (
+      !apiSimulationReady ||
+      !globalTableSnapshot ||
+      getRouletteGlobalClientPhase(
+        globalTableSnapshot,
+        getGlobalServerNow(),
+      ) !== "betting"
+    ) {
+      return;
+    }
+
+    globalBetMutationVersion += 1;
+    pendingGlobalBetSync = {
+      roundId:
+        globalTableSnapshot.roundId,
+      bets:
+        betState.placements.map(
+          (bet) => ({
+            ...bet,
+          }),
+        ),
+      version:
+        globalBetMutationVersion,
+    };
+
+    void drainGlobalBetSync();
+  };
+
+  const tickPhaseTimer = () => {
+    renderPhaseTimer();
+
+    if (
+      !apiSimulationReady ||
+      !globalTableSnapshot
+    ) {
+      return;
+    }
+
+    const globalPhase =
+      getRouletteGlobalClientPhase(
+        globalTableSnapshot,
+        getGlobalServerNow(),
+      );
+    const uiPhase =
+      page.dataset.phase as
+        RouletteScenePhase;
+
+    if (
+      globalPhase === "betting"
+    ) {
+      if (
+        uiPhase !== "betting" ||
+        bettingWindowClosed
+      ) {
+        void bootstrapRouletteApi(
+          true,
+        );
+      }
       return;
     }
 
     bettingWindowClosed = true;
-    page.dataset.bettingLocked = "true";
+    page.dataset.bettingLocked =
+      "true";
     betPanel.setAttribute(
       "aria-disabled",
       "true",
     );
-    if (betStatus) {
-      betStatus.textContent = "NO MORE BETS";
+
+    if (
+      globalPhase === "spinning" &&
+      (
+        uiPhase !== "spinning" ||
+        !globalTableSnapshot.seed
+      )
+    ) {
+      void bootstrapRouletteApi();
+      return;
     }
 
-    closeMobileHudMenus();
-    void startSpin("timer");
+    if (
+      globalPhase === "result" &&
+      uiPhase !== "settled"
+    ) {
+      void bootstrapRouletteApi();
+    }
   };
 
   const phaseTimerInterval =
     window.setInterval(() => {
       if (!app.isConnected) {
-        window.clearInterval(phaseTimerInterval);
+        window.clearInterval(
+          phaseTimerInterval,
+        );
+        window.clearTimeout(
+          apiReadinessRetryTimer,
+        );
         return;
       }
+
       tickPhaseTimer();
     }, 100);
 
@@ -1816,7 +2229,13 @@ export function mountRoulette(app: HTMLDivElement) {
       }
 
       if (
+        !apiSimulationReady ||
+        !globalTableSnapshot ||
         bettingWindowClosed ||
+        getRouletteGlobalClientPhase(
+          globalTableSnapshot,
+          getGlobalServerNow(),
+        ) !== "betting" ||
         !canEditRouletteBets(
           page.dataset.phase as
             RouletteScenePhase,
@@ -1876,13 +2295,13 @@ export function mountRoulette(app: HTMLDivElement) {
             return;
           }
 
-          automaticSpinBlocked = false;
           betState =
             placeRouletteBet(
               betState,
               betId,
             );
           renderBetState();
+          queueGlobalBetSync();
           setMobileChipMenuOpen(false);
         }
         return;
@@ -1893,12 +2312,12 @@ export function mountRoulette(app: HTMLDivElement) {
           "[data-undo-bet]",
         )
       ) {
-        automaticSpinBlocked = false;
         betState =
           undoRouletteBet(
             betState,
           );
         renderBetState();
+        queueGlobalBetSync();
         setMobileChipMenuOpen(false);
         return;
       }
@@ -1909,12 +2328,12 @@ export function mountRoulette(app: HTMLDivElement) {
         )
       ) {
         if (canDoubleCurrentBet()) {
-          automaticSpinBlocked = false;
           betState =
             doubleRouletteBets(
               betState,
             );
           renderBetState();
+          queueGlobalBetSync();
         }
         setMobileChipMenuOpen(false);
         return;
@@ -1925,12 +2344,12 @@ export function mountRoulette(app: HTMLDivElement) {
           "[data-clear-bets]",
         )
       ) {
-        automaticSpinBlocked = false;
         betState =
           clearRouletteBets(
             betState,
           );
         renderBetState();
+        queueGlobalBetSync();
         return;
       }
 
@@ -1949,12 +2368,12 @@ export function mountRoulette(app: HTMLDivElement) {
           return;
         }
 
-        automaticSpinBlocked = false;
         betState =
           rebetRouletteRound(
             betState,
           );
         renderBetState();
+        queueGlobalBetSync();
       }
     },
   );
@@ -2076,22 +2495,6 @@ export function mountRoulette(app: HTMLDivElement) {
       }
     },
   );
-
-  spinButton?.addEventListener(
-    "click",
-    () => {
-      void startSpin("manual");
-    },
-  );
-
-  canvas.addEventListener("click", () => {
-    void startSpin("manual");
-  });
-  canvas.addEventListener("keydown", (event) => {
-    if (event.key !== "Enter" && event.key !== " ") return;
-    event.preventDefault();
-    void startSpin("manual");
-  });
 
   window.addEventListener("resize", redraw, { passive: true });
 }
