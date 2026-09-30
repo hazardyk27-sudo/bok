@@ -476,4 +476,18 @@ describe("cadi kazan route smoke contract", () => {
     expect(visualLockSource).toContain("contain: layout paint !important");
   });
 
+
+  it("finishes Advanced 25 Part 1 with full BUST reveal, centered placement and a stake value badge", () => {
+    expect(witchClientSource).toContain('round.mode === "ADVANCED" && round.status === "BUST"');
+    expect(witchClientSource).toContain("allCells.forEach((index) => this.terminalRevealVisibleCells.add(index))");
+    expect(witchClientSource).toContain('data-witch-advanced-card-value');
+    expect(witchClientSource).toContain("advancedCardValue.textContent = formatTicketPrice(previewStakeCents)");
+    expect(witchClientSource).toContain("advancedCardValue.textContent = formatTicketPrice(round.stakeCents)");
+    expect(visualLockSource).toContain("PASS 37 — ADVANCED 25 Part 1: terminal reveal + centered table placement + card value");
+    expect(visualLockSource).toContain(".is-advanced-theme .witch-advanced-card-value");
+    expect(visualLockSource).toContain("justify-self: center !important");
+    expect(visualLockSource).toContain("align-self: center !important");
+    expect(visualLockSource).toContain("font-variant-numeric: tabular-nums !important");
+  });
+
 });
