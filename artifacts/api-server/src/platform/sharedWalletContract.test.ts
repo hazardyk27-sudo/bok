@@ -1,7 +1,7 @@
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
-import { chooseHighestBalanceSessionCandidate, chooseSessionIdForWalletMigration, getSessionCookieCandidates } from "./session";
+import { chooseHighestBalanceSessionCandidate, chooseSessionIdForWalletMigration, getLegacyScopedSessionPathForRequest, getSessionCookieCandidates } from "./session";
 
 function source(relativePath: string) {
   return readFileSync(
@@ -44,8 +44,20 @@ describe("canonical shared wallet contract", () => {
       "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
       "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb",
     ]);
-    expect(appSource).toContain("LEGACY_SCOPED_SESSION_PATHS");
+    expect(sessionSource).toContain("LEGACY_SCOPED_SESSION_PATHS");
     expect(appSource).toContain("resolveCanonicalWalletSessionCandidates");
+  });
+
+  it("clears a legacy scoped cookie only after that scope is actually requested", () => {
+    expect(getLegacyScopedSessionPathForRequest("/api/slot/session-converge"))
+      .toBe("/api/slot");
+    expect(getLegacyScopedSessionPathForRequest("/api/roulette/spins"))
+      .toBe("/api/roulette");
+    expect(getLegacyScopedSessionPathForRequest("/api/healthz"))
+      .toBeNull();
+    expect(appSource).toContain("getLegacyScopedSessionPathForRequest(req.path)");
+    expect(appSource).toContain("path: observedLegacyScope");
+    expect(appSource).not.toContain("for (const path of LEGACY_SCOPED_SESSION_PATHS)");
   });
 
   it("root-scopes every HTTP game_session cookie", () => {
