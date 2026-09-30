@@ -177,6 +177,22 @@ required_target_tables=(
   email_verification_tokens
 )
 
+required_target_only_tables=(
+  oyun_migration_receipts
+)
+
+missing_target_only=()
+for table in "${required_target_only_tables[@]}"; do
+  if [[ -z "${target_set[$table]:-}" ]]; then
+    missing_target_only+=("$table")
+  fi
+done
+
+if [[ "${#missing_target_only[@]}" -gt 0 ]]; then
+  echo "ABORT: Supabase target is missing platform cutover table(s): ${missing_target_only[*]}"
+  exit 4
+fi
+
 declare -A source_set=()
 for table in "${source_tables[@]}"; do
   source_set["$table"]=1
@@ -515,6 +531,53 @@ if [[ "$relation_issues" -ne 0 ]]; then
   echo "ABORT: critical relationship verification failed. DO NOT CUT OVER."
   exit 11
 fi
+
+source_manifest_sha256="$(sha256sum "$source_before" | awk '{print $1}')"
+source_total_rows="$(awk -F'|' '{ total += $2 } END { print total + 0 }' "$source_before")"
+source_table_count="${#source_tables[@]}"
+
+echo
+echo "=== WRITE VERIFIED CUTOVER RECEIPT ==="
+psql "$TARGET_DATABASE_URL" \
+  -v ON_ERROR_STOP=1 \
+  -qX \
+  -v source_host="$source_host" \
+  -v manifest_sha="$source_manifest_sha256" \
+  -v source_table_count="$source_table_count" \
+  -v source_total_rows="$source_total_rows" <<'SQL'
+insert into public.oyun_migration_receipts (
+  migration_kind,
+  source_host,
+  source_manifest_sha256,
+  source_table_count,
+  source_total_rows,
+  verification_status
+) values (
+  'helium_to_supabase_v1',
+  :'source_host',
+  :'manifest_sha',
+  :source_table_count,
+  :source_total_rows,
+  'VERIFIED'
+);
+SQL
+
+receipt_count="$(psqlq "$TARGET_DATABASE_URL" "
+  select count(*)
+  from public.oyun_migration_receipts
+  where migration_kind = 'helium_to_supabase_v1'
+    and verification_status = 'VERIFIED'
+    and source_manifest_sha256 = '$source_manifest_sha256';
+")"
+
+if [[ "$receipt_count" != "1" ]]; then
+  echo "ABORT: verified migration receipt could not be confirmed. DO NOT CUT OVER."
+  exit 14
+fi
+
+echo "VERIFIED_MIGRATION_RECEIPT: yes"
+echo "SOURCE_MANIFEST_SHA256: $source_manifest_sha256"
+echo "SOURCE_TOTAL_ROWS: $source_total_rows"
 
 echo
 echo "MIGRATION_OK"

@@ -1,5 +1,9 @@
 import { createServer } from "node:http";
-import { pool } from "@workspace/db";
+import {
+  assertDatabaseCutoverReady,
+  databaseRuntimeConfig,
+  pool,
+} from "@workspace/db";
 import app from "./app";
 import { logger } from "./lib/logger";
 import { attachBlackjackPlatformRuntime } from "./platform/blackjack";
@@ -19,6 +23,25 @@ if (Number.isNaN(port) || port <= 0) {
   throw new Error(`Invalid PORT value: "${rawPort}"`);
 }
 
+const databaseReadiness = await assertDatabaseCutoverReady();
+
+logger.info(
+  {
+    databaseTarget: databaseReadiness.target,
+    databaseHost: databaseReadiness.hostname,
+    migrationReceipt: databaseReadiness.receipt
+      ? {
+          verifiedAt: databaseReadiness.receipt.verifiedAt,
+          sourceTableCount: databaseReadiness.receipt.sourceTableCount,
+          sourceTotalRows: databaseReadiness.receipt.sourceTotalRows,
+          sourceManifestSha256:
+            databaseReadiness.receipt.sourceManifestSha256,
+        }
+      : null,
+  },
+  "Database runtime target verified",
+);
+
 const server = createServer(app);
 let blackjackRuntime: Awaited<
   ReturnType<typeof attachBlackjackPlatformRuntime>
@@ -31,6 +54,7 @@ server.listen(port, () => {
       port,
       blackjack: "STARTING",
       walletInitialization: "STARTING",
+      databaseTarget: databaseRuntimeConfig.target,
     },
     "Server listening",
   );

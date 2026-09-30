@@ -134,6 +134,8 @@ Runtime DB selection is explicit:
 - default/runtime authority: `DATABASE_URL`
 - Supabase target: `SUPABASE_DATABASE_URL`
 - runtime switches to Supabase only when `USE_SUPABASE_DATABASE=true`
+- when the flag is false, `DATABASE_URL` is mandatory; `SUPABASE_DATABASE_URL` must never be used as an implicit fallback
+- when the flag is true, the API must find a valid `VERIFIED` `helium_to_supabase_v1` row in `oyun_migration_receipts` before opening its HTTP listener
 
 Both runtime Drizzle and schema tooling must follow the same selection rule.
 
@@ -275,7 +277,8 @@ Shared/platform milestones live only in this master file and are updated only by
 
 ## 13. Current shared/platform state
 
-- 2026-09-30 — Supabase schema parity + verified migration pipeline ready — BOKGAME target now has the complete 24-table application schema with Slot money columns widened to BIGINT; migration tooling requires the same 24-table contract on Helium, supports database-level source write freeze/status/unfreeze, refuses copy unless source is truly read-only, restores atomically, and verifies source stability, per-table counts/content checksums, sequences and critical wallet/user/ledger relationships before cutover. Next: run Replit preflight, freeze Helium, copy+verify, then enable Supabase runtime only after MIGRATION_OK.
+- 2026-09-30 — Supabase fail-closed cutover guard prepared — BOKGAME has 24 application tables plus the platform-only `oyun_migration_receipts` guard table. A successful frozen Helium copy writes a `VERIFIED` receipt only after count/checksum/sequence/relation verification; Supabase-mode API startup refuses to listen without that receipt, and the DB module no longer permits an implicit `SUPABASE_DATABASE_URL` fallback while the cutover flag is false. Next: sync to Replit, run preflight → freeze → copy, confirm `MIGRATION_OK` + receipt, then enable `USE_SUPABASE_DATABASE=true` and run cross-game smoke.
+- 2026-09-30 — Supabase schema parity + verified migration pipeline ready — BOKGAME target has the complete 24-table application schema with Slot money columns widened to BIGINT; migration tooling requires the same 24-table contract on Helium, supports database-level source write freeze/status/unfreeze, refuses copy unless source is truly read-only, restores atomically, and verifies source stability, per-table counts/content checksums, sequences and critical wallet/user/ledger relationships before cutover.
 
 - 2026-09-30 — Account/Profile v1 — Account/Auth is wired into the shared product: `/account` and `/api/auth/*` are live integration surfaces, registration uses email + unique username + password without email verification, DB-sequenced usercodes render as `0000-0000-01`, authenticated identity is bound to the canonical `game_session` / `shared_wallets` wallet, login accepts email or username, profile shows shared balance/email/username/usercode, password change revokes other auth sessions, logout detaches the browser to a fresh guest wallet, and Hub renders a fifth Profile card from server-authoritative `/api/auth/me` state.
 
