@@ -329,4 +329,12 @@ describe("cadi kazan route smoke contract", () => {
     expect(visualLockSource).toContain("aspect-ratio: var(--advanced-card-ratio) !important");
   });
 
+
+  it("keeps Advanced 25 result assets inside the Cadı Kazan ownership root", () => {
+    expect(scratchPresentationSource).toContain('new URL("../advanced/assets/advanced25-paw.webp", import.meta.url).href');
+    expect(scratchPresentationSource).toContain('new URL("../advanced/assets/advanced25-skull.webp", import.meta.url).href');
+    expect(scratchPresentationSource).not.toContain('"/cadi-kazan/advanced25-paw.webp"');
+    expect(scratchPresentationSource).not.toContain('"/cadi-kazan/advanced25-skull.webp"');
+  });
+
 });

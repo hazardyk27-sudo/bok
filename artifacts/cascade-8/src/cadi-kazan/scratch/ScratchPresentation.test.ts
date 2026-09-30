@@ -43,14 +43,14 @@ describe("scratch result presentation", () => {
       symbol: "",
       label: "KEDİ KAFATASI · BOMBA",
       resultClass: "bomb",
-      artworkUrl: "/cadi-kazan/advanced25-skull.webp",
+      artworkUrl: expect.stringContaining("advanced25-skull.webp"),
       artworkAlt: "Kedi kafatası",
     });
     expect(getScratchCellPresentation("ADVANCED", true, false)).toEqual({
       symbol: "",
       label: "ALTIN PATİ",
       resultClass: "safe",
-      artworkUrl: "/cadi-kazan/advanced25-paw.webp",
+      artworkUrl: expect.stringContaining("advanced25-paw.webp"),
       artworkAlt: "Altın pati",
     });
   });
