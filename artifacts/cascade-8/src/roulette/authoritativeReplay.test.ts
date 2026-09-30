@@ -7,6 +7,7 @@ import {
   createVerifiedRouletteReplay,
 } from "./authoritativeReplay";
 import {
+  ROULETTE_SIMULATION_VERSION,
   simulateSeededRouletteSpin,
 } from "./spinResult";
 import type {
@@ -28,6 +29,8 @@ function responseForSeed(
   return {
     roundId: "round-test",
     seed,
+    simulationVersion:
+      ROULETTE_SIMULATION_VERSION,
     result: simulation.result,
     settlement: {
       winningNumber:
@@ -62,53 +65,20 @@ describe("authoritative roulette replay", () => {
     );
   });
 
-  it("aligns a hot-reload seed-mapping mismatch to the authoritative server pocket", () => {
+  it("rejects a server running a different simulation version", () => {
     const response =
       responseForSeed(
-        "roulette-hot-reload-client",
-      );
-    const candidates = [
-      "roulette-hot-reload-server-a",
-      "roulette-hot-reload-server-b",
-      "roulette-hot-reload-server-c",
-      "roulette-hot-reload-server-d",
-    ];
-
-    const differentResult =
-      candidates
-        .map((seed) =>
-          simulateSeededRouletteSpin(
-            seed,
-          ).result,
-        )
-        .find(
-          (result) =>
-            result !== null &&
-            result.pocketIndex !==
-              response.result.pocketIndex,
-        );
-
-    expect(
-      differentResult,
-    ).not.toBeNull();
-
-    const authoritativeResponse = {
-      ...response,
-      result:
-        differentResult!,
-      settlement: {
-        ...response.settlement,
-        winningNumber:
-          differentResult!.number,
-      },
-    };
-    const replay =
-      createVerifiedRouletteReplay(
-        authoritativeResponse,
+        "roulette-version-skew",
       );
 
-    expect(replay.result).toEqual(
-      authoritativeResponse.result,
+    expect(() =>
+      createVerifiedRouletteReplay({
+        ...response,
+        simulationVersion:
+          "roulette-stale-version",
+      }),
+    ).toThrow(
+      "ROULETTE_SIMULATION_VERSION_MISMATCH",
     );
   });
 

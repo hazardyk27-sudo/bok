@@ -21,6 +21,9 @@ import {
 
 const TAU = Math.PI * 2;
 
+export const ROULETTE_SIMULATION_VERSION =
+  "roulette-full-turn-v2";
+
 export const ROULETTE_SEED_ENVELOPE = {
   rotorCenterAngle: 0.37,
   rotorAngleSpan: TAU,

@@ -13,6 +13,7 @@ export type RouletteWallet = {
 export type RouletteServerSpinResponse = {
   roundId: string;
   seed: string;
+  simulationVersion: string;
   result: RouletteWinningResult;
   settlement: RouletteRoundSettlement;
   wallet: RouletteWallet;
