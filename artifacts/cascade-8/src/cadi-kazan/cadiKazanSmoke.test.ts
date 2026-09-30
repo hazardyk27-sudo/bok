@@ -341,4 +341,17 @@ describe("cadi kazan route smoke contract", () => {
     expect(scratchPresentationSource).not.toContain('"/cadi-kazan/advanced25-skull.webp"');
   });
 
+
+  it("keeps payout beside the card by sharing the BCS desktop parent grid across every card", () => {
+    expect(visualLockSource).toContain("PASS 30 — canonical desktop stage geometry");
+    expect(visualLockSource).toContain(':is(.is-standard-theme, .is-advanced-theme, .is-office-theme) .witch-stage-shell');
+    expect(visualLockSource).toContain('grid-template-areas: "table payout" !important');
+    expect(visualLockSource).toContain('grid-template-columns: minmax(0, 1fr) 230px !important');
+    expect(visualLockSource).toContain(':is(.is-standard-theme, .is-advanced-theme, .is-office-theme) .witch-table-surface');
+    expect(visualLockSource).toContain('position: relative !important');
+    expect(visualLockSource).toContain(':is(.is-standard-theme, .is-advanced-theme, .is-office-theme) .witch-payout-panel');
+    expect(visualLockSource).toContain('width: 230px !important');
+    expect(visualLockSource).toContain(':is(.is-advanced-theme, .is-office-theme) .witch-ticket-header');
+  });
+
 });

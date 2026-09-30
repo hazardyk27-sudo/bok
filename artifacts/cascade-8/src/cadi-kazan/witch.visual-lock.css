@@ -5545,3 +5545,104 @@
     overscroll-behavior: contain !important;
   }
 }
+
+
+/* PASS 30 — canonical desktop stage geometry.
+   Part 1 unified the payout card itself but left the BCS parent two-column grid
+   scoped only to STANDARD. That made Office/Advanced payout panels fall into
+   normal document flow and stretch across the table. All three cards now share
+   the exact same desktop stage/table/payout geometry; card themes only change
+   colors and ticket artwork. */
+@media (min-width: 821px) {
+  :is(.is-standard-theme, .is-advanced-theme, .is-office-theme) .witch-stage-shell {
+    position: relative !important;
+    z-index: 1 !important;
+    display: grid !important;
+    grid-template-columns: minmax(0, 1fr) clamp(248px, 16.7vw, 320px) !important;
+    grid-template-rows: minmax(0, 1fr) !important;
+    grid-template-areas: "table payout" !important;
+    gap: clamp(20px, 1.7vw, 34px) !important;
+    align-items: center !important;
+    width: 100% !important;
+    height: 100% !important;
+    min-width: 0 !important;
+    min-height: 0 !important;
+    margin: 0 !important;
+    padding:
+      clamp(34px, 4.4vh, 58px)
+      clamp(42px, 4.4vw, 84px)
+      clamp(26px, 3.2vh, 42px)
+      clamp(76px, 6.2vw, 118px) !important;
+    overflow: hidden !important;
+  }
+
+  :is(.is-standard-theme, .is-advanced-theme, .is-office-theme) .witch-table-surface {
+    grid-area: table !important;
+    position: relative !important;
+    z-index: 3 !important;
+    inset: auto !important;
+    top: auto !important;
+    right: auto !important;
+    bottom: auto !important;
+    left: auto !important;
+    display: grid !important;
+    width: 100% !important;
+    height: 100% !important;
+    min-width: 0 !important;
+    min-height: 0 !important;
+    place-items: center !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    overflow: visible !important;
+  }
+
+  :is(.is-standard-theme, .is-advanced-theme, .is-office-theme) .witch-payout-panel {
+    grid-area: payout !important;
+    position: relative !important;
+    z-index: 4 !important;
+    inset: auto !important;
+    top: auto !important;
+    right: auto !important;
+    bottom: auto !important;
+    left: auto !important;
+    justify-self: stretch !important;
+    align-self: center !important;
+    width: 100% !important;
+    min-width: 0 !important;
+    margin: 0 !important;
+  }
+
+  /* Master-image cards must not leak any generic ticket chrome over the PNG. */
+  :is(.is-advanced-theme, .is-office-theme) .witch-ticket-frame,
+  :is(.is-advanced-theme, .is-office-theme) .witch-standard-price-badge,
+  :is(.is-advanced-theme, .is-office-theme) .witch-bcs-card-art,
+  :is(.is-advanced-theme, .is-office-theme) .witch-ticket-header,
+  :is(.is-advanced-theme, .is-office-theme) .witch-ticket-meta-row,
+  :is(.is-advanced-theme, .is-office-theme) .witch-ticket-footer {
+    display: none !important;
+  }
+}
+
+@media (min-width: 821px) and (max-width: 1499px) {
+  :is(.is-standard-theme, .is-advanced-theme, .is-office-theme) .witch-stage-shell {
+    grid-template-columns: minmax(0, 1fr) 230px !important;
+    gap: 18px !important;
+    padding: 24px 28px 28px 54px !important;
+  }
+
+  :is(.is-standard-theme, .is-advanced-theme, .is-office-theme) .witch-payout-panel {
+    width: 230px !important;
+    max-width: 230px !important;
+    justify-self: end !important;
+  }
+
+  .is-office-theme .witch-ticket {
+    width: min(100%, 900px) !important;
+    max-width: 900px !important;
+  }
+
+  .is-advanced-theme .witch-ticket {
+    width: min(100%, 940px) !important;
+    max-width: 940px !important;
+  }
+}
