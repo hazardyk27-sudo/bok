@@ -128,6 +128,16 @@ describe("Part 26 premium Stadium control surface", () => {
     expect(css).toContain("min-height: 100dvh");
   });
 
+  it("keeps tablet and desktop pages vertically scrollable", () => {
+    expect(css).toContain("tablet + desktop scroll safety");
+    expect(css).toContain("@media (min-width: 761px)");
+    expect(css).toContain("overflow-y: auto !important");
+    expect(css).toContain("height: auto !important");
+    expect(css).toContain("max-height: none !important");
+    expect(css).toContain("touch-action: pan-y !important");
+  });
+
+
   it("keeps the Stadium subject fully framed on wide 16:9 desktop views", () => {
     expect(css).toContain("desktop 16:9 hero framing");
     expect(css).toContain(
