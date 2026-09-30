@@ -277,6 +277,9 @@ Shared/platform milestones live only in this master file and are updated only by
 
 ## 13. Current shared/platform state
 
+- 2026-10-01 — Replit routine sync DB safety — `scripts/post-merge.sh` no longer runs Drizzle schema push during ordinary preview refreshes. Routine sync now installs dependencies and skips DB mutation; schema push requires explicit `OYUN_RUN_DB_PUSH=1` during a separate controlled database maintenance step, preventing non-TTY prompts or destructive-table suggestions from blocking code delivery.
+
+
 - 2026-09-30 — Supabase fail-closed cutover guard prepared — BOKGAME has 24 application tables plus the platform-only `oyun_migration_receipts` guard table. A successful frozen Helium copy writes a `VERIFIED` receipt only after count/checksum/sequence/relation verification; Supabase-mode API startup refuses to listen without that receipt, and the DB module no longer permits an implicit `SUPABASE_DATABASE_URL` fallback while the cutover flag is false. Next: sync to Replit, run preflight → freeze → copy, confirm `MIGRATION_OK` + receipt, then enable `USE_SUPABASE_DATABASE=true` and run cross-game smoke.
 - 2026-09-30 — Supabase schema parity + verified migration pipeline ready — BOKGAME target has the complete 24-table application schema with Slot money columns widened to BIGINT; migration tooling requires the same 24-table contract on Helium, supports database-level source write freeze/status/unfreeze, refuses copy unless source is truly read-only, restores atomically, and verifies source stability, per-table counts/content checksums, sequences and critical wallet/user/ledger relationships before cutover.
 
