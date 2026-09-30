@@ -4727,3 +4727,232 @@ button {
     line-height: 1;
   }
 }
+
+
+/* Part 14 — restore approved wheel scale and separate result overlays */
+@media (max-width: 900px) and (orientation: portrait) {
+  /*
+   * Do not rescale the roulette artwork from generic viewport equations.
+   * These are the approved pre-Part-12 wheel sizes; wheelRenderer typography
+   * and numbered-ring sizing remain untouched.
+   */
+  .roulette-page {
+    --mobile-safe-top:
+      max(6px, env(safe-area-inset-top));
+    --top-hud-height:
+      clamp(38px, 5dvh, 42px);
+    --history-height:
+      clamp(18px, 2.8dvh, 22px);
+    --wheel-size:
+      min(76vw, 286px);
+    --mobile-chrome-bottom:
+      calc(
+        var(--mobile-safe-top) +
+        var(--top-hud-height) +
+        var(--mobile-chrome-gap) +
+        var(--history-height) +
+        var(--mobile-chrome-gap)
+      );
+  }
+
+  .roulette-top-hud {
+    top: var(--mobile-safe-top) !important;
+    height: var(--top-hud-height) !important;
+  }
+
+  .roulette-recent-strip {
+    top:
+      calc(
+        var(--mobile-safe-top) +
+        var(--top-hud-height) +
+        var(--mobile-chrome-gap)
+      ) !important;
+  }
+
+  .roulette-page[data-phase="spinning"] {
+    --wheel-size:
+      min(94vw, 418px);
+  }
+
+  .roulette-page[data-phase="settled"] {
+    --wheel-size:
+      min(93vw, 410px);
+  }
+
+  /*
+   * Winning-number banner occupies the upper wheel band.
+   * The payout panel owns a separate lower band, so their boxes cannot touch.
+   */
+  .roulette-result-banner {
+    top:
+      clamp(48px, 13%, 62px) !important;
+  }
+
+  .roulette-win-message {
+    top: 56% !important;
+  }
+
+  .roulette-page[data-result-visible="true"][data-result-has-payout="true"]
+    .roulette-win-message {
+    transform:
+      translate(-50%, -50%)
+      scale(1);
+  }
+
+  /*
+   * Table positioning may remain responsive, but it measures from the restored
+   * wheel size rather than changing the wheel itself.
+   */
+  .roulette-page[data-phase="spinning"],
+  .roulette-page[data-phase="settled"] {
+    --spin-table-gap:
+      clamp(10px, 2.8vw, 14px);
+    --table-top:
+      calc(
+        var(--mobile-chrome-bottom) +
+        var(--wheel-size) +
+        var(--spin-table-gap)
+      );
+    --table-width:
+      min(
+        66vw,
+        268px,
+        calc(
+          (
+            100dvh -
+            var(--table-top) -
+            var(--mobile-safe-bottom) -
+            4px
+          ) / var(--table-ratio)
+        )
+      );
+  }
+
+  .roulette-page[data-phase="settled"] {
+    --table-width:
+      min(
+        65vw,
+        264px,
+        calc(
+          (
+            100dvh -
+            var(--table-top) -
+            var(--mobile-safe-bottom) -
+            4px
+          ) / var(--table-ratio)
+        )
+      );
+  }
+}
+
+@media (max-width: 900px) and (orientation: portrait) and (max-height: 700px) {
+  .roulette-page {
+    --top-hud-height: 38px;
+    --wheel-size:
+      min(74vw, 266px);
+  }
+
+  .roulette-page[data-phase="spinning"] {
+    --wheel-size:
+      min(84vw, 324px);
+    --spin-table-gap: 10px;
+    --table-width:
+      min(
+        54vw,
+        204px,
+        calc(
+          (
+            100dvh -
+            var(--table-top) -
+            var(--mobile-safe-bottom) -
+            4px
+          ) / var(--table-ratio)
+        )
+      );
+  }
+
+  .roulette-page[data-phase="settled"] {
+    --wheel-size:
+      min(83vw, 318px);
+    --spin-table-gap: 10px;
+    --table-width:
+      min(
+        53vw,
+        200px,
+        calc(
+          (
+            100dvh -
+            var(--table-top) -
+            var(--mobile-safe-bottom) -
+            4px
+          ) / var(--table-ratio)
+        )
+      );
+  }
+
+  .roulette-result-banner {
+    top:
+      clamp(44px, 13.5%, 54px) !important;
+  }
+
+  .roulette-win-message {
+    top: 57% !important;
+  }
+}
+
+@media (max-width: 900px) and (orientation: portrait) and (max-height: 590px) {
+  .roulette-page {
+    --mobile-safe-top:
+      max(5px, env(safe-area-inset-top));
+    --top-hud-height: 36px;
+    --history-height: 18px;
+    --wheel-size:
+      min(70vw, 236px);
+  }
+
+  .roulette-page[data-phase="spinning"] {
+    --wheel-size:
+      min(80vw, 292px);
+    --spin-table-gap: 8px;
+    --table-width:
+      min(
+        50vw,
+        182px,
+        calc(
+          (
+            100dvh -
+            var(--table-top) -
+            var(--mobile-safe-bottom) -
+            3px
+          ) / var(--table-ratio)
+        )
+      );
+  }
+
+  .roulette-page[data-phase="settled"] {
+    --wheel-size:
+      min(79vw, 286px);
+    --spin-table-gap: 8px;
+    --table-width:
+      min(
+        50vw,
+        180px,
+        calc(
+          (
+            100dvh -
+            var(--table-top) -
+            var(--mobile-safe-bottom) -
+            3px
+          ) / var(--table-ratio)
+        )
+      );
+  }
+
+  .roulette-result-banner {
+    top: 40px !important;
+  }
+
+  .roulette-win-message {
+    top: 58% !important;
+  }
+}
