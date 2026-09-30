@@ -1,119 +1,293 @@
-# OYUN repository operating rules
+# OYUN — MASTER AGENT HANDBOOK
 
-This repository contains multiple games that must be developed and released independently.
+This is the single authoritative project-wide instruction file for OYUN.
 
+**Canonical copy:** `integration/replit-preview:AGENTS.md`
 
-## Conversation/session initialization
-- On the first OYUN/repository task in a new conversation, read and understand the root `AGENTS.md`, the relevant game/category `AGENTS.md` including `Current milestones`, and that category's ownership entry once.
-- Keep those rules in the conversation context. Do **not** re-open or re-read the same instruction files for every later user command in the same conversation.
-- Read `GAME_DELIVERY_PROTOCOL.md` and `GIT_WORKFLOW_RULES.md` only when the conversation first reaches commit/push/promotion/Replit work; after that, keep them in context and do not re-read them for each delivery step.
-- Re-read instructions only when there is a concrete reason: the user says rules/milestones changed, the conversation switches to another game/category/repository, the active branch/context changes, or a tool reports stale/conflicting state that requires refreshing the source.
-- After session initialization, simple questions, explanations, design discussions, and small follow-up instructions should be answered directly without repo reads unless current repository state is genuinely needed.
+A feature branch may contain an older root copy because shared files are deliberately not merged back into every feature branch. Therefore, at the start of every new OYUN conversation, read this file from `integration/replit-preview`, then read exactly one relevant game/category `AGENTS.md` from that category's feature branch.
 
-## Permanent branch model
-- Slot work: `feature/slot`
-- Cadı Kazan work: `feature/cadi-kazan`
-- Idle / İşletmeler work: `feature/idle`
-- Hub/site work: `feature/hub`
-- Account/auth work: `feature/account`
-- Blackjack work: `feature/blackjack`
-- Roulette 2D work: `feature/roulette-2d`
-- Shared Replit preview: `integration/replit-preview`
-- Replit must stay on `integration/replit-preview`.
+Do not treat `GAME_DELIVERY_PROTOCOL.md`, `GIT_WORKFLOW_RULES.md`, `OYUN_PROJECT_MEMORY.md`, or `.agents/memory/**` as mandatory instruction sources. Project-wide operating rules live here. Historical/memory files are reference material only.
 
-## Isolation rules
-1. A game task may only modify files owned by that game in `.github/game-ownership.json`.
-2. Never modify another game's owned files.
-3. Shared/platform files are not part of a normal game update. If a shared file must change, stop and treat it as a separate platform change.
-4. Committing to a feature branch does NOT publish to Replit.
-5. Promotion to preview must use the game promotion workflow; do not merge an entire feature branch into the preview branch.
-6. Promotion must preserve every non-target game's tree exactly.
-7. No reset --hard, rebase, force-push, or branch switching in Replit.
-8. Do not make design or behavior changes while performing structural isolation/refactors.
-9. During refactors or infrastructure work, preserve the current working game's design and behavior unless the user explicitly asks for a behavior/design change.
-10. If ownership is unclear, stop instead of touching a shared or foreign file.
+## 1. Startup contract
 
-## Goal
-Routine Slot updates must have zero file changes in Cadı Kazan, Idle, Hub, Account/Auth, Blackjack and Roulette. The same isolation rule applies symmetrically to every game/category.
+For a normal game conversation, the startup sequence is:
 
+1. Read `integration/replit-preview:AGENTS.md` once.
+2. Read the relevant game/category `AGENTS.md` once, including its `Current milestones`.
+3. Keep both in conversation context. Do not re-read them on every command.
+4. Before the first code write, verify the target branch and check the relevant ownership entry in `.github/game-ownership.json`.
+5. Re-read only if the user says rules/milestones changed, the category/repository changes, or a real branch/state conflict requires refresh.
 
-## Release workflow
-Isolation layout v2 is active. Game agents only develop and commit inside their declared ownership. The central integration/release flow selects a game and source commit and promotes only that game's owned roots to `integration/replit-preview`. Do not manually merge a full feature branch into preview.
+Do **not** read other games' `AGENTS.md` files unless the task is explicitly a cross-game/platform audit.
 
-## Shared wallet/session invariant
-- There is exactly one spendable wallet authority for the whole product: `shared_wallets`.
-- There is exactly one live anonymous game-session identity: the `game_session` cookie. Slot, Roulette, Cadı Kazan, Idle/İşletmeler, Blackjack and future games must all read and mutate the same `shared_wallets` row for that same session.
-- The canonical `game_session` cookie must always be issued with `Path=/`. Game/API-specific path-scoped `game_session` cookies are forbidden because they create shadow identities and split the shared wallet. Legacy scoped copies must be detected, resolved against shared wallet state, and cleared during migration.
-- Legacy path-scoped game sessions are not all visible on a single game request. During the one-time browser migration, the shared bootstrap must sequentially probe every historical `/api/<game>` cookie scope before mounting the selected game, then converge to one root `game_session`. When fragmented session wallets are discovered, preserve the highest existing balance as canonical and never sum balances, so migration avoids both credit loss and double-crediting. Never clear all legacy scoped cookies on the first request: each scoped cookie may be cleared only after a request to that scope has exposed it to the convergence middleware.
-- Game-specific wallet tables or per-game starting balances are forbidden. Per-game ledger/round tables are allowed only as audit/history and must never become an independent balance authority.
-- `roulette_wallets` and `roulette_session` are legacy migration inputs only. Runtime gameplay must not read, debit, credit or recreate them as live wallet authority.
-- Legacy migration must be one-time and idempotent. When the same browser exposes fragmented server-issued session identities, convergence must preserve the highest existing server-side `shared_wallets` balance and must never sum balances. After convergence finishes, the root-scoped canonical session is the only live authority.
-- Money columns that can contain stakes, payouts, wallet balances or ledger deltas must use BIGINT-safe storage. Do not introduce 32-bit integer casts on monetary settlement paths.
-- Wallet/session changes are shared/platform work owned by the central integration flow. They require cross-game regression coverage proving every game points to `shared_wallets` and `game_session`.
+## 2. What OYUN is
 
-### Dependency-scoped release gates
-- A normal one-game promotion is blocked by: ownership/isolation checks, production artifact builds, shared platform contracts, and the selected game's owned regression surface.
-- Unchanged foreign-game regressions are not promotion blockers. After a successful preview push, all games run again as advisory integration regressions so failures stay visible without forcing an unrelated promotion retry.
-- Shared/platform or multi-game preview changes use the broader blocking gate: full workspace typecheck plus cross-game shared/platform smoke in addition to the critical artifact/platform gate.
-- Shared wallet, session identity, API routing/startup, schema aggregation and deployable artifact builds are always critical contracts. A break in these blocks every promotion because it can corrupt or disable multiple games.
-- Keep feature branches isolated. Compatibility with the latest preview is proven by overlaying the immutable feature SHA onto the current preview during promotion; do not routinely merge preview back into feature branches just to reduce drift.
+OYUN is one multi-game web product with a shared site shell, shared anonymous session identity, shared virtual-credit wallet, one web artifact, and one API artifact.
 
+Current product areas:
+- Hub / main game selector: `/`
+- Slot / Cascade 8: `/slot`
+- Cadı Kazan / scratch cards: `/cadi-kazan`
+- Idle / İşletmeler: `/businesses`
+- Blackjack: `/blackjack`
+- Roulette 2D: `/roulette`
+- Account/Auth: shared account subsystem, not an independent game route
 
-## Agent operating discipline
-1. Before coding, verify the active branch matches the task and inspect working-tree status. If unrelated uncommitted changes exist, do not overwrite or absorb them.
-2. Before editing, check the intended files against `.github/game-ownership.json`. Normal game work stays inside that game's owned/development roots.
-3. Use mini-parts to prevent timeouts, not to create tiny busywork. One mini-part should be one coherent, meaningful checkpoint and may touch several tightly related owned files plus its relevant test. Do not split trivial adjacent edits into separate parts, and do not combine unrelated objectives or long exploratory work into one part.
-4. Search narrowly first: inspect the target game's owned area and the smallest relevant code/log slice. Widen only when evidence requires it. Avoid dumping entire files, giant logs, or broad repository scans when targeted inspection is enough.
-5. If the correct fix requires a shared/platform or foreign-game file, stop and hand that dependency to the central integration flow. Do not hide the dependency with a workaround, duplicate hack, or cross-game import.
-6. Before each game commit, run the relevant targeted test/check and inspect the diff/file list. A normal game commit must contain only that game's allowed paths.
-7. Refactors, test work, isolation work, performance work, and backend work must not silently redesign UI, game rules, payouts, physics, or user-visible behavior.
-8. GitHub Actions is a verification/release gate, not the default execution environment. Routine code edits, file writes, local/owned simulations, targeted tests, and ordinary feature-branch commits/pushes do **not** require a GitHub Actions run unless a workflow-only environment is genuinely required.
-9. Do not dispatch GitHub Actions merely to prove that code was written or to run a test/simulation that can be executed directly in the working environment. Use Actions for preview promotion/release, explicitly requested CI verification, or checks that cannot be performed locally/directly.
-10. Do not busy-poll GitHub Actions in fixed short loops (for example every 30 seconds). If a workflow is actually required, make only the minimum status checks needed to determine its result or unblock the next gated step; avoid repeated waiting/checking cycles that keep the user blocked.
-11. Treat GitHub CI (GitHub Actions runners) as independent verification, not as the place to do ordinary development work. Prefer direct/local execution for simulations, unit tests, typechecks, builds, and other checks whenever the current working environment can run them reliably. Use CI mainly for final/independent verification, release/promotion gates, or checks that genuinely require the GitHub runner environment.
+The product is virtual-credit only. Do not add real-money deposits, withdrawals, cash-out processors, or payment rails unless the user explicitly changes the product scope.
 
+## 3. Repository and branch model
 
-## Preview / Replit protocol
-- A preview request follows this order: finish and commit the game change on its feature branch; promote only that game's owned roots to `integration/replit-preview` through the one-game promotion flow; then refresh Replit's existing integration branch.
-- Do not connect to Replit first and do not ask Replit Agent routine status/debugging questions.
-- For the normal Replit refresh, give the user a short shell command using `scripts/replit-sync-preview.sh`. When promotion produced a preview SHA, pass that exact SHA so the helper can prove the promoted commit is contained in Replit HEAD.
-- State the exact success criteria with the snippet: branch must print `integration/replit-preview`; ahead/behind must print `0 0`; working-tree status must print nothing; and when an expected preview SHA was supplied, `EXPECTED_PRESENT` must print `yes`.
-- Never use reset --hard, rebase, force-push, or feature-branch switching in Replit.
-- Replit must keep the local read-only Git guard active. It blocks local commits and pushes plus direct updates of the preview branch ref; only `scripts/replit-sync-preview.sh` may authorize a verified fast-forward.
-- Query Replit only when the user's shell output shows an error, wrong branch, non-clean tree, non-fast-forward/ahead-behind problem, or when the user explicitly asks for Replit-side diagnosis.
-- The Replit API development runtime must auto-rebuild/restart when API, game-engine, or shared DB source changes after a preview fast-forward. A successful Git sync alone must never be treated as proof that an already-running API process loaded the new backend code. When introducing/changing the watcher itself, restart the API workflow once so the watcher becomes active.
+Permanent development branches:
+- Slot: `feature/slot`
+- Cadı Kazan: `feature/cadi-kazan`
+- Idle / İşletmeler: `feature/idle`
+- Hub/site: `feature/hub`
+- Account/Auth: `feature/account`
+- Blackjack: `feature/blackjack`
+- Roulette 2D: `feature/roulette-2d`
 
+Shared preview branch:
+- `integration/replit-preview`
 
-## General game delivery protocol
-This protocol is mandatory for every game/category. Before commit, promotion, or Replit work, read `GAME_DELIVERY_PROTOCOL.md`.
+Replit must stay on `integration/replit-preview`.
 
-The repository has three separate lanes:
-1. **Development lane** — work and commits stay on the category's `feature/*` branch. Default rule: one active writer per feature branch. If the remote feature HEAD changes unexpectedly during a task, stop, fetch, inspect the new commits, and reconcile deliberately; never blind-merge, overwrite, or force-push. Parallel writers for the same game must use separate temporary task branches.
-2. **Promotion lane** — routine game releases reach `integration/replit-preview` only through the serialized one-game promotion workflow, using an immutable source commit SHA. Game agents and Replit must never manually merge/push routine game commits into the integration branch.
-3. **Replit lane** — Replit is a read-only consumer of `integration/replit-preview`. Replit never creates product commits and never pushes to GitHub. Normal refresh is fetch + fast-forward only through `scripts/replit-sync-preview.sh`.
+Normal game work happens only on that game's feature branch and inside that game's roots declared in `.github/game-ownership.json`. A game agent never edits another game's roots. Shared platform files are handled by the central integration flow.
 
-Race handling is fail-safe: if a feature branch or preview branch moves while an operation is in progress, abort/re-run from the newest verified HEAD instead of automatically merging unrelated work. A successful preview sync must prove both that Replit matches the current remote preview and, when an expected promoted preview SHA is supplied, that this SHA is an ancestor of the running HEAD.
+Examples of shared/platform ownership:
+- root router / app shell
+- shared styles/build/workspace configuration
+- API router/startup
+- wallet/session platform code
+- shared wallet schema
+- schema aggregator
+- promotion/CI/Replit infrastructure
 
+If a game fix requires a shared or foreign file, do not hide the dependency with duplicate code. Hand it to central integration.
 
-## Milestone continuity
-- At the start of a new conversation, read the closest owned `AGENTS.md` and its `Current milestones` once before substantial work; do not re-read them on each later task in the same conversation.
-- Record a milestone only when it materially changes what the next agent needs to know: a durable architecture/behavior decision, a completed phase, a validated baseline, a significant blocker/root cause, or the next agreed checkpoint.
-- Game agents update milestones only in their own game/category `AGENTS.md`. Shared/platform/integration milestones are maintained only by the central integration flow in this root `AGENTS.md`.
-- Keep milestones curated, not chronological noise: newest first, normally 5–10 bullets maximum, replace/remove superseded items, and never paste raw logs, long failed experiments, or full chat history.
-- Preferred format: `YYYY-MM-DD — Milestone — current result/state. Next: ...`
-- Before ending a substantial task or handing work to a new chat, update the milestone section if the durable state changed. If nothing important changed, do not add a milestone.
-- Code, tests, ownership manifest, and validated runtime behavior remain the source of truth if a milestone note becomes stale.
+## 4. ChatGPT / GitHub / Replit / Supabase responsibility split
 
-## Shared/platform current milestones
-- 2026-09-30 — Replit preview Git-level read-only guard prepared — tracked hooks plus a local installer block Replit-side commits, merge commits, rebases, pushes and direct updates of `integration/replit-preview`; only the verified sync helper receives a one-command ref-update exception for fast-forward. This prevents publish/asset/local commits from recreating preview divergence. Next: validate broad shared gate, merge, sync once, and confirm `READONLY_GUARD: active`.
-- 2026-09-30 — Cross-path session convergence completed — root-scoped `game_session` remains the sole live identity, and browser bootstrap sequentially probes every historical game cookie scope so legacy Slot/Roulette/Cadı/Idle/Blackjack session IDs can actually be discovered from any page. Fragmented `shared_wallets` candidates converge to the highest existing balance without summing credits. Each legacy scoped cookie is cleared only after its own scope is probed, preventing an early Slot request from deleting an unseen million-credit Roulette/Idle identity. The convergence contract is part of the blocking critical-platform gate. Next: merge after the shared gate passes, then refresh preview and verify >$1,000 Slot bets.
-- 2026-09-30 — Replit API reload gap fixed — API `dev` runtime now watches API source, Cascade/game-engine source and shared DB source, rebuilds and restarts after preview fast-forwards; this prevents frontend/new Git state from running against a stale backend process. One API workflow restart is required when first rolling out the watcher. Next: sync the watcher preview SHA to Replit, restart API once, then verify a $50,000 Slot spin against the canonical shared wallet.
-- 2026-09-30 — Canonical shared wallet invariant enforced — `shared_wallets` is the sole live balance authority and `game_session` the sole live session identity for every game; `roulette_wallets` / `roulette_session` are migration-only. Legacy balances are imported idempotently, untouched default shared rows can be repaired from real legacy balances, established canonical balances are preserved, and Slot monetary settlement/storage is BIGINT-safe for high bets. Cross-game platform regression locks this contract. Next: validate the shared/multi-game gate, merge the integration fix to preview, then fast-forward Replit.
-- 2026-09-29 — Dependency-scoped promotion gates defined — routine one-game promotion now blocks only on deployable artifact/platform contracts plus the selected game's owned tests; post-preview foreign-game regressions are advisory, while shared/multi-game changes still require broad blocking typecheck + cross-game smoke. Next: validate the new workflow on the integration branch before promoting it to preview.
-- 2026-09-28 — Blackjack central integration wiring prepared and current-preview preflighted — shared runtime wiring is staged on `integration/blackjack-runtime-wiring-v2` from preview base `697e50b5540a0535c6908606762fcf04244e6eb8`: `/blackjack` browser bootstrap establishes `game_session`, server startup attaches the owned Blackjack scheduled WebSocket runtime, `shared_wallets` is loaded server-side for seat accounts, and Blackjack snapshot persistence CAS-updates the shared wallet in the same DB transaction so concurrent foreign wallet changes fail closed instead of being overwritten. Current-base preflight PR #102 (closed unmerged) with immutable Blackjack feature SHA `8634e6f4cab49e97187424b482a4b808af552c71` passed workspace typecheck, Cascade build, expanded frontend 51/51, expanded backend plus shared isolation 420/420; only the known four Idle integration tests remained red. Next: dispatch `Promote One Game To Replit Preview` with game=`blackjack` and source_ref=`8634e6f4cab49e97187424b482a4b808af552c71`, then replay the staged shared wiring onto the resulting newest preview HEAD and refresh Replit.
-- 2026-09-28 — Roulette 2D category re-established from a clean baseline — `feature/roulette-2d` owns only `artifacts/cascade-8/src/roulette`; the old 3D implementation is not reused. `/roulette` is wired centrally for isolated preview work. Next: build the reference-matched procedural wheel in owned files.
-- 2026-09-27 — Race-safe delivery protocol active — canonical feature branches use single-writer discipline, promotions use immutable commit SHAs and abort if preview HEAD moves, and Replit is read-only with verified fast-forward sync. Next: use `GAME_DELIVERY_PROTOCOL.md` for every commit → promotion → Replit handoff.
-- 2026-09-27 — Blackjack category established — `feature/blackjack` owns isolated frontend, API and Blackjack schema roots; shared route/schema wiring remains a central integration responsibility. Next: build the isolated Blackjack skeleton and validate ownership CI.
-- 2026-09-27 — Account/Auth category established — auth development is isolated on `feature/account` with owned frontend, API and DB-schema roots; shared route/schema wiring remains a central integration responsibility. Next: build and validate email/password auth foundation on the account branch.
-- 2026-09-26 — Isolation v2 active — game work is branch- and ownership-scoped; preview promotion copies only the selected game's owned roots into `integration/replit-preview`.
-- 2026-09-26 — Replit workflow normalized — Replit stays on `integration/replit-preview`; legacy `main` preview instructions are obsolete; normal refresh is fast-forward only.
+### ChatGPT
+ChatGPT is the control plane for planning, code review, code changes, testing, promotion, integration and diagnosis.
+
+### GitHub
+GitHub is the source of truth for code and branch state.
+- Game code is written/committed to its feature branch.
+- Routine preview release is performed by the serialized `Promote One Game To Replit Preview` workflow.
+- Promotion input is an immutable feature commit SHA, never a moving branch name.
+- Replit never becomes the source of truth.
+
+### Replit
+Replit is the runtime/preview consumer only.
+- Do not do normal development in the shared Replit workspace.
+- Do not switch Replit to feature branches.
+- Do not commit or push from Replit.
+- Do not use Replit Agent for routine sync/status work.
+- Normal code delivery to Replit is **only** the standard Shell fast-forward command in section 10.
+
+### Supabase
+Supabase is the target database platform, but database cutover is a separate controlled platform operation.
+- Never commit connection strings or secrets.
+- Use Replit/Supabase secret storage for credentials.
+- Database migrations/cutover are central integration work, not a game-agent task.
+- Do not infer that Supabase is live merely because `SUPABASE_DATABASE_URL` exists.
+
+## 5. Runtime architecture
+
+Frontend artifact:
+- workspace: `artifacts/cascade-8`
+- Replit web service path: `/`
+- tracked local web port: `20003`
+
+API artifact:
+- workspace: `artifacts/api-server`
+- Replit API service path: `/api`
+- current tracked artifact local/runtime port: `8080`
+
+The web dev server proxies `/api`; its fallback proxy target is currently `127.0.0.1:20004`. This does not match the tracked API artifact port `8080`, so do not silently assume an old port from memory. Treat the artifact TOMLs, environment, and live runtime as source of truth and handle any routing/port correction as central platform work.
+
+Main frontend route dispatch lives in `artifacts/cascade-8/src/main.ts`.
+Main API mounting lives in `artifacts/api-server/src/app.ts` and `artifacts/api-server/src/routes`.
+
+A successful Git sync does not by itself prove an already-running API process loaded new backend code. Replit API development runtime must rebuild/restart when relevant API/game/shared DB source changes. If the watcher itself changes, restart that workflow once.
+
+## 6. Shared wallet and session invariants
+
+There is exactly one live spendable wallet authority:
+- `shared_wallets`
+
+There is exactly one live anonymous game identity:
+- `game_session`
+
+Rules:
+- Every game reads/debits/credits the same `shared_wallets` row for the same `game_session`.
+- Canonical `game_session` must be root-scoped with `Path=/`.
+- Game-specific live wallets are forbidden.
+- Per-game ledger/round tables may exist only for audit/history/idempotency.
+- `roulette_wallets` and `roulette_session` are legacy migration inputs only.
+- Legacy fragmented/scoped sessions converge to one canonical identity without summing duplicate balances; preserve the highest established server-side balance during convergence.
+- Money paths must remain BIGINT-safe.
+- Wallet/session changes are always shared/platform work and require cross-game regression coverage.
+
+## 7. Database state and Supabase cutover rules
+
+Runtime DB selection is explicit:
+- default/runtime authority: `DATABASE_URL`
+- Supabase target: `SUPABASE_DATABASE_URL`
+- runtime switches to Supabase only when `USE_SUPABASE_DATABASE=true`
+
+Both runtime Drizzle and schema tooling must follow the same selection rule.
+
+Current policy: **do not cut over to Supabase until the general game/platform audit is complete and migration verification is hardened.**
+
+Required migration sequence:
+1. Freeze/identify the exact source database and target Supabase database.
+2. Confirm target schema contains all required source tables.
+3. Refuse automatic merge into a non-empty target unless a deliberate reconciliation plan exists.
+4. Take a source snapshot/dump without mutating source.
+5. Restore to Supabase.
+6. Verify every migrated table with row counts **and deterministic content checksums**, not row count alone.
+7. Verify critical wallet/ledger/round/state relationships and sequence/id integrity.
+8. Only after all verification passes, enable `USE_SUPABASE_DATABASE=true`.
+9. Restart/reload the API.
+10. Prove runtime is actually using Supabase and run cross-game wallet/core smoke tests.
+11. Keep rollback information until post-cutover validation is complete.
+
+The existing migration script must not be treated as final cutover authorization if it only verifies row counts.
+
+## 8. Development discipline
+
+Before coding:
+- verify the active feature branch;
+- fetch/inspect the current remote feature HEAD;
+- inspect working-tree status when local;
+- verify intended paths against `.github/game-ownership.json`.
+
+During work:
+- search narrowly first;
+- preserve game rules/UI/behavior during infrastructure/refactor work unless the user asked to change them;
+- use meaningful mini-parts, not artificial micro-steps;
+- do not absorb unrelated changes;
+- do not modify shared/platform files from a normal game task.
+
+Before feature commit:
+- run the relevant owned regression/test/check;
+- inspect changed paths;
+- confirm no foreign/shared path leaked into the commit;
+- fetch remote feature HEAD again;
+- if it moved unexpectedly, stop and inspect instead of blind merge/rebase/force push.
+
+Default: one active writer per canonical feature branch. Same-game parallel work requires separate task branches and deliberate integration.
+
+## 9. Promotion standard
+
+A feature commit is **not** a Replit release.
+
+Normal path:
+
+```text
+feature/<game>
+  -> exact immutable commit SHA
+  -> Promote One Game To Replit Preview
+  -> integration/replit-preview
+  -> standard Replit Shell sync
+```
+
+Promotion must:
+- accept the exact feature commit SHA;
+- verify the SHA belongs to the expected game branch;
+- copy only that game's promotion roots;
+- preserve all non-target games;
+- run deployable web/API + shared critical platform checks;
+- run the selected game's owned regression gate;
+- not block on unchanged foreign-game stale regressions;
+- re-check preview HEAD immediately before push;
+- abort/re-run if preview moved rather than auto-merging unrelated work.
+
+Shared/platform or multi-game changes use the broad blocking gate: full workspace typecheck + cross-game smoke in addition to critical platform checks.
+
+## 10. Replit Shell transfer standard — mandatory
+
+This is the only normal command format an agent should give the user after a successful promotion.
+
+Replace `<PREVIEW_SHA>` with the exact preview commit produced by the promotion:
+
+```bash
+cd ~/workspace || exit 1
+set -euo pipefail
+
+EXPECTED="<PREVIEW_SHA>"
+
+bash scripts/replit-sync-preview.sh github "$EXPECTED"
+```
+
+Do not add `git pull`, `git merge`, `git rebase`, `git checkout`, `git switch`, `git reset --hard`, `git clean`, force push, cherry-pick, or manual ref manipulation to the normal Replit delivery command.
+
+Success is valid only when the helper prints:
+- `BRANCH: integration/replit-preview`
+- `AHEAD_BEHIND: 0 0`
+- `EXPECTED_PRESENT: yes`
+- empty content between `STATUS_BEGIN` and `STATUS_END`
+
+The helper may safely advance beyond the supplied expected SHA if GitHub preview received later valid promotions; the expected SHA must still be an ancestor of final HEAD.
+
+### Replit read-only guard
+The shared Replit clone has a Git-level read-only guard:
+- `core.hooksPath=.githooks`
+- `oyun.replitReadonly=true`
+- local commits, merge commits and rebases are blocked;
+- push URLs are blocked while fetch URLs remain usable;
+- direct updates of `refs/heads/integration/replit-preview` are blocked;
+- only `scripts/replit-sync-preview.sh` gets a one-command exception for its verified fast-forward.
+
+If the helper aborts, do **not** bypass the guard. Diagnose with read-only commands first:
+- `git branch --show-current`
+- `git status --short`
+- `git rev-list --left-right --count github/integration/replit-preview...HEAD`
+- `git log --oneline github/integration/replit-preview..HEAD`
+
+If local-only commits somehow exist, central integration handles recovery and preserves them behind a backup pointer before realignment.
+
+## 11. Testing and CI philosophy
+
+GitHub Actions is a verification/release gate, not the default place to do ordinary development work.
+- Prefer direct/local targeted tests for game work.
+- Use Actions for promotion, final independent verification, broad platform/shared changes, or checks that genuinely require CI.
+- Do not dispatch Actions just to prove a file was written.
+- Do not busy-poll workflows in tight loops.
+
+Normal one-game promotion blocking surface:
+- ownership/isolation
+- deployable web/API artifacts
+- shared critical platform contracts
+- selected game's owned tests
+
+Foreign unchanged game regressions remain advisory.
+
+## 12. Milestones and handoff
+
+Each game/category keeps durable state in its own `AGENTS.md` under `Current milestones`.
+- newest first;
+- keep only durable decisions/baselines/blockers/next checkpoints;
+- do not paste raw logs or every commit;
+- code/tests/current ownership win if an old milestone conflicts.
+
+Shared/platform milestones live only in this master file and are updated only by central integration.
+
+## 13. Current shared/platform state
+
+- 2026-09-30 — Replit read-only preview guard is merged and verified live: branch `integration/replit-preview`, `core.hooksPath=.githooks`, `oyun.replitReadonly=true`, fetch enabled and pushes blocked. This closes the recurring Replit-local commit divergence problem.
+- 2026-09-30 — Cross-path session convergence is active: historical scoped game-session cookies are probed and converged into root `game_session`; fragmented wallet identities preserve the highest existing balance without summing credits.
+- 2026-09-30 — Supabase is still a staged target, not an authorized runtime cutover. Runtime remains on the explicitly selected database until migration audit + checksum verification + cutover validation are complete.
+- 2026-09-30 — Dependency-scoped promotion is active: selected-game + critical platform failures block a normal promotion; unchanged foreign-game regressions are advisory; shared/multi-game changes run the broad blocking gate.
+
+## 14. Authority order
+
+When instructions conflict, use this order:
+1. the user's latest explicit instruction;
+2. this canonical `integration/replit-preview:AGENTS.md`;
+3. the relevant game's `AGENTS.md`;
+4. `.github/game-ownership.json` for exact writable paths;
+5. current code/tests/runtime evidence;
+6. historical notes/memory.
+
+Never invent missing state. Inspect the repository/runtime when a factual decision depends on it.
