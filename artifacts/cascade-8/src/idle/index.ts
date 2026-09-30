@@ -440,6 +440,12 @@ class BusinessesClient {
           card.dataset.marketConnection =
             "reconnecting";
         }
+
+        setText(
+          this.root,
+          "[data-idle-market-status]",
+          "YENİDEN BAĞLANIYOR",
+        );
       },
     );
 
