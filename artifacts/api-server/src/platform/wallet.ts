@@ -1,5 +1,5 @@
 import { pool, type PoolClient } from "@workspace/db";
-import { chooseSessionIdForWalletMigration } from "./session";
+import { chooseHighestBalanceSessionCandidate, chooseSessionIdForWalletMigration } from "./session";
 
 export const INITIAL_SHARED_BALANCE_CENTS = 100_000;
 export const SHARED_WALLET_TABLE = "shared_wallets" as const;
@@ -252,17 +252,16 @@ export async function resolveCanonicalWalletSessionCandidates(
     result.rows.map((row) => [row.session_id, Number(row.balance_cents)]),
   );
 
-  const establishedCandidates = candidates.filter((sessionId) => {
-    const balance = balances.get(sessionId);
-    return balance !== undefined && balance !== INITIAL_SHARED_BALANCE_CENTS;
-  });
-
   const existingCandidates = candidates.filter((sessionId) =>
     balances.has(sessionId),
   );
 
-  const canonicalSessionId = establishedCandidates.at(-1)
-    ?? existingCandidates.at(-1)
+  const canonicalSessionId = chooseHighestBalanceSessionCandidate(
+    existingCandidates.map((sessionId) => ({
+      sessionId,
+      balanceCents: balances.get(sessionId) ?? INITIAL_SHARED_BALANCE_CENTS,
+    })),
+  )
     ?? candidates.at(-1)
     ?? null;
 
