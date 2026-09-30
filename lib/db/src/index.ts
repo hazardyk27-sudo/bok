@@ -1,6 +1,7 @@
 import { drizzle } from "drizzle-orm/node-postgres";
 import pg from "pg";
 import * as schema from "./schema";
+import { resolveSupabaseDatabaseUrl } from "./runtime-config";
 
 const { Pool } = pg;
 
@@ -18,11 +19,11 @@ export function resolveDatabaseRuntimeConfig(
   env: NodeJS.ProcessEnv = process.env,
 ): DatabaseRuntimeConfig {
   const useSupabaseDatabase = env.USE_SUPABASE_DATABASE === "true";
-  const connectionString = useSupabaseDatabase
+  const configuredConnectionString = useSupabaseDatabase
     ? env.SUPABASE_DATABASE_URL
     : env.DATABASE_URL;
 
-  if (!connectionString) {
+  if (!configuredConnectionString) {
     throw new Error(
       useSupabaseDatabase
         ? "USE_SUPABASE_DATABASE=true requires SUPABASE_DATABASE_URL."
@@ -30,9 +31,17 @@ export function resolveDatabaseRuntimeConfig(
     );
   }
 
+  let connectionString = configuredConnectionString;
   let hostname: string;
+
   try {
-    hostname = new URL(connectionString).hostname.toLowerCase();
+    if (useSupabaseDatabase) {
+      const resolved = resolveSupabaseDatabaseUrl(configuredConnectionString);
+      connectionString = resolved.connectionString;
+      hostname = resolved.hostname;
+    } else {
+      hostname = new URL(configuredConnectionString).hostname.toLowerCase();
+    }
   } catch {
     throw new Error("Configured database URL is invalid.");
   }
