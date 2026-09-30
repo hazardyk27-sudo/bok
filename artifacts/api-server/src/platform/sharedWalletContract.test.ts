@@ -1,7 +1,7 @@
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
-import { chooseSessionIdForWalletMigration, getSessionCookieCandidates } from "./session";
+import { chooseHighestBalanceSessionCandidate, chooseSessionIdForWalletMigration, getSessionCookieCandidates } from "./session";
 
 function source(relativePath: string) {
   return readFileSync(
@@ -13,6 +13,9 @@ function source(relativePath: string) {
 const appSource = source("../app.ts");
 const sessionSource = source("./session.ts");
 const walletSource = source("./wallet.ts");
+const sessionConvergenceApi = source("./sessionConvergence.ts");
+const sessionConvergenceClient = source("../../../../cascade-8/src/platform/sessionConvergence.ts");
+const frontendMain = source("../../../../cascade-8/src/main.ts");
 const slotRoutes = source("../slot/routes.ts");
 const rouletteRoutes = source("../roulette/routes.ts");
 const cadiRoutes = source("../cadi-kazan/routes.ts");
@@ -28,9 +31,9 @@ describe("canonical shared wallet contract", () => {
   it("uses game_session as the only live cookie and roulette_session only as legacy input", () => {
     expect(sessionSource).toContain('SESSION_COOKIE = "game_session"');
     expect(sessionSource).toContain('LEGACY_SESSION_COOKIE = "roulette_session"');
-    expect(appSource).toContain("getCanonicalSessionId");
+    expect(appSource).toContain("getSessionCookieCandidates(req.headers.cookie)");
     expect(appSource).toContain("getLegacySessionId");
-    expect(appSource).toContain("resolveCanonicalWalletSessionId");
+    expect(appSource).toContain("resolveCanonicalWalletSessionCandidates");
     expect(appSource).not.toContain("req.cookies[SESSION_COOKIE] = legacySessionId");
   });
 
@@ -55,6 +58,36 @@ describe("canonical shared wallet contract", () => {
     ]) {
       expect(routeSource).toContain('path: "/"');
     }
+  });
+
+  it("discovers every historical game cookie scope before mounting the selected game", () => {
+    for (const endpoint of [
+      "/api/slot/session-converge",
+      "/api/roulette/session-converge",
+      "/api/cadi-kazan/session-converge",
+      "/api/idle/session-converge",
+      "/api/blackjack/session-converge",
+    ]) {
+      expect(sessionConvergenceClient).toContain(endpoint);
+    }
+    expect(sessionConvergenceClient).toContain("for (const endpoint of SESSION_CONVERGENCE_ENDPOINTS)");
+    expect(sessionConvergenceApi).toContain("SESSION_CONVERGENCE_ROUTE_PATHS");
+    expect(frontendMain).toContain("await convergeLegacyGameSessions()");
+  });
+
+  it("preserves the highest discovered fragmented wallet without summing balances", () => {
+    expect(chooseHighestBalanceSessionCandidate([
+      { sessionId: "slot-shadow", balanceCents: 100_000 },
+      { sessionId: "roulette-real", balanceCents: 198_398_592_200 },
+      { sessionId: "idle-shadow", balanceCents: 850_000 },
+    ])).toBe("roulette-real");
+
+    expect(chooseHighestBalanceSessionCandidate([
+      { sessionId: "older", balanceCents: 500_000 },
+      { sessionId: "newer", balanceCents: 500_000 },
+    ])).toBe("newer");
+
+    expect(walletSource).not.toContain("SUM(balance_cents)");
   });
 
   it("keeps shared_wallets as the only live spendable wallet authority", () => {
