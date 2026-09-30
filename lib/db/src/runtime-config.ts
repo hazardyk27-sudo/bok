@@ -10,6 +10,15 @@ export type ResolvedSupabaseDatabaseUrl = {
   usedSessionPoolerFallback: boolean;
 };
 
+export function isSupabaseDatabaseHost(hostname: string): boolean {
+  const normalizedHostname = hostname.toLowerCase();
+  return (
+    normalizedHostname === "supabase.co"
+    || normalizedHostname.endsWith(".supabase.co")
+    || normalizedHostname.endsWith(".pooler.supabase.com")
+  );
+}
+
 export function resolveSupabaseDatabaseUrl(
   connectionString: string,
 ): ResolvedSupabaseDatabaseUrl {
