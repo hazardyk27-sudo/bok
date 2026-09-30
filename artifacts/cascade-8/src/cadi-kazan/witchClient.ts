@@ -217,6 +217,7 @@ export const CADI_KAZAN_MARKUP = `
 
           <div class="witch-advanced-card-art" aria-hidden="true">
             <img class="witch-advanced-card-master" src="${ADVANCED_25_CARD_ART_URL}" alt="" width="1200" height="546" loading="eager" decoding="async" fetchpriority="auto" draggable="false">
+            <div class="witch-advanced-card-value" data-witch-advanced-card-value>$1.00</div>
           </div>
 
           <div class="witch-office-card-art" aria-hidden="true">
@@ -819,6 +820,17 @@ export class WitchClient {
     const reducedMotion = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches ?? false;
     const allCells = Array.from({ length: round.cellCount }, (_, index) => index);
     const immediateCells = new Set(round.revealedCells);
+
+    // Advanced 25 follows the Standard card terminal rule: once a bomb ends
+    // the round, the whole ticket is exposed. Do this immediately so no
+    // scratch coating/canvas can remain over unrevealed cells after BUST.
+    if (round.mode === "ADVANCED" && round.status === "BUST") {
+      allCells.forEach((index) => this.terminalRevealVisibleCells.add(index));
+      this.terminalRevealAnimating = false;
+      this.render();
+      return;
+    }
+
     if (!animateTerminal || reducedMotion) {
       allCells.forEach((index) => this.terminalRevealVisibleCells.add(index));
       this.render();
@@ -1010,6 +1022,8 @@ export class WitchClient {
         if (ticketStake) ticketStake.textContent = formatMoney(previewStakeCents);
         if (ticketBombs) ticketBombs.textContent = `${String(previewBombs).padStart(2, "0")} BOMBA`;
         if (ticketPrice) ticketPrice.textContent = formatTicketPrice(previewStakeCents);
+        const advancedCardValue = this.root.querySelector<HTMLElement>("[data-witch-advanced-card-value]");
+        if (advancedCardValue) advancedCardValue.textContent = formatTicketPrice(previewStakeCents);
         if (standardPrice) standardPrice.hidden = true;
         if (ticketId) ticketId.textContent = "PREVIEW";
       } else if (showOfficePreview && board) {
@@ -1209,6 +1223,8 @@ export class WitchClient {
     if (ticketStake) ticketStake.textContent = formatMoney(round.stakeCents);
     if (ticketBombs) ticketBombs.textContent = round.mode === "OFFICE_MATCH_6" ? "3 AYNI" : `${String(round.alarmCount).padStart(2, "0")} BOMBA`;
     if (ticketPrice) ticketPrice.textContent = formatTicketPrice(round.stakeCents);
+    const advancedCardValue = this.root.querySelector<HTMLElement>("[data-witch-advanced-card-value]");
+    if (advancedCardValue) advancedCardValue.textContent = formatTicketPrice(round.stakeCents);
     if (standardPrice) {
       standardPrice.textContent = formatTicketPrice(round.stakeCents);
       standardPrice.hidden = round.mode !== "STANDARD";

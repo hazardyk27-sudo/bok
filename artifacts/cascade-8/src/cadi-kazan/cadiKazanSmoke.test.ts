@@ -476,4 +476,44 @@ describe("cadi kazan route smoke contract", () => {
     expect(visualLockSource).toContain("contain: layout paint !important");
   });
 
+
+  it("finishes Advanced 25 Part 1 with full BUST reveal, centered placement and a stake value badge", () => {
+    expect(witchClientSource).toContain('round.mode === "ADVANCED" && round.status === "BUST"');
+    expect(witchClientSource).toContain("allCells.forEach((index) => this.terminalRevealVisibleCells.add(index))");
+    expect(witchClientSource).toContain('data-witch-advanced-card-value');
+    expect(witchClientSource).toContain("advancedCardValue.textContent = formatTicketPrice(previewStakeCents)");
+    expect(witchClientSource).toContain("advancedCardValue.textContent = formatTicketPrice(round.stakeCents)");
+    expect(visualLockSource).toContain("PASS 37 — ADVANCED 25 Part 1: terminal reveal + centered table placement + card value");
+    expect(visualLockSource).toContain(".is-advanced-theme .witch-advanced-card-value");
+    expect(visualLockSource).toContain("justify-self: center !important");
+    expect(visualLockSource).toContain("align-self: center !important");
+    expect(visualLockSource).toContain("font-variant-numeric: tabular-nums !important");
+  });
+
+
+  it("centers every Advanced paw/skull result on the exact scratch-cell center", () => {
+    expect(visualLockSource).toContain("PASS 38 — ADVANCED 25 follow-up Part 2: exact symbol centering");
+    expect(visualLockSource).toContain(".is-advanced-theme .witch-ticket.is-advanced .witch-cell-artwork");
+    expect(visualLockSource).toContain("left: 50% !important");
+    expect(visualLockSource).toContain("top: 50% !important");
+    expect(visualLockSource).toContain("transform: translate(-50%, -50%) !important");
+    expect(visualLockSource).toContain("object-position: 50% 50% !important");
+    expect(visualLockSource).toContain(".witch-cell.is-safe .witch-cell-artwork");
+    expect(visualLockSource).toContain(".witch-cell.is-bomb .witch-cell-artwork");
+    expect(visualLockSource).toContain(".witch-cell.is-terminal-reveal .witch-cell-artwork");
+  });
+
+
+  it("uses one centered premium back-button geometry across every Cadı Kazan theme", () => {
+    expect(visualLockSource).toContain("PASS 39 — Cadı Kazan global back-button polish, Part 3");
+    expect(visualLockSource).toContain(".witch-back::before");
+    expect(visualLockSource).toContain(".witch-back::after");
+    expect(visualLockSource).toContain("place-items: center !important");
+    expect(visualLockSource).toContain("color: transparent !important");
+    expect(visualLockSource).toContain(".is-standard-theme .witch-back");
+    expect(visualLockSource).toContain(".is-advanced-theme .witch-back");
+    expect(visualLockSource).toContain(".is-office-theme .witch-back");
+    expect(visualLockSource).toContain(".witch-back:focus-visible");
+  });
+
 });
