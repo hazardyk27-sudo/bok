@@ -53,9 +53,14 @@ function sendError(res: Response, error: unknown) {
   const status =
     message === "INSUFFICIENT_ROULETTE_CREDITS"
       ? 402
-      : message === "ROULETTE_IDEMPOTENCY_KEY_REUSED"
-        ? 409
-        : 400;
+      : message === "ROULETTE_GLOBAL_ROUND_NOT_FOUND"
+        ? 404
+        : message === "ROULETTE_IDEMPOTENCY_KEY_REUSED" ||
+            message === "ROULETTE_GLOBAL_BETTING_NOT_OPEN" ||
+            message === "ROULETTE_GLOBAL_BETTING_CLOSED" ||
+            message === "ROULETTE_GLOBAL_BET_ALREADY_SETTLED"
+          ? 409
+          : 400;
 
   res.status(status).json({ error: message });
 }
@@ -69,6 +74,57 @@ router.get("/roulette/state", async (req, res) => {
     );
   } catch (error) {
     sendError(res, error);
+  }
+});
+
+router.put("/roulette/global-bets", async (req, res) => {
+  try {
+    const body =
+      req.body as {
+        roundId?: unknown;
+        bets?: unknown;
+        idempotencyKey?: unknown;
+      };
+
+    if (
+      typeof body.roundId !==
+        "string" ||
+      typeof body.idempotencyKey !==
+        "string"
+    ) {
+      res.status(400).json({
+        error:
+          "ROULETTE_GLOBAL_BET_INPUT_REQUIRED",
+      });
+      return;
+    }
+
+    const bets =
+      parseRouletteServerBets(
+        body.bets,
+      );
+
+    res.json(
+      await rouletteRepository
+        .updateGlobalBet(
+          getSessionId(
+            req,
+            res,
+          ),
+          {
+            roundId:
+              body.roundId,
+            bets,
+            idempotencyKey:
+              body.idempotencyKey,
+          },
+        ),
+    );
+  } catch (error) {
+    sendError(
+      res,
+      error,
+    );
   }
 });
 

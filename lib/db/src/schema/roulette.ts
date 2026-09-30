@@ -93,3 +93,57 @@ export const rouletteGlobalRounds = pgTable(
     ),
   ],
 );
+
+
+export const rouletteGlobalBets = pgTable(
+  "roulette_global_bets",
+  {
+    id: text("id").primaryKey(),
+    roundId: text("round_id").notNull(),
+    sessionId: text("session_id").notNull(),
+    bets: jsonb("bets").notNull(),
+    stakeCents: bigint("stake_cents", { mode: "number" }).notNull(),
+    payoutCents: bigint("payout_cents", { mode: "number" })
+      .notNull()
+      .default(0),
+    settlement: jsonb("settlement"),
+    settledAt: timestamp("settled_at", { withTimezone: true }),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => [
+    uniqueIndex("roulette_global_bets_round_session_unique").on(
+      table.roundId,
+      table.sessionId,
+    ),
+    index("roulette_global_bets_unsettled_idx").on(
+      table.settledAt,
+      table.roundId,
+    ),
+  ],
+);
+
+export const rouletteGlobalBetRequests = pgTable(
+  "roulette_global_bet_requests",
+  {
+    idempotencyKey: text("idempotency_key").primaryKey(),
+    roundId: text("round_id").notNull(),
+    sessionId: text("session_id").notNull(),
+    bets: jsonb("bets").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => [
+    index("roulette_global_bet_requests_round_idx").on(
+      table.roundId,
+    ),
+    index("roulette_global_bet_requests_session_idx").on(
+      table.sessionId,
+    ),
+  ],
+);

@@ -7,6 +7,9 @@ import {
   type RouletteGlobalRoundPlan,
 } from "./globalTable";
 import {
+  settleDueRouletteGlobalBets,
+} from "./globalBetStore";
+import {
   ensureRouletteGlobalTableStorage,
   insertRouletteGlobalRound,
   readLatestRouletteGlobalRound,
@@ -66,9 +69,16 @@ export async function runRouletteGlobalTableSchedulerTick(
         }
       }
 
+      const settlement =
+        await settleDueRouletteGlobalBets(
+          client,
+          nowMs,
+        );
+
       return {
         ...materialization,
         insertedRounds,
+        ...settlement,
       };
     },
   );
@@ -112,7 +122,8 @@ async function schedulerLoop() {
     }
 
     scheduleNextTick(
-      result.reachedHorizon
+      result.reachedHorizon &&
+        !result.hasMore
         ? ROULETTE_GLOBAL_TABLE_TICK_MS
         : 0,
     );
