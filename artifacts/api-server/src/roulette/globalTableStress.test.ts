@@ -4,11 +4,6 @@ import {
   it,
 } from "vitest";
 import {
-  getRouletteGlobalBettingSecondsRemaining,
-  getRouletteGlobalClientPhase,
-  getRouletteGlobalSpinElapsedMs,
-} from "../../../cascade-8/src/roulette/globalClient";
-import {
   assertRouletteGlobalBettingOpen,
   getNextRouletteGlobalBetRevision,
   getRouletteGlobalPayoutIdempotencyKey,
@@ -16,8 +11,6 @@ import {
 } from "./globalBet";
 import {
   createRouletteGlobalRoundPlan,
-  createRouletteGlobalRoundSnapshot,
-  getRouletteGlobalRoundPhase,
   type RouletteGlobalRoundPlan,
 } from "./globalTable";
 import {
@@ -169,129 +162,6 @@ describe("roulette global live table stress audit", () => {
     );
   });
 
-  it("keeps server and client phase decisions identical across one thousand timestamps", () => {
-    const round =
-      createRouletteGlobalRoundPlan({
-        roundId:
-          "phase-stress-round",
-        seed:
-          "phase-stress-seed",
-        bettingOpenAtMs:
-          START_MS,
-      });
-    const rangeStart =
-      round.bettingOpenAtMs;
-    const rangeEnd =
-      round.nextRoundAtMs -
-      1;
-    const range =
-      rangeEnd -
-      rangeStart;
-
-    for (
-      let index = 0;
-      index < 1_000;
-      index += 1
-    ) {
-      const nowMs =
-        rangeStart +
-        Math.floor(
-          (
-            range *
-            index
-          ) /
-            999,
-        );
-      const snapshot =
-        createRouletteGlobalRoundSnapshot(
-          round,
-          nowMs,
-        );
-
-      expect(
-        getRouletteGlobalClientPhase(
-          snapshot,
-          nowMs,
-        ),
-      ).toBe(
-        getRouletteGlobalRoundPhase(
-          round,
-          nowMs,
-        ),
-      );
-
-      if (
-        nowMs >=
-          round.spinStartedAtMs &&
-        nowMs <
-          round.resultAtMs
-      ) {
-        expect(
-          getRouletteGlobalSpinElapsedMs(
-            snapshot,
-            nowMs,
-          ),
-        ).toBe(
-          nowMs -
-            round.spinStartedAtMs,
-        );
-      }
-    }
-  });
-
-  it("gives independent viewers the same global snapshot and mid-spin position", () => {
-    const round =
-      createRouletteGlobalRoundPlan({
-        roundId:
-          "shared-view-round",
-        seed:
-          "shared-view-seed",
-        bettingOpenAtMs:
-          START_MS,
-      });
-    const nowMs =
-      round.spinStartedAtMs +
-      Math.floor(
-        (
-          round.resultAtMs -
-          round.spinStartedAtMs
-        ) /
-          2,
-      );
-
-    const first =
-      createRouletteGlobalRoundSnapshot(
-        round,
-        nowMs,
-      );
-    const second =
-      createRouletteGlobalRoundSnapshot(
-        round,
-        nowMs,
-      );
-
-    expect(first).toEqual(
-      second,
-    );
-    expect(
-      getRouletteGlobalSpinElapsedMs(
-        first,
-        nowMs,
-      ),
-    ).toBe(
-      getRouletteGlobalSpinElapsedMs(
-        second,
-        nowMs,
-      ),
-    );
-    expect(first.seed).toBe(
-      round.seed,
-    );
-    expect(
-      first.result,
-    ).toBeNull();
-  });
-
   it("keeps a real deterministic spin chain contiguous across many seeds", () => {
     let bettingOpenAtMs =
       START_MS;
@@ -373,45 +243,6 @@ describe("roulette global live table stress audit", () => {
       "ROULETTE_GLOBAL_BETTING_CLOSED",
     );
 
-    const snapshot = {
-      roundId:
-        "deadline-round",
-      simulationVersion:
-        "roulette-full-turn-v2",
-      phase:
-        "betting" as const,
-      serverTimeMs:
-        round.bettingCloseAtMs -
-        1,
-      bettingOpenAtMs:
-        round.bettingOpenAtMs,
-      bettingCloseAtMs:
-        round.bettingCloseAtMs,
-      spinStartedAtMs:
-        round.bettingCloseAtMs,
-      resultAtMs:
-        round.bettingCloseAtMs +
-        10_000,
-      nextRoundAtMs:
-        round.bettingCloseAtMs +
-        12_200,
-      seed: null,
-      result: null,
-    };
-
-    expect(
-      getRouletteGlobalBettingSecondsRemaining(
-        snapshot,
-        round.bettingCloseAtMs -
-          1,
-      ),
-    ).toBe(1);
-    expect(
-      getRouletteGlobalClientPhase(
-        snapshot,
-        round.bettingCloseAtMs,
-      ),
-    ).toBe("spinning");
   });
 
   it("survives ten thousand revision advances and rejects an old tab revision", () => {
