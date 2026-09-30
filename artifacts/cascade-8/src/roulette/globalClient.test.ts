@@ -9,6 +9,9 @@ import {
   getRouletteGlobalClientPhase,
   getRouletteGlobalSpinElapsedMs,
   getRouletteQueuedBetExpectedRevision,
+  getRouletteStateSyncDelay,
+  ROULETTE_STATE_RETRY_INTERVAL_MS,
+  ROULETTE_STATE_SYNC_INTERVAL_MS,
 } from "./globalClient";
 import type {
   RouletteGlobalTableSnapshot,
@@ -30,6 +33,29 @@ const table: RouletteGlobalTableSnapshot = {
 };
 
 describe("roulette global client clock", () => {
+  it("backs off steady-state polling while keeping connection retries bounded", () => {
+    expect(
+      getRouletteStateSyncDelay(
+        true,
+      ),
+    ).toBe(
+      ROULETTE_STATE_SYNC_INTERVAL_MS,
+    );
+    expect(
+      ROULETTE_STATE_SYNC_INTERVAL_MS,
+    ).toBe(2_000);
+    expect(
+      getRouletteStateSyncDelay(
+        false,
+      ),
+    ).toBe(
+      ROULETTE_STATE_RETRY_INTERVAL_MS,
+    );
+    expect(
+      ROULETTE_STATE_RETRY_INTERVAL_MS,
+    ).toBe(1_000);
+  });
+
   it("keeps queued writes pinned to the revision they were based on", () => {
     expect(
       getRouletteQueuedBetExpectedRevision(
