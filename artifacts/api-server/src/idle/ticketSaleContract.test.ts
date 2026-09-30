@@ -140,6 +140,9 @@ describe("ticket sale transaction contract", () => {
     expect(saleSource).toContain(
       "replayed: true",
     );
+    expect(saleSource).toContain(
+      "currentBalanceCents",
+    );
   });
 
 
