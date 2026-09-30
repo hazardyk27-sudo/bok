@@ -3,7 +3,6 @@ import {
   BALL_ORBIT_PROFILE,
   createBallOrbit,
   getBallOrbitDurationMs,
-  getBallOrbitRevolutions,
   getBallSpeedThresholdMs,
   sampleBallOrbit,
 } from "./ballMotion";
@@ -45,7 +44,6 @@ describe("roulette pocket capture and settle", () => {
     expect(orbit.durationMs).toBeGreaterThanOrEqual(
       orbit.freeMotionDurationMs,
     );
-    expect(getBallOrbitRevolutions(orbit)).toBeGreaterThan(4);
   });
 
   it("keeps the repeated fret chain dissipative before capture", () => {

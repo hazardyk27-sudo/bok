@@ -129,6 +129,21 @@ describe("roulette settled result derivation", () => {
         c.ballStartAngle ===
           a.ballStartAngle,
     ).toBe(false);
+
+    expect(
+      ROULETTE_SEED_ENVELOPE
+        .rotorAngleSpan,
+    ).toBeCloseTo(
+      Math.PI * 2,
+      12,
+    );
+    expect(
+      ROULETTE_SEED_ENVELOPE
+        .ballAngleSpan,
+    ).toBeCloseTo(
+      Math.PI * 2,
+      12,
+    );
   });
 
   it("replays a seed into the exact same physics result without supplying a target", () => {
@@ -187,6 +202,61 @@ describe("roulette settled result derivation", () => {
       summary.maxSettleTimeMs,
     ).toBeGreaterThan(0);
   });
+
+  it("spreads 1000 deterministic seeds across all 37 pockets without structural bias", () => {
+    const pocketCounts =
+      Array.from(
+        { length: 37 },
+        () => 0,
+      );
+    let invalidCount = 0;
+
+    for (
+      let index = 0;
+      index < 1000;
+      index += 1
+    ) {
+      const simulation =
+        simulateSeededRouletteSpin(
+          `uniform-regression-${index}`,
+        );
+      const result =
+        simulation.result;
+
+      if (!result) {
+        invalidCount += 1;
+        continue;
+      }
+
+      pocketCounts[
+        result.pocketIndex
+      ] += 1;
+    }
+
+    const expected = 1000 / 37;
+    const chiSquare =
+      pocketCounts.reduce(
+        (sum, count) =>
+          sum +
+          Math.pow(
+            count - expected,
+            2,
+          ) /
+            expected,
+        0,
+      );
+
+    expect(invalidCount).toBe(0);
+    expect(
+      pocketCounts.filter(
+        (count) => count > 0,
+      ),
+    ).toHaveLength(37);
+    expect(chiSquare).toBeLessThan(70);
+    expect(
+      Math.max(...pocketCounts),
+    ).toBeLessThan(60);
+  }, 30_000);
 
   it("keeps the seed path free of target-number or target-pocket inputs", () => {
     const conditions =

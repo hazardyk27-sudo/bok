@@ -244,17 +244,17 @@ describe("European roulette betting rules", () => {
     ).toBe(50);
     expect(
       settlement.grossReturn,
-    ).toBe(460);
+    ).toBe(455);
     expect(
       settlement.netProfit,
-    ).toBe(405);
+    ).toBe(400);
     expect(
       settlement.winningBetIds,
     ).toEqual([
       "straight-17",
-      "red",
       "odd",
       "dozen-2",
+      "column-2",
     ]);
   });
 
