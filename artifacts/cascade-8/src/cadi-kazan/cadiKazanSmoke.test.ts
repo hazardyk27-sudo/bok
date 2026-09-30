@@ -388,4 +388,16 @@ describe("cadi kazan route smoke contract", () => {
     expect(scratchSurfaceSource).toContain("this.accumulatedScratchDistancePx >= Math.max(90, width * 0.75)");
   });
 
+
+  it("keeps The Office app bar and control deck black with white/gray UI copy", () => {
+    expect(visualLockSource).toContain("PASS 33 — THE OFFICE black top bar + black deck");
+    expect(visualLockSource).toContain(".is-office-theme .witch-appbar");
+    expect(visualLockSource).toContain(".is-office-theme .witch-control-dock");
+    expect(visualLockSource).toContain("--office-ui-black: #050607");
+    expect(visualLockSource).toContain("--office-ui-white: #f7f8f9");
+    expect(visualLockSource).toContain(".is-office-theme .witch-stat-balance strong");
+    expect(visualLockSource).toContain(".is-office-theme .witch-primary-button:not(:disabled)");
+    expect(visualLockSource).toContain(".is-office-theme .witch-stake-presets button.is-selected");
+  });
+
 });
