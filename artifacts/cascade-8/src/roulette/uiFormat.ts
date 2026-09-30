@@ -77,6 +77,50 @@ export function getRouletteAmountScale(
 }
 
 
+export type RouletteBalanceScale =
+  | "normal"
+  | "compact"
+  | "tight";
+
+export function formatRouletteBalance(
+  value: number,
+) {
+  if (!Number.isFinite(value)) {
+    return "$0";
+  }
+
+  const sign = value < 0 ? "-$" : "$";
+  const absolute = Math.abs(value);
+  const formatted =
+    absolute.toLocaleString(
+      "en-US",
+      {
+        minimumFractionDigits: 0,
+        maximumFractionDigits: 2,
+      },
+    );
+
+  return `${sign}${formatted}`;
+}
+
+export function getRouletteBalanceScale(
+  value: number,
+): RouletteBalanceScale {
+  const length =
+    formatRouletteBalance(value).length;
+
+  if (length <= 10) {
+    return "normal";
+  }
+
+  if (length <= 14) {
+    return "compact";
+  }
+
+  return "tight";
+}
+
+
 export function formatRouletteMoney(
   value: number,
 ) {

@@ -1148,7 +1148,8 @@ button {
 .roulette-recent-strip,
 .roulette-betting-timer,
 .roulette-result-banner,
-.roulette-win-message {
+.roulette-win-message,
+.roulette-settings-menu {
   display: none;
 }
 
@@ -1255,7 +1256,11 @@ button {
     height: var(--top-hud-height);
     box-sizing: border-box;
     display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
+    grid-template-columns:
+      minmax(0, 1.55fr)
+      minmax(0, 0.82fr)
+      minmax(0, 0.86fr)
+      36px;
     align-items: stretch;
     border: 1px solid rgba(240, 225, 190, 0.18);
     border-radius: 8px;
@@ -4461,5 +4466,264 @@ button {
   .roulette-page[data-phase="spinning"],
   .roulette-page[data-phase="settled"] {
     --spin-table-gap: 7px;
+  }
+}
+
+
+/* Part 13 — premium balance HUD and roulette menu */
+@media (max-width: 900px) and (orientation: portrait) {
+  .roulette-top-hud {
+    overflow: visible;
+  }
+
+  .roulette-top-hud__metric {
+    min-width: 0;
+  }
+
+  .roulette-top-hud__metric--balance {
+    justify-items: start;
+    padding-left: clamp(8px, 2.8vw, 12px);
+    padding-right: 5px;
+  }
+
+  .roulette-top-hud__metric--balance > span {
+    font-size: clamp(6.8px, 1.72vw, 8px);
+  }
+
+  .roulette-top-hud__metric--balance > strong {
+    width: 100%;
+    overflow: hidden;
+    text-align: left;
+    text-overflow: clip;
+    font-variant-numeric: tabular-nums lining-nums;
+    letter-spacing: -0.035em;
+  }
+
+  [data-wallet-balance][data-balance-scale="normal"] {
+    font-size: clamp(13px, 3.55vw, 16.5px);
+  }
+
+  [data-wallet-balance][data-balance-scale="compact"] {
+    font-size: clamp(11.2px, 3.05vw, 14px);
+    letter-spacing: -0.045em;
+  }
+
+  [data-wallet-balance][data-balance-scale="tight"] {
+    font-size: clamp(9.4px, 2.55vw, 12px);
+    letter-spacing: -0.055em;
+  }
+
+  .roulette-top-hud__menu-slot {
+    position: relative;
+    display: grid;
+    place-items: center;
+    border-left: 1px solid rgba(228, 202, 141, 0.18);
+    pointer-events: auto;
+  }
+
+  .roulette-menu-button {
+    width: 28px;
+    height: 28px;
+    padding: 0;
+    border: 1px solid rgba(231, 220, 194, 0.26);
+    border-radius: 8px;
+    display: grid;
+    align-content: center;
+    justify-items: center;
+    gap: 3px;
+    color: #f8f2e5;
+    background:
+      linear-gradient(
+        180deg,
+        rgba(34, 38, 40, 0.98),
+        rgba(10, 12, 13, 0.99)
+      );
+    box-shadow:
+      0 3px 9px rgba(0, 0, 0, 0.38),
+      inset 0 1px 0 rgba(255, 255, 255, 0.07);
+    cursor: pointer;
+    touch-action: manipulation;
+  }
+
+  .roulette-menu-button > span {
+    display: block;
+    height: 1.5px;
+    border-radius: 99px;
+    background: linear-gradient(90deg, #dad5ca, #fff7e3);
+    box-shadow: 0 1px 1px rgba(0, 0, 0, 0.30);
+  }
+
+  .roulette-menu-button > span:nth-child(1) { width: 12px; }
+  .roulette-menu-button > span:nth-child(2) { width: 16px; }
+  .roulette-menu-button > span:nth-child(3) { width: 9px; }
+
+  .roulette-menu-button[aria-expanded="true"] {
+    border-color: rgba(238, 209, 139, 0.62);
+    background:
+      linear-gradient(
+        180deg,
+        rgba(46, 42, 31, 0.99),
+        rgba(15, 14, 12, 0.99)
+      );
+    box-shadow:
+      0 4px 13px rgba(0, 0, 0, 0.46),
+      inset 0 0 0 1px rgba(239, 211, 148, 0.10);
+  }
+
+  .roulette-settings-menu {
+    position: absolute;
+    top:
+      calc(
+        var(--mobile-safe-top) +
+        var(--top-hud-height) +
+        7px
+      );
+    right: max(7px, env(safe-area-inset-right));
+    width: min(72vw, 268px);
+    padding: 10px;
+    display: grid;
+    gap: 9px;
+    border: 1px solid rgba(229, 218, 194, 0.24);
+    border-radius: 13px;
+    color: #f4f1e9;
+    background:
+      linear-gradient(
+        160deg,
+        rgba(27, 30, 31, 0.985),
+        rgba(6, 8, 9, 0.995)
+      );
+    box-shadow:
+      0 18px 42px rgba(0, 0, 0, 0.58),
+      inset 0 1px 0 rgba(255, 255, 255, 0.055);
+    backdrop-filter: blur(14px);
+    pointer-events: auto;
+    z-index: 48;
+  }
+
+  .roulette-settings-menu[hidden] {
+    display: none !important;
+  }
+
+  .roulette-settings-menu__header {
+    min-height: 30px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 1px 7px;
+    border-bottom: 1px solid rgba(229, 218, 194, 0.11);
+  }
+
+  .roulette-settings-menu__header > div {
+    display: flex;
+    align-items: baseline;
+    gap: 5px;
+  }
+
+  .roulette-settings-menu__header span {
+    color: rgba(225, 219, 206, 0.54);
+    font-size: 7px;
+    font-weight: 800;
+    letter-spacing: 0.12em;
+  }
+
+  .roulette-settings-menu__header strong {
+    color: #f7f2e8;
+    font-size: 11px;
+    font-weight: 900;
+    letter-spacing: 0.08em;
+  }
+
+  .roulette-settings-menu__close {
+    width: 27px;
+    height: 27px;
+    padding: 0;
+    border: 1px solid rgba(229, 218, 194, 0.18);
+    border-radius: 8px;
+    color: rgba(245, 239, 226, 0.82);
+    background: rgba(255, 255, 255, 0.025);
+    font-size: 19px;
+    line-height: 1;
+    cursor: pointer;
+  }
+
+  .roulette-audio-control {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-areas:
+      "copy value"
+      "range range";
+    gap: 5px 10px;
+    padding: 7px 8px 8px;
+    border: 1px solid rgba(227, 218, 198, 0.10);
+    border-radius: 10px;
+    background: rgba(255, 255, 255, 0.018);
+  }
+
+  .roulette-audio-control__copy {
+    grid-area: copy;
+    min-width: 0;
+    display: grid;
+    gap: 2px;
+  }
+
+  .roulette-audio-control__copy strong {
+    color: #f2eee5;
+    font-size: 9px;
+    font-weight: 900;
+    letter-spacing: 0.055em;
+  }
+
+  .roulette-audio-control__copy small {
+    color: rgba(219, 215, 205, 0.48);
+    font-size: 6.5px;
+    line-height: 1.15;
+  }
+
+  .roulette-audio-control output {
+    grid-area: value;
+    align-self: center;
+    min-width: 32px;
+    color: #e7c879;
+    font-size: 9px;
+    font-weight: 900;
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .roulette-audio-control input[type="range"] {
+    grid-area: range;
+    width: 100%;
+    height: 16px;
+    margin: 0;
+    accent-color: #d9bc70;
+    cursor: pointer;
+  }
+
+  .roulette-main-menu-button {
+    min-height: 37px;
+    padding: 0 11px;
+    border: 1px solid rgba(226, 216, 193, 0.20);
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    color: #f7f3e9;
+    background:
+      linear-gradient(
+        180deg,
+        rgba(33, 37, 39, 0.98),
+        rgba(11, 13, 14, 0.99)
+      );
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
+    font-size: 9px;
+    font-weight: 900;
+    letter-spacing: 0.08em;
+    cursor: pointer;
+  }
+
+  .roulette-main-menu-button strong {
+    color: #dfc37e;
+    font-size: 16px;
+    line-height: 1;
   }
 }
