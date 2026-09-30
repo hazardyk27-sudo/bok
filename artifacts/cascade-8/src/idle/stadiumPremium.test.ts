@@ -115,4 +115,12 @@ describe("Part 26 premium Stadium control surface", () => {
     expect(css).toContain("z-index: 2");
     expect(css).toContain("transform: translateZ(0)");
   });
+
+  it("never exposes a light host canvas around the Businesses workspace", () => {
+    expect(css).toContain("full-canvas fix");
+    expect(css).toContain("html.businesses-route #app");
+    expect(css).toContain("background: #050b17 !important");
+    expect(css).toContain("background-color: #050b17 !important");
+    expect(css).toContain("min-height: 100dvh");
+  });
 });
