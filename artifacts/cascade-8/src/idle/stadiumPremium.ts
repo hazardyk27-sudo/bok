@@ -261,12 +261,17 @@ function chartPath(points: TicketMarketHistoryPoint[]) {
     1,
     Math.ceil(points.length / maxVisualPoints),
   );
-  const sampled = points.filter(
-    (_item, index) =>
-      index === 0
-      || index === points.length - 1
-      || index % step === 0,
-  );
+  const sampled = points
+    .map((item, sourceIndex) => ({
+      item,
+      sourceIndex,
+    }))
+    .filter(
+      ({ sourceIndex }) =>
+        sourceIndex === 0
+        || sourceIndex === points.length - 1
+        || sourceIndex % step === 0,
+    );
 
   const values =
     points.map((item) => item.priceMicrodollars);
@@ -276,21 +281,23 @@ function chartPath(points: TicketMarketHistoryPoint[]) {
     Math.max(...values) - min,
   );
 
-  return sampled.map((item, index) => {
-    const sourceIndex =
-      points.indexOf(item);
-    const x =
-      sourceIndex / (points.length - 1) * 1000;
-    const y =
-      280
-      - (item.priceMicrodollars - min)
-      / range * 280;
+  return sampled.map(
+    ({ item, sourceIndex }, index) => {
+      const x =
+        sourceIndex
+        / (points.length - 1)
+        * 1000;
+      const y =
+        280
+        - (item.priceMicrodollars - min)
+        / range * 280;
 
-    return (index === 0 ? "M" : "L")
-      + x.toFixed(2)
-      + ","
-      + y.toFixed(2);
-  }).join(" ");
+      return (index === 0 ? "M" : "L")
+        + x.toFixed(2)
+        + ","
+        + y.toFixed(2);
+    },
+  ).join(" ");
 }
 
 export function createStadiumPremiumUi(options: Options): StadiumPremiumUi {
@@ -428,7 +435,13 @@ export function createStadiumPremiumUi(options: Options): StadiumPremiumUi {
       history = history.slice(-17_280);
     }
 
-    renderHistory();
+    const marketDrawer =
+      root.querySelector<HTMLElement>(
+        "[data-idle-market-drawer]",
+      );
+    if (marketDrawer && !marketDrawer.hidden) {
+      renderHistory();
+    }
   };
 
   const loadHistory = async () => {
@@ -975,6 +988,8 @@ export function createStadiumPremiumUi(options: Options): StadiumPremiumUi {
       setDrawer("market", true);
       if (!historyLoaded) {
         void loadHistory();
+      } else {
+        renderHistory();
       }
     },
   );
