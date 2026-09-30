@@ -388,4 +388,92 @@ describe("cadi kazan route smoke contract", () => {
     expect(scratchSurfaceSource).toContain("this.accumulatedScratchDistancePx >= Math.max(90, width * 0.75)");
   });
 
+
+  it("keeps The Office app bar and control deck black with white/gray UI copy", () => {
+    expect(visualLockSource).toContain("PASS 33 — THE OFFICE black top bar + black deck");
+    expect(visualLockSource).toContain(".is-office-theme .witch-appbar");
+    expect(visualLockSource).toContain(".is-office-theme .witch-control-dock");
+    expect(visualLockSource).toContain("--office-ui-black: #050607");
+    expect(visualLockSource).toContain("--office-ui-white: #f7f8f9");
+    expect(visualLockSource).toContain(".is-office-theme .witch-stat-balance strong");
+    expect(visualLockSource).toContain(".is-office-theme .witch-primary-button:not(:disabled)");
+    expect(visualLockSource).toContain(".is-office-theme .witch-stake-presets button.is-selected");
+  });
+
+
+  it("pins Advanced 25 cells directly to the 1200x546 master instead of a resizable nested union", () => {
+    expect(visualLockSource).toContain("PASS 34 — ADVANCED 25 direct master-coordinate registration, Part 1");
+    expect(visualLockSource).toContain(".is-advanced-theme .witch-ticket.is-advanced > .witch-board-wrap");
+    expect(visualLockSource).toContain("inset: 0 !important");
+    expect(visualLockSource).toContain("left: 32.5982% !important");
+    expect(visualLockSource).toContain("width: 12.1570% !important");
+    expect(visualLockSource).toContain("left: 84.2389% !important");
+    expect(visualLockSource).toContain("top: 11.3475% !important");
+    expect(visualLockSource).toContain("top: 76.7140% !important");
+    expect(visualLockSource).toContain("height: 14.7754% !important");
+  });
+
+
+  it("locks Advanced scratch canvases and paw/skull art inside each measured cell", () => {
+    expect(visualLockSource).toContain("PASS 35 — ADVANCED 25 cell-local scratch/result lock, Part 2");
+    expect(visualLockSource).toContain(".is-advanced-theme .witch-ticket.is-advanced .witch-board > .witch-cell > .witch-scratch-layer");
+    expect(visualLockSource).toContain(".is-advanced-theme .witch-ticket.is-advanced .witch-board > .witch-cell > .witch-debris-canvas");
+    expect(visualLockSource).toContain("border-radius: 9% / 17% !important");
+    expect(visualLockSource).toContain(".is-advanced-theme .witch-ticket.is-advanced .witch-cell-artwork");
+    expect(visualLockSource).toContain("justify-self: center !important");
+    expect(visualLockSource).toContain("align-self: center !important");
+    expect(visualLockSource).toContain("object-position: 50% 50% !important");
+    expect(visualLockSource).toContain("width: 72% !important");
+    expect(visualLockSource).toContain(".is-advanced-theme .witch-ticket.is-advanced .witch-cell.is-bomb .witch-cell-artwork");
+  });
+
+
+  it("locks the final Advanced 25 master geometry to a non-overflowing 5x5 map", () => {
+    expect(visualLockSource).toContain("PASS 36 — ADVANCED 25 final geometry QA / regression lock, Part 3");
+
+    const masterWidth = 1200;
+    const masterHeight = 546;
+    const columns = [
+      [32.5982, 12.1570],
+      [45.5622, 12.1032],
+      [58.4723, 12.1032],
+      [71.3287, 12.1032],
+      [84.2389, 12.1032],
+    ] as const;
+    const rows = [
+      [11.3475, 15.1301],
+      [28.0142, 14.8937],
+      [44.5626, 14.6572],
+      [60.7565, 14.5390],
+      [76.8322, 14.6572],
+    ] as const;
+
+    const pxColumns = columns.map(([left, width]) => [
+      masterWidth * left / 100,
+      masterWidth * width / 100,
+    ] as const);
+    const pxRows = rows.map(([top, height]) => [
+      masterHeight * top / 100,
+      masterHeight * height / 100,
+    ] as const);
+
+    expect(pxColumns).toHaveLength(5);
+    expect(pxRows).toHaveLength(5);
+    expect(pxColumns[0][0]).toBeGreaterThanOrEqual(391);
+    expect(pxColumns[4][0] + pxColumns[4][1]).toBeLessThanOrEqual(1157);
+    expect(pxRows[0][0]).toBeGreaterThanOrEqual(61);
+    expect(pxRows[4][0] + pxRows[4][1]).toBeLessThanOrEqual(501);
+
+    for (let index = 0; index < 4; index += 1) {
+      expect(pxColumns[index][0] + pxColumns[index][1]).toBeLessThan(pxColumns[index + 1][0]);
+      expect(pxRows[index][0] + pxRows[index][1]).toBeLessThan(pxRows[index + 1][0]);
+    }
+
+    expect(visualLockSource).toContain(".witch-cell:nth-child(n + 21):nth-child(-n + 25)");
+    expect(visualLockSource).toContain("top: 76.8322% !important");
+    expect(visualLockSource).toContain("height: 14.6572% !important");
+    expect(visualLockSource).toContain("clip-path: inset(0) !important");
+    expect(visualLockSource).toContain("contain: layout paint !important");
+  });
+
 });

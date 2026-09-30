@@ -5873,3 +5873,499 @@
       cover !important;
   }
 }
+
+
+/* PASS 33 — THE OFFICE black top bar + black deck.
+   Keep Office card/payout geometry intact; only the application chrome and
+   control deck switch to a neutral black/graphite palette. Copy, balances,
+   numeric values and controls use white/gray for maximum contrast. */
+.is-office-theme {
+  --office-ui-black: #050607;
+  --office-ui-black-2: #0c0e10;
+  --office-ui-black-3: #15181b;
+  --office-ui-border: rgba(210, 214, 219, .34);
+  --office-ui-border-strong: rgba(238, 240, 242, .62);
+  --office-ui-white: #f7f8f9;
+  --office-ui-text: #e3e6e9;
+  --office-ui-muted: #9ca2a8;
+  --office-ui-dim: #6f757b;
+}
+
+/* TOP APP BAR */
+.is-office-theme .witch-appbar {
+  border-bottom-color: var(--office-ui-border) !important;
+  background:
+    linear-gradient(180deg, #111316 0%, #08090a 54%, #030404 100%) !important;
+  box-shadow:
+    0 9px 26px rgba(0,0,0,.40),
+    inset 0 -1px 0 rgba(255,255,255,.045) !important;
+}
+
+.is-office-theme .witch-appbrand h1 {
+  color: var(--office-ui-white) !important;
+  text-shadow: none !important;
+}
+
+.is-office-theme .witch-appbrand small {
+  color: #b7bcc1 !important;
+}
+
+.is-office-theme .witch-appbrand small::after {
+  background: linear-gradient(90deg, rgba(197,202,207,.52), transparent) !important;
+}
+
+.is-office-theme .witch-back,
+.is-office-theme .witch-appstats,
+.is-office-theme .witch-menu-button {
+  border-color: var(--office-ui-border) !important;
+  color: var(--office-ui-text) !important;
+  background: linear-gradient(180deg, #171a1d, #090b0d) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.055),
+    0 3px 10px rgba(0,0,0,.24) !important;
+}
+
+.is-office-theme .witch-menu-button {
+  border-left-color: rgba(214,218,222,.26) !important;
+}
+
+.is-office-theme .witch-stat-balance span,
+.is-office-theme .witch-appstats span,
+.is-office-theme .witch-appstats small {
+  color: var(--office-ui-muted) !important;
+}
+
+.is-office-theme .witch-stat-balance strong,
+.is-office-theme .witch-appstats strong,
+.is-office-theme .witch-connection {
+  color: var(--office-ui-white) !important;
+  text-shadow: none !important;
+}
+
+/* BOTTOM CONTROL DECK */
+.is-office-theme .witch-control-dock {
+  border-top-color: var(--office-ui-border) !important;
+  background:
+    radial-gradient(circle at 50% 0%, rgba(255,255,255,.035), transparent 34%),
+    linear-gradient(180deg, #111316 0%, #070809 56%, #020303 100%) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.04),
+    0 -12px 30px rgba(0,0,0,.34) !important;
+}
+
+.is-office-theme .witch-card-picker > label,
+.is-office-theme .witch-stake-group > label,
+.is-office-theme .witch-alarm-field > span,
+.is-office-theme .witch-buy-group > label {
+  color: var(--office-ui-muted) !important;
+}
+
+.is-office-theme .witch-cards-button,
+.is-office-theme .witch-stake-stepper,
+.is-office-theme .witch-alarm-field select,
+.is-office-theme .witch-stake-presets button,
+.is-office-theme .witch-stake-presets .witch-stake-scale {
+  border-color: var(--office-ui-border) !important;
+  color: var(--office-ui-text) !important;
+  background: linear-gradient(180deg, #171a1d 0%, #0a0c0e 100%) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.05),
+    0 3px 9px rgba(0,0,0,.24) !important;
+}
+
+.is-office-theme .witch-cards-button strong,
+.is-office-theme .witch-input-wrap input,
+.is-office-theme .witch-alarm-field select,
+.is-office-theme .witch-stake-presets button,
+.is-office-theme .witch-stake-stepper > button {
+  color: var(--office-ui-white) !important;
+}
+
+.is-office-theme .witch-cards-button small,
+.is-office-theme .witch-cards-button > b {
+  color: var(--office-ui-muted) !important;
+}
+
+.is-office-theme .witch-stake-stepper > button {
+  border-color: rgba(210,214,219,.22) !important;
+  background: linear-gradient(180deg, #1d2023, #0d0f11) !important;
+}
+
+.is-office-theme .witch-stake-stepper > button:hover:not(:disabled),
+.is-office-theme .witch-stake-presets button:hover:not(:disabled),
+.is-office-theme .witch-stake-presets .witch-stake-scale:hover:not(:disabled) {
+  border-color: var(--office-ui-border-strong) !important;
+  color: #ffffff !important;
+  background: linear-gradient(180deg, #292d31, #15181b) !important;
+}
+
+.is-office-theme .witch-stake-presets button.is-selected,
+.is-office-theme .witch-stake-presets .witch-stake-scale.is-selected {
+  border-color: #e7eaed !important;
+  color: #ffffff !important;
+  background: linear-gradient(180deg, #4a4f54 0%, #23272b 100%) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.14),
+    0 3px 9px rgba(0,0,0,.28) !important;
+}
+
+.is-office-theme .witch-primary-button:not(:disabled) {
+  border-color: #d7dbe0 !important;
+  color: #ffffff !important;
+  background: linear-gradient(180deg, #4a4f54 0%, #202428 54%, #111315 100%) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.15),
+    0 6px 16px rgba(0,0,0,.30) !important;
+  text-shadow: none !important;
+}
+
+.is-office-theme .witch-primary-button:disabled {
+  border-color: rgba(184,189,194,.18) !important;
+  color: rgba(220,224,228,.36) !important;
+  background: linear-gradient(180deg, #1b1e21 0%, #0c0e10 100%) !important;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.035) !important;
+}
+
+/* Deck popovers keep the same monochrome black family. */
+.is-office-theme .witch-card-menu,
+.is-office-theme .witch-game-menu {
+  border-color: var(--office-ui-border) !important;
+  color: var(--office-ui-text) !important;
+  background: linear-gradient(155deg, #171a1d 0%, #090b0d 62%, #030404 100%) !important;
+  box-shadow:
+    0 18px 36px rgba(0,0,0,.46),
+    inset 0 1px 0 rgba(255,255,255,.045) !important;
+}
+
+.is-office-theme .witch-card-option,
+.is-office-theme .witch-game-menu button,
+.is-office-theme .witch-game-menu a {
+  border-color: rgba(202,207,212,.22) !important;
+  color: var(--office-ui-text) !important;
+  background: rgba(12,14,16,.94) !important;
+}
+
+.is-office-theme .witch-card-option small,
+.is-office-theme .witch-game-menu small {
+  color: var(--office-ui-muted) !important;
+}
+
+.is-office-theme .witch-card-option.is-selected {
+  border-color: #e4e7ea !important;
+  color: #ffffff !important;
+  background: linear-gradient(180deg, #44494e, #202428) !important;
+}
+
+.is-office-theme .witch-card-option.is-selected strong,
+.is-office-theme .witch-card-option.is-selected small,
+.is-office-theme .witch-card-option.is-selected > b {
+  color: #ffffff !important;
+}
+
+
+/* PASS 34 — ADVANCED 25 direct master-coordinate registration, Part 1.
+   The previous geometry was correct in source-space but depended on a nested
+   scratch-union wrapper. A later layout rule could enlarge that wrapper, which
+   made each 19%-wide cell look ~25% of the whole card and created the visible
+   extra column/row overflow. Advanced now registers every cell directly in the
+   1200×546 master-card coordinate space. The wrapper is the full ticket and can
+   no longer distort the measured 5×5 map. */
+.is-advanced-theme .witch-ticket.is-advanced > .witch-board-wrap {
+  position: absolute !important;
+  z-index: 5 !important;
+  inset: 0 !important;
+  left: 0 !important;
+  top: 0 !important;
+  right: 0 !important;
+  bottom: 0 !important;
+  width: 100% !important;
+  height: 100% !important;
+  min-width: 0 !important;
+  min-height: 0 !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  overflow: hidden !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  transform: none !important;
+  pointer-events: none !important;
+}
+
+.is-advanced-theme .witch-ticket.is-advanced > .witch-board-wrap > .witch-board {
+  position: absolute !important;
+  inset: 0 !important;
+  display: block !important;
+  width: 100% !important;
+  height: 100% !important;
+  min-width: 0 !important;
+  min-height: 0 !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  overflow: hidden !important;
+  border: 0 !important;
+  background: transparent !important;
+  transform: none !important;
+  pointer-events: none !important;
+}
+
+.is-advanced-theme .witch-ticket.is-advanced .witch-board > .witch-cell {
+  position: absolute !important;
+  right: auto !important;
+  bottom: auto !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  min-width: 0 !important;
+  min-height: 0 !important;
+  box-sizing: border-box !important;
+  overflow: hidden !important;
+  transform: none !important;
+  pointer-events: auto !important;
+}
+
+/* Columns — percentages are direct 1200px master coordinates. */
+.is-advanced-theme .witch-ticket.is-advanced .witch-board > .witch-cell:nth-child(5n + 1) {
+  left: 32.5982% !important;
+  width: 12.1570% !important;
+}
+.is-advanced-theme .witch-ticket.is-advanced .witch-board > .witch-cell:nth-child(5n + 2) {
+  left: 45.5622% !important;
+  width: 12.1032% !important;
+}
+.is-advanced-theme .witch-ticket.is-advanced .witch-board > .witch-cell:nth-child(5n + 3) {
+  left: 58.4723% !important;
+  width: 12.1032% !important;
+}
+.is-advanced-theme .witch-ticket.is-advanced .witch-board > .witch-cell:nth-child(5n + 4) {
+  left: 71.3287% !important;
+  width: 12.1032% !important;
+}
+.is-advanced-theme .witch-ticket.is-advanced .witch-board > .witch-cell:nth-child(5n) {
+  left: 84.2389% !important;
+  width: 12.1032% !important;
+}
+
+/* Rows — percentages are direct 546px master coordinates. */
+.is-advanced-theme .witch-ticket.is-advanced .witch-board > .witch-cell:nth-child(-n + 5) {
+  top: 11.3475% !important;
+  height: 15.1301% !important;
+}
+.is-advanced-theme .witch-ticket.is-advanced .witch-board > .witch-cell:nth-child(n + 6):nth-child(-n + 10) {
+  top: 28.0142% !important;
+  height: 14.8937% !important;
+}
+.is-advanced-theme .witch-ticket.is-advanced .witch-board > .witch-cell:nth-child(n + 11):nth-child(-n + 15) {
+  top: 44.5626% !important;
+  height: 14.6572% !important;
+}
+.is-advanced-theme .witch-ticket.is-advanced .witch-board > .witch-cell:nth-child(n + 16):nth-child(-n + 20) {
+  top: 60.7565% !important;
+  height: 14.5390% !important;
+}
+.is-advanced-theme .witch-ticket.is-advanced .witch-board > .witch-cell:nth-child(n + 21):nth-child(-n + 24) {
+  top: 76.8322% !important;
+  height: 14.6572% !important;
+}
+.is-advanced-theme .witch-ticket.is-advanced .witch-board > .witch-cell:nth-child(25) {
+  top: 76.7140% !important;
+  height: 14.7754% !important;
+}
+
+/* Nothing in the old scratch-union coordinate system may resize this map. */
+@media (min-width: 0px) {
+  .is-advanced-theme .witch-ticket.is-advanced > .witch-board-wrap {
+    inset: 0 !important;
+    left: 0 !important;
+    top: 0 !important;
+    right: 0 !important;
+    bottom: 0 !important;
+    width: 100% !important;
+    height: 100% !important;
+  }
+}
+
+
+/* PASS 35 — ADVANCED 25 cell-local scratch/result lock, Part 2.
+   Every visual/interaction layer is now local to one measured master-card
+   rectangle. No inherited grid sizing, transforms or generic scratch geometry
+   may move a canvas/result outside its card cell. Paw/skull art is centered in
+   the exact reveal box and preserves its aspect ratio. */
+.is-advanced-theme .witch-ticket.is-advanced .witch-board > .witch-cell {
+  display: block !important;
+  isolation: isolate !important;
+  border: 0 !important;
+  border-radius: 9% / 17% !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  contain: layout paint !important;
+}
+
+/* Result stage stays exactly inside the card's printed rectangle. */
+.is-advanced-theme .witch-ticket.is-advanced .witch-board > .witch-cell > .witch-cell-result-layer {
+  position: absolute !important;
+  z-index: 1 !important;
+  inset: 0 !important;
+  display: grid !important;
+  place-items: center !important;
+  width: 100% !important;
+  height: 100% !important;
+  min-width: 0 !important;
+  min-height: 0 !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  overflow: hidden !important;
+  border: 0 !important;
+  border-radius: inherit !important;
+  box-sizing: border-box !important;
+  transform: none !important;
+}
+
+/* All three scratch canvases + debris use the identical local box. */
+.is-advanced-theme .witch-ticket.is-advanced .witch-board > .witch-cell > .witch-scratch-layer,
+.is-advanced-theme .witch-ticket.is-advanced .witch-board > .witch-cell > .witch-debris-canvas {
+  position: absolute !important;
+  inset: 0 !important;
+  width: 100% !important;
+  height: 100% !important;
+  min-width: 0 !important;
+  min-height: 0 !important;
+  max-width: none !important;
+  max-height: none !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  overflow: hidden !important;
+  border: 0 !important;
+  border-radius: inherit !important;
+  box-sizing: border-box !important;
+  transform: none !important;
+}
+
+/* Preserve the intended interaction stack. */
+.is-advanced-theme .witch-ticket.is-advanced .witch-board > .witch-cell > .witch-scratch-layer-base {
+  z-index: 3 !important;
+  pointer-events: none !important;
+}
+.is-advanced-theme .witch-ticket.is-advanced .witch-board > .witch-cell > .witch-scratch-layer-foil {
+  z-index: 4 !important;
+  pointer-events: none !important;
+}
+.is-advanced-theme .witch-ticket.is-advanced .witch-board > .witch-cell > .witch-scratch-layer-lacquer {
+  z-index: 5 !important;
+  pointer-events: auto !important;
+}
+.is-advanced-theme .witch-ticket.is-advanced .witch-board > .witch-cell > .witch-debris-canvas {
+  z-index: 6 !important;
+  pointer-events: none !important;
+}
+
+/* The artwork stage itself has no legacy sculpture dimensions or transforms. */
+.is-advanced-theme .witch-ticket.is-advanced .witch-cell-content {
+  position: absolute !important;
+  inset: 0 !important;
+  z-index: 2 !important;
+  display: grid !important;
+  place-items: center !important;
+  width: 100% !important;
+  height: 100% !important;
+  min-width: 0 !important;
+  min-height: 0 !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  overflow: hidden !important;
+  border: 0 !important;
+  border-radius: inherit !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  transform: none !important;
+}
+
+.is-advanced-theme .witch-ticket.is-advanced .witch-cell-content::before,
+.is-advanced-theme .witch-ticket.is-advanced .witch-cell-content::after,
+.is-advanced-theme .witch-ticket.is-advanced .witch-cell-aura,
+.is-advanced-theme .witch-ticket.is-advanced .witch-cell-result-label {
+  display: none !important;
+  content: none !important;
+}
+
+/* Paw/skull: centered, contained and consistently scaled inside every cell. */
+.is-advanced-theme .witch-ticket.is-advanced .witch-cell-artwork {
+  position: static !important;
+  display: block !important;
+  justify-self: center !important;
+  align-self: center !important;
+  width: 72% !important;
+  height: 72% !important;
+  max-width: 72% !important;
+  max-height: 72% !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  object-fit: contain !important;
+  object-position: 50% 50% !important;
+  border: 0 !important;
+  background: transparent !important;
+  transform: none !important;
+  transform-origin: center center !important;
+  pointer-events: none !important;
+  user-select: none !important;
+}
+
+.is-advanced-theme .witch-ticket.is-advanced .witch-cell.is-bomb .witch-cell-artwork {
+  width: 76% !important;
+  height: 76% !important;
+  max-width: 76% !important;
+  max-height: 76% !important;
+}
+
+/* Revealed backgrounds remain inside the printed gold frame instead of
+   painting or shadowing outside the rectangle. */
+.is-advanced-theme .witch-ticket.is-advanced .witch-cell.is-safe .witch-cell-result-layer,
+.is-advanced-theme .witch-ticket.is-advanced .witch-cell.is-bomb .witch-cell-result-layer {
+  border-radius: inherit !important;
+  box-shadow:
+    inset 0 0 0 1px rgba(230, 180, 72, .44),
+    inset 0 0 16px rgba(0,0,0,.56) !important;
+}
+
+
+/* PASS 36 — ADVANCED 25 final geometry QA / regression lock, Part 3.
+   Verified against the actual 1200×546 master PNG. The detected silver-cell
+   interiors land inside the direct master-coordinate rectangles for all 25
+   positions. Final scratch-map envelope: x≈391..1156, y≈62..500. No cell may
+   inherit width/height/grid transforms from generic cards or escape this map. */
+.is-advanced-theme .witch-ticket.is-advanced,
+.is-advanced-theme .witch-ticket.is-advanced > .witch-board-wrap,
+.is-advanced-theme .witch-ticket.is-advanced > .witch-board-wrap > .witch-board {
+  container-type: normal !important;
+}
+
+.is-advanced-theme .witch-ticket.is-advanced > .witch-board-wrap,
+.is-advanced-theme .witch-ticket.is-advanced > .witch-board-wrap > .witch-board {
+  clip-path: inset(0) !important;
+  contain: layout paint !important;
+}
+
+.is-advanced-theme .witch-ticket.is-advanced .witch-board > .witch-cell {
+  max-width: none !important;
+  max-height: none !important;
+  aspect-ratio: auto !important;
+  translate: none !important;
+  scale: none !important;
+  rotate: none !important;
+}
+
+/* Row 5 is one straight measured baseline; cell 25 must not drift by a
+   sub-pixel-special-case inherited from the old union map. */
+.is-advanced-theme .witch-ticket.is-advanced .witch-board > .witch-cell:nth-child(n + 21):nth-child(-n + 25) {
+  top: 76.8322% !important;
+  height: 14.6572% !important;
+}
+
+/* Exact local interaction box on every registered cell. */
+.is-advanced-theme .witch-ticket.is-advanced .witch-board > .witch-cell > canvas {
+  display: block !important;
+  inset: 0 !important;
+  width: 100% !important;
+  height: 100% !important;
+  box-sizing: border-box !important;
+}
