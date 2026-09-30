@@ -9,7 +9,7 @@ import {
 const {
   query,
 } = vi.hoisted(() => ({
-  query: vi.fn(async () => ({
+  query: vi.fn(async (_sql: unknown) => ({
     rows: [
       {
         schema_ready: true,
