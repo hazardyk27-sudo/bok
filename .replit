@@ -30,5 +30,8 @@ packages = ["alsa-lib", "atk", "cups", "dbus", "expat", "fontconfig", "freetype"
 
 [userenv]
 
+[userenv.shared]
+USE_SUPABASE_DATABASE = "true"
+
 [userenv.development]
 ROULETTE_ROUND_GENERATION_PAUSED = "false"
