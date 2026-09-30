@@ -13,6 +13,7 @@ import type {
 } from "../../../cascade-8/src/roulette/betRules";
 import {
   assertRouletteGlobalBettingOpen,
+  getNextRouletteGlobalBetRevision,
   getRouletteGlobalStakeCents,
   settleRouletteGlobalBet,
 } from "./globalBet";
@@ -31,6 +32,7 @@ type GlobalRoundBetRow = {
   bets: RouletteServerBet[];
   stake_cents: number;
   payout_cents: number;
+  revision: number;
   settlement:
     | RouletteRoundSettlement
     | null;
@@ -52,6 +54,8 @@ type GlobalBetRequestRow = {
   round_id: string;
   session_id: string;
   bets: RouletteServerBet[];
+  expected_revision: number;
+  applied_revision: number;
 };
 
 type DueGlobalBetRow = {
@@ -131,6 +135,7 @@ async function readGlobalBet(
          bets,
          stake_cents,
          payout_cents,
+         revision,
          settlement,
          settled_at,
          updated_at
@@ -167,6 +172,10 @@ function response(
             payoutCents:
               Number(
                 row.payout_cents,
+              ),
+            revision:
+              Number(
+                row.revision,
               ),
             settlement:
               row.settlement,
@@ -228,10 +237,22 @@ export async function upsertRouletteGlobalBet(input: {
   roundId: string;
   bets: RouletteServerBet[];
   idempotencyKey: string;
+  expectedRevision: number;
 }) {
   validateIdempotencyKey(
     input.idempotencyKey,
   );
+
+  if (
+    !Number.isSafeInteger(
+      input.expectedRevision,
+    ) ||
+    input.expectedRevision < 0
+  ) {
+    throw new Error(
+      "INVALID_ROULETTE_GLOBAL_BET_REVISION",
+    );
+  }
 
   const client =
     await pool.connect();
@@ -261,7 +282,9 @@ export async function upsertRouletteGlobalBet(input: {
            idempotency_key,
            round_id,
            session_id,
-           bets
+           bets,
+           expected_revision,
+           applied_revision
          FROM roulette_global_bet_requests
          WHERE idempotency_key = $1
          LIMIT 1`,
@@ -281,6 +304,10 @@ export async function upsertRouletteGlobalBet(input: {
           input.roundId ||
         existingRequest.session_id !==
           input.sessionId ||
+        Number(
+          existingRequest.expected_revision,
+        ) !==
+          input.expectedRevision ||
         !betsEqual(
           existingRequest.bets,
           input.bets,
@@ -366,6 +393,17 @@ export async function upsertRouletteGlobalBet(input: {
       );
     }
 
+    const currentRevision =
+      Number(
+        existingBet?.revision ??
+        0,
+      );
+    const nextRevision =
+      getNextRouletteGlobalBetRevision(
+        currentRevision,
+        input.expectedRevision,
+      );
+
     const oldStakeCents =
       Number(
         existingBet
@@ -434,13 +472,14 @@ export async function upsertRouletteGlobalBet(input: {
            bets,
            stake_cents,
            payout_cents,
+           revision,
            settlement,
            settled_at,
            updated_at
          )
          VALUES (
            $1, $2, $3, $4::jsonb,
-           $5, 0, NULL, NULL,
+           $5, 0, $6, NULL, NULL,
            clock_timestamp()
          )
          ON CONFLICT
@@ -449,6 +488,8 @@ export async function upsertRouletteGlobalBet(input: {
            bets = EXCLUDED.bets,
            stake_cents =
              EXCLUDED.stake_cents,
+           revision =
+             EXCLUDED.revision,
            updated_at =
              clock_timestamp()
          RETURNING
@@ -458,6 +499,7 @@ export async function upsertRouletteGlobalBet(input: {
            bets,
            stake_cents,
            payout_cents,
+           revision,
            settlement,
            settled_at,
            updated_at`,
@@ -469,6 +511,7 @@ export async function upsertRouletteGlobalBet(input: {
             input.bets,
           ),
           newStakeCents,
+          nextRevision,
         ],
       );
 
@@ -477,10 +520,13 @@ export async function upsertRouletteGlobalBet(input: {
          idempotency_key,
          round_id,
          session_id,
-         bets
+         bets,
+         expected_revision,
+         applied_revision
        )
        VALUES (
-         $1, $2, $3, $4::jsonb
+         $1, $2, $3, $4::jsonb,
+         $5, $6
        )`,
       [
         input.idempotencyKey,
@@ -489,6 +535,8 @@ export async function upsertRouletteGlobalBet(input: {
         JSON.stringify(
           input.bets,
         ),
+        input.expectedRevision,
+        nextRevision,
       ],
     );
 

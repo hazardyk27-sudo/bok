@@ -6,10 +6,38 @@ import {
 import {
   assertRouletteGlobalBettingOpen,
   getRouletteGlobalStakeCents,
+  getNextRouletteGlobalBetRevision,
   settleRouletteGlobalBet,
 } from "./globalBet";
 
 describe("roulette global bets", () => {
+  it("advances only the exact current bet revision", () => {
+    expect(
+      getNextRouletteGlobalBetRevision(
+        0,
+        0,
+      ),
+    ).toBe(1);
+    expect(
+      getNextRouletteGlobalBetRevision(
+        4,
+        4,
+      ),
+    ).toBe(5);
+  });
+
+  it("rejects stale global bet revisions", () => {
+    expect(() =>
+      getNextRouletteGlobalBetRevision(
+        5,
+        4,
+      ),
+    ).toThrow(
+      "ROULETTE_GLOBAL_BET_STALE",
+    );
+  });
+
+
   const round = {
     bettingOpenAtMs:
       1_000,

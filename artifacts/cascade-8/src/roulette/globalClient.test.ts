@@ -8,6 +8,7 @@ import {
   getRouletteGlobalBettingSecondsRemaining,
   getRouletteGlobalClientPhase,
   getRouletteGlobalSpinElapsedMs,
+  getRouletteQueuedBetExpectedRevision,
 } from "./globalClient";
 import type {
   RouletteGlobalTableSnapshot,
@@ -29,6 +30,22 @@ const table: RouletteGlobalTableSnapshot = {
 };
 
 describe("roulette global client clock", () => {
+  it("keeps queued writes pinned to the revision they were based on", () => {
+    expect(
+      getRouletteQueuedBetExpectedRevision(
+        4,
+        false,
+      ),
+    ).toBe(4);
+    expect(
+      getRouletteQueuedBetExpectedRevision(
+        4,
+        true,
+      ),
+    ).toBe(5);
+  });
+
+
   it("estimates server time from the request midpoint", () => {
     expect(
       estimateRouletteServerClockOffset(

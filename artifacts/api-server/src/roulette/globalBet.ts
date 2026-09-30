@@ -102,3 +102,35 @@ export function settleRouletteGlobalBet(
     payoutCents,
   };
 }
+
+
+export function getNextRouletteGlobalBetRevision(
+  currentRevision: number,
+  expectedRevision: number,
+) {
+  if (
+    !Number.isSafeInteger(
+      currentRevision,
+    ) ||
+    currentRevision < 0 ||
+    !Number.isSafeInteger(
+      expectedRevision,
+    ) ||
+    expectedRevision < 0
+  ) {
+    throw new Error(
+      "INVALID_ROULETTE_GLOBAL_BET_REVISION",
+    );
+  }
+
+  if (
+    currentRevision !==
+    expectedRevision
+  ) {
+    throw new Error(
+      "ROULETTE_GLOBAL_BET_STALE",
+    );
+  }
+
+  return currentRevision + 1;
+}

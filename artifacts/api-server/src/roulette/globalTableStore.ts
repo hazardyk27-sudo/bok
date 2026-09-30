@@ -86,11 +86,16 @@ export async function ensureRouletteGlobalTableStorage() {
       bets jsonb NOT NULL,
       stake_cents bigint NOT NULL,
       payout_cents bigint NOT NULL DEFAULT 0,
+      revision integer NOT NULL DEFAULT 0,
       settlement jsonb,
       settled_at timestamptz,
       updated_at timestamptz NOT NULL DEFAULT now(),
       created_at timestamptz NOT NULL DEFAULT now()
     )`,
+  );
+  await pool.query(
+    `ALTER TABLE roulette_global_bets
+       ADD COLUMN IF NOT EXISTS revision integer NOT NULL DEFAULT 0`,
   );
   await pool.query(
     `CREATE UNIQUE INDEX IF NOT EXISTS roulette_global_bets_round_session_unique
@@ -107,8 +112,18 @@ export async function ensureRouletteGlobalTableStorage() {
       round_id text NOT NULL,
       session_id text NOT NULL,
       bets jsonb NOT NULL,
+      expected_revision integer NOT NULL DEFAULT 0,
+      applied_revision integer NOT NULL DEFAULT 0,
       created_at timestamptz NOT NULL DEFAULT now()
     )`,
+  );
+  await pool.query(
+    `ALTER TABLE roulette_global_bet_requests
+       ADD COLUMN IF NOT EXISTS expected_revision integer NOT NULL DEFAULT 0`,
+  );
+  await pool.query(
+    `ALTER TABLE roulette_global_bet_requests
+       ADD COLUMN IF NOT EXISTS applied_revision integer NOT NULL DEFAULT 0`,
   );
 }
 

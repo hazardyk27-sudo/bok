@@ -58,7 +58,8 @@ function sendError(res: Response, error: unknown) {
         : message === "ROULETTE_IDEMPOTENCY_KEY_REUSED" ||
             message === "ROULETTE_GLOBAL_BETTING_NOT_OPEN" ||
             message === "ROULETTE_GLOBAL_BETTING_CLOSED" ||
-            message === "ROULETTE_GLOBAL_BET_ALREADY_SETTLED"
+            message === "ROULETTE_GLOBAL_BET_ALREADY_SETTLED" ||
+            message === "ROULETTE_GLOBAL_BET_STALE"
           ? 409
           : 400;
 
@@ -84,13 +85,20 @@ router.put("/roulette/global-bets", async (req, res) => {
         roundId?: unknown;
         bets?: unknown;
         idempotencyKey?: unknown;
+        expectedRevision?: unknown;
       };
 
     if (
       typeof body.roundId !==
         "string" ||
       typeof body.idempotencyKey !==
-        "string"
+        "string" ||
+      !Number.isSafeInteger(
+        body.expectedRevision,
+      ) ||
+      Number(
+        body.expectedRevision,
+      ) < 0
     ) {
       res.status(400).json({
         error:
@@ -117,6 +125,10 @@ router.put("/roulette/global-bets", async (req, res) => {
             bets,
             idempotencyKey:
               body.idempotencyKey,
+            expectedRevision:
+              Number(
+                body.expectedRevision,
+              ),
           },
         ),
     );
