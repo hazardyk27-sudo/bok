@@ -423,8 +423,15 @@ class BusinessesClient {
     }
 
     this.renderTimer = window.setInterval(
-      () => this.render(),
-      500,
+      () => {
+        if (
+          document.visibilityState !==
+          "hidden"
+        ) {
+          this.render();
+        }
+      },
+      1_000,
     );
 
     window.addEventListener(
