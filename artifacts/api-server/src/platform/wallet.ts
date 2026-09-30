@@ -252,17 +252,20 @@ export async function resolveCanonicalWalletSessionCandidates(
     result.rows.map((row) => [row.session_id, Number(row.balance_cents)]),
   );
 
-  const establishedCandidates = candidates.filter((sessionId) => {
-    const balance = balances.get(sessionId);
-    return balance !== undefined && balance !== INITIAL_SHARED_BALANCE_CENTS;
-  });
-
   const existingCandidates = candidates.filter((sessionId) =>
     balances.has(sessionId),
   );
 
-  const canonicalSessionId = establishedCandidates.at(-1)
-    ?? existingCandidates.at(-1)
+  const canonicalSessionId = existingCandidates
+    .map((sessionId, order) => ({
+      sessionId,
+      order,
+      balanceCents: balances.get(sessionId) ?? INITIAL_SHARED_BALANCE_CENTS,
+    }))
+    .sort((left, right) =>
+      right.balanceCents - left.balanceCents || right.order - left.order,
+    )
+    .at(0)?.sessionId
     ?? candidates.at(-1)
     ?? null;
 
