@@ -4,13 +4,7 @@ import { logger } from "./lib/logger";
 import { attachBlackjackPlatformRuntime } from "./platform/blackjack";
 import { initializeSharedWalletPlatform } from "./platform/wallet";
 
-const REPLIT_DEVELOPMENT_API_PORT = 20_004;
-
-const rawPort =
-  process.env.NODE_ENV === "development"
-  && process.env.REPL_ID !== undefined
-    ? String(REPLIT_DEVELOPMENT_API_PORT)
-    : process.env["PORT"];
+const rawPort = process.env["PORT"];
 
 if (!rawPort) {
   throw new Error(

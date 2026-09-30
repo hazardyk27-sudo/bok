@@ -3,7 +3,7 @@ set -euo pipefail
 
 MODE="${1:-dev}"
 FRONTEND_PORT="${PORT:-20003}"
-API_PORT="${API_PORT:-20004}"
+API_PORT="${API_PORT:-8080}"
 BASE_PATH="${BASE_PATH:-/}"
 API_PROXY_TARGET="${API_PROXY_TARGET:-http://127.0.0.1:${API_PORT}}"
 

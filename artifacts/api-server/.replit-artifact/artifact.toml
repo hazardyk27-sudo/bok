@@ -5,8 +5,8 @@ version = "1.0.0"
 id = "3B4_FFSkEVBkAeYMFRJ2e"
 
 [[services]]
-# Keep aligned with the web API_PROXY_TARGET and scripts/run-local-stack.sh.
-localPort = 20004
+# Replit artifact runtime port; keep web proxy and local stack aligned.
+localPort = 8080
 name = "API Server"
 paths = ["/api"]
 
@@ -26,7 +26,7 @@ NODE_ENV = "production"
 args = ["node", "--enable-source-maps", "artifacts/api-server/dist/index.mjs"]
 
 [services.production.run.env]
-PORT = "20004"
+PORT = "8080"
 NODE_ENV = "production"
 
 [services.production.health.startup]

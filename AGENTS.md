@@ -101,9 +101,9 @@ Frontend artifact:
 API artifact:
 - workspace: `artifacts/api-server`
 - Replit API service path: `/api`
-- tracked local/runtime port: `20004`
+- tracked local/runtime port: `8080`
 
-The web dev server proxies `/api` to `127.0.0.1:20004`. The web artifact also pins `API_PROXY_TARGET=http://127.0.0.1:20004`, and the API artifact, Vite fallback and `scripts/run-local-stack.sh` must remain aligned on this same port. Any future port change is central platform work and must update all three surfaces together.
+The web dev server proxies `/api` to `127.0.0.1:8080`. The web artifact pins `API_PROXY_TARGET=http://127.0.0.1:8080`; the API artifact, Vite fallback and `scripts/run-local-stack.sh` must remain aligned on this same port. The standard Replit sync helper runs post-merge setup when HEAD advances, touches watched API/Vite files to force runtime reload, and verifies `/api/healthz` on port 8080 before reporting success.
 
 Main frontend route dispatch lives in `artifacts/cascade-8/src/main.ts`.
 Main API mounting lives in `artifacts/api-server/src/app.ts` and `artifacts/api-server/src/routes`.
@@ -275,7 +275,7 @@ Shared/platform milestones live only in this master file and are updated only by
 
 ## 13. Current shared/platform state
 
-- 2026-09-30 — Replit web/API runtime ports are re-standardized: web `20003`, API `20004`; the web artifact explicitly pins `API_PROXY_TARGET=http://127.0.0.1:20004`, matching Vite and `scripts/run-local-stack.sh`. This closes the tracked 8080/20004 routing drift that could leave `/api/*` requests disconnected in preview.
+- 2026-09-30 — Replit runtime alignment is hardened around the artifact-native API port `8080`: web stays on `20003`, API artifact/Vite proxy/local-stack all use `8080`, and the standard sync helper now runs post-merge setup on advancement, forces API/Vite watcher reloads, and requires `/api/healthz` to recover before declaring sync success. This closes the stale-process failure where Git was current but `/api/*` still served old routes.
 
 - 2026-09-30 — Replit read-only preview guard is merged and verified live: branch `integration/replit-preview`, `core.hooksPath=.githooks`, `oyun.replitReadonly=true`, fetch enabled and pushes blocked. This closes the recurring Replit-local commit divergence problem.
 - 2026-09-30 — Cross-path session convergence is active: historical scoped game-session cookies are probed and converged into root `game_session`; fragmented wallet identities preserve the highest existing balance without summing credits.

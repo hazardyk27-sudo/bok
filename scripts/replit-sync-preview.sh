@@ -31,6 +31,7 @@ fi
 
 remote_ref="$REMOTE/$BRANCH"
 stable="false"
+updated="false"
 
 for attempt in $(seq 1 "$MAX_ATTEMPTS"); do
   echo "SYNC ATTEMPT $attempt/$MAX_ATTEMPTS"
@@ -54,6 +55,7 @@ for attempt in $(seq 1 "$MAX_ATTEMPTS"); do
     # reference-transaction blocks direct preview ref updates. This verified
     # fast-forward is the sole sanctioned exception.
     OYUN_ALLOW_PREVIEW_REF_UPDATE=1 git merge --ff-only "$remote_ref"
+    updated="true"
   fi
 
   # Re-fetch after the merge. If GitHub moved while we were syncing, do not
@@ -77,6 +79,36 @@ done
 if [[ "$stable" != "true" ]]; then
   echo "ABORT: Preview kept moving during $MAX_ATTEMPTS attempts. Re-run the same sync command later."
   exit 8
+fi
+
+if [[ "$updated" == "true" && -f "scripts/post-merge.sh" ]]; then
+  echo "Running Replit post-merge setup..."
+  bash scripts/post-merge.sh
+fi
+
+# Git sync alone does not guarantee already-running Replit artifact processes
+# reload changed backend/config files. Touch watched files without changing
+# their contents so Node/Vite development watchers reload onto the new HEAD.
+if [[ -n "${REPL_ID:-}" ]]; then
+  touch artifacts/api-server/src/index.ts
+  touch artifacts/cascade-8/vite.config.ts
+
+  echo "Waiting for API runtime on 127.0.0.1:8080..."
+  api_ready="false"
+  for attempt in $(seq 1 80); do
+    if node -e "fetch('http://127.0.0.1:8080/api/healthz').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"; then
+      api_ready="true"
+      break
+    fi
+    sleep 0.25
+  done
+
+  if [[ "$api_ready" != "true" ]]; then
+    echo "ABORT: API runtime did not become healthy on 127.0.0.1:8080 after sync."
+    exit 11
+  fi
+
+  echo "API_RUNTIME_HEALTH: ok"
 fi
 
 final_branch="$(git branch --show-current)"
