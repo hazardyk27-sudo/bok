@@ -5646,3 +5646,185 @@
     max-width: 940px !important;
   }
 }
+
+
+/* PASS 31 — master-card chrome kill + card-themed top chrome.
+   Advanced 25 and The Office are literal master-image tickets. Their only direct
+   visible children are the master artwork and the scratch-board overlay; all
+   legacy parchment/header/meta/price/footer layers and ticket pseudo-surfaces
+   are hard-disabled. The app header follows the selected card palette while its
+   geometry remains unchanged. */
+
+/* hidden must win even against legacy display:grid !important rules. */
+.witch-page [hidden] {
+  display: none !important;
+}
+
+/* Master-card modes: no generic ticket artwork may leak above the supplied PNG. */
+.is-advanced-theme .witch-ticket.is-advanced,
+.is-office-theme .witch-ticket.is-office {
+  display: block !important;
+  grid-template: none !important;
+  grid-template-columns: none !important;
+  grid-template-rows: none !important;
+  grid-template-areas: none !important;
+  gap: 0 !important;
+  padding: 0 !important;
+  border: 0 !important;
+  background: transparent !important;
+  isolation: isolate !important;
+}
+
+.is-advanced-theme .witch-ticket.is-advanced::before,
+.is-advanced-theme .witch-ticket.is-advanced::after,
+.is-office-theme .witch-ticket.is-office::before,
+.is-office-theme .witch-ticket.is-office::after {
+  display: none !important;
+  content: none !important;
+  background: none !important;
+  box-shadow: none !important;
+}
+
+/* Direct-child allowlist: master art + scratch overlay only. */
+.is-advanced-theme .witch-ticket.is-advanced
+  > :not(.witch-advanced-card-art):not(.witch-board-wrap),
+.is-office-theme .witch-ticket.is-office
+  > :not(.witch-office-card-art):not(.witch-board-wrap) {
+  display: none !important;
+  visibility: hidden !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
+}
+
+.is-advanced-theme .witch-ticket.is-advanced > .witch-advanced-card-art,
+.is-office-theme .witch-ticket.is-office > .witch-office-card-art {
+  display: block !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+}
+
+.is-advanced-theme .witch-ticket.is-advanced > .witch-board-wrap,
+.is-office-theme .witch-ticket.is-office > .witch-board-wrap {
+  display: block !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+}
+
+/* ADVANCED: explicitly neutralize the old parchment/grid composition. */
+.is-advanced-theme .witch-ticket.is-advanced {
+  min-width: 0 !important;
+  min-height: 0 !important;
+  box-shadow: 0 20px 44px rgba(0,0,0,.42) !important;
+}
+
+.is-advanced-theme .witch-ticket.is-advanced > .witch-board-wrap {
+  padding: 0 !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+}
+
+/* ---------- selected-card app header palettes ---------- */
+
+/* Advanced 25: graphite/black shell with metallic gold controls/text. */
+.is-advanced-theme .witch-appbar {
+  border-bottom-color: rgba(229, 177, 65, .66) !important;
+  background:
+    radial-gradient(circle at 44% 0%, rgba(222,168,51,.08), transparent 34%),
+    linear-gradient(90deg, #11110f 0%, #080908 48%, #030404 100%) !important;
+  box-shadow:
+    0 8px 26px rgba(0,0,0,.40),
+    inset 0 -1px 0 rgba(247,199,92,.08) !important;
+}
+
+.is-advanced-theme .witch-appbrand h1 {
+  color: #f7edd5 !important;
+}
+
+.is-advanced-theme .witch-appbrand small {
+  color: #e5b94f !important;
+}
+
+.is-advanced-theme .witch-appbrand small::after {
+  background: linear-gradient(90deg, rgba(229,185,79,.70), transparent) !important;
+}
+
+.is-advanced-theme .witch-back,
+.is-advanced-theme .witch-appstats,
+.is-advanced-theme .witch-menu-button {
+  border-color: rgba(226,174,61,.48) !important;
+}
+
+.is-advanced-theme .witch-back {
+  color: #efc557 !important;
+  background: #0d0e0d !important;
+}
+
+.is-advanced-theme .witch-appstats {
+  background: rgba(8,9,8,.92) !important;
+}
+
+.is-advanced-theme .witch-stat-balance span {
+  color: #aa9b7d !important;
+}
+
+.is-advanced-theme .witch-stat-balance strong {
+  color: #ffd56a !important;
+}
+
+.is-advanced-theme .witch-menu-button {
+  border-left-color: rgba(226,174,61,.32) !important;
+  color: #efc557 !important;
+  background: rgba(12,13,12,.88) !important;
+}
+
+/* The Office: white/light-gray shell with black/graphite copy and controls. */
+.is-office-theme .witch-appbar {
+  border-bottom-color: rgba(48,52,56,.42) !important;
+  background:
+    linear-gradient(180deg, #ffffff 0%, #f1f2f3 54%, #dfe1e3 100%) !important;
+  box-shadow:
+    0 8px 24px rgba(0,0,0,.16),
+    inset 0 -1px 0 rgba(0,0,0,.06) !important;
+}
+
+.is-office-theme .witch-appbrand h1 {
+  color: #111315 !important;
+  text-shadow: 0 1px 0 #ffffff !important;
+}
+
+.is-office-theme .witch-appbrand small {
+  color: #4c5156 !important;
+}
+
+.is-office-theme .witch-appbrand small::after {
+  background: linear-gradient(90deg, rgba(62,66,70,.52), transparent) !important;
+}
+
+.is-office-theme .witch-back {
+  border-color: rgba(42,46,50,.42) !important;
+  color: #17191b !important;
+  background: linear-gradient(180deg, #ffffff, #e0e2e4) !important;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.95) !important;
+}
+
+.is-office-theme .witch-appstats {
+  border-color: rgba(42,46,50,.34) !important;
+  background: rgba(255,255,255,.72) !important;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.95) !important;
+}
+
+.is-office-theme .witch-stat-balance span {
+  color: #656a70 !important;
+}
+
+.is-office-theme .witch-stat-balance strong {
+  color: #111315 !important;
+}
+
+.is-office-theme .witch-menu-button {
+  border-left-color: rgba(42,46,50,.24) !important;
+  color: #17191b !important;
+  background: rgba(235,237,239,.86) !important;
+}

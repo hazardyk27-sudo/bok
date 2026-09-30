@@ -882,6 +882,13 @@ export class WitchClient {
       ticket.classList.toggle("is-advanced", visualMode === "ADVANCED");
     }
 
+    const usesMasterCardArtwork = visualMode === "ADVANCED" || visualMode === "OFFICE_MATCH_6";
+    this.root.querySelectorAll<HTMLElement>(
+      ".witch-ticket-frame, .witch-bcs-card-art, .witch-ticket-header, .witch-ticket-meta-row, .witch-ticket-footer",
+    ).forEach((element) => {
+      element.hidden = usesMasterCardArtwork;
+    });
+
     const riskNote = this.root.querySelector<HTMLElement>("[data-witch-risk-note]");
     const riskLabel = this.root.querySelector<HTMLElement>(".witch-alarm-field > span");
     if (riskLabel) riskLabel.textContent = this.mode === "OFFICE_MATCH_6" ? "KURAL" : "RİSK";
