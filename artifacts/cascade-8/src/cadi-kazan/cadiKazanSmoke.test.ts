@@ -18,6 +18,10 @@ const scratchSurfaceSource = readFileSync(
   fileURLToPath(new URL("./scratch/ScratchSurface.ts", import.meta.url)),
   "utf8",
 );
+const scratchPresentationSource = readFileSync(
+  fileURLToPath(new URL("./scratch/ScratchPresentation.ts", import.meta.url)),
+  "utf8",
+);
 const audioManagerSource = readFileSync(
   fileURLToPath(new URL("./AudioManager.ts", import.meta.url)),
   "utf8",
