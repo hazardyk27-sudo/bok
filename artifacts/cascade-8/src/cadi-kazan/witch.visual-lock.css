@@ -3460,7 +3460,7 @@
 /* PASS 19 — THE OFFICE master-PNG shell + measured scratch-zone registration.
    The supplied/generated master PNG owns the entire visible card. Only the six
    measured white scratch rectangles remain live DOM/canvas overlays. Coordinates
-   are normalized from the 1511×707 cropped PNG so resizing preserves registration. */
+   are normalized from the validated 1000×468 master so resizing preserves registration. */
 .is-office-theme .witch-ticket {
   aspect-ratio: 1000 / 468 !important;
   overflow: hidden !important;
@@ -3514,7 +3514,7 @@
   display: none !important;
 }
 
-/* Master PNG scratch union: x 563..1440, y 94..644 in 1511×707. */
+/* Master PNG scratch union: x 372..953, y 62..426 in 1000×468. */
 .is-office-theme .witch-board-wrap {
   position: absolute !important;
   z-index: 5 !important;
@@ -3543,7 +3543,7 @@
   background: transparent !important;
 }
 
-/* Exact per-cell registration inside the 877×550 scratch union. */
+/* Exact per-cell registration inside the 581×364 scratch union. */
 .is-office-theme .witch-board > .witch-cell {
   position: absolute !important;
   margin: 0 !important;
@@ -3640,7 +3640,7 @@
    The supplied master PNG is the entire visible ticket. No CSS-painted Office
    artwork and no duplicate background image are allowed here; only the six
    measured scratch zones may sit above the PNG. Padding/min-width from the
-   generic ticket are explicitly cleared so the full 1511×707 artwork cannot
+   generic ticket are explicitly cleared so the full 1000×468 artwork cannot
    be clipped or shifted inside the ticket box. */
 .is-office-theme .witch-ticket {
   box-sizing: border-box !important;
@@ -3942,5 +3942,1606 @@
     top: 13.2479% !important;
     right: 4.7% !important;
     bottom: 8.9744% !important;
+  }
+}
+
+
+/* PASS 23 — canonical payout/deck theme system.
+   Better Call Saul owns the geometry/typography. STANDARD, ADVANCED and OFFICE
+   share one component structure; only the palette variables change by card. */
+
+.is-standard-theme {
+  --witch-payout-panel-bg: linear-gradient(145deg, rgba(49, 24, 16, .985), rgba(19, 12, 9, .985));
+  --witch-payout-border: rgba(210, 150, 43, .68);
+  --witch-payout-outer-ring: rgba(8, 5, 4, .66);
+  --witch-payout-title: #fff1d7;
+  --witch-payout-title-shadow-1: rgba(97, 52, 21, .95);
+  --witch-payout-title-shadow-2: rgba(54, 27, 11, .72);
+  --witch-payout-amount: #ffd967;
+  --witch-payout-amount-shadow-1: #a96a16;
+  --witch-payout-amount-shadow-2: #8a4f0f;
+  --witch-payout-amount-shadow-3: #633307;
+  --witch-payout-multiplier: #efbd40;
+  --witch-payout-multiplier-shadow-1: #8b5310;
+  --witch-payout-multiplier-shadow-2: #5c3207;
+  --witch-payout-label: #baa78d;
+  --witch-payout-muted: #887966;
+  --witch-payout-value: #fff3de;
+  --witch-payout-rule: rgba(215, 158, 58, .18);
+  --witch-cashout-active-border: #ffd052;
+  --witch-cashout-active-text: #281405;
+  --witch-cashout-active-bg: linear-gradient(180deg, #ffd75d 0%, #efb635 52%, #cf8d1f 100%);
+  --witch-cashout-disabled-border: rgba(255,255,255,.14);
+  --witch-cashout-disabled-text: rgba(255,245,232,.42);
+  --witch-cashout-disabled-bg: linear-gradient(180deg, #4a4037, #312923);
+
+  --witch-deck-bg: linear-gradient(180deg, rgba(55, 27, 15, .985), rgba(18, 10, 8, .995));
+  --witch-deck-border: rgba(201,131,31,.52);
+  --witch-deck-label: #d9b86f;
+  --witch-control-bg: linear-gradient(180deg, rgba(52,29,18,.94), rgba(24,14,10,.96));
+  --witch-control-border: rgba(207,143,41,.42);
+  --witch-control-text: #f5e9d2;
+  --witch-control-muted: #ad967b;
+  --witch-control-accent: #ffe08a;
+  --witch-control-accent-strong: #f4bd35;
+  --witch-control-hover-bg: linear-gradient(180deg, rgba(73,40,23,.98), rgba(31,18,12,.98));
+  --witch-menu-bg: linear-gradient(155deg, rgba(52,26,16,.985), rgba(16,10,8,.995));
+  --witch-option-bg: rgba(13,9,7,.74);
+  --witch-option-selected-bg: linear-gradient(180deg, rgba(73,40,22,.98), rgba(31,18,12,.98));
+  --witch-primary-bg: linear-gradient(180deg, #d4a23a, #9d6e20);
+  --witch-primary-text: #241405;
+  --witch-primary-disabled-bg: linear-gradient(180deg, #4b4036, #332a23);
+  --witch-primary-disabled-text: rgba(255,245,232,.42);
+}
+
+.is-advanced-theme {
+  --witch-payout-panel-bg: linear-gradient(145deg, #171512, #050606);
+  --witch-payout-border: rgba(220, 166, 56, .72);
+  --witch-payout-outer-ring: rgba(0, 0, 0, .70);
+  --witch-payout-title: #f5e8c7;
+  --witch-payout-title-shadow-1: rgba(87, 58, 14, .9);
+  --witch-payout-title-shadow-2: rgba(34, 25, 8, .75);
+  --witch-payout-amount: #f8ca55;
+  --witch-payout-amount-shadow-1: #a16b12;
+  --witch-payout-amount-shadow-2: #6f450a;
+  --witch-payout-amount-shadow-3: #3b2607;
+  --witch-payout-multiplier: #dcae3f;
+  --witch-payout-multiplier-shadow-1: #78500d;
+  --witch-payout-multiplier-shadow-2: #3d2a08;
+  --witch-payout-label: #b8aa8b;
+  --witch-payout-muted: #877d68;
+  --witch-payout-value: #f8f1df;
+  --witch-payout-rule: rgba(220, 166, 56, .20);
+  --witch-cashout-active-border: #e6bd59;
+  --witch-cashout-active-text: #100f0c;
+  --witch-cashout-active-bg: linear-gradient(180deg, #f3cf6d, #b98227);
+  --witch-cashout-disabled-border: rgba(220, 190, 120, .20);
+  --witch-cashout-disabled-text: rgba(235, 226, 204, .38);
+  --witch-cashout-disabled-bg: linear-gradient(180deg, #2d2b27, #181816);
+
+  --witch-deck-bg: linear-gradient(180deg, #151515, #050606);
+  --witch-deck-border: rgba(216, 164, 55, .56);
+  --witch-deck-label: #d9b85f;
+  --witch-control-bg: linear-gradient(180deg, #1c1c1b, #0b0c0c);
+  --witch-control-border: rgba(210, 162, 57, .46);
+  --witch-control-text: #f5edd9;
+  --witch-control-muted: #a79b82;
+  --witch-control-accent: #efc85f;
+  --witch-control-accent-strong: #e5b849;
+  --witch-control-hover-bg: linear-gradient(180deg, #2a2925, #121311);
+  --witch-menu-bg: linear-gradient(155deg, #1b1b19, #070808);
+  --witch-option-bg: rgba(11,12,12,.92);
+  --witch-option-selected-bg: linear-gradient(180deg, #302b20, #151512);
+  --witch-primary-bg: linear-gradient(180deg, #e3bd58, #a57222);
+  --witch-primary-text: #12100b;
+  --witch-primary-disabled-bg: linear-gradient(180deg, #32312d, #1b1b19);
+  --witch-primary-disabled-text: rgba(235, 226, 204, .38);
+}
+
+.is-office-theme {
+  --witch-payout-panel-bg: linear-gradient(145deg, #ffffff, #e5e6e8);
+  --witch-payout-border: rgba(38, 41, 44, .78);
+  --witch-payout-outer-ring: rgba(0, 0, 0, .34);
+  --witch-payout-title: #141516;
+  --witch-payout-title-shadow-1: rgba(255,255,255,.82);
+  --witch-payout-title-shadow-2: rgba(120,124,128,.24);
+  --witch-payout-amount: #101112;
+  --witch-payout-amount-shadow-1: #d7d9dc;
+  --witch-payout-amount-shadow-2: #b7bbc0;
+  --witch-payout-amount-shadow-3: #969ba1;
+  --witch-payout-multiplier: #51555a;
+  --witch-payout-multiplier-shadow-1: #eceef0;
+  --witch-payout-multiplier-shadow-2: #c7cacf;
+  --witch-payout-label: #565b61;
+  --witch-payout-muted: #73787e;
+  --witch-payout-value: #151719;
+  --witch-payout-rule: rgba(43, 46, 49, .18);
+  --witch-cashout-active-border: #151719;
+  --witch-cashout-active-text: #ffffff;
+  --witch-cashout-active-bg: linear-gradient(180deg, #2b2e31, #0d0f10);
+  --witch-cashout-disabled-border: rgba(60, 64, 68, .20);
+  --witch-cashout-disabled-text: rgba(30, 33, 36, .42);
+  --witch-cashout-disabled-bg: linear-gradient(180deg, #dadcdf, #c5c8cc);
+
+  --witch-deck-bg: linear-gradient(180deg, #f7f7f7 0%, #dedfe1 100%);
+  --witch-deck-border: rgba(32, 35, 38, .44);
+  --witch-deck-label: #35383c;
+  --witch-control-bg: linear-gradient(180deg, #ffffff, #e6e8ea);
+  --witch-control-border: rgba(55, 59, 63, .38);
+  --witch-control-text: #17191b;
+  --witch-control-muted: #666b70;
+  --witch-control-accent: #151719;
+  --witch-control-accent-strong: #2d3135;
+  --witch-control-hover-bg: linear-gradient(180deg, #f0f1f2, #d7dadd);
+  --witch-menu-bg: linear-gradient(155deg, #ffffff, #e8eaec);
+  --witch-option-bg: rgba(255,255,255,.76);
+  --witch-option-selected-bg: linear-gradient(180deg, #383b3f, #17191b);
+  --witch-primary-bg: linear-gradient(180deg, #2c2f32, #0d0f10);
+  --witch-primary-text: #ffffff;
+  --witch-primary-disabled-bg: linear-gradient(180deg, #d8dadd, #c2c5c8);
+  --witch-primary-disabled-text: rgba(31,34,37,.42);
+}
+
+/* One payout component: Better Call Saul geometry and typography for every card. */
+:is(.is-standard-theme, .is-advanced-theme, .is-office-theme) .witch-payout-panel {
+  border-color: var(--witch-payout-border) !important;
+  background: var(--witch-payout-panel-bg) !important;
+  box-shadow:
+    0 0 0 4px var(--witch-payout-outer-ring),
+    0 18px 36px rgba(0,0,0,.32),
+    inset 0 1px 0 rgba(255,255,255,.10) !important;
+}
+
+:is(.is-standard-theme, .is-advanced-theme, .is-office-theme) .witch-payout-head {
+  border-bottom-color: var(--witch-payout-rule) !important;
+}
+
+:is(.is-standard-theme, .is-advanced-theme, .is-office-theme) .witch-payout-head span {
+  color: var(--witch-payout-title) !important;
+  text-shadow:
+    0 1px 0 var(--witch-payout-title-shadow-1),
+    0 2px 0 var(--witch-payout-title-shadow-2),
+    0 4px 8px rgba(0,0,0,.22) !important;
+}
+
+:is(.is-standard-theme, .is-advanced-theme, .is-office-theme) .witch-payout-amount {
+  color: var(--witch-payout-amount) !important;
+  text-shadow:
+    0 1px 0 var(--witch-payout-amount-shadow-1),
+    0 2px 0 var(--witch-payout-amount-shadow-2),
+    0 3px 0 var(--witch-payout-amount-shadow-3),
+    0 6px 10px rgba(0,0,0,.22) !important;
+}
+
+:is(.is-standard-theme, .is-advanced-theme, .is-office-theme) .witch-multiplier {
+  color: var(--witch-payout-multiplier) !important;
+  text-shadow:
+    0 1px 0 var(--witch-payout-multiplier-shadow-1),
+    0 2px 0 var(--witch-payout-multiplier-shadow-2),
+    0 4px 7px rgba(0,0,0,.18) !important;
+}
+
+:is(.is-standard-theme, .is-advanced-theme, .is-office-theme) .witch-payout-net {
+  border-top-color: var(--witch-payout-rule) !important;
+  color: var(--witch-payout-label) !important;
+}
+
+:is(.is-standard-theme, .is-advanced-theme, .is-office-theme) .witch-payout-lines {
+  color: var(--witch-payout-muted) !important;
+}
+
+:is(.is-standard-theme, .is-advanced-theme, .is-office-theme) .witch-payout-net b,
+:is(.is-standard-theme, .is-advanced-theme, .is-office-theme) .witch-payout-lines b {
+  color: var(--witch-payout-value) !important;
+}
+
+:is(.is-standard-theme, .is-advanced-theme, .is-office-theme) .witch-cashout-button:not(:disabled) {
+  border-color: var(--witch-cashout-active-border) !important;
+  color: var(--witch-cashout-active-text) !important;
+  background: var(--witch-cashout-active-bg) !important;
+  text-shadow: none !important;
+}
+
+:is(.is-standard-theme, .is-advanced-theme, .is-office-theme) .witch-cashout-button:disabled {
+  opacity: 1 !important;
+  border-color: var(--witch-cashout-disabled-border) !important;
+  color: var(--witch-cashout-disabled-text) !important;
+  background: var(--witch-cashout-disabled-bg) !important;
+}
+
+@media (min-width: 821px) {
+  :is(.is-standard-theme, .is-advanced-theme, .is-office-theme) .witch-payout-panel {
+    display: grid !important;
+    grid-template-rows: auto auto auto auto !important;
+    align-self: center !important;
+    width: 100% !important;
+    height: min(100%, clamp(340px, 46vh, 430px)) !important;
+    min-height: 340px !important;
+    max-height: 430px !important;
+    margin: 0 !important;
+    padding: clamp(18px, 2vh, 26px) 20px !important;
+    overflow: hidden !important;
+    border-width: 1px !important;
+    border-style: solid !important;
+    border-radius: 18px !important;
+    transform: translateY(-2px) !important;
+  }
+
+  :is(.is-standard-theme, .is-advanced-theme, .is-office-theme) .witch-payout-head {
+    padding: 0 0 18px !important;
+    text-align: center !important;
+  }
+
+  :is(.is-standard-theme, .is-advanced-theme, .is-office-theme) .witch-payout-head span {
+    display: block !important;
+    font-size: clamp(13px, 1vw, 18px) !important;
+    font-weight: 900 !important;
+    letter-spacing: .06em !important;
+  }
+
+  :is(.is-standard-theme, .is-advanced-theme, .is-office-theme) .witch-payout-head small,
+  :is(.is-standard-theme, .is-advanced-theme, .is-office-theme) .witch-payout-note {
+    display: none !important;
+  }
+
+  :is(.is-standard-theme, .is-advanced-theme, .is-office-theme) .witch-payout-hero {
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important;
+    padding: clamp(20px, 2.2vh, 28px) 0 16px !important;
+  }
+
+  :is(.is-standard-theme, .is-advanced-theme, .is-office-theme) .witch-payout-amount {
+    order: 1 !important;
+    margin: 0 !important;
+    overflow: visible !important;
+    font-family: Impact, "Arial Black", "DM Sans", sans-serif !important;
+    font-size: clamp(48px, 3.4vw, 72px) !important;
+    font-weight: 900 !important;
+    line-height: .95 !important;
+    letter-spacing: .015em !important;
+    white-space: nowrap !important;
+  }
+
+  :is(.is-standard-theme, .is-advanced-theme, .is-office-theme) .witch-multiplier {
+    order: 2 !important;
+    margin: 14px 0 0 !important;
+    font-size: clamp(24px, 1.7vw, 34px) !important;
+    font-weight: 900 !important;
+  }
+
+  :is(.is-standard-theme, .is-advanced-theme, .is-office-theme) .witch-payout-net {
+    order: 3 !important;
+    width: 100% !important;
+    margin-top: 18px !important;
+    padding-top: 14px !important;
+    font-size: 12px !important;
+    letter-spacing: .08em !important;
+  }
+
+  :is(.is-standard-theme, .is-advanced-theme, .is-office-theme) .witch-payout-net b {
+    float: right !important;
+    font-size: 15px !important;
+  }
+
+  :is(.is-standard-theme, .is-advanced-theme, .is-office-theme) .witch-payout-lines {
+    display: block !important;
+    margin: 0 0 14px !important;
+    padding: 12px 0 0 !important;
+    font-size: 11px !important;
+    letter-spacing: .08em !important;
+  }
+
+  :is(.is-standard-theme, .is-advanced-theme, .is-office-theme) .witch-payout-lines span {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+  }
+
+  :is(.is-standard-theme, .is-advanced-theme, .is-office-theme) .witch-payout-lines b {
+    font-size: 14px !important;
+  }
+
+  :is(.is-standard-theme, .is-advanced-theme, .is-office-theme) .witch-cashout-button {
+    min-height: 58px !important;
+    height: auto !important;
+    margin: 0 !important;
+    border-width: 1px !important;
+    border-style: solid !important;
+    border-radius: 11px !important;
+    font-size: 16px !important;
+    font-weight: 900 !important;
+    letter-spacing: .06em !important;
+  }
+}
+
+@media (min-width: 821px) and (max-width: 1499px) {
+  :is(.is-standard-theme, .is-advanced-theme, .is-office-theme) .witch-payout-panel {
+    height: min(100%, clamp(332px, 46vh, 378px)) !important;
+    min-height: 332px !important;
+    max-height: 378px !important;
+  }
+}
+
+/* One deck/control/menu component: geometry stays shared, palette comes from the card. */
+:is(.is-standard-theme, .is-advanced-theme, .is-office-theme) .witch-control-dock {
+  border-top-color: var(--witch-deck-border) !important;
+  background: var(--witch-deck-bg) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.055),
+    0 -10px 30px rgba(0,0,0,.22) !important;
+}
+
+:is(.is-standard-theme, .is-advanced-theme, .is-office-theme) .witch-card-picker > label,
+:is(.is-standard-theme, .is-advanced-theme, .is-office-theme) .witch-stake-group > label,
+:is(.is-standard-theme, .is-advanced-theme, .is-office-theme) .witch-alarm-field > span,
+:is(.is-standard-theme, .is-advanced-theme, .is-office-theme) .witch-buy-group > label {
+  color: var(--witch-deck-label) !important;
+}
+
+:is(.is-standard-theme, .is-advanced-theme, .is-office-theme) .witch-cards-button,
+:is(.is-standard-theme, .is-advanced-theme, .is-office-theme) .witch-stake-stepper,
+:is(.is-standard-theme, .is-advanced-theme, .is-office-theme) .witch-alarm-field select {
+  border-color: var(--witch-control-border) !important;
+  color: var(--witch-control-text) !important;
+  background: var(--witch-control-bg) !important;
+}
+
+:is(.is-standard-theme, .is-advanced-theme, .is-office-theme) .witch-cards-button strong {
+  color: var(--witch-control-accent) !important;
+}
+:is(.is-standard-theme, .is-advanced-theme, .is-office-theme) .witch-cards-button small {
+  color: var(--witch-control-muted) !important;
+}
+:is(.is-standard-theme, .is-advanced-theme, .is-office-theme) .witch-cards-button > b {
+  color: var(--witch-control-accent-strong) !important;
+}
+
+:is(.is-standard-theme, .is-advanced-theme, .is-office-theme) .witch-stake-stepper > button,
+:is(.is-standard-theme, .is-advanced-theme, .is-office-theme) .witch-stake-presets button {
+  border-color: var(--witch-control-border) !important;
+  color: var(--witch-control-text) !important;
+  background: var(--witch-control-bg) !important;
+}
+
+:is(.is-standard-theme, .is-advanced-theme, .is-office-theme) .witch-stake-stepper > button:hover:not(:disabled),
+:is(.is-standard-theme, .is-advanced-theme, .is-office-theme) .witch-stake-presets button:hover:not(:disabled) {
+  border-color: var(--witch-control-accent-strong) !important;
+  background: var(--witch-control-hover-bg) !important;
+}
+
+:is(.is-standard-theme, .is-advanced-theme, .is-office-theme) .witch-input-wrap input {
+  color: var(--witch-control-text) !important;
+  background: transparent !important;
+}
+
+:is(.is-standard-theme, .is-advanced-theme, .is-office-theme) .witch-stake-presets button.is-selected {
+  border-color: var(--witch-control-accent-strong) !important;
+  color: var(--witch-primary-text) !important;
+  background: var(--witch-primary-bg) !important;
+}
+
+:is(.is-standard-theme, .is-advanced-theme, .is-office-theme) .witch-card-menu {
+  border-color: var(--witch-control-border) !important;
+  background: var(--witch-menu-bg) !important;
+}
+
+:is(.is-standard-theme, .is-advanced-theme, .is-office-theme) .witch-card-option {
+  border-color: var(--witch-control-border) !important;
+  color: var(--witch-control-text) !important;
+  background: var(--witch-option-bg) !important;
+}
+
+:is(.is-standard-theme, .is-advanced-theme, .is-office-theme) .witch-card-option small {
+  color: var(--witch-control-muted) !important;
+}
+
+:is(.is-standard-theme, .is-advanced-theme, .is-office-theme) .witch-card-option > b {
+  border-color: var(--witch-control-border) !important;
+  color: var(--witch-control-accent-strong) !important;
+}
+
+:is(.is-standard-theme, .is-advanced-theme, .is-office-theme) .witch-card-option.is-selected {
+  border-color: var(--witch-control-accent-strong) !important;
+  background: var(--witch-option-selected-bg) !important;
+}
+
+:is(.is-standard-theme, .is-advanced-theme) .witch-card-option.is-selected,
+.is-office-theme .witch-card-option.is-selected {
+  color: var(--witch-control-text) !important;
+}
+
+.is-office-theme .witch-card-option.is-selected {
+  color: #ffffff !important;
+}
+
+:is(.is-standard-theme, .is-advanced-theme, .is-office-theme) .witch-primary-button {
+  border-color: var(--witch-control-accent-strong) !important;
+  color: var(--witch-primary-text) !important;
+  background: var(--witch-primary-bg) !important;
+  text-shadow: none !important;
+}
+
+:is(.is-standard-theme, .is-advanced-theme, .is-office-theme) .witch-primary-button:hover:not(:disabled) {
+  filter: brightness(1.06) !important;
+}
+
+:is(.is-standard-theme, .is-advanced-theme, .is-office-theme) .witch-primary-button:disabled {
+  border-color: var(--witch-control-border) !important;
+  color: var(--witch-primary-disabled-text) !important;
+  background: var(--witch-primary-disabled-bg) !important;
+  filter: none !important;
+}
+
+
+/* PASS 24 — THE OFFICE authoritative PNG + six-zone interaction lock.
+   This is the final geometry authority for OFFICE_MATCH_6. The 1000×468 PNG
+   owns every visible card pixel. Only the six measured rectangles below can
+   receive scratch input; every scratch/result/debris layer is clipped by its
+   rectangle so responsive scaling cannot create drift or spill. */
+.is-office-theme .witch-ticket {
+  --office-card-ratio: 1000 / 468;
+  --office-scratch-left: 37.2%;
+  --office-scratch-top: 13.2479%;
+  --office-scratch-right: 4.7%;
+  --office-scratch-bottom: 8.9744%;
+
+  position: relative !important;
+  box-sizing: border-box !important;
+  aspect-ratio: var(--office-card-ratio) !important;
+  min-width: 0 !important;
+  min-height: 0 !important;
+  padding: 0 !important;
+  overflow: hidden !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  isolation: isolate !important;
+}
+
+.is-office-theme .witch-office-card-art,
+.is-office-theme .witch-office-card-master {
+  position: absolute !important;
+  inset: 0 !important;
+  display: block !important;
+  box-sizing: border-box !important;
+  width: 100% !important;
+  height: 100% !important;
+  min-width: 0 !important;
+  min-height: 0 !important;
+  max-width: none !important;
+  max-height: none !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  border: 0 !important;
+  background: transparent !important;
+  pointer-events: none !important;
+  user-select: none !important;
+}
+
+.is-office-theme .witch-office-card-art {
+  z-index: 1 !important;
+  overflow: hidden !important;
+}
+
+.is-office-theme .witch-office-card-master {
+  z-index: 1 !important;
+  object-fit: fill !important;
+  object-position: 0 0 !important;
+  image-rendering: auto !important;
+}
+
+.is-office-theme .witch-board-wrap {
+  position: absolute !important;
+  z-index: 5 !important;
+  left: var(--office-scratch-left) !important;
+  top: var(--office-scratch-top) !important;
+  right: var(--office-scratch-right) !important;
+  bottom: var(--office-scratch-bottom) !important;
+  width: auto !important;
+  height: auto !important;
+  min-width: 0 !important;
+  min-height: 0 !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  overflow: hidden !important;
+  border: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+}
+
+.is-office-theme .witch-board {
+  position: relative !important;
+  display: block !important;
+  width: 100% !important;
+  height: 100% !important;
+  min-width: 0 !important;
+  min-height: 0 !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  overflow: hidden !important;
+  border: 0 !important;
+  background: transparent !important;
+}
+
+.is-office-theme .witch-board > .witch-cell {
+  --office-cell-left: 0%;
+  --office-cell-top: 0%;
+  --office-cell-width: 0%;
+  --office-cell-height: 0%;
+
+  position: absolute !important;
+  left: var(--office-cell-left) !important;
+  top: var(--office-cell-top) !important;
+  width: var(--office-cell-width) !important;
+  height: var(--office-cell-height) !important;
+  min-width: 0 !important;
+  min-height: 0 !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  overflow: hidden !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+  transform: none !important;
+  box-sizing: border-box !important;
+  touch-action: none !important;
+}
+
+.is-office-theme .witch-board > .witch-cell:nth-child(1) {
+  --office-cell-left: 0%;
+  --office-cell-top: 0%;
+  --office-cell-width: 29.0878%;
+  --office-cell-height: 45.6044%;
+}
+.is-office-theme .witch-board > .witch-cell:nth-child(2) {
+  --office-cell-left: 35.6282%;
+  --office-cell-top: 0%;
+  --office-cell-width: 29.0878%;
+  --office-cell-height: 45.6044%;
+}
+.is-office-theme .witch-board > .witch-cell:nth-child(3) {
+  --office-cell-left: 71.2565%;
+  --office-cell-top: 0%;
+  --office-cell-width: 28.7435%;
+  --office-cell-height: 45.6044%;
+}
+.is-office-theme .witch-board > .witch-cell:nth-child(4) {
+  --office-cell-left: 0%;
+  --office-cell-top: 56.3187%;
+  --office-cell-width: 29.0878%;
+  --office-cell-height: 43.6813%;
+}
+.is-office-theme .witch-board > .witch-cell:nth-child(5) {
+  --office-cell-left: 35.6282%;
+  --office-cell-top: 56.3187%;
+  --office-cell-width: 29.0878%;
+  --office-cell-height: 43.6813%;
+}
+.is-office-theme .witch-board > .witch-cell:nth-child(6) {
+  --office-cell-left: 71.2565%;
+  --office-cell-top: 56.3187%;
+  --office-cell-width: 28.7435%;
+  --office-cell-height: 43.6813%;
+}
+
+/* Preview is visual-only: the PNG already contains the six printed covers. */
+.is-office-theme .witch-ticket.is-preview .witch-board,
+.is-office-theme .witch-ticket.is-preview .witch-board > .witch-cell {
+  pointer-events: none !important;
+  background: transparent !important;
+}
+
+/* Live round: only the six cells are interactive. */
+.is-office-theme .witch-ticket:not(.is-preview) .witch-board {
+  pointer-events: none !important;
+}
+.is-office-theme .witch-ticket:not(.is-preview) .witch-board > .witch-cell {
+  pointer-events: auto !important;
+}
+
+/* Every live rendering layer is forced to the exact cell bounds. */
+.is-office-theme .witch-ticket:not(.is-preview) .witch-board > .witch-cell > *,
+.is-office-theme .witch-ticket:not(.is-preview) .witch-scratch-layer,
+.is-office-theme .witch-ticket:not(.is-preview) .witch-debris-canvas,
+.is-office-theme .witch-ticket:not(.is-preview) .witch-cell-result-layer,
+.is-office-theme .witch-ticket:not(.is-preview) .witch-cell-content {
+  max-width: 100% !important;
+  max-height: 100% !important;
+  overflow: hidden !important;
+  box-sizing: border-box !important;
+}
+
+@media (min-width: 821px) {
+  .is-office-theme .witch-ticket {
+    width: min(96%, 980px) !important;
+    max-width: 980px !important;
+    height: auto !important;
+    max-height: calc(100% - 12px) !important;
+  }
+}
+
+@media (orientation: landscape) and (max-width: 1200px) and (max-height: 600px),
+       (orientation: portrait) and (max-width: 600px) and (max-height: 1200px) {
+  .is-office-theme .witch-ticket {
+    aspect-ratio: var(--office-card-ratio) !important;
+  }
+
+  .is-office-theme .witch-board-wrap {
+    left: var(--office-scratch-left) !important;
+    top: var(--office-scratch-top) !important;
+    right: var(--office-scratch-right) !important;
+    bottom: var(--office-scratch-bottom) !important;
+  }
+}
+
+
+/* PASS 25 — THE OFFICE final light monochrome UI palette.
+   Geometry remains the shared Better Call Saul system. OFFICE_MATCH_6 changes
+   only color tokens: light/white surfaces use black or graphite text, while
+   selected/primary states invert to dark graphite with white text. */
+.is-office-theme {
+  --witch-payout-panel-bg:
+    linear-gradient(145deg, #ffffff 0%, #f4f4f3 42%, #dedfe1 100%);
+  --witch-payout-border: rgba(30, 33, 36, .78);
+  --witch-payout-outer-ring: rgba(0, 0, 0, .28);
+  --witch-payout-title: #17191b;
+  --witch-payout-title-shadow-1: rgba(255,255,255,.92);
+  --witch-payout-title-shadow-2: rgba(139,144,149,.30);
+  --witch-payout-amount: #0d0f10;
+  --witch-payout-amount-shadow-1: #d9dcdf;
+  --witch-payout-amount-shadow-2: #b9bdc1;
+  --witch-payout-amount-shadow-3: #989da2;
+  --witch-payout-multiplier: #4d5257;
+  --witch-payout-multiplier-shadow-1: #f2f3f4;
+  --witch-payout-multiplier-shadow-2: #c6c9cd;
+  --witch-payout-label: #555b61;
+  --witch-payout-muted: #71777d;
+  --witch-payout-value: #151719;
+  --witch-payout-rule: rgba(27, 30, 33, .18);
+
+  --witch-deck-bg:
+    linear-gradient(180deg, #f7f7f6 0%, #eceeed 50%, #d7dadd 100%);
+  --witch-deck-border: rgba(30, 33, 36, .44);
+  --witch-deck-label: #353a3f;
+  --witch-control-bg: linear-gradient(180deg, #ffffff 0%, #e8eaec 100%);
+  --witch-control-border: rgba(50, 54, 58, .36);
+  --witch-control-text: #17191b;
+  --witch-control-muted: #646a70;
+  --witch-control-accent: #141617;
+  --witch-control-accent-strong: #303438;
+  --witch-control-hover-bg: linear-gradient(180deg, #f5f6f7, #dfe2e4);
+  --witch-menu-bg: linear-gradient(155deg, #ffffff 0%, #f3f4f4 58%, #e1e3e5 100%);
+  --witch-option-bg: rgba(255,255,255,.88);
+  --witch-option-selected-bg: linear-gradient(180deg, #3b3f43 0%, #181a1c 100%);
+  --witch-primary-bg: linear-gradient(180deg, #34383c 0%, #111315 100%);
+  --witch-primary-text: #ffffff;
+  --witch-primary-disabled-bg: linear-gradient(180deg, #d9dcdf 0%, #c6c9cc 100%);
+  --witch-primary-disabled-text: rgba(31,34,37,.44);
+
+  --witch-layer-bg: linear-gradient(155deg, #ffffff 0%, #f2f3f4 62%, #dde0e2 100%);
+  --witch-layer-border: rgba(46, 50, 54, .42);
+  --witch-layer-text: #17191b;
+  --witch-layer-muted: #666c72;
+  --witch-layer-control-bg: #ffffff;
+  --witch-layer-control-border: rgba(52,56,60,.32);
+}
+
+/* Office payout is the BCS layout with light monochrome colors only. */
+.is-office-theme .witch-payout-panel {
+  color: var(--witch-payout-text, #17191b) !important;
+  box-shadow:
+    0 0 0 4px var(--witch-payout-outer-ring),
+    0 18px 36px rgba(0,0,0,.18),
+    inset 0 1px 0 rgba(255,255,255,.92) !important;
+}
+
+.is-office-theme .witch-payout-head span,
+.is-office-theme .witch-payout-net,
+.is-office-theme .witch-payout-lines,
+.is-office-theme .witch-payout-net b,
+.is-office-theme .witch-payout-lines b {
+  text-shadow: none !important;
+}
+
+.is-office-theme .witch-payout-amount {
+  text-shadow:
+    0 1px 0 #ffffff,
+    0 2px 0 #d8dbde,
+    0 4px 8px rgba(0,0,0,.14) !important;
+}
+
+.is-office-theme .witch-multiplier {
+  text-shadow:
+    0 1px 0 #ffffff,
+    0 2px 3px rgba(0,0,0,.10) !important;
+}
+
+/* Light Office deck: black/gray content on white/gray surfaces. */
+.is-office-theme .witch-control-dock {
+  border-top-color: var(--witch-deck-border) !important;
+  background: var(--witch-deck-bg) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.94),
+    0 -10px 30px rgba(0,0,0,.12) !important;
+}
+
+.is-office-theme .witch-cards-button,
+.is-office-theme .witch-stake-stepper,
+.is-office-theme .witch-alarm-field select,
+.is-office-theme .witch-stake-presets button {
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.92),
+    0 3px 10px rgba(0,0,0,.08) !important;
+}
+
+.is-office-theme .witch-stake-stepper > button {
+  color: #1c1f22 !important;
+  background: linear-gradient(180deg, #f8f9f9, #dfe2e4) !important;
+}
+
+.is-office-theme .witch-stake-stepper > button:hover:not(:disabled),
+.is-office-theme .witch-stake-presets button:hover:not(:disabled) {
+  color: #0f1112 !important;
+  background: var(--witch-control-hover-bg) !important;
+}
+
+.is-office-theme .witch-stake-presets .witch-stake-scale,
+.is-office-theme .witch-stake-presets button.is-selected {
+  border-color: #292d31 !important;
+  color: #ffffff !important;
+  background: linear-gradient(180deg, #3b3f43, #16181a) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.12),
+    0 3px 8px rgba(0,0,0,.14) !important;
+}
+
+/* Card picker/dropdown layer follows the same Office palette. */
+.is-office-theme .witch-card-menu {
+  border-color: var(--witch-layer-border) !important;
+  background: var(--witch-layer-bg) !important;
+  box-shadow:
+    0 18px 34px rgba(0,0,0,.20),
+    inset 0 1px 0 rgba(255,255,255,.96) !important;
+}
+
+.is-office-theme .witch-card-option {
+  border-color: var(--witch-layer-control-border) !important;
+  color: var(--witch-layer-text) !important;
+  background: var(--witch-layer-control-bg) !important;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.92) !important;
+}
+
+.is-office-theme .witch-card-option small {
+  color: var(--witch-layer-muted) !important;
+}
+
+.is-office-theme .witch-card-option > b {
+  border-color: rgba(48,52,56,.30) !important;
+  color: #303438 !important;
+  background: #eceeef !important;
+}
+
+.is-office-theme .witch-card-option.is-selected {
+  border-color: #202326 !important;
+  color: #ffffff !important;
+  background: var(--witch-option-selected-bg) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.11),
+    0 4px 12px rgba(0,0,0,.14) !important;
+}
+
+.is-office-theme .witch-card-option.is-selected strong,
+.is-office-theme .witch-card-option.is-selected small,
+.is-office-theme .witch-card-option.is-selected > b {
+  color: #ffffff !important;
+}
+
+.is-office-theme .witch-card-option.is-selected > b {
+  border-color: rgba(255,255,255,.26) !important;
+  background: rgba(255,255,255,.08) !important;
+}
+
+/* Game menu layer also follows the selected card palette. */
+.is-office-theme .witch-game-menu {
+  border-color: var(--witch-layer-border) !important;
+  color: var(--witch-layer-text) !important;
+  background: var(--witch-layer-bg) !important;
+  box-shadow:
+    0 18px 34px rgba(0,0,0,.20),
+    inset 0 1px 0 rgba(255,255,255,.94) !important;
+}
+
+.is-office-theme .witch-game-menu > strong,
+.is-office-theme .witch-game-menu label,
+.is-office-theme .witch-game-menu a,
+.is-office-theme .witch-game-menu button {
+  color: var(--witch-layer-text) !important;
+}
+
+.is-office-theme .witch-game-menu small {
+  color: var(--witch-layer-muted) !important;
+}
+
+.is-office-theme .witch-game-menu button,
+.is-office-theme .witch-game-menu a {
+  border-color: var(--witch-layer-control-border) !important;
+  background: var(--witch-layer-control-bg) !important;
+}
+
+/* Office primary/cash-out states: dark graphite on light UI, white text. */
+.is-office-theme .witch-primary-button:not(:disabled),
+.is-office-theme .witch-cashout-button:not(:disabled) {
+  border-color: #151719 !important;
+  color: #ffffff !important;
+  background: linear-gradient(180deg, #34383c 0%, #111315 100%) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.13),
+    0 7px 16px rgba(0,0,0,.18) !important;
+  text-shadow: none !important;
+}
+
+.is-office-theme .witch-primary-button:disabled,
+.is-office-theme .witch-cashout-button:disabled {
+  border-color: rgba(55,59,63,.22) !important;
+  color: rgba(31,34,37,.42) !important;
+  background: linear-gradient(180deg, #d9dcdf 0%, #c6c9cc 100%) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.72),
+    0 3px 8px rgba(0,0,0,.06) !important;
+  text-shadow: none !important;
+}
+
+
+/* PASS 26 — THE OFFICE star-backed character symbols + color-linked prize badge.
+   Supplied character/star artwork is pre-optimized to 384×384 WebP so the
+   scratch cells stay crisp without shipping oversized 768×768 JPEGs. The image
+   owns the white result tile; the prize badge reads its palette from the symbol
+   config, so badge and star remain one visual identity. */
+.is-office-theme .witch-cell.is-office-cell .witch-cell-result-layer,
+.is-office-theme .witch-cell.is-office-cell .witch-cell-content,
+.is-office-theme .witch-cell.is-office-cell .witch-office-result-symbol {
+  background: #ffffff !important;
+}
+
+.is-office-theme .witch-cell.is-office-cell .witch-office-result-symbol {
+  position: absolute !important;
+  inset: 0 !important;
+  display: block !important;
+  width: 100% !important;
+  height: 100% !important;
+  overflow: hidden !important;
+  contain: paint !important;
+}
+
+.is-office-theme .witch-cell.is-office-cell .witch-office-result-art,
+.is-office-theme .witch-cell.is-office-special .witch-office-result-art {
+  position: absolute !important;
+  inset: 0 !important;
+  top: 0 !important;
+  left: 0 !important;
+  width: 100% !important;
+  height: 100% !important;
+  max-width: none !important;
+  max-height: none !important;
+  object-fit: contain !important;
+  object-position: center center !important;
+  background: #ffffff !important;
+  transform: none !important;
+  filter: none !important;
+  image-rendering: auto !important;
+}
+
+.is-office-theme .witch-cell.is-office-cell .witch-office-result-prize,
+.is-office-theme .witch-cell.is-office-cell .witch-office-result-symbol > b,
+.is-office-theme .witch-cell.is-office-special .witch-office-result-prize,
+.is-office-theme .witch-cell.is-office-special .witch-office-result-symbol > b {
+  position: absolute !important;
+  z-index: 15 !important;
+  right: 5% !important;
+  bottom: 5% !important;
+  min-width: 0 !important;
+  max-width: 90% !important;
+  padding: 4px 7px !important;
+  border: 1px solid rgba(17, 19, 21, .20) !important;
+  border-radius: 6px !important;
+  color: var(--office-symbol-text, #151719) !important;
+  background: var(--office-symbol-color, #e5e7e9) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.38),
+    0 2px 7px rgba(0,0,0,.24) !important;
+  font-family: Arial, Helvetica, sans-serif !important;
+  font-size: clamp(10px, 1vw, 17px) !important;
+  line-height: 1 !important;
+  font-weight: 950 !important;
+  text-align: center !important;
+  text-shadow: none !important;
+  white-space: nowrap !important;
+}
+
+@media (orientation: landscape) and (max-width: 1200px) and (max-height: 600px),
+       (orientation: portrait) and (max-width: 600px) and (max-height: 1200px) {
+  .is-office-theme .witch-cell.is-office-cell .witch-office-result-prize,
+  .is-office-theme .witch-cell.is-office-cell .witch-office-result-symbol > b,
+  .is-office-theme .witch-cell.is-office-special .witch-office-result-prize,
+  .is-office-theme .witch-cell.is-office-special .witch-office-result-symbol > b {
+    right: 4% !important;
+    bottom: 4% !important;
+    padding: 2px 4px !important;
+    font-size: clamp(7px, calc(var(--witch-vh) * 2.1), 11px) !important;
+  }
+}
+
+
+/* PASS 27 — ADVANCED 25 single-PNG card + exact 5×5 scratch registration.
+   The supplied 1859×846 source was performance-optimized to a 1200×546 indexed
+   PNG. The master image owns every visible card pixel; only the 25 measured
+   silver rectangles receive scratch interaction. Source scratch union:
+   x=606..1791, y=96..774. */
+.is-advanced-theme .witch-ticket {
+  --advanced-card-ratio: 1200 / 546;
+  --advanced-scratch-left: 32.5982%;
+  --advanced-scratch-top: 11.3475%;
+  --advanced-scratch-right: 3.6579%;
+  --advanced-scratch-bottom: 8.5106%;
+
+  position: relative !important;
+  box-sizing: border-box !important;
+  width: min(98%, 1180px) !important;
+  max-width: 1180px !important;
+  height: auto !important;
+  max-height: calc(100% - 12px) !important;
+  aspect-ratio: var(--advanced-card-ratio) !important;
+  min-width: 0 !important;
+  min-height: 0 !important;
+  padding: 0 !important;
+  overflow: hidden !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  box-shadow: 0 20px 44px rgba(0,0,0,.42) !important;
+  isolation: isolate !important;
+}
+
+.is-advanced-theme .witch-ticket-frame,
+.is-advanced-theme .witch-standard-price-badge,
+.is-advanced-theme .witch-bcs-card-art,
+.is-advanced-theme .witch-office-card-art,
+.is-advanced-theme .witch-ticket-header,
+.is-advanced-theme .witch-ticket-meta-row,
+.is-advanced-theme .witch-ticket-footer {
+  display: none !important;
+}
+
+.witch-advanced-card-art {
+  display: none;
+}
+
+.is-advanced-theme .witch-advanced-card-art,
+.is-advanced-theme .witch-advanced-card-master {
+  position: absolute !important;
+  inset: 0 !important;
+  box-sizing: border-box !important;
+  width: 100% !important;
+  height: 100% !important;
+  min-width: 0 !important;
+  min-height: 0 !important;
+  max-width: none !important;
+  max-height: none !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  border: 0 !important;
+  background: transparent !important;
+  pointer-events: none !important;
+  user-select: none !important;
+}
+
+.is-advanced-theme .witch-advanced-card-art {
+  z-index: 1 !important;
+  display: block !important;
+  overflow: hidden !important;
+}
+
+.is-advanced-theme .witch-advanced-card-master {
+  z-index: 1 !important;
+  display: block !important;
+  object-fit: fill !important;
+  object-position: 0 0 !important;
+  image-rendering: auto !important;
+}
+
+.is-advanced-theme .witch-board-wrap {
+  position: absolute !important;
+  z-index: 5 !important;
+  left: var(--advanced-scratch-left) !important;
+  top: var(--advanced-scratch-top) !important;
+  right: var(--advanced-scratch-right) !important;
+  bottom: var(--advanced-scratch-bottom) !important;
+  width: auto !important;
+  height: auto !important;
+  min-width: 0 !important;
+  min-height: 0 !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  overflow: hidden !important;
+  border: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+}
+
+.is-advanced-theme .witch-board {
+  position: relative !important;
+  display: block !important;
+  width: 100% !important;
+  height: 100% !important;
+  min-width: 0 !important;
+  min-height: 0 !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  overflow: hidden !important;
+  border: 0 !important;
+  background: transparent !important;
+}
+
+.is-advanced-theme .witch-board > .witch-cell {
+  --advanced-cell-left: 0%;
+  --advanced-cell-top: 0%;
+  --advanced-cell-width: 0%;
+  --advanced-cell-height: 0%;
+
+  position: absolute !important;
+  left: var(--advanced-cell-left) !important;
+  top: var(--advanced-cell-top) !important;
+  width: var(--advanced-cell-width) !important;
+  height: var(--advanced-cell-height) !important;
+  min-width: 0 !important;
+  min-height: 0 !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  overflow: hidden !important;
+  box-sizing: border-box !important;
+  border: 0 !important;
+  border-radius: 6% / 10% !important;
+  box-shadow: none !important;
+  transform: none !important;
+  touch-action: none !important;
+}
+
+.is-advanced-theme .witch-board > .witch-cell:nth-child(1) {
+  --advanced-cell-left: 0%;
+  --advanced-cell-top: 0%;
+  --advanced-cell-width: 19.0717%;
+  --advanced-cell-height: 18.8791%;
+}
+.is-advanced-theme .witch-board > .witch-cell:nth-child(2) {
+  --advanced-cell-left: 20.3376%;
+  --advanced-cell-top: 0%;
+  --advanced-cell-width: 18.9873%;
+  --advanced-cell-height: 18.8791%;
+}
+.is-advanced-theme .witch-board > .witch-cell:nth-child(3) {
+  --advanced-cell-left: 40.5907%;
+  --advanced-cell-top: 0%;
+  --advanced-cell-width: 18.9873%;
+  --advanced-cell-height: 18.8791%;
+}
+.is-advanced-theme .witch-board > .witch-cell:nth-child(4) {
+  --advanced-cell-left: 60.7595%;
+  --advanced-cell-top: 0%;
+  --advanced-cell-width: 18.9873%;
+  --advanced-cell-height: 18.8791%;
+}
+.is-advanced-theme .witch-board > .witch-cell:nth-child(5) {
+  --advanced-cell-left: 81.0127%;
+  --advanced-cell-top: 0%;
+  --advanced-cell-width: 18.9873%;
+  --advanced-cell-height: 18.8791%;
+}
+.is-advanced-theme .witch-board > .witch-cell:nth-child(6) {
+  --advanced-cell-left: 0%;
+  --advanced-cell-top: 20.7965%;
+  --advanced-cell-width: 19.0717%;
+  --advanced-cell-height: 18.5841%;
+}
+.is-advanced-theme .witch-board > .witch-cell:nth-child(7) {
+  --advanced-cell-left: 20.3376%;
+  --advanced-cell-top: 20.7965%;
+  --advanced-cell-width: 18.9873%;
+  --advanced-cell-height: 18.5841%;
+}
+.is-advanced-theme .witch-board > .witch-cell:nth-child(8) {
+  --advanced-cell-left: 40.5907%;
+  --advanced-cell-top: 20.7965%;
+  --advanced-cell-width: 18.9873%;
+  --advanced-cell-height: 18.5841%;
+}
+.is-advanced-theme .witch-board > .witch-cell:nth-child(9) {
+  --advanced-cell-left: 60.7595%;
+  --advanced-cell-top: 20.7965%;
+  --advanced-cell-width: 18.9873%;
+  --advanced-cell-height: 18.5841%;
+}
+.is-advanced-theme .witch-board > .witch-cell:nth-child(10) {
+  --advanced-cell-left: 81.0127%;
+  --advanced-cell-top: 20.7965%;
+  --advanced-cell-width: 18.9873%;
+  --advanced-cell-height: 18.5841%;
+}
+.is-advanced-theme .witch-board > .witch-cell:nth-child(11) {
+  --advanced-cell-left: 0%;
+  --advanced-cell-top: 41.4454%;
+  --advanced-cell-width: 19.0717%;
+  --advanced-cell-height: 18.2891%;
+}
+.is-advanced-theme .witch-board > .witch-cell:nth-child(12) {
+  --advanced-cell-left: 20.3376%;
+  --advanced-cell-top: 41.4454%;
+  --advanced-cell-width: 18.9873%;
+  --advanced-cell-height: 18.2891%;
+}
+.is-advanced-theme .witch-board > .witch-cell:nth-child(13) {
+  --advanced-cell-left: 40.5907%;
+  --advanced-cell-top: 41.4454%;
+  --advanced-cell-width: 18.9873%;
+  --advanced-cell-height: 18.2891%;
+}
+.is-advanced-theme .witch-board > .witch-cell:nth-child(14) {
+  --advanced-cell-left: 60.7595%;
+  --advanced-cell-top: 41.4454%;
+  --advanced-cell-width: 18.9873%;
+  --advanced-cell-height: 18.2891%;
+}
+.is-advanced-theme .witch-board > .witch-cell:nth-child(15) {
+  --advanced-cell-left: 81.0127%;
+  --advanced-cell-top: 41.4454%;
+  --advanced-cell-width: 18.9873%;
+  --advanced-cell-height: 18.2891%;
+}
+.is-advanced-theme .witch-board > .witch-cell:nth-child(16) {
+  --advanced-cell-left: 0%;
+  --advanced-cell-top: 61.6519%;
+  --advanced-cell-width: 19.0717%;
+  --advanced-cell-height: 18.1416%;
+}
+.is-advanced-theme .witch-board > .witch-cell:nth-child(17) {
+  --advanced-cell-left: 20.3376%;
+  --advanced-cell-top: 61.6519%;
+  --advanced-cell-width: 18.9873%;
+  --advanced-cell-height: 18.1416%;
+}
+.is-advanced-theme .witch-board > .witch-cell:nth-child(18) {
+  --advanced-cell-left: 40.5907%;
+  --advanced-cell-top: 61.6519%;
+  --advanced-cell-width: 18.9873%;
+  --advanced-cell-height: 18.1416%;
+}
+.is-advanced-theme .witch-board > .witch-cell:nth-child(19) {
+  --advanced-cell-left: 60.7595%;
+  --advanced-cell-top: 61.6519%;
+  --advanced-cell-width: 18.9873%;
+  --advanced-cell-height: 18.1416%;
+}
+.is-advanced-theme .witch-board > .witch-cell:nth-child(20) {
+  --advanced-cell-left: 81.0127%;
+  --advanced-cell-top: 61.6519%;
+  --advanced-cell-width: 18.9873%;
+  --advanced-cell-height: 18.1416%;
+}
+.is-advanced-theme .witch-board > .witch-cell:nth-child(21) {
+  --advanced-cell-left: 0%;
+  --advanced-cell-top: 81.7109%;
+  --advanced-cell-width: 19.0717%;
+  --advanced-cell-height: 18.2891%;
+}
+.is-advanced-theme .witch-board > .witch-cell:nth-child(22) {
+  --advanced-cell-left: 20.3376%;
+  --advanced-cell-top: 81.7109%;
+  --advanced-cell-width: 18.9873%;
+  --advanced-cell-height: 18.2891%;
+}
+.is-advanced-theme .witch-board > .witch-cell:nth-child(23) {
+  --advanced-cell-left: 40.5907%;
+  --advanced-cell-top: 81.7109%;
+  --advanced-cell-width: 18.9873%;
+  --advanced-cell-height: 18.2891%;
+}
+.is-advanced-theme .witch-board > .witch-cell:nth-child(24) {
+  --advanced-cell-left: 60.7595%;
+  --advanced-cell-top: 81.7109%;
+  --advanced-cell-width: 18.9873%;
+  --advanced-cell-height: 18.2891%;
+}
+.is-advanced-theme .witch-board > .witch-cell:nth-child(25) {
+  --advanced-cell-left: 81.0127%;
+  --advanced-cell-top: 81.5634%;
+  --advanced-cell-width: 18.9873%;
+  --advanced-cell-height: 18.4366%;
+}
+
+.is-advanced-theme .witch-ticket.is-preview .witch-board,
+.is-advanced-theme .witch-ticket.is-preview .witch-board > .witch-cell {
+  pointer-events: none !important;
+  background: transparent !important;
+}
+
+.is-advanced-theme .witch-ticket:not(.is-preview) .witch-board {
+  pointer-events: none !important;
+}
+
+.is-advanced-theme .witch-ticket:not(.is-preview) .witch-board > .witch-cell {
+  pointer-events: auto !important;
+}
+
+.is-advanced-theme .witch-ticket:not(.is-preview) .witch-board > .witch-cell > *,
+.is-advanced-theme .witch-ticket:not(.is-preview) .witch-scratch-layer,
+.is-advanced-theme .witch-ticket:not(.is-preview) .witch-debris-canvas,
+.is-advanced-theme .witch-ticket:not(.is-preview) .witch-cell-result-layer,
+.is-advanced-theme .witch-ticket:not(.is-preview) .witch-cell-content {
+  max-width: 100% !important;
+  max-height: 100% !important;
+  overflow: hidden !important;
+  box-sizing: border-box !important;
+}
+
+.is-advanced-theme .witch-advanced-preview-cell {
+  opacity: 0 !important;
+  background: transparent !important;
+}
+
+@media (orientation: landscape) and (max-width: 1200px) and (max-height: 600px),
+       (orientation: portrait) and (max-width: 600px) and (max-height: 1200px) {
+  .is-advanced-theme .witch-ticket {
+    width: min(98%, calc(var(--witch-vh) * 196)) !important;
+    max-width: 1180px !important;
+    aspect-ratio: var(--advanced-card-ratio) !important;
+  }
+
+  .is-advanced-theme .witch-board-wrap {
+    left: var(--advanced-scratch-left) !important;
+    top: var(--advanced-scratch-top) !important;
+    right: var(--advanced-scratch-right) !important;
+    bottom: var(--advanced-scratch-bottom) !important;
+  }
+}
+
+
+/* PASS 28 — ADVANCED 25 supplied paw/skull reveal artwork.
+   The user-supplied transparent symbols are pre-sized to 320×320 WebP
+   (~71 KB combined) so even dense 5×5 boards stay sharp without loading the
+   original multi-megabyte PNGs. The card remains the visual frame; revealed
+   cells become dark inset stages with only the symbol artwork visible. */
+.is-advanced-theme .witch-cell-result-layer {
+  position: absolute !important;
+  inset: 0 !important;
+  display: block !important;
+  overflow: hidden !important;
+  background:
+    radial-gradient(circle at 50% 46%, rgba(206,151,40,.12), transparent 58%),
+    #050606 !important;
+  box-shadow:
+    inset 0 0 0 1px rgba(221,171,67,.34),
+    inset 0 0 18px rgba(0,0,0,.78) !important;
+}
+
+.is-advanced-theme .witch-cell-aura,
+.is-advanced-theme .witch-cell-result-label {
+  display: none !important;
+}
+
+.is-advanced-theme .witch-cell-content {
+  position: absolute !important;
+  inset: 0 !important;
+  z-index: 2 !important;
+  display: grid !important;
+  place-items: center !important;
+  width: 100% !important;
+  height: 100% !important;
+  min-width: 0 !important;
+  min-height: 0 !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  overflow: hidden !important;
+  border: 0 !important;
+  border-radius: inherit !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  transform: none !important;
+}
+
+.is-advanced-theme .witch-cell-content::before,
+.is-advanced-theme .witch-cell-content::after {
+  display: none !important;
+  content: none !important;
+}
+
+.is-advanced-theme .witch-cell-artwork {
+  display: block !important;
+  width: 88% !important;
+  height: 88% !important;
+  max-width: 88% !important;
+  max-height: 88% !important;
+  object-fit: contain !important;
+  object-position: center center !important;
+  pointer-events: none !important;
+  user-select: none !important;
+  transform: none !important;
+  filter: drop-shadow(0 2px 5px rgba(0,0,0,.42)) !important;
+}
+
+.is-advanced-theme .witch-cell.is-safe .witch-cell-result-layer {
+  background:
+    radial-gradient(circle at 50% 44%, rgba(255,195,55,.22), transparent 58%),
+    #070705 !important;
+  box-shadow:
+    inset 0 0 0 1px rgba(244,189,70,.50),
+    inset 0 0 18px rgba(70,42,0,.34) !important;
+}
+
+.is-advanced-theme .witch-cell.is-safe .witch-cell-artwork {
+  filter:
+    drop-shadow(0 0 5px rgba(255,191,35,.26))
+    drop-shadow(0 2px 5px rgba(0,0,0,.48)) !important;
+}
+
+.is-advanced-theme .witch-cell.is-bomb .witch-cell-result-layer {
+  background:
+    radial-gradient(circle at 50% 44%, rgba(210,172,108,.13), transparent 57%),
+    #040404 !important;
+  box-shadow:
+    inset 0 0 0 1px rgba(198,144,47,.44),
+    inset 0 0 20px rgba(0,0,0,.88) !important;
+}
+
+.is-advanced-theme .witch-cell.is-bomb .witch-cell-artwork {
+  width: 91% !important;
+  height: 91% !important;
+  max-width: 91% !important;
+  max-height: 91% !important;
+  filter:
+    drop-shadow(0 0 5px rgba(199,143,43,.18))
+    drop-shadow(0 2px 6px rgba(0,0,0,.58)) !important;
+}
+
+@media (orientation: landscape) and (max-width: 1200px) and (max-height: 600px),
+       (orientation: portrait) and (max-width: 600px) and (max-height: 1200px) {
+  .is-advanced-theme .witch-cell-artwork {
+    width: 90% !important;
+    height: 90% !important;
+    max-width: 90% !important;
+    max-height: 90% !important;
+  }
+
+  .is-advanced-theme .witch-cell.is-bomb .witch-cell-artwork {
+    width: 93% !important;
+    height: 93% !important;
+    max-width: 93% !important;
+    max-height: 93% !important;
+  }
+}
+
+
+/* PASS 29 — ADVANCED 25 final black/gold UI palette + responsive fit lock.
+   The Advanced cat card keeps the shared Better Call Saul component geometry.
+   Only palette changes: deep black/graphite surfaces, warm metallic gold
+   borders/actions, ivory value text. The 1200×546 master remains fully visible
+   on desktop and rotated/mobile layouts without changing the 25-zone geometry. */
+.is-advanced-theme {
+  --witch-payout-panel-bg:
+    radial-gradient(circle at 50% 8%, rgba(232,177,62,.10), transparent 38%),
+    linear-gradient(145deg, #171511 0%, #090a09 48%, #030404 100%);
+  --witch-payout-border: rgba(232, 181, 72, .78);
+  --witch-payout-outer-ring: rgba(0, 0, 0, .76);
+  --witch-payout-title: #f7eccd;
+  --witch-payout-title-shadow-1: rgba(102, 67, 15, .95);
+  --witch-payout-title-shadow-2: rgba(41, 27, 7, .82);
+  --witch-payout-amount: #ffd66b;
+  --witch-payout-amount-shadow-1: #b47b17;
+  --witch-payout-amount-shadow-2: #7d500d;
+  --witch-payout-amount-shadow-3: #482c05;
+  --witch-payout-multiplier: #e8ba4e;
+  --witch-payout-multiplier-shadow-1: #80540f;
+  --witch-payout-multiplier-shadow-2: #432a05;
+  --witch-payout-label: #bdb097;
+  --witch-payout-muted: #91856e;
+  --witch-payout-value: #fff4dc;
+  --witch-payout-rule: rgba(226, 174, 66, .22);
+
+  --witch-deck-bg:
+    radial-gradient(circle at 50% 0%, rgba(226,171,60,.08), transparent 34%),
+    linear-gradient(180deg, #171613 0%, #090a09 58%, #030404 100%);
+  --witch-deck-border: rgba(225, 173, 64, .62);
+  --witch-deck-label: #d9bc73;
+  --witch-control-bg: linear-gradient(180deg, #20201d 0%, #0b0c0b 100%);
+  --witch-control-border: rgba(221, 171, 66, .46);
+  --witch-control-text: #f6edd9;
+  --witch-control-muted: #a69a82;
+  --witch-control-accent: #f2cf72;
+  --witch-control-accent-strong: #e6b84f;
+  --witch-control-hover-bg: linear-gradient(180deg, #302c22 0%, #14130f 100%);
+  --witch-menu-bg: linear-gradient(155deg, #1a1915 0%, #090a09 62%, #030404 100%);
+  --witch-option-bg: rgba(12, 12, 10, .94);
+  --witch-option-selected-bg: linear-gradient(180deg, #dfb454 0%, #a56f1f 100%);
+  --witch-primary-bg: linear-gradient(180deg, #f0cc68 0%, #c68b2a 54%, #9d651a 100%);
+  --witch-primary-text: #151008;
+  --witch-primary-disabled-bg: linear-gradient(180deg, #302e29 0%, #171714 100%);
+  --witch-primary-disabled-text: rgba(236, 225, 199, .36);
+
+  --witch-layer-bg:
+    radial-gradient(circle at 50% 0%, rgba(229,177,70,.10), transparent 36%),
+    linear-gradient(155deg, #1b1a17 0%, #0b0c0b 62%, #040505 100%);
+  --witch-layer-border: rgba(225, 174, 67, .52);
+  --witch-layer-text: #f6ecd5;
+  --witch-layer-muted: #9d927d;
+  --witch-layer-control-bg: rgba(12, 13, 12, .94);
+  --witch-layer-control-border: rgba(215, 166, 62, .34);
+}
+
+.is-advanced-theme .witch-payout-panel {
+  box-shadow:
+    0 0 0 4px rgba(0,0,0,.70),
+    0 18px 38px rgba(0,0,0,.42),
+    inset 0 1px 0 rgba(255,226,155,.08),
+    inset 0 0 32px rgba(205,145,32,.035) !important;
+}
+
+.is-advanced-theme .witch-control-dock {
+  border-top-color: var(--witch-deck-border) !important;
+  background: var(--witch-deck-bg) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255,225,150,.055),
+    0 -12px 32px rgba(0,0,0,.30) !important;
+}
+
+.is-advanced-theme .witch-cards-button,
+.is-advanced-theme .witch-stake-stepper,
+.is-advanced-theme .witch-alarm-field select,
+.is-advanced-theme .witch-stake-presets button {
+  box-shadow:
+    inset 0 1px 0 rgba(255,226,151,.04),
+    0 3px 10px rgba(0,0,0,.24) !important;
+}
+
+.is-advanced-theme .witch-stake-presets button.is-selected,
+.is-advanced-theme .witch-stake-presets .witch-stake-scale.is-selected {
+  border-color: #f0ca65 !important;
+  color: #151008 !important;
+  background: linear-gradient(180deg, #f1d277 0%, #c78b2a 100%) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.30),
+    0 4px 10px rgba(0,0,0,.28) !important;
+}
+
+/* Advanced card picker and game-menu layers use the same black/gold family. */
+.is-advanced-theme .witch-card-menu,
+.is-advanced-theme .witch-game-menu {
+  border-color: var(--witch-layer-border) !important;
+  color: var(--witch-layer-text) !important;
+  background: var(--witch-layer-bg) !important;
+  box-shadow:
+    0 18px 36px rgba(0,0,0,.46),
+    inset 0 1px 0 rgba(255,226,153,.06) !important;
+}
+
+.is-advanced-theme .witch-card-option {
+  border-color: var(--witch-layer-control-border) !important;
+  color: var(--witch-layer-text) !important;
+  background: var(--witch-layer-control-bg) !important;
+}
+
+.is-advanced-theme .witch-card-option small,
+.is-advanced-theme .witch-game-menu small {
+  color: var(--witch-layer-muted) !important;
+}
+
+.is-advanced-theme .witch-card-option > b {
+  border-color: rgba(225,174,67,.32) !important;
+  color: #e5b950 !important;
+  background: rgba(220,167,57,.06) !important;
+}
+
+.is-advanced-theme .witch-card-option.is-selected {
+  border-color: #f0c963 !important;
+  color: #151008 !important;
+  background: var(--witch-option-selected-bg) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.24),
+    0 4px 12px rgba(0,0,0,.30) !important;
+}
+
+.is-advanced-theme .witch-card-option.is-selected strong,
+.is-advanced-theme .witch-card-option.is-selected small,
+.is-advanced-theme .witch-card-option.is-selected > b {
+  color: #151008 !important;
+}
+
+.is-advanced-theme .witch-card-option.is-selected > b {
+  border-color: rgba(50,30,6,.34) !important;
+  background: rgba(255,248,221,.20) !important;
+}
+
+.is-advanced-theme .witch-game-menu > strong,
+.is-advanced-theme .witch-game-menu label,
+.is-advanced-theme .witch-game-menu a,
+.is-advanced-theme .witch-game-menu button {
+  color: var(--witch-layer-text) !important;
+}
+
+.is-advanced-theme .witch-game-menu button,
+.is-advanced-theme .witch-game-menu a {
+  border-color: var(--witch-layer-control-border) !important;
+  background: var(--witch-layer-control-bg) !important;
+}
+
+.is-advanced-theme .witch-primary-button:not(:disabled),
+.is-advanced-theme .witch-cashout-button:not(:disabled) {
+  border-color: #f0cb69 !important;
+  color: #151008 !important;
+  background: linear-gradient(180deg, #f3d478 0%, #ca902d 52%, #a36b1c 100%) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.28),
+    0 7px 18px rgba(0,0,0,.32) !important;
+  text-shadow: none !important;
+}
+
+.is-advanced-theme .witch-primary-button:disabled,
+.is-advanced-theme .witch-cashout-button:disabled {
+  border-color: rgba(221,172,68,.20) !important;
+  color: rgba(236,225,199,.36) !important;
+  background: linear-gradient(180deg, #302e29 0%, #171714 100%) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255,225,155,.04),
+    0 3px 8px rgba(0,0,0,.18) !important;
+  text-shadow: none !important;
+}
+
+/* Fit lock: preserve full master-card visibility while payout remains beside it. */
+@media (min-width: 821px) {
+  .is-advanced-theme .witch-table-surface {
+    position: absolute !important;
+    inset: 18px 252px 16px 18px !important;
+    overflow: visible !important;
+  }
+
+  .is-advanced-theme .witch-ticket {
+    width: min(100%, 1180px) !important;
+    max-width: 1180px !important;
+    max-height: calc(100% - 8px) !important;
+    margin: 0 auto !important;
+  }
+}
+
+@media (min-width: 821px) and (max-width: 1499px) {
+  .is-advanced-theme .witch-table-surface {
+    inset: 16px 236px 14px 14px !important;
+  }
+
+  .is-advanced-theme .witch-ticket {
+    width: min(100%, 1040px) !important;
+    max-width: 1040px !important;
+  }
+}
+
+@media (orientation: landscape) and (max-width: 1200px) and (max-height: 600px),
+       (orientation: portrait) and (max-width: 600px) and (max-height: 1200px) {
+  .is-advanced-theme .witch-table-surface {
+    overflow: visible !important;
+  }
+
+  .is-advanced-theme .witch-ticket {
+    width: min(98%, calc(var(--witch-vh) * 196)) !important;
+    max-width: 1180px !important;
+    max-height: calc(var(--witch-vh) * 82) !important;
+    margin: 0 auto !important;
+    aspect-ratio: var(--advanced-card-ratio) !important;
+  }
+
+  .is-advanced-theme .witch-control-dock {
+    background: var(--witch-deck-bg) !important;
+  }
+
+  .is-advanced-theme .witch-card-menu {
+    max-height: min(68vh, 420px) !important;
+    overflow-y: auto !important;
+    overscroll-behavior: contain !important;
   }
 }

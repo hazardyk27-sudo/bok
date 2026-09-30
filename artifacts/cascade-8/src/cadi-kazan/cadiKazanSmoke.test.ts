@@ -18,6 +18,10 @@ const scratchSurfaceSource = readFileSync(
   fileURLToPath(new URL("./scratch/ScratchSurface.ts", import.meta.url)),
   "utf8",
 );
+const scratchPresentationSource = readFileSync(
+  fileURLToPath(new URL("./scratch/ScratchPresentation.ts", import.meta.url)),
+  "utf8",
+);
 const audioManagerSource = readFileSync(
   fileURLToPath(new URL("./AudioManager.ts", import.meta.url)),
   "utf8",
@@ -220,6 +224,121 @@ describe("cadi kazan route smoke contract", () => {
     expect(visualLockSource).toContain(".witch-board > .witch-cell:nth-child(6)");
     expect(visualLockSource).toContain("overflow: hidden !important");
     expect(visualLockSource).toContain(".witch-ticket.is-preview .witch-office-preview-coating");
+  });
+
+
+  it("uses one canonical Better Call Saul payout/deck structure with card-only palette changes", () => {
+    expect(witchClientSource).toContain('classList.toggle("is-advanced-theme", visualMode === "ADVANCED")');
+    expect(visualLockSource).toContain("PASS 23 — canonical payout/deck theme system");
+    expect(visualLockSource).toContain(".is-standard-theme {");
+    expect(visualLockSource).toContain(".is-advanced-theme {");
+    expect(visualLockSource).toContain(".is-office-theme {");
+    expect(visualLockSource).toContain("--witch-payout-panel-bg");
+    expect(visualLockSource).toContain("--witch-deck-bg");
+    expect(visualLockSource).toContain(":is(.is-standard-theme, .is-advanced-theme, .is-office-theme) .witch-payout-panel");
+    expect(visualLockSource).toContain("background: var(--witch-payout-panel-bg) !important");
+    expect(visualLockSource).toContain('font-family: Impact, "Arial Black", "DM Sans", sans-serif !important');
+    expect(visualLockSource).toContain(":is(.is-standard-theme, .is-advanced-theme, .is-office-theme) .witch-control-dock");
+    expect(visualLockSource).toContain("background: var(--witch-deck-bg) !important");
+    expect(visualLockSource).toContain("--witch-deck-bg: linear-gradient(180deg, #f7f7f7 0%, #dedfe1 100%)");
+  });
+
+
+  it("locks The Office to one PNG and exactly six clipped interactive scratch zones", () => {
+    expect(visualLockSource).toContain("PASS 24 — THE OFFICE authoritative PNG + six-zone interaction lock");
+    expect(visualLockSource).toContain("--office-card-ratio: 1000 / 468");
+    expect(visualLockSource).toContain("--office-scratch-left: 37.2%");
+    expect(visualLockSource).toContain("--office-scratch-top: 13.2479%");
+    expect(visualLockSource).toContain("--office-scratch-right: 4.7%");
+    expect(visualLockSource).toContain("--office-scratch-bottom: 8.9744%");
+    expect(visualLockSource).toContain("--office-cell-left: 35.6282%");
+    expect(visualLockSource).toContain("--office-cell-left: 71.2565%");
+    expect(visualLockSource).toContain("--office-cell-top: 56.3187%");
+    expect(visualLockSource).toContain("--office-cell-width: 28.7435%");
+    expect(visualLockSource).toContain("--office-cell-height: 43.6813%");
+    expect(visualLockSource).toContain(".witch-ticket.is-preview .witch-board");
+    expect(visualLockSource).toContain("pointer-events: none !important");
+    expect(visualLockSource).toContain(".witch-ticket:not(.is-preview) .witch-board > .witch-cell");
+    expect(visualLockSource).toContain("pointer-events: auto !important");
+    expect(visualLockSource).toContain("touch-action: none !important");
+  });
+
+
+  it("keeps The Office palette light with black/gray content while preserving shared geometry", () => {
+    expect(visualLockSource).toContain("PASS 25 — THE OFFICE final light monochrome UI palette");
+    expect(visualLockSource).toContain("--witch-deck-bg:");
+    expect(visualLockSource).toContain("linear-gradient(180deg, #f7f7f6 0%, #eceeed 50%, #d7dadd 100%)");
+    expect(visualLockSource).toContain("--witch-control-text: #17191b");
+    expect(visualLockSource).toContain("--witch-layer-bg:");
+    expect(visualLockSource).toContain(".is-office-theme .witch-card-menu");
+    expect(visualLockSource).toContain(".is-office-theme .witch-game-menu");
+    expect(visualLockSource).toContain(".is-office-theme .witch-card-option.is-selected");
+    expect(visualLockSource).toContain(".is-office-theme .witch-primary-button:not(:disabled)");
+    expect(visualLockSource).toContain(".is-office-theme .witch-cashout-button:not(:disabled)");
+    expect(visualLockSource).toContain("color: #ffffff !important");
+  });
+
+
+  it("uses the supplied star-backed Office symbols with star-matched prize badges", () => {
+    expect(visualLockSource).toContain("PASS 26 — THE OFFICE star-backed character symbols + color-linked prize badge");
+    expect(witchClientSource).toContain("--office-symbol-color:");
+    expect(witchClientSource).toContain("--office-symbol-text:");
+    expect(witchClientSource).toContain('decoding="async"');
+    expect(visualLockSource).toContain("background: var(--office-symbol-color, #e5e7e9) !important");
+    expect(visualLockSource).toContain("color: var(--office-symbol-text, #151719) !important");
+    expect(visualLockSource).toContain("filter: none !important");
+    expect(visualLockSource).toContain("contain: paint !important");
+  });
+
+
+  it("renders Advanced 25 as one master PNG with 25 registered scratch-only zones", () => {
+    expect(witchClientSource).toContain('const ADVANCED_25_CARD_ART_URL = new URL("./advanced/assets/advanced25-card-master.png", import.meta.url).href');
+    expect(witchClientSource).toContain('class="witch-advanced-card-master"');
+    expect(witchClientSource).toContain('width="1200" height="546"');
+    expect(witchClientSource).toContain("const showAdvancedPreview = !hasRound && visualMode === \"ADVANCED\"");
+    expect(witchClientSource).toContain('board.dataset.preview = "advanced"');
+    expect(witchClientSource).toContain("Array.from({ length: 25 }");
+    expect(visualLockSource).toContain("PASS 27 — ADVANCED 25 single-PNG card + exact 5×5 scratch registration");
+    expect(visualLockSource).toContain("--advanced-scratch-left: 32.5982%");
+    expect(visualLockSource).toContain("--advanced-scratch-top: 11.3475%");
+    expect(visualLockSource).toContain("--advanced-scratch-right: 3.6579%");
+    expect(visualLockSource).toContain("--advanced-scratch-bottom: 8.5106%");
+    expect(visualLockSource).toContain(".is-advanced-theme .witch-board > .witch-cell:nth-child(25)");
+    expect(visualLockSource).toContain("--advanced-cell-left: 81.0127%");
+    expect(visualLockSource).toContain("pointer-events: auto !important");
+  });
+
+
+  it("uses optimized supplied paw/skull artwork for Advanced 25 results", () => {
+    expect(witchClientSource).toContain('class="witch-cell-artwork"');
+    expect(witchClientSource).toContain('decoding="async"');
+    expect(visualLockSource).toContain("PASS 28 — ADVANCED 25 supplied paw/skull reveal artwork");
+    expect(visualLockSource).toContain(".is-advanced-theme .witch-cell.is-safe .witch-cell-artwork");
+    expect(visualLockSource).toContain(".is-advanced-theme .witch-cell.is-bomb .witch-cell-artwork");
+    expect(visualLockSource).toContain("object-fit: contain !important");
+    expect(visualLockSource).toContain(".is-advanced-theme .witch-cell-result-label");
+  });
+
+
+  it("locks Advanced 25 to one black/gold UI palette and full-card responsive fit", () => {
+    expect(visualLockSource).toContain("PASS 29 — ADVANCED 25 final black/gold UI palette + responsive fit lock");
+    expect(visualLockSource).toContain("--witch-layer-bg:");
+    expect(visualLockSource).toContain("--witch-layer-border: rgba(225, 174, 67, .52)");
+    expect(visualLockSource).toContain(".is-advanced-theme .witch-card-menu");
+    expect(visualLockSource).toContain(".is-advanced-theme .witch-game-menu");
+    expect(visualLockSource).toContain(".is-advanced-theme .witch-primary-button:not(:disabled)");
+    expect(visualLockSource).toContain(".is-advanced-theme .witch-cashout-button:not(:disabled)");
+    expect(visualLockSource).toContain(".is-advanced-theme .witch-table-surface");
+    expect(visualLockSource).toContain("max-height: calc(var(--witch-vh) * 82) !important");
+    expect(visualLockSource).toContain("aspect-ratio: var(--advanced-card-ratio) !important");
+  });
+
+
+  it("keeps Advanced 25 result assets inside the Cadı Kazan ownership root", () => {
+    expect(scratchPresentationSource).toContain('new URL("../advanced/assets/advanced25-paw.webp", import.meta.url).href');
+    expect(scratchPresentationSource).toContain('new URL("../advanced/assets/advanced25-skull.webp", import.meta.url).href');
+    expect(scratchPresentationSource).not.toContain('"/cadi-kazan/advanced25-paw.webp"');
+    expect(scratchPresentationSource).not.toContain('"/cadi-kazan/advanced25-skull.webp"');
   });
 
 });

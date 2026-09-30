@@ -42,6 +42,7 @@ type CadiKazanMutation = {
 };
 
 const API_BASE = "/api/cadi-kazan";
+const ADVANCED_25_CARD_ART_URL = new URL("./advanced/assets/advanced25-card-master.png", import.meta.url).href;
 const SCRATCH_BRUSH_RADIUS_PX = 14;
 const OFFICE_SCRATCH_BRUSH_RADIUS_PX = SCRATCH_BRUSH_RADIUS_PX * 1.43;
 const OFFICE_SYMBOL_BY_ID = new Map(OFFICE_MATCH_SYMBOLS.map((symbol) => [symbol.id, symbol] as const));
@@ -212,6 +213,10 @@ export const CADI_KAZAN_MARKUP = `
               </div>
             </div>
             <div class="witch-bcs-bottombar">NOT TOLL FREE <b>•</b> SE HABLA ESPAÑOL</div>
+          </div>
+
+          <div class="witch-advanced-card-art" aria-hidden="true">
+            <img class="witch-advanced-card-master" src="${ADVANCED_25_CARD_ART_URL}" alt="" width="1200" height="546" loading="eager" decoding="async" fetchpriority="auto" draggable="false">
           </div>
 
           <div class="witch-office-card-art" aria-hidden="true">
@@ -820,6 +825,7 @@ export class WitchClient {
     this.root.classList.toggle("is-office-round", Boolean(round && round.mode === "OFFICE_MATCH_6"));
     const visualMode = round?.mode ?? this.mode;
     this.root.classList.toggle("is-standard-theme", visualMode === "STANDARD");
+    this.root.classList.toggle("is-advanced-theme", visualMode === "ADVANCED");
     this.root.classList.toggle("is-office-theme", visualMode === "OFFICE_MATCH_6");
     this.root.querySelectorAll<HTMLButtonElement>("[data-witch-mode]").forEach((button) => {
       button.classList.toggle("is-selected", button.dataset.witchMode === this.mode);
@@ -865,8 +871,9 @@ export class WitchClient {
     const empty = this.root.querySelector<HTMLElement>("[data-witch-empty]");
     const ticket = this.root.querySelector<HTMLElement>("[data-witch-ticket]");
     const showStandardPreview = !hasRound && visualMode === "STANDARD";
+    const showAdvancedPreview = !hasRound && visualMode === "ADVANCED";
     const showOfficePreview = !hasRound && visualMode === "OFFICE_MATCH_6";
-    const showCardPreview = showStandardPreview || showOfficePreview;
+    const showCardPreview = showStandardPreview || showAdvancedPreview || showOfficePreview;
     if (empty) empty.hidden = hasRound || showCardPreview;
     if (ticket) {
       ticket.hidden = !(hasRound || showCardPreview);
@@ -895,16 +902,20 @@ export class WitchClient {
       if (playMode) {
         playMode.textContent = showStandardPreview
           ? "STANDARD 5 / 01 BOMBA"
-          : showOfficePreview
-            ? "THE OFFICE / 3 AYNI"
-            : "NO TICKET";
+          : showAdvancedPreview
+            ? `ADVANCED 25 / ${String(Number(alarms?.value ?? "1")).padStart(2, "0")} BOMBA`
+            : showOfficePreview
+              ? "THE OFFICE / 3 AYNI"
+              : "NO TICKET";
       }
       if (playTitle) {
         playTitle.textContent = showOfficePreview
           ? "6 alanı kazı. 3 aynı karakteri bul ve ödülü kazan."
-          : showStandardPreview
-            ? "Biletini al ve kazımaya başla."
-            : "Bir bilet seç ve kazımaya başla.";
+          : showAdvancedPreview
+            ? "25 alanlı bileti al, riskini seç ve kazımaya başla."
+            : showStandardPreview
+              ? "Biletini al ve kazımaya başla."
+              : "Bir bilet seç ve kazımaya başla.";
       }
 
       if (showStandardPreview && board) {
@@ -936,6 +947,30 @@ export class WitchClient {
           standardPrice.textContent = formatTicketPrice(previewStakeCents);
           standardPrice.hidden = false;
         }
+        if (ticketId) ticketId.textContent = "PREVIEW";
+      } else if (showAdvancedPreview && board) {
+        if (board.dataset.preview !== "advanced") {
+          this.destroyScratchSurfaces();
+          board.dataset.preview = "advanced";
+          board.innerHTML = Array.from({ length: 25 }, (_, index) => `
+            <button type="button" class="witch-cell witch-preview-cell witch-advanced-preview-cell" disabled aria-label="Advanced 25 kapalı kazıma alanı ${index + 1}"></button>
+          `).join("");
+        }
+
+        const previewStakeDollars = parseStakeDollars(stakeInput?.value ?? "1");
+        const previewStakeCents = Math.max(100, Math.round((Number.isFinite(previewStakeDollars) ? previewStakeDollars : 1) * 100));
+        const previewBombs = Number(alarms?.value ?? "1");
+        const ticketMode = this.root.querySelector<HTMLElement>("[data-witch-ticket-mode]");
+        const ticketStake = this.root.querySelector<HTMLElement>("[data-witch-ticket-stake]");
+        const ticketBombs = this.root.querySelector<HTMLElement>("[data-witch-ticket-bombs]");
+        const ticketPrice = this.root.querySelector<HTMLElement>("[data-witch-ticket-price]");
+        const standardPrice = this.root.querySelector<HTMLElement>("[data-witch-standard-price]");
+        const ticketId = this.root.querySelector<HTMLElement>("[data-witch-ticket-id]");
+        if (ticketMode) ticketMode.textContent = "ADVANCED 25";
+        if (ticketStake) ticketStake.textContent = formatMoney(previewStakeCents);
+        if (ticketBombs) ticketBombs.textContent = `${String(previewBombs).padStart(2, "0")} BOMBA`;
+        if (ticketPrice) ticketPrice.textContent = formatTicketPrice(previewStakeCents);
+        if (standardPrice) standardPrice.hidden = true;
         if (ticketId) ticketId.textContent = "PREVIEW";
       } else if (showOfficePreview && board) {
         if (board.dataset.preview !== "office") {
@@ -1039,15 +1074,21 @@ export class WitchClient {
             ? Math.floor((round.stakeCents * symbol.multiplierBps) / 100)
             : 0;
           const symbolPrize = formatMoney(symbolPrizeCents, { compactInteger: true });
+          const officePrizeColor = symbol?.prizeColor ?? "#E5E7E9";
+          const officePrizeTextColor = symbol?.prizeTextColor ?? "#151719";
           content.innerHTML = `
-            <span class="witch-office-result-symbol" data-office-symbol="${symbolId ?? ""}">
-              <img class="witch-office-result-art" src="${officePresentation.artworkUrl ?? ""}" alt="${officePresentation.symbol}" draggable="false">
+            <span
+              class="witch-office-result-symbol"
+              data-office-symbol="${symbolId ?? ""}"
+              style="--office-symbol-color:${officePrizeColor};--office-symbol-text:${officePrizeTextColor}"
+            >
+              <img class="witch-office-result-art" src="${officePresentation.artworkUrl ?? ""}" alt="${officePresentation.symbol}" decoding="async" draggable="false">
               <b class="witch-office-result-prize">${symbolPrize}</b>
             </span>
           `;
           button.setAttribute("aria-label", `${officePresentation.symbol} · ${symbolPrize}`);
         } else if ("artworkUrl" in presentation && presentation.artworkUrl) {
-          content.innerHTML = `<img class="witch-cell-artwork" src="${presentation.artworkUrl}" alt="" draggable="false">`;
+          content.innerHTML = `<img class="witch-cell-artwork" src="${presentation.artworkUrl}" alt="${presentation.artworkAlt ?? ""}" decoding="async" draggable="false">`;
         } else {
           content.textContent = presentation.symbol;
         }

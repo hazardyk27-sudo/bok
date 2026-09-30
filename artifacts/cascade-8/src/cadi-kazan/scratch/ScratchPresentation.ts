@@ -1,3 +1,6 @@
+const ADVANCED_25_PAW_ART_URL = new URL("../advanced/assets/advanced25-paw.webp", import.meta.url).href;
+const ADVANCED_25_SKULL_ART_URL = new URL("../advanced/assets/advanced25-skull.webp", import.meta.url).href;
+
 export type ScratchCellPresentation = {
   symbol: string;
   label: string;
@@ -45,6 +48,21 @@ export function getScratchCellPresentation(
         };
   }
 
-  if (bomb) return { symbol: "●", label: "BOMBA", resultClass: "bomb", artworkUrl: null };
-  return { symbol: "✦", label: "ALTIN", resultClass: "safe", artworkUrl: null };
+  if (bomb) {
+    return {
+      symbol: "",
+      label: "KEDİ KAFATASI · BOMBA",
+      resultClass: "bomb",
+      artworkUrl: ADVANCED_25_SKULL_ART_URL,
+      artworkAlt: "Kedi kafatası",
+    };
+  }
+
+  return {
+    symbol: "",
+    label: "ALTIN PATİ",
+    resultClass: "safe",
+    artworkUrl: ADVANCED_25_PAW_ART_URL,
+    artworkAlt: "Altın pati",
+  };
 }
