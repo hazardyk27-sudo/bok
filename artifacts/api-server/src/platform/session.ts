@@ -83,14 +83,12 @@ export function chooseSessionIdForWalletMigration(input: {
     return canonicalSessionId;
   }
 
-  if (canonicalBalanceCents === null && legacyBalanceCents !== null) {
-    return legacySessionId;
-  }
-
   if (
-    canonicalBalanceCents === initialBalanceCents
-    && legacyBalanceCents !== null
-    && legacyBalanceCents !== initialBalanceCents
+    legacyBalanceCents !== null
+    && (
+      canonicalBalanceCents === null
+      || legacyBalanceCents > canonicalBalanceCents
+    )
   ) {
     return legacySessionId;
   }
