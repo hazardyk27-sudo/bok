@@ -2,6 +2,7 @@ import "./idle.css";
 import "./stadium-premium.css";
 import {
   createStadiumPremiumUi,
+  type StadiumMutationResponse,
   type StadiumPremiumUi,
 } from "./stadiumPremium";
 import {
@@ -302,20 +303,7 @@ export const BUSINESSES_MARKUP = `
             </div>
           </div>
 
-          <div class="stadium-canonical-secondary">
-            <div>
-              <span>HIZ SEVİYESİ</span>
-              <strong data-idle-speed-level>Lv—</strong>
-            </div>
-            <div>
-              <span>PİYASA KAYNAĞI</span>
-              <strong data-idle-market-source>—</strong>
-            </div>
-            <div>
-              <span>SON FİYAT TICK</span>
-              <strong data-idle-market-tick>—</strong>
-            </div>
-          </div>
+
         </div>
       </section>
     </main>
@@ -344,13 +332,39 @@ class BusinessesClient {
       root: this.root,
       getEnvelope: () => this.envelope,
       getMarket: () => this.market,
-      refreshState: async () => {
-        this.envelope = await fetchIdleStadiumState();
-        this.market = this.envelope.snapshot.market;
-        this.render();
+      applyMutationResponse: (response) => {
+        this.applyMutationResponse(response);
       },
     });
     void this.start();
+  }
+
+  private applyMutationResponse(
+    response: StadiumMutationResponse,
+  ) {
+    if (!this.envelope) return;
+
+    const nextMarket =
+      "market" in response
+        ? response.market
+        : this.market
+          ?? this.envelope.snapshot.market;
+
+    this.market = nextMarket;
+    this.envelope = {
+      snapshot: {
+        ...this.envelope.snapshot,
+        serverTime: response.serverTime,
+        wallet: {
+          ...this.envelope.snapshot.wallet,
+          balanceCents: response.balanceCents,
+        },
+        stadium: response.stadium,
+        market: nextMarket,
+      },
+      receivedAtMs: Date.now(),
+    };
+    this.render();
   }
 
   private async start() {
@@ -500,12 +514,6 @@ class BusinessesClient {
       `${live.storageCapacityTickets
         .toLocaleString("en-US")} kapasite`,
     );
-    setText(
-      this.root,
-      "[data-idle-speed-level]",
-      `Lv${live.speedLevel}`,
-    );
-
     const track =
       this.root.querySelector<HTMLElement>(
         "[data-idle-storage-track]",
@@ -555,29 +563,6 @@ class BusinessesClient {
       "[data-idle-market-status]",
       this.market.feedStatus,
     );
-    setText(
-      this.root,
-      "[data-idle-market-source]",
-      this.market.source === "binance-btcusdt"
-        ? "BINANCE"
-        : this.market.source === "coinbase-btc-usd"
-          ? "COINBASE"
-          : "BEKLEMEDE",
-    );
-
-    const tick = new Date(this.market.tickAt);
-    setText(
-      this.root,
-      "[data-idle-market-tick]",
-      Number.isFinite(tick.getTime())
-        ? tick.toLocaleTimeString("tr-TR", {
-          hour: "2-digit",
-          minute: "2-digit",
-          second: "2-digit",
-        })
-        : "—",
-    );
-
     const card =
       this.root.querySelector<HTMLElement>(
         "[data-idle-stadium-card]",
