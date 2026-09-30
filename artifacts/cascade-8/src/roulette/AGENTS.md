@@ -1,5 +1,8 @@
 # Roulette 2D operating notes
 
+> **Mandatory startup:** First read the canonical project handbook at `integration/replit-preview:AGENTS.md`. Then read this file. These are the only two mandatory instruction files for a normal category conversation. The canonical root handbook owns all shared GitHub/Replit/Supabase/wallet/promotion/Shell rules; do not use stale feature-branch copies of root rules or the retired delivery/workflow documents as authority.
+
+
 ## Ownership
 - Canonical development branch: `feature/roulette-2d`.
 - Owned roots: `artifacts/cascade-8/src/roulette`, `artifacts/api-server/src/roulette`, and `lib/db/src/schema/roulette.ts`.
