@@ -1,8 +1,8 @@
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
-import { formatAuthUserCode } from "./repository";
 import {
+  formatAuthUserCode,
   isValidUsername,
   normalizeUsername,
 } from "./security";
