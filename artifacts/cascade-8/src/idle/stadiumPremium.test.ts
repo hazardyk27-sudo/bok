@@ -140,13 +140,22 @@ describe("Part 26 premium Stadium control surface", () => {
       "overflow: hidden !important",
     );
     expect(finalScrollContract).toContain(
+      "position: fixed !important",
+    );
+    expect(finalScrollContract).toContain(
+      "display: block !important",
+    );
+    expect(finalScrollContract).toContain(
+      "place-items: initial !important",
+    );
+    expect(finalScrollContract).toContain(
       "height: 100dvh !important",
     );
     expect(finalScrollContract).toContain(
       "max-height: 100dvh !important",
     );
     expect(finalScrollContract).toContain(
-      "overflow-y: auto !important",
+      "overflow-y: scroll !important",
     );
     expect(finalScrollContract).toContain(
       "-webkit-overflow-scrolling: touch",
