@@ -108,3 +108,27 @@ export function getRouletteGlobalSpinElapsedMs(
     ),
   );
 }
+
+
+export function getRouletteQueuedBetExpectedRevision(
+  serverRevision: number,
+  syncInFlight: boolean,
+) {
+  if (
+    !Number.isSafeInteger(
+      serverRevision,
+    ) ||
+    serverRevision < 0
+  ) {
+    return 0;
+  }
+
+  return (
+    serverRevision +
+    (
+      syncInFlight
+        ? 1
+        : 0
+    )
+  );
+}

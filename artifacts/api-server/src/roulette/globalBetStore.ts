@@ -13,6 +13,7 @@ import type {
 } from "../../../cascade-8/src/roulette/betRules";
 import {
   assertRouletteGlobalBettingOpen,
+  getNextRouletteGlobalBetRevision,
   getRouletteGlobalStakeCents,
   settleRouletteGlobalBet,
 } from "./globalBet";
@@ -397,18 +398,11 @@ export async function upsertRouletteGlobalBet(input: {
         existingBet?.revision ??
         0,
       );
-
-    if (
-      currentRevision !==
-      input.expectedRevision
-    ) {
-      throw new Error(
-        "ROULETTE_GLOBAL_BET_STALE",
-      );
-    }
-
     const nextRevision =
-      currentRevision + 1;
+      getNextRouletteGlobalBetRevision(
+        currentRevision,
+        input.expectedRevision,
+      );
 
     const oldStakeCents =
       Number(

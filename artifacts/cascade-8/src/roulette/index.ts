@@ -59,6 +59,7 @@ import {
   getRouletteGlobalBettingSecondsRemaining,
   getRouletteGlobalClientPhase,
   getRouletteGlobalSpinElapsedMs,
+  getRouletteQueuedBetExpectedRevision,
   getRouletteServerNowMs,
 } from "./globalClient";
 import {
@@ -443,6 +444,7 @@ export function mountRoulette(app: HTMLDivElement) {
         roundId: string;
         bets: RouletteBetState["placements"];
         version: number;
+        expectedRevision: number;
       }
     | null = null;
   let globalBetMutationVersion = 0;
@@ -1994,7 +1996,7 @@ export function mountRoulette(app: HTMLDivElement) {
                 job.roundId,
                 job.bets,
                 `roulette_gbet_${job.version}_${crypto.randomUUID().replaceAll("-", "")}`,
-                serverGlobalBetRevision,
+                job.expectedRevision,
               );
 
           if (
@@ -2025,18 +2027,8 @@ export function mountRoulette(app: HTMLDivElement) {
               ? error.message
               : "ROULETTE_GLOBAL_BET_FAILED";
 
-          const discardPending =
-            message ===
-              "ROULETTE_GLOBAL_BET_STALE" ||
-            message ===
-              "ROULETTE_GLOBAL_BETTING_CLOSED" ||
-            message ===
-              "ROULETTE_GLOBAL_BET_ALREADY_SETTLED";
-
-          if (discardPending) {
-            pendingGlobalBetSync =
-              null;
-          }
+          pendingGlobalBetSync =
+            null;
 
           if (betStatus) {
             betStatus.textContent =
@@ -2099,6 +2091,11 @@ export function mountRoulette(app: HTMLDivElement) {
         ),
       version:
         globalBetMutationVersion,
+      expectedRevision:
+        getRouletteQueuedBetExpectedRevision(
+          serverGlobalBetRevision,
+          globalBetSyncInFlight,
+        ),
     };
 
     void drainGlobalBetSync();
