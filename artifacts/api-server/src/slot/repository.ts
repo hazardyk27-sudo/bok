@@ -21,6 +21,63 @@ type WalletRow = { balance_cents: number };
 const VALID_STAKES = new Set<number>(BETS_CENTS);
 const IDEMPOTENCY_PATTERN = /^[a-zA-Z0-9_-]{12,100}$/;
 
+let bigMoneyStorageReady: Promise<void> | null = null;
+
+async function ensureBigMoneyStorage() {
+  if (bigMoneyStorageReady) return bigMoneyStorageReady;
+  bigMoneyStorageReady = (async () => {
+    const expected = new Map([
+      ["shared_wallets.balance_cents", "BIGINT"],
+      ["slot_rounds.stake_cents", "BIGINT"],
+      ["slot_rounds.payout_cents", "BIGINT"],
+      ["slot_ledger.amount_cents", "BIGINT"],
+      ["slot_wallet_migrations.legacy_balance_cents", "BIGINT"],
+    ]);
+    const result = await pool.query<{ table_name: string; column_name: string; data_type: string }>(
+      `SELECT table_name, column_name, data_type
+         FROM information_schema.columns
+        WHERE table_schema = current_schema()
+          AND (
+            (table_name = 'shared_wallets' AND column_name = 'balance_cents')
+            OR (table_name = 'slot_rounds' AND column_name IN ('stake_cents', 'payout_cents'))
+            OR (table_name = 'slot_ledger' AND column_name = 'amount_cents')
+            OR (table_name = 'slot_wallet_migrations' AND column_name = 'legacy_balance_cents')
+          )`,
+    );
+    const current = new Map(
+      result.rows.map((row) => [
+        `${row.table_name}.${row.column_name}`,
+        row.data_type.toUpperCase(),
+      ]),
+    );
+    const statements = [
+      ["shared_wallets.balance_cents", "ALTER TABLE shared_wallets ALTER COLUMN balance_cents TYPE BIGINT USING balance_cents::BIGINT"],
+      ["slot_rounds.stake_cents", "ALTER TABLE slot_rounds ALTER COLUMN stake_cents TYPE BIGINT USING stake_cents::BIGINT"],
+      ["slot_rounds.payout_cents", "ALTER TABLE slot_rounds ALTER COLUMN payout_cents TYPE BIGINT USING payout_cents::BIGINT"],
+      ["slot_ledger.amount_cents", "ALTER TABLE slot_ledger ALTER COLUMN amount_cents TYPE BIGINT USING amount_cents::BIGINT"],
+      ["slot_wallet_migrations.legacy_balance_cents", "ALTER TABLE slot_wallet_migrations ALTER COLUMN legacy_balance_cents TYPE BIGINT USING legacy_balance_cents::BIGINT"],
+    ] as const;
+    const pending = statements.filter(([key]) => current.get(key) !== expected.get(key));
+    if (pending.length === 0) return;
+
+    const client = await pool.connect();
+    try {
+      await client.query("BEGIN");
+      for (const [, sql] of pending) await client.query(sql);
+      await client.query("COMMIT");
+    } catch (error) {
+      await client.query("ROLLBACK");
+      throw error;
+    } finally {
+      client.release();
+    }
+  })().catch((error) => {
+    bigMoneyStorageReady = null;
+    throw error;
+  });
+  return bigMoneyStorageReady;
+}
+
 function validateInput(stakeCents: number, idempotencyKey: string) {
   if (!Number.isInteger(stakeCents) || !VALID_STAKES.has(stakeCents)) throw new Error("INVALID_SLOT_STAKE");
   if (!IDEMPOTENCY_PATTERN.test(idempotencyKey)) throw new Error("INVALID_IDEMPOTENCY_KEY");
@@ -61,13 +118,15 @@ function response(sessionId: string, balanceCents: number, row: SlotRoundRow) {
 
 export class SlotRepository {
   async getState(sessionId: string) {
+    await ensureBigMoneyStorage();
     return {
       wallet: { sessionId, balanceCents: await walletBalance(sessionId) },
     };
   }
 
   async migrateLegacyBalance(sessionId: string, legacyBalanceCents: number) {
-    if (!Number.isInteger(legacyBalanceCents) || legacyBalanceCents < 0 || legacyBalanceCents > 1_000_000_000) {
+    await ensureBigMoneyStorage();
+    if (!Number.isSafeInteger(legacyBalanceCents) || legacyBalanceCents < 0 || legacyBalanceCents > 1_000_000_000) {
       throw new Error("INVALID_LEGACY_SLOT_BALANCE");
     }
     const client = await pool.connect();
@@ -92,6 +151,7 @@ export class SlotRepository {
   }
 
   async spin(sessionId: string, input: { stakeCents: number; idempotencyKey: string }) {
+    await ensureBigMoneyStorage();
     validateInput(input.stakeCents, input.idempotencyKey);
 
     const isFreeBet = input.stakeCents === FREE_BET_CENTS;
@@ -118,20 +178,20 @@ export class SlotRepository {
        ),
        settled_wallet AS (
          INSERT INTO shared_wallets (session_id, balance_cents, updated_at)
-         SELECT $2::text, $13::integer + $1::integer, now()
+         SELECT $2::text, $13::bigint + $1::bigint, now()
           WHERE NOT EXISTS (SELECT 1 FROM duplicate)
-            AND ($10::integer = 0 OR $13::integer >= $10::integer)
+            AND ($10::bigint = 0 OR $13::bigint >= $10::bigint)
          ON CONFLICT (session_id) DO UPDATE
-           SET balance_cents = shared_wallets.balance_cents + $1::integer,
+           SET balance_cents = shared_wallets.balance_cents + $1::bigint,
                updated_at = now()
          WHERE NOT EXISTS (SELECT 1 FROM duplicate)
-           AND ($10::integer = 0 OR shared_wallets.balance_cents >= $10::integer)
+           AND ($10::bigint = 0 OR shared_wallets.balance_cents >= $10::bigint)
          RETURNING balance_cents
        ),
        inserted_round AS (
          INSERT INTO slot_rounds
            (id, session_id, stake_cents, payout_cents, result, idempotency_key)
-         SELECT $3::text, $2::text, $4::integer, $5::integer, $6::jsonb, $7::text
+         SELECT $3::text, $2::text, $4::bigint, $5::bigint, $6::jsonb, $7::text
           WHERE EXISTS (SELECT 1 FROM settled_wallet)
          RETURNING *
        ),
@@ -140,11 +200,11 @@ export class SlotRepository {
            (id, session_id, round_id, kind, amount_cents, idempotency_key)
          SELECT entries.*
            FROM (VALUES
-             ($8::text, $2::text, $3::text, 'STAKE_DEBIT'::text, ($10::integer * -1), $11::text),
-             ($9::text, $2::text, $3::text, 'PAYOUT_CREDIT'::text, $5::integer, $12::text)
+             ($8::text, $2::text, $3::text, 'STAKE_DEBIT'::text, ($10::bigint * -1), $11::text),
+             ($9::text, $2::text, $3::text, 'PAYOUT_CREDIT'::text, $5::bigint, $12::text)
            ) AS entries(id, session_id, round_id, kind, amount_cents, idempotency_key)
           WHERE EXISTS (SELECT 1 FROM inserted_round)
-            AND (entries.kind <> 'STAKE_DEBIT' OR $10::integer > 0)
+            AND (entries.kind <> 'STAKE_DEBIT' OR $10::bigint > 0)
          RETURNING id
        ),
        settled_result AS (
@@ -161,7 +221,7 @@ export class SlotRepository {
                 duplicate.*,
                 COALESCE(
                   (SELECT balance_cents FROM shared_wallets WHERE session_id = $2),
-                  $13::integer
+                  $13::bigint
                 ) AS balance_cents,
                 duplicate.session_id AS existing_session_id,
                 0::bigint AS ledger_count
@@ -171,14 +231,14 @@ export class SlotRepository {
          SELECT 'INSUFFICIENT'::text AS outcome,
                 NULL::text AS id,
                 $2::text AS session_id,
-                $4::integer AS stake_cents,
-                0::integer AS payout_cents,
+                $4::bigint AS stake_cents,
+                0::bigint AS payout_cents,
                 $6::jsonb AS result,
                 $7::text AS idempotency_key,
                 now() AS created_at,
                 COALESCE(
                   (SELECT balance_cents FROM shared_wallets WHERE session_id = $2),
-                  $13::integer
+                  $13::bigint
                 ) AS balance_cents,
                 $2::text AS existing_session_id,
                 0::bigint AS ledger_count
