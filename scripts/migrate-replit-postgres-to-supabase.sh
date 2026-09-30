@@ -6,7 +6,7 @@ TARGET_DATABASE_URL="${SUPABASE_DATABASE_URL:-}"
 MODE="${OYUN_MIGRATION_MODE:-preflight}"
 WRITES_FROZEN="${OYUN_SOURCE_WRITES_FROZEN:-no}"
 
-for command in node psql pg_dump pg_restore md5sum cmp; do
+for command in node psql pg_dump pg_restore sha256sum cmp diff; do
   if ! command -v "$command" >/dev/null 2>&1; then
     echo "ABORT: required command '$command' is unavailable."
     exit 2
@@ -90,6 +90,45 @@ declare -A target_set=()
 for table in "${target_tables[@]}"; do
   target_set["$table"]=1
 done
+
+required_target_tables=(
+  shared_wallets
+  shared_wallet_legacy_imports
+  slot_rounds
+  slot_ledger
+  slot_wallet_migrations
+  cadi_kazan_rounds
+  cadi_kazan_ledger
+  idle_business_states
+  idle_action_receipts
+  idle_ledger
+  idle_stadium_states
+  idle_ticket_market_state
+  idle_ticket_market_ticks
+  idle_stadium_action_receipts
+  roulette_rounds
+  roulette_ledger
+  roulette_global_rounds
+  roulette_global_bets
+  roulette_global_bet_requests
+  blackjack_table_snapshots
+  blackjack_event_journal
+  users
+  auth_sessions
+  email_verification_tokens
+)
+
+missing_required_target=()
+for table in "${required_target_tables[@]}"; do
+  if [[ -z "${target_set[$table]:-}" ]]; then
+    missing_required_target+=("$table")
+  fi
+done
+
+if [[ "${#missing_required_target[@]}" -gt 0 ]]; then
+  echo "ABORT: Supabase target is missing required OYUN table(s): ${missing_required_target[*]}"
+  exit 4
+fi
 
 missing_tables=()
 for table in "${source_tables[@]}"; do
