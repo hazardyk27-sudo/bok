@@ -178,20 +178,37 @@ describe("backend game isolation", () => {
     );
   });
 
-  it("does not let Blackjack recovery block the shared HTTP listener", () => {
+  it("does not let shared startup maintenance block the HTTP listener", () => {
     const listenAt = serverIndex.indexOf("server.listen(port");
+    const walletInitializationAt = serverIndex.indexOf(
+      "initializeSharedWalletPlatform()",
+    );
     const blackjackAttachAt = serverIndex.indexOf(
       "attachBlackjackPlatformRuntime(server)",
     );
 
     expect(listenAt).toBeGreaterThan(-1);
+    expect(walletInitializationAt).toBeGreaterThan(-1);
     expect(blackjackAttachAt).toBeGreaterThan(-1);
+    expect(listenAt).toBeLessThan(walletInitializationAt);
     expect(listenAt).toBeLessThan(blackjackAttachAt);
+    expect(serverIndex).not.toContain(
+      "await initializeSharedWalletPlatform()",
+    );
     expect(serverIndex).not.toContain(
       "await attachBlackjackPlatformRuntime(server)",
     );
+    expect(serverIndex).toContain("void initializeSharedWalletPlatform()");
     expect(serverIndex).toContain("void attachBlackjackPlatformRuntime(server)");
     expect(serverIndex).toContain("pool.end()");
+  });
+
+  it("never waits indefinitely for the shared-wallet startup advisory lock", () => {
+    expect(walletPlatform).toContain("pg_try_advisory_xact_lock");
+    expect(walletPlatform).not.toContain(
+      "SELECT pg_advisory_xact_lock(hashtextextended('shared-wallet-platform-v2'",
+    );
+    expect(walletPlatform).toContain("skippedBecauseAnotherInitializer: true");
   });
 
   it("wires Blackjack runtime through shared platform entrypoints", () => {
