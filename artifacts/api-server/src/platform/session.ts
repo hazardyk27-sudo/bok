@@ -75,7 +75,6 @@ export function chooseSessionIdForWalletMigration(input: {
     legacySessionId,
     canonicalBalanceCents,
     legacyBalanceCents,
-    initialBalanceCents,
   } = input;
 
   if (!canonicalSessionId) return legacySessionId;
