@@ -5097,3 +5097,44 @@ button {
     padding: 8px;
   }
 }
+
+
+/* Part 16 — BET TIME safe placement */
+@media (max-width: 900px) and (orientation: portrait) {
+  .roulette-betting-timer {
+    top:
+      calc(
+        var(--mobile-safe-top) +
+        var(--top-hud-height) +
+        var(--mobile-chrome-gap) +
+        var(--history-height) +
+        12px
+      ) !important;
+  }
+}
+
+@media (max-width: 900px) and (orientation: portrait) and (max-height: 700px) {
+  .roulette-betting-timer {
+    top:
+      calc(
+        var(--mobile-safe-top) +
+        var(--top-hud-height) +
+        var(--mobile-chrome-gap) +
+        var(--history-height) +
+        10px
+      ) !important;
+  }
+}
+
+@media (max-width: 900px) and (orientation: portrait) and (max-height: 590px) {
+  .roulette-betting-timer {
+    top:
+      calc(
+        var(--mobile-safe-top) +
+        var(--top-hud-height) +
+        var(--mobile-chrome-gap) +
+        var(--history-height) +
+        8px
+      ) !important;
+  }
+}
