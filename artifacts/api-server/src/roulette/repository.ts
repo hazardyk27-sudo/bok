@@ -5,6 +5,9 @@ import {
   ROULETTE_SIMULATION_VERSION,
 } from "../../../cascade-8/src/roulette/spinResult";
 import {
+  getCurrentRouletteGlobalTableSnapshot,
+} from "./globalTableStore";
+import {
   createRouletteAuthoritativeRound,
   type RouletteAuthoritativeRound,
   type RouletteServerBet,
@@ -110,12 +113,28 @@ function rowFromRound(
 
 export class RouletteRepository {
   async getState(sessionId: string) {
+    const serverTimeMs =
+      Date.now();
+    const [
+      balanceCents,
+      globalTable,
+    ] = await Promise.all([
+      walletBalance(
+        sessionId,
+      ),
+      getCurrentRouletteGlobalTableSnapshot(
+        serverTimeMs,
+      ),
+    ]);
+
     return {
       simulationVersion:
         ROULETTE_SIMULATION_VERSION,
+      serverTimeMs,
+      globalTable,
       wallet: {
         sessionId,
-        balanceCents: await walletBalance(sessionId),
+        balanceCents,
       },
     };
   }
