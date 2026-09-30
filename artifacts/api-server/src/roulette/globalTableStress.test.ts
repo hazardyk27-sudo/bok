@@ -84,13 +84,19 @@ describe("roulette global live table stress audit", () => {
       START_MS +
       SYNTHETIC_ROUND_MS *
         10_000;
+    const persistedFirst =
+      createRound(
+        START_MS,
+      );
     let latest:
       RouletteGlobalRoundPlan |
-      null = null;
+      null =
+        persistedFirst;
     let previous:
       RouletteGlobalRoundPlan |
-      null = null;
-    let generated = 0;
+      null =
+        persistedFirst;
+    let generated = 1;
     let reachedHorizon = false;
     let ticks = 0;
 
@@ -118,19 +124,12 @@ describe("roulette global live table stress audit", () => {
         const round of
         materialization.rounds
       ) {
-        if (previous) {
-          expect(
-            round.bettingOpenAtMs,
-          ).toBe(
-            previous.nextRoundAtMs,
-          );
-        } else {
-          expect(
-            round.bettingOpenAtMs,
-          ).toBe(
-            START_MS,
-          );
-        }
+        expect(
+          round.bettingOpenAtMs,
+        ).toBe(
+          previous
+            ?.nextRoundAtMs,
+        );
 
         expect(
           round.spinStartedAtMs,
