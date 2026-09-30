@@ -6326,3 +6326,46 @@
     inset 0 0 0 1px rgba(230, 180, 72, .44),
     inset 0 0 16px rgba(0,0,0,.56) !important;
 }
+
+
+/* PASS 36 — ADVANCED 25 final geometry QA / regression lock, Part 3.
+   Verified against the actual 1200×546 master PNG. The detected silver-cell
+   interiors land inside the direct master-coordinate rectangles for all 25
+   positions. Final scratch-map envelope: x≈391..1156, y≈62..500. No cell may
+   inherit width/height/grid transforms from generic cards or escape this map. */
+.is-advanced-theme .witch-ticket.is-advanced,
+.is-advanced-theme .witch-ticket.is-advanced > .witch-board-wrap,
+.is-advanced-theme .witch-ticket.is-advanced > .witch-board-wrap > .witch-board {
+  container-type: normal !important;
+}
+
+.is-advanced-theme .witch-ticket.is-advanced > .witch-board-wrap,
+.is-advanced-theme .witch-ticket.is-advanced > .witch-board-wrap > .witch-board {
+  clip-path: inset(0) !important;
+  contain: layout paint !important;
+}
+
+.is-advanced-theme .witch-ticket.is-advanced .witch-board > .witch-cell {
+  max-width: none !important;
+  max-height: none !important;
+  aspect-ratio: auto !important;
+  translate: none !important;
+  scale: none !important;
+  rotate: none !important;
+}
+
+/* Row 5 is one straight measured baseline; cell 25 must not drift by a
+   sub-pixel-special-case inherited from the old union map. */
+.is-advanced-theme .witch-ticket.is-advanced .witch-board > .witch-cell:nth-child(n + 21):nth-child(-n + 25) {
+  top: 76.8322% !important;
+  height: 14.6572% !important;
+}
+
+/* Exact local interaction box on every registered cell. */
+.is-advanced-theme .witch-ticket.is-advanced .witch-board > .witch-cell > canvas {
+  display: block !important;
+  inset: 0 !important;
+  width: 100% !important;
+  height: 100% !important;
+  box-sizing: border-box !important;
+}

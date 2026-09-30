@@ -427,4 +427,53 @@ describe("cadi kazan route smoke contract", () => {
     expect(visualLockSource).toContain(".is-advanced-theme .witch-ticket.is-advanced .witch-cell.is-bomb .witch-cell-artwork");
   });
 
+
+  it("locks the final Advanced 25 master geometry to a non-overflowing 5x5 map", () => {
+    expect(visualLockSource).toContain("PASS 36 — ADVANCED 25 final geometry QA / regression lock, Part 3");
+
+    const masterWidth = 1200;
+    const masterHeight = 546;
+    const columns = [
+      [32.5982, 12.1570],
+      [45.5622, 12.1032],
+      [58.4723, 12.1032],
+      [71.3287, 12.1032],
+      [84.2389, 12.1032],
+    ] as const;
+    const rows = [
+      [11.3475, 15.1301],
+      [28.0142, 14.8937],
+      [44.5626, 14.6572],
+      [60.7565, 14.5390],
+      [76.8322, 14.6572],
+    ] as const;
+
+    const pxColumns = columns.map(([left, width]) => [
+      masterWidth * left / 100,
+      masterWidth * width / 100,
+    ] as const);
+    const pxRows = rows.map(([top, height]) => [
+      masterHeight * top / 100,
+      masterHeight * height / 100,
+    ] as const);
+
+    expect(pxColumns).toHaveLength(5);
+    expect(pxRows).toHaveLength(5);
+    expect(pxColumns[0][0]).toBeGreaterThanOrEqual(391);
+    expect(pxColumns[4][0] + pxColumns[4][1]).toBeLessThanOrEqual(1157);
+    expect(pxRows[0][0]).toBeGreaterThanOrEqual(61);
+    expect(pxRows[4][0] + pxRows[4][1]).toBeLessThanOrEqual(501);
+
+    for (let index = 0; index < 4; index += 1) {
+      expect(pxColumns[index][0] + pxColumns[index][1]).toBeLessThan(pxColumns[index + 1][0]);
+      expect(pxRows[index][0] + pxRows[index][1]).toBeLessThan(pxRows[index + 1][0]);
+    }
+
+    expect(visualLockSource).toContain(".witch-cell:nth-child(n + 21):nth-child(-n + 25)");
+    expect(visualLockSource).toContain("top: 76.8322% !important");
+    expect(visualLockSource).toContain("height: 14.6572% !important");
+    expect(visualLockSource).toContain("clip-path: inset(0) !important");
+    expect(visualLockSource).toContain("contain: layout paint !important");
+  });
+
 });
