@@ -11,6 +11,7 @@ import {
 } from "./globalBetStore";
 import {
   ensureRouletteGlobalTableStorage,
+  getRouletteDatabaseNowMsFromClient,
   insertRouletteGlobalRound,
   readLatestRouletteGlobalRound,
   withRouletteGlobalSchedulerLock,
@@ -35,12 +36,18 @@ function createScheduledRound(
 }
 
 export async function runRouletteGlobalTableSchedulerTick(
-  nowMs: number = Date.now(),
+  nowMs?: number,
 ) {
   await ensureRouletteGlobalTableStorage();
 
   return withRouletteGlobalSchedulerLock(
     async (client) => {
+      const authoritativeNowMs =
+        nowMs ??
+        await getRouletteDatabaseNowMsFromClient(
+          client,
+        );
+
       const latestRound =
         await readLatestRouletteGlobalRound(
           client,
@@ -48,7 +55,8 @@ export async function runRouletteGlobalTableSchedulerTick(
       const materialization =
         buildRouletteGlobalRoundChain({
           latestRound,
-          nowMs,
+          nowMs:
+            authoritativeNowMs,
           createRound:
             createScheduledRound,
         });
@@ -72,7 +80,7 @@ export async function runRouletteGlobalTableSchedulerTick(
       const settlement =
         await settleDueRouletteGlobalBets(
           client,
-          nowMs,
+          authoritativeNowMs,
         );
 
       return {
