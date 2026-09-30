@@ -41,7 +41,7 @@ const frontendMain = read("../../cascade-8/src/main.ts");
 const appSource = read("./app.ts");
 const apiPackage = read("../package.json");
 const apiDevRunner = read("../dev-runner.mjs");
-const serverIndex = read("./index.ts");
+const serverIndex = read("./index.ts");\nconst viteConfig = read("../../cascade-8/vite.config.ts");\nconst localStackScript = read("../../../scripts/run-local-stack.sh");\nconst replitSyncScript = read("../../../scripts/replit-sync-preview.sh");
 
 describe("backend game isolation", () => {
   it("keeps the DB schema index aggregation-only", () => {
@@ -160,6 +160,35 @@ describe("backend game isolation", () => {
     expect(apiPackage).toContain("./dev-runner.mjs");
     expect(apiDevRunner).toContain('spawnSync("pnpm", ["run", "build"]');
     expect(apiDevRunner).toContain("dist/index.mjs");
+  });
+
+  it("keeps Replit web, API and sync health checks on one API port", () => {
+    expect(viteConfig).toContain(
+      'const defaultApiProxyTarget = "http://127.0.0.1:8080"',
+    );
+    expect(localStackScript).toContain('API_PORT="${API_PORT:-8080}"');
+    expect(replitSyncScript).toContain(
+      "Waiting for API runtime on 127.0.0.1:8080",
+    );
+    expect(replitSyncScript).toContain(
+      "fetch('http://127.0.0.1:8080/api/healthz')",
+    );
+  });
+
+  it("does not let Blackjack recovery block the shared HTTP listener", () => {
+    const listenAt = serverIndex.indexOf("server.listen(port");
+    const blackjackAttachAt = serverIndex.indexOf(
+      "attachBlackjackPlatformRuntime(server)",
+    );
+
+    expect(listenAt).toBeGreaterThan(-1);
+    expect(blackjackAttachAt).toBeGreaterThan(-1);
+    expect(listenAt).toBeLessThan(blackjackAttachAt);
+    expect(serverIndex).not.toContain(
+      "await attachBlackjackPlatformRuntime(server)",
+    );
+    expect(serverIndex).toContain("void attachBlackjackPlatformRuntime(server)");
+    expect(serverIndex).toContain("pool.end()");
   });
 
   it("wires Blackjack runtime through shared platform entrypoints", () => {
