@@ -111,13 +111,7 @@ async function importLegacyWallets(client: PoolClient) {
   };
 }
 
-async function recoverSharedWalletsFromLedgersIfEmpty(client: PoolClient) {
-  const existing = await client.query<{ count: string }>(
-    "SELECT count(*)::text AS count FROM shared_wallets",
-  );
-  const existingCount = Number(existing.rows[0]?.count ?? "0");
-  if (existingCount > 0) return 0;
-
+async function recoverMissingSharedWalletsFromLedgers(client: PoolClient) {
   const recovery = await client.query<{
     negative_count: string;
     inserted_count: string;
@@ -166,6 +160,8 @@ async function recoverSharedWalletsFromLedgersIfEmpty(client: PoolClient) {
          LEFT JOIN slot_totals USING (session_id)
          LEFT JOIN cadi_totals USING (session_id)
          LEFT JOIN idle_totals USING (session_id)
+         LEFT JOIN shared_wallets shared USING (session_id)
+        WHERE shared.session_id IS NULL
      ),
      negative AS (
        SELECT count(*)::bigint AS count
@@ -205,7 +201,7 @@ export async function initializeSharedWalletPlatform(): Promise<SharedWalletInit
 
     await ensureLegacyImportStorage(client);
     const legacy = await importLegacyWallets(client);
-    const ledgerRecoveredCount = await recoverSharedWalletsFromLedgersIfEmpty(client);
+    const ledgerRecoveredCount = await recoverMissingSharedWalletsFromLedgers(client);
 
     await client.query("COMMIT");
     return {
