@@ -1,0 +1,544 @@
+/* 2026-09-30 — Part 26: premium Stadium controls and drawers */
+
+.stadium-premium-card { overflow: visible; }
+
+.stadium-market-open,
+.stadium-details-open,
+.stadium-sell-input-row button,
+.stadium-sell-shortcuts button,
+.stadium-upgrade-grid button,
+.stadium-seat-purchase button,
+.stadium-drawer-head button { font: inherit; }
+
+.stadium-market-open {
+  margin-top: 11px;
+  min-height: 34px;
+  padding: 0 13px;
+  border: 1px solid rgba(181,217,255,.28);
+  border-radius: 10px;
+  background: rgba(6,21,58,.64);
+  color: #eef7ff;
+  font-size: 10px;
+  font-weight: 900;
+  letter-spacing: .08em;
+  cursor: pointer;
+}
+
+.stadium-premium-actions {
+  display: grid;
+  grid-template-columns: minmax(0,1.35fr) minmax(270px,.65fr);
+  gap: 14px;
+  margin-top: 18px;
+}
+
+.stadium-sell-panel,
+.stadium-details-open {
+  border: 1px solid rgba(126,169,218,.16);
+  border-radius: 17px;
+  background: linear-gradient(145deg,rgba(6,18,54,.98),rgba(3,12,38,.98));
+  box-shadow: inset 0 1px rgba(255,255,255,.035);
+}
+
+.stadium-sell-panel { padding: 17px; }
+
+.stadium-panel-heading {
+  display: flex;
+  justify-content: space-between;
+  gap: 18px;
+  margin-bottom: 13px;
+}
+.stadium-panel-heading > div { display: grid; gap: 3px; }
+.stadium-panel-heading span,
+.stadium-sell-preview span,
+.stadium-drawer-head span,
+.stadium-upgrade-grid article > span,
+.stadium-upgrade-grid article > div span,
+.stadium-seat-purchase span,
+.stadium-market-summary span,
+.stadium-market-chart-head span {
+  color: #6f8eb4;
+  font-size: 10px;
+  font-weight: 900;
+  letter-spacing: .11em;
+}
+.stadium-panel-heading strong { color:#f5f9ff; font-size:20px; }
+.stadium-panel-heading small {
+  max-width: 230px;
+  color:#7791b1;
+  font-size:11px;
+  line-height:1.45;
+  text-align:right;
+}
+
+.stadium-sell-input-row {
+  display:grid;
+  grid-template-columns:minmax(0,1fr) 138px;
+  gap:9px;
+}
+.stadium-sell-input-row label,
+.stadium-seat-purchase label {
+  display:flex;
+  align-items:center;
+  min-height:48px;
+  overflow:hidden;
+  border:1px solid rgba(133,176,225,.18);
+  border-radius:12px;
+  background:rgba(0,7,45,.72);
+}
+.stadium-sell-input-row label span,
+.stadium-seat-purchase label span {
+  padding:0 12px;
+  color:#6789ae;
+  font-size:9px;
+  font-weight:900;
+  letter-spacing:.12em;
+}
+.stadium-sell-input-row input,
+.stadium-seat-purchase input {
+  width:100%;
+  min-width:0;
+  height:46px;
+  border:0;
+  outline:0;
+  background:transparent;
+  color:#f4f9ff;
+  font-size:18px;
+  font-weight:850;
+  font-variant-numeric:tabular-nums;
+}
+.stadium-sell-input-row button,
+.stadium-seat-purchase > button {
+  min-height:48px;
+  border:0;
+  border-radius:12px;
+  background:linear-gradient(180deg,#19d7a1,#09b983);
+  color:#001f1a;
+  font-size:11px;
+  font-weight:950;
+  letter-spacing:.07em;
+  cursor:pointer;
+  box-shadow:0 9px 24px rgba(9,185,131,.18);
+}
+.stadium-sell-input-row button:disabled,
+.stadium-seat-purchase > button:disabled,
+.stadium-upgrade-grid button:disabled { opacity:.42; cursor:not-allowed; }
+
+.stadium-sell-shortcuts {
+  display:grid;
+  grid-template-columns:repeat(4,1fr);
+  gap:7px;
+  margin-top:9px;
+}
+.stadium-sell-shortcuts button {
+  min-height:34px;
+  border:1px solid rgba(128,174,225,.14);
+  border-radius:9px;
+  background:rgba(10,29,69,.8);
+  color:#a9bdd5;
+  font-size:10px;
+  font-weight:900;
+  cursor:pointer;
+}
+.stadium-sell-shortcuts button:hover { border-color:rgba(59,183,255,.6); color:#ecf8ff; }
+
+.stadium-sell-preview {
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  margin-top:12px;
+  padding-top:11px;
+  border-top:1px solid rgba(133,176,225,.1);
+}
+.stadium-sell-preview strong { color:#dffdf5; font-size:16px; font-variant-numeric:tabular-nums; }
+
+.stadium-details-open {
+  width:100%;
+  min-height:100%;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:18px;
+  padding:18px;
+  color:#edf6ff;
+  text-align:left;
+  cursor:pointer;
+}
+.stadium-details-open > span { display:grid; gap:6px; }
+.stadium-details-open small { color:#6488b0; font-size:9px; font-weight:900; letter-spacing:.13em; }
+.stadium-details-open strong { font-size:13px; letter-spacing:.04em; }
+.stadium-details-open b { color:#52c5ff; font-size:22px; }
+
+.stadium-action-status {
+  position:fixed;
+  z-index:1200;
+  top:18px;
+  left:50%;
+  transform:translateX(-50%);
+  max-width:min(520px,calc(100vw - 28px));
+  margin:0;
+  padding:11px 16px;
+  border:1px solid rgba(41,222,165,.32);
+  border-radius:11px;
+  background:rgba(4,30,39,.96);
+  color:#dffcf2;
+  font-size:12px;
+  font-weight:800;
+  box-shadow:0 14px 40px rgba(0,0,0,.35);
+}
+.stadium-action-status[data-tone="error"] {
+  border-color:rgba(255,99,109,.38);
+  background:rgba(55,10,23,.97);
+  color:#ffe6e8;
+}
+
+.stadium-drawer[hidden] { display:none !important; }
+.stadium-drawer {
+  position:fixed;
+  z-index:1100;
+  inset:0;
+  display:grid;
+  grid-template-columns:minmax(0,1fr) minmax(420px,680px);
+}
+.stadium-drawer-backdrop {
+  grid-column:1/-1;
+  grid-row:1;
+  background:rgba(0,4,22,.72);
+  backdrop-filter:blur(5px);
+}
+.stadium-drawer-sheet {
+  grid-column:2;
+  grid-row:1;
+  min-width:0;
+  height:100%;
+  overflow-y:auto;
+  padding:26px;
+  border-left:1px solid rgba(133,176,225,.16);
+  background:radial-gradient(circle at 90% 0%,rgba(24,85,153,.18),transparent 32%),#020b25;
+  box-shadow:-28px 0 70px rgba(0,0,0,.38);
+}
+.idle-drawer-open { overflow:hidden !important; }
+
+.stadium-drawer-head {
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:20px;
+  margin-bottom:24px;
+}
+.stadium-drawer-head > div { display:grid; gap:4px; }
+.stadium-drawer-head h2 {
+  margin:0;
+  color:#f6f9ff;
+  font-size:clamp(26px,4vw,38px);
+  line-height:1;
+  letter-spacing:-.035em;
+}
+.stadium-drawer-head button {
+  width:42px;
+  height:42px;
+  border:1px solid rgba(135,178,228,.18);
+  border-radius:12px;
+  background:rgba(9,28,67,.9);
+  color:#c7d6e8;
+  font-size:24px;
+  cursor:pointer;
+}
+
+.stadium-upgrade-grid {
+  display:grid;
+  grid-template-columns:repeat(3,minmax(0,1fr));
+  gap:10px;
+}
+.stadium-upgrade-grid article {
+  display:flex;
+  flex-direction:column;
+  min-width:0;
+  min-height:290px;
+  padding:16px;
+  border:1px solid rgba(124,170,221,.14);
+  border-radius:16px;
+  background:rgba(6,20,54,.82);
+}
+.stadium-upgrade-grid article > i {
+  width:37px;
+  height:37px;
+  display:grid;
+  place-items:center;
+  margin-bottom:15px;
+  border:1px solid rgba(74,187,255,.3);
+  border-radius:11px;
+  background:rgba(32,103,165,.12);
+  color:#68cfff;
+  font-size:16px;
+  font-style:normal;
+  font-weight:900;
+}
+.stadium-upgrade-grid article > strong {
+  margin-top:4px;
+  color:#f5f9ff;
+  font-size:28px;
+}
+.stadium-upgrade-grid article > p {
+  min-height:45px;
+  margin:10px 0 14px;
+  color:#839bb8;
+  font-size:11px;
+  line-height:1.5;
+}
+.stadium-upgrade-grid article > div:last-of-type {
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:10px;
+  margin-top:auto;
+  margin-bottom:10px;
+  padding-top:12px;
+  border-top:1px solid rgba(129,174,223,.09);
+}
+.stadium-upgrade-grid article > div strong { color:#e2f2ff; font-size:13px; }
+.stadium-upgrade-grid article button {
+  min-height:40px;
+  border:1px solid rgba(70,179,244,.25);
+  border-radius:10px;
+  background:rgba(12,52,99,.86);
+  color:#e7f5ff;
+  font-size:9px;
+  font-weight:900;
+  letter-spacing:.06em;
+  cursor:pointer;
+}
+
+.stadium-seat-purchase {
+  display:grid;
+  grid-template-columns:minmax(0,1fr) 180px 160px;
+  gap:12px;
+  align-items:center;
+  margin-top:14px;
+  padding:17px;
+  border:1px solid rgba(124,170,221,.14);
+  border-radius:16px;
+  background:rgba(6,20,54,.82);
+}
+.stadium-seat-purchase > div { display:grid; gap:3px; }
+.stadium-seat-purchase > div strong { color:#f2f8ff; font-size:13px; }
+.stadium-seat-purchase > div small { color:#7f98b6; font-size:10px; }
+
+.stadium-market-summary {
+  display:grid;
+  grid-template-columns:repeat(4,minmax(0,1fr));
+  gap:9px;
+  margin-bottom:13px;
+}
+.stadium-market-summary article {
+  min-width:0;
+  padding:14px;
+  border:1px solid rgba(126,172,223,.12);
+  border-radius:13px;
+  background:rgba(6,20,54,.78);
+}
+.stadium-market-summary article strong {
+  display:block;
+  margin-top:6px;
+  overflow:hidden;
+  color:#f1f8ff;
+  font-size:14px;
+  font-variant-numeric:tabular-nums;
+  text-overflow:ellipsis;
+}
+
+.stadium-market-chart {
+  position:relative;
+  padding:16px;
+  overflow:hidden;
+  border:1px solid rgba(126,172,223,.13);
+  border-radius:17px;
+  background:rgba(1,9,35,.88);
+}
+.stadium-market-chart-head {
+  display:flex;
+  justify-content:space-between;
+  gap:14px;
+  margin-bottom:15px;
+}
+.stadium-market-chart-head small { color:#607e9f; font-size:9px; font-weight:800; }
+.stadium-market-chart svg { width:100%; height:300px; overflow:visible; }
+.stadium-market-chart-grid {
+  fill:none;
+  stroke:rgba(123,170,220,.09);
+  stroke-width:1;
+  vector-effect:non-scaling-stroke;
+}
+.stadium-market-chart-line {
+  fill:none;
+  stroke:#4cc9ff;
+  stroke-width:2.3;
+  stroke-linecap:round;
+  stroke-linejoin:round;
+  vector-effect:non-scaling-stroke;
+  filter:drop-shadow(0 0 8px rgba(76,201,255,.3));
+}
+.stadium-market-chart-empty {
+  position:absolute;
+  inset:76px 18px 18px;
+  display:grid;
+  place-items:center;
+  color:#6885a6;
+  font-size:11px;
+  text-align:center;
+}
+.stadium-market-chart[data-idle-market-chart-state="ready"] .stadium-market-chart-empty { display:none; }
+
+.stadium-market-foot {
+  display:flex;
+  justify-content:space-between;
+  gap:20px;
+  margin-top:13px;
+  padding-top:13px;
+}
+.stadium-market-foot span { color:#72cfff; font-size:10px; font-weight:900; }
+.stadium-market-foot small { max-width:430px; color:#718aa8; font-size:10px; line-height:1.5; text-align:right; }
+
+@media (max-width:980px) {
+  .stadium-premium-actions,
+  .stadium-upgrade-grid { grid-template-columns:1fr; }
+  .stadium-upgrade-grid article { min-height:0; }
+  .stadium-seat-purchase { grid-template-columns:1fr 1fr; }
+  .stadium-seat-purchase > div { grid-column:1/-1; }
+}
+
+@media (max-width:760px) {
+  .stadium-premium-actions { gap:10px; margin-top:12px; }
+  .stadium-panel-heading { display:grid; gap:5px; }
+  .stadium-panel-heading small { max-width:none; text-align:left; }
+  .stadium-sell-input-row { grid-template-columns:minmax(0,1fr) 112px; }
+  .stadium-drawer { display:block; }
+  .stadium-drawer-backdrop { position:absolute; inset:0; }
+  .stadium-drawer-sheet {
+    position:absolute;
+    inset:8vh 0 0;
+    height:92vh;
+    padding:18px 14px 26px;
+    border-left:0;
+    border-top:1px solid rgba(133,176,225,.16);
+    border-radius:20px 20px 0 0;
+  }
+  .stadium-drawer-head {
+    position:sticky;
+    z-index:2;
+    top:-18px;
+    margin:-18px -14px 16px;
+    padding:15px 14px 13px;
+    background:rgba(2,11,37,.97);
+    backdrop-filter:blur(10px);
+  }
+  .stadium-upgrade-grid article {
+    display:grid;
+    grid-template-columns:auto minmax(0,1fr) auto;
+    column-gap:11px;
+    align-items:center;
+    padding:13px;
+  }
+  .stadium-upgrade-grid article > i { grid-row:1/4; margin:0; }
+  .stadium-upgrade-grid article > span,
+  .stadium-upgrade-grid article > strong,
+  .stadium-upgrade-grid article > p { grid-column:2; }
+  .stadium-upgrade-grid article > strong { font-size:22px; }
+  .stadium-upgrade-grid article > p { min-height:0; margin:4px 0 0; }
+  .stadium-upgrade-grid article > div:last-of-type {
+    grid-column:3;
+    grid-row:1/3;
+    display:grid;
+    justify-items:end;
+    margin:0;
+    padding:0;
+    border:0;
+  }
+  .stadium-upgrade-grid article button { grid-column:2/-1; margin-top:10px; }
+  .stadium-seat-purchase { grid-template-columns:minmax(0,1fr) 124px; padding:13px; }
+  .stadium-seat-purchase > button { grid-column:1/-1; }
+  .stadium-market-summary { grid-template-columns:1fr 1fr; }
+  .stadium-market-chart { padding:12px; }
+  .stadium-market-chart svg { height:220px; }
+  .stadium-market-chart-head,
+  .stadium-market-foot { display:grid; }
+  .stadium-market-foot small { max-width:none; text-align:left; }
+}
+
+@media (max-width:430px) {
+  .stadium-sell-input-row,
+  .stadium-seat-purchase { grid-template-columns:1fr; }
+  .stadium-sell-input-row button,
+  .stadium-seat-purchase > button { width:100%; }
+  .stadium-market-summary article { padding:11px; }
+  .stadium-drawer-sheet { top:5vh; height:95vh; }
+}
+
+/* 2026-09-30 — audit hardening: exact seat quote + safe disabled controls */
+.stadium-sell-shortcuts button:disabled {
+  opacity: .35;
+  cursor: not-allowed;
+  border-color: rgba(128,174,225,.08);
+  color: #5f7691;
+}
+.stadium-sell-shortcuts button:disabled:hover {
+  border-color: rgba(128,174,225,.08);
+  color: #5f7691;
+}
+.stadium-seat-purchase {
+  grid-template-columns: minmax(0,1fr) 150px 145px 160px;
+}
+.stadium-seat-purchase-copy {
+  display: grid;
+  gap: 3px;
+}
+.stadium-seat-purchase-copy small {
+  color: #7f98b6;
+  font-size: 10px;
+  line-height: 1.35;
+}
+.stadium-seat-estimate {
+  min-width: 0;
+  display: grid;
+  gap: 5px;
+  padding: 0 4px;
+}
+.stadium-seat-estimate strong {
+  overflow: hidden;
+  color: #e4f7ff;
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+  text-overflow: ellipsis;
+}
+.stadium-market-foot > div {
+  display: grid;
+  gap: 5px;
+}
+.stadium-market-foot > div small {
+  color: #6885a6;
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: .06em;
+}
+@media (max-width:980px) {
+  .stadium-seat-purchase {
+    grid-template-columns: 1fr 1fr;
+  }
+  .stadium-seat-purchase-copy {
+    grid-column: 1 / -1;
+  }
+  .stadium-seat-estimate {
+    align-self: stretch;
+    justify-content: center;
+  }
+}
+@media (max-width:560px) {
+  .stadium-seat-purchase {
+    grid-template-columns: 1fr;
+  }
+  .stadium-seat-purchase-copy,
+  .stadium-seat-purchase label,
+  .stadium-seat-estimate,
+  .stadium-seat-purchase > button {
+    grid-column: 1;
+  }
+}

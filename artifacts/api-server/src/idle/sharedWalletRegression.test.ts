@@ -4,63 +4,75 @@ import { describe, expect, it } from "vitest";
 
 function source(relativePath: string) {
   return readFileSync(
-    fileURLToPath(new URL(relativePath, import.meta.url)),
+    fileURLToPath(
+      new URL(relativePath, import.meta.url),
+    ),
     "utf8",
   );
 }
 
-const rouletteRoutes = source("../roulette/routes.ts");
-const rouletteRepository = source("../roulette/repository.ts");
-const slotRoutes = source("../slot/routes.ts");
-const slotRepository = source("../slot/repository.ts");
-const cadiRoutes = source("../cadi-kazan/routes.ts");
-const cadiRepository = source("../cadi-kazan/repository.ts");
 const idleRoutes = source("./routes.ts");
-const idleRepository = source("./repository.ts");
+const platformWallet = source("../platform/wallet.ts");
+const walletSources = [
+  source("./stadiumState.ts"),
+  source("./seatPurchase.ts"),
+  source("./stadiumUpgrade.ts"),
+  source("./speedUpgrade.ts"),
+  source("./storageUpgrade.ts"),
+  source("./ticketSale.ts"),
+];
 
-describe("shared game wallet integration", () => {
-  it("keeps one game_session identity across all game APIs", () => {
-    for (const routeSource of [
-      rouletteRoutes,
-      slotRoutes,
-      cadiRoutes,
-      idleRoutes,
-    ]) {
-      expect(routeSource).toContain(
-        'import { SESSION_COOKIE } from "../platform/session";',
+describe("Idle shared wallet/session compatibility", () => {
+  it("does not depend on another game's route module for session identity", () => {
+    expect(idleRoutes).not.toContain(
+      '../roulette/routes',
+    );
+    expect(idleRoutes).toContain(
+      'String(SHARED_WALLET_TABLE) === "shared_wallets"',
+    );
+    expect(idleRoutes).toContain('"game_session"');
+    expect(idleRoutes).toContain('"roulette_session"');
+    expect(idleRoutes).toContain('path: "/"');
+  });
+
+  it("uses the shared platform wallet table authority everywhere", () => {
+    expect(platformWallet).toContain(
+      "SHARED_WALLET_TABLE",
+    );
+    expect(platformWallet).toContain(
+      "INITIAL_SHARED_BALANCE_CENTS",
+    );
+
+    for (const walletSource of walletSources) {
+      expect(walletSource).toContain(
+        "SHARED_WALLET_TABLE",
       );
-      expect(routeSource).toContain("req.cookies?.[SESSION_COOKIE]");
-      expect(routeSource).toContain("res.cookie(SESSION_COOKIE, sessionId");
+      expect(walletSource).not.toContain(
+        "roulette_wallets",
+      );
     }
   });
 
-  it("keeps Slot, Roulette, Cadı Kazan and Idle on shared_wallets only", () => {
-    for (const repositorySource of [
-      rouletteRepository,
-      slotRepository,
-      cadiRepository,
-      idleRepository,
-    ]) {
-      expect(repositorySource).toContain("shared_wallets");
-      expect(repositorySource).not.toContain("roulette_wallets");
-      expect(repositorySource).toContain("balance_cents");
-      expect(repositorySource).toContain("session_id");
+  it("locks the wallet before every debit or credit", () => {
+    for (const walletSource of walletSources.slice(1)) {
+      expect(walletSource).toContain("FOR UPDATE");
+    }
+
+    for (const mutationSource of walletSources.slice(1)) {
+      expect(mutationSource).toContain(
+        "UPDATE ${SHARED_WALLET_TABLE}",
+      );
     }
   });
 
-  it("keeps the common platform initial wallet value as Idle's fallback source", () => {
-    expect(idleRepository).toContain(
-      'import { INITIAL_SHARED_BALANCE_CENTS } from "../platform/wallet";',
-    );
-    expect(idleRepository).toContain("INITIAL_SHARED_BALANCE_CENTS");
-    expect(idleRepository).not.toContain("INITIAL_ROULETTE_BALANCE_CENTS");
-  });
-
-  it("keeps Idle collect and upgrades writing the same shared wallet", () => {
-    expect(idleRepository).toContain(
-      "SELECT balance_cents FROM shared_wallets WHERE session_id = $1 FOR UPDATE",
-    );
-    expect(idleRepository).toContain("UPDATE shared_wallets");
-    expect(idleRepository).toContain("INSERT INTO shared_wallets");
+  it("keeps the common platform initial wallet value as Idle's fallback", () => {
+    for (const walletSource of walletSources) {
+      expect(walletSource).toContain(
+        "INITIAL_SHARED_BALANCE_CENTS",
+      );
+      expect(walletSource).not.toContain(
+        "INITIAL_ROULETTE_BALANCE_CENTS",
+      );
+    }
   });
 });

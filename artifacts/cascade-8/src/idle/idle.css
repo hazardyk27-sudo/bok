@@ -9171,3 +9171,234 @@ body.businesses-route {
     overflow: visible !important;
   }
 }
+
+
+/* 2026-09-30 — Part 25: canonical Stadium ticket-state cutover */
+.route-shell.is-businesses-page .stadium-canonical-card {
+  width: min(100%, 1440px);
+  margin: 24px auto 40px;
+  overflow: hidden;
+  border: 1px solid rgba(126, 158, 230, .18);
+  border-radius: 24px;
+  background:
+    linear-gradient(180deg, rgba(5, 22, 80, .96), rgba(0, 7, 45, .98));
+  box-shadow:
+    0 24px 70px rgba(0, 0, 0, .28),
+    inset 0 1px 0 rgba(255, 255, 255, .04);
+}
+
+.route-shell.is-businesses-page .stadium-canonical-hero {
+  position: relative;
+  min-height: 300px;
+  overflow: hidden;
+  background: #00072d;
+}
+
+.route-shell.is-businesses-page .stadium-canonical-hero > img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center 48%;
+}
+
+.route-shell.is-businesses-page .stadium-canonical-hero-shade {
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(90deg, rgba(0, 7, 45, .90), rgba(0, 7, 45, .22) 56%, rgba(0, 7, 45, .76)),
+    linear-gradient(180deg, rgba(0, 0, 0, .08), rgba(0, 7, 45, .72));
+}
+
+.route-shell.is-businesses-page .stadium-canonical-identity,
+.route-shell.is-businesses-page .stadium-canonical-market {
+  position: absolute;
+  z-index: 2;
+  bottom: 28px;
+}
+
+.route-shell.is-businesses-page .stadium-canonical-identity {
+  left: 30px;
+}
+
+.route-shell.is-businesses-page .stadium-canonical-market {
+  right: 30px;
+  text-align: right;
+}
+
+.route-shell.is-businesses-page .stadium-canonical-identity span,
+.route-shell.is-businesses-page .stadium-canonical-market span,
+.route-shell.is-businesses-page .stadium-canonical-primary span,
+.route-shell.is-businesses-page .stadium-canonical-secondary span,
+.route-shell.is-businesses-page .stadium-canonical-storage span {
+  display: block;
+  color: #98a8cf;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: .12em;
+}
+
+.route-shell.is-businesses-page .stadium-canonical-identity strong {
+  display: block;
+  margin-top: 4px;
+  color: #fff;
+  font-size: clamp(30px, 4vw, 54px);
+  line-height: .95;
+  letter-spacing: -.04em;
+}
+
+.route-shell.is-businesses-page .stadium-canonical-identity small,
+.route-shell.is-businesses-page .stadium-canonical-market small {
+  display: block;
+  margin-top: 8px;
+  color: #cbd5f2;
+  font-size: 12px;
+  font-weight: 750;
+}
+
+.route-shell.is-businesses-page .stadium-canonical-market strong {
+  display: block;
+  margin-top: 5px;
+  color: #fff;
+  font-size: clamp(27px, 3vw, 44px);
+  letter-spacing: -.035em;
+}
+
+.route-shell.is-businesses-page
+.stadium-canonical-card[data-market-connection="live"]
+.stadium-canonical-market small {
+  color: #37e6b0;
+}
+
+.route-shell.is-businesses-page .stadium-canonical-body {
+  padding: 24px 28px 28px;
+}
+
+.route-shell.is-businesses-page .stadium-canonical-primary {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.route-shell.is-businesses-page .stadium-canonical-primary article,
+.route-shell.is-businesses-page .stadium-canonical-secondary > div {
+  min-width: 0;
+  padding: 18px;
+  border: 1px solid rgba(126, 158, 230, .14);
+  border-radius: 16px;
+  background: rgba(10, 36, 114, .24);
+}
+
+.route-shell.is-businesses-page .stadium-canonical-primary strong,
+.route-shell.is-businesses-page .stadium-canonical-secondary strong {
+  display: block;
+  margin-top: 7px;
+  color: #f7f9ff;
+  font-size: clamp(20px, 2vw, 30px);
+  letter-spacing: -.025em;
+}
+
+.route-shell.is-businesses-page .stadium-canonical-primary small {
+  display: block;
+  margin-top: 5px;
+  color: #aebce0;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.route-shell.is-businesses-page .stadium-canonical-storage {
+  margin-top: 14px;
+  padding: 18px;
+  border: 1px solid rgba(126, 158, 230, .14);
+  border-radius: 16px;
+  background: rgba(0, 7, 45, .62);
+}
+
+.route-shell.is-businesses-page .stadium-canonical-storage-head,
+.route-shell.is-businesses-page .stadium-canonical-storage-meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.route-shell.is-businesses-page .stadium-canonical-storage-head > div:last-child {
+  text-align: right;
+}
+
+.route-shell.is-businesses-page .stadium-canonical-storage-head strong {
+  display: block;
+  margin-top: 4px;
+  color: #fff;
+  font-size: 18px;
+}
+
+.route-shell.is-businesses-page .stadium-canonical-storage-track {
+  height: 10px;
+  margin-top: 16px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: rgba(221, 226, 246, .10);
+}
+
+.route-shell.is-businesses-page .stadium-canonical-storage-track > i {
+  display: block;
+  width: 0;
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, #0d34e9, #37e6b0);
+  transition: width .35s ease;
+}
+
+.route-shell.is-businesses-page .stadium-canonical-storage-meta {
+  margin-top: 9px;
+}
+
+.route-shell.is-businesses-page .stadium-canonical-storage-meta span {
+  letter-spacing: .04em;
+}
+
+.route-shell.is-businesses-page .stadium-canonical-secondary {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+  margin-top: 14px;
+}
+
+.route-shell.is-businesses-page .stadium-canonical-secondary strong {
+  overflow: hidden;
+  font-size: 16px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+@media (max-width: 760px) {
+  .route-shell.is-businesses-page .stadium-canonical-card {
+    margin: 14px auto 28px;
+    border-radius: 18px;
+  }
+
+  .route-shell.is-businesses-page .stadium-canonical-hero {
+    min-height: 250px;
+  }
+
+  .route-shell.is-businesses-page .stadium-canonical-identity {
+    left: 18px;
+    bottom: 20px;
+  }
+
+  .route-shell.is-businesses-page .stadium-canonical-market {
+    right: 18px;
+    bottom: 20px;
+  }
+
+  .route-shell.is-businesses-page .stadium-canonical-body {
+    padding: 16px;
+  }
+
+  .route-shell.is-businesses-page .stadium-canonical-primary,
+  .route-shell.is-businesses-page .stadium-canonical-secondary {
+    grid-template-columns: 1fr;
+  }
+}
