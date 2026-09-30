@@ -70,13 +70,16 @@ describe("backend game isolation", () => {
     expect(routesIndex).toContain('from "../roulette"');
   });
 
-  it("keeps one shared game_session identity with legacy migration", () => {
+  it("keeps one root-scoped shared game_session identity with legacy migration", () => {
     expect(sessionPlatform).toContain('SESSION_COOKIE = "game_session"');
     expect(sessionPlatform).toContain('LEGACY_SESSION_COOKIE = "roulette_session"');
-    expect(appSource).toContain("getCanonicalSessionId(req.cookies)");
+    expect(sessionPlatform).toContain("LEGACY_SCOPED_SESSION_PATHS");
+    expect(appSource).toContain("getSessionCookieCandidates(req.headers.cookie)");
     expect(appSource).toContain("getLegacySessionId(req.cookies)");
-    expect(appSource).toContain("resolveCanonicalWalletSessionId");
+    expect(appSource).toContain("resolveCanonicalWalletSessionCandidates");
     expect(appSource).toContain("res.cookie(SESSION_COOKIE, selectedSessionId");
+    expect(appSource).toContain('path: "/"');
+    expect(appSource).toContain("res.clearCookie(SESSION_COOKIE");
     expect(appSource).toContain("res.clearCookie(LEGACY_SESSION_COOKIE");
     expect(appSource).not.toContain("res.cookie(SESSION_COOKIE, legacySessionId");
   });

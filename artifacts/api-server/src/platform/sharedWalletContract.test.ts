@@ -1,7 +1,7 @@
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
-import { chooseSessionIdForWalletMigration } from "./session";
+import { chooseSessionIdForWalletMigration, getSessionCookieCandidates } from "./session";
 
 function source(relativePath: string) {
   return readFileSync(
@@ -13,6 +13,10 @@ function source(relativePath: string) {
 const appSource = source("../app.ts");
 const sessionSource = source("./session.ts");
 const walletSource = source("./wallet.ts");
+const slotRoutes = source("../slot/routes.ts");
+const rouletteRoutes = source("../roulette/routes.ts");
+const cadiRoutes = source("../cadi-kazan/routes.ts");
+const idleRoutes = source("../idle/routes.ts");
 const slotRepository = source("../slot/repository.ts");
 const rouletteRepository = source("../roulette/repository.ts");
 const cadiRepository = source("../cadi-kazan/repository.ts");
@@ -28,6 +32,29 @@ describe("canonical shared wallet contract", () => {
     expect(appSource).toContain("getLegacySessionId");
     expect(appSource).toContain("resolveCanonicalWalletSessionId");
     expect(appSource).not.toContain("req.cookies[SESSION_COOKIE] = legacySessionId");
+  });
+
+  it("detects duplicate path-scoped game_session cookies", () => {
+    expect(getSessionCookieCandidates(
+      "game_session=aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa; game_session=bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb",
+    )).toEqual([
+      "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
+      "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb",
+    ]);
+    expect(appSource).toContain("LEGACY_SCOPED_SESSION_PATHS");
+    expect(appSource).toContain("resolveCanonicalWalletSessionCandidates");
+  });
+
+  it("root-scopes every HTTP game_session cookie", () => {
+    for (const routeSource of [
+      slotRoutes,
+      rouletteRoutes,
+      cadiRoutes,
+      idleRoutes,
+      blackjackPlatform,
+    ]) {
+      expect(routeSource).toContain('path: "/"');
+    }
   });
 
   it("keeps shared_wallets as the only live spendable wallet authority", () => {

@@ -8,10 +8,11 @@ import {
   LEGACY_SESSION_COOKIE,
   SESSION_COOKIE,
   SESSION_COOKIE_MAX_AGE_MS,
-  getCanonicalSessionId,
+  LEGACY_SCOPED_SESSION_PATHS,
   getLegacySessionId,
+  getSessionCookieCandidates,
 } from "./platform/session";
-import { resolveCanonicalWalletSessionId } from "./platform/wallet";
+import { resolveCanonicalWalletSessionCandidates } from "./platform/wallet";
 
 const app: Express = express();
 
@@ -42,10 +43,10 @@ app.use(cookieParser());
 // only the untouched default while the legacy identity has a real balance.
 app.use(async (req, res, next) => {
   try {
-    const canonicalSessionId = getCanonicalSessionId(req.cookies);
+    const sessionCandidates = getSessionCookieCandidates(req.headers.cookie);
     const legacySessionId = getLegacySessionId(req.cookies);
-    const selectedSessionId = await resolveCanonicalWalletSessionId(
-      canonicalSessionId,
+    const selectedSessionId = await resolveCanonicalWalletSessionCandidates(
+      sessionCandidates,
       legacySessionId,
     );
 
@@ -53,21 +54,29 @@ app.use(async (req, res, next) => {
       httpOnly: true,
       sameSite: "lax" as const,
       secure: process.env.NODE_ENV === "production",
-      path: "/",
     };
 
     if (selectedSessionId) {
       req.cookies[SESSION_COOKIE] = selectedSessionId;
-      if (canonicalSessionId !== selectedSessionId) {
-        res.cookie(SESSION_COOKIE, selectedSessionId, {
-          ...cookieOptions,
-          maxAge: SESSION_COOKIE_MAX_AGE_MS,
-        });
-      }
+      res.cookie(SESSION_COOKIE, selectedSessionId, {
+        ...cookieOptions,
+        path: "/",
+        maxAge: SESSION_COOKIE_MAX_AGE_MS,
+      });
+    }
+
+    for (const path of LEGACY_SCOPED_SESSION_PATHS) {
+      res.clearCookie(SESSION_COOKIE, {
+        ...cookieOptions,
+        path,
+      });
     }
 
     if (legacySessionId) {
-      res.clearCookie(LEGACY_SESSION_COOKIE, cookieOptions);
+      res.clearCookie(LEGACY_SESSION_COOKIE, {
+        ...cookieOptions,
+        path: "/",
+      });
     }
 
     next();
