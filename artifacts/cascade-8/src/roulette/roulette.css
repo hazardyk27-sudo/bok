@@ -4190,3 +4190,252 @@ button {
     text-shadow: none;
   }
 }
+
+
+/* Part 12 — canonical all-phone portrait composition */
+@media (max-width: 900px) and (orientation: portrait) {
+  .roulette-page {
+    --top-hud-height:
+      clamp(30px, 4.2dvh, 34px);
+    --history-height:
+      clamp(18px, 2.8dvh, 22px);
+    --mobile-safe-top:
+      max(2px, env(safe-area-inset-top));
+    --mobile-safe-bottom:
+      max(5px, env(safe-area-inset-bottom));
+    --mobile-wheel-panel-top:
+      calc(
+        var(--mobile-safe-top) +
+        var(--top-hud-height) +
+        5px
+      );
+    --mobile-wheel-stage-top:
+      calc(
+        var(--mobile-wheel-panel-top) +
+        var(--history-height)
+      );
+
+    /*
+     * Betting keeps the table dominant. Width is governed by the phone width;
+     * vertical placement then consumes the available screen instead of leaving
+     * device-specific dead space at the bottom.
+     */
+    --table-ratio: 1.73;
+    --wheel-size:
+      min(
+        82vw,
+        calc(27dvh + 84px),
+        320px
+      );
+    --table-width:
+      min(
+        82vw,
+        336px
+      );
+    --table-top:
+      max(
+        clamp(124px, 19dvh, 154px),
+        calc(
+          100dvh -
+          (var(--table-width) * var(--table-ratio)) -
+          var(--mobile-safe-bottom) -
+          3px
+        )
+      );
+
+    --zero-row:
+      calc(var(--table-width) * 0.112);
+    --number-row:
+      calc(var(--table-width) * 0.128);
+    --column-row:
+      calc(var(--table-width) * 0.112);
+    --control-size:
+      clamp(
+        28px,
+        calc(var(--table-width) * 0.145),
+        40px
+      );
+    --control-gap:
+      clamp(
+        6px,
+        calc(var(--table-width) * 0.030),
+        11px
+      );
+  }
+
+  .roulette-wheel-panel {
+    top: var(--mobile-wheel-panel-top) !important;
+    bottom: auto !important;
+  }
+
+  .roulette-stage {
+    width: var(--wheel-size) !important;
+    height: var(--wheel-size) !important;
+  }
+
+  .roulette-table-layout {
+    top: var(--table-top) !important;
+    left: 50% !important;
+    width: var(--table-width) !important;
+    max-width: none !important;
+    transform: translateX(-56.5%) !important;
+  }
+
+  .roulette-bet-table {
+    width: var(--table-width) !important;
+  }
+
+  .roulette-mobile-control-rail {
+    left: calc(100% + 4px) !important;
+    top: 50% !important;
+    transform: translate(-1px, -50%) !important;
+  }
+
+  /*
+   * Spin/result share one geometry model: wheel stays directly below the
+   * history strip, the table starts after a real gap, and table width is
+   * capped by the remaining viewport height. This removes overlap and
+   * bottom-space drift across short/tall phones.
+   */
+  .roulette-page[data-phase="spinning"],
+  .roulette-page[data-phase="settled"] {
+    --table-ratio: 1.576;
+    --wheel-size:
+      min(
+        82vw,
+        calc(29dvh + 80px),
+        330px
+      );
+    --spin-table-gap:
+      clamp(9px, 2.6vw, 14px);
+    --table-top:
+      calc(
+        var(--mobile-wheel-stage-top) +
+        var(--wheel-size) +
+        var(--spin-table-gap)
+      );
+    --table-width:
+      min(
+        70vw,
+        300px,
+        calc(
+          (
+            100dvh -
+            var(--table-top) -
+            var(--mobile-safe-bottom) -
+            3px
+          ) / var(--table-ratio)
+        )
+      );
+    --zero-row:
+      calc(var(--table-width) * 0.103);
+    --number-row:
+      calc(var(--table-width) * 0.114);
+    --column-row:
+      calc(var(--table-width) * 0.105);
+    --control-size:
+      clamp(
+        25px,
+        calc(var(--table-width) * 0.16),
+        36px
+      );
+    --control-gap:
+      clamp(
+        4px,
+        calc(var(--table-width) * 0.030),
+        8px
+      );
+  }
+
+  .roulette-page[data-phase="spinning"] .roulette-stage,
+  .roulette-page[data-phase="settled"] .roulette-stage {
+    transform: none !important;
+  }
+
+  .roulette-page[data-phase="spinning"] .roulette-table-layout,
+  .roulette-page[data-phase="settled"] .roulette-table-layout {
+    top: var(--table-top) !important;
+    width: var(--table-width) !important;
+    transform: translateX(-56.5%) !important;
+  }
+
+  .roulette-page[data-phase="spinning"] .roulette-bet-table,
+  .roulette-page[data-phase="settled"] .roulette-bet-table {
+    width: var(--table-width) !important;
+  }
+
+  .roulette-page[data-phase="spinning"] .roulette-mobile-control-rail,
+  .roulette-page[data-phase="settled"] .roulette-mobile-control-rail {
+    top: 50% !important;
+    transform: translate(-1px, -50%) !important;
+  }
+
+  .roulette-bet-console {
+    display: none !important;
+  }
+}
+
+/*
+ * Very narrow phones keep the same composition. Only the horizontal ceiling
+ * tightens so the right rail always remains inside the viewport.
+ */
+@media (max-width: 360px) and (orientation: portrait) {
+  .roulette-page {
+    --table-width:
+      min(
+        80vw,
+        286px
+      );
+    --control-size:
+      clamp(
+        27px,
+        calc(var(--table-width) * 0.145),
+        36px
+      );
+  }
+
+  .roulette-page[data-phase="spinning"],
+  .roulette-page[data-phase="settled"] {
+    --wheel-size:
+      min(
+        80vw,
+        calc(29dvh + 76px),
+        292px
+      );
+    --table-width:
+      min(
+        68vw,
+        226px,
+        calc(
+          (
+            100dvh -
+            var(--table-top) -
+            var(--mobile-safe-bottom) -
+            3px
+          ) / var(--table-ratio)
+        )
+      );
+  }
+
+  .roulette-mobile-control-rail {
+    left: calc(100% + 2px) !important;
+  }
+}
+
+/*
+ * Extremely short phones do not switch to a different layout. The same
+ * equations remain active; only the chrome consumes slightly less height.
+ */
+@media (max-width: 900px) and (orientation: portrait) and (max-height: 590px) {
+  .roulette-page {
+    --top-hud-height: 30px;
+    --history-height: 18px;
+    --mobile-safe-bottom:
+      max(4px, env(safe-area-inset-bottom));
+  }
+
+  .roulette-page[data-phase="spinning"],
+  .roulette-page[data-phase="settled"] {
+    --spin-table-gap: 8px;
+  }
+}
