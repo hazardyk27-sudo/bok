@@ -46,6 +46,14 @@ export function isValidUsername(username: string) {
   return /^[a-z0-9_]{3,20}$/.test(username);
 }
 
+export function formatAuthUserCode(value: number) {
+  if (!Number.isSafeInteger(value) || value <= 0) {
+    throw new Error("AUTH_USERCODE_INVALID");
+  }
+  const digits = String(value).padStart(10, "0");
+  return `${digits.slice(0, 4)}-${digits.slice(4, 8)}-${digits.slice(8, 10)}`;
+}
+
 export function isValidEmail(email: string) {
   if (email.length < 3 || email.length > 254) return false;
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
