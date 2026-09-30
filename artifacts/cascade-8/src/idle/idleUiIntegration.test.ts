@@ -47,10 +47,16 @@ describe("Part 25 canonical Businesses shell", () => {
       "data-idle-seats",
       "data-idle-storage-track",
       "data-idle-market-price",
-      "data-idle-market-source",
     ]) {
       expect(idleIndexSource).toContain(marker);
     }
+
+    expect(idleIndexSource).not.toContain(
+      "data-idle-market-source",
+    );
+    expect(idleIndexSource).not.toContain(
+      "data-idle-market-tick",
+    );
 
     for (const retired of [
       "TÜMÜNÜ TOPLA",
@@ -107,6 +113,11 @@ describe("Part 25 canonical Businesses shell", () => {
       "data-idle-details-drawer",
       "data-idle-market-drawer",
       "fetchIdleMarketHistory",
+      "pendingMutationKeys",
+      "quoteSeatPurchase",
+      "mergeLiveHistory",
+      "data-idle-market-detail-source",
+      "data-idle-market-detail-tick",
     ]) {
       expect(stadiumPremiumSource).toContain(marker);
     }
@@ -119,6 +130,9 @@ describe("Part 25 canonical Businesses shell", () => {
     );
     expect(stadiumPremiumCss).toContain(
       "@media (max-width:760px)",
+    );
+    expect(stadiumPremiumCss).toContain(
+      ".stadium-sell-shortcuts button:disabled",
     );
   });
 });
