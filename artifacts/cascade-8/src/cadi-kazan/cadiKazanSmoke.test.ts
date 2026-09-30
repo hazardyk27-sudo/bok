@@ -354,4 +354,17 @@ describe("cadi kazan route smoke contract", () => {
     expect(visualLockSource).toContain(':is(.is-advanced-theme, .is-office-theme) .witch-ticket-header');
   });
 
+
+  it("hard-removes generic ticket chrome from master-PNG cards and themes the app header by card", () => {
+    expect(witchClientSource).toContain('const usesMasterCardArtwork = visualMode === "ADVANCED" || visualMode === "OFFICE_MATCH_6"');
+    expect(witchClientSource).toContain('".witch-ticket-frame, .witch-bcs-card-art, .witch-ticket-header, .witch-ticket-meta-row, .witch-ticket-footer"');
+    expect(visualLockSource).toContain("PASS 31 — master-card chrome kill + card-themed top chrome");
+    expect(visualLockSource).toContain("> :not(.witch-advanced-card-art):not(.witch-board-wrap)");
+    expect(visualLockSource).toContain("> :not(.witch-office-card-art):not(.witch-board-wrap)");
+    expect(visualLockSource).toContain("grid-template: none !important");
+    expect(visualLockSource).toContain(".is-advanced-theme .witch-appbar");
+    expect(visualLockSource).toContain(".is-office-theme .witch-appbar");
+    expect(visualLockSource).toContain("color: #111315 !important");
+  });
+
 });
