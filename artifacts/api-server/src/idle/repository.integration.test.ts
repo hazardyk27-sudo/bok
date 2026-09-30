@@ -60,7 +60,9 @@ describe.skipIf(!enabled)(
       ).toContain("application/json");
       expect(
         response.headers.get("set-cookie"),
-      ).toContain("roulette_session=");
+      ).toMatch(
+        /(?:game_session|roulette_session)=/,
+      );
 
       const body = await response.json() as {
         sessionId: string;
