@@ -239,4 +239,24 @@ describe("cadi kazan route smoke contract", () => {
     expect(visualLockSource).toContain("--witch-deck-bg: linear-gradient(180deg, #f7f7f7 0%, #dedfe1 100%)");
   });
 
+
+  it("locks The Office to one PNG and exactly six clipped interactive scratch zones", () => {
+    expect(visualLockSource).toContain("PASS 24 — THE OFFICE authoritative PNG + six-zone interaction lock");
+    expect(visualLockSource).toContain("--office-card-ratio: 1000 / 468");
+    expect(visualLockSource).toContain("--office-scratch-left: 37.2%");
+    expect(visualLockSource).toContain("--office-scratch-top: 13.2479%");
+    expect(visualLockSource).toContain("--office-scratch-right: 4.7%");
+    expect(visualLockSource).toContain("--office-scratch-bottom: 8.9744%");
+    expect(visualLockSource).toContain("--office-cell-left: 35.6282%");
+    expect(visualLockSource).toContain("--office-cell-left: 71.2565%");
+    expect(visualLockSource).toContain("--office-cell-top: 56.3187%");
+    expect(visualLockSource).toContain("--office-cell-width: 28.7435%");
+    expect(visualLockSource).toContain("--office-cell-height: 43.6813%");
+    expect(visualLockSource).toContain(".witch-ticket.is-preview .witch-board");
+    expect(visualLockSource).toContain("pointer-events: none !important");
+    expect(visualLockSource).toContain(".witch-ticket:not(.is-preview) .witch-board > .witch-cell");
+    expect(visualLockSource).toContain("pointer-events: auto !important");
+    expect(visualLockSource).toContain("touch-action: none !important");
+  });
+
 });
