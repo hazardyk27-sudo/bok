@@ -4,7 +4,7 @@ import type {
 } from "./rouletteWalletClient";
 
 export const ROULETTE_STATE_SYNC_INTERVAL_MS =
-  2_000;
+  5_000;
 export const ROULETTE_STATE_RETRY_INTERVAL_MS =
   1_000;
 
