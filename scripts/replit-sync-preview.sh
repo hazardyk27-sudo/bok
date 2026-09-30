@@ -32,6 +32,46 @@ fi
 remote_ref="$REMOTE/$BRANCH"
 stable="false"
 updated="false"
+recovery_backup="none"
+
+is_safe_replit_publish_commit() {
+  local commit="$1"
+  local subject parent_count parent tree parent_tree
+
+  subject="$(git show -s --format=%s "$commit")"
+  [[ "$subject" == "Published your App" ]] || return 1
+
+  read -r _commit parent _extra < <(git rev-list --parents -n 1 "$commit")
+  [[ -n "${parent:-}" && -z "${_extra:-}" ]] || return 1
+
+  tree="$(git show -s --format=%T "$commit")"
+  parent_tree="$(git show -s --format=%T "$parent")"
+  [[ "$tree" == "$parent_tree" ]]
+}
+
+recover_safe_replit_publish_commits() {
+  local local_only commit short_stamp
+  mapfile -t local_only < <(git rev-list --reverse "$remote_ref..HEAD")
+
+  [[ "${#local_only[@]}" -gt 0 ]] || return 1
+
+  for commit in "${local_only[@]}"; do
+    if ! is_safe_replit_publish_commit "$commit"; then
+      return 1
+    fi
+  done
+
+  short_stamp="$(date -u +%Y%m%dT%H%M%SZ)"
+  recovery_backup="backup/replit-publish-${short_stamp}-$(git rev-parse --short HEAD)"
+
+  echo "RECOVERY: verified ${#local_only[@]} empty Replit publish commit(s)."
+  echo "RECOVERY: preserving local HEAD at $recovery_backup"
+  git branch "$recovery_backup" HEAD
+
+  echo "RECOVERY: realigning protected preview branch to $remote_ref"
+  OYUN_ALLOW_PREVIEW_REF_UPDATE=1 git reset --hard "$remote_ref"
+  updated="true"
+}
 
 for attempt in $(seq 1 "$MAX_ATTEMPTS"); do
   echo "SYNC ATTEMPT $attempt/$MAX_ATTEMPTS"
@@ -45,10 +85,14 @@ for attempt in $(seq 1 "$MAX_ATTEMPTS"); do
 
   read -r ahead behind < <(git rev-list --left-right --count "HEAD...$remote_ref")
   if [[ "$ahead" != "0" ]]; then
-    echo "ABORT: Local preview has $ahead commit(s) not on $remote_ref. No reset/rebase/merge was attempted."
-    echo "Local:  $(git rev-parse --short HEAD)"
-    echo "Remote: $(git rev-parse --short "$remote_ref")"
-    exit 6
+    if recover_safe_replit_publish_commits; then
+      read -r ahead behind < <(git rev-list --left-right --count "HEAD...$remote_ref")
+    else
+      echo "ABORT: Local preview has $ahead commit(s) not on $remote_ref and they are not verified empty 'Published your App' commits."
+      echo "Local:  $(git rev-parse --short HEAD)"
+      echo "Remote: $(git rev-parse --short "$remote_ref")"
+      exit 6
+    fi
   fi
 
   if [[ "$behind" != "0" ]]; then
@@ -130,6 +174,7 @@ echo "AHEAD_BEHIND: $final_ahead $final_behind"
 echo "HEAD: $(git rev-parse HEAD)"
 echo "EXPECTED_PREVIEW_SHA: ${EXPECTED_PREVIEW_SHA:-not-requested}"
 echo "EXPECTED_PRESENT: $expected_present"
+echo "RECOVERY_BACKUP: $recovery_backup"
 echo "STATUS_BEGIN"
 git status --porcelain
 echo "STATUS_END"
