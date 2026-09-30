@@ -83,6 +83,7 @@ describe("backend game isolation", () => {
     expect(appSource).toContain("resolveCanonicalWalletSessionCandidates");
     expect(appSource).toContain("res.cookie(SESSION_COOKIE, selectedSessionId");
     expect(appSource).toContain('path: "/"');
+    expect(appSource).toContain("getLegacyScopedSessionPathForRequest(req.path)");
     expect(appSource).toContain("res.clearCookie(SESSION_COOKIE");
     expect(appSource).toContain("res.clearCookie(LEGACY_SESSION_COOKIE");
     expect(appSource).not.toContain("res.cookie(SESSION_COOKIE, legacySessionId");
