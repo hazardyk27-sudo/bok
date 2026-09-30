@@ -1193,3 +1193,33 @@ body.businesses-route {
       linear-gradient(180deg, #091421 0%, #07101d 56%, #050b17 100%) !important;
   }
 }
+
+
+/* 2026-09-30 — full-canvas fix.
+   The approved Idle reference never exposes the host application's light
+   canvas. Lock html/body/#app/route-shell to the same dark page surface so
+   centered desktop workspaces cannot reveal white gutters around the game. */
+html.businesses-route,
+body.businesses-route,
+html.businesses-route #app {
+  min-height: 100dvh;
+  background: #050b17 !important;
+  background-color: #050b17 !important;
+}
+
+html.businesses-route #app {
+  width: 100%;
+}
+
+.route-shell.is-businesses-page {
+  min-height: 100dvh;
+  background:
+    radial-gradient(circle at 58% 0%, rgba(92, 125, 255, .11), transparent 27%),
+    radial-gradient(circle at 100% 18%, rgba(69, 103, 177, .055), transparent 24%),
+    linear-gradient(180deg, #050b17 0%, #07101d 100%) !important;
+  background-color: #050b17 !important;
+}
+
+.route-shell.is-businesses-page .businesses-workspace {
+  background: transparent !important;
+}
