@@ -1,5 +1,8 @@
 # Slot ownership
 
+> **Mandatory startup:** First read the canonical project handbook at `integration/replit-preview:AGENTS.md`. Then read this file. These are the only two mandatory instruction files for a normal category conversation. The canonical root handbook owns all shared GitHub/Replit/Supabase/wallet/promotion/Shell rules; do not use stale feature-branch copies of root rules or the retired delivery/workflow documents as authority.
+
+
 This directory is the Slot frontend ownership root.
 
 Normal Slot work may modify this directory plus the Slot-owned config, engine, game, simulation and API roots declared in `.github/game-ownership.json`.
