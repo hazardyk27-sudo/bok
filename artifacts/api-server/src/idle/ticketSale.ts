@@ -18,17 +18,9 @@ import {
   requireSafeNonNegativeInteger,
   settleMarketMicrodollarsToWalletCents,
 } from "./fixedPoint";
-import {
-  ticketMarketPersistence,
-} from "./marketPersistence";
-import {
-  projectPersistedStadiumState,
-  stadiumProjectionToServerState,
-  type StadiumStorageState,
+import type {
+  StadiumStorageState,
 } from "./stadiumRepository";
-import {
-  runCheckpointedStadiumMutation,
-} from "./stadiumMutation";
 import { reserveStadiumActionReceipt } from "./stadiumActionReceipt";
 
 const TICKET_SALE_ACTION = "TICKET_SALE" as const;
@@ -340,6 +332,19 @@ export async function sellStadiumTickets(
   serverNow = new Date(),
 ): Promise<IdleTicketSaleResponse> {
   requirePositiveTicketQuantity(quantityTickets);
+
+  const [
+    { ticketMarketPersistence },
+    {
+      projectPersistedStadiumState,
+      stadiumProjectionToServerState,
+    },
+    { runCheckpointedStadiumMutation },
+  ] = await Promise.all([
+    import("./marketPersistence"),
+    import("./stadiumRepository"),
+    import("./stadiumMutation"),
+  ]);
 
   const mutation = await runCheckpointedStadiumMutation(
     sessionId,
