@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  isSupabaseDatabaseHost,
   resolveSupabaseDatabaseUrl,
   SUPABASE_DIRECT_HOST,
   SUPABASE_PROJECT_REF,
@@ -7,6 +8,12 @@ import {
 } from "../../../lib/db/src/runtime-config";
 
 describe("Supabase runtime connection resolution", () => {
+  it("accepts both direct and Session Pooler Supabase database hosts", () => {
+    expect(isSupabaseDatabaseHost(SUPABASE_DIRECT_HOST)).toBe(true);
+    expect(isSupabaseDatabaseHost(SUPABASE_SESSION_POOLER_HOST)).toBe(true);
+    expect(isSupabaseDatabaseHost("example.com")).toBe(false);
+  });
+
   it("rewrites this project's stale direct URL to the verified IPv4 session pooler", () => {
     const source =
       `postgresql://postgres:example-password@${SUPABASE_DIRECT_HOST}:5432/postgres?sslmode=require`;
