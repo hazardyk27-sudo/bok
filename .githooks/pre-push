@@ -1,0 +1,6 @@
+#!/usr/bin/env bash
+set -euo pipefail
+if [[ "$(git config --bool --get oyun.replitReadonly 2>/dev/null || echo false)" == "true" ]]; then
+  echo "ABORT: pushes from the shared Replit preview workspace are disabled." >&2
+  exit 42
+fi
