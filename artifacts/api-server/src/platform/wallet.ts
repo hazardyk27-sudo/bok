@@ -229,31 +229,62 @@ export async function recoverSharedWalletsIfEmpty() {
   };
 }
 
-export async function resolveCanonicalWalletSessionId(
-  canonicalSessionId: string | null,
+export async function resolveCanonicalWalletSessionCandidates(
+  candidateSessionIds: readonly string[],
   legacySessionId: string | null,
 ) {
-  if (!canonicalSessionId) return legacySessionId;
-  if (!legacySessionId || legacySessionId === canonicalSessionId) {
-    return canonicalSessionId;
+  const candidates = [...new Set(candidateSessionIds)];
+  const lookupIds = [...candidates];
+  if (legacySessionId && !lookupIds.includes(legacySessionId)) {
+    lookupIds.push(legacySessionId);
   }
+
+  if (lookupIds.length === 0) return null;
 
   const result = await pool.query<WalletBalanceRow>(
     `SELECT session_id, balance_cents
        FROM shared_wallets
       WHERE session_id = ANY($1::text[])`,
-    [[canonicalSessionId, legacySessionId]],
+    [lookupIds],
   );
 
   const balances = new Map(
     result.rows.map((row) => [row.session_id, Number(row.balance_cents)]),
   );
 
+  const establishedCandidates = candidates.filter((sessionId) => {
+    const balance = balances.get(sessionId);
+    return balance !== undefined && balance !== INITIAL_SHARED_BALANCE_CENTS;
+  });
+
+  const existingCandidates = candidates.filter((sessionId) =>
+    balances.has(sessionId),
+  );
+
+  const canonicalSessionId = establishedCandidates.at(-1)
+    ?? existingCandidates.at(-1)
+    ?? candidates.at(-1)
+    ?? null;
+
+  if (!canonicalSessionId) return legacySessionId;
+
   return chooseSessionIdForWalletMigration({
     canonicalSessionId,
     legacySessionId,
     canonicalBalanceCents: balances.get(canonicalSessionId) ?? null,
-    legacyBalanceCents: balances.get(legacySessionId) ?? null,
+    legacyBalanceCents: legacySessionId
+      ? balances.get(legacySessionId) ?? null
+      : null,
     initialBalanceCents: INITIAL_SHARED_BALANCE_CENTS,
   });
+}
+
+export async function resolveCanonicalWalletSessionId(
+  canonicalSessionId: string | null,
+  legacySessionId: string | null,
+) {
+  return resolveCanonicalWalletSessionCandidates(
+    canonicalSessionId ? [canonicalSessionId] : [],
+    legacySessionId,
+  );
 }
