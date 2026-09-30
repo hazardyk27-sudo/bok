@@ -46,7 +46,7 @@ for attempt in $(seq 1 120); do
     exit 3
   fi
 
-  if node -e "fetch('http://127.0.0.1:${API_PORT}/api/healthz').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"; then
+  if node -e "fetch('http://127.0.0.1:${API_PORT}/api/readyz',{signal:AbortSignal.timeout(2000)}).then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"; then
     ready="true"
     break
   fi
