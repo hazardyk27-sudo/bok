@@ -1295,46 +1295,45 @@ html.businesses-route #app {
 }
 
 
-/* 2026-10-01 — tablet + desktop scroll safety.
-   Landscape tablets can exceed the 1100px desktop breakpoint. Never trap the
-   Businesses route inside a fixed viewport: preserve the large desktop width
-   while allowing the document to grow and scroll whenever Stadium content,
-   drawers or browser chrome reduce the usable height. */
-@media (min-width: 761px) {
-  html.businesses-route,
-  body.businesses-route {
-    height: auto !important;
-    min-height: 100dvh !important;
-    overflow-x: hidden !important;
-    overflow-y: auto !important;
-    overscroll-behavior-y: auto !important;
-  }
+/* 2026-10-01 — route-owned scroll root.
+   Replit/embedded preview shells can clamp document scrolling even when
+   html/body advertise overflow-y:auto. Businesses therefore owns exactly one
+   vertical scroll container at the route-shell level on every viewport.
+   This also removes the desktop 16:9 fixed-workspace conflict and keeps
+   tablet touch scrolling independent from the host document. */
+html.businesses-route,
+body.businesses-route,
+html.businesses-route #app {
+  height: 100% !important;
+  min-height: 100% !important;
+  max-height: 100% !important;
+  overflow: hidden !important;
+}
 
-  html.businesses-route #app {
-    height: auto !important;
-    min-height: 100dvh !important;
-    overflow: visible !important;
-  }
+.route-shell.is-businesses-page {
+  height: 100dvh !important;
+  min-height: 100dvh !important;
+  max-height: 100dvh !important;
+  overflow-x: hidden !important;
+  overflow-y: auto !important;
+  overscroll-behavior-x: none !important;
+  overscroll-behavior-y: contain !important;
+  -webkit-overflow-scrolling: touch;
+  touch-action: pan-y !important;
+  scrollbar-gutter: stable;
+}
 
-  .route-shell.is-businesses-page {
-    height: auto !important;
-    min-height: 100dvh !important;
-    overflow-x: clip !important;
-    overflow-y: visible !important;
-    touch-action: pan-y !important;
-  }
+.route-shell.is-businesses-page .businesses-workspace {
+  height: auto !important;
+  min-height: 100% !important;
+  max-height: none !important;
+  overflow: visible !important;
+}
 
-  .route-shell.is-businesses-page .businesses-workspace {
-    height: auto !important;
-    min-height: calc(100dvh - 16px) !important;
-    max-height: none !important;
-    overflow: visible !important;
-  }
-
-  .route-shell.is-businesses-page .businesses-page {
-    height: auto !important;
-    min-height: 0 !important;
-    overflow: visible !important;
-    padding-bottom: max(32px, env(safe-area-inset-bottom)) !important;
-  }
+.route-shell.is-businesses-page .businesses-page {
+  height: auto !important;
+  min-height: 0 !important;
+  max-height: none !important;
+  overflow: visible !important;
+  padding-bottom: max(48px, env(safe-area-inset-bottom)) !important;
 }
