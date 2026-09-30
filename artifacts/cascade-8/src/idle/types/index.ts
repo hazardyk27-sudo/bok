@@ -158,4 +158,3 @@ export type IdleTicketSaleResponse = {
   stadium: IdleStadiumServerState;
   market: TicketMarketSnapshot;
 };
-
