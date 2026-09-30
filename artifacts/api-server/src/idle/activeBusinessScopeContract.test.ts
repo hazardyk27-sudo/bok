@@ -51,7 +51,7 @@ describe("Part 25 backend cutover", () => {
       "projectPersistedStadiumState(",
     );
     expect(stateSource).toContain(
-      "roulette_wallets",
+      "${SHARED_WALLET_TABLE}",
     );
     expect(stateSource).toContain(
       "ticketMarketPersistence.getCurrentState()",
