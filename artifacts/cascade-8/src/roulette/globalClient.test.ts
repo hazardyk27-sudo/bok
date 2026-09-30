@@ -43,7 +43,7 @@ describe("roulette global client clock", () => {
     );
     expect(
       ROULETTE_STATE_SYNC_INTERVAL_MS,
-    ).toBe(2_000);
+    ).toBe(5_000);
     expect(
       getRouletteStateSyncDelay(
         false,
