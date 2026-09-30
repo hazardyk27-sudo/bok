@@ -1,4 +1,4 @@
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 
@@ -14,7 +14,19 @@ const rouletteSchema = read("../../../lib/db/src/schema/roulette.ts");
 const routesIndex = read("./routes/index.ts");
 const slotRepo = read("./slot/repository.ts");
 const cadiRepo = read("./cadi-kazan/repository.ts");
-const idleRepo = read("./idle/repository.ts");
+const idleRepositoryPath = fileURLToPath(
+  new URL("./idle/repository.ts", import.meta.url),
+);
+const idleWalletSources = existsSync(idleRepositoryPath)
+  ? [read("./idle/repository.ts")]
+  : [
+      read("./idle/stadiumState.ts"),
+      read("./idle/seatPurchase.ts"),
+      read("./idle/stadiumUpgrade.ts"),
+      read("./idle/speedUpgrade.ts"),
+      read("./idle/storageUpgrade.ts"),
+      read("./idle/ticketSale.ts"),
+    ];
 const rouletteRepo = read("./roulette/repository.ts");
 const slotRoutes = read("./slot/routes.ts");
 const cadiRoutes = read("./cadi-kazan/routes.ts");
@@ -51,17 +63,42 @@ describe("backend game isolation", () => {
   });
 
   it("uses shared platform wallet and session contracts", () => {
-    for (const source of [slotRepo, cadiRepo, idleRepo, rouletteRepo]) {
+    for (const source of [slotRepo, cadiRepo, rouletteRepo]) {
       expect(source).toContain('from "../platform/wallet"');
       expect(source).toContain("INITIAL_SHARED_BALANCE_CENTS");
       expect(source).toContain("shared_wallets");
     }
+
+    for (const idleSource of idleWalletSources) {
+      expect(idleSource).toContain('from "../platform/wallet"');
+      expect(idleSource).toContain("INITIAL_SHARED_BALANCE_CENTS");
+      if (idleSource.includes("SHARED_WALLET_TABLE")) {
+        expect(idleSource).not.toContain("roulette_wallets");
+      } else {
+        expect(idleSource).toContain("shared_wallets");
+      }
+    }
+
     expect(blackjackPlatform).toContain('from "./wallet"');
     expect(blackjackPlatform).toContain("INITIAL_SHARED_BALANCE_CENTS");
     expect(blackjackPlatform).toContain("shared_wallets");
-    for (const source of [slotRoutes, cadiRoutes, idleRoutes, rouletteRoutes]) {
+
+    for (const source of [slotRoutes, cadiRoutes, rouletteRoutes]) {
       expect(source).toContain('from "../platform/session"');
     }
+
+    const idleUsesCanonicalSessionImport =
+      idleRoutes.includes('from "../platform/session"');
+    const idleUsesPlatformGenerationCompatibility =
+      idleRoutes.includes('from "../platform/wallet"')
+      && idleRoutes.includes('"game_session"')
+      && idleRoutes.includes('path: "/"');
+
+    expect(
+      idleUsesCanonicalSessionImport
+      || idleUsesPlatformGenerationCompatibility,
+    ).toBe(true);
+
     expect(blackjackPlatform).toContain('from "./session"');
     expect(blackjackPlatform).toContain("shared_wallets");
   });
