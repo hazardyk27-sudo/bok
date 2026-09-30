@@ -49,6 +49,7 @@ import {
   type RouletteResultPresentation,
 } from "./resultPresentation";
 import {
+  ROULETTE_SIMULATION_VERSION,
   readSettledWinningResult,
 } from "./spinResult";
 import {
@@ -427,6 +428,8 @@ export function mountRoulette(app: HTMLDivElement) {
     performance.now() + ROULETTE_BETTING_WINDOW_MS;
   let bettingWindowClosed = false;
   let automaticSpinBlocked = false;
+  let apiSimulationReady = false;
+  let apiReadinessRetryTimer = 0;
   let activeResultPresentation:
     RouletteResultPresentation | null =
       null;
@@ -771,6 +774,18 @@ export function mountRoulette(app: HTMLDivElement) {
       page.dataset.phase as RouletteScenePhase;
 
     if (phase === "betting") {
+      if (!apiSimulationReady) {
+        if (bettingTimerLabel) {
+          bettingTimerLabel.textContent =
+            "UPDATING GAME";
+        }
+        if (bettingTimerValue) {
+          bettingTimerValue.textContent =
+            "—";
+        }
+        return null;
+      }
+
       const remaining =
         getRouletteBettingSecondsRemaining(
           bettingDeadlineMs,
@@ -806,6 +821,7 @@ export function mountRoulette(app: HTMLDivElement) {
   const updateSpinAvailability = () => {
     if (!spinButton) return;
     spinButton.disabled =
+      !apiSimulationReady ||
       !canStartRouletteSpin(
         page.dataset.phase as RouletteScenePhase,
       ) ||
@@ -1344,6 +1360,81 @@ export function mountRoulette(app: HTMLDivElement) {
     updateSpinAvailability();
   };
 
+  const scheduleApiReadinessRetry = () => {
+    window.clearTimeout(
+      apiReadinessRetryTimer,
+    );
+    apiReadinessRetryTimer =
+      window.setTimeout(() => {
+        void bootstrapRouletteApi();
+      }, 750);
+  };
+
+  const bootstrapRouletteApi = async () => {
+    try {
+      const bootstrap =
+        await rouletteWallet.bootstrap();
+
+      walletBalanceCents =
+        bootstrap.wallet.balanceCents;
+      apiSimulationReady =
+        bootstrap.simulationVersion ===
+        ROULETTE_SIMULATION_VERSION;
+
+      renderWalletBalance();
+
+      if (!apiSimulationReady) {
+        automaticSpinBlocked = false;
+        if (betStatus) {
+          betStatus.textContent =
+            "UPDATING GAME";
+        }
+        renderPhaseTimer();
+        updateSpinAvailability();
+        scheduleApiReadinessRetry();
+        return;
+      }
+
+      automaticSpinBlocked = false;
+
+      if (
+        page.dataset.phase ===
+        "betting"
+      ) {
+        bettingWindowClosed = false;
+        bettingDeadlineMs =
+          performance.now() +
+          ROULETTE_BETTING_WINDOW_MS;
+        page.dataset.bettingLocked =
+          "false";
+        betPanel.setAttribute(
+          "aria-disabled",
+          "false",
+        );
+        if (betStatus) {
+          betStatus.textContent =
+            getRoulettePhaseStatus(
+              "betting",
+            );
+        }
+      }
+
+      renderBetState();
+      renderPhaseTimer();
+      updateSpinAvailability();
+    } catch {
+      apiSimulationReady = false;
+      automaticSpinBlocked = false;
+      if (betStatus) {
+        betStatus.textContent =
+          "CONNECTING";
+      }
+      renderPhaseTimer();
+      updateSpinAvailability();
+      scheduleApiReadinessRetry();
+    }
+  };
+
   const animate = (timestamp: number) => {
     const elapsedMs = timestamp - motionStartedAt;
     let rotorAngularVelocity = 0;
@@ -1497,6 +1588,7 @@ export function mountRoulette(app: HTMLDivElement) {
     source: "manual" | "timer" = "manual",
   ) => {
     if (
+      !apiSimulationReady ||
       activeRotorSpin ||
       activeBallOrbit ||
       !canStartRouletteSpin(
@@ -1580,19 +1672,26 @@ export function mountRoulette(app: HTMLDivElement) {
               : "SPIN FAILED";
       }
 
-      void rouletteWallet
-        .bootstrap()
-        .then((wallet) => {
-          walletBalanceCents =
-            wallet.balanceCents;
-          renderWalletBalance();
-          renderBetState();
-        })
-        .catch(() => {
-          walletBalanceCents = null;
-          renderWalletBalance();
-          updateSpinAvailability();
-        });
+      const replayMismatch =
+        error instanceof Error &&
+        (
+          error.message ===
+            "ROULETTE_SIMULATION_VERSION_MISMATCH" ||
+          error.message ===
+            "ROULETTE_SERVER_RESULT_MISMATCH"
+        );
+
+      if (replayMismatch) {
+        apiSimulationReady = false;
+        automaticSpinBlocked = false;
+      }
+
+      console.error(
+        "[roulette] spin failed",
+        error,
+      );
+
+      void bootstrapRouletteApi();
 
       return;
     }
@@ -1696,20 +1795,7 @@ export function mountRoulette(app: HTMLDivElement) {
   renderBetState();
   renderPhaseTimer();
 
-  void rouletteWallet
-    .bootstrap()
-    .then((wallet) => {
-      walletBalanceCents = wallet.balanceCents;
-      renderWalletBalance();
-      renderBetState();
-    })
-    .catch(() => {
-      walletBalanceCents = null;
-      walletBalanceDisplays.forEach((display) => {
-        display.textContent = "ERR";
-      });
-      updateSpinAvailability();
-    });
+  void bootstrapRouletteApi();
 
   betPanel.addEventListener(
     "click",
