@@ -4956,3 +4956,144 @@ button {
     top: 58% !important;
   }
 }
+
+
+/* Part 15 — menu stacking and HUD clearance hardening */
+@media (max-width: 900px) and (orientation: portrait) {
+  /*
+   * The HUD needs its own guaranteed content box. Do not let the recent strip
+   * visually eat the HUD's bottom border or value descenders.
+   */
+  .roulette-page {
+    --top-hud-height: 44px;
+    --mobile-chrome-gap: 6px;
+    --mobile-chrome-bottom:
+      calc(
+        var(--mobile-safe-top) +
+        var(--top-hud-height) +
+        var(--mobile-chrome-gap) +
+        var(--history-height) +
+        var(--mobile-chrome-gap)
+      );
+  }
+
+  .roulette-top-hud {
+    top: var(--mobile-safe-top) !important;
+    height: var(--top-hud-height) !important;
+    min-height: var(--top-hud-height) !important;
+    overflow: visible !important;
+  }
+
+  .roulette-top-hud__metric {
+    min-height: 0;
+    padding-top: 6px;
+    padding-bottom: 6px;
+    overflow: hidden;
+  }
+
+  .roulette-top-hud__metric > span {
+    line-height: 1.05;
+  }
+
+  .roulette-top-hud__metric > strong {
+    line-height: 1.08;
+  }
+
+  .roulette-recent-strip {
+    top:
+      calc(
+        var(--mobile-safe-top) +
+        var(--top-hud-height) +
+        var(--mobile-chrome-gap)
+      ) !important;
+  }
+
+  /*
+   * Menu is rendered inside roulette-wheel-panel. Raise that whole stacking
+   * context while the menu is open so the betting table can never cut across
+   * the menu.
+   */
+  .roulette-page[data-roulette-menu-open="true"]
+    .roulette-wheel-panel {
+    z-index: 70 !important;
+    pointer-events: auto !important;
+  }
+
+  .roulette-page[data-roulette-menu-open="true"]
+    .roulette-top-hud {
+    z-index: 72 !important;
+  }
+
+  .roulette-page[data-roulette-menu-open="true"]
+    .roulette-settings-menu {
+    z-index: 80 !important;
+    pointer-events: auto !important;
+  }
+
+  .roulette-page[data-roulette-menu-open="true"]
+    .roulette-bet-panel,
+  .roulette-page[data-roulette-menu-open="true"]
+    .roulette-table-layout,
+  .roulette-page[data-roulette-menu-open="true"]
+    .roulette-bet-table {
+    pointer-events: none !important;
+  }
+
+  .roulette-page[data-roulette-menu-open="true"]
+    .roulette-table-layout {
+    filter:
+      brightness(0.48)
+      saturate(0.72) !important;
+  }
+
+  .roulette-settings-menu {
+    top:
+      calc(
+        var(--mobile-safe-top) +
+        var(--top-hud-height) +
+        var(--mobile-chrome-gap) +
+        var(--history-height) +
+        8px
+      ) !important;
+    max-height:
+      calc(
+        100dvh -
+        var(--mobile-safe-top) -
+        var(--top-hud-height) -
+        var(--history-height) -
+        24px
+      );
+    overflow-y: auto;
+    overscroll-behavior: contain;
+  }
+}
+
+@media (max-width: 900px) and (orientation: portrait) and (max-height: 700px) {
+  .roulette-page {
+    --top-hud-height: 42px;
+    --mobile-chrome-gap: 5px;
+  }
+
+  .roulette-top-hud__metric {
+    padding-top: 5px;
+    padding-bottom: 5px;
+  }
+}
+
+@media (max-width: 900px) and (orientation: portrait) and (max-height: 590px) {
+  .roulette-page {
+    --top-hud-height: 40px;
+    --mobile-chrome-gap: 4px;
+  }
+
+  .roulette-top-hud__metric {
+    padding-top: 4px;
+    padding-bottom: 4px;
+  }
+
+  .roulette-settings-menu {
+    width: min(76vw, 258px);
+    gap: 7px;
+    padding: 8px;
+  }
+}
