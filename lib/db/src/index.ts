@@ -1,7 +1,10 @@
 import { drizzle } from "drizzle-orm/node-postgres";
 import pg from "pg";
 import * as schema from "./schema";
-import { resolveSupabaseDatabaseUrl } from "./runtime-config";
+import {
+  isSupabaseDatabaseHost,
+  resolveSupabaseDatabaseUrl,
+} from "./runtime-config";
 
 const { Pool } = pg;
 
@@ -46,8 +49,7 @@ export function resolveDatabaseRuntimeConfig(
     throw new Error("Configured database URL is invalid.");
   }
 
-  const isSupabaseHost =
-    hostname === "supabase.co" || hostname.endsWith(".supabase.co");
+  const isSupabaseHost = isSupabaseDatabaseHost(hostname);
 
   if (useSupabaseDatabase && !isSupabaseHost) {
     throw new Error(
