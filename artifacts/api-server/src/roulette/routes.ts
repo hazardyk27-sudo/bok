@@ -128,34 +128,6 @@ router.put("/roulette/global-bets", async (req, res) => {
   }
 });
 
-router.post("/roulette/spins", async (req, res) => {
-  try {
-    const body = req.body as {
-      bets?: unknown;
-      idempotencyKey?: unknown;
-    };
 
-    if (typeof body.idempotencyKey !== "string") {
-      res.status(400).json({
-        error: "ROULETTE_SPIN_INPUT_REQUIRED",
-      });
-      return;
-    }
-
-    const bets = parseRouletteServerBets(body.bets);
-
-    res.status(201).json(
-      await rouletteRepository.spin(
-        getSessionId(req, res),
-        {
-          bets,
-          idempotencyKey: body.idempotencyKey,
-        },
-      ),
-    );
-  } catch (error) {
-    sendError(res, error);
-  }
-});
 
 export default router;
