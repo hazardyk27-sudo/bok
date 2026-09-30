@@ -490,4 +490,17 @@ describe("cadi kazan route smoke contract", () => {
     expect(visualLockSource).toContain("font-variant-numeric: tabular-nums !important");
   });
 
+
+  it("centers every Advanced paw/skull result on the exact scratch-cell center", () => {
+    expect(visualLockSource).toContain("PASS 38 — ADVANCED 25 follow-up Part 2: exact symbol centering");
+    expect(visualLockSource).toContain(".is-advanced-theme .witch-ticket.is-advanced .witch-cell-artwork");
+    expect(visualLockSource).toContain("left: 50% !important");
+    expect(visualLockSource).toContain("top: 50% !important");
+    expect(visualLockSource).toContain("transform: translate(-50%, -50%) !important");
+    expect(visualLockSource).toContain("object-position: 50% 50% !important");
+    expect(visualLockSource).toContain(".witch-cell.is-safe .witch-cell-artwork");
+    expect(visualLockSource).toContain(".witch-cell.is-bomb .witch-cell-artwork");
+    expect(visualLockSource).toContain(".witch-cell.is-terminal-reveal .witch-cell-artwork");
+  });
+
 });

@@ -6431,3 +6431,72 @@
   pointer-events: none !important;
   box-sizing: border-box !important;
 }
+
+
+/* PASS 38 — ADVANCED 25 follow-up Part 2: exact symbol centering.
+   Use one unambiguous local coordinate system for result content. Paw/skull
+   assets are absolutely centered at 50%/50% inside the measured scratch cell;
+   generic grid alignment, inherited margins and previous transforms cannot
+   offset them. */
+.is-advanced-theme .witch-ticket.is-advanced .witch-cell-result-layer,
+.is-advanced-theme .witch-ticket.is-advanced .witch-cell-content {
+  position: absolute !important;
+  inset: 0 !important;
+  width: 100% !important;
+  height: 100% !important;
+  min-width: 0 !important;
+  min-height: 0 !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  overflow: hidden !important;
+  border-radius: inherit !important;
+  box-sizing: border-box !important;
+}
+
+.is-advanced-theme .witch-ticket.is-advanced .witch-cell-content {
+  display: block !important;
+  place-items: initial !important;
+}
+
+.is-advanced-theme .witch-ticket.is-advanced .witch-cell-artwork,
+.is-advanced-theme .witch-ticket.is-advanced .witch-cell.is-safe .witch-cell-artwork,
+.is-advanced-theme .witch-ticket.is-advanced .witch-cell.is-bomb .witch-cell-artwork {
+  position: absolute !important;
+  inset: auto !important;
+  left: 50% !important;
+  top: 50% !important;
+  right: auto !important;
+  bottom: auto !important;
+  display: block !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  object-fit: contain !important;
+  object-position: 50% 50% !important;
+  transform: translate(-50%, -50%) !important;
+  transform-origin: 50% 50% !important;
+  box-sizing: border-box !important;
+  pointer-events: none !important;
+  user-select: none !important;
+}
+
+.is-advanced-theme .witch-ticket.is-advanced .witch-cell.is-safe .witch-cell-artwork {
+  width: 72% !important;
+  height: 72% !important;
+  max-width: 72% !important;
+  max-height: 72% !important;
+}
+
+.is-advanced-theme .witch-ticket.is-advanced .witch-cell.is-bomb .witch-cell-artwork {
+  width: 76% !important;
+  height: 76% !important;
+  max-width: 76% !important;
+  max-height: 76% !important;
+}
+
+/* Keep terminal-reveal cells on the same exact center as manually scratched cells. */
+.is-advanced-theme .witch-ticket.is-advanced .witch-cell.is-terminal-reveal .witch-cell-artwork,
+.is-advanced-theme .witch-ticket.is-advanced .witch-cell.is-revealed .witch-cell-artwork {
+  left: 50% !important;
+  top: 50% !important;
+  transform: translate(-50%, -50%) !important;
+}
