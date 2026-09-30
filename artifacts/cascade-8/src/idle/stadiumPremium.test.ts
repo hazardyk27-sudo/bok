@@ -135,15 +135,18 @@ describe("Part 26 premium Stadium control surface", () => {
     );
   });
 
-  it("uses a dedicated desktop hero asset and materially larger 16:9 layout", () => {
+  it("uses the stable Stadium hero while keeping the larger 16:9 layout", () => {
     expect(idleIndexSource).toContain(
-      'srcset="/businesses/stadium-desktop.webp"',
+      'src="/businesses/stadium.webp"',
     );
-    expect(idleIndexSource).toContain(
+    expect(idleIndexSource).not.toContain(
+      "stadium-desktop.webp",
+    );
+    expect(idleIndexSource).not.toContain(
       'class="stadium-canonical-hero-media"',
     );
     expect(css).toContain(
-      "desktop scale + dedicated high-quality hero asset",
+      "desktop scale with stable Stadium source",
     );
     expect(css).toContain(
       "width: min(calc(100vw - 16px), 1880px) !important",
