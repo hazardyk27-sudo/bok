@@ -376,6 +376,12 @@ export async function sellStadiumTickets(
           quantityTickets,
         );
 
+        const currentBalanceCents =
+          await ensureSharedWalletForUpdate(
+            client,
+            sessionId,
+          );
+
         const marketTickAt =
           requireReceiptDate(receipt.market_tick_at);
 
@@ -396,7 +402,7 @@ export async function sellStadiumTickets(
                 receipt.sale_remainder_microdollars,
               ),
             balanceCents:
-              Number(receipt.balance_cents),
+              currentBalanceCents,
             market: {
               priceMicrodollars:
                 Number(
