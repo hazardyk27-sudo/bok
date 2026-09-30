@@ -5,9 +5,11 @@ import {
 } from "vitest";
 import {
   formatRouletteAmount,
+  formatRouletteBalance,
   formatRouletteMoney,
   formatRouletteSignedMoney,
   getRouletteAmountScale,
+  getRouletteBalanceScale,
 } from "./uiFormat";
 
 describe("roulette compact amount formatting", () => {
@@ -57,6 +59,30 @@ describe("roulette compact amount formatting", () => {
     expect(
       getRouletteAmountScale(1310000),
     ).toBe("long");
+  });
+
+  it("keeps wallet balance exact and grouped without K/M abbreviations", () => {
+    expect(
+      formatRouletteBalance(30031409),
+    ).toBe("$30,031,409");
+    expect(
+      formatRouletteBalance(1234.5),
+    ).toBe("$1,234.5");
+    expect(
+      formatRouletteBalance(123456789012),
+    ).toBe("$123,456,789,012");
+  });
+
+  it("tightens very long wallet balances instead of overflowing the HUD", () => {
+    expect(
+      getRouletteBalanceScale(999999),
+    ).toBe("normal");
+    expect(
+      getRouletteBalanceScale(30031409),
+    ).toBe("compact");
+    expect(
+      getRouletteBalanceScale(123456789012),
+    ).toBe("tight");
   });
 
   it("adds dollar notation to compact money fields", () => {
