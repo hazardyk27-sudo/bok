@@ -10,6 +10,7 @@ export type SharedWalletInitializationResult = {
   legacyRepairedDefaultCount: number;
   legacyPreservedCount: number;
   ledgerRecoveredCount: number;
+  skippedBecauseAnotherInitializer: boolean;
 };
 
 type WalletBalanceRow = {
@@ -195,9 +196,20 @@ export async function initializeSharedWalletPlatform(): Promise<SharedWalletInit
 
   try {
     await client.query("BEGIN");
-    await client.query(
-      "SELECT pg_advisory_xact_lock(hashtextextended('shared-wallet-platform-v2', 0))",
+    const lock = await client.query<{ locked: boolean }>(
+      "SELECT pg_try_advisory_xact_lock(hashtextextended('shared-wallet-platform-v2', 0)) AS locked",
     );
+
+    if (!lock.rows[0]?.locked) {
+      await client.query("ROLLBACK");
+      return {
+        legacyImportedCount: 0,
+        legacyRepairedDefaultCount: 0,
+        legacyPreservedCount: 0,
+        ledgerRecoveredCount: 0,
+        skippedBecauseAnotherInitializer: true,
+      };
+    }
 
     await ensureLegacyImportStorage(client);
     const legacy = await importLegacyWallets(client);
@@ -207,6 +219,7 @@ export async function initializeSharedWalletPlatform(): Promise<SharedWalletInit
     return {
       ...legacy,
       ledgerRecoveredCount,
+      skippedBecauseAnotherInitializer: false,
     };
   } catch (error) {
     await client.query("ROLLBACK");
