@@ -1,4 +1,4 @@
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 import { chooseHighestBalanceSessionCandidate, chooseSessionIdForWalletMigration, getLegacyScopedSessionPathForRequest, getSessionCookieCandidates } from "./session";
@@ -23,7 +23,19 @@ const idleRoutes = source("../idle/routes.ts");
 const slotRepository = source("../slot/repository.ts");
 const rouletteRepository = source("../roulette/repository.ts");
 const cadiRepository = source("../cadi-kazan/repository.ts");
-const idleRepository = source("../idle/repository.ts");
+const idleRepositoryPath = fileURLToPath(
+  new URL("../idle/repository.ts", import.meta.url),
+);
+const idleWalletSources = existsSync(idleRepositoryPath)
+  ? [source("../idle/repository.ts")]
+  : [
+      source("../idle/stadiumState.ts"),
+      source("../idle/seatPurchase.ts"),
+      source("../idle/stadiumUpgrade.ts"),
+      source("../idle/speedUpgrade.ts"),
+      source("../idle/storageUpgrade.ts"),
+      source("../idle/ticketSale.ts"),
+    ];
 const blackjackPlatform = source("./blackjack.ts");
 const slotSchema = source("../../../../lib/db/src/schema/slot.ts");
 
@@ -111,11 +123,19 @@ describe("canonical shared wallet contract", () => {
       slotRepository,
       rouletteRepository,
       cadiRepository,
-      idleRepository,
       blackjackPlatform,
     ]) {
       expect(repositorySource).toContain("shared_wallets");
       expect(repositorySource).not.toContain("roulette_wallets");
+    }
+
+    for (const idleWalletSource of idleWalletSources) {
+      if (idleWalletSource.includes("SHARED_WALLET_TABLE")) {
+        expect(idleWalletSource).not.toContain("roulette_wallets");
+      } else {
+        expect(idleWalletSource).toContain("shared_wallets");
+        expect(idleWalletSource).not.toContain("roulette_wallets");
+      }
     }
   });
 
