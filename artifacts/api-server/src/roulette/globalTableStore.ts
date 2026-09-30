@@ -265,3 +265,41 @@ export async function getCurrentRouletteGlobalTableSnapshot(
     nowMs,
   );
 }
+
+
+export async function getRouletteGlobalRecentResults(
+  nowMs: number = Date.now(),
+  limit: number = 11,
+) {
+  const safeLimit =
+    Math.max(
+      1,
+      Math.min(
+        50,
+        Math.trunc(limit),
+      ),
+    );
+
+  const result =
+    await pool.query<{
+      winning_number: number;
+    }>(
+      `SELECT winning_number
+       FROM roulette_global_rounds
+       WHERE result_at <= $1
+       ORDER BY result_at DESC
+       LIMIT $2`,
+      [
+        new Date(nowMs),
+        safeLimit,
+      ],
+    );
+
+  return result.rows
+    .map((row) =>
+      Number(
+        row.winning_number,
+      ),
+    )
+    .reverse();
+}

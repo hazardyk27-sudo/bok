@@ -9,10 +9,12 @@ import {
 } from "../../../cascade-8/src/roulette/spinResult";
 import {
   getRouletteGlobalBetForRound,
+  settleRouletteGlobalBetForRoundSession,
   upsertRouletteGlobalBet,
 } from "./globalBetStore";
 import {
   getCurrentRouletteGlobalTableSnapshot,
+  getRouletteGlobalRecentResults,
 } from "./globalTableStore";
 import type {
   RouletteServerBet,
@@ -60,31 +62,53 @@ export class RouletteRepository {
     const serverTimeMs =
       Date.now();
     const [
-      balanceCents,
       globalTable,
+      recentResults,
+    ] =
+      await Promise.all([
+        getCurrentRouletteGlobalTableSnapshot(
+          serverTimeMs,
+        ),
+        getRouletteGlobalRecentResults(
+          serverTimeMs,
+          11,
+        ),
+      ]);
+
+    if (
+      globalTable?.result
+    ) {
+      await settleRouletteGlobalBetForRoundSession(
+        sessionId,
+        globalTable.roundId,
+        serverTimeMs,
+      );
+    }
+
+    const [
+      balanceCents,
+      globalBet,
     ] =
       await Promise.all([
         walletBalance(
           sessionId,
         ),
-        getCurrentRouletteGlobalTableSnapshot(
-          serverTimeMs,
-        ),
+        globalTable
+          ? getRouletteGlobalBetForRound(
+              sessionId,
+              globalTable.roundId,
+            )
+          : Promise.resolve(
+              null,
+            ),
       ]);
-
-    const globalBet =
-      globalTable
-        ? await getRouletteGlobalBetForRound(
-            sessionId,
-            globalTable.roundId,
-          )
-        : null;
 
     return {
       simulationVersion:
         ROULETTE_SIMULATION_VERSION,
       serverTimeMs,
       globalTable,
+      recentResults,
       globalBet:
         globalBet?.globalBet ??
         null,

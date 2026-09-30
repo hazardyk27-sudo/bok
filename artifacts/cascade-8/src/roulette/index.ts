@@ -63,8 +63,6 @@ import {
 } from "./globalClient";
 import {
   ROULETTE_RECENT_RESULT_LIMIT,
-  ROULETTE_RECENT_RESULTS_STORAGE_KEY,
-  appendRouletteRecentResult,
   getRouletteResultTone,
   normalizeRouletteRecentResults,
 } from "./recentResults";
@@ -435,8 +433,6 @@ export function mountRoulette(app: HTMLDivElement) {
     string | null = null;
   let renderedGlobalResultRoundId:
     string | null = null;
-  let recordedGlobalResultRoundId:
-    string | null = null;
   let roundSnapshotCapturedId:
     string | null = null;
   let serverClockOffsetMs = 0;
@@ -455,19 +451,6 @@ export function mountRoulette(app: HTMLDivElement) {
   let activeResultPresentation:
     RouletteResultPresentation | null =
       null;
-
-  try {
-    recentResults =
-      normalizeRouletteRecentResults(
-        JSON.parse(
-          window.localStorage.getItem(
-            ROULETTE_RECENT_RESULTS_STORAGE_KEY,
-          ) ?? "[]",
-        ),
-      );
-  } catch {
-    recentResults = [];
-  }
 
   const rouletteAudio =
     new RouletteAudioEngine();
@@ -642,29 +625,6 @@ export function mountRoulette(app: HTMLDivElement) {
     if (statRed) statRed.textContent = String(redCount);
     if (statBlack) statBlack.textContent = String(blackCount);
     if (statZero) statZero.textContent = String(zeroCount);
-  };
-
-  const recordRecentResult = (
-    number: number,
-  ) => {
-    recentResults =
-      appendRouletteRecentResult(
-        recentResults,
-        number,
-      );
-
-    try {
-      window.localStorage.setItem(
-        ROULETTE_RECENT_RESULTS_STORAGE_KEY,
-        JSON.stringify(
-          recentResults,
-        ),
-      );
-    } catch {
-      // The history remains available for this mounted session.
-    }
-
-    renderRecentResults();
   };
 
   const renderWalletBalance = () => {
@@ -1719,17 +1679,6 @@ export function mountRoulette(app: HTMLDivElement) {
     }
 
     if (
-      recordedGlobalResultRoundId !==
-      table.roundId
-    ) {
-      recordRecentResult(
-        table.result.number,
-      );
-      recordedGlobalResultRoundId =
-        table.roundId;
-    }
-
-    if (
       roundSnapshotCapturedId !==
       table.roundId
     ) {
@@ -1791,6 +1740,11 @@ export function mountRoulette(app: HTMLDivElement) {
       );
     walletBalanceCents =
       bootstrap.wallet.balanceCents;
+    recentResults =
+      normalizeRouletteRecentResults(
+        bootstrap.recentResults,
+      );
+    renderRecentResults();
     globalTableSnapshot =
       bootstrap.globalTable;
     apiSimulationReady =
