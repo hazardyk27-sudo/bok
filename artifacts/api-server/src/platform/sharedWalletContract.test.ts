@@ -119,7 +119,7 @@ describe("canonical shared wallet contract", () => {
     }
   });
 
-  it("prefers a real legacy balance over an untouched canonical default only during migration", () => {
+  it("preserves the highest server-side balance during legacy session convergence", () => {
     expect(chooseSessionIdForWalletMigration({
       canonicalSessionId: "canonical-session-123456",
       legacySessionId: "legacy-session-123456789",
@@ -135,6 +135,14 @@ describe("canonical shared wallet contract", () => {
       legacyBalanceCents: 250_000_000,
       initialBalanceCents: 100_000,
     })).toBe("canonical-session-123456");
+
+    expect(chooseSessionIdForWalletMigration({
+      canonicalSessionId: "small-root-session-123",
+      legacySessionId: "legacy-million-session-123",
+      canonicalBalanceCents: 90_000,
+      legacyBalanceCents: 250_000_000,
+      initialBalanceCents: 100_000,
+    })).toBe("legacy-million-session-123");
   });
 
   it("keeps Slot money storage bigint-safe for high bets and payouts", () => {
