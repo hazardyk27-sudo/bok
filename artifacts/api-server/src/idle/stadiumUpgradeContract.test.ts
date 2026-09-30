@@ -47,12 +47,12 @@ describe("Stadium unlock transaction contract", () => {
   });
 
   it("locks and debits the shared wallet atomically", () => {
-    expect(upgradeSource).toContain("FROM roulette_wallets");
+    expect(upgradeSource).toContain("${SHARED_WALLET_TABLE}");
     expect(upgradeSource).toContain("FOR UPDATE");
     expect(upgradeSource).toContain(
       "balanceCents = upgrade.balanceAfterCents",
     );
-    expect(upgradeSource).toContain("UPDATE roulette_wallets");
+    expect(upgradeSource).toContain("${SHARED_WALLET_TABLE}");
   });
 
   it("uses Stadium action receipts for idempotent replay", () => {
