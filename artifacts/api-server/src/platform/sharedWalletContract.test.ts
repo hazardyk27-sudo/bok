@@ -95,7 +95,7 @@ describe("canonical shared wallet contract", () => {
     ).toBe(true);
   });
 
-  it("discovers every historical game cookie scope before mounting the selected game", () => {
+  it("discovers every historical game cookie scope once per browser profile before mounting the selected game", () => {
     for (const endpoint of [
       "/api/slot/session-converge",
       "/api/roulette/session-converge",
@@ -108,6 +108,24 @@ describe("canonical shared wallet contract", () => {
     expect(sessionConvergenceClient).toContain("for (const endpoint of SESSION_CONVERGENCE_ENDPOINTS)");
     expect(sessionConvergenceApi).toContain("SESSION_CONVERGENCE_ROUTE_PATHS");
     expect(frontendMain).toContain("await convergeLegacyGameSessions()");
+    expect(frontendMain).toContain("window.localStorage.getItem");
+    expect(frontendMain).toContain("window.localStorage.setItem");
+    expect(frontendMain).toContain("oyun-session-convergence-browser-v1");
+  });
+
+  it("avoids a wallet lookup for the steady-state single canonical session", () => {
+    expect(walletSource).toContain("candidates.length === 1");
+    expect(walletSource).toContain("legacySessionId === null");
+    expect(walletSource.indexOf("candidates.length === 1"))
+      .toBeLessThan(walletSource.indexOf("pool.query<WalletBalanceRow>"));
+  });
+
+  it("suppresses successful high-frequency access logs while preserving error logging", () => {
+    expect(appSource).toContain("customLogLevel");
+    expect(appSource).toContain('url === "/api/roulette/state"');
+    expect(appSource).toContain('url === "/api/idle/market/live"');
+    expect(appSource).toContain('return "silent"');
+    expect(appSource).toContain('return "error"');
   });
 
   it("preserves the highest discovered fragmented wallet without summing balances", () => {
