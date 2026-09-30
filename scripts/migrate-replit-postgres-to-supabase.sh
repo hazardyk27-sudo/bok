@@ -23,31 +23,35 @@ if [[ -z "$SOURCE_DATABASE_URL" ]]; then
   exit 2
 fi
 
-if [[ -z "$TARGET_DATABASE_URL" ]]; then
-  echo "ABORT: SUPABASE_DATABASE_URL (target/Supabase) is missing."
-  exit 2
-fi
-
-if [[ "$SOURCE_DATABASE_URL" == "$TARGET_DATABASE_URL" ]]; then
-  echo "ABORT: source and target database URLs are identical."
-  exit 2
-fi
-
 source_host="$(node -e 'try { console.log(new URL(process.argv[1]).hostname) } catch { process.exit(2) }' "$SOURCE_DATABASE_URL")"
-target_host="$(node -e 'try { console.log(new URL(process.argv[1]).hostname) } catch { process.exit(2) }' "$TARGET_DATABASE_URL")"
 
 echo "MODE: $MODE"
 echo "SOURCE_HOST: $source_host"
-echo "TARGET_HOST: $target_host"
-
-if [[ "$target_host" != *"supabase.co" ]]; then
-  echo "ABORT: SUPABASE_DATABASE_URL does not point to a supabase.co host."
-  exit 2
-fi
 
 if [[ "$source_host" == *"supabase.co" ]]; then
   echo "ABORT: DATABASE_URL already points to Supabase; refusing to treat it as the migration source."
   exit 2
+fi
+
+target_host=""
+if [[ "$MODE" == "preflight" || "$MODE" == "copy" ]]; then
+  if [[ -z "$TARGET_DATABASE_URL" ]]; then
+    echo "ABORT: SUPABASE_DATABASE_URL (target/Supabase) is missing."
+    exit 2
+  fi
+
+  if [[ "$SOURCE_DATABASE_URL" == "$TARGET_DATABASE_URL" ]]; then
+    echo "ABORT: source and target database URLs are identical."
+    exit 2
+  fi
+
+  target_host="$(node -e 'try { console.log(new URL(process.argv[1]).hostname) } catch { process.exit(2) }' "$TARGET_DATABASE_URL")"
+  echo "TARGET_HOST: $target_host"
+
+  if [[ "$target_host" != *"supabase.co" ]]; then
+    echo "ABORT: SUPABASE_DATABASE_URL does not point to a supabase.co host."
+    exit 2
+  fi
 fi
 
 psqlq() {
