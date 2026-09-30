@@ -12,6 +12,7 @@ const slotSchema = read("../../../lib/db/src/schema/slot.ts");
 const idleSchema = read("../../../lib/db/src/schema/idle.ts");
 const rouletteSchema = read("../../../lib/db/src/schema/roulette.ts");
 const routesIndex = read("./routes/index.ts");
+const healthRoutes = read("./routes/health.ts");
 const slotRepo = read("./slot/repository.ts");
 const cadiRepo = read("./cadi-kazan/repository.ts");
 const idleRepositoryPath = fileURLToPath(
@@ -171,11 +172,15 @@ describe("backend game isolation", () => {
     );
     expect(localStackScript).toContain('API_PORT="${API_PORT:-8080}"');
     expect(replitSyncScript).toContain(
-      "Waiting for API runtime on 127.0.0.1:8080",
+      "Waiting for API runtime readiness on 127.0.0.1:8080",
     );
     expect(replitSyncScript).toContain(
-      "fetch('http://127.0.0.1:8080/api/healthz')",
+      "fetch('http://127.0.0.1:8080/api/readyz'",
     );
+    expect(replitSyncScript).toContain("AbortSignal.timeout(2000)");
+    expect(localStackScript).toContain("/api/readyz");
+    expect(healthRoutes).toContain('router.get("/readyz"');
+    expect(healthRoutes).toContain('await pool.query("SELECT 1")');
   });
 
   it("does not let shared startup maintenance block the HTTP listener", () => {
