@@ -1,0 +1,20 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+state="${1:-}"
+[[ "$state" == "prepared" ]] || exit 0
+
+if [[ "${OYUN_ALLOW_PREVIEW_REF_UPDATE:-}" == "1" ]]; then
+  exit 0
+fi
+
+protected_branch="$(git config --get oyun.previewProtectedBranch 2>/dev/null || echo integration/replit-preview)"
+protected_ref="refs/heads/$protected_branch"
+
+while read -r _old_oid _new_oid ref_name; do
+  if [[ "$ref_name" == "$protected_ref" ]]; then
+    echo "ABORT: direct update of $protected_ref is blocked in Replit." >&2
+    echo "Use scripts/replit-sync-preview.sh for a verified fast-forward." >&2
+    exit 45
+  fi
+done

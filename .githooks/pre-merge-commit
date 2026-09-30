@@ -1,0 +1,7 @@
+#!/usr/bin/env bash
+set -euo pipefail
+if [[ "$(git config --bool --get oyun.replitReadonly 2>/dev/null || echo false)" == "true" ]]; then
+  echo "ABORT: merge commits are disabled in the shared Replit preview workspace." >&2
+  echo "Only verified fast-forward sync is allowed." >&2
+  exit 43
+fi

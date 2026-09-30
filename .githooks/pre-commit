@@ -1,0 +1,7 @@
+#!/usr/bin/env bash
+set -euo pipefail
+if [[ "$(git config --bool --get oyun.replitReadonly 2>/dev/null || echo false)" == "true" ]]; then
+  echo "ABORT: shared Replit preview is read-only; local commits are disabled." >&2
+  echo "Develop on feature branches, promote in GitHub, then sync the preview." >&2
+  exit 41
+fi

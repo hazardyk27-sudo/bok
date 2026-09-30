@@ -6,6 +6,12 @@ EXPECTED_PREVIEW_SHA="${2:-}"
 BRANCH="integration/replit-preview"
 MAX_ATTEMPTS=3
 
+# Replit is a read-only consumer. Install local-only Git guardrails before
+# every sync; they do not alter tracked files.
+if [[ -f "scripts/install-replit-readonly-guard.sh" ]]; then
+  bash scripts/install-replit-readonly-guard.sh "$REMOTE"
+fi
+
 current_branch="$(git branch --show-current)"
 if [[ "$current_branch" != "$BRANCH" ]]; then
   echo "ABORT: Replit workspace must stay on '$BRANCH'. Current branch: '${current_branch:-DETACHED}'"
@@ -45,7 +51,9 @@ for attempt in $(seq 1 "$MAX_ATTEMPTS"); do
   fi
 
   if [[ "$behind" != "0" ]]; then
-    git merge --ff-only "$remote_ref"
+    # reference-transaction blocks direct preview ref updates. This verified
+    # fast-forward is the sole sanctioned exception.
+    OYUN_ALLOW_PREVIEW_REF_UPDATE=1 git merge --ff-only "$remote_ref"
   fi
 
   # Re-fetch after the merge. If GitHub moved while we were syncing, do not

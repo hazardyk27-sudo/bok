@@ -33,6 +33,8 @@ It must remain on:
 
 Do not develop normal game changes directly in Replit and do not switch the shared Replit workspace to a feature branch.
 
+The shared workspace installs a local Git read-only guard. Tracked hooks reject commits, merge commits, rebases and pushes; a reference-transaction hook also rejects direct updates of `integration/replit-preview`, including commit mechanisms that bypass normal verification hooks. Remote fetch remains enabled. The verified sync helper is the only path allowed to advance the local preview ref.
+
 Forbidden in the shared Replit workspace:
 
 - `git switch feature/...`
@@ -117,6 +119,8 @@ Success criteria are exact:
 - branch prints `integration/replit-preview`
 - ahead/behind prints `0 0`
 - porcelain working-tree status prints nothing
+
+The helper installs/refreshes the read-only guard before syncing and grants a one-command exception only for its verified fast-forward. Push URLs in the Replit clone are intentionally disabled; fetch URLs are unchanged.
 
 If the helper aborts, investigate first. Never replace the failure with hard reset, rebase, force checkout, or force push.
 

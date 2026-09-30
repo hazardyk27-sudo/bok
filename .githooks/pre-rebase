@@ -1,0 +1,6 @@
+#!/usr/bin/env bash
+set -euo pipefail
+if [[ "$(git config --bool --get oyun.replitReadonly 2>/dev/null || echo false)" == "true" ]]; then
+  echo "ABORT: rebasing is disabled in the shared Replit preview workspace." >&2
+  exit 44
+fi
