@@ -13,8 +13,6 @@ import {
 export const AUTH_COOKIE = "fy_auth";
 const GAME_SESSION_COOKIE = "game_session";
 const GAME_SESSION_TTL_MS = 1000 * 60 * 60 * 24 * 365;
-const SESSION_PATTERN = /^[a-f0-9-]{20,80}$/i;
-
 const router: IRouter = Router();
 
 router.use((_req, res, next) => {
@@ -151,17 +149,12 @@ function readPasswordChange(body: unknown) {
   return { currentPassword, newPassword };
 }
 
-function currentOrFreshGameSession(req: { cookies?: Record<string, unknown> }) {
-  const current = req.cookies?.[GAME_SESSION_COOKIE];
-  return typeof current === "string" && SESSION_PATTERN.test(current)
-    ? current
-    : randomUUID();
-}
-
 router.post("/auth/register", async (req, res) => {
   try {
     const { email, username, password } = readRegisterCredentials(req.body);
-    const walletSessionId = currentOrFreshGameSession(req);
+    // Registration always starts a brand-new account identity. Never bind a
+    // newly created account to the browser's existing guest game_session.
+    const walletSessionId = randomUUID();
     const result = await authRepository.register(
       email,
       username,
