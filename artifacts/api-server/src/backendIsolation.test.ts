@@ -10,6 +10,7 @@ const walletSchema = read("../../../lib/db/src/schema/wallet.ts");
 const cadiSchema = read("../../../lib/db/src/schema/cadi-kazan.ts");
 const slotSchema = read("../../../lib/db/src/schema/slot.ts");
 const idleSchema = read("../../../lib/db/src/schema/idle.ts");
+const authSchema = read("../../../lib/db/src/schema/auth.ts");
 const rouletteSchema = read("../../../lib/db/src/schema/roulette.ts");
 const routesIndex = read("./routes/index.ts");
 const healthRoutes = read("./routes/health.ts");
@@ -33,6 +34,8 @@ const slotRoutes = read("./slot/routes.ts");
 const cadiRoutes = read("./cadi-kazan/routes.ts");
 const idleRoutes = read("./idle/routes.ts");
 const rouletteRoutes = read("./roulette/routes.ts");
+const authRoutes = read("./auth/routes.ts");
+const authRepository = read("./auth/repository.ts");
 const blackjackPlatform = read("./platform/blackjack.ts");
 const sessionPlatform = read("./platform/session.ts");
 const walletPlatform = read("./platform/wallet.ts");
@@ -54,6 +57,7 @@ describe("backend game isolation", () => {
     expect(schemaIndex).toContain('export * from "./cadi-kazan";');
     expect(schemaIndex).toContain('export * from "./slot";');
     expect(schemaIndex).toContain('export * from "./idle";');
+    expect(schemaIndex).toContain('export * from "./auth";');
     expect(schemaIndex).toContain('export * from "./blackjack";');
     expect(schemaIndex).toContain('export * from "./roulette";');
   });
@@ -63,6 +67,8 @@ describe("backend game isolation", () => {
     expect(cadiSchema).toContain('"cadi_kazan_rounds"');
     expect(slotSchema).toContain('"slot_rounds"');
     expect(idleSchema).toContain('"idle_business_states"');
+    expect(authSchema).toContain('"users"');
+    expect(authSchema).toContain('"wallet_session_id"');
     expect(rouletteSchema).toContain('"roulette_rounds"');
   });
 
@@ -113,6 +119,19 @@ describe("backend game isolation", () => {
     expect(routesIndex).toContain('from "../idle"');
     expect(routesIndex).toContain('from "../blackjack"');
     expect(routesIndex).toContain('from "../roulette"');
+    expect(routesIndex).toContain('authRouter } from "../auth"');
+    expect(routesIndex).toContain("router.use(authRouter)");
+  });
+
+  it("wires account identity to the canonical shared wallet without a second wallet table", () => {
+    expect(authRoutes).toContain('const GAME_SESSION_COOKIE = "game_session"');
+    expect(authRoutes).toContain('router.post("/auth/register"');
+    expect(authRoutes).toContain('router.post("/auth/login"');
+    expect(authRepository).toContain("INSERT INTO shared_wallets");
+    expect(authRepository).toContain("INNER JOIN shared_wallets");
+    expect(authRepository).not.toContain("auth_wallet");
+    expect(frontendMain).toContain('currentPath === "/account"');
+    expect(frontendMain).toContain('import("./account")');
   });
 
   it("keeps one root-scoped shared game_session identity with legacy migration", () => {
