@@ -17,27 +17,39 @@ describe("scratch result presentation", () => {
       symbol: "",
       label: "",
       resultClass: null,
+      artworkUrl: null,
     });
   });
 
-  it("uses the shared bomb presentation for both modes", () => {
+  it("uses the Standard character artwork presentation after reveal", () => {
     expect(getScratchCellPresentation("STANDARD", true, true)).toEqual({
-      symbol: "●",
-      label: "BOMBA",
+      symbol: "",
+      label: "I AM THE DANGER",
       resultClass: "bomb",
+      artworkUrl: "/cadi-kazan/bcs-danger.webp",
+      artworkAlt: "I AM THE DANGER",
     });
+    expect(getScratchCellPresentation("STANDARD", true, false)).toEqual({
+      symbol: "",
+      label: "SAUL GOODMAN",
+      resultClass: "safe",
+      artworkUrl: "/cadi-kazan/bcs-saul.webp",
+      artworkAlt: "Saul Goodman",
+    });
+  });
+
+  it("keeps the Advanced bomb and lucky-symbol presentation", () => {
     expect(getScratchCellPresentation("ADVANCED", true, true)).toEqual({
       symbol: "●",
       label: "BOMBA",
       resultClass: "bomb",
+      artworkUrl: null,
     });
-  });
-
-  it("uses a premium gold lucky symbol for safe cells", () => {
     expect(getScratchCellPresentation("ADVANCED", true, false)).toEqual({
       symbol: "✦",
       label: "ALTIN",
       resultClass: "safe",
+      artworkUrl: null,
     });
   });
 });

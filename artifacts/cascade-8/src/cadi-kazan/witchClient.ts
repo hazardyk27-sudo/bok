@@ -214,8 +214,8 @@ export const CADI_KAZAN_MARKUP = `
             <div class="witch-bcs-bottombar">NOT TOLL FREE <b>•</b> SE HABLA ESPAÑOL</div>
           </div>
 
-          <div class="witch-office-card-art" aria-hidden="true" style="background-image:url('${OFFICE_CARD_ART_URL}')">
-            <img class="witch-office-card-master" src="${OFFICE_CARD_ART_URL}" alt="" width="1511" height="707" loading="eager" decoding="async" fetchpriority="auto" draggable="false">
+          <div class="witch-office-card-art" aria-hidden="true">
+            <img class="witch-office-card-master" src="${OFFICE_CARD_ART_URL}" alt="" width="1000" height="468" loading="eager" decoding="async" fetchpriority="auto" draggable="false">
           </div>
 
           <header class="witch-ticket-header">

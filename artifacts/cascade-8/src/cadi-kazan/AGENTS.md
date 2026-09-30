@@ -4,7 +4,7 @@ This directory is the Cadı Kazan frontend ownership root.
 
 Cadı Kazan work may modify this directory and the Cadı Kazan API root declared in `.github/game-ownership.json`.
 
-Cadı Kazan work must not modify Slot, Idle, Hub, or shared/platform files during a normal game update.
+Cadı Kazan work must not modify Slot, Roulette, Idle, Hub, or shared/platform files during a normal game update.
 
 The scratch system, styles, route mount, client, and Cadı-specific audio runtime are owned here. A Cadı Kazan commit does not publish itself to Replit; only the central one-game promotion workflow may update the Cadı Kazan slice of `integration/replit-preview`.
 
@@ -16,7 +16,7 @@ The scratch system, styles, route mount, client, and Cadı-specific audio runtim
 - If a task appears to require Hub, another game, wallet/platform, shared router/build/schema files, stop and hand it to the central integration conversation.
 
 ## Milestone continuity
-- Read `Current milestones` before starting substantial work in this category.
+- At the start of a new conversation, read this file and `Current milestones` once. Keep them in context and do not re-read them for each later command unless the rules/milestones actually changed or the conversation switches category/repository.
 - Add a milestone only for durable state that the next agent would otherwise have to rediscover: an important decision, completed phase, validated baseline, major root cause/blocker, or next agreed checkpoint.
 - Do not log routine micro-edits, every commit, raw test output, failed experiments, or temporary observations.
 - Keep the list curated and short (normally 5–10 bullets), newest first. Replace or remove superseded items instead of appending forever.
@@ -26,7 +26,7 @@ The scratch system, styles, route mount, client, and Cadı-specific audio runtim
 - If a note conflicts with code/tests/ownership rules, the validated repository state wins.
 
 ## Current milestones
-- 2026-09-27 — The Office full-PNG render lock — fixed the master art so the complete 1511×707 PNG paints across the full ticket instead of exposing the table under the lower half; the six measured interactive scratch zones are unchanged. The same asset is also kept as the eager async-decoded img for cache/decode performance.\n- 2026-09-27 — The Office PNG delivery optimization — the existing 1511×707 master PNG remains pixel-identical and only 26.7 KB; browser delivery now declares intrinsic dimensions, eager fetch, and asynchronous decode so the asset warms while Cadı Kazan is open without blocking the main render path.
+- 2026-09-30 — The Office approved reference master + monochrome deck theme — the user-approved full Parkour/The Office card now ships as one 1000×468 PNG, all six live scratch zones were re-measured against that exact asset, and OFFICE_MATCH_6 switches the lower deck/buttons to black, white and cool gray. Next: promote and visually verify desktop + mobile scratch registration.
 - 2026-09-27 — The Office master-PNG card shell — the visible Office ticket is now one bundled 1511×707 PNG; legacy CSS-drawn Office/Parkour artwork is hidden, and only six live scratch cells overlay the PNG. Scratch union and all six cells use measured percentage coordinates from the PNG and each cell clips its canvases/debris so scratching cannot spill outside the printed white zones.
 - 2026-09-27 — The Office cutout matte fix — near-black matte pixels around the supplied character JPEGs are converted to transparency at render time, so the characters sit directly on the white scratch-result cells without black rectangles; source artwork sizing and prize badges stay unchanged.
 - 2026-09-27 — The Office scratch UX pass — Office-only result backgrounds are white, no-prize completion now plays a negative cue, Office brush radius is increased another 10% from the prior 1.30× setting to 1.43× baseline, and one continuous pointer drag can scratch across multiple Office cells while Standard/Advanced keep single-cell routing.
