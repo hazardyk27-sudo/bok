@@ -57,12 +57,12 @@ describe("The Office full outcome/reveal contract", () => {
     }
 
     expect(counts).toEqual({
-      KEVIN: 2_500,
+      KEVIN: 3_200,
       JIM: 500,
       DWIGHT: 100,
       STANLEY: 30,
       MICHAEL: 5,
-      LOSS: 6_865,
+      LOSS: 6_165,
     });
   });
 

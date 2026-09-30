@@ -6646,3 +6646,30 @@
     border-radius: 8px !important;
   }
 }
+
+
+/* PASS 40 — THE OFFICE payout ghost-layer cleanup.
+   The Office payout card is already opaque. Disable the inherited backdrop
+   compositor/filter layer that could paint a translucent rectangular surface
+   behind the card in Chromium. Payout geometry/content stays unchanged. */
+.is-office-theme .witch-payout-panel {
+  isolation: isolate !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+  filter: none !important;
+  background-clip: padding-box !important;
+  box-shadow:
+    0 0 0 4px var(--witch-payout-outer-ring),
+    0 14px 28px rgba(0,0,0,.18),
+    inset 0 1px 0 rgba(255,255,255,.92) !important;
+}
+
+.is-office-theme .witch-payout-panel::before,
+.is-office-theme .witch-payout-panel::after {
+  display: none !important;
+  content: none !important;
+  background: none !important;
+  box-shadow: none !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}

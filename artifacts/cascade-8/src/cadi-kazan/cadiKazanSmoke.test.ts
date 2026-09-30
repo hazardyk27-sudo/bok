@@ -519,4 +519,14 @@ describe("cadi kazan route smoke contract", () => {
     expect(visualLockSource).not.toContain(".witch-advanced-card-value");
   });
 
+
+  it("removes the translucent compositor rectangle behind the Office payout card", () => {
+    expect(visualLockSource).toContain("PASS 40 — THE OFFICE payout ghost-layer cleanup");
+    expect(visualLockSource).toContain(".is-office-theme .witch-payout-panel");
+    expect(visualLockSource).toContain("backdrop-filter: none !important");
+    expect(visualLockSource).toContain("-webkit-backdrop-filter: none !important");
+    expect(visualLockSource).toContain(".is-office-theme .witch-payout-panel::before");
+    expect(visualLockSource).toContain(".is-office-theme .witch-payout-panel::after");
+  });
+
 });
