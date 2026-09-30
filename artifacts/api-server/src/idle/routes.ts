@@ -9,6 +9,7 @@ import { upgradeStadiumSpeed } from "./speedUpgrade";
 import { upgradeStadiumStorage } from "./storageUpgrade";
 import { upgradeStadiumLevel } from "./stadiumUpgrade";
 import { getIdleStadiumState } from "./stadiumState";
+import { ensureIdleRuntimeSchema } from "./runtimeSchema";
 
 const router: IRouter = Router();
 const IDEMPOTENCY_PATTERN = /^[a-zA-Z0-9_-]{12,100}$/;
@@ -71,6 +72,16 @@ function sendError(res: Response, error: unknown) {
   res.status(status).json({ error: message });
 }
 
+router.use(async (_req, res, next) => {
+  try {
+    await ensureIdleRuntimeSchema();
+    next();
+  } catch {
+    res.status(503).json({
+      error: "IDLE_RUNTIME_SCHEMA_UNAVAILABLE",
+    });
+  }
+});
 
 router.get("/idle/market", async (_req, res) => {
   try {
