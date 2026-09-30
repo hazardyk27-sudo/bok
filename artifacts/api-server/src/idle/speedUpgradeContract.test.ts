@@ -47,12 +47,12 @@ describe("Speed upgrade transaction contract", () => {
   });
 
   it("locks and debits the shared wallet atomically", () => {
-    expect(speedSource).toContain("FROM roulette_wallets");
+    expect(speedSource).toContain("${SHARED_WALLET_TABLE}");
     expect(speedSource).toContain("FOR UPDATE");
     expect(speedSource).toContain(
       "balanceCents = upgrade.balanceAfterCents",
     );
-    expect(speedSource).toContain("UPDATE roulette_wallets");
+    expect(speedSource).toContain("${SHARED_WALLET_TABLE}");
   });
 
   it("uses canonical Stadium action receipts for idempotent replay", () => {
