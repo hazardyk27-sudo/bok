@@ -275,6 +275,8 @@ Shared/platform milestones live only in this master file and are updated only by
 
 ## 13. Current shared/platform state
 
+- 2026-09-30 — Shared API startup isolation — live Replit diagnosis found the API worker process alive but no HTTP listener on canonical port 8080, causing `/api/healthz` 502 / `ECONNREFUSED` and simultaneously breaking Idle HTTP/SSE, Blackjack HTTP/WebSocket, and Roulette HTTP. The shared HTTP server now begins listening before Blackjack durable runtime recovery/attachment, so a stalled Blackjack recovery cannot take the whole API offline; API shutdown also closes the Postgres pool. Regression coverage locks both the canonical 8080 routing contract and listener-before-Blackjack startup ordering.
+
 - 2026-09-30 — Replit runtime alignment is hardened around the artifact-native API port `8080`: web stays on `20003`, API artifact/Vite proxy/local-stack all use `8080`, and the standard sync helper now runs post-merge setup on advancement, forces API/Vite watcher reloads, and requires `/api/healthz` to recover before declaring sync success. This closes the stale-process failure where Git was current but `/api/*` still served old routes.
 
 - 2026-09-30 — Replit read-only preview guard is merged and verified live: branch `integration/replit-preview`, `core.hooksPath=.githooks`, `oyun.replitReadonly=true`, fetch enabled and pushes blocked. This closes the recurring Replit-local commit divergence problem.
