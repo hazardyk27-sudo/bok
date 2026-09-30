@@ -7,6 +7,9 @@ const read = (relative: string) =>
 
 const schemaIndex = read("../../../lib/db/src/schema/index.ts");
 const walletSchema = read("../../../lib/db/src/schema/wallet.ts");
+const dbRuntime = read("../../../lib/db/src/index.ts");
+const drizzleConfig = read("../../../lib/db/drizzle.config.ts");
+const migrationScript = read("../../../scripts/migrate-replit-postgres-to-supabase.sh");
 const cadiSchema = read("../../../lib/db/src/schema/cadi-kazan.ts");
 const slotSchema = read("../../../lib/db/src/schema/slot.ts");
 const idleSchema = read("../../../lib/db/src/schema/idle.ts");
@@ -183,6 +186,30 @@ describe("backend game isolation", () => {
     expect(apiPackage).toContain("./dev-runner.mjs");
     expect(apiDevRunner).toContain('spawnSync("pnpm", ["run", "build"]');
     expect(apiDevRunner).toContain("dist/index.mjs");
+  });
+
+  it("fails closed on an unverified or implicit Supabase cutover", () => {
+    expect(walletSchema).toContain('"oyun_migration_receipts"');
+    expect(dbRuntime).toContain('USE_SUPABASE_DATABASE === "true"');
+    expect(dbRuntime).toContain(": env.DATABASE_URL;");
+    expect(dbRuntime).not.toContain(
+      "env.DATABASE_URL ?? env.SUPABASE_DATABASE_URL",
+    );
+    expect(drizzleConfig).toContain('USE_SUPABASE_DATABASE === "true"');
+    expect(drizzleConfig).toContain(": process.env.DATABASE_URL;");
+    expect(drizzleConfig).not.toContain(
+      "process.env.DATABASE_URL ?? process.env.SUPABASE_DATABASE_URL",
+    );
+    expect(dbRuntime).toContain("assertDatabaseCutoverReady");
+    expect(dbRuntime).toContain("SUPABASE_CUTOVER_BLOCKED");
+    expect(dbRuntime).toContain("helium_to_supabase_v1");
+    expect(serverIndex).toContain("await assertDatabaseCutoverReady()");
+    expect(serverIndex.indexOf("await assertDatabaseCutoverReady()"))
+      .toBeLessThan(serverIndex.indexOf("server.listen(port"));
+    expect(migrationScript).toContain("oyun_migration_receipts");
+    expect(migrationScript).toContain("VERIFIED_MIGRATION_RECEIPT: yes");
+    expect(migrationScript.indexOf('if [[ "$relation_issues" -ne 0 ]]'))
+      .toBeLessThan(migrationScript.indexOf("VERIFIED_MIGRATION_RECEIPT: yes"));
   });
 
   it("keeps Replit web, API and sync health checks on one API port", () => {
