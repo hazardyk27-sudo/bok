@@ -47,6 +47,52 @@ function rowToPlan(
   };
 }
 
+export async function getRouletteDatabaseNowMs() {
+  const result =
+    await pool.query<{
+      server_now: Date;
+    }>(
+      `SELECT clock_timestamp()
+         AS server_now`,
+    );
+
+  const serverNow =
+    result.rows[0]
+      ?.server_now;
+
+  if (!serverNow) {
+    throw new Error(
+      "ROULETTE_DATABASE_CLOCK_UNAVAILABLE",
+    );
+  }
+
+  return serverNow.getTime();
+}
+
+export async function getRouletteDatabaseNowMsFromClient(
+  client: PoolClient,
+) {
+  const result =
+    await client.query<{
+      server_now: Date;
+    }>(
+      `SELECT clock_timestamp()
+         AS server_now`,
+    );
+
+  const serverNow =
+    result.rows[0]
+      ?.server_now;
+
+  if (!serverNow) {
+    throw new Error(
+      "ROULETTE_DATABASE_CLOCK_UNAVAILABLE",
+    );
+  }
+
+  return serverNow.getTime();
+}
+
 export async function ensureRouletteGlobalTableStorage() {
   await pool.query(
     `CREATE TABLE IF NOT EXISTS roulette_global_rounds (
@@ -243,7 +289,7 @@ export async function insertRouletteGlobalRound(
 }
 
 export async function getCurrentRouletteGlobalTableSnapshot(
-  nowMs: number = Date.now(),
+  nowMs: number,
 ): Promise<RouletteGlobalRoundSnapshot | null> {
   const result =
     await pool.query<RouletteGlobalRoundRow>(
@@ -283,7 +329,7 @@ export async function getCurrentRouletteGlobalTableSnapshot(
 
 
 export async function getRouletteGlobalRecentResults(
-  nowMs: number = Date.now(),
+  nowMs: number,
   limit: number = 11,
 ) {
   const safeLimit =

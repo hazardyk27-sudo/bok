@@ -134,3 +134,11 @@ export function getNextRouletteGlobalBetRevision(
 
   return currentRevision + 1;
 }
+
+
+export function getRouletteGlobalPayoutIdempotencyKey(
+  roundId: string,
+  sessionId: string,
+) {
+  return `global-payout:${roundId}:${sessionId}`;
+}
