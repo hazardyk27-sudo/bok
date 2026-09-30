@@ -367,4 +367,13 @@ describe("cadi kazan route smoke contract", () => {
     expect(visualLockSource).toContain("color: #111315 !important");
   });
 
+
+  it("uses the bundled 1423x557 Office scene only as The Office stage background", () => {
+    expect(visualLockSource).toContain("PASS 32 — THE OFFICE stage background");
+    expect(visualLockSource).toContain('.is-office-theme .witch-stage-shell');
+    expect(visualLockSource).toContain('url("./office/assets/office-stage-background.webp") !important');
+    expect(visualLockSource).toContain('.is-office-theme .witch-table-surface');
+    expect(visualLockSource).toContain('.is-office-theme .witch-payout-panel');
+  });
+
 });
