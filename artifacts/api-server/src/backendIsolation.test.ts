@@ -12,6 +12,7 @@ const slotSchema = read("../../../lib/db/src/schema/slot.ts");
 const idleSchema = read("../../../lib/db/src/schema/idle.ts");
 const rouletteSchema = read("../../../lib/db/src/schema/roulette.ts");
 const routesIndex = read("./routes/index.ts");
+const healthRoutes = read("./routes/health.ts");
 const slotRepo = read("./slot/repository.ts");
 const cadiRepo = read("./cadi-kazan/repository.ts");
 const idleRepositoryPath = fileURLToPath(
@@ -171,27 +172,48 @@ describe("backend game isolation", () => {
     );
     expect(localStackScript).toContain('API_PORT="${API_PORT:-8080}"');
     expect(replitSyncScript).toContain(
-      "Waiting for API runtime on 127.0.0.1:8080",
+      "Waiting for API runtime readiness on 127.0.0.1:8080",
     );
     expect(replitSyncScript).toContain(
-      "fetch('http://127.0.0.1:8080/api/healthz')",
+      "fetch('http://127.0.0.1:8080/api/readyz'",
     );
+    expect(replitSyncScript).toContain("AbortSignal.timeout(2000)");
+    expect(localStackScript).toContain("/api/readyz");
+    expect(healthRoutes).toContain('router.get("/readyz"');
+    expect(healthRoutes).toContain('await pool.query("SELECT 1")');
   });
 
-  it("does not let Blackjack recovery block the shared HTTP listener", () => {
+  it("does not let shared startup maintenance block the HTTP listener", () => {
     const listenAt = serverIndex.indexOf("server.listen(port");
+    const walletInitializationAt = serverIndex.indexOf(
+      "initializeSharedWalletPlatform()",
+    );
     const blackjackAttachAt = serverIndex.indexOf(
       "attachBlackjackPlatformRuntime(server)",
     );
 
     expect(listenAt).toBeGreaterThan(-1);
+    expect(walletInitializationAt).toBeGreaterThan(-1);
     expect(blackjackAttachAt).toBeGreaterThan(-1);
+    expect(listenAt).toBeLessThan(walletInitializationAt);
     expect(listenAt).toBeLessThan(blackjackAttachAt);
+    expect(serverIndex).not.toContain(
+      "await initializeSharedWalletPlatform()",
+    );
     expect(serverIndex).not.toContain(
       "await attachBlackjackPlatformRuntime(server)",
     );
+    expect(serverIndex).toContain("void initializeSharedWalletPlatform()");
     expect(serverIndex).toContain("void attachBlackjackPlatformRuntime(server)");
     expect(serverIndex).toContain("pool.end()");
+  });
+
+  it("never waits indefinitely for the shared-wallet startup advisory lock", () => {
+    expect(walletPlatform).toContain("pg_try_advisory_xact_lock");
+    expect(walletPlatform).not.toContain(
+      "SELECT pg_advisory_xact_lock(hashtextextended('shared-wallet-platform-v2'",
+    );
+    expect(walletPlatform).toContain("skippedBecauseAnotherInitializer: true");
   });
 
   it("wires Blackjack runtime through shared platform entrypoints", () => {

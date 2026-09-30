@@ -19,19 +19,6 @@ if (Number.isNaN(port) || port <= 0) {
   throw new Error(`Invalid PORT value: "${rawPort}"`);
 }
 
-const walletInitialization = await initializeSharedWalletPlatform();
-const migratedWalletCount =
-  walletInitialization.legacyImportedCount
-  + walletInitialization.legacyRepairedDefaultCount
-  + walletInitialization.ledgerRecoveredCount;
-
-if (migratedWalletCount > 0 || walletInitialization.legacyPreservedCount > 0) {
-  logger.warn(
-    walletInitialization,
-    "Initialized canonical shared wallets and retired legacy wallet authority",
-  );
-}
-
 const server = createServer(app);
 let blackjackRuntime: Awaited<
   ReturnType<typeof attachBlackjackPlatformRuntime>
@@ -43,10 +30,46 @@ server.listen(port, () => {
     {
       port,
       blackjack: "STARTING",
+      walletInitialization: "STARTING",
     },
     "Server listening",
   );
 });
+
+// Shared-wallet migration/repair is startup maintenance, not a prerequisite for
+// opening the HTTP socket. Running it after listen prevents a slow/stale
+// initializer from taking every online game offline at once.
+void initializeSharedWalletPlatform()
+  .then((walletInitialization) => {
+    const migratedWalletCount =
+      walletInitialization.legacyImportedCount
+      + walletInitialization.legacyRepairedDefaultCount
+      + walletInitialization.ledgerRecoveredCount;
+
+    if (walletInitialization.skippedBecauseAnotherInitializer) {
+      logger.warn(
+        walletInitialization,
+        "Shared wallet initialization skipped because another initializer owns the lock",
+      );
+      return;
+    }
+
+    if (
+      migratedWalletCount > 0
+      || walletInitialization.legacyPreservedCount > 0
+    ) {
+      logger.warn(
+        walletInitialization,
+        "Initialized canonical shared wallets and retired legacy wallet authority",
+      );
+    }
+  })
+  .catch((error) => {
+    logger.error(
+      { err: error },
+      "Shared wallet startup maintenance failed; HTTP API remains available",
+    );
+  });
 
 // Blackjack is an optional realtime subsystem from the HTTP API's point of
 // view. Its durable recovery must never prevent health, wallet, Idle or

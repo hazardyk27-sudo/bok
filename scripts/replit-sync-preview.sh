@@ -93,10 +93,10 @@ if [[ -n "${REPL_ID:-}" ]]; then
   touch artifacts/api-server/src/index.ts
   touch artifacts/cascade-8/vite.config.ts
 
-  echo "Waiting for API runtime on 127.0.0.1:8080..."
+  echo "Waiting for API runtime readiness on 127.0.0.1:8080..."
   api_ready="false"
   for attempt in $(seq 1 80); do
-    if node -e "fetch('http://127.0.0.1:8080/api/healthz').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"; then
+    if node -e "fetch('http://127.0.0.1:8080/api/readyz',{signal:AbortSignal.timeout(2000)}).then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"; then
       api_ready="true"
       break
     fi
@@ -104,7 +104,7 @@ if [[ -n "${REPL_ID:-}" ]]; then
   done
 
   if [[ "$api_ready" != "true" ]]; then
-    echo "ABORT: API runtime did not become healthy on 127.0.0.1:8080 after sync."
+    echo "ABORT: API runtime did not become ready on 127.0.0.1:8080 after sync."
     exit 11
   fi
 
