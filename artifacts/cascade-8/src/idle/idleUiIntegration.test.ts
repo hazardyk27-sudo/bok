@@ -85,6 +85,24 @@ describe("Part 25 canonical Businesses shell", () => {
       "YENİDEN BAĞLANIYOR",
     );
   });
+  it("keeps the shared total balance visible on the Stadium screen", () => {
+    expect(idleIndexSource).toContain(
+      'class="stadium-canonical-balance"',
+    );
+    expect(idleIndexSource).toContain(
+      "TOPLAM BAKİYE",
+    );
+    expect(idleIndexSource).toContain(
+      "data-idle-balance",
+    );
+    expect(idleIndexSource).toContain(
+      "querySelectorAll<HTMLElement>",
+    );
+    expect(idleIndexSource).toContain(
+      "snapshot.wallet.balanceCents",
+    );
+  });
+
 
   it("includes a responsive canonical Stadium presentation without replacing the approved navy shell", () => {
     expect(idleCssSource).toContain(

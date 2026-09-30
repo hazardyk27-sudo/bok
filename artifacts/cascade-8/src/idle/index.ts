@@ -57,15 +57,17 @@ function setText(
   selector: string,
   value: string,
 ) {
-  const node = root.querySelector<HTMLElement>(
+  const nodes = root.querySelectorAll<HTMLElement>(
     selector,
   );
-  if (!node) {
+  if (nodes.length === 0) {
     throw new Error(
       `IDLE_STADIUM_SHELL_MISSING:${selector}`,
     );
   }
-  node.textContent = value;
+  nodes.forEach((node) => {
+    node.textContent = value;
+  });
 }
 
 export const BUSINESSES_MARKUP = `
@@ -240,6 +242,14 @@ export const BUSINESSES_MARKUP = `
             <small data-idle-stadium-level>
               Lv—
             </small>
+          </div>
+          <div
+            class="stadium-canonical-balance"
+            aria-label="Toplam ortak oyun bakiyesi"
+          >
+            <span>TOPLAM BAKİYE</span>
+            <strong data-idle-balance>—</strong>
+            <small>TÜM OYUNLARDA ORTAK</small>
           </div>
           <div class="stadium-canonical-market">
             <span>CANLI BİLET FİYATI</span>
