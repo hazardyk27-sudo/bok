@@ -6061,3 +6061,126 @@
 .is-office-theme .witch-card-option.is-selected > b {
   color: #ffffff !important;
 }
+
+
+/* PASS 34 — ADVANCED 25 direct master-coordinate registration, Part 1.
+   The previous geometry was correct in source-space but depended on a nested
+   scratch-union wrapper. A later layout rule could enlarge that wrapper, which
+   made each 19%-wide cell look ~25% of the whole card and created the visible
+   extra column/row overflow. Advanced now registers every cell directly in the
+   1200×546 master-card coordinate space. The wrapper is the full ticket and can
+   no longer distort the measured 5×5 map. */
+.is-advanced-theme .witch-ticket.is-advanced > .witch-board-wrap {
+  position: absolute !important;
+  z-index: 5 !important;
+  inset: 0 !important;
+  left: 0 !important;
+  top: 0 !important;
+  right: 0 !important;
+  bottom: 0 !important;
+  width: 100% !important;
+  height: 100% !important;
+  min-width: 0 !important;
+  min-height: 0 !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  overflow: hidden !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  transform: none !important;
+  pointer-events: none !important;
+}
+
+.is-advanced-theme .witch-ticket.is-advanced > .witch-board-wrap > .witch-board {
+  position: absolute !important;
+  inset: 0 !important;
+  display: block !important;
+  width: 100% !important;
+  height: 100% !important;
+  min-width: 0 !important;
+  min-height: 0 !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  overflow: hidden !important;
+  border: 0 !important;
+  background: transparent !important;
+  transform: none !important;
+  pointer-events: none !important;
+}
+
+.is-advanced-theme .witch-ticket.is-advanced .witch-board > .witch-cell {
+  position: absolute !important;
+  right: auto !important;
+  bottom: auto !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  min-width: 0 !important;
+  min-height: 0 !important;
+  box-sizing: border-box !important;
+  overflow: hidden !important;
+  transform: none !important;
+  pointer-events: auto !important;
+}
+
+/* Columns — percentages are direct 1200px master coordinates. */
+.is-advanced-theme .witch-ticket.is-advanced .witch-board > .witch-cell:nth-child(5n + 1) {
+  left: 32.5982% !important;
+  width: 12.1570% !important;
+}
+.is-advanced-theme .witch-ticket.is-advanced .witch-board > .witch-cell:nth-child(5n + 2) {
+  left: 45.5622% !important;
+  width: 12.1032% !important;
+}
+.is-advanced-theme .witch-ticket.is-advanced .witch-board > .witch-cell:nth-child(5n + 3) {
+  left: 58.4723% !important;
+  width: 12.1032% !important;
+}
+.is-advanced-theme .witch-ticket.is-advanced .witch-board > .witch-cell:nth-child(5n + 4) {
+  left: 71.3287% !important;
+  width: 12.1032% !important;
+}
+.is-advanced-theme .witch-ticket.is-advanced .witch-board > .witch-cell:nth-child(5n) {
+  left: 84.2389% !important;
+  width: 12.1032% !important;
+}
+
+/* Rows — percentages are direct 546px master coordinates. */
+.is-advanced-theme .witch-ticket.is-advanced .witch-board > .witch-cell:nth-child(-n + 5) {
+  top: 11.3475% !important;
+  height: 15.1301% !important;
+}
+.is-advanced-theme .witch-ticket.is-advanced .witch-board > .witch-cell:nth-child(n + 6):nth-child(-n + 10) {
+  top: 28.0142% !important;
+  height: 14.8937% !important;
+}
+.is-advanced-theme .witch-ticket.is-advanced .witch-board > .witch-cell:nth-child(n + 11):nth-child(-n + 15) {
+  top: 44.5626% !important;
+  height: 14.6572% !important;
+}
+.is-advanced-theme .witch-ticket.is-advanced .witch-board > .witch-cell:nth-child(n + 16):nth-child(-n + 20) {
+  top: 60.7565% !important;
+  height: 14.5390% !important;
+}
+.is-advanced-theme .witch-ticket.is-advanced .witch-board > .witch-cell:nth-child(n + 21):nth-child(-n + 24) {
+  top: 76.8322% !important;
+  height: 14.6572% !important;
+}
+.is-advanced-theme .witch-ticket.is-advanced .witch-board > .witch-cell:nth-child(25) {
+  top: 76.7140% !important;
+  height: 14.7754% !important;
+}
+
+/* Nothing in the old scratch-union coordinate system may resize this map. */
+@media (min-width: 0px) {
+  .is-advanced-theme .witch-ticket.is-advanced > .witch-board-wrap {
+    inset: 0 !important;
+    left: 0 !important;
+    top: 0 !important;
+    right: 0 !important;
+    bottom: 0 !important;
+    width: 100% !important;
+    height: 100% !important;
+  }
+}

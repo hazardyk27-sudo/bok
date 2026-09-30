@@ -400,4 +400,17 @@ describe("cadi kazan route smoke contract", () => {
     expect(visualLockSource).toContain(".is-office-theme .witch-stake-presets button.is-selected");
   });
 
+
+  it("pins Advanced 25 cells directly to the 1200x546 master instead of a resizable nested union", () => {
+    expect(visualLockSource).toContain("PASS 34 — ADVANCED 25 direct master-coordinate registration, Part 1");
+    expect(visualLockSource).toContain(".is-advanced-theme .witch-ticket.is-advanced > .witch-board-wrap");
+    expect(visualLockSource).toContain("inset: 0 !important");
+    expect(visualLockSource).toContain("left: 32.5982% !important");
+    expect(visualLockSource).toContain("width: 12.1570% !important");
+    expect(visualLockSource).toContain("left: 84.2389% !important");
+    expect(visualLockSource).toContain("top: 11.3475% !important");
+    expect(visualLockSource).toContain("top: 76.7140% !important");
+    expect(visualLockSource).toContain("height: 14.7754% !important");
+  });
+
 });
