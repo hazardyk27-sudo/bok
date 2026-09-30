@@ -5,6 +5,7 @@ version = "1.0.0"
 id = "3B4_FFSkEVBkAeYMFRJ2e"
 
 [[services]]
+# Keep aligned with the web API_PROXY_TARGET and scripts/run-local-stack.sh.
 localPort = 20004
 name = "API Server"
 paths = ["/api"]
