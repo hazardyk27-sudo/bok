@@ -4,6 +4,7 @@ import {
   BLACKJACK_ROUTE,
   BLACKJACK_SHELL_MARKUP,
   BLACKJACK_TABLE_SEAT_NUMBERS,
+  bindBlackjackRealtimeElement,
   bindBlackjackRealtimeView,
   buildBlackjackBettingActionMessage,
   buildBlackjackPlayerActionMessage,
@@ -356,6 +357,73 @@ describe("blackjack responsive table foundation", () => {
     ).toThrow(/exactly five seats/);
   });
 
+
+  it("does not replace the table DOM when a visual refresh produces identical markup", () => {
+    const listeners =
+      new Set<
+        (event: MessageEvent<unknown>) => void
+      >();
+    const socket: BlackjackRealtimeSocketLike = {
+      send: () => undefined,
+      addEventListener: (_type, listener) =>
+        listeners.add(listener),
+      removeEventListener: (_type, listener) =>
+        listeners.delete(listener),
+    };
+    let html = "";
+    let writes = 0;
+    const app = {
+      get innerHTML() {
+        return html;
+      },
+      set innerHTML(value: string) {
+        writes += 1;
+        html = value;
+      },
+    } as HTMLElement;
+
+    const snapshot: BlackjackPublicSnapshotViewSource = {
+      serverTimeMs: 100,
+      tableId: "render-dedupe-table",
+      phase: "TABLE_IDLE",
+      maxSeats: 5,
+      seats: [
+        { seatNumber: 1, playerId: null },
+        { seatNumber: 2, playerId: null },
+        { seatNumber: 3, playerId: null },
+        { seatNumber: 4, playerId: null },
+        { seatNumber: 5, playerId: null },
+      ],
+      players: [],
+      round: null,
+      stateVersion: 1,
+      eventSequence: 1,
+    };
+
+    const controller =
+      bindBlackjackRealtimeElement(
+        app,
+        socket,
+        undefined,
+        () => 100,
+      );
+
+    controller.receive({
+      type: "FULL_TABLE_SNAPSHOT",
+      reason: "EXPLICIT_SYNC",
+      snapshot,
+      resetEventSequenceTo: 1,
+      resetStateVersionTo: 1,
+    });
+
+    expect(writes).toBe(1);
+    expect(
+      controller.rerenderLatest(),
+    ).toBe(true);
+    expect(writes).toBe(1);
+
+    controller.detach();
+  });
 
   it("renders only after an authoritative FULL_TABLE_SNAPSHOT baseline", () => {
     const listeners = new Set<(event: MessageEvent<unknown>) => void>();
