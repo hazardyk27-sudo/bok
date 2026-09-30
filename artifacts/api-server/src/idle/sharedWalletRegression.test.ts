@@ -43,6 +43,11 @@ describe("Idle shared wallet/session compatibility", () => {
     expect(idleRoutes).toContain("wallet_session_id");
     expect(idleRoutes).toContain("createHash(\"sha256\")");
     expect(idleRoutes).toContain("balance_cents");
+    expect(
+      idleRoutes.indexOf("await resolveCookieSessionId(req)")
+    ).toBeLessThan(
+      idleRoutes.indexOf("await resolveAuthenticatedWalletSessionId(req)")
+    );
     expect(idleRoutes).toContain("await getSessionId(req, res)");
   });
 
