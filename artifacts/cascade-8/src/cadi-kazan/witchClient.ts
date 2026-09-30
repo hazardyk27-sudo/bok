@@ -391,6 +391,7 @@ export class WitchClient {
   private readonly terminalRevealTimers = new Set<number>();
   private terminalRevealAnimating = false;
   private readonly scratchSurfaces = new Map<number, ScratchSurface>();
+  private officeRevealQueue: Promise<void> = Promise.resolve();
   private officeScratchPointerId: number | null = null;
   private officeScratchOriginIndex: number | null = null;
   private readonly audio = new AudioManager("cadi-kazan");
@@ -640,6 +641,38 @@ export class WitchClient {
       this.busy = false;
       this.render();
     }
+  }
+
+  private queueOfficeReveal(cellIndex: number) {
+    const task = this.officeRevealQueue
+      .catch(() => undefined)
+      .then(async () => {
+        const before = this.state?.round;
+        if (
+          !before ||
+          before.mode !== "OFFICE_MATCH_6" ||
+          before.status !== "ACTIVE" ||
+          before.revealedCells.includes(cellIndex)
+        ) return;
+
+        this.telemetry.recordScratchCommit(cellIndex);
+        this.lastRevealInput = "pointer";
+        await this.reveal(cellIndex);
+
+        const after = this.state?.round;
+        if (
+          after?.id === before.id &&
+          after.status === "ACTIVE" &&
+          !after.revealedCells.includes(cellIndex)
+        ) {
+          throw new Error("REVEAL_NOT_COMMITTED");
+        }
+      });
+
+    // Keep the queue usable even if one network mutation fails. The caller
+    // still receives the original task rejection so ScratchSurface can retry.
+    this.officeRevealQueue = task.catch(() => undefined);
+    return task;
   }
 
   private async reveal(cellIndex: number) {
@@ -1122,8 +1155,15 @@ export class WitchClient {
               ? OFFICE_SCRATCH_COVER_URL
               : undefined,
           resultReady: isActuallyRevealed,
+          persistentCoverageCommit: round.mode === "OFFICE_MATCH_6",
           onCommit: async () => {
             if (this.state?.round?.revealedCells.includes(index)) return;
+
+            if (round.mode === "OFFICE_MATCH_6") {
+              await this.queueOfficeReveal(index);
+              return;
+            }
+
             if (this.pendingRevealCell !== null || this.busy) throw new Error("ROUND_BUSY");
             this.telemetry.recordScratchCommit(index);
             this.lastRevealInput = "pointer";

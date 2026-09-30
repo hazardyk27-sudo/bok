@@ -51,6 +51,7 @@ export type ScratchSurfaceOptions = {
   resultReady?: boolean;
   layerCanvases?: HTMLCanvasElement[];
   coverImageUrl?: string;
+  persistentCoverageCommit?: boolean;
   onCommit: () => Promise<void>;
 };
 
@@ -63,6 +64,7 @@ export class ScratchSurface {
   private readonly audio?: AudioManager;
   private readonly abrasionConfig: ScratchAbrasionConfig;
   private readonly brushRadiusPx: number;
+  private readonly persistentCoverageCommit: boolean;
   private readonly reducedMotion: boolean;
   private readonly debrisCanvas?: HTMLCanvasElement;
   private readonly debrisContext?: CanvasRenderingContext2D;
@@ -72,6 +74,7 @@ export class ScratchSurface {
   private lastPoint: ScratchPoint | null = null;
   private gestureStartedAt = 0;
   private scratchDistancePx = 0;
+  private accumulatedScratchDistancePx = 0;
   private resultReady = false;
   private resultRequest: Promise<void> | null = null;
   private lastMoveAt = 0;
@@ -126,6 +129,7 @@ export class ScratchSurface {
     const pressure = event.pressure > 0 ? clamp(event.pressure, .35, 1) : .62;
     const angle = Math.atan2(deltaY, deltaX);
     this.scratchDistancePx += distancePx;
+    this.accumulatedScratchDistancePx += distancePx;
 
     const localWidth = Math.max(1, this.interactionCanvas.clientWidth);
     const localHeight = Math.max(1, this.interactionCanvas.clientHeight);
@@ -180,6 +184,7 @@ export class ScratchSurface {
 
     this.abrasionConfig = { ...SCRATCH_ABRASION_CONFIG, ...options.abrasion };
     this.brushRadiusPx = Math.max(8, options.brushRadiusPx ?? DEFAULT_BRUSH_RADIUS_PX);
+    this.persistentCoverageCommit = options.persistentCoverageCommit ?? false;
     this.progress = new ScratchProgressGrid(22, 14, 1, this.abrasionConfig);
     this.onCommit = options.onCommit;
     this.audio = options.audio;
@@ -245,6 +250,7 @@ export class ScratchSurface {
     this.lastPoint = null;
     this.gestureStartedAt = 0;
     this.scratchDistancePx = 0;
+    this.accumulatedScratchDistancePx = 0;
     this.lastMoveAt = 0;
     this.audio?.scratchStop();
     this.brushStep = 0;
@@ -322,6 +328,7 @@ export class ScratchSurface {
     const normalizedPressure = pressure > 0 ? clamp(pressure, .35, 1) : .62;
     const angle = Math.atan2(deltaY, deltaX);
     this.scratchDistancePx += distancePx;
+    this.accumulatedScratchDistancePx += distancePx;
 
     for (const sample of interpolateScratchPoints(previousPoint, point, 0.012)) {
       const depthGain =
@@ -365,12 +372,23 @@ export class ScratchSurface {
   private maybeCommitResult(now: number) {
     if (this.resultReady || this.resultRequest || this.gestureStartedAt <= 0) return;
     const elapsed = now - this.gestureStartedAt;
-    const minimumDistance = Math.max(70, this.interactionCanvas.clientWidth * RESULT_COMMIT_MIN_DISTANCE_FACTOR);
-    if (
-      elapsed < RESULT_COMMIT_MIN_MS
-      || this.scratchDistancePx < minimumDistance
-      || this.progress.coverage < RESULT_COMMIT_MIN_COVERAGE
-    ) return;
+    const width = Math.max(1, this.interactionCanvas.clientWidth);
+    const minimumDistance = Math.max(70, width * RESULT_COMMIT_MIN_DISTANCE_FACTOR);
+    const normalGestureReady =
+      elapsed >= RESULT_COMMIT_MIN_MS &&
+      this.scratchDistancePx >= minimumDistance &&
+      this.progress.coverage >= RESULT_COMMIT_MIN_COVERAGE;
+
+    // Office supports repeated short strokes and a drag that crosses several
+    // cells. Those gestures can legitimately build deep coverage while another
+    // cell is waiting on the server. Do not strand a visibly scratched cell
+    // just because no single stroke met the long anti-spoiler distance gate.
+    const persistentCoverageReady =
+      this.persistentCoverageCommit &&
+      this.progress.coverage >= 0.34 &&
+      this.accumulatedScratchDistancePx >= Math.max(90, width * 0.75);
+
+    if (!normalGestureReady && !persistentCoverageReady) return;
     this.ensureResultCommitted();
   }
 
