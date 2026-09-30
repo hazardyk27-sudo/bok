@@ -42,5 +42,6 @@ If a new game needs a shared route mount or shared shell change, Hub can prepare
 Before commit, run the Hub-owned regression surface and verify changed files stay inside the Hub ownership root.
 
 ## Current milestones
+- 2026-09-30 — Profile card on Hub — the main lounge now has a fifth Profile card styled with the same selector language as the game cards. It reads `/api/auth/me` as presentation-only state: logged-out users see Login/Register, while logged-in users see username, usercode, shared balance and email, then navigate to `/account` for profile/password management.
 - 2026-09-30 — Hub instruction scope standardized — canonical project rules moved to `integration/replit-preview:AGENTS.md`; this file now contains only Hub purpose, ownership, UI/navigation invariants and Hub milestones. Current menu has four live cards: Slot, Roulette, Cadı Kazan and İşletmeler.
 - 2026-09-26 — Isolation v2 active — Hub development stays on `feature/hub`; preview release is ownership-scoped into `integration/replit-preview`, not a whole-branch merge.
