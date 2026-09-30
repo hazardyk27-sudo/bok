@@ -112,4 +112,117 @@ describe("roulette global client clock", () => {
       ),
     ).toBe(10_000);
   });
+
+  it("keeps client phase math stable across one thousand timestamps", () => {
+    const rangeStart =
+      table.bettingOpenAtMs;
+    const rangeEnd =
+      table.nextRoundAtMs -
+      1;
+    const range =
+      rangeEnd -
+      rangeStart;
+
+    for (
+      let index = 0;
+      index < 1_000;
+      index += 1
+    ) {
+      const nowMs =
+        rangeStart +
+        Math.floor(
+          (
+            range *
+            index
+          ) /
+            999,
+        );
+
+      const expectedPhase =
+        nowMs <
+          table.bettingCloseAtMs
+          ? "betting"
+          : nowMs <
+              table.resultAtMs
+            ? "spinning"
+            : "result";
+
+      expect(
+        getRouletteGlobalClientPhase(
+          table,
+          nowMs,
+        ),
+      ).toBe(
+        expectedPhase,
+      );
+
+      if (
+        expectedPhase ===
+        "spinning"
+      ) {
+        expect(
+          getRouletteGlobalSpinElapsedMs(
+            table,
+            nowMs,
+          ),
+        ).toBe(
+          nowMs -
+            table.spinStartedAtMs,
+        );
+      }
+    }
+  });
+
+  it("gives independent viewers the same betting and spin offsets", () => {
+    for (
+      let offset = 0;
+      offset <= 9_000;
+      offset += 250
+    ) {
+      const nowMs =
+        table.spinStartedAtMs +
+        offset;
+
+      expect(
+        getRouletteGlobalSpinElapsedMs(
+          table,
+          nowMs,
+        ),
+      ).toBe(
+        getRouletteGlobalSpinElapsedMs(
+          table,
+          nowMs,
+        ),
+      );
+    }
+
+    for (
+      let offset = 0;
+      offset < 20_000;
+      offset += 250
+    ) {
+      const nowMs =
+        table.bettingOpenAtMs +
+        offset;
+
+      expect(
+        getRouletteGlobalBettingSecondsRemaining(
+          table,
+          nowMs,
+        ),
+      ).toBe(
+        Math.max(
+          0,
+          Math.ceil(
+            (
+              table.bettingCloseAtMs -
+              nowMs
+            ) /
+              1000,
+          ),
+        ),
+      );
+    }
+  });
+
 });
