@@ -1,16 +1,10 @@
 import { logger } from "../lib/logger";
 import router from "./routes";
 import { ticketMarketRuntime } from "./marketRuntimeDb";
+import { ensureIdleRuntimeSchema } from "./runtimeSchema";
 import {
   StadiumActionReceiptCleanupRuntime,
 } from "./stadiumActionReceiptRetention";
-
-void ticketMarketRuntime.start().catch((error) => {
-  logger.error(
-    { err: error },
-    "Unable to start Idle ticket market runtime",
-  );
-});
 
 const stadiumActionReceiptCleanupRuntime =
   new StadiumActionReceiptCleanupRuntime({
@@ -22,7 +16,17 @@ const stadiumActionReceiptCleanupRuntime =
     },
   });
 
-stadiumActionReceiptCleanupRuntime.start();
+void ensureIdleRuntimeSchema()
+  .then(async () => {
+    stadiumActionReceiptCleanupRuntime.start();
+    await ticketMarketRuntime.start();
+  })
+  .catch((error) => {
+    logger.error(
+      { err: error },
+      "Unable to initialize Idle Stadium runtime",
+    );
+  });
 
 const stopIdleRuntime = () => {
   stadiumActionReceiptCleanupRuntime.stop();
