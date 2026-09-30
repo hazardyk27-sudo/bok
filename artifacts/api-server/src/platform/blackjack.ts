@@ -16,7 +16,7 @@ import {
   type BlackjackRealtimeIdentity,
   type BlackjackSnapshotDatabase,
 } from "../blackjack";
-import { SESSION_COOKIE } from "./session";
+import { SESSION_COOKIE, getSessionCookieCandidates } from "./session";
 import { INITIAL_SHARED_BALANCE_CENTS } from "./wallet";
 
 export const BLACKJACK_MAIN_TABLE_ID = "blackjack-main-table" as const;
@@ -61,35 +61,10 @@ function validSessionId(value: string | undefined): value is string {
   return typeof value === "string" && SESSION_PATTERN.test(value);
 }
 
-function parseCookieHeader(
-  header: string | undefined,
-  cookieName: string,
-): string | null {
-  if (!header) return null;
-
-  for (const segment of header.split(";")) {
-    const trimmed = segment.trim();
-    const equalsAt = trimmed.indexOf("=");
-    if (equalsAt <= 0) continue;
-    const name = trimmed.slice(0, equalsAt);
-    if (name !== cookieName) continue;
-    const raw = trimmed.slice(equalsAt + 1);
-    try {
-      return decodeURIComponent(raw);
-    } catch {
-      return raw;
-    }
-  }
-
-  return null;
-}
-
 function readRequestSessionId(request: IncomingMessage): string | null {
-  const sessionId = parseCookieHeader(
-    request.headers.cookie,
-    SESSION_COOKIE,
-  );
-  return validSessionId(sessionId ?? undefined) ? sessionId : null;
+  const candidates = getSessionCookieCandidates(request.headers.cookie);
+  const sessionId = candidates.at(-1);
+  return validSessionId(sessionId) ? sessionId : null;
 }
 
 function getOrCreateHttpSessionId(req: Request, res: Response): string {
