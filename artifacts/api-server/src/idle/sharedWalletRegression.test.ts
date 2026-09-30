@@ -28,7 +28,7 @@ describe("Idle shared wallet/session compatibility", () => {
       '../roulette/routes',
     );
     expect(idleRoutes).toContain(
-      'SHARED_WALLET_TABLE === "shared_wallets"',
+      'String(SHARED_WALLET_TABLE) === "shared_wallets"',
     );
     expect(idleRoutes).toContain('"game_session"');
     expect(idleRoutes).toContain('"roulette_session"');
