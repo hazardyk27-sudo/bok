@@ -13,8 +13,8 @@ for command in node psql pg_dump pg_restore sha256sum cmp diff; do
   fi
 done
 
-if [[ "$MODE" != "preflight" && "$MODE" != "copy" ]]; then
-  echo "ABORT: OYUN_MIGRATION_MODE must be 'preflight' or 'copy'."
+if [[ "$MODE" != "preflight" && "$MODE" != "freeze" && "$MODE" != "copy" && "$MODE" != "status" && "$MODE" != "unfreeze" ]]; then
+  echo "ABORT: OYUN_MIGRATION_MODE must be one of: preflight, freeze, copy, status, unfreeze."
   exit 2
 fi
 
@@ -55,6 +55,65 @@ psqlq() {
   local sql="$2"
   psql "$url" -v ON_ERROR_STOP=1 -qAtX -c "$sql"
 }
+
+source_db_ident() {
+  PGOPTIONS="-c default_transaction_read_only=off" psqlq "$SOURCE_DATABASE_URL"     "select quote_ident(current_database());"
+}
+
+source_default_read_only() {
+  psqlq "$SOURCE_DATABASE_URL" "show default_transaction_read_only;"
+}
+
+freeze_source() {
+  local db_ident
+  db_ident="$(source_db_ident)"
+  echo "FREEZE_DATABASE: $db_ident"
+  PGOPTIONS="-c default_transaction_read_only=off"     psql "$SOURCE_DATABASE_URL" -v ON_ERROR_STOP=1 -qX <<SQL
+alter database $db_ident set default_transaction_read_only = on;
+select pg_terminate_backend(pid)
+from pg_stat_activity
+where datname = current_database()
+  and pid <> pg_backend_pid();
+SQL
+
+  local state
+  state="$(source_default_read_only)"
+  if [[ "$state" != "on" ]]; then
+    echo "ABORT: source write freeze could not be verified."
+    exit 12
+  fi
+  echo "SOURCE_WRITES_FROZEN: yes"
+}
+
+unfreeze_source() {
+  local db_ident
+  db_ident="$(source_db_ident)"
+  PGOPTIONS="-c default_transaction_read_only=off"     psql "$SOURCE_DATABASE_URL" -v ON_ERROR_STOP=1 -qX     -c "alter database $db_ident reset default_transaction_read_only;"
+
+  local state
+  state="$(source_default_read_only)"
+  if [[ "$state" != "off" ]]; then
+    echo "ABORT: source write unfreeze could not be verified."
+    exit 13
+  fi
+  echo "SOURCE_WRITES_FROZEN: no"
+  echo "SOURCE_WRITE_MODE: restored"
+}
+
+if [[ "$MODE" == "status" ]]; then
+  echo "SOURCE_DEFAULT_TRANSACTION_READ_ONLY: $(source_default_read_only)"
+  exit 0
+fi
+
+if [[ "$MODE" == "freeze" ]]; then
+  freeze_source
+  exit 0
+fi
+
+if [[ "$MODE" == "unfreeze" ]]; then
+  unfreeze_source
+  exit 0
+fi
 
 mapfile -t source_tables < <(
   psqlq "$SOURCE_DATABASE_URL" "
@@ -118,12 +177,27 @@ required_target_tables=(
   email_verification_tokens
 )
 
+declare -A source_set=()
+for table in "${source_tables[@]}"; do
+  source_set["$table"]=1
+done
+
+missing_required_source=()
 missing_required_target=()
 for table in "${required_target_tables[@]}"; do
+  if [[ -z "${source_set[$table]:-}" ]]; then
+    missing_required_source+=("$table")
+  fi
   if [[ -z "${target_set[$table]:-}" ]]; then
     missing_required_target+=("$table")
   fi
 done
+
+if [[ "${#missing_required_source[@]}" -gt 0 ]]; then
+  echo "ABORT: source Helium DB is missing required OYUN table(s): ${missing_required_source[*]}"
+  echo "Do not migrate yet; first bring the live source schema up to the current repository contract."
+  exit 4
+fi
 
 if [[ "${#missing_required_target[@]}" -gt 0 ]]; then
   echo "ABORT: Supabase target is missing required OYUN table(s): ${missing_required_target[*]}"
@@ -277,11 +351,19 @@ if [[ "$MODE" == "preflight" ]]; then
   exit 0
 fi
 
-if [[ "$WRITES_FROZEN" != "yes" ]]; then
-  echo "ABORT: copy mode requires OYUN_SOURCE_WRITES_FROZEN=yes."
-  echo "Stop/freeze API and background writers first; then run the exact copy command."
+source_ro="$(source_default_read_only)"
+if [[ "$source_ro" != "on" ]]; then
+  echo "ABORT: copy mode requires the source database itself to be read-only."
+  echo "Run OYUN_MIGRATION_MODE=freeze first. An environment flag alone is not accepted."
   exit 6
 fi
+
+if [[ "$WRITES_FROZEN" != "yes" ]]; then
+  echo "ABORT: copy mode additionally requires OYUN_SOURCE_WRITES_FROZEN=yes as an operator acknowledgement."
+  exit 6
+fi
+
+echo "SOURCE_DATABASE_READ_ONLY: verified"
 
 if [[ "$target_nonempty" -ne 0 ]]; then
   echo "ABORT: target contains data. Refusing to merge or overwrite automatically."
@@ -445,3 +527,4 @@ echo "SOURCE_UNCHANGED_BY_SCRIPT: yes"
 echo "MANIFEST_DIR: $manifest_dir"
 echo "DUMP_PATH: $dump_path"
 echo "NEXT: keep source frozen; only central cutover may enable USE_SUPABASE_DATABASE=true."
+echo "ROLLBACK_ONLY_IF_NEEDED: OYUN_MIGRATION_MODE=unfreeze bash scripts/migrate-replit-postgres-to-supabase.sh"
