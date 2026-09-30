@@ -1,12 +1,13 @@
 import { defineConfig } from "drizzle-kit";
 import path from "path";
+import { resolveSupabaseDatabaseUrl } from "./src/runtime-config";
 
 const useSupabaseDatabase = process.env.USE_SUPABASE_DATABASE === "true";
-const databaseUrl = useSupabaseDatabase
+const configuredDatabaseUrl = useSupabaseDatabase
   ? process.env.SUPABASE_DATABASE_URL
   : process.env.DATABASE_URL;
 
-if (!databaseUrl) {
+if (!configuredDatabaseUrl) {
   throw new Error(
     useSupabaseDatabase
       ? "USE_SUPABASE_DATABASE=true requires SUPABASE_DATABASE_URL."
@@ -14,9 +15,17 @@ if (!databaseUrl) {
   );
 }
 
+let databaseUrl = configuredDatabaseUrl;
 let hostname: string;
+
 try {
-  hostname = new URL(databaseUrl).hostname.toLowerCase();
+  if (useSupabaseDatabase) {
+    const resolved = resolveSupabaseDatabaseUrl(configuredDatabaseUrl);
+    databaseUrl = resolved.connectionString;
+    hostname = resolved.hostname;
+  } else {
+    hostname = new URL(configuredDatabaseUrl).hostname.toLowerCase();
+  }
 } catch {
   throw new Error("Configured database URL is invalid.");
 }
