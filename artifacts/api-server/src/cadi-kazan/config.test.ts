@@ -10,6 +10,7 @@ import {
   getSafeCellCount,
   getVisibleBombCells,
   getVisibleOfficeCells,
+  getVisibleRevealedCells,
 } from "./types";
 
 describe("Cadı Kazan payout configuration", () => {
@@ -52,6 +53,15 @@ describe("Cadı Kazan payout configuration", () => {
     expect(getVisibleBombCells("CASHED_OUT", [1, 4, 9])).toEqual([1, 4, 9]);
     expect(getVisibleBombCells("BUST", [1])).toEqual([1]);
     expect(getVisibleBombCells("COMPLETED", [0, 24])).toEqual([0, 24]);
+  });
+
+
+  it("exposes all 25 Advanced cells after BUST while keeping active play redacted", () => {
+    expect(getVisibleRevealedCells("ADVANCED", "ACTIVE", 25, [2, 7])).toEqual([2, 7]);
+    expect(getVisibleRevealedCells("ADVANCED", "BUST", 25, [2, 7, 11])).toEqual(
+      Array.from({ length: 25 }, (_, index) => index),
+    );
+    expect(getVisibleRevealedCells("STANDARD", "BUST", 5, [1])).toEqual([1]);
   });
 
   it("keeps cash-out amount calculation server-owned", () => {

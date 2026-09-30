@@ -2,11 +2,11 @@ import { randomInt } from "node:crypto";
 
 export const OFFICE_MATCH_CELL_COUNT = 6;
 export const OFFICE_MATCH_REQUIRED_MATCHES = 3;
-export const OFFICE_MATCH_TARGET_RTP_BPS = 9_600;
+export const OFFICE_MATCH_TARGET_RTP_BPS = 11_000;
 export const OFFICE_MATCH_ROLL_SCALE = 10_000;
 
 export const OFFICE_MATCH_SYMBOLS = [
-  { id: "KEVIN", label: "Kevin", multiplierBps: 200, winWeightBps: 2_500, special: false },
+  { id: "KEVIN", label: "Kevin", multiplierBps: 200, winWeightBps: 3_200, special: false },
   { id: "JIM", label: "Jim", multiplierBps: 500, winWeightBps: 500, special: false },
   { id: "DWIGHT", label: "Dwight", multiplierBps: 1_000, winWeightBps: 100, special: false },
   { id: "STANLEY", label: "Stanley", multiplierBps: 2_000, winWeightBps: 30, special: false },

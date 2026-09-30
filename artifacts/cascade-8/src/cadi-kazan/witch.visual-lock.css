@@ -6371,10 +6371,9 @@
 }
 
 
-/* PASS 37 — ADVANCED 25 Part 1: terminal reveal + centered table placement + card value.
-   Advanced keeps the validated 1200×546 scratch map. This pass only locks the
-   whole ticket to the shared table center and places a responsive stake badge
-   over the old cat silhouette in the moon area. */
+/* PASS 37 — ADVANCED 25 Part 1: terminal reveal + centered table placement.
+   Advanced keeps the validated 1200×546 scratch map and stays centered in the
+   shared table surface. The temporary stake badge experiment was reverted. */
 .is-advanced-theme .witch-table-surface {
   display: grid !important;
   place-items: center !important;
@@ -6399,38 +6398,6 @@
   overflow: hidden !important;
 }
 
-/* Covers the printed cat silhouette while preserving the surrounding moon. */
-.is-advanced-theme .witch-advanced-card-value {
-  position: absolute !important;
-  z-index: 7 !important;
-  left: 12.05% !important;
-  top: 6.4% !important;
-  display: grid !important;
-  place-items: center !important;
-  width: 13.9% !important;
-  aspect-ratio: 1 / 1 !important;
-  padding: 8% !important;
-  overflow: hidden !important;
-  border: clamp(1px, .16cqw, 2px) solid rgba(239, 193, 83, .92) !important;
-  border-radius: 50% !important;
-  color: #fff1c5 !important;
-  background:
-    radial-gradient(circle at 50% 38%, #2a261c 0%, #12110d 56%, #050606 100%) !important;
-  box-shadow:
-    inset 0 0 0 1px rgba(255,255,255,.055),
-    0 3px 10px rgba(0,0,0,.42) !important;
-  font-family: "DM Sans", Arial, sans-serif !important;
-  font-size: clamp(11px, 2.15cqw, 30px) !important;
-  line-height: .95 !important;
-  font-weight: 900 !important;
-  font-variant-numeric: tabular-nums !important;
-  letter-spacing: -.055em !important;
-  text-align: center !important;
-  text-shadow: 0 2px 4px rgba(0,0,0,.72) !important;
-  white-space: nowrap !important;
-  pointer-events: none !important;
-  box-sizing: border-box !important;
-}
 
 
 /* PASS 38 — ADVANCED 25 follow-up Part 2: exact symbol centering.
@@ -6678,4 +6645,31 @@
     min-height: 30px !important;
     border-radius: 8px !important;
   }
+}
+
+
+/* PASS 40 — THE OFFICE payout ghost-layer cleanup.
+   The Office payout card is already opaque. Disable the inherited backdrop
+   compositor/filter layer that could paint a translucent rectangular surface
+   behind the card in Chromium. Payout geometry/content stays unchanged. */
+.is-office-theme .witch-payout-panel {
+  isolation: isolate !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+  filter: none !important;
+  background-clip: padding-box !important;
+  box-shadow:
+    0 0 0 4px var(--witch-payout-outer-ring),
+    0 14px 28px rgba(0,0,0,.18),
+    inset 0 1px 0 rgba(255,255,255,.92) !important;
+}
+
+.is-office-theme .witch-payout-panel::before,
+.is-office-theme .witch-payout-panel::after {
+  display: none !important;
+  content: none !important;
+  background: none !important;
+  box-shadow: none !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
 }

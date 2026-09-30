@@ -29,38 +29,38 @@ function counts(values: string[]) {
 }
 
 describe("The Office 6-cell outcome engine", () => {
-  it("locks the approved 2x/5x/10x/20x/100x paytable at 96% RTP", () => {
+  it("locks the approved 2x/5x/10x/20x/100x paytable at 110% RTP", () => {
     expect(OFFICE_MATCH_SYMBOLS.map(({ id, multiplierBps, winWeightBps, special }) => ({
       id,
       multiplierBps,
       winWeightBps,
       special,
     }))).toEqual([
-      { id: "KEVIN", multiplierBps: 200, winWeightBps: 2_500, special: false },
+      { id: "KEVIN", multiplierBps: 200, winWeightBps: 3_200, special: false },
       { id: "JIM", multiplierBps: 500, winWeightBps: 500, special: false },
       { id: "DWIGHT", multiplierBps: 1_000, winWeightBps: 100, special: false },
       { id: "STANLEY", multiplierBps: 2_000, winWeightBps: 30, special: false },
       { id: "MICHAEL", multiplierBps: 10_000, winWeightBps: 5, special: true },
     ]);
 
-    expect(OFFICE_MATCH_WIN_RATE_BPS).toBe(3_135);
-    expect(OFFICE_MATCH_LOSS_WEIGHT_BPS).toBe(6_865);
+    expect(OFFICE_MATCH_WIN_RATE_BPS).toBe(3_835);
+    expect(OFFICE_MATCH_LOSS_WEIGHT_BPS).toBe(6_165);
     expect(OFFICE_MATCH_WIN_RATE_BPS + OFFICE_MATCH_LOSS_WEIGHT_BPS).toBe(OFFICE_MATCH_ROLL_SCALE);
     expect(getOfficeMatchTheoreticalRtpBps()).toBe(OFFICE_MATCH_TARGET_RTP_BPS);
   });
 
   it("maps the exact 10,000-roll boundaries to the intended outcomes", () => {
     expect(selectOfficeMatchOutcome(0)).toMatchObject({ symbolId: "KEVIN", multiplierBps: 200 });
-    expect(selectOfficeMatchOutcome(2_499)).toMatchObject({ symbolId: "KEVIN", multiplierBps: 200 });
-    expect(selectOfficeMatchOutcome(2_500)).toMatchObject({ symbolId: "JIM", multiplierBps: 500 });
-    expect(selectOfficeMatchOutcome(2_999)).toMatchObject({ symbolId: "JIM", multiplierBps: 500 });
-    expect(selectOfficeMatchOutcome(3_000)).toMatchObject({ symbolId: "DWIGHT", multiplierBps: 1_000 });
-    expect(selectOfficeMatchOutcome(3_099)).toMatchObject({ symbolId: "DWIGHT", multiplierBps: 1_000 });
-    expect(selectOfficeMatchOutcome(3_100)).toMatchObject({ symbolId: "STANLEY", multiplierBps: 2_000 });
-    expect(selectOfficeMatchOutcome(3_129)).toMatchObject({ symbolId: "STANLEY", multiplierBps: 2_000 });
-    expect(selectOfficeMatchOutcome(3_130)).toMatchObject({ symbolId: "MICHAEL", multiplierBps: 10_000 });
-    expect(selectOfficeMatchOutcome(3_134)).toMatchObject({ symbolId: "MICHAEL", multiplierBps: 10_000 });
-    expect(selectOfficeMatchOutcome(3_135)).toEqual({ kind: "LOSS", multiplierBps: 0, symbolId: null });
+    expect(selectOfficeMatchOutcome(3_199)).toMatchObject({ symbolId: "KEVIN", multiplierBps: 200 });
+    expect(selectOfficeMatchOutcome(3_200)).toMatchObject({ symbolId: "JIM", multiplierBps: 500 });
+    expect(selectOfficeMatchOutcome(3_699)).toMatchObject({ symbolId: "JIM", multiplierBps: 500 });
+    expect(selectOfficeMatchOutcome(3_700)).toMatchObject({ symbolId: "DWIGHT", multiplierBps: 1_000 });
+    expect(selectOfficeMatchOutcome(3_799)).toMatchObject({ symbolId: "DWIGHT", multiplierBps: 1_000 });
+    expect(selectOfficeMatchOutcome(3_800)).toMatchObject({ symbolId: "STANLEY", multiplierBps: 2_000 });
+    expect(selectOfficeMatchOutcome(3_829)).toMatchObject({ symbolId: "STANLEY", multiplierBps: 2_000 });
+    expect(selectOfficeMatchOutcome(3_830)).toMatchObject({ symbolId: "MICHAEL", multiplierBps: 10_000 });
+    expect(selectOfficeMatchOutcome(3_834)).toMatchObject({ symbolId: "MICHAEL", multiplierBps: 10_000 });
+    expect(selectOfficeMatchOutcome(3_835)).toEqual({ kind: "LOSS", multiplierBps: 0, symbolId: null });
     expect(selectOfficeMatchOutcome(9_999)).toEqual({ kind: "LOSS", multiplierBps: 0, symbolId: null });
   });
 

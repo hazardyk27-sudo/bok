@@ -22,6 +22,7 @@ import {
   getSafeCellCount,
   getVisibleBombCells,
   getVisibleOfficeCells,
+  getVisibleRevealedCells,
 } from "./types";
 
 type CadiRoundRow = {
@@ -136,13 +137,19 @@ function toSnapshot(row: CadiRoundRow): CadiKazanRoundSnapshot {
   const bombIndices = safeNumberArray(row.bomb_indices);
   const officeCells = safeOfficeSymbolArray(row.office_cells);
   const revealedCells = safeNumberArray(row.revealed_cells);
+  const visibleRevealedCells = getVisibleRevealedCells(
+    row.mode,
+    row.status,
+    Number(row.cell_count),
+    revealedCells,
+  );
   return {
     id: row.id,
     mode: row.mode,
     alarmCount: Number(row.alarm_count),
     cellCount: Number(row.cell_count),
     stakeCents: Number(row.stake_cents),
-    revealedCells,
+    revealedCells: visibleRevealedCells,
     revealedSafeCount: Number(row.revealed_safe_count),
     currentMultiplierBps: Number(row.current_multiplier_bps),
     currentCashoutCents: getCashoutPayoutCents(Number(row.stake_cents), Number(row.current_multiplier_bps)),
