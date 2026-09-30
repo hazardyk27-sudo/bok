@@ -73,6 +73,7 @@ describe("Storage upgrade transaction contract", () => {
     );
     expect(storageSource).toContain("target_level");
     expect(storageSource).toContain("replayed: true");
+    expect(storageSource).toContain("currentBalanceCents");
     expect(storageSource).toContain(
       'throw new Error("IDEMPOTENCY_KEY_REUSED")',
     );
