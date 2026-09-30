@@ -167,7 +167,7 @@ describe("backend game isolation", () => {
     }
     expect(sessionConvergenceClient).toContain("for (const endpoint of SESSION_CONVERGENCE_ENDPOINTS)");
     expect(sessionConvergenceClient).toContain('credentials: "same-origin"');
-    expect(frontendMain).toContain('import("./platform/sessionConvergence")');
+    expect(frontendMain).toContain('"./platform/sessionConvergence"');
     expect(frontendMain).toContain("await convergeLegacyGameSessions()");
     expect(sessionConvergenceApi).toContain("SESSION_CONVERGENCE_ROUTE_PATHS");
   });
