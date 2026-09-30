@@ -20,6 +20,7 @@ frontend \
 
 backend \
   src/backendIsolation.test.ts \
+  src/slot/highStakeRegression.test.ts \
   src/cadi-kazan/config.test.ts \
   src/cadi-kazan/officeMatchFlow.test.ts \
   src/idle/policy.test.ts \
