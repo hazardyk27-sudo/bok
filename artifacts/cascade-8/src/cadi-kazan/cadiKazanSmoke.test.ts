@@ -413,4 +413,18 @@ describe("cadi kazan route smoke contract", () => {
     expect(visualLockSource).toContain("height: 14.7754% !important");
   });
 
+
+  it("locks Advanced scratch canvases and paw/skull art inside each measured cell", () => {
+    expect(visualLockSource).toContain("PASS 35 — ADVANCED 25 cell-local scratch/result lock, Part 2");
+    expect(visualLockSource).toContain(".is-advanced-theme .witch-ticket.is-advanced .witch-board > .witch-cell > .witch-scratch-layer");
+    expect(visualLockSource).toContain(".is-advanced-theme .witch-ticket.is-advanced .witch-board > .witch-cell > .witch-debris-canvas");
+    expect(visualLockSource).toContain("border-radius: 9% / 17% !important");
+    expect(visualLockSource).toContain(".is-advanced-theme .witch-ticket.is-advanced .witch-cell-artwork");
+    expect(visualLockSource).toContain("justify-self: center !important");
+    expect(visualLockSource).toContain("align-self: center !important");
+    expect(visualLockSource).toContain("object-position: 50% 50% !important");
+    expect(visualLockSource).toContain("width: 72% !important");
+    expect(visualLockSource).toContain(".is-advanced-theme .witch-ticket.is-advanced .witch-cell.is-bomb .witch-cell-artwork");
+  });
+
 });

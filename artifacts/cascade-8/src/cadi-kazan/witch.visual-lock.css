@@ -6184,3 +6184,145 @@
     height: 100% !important;
   }
 }
+
+
+/* PASS 35 — ADVANCED 25 cell-local scratch/result lock, Part 2.
+   Every visual/interaction layer is now local to one measured master-card
+   rectangle. No inherited grid sizing, transforms or generic scratch geometry
+   may move a canvas/result outside its card cell. Paw/skull art is centered in
+   the exact reveal box and preserves its aspect ratio. */
+.is-advanced-theme .witch-ticket.is-advanced .witch-board > .witch-cell {
+  display: block !important;
+  isolation: isolate !important;
+  border: 0 !important;
+  border-radius: 9% / 17% !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  contain: layout paint !important;
+}
+
+/* Result stage stays exactly inside the card's printed rectangle. */
+.is-advanced-theme .witch-ticket.is-advanced .witch-board > .witch-cell > .witch-cell-result-layer {
+  position: absolute !important;
+  z-index: 1 !important;
+  inset: 0 !important;
+  display: grid !important;
+  place-items: center !important;
+  width: 100% !important;
+  height: 100% !important;
+  min-width: 0 !important;
+  min-height: 0 !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  overflow: hidden !important;
+  border: 0 !important;
+  border-radius: inherit !important;
+  box-sizing: border-box !important;
+  transform: none !important;
+}
+
+/* All three scratch canvases + debris use the identical local box. */
+.is-advanced-theme .witch-ticket.is-advanced .witch-board > .witch-cell > .witch-scratch-layer,
+.is-advanced-theme .witch-ticket.is-advanced .witch-board > .witch-cell > .witch-debris-canvas {
+  position: absolute !important;
+  inset: 0 !important;
+  width: 100% !important;
+  height: 100% !important;
+  min-width: 0 !important;
+  min-height: 0 !important;
+  max-width: none !important;
+  max-height: none !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  overflow: hidden !important;
+  border: 0 !important;
+  border-radius: inherit !important;
+  box-sizing: border-box !important;
+  transform: none !important;
+}
+
+/* Preserve the intended interaction stack. */
+.is-advanced-theme .witch-ticket.is-advanced .witch-board > .witch-cell > .witch-scratch-layer-base {
+  z-index: 3 !important;
+  pointer-events: none !important;
+}
+.is-advanced-theme .witch-ticket.is-advanced .witch-board > .witch-cell > .witch-scratch-layer-foil {
+  z-index: 4 !important;
+  pointer-events: none !important;
+}
+.is-advanced-theme .witch-ticket.is-advanced .witch-board > .witch-cell > .witch-scratch-layer-lacquer {
+  z-index: 5 !important;
+  pointer-events: auto !important;
+}
+.is-advanced-theme .witch-ticket.is-advanced .witch-board > .witch-cell > .witch-debris-canvas {
+  z-index: 6 !important;
+  pointer-events: none !important;
+}
+
+/* The artwork stage itself has no legacy sculpture dimensions or transforms. */
+.is-advanced-theme .witch-ticket.is-advanced .witch-cell-content {
+  position: absolute !important;
+  inset: 0 !important;
+  z-index: 2 !important;
+  display: grid !important;
+  place-items: center !important;
+  width: 100% !important;
+  height: 100% !important;
+  min-width: 0 !important;
+  min-height: 0 !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  overflow: hidden !important;
+  border: 0 !important;
+  border-radius: inherit !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  transform: none !important;
+}
+
+.is-advanced-theme .witch-ticket.is-advanced .witch-cell-content::before,
+.is-advanced-theme .witch-ticket.is-advanced .witch-cell-content::after,
+.is-advanced-theme .witch-ticket.is-advanced .witch-cell-aura,
+.is-advanced-theme .witch-ticket.is-advanced .witch-cell-result-label {
+  display: none !important;
+  content: none !important;
+}
+
+/* Paw/skull: centered, contained and consistently scaled inside every cell. */
+.is-advanced-theme .witch-ticket.is-advanced .witch-cell-artwork {
+  position: static !important;
+  display: block !important;
+  justify-self: center !important;
+  align-self: center !important;
+  width: 72% !important;
+  height: 72% !important;
+  max-width: 72% !important;
+  max-height: 72% !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  object-fit: contain !important;
+  object-position: 50% 50% !important;
+  border: 0 !important;
+  background: transparent !important;
+  transform: none !important;
+  transform-origin: center center !important;
+  pointer-events: none !important;
+  user-select: none !important;
+}
+
+.is-advanced-theme .witch-ticket.is-advanced .witch-cell.is-bomb .witch-cell-artwork {
+  width: 76% !important;
+  height: 76% !important;
+  max-width: 76% !important;
+  max-height: 76% !important;
+}
+
+/* Revealed backgrounds remain inside the printed gold frame instead of
+   painting or shadowing outside the rectangle. */
+.is-advanced-theme .witch-ticket.is-advanced .witch-cell.is-safe .witch-cell-result-layer,
+.is-advanced-theme .witch-ticket.is-advanced .witch-cell.is-bomb .witch-cell-result-layer {
+  border-radius: inherit !important;
+  box-shadow:
+    inset 0 0 0 1px rgba(230, 180, 72, .44),
+    inset 0 0 16px rgba(0,0,0,.56) !important;
+}
