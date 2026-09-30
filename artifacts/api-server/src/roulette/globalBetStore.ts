@@ -246,6 +246,14 @@ export async function upsertRouletteGlobalBet(input: {
         `roulette-global-bet:${input.idempotencyKey}`,
       ],
     );
+    await client.query(
+      `SELECT pg_advisory_xact_lock(
+        hashtextextended($1::text, 0)
+      )`,
+      [
+        `roulette-global-slip:${input.roundId}:${input.sessionId}`,
+      ],
+    );
 
     const duplicate =
       await client.query<GlobalBetRequestRow>(
