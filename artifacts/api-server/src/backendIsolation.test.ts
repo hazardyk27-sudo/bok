@@ -22,6 +22,10 @@ const idleRoutes = read("./idle/routes.ts");
 const rouletteRoutes = read("./roulette/routes.ts");
 const blackjackPlatform = read("./platform/blackjack.ts");
 const sessionPlatform = read("./platform/session.ts");
+const walletPlatform = read("./platform/wallet.ts");
+const sessionConvergenceApi = read("./platform/sessionConvergence.ts");
+const sessionConvergenceClient = read("../../cascade-8/src/platform/sessionConvergence.ts");
+const frontendMain = read("../../cascade-8/src/main.ts");
 const appSource = read("./app.ts");
 const apiPackage = read("../package.json");
 const apiDevRunner = read("../dev-runner.mjs");
@@ -82,6 +86,32 @@ describe("backend game isolation", () => {
     expect(appSource).toContain("res.clearCookie(SESSION_COOKIE");
     expect(appSource).toContain("res.clearCookie(LEGACY_SESSION_COOKIE");
     expect(appSource).not.toContain("res.cookie(SESSION_COOKIE, legacySessionId");
+  });
+
+  it("actively discovers legacy game-scoped sessions before game bootstrap", () => {
+    expect(routesIndex).toContain('sessionConvergenceRouter } from "../platform/sessionConvergence"');
+    expect(routesIndex.indexOf("router.use(sessionConvergenceRouter)"))
+      .toBeLessThan(routesIndex.indexOf("router.use(slotRouter)"));
+    for (const path of [
+      "/api/slot/session-converge",
+      "/api/roulette/session-converge",
+      "/api/cadi-kazan/session-converge",
+      "/api/idle/session-converge",
+      "/api/blackjack/session-converge",
+    ]) {
+      expect(sessionConvergenceClient).toContain(path);
+    }
+    expect(sessionConvergenceClient).toContain("for (const endpoint of SESSION_CONVERGENCE_ENDPOINTS)");
+    expect(sessionConvergenceClient).toContain('credentials: "same-origin"');
+    expect(frontendMain).toContain('import("./platform/sessionConvergence")');
+    expect(frontendMain).toContain("await convergeLegacyGameSessions()");
+    expect(sessionConvergenceApi).toContain("SESSION_CONVERGENCE_ROUTE_PATHS");
+  });
+
+  it("preserves the highest discovered wallet without summing fragmented balances", () => {
+    expect(sessionPlatform).toContain("chooseHighestBalanceSessionCandidate");
+    expect(walletPlatform).toContain("chooseHighestBalanceSessionCandidate(");
+    expect(walletPlatform).not.toContain("SUM(balance_cents)");
   });
 
   it("keeps the Replit API runtime hot-reloadable after preview sync", () => {
