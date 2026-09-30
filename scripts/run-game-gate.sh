@@ -19,6 +19,7 @@ backend() {
 case "$game" in
   slot)
     frontend src/config src/engine src/game src/slot src/simulation
+    backend src/slot
     ;;
   cadi-kazan)
     frontend src/cadi-kazan
