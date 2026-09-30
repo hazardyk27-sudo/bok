@@ -2,7 +2,7 @@ import { logger } from "../lib/logger";
 import router from "./routes";
 import { ticketMarketRuntime } from "./marketRuntimeDb";
 import {
-  stadiumActionReceiptCleanupRuntime,
+  StadiumActionReceiptCleanupRuntime,
 } from "./stadiumActionReceiptRetention";
 
 void ticketMarketRuntime.start().catch((error) => {
@@ -11,6 +11,16 @@ void ticketMarketRuntime.start().catch((error) => {
     "Unable to start Idle ticket market runtime",
   );
 });
+
+const stadiumActionReceiptCleanupRuntime =
+  new StadiumActionReceiptCleanupRuntime({
+    onError: (error) => {
+      logger.error(
+        { err: error },
+        "Idle Stadium action-receipt cleanup failed",
+      );
+    },
+  });
 
 stadiumActionReceiptCleanupRuntime.start();
 
