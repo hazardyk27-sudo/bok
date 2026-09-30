@@ -91,3 +91,24 @@ export function chooseSessionIdForWalletMigration(input: {
 
   return canonicalSessionId;
 }
+
+export function chooseHighestBalanceSessionCandidate(
+  candidates: readonly { sessionId: string; balanceCents: number }[],
+) {
+  let winner: { sessionId: string; balanceCents: number; order: number } | null = null;
+
+  candidates.forEach((candidate, order) => {
+    if (
+      winner === null
+      || candidate.balanceCents > winner.balanceCents
+      || (
+        candidate.balanceCents === winner.balanceCents
+        && order > winner.order
+      )
+    ) {
+      winner = { ...candidate, order };
+    }
+  });
+
+  return winner?.sessionId ?? null;
+}
