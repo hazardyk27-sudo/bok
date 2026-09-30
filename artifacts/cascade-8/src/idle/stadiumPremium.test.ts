@@ -34,12 +34,16 @@ describe("Part 26 premium Stadium control surface", () => {
     expect(source).toContain("fetchIdleMarketHistory");
     expect(source).toContain("data-idle-market-chart-path");
     expect(source).toContain("mergeLiveHistory");
+    expect(source).toContain("maxVisualPoints = 720");
+    expect(source).toContain("marketDrawer.hidden");
     expect(source).toContain("data-idle-market-detail-tick");
   });
 
   it("hardens whole-number inputs and retry idempotency", () => {
     expect(source).toContain("positiveWholeNumber");
     expect(source).toContain("pendingMutationKeys");
+    expect(source).toContain("unresolvedMutation");
+    expect(source).toContain("isMutationAllowed");
     expect(source).toContain("IdleRequestError");
     expect(source).toContain("outcomeUnknown");
     expect(source).toContain("aynı işlem anahtarı korunuyor");
@@ -52,6 +56,7 @@ describe("Part 26 premium Stadium control surface", () => {
     expect(source).toContain("data-idle-seat-estimate");
     expect(source).toContain("data-idle-seat-unit-price");
     expect(source).toContain("data-idle-seat-next-band");
+    expect(source).toContain("exactMoney");
     expect(source).toContain("sonraki kapasite");
     expect(source).toContain("bilet/koltuk/saat");
   });
