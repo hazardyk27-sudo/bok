@@ -14,6 +14,7 @@ import type {
 import {
   assertRouletteGlobalBettingOpen,
   getNextRouletteGlobalBetRevision,
+  getRouletteGlobalPayoutIdempotencyKey,
   getRouletteGlobalStakeCents,
   settleRouletteGlobalBet,
 } from "./globalBet";
@@ -659,7 +660,10 @@ export async function settleDueRouletteGlobalBets(
             row.session_id,
             row.round_id,
             payoutCents,
-            `global-payout:${row.round_id}:${row.session_id}`,
+            getRouletteGlobalPayoutIdempotencyKey(
+              row.round_id,
+              row.session_id,
+            ),
           ],
         );
 
@@ -725,7 +729,7 @@ export async function settleDueRouletteGlobalBets(
 export async function settleRouletteGlobalBetForRoundSession(
   sessionId: string,
   roundId: string,
-  nowMs: number = Date.now(),
+  nowMs: number,
 ) {
   const client =
     await pool.connect();
@@ -813,7 +817,10 @@ export async function settleRouletteGlobalBetForRoundSession(
             sessionId,
             roundId,
             payoutCents,
-            `global-payout:${roundId}:${sessionId}`,
+            getRouletteGlobalPayoutIdempotencyKey(
+              roundId,
+              sessionId,
+            ),
           ],
         );
 

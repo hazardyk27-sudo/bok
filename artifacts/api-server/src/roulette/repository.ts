@@ -14,6 +14,7 @@ import {
 } from "./globalBetStore";
 import {
   getCurrentRouletteGlobalTableSnapshot,
+  getRouletteDatabaseNowMs,
   getRouletteGlobalRecentResults,
 } from "./globalTableStore";
 import type {
@@ -60,7 +61,7 @@ export class RouletteRepository {
     sessionId: string,
   ) {
     const serverTimeMs =
-      Date.now();
+      await getRouletteDatabaseNowMs();
     const [
       globalTable,
       recentResults,
