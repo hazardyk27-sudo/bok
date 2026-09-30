@@ -176,26 +176,28 @@ async function initializeRouletteGlobalTableStorage() {
   );
 }
 
-export function ensureRouletteGlobalTableStorage() {
-  if (!rouletteGlobalStorageReady) {
-    const initialization =
-      initializeRouletteGlobalTableStorage();
-
-    rouletteGlobalStorageReady =
-      initialization;
-
-    void initialization.catch(() => {
-      if (
-        rouletteGlobalStorageReady ===
-        initialization
-      ) {
-        rouletteGlobalStorageReady =
-          null;
-      }
-    });
+export function ensureRouletteGlobalTableStorage(): Promise<void> {
+  if (rouletteGlobalStorageReady) {
+    return rouletteGlobalStorageReady;
   }
 
-  return rouletteGlobalStorageReady;
+  const initialization =
+    initializeRouletteGlobalTableStorage();
+
+  rouletteGlobalStorageReady =
+    initialization;
+
+  void initialization.catch(() => {
+    if (
+      rouletteGlobalStorageReady ===
+      initialization
+    ) {
+      rouletteGlobalStorageReady =
+        null;
+    }
+  });
+
+  return initialization;
 }
 
 export async function withRouletteGlobalSchedulerLock<T>(
