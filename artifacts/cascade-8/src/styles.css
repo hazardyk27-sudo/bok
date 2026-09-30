@@ -4652,3 +4652,70 @@ but they must never
     overflow: hidden;
   }
 }
+
+
+/* Shared Hub profile card: presentation-only view of /api/auth/me. */
+.game-choice-profile{
+  grid-column: 1 / -1;
+  min-height: 238px;
+  background:
+    radial-gradient(circle at 84% 14%, rgba(77, 220, 166, .16), transparent 34%),
+    linear-gradient(145deg, rgba(23, 57, 76, .96), rgba(11, 23, 46, .96));
+}
+.game-choice-profile::after{
+  border-color: rgba(111, 218, 179, .13);
+  box-shadow: 0 0 0 18px rgba(111, 218, 179, .025), 0 0 0 36px rgba(111, 218, 179, .018);
+}
+.game-choice-profile:hover{
+  border-color: rgba(111, 218, 179, .62);
+  box-shadow: 0 30px 84px rgba(1, 5, 21, .46), 0 0 34px rgba(72, 205, 157, .1), inset 0 1px 0 rgba(255,255,255,.07);
+}
+.choice-art-profile{
+  border: 1px solid rgba(111, 218, 179, .5);
+  border-radius: 50%;
+  color: #b8f5de;
+  background: radial-gradient(circle, rgba(64, 190, 145, .28), rgba(21, 79, 73, .12) 56%, transparent 72%);
+  box-shadow: 0 0 38px rgba(72, 205, 157, .18), inset 0 0 24px rgba(172, 255, 224, .08);
+}
+.choice-art-profile span{
+  color: #c8f8e5;
+  font: 800 34px "DM Mono", monospace;
+  text-shadow: 0 0 22px rgba(111, 218, 179, .55);
+}
+.game-choice-profile .choice-copy{
+  margin-top: 58px;
+}
+.game-choice-profile .choice-copy strong{
+  color: #dcfff1;
+}
+.game-choice-profile .choice-status{
+  border-color: rgba(111, 218, 179, .34);
+  color: #7be0ba;
+}
+.game-choice-profile .choice-arrow{
+  color: #7be0ba;
+}
+.route-shell.is-menu-page .game-choice-profile{
+  min-height: 214px;
+}
+.route-shell.is-menu-page .game-choice-profile .choice-copy{
+  margin-top: 52px;
+}
+
+@media (max-width: 680px){
+  .route-shell.is-menu-page .game-choice-profile{
+    grid-column: 1 / -1;
+    min-height: 158px;
+  }
+  .route-shell.is-menu-page .game-choice-profile .choice-copy{
+    margin-top: 38px;
+  }
+  .route-shell.is-menu-page .game-choice-profile .choice-art{
+    top: 24px;
+    width: 58px;
+    height: 58px;
+  }
+  .route-shell.is-menu-page .choice-art-profile span{
+    font-size: 22px;
+  }
+}
