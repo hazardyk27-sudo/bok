@@ -10,9 +10,49 @@ export type RouletteWallet = {
   balanceCents: number;
 };
 
+export type RouletteGlobalTablePhase =
+  | "scheduled"
+  | "betting"
+  | "spinning"
+  | "result"
+  | "complete";
+
+export type RouletteGlobalTableSnapshot = {
+  roundId: string;
+  simulationVersion: string;
+  phase: RouletteGlobalTablePhase;
+  serverTimeMs: number;
+  bettingOpenAtMs: number;
+  bettingCloseAtMs: number;
+  spinStartedAtMs: number;
+  resultAtMs: number;
+  nextRoundAtMs: number;
+  seed: string | null;
+  result: RouletteWinningResult | null;
+};
+
+export type RouletteGlobalBetSnapshot = {
+  id: string;
+  roundId: string;
+  bets: RouletteBetPlacement[];
+  stakeCents: number;
+  payoutCents: number;
+  settlement: RouletteRoundSettlement | null;
+  settledAtMs: number | null;
+  updatedAtMs: number;
+};
+
 export type RouletteBootstrapResponse = {
   simulationVersion: string;
+  serverTimeMs: number;
+  globalTable: RouletteGlobalTableSnapshot | null;
+  globalBet: RouletteGlobalBetSnapshot | null;
   wallet: RouletteWallet;
+};
+
+export type RouletteGlobalBetUpdateResponse = {
+  globalBet: RouletteGlobalBetSnapshot | null;
+  balanceCents: number;
 };
 
 export type RouletteServerSpinResponse = {
@@ -124,6 +164,9 @@ export class RouletteWalletClient {
     const body =
       await readResponse<{
         simulationVersion?: unknown;
+        serverTimeMs?: unknown;
+        globalTable?: RouletteGlobalTableSnapshot | null;
+        globalBet?: RouletteGlobalBetSnapshot | null;
         wallet: RouletteWallet;
       }>(response);
     const headerVersion =
@@ -137,8 +180,52 @@ export class RouletteWalletClient {
         "string"
           ? body.simulationVersion
           : headerVersion ?? "",
+      serverTimeMs:
+        typeof body.serverTimeMs === "number"
+          ? body.serverTimeMs
+          : Number.NaN,
+      globalTable:
+        body.globalTable ?? null,
+      globalBet:
+        body.globalBet ?? null,
       wallet: body.wallet,
     };
+  }
+
+  async updateGlobalBet(
+    roundId: string,
+    bets: readonly RouletteBetPlacement[],
+    idempotencyKey: string,
+  ): Promise<RouletteGlobalBetUpdateResponse> {
+    const response =
+      await fetchWithTimeout(
+        `${API_BASE}/global-bets`,
+        {
+          method: "PUT",
+          credentials: "same-origin",
+          headers: {
+            "Content-Type":
+              "application/json",
+          },
+          body: JSON.stringify({
+            roundId,
+            bets,
+            idempotencyKey,
+          }),
+        },
+        ROULETTE_SPIN_REQUEST_TIMEOUT_MS,
+      ).catch((error) => {
+        if (isAbortError(error)) {
+          throw new Error(
+            "ROULETTE_GLOBAL_BET_TIMEOUT",
+          );
+        }
+        throw error;
+      });
+
+    return readResponse<RouletteGlobalBetUpdateResponse>(
+      response,
+    );
   }
 
   async spin(
