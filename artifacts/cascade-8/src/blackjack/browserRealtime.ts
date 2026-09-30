@@ -510,7 +510,7 @@ export function connectBlackjackRealtimeElement(
   });
   seatClient=seats;
 
-  const renderTickMs=options.renderTickMs ?? 500;
+  const renderTickMs=options.renderTickMs ?? 1_000;
   if(!Number.isSafeInteger(renderTickMs) || renderTickMs<50){
     throw new RangeError(
       "Blackjack visual renderTickMs must be a safe integer >= 50",
@@ -525,8 +525,30 @@ export function connectBlackjackRealtimeElement(
       handle as ReturnType<typeof setInterval>,
     ));
   const renderHandle=scheduleRender(()=>{
+    if (
+      typeof document !== "undefined" &&
+      document.visibilityState === "hidden"
+    ) {
+      return;
+    }
+
     activeController.rerenderLatest();
   },renderTickMs);
+
+  const onVisibilityChange=()=>{
+    if (
+      typeof document !== "undefined" &&
+      document.visibilityState === "visible"
+    ) {
+      activeController.rerenderLatest();
+    }
+  };
+  if (typeof document !== "undefined") {
+    document.addEventListener(
+      "visibilitychange",
+      onVisibilityChange,
+    );
+  }
 
   const onClick=(event: Event) => {
     if(event.target instanceof Element){
@@ -623,6 +645,12 @@ export function connectBlackjackRealtimeElement(
       if(closed) return;
       closed=true;
       app.removeEventListener("click",onClick);
+      if (typeof document !== "undefined") {
+        document.removeEventListener(
+          "visibilitychange",
+          onVisibilityChange,
+        );
+      }
       cancelRender(renderHandle);
       seats.detach();
       privateState.detach();
