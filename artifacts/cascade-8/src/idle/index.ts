@@ -344,11 +344,32 @@ class BusinessesClient {
   ) {
     if (!this.envelope) return;
 
-    const nextMarket =
+    const currentMarket =
+      this.market
+      ?? this.envelope.snapshot.market;
+    const responseMarket =
       "market" in response
         ? response.market
-        : this.market
-          ?? this.envelope.snapshot.market;
+        : null;
+
+    const currentTick =
+      new Date(currentMarket.tickAt).getTime();
+    const responseTick =
+      responseMarket
+        ? new Date(responseMarket.tickAt).getTime()
+        : Number.NEGATIVE_INFINITY;
+
+    const nextMarket =
+      responseMarket
+      && (
+        !Number.isFinite(currentTick)
+        || (
+          Number.isFinite(responseTick)
+          && responseTick >= currentTick
+        )
+      )
+        ? responseMarket
+        : currentMarket;
 
     this.market = nextMarket;
     this.envelope = {
