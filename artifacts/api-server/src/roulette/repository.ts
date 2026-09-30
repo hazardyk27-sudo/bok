@@ -2,6 +2,9 @@ import { randomUUID } from "node:crypto";
 import { pool, type PoolClient } from "@workspace/db";
 import { INITIAL_SHARED_BALANCE_CENTS } from "../platform/wallet";
 import {
+  ROULETTE_SIMULATION_VERSION,
+} from "../../../cascade-8/src/roulette/spinResult";
+import {
   createRouletteAuthoritativeRound,
   type RouletteAuthoritativeRound,
   type RouletteServerBet,
@@ -74,6 +77,8 @@ function response(
   return {
     roundId: row.id,
     seed: row.seed,
+    simulationVersion:
+      ROULETTE_SIMULATION_VERSION,
     result: row.result,
     settlement: row.settlement,
     wallet: { sessionId, balanceCents },
@@ -106,6 +111,8 @@ function rowFromRound(
 export class RouletteRepository {
   async getState(sessionId: string) {
     return {
+      simulationVersion:
+        ROULETTE_SIMULATION_VERSION,
       wallet: {
         sessionId,
         balanceCents: await walletBalance(sessionId),
