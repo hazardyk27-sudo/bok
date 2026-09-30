@@ -1,12 +1,12 @@
-import { index, integer, jsonb, pgTable, text, timestamp, uniqueIndex } from "drizzle-orm/pg-core";
+import { bigint, index, jsonb, pgTable, text, timestamp, uniqueIndex } from "drizzle-orm/pg-core";
 
 export const slotRounds = pgTable(
   "slot_rounds",
   {
     id: text("id").primaryKey(),
     sessionId: text("session_id").notNull(),
-    stakeCents: integer("stake_cents").notNull(),
-    payoutCents: integer("payout_cents").notNull(),
+    stakeCents: bigint("stake_cents", { mode: "number" }).notNull(),
+    payoutCents: bigint("payout_cents", { mode: "number" }).notNull(),
     result: jsonb("result").notNull(),
     idempotencyKey: text("idempotency_key").notNull(),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
@@ -24,7 +24,7 @@ export const slotLedger = pgTable(
     sessionId: text("session_id").notNull(),
     roundId: text("round_id").notNull(),
     kind: text("kind").notNull(),
-    amountCents: integer("amount_cents").notNull(),
+    amountCents: bigint("amount_cents", { mode: "number" }).notNull(),
     idempotencyKey: text("idempotency_key").notNull(),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
@@ -40,7 +40,7 @@ export const slotWalletMigrations = pgTable(
   {
     id: text("id").primaryKey(),
     sessionId: text("session_id").notNull(),
-    legacyBalanceCents: integer("legacy_balance_cents").notNull(),
+    legacyBalanceCents: bigint("legacy_balance_cents", { mode: "number" }).notNull(),
     disposition: text("disposition").notNull(),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
