@@ -1049,7 +1049,7 @@ export function createStadiumPremiumUi(options: Options): StadiumPremiumUi {
         if (input) {
           input.value = String(quantity);
         }
-        renderMarket();
+        render();
       });
     });
 
@@ -1106,7 +1106,7 @@ export function createStadiumPremiumUi(options: Options): StadiumPremiumUi {
       if (response && input) {
         input.value = "";
       }
-      renderMarket();
+      render();
     });
   });
 
@@ -1199,6 +1199,7 @@ export function createStadiumPremiumUi(options: Options): StadiumPremiumUi {
       if (response && input) {
         input.value = "";
       }
+      render();
     });
   });
 
