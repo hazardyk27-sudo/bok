@@ -36,7 +36,7 @@ if (migratedWalletCount > 0 || walletInitialization.legacyPreservedCount > 0) {
 }
 
 const server = createServer(app);
-let blackjackRuntime: BlackjackAttachedServerRuntime | null = null;
+let blackjackRuntime: Awaited<\n  ReturnType<typeof attachBlackjackPlatformRuntime>\n> | null = null;
 let shuttingDown = false;
 
 server.listen(port, () => {
