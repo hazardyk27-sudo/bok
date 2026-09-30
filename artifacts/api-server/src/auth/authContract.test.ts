@@ -50,6 +50,12 @@ describe("account identity contract", () => {
     expect(repositorySource).not.toContain("account_wallet");
   });
 
+  it("starts every new registered account from a fresh zero-balance game identity", () => {
+    expect(routesSource).toContain("const walletSessionId = randomUUID()");
+    expect(routesSource).not.toContain("currentOrFreshGameSession");
+    expect(repositorySource).toContain("ensureWallet(client, walletSessionId, 0)");
+  });
+
   it("keeps password change authenticated and revokes other account sessions", () => {
     expect(routesSource).toContain('router.post("/auth/password"');
     expect(repositorySource).toContain("CURRENT_PASSWORD_INVALID");
