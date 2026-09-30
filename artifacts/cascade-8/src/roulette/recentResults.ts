@@ -1,9 +1,6 @@
 import { RED_NUMBERS } from "./config";
 
 export const ROULETTE_RECENT_RESULT_LIMIT = 11;
-export const ROULETTE_RECENT_RESULTS_STORAGE_KEY =
-  "roulette.recent-results.v1";
-
 export type RouletteResultTone =
   | "green"
   | "red"
