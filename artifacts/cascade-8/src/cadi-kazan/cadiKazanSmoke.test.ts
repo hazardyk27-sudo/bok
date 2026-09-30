@@ -503,4 +503,17 @@ describe("cadi kazan route smoke contract", () => {
     expect(visualLockSource).toContain(".witch-cell.is-terminal-reveal .witch-cell-artwork");
   });
 
+
+  it("uses one centered premium back-button geometry across every Cadı Kazan theme", () => {
+    expect(visualLockSource).toContain("PASS 39 — Cadı Kazan global back-button polish, Part 3");
+    expect(visualLockSource).toContain(".witch-back::before");
+    expect(visualLockSource).toContain(".witch-back::after");
+    expect(visualLockSource).toContain("place-items: center !important");
+    expect(visualLockSource).toContain("color: transparent !important");
+    expect(visualLockSource).toContain(".is-standard-theme .witch-back");
+    expect(visualLockSource).toContain(".is-advanced-theme .witch-back");
+    expect(visualLockSource).toContain(".is-office-theme .witch-back");
+    expect(visualLockSource).toContain(".witch-back:focus-visible");
+  });
+
 });
