@@ -20,7 +20,7 @@ const IDEMPOTENCY_PATTERN = /^[a-zA-Z0-9_-]{12,100}$/;
  * another game's route module.
  */
 const SESSION_COOKIE =
-  SHARED_WALLET_TABLE === "shared_wallets"
+  String(SHARED_WALLET_TABLE) === "shared_wallets"
     ? "game_session"
     : "roulette_session";
 
