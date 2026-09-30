@@ -62,6 +62,56 @@ describe("authoritative roulette replay", () => {
     );
   });
 
+  it("aligns a hot-reload seed-mapping mismatch to the authoritative server pocket", () => {
+    const response =
+      responseForSeed(
+        "roulette-hot-reload-client",
+      );
+    const candidates = [
+      "roulette-hot-reload-server-a",
+      "roulette-hot-reload-server-b",
+      "roulette-hot-reload-server-c",
+      "roulette-hot-reload-server-d",
+    ];
+
+    const differentResult =
+      candidates
+        .map((seed) =>
+          simulateSeededRouletteSpin(
+            seed,
+          ).result,
+        )
+        .find(
+          (result) =>
+            result !== null &&
+            result.pocketIndex !==
+              response.result.pocketIndex,
+        );
+
+    expect(
+      differentResult,
+    ).not.toBeNull();
+
+    const authoritativeResponse = {
+      ...response,
+      result:
+        differentResult!,
+      settlement: {
+        ...response.settlement,
+        winningNumber:
+          differentResult!.number,
+      },
+    };
+    const replay =
+      createVerifiedRouletteReplay(
+        authoritativeResponse,
+      );
+
+    expect(replay.result).toEqual(
+      authoritativeResponse.result,
+    );
+  });
+
   it("rejects a changed winning number or pocket", () => {
     const response =
       responseForSeed(
