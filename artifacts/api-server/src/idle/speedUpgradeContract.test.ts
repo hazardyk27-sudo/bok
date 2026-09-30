@@ -67,6 +67,7 @@ describe("Speed upgrade transaction contract", () => {
     );
     expect(speedSource).toContain("target_level");
     expect(speedSource).toContain("replayed: true");
+    expect(speedSource).toContain("currentBalanceCents");
     expect(speedSource).toContain(
       'throw new Error("IDEMPOTENCY_KEY_REUSED")',
     );
