@@ -274,4 +274,16 @@ describe("cadi kazan route smoke contract", () => {
     expect(visualLockSource).toContain("color: #ffffff !important");
   });
 
+
+  it("uses the supplied star-backed Office symbols with star-matched prize badges", () => {
+    expect(visualLockSource).toContain("PASS 26 — THE OFFICE star-backed character symbols + color-linked prize badge");
+    expect(witchClientSource).toContain("--office-symbol-color:");
+    expect(witchClientSource).toContain("--office-symbol-text:");
+    expect(witchClientSource).toContain('decoding="async"');
+    expect(visualLockSource).toContain("background: var(--office-symbol-color, #e5e7e9) !important");
+    expect(visualLockSource).toContain("color: var(--office-symbol-text, #151719) !important");
+    expect(visualLockSource).toContain("filter: none !important");
+    expect(visualLockSource).toContain("contain: paint !important");
+  });
+
 });

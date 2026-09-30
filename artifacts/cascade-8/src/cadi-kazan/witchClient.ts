@@ -1040,9 +1040,15 @@ export class WitchClient {
             ? Math.floor((round.stakeCents * symbol.multiplierBps) / 100)
             : 0;
           const symbolPrize = formatMoney(symbolPrizeCents, { compactInteger: true });
+          const officePrizeColor = symbol?.prizeColor ?? "#E5E7E9";
+          const officePrizeTextColor = symbol?.prizeTextColor ?? "#151719";
           content.innerHTML = `
-            <span class="witch-office-result-symbol" data-office-symbol="${symbolId ?? ""}">
-              <img class="witch-office-result-art" src="${officePresentation.artworkUrl ?? ""}" alt="${officePresentation.symbol}" draggable="false">
+            <span
+              class="witch-office-result-symbol"
+              data-office-symbol="${symbolId ?? ""}"
+              style="--office-symbol-color:${officePrizeColor};--office-symbol-text:${officePrizeTextColor}"
+            >
+              <img class="witch-office-result-art" src="${officePresentation.artworkUrl ?? ""}" alt="${officePresentation.symbol}" decoding="async" draggable="false">
               <b class="witch-office-result-prize">${symbolPrize}</b>
             </span>
           `;

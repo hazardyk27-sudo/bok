@@ -17,11 +17,11 @@ export const OFFICE_MATCH_ROWS = 2;
 export const OFFICE_MATCH_REQUIRED_MATCHES = 3;
 
 export const OFFICE_MATCH_SYMBOLS = [
-  { id: "KEVIN", label: "Kevin", multiplierBps: 200, special: false, assetKey: "office-kevin-2x", artworkUrl: OFFICE_ARTWORK_URLS.KEVIN },
-  { id: "JIM", label: "Jim", multiplierBps: 500, special: false, assetKey: "office-jim-5x", artworkUrl: OFFICE_ARTWORK_URLS.JIM },
-  { id: "DWIGHT", label: "Dwight", multiplierBps: 1_000, special: false, assetKey: "office-dwight-10x", artworkUrl: OFFICE_ARTWORK_URLS.DWIGHT },
-  { id: "STANLEY", label: "Stanley", multiplierBps: 2_000, special: false, assetKey: "office-stanley-20x", artworkUrl: OFFICE_ARTWORK_URLS.STANLEY },
-  { id: "MICHAEL", label: "Michael Scott", multiplierBps: 10_000, special: true, assetKey: "office-michael-100x", artworkUrl: OFFICE_ARTWORK_URLS.MICHAEL },
+  { id: "KEVIN", label: "Kevin", multiplierBps: 200, special: false, assetKey: "office-kevin-2x", artworkUrl: OFFICE_ARTWORK_URLS.KEVIN, prizeColor: "#D77659", prizeTextColor: "#21100B" },
+  { id: "JIM", label: "Jim", multiplierBps: 500, special: false, assetKey: "office-jim-5x", artworkUrl: OFFICE_ARTWORK_URLS.JIM, prizeColor: "#899A9D", prizeTextColor: "#111719" },
+  { id: "DWIGHT", label: "Dwight", multiplierBps: 1_000, special: false, assetKey: "office-dwight-10x", artworkUrl: OFFICE_ARTWORK_URLS.DWIGHT, prizeColor: "#8E5572", prizeTextColor: "#FFFFFF" },
+  { id: "STANLEY", label: "Stanley", multiplierBps: 2_000, special: false, assetKey: "office-stanley-20x", artworkUrl: OFFICE_ARTWORK_URLS.STANLEY, prizeColor: "#8FB0D1", prizeTextColor: "#10202F" },
+  { id: "MICHAEL", label: "Michael Scott", multiplierBps: 10_000, special: true, assetKey: "office-michael-100x", artworkUrl: OFFICE_ARTWORK_URLS.MICHAEL, prizeColor: "#FFC20A", prizeTextColor: "#1A1400" },
 ] as const;
 
 export type OfficeMatchSymbolId = (typeof OFFICE_MATCH_SYMBOLS)[number]["id"];
