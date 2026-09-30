@@ -19,29 +19,30 @@ const idleRoutes = source("./routes.ts");
 const idleRepository = source("./repository.ts");
 
 describe("shared game wallet integration", () => {
-  it("keeps one roulette_session cookie identity across all game APIs", () => {
-    expect(rouletteRoutes).toContain(
-      'const SESSION_COOKIE = "roulette_session";',
-    );
-    expect(rouletteRoutes).toContain("export { SESSION_COOKIE };");
-
-    for (const routeSource of [slotRoutes, cadiRoutes, idleRoutes]) {
+  it("keeps one game_session identity across all game APIs", () => {
+    for (const routeSource of [
+      rouletteRoutes,
+      slotRoutes,
+      cadiRoutes,
+      idleRoutes,
+    ]) {
       expect(routeSource).toContain(
-        'import { SESSION_COOKIE } from "../roulette/routes";',
+        'import { SESSION_COOKIE } from "../platform/session";',
       );
       expect(routeSource).toContain("req.cookies?.[SESSION_COOKIE]");
       expect(routeSource).toContain("res.cookie(SESSION_COOKIE, sessionId");
     }
   });
 
-  it("keeps Slot, Roulette, Cadı Kazan and Idle on roulette_wallets", () => {
+  it("keeps Slot, Roulette, Cadı Kazan and Idle on shared_wallets only", () => {
     for (const repositorySource of [
       rouletteRepository,
       slotRepository,
       cadiRepository,
       idleRepository,
     ]) {
-      expect(repositorySource).toContain("roulette_wallets");
+      expect(repositorySource).toContain("shared_wallets");
+      expect(repositorySource).not.toContain("roulette_wallets");
       expect(repositorySource).toContain("balance_cents");
       expect(repositorySource).toContain("session_id");
     }
@@ -57,13 +58,9 @@ describe("shared game wallet integration", () => {
 
   it("keeps Idle collect and upgrades writing the same shared wallet", () => {
     expect(idleRepository).toContain(
-      "SELECT balance_cents FROM roulette_wallets WHERE session_id = $1 FOR UPDATE",
+      "SELECT balance_cents FROM shared_wallets WHERE session_id = $1 FOR UPDATE",
     );
-    expect(idleRepository).toContain(
-      "UPDATE roulette_wallets",
-    );
-    expect(idleRepository).toContain(
-      "INSERT INTO roulette_wallets",
-    );
+    expect(idleRepository).toContain("UPDATE shared_wallets");
+    expect(idleRepository).toContain("INSERT INTO shared_wallets");
   });
 });
