@@ -119,9 +119,8 @@ export const idleTicketMarketState = pgTable(
 /**
  * Raw global ticket-price history.
  *
- * At the accepted 5-second cadence the rolling 24-hour window contains at
- * most 17,280 rows. The market runtime is responsible for continuously
- * deleting rows older than 24 hours.
+ * At the accepted 5-second cadence the rolling 24-hour window contains at most 17,280 rows.
+ * The market runtime is responsible for continuously deleting rows older than 24 hours.
  */
 export const idleTicketMarketTicks = pgTable(
   "idle_ticket_market_ticks",
