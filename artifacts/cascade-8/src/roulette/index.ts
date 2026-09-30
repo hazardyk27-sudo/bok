@@ -67,9 +67,11 @@ import {
 } from "./recentResults";
 import {
   formatRouletteAmount,
+  formatRouletteBalance,
   formatRouletteMoney,
   formatRouletteSignedMoney,
   getRouletteAmountScale,
+  getRouletteBalanceScale,
 } from "./uiFormat";
 import { renderRouletteWheel } from "./wheelRenderer";
 
@@ -159,9 +161,13 @@ export function mountRoulette(app: HTMLDivElement) {
             class="roulette-top-hud"
             aria-label="Roulette account summary"
           >
-            <div class="roulette-top-hud__metric">
+            <div class="roulette-top-hud__metric roulette-top-hud__metric--balance">
               <span>BALANCE</span>
-              <strong data-wallet-balance aria-live="polite">…</strong>
+              <strong
+                data-wallet-balance
+                data-balance-scale="normal"
+                aria-live="polite"
+              >…</strong>
             </div>
             <div class="roulette-top-hud__metric">
               <span>TOTAL BET</span>
@@ -171,7 +177,85 @@ export function mountRoulette(app: HTMLDivElement) {
               <span>LAST WIN</span>
               <strong data-last-win aria-live="polite">-</strong>
             </div>
+            <div class="roulette-top-hud__menu-slot">
+              <button
+                type="button"
+                class="roulette-menu-button"
+                data-roulette-menu-toggle
+                aria-label="Open roulette menu"
+                aria-expanded="false"
+                aria-controls="roulette-settings-menu"
+              >
+                <span></span>
+                <span></span>
+                <span></span>
+              </button>
+            </div>
           </div>
+
+          <section
+            id="roulette-settings-menu"
+            class="roulette-settings-menu"
+            data-roulette-settings-menu
+            aria-label="Roulette menu"
+            hidden
+          >
+            <div class="roulette-settings-menu__header">
+              <div>
+                <span>ROULETTE</span>
+                <strong>MENU</strong>
+              </div>
+              <button
+                type="button"
+                class="roulette-settings-menu__close"
+                data-roulette-menu-close
+                aria-label="Close roulette menu"
+              >×</button>
+            </div>
+
+            <label class="roulette-audio-control">
+              <span class="roulette-audio-control__copy">
+                <strong>KRUPİYER / MASA</strong>
+                <small>Masa ve çarpma sesleri</small>
+              </span>
+              <output data-dealer-volume-output>100%</output>
+              <input
+                type="range"
+                min="0"
+                max="100"
+                step="5"
+                value="100"
+                data-dealer-volume
+                aria-label="Krupiyer ve masa sesi"
+              />
+            </label>
+
+            <label class="roulette-audio-control">
+              <span class="roulette-audio-control__copy">
+                <strong>ORTAM</strong>
+                <small>Çark ve top ortam sesi</small>
+              </span>
+              <output data-ambient-volume-output>100%</output>
+              <input
+                type="range"
+                min="0"
+                max="100"
+                step="5"
+                value="100"
+                data-ambient-volume
+                aria-label="Ortam sesi"
+              />
+            </label>
+
+            <button
+              type="button"
+              class="roulette-main-menu-button"
+              data-roulette-main-menu
+            >
+              <span>ANA MENÜ</span>
+              <strong>⌂</strong>
+            </button>
+          </section>
 
           <div
             class="roulette-betting-timer"
@@ -296,6 +380,22 @@ export function mountRoulette(app: HTMLDivElement) {
     app.querySelector<HTMLElement>("[data-stat-black]");
   const statZero =
     app.querySelector<HTMLElement>("[data-stat-zero]");
+  const rouletteMenuToggle =
+    app.querySelector<HTMLButtonElement>("[data-roulette-menu-toggle]");
+  const rouletteSettingsMenu =
+    app.querySelector<HTMLElement>("[data-roulette-settings-menu]");
+  const rouletteMenuClose =
+    app.querySelector<HTMLButtonElement>("[data-roulette-menu-close]");
+  const dealerVolumeInput =
+    app.querySelector<HTMLInputElement>("[data-dealer-volume]");
+  const dealerVolumeOutput =
+    app.querySelector<HTMLOutputElement>("[data-dealer-volume-output]");
+  const ambientVolumeInput =
+    app.querySelector<HTMLInputElement>("[data-ambient-volume]");
+  const ambientVolumeOutput =
+    app.querySelector<HTMLOutputElement>("[data-ambient-volume-output]");
+  const rouletteMainMenuButton =
+    app.querySelector<HTMLButtonElement>("[data-roulette-main-menu]");
 
   if (!canvas) throw new Error("Roulette canvas was not mounted.");
   if (!page) throw new Error("Roulette page was not mounted.");
@@ -348,6 +448,103 @@ export function mountRoulette(app: HTMLDivElement) {
     new RouletteAudioEngine();
   const rouletteWallet =
     new RouletteWalletClient();
+
+  const rouletteAudioSettingsKey =
+    "roulette.audio.settings.v1";
+  let dealerVolume = 1;
+  let ambientVolume = 1;
+
+  try {
+    const storedAudioSettings =
+      JSON.parse(
+        window.localStorage.getItem(
+          rouletteAudioSettingsKey,
+        ) ?? "{}",
+      ) as {
+        dealer?: unknown;
+        ambient?: unknown;
+      };
+
+    const storedDealer =
+      Number(storedAudioSettings.dealer);
+    const storedAmbient =
+      Number(storedAudioSettings.ambient);
+
+    if (Number.isFinite(storedDealer)) {
+      dealerVolume =
+        Math.min(
+          1,
+          Math.max(
+            0,
+            storedDealer,
+          ),
+        );
+    }
+    if (Number.isFinite(storedAmbient)) {
+      ambientVolume =
+        Math.min(
+          1,
+          Math.max(
+            0,
+            storedAmbient,
+          ),
+        );
+    }
+  } catch {
+    dealerVolume = 1;
+    ambientVolume = 1;
+  }
+
+  rouletteAudio.setDealerVolume(
+    dealerVolume,
+  );
+  rouletteAudio.setAmbientVolume(
+    ambientVolume,
+  );
+
+  const syncAudioSettingsUi = () => {
+    const dealerPercent =
+      Math.round(dealerVolume * 100);
+    const ambientPercent =
+      Math.round(ambientVolume * 100);
+
+    if (dealerVolumeInput) {
+      dealerVolumeInput.value =
+        String(dealerPercent);
+    }
+    if (dealerVolumeOutput) {
+      dealerVolumeOutput.value =
+        `${dealerPercent}%`;
+      dealerVolumeOutput.textContent =
+        `${dealerPercent}%`;
+    }
+    if (ambientVolumeInput) {
+      ambientVolumeInput.value =
+        String(ambientPercent);
+    }
+    if (ambientVolumeOutput) {
+      ambientVolumeOutput.value =
+        `${ambientPercent}%`;
+      ambientVolumeOutput.textContent =
+        `${ambientPercent}%`;
+    }
+  };
+
+  const persistAudioSettings = () => {
+    try {
+      window.localStorage.setItem(
+        rouletteAudioSettingsKey,
+        JSON.stringify({
+          dealer: dealerVolume,
+          ambient: ambientVolume,
+        }),
+      );
+    } catch {
+      // Settings remain active for this mounted session.
+    }
+  };
+
+  syncAudioSettingsUi();
 
   const redraw = () => renderCanvas(canvas, viewState);
 
@@ -446,13 +643,25 @@ export function mountRoulette(app: HTMLDivElement) {
   };
 
   const renderWalletBalance = () => {
-    const balanceText =
+    const balanceValue =
       walletBalanceCents === null
+        ? null
+        : walletBalanceCents / 100;
+    const balanceText =
+      balanceValue === null
         ? "…"
-        : formatRouletteMoney(walletBalanceCents / 100);
+        : formatRouletteBalance(
+            balanceValue,
+          );
 
     walletBalanceDisplays.forEach((display) => {
       display.textContent = balanceText;
+      display.dataset.balanceScale =
+        balanceValue === null
+          ? "normal"
+          : getRouletteBalanceScale(
+              balanceValue,
+            );
     });
   };
 
@@ -528,9 +737,33 @@ export function mountRoulette(app: HTMLDivElement) {
     betPanel.dataset.mobileChipMenuOpen = String(open);
   };
 
+  const setRouletteMenuOpen = (
+    open: boolean,
+  ) => {
+    if (open) {
+      setMobileChipMenuOpen(false);
+      setMobileStatsOpen(false);
+    }
+
+    if (rouletteSettingsMenu) {
+      rouletteSettingsMenu.hidden =
+        !open;
+    }
+    if (rouletteMenuToggle) {
+      rouletteMenuToggle.setAttribute(
+        "aria-expanded",
+        String(open),
+      );
+    }
+
+    page.dataset.rouletteMenuOpen =
+      String(open);
+  };
+
   const closeMobileHudMenus = () => {
     setMobileChipMenuOpen(false);
     setMobileStatsOpen(false);
+    setRouletteMenuOpen(false);
   };
 
   const renderPhaseTimer = () => {
@@ -1636,6 +1869,124 @@ export function mountRoulette(app: HTMLDivElement) {
             betState,
           );
         renderBetState();
+      }
+    },
+  );
+
+  rouletteMenuToggle?.addEventListener(
+    "click",
+    (event) => {
+      event.stopPropagation();
+
+      const isOpen =
+        rouletteMenuToggle.getAttribute(
+          "aria-expanded",
+        ) === "true";
+
+      setRouletteMenuOpen(
+        !isOpen,
+      );
+    },
+  );
+
+  rouletteMenuClose?.addEventListener(
+    "click",
+    () => {
+      setRouletteMenuOpen(false);
+      rouletteMenuToggle?.focus();
+    },
+  );
+
+  dealerVolumeInput?.addEventListener(
+    "input",
+    () => {
+      dealerVolume =
+        Math.min(
+          1,
+          Math.max(
+            0,
+            Number(
+              dealerVolumeInput.value,
+            ) / 100,
+          ),
+        );
+
+      rouletteAudio.setDealerVolume(
+        dealerVolume,
+      );
+      syncAudioSettingsUi();
+      persistAudioSettings();
+    },
+  );
+
+  ambientVolumeInput?.addEventListener(
+    "input",
+    () => {
+      ambientVolume =
+        Math.min(
+          1,
+          Math.max(
+            0,
+            Number(
+              ambientVolumeInput.value,
+            ) / 100,
+          ),
+        );
+
+      rouletteAudio.setAmbientVolume(
+        ambientVolume,
+      );
+      syncAudioSettingsUi();
+      persistAudioSettings();
+    },
+  );
+
+  rouletteMainMenuButton?.addEventListener(
+    "click",
+    () => {
+      rouletteAudio.stopMotion();
+      window.location.assign("/");
+    },
+  );
+
+  page.addEventListener(
+    "click",
+    (event) => {
+      if (
+        rouletteSettingsMenu?.hidden !==
+          false
+      ) {
+        return;
+      }
+
+      const target =
+        event.target as HTMLElement;
+
+      if (
+        target.closest(
+          "[data-roulette-settings-menu]",
+        ) ||
+        target.closest(
+          "[data-roulette-menu-toggle]",
+        )
+      ) {
+        return;
+      }
+
+      setRouletteMenuOpen(false);
+    },
+  );
+
+  page.addEventListener(
+    "keydown",
+    (event) => {
+      if (
+        event.key === "Escape" &&
+        rouletteSettingsMenu?.hidden ===
+          false
+      ) {
+        setRouletteMenuOpen(false);
+        rouletteMenuToggle?.focus();
       }
     },
   );
