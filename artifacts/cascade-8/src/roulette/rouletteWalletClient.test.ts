@@ -12,6 +12,51 @@ afterEach(() => {
 });
 
 describe("roulette wallet client", () => {
+  it("reads the API simulation version before betting begins", async () => {
+    const fetchMock =
+      vi.fn().mockResolvedValue({
+        ok: true,
+        headers: {
+          get: (name: string) =>
+            name ===
+            "X-Roulette-Simulation-Version"
+              ? "roulette-full-turn-v2"
+              : null,
+        },
+        json: async () => ({
+          simulationVersion:
+            "roulette-full-turn-v2",
+          wallet: {
+            sessionId: "session-1",
+            balanceCents: 100_000,
+          },
+        }),
+      });
+
+    vi.stubGlobal("fetch", fetchMock);
+
+    const client =
+      new RouletteWalletClient();
+    const bootstrap =
+      await client.bootstrap();
+
+    expect(bootstrap).toEqual({
+      simulationVersion:
+        "roulette-full-turn-v2",
+      wallet: {
+        sessionId: "session-1",
+        balanceCents: 100_000,
+      },
+    });
+    expect(fetchMock).toHaveBeenCalledWith(
+      "/api/roulette/state",
+      expect.objectContaining({
+        credentials: "same-origin",
+        cache: "no-store",
+      }),
+    );
+  });
+
   it("sends the exact wager list to the authoritative spin endpoint", async () => {
     const fetchMock = vi.fn().mockResolvedValue({
       ok: true,
