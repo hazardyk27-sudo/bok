@@ -96,84 +96,52 @@ export async function getRouletteDatabaseNowMsFromClient(
 let rouletteGlobalStorageReady:
   Promise<void> | null = null;
 
-async function initializeRouletteGlobalTableStorage() {
-  await pool.query(
-    `CREATE TABLE IF NOT EXISTS roulette_global_rounds (
-      id text PRIMARY KEY,
-      simulation_version text NOT NULL,
-      seed text NOT NULL,
-      betting_open_at timestamptz NOT NULL,
-      betting_close_at timestamptz NOT NULL,
-      spin_started_at timestamptz NOT NULL,
-      result_at timestamptz NOT NULL,
-      next_round_at timestamptz NOT NULL,
-      winning_number integer NOT NULL,
-      pocket_index integer NOT NULL,
-      result jsonb NOT NULL,
-      created_at timestamptz NOT NULL DEFAULT now()
-    )`,
-  );
+async function verifyRouletteGlobalTableStorage() {
+  const result =
+    await pool.query<{
+      schema_ready: boolean;
+    }>(
+      `SELECT (
+        to_regclass('public.roulette_global_rounds') IS NOT NULL
+        AND to_regclass('public.roulette_global_bets') IS NOT NULL
+        AND to_regclass('public.roulette_global_bet_requests') IS NOT NULL
+        AND to_regclass('public.roulette_global_rounds_betting_open_unique') IS NOT NULL
+        AND to_regclass('public.roulette_global_rounds_next_round_idx') IS NOT NULL
+        AND to_regclass('public.roulette_global_rounds_result_at_idx') IS NOT NULL
+        AND to_regclass('public.roulette_global_bets_round_session_unique') IS NOT NULL
+        AND to_regclass('public.roulette_global_bets_unsettled_idx') IS NOT NULL
+        AND EXISTS (
+          SELECT 1
+          FROM information_schema.columns
+          WHERE table_schema = 'public'
+            AND table_name = 'roulette_global_bets'
+            AND column_name = 'revision'
+        )
+        AND EXISTS (
+          SELECT 1
+          FROM information_schema.columns
+          WHERE table_schema = 'public'
+            AND table_name = 'roulette_global_bet_requests'
+            AND column_name = 'expected_revision'
+        )
+        AND EXISTS (
+          SELECT 1
+          FROM information_schema.columns
+          WHERE table_schema = 'public'
+            AND table_name = 'roulette_global_bet_requests'
+            AND column_name = 'applied_revision'
+        )
+      ) AS schema_ready`,
+    );
 
-  await pool.query(
-    `CREATE UNIQUE INDEX IF NOT EXISTS roulette_global_rounds_betting_open_unique
-       ON roulette_global_rounds (betting_open_at)`,
-  );
-  await pool.query(
-    `CREATE INDEX IF NOT EXISTS roulette_global_rounds_next_round_idx
-       ON roulette_global_rounds (next_round_at)`,
-  );
-  await pool.query(
-    `CREATE INDEX IF NOT EXISTS roulette_global_rounds_result_at_idx
-       ON roulette_global_rounds (result_at)`,
-  );
-
-  await pool.query(
-    `CREATE TABLE IF NOT EXISTS roulette_global_bets (
-      id text PRIMARY KEY,
-      round_id text NOT NULL,
-      session_id text NOT NULL,
-      bets jsonb NOT NULL,
-      stake_cents bigint NOT NULL,
-      payout_cents bigint NOT NULL DEFAULT 0,
-      revision integer NOT NULL DEFAULT 0,
-      settlement jsonb,
-      settled_at timestamptz,
-      updated_at timestamptz NOT NULL DEFAULT now(),
-      created_at timestamptz NOT NULL DEFAULT now()
-    )`,
-  );
-  await pool.query(
-    `ALTER TABLE roulette_global_bets
-       ADD COLUMN IF NOT EXISTS revision integer NOT NULL DEFAULT 0`,
-  );
-  await pool.query(
-    `CREATE UNIQUE INDEX IF NOT EXISTS roulette_global_bets_round_session_unique
-       ON roulette_global_bets (round_id, session_id)`,
-  );
-  await pool.query(
-    `CREATE INDEX IF NOT EXISTS roulette_global_bets_unsettled_idx
-       ON roulette_global_bets (settled_at, round_id)`,
-  );
-
-  await pool.query(
-    `CREATE TABLE IF NOT EXISTS roulette_global_bet_requests (
-      idempotency_key text PRIMARY KEY,
-      round_id text NOT NULL,
-      session_id text NOT NULL,
-      bets jsonb NOT NULL,
-      expected_revision integer NOT NULL DEFAULT 0,
-      applied_revision integer NOT NULL DEFAULT 0,
-      created_at timestamptz NOT NULL DEFAULT now()
-    )`,
-  );
-  await pool.query(
-    `ALTER TABLE roulette_global_bet_requests
-       ADD COLUMN IF NOT EXISTS expected_revision integer NOT NULL DEFAULT 0`,
-  );
-  await pool.query(
-    `ALTER TABLE roulette_global_bet_requests
-       ADD COLUMN IF NOT EXISTS applied_revision integer NOT NULL DEFAULT 0`,
-  );
+  if (
+    result.rows[0]
+      ?.schema_ready !== true
+  ) {
+    throw new Error(
+      "ROULETTE_GLOBAL_SCHEMA_MISSING",
+    );
+  }
 }
 
 export function ensureRouletteGlobalTableStorage(): Promise<void> {
@@ -181,23 +149,23 @@ export function ensureRouletteGlobalTableStorage(): Promise<void> {
     return rouletteGlobalStorageReady;
   }
 
-  const initialization =
-    initializeRouletteGlobalTableStorage();
+  const verification =
+    verifyRouletteGlobalTableStorage();
 
   rouletteGlobalStorageReady =
-    initialization;
+    verification;
 
-  void initialization.catch(() => {
+  void verification.catch(() => {
     if (
       rouletteGlobalStorageReady ===
-      initialization
+      verification
     ) {
       rouletteGlobalStorageReady =
         null;
     }
   });
 
-  return initialization;
+  return verification;
 }
 
 export async function withRouletteGlobalSchedulerLock<T>(
