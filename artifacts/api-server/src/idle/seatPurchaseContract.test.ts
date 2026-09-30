@@ -92,6 +92,7 @@ describe("Stadium seat purchase transaction contract", () => {
       'throw new Error("IDEMPOTENCY_KEY_REUSED")',
     );
     expect(purchaseSource).toContain("replayed: true");
+    expect(purchaseSource).toContain("currentBalanceCents");
   });
 
   it("revalidates replayed seat economics instead of trusting receipt totals", () => {
