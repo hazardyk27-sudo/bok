@@ -304,4 +304,15 @@ describe("cadi kazan route smoke contract", () => {
     expect(visualLockSource).toContain("pointer-events: auto !important");
   });
 
+
+  it("uses optimized supplied paw/skull artwork for Advanced 25 results", () => {
+    expect(witchClientSource).toContain('class="witch-cell-artwork"');
+    expect(witchClientSource).toContain('decoding="async"');
+    expect(visualLockSource).toContain("PASS 28 — ADVANCED 25 supplied paw/skull reveal artwork");
+    expect(visualLockSource).toContain(".is-advanced-theme .witch-cell.is-safe .witch-cell-artwork");
+    expect(visualLockSource).toContain(".is-advanced-theme .witch-cell.is-bomb .witch-cell-artwork");
+    expect(visualLockSource).toContain("object-fit: contain !important");
+    expect(visualLockSource).toContain(".is-advanced-theme .witch-cell-result-label");
+  });
+
 });

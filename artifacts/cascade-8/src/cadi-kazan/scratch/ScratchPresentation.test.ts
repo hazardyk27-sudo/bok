@@ -38,18 +38,20 @@ describe("scratch result presentation", () => {
     });
   });
 
-  it("keeps the Advanced bomb and lucky-symbol presentation", () => {
+  it("uses the supplied Advanced 25 paw and cat-skull artwork after reveal", () => {
     expect(getScratchCellPresentation("ADVANCED", true, true)).toEqual({
-      symbol: "●",
-      label: "BOMBA",
+      symbol: "",
+      label: "KEDİ KAFATASI · BOMBA",
       resultClass: "bomb",
-      artworkUrl: null,
+      artworkUrl: "/cadi-kazan/advanced25-skull.webp",
+      artworkAlt: "Kedi kafatası",
     });
     expect(getScratchCellPresentation("ADVANCED", true, false)).toEqual({
-      symbol: "✦",
-      label: "ALTIN",
+      symbol: "",
+      label: "ALTIN PATİ",
       resultClass: "safe",
-      artworkUrl: null,
+      artworkUrl: "/cadi-kazan/advanced25-paw.webp",
+      artworkAlt: "Altın pati",
     });
   });
 });

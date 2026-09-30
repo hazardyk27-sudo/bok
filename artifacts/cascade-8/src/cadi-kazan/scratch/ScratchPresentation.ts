@@ -45,6 +45,21 @@ export function getScratchCellPresentation(
         };
   }
 
-  if (bomb) return { symbol: "●", label: "BOMBA", resultClass: "bomb", artworkUrl: null };
-  return { symbol: "✦", label: "ALTIN", resultClass: "safe", artworkUrl: null };
+  if (bomb) {
+    return {
+      symbol: "",
+      label: "KEDİ KAFATASI · BOMBA",
+      resultClass: "bomb",
+      artworkUrl: "/cadi-kazan/advanced25-skull.webp",
+      artworkAlt: "Kedi kafatası",
+    };
+  }
+
+  return {
+    symbol: "",
+    label: "ALTIN PATİ",
+    resultClass: "safe",
+    artworkUrl: "/cadi-kazan/advanced25-paw.webp",
+    artworkAlt: "Altın pati",
+  };
 }
