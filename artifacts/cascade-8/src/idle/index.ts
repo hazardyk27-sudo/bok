@@ -513,14 +513,24 @@ class BusinessesClient {
       `Lv${live.storageLevel}`,
     );
 
-    const storagePercent = Math.round(
-      live.storageFillRatio * 100,
-    );
+    const rawStoragePercent =
+      live.storageFillRatio * 100;
+    const storagePercent =
+      live.liveIsStorageFull
+        ? 100
+        : Math.min(
+          99.9,
+          Math.floor(rawStoragePercent * 10) / 10,
+        );
+    const storagePercentLabel =
+      Number.isInteger(storagePercent)
+        ? String(storagePercent)
+        : storagePercent.toFixed(1);
 
     setText(
       this.root,
       "[data-idle-storage-percent]",
-      `%${storagePercent}`,
+      `%${storagePercentLabel}`,
     );
     setText(
       this.root,
