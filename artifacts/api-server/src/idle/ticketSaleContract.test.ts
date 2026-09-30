@@ -76,7 +76,7 @@ describe("ticket sale transaction contract", () => {
       "storedMicroTickets:\n            quote.resultingStoredMicroTickets",
     );
     expect(saleSource).toContain(
-      "UPDATE roulette_wallets",
+      "${SHARED_WALLET_TABLE}",
     );
     expect(saleSource).toContain(
       "BigInt(balanceBeforeCents)\n          + BigInt(quote.walletCreditCents)",
