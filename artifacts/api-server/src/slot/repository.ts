@@ -2,7 +2,7 @@ import { randomUUID } from "node:crypto";
 import { pool, type PoolClient } from "@workspace/db";
 import { playSpin } from "../../../cascade-8/src/engine/SlotEngine";
 import { SeededRNG } from "../../../cascade-8/src/engine/RNG";
-import type { SpinResult } from "../../../cascade-8/src/engine/types";
+import type { FreeSpinResult, SpinResult, TumbleResult } from "../../../cascade-8/src/engine/types";
 import { FREE_BET_CENTS, BETS_CENTS } from "../../../cascade-8/src/config/GameConfig";
 import { INITIAL_SHARED_BALANCE_CENTS } from "../platform/wallet";
 
@@ -108,10 +108,39 @@ async function walletBalance(sessionId: string) {
   return INITIAL_SHARED_BALANCE_CENTS;
 }
 
+type WireTumbleResult = Omit<TumbleResult, "boardBefore" | "boardAfterGravity" | "newSymbols" | "multiplierCoreCells">;
+type WireFreeSpinResult = Omit<FreeSpinResult, "tumbles"> & { tumbles: WireTumbleResult[] };
+type WireSpinResult = Omit<SpinResult, "tumbles" | "freeSpins"> & {
+  tumbles: WireTumbleResult[];
+  freeSpins: WireFreeSpinResult[];
+};
+
+function compactTumbleForWire(tumble: TumbleResult): WireTumbleResult {
+  const {
+    boardBefore: _boardBefore,
+    boardAfterGravity: _boardAfterGravity,
+    newSymbols: _newSymbols,
+    multiplierCoreCells: _multiplierCoreCells,
+    ...wire
+  } = tumble;
+  return wire;
+}
+
+function compactSpinResultForWire(result: SpinResult): WireSpinResult {
+  return {
+    ...result,
+    tumbles: result.tumbles.map(compactTumbleForWire),
+    freeSpins: result.freeSpins.map((freeSpin) => ({
+      ...freeSpin,
+      tumbles: freeSpin.tumbles.map(compactTumbleForWire),
+    })),
+  };
+}
+
 function response(sessionId: string, balanceCents: number, row: SlotRoundRow) {
   return {
     roundId: row.id,
-    result: row.result,
+    result: compactSpinResultForWire(row.result),
     wallet: { sessionId, balanceCents },
   };
 }
