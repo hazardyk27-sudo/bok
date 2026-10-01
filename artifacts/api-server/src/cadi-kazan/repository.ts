@@ -48,6 +48,12 @@ type CadiRoundRow = {
 
 type WalletRow = { balance_cents: number };
 type CadiActionRow = { session_id: string; round_id: string; kind: string };
+type RevealContextRow = CadiRoundRow & {
+  action_session_id: string | null;
+  action_round_id: string | null;
+  action_kind: string | null;
+  wallet_balance_cents: number | null;
+};
 
 const safeNumberArray = (value: unknown) => (Array.isArray(value) ? value.map(Number).filter(Number.isInteger) : []);
 const officeSymbolIds = new Set<OfficeMatchSymbolId>(OFFICE_MATCH_SYMBOLS.map((symbol) => symbol.id));
@@ -282,28 +288,46 @@ export class CadiKazanRepository {
     const client = await pool.connect();
     try {
       await client.query("BEGIN");
-      const existingAction = await client.query<CadiActionRow>(
-        "SELECT session_id, round_id, kind FROM cadi_kazan_ledger WHERE idempotency_key = $1 FOR UPDATE",
-        [idempotencyKey],
-      );
-      const result = await client.query<CadiRoundRow>(
-        "SELECT * FROM cadi_kazan_rounds WHERE id = $1 AND session_id = $2 FOR UPDATE",
-        [roundId, sessionId],
+      const result = await client.query<RevealContextRow>(
+        `SELECT r.*,
+                a.session_id AS action_session_id,
+                a.round_id AS action_round_id,
+                a.kind AS action_kind,
+                w.balance_cents AS wallet_balance_cents
+           FROM cadi_kazan_rounds r
+           LEFT JOIN cadi_kazan_ledger a
+             ON a.idempotency_key = $3
+           LEFT JOIN shared_wallets w
+             ON w.session_id = r.session_id
+          WHERE r.id = $1
+            AND r.session_id = $2
+          FOR UPDATE OF r`,
+        [roundId, sessionId, idempotencyKey],
       );
       const row = result.rows[0];
       if (!row) throw new Error("CADI_KAZAN_ROUND_NOT_FOUND");
-      if (existingAction.rows[0]) {
-        const action = existingAction.rows[0];
-        if (action.session_id !== sessionId || action.round_id !== roundId || action.kind !== `REVEAL:${cellIndex}`) {
+
+      const readRevealBalance = async () => (
+        row.wallet_balance_cents === null
+          ? ensureWalletForUpdate(client, sessionId)
+          : Number(row.wallet_balance_cents)
+      );
+
+      if (row.action_kind) {
+        if (
+          row.action_session_id !== sessionId ||
+          row.action_round_id !== roundId ||
+          row.action_kind !== `REVEAL:${cellIndex}`
+        ) {
           throw new Error("IDEMPOTENCY_KEY_REUSED");
         }
-        const balanceCents = await ensureWalletForUpdate(client, sessionId);
+        const balanceCents = await readRevealBalance();
         await client.query("COMMIT");
         return { outcome: "NOOP" as const, state: stateFrom(sessionId, balanceCents, row) };
       }
       const revealedCells = safeNumberArray(row.revealed_cells);
       if (row.status !== "ACTIVE" || revealedCells.includes(cellIndex)) {
-        const balanceCents = await ensureWalletForUpdate(client, sessionId);
+        const balanceCents = await readRevealBalance();
         await client.query("COMMIT");
         return { outcome: "NOOP" as const, state: stateFrom(sessionId, balanceCents, row) };
       }
@@ -348,7 +372,9 @@ export class CadiKazanRepository {
           [randomUUID(), sessionId, roundId, `REVEAL:${cellIndex}`, idempotencyKey],
         );
 
-        let balanceCents = await ensureWalletForUpdate(client, sessionId);
+        let balanceCents = resolution.win && payoutCents > 0
+          ? await ensureWalletForUpdate(client, sessionId)
+          : await readRevealBalance();
         if (resolution.win && payoutCents > 0) {
           await client.query(
             "UPDATE shared_wallets SET balance_cents = balance_cents + $1, updated_at = now() WHERE session_id = $2",
@@ -377,7 +403,7 @@ export class CadiKazanRepository {
           "INSERT INTO cadi_kazan_ledger (id, session_id, round_id, kind, amount_cents, idempotency_key) VALUES ($1, $2, $3, $4, 0, $5)",
           [randomUUID(), sessionId, roundId, `REVEAL:${cellIndex}`, idempotencyKey],
         );
-        const balanceCents = await ensureWalletForUpdate(client, sessionId);
+        const balanceCents = await readRevealBalance();
         await client.query("COMMIT");
         return { outcome: "BUST" as const, state: stateFrom(sessionId, balanceCents, busted.rows[0]) };
       }
@@ -399,7 +425,9 @@ export class CadiKazanRepository {
         "INSERT INTO cadi_kazan_ledger (id, session_id, round_id, kind, amount_cents, idempotency_key) VALUES ($1, $2, $3, $4, 0, $5)",
         [randomUUID(), sessionId, roundId, `REVEAL:${cellIndex}`, idempotencyKey],
       );
-      let balanceCents = await ensureWalletForUpdate(client, sessionId);
+      let balanceCents = completed
+        ? await ensureWalletForUpdate(client, sessionId)
+        : await readRevealBalance();
       if (completed) {
         await client.query(
           "UPDATE shared_wallets SET balance_cents = balance_cents + $1, updated_at = now() WHERE session_id = $2",

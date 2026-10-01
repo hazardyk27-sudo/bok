@@ -58,6 +58,40 @@ export type ScratchSurfaceOptions = {
 const clamp = (value: number, minimum = 0, maximum = 1) => Math.max(minimum, Math.min(maximum, value));
 const phase = (depth: number, start: number, end: number) => clamp((depth - start) / Math.max(0.001, end - start));
 
+export type ScratchCommitPlan = {
+  commitNow: boolean;
+  deferMs: number | null;
+};
+
+export function getScratchCommitPlan(input: {
+  elapsedMs: number;
+  scratchDistancePx: number;
+  accumulatedScratchDistancePx: number;
+  widthPx: number;
+  coverage: number;
+  persistentCoverageCommit: boolean;
+}): ScratchCommitPlan {
+  const minimumDistance = Math.max(70, input.widthPx * RESULT_COMMIT_MIN_DISTANCE_FACTOR);
+  const persistentCoverageReady =
+    input.persistentCoverageCommit &&
+    input.coverage >= 0.34 &&
+    input.accumulatedScratchDistancePx >= Math.max(90, input.widthPx * 0.75);
+
+  if (persistentCoverageReady) return { commitNow: true, deferMs: 0 };
+
+  const normalCoverageAndDistanceReady =
+    input.scratchDistancePx >= minimumDistance &&
+    input.coverage >= RESULT_COMMIT_MIN_COVERAGE;
+
+  if (!normalCoverageAndDistanceReady) return { commitNow: false, deferMs: null };
+  if (input.elapsedMs >= RESULT_COMMIT_MIN_MS) return { commitNow: true, deferMs: 0 };
+
+  return {
+    commitNow: false,
+    deferMs: Math.max(1, RESULT_COMMIT_MIN_MS - input.elapsedMs),
+  };
+}
+
 export class ScratchSurface {
   private readonly progress: ScratchProgressGrid;
   private readonly onCommit: () => Promise<void>;
@@ -77,6 +111,7 @@ export class ScratchSurface {
   private accumulatedScratchDistancePx = 0;
   private resultReady = false;
   private resultRequest: Promise<void> | null = null;
+  private resultCommitTimer: number | null = null;
   private lastMoveAt = 0;
   private brushStep = 0;
   private trail: TrailSample[] = [];
@@ -158,7 +193,9 @@ export class ScratchSurface {
   private readonly finishPointer = (event: PointerEvent) => {
     if (this.pointerId.value !== event.pointerId) return;
     if (this.interactionCanvas.hasPointerCapture(event.pointerId)) this.interactionCanvas.releasePointerCapture(event.pointerId);
-    this.maybeCommitResult(performance.now());
+    const now = performance.now();
+    this.maybeCommitResult(now);
+    this.scheduleDeferredCommit(now);
     this.pointerId.value = null;
     this.lastPoint = null;
     this.gestureStartedAt = 0;
@@ -229,6 +266,7 @@ export class ScratchSurface {
       window.cancelAnimationFrame(this.resizeFrame);
       this.resizeFrame = null;
     }
+    this.clearResultCommitTimer();
     if (this.pointerId.value !== null && this.interactionCanvas.hasPointerCapture(this.pointerId.value)) {
       this.interactionCanvas.releasePointerCapture(this.pointerId.value);
     }
@@ -257,6 +295,7 @@ export class ScratchSurface {
     this.trail = [];
     this.resultReady = false;
     this.resultRequest = null;
+    this.clearResultCommitTimer();
     this.progress.reset();
     this.layers.forEach((layer) => layer.context.clearRect(0, 0, layer.canvas.clientWidth, layer.canvas.clientHeight));
     this.clearDebris();
@@ -353,6 +392,7 @@ export class ScratchSurface {
   finishExternalPointer(pointerId: number, now = performance.now()) {
     if (this.pointerId.value !== pointerId) return;
     this.maybeCommitResult(now);
+    this.scheduleDeferredCommit(now);
     this.pointerId.value = null;
     this.lastPoint = null;
     this.gestureStartedAt = 0;
@@ -369,27 +409,50 @@ export class ScratchSurface {
     }
   }
 
+  private getCurrentCommitPlan(now: number) {
+    if (this.gestureStartedAt <= 0) return { commitNow: false, deferMs: null } satisfies ScratchCommitPlan;
+    return getScratchCommitPlan({
+      elapsedMs: now - this.gestureStartedAt,
+      scratchDistancePx: this.scratchDistancePx,
+      accumulatedScratchDistancePx: this.accumulatedScratchDistancePx,
+      widthPx: Math.max(1, this.interactionCanvas.clientWidth),
+      coverage: this.progress.coverage,
+      persistentCoverageCommit: this.persistentCoverageCommit,
+    });
+  }
+
   private maybeCommitResult(now: number) {
     if (this.resultReady || this.resultRequest || this.gestureStartedAt <= 0) return;
-    const elapsed = now - this.gestureStartedAt;
-    const width = Math.max(1, this.interactionCanvas.clientWidth);
-    const minimumDistance = Math.max(70, width * RESULT_COMMIT_MIN_DISTANCE_FACTOR);
-    const normalGestureReady =
-      elapsed >= RESULT_COMMIT_MIN_MS &&
-      this.scratchDistancePx >= minimumDistance &&
-      this.progress.coverage >= RESULT_COMMIT_MIN_COVERAGE;
-
-    // Office supports repeated short strokes and a drag that crosses several
-    // cells. Those gestures can legitimately build deep coverage while another
-    // cell is waiting on the server. Do not strand a visibly scratched cell
-    // just because no single stroke met the long anti-spoiler distance gate.
-    const persistentCoverageReady =
-      this.persistentCoverageCommit &&
-      this.progress.coverage >= 0.34 &&
-      this.accumulatedScratchDistancePx >= Math.max(90, width * 0.75);
-
-    if (!normalGestureReady && !persistentCoverageReady) return;
+    const plan = this.getCurrentCommitPlan(now);
+    if (!plan.commitNow) return;
+    this.clearResultCommitTimer();
     this.ensureResultCommitted();
+  }
+
+  private scheduleDeferredCommit(now: number) {
+    if (this.resultReady || this.resultRequest || this.resultCommitTimer !== null || this.gestureStartedAt <= 0) return;
+    const plan = this.getCurrentCommitPlan(now);
+    if (plan.commitNow) {
+      this.ensureResultCommitted();
+      return;
+    }
+    if (plan.deferMs === null) return;
+
+    // A sufficiently scratched fast gesture used to be forgotten when the
+    // pointer was released before the anti-spoiler 420ms gate elapsed. Preserve
+    // the exact gate and scratch feel, but finish the commit once the remaining
+    // milliseconds have elapsed instead of requiring another gesture.
+    this.resultCommitTimer = window.setTimeout(() => {
+      this.resultCommitTimer = null;
+      if (this.resultReady || this.resultRequest) return;
+      this.ensureResultCommitted();
+    }, plan.deferMs);
+  }
+
+  private clearResultCommitTimer() {
+    if (this.resultCommitTimer === null) return;
+    window.clearTimeout(this.resultCommitTimer);
+    this.resultCommitTimer = null;
   }
 
   private ensureResultCommitted() {
