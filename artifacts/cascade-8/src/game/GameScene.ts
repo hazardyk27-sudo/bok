@@ -743,8 +743,6 @@ export class GameScene extends Phaser.Scene {
       };
     }
     this.activeWinLabels.completeAll();
-    this.clearTransientEffects();
-    this.clearPooledBurstEffects();
 
     const previousNodes = new Map(
       this.nodes.map((node) => [`${node.row}:${node.col}`, node]),
@@ -798,7 +796,7 @@ export class GameScene extends Phaser.Scene {
     };
   }
 
-  async animateDrop(duration: number, _awaitScatterLanding = true): Promise<MotionTiming> {
+  async animateDrop(duration: number, awaitScatterLanding = true): Promise<MotionTiming> {
     const startedAt = performance.now();
     const columnGroups = Array.from({ length: BOARD_COLUMNS }, (_, col) =>
       this.nodes
@@ -851,10 +849,16 @@ export class GameScene extends Phaser.Scene {
       const finishScatterLandings = () => {
         if (landingStarted) return;
         landingStarted = true;
-        if (scatterNodes.length) {
-          void Promise.all(scatterNodes.map((node) => this.animateScatterLanding(node)));
+        if (!scatterNodes.length) {
+          complete();
+          return;
         }
-        complete();
+        const landings = scatterNodes.map((node) => this.animateScatterLanding(node));
+        if (awaitScatterLanding) void Promise.all(landings).then(complete);
+        else {
+          void Promise.all(landings);
+          complete();
+        }
       };
       const tween = this.tweens.add({
         targets: motion,
@@ -920,31 +924,22 @@ export class GameScene extends Phaser.Scene {
     };
   }
 
-  highlightCells(cells: Cell[], duration: number) {
+  async highlightCells(cells: Cell[], duration: number) {
     const wanted = new Set(cells.map((cell) => `${cell.row}:${cell.col}`));
     const active = this.nodes.filter((node) => wanted.has(`${node.row}:${node.col}`));
-    const pulseDuration = Math.max(40, Math.min(180, Math.round(duration)));
-
-    active.forEach((node) => {
-      const normalSymbol = getNormalSymbol(node.symbol);
-      const color = isMultiplierCore(node.symbol)
-        ? 0xffc34d
-        : normalSymbol
-          ? getSymbolDefinition(normalSymbol).color
-          : 0xffd56a;
-      const ring = this.acquireBurstRing(node.container.x, node.container.y, color)
-        .setScale(0.72)
-        .setAlpha(0.58);
+    await Promise.all(active.map((node) => new Promise<void>((resolve) => {
       this.tweens.add({
-        targets: ring,
-        scale: 1.42,
-        alpha: 0,
-        duration: pulseDuration,
-        ease: "Cubic.easeOut",
-        onComplete: () => this.releaseBurstRing(ring),
+        targets: node.container,
+        scale: 1.14,
+        duration: duration / 2,
+        yoyo: true,
+        ease: "Sine.easeInOut",
+        onComplete: () => {
+          if (node.symbol === "SCATTER") void this.animateScatterLanding(node).then(resolve);
+          else resolve();
+        },
       });
-      if (node.symbol === "SCATTER") void this.animateScatterLanding(node);
-    });
+    })));
   }
 
   private findMultiplierNode(core: CoreCell) {
@@ -1227,10 +1222,10 @@ export class GameScene extends Phaser.Scene {
   async presentWinLabels(events: readonly WinLabelEvent[], duration: number) {
     if (!events.length) return;
     const placements = calculateWinLabelPositions(events);
-    const totalDuration = Math.max(40, Math.min(720, duration));
+    const totalDuration = Math.max(40, Math.min(2000, duration));
     const isInstantTiming = totalDuration <= 40;
-    const popDuration = isInstantTiming ? 1 : Math.max(100, Math.round(totalDuration * 0.28));
-    const fadeDuration = isInstantTiming ? 1 : Math.max(160, Math.round(totalDuration * 0.42));
+    const popDuration = isInstantTiming ? 1 : Math.max(650, Math.min(700, Math.round(totalDuration * 0.21)));
+    const fadeDuration = isInstantTiming ? 1 : Math.max(900, Math.min(1000, Math.round(totalDuration * 0.29)));
     const holdDuration = Math.max(1, totalDuration - popDuration - fadeDuration);
     const canvasScale = this.game.canvas.getBoundingClientRect().width / Math.max(1, this.scale.width);
     const fontSize = Math.round(36 / Math.max(0.82, canvasScale || 1));
@@ -1322,6 +1317,7 @@ export class GameScene extends Phaser.Scene {
             if (watchdog !== null) window.clearTimeout(watchdog);
             resolve();
           };
+          const mayResolveAtVisualSettle = node.symbol !== "SCATTER" && !isMultiplierCore(node.symbol);
           const tween = this.tweens.add({
             targets: node.container,
             y: targetY,
@@ -1334,7 +1330,7 @@ export class GameScene extends Phaser.Scene {
                 && Math.abs(node.container.y - targetY) <= 1.5
               ) {
                 markVisualSettled();
-                complete();
+                if (mayResolveAtVisualSettle) complete();
               }
             },
             onComplete: () => {
@@ -1409,7 +1405,7 @@ export class GameScene extends Phaser.Scene {
                 && group.every((node, index) => Math.abs(node.container.y - targetYs[index]) <= 1.5 && node.container.alpha >= 0.995)
               ) {
                 markVisualSettled();
-                complete();
+                if (!hasSpecialSymbol) complete();
               }
             },
             onComplete: () => {
