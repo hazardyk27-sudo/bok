@@ -155,6 +155,15 @@ describe("slot route smoke contract", () => {
     expect(slotWalletClientSource).toContain("boardAfterGravity: tumble.boardAfterRefill");
   });
 
+  it("bounds every awaited base-round visual tween without changing its normal duration", () => {
+    expect(gameSceneSource).toContain("watchdog = window.setTimeout(finish, duration + 520)");
+    expect(gameSceneSource).toContain("watchdog = window.setTimeout(finish, duration + 220)");
+    expect(gameSceneSource).toContain("watchdog = window.setTimeout(finish, tweenDuration + 220)");
+    expect(gameSceneSource).toContain("void this.animateScatterLanding(node).finally(finish)");
+    expect(gameSceneSource).toContain("const tweenDuration = Math.max(1, Math.round(duration * 0.24))");
+    expect(gameSceneSource).toContain("const tweenDuration = Math.max(1, Math.round(duration * 0.58))");
+  });
+
   it("guards burst completion without changing burst duration", () => {
     expect(gameSceneSource).toContain("watchdog = window.setTimeout(finish, duration + 220)");
     expect(gameSceneSource).toContain("onComplete: finish");
