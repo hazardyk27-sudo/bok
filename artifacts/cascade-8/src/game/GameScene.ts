@@ -489,9 +489,9 @@ export class GameScene extends Phaser.Scene {
     this.tweens.killTweensOf(targets);
     mark
       .setTexture(`club-logo-${nextSymbol}`)
+      .setScale(1)
       .setDisplaySize(82, 82)
       .setAlpha(1)
-      .setScale(1)
       .setAngle(0)
       .setVisible(true)
       .setActive(true);
