@@ -842,16 +842,10 @@ export class GameScene extends Phaser.Scene {
       const finishScatterLandings = () => {
         if (landingStarted) return;
         landingStarted = true;
-        if (!scatterNodes.length) {
-          complete();
-          return;
+        if (scatterNodes.length) {
+          void Promise.all(scatterNodes.map((node) => this.animateScatterLanding(node)));
         }
-        const landings = scatterNodes.map((node) => this.animateScatterLanding(node));
-        if (awaitScatterLanding) void Promise.all(landings).then(complete);
-        else {
-          void Promise.all(landings);
-          complete();
-        }
+        complete();
       };
       const tween = this.tweens.add({
         targets: motion,
@@ -928,8 +922,8 @@ export class GameScene extends Phaser.Scene {
         yoyo: true,
         ease: "Sine.easeInOut",
              onComplete: () => {
-               if (node.symbol === "SCATTER") void this.animateScatterLanding(node).then(resolve);
-               else resolve();
+               if (node.symbol === "SCATTER") void this.animateScatterLanding(node);
+               resolve();
              },
       });
     })));
@@ -1280,7 +1274,6 @@ export class GameScene extends Phaser.Scene {
             if (watchdog !== null) window.clearTimeout(watchdog);
             resolve();
           };
-          const mayResolveAtVisualSettle = node.symbol !== "SCATTER" && !isMultiplierCore(node.symbol);
           const tween = this.tweens.add({
             targets: node.container,
             y: targetY,
@@ -1293,7 +1286,7 @@ export class GameScene extends Phaser.Scene {
                 && Math.abs(node.container.y - targetY) <= 1.5
               ) {
                 markVisualSettled();
-                if (mayResolveAtVisualSettle) complete();
+                complete();
               }
             },
             onComplete: () => {
@@ -1368,7 +1361,7 @@ export class GameScene extends Phaser.Scene {
                 && group.every((node, index) => Math.abs(node.container.y - targetYs[index]) <= 1.5 && node.container.alpha >= 0.995)
               ) {
                 markVisualSettled();
-                if (!hasSpecialSymbol) complete();
+                complete();
               }
             },
             onComplete: () => {
