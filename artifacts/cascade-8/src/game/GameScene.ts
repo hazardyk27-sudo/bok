@@ -153,6 +153,12 @@ export class GameScene extends Phaser.Scene {
 
   private lastAmbientUpdateAt = -Infinity;
 
+  private runtimeActive = false;
+
+  private idleSleepTimer: number | null = null;
+
+  private idleSleepAttempts = 0;
+
   private boardOrigin = { x: 22, y: 30 };
 
   private cellSize = { width: 96, height: 92 };
@@ -182,6 +188,57 @@ export class GameScene extends Phaser.Scene {
 
   create() {
     this.drawBoardFrame();
+    this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => this.clearIdleSleepTimer());
+    this.events.once(Phaser.Scenes.Events.DESTROY, () => this.clearIdleSleepTimer());
+  }
+
+  private clearIdleSleepTimer() {
+    if (this.idleSleepTimer === null) return;
+    window.clearTimeout(this.idleSleepTimer);
+    this.idleSleepTimer = null;
+  }
+
+  private hasAmbientAnimations() {
+    return this.nodes.some((node) => Boolean(node.ambient));
+  }
+
+  private isVisuallyStatic() {
+    return !this.runtimeActive
+      && !this.hasAmbientAnimations()
+      && this.tweens.getTweens().length === 0
+      && this.transientEffects.length === 0
+      && this.activeBurstRings.size === 0
+      && this.activeBurstParticles.size === 0
+      && this.activeWinLabels.size === 0;
+  }
+
+  private scheduleIdleSleep() {
+    this.clearIdleSleepTimer();
+    if (this.runtimeActive || this.hasAmbientAnimations()) return;
+
+    this.idleSleepAttempts = 0;
+    const attemptSleep = () => {
+      this.idleSleepTimer = null;
+      if (this.runtimeActive || this.hasAmbientAnimations()) return;
+      if (this.isVisuallyStatic()) {
+        this.game.loop.sleep();
+        return;
+      }
+      this.idleSleepAttempts += 1;
+      if (this.idleSleepAttempts >= 12) return;
+      this.idleSleepTimer = window.setTimeout(attemptSleep, 250);
+    };
+    this.idleSleepTimer = window.setTimeout(attemptSleep, 250);
+  }
+
+  setRuntimeActive(active: boolean) {
+    this.runtimeActive = active;
+    if (active) {
+      this.clearIdleSleepTimer();
+      if (!this.game.loop.running) this.game.loop.wake(true);
+      return;
+    }
+    this.scheduleIdleSleep();
   }
 
   update(time: number) {
