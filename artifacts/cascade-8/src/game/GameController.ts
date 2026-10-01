@@ -78,6 +78,7 @@ export class GameController {
     this.bind();
     this.updateHud();
     void this.initializeWallet();
+    this.scene.setRuntimeActive(false);
   }
 
   private async initializeWallet() {
@@ -241,6 +242,7 @@ export class GameController {
       return;
     }
     if (this.pendingBonusResult) {
+      this.scene.setRuntimeActive(true);
       await this.startFreeSpins();
       return;
     }
@@ -248,6 +250,7 @@ export class GameController {
       if (!this.busy && !canAffordBet(this.balanceCents, this.betCents)) this.message("INSUFFICIENT DEMO CREDITS");
       return;
     }
+     this.scene.setRuntimeActive(true);
      this.busy = true; this.currentWinCents = 0; this.bonusWinCents = 0; this.freeSpinsLeft = 0;
      this.pendingSettledBalanceCents = null;
      this.beginRoundTiming("base", fromAuto);
@@ -281,6 +284,7 @@ export class GameController {
          : "SLOT SERVER UNAVAILABLE");
        this.updateHud();
        this.publishTiming();
+       this.scene.setRuntimeActive(false);
        return;
      }
     this.message("THE GATES ARE OPENING");
@@ -476,6 +480,7 @@ export class GameController {
     this.setState("IDLE"); this.updateHud();
     this.markTiming("HUD_IDLE");
     this.publishTiming();
+    this.scene.setRuntimeActive(false);
   }
 
   private async toggleAuto() {
