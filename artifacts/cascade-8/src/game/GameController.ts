@@ -267,6 +267,8 @@ export class GameController {
      this.resetTumbleWin();
     this.setBonusPrompt(false);
     this.setState("SPIN_INIT");
+    this.ui.boardWrap.classList.add("is-awaiting-spin-result");
+    this.message("THE GATES ARE OPENING");
     this.audio.spin(); this.updateHud();
      let result: SpinResult;
      try {
@@ -295,8 +297,9 @@ export class GameController {
        this.publishTiming();
        this.scene.setRuntimeActive(false);
        return;
+     } finally {
+       this.ui.boardWrap.classList.remove("is-awaiting-spin-result");
      }
-    this.message("THE GATES ARE OPENING");
     this.setState("INITIAL_DROP");
     const baseRenderTiming = this.scene.renderBoard(result.initialBoard);
     this.markTiming("BASE_BOARD_RENDERED", baseRenderTiming);
