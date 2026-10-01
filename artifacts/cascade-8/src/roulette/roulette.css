@@ -6093,3 +6093,568 @@ button {
    * Their final 16:9 placement is intentionally deferred to Part 2.
    */
 }
+
+
+/* Desktop 16:9 Part 2 — phase emphasis and result presentation */
+@media (min-width: 1100px) and (orientation: landscape) {
+  .roulette-stage,
+  .roulette-bet-panel {
+    transition:
+      width 520ms cubic-bezier(0.16, 0.86, 0.22, 1),
+      height 520ms cubic-bezier(0.16, 0.86, 0.22, 1),
+      top 520ms cubic-bezier(0.16, 0.86, 0.22, 1),
+      transform 520ms cubic-bezier(0.16, 0.86, 0.22, 1),
+      opacity 320ms ease,
+      filter 360ms ease;
+  }
+
+  /*
+   * BETTING:
+   * Table is the interaction focus. The wheel remains live and readable,
+   * but sits visually behind it like the supplied desktop reference.
+   */
+  .roulette-page[data-phase="betting"] {
+    --desktop-wheel-size:
+      min(
+        42vw,
+        62dvh,
+        620px
+      );
+    --desktop-table-width:
+      min(
+        76vw,
+        1180px
+      );
+  }
+
+  .roulette-page[data-phase="betting"]
+    .roulette-wheel-panel {
+    z-index: 1 !important;
+  }
+
+  .roulette-page[data-phase="betting"]
+    .roulette-stage {
+    top:
+      clamp(
+        92px,
+        10.2dvh,
+        116px
+      );
+    transform:
+      translateX(-50%)
+      scale(0.96) !important;
+    opacity: 0.56 !important;
+    filter:
+      saturate(0.74)
+      brightness(0.67)
+      contrast(0.96) !important;
+  }
+
+  .roulette-page[data-phase="betting"]
+    .roulette-bet-panel {
+    bottom:
+      clamp(
+        10px,
+        1.35dvh,
+        18px
+      );
+    transform:
+      translateX(-50%)
+      scale(1) !important;
+    transform-origin:
+      center bottom;
+    opacity: 1 !important;
+    filter: none !important;
+    pointer-events: auto;
+    z-index: 18;
+  }
+
+  .roulette-page[data-phase="betting"]
+    .roulette-bet-table {
+    box-shadow:
+      0 16px 42px
+      rgba(0, 0, 0, 0.48),
+      0 0 0 1px
+      rgba(232, 224, 204, 0.035),
+      inset 0 1px 0
+      rgba(255, 255, 255, 0.035);
+  }
+
+  /*
+   * SPINNING:
+   * Wheel becomes the hero. The betting table is not redesigned; the entire
+   * approved horizontal desktop table is scaled as one object so every cell,
+   * label, chip and border keeps the exact betting proportions.
+   */
+  .roulette-page[data-phase="spinning"] {
+    --desktop-wheel-size:
+      min(
+        58vw,
+        82dvh,
+        860px
+      );
+    --desktop-table-width:
+      min(
+        74vw,
+        1140px
+      );
+  }
+
+  .roulette-page[data-phase="spinning"]
+    .roulette-wheel-panel {
+    z-index: 10 !important;
+  }
+
+  .roulette-page[data-phase="spinning"]
+    .roulette-stage {
+    top:
+      clamp(
+        66px,
+        7.2dvh,
+        84px
+      );
+    transform:
+      translateX(-50%)
+      scale(1) !important;
+    opacity: 1 !important;
+    filter: none !important;
+  }
+
+  .roulette-page[data-phase="spinning"]
+    .roulette-bet-panel {
+    bottom:
+      clamp(
+        5px,
+        0.75dvh,
+        10px
+      );
+    transform:
+      translateX(-50%)
+      scale(0.62) !important;
+    transform-origin:
+      center bottom;
+    opacity: 0.82 !important;
+    filter:
+      saturate(0.84)
+      brightness(0.86) !important;
+    pointer-events: none;
+    z-index: 17;
+  }
+
+  .roulette-page[data-phase="spinning"]
+    .roulette-bet-table {
+    box-shadow:
+      0 10px 28px
+      rgba(0, 0, 0, 0.34),
+      inset 0 1px 0
+      rgba(255, 255, 255, 0.025);
+  }
+
+  .roulette-page[data-phase="spinning"]
+    .roulette-bet-console {
+    opacity: 0.62;
+  }
+
+  /*
+   * RESULT:
+   * Keeps the wheel-forward composition, with a slightly larger table than
+   * spinning so the winning placement remains legible.
+   */
+  .roulette-page[data-phase="settled"] {
+    --desktop-wheel-size:
+      min(
+        56vw,
+        80dvh,
+        840px
+      );
+    --desktop-table-width:
+      min(
+        74vw,
+        1140px
+      );
+  }
+
+  .roulette-page[data-phase="settled"]
+    .roulette-wheel-panel {
+    z-index: 10 !important;
+  }
+
+  .roulette-page[data-phase="settled"]
+    .roulette-stage {
+    top:
+      clamp(
+        70px,
+        7.7dvh,
+        88px
+      );
+    transform:
+      translateX(-50%)
+      scale(1) !important;
+    opacity: 1 !important;
+    filter: none !important;
+  }
+
+  .roulette-page[data-phase="settled"]
+    .roulette-bet-panel {
+    bottom:
+      clamp(
+        6px,
+        0.9dvh,
+        12px
+      );
+    transform:
+      translateX(-50%)
+      scale(0.68) !important;
+    transform-origin:
+      center bottom;
+    opacity: 0.92 !important;
+    filter:
+      saturate(0.92)
+      brightness(0.94) !important;
+    pointer-events: none;
+    z-index: 17;
+  }
+
+  .roulette-page[data-phase="settled"]
+    .roulette-bet-console {
+    opacity: 0.72;
+  }
+
+  /* ----- desktop result layers ----- */
+
+  .roulette-result-banner {
+    position: absolute;
+    left: 50%;
+    top:
+      clamp(
+        82px,
+        12.5%,
+        116px
+      );
+    width:
+      clamp(
+        238px,
+        19vw,
+        320px
+      );
+    display: grid;
+    grid-template-columns:
+      minmax(62px, 0.74fr)
+      minmax(94px, 1fr)
+      minmax(62px, 0.74fr);
+    align-items: center;
+    gap:
+      clamp(
+        7px,
+        0.65vw,
+        11px
+      );
+    transform:
+      translate(-50%, -8px)
+      scale(0.97);
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+    transition:
+      opacity 180ms ease,
+      transform 220ms cubic-bezier(0.2, 0.78, 0.2, 1),
+      visibility 0s linear 220ms;
+    z-index: 22;
+  }
+
+  .roulette-result-banner__neighbor,
+  .roulette-result-banner__number {
+    box-sizing: border-box;
+    display: grid;
+    place-items: center;
+    font-family:
+      system-ui,
+      -apple-system,
+      BlinkMacSystemFont,
+      "Segoe UI",
+      sans-serif;
+    font-variant-numeric:
+      tabular-nums;
+    line-height: 1;
+    background:
+      linear-gradient(
+        180deg,
+        rgba(14, 16, 17, 0.97),
+        rgba(4, 5, 6, 0.985)
+      );
+  }
+
+  .roulette-result-banner__neighbor {
+    height:
+      clamp(
+        48px,
+        5dvh,
+        62px
+      );
+    border:
+      1px solid
+      rgba(228, 217, 192, 0.16);
+    border-radius: 7px;
+    color:
+      rgba(239, 235, 224, 0.54);
+    font-size:
+      clamp(
+        20px,
+        1.65vw,
+        28px
+      );
+    font-weight: 790;
+    box-shadow:
+      0 7px 18px
+      rgba(0, 0, 0, 0.30),
+      inset 0 1px 0
+      rgba(255, 255, 255, 0.025);
+  }
+
+  .roulette-result-banner__number {
+    height:
+      clamp(
+        68px,
+        7dvh,
+        86px
+      );
+    border:
+      1.5px solid
+      rgba(235, 205, 133, 0.92);
+    border-radius: 8px;
+    color: #fffdf6;
+    font-size:
+      clamp(
+        38px,
+        3.1vw,
+        52px
+      );
+    font-weight: 950;
+    letter-spacing: -0.045em;
+    text-shadow:
+      0 2px 6px
+      rgba(0, 0, 0, 0.64);
+    box-shadow:
+      0 12px 28px
+      rgba(0, 0, 0, 0.42),
+      0 0 0 1px
+      rgba(136, 104, 43, 0.26),
+      inset 0 1px 0
+      rgba(255, 255, 255, 0.055);
+  }
+
+  .roulette-page[data-result-color="red"]
+    .roulette-result-banner__number {
+    box-shadow:
+      0 12px 28px
+      rgba(0, 0, 0, 0.42),
+      0 0 0 1px
+      rgba(136, 104, 43, 0.26),
+      inset 0 -3px 0
+      rgba(196, 59, 53, 0.94),
+      inset 0 1px 0
+      rgba(255, 255, 255, 0.055);
+  }
+
+  .roulette-page[data-result-color="black"]
+    .roulette-result-banner__number {
+    box-shadow:
+      0 12px 28px
+      rgba(0, 0, 0, 0.42),
+      0 0 0 1px
+      rgba(136, 104, 43, 0.26),
+      inset 0 -3px 0
+      rgba(205, 201, 190, 0.72),
+      inset 0 1px 0
+      rgba(255, 255, 255, 0.055);
+  }
+
+  .roulette-page[data-result-color="green"]
+    .roulette-result-banner__number {
+    box-shadow:
+      0 12px 28px
+      rgba(0, 0, 0, 0.42),
+      0 0 0 1px
+      rgba(136, 104, 43, 0.26),
+      inset 0 -3px 0
+      rgba(82, 159, 98, 0.94),
+      inset 0 1px 0
+      rgba(255, 255, 255, 0.055);
+  }
+
+  .roulette-page[data-result-visible="true"]
+    .roulette-result-banner {
+    opacity: 1;
+    visibility: visible;
+    transform:
+      translate(-50%, 0)
+      scale(1);
+    transition-delay: 0s;
+  }
+
+  .roulette-win-message {
+    position: absolute;
+    left: 50%;
+    top: 58%;
+    min-width:
+      clamp(
+        210px,
+        17vw,
+        290px
+      );
+    padding:
+      13px 24px
+      14px;
+    box-sizing: border-box;
+    display: grid;
+    justify-items: center;
+    gap: 5px;
+    transform:
+      translate(-50%, -50%)
+      scale(0.96);
+    border:
+      1px solid
+      rgba(232, 203, 132, 0.48);
+    border-radius: 9px;
+    background:
+      linear-gradient(
+        180deg,
+        rgba(13, 15, 16, 0.92),
+        rgba(4, 5, 6, 0.90)
+      );
+    box-shadow:
+      0 12px 30px
+      rgba(0, 0, 0, 0.42),
+      inset 0 1px 0
+      rgba(255, 255, 255, 0.04);
+    backdrop-filter: blur(5px);
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+    transition:
+      opacity 190ms ease,
+      transform 240ms cubic-bezier(0.2, 0.78, 0.2, 1),
+      visibility 0s linear 240ms;
+    z-index: 22;
+  }
+
+  .roulette-win-message > span {
+    color:
+      rgba(234, 217, 175, 0.78);
+    font-size:
+      clamp(
+        9px,
+        0.7vw,
+        12px
+      );
+    font-weight: 820;
+    line-height: 1;
+    letter-spacing: 0.15em;
+  }
+
+  .roulette-win-message > strong {
+    color: #f3d27f;
+    font-size:
+      clamp(
+        30px,
+        2.5vw,
+        44px
+      );
+    font-weight: 950;
+    line-height: 1;
+    letter-spacing: -0.045em;
+    font-variant-numeric:
+      tabular-nums;
+    text-shadow:
+      0 2px 10px
+      rgba(208, 166, 76, 0.22);
+  }
+
+  .roulette-page[data-result-visible="true"]
+    [data-result-has-payout="true"]
+    .roulette-win-message,
+  .roulette-page[data-result-visible="true"][data-result-has-payout="true"]
+    .roulette-win-message {
+    opacity: 1;
+    visibility: visible;
+    transform:
+      translate(-50%, -50%)
+      scale(1);
+    transition-delay: 55ms;
+  }
+
+  /*
+   * Menu remains above both wheel and table while open. No phase can promote
+   * the wheel/table over the settings layer.
+   */
+  .roulette-page[data-roulette-menu-open="true"]
+    .roulette-wheel-panel {
+    z-index: 50 !important;
+  }
+
+  .roulette-page[data-roulette-menu-open="true"]
+    .roulette-settings-menu {
+    z-index: 70 !important;
+  }
+
+  .roulette-page[data-roulette-menu-open="true"]
+    .roulette-bet-panel {
+    pointer-events: none !important;
+  }
+}
+
+@media (min-width: 1100px) and (orientation: landscape) and (max-height: 760px) {
+  .roulette-page[data-phase="betting"] {
+    --desktop-wheel-size:
+      min(
+        40vw,
+        58dvh,
+        560px
+      );
+  }
+
+  .roulette-page[data-phase="spinning"] {
+    --desktop-wheel-size:
+      min(
+        56vw,
+        78dvh,
+        760px
+      );
+  }
+
+  .roulette-page[data-phase="settled"] {
+    --desktop-wheel-size:
+      min(
+        54vw,
+        76dvh,
+        740px
+      );
+  }
+
+  .roulette-page[data-phase="spinning"]
+    .roulette-bet-panel {
+    transform:
+      translateX(-50%)
+      scale(0.57) !important;
+  }
+
+  .roulette-page[data-phase="settled"]
+    .roulette-bet-panel {
+    transform:
+      translateX(-50%)
+      scale(0.63) !important;
+  }
+
+  .roulette-result-banner {
+    top:
+      clamp(
+        70px,
+        11.5%,
+        92px
+      );
+  }
+
+  .roulette-win-message {
+    top: 57%;
+  }
+}
