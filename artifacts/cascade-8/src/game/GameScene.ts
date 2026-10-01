@@ -155,6 +155,8 @@ export class GameScene extends Phaser.Scene {
 
   private runtimeActive = false;
 
+  private idleSleepEnabled = true;
+
   private idleSleepTimer: number | null = null;
 
   private idleSleepAttempts = 0;
@@ -215,7 +217,7 @@ export class GameScene extends Phaser.Scene {
 
   private scheduleIdleSleep() {
     this.clearIdleSleepTimer();
-    if (this.runtimeActive || this.hasAmbientAnimations()) return;
+    if (!this.idleSleepEnabled || this.runtimeActive || this.hasAmbientAnimations()) return;
 
     this.idleSleepAttempts = 0;
     const attemptSleep = () => {
@@ -230,6 +232,16 @@ export class GameScene extends Phaser.Scene {
       this.idleSleepTimer = window.setTimeout(attemptSleep, 250);
     };
     this.idleSleepTimer = window.setTimeout(attemptSleep, 250);
+  }
+
+  setIdleSleepEnabled(enabled: boolean) {
+    this.idleSleepEnabled = enabled;
+    if (!enabled) {
+      this.clearIdleSleepTimer();
+      if (!this.game.loop.running) this.game.loop.wake(true);
+      return;
+    }
+    this.scheduleIdleSleep();
   }
 
   setRuntimeActive(active: boolean) {
