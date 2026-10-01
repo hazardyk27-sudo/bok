@@ -86,6 +86,23 @@ button:focus-visible, input:focus-visible { outline: 2px solid var(--cyan); outl
 .board-wrap { position: relative; max-width: 760px; margin: 0 auto; border-radius: 28px; background: linear-gradient(145deg, rgba(38, 56, 111, .3), rgba(10, 16, 40, .2)); box-shadow: 0 26px 100px rgba(1, 4, 17, .45), inset 0 0 70px rgba(95, 113, 225, .05); }
 .board-wrap.free-spin-mode { background: linear-gradient(145deg, rgba(129, 86, 18, .48), rgba(38, 22, 7, .45)); box-shadow: 0 26px 100px rgba(1, 4, 17, .52), 0 0 55px rgba(255, 194, 74, .2), inset 0 0 70px rgba(255, 192, 73, .12); }
 .board-wrap.free-spin-ready { box-shadow: 0 26px 100px rgba(1, 4, 17, .45), 0 0 70px rgba(255, 202, 93, .3), inset 0 0 70px rgba(255, 192, 73, .12); }
+.board-wrap.is-awaiting-spin-result::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 18;
+  pointer-events: none;
+  border-radius: inherit;
+  opacity: .7;
+  background:
+    linear-gradient(105deg, transparent 0 34%, rgba(125, 185, 255, .08) 43%, rgba(214, 233, 255, .24) 50%, rgba(125, 185, 255, .08) 57%, transparent 66% 100%);
+  background-size: 220% 100%;
+  animation: slot-request-sweep 680ms linear infinite;
+}
+@keyframes slot-request-sweep {
+  from { background-position: 150% 0; }
+  to { background-position: -150% 0; }
+}
 .board-caption { display: flex; align-items: center; gap: 10px; justify-content: center; padding-top: 13px; color: #8390bd; font: 9px "DM Mono", monospace; letter-spacing: .15em; }
 .caption-line { height: 1px; width: 40px; background: linear-gradient(90deg, transparent, rgba(127, 154, 231, .42)); }
 .caption-line + .caption-line { transform: rotate(180deg); }
