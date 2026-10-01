@@ -743,8 +743,6 @@ export class GameScene extends Phaser.Scene {
       };
     }
     this.activeWinLabels.completeAll();
-    this.clearTransientEffects();
-    this.clearPooledBurstEffects();
 
     const previousNodes = new Map(
       this.nodes.map((node) => [`${node.row}:${node.col}`, node]),
