@@ -110,7 +110,9 @@ describe("slot route smoke contract", () => {
     expect(gameSceneSource).toContain("acquireWinLabel");
     expect(gameSceneSource).toContain("releaseWinLabel");
     expect(gameSceneSource).not.toContain("this.retireGameObject(container)");
-    expect(gameSceneSource).not.toContain("this.clearTransientEffects();\n    this.clearPooledBurstEffects();");
+    const settleRoundVisualsBody =
+      gameSceneSource.match(/settleRoundVisuals\(\) \{([\s\S]*?)\n  \}/)?.[1] ?? "";
+    expect(settleRoundVisualsBody).not.toContain("clearTransientEffects");
     expect(gameSceneSource).toContain("this.acquireBurstParticle(");
     expect(gameSceneSource).not.toContain('this.add.text(centerX, centerY, "✦"');
     expect(gameSceneSource).toContain("void Promise.all(scatterNodes.map((node) => this.animateScatterLanding(node)))");
