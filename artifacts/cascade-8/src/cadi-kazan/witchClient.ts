@@ -122,6 +122,37 @@ const formatTicketPrice = (cents: number) => {
 
 const newIdempotencyKey = (prefix: string) => `${prefix}-${crypto.randomUUID()}-${Date.now()}`;
 
+const REVEAL_ATTEMPT_TIMEOUT_MS = 2200;
+const REVEAL_MAX_ATTEMPTS = 2;
+
+async function fetchRevealMutation(roundId: string, cellIndex: number, idempotencyKey: string) {
+  let lastError: unknown = null;
+
+  for (let attempt = 1; attempt <= REVEAL_MAX_ATTEMPTS; attempt += 1) {
+    try {
+      const response = await fetch(`${API_BASE}/rounds/${encodeURIComponent(roundId)}/reveal`, {
+        method: "POST",
+        credentials: "same-origin",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ cellIndex, idempotencyKey }),
+        signal: AbortSignal.timeout(REVEAL_ATTEMPT_TIMEOUT_MS),
+      });
+      const data = await response.json() as CadiKazanMutation & { error?: string };
+      if (!response.ok) throw new Error(data.error ?? "Alan açılamadı");
+      return data;
+    } catch (error) {
+      lastError = error;
+      const retryable =
+        error instanceof DOMException
+          ? error.name === "TimeoutError" || error.name === "AbortError"
+          : error instanceof TypeError;
+      if (!retryable || attempt >= REVEAL_MAX_ATTEMPTS) throw error;
+    }
+  }
+
+  throw lastError instanceof Error ? lastError : new Error("Alan açılamadı");
+}
+
 export const CADI_KAZAN_MARKUP = `
   <main class="witch-page" aria-labelledby="witch-title">
     <svg class="witch-office-filter-defs" width="0" height="0" aria-hidden="true" focusable="false">
@@ -684,14 +715,8 @@ export class WitchClient {
     this.setFeedback("Alan server’da açılıyor…");
     this.render();
     try {
-      const response = await fetch(`${API_BASE}/rounds/${encodeURIComponent(round.id)}/reveal`, {
-        method: "POST",
-        credentials: "same-origin",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({ cellIndex, idempotencyKey: newIdempotencyKey("reveal") }),
-      });
-      const data = await response.json() as CadiKazanMutation & { error?: string };
-      if (!response.ok) throw new Error(data.error ?? "Alan açılamadı");
+      const idempotencyKey = newIdempotencyKey("reveal");
+      const data = await fetchRevealMutation(round.id, cellIndex, idempotencyKey);
       this.applyState(data.state, data.state.round?.status !== "ACTIVE");
       const resultRound = data.state.round;
       if (resultRound) this.telemetry.recordRevealResult(cellIndex, data.outcome, resultRound.revealedSafeCount, resultRound.currentMultiplierBps);
