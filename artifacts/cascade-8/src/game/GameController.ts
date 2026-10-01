@@ -312,10 +312,6 @@ export class GameController {
     this.balanceCents += result.baseWinCents;
     this.currentWinCents = result.baseWinCents;
     this.updateHud();
-    const baseMultiplier = result.baseWinCents / this.betCents;
-    if (isLargeWin(baseMultiplier)) {
-      await this.presentLargeWin(baseMultiplier, result.baseWinCents);
-    }
      if (result.bonusTriggered && !result.maxWinReached) {
        if (fromAuto && this.autoRunning && !this.autoStopping) {
          this.pendingAutoResume = true;
