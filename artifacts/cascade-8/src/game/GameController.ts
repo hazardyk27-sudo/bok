@@ -598,8 +598,8 @@ export class GameController {
        this.message(tumble.multiplierCores.length ? `${winningMessage} // CORES BANKED` : winningMessage);
       this.setState("WIN_HIGHLIGHT"); this.audio.win();
       this.markTiming(`TUMBLE_${index + 1}_HIGHLIGHT_START`);
-      await this.scene.highlightCells(tumble.winningCells, tumbleDuration(ANIMATION.winHighlight));
-      this.markTiming(`TUMBLE_${index + 1}_HIGHLIGHT_DONE`);
+      this.scene.highlightCells(tumble.winningCells, tumbleDuration(ANIMATION.winHighlight));
+      this.markTiming(`TUMBLE_${index + 1}_HIGHLIGHT_DONE`, { blocking: false });
        this.setState("WIN_EXPLOSION");
       winEvents.forEach(() => this.audio.winLabel());
       await this.scene.burstCells(tumble.removedCells, tumbleDuration(ANIMATION.burst));
