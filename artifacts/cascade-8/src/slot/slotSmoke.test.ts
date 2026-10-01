@@ -91,7 +91,9 @@ describe("slot route smoke contract", () => {
   it("sleeps the static Phaser heartbeat and wakes it for active rounds", () => {
     expect(gameSceneSource).toContain("setRuntimeActive(active: boolean)");
     expect(gameSceneSource).toContain("this.game.loop.sleep()");
-    expect(gameSceneSource).toContain("this.game.loop.wake(true)");
+    expect(gameSceneSource).toContain("this.game.loop.resetDelta()");
+    expect(gameSceneSource).toContain("this.game.loop.wake(false)");
+    expect(gameSceneSource).not.toContain("this.game.loop.wake(true)");
     expect(gameSceneSource).toContain("this.tweens.getTweens().length === 0");
     expect(gameSceneSource).toContain("!this.hasAmbientAnimations()");
     expect(gameSceneSource).toContain("setIdleSleepEnabled(enabled: boolean)");
