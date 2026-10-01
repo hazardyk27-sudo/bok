@@ -920,22 +920,31 @@ export class GameScene extends Phaser.Scene {
     };
   }
 
-  async highlightCells(cells: Cell[], duration: number) {
+  highlightCells(cells: Cell[], duration: number) {
     const wanted = new Set(cells.map((cell) => `${cell.row}:${cell.col}`));
     const active = this.nodes.filter((node) => wanted.has(`${node.row}:${node.col}`));
-    await Promise.all(active.map((node) => new Promise<void>((resolve) => {
+    const pulseDuration = Math.max(40, Math.min(180, Math.round(duration)));
+
+    active.forEach((node) => {
+      const normalSymbol = getNormalSymbol(node.symbol);
+      const color = isMultiplierCore(node.symbol)
+        ? 0xffc34d
+        : normalSymbol
+          ? getSymbolDefinition(normalSymbol).color
+          : 0xffd56a;
+      const ring = this.acquireBurstRing(node.container.x, node.container.y, color)
+        .setScale(0.72)
+        .setAlpha(0.58);
       this.tweens.add({
-        targets: node.container,
-        scale: 1.14,
-        duration: duration / 2,
-        yoyo: true,
-        ease: "Sine.easeInOut",
-             onComplete: () => {
-               if (node.symbol === "SCATTER") void this.animateScatterLanding(node);
-               resolve();
-             },
+        targets: ring,
+        scale: 1.42,
+        alpha: 0,
+        duration: pulseDuration,
+        ease: "Cubic.easeOut",
+        onComplete: () => this.releaseBurstRing(ring),
       });
-    })));
+      if (node.symbol === "SCATTER") void this.animateScatterLanding(node);
+    });
   }
 
   private findMultiplierNode(core: CoreCell) {
