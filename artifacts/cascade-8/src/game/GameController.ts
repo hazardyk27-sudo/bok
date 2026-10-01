@@ -59,6 +59,7 @@ export class GameController {
   private walletReady = false;
   private pendingSettledBalanceCents: number | null = null;
   private activeRoundTiming: RoundTimingTrace | null = null;
+  private lastSpinInputAt: number | null = null;
   private readonly wallet = new SlotWalletClient();
   private readonly eventAbort = new AbortController();
   readonly audio = new AudioManager();
@@ -95,6 +96,9 @@ export class GameController {
 
   private bind() {
     const signal = this.eventAbort.signal;
+    this.ui.spin.addEventListener("pointerdown", (event) => {
+      this.lastSpinInputAt = event.timeStamp;
+    }, { signal });
     this.ui.spin.addEventListener("click", () => void this.spin(), { signal });
     this.ui.betMinus.addEventListener("click", () => this.changeBet(-1), { signal });
     this.ui.betPlus.addEventListener("click", () => this.changeBet(1), { signal });
@@ -225,6 +229,12 @@ export class GameController {
   private beginRoundTiming(mode: "base" | "bonus", auto: boolean) {
     this.activeRoundTiming = createRoundTimingTrace(mode, this.turbo, auto);
     markRoundTiming(this.activeRoundTiming, "ROUND_START");
+    if (this.lastSpinInputAt !== null) {
+      markRoundTiming(this.activeRoundTiming, "INPUT_TO_ROUND_START", {
+        inputDelayMs: Math.round(Math.max(0, performance.now() - this.lastSpinInputAt) * 10) / 10,
+      });
+      this.lastSpinInputAt = null;
+    }
   }
   private markTiming(name: string, detail?: Record<string, number | string | boolean | null>) {
     markRoundTiming(this.activeRoundTiming, name, detail);
@@ -588,8 +598,8 @@ export class GameController {
        this.message(tumble.multiplierCores.length ? `${winningMessage} // CORES BANKED` : winningMessage);
       this.setState("WIN_HIGHLIGHT"); this.audio.win();
       this.markTiming(`TUMBLE_${index + 1}_HIGHLIGHT_START`);
-      await this.scene.highlightCells(tumble.winningCells, tumbleDuration(ANIMATION.winHighlight));
-      this.markTiming(`TUMBLE_${index + 1}_HIGHLIGHT_DONE`);
+      this.scene.highlightCells(tumble.winningCells, tumbleDuration(ANIMATION.winHighlight));
+      this.markTiming(`TUMBLE_${index + 1}_HIGHLIGHT_DONE`, { blocking: false });
        this.setState("WIN_EXPLOSION");
       winEvents.forEach(() => this.audio.winLabel());
       await this.scene.burstCells(tumble.removedCells, tumbleDuration(ANIMATION.burst));
