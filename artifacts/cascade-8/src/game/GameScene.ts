@@ -1130,17 +1130,25 @@ export class GameScene extends Phaser.Scene {
         });
         return particle;
       });
+      let completed = false;
+      let watchdog: number | null = null;
+      const finish = () => {
+        if (completed) return;
+        completed = true;
+        if (watchdog !== null) window.clearTimeout(watchdog);
+        this.tweens.killTweensOf(node.container);
+        this.destroyNode(node);
+        resolve();
+      };
       this.tweens.add({
         targets: node.container,
         scale: 1.6,
         alpha: 0,
         duration,
         ease: "Cubic.easeIn",
-        onComplete: () => {
-          this.destroyNode(node);
-          resolve();
-        },
+        onComplete: finish,
       });
+      watchdog = window.setTimeout(finish, duration + 220);
     })));
     this.nodes = this.nodes.filter((node) => !wanted.has(`${node.row}:${node.col}`));
   }
