@@ -21,7 +21,7 @@ import {
 } from "./RoundTiming";
 import { buildWinLabelEvents, type WinLabelEvent } from "./WinLabel";
 import { isLargeWin, isMaxWin, winTier } from "./WinTiers";
-import { getAnimationDuration, scaleTumbleAnimationDuration, shouldResumeAutoSpin } from "./GameTiming";
+import { getAnimationDuration, shouldResumeAutoSpin } from "./GameTiming";
 import { SlotWalletClient } from "./SlotWalletClient";
 
 type ControllerState = "BOOT" | "IDLE" | "SPIN_INIT" | "INITIAL_DROP" | "EVALUATING" | "WIN_HIGHLIGHT" | "WIN_EXPLOSION" | "GRAVITY" | "REFILL" | "CASCADE_DROP" | "BONUS_TRIGGER_CEREMONY" | "BONUS_AWARD_PRESENTATION" | "BONUS_WAITING_FOR_START" | "BONUS_INTRO" | "FREE_SPIN_PLAY" | "CORE_REVEAL" | "BIG_WIN" | "MAX_WIN" | "BONUS_SUMMARY" | "SPIN_COMPLETE";
@@ -308,7 +308,6 @@ export class GameController {
      this.markTiming("BASE_DROP_DONE", motionTimingDetail(baseDropTiming));
     await this.playTumbles(result, false);
     this.markTiming("BASE_TUMBLES_DONE");
-    this.scene.settleRoundVisuals();
     // Credit the base-game portion only after explosions/Core settlement finish.
     this.balanceCents += result.baseWinCents;
     this.currentWinCents = result.baseWinCents;
@@ -408,7 +407,6 @@ export class GameController {
       const freeDropTiming = await this.scene.animateDrop(this.duration(ANIMATION.initialDrop, true));
       this.markTiming(`FS_${index}_DROP_DONE`, motionTimingDetail(freeDropTiming));
       await this.playTumbles({ ...result, tumbles: freeSpin.tumbles }, true);
-      this.scene.settleRoundVisuals();
       this.markTiming(`FS_${index}_TUMBLES_DONE`);
       if (freeSpin.win === 0) {
         this.resolveZeroWinFreeSpin(freeSpin);
@@ -486,7 +484,6 @@ export class GameController {
     if (result.maxWinReached) this.setState("MAX_WIN");
     else if (result.totalMultiplier >= 10) this.setState("BIG_WIN");
     this.setState("SPIN_COMPLETE"); this.message(result.totalWinCents ? "SPIN COMPLETE // COLLECTED" : "NO WIN // NEXT GATE AWAITS");
-    this.scene.settleRoundVisuals();
     this.busy = false;
     this.markTiming("BUSY_FALSE");
     this.setState("IDLE"); this.updateHud();
@@ -585,8 +582,6 @@ export class GameController {
 
   private async playTumbles(result: Pick<SpinResult, "tumbles">, isBonus: boolean) {
     const tumbleCount = result.tumbles.length;
-    const tumbleDuration = (value: number) =>
-      scaleTumbleAnimationDuration(value, tumbleCount, this.turbo, isBonus);
 
     for (let index = 0; index < tumbleCount; index += 1) {
       const tumble = result.tumbles[index];
@@ -598,25 +593,20 @@ export class GameController {
        this.message(tumble.multiplierCores.length ? `${winningMessage} // CORES BANKED` : winningMessage);
       this.setState("WIN_HIGHLIGHT"); this.audio.win();
       this.markTiming(`TUMBLE_${index + 1}_HIGHLIGHT_START`);
-      this.scene.highlightCells(tumble.winningCells, tumbleDuration(ANIMATION.winHighlight));
-      this.markTiming(`TUMBLE_${index + 1}_HIGHLIGHT_DONE`, { blocking: false });
+      await this.scene.highlightCells(tumble.winningCells, this.duration(ANIMATION.winHighlight, isBonus));
+      this.markTiming(`TUMBLE_${index + 1}_HIGHLIGHT_DONE`);
        this.setState("WIN_EXPLOSION");
       winEvents.forEach(() => this.audio.winLabel());
-      await this.scene.burstCells(tumble.removedCells, tumbleDuration(ANIMATION.burst));
+      await this.scene.burstCells(tumble.removedCells, this.duration(ANIMATION.burst, isBonus));
       this.markTiming(`TUMBLE_${index + 1}_BURST_DONE`);
-      const winLabelDuration = Math.min(
-        tumbleDuration(ANIMATION.winLabel),
-        Math.max(40, tumbleDuration(ANIMATION.refill) - 80),
-      );
-      void this.scene.presentWinLabels(winEvents, winLabelDuration);
+      void this.scene.presentWinLabels(winEvents, this.duration(ANIMATION.winLabel, isBonus));
       await this.showTumbleWin(tumble, index + 1, isBonus, winEvents);
       this.markTiming(`TUMBLE_${index + 1}_WIN_PRESENTED`);
       this.updateHud();
       this.setState("REFILL");
       this.setState("CASCADE_DROP");
-      const cascadeTiming = await this.scene.animateCascade(tumble.boardAfterRefill, tumble.removedCells, tumbleDuration(ANIMATION.refill));
+      const cascadeTiming = await this.scene.animateCascade(tumble.boardAfterRefill, tumble.removedCells, this.duration(ANIMATION.refill, isBonus));
       this.markTiming(`TUMBLE_${index + 1}_CASCADE_DONE`, motionTimingDetail(cascadeTiming));
-      this.scene.settleRoundVisuals();
       this.message(index > 0 ? `TUMBLE ${index + 1} // RAW ${tumble.rawWinPoolAfter.toFixed(2)}x` : `WIN // RAW ${tumble.rawWinPoolAfter.toFixed(2)}x`);
     }
     const last = result.tumbles.at(-1);
