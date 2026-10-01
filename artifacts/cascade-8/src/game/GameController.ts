@@ -606,6 +606,7 @@ export class GameController {
       this.setState("CASCADE_DROP");
       const cascadeTiming = await this.scene.animateCascade(tumble.boardAfterRefill, tumble.removedCells, tumbleDuration(ANIMATION.refill));
       this.markTiming(`TUMBLE_${index + 1}_CASCADE_DONE`, motionTimingDetail(cascadeTiming));
+      this.scene.settleRoundVisuals();
       this.message(index > 0 ? `TUMBLE ${index + 1} // RAW ${tumble.rawWinPoolAfter.toFixed(2)}x` : `WIN // RAW ${tumble.rawWinPoolAfter.toFixed(2)}x`);
     }
     const last = result.tumbles.at(-1);
