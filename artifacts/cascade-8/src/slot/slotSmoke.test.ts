@@ -130,6 +130,10 @@ describe("slot route smoke contract", () => {
     expect(gameTimingSource).not.toContain("scaleTumbleAnimationDuration");
     expect(gameControllerSource).not.toContain("scaleTumbleAnimationDuration");
     expect(gameControllerSource).not.toContain("this.scene.settleRoundVisuals()");
+    const renderBoardBody =
+      gameSceneSource.match(/renderBoard\(board: Board,[\s\S]*?\n  async animateDrop/)?.[0] ?? "";
+    expect(renderBoardBody).not.toContain("clearTransientEffects()");
+    expect(renderBoardBody).not.toContain("clearPooledBurstEffects()");
   });
 
   it("keeps diagnostics opt-in and off the round-end network path", () => {
