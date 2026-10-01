@@ -83,6 +83,9 @@ describe("slot route smoke contract", () => {
     expect(gameSceneSource).toContain("previousNodes");
     expect(gameSceneSource).toContain("reusedNodes");
     expect(gameSceneSource).toContain("createdNodes");
+    expect(gameSceneSource).toContain("normalNodePool");
+    expect(gameSceneSource).toContain("releaseNormalNode");
+    expect(gameSceneSource).toContain("pooledNormalNodes");
   });
 
   it("sleeps the static Phaser heartbeat and wakes it for active rounds", () => {
