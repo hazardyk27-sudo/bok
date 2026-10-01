@@ -5343,3 +5343,753 @@ button {
     --settled-table-scale: 0.43;
   }
 }
+
+
+/* Desktop 16:9 Part 1 — horizontal live-table foundation */
+@media (min-width: 1100px) and (orientation: landscape) {
+  html,
+  body,
+  #app {
+    width: 100%;
+    height: 100%;
+    min-height: 100%;
+    margin: 0;
+    overflow: hidden;
+  }
+
+  body {
+    min-width: 0;
+  }
+
+  .roulette-page {
+    --desktop-safe-inline:
+      clamp(18px, 1.65vw, 34px);
+    --desktop-safe-top:
+      clamp(10px, 1.45dvh, 18px);
+    --desktop-safe-bottom:
+      clamp(14px, 1.8dvh, 24px);
+    --desktop-hud-height:
+      clamp(46px, 5.5dvh, 58px);
+    --desktop-history-height:
+      clamp(22px, 2.65dvh, 30px);
+    --desktop-wheel-size:
+      min(
+        50vw,
+        72dvh,
+        720px
+      );
+    --desktop-table-width:
+      min(
+        72vw,
+        1120px
+      );
+    --desktop-number-row:
+      clamp(
+        42px,
+        5.35dvh,
+        58px
+      );
+    --desktop-dozen-row:
+      clamp(
+        38px,
+        4.5dvh,
+        48px
+      );
+    --desktop-outside-row:
+      clamp(
+        40px,
+        4.7dvh,
+        50px
+      );
+    --wheel-size:
+      var(--desktop-wheel-size);
+
+    position: relative;
+    width: 100%;
+    height: 100dvh;
+    min-height: 100svh;
+    max-height: 100dvh;
+    overflow: hidden;
+    color: #f2f2ed;
+    background:
+      radial-gradient(
+        ellipse at 50% 23%,
+        rgba(52, 58, 61, 0.24),
+        transparent 38%
+      ),
+      radial-gradient(
+        ellipse at 50% 100%,
+        rgba(28, 34, 36, 0.24),
+        transparent 42%
+      ),
+      linear-gradient(
+        180deg,
+        #090b0c 0%,
+        #040506 100%
+      );
+  }
+
+  .roulette-game-shell {
+    position: relative;
+    width: 100%;
+    max-width: none;
+    height: 100%;
+    min-height: 0;
+    margin: 0;
+    padding: 0;
+    display: block;
+    overflow: hidden;
+  }
+
+  /*
+   * The desktop stage is one layered 16:9 composition, not the old
+   * side-by-side card grid. Phase emphasis is added in Part 2.
+   */
+  .roulette-wheel-panel {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    min-width: 0;
+    min-height: 0;
+    margin: 0;
+    display: block;
+    overflow: visible;
+    transform: none !important;
+    opacity: 1 !important;
+    filter: none !important;
+    pointer-events: none;
+    z-index: 1;
+  }
+
+  .roulette-page[data-phase="betting"]
+    .roulette-wheel-panel,
+  .roulette-page[data-phase="spinning"]
+    .roulette-wheel-panel,
+  .roulette-page[data-phase="settled"]
+    .roulette-wheel-panel {
+    transform: none !important;
+    opacity: 1 !important;
+    filter: none !important;
+  }
+
+  .roulette-stage {
+    position: absolute;
+    top:
+      clamp(
+        76px,
+        8.5dvh,
+        96px
+      );
+    left: 50%;
+    width:
+      var(--desktop-wheel-size);
+    height:
+      var(--desktop-wheel-size);
+    max-width: none;
+    max-height: none;
+    aspect-ratio: 1 / 1;
+    display: grid;
+    place-items: center;
+    transform:
+      translateX(-50%);
+    transform-origin:
+      center center;
+  }
+
+  .roulette-wheel-canvas {
+    width: 100%;
+    height: 100%;
+    aspect-ratio: 1 / 1;
+  }
+
+  /* ----- desktop HUD / history chrome ----- */
+
+  .roulette-top-hud {
+    position: absolute;
+    top: var(--desktop-safe-top);
+    left: 50%;
+    width:
+      min(
+        calc(
+          100vw -
+          2 *
+          var(--desktop-safe-inline)
+        ),
+        1240px
+      );
+    height:
+      var(--desktop-hud-height);
+    box-sizing: border-box;
+    display: grid;
+    grid-template-columns:
+      minmax(220px, 1.55fr)
+      minmax(140px, 0.82fr)
+      minmax(140px, 0.86fr)
+      52px;
+    align-items: stretch;
+    transform:
+      translateX(-50%);
+    border:
+      1px solid
+      rgba(236, 224, 197, 0.18);
+    border-radius: 10px;
+    overflow: hidden;
+    background:
+      linear-gradient(
+        180deg,
+        rgba(17, 19, 20, 0.975),
+        rgba(6, 7, 8, 0.985)
+      );
+    box-shadow:
+      0 9px 26px
+      rgba(0, 0, 0, 0.34),
+      inset 0 1px 0
+      rgba(255, 255, 255, 0.045);
+    font-family:
+      system-ui,
+      -apple-system,
+      BlinkMacSystemFont,
+      "Segoe UI",
+      sans-serif;
+    font-variant-numeric:
+      tabular-nums;
+    pointer-events: auto;
+    z-index: 30;
+  }
+
+  .roulette-top-hud__metric {
+    position: relative;
+    min-width: 0;
+    padding:
+      7px 14px
+      6px;
+    display: grid;
+    align-content: center;
+    justify-items: center;
+    gap: 3px;
+    overflow: hidden;
+  }
+
+  .roulette-top-hud__metric
+    + .roulette-top-hud__metric::before {
+    content: "";
+    position: absolute;
+    left: 0;
+    top: 18%;
+    bottom: 18%;
+    width: 1px;
+    background:
+      linear-gradient(
+        180deg,
+        transparent,
+        rgba(228, 202, 141, 0.28),
+        transparent
+      );
+  }
+
+  .roulette-top-hud__metric > span {
+    max-width: 100%;
+    overflow: hidden;
+    color:
+      rgba(225, 218, 202, 0.64);
+    font-size:
+      clamp(
+        8px,
+        0.64vw,
+        10px
+      );
+    font-weight: 780;
+    line-height: 1;
+    letter-spacing: 0.08em;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .roulette-top-hud__metric > strong {
+    max-width: 100%;
+    overflow: hidden;
+    color: #fbf8ef;
+    font-size:
+      clamp(
+        16px,
+        1.18vw,
+        22px
+      );
+    font-weight: 900;
+    line-height: 1;
+    letter-spacing: -0.035em;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    text-shadow:
+      0 1px 3px
+      rgba(0, 0, 0, 0.48);
+  }
+
+  .roulette-top-hud__metric:nth-child(2)
+    > strong {
+    color: #f4e7c8;
+  }
+
+  .roulette-top-hud__metric
+    [data-last-win] {
+    color: #e7c879;
+  }
+
+  .roulette-top-hud__menu-slot {
+    position: relative;
+    display: grid;
+    place-items: center;
+    border-left:
+      1px solid
+      rgba(228, 202, 141, 0.18);
+    pointer-events: auto;
+  }
+
+  .roulette-menu-button {
+    width: 34px;
+    height: 34px;
+    padding: 0;
+    border:
+      1px solid
+      rgba(231, 220, 194, 0.26);
+    border-radius: 9px;
+    display: grid;
+    align-content: center;
+    justify-items: center;
+    gap: 4px;
+    background:
+      linear-gradient(
+        180deg,
+        rgba(34, 38, 40, 0.98),
+        rgba(10, 12, 13, 0.99)
+      );
+    box-shadow:
+      0 3px 9px
+      rgba(0, 0, 0, 0.38),
+      inset 0 1px 0
+      rgba(255, 255, 255, 0.07);
+    cursor: pointer;
+  }
+
+  .roulette-menu-button > span {
+    display: block;
+    height: 1.5px;
+    border-radius: 99px;
+    background:
+      linear-gradient(
+        90deg,
+        #dad5ca,
+        #fff7e3
+      );
+  }
+
+  .roulette-menu-button
+    > span:nth-child(1) {
+    width: 14px;
+  }
+
+  .roulette-menu-button
+    > span:nth-child(2) {
+    width: 18px;
+  }
+
+  .roulette-menu-button
+    > span:nth-child(3) {
+    width: 11px;
+  }
+
+  .roulette-recent-strip {
+    position: absolute;
+    top:
+      calc(
+        var(--desktop-safe-top) +
+        var(--desktop-hud-height) +
+        6px
+      );
+    left: 50%;
+    width:
+      min(
+        calc(
+          100vw -
+          2 *
+          var(--desktop-safe-inline)
+        ),
+        1240px
+      );
+    height:
+      var(--desktop-history-height);
+    display: grid;
+    grid-template-columns:
+      repeat(
+        11,
+        minmax(0, 1fr)
+      );
+    gap: 0;
+    overflow: hidden;
+    transform:
+      translateX(-50%);
+    border:
+      1px solid
+      rgba(216, 204, 176, 0.16);
+    border-radius: 7px;
+    background:
+      rgba(4, 5, 6, 0.965);
+    box-shadow:
+      0 5px 14px
+      rgba(0, 0, 0, 0.24);
+    font-family:
+      system-ui,
+      -apple-system,
+      BlinkMacSystemFont,
+      "Segoe UI",
+      sans-serif;
+    font-variant-numeric:
+      tabular-nums;
+    pointer-events: none;
+    z-index: 27;
+  }
+
+  .roulette-recent-result {
+    min-width: 0;
+    height:
+      calc(
+        var(--desktop-history-height) -
+        2px
+      );
+    display: grid;
+    place-items: center;
+    border-right:
+      1px solid
+      rgba(183, 186, 181, 0.10);
+    color: #e6e5df;
+    background:
+      rgba(7, 8, 9, 0.98);
+    font-size:
+      clamp(
+        10px,
+        0.76vw,
+        13px
+      );
+    font-weight: 650;
+    line-height: 1;
+  }
+
+  .roulette-recent-result:last-child {
+    border-right: 0;
+  }
+
+  .roulette-recent-result.is-red {
+    color: #c33a35;
+  }
+
+  .roulette-recent-result.is-black {
+    color: #e8e7e1;
+  }
+
+  .roulette-recent-result.is-green {
+    color: #78a97a;
+  }
+
+  .roulette-recent-result.is-empty {
+    color:
+      rgba(224, 225, 220, 0.14);
+  }
+
+  .roulette-betting-timer {
+    position: absolute;
+    top:
+      calc(
+        var(--desktop-safe-top) +
+        var(--desktop-hud-height) +
+        var(--desktop-history-height) +
+        20px
+      );
+    left:
+      var(--desktop-safe-inline);
+    min-width:
+      clamp(
+        68px,
+        5.2vw,
+        92px
+      );
+    min-height:
+      clamp(
+        42px,
+        5.4dvh,
+        58px
+      );
+    padding:
+      6px 11px;
+    display: grid;
+    align-content: center;
+    justify-items: center;
+    gap: 3px;
+    border:
+      1px solid
+      rgba(241, 226, 193, 0.26);
+    border-radius: 9px;
+    color: #f7f2e7;
+    background:
+      linear-gradient(
+        180deg,
+        rgba(15, 17, 18, 0.96),
+        rgba(5, 6, 7, 0.96)
+      );
+    box-shadow:
+      0 7px 18px
+      rgba(0, 0, 0, 0.26);
+    font-family:
+      system-ui,
+      -apple-system,
+      BlinkMacSystemFont,
+      "Segoe UI",
+      sans-serif;
+    font-variant-numeric:
+      tabular-nums;
+    pointer-events: none;
+    z-index: 26;
+  }
+
+  .roulette-betting-timer__label {
+    color:
+      rgba(230, 222, 204, 0.62);
+    font-size:
+      clamp(
+        8px,
+        0.58vw,
+        10px
+      );
+    font-weight: 760;
+    line-height: 1;
+    letter-spacing: 0.08em;
+  }
+
+  .roulette-betting-timer__value {
+    min-width: 30px;
+    color: #fff8e8;
+    font-size:
+      clamp(
+        20px,
+        1.55vw,
+        28px
+      );
+    font-weight: 880;
+    line-height: 1;
+    text-align: center;
+    letter-spacing: -0.03em;
+  }
+
+  /* ----- desktop horizontal betting stage ----- */
+
+  .roulette-bet-panel {
+    position: absolute;
+    left: 50%;
+    bottom:
+      var(--desktop-safe-bottom);
+    width:
+      var(--desktop-table-width);
+    max-width:
+      calc(
+        100vw -
+        2 *
+        var(--desktop-safe-inline)
+      );
+    min-width: 0;
+    margin: 0;
+    padding: 0;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+    box-shadow: none;
+    transform:
+      translateX(-50%) !important;
+    transform-origin:
+      center bottom;
+    opacity: 1 !important;
+    filter: none !important;
+    z-index: 8;
+  }
+
+  .roulette-page[data-phase="betting"]
+    .roulette-bet-panel,
+  .roulette-page[data-phase="spinning"]
+    .roulette-bet-panel,
+  .roulette-page[data-phase="settled"]
+    .roulette-bet-panel {
+    transform:
+      translateX(-50%) !important;
+    opacity: 1 !important;
+    filter: none !important;
+  }
+
+  .roulette-bet-panel__header {
+    display: none;
+  }
+
+  .roulette-table-layout {
+    position: relative;
+    width: 100%;
+    max-width: none;
+    display: block;
+  }
+
+  .roulette-bet-table {
+    --bet-border:
+      rgba(229, 224, 209, 0.72);
+
+    width: 100%;
+    grid-template-columns:
+      clamp(
+        54px,
+        4.7vw,
+        76px
+      )
+      minmax(0, 1fr)
+      clamp(
+        48px,
+        4.2vw,
+        68px
+      );
+    grid-template-rows:
+      auto auto auto;
+    overflow: hidden;
+    border:
+      1px solid
+      var(--bet-border);
+    border-radius: 5px;
+    background:
+      rgba(8, 11, 12, 0.94);
+    box-shadow:
+      0 12px 34px
+      rgba(0, 0, 0, 0.40),
+      inset 0 1px 0
+      rgba(255, 255, 255, 0.035);
+  }
+
+  .roulette-zero-cell {
+    min-height:
+      calc(
+        var(--desktop-number-row) *
+        3
+      );
+  }
+
+  .roulette-number-grid {
+    grid-template-columns:
+      repeat(
+        12,
+        minmax(0, 1fr)
+      );
+    grid-template-rows:
+      repeat(
+        3,
+        var(--desktop-number-row)
+      );
+  }
+
+  .roulette-number-cell {
+    min-height:
+      var(--desktop-number-row);
+  }
+
+  .roulette-column-bets {
+    grid-template-rows:
+      repeat(
+        3,
+        var(--desktop-number-row)
+      );
+  }
+
+  .roulette-column-cell {
+    min-height:
+      var(--desktop-number-row);
+  }
+
+  .roulette-dozen-cell {
+    min-height:
+      var(--desktop-dozen-row);
+  }
+
+  .roulette-outside-cell {
+    min-height:
+      var(--desktop-outside-row);
+  }
+
+  /*
+   * Part 1 keeps the existing desktop wager console.
+   * Part 3 will replace its final desktop/tablet control composition.
+   */
+  .roulette-bet-console {
+    margin-top:
+      clamp(
+        8px,
+        1.1dvh,
+        12px
+      );
+  }
+
+  .roulette-mobile-control-rail {
+    display: none !important;
+  }
+
+  /* ----- desktop settings layer ----- */
+
+  .roulette-settings-menu {
+    position: absolute;
+    top:
+      calc(
+        var(--desktop-safe-top) +
+        var(--desktop-hud-height) +
+        8px
+      );
+    right:
+      var(--desktop-safe-inline);
+    width:
+      min(
+        310px,
+        28vw
+      );
+    padding: 12px;
+    display: grid;
+    gap: 10px;
+    border:
+      1px solid
+      rgba(229, 218, 194, 0.24);
+    border-radius: 13px;
+    color: #f4f1e9;
+    background:
+      linear-gradient(
+        160deg,
+        rgba(27, 30, 31, 0.985),
+        rgba(6, 8, 9, 0.995)
+      );
+    box-shadow:
+      0 18px 42px
+      rgba(0, 0, 0, 0.58),
+      inset 0 1px 0
+      rgba(255, 255, 255, 0.055);
+    backdrop-filter:
+      blur(14px);
+    pointer-events: auto;
+    z-index: 60;
+  }
+
+  .roulette-settings-menu[hidden] {
+    display: none !important;
+  }
+
+  .roulette-page[data-roulette-menu-open="true"]
+    .roulette-wheel-panel {
+    z-index: 50;
+  }
+
+  .roulette-page[data-roulette-menu-open="true"]
+    .roulette-bet-panel {
+    pointer-events: none;
+  }
+
+  /*
+   * Result overlays keep their existing hidden/visible state logic.
+   * Their final 16:9 placement is intentionally deferred to Part 2.
+   */
+}
