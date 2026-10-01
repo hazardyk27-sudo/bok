@@ -308,7 +308,6 @@ export class GameController {
      this.markTiming("BASE_DROP_DONE", motionTimingDetail(baseDropTiming));
     await this.playTumbles(result, false);
     this.markTiming("BASE_TUMBLES_DONE");
-    this.scene.settleRoundVisuals();
     // Credit the base-game portion only after explosions/Core settlement finish.
     this.balanceCents += result.baseWinCents;
     this.currentWinCents = result.baseWinCents;
@@ -485,7 +484,6 @@ export class GameController {
     if (result.maxWinReached) this.setState("MAX_WIN");
     else if (result.totalMultiplier >= 10) this.setState("BIG_WIN");
     this.setState("SPIN_COMPLETE"); this.message(result.totalWinCents ? "SPIN COMPLETE // COLLECTED" : "NO WIN // NEXT GATE AWAITS");
-    this.scene.settleRoundVisuals();
     this.busy = false;
     this.markTiming("BUSY_FALSE");
     this.setState("IDLE"); this.updateHud();
@@ -609,7 +607,6 @@ export class GameController {
       this.setState("CASCADE_DROP");
       const cascadeTiming = await this.scene.animateCascade(tumble.boardAfterRefill, tumble.removedCells, this.duration(ANIMATION.refill, isBonus));
       this.markTiming(`TUMBLE_${index + 1}_CASCADE_DONE`, motionTimingDetail(cascadeTiming));
-      this.scene.settleRoundVisuals();
       this.message(index > 0 ? `TUMBLE ${index + 1} // RAW ${tumble.rawWinPoolAfter.toFixed(2)}x` : `WIN // RAW ${tumble.rawWinPoolAfter.toFixed(2)}x`);
     }
     const last = result.tumbles.at(-1);
