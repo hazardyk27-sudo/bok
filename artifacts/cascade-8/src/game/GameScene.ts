@@ -147,7 +147,7 @@ export class GameScene extends Phaser.Scene {
 
   private readonly activeWinLabels = new CancelableCompletionRegistry();
 
-  private cellFrames: Phaser.GameObjects.Rectangle[] = [];
+  private boardFrameGraphics: Phaser.GameObjects.Graphics | null = null;
 
   private freeSpinMode = false;
 
@@ -246,24 +246,29 @@ export class GameScene extends Phaser.Scene {
   }
 
   private drawBoardFrame() {
-    this.cellFrames.forEach((cell) => cell.destroy());
-    this.cellFrames = [];
+    this.boardFrameGraphics?.destroy();
+
+    const graphics = this.add.graphics().setDepth(-9);
+    graphics.fillStyle(
+      this.freeSpinMode ? 0x5b3b0d : 0x16264d,
+      this.freeSpinMode ? 0.52 : 0.45,
+    );
+    graphics.lineStyle(
+      1,
+      this.freeSpinMode ? 0xffd36a : 0x8b9de3,
+      this.freeSpinMode ? 0.25 : 0.1,
+    );
+
     for (let row = 0; row < BOARD_ROWS; row += 1) {
       for (let col = 0; col < BOARD_COLUMNS; col += 1) {
-        const x = this.boardOrigin.x + col * this.cellSize.width;
-        const y = this.boardOrigin.y + row * this.cellSize.height;
-        const cell = this.add.rectangle(
-          x + 48,
-          y + 46,
-          88,
-          84,
-          this.freeSpinMode ? 0x5b3b0d : 0x16264d,
-          this.freeSpinMode ? 0.52 : 0.45,
-        ).setDepth(-9);
-        cell.setStrokeStyle(1, this.freeSpinMode ? 0xffd36a : 0x8b9de3, this.freeSpinMode ? 0.25 : 0.1);
-         this.cellFrames.push(cell);
-       }
+        const x = this.boardOrigin.x + col * this.cellSize.width + 4;
+        const y = this.boardOrigin.y + row * this.cellSize.height + 4;
+        graphics.fillRect(x, y, 88, 84);
+        graphics.strokeRect(x, y, 88, 84);
+      }
     }
+
+    this.boardFrameGraphics = graphics;
   }
 
   setFreeSpinMode(enabled: boolean) {
