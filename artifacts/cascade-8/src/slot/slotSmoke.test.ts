@@ -87,6 +87,8 @@ describe("slot route smoke contract", () => {
     expect(gameSceneSource).toContain("this.game.loop.wake(true)");
     expect(gameSceneSource).toContain("this.tweens.getTweens().length === 0");
     expect(gameSceneSource).toContain("!this.hasAmbientAnimations()");
+    expect(gameSceneSource).toContain("setIdleSleepEnabled(enabled: boolean)");
+    expect(slotSource).toContain("scene.setIdleSleepEnabled(!isLab);");
     expect(gameControllerSource).toContain("this.scene.setRuntimeActive(true)");
     expect(gameControllerSource).toContain("this.scene.setRuntimeActive(false)");
   });
