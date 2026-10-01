@@ -789,7 +789,7 @@ export class GameScene extends Phaser.Scene {
     };
   }
 
-  async animateDrop(duration: number, awaitScatterLanding = true): Promise<MotionTiming> {
+  async animateDrop(duration: number, _awaitScatterLanding = true): Promise<MotionTiming> {
     const startedAt = performance.now();
     const columnGroups = Array.from({ length: BOARD_COLUMNS }, (_, col) =>
       this.nodes
