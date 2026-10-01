@@ -775,27 +775,19 @@ export class GameScene extends Phaser.Scene {
   async highlightCells(cells: Cell[], duration: number) {
     const wanted = new Set(cells.map((cell) => `${cell.row}:${cell.col}`));
     const active = this.nodes.filter((node) => wanted.has(`${node.row}:${node.col}`));
-    if (!active.length) return;
-
-    await new Promise<void>((resolve) => {
+    await Promise.all(active.map((node) => new Promise<void>((resolve) => {
       this.tweens.add({
-        targets: active.map((node) => node.container),
+        targets: node.container,
         scale: 1.14,
         duration: duration / 2,
         yoyo: true,
         ease: "Sine.easeInOut",
-        onComplete: () => {
-          const scatterLandings = active
-            .filter((node) => node.symbol === "SCATTER")
-            .map((node) => this.animateScatterLanding(node));
-          if (!scatterLandings.length) {
-            resolve();
-            return;
-          }
-          void Promise.all(scatterLandings).then(() => resolve());
-        },
+             onComplete: () => {
+               if (node.symbol === "SCATTER") void this.animateScatterLanding(node).then(resolve);
+               else resolve();
+             },
       });
-    });
+    })));
   }
 
   private findMultiplierNode(core: CoreCell) {
@@ -955,136 +947,50 @@ export class GameScene extends Phaser.Scene {
   async burstCells(cells: Cell[], duration: number) {
     const wanted = new Set(cells.map((cell) => `${cell.row}:${cell.col}`));
     const active = this.nodes.filter((node) => wanted.has(`${node.row}:${node.col}`));
-    if (!active.length) return;
-
-    const particleCount = Math.min(
-      4,
-      Math.max(1, Math.floor(36 / Math.max(active.length, 1))),
-    );
-    const ringDuration = duration + 80;
-    const particleDuration = duration + 120;
-    const motion = { progress: 0 };
-    const records = active.map((node) => {
+    await Promise.all(active.map((node) => new Promise<void>((resolve) => {
       const normalSymbol = getNormalSymbol(node.symbol);
-      const color = isMultiplierCore(node.symbol)
-        ? 0xffc34d
-        : getSymbolDefinition(normalSymbol!).color;
+      const color = isMultiplierCore(node.symbol) ? 0xffc34d : getSymbolDefinition(normalSymbol!).color;
       const centerX = node.container.x;
       const centerY = node.container.y;
       const ring = this.acquireBurstRing(centerX, centerY, color);
-      const particles = Array.from({ length: particleCount }, (_, index) => {
-        const particle = this.acquireBurstParticle(
-          centerX,
-          centerY,
-          index % 3 === 0 ? 4 : 2.5,
-          color,
-        );
+      this.tweens.add({
+        targets: ring,
+        scale: 2.15,
+        alpha: 0,
+        duration: duration + 80,
+        ease: "Cubic.easeOut",
+        onComplete: () => this.releaseBurstRing(ring),
+      });
+      const particleCount = Math.min(4, Math.max(1, Math.floor(36 / Math.max(active.length, 1))));
+      Array.from({ length: particleCount }, (_, index) => {
+        const particle = this.acquireBurstParticle(centerX, centerY, index % 3 === 0 ? 4 : 2.5, color);
         const angle = (index / particleCount) * Math.PI * 2;
         const distance = 38 + (index % 4) * 15;
-        return {
-          particle,
-          startX: centerX,
-          startY: centerY,
-          targetX: centerX + Math.cos(angle) * distance,
-          targetY: centerY + Math.sin(angle) * distance,
-        };
-      });
-
-      return {
-        node,
-        startScale: node.container.scaleX,
-        ring,
-        ringReleased: false,
-        particles,
-      };
-    });
-
-    let nodesFinished = false;
-    let resolveNodes!: () => void;
-    const nodesDone = new Promise<void>((resolve) => {
-      resolveNodes = resolve;
-    });
-
-    const finishNodes = () => {
-      if (nodesFinished) return;
-      nodesFinished = true;
-      records.forEach(({ node }) => {
-        if (node.container.active) this.destroyNode(node);
-      });
-      this.nodes = this.nodes.filter((node) => !wanted.has(`${node.row}:${node.col}`));
-      resolveNodes();
-    };
-
-    const releaseRemainingFx = () => {
-      records.forEach((record) => {
-        if (!record.ringReleased && this.activeBurstRings.has(record.ring)) {
-          record.ringReleased = true;
-          this.releaseBurstRing(record.ring);
-        }
-        record.particles.forEach(({ particle }) => {
-          if (this.activeBurstParticles.has(particle)) {
-            this.releaseBurstParticle(particle);
-          }
+        this.tweens.add({
+          targets: particle,
+          x: centerX + Math.cos(angle) * distance,
+          y: centerY + Math.sin(angle) * distance,
+          alpha: 0,
+          scale: 0.15,
+          duration: duration + 120,
+          ease: "Cubic.easeOut",
+          onComplete: () => this.releaseBurstParticle(particle),
         });
+        return particle;
       });
-    };
-
-    this.tweens.add({
-      targets: motion,
-      progress: 1,
-      duration: particleDuration,
-      ease: "Linear",
-      onUpdate: () => {
-        const elapsed = motion.progress * particleDuration;
-        const nodeProgress = Math.min(1, elapsed / Math.max(1, duration));
-        const ringProgress = Math.min(1, elapsed / Math.max(1, ringDuration));
-        const particleProgress = Math.min(1, elapsed / Math.max(1, particleDuration));
-        const nodeEase = Phaser.Math.Easing.Cubic.In(nodeProgress);
-        const ringEase = Phaser.Math.Easing.Cubic.Out(ringProgress);
-        const particleEase = Phaser.Math.Easing.Cubic.Out(particleProgress);
-
-        records.forEach((record) => {
-          const { node, ring, particles } = record;
-
-          if (!nodesFinished && node.container.active) {
-            node.container
-              .setScale(
-                Phaser.Math.Linear(record.startScale, 1.6, nodeEase),
-              )
-              .setAlpha(Phaser.Math.Linear(1, 0, nodeEase));
-          }
-
-          if (!record.ringReleased && this.activeBurstRings.has(ring)) {
-            ring
-              .setScale(Phaser.Math.Linear(1, 2.15, ringEase))
-              .setAlpha(Phaser.Math.Linear(1, 0, ringEase));
-            if (ringProgress >= 1) {
-              record.ringReleased = true;
-              this.releaseBurstRing(ring);
-            }
-          }
-
-          particles.forEach(({ particle, startX, startY, targetX, targetY }) => {
-            if (!this.activeBurstParticles.has(particle)) return;
-            particle
-              .setPosition(
-                Phaser.Math.Linear(startX, targetX, particleEase),
-                Phaser.Math.Linear(startY, targetY, particleEase),
-              )
-              .setAlpha(Phaser.Math.Linear(0.92, 0, particleEase))
-              .setScale(Phaser.Math.Linear(1, 0.15, particleEase));
-          });
-        });
-
-        if (nodeProgress >= 1) finishNodes();
-      },
-      onComplete: () => {
-        finishNodes();
-        releaseRemainingFx();
-      },
-    });
-
-    await nodesDone;
+      this.tweens.add({
+        targets: node.container,
+        scale: 1.6,
+        alpha: 0,
+        duration,
+        ease: "Cubic.easeIn",
+        onComplete: () => {
+          this.destroyNode(node);
+          resolve();
+        },
+      });
+    })));
+    this.nodes = this.nodes.filter((node) => !wanted.has(`${node.row}:${node.col}`));
   }
 
   async presentWinLabels(events: readonly WinLabelEvent[], duration: number) {
@@ -1201,42 +1107,22 @@ export class GameScene extends Phaser.Scene {
         .filter((node) => node.col === col && !winning.has(`${node.row}:${node.col}`))
         .sort((a, b) => a.row - b.row);
       const generatedCount = BOARD_ROWS - survivors.length;
-      const movingSurvivors = survivors.flatMap((node, index) => {
+      survivors.forEach((node, index) => {
         const targetRow = generatedCount + index;
         const targetY = this.boardOrigin.y + targetRow * this.cellSize.height + 46;
         node.row = targetRow;
-        if (Math.abs(node.container.y - targetY) < 0.5 && node.container.alpha >= 0.999) {
-          return [];
-        }
-        return [{
-          node,
-          startY: node.container.y,
-          targetY,
-        }];
-      });
-
-      if (movingSurvivors.length) {
-        movingUnits += movingSurvivors.length;
-        specialUnits += movingSurvivors.filter(({ node }) =>
-          node.symbol === "SCATTER" || isMultiplierCore(node.symbol)
-        ).length;
-
+        if (Math.abs(node.container.y - targetY) < 0.5 && node.container.alpha >= 0.999) return;
+        movingUnits += 1;
+        if (node.symbol === "SCATTER" || isMultiplierCore(node.symbol)) specialUnits += 1;
         animations.push(new Promise<void>((resolve) => {
           const tweenDuration = duration + col * 18;
-          const motion = { progress: 0 };
-          const hasSpecialSymbol = movingSurvivors.some(({ node }) =>
-            node.symbol === "SCATTER" || isMultiplierCore(node.symbol)
-          );
           let visuallySettled = false;
           let completed = false;
           let watchdog: number | null = null;
-
           const markVisualSettled = () => {
             if (visuallySettled) return;
             visuallySettled = true;
-            for (let index = 0; index < movingSurvivors.length; index += 1) {
-              markUnitVisualSettled();
-            }
+            markUnitVisualSettled();
           };
           const complete = () => {
             if (completed) return;
@@ -1244,30 +1130,23 @@ export class GameScene extends Phaser.Scene {
             if (watchdog !== null) window.clearTimeout(watchdog);
             resolve();
           };
-
+          const mayResolveAtVisualSettle = node.symbol !== "SCATTER" && !isMultiplierCore(node.symbol);
           const tween = this.tweens.add({
-            targets: motion,
-            progress: 1,
+            targets: node.container,
+            y: targetY,
             duration: tweenDuration,
             ease: "Cubic.easeInOut",
             onUpdate: (activeTween) => {
               sampleFrameGap();
-              movingSurvivors.forEach(({ node, startY, targetY }) => {
-                node.container.y = Phaser.Math.Linear(startY, targetY, motion.progress);
-              });
               if (
                 activeTween.progress >= 0.92
-                && movingSurvivors.every(({ node, targetY }) =>
-                  Math.abs(node.container.y - targetY) <= 1.5)
+                && Math.abs(node.container.y - targetY) <= 1.5
               ) {
                 markVisualSettled();
-                if (!hasSpecialSymbol) complete();
+                if (mayResolveAtVisualSettle) complete();
               }
             },
             onComplete: () => {
-              movingSurvivors.forEach(({ node, targetY }) => {
-                node.container.y = targetY;
-              });
               markVisualSettled();
               complete();
             },
@@ -1276,16 +1155,13 @@ export class GameScene extends Phaser.Scene {
           watchdog = window.setTimeout(() => {
             if (completed) return;
             tween.stop();
-            motion.progress = 1;
-            movingSurvivors.forEach(({ node, targetY }) => {
-              node.container.y = targetY;
-            });
+            node.container.y = targetY;
             sampleFrameGap();
             markVisualSettled();
             complete();
           }, tweenDuration + 120);
         }));
-      }
+      });
       const incomingGroups = new Map<string, BoardNode[]>();
       for (let row = 0; row < generatedCount; row += 1) {
         const node = this.createSymbolNode(board[row][col], row, col);
