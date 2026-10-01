@@ -217,4 +217,54 @@ export function publishRoundTiming(trace: RoundTimingTrace | null) {
     largestGaps: gaps,
     events: trace.events,
   });
+
+  const memory = performance as Performance & {
+    memory?: {
+      usedJSHeapSize?: number;
+      totalJSHeapSize?: number;
+      jsHeapSizeLimit?: number;
+    };
+  };
+  const longestLongTask = roundLongTasks[0] ?? null;
+  const classification = worstMotionFrameGapMs >= 100
+    ? longestLongTask && longestLongTask.duration >= 50
+      ? "MAIN_THREAD_LONG_TASK"
+      : roundSchedulerEvents.length || document.hidden
+        ? "PAGE_SCHEDULING_OR_VISIBILITY"
+        : "RAF_SCHEDULER_PAUSE"
+    : movementGapLooksTooLong
+      ? "MOVEMENT_PHASE_SLOW_WITHOUT_FRAME_STALL"
+      : "NO_STALL_CLASSIFICATION";
+
+  const report = {
+    id: trace.id,
+    mode: trace.mode,
+    turbo: trace.turbo,
+    auto: trace.auto,
+    durationMs,
+    serverWaitMs,
+    renderWaitMs,
+    dropWaitMs,
+    largestGaps: gaps,
+    worstMotionFrameEvent: worstMotionFrameEvent?.name ?? null,
+    worstMotionFrameGapMs,
+    longestLongTaskMs: longestLongTask ? Math.round(longestLongTask.duration * 10) / 10 : 0,
+    classification,
+    hidden: document.hidden,
+    focused: document.hasFocus(),
+    schedulerEvents: roundSchedulerEvents,
+    heapUsedBytes: memory.memory?.usedJSHeapSize ?? null,
+    heapTotalBytes: memory.memory?.totalJSHeapSize ?? null,
+    events: trace.events,
+  };
+
+  window.setTimeout(() => {
+    void fetch("/api/slot/perf", {
+      method: "POST",
+      credentials: "same-origin",
+      keepalive: true,
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(report),
+    }).catch(() => {});
+  }, 0);
 }
