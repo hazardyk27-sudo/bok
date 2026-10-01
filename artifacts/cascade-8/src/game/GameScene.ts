@@ -1108,13 +1108,19 @@ export class GameScene extends Phaser.Scene {
     this.nodes = this.nodes.filter((node) => !wanted.has(`${node.row}:${node.col}`));
   }
 
+  settleRoundVisuals() {
+    this.activeWinLabels.completeAll();
+    this.clearTransientEffects();
+    this.clearPooledBurstEffects();
+  }
+
   async presentWinLabels(events: readonly WinLabelEvent[], duration: number) {
     if (!events.length) return;
     const placements = calculateWinLabelPositions(events);
-    const totalDuration = Math.max(40, Math.min(2000, duration));
+    const totalDuration = Math.max(40, Math.min(720, duration));
     const isInstantTiming = totalDuration <= 40;
-    const popDuration = isInstantTiming ? 1 : Math.max(650, Math.min(700, Math.round(totalDuration * 0.21)));
-    const fadeDuration = isInstantTiming ? 1 : Math.max(900, Math.min(1000, Math.round(totalDuration * 0.29)));
+    const popDuration = isInstantTiming ? 1 : Math.max(100, Math.round(totalDuration * 0.28));
+    const fadeDuration = isInstantTiming ? 1 : Math.max(160, Math.round(totalDuration * 0.42));
     const holdDuration = Math.max(1, totalDuration - popDuration - fadeDuration);
     const canvasScale = this.game.canvas.getBoundingClientRect().width / Math.max(1, this.scale.width);
     const fontSize = Math.round(36 / Math.max(0.82, canvasScale || 1));
