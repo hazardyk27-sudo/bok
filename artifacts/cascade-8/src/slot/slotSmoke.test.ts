@@ -88,15 +88,12 @@ describe("slot route smoke contract", () => {
     expect(gameSceneSource).toContain("pooledNormalNodes");
   });
 
-  it("sleeps the static Phaser heartbeat and wakes it for active rounds", () => {
-    expect(gameSceneSource).toContain("setRuntimeActive(active: boolean)");
-    expect(gameSceneSource).toContain("this.game.loop.sleep()");
-    expect(gameSceneSource).toContain("this.game.loop.resetDelta()");
-    expect(gameSceneSource).toContain("this.game.loop.wake(false)");
-    expect(gameSceneSource).not.toContain("this.game.loop.wake(true)");
-    expect(gameSceneSource).toContain("this.tweens.getTweens().length === 0");
-    expect(gameSceneSource).toContain("!this.hasAmbientAnimations()");
-    expect(gameSceneSource).toContain("setIdleSleepEnabled(enabled: boolean)");
+  it("keeps the Phaser heartbeat alive between rounds", () => {
+    expect(gameSceneSource).toContain("setRuntimeActive(_active: boolean)");
+    expect(gameSceneSource).toContain("setIdleSleepEnabled(_enabled: boolean)");
+    expect(gameSceneSource).not.toContain("this.game.loop.sleep()");
+    expect(gameSceneSource).not.toContain("this.game.loop.wake(");
+    expect(gameSceneSource).not.toContain("this.game.loop.resetDelta()");
     expect(slotSource).toContain("scene.setIdleSleepEnabled(!isLab);");
     expect(gameControllerSource).toContain("this.scene.setRuntimeActive(true)");
     expect(gameControllerSource).toContain("this.scene.setRuntimeActive(false)");
