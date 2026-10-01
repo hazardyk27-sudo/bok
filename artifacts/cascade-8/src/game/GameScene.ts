@@ -928,6 +928,16 @@ export class GameScene extends Phaser.Scene {
     const wanted = new Set(cells.map((cell) => `${cell.row}:${cell.col}`));
     const active = this.nodes.filter((node) => wanted.has(`${node.row}:${node.col}`));
     await Promise.all(active.map((node) => new Promise<void>((resolve) => {
+      let completed = false;
+      let watchdog: number | null = null;
+      const finish = () => {
+        if (completed) return;
+        completed = true;
+        if (watchdog !== null) window.clearTimeout(watchdog);
+        this.tweens.killTweensOf(node.container);
+        node.container.setScale(1).setAlpha(1);
+        resolve();
+      };
       this.tweens.add({
         targets: node.container,
         scale: 1.14,
@@ -935,10 +945,14 @@ export class GameScene extends Phaser.Scene {
         yoyo: true,
         ease: "Sine.easeInOut",
         onComplete: () => {
-          if (node.symbol === "SCATTER") void this.animateScatterLanding(node).then(resolve);
-          else resolve();
+          if (node.symbol === "SCATTER") {
+            void this.animateScatterLanding(node).finally(finish);
+          } else {
+            finish();
+          }
         },
       });
+      watchdog = window.setTimeout(finish, duration + 520);
     })));
   }
 
@@ -1010,18 +1024,26 @@ export class GameScene extends Phaser.Scene {
       .setStrokeStyle(node.symbol && isMultiplierCore(node.symbol) && node.symbol.value >= 500 ? 3 : 2, 0xffd56b, 0.92)
       .setDepth(18));
     await new Promise<void>((resolve) => {
+      let completed = false;
+      let watchdog: number | null = null;
+      const finish = () => {
+        if (completed) return;
+        completed = true;
+        if (watchdog !== null) window.clearTimeout(watchdog);
+        this.tweens.killTweensOf([impact, ring]);
+        this.destroyEffect(impact);
+        this.destroyEffect(ring);
+        resolve();
+      };
       this.tweens.add({
         targets: [impact, ring],
         scale: node.symbol && isMultiplierCore(node.symbol) && node.symbol.value >= 500 ? 2.35 : 1.85,
         alpha: 0,
         duration,
         ease: "Cubic.easeOut",
-        onComplete: () => {
-          this.destroyEffect(impact);
-          this.destroyEffect(ring);
-          resolve();
-        },
+        onComplete: finish,
       });
+      watchdog = window.setTimeout(finish, duration + 220);
     });
   }
 
@@ -1030,14 +1052,25 @@ export class GameScene extends Phaser.Scene {
     if (!node || !isMultiplierCore(node.symbol) || node.coreCollected) return;
     const emphasis = core.value >= 500 ? 1.2 : core.value >= 100 ? 1.1 : 1;
     await new Promise<void>((resolve) => {
+      const tweenDuration = Math.max(1, Math.round(duration * 0.24));
+      let completed = false;
+      let watchdog: number | null = null;
+      const finish = () => {
+        if (completed) return;
+        completed = true;
+        if (watchdog !== null) window.clearTimeout(watchdog);
+        this.tweens.killTweensOf(node.container);
+        resolve();
+      };
       this.tweens.add({
         targets: node.container,
         scale: node.container.scale * 1.16 * emphasis,
         angle: node.container.angle + (core.value >= 500 ? 5 : 3),
-        duration: Math.max(1, Math.round(duration * 0.24)),
+        duration: tweenDuration,
         ease: "Back.easeOut",
-        onComplete: () => resolve(),
+        onComplete: finish,
       });
+      watchdog = window.setTimeout(finish, tweenDuration + 220);
     });
 
     const targetPoint = this.canvasPointForElement(target);
@@ -1058,19 +1091,28 @@ export class GameScene extends Phaser.Scene {
         .setScale(core.value >= 500 ? 1.16 : 1),
     );
     await new Promise<void>((resolve) => {
+      const tweenDuration = Math.max(1, Math.round(duration * 0.58));
+      let completed = false;
+      let watchdog: number | null = null;
+      const finish = () => {
+        if (completed) return;
+        completed = true;
+        if (watchdog !== null) window.clearTimeout(watchdog);
+        this.tweens.killTweensOf(flight);
+        this.destroyEffect(flight);
+        resolve();
+      };
       this.tweens.add({
         targets: flight,
         x: targetPoint.x,
         y: targetPoint.y,
         scale: core.value >= 500 ? 0.8 : 0.7,
         alpha: 0.18,
-        duration: Math.max(1, Math.round(duration * 0.58)),
+        duration: tweenDuration,
         ease: "Cubic.easeInOut",
-        onComplete: () => {
-          this.destroyEffect(flight);
-          resolve();
-        },
+        onComplete: finish,
       });
+      watchdog = window.setTimeout(finish, tweenDuration + 220);
     });
     this.markMultiplierCoreCollected(node);
     await this.presentMultiplierImpact(node, Math.max(1, Math.round(duration * 0.3)));
