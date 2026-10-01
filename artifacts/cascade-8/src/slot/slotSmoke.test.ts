@@ -14,6 +14,10 @@ const gameSceneSource = readFileSync(
   fileURLToPath(new URL("../game/GameScene.ts", import.meta.url)),
   "utf8",
 );
+const gameControllerSource = readFileSync(
+  fileURLToPath(new URL("../game/GameController.ts", import.meta.url)),
+  "utf8",
+);
 const slotCssSource = readFileSync(
   fileURLToPath(new URL("./slot.css", import.meta.url)),
   "utf8",
@@ -75,6 +79,16 @@ describe("slot route smoke contract", () => {
     expect(gameSceneSource).toContain("boardFrameGraphics");
     expect(gameSceneSource).toContain("graphics.fillRect");
     expect(gameSceneSource).not.toContain("cellFrames");
+  });
+
+  it("sleeps the static Phaser heartbeat and wakes it for active rounds", () => {
+    expect(gameSceneSource).toContain("setRuntimeActive(active: boolean)");
+    expect(gameSceneSource).toContain("this.game.loop.sleep()");
+    expect(gameSceneSource).toContain("this.game.loop.wake(true)");
+    expect(gameSceneSource).toContain("this.tweens.getTweens().length === 0");
+    expect(gameSceneSource).toContain("!this.hasAmbientAnimations()");
+    expect(gameControllerSource).toContain("this.scene.setRuntimeActive(true)");
+    expect(gameControllerSource).toContain("this.scene.setRuntimeActive(false)");
   });
 
   it("keeps expensive round diagnostics out of normal gameplay", () => {
