@@ -685,13 +685,14 @@ export class GameScene extends Phaser.Scene {
   private animateScatterLanding(node: BoardNode) {
     const centerX = node.container.x;
     const centerY = node.container.y + 34;
-    const shockwave = this.trackEffect(this.add.ellipse(centerX, centerY, 28, 9, undefined, 0)
-      .setStrokeStyle(2, 0xffd56a, 0.9)
-      .setDepth(4));
+    const ring = this.acquireBurstRing(centerX, centerY, 0xffd56a);
     const sparks = Array.from({ length: 5 }, (_, index) => {
-      const spark = this.trackEffect(this.add.text(centerX, centerY, "✦", { color: "#ffe49a", fontSize: index % 2 ? "9px" : "12px" })
-        .setOrigin(0.5)
-        .setDepth(4));
+      const spark = this.acquireBurstParticle(
+        centerX,
+        centerY,
+        index % 2 ? 2.5 : 3.5,
+        0xffe49a,
+      );
       const angle = (index / 5) * Math.PI * 2;
       this.tweens.add({
         targets: spark,
@@ -701,25 +702,26 @@ export class GameScene extends Phaser.Scene {
         scale: 0.5,
         duration: 260,
         ease: "Cubic.easeOut",
-          onComplete: () => this.destroyEffect(spark),
+        onComplete: () => this.releaseBurstParticle(spark),
       });
       return spark;
     });
+
     return new Promise<void>((resolve) => {
       this.tweens.add({
-        targets: shockwave,
+        targets: ring,
         scaleX: 2.6,
         scaleY: 1.8,
         alpha: 0,
         duration: 300,
         ease: "Cubic.easeOut",
-          onComplete: () => {
-          this.destroyEffect(shockwave);
-          sparks.forEach((spark) => this.destroyEffect(spark));
+        onComplete: () => {
+          this.releaseBurstRing(ring);
+          sparks.forEach((spark) => this.releaseBurstParticle(spark));
           resolve();
         },
       });
-       });
+    });
   }
 
   renderBoard(board: Board, winningCells: Cell[] = [], reuseIfMatching = false) {
