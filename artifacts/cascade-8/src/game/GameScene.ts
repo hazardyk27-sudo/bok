@@ -190,6 +190,7 @@ export class GameScene extends Phaser.Scene {
     this.drawBoardFrame();
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => this.clearIdleSleepTimer());
     this.events.once(Phaser.Scenes.Events.DESTROY, () => this.clearIdleSleepTimer());
+    this.scheduleIdleSleep();
   }
 
   private clearIdleSleepTimer() {
