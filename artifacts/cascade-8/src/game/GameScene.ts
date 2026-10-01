@@ -39,6 +39,13 @@ type BoardNode = {
   ambient?: CoreAmbientVisual | ScatterAmbientVisual;
 };
 
+type WinLabelNode = {
+  container: Phaser.GameObjects.Container;
+  backdrop: Phaser.GameObjects.Graphics;
+  glowText: Phaser.GameObjects.Text;
+  text: Phaser.GameObjects.Text;
+};
+
 const SCATTER_SYMBOL_SIZE = 100;
 const SCATTER_SOURCE_SIZE = 256;
 const CORE_BASE_SIZE = 84;
@@ -152,6 +159,8 @@ export class GameScene extends Phaser.Scene {
   private burstFxReused = 0;
 
   private readonly activeWinLabels = new CancelableCompletionRegistry();
+
+  private readonly winLabelPool: WinLabelNode[] = [];
 
   private boardFrameGraphics: Phaser.GameObjects.Graphics | null = null;
 
@@ -295,7 +304,6 @@ export class GameScene extends Phaser.Scene {
 
   clearSymbols() {
     this.activeWinLabels.completeAll();
-    this.clearTransientEffects();
     this.clearPooledBurstEffects();
     this.nodes.forEach((node) => this.destroyNode(node));
     this.nodes = [];
@@ -677,13 +685,14 @@ export class GameScene extends Phaser.Scene {
   private animateScatterLanding(node: BoardNode) {
     const centerX = node.container.x;
     const centerY = node.container.y + 34;
-    const shockwave = this.trackEffect(this.add.ellipse(centerX, centerY, 28, 9, undefined, 0)
-      .setStrokeStyle(2, 0xffd56a, 0.9)
-      .setDepth(4));
+    const ring = this.acquireBurstRing(centerX, centerY, 0xffd56a);
     const sparks = Array.from({ length: 5 }, (_, index) => {
-      const spark = this.trackEffect(this.add.text(centerX, centerY, "✦", { color: "#ffe49a", fontSize: index % 2 ? "9px" : "12px" })
-        .setOrigin(0.5)
-        .setDepth(4));
+      const spark = this.acquireBurstParticle(
+        centerX,
+        centerY,
+        index % 2 ? 2.5 : 3.5,
+        0xffe49a,
+      );
       const angle = (index / 5) * Math.PI * 2;
       this.tweens.add({
         targets: spark,
@@ -693,32 +702,32 @@ export class GameScene extends Phaser.Scene {
         scale: 0.5,
         duration: 260,
         ease: "Cubic.easeOut",
-          onComplete: () => this.destroyEffect(spark),
+        onComplete: () => this.releaseBurstParticle(spark),
       });
       return spark;
     });
+
     return new Promise<void>((resolve) => {
       this.tweens.add({
-        targets: shockwave,
+        targets: ring,
         scaleX: 2.6,
         scaleY: 1.8,
         alpha: 0,
         duration: 300,
         ease: "Cubic.easeOut",
-          onComplete: () => {
-          this.destroyEffect(shockwave);
-          sparks.forEach((spark) => this.destroyEffect(spark));
+        onComplete: () => {
+          this.releaseBurstRing(ring);
+          sparks.forEach((spark) => this.releaseBurstParticle(spark));
           resolve();
         },
       });
-       });
+    });
   }
 
   renderBoard(board: Board, winningCells: Cell[] = [], reuseIfMatching = false) {
     const startedAt = performance.now();
     if (reuseIfMatching && this.boardMatches(board)) {
       this.activeWinLabels.completeAll();
-      this.clearTransientEffects();
       const completedAt = performance.now();
       return {
         totalMs: Math.round((completedAt - startedAt) * 10) / 10,
@@ -1134,8 +1143,76 @@ export class GameScene extends Phaser.Scene {
 
   settleRoundVisuals() {
     this.activeWinLabels.completeAll();
-    this.clearTransientEffects();
     this.clearPooledBurstEffects();
+  }
+
+  private acquireWinLabel(textValue: string, fontSize: number, x: number, y: number) {
+    let node = this.winLabelPool.pop();
+    if (!node) {
+      const glowText = this.add.text(0, 0, "", {
+        color: "#e6ad45",
+        fontFamily: "Manrope, sans-serif",
+        fontStyle: "bold",
+        shadow: { blur: 4, color: "#e0a63a", fill: true, offsetX: 0, offsetY: 0 },
+      }).setOrigin(0.5).setAlpha(0.16).setScale(1.03)
+        .setBlendMode(Phaser.BlendModes.ADD);
+      const text = this.add.text(0, 0, "", {
+        color: "#fffaf0",
+        fontFamily: "Manrope, sans-serif",
+        fontStyle: "bold",
+        stroke: "#050916",
+        strokeThickness: 4,
+        shadow: { blur: 2, color: "#02040c", fill: true, offsetX: 0, offsetY: 2 },
+      }).setOrigin(0.5);
+      const backdrop = this.add.graphics();
+      const container = this.add.container(-1000, -1000, [backdrop, glowText, text])
+        .setDepth(14)
+        .setVisible(false)
+        .setActive(false);
+      node = { container, backdrop, glowText, text };
+    }
+
+    this.tweens.killTweensOf([node.container, node.backdrop, node.glowText, node.text]);
+    node.glowText.setText(textValue).setFontSize(fontSize).setAlpha(0.16).setScale(1.03);
+    node.text.setText(textValue).setFontSize(fontSize).setAlpha(1).setScale(1);
+    const backgroundWidth = node.text.width + 16;
+    const backgroundHeight = node.text.height + 8;
+    node.backdrop.clear();
+    node.backdrop.fillStyle(this.freeSpinMode ? 0x33230b : 0x0b1530, 0.66);
+    node.backdrop.fillRoundedRect(
+      -backgroundWidth / 2,
+      -backgroundHeight / 2,
+      backgroundWidth,
+      backgroundHeight,
+      6,
+    );
+    node.backdrop.lineStyle(1, 0xd8b968, 0.22);
+    node.backdrop.strokeRoundedRect(
+      -backgroundWidth / 2,
+      -backgroundHeight / 2,
+      backgroundWidth,
+      backgroundHeight,
+      6,
+    );
+    node.container
+      .setPosition(x, y)
+      .setDepth(14)
+      .setAlpha(0)
+      .setScale(0.94)
+      .setVisible(true)
+      .setActive(true);
+    return node;
+  }
+
+  private releaseWinLabel(node: WinLabelNode) {
+    this.tweens.killTweensOf([node.container, node.backdrop, node.glowText, node.text]);
+    node.container
+      .setVisible(false)
+      .setActive(false)
+      .setAlpha(0)
+      .setScale(1)
+      .setPosition(-1000, -1000);
+    this.winLabelPool.push(node);
   }
 
   async presentWinLabels(events: readonly WinLabelEvent[], duration: number) {
@@ -1150,48 +1227,10 @@ export class GameScene extends Phaser.Scene {
     const fontSize = Math.round(36 / Math.max(0.82, canvasScale || 1));
 
     await Promise.all(placements.map((placement, index) => new Promise<void>((resolve) => {
-      const glowText = this.add.text(0, 0, placement.text, {
-        color: "#e6ad45",
-        fontFamily: "Manrope, sans-serif",
-        fontSize: `${fontSize}px`,
-        fontStyle: "bold",
-        shadow: { blur: 4, color: "#e0a63a", fill: true, offsetX: 0, offsetY: 0 },
-      }).setOrigin(0.5).setAlpha(0.16).setScale(1.03)
-        .setBlendMode(Phaser.BlendModes.ADD);
-      const text = this.add.text(0, 0, placement.text, {
-        color: "#fffaf0",
-        fontFamily: "Manrope, sans-serif",
-        fontSize: `${fontSize}px`,
-        fontStyle: "bold",
-        stroke: "#050916",
-        strokeThickness: 4,
-        shadow: { blur: 2, color: "#02040c", fill: true, offsetX: 0, offsetY: 2 },
-      }).setOrigin(0.5);
-      const backgroundWidth = text.width + 16;
-      const backgroundHeight = text.height + 8;
-      const backdrop = this.add.graphics();
-      backdrop.fillStyle(this.freeSpinMode ? 0x33230b : 0x0b1530, 0.66);
-      backdrop.fillRoundedRect(
-        -backgroundWidth / 2,
-        -backgroundHeight / 2,
-        backgroundWidth,
-        backgroundHeight,
-        6,
-      );
-      backdrop.lineStyle(1, 0xd8b968, 0.22);
-      backdrop.strokeRoundedRect(
-        -backgroundWidth / 2,
-        -backgroundHeight / 2,
-        backgroundWidth,
-        backgroundHeight,
-        6,
-      );
-      const container = this.add.container(placement.x, placement.y, [backdrop, glowText, text])
-        .setDepth(14)
-        .setAlpha(0)
-        .setScale(0.94);
+      const labelNode = this.acquireWinLabel(placement.text, fontSize, placement.x, placement.y);
+      const { container } = labelNode;
       const complete = this.activeWinLabels.track(() => {
-        this.retireGameObject(container);
+        this.releaseWinLabel(labelNode);
         resolve();
       });
 
