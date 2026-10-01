@@ -106,7 +106,13 @@ describe("slot route smoke contract", () => {
     expect(gameSceneSource).toContain("scheduleDeferredDestroy()");
     expect(gameSceneSource).toContain("window.requestAnimationFrame(drain)");
     expect(gameSceneSource).toContain("splice(0, 3)");
-    expect(gameSceneSource).toContain("retireGameObject(container)");
+    expect(gameSceneSource).toContain("winLabelPool");
+    expect(gameSceneSource).toContain("acquireWinLabel");
+    expect(gameSceneSource).toContain("releaseWinLabel");
+    expect(gameSceneSource).not.toContain("this.retireGameObject(container)");
+    expect(gameSceneSource).not.toContain("this.clearTransientEffects();\n    this.clearPooledBurstEffects();");
+    expect(gameSceneSource).toContain("this.acquireBurstParticle(");
+    expect(gameSceneSource).not.toContain('this.add.text(centerX, centerY, "✦"');
     expect(gameSceneSource).toContain("void Promise.all(scatterNodes.map((node) => this.animateScatterLanding(node)))");
     expect(gameSceneSource).toContain('if (node.symbol === "SCATTER") void this.animateScatterLanding(node);');
     expect(gameSceneSource).not.toContain("if (mayResolveAtVisualSettle) complete()");
