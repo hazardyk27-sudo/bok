@@ -384,8 +384,9 @@ describe("cadi kazan route smoke contract", () => {
     expect(witchClientSource).toContain('persistentCoverageCommit: round.mode === "OFFICE_MATCH_6"');
     expect(scratchSurfaceSource).toContain("private accumulatedScratchDistancePx = 0");
     expect(scratchSurfaceSource).toContain("const persistentCoverageReady =");
-    expect(scratchSurfaceSource).toContain("this.progress.coverage >= 0.34");
-    expect(scratchSurfaceSource).toContain("this.accumulatedScratchDistancePx >= Math.max(90, width * 0.75)");
+    expect(scratchSurfaceSource).toContain("input.coverage >= 0.34");
+    expect(scratchSurfaceSource).toContain("input.accumulatedScratchDistancePx >= Math.max(90, input.widthPx * 0.75)");
+    expect(scratchSurfaceSource).toContain("private scheduleDeferredCommit(now: number)");
   });
 
 
