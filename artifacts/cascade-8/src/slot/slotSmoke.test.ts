@@ -88,18 +88,26 @@ describe("slot route smoke contract", () => {
     expect(gameSceneSource).toContain("pooledNormalNodes");
   });
 
-  it("sleeps the static Phaser heartbeat and wakes it for active rounds", () => {
-    expect(gameSceneSource).toContain("setRuntimeActive(active: boolean)");
-    expect(gameSceneSource).toContain("this.game.loop.sleep()");
-    expect(gameSceneSource).toContain("this.game.loop.resetDelta()");
-    expect(gameSceneSource).toContain("this.game.loop.wake(false)");
-    expect(gameSceneSource).not.toContain("this.game.loop.wake(true)");
-    expect(gameSceneSource).toContain("this.tweens.getTweens().length === 0");
-    expect(gameSceneSource).toContain("!this.hasAmbientAnimations()");
-    expect(gameSceneSource).toContain("setIdleSleepEnabled(enabled: boolean)");
+  it("keeps the Phaser heartbeat alive between rounds", () => {
+    expect(gameSceneSource).toContain("setRuntimeActive(_active: boolean)");
+    expect(gameSceneSource).toContain("setIdleSleepEnabled(_enabled: boolean)");
+    expect(gameSceneSource).not.toContain("this.game.loop.sleep()");
+    expect(gameSceneSource).not.toContain("this.game.loop.wake(");
+    expect(gameSceneSource).not.toContain("this.game.loop.resetDelta()");
     expect(slotSource).toContain("scene.setIdleSleepEnabled(!isLab);");
     expect(gameControllerSource).toContain("this.scene.setRuntimeActive(true)");
     expect(gameControllerSource).toContain("this.scene.setRuntimeActive(false)");
+  });
+
+  it("does not leak win-label and transient FX work across round boundaries", () => {
+    expect(gameSceneSource).toContain("settleRoundVisuals()");
+    expect(gameSceneSource).toContain("this.activeWinLabels.completeAll()");
+    expect(gameSceneSource).toContain("Math.min(720, duration)");
+    expect(gameSceneSource).not.toContain("Math.max(650, Math.min(700");
+    expect(gameSceneSource).not.toContain("Math.max(900, Math.min(1000");
+    expect(gameControllerSource).toContain("const winLabelDuration = Math.min(");
+    expect(gameControllerSource).toContain("tumbleDuration(ANIMATION.refill) - 80");
+    expect(gameControllerSource.match(/this\.scene\.settleRoundVisuals\(\)/g)?.length ?? 0).toBeGreaterThanOrEqual(3);
   });
 
   it("keeps expensive round diagnostics out of normal gameplay", () => {

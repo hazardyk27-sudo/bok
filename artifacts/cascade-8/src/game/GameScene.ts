@@ -155,14 +155,6 @@ export class GameScene extends Phaser.Scene {
 
   private lastAmbientUpdateAt = -Infinity;
 
-  private runtimeActive = false;
-
-  private idleSleepEnabled = true;
-
-  private idleSleepTimer: number | null = null;
-
-  private idleSleepAttempts = 0;
-
   private boardOrigin = { x: 22, y: 30 };
 
   private cellSize = { width: 96, height: 92 };
@@ -192,75 +184,14 @@ export class GameScene extends Phaser.Scene {
 
   create() {
     this.drawBoardFrame();
-    this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => this.clearIdleSleepTimer());
-    this.events.once(Phaser.Scenes.Events.DESTROY, () => this.clearIdleSleepTimer());
-    this.scheduleIdleSleep();
   }
 
-  private clearIdleSleepTimer() {
-    if (this.idleSleepTimer === null) return;
-    window.clearTimeout(this.idleSleepTimer);
-    this.idleSleepTimer = null;
-  }
+  // Kept as compatibility hooks for the controller/lab bootstrap. Manual
+  // TimeStep sleep/wake is intentionally disabled: pausing Phaser between
+  // rounds caused post-round stalls after several consecutive spins.
+  setIdleSleepEnabled(_enabled: boolean) {}
 
-  private hasAmbientAnimations() {
-    return this.nodes.some((node) => Boolean(node.ambient));
-  }
-
-  private isVisuallyStatic() {
-    return !this.runtimeActive
-      && !this.hasAmbientAnimations()
-      && this.tweens.getTweens().length === 0
-      && this.transientEffects.length === 0
-      && this.activeBurstRings.size === 0
-      && this.activeBurstParticles.size === 0
-      && this.activeWinLabels.size === 0;
-  }
-
-  private scheduleIdleSleep() {
-    this.clearIdleSleepTimer();
-    if (!this.idleSleepEnabled || this.runtimeActive || this.hasAmbientAnimations()) return;
-
-    this.idleSleepAttempts = 0;
-    const attemptSleep = () => {
-      this.idleSleepTimer = null;
-      if (this.runtimeActive || this.hasAmbientAnimations()) return;
-      if (this.isVisuallyStatic()) {
-        this.game.loop.sleep();
-        return;
-      }
-      this.idleSleepAttempts += 1;
-      if (this.idleSleepAttempts >= 12) return;
-      this.idleSleepTimer = window.setTimeout(attemptSleep, 250);
-    };
-    this.idleSleepTimer = window.setTimeout(attemptSleep, 250);
-  }
-
-  setIdleSleepEnabled(enabled: boolean) {
-    this.idleSleepEnabled = enabled;
-    if (!enabled) {
-      this.clearIdleSleepTimer();
-      if (!this.game.loop.running) {
-        this.game.loop.resetDelta();
-        this.game.loop.wake(false);
-      }
-      return;
-    }
-    this.scheduleIdleSleep();
-  }
-
-  setRuntimeActive(active: boolean) {
-    this.runtimeActive = active;
-    if (active) {
-      this.clearIdleSleepTimer();
-      if (!this.game.loop.running) {
-        this.game.loop.resetDelta();
-        this.game.loop.wake(false);
-      }
-      return;
-    }
-    this.scheduleIdleSleep();
-  }
+  setRuntimeActive(_active: boolean) {}
 
   update(time: number) {
     if (
@@ -1177,13 +1108,19 @@ export class GameScene extends Phaser.Scene {
     this.nodes = this.nodes.filter((node) => !wanted.has(`${node.row}:${node.col}`));
   }
 
+  settleRoundVisuals() {
+    this.activeWinLabels.completeAll();
+    this.clearTransientEffects();
+    this.clearPooledBurstEffects();
+  }
+
   async presentWinLabels(events: readonly WinLabelEvent[], duration: number) {
     if (!events.length) return;
     const placements = calculateWinLabelPositions(events);
-    const totalDuration = Math.max(40, Math.min(2000, duration));
+    const totalDuration = Math.max(40, Math.min(720, duration));
     const isInstantTiming = totalDuration <= 40;
-    const popDuration = isInstantTiming ? 1 : Math.max(650, Math.min(700, Math.round(totalDuration * 0.21)));
-    const fadeDuration = isInstantTiming ? 1 : Math.max(900, Math.min(1000, Math.round(totalDuration * 0.29)));
+    const popDuration = isInstantTiming ? 1 : Math.max(100, Math.round(totalDuration * 0.28));
+    const fadeDuration = isInstantTiming ? 1 : Math.max(160, Math.round(totalDuration * 0.42));
     const holdDuration = Math.max(1, totalDuration - popDuration - fadeDuration);
     const canvasScale = this.game.canvas.getBoundingClientRect().width / Math.max(1, this.scale.width);
     const fontSize = Math.round(36 / Math.max(0.82, canvasScale || 1));
