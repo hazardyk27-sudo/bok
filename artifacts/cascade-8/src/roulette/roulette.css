@@ -6658,3 +6658,702 @@ button {
     top: 57%;
   }
 }
+
+/* Desktop 16:9 Part 3 — premium horizontal betting table final */
+@media (min-width: 1100px) and (orientation: landscape) {
+  /*
+   * Keep the approved 12 × 3 horizontal geometry intact. This pass only
+   * upgrades material, typography, chip readability and the desktop console.
+   */
+  .roulette-table-layout::before {
+    inset: -5px -5px -6px;
+    border-radius: 12px;
+    background:
+      linear-gradient(
+        180deg,
+        rgba(33, 37, 38, 0.54),
+        rgba(4, 6, 7, 0.66)
+      );
+    box-shadow:
+      0 18px 46px rgba(0, 0, 0, 0.48),
+      0 0 0 1px rgba(233, 226, 209, 0.055),
+      inset 0 1px 0 rgba(255, 255, 255, 0.045);
+  }
+
+  .roulette-bet-table {
+    --bet-border:
+      rgba(229, 224, 210, 0.62);
+    --bet-border-soft:
+      rgba(229, 224, 210, 0.18);
+    overflow: hidden;
+    border:
+      1px solid
+      rgba(229, 224, 210, 0.68);
+    border-radius: 8px;
+    background:
+      linear-gradient(
+        180deg,
+        rgba(8, 10, 11, 0.985),
+        rgba(3, 5, 6, 0.992)
+      );
+    box-shadow:
+      0 16px 38px rgba(0, 0, 0, 0.46),
+      0 0 0 1px rgba(255, 255, 255, 0.025),
+      inset 0 1px 0 rgba(255, 255, 255, 0.035);
+  }
+
+  .roulette-bet-cell {
+    border-color:
+      var(--bet-border);
+    color: #efece3;
+    background:
+      linear-gradient(
+        180deg,
+        rgba(10, 12, 13, 0.985),
+        rgba(5, 7, 8, 0.985)
+      );
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.012);
+    text-rendering:
+      geometricPrecision;
+  }
+
+  .roulette-bet-cell:hover {
+    filter:
+      brightness(1.13)
+      saturate(1.04);
+    box-shadow:
+      inset 0 0 0 1px rgba(244, 237, 219, 0.14),
+      inset 0 1px 0 rgba(255, 255, 255, 0.035);
+  }
+
+  .roulette-bet-cell:active {
+    transform: none;
+    filter: brightness(1.18);
+    box-shadow:
+      inset 0 0 0 1px rgba(244, 237, 219, 0.28);
+  }
+
+  .roulette-bet-cell:focus-visible {
+    outline:
+      2px solid
+      rgba(244, 222, 161, 0.92);
+    outline-offset:
+      -3px;
+    z-index: 12;
+  }
+
+  .roulette-number-grid,
+  .roulette-column-bets,
+  .roulette-dozen-bets,
+  .roulette-outside-bets {
+    border-color:
+      var(--bet-border);
+    background:
+      rgba(5, 7, 8, 0.985);
+  }
+
+  .roulette-number-cell {
+    color: #f2efe7;
+    background:
+      linear-gradient(
+        180deg,
+        rgba(9, 11, 12, 0.99),
+        rgba(4, 6, 7, 0.99)
+      ) !important;
+    font-family:
+      system-ui,
+      -apple-system,
+      BlinkMacSystemFont,
+      "Segoe UI",
+      sans-serif;
+    font-size:
+      clamp(
+        18px,
+        1.26vw,
+        23px
+      );
+    font-weight: 860;
+    line-height: 1;
+    letter-spacing: -0.035em;
+    font-variant-numeric:
+      tabular-nums
+      lining-nums;
+    text-shadow:
+      0 1px 2px rgba(0, 0, 0, 0.78);
+  }
+
+  .roulette-number-cell.is-red {
+    color: #d34943;
+    background:
+      linear-gradient(
+        180deg,
+        rgba(18, 9, 9, 0.99),
+        rgba(7, 5, 6, 0.99)
+      ) !important;
+  }
+
+  .roulette-number-cell.is-black {
+    color: #f2efe7;
+    background:
+      linear-gradient(
+        180deg,
+        rgba(10, 12, 13, 0.99),
+        rgba(4, 6, 7, 0.99)
+      ) !important;
+  }
+
+  .roulette-zero-cell {
+    color: #8ec79d;
+    background:
+      linear-gradient(
+        180deg,
+        rgba(8, 26, 17, 0.99),
+        rgba(4, 13, 9, 0.99)
+      ) !important;
+    font-family:
+      system-ui,
+      -apple-system,
+      BlinkMacSystemFont,
+      "Segoe UI",
+      sans-serif;
+    font-size:
+      clamp(
+        28px,
+        2vw,
+        38px
+      );
+    font-weight: 900;
+    line-height: 1;
+    letter-spacing: -0.045em;
+    font-variant-numeric:
+      tabular-nums;
+    text-shadow:
+      0 1px 3px rgba(0, 0, 0, 0.72);
+  }
+
+  .roulette-column-cell {
+    color: #dcd8cc;
+    background:
+      linear-gradient(
+        180deg,
+        rgba(11, 13, 14, 0.99),
+        rgba(5, 7, 8, 0.99)
+      );
+    font-family:
+      system-ui,
+      -apple-system,
+      BlinkMacSystemFont,
+      "Segoe UI",
+      sans-serif;
+    font-size:
+      clamp(
+        10px,
+        0.72vw,
+        13px
+      );
+    font-weight: 820;
+    letter-spacing: 0.025em;
+  }
+
+  .roulette-dozen-cell,
+  .roulette-outside-cell {
+    color: #e7e2d7;
+    background:
+      linear-gradient(
+        180deg,
+        rgba(10, 12, 13, 0.99),
+        rgba(5, 7, 8, 0.99)
+      );
+    font-family:
+      system-ui,
+      -apple-system,
+      BlinkMacSystemFont,
+      "Segoe UI",
+      sans-serif;
+    font-weight: 820;
+    letter-spacing: 0.02em;
+  }
+
+  .roulette-dozen-cell {
+    font-size:
+      clamp(
+        12px,
+        0.82vw,
+        15.5px
+      );
+  }
+
+  .roulette-outside-cell {
+    font-size:
+      clamp(
+        11.5px,
+        0.76vw,
+        14.5px
+      );
+  }
+
+  .roulette-outside-cell .roulette-diamond {
+    width:
+      clamp(
+        26px,
+        1.72vw,
+        31px
+      );
+    height:
+      clamp(
+        26px,
+        1.72vw,
+        31px
+      );
+    border:
+      1.5px solid
+      rgba(239, 232, 215, 0.86);
+    box-shadow:
+      0 3px 8px rgba(0, 0, 0, 0.40),
+      inset 0 0 0 1px rgba(255, 255, 255, 0.035);
+  }
+
+  .roulette-outside-cell.is-red-symbol
+    .roulette-diamond {
+    background:
+      linear-gradient(
+        145deg,
+        #d34a43,
+        #9f2825
+      );
+  }
+
+  .roulette-outside-cell.is-black-symbol
+    .roulette-diamond {
+    background:
+      linear-gradient(
+        145deg,
+        #23282b,
+        #050606
+      );
+  }
+
+  .roulette-bet-cell
+    > .roulette-placed-chip {
+    left: 50%;
+    top: 50%;
+    right: auto;
+    bottom: auto;
+    transform:
+      translate(-50%, -50%);
+    width:
+      clamp(
+        28px,
+        2.05vw,
+        34px
+      );
+    height:
+      clamp(
+        28px,
+        2.05vw,
+        34px
+      );
+    max-width:
+      calc(100% - 8px);
+    max-height:
+      calc(100% - 8px);
+    border-width:
+      1.5px;
+    box-shadow:
+      0 4px 10px rgba(0, 0, 0, 0.48),
+      inset 0 1px 0 rgba(255, 255, 255, 0.24),
+      inset 0 -2px 0 rgba(0, 0, 0, 0.18);
+  }
+
+  .roulette-number-cell.has-bet
+    > span:not(.roulette-placed-chip),
+  .roulette-zero-cell.has-bet
+    > span:not(.roulette-placed-chip) {
+    opacity: 0 !important;
+  }
+
+  /*
+   * One low, dense desktop control bar: chips | round metrics | actions.
+   * It remains part of the bet panel, so Part 2 whole-object spin/result
+   * scaling continues to preserve the exact table/control proportions.
+   */
+  .roulette-bet-console {
+    min-height:
+      clamp(
+        58px,
+        6.7dvh,
+        72px
+      );
+    margin-top:
+      clamp(
+        7px,
+        0.9dvh,
+        10px
+      );
+    padding:
+      clamp(
+        7px,
+        0.8dvh,
+        10px
+      )
+      clamp(
+        9px,
+        0.8vw,
+        13px
+      );
+    box-sizing: border-box;
+    display: grid;
+    grid-template-columns:
+      minmax(240px, 1.05fr)
+      minmax(300px, 1.08fr)
+      minmax(220px, 0.82fr);
+    grid-template-areas:
+      "chips summary actions";
+    align-items: center;
+    gap:
+      clamp(
+        8px,
+        0.72vw,
+        14px
+      );
+    border:
+      1px solid
+      rgba(226, 219, 202, 0.22);
+    border-radius: 12px;
+    background:
+      linear-gradient(
+        180deg,
+        rgba(18, 21, 22, 0.97),
+        rgba(6, 8, 9, 0.985)
+      );
+    box-shadow:
+      0 14px 34px rgba(0, 0, 0, 0.42),
+      inset 0 1px 0 rgba(255, 255, 255, 0.045);
+    backdrop-filter: blur(8px);
+  }
+
+  .roulette-chip-tray {
+    min-width: 0;
+    padding: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap:
+      clamp(
+        5px,
+        0.42vw,
+        8px
+      );
+    overflow: hidden;
+  }
+
+  .roulette-chip-option {
+    flex:
+      0 0
+      clamp(
+        36px,
+        2.4vw,
+        42px
+      );
+    width:
+      clamp(
+        36px,
+        2.4vw,
+        42px
+      );
+    height:
+      clamp(
+        36px,
+        2.4vw,
+        42px
+      );
+    font-size:
+      clamp(
+        10px,
+        0.7vw,
+        12px
+      );
+    border-width: 1.5px;
+  }
+
+  .roulette-chip-option::before {
+    inset: 3px;
+  }
+
+  .roulette-chip-option.is-selected {
+    transform:
+      translateY(-2px)
+      scale(1.055);
+    box-shadow:
+      0 7px 16px rgba(0, 0, 0, 0.46),
+      0 0 0 2px rgba(245, 234, 204, 0.20),
+      inset 0 1px 0 rgba(255, 255, 255, 0.28),
+      inset 0 -2px 0 rgba(0, 0, 0, 0.18);
+  }
+
+  .roulette-bet-summary {
+    min-width: 0;
+    width: 100%;
+    display: grid;
+    grid-template-columns:
+      repeat(
+        4,
+        minmax(0, 1fr)
+      );
+    align-items: center;
+    justify-items: stretch;
+    gap: 0;
+  }
+
+  .roulette-bet-metric {
+    position: relative;
+    min-width: 0;
+    padding:
+      3px
+      clamp(
+        5px,
+        0.45vw,
+        9px
+      );
+    display: grid;
+    align-content: center;
+    justify-items: center;
+    gap: 4px;
+  }
+
+  .roulette-bet-metric
+    + .roulette-bet-metric::before {
+    content: "";
+    position: absolute;
+    left: 0;
+    top: 15%;
+    bottom: 15%;
+    width: 1px;
+    background:
+      linear-gradient(
+        180deg,
+        transparent,
+        rgba(227, 217, 195, 0.22),
+        transparent
+      );
+  }
+
+  .roulette-bet-summary span {
+    max-width: 100%;
+    overflow: hidden;
+    color:
+      rgba(217, 212, 199, 0.58);
+    font-family:
+      system-ui,
+      -apple-system,
+      BlinkMacSystemFont,
+      "Segoe UI",
+      sans-serif;
+    font-size:
+      clamp(
+        7px,
+        0.48vw,
+        9px
+      );
+    font-weight: 800;
+    line-height: 1;
+    letter-spacing: 0.10em;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .roulette-bet-summary strong {
+    max-width: 100%;
+    overflow: hidden;
+    color: #f5f1e8;
+    font-family:
+      system-ui,
+      -apple-system,
+      BlinkMacSystemFont,
+      "Segoe UI",
+      sans-serif;
+    font-size:
+      clamp(
+        15px,
+        1.05vw,
+        20px
+      );
+    font-weight: 900;
+    line-height: 1;
+    letter-spacing: -0.045em;
+    font-variant-numeric:
+      tabular-nums;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .roulette-balance-metric strong {
+    color: #fbf7ec;
+  }
+
+  .roulette-return-metric strong,
+  .roulette-profit-metric strong {
+    color: #e5c979;
+  }
+
+  .roulette-profit-metric[data-round-outcome="win"]
+    strong {
+    color: #7fd9a1;
+  }
+
+  .roulette-profit-metric[data-round-outcome="loss"]
+    strong {
+    color: #e77b74;
+  }
+
+  .roulette-bet-actions {
+    min-width: 0;
+    display: grid;
+    grid-template-columns:
+      repeat(
+        3,
+        minmax(0, 1fr)
+      );
+    gap:
+      clamp(
+        5px,
+        0.42vw,
+        8px
+      );
+  }
+
+  .roulette-bet-actions button {
+    min-width: 0;
+    min-height:
+      clamp(
+        36px,
+        4.1dvh,
+        44px
+      );
+    padding:
+      0
+      clamp(
+        7px,
+        0.55vw,
+        11px
+      );
+    border:
+      1px solid
+      rgba(223, 217, 201, 0.22);
+    border-radius: 9px;
+    color: #ddd9cf;
+    background:
+      linear-gradient(
+        180deg,
+        rgba(34, 38, 40, 0.98),
+        rgba(12, 15, 16, 0.99)
+      );
+    box-shadow:
+      0 4px 10px rgba(0, 0, 0, 0.26),
+      inset 0 1px 0 rgba(255, 255, 255, 0.045);
+    font-family:
+      system-ui,
+      -apple-system,
+      BlinkMacSystemFont,
+      "Segoe UI",
+      sans-serif;
+    font-size:
+      clamp(
+        9px,
+        0.6vw,
+        11px
+      );
+    font-weight: 840;
+    letter-spacing: 0.06em;
+    transition:
+      transform 120ms ease,
+      filter 120ms ease,
+      border-color 120ms ease,
+      opacity 120ms ease;
+  }
+
+  .roulette-bet-actions button:not(:disabled):hover {
+    filter: brightness(1.12);
+    border-color:
+      rgba(235, 226, 205, 0.38);
+  }
+
+  .roulette-bet-actions button:not(:disabled):active {
+    transform:
+      translateY(1px);
+  }
+
+  .roulette-bet-actions
+    .roulette-spin-button {
+    border-color:
+      rgba(225, 219, 204, 0.54);
+    color: #111416;
+    background:
+      linear-gradient(
+        180deg,
+        #f4f0e6,
+        #c7c3ba
+      );
+    font-size:
+      clamp(
+        10px,
+        0.67vw,
+        12px
+      );
+    letter-spacing: 0.11em;
+    box-shadow:
+      0 5px 12px rgba(0, 0, 0, 0.30),
+      inset 0 1px 0 rgba(255, 255, 255, 0.64);
+  }
+
+  /*
+   * Global live table owns the spin clock, so LIVE is intentionally disabled.
+   * Keep it readable as status chrome while disabled action buttons remain dim.
+   */
+  .roulette-bet-actions
+    .roulette-spin-button:disabled {
+    opacity: 0.78;
+    cursor: default;
+  }
+
+  .roulette-page[data-phase="spinning"]
+    .roulette-bet-console {
+    pointer-events: none;
+  }
+}
+
+@media (min-width: 1100px) and (orientation: landscape) and (max-height: 760px) {
+  .roulette-bet-console {
+    min-height: 52px;
+    margin-top: 6px;
+    padding: 6px 8px;
+    border-radius: 10px;
+  }
+
+  .roulette-chip-option {
+    flex-basis: 36px;
+    width: 36px;
+    height: 36px;
+    font-size: 10px;
+  }
+
+  .roulette-bet-summary span {
+    font-size: 7px;
+  }
+
+  .roulette-bet-summary strong {
+    font-size:
+      clamp(
+        14px,
+        1vw,
+        17px
+      );
+  }
+
+  .roulette-bet-actions button {
+    min-height: 34px;
+    font-size: 9px;
+  }
+}
+
