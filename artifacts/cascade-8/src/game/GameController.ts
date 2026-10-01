@@ -78,7 +78,6 @@ export class GameController {
     this.bind();
     this.updateHud();
     void this.initializeWallet();
-    this.scene.setRuntimeActive(false);
   }
 
   private async initializeWallet() {
