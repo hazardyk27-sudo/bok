@@ -66,6 +66,8 @@ describe("slot route smoke contract", () => {
     expect(gameSceneSource).toContain('document.visibilityState === "hidden"');
     expect(slotCssSource).toContain("contain: layout paint");
     expect(slotCssSource).toContain("backdrop-filter: none");
+    expect(gameSceneSource).toContain("Math.floor(48 / Math.max(active.length, 1))");
+    expect(gameSceneSource).toContain("Math.min(6, Math.max(2");
   });
 
   it("mounts Phaser and GameController from the Slot-owned runtime", () => {
