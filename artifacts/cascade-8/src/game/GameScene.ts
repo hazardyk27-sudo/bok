@@ -135,6 +135,10 @@ export class GameScene extends Phaser.Scene {
 
   private transientEffects: Phaser.GameObjects.GameObject[] = [];
 
+  private readonly deferredDestroyQueue: Phaser.GameObjects.GameObject[] = [];
+
+  private deferredDestroyScheduled = false;
+
   private readonly burstRingPool: Phaser.GameObjects.Arc[] = [];
 
   private readonly burstParticlePool: Phaser.GameObjects.Arc[] = [];
@@ -307,19 +311,45 @@ export class GameScene extends Phaser.Scene {
     if (index >= 0) this.transientEffects.splice(index, 1);
   }
 
-  private destroyEffect(effect: Phaser.GameObjects.GameObject) {
+  private scheduleDeferredDestroy() {
+    if (this.deferredDestroyScheduled || !this.deferredDestroyQueue.length) return;
+    this.deferredDestroyScheduled = true;
+
+    const drain = () => {
+      this.deferredDestroyScheduled = false;
+      const batch = this.deferredDestroyQueue.splice(0, 3);
+      batch.forEach((effect) => effect.destroy());
+      if (this.deferredDestroyQueue.length) {
+        this.scheduleDeferredDestroy();
+      }
+    };
+
+    window.requestAnimationFrame(drain);
+  }
+
+  private retireGameObject(effect: Phaser.GameObjects.GameObject) {
     this.tweens.killTweensOf(effect);
+    const displayObject = effect as Phaser.GameObjects.GameObject & {
+      setVisible?: (visible: boolean) => unknown;
+      setActive?: (active: boolean) => unknown;
+    };
+    displayObject.setVisible?.(false);
+    displayObject.setActive?.(false);
+    this.deferredDestroyQueue.push(effect);
+    this.scheduleDeferredDestroy();
+  }
+
+  private destroyEffect(effect: Phaser.GameObjects.GameObject) {
     this.releaseEffect(effect);
-    if (effect.active) effect.destroy();
+    this.retireGameObject(effect);
   }
 
   private clearTransientEffects() {
     if (!this.transientEffects.length) return;
-    this.tweens.killTweensOf(this.transientEffects);
-    this.transientEffects.forEach((effect) => {
-      if (effect.active) effect.destroy();
-    });
+    const retiring = this.transientEffects;
     this.transientEffects = [];
+    this.tweens.killTweensOf(retiring);
+    retiring.forEach((effect) => this.retireGameObject(effect));
   }
 
   private acquireBurstRing(x: number, y: number, color: number) {
@@ -759,7 +789,7 @@ export class GameScene extends Phaser.Scene {
     };
   }
 
-  async animateDrop(duration: number, awaitScatterLanding = true): Promise<MotionTiming> {
+  async animateDrop(duration: number, _awaitScatterLanding = true): Promise<MotionTiming> {
     const startedAt = performance.now();
     const columnGroups = Array.from({ length: BOARD_COLUMNS }, (_, col) =>
       this.nodes
@@ -812,16 +842,10 @@ export class GameScene extends Phaser.Scene {
       const finishScatterLandings = () => {
         if (landingStarted) return;
         landingStarted = true;
-        if (!scatterNodes.length) {
-          complete();
-          return;
+        if (scatterNodes.length) {
+          void Promise.all(scatterNodes.map((node) => this.animateScatterLanding(node)));
         }
-        const landings = scatterNodes.map((node) => this.animateScatterLanding(node));
-        if (awaitScatterLanding) void Promise.all(landings).then(complete);
-        else {
-          void Promise.all(landings);
-          complete();
-        }
+        complete();
       };
       const tween = this.tweens.add({
         targets: motion,
@@ -898,8 +922,8 @@ export class GameScene extends Phaser.Scene {
         yoyo: true,
         ease: "Sine.easeInOut",
              onComplete: () => {
-               if (node.symbol === "SCATTER") void this.animateScatterLanding(node).then(resolve);
-               else resolve();
+               if (node.symbol === "SCATTER") void this.animateScatterLanding(node);
+               resolve();
              },
       });
     })));
@@ -1167,8 +1191,7 @@ export class GameScene extends Phaser.Scene {
         .setAlpha(0)
         .setScale(0.94);
       const complete = this.activeWinLabels.track(() => {
-        this.tweens.killTweensOf(container);
-        if (container.active) container.destroy();
+        this.retireGameObject(container);
         resolve();
       });
 
@@ -1251,7 +1274,6 @@ export class GameScene extends Phaser.Scene {
             if (watchdog !== null) window.clearTimeout(watchdog);
             resolve();
           };
-          const mayResolveAtVisualSettle = node.symbol !== "SCATTER" && !isMultiplierCore(node.symbol);
           const tween = this.tweens.add({
             targets: node.container,
             y: targetY,
@@ -1264,7 +1286,7 @@ export class GameScene extends Phaser.Scene {
                 && Math.abs(node.container.y - targetY) <= 1.5
               ) {
                 markVisualSettled();
-                if (mayResolveAtVisualSettle) complete();
+                complete();
               }
             },
             onComplete: () => {
@@ -1339,7 +1361,7 @@ export class GameScene extends Phaser.Scene {
                 && group.every((node, index) => Math.abs(node.container.y - targetYs[index]) <= 1.5 && node.container.alpha >= 0.995)
               ) {
                 markVisualSettled();
-                if (!hasSpecialSymbol) complete();
+                complete();
               }
             },
             onComplete: () => {
