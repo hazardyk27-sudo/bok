@@ -206,6 +206,7 @@ let controllerReady = false;
 const game = createGameScene(byId("phaser-board"));
 const controllerTimer = window.setTimeout(() => {
   const scene = game.scene.getScene("Cascade8GameScene") as GameScene;
+  scene.setIdleSleepEnabled(!isLab);
   controller = new GameController(scene, {
     balance: byId("balance"), bet: byId("bet"), win: byId("win"), bonusWin: byId("bonus-win"), freeSpins: byId("free-spins"), gameStatusBadge: byId("game-status-badge"), gameStatusLabel: byId("game-status-label"),
     tumble: byId("tumble"), status: byId("status"), spin: byId("spin"), spinLabel: byId("spin").querySelector(".spin-label") as HTMLElement,
