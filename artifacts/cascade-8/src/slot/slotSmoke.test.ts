@@ -155,6 +155,16 @@ describe("slot route smoke contract", () => {
     expect(slotWalletClientSource).toContain("boardAfterGravity: tumble.boardAfterRefill");
   });
 
+  it("keeps Big/Mega/Max ceremony out of base-game round completion", () => {
+    const baseSpinStart = gameControllerSource.indexOf('private async spin(');
+    const freeSpinStart = gameControllerSource.indexOf('private async startFreeSpins(');
+    const baseSpinBody = baseSpinStart >= 0 && freeSpinStart > baseSpinStart
+      ? gameControllerSource.slice(baseSpinStart, freeSpinStart)
+      : "";
+    expect(baseSpinBody).not.toContain("presentLargeWin(");
+    expect(gameControllerSource).toContain("await this.presentLargeWin(freeSpin.finalWinMultiplier, freeSpin.win)");
+  });
+
   it("mounts Phaser and GameController from the Slot-owned runtime", () => {
     expect(slotSource).toContain(
       'const game = createGameScene(byId("phaser-board"));',
