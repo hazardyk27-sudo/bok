@@ -135,6 +135,10 @@ export class GameScene extends Phaser.Scene {
 
   private transientEffects: Phaser.GameObjects.GameObject[] = [];
 
+  private readonly deferredDestroyQueue: Phaser.GameObjects.GameObject[] = [];
+
+  private deferredDestroyScheduled = false;
+
   private readonly burstRingPool: Phaser.GameObjects.Arc[] = [];
 
   private readonly burstParticlePool: Phaser.GameObjects.Arc[] = [];
@@ -307,19 +311,45 @@ export class GameScene extends Phaser.Scene {
     if (index >= 0) this.transientEffects.splice(index, 1);
   }
 
-  private destroyEffect(effect: Phaser.GameObjects.GameObject) {
+  private scheduleDeferredDestroy() {
+    if (this.deferredDestroyScheduled || !this.deferredDestroyQueue.length) return;
+    this.deferredDestroyScheduled = true;
+
+    const drain = () => {
+      this.deferredDestroyScheduled = false;
+      const batch = this.deferredDestroyQueue.splice(0, 3);
+      batch.forEach((effect) => effect.destroy());
+      if (this.deferredDestroyQueue.length) {
+        this.scheduleDeferredDestroy();
+      }
+    };
+
+    window.requestAnimationFrame(drain);
+  }
+
+  private retireGameObject(effect: Phaser.GameObjects.GameObject) {
     this.tweens.killTweensOf(effect);
+    const displayObject = effect as Phaser.GameObjects.GameObject & {
+      setVisible?: (visible: boolean) => unknown;
+      setActive?: (active: boolean) => unknown;
+    };
+    displayObject.setVisible?.(false);
+    displayObject.setActive?.(false);
+    this.deferredDestroyQueue.push(effect);
+    this.scheduleDeferredDestroy();
+  }
+
+  private destroyEffect(effect: Phaser.GameObjects.GameObject) {
     this.releaseEffect(effect);
-    if (effect.active) effect.destroy();
+    this.retireGameObject(effect);
   }
 
   private clearTransientEffects() {
     if (!this.transientEffects.length) return;
-    this.tweens.killTweensOf(this.transientEffects);
-    this.transientEffects.forEach((effect) => {
-      if (effect.active) effect.destroy();
-    });
+    const retiring = this.transientEffects;
     this.transientEffects = [];
+    this.tweens.killTweensOf(retiring);
+    retiring.forEach((effect) => this.retireGameObject(effect));
   }
 
   private acquireBurstRing(x: number, y: number, color: number) {
@@ -1167,8 +1197,7 @@ export class GameScene extends Phaser.Scene {
         .setAlpha(0)
         .setScale(0.94);
       const complete = this.activeWinLabels.track(() => {
-        this.tweens.killTweensOf(container);
-        if (container.active) container.destroy();
+        this.retireGameObject(container);
         resolve();
       });
 
