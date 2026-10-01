@@ -240,7 +240,10 @@ export class GameScene extends Phaser.Scene {
     this.idleSleepEnabled = enabled;
     if (!enabled) {
       this.clearIdleSleepTimer();
-      if (!this.game.loop.running) this.game.loop.wake(true);
+      if (!this.game.loop.running) {
+        this.game.loop.resetDelta();
+        this.game.loop.wake(false);
+      }
       return;
     }
     this.scheduleIdleSleep();
@@ -250,7 +253,10 @@ export class GameScene extends Phaser.Scene {
     this.runtimeActive = active;
     if (active) {
       this.clearIdleSleepTimer();
-      if (!this.game.loop.running) this.game.loop.wake(true);
+      if (!this.game.loop.running) {
+        this.game.loop.resetDelta();
+        this.game.loop.wake(false);
+      }
       return;
     }
     this.scheduleIdleSleep();
