@@ -144,6 +144,15 @@ describe("slot route smoke contract", () => {
     expect(roundTimingSource).toContain("!SLOT_RUNTIME_DIAGNOSTICS_ENABLED");
   });
 
+  it("keeps the board active while the authoritative spin response is pending", () => {
+    expect(gameControllerSource).toContain('classList.add("is-awaiting-spin-result")');
+    expect(gameControllerSource).toContain('classList.remove("is-awaiting-spin-result")');
+    expect(slotCssSource).toContain(".board-wrap.is-awaiting-spin-result::after");
+    expect(slotCssSource).toContain("animation: slot-request-sweep 680ms linear infinite");
+    expect(roundTimingSource).toContain("serverWaitMs >= 450");
+    expect(roundTimingSource).toContain('"SERVER_WAIT"');
+  });
+
   it("compacts repeated tumble transport state without changing gameplay math", () => {
     expect(slotRepositorySource).toContain("compactTumbleForWire");
     expect(slotRepositorySource).toContain('boardBefore: _boardBefore');
