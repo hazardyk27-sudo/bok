@@ -956,7 +956,7 @@ export class GameScene extends Phaser.Scene {
         ease: "Cubic.easeOut",
         onComplete: () => this.releaseBurstRing(ring),
       });
-      const particleCount = Math.min(8, Math.max(3, Math.floor(96 / Math.max(active.length, 1))));
+      const particleCount = Math.min(6, Math.max(2, Math.floor(48 / Math.max(active.length, 1))));
       Array.from({ length: particleCount }, (_, index) => {
         const particle = this.acquireBurstParticle(centerX, centerY, index % 3 === 0 ? 4 : 2.5, color);
         const angle = (index / particleCount) * Math.PI * 2;
