@@ -32,6 +32,13 @@ type TimingWindow = Window & {
 
 const MAX_TRACES = 50;
 
+const SLOT_RUNTIME_DIAGNOSTICS_ENABLED =
+  typeof window !== "undefined"
+  && (
+    window.location.pathname.replace(/\/+$/, "") === "/lab"
+    || new URLSearchParams(window.location.search).get("slotPerf") === "1"
+  );
+
 type LongTaskSample = { startTime: number; duration: number; name: string };
 type SchedulerEvent = { at: number; type: string };
 
@@ -56,7 +63,10 @@ function ingestLongTaskEntries(entries: readonly PerformanceEntry[]) {
   trimRuntimeDiagnostics();
 }
 
-if (typeof window !== "undefined") {
+if (
+  typeof window !== "undefined"
+  && SLOT_RUNTIME_DIAGNOSTICS_ENABLED
+) {
   if (typeof PerformanceObserver !== "undefined") {
     try {
       longTaskObserver = new PerformanceObserver((list) => ingestLongTaskEntries(list.getEntries()));
@@ -119,7 +129,7 @@ export function motionTimingDetail(timing: MotionTiming) {
 }
 
 export function publishRoundTiming(trace: RoundTimingTrace | null) {
-  if (!trace) return;
+  if (!trace || !SLOT_RUNTIME_DIAGNOSTICS_ENABLED) return;
   if (longTaskObserver) ingestLongTaskEntries(longTaskObserver.takeRecords());
   const target = window as TimingWindow;
   const history = target.__CASCADE8_TIMING__ ?? [];
