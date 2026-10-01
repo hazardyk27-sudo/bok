@@ -151,6 +151,8 @@ export class GameScene extends Phaser.Scene {
 
   private freeSpinMode = false;
 
+  private lastAmbientUpdateAt = -Infinity;
+
   private boardOrigin = { x: 22, y: 30 };
 
   private cellSize = { width: 96, height: 92 };
@@ -183,6 +185,22 @@ export class GameScene extends Phaser.Scene {
   }
 
   update(time: number) {
+    if (
+      typeof document !== "undefined" &&
+      document.visibilityState === "hidden"
+    ) {
+      return;
+    }
+
+    // Decorative aura/glint motion does not need to run at the full game
+    // framerate. Keep core drop/tumble tweens at native FPS while updating
+    // ambient-only effects at ~30 Hz to leave more main-thread/GPU budget for
+    // the actual reel motion.
+    if (time - this.lastAmbientUpdateAt < 33) {
+      return;
+    }
+    this.lastAmbientUpdateAt = time;
+
     this.nodes.forEach((node) => {
       const ambient = node.ambient;
       if (!ambient) return;
