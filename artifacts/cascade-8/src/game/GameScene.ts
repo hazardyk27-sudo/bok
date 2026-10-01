@@ -131,6 +131,8 @@ const MULTIPLIER_VISUALS = {
 export class GameScene extends Phaser.Scene {
   private nodes: BoardNode[] = [];
 
+  private readonly normalNodePool: BoardNode[] = [];
+
   private transientEffects: Phaser.GameObjects.GameObject[] = [];
 
   private readonly burstRingPool: Phaser.GameObjects.Arc[] = [];
@@ -441,7 +443,35 @@ export class GameScene extends Phaser.Scene {
     Array.from(this.activeBurstParticles).forEach((particle) => this.releaseBurstParticle(particle));
   }
 
+  private releaseNormalNode(node: BoardNode) {
+    const normalSymbol = getNormalSymbol(node.symbol);
+    const mark = node.container.list[0];
+    if (!normalSymbol || !(mark instanceof Phaser.GameObjects.Image)) return false;
+
+    const targets = [node.container, ...node.container.list];
+    this.tweens.killTweensOf(targets);
+    node.container
+      .setActive(false)
+      .setVisible(false)
+      .setAlpha(1)
+      .setScale(1)
+      .setAngle(0)
+      .setDepth(0)
+      .setPosition(-1000, -1000);
+    mark
+      .setActive(false)
+      .setVisible(false)
+      .setAlpha(1)
+      .setScale(1)
+      .setAngle(0);
+    node.coreCollected = undefined;
+    node.ambient = undefined;
+    this.normalNodePool.push(node);
+    return true;
+  }
+
   private destroyNode(node: BoardNode) {
+    if (this.releaseNormalNode(node)) return;
     const targets = [node.container, ...node.container.list];
     this.tweens.killTweensOf(targets);
     node.container.destroy();
@@ -504,6 +534,7 @@ export class GameScene extends Phaser.Scene {
       activeTweens: this.tweens.getTweens().length,
       transientEffects: this.transientEffects.length + this.activeBurstRings.size + this.activeBurstParticles.size,
       pooledBurstEffects: this.burstRingPool.length + this.burstParticlePool.length,
+      pooledNormalNodes: this.normalNodePool.length,
       burstFxCreated: this.burstFxCreated,
       burstFxReused: this.burstFxReused,
       ambientSpecialAnimations: this.nodes.filter((node) => Boolean(node.ambient)).length,
@@ -515,6 +546,18 @@ export class GameScene extends Phaser.Scene {
   }
 
   private createSymbolNode(symbol: BoardCell, row: number, col: number, winner = false) {
+    const normalSymbol = getNormalSymbol(symbol);
+    if (normalSymbol) {
+      const pooledNode = this.normalNodePool.pop();
+      if (pooledNode) {
+        if (this.reuseNormalNode(pooledNode, symbol, row, col)) {
+          this.nodes.push(pooledNode);
+          return pooledNode;
+        }
+        pooledNode.container.destroy();
+      }
+    }
+
     const container = this.add.container(
       this.boardOrigin.x + col * this.cellSize.width + 48,
       this.boardOrigin.y + row * this.cellSize.height + 46,
@@ -626,8 +669,8 @@ export class GameScene extends Phaser.Scene {
       this.nodes.push(node);
       return node;
     }
-    const normalSymbol = getNormalSymbol(symbol);
     if (!normalSymbol) throw new Error("Unsupported board symbol");
+
     const mark = this.add.image(0, 0, `club-logo-${normalSymbol}`).setDisplaySize(82, 82);
     container.add(mark);
     const node = { container, symbol, row, col };
