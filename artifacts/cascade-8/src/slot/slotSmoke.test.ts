@@ -102,6 +102,14 @@ describe("slot route smoke contract", () => {
   it("does not leak win-label and transient FX work across round boundaries", () => {
     expect(gameSceneSource).toContain("settleRoundVisuals()");
     expect(gameSceneSource).toContain("this.activeWinLabels.completeAll()");
+    expect(gameSceneSource).toContain("deferredDestroyQueue");
+    expect(gameSceneSource).toContain("scheduleDeferredDestroy()");
+    expect(gameSceneSource).toContain("window.requestAnimationFrame(drain)");
+    expect(gameSceneSource).toContain("splice(0, 3)");
+    expect(gameSceneSource).toContain("retireGameObject(container)");
+    expect(gameSceneSource).toContain("void Promise.all(scatterNodes.map((node) => this.animateScatterLanding(node)))");
+    expect(gameSceneSource).toContain('if (node.symbol === "SCATTER") void this.animateScatterLanding(node);');
+    expect(gameSceneSource).not.toContain("if (mayResolveAtVisualSettle) complete()");
     expect(gameSceneSource).toContain("Math.min(720, duration)");
     expect(gameSceneSource).not.toContain("Math.max(650, Math.min(700");
     expect(gameSceneSource).not.toContain("Math.max(900, Math.min(1000");
