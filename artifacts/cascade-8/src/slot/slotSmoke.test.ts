@@ -26,6 +26,10 @@ const roundTimingSource = readFileSync(
   fileURLToPath(new URL("../game/RoundTiming.ts", import.meta.url)),
   "utf8",
 );
+const gameTimingSource = readFileSync(
+  fileURLToPath(new URL("../game/GameTiming.ts", import.meta.url)),
+  "utf8",
+);
 const slotWalletClientSource = readFileSync(
   fileURLToPath(new URL("../game/SlotWalletClient.ts", import.meta.url)),
   "utf8",
@@ -107,46 +111,36 @@ describe("slot route smoke contract", () => {
     expect(gameControllerSource).toContain("this.scene.setRuntimeActive(false)");
   });
 
-  it("does not leak win-label and transient FX work across round boundaries", () => {
-    expect(gameSceneSource).toContain("settleRoundVisuals()");
-    expect(gameSceneSource).toContain("this.activeWinLabels.completeAll()");
-    expect(gameSceneSource).toContain("deferredDestroyQueue");
-    expect(gameSceneSource).toContain("scheduleDeferredDestroy()");
-    expect(gameSceneSource).toContain("window.requestAnimationFrame(drain)");
-    expect(gameSceneSource).toContain("splice(0, 3)");
+  it("keeps the original tumble cadence while keeping pooled visuals", () => {
     expect(gameSceneSource).toContain("winLabelPool");
     expect(gameSceneSource).toContain("acquireWinLabel");
     expect(gameSceneSource).toContain("releaseWinLabel");
-    expect(gameSceneSource).not.toContain("this.retireGameObject(container)");
-    const settleRoundVisualsBody =
-      gameSceneSource.match(/settleRoundVisuals\(\) \{([\s\S]*?)\n  \}/)?.[1] ?? "";
-    expect(settleRoundVisualsBody).not.toContain("clearTransientEffects");
-    expect(gameSceneSource).toContain("this.acquireBurstParticle(");
-    expect(gameSceneSource).not.toContain('this.add.text(centerX, centerY, "✦"');
-    expect(gameSceneSource).toContain("void Promise.all(scatterNodes.map((node) => this.animateScatterLanding(node)))");
-    expect(gameSceneSource).toContain('if (node.symbol === "SCATTER") void this.animateScatterLanding(node);');
-    expect(gameSceneSource).not.toContain("if (mayResolveAtVisualSettle) complete()");
-    expect(gameSceneSource).toContain("Math.min(720, duration)");
-    expect(gameSceneSource).not.toContain("Math.max(650, Math.min(700");
-    expect(gameSceneSource).not.toContain("Math.max(900, Math.min(1000");
-    expect(gameControllerSource).toContain("const winLabelDuration = Math.min(");
-    expect(gameControllerSource).toContain("tumbleDuration(ANIMATION.refill) - 80");
-    expect(gameControllerSource.match(/this\.scene\.settleRoundVisuals\(\)/g)?.length ?? 0).toBeGreaterThanOrEqual(3);
+    expect(gameSceneSource).toContain("async highlightCells(cells: Cell[], duration: number)");
+    expect(gameControllerSource).toContain("await this.scene.highlightCells(tumble.winningCells");
+    expect(gameControllerSource).toContain("this.duration(ANIMATION.burst, isBonus)");
+    expect(gameControllerSource).toContain("this.duration(ANIMATION.refill, isBonus)");
+    expect(gameControllerSource).toContain("this.duration(ANIMATION.winLabel, isBonus)");
+    expect(gameSceneSource).toContain("Math.min(2000, duration)");
+    expect(gameSceneSource).toContain("Math.max(650, Math.min(700");
+    expect(gameSceneSource).toContain("Math.max(900, Math.min(1000");
+    expect(gameSceneSource).toContain("if (awaitScatterLanding) void Promise.all(landings).then(complete)");
+    expect(gameSceneSource).toContain("if (mayResolveAtVisualSettle) complete()");
+    expect(gameSceneSource).toContain("if (!hasSpecialSymbol) complete()");
+    expect(gameTimingSource).not.toContain("getTumblePacingFactor");
+    expect(gameTimingSource).not.toContain("scaleTumbleAnimationDuration");
+    expect(gameControllerSource).not.toContain("scaleTumbleAnimationDuration");
+    expect(gameControllerSource).not.toContain("this.scene.settleRoundVisuals()");
   });
 
-  it("keeps live round diagnostics available while the stall investigation is active", () => {
+  it("keeps diagnostics opt-in and off the round-end network path", () => {
     expect(roundTimingSource).toContain("SLOT_RUNTIME_DIAGNOSTICS_ENABLED");
-    expect(roundTimingSource).toContain('["/slot", "/lab"].includes(window.location.pathname.replace(/\\/+$/, ""))');
+    expect(roundTimingSource).toContain('window.location.pathname.replace(/\\/+$/, "") === "/lab"');
     expect(roundTimingSource).toContain('get("slotPerf") === "1"');
+    expect(roundTimingSource).not.toContain('fetch("/api/slot/perf"');
     expect(roundTimingSource).toContain("!SLOT_RUNTIME_DIAGNOSTICS_ENABLED");
   });
 
-  it("keeps win highlight nonblocking and compacts repeated tumble transport state", () => {
-    expect(gameSceneSource).toContain("highlightCells(cells: Cell[], duration: number)");
-    expect(gameSceneSource).not.toContain("async highlightCells(cells: Cell[], duration: number)");
-    expect(gameControllerSource).toContain("this.scene.highlightCells(tumble.winningCells");
-    expect(gameControllerSource).not.toContain("await this.scene.highlightCells(tumble.winningCells");
-    expect(gameControllerSource).toContain('{ blocking: false }');
+  it("compacts repeated tumble transport state without changing gameplay math", () => {
     expect(slotRepositorySource).toContain("compactTumbleForWire");
     expect(slotRepositorySource).toContain('boardBefore: _boardBefore');
     expect(slotRepositorySource).toContain('boardAfterGravity: _boardAfterGravity');
