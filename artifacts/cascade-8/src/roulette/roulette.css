@@ -5346,7 +5346,7 @@ button {
 
 
 /* Desktop 16:9 Part 1 — horizontal live-table foundation */
-@media (min-width: 1100px) and (orientation: landscape) {
+@media (min-width: 901px) and (orientation: landscape) {
   html,
   body,
   #app {
@@ -6096,7 +6096,7 @@ button {
 
 
 /* Desktop 16:9 Part 2 — phase emphasis and result presentation */
-@media (min-width: 1100px) and (orientation: landscape) {
+@media (min-width: 901px) and (orientation: landscape) {
   .roulette-stage,
   .roulette-bet-panel {
     transition:
@@ -6603,7 +6603,7 @@ button {
   }
 }
 
-@media (min-width: 1100px) and (orientation: landscape) and (max-height: 760px) {
+@media (min-width: 901px) and (orientation: landscape) and (max-height: 760px) {
   .roulette-page[data-phase="betting"] {
     --desktop-wheel-size:
       min(
@@ -6660,7 +6660,7 @@ button {
 }
 
 /* Desktop 16:9 Part 3 — premium horizontal betting table final */
-@media (min-width: 1100px) and (orientation: landscape) {
+@media (min-width: 901px) and (orientation: landscape) {
   /*
    * Keep the approved 12 × 3 horizontal geometry intact. This pass only
    * upgrades material, typography, chip readability and the desktop console.
@@ -7323,7 +7323,7 @@ button {
   }
 }
 
-@media (min-width: 1100px) and (orientation: landscape) and (max-height: 760px) {
+@media (min-width: 901px) and (orientation: landscape) and (max-height: 760px) {
   .roulette-bet-console {
     min-height: 52px;
     margin-top: 6px;
@@ -7354,6 +7354,471 @@ button {
   .roulette-bet-actions button {
     min-height: 34px;
     font-size: 9px;
+  }
+}
+
+/* Desktop/tablet Part 4 — unified landscape tablet fit */
+@media (min-width: 901px) and (max-width: 1099px) and (orientation: landscape) {
+  .roulette-page {
+    --desktop-safe-inline:
+      clamp(12px, 1.6vw, 18px);
+    --desktop-safe-top:
+      clamp(8px, 1.2dvh, 12px);
+    --desktop-safe-bottom:
+      clamp(8px, 1.3dvh, 14px);
+    --desktop-hud-height:
+      clamp(42px, 5.8dvh, 52px);
+    --desktop-history-height:
+      clamp(20px, 2.7dvh, 26px);
+    --desktop-number-row:
+      clamp(38px, 5.2dvh, 48px);
+    --desktop-dozen-row:
+      clamp(34px, 4.4dvh, 42px);
+    --desktop-outside-row:
+      clamp(36px, 4.6dvh, 44px);
+  }
+
+  .roulette-top-hud {
+    width:
+      min(
+        calc(
+          100vw -
+          2 *
+          var(--desktop-safe-inline)
+        ),
+        1040px
+      );
+    grid-template-columns:
+      minmax(180px, 1.45fr)
+      minmax(112px, 0.80fr)
+      minmax(112px, 0.84fr)
+      46px;
+    border-radius: 9px;
+  }
+
+  .roulette-top-hud__metric {
+    padding:
+      6px 9px
+      5px;
+  }
+
+  .roulette-top-hud__metric > span {
+    font-size:
+      clamp(
+        7px,
+        0.78vw,
+        9px
+      );
+  }
+
+  .roulette-top-hud__metric > strong {
+    font-size:
+      clamp(
+        14px,
+        1.55vw,
+        18px
+      );
+  }
+
+  .roulette-top-hud__menu-slot {
+    min-width: 46px;
+  }
+
+  .roulette-menu-button {
+    width: 31px;
+    height: 31px;
+    border-radius: 8px;
+  }
+
+  .roulette-recent-strip {
+    width:
+      min(
+        calc(
+          100vw -
+          2 *
+          var(--desktop-safe-inline)
+        ),
+        1040px
+      );
+    border-radius: 6px;
+  }
+
+  .roulette-recent-result {
+    font-size:
+      clamp(
+        9px,
+        1.0vw,
+        12px
+      );
+  }
+
+  .roulette-betting-timer {
+    top:
+      calc(
+        var(--desktop-safe-top) +
+        var(--desktop-hud-height) +
+        var(--desktop-history-height) +
+        14px
+      );
+    min-width:
+      clamp(
+        62px,
+        7vw,
+        78px
+      );
+    min-height:
+      clamp(
+        38px,
+        5dvh,
+        48px
+      );
+    padding: 5px 9px;
+  }
+
+  .roulette-betting-timer__value {
+    font-size:
+      clamp(
+        18px,
+        2.2vw,
+        24px
+      );
+  }
+
+  .roulette-page[data-phase="betting"] {
+    --desktop-wheel-size:
+      min(
+        46vw,
+        58dvh,
+        500px
+      );
+    --desktop-table-width:
+      min(
+        92vw,
+        940px
+      );
+  }
+
+  .roulette-page[data-phase="betting"]
+    .roulette-stage {
+    top:
+      clamp(
+        82px,
+        10.4dvh,
+        96px
+      );
+    transform:
+      translateX(-50%)
+      scale(0.95) !important;
+    opacity: 0.52 !important;
+  }
+
+  .roulette-page[data-phase="spinning"] {
+    --desktop-wheel-size:
+      min(
+        70vw,
+        76dvh,
+        650px
+      );
+    --desktop-table-width:
+      min(
+        86vw,
+        880px
+      );
+  }
+
+  .roulette-page[data-phase="spinning"]
+    .roulette-stage {
+    top:
+      clamp(
+        58px,
+        7.2dvh,
+        72px
+      );
+  }
+
+  .roulette-page[data-phase="settled"] {
+    --desktop-wheel-size:
+      min(
+        68vw,
+        74dvh,
+        630px
+      );
+    --desktop-table-width:
+      min(
+        86vw,
+        880px
+      );
+  }
+
+  .roulette-page[data-phase="settled"]
+    .roulette-stage {
+    top:
+      clamp(
+        62px,
+        7.6dvh,
+        76px
+      );
+  }
+
+  .roulette-bet-table {
+    grid-template-columns:
+      clamp(
+        48px,
+        5.4vw,
+        62px
+      )
+      minmax(0, 1fr)
+      clamp(
+        44px,
+        4.8vw,
+        56px
+      );
+  }
+
+  .roulette-number-cell {
+    font-size:
+      clamp(
+        16px,
+        1.8vw,
+        20px
+      );
+  }
+
+  .roulette-zero-cell {
+    font-size:
+      clamp(
+        25px,
+        3vw,
+        32px
+      );
+  }
+
+  .roulette-column-cell {
+    font-size:
+      clamp(
+        9px,
+        1.02vw,
+        11px
+      );
+  }
+
+  .roulette-dozen-cell {
+    font-size:
+      clamp(
+        10.5px,
+        1.18vw,
+        13px
+      );
+  }
+
+  .roulette-outside-cell {
+    font-size:
+      clamp(
+        10px,
+        1.1vw,
+        12.5px
+      );
+  }
+
+  .roulette-outside-cell
+    .roulette-diamond {
+    width:
+      clamp(
+        22px,
+        2.6vw,
+        27px
+      );
+    height:
+      clamp(
+        22px,
+        2.6vw,
+        27px
+      );
+  }
+
+  .roulette-bet-console {
+    min-height:
+      clamp(
+        52px,
+        6.6dvh,
+        62px
+      );
+    grid-template-columns:
+      minmax(210px, 1fr)
+      minmax(260px, 1fr)
+      minmax(190px, 0.78fr);
+    gap:
+      clamp(
+        6px,
+        0.7vw,
+        10px
+      );
+    padding:
+      6px 8px;
+    border-radius: 10px;
+  }
+
+  .roulette-chip-tray {
+    gap:
+      clamp(
+        4px,
+        0.42vw,
+        6px
+      );
+  }
+
+  .roulette-chip-option {
+    flex-basis:
+      clamp(
+        34px,
+        4vw,
+        39px
+      );
+    width:
+      clamp(
+        34px,
+        4vw,
+        39px
+      );
+    height:
+      clamp(
+        34px,
+        4vw,
+        39px
+      );
+    font-size:
+      clamp(
+        9px,
+        1vw,
+        11px
+      );
+  }
+
+  .roulette-bet-summary strong {
+    font-size:
+      clamp(
+        14px,
+        1.6vw,
+        18px
+      );
+  }
+
+  .roulette-bet-actions {
+    gap:
+      clamp(
+        4px,
+        0.45vw,
+        6px
+      );
+  }
+
+  .roulette-bet-actions button {
+    min-height:
+      clamp(
+        34px,
+        4.4dvh,
+        40px
+      );
+    padding:
+      0
+      clamp(
+        5px,
+        0.6vw,
+        8px
+      );
+    font-size:
+      clamp(
+        8px,
+        0.92vw,
+        10px
+      );
+  }
+
+  .roulette-result-banner {
+    width:
+      clamp(
+        214px,
+        27vw,
+        270px
+      );
+  }
+
+  .roulette-win-message {
+    min-width:
+      clamp(
+        188px,
+        23vw,
+        238px
+      );
+  }
+
+  .roulette-settings-menu {
+    width:
+      min(
+        286px,
+        34vw
+      );
+  }
+}
+
+@media (min-width: 901px) and (max-width: 1099px) and (orientation: landscape) and (max-height: 700px) {
+  .roulette-page[data-phase="betting"] {
+    --desktop-wheel-size:
+      min(
+        43vw,
+        54dvh,
+        430px
+      );
+  }
+
+  .roulette-page[data-phase="spinning"] {
+    --desktop-wheel-size:
+      min(
+        66vw,
+        72dvh,
+        570px
+      );
+  }
+
+  .roulette-page[data-phase="settled"] {
+    --desktop-wheel-size:
+      min(
+        64vw,
+        70dvh,
+        550px
+      );
+  }
+
+  .roulette-page[data-phase="spinning"]
+    .roulette-bet-panel {
+    transform:
+      translateX(-50%)
+      scale(0.56) !important;
+  }
+
+  .roulette-page[data-phase="settled"]
+    .roulette-bet-panel {
+    transform:
+      translateX(-50%)
+      scale(0.62) !important;
+  }
+
+  .roulette-bet-console {
+    min-height: 48px;
+    margin-top: 5px;
+    padding: 5px 7px;
+  }
+
+  .roulette-chip-option {
+    flex-basis: 33px;
+    width: 33px;
+    height: 33px;
+    font-size: 9px;
+  }
+
+  .roulette-bet-actions button {
+    min-height: 32px;
+    font-size: 8px;
   }
 }
 
