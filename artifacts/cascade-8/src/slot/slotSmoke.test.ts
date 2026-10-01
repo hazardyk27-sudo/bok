@@ -72,6 +72,9 @@ describe("slot route smoke contract", () => {
     expect(slotCssSource).toContain("backdrop-filter: none");
     expect(gameSceneSource).toContain("Math.floor(48 / Math.max(active.length, 1))");
     expect(gameSceneSource).toContain("Math.min(6, Math.max(2");
+    expect(gameSceneSource).toContain("boardFrameGraphics");
+    expect(gameSceneSource).toContain("graphics.fillRect");
+    expect(gameSceneSource).not.toContain("cellFrames");
   });
 
   it("keeps expensive round diagnostics out of normal gameplay", () => {
