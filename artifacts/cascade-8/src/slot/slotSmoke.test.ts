@@ -26,6 +26,14 @@ const roundTimingSource = readFileSync(
   fileURLToPath(new URL("../game/RoundTiming.ts", import.meta.url)),
   "utf8",
 );
+const slotWalletClientSource = readFileSync(
+  fileURLToPath(new URL("../game/SlotWalletClient.ts", import.meta.url)),
+  "utf8",
+);
+const slotRepositorySource = readFileSync(
+  fileURLToPath(new URL("../../../api-server/src/slot/repository.ts", import.meta.url)),
+  "utf8",
+);
 
 describe("slot route smoke contract", () => {
   it("routes /slot and /lab through the Slot-owned module", () => {
@@ -126,11 +134,27 @@ describe("slot route smoke contract", () => {
     expect(gameControllerSource.match(/this\.scene\.settleRoundVisuals\(\)/g)?.length ?? 0).toBeGreaterThanOrEqual(3);
   });
 
-  it("keeps expensive round diagnostics out of normal gameplay", () => {
+  it("keeps live round diagnostics available while the stall investigation is active", () => {
     expect(roundTimingSource).toContain("SLOT_RUNTIME_DIAGNOSTICS_ENABLED");
-    expect(roundTimingSource).toContain('window.location.pathname.replace(/\\/+$/, "") === "/lab"');
+    expect(roundTimingSource).toContain('["/slot", "/lab"].includes(window.location.pathname.replace(/\\/+$/, ""))');
     expect(roundTimingSource).toContain('get("slotPerf") === "1"');
     expect(roundTimingSource).toContain("!SLOT_RUNTIME_DIAGNOSTICS_ENABLED");
+  });
+
+  it("keeps win highlight nonblocking and compacts repeated tumble transport state", () => {
+    expect(gameSceneSource).toContain("highlightCells(cells: Cell[], duration: number)");
+    expect(gameSceneSource).not.toContain("async highlightCells(cells: Cell[], duration: number)");
+    expect(gameControllerSource).toContain("this.scene.highlightCells(tumble.winningCells");
+    expect(gameControllerSource).not.toContain("await this.scene.highlightCells(tumble.winningCells");
+    expect(gameControllerSource).toContain('{ blocking: false }');
+    expect(slotRepositorySource).toContain("compactTumbleForWire");
+    expect(slotRepositorySource).toContain('boardBefore: _boardBefore');
+    expect(slotRepositorySource).toContain('boardAfterGravity: _boardAfterGravity');
+    expect(slotRepositorySource).toContain('newSymbols: _newSymbols');
+    expect(slotRepositorySource).toContain('multiplierCoreCells: _multiplierCoreCells');
+    expect(slotWalletClientSource).toContain("hydrateTumbles");
+    expect(slotWalletClientSource).toContain("boardBefore = tumble.boardAfterRefill");
+    expect(slotWalletClientSource).toContain("boardAfterGravity: tumble.boardAfterRefill");
   });
 
   it("mounts Phaser and GameController from the Slot-owned runtime", () => {
