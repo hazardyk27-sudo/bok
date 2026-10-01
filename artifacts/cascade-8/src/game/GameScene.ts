@@ -151,6 +151,8 @@ export class GameScene extends Phaser.Scene {
 
   private freeSpinMode = false;
 
+  private lastAmbientUpdateAt = -Infinity;
+
   private boardOrigin = { x: 22, y: 30 };
 
   private cellSize = { width: 96, height: 92 };
@@ -183,6 +185,18 @@ export class GameScene extends Phaser.Scene {
   }
 
   update(time: number) {
+    if (
+      typeof document !== "undefined" &&
+      document.visibilityState === "hidden"
+    ) {
+      return;
+    }
+
+    if (time - this.lastAmbientUpdateAt < 33) {
+      return;
+    }
+    this.lastAmbientUpdateAt = time;
+
     this.nodes.forEach((node) => {
       const ambient = node.ambient;
       if (!ambient) return;
