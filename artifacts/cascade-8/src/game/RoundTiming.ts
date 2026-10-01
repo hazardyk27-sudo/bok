@@ -35,7 +35,7 @@ const MAX_TRACES = 50;
 const SLOT_RUNTIME_DIAGNOSTICS_ENABLED =
   typeof window !== "undefined"
   && (
-    window.location.pathname.replace(/\/+$/, "") === "/lab"
+    ["/slot", "/lab"].includes(window.location.pathname.replace(/\/+$/, ""))
     || new URLSearchParams(window.location.search).get("slotPerf") === "1"
   );
 
