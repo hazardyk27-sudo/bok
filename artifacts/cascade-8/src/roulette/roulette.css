@@ -7822,3 +7822,509 @@ button {
   }
 }
 
+/* Desktop/tablet Part 5 — mobile utility rail parity */
+@media (min-width: 901px) and (orientation: landscape) {
+  /*
+   * Reuse the exact mobile utility DOM and betting handlers on landscape.
+   * The rail owns wager-editing actions; the footer keeps chips, metrics and
+   * the server-owned LIVE status.
+   */
+  .roulette-mobile-control-rail {
+    --rail-button-size:
+      clamp(
+        34px,
+        3.05vw,
+        42px
+      );
+
+    position: absolute;
+    left:
+      calc(
+        100% +
+        clamp(
+          7px,
+          0.72vw,
+          12px
+        )
+      );
+    top: 50%;
+    width:
+      calc(
+        var(--rail-button-size) +
+        10px
+      );
+    min-width:
+      calc(
+        var(--rail-button-size) +
+        10px
+      );
+    padding:
+      6px 5px;
+    display: grid !important;
+    grid-template-rows:
+      repeat(
+        6,
+        var(--rail-button-size)
+      );
+    align-items: center;
+    justify-items: center;
+    align-content: center;
+    gap:
+      clamp(
+        4px,
+        0.48dvh,
+        6px
+      );
+    box-sizing: border-box;
+    transform:
+      translateY(-50%);
+    border:
+      1px solid
+      rgba(239, 229, 207, 0.18);
+    border-radius:
+      calc(
+        var(--rail-button-size) *
+        0.62
+      );
+    background:
+      linear-gradient(
+        180deg,
+        rgba(16, 18, 19, 0.985),
+        rgba(5, 6, 7, 0.975)
+      );
+    box-shadow:
+      0 12px 30px
+      rgba(0, 0, 0, 0.42),
+      inset 0 1px 0
+      rgba(255, 255, 255, 0.045);
+    backdrop-filter:
+      blur(8px);
+    pointer-events: auto;
+    z-index: 18;
+  }
+
+  .roulette-mobile-utility,
+  .roulette-mobile-chip-picker {
+    position: relative;
+    width:
+      var(--rail-button-size);
+    height:
+      var(--rail-button-size);
+    display: grid;
+    place-items: center;
+  }
+
+  .roulette-mobile-rail-button {
+    box-sizing: border-box;
+    width:
+      var(--rail-button-size);
+    height:
+      var(--rail-button-size);
+    min-width:
+      var(--rail-button-size);
+    min-height:
+      var(--rail-button-size);
+    padding: 0;
+    border:
+      1px solid
+      rgba(239, 229, 207, 0.30);
+    border-radius: 50%;
+    display: grid;
+    place-items: center;
+    color: #f3eee2;
+    background:
+      linear-gradient(
+        180deg,
+        #171a1b,
+        #080a0b
+      );
+    box-shadow:
+      0 3px 9px
+      rgba(0, 0, 0, 0.38),
+      inset 0 1px 0
+      rgba(255, 255, 255, 0.06);
+    font:
+      820
+      clamp(
+        9px,
+        calc(
+          var(--rail-button-size) *
+          0.30
+        ),
+        13px
+      )/1
+      system-ui,
+      -apple-system,
+      BlinkMacSystemFont,
+      "Segoe UI",
+      sans-serif;
+    cursor: pointer;
+    transition:
+      transform 110ms ease,
+      filter 110ms ease,
+      border-color 140ms ease,
+      opacity 140ms ease;
+  }
+
+  .roulette-mobile-rail-button:disabled {
+    opacity: 0.28;
+    filter:
+      saturate(0.45);
+    cursor: default;
+  }
+
+  .roulette-mobile-rail-button:not(:disabled):hover {
+    filter:
+      brightness(1.14);
+    border-color:
+      rgba(246, 236, 214, 0.50);
+  }
+
+  .roulette-mobile-rail-button:not(:disabled):active {
+    transform:
+      scale(0.94);
+  }
+
+  .roulette-mobile-rail-button[aria-expanded="true"] {
+    border-color:
+      rgba(247, 238, 215, 0.72);
+    background: #1b1e1f;
+  }
+
+  .roulette-rail-icon {
+    width: 52%;
+    height: 52%;
+    display: block;
+    overflow: visible;
+    fill: none;
+    stroke:
+      currentColor;
+    stroke-width: 1.65;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    pointer-events: none;
+  }
+
+  .roulette-rail-icon--undo,
+  .roulette-rail-icon--rebet {
+    width: 56%;
+    height: 56%;
+  }
+
+  .roulette-mobile-double {
+    border-color:
+      rgba(239, 229, 207, 0.44);
+    font-weight: 900;
+    letter-spacing: -0.03em;
+  }
+
+  .roulette-mobile-clear {
+    border-color:
+      rgba(210, 126, 116, 0.40);
+    color: #efc4bd;
+    background:
+      linear-gradient(
+        180deg,
+        #171111,
+        #0c0909
+      );
+    font-weight: 920;
+  }
+
+  .roulette-mobile-chip-toggle {
+    --chip-fill: #2f78c8;
+    --chip-ink: #ffffff;
+    --chip-edge:
+      rgba(
+        255,
+        255,
+        255,
+        0.20
+      );
+
+    isolation: isolate;
+    opacity: 1 !important;
+    border:
+      1.5px solid
+      var(--chip-edge);
+    color:
+      var(--chip-ink);
+    background:
+      var(--chip-fill) !important;
+    background-image:
+      none !important;
+    box-shadow:
+      0 3px 8px
+      rgba(0, 0, 0, 0.38),
+      inset 0 0 0 1px
+      rgba(255, 255, 255, 0.07);
+    font-weight: 950;
+    letter-spacing: -0.045em;
+    text-shadow:
+      none !important;
+  }
+
+  .roulette-mobile-chip-toggle::after {
+    display:
+      none !important;
+  }
+
+  .roulette-mobile-chip-toggle[data-selected-chip="1"] {
+    --chip-fill: #d8dde2;
+    --chip-ink: #15191c;
+    --chip-edge: #9ba3a8;
+  }
+
+  .roulette-mobile-chip-toggle[data-selected-chip="5"] {
+    --chip-fill: #cf4b43;
+    --chip-ink: #ffffff;
+    --chip-edge: #df8c87;
+  }
+
+  .roulette-mobile-chip-toggle[data-selected-chip="10"] {
+    --chip-fill: #2f78c8;
+    --chip-ink: #ffffff;
+    --chip-edge: #85b7e7;
+  }
+
+  .roulette-mobile-chip-toggle[data-selected-chip="25"] {
+    --chip-fill: #2d9b61;
+    --chip-ink: #ffffff;
+    --chip-edge: #8bc7a7;
+  }
+
+  .roulette-mobile-chip-toggle[data-selected-chip="100"] {
+    --chip-fill: #2f3539;
+    --chip-ink: #ffffff;
+    --chip-edge: #727c83;
+  }
+
+  .roulette-mobile-chip-toggle[data-selected-chip="500"] {
+    --chip-fill: #7a56b8;
+    --chip-ink: #ffffff;
+    --chip-edge: #aa90d1;
+  }
+
+  .roulette-mobile-stats-panel,
+  .roulette-mobile-chip-menu {
+    position: absolute;
+    right:
+      calc(
+        var(--rail-button-size) +
+        10px
+      );
+    top: 50%;
+    transform:
+      translateY(-50%);
+    border:
+      1px solid
+      rgba(190, 190, 181, 0.30);
+    background:
+      linear-gradient(
+        180deg,
+        rgba(13, 15, 16, 0.99),
+        rgba(5, 7, 8, 0.995)
+      );
+    box-shadow:
+      0 13px 30px
+      rgba(0, 0, 0, 0.58),
+      inset 0 1px 0
+      rgba(255, 255, 255, 0.04);
+    backdrop-filter:
+      blur(10px);
+    z-index: 24;
+  }
+
+  .roulette-mobile-stats-panel[hidden],
+  .roulette-mobile-chip-menu[hidden] {
+    display: none !important;
+  }
+
+  .roulette-mobile-stats-panel {
+    width: 118px;
+    padding: 8px 9px;
+    border-radius: 10px;
+    font-family:
+      system-ui,
+      -apple-system,
+      BlinkMacSystemFont,
+      "Segoe UI",
+      sans-serif;
+  }
+
+  .roulette-mobile-stats-title {
+    margin-bottom: 6px;
+    color:
+      rgba(
+        223,
+        220,
+        210,
+        0.60
+      );
+    font-size: 7px;
+    font-weight: 820;
+    letter-spacing: 0.11em;
+  }
+
+  .roulette-mobile-stats-row {
+    min-height: 20px;
+    border-top:
+      1px solid
+      rgba(
+        183,
+        186,
+        180,
+        0.10
+      );
+    display: grid;
+    grid-template-columns:
+      1fr auto;
+    align-items: center;
+    color: #dcdbd4;
+    font-size: 8px;
+    font-weight: 720;
+  }
+
+  .roulette-mobile-stats-row strong {
+    color: #faf7ed;
+    font-size: 11px;
+    font-weight: 880;
+  }
+
+  .roulette-mobile-chip-menu {
+    width: max-content;
+    max-width:
+      min(
+        286px,
+        44vw
+      );
+    padding: 5px 6px;
+    display: grid;
+    grid-auto-flow: column;
+    grid-auto-columns: 36px;
+    align-items: center;
+    gap: 5px;
+    overflow-x: auto;
+    overflow-y: hidden;
+    border-radius: 20px;
+    scrollbar-width: none;
+  }
+
+  .roulette-mobile-chip-menu::-webkit-scrollbar {
+    display: none;
+  }
+
+  .roulette-mobile-chip-menu
+    .roulette-chip-option {
+    flex: none;
+    width: 38px;
+    height: 38px;
+    border:
+      1px solid
+      rgba(255, 255, 255, 0.18);
+    font-size: 10px;
+    font-weight: 950;
+    letter-spacing: -0.045em;
+    opacity: 1 !important;
+    filter: none !important;
+    background:
+      var(--chip-fill) !important;
+    background-image:
+      none !important;
+  }
+
+  .roulette-mobile-chip-menu
+    .roulette-chip-option::after {
+    display:
+      none !important;
+  }
+
+  /*
+   * Avoid duplicated wager actions: the utility rail owns UNDO/REBET.
+   * LIVE remains as a compact server-status element in the footer.
+   */
+  .roulette-bet-actions
+    [data-undo-bet],
+  .roulette-bet-actions
+    [data-rebet] {
+    display: none !important;
+  }
+
+  .roulette-bet-actions {
+    grid-template-columns:
+      minmax(
+        92px,
+        1fr
+      );
+  }
+
+  .roulette-bet-actions
+    .roulette-spin-button {
+    width: 100%;
+  }
+}
+
+/*
+ * Landscape tablets need explicit side clearance for the shared utility rail.
+ * This keeps the six-button capsule fully inside the viewport.
+ */
+@media (min-width: 901px) and (max-width: 1099px) and (orientation: landscape) {
+  .roulette-page[data-phase="betting"] {
+    --desktop-table-width:
+      min(
+        84vw,
+        900px
+      );
+  }
+
+  .roulette-page[data-phase="spinning"],
+  .roulette-page[data-phase="settled"] {
+    --desktop-table-width:
+      min(
+        82vw,
+        860px
+      );
+  }
+
+  .roulette-mobile-control-rail {
+    --rail-button-size:
+      clamp(
+        31px,
+        3.55vw,
+        37px
+      );
+    left:
+      calc(
+        100% +
+        6px
+      );
+    width:
+      calc(
+        var(--rail-button-size) +
+        8px
+      );
+    min-width:
+      calc(
+        var(--rail-button-size) +
+        8px
+      );
+    padding:
+      5px 4px;
+    gap: 4px;
+  }
+}
+
+@media (min-width: 901px) and (orientation: landscape) and (max-height: 700px) {
+  .roulette-mobile-control-rail {
+    --rail-button-size:
+      clamp(
+        29px,
+        2.75vw,
+        35px
+      );
+    padding:
+      5px 4px;
+    gap: 3px;
+  }
+}
+
