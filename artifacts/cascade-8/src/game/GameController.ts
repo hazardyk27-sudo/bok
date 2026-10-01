@@ -298,6 +298,7 @@ export class GameController {
      this.markTiming("BASE_DROP_DONE", motionTimingDetail(baseDropTiming));
     await this.playTumbles(result, false);
     this.markTiming("BASE_TUMBLES_DONE");
+    this.scene.settleRoundVisuals();
     // Credit the base-game portion only after explosions/Core settlement finish.
     this.balanceCents += result.baseWinCents;
     this.currentWinCents = result.baseWinCents;
@@ -397,6 +398,7 @@ export class GameController {
       const freeDropTiming = await this.scene.animateDrop(this.duration(ANIMATION.initialDrop, true));
       this.markTiming(`FS_${index}_DROP_DONE`, motionTimingDetail(freeDropTiming));
       await this.playTumbles({ ...result, tumbles: freeSpin.tumbles }, true);
+      this.scene.settleRoundVisuals();
       this.markTiming(`FS_${index}_TUMBLES_DONE`);
       if (freeSpin.win === 0) {
         this.resolveZeroWinFreeSpin(freeSpin);
@@ -474,6 +476,7 @@ export class GameController {
     if (result.maxWinReached) this.setState("MAX_WIN");
     else if (result.totalMultiplier >= 10) this.setState("BIG_WIN");
     this.setState("SPIN_COMPLETE"); this.message(result.totalWinCents ? "SPIN COMPLETE // COLLECTED" : "NO WIN // NEXT GATE AWAITS");
+    this.scene.settleRoundVisuals();
     this.busy = false;
     this.markTiming("BUSY_FALSE");
     this.setState("IDLE"); this.updateHud();
@@ -591,7 +594,11 @@ export class GameController {
       winEvents.forEach(() => this.audio.winLabel());
       await this.scene.burstCells(tumble.removedCells, tumbleDuration(ANIMATION.burst));
       this.markTiming(`TUMBLE_${index + 1}_BURST_DONE`);
-      void this.scene.presentWinLabels(winEvents, tumbleDuration(ANIMATION.winLabel));
+      const winLabelDuration = Math.min(
+        tumbleDuration(ANIMATION.winLabel),
+        Math.max(40, tumbleDuration(ANIMATION.refill) - 80),
+      );
+      void this.scene.presentWinLabels(winEvents, winLabelDuration);
       await this.showTumbleWin(tumble, index + 1, isBonus, winEvents);
       this.markTiming(`TUMBLE_${index + 1}_WIN_PRESENTED`);
       this.updateHud();
