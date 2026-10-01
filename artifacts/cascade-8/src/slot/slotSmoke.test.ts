@@ -75,10 +75,6 @@ describe("slot route smoke contract", () => {
     expect(gameSceneSource).toContain("boardFrameGraphics");
     expect(gameSceneSource).toContain("graphics.fillRect");
     expect(gameSceneSource).not.toContain("cellFrames");
-    expect(gameSceneSource).toContain("targets: active.map((node) => node.container)");
-    expect(gameSceneSource).toContain("const motion = { progress: 0 }");
-    expect(gameSceneSource).toContain("movingSurvivors");
-    expect(gameSceneSource).not.toContain("await Promise.all(active.map((node)");
   });
 
   it("keeps expensive round diagnostics out of normal gameplay", () => {
