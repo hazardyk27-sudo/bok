@@ -546,6 +546,18 @@ export class GameScene extends Phaser.Scene {
   }
 
   private createSymbolNode(symbol: BoardCell, row: number, col: number, winner = false) {
+    const normalSymbol = getNormalSymbol(symbol);
+    if (normalSymbol) {
+      const pooledNode = this.normalNodePool.pop();
+      if (pooledNode) {
+        if (this.reuseNormalNode(pooledNode, symbol, row, col)) {
+          this.nodes.push(pooledNode);
+          return pooledNode;
+        }
+        pooledNode.container.destroy();
+      }
+    }
+
     const container = this.add.container(
       this.boardOrigin.x + col * this.cellSize.width + 48,
       this.boardOrigin.y + row * this.cellSize.height + 46,
@@ -657,19 +669,7 @@ export class GameScene extends Phaser.Scene {
       this.nodes.push(node);
       return node;
     }
-    const normalSymbol = getNormalSymbol(symbol);
     if (!normalSymbol) throw new Error("Unsupported board symbol");
-
-    const pooledNode = this.normalNodePool.pop();
-    if (pooledNode) {
-      container.destroy();
-      if (!this.reuseNormalNode(pooledNode, symbol, row, col)) {
-        pooledNode.container.destroy();
-      } else {
-        this.nodes.push(pooledNode);
-        return pooledNode;
-      }
-    }
 
     const mark = this.add.image(0, 0, `club-logo-${normalSymbol}`).setDisplaySize(82, 82);
     container.add(mark);
