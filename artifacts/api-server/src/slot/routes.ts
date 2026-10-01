@@ -5,6 +5,14 @@ import { slotRepository } from "./repository";
 
 const router: IRouter = Router();
 
+type SlotPerfReport = {
+  receivedAt: string;
+  body: Record<string, unknown>;
+};
+
+const recentPerfReports: SlotPerfReport[] = [];
+const MAX_PERF_REPORTS = 40;
+
 function getSessionId(req: Request, res: Response) {
   const existing = req.cookies?.[SESSION_COOKIE] as string | undefined;
   if (existing && /^[a-f0-9-]{20,80}$/.test(existing)) return existing;
@@ -26,6 +34,28 @@ function sendError(res: Response, error: unknown) {
       : 400;
   res.status(status).json({ error: message });
 }
+
+router.post("/slot/perf", (req, res) => {
+  const body = req.body as Record<string, unknown>;
+  const serialized = JSON.stringify(body);
+  if (serialized.length > 64_000) {
+    res.status(413).json({ error: "SLOT_PERF_REPORT_TOO_LARGE" });
+    return;
+  }
+  recentPerfReports.push({
+    receivedAt: new Date().toISOString(),
+    body,
+  });
+  if (recentPerfReports.length > MAX_PERF_REPORTS) {
+    recentPerfReports.splice(0, recentPerfReports.length - MAX_PERF_REPORTS);
+  }
+  console.info("[CASCADE8_PERF_REPORT]", serialized);
+  res.status(204).end();
+});
+
+router.get("/slot/perf/recent", (_req, res) => {
+  res.json({ reports: recentPerfReports.slice(-20) });
+});
 
 router.get("/slot/state", async (req, res) => {
   try {
