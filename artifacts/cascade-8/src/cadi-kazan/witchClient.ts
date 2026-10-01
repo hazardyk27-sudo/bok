@@ -520,11 +520,20 @@ export class WitchClient {
       if (this.officeScratchPointerId !== event.pointerId) return;
       const round = this.state?.round;
       if (!round || round.mode !== "OFFICE_MATCH_6" || round.status !== "ACTIVE") return;
+
+      // Pointer capture keeps events routed to the origin canvas, but the
+      // physical pointer can already be over another Office cell. Resolve the
+      // actual screen-space cell once instead of forcing every scratch surface
+      // to measure its DOMRect on every move.
+      const hit = document.elementFromPoint(event.clientX, event.clientY);
+      const cell = hit?.closest<HTMLButtonElement>("[data-witch-cell]") ?? null;
+      const index = cell ? Number(cell.dataset.witchCell) : NaN;
+      if (!Number.isInteger(index) || index === this.officeScratchOriginIndex) return;
+
+      const surface = this.scratchSurfaces.get(index);
+      if (!surface) return;
       const pressure = event.pressure > 0 ? event.pressure : 0.62;
-      for (const [index, surface] of Array.from(this.scratchSurfaces.entries())) {
-        if (index === this.officeScratchOriginIndex) continue;
-        surface.scratchExternalPointer(event.pointerId, event.clientX, event.clientY, pressure);
-      }
+      surface.scratchExternalPointer(event.pointerId, event.clientX, event.clientY, pressure);
     });
 
     const finishOfficeMultiScratch = (event: PointerEvent) => {
