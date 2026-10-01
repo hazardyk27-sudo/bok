@@ -10,6 +10,14 @@ const routerSource = readFileSync(
   fileURLToPath(new URL("../main.ts", import.meta.url)),
   "utf8",
 );
+const gameSceneSource = readFileSync(
+  fileURLToPath(new URL("../game/GameScene.ts", import.meta.url)),
+  "utf8",
+);
+const slotCssSource = readFileSync(
+  fileURLToPath(new URL("./slot.css", import.meta.url)),
+  "utf8",
+);
 
 describe("slot route smoke contract", () => {
   it("routes /slot and /lab through the Slot-owned module", () => {
@@ -50,6 +58,14 @@ describe("slot route smoke contract", () => {
     for (const id of requiredMarkupIds) {
       expect(slotSource).toContain(`id="${id}"`);
     }
+  });
+
+  it("keeps decorative effects from stealing the reel animation budget", () => {
+    expect(gameSceneSource).toContain("lastAmbientUpdateAt");
+    expect(gameSceneSource).toContain("time - this.lastAmbientUpdateAt < 33");
+    expect(gameSceneSource).toContain('document.visibilityState === "hidden"');
+    expect(slotCssSource).toContain("contain: layout paint");
+    expect(slotCssSource).toContain("backdrop-filter: none");
   });
 
   it("mounts Phaser and GameController from the Slot-owned runtime", () => {
