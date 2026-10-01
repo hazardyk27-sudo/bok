@@ -155,6 +155,13 @@ describe("slot route smoke contract", () => {
     expect(slotWalletClientSource).toContain("boardAfterGravity: tumble.boardAfterRefill");
   });
 
+  it("guards burst completion without changing burst duration", () => {
+    expect(gameSceneSource).toContain("watchdog = window.setTimeout(finish, duration + 220)");
+    expect(gameSceneSource).toContain("onComplete: finish");
+    expect(gameSceneSource).toContain("duration,");
+    expect(gameSceneSource).not.toContain("duration: Math.min");
+  });
+
   it("keeps Big/Mega/Max ceremony out of base-game round completion", () => {
     const baseSpinStart = gameControllerSource.indexOf('private async spin(');
     const freeSpinStart = gameControllerSource.indexOf('private async startFreeSpins(');
