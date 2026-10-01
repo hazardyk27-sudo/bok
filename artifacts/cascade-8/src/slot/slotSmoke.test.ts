@@ -18,6 +18,10 @@ const slotCssSource = readFileSync(
   fileURLToPath(new URL("./slot.css", import.meta.url)),
   "utf8",
 );
+const roundTimingSource = readFileSync(
+  fileURLToPath(new URL("../game/RoundTiming.ts", import.meta.url)),
+  "utf8",
+);
 
 describe("slot route smoke contract", () => {
   it("routes /slot and /lab through the Slot-owned module", () => {
@@ -68,6 +72,13 @@ describe("slot route smoke contract", () => {
     expect(slotCssSource).toContain("backdrop-filter: none");
     expect(gameSceneSource).toContain("Math.floor(48 / Math.max(active.length, 1))");
     expect(gameSceneSource).toContain("Math.min(6, Math.max(2");
+  });
+
+  it("keeps expensive round diagnostics out of normal gameplay", () => {
+    expect(roundTimingSource).toContain("SLOT_RUNTIME_DIAGNOSTICS_ENABLED");
+    expect(roundTimingSource).toContain('window.location.pathname.replace(/\\/+$/, "") === "/lab"');
+    expect(roundTimingSource).toContain('get("slotPerf") === "1"');
+    expect(roundTimingSource).toContain("!SLOT_RUNTIME_DIAGNOSTICS_ENABLED");
   });
 
   it("mounts Phaser and GameController from the Slot-owned runtime", () => {
