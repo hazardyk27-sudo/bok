@@ -11,6 +11,7 @@ import {
 } from "./security";
 
 const INITIAL_SHARED_BALANCE_CENTS = 100_000;
+const REGISTERED_ACCOUNT_INITIAL_BALANCE_CENTS = 500_000;
 
 export type AuthUser = {
   id: string;
@@ -146,7 +147,7 @@ export const authRepository = {
       return await withTransaction(async (client) => {
         // A registered account must start clean and must never inherit the
         // browser's previous anonymous/guest wallet.
-        const balanceCents = await ensureWallet(client, walletSessionId, 0);
+        const balanceCents = await ensureWallet(client, walletSessionId, REGISTERED_ACCOUNT_INITIAL_BALANCE_CENTS);
         const inserted = await client.query<{
           id: string;
           user_number: number | string;
