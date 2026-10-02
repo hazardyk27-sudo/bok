@@ -634,7 +634,19 @@ export function attachBlackjackWebSocket(
         return;
       }
 
-      if (identity !== null) {
+      if(identity===null){
+        send(socket,{
+          type:"error",
+          error:"BLACKJACK_AUTH_REQUIRED",
+        });
+        socket.close(
+          BLACKJACK_WS_CLOSE_POLICY_VIOLATION,
+          "BLACKJACK_AUTH_REQUIRED",
+        );
+        return;
+      }
+
+      {
         try {
           const claim = claimBlackjackConnection(connectionRegistry, {
             connectionId,
