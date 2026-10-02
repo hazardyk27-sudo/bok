@@ -1417,6 +1417,37 @@ body {
   }
 }
 
+
+@keyframes blackjack-card-deal-stacked {
+  0% {
+    opacity: 0;
+    transform: translate3d(0,-11px,0) scale(.94) rotate(1deg);
+  }
+  70% {
+    opacity: 1;
+    transform: translate3d(0,7px,0) scale(1.015) rotate(4.5deg);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(5px) scale(1) rotate(4deg);
+  }
+}
+
+@keyframes blackjack-hole-reveal-stacked {
+  0% {
+    opacity: .35;
+    transform: perspective(500px) translateY(5px) rotate(4deg) rotateY(88deg) scale(.97);
+  }
+  55% {
+    opacity: 1;
+    transform: perspective(500px) translateY(5px) rotate(4deg) rotateY(-8deg) scale(1.015);
+  }
+  100% {
+    opacity: 1;
+    transform: perspective(500px) translateY(5px) rotate(4deg) rotateY(0) scale(1);
+  }
+}
+
 @keyframes blackjack-turn-halo {
   0%, 100% {
     box-shadow:
@@ -1483,6 +1514,16 @@ body {
 
 .blackjack-seat.is-active-turn {
   border-color: rgba(200,169,106,.78);
+}
+
+.blackjack-seat.is-active-turn::after,
+.blackjack-dealer-zone.is-active-turn::after {
+  content: "";
+  position: absolute;
+  inset: -4px;
+  border: 1px solid rgba(200,169,106,.30);
+  border-radius: inherit;
+  pointer-events: none;
   animation: blackjack-turn-halo 1.55s ease-in-out infinite;
 }
 
@@ -1493,7 +1534,6 @@ body {
 .blackjack-dealer-zone.is-active-turn {
   border-radius: 18px;
   box-shadow: 0 0 0 1px rgba(200,169,106,.22);
-  animation: blackjack-turn-halo 1.55s ease-in-out infinite;
 }
 
 .blackjack-seat.is-seat-transition {
@@ -1512,6 +1552,16 @@ body {
   animation: blackjack-hole-reveal 420ms cubic-bezier(.2,.7,.2,1);
 }
 
+
+.blackjack-seat-cards.is-dealing .blackjack-card-face + .blackjack-card-face:last-child,
+.blackjack-dealer-cards.is-dealing .blackjack-card-face + .blackjack-card-face:last-child {
+  animation-name: blackjack-card-deal-stacked;
+}
+
+.blackjack-dealer-cards.is-hole-flip .blackjack-card-face + .blackjack-card-face:last-child {
+  animation-name: blackjack-hole-reveal-stacked;
+}
+
 .blackjack-bet-circle.is-bet-pulse {
   animation: blackjack-bet-pulse 260ms cubic-bezier(.2,.7,.2,1);
 }
@@ -1526,8 +1576,8 @@ body {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .blackjack-seat.is-active-turn,
-  .blackjack-dealer-zone.is-active-turn,
+  .blackjack-seat.is-active-turn::after,
+  .blackjack-dealer-zone.is-active-turn::after,
   .blackjack-seat.is-seat-transition,
   .blackjack-seat-cards.is-dealing .blackjack-card-face:last-child,
   .blackjack-dealer-cards.is-dealing .blackjack-card-face:last-child,
