@@ -178,8 +178,15 @@ export type CadiKazanRoundSnapshot = {
   payoutCents: number;
   revealedBombCells: number[];
   revealedOfficeCells: CadiKazanOfficeVisibleCell[];
+  officeTicketPublicId: string | null;
+  officePoolRemaining: number | null;
   createdAt: string;
   updatedAt: string;
+};
+
+export type CadiKazanOfficePoolStatus = {
+  remaining: number;
+  total: number;
 };
 
 export type CadiKazanState = {
