@@ -142,6 +142,23 @@ describe("blackjack contextual interaction UX",()=>{
       seatNumber:2,
     });
 
+    for(const listener of listeners.get("message") ?? []){
+      listener(new MessageEvent("message",{
+        data:JSON.stringify({
+          type:"SEAT_CLAIM_REJECTED",
+          requestId:"seat-request-1",
+          error:"SEAT_UNAVAILABLE",
+        }),
+      }));
+    }
+
+    const feedback=app.querySelector<HTMLElement>(
+      ".blackjack-global-feedback",
+    );
+    expect(feedback?.textContent).toBe("SEAT JUST TAKEN");
+    expect(feedback?.dataset.actionTone).toBe("error");
+    expect(feedback?.hidden).toBe(false);
+
     connection.close();
   });
 
