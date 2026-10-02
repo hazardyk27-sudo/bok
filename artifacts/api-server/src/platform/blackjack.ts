@@ -5,6 +5,7 @@ import { pool, type PoolClient } from "@workspace/db";
 import {
   BlackjackJournalRepository,
   BlackjackSnapshotRepository,
+  createBlackjackJournalCheckpoint,
   createBlackjackReservationBook,
   createBlackjackWalletLedgerState,
   createShuffledBlackjackShoe,
@@ -227,6 +228,20 @@ class SharedBlackjackSnapshotRepository {
         rebased.snapshot,
         expectedPreviousStateVersion,
       );
+
+      const previousEventSequence=previous?.eventSequence ?? 0;
+      const journalCheckpoint=createBlackjackJournalCheckpoint({
+        previousEventSequence,
+        runtimeAfter:saved.payload,
+        createdAtMs:saved.savedAtMs,
+      });
+      if(journalCheckpoint!==null){
+        const journalRepository=new BlackjackJournalRepository(database);
+        await journalRepository.append(
+          journalCheckpoint,
+          previousEventSequence,
+        );
+      }
 
       for (const mutation of rebased.mutations) {
         if (mutation.deltaCents === 0) continue;
