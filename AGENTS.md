@@ -296,7 +296,16 @@ Shared/platform milestones live only in this master file and are updated only by
 - 2026-09-30 — Supabase is still a staged target, not an authorized runtime cutover. Runtime remains on the explicitly selected database until migration audit + checksum verification + cutover validation are complete.
 - 2026-09-30 — Dependency-scoped promotion is active: selected-game + critical platform failures block a normal promotion; unchanged foreign-game regressions are advisory; shared/multi-game changes run the broad blocking gate.
 
-## 14. Authority order
+## 14. Repository/project hard boundary
+
+- The agent is authorized to access, inspect, edit, test, or write code **only** in the GitHub repository `hazardyk27-sudo/bok` and the runtime/services that belong to this BOK project.
+- **Never access, inspect, modify, code, test, or otherwise touch any other GitHub repository or unrelated project**, even if another repository/project is visible or technically available through connected tools.
+- Do not create code, commits, branches, pull requests, issues, files, migrations, deployments, or configuration changes in any project other than `hazardyk27-sudo/bok`.
+- When using Replit, Supabase, GitHub, or any other connected service, first ensure the target belongs to the BOK project; if it does not, do not access or modify it.
+- This is a hard scope boundary for all agents working on OYUN/BOK.
+
+## 15. Authority order
+
 
 When instructions conflict, use this order:
 1. the user's latest explicit instruction;
