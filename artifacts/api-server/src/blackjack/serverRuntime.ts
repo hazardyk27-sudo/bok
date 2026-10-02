@@ -46,6 +46,93 @@ export type BlackjackAttachedServerRuntime = Readonly<{
   close: () => void;
 }>;
 
+export type BlackjackRuntimeBootstrapStatus =
+  | "STARTING"
+  | "READY"
+  | "DEGRADED"
+  | "FAILED"
+  | "STOPPED";
+
+export type BlackjackRuntimeBootstrapState = Readonly<{
+  ready: boolean;
+  status: BlackjackRuntimeBootstrapStatus;
+  attempt: number;
+  failureCode: string | null;
+  runtime: BlackjackServerRuntimeReadiness | null;
+}>;
+
+let blackjackRuntimeBootstrapStatus: BlackjackRuntimeBootstrapStatus =
+  "STARTING";
+let blackjackRuntimeBootstrapAttempt = 0;
+let blackjackRuntimeBootstrapFailureCode: string | null = null;
+let blackjackRuntimeReadinessSource: BlackjackAttachedServerRuntime | null =
+  null;
+
+function assertBlackjackRuntimeAttempt(attempt: number): void {
+  if (!Number.isSafeInteger(attempt) || attempt < 0) {
+    throw new RangeError(
+      "Blackjack runtime bootstrap attempt must be a non-negative safe integer",
+    );
+  }
+}
+
+export function markBlackjackRuntimeStarting(attempt: number): void {
+  assertBlackjackRuntimeAttempt(attempt);
+  blackjackRuntimeBootstrapAttempt = attempt;
+  blackjackRuntimeBootstrapStatus = "STARTING";
+  blackjackRuntimeBootstrapFailureCode = null;
+  blackjackRuntimeReadinessSource = null;
+}
+
+export function markBlackjackRuntimeAttached(
+  runtime: BlackjackAttachedServerRuntime,
+  attempt: number,
+): void {
+  assertBlackjackRuntimeAttempt(attempt);
+  blackjackRuntimeBootstrapAttempt = attempt;
+  blackjackRuntimeBootstrapStatus = "READY";
+  blackjackRuntimeBootstrapFailureCode = null;
+  blackjackRuntimeReadinessSource = runtime;
+}
+
+export function markBlackjackRuntimeFailed(attempt: number): void {
+  assertBlackjackRuntimeAttempt(attempt);
+  blackjackRuntimeBootstrapAttempt = attempt;
+  blackjackRuntimeBootstrapStatus = "FAILED";
+  blackjackRuntimeBootstrapFailureCode =
+    "BLACKJACK_RUNTIME_ATTACH_FAILED";
+  blackjackRuntimeReadinessSource = null;
+}
+
+export function markBlackjackRuntimeStopped(): void {
+  blackjackRuntimeBootstrapStatus = "STOPPED";
+  blackjackRuntimeBootstrapFailureCode = null;
+  blackjackRuntimeReadinessSource = null;
+}
+
+export function getBlackjackRuntimeBootstrapState():
+  BlackjackRuntimeBootstrapState {
+  const runtime = blackjackRuntimeReadinessSource?.getReadiness() ?? null;
+
+  if (runtime !== null) {
+    return Object.freeze({
+      ready: runtime.ready,
+      status: runtime.ready ? "READY" : "DEGRADED",
+      attempt: blackjackRuntimeBootstrapAttempt,
+      failureCode: runtime.ready ? null : runtime.status,
+      runtime,
+    });
+  }
+
+  return Object.freeze({
+    ready: false,
+    status: blackjackRuntimeBootstrapStatus,
+    attempt: blackjackRuntimeBootstrapAttempt,
+    failureCode: blackjackRuntimeBootstrapFailureCode,
+    runtime: null,
+  });
+}
+
 export type BlackjackIdentityResolver = (
   request: IncomingMessage,
 ) =>
