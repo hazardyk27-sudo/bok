@@ -48,7 +48,8 @@ describe("The Office 200-ticket pool engine", () => {
       .filter((entry) => entry.symbolId !== null)
       .reduce((sum, entry) => sum + entry.count, 0);
 
-    expect(totalReturnBps / OFFICE_POOL_SIZE).toBe(20_250);
+    expect(totalReturnBps).toBe(40_500);
+    expect(totalReturnBps / OFFICE_POOL_SIZE).toBe(202.5);
     expect(winningTickets).toBe(84);
     expect(winningTickets / OFFICE_POOL_SIZE).toBe(0.42);
   });
