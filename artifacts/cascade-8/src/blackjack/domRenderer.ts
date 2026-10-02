@@ -459,6 +459,14 @@ function patchInteraction(
     model.interactionPrompt ?? "WAITING FOR TABLE",
   );
 
+  const feedback=requireElement<HTMLElement>(
+    app,
+    ".blackjack-global-feedback",
+  );
+  feedback.dataset.actionTone=model.actionStatusTone ?? "neutral";
+  feedback.textContent=model.actionStatusLabel ?? "";
+  feedback.hidden=!model.actionStatusLabel;
+
   const openDrawer=model.openDrawer ?? null;
   const betDrawer=requireElement<HTMLElement>(
     app,
@@ -554,12 +562,6 @@ function patchActions(
     }
   }
 
-  const feedback=requireElement<HTMLElement>(
-    app,
-    ".blackjack-action-feedback",
-  );
-  feedback.dataset.actionTone=model.actionStatusTone ?? "neutral";
-  feedback.textContent=model.actionStatusLabel ?? "";
 }
 
 function patchRoundResult(
