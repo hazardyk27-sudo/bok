@@ -270,6 +270,13 @@ describe("blackjack contextual interaction UX",()=>{
     expect(infoDrawer?.hidden).toBe(true);
     expect(betToggle?.getAttribute("aria-expanded")).toBe("true");
 
+    betToggle?.click();
+    expect(betDrawer?.hidden).toBe(true);
+    expect(betToggle?.getAttribute("aria-expanded")).toBe("false");
+
+    betToggle?.click();
+    expect(betDrawer?.hidden).toBe(false);
+
     infoToggle?.click();
     expect(betDrawer?.hidden).toBe(true);
     expect(infoDrawer?.hidden).toBe(false);
