@@ -203,9 +203,16 @@ export function createBlackjackRuntimeAuthority(
     BlackjackRealtimePlayerActionTransactionHandler =
     (action,acknowledge)=>queue.enqueue(async()=>{
       assertHealthy();
-      await refreshAccountAvailableBalance(
-        action.envelope.actorPlayerId,
-      );
+      if(
+        action.envelope.type==="PLACE_BET" ||
+        action.envelope.type==="CLEAR_BET" ||
+        action.envelope.type==="DOUBLE" ||
+        action.envelope.type==="SPLIT"
+      ){
+        await refreshAccountAvailableBalance(
+          action.envelope.actorPlayerId,
+        );
+      }
       const result=await coordinator.submit(action);
       const response: BlackjackRealtimePlayerActionHandlerResult=
         Object.freeze({
