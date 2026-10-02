@@ -197,6 +197,7 @@ describe("blackjack recovered scheduled runtime",()=>{
     let saves=0;
     let scheduled=false;
     let cancelled=false;
+    const fatalErrors: unknown[]=[];
 
     await expect(
       recoverAndStartBlackjackRoundRuntime({
@@ -212,6 +213,7 @@ describe("blackjack recovered scheduled runtime",()=>{
         journalRepository:{loadAfter:async()=>[]},
         recoveredAtMs:10_000,
         nowMs:()=>10_000,
+        onFatalError:(error)=>fatalErrors.push(error),
         scheduler:{
           schedule:()=>{
             scheduled=true;
@@ -228,5 +230,7 @@ describe("blackjack recovered scheduled runtime",()=>{
     expect(scheduled).toBe(true);
     expect(cancelled).toBe(true);
     expect(saves).toBe(2);
+    expect(fatalErrors).toHaveLength(1);
+    expect(fatalErrors[0]).toBeInstanceOf(Error);
   });
 });

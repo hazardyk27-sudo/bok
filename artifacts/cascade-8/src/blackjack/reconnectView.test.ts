@@ -235,6 +235,57 @@ describe("blackjack resilient browser realtime transport",()=>{
     connection.close();
   });
 
+  it("turns snapshot-unavailable into a reconnectable transport close",()=>{
+    const physicals:Array<ReturnType<typeof physicalSocket>>=[];
+    const reconnectCallbacks:Array<()=>void>=[];
+    const app={
+      innerHTML:"",
+      addEventListener:()=>undefined,
+      removeEventListener:()=>undefined,
+    } as unknown as HTMLElement;
+
+    const connection=connectBlackjackRealtimeElement(app,{
+      location:{protocol:"https:",host:"blackjack.example"},
+      createSocket:()=>{
+        const next=physicalSocket();
+        physicals.push(next);
+        return next.socket;
+      },
+      reconnectJitterRatio:0,
+      scheduleReconnect:(callback)=>{
+        reconnectCallbacks.push(callback);
+        return callback;
+      },
+      cancelReconnect:()=>undefined,
+      scheduleTransportTimer:()=> "transport-timer",
+      cancelTransportTimer:()=>undefined,
+      scheduleRender:()=> "render-handle",
+      cancelRender:()=>undefined,
+    });
+
+    physicals[0].emit(
+      "message",
+      new MessageEvent("message",{
+        data:JSON.stringify({
+          type:"error",
+          error:"BLACKJACK_SNAPSHOT_UNAVAILABLE",
+        }),
+      }),
+    );
+    expect(physicals[0].closeCalls).toContainEqual([
+      4002,
+      "BLACKJACK_SNAPSHOT_UNAVAILABLE",
+    ]);
+
+    physicals[0].emit(
+      "close",
+      Object.assign(new Event("close"),{code:1013}),
+    );
+    expect(reconnectCallbacks).toHaveLength(1);
+    expect(connection.getStatus().state).toBe("CONNECTING");
+    connection.close();
+  });
+
   it("treats policy/auth close as terminal instead of reconnect-spamming",()=>{
     const physicals:Array<ReturnType<typeof physicalSocket>>=[];
     const reconnectCallbacks:Array<()=>void>=[];
