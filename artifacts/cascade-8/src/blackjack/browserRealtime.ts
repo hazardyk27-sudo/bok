@@ -1,5 +1,10 @@
 import { createBlackjackBettingClient, type BlackjackBettingClient, type BlackjackBettingActionType } from "./bettingClient";
 import { doubleBlackjackChipCredits } from "./bettingView";
+import {
+  blackjackAcceptedFeedback,
+  blackjackErrorFeedback,
+  type BlackjackUiFeedback,
+} from "./feedbackView";
 import { createBlackjackPlayerActionClient, type BlackjackPlayerActionClient, type BlackjackPlayerActionType } from "./playerActionsClient";
 import {
   createBlackjackPrivatePlayerStateClient,
@@ -495,6 +500,29 @@ export function connectBlackjackRealtimeElement(
   let selectedChipCredits=100;
   let selectedSeatForClaim: 1 | 2 | 3 | 4 | 5 | null=null;
   let openDrawer: "BET" | "INFO" | null=null;
+  let transientFeedback:
+    | (BlackjackUiFeedback & Readonly<{expiresAtMs:number}>)
+    | null=null;
+  const feedbackNow=options.nowMs ?? Date.now;
+  const setTransientFeedback=(
+    feedback: BlackjackUiFeedback,
+    ttlMs=4_000,
+  )=>{
+    transientFeedback=Object.freeze({
+      ...feedback,
+      expiresAtMs:feedbackNow()+ttlMs,
+    });
+    controller?.rerenderLatest();
+  };
+  const getTransientFeedback=()=>{
+    if(
+      transientFeedback!==null &&
+      feedbackNow()>=transientFeedback.expiresAtMs
+    ){
+      transientFeedback=null;
+    }
+    return transientFeedback;
+  };
   let transportConnected=false;
   let everReady=false;
   let sessionReplaced=false;
@@ -585,9 +613,7 @@ export function connectBlackjackRealtimeElement(
   const getViewContext=(): BlackjackSnapshotViewContext => {
     const base=baseViewContext();
     const playerPending=actionClient?.getPending() ?? null;
-    const playerFeedback=actionClient?.getFeedback() ?? null;
     const bettingPending=bettingClient?.getPending() ?? null;
-    const bettingFeedback=bettingClient?.getFeedback() ?? null;
     const bettingState=bettingClient?.getState() ?? null;
     const privateState=privateStateClient?.getState() ?? null;
     const privateBetting=privateState?.betting ?? null;
@@ -621,28 +647,12 @@ export function connectBlackjackRealtimeElement(
       actionStatusLabel=bettingPending.phase === "ACKNOWLEDGED"
         ? "BET · SYNCING"
         : "BET · PROCESSING";
-    } else if(playerFeedback!==null){
-      actionStatusLabel =
-        playerFeedback.status === "ACCEPTED"
-          ? playerFeedback.actionType + " · CONFIRMED"
-          : playerFeedback.error === "STALE_ACTION"
-            ? "TABLE UPDATED · TRY AGAIN"
-            : playerFeedback.error === "SESSION_REPLACED"
-              ? "SESSION REPLACED"
-              : playerFeedback.actionType + " · NOT AVAILABLE";
-      actionStatusTone=playerFeedback.status === "ACCEPTED" ? "success" : "error";
-    } else if(bettingFeedback!==null){
-      actionStatusLabel =
-        bettingFeedback.status === "ACCEPTED"
-          ? bettingFeedback.actionType === "READY"
-            ? "BET READY"
-            : "BET UPDATED"
-          : bettingFeedback.error === "STALE_ACTION"
-            ? "TABLE UPDATED · TRY AGAIN"
-            : bettingFeedback.error === "SESSION_REPLACED"
-              ? "SESSION REPLACED"
-              : "BET NOT AVAILABLE";
-      actionStatusTone=bettingFeedback.status === "ACCEPTED" ? "success" : "error";
+    } else {
+      const feedback=getTransientFeedback();
+      if(feedback!==null){
+        actionStatusLabel=feedback.label;
+        actionStatusTone=feedback.tone;
+      }
     }
 
     const connectionState=
@@ -696,7 +706,16 @@ export function connectBlackjackRealtimeElement(
     getViewContext,
     createActionId:options.createActionId ?? defaultBlackjackActionId,
     onPendingChange:()=>{ activeController.rerenderLatest(); },
-    onFeedbackChange:()=>{ activeController.rerenderLatest(); },
+    onFeedbackChange:(feedback)=>{
+      if(feedback!==null){
+        setTransientFeedback(
+          feedback.status==="ACCEPTED"
+            ? blackjackAcceptedFeedback("ACTION",feedback.actionType)
+            : blackjackErrorFeedback(feedback.error),
+        );
+      }
+      activeController.rerenderLatest();
+    },
   });
   actionClient=actions;
   const betting=createBlackjackBettingClient({
@@ -705,6 +724,16 @@ export function connectBlackjackRealtimeElement(
     getViewContext,
     createActionId:options.createActionId ?? defaultBlackjackActionId,
     onStateChange:()=>{ activeController.rerenderLatest(); },
+    onFeedbackChange:(feedback)=>{
+      if(feedback!==null){
+        setTransientFeedback(
+          feedback.status==="ACCEPTED"
+            ? blackjackAcceptedFeedback("BET",feedback.actionType)
+            : blackjackErrorFeedback(feedback.error),
+        );
+      }
+      activeController.rerenderLatest();
+    },
   });
   bettingClient=betting;
   const privateState=createBlackjackPrivatePlayerStateClient({
@@ -717,6 +746,18 @@ export function connectBlackjackRealtimeElement(
     socket,
     createRequestId:options.createActionId ?? defaultBlackjackActionId,
     onPendingChange:()=>{ activeController.rerenderLatest(); },
+    onFeedbackChange:(feedback)=>{
+      if(feedback!==null){
+        setTransientFeedback(
+          feedback.status==="ACCEPTED"
+            ? blackjackAcceptedFeedback(
+                feedback.type==="CLAIM_SEAT" ? "SEAT" : "LEAVE",
+              )
+            : blackjackErrorFeedback(feedback.error),
+        );
+      }
+      activeController.rerenderLatest();
+    },
   });
   seatClient=seats;
 
@@ -799,7 +840,8 @@ export function connectBlackjackRealtimeElement(
             selectedSeatForClaim=null;
             seats.claim(seatNumber);
             activeController.rerenderLatest();
-          } catch {
+          } catch(error) {
+            setTransientFeedback(blackjackErrorFeedback(error));
             activeController.rerenderLatest();
           }
           return;
@@ -830,8 +872,8 @@ export function connectBlackjackRealtimeElement(
           if(seatAction.dataset.blackjackSeatAction==="LEAVE"){
             seats.leave();
           }
-        } catch {
-          return;
+        } catch(error) {
+          setTransientFeedback(blackjackErrorFeedback(error));
         }
         return;
       }
@@ -843,8 +885,8 @@ export function connectBlackjackRealtimeElement(
           Math.max(selectedChipCredits,1_000),
         );
         activeController.rerenderLatest();
-      } catch {
-        return;
+      } catch(error) {
+        setTransientFeedback(blackjackErrorFeedback(error));
       }
       return;
     }
@@ -858,8 +900,8 @@ export function connectBlackjackRealtimeElement(
         } else {
           betting.submit(bettingAction.type);
         }
-      } catch {
-        return;
+      } catch(error) {
+        setTransientFeedback(blackjackErrorFeedback(error));
       }
       return;
     }
@@ -868,8 +910,8 @@ export function connectBlackjackRealtimeElement(
     if(action===null) return;
     try {
       actions.submit(action);
-    } catch {
-      return;
+    } catch(error) {
+      setTransientFeedback(blackjackErrorFeedback(error));
     }
   };
   const onKeyDown=(event: KeyboardEvent)=>{
