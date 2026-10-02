@@ -3,6 +3,7 @@ import { pool, type PoolClient } from "@workspace/db";
 import { INITIAL_SHARED_BALANCE_CENTS } from "../platform/wallet";
 import {
   OFFICE_MATCH_SYMBOLS,
+  OFFICE_POOL_DISTRIBUTION,
   OFFICE_POOL_SIZE,
   createOfficePoolTickets,
   resolveOfficeMatchReveal,
@@ -283,8 +284,49 @@ async function getOfficePoolRemaining(client: PoolClient, poolId: string) {
   return Number(result.rows[0]?.remaining ?? 0);
 }
 
+async function isOfficePoolCurrent(client: PoolClient, poolId: string) {
+  const result = await client.query<{ outcome_symbol: OfficeMatchSymbolId | null; multiplier_bps: number; count: number }>(
+    `SELECT outcome_symbol, multiplier_bps, COUNT(*)::int AS count
+       FROM cadi_kazan_office_tickets
+      WHERE pool_id = $1
+      GROUP BY outcome_symbol, multiplier_bps`,
+    [poolId],
+  );
+
+  const expected = new Map(
+    OFFICE_POOL_DISTRIBUTION.map((entry) => [
+      `${entry.symbolId ?? "LOSS"}:${entry.multiplierBps}`,
+      entry.count,
+    ]),
+  );
+  const actual = new Map(
+    result.rows.map((row) => [
+      `${row.outcome_symbol ?? "LOSS"}:${Number(row.multiplier_bps)}`,
+      Number(row.count),
+    ]),
+  );
+
+  return actual.size === expected.size
+    && [...expected.entries()].every(([key, count]) => actual.get(key) === count);
+}
+
+async function retireLegacyOfficePools(client: PoolClient) {
+  const candidates = await client.query<OfficePoolRow>(
+    "SELECT id, pool_number, status FROM cadi_kazan_office_pools WHERE status IN ('ACTIVE', 'READY') ORDER BY pool_number FOR UPDATE",
+  );
+  for (const candidate of candidates.rows) {
+    if (await isOfficePoolCurrent(client, candidate.id)) continue;
+    await client.query(
+      "UPDATE cadi_kazan_office_pools SET status = 'EXHAUSTED', exhausted_at = COALESCE(exhausted_at, now()) WHERE id = $1",
+      [candidate.id],
+    );
+  }
+}
+
 async function ensureOfficePoolSupply(client: PoolClient): Promise<OfficePoolRow> {
   await client.query("SELECT pg_advisory_xact_lock($1)", [OFFICE_POOL_ADVISORY_LOCK]);
+
+  await retireLegacyOfficePools(client);
 
   let active: OfficePoolRow | null = (
     await client.query<OfficePoolRow>(
