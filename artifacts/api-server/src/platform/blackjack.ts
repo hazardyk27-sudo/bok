@@ -230,8 +230,27 @@ class SharedBlackjackSnapshotRepository {
       );
 
       const previousEventSequence=previous?.eventSequence ?? 0;
-      const journalCheckpoint=createBlackjackJournalCheckpoint({
+      const journalHeadRow=await client.query<{
+        event_sequence: string | null;
+      }>(
+        `SELECT MAX(event_sequence)::text AS event_sequence
+           FROM blackjack_event_journal
+          WHERE table_id = $1`,
+        [saved.tableId],
+      );
+      const journalHeadSequence=
+        journalHeadRow.rows[0]?.event_sequence === null ||
+        journalHeadRow.rows[0]?.event_sequence === undefined
+          ? 0
+          : parseSharedWalletBalanceCents(
+              journalHeadRow.rows[0].event_sequence,
+            );
+      const durableEventSequence=Math.max(
         previousEventSequence,
+        journalHeadSequence,
+      );
+      const journalCheckpoint=createBlackjackJournalCheckpoint({
+        previousEventSequence:durableEventSequence,
         runtimeAfter:saved.payload,
         createdAtMs:saved.savedAtMs,
       });
@@ -239,7 +258,7 @@ class SharedBlackjackSnapshotRepository {
         const journalRepository=new BlackjackJournalRepository(database);
         await journalRepository.append(
           journalCheckpoint,
-          previousEventSequence,
+          durableEventSequence,
         );
       }
 
