@@ -547,6 +547,16 @@ describe("cadi kazan route smoke contract", () => {
   });
 
 
+  it("forces server-authoritative SAFE/BOMB artwork visible after terminal reveal", () => {
+    expect(witchClientSource).toContain("data.authoritativeResult");
+    expect(witchClientSource).toContain('button.dataset.authoritativeResult = authoritativePrepared.kind');
+    expect(visualLockSource).toContain("PASS 47 — authoritative bomb/safe visibility");
+    expect(visualLockSource).toContain('[data-authoritative-result="BOMB"]');
+    expect(visualLockSource).toContain('[data-witch-result-candidate="BOMB"]');
+    expect(visualLockSource).toContain("visibility: visible !important");
+  });
+
+
   it("never clears a prepared result during transient renders, preventing blank white cells", () => {
     expect(witchClientSource).toContain("a selected result candidate");
     expect(witchClientSource).toContain("if (!prepared || prepared.roundId !== round.id");
