@@ -1,10 +1,11 @@
 import { describe, expect, it } from "vitest";
 import {
-  OFFICE_MATCH_ROLL_SCALE,
   OFFICE_MATCH_SYMBOLS,
+  OFFICE_POOL_DISTRIBUTION,
+  OFFICE_POOL_SIZE,
   createOfficeMatchBoard,
+  createOfficePoolTickets,
   resolveOfficeMatchReveal,
-  selectOfficeMatchOutcome,
   type OfficeMatchSymbolId,
 } from "./officeMatch";
 import {
@@ -41,7 +42,18 @@ function winningRevealOrder(board: readonly OfficeMatchSymbolId[], symbolId: Off
 }
 
 describe("The Office full outcome/reveal contract", () => {
-  it("matches the exact 10,000-ticket outcome distribution", () => {
+  it("builds every 75-ticket pool with the exact approved distribution", () => {
+    const tickets = createOfficePoolTickets(deterministicRandom(20261002));
+    expect(tickets).toHaveLength(OFFICE_POOL_SIZE);
+    expect(OFFICE_POOL_DISTRIBUTION).toEqual([
+      { symbolId: "MICHAEL", count: 1, multiplierBps: 10_000 },
+      { symbolId: "STANLEY", count: 2, multiplierBps: 2_000 },
+      { symbolId: "DWIGHT", count: 4, multiplierBps: 1_000 },
+      { symbolId: "JIM", count: 8, multiplierBps: 500 },
+      { symbolId: "KEVIN", count: 20, multiplierBps: 200 },
+      { symbolId: null, count: 40, multiplierBps: 0 },
+    ]);
+
     const counts = {
       KEVIN: 0,
       JIM: 0,
@@ -50,20 +62,17 @@ describe("The Office full outcome/reveal contract", () => {
       MICHAEL: 0,
       LOSS: 0,
     };
-
-    for (let roll = 0; roll < OFFICE_MATCH_ROLL_SCALE; roll += 1) {
-      const outcome = selectOfficeMatchOutcome(roll);
-      if (outcome.kind === "LOSS") counts.LOSS += 1;
-      else counts[outcome.symbolId] += 1;
+    for (const ticket of tickets) {
+      if (ticket.outcome.kind === "LOSS") counts.LOSS += 1;
+      else counts[ticket.outcome.symbolId] += 1;
     }
-
     expect(counts).toEqual({
-      KEVIN: 3_200,
-      JIM: 500,
-      DWIGHT: 100,
-      STANLEY: 30,
-      MICHAEL: 5,
-      LOSS: 6_165,
+      KEVIN: 20,
+      JIM: 8,
+      DWIGHT: 4,
+      STANLEY: 2,
+      MICHAEL: 1,
+      LOSS: 40,
     });
   });
 

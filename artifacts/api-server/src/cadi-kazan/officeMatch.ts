@@ -2,15 +2,14 @@ import { randomInt } from "node:crypto";
 
 export const OFFICE_MATCH_CELL_COUNT = 6;
 export const OFFICE_MATCH_REQUIRED_MATCHES = 3;
-export const OFFICE_MATCH_TARGET_RTP_BPS = 11_000;
-export const OFFICE_MATCH_ROLL_SCALE = 10_000;
+export const OFFICE_POOL_SIZE = 75;
 
 export const OFFICE_MATCH_SYMBOLS = [
-  { id: "KEVIN", label: "Kevin", multiplierBps: 200, winWeightBps: 3_200, special: false },
-  { id: "JIM", label: "Jim", multiplierBps: 500, winWeightBps: 500, special: false },
-  { id: "DWIGHT", label: "Dwight", multiplierBps: 1_000, winWeightBps: 100, special: false },
-  { id: "STANLEY", label: "Stanley", multiplierBps: 2_000, winWeightBps: 30, special: false },
-  { id: "MICHAEL", label: "Michael Scott", multiplierBps: 10_000, winWeightBps: 5, special: true },
+  { id: "KEVIN", label: "Kevin", multiplierBps: 200, special: false },
+  { id: "JIM", label: "Jim", multiplierBps: 500, special: false },
+  { id: "DWIGHT", label: "Dwight", multiplierBps: 1_000, special: false },
+  { id: "STANLEY", label: "Stanley", multiplierBps: 2_000, special: false },
+  { id: "MICHAEL", label: "Michael Scott", multiplierBps: 10_000, special: true },
 ] as const;
 
 export type OfficeMatchSymbolId = (typeof OFFICE_MATCH_SYMBOLS)[number]["id"];
@@ -19,40 +18,18 @@ export type OfficeMatchOutcome =
   | { kind: "LOSS"; multiplierBps: 0; symbolId: null }
   | { kind: "WIN"; multiplierBps: number; symbolId: OfficeMatchSymbolId };
 
-const OFFICE_MATCH_TOTAL_WIN_WEIGHT_BPS = OFFICE_MATCH_SYMBOLS.reduce(
-  (total, symbol) => total + symbol.winWeightBps,
-  0,
-);
-
-export const OFFICE_MATCH_LOSS_WEIGHT_BPS = OFFICE_MATCH_ROLL_SCALE - OFFICE_MATCH_TOTAL_WIN_WEIGHT_BPS;
-export const OFFICE_MATCH_WIN_RATE_BPS = OFFICE_MATCH_TOTAL_WIN_WEIGHT_BPS;
-
-export function getOfficeMatchTheoreticalRtpBps() {
-  return OFFICE_MATCH_SYMBOLS.reduce(
-    (rtpBps, symbol) => rtpBps + symbol.winWeightBps * (symbol.multiplierBps / 100),
-    0,
-  );
-}
-
-export function selectOfficeMatchOutcome(roll: number): OfficeMatchOutcome {
-  if (!Number.isInteger(roll) || roll < 0 || roll >= OFFICE_MATCH_ROLL_SCALE) {
-    throw new Error("INVALID_OFFICE_OUTCOME_ROLL");
-  }
-
-  let cursor = 0;
-  for (const symbol of OFFICE_MATCH_SYMBOLS) {
-    cursor += symbol.winWeightBps;
-    if (roll < cursor) {
-      return {
-        kind: "WIN",
-        multiplierBps: symbol.multiplierBps,
-        symbolId: symbol.id,
-      };
-    }
-  }
-
-  return { kind: "LOSS", multiplierBps: 0, symbolId: null };
-}
+export const OFFICE_POOL_DISTRIBUTION = [
+  { symbolId: "MICHAEL", count: 1, multiplierBps: 10_000 },
+  { symbolId: "STANLEY", count: 2, multiplierBps: 2_000 },
+  { symbolId: "DWIGHT", count: 4, multiplierBps: 1_000 },
+  { symbolId: "JIM", count: 8, multiplierBps: 500 },
+  { symbolId: "KEVIN", count: 20, multiplierBps: 200 },
+  { symbolId: null, count: 40, multiplierBps: 0 },
+] as const satisfies readonly {
+  symbolId: OfficeMatchSymbolId | null;
+  count: number;
+  multiplierBps: number;
+}[];
 
 type RandomIndex = (maxExclusive: number) => number;
 
@@ -93,10 +70,39 @@ export function createOfficeMatchBoard(
     ], randomIndex);
   }
 
+  // Two of each symbol is the hard ceiling for a losing ticket, so a loss
+  // can never accidentally contain the winning three-of-a-kind.
   const lossPool = OFFICE_MATCH_SYMBOLS.flatMap((symbol) => [symbol.id, symbol.id]);
   return shuffle(lossPool, randomIndex).slice(0, OFFICE_MATCH_CELL_COUNT);
 }
 
+export type PreparedOfficePoolTicket = {
+  outcome: OfficeMatchOutcome;
+  cells: OfficeMatchSymbolId[];
+};
+
+export function createOfficePoolTickets(
+  randomIndex: RandomIndex = (maxExclusive) => randomInt(0, maxExclusive),
+): PreparedOfficePoolTicket[] {
+  const outcomes: OfficeMatchOutcome[] = OFFICE_POOL_DISTRIBUTION.flatMap((entry) =>
+    Array.from({ length: entry.count }, () => (
+      entry.symbolId === null
+        ? { kind: "LOSS" as const, multiplierBps: 0 as const, symbolId: null }
+        : {
+            kind: "WIN" as const,
+            multiplierBps: entry.multiplierBps,
+            symbolId: entry.symbolId,
+          }
+    )),
+  );
+
+  if (outcomes.length !== OFFICE_POOL_SIZE) throw new Error("INVALID_OFFICE_POOL_DISTRIBUTION");
+
+  return shuffle(outcomes, randomIndex).map((outcome) => ({
+    outcome,
+    cells: createOfficeMatchBoard(outcome, randomIndex),
+  }));
+}
 
 export function getOfficeMatchSymbol(symbolId: OfficeMatchSymbolId) {
   const symbol = OFFICE_MATCH_SYMBOLS.find((candidate) => candidate.id === symbolId);
@@ -141,16 +147,5 @@ export function resolveOfficeMatchReveal(
     win: false,
     matchedSymbolId: null,
     multiplierBps: 0,
-  };
-}
-
-export function createRandomOfficeMatchTicket(): {
-  outcome: OfficeMatchOutcome;
-  cells: OfficeMatchSymbolId[];
-} {
-  const outcome = selectOfficeMatchOutcome(randomInt(0, OFFICE_MATCH_ROLL_SCALE));
-  return {
-    outcome,
-    cells: createOfficeMatchBoard(outcome),
   };
 }

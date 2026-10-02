@@ -3,7 +3,8 @@ import { pool, type PoolClient } from "@workspace/db";
 import { INITIAL_SHARED_BALANCE_CENTS } from "../platform/wallet";
 import {
   OFFICE_MATCH_SYMBOLS,
-  createRandomOfficeMatchTicket,
+  OFFICE_POOL_SIZE,
+  createOfficePoolTickets,
   resolveOfficeMatchReveal,
   type OfficeMatchSymbolId,
 } from "./officeMatch";
@@ -12,6 +13,7 @@ import {
   CADI_KAZAN_MIN_STAKE_CENTS,
   CADI_KAZAN_MODES,
   type CadiKazanMode,
+  type CadiKazanOfficePoolStatus,
   type CadiKazanRoundSnapshot,
   type CadiKazanState,
   type CadiKazanStatus,
@@ -35,6 +37,10 @@ type CadiRoundRow = {
   stake_cents: number;
   bomb_indices: unknown;
   office_cells: unknown;
+  office_pool_id: string | null;
+  office_ticket_id: string | null;
+  office_ticket_public_id: string | null;
+  office_pool_remaining: number | null;
   revealed_cells: unknown;
   revealed_safe_count: number;
   current_multiplier_bps: number;
@@ -49,6 +55,20 @@ type CadiRoundRow = {
 
 type WalletRow = { balance_cents: number };
 type CadiActionRow = { session_id: string; round_id: string; kind: string };
+type OfficePoolRow = {
+  id: string;
+  pool_number: number;
+  status: "ACTIVE" | "READY" | "EXHAUSTED";
+};
+type OfficeTicketRow = {
+  id: string;
+  public_id: string;
+  pool_id: string;
+  draw_order: number;
+  outcome_symbol: OfficeMatchSymbolId | null;
+  multiplier_bps: number;
+  office_cells: unknown;
+};
 type RevealContextRow = CadiRoundRow & {
   action_session_id: string | null;
   action_round_id: string | null;
@@ -71,6 +91,38 @@ async function ensureBigMoneyStorage() {
   if (bigMoneyStorageReady) return bigMoneyStorageReady;
   bigMoneyStorageReady = (async () => {
     await pool.query("ALTER TABLE cadi_kazan_rounds ADD COLUMN IF NOT EXISTS office_cells JSONB");
+    await pool.query("ALTER TABLE cadi_kazan_rounds ADD COLUMN IF NOT EXISTS office_pool_id TEXT");
+    await pool.query("ALTER TABLE cadi_kazan_rounds ADD COLUMN IF NOT EXISTS office_ticket_id TEXT");
+    await pool.query("ALTER TABLE cadi_kazan_rounds ADD COLUMN IF NOT EXISTS office_ticket_public_id TEXT");
+    await pool.query("ALTER TABLE cadi_kazan_rounds ADD COLUMN IF NOT EXISTS office_pool_remaining INTEGER");
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS cadi_kazan_office_pools (
+        id TEXT PRIMARY KEY,
+        pool_number INTEGER NOT NULL UNIQUE,
+        status TEXT NOT NULL,
+        created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+        activated_at TIMESTAMPTZ,
+        exhausted_at TIMESTAMPTZ
+      )
+    `);
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS cadi_kazan_office_tickets (
+        id TEXT PRIMARY KEY,
+        public_id TEXT NOT NULL UNIQUE,
+        pool_id TEXT NOT NULL,
+        draw_order INTEGER NOT NULL,
+        outcome_symbol TEXT,
+        multiplier_bps INTEGER NOT NULL,
+        office_cells JSONB NOT NULL,
+        claimed_round_id TEXT,
+        claimed_session_id TEXT,
+        claimed_at TIMESTAMPTZ,
+        created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+        UNIQUE (pool_id, draw_order)
+      )
+    `);
+    await pool.query("CREATE INDEX IF NOT EXISTS cadi_kazan_office_pools_status_idx ON cadi_kazan_office_pools (status, pool_number)");
+    await pool.query("CREATE INDEX IF NOT EXISTS cadi_kazan_office_tickets_pool_claim_idx ON cadi_kazan_office_tickets (pool_id, claimed_round_id, draw_order)");
     const expected = new Map([
       ["shared_wallets.balance_cents", "BIGINT"],
       ["cadi_kazan_rounds.stake_cents", "BIGINT"],
@@ -164,9 +216,179 @@ function toSnapshot(row: CadiRoundRow): CadiKazanRoundSnapshot {
     payoutCents: Number(row.payout_cents),
     revealedBombCells: getVisibleBombCells(row.status, bombIndices),
     revealedOfficeCells: getVisibleOfficeCells(row.status, revealedCells, officeCells),
+    officeTicketPublicId: row.office_ticket_public_id ?? null,
+    officePoolRemaining: row.office_pool_remaining === null ? null : Number(row.office_pool_remaining),
     createdAt: asIso(row.created_at),
     updatedAt: asIso(row.updated_at),
   };
+}
+
+const OFFICE_POOL_ADVISORY_LOCK = 2_607_075;
+
+function createOfficePublicTicketId() {
+  return `OFF-${randomUUID().replaceAll("-", "").slice(0, 12).toUpperCase()}`;
+}
+
+async function createOfficePool(client: PoolClient, status: "ACTIVE" | "READY") {
+  const numberResult = await client.query<{ next_pool_number: number }>(
+    "SELECT COALESCE(MAX(pool_number), 0) + 1 AS next_pool_number FROM cadi_kazan_office_pools",
+  );
+  const poolNumber = Number(numberResult.rows[0]?.next_pool_number ?? 1);
+  const poolId = randomUUID();
+  await client.query(
+    `INSERT INTO cadi_kazan_office_pools
+      (id, pool_number, status, activated_at)
+     VALUES ($1, $2, $3, CASE WHEN $3 = 'ACTIVE' THEN now() ELSE NULL END)`,
+    [poolId, poolNumber, status],
+  );
+
+  const tickets = createOfficePoolTickets().map((ticket, index) => ({
+    id: randomUUID(),
+    publicId: createOfficePublicTicketId(),
+    drawOrder: index + 1,
+    outcomeSymbol: ticket.outcome.symbolId,
+    multiplierBps: ticket.outcome.multiplierBps,
+    officeCells: ticket.cells,
+  }));
+  await client.query(
+    `INSERT INTO cadi_kazan_office_tickets
+      (id, public_id, pool_id, draw_order, outcome_symbol, multiplier_bps, office_cells)
+     SELECT x.id, x.public_id, $2, x.draw_order, x.outcome_symbol, x.multiplier_bps, x.office_cells
+       FROM jsonb_to_recordset($1::jsonb) AS x(
+         id TEXT,
+         public_id TEXT,
+         draw_order INTEGER,
+         outcome_symbol TEXT,
+         multiplier_bps INTEGER,
+         office_cells JSONB
+       )`,
+    [JSON.stringify(tickets.map((ticket) => ({
+      id: ticket.id,
+      public_id: ticket.publicId,
+      draw_order: ticket.drawOrder,
+      outcome_symbol: ticket.outcomeSymbol,
+      multiplier_bps: ticket.multiplierBps,
+      office_cells: ticket.officeCells,
+    }))), poolId],
+  );
+
+  return { id: poolId, pool_number: poolNumber, status } satisfies OfficePoolRow;
+}
+
+async function getOfficePoolRemaining(client: PoolClient, poolId: string) {
+  const result = await client.query<{ remaining: number }>(
+    "SELECT COUNT(*)::int AS remaining FROM cadi_kazan_office_tickets WHERE pool_id = $1 AND claimed_round_id IS NULL",
+    [poolId],
+  );
+  return Number(result.rows[0]?.remaining ?? 0);
+}
+
+async function ensureOfficePoolSupply(client: PoolClient): Promise<OfficePoolRow> {
+  await client.query("SELECT pg_advisory_xact_lock($1)", [OFFICE_POOL_ADVISORY_LOCK]);
+
+  let active = (
+    await client.query<OfficePoolRow>(
+      "SELECT id, pool_number, status FROM cadi_kazan_office_pools WHERE status = 'ACTIVE' ORDER BY pool_number LIMIT 1 FOR UPDATE",
+    )
+  ).rows[0] ?? null;
+
+  if (active && await getOfficePoolRemaining(client, active.id) === 0) {
+    await client.query(
+      "UPDATE cadi_kazan_office_pools SET status = 'EXHAUSTED', exhausted_at = COALESCE(exhausted_at, now()) WHERE id = $1",
+      [active.id],
+    );
+    active = null;
+  }
+
+  if (!active) {
+    const ready = (
+      await client.query<OfficePoolRow>(
+        "SELECT id, pool_number, status FROM cadi_kazan_office_pools WHERE status = 'READY' ORDER BY pool_number LIMIT 1 FOR UPDATE",
+      )
+    ).rows[0] ?? null;
+    if (ready) {
+      await client.query(
+        "UPDATE cadi_kazan_office_pools SET status = 'ACTIVE', activated_at = COALESCE(activated_at, now()) WHERE id = $1",
+        [ready.id],
+      );
+      active = { ...ready, status: "ACTIVE" };
+    } else {
+      active = await createOfficePool(client, "ACTIVE");
+    }
+  }
+
+  const readyExists = (
+    await client.query<{ id: string }>(
+      "SELECT id FROM cadi_kazan_office_pools WHERE status = 'READY' AND pool_number > $1 ORDER BY pool_number LIMIT 1",
+      [active.pool_number],
+    )
+  ).rows[0];
+  if (!readyExists) await createOfficePool(client, "READY");
+
+  return active;
+}
+
+async function claimOfficeTicket(
+  client: PoolClient,
+  roundId: string,
+  sessionId: string,
+): Promise<{ ticket: OfficeTicketRow; remaining: number }> {
+  let active = await ensureOfficePoolSupply(client);
+
+  let ticket = (
+    await client.query<OfficeTicketRow>(
+      `SELECT id, public_id, pool_id, draw_order, outcome_symbol, multiplier_bps, office_cells
+         FROM cadi_kazan_office_tickets
+        WHERE pool_id = $1
+          AND claimed_round_id IS NULL
+        ORDER BY draw_order
+        LIMIT 1
+        FOR UPDATE SKIP LOCKED`,
+      [active.id],
+    )
+  ).rows[0] ?? null;
+
+  if (!ticket) {
+    await client.query(
+      "UPDATE cadi_kazan_office_pools SET status = 'EXHAUSTED', exhausted_at = COALESCE(exhausted_at, now()) WHERE id = $1",
+      [active.id],
+    );
+    active = await ensureOfficePoolSupply(client);
+    ticket = (
+      await client.query<OfficeTicketRow>(
+        `SELECT id, public_id, pool_id, draw_order, outcome_symbol, multiplier_bps, office_cells
+           FROM cadi_kazan_office_tickets
+          WHERE pool_id = $1
+            AND claimed_round_id IS NULL
+          ORDER BY draw_order
+          LIMIT 1
+          FOR UPDATE SKIP LOCKED`,
+        [active.id],
+      )
+    ).rows[0] ?? null;
+  }
+  if (!ticket) throw new Error("OFFICE_POOL_EMPTY");
+
+  await client.query(
+    `UPDATE cadi_kazan_office_tickets
+        SET claimed_round_id = $1,
+            claimed_session_id = $2,
+            claimed_at = now()
+      WHERE id = $3`,
+    [roundId, sessionId, ticket.id],
+  );
+
+  const remainingInClaimedPool = await getOfficePoolRemaining(client, active.id);
+  if (remainingInClaimedPool === 0) {
+    await client.query(
+      "UPDATE cadi_kazan_office_pools SET status = 'EXHAUSTED', exhausted_at = COALESCE(exhausted_at, now()) WHERE id = $1",
+      [active.id],
+    );
+    const nextActive = await ensureOfficePoolSupply(client);
+    return { ticket, remaining: await getOfficePoolRemaining(client, nextActive.id) };
+  }
+
+  return { ticket, remaining: remainingInClaimedPool };
 }
 
 async function ensureWalletForUpdate(client: PoolClient, sessionId: string) {
@@ -209,6 +431,23 @@ function stateFrom(sessionId: string, balanceCents: number, row: CadiRoundRow | 
 }
 
 export class CadiKazanRepository {
+  async getOfficePoolStatus(): Promise<CadiKazanOfficePoolStatus> {
+    await ensureBigMoneyStorage();
+    const client = await pool.connect();
+    try {
+      await client.query("BEGIN");
+      const active = await ensureOfficePoolSupply(client);
+      const remaining = await getOfficePoolRemaining(client, active.id);
+      await client.query("COMMIT");
+      return { remaining, total: OFFICE_POOL_SIZE };
+    } catch (error) {
+      await client.query("ROLLBACK");
+      throw error;
+    } finally {
+      client.release();
+    }
+  }
+
   async getState(sessionId: string): Promise<CadiKazanState> {
     await ensureBigMoneyStorage();
     const [balanceCents, row] = await Promise.all([walletBalance(sessionId), latestRound(sessionId)]);
@@ -244,17 +483,34 @@ export class CadiKazanRepository {
       if (balanceCents < input.stakeCents) throw new Error("INSUFFICIENT_CADI_KAZAN_CREDITS");
 
       const roundId = randomUUID();
-      const officeTicket = input.mode === "OFFICE_MATCH_6" ? createRandomOfficeMatchTicket() : null;
+      const officeClaim = input.mode === "OFFICE_MATCH_6"
+        ? await claimOfficeTicket(client, roundId, sessionId)
+        : null;
       const bombIndices = input.mode === "OFFICE_MATCH_6" ? [] : chooseBombIndices(cellCount, input.alarmCount);
-      const officeCells = officeTicket?.cells ?? null;
+      const officeCells = officeClaim ? safeOfficeSymbolArray(officeClaim.ticket.office_cells) : null;
+      if (input.mode === "OFFICE_MATCH_6" && officeCells?.length !== cellCount) {
+        throw new Error("INVALID_OFFICE_POOL_TICKET");
+      }
       await client.query(
         "UPDATE shared_wallets SET balance_cents = balance_cents - $1, updated_at = now() WHERE session_id = $2",
         [input.stakeCents, sessionId],
       );
       const result = await client.query<CadiRoundRow>(
         `INSERT INTO cadi_kazan_rounds
-          (id, session_id, mode, alarm_count, cell_count, stake_cents, bomb_indices, office_cells, revealed_cells, revealed_safe_count, current_multiplier_bps, status, payout_cents, start_idempotency_key)
-         VALUES ($1, $2, $3, $4, $5, $6, $7::jsonb, $8::jsonb, '[]'::jsonb, 0, 0, 'ACTIVE', 0, $9)
+          (
+            id, session_id, mode, alarm_count, cell_count, stake_cents,
+            bomb_indices, office_cells, office_pool_id, office_ticket_id,
+            office_ticket_public_id, office_pool_remaining,
+            revealed_cells, revealed_safe_count, current_multiplier_bps,
+            status, payout_cents, start_idempotency_key
+          )
+         VALUES (
+           $1, $2, $3, $4, $5, $6,
+           $7::jsonb, $8::jsonb, $9, $10,
+           $11, $12,
+           '[]'::jsonb, 0, 0,
+           'ACTIVE', 0, $13
+         )
          RETURNING *`,
         [
           roundId,
@@ -265,6 +521,10 @@ export class CadiKazanRepository {
           input.stakeCents,
           JSON.stringify(bombIndices),
           officeCells ? JSON.stringify(officeCells) : null,
+          officeClaim?.ticket.pool_id ?? null,
+          officeClaim?.ticket.id ?? null,
+          officeClaim?.ticket.public_id ?? null,
+          officeClaim?.remaining ?? null,
           input.idempotencyKey,
         ],
       );

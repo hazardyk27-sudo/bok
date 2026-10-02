@@ -37,6 +37,8 @@ type CadiKazanRound = {
   payoutCents: number;
   revealedBombCells: number[];
   revealedOfficeCells?: CadiKazanOfficeVisibleCell[];
+  officeTicketPublicId: string | null;
+  officePoolRemaining: number | null;
   createdAt: string;
   updatedAt: string;
 };
@@ -49,6 +51,11 @@ type CadiKazanState = {
 type CadiKazanMutation = {
   outcome: "SAFE" | "BUST" | "COMPLETED" | "CASHED_OUT" | "NOOP";
   state: CadiKazanState;
+};
+
+type CadiKazanOfficePoolStatus = {
+  remaining: number;
+  total: number;
 };
 
 type CadiKazanPreparedReveal =
@@ -344,6 +351,10 @@ export const CADI_KAZAN_MARKUP = `
           <div class="witch-office-card-art" aria-hidden="true">
             <img class="witch-office-card-master" src="${OFFICE_CARD_ART_URL}" alt="" width="1000" height="468" loading="eager" decoding="async" fetchpriority="auto" draggable="false">
           </div>
+          <div class="witch-office-card-meta" data-witch-office-meta hidden>
+            <span>HAVUZ <b data-witch-office-pool>—/75</b></span>
+            <span>BİLET ID <b data-witch-office-ticket-id>—</b></span>
+          </div>
 
           <header class="witch-ticket-header">
             <div class="witch-ticket-sidecopy">
@@ -505,6 +516,7 @@ export const CADI_KAZAN_MARKUP = `
 export class WitchClient {
   private readonly root: HTMLElement;
   private state: CadiKazanState | null = null;
+  private officePoolStatus: CadiKazanOfficePoolStatus | null = null;
   private mode: CadiKazanMode = "STANDARD";
   private busy = false;
   private pendingRevealCell: number | null = null;
@@ -691,6 +703,7 @@ export class WitchClient {
         if (cardsMenu) cardsMenu.hidden = true;
         cardsToggle?.setAttribute("aria-expanded", "false");
         this.render();
+        if (this.mode === "OFFICE_MATCH_6") void this.refreshOfficePoolStatus();
       });
     });
     this.root.querySelectorAll<HTMLButtonElement>("[data-witch-stake-step]").forEach((button) => {
@@ -757,6 +770,23 @@ export class WitchClient {
     });
   }
 
+  private async refreshOfficePoolStatus() {
+    try {
+      const response = await fetch(`${API_BASE}/office-pool`, { credentials: "same-origin" });
+      const data = await response.json() as CadiKazanOfficePoolStatus & { error?: string };
+      if (!response.ok) throw new Error(data.error ?? "Office havuzu yüklenemedi");
+      this.officePoolStatus = {
+        remaining: Math.max(0, Number(data.remaining) || 0),
+        total: Math.max(1, Number(data.total) || 75),
+      };
+      this.render();
+    } catch {
+      // Pool metadata is informational; never block the scratch game if it
+      // cannot refresh. The next successful Office purchase carries a fresh
+      // server-side remaining count on the round snapshot.
+    }
+  }
+
   private async load() {
     try {
       const response = await fetch(`${API_BASE}/state`, { credentials: "same-origin" });
@@ -767,6 +797,7 @@ export class WitchClient {
       if (data.round) this.mode = data.round.mode;
       this.setStatus("SERVER’A BAĞLI", true);
       this.render();
+      void this.refreshOfficePoolStatus();
     } catch (error) {
       this.setStatus(error instanceof Error ? error.message : "BAĞLANTI HATASI", false);
       this.render();
@@ -1023,6 +1054,9 @@ export class WitchClient {
     const previousRoundId = this.state?.round?.id;
     this.state = nextState;
     const round = nextState.round;
+    if (round?.mode === "OFFICE_MATCH_6" && round.officePoolRemaining !== null) {
+      this.officePoolStatus = { remaining: round.officePoolRemaining, total: 75 };
+    }
     if (round?.id !== this.preparedRevealRoundId) {
       this.preparedRevealRoundId = round?.id ?? null;
       this.preparedReveals.clear();
@@ -1107,6 +1141,20 @@ export class WitchClient {
     this.root.classList.toggle("is-standard-theme", visualMode === "STANDARD");
     this.root.classList.toggle("is-advanced-theme", visualMode === "ADVANCED");
     this.root.classList.toggle("is-office-theme", visualMode === "OFFICE_MATCH_6");
+    const officeMeta = this.root.querySelector<HTMLElement>("[data-witch-office-meta]");
+    const officePool = this.root.querySelector<HTMLElement>("[data-witch-office-pool]");
+    const officeTicketId = this.root.querySelector<HTMLElement>("[data-witch-office-ticket-id]");
+    const officePoolRemaining = round?.mode === "OFFICE_MATCH_6" && round.officePoolRemaining !== null
+      ? round.officePoolRemaining
+      : this.officePoolStatus?.remaining ?? null;
+    const officePoolTotal = this.officePoolStatus?.total ?? 75;
+    if (officeMeta) officeMeta.hidden = visualMode !== "OFFICE_MATCH_6";
+    if (officePool) officePool.textContent = officePoolRemaining === null
+      ? `—/${officePoolTotal}`
+      : `${officePoolRemaining}/${officePoolTotal}`;
+    if (officeTicketId) officeTicketId.textContent = round?.mode === "OFFICE_MATCH_6"
+      ? round.officeTicketPublicId ?? "—"
+      : "SATIN AL";
     this.root.querySelectorAll<HTMLButtonElement>("[data-witch-mode]").forEach((button) => {
       button.classList.toggle("is-selected", button.dataset.witchMode === this.mode);
       button.disabled = this.busy || hasActiveRound;
@@ -1175,7 +1223,7 @@ export class WitchClient {
     if (riskLabel) riskLabel.textContent = this.mode === "OFFICE_MATCH_6" ? "KURAL" : "RİSK";
     if (riskNote) {
       if (this.mode === "OFFICE_MATCH_6") {
-        riskNote.textContent = "THE OFFICE / 3 AYNI = ÖDÜL";
+        riskNote.textContent = `THE OFFICE / HAVUZ ${officePoolRemaining === null ? "—/75" : `${officePoolRemaining}/${officePoolTotal}`} / 3 AYNI = ÖDÜL`;
       } else {
         const selectedBombs = this.mode === "STANDARD" ? "1" : (alarms?.value ?? "1");
         riskNote.textContent = `${this.mode === "STANDARD" ? "STANDARD" : "ADVANCED"} / ${selectedBombs} BOMBA`;
@@ -1474,7 +1522,7 @@ export class WitchClient {
     if (ticketId) ticketId.textContent = `#${round.id.slice(0, 8).toUpperCase()}`;
     if (riskNote) {
       if (round.mode === "OFFICE_MATCH_6") {
-        riskNote.textContent = "THE OFFICE / 3 AYNI = ÖDÜL";
+        riskNote.textContent = `THE OFFICE / HAVUZ ${officePoolRemaining === null ? "—/75" : `${officePoolRemaining}/${officePoolTotal}`} / 3 AYNI = ÖDÜL`;
       } else {
         const selectedBombs = this.mode === "STANDARD" ? "1" : (alarms?.value ?? String(round.alarmCount));
         riskNote.textContent = `${this.mode === "STANDARD" ? "STANDARD" : "ADVANCED"} / ${selectedBombs} BOMBA`;
