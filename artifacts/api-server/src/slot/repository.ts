@@ -139,7 +139,6 @@ function compactSpinResultForWire(result: SpinResult): WireSpinResult {
 
 type PreparedSlotSpin = {
   input: { stakeCents: number; idempotencyKey: string };
-  result: SpinResult;
   wireResult: WireSpinResult;
   serializedWireResult: string;
   roundId: string;
@@ -151,11 +150,11 @@ function response(
   sessionId: string,
   balanceCents: number,
   roundId: string,
-  result: SpinResult | WireSpinResult,
+  result: WireSpinResult,
 ) {
   return {
     roundId,
-    result: compactSpinResultForWire(result as SpinResult),
+    result,
     wallet: { sessionId, balanceCents },
   };
 }
@@ -202,7 +201,6 @@ export class SlotRepository {
     const wireResult = compactSpinResultForWire(result);
     return {
       input,
-      result,
       wireResult,
       serializedWireResult: JSON.stringify(wireResult),
       roundId: randomUUID(),
@@ -214,7 +212,7 @@ export class SlotRepository {
   async settlePreparedSpin(sessionId: string, prepared: PreparedSlotSpin) {
     await ensureBigMoneyStorage();
 
-    type AtomicSpinRow = SlotRoundRow & WalletRow & {
+    type AtomicSpinRow = Omit<SlotRoundRow, "result"> & WalletRow & {
       outcome: "SETTLED" | "DUPLICATE" | "INSUFFICIENT";
       existing_session_id: string;
       result: SpinResult | null;
@@ -344,7 +342,7 @@ export class SlotRepository {
 
     const responseRoundId = row.outcome === "DUPLICATE" ? row.id : prepared.roundId;
     const responseResult = row.outcome === "DUPLICATE" && row.result
-      ? row.result
+      ? compactSpinResultForWire(row.result)
       : prepared.wireResult;
 
     return response(sessionId, Number(row.balance_cents), responseRoundId, responseResult);
