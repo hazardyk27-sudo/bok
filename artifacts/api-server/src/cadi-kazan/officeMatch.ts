@@ -2,7 +2,7 @@ import { randomInt } from "node:crypto";
 
 export const OFFICE_MATCH_CELL_COUNT = 6;
 export const OFFICE_MATCH_REQUIRED_MATCHES = 3;
-export const OFFICE_POOL_SIZE = 75;
+export const OFFICE_POOL_SIZE = 200;
 
 export const OFFICE_MATCH_SYMBOLS = [
   { id: "KEVIN", label: "Kevin", multiplierBps: 200, special: false },
@@ -20,11 +20,11 @@ export type OfficeMatchOutcome =
 
 export const OFFICE_POOL_DISTRIBUTION = [
   { symbolId: "MICHAEL", count: 1, multiplierBps: 10_000 },
-  { symbolId: "STANLEY", count: 2, multiplierBps: 2_000 },
-  { symbolId: "DWIGHT", count: 4, multiplierBps: 1_000 },
-  { symbolId: "JIM", count: 8, multiplierBps: 500 },
-  { symbolId: "KEVIN", count: 20, multiplierBps: 200 },
-  { symbolId: null, count: 40, multiplierBps: 0 },
+  { symbolId: "STANLEY", count: 3, multiplierBps: 2_000 },
+  { symbolId: "DWIGHT", count: 5, multiplierBps: 1_000 },
+  { symbolId: "JIM", count: 15, multiplierBps: 500 },
+  { symbolId: "KEVIN", count: 60, multiplierBps: 200 },
+  { symbolId: null, count: 116, multiplierBps: 0 },
 ] as const satisfies readonly {
   symbolId: OfficeMatchSymbolId | null;
   count: number;

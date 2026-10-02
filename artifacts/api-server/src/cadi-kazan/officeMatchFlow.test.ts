@@ -42,16 +42,16 @@ function winningRevealOrder(board: readonly OfficeMatchSymbolId[], symbolId: Off
 }
 
 describe("The Office full outcome/reveal contract", () => {
-  it("builds every 75-ticket pool with the exact approved distribution", () => {
+  it("builds every 200-ticket pool with the exact approved distribution", () => {
     const tickets = createOfficePoolTickets(deterministicRandom(20261002));
     expect(tickets).toHaveLength(OFFICE_POOL_SIZE);
     expect(OFFICE_POOL_DISTRIBUTION).toEqual([
       { symbolId: "MICHAEL", count: 1, multiplierBps: 10_000 },
-      { symbolId: "STANLEY", count: 2, multiplierBps: 2_000 },
-      { symbolId: "DWIGHT", count: 4, multiplierBps: 1_000 },
-      { symbolId: "JIM", count: 8, multiplierBps: 500 },
-      { symbolId: "KEVIN", count: 20, multiplierBps: 200 },
-      { symbolId: null, count: 40, multiplierBps: 0 },
+      { symbolId: "STANLEY", count: 3, multiplierBps: 2_000 },
+      { symbolId: "DWIGHT", count: 5, multiplierBps: 1_000 },
+      { symbolId: "JIM", count: 15, multiplierBps: 500 },
+      { symbolId: "KEVIN", count: 60, multiplierBps: 200 },
+      { symbolId: null, count: 116, multiplierBps: 0 },
     ]);
 
     const counts = {
@@ -67,12 +67,12 @@ describe("The Office full outcome/reveal contract", () => {
       else counts[ticket.outcome.symbolId] += 1;
     }
     expect(counts).toEqual({
-      KEVIN: 20,
-      JIM: 8,
-      DWIGHT: 4,
-      STANLEY: 2,
+      KEVIN: 60,
+      JIM: 15,
+      DWIGHT: 5,
+      STANLEY: 3,
       MICHAEL: 1,
-      LOSS: 40,
+      LOSS: 116,
     });
   });
 
