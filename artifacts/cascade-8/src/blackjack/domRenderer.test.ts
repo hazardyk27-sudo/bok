@@ -287,4 +287,50 @@ describe("blackjack incremental DOM renderer",()=>{
     ).toBe(true);
   });
 
+  it("patches drawer state without replacing drawer nodes",()=>{
+    const app=document.createElement("div");
+    document.body.append(app);
+    const renderer=createBlackjackTableDomRenderer(app);
+
+    renderer.render(model({
+      interactionMode:"BETTING",
+      openDrawer:"BET",
+      canOpenBetDrawer:true,
+      occupiedSeatsLabel:"2 / 5 SEATED",
+    }));
+
+    const betDrawer=app.querySelector<HTMLElement>(
+      '[data-blackjack-drawer="BET"]',
+    );
+    const infoDrawer=app.querySelector<HTMLElement>(
+      '[data-blackjack-drawer="INFO"]',
+    );
+    const betToggle=app.querySelector<HTMLButtonElement>(
+      '[data-blackjack-drawer-toggle="BET"]',
+    );
+
+    expect(betDrawer?.hidden).toBe(false);
+    expect(infoDrawer?.hidden).toBe(true);
+    expect(betToggle?.getAttribute("aria-expanded")).toBe("true");
+
+    renderer.render(model({
+      interactionMode:"BETTING",
+      openDrawer:"INFO",
+      canOpenBetDrawer:true,
+      occupiedSeatsLabel:"3 / 5 SEATED",
+    }));
+
+    expect(
+      app.querySelector('[data-blackjack-drawer="BET"]'),
+    ).toBe(betDrawer);
+    expect(
+      app.querySelector('[data-blackjack-drawer="INFO"]'),
+    ).toBe(infoDrawer);
+    expect(betDrawer?.hidden).toBe(true);
+    expect(infoDrawer?.hidden).toBe(false);
+    expect(
+      app.querySelector('[data-blackjack-info="players"]')?.textContent,
+    ).toBe("3 / 5 SEATED");
+  });
+
 });
