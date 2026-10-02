@@ -112,6 +112,7 @@ export type BlackjackSnapshotViewContext = Readonly<{
   bettingStatus?: "OPEN" | "READY" | "LOCKED" | null;
   bettingPending?: boolean;
   selectedChipCredits?: number;
+  selectedSeatForClaim?: BlackjackViewSeatNumber | null;
   transportConnected?: boolean;
   seatCommandPending?: boolean;
   connectionState?:
@@ -424,6 +425,9 @@ export function buildBlackjackTableViewModelFromSnapshot(
             snapshot.phase==="BETTING" ||
             snapshot.phase==="ROUND_END"
           ),
+        isSelectedForClaim:
+          seat.playerId===null &&
+          context.selectedSeatForClaim===seat.seatNumber,
         canLeave:
           context.transportConnected !== false &&
           context.seatCommandPending !== true &&
@@ -482,6 +486,49 @@ export function buildBlackjackTableViewModelFromSnapshot(
         ) + "s"
       : "WAITING";
 
+  const enabledActions=getBlackjackAvailablePlayerActions(
+    snapshot,
+    context,
+  );
+  const localTurn=
+    localSeatNumber!==null &&
+    snapshot.round?.currentTurn?.seatNumber===localSeatNumber;
+  const interactionMode=
+    localPlayer===null
+      ? "SEAT" as const
+      : snapshot.phase==="BETTING"
+        ? "BETTING" as const
+        : localTurn
+          ? "TURN" as const
+          : "WAIT" as const;
+  const interactionPrompt=
+    interactionMode==="SEAT"
+      ? context.selectedSeatForClaim
+        ? "CONFIRM YOUR SEAT"
+        : "CHOOSE AN OPEN SEAT"
+      : interactionMode==="BETTING"
+        ? localBettingStatus==="READY"
+          ? "BET LOCKED · WAITING FOR DEAL"
+          : "PLACE YOUR BET"
+        : interactionMode==="TURN"
+          ? "YOUR TURN"
+          : snapshot.phase==="PLAYER_TURNS" && snapshot.round?.currentTurn
+            ? "WAITING FOR SEAT " +
+              snapshot.round.currentTurn.seatNumber
+            : snapshot.phase==="DEALER_TURN"
+              ? "DEALER PLAYING"
+              : snapshot.phase==="SETTLEMENT"
+                ? "SETTLING ROUND"
+                : snapshot.phase==="ROUND_END"
+                  ? "ROUND COMPLETE"
+                  : snapshot.phase==="SHUFFLING"
+                    ? "SHUFFLING"
+                    : snapshot.phase==="RECOVERING"
+                      ? "RECOVERING TABLE"
+                      : localPlayer
+                        ? "WAITING FOR NEXT ROUND"
+                        : "CHOOSE AN OPEN SEAT";
+
   return Object.freeze({
     phaseLabel: formatPhaseLabel(snapshot.phase),
     balanceLabel,
@@ -495,7 +542,11 @@ export function buildBlackjackTableViewModelFromSnapshot(
           : Object.freeze({ rank: card.rank, suit: card.suit }),
       ),
     ),
-    enabledActions: getBlackjackAvailablePlayerActions(snapshot, context),
+    enabledActions,
+    interactionMode,
+    interactionPrompt,
+    selectedSeatForClaim: context.selectedSeatForClaim ?? null,
+    seatClaimPending: context.seatCommandPending === true,
     actionStatusLabel: context.actionStatusLabel ?? null,
     actionStatusTone: context.actionStatusTone ?? "neutral",
     connectionStatus:Object.freeze(
