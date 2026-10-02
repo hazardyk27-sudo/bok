@@ -81,8 +81,9 @@ describe("cadi kazan route smoke contract", () => {
     expect(witchClientSource).toContain("Array.from({ length: 6 }");
     expect(witchClientSource).toContain("revealedOfficeCells");
     expect(witchClientSource).toContain("officeSymbolPresentation");
-    expect(witchClientSource).toContain("witch-office-result-art");
-    expect(witchClientSource).toContain("officePresentation.artworkUrl");
+    expect(witchClientSource).toContain("paintPreparedReveal");
+    expect(scratchPresentationSource).toContain("witch-office-result-art");
+    expect(scratchPresentationSource).toContain("data-witch-office-candidate");
   });
 
 
@@ -141,10 +142,10 @@ describe("cadi kazan route smoke contract", () => {
 
 
   it("shows stake-derived Office prize money instead of multiplier labels", () => {
-    expect(witchClientSource).toContain("symbolPrizeCents");
     expect(witchClientSource).toContain("round.stakeCents * symbol.multiplierBps");
-    expect(witchClientSource).toContain('formatMoney(symbolPrizeCents, { compactInteger: true })');
-    expect(witchClientSource).toContain("witch-office-result-prize");
+    expect(witchClientSource).toContain("Math.floor((round.stakeCents * symbol.multiplierBps) / 100)");
+    expect(witchClientSource).toContain("{ compactInteger: true }");
+    expect(scratchPresentationSource).toContain("witch-office-result-prize");
     expect(witchClientSource).not.toContain('<strong class="witch-office-result-name">');
     expect(visualLockSource).toContain("PASS 16 — THE OFFICE smaller character art + direct prize amount");
     expect(visualLockSource).toContain("width: 84.6% !important");
@@ -281,9 +282,9 @@ describe("cadi kazan route smoke contract", () => {
 
   it("uses the supplied star-backed Office symbols with star-matched prize badges", () => {
     expect(visualLockSource).toContain("PASS 26 — THE OFFICE star-backed character symbols + color-linked prize badge");
-    expect(witchClientSource).toContain('style.setProperty("--office-symbol-color"');
-    expect(witchClientSource).toContain('style.setProperty("--office-symbol-text"');
-    expect(witchClientSource).toContain('decoding="async"');
+    expect(scratchPresentationSource).toContain("--office-symbol-color:");
+    expect(scratchPresentationSource).toContain("--office-symbol-text:");
+    expect(scratchPresentationSource).toContain('decoding="async"');
     expect(visualLockSource).toContain("background: var(--office-symbol-color, #e5e7e9) !important");
     expect(visualLockSource).toContain("color: var(--office-symbol-text, #151719) !important");
     expect(visualLockSource).toContain("filter: none !important");
@@ -538,8 +539,8 @@ describe("cadi kazan route smoke contract", () => {
   it("rebuilds result slots on every new round so a previous Office symbol can never flash first", () => {
     expect(witchClientSource).toContain("const boardRoundChanged = board?.dataset.roundId !== round.id");
     expect(witchClientSource).toContain("board.dataset.roundId = round.id");
-    expect(scratchPresentationSource).toContain('data-witch-office-candidate="KEVIN"');
-    expect(scratchPresentationSource).toContain('data-witch-office-candidate="MICHAEL"');
+    expect(scratchPresentationSource).toContain("OFFICE_MATCH_SYMBOLS.map");
+    expect(scratchPresentationSource).toContain('data-witch-office-candidate="${symbol.id}"');
     expect(witchClientSource).not.toContain('officeArt.setAttribute("src"');
     expect(witchClientSource).not.toContain('genericArt.setAttribute("src"');
     expect(visualLockSource).toContain("PASS 42 — prepared-under-coating result pipeline");
