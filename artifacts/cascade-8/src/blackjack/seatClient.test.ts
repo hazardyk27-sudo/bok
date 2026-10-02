@@ -5,7 +5,7 @@ import {
 import type { BlackjackRealtimeSocketLike } from "./realtimeClient";
 
 describe("blackjack browser seat command client",()=>{
-  it("keeps claim pending through ACK until matching snapshot cursor arrives",()=>{
+  it("keeps claim pending through ACK, requests sync, then completes on matching snapshot",()=>{
     const sent:string[]=[];
     const socket:BlackjackRealtimeSocketLike={
       send:(data)=>sent.push(data),
@@ -33,9 +33,10 @@ describe("blackjack browser seat command client",()=>{
       eventSequence:1,
     });
     expect(client.getPending()?.acceptedEventSequence).toBe(1);
+    expect(JSON.parse(sent[1])).toEqual({type:"sync"});
 
     client.receive({
-      type:"snapshot",
+      type:"FULL_TABLE_SNAPSHOT",
       snapshot:{stateVersion:2,eventSequence:1},
     });
     expect(client.getPending()).toBeNull();
@@ -77,6 +78,31 @@ describe("blackjack browser seat command client",()=>{
       error:"SEAT_LEAVE_NOT_AVAILABLE",
     });
   });
+
+  it("requests sync after accepted leave as well",()=>{
+    const sent:string[]=[];
+    const socket:BlackjackRealtimeSocketLike={
+      send:(data)=>sent.push(data),
+      addEventListener:()=>undefined,
+      removeEventListener:()=>undefined,
+    };
+    const client=createBlackjackSeatCommandClient({
+      socket,
+      createRequestId:()=>"leave-request-2",
+    });
+
+    client.leave();
+    client.receive({
+      type:"SEAT_LEAVE_ACCEPTED",
+      requestId:"leave-request-2",
+      replayed:false,
+      stateVersion:4,
+      eventSequence:3,
+    });
+
+    expect(JSON.parse(sent[1])).toEqual({type:"sync"});
+  });
+
   it("clears pending and exposes feedback when transport send throws",()=>{
     const client=createBlackjackSeatCommandClient({
       socket:{
@@ -95,5 +121,4 @@ describe("blackjack browser seat command client",()=>{
       type:"CLAIM_SEAT",
     });
   });
-
 });

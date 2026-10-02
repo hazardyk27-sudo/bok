@@ -71,6 +71,15 @@ export function createBlackjackSeatCommandClient(input:{
     input.onFeedbackChange?.(feedback);
   };
 
+  const requestAuthoritativeSync=()=>{
+    try {
+      input.socket.send(JSON.stringify({type:"sync"}));
+    } catch {
+      // The resilient transport will request a fresh snapshot on reconnect.
+      // Do not turn an already-accepted seat command into a false rejection.
+    }
+  };
+
   const start=(
     type:"CLAIM_SEAT"|"LEAVE_SEAT",
     seatNumber:number|null,
@@ -151,6 +160,7 @@ export function createBlackjackSeatCommandClient(input:{
         acceptedEventSequence:message.eventSequence,
       });
       changed();
+      requestAuthoritativeSync();
       return;
     }
 
