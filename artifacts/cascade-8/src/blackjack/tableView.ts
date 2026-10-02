@@ -229,15 +229,15 @@ export function renderBlackjackTableShell(
         <div class="blackjack-status-strip">
           <div>
             <span>PHASE</span>
-            <strong>${escapeHtml(model.phaseLabel)}</strong>
+            <strong data-blackjack-stat="phase">${escapeHtml(model.phaseLabel)}</strong>
           </div>
           <div>
             <span>BALANCE</span>
-            <strong>${escapeHtml(model.balanceLabel)}</strong>
+            <strong data-blackjack-stat="balance">${escapeHtml(model.balanceLabel)}</strong>
           </div>
           <div>
             <span>BET</span>
-            <strong>${escapeHtml(model.betLabel)}</strong>
+            <strong data-blackjack-stat="bet">${escapeHtml(model.betLabel)}</strong>
           </div>
         </div>
 
