@@ -37,7 +37,9 @@ describe("blackjack responsive layout contract",()=>{
     expect(css).toContain(
       "@media (orientation: portrait) and (max-width: 599px)",
     );
-    expect(css).toContain("overflow-y: auto");
+    expect(css).toContain("overflow-y: auto !important");
+    expect(css).toContain("overscroll-behavior-y: contain");
+    expect(css).toContain("-webkit-overflow-scrolling: touch");
     expect(css).toContain("aspect-ratio: 4 / 5");
     expect(css).toContain("position: sticky");
     expect(css).toContain("--blackjack-seat-width: clamp(92px, 27vw, 108px)");
