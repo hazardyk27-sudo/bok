@@ -906,13 +906,19 @@ export class WitchClient {
   }
 
   private paintPreparedReveal(button: HTMLButtonElement, round: CadiKazanRound, prepared: CadiKazanPreparedReveal | null) {
-    button.querySelectorAll<HTMLElement>("[data-witch-result-candidate], [data-witch-office-candidate]").forEach((candidate) => {
-      candidate.dataset.witchResultActive = "false";
-    });
-
+    // The board DOM is rebuilt for every round, so a selected result candidate
+    // can stay sticky for the lifetime of that round. Do not clear it during a
+    // transient render where prepared data is momentarily absent; that was able
+    // to expose a plain white result cell between state updates.
     if (!prepared || prepared.roundId !== round.id || prepared.cellIndex !== Number(button.dataset.witchCell)) {
-      delete button.dataset.preparedResult;
       return;
+    }
+
+    const preparedKey = prepared.kind === "OFFICE" ? prepared.symbolId : prepared.kind;
+    if (button.dataset.preparedResult !== preparedKey) {
+      button.querySelectorAll<HTMLElement>("[data-witch-result-candidate], [data-witch-office-candidate]").forEach((candidate) => {
+        candidate.dataset.witchResultActive = "false";
+      });
     }
 
     if (prepared.kind === "OFFICE") {
@@ -1143,10 +1149,10 @@ export class WitchClient {
     const allCells = Array.from({ length: round.cellCount }, (_, index) => index);
     const immediateCells = new Set(round.revealedCells);
 
-    // Advanced 25 follows the Standard card terminal rule: once a bomb ends
-    // the round, the whole ticket is exposed. Do this immediately so no
-    // scratch coating/canvas can remain over unrevealed cells after BUST.
-    if (round.mode === "ADVANCED" && round.status === "BUST") {
+    // Every bomb-based card must expose the whole ticket immediately on BUST.
+    // Keep this client-side guarantee in addition to the server snapshot rule so
+    // no scratch canvas can remain over Standard or Advanced terminal results.
+    if (round.mode !== "OFFICE_MATCH_6" && round.status === "BUST") {
       allCells.forEach((index) => this.terminalRevealVisibleCells.add(index));
       this.terminalRevealAnimating = false;
       this.render();
