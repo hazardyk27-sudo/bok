@@ -29,6 +29,14 @@ function sendError(res: Response, error: unknown) {
   res.status(status).json({ error: message });
 }
 
+router.get("/cadi-kazan/office-pool", async (_req, res) => {
+  try {
+    res.json(await cadiKazanRepository.getOfficePoolStatus());
+  } catch (error) {
+    sendError(res, error);
+  }
+});
+
 router.get("/cadi-kazan/state", async (req, res) => {
   try {
     res.json(await cadiKazanRepository.getState(getSessionId(req, res)));
