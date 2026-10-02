@@ -21,6 +21,7 @@ export type BlackjackTableSeatViewModel = Readonly<{
   canClaim?: boolean;
   canLeave?: boolean;
   isSelectedForClaim?: boolean;
+  isActiveTurn?: boolean;
   cards?: readonly BlackjackCardViewModel[];
 }>;
 
@@ -39,6 +40,7 @@ export type BlackjackTableViewModel = Readonly<{
   turnLabel: string;
   dealerTotalLabel: string;
   dealerCards?: readonly (BlackjackCardViewModel | null)[];
+  dealerActive?: boolean;
   enabledActions?: readonly BlackjackTableAction[];
   actionStatusLabel?: string | null;
   actionStatusTone?: "neutral" | "success" | "error";
@@ -69,6 +71,7 @@ export const BLACKJACK_DEFAULT_TABLE_VIEW: BlackjackTableViewModel =
     betLabel: "0",
     turnLabel: "MULTIPLAYER TABLE",
     dealerTotalLabel: "DEALER",
+    dealerActive:false,
     interactionMode:"WAIT",
     interactionPrompt:"CHOOSE A SEAT TO JOIN",
     selectedSeatForClaim:null,
@@ -166,7 +169,7 @@ export function renderBlackjackSeat(seat: BlackjackTableSeatViewModel): string {
 
   return `
     <article
-      class="blackjack-seat blackjack-seat-${seat.seatNumber}${seat.isLocal ? " is-local" : ""}${claimable ? " is-claimable" : ""}${seat.isSelectedForClaim ? " is-selected-for-claim" : ""}"
+      class="blackjack-seat blackjack-seat-${seat.seatNumber}${seat.isLocal ? " is-local" : ""}${claimable ? " is-claimable" : ""}${seat.isSelectedForClaim ? " is-selected-for-claim" : ""}${seat.isActiveTurn ? " is-active-turn" : ""}"
       data-seat="${seat.seatNumber}"
       data-status="${seat.status}"
       data-local="${seat.isLocal ? "true" : "false"}"
@@ -224,7 +227,7 @@ export function renderBlackjackTableShell(
           <div class="blackjack-table-felt">
             <div class="blackjack-felt-line" aria-hidden="true"></div>
 
-            <section class="blackjack-dealer-zone" aria-label="Dealer">
+            <section class="blackjack-dealer-zone${model.dealerActive ? " is-active-turn" : ""}" aria-label="Dealer">
               <span class="blackjack-dealer-kicker">DEALER</span>
               <div class="blackjack-shoe" aria-label="Card shoe">
                 <i></i><i></i><i></i>
