@@ -113,6 +113,7 @@ export type BlackjackSnapshotViewContext = Readonly<{
   bettingPending?: boolean;
   selectedChipCredits?: number;
   selectedSeatForClaim?: BlackjackViewSeatNumber | null;
+  openDrawer?: "BET" | "INFO" | null;
   transportConnected?: boolean;
   seatCommandPending?: boolean;
   connectionState?:
@@ -501,6 +502,13 @@ export function buildBlackjackTableViewModelFromSnapshot(
         : localTurn
           ? "TURN" as const
           : "WAIT" as const;
+  const effectiveOpenDrawer=
+    context.openDrawer==="BET" && interactionMode!=="BETTING"
+      ? null
+      : context.openDrawer ?? null;
+  const occupiedSeats=snapshot.seats.filter(
+    (seat)=>seat.playerId!==null,
+  ).length;
   const interactionPrompt=
     interactionMode==="SEAT"
       ? context.selectedSeatForClaim
@@ -547,6 +555,11 @@ export function buildBlackjackTableViewModelFromSnapshot(
     interactionPrompt,
     selectedSeatForClaim: context.selectedSeatForClaim ?? null,
     seatClaimPending: context.seatCommandPending === true,
+    openDrawer: effectiveOpenDrawer,
+    canOpenBetDrawer:
+      interactionMode==="BETTING" &&
+      localBettingStatus==="OPEN",
+    occupiedSeatsLabel: occupiedSeats + " / 5 SEATED",
     actionStatusLabel: context.actionStatusLabel ?? null,
     actionStatusTone: context.actionStatusTone ?? "neutral",
     connectionStatus:Object.freeze(
