@@ -25,23 +25,23 @@ function counts(values: string[]) {
   }, {});
 }
 
-describe("The Office 75-ticket pool engine", () => {
-  it("locks the approved 75-ticket distribution", () => {
-    expect(OFFICE_POOL_SIZE).toBe(75);
+describe("The Office 200-ticket pool engine", () => {
+  it("locks the approved 200-ticket distribution", () => {
+    expect(OFFICE_POOL_SIZE).toBe(200);
     expect(OFFICE_POOL_DISTRIBUTION).toEqual([
       { symbolId: "MICHAEL", count: 1, multiplierBps: 10_000 },
-      { symbolId: "STANLEY", count: 2, multiplierBps: 2_000 },
-      { symbolId: "DWIGHT", count: 4, multiplierBps: 1_000 },
-      { symbolId: "JIM", count: 8, multiplierBps: 500 },
-      { symbolId: "KEVIN", count: 20, multiplierBps: 200 },
-      { symbolId: null, count: 40, multiplierBps: 0 },
+      { symbolId: "STANLEY", count: 3, multiplierBps: 2_000 },
+      { symbolId: "DWIGHT", count: 5, multiplierBps: 1_000 },
+      { symbolId: "JIM", count: 15, multiplierBps: 500 },
+      { symbolId: "KEVIN", count: 60, multiplierBps: 200 },
+      { symbolId: null, count: 116, multiplierBps: 0 },
     ]);
-    expect(OFFICE_POOL_DISTRIBUTION.reduce((sum, entry) => sum + entry.count, 0)).toBe(75);
+    expect(OFFICE_POOL_DISTRIBUTION.reduce((sum, entry) => sum + entry.count, 0)).toBe(200);
   });
 
-  it("prepares exactly 75 complete cards before any card is claimed", () => {
+  it("prepares exactly 200 complete cards before any card is claimed", () => {
     const tickets = createOfficePoolTickets(sequenceRandom([7, 3, 19, 2, 41, 5, 11, 23, 31]));
-    expect(tickets).toHaveLength(75);
+    expect(tickets).toHaveLength(200);
 
     const outcomeCounts = {
       KEVIN: 0,
@@ -63,12 +63,12 @@ describe("The Office 75-ticket pool engine", () => {
     }
 
     expect(outcomeCounts).toEqual({
-      KEVIN: 20,
-      JIM: 8,
-      DWIGHT: 4,
-      STANLEY: 2,
+      KEVIN: 60,
+      JIM: 15,
+      DWIGHT: 5,
+      STANLEY: 3,
       MICHAEL: 1,
-      LOSS: 40,
+      LOSS: 116,
     });
   });
 
