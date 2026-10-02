@@ -5,6 +5,12 @@ import {
   pool,
 } from "@workspace/db";
 import app from "./app";
+import {
+  markBlackjackRuntimeAttached,
+  markBlackjackRuntimeFailed,
+  markBlackjackRuntimeStarting,
+  markBlackjackRuntimeStopped,
+} from "./blackjack";
 import { logger } from "./lib/logger";
 import { attachBlackjackPlatformRuntime } from "./platform/blackjack";
 import { initializeSharedWalletPlatform } from "./platform/wallet";
@@ -46,7 +52,10 @@ const server = createServer(app);
 let blackjackRuntime: Awaited<
   ReturnType<typeof attachBlackjackPlatformRuntime>
 > | null = null;
+let blackjackRuntimeRetryHandle: ReturnType<typeof setTimeout> | null = null;
+let blackjackRuntimeAttempt = 0;
 let shuttingDown = false;
+const BLACKJACK_RUNTIME_RETRY_MS = 1_000;
 
 server.listen(port, () => {
   logger.info(
@@ -95,37 +104,70 @@ void initializeSharedWalletPlatform()
     );
   });
 
-// Blackjack is an optional realtime subsystem from the HTTP API's point of
-// view. Its durable recovery must never prevent health, wallet, Idle or
-// Roulette HTTP routes from accepting connections. The browser client already
-// reconnects until the realtime transport becomes ready.
-void attachBlackjackPlatformRuntime(server)
-  .then((runtime) => {
+// Blackjack is optional to the rest of the HTTP API, but Blackjack itself is
+// not considered ready until its authoritative realtime runtime is attached.
+// Failed startup attempts retry without requiring a process restart.
+const startBlackjackRuntime = async (): Promise<void> => {
+  if (shuttingDown) return;
+
+  blackjackRuntimeAttempt += 1;
+  const attempt = blackjackRuntimeAttempt;
+  markBlackjackRuntimeStarting(attempt);
+
+  try {
+    const runtime = await attachBlackjackPlatformRuntime(server);
+
     if (shuttingDown) {
       runtime.close();
+      markBlackjackRuntimeStopped();
       return;
     }
 
     blackjackRuntime = runtime;
+    markBlackjackRuntimeAttached(runtime, attempt);
     logger.info(
       {
         blackjack: runtime.getReadiness(),
+        attempt,
       },
       "Blackjack runtime attached",
     );
-  })
-  .catch((error) => {
+  } catch (error) {
+    if (shuttingDown) {
+      markBlackjackRuntimeStopped();
+      return;
+    }
+
+    markBlackjackRuntimeFailed(attempt);
     logger.error(
-      { err: error },
-      "Blackjack runtime failed to attach; HTTP API remains available",
+      {
+        err: error,
+        attempt,
+        retryInMs: BLACKJACK_RUNTIME_RETRY_MS,
+      },
+      "Blackjack runtime failed to attach; retry scheduled",
     );
-  });
+
+    blackjackRuntimeRetryHandle = setTimeout(() => {
+      blackjackRuntimeRetryHandle = null;
+      void startBlackjackRuntime();
+    }, BLACKJACK_RUNTIME_RETRY_MS);
+  }
+};
+
+void startBlackjackRuntime();
 
 const shutdown = () => {
   if (shuttingDown) return;
   shuttingDown = true;
 
+  if (blackjackRuntimeRetryHandle !== null) {
+    clearTimeout(blackjackRuntimeRetryHandle);
+    blackjackRuntimeRetryHandle = null;
+  }
   blackjackRuntime?.close();
+  blackjackRuntime = null;
+  markBlackjackRuntimeStopped();
   server.close();
 
   void pool.end().catch((error) => {

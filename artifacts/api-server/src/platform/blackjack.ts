@@ -8,6 +8,7 @@ import {
   createBlackjackReservationBook,
   createBlackjackWalletLedgerState,
   createShuffledBlackjackShoe,
+  getBlackjackRuntimeBootstrapState,
   initializeAndAttachBlackjackServerRuntime,
   parseBlackjackDurableSnapshot,
   type BlackjackAttachedServerRuntime,
@@ -240,12 +241,42 @@ export const blackjackPlatformRouter: IRouter = Router();
 blackjackPlatformRouter.get(
   "/blackjack/session",
   async (req, res) => {
+    const beforeBootstrap = getBlackjackRuntimeBootstrapState();
+    if (!beforeBootstrap.ready) {
+      res.setHeader("Retry-After", "1");
+      res.status(503).json({
+        ready: false,
+        status: beforeBootstrap.status,
+        failureCode: beforeBootstrap.failureCode,
+      });
+      return;
+    }
+
     try {
       const sessionId = getOrCreateHttpSessionId(req, res);
       await ensureSharedWallet(sessionId);
-      res.json({ ready: true });
+
+      const afterBootstrap = getBlackjackRuntimeBootstrapState();
+      if (!afterBootstrap.ready) {
+        res.setHeader("Retry-After", "1");
+        res.status(503).json({
+          ready: false,
+          status: afterBootstrap.status,
+          failureCode: afterBootstrap.failureCode,
+        });
+        return;
+      }
+
+      res.json({
+        ready: true,
+        status: afterBootstrap.status,
+      });
     } catch {
-      res.status(503).json({ error: "BLACKJACK_SESSION_UNAVAILABLE" });
+      res.status(503).json({
+        ready: false,
+        status: "FAILED",
+        error: "BLACKJACK_SESSION_UNAVAILABLE",
+      });
     }
   },
 );
