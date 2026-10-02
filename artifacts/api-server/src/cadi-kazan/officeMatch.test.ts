@@ -39,6 +39,20 @@ describe("The Office 200-ticket pool engine", () => {
     expect(OFFICE_POOL_DISTRIBUTION.reduce((sum, entry) => sum + entry.count, 0)).toBe(200);
   });
 
+  it("locks the approved 202.5% pool RTP and 42% hit rate", () => {
+    const totalReturnBps = OFFICE_POOL_DISTRIBUTION.reduce(
+      (sum, entry) => sum + entry.count * entry.multiplierBps,
+      0,
+    );
+    const winningTickets = OFFICE_POOL_DISTRIBUTION
+      .filter((entry) => entry.symbolId !== null)
+      .reduce((sum, entry) => sum + entry.count, 0);
+
+    expect(totalReturnBps / OFFICE_POOL_SIZE).toBe(20_250);
+    expect(winningTickets).toBe(84);
+    expect(winningTickets / OFFICE_POOL_SIZE).toBe(0.42);
+  });
+
   it("prepares exactly 200 complete cards before any card is claimed", () => {
     const tickets = createOfficePoolTickets(sequenceRandom([7, 3, 19, 2, 41, 5, 11, 23, 31]));
     expect(tickets).toHaveLength(200);
