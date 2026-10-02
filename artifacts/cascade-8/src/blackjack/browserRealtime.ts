@@ -494,6 +494,7 @@ export function connectBlackjackRealtimeElement(
   let controller: BlackjackRealtimeViewController | null=null;
   let selectedChipCredits=100;
   let selectedSeatForClaim: 1 | 2 | 3 | 4 | 5 | null=null;
+  let openDrawer: "BET" | "INFO" | null=null;
   let transportConnected=false;
   let everReady=false;
   let sessionReplaced=false;
@@ -591,6 +592,10 @@ export function connectBlackjackRealtimeElement(
     const privateState=privateStateClient?.getState() ?? null;
     const privateBetting=privateState?.betting ?? null;
     const seatPending=seatClient?.getPending() ?? null;
+    const latestSnapshot=controller?.getSnapshot() ?? null;
+    if(openDrawer==="BET" && latestSnapshot?.phase!=="BETTING"){
+      openDrawer=null;
+    }
 
     let actionStatusLabel: string | null=null;
     let actionStatusTone: "neutral" | "success" | "error"="neutral";
@@ -675,6 +680,7 @@ export function connectBlackjackRealtimeElement(
       bettingPending:bettingPending!==null,
       selectedChipCredits,
       selectedSeatForClaim,
+      openDrawer,
     };
   };
   controller=bindBlackjackRealtimeElement(
@@ -756,6 +762,27 @@ export function connectBlackjackRealtimeElement(
 
   const onClick=(event: Event) => {
     if(event.target instanceof Element){
+      const drawerToggle=event.target.closest<HTMLButtonElement>(
+        "[data-blackjack-drawer-toggle]",
+      );
+      if(drawerToggle && !drawerToggle.disabled){
+        const drawer=drawerToggle.dataset.blackjackDrawerToggle;
+        if(drawer==="BET" || drawer==="INFO"){
+          openDrawer=openDrawer===drawer ? null : drawer;
+          activeController.rerenderLatest();
+        }
+        return;
+      }
+
+      const drawerClose=event.target.closest<HTMLElement>(
+        "[data-blackjack-drawer-close]",
+      );
+      if(drawerClose){
+        openDrawer=null;
+        activeController.rerenderLatest();
+        return;
+      }
+
       const seatConfirm=event.target.closest<HTMLButtonElement>(
         "[data-blackjack-seat-confirm-action]",
       );
@@ -846,6 +873,11 @@ export function connectBlackjackRealtimeElement(
     }
   };
   const onKeyDown=(event: KeyboardEvent)=>{
+    if(event.key==="Escape" && openDrawer!==null){
+      openDrawer=null;
+      activeController.rerenderLatest();
+      return;
+    }
     if(event.key!=="Enter" && event.key!==" ") return;
     if(!(event.target instanceof Element)) return;
     const seat=event.target.closest<HTMLElement>(

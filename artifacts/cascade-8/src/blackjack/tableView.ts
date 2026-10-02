@@ -30,6 +30,7 @@ export type BlackjackInteractionMode =
   | "BETTING"
   | "TURN"
   | "WAIT";
+export type BlackjackDrawer = "BET" | "INFO";
 
 export type BlackjackTableViewModel = Readonly<{
   phaseLabel: string;
@@ -45,6 +46,9 @@ export type BlackjackTableViewModel = Readonly<{
   interactionPrompt?: string;
   selectedSeatForClaim?: 1 | 2 | 3 | 4 | 5 | null;
   seatClaimPending?: boolean;
+  openDrawer?: BlackjackDrawer | null;
+  canOpenBetDrawer?: boolean;
+  occupiedSeatsLabel?: string;
   connectionStatus?: Readonly<{
     label: string;
     tone: "connecting" | "live" | "reconnecting" | "error";
@@ -69,6 +73,9 @@ export const BLACKJACK_DEFAULT_TABLE_VIEW: BlackjackTableViewModel =
     interactionPrompt:"CHOOSE A SEAT TO JOIN",
     selectedSeatForClaim:null,
     seatClaimPending:false,
+    openDrawer:null,
+    canOpenBetDrawer:false,
+    occupiedSeatsLabel:"0 / 5 SEATED",
     connectionStatus:Object.freeze({
       label:"CONNECTING",
       tone:"connecting" as const,
@@ -246,17 +253,32 @@ export function renderBlackjackTableShell(
         data-interaction-mode="${model.interactionMode ?? "WAIT"}"
       >
         <div class="blackjack-status-strip">
-          <div>
+          <div class="blackjack-dock-stat blackjack-dock-phase">
             <span>PHASE</span>
             <strong data-blackjack-stat="phase">${escapeHtml(model.phaseLabel)}</strong>
           </div>
-          <div>
+          <div class="blackjack-dock-stat">
             <span>BALANCE</span>
             <strong data-blackjack-stat="balance">${escapeHtml(model.balanceLabel)}</strong>
           </div>
-          <div>
+          <div class="blackjack-dock-stat">
             <span>BET</span>
             <strong data-blackjack-stat="bet">${escapeHtml(model.betLabel)}</strong>
+          </div>
+          <div class="blackjack-dock-actions" aria-label="Table panels">
+            <button
+              type="button"
+              data-blackjack-drawer-toggle="BET"
+              aria-controls="blackjack-bet-drawer"
+              aria-expanded="${model.openDrawer === "BET" ? "true" : "false"}"
+              ${model.canOpenBetDrawer ? "" : "disabled"}
+            >BET</button>
+            <button
+              type="button"
+              data-blackjack-drawer-toggle="INFO"
+              aria-controls="blackjack-info-drawer"
+              aria-expanded="${model.openDrawer === "INFO" ? "true" : "false"}"
+            >TABLE</button>
           </div>
         </div>
 
@@ -273,14 +295,58 @@ export function renderBlackjackTableShell(
           </div>
         </div>
 
-        <div class="blackjack-betting-region" ${model.interactionMode === "BETTING" ? "" : "hidden"}>
+        <div
+          class="blackjack-drawer-backdrop"
+          data-blackjack-drawer-close
+          ${model.openDrawer ? "" : "hidden"}
+          aria-hidden="true"
+        ></div>
+
+        <section
+          id="blackjack-bet-drawer"
+          class="blackjack-drawer blackjack-betting-region"
+          data-blackjack-drawer="BET"
+          aria-label="Bet controls"
+          aria-hidden="${model.openDrawer === "BET" ? "false" : "true"}"
+          ${model.openDrawer === "BET" ? "" : "hidden"}
+        >
+          <div class="blackjack-drawer-head">
+            <div>
+              <span>BETTING</span>
+              <strong>CHIPS & WAGER</strong>
+            </div>
+            <button type="button" data-blackjack-drawer-close aria-label="Close bet controls">×</button>
+          </div>
           ${renderBlackjackBettingPanel(
             model.bettingPanel ?? {
               ...BLACKJACK_DEFAULT_BETTING_PANEL,
               totalBetLabel: model.betLabel,
             },
           )}
-        </div>
+        </section>
+
+        <section
+          id="blackjack-info-drawer"
+          class="blackjack-drawer blackjack-info-drawer"
+          data-blackjack-drawer="INFO"
+          aria-label="Table information"
+          aria-hidden="${model.openDrawer === "INFO" ? "false" : "true"}"
+          ${model.openDrawer === "INFO" ? "" : "hidden"}
+        >
+          <div class="blackjack-drawer-head">
+            <div>
+              <span>TABLE</span>
+              <strong>LIVE INFO</strong>
+            </div>
+            <button type="button" data-blackjack-drawer-close aria-label="Close table information">×</button>
+          </div>
+          <div class="blackjack-info-grid">
+            <div><span>PHASE</span><strong data-blackjack-info="phase">${escapeHtml(model.phaseLabel)}</strong></div>
+            <div><span>PLAYERS</span><strong data-blackjack-info="players">${escapeHtml(model.occupiedSeatsLabel ?? "0 / 5 SEATED")}</strong></div>
+            <div><span>BLACKJACK</span><strong>3:2</strong></div>
+            <div><span>DEALER</span><strong>STANDS ON 17</strong></div>
+          </div>
+        </section>
 
         <div class="blackjack-actions" aria-label="Player actions" ${model.interactionMode === "TURN" ? "" : "hidden"}>
           <button type="button" data-blackjack-action="HIT"${actionDisabled("HIT")}>HIT</button>
