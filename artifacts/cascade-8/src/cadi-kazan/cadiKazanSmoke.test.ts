@@ -281,8 +281,8 @@ describe("cadi kazan route smoke contract", () => {
 
   it("uses the supplied star-backed Office symbols with star-matched prize badges", () => {
     expect(visualLockSource).toContain("PASS 26 — THE OFFICE star-backed character symbols + color-linked prize badge");
-    expect(witchClientSource).toContain("--office-symbol-color:");
-    expect(witchClientSource).toContain("--office-symbol-text:");
+    expect(witchClientSource).toContain('style.setProperty("--office-symbol-color"');
+    expect(witchClientSource).toContain('style.setProperty("--office-symbol-text"');
     expect(witchClientSource).toContain('decoding="async"');
     expect(visualLockSource).toContain("background: var(--office-symbol-color, #e5e7e9) !important");
     expect(visualLockSource).toContain("color: var(--office-symbol-text, #151719) !important");
