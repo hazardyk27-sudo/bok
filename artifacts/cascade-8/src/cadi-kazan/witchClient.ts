@@ -1177,17 +1177,20 @@ export class WitchClient {
         if (ticketPrice) ticketPrice.textContent = formatTicketPrice(previewStakeCents);
         if (standardPrice) standardPrice.hidden = true;
         if (ticketId) ticketId.textContent = "PREVIEW";
-      } else if (board?.dataset.preview) {
+      } else if (board?.dataset.preview || board?.dataset.roundId) {
         board.replaceChildren();
         delete board.dataset.preview;
+        delete board.dataset.roundId;
       }
 
       this.updatePayout(null, visualMode);
       return;
     }
 
-    if (board && (board.childElementCount !== round.cellCount || Boolean(board.dataset.preview))) {
+    const boardRoundChanged = board?.dataset.roundId !== round.id;
+    if (board && (boardRoundChanged || board.childElementCount !== round.cellCount || Boolean(board.dataset.preview))) {
       delete board.dataset.preview;
+      board.dataset.roundId = round.id;
       this.destroyScratchSurfaces();
       board.innerHTML = Array.from({ length: round.cellCount }, (_, index) => `
         <button type="button" class="witch-cell" data-witch-cell="${index}" aria-label="Kazınabilir kapalı alan">
@@ -1204,6 +1207,7 @@ export class WitchClient {
         });
       });
     }
+    if (board) board.dataset.roundId = round.id;
 
     const revealedBombs = new Set(round.revealedBombCells);
     const visibleOfficeSymbols = new Map((round.revealedOfficeCells ?? []).map((cell) => [cell.index, cell.symbolId] as const));
@@ -1286,7 +1290,15 @@ export class WitchClient {
           if (officePrizeNode) officePrizeNode.textContent = symbolPrize;
           button.setAttribute("aria-label", `${officePresentation.symbol} · ${symbolPrize}`);
         } else {
-          if (officeResult) officeResult.hidden = true;
+          if (officeResult) {
+            officeResult.hidden = true;
+            delete officeResult.dataset.officeSymbol;
+          }
+          if (officeArt) {
+            officeArt.removeAttribute("src");
+            officeArt.alt = "";
+          }
+          if (officePrizeNode) officePrizeNode.textContent = "";
           const artworkUrl = "artworkUrl" in presentation ? presentation.artworkUrl : null;
           if (genericArt && artworkUrl) {
             if (genericArt.getAttribute("src") !== artworkUrl) genericArt.setAttribute("src", artworkUrl);
@@ -1294,6 +1306,8 @@ export class WitchClient {
             genericArt.hidden = false;
           } else if (genericArt) {
             genericArt.hidden = true;
+            genericArt.removeAttribute("src");
+            genericArt.alt = "";
           }
         }
       }

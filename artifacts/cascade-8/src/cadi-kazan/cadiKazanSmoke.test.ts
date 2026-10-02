@@ -521,6 +521,17 @@ describe("cadi kazan route smoke contract", () => {
   });
 
 
+  it("rebuilds result slots on every new round so a previous Office symbol can never flash first", () => {
+    expect(witchClientSource).toContain("const boardRoundChanged = board?.dataset.roundId !== round.id");
+    expect(witchClientSource).toContain("board.dataset.roundId = round.id");
+    expect(witchClientSource).toContain('officeArt.removeAttribute("src")');
+    expect(witchClientSource).toContain('genericArt.removeAttribute("src")');
+    expect(visualLockSource).toContain("PASS 41 — round-scoped result identity");
+    expect(visualLockSource).toContain("[data-witch-office-result][hidden]");
+    expect(visualLockSource).toContain(".witch-cell:not(.is-revealed) .witch-office-result-symbol");
+  });
+
+
   it("keeps result assets predecoded and result DOM persistent under the scratch coating", () => {
     expect(scratchPresentationSource).toContain("SCRATCH_RESULT_ART_URLS");
     expect(scratchPresentationSource).toContain("data-witch-result-art");

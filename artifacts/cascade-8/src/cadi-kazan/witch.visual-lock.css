@@ -6753,3 +6753,20 @@
     max-height: 100% !important;
   }
 }
+
+
+/* PASS 41 — round-scoped result identity.
+   Persistent result slots may never leak a previous round's artwork. Hidden
+   result nodes must remain hidden even against the high-specificity Office
+   artwork rules above. */
+.witch-page .witch-cell [data-witch-office-result][hidden],
+.witch-page .witch-cell [data-witch-result-art][hidden] {
+  display: none !important;
+  visibility: hidden !important;
+  opacity: 0 !important;
+}
+
+.witch-page .witch-cell:not(.is-revealed) .witch-office-result-symbol,
+.witch-page .witch-cell:not(.is-revealed) .witch-cell-artwork {
+  visibility: hidden !important;
+}
