@@ -9,6 +9,7 @@ import {
 } from "./officeMatch";
 import {
   getCashoutPayoutCents,
+  getPreparedReveal,
   getVisibleOfficeCells,
 } from "./types";
 
@@ -99,6 +100,29 @@ describe("The Office full outcome/reveal contract", () => {
       }
     },
   );
+
+  it("prepares exactly one touched cell without changing the board or settlement state", () => {
+    const board: OfficeMatchSymbolId[] = ["MICHAEL", "KEVIN", "JIM", "DWIGHT", "STANLEY", "MICHAEL"];
+    expect(getPreparedReveal("round-1", "OFFICE_MATCH_6", 1, [], board)).toEqual({
+      roundId: "round-1",
+      cellIndex: 1,
+      mode: "OFFICE_MATCH_6",
+      kind: "OFFICE",
+      symbolId: "KEVIN",
+    });
+    expect(getPreparedReveal("round-2", "ADVANCED", 4, [4], [])).toEqual({
+      roundId: "round-2",
+      cellIndex: 4,
+      mode: "ADVANCED",
+      kind: "BOMB",
+    });
+    expect(getPreparedReveal("round-3", "STANDARD", 2, [0], [])).toEqual({
+      roundId: "round-3",
+      cellIndex: 2,
+      mode: "STANDARD",
+      kind: "SAFE",
+    });
+  });
 
   it("never leaks hidden Office symbols while the round is active", () => {
     const board: OfficeMatchSymbolId[] = [
