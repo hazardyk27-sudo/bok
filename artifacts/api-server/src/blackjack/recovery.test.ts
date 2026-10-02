@@ -78,12 +78,12 @@ function journalRecord(
 }
 
 describe("blackjack server restart recovery", () => {
-  it("loads snapshot then applies every later journal state in order", async () => {
+  it("loads snapshot then applies later sparse journal checkpoints in order", async () => {
     const snapshot = createBlackjackDurableSnapshot(
       runtime(1, 1, true),
       1_000,
     );
-    const records = [journalRecord(2, 2), journalRecord(3, 3)];
+    const records = [journalRecord(3, 3), journalRecord(7, 7)];
 
     const recovered = await recoverBlackjackRuntime(
       "main-blackjack",
@@ -95,8 +95,8 @@ describe("blackjack server restart recovery", () => {
     expect(recovered).not.toBeNull();
     expect(recovered?.snapshotEventSequence).toBe(1);
     expect(recovered?.journalEventsApplied).toBe(2);
-    expect(recovered?.runtime.table.eventSequence).toBe(3);
-    expect(recovered?.runtime.table.stateVersion).toBe(4);
+    expect(recovered?.runtime.table.eventSequence).toBe(7);
+    expect(recovered?.runtime.table.stateVersion).toBe(8);
     expect(recovered?.runtime.table.phase).toBe("RECOVERING");
   });
 
@@ -161,6 +161,20 @@ describe("blackjack server restart recovery", () => {
         10_000,
       ),
     ).resolves.toBeNull();
+  });
+
+  it("rejects a journal tail that moves eventSequence backwards", async () => {
+    const snapshot = createBlackjackDurableSnapshot(runtime(5, 5), 1_000);
+    const record = journalRecord(4, 6);
+
+    await expect(
+      recoverBlackjackRuntime(
+        "main-blackjack",
+        { load: async () => snapshot },
+        { loadAfter: async () => [record] },
+        10_000,
+      ),
+    ).rejects.toThrow(/not monotonic/);
   });
 
   it("rejects a journal tail that moves stateVersion backwards", async () => {
