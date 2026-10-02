@@ -39,6 +39,9 @@ case "$game" in
   blackjack)
     frontend src/blackjack
     backend src/blackjack
+    pnpm --filter @workspace/cascade-8 exec playwright test \
+      e2e/blackjack.spec.ts \
+      --project=android-chrome
     ;;
   roulette)
     frontend src/roulette
