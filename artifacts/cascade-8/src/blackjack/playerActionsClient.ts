@@ -318,6 +318,12 @@ export function createBlackjackPlayerActionClient(input: {
         latest.eventSequence >= message.eventSequence
       ) {
         setPending(null);
+        setFeedback(Object.freeze({
+          status:"ACCEPTED",
+          actionId:acknowledged.message.actionId,
+          actionType:acknowledged.message.type,
+          error:null,
+        }));
       }
       return;
     }
