@@ -374,4 +374,84 @@ describe("blackjack contextual interaction UX",()=>{
     connection.close();
   });
 
+  it("expires transient feedback without changing authoritative table state",()=>{
+    const listeners=new Map<
+      string,
+      Set<(event:Event|MessageEvent<unknown>)=>void>
+    >();
+    const socket={
+      send:()=>undefined,
+      addEventListener:(
+        type:string,
+        listener:(event:Event|MessageEvent<unknown>)=>void,
+      )=>{
+        const set=listeners.get(type) ?? new Set();
+        set.add(listener);
+        listeners.set(type,set);
+      },
+      removeEventListener:()=>undefined,
+      close:()=>undefined,
+    };
+    let now=1_000;
+    let renderTick: (()=>void) | null=null;
+    const app=document.createElement("div");
+    document.body.append(app);
+
+    const connection=connectBlackjackRealtimeElement(app,{
+      location:{protocol:"https:",host:"casino.example"},
+      createSocket:()=>socket,
+      createActionId:()=>"ttl-seat",
+      nowMs:()=>now,
+      autoReconnect:false,
+      scheduleRender:(callback)=>{
+        renderTick=callback;
+        return "render";
+      },
+      cancelRender:()=>undefined,
+      scheduleTransportTimer:()=> "transport",
+      cancelTransportTimer:()=>undefined,
+    });
+
+    const snapshot=emptySnapshot();
+    for(const listener of listeners.get("message") ?? []){
+      listener(new MessageEvent("message",{
+        data:JSON.stringify({
+          type:"FULL_TABLE_SNAPSHOT",
+          snapshot,
+          resetEventSequenceTo:1,
+          resetStateVersionTo:1,
+        }),
+      }));
+    }
+
+    app.querySelector<HTMLElement>('[data-seat="1"]')?.click();
+    app.querySelector<HTMLButtonElement>(
+      '[data-blackjack-seat-confirm-action="CONFIRM"]',
+    )?.click();
+
+    for(const listener of listeners.get("message") ?? []){
+      listener(new MessageEvent("message",{
+        data:JSON.stringify({
+          type:"SEAT_CLAIM_REJECTED",
+          requestId:"ttl-seat",
+          error:"SEAT_UNAVAILABLE",
+        }),
+      }));
+    }
+
+    const feedback=app.querySelector<HTMLElement>(
+      ".blackjack-global-feedback",
+    );
+    expect(feedback?.hidden).toBe(false);
+
+    now=5_001;
+    renderTick?.();
+    expect(feedback?.hidden).toBe(true);
+    expect(
+      app.querySelector('[data-seat="1"]'),
+    ).not.toBeNull();
+
+    connection.close();
+  });
+
 });
