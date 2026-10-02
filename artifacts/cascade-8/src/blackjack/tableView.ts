@@ -114,7 +114,7 @@ function renderCard(
   `;
 }
 
-function renderCardStack(
+export function renderBlackjackCardStack(
   cards: readonly (BlackjackCardViewModel | null)[] | undefined,
   fallbackCount: number,
   className = "",
@@ -128,7 +128,7 @@ function renderCardStack(
   ).join("");
 }
 
-function renderSeat(seat: BlackjackTableSeatViewModel): string {
+export function renderBlackjackSeat(seat: BlackjackTableSeatViewModel): string {
   const total =
     seat.total === null
       ? ""
@@ -153,7 +153,7 @@ function renderSeat(seat: BlackjackTableSeatViewModel): string {
       aria-label="Blackjack seat ${seat.seatNumber}"
     >
       <div class="blackjack-seat-cards" aria-label="Seat ${seat.seatNumber} cards">
-        ${renderCardStack(seat.cards, 2)}
+        ${renderBlackjackCardStack(seat.cards, 2)}
       </div>
       <div class="blackjack-seat-copy">
         <span class="blackjack-seat-label">${escapeHtml(seat.label)}</span>
@@ -208,13 +208,13 @@ export function renderBlackjackTableShell(
                 <i></i><i></i><i></i>
               </div>
               <div class="blackjack-dealer-cards" aria-label="Dealer cards">
-                ${renderCardStack(model.dealerCards, 2, "is-dealer")}
+                ${renderBlackjackCardStack(model.dealerCards, 2, "is-dealer")}
               </div>
               <strong class="blackjack-dealer-total">${escapeHtml(model.dealerTotalLabel)}</strong>
             </section>
 
             <div class="blackjack-seat-arc" aria-label="Five player seats">
-              ${orderedSeats.map(renderSeat).join("")}
+              ${orderedSeats.map(renderBlackjackSeat).join("")}
             </div>
 
             <div class="blackjack-table-rule">
@@ -260,18 +260,20 @@ export function renderBlackjackTableShell(
           >${model.actionStatusLabel ? escapeHtml(model.actionStatusLabel) : ""}</span>
         </div>
 
-        ${model.roundResult
-          ? `
-            <div
-              class="blackjack-round-result"
-              data-result-tone="${model.roundResult.tone}"
-              aria-live="polite"
-            >
-              <strong>${escapeHtml(model.roundResult.title)}</strong>
-              <span>${escapeHtml(model.roundResult.detail)}</span>
-            </div>
-          `
-          : ""}
+        <div data-blackjack-region="round-result">
+          ${model.roundResult
+            ? `
+              <div
+                class="blackjack-round-result"
+                data-result-tone="${model.roundResult.tone}"
+                aria-live="polite"
+              >
+                <strong>${escapeHtml(model.roundResult.title)}</strong>
+                <span>${escapeHtml(model.roundResult.detail)}</span>
+              </div>
+            `
+            : ""}
+        </div>
       </section>
 
       <footer class="blackjack-footnote">
