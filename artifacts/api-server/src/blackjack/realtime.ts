@@ -38,6 +38,13 @@ export const BLACKJACK_WS_PATH = "/api/blackjack/ws" as const;
 export const BLACKJACK_WS_CLOSE_SESSION_REPLACED = 4001 as const;
 export const BLACKJACK_WS_CLOSE_SNAPSHOT_UNAVAILABLE = 1013 as const;
 export const BLACKJACK_WS_CLOSE_IDENTITY_UNAVAILABLE = 1008 as const;
+export const BLACKJACK_WS_CLOSE_POLICY_VIOLATION = 1008 as const;
+export const BLACKJACK_WS_MAX_PAYLOAD_BYTES = 16 * 1024;
+export const BLACKJACK_WS_MESSAGE_RATE_LIMIT = 60;
+export const BLACKJACK_WS_MESSAGE_RATE_WINDOW_MS = 10_000;
+export const BLACKJACK_WS_MUTATION_RATE_LIMIT = 20;
+export const BLACKJACK_WS_MUTATION_RATE_WINDOW_MS = 5_000;
+export const BLACKJACK_WS_INVALID_MESSAGE_STRIKES = 3;
 
 export type BlackjackRealtimeSource = Readonly<{
   getSnapshot: () =>
@@ -87,6 +94,12 @@ export type BlackjackRealtimeOptions = Readonly<{
     request: BlackjackSeatLeaveRequest,
     acknowledge: (result: BlackjackSeatLeaveAccepted)=>void,
   ) => void | Promise<void>;
+  maxPayloadBytes?: number;
+  messageRateLimit?: number;
+  messageRateWindowMs?: number;
+  mutationRateLimit?: number;
+  mutationRateWindowMs?: number;
+  invalidMessageStrikeLimit?: number;
 }>;
 
 export type BlackjackRealtimeRuntime = Readonly<{
@@ -129,16 +142,119 @@ export function attachBlackjackWebSocket(
   source: BlackjackRealtimeSource,
   options: BlackjackRealtimeOptions = {},
 ): BlackjackRealtimeRuntime {
-  const webSocketServer = new WebSocketServer({ noServer: true });
+  const maxPayloadBytes=
+    options.maxPayloadBytes ?? BLACKJACK_WS_MAX_PAYLOAD_BYTES;
+  const messageRateLimit=
+    options.messageRateLimit ?? BLACKJACK_WS_MESSAGE_RATE_LIMIT;
+  const messageRateWindowMs=
+    options.messageRateWindowMs ?? BLACKJACK_WS_MESSAGE_RATE_WINDOW_MS;
+  const mutationRateLimit=
+    options.mutationRateLimit ?? BLACKJACK_WS_MUTATION_RATE_LIMIT;
+  const mutationRateWindowMs=
+    options.mutationRateWindowMs ?? BLACKJACK_WS_MUTATION_RATE_WINDOW_MS;
+  const invalidMessageStrikeLimit=
+    options.invalidMessageStrikeLimit ??
+    BLACKJACK_WS_INVALID_MESSAGE_STRIKES;
+
+  for(const [label,value,min] of [
+    ["maxPayloadBytes",maxPayloadBytes,256],
+    ["messageRateLimit",messageRateLimit,1],
+    ["messageRateWindowMs",messageRateWindowMs,100],
+    ["mutationRateLimit",mutationRateLimit,1],
+    ["mutationRateWindowMs",mutationRateWindowMs,100],
+    ["invalidMessageStrikeLimit",invalidMessageStrikeLimit,1],
+  ] as const){
+    if(!Number.isSafeInteger(value) || value<min){
+      throw new RangeError(
+        "Blackjack realtime " + label + " is invalid",
+      );
+    }
+  }
+
+  const webSocketServer = new WebSocketServer({
+    noServer: true,
+    maxPayload:maxPayloadBytes,
+    perMessageDeflate:false,
+  });
   const connections = new Set<WebSocket>();
   const connectionIdBySocket = new Map<WebSocket, string>();
   const socketByConnectionId = new Map<string, WebSocket>();
   const identityBySocket = new Map<WebSocket, BlackjackRealtimeIdentity>();
+  const messageRateBySocket = new Map<
+    WebSocket,
+    {windowStartedAtMs:number;count:number}
+  >();
+  const mutationRateBySocket = new Map<
+    WebSocket,
+    {windowStartedAtMs:number;count:number}
+  >();
+  const invalidMessageStrikesBySocket = new Map<WebSocket,number>();
   let connectionRegistry: BlackjackConnectionRegistry =
     createBlackjackConnectionRegistry();
   const createConnectionId = options.createConnectionId ?? randomUUID;
   const nowMs = options.nowMs ?? Date.now;
   let closed = false;
+
+  const consumeRate=(
+    map: Map<WebSocket,{windowStartedAtMs:number;count:number}>,
+    socket: WebSocket,
+    limit: number,
+    windowMs: number,
+  ): boolean => {
+    const now=nowMs();
+    const current=map.get(socket);
+    if(
+      current===undefined ||
+      now-current.windowStartedAtMs>=windowMs
+    ){
+      map.set(socket,{windowStartedAtMs:now,count:1});
+      return true;
+    }
+    current.count+=1;
+    return current.count<=limit;
+  };
+
+  const closePolicyViolation=(
+    socket: WebSocket,
+    error: string,
+  )=>{
+    send(socket,{type:"error",error});
+    if(socket.readyState===WebSocket.OPEN){
+      socket.close(BLACKJACK_WS_CLOSE_POLICY_VIOLATION,error);
+    }
+  };
+
+  const strikeInvalidMessage=(socket: WebSocket)=>{
+    const strikes=(invalidMessageStrikesBySocket.get(socket) ?? 0)+1;
+    invalidMessageStrikesBySocket.set(socket,strikes);
+    send(socket,{
+      type:"error",
+      error:"BLACKJACK_INVALID_MESSAGE",
+    });
+    if(strikes>=invalidMessageStrikeLimit && socket.readyState===WebSocket.OPEN){
+      socket.close(
+        BLACKJACK_WS_CLOSE_POLICY_VIOLATION,
+        "BLACKJACK_INVALID_MESSAGE",
+      );
+    }
+  };
+
+  const mutationMessageTypes=new Set([
+    "CLAIM_SEAT",
+    "LEAVE_SEAT",
+    "HIT",
+    "STAND",
+    "DOUBLE",
+    "SPLIT",
+    "PLACE_BET",
+    "CLEAR_BET",
+    "READY",
+  ]);
+
+  const knownMessageTypes=new Set([
+    "sync",
+    ...mutationMessageTypes,
+  ]);
 
   const sendPrivatePlayerState=(
     socket: WebSocket,
@@ -471,6 +587,9 @@ export function attachBlackjackWebSocket(
       connectionIdBySocket.delete(socket);
       socketByConnectionId.delete(connectionId);
       identityBySocket.delete(socket);
+      messageRateBySocket.delete(socket);
+      mutationRateBySocket.delete(socket);
+      invalidMessageStrikesBySocket.delete(socket);
       connectionRegistry = releaseBlackjackConnection(
         connectionRegistry,
         connectionId,
@@ -515,7 +634,19 @@ export function attachBlackjackWebSocket(
         return;
       }
 
-      if (identity !== null) {
+      if(identity===null){
+        send(socket,{
+          type:"error",
+          error:"BLACKJACK_AUTH_REQUIRED",
+        });
+        socket.close(
+          BLACKJACK_WS_CLOSE_POLICY_VIOLATION,
+          "BLACKJACK_AUTH_REQUIRED",
+        );
+        return;
+      }
+
+      {
         try {
           const claim = claimBlackjackConnection(connectionRegistry, {
             connectionId,
@@ -570,37 +701,63 @@ export function attachBlackjackWebSocket(
 
     connections.add(socket);
 
-    socket.on("message", (raw) => {
-      const message = parseMessage(raw.toString());
-
-      if (
-        message === "sync" ||
-        (
-          typeof message === "object" &&
-          message !== null &&
-          "type" in message &&
-          (message as { type?: unknown }).type === "sync"
+    socket.on("message", (raw,isBinary) => {
+      if(
+        !consumeRate(
+          messageRateBySocket,
+          socket,
+          messageRateLimit,
+          messageRateWindowMs,
         )
-      ) {
+      ){
+        closePolicyViolation(socket,"BLACKJACK_RATE_LIMITED");
+        return;
+      }
+
+      if(isBinary){
+        strikeInvalidMessage(socket);
+        return;
+      }
+
+      const message = parseMessage(raw.toString());
+      const messageType=
+        message==="sync"
+          ? "sync"
+          : typeof message==="object" &&
+              message!==null &&
+              "type" in message &&
+              typeof (message as {type?:unknown}).type==="string"
+            ? (message as {type:string}).type
+            : null;
+
+      if(messageType===null || !knownMessageTypes.has(messageType)){
+        strikeInvalidMessage(socket);
+        return;
+      }
+
+      if(
+        mutationMessageTypes.has(messageType) &&
+        !consumeRate(
+          mutationRateBySocket,
+          socket,
+          mutationRateLimit,
+          mutationRateWindowMs,
+        )
+      ){
+        closePolicyViolation(socket,"BLACKJACK_ACTION_RATE_LIMITED");
+        return;
+      }
+
+      if(messageType==="sync"){
         void handleSync(socket, message);
         return;
       }
 
-      if(
-        typeof message==="object" &&
-        message!==null &&
-        "type" in message &&
-        (message as {type?:unknown}).type==="CLAIM_SEAT"
-      ){
+      if(messageType==="CLAIM_SEAT"){
         void handleSeatClaimMessage(socket,message);
         return;
       }
-      if(
-        typeof message==="object" &&
-        message!==null &&
-        "type" in message &&
-        (message as {type?:unknown}).type==="LEAVE_SEAT"
-      ){
+      if(messageType==="LEAVE_SEAT"){
         void handleSeatLeaveMessage(socket,message);
         return;
       }
@@ -632,6 +789,9 @@ export function attachBlackjackWebSocket(
       connectionIdBySocket.clear();
       socketByConnectionId.clear();
       identityBySocket.clear();
+      messageRateBySocket.clear();
+      mutationRateBySocket.clear();
+      invalidMessageStrikesBySocket.clear();
       connectionRegistry = createBlackjackConnectionRegistry();
       webSocketServer.close();
     },
