@@ -198,6 +198,7 @@ function patchSeatNode(
     );
     const addedCard=
       cardCount(seat.cards)>cardCount(previous.cards);
+    cards.classList.remove("is-dealing");
     replaceChildrenFromMarkup(
       cards,
       renderBlackjackCardStack(seat.cards,2),
@@ -281,6 +282,7 @@ function patchDealer(
   const addedCard=
     cardCount(model.dealerCards)>cardCount(previous.dealerCards);
   const holeRevealed=dealerHoleRevealed(previous,model);
+  cards.classList.remove("is-dealing","is-hole-flip");
   replaceChildrenFromMarkup(
     cards,
     renderBlackjackCardStack(
@@ -407,6 +409,11 @@ function patchBettingPanel(
   );
   if(model.totalBetLabel!==previous.totalBetLabel){
     restartAnimationClass(betCircle,"is-bet-pulse");
+    for(const chip of panel.querySelectorAll<HTMLElement>(
+      ".is-chip-pulse",
+    )){
+      chip.classList.remove("is-chip-pulse");
+    }
     const selectedChip=panel.querySelector<HTMLElement>(
       '[data-blackjack-chip="' + model.selectedChipCredits + '"]',
     );
