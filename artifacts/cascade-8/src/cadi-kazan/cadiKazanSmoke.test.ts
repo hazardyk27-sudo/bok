@@ -521,6 +521,20 @@ describe("cadi kazan route smoke contract", () => {
   });
 
 
+  it("prepares the touched result under the base layer before the existing settlement threshold", () => {
+    expect(scratchSurfaceSource).toContain("onPrepare?: () => Promise<void>");
+    expect(scratchSurfaceSource).toContain("this.ensureResultPrepared()");
+    expect(scratchSurfaceSource).toContain("this.resultPrepared");
+    expect(witchClientSource).toContain("/prepare-reveal");
+    expect(witchClientSource).toContain("preparedReveals");
+    expect(witchClientSource).toContain("paintPreparedReveal");
+    expect(witchClientSource).toContain("onPrepare: async () =>");
+    expect(witchClientSource).toContain("getScratchCellLayerMarkup(round.mode)");
+    expect(visualLockSource).toContain("PASS 42 — prepared-under-coating result pipeline");
+    expect(visualLockSource).toContain('[data-witch-result-active="true"]');
+  });
+
+
   it("rebuilds result slots on every new round so a previous Office symbol can never flash first", () => {
     expect(witchClientSource).toContain("const boardRoundChanged = board?.dataset.roundId !== round.id");
     expect(witchClientSource).toContain("board.dataset.roundId = round.id");
