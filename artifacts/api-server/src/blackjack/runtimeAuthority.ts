@@ -90,6 +90,9 @@ export function createBlackjackRuntimeAuthority(
     ) =>
       | BlackjackCoordinatorAccount
       | Promise<BlackjackCoordinatorAccount>;
+    loadAvailableBalanceCents?: (
+      userId: string,
+    ) => number | Promise<number>;
   },
 ): BlackjackRuntimeAuthority {
   const queue=input.queue ?? createBlackjackActionQueue();
@@ -111,6 +114,31 @@ export function createBlackjackRuntimeAuthority(
     if(fatal!==null){
       throw new Error(
         "Blackjack runtime authority is fail-closed after a fatal error",
+      );
+    }
+  };
+
+  const refreshAccountAvailableBalance=async(playerId: string)=>{
+    if(!input.loadAvailableBalanceCents) return;
+    const account=coordinator.getAccount(playerId);
+    const availableBalanceCents=await input.loadAvailableBalanceCents(
+      account.userId,
+    );
+    coordinator.rebaseAccountAvailableBalance(
+      playerId,
+      availableBalanceCents,
+    );
+  };
+
+  const refreshAllAvailableBalances=async()=>{
+    if(!input.loadAvailableBalanceCents) return;
+    for(const account of coordinator.getAccounts()){
+      const availableBalanceCents=await input.loadAvailableBalanceCents(
+        account.userId,
+      );
+      coordinator.rebaseAccountAvailableBalance(
+        account.playerId,
+        availableBalanceCents,
       );
     }
   };
@@ -139,6 +167,19 @@ export function createBlackjackRuntimeAuthority(
       const nowMs=input.nowMs();
       assertNowMs(nowMs);
 
+      const beforeTick=coordinator.getTable();
+      const bettingDeadlineReached=
+        beforeTick.phase==="BETTING" &&
+        beforeTick.round?.bettingClosesAtMs!==null &&
+        beforeTick.round?.bettingClosesAtMs!==undefined &&
+        nowMs>=beforeTick.round.bettingClosesAtMs;
+      if(
+        beforeTick.phase==="SETTLEMENT" ||
+        bettingDeadlineReached
+      ){
+        await refreshAllAvailableBalances();
+      }
+
       const result=await runBlackjackRoundRuntimeTick(
         coordinator,
         {
@@ -162,6 +203,9 @@ export function createBlackjackRuntimeAuthority(
     BlackjackRealtimePlayerActionTransactionHandler =
     (action,acknowledge)=>queue.enqueue(async()=>{
       assertHealthy();
+      await refreshAccountAvailableBalance(
+        action.envelope.actorPlayerId,
+      );
       const result=await coordinator.submit(action);
       const response: BlackjackRealtimePlayerActionHandlerResult=
         Object.freeze({
@@ -195,7 +239,9 @@ export function createBlackjackRuntimeAuthority(
     const player=coordinator.getTable().players.find(
       (candidate)=>candidate.playerId===identity.playerId,
     );
-    if(!player || player.connected) return;
+    if(!player) return;
+    await refreshAccountAvailableBalance(identity.playerId);
+    if(player.connected) return;
 
     const result=await coordinator.reconnectPlayerSession({
       playerId:identity.playerId,
@@ -247,6 +293,7 @@ export function createBlackjackRuntimeAuthority(
         player.userId===identity.userId,
     );
     if(existing){
+      await refreshAccountAvailableBalance(existing.playerId);
       if(
         existing.playerId!==identity.playerId ||
         existing.userId!==identity.userId ||

@@ -29,7 +29,10 @@ import type {
 } from "./domain";
 import { leaveBlackjackSeat, seatBlackjackPlayer } from "./participation";
 import { BLACKJACK_BETTING_WINDOW_MS } from "./roundFlow";
-import type { BlackjackReservationBook } from "./reservations";
+import {
+  assertBlackjackReservationWalletConsistency,
+  type BlackjackReservationBook,
+} from "./reservations";
 import {
   applyBlackjackDisconnectedTurnPolicy,
   createBlackjackReconnectRegistry,
@@ -50,7 +53,10 @@ import {
 } from "./roundFlow";
 import { standBlackjackCurrentHand } from "./stand";
 import { applyBlackjackTurnTimeout } from "./turnEngine";
-import type { BlackjackWalletLedgerState } from "./walletLedger";
+import {
+  rebaseBlackjackWalletAvailableBalance,
+  type BlackjackWalletLedgerState,
+} from "./walletLedger";
 
 export type BlackjackCoordinatorAccount = Readonly<{
   playerId: string;
@@ -360,6 +366,57 @@ export class BlackjackPlayerActionCoordinator {
 
   getAccounts(): readonly BlackjackCoordinatorAccount[] {
     return Object.freeze(Array.from(this.accounts.values()));
+  }
+
+  rebaseAccountAvailableBalance(
+    playerId: string,
+    availableBalanceCents: number,
+  ): BlackjackCoordinatorAccount {
+    const account=this.getAccount(playerId);
+    const wallet=rebaseBlackjackWalletAvailableBalance(
+      account.wallet,
+      availableBalanceCents,
+    );
+    assertBlackjackReservationWalletConsistency(wallet,account.book);
+    if(wallet===account.wallet) return account;
+
+    const rebased=freezeAccount({...account,wallet});
+    this.accounts.set(playerId,rebased);
+    return rebased;
+  }
+
+  synchronizeWalletStates(
+    wallets: readonly BlackjackWalletLedgerState[],
+  ): void {
+    const byUserId=new Map<string,BlackjackWalletLedgerState>();
+    for(const wallet of wallets){
+      if(byUserId.has(wallet.userId)){
+        throw new Error(
+          "Blackjack wallet synchronization contains duplicate userId",
+        );
+      }
+      byUserId.set(wallet.userId,wallet);
+    }
+
+    if(byUserId.size!==this.accounts.size){
+      throw new Error(
+        "Blackjack wallet synchronization account count mismatch",
+      );
+    }
+
+    for(const [playerId,account] of this.accounts){
+      const wallet=byUserId.get(account.userId);
+      if(!wallet){
+        throw new Error(
+          "Blackjack wallet synchronization is missing an account wallet",
+        );
+      }
+      assertBlackjackReservationWalletConsistency(wallet,account.book);
+      this.accounts.set(
+        playerId,
+        freezeAccount({...account,wallet}),
+      );
+    }
   }
 
   getBettingPositions(): readonly BlackjackBettingPosition[] {

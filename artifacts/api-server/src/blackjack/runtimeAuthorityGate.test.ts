@@ -158,6 +158,37 @@ function bettingAction(
 }
 
 describe("blackjack full lifecycle + recovery multiplayer gate",()=>{
+  it("refreshes the actor wallet from shared authority before accepting a bet",async()=>{
+    const game=coordinator();
+    let externalBalance=150_000;
+    const authority=createBlackjackRuntimeAuthority(game,{
+      nowMs:()=>1_000,
+      persist:async()=>undefined,
+      loadAvailableBalanceCents:async(userId)=>{
+        expect(userId).toBe("gate-user-1");
+        return externalBalance;
+      },
+    });
+
+    await authority.handlePlayerActionTransaction(
+      bettingAction(game,1,"PLACE_BET","external-balance-bet",1_000),
+      ()=>undefined,
+    );
+
+    expect(
+      game.getAccount("gate-player-1").wallet.availableBalanceCents,
+    ).toBe(149_000);
+
+    externalBalance=90_000;
+    await authority.handlePlayerActionTransaction(
+      bettingAction(game,1,"PLACE_BET","external-balance-bet-2",1_001),
+      ()=>undefined,
+    );
+    expect(
+      game.getAccount("gate-player-1").wallet.availableBalanceCents,
+    ).toBe(89_000);
+  });
+
   it("runs five players through bet, deal, timeouts, settlement, next round and restart recovery",async()=>{
     const game=coordinator();
     let clock=1_000;
