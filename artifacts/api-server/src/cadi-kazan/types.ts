@@ -103,7 +103,9 @@ export function getVisibleRevealedCells(
   cellCount: number,
   revealedCells: number[],
 ) {
-  if (mode === "ADVANCED" && status === "BUST") {
+  // Every bomb-based scratch card exposes the complete board after BUST.
+  // Office has no bomb/BUST path and keeps its own terminal visibility rules.
+  if (mode !== "OFFICE_MATCH_6" && status === "BUST") {
     return Array.from({ length: cellCount }, (_, index) => index);
   }
   return [...revealedCells];

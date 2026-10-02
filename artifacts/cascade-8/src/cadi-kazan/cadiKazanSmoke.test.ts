@@ -479,8 +479,8 @@ describe("cadi kazan route smoke contract", () => {
   });
 
 
-  it("finishes Advanced 25 Part 1 with full BUST reveal and centered placement", () => {
-    expect(witchClientSource).toContain('round.mode === "ADVANCED" && round.status === "BUST"');
+  it("finishes every bomb card with an immediate full BUST reveal and keeps Advanced centered", () => {
+    expect(witchClientSource).toContain('round.mode !== "OFFICE_MATCH_6" && round.status === "BUST"');
     expect(witchClientSource).toContain("allCells.forEach((index) => this.terminalRevealVisibleCells.add(index))");
     expect(witchClientSource).not.toContain('data-witch-advanced-card-value');
     expect(visualLockSource).toContain("PASS 37 — ADVANCED 25 Part 1: terminal reveal + centered table placement");
@@ -544,6 +544,15 @@ describe("cadi kazan route smoke contract", () => {
     expect(witchClientSource).not.toContain('officeArt.setAttribute("src"');
     expect(witchClientSource).not.toContain('genericArt.setAttribute("src"');
     expect(visualLockSource).toContain("PASS 42 — prepared-under-coating result pipeline");
+  });
+
+
+  it("never clears a prepared result during transient renders, preventing blank white cells", () => {
+    expect(witchClientSource).toContain("a selected result candidate");
+    expect(witchClientSource).toContain("if (!prepared || prepared.roundId !== round.id");
+    expect(witchClientSource).toContain("const preparedKey = prepared.kind === \"OFFICE\" ? prepared.symbolId : prepared.kind");
+    expect(witchClientSource).toContain("if (button.dataset.preparedResult !== preparedKey)");
+    expect(witchClientSource).not.toContain("delete button.dataset.preparedResult");
   });
 
 

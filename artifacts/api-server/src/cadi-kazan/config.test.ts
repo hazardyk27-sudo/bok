@@ -56,12 +56,12 @@ describe("Cadı Kazan payout configuration", () => {
   });
 
 
-  it("exposes all 25 Advanced cells after BUST while keeping active play redacted", () => {
+  it("exposes every bomb-card cell after BUST while keeping active play redacted", () => {
     expect(getVisibleRevealedCells("ADVANCED", "ACTIVE", 25, [2, 7])).toEqual([2, 7]);
     expect(getVisibleRevealedCells("ADVANCED", "BUST", 25, [2, 7, 11])).toEqual(
       Array.from({ length: 25 }, (_, index) => index),
     );
-    expect(getVisibleRevealedCells("STANDARD", "BUST", 5, [1])).toEqual([1]);
+    expect(getVisibleRevealedCells("STANDARD", "BUST", 5, [1])).toEqual([0, 1, 2, 3, 4]);
   });
 
   it("keeps cash-out amount calculation server-owned", () => {
