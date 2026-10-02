@@ -24,6 +24,8 @@ export const OFFICE_MATCH_SYMBOLS = [
   { id: "MICHAEL", label: "Michael Scott", multiplierBps: 10_000, special: true, assetKey: "office-michael-100x", artworkUrl: OFFICE_ARTWORK_URLS.MICHAEL, prizeColor: "#FFC20A", prizeTextColor: "#1A1400" },
 ] as const;
 
+export const OFFICE_RESULT_ART_URLS = OFFICE_MATCH_SYMBOLS.map((symbol) => symbol.artworkUrl);
+
 export type OfficeMatchSymbolId = (typeof OFFICE_MATCH_SYMBOLS)[number]["id"];
 
 export const OFFICE_MATCH_CARD_CONFIG = {

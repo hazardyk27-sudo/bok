@@ -1,9 +1,19 @@
 import { ScratchSurface } from "./scratch/ScratchSurface";
-import { getScratchCellLayerMarkup, getScratchCellPresentation } from "./scratch/ScratchPresentation";
+import {
+  SCRATCH_RESULT_ART_URLS,
+  getScratchCellLayerMarkup,
+  getScratchCellPresentation,
+} from "./scratch/ScratchPresentation";
 import { triggerScratchHaptic } from "./scratch/ScratchFeedback";
 import { ScratchTelemetry } from "./scratch/ScratchTelemetry";
 import { AudioManager } from "./AudioManager";
-import { OFFICE_CARD_ART_URL, OFFICE_MATCH_SYMBOLS, type OfficeMatchSymbolId } from "./office/officeCardConfig";
+import {
+  OFFICE_CARD_ART_URL,
+  OFFICE_MATCH_SYMBOLS,
+  OFFICE_RESULT_ART_URLS,
+  type OfficeMatchSymbolId,
+} from "./office/officeCardConfig";
+import { fitAdvancedCardBounds } from "./advanced/advancedCardFit";
 
 type CadiKazanMode = "STANDARD" | "ADVANCED" | "OFFICE_MATCH_6";
 type CadiKazanStatus = "ACTIVE" | "CASHED_OUT" | "BUST" | "COMPLETED";
@@ -121,6 +131,42 @@ const formatTicketPrice = (cents: number) => {
 };
 
 const newIdempotencyKey = (prefix: string) => `${prefix}-${crypto.randomUUID()}-${Date.now()}`;
+
+const ALL_SCRATCH_RESULT_ART_URLS = [...new Set([
+  ...SCRATCH_RESULT_ART_URLS,
+  ...OFFICE_RESULT_ART_URLS,
+])];
+
+function preloadScratchResultAssets() {
+  if (typeof Image === "undefined") return Promise.resolve();
+
+  return Promise.all(ALL_SCRATCH_RESULT_ART_URLS.map((url) => new Promise<void>((resolve) => {
+    const image = new Image();
+    let settled = false;
+    const finish = async () => {
+      if (settled) return;
+      settled = true;
+      try {
+        await image.decode();
+      } catch {
+        // A failed decode must not make the game unusable. The browser can
+        // still retry the already-cached URL in the persistent result slot.
+      }
+      resolve();
+    };
+    image.addEventListener("load", () => { void finish(); }, { once: true });
+    image.addEventListener("error", () => {
+      if (settled) return;
+      settled = true;
+      resolve();
+    }, { once: true });
+    image.decoding = "async";
+    image.src = url;
+    if (image.complete && image.naturalWidth > 0) void finish();
+  }))).then(() => undefined);
+}
+
+const scratchResultAssetsReady = preloadScratchResultAssets();
 
 const REVEAL_ATTEMPT_TIMEOUT_MS = 2200;
 const REVEAL_MAX_ATTEMPTS = 2;
@@ -430,11 +476,53 @@ export class WitchClient {
   private lastRevealInput: "pointer" | "keyboard" = "pointer";
   private entranceRoundId: string | null = null;
   private entranceTimer: number | null = null;
+  private advancedFitObserver?: ResizeObserver;
+  private advancedFitFrame: number | null = null;
 
   constructor(root: HTMLElement) {
     this.root = root;
     this.bind();
+    this.bindAdvancedCardFit();
     void this.load();
+  }
+
+  private bindAdvancedCardFit() {
+    const surface = this.root.querySelector<HTMLElement>(".witch-table-surface");
+    if (!surface) return;
+
+    if (typeof ResizeObserver !== "undefined") {
+      this.advancedFitObserver = new ResizeObserver(() => this.scheduleAdvancedCardFit());
+      this.advancedFitObserver.observe(surface);
+    } else {
+      window.addEventListener("resize", this.scheduleAdvancedCardFit, { passive: true });
+    }
+    this.scheduleAdvancedCardFit();
+  }
+
+  private readonly scheduleAdvancedCardFit = () => {
+    if (this.advancedFitFrame !== null) return;
+    this.advancedFitFrame = window.requestAnimationFrame(() => {
+      this.advancedFitFrame = null;
+      this.applyAdvancedCardFit();
+    });
+  };
+
+  private applyAdvancedCardFit() {
+    const ticket = this.root.querySelector<HTMLElement>("[data-witch-ticket]");
+    const surface = this.root.querySelector<HTMLElement>(".witch-table-surface");
+    if (!ticket || !surface) return;
+
+    if (!this.root.classList.contains("is-advanced-theme") || ticket.hidden) {
+      ticket.style.removeProperty("--advanced-fit-width");
+      ticket.style.removeProperty("--advanced-fit-height");
+      return;
+    }
+
+    const fitted = fitAdvancedCardBounds(surface.clientWidth, surface.clientHeight);
+    if (fitted.width <= 0 || fitted.height <= 0) return;
+
+    ticket.style.setProperty("--advanced-fit-width", `${fitted.width}px`);
+    ticket.style.setProperty("--advanced-fit-height", `${fitted.height}px`);
   }
 
   private bind() {
@@ -626,6 +714,7 @@ export class WitchClient {
       const response = await fetch(`${API_BASE}/state`, { credentials: "same-origin" });
       const data = await response.json() as CadiKazanState & { error?: string };
       if (!response.ok) throw new Error(data.error ?? "Cadı Kazan yüklenemedi");
+      await scratchResultAssetsReady;
       this.applyState(data);
       if (data.round) this.mode = data.round.mode;
       this.setStatus("SERVER’A BAĞLI", true);
@@ -662,6 +751,7 @@ export class WitchClient {
       });
       const data = await response.json() as CadiKazanState & { error?: string };
       if (!response.ok) throw new Error(data.error ?? "Bilet başlatılamadı");
+      await scratchResultAssetsReady;
       this.applyState(data);
       this.audio.ticketPurchase();
       if (data.round) {
@@ -959,6 +1049,7 @@ export class WitchClient {
       ticket.classList.toggle("is-office", visualMode === "OFFICE_MATCH_6");
       ticket.classList.toggle("is-advanced", visualMode === "ADVANCED");
     }
+    this.scheduleAdvancedCardFit();
 
     const usesMasterCardArtwork = visualMode === "ADVANCED" || visualMode === "OFFICE_MATCH_6";
     this.root.querySelectorAll<HTMLElement>(
@@ -1125,6 +1216,15 @@ export class WitchClient {
     const winningOfficeSymbolId = round.mode === "OFFICE_MATCH_6" && round.status === "COMPLETED" && round.payoutCents > 0
       ? OFFICE_MATCH_SYMBOLS.find((symbol) => (officeSymbolCounts.get(symbol.id) ?? 0) >= 3)?.id ?? null
       : null;
+    const winningOfficeIndices = new Set<number>();
+    if (winningOfficeSymbolId) {
+      (round.revealedOfficeCells ?? [])
+        .filter((cell) => cell.symbolId === winningOfficeSymbolId)
+        .map((cell) => cell.index)
+        .sort((left, right) => left - right)
+        .slice(0, 3)
+        .forEach((index) => winningOfficeIndices.add(index));
+    }
 
     this.root.querySelectorAll<HTMLButtonElement>("[data-witch-cell]").forEach((button) => {
       const index = Number(button.dataset.witchCell);
@@ -1145,13 +1245,22 @@ export class WitchClient {
       button.classList.toggle("is-office-special", Boolean(officePresentation?.special));
       button.classList.toggle(
         "is-office-winning-match",
-        round.mode === "OFFICE_MATCH_6" && Boolean(winningOfficeSymbolId) && visibleOfficeSymbols.get(index) === winningOfficeSymbolId,
+        round.mode === "OFFICE_MATCH_6" && winningOfficeIndices.has(index),
+      );
+      button.classList.toggle(
+        "is-office-win-dimmed",
+        round.mode === "OFFICE_MATCH_6" && winningOfficeIndices.size === 3 && !winningOfficeIndices.has(index),
       );
       button.classList.toggle("is-pending", this.pendingRevealCell === index);
       button.classList.toggle("is-terminal-reveal", this.terminalRevealAnimating && isTerminallyRevealed && !isActuallyRevealed);
       button.setAttribute("aria-label", presentation.resultClass ? presentation.label : "Kazınabilir kapalı alan");
       const content = button.querySelector<HTMLElement>(".witch-cell-content");
       if (content) {
+        const genericArt = content.querySelector<HTMLImageElement>("[data-witch-result-art]");
+        const officeResult = content.querySelector<HTMLElement>("[data-witch-office-result]");
+        const officeArt = content.querySelector<HTMLImageElement>("[data-witch-office-result-art]");
+        const officePrizeNode = content.querySelector<HTMLElement>("[data-witch-office-result-prize]");
+
         if (round.mode === "OFFICE_MATCH_6" && officePresentation?.symbol) {
           const symbolId = visibleOfficeSymbols.get(index);
           const symbol = symbolId ? OFFICE_SYMBOL_BY_ID.get(symbolId) : undefined;
@@ -1161,21 +1270,31 @@ export class WitchClient {
           const symbolPrize = formatMoney(symbolPrizeCents, { compactInteger: true });
           const officePrizeColor = symbol?.prizeColor ?? "#E5E7E9";
           const officePrizeTextColor = symbol?.prizeTextColor ?? "#151719";
-          content.innerHTML = `
-            <span
-              class="witch-office-result-symbol"
-              data-office-symbol="${symbolId ?? ""}"
-              style="--office-symbol-color:${officePrizeColor};--office-symbol-text:${officePrizeTextColor}"
-            >
-              <img class="witch-office-result-art" src="${officePresentation.artworkUrl ?? ""}" alt="${officePresentation.symbol}" decoding="async" draggable="false">
-              <b class="witch-office-result-prize">${symbolPrize}</b>
-            </span>
-          `;
+          if (genericArt) genericArt.hidden = true;
+          if (officeResult) {
+            officeResult.hidden = false;
+            officeResult.dataset.officeSymbol = symbolId ?? "";
+            officeResult.style.setProperty("--office-symbol-color", officePrizeColor);
+            officeResult.style.setProperty("--office-symbol-text", officePrizeTextColor);
+          }
+          if (officeArt && officePresentation.artworkUrl) {
+            if (officeArt.getAttribute("src") !== officePresentation.artworkUrl) {
+              officeArt.setAttribute("src", officePresentation.artworkUrl);
+            }
+            officeArt.alt = officePresentation.symbol;
+          }
+          if (officePrizeNode) officePrizeNode.textContent = symbolPrize;
           button.setAttribute("aria-label", `${officePresentation.symbol} · ${symbolPrize}`);
-        } else if ("artworkUrl" in presentation && presentation.artworkUrl) {
-          content.innerHTML = `<img class="witch-cell-artwork" src="${presentation.artworkUrl}" alt="${"artworkAlt" in presentation ? presentation.artworkAlt ?? "" : ""}" decoding="async" draggable="false">`;
         } else {
-          content.textContent = presentation.symbol;
+          if (officeResult) officeResult.hidden = true;
+          const artworkUrl = "artworkUrl" in presentation ? presentation.artworkUrl : null;
+          if (genericArt && artworkUrl) {
+            if (genericArt.getAttribute("src") !== artworkUrl) genericArt.setAttribute("src", artworkUrl);
+            genericArt.alt = "artworkAlt" in presentation ? presentation.artworkAlt ?? "" : "";
+            genericArt.hidden = false;
+          } else if (genericArt) {
+            genericArt.hidden = true;
+          }
         }
       }
       const resultLabel = button.querySelector<HTMLElement>(".witch-cell-result-label");
