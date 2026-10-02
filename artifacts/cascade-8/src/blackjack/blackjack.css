@@ -1590,3 +1590,339 @@ body {
     transition: none !important;
   }
 }
+
+
+/* Part 9: responsive table geometry */
+.blackjack-root {
+  overflow-x: hidden;
+}
+
+.blackjack-stage {
+  min-width: 0;
+}
+
+.blackjack-table-frame {
+  width: min(
+    calc(100% - 8px),
+    var(--blackjack-table-max),
+    calc(177.78dvh - 391px)
+  );
+  height: auto;
+  min-height: 0;
+  aspect-ratio: 16 / 9;
+}
+
+.blackjack-dealer-zone {
+  top: var(--blackjack-dealer-top, 7%);
+  width: var(--blackjack-dealer-width, clamp(176px, 19%, 220px));
+}
+
+.blackjack-seat {
+  width: var(--blackjack-seat-width, clamp(136px, 14.6%, 172px));
+  min-height: var(--blackjack-seat-height, 96px);
+  left: var(--blackjack-seat-left, auto);
+  right: var(--blackjack-seat-right, auto);
+  top: var(--blackjack-seat-top, auto);
+  bottom: var(--blackjack-seat-bottom, auto);
+  transform: var(--blackjack-seat-transform, none);
+}
+
+.blackjack-seat-1 {
+  --blackjack-seat-left: 5%;
+  --blackjack-seat-top: 36%;
+}
+
+.blackjack-seat-2 {
+  --blackjack-seat-left: 17%;
+  --blackjack-seat-bottom: 9%;
+}
+
+.blackjack-seat-3 {
+  --blackjack-seat-left: 50%;
+  --blackjack-seat-bottom: 2.5%;
+  --blackjack-seat-transform: translateX(-50%);
+}
+
+.blackjack-seat-4 {
+  --blackjack-seat-right: 17%;
+  --blackjack-seat-bottom: 9%;
+}
+
+.blackjack-seat-5 {
+  --blackjack-seat-right: 5%;
+  --blackjack-seat-top: 36%;
+}
+
+@media (min-width: 1100px) and (min-aspect-ratio: 16 / 10) {
+  .blackjack-stage {
+    padding-block: clamp(8px, 1.5vh, 16px);
+  }
+
+  .blackjack-table-frame {
+    width: min(
+      calc(100% - 20px),
+      var(--blackjack-table-max),
+      calc(177.78dvh - 360px)
+    );
+  }
+
+  .blackjack-hud {
+    width: min(calc(100% - 32px), 1100px);
+  }
+}
+
+@media (orientation: landscape) and (max-height: 760px) {
+  .blackjack-root {
+    overflow-y: auto;
+    grid-template-rows: auto auto auto auto;
+  }
+
+  .blackjack-topbar {
+    min-height: 52px;
+    padding-block: 6px;
+  }
+
+  .blackjack-stage {
+    min-height: auto;
+    padding: 5px 8px;
+  }
+
+  .blackjack-table-frame {
+    width: min(
+      calc(100% - 8px),
+      980px,
+      calc(177.78dvh - 276px)
+    );
+    min-width: 0;
+  }
+
+  .blackjack-dealer-zone {
+    --blackjack-dealer-top: 4%;
+    --blackjack-dealer-width: clamp(144px, 22%, 184px);
+  }
+
+  .blackjack-seat {
+    --blackjack-seat-width: clamp(92px, 15.5%, 132px);
+    --blackjack-seat-height: 68px;
+    grid-template-columns: 40px minmax(0,1fr);
+    gap: 3px;
+    padding: 6px;
+  }
+
+  .blackjack-seat .blackjack-card-placeholder {
+    width: 25px;
+  }
+
+  .blackjack-seat-total {
+    font-size: 19px;
+  }
+
+  .blackjack-seat-label {
+    font-size: 7px;
+  }
+
+  .blackjack-table-rule {
+    top: 47%;
+    font-size: 8px;
+  }
+
+  .blackjack-hud {
+    width: min(calc(100% - 12px), 920px);
+    gap: 6px;
+    margin-bottom: 4px;
+  }
+
+  .blackjack-context-strip,
+  .blackjack-status-strip {
+    min-height: 42px;
+  }
+
+  .blackjack-actions button {
+    min-height: 44px;
+  }
+
+  .blackjack-footnote {
+    min-height: 18px;
+    padding-bottom: 4px;
+  }
+}
+
+@media (orientation: portrait) and (min-width: 600px) and (max-width: 1024px) {
+  .blackjack-root {
+    overflow-y: auto;
+    grid-template-rows: auto auto auto auto;
+  }
+
+  .blackjack-stage {
+    min-height: auto;
+    padding: 10px 10px 6px;
+  }
+
+  .blackjack-table-frame {
+    width: min(calc(100% - 12px), 820px);
+    aspect-ratio: 4 / 3;
+  }
+
+  .blackjack-dealer-zone {
+    --blackjack-dealer-top: 5%;
+    --blackjack-dealer-width: clamp(168px, 26%, 210px);
+  }
+
+  .blackjack-seat {
+    --blackjack-seat-width: clamp(112px, 19%, 146px);
+    --blackjack-seat-height: 78px;
+    grid-template-columns: 48px minmax(0,1fr);
+    gap: 4px;
+    padding: 7px;
+  }
+
+  .blackjack-seat-1 {
+    --blackjack-seat-left: 3%;
+    --blackjack-seat-top: 31%;
+  }
+
+  .blackjack-seat-2 {
+    --blackjack-seat-left: 7%;
+    --blackjack-seat-bottom: 17%;
+  }
+
+  .blackjack-seat-3 {
+    --blackjack-seat-bottom: 2%;
+  }
+
+  .blackjack-seat-4 {
+    --blackjack-seat-right: 7%;
+    --blackjack-seat-bottom: 17%;
+  }
+
+  .blackjack-seat-5 {
+    --blackjack-seat-right: 3%;
+    --blackjack-seat-top: 31%;
+  }
+
+  .blackjack-table-rule {
+    top: 47%;
+  }
+
+  .blackjack-hud {
+    width: min(calc(100% - 20px), 820px);
+  }
+}
+
+@media (orientation: portrait) and (max-width: 599px) {
+  .blackjack-root {
+    overflow-y: auto;
+    grid-template-rows: auto auto auto auto;
+  }
+
+  .blackjack-topbar {
+    position: sticky;
+    top: 0;
+    z-index: 40;
+    min-height: 54px;
+    padding: 7px 9px;
+  }
+
+  .blackjack-stage {
+    min-height: auto;
+    padding: 6px 5px 4px;
+  }
+
+  .blackjack-table-frame {
+    width: calc(100% - 4px);
+    aspect-ratio: 4 / 5;
+    padding: 6px;
+    border-radius: 40% 40% 14% 14% / 11% 11% 8% 8%;
+  }
+
+  .blackjack-table-felt {
+    border-radius: 39% 39% 12% 12% / 10% 10% 7% 7%;
+  }
+
+  .blackjack-felt-line {
+    inset: 15% 3% 13%;
+  }
+
+  .blackjack-dealer-zone {
+    --blackjack-dealer-top: 3.5%;
+    --blackjack-dealer-width: 152px;
+  }
+
+  .blackjack-card-placeholder {
+    width: 38px;
+  }
+
+  .blackjack-seat {
+    --blackjack-seat-width: clamp(92px, 27vw, 108px);
+    --blackjack-seat-height: 70px;
+    grid-template-columns: 38px minmax(0,1fr);
+    gap: 2px;
+    padding: 6px;
+    border-radius: 11px;
+  }
+
+  .blackjack-seat .blackjack-card-placeholder {
+    width: 24px;
+  }
+
+  .blackjack-seat-1 {
+    --blackjack-seat-left: 1.5%;
+    --blackjack-seat-top: 28%;
+  }
+
+  .blackjack-seat-2 {
+    --blackjack-seat-left: 2%;
+    --blackjack-seat-bottom: 18%;
+  }
+
+  .blackjack-seat-3 {
+    --blackjack-seat-width: clamp(118px, 34vw, 142px);
+    --blackjack-seat-bottom: 1.5%;
+  }
+
+  .blackjack-seat-4 {
+    --blackjack-seat-right: 2%;
+    --blackjack-seat-bottom: 18%;
+  }
+
+  .blackjack-seat-5 {
+    --blackjack-seat-right: 1.5%;
+    --blackjack-seat-top: 28%;
+  }
+
+  .blackjack-seat-label {
+    font-size: 7px;
+  }
+
+  .blackjack-seat-total {
+    font-size: 19px;
+  }
+
+  .blackjack-seat-bet {
+    font-size: 6px;
+  }
+
+  .blackjack-table-rule {
+    top: 47%;
+    gap: 4px;
+    font-size: 7px;
+  }
+
+  .blackjack-hud {
+    width: calc(100% - 10px);
+    margin-bottom: 4px;
+  }
+
+  .blackjack-context-strip {
+    min-height: 42px;
+  }
+
+  .blackjack-actions button {
+    min-height: 46px;
+  }
+
+  .blackjack-footnote {
+    min-height: 20px;
+    padding: 0 8px 6px;
+  }
+}
