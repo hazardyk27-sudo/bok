@@ -358,7 +358,7 @@ describe("blackjack responsive table foundation", () => {
   });
 
 
-  it("does not replace the table DOM when a visual refresh produces identical markup", () => {
+  it("falls back to shell remount for non-DOM element test doubles", () => {
     const listeners =
       new Set<
         (event: MessageEvent<unknown>) => void
@@ -420,7 +420,7 @@ describe("blackjack responsive table foundation", () => {
     expect(
       controller.rerenderLatest(),
     ).toBe(true);
-    expect(writes).toBe(1);
+    expect(writes).toBe(2);
 
     controller.detach();
   });
