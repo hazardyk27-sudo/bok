@@ -1506,6 +1506,19 @@ export class WitchClient {
           : null;
       const preparedVisual = authoritativePrepared ?? this.preparedReveals.get(index) ?? null;
       this.paintPreparedReveal(button, round, preparedVisual);
+
+      // Authoritative terminal/revealed state gets its own DOM marker. This is
+      // deliberately independent from the prepared-result cache so a BUST
+      // bomb can never render as a white empty cell if a transient render or
+      // candidate flag gets out of sync.
+      if (authoritativePrepared?.kind === "OFFICE") {
+        button.dataset.authoritativeResult = authoritativePrepared.symbolId;
+      } else if (authoritativePrepared) {
+        button.dataset.authoritativeResult = authoritativePrepared.kind;
+      } else {
+        delete button.dataset.authoritativeResult;
+      }
+
       const resultLabel = button.querySelector<HTMLElement>(".witch-cell-result-label");
       if (resultLabel) resultLabel.textContent = presentation.label;
       const layerCanvases = Array.from(button.querySelectorAll<HTMLCanvasElement>(".witch-scratch-layer"));
