@@ -389,15 +389,24 @@ body {
   display: grid;
   grid-template-columns: minmax(260px, .9fr) minmax(420px, 1.5fr);
   grid-template-areas:
-    "status actions"
-    "betting betting";
+    "status context"
+    "betting betting"
+    "actions actions";
   gap: 12px;
 }
 
 .blackjack-status-strip,
 .blackjack-actions {
-  display: grid;
   gap: 8px;
+}
+
+.blackjack-status-strip {
+  display: grid;
+}
+
+.blackjack-actions {
+  display: flex;
+  align-items: stretch;
 }
 
 .blackjack-status-strip {
@@ -433,7 +442,15 @@ body {
 
 .blackjack-actions {
   grid-area: actions;
-  grid-template-columns: repeat(4, 1fr);
+}
+
+.blackjack-actions > button {
+  flex: 1 1 0;
+}
+
+.blackjack-actions > button[data-blackjack-action="DOUBLE"],
+.blackjack-actions > button[data-blackjack-action="SPLIT"] {
+  flex: .72 1 0;
 }
 
 .blackjack-actions button {
@@ -452,6 +469,112 @@ body {
   border-color: rgba(200,169,106,.72);
 }
 
+
+
+.blackjack-root [hidden] {
+  display: none !important;
+}
+
+.blackjack-context-strip {
+  grid-area: context;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 8px 10px;
+  border: 1px solid rgba(255,255,255,.075);
+  border-radius: 14px;
+  background: rgba(15,18,16,.9);
+}
+
+.blackjack-context-prompt {
+  min-width: 0;
+  overflow: hidden;
+  color: var(--blackjack-ivory);
+  font-size: 11px;
+  letter-spacing: .08em;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.blackjack-seat-confirm {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+
+.blackjack-seat-confirm > span {
+  color: var(--blackjack-muted);
+  font-size: 8px;
+  font-weight: 800;
+  letter-spacing: .1em;
+}
+
+.blackjack-seat-confirm > span strong {
+  color: var(--blackjack-gold);
+  font-size: 11px;
+}
+
+.blackjack-seat-confirm button {
+  min-height: 34px;
+  padding: 0 12px;
+  border: 1px solid rgba(255,255,255,.12);
+  border-radius: 9px;
+  background: rgba(255,255,255,.04);
+  color: var(--blackjack-muted);
+  font: 800 8px/1 Inter, ui-sans-serif, system-ui, sans-serif;
+  letter-spacing: .08em;
+}
+
+.blackjack-seat-confirm [data-blackjack-seat-confirm-action="CONFIRM"] {
+  border-color: rgba(200,169,106,.58);
+  background: linear-gradient(180deg, #332817, #18140e);
+  color: var(--blackjack-ivory);
+}
+
+.blackjack-betting-region {
+  grid-area: betting;
+  min-width: 0;
+}
+
+.blackjack-betting-region .blackjack-betting-panel {
+  grid-area: auto;
+}
+
+.blackjack-seat.is-claimable {
+  cursor: pointer;
+  border-color: rgba(200,169,106,.26);
+  transition:
+    transform 140ms ease,
+    border-color 140ms ease,
+    box-shadow 140ms ease;
+}
+
+.blackjack-seat.is-claimable:hover,
+.blackjack-seat.is-claimable:focus-visible {
+  transform: translateY(-2px);
+  border-color: rgba(200,169,106,.64);
+  box-shadow: 0 10px 26px rgba(0,0,0,.24);
+  outline: none;
+}
+
+.blackjack-seat.is-selected-for-claim {
+  border-color: var(--blackjack-gold);
+  box-shadow:
+    0 0 0 2px rgba(200,169,106,.16),
+    0 12px 28px rgba(0,0,0,.30);
+}
+
+.blackjack-hud[data-interaction-mode="TURN"] .blackjack-context-strip {
+  border-color: rgba(200,169,106,.28);
+}
+
+.blackjack-hud[data-interaction-mode="TURN"] .blackjack-context-prompt {
+  color: var(--blackjack-gold);
+  font-size: 12px;
+}
 
 .blackjack-betting-panel {
   grid-area: betting;
@@ -780,10 +903,34 @@ body {
     grid-template-columns: 1fr;
     grid-template-areas:
       "status"
+      "context"
       "betting"
       "actions";
     gap: 8px;
     margin-bottom: 6px;
+  }
+
+
+  .blackjack-context-strip {
+    min-height: 46px;
+    padding: 7px 9px;
+  }
+
+  .blackjack-seat-confirm {
+    gap: 5px;
+  }
+
+  .blackjack-seat-confirm button {
+    min-height: 32px;
+    padding-inline: 9px;
+  }
+
+  .blackjack-actions {
+    gap: 7px;
+  }
+
+  .blackjack-actions > button {
+    min-width: 0;
   }
 
   .blackjack-betting-panel {
@@ -858,6 +1005,21 @@ body {
     flex-direction: column;
     align-items: center;
     gap: 4px;
+  }
+
+
+  .blackjack-context-strip {
+    align-items: stretch;
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  .blackjack-context-prompt {
+    text-align: center;
+  }
+
+  .blackjack-seat-confirm {
+    justify-content: center;
   }
 
   .blackjack-betting-panel {
