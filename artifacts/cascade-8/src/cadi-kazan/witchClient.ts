@@ -282,7 +282,7 @@ export const CADI_KAZAN_MARKUP = `
         <div class="witch-office-pool-head" data-witch-office-pool-head hidden>
           <div class="witch-office-pool-chip" aria-label="The Office havuzunda kalan bilet">
             <span>HAVUZ</span>
-            <strong data-witch-office-pool-head-value>—/75</strong>
+            <strong data-witch-office-pool-head-value>—/200</strong>
           </div>
           <button
             class="witch-office-pool-info-button"
@@ -300,17 +300,17 @@ export const CADI_KAZAN_MARKUP = `
             aria-label="The Office havuz sistemi"
             hidden
           >
-            <strong>75 BİLETLİK HAVUZ</strong>
-            <p>Her havuzda önceden hazırlanmış 75 bilet bulunur. Satın aldığında havuzdaki kullanılmamış biletlerden biri sana atanır.</p>
+            <strong>200 BİLETLİK HAVUZ</strong>
+            <p>Her havuzda önceden hazırlanmış 200 bilet bulunur. Satın aldığında havuzdaki kullanılmamış biletlerden biri sana atanır.</p>
             <div class="witch-office-pool-info-grid">
               <span><b>1</b> Michael · 100x</span>
-              <span><b>2</b> Stanley · 20x</span>
-              <span><b>4</b> Dwight · 10x</span>
-              <span><b>8</b> Jim · 5x</span>
-              <span><b>20</b> Kevin · 2x</span>
-              <span><b>40</b> Ödülsüz</span>
+              <span><b>3</b> Stanley · 20x</span>
+              <span><b>5</b> Dwight · 10x</span>
+              <span><b>15</b> Jim · 5x</span>
+              <span><b>60</b> Kevin · 2x</span>
+              <span><b>116</b> Ödülsüz</span>
             </div>
-            <small>Havuzdaki 75 bilet bittiğinde sıradaki 75'lik paket otomatik devreye girer.</small>
+            <small>Havuzdaki 200 bilet bittiğinde sıradaki 200'lük paket otomatik devreye girer.</small>
           </div>
         </div>
         <div class="witch-stat witch-stat-balance">
@@ -386,7 +386,7 @@ export const CADI_KAZAN_MARKUP = `
             <img class="witch-office-card-master" src="${OFFICE_CARD_ART_URL}" alt="" width="1000" height="468" loading="eager" decoding="async" fetchpriority="auto" draggable="false">
           </div>
           <div class="witch-office-card-meta" data-witch-office-meta hidden>
-            <span>HAVUZ <b data-witch-office-pool>—/75</b></span>
+            <span>HAVUZ <b data-witch-office-pool>—/200</b></span>
             <span>BİLET ID <b data-witch-office-ticket-id>—</b></span>
           </div>
 
@@ -830,7 +830,7 @@ export class WitchClient {
       if (!response.ok) throw new Error(data.error ?? "Office havuzu yüklenemedi");
       this.officePoolStatus = {
         remaining: Math.max(0, Number(data.remaining) || 0),
-        total: Math.max(1, Number(data.total) || 75),
+        total: Math.max(1, Number(data.total) || 200),
       };
       this.render();
     } catch {
@@ -1108,7 +1108,7 @@ export class WitchClient {
     this.state = nextState;
     const round = nextState.round;
     if (round?.mode === "OFFICE_MATCH_6" && round.officePoolRemaining !== null) {
-      this.officePoolStatus = { remaining: round.officePoolRemaining, total: 75 };
+      this.officePoolStatus = { remaining: round.officePoolRemaining, total: 200 };
     }
     if (round?.id !== this.preparedRevealRoundId) {
       this.preparedRevealRoundId = round?.id ?? null;
@@ -1202,7 +1202,7 @@ export class WitchClient {
     const officePoolRemaining = round?.mode === "OFFICE_MATCH_6" && round.officePoolRemaining !== null
       ? round.officePoolRemaining
       : this.officePoolStatus?.remaining ?? null;
-    const officePoolTotal = this.officePoolStatus?.total ?? 75;
+    const officePoolTotal = this.officePoolStatus?.total ?? 200;
     if (officePoolHead) officePoolHead.hidden = visualMode !== "OFFICE_MATCH_6";
     if (officePoolHeadValue) officePoolHeadValue.textContent = officePoolRemaining === null
       ? `—/${officePoolTotal}`
@@ -1288,7 +1288,7 @@ export class WitchClient {
     if (riskLabel) riskLabel.textContent = this.mode === "OFFICE_MATCH_6" ? "KURAL" : "RİSK";
     if (riskNote) {
       if (this.mode === "OFFICE_MATCH_6") {
-        riskNote.textContent = `THE OFFICE / HAVUZ ${officePoolRemaining === null ? "—/75" : `${officePoolRemaining}/${officePoolTotal}`} / 3 AYNI = ÖDÜL`;
+        riskNote.textContent = `THE OFFICE / HAVUZ ${officePoolRemaining === null ? "—/200" : `${officePoolRemaining}/${officePoolTotal}`} / 3 AYNI = ÖDÜL`;
       } else {
         const selectedBombs = this.mode === "STANDARD" ? "1" : (alarms?.value ?? "1");
         riskNote.textContent = `${this.mode === "STANDARD" ? "STANDARD" : "ADVANCED"} / ${selectedBombs} BOMBA`;
@@ -1587,7 +1587,7 @@ export class WitchClient {
     if (ticketId) ticketId.textContent = `#${round.id.slice(0, 8).toUpperCase()}`;
     if (riskNote) {
       if (round.mode === "OFFICE_MATCH_6") {
-        riskNote.textContent = `THE OFFICE / HAVUZ ${officePoolRemaining === null ? "—/75" : `${officePoolRemaining}/${officePoolTotal}`} / 3 AYNI = ÖDÜL`;
+        riskNote.textContent = `THE OFFICE / HAVUZ ${officePoolRemaining === null ? "—/200" : `${officePoolRemaining}/${officePoolTotal}`} / 3 AYNI = ÖDÜL`;
       } else {
         const selectedBombs = this.mode === "STANDARD" ? "1" : (alarms?.value ?? String(round.alarmCount));
         riskNote.textContent = `${this.mode === "STANDARD" ? "STANDARD" : "ADVANCED"} / ${selectedBombs} BOMBA`;
