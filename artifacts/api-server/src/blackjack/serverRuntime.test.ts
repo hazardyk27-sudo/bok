@@ -9,7 +9,12 @@ import {
   BLACKJACK_WS_PATH,
 } from "./realtime";
 import {
+  getBlackjackRuntimeBootstrapState,
   initializeAndAttachBlackjackServerRuntime,
+  markBlackjackRuntimeAttached,
+  markBlackjackRuntimeFailed,
+  markBlackjackRuntimeStarting,
+  markBlackjackRuntimeStopped,
   recoverAndAttachBlackjackServerRuntime,
   type BlackjackAttachedServerRuntime,
 } from "./serverRuntime";
@@ -125,6 +130,72 @@ describe("blackjack owned server runtime wiring",()=>{
     client=undefined;
     attached=null;
     server=undefined;
+    markBlackjackRuntimeStopped();
+  });
+
+  it("publishes bootstrap readiness from the real attached runtime",()=>{
+    let runtimeReadiness={
+      ready:true,
+      status:"READY" as const,
+      tableId:"bootstrap-table",
+      phase:"TABLE_IDLE" as const,
+      stateVersion:3,
+      eventSequence:2,
+      schedulerRunning:true,
+      authorityHealthy:true,
+    };
+
+    const fakeRuntime={
+      getReadiness:()=>runtimeReadiness,
+    } as BlackjackAttachedServerRuntime;
+
+    markBlackjackRuntimeStarting(1);
+    expect(getBlackjackRuntimeBootstrapState()).toMatchObject({
+      ready:false,
+      status:"STARTING",
+      attempt:1,
+      runtime:null,
+    });
+
+    markBlackjackRuntimeAttached(fakeRuntime,1);
+    expect(getBlackjackRuntimeBootstrapState()).toMatchObject({
+      ready:true,
+      status:"READY",
+      attempt:1,
+      runtime:{
+        status:"READY",
+        tableId:"bootstrap-table",
+      },
+    });
+
+    runtimeReadiness={
+      ...runtimeReadiness,
+      ready:false,
+      status:"AUTHORITY_FAILED",
+      authorityHealthy:false,
+    };
+    expect(getBlackjackRuntimeBootstrapState()).toMatchObject({
+      ready:false,
+      status:"DEGRADED",
+      failureCode:"AUTHORITY_FAILED",
+      runtime:{status:"AUTHORITY_FAILED"},
+    });
+
+    markBlackjackRuntimeFailed(2);
+    expect(getBlackjackRuntimeBootstrapState()).toMatchObject({
+      ready:false,
+      status:"FAILED",
+      attempt:2,
+      failureCode:"BLACKJACK_RUNTIME_ATTACH_FAILED",
+      runtime:null,
+    });
+
+    markBlackjackRuntimeStopped();
+    expect(getBlackjackRuntimeBootstrapState()).toMatchObject({
+      ready:false,
+      status:"STOPPED",
+      runtime:null,
+    });
   });
 
   it("recovers, schedules and attaches authenticated realtime in one owned bootstrap",async()=>{
