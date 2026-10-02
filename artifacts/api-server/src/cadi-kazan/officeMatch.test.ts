@@ -1,15 +1,12 @@
 import { describe, expect, it } from "vitest";
 import {
   OFFICE_MATCH_CELL_COUNT,
-  OFFICE_MATCH_LOSS_WEIGHT_BPS,
-  OFFICE_MATCH_ROLL_SCALE,
   OFFICE_MATCH_SYMBOLS,
-  OFFICE_MATCH_TARGET_RTP_BPS,
-  OFFICE_MATCH_WIN_RATE_BPS,
+  OFFICE_POOL_DISTRIBUTION,
+  OFFICE_POOL_SIZE,
   createOfficeMatchBoard,
-  getOfficeMatchTheoreticalRtpBps,
+  createOfficePoolTickets,
   resolveOfficeMatchReveal,
-  selectOfficeMatchOutcome,
 } from "./officeMatch";
 
 function sequenceRandom(sequence: number[]) {
@@ -28,46 +25,51 @@ function counts(values: string[]) {
   }, {});
 }
 
-describe("The Office 6-cell outcome engine", () => {
-  it("locks the approved 2x/5x/10x/20x/100x paytable at 110% RTP", () => {
-    expect(OFFICE_MATCH_SYMBOLS.map(({ id, multiplierBps, winWeightBps, special }) => ({
-      id,
-      multiplierBps,
-      winWeightBps,
-      special,
-    }))).toEqual([
-      { id: "KEVIN", multiplierBps: 200, winWeightBps: 3_200, special: false },
-      { id: "JIM", multiplierBps: 500, winWeightBps: 500, special: false },
-      { id: "DWIGHT", multiplierBps: 1_000, winWeightBps: 100, special: false },
-      { id: "STANLEY", multiplierBps: 2_000, winWeightBps: 30, special: false },
-      { id: "MICHAEL", multiplierBps: 10_000, winWeightBps: 5, special: true },
+describe("The Office 75-ticket pool engine", () => {
+  it("locks the approved 75-ticket distribution", () => {
+    expect(OFFICE_POOL_SIZE).toBe(75);
+    expect(OFFICE_POOL_DISTRIBUTION).toEqual([
+      { symbolId: "MICHAEL", count: 1, multiplierBps: 10_000 },
+      { symbolId: "STANLEY", count: 2, multiplierBps: 2_000 },
+      { symbolId: "DWIGHT", count: 4, multiplierBps: 1_000 },
+      { symbolId: "JIM", count: 8, multiplierBps: 500 },
+      { symbolId: "KEVIN", count: 20, multiplierBps: 200 },
+      { symbolId: null, count: 40, multiplierBps: 0 },
     ]);
-
-    expect(OFFICE_MATCH_WIN_RATE_BPS).toBe(3_835);
-    expect(OFFICE_MATCH_LOSS_WEIGHT_BPS).toBe(6_165);
-    expect(OFFICE_MATCH_WIN_RATE_BPS + OFFICE_MATCH_LOSS_WEIGHT_BPS).toBe(OFFICE_MATCH_ROLL_SCALE);
-    expect(getOfficeMatchTheoreticalRtpBps()).toBe(OFFICE_MATCH_TARGET_RTP_BPS);
+    expect(OFFICE_POOL_DISTRIBUTION.reduce((sum, entry) => sum + entry.count, 0)).toBe(75);
   });
 
-  it("maps the exact 10,000-roll boundaries to the intended outcomes", () => {
-    expect(selectOfficeMatchOutcome(0)).toMatchObject({ symbolId: "KEVIN", multiplierBps: 200 });
-    expect(selectOfficeMatchOutcome(3_199)).toMatchObject({ symbolId: "KEVIN", multiplierBps: 200 });
-    expect(selectOfficeMatchOutcome(3_200)).toMatchObject({ symbolId: "JIM", multiplierBps: 500 });
-    expect(selectOfficeMatchOutcome(3_699)).toMatchObject({ symbolId: "JIM", multiplierBps: 500 });
-    expect(selectOfficeMatchOutcome(3_700)).toMatchObject({ symbolId: "DWIGHT", multiplierBps: 1_000 });
-    expect(selectOfficeMatchOutcome(3_799)).toMatchObject({ symbolId: "DWIGHT", multiplierBps: 1_000 });
-    expect(selectOfficeMatchOutcome(3_800)).toMatchObject({ symbolId: "STANLEY", multiplierBps: 2_000 });
-    expect(selectOfficeMatchOutcome(3_829)).toMatchObject({ symbolId: "STANLEY", multiplierBps: 2_000 });
-    expect(selectOfficeMatchOutcome(3_830)).toMatchObject({ symbolId: "MICHAEL", multiplierBps: 10_000 });
-    expect(selectOfficeMatchOutcome(3_834)).toMatchObject({ symbolId: "MICHAEL", multiplierBps: 10_000 });
-    expect(selectOfficeMatchOutcome(3_835)).toEqual({ kind: "LOSS", multiplierBps: 0, symbolId: null });
-    expect(selectOfficeMatchOutcome(9_999)).toEqual({ kind: "LOSS", multiplierBps: 0, symbolId: null });
-  });
+  it("prepares exactly 75 complete cards before any card is claimed", () => {
+    const tickets = createOfficePoolTickets(sequenceRandom([7, 3, 19, 2, 41, 5, 11, 23, 31]));
+    expect(tickets).toHaveLength(75);
 
-  it("makes Michael Scott 100x exactly 5 in 10,000, equivalent to 1 in 2,000", () => {
-    const michaelRolls = Array.from({ length: OFFICE_MATCH_ROLL_SCALE }, (_, roll) => selectOfficeMatchOutcome(roll))
-      .filter((outcome) => outcome.kind === "WIN" && outcome.symbolId === "MICHAEL");
-    expect(michaelRolls).toHaveLength(5);
+    const outcomeCounts = {
+      KEVIN: 0,
+      JIM: 0,
+      DWIGHT: 0,
+      STANLEY: 0,
+      MICHAEL: 0,
+      LOSS: 0,
+    };
+    for (const ticket of tickets) {
+      expect(ticket.cells).toHaveLength(OFFICE_MATCH_CELL_COUNT);
+      if (ticket.outcome.kind === "LOSS") {
+        outcomeCounts.LOSS += 1;
+        expect(Math.max(...Object.values(counts(ticket.cells)))).toBeLessThanOrEqual(2);
+      } else {
+        outcomeCounts[ticket.outcome.symbolId] += 1;
+        expect(counts(ticket.cells)[ticket.outcome.symbolId]).toBe(3);
+      }
+    }
+
+    expect(outcomeCounts).toEqual({
+      KEVIN: 20,
+      JIM: 8,
+      DWIGHT: 4,
+      STANLEY: 2,
+      MICHAEL: 1,
+      LOSS: 40,
+    });
   });
 
   it.each(OFFICE_MATCH_SYMBOLS)("builds a six-cell $id win with exactly three matching symbols and no second triple", (symbol) => {
@@ -92,12 +94,6 @@ describe("The Office 6-cell outcome engine", () => {
       expect(board).toHaveLength(OFFICE_MATCH_CELL_COUNT);
       expect(Math.max(...Object.values(counts(board)))).toBeLessThanOrEqual(2);
     }
-  });
-
-  it("rejects invalid outcome rolls", () => {
-    expect(() => selectOfficeMatchOutcome(-1)).toThrow("INVALID_OFFICE_OUTCOME_ROLL");
-    expect(() => selectOfficeMatchOutcome(10_000)).toThrow("INVALID_OFFICE_OUTCOME_ROLL");
-    expect(() => selectOfficeMatchOutcome(2.5)).toThrow("INVALID_OFFICE_OUTCOME_ROLL");
   });
 
   it("settles immediately on the third matching revealed symbol", () => {
@@ -134,5 +130,4 @@ describe("The Office 6-cell outcome engine", () => {
       multiplierBps: 0,
     });
   });
-
 });
