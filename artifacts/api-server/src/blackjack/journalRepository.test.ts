@@ -84,13 +84,30 @@ describe("blackjack journal repository", () => {
     expect(params[9]).toBe(2);
   });
 
-  it("rejects an API call that tries to skip a sequence", async () => {
+  it("allows a sparse checkpoint as long as eventSequence advances", async () => {
+    const event = record(5);
+    let params: readonly unknown[] = [];
+    const repository = new BlackjackJournalRepository(
+      db(async (_sql, input = []) => {
+        params = input;
+        return { rows: [row(event)] };
+      }),
+    );
+
+    await expect(repository.append(event, 2)).resolves.toMatchObject({
+      replayed: false,
+      record: event,
+    });
+    expect(params[9]).toBe(2);
+  });
+
+  it("rejects a checkpoint that does not advance eventSequence", async () => {
     const repository = new BlackjackJournalRepository(
       db(async () => ({ rows: [] })),
     );
 
-    await expect(repository.append(record(3), 1)).rejects.toThrow(
-      /advance eventSequence by exactly one/,
+    await expect(repository.append(record(2), 2)).rejects.toThrow(
+      /advance eventSequence monotonically/,
     );
   });
 
@@ -147,27 +164,27 @@ describe("blackjack journal repository", () => {
     );
   });
 
-  it("loads only contiguous events after a snapshot cursor", async () => {
-    const second = record(2);
+  it("loads monotonic sparse checkpoints after a snapshot cursor", async () => {
     const third = record(3);
+    const seventh = record(7);
     const repository = new BlackjackJournalRepository(
-      db(async () => ({ rows: [row(second), row(third)] })),
+      db(async () => ({ rows: [row(third), row(seventh)] })),
     );
 
     const loaded = await repository.loadAfter("main-blackjack", 1);
 
-    expect(loaded.map((entry) => entry.eventSequence)).toEqual([2, 3]);
+    expect(loaded.map((entry) => entry.eventSequence)).toEqual([3, 7]);
   });
 
-  it("rejects a recovery stream with an event gap", async () => {
-    const second = record(2);
+  it("rejects a non-monotonic recovery stream", async () => {
     const fourth = record(4);
+    const third = record(3);
     const repository = new BlackjackJournalRepository(
-      db(async () => ({ rows: [row(second), row(fourth)] })),
+      db(async () => ({ rows: [row(fourth), row(third)] })),
     );
 
     await expect(
       repository.loadAfter("main-blackjack", 1),
-    ).rejects.toThrow(/sequence gap/);
+    ).rejects.toThrow(/non-monotonic/);
   });
 });

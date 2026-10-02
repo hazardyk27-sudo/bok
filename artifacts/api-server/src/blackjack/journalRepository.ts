@@ -86,9 +86,9 @@ export class BlackjackJournalRepository {
     verifyBlackjackJournalRecord(record);
     assertSequence(expectedPreviousEventSequence);
 
-    if (record.eventSequence !== expectedPreviousEventSequence + 1) {
+    if (record.eventSequence <= expectedPreviousEventSequence) {
       throw new RangeError(
-        "Blackjack journal append must advance eventSequence by exactly one",
+        "Blackjack journal append must advance eventSequence monotonically",
       );
     }
 
@@ -102,7 +102,7 @@ export class BlackjackJournalRepository {
              FROM blackjack_event_journal
             WHERE table_id = $2),
           0
-        ) = $10
+        ) <= $10
        ON CONFLICT DO NOTHING
        RETURNING ${RETURNING_COLUMNS}`,
       [
@@ -150,7 +150,7 @@ export class BlackjackJournalRepository {
     }
 
     throw new BlackjackJournalConflictError(
-      "Blackjack journal append expected previous eventSequence is stale or missing",
+      "Blackjack journal append expected previous eventSequence is stale",
     );
   }
 
@@ -176,19 +176,17 @@ export class BlackjackJournalRepository {
       rowToRecord(row as JournalRow),
     );
 
-    let expected = afterEventSequence + 1;
+    let previous = afterEventSequence;
     for (const record of records) {
-      if (record.tableId !== tableId || record.eventSequence !== expected) {
+      if (
+        record.tableId !== tableId ||
+        record.eventSequence <= previous
+      ) {
         throw new BlackjackJournalConflictError(
-          "Blackjack journal contains a sequence gap or foreign event",
+          "Blackjack journal contains a non-monotonic or foreign checkpoint",
         );
       }
-      expected += 1;
-      if (!Number.isSafeInteger(expected)) {
-        throw new RangeError(
-          "Blackjack journal recovery sequence exceeds safe integer range",
-        );
-      }
+      previous = record.eventSequence;
     }
 
     return Object.freeze(records);
