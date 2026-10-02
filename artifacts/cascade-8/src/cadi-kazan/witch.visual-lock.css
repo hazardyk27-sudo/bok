@@ -6797,3 +6797,15 @@
 .witch-page [data-witch-office-candidate][data-witch-result-active="true"] {
   display: grid !important;
 }
+
+
+/* PASS 43 — prepared visibility wins over the stale-result guard.
+   PASS 41 intentionally hides unrevealed artwork; a server-prepared candidate is
+   the one safe exception and must be visible behind the still-intact base mask. */
+.witch-page .witch-cell:not(.is-revealed)
+  [data-witch-result-candidate][data-witch-result-active="true"],
+.witch-page .witch-cell:not(.is-revealed)
+  [data-witch-office-candidate][data-witch-result-active="true"] {
+  visibility: visible !important;
+  opacity: 1 !important;
+}
