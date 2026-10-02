@@ -137,10 +137,25 @@ function compactSpinResultForWire(result: SpinResult): WireSpinResult {
   };
 }
 
-function response(sessionId: string, balanceCents: number, row: SlotRoundRow) {
+type PreparedSlotSpin = {
+  input: { stakeCents: number; idempotencyKey: string };
+  result: SpinResult;
+  wireResult: WireSpinResult;
+  serializedWireResult: string;
+  roundId: string;
+  debitCents: number;
+  payoutCents: number;
+};
+
+function response(
+  sessionId: string,
+  balanceCents: number,
+  roundId: string,
+  result: SpinResult | WireSpinResult,
+) {
   return {
-    roundId: row.id,
-    result: compactSpinResultForWire(row.result),
+    roundId,
+    result: compactSpinResultForWire(result as SpinResult),
     wallet: { sessionId, balanceCents },
   };
 }
@@ -179,19 +194,30 @@ export class SlotRepository {
     }
   }
 
-  async spin(sessionId: string, input: { stakeCents: number; idempotencyKey: string }) {
-    await ensureBigMoneyStorage();
+  prepareSpin(input: { stakeCents: number; idempotencyKey: string }): PreparedSlotSpin {
     validateInput(input.stakeCents, input.idempotencyKey);
 
     const isFreeBet = input.stakeCents === FREE_BET_CENTS;
     const result = playSpin(input.stakeCents, new SeededRNG(randomUUID()));
-    const roundId = randomUUID();
-    const debitCents = isFreeBet ? 0 : input.stakeCents;
-    const payoutCents = result.totalWinCents;
+    const wireResult = compactSpinResultForWire(result);
+    return {
+      input,
+      result,
+      wireResult,
+      serializedWireResult: JSON.stringify(wireResult),
+      roundId: randomUUID(),
+      debitCents: isFreeBet ? 0 : input.stakeCents,
+      payoutCents: result.totalWinCents,
+    };
+  }
+
+  async settlePreparedSpin(sessionId: string, prepared: PreparedSlotSpin) {
+    await ensureBigMoneyStorage();
 
     type AtomicSpinRow = SlotRoundRow & WalletRow & {
       outcome: "SETTLED" | "DUPLICATE" | "INSUFFICIENT";
       existing_session_id: string;
+      result: SpinResult | null;
     };
 
     const atomic = await pool.query<AtomicSpinRow>(
@@ -222,7 +248,7 @@ export class SlotRepository {
            (id, session_id, stake_cents, payout_cents, result, idempotency_key)
          SELECT $3::text, $2::text, $4::bigint, $5::bigint, $6::jsonb, $7::text
           WHERE EXISTS (SELECT 1 FROM settled_wallet)
-         RETURNING *
+         RETURNING id, session_id, stake_cents, payout_cents, idempotency_key, created_at
        ),
        inserted_ledger AS (
          INSERT INTO slot_ledger
@@ -238,7 +264,13 @@ export class SlotRepository {
        ),
        settled_result AS (
          SELECT 'SETTLED'::text AS outcome,
-                inserted_round.*,
+                inserted_round.id,
+                inserted_round.session_id,
+                inserted_round.stake_cents,
+                inserted_round.payout_cents,
+                NULL::jsonb AS result,
+                inserted_round.idempotency_key,
+                inserted_round.created_at,
                 settled_wallet.balance_cents,
                 inserted_round.session_id AS existing_session_id,
                 (SELECT count(*) FROM inserted_ledger) AS ledger_count
@@ -262,7 +294,7 @@ export class SlotRepository {
                 $2::text AS session_id,
                 $4::bigint AS stake_cents,
                 0::bigint AS payout_cents,
-                $6::jsonb AS result,
+                NULL::jsonb AS result,
                 $7::text AS idempotency_key,
                 now() AS created_at,
                 COALESCE(
@@ -287,18 +319,18 @@ export class SlotRepository {
          FROM insufficient_result
        LIMIT 1`,
       [
-        payoutCents - debitCents,
+        prepared.payoutCents - prepared.debitCents,
         sessionId,
-        roundId,
-        input.stakeCents,
-        payoutCents,
-        JSON.stringify(result),
-        input.idempotencyKey,
+        prepared.roundId,
+        prepared.input.stakeCents,
+        prepared.payoutCents,
+        prepared.serializedWireResult,
+        prepared.input.idempotencyKey,
         randomUUID(),
         randomUUID(),
-        debitCents,
-        `stake:${input.idempotencyKey}`,
-        `payout:${roundId}`,
+        prepared.debitCents,
+        `stake:${prepared.input.idempotencyKey}`,
+        `payout:${prepared.roundId}`,
         INITIAL_SHARED_BALANCE_CENTS,
       ],
     );
@@ -310,7 +342,17 @@ export class SlotRepository {
       throw new Error("IDEMPOTENCY_KEY_REUSED");
     }
 
-    return response(sessionId, Number(row.balance_cents), row);
+    const responseRoundId = row.outcome === "DUPLICATE" ? row.id : prepared.roundId;
+    const responseResult = row.outcome === "DUPLICATE" && row.result
+      ? row.result
+      : prepared.wireResult;
+
+    return response(sessionId, Number(row.balance_cents), responseRoundId, responseResult);
+  }
+
+  async spin(sessionId: string, input: { stakeCents: number; idempotencyKey: string }) {
+    const prepared = this.prepareSpin(input);
+    return this.settlePreparedSpin(sessionId, prepared);
   }
 }
 

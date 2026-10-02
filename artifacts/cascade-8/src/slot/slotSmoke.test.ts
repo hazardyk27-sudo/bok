@@ -38,6 +38,10 @@ const slotRepositorySource = readFileSync(
   fileURLToPath(new URL("../../../api-server/src/slot/repository.ts", import.meta.url)),
   "utf8",
 );
+const slotRoutesSource = readFileSync(
+  fileURLToPath(new URL("../../../api-server/src/slot/routes.ts", import.meta.url)),
+  "utf8",
+);
 
 describe("slot route smoke contract", () => {
   it("routes /slot and /lab through the Slot-owned module", () => {
@@ -144,12 +148,31 @@ describe("slot route smoke contract", () => {
     expect(roundTimingSource).toContain("!SLOT_RUNTIME_DIAGNOSTICS_ENABLED");
   });
 
-  it("compacts repeated tumble transport state without changing gameplay math", () => {
+  it("streams the authoritative outcome before DB settlement and overlaps settlement with the original drop", () => {
+    expect(slotRoutesSource).toContain('req.get("accept")?.includes("text/event-stream")');
+    expect(slotRoutesSource).toContain('writeSpinEvent(res, "result"');
+    expect(slotRoutesSource).toContain("await slotRepository.settlePreparedSpin");
+    expect(slotWalletClientSource).toContain('"Accept": "text/event-stream"');
+    expect(slotWalletClientSource).toContain("settlement: Promise<SpinSettlement>");
+    expect(gameControllerSource).toContain("const settlementState = serverSpin.settlement.then");
+    const dropAt = gameControllerSource.indexOf("await this.scene.animateDrop(this.duration(ANIMATION.initialDrop)");
+    const settleAt = gameControllerSource.indexOf("const settlement = await settlementState");
+    expect(dropAt).toBeGreaterThan(0);
+    expect(settleAt).toBeGreaterThan(dropAt);
+    expect(gameControllerSource).not.toContain("is-awaiting-spin-result");
+    expect(slotCssSource).not.toContain("slot-request-sweep");
+    expect(roundTimingSource).toContain("serverWaitMs >= 450");
+    expect(roundTimingSource).toContain('"SERVER_WAIT"');
+  });
+
+  it("compacts repeated tumble state for both DB storage and wire transport without changing gameplay math", () => {
     expect(slotRepositorySource).toContain("compactTumbleForWire");
     expect(slotRepositorySource).toContain('boardBefore: _boardBefore');
     expect(slotRepositorySource).toContain('boardAfterGravity: _boardAfterGravity');
     expect(slotRepositorySource).toContain('newSymbols: _newSymbols');
     expect(slotRepositorySource).toContain('multiplierCoreCells: _multiplierCoreCells');
+    expect(slotRepositorySource).toContain("serializedWireResult: JSON.stringify(wireResult)");
+    expect(slotRepositorySource).toContain("NULL::jsonb AS result");
     expect(slotWalletClientSource).toContain("hydrateTumbles");
     expect(slotWalletClientSource).toContain("boardBefore = tumble.boardAfterRefill");
     expect(slotWalletClientSource).toContain("boardAfterGravity: tumble.boardAfterRefill");

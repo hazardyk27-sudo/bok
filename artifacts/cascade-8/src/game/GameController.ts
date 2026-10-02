@@ -259,79 +259,114 @@ export class GameController {
       if (!this.busy && !canAffordBet(this.balanceCents, this.betCents)) this.message("INSUFFICIENT DEMO CREDITS");
       return;
     }
-     this.scene.setRuntimeActive(true);
-     this.busy = true; this.currentWinCents = 0; this.bonusWinCents = 0; this.freeSpinsLeft = 0;
-     this.pendingSettledBalanceCents = null;
-     this.beginRoundTiming("base", fromAuto);
-     this.markTiming("SPIN_REQUESTED", { betCents: this.betCents });
-     this.resetTumbleWin();
+
+    this.scene.setRuntimeActive(true);
+    this.busy = true;
+    this.currentWinCents = 0;
+    this.bonusWinCents = 0;
+    this.freeSpinsLeft = 0;
+    this.pendingSettledBalanceCents = null;
+    const balanceBeforeSpin = this.balanceCents;
+    const debitCents = this.isCurrentBetFree ? 0 : this.betCents;
+    this.balanceCents = Math.max(0, this.balanceCents - debitCents);
+
+    this.beginRoundTiming("base", fromAuto);
+    this.markTiming("SPIN_REQUESTED", { betCents: this.betCents });
+    this.resetTumbleWin();
     this.setBonusPrompt(false);
     this.setState("SPIN_INIT");
-    this.audio.spin(); this.updateHud();
-     let result: SpinResult;
-     try {
-       const serverSpin = await this.wallet.spin(this.betCents, crypto.randomUUID());
-       result = serverSpin.result;
-       this.pendingSettledBalanceCents = serverSpin.wallet.balanceCents;
-       // The server settles the whole round immediately, but the HUD must not
-       // reveal future base/bonus wins before their visual settlement.
-       this.balanceCents = Math.max(0, serverSpin.wallet.balanceCents - result.totalWinCents);
-       this.markTiming("SERVER_RESULT", {
-         scatterCount: result.scatterCount,
-         tumbleCount: result.tumbles.length,
-         baseWinCents: result.baseWinCents,
-         bonusTriggered: result.bonusTriggered,
-         settlementCoreCount: result.tumbles.reduce((sum, tumble) => sum + tumble.settlementCores.length, 0),
-       });
-       this.updateHud();
-     } catch (error) {
-       this.markTiming("SPIN_ERROR", { error: error instanceof Error ? error.message : "UNKNOWN" });
-       this.busy = false;
-       this.setState("IDLE");
-       this.message(error instanceof Error && error.message === "INSUFFICIENT_SLOT_CREDITS"
-         ? "INSUFFICIENT DEMO CREDITS"
-         : "SLOT SERVER UNAVAILABLE");
-       this.updateHud();
-       this.publishTiming();
-       this.scene.setRuntimeActive(false);
-       return;
-     }
     this.message("THE GATES ARE OPENING");
-    this.setState("INITIAL_DROP");
-    const baseRenderTiming = this.scene.renderBoard(result.initialBoard);
-    this.markTiming("BASE_BOARD_RENDERED", baseRenderTiming);
-    if (result.scatterCount > 0) {
-      this.audio.scatterAnticipation(result.scatterCount);
-       this.audio.scatterArrival(result.scatterCount);
+    this.audio.spin();
+    this.updateHud();
+
+    let result: SpinResult;
+    try {
+      const serverSpin = await this.wallet.spin(this.betCents, crypto.randomUUID());
+      result = serverSpin.result;
+      const settlementState = serverSpin.settlement.then(
+        (settled) => ({ ok: true as const, settled }),
+        (error: unknown) => ({ ok: false as const, error }),
+      );
+
+      this.markTiming("SERVER_RESULT", {
+        scatterCount: result.scatterCount,
+        tumbleCount: result.tumbles.length,
+        baseWinCents: result.baseWinCents,
+        bonusTriggered: result.bonusTriggered,
+        settlementCoreCount: result.tumbles.reduce((sum, tumble) => sum + tumble.settlementCores.length, 0),
+      });
+
+      this.setState("INITIAL_DROP");
+      const baseRenderTiming = this.scene.renderBoard(result.initialBoard);
+      this.markTiming("BASE_BOARD_RENDERED", baseRenderTiming);
+      if (result.scatterCount > 0) {
+        this.audio.scatterAnticipation(result.scatterCount);
+        this.audio.scatterArrival(result.scatterCount);
+      }
+      const baseDropTiming = await this.scene.animateDrop(this.duration(ANIMATION.initialDrop), !this.turbo);
+      this.markTiming("BASE_DROP_DONE", motionTimingDetail(baseDropTiming));
+
+      const settlement = await settlementState;
+      if (!settlement.ok) throw settlement.error;
+
+      if (settlement.settled.result) {
+        result = settlement.settled.result;
+        const canonicalRenderTiming = this.scene.renderBoard(result.initialBoard);
+        this.markTiming("DUPLICATE_RESULT_SYNC", canonicalRenderTiming);
+      }
+      this.pendingSettledBalanceCents = settlement.settled.wallet.balanceCents;
+      // Keep future base/bonus winnings hidden until their normal visual settlement.
+      this.balanceCents = Math.max(0, settlement.settled.wallet.balanceCents - result.totalWinCents);
+      this.markTiming("SERVER_SETTLED", {
+        balanceCents: settlement.settled.wallet.balanceCents,
+      });
+      this.updateHud();
+    } catch (error) {
+      this.markTiming("SPIN_ERROR", { error: error instanceof Error ? error.message : "UNKNOWN" });
+      try {
+        const wallet = await this.wallet.bootstrap();
+        this.balanceCents = wallet.balanceCents;
+      } catch {
+        this.balanceCents = balanceBeforeSpin;
+      }
+      this.busy = false;
+      this.setState("IDLE");
+      this.message(error instanceof Error && error.message === "INSUFFICIENT_SLOT_CREDITS"
+        ? "INSUFFICIENT DEMO CREDITS"
+        : "SLOT SERVER UNAVAILABLE");
+      this.updateHud();
+      this.publishTiming();
+      this.scene.setRuntimeActive(false);
+      return;
     }
-     const baseDropTiming = await this.scene.animateDrop(this.duration(ANIMATION.initialDrop), !this.turbo);
-     this.markTiming("BASE_DROP_DONE", motionTimingDetail(baseDropTiming));
+
     await this.playTumbles(result, false);
     this.markTiming("BASE_TUMBLES_DONE");
     // Credit the base-game portion only after explosions/Core settlement finish.
     this.balanceCents += result.baseWinCents;
     this.currentWinCents = result.baseWinCents;
     this.updateHud();
-     if (result.bonusTriggered && !result.maxWinReached) {
-       if (fromAuto && this.autoRunning && !this.autoStopping) {
-         this.pendingAutoResume = true;
-       }
+
+    if (result.bonusTriggered && !result.maxWinReached) {
+      if (fromAuto && this.autoRunning && !this.autoStopping) {
+        this.pendingAutoResume = true;
+      }
       this.pendingBonusResult = result;
       this.freeSpinsLeft = result.freeSpinsAwarded;
-       this.bonusTriggerScatterCount = result.bonusTriggerScatterCount;
-       this.setState("BONUS_TRIGGER_CEREMONY");
-       this.markTiming("BONUS_TRIGGER_CEREMONY_START", { scatterCount: this.bonusTriggerScatterCount });
-       this.message(`BONUS TRIGGER DETECTED // ${this.bonusTriggerScatterCount} SCATTERS`);
-       const triggerBoard = result.tumbles.at(-1)?.boardAfterRefill ?? result.initialBoard;
-       const triggerCells = triggerBoard.flatMap((row, rowIndex) =>
-         row.flatMap((cell, col) => cell === "SCATTER" ? [{ row: rowIndex, col }] : []),
-       );
-       await this.scene.presentBonusTriggerCeremony(triggerCells, this.bonusTriggerScatterCount);
-       this.audio.bonusUnlock(this.bonusTriggerScatterCount);
-       this.scene.bonusUnlockFlash();
-       await sleep(this.duration(360));
-       this.setState("BONUS_AWARD_PRESENTATION");
-       this.message(`${result.freeSpinsAwarded} FREE SPINS READY // ${this.bonusTriggerScatterCount} SCATTERS // PRESS SPIN`);
+      this.bonusTriggerScatterCount = result.bonusTriggerScatterCount;
+      this.setState("BONUS_TRIGGER_CEREMONY");
+      this.markTiming("BONUS_TRIGGER_CEREMONY_START", { scatterCount: this.bonusTriggerScatterCount });
+      this.message(`BONUS TRIGGER DETECTED // ${this.bonusTriggerScatterCount} SCATTERS`);
+      const triggerBoard = result.tumbles.at(-1)?.boardAfterRefill ?? result.initialBoard;
+      const triggerCells = triggerBoard.flatMap((row, rowIndex) =>
+        row.flatMap((cell, col) => cell === "SCATTER" ? [{ row: rowIndex, col }] : []),
+      );
+      await this.scene.presentBonusTriggerCeremony(triggerCells, this.bonusTriggerScatterCount);
+      this.audio.bonusUnlock(this.bonusTriggerScatterCount);
+      this.scene.bonusUnlockFlash();
+      await sleep(this.duration(360));
+      this.setState("BONUS_AWARD_PRESENTATION");
+      this.message(`${result.freeSpinsAwarded} FREE SPINS READY // ${this.bonusTriggerScatterCount} SCATTERS // PRESS SPIN`);
       this.setBonusPrompt(true);
       this.setState("BONUS_WAITING_FOR_START");
       this.markTiming("BONUS_WAITING_FOR_START");
@@ -341,6 +376,7 @@ export class GameController {
       this.publishTiming();
       return;
     }
+
     await this.finishSpin(result);
   }
 

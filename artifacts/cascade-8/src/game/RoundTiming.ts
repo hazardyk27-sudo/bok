@@ -191,16 +191,22 @@ export function publishRoundTiming(trace: RoundTimingTrace | null) {
     && biggest.ms >= 1000
     && (biggest.to === "BASE_DROP_DONE" || biggest.to.endsWith("_CASCADE_DONE")),
   );
+  const serverWaitLooksTooLong = Boolean(
+    serverWaitMs !== null
+    && serverWaitMs >= 450,
+  );
 
-  if (worstMotionFrameGapMs >= 100 || movementGapLooksTooLong) {
+  if (serverWaitLooksTooLong || worstMotionFrameGapMs >= 100 || movementGapLooksTooLong) {
     const longestLongTask = roundLongTasks[0] ?? null;
-    const classification = worstMotionFrameGapMs >= 100
-      ? longestLongTask && longestLongTask.duration >= 50
-        ? "MAIN_THREAD_LONG_TASK"
-        : roundSchedulerEvents.length || document.hidden
-          ? "PAGE_SCHEDULING_OR_VISIBILITY"
-          : "RAF_SCHEDULER_PAUSE"
-      : "MOVEMENT_PHASE_SLOW_WITHOUT_FRAME_STALL";
+    const classification = serverWaitLooksTooLong
+      ? "SERVER_WAIT"
+      : worstMotionFrameGapMs >= 100
+        ? longestLongTask && longestLongTask.duration >= 50
+          ? "MAIN_THREAD_LONG_TASK"
+          : roundSchedulerEvents.length || document.hidden
+            ? "PAGE_SCHEDULING_OR_VISIBILITY"
+            : "RAF_SCHEDULER_PAUSE"
+        : "MOVEMENT_PHASE_SLOW_WITHOUT_FRAME_STALL";
     console.error(
       "[CASCADE8_STALL]",
       `class=${classification} | motionEvent=${worstMotionFrameEvent?.name ?? "none"} | maxFrameGap=${Math.round(worstMotionFrameGapMs * 10) / 10}ms | biggest=${biggest ? `${biggest.ms}ms ${biggest.from}->${biggest.to}` : "n/a"} | longTask=${longestLongTask ? Math.round(longestLongTask.duration * 10) / 10 : 0}ms | hidden=${document.hidden} | focus=${document.hasFocus()} | schedulerEvents=${roundSchedulerEvents.map((event) => event.type).join(",") || "none"}`,
