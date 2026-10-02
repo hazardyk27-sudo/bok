@@ -286,7 +286,7 @@ async function getOfficePoolRemaining(client: PoolClient, poolId: string) {
 async function ensureOfficePoolSupply(client: PoolClient): Promise<OfficePoolRow> {
   await client.query("SELECT pg_advisory_xact_lock($1)", [OFFICE_POOL_ADVISORY_LOCK]);
 
-  let active = (
+  let active: OfficePoolRow | null = (
     await client.query<OfficePoolRow>(
       "SELECT id, pool_number, status FROM cadi_kazan_office_pools WHERE status = 'ACTIVE' ORDER BY pool_number LIMIT 1 FOR UPDATE",
     )
