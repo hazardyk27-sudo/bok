@@ -143,6 +143,21 @@ describe("canonical shared wallet contract", () => {
     expect(walletSource).not.toContain("SUM(balance_cents)");
   });
 
+  it("journals Blackjack durable checkpoints in the same wallet transaction", () => {
+    expect(blackjackPlatform).toContain(
+      "createBlackjackJournalCheckpoint",
+    );
+    expect(blackjackPlatform).toContain(
+      "new BlackjackJournalRepository(database)",
+    );
+    expect(blackjackPlatform).toContain(
+      "await journalRepository.append(",
+    );
+    expect(blackjackPlatform).toContain('await client.query("BEGIN")');
+    expect(blackjackPlatform).toContain('await client.query("COMMIT")');
+    expect(blackjackPlatform).toContain('await client.query("ROLLBACK")');
+  });
+
   it("applies Blackjack money as deltas over the locked shared wallet", () => {
     expect(blackjackPlatform).toContain(
       "rebaseBlackjackSnapshotAgainstSharedWallets",
