@@ -17,6 +17,7 @@ import {
   markBlackjackRuntimeStopped,
   recoverAndAttachBlackjackServerRuntime,
   type BlackjackAttachedServerRuntime,
+  type BlackjackServerRuntimeReadiness,
 } from "./serverRuntime";
 import { createBlackjackTableFoundation } from "./seats";
 import { createUnshuffledBlackjackShoe } from "./shoe";
@@ -134,11 +135,11 @@ describe("blackjack owned server runtime wiring",()=>{
   });
 
   it("publishes bootstrap readiness from the real attached runtime",()=>{
-    let runtimeReadiness={
+    let runtimeReadiness: BlackjackServerRuntimeReadiness={
       ready:true,
-      status:"READY" as const,
+      status:"READY",
       tableId:"bootstrap-table",
-      phase:"TABLE_IDLE" as const,
+      phase:"TABLE_IDLE",
       stateVersion:3,
       eventSequence:2,
       schedulerRunning:true,
