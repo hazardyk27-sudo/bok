@@ -286,7 +286,14 @@ export function renderBlackjackTableShell(
         </div>
 
         <div class="blackjack-context-strip" aria-live="polite">
-          <strong class="blackjack-context-prompt">${escapeHtml(model.interactionPrompt ?? "WAITING FOR TABLE")}</strong>
+          <div class="blackjack-context-copy">
+            <strong class="blackjack-context-prompt">${escapeHtml(model.interactionPrompt ?? "WAITING FOR TABLE")}</strong>
+            <span
+              class="blackjack-global-feedback"
+              data-action-tone="${model.actionStatusTone ?? "neutral"}"
+              ${model.actionStatusLabel ? "" : "hidden"}
+            >${model.actionStatusLabel ? escapeHtml(model.actionStatusLabel) : ""}</span>
+          </div>
           <div
             class="blackjack-seat-confirm"
             data-blackjack-seat-confirm
@@ -356,11 +363,6 @@ export function renderBlackjackTableShell(
           <button type="button" data-blackjack-action="STAND"${actionDisabled("STAND")}>STAND</button>
           <button type="button" data-blackjack-action="DOUBLE"${actionDisabled("DOUBLE")}${enabledActions.has("DOUBLE") ? "" : " hidden"}>DOUBLE</button>
           <button type="button" data-blackjack-action="SPLIT"${actionDisabled("SPLIT")}${enabledActions.has("SPLIT") ? "" : " hidden"}>SPLIT</button>
-          <span
-            class="blackjack-action-feedback"
-            data-action-tone="${model.actionStatusTone ?? "neutral"}"
-            aria-live="polite"
-          >${model.actionStatusLabel ? escapeHtml(model.actionStatusLabel) : ""}</span>
         </div>
 
         <div data-blackjack-region="round-result">
