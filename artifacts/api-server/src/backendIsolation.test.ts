@@ -235,7 +235,7 @@ describe("backend game isolation", () => {
       "initializeSharedWalletPlatform()",
     );
     const blackjackAttachAt = serverIndex.indexOf(
-      "attachBlackjackPlatformRuntime(server)",
+      "attachBlackjackPlatformRuntime(server, {",
     );
 
     expect(listenAt).toBeGreaterThan(-1);
@@ -275,7 +275,7 @@ describe("backend game isolation", () => {
     );
     expect(serverIndex).toContain("void startBlackjackRuntime()");
     expect(serverIndex).toContain(
-      "const runtime = await attachBlackjackPlatformRuntime(server)",
+      "const runtime = await attachBlackjackPlatformRuntime(server, {",
     );
     expect(blackjackPlatform).toContain(
       "initializeAndAttachBlackjackServerRuntime",
