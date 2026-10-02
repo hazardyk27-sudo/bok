@@ -378,10 +378,59 @@ function patchInteraction(
     model.interactionPrompt ?? "WAITING FOR TABLE",
   );
 
-  requireElement<HTMLElement>(
+  const openDrawer=model.openDrawer ?? null;
+  const betDrawer=requireElement<HTMLElement>(
     app,
-    ".blackjack-betting-region",
-  ).hidden=mode!=="BETTING";
+    '[data-blackjack-drawer="BET"]',
+  );
+  const infoDrawer=requireElement<HTMLElement>(
+    app,
+    '[data-blackjack-drawer="INFO"]',
+  );
+  const backdrop=requireElement<HTMLElement>(
+    app,
+    ".blackjack-drawer-backdrop",
+  );
+  betDrawer.hidden=openDrawer!=="BET";
+  infoDrawer.hidden=openDrawer!=="INFO";
+  backdrop.hidden=openDrawer===null;
+  betDrawer.setAttribute(
+    "aria-hidden",
+    openDrawer==="BET" ? "false" : "true",
+  );
+  infoDrawer.setAttribute(
+    "aria-hidden",
+    openDrawer==="INFO" ? "false" : "true",
+  );
+
+  const betToggle=requireElement<HTMLButtonElement>(
+    app,
+    '[data-blackjack-drawer-toggle="BET"]',
+  );
+  const infoToggle=requireElement<HTMLButtonElement>(
+    app,
+    '[data-blackjack-drawer-toggle="INFO"]',
+  );
+  betToggle.disabled=model.canOpenBetDrawer!==true;
+  betToggle.setAttribute(
+    "aria-expanded",
+    openDrawer==="BET" ? "true" : "false",
+  );
+  infoToggle.setAttribute(
+    "aria-expanded",
+    openDrawer==="INFO" ? "true" : "false",
+  );
+
+  setText(
+    app,
+    '[data-blackjack-info="phase"]',
+    model.phaseLabel,
+  );
+  setText(
+    app,
+    '[data-blackjack-info="players"]',
+    model.occupiedSeatsLabel ?? "0 / 5 SEATED",
+  );
 
   requireElement<HTMLElement>(
     app,
