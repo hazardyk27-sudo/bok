@@ -3,7 +3,8 @@ import {
   type BlackjackPublicSnapshotViewSource,
   type BlackjackSnapshotViewContext,
 } from "./snapshotView";
-import { renderBlackjackTableShell, type BlackjackTableViewModel } from "./tableView";
+import { createBlackjackTableDomRenderer } from "./domRenderer";
+import type { BlackjackTableViewModel } from "./tableView";
 
 export type BlackjackRealtimeCursor = Readonly<{
   eventSequence: number;
@@ -288,22 +289,12 @@ export function bindBlackjackRealtimeElement(
   getViewContext?: () => BlackjackSnapshotViewContext,
   nowMs?: () => number,
 ): BlackjackRealtimeViewController {
-  let lastMarkup: string | null = null;
+  const renderer=createBlackjackTableDomRenderer(app);
 
   return bindBlackjackRealtimeView({
     socket,
     getViewContext,
     nowMs,
-    renderModel:(model)=>{
-      const markup =
-        renderBlackjackTableShell(model);
-
-      if (markup === lastMarkup) {
-        return;
-      }
-
-      lastMarkup = markup;
-      app.innerHTML = markup;
-    },
+    renderModel:renderer.render,
   });
 }
