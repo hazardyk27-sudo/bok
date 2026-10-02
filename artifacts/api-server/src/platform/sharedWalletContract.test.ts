@@ -143,6 +143,25 @@ describe("canonical shared wallet contract", () => {
     expect(walletSource).not.toContain("SUM(balance_cents)");
   });
 
+  it("applies Blackjack money as deltas over the locked shared wallet", () => {
+    expect(blackjackPlatform).toContain(
+      "rebaseBlackjackSnapshotAgainstSharedWallets",
+    );
+    expect(blackjackPlatform).toContain(
+      "balance_cents::text AS balance_cents",
+    );
+    expect(blackjackPlatform).toContain("FOR UPDATE");
+    expect(blackjackPlatform).toContain(
+      "mutation.sharedBalanceAfterCents",
+    );
+    expect(blackjackPlatform).toContain(
+      "loadAvailableBalanceCents: loadBlackjackAvailableBalanceCents",
+    );
+    expect(blackjackPlatform).not.toContain(
+      "BLACKJACK_SHARED_WALLET_CHANGED",
+    );
+  });
+
   it("keeps shared_wallets as the only live spendable wallet authority", () => {
     expect(walletSource).toContain('SHARED_WALLET_TABLE = "shared_wallets"');
     expect(walletSource).toContain('LEGACY_WALLET_TABLE = "roulette_wallets"');
