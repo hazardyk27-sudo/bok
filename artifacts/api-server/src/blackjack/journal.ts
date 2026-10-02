@@ -171,6 +171,41 @@ export function createBlackjackJournalRecord(input: {
   });
 }
 
+export function createBlackjackJournalCheckpoint(input: {
+  previousEventSequence: number;
+  runtimeAfter: BlackjackDurableRuntimeState;
+  createdAtMs: number;
+}): BlackjackJournalRecord | null {
+  assertSafeNonNegative(
+    "journal previousEventSequence",
+    input.previousEventSequence,
+  );
+  const currentEventSequence=input.runtimeAfter.table.eventSequence;
+  assertSafeNonNegative(
+    "journal runtime eventSequence",
+    currentEventSequence,
+  );
+
+  if(currentEventSequence<input.previousEventSequence){
+    throw new Error(
+      "Blackjack journal checkpoint eventSequence moved backwards",
+    );
+  }
+  if(currentEventSequence===input.previousEventSequence){
+    return null;
+  }
+
+  return createBlackjackJournalRecord({
+    runtimeAfter:input.runtimeAfter,
+    eventType:"TABLE_STATE_COMMITTED",
+    actionId:null,
+    details:Object.freeze({
+      durability:"snapshot-checkpoint",
+    }),
+    createdAtMs:input.createdAtMs,
+  });
+}
+
 export function verifyBlackjackJournalRecord(
   record: BlackjackJournalRecord,
 ): BlackjackDurableRuntimeState {
