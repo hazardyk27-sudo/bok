@@ -110,6 +110,9 @@ export async function recoverAndStartBlackjackRoundRuntime(input: {
   ) =>
     | BlackjackCoordinatorAccount
     | Promise<BlackjackCoordinatorAccount>;
+  loadAvailableBalanceCents?: (
+    userId: string,
+  ) => number | Promise<number>;
   onFatalError?: (error: unknown) => void;
 }): Promise<BlackjackRecoveredScheduledRuntime | null> {
   const recovery=await recoverBlackjackRuntime(
@@ -146,6 +149,7 @@ export async function recoverAndStartBlackjackRoundRuntime(input: {
       persistedStateVersion,
     );
     persistedStateVersion=saved.stateVersion;
+    coordinator.synchronizeWalletStates(saved.payload.wallets);
   };
 
   // Persist RECOVERING -> resumed phase before any timer-driven state can
@@ -171,6 +175,7 @@ export async function recoverAndStartBlackjackRoundRuntime(input: {
       bettingWindowMs:input.bettingWindowMs,
       persist,
       loadSeatAccount:input.loadSeatAccount,
+      loadAvailableBalanceCents:input.loadAvailableBalanceCents,
       onFatalError:reportFatal,
     },
   );
