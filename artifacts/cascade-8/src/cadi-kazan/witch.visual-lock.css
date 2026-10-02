@@ -6790,6 +6790,10 @@
   opacity: 1 !important;
 }
 
-.witch-page .witch-cell:not(.is-revealed) [data-witch-result-active="true"] {
+.witch-page [data-witch-result-candidate][data-witch-result-active="true"] {
+  display: block !important;
+}
+
+.witch-page [data-witch-office-candidate][data-witch-result-active="true"] {
   display: grid !important;
 }
