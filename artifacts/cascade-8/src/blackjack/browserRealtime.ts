@@ -46,6 +46,16 @@ export type BlackjackBrowserRealtimeOptions = Readonly<{
   cancelRender?: (handle: unknown) => void;
   autoReconnect?: boolean;
   reconnectDelayMs?: number;
+  reconnectMaxDelayMs?: number;
+  reconnectJitterRatio?: number;
+  reconnectRandom?: () => number;
+  heartbeatIntervalMs?: number;
+  snapshotTimeoutMs?: number;
+  scheduleTransportTimer?: (
+    callback: () => void,
+    delayMs: number,
+  ) => unknown;
+  cancelTransportTimer?: (handle: unknown) => void;
   scheduleReconnect?: (
     callback: () => void,
     delayMs: number,
@@ -58,6 +68,7 @@ export type BlackjackBrowserConnectionState =
   | "READY"
   | "RECONNECTING"
   | "SESSION_REPLACED"
+  | "ERROR"
   | "CLOSED";
 
 export type BlackjackBrowserConnectionStatus = Readonly<{
@@ -115,19 +126,29 @@ type BlackjackPhysicalSocket = BlackjackBrowserSocket & Readonly<{
   ) => void;
 }>;
 
-function parseMessageType(raw: unknown): string | null {
+function parseMessage(raw: unknown): Record<string, unknown> | null {
   const value=
     typeof raw==="string"
       ? (()=>{ try { return JSON.parse(raw); } catch { return null; } })()
       : raw;
-  return (
-    typeof value==="object" &&
-    value!==null &&
-    "type" in value &&
-    typeof (value as {type?:unknown}).type==="string"
-  )
-    ? (value as {type:string}).type
+  return typeof value==="object" && value!==null
+    ? value as Record<string,unknown>
     : null;
+}
+
+function reconnectDelayForAttempt(input:{
+  attempt:number;
+  baseDelayMs:number;
+  maxDelayMs:number;
+  jitterRatio:number;
+  random:()=>number;
+}):number{
+  const exponent=Math.max(0,Math.min(input.attempt-1,20));
+  const uncapped=input.baseDelayMs*(2**exponent);
+  const capped=Math.min(input.maxDelayMs,uncapped);
+  const random=Math.max(0,Math.min(1,input.random()));
+  const factor=1-input.jitterRatio+(2*input.jitterRatio*random);
+  return Math.max(100,Math.round(capped*factor));
 }
 
 function createBlackjackResilientBrowserSocket(
@@ -136,10 +157,18 @@ function createBlackjackResilientBrowserSocket(
   input: {
     autoReconnect: boolean;
     reconnectDelayMs: number;
+    reconnectMaxDelayMs: number;
+    reconnectJitterRatio: number;
+    reconnectRandom: () => number;
+    heartbeatIntervalMs: number;
+    snapshotTimeoutMs: number;
     scheduleReconnect: (callback:()=>void,delayMs:number)=>unknown;
     cancelReconnect: (handle:unknown)=>void;
+    scheduleTransportTimer: (callback:()=>void,delayMs:number)=>unknown;
+    cancelTransportTimer: (handle:unknown)=>void;
     onTransportReadyChange: (ready:boolean)=>void;
     onSessionReplaced: () => void;
+    onTerminalError: () => void;
   },
 ): BlackjackBrowserSocket {
   const messageListeners=new Set<
@@ -147,16 +176,79 @@ function createBlackjackResilientBrowserSocket(
   >();
   let physical: BlackjackPhysicalSocket | null=null;
   let reconnectHandle: unknown | null=null;
+  let heartbeatHandle: unknown | null=null;
+  let snapshotTimeoutHandle: unknown | null=null;
   let explicitlyClosed=false;
   let transportReady=false;
   let terminalSessionReplaced=false;
+  let terminalError=false;
   let generation=0;
+  let reconnectAttempt=0;
   let detachCurrent: (()=>void) | null=null;
 
   const setReady=(ready:boolean)=>{
     if(transportReady===ready) return;
     transportReady=ready;
     input.onTransportReadyChange(ready);
+  };
+
+  const clearTransportTimers=()=>{
+    if(heartbeatHandle!==null){
+      input.cancelTransportTimer(heartbeatHandle);
+      heartbeatHandle=null;
+    }
+    if(snapshotTimeoutHandle!==null){
+      input.cancelTransportTimer(snapshotTimeoutHandle);
+      snapshotTimeoutHandle=null;
+    }
+  };
+
+  const scheduleSnapshotTimeout=(
+    socket: BlackjackPhysicalSocket,
+    ownGeneration: number,
+  )=>{
+    if(snapshotTimeoutHandle!==null){
+      input.cancelTransportTimer(snapshotTimeoutHandle);
+    }
+    snapshotTimeoutHandle=input.scheduleTransportTimer(()=>{
+      snapshotTimeoutHandle=null;
+      if(
+        explicitlyClosed ||
+        terminalSessionReplaced ||
+        terminalError ||
+        ownGeneration!==generation ||
+        physical!==socket
+      ) return;
+      setReady(false);
+      socket.close(4002,"BLACKJACK_SNAPSHOT_TIMEOUT");
+    },input.snapshotTimeoutMs);
+  };
+
+  const scheduleHeartbeat=(
+    socket: BlackjackPhysicalSocket,
+    ownGeneration: number,
+  )=>{
+    if(heartbeatHandle!==null){
+      input.cancelTransportTimer(heartbeatHandle);
+    }
+    heartbeatHandle=input.scheduleTransportTimer(()=>{
+      heartbeatHandle=null;
+      if(
+        explicitlyClosed ||
+        terminalSessionReplaced ||
+        terminalError ||
+        ownGeneration!==generation ||
+        physical!==socket ||
+        !transportReady
+      ) return;
+      try {
+        socket.send(JSON.stringify({type:"sync"}));
+        scheduleSnapshotTimeout(socket,ownGeneration);
+      } catch {
+        setReady(false);
+        socket.close(4002,"BLACKJACK_HEARTBEAT_SEND_FAILED");
+      }
+    },input.heartbeatIntervalMs);
   };
 
   const detachPhysical=(
@@ -174,25 +266,79 @@ function createBlackjackResilientBrowserSocket(
     socket.removeEventListener("error",handlers.error);
   };
 
+  const scheduleReconnect=()=>{
+    if(
+      explicitlyClosed ||
+      terminalSessionReplaced ||
+      terminalError ||
+      !input.autoReconnect
+    ) return;
+    reconnectAttempt+=1;
+    const delayMs=reconnectDelayForAttempt({
+      attempt:reconnectAttempt,
+      baseDelayMs:input.reconnectDelayMs,
+      maxDelayMs:input.reconnectMaxDelayMs,
+      jitterRatio:input.reconnectJitterRatio,
+      random:input.reconnectRandom,
+    });
+    if(reconnectHandle!==null){
+      input.cancelReconnect(reconnectHandle);
+    }
+    reconnectHandle=input.scheduleReconnect(()=>{
+      reconnectHandle=null;
+      connect();
+    },delayMs);
+  };
+
   const connect=()=>{
-    if(explicitlyClosed) return;
+    if(explicitlyClosed || terminalSessionReplaced || terminalError) return;
     const socket=factory(url) as BlackjackPhysicalSocket;
     physical=socket;
     const ownGeneration=++generation;
     setReady(false);
+    clearTransportTimers();
+    scheduleSnapshotTimeout(socket,ownGeneration);
 
     const handlers={
       message:(event: Event | MessageEvent<unknown>)=>{
         if(ownGeneration!==generation) return;
         const message=event as MessageEvent<unknown>;
-        const type=parseMessageType(message.data);
+        const parsed=parseMessage(message.data);
+        const type=
+          parsed && typeof parsed.type==="string"
+            ? parsed.type
+            : null;
+
         if(type==="FULL_TABLE_SNAPSHOT"){
+          reconnectAttempt=0;
+          if(snapshotTimeoutHandle!==null){
+            input.cancelTransportTimer(snapshotTimeoutHandle);
+            snapshotTimeoutHandle=null;
+          }
           setReady(true);
+          scheduleHeartbeat(socket,ownGeneration);
         } else if(type==="SESSION_REPLACED"){
           terminalSessionReplaced=true;
           setReady(false);
+          clearTransportTimers();
           input.onSessionReplaced();
+        } else if(
+          type==="error" &&
+          parsed?.error==="BLACKJACK_SNAPSHOT_UNAVAILABLE"
+        ){
+          setReady(false);
+          clearTransportTimers();
+          socket.close(4002,"BLACKJACK_SNAPSHOT_UNAVAILABLE");
+        } else if(
+          type==="error" &&
+          parsed?.error==="BLACKJACK_IDENTITY_UNAVAILABLE"
+        ){
+          terminalError=true;
+          setReady(false);
+          clearTransportTimers();
+          input.onTerminalError();
         }
+
         for(const listener of messageListeners){
           listener(message);
         }
@@ -203,29 +349,28 @@ function createBlackjackResilientBrowserSocket(
         detachPhysical(socket,handlers);
         if(detachCurrent!==null) detachCurrent=null;
         if(physical===socket) physical=null;
+        clearTransportTimers();
         setReady(false);
         const code=
           "code" in event && typeof event.code==="number"
             ? event.code
             : 0;
+
         if(code===4001 && !terminalSessionReplaced){
           terminalSessionReplaced=true;
           input.onSessionReplaced();
-        }
-        if(
-          explicitlyClosed ||
-          terminalSessionReplaced ||
-          !input.autoReconnect
+        } else if(
+          code===1002 ||
+          code===1003 ||
+          code===1007 ||
+          code===1008 ||
+          code===1009
         ){
-          return;
+          terminalError=true;
+          input.onTerminalError();
         }
-        if(reconnectHandle!==null){
-          input.cancelReconnect(reconnectHandle);
-        }
-        reconnectHandle=input.scheduleReconnect(()=>{
-          reconnectHandle=null;
-          connect();
-        },input.reconnectDelayMs);
+
+        scheduleReconnect();
       },
       error:()=>undefined,
     };
@@ -256,6 +401,7 @@ function createBlackjackResilientBrowserSocket(
       if(explicitlyClosed) return;
       explicitlyClosed=true;
       setReady(false);
+      clearTransportTimers();
       if(reconnectHandle!==null){
         input.cancelReconnect(reconnectHandle);
         reconnectHandle=null;
@@ -350,10 +496,42 @@ export function connectBlackjackRealtimeElement(
   let transportConnected=false;
   let everReady=false;
   let sessionReplaced=false;
-  const reconnectDelayMs=options.reconnectDelayMs ?? 750;
+  let terminalConnectionError=false;
+  const reconnectDelayMs=options.reconnectDelayMs ?? 500;
   if(!Number.isSafeInteger(reconnectDelayMs) || reconnectDelayMs<100){
     throw new RangeError(
       "Blackjack reconnectDelayMs must be a safe integer >= 100",
+    );
+  }
+  const reconnectMaxDelayMs=options.reconnectMaxDelayMs ?? 8_000;
+  if(
+    !Number.isSafeInteger(reconnectMaxDelayMs) ||
+    reconnectMaxDelayMs<reconnectDelayMs
+  ){
+    throw new RangeError(
+      "Blackjack reconnectMaxDelayMs must be a safe integer >= reconnectDelayMs",
+    );
+  }
+  const reconnectJitterRatio=options.reconnectJitterRatio ?? 0.2;
+  if(
+    !Number.isFinite(reconnectJitterRatio) ||
+    reconnectJitterRatio<0 ||
+    reconnectJitterRatio>0.5
+  ){
+    throw new RangeError(
+      "Blackjack reconnectJitterRatio must be between 0 and 0.5",
+    );
+  }
+  const heartbeatIntervalMs=options.heartbeatIntervalMs ?? 10_000;
+  const snapshotTimeoutMs=options.snapshotTimeoutMs ?? 5_000;
+  if(
+    !Number.isSafeInteger(heartbeatIntervalMs) ||
+    heartbeatIntervalMs<1_000 ||
+    !Number.isSafeInteger(snapshotTimeoutMs) ||
+    snapshotTimeoutMs<500
+  ){
+    throw new RangeError(
+      "Blackjack heartbeat/snapshot timeouts are invalid",
     );
   }
   const scheduleReconnect=
@@ -364,14 +542,29 @@ export function connectBlackjackRealtimeElement(
     ((handle:unknown)=>clearTimeout(
       handle as ReturnType<typeof setTimeout>,
     ));
+  const scheduleTransportTimer=
+    options.scheduleTransportTimer ??
+    ((callback:()=>void,delayMs:number)=>setTimeout(callback,delayMs));
+  const cancelTransportTimer=
+    options.cancelTransportTimer ??
+    ((handle:unknown)=>clearTimeout(
+      handle as ReturnType<typeof setTimeout>,
+    ));
   const socket=createBlackjackResilientBrowserSocket(
     url,
     options.createSocket ?? defaultBlackjackSocketFactory,
     {
       autoReconnect:options.autoReconnect !== false,
       reconnectDelayMs,
+      reconnectMaxDelayMs,
+      reconnectJitterRatio,
+      reconnectRandom:options.reconnectRandom ?? Math.random,
+      heartbeatIntervalMs,
+      snapshotTimeoutMs,
       scheduleReconnect,
       cancelReconnect,
+      scheduleTransportTimer,
+      cancelTransportTimer,
       onTransportReadyChange:(ready)=>{
         transportConnected=ready;
         if(ready) everReady=true;
@@ -379,6 +572,10 @@ export function connectBlackjackRealtimeElement(
       },
       onSessionReplaced:()=>{
         sessionReplaced=true;
+        controller?.rerenderLatest();
+      },
+      onTerminalError:()=>{
+        terminalConnectionError=true;
         controller?.rerenderLatest();
       },
     },
@@ -399,6 +596,9 @@ export function connectBlackjackRealtimeElement(
 
     if(sessionReplaced){
       actionStatusLabel="SESSION REPLACED";
+      actionStatusTone="error";
+    } else if(terminalConnectionError){
+      actionStatusLabel="CONNECTION ERROR";
       actionStatusTone="error";
     } else if(!transportConnected){
       actionStatusLabel="RECONNECTING…";
@@ -442,7 +642,9 @@ export function connectBlackjackRealtimeElement(
     const connectionState=
       sessionReplaced
         ? "SESSION_REPLACED" as const
-        : transportConnected
+        : terminalConnectionError
+          ? "ERROR" as const
+          : transportConnected
           ? "READY" as const
           : everReady
             ? "RECONNECTING" as const
@@ -620,7 +822,9 @@ export function connectBlackjackRealtimeElement(
         ? "CLOSED" as const
         : sessionReplaced
           ? "SESSION_REPLACED" as const
-          : transportConnected && activeController.getCursor()!==null
+          : terminalConnectionError
+            ? "ERROR" as const
+            : transportConnected && activeController.getCursor()!==null
             ? "READY" as const
             : everReady
               ? "RECONNECTING" as const

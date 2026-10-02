@@ -93,6 +93,9 @@ describe("blackjack resilient browser realtime transport",()=>{
         return callback;
       },
       cancelReconnect:()=>undefined,
+      reconnectJitterRatio:0,
+      scheduleTransportTimer:()=> "transport-timer",
+      cancelTransportTimer:()=>undefined,
       scheduleRender:()=> "render-handle",
       cancelRender:()=>undefined,
     });
@@ -144,6 +147,130 @@ describe("blackjack resilient browser realtime transport",()=>{
     expect(connection.getStatus().state).toBe("CLOSED");
   });
 
+  it("backs off repeated pre-ready failures and resets after a full snapshot",()=>{
+    const physicals:Array<ReturnType<typeof physicalSocket>>=[];
+    const delays:number[]=[];
+    const reconnectCallbacks:Array<()=>void>=[];
+    const app={
+      innerHTML:"",
+      addEventListener:()=>undefined,
+      removeEventListener:()=>undefined,
+    } as unknown as HTMLElement;
+
+    const connection=connectBlackjackRealtimeElement(app,{
+      location:{protocol:"https:",host:"blackjack.example"},
+      createSocket:()=>{
+        const next=physicalSocket();
+        physicals.push(next);
+        return next.socket;
+      },
+      reconnectDelayMs:500,
+      reconnectMaxDelayMs:4_000,
+      reconnectJitterRatio:0,
+      scheduleReconnect:(callback,delayMs)=>{
+        reconnectCallbacks.push(callback);
+        delays.push(delayMs);
+        return callback;
+      },
+      cancelReconnect:()=>undefined,
+      scheduleTransportTimer:()=> "transport-timer",
+      cancelTransportTimer:()=>undefined,
+      scheduleRender:()=> "render-handle",
+      cancelRender:()=>undefined,
+    });
+
+    physicals[0].emit("close",Object.assign(new Event("close"),{code:1006}));
+    expect(delays).toEqual([500]);
+    reconnectCallbacks.shift()?.();
+    physicals[1].emit("close",Object.assign(new Event("close"),{code:1006}));
+    expect(delays).toEqual([500,1_000]);
+    reconnectCallbacks.shift()?.();
+
+    physicals[2].emit(
+      "message",
+      new MessageEvent("message",{
+        data:JSON.stringify(fullSnapshot(1,"round-reset")),
+      }),
+    );
+    physicals[2].emit("close",Object.assign(new Event("close"),{code:1006}));
+    expect(delays.at(-1)).toBe(500);
+    connection.close();
+  });
+
+  it("closes a zombie connection when no authoritative snapshot arrives",()=>{
+    const physicals:Array<ReturnType<typeof physicalSocket>>=[];
+    const timers:Array<()=>void>=[];
+    const app={
+      innerHTML:"",
+      addEventListener:()=>undefined,
+      removeEventListener:()=>undefined,
+    } as unknown as HTMLElement;
+
+    const connection=connectBlackjackRealtimeElement(app,{
+      location:{protocol:"https:",host:"blackjack.example"},
+      createSocket:()=>{
+        const next=physicalSocket();
+        physicals.push(next);
+        return next.socket;
+      },
+      snapshotTimeoutMs:500,
+      heartbeatIntervalMs:1_000,
+      scheduleTransportTimer:(callback)=>{
+        timers.push(callback);
+        return callback;
+      },
+      cancelTransportTimer:()=>undefined,
+      scheduleReconnect:()=> "reconnect",
+      cancelReconnect:()=>undefined,
+      scheduleRender:()=> "render-handle",
+      cancelRender:()=>undefined,
+    });
+
+    expect(timers).toHaveLength(1);
+    timers[0]();
+    expect(physicals[0].closeCalls).toContainEqual([
+      4002,
+      "BLACKJACK_SNAPSHOT_TIMEOUT",
+    ]);
+    connection.close();
+  });
+
+  it("treats policy/auth close as terminal instead of reconnect-spamming",()=>{
+    const physicals:Array<ReturnType<typeof physicalSocket>>=[];
+    const reconnectCallbacks:Array<()=>void>=[];
+    const app={
+      innerHTML:"",
+      addEventListener:()=>undefined,
+      removeEventListener:()=>undefined,
+    } as unknown as HTMLElement;
+
+    const connection=connectBlackjackRealtimeElement(app,{
+      location:{protocol:"https:",host:"blackjack.example"},
+      createSocket:()=>{
+        const next=physicalSocket();
+        physicals.push(next);
+        return next.socket;
+      },
+      scheduleReconnect:(callback)=>{
+        reconnectCallbacks.push(callback);
+        return callback;
+      },
+      cancelReconnect:()=>undefined,
+      scheduleTransportTimer:()=> "transport-timer",
+      cancelTransportTimer:()=>undefined,
+      scheduleRender:()=> "render-handle",
+      cancelRender:()=>undefined,
+    });
+
+    physicals[0].emit(
+      "close",
+      Object.assign(new Event("close"),{code:1008}),
+    );
+    expect(reconnectCallbacks).toEqual([]);
+    expect(connection.getStatus().state).toBe("ERROR");
+    connection.close();
+  });
+
   it("does not reconnect a session-replaced socket",()=>{
     const physicals:Array<ReturnType<typeof physicalSocket>>=[];
     const reconnectCallbacks:Array<()=>void>=[];
@@ -165,6 +292,9 @@ describe("blackjack resilient browser realtime transport",()=>{
         return callback;
       },
       cancelReconnect:()=>undefined,
+      reconnectJitterRatio:0,
+      scheduleTransportTimer:()=> "transport-timer",
+      cancelTransportTimer:()=>undefined,
       scheduleRender:()=> "render-handle",
       cancelRender:()=>undefined,
     });
