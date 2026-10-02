@@ -2,8 +2,19 @@ import fs from "node:fs";
 import path from "node:path";
 import { defineConfig, devices } from "@playwright/test";
 
-const chromiumPath = "/repl/tools/bin/chromium";
-const hasWorkspaceChromium = fs.existsSync(chromiumPath);
+const chromiumCandidates = [
+  process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH,
+  "/repl/tools/bin/chromium",
+  "/usr/bin/google-chrome",
+  "/usr/bin/google-chrome-stable",
+  "/usr/bin/chromium",
+  "/usr/bin/chromium-browser",
+].filter((candidate): candidate is string => Boolean(candidate));
+
+const chromiumPath = chromiumCandidates.find((candidate) =>
+  fs.existsSync(candidate),
+);
+const hasWorkspaceChromium = chromiumPath !== undefined;
 
 export default defineConfig({
   testDir: "./e2e",
