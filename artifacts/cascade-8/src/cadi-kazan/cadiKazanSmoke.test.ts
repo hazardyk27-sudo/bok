@@ -566,13 +566,17 @@ describe("cadi kazan route smoke contract", () => {
   });
 
 
-  it("shows Office pool remaining beside balance and explains the 75-ticket system from the info button", () => {
+  it("shows Office pool remaining beside balance and explains the 200-ticket system from the info button", () => {
     expect(witchClientSource).toContain("data-witch-office-pool-head");
     expect(witchClientSource).toContain("data-witch-office-pool-head-value");
     expect(witchClientSource).toContain("data-witch-office-pool-info-toggle");
-    expect(witchClientSource).toContain("75 BİLETLİK HAVUZ");
+    expect(witchClientSource).toContain("200 BİLETLİK HAVUZ");
     expect(witchClientSource).toContain("1</b> Michael · 100x");
-    expect(witchClientSource).toContain("40</b> Ödülsüz");
+    expect(witchClientSource).toContain("3</b> Stanley · 20x");
+    expect(witchClientSource).toContain("5</b> Dwight · 10x");
+    expect(witchClientSource).toContain("15</b> Jim · 5x");
+    expect(witchClientSource).toContain("60</b> Kevin · 2x");
+    expect(witchClientSource).toContain("116</b> Ödülsüz");
     expect(witchClientSource).toContain("closeOfficePoolInfo");
     expect(visualLockSource).toContain("PASS 45 — Office pool status in top bar + explainer");
     expect(visualLockSource).toContain(".witch-office-pool-info-button");
