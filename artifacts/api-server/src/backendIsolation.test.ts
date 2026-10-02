@@ -284,6 +284,9 @@ describe("backend game isolation", () => {
       "createShuffledBlackjackShoe",
     );
     expect(blackjackPlatform).toContain(
+      "rebaseBlackjackSnapshotAgainstSharedWallets",
+    );
+    expect(blackjackPlatform).not.toContain(
       "BLACKJACK_SHARED_WALLET_CHANGED",
     );
   });
