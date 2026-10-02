@@ -6770,3 +6770,26 @@
 .witch-page .witch-cell:not(.is-revealed) .witch-cell-artwork {
   visibility: hidden !important;
 }
+
+
+/* PASS 42 — prepared-under-coating result pipeline.
+   Every possible result asset is mounted from board creation. Pointer contact
+   prepares only the touched cell via a lightweight server read; no image src is
+   swapped during reveal. The selected candidate is already painted below the
+   intact base layer before settlement reaches the existing commit threshold. */
+.witch-page [data-witch-result-candidate],
+.witch-page [data-witch-office-candidate] {
+  visibility: hidden !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
+}
+
+.witch-page [data-witch-result-candidate][data-witch-result-active="true"],
+.witch-page [data-witch-office-candidate][data-witch-result-active="true"] {
+  visibility: visible !important;
+  opacity: 1 !important;
+}
+
+.witch-page .witch-cell:not(.is-revealed) [data-witch-result-active="true"] {
+  display: grid !important;
+}
