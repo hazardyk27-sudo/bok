@@ -256,6 +256,8 @@ describe("blackjack incremental DOM renderer",()=>{
     renderer.render(model({
       interactionMode:"BETTING",
       interactionPrompt:"PLACE YOUR BET",
+      openDrawer:"BET",
+      canOpenBetDrawer:true,
     }));
 
     const betting=app.querySelector<HTMLElement>(
@@ -269,6 +271,8 @@ describe("blackjack incremental DOM renderer",()=>{
       interactionMode:"TURN",
       interactionPrompt:"YOUR TURN",
       enabledActions:["HIT","STAND"],
+      openDrawer:null,
+      canOpenBetDrawer:false,
     }));
 
     expect(app.querySelector(".blackjack-betting-region")).toBe(betting);
