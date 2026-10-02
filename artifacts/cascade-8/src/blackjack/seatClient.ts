@@ -10,11 +10,20 @@ export type BlackjackSeatCommandPending = Readonly<{
   acceptedEventSequence:number|null;
 }>;
 
+export type BlackjackSeatCommandFeedback = Readonly<{
+  status:"ACCEPTED"|"REJECTED";
+  requestId:string;
+  type:"CLAIM_SEAT"|"LEAVE_SEAT";
+  error:string|null;
+}>;
+
 export type BlackjackSeatCommandClient = Readonly<{
   claim:(seatNumber:1|2|3|4|5)=>void;
   leave:()=>void;
   receive:(rawMessage:unknown)=>void;
   getPending:()=>BlackjackSeatCommandPending|null;
+  getFeedback:()=>BlackjackSeatCommandFeedback|null;
+  clearFeedback:()=>void;
   detach:()=>void;
 }>;
 
@@ -51,10 +60,16 @@ export function createBlackjackSeatCommandClient(input:{
   socket:BlackjackRealtimeSocketLike;
   createRequestId:()=>string;
   onPendingChange?:()=>void;
+  onFeedbackChange?:(feedback:BlackjackSeatCommandFeedback|null)=>void;
 }):BlackjackSeatCommandClient{
   let pending:BlackjackSeatCommandPending|null=null;
+  let feedback:BlackjackSeatCommandFeedback|null=null;
   let detached=false;
   const changed=()=>input.onPendingChange?.();
+  const setFeedback=(next:BlackjackSeatCommandFeedback|null)=>{
+    feedback=next;
+    input.onFeedbackChange?.(feedback);
+  };
 
   const start=(
     type:"CLAIM_SEAT"|"LEAVE_SEAT",
@@ -64,17 +79,30 @@ export function createBlackjackSeatCommandClient(input:{
     if(pending) throw new Error("Blackjack seat command is already pending");
     const requestId=input.createRequestId();
     if(!requestId.trim()) throw new Error("Blackjack seat requestId is empty");
+    setFeedback(null);
     pending=Object.freeze({
       requestId,type,seatNumber,
       acceptedStateVersion:null,
       acceptedEventSequence:null,
     });
     changed();
-    input.socket.send(JSON.stringify({
-      type,
-      requestId,
-      ...(seatNumber===null?{}:{seatNumber}),
-    }));
+    try {
+      input.socket.send(JSON.stringify({
+        type,
+        requestId,
+        ...(seatNumber===null?{}:{seatNumber}),
+      }));
+    } catch(error) {
+      pending=null;
+      changed();
+      setFeedback(Object.freeze({
+        status:"REJECTED",
+        requestId,
+        type,
+        error:error instanceof Error ? error.message : "BLACKJACK_CONNECTION_ERROR",
+      }));
+      throw error;
+    }
   };
 
   const receive=(rawMessage:unknown)=>{
@@ -92,8 +120,17 @@ export function createBlackjackSeatCommandClient(input:{
         message.requestId===pending.requestId
       )
     ){
+      const failed=pending;
       pending=null;
       changed();
+      setFeedback(Object.freeze({
+        status:"REJECTED",
+        requestId:failed.requestId,
+        type:failed.type,
+        error:typeof message.error==="string"
+          ? message.error
+          : "SEAT_NOT_AVAILABLE",
+      }));
       return;
     }
 
@@ -121,8 +158,20 @@ export function createBlackjackSeatCommandClient(input:{
       message.type==="SESSION_REPLACED" ||
       message.type==="error"
     ){
+      const failed=pending;
       pending=null;
       changed();
+      setFeedback(Object.freeze({
+        status:"REJECTED",
+        requestId:failed.requestId,
+        type:failed.type,
+        error:
+          message.type==="SESSION_REPLACED"
+            ? "SESSION_REPLACED"
+            : typeof message.error==="string"
+              ? message.error
+              : "BLACKJACK_CONNECTION_ERROR",
+      }));
       return;
     }
 
@@ -134,8 +183,15 @@ export function createBlackjackSeatCommandClient(input:{
       cursor.stateVersion>=pending.acceptedStateVersion &&
       cursor.eventSequence>=pending.acceptedEventSequence
     ){
+      const completed=pending;
       pending=null;
       changed();
+      setFeedback(Object.freeze({
+        status:"ACCEPTED",
+        requestId:completed.requestId,
+        type:completed.type,
+        error:null,
+      }));
     }
   };
 
@@ -152,11 +208,14 @@ export function createBlackjackSeatCommandClient(input:{
     leave:()=>start("LEAVE_SEAT",null),
     receive,
     getPending:()=>pending,
+    getFeedback:()=>feedback,
+    clearFeedback:()=>setFeedback(null),
     detach:()=>{
       if(detached) return;
       detached=true;
       input.socket.removeEventListener("message",onMessage);
       pending=null;
+      feedback=null;
     },
   });
 }

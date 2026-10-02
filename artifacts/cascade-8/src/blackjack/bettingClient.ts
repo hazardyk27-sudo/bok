@@ -194,6 +194,7 @@ export function createBlackjackBettingClient(input: {
   getViewContext: () => BlackjackSnapshotViewContext;
   createActionId: () => string;
   onStateChange?: () => void;
+  onFeedbackChange?: (feedback: BlackjackBettingFeedback | null) => void;
 }): BlackjackBettingClient {
   let state: BlackjackBettingState | null=null;
   let pending: BlackjackPendingBettingAction | null=null;
@@ -203,6 +204,10 @@ export function createBlackjackBettingClient(input: {
     input.getSnapshot()?.round?.roundId ?? null;
 
   const changed=()=>input.onStateChange?.();
+  const setFeedback=(next: BlackjackBettingFeedback | null)=>{
+    feedback=next;
+    input.onFeedbackChange?.(feedback);
+  };
 
   const clearForDifferentRound=(roundId: string | null) => {
     if(observedRoundId===roundId) return;
@@ -214,7 +219,7 @@ export function createBlackjackBettingClient(input: {
       feedback!==null;
     state=null;
     pending=null;
-    feedback=null;
+    setFeedback(null);
     if(hadState) changed();
   };
 
@@ -241,12 +246,12 @@ export function createBlackjackBettingClient(input: {
       state=completed.acceptedBettingState;
     }
     pending=null;
-    feedback=Object.freeze({
+    setFeedback(Object.freeze({
       status:"ACCEPTED",
       actionId:completed.message.actionId,
       actionType:completed.message.type,
       error:null,
-    });
+    }));
     changed();
   };
 
@@ -277,12 +282,12 @@ export function createBlackjackBettingClient(input: {
       if(acceptedBettingState===null){
         const failed=pending;
         pending=null;
-        feedback=Object.freeze({
+        setFeedback(Object.freeze({
           status:"REJECTED",
           actionId:failed.message.actionId,
           actionType:failed.message.type,
           error:"BETTING_STATE_UNAVAILABLE",
-        });
+        }));
         changed();
         return;
       }
@@ -313,12 +318,12 @@ export function createBlackjackBettingClient(input: {
     ) {
       const failed=pending;
       pending=null;
-      feedback=Object.freeze({
+      setFeedback(Object.freeze({
         status:"REJECTED",
         actionId:failed.message.actionId,
         actionType:failed.message.type,
         error:typeof message.error==="string" ? message.error : "INVALID_ACTION",
-      });
+      }));
       changed();
       return;
     }
@@ -326,7 +331,7 @@ export function createBlackjackBettingClient(input: {
     if(message.type==="error" || message.type==="SESSION_REPLACED"){
       const failed=pending;
       pending=null;
-      feedback=Object.freeze({
+      setFeedback(Object.freeze({
         status:"REJECTED",
         actionId:failed.message.actionId,
         actionType:failed.message.type,
@@ -336,7 +341,7 @@ export function createBlackjackBettingClient(input: {
             : typeof message.error==="string"
               ? message.error
               : "BLACKJACK_ACTION_ERROR",
-      });
+      }));
       changed();
     }
   };
@@ -354,7 +359,7 @@ export function createBlackjackBettingClient(input: {
       if(snapshot===null){
         throw new Error("Blackjack betting action requires authoritative snapshot");
       }
-      feedback=null;
+      setFeedback(null);
       const message=buildBlackjackBettingActionMessage(
         snapshot,
         input.getViewContext(),
@@ -385,7 +390,7 @@ export function createBlackjackBettingClient(input: {
     getFeedback:()=>feedback,
     isPending:()=>pending!==null,
     clearFeedback:()=>{
-      feedback=null;
+      setFeedback(null);
       changed();
     },
     detach:()=>{
