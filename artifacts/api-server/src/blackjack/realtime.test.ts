@@ -3,6 +3,7 @@ import { afterEach, describe, expect, it } from "vitest";
 import { WebSocket, type RawData } from "ws";
 import type { BlackjackPublicSnapshot } from "./publicSnapshot";
 import {
+  BLACKJACK_WS_CLOSE_POLICY_VIOLATION,
   BLACKJACK_WS_CLOSE_SNAPSHOT_UNAVAILABLE,
   BLACKJACK_WS_PATH,
   attachBlackjackWebSocket,
@@ -359,4 +360,150 @@ describe("blackjack WebSocket room foundation", () => {
       reason: "BLACKJACK_SNAPSHOT_UNAVAILABLE",
     });
   });
+  it("closes repeated malformed or unknown messages as a policy violation",async()=>{
+    const source=new TestSource(snapshot(1));
+    server=createServer();
+    runtime=attachBlackjackWebSocket(server,source,{
+      invalidMessageStrikeLimit:3,
+    });
+    const port=await listen(server);
+
+    client=new WebSocket(
+      `ws://127.0.0.1:${port}${BLACKJACK_WS_PATH}`,
+    );
+    await nextMessage(client);
+
+    for(let strike=1;strike<=2;strike+=1){
+      const rejected=nextMessage(client);
+      client.send(strike===1 ? "{" : JSON.stringify({type:"NOPE"}));
+      await expect(rejected).resolves.toEqual({
+        type:"error",
+        error:"BLACKJACK_INVALID_MESSAGE",
+      });
+      expect(client.readyState).toBe(WebSocket.OPEN);
+    }
+
+    const finalError=nextMessage(client);
+    const closed=nextClose(client);
+    client.send(JSON.stringify({type:"STILL_NOT_VALID"}));
+
+    await expect(finalError).resolves.toEqual({
+      type:"error",
+      error:"BLACKJACK_INVALID_MESSAGE",
+    });
+    await expect(closed).resolves.toEqual({
+      code:BLACKJACK_WS_CLOSE_POLICY_VIOLATION,
+      reason:"BLACKJACK_INVALID_MESSAGE",
+    });
+  });
+
+  it("rate limits total websocket messages without affecting the initial snapshot",async()=>{
+    const source=new TestSource(snapshot(2));
+    server=createServer();
+    runtime=attachBlackjackWebSocket(server,source,{
+      messageRateLimit:2,
+      messageRateWindowMs:10_000,
+    });
+    const port=await listen(server);
+
+    client=new WebSocket(
+      `ws://127.0.0.1:${port}${BLACKJACK_WS_PATH}`,
+    );
+    await nextMessage(client);
+
+    for(let index=0;index<2;index+=1){
+      const synced=nextMessage(client);
+      client.send(JSON.stringify({type:"sync"}));
+      await expect(synced).resolves.toMatchObject({
+        type:"FULL_TABLE_SNAPSHOT",
+        reason:"EXPLICIT_SYNC",
+      });
+    }
+
+    const limited=nextMessage(client);
+    const closed=nextClose(client);
+    client.send(JSON.stringify({type:"sync"}));
+    await expect(limited).resolves.toEqual({
+      type:"error",
+      error:"BLACKJACK_RATE_LIMITED",
+    });
+    await expect(closed).resolves.toEqual({
+      code:BLACKJACK_WS_CLOSE_POLICY_VIOLATION,
+      reason:"BLACKJACK_RATE_LIMITED",
+    });
+  });
+
+  it("applies a stricter mutation rate limit than heartbeat sync traffic",async()=>{
+    const source=new TestSource(snapshot(2));
+    server=createServer();
+    runtime=attachBlackjackWebSocket(server,source,{
+      mutationRateLimit:1,
+      mutationRateWindowMs:10_000,
+    });
+    const port=await listen(server);
+
+    client=new WebSocket(
+      `ws://127.0.0.1:${port}${BLACKJACK_WS_PATH}`,
+    );
+    await nextMessage(client);
+
+    const first=nextMessage(client);
+    client.send(JSON.stringify({
+      type:"CLAIM_SEAT",
+      requestId:"claim-rate-1",
+      seatNumber:1,
+    }));
+    await expect(first).resolves.toEqual({
+      type:"SEAT_CLAIM_REJECTED",
+      error:"AUTH_REQUIRED",
+    });
+
+    const sync=nextMessage(client);
+    client.send(JSON.stringify({type:"sync"}));
+    await expect(sync).resolves.toMatchObject({
+      type:"FULL_TABLE_SNAPSHOT",
+      reason:"EXPLICIT_SYNC",
+    });
+
+    const limited=nextMessage(client);
+    const closed=nextClose(client);
+    client.send(JSON.stringify({
+      type:"CLAIM_SEAT",
+      requestId:"claim-rate-2",
+      seatNumber:1,
+    }));
+    await expect(limited).resolves.toEqual({
+      type:"error",
+      error:"BLACKJACK_ACTION_RATE_LIMITED",
+    });
+    await expect(closed).resolves.toEqual({
+      code:BLACKJACK_WS_CLOSE_POLICY_VIOLATION,
+      reason:"BLACKJACK_ACTION_RATE_LIMITED",
+    });
+  });
+
+  it("uses websocket close 1009 for oversized inbound payloads",async()=>{
+    const source=new TestSource(snapshot(1));
+    server=createServer();
+    runtime=attachBlackjackWebSocket(server,source,{
+      maxPayloadBytes:256,
+    });
+    const port=await listen(server);
+
+    client=new WebSocket(
+      `ws://127.0.0.1:${port}${BLACKJACK_WS_PATH}`,
+    );
+    await nextMessage(client);
+
+    const closed=nextClose(client);
+    client.send(JSON.stringify({
+      type:"sync",
+      padding:"x".repeat(1_024),
+    }));
+
+    await expect(closed).resolves.toMatchObject({
+      code:1009,
+    });
+  });
+
 });
