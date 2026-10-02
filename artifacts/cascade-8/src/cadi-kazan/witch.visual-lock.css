@@ -7268,3 +7268,25 @@
     font-size: 16px !important;
   }
 }
+
+
+/* PASS 47 — authoritative bomb/safe visibility.
+   A terminal/revealed Standard or Advanced result must never depend solely on
+   transient prepared-result flags. The server-authoritative result marker wins
+   every visibility cascade so BUST cannot leave a plain white bomb cell. */
+.witch-page .witch-cell[data-authoritative-result="SAFE"]
+  [data-witch-result-candidate="SAFE"],
+.witch-page .witch-cell[data-authoritative-result="BOMB"]
+  [data-witch-result-candidate="BOMB"] {
+  display: block !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+}
+
+.witch-page .witch-cell[data-authoritative-result="SAFE"]
+  [data-witch-result-candidate="BOMB"],
+.witch-page .witch-cell[data-authoritative-result="BOMB"]
+  [data-witch-result-candidate="SAFE"] {
+  visibility: hidden !important;
+  opacity: 0 !important;
+}
