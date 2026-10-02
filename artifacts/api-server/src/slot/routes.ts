@@ -27,6 +27,10 @@ function sendError(res: Response, error: unknown) {
   res.status(status).json({ error: message });
 }
 
+function writeSpinEvent(res: Response, event: "result" | "settled" | "error", payload: unknown) {
+  res.write(`event: ${event}\ndata: ${JSON.stringify(payload)}\n\n`);
+}
+
 router.get("/slot/state", async (req, res) => {
   try {
     res.json(await slotRepository.getState(getSessionId(req, res)));
@@ -45,18 +49,60 @@ router.post("/slot/migrate", async (req, res) => {
 });
 
 router.post("/slot/spins", async (req, res) => {
-  try {
-    const body = req.body as { stakeCents?: unknown; idempotencyKey?: unknown };
-    if (typeof body.idempotencyKey !== "string") {
-      res.status(400).json({ error: "stakeCents and idempotencyKey are required" });
-      return;
+  const body = req.body as { stakeCents?: unknown; idempotencyKey?: unknown };
+  if (typeof body.idempotencyKey !== "string") {
+    res.status(400).json({ error: "stakeCents and idempotencyKey are required" });
+    return;
+  }
+
+  const input = {
+    stakeCents: Number(body.stakeCents),
+    idempotencyKey: body.idempotencyKey,
+  };
+  const sessionId = getSessionId(req, res);
+  const wantsStream = req.get("accept")?.includes("text/event-stream") ?? false;
+
+  if (!wantsStream) {
+    try {
+      res.status(201).json(await slotRepository.spin(sessionId, input));
+    } catch (error) {
+      sendError(res, error);
     }
-    res.status(201).json(await slotRepository.spin(getSessionId(req, res), {
-      stakeCents: Number(body.stakeCents),
-      idempotencyKey: body.idempotencyKey,
-    }));
+    return;
+  }
+
+  let prepared: ReturnType<typeof slotRepository.prepareSpin>;
+  try {
+    prepared = slotRepository.prepareSpin(input);
   } catch (error) {
     sendError(res, error);
+    return;
+  }
+
+  res.status(200);
+  res.setHeader("Content-Type", "text/event-stream; charset=utf-8");
+  res.setHeader("Cache-Control", "no-cache, no-transform");
+  res.setHeader("X-Accel-Buffering", "no");
+  res.flushHeaders();
+
+  writeSpinEvent(res, "result", {
+    roundId: prepared.roundId,
+    result: prepared.wireResult,
+  });
+
+  try {
+    const settled = await slotRepository.settlePreparedSpin(sessionId, prepared);
+    writeSpinEvent(res, "settled", {
+      roundId: settled.roundId,
+      wallet: settled.wallet,
+      ...(settled.roundId === prepared.roundId ? {} : { result: settled.result }),
+    });
+  } catch (error) {
+    writeSpinEvent(res, "error", {
+      error: error instanceof Error ? error.message : "SLOT_REQUEST_FAILED",
+    });
+  } finally {
+    res.end();
   }
 });
 
