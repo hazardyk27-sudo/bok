@@ -8328,3 +8328,1160 @@ button {
   }
 }
 
+/* Canonical responsive scene v1 — one scaled coordinate system per orientation */
+.roulette-page[data-responsive-layout="canonical-v1"] {
+  position: relative;
+  width: 100vw;
+  height: 100dvh;
+  min-height: 100dvh;
+  overflow: hidden;
+  padding: 0;
+}
+
+.roulette-page[data-responsive-layout="canonical-v1"]
+  .roulette-game-shell {
+  position: absolute !important;
+  left: 50% !important;
+  top: 50% !important;
+  width: var(--roulette-scene-width) !important;
+  height: var(--roulette-scene-height) !important;
+  min-height: 0 !important;
+  max-width: none !important;
+  max-height: none !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  display: block !important;
+  overflow: visible !important;
+  transform:
+    translate(-50%, -50%)
+    scale(var(--roulette-scene-scale)) !important;
+  transform-origin: center center !important;
+}
+
+.roulette-page[data-responsive-layout="canonical-v1"]
+  .roulette-wheel-panel {
+  position: absolute !important;
+  inset: 0 !important;
+  width: 100% !important;
+  height: 100% !important;
+  min-width: 0 !important;
+  min-height: 0 !important;
+  margin: 0 !important;
+  display: block !important;
+  overflow: visible !important;
+  transform: none !important;
+  opacity: 1 !important;
+  filter: none !important;
+  pointer-events: none;
+  z-index: 1;
+}
+
+.roulette-page[data-responsive-layout="canonical-v1"]
+  .roulette-stage {
+  position: absolute !important;
+  left: var(--roulette-wheel-x) !important;
+  top: var(--roulette-wheel-y) !important;
+  width: var(--roulette-wheel-size) !important;
+  height: var(--roulette-wheel-size) !important;
+  max-width: none !important;
+  max-height: none !important;
+  aspect-ratio: 1 / 1;
+  display: grid !important;
+  place-items: center;
+  transform: none !important;
+  transform-origin: center center !important;
+  opacity: 1;
+  filter: none;
+  transition:
+    left 420ms cubic-bezier(0.2, 0.78, 0.2, 1),
+    top 420ms cubic-bezier(0.2, 0.78, 0.2, 1),
+    width 420ms cubic-bezier(0.2, 0.78, 0.2, 1),
+    height 420ms cubic-bezier(0.2, 0.78, 0.2, 1),
+    opacity 300ms ease,
+    filter 300ms ease;
+}
+
+.roulette-page[data-responsive-layout="canonical-v1"]
+  .roulette-wheel-canvas {
+  width: 100% !important;
+  height: 100% !important;
+  max-width: none !important;
+  max-height: none !important;
+}
+
+.roulette-page[data-responsive-layout="canonical-v1"][data-phase="betting"]
+  .roulette-stage {
+  opacity: 0.48 !important;
+  filter:
+    saturate(0.82)
+    brightness(0.78) !important;
+}
+
+.roulette-page[data-responsive-layout="canonical-v1"][data-phase="spinning"]
+  .roulette-stage,
+.roulette-page[data-responsive-layout="canonical-v1"][data-phase="settled"]
+  .roulette-stage {
+  opacity: 1 !important;
+  filter: none !important;
+}
+
+.roulette-page[data-responsive-layout="canonical-v1"]
+  .roulette-top-hud {
+  position: absolute;
+  box-sizing: border-box;
+  display: grid;
+  align-items: stretch;
+  overflow: hidden;
+  border:
+    1px solid
+    rgba(236, 224, 197, 0.18);
+  border-radius: 10px;
+  background:
+    linear-gradient(
+      180deg,
+      rgba(17, 19, 20, 0.975),
+      rgba(6, 7, 8, 0.985)
+    );
+  box-shadow:
+    0 9px 26px rgba(0, 0, 0, 0.34),
+    inset 0 1px 0 rgba(255, 255, 255, 0.045);
+  font-family:
+    system-ui,
+    -apple-system,
+    BlinkMacSystemFont,
+    "Segoe UI",
+    sans-serif;
+  font-variant-numeric:
+    tabular-nums;
+  pointer-events: auto;
+  z-index: 30;
+}
+
+.roulette-page[data-responsive-layout="canonical-v1"]
+  .roulette-top-hud__metric {
+  position: relative;
+  min-width: 0;
+  display: grid;
+  align-content: center;
+  justify-items: center;
+  overflow: hidden;
+}
+
+.roulette-page[data-responsive-layout="canonical-v1"]
+  .roulette-top-hud__metric
+  + .roulette-top-hud__metric::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 18%;
+  bottom: 18%;
+  width: 1px;
+  background:
+    linear-gradient(
+      180deg,
+      transparent,
+      rgba(228, 202, 141, 0.28),
+      transparent
+    );
+}
+
+.roulette-page[data-responsive-layout="canonical-v1"]
+  .roulette-top-hud__metric > span {
+  max-width: 100%;
+  overflow: hidden;
+  color: rgba(225, 218, 202, 0.64);
+  font-weight: 780;
+  line-height: 1;
+  letter-spacing: 0.08em;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.roulette-page[data-responsive-layout="canonical-v1"]
+  .roulette-top-hud__metric > strong {
+  max-width: 100%;
+  overflow: hidden;
+  color: #fbf8ef;
+  font-weight: 900;
+  line-height: 1.05;
+  letter-spacing: -0.035em;
+  text-overflow: clip;
+  white-space: nowrap;
+}
+
+.roulette-page[data-responsive-layout="canonical-v1"]
+  .roulette-top-hud__metric
+  [data-last-win] {
+  color: #e7c879;
+}
+
+.roulette-page[data-responsive-layout="canonical-v1"]
+  .roulette-top-hud__menu-slot {
+  position: relative;
+  display: grid;
+  place-items: center;
+  border-left:
+    1px solid
+    rgba(228, 202, 141, 0.18);
+  pointer-events: auto;
+}
+
+.roulette-page[data-responsive-layout="canonical-v1"]
+  .roulette-menu-button {
+  padding: 0;
+  border:
+    1px solid
+    rgba(231, 220, 194, 0.26);
+  display: grid;
+  align-content: center;
+  justify-items: center;
+  gap: 4px;
+  color: #f8f2e5;
+  background:
+    linear-gradient(
+      180deg,
+      rgba(34, 38, 40, 0.98),
+      rgba(10, 12, 13, 0.99)
+    );
+  cursor: pointer;
+}
+
+.roulette-page[data-responsive-layout="canonical-v1"]
+  .roulette-menu-button > span {
+  display: block;
+  height: 1.5px;
+  border-radius: 99px;
+  background:
+    linear-gradient(
+      90deg,
+      #dad5ca,
+      #fff7e3
+    );
+}
+
+.roulette-page[data-responsive-layout="canonical-v1"]
+  .roulette-menu-button > span:nth-child(1) {
+  width: 12px;
+}
+.roulette-page[data-responsive-layout="canonical-v1"]
+  .roulette-menu-button > span:nth-child(2) {
+  width: 16px;
+}
+.roulette-page[data-responsive-layout="canonical-v1"]
+  .roulette-menu-button > span:nth-child(3) {
+  width: 9px;
+}
+
+.roulette-page[data-responsive-layout="canonical-v1"]
+  .roulette-recent-strip {
+  position: absolute;
+  display: grid;
+  grid-template-columns:
+    repeat(11, minmax(0, 1fr));
+  overflow: hidden;
+  border:
+    1px solid
+    rgba(216, 204, 176, 0.16);
+  border-radius: 7px;
+  background: rgba(4, 5, 6, 0.965);
+  box-shadow:
+    0 5px 14px rgba(0, 0, 0, 0.24);
+  pointer-events: none;
+  z-index: 27;
+}
+
+.roulette-page[data-responsive-layout="canonical-v1"]
+  .roulette-recent-result {
+  min-width: 0;
+  display: grid;
+  place-items: center;
+  border-right:
+    1px solid
+    rgba(183, 186, 181, 0.10);
+  color: #e6e5df;
+  background: rgba(7, 8, 9, 0.98);
+  font-weight: 700;
+  line-height: 1;
+}
+
+.roulette-page[data-responsive-layout="canonical-v1"]
+  .roulette-recent-result.is-red {
+  color: #c33a35;
+}
+.roulette-page[data-responsive-layout="canonical-v1"]
+  .roulette-recent-result.is-green {
+  color: #78a97a;
+}
+.roulette-page[data-responsive-layout="canonical-v1"]
+  .roulette-recent-result.is-empty {
+  color: rgba(224, 225, 220, 0.14);
+}
+
+.roulette-page[data-responsive-layout="canonical-v1"]
+  .roulette-betting-timer {
+  position: absolute;
+  display: grid;
+  align-content: center;
+  justify-items: center;
+  border:
+    1px solid
+    rgba(241, 226, 193, 0.26);
+  border-radius: 9px;
+  color: #f7f2e7;
+  background:
+    linear-gradient(
+      180deg,
+      rgba(15, 17, 18, 0.96),
+      rgba(5, 6, 7, 0.96)
+    );
+  box-shadow:
+    0 7px 18px rgba(0, 0, 0, 0.26);
+  font-family:
+    system-ui,
+    -apple-system,
+    BlinkMacSystemFont,
+    "Segoe UI",
+    sans-serif;
+  font-variant-numeric:
+    tabular-nums;
+  pointer-events: none;
+  z-index: 28;
+}
+
+.roulette-page[data-responsive-layout="canonical-v1"]
+  .roulette-betting-timer__label {
+  color: rgba(230, 222, 204, 0.62);
+  font-weight: 760;
+  line-height: 1;
+  letter-spacing: 0.08em;
+}
+
+.roulette-page[data-responsive-layout="canonical-v1"]
+  .roulette-betting-timer__value {
+  color: #fff8e8;
+  font-weight: 880;
+  line-height: 1;
+  text-align: center;
+}
+
+.roulette-page[data-responsive-layout="canonical-v1"]
+  .roulette-result-banner {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  justify-items: center;
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  z-index: 12;
+}
+
+.roulette-page[data-responsive-layout="canonical-v1"][data-result-visible="true"]
+  .roulette-result-banner {
+  opacity: 1;
+  visibility: visible;
+}
+
+.roulette-page[data-responsive-layout="canonical-v1"]
+  .roulette-win-message {
+  position: absolute;
+  left: 50%;
+  transform:
+    translate(-50%, -50%)
+    scale(0.96);
+  display: grid;
+  justify-items: center;
+  gap: 4px;
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  z-index: 13;
+}
+
+.roulette-page[data-responsive-layout="canonical-v1"][data-result-visible="true"][data-result-has-payout="true"]
+  .roulette-win-message {
+  opacity: 1;
+  visibility: visible;
+  transform:
+    translate(-50%, -50%)
+    scale(1);
+}
+
+.roulette-page[data-responsive-layout="canonical-v1"]
+  .roulette-bet-panel {
+  min-width: 0 !important;
+  min-height: 0 !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  opacity: 1 !important;
+  filter: none !important;
+  transform-origin: top left !important;
+  z-index: 8;
+}
+
+.roulette-page[data-responsive-layout="canonical-v1"]
+  .roulette-bet-panel__header {
+  display: none !important;
+}
+
+.roulette-page[data-responsive-layout="canonical-v1"]
+  .roulette-table-layout {
+  position: relative;
+  width: 100%;
+  max-width: none !important;
+  overflow: visible !important;
+  pointer-events: auto;
+}
+
+.roulette-page[data-responsive-layout="canonical-v1"]
+  .roulette-mobile-control-rail {
+  position: absolute;
+  display: grid !important;
+  grid-template-rows: repeat(6, 40px);
+  align-items: center;
+  justify-items: center;
+  align-content: center;
+  gap: 7px;
+  width: 48px;
+  min-width: 48px;
+  padding: 6px 4px;
+  box-sizing: border-box;
+  border:
+    1px solid
+    rgba(239, 229, 207, 0.18);
+  border-radius: 24px;
+  background:
+    linear-gradient(
+      180deg,
+      rgba(16, 18, 19, 0.985),
+      rgba(5, 6, 7, 0.975)
+    );
+  box-shadow:
+    0 12px 30px rgba(0, 0, 0, 0.42),
+    inset 0 1px 0 rgba(255, 255, 255, 0.045);
+  pointer-events: auto;
+  z-index: 18;
+}
+
+.roulette-page[data-responsive-layout="canonical-v1"]
+  .roulette-mobile-utility,
+.roulette-page[data-responsive-layout="canonical-v1"]
+  .roulette-mobile-chip-picker {
+  position: relative;
+  width: 40px;
+  height: 40px;
+  display: grid;
+  place-items: center;
+}
+
+.roulette-page[data-responsive-layout="canonical-v1"]
+  .roulette-mobile-rail-button {
+  box-sizing: border-box;
+  width: 40px;
+  height: 40px;
+  min-width: 40px;
+  min-height: 40px;
+  padding: 0;
+  border:
+    1px solid
+    rgba(239, 229, 207, 0.30);
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  color: #f3eee2;
+  background:
+    linear-gradient(
+      180deg,
+      #171a1b,
+      #080a0b
+    );
+  box-shadow:
+    0 3px 9px rgba(0, 0, 0, 0.38),
+    inset 0 1px 0 rgba(255, 255, 255, 0.06);
+  font:
+    820 12px/1
+    system-ui,
+    -apple-system,
+    BlinkMacSystemFont,
+    "Segoe UI",
+    sans-serif;
+  cursor: pointer;
+}
+
+.roulette-page[data-responsive-layout="canonical-v1"]
+  .roulette-mobile-rail-button:disabled {
+  opacity: 0.28;
+  filter: saturate(0.45);
+  cursor: default;
+}
+
+.roulette-page[data-responsive-layout="canonical-v1"]
+  .roulette-rail-icon {
+  width: 54%;
+  height: 54%;
+  display: block;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.65;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  pointer-events: none;
+}
+
+.roulette-page[data-responsive-layout="canonical-v1"]
+  .roulette-mobile-chip-toggle {
+  opacity: 1 !important;
+  background-image: none !important;
+  font-weight: 950;
+}
+
+.roulette-page[data-responsive-layout="canonical-v1"]
+  .roulette-mobile-stats-panel,
+.roulette-page[data-responsive-layout="canonical-v1"]
+  .roulette-mobile-chip-menu {
+  position: absolute;
+  right: 50px;
+  top: 50%;
+  transform: translateY(-50%);
+  border:
+    1px solid
+    rgba(190, 190, 181, 0.30);
+  background:
+    linear-gradient(
+      180deg,
+      rgba(13, 15, 16, 0.99),
+      rgba(5, 7, 8, 0.995)
+    );
+  box-shadow:
+    0 13px 30px rgba(0, 0, 0, 0.58);
+  z-index: 24;
+}
+
+.roulette-page[data-responsive-layout="canonical-v1"]
+  .roulette-mobile-stats-panel[hidden],
+.roulette-page[data-responsive-layout="canonical-v1"]
+  .roulette-mobile-chip-menu[hidden] {
+  display: none !important;
+}
+
+.roulette-page[data-responsive-layout="canonical-v1"]
+  .roulette-mobile-stats-panel {
+  width: 118px;
+  padding: 8px 9px;
+  border-radius: 10px;
+}
+
+.roulette-page[data-responsive-layout="canonical-v1"]
+  .roulette-mobile-stats-row {
+  min-height: 20px;
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: center;
+}
+
+.roulette-page[data-responsive-layout="canonical-v1"]
+  .roulette-mobile-chip-menu {
+  width: max-content;
+  max-width: 286px;
+  padding: 5px 6px;
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: 36px;
+  align-items: center;
+  gap: 5px;
+  overflow-x: auto;
+  overflow-y: hidden;
+  border-radius: 20px;
+  scrollbar-width: none;
+}
+
+.roulette-page[data-responsive-layout="canonical-v1"]
+  .roulette-mobile-chip-menu
+  .roulette-chip-option {
+  flex: none;
+  width: 38px;
+  height: 38px;
+  opacity: 1 !important;
+  filter: none !important;
+}
+
+.roulette-page[data-responsive-layout="canonical-v1"]
+  .roulette-settings-menu {
+  position: absolute;
+  padding: 10px;
+  display: grid;
+  gap: 9px;
+  border:
+    1px solid
+    rgba(229, 218, 194, 0.24);
+  border-radius: 13px;
+  color: #f4f1e9;
+  background:
+    linear-gradient(
+      160deg,
+      rgba(27, 30, 31, 0.985),
+      rgba(6, 8, 9, 0.995)
+    );
+  box-shadow:
+    0 18px 42px rgba(0, 0, 0, 0.58);
+  pointer-events: auto;
+  z-index: 80;
+}
+
+.roulette-page[data-responsive-layout="canonical-v1"]
+  .roulette-settings-menu[hidden] {
+  display: none !important;
+}
+
+.roulette-page[data-responsive-layout="canonical-v1"]
+  .roulette-settings-menu__header {
+  min-height: 30px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 1px 7px;
+  border-bottom:
+    1px solid
+    rgba(229, 218, 194, 0.11);
+}
+
+.roulette-page[data-responsive-layout="canonical-v1"]
+  .roulette-audio-control {
+  display: grid;
+  grid-template-columns:
+    minmax(0, 1fr)
+    auto;
+  grid-template-areas:
+    "copy value"
+    "range range";
+  gap: 5px 10px;
+  padding: 7px 8px 8px;
+  border:
+    1px solid
+    rgba(227, 218, 198, 0.10);
+  border-radius: 10px;
+}
+
+.roulette-page[data-responsive-layout="canonical-v1"]
+  .roulette-audio-control__copy {
+  grid-area: copy;
+  display: grid;
+  gap: 2px;
+}
+
+.roulette-page[data-responsive-layout="canonical-v1"]
+  .roulette-audio-control output {
+  grid-area: value;
+}
+
+.roulette-page[data-responsive-layout="canonical-v1"]
+  .roulette-audio-control input[type="range"] {
+  grid-area: range;
+  width: 100%;
+}
+
+.roulette-page[data-responsive-layout="canonical-v1"]
+  .roulette-main-menu-button {
+  min-height: 37px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+/* Portrait reference scene: 390 × 844. */
+.roulette-page[data-responsive-layout="canonical-v1"][data-responsive-mode="portrait"]
+  .roulette-top-hud {
+  left: 8px !important;
+  top: 6px !important;
+  width: 374px !important;
+  height: 44px !important;
+  min-height: 44px !important;
+  grid-template-columns:
+    minmax(0, 1.55fr)
+    minmax(0, 0.78fr)
+    minmax(0, 0.82fr)
+    42px;
+}
+
+.roulette-page[data-responsive-layout="canonical-v1"][data-responsive-mode="portrait"]
+  .roulette-top-hud__metric {
+  padding: 5px 7px;
+}
+
+.roulette-page[data-responsive-layout="canonical-v1"][data-responsive-mode="portrait"]
+  .roulette-top-hud__metric > span {
+  font-size: 7px;
+}
+
+.roulette-page[data-responsive-layout="canonical-v1"][data-responsive-mode="portrait"]
+  .roulette-top-hud__metric > strong {
+  font-size: 15px;
+}
+
+.roulette-page[data-responsive-layout="canonical-v1"][data-responsive-mode="portrait"]
+  .roulette-menu-button {
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+}
+
+.roulette-page[data-responsive-layout="canonical-v1"][data-responsive-mode="portrait"]
+  .roulette-recent-strip {
+  left: 8px !important;
+  top: 56px !important;
+  width: 374px !important;
+  height: 22px !important;
+  transform: none !important;
+}
+
+.roulette-page[data-responsive-layout="canonical-v1"][data-responsive-mode="portrait"]
+  .roulette-recent-result {
+  height: 20px;
+  font-size: 10px;
+}
+
+.roulette-page[data-responsive-layout="canonical-v1"][data-responsive-mode="portrait"]
+  .roulette-betting-timer {
+  left: 8px !important;
+  top: 88px !important;
+  width: 62px;
+  min-width: 62px !important;
+  height: 46px;
+  min-height: 46px !important;
+  padding: 5px 7px;
+}
+
+.roulette-page[data-responsive-layout="canonical-v1"][data-responsive-mode="portrait"]
+  .roulette-betting-timer__label {
+  font-size: 7px;
+}
+
+.roulette-page[data-responsive-layout="canonical-v1"][data-responsive-mode="portrait"]
+  .roulette-betting-timer__value {
+  font-size: 21px;
+}
+
+.roulette-page[data-responsive-layout="canonical-v1"][data-responsive-mode="portrait"]
+  .roulette-bet-panel {
+  position: absolute !important;
+  inset: 0 !important;
+  width: 390px !important;
+  height: 844px !important;
+  transform: none !important;
+  pointer-events: none;
+}
+
+.roulette-page[data-responsive-layout="canonical-v1"][data-responsive-mode="portrait"]
+  .roulette-table-layout {
+  position: absolute !important;
+  left: var(--roulette-table-x) !important;
+  top: var(--roulette-table-y) !important;
+  width: var(--roulette-table-width) !important;
+  transform:
+    scale(var(--roulette-table-scale)) !important;
+  transform-origin: top left !important;
+}
+
+.roulette-page[data-responsive-layout="canonical-v1"][data-responsive-mode="portrait"]
+  .roulette-bet-table {
+  --bet-border:
+    rgba(241, 234, 218, 0.74);
+  --table-width:
+    var(--roulette-table-width);
+  --zero-row: 37.5px;
+  --number-row: 42.9px;
+  --column-row: 37.5px;
+
+  position: relative;
+  width: var(--roulette-table-width) !important;
+  display: grid !important;
+  grid-template-columns:
+    17.2%
+    16.2%
+    66.6% !important;
+  grid-template-rows:
+    var(--zero-row)
+    auto
+    var(--column-row) !important;
+  overflow: visible !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+}
+
+.roulette-page[data-responsive-layout="canonical-v1"][data-responsive-mode="portrait"]
+  .roulette-zero-cell {
+  grid-column: 3 !important;
+  grid-row: 1 !important;
+  min-height: var(--zero-row) !important;
+}
+
+.roulette-page[data-responsive-layout="canonical-v1"][data-responsive-mode="portrait"]
+  .roulette-number-grid {
+  grid-column: 3 !important;
+  grid-row: 2 !important;
+  display: grid !important;
+  grid-template-columns:
+    repeat(3, minmax(0, 1fr)) !important;
+  grid-template-rows:
+    repeat(12, var(--number-row)) !important;
+}
+
+.roulette-page[data-responsive-layout="canonical-v1"][data-responsive-mode="portrait"]
+  .roulette-number-cell {
+  grid-column:
+    var(--mobile-column) !important;
+  grid-row:
+    var(--mobile-row) !important;
+  min-height:
+    var(--number-row) !important;
+}
+
+.roulette-page[data-responsive-layout="canonical-v1"][data-responsive-mode="portrait"]
+  .roulette-column-bets {
+  grid-column: 3 !important;
+  grid-row: 3 !important;
+  display: grid !important;
+  grid-template-columns:
+    repeat(3, minmax(0, 1fr)) !important;
+  grid-template-rows:
+    var(--column-row) !important;
+}
+
+.roulette-page[data-responsive-layout="canonical-v1"][data-responsive-mode="portrait"]
+  .roulette-column-cell {
+  min-height:
+    var(--column-row) !important;
+}
+
+.roulette-page[data-responsive-layout="canonical-v1"][data-responsive-mode="portrait"]
+  .roulette-dozen-bets {
+  grid-column: 2 !important;
+  grid-row: 2 !important;
+  display: grid !important;
+  grid-template-columns: 100% !important;
+  grid-template-rows:
+    repeat(3, 1fr) !important;
+}
+
+.roulette-page[data-responsive-layout="canonical-v1"][data-responsive-mode="portrait"]
+  .roulette-outside-bets {
+  grid-column: 1 !important;
+  grid-row: 2 !important;
+  display: grid !important;
+  grid-template-columns: 100% !important;
+  grid-template-rows:
+    repeat(6, 1fr) !important;
+}
+
+.roulette-page[data-responsive-layout="canonical-v1"][data-responsive-mode="portrait"]
+  .roulette-mobile-control-rail {
+  left: 339px !important;
+  top: 151px !important;
+  transform: none !important;
+}
+
+.roulette-page[data-responsive-layout="canonical-v1"][data-responsive-mode="portrait"]
+  .roulette-bet-console {
+  display: none !important;
+}
+
+.roulette-page[data-responsive-layout="canonical-v1"][data-responsive-mode="portrait"]
+  .roulette-result-banner {
+  top: 13%;
+  min-width: 156px;
+}
+
+.roulette-page[data-responsive-layout="canonical-v1"][data-responsive-mode="portrait"]
+  .roulette-win-message {
+  top: 56%;
+  min-width: 180px;
+}
+
+.roulette-page[data-responsive-layout="canonical-v1"][data-responsive-mode="portrait"]
+  .roulette-settings-menu {
+  top: 84px !important;
+  right: 8px !important;
+  width: 268px !important;
+  max-height: 700px;
+  overflow-y: auto;
+}
+
+.roulette-page[data-responsive-layout="canonical-v1"][data-responsive-mode="portrait"][data-roulette-menu-open="true"]
+  .roulette-wheel-panel {
+  z-index: 70 !important;
+  pointer-events: auto !important;
+}
+
+/* Landscape reference scene: 1600 × 900. */
+.roulette-page[data-responsive-layout="canonical-v1"][data-responsive-mode="landscape"]
+  .roulette-top-hud {
+  left: 180px !important;
+  top: 14px !important;
+  width: 1240px !important;
+  height: 52px !important;
+  grid-template-columns:
+    minmax(220px, 1.55fr)
+    minmax(140px, 0.82fr)
+    minmax(140px, 0.86fr)
+    52px;
+}
+
+.roulette-page[data-responsive-layout="canonical-v1"][data-responsive-mode="landscape"]
+  .roulette-top-hud__metric {
+  padding: 7px 14px 6px;
+}
+
+.roulette-page[data-responsive-layout="canonical-v1"][data-responsive-mode="landscape"]
+  .roulette-top-hud__metric > span {
+  font-size: 9px;
+}
+
+.roulette-page[data-responsive-layout="canonical-v1"][data-responsive-mode="landscape"]
+  .roulette-top-hud__metric > strong {
+  font-size: 20px;
+}
+
+.roulette-page[data-responsive-layout="canonical-v1"][data-responsive-mode="landscape"]
+  .roulette-menu-button {
+  width: 34px;
+  height: 34px;
+  border-radius: 9px;
+}
+
+.roulette-page[data-responsive-layout="canonical-v1"][data-responsive-mode="landscape"]
+  .roulette-recent-strip {
+  left: 180px !important;
+  top: 72px !important;
+  width: 1240px !important;
+  height: 26px !important;
+  transform: none !important;
+}
+
+.roulette-page[data-responsive-layout="canonical-v1"][data-responsive-mode="landscape"]
+  .roulette-recent-result {
+  height: 24px;
+  font-size: 12px;
+}
+
+.roulette-page[data-responsive-layout="canonical-v1"][data-responsive-mode="landscape"]
+  .roulette-betting-timer {
+  left: 26px !important;
+  top: 112px !important;
+  width: 84px;
+  min-width: 84px !important;
+  height: 52px;
+  min-height: 52px !important;
+  padding: 6px 10px;
+}
+
+.roulette-page[data-responsive-layout="canonical-v1"][data-responsive-mode="landscape"]
+  .roulette-betting-timer__label {
+  font-size: 9px;
+}
+
+.roulette-page[data-responsive-layout="canonical-v1"][data-responsive-mode="landscape"]
+  .roulette-betting-timer__value {
+  font-size: 25px;
+}
+
+.roulette-page[data-responsive-layout="canonical-v1"][data-responsive-mode="landscape"]
+  .roulette-bet-panel {
+  position: absolute !important;
+  left: var(--roulette-table-x) !important;
+  top: var(--roulette-table-y) !important;
+  width: var(--roulette-table-width) !important;
+  height: auto !important;
+  transform:
+    scale(var(--roulette-table-scale)) !important;
+  transform-origin: top left !important;
+  pointer-events: auto;
+}
+
+.roulette-page[data-responsive-layout="canonical-v1"][data-responsive-mode="landscape"]
+  .roulette-table-layout {
+  width: var(--roulette-table-width) !important;
+}
+
+.roulette-page[data-responsive-layout="canonical-v1"][data-responsive-mode="landscape"]
+  .roulette-bet-table {
+  --bet-border:
+    rgba(229, 224, 209, 0.76);
+  --desktop-number-row: 54px;
+  --desktop-dozen-row: 42px;
+  --desktop-outside-row: 44px;
+
+  width: var(--roulette-table-width) !important;
+  display: grid !important;
+  grid-template-columns:
+    72px
+    minmax(0, 1fr)
+    62px !important;
+  grid-template-rows:
+    auto
+    auto
+    auto !important;
+  overflow: hidden !important;
+  border:
+    1px solid
+    var(--bet-border) !important;
+  border-radius: 5px !important;
+}
+
+.roulette-page[data-responsive-layout="canonical-v1"][data-responsive-mode="landscape"]
+  .roulette-zero-cell {
+  grid-column: 1 !important;
+  grid-row: 1 !important;
+  min-height: 162px !important;
+}
+
+.roulette-page[data-responsive-layout="canonical-v1"][data-responsive-mode="landscape"]
+  .roulette-number-grid {
+  grid-column: 2 !important;
+  grid-row: 1 !important;
+  display: grid !important;
+  grid-template-columns:
+    repeat(12, minmax(0, 1fr)) !important;
+  grid-template-rows:
+    repeat(3, 54px) !important;
+}
+
+.roulette-page[data-responsive-layout="canonical-v1"][data-responsive-mode="landscape"]
+  .roulette-number-cell {
+  grid-column:
+    var(--desktop-column) !important;
+  grid-row:
+    var(--desktop-row) !important;
+  min-height: 54px !important;
+}
+
+.roulette-page[data-responsive-layout="canonical-v1"][data-responsive-mode="landscape"]
+  .roulette-column-bets {
+  grid-column: 3 !important;
+  grid-row: 1 !important;
+  display: grid !important;
+  grid-template-columns: 1fr !important;
+  grid-template-rows:
+    repeat(3, 54px) !important;
+}
+
+.roulette-page[data-responsive-layout="canonical-v1"][data-responsive-mode="landscape"]
+  .roulette-column-cell {
+  min-height: 54px !important;
+}
+
+.roulette-page[data-responsive-layout="canonical-v1"][data-responsive-mode="landscape"]
+  .roulette-dozen-bets {
+  grid-column: 2 !important;
+  grid-row: 2 !important;
+  display: grid !important;
+  grid-template-columns:
+    repeat(3, 1fr) !important;
+  grid-template-rows: 42px !important;
+}
+
+.roulette-page[data-responsive-layout="canonical-v1"][data-responsive-mode="landscape"]
+  .roulette-dozen-cell {
+  min-height: 42px !important;
+}
+
+.roulette-page[data-responsive-layout="canonical-v1"][data-responsive-mode="landscape"]
+  .roulette-outside-bets {
+  grid-column: 2 !important;
+  grid-row: 3 !important;
+  display: grid !important;
+  grid-template-columns:
+    repeat(6, 1fr) !important;
+  grid-template-rows: 44px !important;
+}
+
+.roulette-page[data-responsive-layout="canonical-v1"][data-responsive-mode="landscape"]
+  .roulette-outside-cell {
+  min-height: 44px !important;
+}
+
+.roulette-page[data-responsive-layout="canonical-v1"][data-responsive-mode="landscape"]
+  .roulette-mobile-control-rail {
+  left: 1190px !important;
+  top: 0 !important;
+  transform: none !important;
+  grid-template-rows:
+    repeat(6, 40px) !important;
+}
+
+.roulette-page[data-responsive-layout="canonical-v1"][data-responsive-mode="landscape"]
+  .roulette-bet-console {
+  width: 1180px !important;
+  min-height: 58px;
+  margin: 8px 0 0 !important;
+  padding: 7px 9px !important;
+  display: grid !important;
+  grid-template-columns:
+    minmax(320px, 1.08fr)
+    minmax(430px, 1.32fr)
+    minmax(120px, 0.42fr) !important;
+  align-items: center;
+  gap: 10px;
+}
+
+.roulette-page[data-responsive-layout="canonical-v1"][data-responsive-mode="landscape"]
+  .roulette-bet-actions
+  [data-undo-bet],
+.roulette-page[data-responsive-layout="canonical-v1"][data-responsive-mode="landscape"]
+  .roulette-bet-actions
+  [data-rebet] {
+  display: none !important;
+}
+
+.roulette-page[data-responsive-layout="canonical-v1"][data-responsive-mode="landscape"]
+  .roulette-bet-actions {
+  grid-template-columns:
+    minmax(96px, 1fr) !important;
+}
+
+.roulette-page[data-responsive-layout="canonical-v1"][data-responsive-mode="landscape"]
+  .roulette-result-banner {
+  top: 12%;
+  width: 270px;
+}
+
+.roulette-page[data-responsive-layout="canonical-v1"][data-responsive-mode="landscape"]
+  .roulette-win-message {
+  top: 56%;
+  min-width: 238px;
+}
+
+.roulette-page[data-responsive-layout="canonical-v1"][data-responsive-mode="landscape"]
+  .roulette-settings-menu {
+  top: 108px !important;
+  right: 180px !important;
+  width: 310px !important;
+  max-height: 700px;
+  overflow-y: auto;
+}
+
+.roulette-page[data-responsive-layout="canonical-v1"][data-responsive-mode="landscape"][data-phase="spinning"]
+  .roulette-bet-panel,
+.roulette-page[data-responsive-layout="canonical-v1"][data-responsive-mode="landscape"][data-phase="settled"]
+  .roulette-bet-panel {
+  pointer-events: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .roulette-page[data-responsive-layout="canonical-v1"]
+    .roulette-stage,
+  .roulette-page[data-responsive-layout="canonical-v1"]
+    .roulette-bet-panel,
+  .roulette-page[data-responsive-layout="canonical-v1"]
+    .roulette-table-layout {
+    transition: none !important;
+  }
+}
+
