@@ -81,39 +81,31 @@ function patchSeatAction(
   copy: HTMLElement,
   seat: BlackjackTableSeatViewModel,
 ): void {
-  const desired=
-    seat.canClaim
-      ? "CLAIM"
-      : seat.canLeave
-        ? "LEAVE"
-        : null;
   const current=copy.querySelector<HTMLButtonElement>(
     ".blackjack-seat-action",
   );
 
-  if(desired===null){
+  if(!seat.canLeave){
     current?.remove();
     return;
   }
 
   if(
     current &&
-    current.dataset.blackjackSeatAction===desired
+    current.dataset.blackjackSeatAction==="LEAVE"
   ){
     current.dataset.seat=String(seat.seatNumber);
-    current.textContent=desired==="CLAIM" ? "TAKE SEAT" : "LEAVE";
-    current.classList.toggle("is-leave",desired==="LEAVE");
+    current.textContent="LEAVE";
+    current.classList.add("is-leave");
     return;
   }
 
   const button=copy.ownerDocument.createElement("button");
   button.type="button";
-  button.className=
-    "blackjack-seat-action" +
-    (desired==="LEAVE" ? " is-leave" : "");
-  button.dataset.blackjackSeatAction=desired;
+  button.className="blackjack-seat-action is-leave";
+  button.dataset.blackjackSeatAction="LEAVE";
   button.dataset.seat=String(seat.seatNumber);
-  button.textContent=desired==="CLAIM" ? "TAKE SEAT" : "LEAVE";
+  button.textContent="LEAVE";
   current?.replaceWith(button) ?? copy.append(button);
 }
 
@@ -123,8 +115,22 @@ function patchSeatNode(
   previous: BlackjackTableSeatViewModel,
 ): void {
   current.classList.toggle("is-local",seat.isLocal);
+  current.classList.toggle("is-claimable",seat.canClaim===true);
+  current.classList.toggle(
+    "is-selected-for-claim",
+    seat.isSelectedForClaim===true,
+  );
   current.dataset.status=seat.status;
   current.dataset.local=seat.isLocal ? "true" : "false";
+  current.dataset.blackjackSeatSelect=
+    seat.canClaim===true ? "true" : "false";
+  if(seat.canClaim===true){
+    current.setAttribute("role","button");
+    current.tabIndex=0;
+  } else {
+    current.removeAttribute("role");
+    current.removeAttribute("tabindex");
+  }
 
   setText(current,".blackjack-seat-label",seat.label);
 
@@ -355,6 +361,49 @@ function patchBettingPanel(
   );
 }
 
+function patchInteraction(
+  app: HTMLElement,
+  model: BlackjackTableViewModel,
+): void {
+  const hud=requireElement<HTMLElement>(
+    app,
+    ".blackjack-hud",
+  );
+  const mode=model.interactionMode ?? "WAIT";
+  hud.dataset.interactionMode=mode;
+
+  setText(
+    app,
+    ".blackjack-context-prompt",
+    model.interactionPrompt ?? "WAITING FOR TABLE",
+  );
+
+  requireElement<HTMLElement>(
+    app,
+    ".blackjack-betting-region",
+  ).hidden=mode!=="BETTING";
+
+  requireElement<HTMLElement>(
+    app,
+    ".blackjack-actions",
+  ).hidden=mode!=="TURN";
+
+  const confirm=requireElement<HTMLElement>(
+    app,
+    "[data-blackjack-seat-confirm]",
+  );
+  const selected=model.selectedSeatForClaim ?? null;
+  confirm.hidden=selected===null;
+  setText(
+    confirm,
+    "[data-blackjack-selected-seat]",
+    selected===null ? "—" : String(selected),
+  );
+  for(const button of confirm.querySelectorAll<HTMLButtonElement>("button")){
+    button.disabled=model.seatClaimPending===true;
+  }
+}
+
 function patchActions(
   app: HTMLElement,
   model: BlackjackTableViewModel,
@@ -363,10 +412,16 @@ function patchActions(
     model.enabledActions ?? [],
   );
   for(const action of ["HIT","STAND","DOUBLE","SPLIT"] as const){
-    requireElement<HTMLButtonElement>(
+    const button=requireElement<HTMLButtonElement>(
       app,
       '[data-blackjack-action="' + action + '"]',
-    ).disabled=!enabled.has(action);
+    );
+    button.disabled=!enabled.has(action);
+    if(action==="DOUBLE" || action==="SPLIT"){
+      button.hidden=!enabled.has(action);
+    } else {
+      button.hidden=false;
+    }
   }
 
   const feedback=requireElement<HTMLElement>(
@@ -448,6 +503,7 @@ export function createBlackjackTableDomRenderer(
         app,
         normalizeBettingPanel(model),
       );
+      patchInteraction(app,model);
       patchActions(app,model);
       patchRoundResult(app,model,previous);
       previous=model;
