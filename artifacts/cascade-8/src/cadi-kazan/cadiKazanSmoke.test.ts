@@ -310,8 +310,8 @@ describe("cadi kazan route smoke contract", () => {
 
 
   it("uses optimized supplied paw/skull artwork for Advanced 25 results", () => {
-    expect(witchClientSource).toContain('class="witch-cell-artwork"');
-    expect(witchClientSource).toContain('decoding="async"');
+    expect(scratchPresentationSource).toContain('class="witch-cell-artwork"');
+    expect(scratchPresentationSource).toContain('decoding="async"');
     expect(visualLockSource).toContain("PASS 28 — ADVANCED 25 supplied paw/skull reveal artwork");
     expect(visualLockSource).toContain(".is-advanced-theme .witch-cell.is-safe .witch-cell-artwork");
     expect(visualLockSource).toContain(".is-advanced-theme .witch-cell.is-bomb .witch-cell-artwork");
@@ -518,6 +518,33 @@ describe("cadi kazan route smoke contract", () => {
   it("keeps the Advanced card art original by removing the temporary stake badge", () => {
     expect(witchClientSource).not.toContain("witch-advanced-card-value");
     expect(visualLockSource).not.toContain(".witch-advanced-card-value");
+  });
+
+
+  it("keeps result assets predecoded and result DOM persistent under the scratch coating", () => {
+    expect(scratchPresentationSource).toContain("SCRATCH_RESULT_ART_URLS");
+    expect(scratchPresentationSource).toContain("data-witch-result-art");
+    expect(scratchPresentationSource).toContain("data-witch-office-result");
+    expect(witchClientSource).toContain("scratchResultAssetsReady");
+    expect(witchClientSource).toContain("await scratchResultAssetsReady");
+    expect(witchClientSource).not.toContain("content.innerHTML");
+  });
+
+  it("marks exactly the resolved Office winning triple and visually recedes the other cells", () => {
+    expect(witchClientSource).toContain("winningOfficeIndices");
+    expect(witchClientSource).toContain(".slice(0, 3)");
+    expect(witchClientSource).toContain("is-office-win-dimmed");
+    expect(visualLockSource).toContain("PASS 40 — result permanence + Office winner clarity + Advanced full-card contain");
+    expect(visualLockSource).toContain(".witch-office-win-badge");
+    expect(visualLockSource).toContain("outline: 3px solid #ffd34e !important");
+  });
+
+  it("uses measured contain sizing so the Advanced master cannot crop at any viewport class", () => {
+    expect(witchClientSource).toContain("fitAdvancedCardBounds");
+    expect(witchClientSource).toContain("--advanced-fit-width");
+    expect(witchClientSource).toContain("--advanced-fit-height");
+    expect(visualLockSource).toContain("width: var(--advanced-fit-width");
+    expect(visualLockSource).toContain("height: var(--advanced-fit-height");
   });
 
 
