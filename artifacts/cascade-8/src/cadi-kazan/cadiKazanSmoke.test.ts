@@ -557,6 +557,20 @@ describe("cadi kazan route smoke contract", () => {
     expect(witchClientSource).not.toContain("content.innerHTML");
   });
 
+  it("shows Office pool remaining beside balance and explains the 75-ticket system from the info button", () => {
+    expect(witchClientSource).toContain("data-witch-office-pool-head");
+    expect(witchClientSource).toContain("data-witch-office-pool-head-value");
+    expect(witchClientSource).toContain("data-witch-office-pool-info-toggle");
+    expect(witchClientSource).toContain("75 BİLETLİK HAVUZ");
+    expect(witchClientSource).toContain("1</b> Michael · 100x");
+    expect(witchClientSource).toContain("40</b> Ödülsüz");
+    expect(witchClientSource).toContain("closeOfficePoolInfo");
+    expect(visualLockSource).toContain("PASS 45 — Office pool status in top bar + explainer");
+    expect(visualLockSource).toContain(".witch-office-pool-info-button");
+    expect(visualLockSource).toContain(".witch-office-pool-info-grid");
+  });
+
+
   it("shows the finite Office pool count and immutable public ticket ID inside the master card", () => {
     expect(witchClientSource).toContain("data-witch-office-meta");
     expect(witchClientSource).toContain("data-witch-office-pool");

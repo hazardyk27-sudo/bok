@@ -279,6 +279,40 @@ export const CADI_KAZAN_MARKUP = `
       </div>
 
       <section class="witch-appstats" aria-label="Cadı Kazan durumu">
+        <div class="witch-office-pool-head" data-witch-office-pool-head hidden>
+          <div class="witch-office-pool-chip" aria-label="The Office havuzunda kalan bilet">
+            <span>HAVUZ</span>
+            <strong data-witch-office-pool-head-value>—/75</strong>
+          </div>
+          <button
+            class="witch-office-pool-info-button"
+            type="button"
+            data-witch-office-pool-info-toggle
+            aria-label="The Office havuz sistemi hakkında bilgi"
+            aria-expanded="false"
+            aria-controls="witch-office-pool-info"
+          >i</button>
+          <div
+            class="witch-office-pool-info"
+            id="witch-office-pool-info"
+            data-witch-office-pool-info
+            role="dialog"
+            aria-label="The Office havuz sistemi"
+            hidden
+          >
+            <strong>75 BİLETLİK HAVUZ</strong>
+            <p>Her havuzda önceden hazırlanmış 75 bilet bulunur. Satın aldığında havuzdaki kullanılmamış biletlerden biri sana atanır.</p>
+            <div class="witch-office-pool-info-grid">
+              <span><b>1</b> Michael · 100x</span>
+              <span><b>2</b> Stanley · 20x</span>
+              <span><b>4</b> Dwight · 10x</span>
+              <span><b>8</b> Jim · 5x</span>
+              <span><b>20</b> Kevin · 2x</span>
+              <span><b>40</b> Ödülsüz</span>
+            </div>
+            <small>Havuzdaki 75 bilet bittiğinde sıradaki 75'lik paket otomatik devreye girer.</small>
+          </div>
+        </div>
         <div class="witch-stat witch-stat-balance">
           <span>BAKİYE</span>
           <strong data-witch-balance>$0.00</strong>
@@ -588,6 +622,8 @@ export class WitchClient {
   private bind() {
     const menuToggle = this.root.querySelector<HTMLButtonElement>("[data-witch-menu-toggle]");
     const menu = this.root.querySelector<HTMLElement>("[data-witch-menu]");
+    const officePoolInfoToggle = this.root.querySelector<HTMLButtonElement>("[data-witch-office-pool-info-toggle]");
+    const officePoolInfo = this.root.querySelector<HTMLElement>("[data-witch-office-pool-info]");
     const soundToggle = this.root.querySelector<HTMLButtonElement>("[data-witch-sound-toggle]");
     const volume = this.root.querySelector<HTMLInputElement>("[data-witch-volume]");
     const syncAudioMenu = () => {
@@ -605,6 +641,11 @@ export class WitchClient {
       cardsMenu.hidden = true;
       cardsToggle?.setAttribute("aria-expanded", "false");
     };
+    const closeOfficePoolInfo = () => {
+      if (!officePoolInfo) return;
+      officePoolInfo.hidden = true;
+      officePoolInfoToggle?.setAttribute("aria-expanded", "false");
+    };
 
     menuToggle?.addEventListener("click", (event) => {
       event.stopPropagation();
@@ -614,6 +655,16 @@ export class WitchClient {
       menu.hidden = !willOpen;
       menuToggle.setAttribute("aria-expanded", String(willOpen));
     });
+    officePoolInfoToggle?.addEventListener("click", (event) => {
+      event.stopPropagation();
+      if (!officePoolInfo || this.mode !== "OFFICE_MATCH_6") return;
+      const willOpen = officePoolInfo.hidden;
+      closeGameMenu();
+      closeCardsMenu();
+      officePoolInfo.hidden = !willOpen;
+      officePoolInfoToggle.setAttribute("aria-expanded", String(willOpen));
+    });
+    officePoolInfo?.addEventListener("click", (event) => event.stopPropagation());
     soundToggle?.addEventListener("click", () => {
       this.audio.setMuted(!this.audio.muted);
       if (!this.audio.muted) this.audio.unlock();
@@ -641,11 +692,13 @@ export class WitchClient {
     this.root.addEventListener("click", () => {
       closeGameMenu();
       closeCardsMenu();
+      closeOfficePoolInfo();
     });
     this.root.addEventListener("keydown", (event) => {
       if (event.key !== "Escape") return;
       closeGameMenu();
       closeCardsMenu();
+      closeOfficePoolInfo();
       menuToggle?.focus();
     });
 
@@ -1141,6 +1194,8 @@ export class WitchClient {
     this.root.classList.toggle("is-standard-theme", visualMode === "STANDARD");
     this.root.classList.toggle("is-advanced-theme", visualMode === "ADVANCED");
     this.root.classList.toggle("is-office-theme", visualMode === "OFFICE_MATCH_6");
+    const officePoolHead = this.root.querySelector<HTMLElement>("[data-witch-office-pool-head]");
+    const officePoolHeadValue = this.root.querySelector<HTMLElement>("[data-witch-office-pool-head-value]");
     const officeMeta = this.root.querySelector<HTMLElement>("[data-witch-office-meta]");
     const officePool = this.root.querySelector<HTMLElement>("[data-witch-office-pool]");
     const officeTicketId = this.root.querySelector<HTMLElement>("[data-witch-office-ticket-id]");
@@ -1148,6 +1203,16 @@ export class WitchClient {
       ? round.officePoolRemaining
       : this.officePoolStatus?.remaining ?? null;
     const officePoolTotal = this.officePoolStatus?.total ?? 75;
+    if (officePoolHead) officePoolHead.hidden = visualMode !== "OFFICE_MATCH_6";
+    if (officePoolHeadValue) officePoolHeadValue.textContent = officePoolRemaining === null
+      ? `—/${officePoolTotal}`
+      : `${officePoolRemaining}/${officePoolTotal}`;
+    if (visualMode !== "OFFICE_MATCH_6") {
+      const info = this.root.querySelector<HTMLElement>("[data-witch-office-pool-info]");
+      const infoToggle = this.root.querySelector<HTMLButtonElement>("[data-witch-office-pool-info-toggle]");
+      if (info) info.hidden = true;
+      infoToggle?.setAttribute("aria-expanded", "false");
+    }
     if (officeMeta) officeMeta.hidden = visualMode !== "OFFICE_MATCH_6";
     if (officePool) officePool.textContent = officePoolRemaining === null
       ? `—/${officePoolTotal}`
