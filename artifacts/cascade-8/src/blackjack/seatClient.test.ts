@@ -39,6 +39,12 @@ describe("blackjack browser seat command client",()=>{
       snapshot:{stateVersion:2,eventSequence:1},
     });
     expect(client.getPending()).toBeNull();
+    expect(client.getFeedback()).toEqual({
+      status:"ACCEPTED",
+      requestId:"seat-request-1",
+      type:"CLAIM_SEAT",
+      error:null,
+    });
   });
 
   it("sends leave and clears rejected commands",()=>{
@@ -64,5 +70,30 @@ describe("blackjack browser seat command client",()=>{
       error:"SEAT_LEAVE_NOT_AVAILABLE",
     });
     expect(client.getPending()).toBeNull();
+    expect(client.getFeedback()).toEqual({
+      status:"REJECTED",
+      requestId:"leave-request-1",
+      type:"LEAVE_SEAT",
+      error:"SEAT_LEAVE_NOT_AVAILABLE",
+    });
   });
+  it("clears pending and exposes feedback when transport send throws",()=>{
+    const client=createBlackjackSeatCommandClient({
+      socket:{
+        send:()=>{ throw new Error("socket closed"); },
+        addEventListener:()=>undefined,
+        removeEventListener:()=>undefined,
+      },
+      createRequestId:()=>"seat-send-error",
+    });
+
+    expect(()=>client.claim(2)).toThrow(/socket closed/);
+    expect(client.getPending()).toBeNull();
+    expect(client.getFeedback()).toMatchObject({
+      status:"REJECTED",
+      requestId:"seat-send-error",
+      type:"CLAIM_SEAT",
+    });
+  });
+
 });
