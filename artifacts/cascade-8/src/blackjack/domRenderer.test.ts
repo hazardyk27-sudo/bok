@@ -153,12 +153,14 @@ describe("blackjack incremental DOM renderer",()=>{
       )?.textContent,
     ).toBe("PLAYER A");
   });
-  it("preserves a focused seat action when the seat remains claimable",()=>{
+  it("preserves a focused claimable seat node across contextual patches",()=>{
     const app=document.createElement("div");
     document.body.append(app);
     const renderer=createBlackjackTableDomRenderer(app);
 
     const initial=model({
+      interactionMode:"SEAT",
+      interactionPrompt:"CHOOSE AN OPEN SEAT",
       seats:BLACKJACK_DEFAULT_TABLE_VIEW.seats.map((seat)=>
         seat.seatNumber===1
           ? {...seat,canClaim:true}
@@ -168,30 +170,37 @@ describe("blackjack incremental DOM renderer",()=>{
     renderer.render(initial);
 
     const seat=app.querySelector<HTMLElement>('[data-seat="1"]');
-    const button=app.querySelector<HTMLButtonElement>(
-      '[data-seat="1"] [data-blackjack-seat-action="CLAIM"]',
-    );
     expect(seat).not.toBeNull();
-    expect(button).not.toBeNull();
+    expect(seat?.dataset.blackjackSeatSelect).toBe("true");
+    expect(seat?.getAttribute("role")).toBe("button");
 
-    button!.focus();
-    expect(document.activeElement).toBe(button);
+    seat!.focus();
+    expect(document.activeElement).toBe(seat);
 
     renderer.render(model({
+      interactionMode:"SEAT",
+      interactionPrompt:"CONFIRM YOUR SEAT",
+      selectedSeatForClaim:1,
       seats:initial.seats.map((entry)=>
         entry.seatNumber===1
-          ? {...entry,label:"OPEN · TAP TO SIT"}
+          ? {
+              ...entry,
+              label:"OPEN · TAP TO SIT",
+              isSelectedForClaim:true,
+            }
           : entry,
       ),
     }));
 
     expect(app.querySelector('[data-seat="1"]')).toBe(seat);
+    expect(seat?.classList.contains("is-selected-for-claim")).toBe(true);
+    expect(document.activeElement).toBe(seat);
     expect(
-      app.querySelector(
-        '[data-seat="1"] [data-blackjack-seat-action="CLAIM"]',
-      ),
-    ).toBe(button);
-    expect(document.activeElement).toBe(button);
+      app.querySelector("[data-blackjack-seat-confirm]")?.hasAttribute("hidden"),
+    ).toBe(false);
+    expect(
+      app.querySelector("[data-blackjack-selected-seat]")?.textContent,
+    ).toBe("1");
   });
 
   it("keeps dealer and seat card containers stable while patching card contents",()=>{
@@ -237,6 +246,45 @@ describe("blackjack incremental DOM renderer",()=>{
     expect(
       seatCards?.querySelector('[data-card-rank="10"]'),
     ).not.toBeNull();
+  });
+
+  it("switches betting and turn controls without replacing their regions",()=>{
+    const app=document.createElement("div");
+    document.body.append(app);
+    const renderer=createBlackjackTableDomRenderer(app);
+
+    renderer.render(model({
+      interactionMode:"BETTING",
+      interactionPrompt:"PLACE YOUR BET",
+    }));
+
+    const betting=app.querySelector<HTMLElement>(
+      ".blackjack-betting-region",
+    );
+    const actions=app.querySelector<HTMLElement>(".blackjack-actions");
+    expect(betting?.hidden).toBe(false);
+    expect(actions?.hidden).toBe(true);
+
+    renderer.render(model({
+      interactionMode:"TURN",
+      interactionPrompt:"YOUR TURN",
+      enabledActions:["HIT","STAND"],
+    }));
+
+    expect(app.querySelector(".blackjack-betting-region")).toBe(betting);
+    expect(app.querySelector(".blackjack-actions")).toBe(actions);
+    expect(betting?.hidden).toBe(true);
+    expect(actions?.hidden).toBe(false);
+    expect(
+      app.querySelector<HTMLButtonElement>(
+        '[data-blackjack-action="HIT"]',
+      )?.hidden,
+    ).toBe(false);
+    expect(
+      app.querySelector<HTMLButtonElement>(
+        '[data-blackjack-action="DOUBLE"]',
+      )?.hidden,
+    ).toBe(true);
   });
 
 });
