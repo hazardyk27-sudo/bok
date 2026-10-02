@@ -273,14 +273,14 @@ function patchRoundResult(
 
   if(!model.roundResult) return;
 
-  const result=document.createElement("div");
+  const result=region.ownerDocument.createElement("div");
   result.className="blackjack-round-result";
   result.dataset.resultTone=model.roundResult.tone;
   result.setAttribute("aria-live","polite");
 
-  const title=document.createElement("strong");
+  const title=region.ownerDocument.createElement("strong");
   title.textContent=model.roundResult.title;
-  const detail=document.createElement("span");
+  const detail=region.ownerDocument.createElement("span");
   detail.textContent=model.roundResult.detail;
 
   result.append(title,detail);
@@ -298,8 +298,13 @@ function normalizeBettingPanel(
 
 export function createBlackjackTableDomRenderer(
   app: HTMLElement,
+  initialModel: BlackjackTableViewModel | null = null,
 ): BlackjackTableDomRenderer {
-  let previous: BlackjackTableViewModel | null=null;
+  const hasMountedShell=
+    typeof app.querySelector==="function" &&
+    app.querySelector(".blackjack-root")!==null;
+  let previous: BlackjackTableViewModel | null=
+    hasMountedShell ? initialModel : null;
 
   const mount=(model: BlackjackTableViewModel)=>{
     app.innerHTML=renderBlackjackTableShell(model);

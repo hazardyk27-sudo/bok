@@ -9,6 +9,7 @@ import {
 } from "./domRenderer";
 import {
   BLACKJACK_DEFAULT_TABLE_VIEW,
+  renderBlackjackTableShell,
   type BlackjackTableViewModel,
 } from "./tableView";
 
@@ -42,6 +43,26 @@ function model(
 }
 
 describe("blackjack incremental DOM renderer",()=>{
+  it("adopts an already-mounted connecting shell without replacing the root",()=>{
+    const app=document.createElement("div");
+    app.innerHTML=renderBlackjackTableShell(
+      BLACKJACK_DEFAULT_TABLE_VIEW,
+    );
+    document.body.append(app);
+    const root=app.querySelector(".blackjack-root");
+
+    const renderer=createBlackjackTableDomRenderer(
+      app,
+      BLACKJACK_DEFAULT_TABLE_VIEW,
+    );
+    renderer.render(model({turnLabel:"BETTING · 8s"}));
+
+    expect(app.querySelector(".blackjack-root")).toBe(root);
+    expect(
+      app.querySelector(".blackjack-turn-label")?.textContent,
+    ).toBe("BETTING · 8s");
+  });
+
   it("preserves the mounted table, chip focus and chip tray scroll on countdown-only patches",()=>{
     const app=document.createElement("div");
     document.body.append(app);

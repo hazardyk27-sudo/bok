@@ -29,7 +29,12 @@ export function mountConnectedBlackjack(
   app: HTMLElement,
   options: BlackjackBrowserRealtimeOptions = {},
 ): BlackjackBrowserRealtimeConnection {
-  mountBlackjack(app);
+  const hasMountedTable =
+    typeof app.querySelector === "function" &&
+    app.querySelector('[data-game="blackjack"]') !== null;
+  if (!hasMountedTable) {
+    mountBlackjack(app);
+  }
   return connectBlackjackRealtimeElementLocal(app,options);
 }
 
