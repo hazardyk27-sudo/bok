@@ -56,16 +56,16 @@ function applyJournalTail(
   records: readonly BlackjackJournalRecord[],
 ): BlackjackDurableRuntimeState {
   let runtime = initial;
-  let expectedEventSequence = initial.table.eventSequence + 1;
+  let previousEventSequence = initial.table.eventSequence;
   let previousStateVersion = initial.table.stateVersion;
 
   for (const record of records) {
     if (
       record.tableId !== runtime.table.tableId ||
-      record.eventSequence !== expectedEventSequence
+      record.eventSequence <= previousEventSequence
     ) {
       throw new Error(
-        "Blackjack recovery journal is not contiguous with recovered state",
+        "Blackjack recovery journal is not monotonic with recovered state",
       );
     }
 
@@ -75,12 +75,8 @@ function applyJournalTail(
     }
 
     runtime = runtimeAfter;
+    previousEventSequence = runtime.table.eventSequence;
     previousStateVersion = runtime.table.stateVersion;
-    expectedEventSequence += 1;
-
-    if (!Number.isSafeInteger(expectedEventSequence)) {
-      throw new RangeError("Blackjack recovery eventSequence overflow");
-    }
   }
 
   return runtime;
