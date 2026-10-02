@@ -285,6 +285,32 @@ describe("blackjack WebSocket room foundation", () => {
     });
   });
 
+  it("closes unresolved identities with auth-required policy semantics",async()=>{
+    const source=new TestSource(snapshot(1));
+    server=createServer();
+    runtime=attachBlackjackWebSocket(server,source,{
+      resolveIdentity:()=>null,
+    });
+    const port=await listen(server);
+
+    client=new WebSocket(
+      `ws://127.0.0.1:${port}${BLACKJACK_WS_PATH}`,
+    );
+    const errorMessage=nextMessage(client);
+    const closed=nextClose(client);
+
+    await expect(errorMessage).resolves.toEqual({
+      type:"error",
+      error:"BLACKJACK_AUTH_REQUIRED",
+    });
+    await expect(closed).resolves.toEqual({
+      code:BLACKJACK_WS_CLOSE_POLICY_VIOLATION,
+      reason:"BLACKJACK_AUTH_REQUIRED",
+    });
+    expect(runtime.authenticatedConnectionCount()).toBe(0);
+    expect(runtime.connectionCount()).toBe(0);
+  });
+
   it("replaces an older authenticated device connection for the same account", async () => {
     const source = new TestSource(snapshot(5));
     server = createServer();
