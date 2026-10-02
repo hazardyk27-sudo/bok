@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { createBlackjackActionProtocolState } from "./actionProtocol";
 import {
+  createBlackjackJournalCheckpoint,
   createBlackjackJournalRecord,
   verifyBlackjackJournalRecord,
 } from "./journal";
@@ -33,6 +34,40 @@ function runtime(eventSequence = 1, stateVersion = 1): BlackjackDurableRuntimeSt
 }
 
 describe("blackjack durable event journal codec", () => {
+  it("skips a checkpoint when only stateVersion advanced",()=>{
+    expect(createBlackjackJournalCheckpoint({
+      previousEventSequence:7,
+      runtimeAfter:runtime(7,9),
+      createdAtMs:1_000,
+    })).toBeNull();
+  });
+
+  it("creates a sparse checkpoint when eventSequence advanced",()=>{
+    const checkpoint=createBlackjackJournalCheckpoint({
+      previousEventSequence:3,
+      runtimeAfter:runtime(8,9),
+      createdAtMs:1_000,
+    });
+
+    expect(checkpoint).toMatchObject({
+      eventSequence:8,
+      stateVersion:9,
+      eventType:"TABLE_STATE_COMMITTED",
+      actionId:null,
+      payload:{
+        details:{durability:"snapshot-checkpoint"},
+      },
+    });
+  });
+
+  it("rejects a checkpoint cursor that moves backwards",()=>{
+    expect(()=>createBlackjackJournalCheckpoint({
+      previousEventSequence:9,
+      runtimeAfter:runtime(8,9),
+      createdAtMs:1_000,
+    })).toThrow(/moved backwards/);
+  });
+
   it("creates a deterministic event ID bound to runtime eventSequence", () => {
     const source = runtime(7, 4);
     const record = createBlackjackJournalRecord({
