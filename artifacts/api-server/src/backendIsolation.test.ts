@@ -246,11 +246,11 @@ describe("backend game isolation", () => {
     expect(serverIndex).not.toContain(
       "await initializeSharedWalletPlatform()",
     );
-    expect(serverIndex).not.toContain(
-      "await attachBlackjackPlatformRuntime(server)",
-    );
     expect(serverIndex).toContain("void initializeSharedWalletPlatform()");
-    expect(serverIndex).toContain("void attachBlackjackPlatformRuntime(server)");
+    expect(serverIndex).toContain("void startBlackjackRuntime()");
+    expect(serverIndex).toContain(
+      "const runtime = await attachBlackjackPlatformRuntime(server)",
+    );
     expect(serverIndex).toContain("pool.end()");
   });
 
@@ -270,8 +270,9 @@ describe("backend game isolation", () => {
     expect(serverIndex).toContain(
       'attachBlackjackPlatformRuntime } from "./platform/blackjack"',
     );
+    expect(serverIndex).toContain("void startBlackjackRuntime()");
     expect(serverIndex).toContain(
-      "void attachBlackjackPlatformRuntime(server)",
+      "const runtime = await attachBlackjackPlatformRuntime(server)",
     );
     expect(blackjackPlatform).toContain(
       "initializeAndAttachBlackjackServerRuntime",
