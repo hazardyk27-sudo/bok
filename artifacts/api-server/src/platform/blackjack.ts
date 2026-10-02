@@ -11,6 +11,7 @@ import {
   getBlackjackRuntimeBootstrapState,
   initializeAndAttachBlackjackServerRuntime,
   parseBlackjackDurableSnapshot,
+  rebaseBlackjackSnapshotAgainstSharedWallets,
   type BlackjackAttachedServerRuntime,
   type BlackjackCoordinatorAccount,
   type BlackjackDurableSnapshot,
@@ -83,17 +84,47 @@ function getOrCreateHttpSessionId(req: Request, res: Response): string {
   return sessionId;
 }
 
+function parseSharedWalletBalanceCents(value: unknown): number {
+  const text =
+    typeof value === "bigint"
+      ? value.toString()
+      : typeof value === "number" || typeof value === "string"
+        ? String(value)
+        : "";
+
+  if (!/^-?\d+$/.test(text)) {
+    throw new Error("BLACKJACK_SHARED_WALLET_BALANCE_INVALID");
+  }
+
+  const balance = BigInt(text);
+  if (
+    balance < 0n ||
+    balance > BigInt(Number.MAX_SAFE_INTEGER)
+  ) {
+    throw new Error("BLACKJACK_SHARED_WALLET_BALANCE_OUT_OF_RANGE");
+  }
+  return Number(balance);
+}
+
 async function ensureSharedWallet(sessionId: string): Promise<number> {
-  const result = await pool.query<{ balance_cents: number }>(
+  const result = await pool.query<{ balance_cents: string }>(
     `INSERT INTO shared_wallets
        (session_id, balance_cents, updated_at)
      VALUES ($1, $2, now())
      ON CONFLICT (session_id) DO UPDATE
        SET balance_cents = shared_wallets.balance_cents
-     RETURNING balance_cents`,
+     RETURNING balance_cents::text AS balance_cents`,
     [sessionId, INITIAL_SHARED_BALANCE_CENTS],
   );
-  return Number(result.rows[0]?.balance_cents ?? INITIAL_SHARED_BALANCE_CENTS);
+  return parseSharedWalletBalanceCents(
+    result.rows[0]?.balance_cents ?? INITIAL_SHARED_BALANCE_CENTS,
+  );
+}
+
+export async function loadBlackjackAvailableBalanceCents(
+  userId: string,
+): Promise<number> {
+  return ensureSharedWallet(userId);
 }
 
 export function resolveBlackjackRealtimeIdentity(
@@ -160,67 +191,71 @@ class SharedBlackjackSnapshotRepository {
         ? parseBlackjackDurableSnapshot(previousRow.rows[0].snapshot)
         : null;
 
+      const userIds = snapshot.payload.wallets.map(
+        (wallet) => wallet.userId,
+      );
+      const sharedBalances = new Map<string, number>();
+
+      if (userIds.length > 0) {
+        const shared = await client.query<{
+          session_id: string;
+          balance_cents: string;
+        }>(
+          `SELECT session_id,
+                  balance_cents::text AS balance_cents
+             FROM shared_wallets
+            WHERE session_id = ANY($1::text[])
+            FOR UPDATE`,
+          [userIds],
+        );
+
+        for (const row of shared.rows) {
+          sharedBalances.set(
+            row.session_id,
+            parseSharedWalletBalanceCents(row.balance_cents),
+          );
+        }
+      }
+
+      const rebased = rebaseBlackjackSnapshotAgainstSharedWallets({
+        previous,
+        candidate: snapshot,
+        sharedBalances,
+      });
+
       const saved = await repository.save(
-        snapshot,
+        rebased.snapshot,
         expectedPreviousStateVersion,
       );
 
-      const previousWallets = new Map(
-        previous?.payload.wallets.map((wallet) => [
-          wallet.userId,
-          wallet,
-        ] as const) ?? [],
-      );
+      for (const mutation of rebased.mutations) {
+        if (mutation.deltaCents === 0) continue;
 
-      for (const wallet of saved.payload.wallets) {
-        const prior = previousWallets.get(wallet.userId);
-
-        if (!prior) {
-          const shared = await client.query<{ balance_cents: number }>(
-            `SELECT balance_cents
-               FROM shared_wallets
-              WHERE session_id = $1
-              FOR UPDATE`,
-            [wallet.userId],
-          );
-          const current = shared.rows[0];
-          if (!current) {
-            throw new Error(
-              "BLACKJACK_SHARED_WALLET_MISSING",
-            );
-          }
-          if (Number(current.balance_cents) !== wallet.availableBalanceCents) {
-            throw new Error(
-              "BLACKJACK_SHARED_WALLET_CHANGED",
-            );
-          }
-          continue;
-        }
-
-        if (
-          prior.availableBalanceCents ===
-          wallet.availableBalanceCents
-        ) {
-          continue;
-        }
-
-        const updated = await client.query<{ balance_cents: number }>(
+        const updated = await client.query<{ balance_cents: string }>(
           `UPDATE shared_wallets
-              SET balance_cents = $2,
+              SET balance_cents = $2::bigint,
                   updated_at = now()
             WHERE session_id = $1
-              AND balance_cents = $3
-            RETURNING balance_cents`,
+              AND balance_cents = $3::bigint
+            RETURNING balance_cents::text AS balance_cents`,
           [
-            wallet.userId,
-            wallet.availableBalanceCents,
-            prior.availableBalanceCents,
+            mutation.userId,
+            mutation.sharedBalanceAfterCents,
+            mutation.sharedBalanceBeforeCents,
           ],
         );
 
         if (!updated.rows[0]) {
           throw new Error(
-            "BLACKJACK_SHARED_WALLET_CHANGED",
+            "BLACKJACK_SHARED_WALLET_LOCKED_BALANCE_CHANGED",
+          );
+        }
+        const confirmed = parseSharedWalletBalanceCents(
+          updated.rows[0].balance_cents,
+        );
+        if (confirmed !== mutation.sharedBalanceAfterCents) {
+          throw new Error(
+            "BLACKJACK_SHARED_WALLET_UPDATE_MISMATCH",
           );
         }
       }
@@ -307,6 +342,7 @@ export async function attachBlackjackPlatformRuntime(
     nowMs: Date.now,
     resolveIdentity: resolveBlackjackRealtimeIdentity,
     loadSeatAccount: loadBlackjackSeatAccount,
+    loadAvailableBalanceCents: loadBlackjackAvailableBalanceCents,
     createInitialShoe: createFreshShoe,
     createFreshShoe,
     onRuntimeUnavailable: input.onRuntimeUnavailable,
