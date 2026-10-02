@@ -153,6 +153,9 @@ describe("canonical shared wallet contract", () => {
     expect(blackjackPlatform).toContain(
       "await journalRepository.append(",
     );
+    expect(blackjackPlatform).toContain(
+      "MAX(event_sequence)::text AS event_sequence",
+    );
     expect(blackjackPlatform).toContain('await client.query("BEGIN")');
     expect(blackjackPlatform).toContain('await client.query("COMMIT")');
     expect(blackjackPlatform).toContain('await client.query("ROLLBACK")');
