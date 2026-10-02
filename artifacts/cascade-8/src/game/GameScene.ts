@@ -138,10 +138,6 @@ const MULTIPLIER_VISUALS = {
 export class GameScene extends Phaser.Scene {
   private nodes: BoardNode[] = [];
 
-  private spinRequestMotionTween: Phaser.Tweens.Tween | null = null;
-
-  private spinRequestMotionSnapshot: Array<{ node: BoardNode; y: number; alpha: number }> = [];
-
   private readonly normalNodePool: BoardNode[] = [];
 
   private transientEffects: Phaser.GameObjects.GameObject[] = [];
@@ -209,46 +205,6 @@ export class GameScene extends Phaser.Scene {
   setIdleSleepEnabled(_enabled: boolean) {}
 
   setRuntimeActive(_active: boolean) {}
-
-  startSpinRequestMotion() {
-    this.stopSpinRequestMotion();
-    if (!this.nodes.length) return;
-
-    this.spinRequestMotionSnapshot = this.nodes.map((node) => ({
-      node,
-      y: node.container.y,
-      alpha: node.container.alpha,
-    }));
-
-    const motion = { progress: 0 };
-    this.spinRequestMotionTween = this.tweens.add({
-      targets: motion,
-      progress: 1,
-      duration: 260,
-      yoyo: true,
-      repeat: -1,
-      ease: "Sine.easeInOut",
-      onUpdate: () => {
-        this.spinRequestMotionSnapshot.forEach(({ node, y, alpha }, index) => {
-          if (!node.container.active) return;
-          const laneOffset = 10 + (index % BOARD_COLUMNS) * 1.5;
-          node.container.y = y + motion.progress * laneOffset;
-          node.container.alpha = Math.max(0.84, alpha - motion.progress * 0.08);
-        });
-      },
-    });
-  }
-
-  stopSpinRequestMotion() {
-    this.spinRequestMotionTween?.stop();
-    this.spinRequestMotionTween = null;
-    this.spinRequestMotionSnapshot.forEach(({ node, y, alpha }) => {
-      if (!node.container.active) return;
-      node.container.y = y;
-      node.container.alpha = alpha;
-    });
-    this.spinRequestMotionSnapshot = [];
-  }
 
   update(time: number) {
     if (
