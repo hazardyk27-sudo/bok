@@ -557,6 +557,18 @@ describe("cadi kazan route smoke contract", () => {
     expect(witchClientSource).not.toContain("content.innerHTML");
   });
 
+  it("shows the finite Office pool count and immutable public ticket ID inside the master card", () => {
+    expect(witchClientSource).toContain("data-witch-office-meta");
+    expect(witchClientSource).toContain("data-witch-office-pool");
+    expect(witchClientSource).toContain("data-witch-office-ticket-id");
+    expect(witchClientSource).toContain("/office-pool");
+    expect(witchClientSource).toContain("officePoolRemaining");
+    expect(witchClientSource).toContain("officeTicketPublicId");
+    expect(visualLockSource).toContain("PASS 44 — THE OFFICE finite-pool metadata");
+    expect(visualLockSource).toContain("> .witch-office-card-meta");
+  });
+
+
   it("marks exactly the resolved Office winning triple and visually recedes the other cells", () => {
     expect(witchClientSource).toContain("winningOfficeIndices");
     expect(witchClientSource).toContain(".slice(0, 3)");
