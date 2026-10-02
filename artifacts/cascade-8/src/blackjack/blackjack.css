@@ -1680,7 +1680,9 @@ body {
 
 @media (orientation: landscape) and (max-height: 760px) {
   .blackjack-root {
-    overflow-y: auto;
+    overflow-y: auto !important;
+    overscroll-behavior-y: contain;
+    -webkit-overflow-scrolling: touch;
     grid-template-rows: auto auto auto auto;
   }
 
@@ -1756,7 +1758,9 @@ body {
 
 @media (orientation: portrait) and (min-width: 600px) and (max-width: 1024px) {
   .blackjack-root {
-    overflow-y: auto;
+    overflow-y: auto !important;
+    overscroll-behavior-y: contain;
+    -webkit-overflow-scrolling: touch;
     grid-template-rows: auto auto auto auto;
   }
 
@@ -1818,7 +1822,9 @@ body {
 
 @media (orientation: portrait) and (max-width: 599px) {
   .blackjack-root {
-    overflow-y: auto;
+    overflow-y: auto !important;
+    overscroll-behavior-y: contain;
+    -webkit-overflow-scrolling: touch;
     grid-template-rows: auto auto auto auto;
   }
 
