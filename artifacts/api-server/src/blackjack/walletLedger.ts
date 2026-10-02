@@ -302,3 +302,19 @@ export function settleBlackjackReservedFunds(
 
   return applyEntry(state, entry);
 }
+
+
+export function rebaseBlackjackWalletAvailableBalance(
+  state: BlackjackWalletLedgerState,
+  availableBalanceCents: number,
+): BlackjackWalletLedgerState {
+  assertMoneyCents("availableBalanceCents", availableBalanceCents);
+  if (state.availableBalanceCents === availableBalanceCents) {
+    return state;
+  }
+
+  return Object.freeze({
+    ...state,
+    availableBalanceCents,
+  });
+}
