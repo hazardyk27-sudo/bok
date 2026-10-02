@@ -8,7 +8,6 @@ import {
 } from "./bettingView";
 import {
   renderBlackjackCardStack,
-  renderBlackjackSeat,
   renderBlackjackTableShell,
   type BlackjackTableAction,
   type BlackjackTableSeatViewModel,
@@ -41,6 +40,123 @@ function setText(
   value: string,
 ): void {
   requireElement<HTMLElement>(root,selector).textContent=value;
+}
+
+function replaceChildrenFromMarkup(
+  element: HTMLElement,
+  markup: string,
+): void {
+  const template=element.ownerDocument.createElement("template");
+  template.innerHTML=markup;
+  element.replaceChildren(
+    ...Array.from(template.content.childNodes),
+  );
+}
+
+function patchOptionalTextNode(input:{
+  parent: HTMLElement;
+  selector: string;
+  className: string;
+  text: string | null;
+  tagName?: "span" | "strong";
+}): void {
+  const current=input.parent.querySelector<HTMLElement>(input.selector);
+  if(input.text===null){
+    current?.remove();
+    return;
+  }
+  if(current){
+    current.textContent=input.text;
+    return;
+  }
+  const node=input.parent.ownerDocument.createElement(
+    input.tagName ?? "span",
+  );
+  node.className=input.className;
+  node.textContent=input.text;
+  input.parent.append(node);
+}
+
+function patchSeatAction(
+  copy: HTMLElement,
+  seat: BlackjackTableSeatViewModel,
+): void {
+  const desired=
+    seat.canClaim
+      ? "CLAIM"
+      : seat.canLeave
+        ? "LEAVE"
+        : null;
+  const current=copy.querySelector<HTMLButtonElement>(
+    ".blackjack-seat-action",
+  );
+
+  if(desired===null){
+    current?.remove();
+    return;
+  }
+
+  if(
+    current &&
+    current.dataset.blackjackSeatAction===desired
+  ){
+    current.dataset.seat=String(seat.seatNumber);
+    current.textContent=desired==="CLAIM" ? "TAKE SEAT" : "LEAVE";
+    current.classList.toggle("is-leave",desired==="LEAVE");
+    return;
+  }
+
+  const button=copy.ownerDocument.createElement("button");
+  button.type="button";
+  button.className=
+    "blackjack-seat-action" +
+    (desired==="LEAVE" ? " is-leave" : "");
+  button.dataset.blackjackSeatAction=desired;
+  button.dataset.seat=String(seat.seatNumber);
+  button.textContent=desired==="CLAIM" ? "TAKE SEAT" : "LEAVE";
+  current?.replaceWith(button) ?? copy.append(button);
+}
+
+function patchSeatNode(
+  current: HTMLElement,
+  seat: BlackjackTableSeatViewModel,
+  previous: BlackjackTableSeatViewModel,
+): void {
+  current.classList.toggle("is-local",seat.isLocal);
+  current.dataset.status=seat.status;
+  current.dataset.local=seat.isLocal ? "true" : "false";
+
+  setText(current,".blackjack-seat-label",seat.label);
+
+  const copy=requireElement<HTMLElement>(
+    current,
+    ".blackjack-seat-copy",
+  );
+  patchOptionalTextNode({
+    parent:copy,
+    selector:".blackjack-seat-total",
+    className:"blackjack-seat-total",
+    text:seat.total===null ? null : String(seat.total),
+    tagName:"strong",
+  });
+  patchOptionalTextNode({
+    parent:copy,
+    selector:".blackjack-seat-bet",
+    className:"blackjack-seat-bet",
+    text:seat.betLabel===null ? null : "BET " + seat.betLabel,
+  });
+  patchSeatAction(copy,seat);
+
+  if(!sameValue(seat.cards,previous.cards)){
+    const cards=requireElement<HTMLElement>(
+      current,
+      ".blackjack-seat-cards",
+    );
+    replaceChildrenFromMarkup(
+      cards,
+      renderBlackjackCardStack(seat.cards,2),
+    );
+  }
 }
 
 function patchConnection(
@@ -101,13 +217,16 @@ function patchDealer(
   );
 
   if(sameValue(model.dealerCards,previous.dealerCards)) return;
-  requireElement<HTMLElement>(
-    app,
-    ".blackjack-dealer-cards",
-  ).innerHTML=renderBlackjackCardStack(
-    model.dealerCards,
-    2,
-    "is-dealer",
+  replaceChildrenFromMarkup(
+    requireElement<HTMLElement>(
+      app,
+      ".blackjack-dealer-cards",
+    ),
+    renderBlackjackCardStack(
+      model.dealerCards,
+      2,
+      "is-dealer",
+    ),
   );
 }
 
@@ -140,7 +259,7 @@ function patchSeats(
       app,
       '.blackjack-seat[data-seat="' + seatNumber + '"]',
     );
-    current.outerHTML=renderBlackjackSeat(nextSeat);
+    patchSeatNode(current,nextSeat,oldSeat);
   }
 }
 
