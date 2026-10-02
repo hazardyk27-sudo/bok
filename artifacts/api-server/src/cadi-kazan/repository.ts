@@ -297,13 +297,13 @@ async function isOfficePoolCurrent(client: PoolClient, poolId: string) {
     OFFICE_POOL_DISTRIBUTION.map((entry) => [
       `${entry.symbolId ?? "LOSS"}:${entry.multiplierBps}`,
       entry.count,
-    ]),
+    ] as const),
   );
   const actual = new Map(
     result.rows.map((row) => [
       `${row.outcome_symbol ?? "LOSS"}:${Number(row.multiplier_bps)}`,
       Number(row.count),
-    ]),
+    ] as const),
   );
 
   return actual.size === expected.size
