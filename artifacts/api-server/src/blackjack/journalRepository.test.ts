@@ -160,7 +160,7 @@ describe("blackjack journal repository", () => {
     );
 
     await expect(repository.append(record(2), 1)).rejects.toThrow(
-      /stale or missing/,
+      /eventSequence is stale/,
     );
   });
 
