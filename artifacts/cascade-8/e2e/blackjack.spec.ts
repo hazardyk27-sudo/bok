@@ -294,6 +294,14 @@ async function installBlackjackFixture(
     }));
   };
 
+  await page.route("**/api/slot/session-converge",async(route)=>{
+    await route.fulfill({
+      status:200,
+      contentType:"application/json",
+      body:JSON.stringify({ready:true}),
+    });
+  });
+
   await page.route("**/api/blackjack/session",async(route)=>{
     await route.fulfill({
       status:200,
@@ -509,14 +517,14 @@ test.describe("Blackjack browser lifecycle",()=>{
     await openBlackjack(page);
 
     await test.step("claim a seat through the confirmation UX",async()=>{
-      await page.locator('[data-seat="3"]').click();
+      await page.locator('.blackjack-seat[data-seat="3"]').click();
       await expect(page.locator("[data-blackjack-selected-seat]"))
         .toHaveText("3");
       await page.locator(
         '[data-blackjack-seat-confirm-action="CONFIRM"]',
       ).click();
 
-      await expect(page.locator('[data-seat="3"]'))
+      await expect(page.locator('.blackjack-seat[data-seat="3"]'))
         .toHaveClass(/is-local/);
       await expect(page.locator(".blackjack-context-prompt"))
         .toHaveText("PLACE YOUR BET");
@@ -601,7 +609,7 @@ test.describe("Blackjack browser lifecycle",()=>{
     const fixture=await installBlackjackFixture(page);
     await openBlackjack(page);
 
-    await page.locator('[data-seat="3"]').click();
+    await page.locator('.blackjack-seat[data-seat="3"]').click();
     await page.locator(
       '[data-blackjack-seat-confirm-action="CONFIRM"]',
     ).click();
@@ -677,7 +685,7 @@ test.describe("Blackjack responsive browser smoke",()=>{
       layout.viewportWidth+1,
     );
 
-    await page.locator('[data-seat="3"]').tap();
+    await page.locator('.blackjack-seat[data-seat="3"]').tap();
     await expect(page.locator("[data-blackjack-seat-confirm]"))
       .toBeVisible();
   });
