@@ -222,6 +222,7 @@ export async function recoverAndAttachBlackjackServerRuntime(input: {
   ) =>
     | BlackjackCoordinatorAccount
     | Promise<BlackjackCoordinatorAccount>;
+  onRuntimeUnavailable?: (error: unknown) => void;
 }): Promise<BlackjackAttachedServerRuntime | null> {
   const scheduled=await recoverAndStartBlackjackRoundRuntime({
     tableId:input.tableId,
@@ -233,6 +234,7 @@ export async function recoverAndAttachBlackjackServerRuntime(input: {
     bettingWindowMs:input.bettingWindowMs,
     scheduler:input.scheduler,
     loadSeatAccount:input.loadSeatAccount,
+    onFatalError:input.onRuntimeUnavailable,
   });
   if(scheduled===null) return null;
 
@@ -286,6 +288,7 @@ export async function initializeAndAttachBlackjackServerRuntime(input: {
   ) =>
     | BlackjackCoordinatorAccount
     | Promise<BlackjackCoordinatorAccount>;
+  onRuntimeUnavailable?: (error: unknown) => void;
 }): Promise<BlackjackAttachedServerRuntime> {
   const existing=await input.snapshotRepository.load(input.tableId);
 
@@ -322,6 +325,7 @@ export async function initializeAndAttachBlackjackServerRuntime(input: {
     scheduler:input.scheduler,
     createConnectionId:input.createConnectionId,
     loadSeatAccount:input.loadSeatAccount,
+    onRuntimeUnavailable:input.onRuntimeUnavailable,
   });
 
   if(attached===null){

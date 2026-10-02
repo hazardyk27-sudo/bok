@@ -110,6 +110,7 @@ export async function recoverAndStartBlackjackRoundRuntime(input: {
   ) =>
     | BlackjackCoordinatorAccount
     | Promise<BlackjackCoordinatorAccount>;
+  onFatalError?: (error: unknown) => void;
 }): Promise<BlackjackRecoveredScheduledRuntime | null> {
   const recovery=await recoverBlackjackRuntime(
     input.tableId,
@@ -153,6 +154,14 @@ export async function recoverAndStartBlackjackRoundRuntime(input: {
 
   let scheduler: BlackjackRoundScheduler | null=null;
   const callerOnError=input.scheduler?.onError;
+  let fatalReported=false;
+  const reportFatal=(error: unknown)=>{
+    scheduler?.stop();
+    if(fatalReported) return;
+    fatalReported=true;
+    input.onFatalError?.(error);
+    callerOnError?.(error);
+  };
 
   const authority=createBlackjackRuntimeAuthority(
     coordinator,
@@ -162,10 +171,7 @@ export async function recoverAndStartBlackjackRoundRuntime(input: {
       bettingWindowMs:input.bettingWindowMs,
       persist,
       loadSeatAccount:input.loadSeatAccount,
-      onFatalError:(error)=>{
-        scheduler?.stop();
-        callerOnError?.(error);
-      },
+      onFatalError:reportFatal,
     },
   );
   const driver=authority.driver;
@@ -174,10 +180,7 @@ export async function recoverAndStartBlackjackRoundRuntime(input: {
     driver,
     {
       ...input.scheduler,
-      onError:(error)=>{
-        scheduler?.stop();
-        callerOnError?.(error);
-      },
+      onError:reportFatal,
     },
   );
 

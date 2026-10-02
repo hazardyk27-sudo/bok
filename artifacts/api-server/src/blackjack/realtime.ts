@@ -35,6 +35,9 @@ import {
 } from "./realtimeActions";
 
 export const BLACKJACK_WS_PATH = "/api/blackjack/ws" as const;
+export const BLACKJACK_WS_CLOSE_SESSION_REPLACED = 4001 as const;
+export const BLACKJACK_WS_CLOSE_SNAPSHOT_UNAVAILABLE = 1013 as const;
+export const BLACKJACK_WS_CLOSE_IDENTITY_UNAVAILABLE = 1008 as const;
 
 export type BlackjackRealtimeSource = Readonly<{
   getSnapshot: () =>
@@ -108,6 +111,19 @@ function parseMessage(message: string): unknown {
   }
 }
 
+function closeSnapshotUnavailable(socket: WebSocket): void {
+  send(socket, {
+    type: "error",
+    error: "BLACKJACK_SNAPSHOT_UNAVAILABLE",
+  });
+  if (socket.readyState === WebSocket.OPEN) {
+    socket.close(
+      BLACKJACK_WS_CLOSE_SNAPSHOT_UNAVAILABLE,
+      "BLACKJACK_SNAPSHOT_UNAVAILABLE",
+    );
+  }
+}
+
 export function attachBlackjackWebSocket(
   server: Server,
   source: BlackjackRealtimeSource,
@@ -163,10 +179,7 @@ export function attachBlackjackWebSocket(
         sendPrivatePlayerState(socket,snapshot);
       }
     } catch {
-      send(socket, {
-        type: "error",
-        error: "BLACKJACK_SNAPSHOT_UNAVAILABLE",
-      });
+      closeSnapshotUnavailable(socket);
     }
   };
 
@@ -200,10 +213,7 @@ export function attachBlackjackWebSocket(
         return;
       }
 
-      send(socket, {
-        type: "error",
-        error: "BLACKJACK_SNAPSHOT_UNAVAILABLE",
-      });
+      closeSnapshotUnavailable(socket);
     }
   };
 
@@ -239,6 +249,12 @@ export function attachBlackjackWebSocket(
         (result)=>send(socket,result),
       );
     } catch {
+      try {
+        await source.getSnapshot();
+      } catch {
+        closeSnapshotUnavailable(socket);
+        return;
+      }
       send(socket,{
         type:"SEAT_CLAIM_REJECTED",
         requestId:request.requestId,
@@ -279,6 +295,12 @@ export function attachBlackjackWebSocket(
         (result)=>send(socket,result),
       );
     } catch {
+      try {
+        await source.getSnapshot();
+      } catch {
+        closeSnapshotUnavailable(socket);
+        return;
+      }
       send(socket,{
         type:"SEAT_LEAVE_REJECTED",
         requestId:request.requestId,
@@ -321,8 +343,15 @@ export function attachBlackjackWebSocket(
         ? (rawMessage as { actionId: string }).actionId
         : null;
 
+    let current: BlackjackPublicSnapshot;
     try {
-      const current = await source.getSnapshot();
+      current = await source.getSnapshot();
+    } catch {
+      closeSnapshotUnavailable(socket);
+      return;
+    }
+
+    try {
       const action = parseBlackjackRealtimePlayerAction(rawMessage, {
         playerId: identity.playerId,
         tableId: current.tableId,
@@ -371,11 +400,15 @@ export function attachBlackjackWebSocket(
             ),
           });
         } catch {
-          send(socket, {
-            type: "error",
-            error: "BLACKJACK_SNAPSHOT_UNAVAILABLE",
-          });
+          closeSnapshotUnavailable(socket);
         }
+        return;
+      }
+
+      try {
+        await source.getSnapshot();
+      } catch {
+        closeSnapshotUnavailable(socket);
         return;
       }
 
@@ -429,7 +462,10 @@ export function attachBlackjackWebSocket(
     connectionIdBySocket.set(socket, connectionId);
     socketByConnectionId.set(connectionId, socket);
 
+    let cleaned=false;
     const cleanup = () => {
+      if(cleaned) return;
+      cleaned=true;
       const identity=identityBySocket.get(socket);
       connections.delete(socket);
       connectionIdBySocket.delete(socket);
@@ -464,9 +500,23 @@ export function attachBlackjackWebSocket(
     socket.once("error", cleanup);
 
     if (options.resolveIdentity) {
+      let identity: BlackjackRealtimeIdentity | null;
       try {
-        const identity = await options.resolveIdentity(request);
-        if (identity !== null) {
+        identity = await options.resolveIdentity(request);
+      } catch {
+        send(socket, {
+          type: "error",
+          error: "BLACKJACK_IDENTITY_UNAVAILABLE",
+        });
+        socket.close(
+          BLACKJACK_WS_CLOSE_IDENTITY_UNAVAILABLE,
+          "BLACKJACK_IDENTITY_UNAVAILABLE",
+        );
+        return;
+      }
+
+      if (identity !== null) {
+        try {
           const claim = claimBlackjackConnection(connectionRegistry, {
             connectionId,
             userId: identity.userId,
@@ -495,17 +545,26 @@ export function attachBlackjackWebSocket(
                 type: "SESSION_REPLACED",
                 replacementConnectionId: connectionId,
               });
-              replacedSocket.close(4001, "SESSION_REPLACED");
+              replacedSocket.close(
+                BLACKJACK_WS_CLOSE_SESSION_REPLACED,
+                "SESSION_REPLACED",
+              );
             }
           }
+        } catch {
+          try {
+            await source.getSnapshot();
+          } catch {
+            closeSnapshotUnavailable(socket);
+            return;
+          }
+          send(socket, {
+            type: "error",
+            error: "BLACKJACK_CONNECTION_UNAVAILABLE",
+          });
+          socket.close(1011, "BLACKJACK_CONNECTION_UNAVAILABLE");
+          return;
         }
-      } catch {
-        send(socket, {
-          type: "error",
-          error: "BLACKJACK_IDENTITY_UNAVAILABLE",
-        });
-        socket.close(1008, "BLACKJACK_IDENTITY_UNAVAILABLE");
-        return;
       }
     }
 

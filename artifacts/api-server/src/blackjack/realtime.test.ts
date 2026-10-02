@@ -3,6 +3,7 @@ import { afterEach, describe, expect, it } from "vitest";
 import { WebSocket, type RawData } from "ws";
 import type { BlackjackPublicSnapshot } from "./publicSnapshot";
 import {
+  BLACKJACK_WS_CLOSE_SNAPSHOT_UNAVAILABLE,
   BLACKJACK_WS_PATH,
   attachBlackjackWebSocket,
   type BlackjackRealtimeRuntime,
@@ -346,11 +347,16 @@ describe("blackjack WebSocket room foundation", () => {
     const port = await listen(server);
 
     client = new WebSocket(`ws://127.0.0.1:${port}${BLACKJACK_WS_PATH}`);
-    const message = await nextMessage(client);
+    const message = nextMessage(client);
+    const closed = nextClose(client);
 
-    expect(message).toEqual({
+    await expect(message).resolves.toEqual({
       type: "error",
       error: "BLACKJACK_SNAPSHOT_UNAVAILABLE",
+    });
+    await expect(closed).resolves.toEqual({
+      code: BLACKJACK_WS_CLOSE_SNAPSHOT_UNAVAILABLE,
+      reason: "BLACKJACK_SNAPSHOT_UNAVAILABLE",
     });
   });
 });
