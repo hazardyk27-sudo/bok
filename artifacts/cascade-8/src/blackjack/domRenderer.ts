@@ -53,6 +53,32 @@ function replaceChildrenFromMarkup(
   );
 }
 
+function restartAnimationClass(
+  element: HTMLElement,
+  className: string,
+): void {
+  element.classList.remove(className);
+  void element.offsetWidth;
+  element.classList.add(className);
+}
+
+function cardCount(
+  cards: readonly unknown[] | undefined,
+): number {
+  return cards?.length ?? 0;
+}
+
+function dealerHoleRevealed(
+  previous: BlackjackTableViewModel,
+  model: BlackjackTableViewModel,
+): boolean {
+  const before=previous.dealerCards ?? [];
+  const after=model.dealerCards ?? [];
+  return after.some(
+    (card,index)=>card!==null && before[index]===null,
+  );
+}
+
 function patchOptionalTextNode(input:{
   parent: HTMLElement;
   selector: string;
@@ -120,6 +146,10 @@ function patchSeatNode(
     "is-selected-for-claim",
     seat.isSelectedForClaim===true,
   );
+  current.classList.toggle(
+    "is-active-turn",
+    seat.isActiveTurn===true,
+  );
   current.dataset.status=seat.status;
   current.dataset.local=seat.isLocal ? "true" : "false";
   current.dataset.blackjackSeatSelect=
@@ -153,15 +183,29 @@ function patchSeatNode(
   });
   patchSeatAction(copy,seat);
 
+  if(
+    seat.status!==previous.status ||
+    seat.label!==previous.label ||
+    seat.isLocal!==previous.isLocal
+  ){
+    restartAnimationClass(current,"is-seat-transition");
+  }
+
   if(!sameValue(seat.cards,previous.cards)){
     const cards=requireElement<HTMLElement>(
       current,
       ".blackjack-seat-cards",
     );
+    const addedCard=
+      cardCount(seat.cards)>cardCount(previous.cards);
+    cards.classList.remove("is-dealing");
     replaceChildrenFromMarkup(
       cards,
       renderBlackjackCardStack(seat.cards,2),
     );
+    if(addedCard){
+      restartAnimationClass(cards,"is-dealing");
+    }
   }
 }
 
@@ -222,18 +266,36 @@ function patchDealer(
     model.dealerTotalLabel,
   );
 
+  requireElement<HTMLElement>(
+    app,
+    ".blackjack-dealer-zone",
+  ).classList.toggle(
+    "is-active-turn",
+    model.dealerActive===true,
+  );
+
   if(sameValue(model.dealerCards,previous.dealerCards)) return;
+  const cards=requireElement<HTMLElement>(
+    app,
+    ".blackjack-dealer-cards",
+  );
+  const addedCard=
+    cardCount(model.dealerCards)>cardCount(previous.dealerCards);
+  const holeRevealed=dealerHoleRevealed(previous,model);
+  cards.classList.remove("is-dealing","is-hole-flip");
   replaceChildrenFromMarkup(
-    requireElement<HTMLElement>(
-      app,
-      ".blackjack-dealer-cards",
-    ),
+    cards,
     renderBlackjackCardStack(
       model.dealerCards,
       2,
       "is-dealer",
     ),
   );
+  if(holeRevealed){
+    restartAnimationClass(cards,"is-hole-flip");
+  } else if(addedCard){
+    restartAnimationClass(cards,"is-dealing");
+  }
 }
 
 function seatByNumber(
@@ -282,6 +344,7 @@ function affordable(
 function patchBettingPanel(
   app: HTMLElement,
   model: BlackjackBettingPanelViewModel,
+  previous: BlackjackBettingPanelViewModel,
 ): void {
   const panel=requireElement<HTMLElement>(
     app,
@@ -335,11 +398,29 @@ function patchBettingPanel(
   );
   doubleButton.disabled=!model.enabled || model.pending;
 
-  setText(
+  const betCircle=requireElement<HTMLElement>(
     panel,
-    ".blackjack-bet-circle strong",
+    ".blackjack-bet-circle",
+  );
+  setText(
+    betCircle,
+    "strong",
     model.totalBetLabel,
   );
+  if(model.totalBetLabel!==previous.totalBetLabel){
+    restartAnimationClass(betCircle,"is-bet-pulse");
+    for(const chip of panel.querySelectorAll<HTMLElement>(
+      ".is-chip-pulse",
+    )){
+      chip.classList.remove("is-chip-pulse");
+    }
+    const selectedChip=panel.querySelector<HTMLElement>(
+      '[data-blackjack-chip="' + model.selectedChipCredits + '"]',
+    );
+    if(selectedChip){
+      restartAnimationClass(selectedChip,"is-chip-pulse");
+    }
+  }
 
   const clear=requireElement<HTMLButtonElement>(
     panel,
@@ -497,7 +578,7 @@ function patchRoundResult(
   if(!model.roundResult) return;
 
   const result=region.ownerDocument.createElement("div");
-  result.className="blackjack-round-result";
+  result.className="blackjack-round-result is-result-enter";
   result.dataset.resultTone=model.roundResult.tone;
   result.setAttribute("aria-live","polite");
 
@@ -551,6 +632,7 @@ export function createBlackjackTableDomRenderer(
       patchBettingPanel(
         app,
         normalizeBettingPanel(model),
+        normalizeBettingPanel(previous),
       );
       patchInteraction(app,model);
       patchActions(app,model);

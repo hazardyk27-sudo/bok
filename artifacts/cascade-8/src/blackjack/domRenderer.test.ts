@@ -337,4 +337,131 @@ describe("blackjack incremental DOM renderer",()=>{
     ).toBe("3 / 5 SEATED");
   });
 
+  it("animates authoritative card, turn, bet and result changes without replacing stable containers",()=>{
+    const app=document.createElement("div");
+    document.body.append(app);
+    const renderer=createBlackjackTableDomRenderer(app);
+
+    const initial=model({
+      interactionMode:"BETTING",
+      openDrawer:"BET",
+      canOpenBetDrawer:true,
+      dealerCards:[
+        {rank:"10",suit:"HEARTS"},
+        null,
+      ],
+      seats:BLACKJACK_DEFAULT_TABLE_VIEW.seats.map((seat)=>
+        seat.seatNumber===3
+          ? {
+              ...seat,
+              label:"YOUR SEAT",
+              status:"ACTIVE" as const,
+              isLocal:true,
+              isActiveTurn:false,
+              cards:[
+                {rank:"A" as const,suit:"SPADES" as const},
+              ],
+            }
+          : seat,
+      ),
+    });
+    renderer.render(initial);
+
+    const dealerCards=app.querySelector<HTMLElement>(
+      ".blackjack-dealer-cards",
+    );
+    const localSeat=app.querySelector<HTMLElement>(
+      '[data-seat="3"]',
+    );
+    const localCards=localSeat?.querySelector<HTMLElement>(
+      ".blackjack-seat-cards",
+    );
+    const betCircle=app.querySelector<HTMLElement>(
+      ".blackjack-bet-circle",
+    );
+
+    renderer.render(model({
+      interactionMode:"TURN",
+      openDrawer:null,
+      canOpenBetDrawer:false,
+      dealerCards:[
+        {rank:"10",suit:"HEARTS"},
+        {rank:"8",suit:"CLUBS"},
+      ],
+      seats:initial.seats.map((seat)=>
+        seat.seatNumber===3
+          ? {
+              ...seat,
+              isActiveTurn:true,
+              cards:[
+                ...(seat.cards ?? []),
+                {rank:"K" as const,suit:"DIAMONDS" as const},
+              ],
+            }
+          : seat,
+      ),
+      bettingPanel:{
+        ...initial.bettingPanel!,
+        totalBetLabel:"100",
+      },
+      betLabel:"100",
+      roundResult:{
+        title:"YOU WIN",
+        detail:"RETURN 200 · NET +100",
+        tone:"win",
+      },
+    }));
+
+    expect(
+      app.querySelector(".blackjack-dealer-cards"),
+    ).toBe(dealerCards);
+    expect(
+      app.querySelector('[data-seat="3"]'),
+    ).toBe(localSeat);
+    expect(
+      app.querySelector(
+        '[data-seat="3"] .blackjack-seat-cards',
+      ),
+    ).toBe(localCards);
+
+    expect(dealerCards?.classList.contains("is-hole-flip")).toBe(true);
+    expect(localCards?.classList.contains("is-dealing")).toBe(true);
+    expect(localSeat?.classList.contains("is-active-turn")).toBe(true);
+    expect(betCircle?.classList.contains("is-bet-pulse")).toBe(true);
+    expect(
+      app.querySelector(".blackjack-round-result")
+        ?.classList.contains("is-result-enter"),
+    ).toBe(true);
+
+    renderer.render(model({
+      interactionMode:"WAIT",
+      dealerActive:true,
+      dealerCards:[
+        {rank:"10",suit:"HEARTS"},
+        {rank:"8",suit:"CLUBS"},
+        {rank:"2",suit:"SPADES"},
+      ],
+      seats:initial.seats.map((seat)=>
+        seat.seatNumber===3
+          ? {
+              ...seat,
+              isActiveTurn:false,
+              cards:[
+                ...(seat.cards ?? []),
+                {rank:"K" as const,suit:"DIAMONDS" as const},
+              ],
+            }
+          : seat,
+      ),
+    }));
+
+    expect(dealerCards?.classList.contains("is-hole-flip")).toBe(false);
+    expect(dealerCards?.classList.contains("is-dealing")).toBe(true);
+    expect(
+      app.querySelector(".blackjack-dealer-zone")
+        ?.classList.contains("is-active-turn"),
+    ).toBe(true);
+    expect(localSeat?.classList.contains("is-active-turn")).toBe(false);
+  });
+
 });

@@ -429,6 +429,8 @@ export function buildBlackjackTableViewModelFromSnapshot(
         isSelectedForClaim:
           seat.playerId===null &&
           context.selectedSeatForClaim===seat.seatNumber,
+        isActiveTurn:
+          snapshot.round?.currentTurn?.seatNumber===seat.seatNumber,
         canLeave:
           context.transportConnected !== false &&
           context.seatCommandPending !== true &&
@@ -543,6 +545,7 @@ export function buildBlackjackTableViewModelFromSnapshot(
     betLabel: formatCreditsFromCents(localBettingCents),
     turnLabel: resolveTurnLabel(snapshot, localSeatNumber),
     dealerTotalLabel: resolveDealerLabel(snapshot),
+    dealerActive:snapshot.phase==="DEALER_TURN",
     dealerCards: Object.freeze(
       (snapshot.round?.dealer.cards ?? []).map((card) =>
         card === null
