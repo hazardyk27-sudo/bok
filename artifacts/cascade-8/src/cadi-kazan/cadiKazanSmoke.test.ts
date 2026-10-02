@@ -557,6 +557,15 @@ describe("cadi kazan route smoke contract", () => {
     expect(witchClientSource).not.toContain("content.innerHTML");
   });
 
+  it("keeps the Office topbar compact with no legacy runtime gap and one typography system", () => {
+    expect(visualLockSource).toContain("PASS 46 — compact Office topbar alignment");
+    expect(visualLockSource).toContain(".is-office-theme .witch-stat-runtime");
+    expect(visualLockSource).toContain("display: none !important");
+    expect(visualLockSource).toContain("grid-template-columns: max-content max-content 46px");
+    expect(visualLockSource).toContain('font-family: "DM Sans", sans-serif !important');
+  });
+
+
   it("shows Office pool remaining beside balance and explains the 75-ticket system from the info button", () => {
     expect(witchClientSource).toContain("data-witch-office-pool-head");
     expect(witchClientSource).toContain("data-witch-office-pool-head-value");
