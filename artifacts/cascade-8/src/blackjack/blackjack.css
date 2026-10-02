@@ -1384,3 +1384,159 @@ body {
     padding: 8px;
   }
 }
+
+
+/* Part 8: authoritative presentation motion */
+@keyframes blackjack-card-deal {
+  0% {
+    opacity: 0;
+    transform: translate3d(0,-16px,0) scale(.94) rotate(-2deg);
+  }
+  70% {
+    opacity: 1;
+    transform: translate3d(0,2px,0) scale(1.015) rotate(.5deg);
+  }
+  100% {
+    opacity: 1;
+    transform: translate3d(0,0,0) scale(1) rotate(0);
+  }
+}
+
+@keyframes blackjack-hole-reveal {
+  0% {
+    opacity: .35;
+    transform: perspective(500px) rotateY(88deg) scale(.97);
+  }
+  55% {
+    opacity: 1;
+    transform: perspective(500px) rotateY(-8deg) scale(1.015);
+  }
+  100% {
+    opacity: 1;
+    transform: perspective(500px) rotateY(0) scale(1);
+  }
+}
+
+@keyframes blackjack-turn-halo {
+  0%, 100% {
+    box-shadow:
+      0 0 0 1px rgba(200,169,106,.28),
+      0 10px 28px rgba(0,0,0,.24);
+  }
+  50% {
+    box-shadow:
+      0 0 0 3px rgba(200,169,106,.18),
+      0 0 26px rgba(200,169,106,.20),
+      0 12px 30px rgba(0,0,0,.28);
+  }
+}
+
+@keyframes blackjack-seat-enter {
+  0% {
+    opacity: .62;
+    transform: translateY(5px) scale(.985);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes blackjack-bet-pulse {
+  0% {
+    transform: scale(.96);
+  }
+  55% {
+    transform: scale(1.055);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+@keyframes blackjack-chip-pulse {
+  0% {
+    transform: translateY(0) scale(1);
+  }
+  45% {
+    transform: translateY(-5px) scale(1.06);
+  }
+  100% {
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes blackjack-result-enter {
+  0% {
+    opacity: 0;
+    transform: translateY(8px) scale(.985);
+  }
+  65% {
+    opacity: 1;
+    transform: translateY(-1px) scale(1.01);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.blackjack-seat.is-active-turn {
+  border-color: rgba(200,169,106,.78);
+  animation: blackjack-turn-halo 1.55s ease-in-out infinite;
+}
+
+.blackjack-seat.is-active-turn .blackjack-seat-label {
+  color: var(--blackjack-gold);
+}
+
+.blackjack-dealer-zone.is-active-turn {
+  border-radius: 18px;
+  box-shadow: 0 0 0 1px rgba(200,169,106,.22);
+  animation: blackjack-turn-halo 1.55s ease-in-out infinite;
+}
+
+.blackjack-seat.is-seat-transition {
+  animation: blackjack-seat-enter 260ms cubic-bezier(.2,.7,.2,1);
+}
+
+.blackjack-seat-cards.is-dealing .blackjack-card-face:last-child,
+.blackjack-dealer-cards.is-dealing .blackjack-card-face:last-child {
+  transform-origin: 50% 100%;
+  animation: blackjack-card-deal 310ms cubic-bezier(.18,.75,.25,1);
+}
+
+.blackjack-dealer-cards.is-hole-flip .blackjack-card-face:last-child {
+  transform-origin: 50% 50%;
+  backface-visibility: hidden;
+  animation: blackjack-hole-reveal 420ms cubic-bezier(.2,.7,.2,1);
+}
+
+.blackjack-bet-circle.is-bet-pulse {
+  animation: blackjack-bet-pulse 260ms cubic-bezier(.2,.7,.2,1);
+}
+
+.blackjack-chip.is-chip-pulse,
+.blackjack-high-chip-value.is-chip-pulse {
+  animation: blackjack-chip-pulse 260ms cubic-bezier(.2,.7,.2,1);
+}
+
+.blackjack-round-result.is-result-enter {
+  animation: blackjack-result-enter 340ms cubic-bezier(.2,.7,.2,1);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .blackjack-seat.is-active-turn,
+  .blackjack-dealer-zone.is-active-turn,
+  .blackjack-seat.is-seat-transition,
+  .blackjack-seat-cards.is-dealing .blackjack-card-face:last-child,
+  .blackjack-dealer-cards.is-dealing .blackjack-card-face:last-child,
+  .blackjack-dealer-cards.is-hole-flip .blackjack-card-face:last-child,
+  .blackjack-bet-circle.is-bet-pulse,
+  .blackjack-chip.is-chip-pulse,
+  .blackjack-high-chip-value.is-chip-pulse,
+  .blackjack-round-result.is-result-enter {
+    animation: none !important;
+    transition: none !important;
+  }
+}
