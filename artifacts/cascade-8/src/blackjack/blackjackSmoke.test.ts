@@ -239,6 +239,7 @@ describe("blackjack responsive table foundation", () => {
     expect(model.turnLabel).toBe("YOUR TURN · 6s");
     expect(model.interactionMode).toBe("TURN");
     expect(model.interactionPrompt).toBe("YOUR TURN");
+    expect(model.dealerActive).toBe(false);
     expect(model.dealerTotalLabel).toBe("10 + ?");
     expect(model.balanceLabel).toBe("5K");
     expect(model.betLabel).toBe("1K");
@@ -250,6 +251,7 @@ describe("blackjack responsive table foundation", () => {
       total: 21,
       betLabel: "1K",
       isLocal: true,
+      isActiveTurn: true,
     });
 
     const offlineSeat = model.seats.find((seat) => seat.seatNumber === 1);
