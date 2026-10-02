@@ -131,7 +131,7 @@ export function formatBlackjackChipCredits(credits: number): string {
   return credits.toLocaleString("en-US");
 }
 
-function chipTier(credits: number): string {
+export function getBlackjackChipTier(credits: number): string {
   if (credits >= 4_000_000) return "ultra";
   if (credits >= 256_000) return "vip";
   if (credits >= 16_000) return "high-roller";
@@ -156,7 +156,7 @@ function renderChipButton(
       type="button"
       class="blackjack-chip${selected ? " is-selected" : ""}"
       data-blackjack-chip="${credits}"
-      data-chip-tier="${chipTier(credits)}"
+      data-chip-tier="${getBlackjackChipTier(credits)}"
       aria-pressed="${selected ? "true" : "false"}"${disabled ? " disabled" : ""}
     >
       <span class="blackjack-chip-edge" aria-hidden="true"></span>
@@ -194,7 +194,7 @@ export function renderBlackjackBettingPanel(
         ).join("")}
       </div>
 
-      <div class="blackjack-high-chip-control" data-chip-tier="${chipTier(highChip)}">
+      <div class="blackjack-high-chip-control" data-chip-tier="${getBlackjackChipTier(highChip)}">
         <span>HIGH CHIP</span>
         <button
           type="button"
