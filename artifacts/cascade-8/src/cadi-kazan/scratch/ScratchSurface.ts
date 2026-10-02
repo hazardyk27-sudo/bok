@@ -52,6 +52,7 @@ export type ScratchSurfaceOptions = {
   layerCanvases?: HTMLCanvasElement[];
   coverImageUrl?: string;
   persistentCoverageCommit?: boolean;
+  onPrepare?: () => Promise<void>;
   onCommit: () => Promise<void>;
 };
 
@@ -94,6 +95,7 @@ export function getScratchCommitPlan(input: {
 
 export class ScratchSurface {
   private readonly progress: ScratchProgressGrid;
+  private readonly onPrepare?: () => Promise<void>;
   private readonly onCommit: () => Promise<void>;
   private readonly audio?: AudioManager;
   private readonly abrasionConfig: ScratchAbrasionConfig;
@@ -109,6 +111,8 @@ export class ScratchSurface {
   private gestureStartedAt = 0;
   private scratchDistancePx = 0;
   private accumulatedScratchDistancePx = 0;
+  private resultPrepared = false;
+  private prepareRequest: Promise<void> | null = null;
   private resultReady = false;
   private resultRequest: Promise<void> | null = null;
   private resultCommitTimer: number | null = null;
@@ -130,6 +134,7 @@ export class ScratchSurface {
     this.gestureStartedAt = performance.now();
     this.scratchDistancePx = 0;
     this.lastMoveAt = this.gestureStartedAt;
+    this.ensureResultPrepared();
 
     // Make the first physical contact visible exactly under the pointer/finger.
     // This is only a surface scuff; settlement still requires the existing
@@ -140,7 +145,7 @@ export class ScratchSurface {
     const initialDepthGain = this.abrasionConfig.depthPerSample * 1.15;
     this.progress.sampleCircle(this.lastPoint.x, this.lastPoint.y, initialRadius, initialDepthGain);
     this.rememberTrail(this.lastPoint, 0, 0.08);
-    this.applyThreeLayerAbrasion(this.lastPoint, 0, 0.08, this.resultReady);
+    this.applyThreeLayerAbrasion(this.lastPoint, 0, 0.08, this.resultPrepared);
     this.eraseLayer("lacquer", this.lastPoint, 0, 0.08, 0.82);
 
     this.audio?.scratchStart(0, this.progress.depthAt(this.lastPoint.x, this.lastPoint.y));
@@ -174,7 +179,7 @@ export class ScratchSurface {
       const depthGain = this.abrasionConfig.depthPerSample * (0.78 + speed * 0.24) * (0.86 + pressure * 0.32);
       this.progress.sampleCircle(sample.x, sample.y, normalizedBrushRadius, depthGain);
       this.rememberTrail(sample, angle, speed);
-      this.applyThreeLayerAbrasion(sample, angle, speed, this.resultReady);
+      this.applyThreeLayerAbrasion(sample, angle, speed, this.resultPrepared);
     }
 
     // Keep the visible scratch head centered under the live pointer. This only
@@ -223,13 +228,18 @@ export class ScratchSurface {
     this.brushRadiusPx = Math.max(8, options.brushRadiusPx ?? DEFAULT_BRUSH_RADIUS_PX);
     this.persistentCoverageCommit = options.persistentCoverageCommit ?? false;
     this.progress = new ScratchProgressGrid(22, 14, 1, this.abrasionConfig);
+    this.onPrepare = options.onPrepare;
     this.onCommit = options.onCommit;
     this.audio = options.audio;
     this.reducedMotion = prefersReducedMotion();
     this.debrisCanvas = options.debrisCanvas;
     this.debrisContext = options.debrisCanvas?.getContext("2d") ?? undefined;
     this.resultReady = options.resultReady ?? false;
-    if (this.resultReady) this.resultRequest = Promise.resolve();
+    this.resultPrepared = this.resultReady;
+    if (this.resultReady) {
+      this.prepareRequest = Promise.resolve();
+      this.resultRequest = Promise.resolve();
+    }
 
     if (options.coverImageUrl) {
       const cover = new Image();
@@ -293,6 +303,8 @@ export class ScratchSurface {
     this.audio?.scratchStop();
     this.brushStep = 0;
     this.trail = [];
+    this.resultPrepared = false;
+    this.prepareRequest = null;
     this.resultReady = false;
     this.resultRequest = null;
     this.clearResultCommitTimer();
@@ -338,6 +350,7 @@ export class ScratchSurface {
       this.scratchDistancePx = 0;
       this.lastMoveAt = now;
       this.lastPoint = point;
+      this.ensureResultPrepared();
     }
 
     if (!this.lastPoint) {
@@ -354,7 +367,7 @@ export class ScratchSurface {
       const initialDepthGain = this.abrasionConfig.depthPerSample * 1.15;
       this.progress.sampleCircle(point.x, point.y, normalizedBrushRadius, initialDepthGain);
       this.rememberTrail(point, 0, 0.08);
-      this.applyThreeLayerAbrasion(point, 0, 0.08, this.resultReady);
+      this.applyThreeLayerAbrasion(point, 0, 0.08, this.resultPrepared);
       this.eraseLayer("lacquer", point, 0, 0.08, 0.82);
       this.audio?.scratchStart(0, this.progress.depthAt(point.x, point.y));
       this.interactionCanvas.classList.add("is-scratching");
@@ -376,7 +389,7 @@ export class ScratchSurface {
         (0.86 + normalizedPressure * 0.32);
       this.progress.sampleCircle(sample.x, sample.y, normalizedBrushRadius, depthGain);
       this.rememberTrail(sample, angle, speed);
-      this.applyThreeLayerAbrasion(sample, angle, speed, this.resultReady);
+      this.applyThreeLayerAbrasion(sample, angle, speed, this.resultPrepared);
     }
 
     this.eraseLayer("lacquer", point, angle, speed, 0.78);
@@ -455,10 +468,24 @@ export class ScratchSurface {
     this.resultCommitTimer = null;
   }
 
+  private ensureResultPrepared() {
+    if (this.resultPrepared || this.prepareRequest || !this.onPrepare) return;
+    this.prepareRequest = this.onPrepare()
+      .then(() => {
+        this.resultPrepared = true;
+        this.replayBaseLayer();
+      })
+      .catch(() => {
+        this.resultPrepared = false;
+        this.prepareRequest = null;
+      });
+  }
+
   private ensureResultCommitted() {
     if (this.resultReady || this.resultRequest) return;
     this.resultRequest = this.onCommit()
       .then(() => {
+        this.resultPrepared = true;
         this.resultReady = true;
         this.replayBaseLayer();
       })

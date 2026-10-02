@@ -23,6 +23,7 @@ import {
   getVisibleBombCells,
   getVisibleOfficeCells,
   getVisibleRevealedCells,
+  getPreparedReveal,
 } from "./types";
 
 type CadiRoundRow = {
@@ -279,6 +280,28 @@ export class CadiKazanRepository {
     } finally {
       client.release();
     }
+  }
+
+  async prepareReveal(sessionId: string, roundId: string, cellIndex: number) {
+    await ensureBigMoneyStorage();
+    if (!Number.isInteger(cellIndex)) throw new Error("INVALID_CADI_KAZAN_CELL");
+
+    const result = await pool.query<CadiRoundRow>(
+      "SELECT * FROM cadi_kazan_rounds WHERE id = $1 AND session_id = $2 LIMIT 1",
+      [roundId, sessionId],
+    );
+    const row = result.rows[0];
+    if (!row) throw new Error("CADI_KAZAN_ROUND_NOT_FOUND");
+    if (row.status !== "ACTIVE") throw new Error("CADI_KAZAN_ROUND_NOT_ACTIVE");
+    if (cellIndex < 0 || cellIndex >= Number(row.cell_count)) throw new Error("INVALID_CADI_KAZAN_CELL");
+
+    return getPreparedReveal(
+      row.id,
+      row.mode,
+      cellIndex,
+      safeNumberArray(row.bomb_indices),
+      safeOfficeSymbolArray(row.office_cells),
+    );
   }
 
   async revealCell(sessionId: string, roundId: string, cellIndex: number, idempotencyKey: string) {

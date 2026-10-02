@@ -51,6 +51,21 @@ type CadiKazanMutation = {
   state: CadiKazanState;
 };
 
+type CadiKazanPreparedReveal =
+  | {
+      roundId: string;
+      cellIndex: number;
+      mode: "STANDARD" | "ADVANCED";
+      kind: "SAFE" | "BOMB";
+    }
+  | {
+      roundId: string;
+      cellIndex: number;
+      mode: "OFFICE_MATCH_6";
+      kind: "OFFICE";
+      symbolId: OfficeMatchSymbolId;
+    };
+
 const API_BASE = "/api/cadi-kazan";
 const ADVANCED_25_CARD_ART_URL = new URL("./advanced/assets/advanced25-card-master.png", import.meta.url).href;
 const SCRATCH_BRUSH_RADIUS_PX = 14;
@@ -168,8 +183,38 @@ function preloadScratchResultAssets() {
 
 const scratchResultAssetsReady = preloadScratchResultAssets();
 
+const PREPARE_REVEAL_TIMEOUT_MS = 1200;
+const PREPARE_REVEAL_MAX_ATTEMPTS = 2;
 const REVEAL_ATTEMPT_TIMEOUT_MS = 2200;
 const REVEAL_MAX_ATTEMPTS = 2;
+
+async function fetchPreparedReveal(roundId: string, cellIndex: number) {
+  let lastError: unknown = null;
+
+  for (let attempt = 1; attempt <= PREPARE_REVEAL_MAX_ATTEMPTS; attempt += 1) {
+    try {
+      const response = await fetch(`${API_BASE}/rounds/${encodeURIComponent(roundId)}/prepare-reveal`, {
+        method: "POST",
+        credentials: "same-origin",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ cellIndex }),
+        signal: AbortSignal.timeout(PREPARE_REVEAL_TIMEOUT_MS),
+      });
+      const data = await response.json() as CadiKazanPreparedReveal & { error?: string };
+      if (!response.ok) throw new Error(data.error ?? "Alan hazırlanamadı");
+      return data;
+    } catch (error) {
+      lastError = error;
+      const retryable =
+        error instanceof DOMException
+          ? error.name === "TimeoutError" || error.name === "AbortError"
+          : error instanceof TypeError;
+      if (!retryable || attempt >= PREPARE_REVEAL_MAX_ATTEMPTS) throw error;
+    }
+  }
+
+  throw lastError instanceof Error ? lastError : new Error("Alan hazırlanamadı");
+}
 
 async function fetchRevealMutation(roundId: string, cellIndex: number, idempotencyKey: string) {
   let lastError: unknown = null;
@@ -468,6 +513,9 @@ export class WitchClient {
   private readonly terminalRevealTimers = new Set<number>();
   private terminalRevealAnimating = false;
   private readonly scratchSurfaces = new Map<number, ScratchSurface>();
+  private preparedRevealRoundId: string | null = null;
+  private readonly preparedReveals = new Map<number, CadiKazanPreparedReveal>();
+  private readonly preparedRevealRequests = new Map<number, Promise<void>>();
   private officeRevealQueue: Promise<void> = Promise.resolve();
   private officeScratchPointerId: number | null = null;
   private officeScratchOriginIndex: number | null = null;
@@ -773,6 +821,65 @@ export class WitchClient {
     }
   }
 
+  private paintPreparedReveal(button: HTMLButtonElement, round: CadiKazanRound, prepared: CadiKazanPreparedReveal | null) {
+    button.querySelectorAll<HTMLElement>("[data-witch-result-candidate], [data-witch-office-candidate]").forEach((candidate) => {
+      candidate.dataset.witchResultActive = "false";
+    });
+
+    if (!prepared || prepared.roundId !== round.id || prepared.cellIndex !== Number(button.dataset.witchCell)) {
+      delete button.dataset.preparedResult;
+      return;
+    }
+
+    if (prepared.kind === "OFFICE") {
+      const candidate = button.querySelector<HTMLElement>(`[data-witch-office-candidate="${prepared.symbolId}"]`);
+      if (!candidate) return;
+      const symbol = OFFICE_SYMBOL_BY_ID.get(prepared.symbolId);
+      const prize = candidate.querySelector<HTMLElement>("[data-witch-office-result-prize]");
+      if (symbol && prize) {
+        prize.textContent = formatMoney(
+          Math.floor((round.stakeCents * symbol.multiplierBps) / 100),
+          { compactInteger: true },
+        );
+      }
+      candidate.dataset.witchResultActive = "true";
+      button.dataset.preparedResult = prepared.symbolId;
+      return;
+    }
+
+    const candidate = button.querySelector<HTMLElement>(`[data-witch-result-candidate="${prepared.kind}"]`);
+    if (!candidate) return;
+    candidate.dataset.witchResultActive = "true";
+    button.dataset.preparedResult = prepared.kind;
+  }
+
+  private async prepareReveal(roundId: string, cellIndex: number) {
+    const round = this.state?.round;
+    if (!round || round.id !== roundId || round.status !== "ACTIVE") throw new Error("ROUND_CHANGED");
+    if (this.preparedReveals.has(cellIndex)) return;
+
+    const inFlight = this.preparedRevealRequests.get(cellIndex);
+    if (inFlight) return inFlight;
+
+    const task = fetchPreparedReveal(roundId, cellIndex)
+      .then((prepared) => {
+        const current = this.state?.round;
+        if (!current || current.id !== roundId || current.status !== "ACTIVE") throw new Error("ROUND_CHANGED");
+        if (prepared.roundId !== roundId || prepared.cellIndex !== cellIndex || prepared.mode !== current.mode) {
+          throw new Error("PREPARED_REVEAL_MISMATCH");
+        }
+        this.preparedReveals.set(cellIndex, prepared);
+        const button = this.root.querySelector<HTMLButtonElement>(`[data-witch-cell="${cellIndex}"]`);
+        if (button) this.paintPreparedReveal(button, current, prepared);
+      })
+      .finally(() => {
+        this.preparedRevealRequests.delete(cellIndex);
+      });
+
+    this.preparedRevealRequests.set(cellIndex, task);
+    return task;
+  }
+
   private queueOfficeReveal(cellIndex: number) {
     const task = this.officeRevealQueue
       .catch(() => undefined)
@@ -916,6 +1023,11 @@ export class WitchClient {
     const previousRoundId = this.state?.round?.id;
     this.state = nextState;
     const round = nextState.round;
+    if (round?.id !== this.preparedRevealRoundId) {
+      this.preparedRevealRoundId = round?.id ?? null;
+      this.preparedReveals.clear();
+      this.preparedRevealRequests.clear();
+    }
     if (!round) {
       this.terminalRevealRoundId = null;
       this.terminalRevealVisibleCells.clear();
@@ -1194,7 +1306,7 @@ export class WitchClient {
       this.destroyScratchSurfaces();
       board.innerHTML = Array.from({ length: round.cellCount }, (_, index) => `
         <button type="button" class="witch-cell" data-witch-cell="${index}" aria-label="Kazınabilir kapalı alan">
-          ${getScratchCellLayerMarkup()}
+          ${getScratchCellLayerMarkup(round.mode)}
         </button>
       `).join("");
       board.querySelectorAll<HTMLButtonElement>("[data-witch-cell]").forEach((button) => {
@@ -1258,59 +1370,23 @@ export class WitchClient {
       button.classList.toggle("is-pending", this.pendingRevealCell === index);
       button.classList.toggle("is-terminal-reveal", this.terminalRevealAnimating && isTerminallyRevealed && !isActuallyRevealed);
       button.setAttribute("aria-label", presentation.resultClass ? presentation.label : "Kazınabilir kapalı alan");
-      const content = button.querySelector<HTMLElement>(".witch-cell-content");
-      if (content) {
-        const genericArt = content.querySelector<HTMLImageElement>("[data-witch-result-art]");
-        const officeResult = content.querySelector<HTMLElement>("[data-witch-office-result]");
-        const officeArt = content.querySelector<HTMLImageElement>("[data-witch-office-result-art]");
-        const officePrizeNode = content.querySelector<HTMLElement>("[data-witch-office-result-prize]");
-
-        if (round.mode === "OFFICE_MATCH_6" && officePresentation?.symbol) {
-          const symbolId = visibleOfficeSymbols.get(index);
-          const symbol = symbolId ? OFFICE_SYMBOL_BY_ID.get(symbolId) : undefined;
-          const symbolPrizeCents = symbol
-            ? Math.floor((round.stakeCents * symbol.multiplierBps) / 100)
-            : 0;
-          const symbolPrize = formatMoney(symbolPrizeCents, { compactInteger: true });
-          const officePrizeColor = symbol?.prizeColor ?? "#E5E7E9";
-          const officePrizeTextColor = symbol?.prizeTextColor ?? "#151719";
-          if (genericArt) genericArt.hidden = true;
-          if (officeResult) {
-            officeResult.hidden = false;
-            officeResult.dataset.officeSymbol = symbolId ?? "";
-            officeResult.style.setProperty("--office-symbol-color", officePrizeColor);
-            officeResult.style.setProperty("--office-symbol-text", officePrizeTextColor);
-          }
-          if (officeArt && officePresentation.artworkUrl) {
-            if (officeArt.getAttribute("src") !== officePresentation.artworkUrl) {
-              officeArt.setAttribute("src", officePresentation.artworkUrl);
+      const authoritativePrepared: CadiKazanPreparedReveal | null = round.mode === "OFFICE_MATCH_6"
+        ? (() => {
+            const symbolId = visibleOfficeSymbols.get(index);
+            return isRevealed && symbolId
+              ? { roundId: round.id, cellIndex: index, mode: "OFFICE_MATCH_6", kind: "OFFICE", symbolId }
+              : null;
+          })()
+        : isRevealed
+          ? {
+              roundId: round.id,
+              cellIndex: index,
+              mode: round.mode,
+              kind: isBomb ? "BOMB" : "SAFE",
             }
-            officeArt.alt = officePresentation.symbol;
-          }
-          if (officePrizeNode) officePrizeNode.textContent = symbolPrize;
-          button.setAttribute("aria-label", `${officePresentation.symbol} · ${symbolPrize}`);
-        } else {
-          if (officeResult) {
-            officeResult.hidden = true;
-            delete officeResult.dataset.officeSymbol;
-          }
-          if (officeArt) {
-            officeArt.removeAttribute("src");
-            officeArt.alt = "";
-          }
-          if (officePrizeNode) officePrizeNode.textContent = "";
-          const artworkUrl = "artworkUrl" in presentation ? presentation.artworkUrl : null;
-          if (genericArt && artworkUrl) {
-            if (genericArt.getAttribute("src") !== artworkUrl) genericArt.setAttribute("src", artworkUrl);
-            genericArt.alt = "artworkAlt" in presentation ? presentation.artworkAlt ?? "" : "";
-            genericArt.hidden = false;
-          } else if (genericArt) {
-            genericArt.hidden = true;
-            genericArt.removeAttribute("src");
-            genericArt.alt = "";
-          }
-        }
-      }
+          : null;
+      const preparedVisual = authoritativePrepared ?? this.preparedReveals.get(index) ?? null;
+      this.paintPreparedReveal(button, round, preparedVisual);
       const resultLabel = button.querySelector<HTMLElement>(".witch-cell-result-label");
       if (resultLabel) resultLabel.textContent = presentation.label;
       const layerCanvases = Array.from(button.querySelectorAll<HTMLCanvasElement>(".witch-scratch-layer"));
@@ -1334,6 +1410,10 @@ export class WitchClient {
               : undefined,
           resultReady: isActuallyRevealed,
           persistentCoverageCommit: round.mode === "OFFICE_MATCH_6",
+          onPrepare: async () => {
+            if (this.state?.round?.revealedCells.includes(index)) return;
+            await this.prepareReveal(round.id, index);
+          },
           onCommit: async () => {
             if (this.state?.round?.revealedCells.includes(index)) return;
 

@@ -3,13 +3,25 @@ import { getScratchCellLayerMarkup, getScratchCellPresentation } from "./Scratch
 
 describe("scratch result presentation", () => {
   it("places the result layer directly below the scratch mask", () => {
-    const markup = getScratchCellLayerMarkup();
+    const markup = getScratchCellLayerMarkup("STANDARD");
 
     expect(markup.indexOf("witch-cell-result-layer")).toBeGreaterThanOrEqual(0);
     expect(markup.indexOf("witch-scratch-layer-base")).toBeGreaterThan(markup.indexOf("witch-cell-result-layer"));
     expect(markup.indexOf("witch-scratch-layer-foil")).toBeGreaterThan(markup.indexOf("witch-scratch-layer-base"));
     expect(markup.indexOf("witch-scratch-layer-lacquer")).toBeGreaterThan(markup.indexOf("witch-scratch-layer-foil"));
     expect(markup).not.toContain("data-witch-cell");
+    expect(markup).toContain('data-witch-result-candidate="SAFE"');
+    expect(markup).toContain('data-witch-result-candidate="BOMB"');
+  });
+
+  it("mounts every Office character asset before scratching and only toggles the active candidate later", () => {
+    const markup = getScratchCellLayerMarkup("OFFICE_MATCH_6");
+    expect(markup).toContain('data-witch-office-candidate="KEVIN"');
+    expect(markup).toContain('data-witch-office-candidate="JIM"');
+    expect(markup).toContain('data-witch-office-candidate="DWIGHT"');
+    expect(markup).toContain('data-witch-office-candidate="STANLEY"');
+    expect(markup).toContain('data-witch-office-candidate="MICHAEL"');
+    expect(markup.match(/data-witch-result-active="false"/g)).toHaveLength(5);
   });
 
   it("does not expose a result before the server commits the cell", () => {

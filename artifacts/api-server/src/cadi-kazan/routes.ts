@@ -24,7 +24,7 @@ function sendError(res: Response, error: unknown) {
   const message = error instanceof Error ? error.message : "CADI_KAZAN_REQUEST_FAILED";
   const status = message === "INSUFFICIENT_CADI_KAZAN_CREDITS" ? 402
     : message === "CADI_KAZAN_ROUND_NOT_FOUND" ? 404
-      : message === "ACTIVE_CADI_KAZAN_ROUND_EXISTS" || message === "CASH_OUT_REQUIRES_SAFE_REVEAL" || message === "OFFICE_MATCH_NO_CASH_OUT" || message === "IDEMPOTENCY_KEY_REUSED" ? 409
+      : message === "ACTIVE_CADI_KAZAN_ROUND_EXISTS" || message === "CADI_KAZAN_ROUND_NOT_ACTIVE" || message === "CASH_OUT_REQUIRES_SAFE_REVEAL" || message === "OFFICE_MATCH_NO_CASH_OUT" || message === "IDEMPOTENCY_KEY_REUSED" ? 409
         : 400;
   res.status(status).json({ error: message });
 }
@@ -56,6 +56,16 @@ router.post("/cadi-kazan/rounds", async (req, res) => {
       stakeCents: Number(stakeCents),
       idempotencyKey,
     }));
+  } catch (error) {
+    sendError(res, error);
+  }
+});
+
+router.post("/cadi-kazan/rounds/:roundId/prepare-reveal", async (req, res) => {
+  try {
+    const sessionId = getSessionId(req, res);
+    const { cellIndex } = req.body as { cellIndex?: unknown };
+    res.json(await cadiKazanRepository.prepareReveal(sessionId, req.params.roundId, Number(cellIndex)));
   } catch (error) {
     sendError(res, error);
   }
