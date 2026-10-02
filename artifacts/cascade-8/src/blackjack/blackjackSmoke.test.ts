@@ -237,6 +237,8 @@ describe("blackjack responsive table foundation", () => {
 
     expect(model.phaseLabel).toBe("PLAYER TURNS");
     expect(model.turnLabel).toBe("YOUR TURN · 6s");
+    expect(model.interactionMode).toBe("TURN");
+    expect(model.interactionPrompt).toBe("YOUR TURN");
     expect(model.dealerTotalLabel).toBe("10 + ?");
     expect(model.balanceLabel).toBe("5K");
     expect(model.betLabel).toBe("1K");
@@ -845,6 +847,8 @@ describe("blackjack responsive table foundation", () => {
       "DOUBLE",
       "SPLIT",
     ]);
+    expect(model.interactionMode).toBe("TURN");
+    expect(model.interactionPrompt).toBe("YOUR TURN");
 
     expect(
       buildBlackjackPlayerActionMessage(
@@ -1213,6 +1217,8 @@ describe("blackjack responsive table foundation", () => {
     );
     expect(model.balanceLabel).toBe("4K");
     expect(model.betLabel).toBe("1K");
+    expect(model.interactionMode).toBe("BETTING");
+    expect(model.interactionPrompt).toBe("PLACE YOUR BET");
     expect(model.bettingPanel).toMatchObject({
       selectedChipCredits:1_000,
       totalBetLabel:"1K",
@@ -1287,6 +1293,52 @@ describe("blackjack responsive table foundation", () => {
     });
   });
 
+
+  it("uses seat-selection mode with confirmation instead of permanent take-seat buttons",()=>{
+    const snapshot: BlackjackPublicSnapshotViewSource={
+      serverTimeMs:1_000,
+      tableId:"seat-mode-table",
+      phase:"TABLE_IDLE",
+      maxSeats:5,
+      seats:[
+        {seatNumber:1,playerId:null},
+        {seatNumber:2,playerId:null},
+        {seatNumber:3,playerId:null},
+        {seatNumber:4,playerId:null},
+        {seatNumber:5,playerId:null},
+      ],
+      players:[],
+      round:null,
+      stateVersion:1,
+      eventSequence:1,
+    };
+
+    const model=buildBlackjackTableViewModelFromSnapshot(snapshot,{
+      transportConnected:true,
+      selectedSeatForClaim:3,
+    });
+    expect(model.interactionMode).toBe("SEAT");
+    expect(model.interactionPrompt).toBe("CONFIRM YOUR SEAT");
+    expect(model.selectedSeatForClaim).toBe(3);
+    expect(
+      model.seats.find((seat)=>seat.seatNumber===3),
+    ).toMatchObject({
+      canClaim:true,
+      isSelectedForClaim:true,
+    });
+
+    const markup=renderBlackjackTableShell(model);
+    expect(markup).toContain('data-blackjack-seat-select="true"');
+    expect(markup).not.toContain(
+      'data-blackjack-seat-action="CLAIM"',
+    );
+    expect(markup).toContain(
+      'data-blackjack-seat-confirm-action="CONFIRM"',
+    );
+    expect(markup).toContain(
+      'data-blackjack-selected-seat>3<',
+    );
+  });
 
   it("renders transport state explicitly instead of showing a false live indicator",()=>{
     const base: BlackjackPublicSnapshotViewSource={

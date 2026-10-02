@@ -20,10 +20,16 @@ export type BlackjackTableSeatViewModel = Readonly<{
   isLocal: boolean;
   canClaim?: boolean;
   canLeave?: boolean;
+  isSelectedForClaim?: boolean;
   cards?: readonly BlackjackCardViewModel[];
 }>;
 
 export type BlackjackTableAction = "HIT" | "STAND" | "DOUBLE" | "SPLIT";
+export type BlackjackInteractionMode =
+  | "SEAT"
+  | "BETTING"
+  | "TURN"
+  | "WAIT";
 
 export type BlackjackTableViewModel = Readonly<{
   phaseLabel: string;
@@ -35,6 +41,10 @@ export type BlackjackTableViewModel = Readonly<{
   enabledActions?: readonly BlackjackTableAction[];
   actionStatusLabel?: string | null;
   actionStatusTone?: "neutral" | "success" | "error";
+  interactionMode?: BlackjackInteractionMode;
+  interactionPrompt?: string;
+  selectedSeatForClaim?: 1 | 2 | 3 | 4 | 5 | null;
+  seatClaimPending?: boolean;
   connectionStatus?: Readonly<{
     label: string;
     tone: "connecting" | "live" | "reconnecting" | "error";
@@ -55,6 +65,10 @@ export const BLACKJACK_DEFAULT_TABLE_VIEW: BlackjackTableViewModel =
     betLabel: "0",
     turnLabel: "MULTIPLAYER TABLE",
     dealerTotalLabel: "DEALER",
+    interactionMode:"WAIT",
+    interactionPrompt:"CHOOSE A SEAT TO JOIN",
+    selectedSeatForClaim:null,
+    seatClaimPending:false,
     connectionStatus:Object.freeze({
       label:"CONNECTING",
       tone:"connecting" as const,
@@ -138,19 +152,20 @@ export function renderBlackjackSeat(seat: BlackjackTableSeatViewModel): string {
       ? ""
       : `<span class="blackjack-seat-bet">BET ${escapeHtml(seat.betLabel)}</span>`;
   const seatAction =
-    seat.canClaim
-      ? `<button type="button" class="blackjack-seat-action" data-blackjack-seat-action="CLAIM" data-seat="${seat.seatNumber}">TAKE SEAT</button>`
-      : seat.canLeave
-        ? `<button type="button" class="blackjack-seat-action is-leave" data-blackjack-seat-action="LEAVE" data-seat="${seat.seatNumber}">LEAVE</button>`
-        : "";
+    seat.canLeave
+      ? `<button type="button" class="blackjack-seat-action is-leave" data-blackjack-seat-action="LEAVE" data-seat="${seat.seatNumber}">LEAVE</button>`
+      : "";
+  const claimable = seat.canClaim === true;
 
   return `
     <article
-      class="blackjack-seat blackjack-seat-${seat.seatNumber}${seat.isLocal ? " is-local" : ""}"
+      class="blackjack-seat blackjack-seat-${seat.seatNumber}${seat.isLocal ? " is-local" : ""}${claimable ? " is-claimable" : ""}${seat.isSelectedForClaim ? " is-selected-for-claim" : ""}"
       data-seat="${seat.seatNumber}"
       data-status="${seat.status}"
       data-local="${seat.isLocal ? "true" : "false"}"
-      aria-label="Blackjack seat ${seat.seatNumber}"
+      data-blackjack-seat-select="${claimable ? "true" : "false"}"
+      aria-label="Blackjack seat ${seat.seatNumber}${claimable ? ", available" : ""}"
+      ${claimable ? 'role="button" tabindex="0"' : ""}
     >
       <div class="blackjack-seat-cards" aria-label="Seat ${seat.seatNumber} cards">
         ${renderBlackjackCardStack(seat.cards, 2)}
@@ -225,7 +240,11 @@ export function renderBlackjackTableShell(
         </div>
       </section>
 
-      <section class="blackjack-hud" aria-label="Blackjack controls">
+      <section
+        class="blackjack-hud"
+        aria-label="Blackjack controls"
+        data-interaction-mode="${model.interactionMode ?? "WAIT"}"
+      >
         <div class="blackjack-status-strip">
           <div>
             <span>PHASE</span>
@@ -241,18 +260,33 @@ export function renderBlackjackTableShell(
           </div>
         </div>
 
-        ${renderBlackjackBettingPanel(
-          model.bettingPanel ?? {
-            ...BLACKJACK_DEFAULT_BETTING_PANEL,
-            totalBetLabel: model.betLabel,
-          },
-        )}
+        <div class="blackjack-context-strip" aria-live="polite">
+          <strong class="blackjack-context-prompt">${escapeHtml(model.interactionPrompt ?? "WAITING FOR TABLE")}</strong>
+          <div
+            class="blackjack-seat-confirm"
+            data-blackjack-seat-confirm
+            ${model.selectedSeatForClaim ? "" : "hidden"}
+          >
+            <span>SEAT <strong data-blackjack-selected-seat>${model.selectedSeatForClaim ?? "—"}</strong></span>
+            <button type="button" data-blackjack-seat-confirm-action="CANCEL"${model.seatClaimPending ? " disabled" : ""}>CANCEL</button>
+            <button type="button" data-blackjack-seat-confirm-action="CONFIRM"${model.seatClaimPending ? " disabled" : ""}>TAKE SEAT</button>
+          </div>
+        </div>
 
-        <div class="blackjack-actions" aria-label="Player actions">
+        <div class="blackjack-betting-region" ${model.interactionMode === "BETTING" ? "" : "hidden"}>
+          ${renderBlackjackBettingPanel(
+            model.bettingPanel ?? {
+              ...BLACKJACK_DEFAULT_BETTING_PANEL,
+              totalBetLabel: model.betLabel,
+            },
+          )}
+        </div>
+
+        <div class="blackjack-actions" aria-label="Player actions" ${model.interactionMode === "TURN" ? "" : "hidden"}>
           <button type="button" data-blackjack-action="HIT"${actionDisabled("HIT")}>HIT</button>
           <button type="button" data-blackjack-action="STAND"${actionDisabled("STAND")}>STAND</button>
-          <button type="button" data-blackjack-action="DOUBLE"${actionDisabled("DOUBLE")}>DOUBLE</button>
-          <button type="button" data-blackjack-action="SPLIT"${actionDisabled("SPLIT")}>SPLIT</button>
+          <button type="button" data-blackjack-action="DOUBLE"${actionDisabled("DOUBLE")}${enabledActions.has("DOUBLE") ? "" : " hidden"}>DOUBLE</button>
+          <button type="button" data-blackjack-action="SPLIT"${actionDisabled("SPLIT")}${enabledActions.has("SPLIT") ? "" : " hidden"}>SPLIT</button>
           <span
             class="blackjack-action-feedback"
             data-action-tone="${model.actionStatusTone ?? "neutral"}"

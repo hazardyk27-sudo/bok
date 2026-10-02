@@ -493,6 +493,7 @@ export function connectBlackjackRealtimeElement(
   let seatClient: BlackjackSeatCommandClient | null=null;
   let controller: BlackjackRealtimeViewController | null=null;
   let selectedChipCredits=100;
+  let selectedSeatForClaim: 1 | 2 | 3 | 4 | 5 | null=null;
   let transportConnected=false;
   let everReady=false;
   let sessionReplaced=false;
@@ -673,6 +674,7 @@ export function connectBlackjackRealtimeElement(
         null,
       bettingPending:bettingPending!==null,
       selectedChipCredits,
+      selectedSeatForClaim,
     };
   };
   controller=bindBlackjackRealtimeElement(
@@ -754,6 +756,45 @@ export function connectBlackjackRealtimeElement(
 
   const onClick=(event: Event) => {
     if(event.target instanceof Element){
+      const seatConfirm=event.target.closest<HTMLButtonElement>(
+        "[data-blackjack-seat-confirm-action]",
+      );
+      if(seatConfirm && !seatConfirm.disabled){
+        const action=seatConfirm.dataset.blackjackSeatConfirmAction;
+        if(action==="CANCEL"){
+          selectedSeatForClaim=null;
+          activeController.rerenderLatest();
+          return;
+        }
+        if(action==="CONFIRM" && selectedSeatForClaim!==null){
+          try {
+            const seatNumber=selectedSeatForClaim;
+            selectedSeatForClaim=null;
+            seats.claim(seatNumber);
+            activeController.rerenderLatest();
+          } catch {
+            activeController.rerenderLatest();
+          }
+          return;
+        }
+      }
+
+      const seatSelectable=event.target.closest<HTMLElement>(
+        '[data-blackjack-seat-select="true"]',
+      );
+      if(seatSelectable){
+        const seatNumber=Number(seatSelectable.dataset.seat);
+        if(
+          seatNumber===1 || seatNumber===2 ||
+          seatNumber===3 || seatNumber===4 ||
+          seatNumber===5
+        ){
+          selectedSeatForClaim=seatNumber;
+          activeController.rerenderLatest();
+        }
+        return;
+      }
+
       const seatAction=event.target.closest<HTMLButtonElement>(
         "[data-blackjack-seat-action]",
       );
@@ -761,15 +802,6 @@ export function connectBlackjackRealtimeElement(
         try {
           if(seatAction.dataset.blackjackSeatAction==="LEAVE"){
             seats.leave();
-          } else if(seatAction.dataset.blackjackSeatAction==="CLAIM"){
-            const seatNumber=Number(seatAction.dataset.seat);
-            if(
-              seatNumber===1 || seatNumber===2 ||
-              seatNumber===3 || seatNumber===4 ||
-              seatNumber===5
-            ){
-              seats.claim(seatNumber);
-            }
           }
         } catch {
           return;
@@ -813,7 +845,25 @@ export function connectBlackjackRealtimeElement(
       return;
     }
   };
+  const onKeyDown=(event: KeyboardEvent)=>{
+    if(event.key!=="Enter" && event.key!==" ") return;
+    if(!(event.target instanceof Element)) return;
+    const seat=event.target.closest<HTMLElement>(
+      '[data-blackjack-seat-select="true"]',
+    );
+    if(!seat) return;
+    const seatNumber=Number(seat.dataset.seat);
+    if(
+      seatNumber!==1 && seatNumber!==2 && seatNumber!==3 &&
+      seatNumber!==4 && seatNumber!==5
+    ) return;
+    event.preventDefault();
+    selectedSeatForClaim=seatNumber;
+    activeController.rerenderLatest();
+  };
+
   app.addEventListener("click",onClick);
+  app.addEventListener("keydown",onKeyDown);
   let closed=false;
 
   const getStatus=(): BlackjackBrowserConnectionStatus => {
@@ -849,6 +899,7 @@ export function connectBlackjackRealtimeElement(
       if(closed) return;
       closed=true;
       app.removeEventListener("click",onClick);
+      app.removeEventListener("keydown",onKeyDown);
       if (typeof document !== "undefined") {
         document.removeEventListener(
           "visibilitychange",
