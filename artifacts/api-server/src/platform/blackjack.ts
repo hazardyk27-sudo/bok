@@ -283,6 +283,9 @@ blackjackPlatformRouter.get(
 
 export async function attachBlackjackPlatformRuntime(
   server: Server,
+  input: Readonly<{
+    onRuntimeUnavailable?: (error: unknown) => void;
+  }> = {},
 ): Promise<BlackjackAttachedServerRuntime> {
   const snapshotRepository = new SharedBlackjackSnapshotRepository();
   const journalRepository = new BlackjackJournalRepository(
@@ -306,5 +309,6 @@ export async function attachBlackjackPlatformRuntime(
     loadSeatAccount: loadBlackjackSeatAccount,
     createInitialShoe: createFreshShoe,
     createFreshShoe,
+    onRuntimeUnavailable: input.onRuntimeUnavailable,
   });
 }

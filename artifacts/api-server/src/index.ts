@@ -106,7 +106,44 @@ void initializeSharedWalletPlatform()
 
 // Blackjack is optional to the rest of the HTTP API, but Blackjack itself is
 // not considered ready until its authoritative realtime runtime is attached.
-// Failed startup attempts retry without requiring a process restart.
+// Startup failures and later fail-closed authority failures both rebuild the
+// runtime in-process; a dead authority is never left behind a live WebSocket.
+const scheduleBlackjackRuntimeRetry = (): void => {
+  if (shuttingDown || blackjackRuntimeRetryHandle !== null) return;
+  blackjackRuntimeRetryHandle = setTimeout(() => {
+    blackjackRuntimeRetryHandle = null;
+    void startBlackjackRuntime();
+  }, BLACKJACK_RUNTIME_RETRY_MS);
+};
+
+const handleBlackjackRuntimeUnavailable = (
+  error: unknown,
+  attempt: number,
+): void => {
+  if (
+    shuttingDown ||
+    attempt !== blackjackRuntimeAttempt ||
+    blackjackRuntime === null
+  ) {
+    return;
+  }
+
+  const failedRuntime = blackjackRuntime;
+  blackjackRuntime = null;
+  failedRuntime.close();
+  markBlackjackRuntimeFailed(attempt);
+
+  logger.error(
+    {
+      err: error,
+      attempt,
+      retryInMs: BLACKJACK_RUNTIME_RETRY_MS,
+    },
+    "Blackjack runtime became unavailable; recovery retry scheduled",
+  );
+  scheduleBlackjackRuntimeRetry();
+};
+
 const startBlackjackRuntime = async (): Promise<void> => {
   if (shuttingDown) return;
 
@@ -115,7 +152,11 @@ const startBlackjackRuntime = async (): Promise<void> => {
   markBlackjackRuntimeStarting(attempt);
 
   try {
-    const runtime = await attachBlackjackPlatformRuntime(server);
+    const runtime = await attachBlackjackPlatformRuntime(server, {
+      onRuntimeUnavailable: (error) => {
+        handleBlackjackRuntimeUnavailable(error, attempt);
+      },
+    });
 
     if (shuttingDown) {
       runtime.close();
@@ -124,10 +165,20 @@ const startBlackjackRuntime = async (): Promise<void> => {
     }
 
     blackjackRuntime = runtime;
+
+    const readiness = runtime.getReadiness();
+    if (!readiness.ready) {
+      handleBlackjackRuntimeUnavailable(
+        new Error("BLACKJACK_RUNTIME_NOT_READY_AFTER_ATTACH"),
+        attempt,
+      );
+      return;
+    }
+
     markBlackjackRuntimeAttached(runtime, attempt);
     logger.info(
       {
-        blackjack: runtime.getReadiness(),
+        blackjack: readiness,
         attempt,
       },
       "Blackjack runtime attached",
@@ -147,11 +198,7 @@ const startBlackjackRuntime = async (): Promise<void> => {
       },
       "Blackjack runtime failed to attach; retry scheduled",
     );
-
-    blackjackRuntimeRetryHandle = setTimeout(() => {
-      blackjackRuntimeRetryHandle = null;
-      void startBlackjackRuntime();
-    }, BLACKJACK_RUNTIME_RETRY_MS);
+    scheduleBlackjackRuntimeRetry();
   }
 };
 

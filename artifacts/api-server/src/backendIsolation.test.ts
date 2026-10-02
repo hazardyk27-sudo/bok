@@ -249,7 +249,10 @@ describe("backend game isolation", () => {
     expect(serverIndex).toContain("void initializeSharedWalletPlatform()");
     expect(serverIndex).toContain("void startBlackjackRuntime()");
     expect(serverIndex).toContain(
-      "const runtime = await attachBlackjackPlatformRuntime(server)",
+      "const runtime = await attachBlackjackPlatformRuntime(server, {",
+    );
+    expect(serverIndex).toContain(
+      "onRuntimeUnavailable: (error) =>",
     );
     expect(serverIndex).toContain("pool.end()");
   });
