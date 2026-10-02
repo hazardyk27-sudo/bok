@@ -109,6 +109,42 @@ export function getVisibleRevealedCells(
   return [...revealedCells];
 }
 
+export type CadiKazanPreparedReveal =
+  | {
+      roundId: string;
+      cellIndex: number;
+      mode: "STANDARD" | "ADVANCED";
+      kind: "SAFE" | "BOMB";
+    }
+  | {
+      roundId: string;
+      cellIndex: number;
+      mode: "OFFICE_MATCH_6";
+      kind: "OFFICE";
+      symbolId: OfficeMatchSymbolId;
+    };
+
+export function getPreparedReveal(
+  roundId: string,
+  mode: CadiKazanMode,
+  cellIndex: number,
+  bombIndices: number[],
+  officeCells: OfficeMatchSymbolId[],
+): CadiKazanPreparedReveal {
+  if (mode === "OFFICE_MATCH_6") {
+    const symbolId = officeCells[cellIndex];
+    if (!symbolId) throw new Error("INVALID_OFFICE_BOARD_STORAGE");
+    return { roundId, cellIndex, mode, kind: "OFFICE", symbolId };
+  }
+
+  return {
+    roundId,
+    cellIndex,
+    mode,
+    kind: bombIndices.includes(cellIndex) ? "BOMB" : "SAFE",
+  };
+}
+
 export type CadiKazanOfficeVisibleCell = {
   index: number;
   symbolId: OfficeMatchSymbolId;
