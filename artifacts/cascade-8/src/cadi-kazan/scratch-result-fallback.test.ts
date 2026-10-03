@@ -28,4 +28,13 @@ describe("Standard 5 terminal artwork fallback", () => {
     expect(fallbackCss).toContain('[data-witch-result-candidate="SAFE"]');
     expect(fallbackCss).toContain("visibility: visible !important");
   });
+
+  it("removes stale foil/base only after Standard or Advanced prepared results, never Office", () => {
+    expect(fallbackCss).toContain("PASS 50 — no blank intermediate result while scratching");
+    expect(fallbackCss).toContain('.is-standard-theme .witch-cell[data-prepared-result="SAFE"] .witch-scratch-layer-foil');
+    expect(fallbackCss).toContain('.is-standard-theme .witch-cell[data-prepared-result="BOMB"] .witch-scratch-layer-base');
+    expect(fallbackCss).toContain('.is-advanced-theme .witch-cell[data-prepared-result="SAFE"] .witch-scratch-layer-foil');
+    expect(fallbackCss).toContain('.is-advanced-theme .witch-cell[data-prepared-result="BOMB"] .witch-scratch-layer-base');
+    expect(fallbackCss).not.toContain('.is-office-theme .witch-cell[data-prepared-result');
+  });
 });

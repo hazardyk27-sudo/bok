@@ -1,6 +1,7 @@
 import "./witch.css";
 import "./witch.visual-lock.css";
 import "./scratch-result-fallback.css";
+import { installAdvancedBustRevealGuard } from "./advancedBustRevealGuard";
 import { CADI_KAZAN_MARKUP, WitchClient } from "./witchClient";
 
 const cadiKazanRouteShell = (content: string) => `
@@ -21,7 +22,17 @@ const cadiKazanRouteShell = (content: string) => `
 export function mountCadiKazan(app: HTMLElement) {
   app.innerHTML = cadiKazanRouteShell(CADI_KAZAN_MARKUP);
   const witchRoot = app.querySelector<HTMLElement>(".witch-page");
-  if (witchRoot) new WitchClient(witchRoot);
+  if (!witchRoot) return;
+
+  let client: WitchClient | null = null;
+  installAdvancedBustRevealGuard((state) => {
+    if (!client) return;
+    const internalClient = client as unknown as {
+      applyState: (nextState: unknown, animateTerminal?: boolean) => void;
+    };
+    internalClient.applyState(state, false);
+  });
+  client = new WitchClient(witchRoot);
 }
 
 export { CADI_KAZAN_MARKUP, WitchClient };
