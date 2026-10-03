@@ -25,12 +25,13 @@ import {
   BLACKJACK_REALTIME_SESSION_COOKIE_MAX_AGE_MS,
   BLACKJACK_REALTIME_SESSION_COOKIE_PATH,
   resolveBlackjackRealtimeSessionId,
+  resolveBlackjackRealtimeSessionIdWithAuth,
+  type BlackjackAuthWalletSessionLookup,
 } from "../blackjack/realtimeIdentity";
 import { SESSION_COOKIE, isValidSessionId } from "./session";
 import { INITIAL_SHARED_BALANCE_CENTS } from "./wallet";
 
 export const BLACKJACK_MAIN_TABLE_ID = "blackjack-main-table" as const;
-export const BLACKJACK_AUTH_COOKIE = "fy_auth" as const;
 
 type Queryable = Readonly<{
   query: (
@@ -38,10 +39,6 @@ type Queryable = Readonly<{
     params?: readonly unknown[],
   ) => Promise<Readonly<{ rows: readonly Record<string, unknown>[] }>>;
 }>;
-
-type BlackjackAuthWalletSessionLookup = (
-  authToken: string,
-) => Promise<string | null>;
 
 function databaseFrom(queryable: Queryable): BlackjackSnapshotDatabase {
   return Object.freeze({
@@ -97,38 +94,6 @@ function setBlackjackRealtimeSessionBinding(
     path: BLACKJACK_REALTIME_SESSION_COOKIE_PATH,
     maxAge: BLACKJACK_REALTIME_SESSION_COOKIE_MAX_AGE_MS,
   });
-}
-
-function getCookieValuesByName(
-  cookieHeader: string | undefined,
-  cookieName: string,
-): string[] {
-  if (!cookieHeader || !cookieName) return [];
-
-  const values: string[] = [];
-  const seen = new Set<string>();
-
-  for (const segment of cookieHeader.split(";")) {
-    const trimmed = segment.trim();
-    const equalsAt = trimmed.indexOf("=");
-    if (equalsAt <= 0 || trimmed.slice(0, equalsAt) !== cookieName) {
-      continue;
-    }
-
-    const raw = trimmed.slice(equalsAt + 1);
-    let value = raw;
-    try {
-      value = decodeURIComponent(raw);
-    } catch {
-      // Keep the raw cookie value. Auth verification will reject it if invalid.
-    }
-
-    if (!value || seen.has(value)) continue;
-    seen.add(value);
-    values.push(value);
-  }
-
-  return values;
 }
 
 function buildBlackjackRealtimeIdentity(
@@ -207,43 +172,13 @@ export async function resolveBlackjackRealtimeIdentityWithAuth(
   lookupAuthWalletSessionId: BlackjackAuthWalletSessionLookup =
     lookupBlackjackAuthWalletSessionId,
 ): Promise<BlackjackRealtimeIdentity | null> {
-  const authTokens = getCookieValuesByName(
+  const sessionId = await resolveBlackjackRealtimeSessionIdWithAuth(
     request.headers.cookie,
-    BLACKJACK_AUTH_COOKIE,
+    lookupAuthWalletSessionId,
   );
-
-  if (authTokens.length > 0) {
-    const authenticatedWalletSessions = new Set<string>();
-
-    for (const authToken of authTokens) {
-      let walletSessionId: string | null;
-      try {
-        walletSessionId = await lookupAuthWalletSessionId(authToken);
-      } catch {
-        throw new Error("BLACKJACK_AUTH_SESSION_LOOKUP_FAILED");
-      }
-
-      if (walletSessionId === null) continue;
-      if (!isValidSessionId(walletSessionId)) {
-        throw new Error("BLACKJACK_AUTH_WALLET_SESSION_INVALID");
-      }
-      authenticatedWalletSessions.add(walletSessionId);
-    }
-
-    if (authenticatedWalletSessions.size > 1) {
-      return null;
-    }
-
-    const authenticatedSessionId =
-      authenticatedWalletSessions.values().next().value as
-        | string
-        | undefined;
-    if (authenticatedSessionId !== undefined) {
-      return buildBlackjackRealtimeIdentity(authenticatedSessionId);
-    }
-  }
-
-  return resolveBlackjackRealtimeIdentity(request);
+  return sessionId === null
+    ? null
+    : buildBlackjackRealtimeIdentity(sessionId);
 }
 
 export async function loadBlackjackSeatAccount(
