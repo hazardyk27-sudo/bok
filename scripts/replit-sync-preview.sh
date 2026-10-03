@@ -49,22 +49,46 @@ is_safe_replit_publish_commit() {
   [[ "$tree" == "$parent_tree" ]]
 }
 
-recover_safe_replit_publish_commits() {
-  local local_only commit short_stamp
-  mapfile -t local_only < <(git rev-list --reverse "$remote_ref..HEAD")
+all_local_commits_are_patch_equivalent() {
+  local expected_count="$1"
+  local line
+  local -a cherry_lines=()
 
+  mapfile -t cherry_lines < <(git cherry "$remote_ref" HEAD)
+  [[ "${#cherry_lines[@]}" -eq "$expected_count" ]] || return 1
+
+  for line in "${cherry_lines[@]}"; do
+    [[ "${line:0:1}" == "-" ]] || return 1
+  done
+}
+
+recover_safe_local_commits() {
+  local commit short_stamp recovery_reason
+  local all_empty_publish="true"
+  local -a local_only=()
+
+  mapfile -t local_only < <(git rev-list --reverse "$remote_ref..HEAD")
   [[ "${#local_only[@]}" -gt 0 ]] || return 1
 
   for commit in "${local_only[@]}"; do
     if ! is_safe_replit_publish_commit "$commit"; then
-      return 1
+      all_empty_publish="false"
+      break
     fi
   done
 
-  short_stamp="$(date -u +%Y%m%dT%H%M%SZ)"
-  recovery_backup="backup/replit-publish-${short_stamp}-$(git rev-parse --short HEAD)"
+  if [[ "$all_empty_publish" == "true" ]]; then
+    recovery_reason="empty Replit publish commit(s)"
+  elif all_local_commits_are_patch_equivalent "${#local_only[@]}"; then
+    recovery_reason="local commit(s) already represented by patch-equivalent upstream commit(s)"
+  else
+    return 1
+  fi
 
-  echo "RECOVERY: verified ${#local_only[@]} empty Replit publish commit(s)."
+  short_stamp="$(date -u +%Y%m%dT%H%M%SZ)"
+  recovery_backup="backup/replit-recovery-${short_stamp}-$(git rev-parse --short HEAD)"
+
+  echo "RECOVERY: verified ${#local_only[@]} $recovery_reason."
   echo "RECOVERY: preserving local HEAD at $recovery_backup"
   git branch "$recovery_backup" HEAD
 
@@ -85,10 +109,10 @@ for attempt in $(seq 1 "$MAX_ATTEMPTS"); do
 
   read -r ahead behind < <(git rev-list --left-right --count "HEAD...$remote_ref")
   if [[ "$ahead" != "0" ]]; then
-    if recover_safe_replit_publish_commits; then
+    if recover_safe_local_commits; then
       read -r ahead behind < <(git rev-list --left-right --count "HEAD...$remote_ref")
     else
-      echo "ABORT: Local preview has $ahead commit(s) not on $remote_ref and they are not verified empty 'Published your App' commits."
+      echo "ABORT: Local preview has $ahead commit(s) not on $remote_ref and they are neither verified empty publish commits nor patch-equivalent to upstream."
       echo "Local:  $(git rev-parse --short HEAD)"
       echo "Remote: $(git rev-parse --short "$remote_ref")"
       exit 6
