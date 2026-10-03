@@ -114,6 +114,21 @@ describe("blackjack realtime identity binding", () => {
     expect(resolveBlackjackRealtimeSessionId(header)).toBe(BOUND);
   });
 
+  it("falls back to one unambiguous canonical game_session", () => {
+    expect(
+      resolveBlackjackRealtimeSessionId(`game_session=${ROOT}`),
+    ).toBe(ROOT);
+  });
+
+  it("deduplicates identical canonical game_session values before fallback", () => {
+    const header = [
+      `game_session=${ROOT}`,
+      `game_session=${ROOT}`,
+    ].join("; ");
+
+    expect(resolveBlackjackRealtimeSessionId(header)).toBe(ROOT);
+  });
+
   it("does not silently fall back to ambiguous game_session candidates", () => {
     const header = [
       `game_session=${LEGACY}`,
@@ -178,6 +193,44 @@ describe("blackjack realtime identity binding", () => {
           `game_session=${ROOT}`,
           `${BLACKJACK_REALTIME_SESSION_COOKIE}=${BOUND}`,
         ].join("; "),
+      },
+    });
+
+    await expect(nextMessage(client)).resolves.toMatchObject({
+      type: "FULL_TABLE_SNAPSHOT",
+      reason: "INITIAL_CONNECT",
+      snapshot: { tableId: "identity-test-table" },
+    });
+    expect(runtime.authenticatedConnectionCount()).toBe(1);
+  });
+
+  it("accepts a real websocket with one canonical game_session when the dedicated binding is missing", async () => {
+    const tableSnapshot = snapshot();
+    server = createServer();
+    runtime = attachBlackjackWebSocket(
+      server,
+      {
+        getSnapshot: () => tableSnapshot,
+        subscribe: () => () => undefined,
+      },
+      {
+        resolveIdentity: (request) => {
+          const sessionId = resolveBlackjackRealtimeSessionId(
+            request.headers.cookie,
+          );
+          return sessionId === null ? null : {
+            userId: sessionId,
+            playerId: `blackjack-player:${sessionId}`,
+            sessionId,
+          };
+        },
+      },
+    );
+    const port = await listen(server);
+
+    client = new WebSocket(`ws://127.0.0.1:${port}${BLACKJACK_WS_PATH}`, {
+      headers: {
+        Cookie: `game_session=${ROOT}`,
       },
     });
 
