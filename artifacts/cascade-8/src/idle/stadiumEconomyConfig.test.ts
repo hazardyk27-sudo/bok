@@ -91,7 +91,7 @@ describe("canonical Stadium economy config", () => {
   it("locks the accepted global BTC market baseline", () => {
     expect(MARKET_CONFIG).toMatchObject({
       tickMs: 5_000,
-      btcSensitivity: 300,
+      btcSensitivity: 20,
       initialTicketPriceMicrodollars: 8_000_000,
       minTicketPriceMicrodollars: 100_000,
       maxTicketPriceMicrodollars: 20_000_000,
