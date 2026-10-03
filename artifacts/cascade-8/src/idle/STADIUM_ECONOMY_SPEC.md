@@ -167,7 +167,7 @@ Market tick:
 
 - Sample interval: **5 seconds**.
 - Underlying signal: BTC percentage movement over the same 5-second interval.
-- Sensitivity: **300x**.
+- Sensitivity: **20x**.
 - No per-tick rise/fall cap.
 - No smoothing cap.
 - The only ticket-price limits are:
@@ -178,7 +178,7 @@ Formula:
 
 ```text
 btcReturn = newBTC / previousBTC - 1
-rawTicketPrice = currentTicketPrice × (1 + 300 × btcReturn)
+rawTicketPrice = currentTicketPrice × (1 + 20 × btcReturn)
 ticketPrice = clamp(rawTicketPrice, $0.10, $20.00)
 ```
 
@@ -186,8 +186,8 @@ Example:
 
 ```text
 BTC +0.10% in one 5-second interval
-→ ticket raw move +30%
-→ $8.00 becomes $10.40 before any clamp
+→ ticket raw move +2%
+→ $8.00 becomes $8.16 before any clamp
 ```
 
 BTC movement is otherwise followed without an additional movement limit.
