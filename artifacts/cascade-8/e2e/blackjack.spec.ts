@@ -261,6 +261,7 @@ type BlackjackFixture=Readonly<{
   outbound:readonly Record<string,unknown>[];
   connectionCount:()=>number;
   currentSnapshot:()=>Snapshot;
+  dealInitialHand:()=>void;
   disconnect:()=>void;
   forcePlayerTurn:(cards:readonly Card[])=>void;
 }>;
@@ -397,17 +398,6 @@ async function installBlackjackFixture(
         });
         send({type:"snapshot",snapshot:next});
         sendPrivate(next);
-        setTimeout(()=>{
-          if(activeSocket!==ws) return;
-          cursor+=1;
-          const dealt=playerTurnSnapshot(cursor,[
-            card("8","HEARTS"),
-            card("7","CLUBS"),
-          ]);
-          snapshot=dealt;
-          send({type:"snapshot",snapshot:dealt});
-          sendPrivate(dealt);
-        },20);
         return;
       }
 
@@ -481,6 +471,15 @@ async function installBlackjackFixture(
     outbound,
     connectionCount:()=>connections,
     currentSnapshot:()=>snapshot,
+    dealInitialHand:()=>{
+      cursor+=1;
+      const dealt=playerTurnSnapshot(cursor,[
+        card("8","HEARTS"),
+        card("7","CLUBS"),
+      ]);
+      sendSnapshot(dealt);
+      sendPrivate(dealt);
+    },
     disconnect:()=>{
       activeSocket?.close({
         code:1012,
@@ -548,14 +547,14 @@ test.describe("Blackjack browser lifecycle",()=>{
         .toHaveText("100");
 
       await page.locator('[data-blackjack-bet-action="READY"]').click();
-      await expect(page.locator(".blackjack-context-prompt"))
-        .toHaveText("BET LOCKED · WAITING FOR DEAL");
-
       await expect.poll(()=>
         fixture.outbound.filter((message)=>
           message.type==="PLACE_BET" || message.type==="READY"
         ).map((message)=>message.type)
       ).toEqual(["PLACE_BET","READY"]);
+      await expect(page.locator(".blackjack-context-prompt"))
+        .toHaveText("BET LOCKED · WAITING FOR DEAL");
+      fixture.dealInitialHand();
     });
 
     await test.step("deal and execute authoritative player actions",async()=>{
