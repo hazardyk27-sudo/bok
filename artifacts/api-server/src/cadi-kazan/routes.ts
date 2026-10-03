@@ -72,8 +72,53 @@ router.post("/cadi-kazan/rounds", async (req, res) => {
 router.post("/cadi-kazan/rounds/:roundId/prepare-reveal", async (req, res) => {
   try {
     const sessionId = getSessionId(req, res);
-    const { cellIndex } = req.body as { cellIndex?: unknown };
-    res.json(await cadiKazanRepository.prepareReveal(sessionId, req.params.roundId, Number(cellIndex)));
+    const roundId = req.params.roundId;
+    const { cellIndex: rawCellIndex } = req.body as { cellIndex?: unknown };
+    const cellIndex = Number(rawCellIndex);
+    let prepared: Awaited<ReturnType<typeof cadiKazanRepository.prepareReveal>>;
+
+    try {
+      prepared = await cadiKazanRepository.prepareReveal(sessionId, roundId, cellIndex);
+    } catch (error) {
+      // A prepare request may be retried after the first request already settled
+      // the bomb but its HTTP response was lost. Return the same authoritative
+      // terminal state instead of leaking a 409 back into the scratch surface.
+      if (!(error instanceof Error) || error.message !== "CADI_KAZAN_ROUND_NOT_ACTIVE") throw error;
+      const state = await cadiKazanRepository.getState(sessionId);
+      const round = state.round;
+      if (
+        !round ||
+        round.id !== roundId ||
+        round.status !== "BUST" ||
+        round.mode === "OFFICE_MATCH_6" ||
+        !round.revealedBombCells.includes(cellIndex)
+      ) throw error;
+
+      res.json({
+        roundId,
+        cellIndex,
+        mode: round.mode,
+        kind: "BOMB",
+        settlement: { outcome: "NOOP", state },
+      });
+      return;
+    }
+
+    // Security boundary: never disclose a bomb to the browser while the round
+    // is still cash-out eligible. Settle the exact bomb server-side first, then
+    // return both the prepared visual result and authoritative terminal state.
+    if (prepared.kind === "BOMB") {
+      const settlement = await cadiKazanRepository.revealCell(
+        sessionId,
+        roundId,
+        cellIndex,
+        `prepare-bust-${roundId}-${cellIndex}`,
+      );
+      res.json({ ...prepared, settlement });
+      return;
+    }
+
+    res.json(prepared);
   } catch (error) {
     sendError(res, error);
   }
