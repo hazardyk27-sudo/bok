@@ -14,15 +14,18 @@ type AdvancedBustRound = {
 };
 
 type CadiMutationResponse = {
-  state?: { round?: AdvancedBustRound | null };
+  state?: { round?: AdvancedBustRound | null; [key: string]: unknown };
 };
 
 type GuardWindow = Window & {
   __cadiAdvancedBustRevealGuardInstalled?: boolean;
 };
 
+type AdvancedBustStateConsumer = (state: unknown) => void;
+
 const API_PREFIX = "/api/cadi-kazan/rounds/";
 const settlingBombs = new Set<string>();
+let consumeAdvancedBustState: AdvancedBustStateConsumer | null = null;
 
 function requestUrl(input: RequestInfo | URL) {
   if (typeof input === "string") return input;
@@ -89,13 +92,17 @@ async function settlePreparedAdvancedBomb(nativeFetch: typeof window.fetch, prep
     if (!response.ok) return;
     const data = await response.json() as CadiMutationResponse;
     const round = data.state?.round;
-    if (round?.mode === "ADVANCED" && round.status === "BUST") applyBustAcrossRenderFrames(round);
+    if (round?.mode === "ADVANCED" && round.status === "BUST") {
+      consumeAdvancedBustState?.(data.state);
+      applyBustAcrossRenderFrames(round);
+    }
   } finally {
     settlingBombs.delete(key);
   }
 }
 
-export function installAdvancedBustRevealGuard() {
+export function installAdvancedBustRevealGuard(consumeState?: AdvancedBustStateConsumer) {
+  if (consumeState) consumeAdvancedBustState = consumeState;
   if (typeof window === "undefined") return;
   const guardedWindow = window as GuardWindow;
   if (guardedWindow.__cadiAdvancedBustRevealGuardInstalled) return;
