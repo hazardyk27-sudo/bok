@@ -13,7 +13,10 @@ case "$MODE" in
     FRONTEND_COMMAND=(pnpm --filter @workspace/cascade-8 run dev)
     ;;
   preview)
-    API_COMMAND=(pnpm --filter @workspace/api-server run start)
+    API_COMMAND=(
+      bash -lc
+      'pnpm --filter @workspace/api-server run build && pnpm --filter @workspace/api-server run start'
+    )
     FRONTEND_COMMAND=(pnpm --filter @workspace/cascade-8 run serve)
     ;;
   *)
