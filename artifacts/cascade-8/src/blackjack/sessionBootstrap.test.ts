@@ -55,7 +55,7 @@ describe("blackjack session bootstrap",()=>{
   });
 
   it("aborts a hung request instead of leaving CONNECTING forever",async()=>{
-    const fetchImpl=vi.fn((_:string,init?:RequestInit)=
+    const fetchImpl=vi.fn((_:string,init?:RequestInit)=>
       new Promise<Response>((_resolve,reject)=>{
         init?.signal?.addEventListener("abort",()=>{
           const error=new Error("aborted");
