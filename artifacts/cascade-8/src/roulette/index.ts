@@ -77,9 +77,6 @@ import {
   getRouletteBalanceScale,
 } from "./uiFormat";
 import { renderRouletteWheel } from "./wheelRenderer";
-import {
-  applyRouletteResponsiveLayout,
-} from "./responsiveLayout";
 
 const ROULETTE_PLACED_CHIP_PALETTE: Record<
   RouletteChipValue,
@@ -576,36 +573,6 @@ export function mountRoulette(app: HTMLDivElement) {
   const syncCanvasSizeAndRedraw = () => {
     resizeCanvasToDisplaySize(canvas);
     redraw();
-  };
-  const getResponsiveViewport = () => ({
-    width:
-      window.visualViewport?.width ??
-      window.innerWidth,
-    height:
-      window.visualViewport?.height ??
-      window.innerHeight,
-  });
-  const syncResponsiveLayout = (
-    phase: RouletteScenePhase =
-      (
-        page.dataset.phase as
-          RouletteScenePhase | undefined
-      ) ??
-      "betting",
-  ) => {
-    const viewport =
-      getResponsiveViewport();
-
-    applyRouletteResponsiveLayout(
-      page,
-      phase,
-      viewport.width,
-      viewport.height,
-    );
-  };
-  const syncResponsiveLayoutAndCanvas = () => {
-    syncResponsiveLayout();
-    syncCanvasSizeAndRedraw();
   };
 
   const renderRecentResults = () => {
@@ -1184,9 +1151,6 @@ export function mountRoulette(app: HTMLDivElement) {
     resultNumber?: number,
   ) => {
     page.dataset.phase = phase;
-    syncResponsiveLayout(
-      phase,
-    );
 
     if (phase === "betting") {
       bettingWindowClosed =
@@ -2586,14 +2550,5 @@ export function mountRoulette(app: HTMLDivElement) {
     },
   );
 
-  window.addEventListener(
-    "resize",
-    syncResponsiveLayoutAndCanvas,
-    { passive: true },
-  );
-  window.visualViewport?.addEventListener(
-    "resize",
-    syncResponsiveLayoutAndCanvas,
-    { passive: true },
-  );
+  window.addEventListener("resize", redraw, { passive: true });
 }
