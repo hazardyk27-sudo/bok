@@ -60,46 +60,38 @@ if (isWitchRoute) {
   slotModule.mountSlot(app, currentPath);
 } else if (isBlackjackRoute) {
   const blackjackModule = await import("./blackjack");
-  blackjackModule.mountBlackjack(app);
+  let bootstrapGeneration = 0;
 
-  const retryableBlackjackSessionStatuses = new Set([502, 503, 504]);
-  const waitForBlackjackSession = async (): Promise<void> => {
-    while (true) {
-      try {
-        const sessionResponse = await fetch("/api/blackjack/session", {
-          credentials: "same-origin",
-          cache: "no-store",
-        });
+  const connectBlackjack = async (): Promise<void> => {
+    const generation = ++bootstrapGeneration;
+    blackjackModule.mountBlackjack(app);
 
-        if (sessionResponse.ok) return;
-
-        // The artifact proxy can briefly return a gateway error while the API
-        // service is restarting. Retry those transient responses like 503s.
-        if (!retryableBlackjackSessionStatuses.has(sessionResponse.status)) {
-          throw new Error(
-            "BLACKJACK_SESSION_BOOTSTRAP_FAILED:" +
-              sessionResponse.status,
-          );
-        }
-      } catch (error) {
-        if (
-          error instanceof Error &&
-          error.message.startsWith(
-            "BLACKJACK_SESSION_BOOTSTRAP_FAILED:",
-          )
-        ) {
-          throw error;
-        }
+    try {
+      await blackjackModule.waitForBlackjackSession();
+      if (
+        generation !== bootstrapGeneration ||
+        !document.body.contains(app)
+      ) {
+        return;
       }
-
-      await new Promise<void>((resolve) => {
-        window.setTimeout(resolve, 1_000);
-      });
+      blackjackModule.mountConnectedBlackjack(app);
+    } catch {
+      if (
+        generation !== bootstrapGeneration ||
+        !document.body.contains(app)
+      ) {
+        return;
+      }
+      blackjackModule.mountBlackjackSessionUnavailable(
+        app,
+        () => {
+          void connectBlackjack();
+        },
+      );
     }
   };
 
-  await waitForBlackjackSession();
-  blackjackModule.mountConnectedBlackjack(app);
+  void connectBlackjack();
 } else if (isRouletteRoute) {
   const rouletteModule = await import("./roulette");
   rouletteModule.mountRoulette(app);
