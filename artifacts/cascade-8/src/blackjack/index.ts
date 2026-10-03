@@ -17,15 +17,21 @@ export const BLACKJACK_MAX_SEATS = 5;
 export const BLACKJACK_MOUNT_SNAPSHOT_TIMEOUT_MS = 15_000;
 export const BLACKJACK_INITIAL_CONNECTION_DEADLINE_MS = 25_000;
 export const BLACKJACK_TERMINAL_REPAIR_POLL_MS = 250;
-const BLACKJACK_AUTO_REPAIR_MARKER = "blackjack-realtime-auto-repair-v1";
+export const BLACKJACK_AUTO_REPAIR_COOLDOWN_MS = 60_000;
+const BLACKJACK_AUTO_REPAIR_MARKER = "blackjack-realtime-auto-repair-v2";
+
+const BLACKJACK_LOADING_TABLE_VIEW: BlackjackTableViewModel = Object.freeze({
+  ...BLACKJACK_DEFAULT_TABLE_VIEW,
+  balanceLabel: "—",
+});
 
 export const BLACKJACK_SHELL_MARKUP = renderBlackjackTableShell(
-  BLACKJACK_DEFAULT_TABLE_VIEW,
+  BLACKJACK_LOADING_TABLE_VIEW,
 );
 
 export function mountBlackjack(
   app: HTMLElement,
-  model: BlackjackTableViewModel = BLACKJACK_DEFAULT_TABLE_VIEW,
+  model: BlackjackTableViewModel = BLACKJACK_LOADING_TABLE_VIEW,
 ) {
   app.innerHTML = renderBlackjackTableShell(model);
 }
@@ -50,7 +56,19 @@ function appendBlackjackRetry(
 
 function hasBlackjackAutoRepairMarker(): boolean {
   try {
-    return window.sessionStorage.getItem(BLACKJACK_AUTO_REPAIR_MARKER) === "1";
+    const raw = window.sessionStorage.getItem(BLACKJACK_AUTO_REPAIR_MARKER);
+    if (raw === null) return false;
+
+    const attemptedAtMs = Number(raw);
+    if (
+      !Number.isSafeInteger(attemptedAtMs) ||
+      attemptedAtMs < 0 ||
+      Date.now() - attemptedAtMs >= BLACKJACK_AUTO_REPAIR_COOLDOWN_MS
+    ) {
+      window.sessionStorage.removeItem(BLACKJACK_AUTO_REPAIR_MARKER);
+      return false;
+    }
+    return true;
   } catch {
     return false;
   }
@@ -58,7 +76,10 @@ function hasBlackjackAutoRepairMarker(): boolean {
 
 function markBlackjackAutoRepairAttempted(): void {
   try {
-    window.sessionStorage.setItem(BLACKJACK_AUTO_REPAIR_MARKER, "1");
+    window.sessionStorage.setItem(
+      BLACKJACK_AUTO_REPAIR_MARKER,
+      String(Date.now()),
+    );
   } catch {
     // Hardened/private browser contexts can block sessionStorage.
   }
@@ -112,6 +133,23 @@ export function mountBlackjackConnectionUnavailable(
     }),
   });
   appendBlackjackRetry(app, onRetry);
+}
+
+function mountBlackjackConnectionRepairing(app: HTMLElement): void {
+  mountBlackjack(app, {
+    ...BLACKJACK_DEFAULT_TABLE_VIEW,
+    phaseLabel: "RECONNECTING",
+    balanceLabel: "—",
+    turnLabel: "REFRESHING SESSION",
+    interactionMode: "WAIT",
+    interactionPrompt: "RESTORING TABLE CONNECTION",
+    actionStatusLabel: "REPAIRING SESSION…",
+    actionStatusTone: "neutral",
+    connectionStatus: Object.freeze({
+      label: "RECONNECTING",
+      tone: "reconnecting" as const,
+    }),
+  });
 }
 
 export function mountConnectedBlackjack(
@@ -174,6 +212,7 @@ export function mountConnectedBlackjack(
     guardActive = false;
     clearInitialGuards();
     connection.close();
+    mountBlackjackConnectionRepairing(app);
 
     void repairBlackjackSessionIdentity()
       .then(() => {
@@ -214,10 +253,6 @@ export function mountConnectedBlackjack(
     }
 
     const state = connection.getStatus().state;
-    if (state === "ERROR") {
-      attemptSessionRepair();
-      return;
-    }
     if (
       state === "CLOSED" ||
       state === "SESSION_REPLACED"
@@ -225,7 +260,11 @@ export function mountConnectedBlackjack(
       return;
     }
 
-    mountTerminalFailure();
+    // A browser/proxy can occasionally leave the transport in CONNECTING or
+    // RECONNECTING without surfacing a useful close event. Treat missing the
+    // authoritative first-snapshot deadline as an identity/session repair
+    // trigger too, rather than leaving the table stuck forever.
+    attemptSessionRepair();
   }, BLACKJACK_INITIAL_CONNECTION_DEADLINE_MS);
 
   return Object.freeze({

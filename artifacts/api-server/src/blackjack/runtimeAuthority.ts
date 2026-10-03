@@ -76,6 +76,14 @@ function assertNowMs(nowMs: number): void {
   }
 }
 
+function assertAvailableBalanceCents(value: number): void {
+  if(!Number.isSafeInteger(value) || value<0){
+    throw new RangeError(
+      "Blackjack available balance must be a non-negative safe integer",
+    );
+  }
+}
+
 export function createBlackjackRuntimeAuthority(
   coordinator: BlackjackPlayerActionCoordinator,
   input: {
@@ -100,6 +108,7 @@ export function createBlackjackRuntimeAuthority(
     coordinator,
     {nowMs:input.nowMs},
   );
+  const connectedBalanceByUserId=new Map<string,number>();
   let fatal: unknown | null=null;
 
   const fail=(error: unknown): never=>{
@@ -118,12 +127,19 @@ export function createBlackjackRuntimeAuthority(
     }
   };
 
+  const loadAvailableBalance=async(userId: string): Promise<number|null>=>{
+    if(!input.loadAvailableBalanceCents) return null;
+    const availableBalanceCents=await input.loadAvailableBalanceCents(userId);
+    assertAvailableBalanceCents(availableBalanceCents);
+    connectedBalanceByUserId.set(userId,availableBalanceCents);
+    return availableBalanceCents;
+  };
+
   const refreshAccountAvailableBalance=async(playerId: string)=>{
     if(!input.loadAvailableBalanceCents) return;
     const account=coordinator.getAccount(playerId);
-    const availableBalanceCents=await input.loadAvailableBalanceCents(
-      account.userId,
-    );
+    const availableBalanceCents=await loadAvailableBalance(account.userId);
+    if(availableBalanceCents===null) return;
     coordinator.rebaseAccountAvailableBalance(
       playerId,
       availableBalanceCents,
@@ -133,9 +149,8 @@ export function createBlackjackRuntimeAuthority(
   const refreshAllAvailableBalances=async()=>{
     if(!input.loadAvailableBalanceCents) return;
     for(const account of coordinator.getAccounts()){
-      const availableBalanceCents=await input.loadAvailableBalanceCents(
-        account.userId,
-      );
+      const availableBalanceCents=await loadAvailableBalance(account.userId);
+      if(availableBalanceCents===null) continue;
       coordinator.rebaseAccountAvailableBalance(
         account.playerId,
         availableBalanceCents,
@@ -243,11 +258,19 @@ export function createBlackjackRuntimeAuthority(
     assertHealthy();
     assertNowMs(connectedAtMs);
 
+    const connectedAvailableBalanceCents=
+      await loadAvailableBalance(identity.userId);
     const player=coordinator.getTable().players.find(
       (candidate)=>candidate.playerId===identity.playerId,
     );
     if(!player) return;
-    await refreshAccountAvailableBalance(identity.playerId);
+
+    if(connectedAvailableBalanceCents!==null){
+      coordinator.rebaseAccountAvailableBalance(
+        identity.playerId,
+        connectedAvailableBalanceCents,
+      );
+    }
     if(player.connected) return;
 
     const result=await coordinator.reconnectPlayerSession({
@@ -268,6 +291,7 @@ export function createBlackjackRuntimeAuthority(
   ): Promise<void>=>queue.enqueue(async()=>{
     assertHealthy();
     assertNowMs(disconnectedAtMs);
+    connectedBalanceByUserId.delete(identity.userId);
 
     const player=coordinator.getTable().players.find(
       (candidate)=>candidate.playerId===identity.playerId,
@@ -415,6 +439,41 @@ export function createBlackjackRuntimeAuthority(
     tick,
   });
 
+  const getPrivatePlayerState=(
+    identity: BlackjackRealtimeIdentity,
+    snapshot: BlackjackPublicSnapshot,
+  ): BlackjackPrivatePlayerState | null=>{
+    const seatedState=buildBlackjackPrivatePlayerState(
+      coordinator,
+      identity,
+      snapshot,
+    );
+    if(seatedState!==null) return seatedState;
+
+    const table=coordinator.getTable();
+    if(
+      table.stateVersion!==snapshot.stateVersion ||
+      table.eventSequence!==snapshot.eventSequence
+    ){
+      return null;
+    }
+
+    const availableBalanceCents=
+      connectedBalanceByUserId.get(identity.userId);
+    if(availableBalanceCents===undefined) return null;
+
+    return Object.freeze({
+      type:"PRIVATE_PLAYER_STATE" as const,
+      stateVersion:snapshot.stateVersion,
+      eventSequence:snapshot.eventSequence,
+      roundId:snapshot.round?.roundId ?? null,
+      playerId:identity.playerId,
+      availableBalanceCents,
+      reservedBalanceCents:0,
+      betting:null,
+    });
+  };
+
   return Object.freeze({
     source,
     driver,
@@ -423,12 +482,7 @@ export function createBlackjackRuntimeAuthority(
     onIdentityDisconnected,
     handleSeatClaimTransaction,
     handleSeatLeaveTransaction,
-    getPrivatePlayerState:(identity,snapshot)=>
-      buildBlackjackPrivatePlayerState(
-        coordinator,
-        identity,
-        snapshot,
-      ),
+    getPrivatePlayerState,
     pendingCount:queue.pendingCount,
     activeCount:queue.activeCount,
     fatalError:()=>fatal,
