@@ -32,3 +32,21 @@
   visibility: hidden !important;
   opacity: 0 !important;
 }
+
+/* PASS 50 — no blank intermediate result while scratching.
+   Standard and Advanced mount the correct SAFE/BOMB candidate before settlement.
+   Once that prepared result is selected, stale foil/base canvases must stop
+   covering it. The top lacquer remains the scratch mask, so only physically
+   scratched pixels reveal the prepared artwork. Office is intentionally excluded. */
+.witch-page.is-standard-theme .witch-cell[data-prepared-result="SAFE"] .witch-scratch-layer-foil,
+.witch-page.is-standard-theme .witch-cell[data-prepared-result="SAFE"] .witch-scratch-layer-base,
+.witch-page.is-standard-theme .witch-cell[data-prepared-result="BOMB"] .witch-scratch-layer-foil,
+.witch-page.is-standard-theme .witch-cell[data-prepared-result="BOMB"] .witch-scratch-layer-base,
+.witch-page.is-advanced-theme .witch-cell[data-prepared-result="SAFE"] .witch-scratch-layer-foil,
+.witch-page.is-advanced-theme .witch-cell[data-prepared-result="SAFE"] .witch-scratch-layer-base,
+.witch-page.is-advanced-theme .witch-cell[data-prepared-result="BOMB"] .witch-scratch-layer-foil,
+.witch-page.is-advanced-theme .witch-cell[data-prepared-result="BOMB"] .witch-scratch-layer-base {
+  visibility: hidden !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
+}
