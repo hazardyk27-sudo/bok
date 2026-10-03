@@ -1,25 +1,42 @@
-import { createServer, type IncomingMessage } from "node:http";
+import { createServer } from "node:http";
 import { afterEach, describe, expect, it } from "vitest";
 import { WebSocket, type RawData } from "ws";
-import {
-  BLACKJACK_AUTH_COOKIE,
-  resolveBlackjackRealtimeIdentityWithAuth,
-} from "../platform/blackjack";
 import type { BlackjackPublicSnapshot } from "./publicSnapshot";
 import {
   BLACKJACK_WS_PATH,
   attachBlackjackWebSocket,
+  type BlackjackRealtimeIdentity,
   type BlackjackRealtimeRuntime,
 } from "./realtime";
-import { BLACKJACK_REALTIME_SESSION_COOKIE } from "./realtimeIdentity";
+import {
+  BLACKJACK_AUTH_COOKIE,
+  BLACKJACK_REALTIME_SESSION_COOKIE,
+  resolveBlackjackRealtimeSessionIdWithAuth,
+  type BlackjackAuthWalletSessionLookup,
+} from "./realtimeIdentity";
 
 const AUTH_SESSION = "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa";
 const LEGACY_SESSION = "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb";
 const STALE_BOUND_SESSION = "cccccccc-cccc-cccc-cccc-cccccccccccc";
 const OTHER_AUTH_SESSION = "dddddddd-dddd-dddd-dddd-dddddddddddd";
 
-function requestWithCookie(cookie: string): IncomingMessage {
-  return { headers: { cookie } } as IncomingMessage;
+function identityFromSessionId(
+  sessionId: string | null,
+): BlackjackRealtimeIdentity | null {
+  return sessionId === null ? null : {
+    userId: sessionId,
+    playerId: `blackjack-player:${sessionId}`,
+    sessionId,
+  };
+}
+
+async function resolveIdentity(
+  cookieHeader: string | undefined,
+  lookup: BlackjackAuthWalletSessionLookup,
+): Promise<BlackjackRealtimeIdentity | null> {
+  return identityFromSessionId(
+    await resolveBlackjackRealtimeSessionIdWithAuth(cookieHeader, lookup),
+  );
 }
 
 function tableSnapshot(): BlackjackPublicSnapshot {
@@ -100,46 +117,40 @@ describe("blackjack authenticated websocket identity", () => {
   });
 
   it("prefers the authenticated wallet over conflicting legacy game_session cookies", async () => {
-    const request = requestWithCookie([
+    const cookieHeader = [
       `${BLACKJACK_AUTH_COOKIE}=valid-auth`,
       `game_session=${LEGACY_SESSION}`,
       `game_session=${STALE_BOUND_SESSION}`,
-    ].join("; "));
+    ].join("; ");
 
-    await expect(resolveBlackjackRealtimeIdentityWithAuth(
-      request,
+    await expect(resolveBlackjackRealtimeSessionIdWithAuth(
+      cookieHeader,
       async (token) => token === "valid-auth" ? AUTH_SESSION : null,
-    )).resolves.toMatchObject({
-      userId: AUTH_SESSION,
-      playerId: `blackjack-player:${AUTH_SESSION}`,
-      sessionId: AUTH_SESSION,
-    });
+    )).resolves.toBe(AUTH_SESSION);
   });
 
   it("prefers the authenticated wallet over a stale dedicated websocket binding", async () => {
-    const request = requestWithCookie([
+    const cookieHeader = [
       `${BLACKJACK_AUTH_COOKIE}=valid-auth`,
       `${BLACKJACK_REALTIME_SESSION_COOKIE}=${STALE_BOUND_SESSION}`,
       `game_session=${LEGACY_SESSION}`,
-    ].join("; "));
+    ].join("; ");
 
-    await expect(resolveBlackjackRealtimeIdentityWithAuth(
-      request,
+    await expect(resolveBlackjackRealtimeSessionIdWithAuth(
+      cookieHeader,
       async () => AUTH_SESSION,
-    )).resolves.toMatchObject({
-      sessionId: AUTH_SESSION,
-    });
+    )).resolves.toBe(AUTH_SESSION);
   });
 
   it("fails closed when duplicate auth cookies resolve to different wallets", async () => {
-    const request = requestWithCookie([
+    const cookieHeader = [
       `${BLACKJACK_AUTH_COOKIE}=auth-one`,
       `${BLACKJACK_AUTH_COOKIE}=auth-two`,
       `game_session=${LEGACY_SESSION}`,
-    ].join("; "));
+    ].join("; ");
 
-    await expect(resolveBlackjackRealtimeIdentityWithAuth(
-      request,
+    await expect(resolveBlackjackRealtimeSessionIdWithAuth(
+      cookieHeader,
       async (token) => token === "auth-one"
         ? AUTH_SESSION
         : OTHER_AUTH_SESSION,
@@ -147,17 +158,15 @@ describe("blackjack authenticated websocket identity", () => {
   });
 
   it("falls back to the dedicated websocket binding when auth is expired", async () => {
-    const request = requestWithCookie([
+    const cookieHeader = [
       `${BLACKJACK_AUTH_COOKIE}=expired-auth`,
       `${BLACKJACK_REALTIME_SESSION_COOKIE}=${STALE_BOUND_SESSION}`,
-    ].join("; "));
+    ].join("; ");
 
-    await expect(resolveBlackjackRealtimeIdentityWithAuth(
-      request,
+    await expect(resolveBlackjackRealtimeSessionIdWithAuth(
+      cookieHeader,
       async () => null,
-    )).resolves.toMatchObject({
-      sessionId: STALE_BOUND_SESSION,
-    });
+    )).resolves.toBe(STALE_BOUND_SESSION);
   });
 
   it("opens a real websocket from auth even when game_session cookies are ambiguous", async () => {
@@ -171,8 +180,8 @@ describe("blackjack authenticated websocket identity", () => {
       },
       {
         resolveIdentity: (request) =>
-          resolveBlackjackRealtimeIdentityWithAuth(
-            request,
+          resolveIdentity(
+            request.headers.cookie,
             async (token) => token === "valid-auth" ? AUTH_SESSION : null,
           ),
       },
