@@ -2,6 +2,7 @@ import { randomUUID } from "node:crypto";
 import type { IncomingMessage, Server } from "node:http";
 import { Router, type IRouter, type Request, type Response } from "express";
 import { pool, type PoolClient } from "@workspace/db";
+import { authRepository } from "../auth/repository";
 import {
   BlackjackJournalRepository,
   BlackjackSnapshotRepository,
@@ -24,6 +25,8 @@ import {
   BLACKJACK_REALTIME_SESSION_COOKIE_MAX_AGE_MS,
   BLACKJACK_REALTIME_SESSION_COOKIE_PATH,
   resolveBlackjackRealtimeSessionId,
+  resolveBlackjackRealtimeSessionIdWithAuth,
+  type BlackjackAuthWalletSessionLookup,
 } from "../blackjack/realtimeIdentity";
 import { SESSION_COOKIE, isValidSessionId } from "./session";
 import { INITIAL_SHARED_BALANCE_CENTS } from "./wallet";
@@ -93,6 +96,23 @@ function setBlackjackRealtimeSessionBinding(
   });
 }
 
+function buildBlackjackRealtimeIdentity(
+  sessionId: string,
+): BlackjackRealtimeIdentity {
+  return Object.freeze({
+    userId: sessionId,
+    playerId: "blackjack-player:" + sessionId,
+    sessionId,
+  });
+}
+
+async function lookupBlackjackAuthWalletSessionId(
+  authToken: string,
+): Promise<string | null> {
+  const session = await authRepository.getUserBySessionToken(authToken);
+  return session?.walletSessionId ?? null;
+}
+
 function parseSharedWalletBalanceCents(value: unknown): number {
   const text =
     typeof value === "bigint"
@@ -142,13 +162,23 @@ export function resolveBlackjackRealtimeIdentity(
   const sessionId = resolveBlackjackRealtimeSessionId(
     request.headers.cookie,
   );
-  if (sessionId === null) return null;
+  return sessionId === null
+    ? null
+    : buildBlackjackRealtimeIdentity(sessionId);
+}
 
-  return Object.freeze({
-    userId: sessionId,
-    playerId: "blackjack-player:" + sessionId,
-    sessionId,
-  });
+export async function resolveBlackjackRealtimeIdentityWithAuth(
+  request: IncomingMessage,
+  lookupAuthWalletSessionId: BlackjackAuthWalletSessionLookup =
+    lookupBlackjackAuthWalletSessionId,
+): Promise<BlackjackRealtimeIdentity | null> {
+  const sessionId = await resolveBlackjackRealtimeSessionIdWithAuth(
+    request.headers.cookie,
+    lookupAuthWalletSessionId,
+  );
+  return sessionId === null
+    ? null
+    : buildBlackjackRealtimeIdentity(sessionId);
 }
 
 export async function loadBlackjackSeatAccount(
@@ -385,7 +415,7 @@ export async function attachBlackjackPlatformRuntime(
     journalRepository,
     recoveredAtMs: Date.now(),
     nowMs: Date.now,
-    resolveIdentity: resolveBlackjackRealtimeIdentity,
+    resolveIdentity: resolveBlackjackRealtimeIdentityWithAuth,
     loadSeatAccount: loadBlackjackSeatAccount,
     loadAvailableBalanceCents: loadBlackjackAvailableBalanceCents,
     createInitialShoe: createFreshShoe,
