@@ -251,8 +251,8 @@ describe("global ticket market runtime", () => {
     await runtime.runOneTick(new Date(110_000));
 
     expect(persistence.state).toMatchObject({
-      // +0.1% BTC ×300 = +30% ticket: $5.00 -> $6.50.
-      priceMicrodollars: 6_500_000,
+      // +0.1% BTC ×20 = +2% ticket: $5.00 -> $5.10.
+      priceMicrodollars: 5_100_000,
       source: "binance-btcusdt",
       feedStatus: "LIVE",
     });
@@ -287,7 +287,7 @@ describe("global ticket market runtime", () => {
       receivedAtMs: 109_000,
     }));
     await runtime.runOneTick(new Date(110_000));
-    expect(persistence.state.priceMicrodollars).toBe(5_200_000);
+    expect(persistence.state.priceMicrodollars).toBe(4_080_000);
 
     binance.setSnapshot(
       frozenFeed("binance-btcusdt"),
@@ -295,7 +295,7 @@ describe("global ticket market runtime", () => {
     await runtime.runOneTick(new Date(115_000));
 
     expect(persistence.state).toMatchObject({
-      priceMicrodollars: 5_200_000,
+      priceMicrodollars: 4_080_000,
       source: "none",
       feedStatus: "FROZEN",
     });
@@ -308,7 +308,7 @@ describe("global ticket market runtime", () => {
     await runtime.runOneTick(new Date(120_000));
 
     expect(persistence.state).toMatchObject({
-      priceMicrodollars: 5_200_000,
+      priceMicrodollars: 4_080_000,
       source: "coinbase-btc-usd",
       feedStatus: "REBASELINING",
     });
@@ -321,7 +321,7 @@ describe("global ticket market runtime", () => {
     await runtime.runOneTick(new Date(125_000));
 
     expect(persistence.state).toMatchObject({
-      priceMicrodollars: 6_760_000,
+      priceMicrodollars: 4_161_600,
       source: "coinbase-btc-usd",
       feedStatus: "LIVE",
     });
