@@ -13,6 +13,8 @@ import {
 
 export const BLACKJACK_ROUTE = "/blackjack";
 export const BLACKJACK_MAX_SEATS = 5;
+export const BLACKJACK_MOUNT_SNAPSHOT_TIMEOUT_MS = 15_000;
+export const BLACKJACK_INITIAL_CONNECTION_DEADLINE_MS = 25_000;
 
 export const BLACKJACK_SHELL_MARKUP = renderBlackjackTableShell(
   BLACKJACK_DEFAULT_TABLE_VIEW,
@@ -23,6 +25,24 @@ export function mountBlackjack(
   model: BlackjackTableViewModel = BLACKJACK_DEFAULT_TABLE_VIEW,
 ) {
   app.innerHTML = renderBlackjackTableShell(model);
+}
+
+function appendBlackjackRetry(
+  app: HTMLElement,
+  onRetry: () => void,
+): void {
+  const context = app.querySelector<HTMLElement>(
+    ".blackjack-context-strip",
+  );
+  if (!context) return;
+
+  const retry = document.createElement("button");
+  retry.type = "button";
+  retry.className = "blackjack-session-retry";
+  retry.dataset.blackjackSessionRetry = "true";
+  retry.textContent = "RETRY";
+  retry.addEventListener("click", onRetry, { once: true });
+  context.append(retry);
 }
 
 export function mountBlackjackSessionUnavailable(
@@ -43,19 +63,28 @@ export function mountBlackjackSessionUnavailable(
       tone: "error" as const,
     }),
   });
+  appendBlackjackRetry(app, onRetry);
+}
 
-  const context = app.querySelector<HTMLElement>(
-    ".blackjack-context-strip",
-  );
-  if (!context) return;
-
-  const retry = document.createElement("button");
-  retry.type = "button";
-  retry.className = "blackjack-session-retry";
-  retry.dataset.blackjackSessionRetry = "true";
-  retry.textContent = "RETRY";
-  retry.addEventListener("click", onRetry, { once: true });
-  context.append(retry);
+export function mountBlackjackConnectionUnavailable(
+  app: HTMLElement,
+  onRetry: () => void,
+): void {
+  mountBlackjack(app, {
+    ...BLACKJACK_DEFAULT_TABLE_VIEW,
+    phaseLabel: "CONNECTION ERROR",
+    balanceLabel: "—",
+    turnLabel: "REALTIME UNAVAILABLE",
+    interactionMode: "WAIT",
+    interactionPrompt: "TABLE CONNECTION UNAVAILABLE",
+    actionStatusLabel: "RETRY TABLE CONNECTION",
+    actionStatusTone: "error",
+    connectionStatus: Object.freeze({
+      label: "ERROR",
+      tone: "error" as const,
+    }),
+  });
+  appendBlackjackRetry(app, onRetry);
 }
 
 export function mountConnectedBlackjack(
@@ -68,7 +97,48 @@ export function mountConnectedBlackjack(
   if (!hasMountedTable) {
     mountBlackjack(app);
   }
-  return connectBlackjackRealtimeElementLocal(app,options);
+
+  const connection = connectBlackjackRealtimeElementLocal(app, {
+    ...options,
+    snapshotTimeoutMs:
+      options.snapshotTimeoutMs ?? BLACKJACK_MOUNT_SNAPSHOT_TIMEOUT_MS,
+  });
+
+  if (typeof window === "undefined") {
+    return connection;
+  }
+
+  let guardActive = true;
+  const initialConnectionDeadline = window.setTimeout(() => {
+    if (!guardActive) return;
+    if (connection.controller.getCursor() !== null) return;
+
+    const state = connection.getStatus().state;
+    if (
+      state === "CLOSED" ||
+      state === "SESSION_REPLACED" ||
+      state === "ERROR"
+    ) {
+      return;
+    }
+
+    guardActive = false;
+    connection.close();
+    mountBlackjackConnectionUnavailable(app, () => {
+      window.location.reload();
+    });
+  }, BLACKJACK_INITIAL_CONNECTION_DEADLINE_MS);
+
+  return Object.freeze({
+    ...connection,
+    close: () => {
+      if (guardActive) {
+        guardActive = false;
+        window.clearTimeout(initialConnectionDeadline);
+      }
+      connection.close();
+    },
+  });
 }
 
 export {
