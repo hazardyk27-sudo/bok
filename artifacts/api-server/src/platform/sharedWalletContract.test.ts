@@ -1,6 +1,11 @@
 import { existsSync, readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
+import {
+  BLACKJACK_REALTIME_SESSION_COOKIE,
+  BLACKJACK_REALTIME_SESSION_COOKIE_PATH,
+  resolveBlackjackRealtimeSessionId,
+} from "../blackjack/realtimeIdentity";
 import { chooseHighestBalanceSessionCandidate, chooseSessionIdForWalletMigration, getLegacyScopedSessionPathForRequest, getSessionCookieCandidates } from "./session";
 
 function source(relativePath: string) {
@@ -58,6 +63,23 @@ describe("canonical shared wallet contract", () => {
     ]);
     expect(sessionSource).toContain("LEGACY_SCOPED_SESSION_PATHS");
     expect(appSource).toContain("resolveCanonicalWalletSessionCandidates");
+  });
+
+  it("binds Blackjack realtime identity to the canonical HTTP-selected session", () => {
+    const bound = "cccccccc-cccc-cccc-cccc-cccccccccccc";
+    const header = [
+      "game_session=aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
+      "game_session=bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb",
+      `${BLACKJACK_REALTIME_SESSION_COOKIE}=${bound}`,
+    ].join("; ");
+
+    expect(resolveBlackjackRealtimeSessionId(header)).toBe(bound);
+    expect(BLACKJACK_REALTIME_SESSION_COOKIE_PATH).toBe("/api/blackjack/ws");
+    expect(blackjackPlatform).toContain("setBlackjackRealtimeSessionBinding");
+    expect(blackjackPlatform).toContain("resolveBlackjackRealtimeSessionId");
+    expect(blackjackPlatform).toContain("BLACKJACK_REALTIME_SESSION_COOKIE_PATH");
+    expect(blackjackPlatform).not.toContain("getSessionCookieCandidates");
+    expect(blackjackPlatform).not.toContain("candidates.at(-1)");
   });
 
   it("clears a legacy scoped cookie only after that scope is actually requested", () => {
