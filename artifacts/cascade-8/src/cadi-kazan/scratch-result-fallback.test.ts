@@ -18,13 +18,14 @@ describe("Standard 5 terminal artwork fallback", () => {
     );
   });
 
-  it("paints the Danger artwork directly for every authoritative bomb marker", () => {
-    expect(fallbackCss).toContain("PASS 48 — Standard 5 terminal artwork hard fallback");
-    expect(fallbackCss).toContain('.witch-cell.is-bomb .witch-cell-result-layer');
-    expect(fallbackCss).toContain('.witch-cell[data-cell-state="bomb"] .witch-cell-result-layer');
-    expect(fallbackCss).toContain('.witch-cell[data-authoritative-result="BOMB"] .witch-cell-result-layer');
+  it("paints Danger on the opaque visible content plane for every bomb marker", () => {
+    expect(fallbackCss).toContain("PASS 49 — Standard 5 bomb artwork on the visible result plane");
+    expect(fallbackCss).toContain('.witch-cell.is-bomb .witch-cell-content');
+    expect(fallbackCss).toContain('.witch-cell[data-cell-state="bomb"] .witch-cell-content');
+    expect(fallbackCss).toContain('.witch-cell[data-authoritative-result="BOMB"] .witch-cell-content');
     expect(fallbackCss).toContain('background-image: url("/cadi-kazan/bcs-danger.webp") !important');
     expect(fallbackCss).toContain('[data-witch-result-candidate="BOMB"]');
+    expect(fallbackCss).toContain('[data-witch-result-candidate="SAFE"]');
     expect(fallbackCss).toContain("visibility: visible !important");
   });
 });
