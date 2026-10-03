@@ -1,6 +1,7 @@
 import {describe,expect,it,vi} from "vitest";
 import {
   BlackjackSessionBootstrapError,
+  repairBlackjackSessionIdentity,
   waitForBlackjackSession,
 } from "./sessionBootstrap";
 
@@ -76,12 +77,54 @@ describe("blackjack session bootstrap",()=>{
     expect(fetchImpl).toHaveBeenCalledTimes(1);
   });
 
+  it("repairs account identity before reopening the blackjack session",async()=>{
+    const fetchImpl=vi.fn()
+      .mockResolvedValueOnce(response(200))
+      .mockResolvedValueOnce(response(200));
+
+    await expect(repairBlackjackSessionIdentity({
+      fetchImpl,
+      authTimeoutMs:100,
+      sessionOptions:{
+        maxAttempts:1,
+        attemptTimeoutMs:100,
+        retryDelayMs:0,
+      },
+    })).resolves.toBeUndefined();
+
+    expect(fetchImpl).toHaveBeenCalledTimes(2);
+    expect(fetchImpl.mock.calls[0]?.[0]).toBe("/api/auth/me");
+    expect(fetchImpl.mock.calls[1]?.[0]).toBe("/api/blackjack/session");
+  });
+
+  it("still repairs anonymous blackjack session when auth refresh fails",async()=>{
+    const fetchImpl=vi.fn()
+      .mockRejectedValueOnce(new Error("auth offline"))
+      .mockResolvedValueOnce(response(200));
+
+    await expect(repairBlackjackSessionIdentity({
+      fetchImpl,
+      authTimeoutMs:100,
+      sessionOptions:{
+        maxAttempts:1,
+        attemptTimeoutMs:100,
+        retryDelayMs:0,
+      },
+    })).resolves.toBeUndefined();
+
+    expect(fetchImpl).toHaveBeenCalledTimes(2);
+    expect(fetchImpl.mock.calls[1]?.[0]).toBe("/api/blackjack/session");
+  });
+
   it("validates retry controls",async()=>{
     await expect(waitForBlackjackSession({
       maxAttempts:0,
     })).rejects.toBeInstanceOf(RangeError);
     await expect(waitForBlackjackSession({
       attemptTimeoutMs:0,
+    })).rejects.toBeInstanceOf(RangeError);
+    await expect(repairBlackjackSessionIdentity({
+      authTimeoutMs:0,
     })).rejects.toBeInstanceOf(RangeError);
   });
 
