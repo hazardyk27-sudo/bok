@@ -56,6 +56,8 @@ function idleSnapshot() {
 
 afterEach(() => {
   vi.useRealTimers();
+  vi.unstubAllGlobals();
+  window.sessionStorage.clear();
 });
 
 describe("blackjack initial realtime connection guard", () => {
@@ -79,11 +81,17 @@ describe("blackjack initial realtime connection guard", () => {
     });
 
     expect(delays[0]).toBe(BLACKJACK_MOUNT_SNAPSHOT_TIMEOUT_MS);
+    expect(app.querySelector('[data-blackjack-stat="balance"]')?.textContent)
+      .toBe("—");
     connection.close();
   });
 
-  it("replaces endless CONNECTING with an actionable error after the deadline", () => {
+  it("repairs an endless initial CONNECTING state instead of leaving it stuck", () => {
     vi.useFakeTimers();
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(() => new Promise<Response>(() => undefined)),
+    );
     const physical = createPhysicalSocket();
     const app = document.createElement("div");
 
@@ -104,11 +112,11 @@ describe("blackjack initial realtime connection guard", () => {
 
     vi.advanceTimersByTime(1);
     expect(app.querySelector(".blackjack-connection-label")?.textContent)
-      .toBe("ERROR");
+      .toBe("RECONNECTING");
     expect(app.querySelector(".blackjack-context-prompt")?.textContent)
-      .toBe("TABLE CONNECTION UNAVAILABLE");
-    expect(app.querySelector("[data-blackjack-session-retry]"))
-      .not.toBeNull();
+      .toBe("RESTORING TABLE CONNECTION");
+    expect(app.querySelector('[data-blackjack-stat="balance"]')?.textContent)
+      .toBe("—");
     expect(physical.closeCalls).toContainEqual([
       1000,
       "BLACKJACK_CLIENT_CLOSED",
