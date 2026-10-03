@@ -25,6 +25,39 @@ export function mountBlackjack(
   app.innerHTML = renderBlackjackTableShell(model);
 }
 
+export function mountBlackjackSessionUnavailable(
+  app: HTMLElement,
+  onRetry: () => void,
+): void {
+  mountBlackjack(app, {
+    ...BLACKJACK_DEFAULT_TABLE_VIEW,
+    phaseLabel: "CONNECTION ERROR",
+    balanceLabel: "—",
+    turnLabel: "SESSION UNAVAILABLE",
+    interactionMode: "WAIT",
+    interactionPrompt: "TABLE SESSION UNAVAILABLE",
+    actionStatusLabel: "CHECK CONNECTION AND RETRY",
+    actionStatusTone: "error",
+    connectionStatus: Object.freeze({
+      label: "ERROR",
+      tone: "error" as const,
+    }),
+  });
+
+  const context = app.querySelector<HTMLElement>(
+    ".blackjack-context-strip",
+  );
+  if (!context) return;
+
+  const retry = document.createElement("button");
+  retry.type = "button";
+  retry.className = "blackjack-session-retry";
+  retry.dataset.blackjackSessionRetry = "true";
+  retry.textContent = "RETRY";
+  retry.addEventListener("click", onRetry, { once: true });
+  context.append(retry);
+}
+
 export function mountConnectedBlackjack(
   app: HTMLElement,
   options: BlackjackBrowserRealtimeOptions = {},
@@ -89,6 +122,16 @@ export type {
   BlackjackBrowserSocket,
   BlackjackBrowserSocketFactory,
 } from "./browserRealtime";
+
+export {
+  BLACKJACK_SESSION_ATTEMPT_TIMEOUT_MS,
+  BLACKJACK_SESSION_ENDPOINT,
+  BLACKJACK_SESSION_MAX_ATTEMPTS,
+  BLACKJACK_SESSION_RETRY_DELAY_MS,
+  BlackjackSessionBootstrapError,
+  waitForBlackjackSession,
+} from "./sessionBootstrap";
+export type { BlackjackSessionBootstrapOptions } from "./sessionBootstrap";
 
 export {
   BLACKJACK_PLAYER_ACTION_TYPES,
