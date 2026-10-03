@@ -1,8 +1,10 @@
 import { describe, expect, it, vi } from "vitest";
 import type { NextFunction, Request, Response } from "express";
-import { AUTH_COOKIE } from "../auth/routes";
 import { SESSION_COOKIE } from "../platform/session";
-import { createBlackjackSessionIdentityMiddleware } from "./sessionIdentityMiddleware";
+import {
+  BLACKJACK_AUTH_COOKIE,
+  createBlackjackSessionIdentityMiddleware,
+} from "./sessionIdentityMiddleware";
 
 const ACCOUNT = "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa";
 const GUEST = "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb";
@@ -13,7 +15,7 @@ function harness(input: {
   lookup: (token: string) => Promise<string | null>;
 }) {
   const cookies: Record<string, unknown> = {};
-  if (input.authToken) cookies[AUTH_COOKIE] = input.authToken;
+  if (input.authToken) cookies[BLACKJACK_AUTH_COOKIE] = input.authToken;
   if (input.canonicalSessionId) cookies[SESSION_COOKIE] = input.canonicalSessionId;
 
   const req = {
