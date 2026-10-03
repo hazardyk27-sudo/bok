@@ -5,123 +5,123 @@ import {
 } from "./marketMath";
 
 describe("BTC-linked ticket market math", () => {
-  it("boots at the accepted $4.00 ticket price", () => {
-    expect(getInitialTicketPriceMicrodollars()).toBe(4_000_000);
+  it("boots at the accepted $8.00 ticket price", () => {
+    expect(getInitialTicketPriceMicrodollars()).toBe(8_000_000);
   });
 
   it("keeps the ticket price unchanged when BTC is unchanged", () => {
     expect(calculateNextTicketPriceFromBtcMove({
-      previousTicketPriceMicrodollars: 4_000_000,
+      previousTicketPriceMicrodollars: 8_000_000,
       previousBtcQuoteUnits: 100_000_000,
       currentBtcQuoteUnits: 100_000_000,
     })).toMatchObject({
-      ticketPriceMicrodollars: 4_000_000,
+      ticketPriceMicrodollars: 8_000_000,
       clamp: "NONE",
     });
   });
 
-  it("amplifies a +1% BTC move to a +15% ticket move", () => {
+  it("amplifies a +0.1% BTC move to a +30% ticket move", () => {
     expect(calculateNextTicketPriceFromBtcMove({
-      previousTicketPriceMicrodollars: 4_000_000,
+      previousTicketPriceMicrodollars: 8_000_000,
       previousBtcQuoteUnits: 100_000_000,
-      currentBtcQuoteUnits: 101_000_000,
+      currentBtcQuoteUnits: 100_100_000,
     })).toMatchObject({
-      ticketPriceMicrodollars: 4_600_000,
+      ticketPriceMicrodollars: 10_400_000,
       clamp: "NONE",
     });
   });
 
-  it("amplifies a -1% BTC move to a -15% ticket move", () => {
+  it("amplifies a -0.1% BTC move to a -30% ticket move", () => {
     expect(calculateNextTicketPriceFromBtcMove({
-      previousTicketPriceMicrodollars: 4_000_000,
+      previousTicketPriceMicrodollars: 8_000_000,
+      previousBtcQuoteUnits: 100_000_000,
+      currentBtcQuoteUnits: 99_900_000,
+    })).toMatchObject({
+      ticketPriceMicrodollars: 5_600_000,
+      clamp: "NONE",
+    });
+  });
+
+  it("has no per-tick smoothing or movement cap before the hard range", () => {
+    expect(calculateNextTicketPriceFromBtcMove({
+      previousTicketPriceMicrodollars: 8_000_000,
+      previousBtcQuoteUnits: 100_000_000,
+      currentBtcQuoteUnits: 100_200_000,
+    })).toMatchObject({
+      // +0.2% BTC ×300 = +60%, so $8.00 -> $12.80 in one tick.
+      ticketPriceMicrodollars: 12_800_000,
+      clamp: "NONE",
+    });
+
+    expect(calculateNextTicketPriceFromBtcMove({
+      previousTicketPriceMicrodollars: 8_000_000,
+      previousBtcQuoteUnits: 100_000_000,
+      currentBtcQuoteUnits: 99_800_000,
+    })).toMatchObject({
+      // -0.2% BTC ×300 = -60%, so $8.00 -> $3.20 in one tick.
+      ticketPriceMicrodollars: 3_200_000,
+      clamp: "NONE",
+    });
+  });
+
+  it("hard-clamps a crash to the accepted $0.10 floor", () => {
+    expect(calculateNextTicketPriceFromBtcMove({
+      previousTicketPriceMicrodollars: 8_000_000,
       previousBtcQuoteUnits: 100_000_000,
       currentBtcQuoteUnits: 99_000_000,
     })).toMatchObject({
-      ticketPriceMicrodollars: 3_400_000,
-      clamp: "NONE",
-    });
-  });
-
-  it("has no per-tick smoothing or movement cap", () => {
-    expect(calculateNextTicketPriceFromBtcMove({
-      previousTicketPriceMicrodollars: 4_000_000,
-      previousBtcQuoteUnits: 100_000_000,
-      currentBtcQuoteUnits: 105_000_000,
-    })).toMatchObject({
-      // +5% BTC ×15 = +75%, so $4.00 -> $7.00 in one tick.
-      ticketPriceMicrodollars: 7_000_000,
-      clamp: "NONE",
-    });
-
-    expect(calculateNextTicketPriceFromBtcMove({
-      previousTicketPriceMicrodollars: 4_000_000,
-      previousBtcQuoteUnits: 100_000_000,
-      currentBtcQuoteUnits: 95_000_000,
-    })).toMatchObject({
-      // -5% BTC ×15 = -75%, so $4.00 -> $1.00 in one tick.
-      ticketPriceMicrodollars: 1_000_000,
-      clamp: "NONE",
-    });
-  });
-
-  it("hard-clamps a crash to the accepted $0.20 floor", () => {
-    expect(calculateNextTicketPriceFromBtcMove({
-      previousTicketPriceMicrodollars: 4_000_000,
-      previousBtcQuoteUnits: 100_000_000,
-      currentBtcQuoteUnits: 90_000_000,
-    })).toMatchObject({
-      ticketPriceMicrodollars: 200_000,
+      ticketPriceMicrodollars: 100_000,
       clamp: "MIN",
     });
   });
 
-  it("hard-clamps an oversized rise to the accepted $10 ceiling", () => {
+  it("hard-clamps an oversized rise to the accepted $20 ceiling", () => {
     expect(calculateNextTicketPriceFromBtcMove({
-      previousTicketPriceMicrodollars: 4_000_000,
+      previousTicketPriceMicrodollars: 8_000_000,
       previousBtcQuoteUnits: 100_000_000,
-      currentBtcQuoteUnits: 111_000_000,
+      currentBtcQuoteUnits: 101_000_000,
     })).toMatchObject({
-      ticketPriceMicrodollars: 10_000_000,
+      ticketPriceMicrodollars: 20_000_000,
       clamp: "MAX",
     });
   });
 
-  it("allows the amplified move to land exactly on the $10 ceiling", () => {
+  it("allows the amplified move to land exactly on the $20 ceiling", () => {
     expect(calculateNextTicketPriceFromBtcMove({
-      previousTicketPriceMicrodollars: 4_000_000,
+      previousTicketPriceMicrodollars: 8_000_000,
       previousBtcQuoteUnits: 100_000_000,
-      currentBtcQuoteUnits: 110_000_000,
+      currentBtcQuoteUnits: 100_500_000,
     })).toMatchObject({
-      ticketPriceMicrodollars: 10_000_000,
+      ticketPriceMicrodollars: 20_000_000,
       clamp: "MAX",
     });
   });
 
   it("compounds each new move from the previous authoritative ticket price", () => {
     const first = calculateNextTicketPriceFromBtcMove({
-      previousTicketPriceMicrodollars: 4_000_000,
+      previousTicketPriceMicrodollars: 8_000_000,
       previousBtcQuoteUnits: 100_000_000,
-      currentBtcQuoteUnits: 101_000_000,
+      currentBtcQuoteUnits: 100_100_000,
     });
 
     const second = calculateNextTicketPriceFromBtcMove({
       previousTicketPriceMicrodollars: first.ticketPriceMicrodollars,
-      previousBtcQuoteUnits: 101_000_000,
-      currentBtcQuoteUnits: 102_010_000,
+      previousBtcQuoteUnits: 100_100_000,
+      currentBtcQuoteUnits: 100_200_100,
     });
 
-    expect(first.ticketPriceMicrodollars).toBe(4_600_000);
-    expect(second.ticketPriceMicrodollars).toBe(5_290_000);
+    expect(first.ticketPriceMicrodollars).toBe(10_400_000);
+    expect(second.ticketPriceMicrodollars).toBe(13_520_000);
   });
 
   it("rounds only at final microdollar precision using deterministic half-up math", () => {
     const move = calculateNextTicketPriceFromBtcMove({
       previousTicketPriceMicrodollars: 4_000_001,
-      previousBtcQuoteUnits: 30,
-      currentBtcQuoteUnits: 31,
+      previousBtcQuoteUnits: 600,
+      currentBtcQuoteUnits: 601,
     });
 
-    // +1/30 BTC ×15 = +50%; 4,000,001 × 1.5 = 6,000,001.5.
+    // +1/600 BTC ×300 = +50%; 4,000,001 × 1.5 = 6,000,001.5.
     expect(move.ticketPriceMicrodollars).toBe(6_000_002);
     expect(move.clamp).toBe("NONE");
   });
@@ -134,13 +134,13 @@ describe("BTC-linked ticket market math", () => {
     })).toThrow("INVALID_IDLE_TICKET_PRICE");
 
     expect(() => calculateNextTicketPriceFromBtcMove({
-      previousTicketPriceMicrodollars: 4_000_000,
+      previousTicketPriceMicrodollars: 8_000_000,
       previousBtcQuoteUnits: 0,
       currentBtcQuoteUnits: 101,
     })).toThrow("INVALID_IDLE_PREVIOUS_BTC_QUOTE");
 
     expect(() => calculateNextTicketPriceFromBtcMove({
-      previousTicketPriceMicrodollars: 4_000_000,
+      previousTicketPriceMicrodollars: 8_000_000,
       previousBtcQuoteUnits: 100,
       currentBtcQuoteUnits: 0,
     })).toThrow("INVALID_IDLE_CURRENT_BTC_QUOTE");
