@@ -1,0 +1,22 @@
+/* PASS 48 — Standard 5 terminal artwork hard fallback.
+   A resolved bomb must never depend on a transient candidate flag. The result
+   layer itself paints the canonical Danger artwork whenever any authoritative
+   bomb marker is present, while the normal prepared <img> remains the primary
+   path. This makes a white terminal bomb cell impossible. */
+.witch-page.is-standard-theme .witch-ticket:not(.is-advanced) .witch-cell.is-bomb .witch-cell-result-layer,
+.witch-page.is-standard-theme .witch-ticket:not(.is-advanced) .witch-cell[data-cell-state="bomb"] .witch-cell-result-layer,
+.witch-page.is-standard-theme .witch-ticket:not(.is-advanced) .witch-cell[data-authoritative-result="BOMB"] .witch-cell-result-layer {
+  background-color: #fff !important;
+  background-image: url("/cadi-kazan/bcs-danger.webp") !important;
+  background-repeat: no-repeat !important;
+  background-position: 50% 50% !important;
+  background-size: contain !important;
+}
+
+.witch-page.is-standard-theme .witch-ticket:not(.is-advanced) .witch-cell.is-bomb [data-witch-result-candidate="BOMB"],
+.witch-page.is-standard-theme .witch-ticket:not(.is-advanced) .witch-cell[data-cell-state="bomb"] [data-witch-result-candidate="BOMB"],
+.witch-page.is-standard-theme .witch-ticket:not(.is-advanced) .witch-cell[data-authoritative-result="BOMB"] [data-witch-result-candidate="BOMB"] {
+  display: block !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+}
