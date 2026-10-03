@@ -1,5 +1,6 @@
 import { SESSION_COOKIE } from "../platform/session";
 
+export const BLACKJACK_AUTH_COOKIE = "fy_auth" as const;
 export const BLACKJACK_REALTIME_SESSION_COOKIE =
   "blackjack_realtime_session" as const;
 export const BLACKJACK_REALTIME_SESSION_COOKIE_PATH =
@@ -9,19 +10,23 @@ export const BLACKJACK_REALTIME_SESSION_COOKIE_MAX_AGE_MS =
 
 const SESSION_ID_PATTERN = /^[a-f0-9-]{20,80}$/i;
 
+export type BlackjackAuthWalletSessionLookup = (
+  authToken: string,
+) => Promise<string | null>;
+
 export function isValidBlackjackRealtimeSessionId(
   value: unknown,
 ): value is string {
   return typeof value === "string" && SESSION_ID_PATTERN.test(value);
 }
 
-export function getCookieCandidatesByName(
+export function getDecodedCookieValuesByName(
   cookieHeader: string | undefined,
   cookieName: string,
 ): string[] {
   if (!cookieHeader || !cookieName) return [];
 
-  const candidates: string[] = [];
+  const values: string[] = [];
   const seen = new Set<string>();
 
   for (const segment of cookieHeader.split(";")) {
@@ -35,17 +40,24 @@ export function getCookieCandidatesByName(
     try {
       value = decodeURIComponent(raw);
     } catch {
-      // Invalid percent encoding is handled by the validator below.
+      // Keep raw value. The caller owns semantic validation.
     }
 
-    if (!isValidBlackjackRealtimeSessionId(value) || seen.has(value)) {
-      continue;
-    }
+    if (!value || seen.has(value)) continue;
     seen.add(value);
-    candidates.push(value);
+    values.push(value);
   }
 
-  return candidates;
+  return values;
+}
+
+export function getCookieCandidatesByName(
+  cookieHeader: string | undefined,
+  cookieName: string,
+): string[] {
+  return getDecodedCookieValuesByName(cookieHeader, cookieName).filter(
+    isValidBlackjackRealtimeSessionId,
+  );
 }
 
 export function resolveBlackjackRealtimeSessionId(
@@ -66,4 +78,47 @@ export function resolveBlackjackRealtimeSessionId(
   return canonicalCandidates.length === 1
     ? canonicalCandidates[0] ?? null
     : null;
+}
+
+export async function resolveBlackjackRealtimeSessionIdWithAuth(
+  cookieHeader: string | undefined,
+  lookupAuthWalletSessionId: BlackjackAuthWalletSessionLookup,
+): Promise<string | null> {
+  const authTokens = getDecodedCookieValuesByName(
+    cookieHeader,
+    BLACKJACK_AUTH_COOKIE,
+  );
+
+  if (authTokens.length > 0) {
+    const authenticatedWalletSessions = new Set<string>();
+
+    for (const authToken of authTokens) {
+      let walletSessionId: string | null;
+      try {
+        walletSessionId = await lookupAuthWalletSessionId(authToken);
+      } catch {
+        throw new Error("BLACKJACK_AUTH_SESSION_LOOKUP_FAILED");
+      }
+
+      if (walletSessionId === null) continue;
+      if (!isValidBlackjackRealtimeSessionId(walletSessionId)) {
+        throw new Error("BLACKJACK_AUTH_WALLET_SESSION_INVALID");
+      }
+      authenticatedWalletSessions.add(walletSessionId);
+    }
+
+    if (authenticatedWalletSessions.size > 1) {
+      return null;
+    }
+
+    const authenticatedSessionId =
+      authenticatedWalletSessions.values().next().value as
+        | string
+        | undefined;
+    if (authenticatedSessionId !== undefined) {
+      return authenticatedSessionId;
+    }
+  }
+
+  return resolveBlackjackRealtimeSessionId(cookieHeader);
 }
