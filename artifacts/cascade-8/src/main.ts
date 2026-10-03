@@ -62,6 +62,7 @@ if (isWitchRoute) {
   const blackjackModule = await import("./blackjack");
   blackjackModule.mountBlackjack(app);
 
+  const retryableBlackjackSessionStatuses = new Set([502, 503, 504]);
   const waitForBlackjackSession = async (): Promise<void> => {
     while (true) {
       try {
@@ -72,7 +73,9 @@ if (isWitchRoute) {
 
         if (sessionResponse.ok) return;
 
-        if (sessionResponse.status !== 503) {
+        // The artifact proxy can briefly return a gateway error while the API
+        // service is restarting. Retry those transient responses like 503s.
+        if (!retryableBlackjackSessionStatuses.has(sessionResponse.status)) {
           throw new Error(
             "BLACKJACK_SESSION_BOOTSTRAP_FAILED:" +
               sessionResponse.status,
