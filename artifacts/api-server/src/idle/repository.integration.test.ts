@@ -170,8 +170,8 @@ describe.skipIf(!enabled)(
 
       expect(firstBody).toMatchObject({
         purchasedSeats: 10,
-        costCents: 1_000,
-        balanceCents: 99_000,
+        costCents: 3_000,
+        balanceCents: 97_000,
         replayed: false,
       });
       expect(firstBody.stadium.ownedSeats)
@@ -185,8 +185,8 @@ describe.skipIf(!enabled)(
 
       expect(replayBody).toMatchObject({
         purchasedSeats: 10,
-        costCents: 1_000,
-        balanceCents: 99_000,
+        costCents: 3_000,
+        balanceCents: 97_000,
         replayed: true,
       });
       expect(replayBody.stadium.ownedSeats)
@@ -233,7 +233,7 @@ describe.skipIf(!enabled)(
       };
 
       expect(body.wallet.balanceCents)
-        .toBe(99_500);
+        .toBe(98_500);
       expect(body.stadium.ownedSeats)
         .toBe(5);
     });
