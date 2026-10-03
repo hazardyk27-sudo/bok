@@ -28,12 +28,13 @@ describe("canonical Idle economy smoke", () => {
 
   it("keeps the approved global ticket market bounds", () => {
     expect(MARKET_CONFIG.tickMs).toBe(5_000);
+    expect(MARKET_CONFIG.btcSensitivity).toBe(300);
     expect(MARKET_CONFIG.initialTicketPriceMicrodollars)
-      .toBe(4_000_000);
+      .toBe(8_000_000);
     expect(MARKET_CONFIG.minTicketPriceMicrodollars)
-      .toBe(200_000);
+      .toBe(100_000);
     expect(MARKET_CONFIG.maxTicketPriceMicrodollars)
-      .toBe(10_000_000);
+      .toBe(20_000_000);
   });
 
   it("contains no passive-cash accrual, collection, or Vault service", () => {

@@ -20,23 +20,23 @@ describe("ticket market persistence policy", () => {
 
   it("accepts the canonical price floor and ceiling", () => {
     expect(validateAuthoritativeMarketTick({
-      priceMicrodollars: 200_000,
+      priceMicrodollars: 100_000,
       source: "binance-btcusdt",
       feedStatus: "LIVE",
       tickAt: new Date("2026-09-29T20:00:00.000Z"),
-    }).priceMicrodollars).toBe(200_000);
+    }).priceMicrodollars).toBe(100_000);
 
     expect(validateAuthoritativeMarketTick({
-      priceMicrodollars: 10_000_000,
+      priceMicrodollars: 20_000_000,
       source: "coinbase-btc-usd",
       feedStatus: "REBASELINING",
       tickAt: new Date("2026-09-29T20:00:05.000Z"),
-    }).priceMicrodollars).toBe(10_000_000);
+    }).priceMicrodollars).toBe(20_000_000);
   });
 
   it("allows frozen global state with no active provider", () => {
     expect(validateAuthoritativeMarketTick({
-      priceMicrodollars: 4_000_000,
+      priceMicrodollars: 8_000_000,
       source: "none",
       feedStatus: "FROZEN",
       tickAt: new Date("2026-09-29T20:00:00.000Z"),
@@ -48,14 +48,14 @@ describe("ticket market persistence policy", () => {
 
   it("rejects prices outside the accepted hard market range", () => {
     expect(() => validateAuthoritativeMarketTick({
-      priceMicrodollars: 199_999,
+      priceMicrodollars: 99_999,
       source: "binance-btcusdt",
       feedStatus: "LIVE",
       tickAt: new Date(),
     })).toThrow("INVALID_IDLE_MARKET_PRICE");
 
     expect(() => validateAuthoritativeMarketTick({
-      priceMicrodollars: 10_000_001,
+      priceMicrodollars: 20_000_001,
       source: "binance-btcusdt",
       feedStatus: "LIVE",
       tickAt: new Date(),
@@ -64,21 +64,21 @@ describe("ticket market persistence policy", () => {
 
   it("compares exact authoritative tick identity including status and timestamp", () => {
     const left = validateAuthoritativeMarketTick({
-      priceMicrodollars: 4_000_000,
+      priceMicrodollars: 8_000_000,
       source: "binance-btcusdt",
       feedStatus: "LIVE",
       tickAt: new Date("2026-09-29T20:00:00.000Z"),
     });
 
     const same = validateAuthoritativeMarketTick({
-      priceMicrodollars: 4_000_000,
+      priceMicrodollars: 8_000_000,
       source: "binance-btcusdt",
       feedStatus: "LIVE",
       tickAt: new Date("2026-09-29T20:00:00.000Z"),
     });
 
     const changedStatus = validateAuthoritativeMarketTick({
-      priceMicrodollars: 4_000_000,
+      priceMicrodollars: 8_000_000,
       source: "binance-btcusdt",
       feedStatus: "REBASELINING",
       tickAt: new Date("2026-09-29T20:00:00.000Z"),

@@ -1,7 +1,7 @@
 # Stadium Economy — Canonical Specification
 
 Status: **accepted for implementation**
-Date: 2026-09-29
+Date: 2026-10-03
 Branch: `feature/idle`
 
 This document is the canonical economy/product specification for Idle / İşletmeler.
@@ -21,73 +21,55 @@ If an older Idle milestone, comment, test, config value, or implementation confl
 
 Stadium level is a **capacity gate only**. It does not directly multiply production, storage, or sale price.
 
-| Stadium Lv | Max seat capacity | Seat unit price for newly opened band | Unlock cost |
-|---:|---:|---:|---:|
-| 1 | 1,000 | $1 | Free |
-| 2 | 5,000 | $3 | $5,000 |
-| 3 | 10,000 | $5 | $15,000 |
-| 4 | 20,000 | $10 | $50,000 |
-| 5 | 35,000 | $20 | $150,000 |
-| 6 | 50,000 | $50 | $500,000 |
-| 7 | 75,000 | $100 | $1,500,000 |
-| 8 | 100,000 | $250 | $4,000,000 |
-| 9 | 150,000 | $500 | $10,000,000 |
-| 10 | 200,000, then expandable to 500,000 | $1,000 starting | $20,000,000 |
+| Stadium Lv | Max seat capacity | Unlock cost |
+|---:|---:|---:|
+| 1 | 1,000 | Free |
+| 2 | 5,000 | $5,000 |
+| 3 | 10,000 | $15,000 |
+| 4 | 20,000 | $50,000 |
+| 5 | 35,000 | $150,000 |
+| 6 | 50,000 | $500,000 |
+| 7 | 75,000 | $1,500,000 |
+| 8 | 100,000 | $4,000,000 |
+| 9 | 150,000 | $10,000,000 |
+| 10 | 500,000 | $20,000,000 |
 
 Rules:
 
 - Stadium Lv1 is available for free.
-- Lv1 provides **1,000 seat capacity**, but seats are purchased separately.
-- Example: at Lv1, buying 1,000 seats costs $1,000.
+- The game starts with **1,000 owned seats** at Lv1; those initial seats are free.
 - The player may buy any positive quantity that fits the currently unlocked capacity and available wallet balance.
 - Filling the current capacity is **not required** before unlocking the next Stadium level.
 - Stadium level, Speed level, and Storage level are independent progression tracks.
 - Stadium level-up never resets Speed or Storage.
 
-### Seat-price bands before 200k
+### Seat-price bands
 
 The seat price is determined by the seat-count band being purchased, not merely by the highest Stadium level already unlocked.
 
 | Seat positions being added | Unit price |
 |---:|---:|
-| 0–999 | $1 |
-| 1,000–4,999 | $3 |
-| 5,000–9,999 | $5 |
-| 10,000–19,999 | $10 |
-| 20,000–34,999 | $20 |
-| 35,000–49,999 | $50 |
-| 50,000–74,999 | $100 |
-| 75,000–99,999 | $250 |
-| 100,000–149,999 | $500 |
-| 150,000–199,999 | $1,000 |
+| 0–49,999 | $3 |
+| 50,000–149,999 | $5 |
+| 150,000–249,999 | $10 |
+| 250,000–349,999 | $20 |
+| 350,000–449,999 | $30 |
+| 450,000–499,999 | $50 |
 
 A bulk purchase that crosses price bands must be priced band-by-band on the server.
 
-## 3. 200k–500k seat pricing
+Reference totals from the free 1,000-seat starting state:
 
-- Stadium Lv10 unlocks growth above 200,000 seats.
+- 1,000 → 50,000 seats costs **$147,000**.
+- 1,000 → 500,000 seats costs **$9,147,000** in seat purchases.
+
+## 3. Maximum capacity and seat-pricing boundaries
+
 - The absolute maximum Stadium capacity is **500,000 seats**.
-- From 200,000 seats onward, the unit seat price increases by **10% every additional 25,000 seats**.
-- There is no other capacity level after Lv10.
-
-Formula:
-
-```text
-price = $1,000 × 1.10 ^ floor((currentSeatCount - 200,000) / 25,000)
-```
-
-Examples:
-
-| Current seat band | Unit price |
-|---:|---:|
-| 200,000–224,999 | $1,000 |
-| 225,000–249,999 | $1,100 |
-| 250,000–274,999 | $1,210 |
-| 275,000–299,999 | $1,331 |
-| 300,000–324,999 | ~$1,464.10 |
-| 475,000–499,999 | ~$2,853.12 |
-
-The server must split a bulk purchase across 25k bands so one request cannot bypass a price step.
+- There is no percentage-growth formula after 200,000 seats.
+- There is no 25,000-seat +10% price step anymore.
+- The fixed seat-price bands in section 2 are authoritative all the way to 500,000 seats.
+- The server must split a bulk purchase at every price boundary so one request cannot bypass a price step.
 
 ## 4. Ticket production speed
 
@@ -178,35 +160,34 @@ The ticket market is global: all players see the same authoritative price.
 Initial bootstrap price when no persisted market state exists:
 
 ```text
-$4.00
+$8.00
 ```
 
 Market tick:
 
 - Sample interval: **5 seconds**.
 - Underlying signal: BTC percentage movement over the same 5-second interval.
-- Sensitivity: **15x**.
+- Sensitivity: **300x**.
 - No per-tick rise/fall cap.
 - No smoothing cap.
 - The only ticket-price limits are:
-  - minimum **$0.20**
-  - maximum **$10.00**
+  - minimum **$0.10**
+  - maximum **$20.00**
 
 Formula:
 
 ```text
 btcReturn = newBTC / previousBTC - 1
-rawTicketPrice = currentTicketPrice × (1 + 15 × btcReturn)
-ticketPrice = clamp(rawTicketPrice, $0.20, $10.00)
+rawTicketPrice = currentTicketPrice × (1 + 300 × btcReturn)
+ticketPrice = clamp(rawTicketPrice, $0.10, $20.00)
 ```
 
 Example:
 
 ```text
-BTC -10% in one 5-second interval
-→ ticket raw move -150%
-→ raw result may be below zero
-→ authoritative ticket price becomes $0.20
+BTC +0.10% in one 5-second interval
+→ ticket raw move +30%
+→ $8.00 becomes $10.40 before any clamp
 ```
 
 BTC movement is otherwise followed without an additional movement limit.
@@ -224,7 +205,7 @@ Server-side only:
 - On provider switch, take a new BTC baseline first; exchange-to-exchange nominal price differences must never create a fake ticket-price move.
 - If both feeds are unavailable, freeze the last valid ticket price.
 - When a feed returns, re-baseline BTC and apply only subsequent percentage movements.
-- On server restart, restore the persisted ticket market state instead of resetting to $4.00, then re-baseline BTC before continuing.
+- On server restart, restore the persisted ticket market state instead of resetting to $8.00, then re-baseline BTC before continuing.
 
 ## 9. Market SQL retention
 
@@ -295,7 +276,7 @@ It must contain three independent systems:
    - current capacity
    - next capacity/unlock cost
    - seat purchase
-   - post-200k next 25k price threshold when relevant
+   - current seat-price band and next price boundary
    - 500k hard maximum
 
 2. **Production Speed**

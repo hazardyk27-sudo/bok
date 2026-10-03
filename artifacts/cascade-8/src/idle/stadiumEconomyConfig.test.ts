@@ -5,8 +5,7 @@ import {
   MAX_STADIUM_SEATS,
   MAX_SPEED_LEVEL,
   MAX_STORAGE_LEVEL,
-  POST_200K_SEAT_PRICING,
-  PRE_200K_SEAT_PRICE_BANDS,
+  SEAT_PRICE_BANDS,
   SPEED_LEVELS,
   STADIUM_LEVELS,
   STORAGE_LEVELS,
@@ -44,32 +43,19 @@ describe("canonical Stadium economy config", () => {
     expect(MAX_STADIUM_SEATS).toBe(500_000);
   });
 
-  it("locks the pre-200k seat bands and 25k post-200k growth rule", () => {
-    expect(PRE_200K_SEAT_PRICE_BANDS.map((entry) => [
+  it("locks the accepted broad seat-price bands through 500k", () => {
+    expect(SEAT_PRICE_BANDS.map((entry) => [
       entry.startSeat,
       entry.endSeatExclusive,
       entry.unitPriceCents,
     ])).toEqual([
-      [0, 1_000, 100],
-      [1_000, 5_000, 300],
-      [5_000, 10_000, 500],
-      [10_000, 20_000, 1_000],
-      [20_000, 35_000, 2_000],
-      [35_000, 50_000, 5_000],
-      [50_000, 75_000, 10_000],
-      [75_000, 100_000, 25_000],
-      [100_000, 150_000, 50_000],
-      [150_000, 200_000, 100_000],
+      [0, 50_000, 300],
+      [50_000, 150_000, 500],
+      [150_000, 250_000, 1_000],
+      [250_000, 350_000, 2_000],
+      [350_000, 450_000, 3_000],
+      [450_000, 500_000, 5_000],
     ]);
-
-    expect(POST_200K_SEAT_PRICING).toEqual({
-      startsAtSeats: 200_000,
-      hardMaxSeats: 500_000,
-      blockSizeSeats: 25_000,
-      baseUnitPriceCents: 100_000,
-      growthNumerator: 110,
-      growthDenominator: 100,
-    });
   });
 
   it("locks the independent 20-level speed curve", () => {
@@ -105,10 +91,10 @@ describe("canonical Stadium economy config", () => {
   it("locks the accepted global BTC market baseline", () => {
     expect(MARKET_CONFIG).toMatchObject({
       tickMs: 5_000,
-      btcSensitivity: 15,
-      initialTicketPriceMicrodollars: 4_000_000,
-      minTicketPriceMicrodollars: 200_000,
-      maxTicketPriceMicrodollars: 10_000_000,
+      btcSensitivity: 300,
+      initialTicketPriceMicrodollars: 8_000_000,
+      minTicketPriceMicrodollars: 100_000,
+      maxTicketPriceMicrodollars: 20_000_000,
       historyRetentionMs: 86_400_000,
       primaryFeed: "binance-btcusdt",
       backupFeed: "coinbase-btc-usd",

@@ -244,15 +244,15 @@ describe("global ticket market runtime", () => {
 
     binance.setSnapshot(liveFeed({
       source: "binance-btcusdt",
-      priceMicrodollars: 101_000_000_000,
+      priceMicrodollars: 100_100_000_000,
       receivedAtMs: 109_000,
     }));
 
     await runtime.runOneTick(new Date(110_000));
 
     expect(persistence.state).toMatchObject({
-      // +1% BTC ×15 = +15% ticket: $5.00 -> $5.75.
-      priceMicrodollars: 5_750_000,
+      // +0.1% BTC ×300 = +30% ticket: $5.00 -> $6.50.
+      priceMicrodollars: 6_500_000,
       source: "binance-btcusdt",
       feedStatus: "LIVE",
     });
@@ -283,11 +283,11 @@ describe("global ticket market runtime", () => {
 
     binance.setSnapshot(liveFeed({
       source: "binance-btcusdt",
-      priceMicrodollars: 101_000_000_000,
+      priceMicrodollars: 100_100_000_000,
       receivedAtMs: 109_000,
     }));
     await runtime.runOneTick(new Date(110_000));
-    expect(persistence.state.priceMicrodollars).toBe(4_600_000);
+    expect(persistence.state.priceMicrodollars).toBe(5_200_000);
 
     binance.setSnapshot(
       frozenFeed("binance-btcusdt"),
@@ -295,7 +295,7 @@ describe("global ticket market runtime", () => {
     await runtime.runOneTick(new Date(115_000));
 
     expect(persistence.state).toMatchObject({
-      priceMicrodollars: 4_600_000,
+      priceMicrodollars: 5_200_000,
       source: "none",
       feedStatus: "FROZEN",
     });
@@ -308,20 +308,20 @@ describe("global ticket market runtime", () => {
     await runtime.runOneTick(new Date(120_000));
 
     expect(persistence.state).toMatchObject({
-      priceMicrodollars: 4_600_000,
+      priceMicrodollars: 5_200_000,
       source: "coinbase-btc-usd",
       feedStatus: "REBASELINING",
     });
 
     coinbase.setSnapshot(liveFeed({
       source: "coinbase-btc-usd",
-      priceMicrodollars: 101_000_000_000,
+      priceMicrodollars: 100_100_000_000,
       receivedAtMs: 124_000,
     }));
     await runtime.runOneTick(new Date(125_000));
 
     expect(persistence.state).toMatchObject({
-      priceMicrodollars: 5_290_000,
+      priceMicrodollars: 6_760_000,
       source: "coinbase-btc-usd",
       feedStatus: "LIVE",
     });
