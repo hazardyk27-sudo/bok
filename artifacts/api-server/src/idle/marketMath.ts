@@ -28,8 +28,8 @@ function requireSafeTicketPrice(value: number) {
  * Applies the canonical 5-second BTC-linked ticket-price move:
  *
  *   btcReturn = currentBTC / previousBTC - 1
- *   rawTicket = previousTicket × (1 + 15 × btcReturn)
- *   nextTicket = clamp(rawTicket, $0.20, $10.00)
+ *   rawTicket = previousTicket × (1 + 300 × btcReturn)
+ *   nextTicket = clamp(rawTicket, $0.10, $20.00)
  *
  * BTC quotes are supplied as positive integers in ANY shared fixed-point scale
  * (for example microdollars). Only the ratio matters, so both quotes merely
