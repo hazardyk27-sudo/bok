@@ -1,31 +1,35 @@
-type AdvancedPreparedReveal = {
+type BombCardMode = "STANDARD" | "ADVANCED";
+
+type BombPreparedReveal = {
   roundId: string;
   cellIndex: number;
-  mode: "ADVANCED";
+  mode: BombCardMode;
   kind: "BOMB";
+  settlement?: CadiMutationResponse;
 };
 
-type AdvancedBustRound = {
+type BombTerminalRound = {
   id: string;
-  mode: "ADVANCED";
-  status: "BUST";
+  mode: BombCardMode;
+  status: "BUST" | "CASHED_OUT" | "COMPLETED";
   cellCount: number;
   revealedBombCells: number[];
 };
 
 type CadiMutationResponse = {
-  state?: { round?: AdvancedBustRound | null; [key: string]: unknown };
+  outcome?: string;
+  state?: { round?: BombTerminalRound | null; [key: string]: unknown };
 };
 
 type GuardWindow = Window & {
   __cadiAdvancedBustRevealGuardInstalled?: boolean;
 };
 
-type AdvancedBustStateConsumer = (state: unknown) => void;
+type BombTerminalStateConsumer = (state: unknown) => void;
 
 const API_PREFIX = "/api/cadi-kazan/rounds/";
 const settlingBombs = new Set<string>();
-let consumeAdvancedBustState: AdvancedBustStateConsumer | null = null;
+let consumeBombTerminalState: BombTerminalStateConsumer | null = null;
 
 function requestUrl(input: RequestInfo | URL) {
   if (typeof input === "string") return input;
@@ -33,7 +37,11 @@ function requestUrl(input: RequestInfo | URL) {
   return input.url;
 }
 
-export function forceAdvancedBustReveal(round: AdvancedBustRound) {
+function isBombCardMode(mode: unknown): mode is BombCardMode {
+  return mode === "STANDARD" || mode === "ADVANCED";
+}
+
+export function forceAdvancedBustReveal(round: BombTerminalRound) {
   if (round.mode !== "ADVANCED" || round.status !== "BUST" || round.cellCount !== 25) return false;
 
   const bombIndices = new Set(round.revealedBombCells);
@@ -64,7 +72,8 @@ export function forceAdvancedBustReveal(round: AdvancedBustRound) {
   return true;
 }
 
-function applyBustAcrossRenderFrames(round: AdvancedBustRound) {
+function applyBustAcrossRenderFrames(round: BombTerminalRound) {
+  if (round.mode !== "ADVANCED" || round.status !== "BUST") return;
   const apply = () => forceAdvancedBustReveal(round);
   queueMicrotask(apply);
   requestAnimationFrame(() => {
@@ -74,7 +83,17 @@ function applyBustAcrossRenderFrames(round: AdvancedBustRound) {
   window.setTimeout(apply, 80);
 }
 
-async function settlePreparedAdvancedBomb(nativeFetch: typeof window.fetch, prepared: AdvancedPreparedReveal) {
+function applyPreparedSettlement(settlement: CadiMutationResponse | undefined) {
+  const state = settlement?.state;
+  const round = state?.round;
+  if (!round || !isBombCardMode(round.mode) || round.status === undefined) return false;
+
+  consumeBombTerminalState?.(state);
+  if (round.mode === "ADVANCED" && round.status === "BUST") applyBustAcrossRenderFrames(round);
+  return true;
+}
+
+async function settlePreparedBomb(nativeFetch: typeof window.fetch, prepared: BombPreparedReveal) {
   const key = `${prepared.roundId}:${prepared.cellIndex}`;
   if (settlingBombs.has(key)) return;
   settlingBombs.add(key);
@@ -86,23 +105,19 @@ async function settlePreparedAdvancedBomb(nativeFetch: typeof window.fetch, prep
       headers: { "content-type": "application/json" },
       body: JSON.stringify({
         cellIndex: prepared.cellIndex,
-        idempotencyKey: `advanced-bust-${crypto.randomUUID()}-${Date.now()}`,
+        idempotencyKey: `prepared-bust-${crypto.randomUUID()}-${Date.now()}`,
       }),
     });
     if (!response.ok) return;
     const data = await response.json() as CadiMutationResponse;
-    const round = data.state?.round;
-    if (round?.mode === "ADVANCED" && round.status === "BUST") {
-      consumeAdvancedBustState?.(data.state);
-      applyBustAcrossRenderFrames(round);
-    }
+    applyPreparedSettlement(data);
   } finally {
     settlingBombs.delete(key);
   }
 }
 
-export function installAdvancedBustRevealGuard(consumeState?: AdvancedBustStateConsumer) {
-  if (consumeState) consumeAdvancedBustState = consumeState;
+export function installAdvancedBustRevealGuard(consumeState?: BombTerminalStateConsumer) {
+  if (consumeState) consumeBombTerminalState = consumeState;
   if (typeof window === "undefined") return;
   const guardedWindow = window as GuardWindow;
   if (guardedWindow.__cadiAdvancedBustRevealGuardInstalled) return;
@@ -115,11 +130,24 @@ export function installAdvancedBustRevealGuard(consumeState?: AdvancedBustStateC
 
     if (response.ok && url.includes(API_PREFIX)) {
       if (url.endsWith("/prepare-reveal")) {
-        void response.clone().json().then((prepared: Partial<AdvancedPreparedReveal>) => {
-          if (prepared.mode === "ADVANCED" && prepared.kind === "BOMB" && typeof prepared.roundId === "string" && Number.isInteger(prepared.cellIndex)) {
-            void settlePreparedAdvancedBomb(nativeFetch, prepared as AdvancedPreparedReveal);
+        // Wait for the cloned prepare payload before resolving the original fetch.
+        // The API settles a bomb before returning it, so this applies terminal
+        // state and disables Cash Out before the scratch surface can continue.
+        const prepared = await response.clone().json().catch(() => null) as Partial<BombPreparedReveal> | null;
+        if (
+          prepared &&
+          isBombCardMode(prepared.mode) &&
+          prepared.kind === "BOMB" &&
+          typeof prepared.roundId === "string" &&
+          Number.isInteger(prepared.cellIndex)
+        ) {
+          const bombPrepared = prepared as BombPreparedReveal;
+          if (!applyPreparedSettlement(bombPrepared.settlement)) {
+            // Compatibility fallback for an older API runtime. It still settles
+            // before the original prepare response is released to WitchClient.
+            await settlePreparedBomb(nativeFetch, bombPrepared);
           }
-        }).catch(() => undefined);
+        }
       } else if (url.endsWith("/reveal")) {
         void response.clone().json().then((data: CadiMutationResponse) => {
           const round = data.state?.round;
