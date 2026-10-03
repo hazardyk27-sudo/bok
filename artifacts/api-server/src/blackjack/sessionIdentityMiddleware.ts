@@ -1,6 +1,4 @@
 import type { NextFunction, Request, RequestHandler, Response } from "express";
-import { AUTH_COOKIE } from "../auth/routes";
-import { authRepository } from "../auth/repository";
 import {
   SESSION_COOKIE,
   SESSION_COOKIE_MAX_AGE_MS,
@@ -9,6 +7,8 @@ import {
   resolveBlackjackHttpSessionIdentity,
   type BlackjackAuthWalletLookup,
 } from "./httpSessionIdentity";
+
+export const BLACKJACK_AUTH_COOKIE = "fy_auth" as const;
 
 export type BlackjackSessionIdentityMiddlewareOptions = Readonly<{
   lookupAuthWalletSessionId?: BlackjackAuthWalletLookup;
@@ -33,6 +33,7 @@ export function createBlackjackSessionIdentityMiddleware(
   const lookupAuthWalletSessionId =
     options.lookupAuthWalletSessionId
     ?? (async (authToken: string) => {
+      const { authRepository } = await import("../auth/repository");
       const session = await authRepository.getUserBySessionToken(authToken);
       return session?.walletSessionId ?? null;
     });
@@ -49,7 +50,7 @@ export function createBlackjackSessionIdentityMiddleware(
 
     try {
       const identity = await resolveBlackjackHttpSessionIdentity({
-        authToken: req.cookies?.[AUTH_COOKIE],
+        authToken: req.cookies?.[BLACKJACK_AUTH_COOKIE],
         canonicalSessionId: req.cookies?.[SESSION_COOKIE],
       }, {
         lookupAuthWalletSessionId,
