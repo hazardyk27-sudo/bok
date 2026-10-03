@@ -50,3 +50,72 @@
   opacity: 0 !important;
   pointer-events: none !important;
 }
+
+/* PASS 51 — Standard prepared SAFE/BOMB owns the visible result plane.
+   The legacy SAFE/BOMB sculpture CSS can leave .witch-cell-content as a white
+   or decorative box even though prepare-reveal already selected the correct
+   persistent candidate. Bind the prepared result directly to the full content
+   plane so every already-scratched pixel immediately exposes Saul/Danger.
+   This is deliberately Standard-only: Advanced and Office keep their existing
+   measured result presentation untouched. */
+.witch-page.is-standard-theme .witch-ticket:not(.is-advanced):not(.is-office) .witch-cell[data-prepared-result="SAFE"] .witch-cell-content,
+.witch-page.is-standard-theme .witch-ticket:not(.is-advanced):not(.is-office) .witch-cell[data-authoritative-result="SAFE"] .witch-cell-content {
+  position: absolute !important;
+  inset: 0 !important;
+  width: 100% !important;
+  height: 100% !important;
+  overflow: hidden !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  background-color: #fff !important;
+  background-image: url("/cadi-kazan/bcs-saul.webp") !important;
+  background-repeat: no-repeat !important;
+  background-position: 50% 50% !important;
+  background-size: contain !important;
+  box-shadow: none !important;
+  transform: none !important;
+}
+
+.witch-page.is-standard-theme .witch-ticket:not(.is-advanced):not(.is-office) .witch-cell[data-prepared-result="BOMB"] .witch-cell-content,
+.witch-page.is-standard-theme .witch-ticket:not(.is-advanced):not(.is-office) .witch-cell[data-authoritative-result="BOMB"] .witch-cell-content {
+  position: absolute !important;
+  inset: 0 !important;
+  width: 100% !important;
+  height: 100% !important;
+  overflow: hidden !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  background-color: #fff !important;
+  background-image: url("/cadi-kazan/bcs-danger.webp") !important;
+  background-repeat: no-repeat !important;
+  background-position: 50% 50% !important;
+  background-size: contain !important;
+  box-shadow: none !important;
+  transform: none !important;
+}
+
+.witch-page.is-standard-theme .witch-ticket:not(.is-advanced):not(.is-office) .witch-cell[data-prepared-result] .witch-cell-content::before,
+.witch-page.is-standard-theme .witch-ticket:not(.is-advanced):not(.is-office) .witch-cell[data-prepared-result] .witch-cell-content::after,
+.witch-page.is-standard-theme .witch-ticket:not(.is-advanced):not(.is-office) .witch-cell[data-authoritative-result] .witch-cell-content::before,
+.witch-page.is-standard-theme .witch-ticket:not(.is-advanced):not(.is-office) .witch-cell[data-authoritative-result] .witch-cell-content::after {
+  display: none !important;
+  content: none !important;
+}
+
+.witch-page.is-standard-theme .witch-ticket:not(.is-advanced):not(.is-office) .witch-cell[data-prepared-result="SAFE"] [data-witch-result-candidate="SAFE"],
+.witch-page.is-standard-theme .witch-ticket:not(.is-advanced):not(.is-office) .witch-cell[data-prepared-result="BOMB"] [data-witch-result-candidate="BOMB"] {
+  position: absolute !important;
+  inset: 0 !important;
+  display: block !important;
+  width: 100% !important;
+  height: 100% !important;
+  object-fit: contain !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+}
+
+.witch-page.is-standard-theme .witch-ticket:not(.is-advanced):not(.is-office) .witch-cell[data-prepared-result="SAFE"] [data-witch-result-candidate="BOMB"],
+.witch-page.is-standard-theme .witch-ticket:not(.is-advanced):not(.is-office) .witch-cell[data-prepared-result="BOMB"] [data-witch-result-candidate="SAFE"] {
+  visibility: hidden !important;
+  opacity: 0 !important;
+}
