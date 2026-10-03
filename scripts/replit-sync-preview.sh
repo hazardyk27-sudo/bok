@@ -5,7 +5,6 @@ REMOTE="${1:-github}"
 EXPECTED_PREVIEW_SHA="${2:-}"
 BRANCH="integration/replit-preview"
 MAX_ATTEMPTS=3
-API_RUNTIME_URL="http://127.0.0.1:8080/api/readyz"
 API_RUNTIME_LOG="${TMPDIR:-/tmp}/oyun-replit-api-server.log"
 
 # Replit is a read-only consumer. Install local-only Git guardrails before
@@ -100,7 +99,7 @@ recover_safe_local_commits() {
 }
 
 api_runtime_ready() {
-  node -e "fetch('${API_RUNTIME_URL}',{signal:AbortSignal.timeout(2000)}).then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"
+  node -e "fetch('http://127.0.0.1:8080/api/readyz',{signal:AbortSignal.timeout(2000)}).then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"
 }
 
 wait_for_api_runtime() {
