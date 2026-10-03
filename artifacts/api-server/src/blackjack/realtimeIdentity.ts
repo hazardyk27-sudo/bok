@@ -1,3 +1,5 @@
+import { SESSION_COOKIE } from "../platform/session";
+
 export const BLACKJACK_REALTIME_SESSION_COOKIE =
   "blackjack_realtime_session" as const;
 export const BLACKJACK_REALTIME_SESSION_COOKIE_PATH =
@@ -49,9 +51,19 @@ export function getCookieCandidatesByName(
 export function resolveBlackjackRealtimeSessionId(
   cookieHeader: string | undefined,
 ): string | null {
-  const candidates = getCookieCandidatesByName(
+  const realtimeCandidates = getCookieCandidatesByName(
     cookieHeader,
     BLACKJACK_REALTIME_SESSION_COOKIE,
   );
-  return candidates.at(-1) ?? null;
+  const dedicated = realtimeCandidates.at(-1);
+  if (dedicated !== undefined) return dedicated;
+
+  const canonicalCandidates = getCookieCandidatesByName(
+    cookieHeader,
+    SESSION_COOKIE,
+  );
+
+  return canonicalCandidates.length === 1
+    ? canonicalCandidates[0] ?? null
+    : null;
 }
