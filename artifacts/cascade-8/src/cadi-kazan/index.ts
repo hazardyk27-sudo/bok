@@ -1,5 +1,6 @@
 import "./witch.css";
 import "./witch.visual-lock.css";
+import "./scratch-result-fallback.css";
 import { CADI_KAZAN_MARKUP, WitchClient } from "./witchClient";
 
 const cadiKazanRouteShell = (content: string) => `
