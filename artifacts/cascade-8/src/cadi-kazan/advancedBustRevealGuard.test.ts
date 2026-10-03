@@ -12,14 +12,16 @@ const routeSource = readFileSync(
 );
 
 describe("Advanced 25 BUST reveal guard", () => {
-  it("is installed only from the Cadi Kazan route", () => {
+  it("is installed only from the Cadi Kazan route and feeds terminal state back to WitchClient", () => {
     expect(routeSource).toContain('import { installAdvancedBustRevealGuard } from "./advancedBustRevealGuard"');
-    expect(routeSource).toContain("installAdvancedBustRevealGuard();");
+    expect(routeSource).toContain("installAdvancedBustRevealGuard((state) => {");
+    expect(routeSource).toContain("internalClient.applyState(state, false);");
   });
 
   it("auto-settles only a prepared Advanced bomb", () => {
     expect(guardSource).toContain('prepared.mode === "ADVANCED" && prepared.kind === "BOMB"');
     expect(guardSource).toContain("settlePreparedAdvancedBomb(nativeFetch");
+    expect(guardSource).toContain("consumeAdvancedBustState?.(data.state)");
     expect(guardSource).not.toContain('prepared.mode === "STANDARD" && prepared.kind === "BOMB"');
     expect(guardSource).not.toContain('prepared.mode === "OFFICE_MATCH_6"');
   });
