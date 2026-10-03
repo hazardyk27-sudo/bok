@@ -41,6 +41,7 @@ case "$game" in
     backend src/blackjack
     pnpm --filter @workspace/cascade-8 exec playwright test \
       e2e/blackjack.spec.ts \
+      e2e/blackjack-session-bootstrap.spec.ts \
       --project=android-chrome
     ;;
   roulette)
