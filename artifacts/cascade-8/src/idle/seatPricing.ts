@@ -1,7 +1,6 @@
 import {
   MAX_STADIUM_SEATS,
-  POST_200K_SEAT_PRICING,
-  PRE_200K_SEAT_PRICE_BANDS,
+  SEAT_PRICE_BANDS,
 } from "./config";
 
 export type SeatPurchasePriceSegment = {
@@ -41,40 +40,31 @@ function bigintToSafeNumber(value: bigint, errorCode: string) {
   return Number(value);
 }
 
-function powBigInt(base: bigint, exponent: number) {
-  let result = 1n;
-  for (let index = 0; index < exponent; index += 1) {
-    result *= base;
-  }
-  return result;
-}
+function getSeatPriceBand(seatIndex: number) {
+  const band = SEAT_PRICE_BANDS.find(
+    (entry) =>
+      seatIndex >= entry.startSeat
+      && seatIndex < entry.endSeatExclusive,
+  );
 
-function roundPositiveRationalHalfUp(
-  numerator: bigint,
-  denominator: bigint,
-) {
-  if (numerator < 0n || denominator <= 0n) {
-    throw new Error("INVALID_IDLE_SEAT_PRICE_RATIONAL");
+  if (!band) {
+    throw new Error("IDLE_STADIUM_SEAT_PRICE_BAND_MISSING");
   }
 
-  const quotient = numerator / denominator;
-  const remainder = numerator % denominator;
-  return remainder * 2n >= denominator
-    ? quotient + 1n
-    : quotient;
+  return band;
 }
 
 /**
  * Returns the canonical unit price, in wallet cents, for the next seat at the
  * supplied zero-based seat index.
  *
- * 0..199,999 uses the fixed accepted bands.
- * 200,000..499,999 uses:
- *   $1,000 × 1.10^floor((seatIndex - 200,000) / 25,000)
- *
- * The exact rational result is rounded half-up to the nearest wallet cent.
- * The exponent is always derived from the original $1,000 base, so rounding a
- * previous block never compounds into later blocks.
+ * Prices are intentionally stable across broad capacity bands:
+ *   0..49,999       = $3
+ *   50,000..149,999 = $5
+ *   150,000..249,999 = $10
+ *   250,000..349,999 = $20
+ *   350,000..449,999 = $30
+ *   450,000..499,999 = $50
  */
 export function getSeatUnitPriceCentsAtSeatIndex(
   seatIndex: number,
@@ -88,70 +78,25 @@ export function getSeatUnitPriceCentsAtSeatIndex(
     throw new Error("IDLE_STADIUM_MAX_SEATS_REACHED");
   }
 
-  const pre200kBand = PRE_200K_SEAT_PRICE_BANDS.find(
-    (band) =>
-      seatIndex >= band.startSeat
-      && seatIndex < band.endSeatExclusive,
-  );
-
-  if (pre200kBand) return pre200kBand.unitPriceCents;
-
-  const {
-    startsAtSeats,
-    blockSizeSeats,
-    baseUnitPriceCents,
-    growthNumerator,
-    growthDenominator,
-  } = POST_200K_SEAT_PRICING;
-
-  const blockIndex = Math.floor(
-    (seatIndex - startsAtSeats) / blockSizeSeats,
-  );
-
-  const numerator =
-    BigInt(baseUnitPriceCents)
-    * powBigInt(BigInt(growthNumerator), blockIndex);
-  const denominator = powBigInt(
-    BigInt(growthDenominator),
-    blockIndex,
-  );
-
-  return bigintToSafeNumber(
-    roundPositiveRationalHalfUp(numerator, denominator),
-    "IDLE_SEAT_UNIT_PRICE_OVERFLOW",
-  );
+  return getSeatPriceBand(seatIndex).unitPriceCents;
 }
 
 export function getNextSeatPriceBoundary(seatIndex: number) {
-  const pre200kBand = PRE_200K_SEAT_PRICE_BANDS.find(
-    (band) =>
-      seatIndex >= band.startSeat
-      && seatIndex < band.endSeatExclusive,
-  );
-  if (pre200kBand) return pre200kBand.endSeatExclusive;
-
-  const {
-    startsAtSeats,
-    blockSizeSeats,
-    hardMaxSeats,
-  } = POST_200K_SEAT_PRICING;
-
-  const blockIndex = Math.floor(
-    (seatIndex - startsAtSeats) / blockSizeSeats,
+  requireSafeNonNegativeInteger(
+    seatIndex,
+    "INVALID_IDLE_SEAT_INDEX",
   );
 
-  return Math.min(
-    hardMaxSeats,
-    startsAtSeats + (blockIndex + 1) * blockSizeSeats,
-  );
+  if (seatIndex >= MAX_STADIUM_SEATS) {
+    throw new Error("IDLE_STADIUM_MAX_SEATS_REACHED");
+  }
+
+  return getSeatPriceBand(seatIndex).endSeatExclusive;
 }
 
 /**
- * Quotes a bulk seat purchase band-by-band.
- *
- * The quote never flattens a multi-band purchase to the price of its first
- * seat, so a request cannot bypass a pre-200k boundary or a 25k post-200k
- * +10% step.
+ * Quotes a bulk seat purchase band-by-band so a single request can never
+ * bypass a capacity price boundary.
  *
  * Stadium-level capacity is intentionally checked by the action layer against
  * the player's locked row. This pure pricing engine enforces only the global
