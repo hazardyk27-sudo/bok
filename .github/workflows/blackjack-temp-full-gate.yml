@@ -1,0 +1,25 @@
+name: Blackjack Temporary Full Gate
+
+on:
+  push:
+    branches:
+      - preflight/blackjack-c40fd3-full-gate
+
+jobs:
+  full-blackjack-gate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.15.0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - name: Install
+        run: pnpm install --frozen-lockfile
+      - name: Full Blackjack regression gate
+        run: bash scripts/run-game-gate.sh blackjack
