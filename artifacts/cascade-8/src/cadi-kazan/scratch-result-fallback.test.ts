@@ -37,4 +37,16 @@ describe("Standard 5 terminal artwork fallback", () => {
     expect(fallbackCss).toContain('.is-advanced-theme .witch-cell[data-prepared-result="BOMB"] .witch-scratch-layer-base');
     expect(fallbackCss).not.toContain('.is-office-theme .witch-cell[data-prepared-result');
   });
+
+  it("binds Standard prepared SAFE/BOMB directly to the full visible content plane without touching Advanced or Office", () => {
+    expect(fallbackCss).toContain("PASS 51 — Standard prepared SAFE/BOMB owns the visible result plane");
+    expect(fallbackCss).toContain('.witch-cell[data-prepared-result="SAFE"] .witch-cell-content');
+    expect(fallbackCss).toContain('.witch-cell[data-prepared-result="BOMB"] .witch-cell-content');
+    expect(fallbackCss).toContain('background-image: url("/cadi-kazan/bcs-saul.webp") !important');
+    expect(fallbackCss).toContain('background-image: url("/cadi-kazan/bcs-danger.webp") !important');
+    expect(fallbackCss).toContain('object-fit: contain !important');
+    expect(fallbackCss).toContain(':not(.is-advanced):not(.is-office)');
+    expect(fallbackCss).not.toContain('.is-advanced-theme .witch-ticket:not(.is-advanced):not(.is-office)');
+    expect(fallbackCss).not.toContain('.is-office-theme .witch-ticket:not(.is-advanced):not(.is-office)');
+  });
 });
