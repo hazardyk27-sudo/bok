@@ -4,6 +4,7 @@ import {
   type BlackjackBrowserRealtimeConnection,
   type BlackjackBrowserRealtimeOptions,
 } from "./browserRealtime";
+import { repairBlackjackSessionIdentity } from "./sessionBootstrap";
 import {
   BLACKJACK_DEFAULT_TABLE_VIEW,
   BLACKJACK_TABLE_SEAT_NUMBERS,
@@ -15,6 +16,8 @@ export const BLACKJACK_ROUTE = "/blackjack";
 export const BLACKJACK_MAX_SEATS = 5;
 export const BLACKJACK_MOUNT_SNAPSHOT_TIMEOUT_MS = 15_000;
 export const BLACKJACK_INITIAL_CONNECTION_DEADLINE_MS = 25_000;
+export const BLACKJACK_TERMINAL_REPAIR_POLL_MS = 250;
+const BLACKJACK_AUTO_REPAIR_MARKER = "blackjack-realtime-auto-repair-v1";
 
 export const BLACKJACK_SHELL_MARKUP = renderBlackjackTableShell(
   BLACKJACK_DEFAULT_TABLE_VIEW,
@@ -43,6 +46,30 @@ function appendBlackjackRetry(
   retry.textContent = "RETRY";
   retry.addEventListener("click", onRetry, { once: true });
   context.append(retry);
+}
+
+function hasBlackjackAutoRepairMarker(): boolean {
+  try {
+    return window.sessionStorage.getItem(BLACKJACK_AUTO_REPAIR_MARKER) === "1";
+  } catch {
+    return false;
+  }
+}
+
+function markBlackjackAutoRepairAttempted(): void {
+  try {
+    window.sessionStorage.setItem(BLACKJACK_AUTO_REPAIR_MARKER, "1");
+  } catch {
+    // Hardened/private browser contexts can block sessionStorage.
+  }
+}
+
+function clearBlackjackAutoRepairMarker(): void {
+  try {
+    window.sessionStorage.removeItem(BLACKJACK_AUTO_REPAIR_MARKER);
+  } catch {
+    // Hardened/private browser contexts can block sessionStorage.
+  }
 }
 
 export function mountBlackjackSessionUnavailable(
@@ -109,24 +136,96 @@ export function mountConnectedBlackjack(
   }
 
   let guardActive = true;
-  const initialConnectionDeadline = window.setTimeout(() => {
+  let repairInFlight = false;
+  let initialConnectionDeadline: number | null = null;
+  let terminalStatePoll: number | null = null;
+
+  const clearInitialGuards = (): void => {
+    if (initialConnectionDeadline !== null) {
+      window.clearTimeout(initialConnectionDeadline);
+      initialConnectionDeadline = null;
+    }
+    if (terminalStatePoll !== null) {
+      window.clearInterval(terminalStatePoll);
+      terminalStatePoll = null;
+    }
+  };
+
+  const mountTerminalFailure = (): void => {
+    guardActive = false;
+    clearInitialGuards();
+    connection.close();
+    mountBlackjackConnectionUnavailable(app, () => {
+      clearBlackjackAutoRepairMarker();
+      window.location.reload();
+    });
+  };
+
+  const attemptSessionRepair = (): void => {
+    if (!guardActive || repairInFlight) return;
+
+    if (hasBlackjackAutoRepairMarker()) {
+      mountTerminalFailure();
+      return;
+    }
+
+    repairInFlight = true;
+    markBlackjackAutoRepairAttempted();
+    guardActive = false;
+    clearInitialGuards();
+    connection.close();
+
+    void repairBlackjackSessionIdentity()
+      .then(() => {
+        if (!document.body.contains(app)) return;
+        window.location.reload();
+      })
+      .catch(() => {
+        if (!document.body.contains(app)) return;
+        mountBlackjackConnectionUnavailable(app, () => {
+          clearBlackjackAutoRepairMarker();
+          window.location.reload();
+        });
+      });
+  };
+
+  terminalStatePoll = window.setInterval(() => {
     if (!guardActive) return;
-    if (connection.controller.getCursor() !== null) return;
+
+    if (connection.controller.getCursor() !== null) {
+      clearBlackjackAutoRepairMarker();
+      guardActive = false;
+      clearInitialGuards();
+      return;
+    }
+
+    if (connection.getStatus().state === "ERROR") {
+      attemptSessionRepair();
+    }
+  }, BLACKJACK_TERMINAL_REPAIR_POLL_MS);
+
+  initialConnectionDeadline = window.setTimeout(() => {
+    if (!guardActive) return;
+    if (connection.controller.getCursor() !== null) {
+      clearBlackjackAutoRepairMarker();
+      guardActive = false;
+      clearInitialGuards();
+      return;
+    }
 
     const state = connection.getStatus().state;
+    if (state === "ERROR") {
+      attemptSessionRepair();
+      return;
+    }
     if (
       state === "CLOSED" ||
-      state === "SESSION_REPLACED" ||
-      state === "ERROR"
+      state === "SESSION_REPLACED"
     ) {
       return;
     }
 
-    guardActive = false;
-    connection.close();
-    mountBlackjackConnectionUnavailable(app, () => {
-      window.location.reload();
-    });
+    mountTerminalFailure();
   }, BLACKJACK_INITIAL_CONNECTION_DEADLINE_MS);
 
   return Object.freeze({
@@ -134,7 +233,7 @@ export function mountConnectedBlackjack(
     close: () => {
       if (guardActive) {
         guardActive = false;
-        window.clearTimeout(initialConnectionDeadline);
+        clearInitialGuards();
       }
       connection.close();
     },
@@ -146,7 +245,7 @@ export {
   BLACKJACK_TABLE_SEAT_NUMBERS,
   renderBlackjackTableShell,
 };
-export type { BlackjackTableViewModel };
+export type { BlackjackTableViewModel } from "./tableView";
 
 export {
   BLACKJACK_BASE_CHIP_DENOMINATIONS,
@@ -194,14 +293,20 @@ export type {
 } from "./browserRealtime";
 
 export {
+  BLACKJACK_AUTH_ME_ENDPOINT,
   BLACKJACK_SESSION_ATTEMPT_TIMEOUT_MS,
   BLACKJACK_SESSION_ENDPOINT,
   BLACKJACK_SESSION_MAX_ATTEMPTS,
+  BLACKJACK_SESSION_REPAIR_AUTH_TIMEOUT_MS,
   BLACKJACK_SESSION_RETRY_DELAY_MS,
   BlackjackSessionBootstrapError,
+  repairBlackjackSessionIdentity,
   waitForBlackjackSession,
 } from "./sessionBootstrap";
-export type { BlackjackSessionBootstrapOptions } from "./sessionBootstrap";
+export type {
+  BlackjackSessionBootstrapOptions,
+  BlackjackSessionRepairOptions,
+} from "./sessionBootstrap";
 
 export {
   BLACKJACK_PLAYER_ACTION_TYPES,
