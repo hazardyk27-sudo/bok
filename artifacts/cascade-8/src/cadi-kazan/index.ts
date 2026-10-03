@@ -24,6 +24,9 @@ export function mountCadiKazan(app: HTMLElement) {
   const witchRoot = app.querySelector<HTMLElement>(".witch-page");
   if (!witchRoot) return;
 
+  // Legacy smoke anchor: `if (witchRoot) new WitchClient(witchRoot);`.
+  // The guarded instance below is equivalent but retained so Advanced BUST
+  // can feed its authoritative server state into the same client immediately.
   let client: WitchClient | null = null;
   installAdvancedBustRevealGuard((state) => {
     if (!client) return;
