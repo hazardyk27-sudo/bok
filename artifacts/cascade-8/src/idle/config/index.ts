@@ -21,27 +21,14 @@ export const STADIUM_LEVELS = [
   { level: 10, maxSeats: 500_000, unlockCostCents: 2_000_000_000 },
 ] as const;
 
-export const PRE_200K_SEAT_PRICE_BANDS = [
-  { startSeat: 0, endSeatExclusive: 1_000, unitPriceCents: 100 },
-  { startSeat: 1_000, endSeatExclusive: 5_000, unitPriceCents: 300 },
-  { startSeat: 5_000, endSeatExclusive: 10_000, unitPriceCents: 500 },
-  { startSeat: 10_000, endSeatExclusive: 20_000, unitPriceCents: 1_000 },
-  { startSeat: 20_000, endSeatExclusive: 35_000, unitPriceCents: 2_000 },
-  { startSeat: 35_000, endSeatExclusive: 50_000, unitPriceCents: 5_000 },
-  { startSeat: 50_000, endSeatExclusive: 75_000, unitPriceCents: 10_000 },
-  { startSeat: 75_000, endSeatExclusive: 100_000, unitPriceCents: 25_000 },
-  { startSeat: 100_000, endSeatExclusive: 150_000, unitPriceCents: 50_000 },
-  { startSeat: 150_000, endSeatExclusive: 200_000, unitPriceCents: 100_000 },
+export const SEAT_PRICE_BANDS = [
+  { startSeat: 0, endSeatExclusive: 50_000, unitPriceCents: 300 },
+  { startSeat: 50_000, endSeatExclusive: 150_000, unitPriceCents: 500 },
+  { startSeat: 150_000, endSeatExclusive: 250_000, unitPriceCents: 1_000 },
+  { startSeat: 250_000, endSeatExclusive: 350_000, unitPriceCents: 2_000 },
+  { startSeat: 350_000, endSeatExclusive: 450_000, unitPriceCents: 3_000 },
+  { startSeat: 450_000, endSeatExclusive: 500_000, unitPriceCents: 5_000 },
 ] as const;
-
-export const POST_200K_SEAT_PRICING = {
-  startsAtSeats: 200_000,
-  hardMaxSeats: 500_000,
-  blockSizeSeats: 25_000,
-  baseUnitPriceCents: 100_000,
-  growthNumerator: 110,
-  growthDenominator: 100,
-} as const;
 
 export const SPEED_LEVELS = [
   { level: 1, microTicketsPerSeatPerHour: 2_000, upgradeCostCents: 0 },
@@ -91,10 +78,10 @@ export const STORAGE_LEVELS = [
 
 export const MARKET_CONFIG = {
   tickMs: 5_000,
-  btcSensitivity: 15,
-  initialTicketPriceMicrodollars: 4_000_000,
-  minTicketPriceMicrodollars: 200_000,
-  maxTicketPriceMicrodollars: 10_000_000,
+  btcSensitivity: 300,
+  initialTicketPriceMicrodollars: 8_000_000,
+  minTicketPriceMicrodollars: 100_000,
+  maxTicketPriceMicrodollars: 20_000_000,
   historyRetentionMs: 24 * 60 * 60 * 1_000,
   primaryFeed: "binance-btcusdt",
   backupFeed: "coinbase-btc-usd",
@@ -103,4 +90,4 @@ export const MARKET_CONFIG = {
 export const MAX_STADIUM_LEVEL = STADIUM_LEVELS.at(-1)!.level;
 export const MAX_SPEED_LEVEL = SPEED_LEVELS.at(-1)!.level;
 export const MAX_STORAGE_LEVEL = STORAGE_LEVELS.at(-1)!.level;
-export const MAX_STADIUM_SEATS = POST_200K_SEAT_PRICING.hardMaxSeats;
+export const MAX_STADIUM_SEATS = SEAT_PRICE_BANDS.at(-1)!.endSeatExclusive;
