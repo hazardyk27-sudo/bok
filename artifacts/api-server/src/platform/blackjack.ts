@@ -19,11 +19,16 @@ import {
   type BlackjackRealtimeIdentity,
   type BlackjackSnapshotDatabase,
 } from "../blackjack";
-import { SESSION_COOKIE, getSessionCookieCandidates } from "./session";
+import {
+  BLACKJACK_REALTIME_SESSION_COOKIE,
+  BLACKJACK_REALTIME_SESSION_COOKIE_MAX_AGE_MS,
+  BLACKJACK_REALTIME_SESSION_COOKIE_PATH,
+  resolveBlackjackRealtimeSessionId,
+} from "../blackjack/realtimeIdentity";
+import { SESSION_COOKIE, isValidSessionId } from "./session";
 import { INITIAL_SHARED_BALANCE_CENTS } from "./wallet";
 
 export const BLACKJACK_MAIN_TABLE_ID = "blackjack-main-table" as const;
-const SESSION_PATTERN = /^[a-f0-9-]{20,80}$/i;
 
 type Queryable = Readonly<{
   query: (
@@ -60,19 +65,9 @@ function clientQueryable(client: PoolClient): Queryable {
   });
 }
 
-function validSessionId(value: string | undefined): value is string {
-  return typeof value === "string" && SESSION_PATTERN.test(value);
-}
-
-function readRequestSessionId(request: IncomingMessage): string | null {
-  const candidates = getSessionCookieCandidates(request.headers.cookie);
-  const sessionId = candidates.at(-1);
-  return validSessionId(sessionId) ? sessionId : null;
-}
-
 function getOrCreateHttpSessionId(req: Request, res: Response): string {
   const existing = req.cookies?.[SESSION_COOKIE] as string | undefined;
-  if (validSessionId(existing)) return existing;
+  if (isValidSessionId(existing)) return existing;
 
   const sessionId = randomUUID();
   res.cookie(SESSION_COOKIE, sessionId, {
@@ -83,6 +78,19 @@ function getOrCreateHttpSessionId(req: Request, res: Response): string {
     maxAge: 1000 * 60 * 60 * 24 * 365,
   });
   return sessionId;
+}
+
+function setBlackjackRealtimeSessionBinding(
+  res: Response,
+  sessionId: string,
+): void {
+  res.cookie(BLACKJACK_REALTIME_SESSION_COOKIE, sessionId, {
+    httpOnly: true,
+    sameSite: "lax",
+    secure: process.env.NODE_ENV === "production",
+    path: BLACKJACK_REALTIME_SESSION_COOKIE_PATH,
+    maxAge: BLACKJACK_REALTIME_SESSION_COOKIE_MAX_AGE_MS,
+  });
 }
 
 function parseSharedWalletBalanceCents(value: unknown): number {
@@ -131,7 +139,9 @@ export async function loadBlackjackAvailableBalanceCents(
 export function resolveBlackjackRealtimeIdentity(
   request: IncomingMessage,
 ): BlackjackRealtimeIdentity | null {
-  const sessionId = readRequestSessionId(request);
+  const sessionId = resolveBlackjackRealtimeSessionId(
+    request.headers.cookie,
+  );
   if (sessionId === null) return null;
 
   return Object.freeze({
@@ -336,6 +346,7 @@ blackjackPlatformRouter.get(
         return;
       }
 
+      setBlackjackRealtimeSessionBinding(res, sessionId);
       res.json({
         ready: true,
         status: afterBootstrap.status,
