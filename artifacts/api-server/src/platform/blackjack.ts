@@ -2,6 +2,7 @@ import { randomUUID } from "node:crypto";
 import type { IncomingMessage, Server } from "node:http";
 import { Router, type IRouter, type Request, type Response } from "express";
 import { pool, type PoolClient } from "@workspace/db";
+import { authRepository } from "../auth/repository";
 import {
   BlackjackJournalRepository,
   BlackjackSnapshotRepository,
@@ -29,6 +30,7 @@ import { SESSION_COOKIE, isValidSessionId } from "./session";
 import { INITIAL_SHARED_BALANCE_CENTS } from "./wallet";
 
 export const BLACKJACK_MAIN_TABLE_ID = "blackjack-main-table" as const;
+export const BLACKJACK_AUTH_COOKIE = "fy_auth" as const;
 
 type Queryable = Readonly<{
   query: (
@@ -36,6 +38,10 @@ type Queryable = Readonly<{
     params?: readonly unknown[],
   ) => Promise<Readonly<{ rows: readonly Record<string, unknown>[] }>>;
 }>;
+
+type BlackjackAuthWalletSessionLookup = (
+  authToken: string,
+) => Promise<string | null>;
 
 function databaseFrom(queryable: Queryable): BlackjackSnapshotDatabase {
   return Object.freeze({
@@ -93,6 +99,55 @@ function setBlackjackRealtimeSessionBinding(
   });
 }
 
+function getCookieValuesByName(
+  cookieHeader: string | undefined,
+  cookieName: string,
+): string[] {
+  if (!cookieHeader || !cookieName) return [];
+
+  const values: string[] = [];
+  const seen = new Set<string>();
+
+  for (const segment of cookieHeader.split(";")) {
+    const trimmed = segment.trim();
+    const equalsAt = trimmed.indexOf("=");
+    if (equalsAt <= 0 || trimmed.slice(0, equalsAt) !== cookieName) {
+      continue;
+    }
+
+    const raw = trimmed.slice(equalsAt + 1);
+    let value = raw;
+    try {
+      value = decodeURIComponent(raw);
+    } catch {
+      // Keep the raw cookie value. Auth verification will reject it if invalid.
+    }
+
+    if (!value || seen.has(value)) continue;
+    seen.add(value);
+    values.push(value);
+  }
+
+  return values;
+}
+
+function buildBlackjackRealtimeIdentity(
+  sessionId: string,
+): BlackjackRealtimeIdentity {
+  return Object.freeze({
+    userId: sessionId,
+    playerId: "blackjack-player:" + sessionId,
+    sessionId,
+  });
+}
+
+async function lookupBlackjackAuthWalletSessionId(
+  authToken: string,
+): Promise<string | null> {
+  const session = await authRepository.getUserBySessionToken(authToken);
+  return session?.walletSessionId ?? null;
+}
+
 function parseSharedWalletBalanceCents(value: unknown): number {
   const text =
     typeof value === "bigint"
@@ -142,13 +197,53 @@ export function resolveBlackjackRealtimeIdentity(
   const sessionId = resolveBlackjackRealtimeSessionId(
     request.headers.cookie,
   );
-  if (sessionId === null) return null;
+  return sessionId === null
+    ? null
+    : buildBlackjackRealtimeIdentity(sessionId);
+}
 
-  return Object.freeze({
-    userId: sessionId,
-    playerId: "blackjack-player:" + sessionId,
-    sessionId,
-  });
+export async function resolveBlackjackRealtimeIdentityWithAuth(
+  request: IncomingMessage,
+  lookupAuthWalletSessionId: BlackjackAuthWalletSessionLookup =
+    lookupBlackjackAuthWalletSessionId,
+): Promise<BlackjackRealtimeIdentity | null> {
+  const authTokens = getCookieValuesByName(
+    request.headers.cookie,
+    BLACKJACK_AUTH_COOKIE,
+  );
+
+  if (authTokens.length > 0) {
+    const authenticatedWalletSessions = new Set<string>();
+
+    for (const authToken of authTokens) {
+      let walletSessionId: string | null;
+      try {
+        walletSessionId = await lookupAuthWalletSessionId(authToken);
+      } catch {
+        throw new Error("BLACKJACK_AUTH_SESSION_LOOKUP_FAILED");
+      }
+
+      if (walletSessionId === null) continue;
+      if (!isValidSessionId(walletSessionId)) {
+        throw new Error("BLACKJACK_AUTH_WALLET_SESSION_INVALID");
+      }
+      authenticatedWalletSessions.add(walletSessionId);
+    }
+
+    if (authenticatedWalletSessions.size > 1) {
+      return null;
+    }
+
+    const authenticatedSessionId =
+      authenticatedWalletSessions.values().next().value as
+        | string
+        | undefined;
+    if (authenticatedSessionId !== undefined) {
+      return buildBlackjackRealtimeIdentity(authenticatedSessionId);
+    }
+  }
+
+  return resolveBlackjackRealtimeIdentity(request);
 }
 
 export async function loadBlackjackSeatAccount(
@@ -385,7 +480,7 @@ export async function attachBlackjackPlatformRuntime(
     journalRepository,
     recoveredAtMs: Date.now(),
     nowMs: Date.now,
-    resolveIdentity: resolveBlackjackRealtimeIdentity,
+    resolveIdentity: resolveBlackjackRealtimeIdentityWithAuth,
     loadSeatAccount: loadBlackjackSeatAccount,
     loadAvailableBalanceCents: loadBlackjackAvailableBalanceCents,
     createInitialShoe: createFreshShoe,
