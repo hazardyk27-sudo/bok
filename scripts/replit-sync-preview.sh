@@ -5,6 +5,8 @@ REMOTE="${1:-github}"
 EXPECTED_PREVIEW_SHA="${2:-}"
 BRANCH="integration/replit-preview"
 MAX_ATTEMPTS=3
+API_RUNTIME_URL="http://127.0.0.1:8080/api/readyz"
+API_RUNTIME_LOG="${TMPDIR:-/tmp}/oyun-replit-api-server.log"
 
 # Replit is a read-only consumer. Install local-only Git guardrails before
 # every sync; they do not alter tracked files.
@@ -97,6 +99,31 @@ recover_safe_local_commits() {
   updated="true"
 }
 
+api_runtime_ready() {
+  node -e "fetch('${API_RUNTIME_URL}',{signal:AbortSignal.timeout(2000)}).then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"
+}
+
+wait_for_api_runtime() {
+  local checks="$1"
+  local delay="$2"
+  local check
+  for check in $(seq 1 "$checks"); do
+    if api_runtime_ready; then
+      return 0
+    fi
+    sleep "$delay"
+  done
+  return 1
+}
+
+start_replit_api_runtime_fallback() {
+  echo "API runtime is offline; starting Replit API fallback on 127.0.0.1:8080..."
+  : > "$API_RUNTIME_LOG"
+  nohup env PORT=8080 pnpm --dir artifacts/api-server run dev \
+    >"$API_RUNTIME_LOG" 2>&1 </dev/null &
+  echo "API_FALLBACK_PID: $!"
+}
+
 for attempt in $(seq 1 "$MAX_ATTEMPTS"); do
   echo "SYNC ATTEMPT $attempt/$MAX_ATTEMPTS"
   echo "Fetching $REMOTE/$BRANCH..."
@@ -155,24 +182,34 @@ if [[ "$updated" == "true" && -f "scripts/post-merge.sh" ]]; then
 fi
 
 # Git sync alone does not guarantee already-running Replit artifact processes
-# reload changed backend/config files. Touch watched files without changing
-# their contents so Node/Vite development watchers reload onto the new HEAD.
+# reload changed backend/config files. Touch watched files so healthy watchers
+# reload onto the new HEAD. If the API artifact is not running at all, start a
+# detached fallback dev process instead of waiting forever for a watcher that
+# does not exist.
 if [[ -n "${REPL_ID:-}" ]]; then
   touch artifacts/api-server/src/index.ts
   touch artifacts/cascade-8/vite.config.ts
 
   echo "Waiting for API runtime readiness on 127.0.0.1:8080..."
   api_ready="false"
-  for attempt in $(seq 1 80); do
-    if node -e "fetch('http://127.0.0.1:8080/api/readyz',{signal:AbortSignal.timeout(2000)}).then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"; then
+
+  # Give an existing Replit artifact/watch process a short chance to reload.
+  if wait_for_api_runtime 20 0.25; then
+    api_ready="true"
+  else
+    start_replit_api_runtime_fallback
+    if wait_for_api_runtime 120 0.25; then
       api_ready="true"
-      break
     fi
-    sleep 0.25
-  done
+  fi
 
   if [[ "$api_ready" != "true" ]]; then
     echo "ABORT: API runtime did not become ready on 127.0.0.1:8080 after sync."
+    if [[ -f "$API_RUNTIME_LOG" ]]; then
+      echo "API_RUNTIME_LOG_BEGIN"
+      tail -n 80 "$API_RUNTIME_LOG" || true
+      echo "API_RUNTIME_LOG_END"
+    fi
     exit 11
   fi
 
