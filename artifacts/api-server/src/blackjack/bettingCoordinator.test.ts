@@ -146,3 +146,22 @@ describe("blackjack coordinated betting actions",()=>{
     expect(game.getTable().stateVersion).toBe(0);
   });
 });
+
+describe("blackjack empty betting rollover state",()=>{
+  it("drops expired betting positions when an unready round reopens",async()=>{
+    const game=coordinator();
+    await game.submit(action("PLACE_BET","bet-expire",0));
+
+    expect(game.getAccount("player-1").wallet.reservedBalanceCents).toBe(100_000);
+    expect(game.getBettingPosition("player-1")?.roundId).toBe("round-bet");
+
+    const closed=await game.closeBettingWindow(10_000);
+
+    expect(closed.replayed).toBe(false);
+    expect(game.getTable().phase).toBe("BETTING");
+    expect(game.getTable().round?.roundId).toBe("main-blackjack:round-2");
+    expect(game.getBettingPosition("player-1")).toBeNull();
+    expect(game.getBettingPositions()).toEqual([]);
+    expect(game.getAccount("player-1").wallet.reservedBalanceCents).toBe(0);
+  });
+});

@@ -807,6 +807,11 @@ export class BlackjackPlayerActionCoordinator {
       for(const account of result.accounts){
         this.accounts.set(account.playerId,freezeAccount(account));
       }
+      // closeBlackjackBettingWindow returns the authoritative betting-position
+      // set after close/reopen. Replace the map instead of overlaying it,
+      // otherwise an expired position from the previous round survives and
+      // makes the next durable snapshot fail round-consistency validation.
+      this.bettingPositions.clear();
       for(const position of result.positions){
         this.bettingPositions.set(position.playerId,position);
       }
