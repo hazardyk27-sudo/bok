@@ -1,5 +1,5 @@
 import { createServer, type IncomingMessage } from "node:http";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it } from "vitest";
 import { WebSocket, type RawData } from "ws";
 import type { BlackjackPublicSnapshot } from "./publicSnapshot";
 import {
@@ -9,13 +9,14 @@ import {
 } from "./realtime";
 import {
   BLACKJACK_REALTIME_ACCESS_TTL_MS,
-  hashBlackjackRealtimeAccessToken,
   issueBlackjackRealtimeAccess,
   resolveBlackjackRealtimeAccess,
 } from "./realtimeAccess";
 
 const SESSION_ID="aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa";
-const TOKEN="bjrt_bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb";
+const SIGNING_SECRET="blackjack-test-signing-secret-that-is-long-enough-123456";
+const WRONG_SECRET="blackjack-test-signing-secret-that-is-wrong-654321";
+const NONCE="bbbbbbbbbbbbbbbbbbbbbbbb";
 
 function request(url:string,cookie?:string):IncomingMessage{
   return {
@@ -98,82 +99,70 @@ describe("blackjack realtime access token",()=>{
     client=undefined;
   });
 
-  it("persists a domain-separated token and resolves it without cookies",async()=>{
-    const persisted=new Map<string,string>();
-    const persist=vi.fn(async(input:{tokenHash:string;sessionId:string})=>{
-      persisted.set(input.tokenHash,input.sessionId);
-      return true;
-    });
-    const lookup=vi.fn(async(tokenHash:string)=>persisted.get(tokenHash) ?? null);
-
-    const issued=await issueBlackjackRealtimeAccess(SESSION_ID,{
+  it("resolves a signed token without reading auth or game cookies",()=>{
+    const issued=issueBlackjackRealtimeAccess(SESSION_ID,{
       nowMs:1_000,
-      createToken:()=>TOKEN,
-      persist,
+      signingSecret:SIGNING_SECRET,
+      createNonce:()=>NONCE,
     });
 
     expect(issued.expiresAtMs).toBe(1_000+BLACKJACK_REALTIME_ACCESS_TTL_MS);
-    expect(persist).toHaveBeenCalledWith(expect.objectContaining({
-      tokenHash:hashBlackjackRealtimeAccessToken(TOKEN),
-      sessionId:SESSION_ID,
-    }));
-
-    await expect(resolveBlackjackRealtimeAccess(
+    expect(resolveBlackjackRealtimeAccess(
       request(
-        `${BLACKJACK_WS_PATH}?access=${TOKEN}`,
+        `${BLACKJACK_WS_PATH}?access=${issued.token}`,
         "fy_auth=stale; game_session=wrong; blackjack_realtime_session=wrong",
       ),
-      {nowMs:1_001,lookup},
-    )).resolves.toEqual({
+      {nowMs:1_001,signingSecret:SIGNING_SECRET},
+    )).toEqual({
       userId:SESSION_ID,
       playerId:`blackjack-player:${SESSION_ID}`,
       sessionId:SESSION_ID,
     });
   });
 
-  it("survives issuer process loss because resolution uses the shared lookup",async()=>{
-    let storedHash="";
-    await issueBlackjackRealtimeAccess(SESSION_ID,{
-      createToken:()=>TOKEN,
-      persist:async(input)=>{
-        storedHash=input.tokenHash;
-        return true;
-      },
+  it("survives process replacement because validation has no memory state",()=>{
+    const issued=issueBlackjackRealtimeAccess(SESSION_ID,{
+      nowMs:10_000,
+      signingSecret:SIGNING_SECRET,
+      createNonce:()=>NONCE,
     });
 
-    const independentLookup=vi.fn(async(tokenHash:string)=>
-      tokenHash===storedHash ? SESSION_ID : null,
-    );
-
-    await expect(resolveBlackjackRealtimeAccess(
-      request(`${BLACKJACK_WS_PATH}?access=${TOKEN}`),
-      {lookup:independentLookup},
-    )).resolves.toMatchObject({sessionId:SESSION_ID});
+    expect(resolveBlackjackRealtimeAccess(
+      request(`${BLACKJACK_WS_PATH}?access=${issued.token}`),
+      {nowMs:10_100,signingSecret:SIGNING_SECRET},
+    )).toMatchObject({sessionId:SESSION_ID});
   });
 
-  it("rejects missing, malformed and unknown tokens",async()=>{
-    const lookup=vi.fn(async()=>null);
+  it("rejects tampered, wrong-key and expired tokens",()=>{
+    const issued=issueBlackjackRealtimeAccess(SESSION_ID,{
+      nowMs:20_000,
+      signingSecret:SIGNING_SECRET,
+      createNonce:()=>NONCE,
+    });
+    const tampered=issued.token.slice(0,-1)+(issued.token.endsWith("a")?"b":"a");
 
-    await expect(resolveBlackjackRealtimeAccess(
-      request(BLACKJACK_WS_PATH),
-      {lookup},
-    )).resolves.toBeNull();
-    await expect(resolveBlackjackRealtimeAccess(
-      request(`${BLACKJACK_WS_PATH}?access=not-a-blackjack-token`),
-      {lookup},
-    )).resolves.toBeNull();
-    await expect(resolveBlackjackRealtimeAccess(
-      request(`${BLACKJACK_WS_PATH}?access=${TOKEN}`),
-      {lookup},
-    )).resolves.toBeNull();
+    expect(resolveBlackjackRealtimeAccess(
+      request(`${BLACKJACK_WS_PATH}?access=${tampered}`),
+      {nowMs:20_001,signingSecret:SIGNING_SECRET},
+    )).toBeNull();
+    expect(resolveBlackjackRealtimeAccess(
+      request(`${BLACKJACK_WS_PATH}?access=${issued.token}`),
+      {nowMs:20_001,signingSecret:WRONG_SECRET},
+    )).toBeNull();
+    expect(resolveBlackjackRealtimeAccess(
+      request(`${BLACKJACK_WS_PATH}?access=${issued.token}`),
+      {
+        nowMs:20_000+BLACKJACK_REALTIME_ACCESS_TTL_MS+1,
+        signingSecret:SIGNING_SECRET,
+      },
+    )).toBeNull();
   });
 
-  it("opens a real websocket from shared access even with stale cookies",async()=>{
-    const lookup=vi.fn(async(tokenHash:string)=>
-      tokenHash===hashBlackjackRealtimeAccessToken(TOKEN)
-        ? SESSION_ID
-        : null,
-    );
+  it("opens a real websocket from the signed access token",async()=>{
+    const issued=issueBlackjackRealtimeAccess(SESSION_ID,{
+      signingSecret:SIGNING_SECRET,
+      createNonce:()=>NONCE,
+    });
     const tableSnapshot=snapshot();
     server=createServer();
     runtime=attachBlackjackWebSocket(
@@ -185,14 +174,14 @@ describe("blackjack realtime access token",()=>{
       {
         resolveIdentity:(incoming)=>resolveBlackjackRealtimeAccess(
           incoming,
-          {lookup},
+          {signingSecret:SIGNING_SECRET},
         ),
       },
     );
     const port=await listen(server);
 
     client=new WebSocket(
-      `ws://127.0.0.1:${port}${BLACKJACK_WS_PATH}?access=${TOKEN}`,
+      `ws://127.0.0.1:${port}${BLACKJACK_WS_PATH}?access=${issued.token}`,
       {
         headers:{
           Cookie:"fy_auth=stale; game_session=wrong; blackjack_realtime_session=wrong",
