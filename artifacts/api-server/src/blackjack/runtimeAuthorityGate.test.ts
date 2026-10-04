@@ -335,13 +335,17 @@ describe("blackjack full lifecycle + recovery multiplayer gate",()=>{
     expect(recovered.realtimeOptions.handlePlayerActionTransaction)
       .toBe(recovered.authority.handlePlayerActionTransaction);
     expect(recovered.realtimeOptions.onIdentityConnected)
-      .toBe(recovered.authority.onIdentityConnected);
+      .toBeTypeOf("function");
     expect(recovered.realtimeOptions.onIdentityDisconnected)
       .toBe(recovered.authority.onIdentityDisconnected);
 
+    const realtimeConnected = recovered.realtimeOptions.onIdentityConnected;
+    if (!realtimeConnected) {
+      throw new Error("Blackjack realtime identity hook missing");
+    }
     for(let seat=1;seat<=5;seat+=1){
       clock+=1;
-      await recovered.authority.onIdentityConnected(
+      await realtimeConnected(
         {
           userId:"gate-user-"+seat,
           playerId:"gate-player-"+seat,

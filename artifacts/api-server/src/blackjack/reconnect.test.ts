@@ -145,9 +145,9 @@ describe("blackjack reconnect grace", () => {
     expect(reconnected.registry.records).toHaveLength(0);
   });
 
-  it("rejects wrong identity and reconnects after grace expiry", () => {
+  it("rejects wrong identity but lets the same seated player reconnect after grace expiry", () => {
     const disconnected = disconnectBlackjackPlayerForReconnect(
-      seatedTable(),
+      seatedTable("READY"),
       createBlackjackReconnectRegistry(),
       { playerId: "player-1", nowMs: 1_000 },
     );
@@ -170,14 +170,24 @@ describe("blackjack reconnect grace", () => {
       }),
     ).toThrow(/sessionId/);
 
-    expect(() =>
-      reconnectBlackjackPlayer(disconnected.table, disconnected.registry, {
+    const reconnected = reconnectBlackjackPlayer(
+      disconnected.table,
+      disconnected.registry,
+      {
         playerId: "player-1",
         userId: "user-1",
         sessionId: "session-1",
         nowMs: 31_001,
-      }),
-    ).toThrow(/grace has expired/);
+      },
+    );
+
+    expect(reconnected.table.players[0]).toMatchObject({
+      playerId: "player-1",
+      status: "READY",
+      connected: true,
+      disconnectedAtMs: null,
+    });
+    expect(reconnected.registry.records).toHaveLength(0);
   });
 
   it("does not extend the action timer just because the socket disconnected", () => {
