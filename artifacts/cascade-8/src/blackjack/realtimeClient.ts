@@ -5,6 +5,12 @@ import {
 } from "./snapshotView";
 import { createBlackjackTableDomRenderer } from "./domRenderer";
 import {
+  BLACKJACK_PRESENTATION_EVENT_NAME,
+  createBlackjackPresentationQueue,
+  deriveBlackjackPresentationEvents,
+  type BlackjackPresentationEvent,
+} from "./presentationQueue";
+import {
   BLACKJACK_DEFAULT_TABLE_VIEW,
   type BlackjackTableViewModel,
 } from "./tableView";
@@ -40,6 +46,9 @@ export type BlackjackRealtimeViewBindingOptions = Readonly<{
   renderModel: (model: BlackjackTableViewModel) => void;
   getViewContext?: () => BlackjackSnapshotViewContext;
   nowMs?: () => number;
+  onPresentationEvents?: (
+    events: readonly BlackjackPresentationEvent[],
+  ) => void;
 }>;
 
 type BlackjackFullSnapshotEnvelope = Readonly<{
@@ -165,9 +174,27 @@ export function bindBlackjackRealtimeView(
     options.socket.send(JSON.stringify(request));
   };
 
-  const renderSnapshot=(snapshot: BlackjackPublicSnapshotViewSource): boolean => {
+  const publishPresentationTransition=(
+    previous: BlackjackPublicSnapshotViewSource | null,
+    next: BlackjackPublicSnapshotViewSource,
+  ): void => {
+    if(previous===null || options.onPresentationEvents===undefined) return;
+    try {
+      const events=deriveBlackjackPresentationEvents(previous,next);
+      if(events.length>0) options.onPresentationEvents(events);
+    } catch {
+      // Presentation is deliberately non-authoritative. Animation failures must
+      // never request a resync or poison the realtime state machine.
+    }
+  };
+
+  const renderSnapshot=(
+    snapshot: BlackjackPublicSnapshotViewSource,
+    emitPresentationEvents: boolean,
+  ): boolean => {
     try {
       const receivedAt=readClientNowMs();
+      const previousSnapshot=latestSnapshot;
       const model=buildBlackjackTableViewModelFromSnapshot(
         snapshot,
         options.getViewContext?.() ?? {},
@@ -180,6 +207,9 @@ export function bindBlackjackRealtimeView(
       latestSnapshot=snapshot;
       latestSnapshotReceivedAtClientMs=receivedAt;
       awaitingResync=false;
+      if(emitPresentationEvents){
+        publishPresentationTransition(previousSnapshot,snapshot);
+      }
       return true;
     } catch {
       requestResync();
@@ -211,7 +241,9 @@ export function bindBlackjackRealtimeView(
       return;
     }
 
-    renderSnapshot(envelope.snapshot);
+    // Full snapshots are recovery/baseline material. Never replay historical
+    // dealing animations when a player connects or resynchronizes.
+    renderSnapshot(envelope.snapshot,false);
   };
 
   const receive=(rawMessage: unknown): void => {
@@ -263,7 +295,7 @@ export function bindBlackjackRealtimeView(
       return;
     }
 
-    renderSnapshot(snapshot);
+    renderSnapshot(snapshot,true);
   };
 
   const onMessage=(event: MessageEvent<unknown>) => {
@@ -296,11 +328,33 @@ export function bindBlackjackRealtimeElement(
     app,
     BLACKJACK_DEFAULT_TABLE_VIEW,
   );
+  const presentationQueue=createBlackjackPresentationQueue({
+    play:(event)=>{
+      if(
+        typeof CustomEvent!=="undefined" &&
+        typeof app.dispatchEvent==="function"
+      ){
+        app.dispatchEvent(new CustomEvent<BlackjackPresentationEvent>(
+          BLACKJACK_PRESENTATION_EVENT_NAME,
+          { detail:event },
+        ));
+      }
+    },
+  });
 
-  return bindBlackjackRealtimeView({
+  const controller=bindBlackjackRealtimeView({
     socket,
     getViewContext,
     nowMs,
     renderModel:renderer.render,
+    onPresentationEvents:(events)=>{ presentationQueue.enqueue(events); },
+  });
+
+  return Object.freeze({
+    ...controller,
+    detach:()=>{
+      presentationQueue.clear();
+      controller.detach();
+    },
   });
 }
