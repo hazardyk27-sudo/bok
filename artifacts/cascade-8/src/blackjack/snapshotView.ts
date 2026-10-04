@@ -175,14 +175,16 @@ export function getBlackjackVisibleCardTotal(
 
 function formatCreditsFromCents(cents: number): string {
   assertSafeNonNegativeInteger("money cents", cents);
-  if (cents % 100 !== 0) {
-    throw new RangeError(
-      "Blackjack snapshot money must represent whole credit units",
-    );
+  if (cents === 0) return "0";
+
+  if (cents % 100 === 0) {
+    return formatBlackjackChipCredits(cents / 100);
   }
 
-  const credits = cents / 100;
-  return credits === 0 ? "0" : formatBlackjackChipCredits(credits);
+  return (cents / 100).toLocaleString("en-US", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  });
 }
 
 function formatPhaseLabel(phase: BlackjackViewPhase): string {
