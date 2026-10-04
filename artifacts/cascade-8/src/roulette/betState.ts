@@ -1,14 +1,13 @@
-export const ROULETTE_CHIP_VALUES = [
+export const ROULETTE_CHIP_VALUES: readonly number[] = [
   10,
   50,
   100,
   500,
   2_000,
   5_000,
-] as const;
+];
 
-export type RouletteChipValue =
-  (typeof ROULETTE_CHIP_VALUES)[number];
+export type RouletteChipValue = number;
 
 export type RouletteBetPlacement = {
   betId: string;
@@ -152,14 +151,15 @@ export function getRouletteBetTotals(
 export function expandRouletteBetPlacementsToChipValues(
   placements: readonly RouletteBetPlacement[],
 ): RouletteBetPlacement[] {
-  // 1 and 5 are retained only for replaying an in-flight wager created
-  // before the $10-minimum picker rollout. They are not selectable chips.
+  // New UI denominations come first. 25/5/1 remain replay-only so a wager
+  // created immediately before this rollout can still be reconstructed.
   const denominations = [
     5_000,
     2_000,
     500,
     100,
     50,
+    25,
     10,
     5,
     1,
@@ -239,15 +239,17 @@ export function compactRouletteBetPlacements(
   });
 }
 
+// Kept for the legacy placed-chip runtime palette. The Part 3 visual layer
+// recolors the final chip by total wager range, so this remains replay-safe.
 export function getRouletteDisplayChipValue(
   amount: number,
 ): RouletteChipValue {
-  if (amount >= 5_000) return 5_000;
-  if (amount >= 2_000) return 2_000;
   if (amount >= 500) return 500;
   if (amount >= 100) return 100;
-  if (amount >= 50) return 50;
-  return 10;
+  if (amount >= 25) return 25;
+  if (amount >= 10) return 10;
+  if (amount >= 5) return 5;
+  return 1;
 }
 
 export function getRouletteLastChipByBet(
@@ -275,7 +277,5 @@ export function getRouletteTotalStake(
 export function isRouletteChipValue(
   value: number,
 ): value is RouletteChipValue {
-  return (
-    ROULETTE_CHIP_VALUES as readonly number[]
-  ).includes(value);
+  return ROULETTE_CHIP_VALUES.includes(value);
 }
