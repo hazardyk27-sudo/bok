@@ -161,10 +161,7 @@ export function getRouletteQueuedBetExpectedRevision(
     !Number.isSafeInteger(
       serverRevision,
     ) ||
-    serverRevision < 0 ||
-    !Number.isSafeInteger(
-      expectedRevisionGuard(syncInFlight),
-    )
+    serverRevision < 0
   ) {
     return 0;
   }
@@ -177,10 +174,4 @@ export function getRouletteQueuedBetExpectedRevision(
         : 0
     )
   );
-}
-
-function expectedRevisionGuard(
-  syncInFlight: boolean,
-) {
-  return syncInFlight ? 1 : 0;
 }
