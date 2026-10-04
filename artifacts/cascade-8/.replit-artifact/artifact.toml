@@ -12,7 +12,7 @@ paths = [ "/" ]
 localPort = 20003
 
 [services.development]
-run = "pnpm --filter @workspace/cascade-8 run dev"
+run = "pnpm run dev"
 
 [services.production]
 build = [ "pnpm", "--filter", "@workspace/cascade-8", "run", "build" ]
