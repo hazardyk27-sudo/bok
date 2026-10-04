@@ -79,7 +79,7 @@ export const STORAGE_LEVELS = [
 export const MARKET_CONFIG = {
   tickMs: 5_000,
   btcSensitivity: 20,
-  initialTicketPriceMicrodollars: 8_000_000,
+  initialTicketPriceMicrodollars: 7_000_000,
   minTicketPriceMicrodollars: 100_000,
   maxTicketPriceMicrodollars: 20_000_000,
   historyRetentionMs: 24 * 60 * 60 * 1_000,
