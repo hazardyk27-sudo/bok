@@ -367,7 +367,8 @@ blackjackPlatformRouter.get(
 
     try {
       const sessionId = getOrCreateHttpSessionId(req, res);
-      await ensureSharedWallet(sessionId);
+      const availableBalanceCents = await ensureSharedWallet(sessionId);
+      const identity = buildBlackjackRealtimeIdentity(sessionId);
 
       const afterBootstrap = getBlackjackRuntimeBootstrapState();
       if (!afterBootstrap.ready) {
@@ -387,6 +388,8 @@ blackjackPlatformRouter.get(
         status: afterBootstrap.status,
         realtimeAccessToken: access.token,
         realtimeAccessExpiresAtMs: access.expiresAtMs,
+        playerId: identity.playerId,
+        availableBalanceCents,
       });
     } catch {
       res.status(503).json({
