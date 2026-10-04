@@ -22,6 +22,7 @@ describe("Idle runtime Stadium schema bootstrap", () => {
     for (const table of [
       "idle_stadium_states",
       "idle_ticket_market_state",
+      "idle_ticket_market_price_epochs",
       "idle_ticket_market_ticks",
       "idle_stadium_action_receipts",
     ]) {
@@ -41,6 +42,30 @@ describe("Idle runtime Stadium schema bootstrap", () => {
     );
     expect(schemaSource).not.toContain(
       "CREATE TABLE IF NOT EXISTS roulette_",
+    );
+  });
+
+  it("applies each ticket-price epoch once and preserves later restarts", () => {
+    expect(schemaSource).toContain(
+      "WITH newly_applied_epoch AS",
+    );
+    expect(schemaSource).toContain(
+      "INSERT INTO idle_ticket_market_price_epochs (epoch)",
+    );
+    expect(schemaSource).toContain(
+      "ON CONFLICT (epoch) DO NOTHING",
+    );
+    expect(schemaSource).toContain(
+      "MARKET_CONFIG.priceEpoch",
+    );
+    expect(schemaSource).toContain(
+      "MARKET_CONFIG.initialTicketPriceMicrodollars",
+    );
+    expect(schemaSource).toContain(
+      "UPDATE idle_ticket_market_state",
+    );
+    expect(schemaSource).toContain(
+      "AND EXISTS (SELECT 1 FROM newly_applied_epoch)",
     );
   });
 
