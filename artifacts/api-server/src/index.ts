@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import { createServer } from "node:http";
 import {
   assertDatabaseCutoverReady,
@@ -49,6 +50,74 @@ logger.info(
 );
 
 const server = createServer(app);
+const BLACKJACK_WS_DIAGNOSTIC_PATH = "/api/blackjack/ws";
+
+function getBlackjackWsDiagnosticIdentity(requestUrl: string | undefined): {
+  path: string | null;
+  hasAccessToken: boolean;
+  accessFingerprint: string | null;
+} {
+  try {
+    const url = new URL(requestUrl ?? "/", "http://blackjack.local");
+    const access = url.searchParams.get("access");
+    return {
+      path: url.pathname,
+      hasAccessToken: access !== null && access.length > 0,
+      accessFingerprint:
+        access === null || access.length === 0
+          ? null
+          : createHash("sha256").update(access).digest("hex").slice(0, 12),
+    };
+  } catch {
+    return {
+      path: null,
+      hasAccessToken: false,
+      accessFingerprint: null,
+    };
+  }
+}
+
+server.on("upgrade", (request, socket) => {
+  const diagnostic = getBlackjackWsDiagnosticIdentity(request.url);
+  if (diagnostic.path !== BLACKJACK_WS_DIAGNOSTIC_PATH) return;
+
+  const openedAtMs = Date.now();
+  logger.info(
+    {
+      event: "BLACKJACK_WS_UPGRADE_RECEIVED",
+      pid: process.pid,
+      hasAccessToken: diagnostic.hasAccessToken,
+      accessFingerprint: diagnostic.accessFingerprint,
+    },
+    "Blackjack WebSocket upgrade reached API server",
+  );
+
+  socket.once("error", (error) => {
+    logger.warn(
+      {
+        event: "BLACKJACK_WS_TCP_ERROR",
+        pid: process.pid,
+        accessFingerprint: diagnostic.accessFingerprint,
+        err: error,
+      },
+      "Blackjack WebSocket TCP transport error",
+    );
+  });
+
+  socket.once("close", (hadError) => {
+    logger.info(
+      {
+        event: "BLACKJACK_WS_TCP_CLOSED",
+        pid: process.pid,
+        accessFingerprint: diagnostic.accessFingerprint,
+        hadError,
+        lifetimeMs: Date.now() - openedAtMs,
+      },
+      "Blackjack WebSocket TCP transport closed",
+    );
+  });
+});
+
 let blackjackRuntime: Awaited<
   ReturnType<typeof attachBlackjackPlatformRuntime>
 > | null = null;
@@ -163,6 +232,70 @@ const startBlackjackRuntime = async (): Promise<void> => {
       markBlackjackRuntimeStopped();
       return;
     }
+
+    runtime.realtime.webSocketServer.on("connection", (socket, request) => {
+      const diagnostic = getBlackjackWsDiagnosticIdentity(request.url);
+      const connectedAtMs = Date.now();
+
+      logger.info(
+        {
+          event: "BLACKJACK_WS_CONNECTION_ACCEPTED",
+          pid: process.pid,
+          attempt,
+          hasAccessToken: diagnostic.hasAccessToken,
+          accessFingerprint: diagnostic.accessFingerprint,
+        },
+        "Blackjack WebSocket connection accepted by ws server",
+      );
+
+      socket.on("error", (error) => {
+        logger.warn(
+          {
+            event: "BLACKJACK_WS_SOCKET_ERROR",
+            pid: process.pid,
+            attempt,
+            accessFingerprint: diagnostic.accessFingerprint,
+            err: error,
+          },
+          "Blackjack WebSocket socket error",
+        );
+      });
+
+      socket.on("close", (code, reason) => {
+        logger.info(
+          {
+            event: "BLACKJACK_WS_SOCKET_CLOSED",
+            pid: process.pid,
+            attempt,
+            accessFingerprint: diagnostic.accessFingerprint,
+            closeCode: code,
+            closeReason: reason.toString(),
+            lifetimeMs: Date.now() - connectedAtMs,
+          },
+          "Blackjack WebSocket socket closed",
+        );
+      });
+
+      for (const delayMs of [250, 2_000, 10_000]) {
+        const handle = setTimeout(() => {
+          logger.info(
+            {
+              event: "BLACKJACK_WS_CONNECTION_STATE",
+              pid: process.pid,
+              attempt,
+              accessFingerprint: diagnostic.accessFingerprint,
+              ageMs: delayMs,
+              socketReadyState: socket.readyState,
+              connectionCount: runtime.realtime.connectionCount(),
+              authenticatedConnectionCount:
+                runtime.realtime.authenticatedConnectionCount(),
+            },
+            "Blackjack WebSocket connection diagnostic state",
+          );
+        }, delayMs);
+        handle.unref?.();
+      }
+    });
 
     blackjackRuntime = runtime;
 
