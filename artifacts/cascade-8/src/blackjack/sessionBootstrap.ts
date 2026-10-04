@@ -28,6 +28,7 @@ export type BlackjackSessionBootstrapOptions=Readonly<{
   fetchImpl?:FetchLike;
   endpoint?:string;
   maxAttempts?:number;
+  retryUntilReady?:boolean;
   attemptTimeoutMs?:number;
   retryDelayMs?:number;
   delay?:(ms:number)=>Promise<void>;
@@ -56,6 +57,8 @@ export async function waitForBlackjackSession(
     options.maxAttempts ?? BLACKJACK_SESSION_MAX_ATTEMPTS,
     "maxAttempts",
   );
+  const retryUntilReady=
+    options.retryUntilReady ?? (options.maxAttempts===undefined);
   const attemptTimeoutMs=positiveInteger(
     options.attemptTimeoutMs ?? BLACKJACK_SESSION_ATTEMPT_TIMEOUT_MS,
     "attemptTimeoutMs",
@@ -70,7 +73,11 @@ export async function waitForBlackjackSession(
 
   let lastError:unknown=null;
 
-  for(let attempt=1;attempt<=maxAttempts;attempt+=1){
+  for(
+    let attempt=1;
+    retryUntilReady || attempt<=maxAttempts;
+    attempt+=1
+  ){
     const controller=new AbortController();
     const timeout=setTimeout(()=>controller.abort(),attemptTimeoutMs);
 
@@ -112,7 +119,10 @@ export async function waitForBlackjackSession(
       clearTimeout(timeout);
     }
 
-    if(attempt<maxAttempts && retryDelayMs>0){
+    if(
+      (retryUntilReady || attempt<maxAttempts) &&
+      retryDelayMs>0
+    ){
       await delay(retryDelayMs);
     }
   }
