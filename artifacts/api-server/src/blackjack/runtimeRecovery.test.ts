@@ -128,13 +128,13 @@ describe("blackjack recovered scheduled runtime",()=>{
     expect(runtime).not.toBeNull();
     expect(savedPhases).toEqual([
       "BETTING",
-      "BETTING_LOCKED",
+      "BETTING",
     ]);
     expect(savedVersions).toEqual([5,6]);
     expect(stored.eventSequence).toBe(4);
-    expect(stored.payload.table.phase).toBe("BETTING_LOCKED");
+    expect(stored.payload.table.phase).toBe("BETTING");
     expect(runtime?.coordinator.getTable().phase)
-      .toBe("BETTING_LOCKED");
+      .toBe("BETTING");
     expect(runtime?.scheduler.completedTickCount()).toBe(1);
     expect(runtime?.scheduler.lastResult()?.status)
       .toBe("BETTING_CLOSED_EMPTY");

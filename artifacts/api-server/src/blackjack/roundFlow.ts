@@ -96,6 +96,97 @@ function currentLockedParticipants(
   );
 }
 
+function reopenEmptyBlackjackBettingWindow(input: {
+  table: BlackjackTable;
+  accounts: readonly BlackjackRoundFlowAccount[];
+  positions: readonly BlackjackBettingPosition[];
+  nowMs: number;
+}): BlackjackBettingWindowCloseResult {
+  const round=input.table.round;
+  if(
+    round===null ||
+    (round.phase!=="BETTING" && round.phase!=="BETTING_LOCKED") ||
+    round.bettingClosesAtMs===null
+  ){
+    throw new Error(
+      "Blackjack empty betting recovery requires a closed betting round",
+    );
+  }
+
+  const bettingWindowMs=round.bettingClosesAtMs-round.startedAtMs;
+  if(!Number.isSafeInteger(bettingWindowMs) || bettingWindowMs<=0){
+    throw new RangeError(
+      "Blackjack empty betting recovery window is invalid",
+    );
+  }
+  const nextRoundNumber=round.roundNumber+1;
+  if(!Number.isSafeInteger(nextRoundNumber) || nextRoundNumber<1){
+    throw new RangeError(
+      "Blackjack empty betting recovery roundNumber cannot advance safely",
+    );
+  }
+  const bettingClosesAtMs=input.nowMs+bettingWindowMs;
+  if(!Number.isSafeInteger(bettingClosesAtMs)){
+    throw new RangeError(
+      "Blackjack empty betting recovery deadline exceeds safe integer range",
+    );
+  }
+
+  const reopenedRound=Object.freeze({
+    ...round,
+    roundId:input.table.tableId+":round-"+nextRoundNumber,
+    roundNumber:nextRoundNumber,
+    phase:"BETTING" as const,
+    activeSeatOrder:Object.freeze([]),
+    hands:Object.freeze([]),
+    dealer:Object.freeze({
+      cards:Object.freeze([]),
+      holeCardRevealed:false,
+    }),
+    currentTurn:null,
+    startedAtMs:input.nowMs,
+    bettingClosesAtMs,
+    finishedAtMs:null,
+  });
+  const players=Object.freeze(
+    input.table.players.map((player): BlackjackPlayer =>
+      player.status==="DISCONNECTED"
+        ? player
+        : Object.freeze({
+            ...player,
+            status:"BETTING" as const,
+            handIds:Object.freeze([]),
+          }),
+    ),
+  );
+  const reopened=commitBlackjackServerEvent(
+    Object.freeze({
+      ...input.table,
+      phase:"BETTING" as const,
+      round:reopenedRound,
+      players,
+      stateVersion:nextStateVersion(input.table.stateVersion),
+    }),
+    {
+      type:"ROUND_PHASE_CHANGED",
+      actionId:null,
+      createdAtMs:input.nowMs,
+    },
+  ).table;
+
+  return Object.freeze({
+    table:reopened,
+    accounts:Object.freeze([...input.accounts]),
+    positions:Object.freeze(
+      input.positions.filter(
+        (position)=>position.roundId!==round.roundId,
+      ),
+    ),
+    participants:Object.freeze([]),
+    replayed:false,
+  });
+}
+
 export function closeBlackjackBettingWindow(input: {
   table: BlackjackTable;
   accounts: readonly BlackjackRoundFlowAccount[];
@@ -113,11 +204,23 @@ export function closeBlackjackBettingWindow(input: {
     input.table.phase === "BETTING_LOCKED" &&
     round.phase === "BETTING_LOCKED"
   ) {
+    const participants=currentLockedParticipants(
+      round.roundId,
+      input.positions,
+    );
+    if(participants.length===0){
+      return reopenEmptyBlackjackBettingWindow({
+        table:input.table,
+        accounts:input.accounts,
+        positions:input.positions,
+        nowMs:input.nowMs,
+      });
+    }
     return Object.freeze({
       table:input.table,
       accounts:Object.freeze([...input.accounts]),
       positions:Object.freeze([...input.positions]),
-      participants:currentLockedParticipants(round.roundId,input.positions),
+      participants,
       replayed:true,
     });
   }
@@ -194,6 +297,19 @@ export function closeBlackjackBettingWindow(input: {
       }),
     );
     nextPositions.push(expired.position);
+  }
+
+  if(readyPlayerIds.size===0){
+    return reopenEmptyBlackjackBettingWindow({
+      table:input.table,
+      accounts:Object.freeze(
+        input.accounts.map((account)=>
+          accountsByPlayer.get(account.playerId) ?? account,
+        ),
+      ),
+      positions:Object.freeze([...nextPositions]),
+      nowMs:input.nowMs,
+    });
   }
 
   const players=Object.freeze(
