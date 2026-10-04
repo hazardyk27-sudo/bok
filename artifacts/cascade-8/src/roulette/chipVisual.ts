@@ -155,6 +155,56 @@ function applyChipVisualState(
   return true;
 }
 
+function setImportantStyle(
+  element: HTMLElement,
+  property: string,
+  value: string,
+) {
+  element.style.setProperty(property, value, "important");
+}
+
+function anchorPlacedChip(
+  element: HTMLElement,
+) {
+  const cell = element.parentElement;
+  if (!cell) return;
+
+  setImportantStyle(element, "position", "absolute");
+  setImportantStyle(element, "z-index", "6");
+  setImportantStyle(element, "margin", "0");
+
+  if (
+    cell.matches(
+      ".roulette-number-cell, .roulette-zero-cell",
+    )
+  ) {
+    element.dataset.chipAnchor = "straight-corner";
+    setImportantStyle(element, "left", "auto");
+    setImportantStyle(element, "top", "auto");
+    setImportantStyle(element, "right", "4px");
+    setImportantStyle(element, "bottom", "4px");
+    setImportantStyle(element, "transform", "none");
+    return;
+  }
+
+  if (
+    cell.matches(
+      ".roulette-column-cell, .roulette-dozen-cell, .roulette-outside-cell",
+    )
+  ) {
+    element.dataset.chipAnchor = "center";
+    setImportantStyle(element, "left", "50%");
+    setImportantStyle(element, "top", "50%");
+    setImportantStyle(element, "right", "auto");
+    setImportantStyle(element, "bottom", "auto");
+    setImportantStyle(
+      element,
+      "transform",
+      "translate(-50%, -50%)",
+    );
+  }
+}
+
 function decorateChipElement(
   element: HTMLElement,
   amount: number,
@@ -168,6 +218,7 @@ function decorateChipElement(
     element.dataset.stackDepth = String(
       getRouletteChipStackDepth(amount),
     );
+    anchorPlacedChip(element);
     return;
   }
 
