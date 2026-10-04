@@ -8,6 +8,7 @@ import {
   getRouletteGlobalBettingSecondsRemaining,
   getRouletteGlobalClientPhase,
   getRouletteGlobalSpinElapsedMs,
+  getRouletteGlobalVerificationSecondsRemaining,
   getRouletteQueuedBetExpectedRevision,
   getRouletteStateSyncDelay,
   ROULETTE_STATE_RETRY_INTERVAL_MS,
@@ -25,9 +26,9 @@ const table: RouletteGlobalTableSnapshot = {
   serverTimeMs: 10_000,
   bettingOpenAtMs: 10_000,
   bettingCloseAtMs: 30_000,
-  spinStartedAtMs: 30_000,
-  resultAtMs: 40_000,
-  nextRoundAtMs: 42_200,
+  spinStartedAtMs: 33_000,
+  resultAtMs: 43_000,
+  nextRoundAtMs: 45_200,
   seed: null,
   result: null,
 };
@@ -71,7 +72,6 @@ describe("roulette global client clock", () => {
     ).toBe(5);
   });
 
-
   it("estimates server time from the request midpoint", () => {
     expect(
       estimateRouletteServerClockOffset(
@@ -97,6 +97,39 @@ describe("roulette global client clock", () => {
     ).toBe(7);
   });
 
+  it("locks bets for exactly three seconds before spin", () => {
+    expect(
+      getRouletteGlobalClientPhase(
+        table,
+        30_000,
+      ),
+    ).toBe("verifying");
+    expect(
+      getRouletteGlobalVerificationSecondsRemaining(
+        table,
+        30_000,
+      ),
+    ).toBe(3);
+    expect(
+      getRouletteGlobalVerificationSecondsRemaining(
+        table,
+        31_001,
+      ),
+    ).toBe(2);
+    expect(
+      getRouletteGlobalVerificationSecondsRemaining(
+        table,
+        32_001,
+      ),
+    ).toBe(1);
+    expect(
+      getRouletteGlobalVerificationSecondsRemaining(
+        table,
+        33_000,
+      ),
+    ).toBe(0);
+  });
+
   it("moves phases only from authoritative timestamps", () => {
     expect(
       getRouletteGlobalClientPhase(
@@ -109,17 +142,29 @@ describe("roulette global client clock", () => {
         table,
         30_000,
       ),
+    ).toBe("verifying");
+    expect(
+      getRouletteGlobalClientPhase(
+        table,
+        32_999,
+      ),
+    ).toBe("verifying");
+    expect(
+      getRouletteGlobalClientPhase(
+        table,
+        33_000,
+      ),
     ).toBe("spinning");
     expect(
       getRouletteGlobalClientPhase(
         table,
-        40_000,
+        43_000,
       ),
     ).toBe("result");
     expect(
       getRouletteGlobalClientPhase(
         table,
-        42_200,
+        45_200,
       ),
     ).toBe("complete");
   });
@@ -128,7 +173,7 @@ describe("roulette global client clock", () => {
     expect(
       getRouletteGlobalSpinElapsedMs(
         table,
-        34_250,
+        37_250,
       ),
     ).toBe(4_250);
     expect(
@@ -169,9 +214,12 @@ describe("roulette global client clock", () => {
           table.bettingCloseAtMs
           ? "betting"
           : nowMs <
-              table.resultAtMs
-            ? "spinning"
-            : "result";
+              table.spinStartedAtMs
+            ? "verifying"
+            : nowMs <
+                table.resultAtMs
+              ? "spinning"
+              : "result";
 
       expect(
         getRouletteGlobalClientPhase(
@@ -199,7 +247,7 @@ describe("roulette global client clock", () => {
     }
   });
 
-  it("gives independent viewers the same betting and spin offsets", () => {
+  it("gives independent viewers the same betting, verification and spin offsets", () => {
     for (
       let offset = 0;
       offset <= 9_000;
@@ -249,6 +297,33 @@ describe("roulette global client clock", () => {
         ),
       );
     }
-  });
 
+    for (
+      let offset = 0;
+      offset < 3_000;
+      offset += 250
+    ) {
+      const nowMs =
+        table.bettingCloseAtMs +
+        offset;
+
+      expect(
+        getRouletteGlobalVerificationSecondsRemaining(
+          table,
+          nowMs,
+        ),
+      ).toBe(
+        Math.max(
+          0,
+          Math.ceil(
+            (
+              table.spinStartedAtMs -
+              nowMs
+            ) /
+              1000,
+          ),
+        ),
+      );
+    }
+  });
 });

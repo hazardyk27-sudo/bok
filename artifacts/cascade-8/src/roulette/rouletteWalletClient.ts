@@ -16,6 +16,7 @@ export type RouletteWallet = {
 export type RouletteGlobalTablePhase =
   | "scheduled"
   | "betting"
+  | "verifying"
   | "spinning"
   | "result"
   | "complete";

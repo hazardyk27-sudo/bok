@@ -5,6 +5,7 @@ import {
 } from "vitest";
 import {
   ROULETTE_BETTING_WINDOW_MS,
+  ROULETTE_BET_VERIFICATION_MS,
   ROULETTE_RESULT_HOLD_MS,
 } from "../../../cascade-8/src/roulette/scenePhase";
 import {
@@ -26,7 +27,7 @@ describe("roulette global table timeline", () => {
       bettingOpenAtMs,
     });
 
-  it("uses one immutable 20 second betting window before the spin", () => {
+  it("uses one immutable 20 second betting window plus three second verification before the spin", () => {
     expect(
       round.simulationVersion,
     ).toBe(
@@ -39,9 +40,10 @@ describe("roulette global table timeline", () => {
       ROULETTE_BETTING_WINDOW_MS,
     );
     expect(
-      round.spinStartedAtMs,
+      round.spinStartedAtMs -
+        round.bettingCloseAtMs,
     ).toBe(
-      round.bettingCloseAtMs,
+      ROULETTE_BET_VERIFICATION_MS,
     );
     expect(
       round.nextRoundAtMs -
@@ -78,6 +80,18 @@ describe("roulette global table timeline", () => {
     expect(
       getRouletteGlobalRoundPhase(
         round,
+        round.bettingCloseAtMs,
+      ),
+    ).toBe("verifying");
+    expect(
+      getRouletteGlobalRoundPhase(
+        round,
+        round.spinStartedAtMs - 1,
+      ),
+    ).toBe("verifying");
+    expect(
+      getRouletteGlobalRoundPhase(
+        round,
         round.spinStartedAtMs,
       ),
     ).toBe("spinning");
@@ -95,12 +109,18 @@ describe("roulette global table timeline", () => {
     ).toBe("complete");
   });
 
-  it("hides the seed during betting and reveals it only after bets close", () => {
+  it("keeps the seed hidden while bets are being verified", () => {
     const betting =
       createRouletteGlobalRoundSnapshot(
         round,
         round.bettingOpenAtMs +
           7_000,
+      );
+    const verifying =
+      createRouletteGlobalRoundSnapshot(
+        round,
+        round.bettingCloseAtMs +
+          1,
       );
     const spinning =
       createRouletteGlobalRoundSnapshot(
@@ -114,6 +134,12 @@ describe("roulette global table timeline", () => {
     );
     expect(betting.seed).toBeNull();
     expect(betting.result).toBeNull();
+
+    expect(verifying.phase).toBe(
+      "verifying",
+    );
+    expect(verifying.seed).toBeNull();
+    expect(verifying.result).toBeNull();
 
     expect(spinning.phase).toBe(
       "spinning",
