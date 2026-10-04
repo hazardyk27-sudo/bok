@@ -56,7 +56,7 @@ describe("blackjack session bootstrap",()=>{
     expect(fetchImpl).toHaveBeenCalledTimes(6);
   });
 
-  it("rejects a successful response that does not contain realtime access",async()=>{
+  it("keeps rolling compatibility with a successful pre-token bootstrap",async()=>{
     const fetchImpl=vi.fn().mockResolvedValue(response(200,{
       ready:true,
       status:"READY",
@@ -67,9 +67,9 @@ describe("blackjack session bootstrap",()=>{
       maxAttempts:1,
       attemptTimeoutMs:100,
       retryDelayMs:0,
-    })).rejects.toMatchObject({
-      code:"BLACKJACK_SESSION_ACCESS_INVALID",
-      status:200,
+    })).resolves.toEqual({
+      realtimeAccessToken:null,
+      realtimeAccessExpiresAtMs:null,
     });
   });
 
