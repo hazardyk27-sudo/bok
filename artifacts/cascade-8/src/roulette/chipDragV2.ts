@@ -22,6 +22,8 @@ const PICKUP_SCALE = 1.05;
 const SNAP_MS = 45;
 const AUTHORITATIVE_SYNC_TIMEOUT_MS = 2400;
 const AUTHORITATIVE_REFRESH_MS = 120;
+const SOURCE_SYNC_RETRY_MS = 50;
+const SOURCE_SYNC_MAX_ATTEMPTS = 80;
 
 type PressState = {
   pointerId: number;
@@ -63,6 +65,11 @@ type OptimisticMove = {
   sourceTemplate: HTMLElement;
   targetTemplate: HTMLElement | null;
 };
+
+type DragWallet = Pick<
+  RouletteWalletClient,
+  "bootstrap" | "updateGlobalBet"
+>;
 
 function readPlacedBets(root: ParentNode): RouletteBetPlacement[] {
   return Array.from(root.querySelectorAll<HTMLElement>("[data-bet-id]"))
@@ -447,54 +454,79 @@ function guardOptimisticMove(
   };
 }
 
-async function commitMove(
-  wallet: RouletteWalletClient,
+function waitForSourceSync() {
+  return new Promise<void>((resolve) => {
+    globalThis.setTimeout(resolve, SOURCE_SYNC_RETRY_MS);
+  });
+}
+
+export async function commitRouletteChipDragMove(
+  wallet: DragWallet,
   uiBets: readonly RouletteBetPlacement[],
   fromBetId: string,
   toBetId: string,
+  waitForRetry: () => Promise<void> = waitForSourceSync,
 ) {
-  for (let attempt = 0; attempt < 2; attempt += 1) {
+  let lastReadinessError = "ROULETTE_DRAG_BET_UNAVAILABLE";
+
+  for (
+    let attempt = 0;
+    attempt < SOURCE_SYNC_MAX_ATTEMPTS;
+    attempt += 1
+  ) {
     const bootstrap = await wallet.bootstrap();
     const table = bootstrap.globalTable;
     const globalBet = bootstrap.globalBet;
-    if (!table || !globalBet || globalBet.roundId !== table.roundId) {
-      throw new Error("ROULETTE_DRAG_BET_UNAVAILABLE");
-    }
 
-    const serverNow = Number.isFinite(bootstrap.serverTimeMs)
-      ? bootstrap.serverTimeMs
-      : table.serverTimeMs;
-    if (getRouletteGlobalClientPhase(table, serverNow) !== "betting") {
-      throw new Error("ROULETTE_DRAG_BETTING_CLOSED");
-    }
-    if (!sameTotals(uiBets, globalBet.bets)) {
-      throw new Error("ROULETTE_DRAG_WAITING_FOR_SYNC");
-    }
-    if (!globalBet.bets.some((bet) => bet.betId === fromBetId)) {
-      throw new Error("ROULETTE_DRAG_SOURCE_MISSING");
-    }
+    if (!table) {
+      lastReadinessError = "ROULETTE_DRAG_BET_UNAVAILABLE";
+    } else {
+      const serverNow = Number.isFinite(bootstrap.serverTimeMs)
+        ? bootstrap.serverTimeMs
+        : table.serverTimeMs;
 
-    const moved = moveRouletteBetPlacements(
-      globalBet.bets,
-      fromBetId,
-      toBetId,
-    );
-    try {
-      await wallet.updateGlobalBet(
-        table.roundId,
-        moved,
-        `roulette_drag_v4_${Date.now()}_${crypto.randomUUID().replaceAll("-", "")}`,
-        globalBet.revision,
-      );
-      return;
-    } catch (error) {
-      const message = error instanceof Error ? error.message : "";
-      if (message === "ROULETTE_GLOBAL_BET_STALE" && attempt === 0) {
-        continue;
+      if (getRouletteGlobalClientPhase(table, serverNow) !== "betting") {
+        throw new Error("ROULETTE_DRAG_BETTING_CLOSED");
       }
-      throw error;
+
+      if (!globalBet || globalBet.roundId !== table.roundId) {
+        lastReadinessError = "ROULETTE_DRAG_BET_UNAVAILABLE";
+      } else if (!sameTotals(uiBets, globalBet.bets)) {
+        lastReadinessError = "ROULETTE_DRAG_WAITING_FOR_SYNC";
+      } else if (!globalBet.bets.some((bet) => bet.betId === fromBetId)) {
+        lastReadinessError = "ROULETTE_DRAG_SOURCE_MISSING";
+      } else {
+        const moved = moveRouletteBetPlacements(
+          globalBet.bets,
+          fromBetId,
+          toBetId,
+        );
+
+        try {
+          await wallet.updateGlobalBet(
+            table.roundId,
+            moved,
+            `roulette_drag_v5_${Date.now()}_${crypto.randomUUID().replaceAll("-", "")}`,
+            globalBet.revision,
+          );
+          return;
+        } catch (error) {
+          const message = error instanceof Error ? error.message : "";
+          if (message !== "ROULETTE_GLOBAL_BET_STALE") {
+            throw error;
+          }
+          lastReadinessError = message;
+        }
+      }
     }
+
+    if (attempt + 1 >= SOURCE_SYNC_MAX_ATTEMPTS) {
+      break;
+    }
+    await waitForRetry();
   }
+
+  throw new Error(lastReadinessError);
 }
 
 export function installRouletteChipDragV2(app: HTMLDivElement) {
@@ -728,7 +760,7 @@ export function installRouletteChipDragV2(app: HTMLDivElement) {
       applyOptimisticMove(optimisticMove);
       activeGuard = guardOptimisticMove(app, optimisticMove);
 
-      void commitMove(
+      void commitRouletteChipDragMove(
         wallet,
         uiBets,
         completed.betId,
@@ -746,7 +778,7 @@ export function installRouletteChipDragV2(app: HTMLDivElement) {
           navigator.vibrate?.(5);
         })
         .catch((error) => {
-          console.error("[roulette] chip drag v4 failed", error);
+          console.error("[roulette] chip drag v5 failed", error);
           const guard = activeGuard;
           activeGuard = null;
           guard?.failed();
