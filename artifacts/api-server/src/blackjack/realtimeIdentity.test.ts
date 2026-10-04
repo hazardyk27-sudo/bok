@@ -104,8 +104,9 @@ describe("blackjack realtime identity binding", () => {
     server = undefined;
   });
 
-  it("uses a dedicated websocket-path cookie instead of game_session ordering", () => {
+  it("uses only the dedicated websocket-path binding", () => {
     const header = [
+      `fy_auth=stale-auth`,
       `game_session=${LEGACY}`,
       `game_session=${ROOT}`,
       `${BLACKJACK_REALTIME_SESSION_COOKIE}=${BOUND}`,
@@ -114,28 +115,8 @@ describe("blackjack realtime identity binding", () => {
     expect(resolveBlackjackRealtimeSessionId(header)).toBe(BOUND);
   });
 
-  it("falls back to one unambiguous canonical game_session", () => {
-    expect(
-      resolveBlackjackRealtimeSessionId(`game_session=${ROOT}`),
-    ).toBe(ROOT);
-  });
-
-  it("deduplicates identical canonical game_session values before fallback", () => {
-    const header = [
-      `game_session=${ROOT}`,
-      `game_session=${ROOT}`,
-    ].join("; ");
-
-    expect(resolveBlackjackRealtimeSessionId(header)).toBe(ROOT);
-  });
-
-  it("does not silently fall back to ambiguous game_session candidates", () => {
-    const header = [
-      `game_session=${LEGACY}`,
-      `game_session=${ROOT}`,
-    ].join("; ");
-
-    expect(resolveBlackjackRealtimeSessionId(header)).toBeNull();
+  it("never falls back to game_session", () => {
+    expect(resolveBlackjackRealtimeSessionId(`game_session=${ROOT}`)).toBeNull();
   });
 
   it("keeps the dedicated binding scoped to the blackjack websocket path", () => {
@@ -162,7 +143,7 @@ describe("blackjack realtime identity binding", () => {
     expect(resolveBlackjackRealtimeSessionId(header)).toBeNull();
   });
 
-  it("accepts conflicting game_session cookies when the dedicated binding is present", async () => {
+  it("opens a real websocket with the dedicated binding even when auth and game cookies conflict", async () => {
     const tableSnapshot = snapshot();
     server = createServer();
     runtime = attachBlackjackWebSocket(
@@ -189,6 +170,8 @@ describe("blackjack realtime identity binding", () => {
     client = new WebSocket(`ws://127.0.0.1:${port}${BLACKJACK_WS_PATH}`, {
       headers: {
         Cookie: [
+          `fy_auth=old-auth`,
+          `fy_auth=new-auth`,
           `game_session=${LEGACY}`,
           `game_session=${ROOT}`,
           `${BLACKJACK_REALTIME_SESSION_COOKIE}=${BOUND}`,
@@ -204,45 +187,7 @@ describe("blackjack realtime identity binding", () => {
     expect(runtime.authenticatedConnectionCount()).toBe(1);
   });
 
-  it("accepts a real websocket with one canonical game_session when the dedicated binding is missing", async () => {
-    const tableSnapshot = snapshot();
-    server = createServer();
-    runtime = attachBlackjackWebSocket(
-      server,
-      {
-        getSnapshot: () => tableSnapshot,
-        subscribe: () => () => undefined,
-      },
-      {
-        resolveIdentity: (request) => {
-          const sessionId = resolveBlackjackRealtimeSessionId(
-            request.headers.cookie,
-          );
-          return sessionId === null ? null : {
-            userId: sessionId,
-            playerId: `blackjack-player:${sessionId}`,
-            sessionId,
-          };
-        },
-      },
-    );
-    const port = await listen(server);
-
-    client = new WebSocket(`ws://127.0.0.1:${port}${BLACKJACK_WS_PATH}`, {
-      headers: {
-        Cookie: `game_session=${ROOT}`,
-      },
-    });
-
-    await expect(nextMessage(client)).resolves.toMatchObject({
-      type: "FULL_TABLE_SNAPSHOT",
-      reason: "INITIAL_CONNECT",
-      snapshot: { tableId: "identity-test-table" },
-    });
-    expect(runtime.authenticatedConnectionCount()).toBe(1);
-  });
-
-  it("fails closed over a real websocket when only ambiguous game_session cookies exist", async () => {
+  it("fails closed over a real websocket when the dedicated binding is missing", async () => {
     const tableSnapshot = snapshot();
     server = createServer();
     runtime = attachBlackjackWebSocket(
@@ -269,7 +214,7 @@ describe("blackjack realtime identity binding", () => {
     client = new WebSocket(`ws://127.0.0.1:${port}${BLACKJACK_WS_PATH}`, {
       headers: {
         Cookie: [
-          `game_session=${LEGACY}`,
+          `fy_auth=valid-looking-auth`,
           `game_session=${ROOT}`,
         ].join("; "),
       },
