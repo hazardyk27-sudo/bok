@@ -1,0 +1,87 @@
+.roulette-placed-chip {
+  pointer-events: auto !important;
+  cursor: grab;
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.roulette-placed-chip:active {
+  cursor: grabbing;
+}
+
+.roulette-bet-panel.is-chip-dragging {
+  cursor: grabbing;
+}
+
+.roulette-bet-panel.is-chip-dragging .roulette-placed-chip {
+  cursor: grabbing;
+}
+
+.roulette-placed-chip.is-chip-drag-source {
+  opacity: 0.16 !important;
+}
+
+.roulette-chip-drag-ghost {
+  pointer-events: none !important;
+  opacity: 0.98;
+  cursor: grabbing;
+  filter:
+    drop-shadow(0 7px 8px rgba(0, 0, 0, 0.5))
+    drop-shadow(0 1px 1px rgba(255, 255, 255, 0.18));
+  transition:
+    filter 110ms ease,
+    opacity 110ms ease,
+    transform 70ms linear;
+  will-change: transform;
+}
+
+.roulette-chip-drag-ghost.is-pending {
+  opacity: 0.88;
+  filter:
+    drop-shadow(0 5px 7px rgba(0, 0, 0, 0.44))
+    drop-shadow(0 0 5px rgba(255, 255, 255, 0.28));
+  transition:
+    filter 110ms ease,
+    opacity 110ms ease,
+    transform 130ms ease-out;
+}
+
+.roulette-chip-drag-ghost.is-returning {
+  opacity: 0.72;
+  transition:
+    transform 140ms ease-out,
+    opacity 140ms ease-out;
+}
+
+.roulette-bet-cell.roulette-chip-drop-target {
+  box-shadow:
+    inset 0 0 0 2px rgba(255, 255, 255, 0.88),
+    inset 0 0 18px rgba(255, 255, 255, 0.14) !important;
+  filter: brightness(1.15);
+}
+
+.roulette-bet-cell.roulette-chip-drop-confirmed {
+  animation: roulette-chip-drop-confirm 220ms ease-out;
+}
+
+@keyframes roulette-chip-drop-confirm {
+  0% {
+    box-shadow:
+      inset 0 0 0 2px rgba(255, 255, 255, 0.9),
+      inset 0 0 20px rgba(255, 255, 255, 0.18);
+  }
+  100% {
+    box-shadow: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .roulette-chip-drag-ghost,
+  .roulette-chip-drag-ghost.is-pending,
+  .roulette-chip-drag-ghost.is-returning,
+  .roulette-bet-cell.roulette-chip-drop-confirmed {
+    transition: none;
+    animation: none;
+  }
+}

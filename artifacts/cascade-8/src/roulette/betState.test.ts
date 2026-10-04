@@ -12,6 +12,7 @@ import {
   getRouletteBetTotals,
   getRouletteDisplayChipValue,
   getRouletteTotalStake,
+  moveRouletteBetPlacements,
   placeRouletteBet,
   rebetRouletteRound,
   selectRouletteChip,
@@ -58,6 +59,98 @@ describe("roulette local wager state", () => {
         state.placements,
       ),
     ).toBe(55);
+  });
+
+  it("moves every granular placement from one betting area to another without changing stake", () => {
+    const placements = [
+      {
+        betId: "straight-29",
+        amount: 10,
+      },
+      {
+        betId: "red",
+        amount: 50,
+      },
+      {
+        betId: "straight-29",
+        amount: 100,
+      },
+      {
+        betId: "straight-31",
+        amount: 500,
+      },
+    ];
+
+    const moved =
+      moveRouletteBetPlacements(
+        placements,
+        "straight-29",
+        "straight-31",
+      );
+
+    expect(moved).toEqual([
+      {
+        betId: "straight-31",
+        amount: 10,
+      },
+      {
+        betId: "red",
+        amount: 50,
+      },
+      {
+        betId: "straight-31",
+        amount: 100,
+      },
+      {
+        betId: "straight-31",
+        amount: 500,
+      },
+    ]);
+    expect(
+      getRouletteBetTotals(moved),
+    ).toEqual({
+      "straight-31": 610,
+      red: 50,
+    });
+    expect(
+      getRouletteTotalStake(moved),
+    ).toBe(
+      getRouletteTotalStake(
+        placements,
+      ),
+    );
+  });
+
+  it("does not mutate the original placement list while moving a bet", () => {
+    const placements = [
+      {
+        betId: "straight-29",
+        amount: 10,
+      },
+    ];
+
+    const moved =
+      moveRouletteBetPlacements(
+        placements,
+        "straight-29",
+        "straight-30",
+      );
+
+    expect(placements).toEqual([
+      {
+        betId: "straight-29",
+        amount: 10,
+      },
+    ]);
+    expect(moved).toEqual([
+      {
+        betId: "straight-30",
+        amount: 10,
+      },
+    ]);
+    expect(moved[0]).not.toBe(
+      placements[0],
+    );
   });
 
   it("undoes only the latest placement", () => {
