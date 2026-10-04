@@ -255,9 +255,15 @@ describe("blackjack locked-bet initial-deal flow",()=>{
     await game.closeBettingWindow(10_000);
 
     await expect(game.startInitialDeal(10_001)).rejects.toThrow(
-      /at least one locked betting participant/,
+      /BETTING_LOCKED phase/,
     );
-    expect(game.getTable().phase).toBe("BETTING_LOCKED");
+    expect(game.getTable().phase).toBe("BETTING");
+    expect(game.getTable().round).toMatchObject({
+      roundNumber:2,
+      phase:"BETTING",
+      startedAtMs:10_000,
+      bettingClosesAtMs:20_000,
+    });
     expect(game.getTable().shoe.nextIndex).toBe(0);
   });
 
