@@ -1,3 +1,7 @@
+import {
+  MARKET_CONFIG,
+} from "../../../cascade-8/src/idle/config";
+
 let schemaReadyPromise: Promise<void> | null = null;
 
 async function applyIdleRuntimeSchema() {
@@ -39,6 +43,26 @@ async function applyIdleRuntimeSchema() {
     CREATE INDEX IF NOT EXISTS
       idle_ticket_market_state_tick_idx
       ON idle_ticket_market_state (tick_at);
+
+    CREATE TABLE IF NOT EXISTS idle_ticket_market_price_epochs (
+      epoch integer PRIMARY KEY,
+      applied_at timestamptz NOT NULL DEFAULT now()
+    );
+
+    WITH newly_applied_epoch AS (
+      INSERT INTO idle_ticket_market_price_epochs (epoch)
+      VALUES (${MARKET_CONFIG.priceEpoch})
+      ON CONFLICT (epoch) DO NOTHING
+      RETURNING epoch
+    )
+    UPDATE idle_ticket_market_state
+       SET price_microdollars = ${MARKET_CONFIG.initialTicketPriceMicrodollars},
+           source = 'none',
+           feed_status = 'FROZEN',
+           tick_at = now(),
+           updated_at = now()
+     WHERE id = 'global'
+       AND EXISTS (SELECT 1 FROM newly_applied_epoch);
 
     CREATE TABLE IF NOT EXISTS idle_ticket_market_ticks (
       id text PRIMARY KEY,
@@ -102,6 +126,10 @@ async function applyIdleRuntimeSchema() {
  * Replit preview can receive owned game code before an operator runs a
  * workspace-wide Drizzle push. Idle therefore bootstraps only its own new
  * canonical tables/indexes and never mutates shared/platform tables.
+ *
+ * A new MARKET_CONFIG.priceEpoch also performs exactly one global price
+ * rebase to the canonical bootstrap value. Once that epoch marker exists,
+ * later process restarts preserve the persisted live ticket price.
  */
 export function ensureIdleRuntimeSchema() {
   if (schemaReadyPromise) {

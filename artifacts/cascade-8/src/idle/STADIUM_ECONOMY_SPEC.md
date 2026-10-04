@@ -157,11 +157,13 @@ Storage-full behavior:
 
 The ticket market is global: all players see the same authoritative price.
 
-Initial bootstrap price when no persisted market state exists:
+Initial bootstrap price:
 
 ```text
 $7.00
 ```
+
+The current canonical market price epoch is **2**. On the first server startup after this epoch is deployed, an older persisted global market state is rebased **once** to **$7.00**, with source `none` and feed status `FROZEN`. The BTC feed then establishes a fresh baseline before applying subsequent movement. The epoch is persisted, so normal future server restarts **must not** reset the price to $7.00; they restore the current persisted live price.
 
 Market tick:
 
@@ -205,7 +207,7 @@ Server-side only:
 - On provider switch, take a new BTC baseline first; exchange-to-exchange nominal price differences must never create a fake ticket-price move.
 - If both feeds are unavailable, freeze the last valid ticket price.
 - When a feed returns, re-baseline BTC and apply only subsequent percentage movements.
-- On server restart, restore the persisted ticket market state instead of resetting to $7.00, then re-baseline BTC before continuing.
+- After the current price epoch has been applied once, normal server restarts restore the persisted ticket market state, then re-baseline BTC before continuing.
 
 ## 9. Market SQL retention
 
