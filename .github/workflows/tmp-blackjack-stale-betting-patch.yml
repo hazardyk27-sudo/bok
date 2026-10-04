@@ -1,0 +1,51 @@
+name: tmp-blackjack-stale-betting-patch
+
+on:
+  push:
+    branches:
+      - fix/blackjack-stale-betting-position-20261005
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: fix/blackjack-stale-betting-position-20261005
+          fetch-depth: 0
+      - name: Apply focused Blackjack fix and regression
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          coordinator = Path('artifacts/api-server/src/blackjack/actionCoordinator.ts')
+          text = coordinator.read_text()
+          old = '''      this.tableState=result.table;\n      for(const account of result.accounts){\n        this.accounts.set(account.playerId,freezeAccount(account));\n      }\n      for(const position of result.positions){\n        this.bettingPositions.set(position.playerId,position);\n      }\n'''
+          new = '''      this.tableState=result.table;\n      for(const account of result.accounts){\n        this.accounts.set(account.playerId,freezeAccount(account));\n      }\n      // closeBlackjackBettingWindow returns the authoritative betting-position\n      // set after close/reopen. Replace the map instead of overlaying it,\n      // otherwise an expired position from the previous round survives and\n      // makes the next durable snapshot fail round-consistency validation.\n      this.bettingPositions.clear();\n      for(const position of result.positions){\n        this.bettingPositions.set(position.playerId,position);\n      }\n'''
+          if old not in text:
+              raise SystemExit('target coordinator block not found')
+          coordinator.write_text(text.replace(old, new, 1))
+
+          test = Path('artifacts/api-server/src/blackjack/bettingCoordinator.test.ts')
+          test_text = test.read_text()
+          regression = '''\n\ndescribe("blackjack empty betting rollover state",()=>{\n  it("drops expired betting positions when an unready round reopens",async()=>{\n    const game=coordinator();\n    await game.submit(action("PLACE_BET","bet-expire",0));\n\n    expect(game.getAccount("player-1").wallet.reservedBalanceCents).toBe(100_000);\n    expect(game.getBettingPosition("player-1")?.roundId).toBe("round-bet");\n\n    const closed=await game.closeBettingWindow(10_000);\n\n    expect(closed.replayed).toBe(false);\n    expect(game.getTable().phase).toBe("BETTING");\n    expect(game.getTable().round?.roundId).toBe("main-blackjack:round-2");\n    expect(game.getBettingPosition("player-1")).toBeNull();\n    expect(game.getBettingPositions()).toEqual([]);\n    expect(game.getAccount("player-1").wallet.reservedBalanceCents).toBe(0);\n  });\n});\n'''
+          marker = 'describe("blackjack empty betting rollover state"'
+          if marker in test_text:
+              raise SystemExit('regression test already present')
+          test.write_text(test_text.rstrip() + regression)
+          PY
+      - name: Remove temporary workflow from resulting branch
+        run: rm .github/workflows/tmp-blackjack-stale-betting-patch.yml
+      - name: Commit focused patch
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git diff --cached --check
+          git commit -m "fix(blackjack): clear stale betting positions on rollover"
+          git push origin HEAD:fix/blackjack-stale-betting-position-20261005
