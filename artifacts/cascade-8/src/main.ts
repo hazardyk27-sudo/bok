@@ -76,6 +76,9 @@ if (isWitchRoute) {
       }
       blackjackModule.mountConnectedBlackjack(app, {
         createSocket: (url) => {
+          if (session.realtimeAccessToken === null) {
+            return new WebSocket(url);
+          }
           const websocketUrl = new URL(url);
           websocketUrl.searchParams.set(
             "access",
