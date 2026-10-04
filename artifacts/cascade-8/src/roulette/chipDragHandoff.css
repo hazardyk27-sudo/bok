@@ -1,5 +1,6 @@
-.roulette-placed-chip.is-chip-handoff-source {
+[data-bet-id].is-chip-handoff-source-cell .roulette-placed-chip {
   opacity: 0 !important;
+  visibility: hidden !important;
 }
 
 .roulette-chip-handoff-placeholder {
