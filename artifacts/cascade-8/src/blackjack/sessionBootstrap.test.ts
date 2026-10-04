@@ -7,12 +7,16 @@ import {
 
 const ACCESS_TOKEN="aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa";
 const ACCESS_EXPIRES_AT_MS=1_900_000_000_000;
+const PLAYER_ID="blackjack-player:aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa";
+const AVAILABLE_BALANCE_CENTS=500_000;
 
 const response=(status:number,payload:unknown={
   ready:true,
   status:"READY",
   realtimeAccessToken:ACCESS_TOKEN,
   realtimeAccessExpiresAtMs:ACCESS_EXPIRES_AT_MS,
+  playerId:PLAYER_ID,
+  availableBalanceCents:AVAILABLE_BALANCE_CENTS,
 })=>({
   ok:status>=200 && status<300,
   status,
@@ -20,7 +24,7 @@ const response=(status:number,payload:unknown={
 }) as unknown as Response;
 
 describe("blackjack session bootstrap",()=>{
-  it("retries transient gateway responses and returns realtime access",async()=>{
+  it("retries transient gateway responses and returns realtime access plus identity",async()=>{
     const fetchImpl=vi.fn()
       .mockResolvedValueOnce(response(503))
       .mockResolvedValueOnce(response(200));
@@ -33,6 +37,8 @@ describe("blackjack session bootstrap",()=>{
     })).resolves.toEqual({
       realtimeAccessToken:ACCESS_TOKEN,
       realtimeAccessExpiresAtMs:ACCESS_EXPIRES_AT_MS,
+      playerId:PLAYER_ID,
+      availableBalanceCents:AVAILABLE_BALANCE_CENTS,
     });
     expect(fetchImpl).toHaveBeenCalledTimes(2);
   });
@@ -52,6 +58,8 @@ describe("blackjack session bootstrap",()=>{
       retryDelayMs:0,
     })).resolves.toMatchObject({
       realtimeAccessToken:ACCESS_TOKEN,
+      playerId:PLAYER_ID,
+      availableBalanceCents:AVAILABLE_BALANCE_CENTS,
     });
     expect(fetchImpl).toHaveBeenCalledTimes(6);
   });
@@ -70,6 +78,49 @@ describe("blackjack session bootstrap",()=>{
     })).resolves.toEqual({
       realtimeAccessToken:null,
       realtimeAccessExpiresAtMs:null,
+      playerId:null,
+      availableBalanceCents:null,
+    });
+  });
+
+  it("accepts identity bootstrap without a realtime token during rolling upgrade",async()=>{
+    const fetchImpl=vi.fn().mockResolvedValue(response(200,{
+      ready:true,
+      status:"READY",
+      playerId:PLAYER_ID,
+      availableBalanceCents:AVAILABLE_BALANCE_CENTS,
+    }));
+
+    await expect(waitForBlackjackSession({
+      fetchImpl,
+      maxAttempts:1,
+      attemptTimeoutMs:100,
+      retryDelayMs:0,
+    })).resolves.toEqual({
+      realtimeAccessToken:null,
+      realtimeAccessExpiresAtMs:null,
+      playerId:PLAYER_ID,
+      availableBalanceCents:AVAILABLE_BALANCE_CENTS,
+    });
+  });
+
+  it("rejects a partial or malformed bootstrap identity",async()=>{
+    const fetchImpl=vi.fn().mockResolvedValue(response(200,{
+      ready:true,
+      status:"READY",
+      realtimeAccessToken:ACCESS_TOKEN,
+      realtimeAccessExpiresAtMs:ACCESS_EXPIRES_AT_MS,
+      playerId:PLAYER_ID,
+    }));
+
+    await expect(waitForBlackjackSession({
+      fetchImpl,
+      maxAttempts:1,
+      attemptTimeoutMs:100,
+      retryDelayMs:0,
+    })).rejects.toMatchObject({
+      code:"BLACKJACK_SESSION_IDENTITY_INVALID",
+      status:200,
     });
   });
 
@@ -140,6 +191,8 @@ describe("blackjack session bootstrap",()=>{
       },
     })).resolves.toMatchObject({
       realtimeAccessToken:ACCESS_TOKEN,
+      playerId:PLAYER_ID,
+      availableBalanceCents:AVAILABLE_BALANCE_CENTS,
     });
 
     expect(fetchImpl).toHaveBeenCalledTimes(2);
@@ -162,6 +215,8 @@ describe("blackjack session bootstrap",()=>{
       },
     })).resolves.toMatchObject({
       realtimeAccessToken:ACCESS_TOKEN,
+      playerId:PLAYER_ID,
+      availableBalanceCents:AVAILABLE_BALANCE_CENTS,
     });
 
     expect(fetchImpl).toHaveBeenCalledTimes(2);

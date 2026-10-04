@@ -22,6 +22,8 @@ export class BlackjackSessionBootstrapError extends Error{
 export type BlackjackSessionBootstrapResult=Readonly<{
   realtimeAccessToken:string|null;
   realtimeAccessExpiresAtMs:number|null;
+  playerId:string|null;
+  availableBalanceCents:number|null;
 }>;
 
 type FetchLike=(
@@ -53,6 +55,42 @@ function positiveInteger(value:number,label:string):number{
   return value;
 }
 
+function parseBootstrapIdentity(
+  payload:Record<string,unknown>,
+  status:number,
+):Pick<
+  BlackjackSessionBootstrapResult,
+  "playerId"|"availableBalanceCents"
+>{
+  const playerId=payload.playerId;
+  const availableBalanceCents=payload.availableBalanceCents;
+
+  if(playerId===undefined && availableBalanceCents===undefined){
+    return Object.freeze({
+      playerId:null,
+      availableBalanceCents:null,
+    });
+  }
+
+  if(
+    typeof playerId!=="string" ||
+    !playerId.trim() ||
+    typeof availableBalanceCents!=="number" ||
+    !Number.isSafeInteger(availableBalanceCents) ||
+    availableBalanceCents<0
+  ){
+    throw new BlackjackSessionBootstrapError(
+      "BLACKJACK_SESSION_IDENTITY_INVALID",
+      status,
+    );
+  }
+
+  return Object.freeze({
+    playerId,
+    availableBalanceCents,
+  });
+}
+
 async function parseBootstrapResult(
   response:Response,
 ):Promise<BlackjackSessionBootstrapResult>{
@@ -73,14 +111,10 @@ async function parseBootstrapResult(
     );
   }
 
-  const token=
-    "realtimeAccessToken" in payload
-      ? (payload as {realtimeAccessToken?:unknown}).realtimeAccessToken
-      : undefined;
-  const expiresAtMs=
-    "realtimeAccessExpiresAtMs" in payload
-      ? (payload as {realtimeAccessExpiresAtMs?:unknown}).realtimeAccessExpiresAtMs
-      : undefined;
+  const record=payload as Record<string,unknown>;
+  const identity=parseBootstrapIdentity(record,response.status);
+  const token=record.realtimeAccessToken;
+  const expiresAtMs=record.realtimeAccessExpiresAtMs;
 
   if(token===undefined && expiresAtMs===undefined){
     // Rolling-upgrade compatibility for an older HTTP bootstrap. The current
@@ -89,6 +123,7 @@ async function parseBootstrapResult(
     return Object.freeze({
       realtimeAccessToken:null,
       realtimeAccessExpiresAtMs:null,
+      ...identity,
     });
   }
 
@@ -106,6 +141,7 @@ async function parseBootstrapResult(
   return Object.freeze({
     realtimeAccessToken:token,
     realtimeAccessExpiresAtMs:expiresAtMs as number,
+    ...identity,
   });
 }
 
