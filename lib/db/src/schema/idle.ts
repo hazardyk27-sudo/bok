@@ -96,9 +96,9 @@ export const idleStadiumStates = pgTable(
 /**
  * One persisted global ticket-market snapshot shared by every player.
  *
- * The runtime uses a fixed singleton id (for example "global") and restores
- * this row after restart instead of resetting the ticket price to the $4
- * bootstrap value.
+ * The runtime uses a fixed singleton id (for example "global"). A new market
+ * price epoch may rebase this row once to the canonical $7 bootstrap; after
+ * that marker exists, later restarts restore the persisted live price.
  */
 export const idleTicketMarketState = pgTable(
   "idle_ticket_market_state",
@@ -114,6 +114,21 @@ export const idleTicketMarketState = pgTable(
   (table) => [
     index("idle_ticket_market_state_tick_idx").on(table.tickAt),
   ],
+);
+
+/**
+ * Applied ticket-market price epochs.
+ *
+ * Inserting a new epoch is an idempotent one-time signal to rebase the global
+ * market state to that release's canonical bootstrap price. Existing epoch
+ * rows make later process restarts preserve the live price instead of resetting.
+ */
+export const idleTicketMarketPriceEpochs = pgTable(
+  "idle_ticket_market_price_epochs",
+  {
+    epoch: integer("epoch").primaryKey(),
+    appliedAt: timestamp("applied_at", { withTimezone: true }).notNull().defaultNow(),
+  },
 );
 
 /**
