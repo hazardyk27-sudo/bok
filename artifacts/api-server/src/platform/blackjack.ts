@@ -21,6 +21,10 @@ import {
   type BlackjackSnapshotDatabase,
 } from "../blackjack";
 import {
+  issueBlackjackRealtimeAccess,
+  resolveBlackjackRealtimeAccess,
+} from "../blackjack/realtimeAccess";
+import {
   BLACKJACK_REALTIME_SESSION_COOKIE,
   BLACKJACK_REALTIME_SESSION_COOKIE_MAX_AGE_MS,
   BLACKJACK_REALTIME_SESSION_COOKIE_PATH,
@@ -377,9 +381,12 @@ blackjackPlatformRouter.get(
       }
 
       setBlackjackRealtimeSessionBinding(res, sessionId);
+      const access = issueBlackjackRealtimeAccess(sessionId);
       res.json({
         ready: true,
         status: afterBootstrap.status,
+        realtimeAccessToken: access.token,
+        realtimeAccessExpiresAtMs: access.expiresAtMs,
       });
     } catch {
       res.status(503).json({
@@ -415,7 +422,7 @@ export async function attachBlackjackPlatformRuntime(
     journalRepository,
     recoveredAtMs: Date.now(),
     nowMs: Date.now,
-    resolveIdentity: resolveBlackjackRealtimeIdentityWithAuth,
+    resolveIdentity: resolveBlackjackRealtimeAccess,
     loadSeatAccount: loadBlackjackSeatAccount,
     loadAvailableBalanceCents: loadBlackjackAvailableBalanceCents,
     createInitialShoe: createFreshShoe,
