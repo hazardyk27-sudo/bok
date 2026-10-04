@@ -160,7 +160,7 @@ The ticket market is global: all players see the same authoritative price.
 Initial bootstrap price when no persisted market state exists:
 
 ```text
-$8.00
+$7.00
 ```
 
 Market tick:
@@ -187,7 +187,7 @@ Example:
 ```text
 BTC +0.10% in one 5-second interval
 → ticket raw move +2%
-→ $8.00 becomes $8.16 before any clamp
+→ $7.00 becomes $7.14 before any clamp
 ```
 
 BTC movement is otherwise followed without an additional movement limit.
@@ -205,7 +205,7 @@ Server-side only:
 - On provider switch, take a new BTC baseline first; exchange-to-exchange nominal price differences must never create a fake ticket-price move.
 - If both feeds are unavailable, freeze the last valid ticket price.
 - When a feed returns, re-baseline BTC and apply only subsequent percentage movements.
-- On server restart, restore the persisted ticket market state instead of resetting to $8.00, then re-baseline BTC before continuing.
+- On server restart, restore the persisted ticket market state instead of resetting to $7.00, then re-baseline BTC before continuing.
 
 ## 9. Market SQL retention
 

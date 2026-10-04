@@ -30,7 +30,7 @@ describe("canonical Idle economy smoke", () => {
     expect(MARKET_CONFIG.tickMs).toBe(5_000);
     expect(MARKET_CONFIG.btcSensitivity).toBe(20);
     expect(MARKET_CONFIG.initialTicketPriceMicrodollars)
-      .toBe(8_000_000);
+      .toBe(7_000_000);
     expect(MARKET_CONFIG.minTicketPriceMicrodollars)
       .toBe(100_000);
     expect(MARKET_CONFIG.maxTicketPriceMicrodollars)
