@@ -28,6 +28,7 @@ import {
   createBlackjackDurableSnapshot,
   type BlackjackDurableRuntimeState,
 } from "./snapshotState";
+import { logger } from "../lib/logger";
 
 export type BlackjackRecoveredScheduledRuntime = Readonly<{
   recovery: BlackjackRecoveryResult;
@@ -200,6 +201,29 @@ export async function recoverAndStartBlackjackRoundRuntime(input: {
     throw catchUpError;
   }
 
+  const onIdentityConnected: NonNullable<
+    BlackjackRealtimeOptions["onIdentityConnected"]
+  > = async (identity, connectedAtMs) => {
+    try {
+      await authority.onIdentityConnected(identity, connectedAtMs);
+    } catch (error) {
+      // Persistence/authority corruption remains fail-closed. Balance refresh,
+      // stale reconnect metadata, or other non-fatal connection enrichment
+      // must not prevent an authenticated socket from receiving the public
+      // table snapshot.
+      if (authority.fatalError() !== null) {
+        throw error;
+      }
+      logger.warn(
+        {
+          err: error,
+          stage: "BLACKJACK_IDENTITY_CONNECTED_NONFATAL",
+        },
+        "Blackjack identity side effect failed; keeping realtime socket available",
+      );
+    }
+  };
+
   const activeScheduler=scheduler;
   return Object.freeze({
     recovery,
@@ -213,7 +237,7 @@ export async function recoverAndStartBlackjackRoundRuntime(input: {
     realtimeOptions:Object.freeze({
       handlePlayerActionTransaction:
         authority.handlePlayerActionTransaction,
-      onIdentityConnected:authority.onIdentityConnected,
+      onIdentityConnected,
       onIdentityDisconnected:authority.onIdentityDisconnected,
       getPrivatePlayerState:authority.getPrivatePlayerState,
       handleSeatClaimTransaction:
