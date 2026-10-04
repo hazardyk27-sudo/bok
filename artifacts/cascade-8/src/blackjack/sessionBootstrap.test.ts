@@ -5,13 +5,22 @@ import {
   waitForBlackjackSession,
 } from "./sessionBootstrap";
 
-const response=(status:number)=>({
+const ACCESS_TOKEN="aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa";
+const ACCESS_EXPIRES_AT_MS=1_900_000_000_000;
+
+const response=(status:number,payload:unknown={
+  ready:true,
+  status:"READY",
+  realtimeAccessToken:ACCESS_TOKEN,
+  realtimeAccessExpiresAtMs:ACCESS_EXPIRES_AT_MS,
+})=>({
   ok:status>=200 && status<300,
   status,
-}) as Response;
+  json:vi.fn(async()=>payload),
+}) as unknown as Response;
 
 describe("blackjack session bootstrap",()=>{
-  it("retries transient gateway responses and then resolves",async()=>{
+  it("retries transient gateway responses and returns realtime access",async()=>{
     const fetchImpl=vi.fn()
       .mockResolvedValueOnce(response(503))
       .mockResolvedValueOnce(response(200));
@@ -21,7 +30,10 @@ describe("blackjack session bootstrap",()=>{
       maxAttempts:3,
       attemptTimeoutMs:100,
       retryDelayMs:0,
-    })).resolves.toBeUndefined();
+    })).resolves.toEqual({
+      realtimeAccessToken:ACCESS_TOKEN,
+      realtimeAccessExpiresAtMs:ACCESS_EXPIRES_AT_MS,
+    });
     expect(fetchImpl).toHaveBeenCalledTimes(2);
   });
 
@@ -38,8 +50,27 @@ describe("blackjack session bootstrap",()=>{
       fetchImpl,
       attemptTimeoutMs:100,
       retryDelayMs:0,
-    })).resolves.toBeUndefined();
+    })).resolves.toMatchObject({
+      realtimeAccessToken:ACCESS_TOKEN,
+    });
     expect(fetchImpl).toHaveBeenCalledTimes(6);
+  });
+
+  it("rejects a successful response that does not contain realtime access",async()=>{
+    const fetchImpl=vi.fn().mockResolvedValue(response(200,{
+      ready:true,
+      status:"READY",
+    }));
+
+    await expect(waitForBlackjackSession({
+      fetchImpl,
+      maxAttempts:1,
+      attemptTimeoutMs:100,
+      retryDelayMs:0,
+    })).rejects.toMatchObject({
+      code:"BLACKJACK_SESSION_ACCESS_INVALID",
+      status:200,
+    });
   });
 
   it("stops after the configured transient retry budget",async()=>{
@@ -107,14 +138,16 @@ describe("blackjack session bootstrap",()=>{
         attemptTimeoutMs:100,
         retryDelayMs:0,
       },
-    })).resolves.toBeUndefined();
+    })).resolves.toMatchObject({
+      realtimeAccessToken:ACCESS_TOKEN,
+    });
 
     expect(fetchImpl).toHaveBeenCalledTimes(2);
     expect(fetchImpl.mock.calls[0]?.[0]).toBe("/api/auth/me");
     expect(fetchImpl.mock.calls[1]?.[0]).toBe("/api/blackjack/session");
   });
 
-  it("still repairs anonymous blackjack session when auth refresh fails",async()=>{
+  it("still lets the session endpoint decide when auth refresh fails",async()=>{
     const fetchImpl=vi.fn()
       .mockRejectedValueOnce(new Error("auth offline"))
       .mockResolvedValueOnce(response(200));
@@ -127,7 +160,9 @@ describe("blackjack session bootstrap",()=>{
         attemptTimeoutMs:100,
         retryDelayMs:0,
       },
-    })).resolves.toBeUndefined();
+    })).resolves.toMatchObject({
+      realtimeAccessToken:ACCESS_TOKEN,
+    });
 
     expect(fetchImpl).toHaveBeenCalledTimes(2);
     expect(fetchImpl.mock.calls[1]?.[0]).toBe("/api/blackjack/session");
