@@ -1,10 +1,14 @@
-const HANDOFF_TIMEOUT_MS = 2200;
+const HANDOFF_TIMEOUT_MS = 2400;
 const HANDOFF_POLL_MS = 50;
 const PLACEHOLDER_DELAY_MS = 145;
+const REFRESH_INTERVAL_MS = 180;
 
 type PressSnapshot = {
   pointerId: number;
   sourceChip: HTMLElement;
+  sourceChipTemplate: HTMLElement;
+  sourceChipWidth: number;
+  sourceChipHeight: number;
   sourceCell: HTMLElement;
   sourceBetId: string;
   sourceAmount: number;
@@ -62,16 +66,16 @@ function findBetCellAtPoint(
 }
 
 function createTargetPlaceholder(
-  sourceChip: HTMLElement,
+  sourceChipTemplate: HTMLElement,
+  sourceChipWidth: number,
+  sourceChipHeight: number,
   targetCell: HTMLElement,
 ) {
-  const sourceRect = sourceChip.getBoundingClientRect();
   const targetRect = targetCell.getBoundingClientRect();
-  const clone = sourceChip.cloneNode(true) as HTMLElement;
+  const clone = sourceChipTemplate.cloneNode(true) as HTMLElement;
 
   clone.classList.remove(
     "is-chip-drag-source",
-    "is-chip-handoff-source",
     "roulette-chip-drag-ghost",
     "is-pending",
     "is-returning",
@@ -81,18 +85,18 @@ function createTargetPlaceholder(
   clone.style.setProperty("position", "fixed", "important");
   clone.style.setProperty(
     "left",
-    `${targetRect.left + targetRect.width / 2 - sourceRect.width / 2}px`,
+    `${targetRect.left + targetRect.width / 2 - sourceChipWidth / 2}px`,
     "important",
   );
   clone.style.setProperty(
     "top",
-    `${targetRect.top + targetRect.height / 2 - sourceRect.height / 2}px`,
+    `${targetRect.top + targetRect.height / 2 - sourceChipHeight / 2}px`,
     "important",
   );
   clone.style.setProperty("right", "auto", "important");
   clone.style.setProperty("bottom", "auto", "important");
-  clone.style.setProperty("width", `${sourceRect.width}px`, "important");
-  clone.style.setProperty("height", `${sourceRect.height}px`, "important");
+  clone.style.setProperty("width", `${sourceChipWidth}px`, "important");
+  clone.style.setProperty("height", `${sourceChipHeight}px`, "important");
   clone.style.setProperty("margin", "0", "important");
   clone.style.setProperty("transform", "none", "important");
   clone.style.setProperty("transition", "none", "important");
@@ -111,6 +115,7 @@ export function installRouletteChipDragHandoff(app: HTMLDivElement) {
 
   let press: PressSnapshot | null = null;
   let handoffToken = 0;
+  let cancelActiveHandoff: (() => void) | null = null;
 
   panel.addEventListener("pointerdown", (event) => {
     const hit = findPlacedChipAtPoint(panel, event.clientX, event.clientY);
@@ -119,9 +124,13 @@ export function installRouletteChipDragHandoff(app: HTMLDivElement) {
       return;
     }
 
+    const sourceRect = hit.chip.getBoundingClientRect();
     press = {
       pointerId: event.pointerId,
       sourceChip: hit.chip,
+      sourceChipTemplate: hit.chip.cloneNode(true) as HTMLElement,
+      sourceChipWidth: sourceRect.width,
+      sourceChipHeight: sourceRect.height,
       sourceCell: hit.cell,
       sourceBetId: hit.betId,
       sourceAmount: hit.amount,
@@ -142,61 +151,86 @@ export function installRouletteChipDragHandoff(app: HTMLDivElement) {
     const target = findBetCellAtPoint(panel, event.clientX, event.clientY);
     if (!target || target.betId === current.sourceBetId) return;
 
+    cancelActiveHandoff?.();
+    cancelActiveHandoff = null;
+
     const targetInitialAmount = readCellAmount(target.cell);
     const expectedTargetAmount = targetInitialAmount + current.sourceAmount;
     const token = ++handoffToken;
     let placeholder: HTMLElement | null = null;
     let finished = false;
+    let placeholderTimer = 0;
+    let pollTimer = 0;
+    let lastRefreshAt = -Infinity;
 
-    current.sourceChip.classList.add("is-chip-handoff-source");
-
-    const cleanup = (revealSource: boolean) => {
-      if (finished || token !== handoffToken) return;
-      finished = true;
-      placeholder?.remove();
-      placeholder = null;
-      if (revealSource && current.sourceChip.isConnected) {
-        current.sourceChip.classList.remove("is-chip-handoff-source");
-      }
-    };
+    current.sourceCell.classList.add("is-chip-handoff-source-cell");
 
     const isAuthoritativeDomReady = () =>
       readCellAmount(current.sourceCell) === 0 &&
       readCellAmount(target.cell) === expectedTargetAmount;
 
-    const placeholderTimer = window.setTimeout(() => {
+    const observer = new MutationObserver(() => {
+      if (!finished && token === handoffToken && isAuthoritativeDomReady()) {
+        cleanup();
+      }
+    });
+
+    const cleanup = () => {
+      if (finished) return;
+      finished = true;
+      window.clearTimeout(placeholderTimer);
+      window.clearTimeout(pollTimer);
+      observer.disconnect();
+      placeholder?.remove();
+      placeholder = null;
+      current.sourceCell.classList.remove("is-chip-handoff-source-cell");
+      if (cancelActiveHandoff === cleanup) cancelActiveHandoff = null;
+    };
+
+    cancelActiveHandoff = cleanup;
+    observer.observe(panel, {
+      childList: true,
+      subtree: true,
+      attributes: true,
+      attributeFilter: ["data-bet-amount"],
+    });
+
+    placeholderTimer = window.setTimeout(() => {
       if (finished || token !== handoffToken || isAuthoritativeDomReady()) return;
       if (targetInitialAmount === 0) {
-        placeholder = createTargetPlaceholder(current.sourceChip, target.cell);
+        placeholder = createTargetPlaceholder(
+          current.sourceChipTemplate,
+          current.sourceChipWidth,
+          current.sourceChipHeight,
+          target.cell,
+        );
       }
     }, PLACEHOLDER_DELAY_MS);
 
     const deadline = performance.now() + HANDOFF_TIMEOUT_MS;
-    let refreshCount = 0;
 
     const poll = () => {
       if (finished || token !== handoffToken) return;
 
       if (isAuthoritativeDomReady()) {
-        window.clearTimeout(placeholderTimer);
-        cleanup(false);
+        cleanup();
         return;
       }
 
-      if (performance.now() >= deadline) {
-        window.clearTimeout(placeholderTimer);
-        cleanup(true);
+      const now = performance.now();
+      if (now >= deadline) {
+        cleanup();
         return;
       }
 
-      if (refreshCount < 3) {
+      if (now - lastRefreshAt >= REFRESH_INTERVAL_MS) {
         requestRuntimeRefresh();
-        refreshCount += 1;
+        lastRefreshAt = now;
       }
 
-      window.setTimeout(poll, HANDOFF_POLL_MS);
+      pollTimer = window.setTimeout(poll, HANDOFF_POLL_MS);
     };
 
-    window.setTimeout(poll, 130);
+    pollTimer = window.setTimeout(poll, 80);
   });
 }
