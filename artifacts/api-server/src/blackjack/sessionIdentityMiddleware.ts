@@ -2,11 +2,9 @@ import type { NextFunction, Request, RequestHandler, Response } from "express";
 import {
   SESSION_COOKIE,
   SESSION_COOKIE_MAX_AGE_MS,
+  isValidSessionId,
 } from "../platform/session";
-import {
-  resolveBlackjackHttpSessionIdentity,
-  type BlackjackAuthWalletLookup,
-} from "./httpSessionIdentity";
+import type { BlackjackAuthWalletLookup } from "./httpSessionIdentity";
 
 export const BLACKJACK_AUTH_COOKIE = "fy_auth" as const;
 
@@ -48,17 +46,30 @@ export function createBlackjackSessionIdentityMiddleware(
       return;
     }
 
-    try {
-      const identity = await resolveBlackjackHttpSessionIdentity({
-        authToken: req.cookies?.[BLACKJACK_AUTH_COOKIE],
-        canonicalSessionId: req.cookies?.[SESSION_COOKIE],
-      }, {
-        lookupAuthWalletSessionId,
+    const authToken = req.cookies?.[BLACKJACK_AUTH_COOKIE];
+    if (typeof authToken !== "string" || authToken.length === 0) {
+      res.status(401).json({
+        ready: false,
+        status: "LOGIN_REQUIRED",
+        error: "BLACKJACK_LOGIN_REQUIRED",
       });
+      return;
+    }
+
+    try {
+      const walletSessionId = await lookupAuthWalletSessionId(authToken);
+      if (!isValidSessionId(walletSessionId)) {
+        res.status(401).json({
+          ready: false,
+          status: "LOGIN_REQUIRED",
+          error: "BLACKJACK_LOGIN_REQUIRED",
+        });
+        return;
+      }
 
       req.cookies ??= {};
-      req.cookies[SESSION_COOKIE] = identity.sessionId;
-      writeCanonicalSessionCookie(res, identity.sessionId);
+      req.cookies[SESSION_COOKIE] = walletSessionId;
+      writeCanonicalSessionCookie(res, walletSessionId);
       next();
     } catch {
       res.status(503).json({
