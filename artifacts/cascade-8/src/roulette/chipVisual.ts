@@ -110,30 +110,26 @@ export function getRouletteChipStackDepth(
             : amount >= 50
               ? 50
               : 10;
-  const estimatedChips =
-    Math.max(
-      2,
-      Math.ceil(amount / tierFloor),
-    );
+  const estimatedChips = Math.max(
+    2,
+    Math.ceil(amount / tierFloor),
+  );
 
   return Math.min(3, estimatedChips);
 }
 
-function decorateChipElement(
+function applyChipVisualState(
   element: HTMLElement,
   amount: number,
-  placed: boolean,
 ) {
   if (!Number.isFinite(amount) || amount <= 0) {
-    return;
+    return false;
   }
 
   const tier = getRouletteChipTier(amount);
   const palette = getRouletteChipPalette(amount);
 
-  element.classList.add(
-    "roulette-casino-chip",
-  );
+  element.classList.add("roulette-casino-chip");
   element.dataset.chipTier = tier;
   element.style.setProperty(
     "--casino-chip-main",
@@ -156,18 +152,50 @@ function decorateChipElement(
     palette.highlight,
   );
 
+  return true;
+}
+
+function decorateChipElement(
+  element: HTMLElement,
+  amount: number,
+  placed: boolean,
+) {
+  if (!applyChipVisualState(element, amount)) {
+    return;
+  }
+
   if (placed) {
     element.dataset.stackDepth = String(
       getRouletteChipStackDepth(amount),
     );
-  } else {
-    const label = element.querySelector<HTMLElement>(
-      ":scope > span",
-    );
-    if (label) {
-      label.textContent =
-        formatRouletteAmount(amount);
-    }
+    return;
+  }
+
+  const label = element.querySelector<HTMLElement>(
+    ":scope > span",
+  );
+  if (label) {
+    label.textContent = formatRouletteAmount(amount);
+  }
+}
+
+function decorateMobileChipToggle(
+  app: HTMLDivElement,
+  amount: number,
+) {
+  const toggle = app.querySelector<HTMLElement>(
+    "[data-mobile-chip-toggle]",
+  );
+  if (!toggle || !applyChipVisualState(toggle, amount)) {
+    return;
+  }
+
+  toggle.dataset.selectedChipValue = String(amount);
+  const label = toggle.querySelector<HTMLElement>(
+    "[data-mobile-selected-chip]",
+  );
+  if (label) {
+    label.textContent = formatRouletteAmount(amount);
   }
 }
 
@@ -175,9 +203,7 @@ function decorateRouletteChips(
   root: ParentNode,
 ) {
   root
-    .querySelectorAll<HTMLElement>(
-      "[data-chip-value]",
-    )
+    .querySelectorAll<HTMLElement>("[data-chip-value]")
     .forEach((chip) => {
       decorateChipElement(
         chip,
@@ -199,13 +225,24 @@ function decorateRouletteChips(
     });
 }
 
+function readSelectedChipAmount(
+  app: HTMLDivElement,
+) {
+  const selected = app.querySelector<HTMLElement>(
+    "[data-chip-value][aria-pressed=\"true\"]",
+  );
+  const value = Number(selected?.dataset.chipValue);
+  return Number.isFinite(value) && value > 0
+    ? value
+    : ROULETTE_CHIP_VALUES[0];
+}
+
 export function installRouletteChipVisuals(
   app: HTMLDivElement,
 ) {
-  const page =
-    app.querySelector<HTMLElement>(
-      "[data-roulette-page]",
-    );
+  const page = app.querySelector<HTMLElement>(
+    "[data-roulette-page]",
+  );
 
   if (
     !page ||
@@ -216,36 +253,68 @@ export function installRouletteChipVisuals(
 
   page.dataset.chipVisualsInstalled = "true";
   decorateRouletteChips(app);
-
-  const observer = new MutationObserver(
-    (records) => {
-      for (const record of records) {
-        for (const node of record.addedNodes) {
-          if (!(node instanceof HTMLElement)) {
-            continue;
-          }
-
-          if (
-            node.matches(
-              "[data-chip-value], .roulette-placed-chip[data-bet-amount]",
-            )
-          ) {
-            decorateRouletteChips(
-              node.parentElement ?? node,
-            );
-          } else if (
-            node.querySelector(
-              "[data-chip-value], .roulette-placed-chip[data-bet-amount]",
-            )
-          ) {
-            decorateRouletteChips(node);
-          }
-        }
-      }
-    },
+  decorateMobileChipToggle(
+    app,
+    readSelectedChipAmount(app),
   );
 
+  app.addEventListener("click", (event) => {
+    const target = event.target;
+    if (!(target instanceof Element)) return;
+
+    const chip = target.closest<HTMLElement>(
+      "[data-chip-value]",
+    );
+    if (!chip) return;
+
+    const amount = Number(chip.dataset.chipValue);
+    if (!Number.isFinite(amount) || amount <= 0) return;
+
+    queueMicrotask(() => {
+      decorateMobileChipToggle(app, amount);
+    });
+  });
+
+  const observer = new MutationObserver((records) => {
+    for (const record of records) {
+      if (
+        record.type === "attributes" &&
+        record.attributeName === "aria-pressed" &&
+        record.target instanceof HTMLElement &&
+        record.target.matches("[data-chip-value]") &&
+        record.target.getAttribute("aria-pressed") === "true"
+      ) {
+        decorateMobileChipToggle(
+          app,
+          Number(record.target.dataset.chipValue),
+        );
+      }
+
+      for (const node of record.addedNodes) {
+        if (!(node instanceof HTMLElement)) continue;
+
+        if (
+          node.matches(
+            "[data-chip-value], .roulette-placed-chip[data-bet-amount]",
+          )
+        ) {
+          decorateRouletteChips(
+            node.parentElement ?? node,
+          );
+        } else if (
+          node.querySelector(
+            "[data-chip-value], .roulette-placed-chip[data-bet-amount]",
+          )
+        ) {
+          decorateRouletteChips(node);
+        }
+      }
+    }
+  });
+
   observer.observe(app, {
+    attributes: true,
+    attributeFilter: ["aria-pressed"],
     childList: true,
     subtree: true,
   });
