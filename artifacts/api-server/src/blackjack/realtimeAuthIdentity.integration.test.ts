@@ -1,5 +1,5 @@
 import { createServer } from "node:http";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { WebSocket, type RawData } from "ws";
 import type { BlackjackPublicSnapshot } from "./publicSnapshot";
 import {
@@ -15,10 +15,8 @@ import {
   type BlackjackAuthWalletSessionLookup,
 } from "./realtimeIdentity";
 
-const AUTH_SESSION = "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa";
+const ACCOUNT_SESSION = "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa";
 const LEGACY_SESSION = "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb";
-const STALE_BOUND_SESSION = "cccccccc-cccc-cccc-cccc-cccccccccccc";
-const OTHER_AUTH_SESSION = "dddddddd-dddd-dddd-dddd-dddddddddddd";
 
 function identityFromSessionId(
   sessionId: string | null,
@@ -116,93 +114,41 @@ describe("blackjack authenticated websocket identity", () => {
     server = undefined;
   });
 
-  it("prefers the authenticated wallet over conflicting legacy game_session cookies", async () => {
+  it("does not authenticate websocket directly from fy_auth anymore", async () => {
+    const lookup = vi.fn(async () => ACCOUNT_SESSION);
     const cookieHeader = [
       `${BLACKJACK_AUTH_COOKIE}=valid-auth`,
-      `game_session=${LEGACY_SESSION}`,
-      `game_session=${STALE_BOUND_SESSION}`,
+      `game_session=${ACCOUNT_SESSION}`,
     ].join("; ");
 
     await expect(resolveBlackjackRealtimeSessionIdWithAuth(
       cookieHeader,
-      async (token) => token === "valid-auth" ? AUTH_SESSION : null,
-    )).resolves.toBe(AUTH_SESSION);
-  });
-
-  it("prefers the authenticated wallet over a stale dedicated websocket binding", async () => {
-    const cookieHeader = [
-      `${BLACKJACK_AUTH_COOKIE}=valid-auth`,
-      `${BLACKJACK_REALTIME_SESSION_COOKIE}=${STALE_BOUND_SESSION}`,
-      `game_session=${LEGACY_SESSION}`,
-    ].join("; ");
-
-    await expect(resolveBlackjackRealtimeSessionIdWithAuth(
-      cookieHeader,
-      async () => AUTH_SESSION,
-    )).resolves.toBe(AUTH_SESSION);
-  });
-
-  it("fails closed when duplicate auth cookies resolve to different wallets without a canonical realtime binding", async () => {
-    const cookieHeader = [
-      `${BLACKJACK_AUTH_COOKIE}=auth-one`,
-      `${BLACKJACK_AUTH_COOKIE}=auth-two`,
-      `game_session=${LEGACY_SESSION}`,
-    ].join("; ");
-
-    await expect(resolveBlackjackRealtimeSessionIdWithAuth(
-      cookieHeader,
-      async (token) => token === "auth-one"
-        ? AUTH_SESSION
-        : OTHER_AUTH_SESSION,
+      lookup,
     )).resolves.toBeNull();
+    expect(lookup).not.toHaveBeenCalled();
   });
 
-  it("reconciles duplicate auth cookies through the session bootstrap realtime binding", async () => {
+  it("uses the dedicated binding and ignores duplicate auth/game cookies", async () => {
+    const lookup = vi.fn(async () => LEGACY_SESSION);
     const cookieHeader = [
-      `${BLACKJACK_AUTH_COOKIE}=auth-one`,
-      `${BLACKJACK_AUTH_COOKIE}=auth-two`,
-      `${BLACKJACK_REALTIME_SESSION_COOKIE}=${AUTH_SESSION}`,
+      `${BLACKJACK_AUTH_COOKIE}=old-auth`,
+      `${BLACKJACK_AUTH_COOKIE}=new-auth`,
       `game_session=${LEGACY_SESSION}`,
+      `game_session=${ACCOUNT_SESSION}`,
+      `${BLACKJACK_REALTIME_SESSION_COOKIE}=${ACCOUNT_SESSION}`,
     ].join("; ");
 
     await expect(resolveBlackjackRealtimeSessionIdWithAuth(
       cookieHeader,
-      async (token) => token === "auth-one"
-        ? AUTH_SESSION
-        : OTHER_AUTH_SESSION,
-    )).resolves.toBe(AUTH_SESSION);
+      lookup,
+    )).resolves.toBe(ACCOUNT_SESSION);
+    expect(lookup).not.toHaveBeenCalled();
   });
 
-  it("still fails closed when the realtime binding does not match any authenticated wallet", async () => {
-    const cookieHeader = [
-      `${BLACKJACK_AUTH_COOKIE}=auth-one`,
-      `${BLACKJACK_AUTH_COOKIE}=auth-two`,
-      `${BLACKJACK_REALTIME_SESSION_COOKIE}=${STALE_BOUND_SESSION}`,
-    ].join("; ");
-
-    await expect(resolveBlackjackRealtimeSessionIdWithAuth(
-      cookieHeader,
-      async (token) => token === "auth-one"
-        ? AUTH_SESSION
-        : OTHER_AUTH_SESSION,
-    )).resolves.toBeNull();
-  });
-
-  it("falls back to the dedicated websocket binding when auth is expired", async () => {
-    const cookieHeader = [
-      `${BLACKJACK_AUTH_COOKIE}=expired-auth`,
-      `${BLACKJACK_REALTIME_SESSION_COOKIE}=${STALE_BOUND_SESSION}`,
-    ].join("; ");
-
-    await expect(resolveBlackjackRealtimeSessionIdWithAuth(
-      cookieHeader,
-      async () => null,
-    )).resolves.toBe(STALE_BOUND_SESSION);
-  });
-
-  it("opens a real websocket from auth even when game_session cookies are ambiguous", async () => {
+  it("opens a real websocket from the dedicated account binding", async () => {
     const snapshot = tableSnapshot();
     server = createServer();
+    const lookup = vi.fn(async () => LEGACY_SESSION);
     runtime = attachBlackjackWebSocket(
       server,
       {
@@ -211,10 +157,7 @@ describe("blackjack authenticated websocket identity", () => {
       },
       {
         resolveIdentity: (request) =>
-          resolveIdentity(
-            request.headers.cookie,
-            async (token) => token === "valid-auth" ? AUTH_SESSION : null,
-          ),
+          resolveIdentity(request.headers.cookie, lookup),
       },
     );
     const port = await listen(server);
@@ -222,9 +165,10 @@ describe("blackjack authenticated websocket identity", () => {
     client = new WebSocket(`ws://127.0.0.1:${port}${BLACKJACK_WS_PATH}`, {
       headers: {
         Cookie: [
-          `${BLACKJACK_AUTH_COOKIE}=valid-auth`,
+          `${BLACKJACK_AUTH_COOKIE}=old-auth`,
+          `${BLACKJACK_AUTH_COOKIE}=new-auth`,
           `game_session=${LEGACY_SESSION}`,
-          `game_session=${STALE_BOUND_SESSION}`,
+          `${BLACKJACK_REALTIME_SESSION_COOKIE}=${ACCOUNT_SESSION}`,
         ].join("; "),
       },
     });
@@ -235,47 +179,6 @@ describe("blackjack authenticated websocket identity", () => {
       snapshot: { tableId: "auth-identity-test-table" },
     });
     expect(runtime.authenticatedConnectionCount()).toBe(1);
-  });
-
-  it("opens a real websocket when duplicate auth cookies are reconciled by the bootstrap binding", async () => {
-    const snapshot = tableSnapshot();
-    server = createServer();
-    runtime = attachBlackjackWebSocket(
-      server,
-      {
-        getSnapshot: () => snapshot,
-        subscribe: () => () => undefined,
-      },
-      {
-        resolveIdentity: (request) =>
-          resolveIdentity(
-            request.headers.cookie,
-            async (token) => token === "auth-one"
-              ? AUTH_SESSION
-              : token === "auth-two"
-                ? OTHER_AUTH_SESSION
-                : null,
-          ),
-      },
-    );
-    const port = await listen(server);
-
-    client = new WebSocket(`ws://127.0.0.1:${port}${BLACKJACK_WS_PATH}`, {
-      headers: {
-        Cookie: [
-          `${BLACKJACK_AUTH_COOKIE}=auth-one`,
-          `${BLACKJACK_AUTH_COOKIE}=auth-two`,
-          `${BLACKJACK_REALTIME_SESSION_COOKIE}=${AUTH_SESSION}`,
-          `game_session=${LEGACY_SESSION}`,
-        ].join("; "),
-      },
-    });
-
-    await expect(nextMessage(client)).resolves.toMatchObject({
-      type: "FULL_TABLE_SNAPSHOT",
-      reason: "INITIAL_CONNECT",
-      snapshot: { tableId: "auth-identity-test-table" },
-    });
-    expect(runtime.authenticatedConnectionCount()).toBe(1);
+    expect(lookup).not.toHaveBeenCalled();
   });
 });

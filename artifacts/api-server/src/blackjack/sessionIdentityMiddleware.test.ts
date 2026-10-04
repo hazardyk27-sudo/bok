@@ -36,7 +36,7 @@ function harness(input: {
 }
 
 describe("blackjack session identity middleware", () => {
-  it("overrides legacy/canonical guest identity with the authenticated account wallet", async () => {
+  it("uses only the authenticated account wallet for the table session", async () => {
     const h = harness({
       authToken: "valid-token",
       canonicalSessionId: GUEST,
@@ -55,7 +55,7 @@ describe("blackjack session identity middleware", () => {
     expect(h.status).not.toHaveBeenCalled();
   });
 
-  it("keeps the canonical guest identity when auth token is expired", async () => {
+  it("rejects an expired account session instead of falling back to guest", async () => {
     const h = harness({
       authToken: "expired-token",
       canonicalSessionId: GUEST,
@@ -64,11 +64,29 @@ describe("blackjack session identity middleware", () => {
 
     await h.middleware(h.req, h.res, h.next);
 
-    expect(h.req.cookies[SESSION_COOKIE]).toBe(GUEST);
-    expect(h.next).toHaveBeenCalledTimes(1);
+    expect(h.status).toHaveBeenCalledWith(401);
+    expect(h.json).toHaveBeenCalledWith({
+      ready: false,
+      status: "LOGIN_REQUIRED",
+      error: "BLACKJACK_LOGIN_REQUIRED",
+    });
+    expect(h.cookie).not.toHaveBeenCalled();
+    expect(h.next).not.toHaveBeenCalled();
   });
 
-  it("returns a bounded 503 instead of silently switching identity when auth lookup fails", async () => {
+  it("rejects a browser with no account login", async () => {
+    const h = harness({
+      canonicalSessionId: GUEST,
+      lookup: async () => ACCOUNT,
+    });
+
+    await h.middleware(h.req, h.res, h.next);
+
+    expect(h.status).toHaveBeenCalledWith(401);
+    expect(h.next).not.toHaveBeenCalled();
+  });
+
+  it("returns a bounded 503 when the account lookup fails", async () => {
     const h = harness({
       authToken: "valid-token",
       canonicalSessionId: GUEST,
