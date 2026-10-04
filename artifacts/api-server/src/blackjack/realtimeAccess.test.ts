@@ -1,5 +1,5 @@
 import { createServer, type IncomingMessage } from "node:http";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { WebSocket, type RawData } from "ws";
 import type { BlackjackPublicSnapshot } from "./publicSnapshot";
 import {
@@ -9,13 +9,13 @@ import {
 } from "./realtime";
 import {
   BLACKJACK_REALTIME_ACCESS_TTL_MS,
-  clearBlackjackRealtimeAccessForTests,
+  hashBlackjackRealtimeAccessToken,
   issueBlackjackRealtimeAccess,
   resolveBlackjackRealtimeAccess,
 } from "./realtimeAccess";
 
 const SESSION_ID="aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa";
-const TOKEN="bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb";
+const TOKEN="bjrt_bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb";
 
 function request(url:string,cookie?:string):IncomingMessage{
   return {
@@ -93,55 +93,87 @@ describe("blackjack realtime access token",()=>{
     client?.terminate();
     runtime?.close();
     if(server?.listening) await closeServer(server);
-    clearBlackjackRealtimeAccessForTests();
     runtime=undefined;
     server=undefined;
     client=undefined;
   });
 
-  it("resolves an issued token without reading auth or game cookies",()=>{
-    issueBlackjackRealtimeAccess(SESSION_ID,{
+  it("persists a domain-separated token and resolves it without cookies",async()=>{
+    const persisted=new Map<string,string>();
+    const persist=vi.fn(async(input:{tokenHash:string;sessionId:string})=>{
+      persisted.set(input.tokenHash,input.sessionId);
+      return true;
+    });
+    const lookup=vi.fn(async(tokenHash:string)=>persisted.get(tokenHash) ?? null);
+
+    const issued=await issueBlackjackRealtimeAccess(SESSION_ID,{
       nowMs:1_000,
       createToken:()=>TOKEN,
+      persist,
     });
 
-    expect(resolveBlackjackRealtimeAccess(
+    expect(issued.expiresAtMs).toBe(1_000+BLACKJACK_REALTIME_ACCESS_TTL_MS);
+    expect(persist).toHaveBeenCalledWith(expect.objectContaining({
+      tokenHash:hashBlackjackRealtimeAccessToken(TOKEN),
+      sessionId:SESSION_ID,
+    }));
+
+    await expect(resolveBlackjackRealtimeAccess(
       request(
         `${BLACKJACK_WS_PATH}?access=${TOKEN}`,
         "fy_auth=stale; game_session=wrong; blackjack_realtime_session=wrong",
       ),
-      1_001,
-    )).toEqual({
+      {nowMs:1_001,lookup},
+    )).resolves.toEqual({
       userId:SESSION_ID,
       playerId:`blackjack-player:${SESSION_ID}`,
       sessionId:SESSION_ID,
     });
   });
 
-  it("rejects missing, unknown and expired tokens",()=>{
-    issueBlackjackRealtimeAccess(SESSION_ID,{
-      nowMs:10_000,
+  it("survives issuer process loss because resolution uses the shared lookup",async()=>{
+    let storedHash="";
+    await issueBlackjackRealtimeAccess(SESSION_ID,{
       createToken:()=>TOKEN,
+      persist:async(input)=>{
+        storedHash=input.tokenHash;
+        return true;
+      },
     });
 
-    expect(resolveBlackjackRealtimeAccess(
-      request(BLACKJACK_WS_PATH),
-      10_001,
-    )).toBeNull();
-    expect(resolveBlackjackRealtimeAccess(
-      request(`${BLACKJACK_WS_PATH}?access=unknown-token-value-000000`),
-      10_001,
-    )).toBeNull();
-    expect(resolveBlackjackRealtimeAccess(
+    const independentLookup=vi.fn(async(tokenHash:string)=>
+      tokenHash===storedHash ? SESSION_ID : null,
+    );
+
+    await expect(resolveBlackjackRealtimeAccess(
       request(`${BLACKJACK_WS_PATH}?access=${TOKEN}`),
-      10_000+BLACKJACK_REALTIME_ACCESS_TTL_MS+1,
-    )).toBeNull();
+      {lookup:independentLookup},
+    )).resolves.toMatchObject({sessionId:SESSION_ID});
   });
 
-  it("opens a real websocket from the explicit access token",async()=>{
-    issueBlackjackRealtimeAccess(SESSION_ID,{
-      createToken:()=>TOKEN,
-    });
+  it("rejects missing, malformed and unknown tokens",async()=>{
+    const lookup=vi.fn(async()=>null);
+
+    await expect(resolveBlackjackRealtimeAccess(
+      request(BLACKJACK_WS_PATH),
+      {lookup},
+    )).resolves.toBeNull();
+    await expect(resolveBlackjackRealtimeAccess(
+      request(`${BLACKJACK_WS_PATH}?access=not-a-blackjack-token`),
+      {lookup},
+    )).resolves.toBeNull();
+    await expect(resolveBlackjackRealtimeAccess(
+      request(`${BLACKJACK_WS_PATH}?access=${TOKEN}`),
+      {lookup},
+    )).resolves.toBeNull();
+  });
+
+  it("opens a real websocket from shared access even with stale cookies",async()=>{
+    const lookup=vi.fn(async(tokenHash:string)=>
+      tokenHash===hashBlackjackRealtimeAccessToken(TOKEN)
+        ? SESSION_ID
+        : null,
+    );
     const tableSnapshot=snapshot();
     server=createServer();
     runtime=attachBlackjackWebSocket(
@@ -151,7 +183,10 @@ describe("blackjack realtime access token",()=>{
         subscribe:()=>()=>undefined,
       },
       {
-        resolveIdentity:resolveBlackjackRealtimeAccess,
+        resolveIdentity:(incoming)=>resolveBlackjackRealtimeAccess(
+          incoming,
+          {lookup},
+        ),
       },
     );
     const port=await listen(server);
