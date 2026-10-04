@@ -1,8 +1,10 @@
 import type {
   RouletteRoundSettlement,
 } from "./betRules";
-import type {
-  RouletteBetPlacement,
+import {
+  getRouletteBetTotals,
+  moveRouletteBetPlacements,
+  type RouletteBetPlacement,
 } from "./betState";
 import type {
   RouletteWinningResult,
@@ -82,10 +84,219 @@ export type RouletteGlobalBetUpdateResponse = {
   balanceCents: number;
 };
 
+export type RouletteBetMoveGuard = {
+  roundId: string;
+  fromBetId: string;
+  toBetId: string;
+  confirmedRevision: number | null;
+  expiresAtMs: number;
+};
+
 const API_BASE =
   "/api/roulette";
 export const ROULETTE_REQUEST_TIMEOUT_MS =
   8_000;
+const ROULETTE_DRAG_GUARD_TTL_MS =
+  3_000;
+
+let lastObservedGlobalBet:
+  RouletteGlobalBetSnapshot | null =
+    null;
+let activeBetMoveGuard:
+  RouletteBetMoveGuard | null =
+    null;
+let clearMoveGuardTimer = 0;
+
+function clonePlacements(
+  bets: readonly RouletteBetPlacement[],
+) {
+  return bets.map((bet) => ({
+    ...bet,
+  }));
+}
+
+function totalStake(
+  bets: readonly RouletteBetPlacement[],
+) {
+  return bets.reduce(
+    (sum, bet) => sum + bet.amount,
+    0,
+  );
+}
+
+export function deriveRouletteBetMoveGuard(
+  roundId: string,
+  before: readonly RouletteBetPlacement[],
+  after: readonly RouletteBetPlacement[],
+  nowMs = Date.now(),
+): RouletteBetMoveGuard | null {
+  if (
+    !roundId ||
+    totalStake(before) !==
+      totalStake(after)
+  ) {
+    return null;
+  }
+
+  const beforeTotals =
+    getRouletteBetTotals(before);
+  const afterTotals =
+    getRouletteBetTotals(after);
+  const keys = new Set([
+    ...Object.keys(beforeTotals),
+    ...Object.keys(afterTotals),
+  ]);
+  const decreased: string[] = [];
+  const increased: string[] = [];
+
+  for (const key of keys) {
+    const delta =
+      (afterTotals[key] ?? 0) -
+      (beforeTotals[key] ?? 0);
+    if (delta < 0) decreased.push(key);
+    if (delta > 0) increased.push(key);
+  }
+
+  if (
+    decreased.length !== 1 ||
+    increased.length !== 1
+  ) {
+    return null;
+  }
+
+  const fromBetId = decreased[0]!;
+  const toBetId = increased[0]!;
+  const movedAmount =
+    beforeTotals[fromBetId] ?? 0;
+
+  if (
+    movedAmount <= 0 ||
+    (afterTotals[fromBetId] ?? 0) !== 0 ||
+    (afterTotals[toBetId] ?? 0) !==
+      (beforeTotals[toBetId] ?? 0) +
+        movedAmount
+  ) {
+    return null;
+  }
+
+  for (const key of keys) {
+    if (
+      key !== fromBetId &&
+      key !== toBetId &&
+      (beforeTotals[key] ?? 0) !==
+        (afterTotals[key] ?? 0)
+    ) {
+      return null;
+    }
+  }
+
+  return {
+    roundId,
+    fromBetId,
+    toBetId,
+    confirmedRevision: null,
+    expiresAtMs:
+      nowMs +
+      ROULETTE_DRAG_GUARD_TTL_MS,
+  };
+}
+
+export function applyRouletteBetMoveGuard(
+  guard: RouletteBetMoveGuard | null,
+  roundId: string,
+  bets: readonly RouletteBetPlacement[],
+  nowMs = Date.now(),
+) {
+  if (
+    !guard ||
+    guard.roundId !== roundId ||
+    guard.expiresAtMs <= nowMs
+  ) {
+    return clonePlacements(bets);
+  }
+
+  return moveRouletteBetPlacements(
+    bets,
+    guard.fromBetId,
+    guard.toBetId,
+  );
+}
+
+function cleanupExpiredMoveGuard() {
+  if (
+    activeBetMoveGuard &&
+    activeBetMoveGuard.expiresAtMs <=
+      Date.now()
+  ) {
+    activeBetMoveGuard = null;
+  }
+}
+
+function rememberObservedGlobalBet(
+  globalBet:
+    | RouletteGlobalBetSnapshot
+    | null,
+) {
+  if (!globalBet) return;
+
+  lastObservedGlobalBet = {
+    ...globalBet,
+    bets:
+      clonePlacements(
+        globalBet.bets,
+      ),
+  };
+
+  cleanupExpiredMoveGuard();
+  const guard = activeBetMoveGuard;
+  if (
+    !guard ||
+    guard.roundId !==
+      globalBet.roundId ||
+    guard.confirmedRevision === null ||
+    globalBet.revision <
+      guard.confirmedRevision
+  ) {
+    return;
+  }
+
+  const guarded =
+    applyRouletteBetMoveGuard(
+      guard,
+      globalBet.roundId,
+      globalBet.bets,
+    );
+  const observedTotals =
+    getRouletteBetTotals(
+      globalBet.bets,
+    );
+  const guardedTotals =
+    getRouletteBetTotals(guarded);
+  const keys = new Set([
+    ...Object.keys(observedTotals),
+    ...Object.keys(guardedTotals),
+  ]);
+  const alreadyMoved = [...keys]
+    .every(
+      (key) =>
+        (observedTotals[key] ?? 0) ===
+        (guardedTotals[key] ?? 0),
+    );
+
+  if (!alreadyMoved) return;
+
+  window.clearTimeout(
+    clearMoveGuardTimer,
+  );
+  clearMoveGuardTimer =
+    window.setTimeout(() => {
+      if (
+        activeBetMoveGuard === guard
+      ) {
+        activeBetMoveGuard = null;
+      }
+    }, 0);
+}
 
 async function readResponse<T>(
   response: Response,
@@ -178,6 +389,12 @@ export class RouletteWalletClient {
       response.headers?.get?.(
         "X-Roulette-Simulation-Version",
       );
+    const globalBet =
+      body.globalBet ?? null;
+
+    rememberObservedGlobalBet(
+      globalBet,
+    );
 
     return {
       simulationVersion:
@@ -213,9 +430,7 @@ export class RouletteWalletClient {
                 value <= 36,
             )
           : [],
-      globalBet:
-        body.globalBet ??
-        null,
+      globalBet,
       wallet:
         body.wallet,
     };
@@ -228,44 +443,110 @@ export class RouletteWalletClient {
     idempotencyKey: string,
     expectedRevision: number,
   ): Promise<RouletteGlobalBetUpdateResponse> {
-    const response =
-      await fetchWithTimeout(
-        `${API_BASE}/global-bets`,
-        {
-          method: "PUT",
-          credentials:
-            "same-origin",
-          headers: {
-            "Content-Type":
-              "application/json",
-          },
-          body:
-            JSON.stringify({
-              roundId,
-              bets,
-              idempotencyKey,
-              expectedRevision,
-            }),
-        },
-        ROULETTE_REQUEST_TIMEOUT_MS,
-      ).catch(
-        (error) => {
-          if (
-            isAbortError(
-              error,
-            )
-          ) {
-            throw new Error(
-              "ROULETTE_GLOBAL_BET_TIMEOUT",
-            );
-          }
+    cleanupExpiredMoveGuard();
 
-          throw error;
-        },
+    if (
+      idempotencyKey.startsWith(
+        "roulette_drag_",
+      ) &&
+      lastObservedGlobalBet
+        ?.roundId === roundId
+    ) {
+      const derived =
+        deriveRouletteBetMoveGuard(
+          roundId,
+          lastObservedGlobalBet.bets,
+          bets,
+        );
+      if (derived) {
+        activeBetMoveGuard =
+          derived;
+      }
+    }
+
+    const guardedBets =
+      applyRouletteBetMoveGuard(
+        activeBetMoveGuard,
+        roundId,
+        bets,
       );
 
-    return readResponse<RouletteGlobalBetUpdateResponse>(
-      response,
-    );
+    try {
+      const response =
+        await fetchWithTimeout(
+          `${API_BASE}/global-bets`,
+          {
+            method: "PUT",
+            credentials:
+              "same-origin",
+            headers: {
+              "Content-Type":
+                "application/json",
+            },
+            body:
+              JSON.stringify({
+                roundId,
+                bets:
+                  guardedBets,
+                idempotencyKey,
+                expectedRevision,
+              }),
+          },
+          ROULETTE_REQUEST_TIMEOUT_MS,
+        ).catch(
+          (error) => {
+            if (
+              isAbortError(
+                error,
+              )
+            ) {
+              throw new Error(
+                "ROULETTE_GLOBAL_BET_TIMEOUT",
+              );
+            }
+
+            throw error;
+          },
+        );
+
+      const result =
+        await readResponse<RouletteGlobalBetUpdateResponse>(
+          response,
+        );
+
+      if (result.globalBet) {
+        rememberObservedGlobalBet(
+          result.globalBet,
+        );
+      }
+
+      if (
+        idempotencyKey.startsWith(
+          "roulette_drag_",
+        ) &&
+        activeBetMoveGuard
+          ?.roundId === roundId &&
+        result.globalBet
+      ) {
+        activeBetMoveGuard = {
+          ...activeBetMoveGuard,
+          confirmedRevision:
+            result.globalBet.revision,
+        };
+      }
+
+      return result;
+    } catch (error) {
+      if (
+        idempotencyKey.startsWith(
+          "roulette_drag_",
+        ) &&
+        activeBetMoveGuard
+          ?.roundId === roundId
+      ) {
+        activeBetMoveGuard = null;
+      }
+      throw error;
+    }
   }
 }
