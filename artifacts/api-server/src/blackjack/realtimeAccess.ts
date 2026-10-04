@@ -1,4 +1,9 @@
-import { createHash, randomBytes } from "node:crypto";
+import {
+  createHash,
+  createHmac,
+  randomBytes,
+  timingSafeEqual,
+} from "node:crypto";
 import type { IncomingMessage } from "node:http";
 import type { BlackjackRealtimeIdentity } from "./realtime";
 
@@ -6,8 +11,9 @@ export const BLACKJACK_REALTIME_ACCESS_QUERY = "access" as const;
 export const BLACKJACK_REALTIME_ACCESS_PREFIX = "bjrt_" as const;
 export const BLACKJACK_REALTIME_ACCESS_TTL_MS = 10 * 60 * 1000;
 
-const BLACKJACK_REALTIME_ACCESS_HASH_DOMAIN =
-  "blackjack-realtime-access-v1\u0000";
+const BLACKJACK_REALTIME_ACCESS_VERSION = 1 as const;
+const BLACKJACK_REALTIME_ACCESS_KEY_DOMAIN =
+  "blackjack-realtime-access-signing-key-v1\u0000";
 
 export type BlackjackRealtimeAccessRecord = Readonly<{
   token: string;
@@ -15,18 +21,12 @@ export type BlackjackRealtimeAccessRecord = Readonly<{
   expiresAtMs: number;
 }>;
 
-export type BlackjackRealtimeAccessPersist = (
-  input: Readonly<{
-    tokenHash: string;
-    sessionId: string;
-    expiresAtMs: number;
-  }>,
-) => Promise<boolean>;
-
-export type BlackjackRealtimeAccessLookup = (
-  tokenHash: string,
-  nowMs: number,
-) => Promise<string | null>;
+type BlackjackRealtimeAccessPayload = Readonly<{
+  v: typeof BLACKJACK_REALTIME_ACCESS_VERSION;
+  s: string;
+  e: number;
+  n: string;
+}>;
 
 function buildIdentity(sessionId: string): BlackjackRealtimeIdentity {
   return Object.freeze({
@@ -40,111 +40,133 @@ function isValidSessionId(sessionId: string): boolean {
   return sessionId.length >= 20 && sessionId.length <= 200;
 }
 
-function isValidRealtimeToken(token: string): boolean {
-  return (
-    token.startsWith(BLACKJACK_REALTIME_ACCESS_PREFIX) &&
-    token.length >= BLACKJACK_REALTIME_ACCESS_PREFIX.length + 20 &&
-    token.length <= 200
-  );
-}
+function resolveSigningSecret(explicit?: string): string {
+  const configured = explicit?.trim();
+  if (configured) return configured;
 
-export function hashBlackjackRealtimeAccessToken(token: string): string {
-  return createHash("sha256")
-    .update(BLACKJACK_REALTIME_ACCESS_HASH_DOMAIN)
-    .update(token)
-    .digest("hex");
-}
+  const dedicated = process.env.BLACKJACK_REALTIME_SIGNING_SECRET?.trim();
+  if (dedicated) return dedicated;
 
-async function persistBlackjackRealtimeAccessDefault(
-  input: Readonly<{
-    tokenHash: string;
-    sessionId: string;
-    expiresAtMs: number;
-  }>,
-): Promise<boolean> {
-  const { pool } = await import("@workspace/db");
-  const result = await pool.query<{ id: string }>(
-    `INSERT INTO auth_sessions (user_id, token_hash, expires_at)
-     SELECT u.id, $2, $3
-       FROM users u
-      WHERE u.wallet_session_id = $1
-     RETURNING id`,
-    [input.sessionId, input.tokenHash, new Date(input.expiresAtMs)],
-  );
-  return result.rows.length === 1;
-}
-
-async function lookupBlackjackRealtimeAccessDefault(
-  tokenHash: string,
-  nowMs: number,
-): Promise<string | null> {
-  const { pool } = await import("@workspace/db");
-  const result = await pool.query<{ wallet_session_id: string }>(
-    `SELECT u.wallet_session_id
-       FROM auth_sessions s
-       INNER JOIN users u ON u.id = s.user_id
-      WHERE s.token_hash = $1
-        AND s.revoked_at IS NULL
-        AND s.expires_at > $2
-      LIMIT 1`,
-    [tokenHash, new Date(nowMs)],
-  );
-  const sessionId = result.rows[0]?.wallet_session_id ?? null;
-  if (sessionId !== null) {
-    void pool
-      .query(
-        `UPDATE auth_sessions
-            SET last_seen_at = NOW()
-          WHERE token_hash = $1`,
-        [tokenHash],
-      )
-      .catch(() => undefined);
+  const databaseSecret =
+    process.env.USE_SUPABASE_DATABASE === "true"
+      ? process.env.SUPABASE_DATABASE_URL
+      : process.env.DATABASE_URL;
+  if (!databaseSecret || databaseSecret.length < 32) {
+    throw new Error("BLACKJACK_REALTIME_SIGNING_SECRET_UNAVAILABLE");
   }
-  return sessionId;
+  return databaseSecret;
 }
 
-export async function issueBlackjackRealtimeAccess(
+function deriveSigningKey(secret: string): Buffer {
+  return createHash("sha256")
+    .update(BLACKJACK_REALTIME_ACCESS_KEY_DOMAIN)
+    .update(secret)
+    .digest();
+}
+
+function signPayload(payload: string, secret: string): Buffer {
+  return createHmac("sha256", deriveSigningKey(secret))
+    .update(payload)
+    .digest();
+}
+
+function encodePayload(payload: BlackjackRealtimeAccessPayload): string {
+  return Buffer.from(JSON.stringify(payload), "utf8").toString("base64url");
+}
+
+function decodePayload(encoded: string): BlackjackRealtimeAccessPayload | null {
+  try {
+    const value = JSON.parse(
+      Buffer.from(encoded, "base64url").toString("utf8"),
+    ) as unknown;
+    if (typeof value !== "object" || value === null) return null;
+    const candidate = value as Partial<BlackjackRealtimeAccessPayload>;
+    if (
+      candidate.v !== BLACKJACK_REALTIME_ACCESS_VERSION ||
+      typeof candidate.s !== "string" ||
+      !isValidSessionId(candidate.s) ||
+      !Number.isSafeInteger(candidate.e) ||
+      typeof candidate.n !== "string" ||
+      candidate.n.length < 16 ||
+      candidate.n.length > 100
+    ) {
+      return null;
+    }
+    return Object.freeze({
+      v: BLACKJACK_REALTIME_ACCESS_VERSION,
+      s: candidate.s,
+      e: candidate.e as number,
+      n: candidate.n,
+    });
+  } catch {
+    return null;
+  }
+}
+
+function signaturesMatch(
+  encodedPayload: string,
+  encodedSignature: string,
+  secret: string,
+): boolean {
+  let actual: Buffer;
+  try {
+    actual = Buffer.from(encodedSignature, "base64url");
+  } catch {
+    return false;
+  }
+  const expected = signPayload(encodedPayload, secret);
+  return (
+    actual.length === expected.length &&
+    timingSafeEqual(actual, expected)
+  );
+}
+
+export function issueBlackjackRealtimeAccess(
   sessionId: string,
   input: Readonly<{
     nowMs?: number;
-    createToken?: () => string;
-    persist?: BlackjackRealtimeAccessPersist;
+    signingSecret?: string;
+    createNonce?: () => string;
   }> = {},
-): Promise<BlackjackRealtimeAccessRecord> {
-  const nowMs = input.nowMs ?? Date.now();
+): BlackjackRealtimeAccessRecord {
   if (!isValidSessionId(sessionId)) {
     throw new Error("BLACKJACK_REALTIME_ACCESS_SESSION_INVALID");
   }
 
-  const token =
-    input.createToken?.() ??
-    `${BLACKJACK_REALTIME_ACCESS_PREFIX}${randomBytes(32).toString("base64url")}`;
-  if (!isValidRealtimeToken(token)) {
-    throw new Error("BLACKJACK_REALTIME_ACCESS_TOKEN_INVALID");
+  const nowMs = input.nowMs ?? Date.now();
+  if (!Number.isSafeInteger(nowMs) || nowMs < 0) {
+    throw new Error("BLACKJACK_REALTIME_ACCESS_TIME_INVALID");
+  }
+  const expiresAtMs = nowMs + BLACKJACK_REALTIME_ACCESS_TTL_MS;
+  const nonce =
+    input.createNonce?.() ?? randomBytes(18).toString("base64url");
+  if (nonce.length < 16 || nonce.length > 100) {
+    throw new Error("BLACKJACK_REALTIME_ACCESS_NONCE_INVALID");
   }
 
-  const expiresAtMs = nowMs + BLACKJACK_REALTIME_ACCESS_TTL_MS;
-  const persisted = await (
-    input.persist ?? persistBlackjackRealtimeAccessDefault
-  )({
-    tokenHash: hashBlackjackRealtimeAccessToken(token),
-    sessionId,
-    expiresAtMs,
+  const payload = encodePayload({
+    v: BLACKJACK_REALTIME_ACCESS_VERSION,
+    s: sessionId,
+    e: expiresAtMs,
+    n: nonce,
   });
-  if (!persisted) {
-    throw new Error("BLACKJACK_REALTIME_ACCESS_ACCOUNT_NOT_FOUND");
+  const secret = resolveSigningSecret(input.signingSecret);
+  const signature = signPayload(payload, secret).toString("base64url");
+  const token = `${BLACKJACK_REALTIME_ACCESS_PREFIX}${payload}.${signature}`;
+  if (token.length > 512) {
+    throw new Error("BLACKJACK_REALTIME_ACCESS_TOKEN_INVALID");
   }
 
   return Object.freeze({ token, sessionId, expiresAtMs });
 }
 
-export async function resolveBlackjackRealtimeAccess(
+export function resolveBlackjackRealtimeAccess(
   request: IncomingMessage,
   input: Readonly<{
     nowMs?: number;
-    lookup?: BlackjackRealtimeAccessLookup;
+    signingSecret?: string;
   }> = {},
-): Promise<BlackjackRealtimeIdentity | null> {
+): BlackjackRealtimeIdentity | null {
   let token: string | null = null;
   try {
     const url = new URL(request.url ?? "/", "http://blackjack.local");
@@ -153,13 +175,36 @@ export async function resolveBlackjackRealtimeAccess(
     return null;
   }
 
-  if (!token || !isValidRealtimeToken(token)) return null;
+  if (!token || !token.startsWith(BLACKJACK_REALTIME_ACCESS_PREFIX)) {
+    return null;
+  }
+
+  const compact = token.slice(BLACKJACK_REALTIME_ACCESS_PREFIX.length);
+  const separator = compact.indexOf(".");
+  if (separator <= 0 || separator !== compact.lastIndexOf(".")) {
+    return null;
+  }
+  const encodedPayload = compact.slice(0, separator);
+  const encodedSignature = compact.slice(separator + 1);
+  if (!encodedPayload || !encodedSignature) return null;
+
+  let secret: string;
+  try {
+    secret = resolveSigningSecret(input.signingSecret);
+  } catch {
+    return null;
+  }
+  if (!signaturesMatch(encodedPayload, encodedSignature, secret)) {
+    return null;
+  }
+
+  const payload = decodePayload(encodedPayload);
+  if (payload === null) return null;
 
   const nowMs = input.nowMs ?? Date.now();
-  const sessionId = await (
-    input.lookup ?? lookupBlackjackRealtimeAccessDefault
-  )(hashBlackjackRealtimeAccessToken(token), nowMs);
-  if (sessionId === null || !isValidSessionId(sessionId)) return null;
+  if (!Number.isSafeInteger(nowMs) || nowMs < 0 || payload.e <= nowMs) {
+    return null;
+  }
 
-  return buildIdentity(sessionId);
+  return buildIdentity(payload.s);
 }
