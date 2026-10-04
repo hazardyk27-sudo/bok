@@ -1,5 +1,6 @@
 import {
   ROULETTE_BETTING_WINDOW_MS,
+  ROULETTE_BET_VERIFICATION_MS,
   ROULETTE_RESULT_HOLD_MS,
 } from "../../../cascade-8/src/roulette/scenePhase";
 import {
@@ -11,6 +12,7 @@ import {
 export type RouletteGlobalRoundPhase =
   | "scheduled"
   | "betting"
+  | "verifying"
   | "spinning"
   | "result"
   | "complete";
@@ -95,7 +97,8 @@ export function createRouletteGlobalRoundPlan(input: {
     input.bettingOpenAtMs +
     ROULETTE_BETTING_WINDOW_MS;
   const spinStartedAtMs =
-    bettingCloseAtMs;
+    bettingCloseAtMs +
+    ROULETTE_BET_VERIFICATION_MS;
   const resultAtMs =
     spinStartedAtMs +
     spinDurationMs;
@@ -138,6 +141,12 @@ export function getRouletteGlobalRoundPhase(
     round.bettingCloseAtMs
   ) {
     return "betting";
+  }
+  if (
+    nowMs <
+    round.spinStartedAtMs
+  ) {
+    return "verifying";
   }
   if (
     nowMs <
