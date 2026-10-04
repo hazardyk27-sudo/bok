@@ -1,10 +1,10 @@
 export const ROULETTE_CHIP_VALUES = [
-  1,
-  5,
   10,
-  25,
+  50,
   100,
   500,
+  2_000,
+  5_000,
 ] as const;
 
 export type RouletteChipValue =
@@ -152,9 +152,18 @@ export function getRouletteBetTotals(
 export function expandRouletteBetPlacementsToChipValues(
   placements: readonly RouletteBetPlacement[],
 ): RouletteBetPlacement[] {
+  // 1 and 5 are retained only for replaying an in-flight wager created
+  // before the $10-minimum picker rollout. They are not selectable chips.
   const denominations = [
-    ...ROULETTE_CHIP_VALUES,
-  ].sort((a, b) => b - a);
+    5_000,
+    2_000,
+    500,
+    100,
+    50,
+    10,
+    5,
+    1,
+  ] as const;
 
   return placements.flatMap((placement) => {
     if (
@@ -233,12 +242,12 @@ export function compactRouletteBetPlacements(
 export function getRouletteDisplayChipValue(
   amount: number,
 ): RouletteChipValue {
+  if (amount >= 5_000) return 5_000;
+  if (amount >= 2_000) return 2_000;
   if (amount >= 500) return 500;
   if (amount >= 100) return 100;
-  if (amount >= 25) return 25;
-  if (amount >= 10) return 10;
-  if (amount >= 5) return 5;
-  return 1;
+  if (amount >= 50) return 50;
+  return 10;
 }
 
 export function getRouletteLastChipByBet(
