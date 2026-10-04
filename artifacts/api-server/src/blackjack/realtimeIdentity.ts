@@ -1,5 +1,3 @@
-import { SESSION_COOKIE } from "../platform/session";
-
 export const BLACKJACK_AUTH_COOKIE = "fy_auth" as const;
 export const BLACKJACK_REALTIME_SESSION_COOKIE =
   "blackjack_realtime_session" as const;
@@ -60,7 +58,7 @@ export function getCookieCandidatesByName(
   );
 }
 
-function resolveDedicatedRealtimeSessionId(
+export function resolveBlackjackRealtimeSessionId(
   cookieHeader: string | undefined,
 ): string | null {
   const realtimeCandidates = getCookieCandidatesByName(
@@ -70,71 +68,13 @@ function resolveDedicatedRealtimeSessionId(
   return realtimeCandidates.at(-1) ?? null;
 }
 
-export function resolveBlackjackRealtimeSessionId(
-  cookieHeader: string | undefined,
-): string | null {
-  const dedicated = resolveDedicatedRealtimeSessionId(cookieHeader);
-  if (dedicated !== null) return dedicated;
-
-  const canonicalCandidates = getCookieCandidatesByName(
-    cookieHeader,
-    SESSION_COOKIE,
-  );
-
-  return canonicalCandidates.length === 1
-    ? canonicalCandidates[0] ?? null
-    : null;
-}
-
 export async function resolveBlackjackRealtimeSessionIdWithAuth(
   cookieHeader: string | undefined,
   lookupAuthWalletSessionId: BlackjackAuthWalletSessionLookup,
 ): Promise<string | null> {
-  const authTokens = getDecodedCookieValuesByName(
-    cookieHeader,
-    BLACKJACK_AUTH_COOKIE,
-  );
-
-  if (authTokens.length > 0) {
-    const authenticatedWalletSessions = new Set<string>();
-
-    for (const authToken of authTokens) {
-      let walletSessionId: string | null;
-      try {
-        walletSessionId = await lookupAuthWalletSessionId(authToken);
-      } catch {
-        throw new Error("BLACKJACK_AUTH_SESSION_LOOKUP_FAILED");
-      }
-
-      if (walletSessionId === null) continue;
-      if (!isValidBlackjackRealtimeSessionId(walletSessionId)) {
-        throw new Error("BLACKJACK_AUTH_WALLET_SESSION_INVALID");
-      }
-      authenticatedWalletSessions.add(walletSessionId);
-    }
-
-    if (authenticatedWalletSessions.size > 1) {
-      // Browsers can retain legacy scoped fy_auth cookies alongside the
-      // canonical root cookie. HTTP cookie parsing then selects one token,
-      // while the raw WebSocket Cookie header exposes both. The successful
-      // /blackjack/session bootstrap writes a short-lived dedicated binding
-      // for exactly the canonical wallet selected by HTTP. Use that binding
-      // only when it is one of the authenticated wallets; otherwise preserve
-      // fail-closed behavior for genuinely ambiguous auth state.
-      const dedicated = resolveDedicatedRealtimeSessionId(cookieHeader);
-      return dedicated !== null && authenticatedWalletSessions.has(dedicated)
-        ? dedicated
-        : null;
-    }
-
-    const authenticatedSessionId =
-      authenticatedWalletSessions.values().next().value as
-        | string
-        | undefined;
-    if (authenticatedSessionId !== undefined) {
-      return authenticatedSessionId;
-    }
-  }
-
+  // Authentication happens once over normal HTTP at /blackjack/session.
+  // That endpoint writes the short-lived websocket-path binding. Realtime
+  // deliberately does not inspect fy_auth or game_session again.
+  void lookupAuthWalletSessionId;
   return resolveBlackjackRealtimeSessionId(cookieHeader);
 }
