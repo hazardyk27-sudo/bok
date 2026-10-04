@@ -72,6 +72,12 @@ export function getRouletteGlobalClientPhase(
   }
   if (
     serverNowMs <
+    table.spinStartedAtMs
+  ) {
+    return "verifying";
+  }
+  if (
+    serverNowMs <
     table.resultAtMs
   ) {
     return "spinning";
@@ -101,6 +107,31 @@ export function getRouletteGlobalBettingSecondsRemaining(
   );
 }
 
+export function getRouletteGlobalVerificationSecondsRemaining(
+  table: RouletteGlobalTableSnapshot,
+  serverNowMs: number,
+) {
+  if (
+    serverNowMs <
+      table.bettingCloseAtMs ||
+    serverNowMs >=
+      table.spinStartedAtMs
+  ) {
+    return 0;
+  }
+
+  return Math.max(
+    0,
+    Math.ceil(
+      (
+        table.spinStartedAtMs -
+        serverNowMs
+      ) /
+        1000,
+    ),
+  );
+}
+
 export function getRouletteGlobalSpinElapsedMs(
   table: RouletteGlobalTableSnapshot,
   serverNowMs: number,
@@ -122,7 +153,6 @@ export function getRouletteGlobalSpinElapsedMs(
   );
 }
 
-
 export function getRouletteQueuedBetExpectedRevision(
   serverRevision: number,
   syncInFlight: boolean,
@@ -131,7 +161,10 @@ export function getRouletteQueuedBetExpectedRevision(
     !Number.isSafeInteger(
       serverRevision,
     ) ||
-    serverRevision < 0
+    serverRevision < 0 ||
+    !Number.isSafeInteger(
+      expectedRevisionGuard(syncInFlight),
+    )
   ) {
     return 0;
   }
@@ -144,4 +177,10 @@ export function getRouletteQueuedBetExpectedRevision(
         : 0
     )
   );
+}
+
+function expectedRevisionGuard(
+  syncInFlight: boolean,
+) {
+  return syncInFlight ? 1 : 0;
 }
