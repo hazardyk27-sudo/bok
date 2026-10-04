@@ -2,6 +2,8 @@ export {};
 
 const SESSION_CONVERGENCE_BROWSER_MARKER =
   "oyun-session-convergence-browser-v1";
+const BLACKJACK_POST_LIVE_REPAIR_POLL_MS = 250;
+const BLACKJACK_POST_LIVE_RECONNECT_DEADLINE_MS = 25_000;
 
 let needsLegacySessionConvergence = true;
 try {
@@ -74,7 +76,7 @@ if (isWitchRoute) {
       ) {
         return;
       }
-      blackjackModule.mountConnectedBlackjack(app, {
+      const connection = blackjackModule.mountConnectedBlackjack(app, {
         createSocket: (url) => {
           if (session.realtimeAccessToken === null) {
             return new WebSocket(url);
@@ -87,6 +89,76 @@ if (isWitchRoute) {
           return new WebSocket(websocketUrl.toString());
         },
       });
+
+      let hasBeenReady = false;
+      let reconnectingSinceMs: number | null = null;
+      let repairStarted = false;
+
+      const repairPostLiveConnection = (): void => {
+        if (repairStarted) return;
+        repairStarted = true;
+        window.clearInterval(repairPoll);
+        connection.close();
+
+        void blackjackModule.repairBlackjackSessionIdentity()
+          .then(() => {
+            if (
+              generation !== bootstrapGeneration ||
+              !document.body.contains(app)
+            ) {
+              return;
+            }
+            window.location.reload();
+          })
+          .catch(() => {
+            if (
+              generation !== bootstrapGeneration ||
+              !document.body.contains(app)
+            ) {
+              return;
+            }
+            blackjackModule.mountBlackjackConnectionUnavailable(
+              app,
+              () => {
+                void connectBlackjack();
+              },
+            );
+          });
+      };
+
+      const repairPoll = window.setInterval(() => {
+        if (
+          generation !== bootstrapGeneration ||
+          !document.body.contains(app)
+        ) {
+          window.clearInterval(repairPoll);
+          return;
+        }
+
+        const state = connection.getStatus().state;
+        if (state === "READY") {
+          hasBeenReady = true;
+          reconnectingSinceMs = null;
+          return;
+        }
+        if (!hasBeenReady) return;
+
+        if (state === "ERROR") {
+          repairPostLiveConnection();
+          return;
+        }
+        if (state === "RECONNECTING") {
+          reconnectingSinceMs ??= Date.now();
+          if (
+            Date.now() - reconnectingSinceMs >=
+            BLACKJACK_POST_LIVE_RECONNECT_DEADLINE_MS
+          ) {
+            repairPostLiveConnection();
+          }
+          return;
+        }
+        reconnectingSinceMs = null;
+      }, BLACKJACK_POST_LIVE_REPAIR_POLL_MS);
     } catch {
       if (
         generation !== bootstrapGeneration ||

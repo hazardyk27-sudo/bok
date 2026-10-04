@@ -9,13 +9,14 @@ import {
 } from "./realtime";
 import {
   BLACKJACK_REALTIME_ACCESS_TTL_MS,
-  clearBlackjackRealtimeAccessForTests,
   issueBlackjackRealtimeAccess,
   resolveBlackjackRealtimeAccess,
 } from "./realtimeAccess";
 
 const SESSION_ID="aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa";
-const TOKEN="bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb";
+const SIGNING_SECRET="blackjack-test-signing-secret-that-is-long-enough-123456";
+const WRONG_SECRET="blackjack-test-signing-secret-that-is-wrong-654321";
+const NONCE="bbbbbbbbbbbbbbbbbbbbbbbb";
 
 function request(url:string,cookie?:string):IncomingMessage{
   return {
@@ -93,24 +94,25 @@ describe("blackjack realtime access token",()=>{
     client?.terminate();
     runtime?.close();
     if(server?.listening) await closeServer(server);
-    clearBlackjackRealtimeAccessForTests();
     runtime=undefined;
     server=undefined;
     client=undefined;
   });
 
-  it("resolves an issued token without reading auth or game cookies",()=>{
-    issueBlackjackRealtimeAccess(SESSION_ID,{
+  it("resolves a signed token without reading auth or game cookies",()=>{
+    const issued=issueBlackjackRealtimeAccess(SESSION_ID,{
       nowMs:1_000,
-      createToken:()=>TOKEN,
+      signingSecret:SIGNING_SECRET,
+      createNonce:()=>NONCE,
     });
 
+    expect(issued.expiresAtMs).toBe(1_000+BLACKJACK_REALTIME_ACCESS_TTL_MS);
     expect(resolveBlackjackRealtimeAccess(
       request(
-        `${BLACKJACK_WS_PATH}?access=${TOKEN}`,
+        `${BLACKJACK_WS_PATH}?access=${issued.token}`,
         "fy_auth=stale; game_session=wrong; blackjack_realtime_session=wrong",
       ),
-      1_001,
+      {nowMs:1_001,signingSecret:SIGNING_SECRET},
     )).toEqual({
       userId:SESSION_ID,
       playerId:`blackjack-player:${SESSION_ID}`,
@@ -118,29 +120,48 @@ describe("blackjack realtime access token",()=>{
     });
   });
 
-  it("rejects missing, unknown and expired tokens",()=>{
-    issueBlackjackRealtimeAccess(SESSION_ID,{
+  it("survives process replacement because validation has no memory state",()=>{
+    const issued=issueBlackjackRealtimeAccess(SESSION_ID,{
       nowMs:10_000,
-      createToken:()=>TOKEN,
+      signingSecret:SIGNING_SECRET,
+      createNonce:()=>NONCE,
     });
 
     expect(resolveBlackjackRealtimeAccess(
-      request(BLACKJACK_WS_PATH),
-      10_001,
+      request(`${BLACKJACK_WS_PATH}?access=${issued.token}`),
+      {nowMs:10_100,signingSecret:SIGNING_SECRET},
+    )).toMatchObject({sessionId:SESSION_ID});
+  });
+
+  it("rejects tampered, wrong-key and expired tokens",()=>{
+    const issued=issueBlackjackRealtimeAccess(SESSION_ID,{
+      nowMs:20_000,
+      signingSecret:SIGNING_SECRET,
+      createNonce:()=>NONCE,
+    });
+    const tampered=issued.token.slice(0,-1)+(issued.token.endsWith("a")?"b":"a");
+
+    expect(resolveBlackjackRealtimeAccess(
+      request(`${BLACKJACK_WS_PATH}?access=${tampered}`),
+      {nowMs:20_001,signingSecret:SIGNING_SECRET},
     )).toBeNull();
     expect(resolveBlackjackRealtimeAccess(
-      request(`${BLACKJACK_WS_PATH}?access=unknown-token-value-000000`),
-      10_001,
+      request(`${BLACKJACK_WS_PATH}?access=${issued.token}`),
+      {nowMs:20_001,signingSecret:WRONG_SECRET},
     )).toBeNull();
     expect(resolveBlackjackRealtimeAccess(
-      request(`${BLACKJACK_WS_PATH}?access=${TOKEN}`),
-      10_000+BLACKJACK_REALTIME_ACCESS_TTL_MS+1,
+      request(`${BLACKJACK_WS_PATH}?access=${issued.token}`),
+      {
+        nowMs:20_000+BLACKJACK_REALTIME_ACCESS_TTL_MS+1,
+        signingSecret:SIGNING_SECRET,
+      },
     )).toBeNull();
   });
 
-  it("opens a real websocket from the explicit access token",async()=>{
-    issueBlackjackRealtimeAccess(SESSION_ID,{
-      createToken:()=>TOKEN,
+  it("opens a real websocket from the signed access token",async()=>{
+    const issued=issueBlackjackRealtimeAccess(SESSION_ID,{
+      signingSecret:SIGNING_SECRET,
+      createNonce:()=>NONCE,
     });
     const tableSnapshot=snapshot();
     server=createServer();
@@ -151,13 +172,16 @@ describe("blackjack realtime access token",()=>{
         subscribe:()=>()=>undefined,
       },
       {
-        resolveIdentity:resolveBlackjackRealtimeAccess,
+        resolveIdentity:(incoming)=>resolveBlackjackRealtimeAccess(
+          incoming,
+          {signingSecret:SIGNING_SECRET},
+        ),
       },
     );
     const port=await listen(server);
 
     client=new WebSocket(
-      `ws://127.0.0.1:${port}${BLACKJACK_WS_PATH}?access=${TOKEN}`,
+      `ws://127.0.0.1:${port}${BLACKJACK_WS_PATH}?access=${issued.token}`,
       {
         headers:{
           Cookie:"fy_auth=stale; game_session=wrong; blackjack_realtime_session=wrong",
