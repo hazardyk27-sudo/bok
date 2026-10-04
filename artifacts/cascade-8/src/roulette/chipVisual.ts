@@ -1,6 +1,9 @@
 import {
   ROULETTE_CHIP_VALUES,
 } from "./betState";
+import {
+  formatRouletteAmount,
+} from "./uiFormat";
 
 export type RouletteChipTier =
   | "white"
@@ -90,9 +93,7 @@ export function getRouletteChipStackDepth(
   if (
     !Number.isFinite(amount) ||
     amount <= 0 ||
-    ROULETTE_CHIP_VALUES.includes(
-      amount as (typeof ROULETTE_CHIP_VALUES)[number],
-    )
+    ROULETTE_CHIP_VALUES.includes(amount)
   ) {
     return 1;
   }
@@ -159,6 +160,14 @@ function decorateChipElement(
     element.dataset.stackDepth = String(
       getRouletteChipStackDepth(amount),
     );
+  } else {
+    const label = element.querySelector<HTMLElement>(
+      ":scope > span",
+    );
+    if (label) {
+      label.textContent =
+        formatRouletteAmount(amount);
+    }
   }
 }
 
