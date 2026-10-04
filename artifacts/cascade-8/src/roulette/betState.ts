@@ -56,6 +56,30 @@ export function placeRouletteBet(
   };
 }
 
+export function moveRouletteBetPlacements(
+  placements: readonly RouletteBetPlacement[],
+  fromBetId: string,
+  toBetId: string,
+): RouletteBetPlacement[] {
+  if (
+    !fromBetId ||
+    !toBetId ||
+    fromBetId === toBetId
+  ) {
+    return placements.map((placement) => ({
+      ...placement,
+    }));
+  }
+
+  return placements.map((placement) => ({
+    ...placement,
+    betId:
+      placement.betId === fromBetId
+        ? toBetId
+        : placement.betId,
+  }));
+}
+
 export function undoRouletteBet(
   state: RouletteBetState,
 ): RouletteBetState {
