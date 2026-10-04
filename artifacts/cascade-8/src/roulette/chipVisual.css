@@ -12,19 +12,20 @@
   background:
     radial-gradient(
       circle at 50% 50%,
-      var(--casino-chip-inner) 0 48%,
-      var(--casino-chip-accent) 49% 52%,
-      transparent 53%
+      var(--casino-chip-inner) 0 46%,
+      var(--casino-chip-accent) 47% 50%,
+      var(--casino-chip-main) 51% 53%,
+      transparent 54%
     ),
     repeating-conic-gradient(
       from -9deg,
-      var(--casino-chip-accent) 0deg 18deg,
-      var(--casino-chip-main) 18deg 60deg
+      var(--casino-chip-accent) 0deg 17deg,
+      var(--casino-chip-main) 17deg 60deg
     ) !important;
   box-shadow:
-    0 1px 0 rgba(255, 255, 255, 0.28) inset,
-    0 -2px 0 rgba(0, 0, 0, 0.18) inset,
-    0 3px 7px rgba(0, 0, 0, 0.34) !important;
+    0 1px 0 rgba(255, 255, 255, 0.26) inset,
+    0 -1px 0 rgba(0, 0, 0, 0.20) inset,
+    0 2px 5px rgba(0, 0, 0, 0.34) !important;
   text-shadow:
     0 1px 1px rgba(0, 0, 0, 0.22);
 }
@@ -40,18 +41,19 @@
   background:
     radial-gradient(
       circle at 50% 50%,
-      var(--casino-chip-inner) 0 48%,
-      var(--casino-chip-accent) 49% 52%,
-      transparent 53%
+      var(--casino-chip-inner) 0 46%,
+      var(--casino-chip-accent) 47% 50%,
+      var(--casino-chip-main) 51% 53%,
+      transparent 54%
     ),
     repeating-conic-gradient(
       from -9deg,
-      var(--casino-chip-accent) 0deg 18deg,
-      var(--casino-chip-main) 18deg 60deg
+      var(--casino-chip-accent) 0deg 17deg,
+      var(--casino-chip-main) 17deg 60deg
     );
   box-shadow:
-    0 -2px 0 rgba(0, 0, 0, 0.20) inset,
-    0 3px 6px rgba(0, 0, 0, 0.30);
+    0 -1px 0 rgba(0, 0, 0, 0.20) inset,
+    0 2px 4px rgba(0, 0, 0, 0.28);
   opacity: 0;
 }
 
@@ -87,6 +89,11 @@
   line-height: 1;
 }
 
+.roulette-chip-option.roulette-casino-chip[data-chip-value="2000"],
+.roulette-chip-option.roulette-casino-chip[data-chip-value="5000"] {
+  font-size: 0.78em !important;
+}
+
 .roulette-chip-option.roulette-casino-chip:hover {
   filter: brightness(1.07) saturate(1.04);
 }
@@ -95,10 +102,10 @@
   transform: translateY(-2px) scale(1.08);
   box-shadow:
     0 0 0 2px rgba(255, 255, 255, 0.95),
-    0 0 0 5px color-mix(in srgb, var(--casino-chip-highlight) 64%, transparent),
-    0 7px 13px rgba(0, 0, 0, 0.44),
-    0 1px 0 rgba(255, 255, 255, 0.30) inset,
-    0 -2px 0 rgba(0, 0, 0, 0.18) inset !important;
+    0 0 0 4px color-mix(in srgb, var(--casino-chip-highlight) 58%, transparent),
+    0 6px 12px rgba(0, 0, 0, 0.42),
+    0 1px 0 rgba(255, 255, 255, 0.28) inset,
+    0 -1px 0 rgba(0, 0, 0, 0.20) inset !important;
 }
 
 .roulette-chip-option.roulette-casino-chip:focus-visible {
@@ -110,6 +117,9 @@
   overflow: visible !important;
   display: grid !important;
   place-items: center;
+  width: clamp(20px, 1.55vw, 23px) !important;
+  height: clamp(20px, 1.55vw, 23px) !important;
+  max-width: none !important;
   padding: 0 !important;
   font-family:
     Inter,
@@ -119,8 +129,9 @@
     BlinkMacSystemFont,
     "Segoe UI",
     sans-serif !important;
+  font-size: clamp(6px, 0.52vw, 7.5px) !important;
   font-weight: 900 !important;
-  letter-spacing: -0.045em;
+  letter-spacing: -0.05em;
   line-height: 1 !important;
 }
 
@@ -128,24 +139,64 @@
   position: relative;
   z-index: 2;
   text-shadow:
-    0 1px 1px rgba(0, 0, 0, 0.28);
+    0 1px 1px rgba(0, 0, 0, 0.24);
+}
+
+/*
+ * Straight-up chips must never hide the table number. Older roulette.css
+ * phases center them with !important; this final visual layer deliberately
+ * wins that cascade and anchors them to the lower-right corner instead.
+ */
+.roulette-page .roulette-number-cell > .roulette-placed-chip.roulette-casino-chip,
+.roulette-page .roulette-zero-cell > .roulette-placed-chip.roulette-casino-chip,
+.roulette-page[data-phase="betting"] .roulette-number-cell > .roulette-placed-chip.roulette-casino-chip,
+.roulette-page[data-phase="betting"] .roulette-zero-cell > .roulette-placed-chip.roulette-casino-chip,
+.roulette-page[data-phase="spinning"] .roulette-number-cell > .roulette-placed-chip.roulette-casino-chip,
+.roulette-page[data-phase="spinning"] .roulette-zero-cell > .roulette-placed-chip.roulette-casino-chip,
+.roulette-page[data-phase="settled"] .roulette-number-cell > .roulette-placed-chip.roulette-casino-chip,
+.roulette-page[data-phase="settled"] .roulette-zero-cell > .roulette-placed-chip.roulette-casino-chip {
+  left: auto !important;
+  top: auto !important;
+  right: 3px !important;
+  bottom: 3px !important;
+  transform: none !important;
+  margin: 0 !important;
+}
+
+/* Outside / dozen / column wagers may stay centered, but at the same compact scale. */
+.roulette-page .roulette-column-cell > .roulette-placed-chip.roulette-casino-chip,
+.roulette-page .roulette-dozen-cell > .roulette-placed-chip.roulette-casino-chip,
+.roulette-page .roulette-outside-cell > .roulette-placed-chip.roulette-casino-chip {
+  left: 50% !important;
+  top: 50% !important;
+  right: auto !important;
+  bottom: auto !important;
+  transform: translate(-50%, -50%) !important;
+}
+
+.roulette-page .roulette-number-cell.is-winning-bet > .roulette-placed-chip.roulette-casino-chip,
+.roulette-page .roulette-number-cell.is-result-number > .roulette-placed-chip.roulette-casino-chip,
+.roulette-page .roulette-zero-cell.is-winning-bet > .roulette-placed-chip.roulette-casino-chip,
+.roulette-page .roulette-zero-cell.is-result-number > .roulette-placed-chip.roulette-casino-chip {
+  transform: scale(1.04) !important;
+  transform-origin: 100% 100%;
 }
 
 .roulette-placed-chip.roulette-casino-chip[data-stack-depth="2"]::before,
 .roulette-placed-chip.roulette-casino-chip[data-stack-depth="3"]::before {
   opacity: 1;
-  transform: translate(1px, 3px);
+  transform: translate(1px, 2px);
 }
 
 .roulette-placed-chip.roulette-casino-chip[data-stack-depth="3"]::after {
   opacity: 1;
-  transform: translate(2px, 6px);
+  transform: translate(2px, 4px);
   z-index: -2;
 }
 
 .roulette-placed-chip.roulette-casino-chip[data-stack-depth="2"],
 .roulette-placed-chip.roulette-casino-chip[data-stack-depth="3"] {
-  margin-top: -2px;
+  margin-top: 0 !important;
 }
 
 .roulette-casino-chip[data-chip-tier="white"] {
@@ -156,13 +207,27 @@
   text-shadow: none !important;
 }
 
+@media (max-width: 900px) and (orientation: portrait) {
+  .roulette-placed-chip.roulette-casino-chip {
+    width: clamp(18px, calc(var(--table-width) * 0.071), 22px) !important;
+    height: clamp(18px, calc(var(--table-width) * 0.071), 22px) !important;
+    font-size: clamp(5.5px, calc(var(--table-width) * 0.021), 7px) !important;
+  }
+
+  .roulette-page .roulette-number-cell > .roulette-placed-chip.roulette-casino-chip,
+  .roulette-page .roulette-zero-cell > .roulette-placed-chip.roulette-casino-chip {
+    right: 3px !important;
+    bottom: 3px !important;
+  }
+}
+
 @media (max-width: 640px) {
   .roulette-chip-option.roulette-casino-chip[aria-pressed="true"] {
     transform: translateY(-1px) scale(1.06);
   }
 
   .roulette-placed-chip.roulette-casino-chip[data-stack-depth="3"]::after {
-    transform: translate(1px, 5px);
+    transform: translate(1px, 4px);
   }
 }
 
