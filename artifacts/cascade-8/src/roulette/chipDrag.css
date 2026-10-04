@@ -19,7 +19,7 @@
 }
 
 .roulette-placed-chip.is-chip-drag-source {
-  opacity: 0.16 !important;
+  opacity: 0 !important;
 }
 
 .roulette-chip-drag-ghost {
@@ -31,27 +31,19 @@
     drop-shadow(0 1px 1px rgba(255, 255, 255, 0.18));
   transition:
     filter 110ms ease,
-    opacity 110ms ease,
-    transform 70ms linear;
-  will-change: transform;
+    opacity 110ms ease;
+  will-change: left, top, transform;
 }
 
 .roulette-chip-drag-ghost.is-pending {
-  opacity: 0.88;
+  opacity: 0.92;
   filter:
-    drop-shadow(0 5px 7px rgba(0, 0, 0, 0.44))
-    drop-shadow(0 0 5px rgba(255, 255, 255, 0.28));
-  transition:
-    filter 110ms ease,
-    opacity 110ms ease,
-    transform 130ms ease-out;
+    drop-shadow(0 4px 6px rgba(0, 0, 0, 0.42))
+    drop-shadow(0 0 4px rgba(255, 255, 255, 0.22));
 }
 
 .roulette-chip-drag-ghost.is-returning {
-  opacity: 0.72;
-  transition:
-    transform 140ms ease-out,
-    opacity 140ms ease-out;
+  opacity: 0.9;
 }
 
 .roulette-bet-cell.roulette-chip-drop-target {
@@ -81,7 +73,7 @@
   .roulette-chip-drag-ghost.is-pending,
   .roulette-chip-drag-ghost.is-returning,
   .roulette-bet-cell.roulette-chip-drop-confirmed {
-    transition: none;
+    transition: none !important;
     animation: none;
   }
 }
