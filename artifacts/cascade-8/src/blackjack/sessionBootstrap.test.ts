@@ -25,6 +25,23 @@ describe("blackjack session bootstrap",()=>{
     expect(fetchImpl).toHaveBeenCalledTimes(2);
   });
 
+  it("keeps retrying transient startup failures by default until ready",async()=>{
+    const fetchImpl=vi.fn()
+      .mockResolvedValueOnce(response(503))
+      .mockResolvedValueOnce(response(502))
+      .mockResolvedValueOnce(response(504))
+      .mockResolvedValueOnce(response(503))
+      .mockResolvedValueOnce(response(502))
+      .mockResolvedValueOnce(response(200));
+
+    await expect(waitForBlackjackSession({
+      fetchImpl,
+      attemptTimeoutMs:100,
+      retryDelayMs:0,
+    })).resolves.toBeUndefined();
+    expect(fetchImpl).toHaveBeenCalledTimes(6);
+  });
+
   it("stops after the configured transient retry budget",async()=>{
     const fetchImpl=vi.fn().mockResolvedValue(response(503));
 
