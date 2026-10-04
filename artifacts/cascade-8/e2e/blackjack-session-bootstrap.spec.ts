@@ -21,7 +21,7 @@ test.describe("Blackjack session bootstrap",()=>{
     screen:{width:1440,height:900},
   });
 
-  test("does not remain CONNECTING forever and retry can recover",async({page})=>{
+  test("stays non-terminal through transient startup failures and recovers automatically",async({page})=>{
     let sessionHealthy=false;
     let sessionAttempts=0;
 
@@ -57,20 +57,21 @@ test.describe("Blackjack session bootstrap",()=>{
     });
 
     await page.goto("/blackjack");
+
+    // Prove the browser survives beyond the former four-attempt budget without
+    // dropping into the terminal SESSION UNAVAILABLE / manual-retry state.
+    await expect.poll(()=>sessionAttempts,{timeout:8_000})
+      .toBeGreaterThanOrEqual(5);
     await expect(page.locator(".blackjack-connection-label"))
-      .toHaveText("ERROR",{timeout:8_000});
-    await expect(page.locator(".blackjack-context-prompt"))
-      .toHaveText("TABLE SESSION UNAVAILABLE");
+      .toHaveText("CONNECTING");
     await expect(page.locator("[data-blackjack-session-retry]"))
-      .toBeVisible();
-    expect(sessionAttempts).toBe(4);
+      .toHaveCount(0);
 
     sessionHealthy=true;
-    await page.locator("[data-blackjack-session-retry]").click();
 
     await expect(page.locator(".blackjack-connection-label"),{
       timeout:4_000,
     }).toHaveText("LIVE");
-    expect(sessionAttempts).toBe(5);
+    expect(sessionAttempts).toBeGreaterThanOrEqual(6);
   });
 });
