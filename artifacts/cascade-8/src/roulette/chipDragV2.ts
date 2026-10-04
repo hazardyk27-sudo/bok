@@ -390,6 +390,13 @@ function guardOptimisticMove(
   let refreshTimer = 0;
   const deadline = performance.now() + AUTHORITATIVE_SYNC_TIMEOUT_MS;
 
+  const close = () => {
+    if (closed) return;
+    closed = true;
+    observer.disconnect();
+    window.clearTimeout(refreshTimer);
+  };
+
   const observer = new MutationObserver(() => {
     if (closed || applying) return;
     if (isAuthoritativeMoveRendered(move)) {
@@ -402,13 +409,6 @@ function guardOptimisticMove(
     applyOptimisticMove(move);
     applying = false;
   });
-
-  const close = () => {
-    if (closed) return;
-    closed = true;
-    observer.disconnect();
-    window.clearTimeout(refreshTimer);
-  };
 
   const refreshUntilAuthoritative = () => {
     if (closed) return;
@@ -735,21 +735,21 @@ export function installRouletteChipDragV2(app: HTMLDivElement) {
         targetBetId,
       )
         .then(() => {
-          activeGuard?.committed();
+          const guard = activeGuard;
+          activeGuard = null;
+          guard?.committed();
           targetCell.classList.add("roulette-chip-drop-confirmed");
           window.setTimeout(
             () => targetCell.classList.remove("roulette-chip-drop-confirmed"),
             140,
           );
           navigator.vibrate?.(5);
-          window.setTimeout(() => {
-            activeGuard = null;
-          }, AUTHORITATIVE_SYNC_TIMEOUT_MS + 100);
         })
         .catch((error) => {
           console.error("[roulette] chip drag v4 failed", error);
-          activeGuard?.failed();
+          const guard = activeGuard;
           activeGuard = null;
+          guard?.failed();
         });
     }, SNAP_MS);
   };
