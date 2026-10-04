@@ -6,6 +6,7 @@ EXPECTED_PREVIEW_SHA="${2:-}"
 BRANCH="integration/replit-preview"
 MAX_ATTEMPTS=3
 API_RUNTIME_LOG="${TMPDIR:-/tmp}/oyun-replit-api-server.log"
+ALLOW_NONCANONICAL_RECOVERY="${OYUN_ALLOW_BACKUP_NONCANONICAL_LOCAL_COMMITS:-0}"
 
 # Replit is a read-only consumer. Install local-only Git guardrails before
 # every sync; they do not alter tracked files.
@@ -28,6 +29,11 @@ fi
 if [[ -n "$EXPECTED_PREVIEW_SHA" && ! "$EXPECTED_PREVIEW_SHA" =~ ^[0-9a-fA-F]{40}$ ]]; then
   echo "ABORT: Expected preview SHA must be an exact 40-character commit SHA."
   exit 4
+fi
+
+if [[ "$ALLOW_NONCANONICAL_RECOVERY" != "0" && "$ALLOW_NONCANONICAL_RECOVERY" != "1" ]]; then
+  echo "ABORT: OYUN_ALLOW_BACKUP_NONCANONICAL_LOCAL_COMMITS must be 0 or 1."
+  exit 12
 fi
 
 remote_ref="$REMOTE/$BRANCH"
@@ -82,6 +88,12 @@ recover_safe_local_commits() {
     recovery_reason="empty Replit publish commit(s)"
   elif all_local_commits_are_patch_equivalent "${#local_only[@]}"; then
     recovery_reason="local commit(s) already represented by patch-equivalent upstream commit(s)"
+  elif [[ "$ALLOW_NONCANONICAL_RECOVERY" == "1" ]]; then
+    recovery_reason="explicitly approved noncanonical local commit(s)"
+    echo "RECOVERY: explicit backup-and-realign approval is active."
+    echo "RECOVERY_LOCAL_COMMITS_BEGIN"
+    git log --oneline "$remote_ref..HEAD"
+    echo "RECOVERY_LOCAL_COMMITS_END"
   else
     return 1
   fi
@@ -141,6 +153,7 @@ for attempt in $(seq 1 "$MAX_ATTEMPTS"); do
       echo "ABORT: Local preview has $ahead commit(s) not on $remote_ref and they are neither verified empty publish commits nor patch-equivalent to upstream."
       echo "Local:  $(git rev-parse --short HEAD)"
       echo "Remote: $(git rev-parse --short "$remote_ref")"
+      echo "To preserve the local HEAD in a backup branch and realign explicitly, rerun the canonical helper with OYUN_ALLOW_BACKUP_NONCANONICAL_LOCAL_COMMITS=1."
       exit 6
     fi
   fi
