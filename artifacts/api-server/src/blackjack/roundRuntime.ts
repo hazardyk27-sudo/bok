@@ -8,6 +8,7 @@ export const BLACKJACK_ROUND_END_HOLD_MS = 3_000 as const;
 
 export type BlackjackRoundRuntimeTransitionType =
   | "BETTING_LOCKED"
+  | "BETTING_REOPENED"
   | "INITIAL_DEAL_COMMITTED"
   | "PLAYER_TURN_TIMEOUT_COMMITTED"
   | "DISCONNECTED_AUTO_STAND_COMMITTED"
@@ -73,6 +74,11 @@ async function startDealFromLockedBetting(
   transitions: BlackjackRoundRuntimeTransition[],
 ): Promise<BlackjackRoundRuntimeTickResult> {
   const locked = await coordinator.closeBettingWindow(nowMs);
+  if(!locked.replayed && locked.table.phase==="BETTING"){
+    transitions.push(
+      freezeTransition("BETTING_REOPENED",locked.table),
+    );
+  }
   if (locked.participants.length === 0) {
     return finish(
       "BETTING_CLOSED_EMPTY",
@@ -172,7 +178,12 @@ export async function runBlackjackRoundRuntimeTick(
     table = closed.table;
     if (!closed.replayed) {
       transitions.push(
-        freezeTransition("BETTING_LOCKED", closed.table),
+        freezeTransition(
+          closed.table.phase==="BETTING"
+            ? "BETTING_REOPENED"
+            : "BETTING_LOCKED",
+          closed.table,
+        ),
       );
     }
 
