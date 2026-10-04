@@ -5,13 +5,23 @@ import {
 } from "./betState";
 import { getRouletteGlobalClientPhase } from "./globalClient";
 import { RouletteWalletClient } from "./rouletteWalletClient";
+import {
+  formatRouletteAmount,
+} from "./uiFormat";
+import {
+  getRouletteChipPalette,
+  getRouletteChipStackDepth,
+  getRouletteChipTier,
+} from "./chipVisual";
 
-const HOLD_MS = 150;
-const EARLY_DRAG_MS = 85;
-const EARLY_DRAG_DISTANCE_PX = 7;
-const CHIP_HIT_SLOP_PX = 7;
-const PICKUP_SCALE = 1.06;
-const SNAP_MS = 120;
+const HOLD_MS = 120;
+const EARLY_DRAG_MS = 20;
+const EARLY_DRAG_DISTANCE_PX = 3;
+const CHIP_HIT_SLOP_PX = 8;
+const PICKUP_SCALE = 1.05;
+const SNAP_MS = 45;
+const AUTHORITATIVE_SYNC_TIMEOUT_MS = 2400;
+const AUTHORITATIVE_REFRESH_MS = 120;
 
 type PressState = {
   pointerId: number;
@@ -42,6 +52,18 @@ type DragState = {
   targetBetId: string | null;
 };
 
+type OptimisticMove = {
+  sourceCell: HTMLElement;
+  targetCell: HTMLElement;
+  sourceBetId: string;
+  targetBetId: string;
+  sourceAmount: number;
+  targetInitialAmount: number;
+  expectedTargetAmount: number;
+  sourceTemplate: HTMLElement;
+  targetTemplate: HTMLElement | null;
+};
+
 function readPlacedBets(root: ParentNode): RouletteBetPlacement[] {
   return Array.from(root.querySelectorAll<HTMLElement>("[data-bet-id]"))
     .flatMap((cell) => {
@@ -54,6 +76,14 @@ function readPlacedBets(root: ParentNode): RouletteBetPlacement[] {
         ? [{ betId, amount }]
         : [];
     });
+}
+
+function readCellAmount(cell: HTMLElement) {
+  const chip = cell.querySelector<HTMLElement>(
+    ".roulette-placed-chip[data-bet-amount]",
+  );
+  const amount = Number(chip?.dataset.betAmount ?? 0);
+  return Number.isFinite(amount) && amount > 0 ? amount : 0;
 }
 
 function sameTotals(
@@ -169,16 +199,8 @@ function createDragGhost(
     `${grabOffsetX}px ${grabOffsetY}px`,
     "important",
   );
-  ghost.style.setProperty(
-    "left",
-    `${x - grabOffsetX}px`,
-    "important",
-  );
-  ghost.style.setProperty(
-    "top",
-    `${y - grabOffsetY}px`,
-    "important",
-  );
+  ghost.style.setProperty("left", `${x - grabOffsetX}px`, "important");
+  ghost.style.setProperty("top", `${y - grabOffsetY}px`, "important");
   ghost.style.setProperty(
     "transform",
     `translate3d(0, 0, 0) scale(${PICKUP_SCALE})`,
@@ -219,23 +241,15 @@ function moveGhost(
 function snapGhostToCell(
   drag: DragState,
   cell: HTMLElement,
-  mode: "pending" | "returning",
 ) {
   const rect = cell.getBoundingClientRect();
   const left = rect.left + rect.width / 2 - drag.width / 2;
   const top = rect.top + rect.height / 2 - drag.height / 2;
 
-  drag.ghost.classList.add(
-    mode === "pending" ? "is-pending" : "is-returning",
-  );
-  drag.ghost.style.setProperty(
-    "transform-origin",
-    "50% 50%",
-    "important",
-  );
+  drag.ghost.style.setProperty("transform-origin", "50% 50%", "important");
   drag.ghost.style.setProperty(
     "transition",
-    `left ${SNAP_MS}ms ease-out, top ${SNAP_MS}ms ease-out, transform ${SNAP_MS}ms ease-out, opacity ${SNAP_MS}ms ease-out`,
+    `left ${SNAP_MS}ms ease-out, top ${SNAP_MS}ms ease-out, transform ${SNAP_MS}ms ease-out`,
     "important",
   );
   drag.ghost.style.setProperty("left", `${left}px`, "important");
@@ -249,6 +263,188 @@ function snapGhostToCell(
 
 function forceRuntimeRefresh() {
   document.dispatchEvent(new Event("visibilitychange"));
+}
+
+function updateChipAmount(chip: HTMLElement, amount: number) {
+  chip.dataset.betAmount = String(amount);
+  chip.dataset.stackDepth = String(getRouletteChipStackDepth(amount));
+  chip.dataset.chipTier = getRouletteChipTier(amount);
+  chip.dataset.rouletteDragOptimistic = "true";
+
+  const palette = getRouletteChipPalette(amount);
+  chip.style.setProperty("--casino-chip-main", palette.main);
+  chip.style.setProperty("--casino-chip-inner", palette.inner);
+  chip.style.setProperty("--casino-chip-ink", palette.ink);
+  chip.style.setProperty("--casino-chip-accent", palette.accent);
+  chip.style.setProperty("--casino-chip-highlight", palette.highlight);
+
+  const displayAmount = formatRouletteAmount(amount);
+  const suffix = /[KM]$/.test(displayAmount)
+    ? displayAmount.slice(-1)
+    : "";
+  const number = suffix
+    ? displayAmount.slice(0, -1)
+    : displayAmount;
+
+  let value = chip.querySelector<HTMLElement>(
+    ".roulette-placed-chip__value",
+  );
+  if (!value) {
+    value = document.createElement("span");
+    value.className = "roulette-placed-chip__value";
+    chip.prepend(value);
+  }
+  value.textContent = number;
+
+  chip.querySelector(".roulette-placed-chip__suffix")?.remove();
+  if (suffix) {
+    const suffixElement = document.createElement("span");
+    suffixElement.className = "roulette-placed-chip__suffix";
+    suffixElement.textContent = suffix;
+    chip.append(suffixElement);
+  }
+}
+
+function makeOptimisticChip(
+  template: HTMLElement,
+  amount: number,
+) {
+  const chip = template.cloneNode(true) as HTMLElement;
+  chip.classList.remove(
+    "is-chip-drag-source",
+    "roulette-chip-drag-ghost",
+    "is-pending",
+    "is-returning",
+    "is-chip-handoff-source",
+  );
+  chip.removeAttribute("data-roulette-drag-handoff");
+  updateChipAmount(chip, amount);
+  return chip;
+}
+
+function clearPlacedChip(cell: HTMLElement) {
+  cell
+    .querySelectorAll<HTMLElement>(".roulette-placed-chip")
+    .forEach((chip) => chip.remove());
+}
+
+function applyOptimisticMove(move: OptimisticMove) {
+  clearPlacedChip(move.sourceCell);
+  move.sourceCell.classList.remove("has-bet");
+
+  clearPlacedChip(move.targetCell);
+  const chip = makeOptimisticChip(
+    move.sourceTemplate,
+    move.expectedTargetAmount,
+  );
+  move.targetCell.classList.add("has-bet");
+  move.targetCell.append(chip);
+}
+
+function restoreOriginalDom(move: OptimisticMove) {
+  clearPlacedChip(move.sourceCell);
+  move.sourceCell.classList.add("has-bet");
+  move.sourceCell.append(
+    makeOptimisticChip(move.sourceTemplate, move.sourceAmount),
+  );
+
+  clearPlacedChip(move.targetCell);
+  if (move.targetInitialAmount > 0 && move.targetTemplate) {
+    move.targetCell.classList.add("has-bet");
+    move.targetCell.append(
+      makeOptimisticChip(move.targetTemplate, move.targetInitialAmount),
+    );
+  } else {
+    move.targetCell.classList.remove("has-bet");
+  }
+}
+
+function isAuthoritativeMoveRendered(move: OptimisticMove) {
+  const targetChip = move.targetCell.querySelector<HTMLElement>(
+    ".roulette-placed-chip[data-bet-amount]",
+  );
+  return (
+    readCellAmount(move.sourceCell) === 0 &&
+    readCellAmount(move.targetCell) === move.expectedTargetAmount &&
+    targetChip?.dataset.rouletteDragOptimistic !== "true"
+  );
+}
+
+function isOptimisticMoveRendered(move: OptimisticMove) {
+  const targetChip = move.targetCell.querySelector<HTMLElement>(
+    ".roulette-placed-chip[data-bet-amount]",
+  );
+  return (
+    readCellAmount(move.sourceCell) === 0 &&
+    readCellAmount(move.targetCell) === move.expectedTargetAmount &&
+    targetChip?.dataset.rouletteDragOptimistic === "true"
+  );
+}
+
+function guardOptimisticMove(
+  app: HTMLDivElement,
+  move: OptimisticMove,
+) {
+  let closed = false;
+  let applying = false;
+  let refreshTimer = 0;
+  const deadline = performance.now() + AUTHORITATIVE_SYNC_TIMEOUT_MS;
+
+  const close = () => {
+    if (closed) return;
+    closed = true;
+    observer.disconnect();
+    window.clearTimeout(refreshTimer);
+  };
+
+  const observer = new MutationObserver(() => {
+    if (closed || applying) return;
+    if (isAuthoritativeMoveRendered(move)) {
+      close();
+      return;
+    }
+    if (isOptimisticMoveRendered(move)) return;
+
+    applying = true;
+    applyOptimisticMove(move);
+    applying = false;
+  });
+
+  const refreshUntilAuthoritative = () => {
+    if (closed) return;
+    if (isAuthoritativeMoveRendered(move)) {
+      close();
+      return;
+    }
+    if (performance.now() >= deadline) {
+      close();
+      forceRuntimeRefresh();
+      return;
+    }
+
+    forceRuntimeRefresh();
+    refreshTimer = window.setTimeout(
+      refreshUntilAuthoritative,
+      AUTHORITATIVE_REFRESH_MS,
+    );
+  };
+
+  observer.observe(app, {
+    childList: true,
+    subtree: true,
+  });
+
+  return {
+    committed() {
+      refreshTimer = window.setTimeout(refreshUntilAuthoritative, 20);
+    },
+    failed() {
+      close();
+      restoreOriginalDom(move);
+      forceRuntimeRefresh();
+    },
+    cancel: close,
+  };
 }
 
 async function commitMove(
@@ -287,7 +483,7 @@ async function commitMove(
       await wallet.updateGlobalBet(
         table.roundId,
         moved,
-        `roulette_drag_v3_${Date.now()}_${crypto.randomUUID().replaceAll("-", "")}`,
+        `roulette_drag_v4_${Date.now()}_${crypto.randomUUID().replaceAll("-", "")}`,
         globalBet.revision,
       );
       return;
@@ -310,6 +506,7 @@ export function installRouletteChipDragV2(app: HTMLDivElement) {
   const wallet = new RouletteWalletClient();
   let press: PressState | null = null;
   let drag: DragState | null = null;
+  let activeGuard: ReturnType<typeof guardOptimisticMove> | null = null;
   let suppressClickUntil = 0;
 
   const clearPress = () => {
@@ -357,8 +554,8 @@ export function installRouletteChipDragV2(app: HTMLDivElement) {
     current.chip.classList.add("is-chip-drag-source");
     panel.classList.remove("is-chip-drag-armed");
     panel.classList.add("is-chip-dragging");
-    suppressClickUntil = performance.now() + 1000;
-    navigator.vibrate?.(6);
+    suppressClickUntil = performance.now() + 320;
+    navigator.vibrate?.(4);
   };
 
   app.addEventListener(
@@ -376,21 +573,12 @@ export function installRouletteChipDragV2(app: HTMLDivElement) {
 
   panel.addEventListener("pointerdown", (event) => {
     if (event.pointerType === "mouse" && event.button !== 0) return;
-    if (!bettingOpen(page, panel) || drag) return;
+    if (!bettingOpen(page, panel) || drag || activeGuard) return;
 
     const hit = findPlacedChipAtPoint(panel, event.clientX, event.clientY);
     if (!hit) return;
 
     const chipRect = hit.chip.getBoundingClientRect();
-    const grabOffsetX = Math.min(
-      chipRect.width,
-      Math.max(0, event.clientX - chipRect.left),
-    );
-    const grabOffsetY = Math.min(
-      chipRect.height,
-      Math.max(0, event.clientY - chipRect.top),
-    );
-
     clearPress();
     press = {
       pointerId: event.pointerId,
@@ -401,8 +589,14 @@ export function installRouletteChipDragV2(app: HTMLDivElement) {
       startY: event.clientY,
       x: event.clientX,
       y: event.clientY,
-      grabOffsetX,
-      grabOffsetY,
+      grabOffsetX: Math.min(
+        chipRect.width,
+        Math.max(0, event.clientX - chipRect.left),
+      ),
+      grabOffsetY: Math.min(
+        chipRect.height,
+        Math.max(0, event.clientY - chipRect.top),
+      ),
       startedAt: performance.now(),
       timer: 0,
     };
@@ -412,7 +606,7 @@ export function installRouletteChipDragV2(app: HTMLDivElement) {
     try {
       panel.setPointerCapture(event.pointerId);
     } catch {
-      // Some browsers may decline capture; panel listeners still handle the pointer.
+      // Capture may be unavailable; panel listeners still receive normal events.
     }
   });
 
@@ -421,9 +615,10 @@ export function installRouletteChipDragV2(app: HTMLDivElement) {
       press.x = event.clientX;
       press.y = event.clientY;
       if (!drag) {
-        const dx = event.clientX - press.startX;
-        const dy = event.clientY - press.startY;
-        const distance = Math.hypot(dx, dy);
+        const distance = Math.hypot(
+          event.clientX - press.startX,
+          event.clientY - press.startY,
+        );
         if (
           performance.now() - press.startedAt >= EARLY_DRAG_MS &&
           distance >= EARLY_DRAG_DISTANCE_PX
@@ -439,6 +634,7 @@ export function installRouletteChipDragV2(app: HTMLDivElement) {
     moveGhost(drag, event.clientX, event.clientY);
     clearTarget();
     if (!bettingOpen(page, panel)) return;
+
     const target = findDropCell(
       panel,
       event.clientX,
@@ -468,7 +664,7 @@ export function installRouletteChipDragV2(app: HTMLDivElement) {
     }
 
     event.preventDefault();
-    suppressClickUntil = performance.now() + 1100;
+    suppressClickUntil = performance.now() + 320;
     const completed = drag;
     const targetCell = completed.targetCell;
     const targetBetId = completed.targetBetId;
@@ -476,6 +672,7 @@ export function installRouletteChipDragV2(app: HTMLDivElement) {
     drag = null;
     clearPress();
     panel.classList.remove("is-chip-dragging");
+
     try {
       panel.releasePointerCapture(event.pointerId);
     } catch {
@@ -488,40 +685,73 @@ export function installRouletteChipDragV2(app: HTMLDivElement) {
       !targetBetId ||
       !bettingOpen(page, panel)
     ) {
-      snapGhostToCell(completed, completed.cell, "returning");
+      snapGhostToCell(completed, completed.cell);
       window.setTimeout(() => {
         completed.ghost.remove();
         completed.chip.classList.remove("is-chip-drag-source");
-      }, SNAP_MS + 30);
+      }, SNAP_MS + 10);
       return;
     }
 
-    snapGhostToCell(completed, targetCell, "pending");
+    const sourceAmount = Number(completed.chip.dataset.betAmount ?? 0);
+    const targetInitialAmount = readCellAmount(targetCell);
+    const targetTemplate = targetCell.querySelector<HTMLElement>(
+      ".roulette-placed-chip[data-bet-amount]",
+    );
     const uiBets = readPlacedBets(app);
 
-    void commitMove(wallet, uiBets, completed.betId, targetBetId)
-      .then(() => {
-        window.setTimeout(() => {
-          forceRuntimeRefresh();
-          completed.ghost.remove();
-          completed.chip.classList.remove("is-chip-drag-source");
+    if (!Number.isFinite(sourceAmount) || sourceAmount <= 0) {
+      completed.ghost.remove();
+      completed.chip.classList.remove("is-chip-drag-source");
+      return;
+    }
+
+    const optimisticMove: OptimisticMove = {
+      sourceCell: completed.cell,
+      targetCell,
+      sourceBetId: completed.betId,
+      targetBetId,
+      sourceAmount,
+      targetInitialAmount,
+      expectedTargetAmount: targetInitialAmount + sourceAmount,
+      sourceTemplate: completed.chip.cloneNode(true) as HTMLElement,
+      targetTemplate: targetTemplate
+        ? (targetTemplate.cloneNode(true) as HTMLElement)
+        : null,
+    };
+
+    snapGhostToCell(completed, targetCell);
+
+    window.setTimeout(() => {
+      completed.ghost.remove();
+      activeGuard?.cancel();
+      applyOptimisticMove(optimisticMove);
+      activeGuard = guardOptimisticMove(app, optimisticMove);
+
+      void commitMove(
+        wallet,
+        uiBets,
+        completed.betId,
+        targetBetId,
+      )
+        .then(() => {
+          const guard = activeGuard;
+          activeGuard = null;
+          guard?.committed();
           targetCell.classList.add("roulette-chip-drop-confirmed");
           window.setTimeout(
             () => targetCell.classList.remove("roulette-chip-drop-confirmed"),
-            220,
+            140,
           );
-          navigator.vibrate?.(8);
-        }, SNAP_MS);
-      })
-      .catch((error) => {
-        console.error("[roulette] chip drag v3 failed", error);
-        snapGhostToCell(completed, completed.cell, "returning");
-        window.setTimeout(() => {
-          completed.ghost.remove();
-          completed.chip.classList.remove("is-chip-drag-source");
-          forceRuntimeRefresh();
-        }, SNAP_MS + 30);
-      });
+          navigator.vibrate?.(5);
+        })
+        .catch((error) => {
+          console.error("[roulette] chip drag v4 failed", error);
+          const guard = activeGuard;
+          activeGuard = null;
+          guard?.failed();
+        });
+    }, SNAP_MS);
   };
 
   panel.addEventListener("pointerup", (event) => finish(event, false));
