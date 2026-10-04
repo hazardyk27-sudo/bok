@@ -166,10 +166,11 @@ export function reconnectBlackjackPlayer(
   if (record.sessionId !== input.sessionId) {
     throw new Error("Blackjack reconnect sessionId does not match");
   }
-  if (input.nowMs > record.expiresAtMs) {
-    throw new Error("Blackjack reconnect grace has expired");
-  }
 
+  // Grace expiry controls disconnected-turn consequences, not whether the
+  // same authenticated player may ever attach to their still-reserved seat.
+  // The scheduler can auto-stand/advance an expired active turn; if the seat
+  // still exists afterwards, transport reconnection must remain possible.
   const player = table.players.find(
     (candidate) => candidate.playerId === input.playerId,
   );
