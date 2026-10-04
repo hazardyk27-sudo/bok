@@ -1,0 +1,16 @@
+.roulette-page [data-bet-id] > .roulette-placed-chip.roulette-casino-chip {
+  left: 50% !important;
+  top: 50% !important;
+  right: auto !important;
+  bottom: auto !important;
+  transform: translate(-50%, -50%) !important;
+  margin: 0 !important;
+  max-width: calc(100% - 6px) !important;
+  max-height: calc(100% - 6px) !important;
+  transform-origin: 50% 50% !important;
+}
+
+.roulette-page [data-bet-id].is-winning-bet > .roulette-placed-chip.roulette-casino-chip,
+.roulette-page [data-bet-id].is-result-number > .roulette-placed-chip.roulette-casino-chip {
+  transform: translate(-50%, -50%) scale(1.04) !important;
+}
