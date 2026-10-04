@@ -19,6 +19,11 @@ export class BlackjackSessionBootstrapError extends Error{
   }
 }
 
+export type BlackjackSessionBootstrapResult=Readonly<{
+  realtimeAccessToken:string|null;
+  realtimeAccessExpiresAtMs:number|null;
+}>;
+
 type FetchLike=(
   input:string,
   init?:RequestInit,
@@ -48,9 +53,65 @@ function positiveInteger(value:number,label:string):number{
   return value;
 }
 
+async function parseBootstrapResult(
+  response:Response,
+):Promise<BlackjackSessionBootstrapResult>{
+  let payload:unknown;
+  try{
+    payload=await response.json();
+  }catch{
+    throw new BlackjackSessionBootstrapError(
+      "BLACKJACK_SESSION_ACCESS_INVALID",
+      response.status,
+    );
+  }
+
+  if(typeof payload!=="object" || payload===null){
+    throw new BlackjackSessionBootstrapError(
+      "BLACKJACK_SESSION_ACCESS_INVALID",
+      response.status,
+    );
+  }
+
+  const token=
+    "realtimeAccessToken" in payload
+      ? (payload as {realtimeAccessToken?:unknown}).realtimeAccessToken
+      : undefined;
+  const expiresAtMs=
+    "realtimeAccessExpiresAtMs" in payload
+      ? (payload as {realtimeAccessExpiresAtMs?:unknown}).realtimeAccessExpiresAtMs
+      : undefined;
+
+  if(token===undefined && expiresAtMs===undefined){
+    // Rolling-upgrade compatibility for an older HTTP bootstrap. The current
+    // API always returns explicit realtime access; this fallback only keeps an
+    // older server/test fixture usable while versions cross during startup.
+    return Object.freeze({
+      realtimeAccessToken:null,
+      realtimeAccessExpiresAtMs:null,
+    });
+  }
+
+  if(
+    typeof token!=="string" ||
+    token.length<20 ||
+    !Number.isSafeInteger(expiresAtMs)
+  ){
+    throw new BlackjackSessionBootstrapError(
+      "BLACKJACK_SESSION_ACCESS_INVALID",
+      response.status,
+    );
+  }
+
+  return Object.freeze({
+    realtimeAccessToken:token,
+    realtimeAccessExpiresAtMs:expiresAtMs as number,
+  });
+}
+
 export async function waitForBlackjackSession(
   options:BlackjackSessionBootstrapOptions={},
-):Promise<void>{
+):Promise<BlackjackSessionBootstrapResult>{
   const fetchImpl=options.fetchImpl ?? fetch;
   const endpoint=options.endpoint ?? BLACKJACK_SESSION_ENDPOINT;
   const maxAttempts=positiveInteger(
@@ -90,7 +151,9 @@ export async function waitForBlackjackSession(
         signal:controller.signal,
       });
 
-      if(response.ok) return;
+      if(response.ok){
+        return await parseBootstrapResult(response);
+      }
 
       if(!TRANSIENT_STATUSES.has(response.status)){
         throw new BlackjackSessionBootstrapError(
@@ -136,7 +199,7 @@ export async function waitForBlackjackSession(
 
 export async function repairBlackjackSessionIdentity(
   options:BlackjackSessionRepairOptions={},
-):Promise<void>{
+):Promise<BlackjackSessionBootstrapResult>{
   const fetchImpl=options.fetchImpl ?? fetch;
   const authEndpoint=options.authEndpoint ?? BLACKJACK_AUTH_ME_ENDPOINT;
   const authTimeoutMs=positiveInteger(
@@ -147,10 +210,6 @@ export async function repairBlackjackSessionIdentity(
   const controller=new AbortController();
   const timeout=setTimeout(()=>controller.abort(),authTimeoutMs);
   try{
-    // A valid account session rewrites game_session to its canonical wallet.
-    // Anonymous browsers simply receive {user:null}. Either way, the follow-up
-    // Blackjack session bootstrap then clears legacy scoped cookies and ensures
-    // the selected shared wallet exists before realtime reconnects.
     await fetchImpl(authEndpoint,{
       method:"GET",
       credentials:"same-origin",
@@ -159,13 +218,12 @@ export async function repairBlackjackSessionIdentity(
       signal:controller.signal,
     });
   }catch{
-    // The Blackjack session bootstrap below remains authoritative. Auth refresh
-    // is best-effort so an anonymous browser is never blocked by this repair.
+    // The authenticated Blackjack session bootstrap below is authoritative.
   }finally{
     clearTimeout(timeout);
   }
 
-  await waitForBlackjackSession({
+  return waitForBlackjackSession({
     ...options.sessionOptions,
     fetchImpl,
   });

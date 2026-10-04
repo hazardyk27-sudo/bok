@@ -67,14 +67,26 @@ if (isWitchRoute) {
     blackjackModule.mountBlackjack(app);
 
     try {
-      await blackjackModule.waitForBlackjackSession();
+      const session = await blackjackModule.waitForBlackjackSession();
       if (
         generation !== bootstrapGeneration ||
         !document.body.contains(app)
       ) {
         return;
       }
-      blackjackModule.mountConnectedBlackjack(app);
+      blackjackModule.mountConnectedBlackjack(app, {
+        createSocket: (url) => {
+          if (session.realtimeAccessToken === null) {
+            return new WebSocket(url);
+          }
+          const websocketUrl = new URL(url);
+          websocketUrl.searchParams.set(
+            "access",
+            session.realtimeAccessToken,
+          );
+          return new WebSocket(websocketUrl.toString());
+        },
+      });
     } catch {
       if (
         generation !== bootstrapGeneration ||
