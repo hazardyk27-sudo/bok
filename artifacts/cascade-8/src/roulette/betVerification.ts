@@ -1,8 +1,11 @@
+import {
+  ROULETTE_BET_VERIFICATION_MS,
+} from "./scenePhase";
 import type {
   RouletteGlobalTableSnapshot,
 } from "./rouletteWalletClient";
 
-export const ROULETTE_BET_VERIFICATION_MS = 3_000;
+export { ROULETTE_BET_VERIFICATION_MS };
 
 export function getRouletteVerificationSecondsRemaining(
   table: RouletteGlobalTableSnapshot,
