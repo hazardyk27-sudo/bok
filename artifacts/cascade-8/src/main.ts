@@ -77,6 +77,10 @@ if (isWitchRoute) {
         return;
       }
       const connection = blackjackModule.mountConnectedBlackjack(app, {
+        getViewContext: () => ({
+          localPlayerId: session.playerId,
+          availableBalanceCents: session.availableBalanceCents,
+        }),
         createSocket: (url) => {
           if (session.realtimeAccessToken === null) {
             return new WebSocket(url);
