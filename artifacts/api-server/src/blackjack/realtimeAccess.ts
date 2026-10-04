@@ -5,6 +5,7 @@ import {
   timingSafeEqual,
 } from "node:crypto";
 import type { IncomingMessage } from "node:http";
+import { logger } from "../lib/logger";
 import type { BlackjackRealtimeIdentity } from "./realtime";
 
 export const BLACKJACK_REALTIME_ACCESS_QUERY = "access" as const;
@@ -38,6 +39,26 @@ function buildIdentity(sessionId: string): BlackjackRealtimeIdentity {
 
 function isValidSessionId(sessionId: string): boolean {
   return sessionId.length >= 20 && sessionId.length <= 200;
+}
+
+function accessFingerprint(token: string | null): string | null {
+  return token === null || token.length === 0
+    ? null
+    : createHash("sha256").update(token).digest("hex").slice(0, 12);
+}
+
+function logRealtimeAccessRejected(
+  reason: string,
+  token: string | null,
+): void {
+  logger.warn(
+    {
+      event: "BLACKJACK_WS_AUTH_REJECTED",
+      reason,
+      accessFingerprint: accessFingerprint(token),
+    },
+    "Blackjack WebSocket access token rejected",
+  );
 }
 
 function resolveSigningSecret(explicit?: string): string {
@@ -172,39 +193,68 @@ export function resolveBlackjackRealtimeAccess(
     const url = new URL(request.url ?? "/", "http://blackjack.local");
     token = url.searchParams.get(BLACKJACK_REALTIME_ACCESS_QUERY);
   } catch {
+    logRealtimeAccessRejected("INVALID_REQUEST_URL", null);
     return null;
   }
 
-  if (!token || !token.startsWith(BLACKJACK_REALTIME_ACCESS_PREFIX)) {
+  if (!token) {
+    logRealtimeAccessRejected("ACCESS_TOKEN_MISSING", null);
+    return null;
+  }
+  if (!token.startsWith(BLACKJACK_REALTIME_ACCESS_PREFIX)) {
+    logRealtimeAccessRejected("ACCESS_TOKEN_PREFIX_INVALID", token);
     return null;
   }
 
   const compact = token.slice(BLACKJACK_REALTIME_ACCESS_PREFIX.length);
   const separator = compact.indexOf(".");
   if (separator <= 0 || separator !== compact.lastIndexOf(".")) {
+    logRealtimeAccessRejected("ACCESS_TOKEN_STRUCTURE_INVALID", token);
     return null;
   }
   const encodedPayload = compact.slice(0, separator);
   const encodedSignature = compact.slice(separator + 1);
-  if (!encodedPayload || !encodedSignature) return null;
+  if (!encodedPayload || !encodedSignature) {
+    logRealtimeAccessRejected("ACCESS_TOKEN_COMPONENT_MISSING", token);
+    return null;
+  }
 
   let secret: string;
   try {
     secret = resolveSigningSecret(input.signingSecret);
   } catch {
+    logRealtimeAccessRejected("SIGNING_SECRET_UNAVAILABLE", token);
     return null;
   }
   if (!signaturesMatch(encodedPayload, encodedSignature, secret)) {
+    logRealtimeAccessRejected("ACCESS_TOKEN_SIGNATURE_INVALID", token);
     return null;
   }
 
   const payload = decodePayload(encodedPayload);
-  if (payload === null) return null;
-
-  const nowMs = input.nowMs ?? Date.now();
-  if (!Number.isSafeInteger(nowMs) || nowMs < 0 || payload.e <= nowMs) {
+  if (payload === null) {
+    logRealtimeAccessRejected("ACCESS_TOKEN_PAYLOAD_INVALID", token);
     return null;
   }
+
+  const nowMs = input.nowMs ?? Date.now();
+  if (!Number.isSafeInteger(nowMs) || nowMs < 0) {
+    logRealtimeAccessRejected("ACCESS_TIME_INVALID", token);
+    return null;
+  }
+  if (payload.e <= nowMs) {
+    logRealtimeAccessRejected("ACCESS_TOKEN_EXPIRED", token);
+    return null;
+  }
+
+  logger.info(
+    {
+      event: "BLACKJACK_WS_AUTH_ACCEPTED",
+      accessFingerprint: accessFingerprint(token),
+      expiresInMs: payload.e - nowMs,
+    },
+    "Blackjack WebSocket access token accepted",
+  );
 
   return buildIdentity(payload.s);
 }
