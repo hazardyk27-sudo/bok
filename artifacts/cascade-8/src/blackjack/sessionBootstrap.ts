@@ -20,8 +20,8 @@ export class BlackjackSessionBootstrapError extends Error{
 }
 
 export type BlackjackSessionBootstrapResult=Readonly<{
-  realtimeAccessToken:string;
-  realtimeAccessExpiresAtMs:number;
+  realtimeAccessToken:string|null;
+  realtimeAccessExpiresAtMs:number|null;
 }>;
 
 type FetchLike=(
@@ -66,16 +66,36 @@ async function parseBootstrapResult(
     );
   }
 
+  if(typeof payload!=="object" || payload===null){
+    throw new BlackjackSessionBootstrapError(
+      "BLACKJACK_SESSION_ACCESS_INVALID",
+      response.status,
+    );
+  }
+
+  const token=
+    "realtimeAccessToken" in payload
+      ? (payload as {realtimeAccessToken?:unknown}).realtimeAccessToken
+      : undefined;
+  const expiresAtMs=
+    "realtimeAccessExpiresAtMs" in payload
+      ? (payload as {realtimeAccessExpiresAtMs?:unknown}).realtimeAccessExpiresAtMs
+      : undefined;
+
+  if(token===undefined && expiresAtMs===undefined){
+    // Rolling-upgrade compatibility for an older HTTP bootstrap. The current
+    // API always returns explicit realtime access; this fallback only keeps an
+    // older server/test fixture usable while versions cross during startup.
+    return Object.freeze({
+      realtimeAccessToken:null,
+      realtimeAccessExpiresAtMs:null,
+    });
+  }
+
   if(
-    typeof payload!=="object" ||
-    payload===null ||
-    !("realtimeAccessToken" in payload) ||
-    typeof (payload as {realtimeAccessToken?:unknown}).realtimeAccessToken!=="string" ||
-    (payload as {realtimeAccessToken:string}).realtimeAccessToken.length<20 ||
-    !("realtimeAccessExpiresAtMs" in payload) ||
-    !Number.isSafeInteger(
-      (payload as {realtimeAccessExpiresAtMs?:unknown}).realtimeAccessExpiresAtMs,
-    )
+    typeof token!=="string" ||
+    token.length<20 ||
+    !Number.isSafeInteger(expiresAtMs)
   ){
     throw new BlackjackSessionBootstrapError(
       "BLACKJACK_SESSION_ACCESS_INVALID",
@@ -84,10 +104,8 @@ async function parseBootstrapResult(
   }
 
   return Object.freeze({
-    realtimeAccessToken:
-      (payload as {realtimeAccessToken:string}).realtimeAccessToken,
-    realtimeAccessExpiresAtMs:
-      (payload as {realtimeAccessExpiresAtMs:number}).realtimeAccessExpiresAtMs,
+    realtimeAccessToken:token,
+    realtimeAccessExpiresAtMs:expiresAtMs as number,
   });
 }
 
