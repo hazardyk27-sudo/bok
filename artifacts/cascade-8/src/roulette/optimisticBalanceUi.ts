@@ -59,18 +59,22 @@ function snapshotFromBootstrap(
   response: RouletteBootstrapResponse,
 ): RouletteAuthoritativeWalletSnapshot {
   const globalBet = response.globalBet;
+  const phase =
+    response.globalTable?.phase ?? null;
   const terminal =
-    globalBet?.settledAtMs !== null &&
-    globalBet?.settledAtMs !== undefined;
+    (
+      globalBet?.settledAtMs !== null &&
+      globalBet?.settledAtMs !== undefined
+    ) ||
+    phase === "result" ||
+    phase === "complete";
 
   return {
     roundId:
       response.globalTable?.roundId ??
       globalBet?.roundId ??
       null,
-    phase:
-      response.globalTable?.phase ??
-      null,
+    phase,
     revision:
       globalBet?.revision ?? 0,
     balanceCents:
@@ -211,10 +215,16 @@ export function installRouletteOptimisticBalanceUi(
   );
   if (displays.length === 0) return;
 
+  const betPanel =
+    app.querySelector<HTMLElement>(
+      "[data-roulette-bet-panel]",
+    );
+
   let authoritativeBalanceCents:
     number | null = null;
   let serverReservedStakeCents = 0;
   let activeRoundId: string | null = null;
+  let terminalRoundId: string | null = null;
   let acceptedRevision = -1;
 
   const renderOptimisticBalance = () => {
@@ -265,6 +275,21 @@ export function installRouletteOptimisticBalanceUi(
 
     const roundChanged =
       detail.roundId !== activeRoundId;
+
+    if (roundChanged) {
+      activeRoundId = detail.roundId;
+      terminalRoundId = null;
+      acceptedRevision = -1;
+    }
+
+    if (
+      !roundChanged &&
+      terminalRoundId === detail.roundId &&
+      !detail.terminal
+    ) {
+      return;
+    }
+
     const staleBettingSnapshot =
       !roundChanged &&
       !detail.terminal &&
@@ -273,23 +298,19 @@ export function installRouletteOptimisticBalanceUi(
 
     if (staleBettingSnapshot) return;
 
-    if (roundChanged) {
-      activeRoundId = detail.roundId;
-      acceptedRevision = -1;
-    }
-
     authoritativeBalanceCents =
       safeCents(detail.balanceCents);
     serverReservedStakeCents =
       safeCents(
         detail.serverReservedStakeCents,
       );
-    acceptedRevision = detail.terminal
-      ? 0
-      : Math.max(
-          acceptedRevision,
-          detail.revision,
-        );
+    acceptedRevision = Math.max(
+      acceptedRevision,
+      detail.revision,
+    );
+    if (detail.terminal) {
+      terminalRoundId = detail.roundId;
+    }
 
     renderOptimisticBalance();
   };
@@ -299,26 +320,51 @@ export function installRouletteOptimisticBalanceUi(
     onSnapshot,
   );
 
-  const observer =
-    new MutationObserver(() => {
-      if (!app.isConnected) {
-        observer.disconnect();
-        window.removeEventListener(
-          ROULETTE_WALLET_SNAPSHOT_EVENT,
-          onSnapshot,
-        );
-        return;
-      }
-      renderOptimisticBalance();
-    });
+  let stopped = false;
+  const stop = () => {
+    if (stopped) return;
+    stopped = true;
+    betObserver.disconnect();
+    balanceObserver.disconnect();
+    window.removeEventListener(
+      ROULETTE_WALLET_SNAPSHOT_EVENT,
+      onSnapshot,
+    );
+  };
 
-  observer.observe(app, {
-    subtree: true,
-    childList: true,
-    characterData: true,
-    attributes: true,
-    attributeFilter: [
-      "data-bet-amount",
-    ],
+  const observeAndRender = () => {
+    if (!app.isConnected) {
+      stop();
+      return;
+    }
+    renderOptimisticBalance();
+  };
+
+  const betObserver =
+    new MutationObserver(
+      observeAndRender,
+    );
+  const balanceObserver =
+    new MutationObserver(
+      observeAndRender,
+    );
+
+  if (betPanel) {
+    betObserver.observe(betPanel, {
+      subtree: true,
+      childList: true,
+      attributes: true,
+      attributeFilter: [
+        "data-bet-amount",
+      ],
+    });
+  }
+
+  displays.forEach((display) => {
+    balanceObserver.observe(display, {
+      subtree: true,
+      childList: true,
+      characterData: true,
+    });
   });
 }
