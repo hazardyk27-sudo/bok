@@ -1,4 +1,4 @@
-/* Blackjack realism Part 3: shoe-to-hand dealing motion */
+/* Blackjack realism Parts 3-4: shoe-to-hand motion + dealer reveal */
 .blackjack-card-flight-pending {
   opacity: 0 !important;
   animation: none !important;
@@ -61,6 +61,73 @@
     0 0 18px rgba(200,169,106,.16);
 }
 
+/* The authoritative face already exists in the DOM. Keep it visually face-down
+   until its presentation event reaches the head of the FIFO queue. */
+.blackjack-card-face.blackjack-card-flip-pending {
+  color: transparent !important;
+  background:
+    linear-gradient(135deg, rgba(255,255,255,.08), transparent 42%),
+    repeating-linear-gradient(45deg, #781f28 0 3px, #e7d8b5 3px 5px, #1a3029 5px 8px, #e7d8b5 8px 10px),
+    #701b24 !important;
+  box-shadow:
+    0 7px 15px rgba(0,0,0,.36),
+    inset 0 0 0 3px #eee5cf,
+    inset 0 0 0 5px #8b2830,
+    inset 0 0 0 7px #eee5cf !important;
+}
+
+.blackjack-card-face.blackjack-card-flip-pending > strong,
+.blackjack-card-face.blackjack-card-flip-pending > span,
+.blackjack-card-face.blackjack-card-flip-pending::before,
+.blackjack-card-face.blackjack-card-flip-pending::after {
+  visibility: hidden !important;
+}
+
+.blackjack-dealer-cards .blackjack-card-flip-pending,
+.blackjack-dealer-cards .blackjack-card-flip-out,
+.blackjack-dealer-cards .blackjack-card-flip-in {
+  transform-style: preserve-3d;
+  transform-origin: 50% 50%;
+  backface-visibility: hidden;
+  will-change: transform;
+}
+
+.blackjack-dealer-cards .blackjack-card-flip-out {
+  animation: blackjack-hole-flip-out 190ms cubic-bezier(.48,.04,.86,.45) both !important;
+}
+
+.blackjack-dealer-cards .blackjack-card-flip-in {
+  animation: blackjack-hole-flip-in 190ms cubic-bezier(.14,.55,.36,1) both !important;
+}
+
+@keyframes blackjack-hole-flip-out {
+  from {
+    transform: translateY(5px) rotate(4deg) rotateY(0deg);
+  }
+  to {
+    transform: translateY(5px) rotate(4deg) rotateY(90deg);
+  }
+}
+
+@keyframes blackjack-hole-flip-in {
+  from {
+    transform: translateY(5px) rotate(4deg) rotateY(-90deg);
+  }
+  to {
+    transform: translateY(5px) rotate(4deg) rotateY(0deg);
+  }
+}
+
+.blackjack-dealer-total.is-counting {
+  animation: blackjack-dealer-total-count 220ms cubic-bezier(.2,.8,.2,1) both;
+}
+
+@keyframes blackjack-dealer-total-count {
+  0% { opacity: .58; transform: translateY(2px) scale(.94); }
+  55% { opacity: 1; transform: translateY(-1px) scale(1.12); }
+  100% { opacity: 1; transform: translateY(0) scale(1); }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .blackjack-card-flight-ghost {
     display: none !important;
@@ -68,5 +135,13 @@
 
   .blackjack-card-flight-pending {
     opacity: 1 !important;
+  }
+
+  .blackjack-card-flip-pending,
+  .blackjack-card-flip-out,
+  .blackjack-card-flip-in,
+  .blackjack-dealer-total.is-counting {
+    animation: none !important;
+    transform: none !important;
   }
 }
