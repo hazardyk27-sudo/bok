@@ -6,6 +6,7 @@ import { installRouletteChipDragLatestWriter } from "./chipDragLatestWriter";
 import { installRouletteChipDragCanonicalState } from "./chipDragCanonicalState";
 import { installRouletteChipDragV6 } from "./chipDragV6";
 import { installRouletteNetworkGuard } from "./rouletteNetworkGuard";
+import { installRouletteIncrementalPlacedChipReuse } from "./incrementalPlacedChipReuse";
 import {
   installRouletteOptimisticBalanceBridge,
   installRouletteOptimisticBalanceUi,
@@ -22,6 +23,11 @@ export function mountRoulette(app: HTMLDivElement) {
   // A timed-out mutation still falls through the existing authoritative state
   // rehydrate path; other games and unrelated fetches remain untouched.
   installRouletteNetworkGuard();
+
+  // Reuse placed-chip nodes before rouletteRuntime begins rendering. Runtime
+  // remains authoritative for bet state, while repeated renders stop tearing
+  // down and rebuilding the same chip DOM nodes.
+  installRouletteIncrementalPlacedChipReuse(app);
 
   // Patch the wallet client before rouletteRuntime creates its client instance so
   // the very first authoritative bootstrap can seed the optimistic balance base.
