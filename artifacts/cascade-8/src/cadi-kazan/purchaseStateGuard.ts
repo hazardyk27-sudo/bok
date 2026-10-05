@@ -52,6 +52,16 @@ async function fetchPurchaseWithSafeRetry(
   }
 }
 
+async function waitForPurchaseToSettle(purchase: Promise<Response> | null) {
+  if (!purchase) return;
+  try {
+    await purchase;
+  } catch {
+    // A state refresh after a failed transport is still the authoritative way
+    // to learn whether the server committed the purchase.
+  }
+}
+
 export function installCadiPurchaseStateGuard() {
   if (typeof window === "undefined") return;
   const guardedWindow = window as GuardWindow;
@@ -67,20 +77,19 @@ export function installCadiPurchaseStateGuard() {
       const startedAtGeneration = mutationGeneration;
       const activePurchase = purchaseInFlight;
       if (activePurchase) {
-        try {
-          await activePurchase;
-        } catch {
-          // A fresh state fetch below is still authoritative after a failed
-          // purchase transport attempt.
-        }
+        await waitForPurchaseToSettle(activePurchase);
         return nativeFetch(input, init);
       }
 
       const response = await nativeFetch(input, init);
       // The page can begin loading /state and the user can purchase a card
       // before that old response is applied. Never let an older wallet snapshot
-      // overwrite a newer purchase/reveal/cash-out mutation.
-      if (startedAtGeneration !== mutationGeneration) return nativeFetch(input, init);
+      // overwrite a newer purchase/reveal/cash-out mutation. If a purchase is
+      // still in flight, wait for its authoritative result before refreshing.
+      if (startedAtGeneration !== mutationGeneration) {
+        await waitForPurchaseToSettle(purchaseInFlight);
+        return nativeFetch(input, init);
+      }
       return response;
     }
 
