@@ -5,6 +5,7 @@ import { installRouletteChipVisuals } from "./chipVisual";
 import { installRouletteChipDragLatestWriter } from "./chipDragLatestWriter";
 import { installRouletteChipDragCanonicalState } from "./chipDragCanonicalState";
 import { installRouletteChipDragV6 } from "./chipDragV6";
+import { installRouletteNetworkGuard } from "./rouletteNetworkGuard";
 import {
   installRouletteOptimisticBalanceBridge,
   installRouletteOptimisticBalanceUi,
@@ -17,6 +18,11 @@ import "./placedChipLayout.css";
 import "./settingsMenu.css";
 
 export function mountRoulette(app: HTMLDivElement) {
+  // Install Roulette-only transport bounds before any client instance starts.
+  // A timed-out mutation still falls through the existing authoritative state
+  // rehydrate path; other games and unrelated fetches remain untouched.
+  installRouletteNetworkGuard();
+
   // Patch the wallet client before rouletteRuntime creates its client instance so
   // the very first authoritative bootstrap can seed the optimistic balance base.
   installRouletteOptimisticBalanceBridge();

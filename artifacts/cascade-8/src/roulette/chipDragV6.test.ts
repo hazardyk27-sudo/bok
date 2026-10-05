@@ -1,5 +1,9 @@
 import { describe, expect, it, vi } from "vitest";
-import { commitRouletteSequentialChipMove } from "./chipDragV6";
+import {
+  ROULETTE_DRAG_SOURCE_SYNC_MAX_ATTEMPTS,
+  commitRouletteSequentialChipMove,
+  getRouletteDragSourceRetryMs,
+} from "./chipDragV6";
 import type { RouletteWalletClient } from "./rouletteWalletClient";
 
 const bettingTable = {
@@ -146,9 +150,53 @@ describe("roulette sequential chip drag v6", () => {
     );
 
     expect(waitForRetry).toHaveBeenCalledTimes(1);
+    expect(waitForRetry).toHaveBeenCalledWith(0);
     expect(updateGlobalBet).toHaveBeenCalledTimes(1);
     expect(updateGlobalBet.mock.calls[0]?.[1]).toEqual([
       { betId: "straight-17", amount: 10 },
     ]);
+  });
+
+  it("uses a short capped backoff instead of the legacy 100 x 50ms polling loop", () => {
+    const waits = Array.from(
+      { length: ROULETTE_DRAG_SOURCE_SYNC_MAX_ATTEMPTS - 1 },
+      (_, index) => getRouletteDragSourceRetryMs(index),
+    );
+
+    expect(ROULETTE_DRAG_SOURCE_SYNC_MAX_ATTEMPTS).toBe(10);
+    expect(waits[0]).toBe(50);
+    expect(Math.max(...waits)).toBeLessThanOrEqual(250);
+    expect(waits.reduce((sum, wait) => sum + wait, 0)).toBeLessThan(1_800);
+  });
+
+  it("stops polling after the bounded source-sync budget", async () => {
+    const waitForRetry = vi.fn(async () => undefined);
+    const bootstrapMock = vi.fn(async () => bootstrap(null));
+    const updateGlobalBet = vi.fn();
+    const wallet = {
+      bootstrap: bootstrapMock,
+      updateGlobalBet,
+    } as unknown as Pick<
+      RouletteWalletClient,
+      "bootstrap" | "updateGlobalBet"
+    >;
+
+    await expect(
+      commitRouletteSequentialChipMove(
+        wallet,
+        [{ betId: "straight-14", amount: 10 }],
+        "straight-14",
+        "straight-17",
+        waitForRetry,
+      ),
+    ).rejects.toThrow("ROULETTE_DRAG_BET_UNAVAILABLE");
+
+    expect(bootstrapMock).toHaveBeenCalledTimes(
+      ROULETTE_DRAG_SOURCE_SYNC_MAX_ATTEMPTS,
+    );
+    expect(waitForRetry).toHaveBeenCalledTimes(
+      ROULETTE_DRAG_SOURCE_SYNC_MAX_ATTEMPTS - 1,
+    );
+    expect(updateGlobalBet).not.toHaveBeenCalled();
   });
 });
