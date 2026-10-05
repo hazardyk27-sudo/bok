@@ -9,6 +9,10 @@ import {
   normalizeEmail,
   normalizeUsername,
 } from "./security";
+import {
+  LEGACY_SCOPED_SESSION_PATHS,
+  LEGACY_SESSION_COOKIE,
+} from "../platform/session";
 
 export const AUTH_COOKIE = "fy_auth";
 const GAME_SESSION_COOKIE = "game_session";
@@ -20,12 +24,12 @@ router.use((_req, res, next) => {
   next();
 });
 
-function cookieSecurity() {
+function cookieSecurity(path = "/") {
   return {
     httpOnly: true,
     sameSite: "lax" as const,
     secure: process.env.NODE_ENV === "production",
-    path: "/",
+    path,
   };
 }
 
@@ -45,6 +49,14 @@ function setGameSessionCookie(res: Response, sessionId: string) {
 
 function clearAuthCookie(res: Response) {
   res.clearCookie(AUTH_COOKIE, cookieSecurity());
+}
+
+function clearHistoricalGameCookies(res: Response) {
+  const paths = ["/", ...LEGACY_SCOPED_SESSION_PATHS];
+  for (const path of paths) {
+    res.clearCookie(GAME_SESSION_COOKIE, cookieSecurity(path));
+    res.clearCookie(LEGACY_SESSION_COOKIE, cookieSecurity(path));
+  }
 }
 
 function sendAuthError(res: Response, error: unknown) {
@@ -162,6 +174,7 @@ router.post("/auth/register", async (req, res) => {
       walletSessionId,
     );
 
+    clearHistoricalGameCookies(res);
     setAuthCookie(res, result.token);
     setGameSessionCookie(res, result.walletSessionId);
     res.status(201).json({ user: result.user });
@@ -175,6 +188,7 @@ router.post("/auth/login", async (req, res) => {
     const { identifier, password } = readLoginCredentials(req.body);
     const result = await authRepository.login(identifier, password);
 
+    clearHistoricalGameCookies(res);
     setAuthCookie(res, result.token);
     setGameSessionCookie(res, result.walletSessionId);
     res.json({ user: result.user });
@@ -198,6 +212,7 @@ router.post("/auth/password", async (req, res) => {
       newPassword,
     );
 
+    clearHistoricalGameCookies(res);
     setGameSessionCookie(res, result.walletSessionId);
     res.json({ user: result.user });
   } catch (error) {
@@ -216,6 +231,7 @@ router.post("/auth/logout", async (req, res) => {
     // Logout must still detach this browser from the account wallet.
   } finally {
     clearAuthCookie(res);
+    clearHistoricalGameCookies(res);
     setGameSessionCookie(res, anonymousSessionId);
   }
 
@@ -233,10 +249,12 @@ router.get("/auth/me", async (req, res) => {
     const result = await authRepository.getUserBySessionToken(token);
     if (!result) {
       clearAuthCookie(res);
+      clearHistoricalGameCookies(res);
       res.json({ user: null });
       return;
     }
 
+    clearHistoricalGameCookies(res);
     setGameSessionCookie(res, result.walletSessionId);
     res.json({ user: result.user });
   } catch (error) {

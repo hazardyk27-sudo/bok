@@ -1,3 +1,4 @@
+import { randomUUID } from "node:crypto";
 import express, { type Express } from "express";
 import cors from "cors";
 import cookieParser from "cookie-parser";
@@ -7,6 +8,7 @@ import { logger } from "./lib/logger";
 import { AUTH_COOKIE } from "./auth/routes";
 import { authRepository } from "./auth/repository";
 import {
+  LEGACY_SCOPED_SESSION_PATHS,
   LEGACY_SESSION_COOKIE,
   SESSION_COOKIE,
   SESSION_COOKIE_MAX_AGE_MS,
@@ -66,11 +68,11 @@ app.use(
 app.use(cors());
 app.use(cookieParser());
 
-// game_session is the only live game identity. roulette_session is migration-only.
-// Guests still converge fragmented historical wallets by their established server
-// balance. Logged-in users are different: users.wallet_session_id is authoritative
-// for both reads and writes, so stale/scoped browser cookies cannot switch wallets
-// or render a stale wallet as if it were the account balance.
+// game_session is the only live guest game identity. Logged-in users are bound
+// exclusively through users.wallet_session_id. If an auth cookie was revoked or
+// expired, never fall back to the browser's previous game_session because that
+// session may still point at the account wallet. Detach the browser to a fresh
+// anonymous wallet instead and fail closed for the interrupted game request.
 app.use(async (req, res, next) => {
   try {
     const sessionCandidates = getSessionCookieCandidates(req.headers.cookie);
@@ -84,26 +86,56 @@ app.use(async (req, res, next) => {
       legacySessionId,
     });
 
-    const authenticatedWalletSessionId =
-      resolveAuthenticatedWallet && hasAuthToken
-        ? await authRepository.getWalletSessionIdBySessionToken(authToken)
-        : null;
-    const convergedWalletSessionId = authenticatedWalletSessionId
-      ? null
-      : await resolveCanonicalWalletSessionCandidates(
-          sessionCandidates,
-          legacySessionId,
-        );
-    const selectedSessionId = chooseRequestSessionId({
-      authenticatedWalletSessionId,
-      convergedWalletSessionId,
-    });
-
     const cookieOptions = {
       httpOnly: true,
       sameSite: "lax" as const,
       secure: process.env.NODE_ENV === "production",
     };
+
+    const authenticatedWalletSessionId =
+      resolveAuthenticatedWallet && hasAuthToken
+        ? await authRepository.getWalletSessionIdBySessionToken(authToken)
+        : null;
+    const invalidAuthenticatedSession =
+      hasAuthToken && authenticatedWalletSessionId === null;
+
+    let detachedAnonymousSessionId: string | null = null;
+    if (invalidAuthenticatedSession) {
+      detachedAnonymousSessionId = randomUUID();
+      await authRepository.ensureAnonymousWallet(detachedAnonymousSessionId);
+
+      res.clearCookie(AUTH_COOKIE, {
+        ...cookieOptions,
+        path: "/",
+      });
+      for (const path of ["/", ...LEGACY_SCOPED_SESSION_PATHS]) {
+        res.clearCookie(SESSION_COOKIE, {
+          ...cookieOptions,
+          path,
+        });
+        res.clearCookie(LEGACY_SESSION_COOKIE, {
+          ...cookieOptions,
+          path,
+        });
+      }
+
+      delete req.cookies[AUTH_COOKIE];
+      delete req.cookies[LEGACY_SESSION_COOKIE];
+      req.cookies[SESSION_COOKIE] = detachedAnonymousSessionId;
+    }
+
+    const convergedWalletSessionId =
+      authenticatedWalletSessionId || invalidAuthenticatedSession
+        ? null
+        : await resolveCanonicalWalletSessionCandidates(
+            sessionCandidates,
+            legacySessionId,
+          );
+    const selectedSessionId = detachedAnonymousSessionId
+      ?? chooseRequestSessionId({
+        authenticatedWalletSessionId,
+        convergedWalletSessionId,
+      });
 
     if (selectedSessionId) {
       req.cookies[SESSION_COOKIE] = selectedSessionId;
@@ -133,6 +165,14 @@ app.use(async (req, res, next) => {
           path: observedLegacyScope,
         });
       }
+    }
+
+    if (
+      invalidAuthenticatedSession &&
+      !req.path.startsWith("/api/auth/")
+    ) {
+      res.status(401).json({ error: "AUTH_SESSION_REVOKED" });
+      return;
     }
 
     next();

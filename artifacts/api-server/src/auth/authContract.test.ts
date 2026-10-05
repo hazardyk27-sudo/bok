@@ -56,6 +56,23 @@ describe("account identity contract", () => {
     expect(repositorySource).toContain("ensureWallet(client, walletSessionId, 0)");
   });
 
+  it("keeps exactly one active login session per account", () => {
+    expect(repositorySource).toContain("FOR UPDATE");
+    expect(repositorySource).toContain("SET revoked_at = COALESCE(revoked_at, NOW())");
+    expect(repositorySource).toContain("WHERE user_id = $1");
+    expect(repositorySource).toContain("AND revoked_at IS NULL");
+    expect(repositorySource).toContain("const session = await createSession(client, row.id)");
+  });
+
+  it("clears historical game cookies whenever account identity is rebound", () => {
+    expect(routesSource).toContain("LEGACY_SCOPED_SESSION_PATHS");
+    expect(routesSource).toContain("LEGACY_SESSION_COOKIE");
+    expect(routesSource).toContain("function clearHistoricalGameCookies");
+    expect(routesSource).toContain("clearHistoricalGameCookies(res)");
+    expect(routesSource).toContain("res.clearCookie(GAME_SESSION_COOKIE");
+    expect(routesSource).toContain("res.clearCookie(LEGACY_SESSION_COOKIE");
+  });
+
   it("keeps password change authenticated and revokes other account sessions", () => {
     expect(routesSource).toContain('router.post("/auth/password"');
     expect(repositorySource).toContain("CURRENT_PASSWORD_INVALID");
