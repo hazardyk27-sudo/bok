@@ -9,13 +9,15 @@ const walletClientSource = readFileSync(
 
 describe("slot provisional board settlement contract", () => {
   it("invalidates a streamed board when settlement fails without delaying successful result rendering", () => {
-    expect(walletClientSource).toContain("setBoardCanvasVisible(false)");
+    expect(walletClientSource).toContain("invalidateProvisionalBoard()");
+    expect(walletClientSource).toContain("boardVisibilityEpoch += 1");
     expect(walletClientSource).toContain("revealBoardOnNextFrame()");
+    expect(walletClientSource).toContain("boardVisibilityEpoch === expectedEpoch");
     expect(walletClientSource).toContain('canvas.style.visibility = visible ? "" : "hidden"');
 
     const firstResult = walletClientSource.indexOf('if (first.event !== "result")');
     const settlementStart = walletClientSource.indexOf("const settlement = (async");
-    const failureHide = walletClientSource.indexOf("setBoardCanvasVisible(false)");
+    const failureHide = walletClientSource.lastIndexOf("invalidateProvisionalBoard()");
     const reveal = walletClientSource.lastIndexOf("revealBoardOnNextFrame()");
     const responseReturn = walletClientSource.lastIndexOf("return {");
 
