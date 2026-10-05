@@ -1,3 +1,5 @@
+// @vitest-environment happy-dom
+
 import { describe, expect, it } from "vitest";
 import { createBlackjackCardFlightPresentation } from "./cardFlightPresentation";
 import type { BlackjackPresentationEvent } from "./presentationQueue";
