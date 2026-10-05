@@ -28,6 +28,7 @@ const RENDER_RECOVERY_KEY = "cascade8-render-recovery-at";
 let boardVisibilityEpoch = 0;
 let renderRecoveryInstalled = false;
 let renderRecoveryObserver: MutationObserver | null = null;
+let recoveryReloadTimer: number | null = null;
 
 function getBoardCanvas() {
   if (typeof document === "undefined") return null;
@@ -51,7 +52,14 @@ function markBoardRecovering(reason: string) {
   if (status) status.textContent = "GAME BOARD RECOVERING";
 }
 
+function cancelRecoveryReload() {
+  if (typeof window === "undefined" || recoveryReloadTimer === null) return;
+  window.clearTimeout(recoveryReloadTimer);
+  recoveryReloadTimer = null;
+}
+
 function clearBoardRecovering() {
+  cancelRecoveryReload();
   if (typeof document === "undefined") return;
   const board = document.getElementById("phaser-board");
   if (!board) return;
@@ -67,6 +75,7 @@ function isBoardRecovering() {
 function requestRecoveryReload(reason: string) {
   if (typeof window === "undefined") return;
   markBoardRecovering(reason);
+  if (recoveryReloadTimer !== null) return;
 
   let lastReloadAt = 0;
   try {
@@ -76,17 +85,20 @@ function requestRecoveryReload(reason: string) {
   }
 
   const now = Date.now();
-  if (Number.isFinite(lastReloadAt) && now - lastReloadAt < RENDER_RECOVERY_RELOAD_GUARD_MS) {
-    return;
-  }
+  const elapsed = Number.isFinite(lastReloadAt) ? now - lastReloadAt : RENDER_RECOVERY_RELOAD_GUARD_MS;
+  const delay = elapsed < RENDER_RECOVERY_RELOAD_GUARD_MS
+    ? RENDER_RECOVERY_RELOAD_GUARD_MS - Math.max(0, elapsed) + 50
+    : 120;
 
-  try {
-    window.sessionStorage.setItem(RENDER_RECOVERY_KEY, String(now));
-  } catch {
-    // Storage can be unavailable in hardened/private WebViews. Recovery still works.
-  }
-
-  window.setTimeout(() => window.location.reload(), 120);
+  recoveryReloadTimer = window.setTimeout(() => {
+    recoveryReloadTimer = null;
+    try {
+      window.sessionStorage.setItem(RENDER_RECOVERY_KEY, String(Date.now()));
+    } catch {
+      // Storage can be unavailable in hardened/private WebViews. Recovery still works.
+    }
+    window.location.reload();
+  }, delay);
 }
 
 function invalidateProvisionalBoard() {
