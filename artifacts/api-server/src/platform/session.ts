@@ -63,6 +63,32 @@ export function getSessionCookieCandidates(cookieHeader: string | undefined) {
   return candidates;
 }
 
+export function shouldResolveAuthenticatedWalletSession(input: {
+  hasAuthToken: boolean;
+  method: string;
+  sessionCandidateCount: number;
+  legacySessionId: string | null;
+}) {
+  if (!input.hasAuthToken) return false;
+
+  const method = input.method.toUpperCase();
+  const readOnlyMethod = method === "GET" || method === "HEAD" || method === "OPTIONS";
+
+  // Money-changing requests must always re-bind a logged-in browser to the
+  // account wallet. Read-only requests only pay the auth lookup cost when the
+  // browser is visibly fragmented (duplicate/scoped or legacy identities).
+  return !readOnlyMethod
+    || input.sessionCandidateCount !== 1
+    || input.legacySessionId !== null;
+}
+
+export function chooseRequestSessionId(input: {
+  authenticatedWalletSessionId: string | null;
+  convergedWalletSessionId: string | null;
+}) {
+  return input.authenticatedWalletSessionId ?? input.convergedWalletSessionId;
+}
+
 export function chooseSessionIdForWalletMigration(input: {
   canonicalSessionId: string | null;
   legacySessionId: string | null;

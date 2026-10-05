@@ -4,13 +4,17 @@ import cookieParser from "cookie-parser";
 import pinoHttp from "pino-http";
 import router from "./routes";
 import { logger } from "./lib/logger";
+import { AUTH_COOKIE } from "./auth/routes";
+import { authRepository } from "./auth/repository";
 import {
   LEGACY_SESSION_COOKIE,
   SESSION_COOKIE,
   SESSION_COOKIE_MAX_AGE_MS,
+  chooseRequestSessionId,
   getLegacyScopedSessionPathForRequest,
   getLegacySessionId,
   getSessionCookieCandidates,
+  shouldResolveAuthenticatedWalletSession,
 } from "./platform/session";
 import { resolveCanonicalWalletSessionCandidates } from "./platform/wallet";
 
@@ -63,16 +67,37 @@ app.use(cors());
 app.use(cookieParser());
 
 // game_session is the only live game identity. roulette_session is migration-only.
-// When both cookies exist, preserve an established canonical wallet unless it is
-// only the untouched default while the legacy identity has a real balance.
+// Guests still converge fragmented historical wallets by their established server
+// balance. Logged-in users are different: their users.wallet_session_id is the
+// authority and stale/scoped browser cookies must never redirect a money mutation
+// to another wallet.
 app.use(async (req, res, next) => {
   try {
     const sessionCandidates = getSessionCookieCandidates(req.headers.cookie);
     const legacySessionId = getLegacySessionId(req.cookies);
-    const selectedSessionId = await resolveCanonicalWalletSessionCandidates(
-      sessionCandidates,
+    const authToken = req.cookies?.[AUTH_COOKIE];
+    const hasAuthToken = typeof authToken === "string" && authToken.length > 0;
+    const resolveAuthenticatedWallet = shouldResolveAuthenticatedWalletSession({
+      hasAuthToken,
+      method: req.method,
+      sessionCandidateCount: sessionCandidates.length,
       legacySessionId,
-    );
+    });
+
+    const authenticatedSession = resolveAuthenticatedWallet && hasAuthToken
+      ? await authRepository.getUserBySessionToken(authToken)
+      : null;
+    const authenticatedWalletSessionId = authenticatedSession?.walletSessionId ?? null;
+    const convergedWalletSessionId = authenticatedWalletSessionId
+      ? null
+      : await resolveCanonicalWalletSessionCandidates(
+          sessionCandidates,
+          legacySessionId,
+        );
+    const selectedSessionId = chooseRequestSessionId({
+      authenticatedWalletSessionId,
+      convergedWalletSessionId,
+    });
 
     const cookieOptions = {
       httpOnly: true,
