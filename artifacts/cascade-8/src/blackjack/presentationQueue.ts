@@ -65,6 +65,16 @@ export type BlackjackPresentationEvent =
         type: "DEALER_HOLE_REVEALED";
         cardIndex: number;
         card: BlackjackPresentationCard;
+      }>)
+  | (BlackjackPresentationMeta &
+      Readonly<{
+        type: "HAND_SETTLED";
+        playerId: string;
+        seatNumber: 1 | 2 | 3 | 4 | 5;
+        handId: string;
+        result: "WIN" | "LOSS" | "PUSH" | "BLACKJACK_WIN";
+        betCents: number;
+        payoutCents: number;
       }>);
 
 export type BlackjackPresentationEventPlayer = (
@@ -217,6 +227,36 @@ export function deriveBlackjackPresentationEvents(
               suit:nextDealerCard.suit,
               rank:nextDealerCard.rank,
             }),
+    }));
+  }
+
+  for(const hand of nextHands){
+    if(
+      hand.status!=="COMPLETE" ||
+      hand.result===null ||
+      hand.result===undefined ||
+      hand.payoutCents===undefined
+    ){
+      continue;
+    }
+
+    const previousHand=previousHands.get(hand.handId);
+    const alreadyPresented=
+      previousHand?.status==="COMPLETE" &&
+      previousHand.result===hand.result &&
+      previousHand.betCents===hand.betCents &&
+      previousHand.payoutCents===hand.payoutCents;
+    if(alreadyPresented) continue;
+
+    events.push(Object.freeze({
+      ...meta,
+      type:"HAND_SETTLED" as const,
+      playerId:hand.playerId,
+      seatNumber:hand.seatNumber,
+      handId:hand.handId,
+      result:hand.result,
+      betCents:hand.betCents,
+      payoutCents:hand.payoutCents,
     }));
   }
 
