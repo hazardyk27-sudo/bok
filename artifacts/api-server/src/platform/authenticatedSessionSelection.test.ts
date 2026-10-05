@@ -43,7 +43,7 @@ describe("authenticated shared-wallet session selection", () => {
     })).toBe(false);
   });
 
-  it("binds two devices with different stale cookies to the same account wallet", () => {
+  it("binds two devices with different stale cookies to the same account wallet while auth is valid", () => {
     const accountWallet = "account-wallet-1234567890";
 
     const deviceA = chooseRequestSessionId({
@@ -59,7 +59,7 @@ describe("authenticated shared-wallet session selection", () => {
     expect(deviceB).toBe(accountWallet);
   });
 
-  it("falls back to guest convergence only when no validated account wallet exists", () => {
+  it("falls back to guest convergence only when the request has no auth identity", () => {
     expect(chooseRequestSessionId({
       authenticatedWalletSessionId: "account-wallet-1234567890",
       convergedWalletSessionId: "stale-higher-wallet-1234567890",
@@ -75,10 +75,18 @@ describe("authenticated shared-wallet session selection", () => {
     expect(appSource).toContain('import { AUTH_COOKIE } from "./auth/routes"');
     expect(appSource).toContain('import { authRepository } from "./auth/repository"');
     expect(appSource).toContain("authRepository.getWalletSessionIdBySessionToken(authToken)");
-    expect(appSource).toContain("authenticatedWalletSessionId\n      ? null\n      : await resolveCanonicalWalletSessionCandidates");
+    expect(appSource).toContain("authenticatedWalletSessionId || invalidAuthenticatedSession");
 
     expect(authRepositorySource).toContain("async getWalletSessionIdBySessionToken(token: string)");
     expect(authRepositorySource).toContain("s.revoked_at IS NULL");
     expect(authRepositorySource).toContain("s.expires_at > NOW()");
+  });
+
+  it("detaches a revoked auth cookie instead of falling back to the old account game_session", () => {
+    expect(appSource).toContain("const invalidAuthenticatedSession =");
+    expect(appSource).toContain("await authRepository.ensureAnonymousWallet(detachedAnonymousSessionId)");
+    expect(appSource).toContain("delete req.cookies[AUTH_COOKIE]");
+    expect(appSource).toContain("req.cookies[SESSION_COOKIE] = detachedAnonymousSessionId");
+    expect(appSource).toContain('res.status(401).json({ error: "AUTH_SESSION_REVOKED" })');
   });
 });
