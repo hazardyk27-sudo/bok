@@ -55,6 +55,16 @@ describe("Cadı Kazan purchase/state guard", () => {
     expect(guardSource).toContain("round.stakeCents !== fingerprint.stakeCents");
   });
 
+  it("prewarms the Office pool once in the background after state becomes ready", () => {
+    expect(guardSource).toContain('const OFFICE_POOL_PATH = "/api/cadi-kazan/office-pool"');
+    expect(guardSource).toContain("const OFFICE_POOL_WARMUP_TIMEOUT_MS = 2_500");
+    expect(guardSource).toContain("let officePoolWarmupComplete = false");
+    expect(guardSource).toContain("if (officePoolWarmupComplete || officePoolWarmupInFlight) return");
+    expect(guardSource).toContain("officePoolWarmupComplete = true");
+    expect(guardSource).toContain("warmOfficePool(nativeFetch)");
+    expect(guardSource).toContain("Warmup is only a latency optimization");
+  });
+
   it("refreshes state instead of applying a wallet snapshot older than a mutation", () => {
     expect(guardSource).toContain("const startedAtGeneration = mutationGeneration");
     expect(guardSource).toContain("if (startedAtGeneration !== mutationGeneration) {");
