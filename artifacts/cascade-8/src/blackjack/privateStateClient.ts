@@ -1,3 +1,7 @@
+import {
+  createBlackjackBetStackPresentation,
+  type BlackjackBetStackPresentation,
+} from "./betStackPresentation";
 import type {
   BlackjackRealtimeSocketLike,
 } from "./realtimeClient";
@@ -134,6 +138,20 @@ export function createBlackjackPrivatePlayerStateClient(input: {
 }): BlackjackPrivatePlayerStateClient {
   let state: BlackjackPrivatePlayerStateView | null=null;
   let detached=false;
+  const betStack: BlackjackBetStackPresentation | null=
+    typeof document!=="undefined" && document.body
+      ? createBlackjackBetStackPresentation(document.body)
+      : null;
+
+  const syncBetStack=(next:BlackjackPrivatePlayerStateView)=>{
+    const betting=next.betting;
+    betStack?.sync({
+      chipValuesCents:betting?.activeChipValuesCents ?? [],
+      betCents:betting?.betCents ?? 0,
+      status:betting?.status ?? null,
+      pending:false,
+    });
+  };
 
   const receive=(rawMessage: unknown)=>{
     if(detached) return;
@@ -152,6 +170,9 @@ export function createBlackjackPrivatePlayerStateClient(input: {
 
     state=next;
     input.onStateChange?.();
+    // onStateChange rerenders the authoritative local-seat marker first;
+    // the physical stack is then rebuilt from the private server state.
+    syncBetStack(next);
   };
 
   const onMessage=(event: MessageEvent<unknown>)=>receive(event.data);
@@ -164,6 +185,7 @@ export function createBlackjackPrivatePlayerStateClient(input: {
       if(detached) return;
       detached=true;
       input.socket.removeEventListener("message",onMessage);
+      betStack?.clear();
       state=null;
     },
   });
