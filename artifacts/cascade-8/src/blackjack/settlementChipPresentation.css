@@ -1,0 +1,180 @@
+.blackjack-settlement-chip-flight {
+  --blackjack-settlement-x:0px;
+  --blackjack-settlement-y:0px;
+  position:fixed;
+  z-index:80;
+  width:58px;
+  height:58px;
+  margin-left:-29px;
+  margin-top:-29px;
+  pointer-events:none;
+  opacity:0;
+  transform:translate(var(--blackjack-settlement-x),var(--blackjack-settlement-y)) scale(.82);
+  filter:drop-shadow(0 9px 12px rgba(0,0,0,.38));
+}
+
+.blackjack-settlement-chip-flight.is-running {
+  animation:blackjack-settlement-chip-flight 430ms cubic-bezier(.22,.72,.2,1) both;
+}
+
+.blackjack-settlement-chip-flight.is-push.is-running {
+  animation:blackjack-settlement-chip-push 260ms cubic-bezier(.2,.75,.2,1) both;
+}
+
+.blackjack-settlement-chip-stack {
+  position:absolute;
+  left:50%;
+  top:50%;
+  width:38px;
+  height:38px;
+  transform:translate(-50%,-50%);
+}
+
+.blackjack-settlement-chip-stack i {
+  --blackjack-settlement-chip-index:0;
+  position:absolute;
+  inset:0;
+  transform:translateY(calc(var(--blackjack-settlement-chip-index) * -3px));
+  border-radius:50%;
+  border:3px dashed rgba(247,241,229,.84);
+  background:
+    radial-gradient(circle at center,rgba(255,255,255,.14) 0 31%,transparent 32%),
+    #28755a;
+  box-shadow:
+    0 3px 0 rgba(5,24,18,.72),
+    0 5px 9px rgba(0,0,0,.3),
+    inset 0 0 0 2px rgba(255,255,255,.1);
+}
+
+.blackjack-settlement-chip-flight.is-blackjack-win .blackjack-settlement-chip-stack i {
+  background:
+    radial-gradient(circle at center,rgba(255,255,255,.16) 0 31%,transparent 32%),
+    #b99348;
+  border-color:rgba(24,24,20,.88);
+}
+
+.blackjack-settlement-chip-flight.is-loss .blackjack-settlement-chip-stack i {
+  background:
+    radial-gradient(circle at center,rgba(255,255,255,.12) 0 31%,transparent 32%),
+    #8e2d35;
+}
+
+.blackjack-settlement-chip-flight.is-push .blackjack-settlement-chip-stack i {
+  background:
+    radial-gradient(circle at center,rgba(255,255,255,.14) 0 31%,transparent 32%),
+    #595f62;
+}
+
+.blackjack-settlement-chip-label {
+  position:absolute;
+  left:50%;
+  top:-8px;
+  min-width:42px;
+  transform:translateX(-50%);
+  padding:3px 6px;
+  border-radius:999px;
+  border:1px solid rgba(226,215,190,.58);
+  background:rgba(6,12,9,.94);
+  color:#f4f1e8;
+  font:900 9px/1 Inter,ui-sans-serif,system-ui,sans-serif;
+  text-align:center;
+  letter-spacing:.03em;
+  white-space:nowrap;
+  box-shadow:0 5px 11px rgba(0,0,0,.3);
+}
+
+.blackjack-settlement-chip-flight.is-loss .blackjack-settlement-chip-label {
+  color:#ffd8d8;
+  border-color:rgba(223,91,91,.55);
+}
+
+.blackjack-settlement-chip-flight.is-win .blackjack-settlement-chip-label,
+.blackjack-settlement-chip-flight.is-blackjack-win .blackjack-settlement-chip-label {
+  color:#d9ffe9;
+  border-color:rgba(62,215,139,.55);
+}
+
+.blackjack-settlement-chip-flight.is-blackjack-win .blackjack-settlement-chip-label {
+  color:#fff0bd;
+  border-color:rgba(218,183,94,.68);
+}
+
+.blackjack-settlement-chip-flight.is-push .blackjack-settlement-chip-label {
+  color:#e5e7e8;
+  border-color:rgba(178,185,188,.5);
+}
+
+.blackjack-seat.is-settling-chips.is-win,
+.blackjack-seat.is-settling-chips.is-blackjack-win {
+  animation:blackjack-seat-win-pulse 520ms ease-out both;
+}
+
+.blackjack-seat.is-settling-chips.is-loss {
+  animation:blackjack-seat-loss-pulse 520ms ease-out both;
+}
+
+.blackjack-seat.is-settling-chips.is-push {
+  animation:blackjack-seat-push-pulse 320ms ease-out both;
+}
+
+@keyframes blackjack-settlement-chip-flight {
+  0% {
+    opacity:0;
+    transform:translate(var(--blackjack-settlement-x),var(--blackjack-settlement-y)) scale(.78) rotate(-10deg);
+  }
+  16% { opacity:1; }
+  72% {
+    opacity:1;
+    transform:translate(0,0) scale(1.07) rotate(2deg);
+  }
+  100% {
+    opacity:0;
+    transform:translate(0,0) scale(.96) rotate(0deg);
+  }
+}
+
+@keyframes blackjack-settlement-chip-push {
+  0% { opacity:0; transform:translate(0,0) scale(.84); }
+  40% { opacity:1; transform:translate(0,-8px) scale(1.06); }
+  100% { opacity:0; transform:translate(0,0) scale(1); }
+}
+
+@keyframes blackjack-seat-win-pulse {
+  0%,100% { filter:none; }
+  35% { filter:drop-shadow(0 0 13px rgba(55,214,138,.52)); }
+}
+
+@keyframes blackjack-seat-loss-pulse {
+  0%,100% { filter:none; }
+  35% { filter:drop-shadow(0 0 12px rgba(214,72,80,.42)); }
+}
+
+@keyframes blackjack-seat-push-pulse {
+  0%,100% { filter:none; }
+  45% { filter:drop-shadow(0 0 10px rgba(205,210,212,.36)); }
+}
+
+@media (max-width:820px) {
+  .blackjack-settlement-chip-flight {
+    width:48px;
+    height:48px;
+    margin-left:-24px;
+    margin-top:-24px;
+  }
+  .blackjack-settlement-chip-stack {
+    width:31px;
+    height:31px;
+  }
+  .blackjack-settlement-chip-label {
+    top:-7px;
+    font-size:8px;
+  }
+}
+
+@media (prefers-reduced-motion:reduce) {
+  .blackjack-settlement-chip-flight.is-running,
+  .blackjack-settlement-chip-flight.is-push.is-running,
+  .blackjack-seat.is-settling-chips {
+    animation:none;
+  }
+}
