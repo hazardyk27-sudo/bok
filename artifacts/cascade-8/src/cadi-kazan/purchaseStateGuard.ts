@@ -18,16 +18,19 @@ type PurchaseStateSnapshot = {
 const CADI_PREFIX = "/api/cadi-kazan/";
 const CREATE_ROUND_PATH = "/api/cadi-kazan/rounds";
 const STATE_PATH = "/api/cadi-kazan/state";
+const OFFICE_POOL_PATH = "/api/cadi-kazan/office-pool";
 const RETRYABLE_PURCHASE_STATUSES = new Set([502, 503, 504]);
 const STATE_ATTEMPT_TIMEOUT_MS = 1_800;
 const PURCHASE_ATTEMPT_TIMEOUT_MS = 2_500;
 const PURCHASE_RECONCILE_TIMEOUT_MS = 1_500;
+const OFFICE_POOL_WARMUP_TIMEOUT_MS = 2_500;
 const PURCHASE_MAX_ATTEMPTS = 2;
 
 let mutationGeneration = 0;
 let purchaseInFlight: Promise<Response> | null = null;
 let stateBootstrapInFlight: Promise<Response> | null = null;
 let stateBootstrapReady = false;
+let officePoolWarmupInFlight: Promise<void> | null = null;
 
 function requestUrl(input: RequestInfo | URL) {
   if (typeof input === "string") return input;
@@ -71,6 +74,34 @@ function isRetryableTransportError(error: unknown) {
     && (error.name === "TimeoutError" || error.name === "AbortError");
 }
 
+function warmOfficePool(nativeFetch: typeof window.fetch) {
+  if (officePoolWarmupInFlight) return;
+
+  const warmup = fetchWithTimeout(
+    nativeFetch,
+    OFFICE_POOL_PATH,
+    { credentials: "same-origin", cache: "no-store" },
+    OFFICE_POOL_WARMUP_TIMEOUT_MS,
+  )
+    .then((response) => {
+      if (!response.ok) throw new Error("CADI_OFFICE_POOL_WARMUP_FAILED");
+    })
+    .catch(() => {
+      // Warmup is only a latency optimization. The purchase repository remains
+      // authoritative and can create/activate a pool on demand if this fails.
+    })
+    .finally(() => {
+      if (officePoolWarmupInFlight === warmup) officePoolWarmupInFlight = null;
+    });
+
+  officePoolWarmupInFlight = warmup;
+}
+
+function markStateReady(nativeFetch: typeof window.fetch) {
+  stateBootstrapReady = true;
+  warmOfficePool(nativeFetch);
+}
+
 function readPurchaseFingerprint(init?: RequestInit): PurchaseFingerprint {
   if (typeof init?.body !== "string") return { mode: null, stakeCents: null };
   try {
@@ -106,7 +137,7 @@ async function reconcilePurchaseState(
     if (!response.ok) return null;
     const snapshot = await response.clone().json().catch(() => null) as PurchaseStateSnapshot | null;
     if (!snapshot || !stateMatchesPurchase(snapshot, fingerprint)) return null;
-    stateBootstrapReady = true;
+    markStateReady(nativeFetch);
     return response;
   } catch {
     return null;
@@ -176,7 +207,7 @@ async function ensureStateBootstrap(nativeFetch: typeof window.fetch) {
 
   const inFlight = await waitForResponse(stateBootstrapInFlight);
   if (inFlight?.ok) {
-    stateBootstrapReady = true;
+    markStateReady(nativeFetch);
     return;
   }
 
@@ -189,7 +220,7 @@ async function ensureStateBootstrap(nativeFetch: typeof window.fetch) {
   if (!response.ok) {
     throw new Error("Cadı Kazan bağlantısı hazır değil. Tekrar deneyin.");
   }
-  stateBootstrapReady = true;
+  markStateReady(nativeFetch);
 }
 
 export function installCadiPurchaseStateGuard() {
@@ -208,7 +239,7 @@ export function installCadiPurchaseStateGuard() {
       if (activePurchase) {
         await waitForResponse(activePurchase);
         const refreshed = await fetchWithTimeout(nativeFetch, input, init, STATE_ATTEMPT_TIMEOUT_MS);
-        if (refreshed.ok) stateBootstrapReady = true;
+        if (refreshed.ok) markStateReady(nativeFetch);
         return refreshed;
       }
 
@@ -217,14 +248,14 @@ export function installCadiPurchaseStateGuard() {
       stateBootstrapInFlight = request;
       try {
         const response = await request;
-        if (response.ok) stateBootstrapReady = true;
+        if (response.ok) markStateReady(nativeFetch);
         // The page can begin loading /state and a mutation can start before the
         // old snapshot is applied. Refresh only after the purchase settles so a
         // stale balance cannot overwrite the authoritative post-mutation state.
         if (startedAtGeneration !== mutationGeneration) {
           await waitForResponse(purchaseInFlight);
           const refreshed = await fetchWithTimeout(nativeFetch, input, init, STATE_ATTEMPT_TIMEOUT_MS);
-          if (refreshed.ok) stateBootstrapReady = true;
+          if (refreshed.ok) markStateReady(nativeFetch);
           return refreshed;
         }
         return response;
@@ -250,7 +281,7 @@ export function installCadiPurchaseStateGuard() {
       purchaseInFlight = request;
       try {
         const response = await request;
-        if (response.ok) stateBootstrapReady = true;
+        if (response.ok) markStateReady(nativeFetch);
         return response.clone();
       } finally {
         if (purchaseInFlight === request) purchaseInFlight = null;
