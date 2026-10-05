@@ -10,6 +10,7 @@ import "./chipFeedback.css";
 import "./chipVisual.css";
 import "./chipDrag.css";
 import "./placedChipLayout.css";
+import "./settingsMenu.css";
 
 export function mountRoulette(app: HTMLDivElement) {
   mountRouletteRuntime(app);
