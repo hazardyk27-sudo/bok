@@ -347,44 +347,75 @@ export function createBlackjackBettingClient(input: {
     }
   };
 
+  const submit=(
+    type:BlackjackBettingActionType,
+    chipValueCents?:number,
+  ):BlackjackBettingActionMessage=>{
+    if(detached) throw new Error("Blackjack betting client is detached");
+    if(pending!==null){
+      throw new Error("Blackjack betting action is already pending");
+    }
+    const snapshot=input.getSnapshot();
+    if(snapshot===null){
+      throw new Error("Blackjack betting action requires authoritative snapshot");
+    }
+    setFeedback(null);
+    const message=buildBlackjackBettingActionMessage(
+      snapshot,
+      input.getViewContext(),
+      type,
+      input.createActionId(),
+      chipValueCents,
+    );
+    pending=Object.freeze({
+      message,
+      phase:"SENT",
+      acceptedStateVersion:null,
+      acceptedEventSequence:null,
+      acceptedBettingState:null,
+    });
+    changed();
+    try {
+      input.socket.send(JSON.stringify(message));
+    } catch(error) {
+      pending=null;
+      changed();
+      throw error;
+    }
+    return message;
+  };
+
   const onMessage=(event: MessageEvent<unknown>)=>receive(event.data);
   input.socket.addEventListener("message",onMessage);
 
-  return Object.freeze({
-    submit:(type,chipValueCents)=>{
-      if(detached) throw new Error("Blackjack betting client is detached");
-      if(pending!==null){
-        throw new Error("Blackjack betting action is already pending");
-      }
-      const snapshot=input.getSnapshot();
-      if(snapshot===null){
-        throw new Error("Blackjack betting action requires authoritative snapshot");
-      }
-      setFeedback(null);
-      const message=buildBlackjackBettingActionMessage(
-        snapshot,
-        input.getViewContext(),
-        type,
-        input.createActionId(),
-        chipValueCents,
-      );
-      pending=Object.freeze({
-        message,
-        phase:"SENT",
-        acceptedStateVersion:null,
-        acceptedEventSequence:null,
-        acceptedBettingState:null,
-      });
+  const onUndoClick=(event:Event)=>{
+    if(detached || typeof Element==="undefined" || !(event.target instanceof Element)){
+      return;
+    }
+    const button=event.target.closest<HTMLButtonElement>(
+      '[data-blackjack-bet-action="UNDO"]',
+    );
+    if(!button || button.disabled) return;
+    event.preventDefault();
+    event.stopPropagation();
+    try {
+      submit("UNDO_BET");
+    } catch(error) {
+      setFeedback(Object.freeze({
+        status:"REJECTED" as const,
+        actionId:"local-undo",
+        actionType:"UNDO_BET" as const,
+        error:error instanceof Error ? error.message : "BLACKJACK_ACTION_ERROR",
+      }));
       changed();
-      try {
-        input.socket.send(JSON.stringify(message));
-      } catch(error) {
-        pending=null;
-        changed();
-        throw error;
-      }
-      return message;
-    },
+    }
+  };
+  if(typeof document!=="undefined"){
+    document.addEventListener("click",onUndoClick,true);
+  }
+
+  return Object.freeze({
+    submit,
     receive,
     getState:()=>state,
     getPending:()=>pending,
@@ -398,6 +429,9 @@ export function createBlackjackBettingClient(input: {
       if(detached) return;
       detached=true;
       input.socket.removeEventListener("message",onMessage);
+      if(typeof document!=="undefined"){
+        document.removeEventListener("click",onUndoClick,true);
+      }
       pending=null;
       feedback=null;
     },
