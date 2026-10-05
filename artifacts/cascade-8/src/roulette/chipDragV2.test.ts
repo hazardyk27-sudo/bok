@@ -91,9 +91,11 @@ describe("roulette chip drag source synchronization", () => {
     const wallet = {
       bootstrap: vi.fn(async () => ({
         ...bootstrap(null),
+        serverTimeMs: 12_000,
         globalTable: {
           ...bettingTable,
           phase: "spinning" as const,
+          serverTimeMs: 12_000,
         },
       })),
       updateGlobalBet,
