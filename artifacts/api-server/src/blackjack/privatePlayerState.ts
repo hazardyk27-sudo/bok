@@ -23,6 +23,7 @@ export type BlackjackPrivatePlayerState = Readonly<{
     roundId: string;
     status: "OPEN" | "READY" | "LOCKED";
     betCents: number;
+    activeChipValuesCents: readonly number[];
   }> | null;
 }>;
 
@@ -65,6 +66,11 @@ export function buildBlackjackPrivatePlayerState(
           roundId:position.roundId,
           status:position.status,
           betCents:getBlackjackBetTotalCents(position),
+          activeChipValuesCents:Object.freeze(
+            position.chips
+              .filter((chip)=>chip.status==="ACTIVE")
+              .map((chip)=>chip.chipValueCents),
+          ),
         })
       : null;
 

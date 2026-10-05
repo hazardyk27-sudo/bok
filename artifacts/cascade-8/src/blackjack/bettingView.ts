@@ -215,6 +215,9 @@ export function renderBlackjackBettingPanel(
       </div>
 
       <div class="blackjack-betting-actions">
+        <button type="button" data-blackjack-bet-action="UNDO"${model.canClear && !model.pending ? "" : " disabled"}>
+          UNDO
+        </button>
         <button type="button" data-blackjack-bet-action="CLEAR"${model.canClear && !model.pending ? "" : " disabled"}>
           CLEAR
         </button>

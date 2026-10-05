@@ -46,7 +46,7 @@ function snapshot(
 }
 
 describe("blackjack private player state client",()=>{
-  it("applies wallet state only when it matches the authoritative public cursor",()=>{
+  it("applies wallet and exact chip-stack state only at the authoritative cursor",()=>{
     const socket: BlackjackRealtimeSocketLike={
       send:()=>undefined,
       addEventListener:()=>undefined,
@@ -96,19 +96,26 @@ describe("blackjack private player state client",()=>{
       eventSequence:8,
       roundId:"round-2",
       playerId:"local-player",
-      availableBalanceCents:125_000,
-      reservedBalanceCents:0,
+      availableBalanceCents:112_500,
+      reservedBalanceCents:12_500,
       betting:{
         roundId:"round-2",
         status:"OPEN",
-        betCents:0,
+        betCents:12_500,
+        activeChipValuesCents:[2_500,10_000],
       },
     });
     expect(client.getState()).toMatchObject({
       roundId:"round-2",
       playerId:"local-player",
-      availableBalanceCents:125_000,
-      betting:{roundId:"round-2",status:"OPEN",betCents:0},
+      availableBalanceCents:112_500,
+      reservedBalanceCents:12_500,
+      betting:{
+        roundId:"round-2",
+        status:"OPEN",
+        betCents:12_500,
+        activeChipValuesCents:[2_500,10_000],
+      },
     });
   });
 });
