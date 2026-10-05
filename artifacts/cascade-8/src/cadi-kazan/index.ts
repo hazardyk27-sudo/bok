@@ -25,6 +25,12 @@ export function mountCadiKazan(app: HTMLElement) {
   const witchRoot = app.querySelector<HTMLElement>(".witch-page");
   if (!witchRoot) return;
 
+  // Do not allow a card purchase before the first /state response establishes
+  // the canonical game_session cookie and authoritative wallet snapshot.
+  witchRoot.querySelectorAll<HTMLButtonElement>("[data-witch-action='start']").forEach((button) => {
+    button.disabled = true;
+  });
+
   // Install the wallet/purchase ordering guard before WitchClient starts its
   // initial /state request. This prevents that older snapshot from racing a
   // card purchase and coalesces accidental duplicate purchase requests.
