@@ -11,11 +11,23 @@ type PendingRemoval = {
   cell: HTMLElement;
 };
 
+type RemoveMethod = (
+  this: Element,
+) => void;
+type AppendMethod = (
+  this: Element,
+  ...nodes: (Node | string)[]
+) => void;
+
 const activeRouletteApps =
   new Set<HTMLDivElement>();
 const pendingRemovals =
   new Set<PendingRemoval>();
 let flushQueued = false;
+let nativeRemove:
+  RemoveMethod | null = null;
+let nativeAppend:
+  AppendMethod | null = null;
 
 function pruneDisconnectedApps() {
   for (const app of activeRouletteApps) {
@@ -62,13 +74,13 @@ function clearPendingForChip(
     .roulettePendingRuntimeRemoval;
 }
 
-const nativeRemove =
-  Element.prototype.remove;
-const nativeAppend =
-  Element.prototype.append;
-
 function flushPendingRemovals() {
   flushQueued = false;
+
+  if (!nativeRemove) {
+    pendingRemovals.clear();
+    return;
+  }
 
   for (const pending of [
     ...pendingRemovals,
@@ -111,6 +123,8 @@ function schedulePendingFlush() {
 function interceptRemove(
   this: Element,
 ) {
+  if (!nativeRemove) return;
+
   if (
     !(this instanceof HTMLElement) ||
     !this.classList.contains(
@@ -156,6 +170,8 @@ function interceptAppend(
   this: Element,
   ...nodes: (Node | string)[]
 ) {
+  if (!nativeAppend) return;
+
   const app =
     this.matches("[data-bet-id]")
       ? findRouletteApp(this)
@@ -217,18 +233,37 @@ function interceptAppend(
 export function installRouletteIncrementalPlacedChipReuse(
   app: HTMLDivElement,
 ) {
-  pruneDisconnectedApps();
-  activeRouletteApps.add(app);
-
-  if (typeof window === "undefined") {
+  if (
+    typeof window === "undefined" ||
+    typeof Element === "undefined"
+  ) {
     return;
   }
+
+  pruneDisconnectedApps();
+  activeRouletteApps.add(app);
 
   const guardedWindow =
     window as RouletteReuseWindow;
   if (
     guardedWindow
       .__roulettePlacedChipReuseInstalled
+  ) {
+    return;
+  }
+
+  nativeRemove =
+    Element.prototype.remove.bind
+      ? Element.prototype.remove
+      : null;
+  nativeAppend =
+    Element.prototype.append.bind
+      ? Element.prototype.append
+      : null;
+
+  if (
+    !nativeRemove ||
+    !nativeAppend
   ) {
     return;
   }
