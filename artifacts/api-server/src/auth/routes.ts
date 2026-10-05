@@ -12,11 +12,11 @@ import {
 import {
   LEGACY_SCOPED_SESSION_PATHS,
   LEGACY_SESSION_COOKIE,
-  SESSION_COOKIE as GAME_SESSION_COOKIE,
-  SESSION_COOKIE_MAX_AGE_MS as GAME_SESSION_TTL_MS,
 } from "../platform/session";
 
 export const AUTH_COOKIE = "fy_auth";
+const GAME_SESSION_COOKIE = "game_session";
+const GAME_SESSION_TTL_MS = 1000 * 60 * 60 * 24 * 365;
 const router: IRouter = Router();
 
 router.use((_req, res, next) => {
