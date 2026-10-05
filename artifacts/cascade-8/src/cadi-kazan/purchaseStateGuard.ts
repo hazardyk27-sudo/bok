@@ -9,6 +9,7 @@ const RETRYABLE_PURCHASE_STATUSES = new Set([502, 503, 504]);
 
 let mutationGeneration = 0;
 let purchaseInFlight: Promise<Response> | null = null;
+let stateBootstrapInFlight: Promise<Response> | null = null;
 
 function requestUrl(input: RequestInfo | URL) {
   if (typeof input === "string") return input;
@@ -52,13 +53,13 @@ async function fetchPurchaseWithSafeRetry(
   }
 }
 
-async function waitForPurchaseToSettle(purchase: Promise<Response> | null) {
-  if (!purchase) return;
+async function waitForResponse(request: Promise<Response> | null) {
+  if (!request) return;
   try {
-    await purchase;
+    await request;
   } catch {
-    // A state refresh after a failed transport is still the authoritative way
-    // to learn whether the server committed the purchase.
+    // The caller will perform the authoritative follow-up request. Waiting here
+    // is only for request ordering, never for trusting a failed transport.
   }
 }
 
@@ -74,26 +75,37 @@ export function installCadiPurchaseStateGuard() {
     const path = pathname(input);
 
     if (method === "GET" && path === STATE_PATH) {
-      const startedAtGeneration = mutationGeneration;
       const activePurchase = purchaseInFlight;
       if (activePurchase) {
-        await waitForPurchaseToSettle(activePurchase);
+        await waitForResponse(activePurchase);
         return nativeFetch(input, init);
       }
 
-      const response = await nativeFetch(input, init);
-      // The page can begin loading /state and the user can purchase a card
-      // before that old response is applied. Never let an older wallet snapshot
-      // overwrite a newer purchase/reveal/cash-out mutation. If a purchase is
-      // still in flight, wait for its authoritative result before refreshing.
-      if (startedAtGeneration !== mutationGeneration) {
-        await waitForPurchaseToSettle(purchaseInFlight);
-        return nativeFetch(input, init);
+      const startedAtGeneration = mutationGeneration;
+      const request = nativeFetch(input, init);
+      stateBootstrapInFlight = request;
+      try {
+        const response = await request;
+        // The page can begin loading /state and a mutation can start before the
+        // old snapshot is applied. Refresh only after the purchase settles so a
+        // stale balance cannot overwrite the authoritative post-mutation state.
+        if (startedAtGeneration !== mutationGeneration) {
+          await waitForResponse(purchaseInFlight);
+          return nativeFetch(input, init);
+        }
+        return response;
+      } finally {
+        if (stateBootstrapInFlight === request) stateBootstrapInFlight = null;
       }
-      return response;
     }
 
     if (method === "POST" && path === CREATE_ROUND_PATH) {
+      // Critical session boundary: on a brand-new browser both /state and
+      // /rounds would otherwise be allowed to create different game_session
+      // cookies concurrently. Wait until the bootstrap /state response has
+      // arrived so the purchase is sent with the canonical cookie it created.
+      await waitForResponse(stateBootstrapInFlight);
+
       const alreadyRunning = purchaseInFlight;
       if (alreadyRunning) {
         const response = await alreadyRunning;
@@ -107,7 +119,7 @@ export function installCadiPurchaseStateGuard() {
         const response = await request;
         return response.clone();
       } finally {
-        purchaseInFlight = null;
+        if (purchaseInFlight === request) purchaseInFlight = null;
       }
     }
 
