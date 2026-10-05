@@ -1,0 +1,255 @@
+/* Blackjack realism Part 2: readable casino card faces */
+.blackjack-card-face {
+  width: 54px;
+  aspect-ratio: 0.69;
+  position: relative;
+  display: block;
+  overflow: hidden;
+  border: 1px solid rgba(17, 20, 18, .28);
+  border-radius: 7px;
+  color: #151816;
+  background:
+    linear-gradient(155deg, rgba(255,255,255,.96), rgba(239,235,224,.98));
+  box-shadow:
+    0 7px 15px rgba(0,0,0,.34),
+    inset 0 0 0 1px rgba(255,255,255,.72);
+  font-family: Georgia, "Times New Roman", serif;
+}
+
+.blackjack-card-face > strong,
+.blackjack-card-face > span {
+  position: absolute;
+  z-index: 2;
+  left: 6px;
+  margin: 0;
+  line-height: 1;
+  text-shadow: none;
+}
+
+.blackjack-card-face > strong {
+  top: 5px;
+  font-size: 17px;
+  font-weight: 800;
+  letter-spacing: -.05em;
+}
+
+.blackjack-card-face > span {
+  top: 22px;
+  font-size: 14px;
+}
+
+.blackjack-card-face::before {
+  content: attr(data-card-rank);
+  position: absolute;
+  z-index: 2;
+  right: 6px;
+  bottom: 5px;
+  transform: rotate(180deg);
+  font-size: 17px;
+  font-weight: 800;
+  line-height: 1;
+  letter-spacing: -.05em;
+}
+
+.blackjack-card-face::after {
+  content: "";
+  position: absolute;
+  z-index: 1;
+  inset: 50% auto auto 50%;
+  transform: translate(-50%, -50%);
+  font-size: 31px;
+  line-height: 1;
+}
+
+.blackjack-card-face[data-card-suit="HEARTS"]::after { content: "♥"; }
+.blackjack-card-face[data-card-suit="DIAMONDS"]::after { content: "♦"; }
+.blackjack-card-face[data-card-suit="CLUBS"]::after { content: "♣"; }
+.blackjack-card-face[data-card-suit="SPADES"]::after { content: "♠"; }
+
+.blackjack-card-face.is-red {
+  color: #b21f2d;
+}
+
+.blackjack-card-face[data-card-rank="A"]::after,
+.blackjack-card-face[data-card-rank="K"]::after,
+.blackjack-card-face[data-card-rank="Q"]::after,
+.blackjack-card-face[data-card-rank="J"]::after {
+  font-size: 35px;
+}
+
+.blackjack-card-face[data-card-rank="K"]::after,
+.blackjack-card-face[data-card-rank="Q"]::after,
+.blackjack-card-face[data-card-rank="J"]::after {
+  width: 31px;
+  height: 36px;
+  display: grid;
+  place-items: center;
+  border: 1px solid currentColor;
+  border-radius: 4px;
+  background: rgba(255,255,255,.28);
+  font-size: 21px;
+}
+
+.blackjack-card-face[data-card-rank="K"]::after { content: "K"; }
+.blackjack-card-face[data-card-rank="Q"]::after { content: "Q"; }
+.blackjack-card-face[data-card-rank="J"]::after { content: "J"; }
+
+.blackjack-card-face.is-hole,
+.blackjack-card-face.is-dealer.is-hole {
+  border-color: rgba(244,241,232,.58);
+  color: transparent;
+  background:
+    linear-gradient(135deg, rgba(255,255,255,.08), transparent 42%),
+    repeating-linear-gradient(45deg, #781f28 0 3px, #e7d8b5 3px 5px, #1a3029 5px 8px, #e7d8b5 8px 10px),
+    #701b24;
+  box-shadow:
+    0 7px 15px rgba(0,0,0,.36),
+    inset 0 0 0 3px #eee5cf,
+    inset 0 0 0 5px #8b2830,
+    inset 0 0 0 7px #eee5cf;
+}
+
+.blackjack-card-face.is-hole > strong,
+.blackjack-card-face.is-hole > span,
+.blackjack-card-face.is-hole::before,
+.blackjack-card-face.is-hole::after {
+  display: none;
+}
+
+.blackjack-card-placeholder.is-dealer.blackjack-card-face {
+  width: 60px;
+}
+
+.blackjack-dealer-cards {
+  min-height: 86px;
+}
+
+.blackjack-dealer-cards .blackjack-card-placeholder + .blackjack-card-placeholder {
+  margin-left: -22px;
+}
+
+.blackjack-seat-cards {
+  min-height: 62px;
+}
+
+.blackjack-seat .blackjack-card-face {
+  width: 41px;
+}
+
+.blackjack-seat .blackjack-card-face > strong {
+  left: 4px;
+  top: 4px;
+  font-size: 13px;
+}
+
+.blackjack-seat .blackjack-card-face > span {
+  left: 4px;
+  top: 17px;
+  font-size: 10px;
+}
+
+.blackjack-seat .blackjack-card-face::before {
+  right: 4px;
+  bottom: 4px;
+  font-size: 13px;
+}
+
+.blackjack-seat .blackjack-card-face::after {
+  font-size: 24px;
+}
+
+.blackjack-seat .blackjack-card-face[data-card-rank="A"]::after {
+  font-size: 27px;
+}
+
+.blackjack-seat .blackjack-card-face[data-card-rank="K"]::after,
+.blackjack-seat .blackjack-card-face[data-card-rank="Q"]::after,
+.blackjack-seat .blackjack-card-face[data-card-rank="J"]::after {
+  width: 24px;
+  height: 29px;
+  font-size: 16px;
+}
+
+.blackjack-seat .blackjack-card-placeholder + .blackjack-card-placeholder {
+  margin-left: -16px;
+}
+
+@media (max-width: 820px) {
+  .blackjack-card-face,
+  .blackjack-card-placeholder.is-dealer.blackjack-card-face {
+    width: 50px;
+  }
+
+  .blackjack-dealer-cards {
+    min-height: 74px;
+  }
+
+  .blackjack-seat .blackjack-card-face {
+    width: 32px;
+  }
+
+  .blackjack-seat .blackjack-card-face > strong {
+    font-size: 11px;
+  }
+
+  .blackjack-seat .blackjack-card-face > span {
+    top: 15px;
+    font-size: 9px;
+  }
+
+  .blackjack-seat .blackjack-card-face::before {
+    font-size: 11px;
+  }
+
+  .blackjack-seat .blackjack-card-face::after {
+    font-size: 19px;
+  }
+
+  .blackjack-seat .blackjack-card-face[data-card-rank="K"]::after,
+  .blackjack-seat .blackjack-card-face[data-card-rank="Q"]::after,
+  .blackjack-seat .blackjack-card-face[data-card-rank="J"]::after {
+    width: 20px;
+    height: 24px;
+    font-size: 13px;
+  }
+}
+
+@media (orientation: landscape) and (max-height: 760px) {
+  .blackjack-card-face,
+  .blackjack-card-placeholder.is-dealer.blackjack-card-face {
+    width: 44px;
+  }
+
+  .blackjack-seat .blackjack-card-face {
+    width: 28px;
+  }
+
+  .blackjack-seat-cards {
+    min-height: 42px;
+  }
+}
+
+@media (orientation: portrait) and (max-width: 599px) {
+  .blackjack-card-face,
+  .blackjack-card-placeholder.is-dealer.blackjack-card-face {
+    width: 45px;
+  }
+
+  .blackjack-seat .blackjack-card-face {
+    width: 27px;
+  }
+
+  .blackjack-seat .blackjack-card-face > strong,
+  .blackjack-seat .blackjack-card-face::before {
+    font-size: 10px;
+  }
+
+  .blackjack-seat .blackjack-card-face > span {
+    top: 14px;
+    font-size: 8px;
+  }
+
+  .blackjack-seat .blackjack-card-face::after {
+    font-size: 17px;
+  }
+}

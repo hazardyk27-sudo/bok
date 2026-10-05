@@ -1,4 +1,5 @@
 import "./blackjack.css";
+import "./cardDesign.css";
 import {
   connectBlackjackRealtimeElement as connectBlackjackRealtimeElementLocal,
   type BlackjackBrowserRealtimeConnection,
