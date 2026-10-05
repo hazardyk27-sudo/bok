@@ -6,6 +6,8 @@ import {
 import { createBlackjackTableDomRenderer } from "./domRenderer";
 import { createBlackjackCardFlightPresentation } from "./cardFlightPresentation";
 import { createBlackjackSettlementChipPresentation } from "./settlementChipPresentation";
+import { createBlackjackSoundPresentation } from "./soundPresentation";
+import { installBlackjackPresentationLifecycle } from "./presentationLifecycle";
 import {
   BLACKJACK_PRESENTATION_EVENT_NAME,
   createBlackjackPresentationQueue,
@@ -332,6 +334,7 @@ export function bindBlackjackRealtimeElement(
   );
   const cardFlights=createBlackjackCardFlightPresentation(app);
   const settlementChips=createBlackjackSettlementChipPresentation(app);
+  const sounds=createBlackjackSoundPresentation(app);
   const presentationQueue=createBlackjackPresentationQueue({
     play:async(event)=>{
       if(
@@ -343,10 +346,21 @@ export function bindBlackjackRealtimeElement(
           { detail:event },
         ));
       }
+      sounds.play(event);
       await cardFlights.play(event);
       await settlementChips.play(event);
     },
   });
+
+  const clearPresentation=()=>{
+    presentationQueue.clear();
+    cardFlights.clear();
+    settlementChips.clear();
+  };
+  const presentationLifecycle=installBlackjackPresentationLifecycle(
+    app,
+    clearPresentation,
+  );
 
   const controller=bindBlackjackRealtimeView({
     socket,
@@ -354,6 +368,7 @@ export function bindBlackjackRealtimeElement(
     nowMs,
     renderModel:renderer.render,
     onPresentationEvents:(events)=>{
+      if(presentationLifecycle.isSuppressed()) return;
       cardFlights.prepare(events);
       presentationQueue.enqueue(events);
     },
@@ -362,9 +377,9 @@ export function bindBlackjackRealtimeElement(
   return Object.freeze({
     ...controller,
     detach:()=>{
-      presentationQueue.clear();
-      cardFlights.clear();
-      settlementChips.clear();
+      presentationLifecycle.destroy();
+      clearPresentation();
+      sounds.destroy();
       controller.detach();
     },
   });
