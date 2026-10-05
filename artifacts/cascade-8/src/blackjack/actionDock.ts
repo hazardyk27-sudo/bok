@@ -37,6 +37,11 @@ const ACTION_COPY: Readonly<Record<BlackjackActionName, ActionButtonCopy>> =
     }),
   });
 
+const NOOP_ACTION_DOCK: BlackjackActionDock=Object.freeze({
+  refresh:()=>{},
+  destroy:()=>{},
+});
+
 const installedDocks=new WeakMap<HTMLElement,BlackjackActionDock>();
 
 function requireActionButton(
@@ -126,13 +131,16 @@ export function installBlackjackActionDock(app: HTMLElement): BlackjackActionDoc
   const previous=installedDocks.get(app);
   if(previous!==undefined) return previous;
 
+  const candidate=app as unknown as Readonly<{
+    querySelector?: unknown;
+  }>;
+  if(typeof candidate.querySelector!=="function"){
+    return NOOP_ACTION_DOCK;
+  }
+
   const dock=app.querySelector<HTMLElement>(".blackjack-actions");
   if(dock===null){
-    const noop=Object.freeze({
-      refresh:()=>{},
-      destroy:()=>{},
-    });
-    return noop;
+    return NOOP_ACTION_DOCK;
   }
 
   const structure=buildDockStructure(dock);
