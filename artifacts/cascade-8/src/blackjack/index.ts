@@ -1,5 +1,6 @@
 import "./blackjack.css";
 import "./cardDesign.css";
+import { installBlackjackActionDock } from "./actionDock";
 import {
   connectBlackjackRealtimeElement as connectBlackjackRealtimeElementLocal,
   type BlackjackBrowserRealtimeConnection,
@@ -164,14 +165,27 @@ export function mountConnectedBlackjack(
     mountBlackjack(app);
   }
 
-  const connection = connectBlackjackRealtimeElementLocal(app, {
-    ...options,
-    snapshotTimeoutMs:
-      options.snapshotTimeoutMs ?? BLACKJACK_MOUNT_SNAPSHOT_TIMEOUT_MS,
-  });
+  const actionDock = installBlackjackActionDock(app);
+  let connection: BlackjackBrowserRealtimeConnection;
+  try {
+    connection = connectBlackjackRealtimeElementLocal(app, {
+      ...options,
+      snapshotTimeoutMs:
+        options.snapshotTimeoutMs ?? BLACKJACK_MOUNT_SNAPSHOT_TIMEOUT_MS,
+    });
+  } catch (error) {
+    actionDock.destroy();
+    throw error;
+  }
 
   if (typeof window === "undefined") {
-    return connection;
+    return Object.freeze({
+      ...connection,
+      close: () => {
+        actionDock.destroy();
+        connection.close();
+      },
+    });
   }
 
   let guardActive = true;
@@ -193,6 +207,7 @@ export function mountConnectedBlackjack(
   const mountTerminalFailure = (): void => {
     guardActive = false;
     clearInitialGuards();
+    actionDock.destroy();
     connection.close();
     mountBlackjackConnectionUnavailable(app, () => {
       clearBlackjackAutoRepairMarker();
@@ -212,6 +227,7 @@ export function mountConnectedBlackjack(
     markBlackjackAutoRepairAttempted();
     guardActive = false;
     clearInitialGuards();
+    actionDock.destroy();
     connection.close();
     mountBlackjackConnectionRepairing(app);
 
@@ -271,6 +287,7 @@ export function mountConnectedBlackjack(
   return Object.freeze({
     ...connection,
     close: () => {
+      actionDock.destroy();
       if (guardActive) {
         guardActive = false;
         clearInitialGuards();
