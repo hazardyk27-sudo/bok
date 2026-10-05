@@ -9,6 +9,7 @@ import type {
 
 export type BlackjackBettingActionType =
   | "PLACE_BET"
+  | "UNDO_BET"
   | "CLEAR_BET"
   | "READY";
 
