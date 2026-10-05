@@ -20,6 +20,35 @@ export type RouletteBetState = {
   previousRoundPlacements: RouletteBetPlacement[];
 };
 
+let authoritativeDragPlacements: RouletteBetPlacement[] | null = null;
+
+function cloneRoulettePlacements(
+  placements: readonly RouletteBetPlacement[],
+) {
+  return placements.map((placement) => ({
+    ...placement,
+  }));
+}
+
+export function setRouletteAuthoritativeDragPlacements(
+  placements: readonly RouletteBetPlacement[],
+) {
+  authoritativeDragPlacements =
+    cloneRoulettePlacements(placements);
+}
+
+export function getRouletteAuthoritativeDragPlacements() {
+  return authoritativeDragPlacements
+    ? cloneRoulettePlacements(
+        authoritativeDragPlacements,
+      )
+    : null;
+}
+
+export function clearRouletteAuthoritativeDragPlacements() {
+  authoritativeDragPlacements = null;
+}
+
 export function createRouletteBetState(): RouletteBetState {
   return {
     selectedChip: 10,
@@ -129,12 +158,25 @@ export function doubleRouletteBets(
 export function snapshotRouletteRound(
   state: RouletteBetState,
 ): RouletteBetState {
+  const placements =
+    authoritativeDragPlacements ??
+    state.placements;
+
+  const canonicalPlacements =
+    cloneRoulettePlacements(
+      placements,
+    );
+
   return {
     ...state,
+    placements:
+      cloneRoulettePlacements(
+        canonicalPlacements,
+      ),
     previousRoundPlacements:
-      state.placements.map((placement) => ({
-        ...placement,
-      })),
+      cloneRoulettePlacements(
+        canonicalPlacements,
+      ),
   };
 }
 

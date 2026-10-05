@@ -3,6 +3,7 @@ import { installRouletteBetVerificationUi } from "./verificationController";
 import { installRouletteChipFeedbackV2 } from "./chipFeedbackV2";
 import { installRouletteChipVisuals } from "./chipVisual";
 import { installRouletteChipDragLatestWriter } from "./chipDragLatestWriter";
+import { installRouletteChipDragCanonicalState } from "./chipDragCanonicalState";
 import { installRouletteChipDragV6 } from "./chipDragV6";
 import "./verification.css";
 import "./chipFeedback.css";
@@ -16,5 +17,6 @@ export function mountRoulette(app: HTMLDivElement) {
   installRouletteChipFeedbackV2(app);
   installRouletteChipVisuals(app);
   installRouletteChipDragLatestWriter(app);
+  installRouletteChipDragCanonicalState(app);
   installRouletteChipDragV6(app);
 }
