@@ -4,6 +4,7 @@ import {
   type BlackjackSnapshotViewContext,
 } from "./snapshotView";
 import { createBlackjackTableDomRenderer } from "./domRenderer";
+import { createBlackjackCardFlightPresentation } from "./cardFlightPresentation";
 import {
   BLACKJACK_PRESENTATION_EVENT_NAME,
   createBlackjackPresentationQueue,
@@ -328,8 +329,9 @@ export function bindBlackjackRealtimeElement(
     app,
     BLACKJACK_DEFAULT_TABLE_VIEW,
   );
+  const cardFlights=createBlackjackCardFlightPresentation(app);
   const presentationQueue=createBlackjackPresentationQueue({
-    play:(event)=>{
+    play:async(event)=>{
       if(
         typeof CustomEvent!=="undefined" &&
         typeof app.dispatchEvent==="function"
@@ -339,6 +341,7 @@ export function bindBlackjackRealtimeElement(
           { detail:event },
         ));
       }
+      await cardFlights.play(event);
     },
   });
 
@@ -347,13 +350,17 @@ export function bindBlackjackRealtimeElement(
     getViewContext,
     nowMs,
     renderModel:renderer.render,
-    onPresentationEvents:(events)=>{ presentationQueue.enqueue(events); },
+    onPresentationEvents:(events)=>{
+      cardFlights.prepare(events);
+      presentationQueue.enqueue(events);
+    },
   });
 
   return Object.freeze({
     ...controller,
     detach:()=>{
       presentationQueue.clear();
+      cardFlights.clear();
       controller.detach();
     },
   });
