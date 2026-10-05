@@ -19,11 +19,25 @@ export function isRouletteCommittedDragChip(
   return (totals[betId] ?? 0) === amount && amount > 0;
 }
 
+export function shouldWakeRouletteDragGuard(confirmedChipCount: number) {
+  return confirmedChipCount > 0;
+}
+
+function wakeRouletteDragGuard(app: HTMLDivElement) {
+  const marker = document.createElement("span");
+  marker.hidden = true;
+  marker.setAttribute("aria-hidden", "true");
+  marker.dataset.rouletteDragGuardWake = "true";
+  app.append(marker);
+  marker.remove();
+}
+
 function confirmCommittedOptimisticChips(
   app: HTMLDivElement,
   result: RouletteGlobalBetUpdateResponse,
 ) {
   const bets = result.globalBet?.bets ?? [];
+  let confirmedChipCount = 0;
 
   app
     .querySelectorAll<HTMLElement>(
@@ -40,8 +54,11 @@ function confirmCommittedOptimisticChips(
         isRouletteCommittedDragChip(bets, betId, amount)
       ) {
         delete chip.dataset.rouletteDragOptimistic;
+        confirmedChipCount += 1;
       }
     });
+
+  return confirmedChipCount;
 }
 
 export function installRouletteChipDragCommitBridge(
@@ -75,7 +92,18 @@ export function installRouletteChipDragCommitBridge(
       const currentApp = mountedApp;
       queueMicrotask(() => {
         if (!currentApp.isConnected) return;
-        confirmCommittedOptimisticChips(currentApp, result);
+        const confirmedChipCount = confirmCommittedOptimisticChips(
+          currentApp,
+          result,
+        );
+
+        if (shouldWakeRouletteDragGuard(confirmedChipCount)) {
+          // chipDragV2's stale move guard observes childList mutations only.
+          // Wake it in this microtask so it sees the now-authoritative chip,
+          // closes itself, and cannot overwrite the next sequential drag.
+          wakeRouletteDragGuard(currentApp);
+        }
+
         document.dispatchEvent(new Event("visibilitychange"));
       });
     }
