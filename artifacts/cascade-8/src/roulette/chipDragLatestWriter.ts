@@ -187,12 +187,7 @@ function visibleBetsForState(
   fallback: readonly RouletteBetPlacement[],
 ) {
   const visible = readRouletteVisibleBets(app);
-  const fallbackStake = totalStake(fallback);
-  const visibleStake = totalStake(visible);
-
-  return visible.length > 0 && Math.abs(visibleStake - fallbackStake) < 1e-9
-    ? visible
-    : cloneBets(fallback);
+  return visible.length > 0 ? visible : cloneBets(fallback);
 }
 
 export function installRouletteChipDragLatestWriter(app: HTMLDivElement) {
