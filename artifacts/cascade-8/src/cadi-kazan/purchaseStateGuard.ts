@@ -31,6 +31,7 @@ let purchaseInFlight: Promise<Response> | null = null;
 let stateBootstrapInFlight: Promise<Response> | null = null;
 let stateBootstrapReady = false;
 let officePoolWarmupInFlight: Promise<void> | null = null;
+let officePoolWarmupComplete = false;
 
 function requestUrl(input: RequestInfo | URL) {
   if (typeof input === "string") return input;
@@ -75,7 +76,7 @@ function isRetryableTransportError(error: unknown) {
 }
 
 function warmOfficePool(nativeFetch: typeof window.fetch) {
-  if (officePoolWarmupInFlight) return;
+  if (officePoolWarmupComplete || officePoolWarmupInFlight) return;
 
   const warmup = fetchWithTimeout(
     nativeFetch,
@@ -85,6 +86,7 @@ function warmOfficePool(nativeFetch: typeof window.fetch) {
   )
     .then((response) => {
       if (!response.ok) throw new Error("CADI_OFFICE_POOL_WARMUP_FAILED");
+      officePoolWarmupComplete = true;
     })
     .catch(() => {
       // Warmup is only a latency optimization. The purchase repository remains
