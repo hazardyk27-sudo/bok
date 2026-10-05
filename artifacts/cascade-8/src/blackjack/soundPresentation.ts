@@ -149,7 +149,7 @@ function createWebAudioEngine(app:HTMLElement): BlackjackSoundEngine {
       if(audio.state==="running") return true;
       try {
         await audio.resume();
-        return audio.state==="running";
+        return (audio as AudioContext).state==="running";
       } catch {
         return false;
       }
@@ -247,7 +247,7 @@ export function createBlackjackSoundPresentation(
 
   const dock=app.querySelector<HTMLElement>(".blackjack-dock-actions");
   const toggle=dock===null ? null : app.ownerDocument.createElement("button");
-  if(toggle!==null){
+  if(toggle!==null && dock!==null){
     toggle.type="button";
     toggle.className="blackjack-sound-toggle";
     toggle.dataset.blackjackSoundToggle="true";
