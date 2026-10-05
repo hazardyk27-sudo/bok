@@ -6,6 +6,11 @@ type DealEvent = Extract<
   { type: "PLAYER_CARD_DEALT" | "DEALER_CARD_DEALT" }
 >;
 
+type DealerHoleRevealEvent = Extract<
+  BlackjackPresentationEvent,
+  { type: "DEALER_HOLE_REVEALED" }
+>;
+
 export type BlackjackCardFlightPresentation = Readonly<{
   prepare: (events: readonly BlackjackPresentationEvent[]) => void;
   play: (event: BlackjackPresentationEvent) => Promise<void>;
@@ -19,6 +24,8 @@ type BlackjackCardFlightOptions = Readonly<{
 
 const FLIGHT_DURATION_MS=360;
 const FLIGHT_SETTLE_MS=36;
+const HOLE_FLIP_HALF_MS=190;
+const HOLE_FLIP_SETTLE_MS=40;
 
 function defaultWait(durationMs:number): Promise<void> {
   return new Promise((resolve)=>{
@@ -47,6 +54,12 @@ function isDealEvent(event: BlackjackPresentationEvent): event is DealEvent {
   return event.type==="PLAYER_CARD_DEALT" || event.type==="DEALER_CARD_DEALT";
 }
 
+function isDealerHoleRevealEvent(
+  event: BlackjackPresentationEvent,
+): event is DealerHoleRevealEvent {
+  return event.type==="DEALER_HOLE_REVEALED";
+}
+
 function eventKey(event: DealEvent): string {
   if(event.type==="PLAYER_CARD_DEALT"){
     return [
@@ -57,6 +70,15 @@ function eventKey(event: DealEvent): string {
       event.cardIndex,
     ].join(":");
   }
+  return [
+    event.eventSequence,
+    event.type,
+    "dealer",
+    event.cardIndex,
+  ].join(":");
+}
+
+function holeRevealKey(event: DealerHoleRevealEvent): string {
   return [
     event.eventSequence,
     event.type,
@@ -84,6 +106,11 @@ function targetContainer(app: HTMLElement,event: DealEvent): HTMLElement | null 
   );
 }
 
+function dealerContainer(app: HTMLElement): HTMLElement | null {
+  if(!supportsCardFlightDom(app)) return null;
+  return app.querySelector<HTMLElement>(".blackjack-dealer-cards");
+}
+
 function cardAt(container: HTMLElement,index:number): HTMLElement | null {
   return container.children.item(index) as HTMLElement | null;
 }
@@ -105,6 +132,20 @@ function findExactTarget(app: HTMLElement,event: DealEvent): HTMLElement | null 
   if(container===null) return null;
   const target=cardAt(container,event.cardIndex);
   return target!==null && targetMatchesEvent(target,event) ? target : null;
+}
+
+function findHoleRevealTarget(
+  app: HTMLElement,
+  event: DealerHoleRevealEvent,
+): HTMLElement | null {
+  const container=dealerContainer(app);
+  if(container===null) return null;
+  const target=cardAt(container,event.cardIndex);
+  if(target===null) return null;
+  return (
+    target.dataset.cardRank===event.card.rank &&
+    target.dataset.cardSuit===event.card.suit
+  ) ? target : null;
 }
 
 function createCardGhost(
@@ -156,6 +197,68 @@ function fallbackSize(event: DealEvent): Readonly<{ width:number; height:number 
   return Object.freeze({ width, height:width/0.69 });
 }
 
+function rankValue(rank:string): number | null {
+  if(rank==="A") return 11;
+  if(rank==="K" || rank==="Q" || rank==="J") return 10;
+  const parsed=Number(rank);
+  return Number.isInteger(parsed) && parsed>=2 && parsed<=10 ? parsed : null;
+}
+
+function updateDealerPresentationTotal(
+  app: HTMLElement,
+  pulse:boolean,
+): void {
+  if(!supportsCardFlightDom(app)) return;
+  const cards=dealerContainer(app);
+  const label=app.querySelector<HTMLElement>(".blackjack-dealer-total");
+  if(cards===null || label===null) return;
+
+  let total=0;
+  let aces=0;
+  let visibleCount=0;
+  let hiddenCardVisible=false;
+
+  for(const card of Array.from(cards.children)){
+    if(!(card instanceof app.ownerDocument.defaultView!.HTMLElement)) continue;
+    const element=card as HTMLElement;
+    if(element.classList.contains("blackjack-card-flight-pending")) continue;
+
+    const flipPending=
+      element.classList.contains("blackjack-card-flip-pending") ||
+      element.classList.contains("blackjack-card-flip-out");
+    if(flipPending || element.dataset.cardHidden==="true"){
+      hiddenCardVisible=true;
+      continue;
+    }
+
+    const rank=element.dataset.cardRank;
+    if(rank===undefined) continue;
+    const value=rankValue(rank);
+    if(value===null) continue;
+    total+=value;
+    if(rank==="A") aces+=1;
+    visibleCount+=1;
+  }
+
+  while(total>21 && aces>0){
+    total-=10;
+    aces-=1;
+  }
+
+  const nextLabel=
+    visibleCount===0
+      ? hiddenCardVisible ? "?" : "DEALER"
+      : (total>21 ? "BUST "+total : String(total)) +
+        (hiddenCardVisible ? " + ?" : "");
+
+  if(label.textContent===nextLabel) return;
+  label.textContent=nextLabel;
+  if(!pulse) return;
+  label.classList.remove("is-counting");
+  void label.offsetWidth;
+  label.classList.add("is-counting");
+}
+
 function prefersReducedMotion(): boolean {
   return (
     typeof window!=="undefined" &&
@@ -182,22 +285,87 @@ export function createBlackjackCardFlightPresentation(
       pending.classList.add("blackjack-card-flight-arrived");
       pending.removeAttribute("data-blackjack-flight-key");
     }
+    for(const flipping of Array.from(app.querySelectorAll<HTMLElement>(
+      ".blackjack-card-flip-pending, .blackjack-card-flip-out, .blackjack-card-flip-in",
+    ))){
+      flipping.classList.remove(
+        "blackjack-card-flip-pending",
+        "blackjack-card-flip-out",
+        "blackjack-card-flip-in",
+      );
+      flipping.removeAttribute("data-blackjack-flip-key");
+    }
+    updateDealerPresentationTotal(app,false);
   };
 
   const prepare=(events: readonly BlackjackPresentationEvent[]): void => {
     if(!supportsCardFlightDom(app)) return;
+    let stagesDealer=false;
+
     for(const event of events){
-      if(!isDealEvent(event)) continue;
-      const target=findExactTarget(app,event);
-      if(target===null) continue;
-      target.dataset.blackjackFlightKey=eventKey(event);
-      target.classList.add("blackjack-card-flight-pending");
-      target.classList.remove("blackjack-card-flight-arrived");
+      if(isDealEvent(event)){
+        const target=findExactTarget(app,event);
+        if(target===null) continue;
+        target.dataset.blackjackFlightKey=eventKey(event);
+        target.classList.add("blackjack-card-flight-pending");
+        target.classList.remove("blackjack-card-flight-arrived");
+        if(event.type==="DEALER_CARD_DEALT") stagesDealer=true;
+        continue;
+      }
+
+      if(isDealerHoleRevealEvent(event)){
+        const target=findHoleRevealTarget(app,event);
+        if(target===null) continue;
+        target.dataset.blackjackFlipKey=holeRevealKey(event);
+        target.classList.remove("blackjack-card-flip-in","blackjack-card-flip-out");
+        target.classList.add("blackjack-card-flip-pending");
+        stagesDealer=true;
+      }
+    }
+
+    if(stagesDealer){
+      updateDealerPresentationTotal(app,false);
     }
   };
 
-  const play=async(event: BlackjackPresentationEvent): Promise<void> => {
-    if(!isDealEvent(event) || !supportsCardFlightDom(app)) return;
+  const playHoleReveal=async(event:DealerHoleRevealEvent): Promise<void> => {
+    if(!supportsCardFlightDom(app)) return;
+    const key=holeRevealKey(event);
+    const target=app.querySelector<HTMLElement>(
+      '[data-blackjack-flip-key="'+key+'"]',
+    ) ?? findHoleRevealTarget(app,event);
+    if(target===null) return;
+
+    const ownGeneration=generation;
+    if(reducedMotion()){
+      target.classList.remove(
+        "blackjack-card-flip-pending",
+        "blackjack-card-flip-out",
+        "blackjack-card-flip-in",
+      );
+      target.removeAttribute("data-blackjack-flip-key");
+      updateDealerPresentationTotal(app,true);
+      return;
+    }
+
+    target.classList.add("blackjack-card-flip-out");
+    await wait(HOLE_FLIP_HALF_MS);
+    if(ownGeneration!==generation) return;
+
+    target.classList.remove("blackjack-card-flip-pending","blackjack-card-flip-out");
+    target.classList.add("blackjack-card-flip-in");
+    updateDealerPresentationTotal(app,true);
+
+    await wait(HOLE_FLIP_HALF_MS);
+    if(ownGeneration!==generation) return;
+
+    target.classList.remove("blackjack-card-flip-in");
+    target.removeAttribute("data-blackjack-flip-key");
+    await wait(HOLE_FLIP_SETTLE_MS);
+  };
+
+  const playDeal=async(event:DealEvent): Promise<void> => {
+    if(!supportsCardFlightDom(app)) return;
 
     const ownGeneration=generation;
     const key=eventKey(event);
@@ -207,15 +375,22 @@ export function createBlackjackCardFlightPresentation(
     const destination=exact ?? targetContainer(app,event);
     const shoe=app.querySelector<HTMLElement>(".blackjack-shoe");
 
-    if(destination===null){
+    const revealExact=()=>{
       exact?.classList.remove("blackjack-card-flight-pending");
+      exact?.classList.add("blackjack-card-flight-arrived");
+      exact?.removeAttribute("data-blackjack-flight-key");
+      if(event.type==="DEALER_CARD_DEALT"){
+        updateDealerPresentationTotal(app,true);
+      }
+    };
+
+    if(destination===null){
+      revealExact();
       return;
     }
 
     if(reducedMotion() || shoe===null || typeof destination.getBoundingClientRect!=="function"){
-      exact?.classList.remove("blackjack-card-flight-pending");
-      exact?.classList.add("blackjack-card-flight-arrived");
-      exact?.removeAttribute("data-blackjack-flight-key");
+      revealExact();
       return;
     }
 
@@ -261,9 +436,7 @@ export function createBlackjackCardFlightPresentation(
     await wait(FLIGHT_DURATION_MS);
 
     if(ownGeneration===generation){
-      exact?.classList.remove("blackjack-card-flight-pending");
-      exact?.classList.add("blackjack-card-flight-arrived");
-      exact?.removeAttribute("data-blackjack-flight-key");
+      revealExact();
     }
     ghost.remove();
     activeGhosts.delete(ghost);
@@ -271,6 +444,16 @@ export function createBlackjackCardFlightPresentation(
 
     if(ownGeneration===generation){
       await wait(FLIGHT_SETTLE_MS);
+    }
+  };
+
+  const play=async(event: BlackjackPresentationEvent): Promise<void> => {
+    if(isDealerHoleRevealEvent(event)){
+      await playHoleReveal(event);
+      return;
+    }
+    if(isDealEvent(event)){
+      await playDeal(event);
     }
   };
 
@@ -285,6 +468,9 @@ export function createBlackjackCardFlightPresentation(
       if(supportsCardFlightDom(app)){
         app.querySelector<HTMLElement>(".blackjack-shoe")?.classList.remove(
           "is-dealing-card",
+        );
+        app.querySelector<HTMLElement>(".blackjack-dealer-total")?.classList.remove(
+          "is-counting",
         );
       }
     },
