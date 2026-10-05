@@ -134,12 +134,25 @@ function parsePrivateState(
   });
 }
 
+function stateMatchesSnapshot(
+  snapshot: BlackjackPublicSnapshotViewSource | null,
+  state: BlackjackPrivatePlayerStateView,
+): boolean {
+  return (
+    snapshot!==null &&
+    snapshot.stateVersion===state.stateVersion &&
+    snapshot.eventSequence===state.eventSequence &&
+    (snapshot.round?.roundId ?? null)===state.roundId
+  );
+}
+
 export function createBlackjackPrivatePlayerStateClient(input: {
   socket: BlackjackRealtimeSocketLike;
   getSnapshot: () => BlackjackPublicSnapshotViewSource | null;
   onStateChange?: () => void;
 }): BlackjackPrivatePlayerStateClient {
   let state: BlackjackPrivatePlayerStateView | null=null;
+  let pendingState: BlackjackPrivatePlayerStateView | null=null;
   let detached=false;
   const betStack: BlackjackBetStackPresentation | null=
     typeof document!=="undefined" && document.body
@@ -156,26 +169,34 @@ export function createBlackjackPrivatePlayerStateClient(input: {
     });
   };
 
-  const receive=(rawMessage: unknown)=>{
-    if(detached) return;
-    const next=parsePrivateState(rawMessage);
-    if(next===null) return;
-
-    const snapshot=input.getSnapshot();
-    if(
-      snapshot===null ||
-      snapshot.stateVersion!==next.stateVersion ||
-      snapshot.eventSequence!==next.eventSequence ||
-      (snapshot.round?.roundId ?? null)!==next.roundId
-    ){
+  const applyPendingState=()=>{
+    const next=pendingState;
+    if(next===null || !stateMatchesSnapshot(input.getSnapshot(),next)){
       return;
     }
-
+    pendingState=null;
     state=next;
     input.onStateChange?.();
     // onStateChange rerenders the authoritative local-seat marker first;
     // the physical stack is then rebuilt from the private server state.
     syncBetStack(next);
+  };
+
+  const receive=(rawMessage: unknown)=>{
+    if(detached) return;
+
+    // The public realtime controller is registered before this client. On a
+    // snapshot message it has therefore advanced getSnapshot() by the time
+    // this listener runs, allowing an early private state to reconcile here.
+    applyPendingState();
+
+    const next=parsePrivateState(rawMessage);
+    if(next===null) return;
+
+    // Never apply private wallet/player/bet data against a different public
+    // cursor. Retain it until the matching authoritative snapshot arrives.
+    pendingState=next;
+    applyPendingState();
   };
 
   const onMessage=(event: MessageEvent<unknown>)=>receive(event.data);
@@ -189,6 +210,7 @@ export function createBlackjackPrivatePlayerStateClient(input: {
       detached=true;
       input.socket.removeEventListener("message",onMessage);
       betStack?.clear();
+      pendingState=null;
       state=null;
     },
   });
