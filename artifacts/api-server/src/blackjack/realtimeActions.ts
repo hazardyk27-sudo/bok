@@ -16,6 +16,7 @@ export const BLACKJACK_REALTIME_PLAYER_ACTION_TYPES = [
 
 export const BLACKJACK_REALTIME_BETTING_ACTION_TYPES = [
   "PLACE_BET",
+  "UNDO_BET",
   "CLEAR_BET",
   "READY",
 ] as const;
@@ -183,6 +184,12 @@ export function parseBlackjackRealtimePlayerAction(
               "blackjack:" + tableId + ":" + actionId + ":bet-reserve-tx",
           };
         })()
+      : {}),
+    ...(type === "UNDO_BET"
+      ? {
+          releaseTransactionId:
+            "blackjack:" + tableId + ":" + actionId + ":undo-bet-tx",
+        }
       : {}),
     ...(type === "CLEAR_BET"
       ? {
