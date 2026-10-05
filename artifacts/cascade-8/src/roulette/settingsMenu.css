@@ -1,0 +1,305 @@
+/* Shared roulette settings-menu chrome.
+ *
+ * The menu shell already has breakpoint-specific placement in roulette.css.
+ * These inner styles intentionally live outside those media queries so desktop,
+ * tablet and mobile all keep the same premium visual language.
+ */
+.roulette-settings-menu {
+  font-family:
+    system-ui,
+    -apple-system,
+    BlinkMacSystemFont,
+    "Segoe UI",
+    sans-serif;
+  font-variant-numeric: tabular-nums;
+}
+
+.roulette-settings-menu__header {
+  min-height: 34px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 0 1px 8px;
+  border-bottom: 1px solid rgba(229, 218, 194, 0.11);
+}
+
+.roulette-settings-menu__header > div {
+  min-width: 0;
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+}
+
+.roulette-settings-menu__header span {
+  color: rgba(225, 219, 206, 0.54);
+  font-size: 8px;
+  font-weight: 800;
+  line-height: 1;
+  letter-spacing: 0.12em;
+}
+
+.roulette-settings-menu__header strong {
+  color: #f7f2e8;
+  font-size: 12px;
+  font-weight: 900;
+  line-height: 1;
+  letter-spacing: 0.08em;
+}
+
+.roulette-settings-menu__close {
+  flex: 0 0 auto;
+  width: 30px;
+  height: 30px;
+  padding: 0;
+  border: 1px solid rgba(229, 218, 194, 0.18);
+  border-radius: 8px;
+  display: grid;
+  place-items: center;
+  color: rgba(245, 239, 226, 0.82);
+  background:
+    linear-gradient(
+      180deg,
+      rgba(255, 255, 255, 0.045),
+      rgba(255, 255, 255, 0.015)
+    );
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.035);
+  font: 500 20px/1 system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  cursor: pointer;
+  transition:
+    filter 120ms ease,
+    transform 120ms ease,
+    border-color 120ms ease;
+}
+
+.roulette-settings-menu__close:hover {
+  filter: brightness(1.16);
+  border-color: rgba(229, 218, 194, 0.30);
+}
+
+.roulette-settings-menu__close:active {
+  transform: scale(0.95);
+}
+
+.roulette-audio-control {
+  min-width: 0;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-areas:
+    "copy value"
+    "range range";
+  gap: 7px 12px;
+  padding: 9px 10px 10px;
+  border: 1px solid rgba(227, 218, 198, 0.10);
+  border-radius: 10px;
+  background:
+    linear-gradient(
+      180deg,
+      rgba(255, 255, 255, 0.025),
+      rgba(255, 255, 255, 0.012)
+    );
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.018);
+}
+
+.roulette-audio-control__copy {
+  grid-area: copy;
+  min-width: 0;
+  display: grid;
+  gap: 3px;
+}
+
+.roulette-audio-control__copy strong {
+  overflow: hidden;
+  color: #f2eee5;
+  font-size: 10px;
+  font-weight: 900;
+  line-height: 1.05;
+  letter-spacing: 0.055em;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.roulette-audio-control__copy small {
+  overflow: hidden;
+  color: rgba(219, 215, 205, 0.48);
+  font-size: 7px;
+  font-weight: 600;
+  line-height: 1.2;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.roulette-audio-control output {
+  grid-area: value;
+  align-self: center;
+  min-width: 36px;
+  color: #e7c879;
+  font-size: 10px;
+  font-weight: 900;
+  line-height: 1;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.roulette-audio-control input[type="range"] {
+  grid-area: range;
+  width: 100%;
+  height: 18px;
+  margin: 0;
+  padding: 0;
+  accent-color: #d9bc70;
+  background: transparent;
+  cursor: pointer;
+}
+
+.roulette-audio-control input[type="range"]::-webkit-slider-runnable-track {
+  height: 4px;
+  border-radius: 99px;
+  background:
+    linear-gradient(
+      90deg,
+      rgba(217, 188, 112, 0.84),
+      rgba(231, 216, 181, 0.50)
+    );
+  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.22);
+}
+
+.roulette-audio-control input[type="range"]::-webkit-slider-thumb {
+  width: 14px;
+  height: 14px;
+  margin-top: -5px;
+  border: 1px solid rgba(255, 247, 226, 0.82);
+  border-radius: 50%;
+  appearance: none;
+  -webkit-appearance: none;
+  background:
+    radial-gradient(circle at 36% 30%, #fff6dc, #d4b667 46%, #765c28 100%);
+  box-shadow:
+    0 2px 6px rgba(0, 0, 0, 0.42),
+    inset 0 1px 0 rgba(255, 255, 255, 0.34);
+}
+
+.roulette-audio-control input[type="range"]::-moz-range-track {
+  height: 4px;
+  border: 0;
+  border-radius: 99px;
+  background:
+    linear-gradient(
+      90deg,
+      rgba(217, 188, 112, 0.84),
+      rgba(231, 216, 181, 0.50)
+    );
+  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.22);
+}
+
+.roulette-audio-control input[type="range"]::-moz-range-thumb {
+  width: 14px;
+  height: 14px;
+  border: 1px solid rgba(255, 247, 226, 0.82);
+  border-radius: 50%;
+  background:
+    radial-gradient(circle at 36% 30%, #fff6dc, #d4b667 46%, #765c28 100%);
+  box-shadow:
+    0 2px 6px rgba(0, 0, 0, 0.42),
+    inset 0 1px 0 rgba(255, 255, 255, 0.34);
+}
+
+.roulette-main-menu-button {
+  min-height: 39px;
+  padding: 0 12px;
+  border: 1px solid rgba(226, 216, 193, 0.20);
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  color: #f7f3e9;
+  background:
+    linear-gradient(
+      180deg,
+      rgba(33, 37, 39, 0.98),
+      rgba(11, 13, 14, 0.99)
+    );
+  box-shadow:
+    0 4px 12px rgba(0, 0, 0, 0.22),
+    inset 0 1px 0 rgba(255, 255, 255, 0.04);
+  font: 900 10px/1 system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  letter-spacing: 0.08em;
+  cursor: pointer;
+  transition:
+    filter 120ms ease,
+    transform 120ms ease,
+    border-color 120ms ease;
+}
+
+.roulette-main-menu-button:hover {
+  filter: brightness(1.10);
+  border-color: rgba(226, 216, 193, 0.30);
+}
+
+.roulette-main-menu-button:active {
+  transform: translateY(1px);
+}
+
+.roulette-main-menu-button strong {
+  color: #dfc37e;
+  font-size: 16px;
+  line-height: 1;
+}
+
+@media (max-width: 900px) and (orientation: portrait) {
+  .roulette-settings-menu__header {
+    min-height: 30px;
+    padding-bottom: 7px;
+  }
+
+  .roulette-settings-menu__header > div {
+    gap: 5px;
+  }
+
+  .roulette-settings-menu__header span {
+    font-size: 7px;
+  }
+
+  .roulette-settings-menu__header strong {
+    font-size: 11px;
+  }
+
+  .roulette-settings-menu__close {
+    width: 27px;
+    height: 27px;
+    font-size: 19px;
+  }
+
+  .roulette-audio-control {
+    gap: 5px 10px;
+    padding: 7px 8px 8px;
+  }
+
+  .roulette-audio-control__copy {
+    gap: 2px;
+  }
+
+  .roulette-audio-control__copy strong {
+    font-size: 9px;
+  }
+
+  .roulette-audio-control__copy small {
+    font-size: 6.5px;
+  }
+
+  .roulette-audio-control output {
+    min-width: 32px;
+    font-size: 9px;
+  }
+
+  .roulette-audio-control input[type="range"] {
+    height: 16px;
+  }
+
+  .roulette-main-menu-button {
+    min-height: 37px;
+    padding: 0 11px;
+    font-size: 9px;
+  }
+}
