@@ -194,13 +194,15 @@ describe("slot route smoke contract", () => {
     expect(gameSceneSource).not.toContain("duration: Math.min");
   });
 
-  it("keeps Big/Mega/Max ceremony out of base-game round completion", () => {
-    const baseSpinStart = gameControllerSource.indexOf('private async spin(');
+  it("presents Big/Mega/Max ceremony for settled base wins and keeps the Free Spin ceremony path", () => {
+    const baseSpinStart = gameControllerSource.indexOf('async spin(');
     const freeSpinStart = gameControllerSource.indexOf('private async startFreeSpins(');
     const baseSpinBody = baseSpinStart >= 0 && freeSpinStart > baseSpinStart
       ? gameControllerSource.slice(baseSpinStart, freeSpinStart)
       : "";
-    expect(baseSpinBody).not.toContain("presentLargeWin(");
+    expect(baseSpinBody).toContain("const baseWinMultiplier = result.betCents > 0 ? result.baseWinCents / result.betCents : 0");
+    expect(baseSpinBody).toContain("if (isLargeWin(baseWinMultiplier))");
+    expect(baseSpinBody).toContain("await this.presentLargeWin(baseWinMultiplier, result.baseWinCents)");
     expect(gameControllerSource).toContain("await this.presentLargeWin(freeSpin.finalWinMultiplier, freeSpin.win)");
   });
 

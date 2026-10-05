@@ -34,13 +34,13 @@ describe("special-symbol configuration", () => {
     expect(BASE_INITIAL_SCATTER_CHANCE).toBe(0.03);
     expect(BASE_INITIAL_CORE_CHANCE).toBe(0.001);
     expect(BONUS_INITIAL_SCATTER_CHANCE).toBe(0.015);
-    expect(BONUS_INITIAL_CORE_CHANCE).toBe(0.03);
+    expect(BONUS_INITIAL_CORE_CHANCE).toBe(0.035);
   });
 
   it("keeps the requested refill special-symbol chances", () => {
     expect(BASE_REFILL_SCATTER_CHANCE).toBe(0.035);
     expect(BASE_REFILL_CORE_CHANCE).toBe(0.003);
     expect(BONUS_REFILL_SCATTER_CHANCE).toBe(0.03);
-    expect(BONUS_REFILL_CORE_CHANCE).toBe(0.05);
+    expect(BONUS_REFILL_CORE_CHANCE).toBe(0.07);
   });
 });
