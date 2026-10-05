@@ -26,6 +26,23 @@ function defaultWait(durationMs:number): Promise<void> {
   });
 }
 
+function supportsCardFlightDom(app: HTMLElement): boolean {
+  const candidate=app as unknown as {
+    querySelector?: unknown;
+    querySelectorAll?: unknown;
+    ownerDocument?: {
+      body?: unknown;
+      createElement?: unknown;
+    };
+  };
+  return (
+    typeof candidate.querySelector==="function" &&
+    typeof candidate.querySelectorAll==="function" &&
+    candidate.ownerDocument?.body!==undefined &&
+    typeof candidate.ownerDocument?.createElement==="function"
+  );
+}
+
 function isDealEvent(event: BlackjackPresentationEvent): event is DealEvent {
   return event.type==="PLAYER_CARD_DEALT" || event.type==="DEALER_CARD_DEALT";
 }
@@ -58,6 +75,7 @@ function suitSymbol(suit: NonNullable<DealEvent["card"]>["suit"]): string {
 }
 
 function targetContainer(app: HTMLElement,event: DealEvent): HTMLElement | null {
+  if(!supportsCardFlightDom(app)) return null;
   if(event.type==="DEALER_CARD_DEALT"){
     return app.querySelector<HTMLElement>(".blackjack-dealer-cards");
   }
@@ -140,6 +158,7 @@ function fallbackSize(event: DealEvent): Readonly<{ width:number; height:number 
 
 function prefersReducedMotion(): boolean {
   return (
+    typeof window!=="undefined" &&
     typeof window.matchMedia==="function" &&
     window.matchMedia("(prefers-reduced-motion: reduce)").matches
   );
@@ -155,9 +174,10 @@ export function createBlackjackCardFlightPresentation(
   let generation=0;
 
   const revealAllPending=(): void => {
-    for(const pending of app.querySelectorAll<HTMLElement>(
+    if(!supportsCardFlightDom(app)) return;
+    for(const pending of Array.from(app.querySelectorAll<HTMLElement>(
       ".blackjack-card-flight-pending",
-    )){
+    ))){
       pending.classList.remove("blackjack-card-flight-pending");
       pending.classList.add("blackjack-card-flight-arrived");
       pending.removeAttribute("data-blackjack-flight-key");
@@ -165,6 +185,7 @@ export function createBlackjackCardFlightPresentation(
   };
 
   const prepare=(events: readonly BlackjackPresentationEvent[]): void => {
+    if(!supportsCardFlightDom(app)) return;
     for(const event of events){
       if(!isDealEvent(event)) continue;
       const target=findExactTarget(app,event);
@@ -176,7 +197,7 @@ export function createBlackjackCardFlightPresentation(
   };
 
   const play=async(event: BlackjackPresentationEvent): Promise<void> => {
-    if(!isDealEvent(event)) return;
+    if(!isDealEvent(event) || !supportsCardFlightDom(app)) return;
 
     const ownGeneration=generation;
     const key=eventKey(event);
@@ -261,9 +282,11 @@ export function createBlackjackCardFlightPresentation(
       revealAllPending();
       for(const ghost of activeGhosts) ghost.remove();
       activeGhosts.clear();
-      app.querySelector<HTMLElement>(".blackjack-shoe")?.classList.remove(
-        "is-dealing-card",
-      );
+      if(supportsCardFlightDom(app)){
+        app.querySelector<HTMLElement>(".blackjack-shoe")?.classList.remove(
+          "is-dealing-card",
+        );
+      }
     },
   });
 }
