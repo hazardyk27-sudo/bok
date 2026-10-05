@@ -346,6 +346,15 @@ export class GameController {
     this.balanceCents += result.baseWinCents;
     this.currentWinCents = result.baseWinCents;
     this.updateHud();
+    const baseWinMultiplier = result.betCents > 0 ? result.baseWinCents / result.betCents : 0;
+    if (isLargeWin(baseWinMultiplier)) {
+      this.markTiming("BASE_LARGE_WIN_START", {
+        multiplier: baseWinMultiplier,
+        winCents: result.baseWinCents,
+      });
+      await this.presentLargeWin(baseWinMultiplier, result.baseWinCents);
+      this.markTiming("BASE_LARGE_WIN_DONE");
+    }
 
     if (result.bonusTriggered && !result.maxWinReached) {
       if (fromAuto && this.autoRunning && !this.autoStopping) {
@@ -513,8 +522,6 @@ export class GameController {
     this.markTiming("FINISH_SPIN_ENTER");
     this.commitPendingWalletBalance();
     this.currentWinCents = result.totalWinCents;
-    if (result.maxWinReached) this.setState("MAX_WIN");
-    else if (result.totalMultiplier >= 10) this.setState("BIG_WIN");
     this.setState("SPIN_COMPLETE"); this.message(result.totalWinCents ? "SPIN COMPLETE // COLLECTED" : "NO WIN // NEXT GATE AWAITS");
     this.busy = false;
     this.markTiming("BUSY_FALSE");
