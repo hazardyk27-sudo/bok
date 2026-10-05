@@ -5,6 +5,10 @@ import { installRouletteChipVisuals } from "./chipVisual";
 import { installRouletteChipDragLatestWriter } from "./chipDragLatestWriter";
 import { installRouletteChipDragCanonicalState } from "./chipDragCanonicalState";
 import { installRouletteChipDragV6 } from "./chipDragV6";
+import {
+  installRouletteOptimisticBalanceBridge,
+  installRouletteOptimisticBalanceUi,
+} from "./optimisticBalanceUi";
 import "./verification.css";
 import "./chipFeedback.css";
 import "./chipVisual.css";
@@ -13,7 +17,11 @@ import "./placedChipLayout.css";
 import "./settingsMenu.css";
 
 export function mountRoulette(app: HTMLDivElement) {
+  // Patch the wallet client before rouletteRuntime creates its client instance so
+  // the very first authoritative bootstrap can seed the optimistic balance base.
+  installRouletteOptimisticBalanceBridge();
   mountRouletteRuntime(app);
+  installRouletteOptimisticBalanceUi(app);
   installRouletteBetVerificationUi(app);
   installRouletteChipFeedbackV2(app);
   installRouletteChipVisuals(app);
