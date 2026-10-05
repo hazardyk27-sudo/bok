@@ -16,6 +16,7 @@ export type BlackjackPrivatePlayerStateView = Readonly<{
     roundId: string;
     status: "OPEN" | "READY" | "LOCKED";
     betCents: number;
+    activeChipValuesCents: readonly number[];
   }> | null;
 }>;
 
@@ -38,6 +39,22 @@ function parseMessage(raw: unknown): unknown {
   }
 }
 
+function parseChipValues(value: unknown): readonly number[] | null {
+  if(!Array.isArray(value)) return null;
+  const chips:number[]=[];
+  for(const chip of value){
+    if(
+      typeof chip!=="number" ||
+      !Number.isSafeInteger(chip) ||
+      chip<=0
+    ){
+      return null;
+    }
+    chips.push(chip);
+  }
+  return Object.freeze(chips);
+}
+
 function parseBetting(value: unknown):
   BlackjackPrivatePlayerStateView["betting"] | undefined {
   if(value===null) return null;
@@ -56,10 +73,13 @@ function parseBetting(value: unknown):
   ){
     return undefined;
   }
+  const activeChipValuesCents=parseChipValues(value.activeChipValuesCents);
+  if(activeChipValuesCents===null) return undefined;
   return Object.freeze({
     roundId:value.roundId,
     status:value.status,
     betCents:value.betCents,
+    activeChipValuesCents,
   });
 }
 
