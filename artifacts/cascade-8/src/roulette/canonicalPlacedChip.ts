@@ -8,6 +8,28 @@ import {
   getRouletteAmountScale,
 } from "./uiFormat";
 
+function removeLegacyPlacedChipFace(
+  chip: HTMLElement,
+) {
+  for (const className of [
+    ...chip.classList,
+  ]) {
+    if (className.startsWith("chip-")) {
+      chip.classList.remove(className);
+    }
+  }
+
+  chip.style.removeProperty(
+    "--chip-fill",
+  );
+  chip.style.removeProperty(
+    "--chip-ink",
+  );
+  chip.style.removeProperty(
+    "--chip-edge",
+  );
+}
+
 export function syncRouletteCanonicalChipFace(
   chip: HTMLElement,
   amount: number,
@@ -20,6 +42,8 @@ export function syncRouletteCanonicalChipFace(
 
   const palette =
     getRouletteChipPalette(safeAmount);
+
+  removeLegacyPlacedChipFace(chip);
   chip.classList.add(
     "roulette-placed-chip",
     "roulette-casino-chip",
@@ -36,6 +60,9 @@ export function syncRouletteCanonicalChipFace(
     );
   chip.dataset.chipTier =
     getRouletteChipTier(safeAmount);
+  chip.dataset.canonicalChipFace =
+    "true";
+
   chip.style.setProperty(
     "--casino-chip-main",
     palette.main,
