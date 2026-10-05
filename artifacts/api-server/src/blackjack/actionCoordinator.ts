@@ -14,6 +14,7 @@ import {
   getBlackjackBetTotalCents,
   markBlackjackBetReady,
   placeBlackjackBetChip,
+  undoLastBlackjackBetChip,
   type BlackjackBettingPosition,
 } from "./betting";
 import { BLACKJACK_BASE_CHIP_VALUES_CENTS } from "./chips";
@@ -73,7 +74,7 @@ type PlayerActionEnvelope = BlackjackActionEnvelope & Readonly<{
 }>;
 
 type BettingActionEnvelope = BlackjackActionEnvelope & Readonly<{
-  type: "PLACE_BET" | "CLEAR_BET" | "READY";
+  type: "PLACE_BET" | "UNDO_BET" | "CLEAR_BET" | "READY";
   roundId: string;
   handId: null;
   seatNumber: 1 | 2 | 3 | 4 | 5;
@@ -92,6 +93,7 @@ export type BlackjackCoordinatedBettingAction = Readonly<{
   chipValueCents?: number;
   reservationId?: string;
   reserveTransactionId?: string;
+  releaseTransactionId?: string;
   clearTransactionId?: string;
 }>;
 
@@ -101,6 +103,7 @@ export type BlackjackCoordinatedAction = Readonly<{
   chipValueCents?: number;
   reservationId?: string;
   reserveTransactionId?: string;
+  releaseTransactionId?: string;
   clearTransactionId?: string;
 }>;
 
@@ -1262,6 +1265,36 @@ export class BlackjackPlayerActionCoordinator {
                 book: result.book,
               });
               pending.bettingPosition = result.position;
+              break;
+            }
+
+            case "UNDO_BET": {
+              const position=requireBettingPosition();
+              const lastActive=[...position.chips]
+                .reverse()
+                .find((chip)=>chip.status==="ACTIVE");
+              if(!lastActive){
+                throw new Error("Blackjack bet has no active chip to undo");
+              }
+              const result=undoLastBlackjackBetChip(
+                account.wallet,
+                account.book,
+                position,
+                {
+                  expectedReservationId:lastActive.reservationId,
+                  releaseTransactionId:assertNonEmptyId(
+                    "releaseTransactionId",
+                    action.releaseTransactionId,
+                  ),
+                  nowMs:action.nowMs,
+                },
+              );
+              pending.account=freezeAccount({
+                ...account,
+                wallet:result.wallet,
+                book:result.book,
+              });
+              pending.bettingPosition=result.position;
               break;
             }
 
