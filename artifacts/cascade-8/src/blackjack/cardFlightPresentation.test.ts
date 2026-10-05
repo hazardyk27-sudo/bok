@@ -160,8 +160,9 @@ describe("blackjack card flight presentation",()=>{
       reducedMotion:()=>false,
     });
     const reveal=dealerHoleReveal();
+    const draw=dealerDraw();
 
-    presentation.prepare([reveal]);
+    presentation.prepare([reveal,draw]);
     const hole=app.querySelectorAll<HTMLElement>(
       ".blackjack-dealer-cards .blackjack-card-face",
     )[1];
@@ -172,7 +173,7 @@ describe("blackjack card flight presentation",()=>{
 
     expect(hole?.classList.contains("blackjack-card-flip-pending")).toBe(false);
     expect(hole?.dataset.blackjackFlipKey).toBeUndefined();
-    expect(app.querySelector(".blackjack-dealer-total")?.textContent).toBe("20");
+    expect(app.querySelector(".blackjack-dealer-total")?.textContent).toBe("16");
     app.remove();
   });
 
