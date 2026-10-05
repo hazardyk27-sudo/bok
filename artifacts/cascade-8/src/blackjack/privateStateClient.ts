@@ -77,7 +77,10 @@ function parseBetting(value: unknown):
   ){
     return undefined;
   }
-  const activeChipValuesCents=parseChipValues(value.activeChipValuesCents);
+  const activeChipValuesCents=
+    value.activeChipValuesCents===undefined
+      ? Object.freeze([] as number[])
+      : parseChipValues(value.activeChipValuesCents);
   if(activeChipValuesCents===null) return undefined;
   return Object.freeze({
     roundId:value.roundId,
