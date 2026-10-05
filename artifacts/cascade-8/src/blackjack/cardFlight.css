@@ -1,0 +1,72 @@
+/* Blackjack realism Part 3: shoe-to-hand dealing motion */
+.blackjack-card-flight-pending {
+  opacity: 0 !important;
+  animation: none !important;
+}
+
+.blackjack-card-flight-arrived {
+  opacity: 1 !important;
+  animation: none !important;
+}
+
+.blackjack-card-flight-ghost {
+  position: fixed !important;
+  z-index: 120;
+  margin: 0 !important;
+  pointer-events: none !important;
+  transform-origin: 50% 50%;
+  will-change: transform, opacity;
+  box-shadow:
+    0 14px 28px rgba(0,0,0,.42),
+    0 2px 4px rgba(0,0,0,.26) !important;
+}
+
+.blackjack-card-flight-ghost.is-running {
+  animation: blackjack-card-from-shoe 360ms cubic-bezier(.18,.72,.2,1) both;
+}
+
+@keyframes blackjack-card-from-shoe {
+  0% {
+    opacity: .9;
+    transform:
+      translate3d(
+        var(--blackjack-card-flight-x, 0px),
+        var(--blackjack-card-flight-y, 0px),
+        0
+      )
+      scale(.82)
+      rotate(-7deg);
+  }
+  58% {
+    opacity: 1;
+    transform:
+      translate3d(
+        calc(var(--blackjack-card-flight-x, 0px) * .22),
+        calc(var(--blackjack-card-flight-y, 0px) * .22 - 8px),
+        0
+      )
+      scale(1.035)
+      rotate(2deg);
+  }
+  100% {
+    opacity: 1;
+    transform: translate3d(0,0,0) scale(1) rotate(0);
+  }
+}
+
+.blackjack-shoe.is-dealing-card {
+  box-shadow:
+    0 8px 16px rgba(0,0,0,.3),
+    0 0 0 1px rgba(200,169,106,.32),
+    0 0 18px rgba(200,169,106,.16);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .blackjack-card-flight-ghost {
+    display: none !important;
+  }
+
+  .blackjack-card-flight-pending {
+    opacity: 1 !important;
+  }
+}
