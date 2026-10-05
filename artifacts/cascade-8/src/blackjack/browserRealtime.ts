@@ -460,11 +460,13 @@ function readBettingAction(
 
   const action=target.closest<HTMLButtonElement>("[data-blackjack-bet-action]");
   if (!action || action.disabled) return null;
-  return action.dataset.blackjackBetAction === "CLEAR"
-    ? { type:"CLEAR_BET" }
-    : action.dataset.blackjackBetAction === "READY"
-      ? { type:"READY" }
-      : null;
+  return action.dataset.blackjackBetAction === "UNDO"
+    ? { type:"UNDO_BET" }
+    : action.dataset.blackjackBetAction === "CLEAR"
+      ? { type:"CLEAR_BET" }
+      : action.dataset.blackjackBetAction === "READY"
+        ? { type:"READY" }
+        : null;
 }
 
 function wantsHighChipDouble(target: EventTarget | null): boolean {

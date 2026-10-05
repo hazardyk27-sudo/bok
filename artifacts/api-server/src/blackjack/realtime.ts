@@ -247,6 +247,7 @@ export function attachBlackjackWebSocket(
     "DOUBLE",
     "SPLIT",
     "PLACE_BET",
+    "UNDO_BET",
     "CLEAR_BET",
     "READY",
   ]);

@@ -118,4 +118,60 @@ describe("blackjack private player state client",()=>{
       },
     });
   });
+
+  it("reconciles private state that arrives before its matching public snapshot",()=>{
+    const socket: BlackjackRealtimeSocketLike={
+      send:()=>undefined,
+      addEventListener:()=>undefined,
+      removeEventListener:()=>undefined,
+    };
+    let current=snapshot(20,20,"round-before");
+    let changes=0;
+    const client=createBlackjackPrivatePlayerStateClient({
+      socket,
+      getSnapshot:()=>current,
+      onStateChange:()=>{ changes+=1; },
+    });
+
+    client.receive({
+      type:"PRIVATE_PLAYER_STATE",
+      stateVersion:21,
+      eventSequence:21,
+      roundId:"round-after",
+      playerId:"local-player",
+      availableBalanceCents:90_000,
+      reservedBalanceCents:10_000,
+      betting:{
+        roundId:"round-after",
+        status:"OPEN",
+        betCents:10_000,
+        activeChipValuesCents:[5_000,5_000],
+      },
+    });
+
+    expect(client.getState()).toBeNull();
+    expect(changes).toBe(0);
+
+    current=snapshot(21,21,"round-after");
+    client.receive({type:"FULL_TABLE_SNAPSHOT"});
+
+    expect(client.getState()).toMatchObject({
+      stateVersion:21,
+      eventSequence:21,
+      roundId:"round-after",
+      playerId:"local-player",
+      availableBalanceCents:90_000,
+      reservedBalanceCents:10_000,
+      betting:{
+        roundId:"round-after",
+        status:"OPEN",
+        betCents:10_000,
+        activeChipValuesCents:[5_000,5_000],
+      },
+    });
+    expect(changes).toBe(1);
+
+    client.receive({type:"FULL_TABLE_SNAPSHOT"});
+    expect(changes).toBe(1);
+  });
 });

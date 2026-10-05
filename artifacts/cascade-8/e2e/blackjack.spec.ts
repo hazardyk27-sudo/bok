@@ -226,6 +226,7 @@ function privateState(
     availableBalanceCents?:number;
     betCents?:number;
     status?:"OPEN"|"READY"|"LOCKED";
+    activeChipValuesCents?:readonly number[];
   }={},
 ){
   return {
@@ -242,6 +243,7 @@ function privateState(
             roundId:ROUND_ID,
             status:input.status ?? "OPEN",
             betCents:input.betCents ?? 0,
+            activeChipValuesCents:[...(input.activeChipValuesCents ?? [])],
           }
         : null,
   };
@@ -274,6 +276,7 @@ async function installBlackjackFixture(
   let connections=0;
   let cursor=1;
   let betCents=0;
+  let activeChipValuesCents:number[]=[];
   let bettingStatus:"OPEN"|"READY"|"LOCKED"="OPEN";
   const outbound:Record<string,unknown>[]=[];
 
@@ -292,8 +295,15 @@ async function installBlackjackFixture(
       availableBalanceCents,
       betCents,
       status:bettingStatus,
+      activeChipValuesCents,
     }));
   };
+  const acceptedBetting=()=>({
+    roundId:ROUND_ID,
+    status:bettingStatus,
+    betCents,
+    availableBalanceCents:100_000-betCents,
+  });
 
   await page.route("**/api/slot/session-converge",async(route)=>{
     await route.fulfill({
@@ -338,6 +348,7 @@ async function installBlackjackFixture(
       if(message.type==="CLAIM_SEAT"){
         cursor+=1;
         betCents=0;
+        activeChipValuesCents=[];
         bettingStatus="OPEN";
         const next=bettingSnapshot(cursor);
         snapshot=next;
@@ -356,7 +367,9 @@ async function installBlackjackFixture(
 
       if(message.type==="PLACE_BET"){
         cursor+=1;
-        betCents+=Number(message.chipValueCents ?? 0);
+        const chipValueCents=Number(message.chipValueCents ?? 0);
+        betCents+=chipValueCents;
+        activeChipValuesCents=[...activeChipValuesCents,chipValueCents];
         bettingStatus="OPEN";
         const next=bettingSnapshot(cursor);
         snapshot=next;
@@ -366,12 +379,48 @@ async function installBlackjackFixture(
           replayed:false,
           stateVersion:cursor,
           eventSequence:cursor,
-          betting:{
-            roundId:ROUND_ID,
-            status:"OPEN",
-            betCents,
-            availableBalanceCents:100_000-betCents,
-          },
+          betting:acceptedBetting(),
+        });
+        send({type:"snapshot",snapshot:next});
+        sendPrivate(next);
+        return;
+      }
+
+      if(message.type==="UNDO_BET"){
+        cursor+=1;
+        const chipValueCents=activeChipValuesCents.at(-1) ?? 0;
+        activeChipValuesCents=activeChipValuesCents.slice(0,-1);
+        betCents=Math.max(0,betCents-chipValueCents);
+        bettingStatus="OPEN";
+        const next=bettingSnapshot(cursor);
+        snapshot=next;
+        send({
+          type:"ACTION_ACCEPTED",
+          actionId:message.actionId,
+          replayed:false,
+          stateVersion:cursor,
+          eventSequence:cursor,
+          betting:acceptedBetting(),
+        });
+        send({type:"snapshot",snapshot:next});
+        sendPrivate(next);
+        return;
+      }
+
+      if(message.type==="CLEAR_BET"){
+        cursor+=1;
+        betCents=0;
+        activeChipValuesCents=[];
+        bettingStatus="OPEN";
+        const next=bettingSnapshot(cursor);
+        snapshot=next;
+        send({
+          type:"ACTION_ACCEPTED",
+          actionId:message.actionId,
+          replayed:false,
+          stateVersion:cursor,
+          eventSequence:cursor,
+          betting:acceptedBetting(),
         });
         send({type:"snapshot",snapshot:next});
         sendPrivate(next);
@@ -389,12 +438,7 @@ async function installBlackjackFixture(
           replayed:false,
           stateVersion:cursor,
           eventSequence:cursor,
-          betting:{
-            roundId:ROUND_ID,
-            status:"READY",
-            betCents,
-            availableBalanceCents:100_000-betCents,
-          },
+          betting:acceptedBetting(),
         });
         send({type:"snapshot",snapshot:next});
         sendPrivate(next);
@@ -463,6 +507,7 @@ async function installBlackjackFixture(
           snapshot.phase==="ROUND_END" ? 110_000 : 100_000-betCents,
         betCents,
         status:bettingStatus,
+        activeChipValuesCents,
       })));
     }
   });
@@ -535,23 +580,61 @@ test.describe("Blackjack browser lifecycle",()=>{
       ).toBe(true);
     });
 
-    await test.step("place a bet and ready the round",async()=>{
+    await test.step("place, undo, clear and ready the wager",async()=>{
       const betToggle=page.locator(
         '[data-blackjack-drawer-toggle="BET"]',
       );
       await expect(betToggle).toBeEnabled();
       await betToggle.click();
 
+      const tableStack=page.locator(
+        '[data-blackjack-table-chip-stack="true"] .blackjack-table-chip',
+      );
+      const tableTotal=page.locator(
+        '[data-blackjack-table-bet-total="true"]',
+      );
+
       await page.locator('[data-blackjack-chip="100"]').click();
       await expect(page.locator('[data-blackjack-stat="bet"]'))
         .toHaveText("100");
+      await expect(tableStack).toHaveCount(1);
+      await expect(tableStack.last()).toHaveText("100");
+      await expect(tableTotal).toHaveText("100");
+
+      await tableStack.last().click();
+      await expect(tableStack).toHaveCount(0);
+      await expect(page.locator('[data-blackjack-stat="bet"]'))
+        .toHaveText("0");
+      await expect(tableTotal).toHaveText("0");
+
+      await page.locator('[data-blackjack-chip="25"]').click();
+      await expect(tableStack).toHaveCount(1);
+      await expect(tableStack.last()).toHaveText("25");
+      await page.locator('[data-blackjack-bet-action="CLEAR"]').click();
+      await expect(tableStack).toHaveCount(0);
+      await expect(page.locator('[data-blackjack-stat="bet"]'))
+        .toHaveText("0");
+
+      await page.locator('[data-blackjack-chip="100"]').click();
+      await expect(tableStack).toHaveCount(1);
+      await expect(tableTotal).toHaveText("100");
 
       await page.locator('[data-blackjack-bet-action="READY"]').click();
       await expect.poll(()=>
         fixture.outbound.filter((message)=>
-          message.type==="PLACE_BET" || message.type==="READY"
+          message.type==="PLACE_BET" ||
+          message.type==="UNDO_BET" ||
+          message.type==="CLEAR_BET" ||
+          message.type==="READY"
         ).map((message)=>message.type)
-      ).toEqual(["PLACE_BET","READY"]);
+      ).toEqual([
+        "PLACE_BET",
+        "UNDO_BET",
+        "PLACE_BET",
+        "CLEAR_BET",
+        "PLACE_BET",
+        "READY",
+      ]);
       await expect(page.locator(".blackjack-context-prompt"))
         .toHaveText("BET LOCKED · WAITING FOR DEAL");
       fixture.dealInitialHand();
