@@ -21,9 +21,16 @@ describe("Cadı Kazan purchase/state guard", () => {
 
   it("serializes the initial state bootstrap before a purchase can create another session", () => {
     expect(guardSource).toContain("let stateBootstrapInFlight: Promise<Response> | null = null");
-    expect(guardSource).toContain("stateBootstrapInFlight = request");
-    expect(guardSource).toContain("await waitForResponse(stateBootstrapInFlight)");
-    expect(guardSource).toContain("different game_session");
+    expect(guardSource).toContain("let stateBootstrapReady = false");
+    expect(guardSource).toContain("await ensureStateBootstrap(nativeFetch)");
+    expect(guardSource).toContain("canonical game_session");
+  });
+
+  it("bounds state and purchase requests so dead transports cannot freeze the buy button", () => {
+    expect(guardSource).toContain("const STATE_ATTEMPT_TIMEOUT_MS = 1_800");
+    expect(guardSource).toContain("const PURCHASE_ATTEMPT_TIMEOUT_MS = 2_500");
+    expect(guardSource).toContain("const PURCHASE_RECONCILE_TIMEOUT_MS = 1_500");
+    expect(guardSource).toContain("signal: AbortSignal.timeout(timeoutMs)");
   });
 
   it("coalesces concurrent card purchases into one in-flight request", () => {
@@ -32,10 +39,20 @@ describe("Cadı Kazan purchase/state guard", () => {
     expect(guardSource).toContain("return response.clone()");
   });
 
-  it("retries a lost purchase response with the same request body/idempotency key", () => {
+  it("retries transient purchase failures with the same request body/idempotency key", () => {
     expect(guardSource).toContain("new Set([502, 503, 504])");
+    expect(guardSource).toContain("const PURCHASE_MAX_ATTEMPTS = 2");
     expect(guardSource).toContain("fetchPurchaseWithSafeRetry");
-    expect(guardSource).toContain("return nativeFetch(input, init)");
+    expect(guardSource).toContain("The exact same start idempotency key").toBe(false);
+    expect(guardSource).toContain("the exact same start\n  // idempotency key");
+  });
+
+  it("reconciles an uncertain timeout through authoritative state before asking for another purchase", () => {
+    expect(guardSource).toContain("reconcilePurchaseState");
+    expect(guardSource).toContain("stateMatchesPurchase");
+    expect(guardSource).toContain('round.status !== "ACTIVE"');
+    expect(guardSource).toContain("round.mode !== fingerprint.mode");
+    expect(guardSource).toContain("round.stakeCents !== fingerprint.stakeCents");
   });
 
   it("refreshes state instead of applying a wallet snapshot older than a mutation", () => {
