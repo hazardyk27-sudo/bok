@@ -68,9 +68,9 @@ app.use(cookieParser());
 
 // game_session is the only live game identity. roulette_session is migration-only.
 // Guests still converge fragmented historical wallets by their established server
-// balance. Logged-in users are different: their users.wallet_session_id is the
-// authority and stale/scoped browser cookies must never redirect a money mutation
-// to another wallet.
+// balance. Logged-in users are different: users.wallet_session_id is authoritative
+// for both reads and writes, so stale/scoped browser cookies cannot switch wallets
+// or render a stale wallet as if it were the account balance.
 app.use(async (req, res, next) => {
   try {
     const sessionCandidates = getSessionCookieCandidates(req.headers.cookie);
@@ -84,10 +84,10 @@ app.use(async (req, res, next) => {
       legacySessionId,
     });
 
-    const authenticatedSession = resolveAuthenticatedWallet && hasAuthToken
-      ? await authRepository.getUserBySessionToken(authToken)
-      : null;
-    const authenticatedWalletSessionId = authenticatedSession?.walletSessionId ?? null;
+    const authenticatedWalletSessionId =
+      resolveAuthenticatedWallet && hasAuthToken
+        ? await authRepository.getWalletSessionIdBySessionToken(authToken)
+        : null;
     const convergedWalletSessionId = authenticatedWalletSessionId
       ? null
       : await resolveCanonicalWalletSessionCandidates(

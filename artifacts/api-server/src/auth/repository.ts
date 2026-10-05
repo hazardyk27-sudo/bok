@@ -204,6 +204,23 @@ export const authRepository = {
     });
   },
 
+  async getWalletSessionIdBySessionToken(token: string): Promise<string | null> {
+    const tokenHash = hashSessionToken(token);
+    const result = await pool.query<{ wallet_session_id: string }>(
+      `SELECT u.wallet_session_id
+         FROM auth_sessions s
+         INNER JOIN users u
+           ON u.id = s.user_id
+        WHERE s.token_hash = $1
+          AND s.revoked_at IS NULL
+          AND s.expires_at > NOW()
+        LIMIT 1`,
+      [tokenHash],
+    );
+
+    return result.rows[0]?.wallet_session_id ?? null;
+  },
+
   async getUserBySessionToken(token: string): Promise<SessionUser | null> {
     const tokenHash = hashSessionToken(token);
     const result = await pool.query<UserRow>(

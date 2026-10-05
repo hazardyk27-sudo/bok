@@ -69,17 +69,11 @@ export function shouldResolveAuthenticatedWalletSession(input: {
   sessionCandidateCount: number;
   legacySessionId: string | null;
 }) {
-  if (!input.hasAuthToken) return false;
-
-  const method = input.method.toUpperCase();
-  const readOnlyMethod = method === "GET" || method === "HEAD" || method === "OPTIONS";
-
-  // Money-changing requests must always re-bind a logged-in browser to the
-  // account wallet. Read-only requests only pay the auth lookup cost when the
-  // browser is visibly fragmented (duplicate/scoped or legacy identities).
-  return !readOnlyMethod
-    || input.sessionCandidateCount !== 1
-    || input.legacySessionId !== null;
+  // Once an auth cookie is present, every request must validate and re-bind to
+  // users.wallet_session_id before any game state is read or mutated. Doing this
+  // only for writes lets a single stale game_session render the wrong balance
+  // until the first mutation, which looks like a duplicate debit to the player.
+  return input.hasAuthToken;
 }
 
 export function chooseRequestSessionId(input: {
