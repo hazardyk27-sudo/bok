@@ -18,9 +18,11 @@ const EARLY_DRAG_DISTANCE_PX = 3;
 const CHIP_HIT_SLOP_PX = 8;
 const PICKUP_SCALE = 1.05;
 const SNAP_MS = 45;
-const SOURCE_SYNC_RETRY_MS = 50;
-const SOURCE_SYNC_MAX_ATTEMPTS = 100;
 const FINAL_HYDRATE_GRACE_MS = 260;
+
+export const ROULETTE_DRAG_SOURCE_SYNC_MAX_ATTEMPTS = 10;
+const SOURCE_SYNC_BASE_RETRY_MS = 50;
+const SOURCE_SYNC_MAX_RETRY_MS = 250;
 
 type DragWallet = Pick<
   RouletteWalletClient,
@@ -66,6 +68,12 @@ type QueuedMove = {
   beforeBets: RouletteBetPlacement[];
   fromBetId: string;
   toBetId: string;
+};
+
+type PendingPointerMove = {
+  pointerId: number;
+  x: number;
+  y: number;
 };
 
 function cloneBets(bets: readonly RouletteBetPlacement[]) {
@@ -128,7 +136,9 @@ function pointInsideExpandedRect(rect: DOMRect, x: number, y: number) {
 }
 
 function findPlacedChipAtPoint(panel: HTMLElement, x: number, y: number) {
-  for (const element of document.elementsFromPoint(x, y)) {
+  const stack = document.elementsFromPoint(x, y);
+
+  for (const element of stack) {
     const chip = element.closest<HTMLElement>(
       ".roulette-placed-chip[data-bet-amount]",
     );
@@ -138,7 +148,7 @@ function findPlacedChipAtPoint(panel: HTMLElement, x: number, y: number) {
     if (cell && betId) return { chip, cell, betId };
   }
 
-  for (const element of document.elementsFromPoint(x, y)) {
+  for (const element of stack) {
     const cell = element.closest<HTMLElement>("[data-bet-id]");
     if (!cell || !panel.contains(cell)) continue;
     const chip = cell.querySelector<HTMLElement>(
@@ -178,6 +188,14 @@ function findDropCell(
   return null;
 }
 
+function ghostTransform(
+  x: number,
+  y: number,
+  scale = PICKUP_SCALE,
+) {
+  return `translate3d(${x}px, ${y}px, 0) scale(${scale})`;
+}
+
 function createDragGhost(
   chip: HTMLElement,
   x: number,
@@ -191,6 +209,8 @@ function createDragGhost(
   ghost.classList.remove("is-chip-drag-source");
   ghost.setAttribute("aria-hidden", "true");
   ghost.style.setProperty("position", "fixed", "important");
+  ghost.style.setProperty("left", "0", "important");
+  ghost.style.setProperty("top", "0", "important");
   ghost.style.setProperty("right", "auto", "important");
   ghost.style.setProperty("bottom", "auto", "important");
   ghost.style.setProperty("width", `${rect.width}px`, "important");
@@ -198,17 +218,16 @@ function createDragGhost(
   ghost.style.setProperty("margin", "0", "important");
   ghost.style.setProperty("z-index", "10000", "important");
   ghost.style.setProperty("pointer-events", "none", "important");
+  ghost.style.setProperty("will-change", "transform", "important");
   ghost.style.setProperty("transition", "none", "important");
   ghost.style.setProperty(
     "transform-origin",
     `${grabOffsetX}px ${grabOffsetY}px`,
     "important",
   );
-  ghost.style.setProperty("left", `${x - grabOffsetX}px`, "important");
-  ghost.style.setProperty("top", `${y - grabOffsetY}px`, "important");
   ghost.style.setProperty(
     "transform",
-    `translate3d(0, 0, 0) scale(${PICKUP_SCALE})`,
+    ghostTransform(x - grabOffsetX, y - grabOffsetY),
     "important",
   );
   document.body.append(ghost);
@@ -218,18 +237,8 @@ function createDragGhost(
 function moveGhost(drag: DragState, x: number, y: number) {
   drag.ghost.style.setProperty("transition", "none", "important");
   drag.ghost.style.setProperty(
-    "left",
-    `${x - drag.grabOffsetX}px`,
-    "important",
-  );
-  drag.ghost.style.setProperty(
-    "top",
-    `${y - drag.grabOffsetY}px`,
-    "important",
-  );
-  drag.ghost.style.setProperty(
     "transform",
-    `translate3d(0, 0, 0) scale(${PICKUP_SCALE})`,
+    ghostTransform(x - drag.grabOffsetX, y - drag.grabOffsetY),
     "important",
   );
 }
@@ -241,14 +250,12 @@ function snapGhostToCell(drag: DragState, cell: HTMLElement) {
   drag.ghost.style.setProperty("transform-origin", "50% 50%", "important");
   drag.ghost.style.setProperty(
     "transition",
-    `left ${SNAP_MS}ms ease-out, top ${SNAP_MS}ms ease-out, transform ${SNAP_MS}ms ease-out`,
+    `transform ${SNAP_MS}ms ease-out`,
     "important",
   );
-  drag.ghost.style.setProperty("left", `${left}px`, "important");
-  drag.ghost.style.setProperty("top", `${top}px`, "important");
   drag.ghost.style.setProperty(
     "transform",
-    "translate3d(0, 0, 0) scale(1)",
+    ghostTransform(left, top, 1),
     "important",
   );
 }
@@ -339,9 +346,23 @@ function renderDesiredState(app: HTMLDivElement, state: DesiredDragState) {
   });
 }
 
-function waitForSourceSync() {
+export function getRouletteDragSourceRetryMs(attempt: number) {
+  const safeAttempt = Math.max(0, Math.trunc(attempt));
+  return Math.min(
+    SOURCE_SYNC_MAX_RETRY_MS,
+    Math.round(
+      SOURCE_SYNC_BASE_RETRY_MS *
+        Math.pow(1.5, safeAttempt),
+    ),
+  );
+}
+
+function waitForSourceSync(attempt: number) {
   return new Promise<void>((resolve) => {
-    globalThis.setTimeout(resolve, SOURCE_SYNC_RETRY_MS);
+    globalThis.setTimeout(
+      resolve,
+      getRouletteDragSourceRetryMs(attempt),
+    );
   });
 }
 
@@ -350,11 +371,15 @@ export async function commitRouletteSequentialChipMove(
   expectedBefore: readonly RouletteBetPlacement[],
   fromBetId: string,
   toBetId: string,
-  waitForRetry: () => Promise<void> = waitForSourceSync,
+  waitForRetry: (attempt: number) => Promise<void> = waitForSourceSync,
 ) {
   let lastError = "ROULETTE_DRAG_BET_UNAVAILABLE";
 
-  for (let attempt = 0; attempt < SOURCE_SYNC_MAX_ATTEMPTS; attempt += 1) {
+  for (
+    let attempt = 0;
+    attempt < ROULETTE_DRAG_SOURCE_SYNC_MAX_ATTEMPTS;
+    attempt += 1
+  ) {
     const bootstrap = await wallet.bootstrap();
     const table = bootstrap.globalTable;
     const globalBet = bootstrap.globalBet;
@@ -397,8 +422,8 @@ export async function commitRouletteSequentialChipMove(
       }
     }
 
-    if (attempt + 1 < SOURCE_SYNC_MAX_ATTEMPTS) {
-      await waitForRetry();
+    if (attempt + 1 < ROULETTE_DRAG_SOURCE_SYNC_MAX_ATTEMPTS) {
+      await waitForRetry(attempt);
     }
   }
 
@@ -420,6 +445,8 @@ export function installRouletteChipDragV6(app: HTMLDivElement) {
   let suppressClickUntil = 0;
   let processingQueue = false;
   let hydrateTimer = 0;
+  let pointerMoveFrame = 0;
+  let pendingPointerMove: PendingPointerMove | null = null;
   const moveQueue: QueuedMove[] = [];
 
   const stopProtector = () => {
@@ -438,7 +465,7 @@ export function installRouletteChipDragV6(app: HTMLDivElement) {
         protecting = false;
       }
     });
-    protector.observe(app, { childList: true, subtree: true });
+    protector.observe(panel, { childList: true, subtree: true });
   };
 
   const scheduleFinalHydrate = () => {
@@ -525,6 +552,50 @@ export function installRouletteChipDragV6(app: HTMLDivElement) {
     navigator.vibrate?.(4);
   };
 
+  const applyDragPointerPosition = (
+    pointerId: number,
+    x: number,
+    y: number,
+  ) => {
+    if (!drag || drag.pointerId !== pointerId) return;
+    moveGhost(drag, x, y);
+    clearTarget();
+    if (!bettingOpen(page, panel)) return;
+    const target = findDropCell(panel, x, y, drag.betId);
+    if (target) {
+      drag.targetCell = target.cell;
+      drag.targetBetId = target.betId;
+      target.cell.classList.add("roulette-chip-drop-target");
+    }
+  };
+
+  const flushPointerMove = () => {
+    pointerMoveFrame = 0;
+    const pending = pendingPointerMove;
+    pendingPointerMove = null;
+    if (!pending) return;
+    applyDragPointerPosition(pending.pointerId, pending.x, pending.y);
+  };
+
+  const queuePointerMove = (
+    pointerId: number,
+    x: number,
+    y: number,
+  ) => {
+    pendingPointerMove = { pointerId, x, y };
+    if (pointerMoveFrame) return;
+    pointerMoveFrame = window.requestAnimationFrame(flushPointerMove);
+  };
+
+  const flushFinalPointerPosition = (event: PointerEvent) => {
+    if (pointerMoveFrame) {
+      window.cancelAnimationFrame(pointerMoveFrame);
+      pointerMoveFrame = 0;
+    }
+    pendingPointerMove = null;
+    applyDragPointerPosition(event.pointerId, event.clientX, event.clientY);
+  };
+
   app.addEventListener(
     "click",
     (event) => {
@@ -596,20 +667,7 @@ export function installRouletteChipDragV6(app: HTMLDivElement) {
 
     if (!drag || drag.pointerId !== event.pointerId) return;
     event.preventDefault();
-    moveGhost(drag, event.clientX, event.clientY);
-    clearTarget();
-    if (!bettingOpen(page, panel)) return;
-    const target = findDropCell(
-      panel,
-      event.clientX,
-      event.clientY,
-      drag.betId,
-    );
-    if (target) {
-      drag.targetCell = target.cell;
-      drag.targetBetId = target.betId;
-      target.cell.classList.add("roulette-chip-drop-target");
-    }
+    queuePointerMove(event.pointerId, event.clientX, event.clientY);
   });
 
   const finish = (event: PointerEvent, cancelled: boolean) => {
@@ -625,6 +683,7 @@ export function installRouletteChipDragV6(app: HTMLDivElement) {
     }
 
     event.preventDefault();
+    flushFinalPointerPosition(event);
     suppressClickUntil = performance.now() + 320;
     const completed = drag;
     const targetCell = completed.targetCell;
