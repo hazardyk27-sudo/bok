@@ -18,6 +18,7 @@ type StreamingSpinResponse = {
 };
 
 const API_BASE = "/api/slot";
+let boardVisibilityEpoch = 0;
 
 function setBoardCanvasVisible(visible: boolean) {
   if (typeof document === "undefined") return;
@@ -26,12 +27,20 @@ function setBoardCanvasVisible(visible: boolean) {
   canvas.style.visibility = visible ? "" : "hidden";
 }
 
+function invalidateProvisionalBoard() {
+  boardVisibilityEpoch += 1;
+  setBoardCanvasVisible(false);
+}
+
 function revealBoardOnNextFrame() {
+  const expectedEpoch = boardVisibilityEpoch;
   if (typeof window === "undefined") {
-    setBoardCanvasVisible(true);
+    if (boardVisibilityEpoch === expectedEpoch) setBoardCanvasVisible(true);
     return;
   }
-  window.requestAnimationFrame(() => setBoardCanvasVisible(true));
+  window.requestAnimationFrame(() => {
+    if (boardVisibilityEpoch === expectedEpoch) setBoardCanvasVisible(true);
+  });
 }
 
 function hydrateTumbles(initialBoard: Board, tumbles: readonly WireTumbleResult[]): TumbleResult[] {
@@ -188,7 +197,7 @@ export class SlotWalletClient {
         // normal reel drop can start immediately. If settlement later fails,
         // that provisional board is not authoritative and must never remain
         // visible as if it were a completed unpaid round.
-        setBoardCanvasVisible(false);
+        invalidateProvisionalBoard();
         throw error;
       }
     })();
