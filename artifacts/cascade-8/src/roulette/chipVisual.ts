@@ -118,7 +118,7 @@ export function getRouletteChipStackDepth(
   return Math.min(3, estimatedChips);
 }
 
-function applyChipVisualState(
+export function applyRouletteChipVisualState(
   element: HTMLElement,
   amount: number,
 ) {
@@ -191,7 +191,16 @@ function decorateChipElement(
   amount: number,
   placed: boolean,
 ) {
-  if (!applyChipVisualState(element, amount)) {
+  if (
+    placed &&
+    element.dataset.canonicalChipFace ===
+      "true"
+  ) {
+    anchorPlacedChip(element);
+    return;
+  }
+
+  if (!applyRouletteChipVisualState(element, amount)) {
     return;
   }
 
@@ -218,7 +227,13 @@ function decorateMobileChipToggle(
   const toggle = app.querySelector<HTMLElement>(
     "[data-mobile-chip-toggle]",
   );
-  if (!toggle || !applyChipVisualState(toggle, amount)) {
+  if (
+    !toggle ||
+    !applyRouletteChipVisualState(
+      toggle,
+      amount,
+    )
+  ) {
     return;
   }
 
