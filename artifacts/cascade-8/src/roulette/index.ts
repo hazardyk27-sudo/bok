@@ -2,8 +2,7 @@ import { mountRoulette as mountRouletteRuntime } from "./rouletteRuntime";
 import { installRouletteBetVerificationUi } from "./verificationController";
 import { installRouletteChipFeedbackV2 } from "./chipFeedbackV2";
 import { installRouletteChipVisuals } from "./chipVisual";
-import { installRouletteChipDragV2 } from "./chipDragV2";
-import { installRouletteChipDragCommitBridge } from "./chipDragCommitBridge";
+import { installRouletteChipDragV6 } from "./chipDragV6";
 import "./verification.css";
 import "./chipFeedback.css";
 import "./chipVisual.css";
@@ -15,6 +14,5 @@ export function mountRoulette(app: HTMLDivElement) {
   installRouletteBetVerificationUi(app);
   installRouletteChipFeedbackV2(app);
   installRouletteChipVisuals(app);
-  installRouletteChipDragCommitBridge(app);
-  installRouletteChipDragV2(app);
+  installRouletteChipDragV6(app);
 }
