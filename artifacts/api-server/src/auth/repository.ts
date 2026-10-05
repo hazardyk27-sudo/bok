@@ -199,6 +199,25 @@ export const authRepository = {
     }
 
     return withTransaction(async (client) => {
+      // Serialize concurrent logins for this account. The last login wins,
+      // leaving exactly one non-revoked auth session for the user.
+      const locked = await client.query<{ id: string }>(
+        `SELECT id
+           FROM users
+          WHERE id = $1
+          FOR UPDATE`,
+        [row.id],
+      );
+      if (!locked.rows[0]) throw new Error("INVALID_EMAIL_OR_PASSWORD");
+
+      await client.query(
+        `UPDATE auth_sessions
+            SET revoked_at = COALESCE(revoked_at, NOW())
+          WHERE user_id = $1
+            AND revoked_at IS NULL`,
+        [row.id],
+      );
+
       const session = await createSession(client, row.id);
       return { ...toSessionUser(row), ...session };
     });
