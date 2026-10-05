@@ -1,7 +1,6 @@
 import { Router, type IRouter, type Request, type Response } from "express";
 import { randomUUID } from "node:crypto";
 import { SESSION_COOKIE } from "../platform/session";
-import { retireOfficePoolsWithJackpotLeak } from "./officePoolIntegrity";
 import { cadiKazanRepository } from "./repository";
 import { CADI_KAZAN_MODES, type CadiKazanMode } from "./types";
 
@@ -61,14 +60,9 @@ router.post("/cadi-kazan/rounds", async (req, res) => {
       return;
     }
 
-    // Pools prepared by the old generator can have MICHAEL on filler/loss
-    // cards even though only one ticket is the 100x outcome. Retire those
-    // ACTIVE/READY pools before the next Office purchase so the visible jackpot
-    // symbol itself is truly exclusive to the single 1/200 jackpot ticket.
-    if (normalizedMode === "OFFICE_MATCH_6") {
-      await retireOfficePoolsWithJackpotLeak(sessionId);
-    }
-
+    // Never reset an in-progress 200-ticket Office pool for a presentation-only
+    // generator change. Finite-pool odds stay exact only when the active pool is
+    // allowed to exhaust naturally before the next 200-ticket pool activates.
     res.status(201).json(await cadiKazanRepository.createRound(sessionId, {
       mode: normalizedMode,
       alarmCount: Number(alarmCount),
