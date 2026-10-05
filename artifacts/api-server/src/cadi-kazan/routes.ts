@@ -1,6 +1,7 @@
 import { Router, type IRouter, type Request, type Response } from "express";
 import { randomUUID } from "node:crypto";
 import { SESSION_COOKIE } from "../platform/session";
+import { retireOfficePoolsWithJackpotLeak } from "./officePoolIntegrity";
 import { cadiKazanRepository } from "./repository";
 import { CADI_KAZAN_MODES, type CadiKazanMode } from "./types";
 
@@ -54,12 +55,22 @@ router.post("/cadi-kazan/rounds", async (req, res) => {
       stakeCents?: unknown;
       idempotencyKey?: unknown;
     };
-    if (!CADI_KAZAN_MODES.includes(String(mode).toUpperCase() as CadiKazanMode) || typeof idempotencyKey !== "string") {
+    const normalizedMode = String(mode).toUpperCase() as CadiKazanMode;
+    if (!CADI_KAZAN_MODES.includes(normalizedMode) || typeof idempotencyKey !== "string") {
       res.status(400).json({ error: "mode, stakeCents, alarmCount and idempotencyKey are required" });
       return;
     }
+
+    // Pools prepared by the old generator can have MICHAEL on filler/loss
+    // cards even though only one ticket is the 100x outcome. Retire those
+    // ACTIVE/READY pools before the next Office purchase so the visible jackpot
+    // symbol itself is truly exclusive to the single 1/200 jackpot ticket.
+    if (normalizedMode === "OFFICE_MATCH_6") {
+      await retireOfficePoolsWithJackpotLeak(sessionId);
+    }
+
     res.status(201).json(await cadiKazanRepository.createRound(sessionId, {
-      mode: String(mode).toUpperCase() as CadiKazanMode,
+      mode: normalizedMode,
       alarmCount: Number(alarmCount),
       stakeCents: Number(stakeCents),
       idempotencyKey,
