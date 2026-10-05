@@ -274,7 +274,6 @@ export function installRouletteChipDragLatestWriter(app: HTMLDivElement) {
       expectedRevision,
     );
     writerStates.set(this, state);
-    scheduleWriterStateClear(this);
 
     const appForWrite = mountedApp;
     const fallbackBets = cloneBets(state.virtualBet.bets);
