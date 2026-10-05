@@ -17,14 +17,21 @@ const pendingRemovals =
   new Set<PendingRemoval>();
 let flushQueued = false;
 
+function pruneDisconnectedApps() {
+  for (const app of activeRouletteApps) {
+    if (!app.isConnected) {
+      activeRouletteApps.delete(app);
+    }
+  }
+}
+
 function findRouletteApp(
   element: Element,
 ) {
+  pruneDisconnectedApps();
+
   for (const app of activeRouletteApps) {
-    if (
-      app.isConnected &&
-      app.contains(element)
-    ) {
+    if (app.contains(element)) {
       return app;
     }
   }
@@ -55,6 +62,11 @@ function clearPendingForChip(
     .roulettePendingRuntimeRemoval;
 }
 
+const nativeRemove =
+  Element.prototype.remove;
+const nativeAppend =
+  Element.prototype.append;
+
 function flushPendingRemovals() {
   flushQueued = false;
 
@@ -79,7 +91,11 @@ function flushPendingRemovals() {
       chip.isConnected &&
       chip.parentElement === cell
     ) {
-      nativeRemove.call(chip);
+      Reflect.apply(
+        nativeRemove,
+        chip,
+        [],
+      );
     }
   }
 }
@@ -91,11 +107,6 @@ function schedulePendingFlush() {
     flushPendingRemovals,
   );
 }
-
-const nativeRemove =
-  Element.prototype.remove;
-const nativeAppend =
-  Element.prototype.append;
 
 function interceptRemove(
   this: Element,
@@ -111,7 +122,12 @@ function interceptRemove(
     ) ||
     !findRouletteApp(this)
   ) {
-    return nativeRemove.call(this);
+    Reflect.apply(
+      nativeRemove,
+      this,
+      [],
+    );
+    return;
   }
 
   const cell = this.parentElement;
@@ -146,10 +162,12 @@ function interceptAppend(
       : null;
 
   if (!app) {
-    return nativeAppend.apply(
+    Reflect.apply(
+      nativeAppend,
       this,
       nodes,
     );
+    return;
   }
 
   const passThrough:
@@ -188,24 +206,18 @@ function interceptAppend(
   }
 
   if (passThrough.length > 0) {
-    nativeAppend.apply(
+    Reflect.apply(
+      nativeAppend,
       this,
       passThrough,
     );
   }
 }
 
-function pruneDisconnectedApps() {
-  for (const app of activeRouletteApps) {
-    if (!app.isConnected) {
-      activeRouletteApps.delete(app);
-    }
-  }
-}
-
 export function installRouletteIncrementalPlacedChipReuse(
   app: HTMLDivElement,
 ) {
+  pruneDisconnectedApps();
   activeRouletteApps.add(app);
 
   if (typeof window === "undefined") {
@@ -238,6 +250,7 @@ export function installRouletteIncrementalPlacedChipReuse(
 }
 
 export function getRoulettePlacedChipReuseDebugState() {
+  pruneDisconnectedApps();
   return {
     activeApps: activeRouletteApps.size,
     pendingRemovals:
