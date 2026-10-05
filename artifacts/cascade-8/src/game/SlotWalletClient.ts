@@ -18,18 +18,81 @@ type StreamingSpinResponse = {
 };
 
 const API_BASE = "/api/slot";
+const BOOTSTRAP_TIMEOUT_MS = 4_000;
+const SPIN_RESPONSE_TIMEOUT_MS = 6_000;
+const SPIN_RESULT_EVENT_TIMEOUT_MS = 6_000;
+const SETTLEMENT_EVENT_TIMEOUT_MS = 8_000;
+const RENDERER_MOUNT_TIMEOUT_MS = 2_500;
+const RENDER_RECOVERY_RELOAD_GUARD_MS = 8_000;
+const RENDER_RECOVERY_KEY = "cascade8-render-recovery-at";
 let boardVisibilityEpoch = 0;
+let renderRecoveryInstalled = false;
+let renderRecoveryObserver: MutationObserver | null = null;
+
+function getBoardCanvas() {
+  if (typeof document === "undefined") return null;
+  return document.querySelector<HTMLCanvasElement>("#phaser-board canvas");
+}
 
 function setBoardCanvasVisible(visible: boolean) {
-  if (typeof document === "undefined") return;
-  const canvas = document.querySelector<HTMLCanvasElement>("#phaser-board canvas");
+  const canvas = getBoardCanvas();
   if (!canvas) return;
   canvas.style.visibility = visible ? "" : "hidden";
+}
+
+function markBoardRecovering(reason: string) {
+  if (typeof document === "undefined") return;
+  const board = document.getElementById("phaser-board");
+  if (board) {
+    board.dataset.slotRenderRecovering = "true";
+    board.dataset.slotRenderReason = reason;
+  }
+  const status = document.getElementById("status");
+  if (status) status.textContent = "GAME BOARD RECOVERING";
+}
+
+function clearBoardRecovering() {
+  if (typeof document === "undefined") return;
+  const board = document.getElementById("phaser-board");
+  if (!board) return;
+  delete board.dataset.slotRenderRecovering;
+  delete board.dataset.slotRenderReason;
+}
+
+function isBoardRecovering() {
+  if (typeof document === "undefined") return false;
+  return document.getElementById("phaser-board")?.dataset.slotRenderRecovering === "true";
+}
+
+function requestRecoveryReload(reason: string) {
+  if (typeof window === "undefined") return;
+  markBoardRecovering(reason);
+
+  let lastReloadAt = 0;
+  try {
+    lastReloadAt = Number(window.sessionStorage.getItem(RENDER_RECOVERY_KEY) ?? 0);
+  } catch {
+    lastReloadAt = 0;
+  }
+
+  const now = Date.now();
+  if (Number.isFinite(lastReloadAt) && now - lastReloadAt < RENDER_RECOVERY_RELOAD_GUARD_MS) {
+    return;
+  }
+
+  try {
+    window.sessionStorage.setItem(RENDER_RECOVERY_KEY, String(now));
+  } catch {
+    // Storage can be unavailable in hardened/private WebViews. Recovery still works.
+  }
+
+  window.setTimeout(() => window.location.reload(), 120);
 }
 
 function invalidateProvisionalBoard() {
   boardVisibilityEpoch += 1;
   setBoardCanvasVisible(false);
+  markBoardRecovering("settlement-sync");
 }
 
 function revealBoardOnNextFrame() {
@@ -39,8 +102,109 @@ function revealBoardOnNextFrame() {
     return;
   }
   window.requestAnimationFrame(() => {
-    if (boardVisibilityEpoch === expectedEpoch) setBoardCanvasVisible(true);
+    if (boardVisibilityEpoch === expectedEpoch && !isBoardRecovering()) {
+      setBoardCanvasVisible(true);
+    }
   });
+}
+
+function recoverBoardAfterAuthoritativeSync() {
+  if (isBoardRecovering()) {
+    requestRecoveryReload("authoritative-resync");
+    return;
+  }
+  revealBoardOnNextFrame();
+}
+
+function attachCanvasRecoveryListeners(canvas: HTMLCanvasElement) {
+  if (canvas.dataset.slotRenderRecoveryInstalled === "true") return;
+  canvas.dataset.slotRenderRecoveryInstalled = "true";
+
+  canvas.addEventListener("webglcontextlost", (event) => {
+    event.preventDefault();
+    boardVisibilityEpoch += 1;
+    setBoardCanvasVisible(false);
+    markBoardRecovering("webgl-context-lost");
+
+    const recoveryTimer = window.setTimeout(() => {
+      requestRecoveryReload("webgl-context-timeout");
+    }, 2_000);
+
+    canvas.addEventListener("webglcontextrestored", () => {
+      window.clearTimeout(recoveryTimer);
+      clearBoardRecovering();
+      revealBoardOnNextFrame();
+    }, { once: true });
+  });
+}
+
+function installSlotRenderRecovery() {
+  if (typeof window === "undefined" || typeof document === "undefined") return;
+  const attach = () => {
+    const canvas = getBoardCanvas();
+    if (canvas) attachCanvasRecoveryListeners(canvas);
+  };
+
+  attach();
+  if (renderRecoveryInstalled) return;
+  renderRecoveryInstalled = true;
+
+  const board = document.getElementById("phaser-board");
+  if (board && typeof MutationObserver !== "undefined") {
+    renderRecoveryObserver = new MutationObserver(attach);
+    renderRecoveryObserver.observe(board, { childList: true });
+  }
+
+  window.addEventListener("error", (event) => {
+    const target = event.target;
+    if (!(target instanceof HTMLImageElement)) return;
+    const source = target.currentSrc || target.src;
+    if (!source.includes("/team-logos/") && !source.includes("/special-symbols/")) return;
+    setBoardCanvasVisible(false);
+    requestRecoveryReload("slot-asset-load-error");
+  }, true);
+}
+
+function nextAnimationFrame() {
+  return new Promise<void>((resolve) => window.requestAnimationFrame(() => resolve()));
+}
+
+async function ensureSlotRendererMounted() {
+  if (typeof window === "undefined" || typeof document === "undefined") return;
+  const deadline = performance.now() + RENDERER_MOUNT_TIMEOUT_MS;
+
+  while (performance.now() < deadline) {
+    const canvas = getBoardCanvas();
+    if (canvas && canvas.isConnected && canvas.width > 0 && canvas.height > 0) {
+      attachCanvasRecoveryListeners(canvas);
+      await nextAnimationFrame();
+      await nextAnimationFrame();
+      return;
+    }
+    await new Promise<void>((resolve) => window.setTimeout(resolve, 25));
+  }
+
+  setBoardCanvasVisible(false);
+  requestRecoveryReload("renderer-mount-timeout");
+  throw new Error("SLOT_RENDERER_NOT_READY");
+}
+
+async function fetchWithTimeout(
+  input: RequestInfo | URL,
+  init: RequestInit,
+  timeoutMs: number,
+  timeoutCode: string,
+) {
+  const controller = new AbortController();
+  const timer = globalThis.setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    return await fetch(input, { ...init, signal: controller.signal });
+  } catch (error) {
+    if (controller.signal.aborted) throw new Error(timeoutCode);
+    throw error;
+  } finally {
+    globalThis.clearTimeout(timer);
+  }
 }
 
 function hydrateTumbles(initialBoard: Board, tumbles: readonly WireTumbleResult[]): TumbleResult[] {
@@ -88,7 +252,24 @@ function createSpinEventReader(response: Response) {
   const decoder = new TextDecoder();
   let buffer = "";
 
-  return async function nextEvent(): Promise<SpinStreamEvent> {
+  const readChunk = async (timeoutMs: number) => {
+    let timer: ReturnType<typeof globalThis.setTimeout> | null = null;
+    try {
+      return await Promise.race([
+        reader.read(),
+        new Promise<never>((_, reject) => {
+          timer = globalThis.setTimeout(() => {
+            void reader.cancel().catch(() => undefined);
+            reject(new Error("SLOT_STREAM_TIMEOUT"));
+          }, timeoutMs);
+        }),
+      ]);
+    } finally {
+      if (timer !== null) globalThis.clearTimeout(timer);
+    }
+  };
+
+  return async function nextEvent(timeoutMs: number): Promise<SpinStreamEvent> {
     while (true) {
       const boundary = buffer.indexOf("\n\n");
       if (boundary >= 0) {
@@ -108,7 +289,7 @@ function createSpinEventReader(response: Response) {
         continue;
       }
 
-      const chunk = await reader.read();
+      const chunk = await readChunk(timeoutMs);
       if (chunk.done) throw new Error("SLOT_STREAM_CLOSED");
       buffer += decoder.decode(chunk.value, { stream: true }).replace(/\r\n/g, "\n");
     }
@@ -116,29 +297,45 @@ function createSpinEventReader(response: Response) {
 }
 
 export class SlotWalletClient {
+  constructor() {
+    installSlotRenderRecovery();
+  }
+
   async bootstrap(): Promise<Wallet> {
+    await ensureSlotRendererMounted();
+
     const legacyValue = localStorage.getItem("cascade8-balance");
     if (legacyValue !== null) {
       const legacyBalanceCents = Number(legacyValue);
       if (Number.isInteger(legacyBalanceCents) && legacyBalanceCents >= 0) {
-        const response = await fetch(`${API_BASE}/migrate`, {
+        const response = await fetchWithTimeout(`${API_BASE}/migrate`, {
           method: "POST",
           credentials: "same-origin",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ legacyBalanceCents }),
-        });
+        }, BOOTSTRAP_TIMEOUT_MS, "SLOT_STATE_TIMEOUT");
         const migrated = await readResponse<{ wallet: Wallet }>(response);
         localStorage.removeItem("cascade8-balance");
+        recoverBoardAfterAuthoritativeSync();
         return migrated.wallet;
       }
       localStorage.removeItem("cascade8-balance");
     }
-    const response = await fetch(`${API_BASE}/state`, { credentials: "same-origin" });
-    return (await readResponse<{ wallet: Wallet }>(response)).wallet;
+
+    const response = await fetchWithTimeout(
+      `${API_BASE}/state`,
+      { credentials: "same-origin" },
+      BOOTSTRAP_TIMEOUT_MS,
+      "SLOT_STATE_TIMEOUT",
+    );
+    const wallet = (await readResponse<{ wallet: Wallet }>(response)).wallet;
+    recoverBoardAfterAuthoritativeSync();
+    return wallet;
   }
 
   async spin(stakeCents: number, idempotencyKey: string): Promise<StreamingSpinResponse> {
-    const response = await fetch(`${API_BASE}/spins`, {
+    installSlotRenderRecovery();
+    const response = await fetchWithTimeout(`${API_BASE}/spins`, {
       method: "POST",
       credentials: "same-origin",
       headers: {
@@ -146,7 +343,7 @@ export class SlotWalletClient {
         "Accept": "text/event-stream",
       },
       body: JSON.stringify({ stakeCents, idempotencyKey }),
-    });
+    }, SPIN_RESPONSE_TIMEOUT_MS, "SLOT_SPIN_TIMEOUT");
 
     if (!response.ok) {
       await readResponse<never>(response);
@@ -156,6 +353,7 @@ export class SlotWalletClient {
     const contentType = response.headers.get("content-type") ?? "";
     if (!contentType.includes("text/event-stream")) {
       const wire = await readResponse<WireSpinResponse>(response);
+      clearBoardRecovering();
       revealBoardOnNextFrame();
       return {
         roundId: wire.roundId,
@@ -169,7 +367,7 @@ export class SlotWalletClient {
     }
 
     const nextEvent = createSpinEventReader(response);
-    const first = await nextEvent();
+    const first = await nextEvent(SPIN_RESULT_EVENT_TIMEOUT_MS);
     if (first.event === "error") {
       throw new Error(first.data.error ?? "SLOT_REQUEST_FAILED");
     }
@@ -180,7 +378,7 @@ export class SlotWalletClient {
     const settlement = (async (): Promise<SpinSettlement> => {
       try {
         while (true) {
-          const event = await nextEvent();
+          const event = await nextEvent(SETTLEMENT_EVENT_TIMEOUT_MS);
           if (event.event === "error") {
             throw new Error(event.data.error ?? "SLOT_REQUEST_FAILED");
           }
@@ -193,15 +391,17 @@ export class SlotWalletClient {
           }
         }
       } catch (error) {
-        // The result event is intentionally streamed before DB settlement so the
-        // normal reel drop can start immediately. If settlement later fails,
-        // that provisional board is not authoritative and must never remain
-        // visible as if it were a completed unpaid round.
+        // Result is streamed before DB settlement so reel motion can start early.
+        // If settlement then fails or stalls, hide that provisional board and mark
+        // the renderer for an authoritative state recovery. GameController already
+        // bootstraps the wallet in its error path; successful bootstrap reloads the
+        // Slot route once so stale provisional graphics can never remain onscreen.
         invalidateProvisionalBoard();
         throw error;
       }
     })();
 
+    clearBoardRecovering();
     revealBoardOnNextFrame();
     return {
       roundId: first.data.roundId,
