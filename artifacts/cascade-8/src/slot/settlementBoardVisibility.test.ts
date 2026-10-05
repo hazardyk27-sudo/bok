@@ -34,7 +34,7 @@ describe("slot provisional board settlement contract", () => {
     expect(walletClientSource).toContain("SETTLEMENT_EVENT_TIMEOUT_MS = 8_000");
     expect(walletClientSource).toContain("fetchWithTimeout(");
     expect(walletClientSource).toContain("new AbortController()");
-    expect(walletClientSource).toContain('throw new Error("SLOT_STREAM_TIMEOUT")');
+    expect(walletClientSource).toContain('reject(new Error("SLOT_STREAM_TIMEOUT"))');
     expect(walletClientSource).toContain("reader.cancel()");
     expect(walletClientSource).toContain("nextEvent(SPIN_RESULT_EVENT_TIMEOUT_MS)");
     expect(walletClientSource).toContain("nextEvent(SETTLEMENT_EVENT_TIMEOUT_MS)");
