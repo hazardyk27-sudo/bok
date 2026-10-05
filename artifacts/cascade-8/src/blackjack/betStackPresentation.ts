@@ -131,10 +131,10 @@ export function createBlackjackBetStackPresentation(
       stack.replaceChildren();
       state.chipValuesCents.forEach((value,index)=>{
         const credits=value/100;
+        const isUndoable=
+          index===state.chipValuesCents.length-1 && state.status==="OPEN";
         const chip=app.ownerDocument.createElement(
-          index===state.chipValuesCents.length-1 && state.status==="OPEN"
-            ? "button"
-            : "span",
+          isUndoable ? "button" : "span",
         );
         chip.className=
           "blackjack-table-chip "+chipClass(credits)+
@@ -146,10 +146,10 @@ export function createBlackjackBetStackPresentation(
         chip.style.zIndex=String(10+index);
         chip.textContent=formatBlackjackChipCredits(credits);
         chip.setAttribute("aria-label",formatBlackjackChipCredits(credits)+" chip");
-        if(chip instanceof HTMLButtonElement){
-          chip.type="button";
+        if(isUndoable){
+          (chip as HTMLButtonElement).type="button";
           chip.dataset.blackjackBetAction="UNDO";
-          chip.disabled=state.pending;
+          (chip as HTMLButtonElement).disabled=state.pending;
           chip.title="Remove last chip";
         }
         stack.append(chip);
