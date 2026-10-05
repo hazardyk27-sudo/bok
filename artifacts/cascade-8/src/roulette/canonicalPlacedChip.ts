@@ -1,7 +1,6 @@
 import {
-  getRouletteChipPalette,
+  applyRouletteChipVisualState,
   getRouletteChipStackDepth,
-  getRouletteChipTier,
 } from "./chipVisual";
 import {
   formatRouletteAmount,
@@ -40,14 +39,20 @@ export function syncRouletteCanonicalChipFace(
       : 0;
   if (safeAmount <= 0) return false;
 
-  const palette =
-    getRouletteChipPalette(safeAmount);
-
   removeLegacyPlacedChipFace(chip);
   chip.classList.add(
     "roulette-placed-chip",
-    "roulette-casino-chip",
   );
+
+  if (
+    !applyRouletteChipVisualState(
+      chip,
+      safeAmount,
+    )
+  ) {
+    return false;
+  }
+
   chip.dataset.betAmount =
     String(safeAmount);
   chip.dataset.amountScale =
@@ -58,31 +63,8 @@ export function syncRouletteCanonicalChipFace(
         safeAmount,
       ),
     );
-  chip.dataset.chipTier =
-    getRouletteChipTier(safeAmount);
   chip.dataset.canonicalChipFace =
     "true";
-
-  chip.style.setProperty(
-    "--casino-chip-main",
-    palette.main,
-  );
-  chip.style.setProperty(
-    "--casino-chip-inner",
-    palette.inner,
-  );
-  chip.style.setProperty(
-    "--casino-chip-ink",
-    palette.ink,
-  );
-  chip.style.setProperty(
-    "--casino-chip-accent",
-    palette.accent,
-  );
-  chip.style.setProperty(
-    "--casino-chip-highlight",
-    palette.highlight,
-  );
 
   const displayAmount =
     formatRouletteAmount(safeAmount);
