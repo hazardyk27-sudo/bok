@@ -253,20 +253,9 @@ export function installRouletteIncrementalPlacedChipReuse(
   }
 
   nativeRemove =
-    Element.prototype.remove.bind
-      ? Element.prototype.remove
-      : null;
+    Element.prototype.remove as RemoveMethod;
   nativeAppend =
-    Element.prototype.append.bind
-      ? Element.prototype.append
-      : null;
-
-  if (
-    !nativeRemove ||
-    !nativeAppend
-  ) {
-    return;
-  }
+    Element.prototype.append as AppendMethod;
 
   guardedWindow
     .__roulettePlacedChipReuseInstalled =
