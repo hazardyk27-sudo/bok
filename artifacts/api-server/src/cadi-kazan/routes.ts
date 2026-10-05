@@ -54,12 +54,17 @@ router.post("/cadi-kazan/rounds", async (req, res) => {
       stakeCents?: unknown;
       idempotencyKey?: unknown;
     };
-    if (!CADI_KAZAN_MODES.includes(String(mode).toUpperCase() as CadiKazanMode) || typeof idempotencyKey !== "string") {
+    const normalizedMode = String(mode).toUpperCase() as CadiKazanMode;
+    if (!CADI_KAZAN_MODES.includes(normalizedMode) || typeof idempotencyKey !== "string") {
       res.status(400).json({ error: "mode, stakeCents, alarmCount and idempotencyKey are required" });
       return;
     }
+
+    // Never reset an in-progress 200-ticket Office pool for a presentation-only
+    // generator change. Finite-pool odds stay exact only when the active pool is
+    // allowed to exhaust naturally before the next 200-ticket pool activates.
     res.status(201).json(await cadiKazanRepository.createRound(sessionId, {
-      mode: String(mode).toUpperCase() as CadiKazanMode,
+      mode: normalizedMode,
       alarmCount: Number(alarmCount),
       stakeCents: Number(stakeCents),
       idempotencyKey,

@@ -55,10 +55,14 @@ export function createOfficeMatchBoard(
   randomIndex: RandomIndex = (maxExclusive) => randomInt(0, maxExclusive),
 ): OfficeMatchSymbolId[] {
   if (outcome.kind === "WIN") {
+    // Michael is the 100x jackpot symbol. It must not leak into any non-jackpot
+    // ticket as a filler, otherwise the visible jackpot symbol is no longer
+    // truly 1 ticket per 200-card pool even though the winning outcome is.
     const fillers = shuffle(
       OFFICE_MATCH_SYMBOLS
         .map((symbol) => symbol.id)
-        .filter((symbolId) => symbolId !== outcome.symbolId),
+        .filter((symbolId) => symbolId !== outcome.symbolId)
+        .filter((symbolId) => outcome.symbolId === "MICHAEL" || symbolId !== "MICHAEL"),
       randomIndex,
     ).slice(0, OFFICE_MATCH_CELL_COUNT - OFFICE_MATCH_REQUIRED_MATCHES);
 
@@ -70,9 +74,12 @@ export function createOfficeMatchBoard(
     ], randomIndex);
   }
 
-  // Two of each symbol is the hard ceiling for a losing ticket, so a loss
-  // can never accidentally contain the winning three-of-a-kind.
-  const lossPool = OFFICE_MATCH_SYMBOLS.flatMap((symbol) => [symbol.id, symbol.id]);
+  // Michael is reserved exclusively for the single jackpot ticket. Losses use
+  // only the four regular symbols, still capped at two of each so a loss can
+  // never accidentally contain a winning three-of-a-kind.
+  const lossPool = OFFICE_MATCH_SYMBOLS
+    .filter((symbol) => symbol.id !== "MICHAEL")
+    .flatMap((symbol) => [symbol.id, symbol.id]);
   return shuffle(lossPool, randomIndex).slice(0, OFFICE_MATCH_CELL_COUNT);
 }
 

@@ -71,9 +71,15 @@ describe("The Office 200-ticket pool engine", () => {
       if (ticket.outcome.kind === "LOSS") {
         outcomeCounts.LOSS += 1;
         expect(Math.max(...Object.values(counts(ticket.cells)))).toBeLessThanOrEqual(2);
+        expect(ticket.cells).not.toContain("MICHAEL");
       } else {
         outcomeCounts[ticket.outcome.symbolId] += 1;
         expect(counts(ticket.cells)[ticket.outcome.symbolId]).toBe(3);
+        if (ticket.outcome.symbolId === "MICHAEL") {
+          expect(counts(ticket.cells).MICHAEL).toBe(3);
+        } else {
+          expect(ticket.cells).not.toContain("MICHAEL");
+        }
       }
     }
 
@@ -85,6 +91,7 @@ describe("The Office 200-ticket pool engine", () => {
       MICHAEL: 1,
       LOSS: 116,
     });
+    expect(tickets.filter((ticket) => ticket.cells.includes("MICHAEL"))).toHaveLength(1);
   });
 
   it.each(OFFICE_MATCH_SYMBOLS)("builds a six-cell $id win with exactly three matching symbols and no second triple", (symbol) => {
@@ -98,9 +105,11 @@ describe("The Office 200-ticket pool engine", () => {
     expect(resultCounts[symbol.id]).toBe(3);
     expect(Math.max(...Object.values(resultCounts))).toBe(3);
     expect(Object.entries(resultCounts).filter(([, count]) => count === 3)).toEqual([[symbol.id, 3]]);
+    if (symbol.id === "MICHAEL") expect(resultCounts.MICHAEL).toBe(3);
+    else expect(board).not.toContain("MICHAEL");
   });
 
-  it("builds loss boards with no symbol appearing three times", () => {
+  it("builds loss boards with no symbol appearing three times and no Michael leakage", () => {
     for (let seed = 0; seed < 100; seed += 1) {
       const board = createOfficeMatchBoard(
         { kind: "LOSS", multiplierBps: 0, symbolId: null },
@@ -108,6 +117,7 @@ describe("The Office 200-ticket pool engine", () => {
       );
       expect(board).toHaveLength(OFFICE_MATCH_CELL_COUNT);
       expect(Math.max(...Object.values(counts(board)))).toBeLessThanOrEqual(2);
+      expect(board).not.toContain("MICHAEL");
     }
   });
 
