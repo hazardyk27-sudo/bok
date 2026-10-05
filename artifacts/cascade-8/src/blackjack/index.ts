@@ -308,6 +308,17 @@ export type {
 } from "./snapshotView";
 
 export {
+  BLACKJACK_PRESENTATION_EVENT_NAME,
+  createBlackjackPresentationQueue,
+  deriveBlackjackPresentationEvents,
+} from "./presentationQueue";
+export type {
+  BlackjackPresentationEvent,
+  BlackjackPresentationEventPlayer,
+  BlackjackPresentationQueue,
+} from "./presentationQueue";
+
+export {
   bindBlackjackRealtimeElement,
   bindBlackjackRealtimeView,
 } from "./realtimeClient";
