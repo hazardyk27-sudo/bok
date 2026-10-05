@@ -2,14 +2,32 @@ type GuardWindow = Window & {
   __cadiPurchaseStateGuardInstalled?: boolean;
 };
 
+type PurchaseFingerprint = {
+  mode: string | null;
+  stakeCents: number | null;
+};
+
+type PurchaseStateSnapshot = {
+  round?: {
+    mode?: unknown;
+    stakeCents?: unknown;
+    status?: unknown;
+  } | null;
+};
+
 const CADI_PREFIX = "/api/cadi-kazan/";
 const CREATE_ROUND_PATH = "/api/cadi-kazan/rounds";
 const STATE_PATH = "/api/cadi-kazan/state";
 const RETRYABLE_PURCHASE_STATUSES = new Set([502, 503, 504]);
+const STATE_ATTEMPT_TIMEOUT_MS = 1_800;
+const PURCHASE_ATTEMPT_TIMEOUT_MS = 2_500;
+const PURCHASE_RECONCILE_TIMEOUT_MS = 1_500;
+const PURCHASE_MAX_ATTEMPTS = 2;
 
 let mutationGeneration = 0;
 let purchaseInFlight: Promise<Response> | null = null;
 let stateBootstrapInFlight: Promise<Response> | null = null;
+let stateBootstrapReady = false;
 
 function requestUrl(input: RequestInfo | URL) {
   if (typeof input === "string") return input;
@@ -35,32 +53,143 @@ function canReplayRequest(input: RequestInfo | URL) {
   return typeof input === "string" || input instanceof URL;
 }
 
+function fetchWithTimeout(
+  nativeFetch: typeof window.fetch,
+  input: RequestInfo | URL,
+  init: RequestInit | undefined,
+  timeoutMs: number,
+) {
+  return nativeFetch(input, {
+    ...init,
+    signal: AbortSignal.timeout(timeoutMs),
+  });
+}
+
+function isRetryableTransportError(error: unknown) {
+  if (error instanceof TypeError) return true;
+  return error instanceof DOMException
+    && (error.name === "TimeoutError" || error.name === "AbortError");
+}
+
+function readPurchaseFingerprint(init?: RequestInit): PurchaseFingerprint {
+  if (typeof init?.body !== "string") return { mode: null, stakeCents: null };
+  try {
+    const payload = JSON.parse(init.body) as { mode?: unknown; stakeCents?: unknown };
+    return {
+      mode: typeof payload.mode === "string" ? payload.mode : null,
+      stakeCents: Number.isSafeInteger(payload.stakeCents) ? Number(payload.stakeCents) : null,
+    };
+  } catch {
+    return { mode: null, stakeCents: null };
+  }
+}
+
+function stateMatchesPurchase(snapshot: PurchaseStateSnapshot, fingerprint: PurchaseFingerprint) {
+  const round = snapshot.round;
+  if (!round || round.status !== "ACTIVE") return false;
+  if (fingerprint.mode !== null && round.mode !== fingerprint.mode) return false;
+  if (fingerprint.stakeCents !== null && round.stakeCents !== fingerprint.stakeCents) return false;
+  return true;
+}
+
+async function reconcilePurchaseState(
+  nativeFetch: typeof window.fetch,
+  fingerprint: PurchaseFingerprint,
+) {
+  try {
+    const response = await fetchWithTimeout(
+      nativeFetch,
+      STATE_PATH,
+      { credentials: "same-origin", cache: "no-store" },
+      PURCHASE_RECONCILE_TIMEOUT_MS,
+    );
+    if (!response.ok) return null;
+    const snapshot = await response.clone().json().catch(() => null) as PurchaseStateSnapshot | null;
+    if (!snapshot || !stateMatchesPurchase(snapshot, fingerprint)) return null;
+    stateBootstrapReady = true;
+    return response;
+  } catch {
+    return null;
+  }
+}
+
 async function fetchPurchaseWithSafeRetry(
   nativeFetch: typeof window.fetch,
   input: RequestInfo | URL,
   init?: RequestInit,
 ) {
-  try {
-    const first = await nativeFetch(input, init);
-    if (!RETRYABLE_PURCHASE_STATUSES.has(first.status) || !canReplayRequest(input)) return first;
-    return nativeFetch(input, init);
-  } catch (error) {
-    if (!canReplayRequest(input)) throw error;
-    // The body contains the same start idempotency key on the retry. If the
-    // first request committed but its response was lost, the server returns the
-    // existing round instead of charging a second time.
-    return nativeFetch(input, init);
+  const fingerprint = readPurchaseFingerprint(init);
+  let lastResponse: Response | null = null;
+  let lastError: unknown = null;
+
+  for (let attempt = 1; attempt <= PURCHASE_MAX_ATTEMPTS; attempt += 1) {
+    try {
+      const response = await fetchWithTimeout(
+        nativeFetch,
+        input,
+        init,
+        PURCHASE_ATTEMPT_TIMEOUT_MS,
+      );
+      lastResponse = response;
+      if (
+        !RETRYABLE_PURCHASE_STATUSES.has(response.status)
+        || !canReplayRequest(input)
+        || attempt >= PURCHASE_MAX_ATTEMPTS
+      ) {
+        if (!RETRYABLE_PURCHASE_STATUSES.has(response.status)) return response;
+        break;
+      }
+    } catch (error) {
+      lastError = error;
+      if (
+        !canReplayRequest(input)
+        || !isRetryableTransportError(error)
+        || attempt >= PURCHASE_MAX_ATTEMPTS
+      ) {
+        break;
+      }
+    }
   }
+
+  // Every replay uses the exact same body and therefore the exact same start
+  // idempotency key. If the server committed but both responses were lost or
+  // timed out, recover the authoritative active round instead of leaving the
+  // player uncertain and inviting a second purchase with a new key.
+  const reconciled = await reconcilePurchaseState(nativeFetch, fingerprint);
+  if (reconciled) return reconciled;
+  if (lastResponse) return lastResponse;
+  if (lastError && !isRetryableTransportError(lastError)) throw lastError;
+  throw new Error("Bilet işlemi zaman aşımına uğradı. Tekrar deneyin.");
 }
 
 async function waitForResponse(request: Promise<Response> | null) {
-  if (!request) return;
+  if (!request) return null;
   try {
-    await request;
+    return await request;
   } catch {
-    // The caller will perform the authoritative follow-up request. Waiting here
-    // is only for request ordering, never for trusting a failed transport.
+    return null;
   }
+}
+
+async function ensureStateBootstrap(nativeFetch: typeof window.fetch) {
+  if (stateBootstrapReady) return;
+
+  const inFlight = await waitForResponse(stateBootstrapInFlight);
+  if (inFlight?.ok) {
+    stateBootstrapReady = true;
+    return;
+  }
+
+  const response = await fetchWithTimeout(
+    nativeFetch,
+    STATE_PATH,
+    { credentials: "same-origin", cache: "no-store" },
+    STATE_ATTEMPT_TIMEOUT_MS,
+  );
+  if (!response.ok) {
+    throw new Error("Cadı Kazan bağlantısı hazır değil. Tekrar deneyin.");
+  }
+  stateBootstrapReady = true;
 }
 
 export function installCadiPurchaseStateGuard() {
@@ -78,20 +207,25 @@ export function installCadiPurchaseStateGuard() {
       const activePurchase = purchaseInFlight;
       if (activePurchase) {
         await waitForResponse(activePurchase);
-        return nativeFetch(input, init);
+        const refreshed = await fetchWithTimeout(nativeFetch, input, init, STATE_ATTEMPT_TIMEOUT_MS);
+        if (refreshed.ok) stateBootstrapReady = true;
+        return refreshed;
       }
 
       const startedAtGeneration = mutationGeneration;
-      const request = nativeFetch(input, init);
+      const request = fetchWithTimeout(nativeFetch, input, init, STATE_ATTEMPT_TIMEOUT_MS);
       stateBootstrapInFlight = request;
       try {
         const response = await request;
+        if (response.ok) stateBootstrapReady = true;
         // The page can begin loading /state and a mutation can start before the
         // old snapshot is applied. Refresh only after the purchase settles so a
         // stale balance cannot overwrite the authoritative post-mutation state.
         if (startedAtGeneration !== mutationGeneration) {
           await waitForResponse(purchaseInFlight);
-          return nativeFetch(input, init);
+          const refreshed = await fetchWithTimeout(nativeFetch, input, init, STATE_ATTEMPT_TIMEOUT_MS);
+          if (refreshed.ok) stateBootstrapReady = true;
+          return refreshed;
         }
         return response;
       } finally {
@@ -100,11 +234,10 @@ export function installCadiPurchaseStateGuard() {
     }
 
     if (method === "POST" && path === CREATE_ROUND_PATH) {
-      // Critical session boundary: on a brand-new browser both /state and
-      // /rounds would otherwise be allowed to create different game_session
-      // cookies concurrently. Wait until the bootstrap /state response has
-      // arrived so the purchase is sent with the canonical cookie it created.
-      await waitForResponse(stateBootstrapInFlight);
+      // On a brand-new browser, establish the canonical game_session first.
+      // The state request is bounded, so purchase can fail fast instead of
+      // sitting forever behind a dead bootstrap request.
+      await ensureStateBootstrap(nativeFetch);
 
       const alreadyRunning = purchaseInFlight;
       if (alreadyRunning) {
@@ -117,6 +250,7 @@ export function installCadiPurchaseStateGuard() {
       purchaseInFlight = request;
       try {
         const response = await request;
+        if (response.ok) stateBootstrapReady = true;
         return response.clone();
       } finally {
         if (purchaseInFlight === request) purchaseInFlight = null;
