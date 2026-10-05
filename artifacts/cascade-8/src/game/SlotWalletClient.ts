@@ -19,6 +19,21 @@ type StreamingSpinResponse = {
 
 const API_BASE = "/api/slot";
 
+function setBoardCanvasVisible(visible: boolean) {
+  if (typeof document === "undefined") return;
+  const canvas = document.querySelector<HTMLCanvasElement>("#phaser-board canvas");
+  if (!canvas) return;
+  canvas.style.visibility = visible ? "" : "hidden";
+}
+
+function revealBoardOnNextFrame() {
+  if (typeof window === "undefined") {
+    setBoardCanvasVisible(true);
+    return;
+  }
+  window.requestAnimationFrame(() => setBoardCanvasVisible(true));
+}
+
 function hydrateTumbles(initialBoard: Board, tumbles: readonly WireTumbleResult[]): TumbleResult[] {
   let boardBefore = initialBoard;
   return tumbles.map((tumble) => {
@@ -132,6 +147,7 @@ export class SlotWalletClient {
     const contentType = response.headers.get("content-type") ?? "";
     if (!contentType.includes("text/event-stream")) {
       const wire = await readResponse<WireSpinResponse>(response);
+      revealBoardOnNextFrame();
       return {
         roundId: wire.roundId,
         result: hydrateSpinResult(wire.result),
@@ -153,21 +169,31 @@ export class SlotWalletClient {
     }
 
     const settlement = (async (): Promise<SpinSettlement> => {
-      while (true) {
-        const event = await nextEvent();
-        if (event.event === "error") {
-          throw new Error(event.data.error ?? "SLOT_REQUEST_FAILED");
+      try {
+        while (true) {
+          const event = await nextEvent();
+          if (event.event === "error") {
+            throw new Error(event.data.error ?? "SLOT_REQUEST_FAILED");
+          }
+          if (event.event === "settled") {
+            return {
+              roundId: event.data.roundId,
+              wallet: event.data.wallet,
+              ...(event.data.result ? { result: hydrateSpinResult(event.data.result) } : {}),
+            };
+          }
         }
-        if (event.event === "settled") {
-          return {
-            roundId: event.data.roundId,
-            wallet: event.data.wallet,
-            ...(event.data.result ? { result: hydrateSpinResult(event.data.result) } : {}),
-          };
-        }
+      } catch (error) {
+        // The result event is intentionally streamed before DB settlement so the
+        // normal reel drop can start immediately. If settlement later fails,
+        // that provisional board is not authoritative and must never remain
+        // visible as if it were a completed unpaid round.
+        setBoardCanvasVisible(false);
+        throw error;
       }
     })();
 
+    revealBoardOnNextFrame();
     return {
       roundId: first.data.roundId,
       result: hydrateSpinResult(first.data.result),
