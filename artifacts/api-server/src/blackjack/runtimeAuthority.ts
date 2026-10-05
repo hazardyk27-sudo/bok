@@ -220,6 +220,7 @@ export function createBlackjackRuntimeAuthority(
       assertHealthy();
       if(
         action.envelope.type==="PLACE_BET" ||
+        action.envelope.type==="UNDO_BET" ||
         action.envelope.type==="CLEAR_BET" ||
         action.envelope.type==="DOUBLE" ||
         action.envelope.type==="SPLIT"
