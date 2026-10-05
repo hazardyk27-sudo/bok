@@ -33,7 +33,8 @@ describe("Cadı Kazan purchase/state guard", () => {
 
   it("refreshes state instead of applying a wallet snapshot older than a mutation", () => {
     expect(guardSource).toContain("const startedAtGeneration = mutationGeneration");
-    expect(guardSource).toContain("if (startedAtGeneration !== mutationGeneration) return nativeFetch(input, init)");
+    expect(guardSource).toContain("if (startedAtGeneration !== mutationGeneration) {");
+    expect(guardSource).toContain("await waitForPurchaseToSettle(purchaseInFlight)");
     expect(guardSource).toContain("if (activePurchase)");
   });
 });
