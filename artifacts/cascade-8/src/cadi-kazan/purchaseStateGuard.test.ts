@@ -19,6 +19,13 @@ describe("Cadı Kazan purchase/state guard", () => {
     expect(clientAt).toBeGreaterThan(installAt);
   });
 
+  it("serializes the initial state bootstrap before a purchase can create another session", () => {
+    expect(guardSource).toContain("let stateBootstrapInFlight: Promise<Response> | null = null");
+    expect(guardSource).toContain("stateBootstrapInFlight = request");
+    expect(guardSource).toContain("await waitForResponse(stateBootstrapInFlight)");
+    expect(guardSource).toContain("different game_session");
+  });
+
   it("coalesces concurrent card purchases into one in-flight request", () => {
     expect(guardSource).toContain("let purchaseInFlight: Promise<Response> | null = null");
     expect(guardSource).toContain("const alreadyRunning = purchaseInFlight");
@@ -34,7 +41,7 @@ describe("Cadı Kazan purchase/state guard", () => {
   it("refreshes state instead of applying a wallet snapshot older than a mutation", () => {
     expect(guardSource).toContain("const startedAtGeneration = mutationGeneration");
     expect(guardSource).toContain("if (startedAtGeneration !== mutationGeneration) {");
-    expect(guardSource).toContain("await waitForPurchaseToSettle(purchaseInFlight)");
+    expect(guardSource).toContain("await waitForResponse(purchaseInFlight)");
     expect(guardSource).toContain("if (activePurchase)");
   });
 });
