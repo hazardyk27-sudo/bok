@@ -3,6 +3,7 @@ import "./witch.visual-lock.css";
 import "./scratch-result-fallback.css";
 import { installAdvancedBustRevealGuard } from "./advancedBustRevealGuard";
 import { installCadiPurchaseStateGuard } from "./purchaseStateGuard";
+import { installOfficeTerminalFinalizeGuard } from "./officeTerminalFinalizeGuard";
 import { CADI_KAZAN_MARKUP, WitchClient } from "./witchClient";
 
 const cadiKazanRouteShell = (content: string) => `
@@ -48,6 +49,11 @@ export function mountCadiKazan(app: HTMLElement) {
     internalClient.applyState(state, false);
   });
   client = new WitchClient(witchRoot);
+
+  // The Office keeps the exact existing scratch thresholds and feel. Only
+  // after all six cells have crossed those existing commit gates do we collapse
+  // the remaining serialized server reveals so the terminal result is immediate.
+  installOfficeTerminalFinalizeGuard(client);
 }
 
 export { CADI_KAZAN_MARKUP, WitchClient };
