@@ -43,8 +43,8 @@ describe("Cadı Kazan purchase/state guard", () => {
     expect(guardSource).toContain("new Set([502, 503, 504])");
     expect(guardSource).toContain("const PURCHASE_MAX_ATTEMPTS = 2");
     expect(guardSource).toContain("fetchPurchaseWithSafeRetry");
-    expect(guardSource).toContain("The exact same start idempotency key").toBe(false);
-    expect(guardSource).toContain("the exact same start\n  // idempotency key");
+    expect(guardSource).toContain("Every replay uses the exact same body");
+    expect(guardSource).toContain("idempotency key");
   });
 
   it("reconciles an uncertain timeout through authoritative state before asking for another purchase", () => {
