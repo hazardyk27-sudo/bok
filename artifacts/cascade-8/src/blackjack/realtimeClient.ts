@@ -5,6 +5,7 @@ import {
 } from "./snapshotView";
 import { createBlackjackTableDomRenderer } from "./domRenderer";
 import { createBlackjackCardFlightPresentation } from "./cardFlightPresentation";
+import { createBlackjackSettlementChipPresentation } from "./settlementChipPresentation";
 import {
   BLACKJACK_PRESENTATION_EVENT_NAME,
   createBlackjackPresentationQueue,
@@ -330,6 +331,7 @@ export function bindBlackjackRealtimeElement(
     BLACKJACK_DEFAULT_TABLE_VIEW,
   );
   const cardFlights=createBlackjackCardFlightPresentation(app);
+  const settlementChips=createBlackjackSettlementChipPresentation(app);
   const presentationQueue=createBlackjackPresentationQueue({
     play:async(event)=>{
       if(
@@ -342,6 +344,7 @@ export function bindBlackjackRealtimeElement(
         ));
       }
       await cardFlights.play(event);
+      await settlementChips.play(event);
     },
   });
 
@@ -361,6 +364,7 @@ export function bindBlackjackRealtimeElement(
     detach:()=>{
       presentationQueue.clear();
       cardFlights.clear();
+      settlementChips.clear();
       controller.detach();
     },
   });
