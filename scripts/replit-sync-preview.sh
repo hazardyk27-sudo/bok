@@ -5,7 +5,6 @@ REMOTE="${1:-github}"
 EXPECTED_PREVIEW_SHA="${2:-}"
 BRANCH="integration/replit-preview"
 MAX_ATTEMPTS=3
-API_RUNTIME_LOG="${TMPDIR:-/tmp}/oyun-replit-api-server.log"
 ALLOW_NONCANONICAL_RECOVERY="${OYUN_ALLOW_BACKUP_NONCANONICAL_LOCAL_COMMITS:-0}"
 
 # Replit is a read-only consumer. Install local-only Git guardrails before
@@ -127,14 +126,6 @@ wait_for_api_runtime() {
   return 1
 }
 
-start_replit_api_runtime_fallback() {
-  echo "API runtime is offline; starting Replit API fallback on 127.0.0.1:8080..."
-  : > "$API_RUNTIME_LOG"
-  nohup env PORT=8080 pnpm --dir artifacts/api-server run dev \
-    >"$API_RUNTIME_LOG" 2>&1 </dev/null &
-  echo "API_FALLBACK_PID: $!"
-}
-
 for attempt in $(seq 1 "$MAX_ATTEMPTS"); do
   echo "SYNC ATTEMPT $attempt/$MAX_ATTEMPTS"
   echo "Fetching $REMOTE/$BRANCH..."
@@ -194,34 +185,27 @@ if [[ "$updated" == "true" && -f "scripts/post-merge.sh" ]]; then
 fi
 
 # Git sync alone does not guarantee already-running Replit artifact processes
-# reload changed backend/config files. Touch watched files so healthy watchers
-# reload onto the new HEAD. If the API artifact is not running at all, start a
-# detached fallback dev process instead of waiting forever for a watcher that
-# does not exist.
+# reload changed backend/config files. Touch the watched runtime and artifact
+# descriptors, then require the canonical supervised web+API stack to recover.
+# Do not launch a detached API fallback here: an unmanaged second runtime can
+# become a competing Blackjack authority and can also survive past the sync.
 if [[ -n "${REPL_ID:-}" ]]; then
   touch artifacts/api-server/src/index.ts
   touch artifacts/cascade-8/vite.config.ts
+  touch artifacts/api-server/.replit-artifact/artifact.toml
+  touch artifacts/cascade-8/.replit-artifact/artifact.toml
 
-  echo "Waiting for API runtime readiness on 127.0.0.1:8080..."
+  echo "Waiting for supervised API runtime readiness on 127.0.0.1:8080..."
   api_ready="false"
 
-  # Give an existing Replit artifact/watch process a short chance to reload.
-  if wait_for_api_runtime 20 0.25; then
+  if wait_for_api_runtime 120 0.25; then
     api_ready="true"
-  else
-    start_replit_api_runtime_fallback
-    if wait_for_api_runtime 120 0.25; then
-      api_ready="true"
-    fi
   fi
 
   if [[ "$api_ready" != "true" ]]; then
-    echo "ABORT: API runtime did not become ready on 127.0.0.1:8080 after sync."
-    if [[ -f "$API_RUNTIME_LOG" ]]; then
-      echo "API_RUNTIME_LOG_BEGIN"
-      tail -n 80 "$API_RUNTIME_LOG" || true
-      echo "API_RUNTIME_LOG_END"
-    fi
+    echo "ABORT: Supervised API runtime did not become ready on 127.0.0.1:8080 after sync."
+    echo "Detached API fallback is intentionally disabled to prevent duplicate runtime authorities."
+    echo "Ensure the Replit web preview workflow is running; it now owns the supervised web+API stack."
     exit 11
   fi
 
