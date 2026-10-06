@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 import {
   areRouletteBetPlacementsEqual,
   createRouletteVirtualBet,
+  rebaseRouletteMutationOntoVirtualState,
   syncRouletteLatestVisibleState,
 } from "./chipDragLatestWriter";
 import type {
@@ -109,5 +110,48 @@ describe("roulette latest dragged position writer", () => {
         [{ betId: "straight-11", amount: 10 }],
       ),
     ).toBe(true);
+  });
+
+  it("rebases x2 from the stale pre-drag cell onto the final dragged cell", () => {
+    const rebased = rebaseRouletteMutationOntoVirtualState(
+      [{ betId: "straight-8", amount: 10 }],
+      [{ betId: "high", amount: 10 }],
+      [{ betId: "straight-8", amount: 20 }],
+    );
+
+    expect(rebased).toEqual([
+      { betId: "high", amount: 20 },
+    ]);
+  });
+
+  it("keeps repeated x2 mutations on the final dragged cell", () => {
+    const first = rebaseRouletteMutationOntoVirtualState(
+      [{ betId: "straight-8", amount: 10 }],
+      [{ betId: "high", amount: 10 }],
+      [{ betId: "straight-8", amount: 20 }],
+    );
+    const second = rebaseRouletteMutationOntoVirtualState(
+      [{ betId: "straight-8", amount: 20 }],
+      first,
+      [{ betId: "straight-8", amount: 40 }],
+    );
+
+    expect(first).toEqual([
+      { betId: "high", amount: 20 },
+    ]);
+    expect(second).toEqual([
+      { betId: "high", amount: 40 },
+    ]);
+  });
+
+  it("does not rewrite a mutation that already targets the dragged cell", () => {
+    const incoming = [{ betId: "high", amount: 20 }];
+    const rebased = rebaseRouletteMutationOntoVirtualState(
+      [{ betId: "straight-8", amount: 10 }],
+      [{ betId: "high", amount: 10 }],
+      incoming,
+    );
+
+    expect(rebased).toEqual(incoming);
   });
 });
