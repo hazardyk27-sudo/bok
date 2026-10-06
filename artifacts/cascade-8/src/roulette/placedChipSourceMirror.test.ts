@@ -4,6 +4,7 @@ import {
   it,
 } from "vitest";
 import {
+  getRoulettePlacedChipDisplayLabel,
   getRoulettePlacedChipSourceValue,
 } from "./placedChipSourceMirror";
 
@@ -27,6 +28,21 @@ describe("roulette placed-chip single visual source", () => {
         50,
       ),
     ).toBe(50);
+  });
+
+  it("shows the real aggregate wager instead of the source denomination", () => {
+    expect(
+      getRoulettePlacedChipDisplayLabel(10),
+    ).toBe("10");
+    expect(
+      getRoulettePlacedChipDisplayLabel(20),
+    ).toBe("20");
+    expect(
+      getRoulettePlacedChipDisplayLabel(40),
+    ).toBe("40");
+    expect(
+      getRoulettePlacedChipDisplayLabel(4_000),
+    ).toBe("4K");
   });
 
   it("preserves the chip face source already stamped on a placed chip", () => {
