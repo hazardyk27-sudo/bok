@@ -12,10 +12,11 @@ import {
 const V6_MOVE_PREFIX = "roulette_move_v6_";
 const LATEST_MOVE_PREFIX = "roulette_move_latest_";
 const MAX_LATEST_SYNC_ATTEMPTS = 6;
-const VIRTUAL_STATE_IDLE_MS = 900;
+const VIRTUAL_STATE_IDLE_MS = 4_000;
 
 type WriterState = {
   virtualBet: RouletteGlobalBetSnapshot;
+  sourceBets: RouletteBetPlacement[];
   actualBet: RouletteGlobalBetSnapshot | null;
   balanceCents: number;
   clearTimer: number;
@@ -40,8 +41,8 @@ type SyncLatestOptions = {
 
 let installed = false;
 let mountedApp: HTMLDivElement | null = null;
+let writerState: WriterState | null = null;
 
-const writerStates = new WeakMap<RouletteWalletClient, WriterState>();
 const lastActualBootstraps = new WeakMap<
   RouletteWalletClient,
   RouletteBootstrapResponse
@@ -64,6 +65,12 @@ function totalStake(bets: readonly RouletteBetPlacement[]) {
   return bets.reduce((sum, bet) => sum + bet.amount, 0);
 }
 
+function sameKeys(left: Record<string, number>, right: Record<string, number>) {
+  const a = Object.keys(left).sort();
+  const b = Object.keys(right).sort();
+  return a.length === b.length && a.every((key, index) => key === b[index]);
+}
+
 export function areRouletteBetPlacementsEqual(
   left: readonly RouletteBetPlacement[],
   right: readonly RouletteBetPlacement[],
@@ -72,6 +79,58 @@ export function areRouletteBetPlacementsEqual(
   const b = getRouletteBetTotals(right);
   const keys = new Set([...Object.keys(a), ...Object.keys(b)]);
   return [...keys].every((key) => (a[key] ?? 0) === (b[key] ?? 0));
+}
+
+export function rebaseRouletteMutationOntoVirtualState(
+  sourceBets: readonly RouletteBetPlacement[],
+  virtualBets: readonly RouletteBetPlacement[],
+  incomingBets: readonly RouletteBetPlacement[],
+): RouletteBetPlacement[] {
+  if (incomingBets.length === 0) return [];
+  if (areRouletteBetPlacementsEqual(incomingBets, virtualBets)) {
+    return cloneBets(incomingBets);
+  }
+
+  const sourceTotals = getRouletteBetTotals(sourceBets);
+  const incomingTotals = getRouletteBetTotals(incomingBets);
+  if (!sameKeys(sourceTotals, incomingTotals)) {
+    return cloneBets(incomingBets);
+  }
+
+  let multiplier: number | null = null;
+  for (const betId of Object.keys(sourceTotals)) {
+    const before = sourceTotals[betId] ?? 0;
+    const after = incomingTotals[betId] ?? 0;
+    if (before <= 0 || after < 0) {
+      return cloneBets(incomingBets);
+    }
+    const ratio = after / before;
+    if (!Number.isFinite(ratio) || ratio < 0) {
+      return cloneBets(incomingBets);
+    }
+    if (multiplier === null) {
+      multiplier = ratio;
+    } else if (Math.abs(multiplier - ratio) > 1e-9) {
+      return cloneBets(incomingBets);
+    }
+  }
+
+  if (multiplier === null) return cloneBets(incomingBets);
+
+  const rebased = virtualBets.map((bet) => ({
+    ...bet,
+    amount: bet.amount * multiplier!,
+  }));
+
+  if (
+    rebased.some(
+      (bet) => !Number.isSafeInteger(bet.amount) || bet.amount <= 0,
+    )
+  ) {
+    return cloneBets(incomingBets);
+  }
+
+  return rebased;
 }
 
 export function readRouletteVisibleBets(
@@ -162,22 +221,21 @@ export async function syncRouletteLatestVisibleState({
   throw new Error("ROULETTE_DRAG_LATEST_STATE_UNCONFIRMED");
 }
 
-function clearWriterState(client: RouletteWalletClient) {
-  const state = writerStates.get(client);
-  if (state) {
-    globalThis.clearTimeout(state.clearTimer);
+function clearWriterState() {
+  if (writerState) {
+    globalThis.clearTimeout(writerState.clearTimer);
   }
-  writerStates.delete(client);
+  writerState = null;
 }
 
-function scheduleWriterStateClear(client: RouletteWalletClient) {
-  const state = writerStates.get(client);
+function scheduleWriterStateClear() {
+  const state = writerState;
   if (!state) return;
 
   globalThis.clearTimeout(state.clearTimer);
   state.clearTimer = globalThis.setTimeout(() => {
-    if (writerStates.get(client) === state) {
-      writerStates.delete(client);
+    if (writerState === state) {
+      writerState = null;
     }
   }, VIRTUAL_STATE_IDLE_MS) as unknown as number;
 }
@@ -202,7 +260,7 @@ export function installRouletteChipDragLatestWriter(app: HTMLDivElement) {
     const actual = await originalBootstrap.call(this);
     lastActualBootstraps.set(this, actual);
 
-    const state = writerStates.get(this);
+    const state = writerState;
     if (!state) return actual;
 
     state.actualBet = actual.globalBet
@@ -212,8 +270,17 @@ export function installRouletteChipDragLatestWriter(app: HTMLDivElement) {
 
     const activeRoundId = actual.globalTable?.roundId ?? null;
     if (!activeRoundId || state.virtualBet.roundId !== activeRoundId) {
-      clearWriterState(this);
+      clearWriterState();
       return actual;
+    }
+
+    if (
+      actual.globalBet &&
+      actual.globalBet.roundId === activeRoundId &&
+      actual.globalBet.revision > state.virtualBet.revision
+    ) {
+      state.virtualBet = cloneGlobalBet(actual.globalBet);
+      state.sourceBets = cloneBets(actual.globalBet.bets);
     }
 
     return {
@@ -229,17 +296,44 @@ export function installRouletteChipDragLatestWriter(app: HTMLDivElement) {
     expectedRevision,
   ) {
     if (!idempotencyKey.startsWith(V6_MOVE_PREFIX)) {
-      return originalUpdate.call(
+      const state = writerState;
+      const rebasedBets =
+        state && state.virtualBet.roundId === roundId
+          ? rebaseRouletteMutationOntoVirtualState(
+              state.sourceBets,
+              state.virtualBet.bets,
+              bets,
+            )
+          : cloneBets(bets);
+
+      const response = await originalUpdate.call(
         this,
         roundId,
-        bets,
+        rebasedBets,
         idempotencyKey,
         expectedRevision,
       );
+
+      if (
+        state &&
+        response.globalBet &&
+        response.globalBet.roundId === roundId
+      ) {
+        state.sourceBets = cloneBets(bets);
+        state.virtualBet = cloneGlobalBet(response.globalBet);
+        state.actualBet = cloneGlobalBet(response.globalBet);
+        state.balanceCents = response.balanceCents;
+        scheduleWriterStateClear();
+      }
+
+      return response;
     }
 
     const lastBootstrap = lastActualBootstraps.get(this);
-    const existingState = writerStates.get(this);
+    const existingState =
+      writerState?.virtualBet.roundId === roundId
+        ? writerState
+        : null;
     const baseBet =
       existingState?.virtualBet ??
       (lastBootstrap?.globalBet ? cloneGlobalBet(lastBootstrap.globalBet) : null);
@@ -256,6 +350,7 @@ export function installRouletteChipDragLatestWriter(app: HTMLDivElement) {
 
     const state: WriterState = existingState ?? {
       virtualBet: cloneGlobalBet(baseBet),
+      sourceBets: cloneBets(baseBet.bets),
       actualBet: lastBootstrap?.globalBet
         ? cloneGlobalBet(lastBootstrap.globalBet)
         : null,
@@ -268,7 +363,7 @@ export function installRouletteChipDragLatestWriter(app: HTMLDivElement) {
       bets,
       expectedRevision,
     );
-    writerStates.set(this, state);
+    writerState = state;
 
     const appForWrite = mountedApp;
     const fallbackBets = cloneBets(state.virtualBet.bets);
@@ -308,7 +403,10 @@ export function installRouletteChipDragLatestWriter(app: HTMLDivElement) {
       ? cloneGlobalBet(actual.globalBet)
       : null;
     state.balanceCents = actual.balanceCents;
-    scheduleWriterStateClear(this);
+    if (actual.globalBet) {
+      state.virtualBet = cloneGlobalBet(actual.globalBet);
+    }
+    scheduleWriterStateClear();
 
     return {
       globalBet: cloneGlobalBet(state.virtualBet),
