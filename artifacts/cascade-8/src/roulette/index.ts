@@ -2,6 +2,7 @@ import { mountRoulette as mountRouletteRuntime } from "./rouletteRuntime";
 import { installRouletteBetVerificationUi } from "./verificationController";
 import { installRouletteChipFeedbackV2 } from "./chipFeedbackV2";
 import { installRouletteChipVisuals } from "./chipVisual";
+import { installRoulettePlacedChipSourceMirror } from "./placedChipSourceMirror";
 import { installRouletteChipDragLatestWriter } from "./chipDragLatestWriter";
 import { installRouletteChipDragCanonicalState } from "./chipDragCanonicalState";
 import { installRouletteChipDragV6 } from "./chipDragV6";
@@ -37,6 +38,11 @@ export function mountRoulette(app: HTMLDivElement) {
   installRouletteBetVerificationUi(app);
   installRouletteChipFeedbackV2(app);
   installRouletteChipVisuals(app);
+
+  // The tray/right-rail chip is the only visual source of truth. Placed chips
+  // mirror that live face and only keep table-specific size/position behavior.
+  installRoulettePlacedChipSourceMirror(app);
+
   installRouletteChipDragLatestWriter(app);
   installRouletteChipDragCanonicalState(app);
   installRouletteChipDragV6(app);
