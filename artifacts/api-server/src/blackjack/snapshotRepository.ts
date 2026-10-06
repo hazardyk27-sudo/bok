@@ -7,10 +7,16 @@ import {
 
 export const BLACKJACK_RUNTIME_LEASE_MS = 6_000 as const;
 export const BLACKJACK_RUNTIME_LEASE_HEARTBEAT_MS = 2_000 as const;
+export const BLACKJACK_RUNTIME_AUTHORITY_PRIORITY_DEVELOPMENT = 10 as const;
+export const BLACKJACK_RUNTIME_AUTHORITY_PRIORITY_PRODUCTION = 100 as const;
 
 const BLACKJACK_RUNTIME_AUTHORITY_KEY = "_runtimeAuthority" as const;
+const BLACKJACK_RUNTIME_AUTHORITY_PRIORITY_ENV =
+  "BLACKJACK_RUNTIME_AUTHORITY_PRIORITY" as const;
+const DEFAULT_RUNTIME_ROLE =
+  process.env.NODE_ENV === "production" ? "production" : "development";
 const DEFAULT_RUNTIME_OWNER_ID =
-  `blackjack-runtime:${process.pid}:${randomUUID()}`;
+  `blackjack-runtime:${DEFAULT_RUNTIME_ROLE}:${process.pid}:${randomUUID()}`;
 
 export type BlackjackSnapshotQueryResult = Readonly<{
   rows: readonly Record<string, unknown>[];
@@ -27,6 +33,7 @@ export type BlackjackRuntimeAuthorityLease = Readonly<{
   ownerId: string;
   fencingToken: string;
   leaseUntilMs: number;
+  priority: number;
   checksum: string;
 }>;
 
@@ -34,6 +41,7 @@ type BlackjackSnapshotRepositoryOptions = Readonly<{
   ownerId?: string;
   leaseDurationMs?: number;
   nowMs?: () => number;
+  authorityPriority?: number;
 }>;
 
 type LocalLeaseEpoch = Readonly<{
@@ -60,9 +68,16 @@ export class BlackjackRuntimeLeaseConflictError extends Error {
     readonly ownerId: string,
     readonly leaseUntilMs: number,
     readonly fencingToken: string,
+    readonly ownerPriority = 0,
   ) {
     super(
-      "Blackjack runtime lease is owned by another writer for table " + tableId,
+      "Blackjack runtime lease is owned by another writer for table " +
+        tableId +
+        " (owner=" +
+        ownerId +
+        ", priority=" +
+        ownerPriority +
+        ")",
     );
     this.name = "BlackjackRuntimeLeaseConflictError";
   }
@@ -101,6 +116,35 @@ function assertOwnerId(value: string): void {
   }
 }
 
+function assertAuthorityPriority(value: number): void {
+  if (!Number.isSafeInteger(value) || value < 0) {
+    throw new RangeError(
+      "Blackjack runtime authority priority must be a non-negative safe integer",
+    );
+  }
+}
+
+function resolveDefaultRuntimeAuthorityPriority(): number {
+  const explicit = process.env[BLACKJACK_RUNTIME_AUTHORITY_PRIORITY_ENV]?.trim();
+  if (explicit) {
+    if (!/^\d+$/.test(explicit)) {
+      throw new Error(
+        "BLACKJACK_RUNTIME_AUTHORITY_PRIORITY must be a non-negative integer",
+      );
+    }
+    const priority = Number(explicit);
+    assertAuthorityPriority(priority);
+    return priority;
+  }
+
+  return process.env.NODE_ENV === "production"
+    ? BLACKJACK_RUNTIME_AUTHORITY_PRIORITY_PRODUCTION
+    : BLACKJACK_RUNTIME_AUTHORITY_PRIORITY_DEVELOPMENT;
+}
+
+const DEFAULT_RUNTIME_AUTHORITY_PRIORITY =
+  resolveDefaultRuntimeAuthorityPriority();
+
 function parseDatabaseNowMs(value: unknown): number {
   const text =
     typeof value === "bigint" ||
@@ -116,7 +160,7 @@ function parseDatabaseNowMs(value: unknown): number {
   return nowMs;
 }
 
-function authorityChecksum(input: {
+function legacyAuthorityChecksum(input: {
   tableId: string;
   ownerId: string;
   fencingToken: string;
@@ -134,16 +178,38 @@ function authorityChecksum(input: {
     .digest("hex");
 }
 
+function authorityChecksum(input: {
+  tableId: string;
+  ownerId: string;
+  fencingToken: string;
+  leaseUntilMs: number;
+  priority: number;
+}): string {
+  return createHash("sha256")
+    .update(
+      JSON.stringify([
+        input.tableId,
+        input.ownerId,
+        input.fencingToken,
+        input.leaseUntilMs,
+        input.priority,
+      ]),
+    )
+    .digest("hex");
+}
+
 function buildAuthorityLease(input: {
   tableId: string;
   ownerId: string;
   fencingToken: string;
   leaseUntilMs: number;
+  priority: number;
 }): BlackjackRuntimeAuthorityLease {
   return Object.freeze({
     ownerId: input.ownerId,
     fencingToken: input.fencingToken,
     leaseUntilMs: input.leaseUntilMs,
+    priority: input.priority,
     checksum: authorityChecksum(input),
   });
 }
@@ -175,12 +241,30 @@ function parseAuthorityLease(
     throw new Error("Blackjack runtime authority lease shape is invalid");
   }
 
-  const expected = authorityChecksum({
-    tableId,
-    ownerId: candidate.ownerId,
-    fencingToken: candidate.fencingToken,
-    leaseUntilMs: candidate.leaseUntilMs,
-  });
+  const isLegacy = candidate.priority === undefined;
+  const priority = isLegacy ? 0 : candidate.priority;
+  if (
+    typeof priority !== "number" ||
+    !Number.isSafeInteger(priority) ||
+    priority < 0
+  ) {
+    throw new Error("Blackjack runtime authority priority is invalid");
+  }
+
+  const expected = isLegacy
+    ? legacyAuthorityChecksum({
+        tableId,
+        ownerId: candidate.ownerId,
+        fencingToken: candidate.fencingToken,
+        leaseUntilMs: candidate.leaseUntilMs,
+      })
+    : authorityChecksum({
+        tableId,
+        ownerId: candidate.ownerId,
+        fencingToken: candidate.fencingToken,
+        leaseUntilMs: candidate.leaseUntilMs,
+        priority,
+      });
   if (candidate.checksum !== expected) {
     throw new Error("Blackjack runtime authority lease checksum mismatch");
   }
@@ -189,6 +273,7 @@ function parseAuthorityLease(
     ownerId: candidate.ownerId,
     fencingToken: candidate.fencingToken,
     leaseUntilMs: candidate.leaseUntilMs,
+    priority,
     checksum: candidate.checksum,
   });
 }
@@ -218,6 +303,7 @@ export class BlackjackSnapshotRepository {
   private readonly ownerId: string;
   private readonly leaseDurationMs: number;
   private readonly injectedNowMs: (() => number) | null;
+  private readonly authorityPriority: number;
 
   constructor(
     private readonly database: BlackjackSnapshotDatabase,
@@ -227,8 +313,11 @@ export class BlackjackSnapshotRepository {
     this.leaseDurationMs =
       options.leaseDurationMs ?? BLACKJACK_RUNTIME_LEASE_MS;
     this.injectedNowMs = options.nowMs ?? null;
+    this.authorityPriority =
+      options.authorityPriority ?? DEFAULT_RUNTIME_AUTHORITY_PRIORITY;
     assertOwnerId(this.ownerId);
     assertLeaseDurationMs(this.leaseDurationMs);
+    assertAuthorityPriority(this.authorityPriority);
   }
 
   private async currentLeaseTimeMs(): Promise<number> {
@@ -264,6 +353,7 @@ export class BlackjackSnapshotRepository {
       ownerId: this.ownerId,
       fencingToken,
       leaseUntilMs,
+      priority: this.authorityPriority,
     });
   }
 
@@ -311,6 +401,7 @@ export class BlackjackSnapshotRepository {
     if (
       authority !== null &&
       authority.leaseUntilMs > nowMs &&
+      authority.priority >= this.authorityPriority &&
       (
         authority.ownerId !== this.ownerId ||
         authority.fencingToken !== attemptedFencingToken
@@ -321,6 +412,7 @@ export class BlackjackSnapshotRepository {
         authority.ownerId,
         authority.leaseUntilMs,
         authority.fencingToken,
+        authority.priority,
       );
     }
     throw new BlackjackSnapshotConflictError(tableId);
@@ -396,6 +488,10 @@ export class BlackjackSnapshotRepository {
                     (snapshot->'_runtimeAuthority'->>'leaseUntilMs')::bigint,
                     0
                   ) <= $11
+                  OR COALESCE(
+                    (snapshot->'_runtimeAuthority'->>'priority')::bigint,
+                    0
+                  ) < $13::bigint
                 )
               RETURNING snapshot`,
             [
@@ -404,6 +500,7 @@ export class BlackjackSnapshotRepository {
               this.ownerId,
               nowMs,
               authority.fencingToken,
+              this.authorityPriority,
             ],
           );
 
@@ -423,7 +520,8 @@ export class BlackjackSnapshotRepository {
     if (
       savedAuthority === null ||
       savedAuthority.ownerId !== this.ownerId ||
-      savedAuthority.fencingToken !== authority.fencingToken
+      savedAuthority.fencingToken !== authority.fencingToken ||
+      savedAuthority.priority !== this.authorityPriority
     ) {
       throw new Error("Blackjack runtime authority lease confirmation failed");
     }

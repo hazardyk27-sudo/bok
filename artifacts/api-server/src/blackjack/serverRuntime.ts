@@ -12,7 +12,9 @@ import type { BlackjackShoe, BlackjackTable } from "./domain";
 import type { BlackjackCoordinatorAccount } from "./actionCoordinator";
 import type { BlackjackJournalRepository } from "./journalRepository";
 import {
+  BlackjackRuntimeLeaseConflictError,
   BlackjackSnapshotConflictError,
+  releaseBlackjackRuntimeLeaseEpoch,
   type BlackjackSnapshotRepository,
 } from "./snapshotRepository";
 import { createBlackjackActionProtocolState } from "./actionProtocol";
@@ -23,6 +25,11 @@ import {
   type BlackjackDurableRuntimeState,
 } from "./snapshotState";
 import type { BlackjackRoundSchedulerOptions } from "./roundScheduler";
+import { isBlackjackRuntimeAuthoritySuppressed } from "./runtimeProcessRole";
+
+export const BLACKJACK_RUNTIME_STANDBY_RETRY_MS = 1_000 as const;
+export const BLACKJACK_RUNTIME_STANDBY_FAILURE_CODE =
+  "BLACKJACK_RUNTIME_AUTHORITY_STANDBY" as const;
 
 export type BlackjackServerRuntimeReadiness = Readonly<{
   ready: boolean;
@@ -48,6 +55,7 @@ export type BlackjackAttachedServerRuntime = Readonly<{
 
 export type BlackjackRuntimeBootstrapStatus =
   | "STARTING"
+  | "STANDBY"
   | "READY"
   | "DEGRADED"
   | "FAILED"
@@ -76,11 +84,42 @@ function assertBlackjackRuntimeAttempt(attempt: number): void {
   }
 }
 
+function assertStandbyRetryMs(value: number): void {
+  if (!Number.isSafeInteger(value) || value < 0) {
+    throw new RangeError(
+      "Blackjack runtime standby retry must be a non-negative safe integer",
+    );
+  }
+}
+
+function isRuntimeAuthorityContention(
+  error: unknown,
+): error is BlackjackRuntimeLeaseConflictError | BlackjackSnapshotConflictError {
+  return (
+    error instanceof BlackjackRuntimeLeaseConflictError ||
+    error instanceof BlackjackSnapshotConflictError
+  );
+}
+
+function delayBlackjackRuntimeStandby(ms: number): Promise<void> {
+  return new Promise((resolve) => {
+    const handle=setTimeout(resolve,ms);
+    handle.unref?.();
+  });
+}
+
 export function markBlackjackRuntimeStarting(attempt: number): void {
   assertBlackjackRuntimeAttempt(attempt);
   blackjackRuntimeBootstrapAttempt = attempt;
   blackjackRuntimeBootstrapStatus = "STARTING";
   blackjackRuntimeBootstrapFailureCode = null;
+  blackjackRuntimeReadinessSource = null;
+}
+
+export function markBlackjackRuntimeStandby(): void {
+  blackjackRuntimeBootstrapStatus = "STANDBY";
+  blackjackRuntimeBootstrapFailureCode =
+    BLACKJACK_RUNTIME_STANDBY_FAILURE_CODE;
   blackjackRuntimeReadinessSource = null;
 }
 
@@ -194,8 +233,6 @@ export function attachBlackjackScheduledServerRuntime(
     close:()=>{
       if(closed) return;
       closed=true;
-      // Close WebSocket transport first. Its intentional shutdown path
-      // suppresses disconnect lifecycle mutations, then stop the scheduler.
       realtime.close();
       scheduled.stop();
     },
@@ -253,7 +290,6 @@ export async function recoverAndAttachBlackjackServerRuntime(input: {
   );
 }
 
-
 export function createBlackjackInitialServerRuntimeState(input: {
   tableId: string;
   shoe: BlackjackShoe;
@@ -296,50 +332,82 @@ export async function initializeAndAttachBlackjackServerRuntime(input: {
     userId: string,
   ) => number | Promise<number>;
   onRuntimeUnavailable?: (error: unknown) => void;
+  standbyRetryMs?: number;
+  standbyDelay?: (ms: number) => Promise<void>;
+  authoritySuppressed?: () => boolean;
 }): Promise<BlackjackAttachedServerRuntime> {
-  const existing=await input.snapshotRepository.load(input.tableId);
+  const standbyRetryMs=
+    input.standbyRetryMs ?? BLACKJACK_RUNTIME_STANDBY_RETRY_MS;
+  assertStandbyRetryMs(standbyRetryMs);
+  const standbyDelay=input.standbyDelay ?? delayBlackjackRuntimeStandby;
+  const authoritySuppressed=
+    input.authoritySuppressed ?? isBlackjackRuntimeAuthoritySuppressed;
 
-  if(existing===null){
-    const initial=createBlackjackDurableSnapshot(
-      createBlackjackInitialServerRuntimeState({
-        tableId:input.tableId,
-        shoe:input.createInitialShoe(),
-      }),
-      input.recoveredAtMs,
-    );
+  while(true){
+    if(authoritySuppressed()){
+      markBlackjackRuntimeStandby();
+      await standbyDelay(standbyRetryMs);
+      continue;
+    }
+
+    const recoveredAtMs=Math.max(input.recoveredAtMs,input.nowMs());
 
     try {
-      await input.snapshotRepository.save(initial,null);
+      const existing=await input.snapshotRepository.load(input.tableId);
+
+      if(existing===null){
+        const initial=createBlackjackDurableSnapshot(
+          createBlackjackInitialServerRuntimeState({
+            tableId:input.tableId,
+            shoe:input.createInitialShoe(),
+          }),
+          recoveredAtMs,
+        );
+
+        try {
+          await input.snapshotRepository.save(initial,null);
+        } catch(error) {
+          if(!isRuntimeAuthorityContention(error)){
+            throw error;
+          }
+          releaseBlackjackRuntimeLeaseEpoch(input.tableId);
+          markBlackjackRuntimeStandby();
+          await standbyDelay(standbyRetryMs);
+          continue;
+        }
+      }
+
+      const attached=await recoverAndAttachBlackjackServerRuntime({
+        server:input.server,
+        tableId:input.tableId,
+        snapshotRepository:input.snapshotRepository,
+        journalRepository:input.journalRepository,
+        recoveredAtMs,
+        nowMs:input.nowMs,
+        resolveIdentity:input.resolveIdentity,
+        createFreshShoe:input.createFreshShoe,
+        bettingWindowMs:input.bettingWindowMs,
+        scheduler:input.scheduler,
+        createConnectionId:input.createConnectionId,
+        loadSeatAccount:input.loadSeatAccount,
+        loadAvailableBalanceCents:input.loadAvailableBalanceCents,
+        onRuntimeUnavailable:input.onRuntimeUnavailable,
+      });
+
+      if(attached===null){
+        throw new Error(
+          "Blackjack server runtime initialization did not produce durable state",
+        );
+      }
+      return attached;
     } catch(error) {
-      if(!(error instanceof BlackjackSnapshotConflictError)){
+      if(!isRuntimeAuthorityContention(error)){
         throw error;
       }
-      // Another server won first-start initialization. Recovery below
-      // reloads the CAS winner instead of creating a second authority.
+
+      releaseBlackjackRuntimeLeaseEpoch(input.tableId);
+      markBlackjackRuntimeStandby();
+      await standbyDelay(standbyRetryMs);
     }
   }
-
-  const attached=await recoverAndAttachBlackjackServerRuntime({
-    server:input.server,
-    tableId:input.tableId,
-    snapshotRepository:input.snapshotRepository,
-    journalRepository:input.journalRepository,
-    recoveredAtMs:input.recoveredAtMs,
-    nowMs:input.nowMs,
-    resolveIdentity:input.resolveIdentity,
-    createFreshShoe:input.createFreshShoe,
-    bettingWindowMs:input.bettingWindowMs,
-    scheduler:input.scheduler,
-    createConnectionId:input.createConnectionId,
-    loadSeatAccount:input.loadSeatAccount,
-    loadAvailableBalanceCents:input.loadAvailableBalanceCents,
-    onRuntimeUnavailable:input.onRuntimeUnavailable,
-  });
-
-  if(attached===null){
-    throw new Error(
-      "Blackjack server runtime initialization did not produce durable state",
-    );
-  }
-  return attached;
 }
