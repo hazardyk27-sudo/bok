@@ -11,7 +11,9 @@ import {
   snapshotRouletteRound,
 } from "./betState";
 import {
+  ROULETTE_CANONICAL_RESET_SELECTOR,
   shouldEnforceRouletteCanonicalDragState,
+  shouldResetRouletteCanonicalDragStateForUpdate,
 } from "./chipDragCanonicalState";
 
 afterEach(() => {
@@ -54,6 +56,72 @@ describe("roulette canonical drag state", () => {
         amount: 10,
       },
     ]);
+  });
+
+  it("lets a normal x2 mutation supersede the previous drag override", () => {
+    const doubled = {
+      ...createRouletteBetState(),
+      placements: [
+        {
+          betId: "high",
+          amount: 20,
+        },
+      ],
+    };
+
+    setRouletteAuthoritativeDragPlacements([
+      {
+        betId: "high",
+        amount: 10,
+      },
+    ]);
+    clearRouletteAuthoritativeDragPlacements();
+
+    const snapshot =
+      snapshotRouletteRound(doubled);
+
+    expect(snapshot.placements).toEqual([
+      {
+        betId: "high",
+        amount: 20,
+      },
+    ]);
+    expect(
+      snapshot.previousRoundPlacements,
+    ).toEqual([
+      {
+        betId: "high",
+        amount: 20,
+      },
+    ]);
+  });
+
+  it("resets canonical drag state for normal bet writes but not V6 move writes", () => {
+    expect(
+      shouldResetRouletteCanonicalDragStateForUpdate(
+        "roulette_bet_123",
+      ),
+    ).toBe(true);
+    expect(
+      shouldResetRouletteCanonicalDragStateForUpdate(
+        "roulette_move_v6_123",
+      ),
+    ).toBe(false);
+  });
+
+  it("invalidates stale drag state immediately for wager mutation controls", () => {
+    expect(
+      ROULETTE_CANONICAL_RESET_SELECTOR,
+    ).toContain("[data-double-bet]");
+    expect(
+      ROULETTE_CANONICAL_RESET_SELECTOR,
+    ).toContain("[data-undo-bet]");
+    expect(
+      ROULETTE_CANONICAL_RESET_SELECTOR,
+    ).toContain("[data-clear-bets]");
+    expect(
+      ROULETTE_CANONICAL_RESET_SELECTOR,
+    ).toContain("[data-rebet]");
   });
 
   it("does not replace the normal snapshot when no drag override exists", () => {
