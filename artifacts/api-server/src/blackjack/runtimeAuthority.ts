@@ -39,6 +39,7 @@ import {
 export type BlackjackRuntimeAuthority = Readonly<{
   source: BlackjackCoordinatorRealtimeSource;
   driver: BlackjackRoundRealtimeDriver;
+  heartbeat: () => Promise<void>;
   handlePlayerActionTransaction:
     BlackjackRealtimePlayerActionTransactionHandler;
   onIdentityConnected: (
@@ -166,6 +167,13 @@ export function createBlackjackRuntimeAuthority(
       fail(error);
     }
   };
+
+  const heartbeat=(): Promise<void>=>queue.enqueue(async()=>{
+    assertHealthy();
+    const nowMs=input.nowMs();
+    assertNowMs(nowMs);
+    await persist(nowMs);
+  });
 
   const source: BlackjackCoordinatorRealtimeSource=Object.freeze({
     getSnapshot:()=>queue.enqueue(async()=>{
@@ -478,6 +486,7 @@ export function createBlackjackRuntimeAuthority(
   return Object.freeze({
     source,
     driver,
+    heartbeat,
     handlePlayerActionTransaction,
     onIdentityConnected,
     onIdentityDisconnected,

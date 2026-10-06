@@ -23,7 +23,13 @@ import {
 } from "./roundScheduler";
 import type { BlackjackShoe } from "./domain";
 import type { BlackjackJournalRepository } from "./journalRepository";
-import type { BlackjackSnapshotRepository } from "./snapshotRepository";
+import {
+  BLACKJACK_RUNTIME_LEASE_HEARTBEAT_MS,
+  BlackjackRuntimeLeaseConflictError,
+  BlackjackSnapshotConflictError,
+  releaseBlackjackRuntimeLeaseEpoch,
+  type BlackjackSnapshotRepository,
+} from "./snapshotRepository";
 import {
   createBlackjackDurableSnapshot,
   type BlackjackDurableRuntimeState,
@@ -153,17 +159,37 @@ export async function recoverAndStartBlackjackRoundRuntime(input: {
     coordinator.synchronizeWalletStates(saved.payload.wallets);
   };
 
-  // Persist RECOVERING -> resumed phase before any timer-driven state can
-  // become visible to realtime clients.
+  // This first write is the runtime leadership gate. A second API process
+  // cannot create its scheduler or WebSocket authority while another writer's
+  // durable lease is still valid.
   await persist(input.recoveredAtMs);
 
   let scheduler: BlackjackRoundScheduler | null=null;
+  let leaseHeartbeatHandle: ReturnType<typeof setInterval> | null=null;
   const callerOnError=input.scheduler?.onError;
   let fatalReported=false;
+
+  const stopLeaseHeartbeat=()=>{
+    if(leaseHeartbeatHandle===null) return;
+    clearInterval(leaseHeartbeatHandle);
+    leaseHeartbeatHandle=null;
+  };
+
   const reportFatal=(error: unknown)=>{
     scheduler?.stop();
+    stopLeaseHeartbeat();
     if(fatalReported) return;
     fatalReported=true;
+    // Authority/CAS conflicts mean this runtime can no longer prove ownership.
+    // Rotate only in that case. Other transient failures keep the local epoch
+    // so the existing 1s in-process recovery path does not incur lease expiry
+    // downtime before it can reattach.
+    if (
+      error instanceof BlackjackRuntimeLeaseConflictError ||
+      error instanceof BlackjackSnapshotConflictError
+    ) {
+      releaseBlackjackRuntimeLeaseEpoch(input.tableId);
+    }
     input.onFatalError?.(error);
     callerOnError?.(error);
   };
@@ -200,6 +226,15 @@ export async function recoverAndStartBlackjackRoundRuntime(input: {
     scheduler.stop();
     throw catchUpError;
   }
+
+  leaseHeartbeatHandle=setInterval(()=>{
+    void authority.heartbeat().catch(()=>{
+      // persist() already reports the authority failure and stops both the
+      // scheduler and heartbeat. The rejected promise is intentionally
+      // consumed here to avoid an unhandled-rejection crash.
+    });
+  },BLACKJACK_RUNTIME_LEASE_HEARTBEAT_MS);
+  leaseHeartbeatHandle.unref?.();
 
   const onIdentityConnected: NonNullable<
     BlackjackRealtimeOptions["onIdentityConnected"]
@@ -246,6 +281,9 @@ export async function recoverAndStartBlackjackRoundRuntime(input: {
         authority.handleSeatLeaveTransaction,
     }),
     getDurableRuntime,
-    stop:()=>activeScheduler.stop(),
+    stop:()=>{
+      stopLeaseHeartbeat();
+      activeScheduler.stop();
+    },
   });
 }
