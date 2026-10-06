@@ -14,6 +14,13 @@ import { formatRouletteAmount } from "./uiFormat";
 
 const V6_MOVE_PREFIX = "roulette_move_v6_";
 
+export const ROULETTE_CANONICAL_RESET_SELECTOR = [
+  "[data-double-bet]",
+  "[data-undo-bet]",
+  "[data-clear-bets]",
+  "[data-rebet]",
+].join(", ");
+
 type CanonicalState = {
   placements: RouletteBetPlacement[];
   templates: Map<string, HTMLElement>;
@@ -54,6 +61,19 @@ export function shouldEnforceRouletteCanonicalDragState(
       bettingLocked === "true"
     )
   );
+}
+
+export function shouldResetRouletteCanonicalDragStateForUpdate(
+  idempotencyKey: string,
+) {
+  return !idempotencyKey.startsWith(
+    V6_MOVE_PREFIX,
+  );
+}
+
+function resetCanonicalDragState() {
+  canonicalState = null;
+  clearRouletteAuthoritativeDragPlacements();
 }
 
 function readVisiblePlacements(
@@ -297,8 +317,7 @@ function enforceIfLocked() {
   if (
     page.dataset.phase === "settled"
   ) {
-    canonicalState = null;
-    clearRouletteAuthoritativeDragPlacements();
+    resetCanonicalDragState();
     return;
   }
 
@@ -329,6 +348,22 @@ export function installRouletteChipDragCanonicalState(
   if (installed) return;
   installed = true;
 
+  app.addEventListener(
+    "click",
+    (event) => {
+      const target = event.target;
+      if (
+        target instanceof Element &&
+        target.closest(
+          ROULETTE_CANONICAL_RESET_SELECTOR,
+        )
+      ) {
+        resetCanonicalDragState();
+      }
+    },
+    true,
+  );
+
   const originalUpdate =
     RouletteWalletClient.prototype
       .updateGlobalBet;
@@ -350,9 +385,15 @@ export function installRouletteChipDragCanonicalState(
         );
 
       if (
-        !idempotencyKey.startsWith(
-          V6_MOVE_PREFIX,
-        ) ||
+        shouldResetRouletteCanonicalDragStateForUpdate(
+          idempotencyKey,
+        )
+      ) {
+        resetCanonicalDragState();
+        return result;
+      }
+
+      if (
         !mountedApp?.isConnected ||
         !result.globalBet
       ) {
