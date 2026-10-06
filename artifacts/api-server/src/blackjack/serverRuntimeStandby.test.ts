@@ -1,5 +1,5 @@
 import { createServer, type Server } from "node:http";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { createUnshuffledBlackjackShoe } from "./shoe";
 import {
   createBlackjackDurableSnapshot,
@@ -9,6 +9,10 @@ import {
   BlackjackRuntimeLeaseConflictError,
   BlackjackSnapshotConflictError,
 } from "./snapshotRepository";
+import {
+  BLACKJACK_CANONICAL_TABLE_ID,
+  BLACKJACK_PREVIEW_TABLE_PREFIX,
+} from "./runtimeProcessRole";
 import {
   BLACKJACK_RUNTIME_STANDBY_FAILURE_CODE,
   createBlackjackInitialServerRuntimeState,
@@ -50,6 +54,7 @@ describe("blackjack server runtime standby authority",()=>{
     if(server!==null) await closeServer(server);
     server=null;
     markBlackjackRuntimeStopped();
+    vi.unstubAllEnvs();
   });
 
   it("keeps one bootstrap attempt in standby until the active lease is released",async()=>{
@@ -234,5 +239,49 @@ describe("blackjack server runtime standby authority",()=>{
     expect(loadCalls).toBeGreaterThan(0);
     expect(saveCalls).toBeGreaterThan(0);
     expect(attached.getReadiness().ready).toBe(true);
+  });
+
+  it("routes the canonical table to the Replit preview namespace before storage access",async()=>{
+    vi.stubEnv("NODE_ENV","development");
+    vi.stubEnv("REPL_ID","preview-app-123");
+    const runtimeTableId=`${BLACKJACK_PREVIEW_TABLE_PREFIX}-preview-app-123`;
+    let stored=durableSnapshot(runtimeTableId);
+    const loadedTableIds:string[]=[];
+
+    markBlackjackRuntimeStarting(17);
+    server=createServer();
+
+    attached=await initializeAndAttachBlackjackServerRuntime({
+      server,
+      tableId:BLACKJACK_CANONICAL_TABLE_ID,
+      snapshotRepository:{
+        load:async(tableId)=>{
+          loadedTableIds.push(tableId);
+          return stored;
+        },
+        save:async(snapshot)=>{
+          stored=snapshot;
+          return snapshot;
+        },
+      },
+      journalRepository:{loadAfter:async()=>[]},
+      recoveredAtMs:40_000,
+      nowMs:()=>40_000,
+      resolveIdentity:()=>null,
+      createInitialShoe:()=>{
+        throw new Error("existing durable runtime must not create a new shoe");
+      },
+      scheduler:{
+        schedule:()=>"preview-namespace-scheduler",
+        cancelSchedule:()=>undefined,
+      },
+    });
+
+    expect(loadedTableIds[0]).toBe(runtimeTableId);
+    expect(attached.getReadiness()).toMatchObject({
+      ready:true,
+      status:"READY",
+      tableId:runtimeTableId,
+    });
   });
 });

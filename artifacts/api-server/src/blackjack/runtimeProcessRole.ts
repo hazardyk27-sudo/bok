@@ -2,6 +2,9 @@ import { readlinkSync } from "node:fs";
 
 export const BLACKJACK_RUNTIME_DISABLE_ENV =
   "OYUN_DISABLE_BLACKJACK_RUNTIME" as const;
+export const BLACKJACK_CANONICAL_TABLE_ID = "blackjack-main-table" as const;
+export const BLACKJACK_PREVIEW_TABLE_PREFIX =
+  "blackjack-preview-table" as const;
 const REPLIT_SYNC_FALLBACK_LOG = "oyun-replit-api-server.log" as const;
 
 type RuntimeProcessRoleInput = Readonly<{
@@ -17,6 +20,32 @@ function readProcessStdoutTarget(): string | null {
   }
 }
 
+function normalizeRuntimeNamespace(value: string | undefined): string {
+  const normalized = (value ?? "")
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9-]+/g, "-")
+    .replace(/-+/g, "-")
+    .replace(/^-|-$/g, "");
+  return normalized || "local";
+}
+
+export function resolveBlackjackRuntimeTableId(
+  requestedTableId: string,
+  env: Readonly<Record<string, string | undefined>> = process.env,
+): string {
+  if (requestedTableId !== BLACKJACK_CANONICAL_TABLE_ID) {
+    return requestedTableId;
+  }
+
+  if (env.NODE_ENV === "production") {
+    return BLACKJACK_CANONICAL_TABLE_ID;
+  }
+
+  const namespace = normalizeRuntimeNamespace(env.REPL_ID);
+  return `${BLACKJACK_PREVIEW_TABLE_PREFIX}-${namespace}`;
+}
+
 export function isBlackjackRuntimeAuthoritySuppressed(
   input: RuntimeProcessRoleInput = {},
 ): boolean {
@@ -25,11 +54,9 @@ export function isBlackjackRuntimeAuthoritySuppressed(
   if(explicit==="1") return true;
   if(explicit==="0") return false;
 
-  // The canonical Replit sync helper can start a detached API process solely
-  // to make the local /api/readyz probe available after a sync. That process
-  // redirects stdout to this dedicated log and must never become owner of the
-  // global Blackjack table. Without this guard it can outlive the sync, renew
-  // the runtime lease forever, and fence the actual API runtime.
+  // Keep recognizing historical detached sync fallback processes so an old
+  // process left behind by a previous preview revision can never become table
+  // authority while the supervised runtime replacement is rolling out.
   if(!env.REPL_ID) return false;
   const stdoutTarget=(input.readStdoutTarget ?? readProcessStdoutTarget)();
   return stdoutTarget?.includes(REPLIT_SYNC_FALLBACK_LOG) ?? false;

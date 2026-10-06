@@ -25,7 +25,10 @@ import {
   type BlackjackDurableRuntimeState,
 } from "./snapshotState";
 import type { BlackjackRoundSchedulerOptions } from "./roundScheduler";
-import { isBlackjackRuntimeAuthoritySuppressed } from "./runtimeProcessRole";
+import {
+  isBlackjackRuntimeAuthoritySuppressed,
+  resolveBlackjackRuntimeTableId,
+} from "./runtimeProcessRole";
 
 export const BLACKJACK_RUNTIME_STANDBY_RETRY_MS = 1_000 as const;
 export const BLACKJACK_RUNTIME_STANDBY_FAILURE_CODE =
@@ -342,6 +345,7 @@ export async function initializeAndAttachBlackjackServerRuntime(input: {
   const standbyDelay=input.standbyDelay ?? delayBlackjackRuntimeStandby;
   const authoritySuppressed=
     input.authoritySuppressed ?? isBlackjackRuntimeAuthoritySuppressed;
+  const runtimeTableId=resolveBlackjackRuntimeTableId(input.tableId);
 
   while(true){
     if(authoritySuppressed()){
@@ -353,12 +357,12 @@ export async function initializeAndAttachBlackjackServerRuntime(input: {
     const recoveredAtMs=Math.max(input.recoveredAtMs,input.nowMs());
 
     try {
-      const existing=await input.snapshotRepository.load(input.tableId);
+      const existing=await input.snapshotRepository.load(runtimeTableId);
 
       if(existing===null){
         const initial=createBlackjackDurableSnapshot(
           createBlackjackInitialServerRuntimeState({
-            tableId:input.tableId,
+            tableId:runtimeTableId,
             shoe:input.createInitialShoe(),
           }),
           recoveredAtMs,
@@ -370,7 +374,7 @@ export async function initializeAndAttachBlackjackServerRuntime(input: {
           if(!isRuntimeAuthorityContention(error)){
             throw error;
           }
-          releaseBlackjackRuntimeLeaseEpoch(input.tableId);
+          releaseBlackjackRuntimeLeaseEpoch(runtimeTableId);
           markBlackjackRuntimeStandby();
           await standbyDelay(standbyRetryMs);
           continue;
@@ -379,7 +383,7 @@ export async function initializeAndAttachBlackjackServerRuntime(input: {
 
       const attached=await recoverAndAttachBlackjackServerRuntime({
         server:input.server,
-        tableId:input.tableId,
+        tableId:runtimeTableId,
         snapshotRepository:input.snapshotRepository,
         journalRepository:input.journalRepository,
         recoveredAtMs,
@@ -405,7 +409,7 @@ export async function initializeAndAttachBlackjackServerRuntime(input: {
         throw error;
       }
 
-      releaseBlackjackRuntimeLeaseEpoch(input.tableId);
+      releaseBlackjackRuntimeLeaseEpoch(runtimeTableId);
       markBlackjackRuntimeStandby();
       await standbyDelay(standbyRetryMs);
     }
