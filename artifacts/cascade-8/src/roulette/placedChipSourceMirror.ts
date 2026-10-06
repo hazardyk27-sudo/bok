@@ -1,6 +1,9 @@
 import {
   ROULETTE_CHIP_VALUES,
 } from "./betState";
+import {
+  formatRouletteAmount,
+} from "./uiFormat";
 
 const FACE_VARIABLES = [
   "--casino-chip-main",
@@ -78,6 +81,12 @@ export function getRoulettePlacedChipSourceValue(
   );
 
   return divisor ?? ROULETTE_CHIP_VALUES[0];
+}
+
+export function getRoulettePlacedChipDisplayLabel(
+  amount: number,
+) {
+  return formatRouletteAmount(amount);
 }
 
 function readSelectedChipValue(app: HTMLDivElement) {
@@ -203,9 +212,11 @@ export function mirrorRoulettePlacedChipFromSource(
 
   const sourceLabel = sourceLabelFor(source);
   if (sourceLabel) {
+    const displayLabel =
+      getRoulettePlacedChipDisplayLabel(amount);
     const label = document.createElement("span");
     label.className = "roulette-placed-chip__value";
-    label.textContent = sourceLabel.textContent ?? "";
+    label.textContent = displayLabel;
 
     const sourceLabelStyle =
       getComputedStyle(sourceLabel);
@@ -238,7 +249,7 @@ export function mirrorRoulettePlacedChipFromSource(
     );
     if (
       !currentValue ||
-      currentValue.textContent !== label.textContent ||
+      currentValue.textContent !== displayLabel ||
       hasSuffix
     ) {
       chip.replaceChildren(label);
