@@ -12,7 +12,9 @@ paths = [ "/" ]
 localPort = 20003
 
 [services.development]
-run = "pnpm run dev"
+# Always run the workspace-root full-stack supervisor even when Replit starts
+# this command with the web artifact as the current working directory.
+run = "pnpm -w run dev"
 
 [services.production]
 build = [ "pnpm", "--filter", "@workspace/cascade-8", "run", "build" ]
