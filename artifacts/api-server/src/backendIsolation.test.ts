@@ -218,13 +218,15 @@ describe("backend game isolation", () => {
     );
     expect(localStackScript).toContain('API_PORT="${API_PORT:-8080}"');
     expect(replitSyncScript).toContain(
-      "Waiting for API runtime readiness on 127.0.0.1:8080",
+      "Waiting for supervised API runtime readiness on 127.0.0.1:8080",
     );
     expect(replitSyncScript).toContain(
       "fetch('http://127.0.0.1:8080/api/readyz'",
     );
     expect(replitSyncScript).toContain("AbortSignal.timeout(2000)");
     expect(localStackScript).toContain("/api/readyz");
+    expect(localStackScript).toContain("API server exited after startup");
+    expect(replitSyncScript).not.toContain("start_replit_api_runtime_fallback");
     expect(healthRoutes).toContain('router.get("/readyz"');
     expect(healthRoutes).toContain('await pool.query("SELECT 1")');
   });
