@@ -30,6 +30,25 @@ function cloneRoulettePlacements(
   }));
 }
 
+function getEffectiveRoulettePlacements(
+  state: RouletteBetState,
+) {
+  return cloneRoulettePlacements(
+    authoritativeDragPlacements ?? state.placements,
+  );
+}
+
+function commitLocalPlacementMutation(
+  state: RouletteBetState,
+  placements: readonly RouletteBetPlacement[],
+): RouletteBetState {
+  authoritativeDragPlacements = null;
+  return {
+    ...state,
+    placements: cloneRoulettePlacements(placements),
+  };
+}
+
 export function setRouletteAuthoritativeDragPlacements(
   placements: readonly RouletteBetPlacement[],
 ) {
@@ -73,16 +92,19 @@ export function placeRouletteBet(
 ): RouletteBetState {
   if (!betId) return state;
 
-  return {
-    ...state,
-    placements: [
-      ...state.placements,
+  const placements =
+    getEffectiveRoulettePlacements(state);
+
+  return commitLocalPlacementMutation(
+    state,
+    [
+      ...placements,
       {
         betId,
         amount: state.selectedChip,
       },
     ],
-  };
+  );
 }
 
 export function moveRouletteBetPlacements(
@@ -112,20 +134,28 @@ export function moveRouletteBetPlacements(
 export function undoRouletteBet(
   state: RouletteBetState,
 ): RouletteBetState {
-  if (state.placements.length === 0) {
+  const placements =
+    getEffectiveRoulettePlacements(state);
+
+  if (placements.length === 0) {
+    authoritativeDragPlacements = null;
     return state;
   }
 
-  return {
-    ...state,
-    placements: state.placements.slice(0, -1),
-  };
+  return commitLocalPlacementMutation(
+    state,
+    placements.slice(0, -1),
+  );
 }
 
 export function clearRouletteBets(
   state: RouletteBetState,
 ): RouletteBetState {
-  if (state.placements.length === 0) {
+  const placements =
+    getEffectiveRoulettePlacements(state);
+
+  authoritativeDragPlacements = null;
+  if (placements.length === 0) {
     return state;
   }
 
@@ -138,34 +168,28 @@ export function clearRouletteBets(
 export function doubleRouletteBets(
   state: RouletteBetState,
 ): RouletteBetState {
-  if (state.placements.length === 0) {
+  const placements =
+    getEffectiveRoulettePlacements(state);
+
+  if (placements.length === 0) {
+    authoritativeDragPlacements = null;
     return state;
   }
 
-  return {
-    ...state,
-    placements:
-      state.placements.map(
-        (placement) => ({
-          ...placement,
-          amount:
-            placement.amount * 2,
-        }),
-      ),
-  };
+  return commitLocalPlacementMutation(
+    state,
+    placements.map((placement) => ({
+      ...placement,
+      amount: placement.amount * 2,
+    })),
+  );
 }
 
 export function snapshotRouletteRound(
   state: RouletteBetState,
 ): RouletteBetState {
-  const placements =
-    authoritativeDragPlacements ??
-    state.placements;
-
   const canonicalPlacements =
-    cloneRoulettePlacements(
-      placements,
-    );
+    getEffectiveRoulettePlacements(state);
 
   return {
     ...state,
@@ -189,6 +213,7 @@ export function rebetRouletteRound(
     return state;
   }
 
+  authoritativeDragPlacements = null;
   return {
     ...state,
     placements:
@@ -305,7 +330,7 @@ export function compactRouletteBetPlacements(
   });
 }
 
-// Kept for the legacy placed-chip runtime palette. The Part 3 visual layer
+// Kept for the legacy placed-chip runtime palette. The final visual layer
 // recolors the final chip by total wager range, so this remains replay-safe.
 export function getRouletteDisplayChipValue(
   amount: number,
