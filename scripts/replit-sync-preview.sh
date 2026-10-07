@@ -188,7 +188,7 @@ fi
 # reload changed backend/config files. Touch the watched runtime and artifact
 # descriptors, then require the canonical supervised web+API stack to recover.
 # Do not launch a detached API fallback here: an unmanaged second runtime can
-# become a competing Blackjack authority and can also survive past the sync.
+# become a competing runtime authority and can also survive past the sync.
 if [[ -n "${REPL_ID:-}" ]]; then
   touch artifacts/api-server/src/index.ts
   touch artifacts/cascade-8/vite.config.ts
