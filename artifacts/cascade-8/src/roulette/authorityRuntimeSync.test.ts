@@ -134,9 +134,10 @@ describe("roulette runtime authority synchronization", () => {
     ).toBe(true);
   });
 
-  it("feeds runtime the last accepted bet instead of a delayed stale server snapshot", () => {
+  it("feeds runtime the accepted authority instead of a delayed stale server snapshot", () => {
     const authority = {
       roundId: "round-1",
+      bets: [{ betId: "straight-25", amount: 200 }],
       revision: 8,
       optimistic: false,
     };
@@ -153,6 +154,29 @@ describe("roulette runtime authority synchronization", () => {
     expect(selected?.revision).toBe(8);
     expect(selected?.bets).toEqual([
       { betId: "straight-25", amount: 200 },
+    ]);
+  });
+
+  it("feeds runtime the optimistic moved topology while the serialized write is pending", () => {
+    const authority = {
+      roundId: "round-1",
+      bets: [{ betId: "straight-25", amount: 40 }],
+      revision: 8,
+      optimistic: true,
+    };
+    const accepted = globalBet(8, "straight-24", 40);
+
+    const selected = selectRouletteRuntimeBootstrapBet(
+      authority,
+      "round-1",
+      accepted,
+      accepted,
+    );
+
+    expect(selected?.revision).toBe(8);
+    expect(selected?.stakeCents).toBe(4_000);
+    expect(selected?.bets).toEqual([
+      { betId: "straight-25", amount: 40 },
     ]);
   });
 });
