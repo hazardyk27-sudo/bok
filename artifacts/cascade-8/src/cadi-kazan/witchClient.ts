@@ -74,6 +74,7 @@ type CadiKazanPreparedReveal =
     };
 
 const API_BASE = "/api/cadi-kazan";
+const OFFICE_POOL_TOTAL = 400;
 const ADVANCED_25_CARD_ART_URL = new URL("./advanced/assets/advanced25-card-master.png", import.meta.url).href;
 const SCRATCH_BRUSH_RADIUS_PX = 14;
 const OFFICE_SCRATCH_BRUSH_RADIUS_PX = SCRATCH_BRUSH_RADIUS_PX * 1.43;
@@ -280,9 +281,9 @@ export const CADI_KAZAN_MARKUP = `
 
       <section class="witch-appstats" aria-label="Cadı Kazan durumu">
         <div class="witch-office-pool-head" data-witch-office-pool-head hidden>
-          <div class="witch-office-pool-chip" aria-label="The Office havuzunda kalan bilet">
+          <div class="witch-office-pool-chip" aria-label="The Office base havuzunda kalan bilet">
             <span>HAVUZ</span>
-            <strong data-witch-office-pool-head-value>—/200</strong>
+            <strong data-witch-office-pool-head-value>—/400</strong>
           </div>
           <button
             class="witch-office-pool-info-button"
@@ -300,17 +301,17 @@ export const CADI_KAZAN_MARKUP = `
             aria-label="The Office havuz sistemi"
             hidden
           >
-            <strong>200 BİLETLİK HAVUZ</strong>
-            <p>Her havuzda önceden hazırlanmış 200 bilet bulunur. Satın aldığında havuzdaki kullanılmamış biletlerden biri sana atanır.</p>
+            <strong>400 BİLETLİK BASE HAVUZ</strong>
+            <p>Stanley, Dwight, Jim ve Kevin ödülleri 400 biletlik sabit base havuzdan gelir. Michael bu havuzun dışında, her satın alımda bağımsız 1/300 jackpot şansıdır ve çıktığında base havuzdan bilet eksilmez.</p>
             <div class="witch-office-pool-info-grid">
-              <span><b>1</b> Michael · 100x</span>
+              <span><b>1/300</b> Michael · 100x</span>
               <span><b>3</b> Stanley · 20x</span>
               <span><b>5</b> Dwight · 10x</span>
-              <span><b>15</b> Jim · 5x</span>
-              <span><b>60</b> Kevin · 2x</span>
-              <span><b>116</b> Ödülsüz</span>
+              <span><b>10</b> Jim · 5x</span>
+              <span><b>104</b> Kevin · 2x</span>
+              <span><b>278</b> Ödülsüz</span>
             </div>
-            <small>Havuzdaki 200 bilet bittiğinde sıradaki 200'lük paket otomatik devreye girer.</small>
+            <small>Base havuzdaki 400 bilet bittiğinde sıradaki 400'lük paket otomatik devreye girer. Michael jackpotu paketlerden bağımsızdır.</small>
           </div>
         </div>
         <div class="witch-stat witch-stat-balance">
@@ -386,7 +387,7 @@ export const CADI_KAZAN_MARKUP = `
             <img class="witch-office-card-master" src="${OFFICE_CARD_ART_URL}" alt="" width="1000" height="468" loading="eager" decoding="async" fetchpriority="auto" draggable="false">
           </div>
           <div class="witch-office-card-meta" data-witch-office-meta hidden>
-            <span>HAVUZ <b data-witch-office-pool>—/200</b></span>
+            <span>HAVUZ <b data-witch-office-pool>—/400</b></span>
             <span>BİLET ID <b data-witch-office-ticket-id>—</b></span>
           </div>
 
@@ -702,10 +703,6 @@ export class WitchClient {
       menuToggle?.focus();
     });
 
-    // The Office supports one continuous drag across multiple scratch cells.
-    // The origin cell keeps its native pointer-captured ScratchSurface; every
-    // other Office surface receives the same screen-space pointer path when the
-    // cursor/finger crosses its bounds. Standard and Advanced are untouched.
     this.root.addEventListener("pointerdown", (event) => {
       const round = this.state?.round;
       if (!round || round.mode !== "OFFICE_MATCH_6" || round.status !== "ACTIVE") return;
@@ -721,16 +718,10 @@ export class WitchClient {
       if (this.officeScratchPointerId !== event.pointerId) return;
       const round = this.state?.round;
       if (!round || round.mode !== "OFFICE_MATCH_6" || round.status !== "ACTIVE") return;
-
-      // Pointer capture keeps events routed to the origin canvas, but the
-      // physical pointer can already be over another Office cell. Resolve the
-      // actual screen-space cell once instead of forcing every scratch surface
-      // to measure its DOMRect on every move.
       const hit = document.elementFromPoint(event.clientX, event.clientY);
       const cell = hit?.closest<HTMLButtonElement>("[data-witch-cell]") ?? null;
       const index = cell ? Number(cell.dataset.witchCell) : NaN;
       if (!Number.isInteger(index) || index === this.officeScratchOriginIndex) return;
-
       const surface = this.scratchSurfaces.get(index);
       if (!surface) return;
       const pressure = event.pressure > 0 ? event.pressure : 0.62;
@@ -830,13 +821,11 @@ export class WitchClient {
       if (!response.ok) throw new Error(data.error ?? "Office havuzu yüklenemedi");
       this.officePoolStatus = {
         remaining: Math.max(0, Number(data.remaining) || 0),
-        total: Math.max(1, Number(data.total) || 200),
+        total: Math.max(1, Number(data.total) || OFFICE_POOL_TOTAL),
       };
       this.render();
     } catch {
-      // Pool metadata is informational; never block the scratch game if it
-      // cannot refresh. The next successful Office purchase carries a fresh
-      // server-side remaining count on the round snapshot.
+      // Pool metadata is informational; never block the scratch game if it cannot refresh.
     }
   }
 
@@ -906,37 +895,25 @@ export class WitchClient {
   }
 
   private paintPreparedReveal(button: HTMLButtonElement, round: CadiKazanRound, prepared: CadiKazanPreparedReveal | null) {
-    // The board DOM is rebuilt for every round, so a selected result candidate
-    // can stay sticky for the lifetime of that round. Do not clear it during a
-    // transient render where prepared data is momentarily absent; that was able
-    // to expose a plain white result cell between state updates.
-    if (!prepared || prepared.roundId !== round.id || prepared.cellIndex !== Number(button.dataset.witchCell)) {
-      return;
-    }
-
+    if (!prepared || prepared.roundId !== round.id || prepared.cellIndex !== Number(button.dataset.witchCell)) return;
     const preparedKey = prepared.kind === "OFFICE" ? prepared.symbolId : prepared.kind;
     if (button.dataset.preparedResult !== preparedKey) {
       button.querySelectorAll<HTMLElement>("[data-witch-result-candidate], [data-witch-office-candidate]").forEach((candidate) => {
         candidate.dataset.witchResultActive = "false";
       });
     }
-
     if (prepared.kind === "OFFICE") {
       const candidate = button.querySelector<HTMLElement>(`[data-witch-office-candidate="${prepared.symbolId}"]`);
       if (!candidate) return;
       const symbol = OFFICE_SYMBOL_BY_ID.get(prepared.symbolId);
       const prize = candidate.querySelector<HTMLElement>("[data-witch-office-result-prize]");
       if (symbol && prize) {
-        prize.textContent = formatMoney(
-          Math.floor((round.stakeCents * symbol.multiplierBps) / 100),
-          { compactInteger: true },
-        );
+        prize.textContent = formatMoney(Math.floor((round.stakeCents * symbol.multiplierBps) / 100), { compactInteger: true });
       }
       candidate.dataset.witchResultActive = "true";
       button.dataset.preparedResult = prepared.symbolId;
       return;
     }
-
     const candidate = button.querySelector<HTMLElement>(`[data-witch-result-candidate="${prepared.kind}"]`);
     if (!candidate) return;
     candidate.dataset.witchResultActive = "true";
@@ -947,17 +924,13 @@ export class WitchClient {
     const round = this.state?.round;
     if (!round || round.id !== roundId || round.status !== "ACTIVE") throw new Error("ROUND_CHANGED");
     if (this.preparedReveals.has(cellIndex)) return;
-
     const inFlight = this.preparedRevealRequests.get(cellIndex);
     if (inFlight) return inFlight;
-
     const task = fetchPreparedReveal(roundId, cellIndex)
       .then((prepared) => {
         const current = this.state?.round;
         if (!current || current.id !== roundId || current.status !== "ACTIVE") throw new Error("ROUND_CHANGED");
-        if (prepared.roundId !== roundId || prepared.cellIndex !== cellIndex || prepared.mode !== current.mode) {
-          throw new Error("PREPARED_REVEAL_MISMATCH");
-        }
+        if (prepared.roundId !== roundId || prepared.cellIndex !== cellIndex || prepared.mode !== current.mode) throw new Error("PREPARED_REVEAL_MISMATCH");
         this.preparedReveals.set(cellIndex, prepared);
         const button = this.root.querySelector<HTMLButtonElement>(`[data-witch-cell="${cellIndex}"]`);
         if (button) this.paintPreparedReveal(button, current, prepared);
@@ -965,7 +938,6 @@ export class WitchClient {
       .finally(() => {
         this.preparedRevealRequests.delete(cellIndex);
       });
-
     this.preparedRevealRequests.set(cellIndex, task);
     return task;
   }
@@ -975,29 +947,13 @@ export class WitchClient {
       .catch(() => undefined)
       .then(async () => {
         const before = this.state?.round;
-        if (
-          !before ||
-          before.mode !== "OFFICE_MATCH_6" ||
-          before.status !== "ACTIVE" ||
-          before.revealedCells.includes(cellIndex)
-        ) return;
-
+        if (!before || before.mode !== "OFFICE_MATCH_6" || before.status !== "ACTIVE" || before.revealedCells.includes(cellIndex)) return;
         this.telemetry.recordScratchCommit(cellIndex);
         this.lastRevealInput = "pointer";
         await this.reveal(cellIndex);
-
         const after = this.state?.round;
-        if (
-          after?.id === before.id &&
-          after.status === "ACTIVE" &&
-          !after.revealedCells.includes(cellIndex)
-        ) {
-          throw new Error("REVEAL_NOT_COMMITTED");
-        }
+        if (after?.id === before.id && after.status === "ACTIVE" && !after.revealedCells.includes(cellIndex)) throw new Error("REVEAL_NOT_COMMITTED");
       });
-
-    // Keep the queue usable even if one network mutation fails. The caller
-    // still receives the original task rejection so ScratchSurface can retry.
     this.officeRevealQueue = task.catch(() => undefined);
     return task;
   }
@@ -1114,7 +1070,7 @@ export class WitchClient {
     this.state = nextState;
     const round = nextState.round;
     if (round?.mode === "OFFICE_MATCH_6" && round.officePoolRemaining !== null) {
-      this.officePoolStatus = { remaining: round.officePoolRemaining, total: 200 };
+      this.officePoolStatus = { remaining: round.officePoolRemaining, total: OFFICE_POOL_TOTAL };
     }
     if (round?.id !== this.preparedRevealRoundId) {
       this.preparedRevealRoundId = round?.id ?? null;
@@ -1148,17 +1104,12 @@ export class WitchClient {
     const reducedMotion = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches ?? false;
     const allCells = Array.from({ length: round.cellCount }, (_, index) => index);
     const immediateCells = new Set(round.revealedCells);
-
-    // Every bomb-based card must expose the whole ticket immediately on BUST.
-    // Keep this client-side guarantee in addition to the server snapshot rule so
-    // no scratch canvas can remain over Standard or Advanced terminal results.
     if (round.mode !== "OFFICE_MATCH_6" && round.status === "BUST") {
       allCells.forEach((index) => this.terminalRevealVisibleCells.add(index));
       this.terminalRevealAnimating = false;
       this.render();
       return;
     }
-
     if (!animateTerminal || reducedMotion) {
       allCells.forEach((index) => this.terminalRevealVisibleCells.add(index));
       this.render();
@@ -1208,7 +1159,7 @@ export class WitchClient {
     const officePoolRemaining = round?.mode === "OFFICE_MATCH_6" && round.officePoolRemaining !== null
       ? round.officePoolRemaining
       : this.officePoolStatus?.remaining ?? null;
-    const officePoolTotal = this.officePoolStatus?.total ?? 200;
+    const officePoolTotal = this.officePoolStatus?.total ?? OFFICE_POOL_TOTAL;
     if (officePoolHead) officePoolHead.hidden = visualMode !== "OFFICE_MATCH_6";
     if (officePoolHeadValue) officePoolHeadValue.textContent = officePoolRemaining === null
       ? `—/${officePoolTotal}`
@@ -1294,7 +1245,7 @@ export class WitchClient {
     if (riskLabel) riskLabel.textContent = this.mode === "OFFICE_MATCH_6" ? "KURAL" : "RİSK";
     if (riskNote) {
       if (this.mode === "OFFICE_MATCH_6") {
-        riskNote.textContent = `THE OFFICE / HAVUZ ${officePoolRemaining === null ? "—/200" : `${officePoolRemaining}/${officePoolTotal}`} / 3 AYNI = ÖDÜL`;
+        riskNote.textContent = `THE OFFICE / HAVUZ ${officePoolRemaining === null ? `—/${OFFICE_POOL_TOTAL}` : `${officePoolRemaining}/${officePoolTotal}`} / MICHAEL 1/300 / 3 AYNI = ÖDÜL`;
       } else {
         const selectedBombs = this.mode === "STANDARD" ? "1" : (alarms?.value ?? "1");
         riskNote.textContent = `${this.mode === "STANDARD" ? "STANDARD" : "ADVANCED"} / ${selectedBombs} BOMBA`;
@@ -1317,7 +1268,7 @@ export class WitchClient {
       }
       if (playTitle) {
         playTitle.textContent = showOfficePreview
-          ? "6 alanı kazı. 3 aynı karakteri bul ve ödülü kazan."
+          ? "6 alanı kazı. 3 aynı karakteri bul ve ödülü kazan. Michael jackpot her bilette bağımsız 1/300."
           : showAdvancedPreview
             ? "25 alanlı bileti al, riskini seç ve kazımaya başla."
             : showStandardPreview
@@ -1337,7 +1288,6 @@ export class WitchClient {
             </button>
           `).join("");
         }
-
         const previewStakeDollars = parseStakeDollars(stakeInput?.value ?? "1");
         const previewStakeCents = Math.max(100, Math.round((Number.isFinite(previewStakeDollars) ? previewStakeDollars : 1) * 100));
         const ticketMode = this.root.querySelector<HTMLElement>("[data-witch-ticket-mode]");
@@ -1363,7 +1313,6 @@ export class WitchClient {
             <button type="button" class="witch-cell witch-preview-cell witch-advanced-preview-cell" disabled aria-label="Advanced 25 kapalı kazıma alanı ${index + 1}"></button>
           `).join("");
         }
-
         const previewStakeDollars = parseStakeDollars(stakeInput?.value ?? "1");
         const previewStakeCents = Math.max(100, Math.round((Number.isFinite(previewStakeDollars) ? previewStakeDollars : 1) * 100));
         const previewBombs = Number(alarms?.value ?? "1");
@@ -1393,7 +1342,6 @@ export class WitchClient {
             </button>
           `).join("");
         }
-
         const previewStakeDollars = parseStakeDollars(stakeInput?.value ?? "1");
         const previewStakeCents = Math.max(100, Math.round((Number.isFinite(previewStakeDollars) ? previewStakeDollars : 1) * 100));
         const ticketMode = this.root.querySelector<HTMLElement>("[data-witch-ticket-mode]");
@@ -1413,7 +1361,6 @@ export class WitchClient {
         delete board.dataset.preview;
         delete board.dataset.roundId;
       }
-
       this.updatePayout(null, visualMode);
       return;
     }
@@ -1444,9 +1391,7 @@ export class WitchClient {
     const visibleOfficeSymbols = new Map((round.revealedOfficeCells ?? []).map((cell) => [cell.index, cell.symbolId] as const));
     const officeSymbolCounts = new Map<OfficeMatchSymbolId, number>();
     if (round.mode === "OFFICE_MATCH_6") {
-      for (const symbolId of visibleOfficeSymbols.values()) {
-        officeSymbolCounts.set(symbolId, (officeSymbolCounts.get(symbolId) ?? 0) + 1);
-      }
+      for (const symbolId of visibleOfficeSymbols.values()) officeSymbolCounts.set(symbolId, (officeSymbolCounts.get(symbolId) ?? 0) + 1);
     }
     const winningOfficeSymbolId = round.mode === "OFFICE_MATCH_6" && round.status === "COMPLETED" && round.payoutCents > 0
       ? OFFICE_MATCH_SYMBOLS.find((symbol) => (officeSymbolCounts.get(symbol.id) ?? 0) >= 3)?.id ?? null
@@ -1467,9 +1412,7 @@ export class WitchClient {
       const isTerminallyRevealed = this.terminalRevealRoundId === round.id && this.terminalRevealVisibleCells.has(index);
       const isRevealed = isActuallyRevealed || isTerminallyRevealed;
       const isBomb = round.status !== "ACTIVE" && revealedBombs.has(index) && isRevealed;
-      const officePresentation = round.mode === "OFFICE_MATCH_6"
-        ? officeSymbolPresentation(visibleOfficeSymbols.get(index), isRevealed)
-        : null;
+      const officePresentation = round.mode === "OFFICE_MATCH_6" ? officeSymbolPresentation(visibleOfficeSymbols.get(index), isRevealed) : null;
       const presentation = officePresentation ?? getScratchCellPresentation(round.mode as "STANDARD" | "ADVANCED", isRevealed, isBomb);
       button.disabled = round.status !== "ACTIVE";
       button.dataset.cellState = presentation.resultClass ?? "covered";
@@ -1478,14 +1421,8 @@ export class WitchClient {
       button.classList.toggle("is-bomb", presentation.resultClass === "bomb");
       button.classList.toggle("is-office-cell", round.mode === "OFFICE_MATCH_6");
       button.classList.toggle("is-office-special", Boolean(officePresentation?.special));
-      button.classList.toggle(
-        "is-office-winning-match",
-        round.mode === "OFFICE_MATCH_6" && winningOfficeIndices.has(index),
-      );
-      button.classList.toggle(
-        "is-office-win-dimmed",
-        round.mode === "OFFICE_MATCH_6" && winningOfficeIndices.size === 3 && !winningOfficeIndices.has(index),
-      );
+      button.classList.toggle("is-office-winning-match", round.mode === "OFFICE_MATCH_6" && winningOfficeIndices.has(index));
+      button.classList.toggle("is-office-win-dimmed", round.mode === "OFFICE_MATCH_6" && winningOfficeIndices.size === 3 && !winningOfficeIndices.has(index));
       button.classList.toggle("is-pending", this.pendingRevealCell === index);
       button.classList.toggle("is-terminal-reveal", this.terminalRevealAnimating && isTerminallyRevealed && !isActuallyRevealed);
       button.setAttribute("aria-label", presentation.resultClass ? presentation.label : "Kazınabilir kapalı alan");
@@ -1497,28 +1434,13 @@ export class WitchClient {
               : null;
           })()
         : isRevealed
-          ? {
-              roundId: round.id,
-              cellIndex: index,
-              mode: round.mode,
-              kind: isBomb ? "BOMB" : "SAFE",
-            }
+          ? { roundId: round.id, cellIndex: index, mode: round.mode, kind: isBomb ? "BOMB" : "SAFE" }
           : null;
       const preparedVisual = authoritativePrepared ?? this.preparedReveals.get(index) ?? null;
       this.paintPreparedReveal(button, round, preparedVisual);
-
-      // Authoritative terminal/revealed state gets its own DOM marker. This is
-      // deliberately independent from the prepared-result cache so a BUST
-      // bomb can never render as a white empty cell if a transient render or
-      // candidate flag gets out of sync.
-      if (authoritativePrepared?.kind === "OFFICE") {
-        button.dataset.authoritativeResult = authoritativePrepared.symbolId;
-      } else if (authoritativePrepared) {
-        button.dataset.authoritativeResult = authoritativePrepared.kind;
-      } else {
-        delete button.dataset.authoritativeResult;
-      }
-
+      if (authoritativePrepared?.kind === "OFFICE") button.dataset.authoritativeResult = authoritativePrepared.symbolId;
+      else if (authoritativePrepared) button.dataset.authoritativeResult = authoritativePrepared.kind;
+      else delete button.dataset.authoritativeResult;
       const resultLabel = button.querySelector<HTMLElement>(".witch-cell-result-label");
       if (resultLabel) resultLabel.textContent = presentation.label;
       const layerCanvases = Array.from(button.querySelectorAll<HTMLCanvasElement>(".witch-scratch-layer"));
@@ -1548,12 +1470,10 @@ export class WitchClient {
           },
           onCommit: async () => {
             if (this.state?.round?.revealedCells.includes(index)) return;
-
             if (round.mode === "OFFICE_MATCH_6") {
               await this.queueOfficeReveal(index);
               return;
             }
-
             if (this.pendingRevealCell !== null || this.busy) throw new Error("ROUND_BUSY");
             this.telemetry.recordScratchCommit(index);
             this.lastRevealInput = "pointer";
@@ -1606,7 +1526,7 @@ export class WitchClient {
     if (ticketId) ticketId.textContent = `#${round.id.slice(0, 8).toUpperCase()}`;
     if (riskNote) {
       if (round.mode === "OFFICE_MATCH_6") {
-        riskNote.textContent = `THE OFFICE / HAVUZ ${officePoolRemaining === null ? "—/200" : `${officePoolRemaining}/${officePoolTotal}`} / 3 AYNI = ÖDÜL`;
+        riskNote.textContent = `THE OFFICE / HAVUZ ${officePoolRemaining === null ? `—/${OFFICE_POOL_TOTAL}` : `${officePoolRemaining}/${officePoolTotal}`} / MICHAEL 1/300 / 3 AYNI = ÖDÜL`;
       } else {
         const selectedBombs = this.mode === "STANDARD" ? "1" : (alarms?.value ?? String(round.alarmCount));
         riskNote.textContent = `${this.mode === "STANDARD" ? "STANDARD" : "ADVANCED"} / ${selectedBombs} BOMBA`;
@@ -1644,7 +1564,7 @@ export class WitchClient {
     if (payoutNote) {
       payoutNote.textContent = isOffice
         ? !round
-          ? "3 aynı karakteri bulduğunda ödül otomatik ödenir."
+          ? "3 aynı karakteri bulduğunda ödül otomatik ödenir. Michael jackpot her bilette bağımsız 1/300."
           : round.status === "ACTIVE"
             ? "Cash Out yok. 3 aynı karakteri tamamla."
             : round.payoutCents > 0
