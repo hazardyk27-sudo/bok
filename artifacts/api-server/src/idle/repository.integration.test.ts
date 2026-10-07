@@ -11,6 +11,17 @@ import {
 const enabled =
   process.env.IDLE_DB_INTEGRATION === "1";
 
+async function unlockSeatCapacityForTest(sessionId: string) {
+  const { pool } = await import("@workspace/db");
+  await pool.query(
+    `UPDATE idle_stadium_states
+        SET stadium_level = 2,
+            updated_at = now()
+      WHERE session_id = $1`,
+    [sessionId],
+  );
+}
+
 describe.skipIf(!enabled)(
   "canonical Idle PostgreSQL integration",
   () => {
@@ -90,7 +101,7 @@ describe.skipIf(!enabled)(
         .toBe(100_000);
       expect(body.stadium).toMatchObject({
         stadiumLevel: 1,
-        ownedSeats: 0,
+        ownedSeats: 1_000,
         speedLevel: 1,
         storageLevel: 1,
         storedMicroTickets: 0,
@@ -136,8 +147,16 @@ describe.skipIf(!enabled)(
         stateResponse.headers
           .get("set-cookie")
           ?.split(";")[0];
+      const stateBody = await stateResponse.json() as {
+        sessionId: string;
+      };
 
       expect(cookie).toBeTruthy();
+
+      // Lv1 starts with its full canonical 1,000 free seats. The fixture
+      // unlocks capacity server-side so this test remains focused on the seat
+      // purchase transaction instead of requiring a $5,000 Stadium unlock.
+      await unlockSeatCapacityForTest(stateBody.sessionId);
 
       const idempotencyKey = randomUUID();
       const request = () => fetch(
@@ -175,7 +194,7 @@ describe.skipIf(!enabled)(
         replayed: false,
       });
       expect(firstBody.stadium.ownedSeats)
-        .toBe(10);
+        .toBe(1_010);
 
       const replay = await request();
       expect(replay.status).toBe(200);
@@ -190,7 +209,7 @@ describe.skipIf(!enabled)(
         replayed: true,
       });
       expect(replayBody.stadium.ownedSeats)
-        .toBe(10);
+        .toBe(1_010);
     });
 
     it("keeps the canonical state snapshot internally consistent after a mutation", async () => {
@@ -201,6 +220,11 @@ describe.skipIf(!enabled)(
         stateResponse.headers
           .get("set-cookie")
           ?.split(";")[0];
+      const stateBody = await stateResponse.json() as {
+        sessionId: string;
+      };
+
+      await unlockSeatCapacityForTest(stateBody.sessionId);
 
       const purchase = await fetch(
         `${baseUrl}/api/idle/stadium/seats/buy`,
@@ -235,7 +259,7 @@ describe.skipIf(!enabled)(
       expect(body.wallet.balanceCents)
         .toBe(98_500);
       expect(body.stadium.ownedSeats)
-        .toBe(5);
+        .toBe(1_005);
     });
 
     it("does not expose retired direct-cash mutation endpoints", async () => {
