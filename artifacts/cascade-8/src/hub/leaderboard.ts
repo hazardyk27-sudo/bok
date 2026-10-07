@@ -14,6 +14,10 @@ type HubLeaderboardResponse = {
   entries: HubLeaderboardEntry[];
 };
 
+export type HubLeaderboardController = {
+  setCurrentUsername: (username: string | null) => void;
+};
+
 export const HUB_LEADERBOARD_REFRESH_MS = 15_000;
 
 const LEADERBOARD_MARKUP = `
@@ -78,7 +82,7 @@ const LEADERBOARD_MARKUP = `
             </tr>
           </thead>
           <tbody data-hub-leaderboard-body>
-            <tr>
+            <tr data-state="message">
               <td colspan="5" class="hub-leaderboard-state">
                 Sıralama yükleniyor…
               </td>
@@ -88,7 +92,7 @@ const LEADERBOARD_MARKUP = `
       </div>
 
       <p class="hub-leaderboard-footnote">
-        Tablo açıkken 15 saniyede bir otomatik yenilenir. Sekmeye geri dönüldüğünde anında tekrar kontrol edilir.
+        Tablo ve profil özeti 15 saniyede bir otomatik yenilenir. Sekmeye geri dönüldüğünde anında tekrar kontrol edilir.
       </p>
     </div>
   </section>
@@ -153,7 +157,7 @@ function renderRows(
 ) {
   if (entries.length === 0) {
     body.innerHTML = `
-      <tr>
+      <tr data-state="message">
         <td colspan="5" class="hub-leaderboard-state">
           Henüz sıralanacak kullanıcı yok.
         </td>
@@ -164,19 +168,19 @@ function renderRows(
 
   body.innerHTML = entries.map((entry) => `
     <tr data-rank="${entry.rank}">
-      <td>
+      <td data-label="SIRA">
         <span class="hub-leaderboard-rank">
           ${rankLabel(entry.rank)}
         </span>
       </td>
-      <td>
+      <td data-label="KULLANICI">
         <strong class="hub-leaderboard-user">
           ${escapeHtml(entry.username)}
         </strong>
       </td>
-      <td>${formatMoney(entry.cashCents)}</td>
-      <td>${formatMoney(entry.capitalCents)}</td>
-      <td>
+      <td data-label="NAKİT">${formatMoney(entry.cashCents)}</td>
+      <td data-label="SERMAYE">${formatMoney(entry.capitalCents)}</td>
+      <td data-label="TOPLAM SERVET">
         <strong class="hub-leaderboard-total">
           ${formatMoney(entry.totalWealthCents)}
         </strong>
@@ -185,10 +189,12 @@ function renderRows(
   `).join("");
 }
 
-export function mountHubLeaderboard(app: HTMLElement) {
+export function mountHubLeaderboard(
+  app: HTMLElement,
+): HubLeaderboardController {
   app.insertAdjacentHTML("beforeend", LEADERBOARD_MARKUP);
 
-  const openButton = app.querySelector<HTMLButtonElement>(
+  const openButton = app.querySelector<HTMLElement>(
     "[data-hub-open-leaderboard]",
   );
   const drawer = app.querySelector<HTMLElement>(
@@ -206,6 +212,18 @@ export function mountHubLeaderboard(app: HTMLElement) {
   const refreshButton = app.querySelector<HTMLButtonElement>(
     "[data-hub-refresh-leaderboard]",
   );
+  const profileRank = app.querySelector<HTMLElement>(
+    "[data-hub-profile-rank]",
+  );
+  const profileCash = app.querySelector<HTMLElement>(
+    "[data-hub-profile-cash]",
+  );
+  const profileCapital = app.querySelector<HTMLElement>(
+    "[data-hub-profile-capital]",
+  );
+  const profileTotal = app.querySelector<HTMLElement>(
+    "[data-hub-profile-wealth-total]",
+  );
 
   if (
     !openButton
@@ -214,12 +232,43 @@ export function mountHubLeaderboard(app: HTMLElement) {
     || !count
     || !updated
     || !refreshButton
+    || !profileRank
+    || !profileCash
+    || !profileCapital
+    || !profileTotal
   ) {
     throw new Error("HUB_LEADERBOARD_SHELL_MISSING");
   }
 
   let loading = false;
   let refreshTimer: number | null = null;
+  let currentUsername: string | null = null;
+  let lastResponse: HubLeaderboardResponse | null = null;
+
+  const renderProfileSummary = (
+    response: HubLeaderboardResponse | null,
+  ) => {
+    const entry = currentUsername && response
+      ? response.entries.find(
+        (candidate) =>
+          candidate.username.toLocaleLowerCase("tr-TR")
+          === currentUsername!.toLocaleLowerCase("tr-TR"),
+      ) ?? null
+      : null;
+
+    if (!entry) {
+      profileRank.textContent = "—";
+      profileCash.textContent = "—";
+      profileCapital.textContent = "—";
+      profileTotal.textContent = "—";
+      return;
+    }
+
+    profileRank.textContent = `#${entry.rank}`;
+    profileCash.textContent = formatMoney(entry.cashCents);
+    profileCapital.textContent = formatMoney(entry.capitalCents);
+    profileTotal.textContent = formatMoney(entry.totalWealthCents);
+  };
 
   const load = async () => {
     if (loading) return;
@@ -228,21 +277,25 @@ export function mountHubLeaderboard(app: HTMLElement) {
 
     try {
       const response = await fetchHubLeaderboard();
+      lastResponse = response;
       count.textContent = response.totalPlayers.toLocaleString("tr-TR");
       updated.textContent = formatUpdatedAt(response.serverTime);
       renderRows(body, response.entries);
+      renderProfileSummary(response);
     } catch (error) {
-      body.innerHTML = `
-        <tr>
-          <td colspan="5" class="hub-leaderboard-state hub-leaderboard-state--error">
-            ${escapeHtml(
-              error instanceof Error
-                ? error.message
-                : "LEADERBOARD_REQUEST_FAILED",
-            )}
-          </td>
-        </tr>
-      `;
+      if (!lastResponse) {
+        body.innerHTML = `
+          <tr data-state="message">
+            <td colspan="5" class="hub-leaderboard-state hub-leaderboard-state--error">
+              ${escapeHtml(
+                error instanceof Error
+                  ? error.message
+                  : "LEADERBOARD_REQUEST_FAILED",
+              )}
+            </td>
+          </tr>
+        `;
+      }
     } finally {
       loading = false;
       refreshButton.disabled = false;
@@ -259,10 +312,7 @@ export function mountHubLeaderboard(app: HTMLElement) {
   const startRefreshTimer = () => {
     stopRefreshTimer();
     refreshTimer = window.setInterval(() => {
-      if (
-        !drawer.hidden
-        && document.visibilityState === "visible"
-      ) {
+      if (document.visibilityState === "visible") {
         void load();
       }
     }, HUB_LEADERBOARD_REFRESH_MS);
@@ -270,6 +320,10 @@ export function mountHubLeaderboard(app: HTMLElement) {
 
   const setOpen = (open: boolean) => {
     drawer.hidden = !open;
+    openButton.setAttribute(
+      "aria-expanded",
+      open ? "true" : "false",
+    );
     document.body.classList.toggle(
       "hub-leaderboard-lock",
       open,
@@ -277,13 +331,21 @@ export function mountHubLeaderboard(app: HTMLElement) {
 
     if (open) {
       void load();
-      startRefreshTimer();
-    } else {
-      stopRefreshTimer();
     }
   };
 
-  openButton.addEventListener("click", () => setOpen(true));
+  const openLeaderboard = (event: Event) => {
+    event.preventDefault();
+    event.stopPropagation();
+    setOpen(true);
+  };
+
+  openButton.addEventListener("click", openLeaderboard);
+  openButton.addEventListener("keydown", (event) => {
+    if (event.key === "Enter" || event.key === " ") {
+      openLeaderboard(event);
+    }
+  });
   refreshButton.addEventListener("click", () => void load());
 
   app
@@ -293,10 +355,7 @@ export function mountHubLeaderboard(app: HTMLElement) {
     });
 
   const handleVisibility = () => {
-    if (
-      document.visibilityState === "visible"
-      && !drawer.hidden
-    ) {
+    if (document.visibilityState === "visible") {
       void load();
     }
   };
@@ -310,6 +369,9 @@ export function mountHubLeaderboard(app: HTMLElement) {
   document.addEventListener("visibilitychange", handleVisibility);
   document.addEventListener("keydown", handleKeydown);
 
+  void load();
+  startRefreshTimer();
+
   window.addEventListener(
     "pagehide",
     () => {
@@ -322,4 +384,14 @@ export function mountHubLeaderboard(app: HTMLElement) {
     },
     { once: true },
   );
+
+  return {
+    setCurrentUsername(username) {
+      currentUsername = username;
+      renderProfileSummary(lastResponse);
+      if (!lastResponse) {
+        void load();
+      }
+    },
+  };
 }
