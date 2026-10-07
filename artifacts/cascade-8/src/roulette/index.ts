@@ -5,10 +5,6 @@ import { installRouletteChipVisuals } from "./chipVisual";
 import { installRouletteBetAuthority } from "./betAuthority";
 import { installRouletteChipDragV6 } from "./chipDragV6";
 import { installRouletteNetworkGuard } from "./rouletteNetworkGuard";
-import {
-  installRouletteOptimisticBalanceBridge,
-  installRouletteOptimisticBalanceUi,
-} from "./optimisticBalanceUi";
 import "./verification.css";
 import "./chipFeedback.css";
 import "./chipVisual.css";
@@ -18,20 +14,17 @@ import "./settingsMenu.css";
 
 export function mountRoulette(app: HTMLDivElement) {
   installRouletteNetworkGuard();
-  installRouletteOptimisticBalanceBridge();
 
-  // Transitional single-state rebuild: authority is now only a network/revision
-  // guard. It no longer renders chips or observes DOM mutations.
+  // One state authority owns wager topology and serializes every server write.
+  // It never renders DOM; runtime is the only persistent chip renderer.
   installRouletteBetAuthority(app);
 
   mountRouletteRuntime(app);
-  installRouletteOptimisticBalanceUi(app);
   installRouletteBetVerificationUi(app);
   installRouletteChipFeedbackV2(app);
   installRouletteChipVisuals(app);
 
-  // V6 remains temporarily as the input gesture layer. The old latest-writer
-  // and Element.prototype reuse hooks are intentionally not mounted because
-  // they created competing DOM/state ownership and microtask churn.
+  // Drag is input-only: one optimistic render at drop, then one serialized
+  // authority write. No polling loop, DOM protector, or secondary writer.
   installRouletteChipDragV6(app);
 }
