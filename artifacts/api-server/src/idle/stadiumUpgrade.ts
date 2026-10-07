@@ -92,6 +92,17 @@ function assertUpgradeReplay(
   return targetLevel as StadiumLevel;
 }
 
+/**
+ * Unlocks exactly the next Stadium capacity level.
+ *
+ * Lv1 is the free baseline created with the canonical Stadium row, so this
+ * action only advances Lv1→Lv2 through Lv9→Lv10. The server derives the next
+ * level and price from canonical config; the client cannot choose a target
+ * level or submit a price.
+ *
+ * Owned seats are intentionally NOT inspected as an unlock prerequisite.
+ * Players may unlock the next Stadium level before filling current capacity.
+ */
 export async function upgradeStadiumLevel(
   sessionId: string,
   idempotencyKey: string,
