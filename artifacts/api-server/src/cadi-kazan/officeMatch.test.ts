@@ -26,30 +26,30 @@ function counts(values: string[]) {
   }, {});
 }
 
-describe("The Office 200-ticket pool engine", () => {
-  it("locks the approved 200-ticket prize distribution", () => {
-    expect(OFFICE_POOL_SIZE).toBe(200);
+describe("The Office 400-ticket pool engine", () => {
+  it("locks the approved 400-ticket prize distribution", () => {
+    expect(OFFICE_POOL_SIZE).toBe(400);
     expect(OFFICE_POOL_DISTRIBUTION).toEqual([
       { symbolId: "MICHAEL", count: 1, multiplierBps: 10_000 },
       { symbolId: "STANLEY", count: 3, multiplierBps: 2_000 },
       { symbolId: "DWIGHT", count: 5, multiplierBps: 1_000 },
-      { symbolId: "JIM", count: 15, multiplierBps: 500 },
-      { symbolId: "KEVIN", count: 60, multiplierBps: 200 },
-      { symbolId: null, count: 116, multiplierBps: 0 },
+      { symbolId: "JIM", count: 18, multiplierBps: 500 },
+      { symbolId: "KEVIN", count: 100, multiplierBps: 200 },
+      { symbolId: null, count: 273, multiplierBps: 0 },
     ]);
-    expect(OFFICE_POOL_DISTRIBUTION.reduce((sum, entry) => sum + entry.count, 0)).toBe(200);
+    expect(OFFICE_POOL_DISTRIBUTION.reduce((sum, entry) => sum + entry.count, 0)).toBe(400);
   });
 
   it("locks Michael visual frequency separately from prize odds", () => {
     expect(OFFICE_MICHAEL_TEASE_DISTRIBUTION).toEqual([
-      { michaelCount: 2, count: 4 },
-      { michaelCount: 1, count: 24 },
-      { michaelCount: 0, count: 171 },
+      { michaelCount: 2, count: 9 },
+      { michaelCount: 1, count: 48 },
+      { michaelCount: 0, count: 342 },
     ]);
-    expect(OFFICE_MICHAEL_TEASE_DISTRIBUTION.reduce((sum, entry) => sum + entry.count, 0)).toBe(199);
+    expect(OFFICE_MICHAEL_TEASE_DISTRIBUTION.reduce((sum, entry) => sum + entry.count, 0)).toBe(399);
   });
 
-  it("locks the approved 202.5% pool RTP and 42% hit rate", () => {
+  it("locks exactly 500x return from 400 stakes: 125% pool RTP and 31.75% hit rate", () => {
     const totalReturnBps = OFFICE_POOL_DISTRIBUTION.reduce(
       (sum, entry) => sum + entry.count * entry.multiplierBps,
       0,
@@ -58,15 +58,15 @@ describe("The Office 200-ticket pool engine", () => {
       .filter((entry) => entry.symbolId !== null)
       .reduce((sum, entry) => sum + entry.count, 0);
 
-    expect(totalReturnBps).toBe(40_500);
-    expect(totalReturnBps / OFFICE_POOL_SIZE).toBe(202.5);
-    expect(winningTickets).toBe(84);
-    expect(winningTickets / OFFICE_POOL_SIZE).toBe(0.42);
+    expect(totalReturnBps).toBe(50_000);
+    expect(totalReturnBps / OFFICE_POOL_SIZE).toBe(125);
+    expect(winningTickets).toBe(127);
+    expect(winningTickets / OFFICE_POOL_SIZE).toBe(0.3175);
   });
 
-  it("prepares exactly 200 complete cards with exact prize and Michael-visibility contracts", () => {
+  it("prepares exactly 400 complete cards with exact prize and Michael-visibility contracts", () => {
     const tickets = createOfficePoolTickets(sequenceRandom([7, 3, 19, 2, 41, 5, 11, 23, 31]));
-    expect(tickets).toHaveLength(200);
+    expect(tickets).toHaveLength(400);
 
     const outcomeCounts = {
       KEVIN: 0,
@@ -102,22 +102,22 @@ describe("The Office 200-ticket pool engine", () => {
     }
 
     expect(outcomeCounts).toEqual({
-      KEVIN: 60,
-      JIM: 15,
+      KEVIN: 100,
+      JIM: 18,
       DWIGHT: 5,
       STANLEY: 3,
       MICHAEL: 1,
-      LOSS: 116,
+      LOSS: 273,
     });
 
     expect(michaelCardHistogram).toEqual({
-      0: 171,
-      1: 24,
-      2: 4,
+      0: 342,
+      1: 48,
+      2: 9,
       3: 1,
     });
-    expect(tickets.filter((ticket) => ticket.cells.includes("MICHAEL"))).toHaveLength(29);
-    expect(tickets.reduce((sum, ticket) => sum + (counts(ticket.cells).MICHAEL ?? 0), 0)).toBe(35);
+    expect(tickets.filter((ticket) => ticket.cells.includes("MICHAEL"))).toHaveLength(58);
+    expect(tickets.reduce((sum, ticket) => sum + (counts(ticket.cells).MICHAEL ?? 0), 0)).toBe(69);
     expect(tickets.filter((ticket) => (counts(ticket.cells).MICHAEL ?? 0) === 3)).toHaveLength(1);
     expect(tickets.find((ticket) => (counts(ticket.cells).MICHAEL ?? 0) === 3)?.outcome).toEqual({
       kind: "WIN",
