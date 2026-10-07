@@ -2,6 +2,9 @@ import {
   ROULETTE_CHIP_VALUES,
 } from "./betState";
 import {
+  getRouletteChipTier,
+} from "./chipVisual";
+import {
   formatRouletteAmount,
 } from "./uiFormat";
 
@@ -191,10 +194,11 @@ export function mirrorRoulettePlacedChipFromSource(
   chip.dataset.chipFaceSourceValue =
     String(sourceValue);
 
-  const sourceTier = source.dataset.chipTier;
-  if (sourceTier) {
-    chip.dataset.chipTier = sourceTier;
-  }
+  // Aggregate tier describes the wager amount. The visual face is a separate
+  // invariant and is copied from the denomination that originally created the
+  // chip. Example: a $10 white chip doubled to $160 stays visually white while
+  // its aggregate metadata tier becomes green.
+  chip.dataset.chipTier = getRouletteChipTier(amount);
 
   for (const variable of FACE_VARIABLES) {
     const value = sourceStyle.getPropertyValue(variable);
