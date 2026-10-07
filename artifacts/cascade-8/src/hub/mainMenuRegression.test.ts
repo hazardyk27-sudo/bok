@@ -20,7 +20,7 @@ const leaderboardCss = readFileSync(
 const menuSource = hubSource;
 
 describe("main menu regression", () => {
-  it("keeps four games and integrates wealth ranking into Profile", () => {
+  it("keeps four games and only a ranking CTA inside Profile", () => {
     expect(menuSource).toContain('class="game-choice game-choice-slot" href="/slot"');
     expect(menuSource).toContain('class="game-choice game-choice-roulette" href="/roulette"');
     expect(menuSource).toContain('class="game-choice game-choice-witch" href="/cadi-kazan"');
@@ -29,12 +29,13 @@ describe("main menu regression", () => {
 
     expect(menuSource.match(/class="game-choice game-choice-/g)).toHaveLength(5);
     expect(menuSource).not.toContain("game-choice-leaderboard");
-    expect(menuSource).toContain("hub-profile-wealth");
+    expect(menuSource).toContain("hub-profile-ranking-cta");
     expect(menuSource).toContain("data-hub-open-leaderboard");
-    expect(menuSource).toContain("data-hub-profile-rank");
-    expect(menuSource).toContain("data-hub-profile-cash");
-    expect(menuSource).toContain("data-hub-profile-capital");
-    expect(menuSource).toContain("data-hub-profile-wealth-total");
+    expect(menuSource).toContain("SERVET SIRALAMASINI GÖR");
+    expect(menuSource).not.toContain("data-hub-profile-rank");
+    expect(menuSource).not.toContain("data-hub-profile-cash");
+    expect(menuSource).not.toContain("data-hub-profile-capital");
+    expect(menuSource).not.toContain("data-hub-profile-wealth-total");
     expect(menuSource).toContain("ONE LOUNGE · FOUR WORLDS · ONE PROFILE");
   });
 
@@ -53,18 +54,17 @@ describe("main menu regression", () => {
     expect(menuSource).toContain("<strong>İŞLETMELER</strong>");
   });
 
-  it("hydrates Profile and binds the logged-in username to wealth summary", () => {
+  it("hydrates Profile without binding leaderboard summary data into the card", () => {
     expect(menuSource).toContain('fetch("/api/auth/me"');
     expect(menuSource).toContain('credentials: "same-origin"');
     expect(menuSource).toContain("data-hub-profile-name");
     expect(menuSource).toContain("user.userCode");
     expect(menuSource).toContain("user.balanceCents");
-    expect(menuSource).toContain(
-      "leaderboard.setCurrentUsername(user?.username ?? null)",
-    );
+    expect(menuSource).not.toContain("setCurrentUsername");
+    expect(leaderboardSource).not.toContain("renderProfileSummary");
   });
 
-  it("refreshes the Profile wealth summary and leaderboard from one authority", () => {
+  it("loads and refreshes leaderboard only while the ranking panel is open", () => {
     expect(hubSource).toContain(
       'import { mountHubLeaderboard } from "./leaderboard"',
     );
@@ -75,14 +75,17 @@ describe("main menu regression", () => {
     expect(leaderboardSource).toContain(
       "export const HUB_LEADERBOARD_REFRESH_MS = 15_000",
     );
-    expect(leaderboardSource).toContain("renderProfileSummary(response)");
-    expect(leaderboardSource).toContain("window.setInterval");
+    expect(leaderboardSource).toContain("startRefreshTimer();");
+    expect(leaderboardSource).toContain("stopRefreshTimer();");
     expect(leaderboardSource).toContain(
-      'document.visibilityState === "visible"',
+      '!drawer.hidden && document.visibilityState === "visible"',
     );
+    expect(leaderboardSource).not.toContain("void load();\n  startRefreshTimer();");
   });
 
-  it("stacks mobile ranking rows without horizontal table scrolling", () => {
+  it("keeps a mobile-safe ranking button and stacked rows", () => {
+    expect(leaderboardCss).toContain(".hub-profile-ranking-cta");
+    expect(leaderboardCss).toContain("min-height: 44px");
     expect(leaderboardSource).toContain('data-label="NAKİT"');
     expect(leaderboardSource).toContain('data-label="SERMAYE"');
     expect(leaderboardSource).toContain('data-label="TOPLAM SERVET"');
@@ -91,7 +94,6 @@ describe("main menu regression", () => {
     expect(leaderboardCss).toContain(".hub-leaderboard-table thead");
     expect(leaderboardCss).toContain("display: none;");
     expect(leaderboardCss).toContain("content: attr(data-label)");
-    expect(leaderboardCss).toContain("min-width: 0");
   });
 
   it("keeps the Hub mount isolated from game runtime code", () => {
