@@ -4,6 +4,7 @@ import {
   createRouletteVirtualBet,
   rebaseRouletteMutationOntoVirtualState,
   syncRouletteLatestVisibleState,
+  writeRouletteMutationWithRevisionRetry,
 } from "./chipDragLatestWriter";
 import type {
   RouletteGlobalBetSnapshot,
@@ -153,5 +154,86 @@ describe("roulette latest dragged position writer", () => {
     );
 
     expect(rebased).toEqual(incoming);
+  });
+
+  it("uses the drag writer actual revision instead of a stale runtime revision", async () => {
+    const bets = [{ betId: "high", amount: 20 }];
+    const writeActual = vi.fn(async (
+      nextBets: readonly { betId: string; amount: number }[],
+      expectedRevision: number,
+    ): Promise<RouletteGlobalBetUpdateResponse> => ({
+      globalBet: {
+        ...snapshot("high", expectedRevision + 1),
+        bets: nextBets.map((bet) => ({ ...bet })),
+        stakeCents: 2_000,
+        revision: expectedRevision + 1,
+      },
+      balanceCents: 98_000,
+    }));
+    const refreshActual = vi.fn(async () => ({
+      globalBet: snapshot("high", 2),
+      balanceCents: 99_000,
+    }));
+
+    const result = await writeRouletteMutationWithRevisionRetry({
+      roundId: "round-1",
+      bets,
+      expectedRevision: 1,
+      knownActualRevision: 2,
+      refreshActual,
+      writeActual,
+    });
+
+    expect(writeActual).toHaveBeenCalledTimes(1);
+    expect(writeActual.mock.calls[0]?.[0]).toEqual(bets);
+    expect(writeActual.mock.calls[0]?.[1]).toBe(2);
+    expect(refreshActual).not.toHaveBeenCalled();
+    expect(result.globalBet?.bets).toEqual(bets);
+    expect(result.globalBet?.revision).toBe(3);
+  });
+
+  it("refreshes and retries the same final x2 state when revision races again", async () => {
+    const bets = [{ betId: "high", amount: 40 }];
+    const writeActual = vi
+      .fn<(
+        nextBets: readonly { betId: string; amount: number }[],
+        expectedRevision: number,
+      ) => Promise<RouletteGlobalBetUpdateResponse>>()
+      .mockRejectedValueOnce(new Error("ROULETTE_GLOBAL_BET_STALE"))
+      .mockImplementationOnce(async (nextBets, expectedRevision) => ({
+        globalBet: {
+          ...snapshot("high", expectedRevision + 1),
+          bets: nextBets.map((bet) => ({ ...bet })),
+          stakeCents: 4_000,
+          revision: expectedRevision + 1,
+        },
+        balanceCents: 96_000,
+      }));
+    const refreshActual = vi.fn(async () => ({
+      globalBet: {
+        ...snapshot("high", 3),
+        bets: [{ betId: "high", amount: 20 }],
+        stakeCents: 2_000,
+        revision: 3,
+      },
+      balanceCents: 98_000,
+    }));
+
+    const result = await writeRouletteMutationWithRevisionRetry({
+      roundId: "round-1",
+      bets,
+      expectedRevision: 1,
+      knownActualRevision: 2,
+      refreshActual,
+      writeActual,
+    });
+
+    expect(writeActual).toHaveBeenCalledTimes(2);
+    expect(writeActual.mock.calls[0]?.[1]).toBe(2);
+    expect(writeActual.mock.calls[1]?.[0]).toEqual(bets);
+    expect(writeActual.mock.calls[1]?.[1]).toBe(3);
+    expect(refreshActual).toHaveBeenCalledTimes(1);
+    expect(result.globalBet?.bets).toEqual(bets);
+    expect(result.globalBet?.revision).toBe(4);
   });
 });

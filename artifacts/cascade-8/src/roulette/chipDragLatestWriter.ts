@@ -39,6 +39,18 @@ type SyncLatestOptions = {
   maxAttempts?: number;
 };
 
+type MutationWriteOptions = {
+  roundId: string;
+  bets: readonly RouletteBetPlacement[];
+  expectedRevision: number;
+  knownActualRevision?: number | null;
+  refreshActual: () => Promise<ActualSnapshot>;
+  writeActual: (
+    bets: readonly RouletteBetPlacement[],
+    expectedRevision: number,
+  ) => Promise<RouletteGlobalBetUpdateResponse>;
+};
+
 let installed = false;
 let mountedApp: HTMLDivElement | null = null;
 let writerState: WriterState | null = null;
@@ -131,6 +143,38 @@ export function rebaseRouletteMutationOntoVirtualState(
   }
 
   return rebased;
+}
+
+export async function writeRouletteMutationWithRevisionRetry({
+  roundId,
+  bets,
+  expectedRevision,
+  knownActualRevision,
+  refreshActual,
+  writeActual,
+}: MutationWriteOptions) {
+  const firstRevision = Math.max(
+    expectedRevision,
+    Number.isSafeInteger(knownActualRevision)
+      ? (knownActualRevision as number)
+      : 0,
+  );
+
+  try {
+    return await writeActual(bets, firstRevision);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "";
+    if (message !== "ROULETTE_GLOBAL_BET_STALE") {
+      throw error;
+    }
+  }
+
+  const fresh = await refreshActual();
+  if (!fresh.globalBet || fresh.globalBet.roundId !== roundId) {
+    throw new Error("ROULETTE_GLOBAL_BET_UNAVAILABLE");
+  }
+
+  return writeActual(bets, fresh.globalBet.revision);
 }
 
 export function readRouletteVisibleBets(
@@ -306,13 +350,41 @@ export function installRouletteChipDragLatestWriter(app: HTMLDivElement) {
             )
           : cloneBets(bets);
 
-      const response = await originalUpdate.call(
-        this,
+      const refreshActual = async (): Promise<ActualSnapshot> => {
+        const bootstrap = await originalBootstrap.call(this);
+        lastActualBootstraps.set(this, bootstrap);
+        if (state) {
+          state.actualBet = bootstrap.globalBet
+            ? cloneGlobalBet(bootstrap.globalBet)
+            : null;
+          state.balanceCents = bootstrap.wallet.balanceCents;
+        }
+        return {
+          globalBet: bootstrap.globalBet
+            ? cloneGlobalBet(bootstrap.globalBet)
+            : null,
+          balanceCents: bootstrap.wallet.balanceCents,
+        };
+      };
+
+      const response = await writeRouletteMutationWithRevisionRetry({
         roundId,
-        rebasedBets,
-        idempotencyKey,
+        bets: rebasedBets,
         expectedRevision,
-      );
+        knownActualRevision:
+          state?.actualBet?.roundId === roundId
+            ? state.actualBet.revision
+            : null,
+        refreshActual,
+        writeActual: (nextBets, actualRevision) =>
+          originalUpdate.call(
+            this,
+            roundId,
+            nextBets,
+            idempotencyKey,
+            actualRevision,
+          ),
+      });
 
       if (
         state &&
