@@ -2,11 +2,14 @@ import { describe, expect, it } from "vitest";
 import {
   OFFICE_MATCH_CELL_COUNT,
   OFFICE_MATCH_SYMBOLS,
+  OFFICE_MICHAEL_JACKPOT_ODDS,
   OFFICE_MICHAEL_TEASE_DISTRIBUTION,
   OFFICE_POOL_DISTRIBUTION,
   OFFICE_POOL_SIZE,
   createOfficeMatchBoard,
+  createOfficeMichaelJackpotBoard,
   createOfficePoolTickets,
+  drawOfficeMichaelJackpot,
   resolveOfficeMatchReveal,
 } from "./officeMatch";
 
@@ -26,30 +29,21 @@ function counts(values: string[]) {
   }, {});
 }
 
-describe("The Office 400-ticket pool engine", () => {
-  it("locks the approved 400-ticket prize distribution", () => {
+describe("The Office 400-ticket base pool + Michael overlay", () => {
+  it("locks the approved 400-ticket base distribution with Michael excluded", () => {
     expect(OFFICE_POOL_SIZE).toBe(400);
     expect(OFFICE_POOL_DISTRIBUTION).toEqual([
-      { symbolId: "MICHAEL", count: 1, multiplierBps: 10_000 },
       { symbolId: "STANLEY", count: 3, multiplierBps: 2_000 },
       { symbolId: "DWIGHT", count: 5, multiplierBps: 1_000 },
       { symbolId: "JIM", count: 10, multiplierBps: 500 },
-      { symbolId: "KEVIN", count: 120, multiplierBps: 200 },
-      { symbolId: null, count: 261, multiplierBps: 0 },
+      { symbolId: "KEVIN", count: 104, multiplierBps: 200 },
+      { symbolId: null, count: 278, multiplierBps: 0 },
     ]);
     expect(OFFICE_POOL_DISTRIBUTION.reduce((sum, entry) => sum + entry.count, 0)).toBe(400);
+    expect(OFFICE_POOL_DISTRIBUTION.some((entry) => entry.symbolId === "MICHAEL")).toBe(false);
   });
 
-  it("locks Michael visual frequency separately from prize odds", () => {
-    expect(OFFICE_MICHAEL_TEASE_DISTRIBUTION).toEqual([
-      { michaelCount: 2, count: 9 },
-      { michaelCount: 1, count: 48 },
-      { michaelCount: 0, count: 342 },
-    ]);
-    expect(OFFICE_MICHAEL_TEASE_DISTRIBUTION.reduce((sum, entry) => sum + entry.count, 0)).toBe(399);
-  });
-
-  it("locks exactly 500x return from 400 stakes: 125% pool RTP and 34.75% hit rate", () => {
+  it("locks the base pool at 92% RTP", () => {
     const totalReturnBps = OFFICE_POOL_DISTRIBUTION.reduce(
       (sum, entry) => sum + entry.count * entry.multiplierBps,
       0,
@@ -58,13 +52,36 @@ describe("The Office 400-ticket pool engine", () => {
       .filter((entry) => entry.symbolId !== null)
       .reduce((sum, entry) => sum + entry.count, 0);
 
-    expect(totalReturnBps).toBe(50_000);
-    expect(totalReturnBps / OFFICE_POOL_SIZE).toBe(125);
-    expect(winningTickets).toBe(139);
-    expect(winningTickets / OFFICE_POOL_SIZE).toBe(0.3475);
+    expect(totalReturnBps).toBe(36_800);
+    expect(totalReturnBps / OFFICE_POOL_SIZE).toBe(92);
+    expect(winningTickets).toBe(122);
+    expect(winningTickets / OFFICE_POOL_SIZE).toBe(0.305);
   });
 
-  it("prepares exactly 400 complete cards with exact prize and Michael-visibility contracts", () => {
+  it("locks Michael at an independent 1-in-300 jackpot draw", () => {
+    expect(OFFICE_MICHAEL_JACKPOT_ODDS).toBe(300);
+    expect(drawOfficeMichaelJackpot(sequenceRandom([0]))).toBe(true);
+    expect(drawOfficeMichaelJackpot(sequenceRandom([1]))).toBe(false);
+    expect(drawOfficeMichaelJackpot(sequenceRandom([299]))).toBe(false);
+  });
+
+  it("keeps combined expected RTP at about 125.03%", () => {
+    const baseRtp = 0.92;
+    const jackpotProbability = 1 / OFFICE_MICHAEL_JACKPOT_ODDS;
+    const expectedReturn = jackpotProbability * 100 + (1 - jackpotProbability) * baseRtp;
+    expect(expectedReturn * 100).toBeCloseTo(125.0266666667, 8);
+  });
+
+  it("locks Michael teaser visibility separately from both base prizes and jackpot odds", () => {
+    expect(OFFICE_MICHAEL_TEASE_DISTRIBUTION).toEqual([
+      { michaelCount: 2, count: 9 },
+      { michaelCount: 1, count: 48 },
+      { michaelCount: 0, count: 343 },
+    ]);
+    expect(OFFICE_MICHAEL_TEASE_DISTRIBUTION.reduce((sum, entry) => sum + entry.count, 0)).toBe(400);
+  });
+
+  it("prepares exactly 400 base cards with no hidden Michael jackpot", () => {
     const tickets = createOfficePoolTickets(sequenceRandom([7, 3, 19, 2, 41, 5, 11, 23, 31]));
     expect(tickets).toHaveLength(400);
 
@@ -102,28 +119,28 @@ describe("The Office 400-ticket pool engine", () => {
     }
 
     expect(outcomeCounts).toEqual({
-      KEVIN: 120,
+      KEVIN: 104,
       JIM: 10,
       DWIGHT: 5,
       STANLEY: 3,
-      MICHAEL: 1,
-      LOSS: 261,
+      MICHAEL: 0,
+      LOSS: 278,
     });
-
     expect(michaelCardHistogram).toEqual({
-      0: 342,
+      0: 343,
       1: 48,
       2: 9,
-      3: 1,
+      3: 0,
     });
-    expect(tickets.filter((ticket) => ticket.cells.includes("MICHAEL"))).toHaveLength(58);
-    expect(tickets.reduce((sum, ticket) => sum + (counts(ticket.cells).MICHAEL ?? 0), 0)).toBe(69);
-    expect(tickets.filter((ticket) => (counts(ticket.cells).MICHAEL ?? 0) === 3)).toHaveLength(1);
-    expect(tickets.find((ticket) => (counts(ticket.cells).MICHAEL ?? 0) === 3)?.outcome).toEqual({
-      kind: "WIN",
-      symbolId: "MICHAEL",
-      multiplierBps: 10_000,
-    });
+    expect(tickets.filter((ticket) => (counts(ticket.cells).MICHAEL ?? 0) === 3)).toHaveLength(0);
+  });
+
+  it("builds the independent jackpot as exactly three Michael symbols", () => {
+    const board = createOfficeMichaelJackpotBoard(sequenceRandom([3, 1, 7, 2, 5, 0, 11]));
+    const resultCounts = counts(board);
+    expect(board).toHaveLength(OFFICE_MATCH_CELL_COUNT);
+    expect(resultCounts.MICHAEL).toBe(3);
+    expect(Object.entries(resultCounts).filter(([, count]) => count === 3)).toEqual([["MICHAEL", 3]]);
   });
 
   it.each(OFFICE_MATCH_SYMBOLS)("builds a six-cell $id win with exactly three matching symbols and no second triple", (symbol) => {
@@ -169,18 +186,6 @@ describe("The Office 400-ticket pool engine", () => {
         expect(resultCounts.MICHAEL).toBe(michaelTeaseCount);
         expect(Math.max(...Object.values(resultCounts))).toBeLessThanOrEqual(2);
       }
-    }
-  });
-
-  it("keeps default loss-board generation below three matches", () => {
-    for (let seed = 0; seed < 100; seed += 1) {
-      const board = createOfficeMatchBoard(
-        { kind: "LOSS", multiplierBps: 0, symbolId: null },
-        sequenceRandom([seed, seed + 3, seed + 7, seed + 11, seed + 17, seed + 23, seed + 31, seed + 41, seed + 53]),
-      );
-      expect(board).toHaveLength(OFFICE_MATCH_CELL_COUNT);
-      expect(Math.max(...Object.values(counts(board)))).toBeLessThanOrEqual(2);
-      expect(board).not.toContain("MICHAEL");
     }
   });
 
