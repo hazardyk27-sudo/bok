@@ -42,6 +42,58 @@ export function getRouletteGlobalStakeCents(
   return stakeCents;
 }
 
+export function alignRouletteRequestReceivedAtToDatabaseClock(input: {
+  requestReceivedAtMs: number;
+  databaseSampleMs: number;
+  sampleStartedAtMs: number;
+  sampleFinishedAtMs: number;
+}) {
+  const {
+    requestReceivedAtMs,
+    databaseSampleMs,
+    sampleStartedAtMs,
+    sampleFinishedAtMs,
+  } = input;
+
+  if (
+    !Number.isFinite(requestReceivedAtMs) ||
+    !Number.isFinite(databaseSampleMs) ||
+    !Number.isFinite(sampleStartedAtMs) ||
+    !Number.isFinite(sampleFinishedAtMs) ||
+    sampleFinishedAtMs < sampleStartedAtMs
+  ) {
+    throw new Error(
+      "INVALID_ROULETTE_GLOBAL_REQUEST_TIME",
+    );
+  }
+
+  const sampleMidpointMs =
+    sampleStartedAtMs +
+    (
+      sampleFinishedAtMs -
+      sampleStartedAtMs
+    ) /
+      2;
+  const databaseClockOffsetMs =
+    databaseSampleMs -
+    sampleMidpointMs;
+  const alignedRequestReceivedAtMs =
+    requestReceivedAtMs +
+    databaseClockOffsetMs;
+
+  if (
+    !Number.isFinite(
+      alignedRequestReceivedAtMs,
+    )
+  ) {
+    throw new Error(
+      "INVALID_ROULETTE_GLOBAL_REQUEST_TIME",
+    );
+  }
+
+  return alignedRequestReceivedAtMs;
+}
+
 export function assertRouletteGlobalBettingOpen(
   round: RouletteGlobalBetWindow,
   nowMs: number,

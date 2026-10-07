@@ -79,6 +79,9 @@ router.get("/roulette/state", async (req, res) => {
 });
 
 router.put("/roulette/global-bets", async (req, res) => {
+  const requestReceivedAtMs =
+    Date.now();
+
   try {
     const body =
       req.body as {
@@ -129,6 +132,7 @@ router.put("/roulette/global-bets", async (req, res) => {
               Number(
                 body.expectedRevision,
               ),
+            requestReceivedAtMs,
           },
         ),
     );

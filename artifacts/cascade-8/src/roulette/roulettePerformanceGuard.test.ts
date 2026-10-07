@@ -11,8 +11,35 @@ function source(name: string) {
 
 const indexSource = source("./index.ts");
 const dragSource = source("./chipDragV6.ts");
+const runtimeSource = source("./rouletteRuntime.ts");
 const authorityVisualSource = source("./betAuthorityVisual.ts");
 const authoritySource = source("./betAuthority.ts");
+
+function expectLocalRenderBeforeNetwork(
+  actionMarker: string,
+) {
+  const actionIndex =
+    runtimeSource.indexOf(actionMarker);
+  expect(actionIndex).toBeGreaterThanOrEqual(0);
+
+  const renderIndex =
+    runtimeSource.indexOf(
+      "renderBetState();",
+      actionIndex,
+    );
+  const syncIndex =
+    runtimeSource.indexOf(
+      "queueGlobalBetSync();",
+      actionIndex,
+    );
+
+  expect(renderIndex).toBeGreaterThan(
+    actionIndex,
+  );
+  expect(syncIndex).toBeGreaterThan(
+    renderIndex,
+  );
+}
 
 describe("roulette performance architecture guard", () => {
   it("keeps retired competing writer and global DOM interception layers out of the mount path", () => {
@@ -36,5 +63,38 @@ describe("roulette performance architecture guard", () => {
     expect(authoritySource).toContain("writeTail");
     expect(authoritySource).toContain("enqueueWrite");
     expect(authoritySource).toContain("authority.optimistic");
+  });
+
+  it("renders every button wager mutation locally before starting network sync", () => {
+    expectLocalRenderBeforeNetwork(
+      "placeRouletteBet(",
+    );
+    expectLocalRenderBeforeNetwork(
+      "undoRouletteBet(",
+    );
+    expectLocalRenderBeforeNetwork(
+      "doubleRouletteBets(",
+    );
+    expectLocalRenderBeforeNetwork(
+      "[data-clear-bets]",
+    );
+    expectLocalRenderBeforeNetwork(
+      "rebetRouletteRound(",
+    );
+  });
+
+  it("keeps drag pickup and snap feedback well below the 500ms interaction target", () => {
+    expect(dragSource).toContain(
+      "const HOLD_MS = 120;",
+    );
+    expect(dragSource).toContain(
+      "const EARLY_DRAG_MS = 20;",
+    );
+    expect(dragSource).toContain(
+      "const SNAP_MS = 45;",
+    );
+    expect(dragSource).toContain(
+      "renderOptimisticBets(app, nextBets);",
+    );
   });
 });
