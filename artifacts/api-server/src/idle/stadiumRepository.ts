@@ -127,7 +127,7 @@ async function insertMissingStadiumState(
        (id, session_id, stadium_level, owned_seats, speed_level, storage_level,
         stored_microtickets, sale_remainder_microdollars,
         production_checkpoint_at, created_at, updated_at)
-     VALUES ($1, $2, 1, 0, 1, 1, 0, 0, $3, $3, $3)
+     VALUES ($1, $2, 1, 1000, 1, 1, 0, 0, $3, $3, $3)
      ON CONFLICT (session_id) DO NOTHING`,
     [randomUUID(), sessionId, checkpointAt],
   );
@@ -219,8 +219,9 @@ export function stadiumProjectionToServerState(
 /**
  * Ensures the canonical Stadium row exists and returns the persisted state.
  *
- * New players start at Stadium Lv1, 0 owned seats, Speed Lv1, Storage Lv1,
- * zero tickets, and a checkpoint at the server time used for creation.
+ * New players start at Stadium Lv1, 1,000 free owned seats, Speed Lv1,
+ * Storage Lv1, zero tickets, and a checkpoint at the server time used for
+ * creation.
  */
 export async function ensureStadiumState(
   client: PoolClient,

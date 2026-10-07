@@ -15,6 +15,7 @@ import {
 import { runCheckpointedStadiumMutation } from "./stadiumMutation";
 import { reserveStadiumActionReceipt } from "./stadiumActionReceipt";
 import { resolveNextSpeedUpgrade } from "./stadiumPolicy";
+import { recordIdleInvestment } from "./investmentLedger";
 
 const SPEED_UPGRADE_ACTION = "SPEED_UPGRADE" as const;
 
@@ -161,6 +162,15 @@ export async function upgradeStadiumSpeed(
         settledState.speedLevel,
         balanceBeforeCents,
       );
+
+      await recordIdleInvestment(
+        client,
+        settledState,
+        SPEED_UPGRADE_ACTION,
+        idempotencyKey,
+        upgrade.costCents,
+      );
+
       const balanceCents = upgrade.balanceAfterCents;
 
       await client.query(

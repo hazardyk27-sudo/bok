@@ -1,5 +1,6 @@
 import "./idle.css";
 import "./stadium-premium.css";
+import { createIdleLeaderboardUi } from "./leaderboard";
 import {
   createStadiumPremiumUi,
   type StadiumMutationResponse,
@@ -338,6 +339,7 @@ class BusinessesClient {
   constructor(
     private readonly root: HTMLElement,
   ) {
+    createIdleLeaderboardUi(this.root);
     this.premiumUi = createStadiumPremiumUi({
       root: this.root,
       getEnvelope: () => this.envelope,

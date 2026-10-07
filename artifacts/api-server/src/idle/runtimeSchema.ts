@@ -1,6 +1,8 @@
+import { randomUUID } from "node:crypto";
 import {
   MARKET_CONFIG,
 } from "../../../cascade-8/src/idle/config";
+import { calculateInvestedCapitalCents } from "./investmentCapital";
 
 let schemaReadyPromise: Promise<void> | null = null;
 
@@ -12,7 +14,7 @@ async function applyIdleRuntimeSchema() {
       id text PRIMARY KEY,
       session_id text NOT NULL,
       stadium_level integer NOT NULL DEFAULT 1,
-      owned_seats integer NOT NULL DEFAULT 0,
+      owned_seats integer NOT NULL DEFAULT 1000,
       speed_level integer NOT NULL DEFAULT 1,
       storage_level integer NOT NULL DEFAULT 1,
       stored_microtickets bigint NOT NULL DEFAULT 0,
@@ -21,6 +23,9 @@ async function applyIdleRuntimeSchema() {
       created_at timestamptz NOT NULL DEFAULT now(),
       updated_at timestamptz NOT NULL DEFAULT now()
     );
+
+    ALTER TABLE idle_stadium_states
+      ALTER COLUMN owned_seats SET DEFAULT 1000;
 
     CREATE UNIQUE INDEX IF NOT EXISTS
       idle_stadium_states_session_unique
@@ -117,7 +122,73 @@ async function applyIdleRuntimeSchema() {
     CREATE INDEX IF NOT EXISTS
       idle_stadium_action_receipts_retention_idx
       ON idle_stadium_action_receipts (created_at);
+
+    CREATE TABLE IF NOT EXISTS idle_investment_ledger (
+      id text PRIMARY KEY,
+      session_id text NOT NULL,
+      business_id text NOT NULL,
+      action_type text NOT NULL,
+      amount_cents bigint NOT NULL DEFAULT 0,
+      idempotency_key text NOT NULL,
+      created_at timestamptz NOT NULL DEFAULT now()
+    );
+
+    CREATE UNIQUE INDEX IF NOT EXISTS
+      idle_investment_ledger_idempotency_unique
+      ON idle_investment_ledger (idempotency_key);
+
+    CREATE INDEX IF NOT EXISTS
+      idle_investment_ledger_session_idx
+      ON idle_investment_ledger (session_id);
   `);
+
+  const baselineRows = await pool.query<{
+    session_id: string;
+    stadium_level: string | number;
+    owned_seats: string | number;
+    speed_level: string | number;
+    storage_level: string | number;
+  }>(
+    `SELECT s.session_id, s.stadium_level, s.owned_seats,
+            s.speed_level, s.storage_level
+       FROM idle_stadium_states s
+      WHERE NOT EXISTS (
+        SELECT 1
+          FROM idle_investment_ledger i
+         WHERE i.idempotency_key =
+               'IDLE_INVESTMENT_BASELINE_V1:' || s.session_id
+      )`,
+  );
+
+  for (const row of baselineRows.rows) {
+    // Before this rollout the backend created Stadium rows at 0 owned seats,
+    // so every persisted seat was actually bought by the player. Preserve that
+    // spend in the one-time legacy baseline instead of treating the first 1,000
+    // as retroactively free. New rows start at the canonical 1,000 free seats.
+    const capitalCents = calculateInvestedCapitalCents(
+      {
+        stadiumLevel: Number(row.stadium_level),
+        ownedSeats: Number(row.owned_seats),
+        speedLevel: Number(row.speed_level),
+        storageLevel: Number(row.storage_level),
+      },
+      { freeStartingSeats: 0 },
+    );
+
+    await pool.query(
+      `INSERT INTO idle_investment_ledger
+         (id, session_id, business_id, action_type,
+          amount_cents, idempotency_key)
+       VALUES ($1, $2, 'stadium', 'BASELINE', $3, $4)
+       ON CONFLICT (idempotency_key) DO NOTHING`,
+      [
+        randomUUID(),
+        row.session_id,
+        capitalCents,
+        `IDLE_INVESTMENT_BASELINE_V1:${row.session_id}`,
+      ],
+    );
+  }
 }
 
 /**
@@ -126,6 +197,14 @@ async function applyIdleRuntimeSchema() {
  * Replit preview can receive owned game code before an operator runs a
  * workspace-wide Drizzle push. Idle therefore bootstraps only its own new
  * canonical tables/indexes and never mutates shared/platform tables.
+ *
+ * The permanent investment ledger is intentionally NOT part of the 3-day
+ * Stadium action-receipt cleanup. Existing Stadium progress receives one
+ * immutable legacy baseline row using the actual old zero-seat start; all
+ * later investment costs are recorded exactly at transaction time. Existing
+ * seat counts are not rewritten during this backfill, avoiding retroactive
+ * production changes. Newly created Stadium rows use the canonical 1,000 free
+ * starting seats.
  *
  * A new MARKET_CONFIG.priceEpoch also performs exactly one global price
  * rebase to the canonical bootstrap value. Once that epoch marker exists,

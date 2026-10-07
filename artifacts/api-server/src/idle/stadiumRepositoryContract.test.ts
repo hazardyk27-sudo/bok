@@ -8,10 +8,11 @@ const source = readFileSync(
 );
 
 describe("Stadium persistent production repository contract", () => {
-  it("creates canonical Lv1 Stadium state with zero seats and zero inventory", () => {
+  it("creates canonical Lv1 Stadium state with 1,000 free seats and zero inventory", () => {
     expect(source).toContain("INSERT INTO idle_stadium_states");
-    expect(source).toContain("VALUES ($1, $2, 1, 0, 1, 1, 0, 0, $3, $3, $3)");
+    expect(source).toContain("VALUES ($1, $2, 1, 1000, 1, 1, 0, 0, $3, $3, $3)");
     expect(source).toContain("ON CONFLICT (session_id) DO NOTHING");
+    expect(source).toContain("1,000 free owned seats");
   });
 
   it("projects elapsed production from the persisted checkpoint without timers", () => {

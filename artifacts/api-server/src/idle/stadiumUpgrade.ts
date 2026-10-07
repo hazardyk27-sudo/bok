@@ -15,6 +15,7 @@ import {
 import { runCheckpointedStadiumMutation } from "./stadiumMutation";
 import { reserveStadiumActionReceipt } from "./stadiumActionReceipt";
 import { resolveNextStadiumUpgrade } from "./stadiumPolicy";
+import { recordIdleInvestment } from "./investmentLedger";
 
 const STADIUM_UPGRADE_ACTION = "STADIUM_UPGRADE" as const;
 
@@ -165,6 +166,15 @@ export async function upgradeStadiumLevel(
         settledState.stadiumLevel,
         balanceBeforeCents,
       );
+
+      await recordIdleInvestment(
+        client,
+        settledState,
+        STADIUM_UPGRADE_ACTION,
+        idempotencyKey,
+        upgrade.costCents,
+      );
+
       const balanceCents = upgrade.balanceAfterCents;
 
       await client.query(
