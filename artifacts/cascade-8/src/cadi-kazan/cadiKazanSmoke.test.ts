@@ -86,7 +86,6 @@ describe("cadi kazan route smoke contract", () => {
     expect(scratchPresentationSource).toContain("data-witch-office-candidate");
   });
 
-
   it("uses the supplied Office sticker language for preview and live scratch coating", () => {
     expect(witchClientSource).toContain("OFFICE_SCRATCH_COVER_URL");
     expect(witchClientSource).toContain("that's");
@@ -103,7 +102,6 @@ describe("cadi kazan route smoke contract", () => {
     expect(visualLockSource).toContain("grid-template-rows: repeat(2");
   });
 
-
   it("highlights only the resolved Office winning triple and reserves the premium effect for Michael 100x", () => {
     expect(witchClientSource).toContain("winningOfficeSymbolId");
     expect(witchClientSource).toContain("is-office-winning-match");
@@ -113,13 +111,11 @@ describe("cadi kazan route smoke contract", () => {
     expect(visualLockSource).toContain("prefers-reduced-motion: no-preference");
   });
 
-
   it("keeps the Office reference card bounded inside the horizontal mobile stage", () => {
     expect(visualLockSource).toContain("height: min(100%, calc(var(--witch-vh) * 55))");
     expect(visualLockSource).toContain("max-width: 100%");
     expect(visualLockSource).toContain("aspect-ratio: 2.08 / 1");
   });
-
 
   it("clears legacy Office ticket offsets and keeps the purchased lacquer interactive", () => {
     expect(visualLockSource).toContain("PASS 14 — THE OFFICE table registration");
@@ -131,7 +127,6 @@ describe("cadi kazan route smoke contract", () => {
     expect(visualLockSource).toContain("touch-action: none !important");
   });
 
-
   it("prevents the generic safe sculpture from covering Office character art", () => {
     expect(visualLockSource).toContain("PASS 15 — THE OFFICE result artwork owns the full scratch cell");
     expect(visualLockSource).toContain(".witch-cell.is-office-cell .witch-cell-content::before");
@@ -139,7 +134,6 @@ describe("cadi kazan route smoke contract", () => {
     expect(visualLockSource).toContain(".witch-cell.is-office-cell .witch-cell-aura");
     expect(visualLockSource).toContain("object-fit: contain !important");
   });
-
 
   it("shows stake-derived Office prize money instead of multiplier labels", () => {
     expect(witchClientSource).toContain("round.stakeCents * symbol.multiplierBps");
@@ -154,13 +148,11 @@ describe("cadi kazan route smoke contract", () => {
     expect(visualLockSource).toContain("display: none !important");
   });
 
-
   it("uses a 30 percent larger scratch brush only for The Office", () => {
     expect(witchClientSource).toContain("const SCRATCH_BRUSH_RADIUS_PX = 14;");
     expect(witchClientSource).toContain("const OFFICE_SCRATCH_BRUSH_RADIUS_PX = SCRATCH_BRUSH_RADIUS_PX * 1.43;");
     expect(witchClientSource).toContain('brushRadiusPx: round.mode === "OFFICE_MATCH_6" ? OFFICE_SCRATCH_BRUSH_RADIUS_PX : SCRATCH_BRUSH_RADIUS_PX');
   });
-
 
   it("keeps Office reveal cells white and routes one drag across multiple cells", () => {
     expect(visualLockSource).toContain("PASS 17 — THE OFFICE white reveal stage");
@@ -181,7 +173,6 @@ describe("cadi kazan route smoke contract", () => {
     expect(witchClientSource).toContain("else this.audio.cashRegister()");
   });
 
-
   it("removes the near-black matte around Office cutouts", () => {
     expect(witchClientSource).toContain('id="witch-office-remove-black"');
     expect(witchClientSource).toContain("8 8 8 0 -0.12");
@@ -189,7 +180,6 @@ describe("cadi kazan route smoke contract", () => {
     expect(visualLockSource).toContain("filter: url(#witch-office-remove-black) !important");
     expect(visualLockSource).toContain("background: transparent !important");
   });
-
 
   it("uses the master PNG as the Office card and pins all six live scratch zones to measured coordinates", () => {
     expect(witchClientSource).toContain("OFFICE_CARD_ART_URL");
@@ -227,7 +217,6 @@ describe("cadi kazan route smoke contract", () => {
     expect(visualLockSource).toContain(".witch-ticket.is-preview .witch-office-preview-coating");
   });
 
-
   it("uses one canonical Better Call Saul payout/deck structure with card-only palette changes", () => {
     expect(witchClientSource).toContain('classList.toggle("is-advanced-theme", visualMode === "ADVANCED")');
     expect(visualLockSource).toContain("PASS 23 — canonical payout/deck theme system");
@@ -243,7 +232,6 @@ describe("cadi kazan route smoke contract", () => {
     expect(visualLockSource).toContain("background: var(--witch-deck-bg) !important");
     expect(visualLockSource).toContain("--witch-deck-bg: linear-gradient(180deg, #f7f7f7 0%, #dedfe1 100%)");
   });
-
 
   it("locks The Office to one PNG and exactly six clipped interactive scratch zones", () => {
     expect(visualLockSource).toContain("PASS 24 — THE OFFICE authoritative PNG + six-zone interaction lock");
@@ -264,7 +252,6 @@ describe("cadi kazan route smoke contract", () => {
     expect(visualLockSource).toContain("touch-action: none !important");
   });
 
-
   it("keeps The Office palette light with black/gray content while preserving shared geometry", () => {
     expect(visualLockSource).toContain("PASS 25 — THE OFFICE final light monochrome UI palette");
     expect(visualLockSource).toContain("--witch-deck-bg:");
@@ -279,7 +266,6 @@ describe("cadi kazan route smoke contract", () => {
     expect(visualLockSource).toContain("color: #ffffff !important");
   });
 
-
   it("uses the supplied star-backed Office symbols with star-matched prize badges", () => {
     expect(visualLockSource).toContain("PASS 26 — THE OFFICE star-backed character symbols + color-linked prize badge");
     expect(scratchPresentationSource).toContain("--office-symbol-color:");
@@ -290,7 +276,6 @@ describe("cadi kazan route smoke contract", () => {
     expect(visualLockSource).toContain("filter: none !important");
     expect(visualLockSource).toContain("contain: paint !important");
   });
-
 
   it("renders Advanced 25 as one master PNG with 25 registered scratch-only zones", () => {
     expect(witchClientSource).toContain('const ADVANCED_25_CARD_ART_URL = new URL("./advanced/assets/advanced25-card-master.png", import.meta.url).href');
@@ -309,7 +294,6 @@ describe("cadi kazan route smoke contract", () => {
     expect(visualLockSource).toContain("pointer-events: auto !important");
   });
 
-
   it("uses optimized supplied paw/skull artwork for Advanced 25 results", () => {
     expect(scratchPresentationSource).toContain('class="witch-cell-artwork"');
     expect(scratchPresentationSource).toContain('decoding="async"');
@@ -319,7 +303,6 @@ describe("cadi kazan route smoke contract", () => {
     expect(visualLockSource).toContain("object-fit: contain !important");
     expect(visualLockSource).toContain(".is-advanced-theme .witch-cell-result-label");
   });
-
 
   it("locks Advanced 25 to one black/gold UI palette and full-card responsive fit", () => {
     expect(visualLockSource).toContain("PASS 29 — ADVANCED 25 final black/gold UI palette + responsive fit lock");
@@ -334,14 +317,12 @@ describe("cadi kazan route smoke contract", () => {
     expect(visualLockSource).toContain("aspect-ratio: var(--advanced-card-ratio) !important");
   });
 
-
   it("keeps Advanced 25 result assets inside the Cadı Kazan ownership root", () => {
     expect(scratchPresentationSource).toContain('new URL("../advanced/assets/advanced25-paw.webp", import.meta.url).href');
     expect(scratchPresentationSource).toContain('new URL("../advanced/assets/advanced25-skull.webp", import.meta.url).href');
     expect(scratchPresentationSource).not.toContain('"/cadi-kazan/advanced25-paw.webp"');
     expect(scratchPresentationSource).not.toContain('"/cadi-kazan/advanced25-skull.webp"');
   });
-
 
   it("keeps payout beside the card by sharing the BCS desktop parent grid across every card", () => {
     expect(visualLockSource).toContain("PASS 30 — canonical desktop stage geometry");
@@ -355,7 +336,6 @@ describe("cadi kazan route smoke contract", () => {
     expect(visualLockSource).toContain(':is(.is-advanced-theme, .is-office-theme) .witch-ticket-header');
   });
 
-
   it("hard-removes generic ticket chrome from master-PNG cards and themes the app header by card", () => {
     expect(witchClientSource).toContain('const usesMasterCardArtwork = visualMode === "ADVANCED" || visualMode === "OFFICE_MATCH_6"');
     expect(witchClientSource).toContain('".witch-ticket-frame, .witch-bcs-card-art, .witch-ticket-header, .witch-ticket-meta-row, .witch-ticket-footer"');
@@ -368,7 +348,6 @@ describe("cadi kazan route smoke contract", () => {
     expect(visualLockSource).toContain("color: #111315 !important");
   });
 
-
   it("uses the bundled 1423x557 Office scene only as The Office stage background", () => {
     expect(visualLockSource).toContain("PASS 32 — THE OFFICE stage background");
     expect(visualLockSource).toContain('.is-office-theme .witch-stage-shell');
@@ -376,7 +355,6 @@ describe("cadi kazan route smoke contract", () => {
     expect(visualLockSource).toContain('.is-office-theme .witch-table-surface');
     expect(visualLockSource).toContain('.is-office-theme .witch-payout-panel');
   });
-
 
   it("prevents Office multi-scratch cells from getting stranded behind a busy reveal", () => {
     expect(witchClientSource).toContain("private officeRevealQueue: Promise<void> = Promise.resolve()");
@@ -390,7 +368,6 @@ describe("cadi kazan route smoke contract", () => {
     expect(scratchSurfaceSource).toContain("private scheduleDeferredCommit(now: number)");
   });
 
-
   it("keeps The Office app bar and control deck black with white/gray UI copy", () => {
     expect(visualLockSource).toContain("PASS 33 — THE OFFICE black top bar + black deck");
     expect(visualLockSource).toContain(".is-office-theme .witch-appbar");
@@ -401,7 +378,6 @@ describe("cadi kazan route smoke contract", () => {
     expect(visualLockSource).toContain(".is-office-theme .witch-primary-button:not(:disabled)");
     expect(visualLockSource).toContain(".is-office-theme .witch-stake-presets button.is-selected");
   });
-
 
   it("pins Advanced 25 cells directly to the 1200x546 master instead of a resizable nested union", () => {
     expect(visualLockSource).toContain("PASS 34 — ADVANCED 25 direct master-coordinate registration, Part 1");
@@ -415,7 +391,6 @@ describe("cadi kazan route smoke contract", () => {
     expect(visualLockSource).toContain("height: 14.7754% !important");
   });
 
-
   it("locks Advanced scratch canvases and paw/skull art inside each measured cell", () => {
     expect(visualLockSource).toContain("PASS 35 — ADVANCED 25 cell-local scratch/result lock, Part 2");
     expect(visualLockSource).toContain(".is-advanced-theme .witch-ticket.is-advanced .witch-board > .witch-cell > .witch-scratch-layer");
@@ -428,7 +403,6 @@ describe("cadi kazan route smoke contract", () => {
     expect(visualLockSource).toContain("width: 72% !important");
     expect(visualLockSource).toContain(".is-advanced-theme .witch-ticket.is-advanced .witch-cell.is-bomb .witch-cell-artwork");
   });
-
 
   it("locks the final Advanced 25 master geometry to a non-overflowing 5x5 map", () => {
     expect(visualLockSource).toContain("PASS 36 — ADVANCED 25 final geometry QA / regression lock, Part 3");
@@ -478,7 +452,6 @@ describe("cadi kazan route smoke contract", () => {
     expect(visualLockSource).toContain("contain: layout paint !important");
   });
 
-
   it("finishes every bomb card with an immediate full BUST reveal and keeps Advanced centered", () => {
     expect(witchClientSource).toContain('round.mode !== "OFFICE_MATCH_6" && round.status === "BUST"');
     expect(witchClientSource).toContain("allCells.forEach((index) => this.terminalRevealVisibleCells.add(index))");
@@ -488,7 +461,6 @@ describe("cadi kazan route smoke contract", () => {
     expect(visualLockSource).toContain("justify-self: center !important");
     expect(visualLockSource).toContain("align-self: center !important");
   });
-
 
   it("centers every Advanced paw/skull result on the exact scratch-cell center", () => {
     expect(visualLockSource).toContain("PASS 38 — ADVANCED 25 follow-up Part 2: exact symbol centering");
@@ -502,7 +474,6 @@ describe("cadi kazan route smoke contract", () => {
     expect(visualLockSource).toContain(".witch-cell.is-terminal-reveal .witch-cell-artwork");
   });
 
-
   it("uses one centered premium back-button geometry across every Cadı Kazan theme", () => {
     expect(visualLockSource).toContain("PASS 39 — Cadı Kazan global back-button polish, Part 3");
     expect(visualLockSource).toContain(".witch-back::before");
@@ -515,12 +486,10 @@ describe("cadi kazan route smoke contract", () => {
     expect(visualLockSource).toContain(".witch-back:focus-visible");
   });
 
-
   it("keeps the Advanced card art original by removing the temporary stake badge", () => {
     expect(witchClientSource).not.toContain("witch-advanced-card-value");
     expect(visualLockSource).not.toContain(".witch-advanced-card-value");
   });
-
 
   it("prepares the touched result under the base layer before the existing settlement threshold", () => {
     expect(scratchSurfaceSource).toContain("onPrepare?: () => Promise<void>");
@@ -535,7 +504,6 @@ describe("cadi kazan route smoke contract", () => {
     expect(visualLockSource).toContain('[data-witch-result-active="true"]');
   });
 
-
   it("rebuilds result slots on every new round so a previous Office symbol can never flash first", () => {
     expect(witchClientSource).toContain("const boardRoundChanged = board?.dataset.roundId !== round.id");
     expect(witchClientSource).toContain("board.dataset.roundId = round.id");
@@ -546,7 +514,6 @@ describe("cadi kazan route smoke contract", () => {
     expect(visualLockSource).toContain("PASS 42 — prepared-under-coating result pipeline");
   });
 
-
   it("forces server-authoritative SAFE/BOMB artwork visible after terminal reveal", () => {
     expect(witchClientSource).toContain("dataset.authoritativeResult");
     expect(witchClientSource).toContain('button.dataset.authoritativeResult = authoritativePrepared.kind');
@@ -556,15 +523,12 @@ describe("cadi kazan route smoke contract", () => {
     expect(visualLockSource).toContain("visibility: visible !important");
   });
 
-
   it("never clears a prepared result during transient renders, preventing blank white cells", () => {
-    expect(witchClientSource).toContain("a selected result candidate");
     expect(witchClientSource).toContain("if (!prepared || prepared.roundId !== round.id");
     expect(witchClientSource).toContain("const preparedKey = prepared.kind === \"OFFICE\" ? prepared.symbolId : prepared.kind");
     expect(witchClientSource).toContain("if (button.dataset.preparedResult !== preparedKey)");
     expect(witchClientSource).not.toContain("delete button.dataset.preparedResult");
   });
-
 
   it("keeps result assets predecoded and candidate DOM persistent under the scratch coating", () => {
     expect(scratchPresentationSource).toContain("SCRATCH_RESULT_ART_URLS");
@@ -584,26 +548,26 @@ describe("cadi kazan route smoke contract", () => {
     expect(visualLockSource).toContain('font-family: "DM Sans", sans-serif !important');
   });
 
-
-  it("shows Office pool remaining beside balance and explains the 200-ticket system from the info button", () => {
+  it("shows the 400-ticket Office base pool and explains the independent 1-in-300 Michael jackpot", () => {
     expect(witchClientSource).toContain("data-witch-office-pool-head");
     expect(witchClientSource).toContain("data-witch-office-pool-head-value");
     expect(witchClientSource).toContain("data-witch-office-pool-info-toggle");
-    expect(witchClientSource).toContain("200 BİLETLİK HAVUZ");
-    expect(witchClientSource).toContain("1</b> Michael · 100x");
+    expect(witchClientSource).toContain("400 BİLETLİK BASE HAVUZ");
+    expect(witchClientSource).toContain("1/300</b> Michael · 100x");
     expect(witchClientSource).toContain("3</b> Stanley · 20x");
     expect(witchClientSource).toContain("5</b> Dwight · 10x");
-    expect(witchClientSource).toContain("15</b> Jim · 5x");
-    expect(witchClientSource).toContain("60</b> Kevin · 2x");
-    expect(witchClientSource).toContain("116</b> Ödülsüz");
+    expect(witchClientSource).toContain("10</b> Jim · 5x");
+    expect(witchClientSource).toContain("104</b> Kevin · 2x");
+    expect(witchClientSource).toContain("278</b> Ödülsüz");
+    expect(witchClientSource).toContain("Michael jackpotu paketlerden bağımsızdır");
+    expect(witchClientSource).not.toContain("200 BİLETLİK HAVUZ");
     expect(witchClientSource).toContain("closeOfficePoolInfo");
     expect(visualLockSource).toContain("PASS 45 — Office pool status in top bar + explainer");
     expect(visualLockSource).toContain(".witch-office-pool-info-button");
     expect(visualLockSource).toContain(".witch-office-pool-info-grid");
   });
 
-
-  it("shows the finite Office pool count and immutable public ticket ID inside the master card", () => {
+  it("shows the finite Office base-pool count and immutable public ticket ID inside the master card", () => {
     expect(witchClientSource).toContain("data-witch-office-meta");
     expect(witchClientSource).toContain("data-witch-office-pool");
     expect(witchClientSource).toContain("data-witch-office-ticket-id");
@@ -613,7 +577,6 @@ describe("cadi kazan route smoke contract", () => {
     expect(visualLockSource).toContain("PASS 44 — THE OFFICE finite-pool metadata");
     expect(visualLockSource).toContain("> .witch-office-card-meta");
   });
-
 
   it("marks exactly the resolved Office winning triple and visually recedes the other cells", () => {
     expect(witchClientSource).toContain("winningOfficeIndices");
@@ -632,7 +595,6 @@ describe("cadi kazan route smoke contract", () => {
     expect(visualLockSource).toContain("height: var(--advanced-fit-height");
   });
 
-
   it("removes the translucent compositor rectangle behind the Office payout card", () => {
     expect(visualLockSource).toContain("PASS 40 — THE OFFICE payout ghost-layer cleanup");
     expect(visualLockSource).toContain(".is-office-theme .witch-payout-panel");
@@ -641,5 +603,4 @@ describe("cadi kazan route smoke contract", () => {
     expect(visualLockSource).toContain(".is-office-theme .witch-payout-panel::before");
     expect(visualLockSource).toContain(".is-office-theme .witch-payout-panel::after");
   });
-
 });

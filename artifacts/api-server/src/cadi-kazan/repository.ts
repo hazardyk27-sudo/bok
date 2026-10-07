@@ -5,7 +5,9 @@ import {
   OFFICE_MATCH_SYMBOLS,
   OFFICE_POOL_DISTRIBUTION,
   OFFICE_POOL_SIZE,
+  createOfficeMichaelJackpotBoard,
   createOfficePoolTickets,
+  drawOfficeMichaelJackpot,
   resolveOfficeMatchReveal,
   type OfficeMatchSymbolId,
 } from "./officeMatch";
@@ -370,6 +372,11 @@ async function ensureOfficePoolSupply(client: PoolClient): Promise<OfficePoolRow
   return active;
 }
 
+async function getOfficePoolRemainingWithoutClaim(client: PoolClient) {
+  const active = await ensureOfficePoolSupply(client);
+  return getOfficePoolRemaining(client, active.id);
+}
+
 async function claimOfficeTicket(
   client: PoolClient,
   roundId: string,
@@ -525,14 +532,29 @@ export class CadiKazanRepository {
       if (balanceCents < input.stakeCents) throw new Error("INSUFFICIENT_CADI_KAZAN_CREDITS");
 
       const roundId = randomUUID();
-      const officeClaim = input.mode === "OFFICE_MATCH_6"
+      const officeJackpot = input.mode === "OFFICE_MATCH_6" && drawOfficeMichaelJackpot();
+      const officeClaim = input.mode === "OFFICE_MATCH_6" && !officeJackpot
         ? await claimOfficeTicket(client, roundId, sessionId)
         : null;
+      const officeJackpotRemaining = officeJackpot
+        ? await getOfficePoolRemainingWithoutClaim(client)
+        : null;
       const bombIndices = input.mode === "OFFICE_MATCH_6" ? [] : chooseBombIndices(cellCount, input.alarmCount);
-      const officeCells = officeClaim ? safeOfficeSymbolArray(officeClaim.ticket.office_cells) : null;
+      const officeCells = officeJackpot
+        ? createOfficeMichaelJackpotBoard()
+        : officeClaim
+          ? safeOfficeSymbolArray(officeClaim.ticket.office_cells)
+          : null;
       if (input.mode === "OFFICE_MATCH_6" && officeCells?.length !== cellCount) {
         throw new Error("INVALID_OFFICE_POOL_TICKET");
       }
+      const officePublicTicketId = officeJackpot
+        ? createOfficePublicTicketId()
+        : officeClaim?.ticket.public_id ?? null;
+      const officePoolRemaining = officeJackpot
+        ? officeJackpotRemaining
+        : officeClaim?.remaining ?? null;
+
       await client.query(
         "UPDATE shared_wallets SET balance_cents = balance_cents - $1, updated_at = now() WHERE session_id = $2",
         [input.stakeCents, sessionId],
@@ -565,8 +587,8 @@ export class CadiKazanRepository {
           officeCells ? JSON.stringify(officeCells) : null,
           officeClaim?.ticket.pool_id ?? null,
           officeClaim?.ticket.id ?? null,
-          officeClaim?.ticket.public_id ?? null,
-          officeClaim?.remaining ?? null,
+          officePublicTicketId,
+          officePoolRemaining,
           input.idempotencyKey,
         ],
       );
