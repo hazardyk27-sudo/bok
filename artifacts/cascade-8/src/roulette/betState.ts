@@ -270,14 +270,24 @@ export function compactRouletteBetPlacements(
   });
 }
 
+/**
+ * Compatibility bridge for the legacy runtime's `chip-*` classes.
+ *
+ * The keys here are NOT wager denominations anymore; they are palette slots in
+ * the old renderer. Keep this mapping identical to `getRouletteChipTier()` so
+ * the legacy fallback can never disagree with the canonical aggregate face:
+ * white -> 1, blue -> 10, green -> 25, red -> 5, black -> 100, purple -> 500.
+ * The canonical renderer strips these classes entirely; this bridge exists only
+ * as a fail-safe until the old runtime markup is fully removed.
+ */
 export function getRouletteDisplayChipValue(
   amount: number,
 ): RouletteChipValue {
-  if (amount >= 500) return 500;
-  if (amount >= 100) return 100;
-  if (amount >= 25) return 25;
-  if (amount >= 10) return 10;
-  if (amount >= 5) return 5;
+  if (amount >= 5_000) return 500;
+  if (amount >= 2_000) return 100;
+  if (amount >= 500) return 5;
+  if (amount >= 100) return 25;
+  if (amount >= 50) return 10;
   return 1;
 }
 
