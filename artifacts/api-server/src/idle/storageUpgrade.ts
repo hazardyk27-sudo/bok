@@ -92,6 +92,15 @@ function assertUpgradeReplay(
   return targetLevel as StorageLevel;
 }
 
+/**
+ * Upgrades the independent ticket Storage track by exactly one level.
+ *
+ * All elapsed production is checkpointed under the OLD Storage capacity first.
+ * If the old Storage was full, time spent full remains lost; the newly expanded
+ * capacity never retroactively receives tickets for that elapsed interval.
+ *
+ * Stadium level, owned seats, and Speed are not prerequisites for Storage.
+ */
 export async function upgradeStadiumStorage(
   sessionId: string,
   idempotencyKey: string,
