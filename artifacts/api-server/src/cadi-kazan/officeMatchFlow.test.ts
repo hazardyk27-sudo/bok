@@ -4,6 +4,7 @@ import {
   OFFICE_POOL_DISTRIBUTION,
   OFFICE_POOL_SIZE,
   createOfficeMatchBoard,
+  createOfficeMichaelJackpotBoard,
   createOfficePoolTickets,
   resolveOfficeMatchReveal,
   type OfficeMatchSymbolId,
@@ -42,16 +43,15 @@ function winningRevealOrder(board: readonly OfficeMatchSymbolId[], symbolId: Off
 }
 
 describe("The Office full outcome/reveal contract", () => {
-  it("builds every 200-ticket pool with the exact approved distribution", () => {
+  it("builds every 400-ticket base pool with the exact approved distribution and no Michael jackpot", () => {
     const tickets = createOfficePoolTickets(deterministicRandom(20261002));
     expect(tickets).toHaveLength(OFFICE_POOL_SIZE);
     expect(OFFICE_POOL_DISTRIBUTION).toEqual([
-      { symbolId: "MICHAEL", count: 1, multiplierBps: 10_000 },
       { symbolId: "STANLEY", count: 3, multiplierBps: 2_000 },
       { symbolId: "DWIGHT", count: 5, multiplierBps: 1_000 },
-      { symbolId: "JIM", count: 15, multiplierBps: 500 },
-      { symbolId: "KEVIN", count: 60, multiplierBps: 200 },
-      { symbolId: null, count: 116, multiplierBps: 0 },
+      { symbolId: "JIM", count: 10, multiplierBps: 500 },
+      { symbolId: "KEVIN", count: 104, multiplierBps: 200 },
+      { symbolId: null, count: 278, multiplierBps: 0 },
     ]);
 
     const counts = {
@@ -67,12 +67,12 @@ describe("The Office full outcome/reveal contract", () => {
       else counts[ticket.outcome.symbolId] += 1;
     }
     expect(counts).toEqual({
-      KEVIN: 60,
-      JIM: 15,
+      KEVIN: 104,
+      JIM: 10,
       DWIGHT: 5,
       STANLEY: 3,
-      MICHAEL: 1,
-      LOSS: 116,
+      MICHAEL: 0,
+      LOSS: 278,
     });
   });
 
@@ -80,10 +80,12 @@ describe("The Office full outcome/reveal contract", () => {
     "settles the complete $id path on the third matching scratch and pays the configured multiplier",
     (symbol) => {
       for (let seed = 1; seed <= 24; seed += 1) {
-        const board = createOfficeMatchBoard(
-          { kind: "WIN", symbolId: symbol.id, multiplierBps: symbol.multiplierBps },
-          deterministicRandom(seed),
-        );
+        const board = symbol.id === "MICHAEL"
+          ? createOfficeMichaelJackpotBoard(deterministicRandom(seed))
+          : createOfficeMatchBoard(
+              { kind: "WIN", symbolId: symbol.id, multiplierBps: symbol.multiplierBps },
+              deterministicRandom(seed),
+            );
         const revealOrder = winningRevealOrder(board, symbol.id);
 
         const beforeThird = resolveOfficeMatchReveal(board, revealOrder.slice(0, 4));
