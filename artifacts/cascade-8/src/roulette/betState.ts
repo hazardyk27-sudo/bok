@@ -30,6 +30,13 @@ function cloneRoulettePlacements(
   }));
 }
 
+function getRouletteEffectivePlacements(
+  state: RouletteBetState,
+) {
+  return authoritativeDragPlacements ??
+    state.placements;
+}
+
 export function setRouletteAuthoritativeDragPlacements(
   placements: readonly RouletteBetPlacement[],
 ) {
@@ -73,10 +80,15 @@ export function placeRouletteBet(
 ): RouletteBetState {
   if (!betId) return state;
 
+  const placements =
+    getRouletteEffectivePlacements(state);
+
   return {
     ...state,
     placements: [
-      ...state.placements,
+      ...cloneRoulettePlacements(
+        placements,
+      ),
       {
         betId,
         amount: state.selectedChip,
@@ -112,21 +124,36 @@ export function moveRouletteBetPlacements(
 export function undoRouletteBet(
   state: RouletteBetState,
 ): RouletteBetState {
-  if (state.placements.length === 0) {
-    return state;
+  const placements =
+    getRouletteEffectivePlacements(state);
+
+  if (placements.length === 0) {
+    return {
+      ...state,
+      placements: [],
+    };
   }
 
   return {
     ...state,
-    placements: state.placements.slice(0, -1),
+    placements:
+      cloneRoulettePlacements(
+        placements.slice(0, -1),
+      ),
   };
 }
 
 export function clearRouletteBets(
   state: RouletteBetState,
 ): RouletteBetState {
-  if (state.placements.length === 0) {
-    return state;
+  const placements =
+    getRouletteEffectivePlacements(state);
+
+  if (placements.length === 0) {
+    return {
+      ...state,
+      placements: [],
+    };
   }
 
   return {
@@ -138,14 +165,20 @@ export function clearRouletteBets(
 export function doubleRouletteBets(
   state: RouletteBetState,
 ): RouletteBetState {
-  if (state.placements.length === 0) {
-    return state;
+  const placements =
+    getRouletteEffectivePlacements(state);
+
+  if (placements.length === 0) {
+    return {
+      ...state,
+      placements: [],
+    };
   }
 
   return {
     ...state,
     placements:
-      state.placements.map(
+      placements.map(
         (placement) => ({
           ...placement,
           amount:
@@ -159,8 +192,7 @@ export function snapshotRouletteRound(
   state: RouletteBetState,
 ): RouletteBetState {
   const placements =
-    authoritativeDragPlacements ??
-    state.placements;
+    getRouletteEffectivePlacements(state);
 
   const canonicalPlacements =
     cloneRoulettePlacements(
@@ -217,8 +249,6 @@ export function getRouletteBetTotals(
 export function expandRouletteBetPlacementsToChipValues(
   placements: readonly RouletteBetPlacement[],
 ): RouletteBetPlacement[] {
-  // New UI denominations come first. 25/5/1 remain replay-only so a wager
-  // created immediately before this rollout can still be reconstructed.
   const denominations = [
     5_000,
     2_000,
@@ -305,8 +335,6 @@ export function compactRouletteBetPlacements(
   });
 }
 
-// Kept for the legacy placed-chip runtime palette. The Part 3 visual layer
-// recolors the final chip by total wager range, so this remains replay-safe.
 export function getRouletteDisplayChipValue(
   amount: number,
 ): RouletteChipValue {
