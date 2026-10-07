@@ -1,3 +1,7 @@
+import {
+  getRouletteLegacyPaletteSlot,
+} from "./chipTier";
+
 export const ROULETTE_CHIP_VALUES: readonly number[] = [
   10,
   50,
@@ -270,15 +274,15 @@ export function compactRouletteBetPlacements(
   });
 }
 
+/**
+ * Compatibility bridge for the legacy runtime's `chip-*` classes. The bridge
+ * consumes the same canonical tier function as the final renderer, so the old
+ * fallback cannot drift into a different color threshold table again.
+ */
 export function getRouletteDisplayChipValue(
   amount: number,
 ): RouletteChipValue {
-  if (amount >= 500) return 500;
-  if (amount >= 100) return 100;
-  if (amount >= 25) return 25;
-  if (amount >= 10) return 10;
-  if (amount >= 5) return 5;
-  return 1;
+  return getRouletteLegacyPaletteSlot(amount);
 }
 
 export function getRouletteLastChipByBet(
