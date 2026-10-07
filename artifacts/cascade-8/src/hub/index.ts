@@ -93,36 +93,52 @@ export const HUB_MARKUP = `
           <strong data-hub-profile-name>GİRİŞ / KAYIT</strong>
           <span class="choice-type" data-hub-profile-meta>EMAIL · USERNAME · USERCODE</span>
         </span>
+
+        <span
+          class="hub-profile-wealth"
+          role="button"
+          tabindex="0"
+          aria-haspopup="dialog"
+          aria-expanded="false"
+          aria-label="Servet sıralamasını aç"
+          data-hub-open-leaderboard
+        >
+          <span class="hub-profile-wealth-head">
+            <span>
+              <small>GLOBAL SIRA</small>
+              <strong data-hub-profile-rank>—</strong>
+            </span>
+            <span class="hub-profile-wealth-total">
+              <small>TOPLAM SERVET</small>
+              <strong data-hub-profile-wealth-total>—</strong>
+            </span>
+          </span>
+          <span class="hub-profile-wealth-breakdown">
+            <span>
+              <small>NAKİT</small>
+              <strong data-hub-profile-cash>—</strong>
+            </span>
+            <span>
+              <small>SERMAYE</small>
+              <strong data-hub-profile-capital>—</strong>
+            </span>
+          </span>
+          <span class="hub-profile-wealth-action">
+            <span>SERVET SIRALAMASINI GÖR</span>
+            <span aria-hidden="true">↗</span>
+          </span>
+        </span>
+
         <span class="choice-footer">
           <span data-hub-profile-footer>PROFİLİ AÇ</span>
           <span class="choice-arrow" aria-hidden="true">→</span>
         </span>
       </a>
-
-      <button
-        type="button"
-        class="game-choice game-choice-leaderboard hub-leaderboard-card"
-        aria-label="Servet sıralamasını aç"
-        aria-haspopup="dialog"
-        data-hub-open-leaderboard
-      >
-        <span class="choice-status is-live">GLOBAL RANKING</span>
-        <span class="choice-art" aria-hidden="true"><span>♛</span></span>
-        <span class="choice-copy">
-          <span class="choice-overline">WEALTH BOARD</span>
-          <strong>SERVET SIRALAMASI</strong>
-          <span class="choice-type">NAKİT + SERMAYE</span>
-        </span>
-        <span class="choice-footer">
-          <span>TOPLAM SERVETE GÖRE</span>
-          <span class="choice-arrow" aria-hidden="true">→</span>
-        </span>
-      </button>
     </div>
 
     <div class="menu-footer">
       <span class="menu-footer-line"></span>
-      <span>ONE LOUNGE · FOUR WORLDS · PROFILE · RANKING</span>
+      <span>ONE LOUNGE · FOUR WORLDS · ONE PROFILE</span>
       <span class="menu-footer-line"></span>
     </div>
   </main>
@@ -159,7 +175,7 @@ function hydrateProfileCard(app: HTMLElement, user: HubProfileUser | null) {
 export function mountHub(app: HTMLElement) {
   app.innerHTML = hubRouteShell(HUB_MARKUP);
   hydrateProfileCard(app, null);
-  mountHubLeaderboard(app);
+  const leaderboard = mountHubLeaderboard(app);
 
   void fetch("/api/auth/me", {
     method: "GET",
@@ -171,6 +187,12 @@ export function mountHub(app: HTMLElement) {
       const body = await response.json() as HubProfileResponse;
       return body.user;
     })
-    .then((user) => hydrateProfileCard(app, user))
-    .catch(() => hydrateProfileCard(app, null));
+    .then((user) => {
+      hydrateProfileCard(app, user);
+      leaderboard.setCurrentUsername(user?.username ?? null);
+    })
+    .catch(() => {
+      hydrateProfileCard(app, null);
+      leaderboard.setCurrentUsername(null);
+    });
 }
