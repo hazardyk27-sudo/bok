@@ -107,7 +107,7 @@ async function chipState(page: Page, betId: string) {
     }));
 }
 
-describe.sequential("roulette real browser wager lifecycle", () => {
+describe("roulette real browser wager lifecycle", () => {
   let vite: ViteDevServer;
   let browser: Browser;
   let page: Page;
