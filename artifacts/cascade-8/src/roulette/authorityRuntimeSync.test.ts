@@ -113,7 +113,7 @@ describe("roulette runtime authority synchronization", () => {
     ).toBe(true);
   });
 
-  it("keeps optimistic authority until the server advances beyond its revision", () => {
+  it("keeps optimistic authority against every same-round poll until its write resolves", () => {
     const optimistic = {
       roundId: "round-1",
       revision: 8,
@@ -128,7 +128,10 @@ describe("roulette runtime authority synchronization", () => {
     ).toBe(false);
     expect(
       shouldAcceptRouletteAuthorityBootstrap(optimistic, "round-1", 9),
-    ).toBe(true);
+    ).toBe(false);
+    expect(
+      shouldAcceptRouletteAuthorityBootstrap(optimistic, "round-1", 99),
+    ).toBe(false);
     expect(
       shouldAcceptRouletteAuthorityBootstrap(optimistic, "round-2", null),
     ).toBe(true);
