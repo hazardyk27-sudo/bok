@@ -8,7 +8,6 @@ export const LEGACY_SCOPED_SESSION_PATHS = [
   "/api/roulette",
   "/api/cadi-kazan",
   "/api/idle",
-  "/api/blackjack",
 ] as const;
 
 export function isValidSessionId(value: unknown): value is string {
@@ -69,10 +68,6 @@ export function shouldResolveAuthenticatedWalletSession(input: {
   sessionCandidateCount: number;
   legacySessionId: string | null;
 }) {
-  // Once an auth cookie is present, every request must validate and re-bind to
-  // users.wallet_session_id before any game state is read or mutated. Doing this
-  // only for writes lets a single stale game_session render the wrong balance
-  // until the first mutation, which looks like a duplicate debit to the player.
   return input.hasAuthToken;
 }
 
