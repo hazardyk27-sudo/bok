@@ -1,3 +1,7 @@
+import {
+  getRouletteLegacyPaletteSlot,
+} from "./chipTier";
+
 export const ROULETTE_CHIP_VALUES: readonly number[] = [
   10,
   50,
@@ -271,24 +275,14 @@ export function compactRouletteBetPlacements(
 }
 
 /**
- * Compatibility bridge for the legacy runtime's `chip-*` classes.
- *
- * The keys here are NOT wager denominations anymore; they are palette slots in
- * the old renderer. Keep this mapping identical to `getRouletteChipTier()` so
- * the legacy fallback can never disagree with the canonical aggregate face:
- * white -> 1, blue -> 10, green -> 25, red -> 5, black -> 100, purple -> 500.
- * The canonical renderer strips these classes entirely; this bridge exists only
- * as a fail-safe until the old runtime markup is fully removed.
+ * Compatibility bridge for the legacy runtime's `chip-*` classes. The bridge
+ * consumes the same canonical tier function as the final renderer, so the old
+ * fallback cannot drift into a different color threshold table again.
  */
 export function getRouletteDisplayChipValue(
   amount: number,
 ): RouletteChipValue {
-  if (amount >= 5_000) return 500;
-  if (amount >= 2_000) return 100;
-  if (amount >= 500) return 5;
-  if (amount >= 100) return 25;
-  if (amount >= 50) return 10;
-  return 1;
+  return getRouletteLegacyPaletteSlot(amount);
 }
 
 export function getRouletteLastChipByBet(
