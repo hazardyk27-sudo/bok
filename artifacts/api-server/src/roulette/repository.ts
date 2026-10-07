@@ -133,6 +133,8 @@ export class RouletteRepository {
         string;
       expectedRevision:
         number;
+      requestReceivedAtMs:
+        number;
     },
   ) {
     return upsertRouletteGlobalBet({
