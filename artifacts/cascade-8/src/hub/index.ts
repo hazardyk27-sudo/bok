@@ -1,3 +1,5 @@
+import { mountHubLeaderboard } from "./leaderboard";
+
 type HubProfileUser = {
   email: string;
   username: string;
@@ -96,11 +98,31 @@ export const HUB_MARKUP = `
           <span class="choice-arrow" aria-hidden="true">→</span>
         </span>
       </a>
+
+      <button
+        type="button"
+        class="game-choice game-choice-leaderboard hub-leaderboard-card"
+        aria-label="Servet sıralamasını aç"
+        aria-haspopup="dialog"
+        data-hub-open-leaderboard
+      >
+        <span class="choice-status is-live">GLOBAL RANKING</span>
+        <span class="choice-art" aria-hidden="true"><span>♛</span></span>
+        <span class="choice-copy">
+          <span class="choice-overline">WEALTH BOARD</span>
+          <strong>SERVET SIRALAMASI</strong>
+          <span class="choice-type">NAKİT + SERMAYE</span>
+        </span>
+        <span class="choice-footer">
+          <span>TOPLAM SERVETE GÖRE</span>
+          <span class="choice-arrow" aria-hidden="true">→</span>
+        </span>
+      </button>
     </div>
 
     <div class="menu-footer">
       <span class="menu-footer-line"></span>
-      <span>ONE LOUNGE · FOUR WORLDS · ONE PROFILE</span>
+      <span>ONE LOUNGE · FOUR WORLDS · PROFILE · RANKING</span>
       <span class="menu-footer-line"></span>
     </div>
   </main>
@@ -137,6 +159,7 @@ function hydrateProfileCard(app: HTMLElement, user: HubProfileUser | null) {
 export function mountHub(app: HTMLElement) {
   app.innerHTML = hubRouteShell(HUB_MARKUP);
   hydrateProfileCard(app, null);
+  mountHubLeaderboard(app);
 
   void fetch("/api/auth/me", {
     method: "GET",
