@@ -2,16 +2,17 @@ import {
   ROULETTE_CHIP_VALUES,
 } from "./betState";
 import {
+  getRouletteChipTier,
+  type RouletteChipTier,
+} from "./chipTier";
+import {
   formatRouletteAmount,
 } from "./uiFormat";
 
-export type RouletteChipTier =
-  | "white"
-  | "blue"
-  | "green"
-  | "red"
-  | "black"
-  | "purple";
+export {
+  getRouletteChipTier,
+  type RouletteChipTier,
+} from "./chipTier";
 
 export type RouletteChipPalette = Readonly<{
   main: string;
@@ -67,17 +68,6 @@ export const ROULETTE_CHIP_PALETTES: Readonly<
     highlight: "#7B43B6",
   },
 };
-
-export function getRouletteChipTier(
-  amount: number,
-): RouletteChipTier {
-  if (amount >= 5_000) return "purple";
-  if (amount >= 2_000) return "black";
-  if (amount >= 500) return "red";
-  if (amount >= 100) return "green";
-  if (amount >= 50) return "blue";
-  return "white";
-}
 
 export function getRouletteChipPalette(
   amount: number,
