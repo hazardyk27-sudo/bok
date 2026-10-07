@@ -7,18 +7,27 @@ const hubSource = readFileSync(
   "utf8",
 );
 
+const leaderboardSource = readFileSync(
+  fileURLToPath(new URL("./leaderboard.ts", import.meta.url)),
+  "utf8",
+);
+
 const menuSource = hubSource;
 
 describe("main menu regression", () => {
-  it("keeps the four game destinations and adds Profile as the fifth card", () => {
+  it("keeps the four game destinations, Profile and wealth leaderboard on home", () => {
     expect(menuSource).toContain('class="game-choice game-choice-slot" href="/slot"');
     expect(menuSource).toContain('class="game-choice game-choice-roulette" href="/roulette"');
     expect(menuSource).toContain('class="game-choice game-choice-witch" href="/cadi-kazan"');
     expect(menuSource).toContain('class="game-choice game-choice-businesses" href="/businesses"');
     expect(menuSource).toContain('class="game-choice game-choice-profile" href="/account"');
+    expect(menuSource).toContain("data-hub-open-leaderboard");
+    expect(menuSource).toContain("SERVET SIRALAMASI");
 
-    expect(menuSource.match(/class="game-choice game-choice-/g)).toHaveLength(5);
-    expect(menuSource).toContain("ONE LOUNGE · FOUR WORLDS · ONE PROFILE");
+    expect(menuSource.match(/class="game-choice game-choice-/g)).toHaveLength(6);
+    expect(menuSource).toContain(
+      "ONE LOUNGE · FOUR WORLDS · PROFILE · RANKING",
+    );
   });
 
   it("preserves the existing selector identity for the four game cards", () => {
@@ -42,6 +51,25 @@ describe("main menu regression", () => {
     expect(menuSource).toContain("data-hub-profile-name");
     expect(menuSource).toContain("user.userCode");
     expect(menuSource).toContain("user.balanceCents");
+  });
+
+  it("presents leaderboard data without becoming the leaderboard authority", () => {
+    expect(hubSource).toContain(
+      'import { mountHubLeaderboard } from "./leaderboard"',
+    );
+    expect(hubSource).toContain("mountHubLeaderboard(app)");
+    expect(leaderboardSource).toContain(
+      'fetch("/api/idle/leaderboard"',
+    );
+    expect(leaderboardSource).toContain(
+      "export const HUB_LEADERBOARD_REFRESH_MS = 15_000",
+    );
+    expect(leaderboardSource).toContain(
+      "window.setInterval",
+    );
+    expect(leaderboardSource).toContain(
+      'document.visibilityState === "visible"',
+    );
   });
 
   it("keeps the Hub mount isolated from game runtime code", () => {
