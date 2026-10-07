@@ -57,19 +57,18 @@ describe("Roulette optimistic balance", () => {
     ).toBe(0);
   });
 
-  it("installs the wallet bridge before runtime bootstrap and the UI observer immediately after mount", () => {
-    const bridgeAt = indexSource.indexOf(
-      "installRouletteOptimisticBalanceBridge();",
+  it("keeps the retired optimistic DOM observer out and installs authority before runtime", () => {
+    const authorityAt = indexSource.indexOf(
+      "installRouletteBetAuthority(app)",
     );
     const runtimeAt = indexSource.indexOf(
-      "mountRouletteRuntime(app);",
-    );
-    const uiAt = indexSource.indexOf(
-      "installRouletteOptimisticBalanceUi(app);",
+      "mountRouletteRuntime(app)",
     );
 
-    expect(bridgeAt).toBeGreaterThan(-1);
-    expect(runtimeAt).toBeGreaterThan(bridgeAt);
-    expect(uiAt).toBeGreaterThan(runtimeAt);
+    expect(indexSource).not.toContain(
+      "installRouletteOptimisticBalanceUi(app)",
+    );
+    expect(authorityAt).toBeGreaterThan(-1);
+    expect(runtimeAt).toBeGreaterThan(authorityAt);
   });
 });
