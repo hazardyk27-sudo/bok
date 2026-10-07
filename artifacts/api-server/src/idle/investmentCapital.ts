@@ -18,6 +18,19 @@ export type IdleInvestmentBaselineOptions = {
   freeStartingSeats?: number;
 };
 
+export type RetainedStadiumInvestmentReceipt = {
+  actionType: string;
+  purchasedSeats: number;
+  costCents: number;
+};
+
+const STADIUM_INVESTMENT_ACTIONS = new Set([
+  "SEAT_PURCHASE",
+  "STADIUM_UPGRADE",
+  "SPEED_UPGRADE",
+  "STORAGE_UPGRADE",
+]);
+
 function requireSafeNonNegativeInteger(
   value: number,
   errorCode: string,
@@ -119,5 +132,77 @@ export function calculateInvestedCapitalCents(
       + storageCapitalCents
       + seatCapitalCents,
     "INVALID_IDLE_LEADERBOARD_CAPITAL",
+  );
+}
+
+/**
+ * Improves the one-time legacy Stadium baseline with every still-retained
+ * action receipt. The retained part uses the exact historical cost_cents,
+ * while only progression older than the receipt-retention window is rebuilt
+ * from canonical progression. This matters when seat/economy prices changed
+ * before the permanent investment ledger existed.
+ */
+export function calculateLegacyStadiumBaselineCents(
+  currentProgress: IdleInvestmentProgress,
+  receipts: RetainedStadiumInvestmentReceipt[],
+) {
+  let retainedPurchasedSeats = 0;
+  let retainedStadiumUpgrades = 0;
+  let retainedSpeedUpgrades = 0;
+  let retainedStorageUpgrades = 0;
+  let exactRetainedCostCents = 0;
+
+  for (const receipt of receipts) {
+    if (!STADIUM_INVESTMENT_ACTIONS.has(receipt.actionType)) continue;
+
+    const costCents = requireSafeNonNegativeInteger(
+      receipt.costCents,
+      "INVALID_IDLE_RETAINED_INVESTMENT_COST",
+    );
+    if (costCents === 0) continue;
+
+    exactRetainedCostCents = requireSafeNonNegativeInteger(
+      exactRetainedCostCents + costCents,
+      "INVALID_IDLE_RETAINED_INVESTMENT_TOTAL",
+    );
+
+    if (receipt.actionType === "SEAT_PURCHASE") {
+      retainedPurchasedSeats += requireSafeNonNegativeInteger(
+        receipt.purchasedSeats,
+        "INVALID_IDLE_RETAINED_SEAT_COUNT",
+      );
+    } else if (receipt.actionType === "STADIUM_UPGRADE") {
+      retainedStadiumUpgrades += 1;
+    } else if (receipt.actionType === "SPEED_UPGRADE") {
+      retainedSpeedUpgrades += 1;
+    } else if (receipt.actionType === "STORAGE_UPGRADE") {
+      retainedStorageUpgrades += 1;
+    }
+  }
+
+  const earlierProgress: IdleInvestmentProgress = {
+    stadiumLevel: currentProgress.stadiumLevel - retainedStadiumUpgrades,
+    ownedSeats: currentProgress.ownedSeats - retainedPurchasedSeats,
+    speedLevel: currentProgress.speedLevel - retainedSpeedUpgrades,
+    storageLevel: currentProgress.storageLevel - retainedStorageUpgrades,
+  };
+
+  if (
+    earlierProgress.stadiumLevel < 1
+    || earlierProgress.ownedSeats < 0
+    || earlierProgress.speedLevel < 1
+    || earlierProgress.storageLevel < 1
+  ) {
+    throw new Error("INVALID_IDLE_RETAINED_INVESTMENT_HISTORY");
+  }
+
+  const reconstructedOlderCapitalCents = calculateInvestedCapitalCents(
+    earlierProgress,
+    { freeStartingSeats: 0 },
+  );
+
+  return requireSafeNonNegativeInteger(
+    reconstructedOlderCapitalCents + exactRetainedCostCents,
+    "INVALID_IDLE_LEGACY_STADIUM_CAPITAL",
   );
 }
