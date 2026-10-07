@@ -1,4 +1,3 @@
-import { createHash } from "node:crypto";
 import { createServer } from "node:http";
 import {
   assertDatabaseCutoverReady,
@@ -6,14 +5,7 @@ import {
   pool,
 } from "@workspace/db";
 import app from "./app";
-import {
-  markBlackjackRuntimeAttached,
-  markBlackjackRuntimeFailed,
-  markBlackjackRuntimeStarting,
-  markBlackjackRuntimeStopped,
-} from "./blackjack";
 import { logger } from "./lib/logger";
-import { attachBlackjackPlatformRuntime } from "./platform/blackjack";
 import { initializeSharedWalletPlatform } from "./platform/wallet";
 
 const rawPort = process.env["PORT"];
@@ -50,87 +42,12 @@ logger.info(
 );
 
 const server = createServer(app);
-const BLACKJACK_WS_DIAGNOSTIC_PATH = "/api/blackjack/ws";
-
-function getBlackjackWsDiagnosticIdentity(requestUrl: string | undefined): {
-  path: string | null;
-  hasAccessToken: boolean;
-  accessFingerprint: string | null;
-} {
-  try {
-    const url = new URL(requestUrl ?? "/", "http://blackjack.local");
-    const access = url.searchParams.get("access");
-    return {
-      path: url.pathname,
-      hasAccessToken: access !== null && access.length > 0,
-      accessFingerprint:
-        access === null || access.length === 0
-          ? null
-          : createHash("sha256").update(access).digest("hex").slice(0, 12),
-    };
-  } catch {
-    return {
-      path: null,
-      hasAccessToken: false,
-      accessFingerprint: null,
-    };
-  }
-}
-
-server.on("upgrade", (request, socket) => {
-  const diagnostic = getBlackjackWsDiagnosticIdentity(request.url);
-  if (diagnostic.path !== BLACKJACK_WS_DIAGNOSTIC_PATH) return;
-
-  const openedAtMs = Date.now();
-  logger.info(
-    {
-      event: "BLACKJACK_WS_UPGRADE_RECEIVED",
-      pid: process.pid,
-      hasAccessToken: diagnostic.hasAccessToken,
-      accessFingerprint: diagnostic.accessFingerprint,
-    },
-    "Blackjack WebSocket upgrade reached API server",
-  );
-
-  socket.once("error", (error) => {
-    logger.warn(
-      {
-        event: "BLACKJACK_WS_TCP_ERROR",
-        pid: process.pid,
-        accessFingerprint: diagnostic.accessFingerprint,
-        err: error,
-      },
-      "Blackjack WebSocket TCP transport error",
-    );
-  });
-
-  socket.once("close", (hadError) => {
-    logger.info(
-      {
-        event: "BLACKJACK_WS_TCP_CLOSED",
-        pid: process.pid,
-        accessFingerprint: diagnostic.accessFingerprint,
-        hadError,
-        lifetimeMs: Date.now() - openedAtMs,
-      },
-      "Blackjack WebSocket TCP transport closed",
-    );
-  });
-});
-
-let blackjackRuntime: Awaited<
-  ReturnType<typeof attachBlackjackPlatformRuntime>
-> | null = null;
-let blackjackRuntimeRetryHandle: ReturnType<typeof setTimeout> | null = null;
-let blackjackRuntimeAttempt = 0;
 let shuttingDown = false;
-const BLACKJACK_RUNTIME_RETRY_MS = 1_000;
 
 server.listen(port, () => {
   logger.info(
     {
       port,
-      blackjack: "STARTING",
       walletInitialization: "STARTING",
       databaseTarget: databaseRuntimeConfig.target,
     },
@@ -173,181 +90,10 @@ void initializeSharedWalletPlatform()
     );
   });
 
-// Blackjack is optional to the rest of the HTTP API, but Blackjack itself is
-// not considered ready until its authoritative realtime runtime is attached.
-// Startup failures and later fail-closed authority failures both rebuild the
-// runtime in-process; a dead authority is never left behind a live WebSocket.
-const scheduleBlackjackRuntimeRetry = (): void => {
-  if (shuttingDown || blackjackRuntimeRetryHandle !== null) return;
-  blackjackRuntimeRetryHandle = setTimeout(() => {
-    blackjackRuntimeRetryHandle = null;
-    void startBlackjackRuntime();
-  }, BLACKJACK_RUNTIME_RETRY_MS);
-};
-
-const handleBlackjackRuntimeUnavailable = (
-  error: unknown,
-  attempt: number,
-): void => {
-  if (
-    shuttingDown ||
-    attempt !== blackjackRuntimeAttempt ||
-    blackjackRuntime === null
-  ) {
-    return;
-  }
-
-  const failedRuntime = blackjackRuntime;
-  blackjackRuntime = null;
-  failedRuntime.close();
-  markBlackjackRuntimeFailed(attempt);
-
-  logger.error(
-    {
-      err: error,
-      attempt,
-      retryInMs: BLACKJACK_RUNTIME_RETRY_MS,
-    },
-    "Blackjack runtime became unavailable; recovery retry scheduled",
-  );
-  scheduleBlackjackRuntimeRetry();
-};
-
-const startBlackjackRuntime = async (): Promise<void> => {
-  if (shuttingDown) return;
-
-  blackjackRuntimeAttempt += 1;
-  const attempt = blackjackRuntimeAttempt;
-  markBlackjackRuntimeStarting(attempt);
-
-  try {
-    const runtime = await attachBlackjackPlatformRuntime(server, {
-      onRuntimeUnavailable: (error) => {
-        handleBlackjackRuntimeUnavailable(error, attempt);
-      },
-    });
-
-    if (shuttingDown) {
-      runtime.close();
-      markBlackjackRuntimeStopped();
-      return;
-    }
-
-    runtime.realtime.webSocketServer.on("connection", (socket, request) => {
-      const diagnostic = getBlackjackWsDiagnosticIdentity(request.url);
-      const connectedAtMs = Date.now();
-
-      logger.info(
-        {
-          event: "BLACKJACK_WS_CONNECTION_ACCEPTED",
-          pid: process.pid,
-          attempt,
-          hasAccessToken: diagnostic.hasAccessToken,
-          accessFingerprint: diagnostic.accessFingerprint,
-        },
-        "Blackjack WebSocket connection accepted by ws server",
-      );
-
-      socket.on("error", (error) => {
-        logger.warn(
-          {
-            event: "BLACKJACK_WS_SOCKET_ERROR",
-            pid: process.pid,
-            attempt,
-            accessFingerprint: diagnostic.accessFingerprint,
-            err: error,
-          },
-          "Blackjack WebSocket socket error",
-        );
-      });
-
-      socket.on("close", (code, reason) => {
-        logger.info(
-          {
-            event: "BLACKJACK_WS_SOCKET_CLOSED",
-            pid: process.pid,
-            attempt,
-            accessFingerprint: diagnostic.accessFingerprint,
-            closeCode: code,
-            closeReason: reason.toString(),
-            lifetimeMs: Date.now() - connectedAtMs,
-          },
-          "Blackjack WebSocket socket closed",
-        );
-      });
-
-      for (const delayMs of [250, 2_000, 10_000]) {
-        const handle = setTimeout(() => {
-          logger.info(
-            {
-              event: "BLACKJACK_WS_CONNECTION_STATE",
-              pid: process.pid,
-              attempt,
-              accessFingerprint: diagnostic.accessFingerprint,
-              ageMs: delayMs,
-              socketReadyState: socket.readyState,
-              connectionCount: runtime.realtime.connectionCount(),
-              authenticatedConnectionCount:
-                runtime.realtime.authenticatedConnectionCount(),
-            },
-            "Blackjack WebSocket connection diagnostic state",
-          );
-        }, delayMs);
-        handle.unref?.();
-      }
-    });
-
-    blackjackRuntime = runtime;
-
-    const readiness = runtime.getReadiness();
-    if (!readiness.ready) {
-      handleBlackjackRuntimeUnavailable(
-        new Error("BLACKJACK_RUNTIME_NOT_READY_AFTER_ATTACH"),
-        attempt,
-      );
-      return;
-    }
-
-    markBlackjackRuntimeAttached(runtime, attempt);
-    logger.info(
-      {
-        blackjack: readiness,
-        attempt,
-      },
-      "Blackjack runtime attached",
-    );
-  } catch (error) {
-    if (shuttingDown) {
-      markBlackjackRuntimeStopped();
-      return;
-    }
-
-    markBlackjackRuntimeFailed(attempt);
-    logger.error(
-      {
-        err: error,
-        attempt,
-        retryInMs: BLACKJACK_RUNTIME_RETRY_MS,
-      },
-      "Blackjack runtime failed to attach; retry scheduled",
-    );
-    scheduleBlackjackRuntimeRetry();
-  }
-};
-
-void startBlackjackRuntime();
-
 const shutdown = () => {
   if (shuttingDown) return;
   shuttingDown = true;
 
-  if (blackjackRuntimeRetryHandle !== null) {
-    clearTimeout(blackjackRuntimeRetryHandle);
-    blackjackRuntimeRetryHandle = null;
-  }
-  blackjackRuntime?.close();
-  blackjackRuntime = null;
-  markBlackjackRuntimeStopped();
   server.close();
 
   void pool.end().catch((error) => {

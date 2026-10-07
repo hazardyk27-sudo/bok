@@ -39,7 +39,6 @@ const idleRoutes = read("./idle/routes.ts");
 const rouletteRoutes = read("./roulette/routes.ts");
 const authRoutes = read("./auth/routes.ts");
 const authRepository = read("./auth/repository.ts");
-const blackjackPlatform = read("./platform/blackjack.ts");
 const sessionPlatform = read("./platform/session.ts");
 const walletPlatform = read("./platform/wallet.ts");
 const sessionConvergenceApi = read("./platform/sessionConvergence.ts");
@@ -92,10 +91,6 @@ describe("backend game isolation", () => {
       }
     }
 
-    expect(blackjackPlatform).toContain('from "./wallet"');
-    expect(blackjackPlatform).toContain("INITIAL_SHARED_BALANCE_CENTS");
-    expect(blackjackPlatform).toContain("shared_wallets");
-
     for (const source of [slotRoutes, cadiRoutes, rouletteRoutes]) {
       expect(source).toContain('from "../platform/session"');
     }
@@ -111,19 +106,16 @@ describe("backend game isolation", () => {
       idleUsesCanonicalSessionImport
       || idleUsesPlatformGenerationCompatibility,
     ).toBe(true);
-
-    expect(blackjackPlatform).toContain('from "./session"');
-    expect(blackjackPlatform).toContain("shared_wallets");
   });
 
   it("routes through stable live-game backend entrypoints", () => {
     expect(routesIndex).toContain('from "../cadi-kazan"');
     expect(routesIndex).toContain('from "../slot"');
     expect(routesIndex).toContain('from "../idle"');
-    expect(routesIndex).toContain('from "../blackjack"');
     expect(routesIndex).toContain('from "../roulette"');
     expect(routesIndex).toContain('authRouter } from "../auth"');
     expect(routesIndex).toContain("router.use(authRouter)");
+    expect(routesIndex).not.toContain("blackjack");
   });
 
   it("wires account identity to the canonical shared wallet without a second wallet table", () => {
@@ -236,26 +228,14 @@ describe("backend game isolation", () => {
     const walletInitializationAt = serverIndex.indexOf(
       "initializeSharedWalletPlatform()",
     );
-    const blackjackAttachAt = serverIndex.indexOf(
-      "attachBlackjackPlatformRuntime(server, {",
-    );
 
     expect(listenAt).toBeGreaterThan(-1);
     expect(walletInitializationAt).toBeGreaterThan(-1);
-    expect(blackjackAttachAt).toBeGreaterThan(-1);
     expect(listenAt).toBeLessThan(walletInitializationAt);
-    expect(listenAt).toBeLessThan(blackjackAttachAt);
     expect(serverIndex).not.toContain(
       "await initializeSharedWalletPlatform()",
     );
     expect(serverIndex).toContain("void initializeSharedWalletPlatform()");
-    expect(serverIndex).toContain("void startBlackjackRuntime()");
-    expect(serverIndex).toContain(
-      "const runtime = await attachBlackjackPlatformRuntime(server, {",
-    );
-    expect(serverIndex).toContain(
-      "onRuntimeUnavailable: (error) =>",
-    );
     expect(serverIndex).toContain("pool.end()");
   });
 
@@ -267,30 +247,11 @@ describe("backend game isolation", () => {
     expect(walletPlatform).toContain("skippedBecauseAnotherInitializer: true");
   });
 
-  it("wires Blackjack runtime through shared platform entrypoints", () => {
-    expect(routesIndex).toContain(
-      'blackjackPlatformRouter } from "../platform/blackjack"',
-    );
-    expect(routesIndex).toContain("router.use(blackjackPlatformRouter)");
-    expect(serverIndex).toContain(
-      'attachBlackjackPlatformRuntime } from "./platform/blackjack"',
-    );
-    expect(serverIndex).toContain("void startBlackjackRuntime()");
-    expect(serverIndex).toContain(
-      "const runtime = await attachBlackjackPlatformRuntime(server, {",
-    );
-    expect(blackjackPlatform).toContain(
-      "initializeAndAttachBlackjackServerRuntime",
-    );
-    expect(blackjackPlatform).toContain(
-      "createShuffledBlackjackShoe",
-    );
-    expect(blackjackPlatform).toContain(
-      "rebaseBlackjackSnapshotAgainstSharedWallets",
-    );
-    expect(blackjackPlatform).not.toContain(
-      "BLACKJACK_SHARED_WALLET_CHANGED",
-    );
+  it("keeps retired Blackjack out of shared runtime and routing", () => {
+    expect(routesIndex).not.toContain("blackjack");
+    expect(serverIndex).not.toContain("Blackjack");
+    expect(serverIndex).not.toContain("blackjack");
+    expect(frontendMain).not.toContain('currentPath === "/blackjack"');
+    expect(frontendMain).not.toContain('import("./blackjack")');
   });
-
 });
