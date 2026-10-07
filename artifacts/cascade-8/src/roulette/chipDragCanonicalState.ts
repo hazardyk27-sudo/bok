@@ -375,20 +375,35 @@ export function installRouletteChipDragCanonicalState(
       idempotencyKey,
       expectedRevision,
     ) {
-      const result =
-        await originalUpdate.call(
-          this,
-          roundId,
-          bets,
+      const isDragUpdate =
+        !shouldResetRouletteCanonicalDragStateForUpdate(
           idempotencyKey,
-          expectedRevision,
         );
 
-      if (
-        shouldResetRouletteCanonicalDragStateForUpdate(
-          idempotencyKey,
-        )
-      ) {
+      if (isDragUpdate) {
+        setRouletteAuthoritativeDragPlacements(
+          bets,
+        );
+      }
+
+      let result;
+      try {
+        result =
+          await originalUpdate.call(
+            this,
+            roundId,
+            bets,
+            idempotencyKey,
+            expectedRevision,
+          );
+      } catch (error) {
+        if (isDragUpdate) {
+          resetCanonicalDragState();
+        }
+        throw error;
+      }
+
+      if (!isDragUpdate) {
         resetCanonicalDragState();
         return result;
       }
