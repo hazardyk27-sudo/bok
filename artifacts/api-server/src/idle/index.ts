@@ -1,5 +1,6 @@
 import { logger } from "../lib/logger";
 import router from "./routes";
+import leaderboardRouter from "./leaderboardRoutes";
 import { ticketMarketRuntime } from "./marketRuntimeDb";
 import { ensureIdleRuntimeSchema } from "./runtimeSchema";
 import {
@@ -41,5 +42,7 @@ const stopIdleRuntime = () => {
 
 process.once("SIGTERM", stopIdleRuntime);
 process.once("SIGINT", stopIdleRuntime);
+
+router.use(leaderboardRouter);
 
 export { router };
