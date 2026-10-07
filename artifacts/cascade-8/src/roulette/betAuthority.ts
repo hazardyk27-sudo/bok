@@ -4,6 +4,7 @@ import {
   type RouletteGlobalBetSnapshot,
   type RouletteGlobalBetUpdateResponse,
 } from "./rouletteWalletClient";
+import type { RouletteBetPlacement } from "./betState";
 import {
   cloneRouletteAuthorityBets,
   getRouletteAuthorityStake,
@@ -55,6 +56,32 @@ function syntheticAuthorityBet(
     settledAtMs: base?.settledAtMs ?? null,
     updatedAtMs: Date.now(),
   };
+}
+
+function betTotals(
+  bets: readonly RouletteBetPlacement[],
+) {
+  const totals = new Map<string, number>();
+  for (const bet of bets) {
+    totals.set(
+      bet.betId,
+      (totals.get(bet.betId) ?? 0) + bet.amount,
+    );
+  }
+  return totals;
+}
+
+function sameWagerTopology(
+  left: readonly RouletteBetPlacement[],
+  right: readonly RouletteBetPlacement[],
+) {
+  const a = betTotals(left);
+  const b = betTotals(right);
+  if (a.size !== b.size) return false;
+  for (const [betId, amount] of a) {
+    if ((b.get(betId) ?? 0) !== amount) return false;
+  }
+  return true;
 }
 
 export function shouldAcceptRouletteAuthorityBootstrap(
@@ -167,6 +194,7 @@ function revisionForWrite(
 
 function acceptConfirmedWrite(
   roundId: string,
+  plan: readonly RouletteBetPlacement[],
   response: RouletteGlobalBetUpdateResponse,
   sequence: number,
 ) {
@@ -174,9 +202,14 @@ function acceptConfirmedWrite(
     lastAcceptedGlobalBet = cloneGlobalBet(response.globalBet);
 
     const authority = getRouletteBetAuthoritySnapshot();
+    const stillRepresentsThisWrite =
+      authority.bets !== null &&
+      sameWagerTopology(authority.bets, plan);
+
     if (
       sequence === mutationSequence &&
-      authority.roundId === roundId
+      authority.roundId === roundId &&
+      stillRepresentsThisWrite
     ) {
       setRouletteBetAuthority(
         roundId,
@@ -190,9 +223,14 @@ function acceptConfirmedWrite(
 
   lastAcceptedGlobalBet = null;
   const authority = getRouletteBetAuthoritySnapshot();
+  const stillRepresentsThisWrite =
+    authority.bets !== null &&
+    sameWagerTopology(authority.bets, plan);
+
   if (
     sequence === mutationSequence &&
-    authority.roundId === roundId
+    authority.roundId === roundId &&
+    stillRepresentsThisWrite
   ) {
     setRouletteBetAuthority(
       roundId,
@@ -294,7 +332,7 @@ export function installRouletteBetAuthority(_app: HTMLDivElement) {
           idempotencyKey,
           revision,
         );
-        acceptConfirmedWrite(roundId, response, sequence);
+        acceptConfirmedWrite(roundId, plan, response, sequence);
         return response;
       } catch (error) {
         const message = error instanceof Error ? error.message : "";
@@ -324,7 +362,7 @@ export function installRouletteBetAuthority(_app: HTMLDivElement) {
         idempotencyKey,
         revision,
       );
-      acceptConfirmedWrite(roundId, response, sequence);
+      acceptConfirmedWrite(roundId, plan, response, sequence);
       return response;
     });
   };

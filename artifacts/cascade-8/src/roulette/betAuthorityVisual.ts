@@ -1,21 +1,18 @@
 import {
   clearRouletteAuthoritativeDragPlacements,
+  getRouletteAuthoritativeDragPlacements,
   setRouletteAuthoritativeDragPlacements,
   type RouletteBetPlacement,
 } from "./betState";
-import { cloneRouletteAuthorityBets } from "./betAuthorityState";
 
 let authorityRoundId: string | null = null;
-let authorityBets: RouletteBetPlacement[] | null = null;
 let authorityRevision = 0;
 let authorityOptimistic = false;
 
 export function getRouletteBetAuthoritySnapshot() {
   return {
     roundId: authorityRoundId,
-    bets: authorityBets
-      ? cloneRouletteAuthorityBets(authorityBets)
-      : null,
+    bets: getRouletteAuthoritativeDragPlacements(),
     revision: authorityRevision,
     optimistic: authorityOptimistic,
   };
@@ -23,7 +20,6 @@ export function getRouletteBetAuthoritySnapshot() {
 
 export function clearRouletteBetAuthority() {
   authorityRoundId = null;
-  authorityBets = null;
   authorityRevision = 0;
   authorityOptimistic = false;
   clearRouletteAuthoritativeDragPlacements();
@@ -36,8 +32,7 @@ export function setRouletteBetAuthority(
   optimistic: boolean,
 ) {
   authorityRoundId = roundId;
-  authorityBets = cloneRouletteAuthorityBets(bets);
   authorityRevision = Math.max(0, revision);
   authorityOptimistic = optimistic;
-  setRouletteAuthoritativeDragPlacements(authorityBets);
+  setRouletteAuthoritativeDragPlacements(bets);
 }
