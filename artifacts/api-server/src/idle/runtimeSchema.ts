@@ -14,7 +14,7 @@ async function applyIdleRuntimeSchema() {
       id text PRIMARY KEY,
       session_id text NOT NULL,
       stadium_level integer NOT NULL DEFAULT 1,
-      owned_seats integer NOT NULL DEFAULT 0,
+      owned_seats integer NOT NULL DEFAULT 1000,
       speed_level integer NOT NULL DEFAULT 1,
       storage_level integer NOT NULL DEFAULT 1,
       stored_microtickets bigint NOT NULL DEFAULT 0,
@@ -23,6 +23,9 @@ async function applyIdleRuntimeSchema() {
       created_at timestamptz NOT NULL DEFAULT now(),
       updated_at timestamptz NOT NULL DEFAULT now()
     );
+
+    ALTER TABLE idle_stadium_states
+      ALTER COLUMN owned_seats SET DEFAULT 1000;
 
     CREATE UNIQUE INDEX IF NOT EXISTS
       idle_stadium_states_session_unique
@@ -158,12 +161,19 @@ async function applyIdleRuntimeSchema() {
   );
 
   for (const row of baselineRows.rows) {
-    const capitalCents = calculateInvestedCapitalCents({
-      stadiumLevel: Number(row.stadium_level),
-      ownedSeats: Number(row.owned_seats),
-      speedLevel: Number(row.speed_level),
-      storageLevel: Number(row.storage_level),
-    });
+    // Before this rollout the backend created Stadium rows at 0 owned seats,
+    // so every persisted seat was actually bought by the player. Preserve that
+    // spend in the one-time legacy baseline instead of treating the first 1,000
+    // as retroactively free. New rows start at the canonical 1,000 free seats.
+    const capitalCents = calculateInvestedCapitalCents(
+      {
+        stadiumLevel: Number(row.stadium_level),
+        ownedSeats: Number(row.owned_seats),
+        speedLevel: Number(row.speed_level),
+        storageLevel: Number(row.storage_level),
+      },
+      { freeStartingSeats: 0 },
+    );
 
     await pool.query(
       `INSERT INTO idle_investment_ledger
@@ -190,8 +200,11 @@ async function applyIdleRuntimeSchema() {
  *
  * The permanent investment ledger is intentionally NOT part of the 3-day
  * Stadium action-receipt cleanup. Existing Stadium progress receives one
- * immutable baseline row; all later investment costs are recorded exactly at
- * transaction time.
+ * immutable legacy baseline row using the actual old zero-seat start; all
+ * later investment costs are recorded exactly at transaction time. Existing
+ * seat counts are not rewritten during this backfill, avoiding retroactive
+ * production changes. Newly created Stadium rows use the canonical 1,000 free
+ * starting seats.
  *
  * A new MARKET_CONFIG.priceEpoch also performs exactly one global price
  * rebase to the canonical bootstrap value. Once that epoch marker exists,
