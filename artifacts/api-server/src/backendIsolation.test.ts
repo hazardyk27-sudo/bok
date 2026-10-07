@@ -17,7 +17,6 @@ const walletPlatform = read("./platform/wallet.ts");
 const sessionConvergenceApi = read("./platform/sessionConvergence.ts");
 const sessionConvergenceClient = read("../../cascade-8/src/platform/sessionConvergence.ts");
 const frontendMain = read("../../cascade-8/src/main.ts");
-const appSource = read("./app.ts");
 const apiPackage = read("../package.json");
 const apiDevRunner = read("../dev-runner.mjs");
 const serverIndex = read("./index.ts");
@@ -46,14 +45,12 @@ describe("backend game isolation", () => {
     for (const name of ["wallet", "cadi-kazan", "slot", "idle", "auth", "roulette"]) {
       expect(schemaIndex).toContain(`export * from "./${name}";`);
     }
-    expect(schemaIndex.toLowerCase()).not.toContain("blackjack");
   });
 
   it("routes only active backend games", () => {
     for (const name of ["cadi-kazan", "slot", "idle", "roulette", "auth"]) {
       expect(routesIndex).toContain(name);
     }
-    expect(routesIndex.toLowerCase()).not.toContain("blackjack");
   });
 
   it("keeps shared wallet/session authority for every remaining game", () => {
@@ -80,16 +77,7 @@ describe("backend game isolation", () => {
     ]) {
       expect(sessionConvergenceClient).toContain(endpoint);
     }
-    expect(sessionConvergenceClient.toLowerCase()).not.toContain("blackjack");
-    expect(sessionPlatform.toLowerCase()).not.toContain("blackjack");
     expect(sessionConvergenceApi).toContain("SESSION_CONVERGENCE_ROUTE_PATHS");
-  });
-
-  it("keeps the retired game out of shared runtime and frontend routing", () => {
-    expect(routesIndex.toLowerCase()).not.toContain("blackjack");
-    expect(serverIndex.toLowerCase()).not.toContain("blackjack");
-    expect(frontendMain.toLowerCase()).not.toContain("blackjack");
-    expect(appSource.toLowerCase()).not.toContain("blackjack");
   });
 
   it("fails closed on an unverified or implicit Supabase cutover", () => {

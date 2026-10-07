@@ -29,7 +29,6 @@ Current product areas:
 - Slot / Cascade 8: `/slot`
 - Cadı Kazan / scratch cards: `/cadi-kazan`
 - Idle / İşletmeler: `/businesses`
-- Blackjack: `/blackjack`
 - Roulette 2D: `/roulette`
 - Account/Auth: shared account subsystem, not an independent game route
 
@@ -43,7 +42,6 @@ Permanent development branches:
 - Idle / İşletmeler: `feature/idle`
 - Hub/site: `feature/hub`
 - Account/Auth: `feature/account`
-- Blackjack: `feature/blackjack`
 - Roulette 2D: `feature/roulette-2d`
 
 Shared preview branch:
@@ -279,15 +277,12 @@ Shared/platform milestones live only in this master file and are updated only by
 
 - 2026-10-01 — Replit routine sync DB safety — `scripts/post-merge.sh` no longer runs Drizzle schema push during ordinary preview refreshes. Routine sync now installs dependencies and skips DB mutation; schema push requires explicit `OYUN_RUN_DB_PUSH=1` during a separate controlled database maintenance step, preventing non-TTY prompts or destructive-table suggestions from blocking code delivery.
 
-
 - 2026-09-30 — Supabase fail-closed cutover guard prepared — BOKGAME has 24 application tables plus the platform-only `oyun_migration_receipts` guard table. A successful frozen Helium copy writes a `VERIFIED` receipt only after count/checksum/sequence/relation verification; Supabase-mode API startup refuses to listen without that receipt, and the DB module no longer permits an implicit `SUPABASE_DATABASE_URL` fallback while the cutover flag is false. Next: sync to Replit, run preflight → freeze → copy, confirm `MIGRATION_OK` + receipt, then enable `USE_SUPABASE_DATABASE=true` and run cross-game smoke.
 - 2026-09-30 — Supabase schema parity + verified migration pipeline ready — BOKGAME target has the complete 24-table application schema with Slot money columns widened to BIGINT; migration tooling requires the same 24-table contract on Helium, supports database-level source write freeze/status/unfreeze, refuses copy unless source is truly read-only, restores atomically, and verifies source stability, per-table counts/content checksums, sequences and critical wallet/user/ledger relationships before cutover.
 
 - 2026-09-30 — Account/Profile v1 — Account/Auth is wired into the shared product: `/account` and `/api/auth/*` are live integration surfaces, registration uses email + unique username + password without email verification, DB-sequenced usercodes render as `0000-0000-01`, authenticated identity is bound to the canonical `game_session` / `shared_wallets` wallet, login accepts email or username, profile shows shared balance/email/username/usercode, password change revokes other auth sessions, logout detaches the browser to a fresh guest wallet, and Hub renders a fifth Profile card from server-authoritative `/api/auth/me` state.
 
 - 2026-09-30 — API startup hardening v2 — live Replit proved the correct preview HEAD was loaded but port 8080 still never opened because `initializeSharedWalletPlatform()` was still awaited before `server.listen()`. Shared-wallet maintenance now runs after the listener starts, its advisory lock uses non-blocking `pg_try_advisory_xact_lock`, and Replit/local readiness checks use DB-backed `/api/readyz` with bounded probe timeouts instead of treating liveness alone as success.
-
-- 2026-09-30 — Shared API startup isolation — live Replit diagnosis found the API worker process alive but no HTTP listener on canonical port 8080, causing `/api/healthz` 502 / `ECONNREFUSED` and simultaneously breaking Idle HTTP/SSE, Blackjack HTTP/WebSocket, and Roulette HTTP. The shared HTTP server now begins listening before Blackjack durable runtime recovery/attachment, so a stalled Blackjack recovery cannot take the whole API offline; API shutdown also closes the Postgres pool. Regression coverage locks both the canonical 8080 routing contract and listener-before-Blackjack startup ordering.
 
 - 2026-09-30 — Replit runtime alignment is hardened around the artifact-native API port `8080`: web stays on `20003`, API artifact/Vite proxy/local-stack all use `8080`, and the standard sync helper now runs post-merge setup on advancement, forces API/Vite watcher reloads, and requires `/api/healthz` to recover before declaring sync success. This closes the stale-process failure where Git was current but `/api/*` still served old routes.
 
@@ -305,7 +300,6 @@ Shared/platform milestones live only in this master file and are updated only by
 - This is a hard scope boundary for all agents working on OYUN/BOK.
 
 ## 15. Authority order
-
 
 When instructions conflict, use this order:
 1. the user's latest explicit instruction;

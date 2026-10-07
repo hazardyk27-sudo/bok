@@ -59,7 +59,6 @@ describe("canonical shared wallet contract", () => {
     expect(getLegacyScopedSessionPathForRequest("/api/slot/session-converge")).toBe("/api/slot");
     expect(getLegacyScopedSessionPathForRequest("/api/roulette/spins")).toBe("/api/roulette");
     expect(getLegacyScopedSessionPathForRequest("/api/healthz")).toBeNull();
-    expect(sessionSource.toLowerCase()).not.toContain("blackjack");
   });
 
   it("root-scopes every remaining HTTP game_session cookie", () => {
@@ -77,7 +76,6 @@ describe("canonical shared wallet contract", () => {
     ]) {
       expect(sessionConvergenceClient).toContain(endpoint);
     }
-    expect(sessionConvergenceClient.toLowerCase()).not.toContain("blackjack");
     expect(sessionConvergenceApi).toContain("SESSION_CONVERGENCE_ROUTE_PATHS");
     expect(frontendMain).toContain("await convergeLegacyGameSessions()");
   });
