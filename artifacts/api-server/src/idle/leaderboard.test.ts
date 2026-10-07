@@ -1,8 +1,16 @@
+import { readFileSync } from "node:fs";
+import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 import {
   buildIdleLeaderboard,
   calculateInvestedCapitalCents,
+  calculateLegacyStadiumBaselineCents,
 } from "./leaderboard";
+
+const leaderboardSource = readFileSync(
+  fileURLToPath(new URL("./leaderboard.ts", import.meta.url)),
+  "utf8",
+);
 
 describe("Idle wealth leaderboard", () => {
   it("keeps the canonical 1,000 free starting seats out of new-player capital", () => {
@@ -26,6 +34,24 @@ describe("Idle wealth leaderboard", () => {
     )).toBe(300_000);
   });
 
+  it("uses retained Stadium receipts at their exact historical price", () => {
+    expect(calculateLegacyStadiumBaselineCents(
+      {
+        stadiumLevel: 1,
+        ownedSeats: 1_000,
+        speedLevel: 1,
+        storageLevel: 1,
+      },
+      [
+        {
+          actionType: "SEAT_PURCHASE",
+          purchasedSeats: 500,
+          costCents: 100_000,
+        },
+      ],
+    )).toBe(250_000);
+  });
+
   it("reconstructs a one-time canonical baseline from Stadium, seats, Speed and Storage", () => {
     expect(calculateInvestedCapitalCents({
       stadiumLevel: 6,
@@ -42,6 +68,14 @@ describe("Idle wealth leaderboard", () => {
       speedLevel: 20,
       storageLevel: 20,
     })).toBe(14_049_050_000);
+  });
+
+  it("includes only real legacy investment debits and excludes collect credits", () => {
+    expect(leaderboardSource).toContain("'BUSINESS_UPGRADE_DEBIT'");
+    expect(leaderboardSource).toContain("'VAULT_UPGRADE_DEBIT'");
+    expect(leaderboardSource).toContain("SUM(-amount_cents) AS legacy_capital_cents");
+    expect(leaderboardSource).toContain("AND amount_cents < 0");
+    expect(leaderboardSource).not.toContain("'COLLECT_CREDIT',\n          'BUSINESS_UPGRADE_DEBIT'");
   });
 
   it("sorts by cash plus durable invested capital", () => {

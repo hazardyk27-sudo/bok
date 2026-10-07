@@ -1,6 +1,7 @@
 import { pool } from "@workspace/db";
 export {
   calculateInvestedCapitalCents,
+  calculateLegacyStadiumBaselineCents,
 } from "./investmentCapital";
 
 export type IdleLeaderboardSourceRow = {
@@ -66,6 +67,13 @@ export function buildIdleLeaderboard(
   }));
 }
 
+/**
+ * Capital means cumulative money the player actually invested into Idle
+ * businesses. Legacy BUSINESS_UPGRADE_DEBIT / VAULT_UPGRADE_DEBIT rows are
+ * permanent exact historical debits, so they remain part of capital after the
+ * old passive-cash UI was retired. Current Stadium/seat/Speed/Storage spending
+ * comes from idle_investment_ledger. Income/collect credits are never capital.
+ */
 export async function getIdleLeaderboard() {
   const result = await pool.query<{
     username: string;
@@ -75,17 +83,31 @@ export async function getIdleLeaderboard() {
     `SELECT
        u.username,
        w.balance_cents,
-       COALESCE(i.invested_capital_cents, 0) AS invested_capital_cents
+       COALESCE(i.current_capital_cents, 0)
+         + COALESCE(l.legacy_capital_cents, 0)
+         AS invested_capital_cents
      FROM users u
      JOIN shared_wallets w
        ON w.session_id = u.wallet_session_id
      LEFT JOIN (
        SELECT session_id,
-              SUM(amount_cents) AS invested_capital_cents
+              SUM(amount_cents) AS current_capital_cents
          FROM idle_investment_ledger
         GROUP BY session_id
      ) i
-       ON i.session_id = u.wallet_session_id`,
+       ON i.session_id = u.wallet_session_id
+     LEFT JOIN (
+       SELECT session_id,
+              SUM(-amount_cents) AS legacy_capital_cents
+         FROM idle_ledger
+        WHERE kind IN (
+          'BUSINESS_UPGRADE_DEBIT',
+          'VAULT_UPGRADE_DEBIT'
+        )
+          AND amount_cents < 0
+        GROUP BY session_id
+     ) l
+       ON l.session_id = u.wallet_session_id`,
   );
 
   const entries = buildIdleLeaderboard(

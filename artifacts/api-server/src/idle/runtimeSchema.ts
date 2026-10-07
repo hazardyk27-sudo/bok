@@ -2,7 +2,7 @@ import { randomUUID } from "node:crypto";
 import {
   MARKET_CONFIG,
 } from "../../../cascade-8/src/idle/config";
-import { calculateInvestedCapitalCents } from "./investmentCapital";
+import { calculateLegacyStadiumBaselineCents } from "./investmentCapital";
 
 let schemaReadyPromise: Promise<void> | null = null;
 
@@ -160,19 +160,55 @@ async function applyIdleRuntimeSchema() {
       )`,
   );
 
+  const retainedReceipts = await pool.query<{
+    session_id: string;
+    action_type: string;
+    purchased_seats: string | number;
+    cost_cents: string | number;
+  }>(
+    `SELECT session_id, action_type, purchased_seats, cost_cents
+       FROM idle_stadium_action_receipts
+      WHERE action_type IN (
+        'SEAT_PURCHASE',
+        'STADIUM_UPGRADE',
+        'SPEED_UPGRADE',
+        'STORAGE_UPGRADE'
+      )
+        AND cost_cents > 0
+      ORDER BY created_at ASC`,
+  );
+
+  const receiptsBySession = new Map<string, Array<{
+    actionType: string;
+    purchasedSeats: number;
+    costCents: number;
+  }>>();
+
+  for (const receipt of retainedReceipts.rows) {
+    const list = receiptsBySession.get(receipt.session_id) ?? [];
+    list.push({
+      actionType: receipt.action_type,
+      purchasedSeats: Number(receipt.purchased_seats),
+      costCents: Number(receipt.cost_cents),
+    });
+    receiptsBySession.set(receipt.session_id, list);
+  }
+
   for (const row of baselineRows.rows) {
     // Before this rollout the backend created Stadium rows at 0 owned seats,
-    // so every persisted seat was actually bought by the player. Preserve that
-    // spend in the one-time legacy baseline instead of treating the first 1,000
-    // as retroactively free. New rows start at the canonical 1,000 free seats.
-    const capitalCents = calculateInvestedCapitalCents(
+    // so every persisted seat was actually bought by the player. Rewind every
+    // still-retained investment receipt from the current progression, rebuild
+    // only the older missing history, then add the receipt's exact historical
+    // cost_cents back. This preserves real paid prices whenever the 3-day
+    // receipt window still has them instead of repricing those actions today.
+    const capitalCents = calculateLegacyStadiumBaselineCents(
       {
         stadiumLevel: Number(row.stadium_level),
         ownedSeats: Number(row.owned_seats),
         speedLevel: Number(row.speed_level),
         storageLevel: Number(row.storage_level),
       },
-      { freeStartingSeats: 0 },
+      receiptsBySession.get(row.session_id) ?? [],
     );
 
     await pool.query(
@@ -200,11 +236,11 @@ async function applyIdleRuntimeSchema() {
  *
  * The permanent investment ledger is intentionally NOT part of the 3-day
  * Stadium action-receipt cleanup. Existing Stadium progress receives one
- * immutable legacy baseline row using the actual old zero-seat start; all
- * later investment costs are recorded exactly at transaction time. Existing
- * seat counts are not rewritten during this backfill, avoiding retroactive
- * production changes. Newly created Stadium rows use the canonical 1,000 free
- * starting seats.
+ * immutable legacy baseline row. Retained receipts contribute their exact
+ * historical transaction cost; only older progression outside retention must
+ * be reconstructed. Existing seat counts are never rewritten. Newly created
+ * Stadium rows use the canonical 1,000 free starting seats and all later
+ * investments are recorded exactly at transaction time.
  *
  * A new MARKET_CONFIG.priceEpoch also performs exactly one global price
  * rebase to the canonical bootstrap value. Once that epoch marker exists,
