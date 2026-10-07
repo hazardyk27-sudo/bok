@@ -4,6 +4,7 @@ import {
   type BlackjackRealtimeIdentity,
   type BlackjackRealtimeRuntime,
 } from "./realtime";
+import { resolveBlackjackLiveRealtimeIdentity } from "./realtimeIdentityGuard";
 import {
   recoverAndStartBlackjackRoundRuntime,
   type BlackjackRecoveredScheduledRuntime,
@@ -198,7 +199,8 @@ export function attachBlackjackScheduledServerRuntime(
     scheduled.authority.source,
     {
       ...scheduled.realtimeOptions,
-      resolveIdentity:input.resolveIdentity,
+      resolveIdentity:(request)=>
+        resolveBlackjackLiveRealtimeIdentity(request,input.resolveIdentity),
       nowMs:input.nowMs,
       createConnectionId:input.createConnectionId,
     },
