@@ -3,11 +3,8 @@ import healthRouter from "./health";
 import { router as cadiKazanRouter } from "../cadi-kazan";
 import { router as slotRouter } from "../slot";
 import { router as idleRouter } from "../idle";
-import { router as blackjackRouter } from "../blackjack";
-import { blackjackSessionIdentityMiddleware } from "../blackjack/sessionIdentityMiddleware";
 import { router as rouletteRouter } from "../roulette";
 import { authRouter } from "../auth";
-import { blackjackPlatformRouter } from "../platform/blackjack";
 import { sessionConvergenceRouter } from "../platform/sessionConvergence";
 
 const router: IRouter = Router();
@@ -18,9 +15,6 @@ router.use(authRouter);
 router.use(cadiKazanRouter);
 router.use(slotRouter);
 router.use(idleRouter);
-router.use(blackjackSessionIdentityMiddleware);
-router.use(blackjackPlatformRouter);
-router.use(blackjackRouter);
 router.use(rouletteRouter);
 
 export default router;
