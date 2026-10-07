@@ -77,6 +77,10 @@ function totalStake(bets: readonly RouletteBetPlacement[]) {
   return bets.reduce((sum, bet) => sum + bet.amount, 0);
 }
 
+function totalStakeCents(bets: readonly RouletteBetPlacement[]) {
+  return Math.round(totalStake(bets) * 100);
+}
+
 function sameKeys(left: Record<string, number>, right: Record<string, number>) {
   const a = Object.keys(left).sort();
   const b = Object.keys(right).sort();
@@ -193,6 +197,20 @@ export function readRouletteVisibleBets(
     });
 }
 
+export function selectRouletteDragBetsWithStakeGuard(
+  visibleBets: readonly RouletteBetPlacement[],
+  fallbackBets: readonly RouletteBetPlacement[],
+): RouletteBetPlacement[] {
+  if (
+    visibleBets.length === 0 ||
+    totalStakeCents(visibleBets) !== totalStakeCents(fallbackBets)
+  ) {
+    return cloneBets(fallbackBets);
+  }
+
+  return cloneBets(visibleBets);
+}
+
 export function createRouletteVirtualBet(
   base: RouletteGlobalBetSnapshot,
   bets: readonly RouletteBetPlacement[],
@@ -201,7 +219,7 @@ export function createRouletteVirtualBet(
   return {
     ...base,
     bets: cloneBets(bets),
-    stakeCents: Math.round(totalStake(bets) * 100),
+    stakeCents: totalStakeCents(bets),
     revision: Math.max(base.revision, expectedRevision) + 1,
     updatedAtMs: Date.now(),
   };
@@ -232,6 +250,10 @@ export async function syncRouletteLatestVisibleState({
       throw new Error("ROULETTE_DRAG_VISIBLE_STATE_UNAVAILABLE");
     }
 
+    if (totalStakeCents(latestBets) !== totalStakeCents(globalBet.bets)) {
+      throw new Error("ROULETTE_DRAG_STAKE_MISMATCH");
+    }
+
     if (areRouletteBetPlacementsEqual(globalBet.bets, latestBets)) {
       return actual;
     }
@@ -254,6 +276,14 @@ export async function syncRouletteLatestVisibleState({
   }
 
   const latestBets = readLatestBets();
+  if (
+    actual.globalBet &&
+    actual.globalBet.roundId === roundId &&
+    totalStakeCents(latestBets) !== totalStakeCents(actual.globalBet.bets)
+  ) {
+    throw new Error("ROULETTE_DRAG_STAKE_MISMATCH");
+  }
+
   if (
     actual.globalBet &&
     actual.globalBet.roundId === roundId &&
@@ -289,7 +319,7 @@ function visibleBetsForState(
   fallback: readonly RouletteBetPlacement[],
 ) {
   const visible = readRouletteVisibleBets(app);
-  return visible.length > 0 ? visible : cloneBets(fallback);
+  return selectRouletteDragBetsWithStakeGuard(visible, fallback);
 }
 
 export function installRouletteChipDragLatestWriter(app: HTMLDivElement) {
