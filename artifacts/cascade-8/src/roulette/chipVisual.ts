@@ -227,6 +227,7 @@ function decorateMobileChipToggle(
   const toggle = app.querySelector<HTMLElement>(
     "[data-mobile-chip-toggle]",
   );
+
   if (
     !toggle ||
     !applyRouletteChipVisualState(
@@ -284,6 +285,26 @@ function readSelectedChipAmount(
     : ROULETTE_CHIP_VALUES[0];
 }
 
+function recordAddsChip(record: MutationRecord) {
+  if (record.type !== "childList") return false;
+
+  for (const node of record.addedNodes) {
+    if (!(node instanceof HTMLElement)) continue;
+    if (
+      node.matches(
+        "[data-chip-value], .roulette-placed-chip[data-bet-amount]",
+      ) ||
+      node.querySelector(
+        "[data-chip-value], .roulette-placed-chip[data-bet-amount]",
+      )
+    ) {
+      return true;
+    }
+  }
+
+  return false;
+}
+
 export function installRouletteChipVisuals(
   app: HTMLDivElement,
 ) {
@@ -322,46 +343,16 @@ export function installRouletteChipVisuals(
     });
   });
 
+  // Runtime may replace several placed-chip nodes in one render. Decorate the
+  // completed mutation batch exactly once instead of rescanning once per added
+  // node. Attribute changes are deliberately ignored: chip denomination is
+  // immutable and the mobile selected face is updated directly by click.
   const observer = new MutationObserver((records) => {
-    for (const record of records) {
-      if (
-        record.type === "attributes" &&
-        record.attributeName === "aria-pressed" &&
-        record.target instanceof HTMLElement &&
-        record.target.matches("[data-chip-value]") &&
-        record.target.getAttribute("aria-pressed") === "true"
-      ) {
-        decorateMobileChipToggle(
-          app,
-          Number(record.target.dataset.chipValue),
-        );
-      }
-
-      for (const node of record.addedNodes) {
-        if (!(node instanceof HTMLElement)) continue;
-
-        if (
-          node.matches(
-            "[data-chip-value], .roulette-placed-chip[data-bet-amount]",
-          )
-        ) {
-          decorateRouletteChips(
-            node.parentElement ?? node,
-          );
-        } else if (
-          node.querySelector(
-            "[data-chip-value], .roulette-placed-chip[data-bet-amount]",
-          )
-        ) {
-          decorateRouletteChips(node);
-        }
-      }
-    }
+    if (!records.some(recordAddsChip)) return;
+    decorateRouletteChips(app);
   });
 
   observer.observe(app, {
-    attributes: true,
-    attributeFilter: ["aria-pressed"],
     childList: true,
     subtree: true,
   });
