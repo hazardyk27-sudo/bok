@@ -92,9 +92,9 @@ echo "API ready. Starting frontend on port $FRONTEND_PORT with /api proxy -> $AP
 frontend_pid="$!"
 
 # Keep the web and API lifecycle coupled. Previously the frontend stayed alive
-# after the API process died, leaving Vite connected while /api and Blackjack
-# realtime were permanently offline. If either child exits unexpectedly, end
-# the whole service so Replit restarts the canonical full stack together.
+# after the API process died, leaving Vite connected while /api was permanently
+# offline. If either child exits unexpectedly, end the whole service so Replit
+# restarts the canonical full stack together.
 while true; do
   if ! kill -0 "$api_pid" 2>/dev/null; then
     set +e
