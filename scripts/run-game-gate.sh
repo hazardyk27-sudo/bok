@@ -4,7 +4,7 @@ set -euo pipefail
 game="${1:-${GAME:-}}"
 
 if [[ -z "$game" ]]; then
-  echo "GAME is required (slot|cadi-kazan|idle|hub|account|blackjack|roulette)." >&2
+  echo "GAME is required (slot|cadi-kazan|idle|hub|account|roulette)." >&2
   exit 2
 fi
 
@@ -35,14 +35,6 @@ case "$game" in
   account)
     frontend src/account --passWithNoTests
     backend src/auth --passWithNoTests
-    ;;
-  blackjack)
-    frontend src/blackjack
-    backend src/blackjack
-    pnpm --filter @workspace/cascade-8 exec playwright test \
-      e2e/blackjack.spec.ts \
-      e2e/blackjack-session-bootstrap.spec.ts \
-      --project=android-chrome
     ;;
   roulette)
     frontend src/roulette

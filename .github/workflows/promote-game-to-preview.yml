@@ -13,7 +13,6 @@ on:
           - idle
           - hub
           - account
-          - blackjack
           - roulette
       source_ref:
         description: Exact 40-character feature commit SHA to promote (immutable; branch names are rejected)
@@ -68,20 +67,12 @@ jobs:
           git diff --name-only
       - name: Install
         run: pnpm install --frozen-lockfile
-
-      # Blocking promotion gates are intentionally dependency-scoped:
-      # 1) production artifacts + shared platform contracts,
-      # 2) only the selected game's owned regression surface.
-      # Unrelated games are checked after preview push by Integration Preview Guard
-      # and do not block this promotion.
       - name: Critical platform artifact gate
         run: bash scripts/run-platform-critical-gate.sh
-
       - name: Target game regression gate
         env:
           GAME: ${{ inputs.game }}
         run: bash scripts/run-game-gate.sh "$GAME"
-
       - name: Commit promotion locally
         id: promotion
         shell: bash

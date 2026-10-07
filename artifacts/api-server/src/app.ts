@@ -26,41 +26,26 @@ app.use(
   pinoHttp({
     logger,
     customLogLevel(req, res, err) {
-      if (err || res.statusCode >= 500) {
-        return "error";
-      }
-      if (res.statusCode >= 400) {
-        return "warn";
-      }
+      if (err || res.statusCode >= 500) return "error";
+      if (res.statusCode >= 400) return "warn";
 
-      const url =
-        req.url?.split("?")[0] ??
-        "";
-
+      const url = req.url?.split("?")[0] ?? "";
       if (
         url === "/api/readyz" ||
         url === "/api/healthz" ||
         url === "/api/roulette/state" ||
-        url === "/api/blackjack/health" ||
         url === "/api/idle/market/live"
       ) {
         return "silent";
       }
-
       return "info";
     },
     serializers: {
       req(req) {
-        return {
-          id: req.id,
-          method: req.method,
-          url: req.url?.split("?")[0],
-        };
+        return { id: req.id, method: req.method, url: req.url?.split("?")[0] };
       },
       res(res) {
-        return {
-          statusCode: res.statusCode,
-        };
+        return { statusCode: res.statusCode };
       },
     },
   }),
@@ -68,11 +53,6 @@ app.use(
 app.use(cors());
 app.use(cookieParser());
 
-// game_session is the only live guest game identity. Logged-in users are bound
-// exclusively through users.wallet_session_id. If an auth cookie was revoked or
-// expired, never fall back to the browser's previous game_session because that
-// session may still point at the account wallet. Detach the browser to a fresh
-// anonymous wallet instead and fail closed for the interrupted game request.
 app.use(async (req, res, next) => {
   try {
     const sessionCandidates = getSessionCookieCandidates(req.headers.cookie);
@@ -104,19 +84,10 @@ app.use(async (req, res, next) => {
       detachedAnonymousSessionId = randomUUID();
       await authRepository.ensureAnonymousWallet(detachedAnonymousSessionId);
 
-      res.clearCookie(AUTH_COOKIE, {
-        ...cookieOptions,
-        path: "/",
-      });
+      res.clearCookie(AUTH_COOKIE, { ...cookieOptions, path: "/" });
       for (const path of ["/", ...LEGACY_SCOPED_SESSION_PATHS]) {
-        res.clearCookie(SESSION_COOKIE, {
-          ...cookieOptions,
-          path,
-        });
-        res.clearCookie(LEGACY_SESSION_COOKIE, {
-          ...cookieOptions,
-          path,
-        });
+        res.clearCookie(SESSION_COOKIE, { ...cookieOptions, path });
+        res.clearCookie(LEGACY_SESSION_COOKIE, { ...cookieOptions, path });
       }
 
       delete req.cookies[AUTH_COOKIE];
@@ -155,10 +126,7 @@ app.use(async (req, res, next) => {
     }
 
     if (legacySessionId) {
-      res.clearCookie(LEGACY_SESSION_COOKIE, {
-        ...cookieOptions,
-        path: "/",
-      });
+      res.clearCookie(LEGACY_SESSION_COOKIE, { ...cookieOptions, path: "/" });
       if (observedLegacyScope) {
         res.clearCookie(LEGACY_SESSION_COOKIE, {
           ...cookieOptions,
@@ -167,10 +135,7 @@ app.use(async (req, res, next) => {
       }
     }
 
-    if (
-      invalidAuthenticatedSession &&
-      !req.path.startsWith("/api/auth/")
-    ) {
+    if (invalidAuthenticatedSession && !req.path.startsWith("/api/auth/")) {
       res.status(401).json({ error: "AUTH_SESSION_REVOKED" });
       return;
     }
@@ -183,7 +148,6 @@ app.use(async (req, res, next) => {
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
-
 app.use("/api", router);
 
 export default app;

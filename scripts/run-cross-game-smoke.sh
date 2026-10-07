@@ -15,7 +15,6 @@ frontend \
   src/cadi-kazan/cadiKazanSmoke.test.ts \
   src/idle/economySmoke.test.ts \
   src/idle/services/index.test.ts \
-  src/blackjack/blackjackSmoke.test.ts \
   src/roulette/finalRegression.test.ts
 
 backend \
@@ -25,6 +24,4 @@ backend \
   src/cadi-kazan/config.test.ts \
   src/cadi-kazan/officeMatchFlow.test.ts \
   src/idle/policy.test.ts \
-  src/roulette/round.test.ts \
-  src/blackjack/rules.test.ts \
-  src/blackjack/walletLedger.test.ts
+  src/roulette/round.test.ts

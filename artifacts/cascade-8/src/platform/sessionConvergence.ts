@@ -3,7 +3,6 @@ export const SESSION_CONVERGENCE_ENDPOINTS = [
   "/api/roulette/session-converge",
   "/api/cadi-kazan/session-converge",
   "/api/idle/session-converge",
-  "/api/blackjack/session-converge",
 ] as const;
 
 const SESSION_CONVERGENCE_MARKER = "oyun-session-convergence-v3";
