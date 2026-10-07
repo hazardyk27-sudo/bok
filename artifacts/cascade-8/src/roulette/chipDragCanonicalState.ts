@@ -14,13 +14,6 @@ import { formatRouletteAmount } from "./uiFormat";
 
 const V6_MOVE_PREFIX = "roulette_move_v6_";
 
-export const ROULETTE_CANONICAL_RESET_SELECTOR = [
-  "[data-double-bet]",
-  "[data-undo-bet]",
-  "[data-clear-bets]",
-  "[data-rebet]",
-].join(", ");
-
 type CanonicalState = {
   placements: RouletteBetPlacement[];
   templates: Map<string, HTMLElement>;
@@ -348,22 +341,6 @@ export function installRouletteChipDragCanonicalState(
   if (installed) return;
   installed = true;
 
-  app.addEventListener(
-    "click",
-    (event) => {
-      const target = event.target;
-      if (
-        target instanceof Element &&
-        target.closest(
-          ROULETTE_CANONICAL_RESET_SELECTOR,
-        )
-      ) {
-        resetCanonicalDragState();
-      }
-    },
-    true,
-  );
-
   const originalUpdate =
     RouletteWalletClient.prototype
       .updateGlobalBet;
@@ -384,6 +361,11 @@ export function installRouletteChipDragCanonicalState(
         setRouletteAuthoritativeDragPlacements(
           bets,
         );
+      } else {
+        // Normal wager mutations run only after betState has synchronously
+        // consumed the latest dragged placement. Clear the visual drag guard
+        // here, not in click capture, so x2/place/undo cannot lose the move.
+        resetCanonicalDragState();
       }
 
       let result;
@@ -404,7 +386,6 @@ export function installRouletteChipDragCanonicalState(
       }
 
       if (!isDragUpdate) {
-        resetCanonicalDragState();
         return result;
       }
 
