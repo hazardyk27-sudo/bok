@@ -62,7 +62,10 @@ describe("backend game isolation", () => {
       expect(source).toContain("shared_wallets");
     }
     for (const source of idleWalletSources) {
-      expect(source).toContain("shared_wallets");
+      const usesSharedWalletConstant = source.includes("SHARED_WALLET_TABLE");
+      const usesLiteralSharedWallet = source.includes("shared_wallets");
+      expect(usesSharedWalletConstant || usesLiteralSharedWallet).toBe(true);
+      expect(source).not.toContain("roulette_wallets");
     }
     expect(walletPlatform).toContain('SHARED_WALLET_TABLE = "shared_wallets"');
     expect(sessionPlatform).toContain('SESSION_COOKIE = "game_session"');
