@@ -92,6 +92,13 @@ function assertUpgradeReplay(
   return targetLevel as SpeedLevel;
 }
 
+/**
+ * Upgrades the independent ticket-production Speed track by exactly one level.
+ *
+ * The action has no Stadium-level, seat-count, or Storage prerequisite. All
+ * elapsed production is checkpointed first by runCheckpointedStadiumMutation,
+ * so the old Speed remains authoritative for the entire pre-upgrade interval.
+ */
 export async function upgradeStadiumSpeed(
   sessionId: string,
   idempotencyKey: string,
