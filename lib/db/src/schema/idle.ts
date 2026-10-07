@@ -66,7 +66,7 @@ export const idleStadiumStates = pgTable(
     id: text("id").primaryKey(),
     sessionId: text("session_id").notNull(),
     stadiumLevel: integer("stadium_level").notNull().default(1),
-    ownedSeats: integer("owned_seats").notNull().default(0),
+    ownedSeats: integer("owned_seats").notNull().default(1_000),
     speedLevel: integer("speed_level").notNull().default(1),
     storageLevel: integer("storage_level").notNull().default(1),
     storedMicroTickets: bigint("stored_microtickets", { mode: "number" }).notNull().default(0),
