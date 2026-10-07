@@ -24,9 +24,9 @@ export const OFFICE_POOL_DISTRIBUTION = [
   { symbolId: "MICHAEL", count: 1, multiplierBps: 10_000 },
   { symbolId: "STANLEY", count: 3, multiplierBps: 2_000 },
   { symbolId: "DWIGHT", count: 5, multiplierBps: 1_000 },
-  { symbolId: "JIM", count: 18, multiplierBps: 500 },
-  { symbolId: "KEVIN", count: 100, multiplierBps: 200 },
-  { symbolId: null, count: 273, multiplierBps: 0 },
+  { symbolId: "JIM", count: 10, multiplierBps: 500 },
+  { symbolId: "KEVIN", count: 120, multiplierBps: 200 },
+  { symbolId: null, count: 261, multiplierBps: 0 },
 ] as const satisfies readonly {
   symbolId: OfficeMatchSymbolId | null;
   count: number;
