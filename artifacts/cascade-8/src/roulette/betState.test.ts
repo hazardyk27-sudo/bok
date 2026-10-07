@@ -353,19 +353,22 @@ describe("roulette local wager state", () => {
     ]);
   });
 
-  it("promotes the displayed chip by the total wager amount", () => {
-    expect(getRouletteDisplayChipValue(1)).toBe(1);
-    expect(getRouletteDisplayChipValue(4)).toBe(1);
-    expect(getRouletteDisplayChipValue(5)).toBe(5);
-    expect(getRouletteDisplayChipValue(9)).toBe(5);
-    expect(getRouletteDisplayChipValue(10)).toBe(10);
-    expect(getRouletteDisplayChipValue(24)).toBe(10);
-    expect(getRouletteDisplayChipValue(25)).toBe(25);
-    expect(getRouletteDisplayChipValue(99)).toBe(25);
-    expect(getRouletteDisplayChipValue(100)).toBe(100);
-    expect(getRouletteDisplayChipValue(499)).toBe(100);
-    expect(getRouletteDisplayChipValue(500)).toBe(500);
-    expect(getRouletteDisplayChipValue(640)).toBe(500);
-    expect(getRouletteDisplayChipValue(5_120)).toBe(500);
+  it("keeps the legacy runtime fallback aligned with aggregate color tiers", () => {
+    // These return values are palette slots in the old renderer, not wager
+    // denominations. They intentionally mirror white/blue/green/red/black/
+    // purple until the old chip-* markup is fully removed.
+    expect(getRouletteDisplayChipValue(10)).toBe(1);
+    expect(getRouletteDisplayChipValue(20)).toBe(1);
+    expect(getRouletteDisplayChipValue(40)).toBe(1);
+    expect(getRouletteDisplayChipValue(50)).toBe(10);
+    expect(getRouletteDisplayChipValue(80)).toBe(10);
+    expect(getRouletteDisplayChipValue(100)).toBe(25);
+    expect(getRouletteDisplayChipValue(160)).toBe(25);
+    expect(getRouletteDisplayChipValue(499)).toBe(25);
+    expect(getRouletteDisplayChipValue(500)).toBe(5);
+    expect(getRouletteDisplayChipValue(1_999)).toBe(5);
+    expect(getRouletteDisplayChipValue(2_000)).toBe(100);
+    expect(getRouletteDisplayChipValue(4_999)).toBe(100);
+    expect(getRouletteDisplayChipValue(5_000)).toBe(500);
   });
 });
