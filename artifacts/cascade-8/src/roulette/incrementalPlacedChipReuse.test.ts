@@ -18,14 +18,6 @@ const canonicalSource =
     ),
     "utf8",
   );
-const reuseSource =
-  readFileSync(
-    new URL(
-      "./incrementalPlacedChipReuse.ts",
-      import.meta.url,
-    ),
-    "utf8",
-  );
 const indexSource =
   readFileSync(
     new URL(
@@ -35,7 +27,7 @@ const indexSource =
     "utf8",
   );
 
-describe("roulette canonical placed chip + incremental reuse", () => {
+describe("roulette canonical placed chip", () => {
   it("keeps the selected 10 chip and placed 10 chip on the same white casino tier", () => {
     expect(getRouletteChipTier(10)).toBe("white");
     expect(canonicalSource).toContain(
@@ -55,33 +47,12 @@ describe("roulette canonical placed chip + incremental reuse", () => {
     );
   });
 
-  it("reuses a pending placed-chip node instead of detach + append churn", () => {
-    expect(reuseSource).toContain(
-      "roulettePendingRuntimeRemoval",
+  it("keeps the legacy Element prototype reuse layer out of the runtime mount path", () => {
+    expect(indexSource).not.toContain(
+      "installRouletteIncrementalPlacedChipReuse",
     );
-    expect(reuseSource).toContain(
-      "directPlacedChip(this)",
+    expect(indexSource).toContain(
+      "mountRouletteRuntime(app)",
     );
-    expect(reuseSource).toContain(
-      "syncRouletteCanonicalChipFace(\n        existing",
-    );
-    expect(reuseSource).toContain(
-      "queueMicrotask(\n    flushPendingRemovals",
-    );
-  });
-
-  it("installs reuse before rouletteRuntime mounts", () => {
-    const reuseInstall =
-      indexSource.indexOf(
-        "installRouletteIncrementalPlacedChipReuse(app)",
-      );
-    const runtimeMount =
-      indexSource.indexOf(
-        "mountRouletteRuntime(app)",
-      );
-
-    expect(reuseInstall).toBeGreaterThan(-1);
-    expect(runtimeMount).toBeGreaterThan(-1);
-    expect(reuseInstall).toBeLessThan(runtimeMount);
   });
 });
