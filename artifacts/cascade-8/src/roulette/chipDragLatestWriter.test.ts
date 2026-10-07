@@ -3,6 +3,7 @@ import {
   areRouletteBetPlacementsEqual,
   createRouletteVirtualBet,
   rebaseRouletteMutationOntoVirtualState,
+  selectRouletteDragBetsWithStakeGuard,
   syncRouletteLatestVisibleState,
   writeRouletteMutationWithRevisionRetry,
 } from "./chipDragLatestWriter";
@@ -79,6 +80,72 @@ describe("roulette latest dragged position writer", () => {
       { betId: "straight-11", amount: 10 },
     ]);
     expect(result.globalBet?.revision).toBe(3);
+  });
+
+  it("keeps the full wager when a VERIFY render exposes only a partial DOM bet set", () => {
+    const fullWager = Array.from({ length: 10 }, (_, index) => ({
+      betId: `straight-${index + 1}`,
+      amount: 100,
+    }));
+    const partialDom = fullWager.slice(0, 7);
+
+    expect(
+      selectRouletteDragBetsWithStakeGuard(partialDom, fullWager),
+    ).toEqual(fullWager);
+  });
+
+  it("accepts a complete moved DOM state when total drag stake is unchanged", () => {
+    const fallback = [
+      { betId: "straight-8", amount: 500 },
+      { betId: "straight-17", amount: 500 },
+    ];
+    const moved = [
+      { betId: "high", amount: 500 },
+      { betId: "straight-17", amount: 500 },
+    ];
+
+    expect(
+      selectRouletteDragBetsWithStakeGuard(moved, fallback),
+    ).toEqual(moved);
+  });
+
+  it("refuses to write a partial DOM snapshot that would shrink drag stake", async () => {
+    const fullWager = Array.from({ length: 10 }, (_, index) => ({
+      betId: `straight-${index + 1}`,
+      amount: 100,
+    }));
+    const actual: RouletteGlobalBetSnapshot = {
+      ...snapshot("straight-1", 8),
+      bets: fullWager,
+      stakeCents: 100_000,
+      revision: 8,
+    };
+    const writeActual = vi.fn<(
+      bets: readonly { betId: string; amount: number }[],
+      expectedRevision: number,
+    ) => Promise<RouletteGlobalBetUpdateResponse>>();
+
+    await expect(
+      syncRouletteLatestVisibleState({
+        roundId: "round-1",
+        initialActual: {
+          globalBet: actual,
+          balanceCents: 900_000,
+        },
+        readLatestBets: () =>
+          Array.from({ length: 7 }, (_, index) => ({
+            betId: `straight-${index + 1}`,
+            amount: 10,
+          })),
+        refreshActual: vi.fn(async () => ({
+          globalBet: actual,
+          balanceCents: 900_000,
+        })),
+        writeActual,
+      }),
+    ).rejects.toThrow("ROULETTE_DRAG_STAKE_MISMATCH");
+
+    expect(writeActual).not.toHaveBeenCalled();
   });
 
   it("lets the V6 command queue advance virtually without changing the final desired stake", () => {
