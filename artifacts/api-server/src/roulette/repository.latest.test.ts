@@ -34,11 +34,11 @@ describe("roulette latest wager write", () => {
   it("retries a stale predecessor without moving the original server arrival time", async () => {
     mocks.getBet
       .mockResolvedValueOnce({
-        globalBet: { revision: 4 },
+        globalBet: { revision: 4, stakeCents: 4_000 },
         balanceCents: 100_000,
       })
       .mockResolvedValueOnce({
-        globalBet: { revision: 5 },
+        globalBet: { revision: 5, stakeCents: 4_000 },
         balanceCents: 99_000,
       });
 
@@ -49,6 +49,7 @@ describe("roulette latest wager write", () => {
       .mockResolvedValueOnce({
         globalBet: {
           revision: 6,
+          stakeCents: 8_000,
           bets: [{ betId: "straight-8", amount: 80 }],
         },
         balanceCents: 92_000,
@@ -79,7 +80,7 @@ describe("roulette latest wager write", () => {
 
   it("does not retry non-stale failures", async () => {
     mocks.getBet.mockResolvedValue({
-      globalBet: { revision: 2 },
+      globalBet: { revision: 2, stakeCents: 4_000 },
       balanceCents: 100_000,
     });
     mocks.upsert.mockRejectedValue(
@@ -101,5 +102,30 @@ describe("roulette latest wager write", () => {
     ).rejects.toThrow("INSUFFICIENT_ROULETTE_CREDITS");
 
     expect(mocks.upsert).toHaveBeenCalledTimes(1);
+  });
+
+  it("keeps a newer repeated double when an older smaller fast request arrives late", async () => {
+    mocks.getBet.mockResolvedValue({
+      globalBet: {
+        revision: 7,
+        stakeCents: 16_000,
+        bets: [{ betId: "straight-8", amount: 160 }],
+      },
+      balanceCents: 84_000,
+    });
+
+    const repository = new RouletteRepository();
+    const result = await repository.updateGlobalBetLatest(
+      "session-1",
+      {
+        roundId: "round-1",
+        bets: [{ betId: "straight-8", amount: 80 }],
+        idempotencyKey: "roulette_fast_double_late_smaller",
+        requestReceivedAtMs: 12_345,
+      },
+    );
+
+    expect(result.globalBet?.stakeCents).toBe(16_000);
+    expect(mocks.upsert).not.toHaveBeenCalled();
   });
 });
