@@ -25,6 +25,33 @@ let pendingIntent: RouletteAuthorityIntent = { kind: "unknown" };
 let intentToken = 0;
 const mutationPlans = new Map<string, MutationPlan>();
 
+export function shouldAcceptRouletteAuthorityBootstrap(
+  authority: {
+    roundId: string | null;
+    revision: number;
+    optimistic: boolean;
+  },
+  roundId: string,
+  serverRevision: number | null,
+) {
+  if (authority.roundId !== roundId) {
+    return true;
+  }
+
+  if (serverRevision === null) {
+    return false;
+  }
+
+  if (serverRevision > authority.revision) {
+    return true;
+  }
+
+  return (
+    !authority.optimistic &&
+    serverRevision === authority.revision
+  );
+}
+
 function selectedChipAmount(app: HTMLDivElement) {
   const selected = app.querySelector<HTMLElement>(
     ".roulette-chip-option[data-chip-value][aria-pressed=\"true\"]",
@@ -127,8 +154,12 @@ export function installRouletteBetAuthority(app: HTMLDivElement) {
     }
 
     if (
-      serverBet &&
-      (!authority.optimistic || serverBet.revision > authority.revision)
+      shouldAcceptRouletteAuthorityBootstrap(
+        authority,
+        roundId,
+        serverBet?.revision ?? null,
+      ) &&
+      serverBet
     ) {
       setRouletteBetAuthority(
         roundId,
@@ -136,8 +167,6 @@ export function installRouletteBetAuthority(app: HTMLDivElement) {
         serverBet.revision,
         false,
       );
-    } else if (!serverBet && !authority.optimistic) {
-      setRouletteBetAuthority(roundId, [], 0, false);
     }
 
     return response;
