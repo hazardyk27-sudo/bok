@@ -95,7 +95,7 @@ export const HUB_MARKUP = `
         </span>
 
         <span
-          class="hub-profile-wealth"
+          class="hub-profile-ranking-cta"
           role="button"
           tabindex="0"
           aria-haspopup="dialog"
@@ -103,33 +103,8 @@ export const HUB_MARKUP = `
           aria-label="Servet sıralamasını aç"
           data-hub-open-leaderboard
         >
-          <span class="hub-profile-wealth-head">
-            <span>
-              <small>GLOBAL SIRA</small>
-              <strong data-hub-profile-rank>—</strong>
-            </span>
-            <span class="hub-profile-wealth-total">
-              <small>TOPLAM SERVET</small>
-              <strong data-hub-profile-wealth-total>—</strong>
-            </span>
-          </span>
-          <span class="hub-profile-wealth-breakdown">
-            <span>
-              <small>NAKİT</small>
-              <strong data-hub-profile-cash>—</strong>
-            </span>
-            <span>
-              <small>SERMAYE</small>
-              <strong data-hub-profile-capital>—</strong>
-            </span>
-          </span>
-          <span
-            class="hub-profile-wealth-action"
-            style="box-sizing:border-box;width:100%;min-height:50px;margin-top:4px;padding:0 14px;border:1px solid rgba(99,228,255,.38);border-radius:11px;background:linear-gradient(180deg,rgba(99,228,255,.16),rgba(99,228,255,.08));box-shadow:inset 0 1px 0 rgba(255,255,255,.08);font-size:clamp(11px,2.7vw,13px);letter-spacing:.09em;touch-action:manipulation;"
-          >
-            <span>SERVET SIRALAMASINI GÖR</span>
-            <span aria-hidden="true">↗</span>
-          </span>
+          <span>SERVET SIRALAMASINI GÖR</span>
+          <span aria-hidden="true">↗</span>
         </span>
 
         <span class="choice-footer">
@@ -178,7 +153,7 @@ function hydrateProfileCard(app: HTMLElement, user: HubProfileUser | null) {
 export function mountHub(app: HTMLElement) {
   app.innerHTML = hubRouteShell(HUB_MARKUP);
   hydrateProfileCard(app, null);
-  const leaderboard = mountHubLeaderboard(app);
+  mountHubLeaderboard(app);
 
   void fetch("/api/auth/me", {
     method: "GET",
@@ -190,12 +165,6 @@ export function mountHub(app: HTMLElement) {
       const body = await response.json() as HubProfileResponse;
       return body.user;
     })
-    .then((user) => {
-      hydrateProfileCard(app, user);
-      leaderboard.setCurrentUsername(user?.username ?? null);
-    })
-    .catch(() => {
-      hydrateProfileCard(app, null);
-      leaderboard.setCurrentUsername(null);
-    });
+    .then((user) => hydrateProfileCard(app, user))
+    .catch(() => hydrateProfileCard(app, null));
 }
