@@ -2,7 +2,7 @@ import { randomInt } from "node:crypto";
 
 export const OFFICE_MATCH_CELL_COUNT = 6;
 export const OFFICE_MATCH_REQUIRED_MATCHES = 3;
-export const OFFICE_POOL_SIZE = 200;
+export const OFFICE_POOL_SIZE = 400;
 
 export const OFFICE_MATCH_SYMBOLS = [
   { id: "KEVIN", label: "Kevin", multiplierBps: 200, special: false },
@@ -18,28 +18,31 @@ export type OfficeMatchOutcome =
   | { kind: "LOSS"; multiplierBps: 0; symbolId: null }
   | { kind: "WIN"; multiplierBps: number; symbolId: OfficeMatchSymbolId };
 
+// 400-card finite pool. Buying every card costs 400 stakes and returns exactly
+// 500 stakes, so the complete-pool RTP is 125% and full-pool profit is 25%.
 export const OFFICE_POOL_DISTRIBUTION = [
   { symbolId: "MICHAEL", count: 1, multiplierBps: 10_000 },
   { symbolId: "STANLEY", count: 3, multiplierBps: 2_000 },
   { symbolId: "DWIGHT", count: 5, multiplierBps: 1_000 },
-  { symbolId: "JIM", count: 15, multiplierBps: 500 },
-  { symbolId: "KEVIN", count: 60, multiplierBps: 200 },
-  { symbolId: null, count: 116, multiplierBps: 0 },
+  { symbolId: "JIM", count: 18, multiplierBps: 500 },
+  { symbolId: "KEVIN", count: 100, multiplierBps: 200 },
+  { symbolId: null, count: 273, multiplierBps: 0 },
 ] as const satisfies readonly {
   symbolId: OfficeMatchSymbolId | null;
   count: number;
   multiplierBps: number;
 }[];
 
-// Visual-only Michael distribution for the 199 non-jackpot tickets.
+// Visual-only Michael distribution for the 399 non-jackpot tickets.
 // It is intentionally separate from OFFICE_POOL_DISTRIBUTION so changing how
-// often Michael is seen can never change the 1-in-200 100x prize probability.
-// 24 single-Michael teases + 4 double-Michael teases means Michael appears on
-// 29/200 cards total including the jackpot, while only one card can contain 3.
+// often Michael is seen can never change the 1-in-400 100x prize probability.
+// The visual frequency stays at the previously approved level: 12% single-Michael
+// teases and 2.25% double-Michael teases, with the jackpot bringing cards that show
+// Michael to 58/400 (14.5%) and cards with 2+ Michael to 10/400 (2.5%).
 export const OFFICE_MICHAEL_TEASE_DISTRIBUTION = [
-  { michaelCount: 2, count: 4 },
-  { michaelCount: 1, count: 24 },
-  { michaelCount: 0, count: 171 },
+  { michaelCount: 2, count: 9 },
+  { michaelCount: 1, count: 48 },
+  { michaelCount: 0, count: 342 },
 ] as const;
 
 export type OfficeMichaelTeaseCount = (typeof OFFICE_MICHAEL_TEASE_DISTRIBUTION)[number]["michaelCount"];
