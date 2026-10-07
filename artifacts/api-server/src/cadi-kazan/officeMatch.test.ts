@@ -33,9 +33,9 @@ describe("The Office 400-ticket pool engine", () => {
       { symbolId: "MICHAEL", count: 1, multiplierBps: 10_000 },
       { symbolId: "STANLEY", count: 3, multiplierBps: 2_000 },
       { symbolId: "DWIGHT", count: 5, multiplierBps: 1_000 },
-      { symbolId: "JIM", count: 18, multiplierBps: 500 },
-      { symbolId: "KEVIN", count: 100, multiplierBps: 200 },
-      { symbolId: null, count: 273, multiplierBps: 0 },
+      { symbolId: "JIM", count: 10, multiplierBps: 500 },
+      { symbolId: "KEVIN", count: 120, multiplierBps: 200 },
+      { symbolId: null, count: 261, multiplierBps: 0 },
     ]);
     expect(OFFICE_POOL_DISTRIBUTION.reduce((sum, entry) => sum + entry.count, 0)).toBe(400);
   });
@@ -49,7 +49,7 @@ describe("The Office 400-ticket pool engine", () => {
     expect(OFFICE_MICHAEL_TEASE_DISTRIBUTION.reduce((sum, entry) => sum + entry.count, 0)).toBe(399);
   });
 
-  it("locks exactly 500x return from 400 stakes: 125% pool RTP and 31.75% hit rate", () => {
+  it("locks exactly 500x return from 400 stakes: 125% pool RTP and 34.75% hit rate", () => {
     const totalReturnBps = OFFICE_POOL_DISTRIBUTION.reduce(
       (sum, entry) => sum + entry.count * entry.multiplierBps,
       0,
@@ -60,8 +60,8 @@ describe("The Office 400-ticket pool engine", () => {
 
     expect(totalReturnBps).toBe(50_000);
     expect(totalReturnBps / OFFICE_POOL_SIZE).toBe(125);
-    expect(winningTickets).toBe(127);
-    expect(winningTickets / OFFICE_POOL_SIZE).toBe(0.3175);
+    expect(winningTickets).toBe(139);
+    expect(winningTickets / OFFICE_POOL_SIZE).toBe(0.3475);
   });
 
   it("prepares exactly 400 complete cards with exact prize and Michael-visibility contracts", () => {
@@ -102,12 +102,12 @@ describe("The Office 400-ticket pool engine", () => {
     }
 
     expect(outcomeCounts).toEqual({
-      KEVIN: 100,
-      JIM: 18,
+      KEVIN: 120,
+      JIM: 10,
       DWIGHT: 5,
       STANLEY: 3,
       MICHAEL: 1,
-      LOSS: 273,
+      LOSS: 261,
     });
 
     expect(michaelCardHistogram).toEqual({
