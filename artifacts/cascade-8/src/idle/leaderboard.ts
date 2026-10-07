@@ -174,7 +174,7 @@ export function createIdleLeaderboardUi(
   const setOpen = (open: boolean) => {
     drawer.hidden = !open;
     document.body.classList.toggle(
-      "idle-leaderboard-open",
+      "idle-leaderboard-lock",
       open,
     );
   };
