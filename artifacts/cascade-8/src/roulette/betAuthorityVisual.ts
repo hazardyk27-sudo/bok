@@ -70,6 +70,15 @@ export function renderRouletteBetAuthority() {
     return;
   }
 
+  if (
+    !authorityOptimistic &&
+    app.querySelector(
+      ".roulette-placed-chip[data-roulette-drag-optimistic=\"true\"]",
+    )
+  ) {
+    return;
+  }
+
   const totals = getRouletteBetTotals(bets);
   rendering = true;
   try {
