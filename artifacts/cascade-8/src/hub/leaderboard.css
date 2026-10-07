@@ -1,75 +1,42 @@
-.hub-profile-wealth {
-  display: grid;
-  gap: 8px;
-  margin-top: 10px;
-  padding: 12px 0 10px;
-  border-top: 1px solid rgba(255, 255, 255, 0.11);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.07);
-  color: inherit;
-  cursor: pointer;
-}
-
-.hub-profile-wealth:focus-visible {
-  outline: 2px solid rgba(91, 225, 255, 0.9);
-  outline-offset: 5px;
-  border-radius: 8px;
-}
-
-.hub-profile-wealth-head,
-.hub-profile-wealth-breakdown {
-  display: grid;
-  grid-template-columns: minmax(0, 0.75fr) minmax(0, 1.25fr);
-  gap: 10px;
-}
-
-.hub-profile-wealth-head > span,
-.hub-profile-wealth-breakdown > span {
-  min-width: 0;
-}
-
-.hub-profile-wealth small {
-  display: block;
-  margin-bottom: 3px;
-  color: rgba(255, 255, 255, 0.46);
-  font-size: 8px;
-  font-weight: 800;
-  letter-spacing: 0.12em;
-}
-
-.hub-profile-wealth strong {
-  display: block;
-  overflow: hidden;
-  color: rgba(255, 255, 255, 0.92);
-  font-size: 12px;
-  line-height: 1.25;
-  font-variant-numeric: tabular-nums;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.hub-profile-wealth-total strong {
-  color: #63e4ff;
-  font-size: 14px;
-}
-
-.hub-profile-wealth-breakdown {
-  padding-top: 2px;
-}
-
-.hub-profile-wealth-action {
+.hub-profile-ranking-cta {
+  box-sizing: border-box;
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  padding-top: 7px;
+  width: 100%;
+  min-height: 44px;
+  margin: 9px 0 2px;
+  padding: 0 13px;
+  border: 1px solid rgba(99, 228, 255, 0.34);
+  border-radius: 10px;
+  background: linear-gradient(
+    180deg,
+    rgba(99, 228, 255, 0.13),
+    rgba(99, 228, 255, 0.055)
+  );
   color: #63e4ff;
-  font-size: 9px;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06);
+  font-size: 10px;
   font-weight: 900;
-  letter-spacing: 0.11em;
+  letter-spacing: 0.09em;
+  cursor: pointer;
+  touch-action: manipulation;
 }
 
-.hub-profile-wealth:hover .hub-profile-wealth-action {
-  color: #ffffff;
+.hub-profile-ranking-cta:hover {
+  border-color: rgba(99, 228, 255, 0.58);
+  background: linear-gradient(
+    180deg,
+    rgba(99, 228, 255, 0.19),
+    rgba(99, 228, 255, 0.08)
+  );
+  color: #fff;
+}
+
+.hub-profile-ranking-cta:focus-visible {
+  outline: 2px solid rgba(99, 228, 255, 0.92);
+  outline-offset: 3px;
 }
 
 .hub-leaderboard-drawer[hidden] {
@@ -274,28 +241,13 @@ body.hub-leaderboard-lock {
 }
 
 @media (max-width: 760px) {
-  .hub-profile-wealth {
-    gap: 7px;
+  .hub-profile-ranking-cta {
+    min-height: 46px;
     margin-top: 8px;
-    padding-top: 10px;
-  }
-
-  .hub-profile-wealth-head,
-  .hub-profile-wealth-breakdown {
-    grid-template-columns: minmax(0, 0.72fr) minmax(0, 1.28fr);
-    gap: 8px;
-  }
-
-  .hub-profile-wealth small {
-    font-size: 7px;
-  }
-
-  .hub-profile-wealth strong {
-    font-size: 11px;
-  }
-
-  .hub-profile-wealth-total strong {
-    font-size: 13px;
+    padding: 0 12px;
+    border-radius: 10px;
+    font-size: 10.5px;
+    letter-spacing: 0.075em;
   }
 
   .hub-leaderboard-drawer {
