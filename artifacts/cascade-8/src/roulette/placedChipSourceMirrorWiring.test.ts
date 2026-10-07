@@ -7,20 +7,25 @@ const indexSource = readFileSync(
   "utf8",
 );
 
-describe("roulette placed-chip source mirror wiring", () => {
-  it("installs source mirroring after generic chip visuals", () => {
+describe("roulette placed-chip aggregate visual wiring", () => {
+  it("uses aggregate chip visuals without selected-chip source mirroring", () => {
     expect(indexSource).toContain(
-      'import { installRoulettePlacedChipSourceMirror } from "./placedChipSourceMirror";',
+      'import { installRouletteChipVisuals } from "./chipVisual";',
     );
-
-    const visuals = indexSource.indexOf(
+    expect(indexSource).toContain(
       "installRouletteChipVisuals(app);",
     );
-    const mirror = indexSource.indexOf(
-      "installRoulettePlacedChipSourceMirror(app);",
+    expect(indexSource).not.toContain(
+      "installRoulettePlacedChipSourceMirror",
     );
+  });
 
-    expect(visuals).toBeGreaterThanOrEqual(0);
-    expect(mirror).toBeGreaterThan(visuals);
+  it("installs deadline-safe x2 ingress", () => {
+    expect(indexSource).toContain(
+      'import { installRouletteFastDouble } from "./fastDouble";',
+    );
+    expect(indexSource).toContain(
+      "installRouletteFastDouble(app);",
+    );
   });
 });

@@ -8,6 +8,9 @@ import {
   ROULETTE_SIMULATION_VERSION,
 } from "../../../cascade-8/src/roulette/spinResult";
 import {
+  getRouletteGlobalStakeCents,
+} from "./globalBet";
+import {
   getRouletteGlobalBetForRound,
   settleRouletteGlobalBetForRoundSession,
   upsertRouletteGlobalBet,
@@ -24,6 +27,8 @@ import type {
 type WalletRow = {
   balance_cents: number;
 };
+
+const ROULETTE_LATEST_WRITE_MAX_ATTEMPTS = 4;
 
 async function walletBalance(
   sessionId: string,
@@ -54,6 +59,13 @@ async function walletBalance(
   );
 
   return INITIAL_SHARED_BALANCE_CENTS;
+}
+
+function isRouletteStaleWrite(error: unknown) {
+  return (
+    error instanceof Error &&
+    error.message === "ROULETTE_GLOBAL_BET_STALE"
+  );
 }
 
 export class RouletteRepository {
@@ -141,6 +153,73 @@ export class RouletteRepository {
       sessionId,
       ...input,
     });
+  }
+
+  async updateGlobalBetLatest(
+    sessionId: string,
+    input: {
+      roundId: string;
+      bets:
+        RouletteServerBet[];
+      idempotencyKey:
+        string;
+      requestReceivedAtMs:
+        number;
+    },
+  ) {
+    let lastError: unknown = null;
+    const desiredStakeCents =
+      getRouletteGlobalStakeCents(
+        input.bets,
+      );
+
+    // This path is used only by monotonic x2. The route stamps
+    // requestReceivedAtMs before any database wait. If an older wager write is
+    // already holding the per-slip lock, retry against the newly committed
+    // revision while preserving that original server arrival time. A delayed
+    // older x2 request is also prevented from lowering a newer doubled stake.
+    for (
+      let attempt = 0;
+      attempt < ROULETTE_LATEST_WRITE_MAX_ATTEMPTS;
+      attempt += 1
+    ) {
+      const current =
+        await getRouletteGlobalBetForRound(
+          sessionId,
+          input.roundId,
+        );
+      const currentStakeCents =
+        current.globalBet?.stakeCents ?? 0;
+
+      if (
+        current.globalBet &&
+        currentStakeCents >= desiredStakeCents
+      ) {
+        return current;
+      }
+
+      const expectedRevision =
+        current.globalBet?.revision ?? 0;
+
+      try {
+        return await upsertRouletteGlobalBet({
+          sessionId,
+          ...input,
+          expectedRevision,
+        });
+      } catch (error) {
+        lastError = error;
+        if (!isRouletteStaleWrite(error)) {
+          throw error;
+        }
+      }
+    }
+
+    throw (
+      lastError instanceof Error
+        ? lastError
+        : new Error("ROULETTE_GLOBAL_BET_STALE")
+    );
   }
 }
 
