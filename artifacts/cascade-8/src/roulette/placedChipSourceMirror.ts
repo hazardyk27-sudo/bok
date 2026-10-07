@@ -47,40 +47,20 @@ function validChipValue(value: number) {
 
 export function getRoulettePlacedChipSourceValue(
   amount: number,
-  selectedValue: number | null,
-  existingValue: number | null = null,
+  _selectedValue: number | null = null,
+  _existingValue: number | null = null,
 ) {
   if (!Number.isFinite(amount) || amount <= 0) {
     return ROULETTE_CHIP_VALUES[0];
   }
 
-  if (
-    existingValue !== null &&
-    validChipValue(existingValue) &&
-    amount % existingValue === 0
-  ) {
-    return existingValue;
-  }
-
-  if (
-    selectedValue !== null &&
-    validChipValue(selectedValue) &&
-    amount % selectedValue === 0
-  ) {
-    return selectedValue;
-  }
-
-  if (ROULETTE_CHIP_VALUES.includes(amount)) {
-    return amount;
-  }
-
   const descending = [...ROULETTE_CHIP_VALUES]
     .sort((left, right) => right - left);
-  const divisor = descending.find(
-    (value) => value <= amount && amount % value === 0,
-  );
 
-  return divisor ?? ROULETTE_CHIP_VALUES[0];
+  return (
+    descending.find((value) => value <= amount) ??
+    ROULETTE_CHIP_VALUES[0]
+  );
 }
 
 export function getRoulettePlacedChipDisplayLabel(
@@ -165,16 +145,11 @@ export function mirrorRoulettePlacedChipFromSource(
     return false;
   }
 
-  const existingValue = Number(
-    chip.dataset.chipFaceSourceValue,
-  );
   const selectedValue = readSelectedChipValue(app);
   const sourceValue = getRoulettePlacedChipSourceValue(
     amount,
     selectedValue,
-    validChipValue(existingValue)
-      ? existingValue
-      : null,
+    Number(chip.dataset.chipFaceSourceValue),
   );
   const source = findChipFaceSource(
     app,
