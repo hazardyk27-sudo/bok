@@ -144,6 +144,56 @@ router.put("/roulette/global-bets", async (req, res) => {
   }
 });
 
+router.put("/roulette/global-bets/latest", async (req, res) => {
+  // Stamp arrival before any DB read/lock. updateGlobalBetLatest preserves this
+  // exact server timestamp across stale-revision retries, so a click received
+  // while BET TIME is open cannot be invalidated by internal queue latency.
+  const requestReceivedAtMs =
+    Date.now();
 
+  try {
+    const body =
+      req.body as {
+        roundId?: unknown;
+        bets?: unknown;
+        idempotencyKey?: unknown;
+      };
+
+    if (
+      typeof body.roundId !== "string" ||
+      typeof body.idempotencyKey !== "string"
+    ) {
+      res.status(400).json({
+        error:
+          "ROULETTE_GLOBAL_BET_INPUT_REQUIRED",
+      });
+      return;
+    }
+
+    const bets =
+      parseRouletteServerBets(
+        body.bets,
+      );
+
+    res.json(
+      await rouletteRepository
+        .updateGlobalBetLatest(
+          getSessionId(
+            req,
+            res,
+          ),
+          {
+            roundId: body.roundId,
+            bets,
+            idempotencyKey:
+              body.idempotencyKey,
+            requestReceivedAtMs,
+          },
+        ),
+    );
+  } catch (error) {
+    sendError(res, error);
+  }
+});
 
 export default router;
