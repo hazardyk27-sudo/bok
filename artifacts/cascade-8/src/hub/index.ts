@@ -123,7 +123,10 @@ export const HUB_MARKUP = `
               <strong data-hub-profile-capital>—</strong>
             </span>
           </span>
-          <span class="hub-profile-wealth-action">
+          <span
+            class="hub-profile-wealth-action"
+            style="box-sizing:border-box;width:100%;min-height:50px;margin-top:4px;padding:0 14px;border:1px solid rgba(99,228,255,.38);border-radius:11px;background:linear-gradient(180deg,rgba(99,228,255,.16),rgba(99,228,255,.08));box-shadow:inset 0 1px 0 rgba(255,255,255,.08);font-size:clamp(11px,2.7vw,13px);letter-spacing:.09em;touch-action:manipulation;"
+          >
             <span>SERVET SIRALAMASINI GÖR</span>
             <span aria-hidden="true">↗</span>
           </span>
