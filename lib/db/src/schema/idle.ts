@@ -6,10 +6,8 @@ export const idleBusinessStates = pgTable(
     id: text("id").primaryKey(),
     sessionId: text("session_id").notNull(),
     businessId: text("business_id").notNull(),
-    // null means the entry level has not been purchased yet.
     businessLevel: integer("business_level"),
     vaultLevel: integer("vault_level").notNull().default(1),
-    // 1 cent = 1,000,000 microcents. Keeps sub-cent passive accrual persistent.
     accruedMicrocents: bigint("accrued_microcents", { mode: "number" }).notNull().default(0),
     checkpointAt: timestamp("checkpoint_at", { withTimezone: true }).notNull().defaultNow(),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
@@ -62,14 +60,6 @@ export const idleLedger = pgTable(
   ],
 );
 
-
-/**
- * Canonical Stadium ticket-economy state.
- *
- * This is additive during the migration away from idle_business_states.
- * New code should target this table; legacy rows remain untouched until the
- * later cutover/removal parts.
- */
 export const idleStadiumStates = pgTable(
   "idle_stadium_states",
   {
@@ -79,9 +69,7 @@ export const idleStadiumStates = pgTable(
     ownedSeats: integer("owned_seats").notNull().default(0),
     speedLevel: integer("speed_level").notNull().default(1),
     storageLevel: integer("storage_level").notNull().default(1),
-    // 1 ticket = 1,000,000 microtickets. Fractional production is never lost.
     storedMicroTickets: bigint("stored_microtickets", { mode: "number" }).notNull().default(0),
-    // Carries sub-cent sale value forward so repeated small sales do not lose value.
     saleRemainderMicrodollars: bigint("sale_remainder_microdollars", { mode: "number" }).notNull().default(0),
     productionCheckpointAt: timestamp("production_checkpoint_at", { withTimezone: true }).notNull().defaultNow(),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
@@ -93,13 +81,6 @@ export const idleStadiumStates = pgTable(
   ],
 );
 
-/**
- * One persisted global ticket-market snapshot shared by every player.
- *
- * The runtime uses a fixed singleton id (for example "global"). A new market
- * price epoch may rebase this row once to the canonical $7 bootstrap; after
- * that marker exists, later restarts restore the persisted live price.
- */
 export const idleTicketMarketState = pgTable(
   "idle_ticket_market_state",
   {
@@ -116,13 +97,6 @@ export const idleTicketMarketState = pgTable(
   ],
 );
 
-/**
- * Applied ticket-market price epochs.
- *
- * Inserting a new epoch is an idempotent one-time signal to rebase the global
- * market state to that release's canonical bootstrap price. Existing epoch
- * rows make later process restarts preserve the live price instead of resetting.
- */
 export const idleTicketMarketPriceEpochs = pgTable(
   "idle_ticket_market_price_epochs",
   {
@@ -131,12 +105,6 @@ export const idleTicketMarketPriceEpochs = pgTable(
   },
 );
 
-/**
- * Raw global ticket-price history.
- *
- * At the accepted 5-second cadence the rolling 24-hour window contains at most 17,280 rows.
- * The market runtime is responsible for continuously deleting rows older than 24 hours.
- */
 export const idleTicketMarketTicks = pgTable(
   "idle_ticket_market_ticks",
   {
@@ -152,15 +120,6 @@ export const idleTicketMarketTicks = pgTable(
   ],
 );
 
-
-/**
- * Canonical idempotency receipts for Stadium economy actions.
- *
- * Part 9 initially uses this for SEAT_PURCHASE. Later Stadium/Speed/Storage
- * upgrades and ticket sales may reuse the same table with their own actionType.
- * The request parameters required to distinguish an idempotent replay are
- * persisted alongside the result.
- */
 export const idleStadiumActionReceipts = pgTable(
   "idle_stadium_action_receipts",
   {
@@ -189,5 +148,28 @@ export const idleStadiumActionReceipts = pgTable(
     index("idle_stadium_action_receipts_session_idx").on(table.sessionId),
     index("idle_stadium_action_receipts_action_idx").on(table.actionType),
     index("idle_stadium_action_receipts_retention_idx").on(table.createdAt),
+  ],
+);
+
+/**
+ * Permanent business-capital history used by the wealth leaderboard.
+ * Unlike action receipts, these rows are never part of the 3-day retention
+ * cleanup. Baseline rows migrate pre-ledger progression once; later rows store
+ * the exact amount paid by the player for each investment action.
+ */
+export const idleInvestmentLedger = pgTable(
+  "idle_investment_ledger",
+  {
+    id: text("id").primaryKey(),
+    sessionId: text("session_id").notNull(),
+    businessId: text("business_id").notNull(),
+    actionType: text("action_type").notNull(),
+    amountCents: bigint("amount_cents", { mode: "number" }).notNull().default(0),
+    idempotencyKey: text("idempotency_key").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    uniqueIndex("idle_investment_ledger_idempotency_unique").on(table.idempotencyKey),
+    index("idle_investment_ledger_session_idx").on(table.sessionId),
   ],
 );

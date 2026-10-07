@@ -15,6 +15,7 @@ import {
 import { runCheckpointedStadiumMutation } from "./stadiumMutation";
 import { reserveStadiumActionReceipt } from "./stadiumActionReceipt";
 import { resolveNextSpeedUpgrade } from "./stadiumPolicy";
+import { recordIdleInvestment } from "./investmentLedger";
 
 const SPEED_UPGRADE_ACTION = "SPEED_UPGRADE" as const;
 
@@ -91,13 +92,6 @@ function assertUpgradeReplay(
   return targetLevel as SpeedLevel;
 }
 
-/**
- * Upgrades the independent ticket-production Speed track by exactly one level.
- *
- * The action has no Stadium-level, seat-count, or Storage prerequisite. All
- * elapsed production is checkpointed first by runCheckpointedStadiumMutation,
- * so the old Speed remains authoritative for the entire pre-upgrade interval.
- */
 export async function upgradeStadiumSpeed(
   sessionId: string,
   idempotencyKey: string,
@@ -161,6 +155,15 @@ export async function upgradeStadiumSpeed(
         settledState.speedLevel,
         balanceBeforeCents,
       );
+
+      await recordIdleInvestment(
+        client,
+        settledState,
+        SPEED_UPGRADE_ACTION,
+        idempotencyKey,
+        upgrade.costCents,
+      );
+
       const balanceCents = upgrade.balanceAfterCents;
 
       await client.query(

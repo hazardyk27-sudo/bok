@@ -12,6 +12,7 @@ import {
 } from "./stadiumRepository";
 import { runCheckpointedStadiumMutation } from "./stadiumMutation";
 import { reserveStadiumActionReceipt } from "./stadiumActionReceipt";
+import { recordIdleInvestment } from "./investmentLedger";
 
 const SEAT_PURCHASE_ACTION = "SEAT_PURCHASE" as const;
 
@@ -115,13 +116,6 @@ function assertSeatPurchaseReplay(
   }
 }
 
-/**
- * Purchases seats using server-side pricing only.
- *
- * The client supplies quantity + idempotency key. Price and total cost are
- * always derived after the Stadium row has been locked and elapsed production
- * has been checkpointed under the old seat count.
- */
 export async function buyStadiumSeats(
   sessionId: string,
   quantity: number,
@@ -206,6 +200,14 @@ export async function buyStadiumSeats(
       if (balanceBeforeCents < quote.totalCostCents) {
         throw new Error("INSUFFICIENT_IDLE_CREDITS");
       }
+
+      await recordIdleInvestment(
+        client,
+        settledState,
+        SEAT_PURCHASE_ACTION,
+        idempotencyKey,
+        quote.totalCostCents,
+      );
 
       const balanceCents =
         balanceBeforeCents - quote.totalCostCents;

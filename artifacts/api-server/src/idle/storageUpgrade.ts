@@ -15,6 +15,7 @@ import {
 import { runCheckpointedStadiumMutation } from "./stadiumMutation";
 import { reserveStadiumActionReceipt } from "./stadiumActionReceipt";
 import { resolveNextStorageUpgrade } from "./stadiumPolicy";
+import { recordIdleInvestment } from "./investmentLedger";
 
 const STORAGE_UPGRADE_ACTION = "STORAGE_UPGRADE" as const;
 
@@ -91,15 +92,6 @@ function assertUpgradeReplay(
   return targetLevel as StorageLevel;
 }
 
-/**
- * Upgrades the independent ticket Storage track by exactly one level.
- *
- * All elapsed production is checkpointed under the OLD Storage capacity first.
- * If the old Storage was full, time spent full remains lost; the newly expanded
- * capacity never retroactively receives tickets for that elapsed interval.
- *
- * Stadium level, owned seats, and Speed are not prerequisites for Storage.
- */
 export async function upgradeStadiumStorage(
   sessionId: string,
   idempotencyKey: string,
@@ -163,6 +155,15 @@ export async function upgradeStadiumStorage(
         settledState.storageLevel,
         balanceBeforeCents,
       );
+
+      await recordIdleInvestment(
+        client,
+        settledState,
+        STORAGE_UPGRADE_ACTION,
+        idempotencyKey,
+        upgrade.costCents,
+      );
+
       const balanceCents = upgrade.balanceAfterCents;
 
       await client.query(

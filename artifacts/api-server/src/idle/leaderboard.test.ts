@@ -5,7 +5,7 @@ import {
 } from "./leaderboard";
 
 describe("Idle wealth leaderboard", () => {
-  it("keeps the canonical free starting assets out of invested capital", () => {
+  it("keeps the canonical free starting assets out of the legacy baseline", () => {
     expect(calculateInvestedCapitalCents({
       stadiumLevel: 1,
       ownedSeats: 1_000,
@@ -14,7 +14,7 @@ describe("Idle wealth leaderboard", () => {
     })).toBe(0);
   });
 
-  it("reconstructs capital from Stadium, seats, Speed and Storage", () => {
+  it("reconstructs a one-time baseline from Stadium, seats, Speed and Storage", () => {
     expect(calculateInvestedCapitalCents({
       stadiumLevel: 6,
       ownedSeats: 50_000,
@@ -23,7 +23,7 @@ describe("Idle wealth leaderboard", () => {
     })).toBe(86_850_000);
   });
 
-  it("prices the full current progression without relying on expiring receipts", () => {
+  it("prices the full pre-ledger progression baseline deterministically", () => {
     expect(calculateInvestedCapitalCents({
       stadiumLevel: 10,
       ownedSeats: 500_000,
@@ -32,23 +32,17 @@ describe("Idle wealth leaderboard", () => {
     })).toBe(14_049_050_000);
   });
 
-  it("sorts by total wealth and assigns stable one-based ranks", () => {
+  it("sorts by cash plus durable invested capital", () => {
     const entries = buildIdleLeaderboard([
       {
         username: "cash_only",
         balanceCents: 100_000_000,
-        stadiumLevel: null,
-        ownedSeats: null,
-        speedLevel: null,
-        storageLevel: null,
+        investedCapitalCents: 0,
       },
       {
         username: "investor",
         balanceCents: 20_000_000,
-        stadiumLevel: 6,
-        ownedSeats: 50_000,
-        speedLevel: 2,
-        storageLevel: 2,
+        investedCapitalCents: 86_850_000,
       },
     ]);
 
