@@ -198,7 +198,13 @@ function acceptConfirmedWrite(
   sequence: number,
 ) {
   if (response.globalBet?.roundId === roundId) {
-    lastAcceptedGlobalBet = cloneGlobalBet(response.globalBet);
+    if (
+      !lastAcceptedGlobalBet ||
+      lastAcceptedGlobalBet.roundId !== roundId ||
+      response.globalBet.revision >= lastAcceptedGlobalBet.revision
+    ) {
+      lastAcceptedGlobalBet = cloneGlobalBet(response.globalBet);
+    }
 
     const authority = getRouletteBetAuthoritySnapshot();
     const stillRepresentsThisWrite =
@@ -220,7 +226,12 @@ function acceptConfirmedWrite(
     return;
   }
 
-  lastAcceptedGlobalBet = null;
+  if (
+    !lastAcceptedGlobalBet ||
+    lastAcceptedGlobalBet.roundId === roundId
+  ) {
+    lastAcceptedGlobalBet = null;
+  }
   const authority = getRouletteBetAuthoritySnapshot();
   const stillRepresentsThisWrite =
     authority.bets !== null &&
@@ -238,6 +249,25 @@ function acceptConfirmedWrite(
       false,
     );
   }
+}
+
+export function reserveRouletteExternalLatestMutation() {
+  mutationSequence += 1;
+  return mutationSequence;
+}
+
+export function confirmRouletteExternalLatestMutation(
+  roundId: string,
+  plan: readonly RouletteBetPlacement[],
+  response: RouletteGlobalBetUpdateResponse,
+  sequence: number,
+) {
+  acceptConfirmedWrite(
+    roundId,
+    plan,
+    response,
+    sequence,
+  );
 }
 
 async function recoverCurrentMutation(
@@ -376,6 +406,13 @@ export function installRouletteBetAuthority(_app: HTMLDivElement) {
             roundId,
             sequence,
           );
+          throw error;
+        }
+
+        // A server-stamped fast mutation (for example x2 near the deadline)
+        // supersedes this older queued plan. Never retry the stale older plan
+        // after the newer mutation has already claimed authority.
+        if (sequence !== mutationSequence) {
           throw error;
         }
       }

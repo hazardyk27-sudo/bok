@@ -1,5 +1,8 @@
 import { afterAll, beforeEach, describe, expect, it, vi } from "vitest";
-import { installRouletteBetAuthority } from "./betAuthority";
+import {
+  installRouletteBetAuthority,
+  reserveRouletteExternalLatestMutation,
+} from "./betAuthority";
 import {
   clearRouletteBetAuthority,
   getRouletteBetAuthoritySnapshot,
@@ -16,6 +19,7 @@ type PendingWrite = {
   expectedRevision: number;
   bets: { betId: string; amount: number }[];
   resolve: (response: RouletteGlobalBetUpdateResponse) => void;
+  reject: (error: Error) => void;
 };
 
 const pendingWrites: PendingWrite[] = [];
@@ -59,11 +63,12 @@ const updateMock = vi.fn((
   bets: readonly { betId: string; amount: number }[],
   _idempotencyKey: string,
   expectedRevision: number,
-) => new Promise<RouletteGlobalBetUpdateResponse>((resolve) => {
+) => new Promise<RouletteGlobalBetUpdateResponse>((resolve, reject) => {
   pendingWrites.push({
     expectedRevision,
     bets: bets.map((bet) => ({ ...bet })),
     resolve,
+    reject,
   });
 }));
 
@@ -207,5 +212,33 @@ describe("roulette serialized authority queue", () => {
       revision: 3,
       optimistic: false,
     });
+  });
+
+  it("does not retry an older stale plan after a fast latest mutation reserves authority", async () => {
+    const client = new RouletteWalletClient();
+    await client.bootstrap();
+
+    const oldWrite = client.updateGlobalBet(
+      "round-1",
+      [{ betId: "straight-25", amount: 10 }],
+      "roulette_move_v6_old_before_fast_double",
+      1,
+    );
+
+    await Promise.resolve();
+    expect(updateMock).toHaveBeenCalledTimes(1);
+
+    reserveRouletteExternalLatestMutation();
+    pendingWrites[0]!.reject(
+      new Error("ROULETTE_GLOBAL_BET_STALE"),
+    );
+
+    await expect(oldWrite).rejects.toThrow(
+      "ROULETTE_GLOBAL_BET_STALE",
+    );
+    await Promise.resolve();
+
+    expect(updateMock).toHaveBeenCalledTimes(1);
+    expect(bootstrapMock).toHaveBeenCalledTimes(1);
   });
 });
