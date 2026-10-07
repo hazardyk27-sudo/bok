@@ -67,6 +67,10 @@ export function clearRouletteAuthoritativeDragPlacements() {
 }
 
 export function createRouletteBetState(): RouletteBetState {
+  // A new runtime/test state is a new local authority boundary. Server
+  // bootstrap will hydrate it immediately after mount; stale placements from a
+  // prior mount/test must never leak into the new state.
+  authoritativePlacements = null;
   return {
     selectedChip: 10,
     placements: [],
