@@ -25,12 +25,13 @@ describe("roulette casino chip visuals", () => {
     ]);
   });
 
-  it("maps exact range boundaries to the approved colors", () => {
+  it("maps exact range boundaries and the aggregate 200 wager to the approved colors", () => {
     expect(getRouletteChipTier(10)).toBe("white");
     expect(getRouletteChipTier(49)).toBe("white");
     expect(getRouletteChipTier(50)).toBe("blue");
     expect(getRouletteChipTier(99)).toBe("blue");
     expect(getRouletteChipTier(100)).toBe("green");
+    expect(getRouletteChipTier(200)).toBe("green");
     expect(getRouletteChipTier(499)).toBe("green");
     expect(getRouletteChipTier(500)).toBe("red");
     expect(getRouletteChipTier(1_999)).toBe("red");
