@@ -5,7 +5,7 @@ import {
 } from "./leaderboard";
 
 describe("Idle wealth leaderboard", () => {
-  it("keeps the canonical free starting assets out of the legacy baseline", () => {
+  it("keeps the canonical 1,000 free starting seats out of new-player capital", () => {
     expect(calculateInvestedCapitalCents({
       stadiumLevel: 1,
       ownedSeats: 1_000,
@@ -14,7 +14,19 @@ describe("Idle wealth leaderboard", () => {
     })).toBe(0);
   });
 
-  it("reconstructs a one-time baseline from Stadium, seats, Speed and Storage", () => {
+  it("preserves the first 1,000 seats as paid capital for legacy zero-seat rows", () => {
+    expect(calculateInvestedCapitalCents(
+      {
+        stadiumLevel: 1,
+        ownedSeats: 1_000,
+        speedLevel: 1,
+        storageLevel: 1,
+      },
+      { freeStartingSeats: 0 },
+    )).toBe(300_000);
+  });
+
+  it("reconstructs a one-time canonical baseline from Stadium, seats, Speed and Storage", () => {
     expect(calculateInvestedCapitalCents({
       stadiumLevel: 6,
       ownedSeats: 50_000,
@@ -23,7 +35,7 @@ describe("Idle wealth leaderboard", () => {
     })).toBe(86_850_000);
   });
 
-  it("prices the full pre-ledger progression baseline deterministically", () => {
+  it("prices the full canonical progression baseline deterministically", () => {
     expect(calculateInvestedCapitalCents({
       stadiumLevel: 10,
       ownedSeats: 500_000,
