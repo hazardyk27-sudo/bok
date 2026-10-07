@@ -4,6 +4,7 @@ import {
   it,
 } from "vitest";
 import {
+  alignRouletteRequestReceivedAtToDatabaseClock,
   assertRouletteGlobalBettingOpen,
   getRouletteGlobalStakeCents,
   getNextRouletteGlobalBetRevision,
@@ -73,6 +74,62 @@ describe("roulette global bets", () => {
       assertRouletteGlobalBettingOpen(
         round,
         21_000,
+      ),
+    ).toThrow(
+      "ROULETTE_GLOBAL_BETTING_CLOSED",
+    );
+  });
+
+  it("keeps the API arrival time authoritative even when database work finishes later", () => {
+    const alignedArrival =
+      alignRouletteRequestReceivedAtToDatabaseClock({
+        requestReceivedAtMs:
+          20_400,
+        databaseSampleMs:
+          20_700,
+        sampleStartedAtMs:
+          20_580,
+        sampleFinishedAtMs:
+          20_620,
+      });
+
+    expect(alignedArrival).toBe(
+      20_500,
+    );
+    expect(() =>
+      assertRouletteGlobalBettingOpen(
+        round,
+        alignedArrival,
+      ),
+    ).not.toThrow();
+
+    // Processing may continue beyond close; acceptance is based on the
+    // server-observed API arrival, not on the later lock/commit time.
+    expect(24_000).toBeGreaterThan(
+      round.bettingCloseAtMs,
+    );
+  });
+
+  it("rejects a request that actually arrived at or after the close boundary", () => {
+    const alignedArrival =
+      alignRouletteRequestReceivedAtToDatabaseClock({
+        requestReceivedAtMs:
+          21_050,
+        databaseSampleMs:
+          21_300,
+        sampleStartedAtMs:
+          21_180,
+        sampleFinishedAtMs:
+          21_220,
+      });
+
+    expect(alignedArrival).toBe(
+      21_150,
+    );
+    expect(() =>
+      assertRouletteGlobalBettingOpen(
+        round,
+        alignedArrival,
       ),
     ).toThrow(
       "ROULETTE_GLOBAL_BETTING_CLOSED",
