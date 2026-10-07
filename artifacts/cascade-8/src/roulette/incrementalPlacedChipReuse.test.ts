@@ -18,6 +18,14 @@ const canonicalSource =
     ),
     "utf8",
   );
+const chipVisualSource =
+  readFileSync(
+    new URL(
+      "./chipVisual.ts",
+      import.meta.url,
+    ),
+    "utf8",
+  );
 const indexSource =
   readFileSync(
     new URL(
@@ -28,21 +36,24 @@ const indexSource =
   );
 
 describe("roulette canonical placed chip", () => {
-  it("keeps the selected 10 chip and placed 10 chip on the same white casino tier", () => {
+  it("routes placed-chip faces through one aggregate visual sync", () => {
     expect(getRouletteChipTier(10)).toBe("white");
+    expect(getRouletteChipTier(20)).toBe("white");
+    expect(getRouletteChipTier(80)).toBe("blue");
+    expect(getRouletteChipTier(160)).toBe("green");
     expect(canonicalSource).toContain(
+      "syncRoulettePlacedChipVisual",
+    );
+    expect(canonicalSource).not.toContain(
       "applyRouletteChipVisualState",
     );
-    expect(canonicalSource).toContain(
-      '"roulette-placed-chip"',
-    );
-    expect(canonicalSource).toContain(
+    expect(chipVisualSource).toContain(
       'className.startsWith("chip-")',
     );
-    expect(canonicalSource).toContain(
+    expect(chipVisualSource).toContain(
       '"--chip-fill"',
     );
-    expect(canonicalSource).toContain(
+    expect(chipVisualSource).toContain(
       '"--chip-edge"',
     );
   });
