@@ -2,6 +2,7 @@ import { mountRoulette as mountRouletteRuntime } from "./rouletteRuntime";
 import { installRouletteBetVerificationUi } from "./verificationController";
 import { installRouletteChipFeedbackV2 } from "./chipFeedbackV2";
 import { installRouletteChipVisuals } from "./chipVisual";
+import { installRoulettePlacedChipSourceMirror } from "./placedChipSourceMirror";
 import { installRouletteBetAuthority } from "./betAuthority";
 import { installRouletteChipDragV6 } from "./chipDragV6";
 import { installRouletteNetworkGuard } from "./rouletteNetworkGuard";
@@ -23,6 +24,11 @@ export function mountRoulette(app: HTMLDivElement) {
   installRouletteBetVerificationUi(app);
   installRouletteChipFeedbackV2(app);
   installRouletteChipVisuals(app);
+
+  // Placed chips must mirror the exact currently selected chip face. Install
+  // this after the generic visual decorator so source mirroring wins the same
+  // mutation batch on mobile and desktop.
+  installRoulettePlacedChipSourceMirror(app);
 
   // Drag is input-only: one optimistic render at drop, then one serialized
   // authority write. No polling loop, DOM protector, or secondary writer.
