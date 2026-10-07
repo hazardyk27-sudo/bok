@@ -97,18 +97,17 @@ export function shouldAcceptRouletteAuthorityBootstrap(
     return true;
   }
 
+  // A polling GET can be newer only because an earlier queued PUT landed.
+  // It must never replace a later local action that is still pending.
+  if (authority.optimistic) {
+    return false;
+  }
+
   if (serverRevision === null) {
     return false;
   }
 
-  if (serverRevision > authority.revision) {
-    return true;
-  }
-
-  return (
-    !authority.optimistic &&
-    serverRevision === authority.revision
-  );
+  return serverRevision >= authority.revision;
 }
 
 export function selectRouletteRuntimeBootstrapBet(
@@ -241,6 +240,40 @@ function acceptConfirmedWrite(
   }
 }
 
+async function recoverCurrentMutation(
+  client: RouletteWalletClient,
+  originalBootstrap: () => Promise<RouletteBootstrapResponse>,
+  roundId: string,
+  sequence: number,
+) {
+  if (sequence !== mutationSequence) return;
+
+  try {
+    const fresh = await originalBootstrap.call(client);
+    if (fresh.globalTable?.roundId !== roundId) {
+      clearRouletteBetAuthority();
+      lastAcceptedGlobalBet = null;
+      return;
+    }
+
+    if (fresh.globalBet?.roundId === roundId) {
+      lastAcceptedGlobalBet = cloneGlobalBet(fresh.globalBet);
+      setRouletteBetAuthority(
+        roundId,
+        fresh.globalBet.bets,
+        fresh.globalBet.revision,
+        false,
+      );
+    } else {
+      lastAcceptedGlobalBet = null;
+      setRouletteBetAuthority(roundId, [], 0, false);
+    }
+  } catch {
+    // Keep the visible local wager. A transient read failure is safer than
+    // erasing a bet that may already have reached the server.
+  }
+}
+
 export function installRouletteBetAuthority(_app: HTMLDivElement) {
   if (installed) return;
   installed = true;
@@ -337,6 +370,12 @@ export function installRouletteBetAuthority(_app: HTMLDivElement) {
       } catch (error) {
         const message = error instanceof Error ? error.message : "";
         if (message !== "ROULETTE_GLOBAL_BET_STALE") {
+          await recoverCurrentMutation(
+            this,
+            originalBootstrap,
+            roundId,
+            sequence,
+          );
           throw error;
         }
       }
@@ -344,6 +383,12 @@ export function installRouletteBetAuthority(_app: HTMLDivElement) {
       const fresh = await originalBootstrap.call(this);
       const freshRoundId = fresh.globalTable?.roundId ?? null;
       if (freshRoundId !== roundId) {
+        await recoverCurrentMutation(
+          this,
+          originalBootstrap,
+          roundId,
+          sequence,
+        );
         throw new Error("ROULETTE_GLOBAL_BETTING_CLOSED");
       }
 
@@ -355,15 +400,25 @@ export function installRouletteBetAuthority(_app: HTMLDivElement) {
         revision = 0;
       }
 
-      const response = await originalUpdate.call(
-        this,
-        roundId,
-        plan,
-        idempotencyKey,
-        revision,
-      );
-      acceptConfirmedWrite(roundId, plan, response, sequence);
-      return response;
+      try {
+        const response = await originalUpdate.call(
+          this,
+          roundId,
+          plan,
+          idempotencyKey,
+          revision,
+        );
+        acceptConfirmedWrite(roundId, plan, response, sequence);
+        return response;
+      } catch (error) {
+        await recoverCurrentMutation(
+          this,
+          originalBootstrap,
+          roundId,
+          sequence,
+        );
+        throw error;
+      }
     });
   };
 }
