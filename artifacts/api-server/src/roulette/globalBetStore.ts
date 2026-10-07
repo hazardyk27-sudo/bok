@@ -12,6 +12,7 @@ import type {
   RouletteRoundSettlement,
 } from "../../../cascade-8/src/roulette/betRules";
 import {
+  alignRouletteRequestReceivedAtToDatabaseClock,
   assertRouletteGlobalBettingOpen,
   getNextRouletteGlobalBetRevision,
   getRouletteGlobalPayoutIdempotencyKey,
@@ -47,6 +48,9 @@ type GlobalRoundForBetRow = {
   betting_close_at: Date;
   result_at: Date;
   winning_number: number;
+};
+
+type DatabaseClockRow = {
   server_now: Date;
 };
 
@@ -239,6 +243,7 @@ export async function upsertRouletteGlobalBet(input: {
   bets: RouletteServerBet[];
   idempotencyKey: string;
   expectedRevision: number;
+  requestReceivedAtMs: number;
 }) {
   validateIdempotencyKey(
     input.idempotencyKey,
@@ -255,11 +260,56 @@ export async function upsertRouletteGlobalBet(input: {
     );
   }
 
+  if (
+    !Number.isFinite(
+      input.requestReceivedAtMs,
+    ) ||
+    input.requestReceivedAtMs < 0
+  ) {
+    throw new Error(
+      "INVALID_ROULETTE_GLOBAL_REQUEST_TIME",
+    );
+  }
+
   const client =
     await pool.connect();
 
   try {
     await client.query("BEGIN");
+
+    // Capture a DB clock sample before any per-bet/per-slip lock can wait.
+    // The API arrival itself was stamped synchronously in the route handler.
+    // Aligning that app timestamp to the DB clock keeps the deadline
+    // authoritative without charging lock/transaction delay to the player.
+    const sampleStartedAtMs =
+      Date.now();
+    const databaseClock =
+      await client.query<DatabaseClockRow>(
+        `SELECT clock_timestamp()
+           AS server_now`,
+      );
+    const sampleFinishedAtMs =
+      Date.now();
+    const databaseSample =
+      databaseClock.rows[0]
+        ?.server_now;
+
+    if (!databaseSample) {
+      throw new Error(
+        "INVALID_ROULETTE_GLOBAL_SERVER_TIME",
+      );
+    }
+
+    const requestReceivedAtDatabaseMs =
+      alignRouletteRequestReceivedAtToDatabaseClock({
+        requestReceivedAtMs:
+          input.requestReceivedAtMs,
+        databaseSampleMs:
+          databaseSample.getTime(),
+        sampleStartedAtMs,
+        sampleFinishedAtMs,
+      });
+
     await client.query(
       `SELECT pg_advisory_xact_lock(
         hashtextextended($1::text, 0)
@@ -348,9 +398,7 @@ export async function upsertRouletteGlobalBet(input: {
            betting_open_at,
            betting_close_at,
            result_at,
-           winning_number,
-           clock_timestamp()
-             AS server_now
+           winning_number
          FROM roulette_global_rounds
          WHERE id = $1
          FOR UPDATE`,
@@ -376,7 +424,7 @@ export async function upsertRouletteGlobalBet(input: {
           round.betting_close_at
             .getTime(),
       },
-      round.server_now.getTime(),
+      requestReceivedAtDatabaseMs,
     );
 
     const existingBet =
