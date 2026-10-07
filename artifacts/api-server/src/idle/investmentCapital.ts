@@ -14,6 +14,10 @@ export type IdleInvestmentProgress = {
   storageLevel: number;
 };
 
+export type IdleInvestmentBaselineOptions = {
+  freeStartingSeats?: number;
+};
+
 function requireSafeNonNegativeInteger(
   value: number,
   errorCode: string,
@@ -39,12 +43,19 @@ function requireProgressLevel(
  * One-time baseline calculator for players that already had Stadium progress
  * before the permanent investment ledger existed.
  *
+ * Canonical/new Stadium state starts with 1,000 free seats. The pre-fix
+ * backend, however, created legacy Stadium rows with zero seats, so those
+ * players actually paid for every seat they owned. Runtime migration passes
+ * freeStartingSeats=0 for those legacy rows so their paid first 1,000 seats
+ * are not silently erased from capital.
+ *
  * New spending must NOT be reconstructed from progression. It is written to
  * idle_investment_ledger at the exact transaction cost instead. This function
  * remains the deterministic migration baseline for pre-ledger progress.
  */
 export function calculateInvestedCapitalCents(
   progress: IdleInvestmentProgress,
+  options: IdleInvestmentBaselineOptions = {},
 ) {
   const stadiumLevel = requireProgressLevel(
     progress.stadiumLevel,
@@ -64,6 +75,10 @@ export function calculateInvestedCapitalCents(
   const ownedSeats = requireSafeNonNegativeInteger(
     progress.ownedSeats,
     "INVALID_IDLE_LEADERBOARD_SEAT_COUNT",
+  );
+  const freeStartingSeats = requireSafeNonNegativeInteger(
+    options.freeStartingSeats ?? FREE_STARTING_STADIUM_SEATS,
+    "INVALID_IDLE_LEADERBOARD_FREE_SEAT_COUNT",
   );
 
   const stadiumCapitalCents = STADIUM_LEVELS.reduce(
@@ -90,13 +105,10 @@ export function calculateInvestedCapitalCents(
     0,
   );
 
-  const paidSeatCount = Math.max(
-    0,
-    ownedSeats - FREE_STARTING_STADIUM_SEATS,
-  );
+  const paidSeatCount = Math.max(0, ownedSeats - freeStartingSeats);
   const seatCapitalCents = paidSeatCount > 0
     ? quoteSeatPurchase(
-      FREE_STARTING_STADIUM_SEATS,
+      freeStartingSeats,
       paidSeatCount,
     ).totalCostCents
     : 0;
