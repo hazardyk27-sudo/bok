@@ -8,6 +8,9 @@ import {
   ROULETTE_SIMULATION_VERSION,
 } from "../../../cascade-8/src/roulette/spinResult";
 import {
+  getRouletteGlobalStakeCents,
+} from "./globalBet";
+import {
   getRouletteGlobalBetForRound,
   settleRouletteGlobalBetForRoundSession,
   upsertRouletteGlobalBet,
@@ -165,12 +168,16 @@ export class RouletteRepository {
     },
   ) {
     let lastError: unknown = null;
+    const desiredStakeCents =
+      getRouletteGlobalStakeCents(
+        input.bets,
+      );
 
-    // This path is used by deadline-sensitive controls such as x2. The route
-    // stamps requestReceivedAtMs before any database wait. If an older wager
-    // write is already holding the per-slip lock, retry against the newly
-    // committed revision while preserving that original server arrival time.
-    // The player therefore is not charged for internal queue/lock latency.
+    // This path is used only by monotonic x2. The route stamps
+    // requestReceivedAtMs before any database wait. If an older wager write is
+    // already holding the per-slip lock, retry against the newly committed
+    // revision while preserving that original server arrival time. A delayed
+    // older x2 request is also prevented from lowering a newer doubled stake.
     for (
       let attempt = 0;
       attempt < ROULETTE_LATEST_WRITE_MAX_ATTEMPTS;
@@ -181,6 +188,16 @@ export class RouletteRepository {
           sessionId,
           input.roundId,
         );
+      const currentStakeCents =
+        current.globalBet?.stakeCents ?? 0;
+
+      if (
+        current.globalBet &&
+        currentStakeCents >= desiredStakeCents
+      ) {
+        return current;
+      }
+
       const expectedRevision =
         current.globalBet?.revision ?? 0;
 
