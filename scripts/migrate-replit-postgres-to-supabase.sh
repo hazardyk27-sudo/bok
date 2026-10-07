@@ -174,8 +174,6 @@ required_target_tables=(
   roulette_global_rounds
   roulette_global_bets
   roulette_global_bet_requests
-  blackjack_table_snapshots
-  blackjack_event_journal
   users
   auth_sessions
   email_verification_tokens
