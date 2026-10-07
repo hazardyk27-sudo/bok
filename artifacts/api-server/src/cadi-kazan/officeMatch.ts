@@ -3,6 +3,7 @@ import { randomInt } from "node:crypto";
 export const OFFICE_MATCH_CELL_COUNT = 6;
 export const OFFICE_MATCH_REQUIRED_MATCHES = 3;
 export const OFFICE_POOL_SIZE = 400;
+export const OFFICE_MICHAEL_JACKPOT_ODDS = 300;
 
 export const OFFICE_MATCH_SYMBOLS = [
   { id: "KEVIN", label: "Kevin", multiplierBps: 200, special: false },
@@ -18,31 +19,28 @@ export type OfficeMatchOutcome =
   | { kind: "LOSS"; multiplierBps: 0; symbolId: null }
   | { kind: "WIN"; multiplierBps: number; symbolId: OfficeMatchSymbolId };
 
-// 400-card finite pool. Buying every card costs 400 stakes and returns exactly
-// 500 stakes, so the complete-pool RTP is 125% and full-pool profit is 25%.
+// Base finite pool only. Michael is intentionally excluded from this table and
+// is resolved by an independent 1-in-300 jackpot draw before a base ticket is
+// claimed. Buying all 400 base tickets costs 400 stakes and returns 368 stakes.
 export const OFFICE_POOL_DISTRIBUTION = [
-  { symbolId: "MICHAEL", count: 1, multiplierBps: 10_000 },
   { symbolId: "STANLEY", count: 3, multiplierBps: 2_000 },
   { symbolId: "DWIGHT", count: 5, multiplierBps: 1_000 },
   { symbolId: "JIM", count: 10, multiplierBps: 500 },
-  { symbolId: "KEVIN", count: 120, multiplierBps: 200 },
-  { symbolId: null, count: 261, multiplierBps: 0 },
+  { symbolId: "KEVIN", count: 104, multiplierBps: 200 },
+  { symbolId: null, count: 278, multiplierBps: 0 },
 ] as const satisfies readonly {
   symbolId: OfficeMatchSymbolId | null;
   count: number;
   multiplierBps: number;
 }[];
 
-// Visual-only Michael distribution for the 399 non-jackpot tickets.
-// It is intentionally separate from OFFICE_POOL_DISTRIBUTION so changing how
-// often Michael is seen can never change the 1-in-400 100x prize probability.
-// The visual frequency stays at the previously approved level: 12% single-Michael
-// teases and 2.25% double-Michael teases, with the jackpot bringing cards that show
-// Michael to 58/400 (14.5%) and cards with 2+ Michael to 10/400 (2.5%).
+// Visual-only Michael teasers for all 400 non-jackpot base tickets. The extra
+// zero-Michael card keeps the overall visible Michael frequency near the prior
+// 14.5% level after the independent 1-in-300 jackpot overlay is included.
 export const OFFICE_MICHAEL_TEASE_DISTRIBUTION = [
   { michaelCount: 2, count: 9 },
   { michaelCount: 1, count: 48 },
-  { michaelCount: 0, count: 342 },
+  { michaelCount: 0, count: 343 },
 ] as const;
 
 export type OfficeMichaelTeaseCount = (typeof OFFICE_MICHAEL_TEASE_DISTRIBUTION)[number]["michaelCount"];
@@ -76,6 +74,12 @@ function regularSymbolsExcluding(excludedSymbolId: OfficeMatchSymbolId | null) {
   return OFFICE_MATCH_SYMBOLS
     .map((symbol) => symbol.id)
     .filter((symbolId) => symbolId !== "MICHAEL" && symbolId !== excludedSymbolId);
+}
+
+export function drawOfficeMichaelJackpot(
+  randomIndex: RandomIndex = (maxExclusive) => randomInt(0, maxExclusive),
+) {
+  return checkedRandomIndex(randomIndex, OFFICE_MICHAEL_JACKPOT_ODDS) === 0;
 }
 
 export function createOfficeMatchBoard(
@@ -116,8 +120,6 @@ export function createOfficeMatchBoard(
     ], randomIndex);
   }
 
-  // Loss boards may show Michael once or twice as a genuine near-miss tease,
-  // but every symbol is still capped below three so a loss can never become a win.
   const regularCellCount = OFFICE_MATCH_CELL_COUNT - michaelTeaseCount;
   const lossPool = regularSymbolsExcluding(null)
     .flatMap((symbolId) => [symbolId, symbolId]);
@@ -127,6 +129,16 @@ export function createOfficeMatchBoard(
     ...regularCells,
     ...Array.from({ length: michaelTeaseCount }, () => "MICHAEL" as const),
   ], randomIndex);
+}
+
+export function createOfficeMichaelJackpotBoard(
+  randomIndex: RandomIndex = (maxExclusive) => randomInt(0, maxExclusive),
+) {
+  return createOfficeMatchBoard(
+    { kind: "WIN", symbolId: "MICHAEL", multiplierBps: 10_000 },
+    randomIndex,
+    0,
+  );
 }
 
 export type PreparedOfficePoolTicket = {
@@ -151,33 +163,20 @@ export function createOfficePoolTickets(
 
   if (outcomes.length !== OFFICE_POOL_SIZE) throw new Error("INVALID_OFFICE_POOL_DISTRIBUTION");
 
-  const nonJackpotTeaseCounts = OFFICE_MICHAEL_TEASE_DISTRIBUTION.flatMap((entry) =>
+  const teaseCounts = OFFICE_MICHAEL_TEASE_DISTRIBUTION.flatMap((entry) =>
     Array.from({ length: entry.count }, () => entry.michaelCount),
   );
-  if (nonJackpotTeaseCounts.length !== OFFICE_POOL_SIZE - 1) {
+  if (teaseCounts.length !== OFFICE_POOL_SIZE) {
     throw new Error("INVALID_OFFICE_MICHAEL_TEASE_DISTRIBUTION");
   }
 
   const shuffledOutcomes = shuffle(outcomes, randomIndex);
-  const shuffledTeaseCounts = shuffle(nonJackpotTeaseCounts, randomIndex);
-  let teaseCursor = 0;
+  const shuffledTeaseCounts = shuffle(teaseCounts, randomIndex);
 
-  const tickets = shuffledOutcomes.map((outcome) => {
-    const michaelTeaseCount = outcome.kind === "WIN" && outcome.symbolId === "MICHAEL"
-      ? 0
-      : shuffledTeaseCounts[teaseCursor++]!;
-
-    return {
-      outcome,
-      cells: createOfficeMatchBoard(outcome, randomIndex, michaelTeaseCount),
-    };
-  });
-
-  if (teaseCursor !== OFFICE_POOL_SIZE - 1) {
-    throw new Error("OFFICE_MICHAEL_TEASE_ASSIGNMENT_MISMATCH");
-  }
-
-  return tickets;
+  return shuffledOutcomes.map((outcome, index) => ({
+    outcome,
+    cells: createOfficeMatchBoard(outcome, randomIndex, shuffledTeaseCounts[index]!),
+  }));
 }
 
 export function getOfficeMatchSymbol(symbolId: OfficeMatchSymbolId) {
