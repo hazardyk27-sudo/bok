@@ -391,6 +391,9 @@ export async function upsertRouletteGlobalBet(input: {
       );
     }
 
+    // Global round rows are immutable schedule data after materialization.
+    // Do not FOR UPDATE-lock the shared round for every player's bet; only
+    // this session's slip/wallet need serialization.
     const roundResult =
       await client.query<GlobalRoundForBetRow>(
         `SELECT
@@ -400,8 +403,7 @@ export async function upsertRouletteGlobalBet(input: {
            result_at,
            winning_number
          FROM roulette_global_rounds
-         WHERE id = $1
-         FOR UPDATE`,
+         WHERE id = $1`,
         [
           input.roundId,
         ],
