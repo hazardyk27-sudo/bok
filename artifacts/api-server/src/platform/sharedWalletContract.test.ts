@@ -98,7 +98,10 @@ describe("canonical shared wallet contract", () => {
       expect(repositorySource).not.toContain("roulette_wallets");
     }
     for (const idleWalletSource of idleWalletSources) {
-      expect(idleWalletSource).toContain("shared_wallets");
+      const usesSharedWalletConstant = idleWalletSource.includes("SHARED_WALLET_TABLE");
+      const usesLiteralSharedWallet = idleWalletSource.includes("shared_wallets");
+      expect(usesSharedWalletConstant || usesLiteralSharedWallet).toBe(true);
+      expect(idleWalletSource).not.toContain("roulette_wallets");
     }
   });
 
