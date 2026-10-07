@@ -3,14 +3,8 @@ import { installRouletteBetVerificationUi } from "./verificationController";
 import { installRouletteChipFeedbackV2 } from "./chipFeedbackV2";
 import { installRouletteChipVisuals } from "./chipVisual";
 import { installRouletteBetAuthority } from "./betAuthority";
-import { installRouletteChipDragLatestWriter } from "./chipDragLatestWriter";
 import { installRouletteChipDragV6 } from "./chipDragV6";
 import { installRouletteNetworkGuard } from "./rouletteNetworkGuard";
-import { installRouletteIncrementalPlacedChipReuse } from "./incrementalPlacedChipReuse";
-import {
-  installRouletteOptimisticBalanceBridge,
-  installRouletteOptimisticBalanceUi,
-} from "./optimisticBalanceUi";
 import "./verification.css";
 import "./chipFeedback.css";
 import "./chipVisual.css";
@@ -20,22 +14,17 @@ import "./settingsMenu.css";
 
 export function mountRoulette(app: HTMLDivElement) {
   installRouletteNetworkGuard();
-  installRouletteIncrementalPlacedChipReuse(app);
-  installRouletteOptimisticBalanceBridge();
 
-  // One authority owns the wager topology before runtime creates any wallet
-  // clients. Drag changes position only; normal controls mutate this same state.
+  // One state authority owns wager topology and serializes every server write.
+  // It never renders DOM; runtime is the only persistent chip renderer.
   installRouletteBetAuthority(app);
 
   mountRouletteRuntime(app);
-  installRouletteOptimisticBalanceUi(app);
   installRouletteBetVerificationUi(app);
   installRouletteChipFeedbackV2(app);
   installRouletteChipVisuals(app);
 
-  // Revision/race compatibility remains around the single authority, but DOM
-  // snapshots and the old separate canonical/source-mirror layers no longer own
-  // wager state or chip color.
-  installRouletteChipDragLatestWriter(app);
+  // Drag is input-only: one optimistic render at drop, then one serialized
+  // authority write. No polling loop, DOM protector, or secondary writer.
   installRouletteChipDragV6(app);
 }

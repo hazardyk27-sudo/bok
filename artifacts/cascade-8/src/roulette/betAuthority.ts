@@ -1,29 +1,88 @@
-import { RouletteWalletClient } from "./rouletteWalletClient";
+import {
+  RouletteWalletClient,
+  type RouletteBootstrapResponse,
+  type RouletteGlobalBetSnapshot,
+  type RouletteGlobalBetUpdateResponse,
+} from "./rouletteWalletClient";
+import type { RouletteBetPlacement } from "./betState";
 import {
   cloneRouletteAuthorityBets,
-  resolveRouletteAuthorityMutation,
-  resolveRouletteDragMutation,
-  type RouletteAuthorityIntent,
+  getRouletteAuthorityStake,
 } from "./betAuthorityState";
 import {
   clearRouletteBetAuthority,
   getRouletteBetAuthoritySnapshot,
-  installRouletteBetAuthorityVisual,
   setRouletteBetAuthority,
 } from "./betAuthorityVisual";
 
-const V6_MOVE_PREFIX = "roulette_move_v6_";
-const LATEST_MOVE_PREFIX = "roulette_move_latest_";
-
-type MutationPlan = {
-  roundId: string;
-  bets: ReturnType<typeof cloneRouletteAuthorityBets>;
-};
-
 let installed = false;
-let pendingIntent: RouletteAuthorityIntent = { kind: "unknown" };
-let intentToken = 0;
-const mutationPlans = new Map<string, MutationPlan>();
+let lastAcceptedGlobalBet: RouletteGlobalBetSnapshot | null = null;
+let writeTail: Promise<void> = Promise.resolve();
+let mutationSequence = 0;
+
+function cloneGlobalBet(
+  globalBet: RouletteGlobalBetSnapshot,
+): RouletteGlobalBetSnapshot {
+  return {
+    ...globalBet,
+    bets: cloneRouletteAuthorityBets(globalBet.bets),
+  };
+}
+
+function cloneBootstrap(
+  response: RouletteBootstrapResponse,
+  globalBet: RouletteGlobalBetSnapshot | null,
+): RouletteBootstrapResponse {
+  return {
+    ...response,
+    globalBet: globalBet ? cloneGlobalBet(globalBet) : null,
+  };
+}
+
+function syntheticAuthorityBet(
+  roundId: string,
+  bets: NonNullable<ReturnType<typeof getRouletteBetAuthoritySnapshot>["bets"]>,
+  revision: number,
+  base: RouletteGlobalBetSnapshot | null,
+): RouletteGlobalBetSnapshot {
+  return {
+    id: base?.id ?? `optimistic-${roundId}`,
+    roundId,
+    bets: cloneRouletteAuthorityBets(bets),
+    stakeCents: Math.round(getRouletteAuthorityStake(bets) * 100),
+    payoutCents: base?.payoutCents ?? 0,
+    revision: Math.max(0, revision, base?.revision ?? 0),
+    settlement: base?.settlement ?? null,
+    settledAtMs: base?.settledAtMs ?? null,
+    updatedAtMs: Date.now(),
+  };
+}
+
+function betTotals(
+  bets: readonly RouletteBetPlacement[],
+) {
+  const totals = new Map<string, number>();
+  for (const bet of bets) {
+    totals.set(
+      bet.betId,
+      (totals.get(bet.betId) ?? 0) + bet.amount,
+    );
+  }
+  return totals;
+}
+
+function sameWagerTopology(
+  left: readonly RouletteBetPlacement[],
+  right: readonly RouletteBetPlacement[],
+) {
+  const a = betTotals(left);
+  const b = betTotals(right);
+  if (a.size !== b.size) return false;
+  for (const [betId, amount] of a) {
+    if ((b.get(betId) ?? 0) !== amount) return false;
+  }
+  return true;
+}
 
 export function shouldAcceptRouletteAuthorityBootstrap(
   authority: {
@@ -38,96 +97,186 @@ export function shouldAcceptRouletteAuthorityBootstrap(
     return true;
   }
 
+  // A polling GET can be newer only because an earlier queued PUT landed.
+  // It must never replace a later local action that is still pending.
+  if (authority.optimistic) {
+    return false;
+  }
+
   if (serverRevision === null) {
     return false;
   }
 
-  if (serverRevision > authority.revision) {
-    return true;
-  }
-
-  return (
-    !authority.optimistic &&
-    serverRevision === authority.revision
-  );
+  return serverRevision >= authority.revision;
 }
 
-function selectedChipAmount(app: HTMLDivElement) {
-  const selected = app.querySelector<HTMLElement>(
-    ".roulette-chip-option[data-chip-value][aria-pressed=\"true\"]",
-  );
-  const selectedValue = Number(selected?.dataset.chipValue);
-  if (Number.isFinite(selectedValue) && selectedValue > 0) {
-    return selectedValue;
+export function selectRouletteRuntimeBootstrapBet(
+  authority: ReturnType<typeof getRouletteBetAuthoritySnapshot>,
+  roundId: string,
+  serverBet: RouletteGlobalBetSnapshot | null,
+  acceptedBet: RouletteGlobalBetSnapshot | null,
+) {
+  if (authority.roundId !== roundId) {
+    return serverBet ? cloneGlobalBet(serverBet) : null;
   }
 
-  const toggle = app.querySelector<HTMLElement>("[data-mobile-chip-toggle]");
-  const toggleValue = Number(
-    toggle?.dataset.selectedChipValue ?? toggle?.dataset.selectedChip,
-  );
-  return Number.isFinite(toggleValue) && toggleValue > 0 ? toggleValue : 10;
+  const acceptedSameRound =
+    acceptedBet?.roundId === roundId
+      ? acceptedBet
+      : null;
+  const serverSameRound =
+    serverBet?.roundId === roundId
+      ? serverBet
+      : null;
+
+  if (
+    authority.bets &&
+    (
+      authority.optimistic ||
+      !shouldAcceptRouletteAuthorityBootstrap(
+        authority,
+        roundId,
+        serverSameRound?.revision ?? null,
+      )
+    )
+  ) {
+    return syntheticAuthorityBet(
+      roundId,
+      authority.bets,
+      authority.revision,
+      acceptedSameRound ?? serverSameRound,
+    );
+  }
+
+  if (serverSameRound) {
+    return cloneGlobalBet(serverSameRound);
+  }
+
+  if (authority.bets) {
+    return syntheticAuthorityBet(
+      roundId,
+      authority.bets,
+      authority.revision,
+      acceptedSameRound,
+    );
+  }
+
+  return acceptedSameRound
+    ? cloneGlobalBet(acceptedSameRound)
+    : null;
 }
 
-function queueIntent(intent: RouletteAuthorityIntent) {
-  const token = ++intentToken;
-  pendingIntent = intent;
-  queueMicrotask(() => {
-    if (intentToken === token) {
-      pendingIntent = { kind: "unknown" };
+function enqueueWrite<T>(task: () => Promise<T>) {
+  const run = writeTail.then(task, task);
+  writeTail = run.then(
+    () => undefined,
+    () => undefined,
+  );
+  return run;
+}
+
+function revisionForWrite(
+  roundId: string,
+  requestedRevision: number,
+) {
+  if (lastAcceptedGlobalBet?.roundId === roundId) {
+    return lastAcceptedGlobalBet.revision;
+  }
+
+  const authority = getRouletteBetAuthoritySnapshot();
+  if (authority.roundId === roundId) {
+    return Math.max(requestedRevision, authority.revision);
+  }
+
+  return Math.max(0, requestedRevision);
+}
+
+function acceptConfirmedWrite(
+  roundId: string,
+  plan: readonly RouletteBetPlacement[],
+  response: RouletteGlobalBetUpdateResponse,
+  sequence: number,
+) {
+  if (response.globalBet?.roundId === roundId) {
+    lastAcceptedGlobalBet = cloneGlobalBet(response.globalBet);
+
+    const authority = getRouletteBetAuthoritySnapshot();
+    const stillRepresentsThisWrite =
+      authority.bets !== null &&
+      sameWagerTopology(authority.bets, plan);
+
+    if (
+      sequence === mutationSequence &&
+      authority.roundId === roundId &&
+      stillRepresentsThisWrite
+    ) {
+      setRouletteBetAuthority(
+        roundId,
+        response.globalBet.bets,
+        response.globalBet.revision,
+        false,
+      );
     }
-  });
+    return;
+  }
+
+  lastAcceptedGlobalBet = null;
+  const authority = getRouletteBetAuthoritySnapshot();
+  const stillRepresentsThisWrite =
+    authority.bets !== null &&
+    sameWagerTopology(authority.bets, plan);
+
+  if (
+    sequence === mutationSequence &&
+    authority.roundId === roundId &&
+    stillRepresentsThisWrite
+  ) {
+    setRouletteBetAuthority(
+      roundId,
+      [],
+      authority.revision + 1,
+      false,
+    );
+  }
 }
 
-function consumeIntent() {
-  const intent = pendingIntent;
-  pendingIntent = { kind: "unknown" };
-  intentToken += 1;
-  return intent;
+async function recoverCurrentMutation(
+  client: RouletteWalletClient,
+  originalBootstrap: () => Promise<RouletteBootstrapResponse>,
+  roundId: string,
+  sequence: number,
+) {
+  if (sequence !== mutationSequence) return;
+
+  try {
+    const fresh = await originalBootstrap.call(client);
+    if (fresh.globalTable?.roundId !== roundId) {
+      clearRouletteBetAuthority();
+      lastAcceptedGlobalBet = null;
+      return;
+    }
+
+    if (fresh.globalBet?.roundId === roundId) {
+      lastAcceptedGlobalBet = cloneGlobalBet(fresh.globalBet);
+      setRouletteBetAuthority(
+        roundId,
+        fresh.globalBet.bets,
+        fresh.globalBet.revision,
+        false,
+      );
+    } else {
+      lastAcceptedGlobalBet = null;
+      setRouletteBetAuthority(roundId, [], 0, false);
+    }
+  } catch {
+    // Keep the visible local wager. A transient read failure is safer than
+    // erasing a bet that may already have reached the server.
+  }
 }
 
-function installIntentCapture(app: HTMLDivElement) {
-  app.addEventListener(
-    "click",
-    (event) => {
-      const target = event.target;
-      if (!(target instanceof Element)) return;
-
-      if (target.closest("[data-double-bet]")) {
-        queueIntent({ kind: "double" });
-        return;
-      }
-      if (target.closest("[data-undo-bet]")) {
-        queueIntent({ kind: "undo" });
-        return;
-      }
-      if (target.closest("[data-clear-bets]")) {
-        queueIntent({ kind: "clear" });
-        return;
-      }
-      if (target.closest("[data-rebet]")) {
-        queueIntent({ kind: "rebet" });
-        return;
-      }
-
-      const cell = target.closest<HTMLElement>("[data-bet-id]");
-      const betId = cell?.dataset.betId;
-      if (betId) {
-        queueIntent({
-          kind: "place",
-          betId,
-          amount: selectedChipAmount(app),
-        });
-      }
-    },
-    true,
-  );
-}
-
-export function installRouletteBetAuthority(app: HTMLDivElement) {
-  installRouletteBetAuthorityVisual(app);
+export function installRouletteBetAuthority(_app: HTMLDivElement) {
   if (installed) return;
   installed = true;
-  installIntentCapture(app);
 
   const originalBootstrap = RouletteWalletClient.prototype.bootstrap;
   const originalUpdate = RouletteWalletClient.prototype.updateGlobalBet;
@@ -139,10 +288,12 @@ export function installRouletteBetAuthority(app: HTMLDivElement) {
 
     if (!roundId) {
       clearRouletteBetAuthority();
+      lastAcceptedGlobalBet = null;
       return response;
     }
 
-    const authority = getRouletteBetAuthoritySnapshot();
+    let authority = getRouletteBetAuthoritySnapshot();
+
     if (authority.roundId !== roundId) {
       setRouletteBetAuthority(
         roundId,
@@ -150,16 +301,19 @@ export function installRouletteBetAuthority(app: HTMLDivElement) {
         serverBet?.revision ?? 0,
         false,
       );
-      return response;
+      lastAcceptedGlobalBet = serverBet
+        ? cloneGlobalBet(serverBet)
+        : null;
+      return cloneBootstrap(response, serverBet);
     }
 
     if (
+      serverBet &&
       shouldAcceptRouletteAuthorityBootstrap(
         authority,
         roundId,
-        serverBet?.revision ?? null,
-      ) &&
-      serverBet
+        serverBet.revision,
+      )
     ) {
       setRouletteBetAuthority(
         roundId,
@@ -167,96 +321,104 @@ export function installRouletteBetAuthority(app: HTMLDivElement) {
         serverBet.revision,
         false,
       );
+      lastAcceptedGlobalBet = cloneGlobalBet(serverBet);
+      authority = getRouletteBetAuthoritySnapshot();
     }
 
-    return response;
+    const runtimeBet = selectRouletteRuntimeBootstrapBet(
+      authority,
+      roundId,
+      serverBet,
+      lastAcceptedGlobalBet,
+    );
+
+    return cloneBootstrap(response, runtimeBet);
   };
 
-  RouletteWalletClient.prototype.updateGlobalBet = async function (
+  RouletteWalletClient.prototype.updateGlobalBet = function (
     roundId,
     bets,
     idempotencyKey,
     expectedRevision,
   ) {
-    const dragWrite =
-      idempotencyKey.startsWith(V6_MOVE_PREFIX) ||
-      idempotencyKey.startsWith(LATEST_MOVE_PREFIX);
-
-    let plan = mutationPlans.get(idempotencyKey);
-    if (!plan) {
-      const authority = getRouletteBetAuthoritySnapshot();
-      const current =
-        authority.roundId === roundId && authority.bets
-          ? authority.bets
-          : bets;
-      const desired = dragWrite
-        ? resolveRouletteDragMutation(current, bets)
-        : resolveRouletteAuthorityMutation(current, bets, consumeIntent());
-      plan = {
-        roundId,
-        bets: cloneRouletteAuthorityBets(desired),
-      };
-      mutationPlans.set(idempotencyKey, plan);
-    }
-
+    const sequence = ++mutationSequence;
+    const plan = cloneRouletteAuthorityBets(bets);
     const beforeWrite = getRouletteBetAuthoritySnapshot();
+
     setRouletteBetAuthority(
       roundId,
-      plan.bets,
+      plan,
       beforeWrite.roundId === roundId
         ? beforeWrite.revision
         : expectedRevision,
       true,
     );
 
-    try {
-      const response = await originalUpdate.call(
-        this,
-        roundId,
-        plan.bets,
-        idempotencyKey,
-        expectedRevision,
-      );
-      mutationPlans.delete(idempotencyKey);
+    return enqueueWrite(async () => {
+      let revision = revisionForWrite(roundId, expectedRevision);
 
-      if (response.globalBet?.roundId === roundId) {
-        setRouletteBetAuthority(
+      try {
+        const response = await originalUpdate.call(
+          this,
           roundId,
-          response.globalBet.bets,
-          response.globalBet.revision,
-          false,
+          plan,
+          idempotencyKey,
+          revision,
         );
-      } else if (plan.bets.length === 0) {
-        setRouletteBetAuthority(
-          roundId,
-          [],
-          expectedRevision + 1,
-          false,
-        );
-      }
-
-      return response;
-    } catch (error) {
-      const message = error instanceof Error ? error.message : "";
-      if (message !== "ROULETTE_GLOBAL_BET_STALE") {
-        mutationPlans.delete(idempotencyKey);
-        try {
-          const fresh = await originalBootstrap.call(this);
-          if (fresh.globalTable?.roundId === roundId) {
-            setRouletteBetAuthority(
-              roundId,
-              fresh.globalBet?.bets ?? [],
-              fresh.globalBet?.revision ?? 0,
-              false,
-            );
-          } else {
-            clearRouletteBetAuthority();
-          }
-        } catch {
-          clearRouletteBetAuthority();
+        acceptConfirmedWrite(roundId, plan, response, sequence);
+        return response;
+      } catch (error) {
+        const message = error instanceof Error ? error.message : "";
+        if (message !== "ROULETTE_GLOBAL_BET_STALE") {
+          await recoverCurrentMutation(
+            this,
+            originalBootstrap,
+            roundId,
+            sequence,
+          );
+          throw error;
         }
       }
-      throw error;
-    }
+
+      const fresh = await originalBootstrap.call(this);
+      const freshRoundId = fresh.globalTable?.roundId ?? null;
+      if (freshRoundId !== roundId) {
+        await recoverCurrentMutation(
+          this,
+          originalBootstrap,
+          roundId,
+          sequence,
+        );
+        throw new Error("ROULETTE_GLOBAL_BETTING_CLOSED");
+      }
+
+      if (fresh.globalBet?.roundId === roundId) {
+        lastAcceptedGlobalBet = cloneGlobalBet(fresh.globalBet);
+        revision = fresh.globalBet.revision;
+      } else {
+        lastAcceptedGlobalBet = null;
+        revision = 0;
+      }
+
+      try {
+        const response = await originalUpdate.call(
+          this,
+          roundId,
+          plan,
+          idempotencyKey,
+          revision,
+        );
+        acceptConfirmedWrite(roundId, plan, response, sequence);
+        return response;
+      } catch (error) {
+        await recoverCurrentMutation(
+          this,
+          originalBootstrap,
+          roundId,
+          sequence,
+        );
+        throw error;
+      }
+    });
   };
 }

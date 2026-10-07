@@ -20,7 +20,9 @@ export type RouletteBetState = {
   previousRoundPlacements: RouletteBetPlacement[];
 };
 
-let authoritativeDragPlacements: RouletteBetPlacement[] | null = null;
+// Transitional compatibility name kept for old tests/imports. This is now the
+// one shared local wager topology used by every reducer, not a drag-only cache.
+let authoritativePlacements: RouletteBetPlacement[] | null = null;
 
 function cloneRoulettePlacements(
   placements: readonly RouletteBetPlacement[],
@@ -33,27 +35,35 @@ function cloneRoulettePlacements(
 function getRouletteEffectivePlacements(
   state: RouletteBetState,
 ) {
-  return authoritativeDragPlacements ??
-    state.placements;
+  return authoritativePlacements ?? state.placements;
+}
+
+function withAuthoritativePlacements(
+  state: RouletteBetState,
+  placements: readonly RouletteBetPlacement[],
+): RouletteBetState {
+  const canonical = cloneRoulettePlacements(placements);
+  authoritativePlacements = cloneRoulettePlacements(canonical);
+  return {
+    ...state,
+    placements: canonical,
+  };
 }
 
 export function setRouletteAuthoritativeDragPlacements(
   placements: readonly RouletteBetPlacement[],
 ) {
-  authoritativeDragPlacements =
-    cloneRoulettePlacements(placements);
+  authoritativePlacements = cloneRoulettePlacements(placements);
 }
 
 export function getRouletteAuthoritativeDragPlacements() {
-  return authoritativeDragPlacements
-    ? cloneRoulettePlacements(
-        authoritativeDragPlacements,
-      )
+  return authoritativePlacements
+    ? cloneRoulettePlacements(authoritativePlacements)
     : null;
 }
 
 export function clearRouletteAuthoritativeDragPlacements() {
-  authoritativeDragPlacements = null;
+  authoritativePlacements = null;
 }
 
 export function createRouletteBetState(): RouletteBetState {
@@ -80,21 +90,14 @@ export function placeRouletteBet(
 ): RouletteBetState {
   if (!betId) return state;
 
-  const placements =
-    getRouletteEffectivePlacements(state);
-
-  return {
-    ...state,
-    placements: [
-      ...cloneRoulettePlacements(
-        placements,
-      ),
-      {
-        betId,
-        amount: state.selectedChip,
-      },
-    ],
-  };
+  const placements = getRouletteEffectivePlacements(state);
+  return withAuthoritativePlacements(state, [
+    ...cloneRoulettePlacements(placements),
+    {
+      betId,
+      amount: state.selectedChip,
+    },
+  ]);
 }
 
 export function moveRouletteBetPlacements(
@@ -107,9 +110,7 @@ export function moveRouletteBetPlacements(
     !toBetId ||
     fromBetId === toBetId
   ) {
-    return placements.map((placement) => ({
-      ...placement,
-    }));
+    return cloneRoulettePlacements(placements);
   }
 
   return placements.map((placement) => ({
@@ -124,112 +125,64 @@ export function moveRouletteBetPlacements(
 export function undoRouletteBet(
   state: RouletteBetState,
 ): RouletteBetState {
-  const placements =
-    getRouletteEffectivePlacements(state);
-
-  if (placements.length === 0) {
-    return {
-      ...state,
-      placements: [],
-    };
-  }
-
-  return {
-    ...state,
-    placements:
-      cloneRoulettePlacements(
-        placements.slice(0, -1),
-      ),
-  };
+  const placements = getRouletteEffectivePlacements(state);
+  return withAuthoritativePlacements(
+    state,
+    placements.length === 0
+      ? []
+      : placements.slice(0, -1),
+  );
 }
 
 export function clearRouletteBets(
   state: RouletteBetState,
 ): RouletteBetState {
-  const placements =
-    getRouletteEffectivePlacements(state);
-
-  if (placements.length === 0) {
-    return {
-      ...state,
-      placements: [],
-    };
-  }
-
-  return {
-    ...state,
-    placements: [],
-  };
+  return withAuthoritativePlacements(state, []);
 }
 
 export function doubleRouletteBets(
   state: RouletteBetState,
 ): RouletteBetState {
-  const placements =
-    getRouletteEffectivePlacements(state);
-
+  const placements = getRouletteEffectivePlacements(state);
   if (placements.length === 0) {
-    return {
-      ...state,
-      placements: [],
-    };
+    return withAuthoritativePlacements(state, []);
   }
 
-  return {
-    ...state,
-    placements:
-      placements.map(
-        (placement) => ({
-          ...placement,
-          amount:
-            placement.amount * 2,
-        }),
-      ),
-  };
+  return withAuthoritativePlacements(
+    state,
+    placements.map((placement) => ({
+      ...placement,
+      amount: placement.amount * 2,
+    })),
+  );
 }
 
 export function snapshotRouletteRound(
   state: RouletteBetState,
 ): RouletteBetState {
-  const placements =
-    getRouletteEffectivePlacements(state);
-
-  const canonicalPlacements =
-    cloneRoulettePlacements(
-      placements,
-    );
+  const canonicalPlacements = cloneRoulettePlacements(
+    getRouletteEffectivePlacements(state),
+  );
+  authoritativePlacements = cloneRoulettePlacements(canonicalPlacements);
 
   return {
     ...state,
-    placements:
-      cloneRoulettePlacements(
-        canonicalPlacements,
-      ),
-    previousRoundPlacements:
-      cloneRoulettePlacements(
-        canonicalPlacements,
-      ),
+    placements: cloneRoulettePlacements(canonicalPlacements),
+    previousRoundPlacements: cloneRoulettePlacements(canonicalPlacements),
   };
 }
 
 export function rebetRouletteRound(
   state: RouletteBetState,
 ): RouletteBetState {
-  if (
-    state.previousRoundPlacements.length === 0
-  ) {
+  if (state.previousRoundPlacements.length === 0) {
     return state;
   }
 
-  return {
-    ...state,
-    placements:
-      state.previousRoundPlacements.map(
-        (placement) => ({
-          ...placement,
-        }),
-      ),
-  };
+  return withAuthoritativePlacements(
+    state,
+    state.previousRoundPlacements,
+  );
 }
 
 export function getRouletteBetTotals(
@@ -238,8 +191,7 @@ export function getRouletteBetTotals(
   return placements.reduce<Record<string, number>>(
     (totals, placement) => {
       totals[placement.betId] =
-        (totals[placement.betId] ?? 0) +
-        placement.amount;
+        (totals[placement.betId] ?? 0) + placement.amount;
       return totals;
     },
     {},
@@ -263,47 +215,28 @@ export function expandRouletteBetPlacementsToChipValues(
 
   return placements.flatMap((placement) => {
     if (
-      !Number.isSafeInteger(
-        placement.amount,
-      ) ||
+      !Number.isSafeInteger(placement.amount) ||
       placement.amount <= 0
     ) {
-      throw new Error(
-        "INVALID_ROULETTE_BET_AMOUNT",
-      );
+      throw new Error("INVALID_ROULETTE_BET_AMOUNT");
     }
 
-    let remaining =
-      placement.amount;
-    const expanded:
-      RouletteBetPlacement[] = [];
+    let remaining = placement.amount;
+    const expanded: RouletteBetPlacement[] = [];
 
     for (const chip of denominations) {
-      const count =
-        Math.floor(
-          remaining / chip,
-        );
-
-      for (
-        let index = 0;
-        index < count;
-        index += 1
-      ) {
+      const count = Math.floor(remaining / chip);
+      for (let index = 0; index < count; index += 1) {
         expanded.push({
-          betId:
-            placement.betId,
+          betId: placement.betId,
           amount: chip,
         });
       }
-
-      remaining -=
-        count * chip;
+      remaining -= count * chip;
     }
 
     if (remaining !== 0) {
-      throw new Error(
-        "INVALID_ROULETTE_BET_AMOUNT",
-      );
+      throw new Error("INVALID_ROULETTE_BET_AMOUNT");
     }
 
     return expanded;
@@ -313,8 +246,7 @@ export function expandRouletteBetPlacementsToChipValues(
 export function compactRouletteBetPlacements(
   placements: readonly RouletteBetPlacement[],
 ): RouletteBetPlacement[] {
-  const totals =
-    getRouletteBetTotals(placements);
+  const totals = getRouletteBetTotals(placements);
   const seen = new Set<string>();
 
   return placements.flatMap((placement) => {
@@ -323,8 +255,7 @@ export function compactRouletteBetPlacements(
     }
 
     seen.add(placement.betId);
-    const amount =
-      totals[placement.betId] ?? 0;
+    const amount = totals[placement.betId] ?? 0;
 
     return amount > 0
       ? [{
@@ -349,21 +280,20 @@ export function getRouletteDisplayChipValue(
 export function getRouletteLastChipByBet(
   placements: readonly RouletteBetPlacement[],
 ) {
-  return placements.reduce<
-    Record<string, number>
-  >((lastByBet, placement) => {
-    lastByBet[placement.betId] =
-      placement.amount;
-    return lastByBet;
-  }, {});
+  return placements.reduce<Record<string, number>>(
+    (lastByBet, placement) => {
+      lastByBet[placement.betId] = placement.amount;
+      return lastByBet;
+    },
+    {},
+  );
 }
 
 export function getRouletteTotalStake(
   placements: readonly RouletteBetPlacement[],
 ) {
   return placements.reduce(
-    (total, placement) =>
-      total + placement.amount,
+    (total, placement) => total + placement.amount,
     0,
   );
 }
