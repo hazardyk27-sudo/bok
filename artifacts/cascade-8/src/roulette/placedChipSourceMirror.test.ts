@@ -9,7 +9,7 @@ import {
 } from "./placedChipSourceMirror";
 
 describe("roulette placed-chip single visual source", () => {
-  it("keeps the selected chip denomination as the face source", () => {
+  it("uses the table wager tier as the chip face source", () => {
     expect(
       getRoulettePlacedChipSourceValue(
         10,
@@ -24,10 +24,28 @@ describe("roulette placed-chip single visual source", () => {
     ).toBe(10);
     expect(
       getRoulettePlacedChipSourceValue(
+        80,
+        10,
+      ),
+    ).toBe(50);
+    expect(
+      getRoulettePlacedChipSourceValue(
         100,
         50,
       ),
-    ).toBe(50);
+    ).toBe(100);
+    expect(
+      getRoulettePlacedChipSourceValue(
+        200,
+        10,
+      ),
+    ).toBe(100);
+    expect(
+      getRoulettePlacedChipSourceValue(
+        640,
+        10,
+      ),
+    ).toBe(500);
   });
 
   it("shows the real aggregate wager instead of the source denomination", () => {
@@ -41,39 +59,54 @@ describe("roulette placed-chip single visual source", () => {
       getRoulettePlacedChipDisplayLabel(40),
     ).toBe("40");
     expect(
+      getRoulettePlacedChipDisplayLabel(200),
+    ).toBe("200");
+    expect(
       getRoulettePlacedChipDisplayLabel(4_000),
     ).toBe("4K");
   });
 
-  it("preserves the chip face source already stamped on a placed chip", () => {
+  it("does not keep an old white chip face after x2 crosses a tier", () => {
     expect(
       getRoulettePlacedChipSourceValue(
-        50,
+        200,
         10,
-        50,
+        10,
       ),
-    ).toBe(50);
-    expect(
-      getRoulettePlacedChipSourceValue(
-        100,
-        100,
-        50,
-      ),
-    ).toBe(50);
-  });
-
-  it("falls back to an actual selectable denomination", () => {
+    ).toBe(100);
     expect(
       getRoulettePlacedChipSourceValue(
         500,
-        null,
+        10,
+        100,
       ),
     ).toBe(500);
+  });
+
+  it("always resolves to an actual selectable denomination", () => {
+    expect(
+      getRoulettePlacedChipSourceValue(
+        5,
+        null,
+      ),
+    ).toBe(10);
     expect(
       getRoulettePlacedChipSourceValue(
         70,
         null,
       ),
-    ).toBe(10);
+    ).toBe(50);
+    expect(
+      getRoulettePlacedChipSourceValue(
+        2_500,
+        null,
+      ),
+    ).toBe(2_000);
+    expect(
+      getRoulettePlacedChipSourceValue(
+        8_000,
+        null,
+      ),
+    ).toBe(5_000);
   });
 });
