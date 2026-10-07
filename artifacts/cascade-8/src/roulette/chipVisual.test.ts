@@ -11,6 +11,7 @@ import {
   getRouletteChipPalette,
   getRouletteChipStackDepth,
   getRouletteChipTier,
+  syncRoulettePlacedChipVisual,
 } from "./chipVisual";
 
 describe("roulette casino chip visuals", () => {
@@ -60,5 +61,62 @@ describe("roulette casino chip visuals", () => {
     expect(getRouletteChipStackDepth(20)).toBe(2);
     expect(getRouletteChipStackDepth(150)).toBe(2);
     expect(getRouletteChipStackDepth(1_500)).toBe(3);
+  });
+
+  it("strips the historic blue $10 face before applying aggregate amount color", () => {
+    const chip = document.createElement("span");
+    const cell = document.createElement("div");
+    chip.className = "roulette-placed-chip chip-10";
+    chip.dataset.betAmount = "20";
+    chip.dataset.chipFaceSourceValue = "10";
+    chip.style.setProperty("--chip-fill", "#3b8ce0");
+    chip.style.setProperty("--chip-ink", "#ffffff");
+    chip.style.setProperty("background-color", "rgb(47, 120, 200)", "important");
+    cell.append(chip);
+
+    expect(syncRoulettePlacedChipVisual(chip, 20)).toBe(true);
+    expect(chip.classList.contains("chip-10")).toBe(false);
+    expect(chip.style.getPropertyValue("--chip-fill")).toBe("");
+    expect(chip.style.getPropertyValue("background-color")).toBe("");
+    expect(chip.dataset.chipFaceSourceValue).toBeUndefined();
+    expect(chip.dataset.chipTier).toBe("white");
+    expect(chip.style.getPropertyValue("--casino-chip-main")).toBe(
+      ROULETTE_CHIP_PALETTES.white.main,
+    );
+
+    expect(syncRoulettePlacedChipVisual(chip, 80)).toBe(true);
+    expect(chip.dataset.chipTier).toBe("blue");
+    expect(chip.style.getPropertyValue("--casino-chip-main")).toBe(
+      ROULETTE_CHIP_PALETTES.blue.main,
+    );
+
+    expect(syncRoulettePlacedChipVisual(chip, 160)).toBe(true);
+    expect(chip.dataset.chipTier).toBe("green");
+    expect(chip.style.getPropertyValue("--casino-chip-main")).toBe(
+      ROULETTE_CHIP_PALETTES.green.main,
+    );
+  });
+
+  it("keeps twelve doubled ten-dollar cells white at a $240 board total", () => {
+    const chips = Array.from({ length: 12 }, () => {
+      const cell = document.createElement("div");
+      const chip = document.createElement("span");
+      chip.className = "roulette-placed-chip chip-10";
+      chip.dataset.betAmount = "20";
+      chip.style.setProperty("--chip-fill", "#3b8ce0");
+      cell.append(chip);
+      syncRoulettePlacedChipVisual(chip, 20);
+      return chip;
+    });
+
+    expect(chips).toHaveLength(12);
+    expect(12 * 20).toBe(240);
+    chips.forEach((chip) => {
+      expect(chip.dataset.chipTier).toBe("white");
+      expect(chip.classList.contains("chip-10")).toBe(false);
+      expect(chip.style.getPropertyValue("--casino-chip-main")).toBe(
+        ROULETTE_CHIP_PALETTES.white.main,
+      );
+    });
   });
 });
