@@ -1,33 +1,10 @@
 import {
-  applyRouletteChipVisualState,
-  getRouletteChipStackDepth,
+  syncRoulettePlacedChipVisual,
 } from "./chipVisual";
 import {
   formatRouletteAmount,
   getRouletteAmountScale,
 } from "./uiFormat";
-
-function removeLegacyPlacedChipFace(
-  chip: HTMLElement,
-) {
-  for (const className of [
-    ...chip.classList,
-  ]) {
-    if (className.startsWith("chip-")) {
-      chip.classList.remove(className);
-    }
-  }
-
-  chip.style.removeProperty(
-    "--chip-fill",
-  );
-  chip.style.removeProperty(
-    "--chip-ink",
-  );
-  chip.style.removeProperty(
-    "--chip-edge",
-  );
-}
 
 export function syncRouletteCanonicalChipFace(
   chip: HTMLElement,
@@ -39,13 +16,12 @@ export function syncRouletteCanonicalChipFace(
       : 0;
   if (safeAmount <= 0) return false;
 
-  removeLegacyPlacedChipFace(chip);
   chip.classList.add(
     "roulette-placed-chip",
   );
 
   if (
-    !applyRouletteChipVisualState(
+    !syncRoulettePlacedChipVisual(
       chip,
       safeAmount,
     )
@@ -57,14 +33,6 @@ export function syncRouletteCanonicalChipFace(
     String(safeAmount);
   chip.dataset.amountScale =
     getRouletteAmountScale(safeAmount);
-  chip.dataset.stackDepth =
-    String(
-      getRouletteChipStackDepth(
-        safeAmount,
-      ),
-    );
-  chip.dataset.canonicalChipFace =
-    "true";
 
   const displayAmount =
     formatRouletteAmount(safeAmount);
