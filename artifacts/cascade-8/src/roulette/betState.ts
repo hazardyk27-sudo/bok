@@ -1,6 +1,11 @@
 import {
   getRouletteLegacyPaletteSlot,
 } from "./chipTier";
+import {
+  clearRouletteAuthorityStore,
+  getRouletteAuthorityStoreBets,
+  setRouletteAuthorityStoreBets,
+} from "./betAuthorityStore";
 
 export const ROULETTE_CHIP_VALUES: readonly number[] = [
   10,
@@ -24,10 +29,6 @@ export type RouletteBetState = {
   previousRoundPlacements: RouletteBetPlacement[];
 };
 
-// Transitional compatibility name kept for old tests/imports. This is now the
-// one shared local wager topology used by every reducer, not a drag-only cache.
-let authoritativePlacements: RouletteBetPlacement[] | null = null;
-
 function cloneRoulettePlacements(
   placements: readonly RouletteBetPlacement[],
 ) {
@@ -39,42 +40,51 @@ function cloneRoulettePlacements(
 function getRouletteEffectivePlacements(
   state: RouletteBetState,
 ) {
-  return authoritativePlacements ?? state.placements;
+  return (
+    getRouletteAuthorityStoreBets() ??
+    cloneRoulettePlacements(state.placements)
+  ) as RouletteBetPlacement[];
 }
 
 function withAuthoritativePlacements(
   state: RouletteBetState,
   placements: readonly RouletteBetPlacement[],
 ): RouletteBetState {
-  const canonical = cloneRoulettePlacements(placements);
-  authoritativePlacements = cloneRoulettePlacements(canonical);
+  const canonical =
+    cloneRoulettePlacements(placements);
+  setRouletteAuthorityStoreBets(canonical);
+
   return {
     ...state,
     placements: canonical,
   };
 }
 
+/**
+ * Transitional compatibility exports for existing callers/tests. They no
+ * longer own a separate module-global cache; every call reads/writes the single
+ * betAuthorityStore used by round/revision/optimistic metadata as well.
+ */
 export function setRouletteAuthoritativeDragPlacements(
   placements: readonly RouletteBetPlacement[],
 ) {
-  authoritativePlacements = cloneRoulettePlacements(placements);
+  setRouletteAuthorityStoreBets(placements);
 }
 
 export function getRouletteAuthoritativeDragPlacements() {
-  return authoritativePlacements
-    ? cloneRoulettePlacements(authoritativePlacements)
-    : null;
+  return getRouletteAuthorityStoreBets() as
+    RouletteBetPlacement[] | null;
 }
 
 export function clearRouletteAuthoritativeDragPlacements() {
-  authoritativePlacements = null;
+  clearRouletteAuthorityStore();
 }
 
 export function createRouletteBetState(): RouletteBetState {
-  // A new runtime/test state is a new local authority boundary. Server
-  // bootstrap will hydrate it immediately after mount; stale placements from a
-  // prior mount/test must never leak into the new state.
-  authoritativePlacements = null;
+  // A newly mounted runtime/test starts a new local authority boundary. Clear
+  // the whole authority snapshot instead of only clearing a second bet cache.
+  clearRouletteAuthorityStore();
+
   return {
     selectedChip: 10,
     placements: [],
@@ -98,7 +108,9 @@ export function placeRouletteBet(
 ): RouletteBetState {
   if (!betId) return state;
 
-  const placements = getRouletteEffectivePlacements(state);
+  const placements =
+    getRouletteEffectivePlacements(state);
+
   return withAuthoritativePlacements(state, [
     ...cloneRoulettePlacements(placements),
     {
@@ -133,7 +145,9 @@ export function moveRouletteBetPlacements(
 export function undoRouletteBet(
   state: RouletteBetState,
 ): RouletteBetState {
-  const placements = getRouletteEffectivePlacements(state);
+  const placements =
+    getRouletteEffectivePlacements(state);
+
   return withAuthoritativePlacements(
     state,
     placements.length === 0
@@ -145,15 +159,23 @@ export function undoRouletteBet(
 export function clearRouletteBets(
   state: RouletteBetState,
 ): RouletteBetState {
-  return withAuthoritativePlacements(state, []);
+  return withAuthoritativePlacements(
+    state,
+    [],
+  );
 }
 
 export function doubleRouletteBets(
   state: RouletteBetState,
 ): RouletteBetState {
-  const placements = getRouletteEffectivePlacements(state);
+  const placements =
+    getRouletteEffectivePlacements(state);
+
   if (placements.length === 0) {
-    return withAuthoritativePlacements(state, []);
+    return withAuthoritativePlacements(
+      state,
+      [],
+    );
   }
 
   return withAuthoritativePlacements(
@@ -168,22 +190,34 @@ export function doubleRouletteBets(
 export function snapshotRouletteRound(
   state: RouletteBetState,
 ): RouletteBetState {
-  const canonicalPlacements = cloneRoulettePlacements(
-    getRouletteEffectivePlacements(state),
+  const canonicalPlacements =
+    cloneRoulettePlacements(
+      getRouletteEffectivePlacements(state),
+    );
+
+  setRouletteAuthorityStoreBets(
+    canonicalPlacements,
   );
-  authoritativePlacements = cloneRoulettePlacements(canonicalPlacements);
 
   return {
     ...state,
-    placements: cloneRoulettePlacements(canonicalPlacements),
-    previousRoundPlacements: cloneRoulettePlacements(canonicalPlacements),
+    placements:
+      cloneRoulettePlacements(
+        canonicalPlacements,
+      ),
+    previousRoundPlacements:
+      cloneRoulettePlacements(
+        canonicalPlacements,
+      ),
   };
 }
 
 export function rebetRouletteRound(
   state: RouletteBetState,
 ): RouletteBetState {
-  if (state.previousRoundPlacements.length === 0) {
+  if (
+    state.previousRoundPlacements.length === 0
+  ) {
     return state;
   }
 
@@ -199,7 +233,8 @@ export function getRouletteBetTotals(
   return placements.reduce<Record<string, number>>(
     (totals, placement) => {
       totals[placement.betId] =
-        (totals[placement.betId] ?? 0) + placement.amount;
+        (totals[placement.betId] ?? 0) +
+        placement.amount;
       return totals;
     },
     {},
@@ -226,25 +261,37 @@ export function expandRouletteBetPlacementsToChipValues(
       !Number.isSafeInteger(placement.amount) ||
       placement.amount <= 0
     ) {
-      throw new Error("INVALID_ROULETTE_BET_AMOUNT");
+      throw new Error(
+        "INVALID_ROULETTE_BET_AMOUNT",
+      );
     }
 
     let remaining = placement.amount;
-    const expanded: RouletteBetPlacement[] = [];
+    const expanded:
+      RouletteBetPlacement[] = [];
 
     for (const chip of denominations) {
-      const count = Math.floor(remaining / chip);
-      for (let index = 0; index < count; index += 1) {
+      const count =
+        Math.floor(remaining / chip);
+
+      for (
+        let index = 0;
+        index < count;
+        index += 1
+      ) {
         expanded.push({
           betId: placement.betId,
           amount: chip,
         });
       }
+
       remaining -= count * chip;
     }
 
     if (remaining !== 0) {
-      throw new Error("INVALID_ROULETTE_BET_AMOUNT");
+      throw new Error(
+        "INVALID_ROULETTE_BET_AMOUNT",
+      );
     }
 
     return expanded;
@@ -254,7 +301,8 @@ export function expandRouletteBetPlacementsToChipValues(
 export function compactRouletteBetPlacements(
   placements: readonly RouletteBetPlacement[],
 ): RouletteBetPlacement[] {
-  const totals = getRouletteBetTotals(placements);
+  const totals =
+    getRouletteBetTotals(placements);
   const seen = new Set<string>();
 
   return placements.flatMap((placement) => {
@@ -263,7 +311,8 @@ export function compactRouletteBetPlacements(
     }
 
     seen.add(placement.betId);
-    const amount = totals[placement.betId] ?? 0;
+    const amount =
+      totals[placement.betId] ?? 0;
 
     return amount > 0
       ? [{
@@ -275,14 +324,15 @@ export function compactRouletteBetPlacements(
 }
 
 /**
- * Compatibility bridge for the legacy runtime's `chip-*` classes. The bridge
- * consumes the same canonical tier function as the final renderer, so the old
- * fallback cannot drift into a different color threshold table again.
+ * Compatibility bridge for historic chip-* tests/imports. Runtime placed-chip
+ * rendering no longer consumes this function after Part 1.
  */
 export function getRouletteDisplayChipValue(
   amount: number,
 ): RouletteChipValue {
-  return getRouletteLegacyPaletteSlot(amount);
+  return getRouletteLegacyPaletteSlot(
+    amount,
+  );
 }
 
 export function getRouletteLastChipByBet(
@@ -290,7 +340,8 @@ export function getRouletteLastChipByBet(
 ) {
   return placements.reduce<Record<string, number>>(
     (lastByBet, placement) => {
-      lastByBet[placement.betId] = placement.amount;
+      lastByBet[placement.betId] =
+        placement.amount;
       return lastByBet;
     },
     {},
@@ -301,7 +352,8 @@ export function getRouletteTotalStake(
   placements: readonly RouletteBetPlacement[],
 ) {
   return placements.reduce(
-    (total, placement) => total + placement.amount,
+    (total, placement) =>
+      total + placement.amount,
     0,
   );
 }
@@ -309,5 +361,7 @@ export function getRouletteTotalStake(
 export function isRouletteChipValue(
   value: number,
 ): value is RouletteChipValue {
-  return ROULETTE_CHIP_VALUES.includes(value);
+  return ROULETTE_CHIP_VALUES.includes(
+    value,
+  );
 }
