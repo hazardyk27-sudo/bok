@@ -9,6 +9,7 @@ import {
   getRouletteBetAuthoritySnapshot,
 } from "./betAuthorityVisual";
 import {
+  hasRouletteActiveExternalLatestMutation,
   registerRouletteExternalLatestMutation,
 } from "./latestMutationDeduper";
 import type {
@@ -29,6 +30,16 @@ export function doubleRoulettePlacementsForFastWrite(
     ...bet,
     amount: bet.amount * 2,
   }));
+}
+
+export function canRouletteUseFastDouble(
+  optimistic: boolean,
+  hasMatchingActiveFastMutation: boolean,
+) {
+  return (
+    !optimistic ||
+    hasMatchingActiveFastMutation
+  );
 }
 
 function renderFastConfirmedBalance(
@@ -115,6 +126,25 @@ export function installRouletteFastDouble(
         !authority.roundId ||
         !current ||
         current.length === 0
+      ) {
+        return;
+      }
+
+      const hasMatchingActiveFastMutation =
+        hasRouletteActiveExternalLatestMutation(
+          authority.roundId,
+          current,
+        );
+
+      // If a normal optimistic action (undo/clear/place/drag/rebet) changed the
+      // topology after the last confirmed/fast plan, do not bypass it with the
+      // monotonic latest endpoint. Let the runtime bubble handler apply x2 and
+      // serialize it through the normal authority queue instead.
+      if (
+        !canRouletteUseFastDouble(
+          authority.optimistic,
+          hasMatchingActiveFastMutation,
+        )
       ) {
         return;
       }
