@@ -17,16 +17,18 @@ export function mountRoulette(app: HTMLDivElement) {
   installRouletteNetworkGuard();
 
   // One state authority owns wager topology and protects optimistic state from
-  // stale polling/retries. Runtime remains the persistent chip renderer.
+  // stale polling/retries.
   installRouletteBetAuthority(app);
 
+  // rouletteRuntime owns the table lifecycle, but every placed-chip DOM node is
+  // created through createRouletteCanonicalPlacedChip. The runtime must never
+  // restore legacy chip-* classes or --chip-* palette variables.
   mountRouletteRuntime(app);
   installRouletteBetVerificationUi(app);
   installRouletteChipFeedbackV2(app);
 
-  // Placed-chip color follows the aggregate wager tier. Example: 10/20/40 are
-  // white, 80 is blue, 160 is green. Do not overwrite this with the selected
-  // tray chip's original color.
+  // The visual installer owns tray/mobile chip decoration and remains a safety
+  // normalizer for canonical placed-chip nodes; it is not a second color source.
   installRouletteChipVisuals(app);
 
   // x2 gets a parallel server-stamped latest-state write so a click made while
