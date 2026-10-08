@@ -7,7 +7,11 @@ import {
 } from "./betAuthority";
 import {
   getRouletteBetAuthoritySnapshot,
+  setRouletteBetAuthority,
 } from "./betAuthorityVisual";
+import {
+  registerRouletteExternalLatestMutation,
+} from "./latestMutationDeduper";
 import type {
   RouletteGlobalBetUpdateResponse,
 } from "./rouletteWalletClient";
@@ -125,11 +129,17 @@ export function installRouletteFastDouble(
       const idempotencyKey =
         `roulette_fast_double_${crypto.randomUUID().replaceAll("-", "")}`;
 
-      // Deliberately do not stop propagation. The runtime still performs its
-      // normal optimistic x2 render immediately. This parallel request exists
-      // only to get the final desired wager to the server at click time rather
-      // than waiting behind an older client-side write.
-      void fetch(
+      // Claim authority before the runtime bubble handler executes. The runtime
+      // still performs its normal optimistic reducer/render, but the matching
+      // network call is deduplicated onto this exact server-stamped request.
+      setRouletteBetAuthority(
+        authority.roundId,
+        plan,
+        authority.revision,
+        true,
+      );
+
+      const request = fetch(
         FAST_DOUBLE_ENDPOINT,
         {
           method: "PUT",
@@ -156,15 +166,24 @@ export function installRouletteFastDouble(
             app,
             response.balanceCents,
           );
-        })
-        .catch((error) => {
-          // The normal runtime queue remains the fallback. Do not roll the UI
-          // back here because it may already have a newer optimistic mutation.
-          console.error(
-            "[roulette] fast x2 sync failed",
-            error,
-          );
+          return response;
         });
+
+      registerRouletteExternalLatestMutation(
+        authority.roundId,
+        plan,
+        request,
+      );
+
+      void request.catch((error) => {
+        // The normal runtime queue shares this same promise. Its failure path
+        // performs the authoritative bootstrap recovery; do not launch a second
+        // write here.
+        console.error(
+          "[roulette] fast x2 sync failed",
+          error,
+        );
+      });
     },
     { capture: true },
   );
