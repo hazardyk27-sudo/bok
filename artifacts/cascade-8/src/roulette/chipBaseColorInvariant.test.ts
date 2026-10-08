@@ -1,6 +1,7 @@
 // @vitest-environment happy-dom
 
 import { readFileSync } from "node:fs";
+import { fileURLToPath } from "node:url";
 import {
   describe,
   expect,
@@ -11,11 +12,11 @@ import {
 } from "./chipVisual";
 
 const css = readFileSync(
-  new URL("./chipVisual.css", import.meta.url),
+  fileURLToPath(new URL("./chipVisual.css", import.meta.url)),
   "utf8",
 );
 const dragCss = readFileSync(
-  new URL("./chipDrag.css", import.meta.url),
+  fileURLToPath(new URL("./chipDrag.css", import.meta.url)),
   "utf8",
 );
 
