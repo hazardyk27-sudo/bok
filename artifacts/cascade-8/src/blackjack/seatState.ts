@@ -46,6 +46,18 @@ function replaceSeat(
   };
 }
 
+export function createEmptySeatState(): BlackjackSeatState {
+  return {
+    seats: SEAT_IDS.map((id) => ({
+      id,
+      status: "empty" as const,
+      bet: 0,
+      chips: [],
+    })),
+    selectedSeatId: null,
+  };
+}
+
 export function createInitialSeatState(): BlackjackSeatState {
   return {
     seats: SEAT_IDS.map((id) => {
