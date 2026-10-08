@@ -7,8 +7,8 @@ import {
 import {
   clearRouletteExternalLatestMutationForTests,
   consumeMatchingRouletteExternalLatestMutation,
-  discardRoulettePendingExternalLatestMutationIfSuperseded,
   hasRouletteActiveExternalLatestMutation,
+  invalidateRouletteExternalLatestMutationTracking,
   registerRouletteExternalLatestMutation,
   releaseRouletteFailedExternalLatestMutation,
   selectRouletteRuntimeMutationBets,
@@ -229,7 +229,7 @@ describe("roulette latest mutation deduper", () => {
     ]);
   });
 
-  it("drops a stale fast dedupe slot when the canonical runtime topology supersedes it", async () => {
+  it("invalidates dedupe and active-fast ownership when a newer mutation boundary appears", async () => {
     let resolveShared!: (
       value: RouletteGlobalBetUpdateResponse,
     ) => void;
@@ -249,14 +249,26 @@ describe("roulette latest mutation deduper", () => {
     );
 
     expect(
-      discardRoulettePendingExternalLatestMutationIfSuperseded(
+      hasRouletteActiveExternalLatestMutation(
         "round-1",
         [{
-          betId: "straight-26",
+          betId: "straight-25",
           amount: 20,
         }],
       ),
     ).toBe(true);
+
+    invalidateRouletteExternalLatestMutationTracking();
+
+    expect(
+      hasRouletteActiveExternalLatestMutation(
+        "round-1",
+        [{
+          betId: "straight-25",
+          amount: 20,
+        }],
+      ),
+    ).toBe(false);
     expect(
       consumeMatchingRouletteExternalLatestMutation(
         "round-1",
