@@ -120,4 +120,68 @@ describe("Blackjack player decision control", () => {
     expect(stood.round?.dealer.cards.map((candidate) => candidate?.rank)).toEqual(["10", "7"]);
     expect(stood.round?.hands[0]?.result).toBe("win");
   });
+
+  it("settles player A+8 as soft 19, not 9", () => {
+    const store = new BlackjackServerTableStore({
+      createShoe: () => shoeWith([
+        card("A", 0),
+        card("10", 1, "hearts"),
+        card("8", 2, "clubs"),
+        card("8", 3, "diamonds"),
+      ]),
+    });
+
+    const dealt = store.applyAction(
+      "session-player-soft-19",
+      action(0, "deal", [{ seatId: 1, wager: 50 }]),
+    );
+    expect(dealt.round?.phase).toBe("playerTurns");
+    expect(dealt.allowedActions).toEqual(expect.arrayContaining(["hit", "stand"]));
+
+    const stood = store.applyAction("session-player-soft-19", action(1, "stand"));
+    expect(stood.round?.phase).toBe("complete");
+    expect(stood.round?.hands[0]?.result).toBe("win");
+    expect(stood.round?.hands[0]?.returnAmount).toBe(100);
+  });
+
+  it("stands dealer on soft 19 using Ace as 11", () => {
+    const store = new BlackjackServerTableStore({
+      createShoe: () => shoeWith([
+        card("10", 0),
+        card("8", 1, "hearts"),
+        card("8", 2, "clubs"),
+        card("A", 3, "diamonds"),
+      ]),
+    });
+
+    store.applyAction(
+      "session-dealer-soft-19",
+      action(0, "deal", [{ seatId: 1, wager: 50 }]),
+    );
+    const stood = store.applyAction("session-dealer-soft-19", action(1, "stand"));
+
+    expect(stood.round?.dealer.cards.map((candidate) => candidate?.rank)).toEqual(["8", "A"]);
+    expect(stood.round?.hands[0]?.result).toBe("lose");
+  });
+
+  it("hits dealer soft 17 under H17 and then stands on soft 19", () => {
+    const store = new BlackjackServerTableStore({
+      createShoe: () => shoeWith([
+        card("10", 0),
+        card("6", 1, "hearts"),
+        card("8", 2, "clubs"),
+        card("A", 3, "diamonds"),
+        card("2", 4, "clubs"),
+      ]),
+    });
+
+    store.applyAction(
+      "session-dealer-soft-17",
+      action(0, "deal", [{ seatId: 1, wager: 50 }]),
+    );
+    const stood = store.applyAction("session-dealer-soft-17", action(1, "stand"));
+
+    expect(stood.round?.dealer.cards.map((candidate) => candidate?.rank)).toEqual(["6", "A", "2"]);
+    expect(stood.round?.hands[0]?.result).toBe("lose");
+  });
 });
