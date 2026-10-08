@@ -1,6 +1,5 @@
-import {
-  getRouletteAuthoritativeDragPlacements,
-  type RouletteBetPlacement,
+import type {
+  RouletteBetPlacement,
 } from "./betState";
 import {
   confirmRouletteExternalLatestMutation,
@@ -107,8 +106,7 @@ export function installRouletteFastDouble(
 
       const authority =
         getRouletteBetAuthoritySnapshot();
-      const current =
-        getRouletteAuthoritativeDragPlacements();
+      const current = authority.bets;
 
       if (
         !authority.roundId ||
