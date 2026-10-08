@@ -44,10 +44,15 @@ export function isBlackjackRank(value: string): value is BlackjackRank {
   return VALID_RANKS.has(value as BlackjackRank);
 }
 
+/**
+ * Display the actual comparison value of the hand. A soft hand uses the highest
+ * non-busting total; the SOFT label communicates that an Ace is currently 11
+ * and can fall back to 1 if a later draw would otherwise bust the hand.
+ */
 export function formatBlackjackHandTotal(cards: readonly BlackjackCard[]): string {
   const value = evaluateBlackjackHand(cards);
   if (value.soft && !value.bust) {
-    return `${value.total - 10} / ${value.total}`;
+    return `${value.total} · SOFT`;
   }
   return String(value.total);
 }
@@ -64,7 +69,9 @@ export function formatBlackjackRanksTotal(ranks: readonly BlackjackRank[]): stri
 
 export const BLACKJACK_RULES_DISCLOSURE = [
   "6 decks · American hole-card game",
-  "Dealer hits soft 17 (H17) and peeks for Blackjack",
+  "Ace is 11 unless that would bust the hand, then it becomes 1",
+  "Dealer hits soft 17 (H17), stands on hard 17+ and soft 18+",
+  "Dealer peeks for Blackjack under the American hole-card rule",
   "Natural Blackjack (first 2 cards A + 10-value) pays 3:2",
   "Normal win pays 1:1 · push returns stake",
   "Double on any first 2 cards · one card only · double after split allowed",
