@@ -340,6 +340,15 @@ export function installRouletteChipDragV6(app: HTMLDivElement) {
       targetBetId: null,
     };
 
+    // Pointer capture must belong to a real drag only. Capturing on pointerdown
+    // retargets a stationary tap/click to the panel and prevents occupied cells
+    // from receiving a normal follow-up wager.
+    try {
+      panel.setPointerCapture(current.pointerId);
+    } catch {
+      // Pointer capture is optional.
+    }
+
     current.chip.classList.add("is-chip-drag-source");
     panel.classList.remove("is-chip-drag-armed");
     panel.classList.add("is-chip-dragging");
@@ -448,12 +457,6 @@ export function installRouletteChipDragV6(app: HTMLDivElement) {
       startedAt: performance.now(),
     };
     panel.classList.add("is-chip-drag-armed");
-
-    try {
-      panel.setPointerCapture(event.pointerId);
-    } catch {
-      // Pointer capture is optional.
-    }
   });
 
   panel.addEventListener("pointermove", (event) => {
