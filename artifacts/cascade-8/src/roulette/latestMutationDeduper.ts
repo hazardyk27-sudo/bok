@@ -91,23 +91,9 @@ export function selectRouletteRuntimeMutationBets(
   return cloneBets(bets);
 }
 
-export function discardRoulettePendingExternalLatestMutationIfSuperseded(
-  roundId: string,
-  bets: readonly RouletteBetPlacement[],
-) {
-  const pending = pendingLatestMutation;
-
-  if (!pending) return false;
-
-  if (
-    pending.roundId === roundId &&
-    sameBetTotals(pending.bets, bets)
-  ) {
-    return false;
-  }
-
+export function invalidateRouletteExternalLatestMutationTracking() {
   pendingLatestMutation = null;
-  return true;
+  activeLatestMutations.clear();
 }
 
 export function releaseRouletteFailedExternalLatestMutation(
@@ -160,6 +146,10 @@ export function registerRouletteExternalLatestMutation(
   );
 
   void promise.catch(() => {
+    // If a newer non-matching mutation already invalidated this record, the old
+    // fast failure no longer owns optimistic authority and must not release it.
+    if (!activeLatestMutations.has(record)) return;
+
     releaseRouletteFailedExternalLatestMutation(
       roundId,
       record.bets,
@@ -170,7 +160,7 @@ export function registerRouletteExternalLatestMutation(
     // Do not clear pendingLatestMutation here. The fast HTTP response can finish
     // before a delayed runtime queue reaches the matching roulette_gbet job. The
     // resolved/rejected promise must remain reusable until that runtime job
-    // consumes it or a later runtime topology proves it was superseded.
+    // consumes it or a later mutation invalidates fast ownership.
     activeLatestMutations.delete(record);
   }).catch(() => {
     // The caller owns the request error. This chain only clears active tracking.
@@ -196,8 +186,7 @@ export function consumeMatchingRouletteExternalLatestMutation(
 }
 
 export function clearRouletteExternalLatestMutationForTests() {
-  pendingLatestMutation = null;
-  activeLatestMutations.clear();
+  invalidateRouletteExternalLatestMutationTracking();
 }
 
 export function installRouletteLatestMutationDeduper() {
@@ -243,16 +232,10 @@ export function installRouletteLatestMutationDeduper() {
       return sharedLatest;
     }
 
-    if (idempotencyKey.startsWith(RUNTIME_MUTATION_PREFIX)) {
-      // The first runtime queue job after a fast registration is the canonical
-      // consumer opportunity. If its commit-time authority no longer matches the
-      // fast plan, that plan was superseded and must never be matched later by
-      // coincidence.
-      discardRoulettePendingExternalLatestMutationIfSuperseded(
-        roundId,
-        effectiveBets,
-      );
-    }
+    // Any write that is not the matching runtime consumer represents a newer or
+    // different mutation boundary. Keep its already-registered network barrier,
+    // but revoke the old fast request's authority/dedupe ownership immediately.
+    invalidateRouletteExternalLatestMutationTracking();
 
     return originalUpdate.call(
       this,
