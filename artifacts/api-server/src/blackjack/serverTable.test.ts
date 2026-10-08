@@ -121,6 +121,33 @@ describe("BlackjackServerTableStore", () => {
     );
   });
 
+  it("allows only one of two same-revision tab actions to advance the round", () => {
+    const cards = [
+      card("5", 0),
+      card("10", 1),
+      card("6", 2),
+      card("7", 3),
+      card("4", 4),
+      card("3", 5),
+    ];
+    const store = new BlackjackServerTableStore({ createShoe: () => shoeWith(cards) });
+
+    store.applyAction(
+      "session-a",
+      action(0, "deal", [{ seatId: 1, wager: 50 }]),
+    );
+
+    const tabA = action(1, "hit");
+    const tabB = action(1, "stand");
+    const afterA = store.applyAction("session-a", tabA);
+
+    expect(afterA.revision).toBe(2);
+    expect(() => store.applyAction("session-a", tabB)).toThrow(
+      "BLACKJACK_STALE_REVISION",
+    );
+    expect(store.getState("session-a").revision).toBe(2);
+  });
+
   it("keeps dealer blackjack secret until the insurance decision is finished", () => {
     const cards = [
       card("10", 0),
