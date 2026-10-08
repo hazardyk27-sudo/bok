@@ -8,7 +8,6 @@ import {
 import {
   addSeatChip,
   clearSeatBet,
-  createInitialSeatState,
   doubleSeatBet,
   sitAtSeat,
   undoSeatChip,
