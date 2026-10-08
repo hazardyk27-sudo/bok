@@ -53,7 +53,7 @@ describe("roulette fast normal placement", () => {
     expect(canRouletteUseFastPlace(true, false)).toBe(false);
   });
 
-  it("deducts visible balance and launches HTTP synchronously on the click task", () => {
+  it("deducts visible balance and launches HTTP synchronously on the click task", async () => {
     const app = document.createElement("div");
     app.innerHTML = `
       <main data-roulette-page data-phase="betting" data-betting-locked="false">
@@ -73,9 +73,12 @@ describe("roulette fast normal placement", () => {
       false,
     );
 
-    const never = new Promise<Response>(() => {});
+    let resolveFetch!: (response: Response) => void;
+    const pending = new Promise<Response>((resolve) => {
+      resolveFetch = resolve;
+    });
     const fetchMock = vi.fn(
-      (_input: RequestInfo | URL, _init?: RequestInit) => never,
+      (_input: RequestInfo | URL, _init?: RequestInit) => pending,
     );
     vi.stubGlobal("fetch", fetchMock);
 
@@ -86,7 +89,8 @@ describe("roulette fast normal placement", () => {
       )!
       .click();
 
-    // No await: both effects must happen before the browser yields a frame.
+    // No await before these assertions: both effects must happen before the
+    // browser yields the next frame.
     expect(fetchMock).toHaveBeenCalledTimes(1);
     expect(fetchMock.mock.calls[0]?.[0]).toBe(
       "/api/roulette/global-bets/latest",
@@ -96,5 +100,33 @@ describe("roulette fast normal placement", () => {
         "[data-wallet-balance]",
       )?.textContent,
     ).toBe("$90");
+
+    resolveFetch(
+      new Response(
+        JSON.stringify({
+          globalBet: {
+            id: "bet-1",
+            roundId: "round-1",
+            bets: [{ betId: "straight-8", amount: 10 }],
+            stakeCents: 1_000,
+            payoutCents: 0,
+            revision: 1,
+            settlement: null,
+            settledAtMs: null,
+            updatedAtMs: Date.now(),
+          },
+          balanceCents: 9_000,
+        }),
+        {
+          status: 200,
+          headers: {
+            "Content-Type": "application/json",
+          },
+        },
+      ),
+    );
+    await pending;
+    await Promise.resolve();
+    await Promise.resolve();
   });
 });
