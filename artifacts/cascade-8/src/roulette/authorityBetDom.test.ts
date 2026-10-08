@@ -69,8 +69,6 @@ describe("roulette authority placed-chip DOM", () => {
     ]);
     installRouletteAuthorityBetDomGuard(app);
 
-    // Simulate the exact live flicker source: an older runtime snapshot removes
-    // target 25 and briefly recreates source 24 after the drag already moved.
     renderRouletteBetTopology(app, [
       { betId: "straight-24", amount: 40 },
     ]);
@@ -85,7 +83,7 @@ describe("roulette authority placed-chip DOM", () => {
     expect(chipAmount(app, "straight-25")).toBe("40");
   });
 
-  it("does not fight intentional table cleanup outside betting", async () => {
+  it("keeps moved authority topology through the spin transition", async () => {
     const app = createApp();
     const page = app.querySelector<HTMLElement>("[data-roulette-page]")!;
     setRouletteBetAuthority(
@@ -100,6 +98,32 @@ describe("roulette authority placed-chip DOM", () => {
     installRouletteAuthorityBetDomGuard(app);
 
     page.dataset.phase = "spinning";
+    renderRouletteBetTopology(app, [
+      { betId: "straight-24", amount: 40 },
+    ]);
+
+    await Promise.resolve();
+    await Promise.resolve();
+
+    expect(chipAmount(app, "straight-24")).toBeNull();
+    expect(chipAmount(app, "straight-25")).toBe("40");
+  });
+
+  it("allows intentional table cleanup once the round is settled", async () => {
+    const app = createApp();
+    const page = app.querySelector<HTMLElement>("[data-roulette-page]")!;
+    setRouletteBetAuthority(
+      "round-1",
+      [{ betId: "straight-25", amount: 40 }],
+      7,
+      false,
+    );
+    renderRouletteBetTopology(app, [
+      { betId: "straight-25", amount: 40 },
+    ]);
+    installRouletteAuthorityBetDomGuard(app);
+
+    page.dataset.phase = "settled";
     renderRouletteBetTopology(app, []);
 
     await Promise.resolve();
