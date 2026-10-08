@@ -74,12 +74,7 @@ describe("roulette fast normal placement", () => {
     `;
     document.body.append(app);
 
-    setRouletteBetAuthority(
-      "round-1",
-      [],
-      0,
-      false,
-    );
+    setRouletteBetAuthority("round-1", [], 0, false);
 
     let resolveFetch!: (response: Response) => void;
     const pending = new Promise<Response>((resolve) => {
@@ -92,9 +87,7 @@ describe("roulette fast normal placement", () => {
 
     installRouletteFastPlace(app);
     app
-      .querySelector<HTMLButtonElement>(
-        '[data-bet-id="straight-8"]',
-      )!
+      .querySelector<HTMLButtonElement>('[data-bet-id="straight-8"]')!
       .click();
 
     expect(fetchMock).toHaveBeenCalledTimes(1);
@@ -102,9 +95,7 @@ describe("roulette fast normal placement", () => {
       "/api/roulette/global-bets/latest",
     );
     expect(
-      app.querySelector<HTMLElement>(
-        "[data-wallet-balance]",
-      )?.textContent,
+      app.querySelector<HTMLElement>("[data-wallet-balance]")?.textContent,
     ).toBe("$90");
 
     resolveFetch(
@@ -125,9 +116,7 @@ describe("roulette fast normal placement", () => {
         }),
         {
           status: 200,
-          headers: {
-            "Content-Type": "application/json",
-          },
+          headers: { "Content-Type": "application/json" },
         },
       ),
     );
@@ -136,7 +125,7 @@ describe("roulette fast normal placement", () => {
     await Promise.resolve();
   });
 
-  it("hands a serialized post-drag click to the reducer without rebuilding stale topology", async () => {
+  it("starts the serialized post-drag write at capture and hands the exact plan to a stale runtime reducer", async () => {
     const app = document.createElement("div");
     app.innerHTML = `
       <main data-roulette-page data-phase="betting" data-betting-locked="false">
@@ -156,30 +145,44 @@ describe("roulette fast normal placement", () => {
       true,
     );
 
-    const fetchMock = vi.fn();
+    let resolveFetch!: (response: Response) => void;
+    const pending = new Promise<Response>((resolve) => {
+      resolveFetch = resolve;
+    });
+    const fetchMock = vi.fn(
+      (_input: RequestInfo | URL, _init?: RequestInit) => pending,
+    );
     vi.stubGlobal("fetch", fetchMock);
 
     installRouletteFastPlace(app);
     app
-      .querySelector<HTMLButtonElement>(
-        '[data-bet-id="straight-19"]',
-      )!
+      .querySelector<HTMLButtonElement>('[data-bet-id="straight-19"]')!
       .click();
 
-    expect(fetchMock).not.toHaveBeenCalled();
-    const balance = app.querySelector<HTMLElement>(
-      "[data-wallet-balance]",
-    )!;
+    const balance = app.querySelector<HTMLElement>("[data-wallet-balance]")!;
     expect(balance.textContent).toBe("$90");
 
-    // This is the real runtime bubble reducer. Its local mirror may still point
-    // at the pre-drag source, but the capture intent must force the exact 19=$20
-    // canonical plan rather than independently rebuilding from that stale copy.
+    // Serialized ownership is captured immediately; it no longer waits for the
+    // runtime bubble handler to queue a write.
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(fetchMock.mock.calls[0]?.[0]).toBe(
+      "/api/roulette/global-bets",
+    );
+
+    const requestInit = fetchMock.mock.calls[0]?.[1] as RequestInit;
+    expect(JSON.parse(String(requestInit.body))).toMatchObject({
+      roundId: "round-1",
+      bets: [
+        { betId: "straight-19", amount: 10 },
+        { betId: "straight-19", amount: 10 },
+      ],
+    });
+
+    // The real runtime reducer may still have the pre-drag local source 20. It
+    // must consume the captured plan instead of rebuilding 20+19.
     const staleRuntimeState: RouletteBetState = {
       selectedChip: 10,
-      placements: [
-        { betId: "straight-20", amount: 10 },
-      ],
+      placements: [{ betId: "straight-20", amount: 10 }],
       previousRoundPlacements: [],
     };
     const adopted = placeRouletteBet(
@@ -191,28 +194,35 @@ describe("roulette fast normal placement", () => {
       { betId: "straight-19", amount: 10 },
     ]);
 
-    await Promise.resolve();
-    expect(balance.textContent).toBe("$90");
-
-    // An older drag/poll response paints the previous $100 server balance after
-    // the newer click. The newer $90 local reservation must win immediately.
+    // Older repaint cannot resurrect the higher pre-click balance.
     balance.textContent = "$100";
     await Promise.resolve();
     await Promise.resolve();
     expect(balance.textContent).toBe("$90");
 
-    setRouletteBetAuthority(
-      "round-1",
-      adopted.placements,
-      5,
-      false,
+    resolveFetch(
+      new Response(
+        JSON.stringify({
+          globalBet: {
+            id: "bet-1",
+            roundId: "round-1",
+            bets: adopted.placements,
+            stakeCents: 2_000,
+            payoutCents: 0,
+            revision: 5,
+            settlement: null,
+            settledAtMs: null,
+            updatedAtMs: Date.now(),
+          },
+          balanceCents: 9_000,
+        }),
+        {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        },
+      ),
     );
-    balance.textContent = "$100";
-    await Promise.resolve();
-    await Promise.resolve();
-    expect(balance.textContent).toBe("$90");
-
-    balance.textContent = "$90";
+    await pending;
     await Promise.resolve();
     await Promise.resolve();
     expect(balance.textContent).toBe("$90");
