@@ -4,7 +4,9 @@ import "./seatState.css";
 import "./betting.css";
 import {
   addSeatChip,
+  clearSeatBet,
   createInitialSeatState,
+  doubleSeatBet,
   getOccupiedSeats,
   getSeat,
   getTotalSeatBet,
@@ -12,6 +14,7 @@ import {
   leaveSeat,
   selectSeat,
   sitAtSeat,
+  undoSeatChip,
   type BlackjackChipValue,
   type BlackjackSeat,
   type BlackjackSeatId,
@@ -203,7 +206,10 @@ function renderStatusCopy(state: BlackjackSeatState, selectedChip: BlackjackChip
     return "Choose a seat to start";
   }
 
-  return `${occupied.length} seat${occupied.length === 1 ? "" : "s"} occupied${selected ? ` · Seat ${selected} selected` : ""} · $${selectedChip} chip`;
+  const selectedSeat = selected ? getSeat(state, selected) : null;
+  const selectedBet = selectedSeat ? ` · Bet $${selectedSeat.bet}` : "";
+
+  return `${occupied.length} seat${occupied.length === 1 ? "" : "s"} occupied${selected ? ` · Seat ${selected} selected` : ""}${selectedBet} · $${selectedChip} chip`;
 }
 
 function renderBlackjack(
@@ -214,9 +220,10 @@ function renderBlackjack(
   const totalBet = getTotalSeatBet(state);
   const selectedSeat = state.selectedSeatId ? getSeat(state, state.selectedSeatId) : null;
   const canPlaceBet = selectedSeat !== null && selectedSeat.status !== "empty";
+  const hasSelectedBet = canPlaceBet && selectedSeat.bet > 0;
 
   app.innerHTML = `
-    <main class="bj-root" data-blackjack-part="4a">
+    <main class="bj-root" data-blackjack-part="4b">
       <div class="bj-casino-backdrop" aria-hidden="true">
         <span class="bj-bokeh bj-bokeh--1"></span>
         <span class="bj-bokeh bj-bokeh--2"></span>
@@ -323,17 +330,17 @@ function renderBlackjack(
               <span class="bj-action__icon">＋</span>
               <span><strong>PLACE BET</strong><small>${state.selectedSeatId ? `Seat ${state.selectedSeatId} · +$${selectedChip}` : "Select seat"}</small></span>
             </button>
-            <button class="bj-action bj-action--neutral" type="button" disabled>
+            <button class="bj-action bj-action--neutral" type="button" data-bet-action="undo" ${hasSelectedBet ? "" : "disabled"}>
               <span class="bj-action__icon">↶</span>
-              <span><strong>UNDO</strong><small>Part 4B</small></span>
+              <span><strong>UNDO</strong><small>${hasSelectedBet ? "Last chip" : "No bet"}</small></span>
             </button>
-            <button class="bj-action bj-action--gold" type="button" disabled>
+            <button class="bj-action bj-action--gold" type="button" data-bet-action="double" ${hasSelectedBet ? "" : "disabled"}>
               <span class="bj-action__icon">X2</span>
-              <span><strong>X2 BET</strong><small>Part 4B</small></span>
+              <span><strong>X2 BET</strong><small>${hasSelectedBet ? `+$${selectedSeat?.bet ?? 0}` : "Place bet first"}</small></span>
             </button>
-            <button class="bj-action bj-action--neutral" type="button" disabled>
+            <button class="bj-action bj-action--neutral" type="button" data-bet-action="clear" ${hasSelectedBet ? "" : "disabled"}>
               <span class="bj-action__icon">⌫</span>
-              <span><strong>CLEAR BET</strong><small>Part 4B</small></span>
+              <span><strong>CLEAR BET</strong><small>${hasSelectedBet ? `Return $${selectedSeat?.bet ?? 0}` : "No bet"}</small></span>
             </button>
           </div>
 
@@ -379,12 +386,28 @@ export function mountBlackjack(app: HTMLDivElement) {
     }
 
     const betAction = target.closest<HTMLElement>("[data-bet-action]");
-    if (betAction?.dataset.betAction === "place") {
+    if (betAction) {
       if (!state.selectedSeatId) {
         return;
       }
 
-      state = addSeatChip(state, state.selectedSeatId, selectedChip, TABLE_MIN);
+      switch (betAction.dataset.betAction) {
+        case "place":
+          state = addSeatChip(state, state.selectedSeatId, selectedChip, TABLE_MIN);
+          break;
+        case "undo":
+          state = undoSeatChip(state, state.selectedSeatId, TABLE_MIN);
+          break;
+        case "double":
+          state = doubleSeatBet(state, state.selectedSeatId, TABLE_MIN);
+          break;
+        case "clear":
+          state = clearSeatBet(state, state.selectedSeatId);
+          break;
+        default:
+          return;
+      }
+
       rerender();
       return;
     }
