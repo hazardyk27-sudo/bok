@@ -138,4 +138,13 @@ describe("roulette single-authority chip drag v6", () => {
       "authority.roundId!,\n        authority.revision,\n        currentBets",
     );
   });
+
+  it("never fakes a browser visibility lifecycle event to refresh drag state", () => {
+    expect(dragSource).not.toContain(
+      "new Event(\"visibilitychange\")",
+    );
+    expect(dragSource).toContain(
+      "renderAuthorityBets(app)",
+    );
+  });
 });
