@@ -179,16 +179,22 @@ export function installRouletteFastDouble(
       )
         .then(readFastDoubleResponse)
         .then((response) => {
-          confirmRouletteExternalLatestMutation(
-            authority.roundId!,
-            plan,
-            response,
-            sequence,
-          );
-          renderFastConfirmedBalance(
-            app,
-            response.balanceCents,
-          );
+          const stillCurrent =
+            confirmRouletteExternalLatestMutation(
+              authority.roundId!,
+              plan,
+              response,
+              sequence,
+            );
+
+          // A later mutation or a round rollover may already own the UI. Never
+          // let an older fast response paint its stale wallet balance over it.
+          if (stillCurrent) {
+            renderFastConfirmedBalance(
+              app,
+              response.balanceCents,
+            );
+          }
           return response;
         });
 
