@@ -4,11 +4,18 @@ import "./seatState.css";
 import "./betting.css";
 import "./round.css";
 import "./cardAnimation.css";
+import "./chipAnimation.css";
 import {
   animateBlackjackCardPlan,
   buildBlackjackCardAnimationPlan,
   type BlackjackCardAnimationAction,
 } from "./cardAnimation";
+import {
+  animateBlackjackChipPlan,
+  buildBlackjackBetChipAnimationPlan,
+  buildBlackjackRoundChipAnimationPlan,
+  type BlackjackBetChipAnimationAction,
+} from "./chipAnimation";
 import {
   evaluateBlackjackHand,
   type BlackjackCard,
@@ -238,7 +245,7 @@ function renderSingleRoundHand(
 ) {
   const value = evaluateBlackjackHand(hand.cards);
   return `
-    <div class="bj-seat bj-seat--${seat.id} bj-seat--active${active ? " is-active-hand" : ""}${roundHandClasses(hand, false)}" data-seat="${seat.id}" data-seat-status="inRound">
+    <div class="bj-seat bj-seat--${seat.id} bj-seat--active${active ? " is-active-hand" : ""}${roundHandClasses(hand, false)}" data-seat="${seat.id}" data-seat-status="inRound" data-hand-id="${hand.handId}">
       <div class="bj-seat__total">${value.total}</div>
       <div class="bj-seat__cards">
         ${hand.cards.map((card) => renderCard(card)).join("")}
@@ -527,7 +534,7 @@ function renderBlackjack(
     : "SPLIT";
 
   app.innerHTML = `
-    <main class="bj-root" data-blackjack-part="12a">
+    <main class="bj-root" data-blackjack-part="12b">
       <div class="bj-casino-backdrop" aria-hidden="true">
         <span class="bj-bokeh bj-bokeh--1"></span>
         <span class="bj-bokeh bj-bokeh--2"></span>
@@ -539,7 +546,7 @@ function renderBlackjack(
         <aside class="bj-hud bj-hud--bankroll">
           <div class="bj-hud__pair">
             <span>BALANCE</span>
-            <strong>$2,450.00</strong>
+            <strong data-bankroll-target>$2,450.00</strong>
           </div>
           <div class="bj-hud__pair">
             <span>TOTAL BET</span>
@@ -687,11 +694,18 @@ export function mountBlackjack(app: HTMLDivElement) {
     renderBlackjack(app, state, selectedChip, round);
     if (!animationAction) return;
 
-    const plan = buildBlackjackCardAnimationPlan(previousRound, round, animationAction);
-    if (plan.steps.length === 0) return;
+    const cardPlan = buildBlackjackCardAnimationPlan(previousRound, round, animationAction);
+    const chipPlan = buildBlackjackRoundChipAnimationPlan(
+      previousRound,
+      round,
+      animationAction,
+      cardPlan.totalDurationMs,
+    );
+    if (cardPlan.steps.length === 0 && chipPlan.steps.length === 0) return;
 
     window.requestAnimationFrame(() => {
-      animateBlackjackCardPlan(app, plan);
+      animateBlackjackCardPlan(app, cardPlan);
+      animateBlackjackChipPlan(app, chipPlan);
     });
   };
 
@@ -816,24 +830,41 @@ export function mountBlackjack(app: HTMLDivElement) {
         return;
       }
 
+      const seatId = state.selectedSeatId;
+      const previousState = state;
+      let chipAnimationAction: BlackjackBetChipAnimationAction;
+
       switch (betAction.dataset.betAction) {
         case "place":
-          state = addSeatChip(state, state.selectedSeatId, selectedChip, TABLE_MIN);
+          state = addSeatChip(state, seatId, selectedChip, TABLE_MIN);
+          chipAnimationAction = "place";
           break;
         case "undo":
-          state = undoSeatChip(state, state.selectedSeatId, TABLE_MIN);
+          state = undoSeatChip(state, seatId, TABLE_MIN);
+          chipAnimationAction = "undo";
           break;
         case "double":
-          state = doubleSeatBet(state, state.selectedSeatId, TABLE_MIN);
+          state = doubleSeatBet(state, seatId, TABLE_MIN);
+          chipAnimationAction = "x2";
           break;
         case "clear":
-          state = clearSeatBet(state, state.selectedSeatId);
+          state = clearSeatBet(state, seatId);
+          chipAnimationAction = "clear";
           break;
         default:
           return;
       }
 
       rerender();
+      const chipPlan = buildBlackjackBetChipAnimationPlan(
+        previousState,
+        state,
+        chipAnimationAction,
+        seatId,
+      );
+      if (chipPlan.steps.length > 0) {
+        window.requestAnimationFrame(() => animateBlackjackChipPlan(app, chipPlan));
+      }
       return;
     }
 
