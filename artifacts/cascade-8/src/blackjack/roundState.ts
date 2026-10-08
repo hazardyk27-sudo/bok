@@ -1,6 +1,7 @@
 import {
   dealerShouldHit,
   evaluateBlackjackHand,
+  getBlackjackRankValue,
   type BlackjackCard,
 } from "./blackjackCore";
 import {
@@ -23,7 +24,10 @@ export type BlackjackRoundHandStatus =
 export type BlackjackHandResult = "win" | "lose" | "push" | "blackjack";
 
 export type BlackjackRoundHand = {
+  handId: string;
   seatId: BlackjackSeatId;
+  handIndex: number;
+  splitDepth: number;
   wager: number;
   cards: BlackjackCard[];
   status: BlackjackRoundHandStatus;
@@ -42,6 +46,7 @@ export type BlackjackRoundState = {
   phase: BlackjackRoundPhase;
   hands: BlackjackRoundHand[];
   dealer: BlackjackDealerHand;
+  activeHandId: string | null;
   activeSeatId: BlackjackSeatId | null;
 };
 
@@ -85,16 +90,41 @@ export function getBlackjackRoundReadiness(
   };
 }
 
-function nextPlayingSeatId(
+function getActiveRoundHand(
+  round: BlackjackRoundState,
+): BlackjackRoundHand | null {
+  if (round.activeHandId === null) {
+    return null;
+  }
+
+  return round.hands.find((hand) => hand.handId === round.activeHandId) ?? null;
+}
+
+function withActiveHand(
+  round: BlackjackRoundState,
+  activeHandId: string | null,
+): BlackjackRoundState {
+  const activeHand = activeHandId
+    ? round.hands.find((hand) => hand.handId === activeHandId) ?? null
+    : null;
+
+  return {
+    ...round,
+    activeHandId: activeHand?.handId ?? null,
+    activeSeatId: activeHand?.seatId ?? null,
+  };
+}
+
+function nextPlayingHandId(
   hands: readonly BlackjackRoundHand[],
-  afterSeatId: BlackjackSeatId,
-): BlackjackSeatId | null {
-  const startIndex = hands.findIndex((hand) => hand.seatId === afterSeatId);
+  afterHandId: string,
+): string | null {
+  const startIndex = hands.findIndex((hand) => hand.handId === afterHandId);
 
   for (let index = startIndex + 1; index < hands.length; index += 1) {
     const hand = hands[index];
     if (hand?.status === "playing") {
-      return hand.seatId;
+      return hand.handId;
     }
   }
 
@@ -177,6 +207,7 @@ export function resolveBlackjackDealerTurn(
     round: {
       ...round,
       phase: "complete",
+      activeHandId: null,
       activeSeatId: null,
       dealer: {
         cards: dealerCards,
@@ -190,18 +221,20 @@ export function resolveBlackjackDealerTurn(
 function advanceAfterFinishedHand(
   round: BlackjackRoundState,
   shoe: BlackjackShoe,
-  finishedSeatId: BlackjackSeatId,
+  finishedHandId: string,
 ): BlackjackRoundMutationResult {
-  const nextSeatId = nextPlayingSeatId(round.hands, finishedSeatId);
+  const nextHandId = nextPlayingHandId(round.hands, finishedHandId);
 
-  if (nextSeatId !== null) {
+  if (nextHandId !== null) {
     return {
       shoe,
-      round: {
-        ...round,
-        phase: "playerTurns",
-        activeSeatId: nextSeatId,
-      },
+      round: withActiveHand(
+        {
+          ...round,
+          phase: "playerTurns",
+        },
+        nextHandId,
+      ),
     };
   }
 
@@ -209,6 +242,7 @@ function advanceAfterFinishedHand(
     {
       ...round,
       phase: "dealerTurn",
+      activeHandId: null,
       activeSeatId: null,
     },
     shoe,
@@ -219,19 +253,18 @@ export function hitBlackjackHand(
   round: BlackjackRoundState,
   shoe: BlackjackShoe,
 ): BlackjackRoundMutationResult {
-  if (round.phase !== "playerTurns" || round.activeSeatId === null) {
+  if (round.phase !== "playerTurns") {
     return { round, shoe };
   }
 
-  const handIndex = round.hands.findIndex(
-    (hand) => hand.seatId === round.activeSeatId,
-  );
-  const activeHand = round.hands[handIndex];
-
+  const activeHand = getActiveRoundHand(round);
   if (!activeHand || activeHand.status !== "playing") {
     return { round, shoe };
   }
 
+  const handIndex = round.hands.findIndex(
+    (hand) => hand.handId === activeHand.handId,
+  );
   const drawn = drawBlackjackCard(shoe);
   const cards = [...activeHand.cards, drawn.card];
   const value = evaluateBlackjackHand(cards);
@@ -250,51 +283,48 @@ export function hitBlackjackHand(
     return { round: nextRound, shoe: drawn.shoe };
   }
 
-  return advanceAfterFinishedHand(nextRound, drawn.shoe, activeHand.seatId);
+  return advanceAfterFinishedHand(nextRound, drawn.shoe, activeHand.handId);
 }
 
 export function standBlackjackHand(
   round: BlackjackRoundState,
   shoe: BlackjackShoe,
 ): BlackjackRoundMutationResult {
-  if (round.phase !== "playerTurns" || round.activeSeatId === null) {
+  if (round.phase !== "playerTurns") {
     return { round, shoe };
   }
 
-  const handIndex = round.hands.findIndex(
-    (hand) => hand.seatId === round.activeSeatId,
-  );
-  const activeHand = round.hands[handIndex];
-
+  const activeHand = getActiveRoundHand(round);
   if (!activeHand || activeHand.status !== "playing") {
     return { round, shoe };
   }
 
-  const hands = round.hands.map((hand, index) =>
-    index === handIndex ? { ...hand, status: "stood" as const } : hand,
+  const hands = round.hands.map((hand) =>
+    hand.handId === activeHand.handId
+      ? { ...hand, status: "stood" as const }
+      : hand,
   );
 
   return advanceAfterFinishedHand(
     { ...round, hands },
     shoe,
-    activeHand.seatId,
+    activeHand.handId,
   );
 }
 
 export function canDoubleBlackjackHand(round: BlackjackRoundState): boolean {
-  if (round.phase !== "playerTurns" || round.activeSeatId === null) {
+  if (round.phase !== "playerTurns") {
     return false;
   }
 
-  const activeHand = round.hands.find(
-    (hand) => hand.seatId === round.activeSeatId,
-  );
+  const activeHand = getActiveRoundHand(round);
 
   return Boolean(
     activeHand &&
       activeHand.status === "playing" &&
       activeHand.cards.length === 2 &&
-      !activeHand.doubled,
+      !activeHand.doubled &&
+      activeHand.splitDepth === 0,
   );
 }
 
@@ -302,19 +332,18 @@ export function doubleBlackjackHand(
   round: BlackjackRoundState,
   shoe: BlackjackShoe,
 ): BlackjackRoundMutationResult {
-  if (!canDoubleBlackjackHand(round) || round.activeSeatId === null) {
+  if (!canDoubleBlackjackHand(round)) {
     return { round, shoe };
   }
 
-  const handIndex = round.hands.findIndex(
-    (hand) => hand.seatId === round.activeSeatId,
-  );
-  const activeHand = round.hands[handIndex];
-
+  const activeHand = getActiveRoundHand(round);
   if (!activeHand) {
     return { round, shoe };
   }
 
+  const handIndex = round.hands.findIndex(
+    (hand) => hand.handId === activeHand.handId,
+  );
   const drawn = drawBlackjackCard(shoe);
   const cards = [...activeHand.cards, drawn.card];
   const value = evaluateBlackjackHand(cards);
@@ -335,7 +364,123 @@ export function doubleBlackjackHand(
   return advanceAfterFinishedHand(
     { ...round, hands },
     drawn.shoe,
-    activeHand.seatId,
+    activeHand.handId,
+  );
+}
+
+export function canSplitBlackjackHand(round: BlackjackRoundState): boolean {
+  if (round.phase !== "playerTurns") {
+    return false;
+  }
+
+  const activeHand = getActiveRoundHand(round);
+  if (
+    !activeHand ||
+    activeHand.status !== "playing" ||
+    activeHand.cards.length !== 2 ||
+    activeHand.doubled ||
+    activeHand.splitDepth !== 0
+  ) {
+    return false;
+  }
+
+  const seatHandCount = round.hands.filter(
+    (hand) => hand.seatId === activeHand.seatId,
+  ).length;
+  if (seatHandCount !== 1) {
+    return false;
+  }
+
+  const [first, second] = activeHand.cards;
+  if (!first || !second) {
+    return false;
+  }
+
+  return getBlackjackRankValue(first.rank) === getBlackjackRankValue(second.rank);
+}
+
+function splitHandStatus(cards: readonly BlackjackCard[]): BlackjackRoundHandStatus {
+  const value = evaluateBlackjackHand(cards);
+  return value.total === 21 ? "stood" : "playing";
+}
+
+export function splitBlackjackHand(
+  round: BlackjackRoundState,
+  shoe: BlackjackShoe,
+): BlackjackRoundMutationResult {
+  if (!canSplitBlackjackHand(round)) {
+    return { round, shoe };
+  }
+
+  const activeHand = getActiveRoundHand(round);
+  if (!activeHand) {
+    return { round, shoe };
+  }
+
+  const [firstCard, secondCard] = activeHand.cards;
+  if (!firstCard || !secondCard) {
+    return { round, shoe };
+  }
+
+  const firstDraw = drawBlackjackCard(shoe);
+  const secondDraw = drawBlackjackCard(firstDraw.shoe);
+  const firstCards = [firstCard, firstDraw.card];
+  const secondCards = [secondCard, secondDraw.card];
+
+  const firstHand: BlackjackRoundHand = {
+    ...activeHand,
+    handId: `seat-${activeHand.seatId}-hand-0`,
+    handIndex: 0,
+    splitDepth: 1,
+    cards: firstCards,
+    status: splitHandStatus(firstCards),
+    doubled: false,
+    result: null,
+    returnAmount: null,
+    netAmount: null,
+  };
+  const secondHand: BlackjackRoundHand = {
+    ...activeHand,
+    handId: `seat-${activeHand.seatId}-hand-1`,
+    handIndex: 1,
+    splitDepth: 1,
+    cards: secondCards,
+    status: splitHandStatus(secondCards),
+    doubled: false,
+    result: null,
+    returnAmount: null,
+    netAmount: null,
+  };
+
+  const handIndex = round.hands.findIndex(
+    (hand) => hand.handId === activeHand.handId,
+  );
+  const hands = [
+    ...round.hands.slice(0, handIndex),
+    firstHand,
+    secondHand,
+    ...round.hands.slice(handIndex + 1),
+  ];
+  const nextRound: BlackjackRoundState = { ...round, hands };
+
+  if (firstHand.status === "playing") {
+    return {
+      shoe: secondDraw.shoe,
+      round: withActiveHand(nextRound, firstHand.handId),
+    };
+  }
+
+  if (secondHand.status === "playing") {
+    return {
+      shoe: secondDraw.shoe,
+      round: withActiveHand(nextRound, secondHand.handId),
+    };
+  }
+
+  return advanceAfterFinishedHand(
+    nextRound,
+    secondDraw.shoe,
+    secondHand.handId,
   );
 }
 
@@ -362,7 +507,10 @@ export function startBlackjackRound(
     }
 
     return {
+      handId: `seat-${seatId}-hand-0`,
       seatId,
+      handIndex: 0,
+      splitDepth: 0,
       wager: seat.bet,
       cards: [],
       status: "playing",
@@ -404,22 +552,22 @@ export function startBlackjackRound(
     dealerHoleCard,
   ];
   const dealerBlackjack = evaluateBlackjackHand(dealerCards).blackjack;
-
-  const activeSeatId = dealerBlackjack
+  const activeHand = dealerBlackjack
     ? null
-    : hands.find((hand) => hand.status === "playing")?.seatId ?? null;
+    : hands.find((hand) => hand.status === "playing") ?? null;
 
   const initialRound: BlackjackRoundState = {
-    phase: activeSeatId === null ? "dealerTurn" : "playerTurns",
+    phase: activeHand === null ? "dealerTurn" : "playerTurns",
     hands,
     dealer: {
       cards: dealerCards,
       blackjack: dealerBlackjack,
     },
-    activeSeatId,
+    activeHandId: activeHand?.handId ?? null,
+    activeSeatId: activeHand?.seatId ?? null,
   };
 
-  if (activeSeatId === null) {
+  if (activeHand === null) {
     return resolveBlackjackDealerTurn(initialRound, nextShoe);
   }
 
