@@ -44,11 +44,13 @@
   text-shadow: 0 1px 1px rgba(0, 0, 0, 0.25);
 }
 
-/* One physical face wins the cascade on every Roulette chip surface. */
+/* One physical face wins the cascade on every Roulette chip surface/state. */
 .roulette-page .roulette-chip-tray .roulette-chip-option.roulette-casino-chip,
 .roulette-page .roulette-mobile-chip-menu .roulette-chip-option.roulette-casino-chip,
 .roulette-page .roulette-mobile-chip-toggle.roulette-casino-chip,
-.roulette-page .roulette-placed-chip.roulette-casino-chip {
+.roulette-page .roulette-placed-chip.roulette-casino-chip,
+.roulette-page .is-winning-bet > .roulette-placed-chip.roulette-casino-chip,
+.roulette-page .is-result-number > .roulette-placed-chip.roulette-casino-chip {
   border: 0 !important;
   border-radius: 50% !important;
   background-color: var(--casino-chip-base) !important;
@@ -56,6 +58,11 @@
   background-repeat: no-repeat !important;
   background-position: center !important;
   background-size: 100% 100% !important;
+  box-shadow:
+    0 1px 0 rgba(255, 255, 255, 0.42) inset,
+    0 -2px 0 rgba(0, 0, 0, 0.22) inset,
+    0 2px 0 rgba(0, 0, 0, 0.30),
+    0 4px 8px rgba(0, 0, 0, 0.34) !important;
   mix-blend-mode: normal !important;
   opacity: 1 !important;
   filter: none !important;
@@ -144,13 +151,7 @@
 .roulette-mobile-chip-toggle.roulette-casino-chip > .roulette-chip-face-value {
   width: 100% !important;
   height: 100% !important;
-}
-
-.roulette-chip-option.roulette-casino-chip[data-chip-value="2000"],
-.roulette-chip-option.roulette-casino-chip[data-chip-value="5000"],
-.roulette-mobile-chip-toggle.roulette-casino-chip[data-selected-chip-value="2000"],
-.roulette-mobile-chip-toggle.roulette-casino-chip[data-selected-chip-value="5000"] {
-  font-size: 0.76em !important;
+  font-size: inherit !important;
 }
 
 .roulette-chip-option.roulette-casino-chip:hover {
@@ -224,14 +225,6 @@
   right: auto !important;
   bottom: auto !important;
   transform: translate(-50%, -50%) !important;
-}
-
-.roulette-page .roulette-number-cell.is-winning-bet > .roulette-placed-chip.roulette-casino-chip,
-.roulette-page .roulette-number-cell.is-result-number > .roulette-placed-chip.roulette-casino-chip,
-.roulette-page .roulette-zero-cell.is-winning-bet > .roulette-placed-chip.roulette-casino-chip,
-.roulette-page .roulette-zero-cell.is-result-number > .roulette-placed-chip.roulette-casino-chip {
-  transform: scale(1.04) !important;
-  transform-origin: 100% 100%;
 }
 
 @media (max-width: 900px) and (orientation: portrait) {
