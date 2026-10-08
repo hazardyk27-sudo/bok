@@ -21,7 +21,17 @@ export class BlackjackServerApiError extends Error {
 }
 
 async function readJson<T>(response: Response): Promise<T> {
-  const payload = await response.json() as T & BlackjackServerErrorPayload;
+  let payload: (T & BlackjackServerErrorPayload) | null = null;
+
+  try {
+    payload = await response.json() as T & BlackjackServerErrorPayload;
+  } catch {
+    throw new BlackjackServerApiError(
+      response.ok ? "BLACKJACK_INVALID_SERVER_RESPONSE" : `BLACKJACK_HTTP_${response.status}`,
+      response.ok ? 502 : response.status,
+    );
+  }
+
   if (!response.ok) {
     throw new BlackjackServerApiError(
       payload.error || `BLACKJACK_HTTP_${response.status}`,
