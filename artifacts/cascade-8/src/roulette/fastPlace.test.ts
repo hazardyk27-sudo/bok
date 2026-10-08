@@ -129,4 +129,45 @@ describe("roulette fast normal placement", () => {
     await Promise.resolve();
     await Promise.resolve();
   });
+
+  it("deducts the visible balance immediately even when drag forces the normal serialized writer", () => {
+    const app = document.createElement("div");
+    app.innerHTML = `
+      <main data-roulette-page data-phase="betting" data-betting-locked="false">
+        <strong data-wallet-balance>$100</strong>
+        <section data-roulette-bet-panel>
+          <button data-chip-value="10" aria-pressed="true">10</button>
+          <button data-bet-id="straight-19">19</button>
+        </section>
+      </main>
+    `;
+    document.body.append(app);
+
+    // A drag is still optimistic. Fast-place must not cross that mutation, but
+    // wallet acknowledgement still belongs to this click and cannot wait for the
+    // serialized network write to finish.
+    setRouletteBetAuthority(
+      "round-1",
+      [{ betId: "straight-19", amount: 10 }],
+      4,
+      true,
+    );
+
+    const fetchMock = vi.fn();
+    vi.stubGlobal("fetch", fetchMock);
+
+    installRouletteFastPlace(app);
+    app
+      .querySelector<HTMLButtonElement>(
+        '[data-bet-id="straight-19"]',
+      )!
+      .click();
+
+    expect(fetchMock).not.toHaveBeenCalled();
+    expect(
+      app.querySelector<HTMLElement>(
+        "[data-wallet-balance]",
+      )?.textContent,
+    ).toBe("$90");
+  });
 });
