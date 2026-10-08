@@ -9,6 +9,7 @@ import {
   type BlackjackSuit,
 } from "./blackjackCore";
 import {
+  BLACKJACK_MAX_HANDS_PER_SEAT,
   canDoubleBlackjackHand,
   canSplitBlackjackHand,
   doubleBlackjackHand,
@@ -180,6 +181,9 @@ function roundHandStateCopy(hand: BlackjackRoundHand, active: boolean) {
   if (hand.status === "bust") {
     return hand.doubled ? "DOUBLE · BUST" : "BUST";
   }
+  if (hand.status === "stood" && hand.splitFromAces) {
+    return "ACE SPLIT · ONE CARD";
+  }
   if (hand.status === "stood") {
     return hand.doubled ? "DOUBLE · STAND" : "STAND";
   }
@@ -191,7 +195,8 @@ function roundHandClasses(hand: BlackjackRoundHand, active: boolean) {
   const actionClass = hand.status === "bust" ? " is-bust" : hand.status === "stood" ? " is-stood" : "";
   const doubledClass = hand.doubled ? " is-doubled" : "";
   const blackjackClass = hand.status === "blackjack" ? " is-blackjack" : "";
-  return `${active ? " is-active-subhand" : ""}${blackjackClass}${actionClass}${doubledClass}${resultClass}`;
+  const aceSplitClass = hand.splitFromAces ? " is-ace-split" : "";
+  return `${active ? " is-active-subhand" : ""}${blackjackClass}${actionClass}${doubledClass}${aceSplitClass}${resultClass}`;
 }
 
 function renderSingleRoundHand(
@@ -220,7 +225,7 @@ function renderSplitHand(hand: BlackjackRoundHand, active: boolean) {
   const value = evaluateBlackjackHand(hand.cards);
   return `
     <div class="bj-split-hand${roundHandClasses(hand, active)}" data-hand-id="${hand.handId}">
-      <div class="bj-split-hand__label">HAND ${hand.handIndex + 1}</div>
+      <div class="bj-split-hand__label">HAND ${hand.handIndex + 1}${hand.splitFromAces ? " · ACE" : ""}</div>
       <div class="bj-seat__total">${value.total}</div>
       <div class="bj-seat__cards">
         ${hand.cards.map((card) => renderCard(card)).join("")}
@@ -265,15 +270,16 @@ function renderRoundSeat(
 
   const seatActive = hands.some((hand) => hand.handId === round.activeHandId);
   const seatWager = hands.reduce((total, hand) => total + hand.wager, 0);
+  const aceSplit = hands.every((hand) => hand.splitFromAces);
 
   return `
-    <div class="bj-seat bj-seat--${seat.id} bj-seat--active bj-seat--split${seatActive ? " is-active-hand" : ""}" data-seat="${seat.id}" data-seat-status="split">
+    <div class="bj-seat bj-seat--${seat.id} bj-seat--active bj-seat--split${hands.length > 2 ? " bj-seat--split-many" : ""}${seatActive ? " is-active-hand" : ""}${aceSplit ? " is-ace-split" : ""}" data-seat="${seat.id}" data-seat-status="split">
       <div class="bj-split-hands">
         ${hands.map((hand) => renderSplitHand(hand, round.activeHandId === hand.handId)).join("")}
       </div>
       <div class="bj-seat__badge bj-seat__round-badge bj-seat__round-badge--split">
         <span class="bj-seat__person" aria-hidden="true"></span>
-        <span><strong>Seat ${seat.id}</strong><small>SPLIT · $${seatWager}</small></span>
+        <span><strong>Seat ${seat.id}</strong><small>${aceSplit ? "ACE SPLIT" : `${hands.length} HANDS`} · $${seatWager}</small></span>
       </div>
     </div>
   `;
@@ -316,13 +322,14 @@ function renderMobileSeatTabs(
         const occupied = seat.status !== "empty";
         const ready = seat.status === "betReady";
         const primaryHand = hands[0] ?? null;
+        const aceSplit = hands.length > 1 && hands.every((hand) => hand.splitFromAces);
         const label = round
           ? hands.length > 1
             ? activeHand
               ? `H${activeHand.handIndex + 1}`
-              : round.phase === "complete"
-                ? "SPLIT"
-                : "SPLIT"
+              : aceSplit
+                ? "ACES"
+                : `${hands.length}H`
             : primaryHand?.result === "blackjack"
               ? "BJ"
               : primaryHand?.result
@@ -405,7 +412,7 @@ function renderRoundStatusCopy(round: BlackjackRoundState) {
       ? round.hands.filter((hand) => hand.seatId === activeHand.seatId).length
       : 0;
     const handLabel = activeHand && seatHandCount > 1
-      ? ` · Hand ${activeHand.handIndex + 1}`
+      ? ` · Hand ${activeHand.handIndex + 1}/${seatHandCount}`
       : "";
     return activeHand
       ? `Seat ${activeHand.seatId}${handLabel} to act${total === null ? "" : ` · Total ${total}`}`
@@ -463,9 +470,15 @@ function renderBlackjack(
   const activeRoundHand = round?.activeHandId
     ? round.hands.find((hand) => hand.handId === round.activeHandId) ?? null
     : null;
+  const activeSeatHandCount = activeRoundHand && round
+    ? round.hands.filter((hand) => hand.seatId === activeRoundHand.seatId).length
+    : 0;
+  const splitActionLabel = activeRoundHand?.splitDepth && activeRoundHand.splitDepth > 0
+    ? "RESPLIT"
+    : "SPLIT";
 
   app.innerHTML = `
-    <main class="bj-root" data-blackjack-part="8a">
+    <main class="bj-root" data-blackjack-part="8b">
       <div class="bj-casino-backdrop" aria-hidden="true">
         <span class="bj-bokeh bj-bokeh--1"></span>
         <span class="bj-bokeh bj-bokeh--2"></span>
@@ -592,7 +605,7 @@ function renderBlackjack(
             <button class="bj-round-action bj-round-action--hit" type="button" data-round-action="hit" ${canPlayerAct ? "" : "disabled"}>HIT</button>
             <button class="bj-round-action bj-round-action--stand" type="button" data-round-action="stand" ${canPlayerAct ? "" : "disabled"}>STAND</button>
             <button class="bj-round-action bj-round-action--double" type="button" data-round-action="doubleDown" ${canDoubleDown ? "" : "disabled"}>DOUBLE${canDoubleDown && activeRoundHand ? ` · +$${activeRoundHand.wager}` : ""}</button>
-            <button class="bj-round-action bj-round-action--split" type="button" data-round-action="split" ${canSplit ? "" : "disabled"}>SPLIT${canSplit && activeRoundHand ? ` · +$${activeRoundHand.wager}` : ""}</button>
+            <button class="bj-round-action bj-round-action--split" type="button" data-round-action="split" ${canSplit ? "" : "disabled"}>${splitActionLabel}${canSplit && activeRoundHand ? ` · +$${activeRoundHand.wager}` : activeSeatHandCount >= BLACKJACK_MAX_HANDS_PER_SEAT ? " · MAX 4" : ""}</button>
           </div>
         </section>
       </section>
