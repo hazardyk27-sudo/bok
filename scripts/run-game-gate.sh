@@ -4,7 +4,7 @@ set -euo pipefail
 game="${1:-${GAME:-}}"
 
 if [[ -z "$game" ]]; then
-  echo "GAME is required (slot|cadi-kazan|idle|hub|account|roulette)." >&2
+  echo "GAME is required (slot|cadi-kazan|idle|hub|account|roulette|blackjack)." >&2
   exit 2
 fi
 
@@ -39,6 +39,10 @@ case "$game" in
   roulette)
     frontend src/roulette
     backend src/roulette
+    ;;
+  blackjack)
+    frontend src/blackjack
+    backend src/blackjack
     ;;
   *)
     echo "Unknown GAME: $game" >&2
