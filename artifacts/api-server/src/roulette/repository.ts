@@ -68,6 +68,39 @@ function isRouletteStaleWrite(error: unknown) {
   );
 }
 
+export function areRouletteServerBetTopologiesEqual(
+  left: readonly RouletteServerBet[],
+  right: readonly RouletteServerBet[],
+) {
+  const totals = (
+    bets: readonly RouletteServerBet[],
+  ) => {
+    const byBetId = new Map<string, number>();
+
+    for (const bet of bets) {
+      byBetId.set(
+        bet.betId,
+        (byBetId.get(bet.betId) ?? 0) + bet.amount,
+      );
+    }
+
+    return byBetId;
+  };
+
+  const a = totals(left);
+  const b = totals(right);
+
+  if (a.size !== b.size) return false;
+
+  for (const [betId, amount] of a) {
+    if ((b.get(betId) ?? 0) !== amount) {
+      return false;
+    }
+  }
+
+  return true;
+}
+
 export class RouletteRepository {
   async getState(
     sessionId: string,
@@ -176,8 +209,12 @@ export class RouletteRepository {
     // This path is used only by monotonic x2. The route stamps
     // requestReceivedAtMs before any database wait. If an older wager write is
     // already holding the per-slip lock, retry against the newly committed
-    // revision while preserving that original server arrival time. A delayed
-    // older x2 request is also prevented from lowering a newer doubled stake.
+    // revision while preserving that original server arrival time.
+    //
+    // A strictly larger current stake always wins over an older smaller fast
+    // request. At equal stake, however, topology still matters: an intervening
+    // undo/drag/rebet can legitimately produce a later x2 with the same total
+    // money but a different authoritative placement plan.
     for (
       let attempt = 0;
       attempt < ROULETTE_LATEST_WRITE_MAX_ATTEMPTS;
@@ -193,7 +230,18 @@ export class RouletteRepository {
 
       if (
         current.globalBet &&
-        currentStakeCents >= desiredStakeCents
+        currentStakeCents > desiredStakeCents
+      ) {
+        return current;
+      }
+
+      if (
+        current.globalBet &&
+        currentStakeCents === desiredStakeCents &&
+        areRouletteServerBetTopologiesEqual(
+          current.globalBet.bets,
+          input.bets,
+        )
       ) {
         return current;
       }
