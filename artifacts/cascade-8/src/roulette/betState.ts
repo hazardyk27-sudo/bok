@@ -49,7 +49,15 @@ function withAuthoritativePlacements(
 ): RouletteBetState {
   const canonical =
     cloneRoulettePlacements(placements);
-  setRouletteAuthorityStoreBets(canonical);
+
+  // A user reducer has already changed local intent even if the serialized HTTP
+  // writer has not started yet. Mark authority optimistic now so polling cannot
+  // overwrite queued intent and fast x2 cannot mistake it for confirmed server
+  // topology.
+  setRouletteAuthorityStoreBets(
+    canonical,
+    true,
+  );
 
   return {
     ...state,
@@ -170,6 +178,8 @@ export function snapshotRouletteRound(
       getRouletteEffectivePlacements(state),
     );
 
+  // Snapshotting is not a new wager mutation; preserve the existing optimistic
+  // metadata while copying the current canonical topology into round history.
   setRouletteAuthorityStoreBets(
     canonicalPlacements,
   );
