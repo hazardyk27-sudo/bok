@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   dealerShouldHit,
+  evaluateBlackjackHand,
   type BlackjackCard,
   type BlackjackRank,
 } from "./blackjackCore";
@@ -66,15 +67,20 @@ describe("canonical 6-deck American H17 rules", () => {
     expect(BLACKJACK_MAX_HANDS_PER_SEAT).toBe(BLACKJACK_CANONICAL_RULES.maxHandsPerSeat);
   });
 
-  it("shows both legal totals for soft hands", () => {
-    expect(formatBlackjackHandTotal([card("A", "a"), card("4", "4")])).toBe("5 / 15");
-    expect(formatBlackjackHandTotal([card("A", "a1"), card("A", "a2")])).toBe("2 / 12");
-    expect(formatBlackjackHandTotal([card("A", "a"), card("6", "6"), card("10", "10")])).toBe("17");
+  it("uses the highest non-busting value as the hand total and labels soft hands", () => {
+    const soft19 = [card("A", "a"), card("8", "8")];
+    expect(evaluateBlackjackHand(soft19)).toMatchObject({ total: 19, soft: true, bust: false });
+    expect(formatBlackjackHandTotal(soft19)).toBe("19 · SOFT");
+    expect(formatBlackjackHandTotal([card("A", "a1"), card("A", "a2")])).toBe("12 · SOFT");
+    expect(formatBlackjackHandTotal([card("A", "a3"), card("6", "6"), card("10", "10")])).toBe("17");
   });
 
-  it("enforces dealer H17 while standing on hard 17", () => {
-    expect(dealerShouldHit([card("A", "a"), card("6", "6")], BLACKJACK_CANONICAL_RULES.dealerHitsSoft17)).toBe(true);
-    expect(dealerShouldHit([card("10", "10"), card("7", "7")], BLACKJACK_CANONICAL_RULES.dealerHitsSoft17)).toBe(false);
+  it("enforces H17 but stands on soft 18, soft 19, soft 20 and hard 17+", () => {
+    expect(dealerShouldHit([card("A", "a17"), card("6", "6")], BLACKJACK_CANONICAL_RULES.dealerHitsSoft17)).toBe(true);
+    expect(dealerShouldHit([card("A", "a18"), card("7", "7")], BLACKJACK_CANONICAL_RULES.dealerHitsSoft17)).toBe(false);
+    expect(dealerShouldHit([card("A", "a19"), card("8", "8")], BLACKJACK_CANONICAL_RULES.dealerHitsSoft17)).toBe(false);
+    expect(dealerShouldHit([card("A", "a20"), card("9", "9")], BLACKJACK_CANONICAL_RULES.dealerHitsSoft17)).toBe(false);
+    expect(dealerShouldHit([card("10", "10h"), card("7", "7h")], BLACKJACK_CANONICAL_RULES.dealerHitsSoft17)).toBe(false);
   });
 
   it("allows equal-value ten cards to split and DAS on non-ace split hands", () => {
