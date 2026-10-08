@@ -117,9 +117,125 @@
   font-weight: 900;
 }
 
-.bj-round-action--double:not(:disabled) {
+.bj-round-action--double:not(:disabled),
+.bj-round-action--split:not(:disabled) {
   border-color: rgba(243, 200, 110, 0.92);
   box-shadow: inset 0 0 0 1px rgba(243, 200, 110, 0.12), 0 0 18px rgba(243, 200, 110, 0.2);
+}
+
+.bj-seat--split {
+  width: clamp(210px, 16vw, 270px);
+}
+
+.bj-split-hands {
+  position: absolute;
+  z-index: 12;
+  inset: -10px -28px 48px;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 7px;
+}
+
+.bj-split-hand {
+  position: relative;
+  min-width: 0;
+  overflow: visible;
+  border: 1px solid rgba(224, 188, 112, 0.38);
+  border-radius: 15px;
+  background: linear-gradient(180deg, rgba(4, 48, 31, 0.58), rgba(2, 25, 17, 0.28));
+  box-shadow: inset 0 1px rgba(255, 255, 255, 0.04);
+  transition: border-color 140ms ease, box-shadow 140ms ease, transform 140ms ease;
+}
+
+.bj-split-hand.is-active-subhand {
+  border-color: #24ef92;
+  box-shadow:
+    0 0 0 2px rgba(36, 239, 146, 0.13),
+    0 0 24px rgba(36, 239, 146, 0.42),
+    inset 0 0 24px rgba(14, 122, 73, 0.18);
+  transform: translateY(-3px);
+}
+
+.bj-split-hand.is-result-win {
+  border-color: rgba(36, 239, 146, 0.78);
+}
+
+.bj-split-hand.is-result-lose,
+.bj-split-hand.is-bust {
+  border-color: rgba(240, 68, 68, 0.72);
+}
+
+.bj-split-hand.is-result-push,
+.bj-split-hand.is-stood {
+  border-color: rgba(219, 185, 112, 0.62);
+}
+
+.bj-split-hand__label {
+  position: absolute;
+  z-index: 10;
+  left: 50%;
+  top: -14px;
+  transform: translateX(-50%);
+  padding: 3px 7px;
+  border: 1px solid rgba(230, 189, 106, 0.42);
+  border-radius: 8px;
+  color: #f3d58e;
+  background: rgba(6, 19, 14, 0.94);
+  font-size: 8px;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  white-space: nowrap;
+}
+
+.bj-split-hand .bj-seat__total {
+  top: 3px;
+  min-width: 34px;
+  height: 28px;
+  font-size: 13px;
+}
+
+.bj-split-hand .bj-seat__cards {
+  top: 27%;
+  transform: translateX(-50%) scale(0.78);
+  transform-origin: top center;
+}
+
+.bj-split-hand__bet {
+  position: absolute;
+  z-index: 8;
+  left: 50%;
+  bottom: 21px;
+  transform: translateX(-50%);
+  padding: 3px 7px;
+  border-radius: 9px;
+  color: #f3d58e;
+  background: rgba(0, 0, 0, 0.46);
+  font-size: 9px;
+  font-weight: 900;
+  white-space: nowrap;
+}
+
+.bj-split-hand__status {
+  position: absolute;
+  z-index: 8;
+  left: 4px;
+  right: 4px;
+  bottom: 4px;
+  overflow: hidden;
+  color: rgba(247, 243, 229, 0.86);
+  font-size: 7px;
+  font-weight: 850;
+  letter-spacing: 0.03em;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.bj-split-hand.is-active-subhand .bj-split-hand__status {
+  color: #45f4a4;
+}
+
+.bj-seat__round-badge--split {
+  min-width: 132px;
 }
 
 .bj-seat--sitting-out .bj-seat__bet-circle {
@@ -169,6 +285,47 @@
     margin-top: 3px;
     padding: 3px 8px;
     font-size: 8px;
+  }
+
+  .bj-seat--split {
+    width: 150px;
+  }
+
+  .bj-split-hands {
+    inset: -4px -14px 38px;
+    gap: 3px;
+  }
+
+  .bj-split-hand {
+    border-radius: 10px;
+  }
+
+  .bj-split-hand__label {
+    top: -11px;
+    padding: 2px 5px;
+    font-size: 6px;
+  }
+
+  .bj-split-hand .bj-seat__total {
+    min-width: 27px;
+    height: 23px;
+    font-size: 10px;
+  }
+
+  .bj-split-hand .bj-seat__cards {
+    top: 25%;
+    transform: translateX(-50%) scale(0.58);
+  }
+
+  .bj-split-hand__bet {
+    bottom: 16px;
+    padding: 2px 5px;
+    font-size: 7px;
+  }
+
+  .bj-split-hand__status {
+    bottom: 3px;
+    font-size: 5.5px;
   }
 
   .bj-seat--sitting-out .bj-seat__bet-circle {
