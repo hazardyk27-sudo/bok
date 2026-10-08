@@ -3,6 +3,9 @@ import {
   type RouletteBetPlacement,
 } from "./betState";
 import {
+  registerRouletteExternalMutationBarrier,
+} from "./betAuthority";
+import {
   getRouletteBetAuthoritySnapshot,
   setRouletteBetAuthority,
 } from "./betAuthorityVisual";
@@ -84,10 +87,14 @@ export function registerRouletteExternalLatestMutation(
 
   pendingLatestMutation = record;
 
-  // If the server-stamped request fails after the runtime has claimed this plan
-  // optimistic, release only that still-current plan. The runtime's own error
-  // path can then force-hydrate authoritative server state instead of having the
-  // bootstrap wrapper reject it forever as a pending local mutation.
+  // The request already started at capture time, so it keeps the deadline
+  // advantage. Registering the same promise as an authority queue barrier means
+  // any later normal mutation (clear/undo/place/drag) cannot reach the server
+  // until every earlier fast x2 barrier ahead of it has settled.
+  registerRouletteExternalMutationBarrier(
+    promise,
+  );
+
   void promise.catch(() => {
     releaseRouletteFailedExternalLatestMutation(
       roundId,
@@ -146,9 +153,6 @@ export function installRouletteLatestMutationDeduper() {
       );
 
     if (sharedLatest) {
-      // The runtime reducer has now applied the mutation exactly once. Mark that
-      // same topology optimistic at the moment its normal write is deduplicated,
-      // rather than mutating authority in the capture handler beforehand.
       const authority =
         getRouletteBetAuthoritySnapshot();
       setRouletteBetAuthority(
