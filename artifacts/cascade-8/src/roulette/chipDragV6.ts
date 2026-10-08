@@ -258,8 +258,11 @@ function renderOptimisticBets(
   });
 }
 
-function forceRuntimeRefresh() {
-  document.dispatchEvent(new Event("visibilitychange"));
+function renderAuthorityBets(app: HTMLDivElement) {
+  const bets = getRouletteBetAuthoritySnapshot().bets;
+  if (bets) {
+    renderOptimisticBets(app, bets);
+  }
 }
 
 export function createRouletteMovedBets(
@@ -589,7 +592,7 @@ export function installRouletteChipDragV6(app: HTMLDivElement) {
       ) {
         completed.ghost.remove();
         completed.chip.classList.remove("is-chip-drag-source");
-        forceRuntimeRefresh();
+        renderAuthorityBets(app);
         return;
       }
 
@@ -604,7 +607,7 @@ export function installRouletteChipDragV6(app: HTMLDivElement) {
         console.error("[roulette] chip drag rejected", error);
         completed.ghost.remove();
         completed.chip.classList.remove("is-chip-drag-source");
-        forceRuntimeRefresh();
+        renderAuthorityBets(app);
         return;
       }
 
@@ -627,11 +630,11 @@ export function installRouletteChipDragV6(app: HTMLDivElement) {
         targetBetId,
       )
         .then(() => {
-          forceRuntimeRefresh();
+          renderAuthorityBets(app);
         })
         .catch((error) => {
           console.error("[roulette] chip drag sync failed", error);
-          forceRuntimeRefresh();
+          renderAuthorityBets(app);
         });
     }, SNAP_MS);
   };
