@@ -287,16 +287,16 @@ function renderBettingStatusCopy(
 }
 
 function renderRoundStatusCopy(round: BlackjackRoundState) {
+  if (round.dealer.blackjack) {
+    return "Natural 21 · settlement pending";
+  }
+
   if (round.phase === "playerTurns" && round.activeSeatId) {
     const activeHand = round.hands.find((hand) => hand.seatId === round.activeSeatId);
     const total = activeHand
       ? evaluateBlackjackHand(activeHand.cards).total
       : null;
     return `Seat ${round.activeSeatId} to act${total === null ? "" : ` · Total ${total}`}`;
-  }
-
-  if (round.dealer.blackjack) {
-    return "Dealer blackjack check pending";
   }
 
   return "Dealer resolution pending";
@@ -312,13 +312,18 @@ function renderDealerHand(round: BlackjackRoundState | null) {
     `;
   }
 
+  const revealHoleCard = round.dealer.blackjack;
+  const dealerTotal = revealHoleCard
+    ? evaluateBlackjackHand(round.dealer.cards).total
+    : "?";
+
   return `
     <div class="bj-dealer-hand">
       <div class="bj-dealer-hand__label">DEALER</div>
       <div class="bj-dealer-hand__cards">
         ${renderCard(round.dealer.cards[0])}
-        ${renderCard(round.dealer.cards[1], true)}
-        <span class="bj-dealer-hand__total">?</span>
+        ${renderCard(round.dealer.cards[1], !revealHoleCard)}
+        <span class="bj-dealer-hand__total">${dealerTotal}</span>
       </div>
     </div>
   `;
@@ -364,7 +369,7 @@ function renderBlackjack(
 
         <aside class="bj-hud bj-hud--status">
           <span>ROUND STATUS</span>
-          <strong>${round ? (round.phase === "playerTurns" ? "PLAYER TURN" : "DEALER CHECK") : "PLACE YOUR BETS"}</strong>
+          <strong>${round ? (round.dealer.blackjack ? "DEALER BLACKJACK" : round.phase === "playerTurns" ? "PLAYER TURN" : "DEALER CHECK") : "PLACE YOUR BETS"}</strong>
           <small>${round ? renderRoundStatusCopy(round) : renderBettingStatusCopy(state, selectedChip)}</small>
           ${round
             ? ""
