@@ -133,9 +133,11 @@ export function installRouletteAuthorityBetDomGuard(
   const reconcile = () => {
     reconcileQueued = false;
 
-    // Spin/result intentionally clear/freeze table visuals. During betting,
-    // however, canonical authority is the only topology allowed to reach paint.
-    if (page.dataset.phase !== "betting") return;
+    // Authority remains the visual owner through betting and spinning. The
+    // runtime intentionally clears placed chips only when the round is settled;
+    // stopping reconciliation earlier lets its stale local mirror resurrect the
+    // pre-drag source cell exactly at the betting -> spin transition.
+    if (page.dataset.phase === "settled") return;
 
     const authority =
       getRouletteBetAuthoritySnapshot();
