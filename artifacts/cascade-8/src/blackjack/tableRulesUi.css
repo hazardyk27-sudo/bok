@@ -1,0 +1,109 @@
+.bj-seat__total.is-soft-total,
+.bj-dealer-hand__total.is-soft-total {
+  min-width: 46px;
+  padding-inline: 7px;
+  letter-spacing: -0.02em;
+  white-space: nowrap;
+}
+
+.bj-table-rules {
+  position: relative;
+  margin-top: 7px;
+  color: rgba(244, 234, 208, 0.76);
+  font-size: 8px;
+  letter-spacing: 0.06em;
+}
+
+.bj-table-rules > summary {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  min-height: 24px;
+  padding: 4px 9px;
+  border: 1px solid rgba(230, 189, 106, 0.28);
+  border-radius: 8px;
+  background: rgba(3, 14, 10, 0.72);
+  color: #d6bd7a;
+  font-weight: 900;
+  cursor: pointer;
+  list-style: none;
+  user-select: none;
+}
+
+.bj-table-rules > summary::-webkit-details-marker {
+  display: none;
+}
+
+.bj-table-rules > summary::after {
+  content: "▾";
+  font-size: 9px;
+  transition: transform 140ms ease;
+}
+
+.bj-table-rules[open] > summary::after {
+  transform: rotate(180deg);
+}
+
+.bj-table-rules__panel {
+  position: absolute;
+  z-index: 90;
+  top: calc(100% + 6px);
+  right: 0;
+  width: min(360px, 42vw);
+  padding: 11px 13px;
+  border: 1px solid rgba(230, 189, 106, 0.34);
+  border-radius: 12px;
+  background: rgba(2, 13, 9, 0.97);
+  box-shadow: 0 18px 42px rgba(0, 0, 0, 0.48);
+  color: rgba(246, 240, 221, 0.84);
+  text-align: left;
+  letter-spacing: 0;
+}
+
+.bj-table-rules__panel > strong {
+  display: block;
+  margin-bottom: 7px;
+  color: #efcc79;
+  font-size: 10px;
+  letter-spacing: 0.06em;
+}
+
+.bj-table-rules__panel ul {
+  margin: 0;
+  padding-left: 16px;
+}
+
+.bj-table-rules__panel li {
+  margin: 4px 0;
+  font-size: 9px;
+  line-height: 1.32;
+}
+
+@media (max-width: 900px) {
+  .bj-table-rules {
+    margin-top: 4px;
+  }
+
+  .bj-table-rules > summary {
+    min-height: 20px;
+    padding: 3px 7px;
+    font-size: 7px;
+  }
+
+  .bj-table-rules__panel {
+    position: fixed;
+    z-index: 180;
+    left: 12px;
+    right: 12px;
+    top: 92px;
+    width: auto;
+    max-height: min(58vh, 430px);
+    overflow: auto;
+    padding: 12px 14px;
+  }
+
+  .bj-table-rules__panel li {
+    font-size: 9px;
+    line-height: 1.38;
+  }
+}
