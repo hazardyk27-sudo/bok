@@ -33,6 +33,40 @@ describe("roulette fixed chip geometry invariant", () => {
     }
   });
 
+  it("pins canonical paint above historic !important denomination skins", () => {
+    const chip = document.createElement("span");
+
+    expect(applyRouletteChipVisualState(chip, 10)).toBe(true);
+    const fixedPaintAtTen = {
+      image: chip.style.getPropertyValue("background-image"),
+      imagePriority: chip.style.getPropertyPriority("background-image"),
+      repeat: chip.style.getPropertyValue("background-repeat"),
+      position: chip.style.getPropertyValue("background-position"),
+      size: chip.style.getPropertyValue("background-size"),
+      shadow: chip.style.getPropertyValue("box-shadow"),
+    };
+
+    expect(chip.style.getPropertyValue("--casino-chip-base")).toBe("#F1F1EE");
+    expect(chip.style.getPropertyValue("background-color")).toBe(
+      "var(--casino-chip-base)",
+    );
+    expect(chip.style.getPropertyPriority("background-color")).toBe("important");
+    expect(fixedPaintAtTen.image).toBe("var(--casino-chip-face)");
+    expect(fixedPaintAtTen.imagePriority).toBe("important");
+
+    expect(applyRouletteChipVisualState(chip, 100)).toBe(true);
+    expect(chip.dataset.chipTier).toBe("green");
+    expect(chip.style.getPropertyValue("--casino-chip-base")).toBe("#2D9B61");
+    expect({
+      image: chip.style.getPropertyValue("background-image"),
+      imagePriority: chip.style.getPropertyPriority("background-image"),
+      repeat: chip.style.getPropertyValue("background-repeat"),
+      position: chip.style.getPropertyValue("background-position"),
+      size: chip.style.getPropertyValue("background-size"),
+      shadow: chip.style.getPropertyValue("box-shadow"),
+    }).toEqual(fixedPaintAtTen);
+  });
+
   it("keeps ring, segment, edge, highlight, shadow and typography fixed in CSS", () => {
     expect(css).toContain("--casino-chip-base");
     expect(css).toContain("--casino-chip-inner-fixed");
